@@ -365,3 +365,58 @@ see `MacroPeg/Counterexamples.lean`'s module docstring) -/
 /-- info: 'Shallot.MacroPeg.selfCallDiverges' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.selfCallDiverges
+
+/-! ## M-PEG-6: macro expansion preserves call-by-name semantics (`MacroPeg/ExpandSemantics.lean`)
+
+`expand_preserves_cbn` is the headline (T-exp); `expand_agrees_cbn` adds determinism,
+`expand_preserves_cbn_run` is the fuel-interpreter reading, `expandGrammar_preserves_start`
+the whole-grammar/start-rule form `ParserGenerator` relies on. CE-004/005/006 are the
+machine-checked witnesses for the `subst` fix and for the two side conditions. -/
+
+/-- info: 'Shallot.MacroPeg.subst_subst' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.subst_subst
+
+/-- info: 'Shallot.MacroPeg.expand_subst' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.expand_subst
+
+/-- info: 'Shallot.MacroPeg.expand_preserves_cbn' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.expand_preserves_cbn
+
+/-- info: 'Shallot.MacroPeg.expand_agrees_cbn' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.expand_agrees_cbn
+
+/-- info: 'Shallot.MacroPeg.expand_preserves_cbn_run' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.expand_preserves_cbn_run
+
+/-- info: 'Shallot.MacroPeg.expandGrammar_preserves_start' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.expandGrammar_preserves_start
+
+/-- info: 'Shallot.MacroPeg.ce004_passThrough_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.ce004_passThrough_eval
+
+/-- info: 'Shallot.MacroPeg.ce004_passThrough_expanded_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.ce004_passThrough_expanded_eval
+
+/-- info: 'Shallot.MacroPeg.ce005_arity_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.ce005_arity_eval
+
+/-- info: 'Shallot.MacroPeg.ce005_arity_expanded_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.ce005_arity_expanded_eval
+
+/-- info: 'Shallot.MacroPeg.ce005_arity_not_arityOk' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.ce005_arity_not_arityOk
+
+/-- info: 'Shallot.MacroPeg.ce006_closureReturn_not_noCallableRules' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.ce006_closureReturn_not_noCallableRules

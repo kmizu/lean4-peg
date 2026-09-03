@@ -383,6 +383,9 @@ mutual
             simpa [MExp.hasCall] using this
           simp only [MExp.hasCall, Bool.or_eq_false_iff]
           exact ⟨hbodfree, substArgs_hasCall_eq_false hargs hbody⟩
+        | param j =>
+          simp only [MExp.hasCall]
+          exact substArgs_hasCall_eq_false hargs hbody
         | _ => simp [MExp.failAlways, MExp.hasCall]
     | .invoke _ar bod margs, hbody => by
       simp only [MExp.hasCall, Bool.or_eq_false_iff] at hbody

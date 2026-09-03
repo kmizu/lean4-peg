@@ -669,7 +669,8 @@ def MacroPeg_MExp_subst(args: List[MacroPeg_MExp], x1: MacroPeg_MExp): MacroPeg_
     case MacroPeg_MExp.lam(ar, bod) => MacroPeg_MExp.lam(ar, bod)
     case MacroPeg_MExp.callParam(k, margs) => (MacroPeg_argAt(args, k) match {
     case Some(MacroPeg_MExp.lam(ar, bod)) => MacroPeg_MExp.invoke(ar, bod, MacroPeg_MExp_substArgs(args, margs))
-    case x24 => MacroPeg_MExp_failAlways
+    case Some(MacroPeg_MExp.param(j)) => MacroPeg_MExp.callParam(j, MacroPeg_MExp_substArgs(args, margs))
+    case x25 => MacroPeg_MExp_failAlways
   })
     case MacroPeg_MExp.invoke(ar, bod, margs) => MacroPeg_MExp.invoke(ar, bod, MacroPeg_MExp_substArgs(args, margs))
   })

@@ -201,6 +201,16 @@ mutual
     | .callParam k margs =>
       match argAt args k with
       | some (.lam ar bod) => .invoke ar bod (MExp.substArgs args margs)
+      -- Pass-through (M-PEG-6): the callable bound to `k` is itself the ENCLOSING
+      -- activation's `j`-th parameter, still unresolved. Re-target the `.callParam` so
+      -- that an outer `subst` can resolve it later. This never fires in a
+      -- derivation/interpreter run (the actual parameters spliced in there are
+      -- closed), so no `MDerives`/`mpegRun` case changes; it matters only for
+      -- `MExp.expand`, which substitutes into an already-expanded callee body whose
+      -- actual parameters may still mention the caller's own `.param j` — without
+      -- this case `Baz(f, s) = Apply(f, s); Apply(f, s) = f(s)` expands to
+      -- `failAlways`, diverging from the reference `MacroExpander`.
+      | some (.param j) => .callParam j (MExp.substArgs args margs)
       | _ => MExp.failAlways
     | .invoke ar bod margs => .invoke ar bod (MExp.substArgs args margs)
 

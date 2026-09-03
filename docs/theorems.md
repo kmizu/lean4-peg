@@ -281,6 +281,61 @@ i\_（実装定義）は lone surrogate 拒否方針どおり。抽出 Scala 版
   `mExpandCase`（corpus ID `340`/`341`）を追加し、Lens で自動抽出した Scala
   経由の 3 方一致（Lean ≡ golden ≡ Scala、計 22 ケース）を達成した
 
+## M-PEG-6: マクロ展開は call-by-name 意味論を保つ（`ExpandSemantics.lean`）
+
+M-PEG-5 は `MExp.expand` の停止性と「展開後に call が残らない」（T-fix）までを証明
+していた。M-PEG-6 はその先——参照実装の `ParserGenerator.tryInlineHigherOrder`
+（高階マクロを展開して第一階のパーサを生成する経路）が実際に依存している性質、
+**「展開しても受理する言語は変わらない」**を証明する。`CallByName` 固定。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `subst_subst` | 代入の合成則 `subst A (subst M e) = subst (substArgs A M) e`（無条件） | propext |
+| `expand_subst` | `expand` と `subst` の可換性 `expand (subst B e) = subst (expandArgs B) (expand e)`（`NoCallableRules` のもとで） | propext, Quot.sound |
+| `expand_preserves_cbn` | **headline（T-exp）**: 非循環・アリティ正当・callable 値を返すルール無し、のもとで、元の文法の `CallByName` 導出は展開後の文法・式でも同じ結果（`.fail` は `.fail`、`.ok` は同じ残り入力）で導出できる | propext, Quot.sound |
+| `expand_agrees_cbn` | 両方が導出を持つなら結果は一致（展開後の決定性 T2 と合成） | propext, Quot.sound |
+| `expand_preserves_cbn_run` | fuel インタプリタ版: 元のプログラムがある燃料で終わるなら、展開後もある燃料で終わり結果が一致（T1・T3 と合成） | propext, Classical.choice, Quot.sound |
+| `expandGrammar_preserves_start` | 文法全体・開始規則 `.call i []` の形——`ParserGenerator` が出力する形そのもの | propext, Classical.choice, Quot.sound |
+| `ce004_passThrough_*` | **CE-004**: 素通しパターン `Baz(f,s) = Apply(f,s); Apply(f,s) = f(s)` が展開前後で一致（`subst` 修正のピン留め） | propext, Classical.choice, Quot.sound |
+| `ce005_arity_*` | **CE-005**: アリティ不一致 `F(x) = "a"; S = F("b","c")` は展開前 `.fail`、展開後 `.ok`——`arityOk` は落とせない | propext, Classical.choice, Quot.sound |
+| `ce006_closureReturn_not_noCallableRules` | **CE-006**: クロージャ戻り値 `Baz(f) = f` は `noCallableRulesB` に弾かれる（`Examples.lean` の `#guard` が示す評価器 `fail`／展開後 `ok` の反転がまさにこの条件の必要性） | propext, Quot.sound |
+
+設計判断と、証明が見つけたこと:
+
+- **`subst` の欠陥を証明の途中で発見し、修正した（CE-004）**: `MExp.subst` は
+  `.callParam k` の解決先が `.lam` でなければ一律 `failAlways` にしていた。導出の中では
+  実引数は常に閉じているのでこれで正しいが、`expand` は「callee 本体を先に展開してから
+  実引数を代入する」順序（M-PEG-5 が停止性証明の都合で選んだ、参照実装からの意図的な
+  逸脱）なので、`Baz(f, s) = Apply(f, s)` の展開時に `Apply` の `callParam 0` は
+  まだ未解決の `.param 0` に出会い、`failAlways` に潰れていた。参照実装
+  `MacroExpander` は同じ文法を `"a" !.` に正しく展開する（本セッションで `sbt` から
+  実機確認）。修正は `subst` に「解決先が `.param j` なら `.callParam j` に付け替える」
+  1ケースを足すだけ。導出では到達不能なので `MDerives`/`mpegRun` の規則も既存定理も
+  一切変わらず、Lens 抽出の Scala 側も1行の差分で追随した。M-PEG-5 の「2つの順序は
+  最終的な fixpoint で一致する」という主張は「call が残らない」という意味では正しかった
+  が、意味論としては一致していなかった、というのが正確な事後評価
+- **可換性補題が「展開順序の逸脱」を正当化する**: `expand_subst` は「先に代入して展開」
+  （評価器・参照実装の順）と「先に展開して代入」（`expand` の順）が一致することを
+  述べる。これが主定理の `callNameOk`/`invokeNameOk` ケースの全て——導出の帰納法の
+  仮定は `expand (subst args body)` について得られ、目標は `subst (expandArgs args)
+  (expand body)` について要る
+- **アリティ条件は証明が要求した（CE-005）**: 評価器は `callArity`/`callMissing` で失敗
+  するが、`expand` は引数の個数を見ずに代入する。参照実装では `TypeChecker` が弾く
+  ので、Scala パイプラインが既に置いている仮定をそのまま形式化した。`MExp.arityOk` は
+  `.lam`/`.invoke` の本体や実引数リストの中まで見る構造的述語で、`subst` で保存される
+  （`arityOk_subst`）——これが帰納法の motive に乗る
+- **「callable 値を返すルール無し」は本質的な条件（CE-006）**: `Baz(f) = f` のように
+  展開後の本体が `.lam` か裸の `.param` になるルールがあると、`.call` の値が callable
+  になり `callParam` に渡せてしまう。評価器（参照実装・形式化とも）はこれを失敗させ、
+  展開は成功させる（M-PEG-5 の Examples が記録済みの「反転」）。これは参照実装
+  `MacroExpander` の本物の意味論的ギャップであり、形式化の穴ではない。条件は
+  `noCallableRulesB` として決定可能
+- **CBV 戦略には同種の定理が存在しない**: CE-001（`F(x) = "b"`）が示す通り、
+  `CallByValueSeq` の意味論は「実引数を先に評価する」ことに依存し、構文的インライン化は
+  まさにそれを消す。`expand_preserves_cbn` を `CallByName` 固定で述べているのは
+  そのため。参照実装の `ParserGenerator` が戦略に関係なく展開して生成しているのは、
+  この観点からは CBN 専用と見なすべき
+
 ## CFG 研究: `CFL ⊊ MPEL^CBN_1`（`Cfg/` / `MacroPeg/PegEmbed.lean` / `Shallot/Peg/Examples.lean`）
 
 kmizu/macro_peg（2016年 SWoPP 原稿）が発見的に示唆していた「Macro PEL は CFL を
