@@ -338,6 +338,50 @@ M-PEG-5 は `MExp.expand` の停止性と「展開後に call が残らない」
   そのため。参照実装の `ParserGenerator` が戦略に関係なく展開して生成しているのは、
   この観点からは CBN 専用と見なすべき
 
+## M-PEG-7: 整形式性 ⇒ 停止性（第一階断片、`Termination.lean`）
+
+参照実装の `GrammarValidator`（`Ast.isWellFormed`: nullable の不動点反復、
+`checkRepetition`、`leadsToSelf`）は「評価器＝生成パーサが無限ループしない」ための検査
+だが、CE-002 が示す通りマクロ込みの言語では偽（`F(x) = x; S = F(S)` は検査を通って発散
+する）。M-PEG-7 は、これが **第一階断片**——`MExp.expand` がラムダ無しのマクロ文法から
+生み出す形（T-fix）、すなわち `ParserGenerator` が出力するパーサの言語——では真である
+ことを証明する。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `nullExp_of_nonconsuming` | 不動点表 `tbl`（`stepTbl g tbl = tbl`）のもとで、第一階の式が入力を消費せずに成功したなら表は nullable と答える（導出の帰納法、`.call` は不動点等式経由） | propext, Classical.choice, Quot.sound |
+| `consumes_of_not_nullExp` | 対偶: 表が non-nullable と言う式の成功は必ず 1 文字以上消費する | propext, Classical.choice, Quot.sound |
+| `rankAdj_lt_of_acyclic` | `CallGraph.lean` の `rankGo` を隣接関数一般に取り出したランク減少補題 | propext, Quot.sound |
+| `lrank_body_lt` | 0 引数ルールの本体の左ランクはそのルールのランクより真に小さい | propext, Classical.choice, Quot.sound |
+| `wf_total` | **headline（T-total）**: `wfB g = true` なら、全ての第一階の式（`fo`・`repOk`）が全ての入力で導出を持つ | propext, Classical.choice, Quot.sound |
+| `wf_total_start` / `wf_total_run` | 開始規則 `.call i []` は全入力で停止／有限燃料で `mpegRun` が終わる | propext, Classical.choice, Quot.sound |
+| `generated_parser_total` | **パイプライン形**: 非循環なマクロ文法 `g` の展開が `wfB` を通るなら、生成パーサは全入力・全開始規則で停止する（M-PEG-6 と合わせて「停止し、かつ元の文法と一致」） | propext, Classical.choice, Quot.sound |
+| `rightRec_wf` / `rightRec_total` | `S = "a" S / "b"` は合格し、全入力で導出を持つ | propext, (Classical.choice,) Quot.sound |
+| `leftRec_not_wf` / `nullStar_not_wf` | `S = S "a" / "b"`（左再帰）と `S = ("a"?)* "b"`（nullable 反復）は不合格 | propext, Quot.sound |
+| `ce002_not_wf` | CE-002 の発散するマクロ文法は断片外（`fo = false`）なので `wfB` は保証しない——参照実装の検査器の盲点がまさにここ | propext, Quot.sound |
+
+設計判断:
+
+- **不動点の収束を証明しない**: nullable 表は参照実装と同じ反復（`iterTbl`、ルール数＋1 回）
+  で計算するが、定理は「検査器がその場で確認した不動点等式 `stepTbl g tbl = tbl`」だけを
+  仮定する。収束しなければ `wfB` が不合格を返すだけで、健全性は崩れない。
+  `nullExp_of_nonconsuming` の `.call` ケースがこの等式を使う唯一の場所
+- **左再帰は「消費前到達グラフ」の非循環性**: `headCalls tbl e` は `seq a b` の `b` を
+  `a` が nullable のときだけ数える（参照実装の `leadsToSelf` と同じ判定）。非循環性の
+  判定と厳密なランク減少は M-PEG-5 の `rankGo` をそのまま流用——`rankGo`/`rankSuccs`/
+  `rankGo_shrink`/`rankSuccs_mem` は最初から隣接関数一般で書かれていたので、
+  `rank_lt_of_acyclic` を一般化（`rankAdj_lt_of_acyclic`）するだけで済んだ
+- **三重帰納**: 入力長 → 左ランク → 式構造。`seq` の前半が消費すれば後半は短い入力
+  （外側の仮定）、消費しなければ nullable なので後半は head 位置で同じランク予算内、
+  `star` は本体が non-nullable なので毎周で入力が縮む、`.call` はランクが落ちる。
+  `MExp` はネストした帰納型（`List MExp` を含む）で `induction` タクティクが使いにくいため、
+  構造帰納の層 `wf_struct` は外側2つの帰納法の仮定を引数に取るパターンマッチ再帰の定理
+  として書いた
+- **なぜ断片限定が本質か**: CE-002 の発散は「実引数として自分自身を渡す」マクロ呼び出し
+  から来る。展開後の第一階文法にはそれが存在しない（T-fix）。つまり
+  `GrammarValidator` は「展開後の文法に対して」なら正しい検査であり、
+  マクロ文法にそのまま適用するのが誤り、というのが今回の定式化から読める処方
+
 ## CFG 研究: `CFL ⊊ MPEL^CBN_1`（`Cfg/` / `MacroPeg/PegEmbed.lean` / `Shallot/Peg/Examples.lean`）
 
 kmizu/macro_peg（2016年 SWoPP 原稿）が発見的に示唆していた「Macro PEL は CFL を
