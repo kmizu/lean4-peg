@@ -299,6 +299,8 @@ M-PEG-5 は `MExp.expand` の停止性と「展開後に call が残らない」
 | `ce004_passThrough_*` | **CE-004**: 素通しパターン `Baz(f,s) = Apply(f,s); Apply(f,s) = f(s)` が展開前後で一致（`subst` 修正のピン留め） | propext, Classical.choice, Quot.sound |
 | `ce005_arity_*` | **CE-005**: アリティ不一致 `F(x) = "a"; S = F("b","c")` は展開前 `.fail`、展開後 `.ok`——`arityOk` は落とせない | propext, Classical.choice, Quot.sound |
 | `ce006_closureReturn_not_noCallableRules` | **CE-006**: クロージャ戻り値 `Baz(f) = f` は `noCallableRulesB` に弾かれる（`Examples.lean` の `#guard` が示す評価器 `fail`／展開後 `ok` の反転がまさにこの条件の必要性） | propext, Quot.sound |
+| `ce007_callByValueSeq_diverges` | **CE-007**: CE-001 の文法（T-exp の前提を全て満たす: `ce007_hypotheses_hold`）は `CallByValueSeq` では展開前 `accept`／展開後 `reject`——CBV 戦略に同種の定理は存在しない（`CallByName` 限定は証明の都合ではなく本質） | propext, Classical.choice, Quot.sound |
+| `expand_idempotent` / `expandGrammar_idempotent` | `expand` は自身の出力上で恒等（T-fix と `expand_of_hasCall_false`「call を含まない式には恒等」の合成）。生成器の「再展開は no-op」 | propext, Quot.sound |
 
 設計判断と、証明が見つけたこと:
 
@@ -330,7 +332,7 @@ M-PEG-5 は `MExp.expand` の停止性と「展開後に call が残らない」
   展開は成功させる（M-PEG-5 の Examples が記録済みの「反転」）。これは参照実装
   `MacroExpander` の本物の意味論的ギャップであり、形式化の穴ではない。条件は
   `noCallableRulesB` として決定可能
-- **CBV 戦略には同種の定理が存在しない**: CE-001（`F(x) = "b"`）が示す通り、
+- **CBV 戦略には同種の定理が存在しない（CE-007 で機械検証）**: CE-001（`F(x) = "b"`）が示す通り、
   `CallByValueSeq` の意味論は「実引数を先に評価する」ことに依存し、構文的インライン化は
   まさにそれを消す。`expand_preserves_cbn` を `CallByName` 固定で述べているのは
   そのため。参照実装の `ParserGenerator` が戦略に関係なく展開して生成しているのは、
