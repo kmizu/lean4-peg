@@ -111,3 +111,33 @@ Boolean fields (`b…`), 3,290 pointer fields (`p…`), 1 start rule — 99.66 %
 is the transition circuit exported gate by gate, and the circuit was emitted *without*
 constant folding (that pass ran out of memory at 22 GiB and was skipped).  The size is a
 property of the mechanical translation, not of the language.
+
+## Structure: the recursion advances the input (2026-09-07)
+
+A length-bounded grammar has an acyclic rule-call graph.  `analysis/grammar_scc.py`
+parses all 13,248,052 rules, computes the greatest fixpoint of "this rule consumes at least
+one character whenever it succeeds" (1,302 rules; almost everything in this encoding is a
+predicate and therefore nullable), tags each of the 72,376,872 reference edges as *guarded*
+when an element earlier in its sequence must consume, and runs Tarjan's SCC on the graph
+reachable from `S` ([log](generated/window-pal-structure.log)):
+
+| | |
+|---|---:|
+| rules reachable from `S` | 13,248,052 (all) |
+| strongly connected components | 2,190,652 (304 non-trivial) |
+| largest SCC | 4,002,097 rules — the machine's Boolean fields |
+| consumption-guarded edges, total | 73,261 |
+| consumption-guarded edges **inside SCCs** | 72,638 (99 %) |
+
+Nearly every "consume one character, then the rule at the next position" edge lies inside a
+strongly connected component: the grammar returns to the same rules after advancing the
+input, which no finite unrolling can do.  Together with the absence of any length bound in
+the generator and the 2,048-character runs, this settles the "huge finite grammar" worry.
+
+What this does **not** establish: that every static cycle passes through a consuming edge
+(60,993,220 unguarded intra-SCC edges exist; the guard analysis is an over-approximation,
+e.g. a reference after `X?` counts as unguarded).  Well-formedness is covered dynamically —
+the Rust runner's non-consuming-recursion check never fired on any tested input — and is
+one of the things a verified checker should establish statically.
+
+`analysis/grammar_closure.py` is the closure check reported above (0 undefined references).
