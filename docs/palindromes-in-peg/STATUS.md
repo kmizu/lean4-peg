@@ -75,7 +75,7 @@ Scala側のCLIは `pal.GenerateWindowPal`、`pal.CompactScaffoldPeg`、
 
 Scala全体生成のヒープ必要量は未計測なので、sbtの既定ヒープに頼らず、十分なメモリを持つホストで適切なJVM heapを設定して実行する。
 
-`GenerateOnlinePeg` の互換性もテストで確認済み：cache signatureはScalaソースをハッシュし、`.sca`形式は相互運用できるが自動cache再利用は言語ごとに分かれる。`--memory-mib` はJVMの`-Xmx`で制約し、Pythonの`RLIMIT_AS`とは異なる。SIGTERM時は`interrupted`・`emitted=false`を報告して既存出力を保持し、終了コードはJVMが143、Pythonが130になる。現在はVolta分の実装検証を残す。
+`GenerateOnlinePeg` の互換性もテストで確認済み：cache signatureはScalaソースをハッシュし、`.sca`形式は相互運用できるが自動cache再利用は言語ごとに分かれる。`--memory-mib` はJVMの`-Xmx`で制約し、Pythonの`RLIMIT_AS`とは異なる。SIGTERM時は`interrupted`・`emitted=false`を報告して既存出力を保持し、終了コードはJVMが143、Pythonが130になる。現在は残る実装検証を進めている。
 
 ```sh
 cd /path/to/lean4-peg
