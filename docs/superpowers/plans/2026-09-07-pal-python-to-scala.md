@@ -208,6 +208,65 @@ galil_realtime, scaffold_pal + tests
 - 4b: scaffold_circuit_input, scaffold_circuit_program, scaffold_circuit_search,
   scaffold_circuit_chain, scaffold_circuit_galil, scaffold_match_input, scaffold_gs_heads,
   scaffold_gs_matcher, scaffold_gs_flags, scaffold_delayed_pal, generate_galil_peg, generate_online_peg
+- **4a 実装済み API（2026-09-07、part 1: optimize, artifact, round, round_lazy, round_tree, event_buffer,
+  queue_registers, head_distances, stream_heads, midpoint_peg, compact_scaffold_peg。scaffold_rom と
+  scaffold_live_distances は未着手）**。Python `finalize()` は `commit()`。
+  ```scala
+  // ScaffoldOptimize.scala
+  object ScaffoldOptimize { final case class OptimizeStats(rounds, constantLabels, nullPointers, labelsRemoved, pointersRemoved: Int)
+    def children(expression: Expr): Vector[Expr]
+    def project(initial, labels, pointers: collection.Map, roots: Seq[String], accepting: String, alphabet: String): Scaffold
+    def optimize(machine: Scaffold, roots: Seq[String] = Nil): (Scaffold, OptimizeStats) }
+  // ScaffoldArtifact.scala（CPython marshal 互換の .sca/.sca.gz。Python 側と相互に読める）
+  object ScaffoldArtifact { val MAGIC: Array[Byte]; val OPS: Vector[String]
+    def write(machine: Scaffold, path: Path, metadata: Any = None): Int; def read(path: Path): (Scaffold, Any) }
+  object PyMarshal { final class Writer(out: OutputStream) { def dump(value: Any): Unit }; final class Reader(in: InputStream) { def load(): Any } }
+  // ScaffoldRound.scala（Address.local の併合順は CPython の dict_keys 和集合順を再現: CPythonSetOrder）
+  final case class Address(local: VectorMap[Int, Expr], prior: Expr, tag: Value[Int]);  type RoundValue = Expr | Address
+  class RoundBuilder(stages: Seq[Scaffold], inputSymbols: Option[Seq[collection.Map[Char, Expr]]] = None, alphabet: Option[String] = None) {
+    val stages, source, alphabet, inputSymbols, tags, bits, labels, pointers, initial, slotLabels, slotPointers, zeroTag, empty
+    def select(guard, yes: Address, no: Address): Address; def exists(target: Address): Expr; def possibleTags(tag: Value[Int]): Vector[Int]
+    def read(target: Address, key: String): Expr; def follow(target: Address, key: String): Address
+    def translate(expression: Expr, slot: Int, root: Address, memo: java.util.IdentityHashMap[Expr, RoundValue]): RoundValue; def build(): Scaffold }
+  object RoundBuilder { def label(slot, key); def field(slot, key); def tagBit(slot, key, bit) }
+  object ScaffoldRound { def packRound(stages, inputSymbols = None, alphabet = None): Scaffold }
+  // ScaffoldRoundLazy.scala
+  enum FieldKind { case Label, Pointer }; final case class SlotField(kind, slot, key); final class MissingField(val field: SlotField) extends RuntimeException
+  final class DemandRoundBuilder(...) extends RoundBuilder { def need(kind, slot, key); def resolve(field: SlotField): RoundValue; override def build() }
+  object ScaffoldRoundLazy { def packRoundLazy(stages, inputSymbols = None, alphabet = None): Scaffold }
+  // ScaffoldRoundTree.scala / ScaffoldEventBuffer.scala
+  object ScaffoldRoundTree { def packServiceTree(wrapper: Scaffold, service: Int): Scaffold }
+  object ScaffoldEventBuffer { val PREFIX = "source."
+    def substituteSource(source: Scaffold, symbols: collection.Map[Char, Expr]): (LinkedHashMap[String, Expr], LinkedHashMap[String, Expr])
+    def bufferSource(source: Scaffold, readyLabel, eventLabel, valueLabel: String): (Circuit, Scaffold)
+    def packService(wrapper: Scaffold, service: Int, lazyRound: Boolean = false): Scaffold }
+  // ScaffoldQueueRegisters.scala（Queue が counter ごとに pos/neg 別プールを受けるよう ScaffoldCircuitStructs.Queue を拡張）
+  final class QueueRegisters(val circuit: Circuit, names: Seq[String]) { val names; val cells: Map[String, StackPool]
+    val counterCells: Map[String, Map[String, StackPool]]; val queues: VectorMap[String, Queue]; def commit(): Unit }
+  object ScaffoldQueueRegisters { def fixture(): (Circuit, QueueRegisters, Scaffold) }
+  // ScaffoldHeadDistances.scala
+  final class HeadDistances(circuit: Circuit, names: Seq[String], moves: Option[collection.Map[String, (Int, Int)]] = None,
+                            prefix: String = "head.distance", val exclusiveMoves: Boolean = false) {
+    val names, index, layout, keys, pool: StackPool, counters: VectorMap[(String, String), Counter]
+    def equal(left, right): Expr; def less(left, right): Expr; def move(head, direction: Int, enabled = TRUE); def copy(target, source, enabled = TRUE)
+    def coincide(enabled = TRUE); def commit(): Unit }
+  // ScaffoldStreamHeads.scala
+  final class StreamBank(val circuit: Circuit, names: Seq[String]) { val cells: StackPool; val queues: QueueRegisters; val heads: VectorMap[String, StreamHead]; def commit() }
+  final class StreamHead(bank, name) { var focus: Ref; val left, right: Stack; val queue: Queue; def canRight(): Expr; def peekRight(enabled = TRUE): Ref
+    def moveRight(enabled): Expr; def moveLeft(enabled); def followArrival(cell: Ref, enabled); def copyFrom(other, enabled); def reset(enabled); def commit() }
+  final class PatternTextHead(bank, name) { def available(): Expr; def read(enabled = TRUE): Value[Any]; def start(snapshot: StreamHead, enabled)
+    def move(direction: Int, enabled): (String, Expr); def copyFrom(other, enabled); def commit() }
+  final class OrientedHead(bank, name) { def start(snapshot, reversed: Boolean, enabled); def read(enabled = TRUE): Value[Any]; def move(direction, enabled): (String, Expr); def copyFrom; def commit() }
+  final class MirrorHead(bank, name) { def start(begin, end: StreamHead, atEnd: Boolean, enabled); def read(enabled = TRUE): Value[Any]; def move(direction, enabled): (String, Expr); def copyFrom; def commit() }
+  // MidpointPeg.scala / CompactScaffoldPeg.scala
+  object MidpointPeg { def build(): (Circuit, Scaffold); def grammar(): String; def summary(output: String, source: String): String; def main(args: Array[String]) }
+  object CompactScaffoldPeg { final case class CompactStats(beforeRules, afterRules, fused, beforeBytes, afterBytes: Long, inlinePrivate: Boolean) { def toJson: String }
+    def identifier(name: String): Long; def shortened(name: String): String; def references(body: String): Iterator[Long]; def needsGroup(body, before, after: String): Boolean
+    def compact(source: Path, target: Path, shortNames: Boolean = false, inlinePrivate: Boolean = false): CompactStats
+    def main(args: Array[String]) /* [--short-names] [--inline-private] SOURCE TARGET */ }
+  ```
+  差分テスト: `generated/midpoint.peg` はバイト一致で再生成。compact は小文法・midpoint 系文法（2 種 × 4 フラグ）で Python と
+  バイト一致。`compact` は `generated/midpoint.peg` そのもの（H/HalfCeil/HalfFloor を含む）を Python と同じ理由で拒否する。
 
 ### Task 5: 窓群と最終生成器（4 に依存）
 scaffold_window_counter, scaffold_window_positions, scaffold_window_registers, scaffold_window_live,

@@ -281,11 +281,18 @@ object Counter {
   }
 }
 
-/** A FIFO queue built from seven stacks and two counters with amortized rotation. */
-final class Queue(pools: Map[String, StackPool], counterPools: Map[String, StackPool], val name: String, val sharedSlots: Boolean = false) {
+/** A FIFO queue built from seven stacks and two counters with amortized rotation.
+  *
+  * `pools` maps each of the seven stack roles to its cell pool. `counterPools`
+  * maps each counter role (`"m"`, `"c"`) to its `"pos"`/`"neg"` side pools:
+  * Python accepted either one pool or such a dictionary per counter
+  * (`scaffold_queue_registers` and `scaffold_window_stream` use the latter);
+  * `Queue.withPools` covers the one-pool-per-counter form.
+  */
+final class Queue(pools: Map[String, StackPool], counterPools: Map[String, Map[String, StackPool]], val name: String, val sharedSlots: Boolean = false) {
 
   def this(pool: StackPool, counterPool: StackPool, name: String, sharedSlots: Boolean) = {
-    this(Queue.NAMES.map(role => role -> pool).toMap, Map("m" -> counterPool, "c" -> counterPool), name, sharedSlots)
+    this(Queue.NAMES.map(role => role -> pool).toMap, Queue.sided(Map("m" -> counterPool, "c" -> counterPool)), name, sharedSlots)
   }
 
   def this(pool: StackPool, counterPool: StackPool, name: String) = this(pool, counterPool, name, false)
@@ -400,8 +407,13 @@ final class Queue(pools: Map[String, StackPool], counterPools: Map[String, Stack
 object Queue {
   val NAMES: Vector[String] = Vector("F", "B", "Fr", "Br", "WF", "WB", "B2")
 
-  /** Python `Queue(pool_dict, counter_pool_dict, ...)`. */
+  /** Python `Counter(pool, ...)` for each counter role: both sides share the one pool. */
+  def sided(counterPools: Map[String, StackPool]): Map[String, Map[String, StackPool]] = {
+    counterPools.map { case (role, pool) => role -> Map("pos" -> pool, "neg" -> pool) }
+  }
+
+  /** Python `Queue(pool_dict, counter_pool_dict, ...)` with one pool per counter. */
   def withPools(pools: Map[String, StackPool], counterPools: Map[String, StackPool], name: String, sharedSlots: Boolean = false): Queue = {
-    new Queue(pools, counterPools, name, sharedSlots)
+    new Queue(pools, sided(counterPools), name, sharedSlots)
   }
 }
