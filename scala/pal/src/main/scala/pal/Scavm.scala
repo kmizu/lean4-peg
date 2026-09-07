@@ -95,6 +95,20 @@ object Scavm {
 
     def isNull: Boolean = this == Label.Null
 
+    /** Python の `set` に入れたときの同一性。`VM.emit` は
+      * `labels.add(repr(label) if isinstance(label, dict) else label)` をするので、dict は
+      * `repr` 文字列（`str` ラベルと衝突しうるのも Python 通り）、tuple の中では
+      * `True == 1`, `False == 0` なので bool を int に潰す。
+      */
+    def pythonSetKey: Label = {
+      this match {
+        case Label.Dict(_) => Label.Str(pythonRepr)
+        case Label.Tuple(items) => Label.Tuple(items.map(_.pythonSetKey))
+        case Label.Bool(value) => Label.Num(if (value) { 1 } else { 0 })
+        case other => other
+      }
+    }
+
     /** Python の `repr()` と同じ文字列。デモ出力や `Node.toString` に使う。 */
     def pythonRepr: String = {
       this match {
@@ -250,20 +264,23 @@ object Scavm {
     // ---- reading ---------------------------------------------------------
 
     /** follow a pointer field of a node reached this step (one hop).
-      *
-      * Python では `node` に `None` も渡せて `None` が返る。Scala 版は呼び出し側が
-      * `Option` を剥がしてから渡す。
+      * Python 通り、`None` には hop を数えずに `None` を返す。
       */
-    def get(node: Node, field: String): Option[Node] = {
-      assert(reachable(node), s"$node not reachable this step")
-      hopCount += 1
-      val target = node.pointer(field)
-      target.foreach { target =>
-        assert(target.t <= node.t, "pointer to a newer node")
-        touched += target
+    def get(node: Option[Node], field: String): Option[Node] = {
+      node.flatMap { n =>
+        assert(reachable(n), s"$n not reachable this step")
+        hopCount += 1
+        val target = n.pointer(field)
+        target.foreach { t =>
+          assert(t.t <= n.t, "pointer to a newer node")
+          touched += t
+        }
+        target
       }
-      target
     }
+
+    /** `get(Some(node), field)`: 節点が確定している呼び出し側の糖衣。 */
+    def get(node: Node, field: String): Option[Node] = get(Some(node), field)
 
     def label(node: Node): Label = {
       assert(reachable(node), s"$node not reachable this step")
@@ -301,7 +318,7 @@ object Scavm {
           case (k, None) => (k, None)
         })
       })
-      seenLabels += label
+      seenLabels += label.pythonSetKey // Python: labels.add(repr(label) if dict else label)
       maxFields = math.max(maxFields, ptr.size)
       maxRadius = math.max(maxRadius, hopCount)
       current = Some(node)

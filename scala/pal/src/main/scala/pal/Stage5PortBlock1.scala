@@ -118,7 +118,7 @@ object Stage5PortBlock1 {
       val key = cellKey(cell, field)
       cell.node match {
         case Self => b.ptr(key)
-        case node: Node => gt(node, key)
+        case node: Node => gt(Some(node), key)
       }
     }
 
@@ -150,10 +150,12 @@ object Stage5PortBlock1 {
       }
     }
 
-    private def gt(node: NodeRef, field: String): Option[NodeRef] = {
+    /** Python `gt`: `None` → `None`（hop なし）、SELF → builder の欄、実節点 → `vm.get`。 */
+    private def gt(node: Option[NodeRef], field: String): Option[NodeRef] = {
       node match {
-        case Self => b.ptr.get(field).flatten
-        case n: Node => vm.get(n, field)
+        case None => None
+        case Some(Self) => b.ptr.get(field).flatten
+        case Some(n: Node) => vm.get(n, field)
       }
     }
 
@@ -213,7 +215,7 @@ object Stage5PortBlock1 {
             left = cur
             simR = cur
           case Some(_) =>
-            val lp = gt(left.get, "prev")
+            val lp = gt(left, "prev")
             if (lp.exists(l => sym(l) == c)) { // extend
               left = lp
               simR = cur
@@ -240,7 +242,7 @@ object Stage5PortBlock1 {
         ncell = Some(cell1)
       } else {
         mode = Mode.Kmp
-        wj = gt(simR.get, "prev") // position 2
+        wj = gt(simR, "prev") // position 2
       }
     }
 
@@ -273,7 +275,7 @@ object Stage5PortBlock1 {
           mode = Mode.Chain
           ncell = Some(newc)
         } else {
-          wj = gt(wj.get, "prev")
+          wj = gt(wj, "prev")
         }
       }
       true
@@ -310,7 +312,7 @@ object Stage5PortBlock1 {
           mode = Mode.Match
         case Some(cand) =>
           val start = cellPtr(cand, "wn")
-          val before = gt(start.get, "prev")
+          val before = gt(start, "prev") // Python: gt(None, 'prev') is None
           if (before.exists(bf => sym(bf) == c)) {
             left = before
             simR = cur
@@ -328,7 +330,7 @@ object Stage5PortBlock1 {
     def execute(): Int = {
       runUnits()
       val caughtUp = q.empty && mode == Mode.Match
-      val out = if (caughtUp && left.exists(l => gt(l, "prev").isEmpty)) { 1 } else { 0 }
+      val out = if (caughtUp && left.isDefined && gt(left, "prev").isEmpty) { 1 } else { 0 }
       q.work()
       a.work()
       q.finish()

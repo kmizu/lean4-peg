@@ -2,7 +2,7 @@ package pal
 
 import Scavm.{Label, Node, NodeRef, Self, VM}
 import ScavmStructs.{Builder, emit}
-import ScavmPal.{Cell, CellArg, Cells, Ctx, DpCheck, KmpWindow, Marks, Place, SPACE, placeOf, testKmpAndDp}
+import ScavmPal.{Cell, CellArg, Cells, Ctx, DpCheck, DrivePhase, KmpWindow, Marks, Place, SPACE, placeOf, testKmpAndDp}
 
 /** `scavm_pal.py` の観測可能な振る舞いを固定する。
   *
@@ -80,13 +80,16 @@ class ScavmPalSuite extends munit.FunSuite {
     vm.begin()
     val b = new Builder
     val ctx = new Ctx(vm, vm.top, b, "z")
-    assertEquals(ctx.get(Self, "nothing"), None)
+    assertEquals(ctx.get(None, "prev"), None) // python: get(None, f) is None, no hop
+    assertEquals(vm.hops, 0)
+    assertEquals(ctx.get(Some(Self), "nothing"), None)
     assertEquals(ctx.lab(Self, "nothing"), Label.Null)
     b.ptr("p") = Some(nodes(0))
     b.label("l") = 5
-    assertEquals(ctx.get(Self, "p"), Some(nodes(0)))
+    assertEquals(ctx.get(Some(Self), "p"), Some(nodes(0)))
     assertEquals(ctx.lab(Self, "l"), Label.Num(5))
-    assertEquals(ctx.get(nodes(1), "prev"), Some(nodes(0)))
+    assertEquals(ctx.get(Some(nodes(1)), "prev"), Some(nodes(0)))
+    assertEquals(vm.hops, 1)
     assertEquals(ctx.lab(nodes(1), "c"), Label.Str("b"))
     intercept[NoSuchElementException](ctx.lab(nodes(1), "nothing"))
     ctx.savePlace("pl", Some(Place(nodes(1), 1)))
@@ -137,7 +140,6 @@ class ScavmPalSuite extends munit.FunSuite {
     val mk = m.create("below" -> CellArg.none, "kc" -> CellArg.OfCell(c1), "on" -> CellArg.bool(true))
     assertEquals(m.getLab(mk, "on"), Label.Bool(true))
     assertEquals(m.getCell(mk, "kc"), Some(c1))
-    intercept[IllegalArgumentException](m.create("on" -> CellArg.none))
     // across a step the Self references resolve to the emitted node
     val n = emit(vm, b)
     vm.begin()
@@ -147,10 +149,35 @@ class ScavmPalSuite extends munit.FunSuite {
     assertEquals(cells2.getPlace(Cell(n, 0), "wn"), Some(Place(nodes(1), 1)))
   }
 
+  test("Cells.create falls through like python new(**kw): None in a label field is a None label (layout from python3)") {
+    // python3: m.new(on=None); m.new(on=3); k.new(fail=None, wn=None, pred=None) gives
+    //   {'M.0.on': None, 'M.1.on': 3, 'K.0.fail.s': 0, 'K.0.wn.h': 0, 'K.0.pred.s': 0}
+    //   {'K.0.fail': None, 'K.0.wn': None, 'K.0.pred': None}
+    val vm = new VM
+    vm.begin()
+    val b = new Builder
+    val ctx = new Ctx(vm, None, b, "z")
+    val m = new Cells(ctx, "M", Marks.PTR, Marks.LAB)
+    val k = new Cells(ctx, "K", KmpWindow.PTR, KmpWindow.LAB)
+    val m0 = m.create("on" -> CellArg.none)
+    m.create("on" -> CellArg.Lab(Label.Num(3)))
+    k.create("fail" -> CellArg.none, "wn" -> CellArg.none, "pred" -> CellArg.none)
+    assertEquals(b.label.toLabel.pythonRepr, "{'M.0.on': None, 'M.1.on': 3, 'K.0.fail.s': 0, 'K.0.wn.h': 0, 'K.0.pred.s': 0}")
+    assertEquals(b.ptr.toVector, Vector("K.0.fail" -> None, "K.0.wn" -> None, "K.0.pred" -> None))
+    assertEquals(m.getLab(m0, "on"), Label.Null)
+    // `Lab(Null)` for a pointer field is python's None as well
+    k.create("fail" -> CellArg.Lab(Label.Null))
+    assertEquals(b.ptr("K.1.fail"), None)
+    assertEquals(b.label("K.1.fail.s"), Label.Num(0))
+    // what python would only reject at emit time (label not finite-shaped / pointer not reached)
+    intercept[IllegalArgumentException](m.create("on" -> CellArg.Pointer(Some(Self))))
+    intercept[IllegalArgumentException](k.create("fail" -> CellArg.Lab(Label.Num(1))))
+  }
+
   // ------------------------------------------------------------------ the fixed driver
 
-  /** Python 側のドライバ（Scala の `drive` と 1 行ずつ同じものを印字する）。 */
-  private val pythonDriver =
+  /** Python 側のドライバの定義部（Scala の `drive` と 1 行ずつ同じものを印字する）。 */
+  private val pythonDriverDefs =
     """import random
       |from scavm import VM
       |from scavm_structs import Builder, emit
@@ -213,8 +240,11 @@ class ScavmPalSuite extends munit.FunSuite {
       |    hmax = (hi - lo) // 4
       |    exp = next((k for k in range(r + 1, hmax + 1) if (2*k+1) in pal_lengths and (4*k+1) in pal_lengths), None)
       |    return result, exp, steps, ''.join(trace), vm.stats(), r
-      |
-      |random.seed(11)
+      |""".stripMargin
+
+  /** 300 試行の本体。 */
+  private val pythonDriverMain = pythonDriverDefs +
+    """random.seed(11)
       |bad = 0
       |for trial in range(300):
       |    n = random.randint(2, 14)
@@ -278,14 +308,14 @@ class ScavmPalSuite extends munit.FunSuite {
       d.save()
       emit(vm, b)
     }.toVector
-    var phase = "kmp"
+    var phase: DrivePhase = DrivePhase.Kmp
     var result: Option[Int] = None
     var steps = 0
     var r = r0
     val trace = new StringBuilder
     var extra = 0
     val limit = 4 * (hi - lo + 1) + 20
-    while (extra < limit && phase != "done") {
+    while (extra < limit && phase != DrivePhase.Done) {
       vm.begin()
       val prev = vm.top
       val b = new Builder
@@ -300,29 +330,33 @@ class ScavmPalSuite extends munit.FunSuite {
         reach(vm, prev.get, placeOf(nodes, hi).node)
         k.start(placeOf(nodes, lo), placeOf(nodes, hi))
         if (!k.active) {
-          phase = "marks"
+          phase = DrivePhase.Marks
           m.start()
         }
-      } else if (phase == "kmp") {
-        if (!k.step()) {
-          phase = "marks"
-          m.start()
-        }
-      } else if (phase == "marks") {
-        if (!m.step()) {
-          phase = "dp"
-          val (rmark, effective) = thresholdMark(m, r)
-          r = effective
-          d.start(rmark)
-        }
-      } else if (phase == "dp") {
-        if (!d.step()) {
-          phase = "done"
-          result = d.found.map(found => foundK(k, m, found))
+      } else {
+        phase match {
+          case DrivePhase.Kmp =>
+            if (!k.step()) {
+              phase = DrivePhase.Marks
+              m.start()
+            }
+          case DrivePhase.Marks =>
+            if (!m.step()) {
+              phase = DrivePhase.Dp
+              val (rmark, effective) = thresholdMark(m, r)
+              r = effective
+              d.start(rmark)
+            }
+          case DrivePhase.Dp =>
+            if (!d.step()) {
+              phase = DrivePhase.Done
+              result = d.found.map(found => foundK(k, m, found))
+            }
+          case DrivePhase.Done => ()
         }
       }
       steps += 1
-      trace.append(phase.head).append(if (k.zero) { 1 } else { 0 }).append(if (k.jumping) { 1 } else { 0 }).append(vm.hops)
+      trace.append(phase.label.head).append(if (k.zero) { 1 } else { 0 }).append(if (k.jumping) { 1 } else { 0 }).append(vm.hops)
       k.save()
       m.save()
       d.save()
@@ -363,7 +397,20 @@ class ScavmPalSuite extends munit.FunSuite {
   test("KmpWindow + Marks + DpCheck: 300 driven trials match python line by line") {
     val out = scalaDriverOutput
     assert(out.linesIterator.exists(_.startsWith("bad ")))
-    PyDiff.assertSameAsPython(out, "-c", pythonDriver)
+    PyDiff.assertSameAsPython(out, "-c", pythonDriverMain)
+  }
+
+  test("a window whose `lo` lies right of `hi` runs past the marker and raises, as python (AttributeError at scavm_pal.py:226)") {
+    // wj becomes None (the marker) before `lo` is met; python's `self.wj.same(self.lo)` raises
+    intercept[NoSuchElementException](drive("ab", 3, 1, 0))
+    val probe = pythonDriverDefs +
+      """try:
+        |    drive('ab', 3, 1, 0)
+        |except AttributeError as e:
+        |    import traceback
+        |    print('AttributeError', traceback.extract_tb(e.__traceback__)[-1].lineno)
+        |""".stripMargin
+    assertEquals(PyDiff.python("-c", probe), "AttributeError 226\n")
   }
 
   test("KmpWindow on a window of length 1 is complete at start; Marks makes one mark") {

@@ -50,10 +50,12 @@ object ScavmPal {
 
     // node fields (SELF-aware)
 
-    def get(node: NodeRef, field: String): Option[NodeRef] = {
+    /** Python `get`: `None` → `None`（hop なし）、SELF → builder の欄、実節点 → `vm.get`。 */
+    def get(node: Option[NodeRef], field: String): Option[NodeRef] = {
       node match {
-        case Self => b.ptr.get(field).flatten
-        case n: Node => vm.get(n, field)
+        case None => None
+        case Some(Self) => b.ptr.get(field).flatten
+        case Some(n: Node) => vm.get(n, field)
       }
     }
 
@@ -81,7 +83,7 @@ object ScavmPal {
         if (place.half == 1) {
           Some(Place(place.node, 0))
         } else {
-          get(place.node, "prev").map(pn => Place(pn, 1))
+          get(Some(place.node), "prev").map(pn => Place(pn, 1))
         }
       }
     }
@@ -148,7 +150,7 @@ object ScavmPal {
     def key(cell: Cell, f: String): String = s"$prefix.${cell.slot}.$f"
 
     /** Python `get` for a pointer field. */
-    def getPtr(cell: Cell, f: String): Option[NodeRef] = ctx.get(cell.node, key(cell, f))
+    def getPtr(cell: Cell, f: String): Option[NodeRef] = ctx.get(Some(cell.node), key(cell, f))
 
     /** Python `get` for a label field. */
     def getLab(cell: Cell, f: String): Label = ctx.lab(cell.node, key(cell, f))
@@ -161,7 +163,13 @@ object ScavmPal {
       getPtr(cell, f).map(n => Place(n, getLab(cell, f + ".h").asInt))
     }
 
-    /** Python `new(**kw)`: create a cell in the node being built. */
+    /** Python `new(**kw)`: create a cell in the node being built.
+      *
+      * Python の分岐順そのまま: `Cell` → `Place` → `f in ptr_fields`（ポインタ欄）→ それ以外は
+      * ラベル欄。`None` はどちらの欄にも置ける（`new(on=None)` はラベル `on = None`）。
+      * ラベル欄に実ポインタ、ポインタ欄に `None` 以外のラベル値を置くと Python は `emit` 時の
+      * assert で落ちるので、ここでは即座に拒否する。
+      */
     def create(fields: (String, CellArg)*): Cell = {
       val k = ctx.b.slot(prefix)
       val c = Cell(Self, k)
@@ -173,20 +181,32 @@ object ScavmPal {
           case CellArg.OfPlace(place) =>
             ctx.b.ptr(key(c, f)) = Some(place.node)
             ctx.b.label(key(c, f + ".h")) = place.half
-          case CellArg.Pointer(target) =>
-            require(ptrFields.contains(f), s"$f is not a pointer field of $prefix")
-            ctx.b.ptr(key(c, f)) = target
-            if (labFields.contains(f + ".s")) {
-              ctx.b.label(key(c, f + ".s")) = 0
-            }
-            if (labFields.contains(f + ".h")) {
-              ctx.b.label(key(c, f + ".h")) = 0
-            }
+          case CellArg.Pointer(target) if ptrFields.contains(f) =>
+            writePointer(c, f, target)
+          case CellArg.Lab(Label.Null) if ptrFields.contains(f) =>
+            writePointer(c, f, None) // Python: None is None
+          case CellArg.Lab(value) if ptrFields.contains(f) =>
+            throw new IllegalArgumentException(s"pointer field $f of $prefix cannot hold the label ${value.pythonRepr}")
+          case CellArg.Pointer(None) =>
+            ctx.b.label(key(c, f)) = Label.Null
+          case CellArg.Pointer(Some(target)) =>
+            throw new IllegalArgumentException(s"label field $f of $prefix cannot hold the pointer $target")
           case CellArg.Lab(value) =>
             ctx.b.label(key(c, f)) = value
         }
       }
       c
+    }
+
+    /** the `f in self.ptr_fields` branch of Python `new`: the pointer plus zeroed `.s` / `.h` labels */
+    private def writePointer(c: Cell, f: String, target: Option[NodeRef]): Unit = {
+      ctx.b.ptr(key(c, f)) = target
+      if (labFields.contains(f + ".s")) {
+        ctx.b.label(key(c, f + ".s")) = 0
+      }
+      if (labFields.contains(f + ".h")) {
+        ctx.b.label(key(c, f + ".h")) = 0
+      }
     }
   }
 
@@ -319,7 +339,9 @@ object ScavmPal {
     /** record the new cell and move the window cursor one place left; False when `lo` is reached */
     private def advance(newc: Cell): Boolean = {
       last = Some(newc)
-      if (wj.exists(_.same(lo))) {
+      // Python `self.wj.same(self.lo)`: when the scan ran past the marker (wj is None,
+      // i.e. `lo` was never met) this raises AttributeError; `.get` raises likewise.
+      if (wj.get.same(lo)) {
         ncell = Some(newc)
         active = false
         false
@@ -508,6 +530,16 @@ object ScavmPal {
 
   // ------------------------------------------------------------------ tests
 
+  /** Phase of the test driver `testKmpAndDp`: which component is being stepped.
+    * Python では文字列 `'kmp' | 'marks' | 'dp' | 'done'`。
+    */
+  enum DrivePhase(val label: String) {
+    case Kmp extends DrivePhase("kmp")
+    case Marks extends DrivePhase("marks")
+    case Dp extends DrivePhase("dp")
+    case Done extends DrivePhase("done")
+  }
+
   /** integer place -> Place over a list of nodes (place 2i+1 = node i). */
   def placeOf(nodes: IndexedSeq[Node], place: Int): Place = {
     val i = (place - 1) / 2
@@ -569,11 +601,11 @@ object ScavmPal {
     val vm = new VM
     val nodes = feedInput(vm, x)
     // then drive the components over extra steps with dummy symbols
-    var phase = "kmp"
+    var phase: DrivePhase = DrivePhase.Kmp
     var result: Option[Int] = None
     var extra = 0
     val limit = 4 * (hi - lo + 1) + 20
-    while (extra < limit && phase != "done") {
+    while (extra < limit && phase != DrivePhase.Done) {
       vm.begin()
       val prev = vm.top
       val b = new Builder
@@ -586,23 +618,27 @@ object ScavmPal {
       if (extra == 0) {
         kmp.start(placeOf(nodes, lo), placeOf(nodes, hi))
         if (!kmp.active) {
-          phase = "marks"
+          phase = DrivePhase.Marks
           marks.start()
         }
-      } else if (phase == "kmp") {
-        if (!kmp.step()) {
-          phase = "marks"
-          marks.start()
-        }
-      } else if (phase == "marks") {
-        if (!marks.step()) {
-          phase = "dp"
-          dp.start(thresholdMark(marks, r))
-        }
-      } else if (phase == "dp") {
-        if (!dp.step()) {
-          phase = "done"
-          result = dp.found.map(found => foundK(kmp, marks, found))
+      } else {
+        phase match {
+          case DrivePhase.Kmp =>
+            if (!kmp.step()) {
+              phase = DrivePhase.Marks
+              marks.start()
+            }
+          case DrivePhase.Marks =>
+            if (!marks.step()) {
+              phase = DrivePhase.Dp
+              dp.start(thresholdMark(marks, r))
+            }
+          case DrivePhase.Dp =>
+            if (!dp.step()) {
+              phase = DrivePhase.Done
+              result = dp.found.map(found => foundK(kmp, marks, found))
+            }
+          case DrivePhase.Done => ()
         }
       }
       kmp.save()

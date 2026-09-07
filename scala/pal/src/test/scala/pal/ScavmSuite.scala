@@ -60,6 +60,52 @@ class ScavmSuite extends munit.FunSuite {
     assertEquals(vm.radius, 3)
   }
 
+  test("VM.get on None returns None without counting a hop (python: vm.get(None, 'x') -> None, hops 0)") {
+    val vm = new VM
+    feed(vm, Label.Num(0))
+    vm.begin()
+    assertEquals(vm.get(None, "x"), None)
+    assertEquals(vm.hops, 0)
+    assertEquals(vm.get(vm.top, "prev"), None) // the Option of the previous top passes straight through
+    assertEquals(vm.hops, 1)
+  }
+
+  test("stats.labels uses python set equality: True==1 inside tuples, dicts by repr (values from python3)") {
+    def count(labels: Label*): Int = {
+      val vm = new VM
+      for (l <- labels) {
+        vm.begin()
+        vm.emit(l, Seq.empty)
+      }
+      vm.stats.labels
+    }
+    val t = Label.Str("t")
+    val counts = Vector(
+      count(Label.tuple(t, Label.Num(1)), Label.tuple(t, Label.Bool(true))),
+      count(Label.tuple(t, Label.Num(0)), Label.tuple(t, Label.Bool(false))),
+      count(Label.Num(1), Label.Bool(true)),
+      count(Label.Dict(Vector("a" -> Label.Num(1))), Label.Dict(Vector("a" -> Label.Bool(true)))),
+      count(Label.tuple(Label.tuple(Label.Str("x"), Label.Bool(true))), Label.tuple(Label.tuple(Label.Str("x"), Label.Num(1)))),
+      count(Label.tuple(Label.Str("a")), Label.Str("a")),
+      count(Label.Null, Label.Num(0)),
+      count(Label.Str("{'a': 1}"), Label.Dict(Vector("a" -> Label.Num(1))))
+    )
+    val script =
+      """from scavm import VM
+        |def count(labels):
+        |    vm = VM()
+        |    for l in labels:
+        |        vm.begin(); vm.emit(l)
+        |    return vm.stats()['labels']
+        |print(count([('t',1),('t',True)]), count([('t',0),('t',False)]), count([1,True]), count([{'a':1},{'a':True}]),
+        |      count([(('x',True),),(('x',1),)]), count([('a',),'a']), count([None, 0]), count(["{'a': 1}", {'a': 1}]))
+        |""".stripMargin
+    PyDiff.assertSameAsPython(counts.mkString(" ") + "\n", "-c", script)
+    assertEquals(counts, Vector(1, 1, 1, 2, 1, 2, 2, 1))
+    assertEquals(Label.tuple(Label.Bool(true)).pythonSetKey, Label.tuple(Label.Num(1)))
+    assertEquals(Label.Dict(Vector("a" -> Label.Num(1))).pythonSetKey, Label.Str("{'a': 1}"))
+  }
+
   test("VM.get / label on a node not reached this step is an assertion error") {
     val vm = new VM
     val n0 = feed(vm, Label.Num(0))
