@@ -178,3 +178,9 @@ lake build
   （zipper/stack/seq/counter ビュー）。
 - 未着手：u 検証器の締切補題、段の組み立て（抽象 dyadic 機械の全接頭辞正しさ）、
   抽象機械の `MultiStepMachine` への符号化。
+- 進捗（深夜、コミット 4cca565 まで）：L2 済＝GSScan（走査）、GSRealTime（レート k+1 で実時間、
+  有界遅れ不変量 `Φ ≥ (k+1)n − k|v|`、u 検証器の締切）、GSDecomp（分解述語・k 反復補題・`KSimple`
+  への橋。**L1 の厳密境界 `(k−1)s<|x|` は未証明**、弱い定数版を続行中）、MiddleJob（Manacher 版の
+  中央フラグ締切。ただし TM 化は rad のランダムアクセスで不可なので repo の境界列挙版 BorderJob に
+  切替中）。L4 済＝Speedup（`multiStep_recognizedBy`）、TapeLib。
+  稼働中：RTQueueTapes、Assembly（段の組み立て）、BorderJob、GSScanTapes、GSVerifier、GSPreprocess。
