@@ -191,6 +191,22 @@ theorem mact_MOk {v T : List α} {k p₁ r : ℕ} {cst : ScanState → ℕ} {n :
   · simp
   · simp <;> omega
 
+/-- 実行中（`rem ≠ 0`）のステップは、コスト `2` 以上のものしかありえない
+（コスト `≤ 1` のステップは開始と同時に完了するので停留しない）。 -/
+def MPark (cst : ScanState → ℕ) (m : MState) : Prop := m.rem ≠ 0 → 2 ≤ cst m.st
+
+theorem mact_MPark {v T : List α} {k p₁ r : ℕ} {cst : ScanState → ℕ} {n : ℕ} {m : MState}
+    (h : MPark cst m) : MPark cst (mact v k p₁ r T cst n m) := by
+  unfold MPark at h ⊢
+  unfold mact
+  split_ifs with h0 he hc h1
+  · simp
+  · simp; omega
+  · exact h
+  · simp
+  · simp only [MState.mk_st, MState.mk_rem]
+    intro _; exact h h0
+
 theorem mact_q_le {v T : List α} {k p₁ r : ℕ} {cst : ScanState → ℕ} {n : ℕ} {m : MState}
     (hq : m.st.q ≤ v.length) : (mact v k p₁ r T cst n m).st.q ≤ v.length := by
   unfold mact
@@ -308,6 +324,19 @@ theorem metered_MOk {u v T : List α} {k p₁ r A B' : ℕ} {cst : ScanState →
   intro n
   induction n with
   | zero => exact Nat.zero_le _
+  | succ n ih => exact step _ _ _ ih
+
+theorem metered_MPark {u v T : List α} {k p₁ r A B' : ℕ} {cst : ScanState → ℕ} :
+    ∀ n, MPark cst (metered u v k p₁ r T cst A B' n) := by
+  have step : ∀ (j : ℕ) (n : ℕ) (m : MState), MPark cst m →
+      MPark cst (macts v k p₁ r T cst n j m) := by
+    intro j
+    induction j with
+    | zero => intro n m h; exact h
+    | succ j ih => intro n m h; exact ih _ _ (mact_MPark h)
+  intro n
+  induction n with
+  | zero => intro h; exact absurd rfl h
   | succ n ih => exact step _ _ _ ih
 
 theorem metered_inv {u v T : List α} {k p₁ r A B' : ℕ} {cst : ScanState → ℕ}
@@ -515,6 +544,127 @@ theorem mreported_complete {u v T : List α} {k p₁ r A B' : ℕ} {cst : ScanSt
   simp only [reportFlag, decide_eq_false_iff_not, not_and] at hflagF
   exact hflagF hQ (by omega)
 
+/-! ## 停留中のステップは「ずらし」であること -/
+
+/-- 前進（比較成功）でないステップの行き先は `q' < |v|`：周期ずらしは `q - p₁ < |v|`、
+リセットは `q' = 0 < |v|`。 -/
+theorem scanStep_q_ne_of_not_advance {v T : List α} {k p₁ r : ℕ} (hp : 0 < p₁)
+    (hv : 0 < v.length) {st : ScanState} (hq : st.q ≤ v.length)
+    (hadv : ¬ (st.q ≠ v.length ∧ T[st.pos + st.q]? = v[st.q]?)) :
+    (scanStep v k p₁ r T st).q ≠ v.length := by
+  have hshift : gsNextQ k p₁ r st.q ≠ v.length := by
+    unfold gsNextQ; split_ifs with hc <;> simp <;> omega
+  unfold scanStep
+  split_ifs with h1 h2
+  · simpa using hshift
+  · exact absurd ⟨h1, h2⟩ hadv
+  · simpa using hshift
+
+/-- 停留中でも「仮想的な」ポテンシャル（実行中ステップを完了させた先）は
+境界に追いついている。 -/
+theorem metered_phi_virtual {u v T : List α} {k p₁ r A B' : ℕ} {cst : ScanState → ℕ}
+    (hK : KSimple v k p₁ r) (hk : 0 < k) (hv : 0 < v.length) (hC : 0 < A + B')
+    (hcost : ∀ st, cst st ≤ (A + B') * (Phi k (scanStep v k p₁ r T st) - Phi k st)) (n : ℕ) :
+    (k + 1) * n
+      ≤ Phi k (scanStep v k p₁ r T (metered u v k p₁ r T cst A B' n).st) + k * v.length := by
+  set m := metered u v k p₁ r T cst A B' n with hm
+  have hpot := metered_pot (u := u) hK hk hv hC hcost n
+  rw [← hm] at hpot
+  have hlt := phi_step_lt (v := v) (T := T) (p₁ := p₁) (r := r) hk hK.period_pos m.st
+  have hcst := hcost m.st
+  have hkey : (A + B') * Phi k m.st
+      + (A + B') * (Phi k (scanStep v k p₁ r T m.st) - Phi k m.st)
+      = (A + B') * Phi k (scanStep v k p₁ r T m.st) := by
+    rw [← Nat.mul_add]; congr 1; omega
+  have hle : MPot k (A + B') cst m ≤ (A + B') * Phi k (scanStep v k p₁ r T m.st) := by
+    unfold MPot; split_ifs <;> omega
+  have hexp : (A + B') * (Phi k (scanStep v k p₁ r T m.st) + k * v.length)
+      = (A + B') * Phi k (scanStep v k p₁ r T m.st) + (A + B') * (k * v.length) := by ring
+  have h2 : (A + B') * ((k + 1) * n)
+      ≤ (A + B') * (Phi k (scanStep v k p₁ r T m.st) + k * v.length) := by omega
+  exact Nat.le_of_mul_le_mul_left h2 hC
+
+/-- **停留しない**：出現 `i` の締切ラウンド `i + |v|` の終わりでは、機械は必ず
+ステップ境界にいる。停留していたとすると、そのステップは「ずらし」（`hadvance` により
+前進はコスト `≤ 1` で停留しない）なので行き先の `q' < |v|`、一方で仮想ポテンシャルと
+追い越し禁止から `q' = |v|` が強制されて矛盾する。 -/
+theorem metered_boundary_of_occ {u v T : List α} {k p₁ r A B' : ℕ} {cst : ScanState → ℕ}
+    (hK : KSimple v k p₁ r) (hk : 0 < k) (hv : 0 < v.length) (hC : 0 < A + B')
+    (hcost : ∀ st, cst st ≤ (A + B') * (Phi k (scanStep v k p₁ r T st) - Phi k st))
+    (hadvance : ∀ st, st.q ≠ v.length → T[st.pos + st.q]? = v[st.q]? → cst st ≤ 1)
+    {i n : ℕ} (hi : u.length ≤ i) (hocc : OccAt v T i) (hin : i + v.length = n + 1)
+    (hcon : mreported v k p₁ r T cst (n + 1) (mRate A B' k)
+      (metered u v k p₁ r T cst A B' n) = false) :
+    (metered u v k p₁ r T cst A B' (n + 1)).rem = 0 := by
+  by_contra hrem
+  have hst : macts v k p₁ r T cst (n + 1) (mRate A B' k) (metered u v k p₁ r T cst A B' n)
+      = metered u v k p₁ r T cst A B' (n + 1) := rfl
+  have hinvn := metered_inv (u := u) (T := T) (A := A) (B' := B') (cst := cst) hK hk hv n
+  have hpos0 : (metered u v k p₁ r T cst A B' n).st.pos ≤ i :=
+    metered_pos_le hK hk hv hi hocc n (by omega)
+  have hposF : (metered u v k p₁ r T cst A B' (n + 1)).st.pos ≤ i := by
+    rw [← hst]
+    exact macts_pos_le hK hk hv hocc (by omega) _ _ hinvn.1
+      (hinvn.2.mono (Nat.le_succ n)) hpos0 (Or.inr hcon)
+  have hflagF : reportFlag v (n + 1) (metered u v k p₁ r T cst A B' (n + 1)).st = false := by
+    rw [← hst]
+    exact mreported_false_final _ _ hcon
+  have hinvF := metered_inv (u := u) (T := T) (A := A) (B' := B') (cst := cst) hK hk hv (n + 1)
+  have hqF : (metered u v k p₁ r T cst A B' (n + 1)).st.q ≤ v.length := hinvF.1.2
+  have hfitsF : Fits (n + 1) (metered u v k p₁ r T cst A B' (n + 1)).st := hinvF.2.1
+  -- 停留中なのでコストは 2 以上、よって前進ではない ⇒ 行き先は `q' < |v|`
+  have hpark : 2 ≤ cst (metered u v k p₁ r T cst A B' (n + 1)).st :=
+    metered_MPark (u := u) (v := v) (k := k) (p₁ := p₁) (r := r) (T := T) (A := A) (B' := B')
+      (n + 1) hrem
+  have hnadv : ¬ ((metered u v k p₁ r T cst A B' (n + 1)).st.q ≠ v.length ∧
+      T[(metered u v k p₁ r T cst A B' (n + 1)).st.pos
+          + (metered u v k p₁ r T cst A B' (n + 1)).st.q]?
+        = v[(metered u v k p₁ r T cst A B' (n + 1)).st.q]?) := by
+    rintro ⟨h1, h2⟩
+    have := hadvance _ h1 h2
+    omega
+  have hq'ne : (scanStep v k p₁ r T (metered u v k p₁ r T cst A B' (n + 1)).st).q
+      ≠ v.length := scanStep_q_ne_of_not_advance hK.period_pos hv hqF hnadv
+  -- 追い越し禁止は行き先にも及ぶ
+  have hne : (metered u v k p₁ r T cst A B' (n + 1)).st.q = v.length →
+      (metered u v k p₁ r T cst A B' (n + 1)).st.pos ≠ i := by
+    intro hqe
+    have hle : (metered u v k p₁ r T cst A B' (n + 1)).st.pos
+        + (metered u v k p₁ r T cst A B' (n + 1)).st.q ≤ n + 1 := hfitsF (by omega)
+    simp only [reportFlag, decide_eq_false_iff_not, not_and] at hflagF
+    intro hpi
+    exact hflagF hqe (by omega)
+  have hpos' : (scanStep v k p₁ r T (metered u v k p₁ r T cst A B' (n + 1)).st).pos ≤ i :=
+    scanStep_pos_le_of_occ hK hk hinvF.1 hocc hposF hne
+  have hq' : (scanStep v k p₁ r T (metered u v k p₁ r T cst A B' (n + 1)).st).q ≤ v.length :=
+    scanStep_q_le hqF
+  have hvirt := metered_phi_virtual (u := u) hK hk hv hC hcost (n + 1)
+  set P := (scanStep v k p₁ r T (metered u v k p₁ r T cst A B' (n + 1)).st).pos with hP
+  set Q := (scanStep v k p₁ r T (metered u v k p₁ r T cst A B' (n + 1)).st).q with hQ
+  have hphi' : (k + 1) * (n + 1) ≤ (k + 1) * P + Q + k * v.length := by
+    have e : Phi k (scanStep v k p₁ r T (metered u v k p₁ r T cst A B' (n + 1)).st)
+        = (k + 1) * P + Q := rfl
+    omega
+  have h1 : (k + 1) * P ≤ (k + 1) * i := Nat.mul_le_mul_left _ hpos'
+  have e1 : (k + 1) * (n + 1) = (k + 1) * i + (k + 1) * v.length := by rw [← hin]; ring
+  have e2 : (k + 1) * v.length = k * v.length + v.length := by ring
+  exact hq'ne (by omega)
+
+/-- **`rem = 0` の仮定を外した完全性**。 -/
+theorem mreported_complete' {u v T : List α} {k p₁ r A B' : ℕ} {cst : ScanState → ℕ}
+    (hK : KSimple v k p₁ r) (hk : 0 < k) (hv : 0 < v.length) (hC : 0 < A + B')
+    (hcost : ∀ st, cst st ≤ (A + B') * (Phi k (scanStep v k p₁ r T st) - Phi k st))
+    (hadvance : ∀ st, st.q ≠ v.length → T[st.pos + st.q]? = v[st.q]? → cst st ≤ 1)
+    {i n : ℕ} (hi : u.length ≤ i) (hocc : OccAt v T i) (hin : i + v.length = n + 1) :
+    mreported v k p₁ r T cst (n + 1) (mRate A B' k) (metered u v k p₁ r T cst A B' n)
+      = true := by
+  by_cases hcon : mreported v k p₁ r T cst (n + 1) (mRate A B' k)
+      (metered u v k p₁ r T cst A B' n) = true
+  · exact hcon
+  · rw [Bool.not_eq_true] at hcon
+    exact mreported_complete hK hk hv hC hcost hi hocc hin
+      (metered_boundary_of_occ hK hk hv hC hcost hadvance hi hocc hin hcon)
+
 /-! ## 主定理 -/
 
 /-- 計量式スケジューラのラウンド `n` の出力。 -/
@@ -552,6 +702,43 @@ theorem metered_answer_correct {u v T : List α} {k p₁ r A B' : ℕ} {cst : Sc
       exact this ▸ hocc
     · intro h
       exact mreported_complete hK hk hv hC hcost hiu h hiv hb
+  simp only [manswer, hrep, List.length_append]
+  rw [Bool.eq_iff_iff]
+  simp only [Bool.and_eq_true, decide_eq_true_eq]
+  rw [occAt_append_iff]
+  have hpos : m + 1 - (u.length + v.length) + u.length = i := by omega
+  rw [hpos]
+  exact and_comm
+
+/-- **仮定 `rem = 0` を外した計量式実時間定理**。
+唯一の追加仮定 `hadvance` は「前進（比較成功）ステップは 1 動作で終わる ＝ 停留しない」。
+これは前進のコストが定数であることの正規化（1 動作 = 定数機械ステップ）であり、
+停留しうるのは（ポテンシャル増分に比例する）ずらしだけになる。 -/
+theorem metered_answer_correct' {u v T : List α} {k p₁ r A B' : ℕ} {cst : ScanState → ℕ}
+    (hK : KSimple v k p₁ r) (hk : 0 < k) (hv : 0 < v.length) (hC : 0 < A + B')
+    (hcost : ∀ st, cst st ≤ (A + B') * (Phi k (scanStep v k p₁ r T st) - Phi k st))
+    (hadvance : ∀ st, st.q ≠ v.length → T[st.pos + st.q]? = v[st.q]? → cst st ≤ 1)
+    (n : ℕ) (hn : (u ++ v).length ≤ n) :
+    manswer u v k p₁ r T cst A B' n = decide (OccAt (u ++ v) T (n - (u ++ v).length)) := by
+  simp only [List.length_append] at hn
+  obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
+  set i := m + 1 - v.length with hi
+  have hiv : i + v.length = m + 1 := by omega
+  have hiu : u.length ≤ i := by omega
+  have hinvm := metered_inv (u := u) (T := T) (A := A) (B' := B') (cst := cst) hK hk hv m
+  have hrep :
+      mreported v k p₁ r T cst (m + 1) (mRate A B' k) (metered u v k p₁ r T cst A B' m)
+        = decide (OccAt v T i) := by
+    refine Bool.eq_iff_iff.mpr ?_
+    rw [decide_eq_true_eq]
+    constructor
+    · intro h
+      obtain ⟨p, hp, hocc⟩ :=
+        mreported_sound hK hk hv _ _ hinvm.1 (hinvm.2.mono (Nat.le_succ m)) h
+      have : p = i := by omega
+      exact this ▸ hocc
+    · intro h
+      exact mreported_complete' hK hk hv hC hcost hadvance hiu h hiv
   simp only [manswer, hrep, List.length_append]
   rw [Bool.eq_iff_iff]
   simp only [Bool.and_eq_true, decide_eq_true_eq]
