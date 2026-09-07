@@ -9,6 +9,7 @@ import PalPeg.GroupsLog
 import PalPeg.Matching
 import PalPeg.RTQueue
 import PalPeg.Manacher
+import PalPeg.ManacherHeads
 import PalPeg.Stages
 import PalPeg.Schedule
 
@@ -167,3 +168,7 @@ import PalPeg.Schedule
 /-- info: 'PalPeg.Schedule.fifo_meets_deadlines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.Schedule.fifo_meets_deadlines
+
+/-- info: 'PalPeg.Manacher.headMove_total_run' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.Manacher.headMove_total_run
