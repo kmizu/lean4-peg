@@ -20,3 +20,5 @@ scala/.scala-build/
 # Editors
 .idea/
 .vscode/
+__pycache__/
+.claude/worktrees/
