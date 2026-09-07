@@ -7,6 +7,7 @@ import PalPeg.Structure
 import PalPeg.Groups
 import PalPeg.Matching
 import PalPeg.RTQueue
+import PalPeg.Manacher
 
 /-!
 # 公理 guard
@@ -119,3 +120,15 @@ import PalPeg.RTQueue
 /-- info: 'PalPeg.RTQueue.inv_tail' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.RTQueue.inv_tail
+
+/-- info: 'PalPeg.Manacher.manacher_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.Manacher.manacher_spec
+
+/-- info: 'PalPeg.Manacher.prefixPalFlagsFromRad_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.Manacher.prefixPalFlagsFromRad_eq
+
+/-- info: 'PalPeg.Manacher.work_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.Manacher.work_le
