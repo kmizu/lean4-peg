@@ -12,7 +12,7 @@ object PyItertools {
   def wordsBelow(alphabet: String, sizes: Int): Vector[String] = (0 until sizes).toVector.flatMap(words(alphabet, _))
 }
 
-class PyCompatSuite extends munit.FunSuite {
+class PyItertoolsSuite extends munit.FunSuite {
 
   test("PyRandom reproduces CPython's Random(909) randrange/choice sequence") {
     val rng = new PyRandom(909)

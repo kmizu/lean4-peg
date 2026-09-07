@@ -77,7 +77,10 @@ lazy val pal = project
     name := "pal",
     scalacOptions ++= strictOpts,
     commonTestSettings,
-    Test / javaOptions := Seq("-Xss512m", "-Xmx8g")
+    Test / javaOptions := Seq("-Xss512m", "-Xmx8g"),
+    // Expr hash-consing (Expr.share) uses a process-wide pool, as the Python
+    // original did under the GIL; suites must not interleave.
+    Test / parallelExecution := false
   )
 
 lazy val root = project
