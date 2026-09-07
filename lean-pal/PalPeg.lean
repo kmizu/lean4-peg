@@ -33,6 +33,8 @@ import PalPeg.StageTapes
 import PalPeg.FullMachineTapes
 import PalPeg.ClearAny
 import PalPeg.ProgLang
+import PalPeg.ProgLangLib
+import PalPeg.GSScanProg
 import PalPeg.InputCopy
 import PalPeg.PatternTapes
 import PalPeg.PatternTapesPair
@@ -116,6 +118,8 @@ import PalPeg.Main
 * `PalPeg.FullMachineTapes` — 全体機械（4 スロット回転、常駐 ≤3 段、分散クリア）、`full_answer_mem_PAL`（段インターフェース前提）
 * `PalPeg.ClearAny` — 任意形状のテープの消去（`clearAny` ≤ 3·幅+3、`width_runProg`、チャンク分割）
 * `PalPeg.ProgLang` — 有限制御プログラム言語（`Prog`、`while c do {act; body}`）と `StructuredMachine` への橋（`progMachine_round`、`progMachine_recognizedBy`）
+* `PalPeg.ProgLangLib` — 移植用ライブラリ（`Exec`、単テープ動作→ベクトル `touchVec`）
+* `PalPeg.GSScanProg` — GS 走査器 `program'` の ProgLang 移植（`scanProg_trace`：トレース＝動作リスト、追加マイクロステップ 0）
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/

@@ -49,6 +49,8 @@ import PalPeg.Main
 import PalPeg.FullMachineTapes
 import PalPeg.ClearAny
 import PalPeg.ProgLang
+import PalPeg.ProgLangLib
+import PalPeg.GSScanProg
 
 /-!
 # 公理 guard
@@ -365,3 +367,7 @@ import PalPeg.ProgLang
 /-- info: 'PalPeg.passSumLinear_of_upSum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.passSumLinear_of_upSum
+
+/-- info: 'PalPeg.GSProg.scanProg_trace' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.GSProg.scanProg_trace
