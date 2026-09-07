@@ -4,7 +4,7 @@ import PalPeg.PatternTapesPair
 /-!
 # 2 本ソース版準備フェーズの有限制御プログラム化 (`PatternPairProg`)
 
-`PalPeg.PatternTapesPair` の準備フェーズ（13 本テープ：12 本の段テープ＋最前線テープ
+`PalPeg.PatternTapesPair` の準備フェーズ（16 本テープ：15 本の段テープ＋最前線テープ
 `tF`）を、`PalPeg.PatternProg` の `Prog`（`ProgLang` の構造化プログラム）に載せ替える。
 `PatternProg.setupProgL` と同じく、**入力に依存しない単一の固定プログラム**を作る：
 区間長 `pairCounts`（`min s m`, `s ∸ m`, `m ∸ s`, …）はどこにも定数として現れず、
@@ -36,23 +36,23 @@ open PalPeg.ProgLang
 
 variable {sc : ℕ} {Terminal : Type}
 
-/-! ## 1. 12 本版の `TAct` を 13 本版へ持ち上げる -/
+/-! ## 1. 15 本版の `TAct` を 16 本版へ持ち上げる -/
 
-/-- 12 本版のテープ動作を 13 本版へ（テープ番号を `inj` で埋め込む）。 -/
-def liftT : TAct 12 sc → TAct 13 sc
+/-- 15 本版のテープ動作を 16 本版へ（テープ番号を `inj` で埋め込む）。 -/
+def liftT : TAct 15 sc → TAct 16 sc
   | .keep i m => .keep (inj i) m
   | .put i x m => .put (inj i) x m
   | .copy i j m => .copy (inj i) (inj j) m
 
-@[simp] theorem liftT_tape (a : TAct 12 sc) : (liftT a).tape = inj a.tape := by
+@[simp] theorem liftT_tape (a : TAct 15 sc) : (liftT a).tape = inj a.tape := by
   cases a <;> rfl
 
-@[simp] theorem liftT_mv (a : TAct 12 sc) : (liftT a).mv = a.mv := by cases a <;> rfl
+@[simp] theorem liftT_mv (a : TAct 15 sc) : (liftT a).mv = a.mv := by cases a <;> rfl
 
-theorem liftT_write (S : Tapes13 sc) (a : TAct 12 sc) :
+theorem liftT_write (S : Tapes16 sc) (a : TAct 15 sc) :
     (liftT a).write S = a.write (prj S) := by cases a <;> rfl
 
-theorem prj_applyG (blank : Fin sc) (S : Tapes13 sc) (a : TAct 12 sc) :
+theorem prj_applyG (blank : Fin sc) (S : Tapes16 sc) (a : TAct 15 sc) :
     prj (applyG blank S (liftT a)) = applyG blank (prj S) a := by
   funext j
   show applyG blank S (liftT a) (inj j) = applyG blank (prj S) a j
@@ -72,36 +72,36 @@ theorem prj_applyG (blank : Fin sc) (S : Tapes13 sc) (a : TAct 12 sc) :
     rfl
 
 theorem prj_runG_map (blank : Fin sc) :
-    ∀ (l : List (TAct 12 sc)) (S : Tapes13 sc),
+    ∀ (l : List (TAct 15 sc)) (S : Tapes16 sc),
       prj (runG blank (l.map liftT) S) = runG blank l (prj S) := by
   intro l
   induction l with
   | nil => intro S; rfl
   | cons a l ih => intro S; rw [List.map_cons, runG_cons, ih, prj_applyG, runG_cons]
 
-theorem runG_map_tF (blank : Fin sc) (l : List (TAct 12 sc)) (S : Tapes13 sc) :
+theorem runG_map_tF (blank : Fin sc) (l : List (TAct 15 sc)) (S : Tapes16 sc) :
     runG blank (l.map liftT) S tF = S tF := by
   refine runG_untouched blank tF _ S (fun a ha => ?_)
   obtain ⟨b, _, rfl⟩ := List.mem_map.1 ha
   simp only [liftT_tape]
   exact inj_ne_tF _
 
-theorem prj_runG_map_at (blank : Fin sc) (l : List (TAct 12 sc)) (S : Tapes13 sc)
-    (i : Fin 12) : runG blank (l.map liftT) S (inj i) = runG blank l (prj S) i :=
+theorem prj_runG_map_at (blank : Fin sc) (l : List (TAct 15 sc)) (S : Tapes16 sc)
+    (i : Fin 15) : runG blank (l.map liftT) S (inj i) = runG blank l (prj S) i :=
   congrFun (prj_runG_map blank l S) i
 
-/-! ## 2. 13 本版の `PAct` 動作列との対応 -/
+/-! ## 2. 16 本版の `PAct` 動作列との対応 -/
 
-/-- 13 本版の動作を `TAct` へ。 -/
-def liftP : PAct sc → TAct 13 sc
+/-- 16 本版の動作を `TAct` へ。 -/
+def liftP : PAct sc → TAct 16 sc
   | .keep i m => .keep i m
   | .put i x m => .put i x m
 
-theorem applyP_eq (blank : Fin sc) (S : Tapes13 sc) (a : PAct sc) :
+theorem applyP_eq (blank : Fin sc) (S : Tapes16 sc) (a : PAct sc) :
     applyP blank S a = applyG blank S (liftP a) := by
   cases a <;> rfl
 
-theorem runP_eq (blank : Fin sc) : ∀ (l : List (PAct sc)) (S : Tapes13 sc),
+theorem runP_eq (blank : Fin sc) : ∀ (l : List (PAct sc)) (S : Tapes16 sc),
     runP blank l S = runG blank (l.map liftP) S := by
   intro l
   induction l with
@@ -109,12 +109,12 @@ theorem runP_eq (blank : Fin sc) : ∀ (l : List (PAct sc)) (S : Tapes13 sc),
   | cons a l ih => intro S; rw [runP_cons, ih, List.map_cons, runG_cons, applyP_eq]
 
 /-- 左向きコピーの 1 周回は `copyRoundL` と同じ作用。 -/
-theorem copyRoundG_runP (blank : Fin sc) (i j : Fin 13) (S : Tapes13 sc) :
+theorem copyRoundG_runP (blank : Fin sc) (i j : Fin 16) (S : Tapes16 sc) :
     runG blank (copyRoundG i j) S = runP blank (copyRoundL i j S) S := rfl
 
 /-- 番兵駆動コピーの動作列は `copyLoopL` と同じ作用。 -/
-theorem copyActsN_runP (blank : Fin sc) (i j : Fin 13) :
-    ∀ (n : ℕ) (S : Tapes13 sc),
+theorem copyActsN_runP (blank : Fin sc) (i j : Fin 16) :
+    ∀ (n : ℕ) (S : Tapes16 sc),
       runG blank (copyActsN i j n) S = runP blank (copyLoopL blank i j n S) S := by
   intro n
   induction n with
@@ -124,11 +124,11 @@ theorem copyActsN_runP (blank : Fin sc) (i j : Fin 13) :
       rw [copyActsN, runG_append, copyRoundG_runP, copyLoopL, runP_append, ih]
 
 /-- 右向きコピーの 1 周回は `copyRoundR` と同じ作用。 -/
-theorem copyRoundGR_runP (blank : Fin sc) (i j : Fin 13) (S : Tapes13 sc) :
+theorem copyRoundGR_runP (blank : Fin sc) (i j : Fin 16) (S : Tapes16 sc) :
     runG blank (copyRoundGR i j) S = runP blank (copyRoundR i j S) S := rfl
 
-theorem copyActsR_runP (blank : Fin sc) (i j : Fin 13) :
-    ∀ (n : ℕ) (S : Tapes13 sc),
+theorem copyActsR_runP (blank : Fin sc) (i j : Fin 16) :
+    ∀ (n : ℕ) (S : Tapes16 sc),
       runG blank (copyActsR i j n) S = runP blank (copyLoopR blank i j n S) S := by
   intro n
   induction n with
@@ -138,7 +138,7 @@ theorem copyActsR_runP (blank : Fin sc) (i j : Fin 13) :
       rw [copyActsR, runG_append, copyRoundGR_runP, copyLoopR, runP_append, ih]
 
 /-- `settleProgG` の動作列は `settleP` と同じ作用（左 1 歩・右 1 歩が余分に入るが恒等）。 -/
-theorem settleActs_runP (blank : Fin sc) (i : Fin 13) (n : ℕ) (S : Tapes13 sc)
+theorem settleActs_runP (blank : Fin sc) (i : Fin 16) (n : ℕ) (S : Tapes16 sc)
     {x : Fin sc} {l : List (Fin sc)}
     (h : ((runP blank (settleP blank i n) S) i).left = x :: l) :
     runG blank (TAct.put i blank .left :: (leftWalkG i (n + 1) ++ [TAct.keep i .right])) S
@@ -157,17 +157,17 @@ theorem settleActs_runP (blank : Fin sc) (i : Fin 13) (n : ℕ) (S : Tapes13 sc)
 /-! ## 3. `pushBothN` の `Prog` 版 -/
 
 /-- `tU`, `tP` に同じ記号を積む。 -/
-def pushBothProgP (a : Fin sc) : Prog (ActG 13 sc) (CondG 13 sc) :=
+def pushBothProgP (a : Fin sc) : Prog (ActG 16 sc) (CondG 16 sc) :=
   Prog.seq (ACT (TAct.put tU a .right)) (ACT (TAct.put tP a .right))
 
-def pushBothActsP (a : Fin sc) : List (TAct 13 sc) :=
+def pushBothActsP (a : Fin sc) : List (TAct 16 sc) :=
   [TAct.put tU a .right, TAct.put tP a .right]
 
-theorem pushBothActsP_runP (blank a : Fin sc) (S : Tapes13 sc) :
+theorem pushBothActsP_runP (blank a : Fin sc) (S : Tapes16 sc) :
     runG blank (pushBothActsP a) S = runP blank (pushBothN a) S := by
   rw [pushBothN, runP_eq]; rfl
 
-theorem pushBothProgP_exec {blank : Fin sc} (a : Fin sc) (S : Tapes13 sc) :
+theorem pushBothProgP_exec {blank : Fin sc} (a : Fin sc) (S : Tapes16 sc) :
     ExecG Terminal blank (pushBothProgP a) S (pushBothActsP a) :=
   execG_of_eq rfl (execG_seq (execG_act _ S) (execG_act _ _))
 
@@ -180,28 +180,28 @@ theorem pushBothProgP_exec {blank : Fin sc} (a : Fin sc) (S : Tapes13 sc) :
 section PairLoop
 
 /-- `tF` から 1 記号（ミラー付き）。 -/
-def pairRoundF (blank : Fin sc) : List (TAct 13 sc) :=
+def pairRoundF (blank : Fin sc) : List (TAct 16 sc) :=
   [TAct.copy tU tF .right, TAct.keep tF .left, TAct.put tC2 blank .right]
 
 /-- `tIn` から 1 記号（ミラー付き）。 -/
-def pairRoundI (blank : Fin sc) : List (TAct 13 sc) :=
+def pairRoundI (blank : Fin sc) : List (TAct 16 sc) :=
   [TAct.copy tU tIn .right, TAct.keep tIn .left, TAct.put tC2 blank .right]
 
 /-- 位置 `p`（合成ソース `w₀ ++ fw` の残り長）における 1 周回の本体。 -/
-def pairBody (blank : Fin sc) (h₀ p : ℕ) : List (TAct 13 sc) :=
+def pairBody (blank : Fin sc) (h₀ p : ℕ) : List (TAct 16 sc) :=
   if h₀ < p then pairRoundF blank else pairRoundI blank
 
 /-- 1 周回（カウンタの減算 2 動作＋本体）。 -/
-def pairFirst (blank : Fin sc) (h₀ p : ℕ) : List (TAct 13 sc) :=
+def pairFirst (blank : Fin sc) (h₀ p : ℕ) : List (TAct 16 sc) :=
   TAct.put tCs blank .left :: TAct.put tCs blank .stay :: pairBody blank h₀ p
 
 /-- `n` 周回ぶんの動作列（位置 `p` から）。 -/
-def pairActsN (blank : Fin sc) (h₀ p : ℕ) : ℕ → List (TAct 13 sc)
+def pairActsN (blank : Fin sc) (h₀ p : ℕ) : ℕ → List (TAct 16 sc)
   | 0 => []
   | n + 1 => pairFirst blank h₀ p ++ pairActsN blank h₀ (p - 1) n
 
 /-- ループ本体側から見た `n` 周回（先頭のプローブを外に出した形）。 -/
-def pairTail (blank : Fin sc) (h₀ p : ℕ) : ℕ → List (TAct 13 sc)
+def pairTail (blank : Fin sc) (h₀ p : ℕ) : ℕ → List (TAct 16 sc)
   | 0 => []
   | n + 1 => TAct.put tCs blank .stay ::
       ((pairBody blank h₀ p ++ [TAct.put tCs blank .left]) ++ pairTail blank h₀ (p - 1) n)
@@ -230,13 +230,13 @@ theorem pairCons (blank : Fin sc) (h₀ : ℕ) : ∀ (n p : ℕ),
       rw [← ih]
 
 /-- 分岐する 1 周回本体のプログラム。 -/
-def pairLoopBody (blank leftSym : Fin sc) : Prog (ActG 13 sc) (CondG 13 sc) :=
+def pairLoopBody (blank leftSym : Fin sc) : Prog (ActG 16 sc) (CondG 16 sc) :=
   Prog.ite (tF, leftSym)
     (seqActs (pairRoundF blank ++ [TAct.put tCs blank .left]))
     (seqActs (pairRoundI blank ++ [TAct.put tCs blank .left]))
 
 /-- カウンタ駆動＋ソース分岐のループ全体。 -/
-def pairLoopProg (blank mark leftSym : Fin sc) : Prog (ActG 13 sc) (CondG 13 sc) :=
+def pairLoopProg (blank mark leftSym : Fin sc) : Prog (ActG 16 sc) (CondG 16 sc) :=
   Prog.seq (ACT (TAct.put tCs blank .left))
     (Prog.seq
       (Prog.loop (tCs, mark) (TAct.put tCs blank (sc := sc) .stay).act
@@ -248,7 +248,7 @@ variable {blank mark leftSym : Fin sc}
 /-- **ループ本体の帰納法**：`n` 周回ぶんの実行と、その結果テープの性質。 -/
 theorem pairLoop_tail (hne : mark ≠ blank) {w₀ fw : List (Fin sc)}
     (hfF : leftSym ∉ fw) :
-    ∀ (n p y : ℕ) (L : List (Fin sc)) (S : Tapes13 sc), n ≤ p →
+    ∀ (n p y : ℕ) (L : List (Fin sc)) (S : Tapes16 sc), n ≤ p →
       p ≤ w₀.length + fw.length →
       Tape.CounterView' blank mark (S tCs) n →
       Tape.CounterView' blank mark (S tC2) y →
@@ -269,7 +269,7 @@ theorem pairLoop_tail (hne : mark ≠ blank) {w₀ fw : List (Fin sc)}
           (leftSym :: w₀) (min (p - n) w₀.length) ∧
         Tape.StackView blank (runG blank (pairActsN blank w₀.length p n) S tU)
           (((w₀ ++ fw).take p).drop (p - n) ++ L) ∧
-        (∀ j : Fin 13, j ≠ tU → j ≠ tF → j ≠ tIn → j ≠ tCs → j ≠ tC2 →
+        (∀ j : Fin 16, j ≠ tU → j ≠ tF → j ≠ tIn → j ≠ tCs → j ≠ tC2 →
           runG blank (pairActsN blank w₀.length p n) S j = S j) := by
   intro n
   induction n with
@@ -293,7 +293,7 @@ theorem pairLoop_tail (hne : mark ≠ blank) {w₀ fw : List (Fin sc)}
       -- 減算後の状態
       set Q := applyG blank (applyG blank S (TAct.put tCs blank .left))
         (TAct.put tCs blank .stay) with hQ
-      have hQne : ∀ j : Fin 13, j ≠ tCs → Q j = S j := by
+      have hQne : ∀ j : Fin 16, j ≠ tCs → Q j = S j := by
         intro j hj
         rw [hQ, applyG_ne blank _ _ hj, applyG_ne blank _ _ hj]
       have hQcs : Tape.CounterView' blank mark (Q tCs) n := by
@@ -332,7 +332,7 @@ theorem pairLoop_tail (hne : mark ≠ blank) {w₀ fw : List (Fin sc)}
         simp only [pairBody] at ha
         split at ha <;> fin_cases ha <;> simp only [TAct.tape] <;> decide
       have hS'cs : Tape.CounterView' blank mark (S' tCs) n := by rw [hbody_tCs]; exact hQcs
-      have hS'ne : ∀ j : Fin 13, j ≠ tU → j ≠ tF → j ≠ tIn → j ≠ tCs → j ≠ tC2 →
+      have hS'ne : ∀ j : Fin 16, j ≠ tU → j ≠ tF → j ≠ tIn → j ≠ tCs → j ≠ tC2 →
           S' j = S j := by
         intro j hu hf hi hcsj hc2j
         rw [hS', runG_untouched blank j _ _ (fun a ha => ?_), hQne j hcsj]
@@ -344,7 +344,7 @@ theorem pairLoop_tail (hne : mark ≠ blank) {w₀ fw : List (Fin sc)}
             | exact fun hh => hi hh.symm
             | exact fun hh => hc2j hh.symm
       have hS'c2 : Tape.CounterView' blank mark (S' tC2) (y + 1) := by
-        have hpre : ∀ (X : List (TAct 13 sc)), (∀ a ∈ X, a.tape ≠ tC2) →
+        have hpre : ∀ (X : List (TAct 16 sc)), (∀ a ∈ X, a.tape ≠ tC2) →
             runG blank (X ++ [TAct.put tC2 blank .right]) Q tC2
               = Tape.step blank (Q tC2) blank .right := by
           intro X hX
@@ -475,7 +475,7 @@ theorem pairLoop_tail (hne : mark ≠ blank) {w₀ fw : List (Fin sc)}
         rw [hrunEq, f6 j hu hf hi hcsj hc2j, hS'ne j hu hf hi hcsj hc2j]
 
 /-- `pairLoopProg` の完全な動作列（末尾にプローブ＋復元の 2 動作が付く）。 -/
-def pairLoopActs (blank : Fin sc) (h₀ p n : ℕ) : List (TAct 13 sc) :=
+def pairLoopActs (blank : Fin sc) (h₀ p n : ℕ) : List (TAct 16 sc) :=
   pairActsN blank h₀ p n ++ [TAct.put tCs blank .left, TAct.keep tCs .right]
 
 @[simp] theorem pairLoopActs_length (blank : Fin sc) (h₀ p n : ℕ) :
@@ -484,7 +484,7 @@ def pairLoopActs (blank : Fin sc) (h₀ p n : ℕ) : List (TAct 13 sc) :=
 
 /-- **カウンタ駆動＋ソース分岐ループ全体**。 -/
 theorem pairLoopProg_exec (hne : mark ≠ blank) {w₀ fw : List (Fin sc)}
-    (hfF : leftSym ∉ fw) (n p y : ℕ) (L : List (Fin sc)) (S : Tapes13 sc)
+    (hfF : leftSym ∉ fw) (n p y : ℕ) (L : List (Fin sc)) (S : Tapes16 sc)
     (hnp : n ≤ p) (hpl : p ≤ w₀.length + fw.length)
     (hcs : Tape.CounterView' blank mark (S tCs) n)
     (hc2 : Tape.CounterView' blank mark (S tC2) y)
@@ -503,7 +503,7 @@ theorem pairLoopProg_exec (hne : mark ≠ blank) {w₀ fw : List (Fin sc)}
         (leftSym :: w₀) (min (p - n) w₀.length) ∧
       Tape.StackView blank (runG blank (pairActsN blank w₀.length p n) S tU)
         (((w₀ ++ fw).take p).drop (p - n) ++ L) ∧
-      (∀ j : Fin 13, j ≠ tU → j ≠ tF → j ≠ tIn → j ≠ tCs → j ≠ tC2 →
+      (∀ j : Fin 16, j ≠ tU → j ≠ tF → j ≠ tIn → j ≠ tCs → j ≠ tC2 →
         runG blank (pairActsN blank w₀.length p n) S j = S j) := by
   obtain ⟨e, f1, f2, f3, f4, f5, f6⟩ :=
     pairLoop_tail (Terminal := Terminal) hne hfF n p y L S hnp hpl hcs hc2 hF hIn hU
@@ -526,11 +526,11 @@ theorem pairLoopProg_exec (hne : mark ≠ blank) {w₀ fw : List (Fin sc)}
 
 end PairLoop
 
-/-! ## 5. 12 本版の単進カウンタ操作を 13 本に持ち上げる -/
+/-! ## 5. 15 本版の単進カウンタ操作を 16 本に持ち上げる -/
 
 section KLoop
 
-open PalPeg.PatternProg.Twelve
+open PalPeg.PatternProg.Fifteen
 open PalPeg.PatternTapes
 
 theorem tC1_inj : tC1 = inj sC1 := rfl
@@ -541,7 +541,7 @@ theorem tP_inj : tP = inj sP := rfl
 theorem tIn_inj : tIn = inj sIn := rfl
 theorem tCs_inj : tCs = inj sCs := rfl
 
-theorem decActsN_map (blank : Fin sc) (a : Fin 12) (body : List (TAct 12 sc)) :
+theorem decActsN_map (blank : Fin sc) (a : Fin 15) (body : List (TAct 15 sc)) :
     ∀ n : ℕ, (decActsN blank a body n).map liftT
       = decActsN blank (inj a) (body.map liftT) n := by
   intro n
@@ -549,132 +549,132 @@ theorem decActsN_map (blank : Fin sc) (a : Fin 12) (body : List (TAct 12 sc)) :
   | zero => rfl
   | succ n ih => rw [decActsN, decActsN, List.map_append, ih]; rfl
 
-/-- `xfer2` の 13 本版プログラムと動作列。 -/
-def xfer2Prog13 (blank mark : Fin sc) (a b c : Fin 13) : Prog (ActG 13 sc) (CondG 13 sc) :=
+/-- `xfer2` の 16 本版プログラムと動作列。 -/
+def xfer2Prog16 (blank mark : Fin sc) (a b c : Fin 16) : Prog (ActG 16 sc) (CondG 16 sc) :=
   decLoopProg blank a [TAct.put b blank .right, TAct.put c blank .right] mark
 
-def xfer2Acts13 (blank : Fin sc) (a b c : Fin 13) (n : ℕ) : List (TAct 13 sc) :=
+def xfer2Acts16 (blank : Fin sc) (a b c : Fin 16) (n : ℕ) : List (TAct 16 sc) :=
   decActsN blank a [TAct.put b blank .right, TAct.put c blank .right] n
     ++ [TAct.put a blank .left, TAct.keep a .right]
 
-def xfer1Prog13 (blank mark : Fin sc) (a b : Fin 13) : Prog (ActG 13 sc) (CondG 13 sc) :=
+def xfer1Prog16 (blank mark : Fin sc) (a b : Fin 16) : Prog (ActG 16 sc) (CondG 16 sc) :=
   decLoopProg blank a [TAct.put b blank .right] mark
 
-def xfer1Acts13 (blank : Fin sc) (a b : Fin 13) (n : ℕ) : List (TAct 13 sc) :=
+def xfer1Acts16 (blank : Fin sc) (a b : Fin 16) (n : ℕ) : List (TAct 16 sc) :=
   decActsN blank a [TAct.put b blank .right] n ++ [TAct.put a blank .left, TAct.keep a .right]
 
-theorem xfer2Acts13_map (blank : Fin sc) (a b c : Fin 12) (n : ℕ) :
-    xfer2Acts13 blank (inj a) (inj b) (inj c) n = (xfer2Acts blank a b c n).map liftT := by
-  rw [xfer2Acts13, xfer2Acts, List.map_append, decActsN_map]
+theorem xfer2Acts16_map (blank : Fin sc) (a b c : Fin 15) (n : ℕ) :
+    xfer2Acts16 blank (inj a) (inj b) (inj c) n = (xfer2Acts blank a b c n).map liftT := by
+  rw [xfer2Acts16, xfer2Acts, List.map_append, decActsN_map]
   rfl
 
-theorem xfer1Acts13_map (blank : Fin sc) (a b : Fin 12) (n : ℕ) :
-    xfer1Acts13 blank (inj a) (inj b) n = (xfer1Acts blank a b n).map liftT := by
-  rw [xfer1Acts13, xfer1Acts, List.map_append, decActsN_map]
+theorem xfer1Acts16_map (blank : Fin sc) (a b : Fin 15) (n : ℕ) :
+    xfer1Acts16 blank (inj a) (inj b) n = (xfer1Acts blank a b n).map liftT := by
+  rw [xfer1Acts16, xfer1Acts, List.map_append, decActsN_map]
   rfl
 
-/-- `kRound` の 13 本版。 -/
-def kRoundProg13 (blank mark : Fin sc) : Prog (ActG 13 sc) (CondG 13 sc) :=
-  Prog.seq (xfer2Prog13 blank mark tC1 tAn tC2) (xfer1Prog13 blank mark tC2 tC1)
+/-- `kRound` の 16 本版。 -/
+def kRoundProg16 (blank mark : Fin sc) : Prog (ActG 16 sc) (CondG 16 sc) :=
+  Prog.seq (xfer2Prog16 blank mark tC1 tAn tC2) (xfer1Prog16 blank mark tC2 tC1)
 
-def kRoundActs13 (blank : Fin sc) (p : ℕ) : List (TAct 13 sc) :=
+def kRoundActs16 (blank : Fin sc) (p : ℕ) : List (TAct 16 sc) :=
   (kRoundActs blank p).map liftT
 
-def kLoopProg13 (blank mark : Fin sc) : ℕ → Prog (ActG 13 sc) (CondG 13 sc)
+def kLoopProg16 (blank mark : Fin sc) : ℕ → Prog (ActG 16 sc) (CondG 16 sc)
   | 0 => Prog.skip
-  | m + 1 => Prog.seq (kRoundProg13 blank mark) (kLoopProg13 blank mark m)
+  | m + 1 => Prog.seq (kRoundProg16 blank mark) (kLoopProg16 blank mark m)
 
-def kLoopActs13 (blank : Fin sc) (p : ℕ) (m : ℕ) : List (TAct 13 sc) :=
+def kLoopActs16 (blank : Fin sc) (p : ℕ) (m : ℕ) : List (TAct 16 sc) :=
   (kLoopActs blank p m).map liftT
 
-theorem kLoopActs13_succ (blank : Fin sc) (p m : ℕ) :
-    kLoopActs13 blank p (m + 1) = kRoundActs13 blank p ++ kLoopActs13 blank p m := by
-  simp only [kLoopActs13, kRoundActs13,
+theorem kLoopActs16_succ (blank : Fin sc) (p m : ℕ) :
+    kLoopActs16 blank p (m + 1) = kRoundActs16 blank p ++ kLoopActs16 blank p m := by
+  simp only [kLoopActs16, kRoundActs16,
     show kLoopActs blank p (m + 1) = kRoundActs blank p ++ kLoopActs blank p m from rfl,
     List.map_append]
 
-@[simp] theorem kLoopActs13_length (blank : Fin sc) (p m : ℕ) :
-    (kLoopActs13 blank p m).length = m * (7 * p + 4) := by
-  simp [kLoopActs13]
+@[simp] theorem kLoopActs16_length (blank : Fin sc) (p m : ℕ) :
+    (kLoopActs16 blank p m).length = m * (7 * p + 4) := by
+  simp [kLoopActs16]
 
 variable {blank mark : Fin sc}
 
-theorem kRoundActs13_eq (p : ℕ) :
-    kRoundActs13 (sc := sc) blank p
-      = xfer2Acts13 blank tC1 tAn tC2 p ++ xfer1Acts13 blank tC2 tC1 p := by
-  rw [kRoundActs13, kRoundActs, List.map_append, tC1_inj, tC2_inj, tAn_inj,
-    xfer2Acts13_map blank sC1 sAn sC2 p, xfer1Acts13_map blank sC2 sC1 p]
+theorem kRoundActs16_eq (p : ℕ) :
+    kRoundActs16 (sc := sc) blank p
+      = xfer2Acts16 blank tC1 tAn tC2 p ++ xfer1Acts16 blank tC2 tC1 p := by
+  rw [kRoundActs16, kRoundActs, List.map_append, tC1_inj, tC2_inj, tAn_inj,
+    xfer2Acts16_map blank sC1 sAn sC2 p, xfer1Acts16_map blank sC2 sC1 p]
 
-theorem kRoundProg13_exec {S : Tapes13 sc} {p y : ℕ} (hne : mark ≠ blank)
+theorem kRoundProg16_exec {S : Tapes16 sc} {p y : ℕ} (hne : mark ≠ blank)
     (h1 : Tape.CounterView' blank mark (S tC1) p)
     (h2 : Tape.CounterView' blank mark (S tC2) 0)
     (h3 : Tape.CounterView' blank mark (S tAn) y) :
-    ExecG Terminal blank (kRoundProg13 blank mark) S (kRoundActs13 blank p) := by
+    ExecG Terminal blank (kRoundProg16 blank mark) S (kRoundActs16 blank p) := by
   have h1' : Tape.CounterView' blank mark (prj S sC1) p := h1
   have h2' : Tape.CounterView' blank mark (prj S sC2) 0 := h2
   have h3' : Tape.CounterView' blank mark (prj S sAn) y := h3
   obtain ⟨-, -, g3⟩ := xfer2_spec (blank := blank) (mark := mark) (a := sC1) (b := sAn)
     (c := sC2) (by decide) (by decide) (by decide) p (prj S) 0 y 0 (by simpa using h1') h3' h2'
-  have e1 : ExecG Terminal blank (xfer2Prog13 blank mark tC1 tAn tC2) S
-      (xfer2Acts13 blank tC1 tAn tC2 p) :=
+  have e1 : ExecG Terminal blank (xfer2Prog16 blank mark tC1 tAn tC2) S
+      (xfer2Acts16 blank tC1 tAn tC2 p) :=
     decLoopProg_exec hne (by intro x hx; fin_cases hx <;> (simp only [TAct.tape]; decide)) p S h1
   have hmid : Tape.CounterView' blank mark
-      (runG blank (xfer2Acts13 blank tC1 tAn tC2 p) S tC2) p := by
-    rw [tC1_inj, tC2_inj, tAn_inj, xfer2Acts13_map blank sC1 sAn sC2 p,
+      (runG blank (xfer2Acts16 blank tC1 tAn tC2 p) S tC2) p := by
+    rw [tC1_inj, tC2_inj, tAn_inj, xfer2Acts16_map blank sC1 sAn sC2 p,
       prj_runG_map_at blank _ S sC2,
       xfer2Acts_run (mark := mark) (by decide) (by decide) (by decide) p (prj S) h1' h3' h2']
     simpa using g3
-  have e2 : ExecG Terminal blank (xfer1Prog13 blank mark tC2 tC1)
-      (runG blank (xfer2Acts13 blank tC1 tAn tC2 p) S) (xfer1Acts13 blank tC2 tC1 p) :=
+  have e2 : ExecG Terminal blank (xfer1Prog16 blank mark tC2 tC1)
+      (runG blank (xfer2Acts16 blank tC1 tAn tC2 p) S) (xfer1Acts16 blank tC2 tC1 p) :=
     decLoopProg_exec hne (by intro x hx; fin_cases hx <;> (simp only [TAct.tape]; decide)) p _
       hmid
-  exact execG_of_eq (kRoundActs13_eq p).symm (execG_seq e1 e2)
+  exact execG_of_eq (kRoundActs16_eq p).symm (execG_seq e1 e2)
 
-theorem kRoundActs13_prj {S : Tapes13 sc} {p y : ℕ}
+theorem kRoundActs16_prj {S : Tapes16 sc} {p y : ℕ}
     (h1 : Tape.CounterView' blank mark (S tC1) p)
     (h2 : Tape.CounterView' blank mark (S tC2) 0)
     (h3 : Tape.CounterView' blank mark (S tAn) y) :
-    prj (runG blank (kRoundActs13 blank p) S) = run blank (kRound blank (prj S)) (prj S) := by
-  rw [kRoundActs13, prj_runG_map]
+    prj (runG blank (kRoundActs16 blank p) S) = run blank (kRound blank (prj S)) (prj S) := by
+  rw [kRoundActs16, prj_runG_map]
   exact kRoundActs_run (mark := mark) h1 h2 h3
 
-theorem kLoopProg13_exec (hne : mark ≠ blank) : ∀ (m : ℕ) (S : Tapes13 sc) (p y : ℕ),
+theorem kLoopProg16_exec (hne : mark ≠ blank) : ∀ (m : ℕ) (S : Tapes16 sc) (p y : ℕ),
     Tape.CounterView' blank mark (S tC1) p →
     Tape.CounterView' blank mark (S tC2) 0 →
     Tape.CounterView' blank mark (S tAn) y →
-    ExecG Terminal blank (kLoopProg13 blank mark m) S (kLoopActs13 blank p m) := by
+    ExecG Terminal blank (kLoopProg16 blank mark m) S (kLoopActs16 blank p m) := by
   intro m
   induction m with
   | zero => intro S p y _ _ _; exact execG_skip
   | succ m ih =>
       intro S p y h1 h2 h3
-      have hprj := kRoundActs13_prj (mark := mark) h1 h2 h3
+      have hprj := kRoundActs16_prj (mark := mark) h1 h2 h3
       obtain ⟨e1, e2, e3, -, -⟩ := kRound_spec (blank := blank) (mark := mark)
         (S := prj S) (p := p) (y := y) h1 h2 h3
-      have k1 : Tape.CounterView' blank mark (runG blank (kRoundActs13 blank p) S tC1) p := by
-        show Tape.CounterView' blank mark (prj (runG blank (kRoundActs13 blank p) S) sC1) p
+      have k1 : Tape.CounterView' blank mark (runG blank (kRoundActs16 blank p) S tC1) p := by
+        show Tape.CounterView' blank mark (prj (runG blank (kRoundActs16 blank p) S) sC1) p
         rw [hprj]; exact e1
-      have k2 : Tape.CounterView' blank mark (runG blank (kRoundActs13 blank p) S tC2) 0 := by
-        show Tape.CounterView' blank mark (prj (runG blank (kRoundActs13 blank p) S) sC2) 0
+      have k2 : Tape.CounterView' blank mark (runG blank (kRoundActs16 blank p) S tC2) 0 := by
+        show Tape.CounterView' blank mark (prj (runG blank (kRoundActs16 blank p) S) sC2) 0
         rw [hprj]; exact e2
       have k3 : Tape.CounterView' blank mark
-          (runG blank (kRoundActs13 blank p) S tAn) (y + p) := by
-        show Tape.CounterView' blank mark (prj (runG blank (kRoundActs13 blank p) S) sAn) (y + p)
+          (runG blank (kRoundActs16 blank p) S tAn) (y + p) := by
+        show Tape.CounterView' blank mark (prj (runG blank (kRoundActs16 blank p) S) sAn) (y + p)
         rw [hprj]; exact e3
-      have := execG_seq (kRoundProg13_exec (Terminal := Terminal) hne h1 h2 h3)
-        (ih (runG blank (kRoundActs13 blank p) S) p (y + p) k1 k2 k3)
-      exact execG_of_eq (kLoopActs13_succ blank p m).symm this
+      have := execG_seq (kRoundProg16_exec (Terminal := Terminal) hne h1 h2 h3)
+        (ih (runG blank (kRoundActs16 blank p) S) p (y + p) k1 k2 k3)
+      exact execG_of_eq (kLoopActs16_succ blank p m).symm this
 
-theorem kLoopActs13_prj (hne : mark ≠ blank) (m : ℕ) (S : Tapes13 sc) (p y : ℕ)
+theorem kLoopActs16_prj (hne : mark ≠ blank) (m : ℕ) (S : Tapes16 sc) (p y : ℕ)
     (h1 : Tape.CounterView' blank mark (S tC1) p)
     (h2 : Tape.CounterView' blank mark (S tC2) 0)
     (h3 : Tape.CounterView' blank mark (S tAn) y) :
-    prj (runG blank (kLoopActs13 blank p m) S) = run blank (kLoop blank m (prj S)) (prj S) := by
-  rw [kLoopActs13, prj_runG_map]
+    prj (runG blank (kLoopActs16 blank p m) S) = run blank (kLoop blank m (prj S)) (prj S) := by
+  rw [kLoopActs16, prj_runG_map]
   exact (kLoopProg_exec (Terminal := Unit) hne m (prj S) p y h1 h2 h3).2
 
-theorem kLoopActs13_tF (blank : Fin sc) (p m : ℕ) (S : Tapes13 sc) :
-    runG blank (kLoopActs13 blank p m) S tF = S tF := runG_map_tF blank _ S
+theorem kLoopActs16_tF (blank : Fin sc) (p m : ℕ) (S : Tapes16 sc) :
+    runG blank (kLoopActs16 blank p m) S tF = S tF := runG_map_tF blank _ S
 
 end KLoop
 
@@ -682,16 +682,16 @@ end KLoop
 
 section Setup
 
-open PalPeg.PatternProg.Twelve
+open PalPeg.PatternProg.Fifteen
 open PalPeg.PatternTapes
 
-/-- 13 本のテープ番号は `tF` か 12 本版の埋め込みかのどちらか。 -/
-theorem fin13_cases (j : Fin 13) : j = tF ∨ ∃ i : Fin 12, inj i = j := by
+/-- 16 本のテープ番号は `tF` か 15 本版の埋め込みかのどちらか。 -/
+theorem fin16_cases (j : Fin 16) : j = tF ∨ ∃ i : Fin 15, inj i = j := by
   rcases eq_or_ne j tF with h | h
   · exact Or.inl h
   · refine Or.inr ⟨⟨j.val, ?_⟩, rfl⟩
-    have h12 := j.isLt
-    have hne : j.val ≠ 12 := fun hv => h (Fin.ext hv)
+    have h13 := j.isLt
+    have hne : j.val ≠ 15 := fun hv => h (Fin.ext (by rw [hv]; rfl))
     omega
 
 /-- 番兵付きの語から `b` 個読んだときに積まれる語。 -/
@@ -714,17 +714,17 @@ theorem pair_take_split (w : List (Fin sc)) {h h₀ s : ℕ} (hlt : h₀ < h) (h
       Nat.min_eq_left hle]
 
 /-- 前置き（`tU`,`tP` に `startSym` を積み、最前線テープを 1 歩左へ）。 -/
-def prologueProgP (blank startSym : Fin sc) : Prog (ActG 13 sc) (CondG 13 sc) :=
+def prologueProgP (blank startSym : Fin sc) : Prog (ActG 16 sc) (CondG 16 sc) :=
   Prog.seq (pushBothProgP startSym) (ACT (TAct.put tF blank .left))
 
-def prologueActsP (blank startSym : Fin sc) : List (TAct 13 sc) :=
+def prologueActsP (blank startSym : Fin sc) : List (TAct 16 sc) :=
   pushBothActsP startSym ++ [TAct.put tF blank .left]
 
-theorem prologueActsP_runP (blank startSym : Fin sc) (S : Tapes13 sc) :
+theorem prologueActsP_runP (blank startSym : Fin sc) (S : Tapes16 sc) :
     runG blank (prologueActsP blank startSym) S = runP blank (prologueP blank startSym) S := by
   rw [prologueP, runP_eq]; rfl
 
-theorem prologueProgP_exec {blank : Fin sc} (startSym : Fin sc) (S : Tapes13 sc) :
+theorem prologueProgP_exec {blank : Fin sc} (startSym : Fin sc) (S : Tapes16 sc) :
     ExecG Terminal blank (prologueProgP blank startSym) S (prologueActsP blank startSym) :=
   execG_of_eq rfl (execG_seq (pushBothProgP_exec startSym S) (execG_act _ _))
 
@@ -732,7 +732,7 @@ theorem prologueProgP_exec {blank : Fin sc} (startSym : Fin sc) (S : Tapes13 sc)
 `PatternTapesPair.SetupPrePair` の `inb₀` / `inF` を、内容の左隣に番兵 `leftSym` を
 置いた形に強めたもの。`s`,`h`,`h₀` は入力ごとに変わってよい。 -/
 structure PrepPreLPair (blank mark leftSym : Fin sc) (s h h₀ p₁ r : ℕ)
-    (w Text : List (Fin sc)) (S : Tapes13 sc) : Prop where
+    (w Text : List (Fin sc)) (S : Tapes16 sc) : Prop where
   hpos : 0 < h₀
   hlt : h₀ < h
   hle : h ≤ w.length
@@ -755,9 +755,9 @@ structure PrepPreLPair (blank mark leftSym : Fin sc) (s h h₀ p₁ r : ℕ)
 /-- **入力に依存しない 2 本ソース版準備フェーズのプログラム**。
 `s`, `h`, `h₀` のどれにも依存しない（`k` だけが構成の定数）。 -/
 def setupProgPairL (blank startSym endSym mark leftSym : Fin sc) (k : ℕ) :
-    Prog (ActG 13 sc) (CondG 13 sc) :=
+    Prog (ActG 16 sc) (CondG 16 sc) :=
   Prog.seq (prologueProgP blank startSym)
-    (Prog.seq (Prog.seq (pairLoopProg blank mark leftSym) (xfer1Prog13 blank mark tC2 tCs))
+    (Prog.seq (Prog.seq (pairLoopProg blank mark leftSym) (xfer1Prog16 blank mark tC2 tCs))
       (Prog.seq
         (Prog.loop (tF, leftSym) (TAct.copy tP tF (sc := sc) .right).act
           (ACT (TAct.keep tF .left)))
@@ -766,25 +766,25 @@ def setupProgPairL (blank startSym endSym mark leftSym : Fin sc) (k : ℕ) :
             (ACT (TAct.keep tIn .left)))
           (Prog.seq (pushBothProgP endSym)
             (Prog.seq (settleProgG tU blank startSym)
-              (Prog.seq (settleProgG tP blank startSym) (kLoopProg13 blank mark k)))))))
+              (Prog.seq (settleProgG tP blank startSym) (kLoopProg16 blank mark k)))))))
 
 /-- `setupProgPairL` が実行する動作列。 -/
 def setupProgPairLActs (blank startSym endSym : Fin sc) (s h h₀ k p₁ : ℕ) :
-    List (TAct 13 sc) :=
+    List (TAct 16 sc) :=
   prologueActsP blank startSym ++
     (pairLoopActs blank h₀ h s ++
-      (xfer1Acts13 blank tC2 tCs s ++
+      (xfer1Acts16 blank tC2 tCs s ++
         (copyActsN tF tP (h - s - h₀) ++
           (copyActsN tIn tP (min (h - s) h₀) ++
             (pushBothActsP endSym ++
               ((TAct.put tU blank .left :: (leftWalkG tU (s + 1) ++ [TAct.keep tU .right])) ++
                 ((TAct.put tP blank .left ::
                     (leftWalkG tP (h - s + 1) ++ [TAct.keep tP .right])) ++
-                  kLoopActs13 blank p₁ k)))))))
+                  kLoopActs16 blank p₁ k)))))))
 
 /-- 実行結果のテープ。 -/
-def setupTapesPairL (blank startSym endSym : Fin sc) (s h h₀ k p₁ : ℕ) (S : Tapes13 sc) :
-    Tapes13 sc :=
+def setupTapesPairL (blank startSym endSym : Fin sc) (s h h₀ k p₁ : ℕ) (S : Tapes16 sc) :
+    Tapes16 sc :=
   runG blank (setupProgPairLActs blank startSym endSym s h h₀ k p₁) S
 
 /-- **動作数**。`tF` 側と `tIn` 側の残りは合わせて `h - s` なので、
@@ -794,8 +794,8 @@ theorem setupProgPairL_trace_length {blank startSym endSym : Fin sc} (s h h₀ k
     (setupProgPairLActs blank startSym endSym s h h₀ k p₁).length
       = 15 + 9 * s + 3 * (h - s) + k * (7 * p₁ + 4) := by
   simp only [setupProgPairLActs, prologueActsP, pushBothActsP, List.length_append,
-    pairLoopActs_length, xfer1Acts13, decActsN_length, copyActsN_length, leftWalkG_length,
-    kLoopActs13_length, List.length_cons, List.length_nil]
+    pairLoopActs_length, xfer1Acts16, decActsN_length, copyActsN_length, leftWalkG_length,
+    kLoopActs16_length, List.length_cons, List.length_nil]
   omega
 
 variable {blank mark : Fin sc}
@@ -803,7 +803,7 @@ variable {blank mark : Fin sc}
 /-- **中心となる補題**：`setupProgPairL` はちょうど `setupProgPairLActs` を実行し、
 その結果のテープは `PatternTapesPair.setup_core` と同じ内容になる。 -/
 theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r k : ℕ}
-    {w Text : List (Fin sc)} {S : Tapes13 sc}
+    {w Text : List (Fin sc)} {S : Tapes16 sc}
     (H : PrepPreLPair blank mark leftSym s h h₀ p₁ r w Text S) (hne : mark ≠ blank)
     (hSw : startSym ∉ w) (hSE : startSym ≠ endSym) :
     ExecG Terminal blank (setupProgPairL blank startSym endSym mark leftSym k) S
@@ -818,7 +818,7 @@ theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
         (setupTapesPairL blank startSym endSym s h h₀ k p₁ S tC2) 0 ∧
       Tape.CounterView' blank mark
         (setupTapesPairL blank startSym endSym s h h₀ k p₁ S tAn) (k * p₁) ∧
-      (∀ j : Fin 13, j ≠ tU → j ≠ tP → j ≠ tC1 → j ≠ tC2 → j ≠ tAn → j ≠ tF → j ≠ tIn →
+      (∀ j : Fin 16, j ≠ tU → j ≠ tP → j ≠ tC1 → j ≠ tC2 → j ≠ tAn → j ≠ tF → j ≠ tIn →
         j ≠ tCs → setupTapesPairL blank startSym endSym s h h₀ k p₁ S j = S j) := by
   obtain ⟨hpos, hlt, hle, hcut, hfresh, hIn, hF, hU, hP, hT, hX2, hCs, hC1, hC2, hAp, hAn,
     hRp, hRn⟩ := H
@@ -858,7 +858,7 @@ theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
     have h1 := InputCopy.toSeqView hF (by simp)
     rw [show (leftSym :: fw).length - 1 = m from by simp [hfwlen]] at h1
     exact h1
-  have p0ne : ∀ j : Fin 13, j ≠ tU → j ≠ tP → j ≠ tF → S₀ j = S j := by
+  have p0ne : ∀ j : Fin 16, j ≠ tU → j ≠ tP → j ≠ tF → S₀ j = S j := by
     intro j hu hp hf; rw [hS0P]; exact prologueP_ne blank startSym hu hp hf S
   -- フェーズ 1（カウンタ駆動＋ソース分岐）
   have p0In : Tape.SeqView blank (S₀ tIn) (leftSym :: w₀) (min h w₀.length) := by
@@ -892,12 +892,12 @@ theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
       p0ne tAn (by decide) (by decide) (by decide)]
     exact hAn
   -- フェーズ 1b（ミラー `tC2` を `tCs` に戻す）
-  obtain ⟨S₂, hS2⟩ : ∃ T, runG blank (xfer1Acts13 blank tC2 tCs s) S₁ = T := ⟨_, rfl⟩
+  obtain ⟨S₂, hS2⟩ : ∃ T, runG blank (xfer1Acts16 blank tC2 tCs s) S₁ = T := ⟨_, rfl⟩
   have hq1c2 : Tape.CounterView' blank mark (S₁ tC2) s := by simpa using q1c2
   have hq1c2' : Tape.CounterView' blank mark (prj S₁ sC2) s := hq1c2
   have hq1cs' : Tape.CounterView' blank mark (prj S₁ sCs) 0 := q1cs
   have hprj2 : prj S₂ = run blank (xfer1 blank sC2 sCs s) (prj S₁) := by
-    rw [← hS2, tC2_inj, tCs_inj, xfer1Acts13_map, prj_runG_map]
+    rw [← hS2, tC2_inj, tCs_inj, xfer1Acts16_map, prj_runG_map]
     exact xfer1Acts_run (mark := mark) (a := sC2) (b := sCs) (by decide) s (prj S₁)
       hq1c2' hq1cs'
   obtain ⟨g1, -⟩ := xfer1_spec (blank := blank) (mark := mark) (a := sC2) (b := sCs)
@@ -905,10 +905,10 @@ theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
   have p2C2 : Tape.CounterView' blank mark (S₂ tC2) 0 := by
     show Tape.CounterView' blank mark (prj S₂ sC2) 0
     rw [hprj2]; exact g1
-  have p2ne : ∀ j : Fin 13, j ≠ tC2 → j ≠ tCs → S₂ j = S₁ j := by
+  have p2ne : ∀ j : Fin 16, j ≠ tC2 → j ≠ tCs → S₂ j = S₁ j := by
     intro j hc2 hcs
-    rcases fin13_cases j with rfl | ⟨i, rfl⟩
-    · rw [← hS2, tC2_inj, tCs_inj, xfer1Acts13_map]
+    rcases fin16_cases j with rfl | ⟨i, rfl⟩
+    · rw [← hS2, tC2_inj, tCs_inj, xfer1Acts16_map]
       exact runG_map_tF blank _ S₁
     · show prj S₂ i = prj S₁ i
       rw [hprj2]
@@ -931,7 +931,7 @@ theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
   rw [← hS3P] at p3F p3P
   rw [Nat.sub_self] at p3F
   rw [take_drop_sent] at p3P
-  have p3ne : ∀ j : Fin 13, j ≠ tF → j ≠ tP → S₃ j = S₂ j := by
+  have p3ne : ∀ j : Fin 16, j ≠ tF → j ≠ tP → S₃ j = S₂ j := by
     intro j hf hp; rw [hS3P]; exact copyLoopL_untouched blank hf hp _ _
   -- フェーズ 3（`tIn` → `tP`、番兵まで）
   obtain ⟨S₄, hS4⟩ : ∃ T, runG blank (copyActsN tIn tP (min (h - s) h₀)) S₃ = T := ⟨_, rfl⟩
@@ -946,7 +946,7 @@ theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
   rw [Nat.sub_self] at p4In
   rw [take_drop_sent, ← List.append_assoc,
     pair_take_split (w := w) (h := h) (h₀ := h₀) (s := s) hlt hcut] at p4P
-  have p4ne : ∀ j : Fin 13, j ≠ tIn → j ≠ tP → S₄ j = S₃ j := by
+  have p4ne : ∀ j : Fin 16, j ≠ tIn → j ≠ tP → S₄ j = S₃ j := by
     intro j hi hp; rw [hS4P]; exact copyLoopL_untouched blank hi hp _ _
   have p4U : Tape.StackView blank (S₄ tU) ((w.take h).drop (h - s) ++ [startSym]) := by
     rw [p4ne tU (by decide) (by decide), p3ne tU (by decide) (by decide)]; exact p2U
@@ -958,7 +958,7 @@ theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
     rw [hS5P, pushBothN_U]; exact Tape.push_spec p4U endSym
   have p5P : Tape.StackView blank (S₅ tP) (endSym :: (w.take (h - s) ++ [startSym])) := by
     rw [hS5P, pushBothN_P]; exact Tape.push_spec p4P endSym
-  have p5ne : ∀ j : Fin 13, j ≠ tU → j ≠ tP → S₅ j = S₄ j := by
+  have p5ne : ∀ j : Fin 16, j ≠ tU → j ≠ tP → S₅ j = S₄ j := by
     intro j hu hp; rw [hS5P]; exact pushBothN_ne blank endSym hu hp S₄
   -- 長さ
   have hulen : ((w.take h).drop (h - s)).length = s := by
@@ -985,7 +985,7 @@ theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
   have p6U : Tape.SeqView blank (S₆ tU)
       (startSym :: ((w.take h).reverse.take s ++ [endSym])) 1 := by
     rw [hS6P]; simpa [← hueq] using hs6
-  have p6ne : ∀ j : Fin 13, j ≠ tU → S₆ j = S₅ j := by
+  have p6ne : ∀ j : Fin 16, j ≠ tU → S₆ j = S₅ j := by
     intro j hu; rw [hS6P]; exact settleP_untouched blank hu _ _
   -- フェーズ 6（`tP` の `settle`）
   obtain ⟨S₇, hS7⟩ : ∃ T, runG blank
@@ -1009,10 +1009,10 @@ theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
   have p7P : Tape.SeqView blank (S₇ tP)
       (startSym :: ((w.take h).reverse.drop s ++ [endSym])) 1 := by
     rw [hS7P]; simpa [← hveq] using hs7
-  have p7ne : ∀ j : Fin 13, j ≠ tP → S₇ j = S₆ j := by
+  have p7ne : ∀ j : Fin 16, j ≠ tP → S₇ j = S₆ j := by
     intro j hp; rw [hS7P]; exact settleP_untouched blank hp _ _
   -- 触られなかったテープ
-  have hkeep : ∀ j : Fin 13, j ≠ tU → j ≠ tP → j ≠ tF → j ≠ tIn → j ≠ tCs → j ≠ tC2 →
+  have hkeep : ∀ j : Fin 16, j ≠ tU → j ≠ tP → j ≠ tF → j ≠ tIn → j ≠ tCs → j ≠ tC2 →
       S₇ j = S j := by
     intro j hu hp hf hi hcs hc2
     rw [p7ne j hp, p6ne j hu, p5ne j hu hp, p4ne j hi hp, p3ne j hf hp, p2ne j hc2 hcs,
@@ -1028,16 +1028,16 @@ theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
     rw [hkeep tAn (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)]
     exact hAn
   -- フェーズ 7（単進カウンタ）
-  obtain ⟨S₈, hS8⟩ : ∃ T, runG blank (kLoopActs13 blank p₁ k) S₇ = T := ⟨_, rfl⟩
+  obtain ⟨S₈, hS8⟩ : ∃ T, runG blank (kLoopActs16 blank p₁ k) S₇ = T := ⟨_, rfl⟩
   obtain ⟨u1, u2, u3, -, une⟩ := kLoop_spec (blank := blank) (mark := mark) k (prj S₇) p₁ 0
     p7C1 p7C2 p7An
   have hprj8 : prj S₈ = run blank (kLoop blank k (prj S₇)) (prj S₇) := by
     rw [← hS8]
-    exact kLoopActs13_prj hne k S₇ p₁ 0 p7C1 p7C2 p7An
-  have p8ne : ∀ j : Fin 13, j ≠ tC1 → j ≠ tC2 → j ≠ tAn → S₈ j = S₇ j := by
+    exact kLoopActs16_prj hne k S₇ p₁ 0 p7C1 p7C2 p7An
+  have p8ne : ∀ j : Fin 16, j ≠ tC1 → j ≠ tC2 → j ≠ tAn → S₈ j = S₇ j := by
     intro j h1 h2 h3
-    rcases fin13_cases j with rfl | ⟨i, rfl⟩
-    · rw [← hS8]; exact kLoopActs13_tF blank p₁ k S₇
+    rcases fin16_cases j with rfl | ⟨i, rfl⟩
+    · rw [← hS8]; exact kLoopActs16_tF blank p₁ k S₇
     · show prj S₈ i = prj S₇ i
       rw [hprj8]
       exact une i (fun hc => h1 (by rw [hc]; rfl)) (fun hc => h2 (by rw [hc]; rfl))
@@ -1053,8 +1053,8 @@ theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
     (fun hc => hSw (List.mem_of_mem_take (List.mem_of_mem_drop hc))) hSE
   have hsentP := settle_sentinel_fresh (startSym := startSym) (w.take (h - s)) endSym
     (fun hc => hSw (List.mem_of_mem_take hc)) hSE
-  have E7 : ExecG Terminal blank (kLoopProg13 blank mark k) S₇ (kLoopActs13 blank p₁ k) :=
-    kLoopProg13_exec hne k S₇ p₁ 0 p7C1 p7C2 p7An
+  have E7 : ExecG Terminal blank (kLoopProg16 blank mark k) S₇ (kLoopActs16 blank p₁ k) :=
+    kLoopProg16_exec hne k S₇ p₁ 0 p7C1 p7C2 p7An
   have E6 : ExecG Terminal blank (settleProgG tP blank startSym) S₆
       (TAct.put tP blank .left :: (leftWalkG tP (h - s + 1) ++ [TAct.keep tP .right])) := by
     have := settleProgG_exec (Terminal := Terminal) (i := tP) (sent := startSym) p6P
@@ -1077,8 +1077,8 @@ theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
       (Prog.loop (tF, leftSym) (TAct.copy tP tF (sc := sc) .right).act
         (ACT (TAct.keep tF .left))) S₂ (copyActsN tF tP (h - s - h₀)) :=
     copyLoopSentL_exec (Terminal := Terminal) (by decide) hfreshF _ S₂ p2F
-  have E2a : ExecG Terminal blank (xfer1Prog13 blank mark tC2 tCs) S₁
-      (xfer1Acts13 blank tC2 tCs s) :=
+  have E2a : ExecG Terminal blank (xfer1Prog16 blank mark tC2 tCs) S₁
+      (xfer1Acts16 blank tC2 tCs s) :=
     decLoopProg_exec hne (by intro x hx; fin_cases hx <;> (simp only [TAct.tape]; decide)) s S₁
       hq1c2
   have E0 : ExecG Terminal blank (prologueProgP blank startSym) S
@@ -1109,7 +1109,7 @@ theorem setupProgPairL_core {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
 /-- **実行**：`setupProgPairL` はちょうど `setupProgPairLActs` を実行し、
 その結果のテープが `setupTapesPairL`。 -/
 theorem setupProgPairL_exec {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r k : ℕ}
-    {w Text : List (Fin sc)} {S : Tapes13 sc}
+    {w Text : List (Fin sc)} {S : Tapes16 sc}
     (H : PrepPreLPair blank mark leftSym s h h₀ p₁ r w Text S) (hne : mark ≠ blank)
     (hSw : startSym ∉ w) (hSE : startSym ≠ endSym) :
     ExecG Terminal blank (setupProgPairL blank startSym endSym mark leftSym k) S
@@ -1121,7 +1121,7 @@ theorem setupProgPairL_exec {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r 
 /-- **主定理**：`setupProgPairL`（`s`,`h`,`h₀` に依存しない単一の固定プログラム）は
 `PrepPreLPair` のもとで `PatternTapesPair.setup_spec_pair` と同じ符号化を作る。 -/
 theorem setupProgPairL_spec {startSym endSym leftSym : Fin sc} {s h h₀ p₁ r k : ℕ}
-    {w Text : List (Fin sc)} {S : Tapes13 sc}
+    {w Text : List (Fin sc)} {S : Tapes16 sc}
     (H : PrepPreLPair blank mark leftSym s h h₀ p₁ r w Text S) (hne : mark ≠ blank)
     (hSw : startSym ∉ w) (hSE : startSym ≠ endSym) :
     (ExecG Terminal blank (setupProgPairL blank startSym endSym mark leftSym k) S
@@ -1186,17 +1186,17 @@ section CopyPair
 
 /-- 凍結した 2 本（ヘッドはどちらも添字 `0`）から 1 本のテープ `j` を作るプログラム。
 右向きに、空白を読むまで走る。 -/
-def copyPairProg (blank : Fin sc) (j : Fin 13) : Prog (ActG 13 sc) (CondG 13 sc) :=
+def copyPairProg (blank : Fin sc) (j : Fin 16) : Prog (ActG 16 sc) (CondG 16 sc) :=
   Prog.seq (copyProgR tIn j blank) (copyProgR tF j blank)
 
-def copyPairActs (j : Fin 13) (h₀ m : ℕ) : List (TAct 13 sc) :=
+def copyPairActs (j : Fin 16) (h₀ m : ℕ) : List (TAct 16 sc) :=
   copyActsR tIn j h₀ ++ copyActsR tF j m
 
-@[simp] theorem copyPairActs_length (j : Fin 13) (h₀ m : ℕ) :
+@[simp] theorem copyPairActs_length (j : Fin 16) (h₀ m : ℕ) :
     (copyPairActs (sc := sc) j h₀ m).length = 2 * h₀ + 2 * m := by
   rw [copyPairActs, List.length_append, copyActsR_length, copyActsR_length]
 
-theorem copyPairActs_runP (blank : Fin sc) (j : Fin 13) (h₀ m : ℕ) (S : Tapes13 sc) :
+theorem copyPairActs_runP (blank : Fin sc) (j : Fin 16) (h₀ m : ℕ) (S : Tapes16 sc) :
     runG blank (copyPairActs j h₀ m) S = runP blank (copyPairToSingle blank j h₀ m S) S := by
   rw [copyPairActs, runG_append, copyActsR_runP, copyActsR_runP, copyPairToSingle, seqQ,
     runP_append]
@@ -1204,8 +1204,8 @@ theorem copyPairActs_runP (blank : Fin sc) (j : Fin 13) (h₀ m : ℕ) (S : Tape
 variable {blank : Fin sc}
 
 /-- **実行**：番兵（末尾の空白）駆動で 2 本を読み切る。 -/
-theorem copyPairProg_exec {j : Fin 13} (hjI : j ≠ tIn) (hjF : j ≠ tF)
-    {S : Tapes13 sc} {w : List (Fin sc)} {h h₀ : ℕ} (hpos : 0 < h₀) (hlt : h₀ < h)
+theorem copyPairProg_exec {j : Fin 16} (hjI : j ≠ tIn) (hjF : j ≠ tF)
+    {S : Tapes16 sc} {w : List (Fin sc)} {h h₀ : ℕ} (hpos : 0 < h₀) (hlt : h₀ < h)
     (hle : h ≤ w.length) (hbl : blank ∉ w)
     (hIn : Tape.SeqView blank (S tIn) (w.take h₀) 0)
     (hF : Tape.SeqView blank (S tF) ((w.drop h₀).take (h - h₀)) 0) :
@@ -1231,8 +1231,8 @@ theorem copyPairProg_exec {j : Fin 13} (hjI : j ≠ tIn) (hjF : j ≠ tF)
   exact execG_of_eq rfl (execG_seq e1 e2)
 
 /-- **系**：`copyPairProg` の実行結果、`j` には `w.take h` の最前線ビューが立つ。 -/
-theorem copyPairProg_spec {j : Fin 13} (hjI : j ≠ tIn) (hjF : j ≠ tF)
-    {S : Tapes13 sc} {w : List (Fin sc)} {h h₀ : ℕ} (hpos : 0 < h₀) (hlt : h₀ < h)
+theorem copyPairProg_spec {j : Fin 16} (hjI : j ≠ tIn) (hjF : j ≠ tF)
+    {S : Tapes16 sc} {w : List (Fin sc)} {h h₀ : ℕ} (hpos : 0 < h₀) (hlt : h₀ < h)
     (hle : h ≤ w.length) (hbl : blank ∉ w)
     (hIn : Tape.SeqView blank (S tIn) (w.take h₀) 0)
     (hF : Tape.SeqView blank (S tF) ((w.drop h₀).take (h - h₀)) 0)

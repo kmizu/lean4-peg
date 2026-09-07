@@ -12,7 +12,7 @@ import PalPeg.TextFeed
 本ファイルはその **準備フェーズ**、すなわち「入力コピーテープと単進カウンタから、
 走査器・検証器の初期テープ配置を実際に作る」動作列を与え、その正しさとコストを示す。
 
-## テープ配置（12 本）
+## テープ配置（15 本）
 
 * `sP … sRn` (0–7) — `GSScanTapes` の 8 本（`toGS` でそのまま `TapesState'` になる）。
 * `sU`  (8)  — 検証器の接頭辞テープ。最終形は `startSym :: (u ++ [endSym])`、ヘッドは添字 `1`。
@@ -20,6 +20,9 @@ import PalPeg.TextFeed
 * `sIn` (10) — **入力の 2 本目のコピー**。書き手が最前線に置いているテープとは別に、
                ヘッドが自由に使えるコピーを仮定する（時刻 `h` までに `w.take h` が載っている）。
 * `sCs` (11) — 切断点 `s` の単進カウンタ（`CounterView'`）。
+* `sScr`, `sScr2`, `sScr3` (12–14) — 準備フェーズ専用の作業テープ 3 本。
+  段の走査器・検証器・中央仕事はいずれもこの 3 本を触らないので、不変条件は課さない
+  （`PrepInstance` が前処理器の `GSPre.Act.Ca` / `Cb` / `Cc` の行き先として使う）。
 
 `p₁`, `r` は前処理 (`GSPreprocessTapes`) がそのまま `sC1`, `sRp` 上の単進カウンタとして
 渡してくると仮定する（`Encodes'` が要求するのがまさにその 2 本だから、載せ替えは不要）。
@@ -50,39 +53,45 @@ variable {sc : ℕ}
 
 /-! ## 0. テープ番号と動作 -/
 
-def sP : Fin 12 := 0
-def sT : Fin 12 := 1
-def sC1 : Fin 12 := 2
-def sC2 : Fin 12 := 3
-def sAp : Fin 12 := 4
-def sAn : Fin 12 := 5
-def sRp : Fin 12 := 6
-def sRn : Fin 12 := 7
-def sU : Fin 12 := 8
-def sX2 : Fin 12 := 9
-def sIn : Fin 12 := 10
-def sCs : Fin 12 := 11
+def sP : Fin 15 := 0
+def sT : Fin 15 := 1
+def sC1 : Fin 15 := 2
+def sC2 : Fin 15 := 3
+def sAp : Fin 15 := 4
+def sAn : Fin 15 := 5
+def sRp : Fin 15 := 6
+def sRn : Fin 15 := 7
+def sU : Fin 15 := 8
+def sX2 : Fin 15 := 9
+def sIn : Fin 15 := 10
+def sCs : Fin 15 := 11
+/-- 準備フェーズ用の作業テープ（既存プログラムは触らない）。 -/
+def sScr : Fin 15 := 12
+/-- 準備フェーズ用の作業テープ 2。 -/
+def sScr2 : Fin 15 := 13
+/-- 準備フェーズ用の作業テープ 3。 -/
+def sScr3 : Fin 15 := 14
 
-/-- 12 本のテープ。 -/
-abbrev Tapes (sc : ℕ) := Fin 12 → TapeConfiguration sc
+/-- 15 本のテープ。 -/
+abbrev Tapes (sc : ℕ) := Fin 15 → TapeConfiguration sc
 
 /-- 1 本のテープへの 1 動作。 -/
 inductive SAct (sc : ℕ) where
-  | keep : Fin 12 → Move → SAct sc
-  | put : Fin 12 → Fin sc → Move → SAct sc
+  | keep : Fin 15 → Move → SAct sc
+  | put : Fin 15 → Fin sc → Move → SAct sc
 
 /-- 動作が触るテープ。 -/
-def sTape : SAct sc → Fin 12
+def sTape : SAct sc → Fin 15
   | .keep i _ => i
   | .put i _ _ => i
 
-def updT (S : Tapes sc) (i : Fin 12) (tp : TapeConfiguration sc) : Tapes sc :=
+def updT (S : Tapes sc) (i : Fin 15) (tp : TapeConfiguration sc) : Tapes sc :=
   fun j => if j = i then tp else S j
 
-@[simp] theorem updT_self (S : Tapes sc) (i : Fin 12) (tp : TapeConfiguration sc) :
+@[simp] theorem updT_self (S : Tapes sc) (i : Fin 15) (tp : TapeConfiguration sc) :
     updT S i tp i = tp := by simp [updT]
 
-theorem updT_ne {i j : Fin 12} (S : Tapes sc) (tp : TapeConfiguration sc) (h : j ≠ i) :
+theorem updT_ne {i j : Fin 15} (S : Tapes sc) (tp : TapeConfiguration sc) (h : j ≠ i) :
     updT S i tp j = S j := by simp [updT, h]
 
 def applyS (blank : Fin sc) (S : Tapes sc) : SAct sc → Tapes sc
@@ -102,18 +111,18 @@ theorem run_append (blank : Fin sc) (l₁ l₂ : List (SAct sc)) (S : Tapes sc) 
     run blank (l₁ ++ l₂) S = run blank l₂ (run blank l₁ S) := by
   simp [run]
 
-theorem applyS_put_self (blank : Fin sc) (S : Tapes sc) (i : Fin 12) (a : Fin sc) (m : Move) :
+theorem applyS_put_self (blank : Fin sc) (S : Tapes sc) (i : Fin 15) (a : Fin sc) (m : Move) :
     applyS blank S (.put i a m) i = Tape.step blank (S i) a m := updT_self ..
 
-theorem applyS_keep_self (blank : Fin sc) (S : Tapes sc) (i : Fin 12) (m : Move) :
+theorem applyS_keep_self (blank : Fin sc) (S : Tapes sc) (i : Fin 15) (m : Move) :
     applyS blank S (.keep i m) i = Tape.step blank (S i) (S i).focus m := updT_self ..
 
-theorem applyS_ne (blank : Fin sc) (S : Tapes sc) (a : SAct sc) {j : Fin 12}
+theorem applyS_ne (blank : Fin sc) (S : Tapes sc) (a : SAct sc) {j : Fin 15}
     (h : j ≠ sTape a) : applyS blank S a j = S j := by
   cases a <;> exact updT_ne _ _ h
 
 /-- 触られないテープは変わらない。 -/
-theorem run_untouched (blank : Fin sc) (j : Fin 12) :
+theorem run_untouched (blank : Fin sc) (j : Fin 15) :
     ∀ (l : List (SAct sc)) (S : Tapes sc), (∀ a ∈ l, sTape a ≠ j) → run blank l S j = S j := by
   intro l
   induction l with
@@ -142,15 +151,15 @@ def toVExt (S : Tapes sc) : GSVTapes.VExt sc := ⟨S sU, S sX2⟩
 /-! ## 1. 入力コピーから積む（左へ歩く＝自動的に反転する） -/
 
 /-- 1 記号ぶん：`i` が読んでいる記号を `j` に積み、`i` を左へ 1 歩。 -/
-def copyRound (i j : Fin 12) (S : Tapes sc) : List (SAct sc) :=
+def copyRound (i j : Fin 15) (S : Tapes sc) : List (SAct sc) :=
   [SAct.put j (Tape.read (S i)) .right, SAct.keep i .left]
 
 /-- `n` 記号ぶん。 -/
-def copyLoop (blank : Fin sc) (i j : Fin 12) : ℕ → Tapes sc → List (SAct sc)
+def copyLoop (blank : Fin sc) (i j : Fin 15) : ℕ → Tapes sc → List (SAct sc)
   | 0, _ => []
   | n + 1, S => copyRound i j S ++ copyLoop blank i j n (run blank (copyRound i j S) S)
 
-theorem copyLoop_length (blank : Fin sc) (i j : Fin 12) :
+theorem copyLoop_length (blank : Fin sc) (i j : Fin 15) :
     ∀ (n : ℕ) (S : Tapes sc), (copyLoop blank i j n S).length = 2 * n := by
   intro n
   induction n with
@@ -161,7 +170,7 @@ theorem copyLoop_length (blank : Fin sc) (i j : Fin 12) :
     simp [copyRound]
     omega
 
-theorem copyLoop_untouched (blank : Fin sc) {i j l : Fin 12} (hi : l ≠ i) (hj : l ≠ j) :
+theorem copyLoop_untouched (blank : Fin sc) {i j l : Fin 15} (hi : l ≠ i) (hj : l ≠ j) :
     ∀ (n : ℕ) (S : Tapes sc), run blank (copyLoop blank i j n S) S l = S l := by
   intro n
   induction n with
@@ -179,7 +188,7 @@ theorem copyLoop_untouched (blank : Fin sc) {i j l : Fin 12} (hi : l ≠ i) (hj 
 /-- **主補題**：`i` のヘッドを添字 `b` から左へ `n` 歩ぶん歩かせながら `j` に積むと、
 `j` には `w[b-n+1], …, w[b]`（最上段が `w[b-n+1]`）が積まれ、`i` のヘッドは `b - n` に来る。
 テープのセルとしては `x = (w.take h).reverse` の向きに並ぶ。 -/
-theorem copyLoop_spec (blank : Fin sc) {i j : Fin 12} (hij : j ≠ i) :
+theorem copyLoop_spec (blank : Fin sc) {i j : Fin 15} (hij : j ≠ i) :
     ∀ (n b : ℕ) (S : Tapes sc) (w l : List (Fin sc)), n ≤ b + 1 →
       Tape.SeqView blank (S i) w b → Tape.StackView blank (S j) l →
       Tape.SeqView blank (run blank (copyLoop blank i j n S) S i) w (b - n) ∧
@@ -265,18 +274,18 @@ theorem stack_to_seq {blank : Fin sc} {tp : TapeConfiguration sc} {a : Fin sc}
       List.drop_eq_nil_of_le (by simp), List.nil_append]
 
 /-- ヘッドを左へ `n` 歩（読んだ記号を書き戻す）。 -/
-def leftWalk (i : Fin 12) (n : ℕ) : List (SAct sc) := List.replicate n (SAct.keep i .left)
+def leftWalk (i : Fin 15) (n : ℕ) : List (SAct sc) := List.replicate n (SAct.keep i .left)
 
-@[simp] theorem leftWalk_length (i : Fin 12) (n : ℕ) : (leftWalk (sc := sc) i n).length = n := by
+@[simp] theorem leftWalk_length (i : Fin 15) (n : ℕ) : (leftWalk (sc := sc) i n).length = n := by
   simp [leftWalk]
 
-theorem leftWalk_untouched (blank : Fin sc) {i j : Fin 12} (h : j ≠ i) (n : ℕ) (S : Tapes sc) :
+theorem leftWalk_untouched (blank : Fin sc) {i j : Fin 15} (h : j ≠ i) (n : ℕ) (S : Tapes sc) :
     run blank (leftWalk i n) S j = S j := by
   refine run_untouched blank j _ S (fun a ha => ?_)
   rw [List.eq_of_mem_replicate ha]
   exact Ne.symm h
 
-theorem leftWalk_spec (blank : Fin sc) (i : Fin 12) :
+theorem leftWalk_spec (blank : Fin sc) (i : Fin 15) :
     ∀ (n m : ℕ) (S : Tapes sc) (w : List (Fin sc)),
       Tape.SeqView blank (S i) w (m + n) →
       Tape.SeqView blank (run blank (leftWalk i n) S i) w m := by
@@ -294,17 +303,17 @@ theorem leftWalk_spec (blank : Fin sc) (i : Fin 12) :
     exact Tape.seq_move_left (by rw [show m + n + 1 = m + (n + 1) from by omega]; exact h)
 
 /-- 積み終えたスタックを逐次ビューに直し、ヘッドを添字 `1` に置く動作列。 -/
-def settle (blank : Fin sc) (i : Fin 12) (n : ℕ) : List (SAct sc) :=
+def settle (blank : Fin sc) (i : Fin 15) (n : ℕ) : List (SAct sc) :=
   SAct.put i blank .left :: leftWalk i n
 
-@[simp] theorem settle_length (blank : Fin sc) (i : Fin 12) (n : ℕ) :
+@[simp] theorem settle_length (blank : Fin sc) (i : Fin 15) (n : ℕ) :
     (settle (sc := sc) blank i n).length = n + 1 := by simp [settle]
 
-theorem settle_untouched (blank : Fin sc) {i j : Fin 12} (h : j ≠ i) (n : ℕ) (S : Tapes sc) :
+theorem settle_untouched (blank : Fin sc) {i j : Fin 15} (h : j ≠ i) (n : ℕ) (S : Tapes sc) :
     run blank (settle blank i n) S j = S j := by
   rw [settle, run_cons, leftWalk_untouched blank h, applyS_ne blank S _ h]
 
-theorem settle_spec (blank : Fin sc) (i : Fin 12) {S : Tapes sc} {a : Fin sc}
+theorem settle_spec (blank : Fin sc) (i : Fin 15) {S : Tapes sc} {a : Fin sc}
     {l : List (Fin sc)} {n : ℕ} (h : Tape.StackView blank (S i) (a :: l))
     (hn : l.length = n + 1) :
     Tape.SeqView blank (run blank (settle blank i n) S i) ((a :: l).reverse) 1 := by
@@ -315,40 +324,40 @@ theorem settle_spec (blank : Fin sc) (i : Fin 12) {S : Tapes sc} {a : Fin sc}
 
 /-! ## 3. 単進カウンタの転送 -/
 
-def decActs (blank : Fin sc) (i : Fin 12) : List (SAct sc) :=
+def decActs (blank : Fin sc) (i : Fin 15) : List (SAct sc) :=
   [SAct.put i blank .left, SAct.put i blank .stay]
 
-def incAct (blank : Fin sc) (i : Fin 12) : SAct sc := SAct.put i blank .right
+def incAct (blank : Fin sc) (i : Fin 15) : SAct sc := SAct.put i blank .right
 
 /-- 1 減らして 2 本に 1 ずつ足す（4 動作）。 -/
-def xfer2Round (blank : Fin sc) (a b c : Fin 12) : List (SAct sc) :=
+def xfer2Round (blank : Fin sc) (a b c : Fin 15) : List (SAct sc) :=
   decActs blank a ++ [incAct blank b, incAct blank c]
 
-def xfer2 (blank : Fin sc) (a b c : Fin 12) : ℕ → List (SAct sc)
+def xfer2 (blank : Fin sc) (a b c : Fin 15) : ℕ → List (SAct sc)
   | 0 => []
   | n + 1 => xfer2Round blank a b c ++ xfer2 blank a b c n
 
 /-- 1 減らして 1 本に 1 足す（3 動作）。 -/
-def xfer1Round (blank : Fin sc) (a b : Fin 12) : List (SAct sc) :=
+def xfer1Round (blank : Fin sc) (a b : Fin 15) : List (SAct sc) :=
   decActs blank a ++ [incAct blank b]
 
-def xfer1 (blank : Fin sc) (a b : Fin 12) : ℕ → List (SAct sc)
+def xfer1 (blank : Fin sc) (a b : Fin 15) : ℕ → List (SAct sc)
   | 0 => []
   | n + 1 => xfer1Round blank a b ++ xfer1 blank a b n
 
-theorem xfer2_length (blank : Fin sc) (a b c : Fin 12) (n : ℕ) :
+theorem xfer2_length (blank : Fin sc) (a b c : Fin 15) (n : ℕ) :
     (xfer2 blank a b c n).length = 4 * n := by
   induction n with
   | zero => rfl
   | succ n ih => rw [xfer2, List.length_append, ih]; simp [xfer2Round, decActs]; omega
 
-theorem xfer1_length (blank : Fin sc) (a b : Fin 12) (n : ℕ) :
+theorem xfer1_length (blank : Fin sc) (a b : Fin 15) (n : ℕ) :
     (xfer1 blank a b n).length = 3 * n := by
   induction n with
   | zero => rfl
   | succ n ih => rw [xfer1, List.length_append, ih]; simp [xfer1Round, decActs]; omega
 
-theorem xfer2_untouched (blank : Fin sc) {a b c j : Fin 12} (ha : j ≠ a) (hb : j ≠ b)
+theorem xfer2_untouched (blank : Fin sc) {a b c j : Fin 15} (ha : j ≠ a) (hb : j ≠ b)
     (hc : j ≠ c) : ∀ (n : ℕ) (S : Tapes sc), run blank (xfer2 blank a b c n) S j = S j := by
   intro n
   induction n with
@@ -363,7 +372,7 @@ theorem xfer2_untouched (blank : Fin sc) {a b c j : Fin 12} (ha : j ≠ a) (hb :
       simp only [sTape] <;> [exact Ne.symm ha; exact Ne.symm ha; exact Ne.symm hb;
         exact Ne.symm hc]
 
-theorem xfer1_untouched (blank : Fin sc) {a b j : Fin 12} (ha : j ≠ a) (hb : j ≠ b) :
+theorem xfer1_untouched (blank : Fin sc) {a b j : Fin 15} (ha : j ≠ a) (hb : j ≠ b) :
     ∀ (n : ℕ) (S : Tapes sc), run blank (xfer1 blank a b n) S j = S j := by
   intro n
   induction n with
@@ -379,7 +388,7 @@ theorem xfer1_untouched (blank : Fin sc) {a b j : Fin 12} (ha : j ≠ a) (hb : j
 
 section Xfer
 
-variable {blank mark : Fin sc} {a b c : Fin 12}
+variable {blank mark : Fin sc} {a b c : Fin 15}
 
 theorem xfer2Round_a (hab : a ≠ b) (hac : a ≠ c) (S : Tapes sc) :
     run blank (xfer2Round blank a b c) S a
@@ -486,7 +495,7 @@ theorem kRound_spec {blank mark : Fin sc} {S : Tapes sc} {p y : ℕ}
       Tape.CounterView' blank mark (run blank (kRound blank S) S sC2) 0 ∧
       Tape.CounterView' blank mark (run blank (kRound blank S) S sAn) (y + p) ∧
       (kRound blank S).length = 7 * p ∧
-      ∀ j : Fin 12, j ≠ sC1 → j ≠ sC2 → j ≠ sAn → run blank (kRound blank S) S j = S j := by
+      ∀ j : Fin 15, j ≠ sC1 → j ≠ sC2 → j ≠ sAn → run blank (kRound blank S) S j = S j := by
   have hp : cval (S sC1) = p := cval_eq h1
   have hkR : kRound blank S = xfer2 blank sC1 sAn sC2 p ++ xfer1 blank sC2 sC1 p := by
     rw [kRound, hp]
@@ -517,7 +526,7 @@ theorem kLoop_spec {blank mark : Fin sc} :
         Tape.CounterView' blank mark (run blank (kLoop blank m S) S sC2) 0 ∧
         Tape.CounterView' blank mark (run blank (kLoop blank m S) S sAn) (y + m * p) ∧
         (kLoop blank m S).length = 7 * (m * p) ∧
-        ∀ j : Fin 12, j ≠ sC1 → j ≠ sC2 → j ≠ sAn → run blank (kLoop blank m S) S j = S j := by
+        ∀ j : Fin 15, j ≠ sC1 → j ≠ sC2 → j ≠ sAn → run blank (kLoop blank m S) S j = S j := by
   intro m
   induction m with
   | zero =>
@@ -557,7 +566,7 @@ theorem pushBoth_P (blank a : Fin sc) (S : Tapes sc) :
   show applyS blank (applyS blank S (SAct.put sU a .right)) (SAct.put sP a .right) sP = _
   rw [applyS_put_self, applyS_ne blank _ _ (show sP ≠ sU by decide)]
 
-theorem pushBoth_ne (blank a : Fin sc) {j : Fin 12} (hu : j ≠ sU) (hp : j ≠ sP)
+theorem pushBoth_ne (blank a : Fin sc) {j : Fin 15} (hu : j ≠ sU) (hp : j ≠ sP)
     (S : Tapes sc) : run blank (pushBoth a) S j = S j := by
   refine run_untouched blank j _ S (fun x hx => ?_)
   rcases List.mem_cons.1 hx with h | h
@@ -649,7 +658,7 @@ theorem setup_spec (H : SetupPre blank mark leftSym s h p₁ r w Text S) :
     rw [← hS1, pushBoth_U]; exact Tape.push_spec hU startSym
   have p1P : Tape.StackView blank (S₁ sP) [startSym] := by
     rw [← hS1, pushBoth_P]; exact Tape.push_spec hP startSym
-  have p1ne : ∀ j : Fin 12, j ≠ sU → j ≠ sP → S₁ j = S j := by
+  have p1ne : ∀ j : Fin 15, j ≠ sU → j ≠ sP → S₁ j = S j := by
     intro j hu hp; rw [← hS1]; exact pushBoth_ne blank startSym hu hp S
   -- フェーズ 2
   have hcs : cval (S₁ sCs) = s := by
@@ -663,7 +672,7 @@ theorem setup_spec (H : SetupPre blank mark leftSym s h p₁ r w Text S) :
     exact copyLoop_spec blank (i := sIn) (j := sU) (by decide) s h S₁ (leftSym :: w.take h)
       [startSym] (by omega)
       (by rw [p1ne sIn (by decide) (by decide)]; exact hIn) p1U
-  have p2ne : ∀ j : Fin 12, j ≠ sIn → j ≠ sU → S₂ j = S₁ j := by
+  have p2ne : ∀ j : Fin 15, j ≠ sIn → j ≠ sU → S₂ j = S₁ j := by
     intro j hi hu; rw [← hS2]; exact copyLoop_untouched blank hi hu _ _
   have p2U : Tape.StackView blank (S₂ sU) ((w.take h).drop (h - s) ++ [startSym]) := by
     have := p2.2
@@ -681,7 +690,7 @@ theorem setup_spec (H : SetupPre blank mark leftSym s h p₁ r w Text S) :
     exact copyLoop_spec blank (i := sIn) (j := sP) (by decide) (h - s) (h - s) S₂
       (leftSym :: w.take h) [startSym] (by omega) p2.1
       (by rw [p2ne sP (by decide) (by decide)]; exact p1P)
-  have p3ne : ∀ j : Fin 12, j ≠ sIn → j ≠ sP → S₃ j = S₂ j := by
+  have p3ne : ∀ j : Fin 15, j ≠ sIn → j ≠ sP → S₃ j = S₂ j := by
     intro j hi hp; rw [← hS3]; exact copyLoop_untouched blank hi hp _ _
   have p3P : Tape.StackView blank (S₃ sP) (w.take (h - s) ++ [startSym]) := by
     have := p3.2
@@ -695,7 +704,7 @@ theorem setup_spec (H : SetupPre blank mark leftSym s h p₁ r w Text S) :
     exact Tape.push_spec (by rw [p3ne sU (by decide) (by decide)]; exact p2U) endSym
   have p4P : Tape.StackView blank (S₄ sP) (endSym :: (w.take (h - s) ++ [startSym])) := by
     rw [← hS4, pushBoth_P]; exact Tape.push_spec p3P endSym
-  have p4ne : ∀ j : Fin 12, j ≠ sU → j ≠ sP → S₄ j = S₃ j := by
+  have p4ne : ∀ j : Fin 15, j ≠ sU → j ≠ sP → S₄ j = S₃ j := by
     intro j hu hp; rw [← hS4]; exact pushBoth_ne blank endSym hu hp S₃
   -- フェーズ 5
   have hulen : ((w.take h).drop (h - s)).length = s := by
@@ -712,7 +721,7 @@ theorem setup_spec (H : SetupPre blank mark leftSym s h p₁ r w Text S) :
     have := settle_spec blank sU (n := s) p4U
       (by simp only [List.length_append, List.length_cons, List.length_nil, hulen])
     simpa [← hueq] using this
-  have p5ne : ∀ j : Fin 12, j ≠ sU → S₅ j = S₄ j := by
+  have p5ne : ∀ j : Fin 15, j ≠ sU → S₅ j = S₄ j := by
     intro j hu; rw [← hS5]; exact settle_untouched blank hu _ _
   -- フェーズ 6
   have hlen6 : (S₅ sP).left.length - 2 = h - s := by
@@ -727,10 +736,10 @@ theorem setup_spec (H : SetupPre blank mark leftSym s h p₁ r w Text S) :
     have := settle_spec blank sP (n := h - s) hp5
       (by simp only [List.length_append, List.length_cons, List.length_nil, hvlen])
     simpa [← hveq] using this
-  have p6ne : ∀ j : Fin 12, j ≠ sP → S₆ j = S₅ j := by
+  have p6ne : ∀ j : Fin 15, j ≠ sP → S₆ j = S₅ j := by
     intro j hp; rw [← hS6]; exact settle_untouched blank hp _ _
   -- 触られなかったテープ
-  have hkeep : ∀ j : Fin 12, j ≠ sU → j ≠ sP → j ≠ sIn → S₆ j = S j := by
+  have hkeep : ∀ j : Fin 15, j ≠ sU → j ≠ sP → j ≠ sIn → S₆ j = S j := by
     intro j hu hp hi
     rw [p6ne j hp, p5ne j hu, p4ne j hu hp, p3ne j hi hp, p2ne j hi hu, p1ne j hu hp]
   -- フェーズ 7（`sAn` に `k * p₁`）

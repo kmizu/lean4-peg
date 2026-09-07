@@ -347,16 +347,23 @@ end PhaseChunk
 
 section Setup
 
+/-
+注意（2026-09-08）：`PalPeg.PatternPairProg` の対版テープ本数は現在拡張中で、
+`13 → 14 → 16` と変化している。本節の数値（`ActG 14` / `TAct 14` / `xfer1Prog16` /
+`kLoopProg16` / `xfer1Acts16` / `kLoopActs16`）は上流が落ち着いたら
+機械的に一括置換するだけでよい（構造・証明は本数に依存しない）。
+-/
+
 variable {sc : ℕ}
 
 open PalPeg.PatternProg PalPeg.PatternTapesPair PalPeg.PatternPairProg
 
 /-- `setupProgPairL` の 9 個のフェーズ。 -/
 def setupPhaseProg (bl startSym endSym mark leftSym : Fin sc) (k : ℕ) :
-    ℕ → Prog (ActG 13 sc) (CondG 13 sc)
+    ℕ → Prog (ActG 16 sc) (CondG 16 sc)
   | 0 => prologueProgP bl startSym
   | 1 => pairLoopProg bl mark leftSym
-  | 2 => xfer1Prog13 bl mark tC2 tCs
+  | 2 => xfer1Prog16 bl mark tC2 tCs
   | 3 => Prog.loop (tF, leftSym) (TAct.copy tP tF (sc := sc) .right).act
             (PatternProg.ACT (TAct.keep tF .left))
   | 4 => Prog.loop (tIn, leftSym) (TAct.copy tP tIn (sc := sc) .right).act
@@ -364,11 +371,11 @@ def setupPhaseProg (bl startSym endSym mark leftSym : Fin sc) (k : ℕ) :
   | 5 => pushBothProgP endSym
   | 6 => settleProgG tU bl startSym
   | 7 => settleProgG tP bl startSym
-  | 8 => kLoopProg13 bl mark k
+  | 8 => kLoopProg16 bl mark k
   | _ => Prog.skip
 
 /-- `setupProgPairL` と同じ入れ子でフェーズを組み直す。 -/
-def setupSeqTree (P : ℕ → Prog (ActG 13 sc) (CondG 13 sc)) : Prog (ActG 13 sc) (CondG 13 sc) :=
+def setupSeqTree (P : ℕ → Prog (ActG 16 sc) (CondG 16 sc)) : Prog (ActG 16 sc) (CondG 16 sc) :=
   Prog.seq (P 0)
     (Prog.seq (Prog.seq (P 1) (P 2))
       (Prog.seq (P 3)
@@ -381,7 +388,7 @@ theorem setupProgPairL_phases (bl startSym endSym mark leftSym : Fin sc) (k : �
 
 /-- フェーズのリスト（`PhaseData` に渡す形）。 -/
 def setupPhaseProgList (bl startSym endSym mark leftSym : Fin sc) (k : ℕ) :
-    List (Prog (ActG 13 sc) (CondG 13 sc)) :=
+    List (Prog (ActG 16 sc) (CondG 16 sc)) :=
   (List.range 9).map (setupPhaseProg bl startSym endSym mark leftSym k)
 
 @[simp] theorem setupPhaseProgList_length (bl startSym endSym mark leftSym : Fin sc) (k : ℕ) :
@@ -395,16 +402,16 @@ theorem setupPhaseProgList_getElem (bl startSym endSym mark leftSym : Fin sc) (k
   simp only [setupPhaseProgList, List.getElem_map, List.getElem_range]
 
 /-- `setupProgPairLActs` の 9 個の区間。 -/
-def setupPhaseActs (bl startSym endSym : Fin sc) (s h h₀ k p₁ : ℕ) : ℕ → List (TAct 13 sc)
+def setupPhaseActs (bl startSym endSym : Fin sc) (s h h₀ k p₁ : ℕ) : ℕ → List (TAct 16 sc)
   | 0 => prologueActsP bl startSym
   | 1 => pairLoopActs bl h₀ h s
-  | 2 => xfer1Acts13 bl tC2 tCs s
+  | 2 => xfer1Acts16 bl tC2 tCs s
   | 3 => copyActsN tF tP (h - s - h₀)
   | 4 => copyActsN tIn tP (min (h - s) h₀)
   | 5 => pushBothActsP endSym
   | 6 => TAct.put tU bl .left :: (leftWalkG tU (s + 1) ++ [TAct.keep tU .right])
   | 7 => TAct.put tP bl .left :: (leftWalkG tP (h - s + 1) ++ [TAct.keep tP .right])
-  | 8 => kLoopActs13 bl p₁ k
+  | 8 => kLoopActs16 bl p₁ k
   | _ => []
 
 /-- **フェーズ分解（動作列側）**：`setupProgPairLActs` は 9 個の区間の連結。 -/
@@ -429,10 +436,10 @@ open PalPeg.PatternProg PalPeg.PatternPairProg
 
 /-- 連結を保つ写像は連結列（`flatten`）も保つ。 -/
 theorem vecOf_flatten {Γ' : Type} {t' : ℕ}
-    (vecOf : List (PatternProg.TAct 13 sc) → List (Fin t' → Γ' × Move))
+    (vecOf : List (PatternProg.TAct 16 sc) → List (Fin t' → Γ' × Move))
     (hnil : vecOf [] = [])
     (happ : ∀ l₁ l₂, vecOf (l₁ ++ l₂) = vecOf l₁ ++ vecOf l₂) :
-    ∀ ls : List (List (PatternProg.TAct 13 sc)),
+    ∀ ls : List (List (PatternProg.TAct 16 sc)),
       vecOf ls.flatten = (ls.map vecOf).flatten := by
   intro ls
   induction ls with
@@ -445,7 +452,7 @@ theorem vecOf_flatten {Γ' : Type} {t' : ℕ}
 theorem setupChunk_iterate {Terminal A C Γ : Type} {t : ℕ}
     {I : Interp Terminal A C Γ t} {blank : Γ} {work : Fin t → Prop} {R : ℕ}
     {ps : List (Prog A C)} {pcAdv : A} {pcCond : ℕ → C}
-    (vecOf : List (PatternProg.TAct 13 sc) → List (Fin t → Γ × Move))
+    (vecOf : List (PatternProg.TAct 16 sc) → List (Fin t → Γ × Move))
     (hnil : vecOf [] = [])
     (happ : ∀ l₁ l₂, vecOf (l₁ ++ l₂) = vecOf l₁ ++ vecOf l₂)
     (bl startSym endSym : Fin sc) (s h h₀ k p₁ : ℕ)
