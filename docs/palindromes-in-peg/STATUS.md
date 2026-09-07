@@ -83,6 +83,9 @@ sbt -batch 'pal/runMain pal.VerifyWindowPal /tmp/pal-window-fast.peg --runner ..
 Scala版の既定の全体文法を生成して上記SHAと一致させる検証は未実施。移植の差分証拠は、
 各 `PyDiff` テストが明示するソース／fixture範囲に限る。
 
+ファイル対応の棚卸しは `pal.PortCoverageSuite` がPythonディレクトリを再帰走査して行う。
+件数を固定せず、追加されたPythonファイルにも対応Scalaパスを要求する。
+
 `CompactScaffoldPeg` は1GiBの窓を連結して2GiB超のsourceを読む設計だが、1行には別の上限がある。
 一方、トップレベルの `pal.FileGrammar` はファイルサイズが `Int.MaxValue`（約2GiB）を超えると明示的に拒否する。
 通常の再現手順は圧縮後の文法をRust runnerへ渡すため、後者の読み込み制限はこの手順の障害にならない。

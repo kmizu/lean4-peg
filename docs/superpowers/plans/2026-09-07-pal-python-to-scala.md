@@ -22,6 +22,10 @@ and `pal.GenerateScaffoldExamples`. The default full-grammar SHA has not been
 verified from Scala; only bounded/source-fixture byte-identity checks currently
 count as evidence.
 
+`pal.PortCoverageSuite` performs the durable filename audit: it recursively
+enumerates Python modules and tests and checks their Scala counterparts without
+fixing the expected totals in code.
+
 ## Global Constraints（全タスク共通・必読）
 
 1. **Scala 3 だがブレース構文を使う。** indentation syntax、`then`/`do` 省略記法、`end` マーカーは禁止。
