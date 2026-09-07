@@ -17,6 +17,7 @@ import PalPeg.GSVerifier
 import PalPeg.GSScanTapes
 import PalPeg.GSVerifierTapes
 import PalPeg.TextFeed
+import PalPeg.InputCopy
 import PalPeg.BorderJob
 import PalPeg.BorderJobTapes
 import PalPeg.RTQueue
