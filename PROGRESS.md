@@ -329,3 +329,25 @@ lake build
     periodActs/resetWalk 作業中。**`DecompOnTapes` は充足不能と判明**（`Act` に P/U 書き込みがない；
     `decompOnTapes_isEmpty`）→ `Pset`/`Uset` 構成子を追加中。`PrepOnTapes` に禁止記号パラメータと
     `len_le` の前提条件を追加（費用はテープ内容依存のため）。TextFeed は `fill'`（横断書き込み）が作業中。
+- 進捗（2026-09-09 午前、コミット 25f9b3d/5ab98d7 まで）：
+  * **`PassPeriodSum`**：PassSum10 で組み立てが完全に閉じた——`passPeriodSum_eight_of_treeFacts`
+    （`RootGrowth ∧ LastChildBound ⟹ PassPeriodSum 8 2`、再帰 `stripLoop2` 上に直接）。`LastChildBound` は
+    `child_period_bound` から従う（貼り付け中）、`RootGrowth` は `sibling_growth_eight` と
+    `consumption_lt_period_of_dichotomy`（(G)∨(H) ⟹ C(c) < p_c）から従う。**残る唯一の未証明命題は (H)**：
+    「t_j ≥ (k−1)p_j な子孫は周期境界を跨がへん（E_j < a_{c+1}+p_c）」。自己相似族の正しいコーパス（閉じた
+    ノードに ≥2 子孫、332 例）で違反 0。(E) は反例あり（比 1.027）で不要になった。
+  * **有限制御化**：完成＝GS 走査器、実時間キュー、検証器（`vprogX`、`vprogramX_amortized` A=9k+14/B=16、
+    `matchProg`）、境界列挙 1 ステップ（`ovStepProg_exec_full`、`Act` に `Pset/Uset`）、段セットアップ
+    （12 テープ `setupProgL`、13 テープ対版 `setupProgPairL`、カウンタ駆動＋左番兵）、TextFeed（`fill'`、
+    phase 1）、ProgLang 直和組合せ子、**持続制御機械 `progMachineP`（`progMachineP_grind`）**。
+    作業中：前処理 `decProg` の Prog 移植、中央ジョブ Prog の番兵駆動化、TextFeed phase 2、StageTapes の
+    X 版（Ψ 込み Metered）。
+  * **テープ意味論側**：`prepInstance`（`PrepOnTapes` の具体化、`forb`・`len_le` 前提付き）、
+    `StageIfaceInstance.stageIface`（`full_answer_mem_PAL_of`）完成。`DecompOnTapes` は `EntryBlank` 前提が
+    要ると Lean で証明（`decompOnTapes_isEmpty`）→ MiddleTapes を修正中、`decompInstanceB` は修正後の
+    インタフェースの witness。生の `DecOK` 仮定を `gsDec2` 版に置換中。入力コピーの左番兵化
+    （`InputCopySentinel`、FullMachineTapes `stage_birth_pair_prepView`）完了。段誕生時の初期テープ
+    （`hinit`）構築中。
+  * **残り**：段ライフサイクルを 1 本の持続 Prog に（idle→前処理 grind→セットアップ→照合＋中央ジョブ）、
+    全体機械の 1 ラウンド Prog（4 スロット＋入力コピー＋消去）、Prog 機械の挙動とテープ意味論
+    （`full_answer_mem_PAL_of`）の対応、`progMachineP_recognizedBy` + `pal_in_peg_of_structured` で最終定理。
