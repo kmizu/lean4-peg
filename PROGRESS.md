@@ -207,3 +207,7 @@ lake build
   位置 T の最小周期は p₀ に戻るので単調性と矛盾）。新エージェントで証明中（GSDecompL1）。
   稼働中：GSScanTapes カウンタ化、RTQueueTapes 差分カウンタ、TextFeed、BorderJobTapes、GSPreprocess 全体
   線形上界、GSPreprocessTapes、GSVerifierTapes の償却。
+- 進捗（コミット直近）：GSPreprocess 全体線形上界 `decomposeWork ≤ (16k+38)|x|+2k+5`、RTQueueTapes の
+  数値比較を差分テープに置換、GSVerifierTapes の償却（L1 不要）、GSScanTapes のオラクル bit 除去（8 テープ）、
+  TextFeed（`feed_online`）。稼働中：BorderJobTapes、GSPreprocessTapes、GSDecompL1、OnlineMachine 半分割、
+  MiddleBorder（BorderJob 版 MiddleImpl）。
