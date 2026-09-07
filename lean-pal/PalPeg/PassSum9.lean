@@ -232,7 +232,11 @@ theorem runEnd_down_step {w : List α} {k p q r r' d : ℕ} (hk : 4 ≤ k)
 
 /-! ## §7 残る穴の明示
 
-DOWN ステップは `runEnd_down_step` で閉じている。残るのは **UP ステップ**、すなわち
+DOWN ステップは `runEnd_down_step` で、UP ステップのうち `P + q ≤ r_j`（かつ run `j` が
+第 1 子）の場合は §9 の `runEnd_up_step_le` で閉じた。残るのは **UP ステップのうち
+`r_j < P + q` の場合**（実測ではこちらが UP 着地の 96%）と、run `j` が第 1 子でない
+場合（`runEnd_up_step_le` の結論が `a_j` 基準になり `a_{c+1}` 基準に直せない）である。
+すなわち
 `c` の部分木の中で run `j` を脱出して次の兄弟 `j+1`（なお `c` の子孫）に着地する場合に
 
 ```
@@ -255,6 +259,139 @@ E_{j+1} - p_{j+1} < a_{c+1} + p_c
 def RunEndBound (p : ℕ) (desc : List (ℕ × ℕ)) : Prop :=
   ∀ e ∈ desc, e.1 < p + e.2
 
+/-! ## §8 UP ケースのための語の補題：`P`-周期語の中の `q`-周期因子
+
+UP ステップの矛盾は次の形で出る。`c` の領域は `p_c`-周期的なので、着地した
+`P`-run の中に「run `j` の先頭のコピー」が現れる。そのコピーが長さ `P + q` 以上なら、
+**`P`-周期語の中に長さ `P + q` の `q`-周期因子があれば、その因子より左の部分は
+すべて `q`-周期的**（`period_factor_propagate`）。ところが run `j` の極大性は
+`x[E_j] ≠ x[E_j - q]` を主張し、`E_j` はコピーより左にあるので矛盾する
+（`factor_period_contradiction`）。
+
+Fine–Wilf（`Words.fineWilf`）で因子の周期を `g = gcd P q` に落とし、
+`Words.hasPeriod_of_suffix_gcd` で左へ伝播させる。 -/
+
+/-- **`P`-周期語の `q`-周期因子**。`u.take R` が周期 `P` を持ち、位置 `s` から
+長さ `P + q` の因子が周期 `q` を持つなら、`u.take (s + P)` は周期 `q` を持つ。 -/
+theorem period_factor_propagate {u : List α} {P q s R : ℕ}
+    (hP : HasPeriod (u.take R) P) (hPpos : 0 < P) (hqpos : 0 < q)
+    (hfac : HasPeriod ((u.drop s).take (P + q)) q)
+    (hfit : s + (P + q) ≤ R) (hR : R ≤ u.length) :
+    HasPeriod (u.take (s + P)) q := by
+  have hsR : s ≤ R := by omega
+  -- 因子は `P` も周期に持つ
+  have hyP : HasPeriod ((u.drop s).take (P + q)) P :=
+    hasPeriod_take_of_le (hasPeriod_drop_take hP hR hsR) (by omega)
+  have hylen : ((u.drop s).take (P + q)).length = P + q := by
+    rw [List.length_take, List.length_drop]; omega
+  set g := Nat.gcd P q with hgdef
+  have hgpos : 0 < g := Nat.gcd_pos_of_pos_left _ hPpos
+  have hgle : g ≤ q := Nat.gcd_le_right _ hqpos
+  -- Fine–Wilf で `g` に落とす
+  have hg : HasPeriod ((u.drop s).take (P + q)) g :=
+    fineWilf hyP hfac hPpos hqpos (by rw [hylen]; omega)
+  -- `x = u.take (s + P)` の末尾 `P` 文字が `g`-周期的
+  have hxlen : (u.take (s + P)).length = s + P := by
+    rw [List.length_take]; omega
+  have hxP : HasPeriod (u.take (s + P)) P := hasPeriod_take_of_le hP (by omega)
+  have hdrop : (u.take (s + P)).drop ((u.take (s + P)).length - P) = (u.drop s).take P := by
+    rw [hxlen, show s + P - P = s from by omega, List.drop_take]
+    congr 1; omega
+  have hsuf : HasPeriod ((u.take (s + P)).drop ((u.take (s + P)).length - P)) g := by
+    rw [hdrop]; exact hasPeriod_take_of_le hg (by omega)
+  have hxg : HasPeriod (u.take (s + P)) g :=
+    hasPeriod_of_suffix_gcd hxP hPpos (Nat.gcd_dvd_left P q) hsuf (by omega)
+  -- `g ∣ q` なので周期 `q` も持つ
+  have hq' : (q / g) * g = q := Nat.div_mul_cancel (Nat.gcd_dvd_right P q)
+  have := hasPeriod_mul hxg (q / g)
+  rwa [hq'] at this
+
+/-- **UP ケースの矛盾**。`u.take R` が周期 `P` を持ち、位置 `s` に長さ `P + q` の
+`q`-周期因子があり、しかも因子より左に `q`-周期性の破れ `u[e] ≠ u[e - q]` があるなら
+矛盾する。（`e = E_j`、破れは run `j` の極大性。） -/
+theorem factor_period_contradiction {u : List α} {P q s R e : ℕ}
+    (hP : HasPeriod (u.take R) P) (hPpos : 0 < P) (hqpos : 0 < q)
+    (hfac : HasPeriod ((u.drop s).take (P + q)) q)
+    (hfit : s + (P + q) ≤ R) (hR : R ≤ u.length)
+    (hq : q ≤ e) (he : e < s + P) (hbreak : u[e - q]? ≠ u[e]?) : False := by
+  have hper := period_factor_propagate hP hPpos hqpos hfac hfit hR
+  have hlen : (u.take (s + P)).length = s + P := by
+    rw [List.length_take]; omega
+  have h := hper (e - q) (by rw [hlen]; omega)
+  rw [List.getElem?_take_of_lt (show e - q < s + P by omega),
+    List.getElem?_take_of_lt (show e - q + q < s + P by omega)] at h
+  rw [show e - q + q = e from by omega] at h
+  exact hbreak h
+
+/-! ## §9 領域の周期性によるコピーと、UP ケース（`r_j ≥ P + q`）の決着 -/
+
+/-- **コピー補題**。`u.take R` が周期 `p` を持てば、位置 `t` と `t + p` から始まる
+長さ `L` の因子は等しい（`t + p + L ≤ R`）。 -/
+theorem factor_copy_eq {u : List α} {p t L R : ℕ}
+    (hp : HasPeriod (u.take R) p) (hR : R ≤ u.length) (hfit : t + p + L ≤ R) :
+    (u.drop (t + p)).take L = (u.drop t).take L := by
+  have hlen : (u.take R).length = R := by rw [List.length_take]; omega
+  apply List.ext_getElem?
+  intro i
+  by_cases hi : i < L
+  · rw [List.getElem?_take_of_lt hi, List.getElem?_take_of_lt hi,
+      List.getElem?_drop, List.getElem?_drop]
+    have h := hp (t + i) (by rw [hlen]; omega)
+    rw [List.getElem?_take_of_lt (show t + i < R by omega),
+      List.getElem?_take_of_lt (show t + i + p < R by omega)] at h
+    rw [show t + p + i = t + i + p from by omega]
+    exact h.symm
+  · rw [List.getElem?_take, List.getElem?_take, if_neg hi, if_neg hi]
+
+/-- **UP ステップの (E)（`r_j ≥ P + q` の場合、第 1 子版）**。
+
+`w` を `c` の領域の先頭 `a_{c+1}` から見た接尾辞とする：
+
+* `w.take Rc` は `p = p_c` 周期（領域の周期性）、
+* run `j` は `w` の先頭から（第 1 子）長さ `rj` の `q`-周期 run で、`w[rj-q] ≠ w[rj]`（極大性）、
+* `rj < p + q`（`inner_run_lt`）、
+* 着地位置 `t`（`t + k*q = rj + 1`）から周期 `P` の run が長さ `r'` 続く、
+* `rj ≥ P + q`（本補題が扱う場合）、`q ≤ P`（UP ステップ：実際は `(k-1)*q ≤ P`）。
+
+このとき **`t + r' < p + P + q`**、すなわち `E_{j+1} < a_{c+1} + p_c + P + q` が成り立つ。
+
+証明：もし `p + P + q ≤ t + r'` なら、領域の `p`-周期性から `P`-run の中に
+`w.take (P+q)`（run `j` の先頭、`q`-周期）のコピーが現れる。`period_factor_propagate`
+によりコピーより左の部分はすべて `q`-周期的になるが、そこには run `j` の極大性による
+破れ `w[rj-q] ≠ w[rj]` が含まれるので矛盾。 -/
+theorem runEnd_up_step_le {w : List α} {k p q P rj r' t Rc : ℕ} (hk : 4 ≤ k)
+    (_hp : 0 < p) (hq : 0 < q) (hPpos : 0 < P)
+    (hreg : HasPeriod (w.take Rc) p) (hRc : Rc ≤ w.length)
+    (hrun : HasPeriod (w.take rj) q) (hbreak : w[rj - q]? ≠ w[rj]?)
+    (hrjlt : rj < p + q) (hlong : P + q ≤ rj) (hUP : q ≤ P)
+    (ht : t + k * q = rj + 1)
+    (hPrun : HasPeriod ((w.drop t).take r') P) (hr' : t + r' ≤ w.length)
+    (hcopy : p + (P + q) ≤ Rc) :
+    t + r' < p + P + q := by
+  by_contra hcon
+  have hkq : k * q ≤ rj + 1 := by omega
+  have h4q : 4 * q ≤ k * q := Nat.mul_le_mul_right q (by omega)
+  have htp : t ≤ p := by omega
+  -- コピー：`(w.drop p).take (P+q) = w.take (P+q)`
+  have hcopyeq : (w.drop (0 + p)).take (P + q) = (w.drop 0).take (P + q) :=
+    factor_copy_eq hreg hRc (by omega)
+  have hfac0 : HasPeriod ((w.drop p).take (P + q)) q := by
+    have h0 : (w.drop p).take (P + q) = w.take (P + q) := by
+      simpa using hcopyeq
+    rw [h0]; exact hasPeriod_take_of_le hrun (by omega)
+  -- `P`-run の座標に移す
+  have hshift : (w.drop t).drop (p - t) = w.drop p := by
+    rw [List.drop_drop]; congr 1; omega
+  have hfac : HasPeriod (((w.drop t).drop (p - t)).take (P + q)) q := by
+    rw [hshift]; exact hfac0
+  have hdroplen : (w.drop t).length = w.length - t := by simp
+  refine factor_period_contradiction (u := w.drop t) (P := P) (q := q) (s := p - t)
+    (R := r') (e := rj - t) hPrun hPpos hq hfac (by omega) (by omega) (by omega)
+    (by omega) ?_
+  rw [List.getElem?_drop, List.getElem?_drop,
+    show t + (rj - t - q) = rj - q from by omega, show t + (rj - t) = rj from by omega]
+  exact hbreak
+
 section AxiomCheck
 open PalPeg.PassSum9
 #print axioms PalPeg.PassSum9.inner_run_lt
@@ -266,5 +403,9 @@ open PalPeg.PassSum9
 #print axioms PalPeg.PassSum9.consumption_lt_period_of_runEnd
 #print axioms PalPeg.PassSum9.descendant_start_lt_of_runEnd
 #print axioms PalPeg.PassSum9.runEnd_down_step
+#print axioms PalPeg.PassSum9.period_factor_propagate
+#print axioms PalPeg.PassSum9.factor_period_contradiction
+#print axioms PalPeg.PassSum9.factor_copy_eq
+#print axioms PalPeg.PassSum9.runEnd_up_step_le
 #print axioms PalPeg.PassSum8.passPeriodSum_eight_of_hasTree
 end AxiomCheck
