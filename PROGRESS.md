@@ -262,3 +262,10 @@ lake build
   PassSum4（連続する子は `(k−2)/(k−1)` 倍まで；幾何成長せず、`PassPeriodSum` は仮定のまま）。
   稼働中：`decompose2_on_tapes`（外側ループ）、FullMachineTapes、PatternTapesPair。
   残り：`PrepOnTapes`/`DecompOnTapes` の具体化（有効周期の正規化込み）、`StructuredMachine` 化、最終定理。
+- 進捗（コミット 34f81d1 まで）：FullMachineTapes（4 スロット回転、`full_answer_mem_PAL` は `StageIface` 前提）、
+  PatternTapesPair（凍結入力対からのセットアップ、`setup_spec_pair`）。**ビルド注意**：lakefile は
+  `autoImplicit = false` だが `lake env lean` はそれを読まないので、単体検査は
+  `lake env lean -DautoImplicit=false <file>` で行うこと（MiddleTapes の「`lake build` だけ失敗」の原因）。
+  稼働中：`decompose2_on_tapes`（外側ループ）、ProgLang（有限制御プログラム言語 → `StructuredMachine`：
+  今のテープ実装は「動作リスト」意味論なので、これが最終定理への最大の残工事）、PassSum5（全探索の再確認と
+  証明再挑戦）、ClearAny（任意形状のテープの消去 ≤ 3·幅+3）。
