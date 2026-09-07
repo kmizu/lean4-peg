@@ -248,3 +248,6 @@ lake build
   PassSum2（`Σp_j ≤ C₁T` の再挑戦：着地補題）、StageTapes（段の全ライフサイクル）。
   **現状の唯一の数学的仮定**：`PassPeriodSum`（`decompose2` の 1 パス内 run start 周期和 ≤ C₁·p₂）。
   実測（k=4、T≤60 全探索＋山登り）では最大 0.39T で線形が濃厚。
+- 進捗（コミット f4d0e1c まで）：Prologue、README 更新、PassSum2/3（(j,j+2) 補題、同周期領域の右端一致、
+  兄弟の成長条項）。`PassPeriodSum` は依然未証明（3 回の試行が「pass 固有の着地補題が要る」で一致）。
+  稼働中：前処理 strip2 のテープ化、StageTapes（段ライフサイクル）。残り：全体機械、最終定理。
