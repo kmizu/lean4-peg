@@ -11,12 +11,14 @@ import PalPeg.Matching
 import PalPeg.GSScan
 import PalPeg.GSDecomp
 import PalPeg.GSDecompL1
+import PalPeg.GSDecompose2
 import PalPeg.GSPreprocess
 import PalPeg.GSRealTime
 import PalPeg.GSVerifier
 import PalPeg.GSScanTapes
 import PalPeg.GSVerifierTapes
 import PalPeg.TextFeed
+import PalPeg.VerifierFeed
 import PalPeg.InputCopy
 import PalPeg.PatternTapes
 import PalPeg.BorderJob
@@ -326,3 +328,7 @@ import PalPeg.Main
 /-- info: 'PalPeg.endToEnd_mem_PAL' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.endToEnd_mem_PAL
+
+/-- info: 'PalPeg.decompose2_gsDecomp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.decompose2_gsDecomp

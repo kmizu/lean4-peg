@@ -12,12 +12,14 @@ import PalPeg.Matching
 import PalPeg.GSScan
 import PalPeg.GSDecomp
 import PalPeg.GSDecompL1
+import PalPeg.GSDecompose2
 import PalPeg.GSPreprocess
 import PalPeg.GSRealTime
 import PalPeg.GSVerifier
 import PalPeg.GSScanTapes
 import PalPeg.GSVerifierTapes
 import PalPeg.TextFeed
+import PalPeg.VerifierFeed
 import PalPeg.InputCopy
 import PalPeg.PatternTapes
 import PalPeg.BorderJob
@@ -83,6 +85,8 @@ import PalPeg.Main
 * `PalPeg.GSPreprocess` — 計算可能な GS 分解 `decompose`（Python と一致）、`decompose_spec : GSCore`、1 パス線形（全体は L1 待ち）
 * `PalPeg.Main`      — `pal_in_peg_of_structured`：PAL を SAccepts する構造化機械があれば `RecognizedByTotalPEG PAL`
 * `PalPeg.BorderJobTapes` — 境界列挙の 6 テープ化、テープ仕事 ≤ 4000|x|、`flags_on_tape`
+* `PalPeg.GSDecompose2` — 失敗位置へジャンプする strip 規則の `decompose2`：`decompose2_gsDecomp`（L1 無条件）
+* `PalPeg.VerifierFeed` — 検証器の Txt2 も FIFO で供給（`.X .right` ごとの fill 版を続行中）
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/
