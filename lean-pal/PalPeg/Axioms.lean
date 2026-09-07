@@ -11,6 +11,7 @@ import PalPeg.GSScan
 import PalPeg.RTQueue
 import PalPeg.Manacher
 import PalPeg.ManacherHeads
+import PalPeg.MiddleJob
 import PalPeg.Stages
 import PalPeg.Schedule
 import PalPeg.TapeLib
@@ -190,3 +191,11 @@ import PalPeg.TapeLib
 /-- info: 'PalPeg.scanSteps_le_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.scanSteps_le_bound
+
+/-- info: 'PalPeg.MiddleJob.middle_flag_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.MiddleJob.middle_flag_spec
+
+/-- info: 'PalPeg.MiddleJob.padFlag_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.MiddleJob.padFlag_spec

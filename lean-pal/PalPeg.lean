@@ -12,6 +12,7 @@ import PalPeg.GSScan
 import PalPeg.RTQueue
 import PalPeg.Manacher
 import PalPeg.ManacherHeads
+import PalPeg.MiddleJob
 import PalPeg.Stages
 import PalPeg.Schedule
 import PalPeg.TapeLib
@@ -33,6 +34,7 @@ import PalPeg.TapeLib
 * `PalPeg.Matching`  — KMP 一歩・境界鎖・Galil の予測補題（仕事 ≤ 保証ゼロ出力数）
 * `PalPeg.Manacher`  — Manacher の radius 走査の正しさ、接頭辞回文フラグ、仕事量 ≤ n
 * `PalPeg.ManacherHeads` — Manacher をテープ上で走らせたときのヘッド総移動 ≤ 7|x|（telescoping）
+* `PalPeg.MiddleJob` — 中央回文フラグ：区切り埋め込みで偶奇統一、4 分割ジョブの費用 ≤ 128h と締切 `middle_flag_spec`
 * `PalPeg.Stages`    — dyadic stage 分解 `Pal(n) ⇔ match_W ∧ middle_W`、段の被覆と同時稼働 ≤ 2
 * `PalPeg.Schedule`  — 順序処理の締切（`finishTime_le`）と Galil の FIFO サービス不等式（Lindley）
 * `PalPeg.TapeLib`   — 成果物のテープ上の zipper / stack / seq / counter ビューと 1 アクション補題
