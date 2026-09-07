@@ -160,10 +160,10 @@ import PalPeg.Schedule
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.live_stages
 
-/-- info: 'PalPeg.finishTime_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PalPeg.Schedule.finishTime_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms PalPeg.finishTime_le
+#print axioms PalPeg.Schedule.finishTime_le
 
-/-- info: 'PalPeg.fifo_meets_deadlines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PalPeg.Schedule.fifo_meets_deadlines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms PalPeg.fifo_meets_deadlines
+#print axioms PalPeg.Schedule.fifo_meets_deadlines
