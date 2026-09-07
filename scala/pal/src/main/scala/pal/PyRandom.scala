@@ -158,4 +158,25 @@ final class PyRandom(initialSeed: Long) {
   def choice(chars: String): String = {
     chars.charAt(randbelow(chars.length)).toString
   }
+
+  /** `random.randrange(stop)`。 */
+  def randrange(stop: Int): Int = {
+    require(stop > 0, s"PyRandom.randrange: empty range [0, $stop)")
+    randbelow(stop)
+  }
+
+  /** `random.randrange(start, stop)`。 */
+  def randrange(start: Int, stop: Int): Int = {
+    require(stop > start, s"PyRandom.randrange: empty range [$start, $stop)")
+    start + randbelow(stop - start)
+  }
+
+  /** `"".join(random.choice(alphabet) for _ in range(size))`。 */
+  def word(alphabet: String, size: Int): String = {
+    val builder = new StringBuilder(size)
+    for (_ <- 0 until size) {
+      builder ++= choice(alphabet)
+    }
+    builder.result()
+  }
 }

@@ -121,7 +121,7 @@ object Fpp {
 
   /** Python の `analysis(trials=200, seed=5)` が print する 2 行。 */
   def analysis(trials: Int = 200, seed: Int = 5): String = {
-    val random = new PythonRandom(seed)
+    val random = new PyRandom(seed.toLong)
     var worst: Option[(Double, String)] = None
     var totalRead = 0
     var totalJump = 0
@@ -308,92 +308,5 @@ object Fpp {
       l = f(l)
     }
     out.toVector
-  }
-
-  /** CPython の `random.Random` の再現（MT19937 + `_randbelow_with_getrandbits`）。
-    *
-    * `analysis()` が Python と同じ乱数列を使うために必要。整数 seed のみ対応。
-    */
-  final class PythonRandom(seed: Int) {
-    private val N = 624
-    private val M = 397
-    private val MASK = 0xffffffffL
-    private val mt = new Array[Long](N)
-    private var mti = N + 1
-
-    initGenrand(19650218L)
-    initByArray(Array(math.abs(seed).toLong))
-
-    private def initGenrand(s: Long): Unit = {
-      mt(0) = s & MASK
-      for (i <- 1 until N) {
-        mt(i) = (1812433253L * (mt(i - 1) ^ (mt(i - 1) >>> 30)) + i) & MASK
-      }
-      mti = N
-    }
-
-    private def initByArray(key: Array[Long]): Unit = {
-      var i = 1
-      var j = 0
-      var k = math.max(N, key.length)
-      while (k > 0) {
-        mt(i) = ((mt(i) ^ ((mt(i - 1) ^ (mt(i - 1) >>> 30)) * 1664525L)) + key(j) + j) & MASK
-        i += 1
-        j += 1
-        if (i >= N) { mt(0) = mt(N - 1); i = 1 }
-        if (j >= key.length) { j = 0 }
-        k -= 1
-      }
-      k = N - 1
-      while (k > 0) {
-        mt(i) = ((mt(i) ^ ((mt(i - 1) ^ (mt(i - 1) >>> 30)) * 1566083941L)) - i) & MASK
-        i += 1
-        if (i >= N) { mt(0) = mt(N - 1); i = 1 }
-        k -= 1
-      }
-      mt(0) = 0x80000000L
-    }
-
-    private def genrandUint32(): Long = {
-      if (mti >= N) {
-        for (kk <- 0 until N) {
-          val y = (mt(kk) & 0x80000000L) | (mt((kk + 1) % N) & 0x7fffffffL)
-          mt(kk) = mt((kk + M) % N) ^ (y >>> 1) ^ (if ((y & 1L) == 0L) { 0L } else { 0x9908b0dfL })
-        }
-        mti = 0
-      }
-      var y = mt(mti)
-      mti += 1
-      y ^= (y >>> 11)
-      y ^= (y << 7) & 0x9d2c5680L
-      y ^= (y << 15) & 0xefc60000L
-      y ^= (y >>> 18)
-      y & MASK
-    }
-
-    /** `getrandbits(k)` for `0 < k <= 32`. */
-    def getrandbits(k: Int): Long = {
-      require(0 < k && k <= 32)
-      genrandUint32() >>> (32 - k)
-    }
-
-    /** `_randbelow_with_getrandbits(n)`: rejection sampling on `n.bit_length()` bits. */
-    def randbelow(n: Int): Int = {
-      val k = GalilClock.bitLength(n)
-      var r = getrandbits(k)
-      while (r >= n) {
-        r = getrandbits(k)
-      }
-      r.toInt
-    }
-
-    /** `randrange(n)`. */
-    def randrange(n: Int): Int = randbelow(n)
-
-    /** `randint(a, b)` = `a + randbelow(b - a + 1)`. */
-    def randint(a: Int, b: Int): Int = a + randbelow(b - a + 1)
-
-    /** `choice(seq)`. */
-    def choice(seq: String): Char = seq(randbelow(seq.length))
   }
 }

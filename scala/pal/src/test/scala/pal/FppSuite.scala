@@ -43,7 +43,7 @@ class FppSuite extends munit.FunSuite {
   }
 
   test("PythonRandom reproduces random.seed(5) draws") {
-    val random = new Fpp.PythonRandom(5)
+    val random = new PyRandom(5L)
     val draws = (0 until 20).map(_ => random.randint(4, 200)) ++ (0 until 20).map(_ => random.randrange(3))
     PyDiff.assertSameAsPython(draws.mkString("", "\n", "\n"), "-c",
       "import random\nrandom.seed(5)\n" +
