@@ -18,6 +18,7 @@ import PalPeg.GSPreprocess
 import PalPeg.GSPreprocessTapes
 import PalPeg.GSRealTime
 import PalPeg.GSVerifier
+import PalPeg.Metered
 import PalPeg.GSScanTapes
 import PalPeg.GSVerifierTapes
 import PalPeg.TextFeed
@@ -93,6 +94,7 @@ import PalPeg.Main
 * `PalPeg.MiddleTapes` — 中央ジョブのバッチをテープ上で実行（`batch_read_flag`、レート `rateM`；ラウンド組み立ては続行中）
 * `PalPeg.GSPreprocessTapes` — 前処理のテープ化（firstPeriod/extendReach/secondOuter、1 反復 ≤ (2k+65)·work+k+3；strip2 続行中）
 * `PalPeg.GSDecompose2Work` — `decompose2` の仕事量：Σp_j ≤ C₁T を仮定すれば線形（仮定の真偽を検証中）
+* `PalPeg.Metered`   — 固定 B 動作/ラウンドの de-amortization（`metered_phi`、境界で `metered_answer_correct`）
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/

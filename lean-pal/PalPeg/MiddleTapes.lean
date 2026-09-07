@@ -454,7 +454,7 @@ theorem jobLoop_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (
     (hOK : ∀ L, 1 ≤ L → L ≤ y.length →
       StageOK y 8 L (gsDec y 8 L).1 (gsDec y 8 L).2.1 (gsDec y 8 L).2.2) :
     ∀ (fuel L : ℕ) (ts : OvTapes sc) (fw : List (Fin sc)),
-      L ≤ y.length → fw.length = y.length + 1 →
+      L ≤ y.length → y.length + 1 ≤ fw.length →
       Tape.SeqView blank ts.X (leftSym :: y) (L - stageS y L) →
       Tape.SeqView blank ts.X2 (leftSym :: y) L →
       Tape.SeqView blank ts.F fw L →
@@ -538,10 +538,11 @@ theorem jobLoop_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (
     -- 継ぎ目
     have h3 : 3 * nextLen (stageS y L) + 1 ≤ L := nextLen_shrink hshort
     have hL' : nextLen (stageS y L) ≤ y.length := by omega
-    have hfw2 : (ovRunFlags ((y.take L).take (stageS y L)) ((y.take L).drop (stageS y L))
+    have hfw2 : y.length + 1 ≤ (ovRunFlags ((y.take L).take (stageS y L))
+        ((y.take L).drop (stageS y L))
         ((y.take L).reverse) one 8 (decompose (y.take L) 8).2.1
         (decompose (y.take L) 8).2.2 (max 1 (2 * stageS y L)) ((8 + 2) * L + 1) ⟨0, 0⟩
-        fw).length = y.length + 1 := by rw [ovRunFlags_length]; exact hfw
+        fw).length := by rw [ovRunFlags_length]; exact hfw
     have hhome := homeActs_eff (blank := blank) L
       (nextLen (stageS y L) - stageS y (nextLen (stageS y L))) (nextLen (stageS y L))
       (applyActs blank (stageActs blank startSym endSym mark leftSym one D y L ts) ts)
@@ -553,7 +554,7 @@ theorem jobLoop_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (
       hL' hfw2
       (by rw [hhome]; exact seq_home hrun'.txt (Nat.sub_le _ _) (by rw [hcons]; omega))
       (by rw [hhome]; exact seq_home hrun'.txt2 (Nat.sub_le _ _) (by rw [hcons]; omega))
-      (by rw [hhome]; exact seq_home hrun'.flg (Nat.sub_le _ _) (by rw [hfw2]; omega))
+      (by rw [hhome]; exact seq_home hrun'.flg (Nat.sub_le _ _) (by omega))
     have hstage : (stageActs blank startSym endSym mark leftSym one D y L ts).length
         ≤ D.Cd * L + D.Dd + 2432 * L := by
       simp only [stageActs, List.length_append, hSA]
@@ -587,7 +588,7 @@ theorem jobActs_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (
     (hOK : ∀ L, 1 ≤ L → L ≤ y.length →
       StageOK y 8 L (gsDec y 8 L).1 (gsDec y 8 L).2.1 (gsDec y 8 L).2.2)
     (ts : OvTapes sc) (fw : List (Fin sc)) (rd : ℕ)
-    (hfw : fw.length = y.length + 1) (hrd : rd ≤ y.length)
+    (hfw : y.length + 1 ≤ fw.length) (hrd : rd ≤ y.length)
     (hX : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X (leftSym :: y) i)
     (hX2 : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X2 (leftSym :: y) i)
     (hF : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.F fw i) :
@@ -608,7 +609,7 @@ theorem jobActs_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (
     le_rfl hfw
     (by rw [hh0]; exact seq_home hXv hiX (by rw [hcons]; omega))
     (by rw [hh0]; exact seq_home hX2v hiX2 (by rw [hcons]; omega))
-    (by rw [hh0]; exact seq_home hFv hiF (by rw [hfw]; omega))
+    (by rw [hh0]; exact seq_home hFv hiF (by omega))
   obtain ⟨hlen, i, hi, hsv⟩ := hj
   constructor
   · rw [List.length_append, List.length_append, homeActs_length, homeF_length]
@@ -616,7 +617,7 @@ theorem jobActs_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (
       simp only [Cjob, Nat.add_mul]
     omega
   · rw [applyActs_append, applyActs_append, homeF_eff]
-    exact seq_home hsv hi (by rw [jobFlags_length, hfw]; omega)
+    exact seq_home hsv hi (by rw [jobFlags_length]; omega)
 
 end JobLoop
 
@@ -725,7 +726,7 @@ theorem batchActs_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List
     (hOK : ∀ L, 1 ≤ L → L ≤ y.length →
       StageOK y 8 L (gsDec y 8 L).1 (gsDec y 8 L).2.1 (gsDec y 8 L).2.2)
     (ts : OvTapes sc) (fw : List (Fin sc)) (rd : ℕ)
-    (hfw : fw.length = y.length + 1) (h1 : 1 ≤ rd) (h2 : rd ≤ y.length)
+    (hfw : y.length + 1 ≤ fw.length) (h1 : 1 ≤ rd) (h2 : rd ≤ y.length)
     (hX : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X (leftSym :: y) i)
     (hX2 : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X2 (leftSym :: y) i)
     (hF : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.F fw i) :
@@ -739,7 +740,7 @@ theorem batchActs_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List
   have hh := homeF_eff (blank := blank) y.length y.length ts
   have hFh : Tape.SeqView blank (applyActs blank (homeF sc y.length y.length) ts).F
       fw y.length := by
-    rw [hh]; exact seq_home hFv hiF (by rw [hfw]; omega)
+    rw [hh]; exact seq_home hFv hiF (by omega)
   have hcl := clearF_spec (zero := zero) y.length
     (applyActs blank (homeF sc y.length y.length) ts) fw hFh
   have hXk : (applyActs blank (clearF zero y.length)
@@ -748,7 +749,7 @@ theorem batchActs_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List
   have hX2k : (applyActs blank (clearF zero y.length)
       (applyActs blank (homeF sc y.length y.length) ts)).X2 = ts.X2 := by
     rw [hcl.2.1, hh]
-  have hcw : (clearWord zero y.length fw).length = y.length + 1 := by
+  have hcw : y.length + 1 ≤ (clearWord zero y.length fw).length := by
     rw [clearWord_length]; exact hfw
   have hjob := jobActs_ok (one := one) D hleft hend hOK
     (applyActs blank (clearF zero y.length)
@@ -811,7 +812,7 @@ theorem wnd_length_le {α : Type} (w : List α) {S p : ℕ} (hS : 8 ≤ S)
 /-- **レートの妥当性（テープ版）**：`Cbatch D * L + 1` 動作のバッチは、窓長が `L ≤ 5S` なら
 解放から次の解放までに使える `gw S - 1` ラウンド分の動作 `rateM D * (gw S - 1)` に収まる。 -/
 theorem fits_of_length_le (D : DecompOnTapes sc blank startSym endSym mark) {S L n : ℕ}
-    (hS : 8 ≤ S) (hev : 2 * (S / 2) = S) (hL : L ≤ 5 * S) (h : n ≤ Cbatch D * L + 1) :
+    (_hS : 8 ≤ S) (hev : 2 * (S / 2) = S) (hL : L ≤ 5 * S) (h : n ≤ Cbatch D * L + 1) :
     n ≤ rateM D * (MiddleBorder.gw S - 1) := by
   have hg : 2 ≤ MiddleBorder.gw S := by simp only [MiddleBorder.gw]; omega
   have hS10 : 5 * S ≤ 5 * (10 * (MiddleBorder.gw S - 1)) := by
@@ -881,7 +882,7 @@ theorem batch_read_flag (D : DecompOnTapes sc blank startSym endSym mark)
       StageOK (MiddleBorder.Wnd w S p) 8 L (gsDec (MiddleBorder.Wnd w S p) 8 L).1
         (gsDec (MiddleBorder.Wnd w S p) 8 L).2.1 (gsDec (MiddleBorder.Wnd w S p) 8 L).2.2)
     (ts : OvTapes sc) (fw : List (Fin sc))
-    (hfw : fw.length = (MiddleBorder.Wnd w S p).length + 1)
+    (hfw : (MiddleBorder.Wnd w S p).length + 1 ≤ fw.length)
     (h1 : 1 ≤ n - S) (h2 : n - S ≤ (MiddleBorder.Wnd w S p).length)
     (hcov : n - S ≤ S + p * MiddleBorder.gw S)
     (hX : ∃ i, i ≤ (MiddleBorder.Wnd w S p).length ∧
@@ -902,31 +903,778 @@ theorem batch_read_flag (D : DecompOnTapes sc blank startSym endSym mark)
 
 end FlagRead
 
-/-! ## §9 まだ組み立てていない部分（ラウンド機械）
+/-! ## §9 フラグ語の仕様と、バッチが残すフラグ語 -/
 
-本ファイルは「1 バッチ分」を完全にテープ上へ落とし、レートと締切の評価まで与えた。
-`MiddleBorder.borderMiddle` のラウンド機械そのもの（`MState` / `mround` / `MEncodes` /
-`mround_encodes` / `middle_flag_read`）を組むには、さらに次が必要である。
+/-- フラグ語の仕様：添字 `1..|y|` で `one` が読めることと `y.take ℓ` が回文であることが
+同値。 -/
+def FlagWordOK (one : Fin sc) (N : ℕ) (y ω : List (Fin sc)) : Prop :=
+  N ≤ ω.length ∧
+    ∀ ℓ, 1 ≤ ℓ → ℓ ≤ y.length → ((ω[ℓ]? = some one) ↔ IsPal (y.take ℓ))
 
-1. **入力コピーの供給**：`InputCopy.FrontierView` の 2 本組を、ラウンド `S/2 + 1` 以降
-   毎ラウンド 1 記号ずつ伸ばし、バッチ解放のときにその 2 本を凍結して境界ジョブの
-   `X`／`X2` として渡す。凍結した組は次の解放までに再生成する必要があるので、
-   コピーは 2 組（計 4 本）を交互に使う。再生成の費用は `≤ |窓| ≤ 5S` で、
-   `rateM D` の中に吸収できる（`fits_of_length_le` の余裕に含める形で係数を上げればよい）。
-   本ファイルの `batchActs` は、ヘッドが添字 `≤ |y|` のどこにあってもよい形にしてあるので、
-   凍結したコピーをそのまま渡せる。
-2. **フラグテープのダブルバッファ**：`Grind` の `ts.F` が書き込み側、別に持つ `fout` が
-   読み出し側。解放のたびに 2 本を入れ替え、非解放ラウンドでは `outStep` を 1 回。
-   §7 の `outStep_spec` が読み出しヘッドの前進を、§5 の `batchActs_ok` が
-   書き込み側の完成形を与えるので、あとは「解放時に書き込み側の残り動作が空である」
-   ことを `batch_complete` と `MiddleBorder.inv_block`（ブロックの長さが `gw S`）から
-   言えばよい。
-3. **`MEncodes` と `mround_encodes`**：上の 1., 2. を `MiddleBorder.BState` の
-   各成分（`width`／`idx`／`next`／`cur`／`rem`／`out`）に対応させる不変条件。
-   `out` に対応するのが読み出し側テープで、その内容の正しさが §8 の `batch_read_flag`、
-   ラウンド費用が `CmT D = rateM D + 1` である。
-4. **退化した段（`S < 8`）**：`MiddleBorder.naiveFlags` の側は定数長なので、
-   定数個の動作で直接計算する別プログラムを与える。
+theorem FlagWordOK.read {blank one : Fin sc} {y ω : List (Fin sc)} {N : ℕ}
+    {tp : TapeConfiguration sc} {ℓ : ℕ} (h : FlagWordOK one N y ω)
+    (hs : Tape.SeqView blank tp ω ℓ) (h1 : 1 ≤ ℓ) (h2 : ℓ ≤ y.length) :
+    Tape.read tp = one ↔ IsPal (y.take ℓ) := by
+  rw [← h.2 ℓ h1 h2, hs.read_eq]
+  constructor
+  · intro hc; rw [hc]
+  · intro hc; exact Option.some_inj.1 hc
+
+section BatchWord
+
+variable {blank startSym endSym mark leftSym one zero : Fin sc}
+
+/-- **バッチが残すフラグ語**：バッチを流し切ると、`F` テープには `FlagWordOK` を満たす語が
+残り、ヘッドは読み出し位置 `rd` に立つ。 -/
+theorem batchActs_word (D : DecompOnTapes sc blank startSym endSym mark) {y : List (Fin sc)}
+    (hne : one ≠ zero) (hleft : leftSym ∉ y) (hend : endSym ∉ y)
+    (hOK : ∀ L, 1 ≤ L → L ≤ y.length →
+      StageOK y 8 L (gsDec y 8 L).1 (gsDec y 8 L).2.1 (gsDec y 8 L).2.2)
+    (ts : OvTapes sc) (fw : List (Fin sc)) (rd N : ℕ)
+    (hfw : y.length + 1 ≤ fw.length) (hN : N ≤ fw.length) (hrd : rd ≤ y.length)
+    (hX : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X (leftSym :: y) i)
+    (hX2 : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X2 (leftSym :: y) i)
+    (hF : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.F fw i) :
+    (batchActs blank startSym endSym mark leftSym one zero D y rd ts).length
+        ≤ Cbatch D * y.length + 1 ∧
+      ∃ ω, FlagWordOK one N y ω ∧
+        Tape.SeqView blank (applyActs blank
+          (batchActs blank startSym endSym mark leftSym one zero D y rd ts) ts).F ω rd := by
+  obtain ⟨iF, hiF, hFv⟩ := hF
+  simp only [batchActs]
+  have hh := homeF_eff (blank := blank) y.length y.length ts
+  have hFh : Tape.SeqView blank (applyActs blank (homeF sc y.length y.length) ts).F
+      fw y.length := by
+    rw [hh]; exact seq_home hFv hiF (by omega)
+  have hcl := clearF_spec (zero := zero) y.length
+    (applyActs blank (homeF sc y.length y.length) ts) fw hFh
+  have hXk : (applyActs blank (clearF zero y.length)
+      (applyActs blank (homeF sc y.length y.length) ts)).X = ts.X := by
+    rw [hcl.1, hh]
+  have hX2k : (applyActs blank (clearF zero y.length)
+      (applyActs blank (homeF sc y.length y.length) ts)).X2 = ts.X2 := by
+    rw [hcl.2.1, hh]
+  have hcw : y.length + 1 ≤ (clearWord zero y.length fw).length := by
+    rw [clearWord_length]; exact hfw
+  have hjob := jobActs_ok (one := one) D hleft hend hOK
+    (applyActs blank (clearF zero y.length)
+      (applyActs blank (homeF sc y.length y.length) ts))
+    (clearWord zero y.length fw) rd hcw hrd
+    (by rw [hXk]; exact hX) (by rw [hX2k]; exact hX2)
+    ⟨0, Nat.zero_le _, hcl.2.2⟩
+  refine ⟨?_, ?_⟩
+  · rw [List.length_append, List.length_append, homeF_length, clearF_length]
+    have hC : Cbatch D * y.length = Cjob D * y.length + 4 * y.length := by
+      simp only [Cbatch, Nat.add_mul]
+    have := hjob.1
+    omega
+  · refine ⟨jobFlags y (gsDec y 8) one 8 (y.length + 1) y.length
+      (clearWord zero y.length fw), ⟨?_, ?_⟩, ?_⟩
+    · rw [jobFlags_length, clearWord_length]; exact hN
+    · intro ℓ h1 h2
+      have hz : (clearWord zero y.length fw)[ℓ]? = some zero :=
+        clearWord_le zero y.length fw ℓ h2 (by omega)
+      have hiff := flags_on_tape_eq_palPrefixFlagsGS (x := y) (dec := gsDec y 8)
+        (one := one) (zero := zero) (k := 8) (fw := clearWord zero y.length fw)
+        (by omega) hne hOK ℓ h1 h2 (by omega) hz
+      have hpal := palPrefixFlagsGS_spec (x := y) (dec := gsDec y 8) (k := 8)
+        (by omega) hOK ℓ h2
+      rw [hiff, hpal]
+      simp
+    · rw [applyActs_append, applyActs_append]
+      exact hjob.2
+
+end BatchWord
+
+/-! ## §10 ラウンド機械 -/
+
+/-- 段幅 `S` の中で現れる最大の窓長。フラグテープの語はこの長さ ＋1 以上を保つ。 -/
+def Lmax (S : ℕ) : ℕ := S + MiddleBorder.numJobs * MiddleBorder.gw S
+
+/-- バッチ `j` の出力が最初に読まれる添字（＝そのバッチが完成するラウンド `relTime S (j+1)`
+における `n - S`）。 -/
+def rdOf (S j : ℕ) : ℕ := S / 2 + (j + 1) * MiddleBorder.gw S
+
+theorem rdOf_eq (S j : ℕ) : MiddleBorder.relTime S (j + 1) - S = rdOf S j := by
+  simp only [MiddleBorder.relTime, rdOf]
+  omega
+
+/-- 1 バッチを起動できるテープの条件。 -/
+def BatchEntry (blank leftSym : Fin sc) (N : ℕ) (y : List (Fin sc)) (ts : OvTapes sc) :
+    Prop :=
+  (∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X (leftSym :: y) i) ∧
+    (∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X2 (leftSym :: y) i) ∧
+    (∃ ω, N ≤ ω.length ∧ ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.F ω i)
+
+/-! ### 入力コピーの供給 -/
+
+/-- 到着した記号 `a` を、まだ凍結していないコピー（添字 `j < i ≤ numJobs`）に追記する。 -/
+def feed (blank a : Fin sc) (j : ℕ) (c : ℕ → TapeConfiguration sc) :
+    ℕ → TapeConfiguration sc :=
+  fun i => if j < i ∧ i ≤ MiddleBorder.numJobs then Tape.step blank (c i) a .right else c i
+
+theorem feed_spec {blank a : Fin sc} {j : ℕ} {c : ℕ → TapeConfiguration sc}
+    {v : List (Fin sc)} (h : ∀ i, j < i → i ≤ MiddleBorder.numJobs →
+      InputCopy.FrontierView blank (c i) v) :
+    ∀ i, j < i → i ≤ MiddleBorder.numJobs →
+      InputCopy.FrontierView blank (feed blank a j c i) (v ++ [a]) := by
+  intro i h1 h2
+  simp only [feed, if_pos (⟨h1, h2⟩ : j < i ∧ i ≤ MiddleBorder.numJobs)]
+  exact InputCopy.append_spec (h i h1 h2) a
+
+/-- ラウンド `n` の終わりにコピーが保持している語。 -/
+theorem feedWord_succ (w : List (Fin sc)) (blank : Fin sc) {S n : ℕ}
+    (hS : S / 2 ≤ n) (hn : n < w.length) :
+    ((w.take n).drop (S / 2)) ++ [w.getD n blank] = (w.take (n + 1)).drop (S / 2) := by
+  have hget : w.getD n blank = w[n] := by
+    rw [List.getD_eq_getElem _ _ hn]
+  have hsucc : w.take (n + 1) = w.take n ++ [w[n]] := by
+    rw [List.take_add_one, List.getElem?_eq_getElem hn]
+    rfl
+  have hlen : S / 2 ≤ (w.take n).length := by
+    simp only [List.length_take]; omega
+  rw [hget, hsucc, List.drop_append_of_le_length hlen]
+
+/-! ### 退化した段（`S < 8`）の 1 ラウンド
+
+窓は高々 `3 * S ≤ 21` 記号なので、`MiddleBorder.bstep` の素朴枝と同じく、
+回文性は窓の決定可能な関数として直接求まる。テープ側では「定数個の走査ののち
+判定結果を 1 セルに書く」だけでよく、動作数は `MiddleBorder` が数えている
+`3 * S * S + 1` に収まる。 -/
+def naiveWrite (blank one zero : Fin sc) (win : List (Fin sc)) (m : ℕ)
+    (tp : TapeConfiguration sc) : TapeConfiguration sc :=
+  Tape.step blank tp (if IsPal (win.take m) then one else zero) .stay
+
+@[simp] theorem naiveWrite_read {blank one zero : Fin sc} {win : List (Fin sc)} {m : ℕ}
+    {tp : TapeConfiguration sc} :
+    Tape.read (naiveWrite blank one zero win m tp)
+      = if IsPal (win.take m) then one else zero := rfl
+
+/-! ### 状態と 1 ラウンド -/
+
+/-- ラウンド機械の状態。 -/
+structure MState (sc : ℕ) where
+  /-- 段幅。 -/
+  width : ℕ
+  /-- これまでに解放されたバッチ数。 -/
+  idx : ℕ
+  /-- 次の解放ラウンド。 -/
+  next : ℕ
+  /-- 進行中のバッチ（残りの動作列と 6 本のテープ。`g.ts.F` が書き込み側フラグ）。 -/
+  g : Grind sc
+  /-- 読み出し側フラグテープ。 -/
+  fout : TapeConfiguration sc
+  /-- 入力コピー（`X` 用、バッチ番号で添字づけ）。 -/
+  cp1 : ℕ → TapeConfiguration sc
+  /-- 入力コピー（`X2` 用）。 -/
+  cp2 : ℕ → TapeConfiguration sc
+
+/-- **1 ラウンド**。`t` は到着済みの入力、`a` はこのラウンドに到着した記号。 -/
+def mround (blank startSym endSym mark leftSym one zero : Fin sc)
+    (D : DecompOnTapes sc blank startSym endSym mark)
+    (t : List (Fin sc)) (a : Fin sc) (n : ℕ) (st : MState sc) : MState sc :=
+  if st.width < 8 then
+    let win := (t.drop (st.width / 2)).take (3 * st.width)
+    { st with fout := naiveWrite blank one zero win (n - st.width) st.fout }
+  else if n = st.next ∧ st.idx < MiddleBorder.numJobs then
+    let j := st.idx + 1
+    let c1 := feed blank a st.idx st.cp1
+    let c2 := feed blank a st.idx st.cp2
+    let y := (t.drop (st.width / 2)).take (st.width + j * MiddleBorder.gw st.width)
+    let ts' : OvTapes sc :=
+      { P := st.g.ts.P, X := Tape.step blank (c1 j) blank .left, Cnt := st.g.ts.Cnt,
+        U := st.g.ts.U, X2 := Tape.step blank (c2 j) blank .left, F := st.fout }
+    { width := st.width, idx := j, next := n + MiddleBorder.gw st.width,
+      g := ⟨batchActs blank startSym endSym mark leftSym one zero D y
+              (rdOf st.width j) ts', ts'⟩,
+      fout := st.g.ts.F, cp1 := c1, cp2 := c2 }
+  else
+    let fo : TapeConfiguration sc :=
+      if st.width < n ∧ 2 ≤ st.idx then Tape.step blank st.fout st.fout.focus .right
+      else st.fout
+    let gg : Grind sc := gstep blank (rateM D) st.g
+    let d1 : ℕ → TapeConfiguration sc := feed blank a st.idx st.cp1
+    let d2 : ℕ → TapeConfiguration sc := feed blank a st.idx st.cp2
+    { width := st.width, idx := st.idx, next := st.next, g := gg, fout := fo,
+      cp1 := d1, cp2 := d2 }
+
+/-- 1 ラウンドの費用（実際に流した動作の個数）。 -/
+def mcost (D : DecompOnTapes sc blank startSym endSym mark) (n : ℕ) (st : MState sc) : ℕ :=
+  if st.width < 8 then 3 * st.width * st.width + 1
+  else if n = st.next ∧ st.idx < MiddleBorder.numJobs then 2 * MiddleBorder.numJobs + 2
+  else 2 * MiddleBorder.numJobs + gcost (rateM D) st.g + 1
+
+/-- 1 ラウンドの費用上界。 -/
+def CmT' (D : DecompOnTapes sc blank startSym endSym mark) : ℕ := rateM D + 148
+
+theorem mcost_le (D : DecompOnTapes sc blank startSym endSym mark) (n : ℕ)
+    (st : MState sc) : mcost D n st ≤ CmT' D := by
+  simp only [mcost, CmT']
+  split_ifs with h1 h2
+  · have : st.width ≤ 7 := by omega
+    have h3 : 3 * st.width * st.width ≤ 3 * 7 * 7 :=
+      calc 3 * st.width * st.width ≤ 3 * 7 * st.width :=
+            Nat.mul_le_mul_right _ (Nat.mul_le_mul_left 3 this)
+        _ ≤ 3 * 7 * 7 := Nat.mul_le_mul_left _ this
+    omega
+  · simp only [MiddleBorder.numJobs]; omega
+  · have := gcost_le (rateM D) st.g
+    simp only [MiddleBorder.numJobs]
+    omega
+
+theorem gsteps_succ (blank : Fin sc) (r : ℕ) :
+    ∀ (m : ℕ) (g : Grind sc),
+      gsteps blank r (m + 1) g = gstep blank r (gsteps blank r m g) := by
+  intro m
+  induction m with
+  | zero => intro g; rfl
+  | succ m ih => intro g; rw [gsteps, ih, ← gsteps]
+
+theorem gstep_nil (blank : Fin sc) (r : ℕ) (ts : OvTapes sc) :
+    gstep blank r ⟨[], ts⟩ = ⟨[], ts⟩ := by simp [gstep]
+
+/-- **不変条件**：テープ機械の状態が `MiddleBorder.bstate` を符号化していること。 -/
+structure MEncodes (blank startSym endSym mark leftSym one zero : Fin sc)
+    (D : DecompOnTapes sc blank startSym endSym mark)
+    (w : List (Fin sc)) (S n : ℕ) (st : MState sc) : Prop where
+  width_eq : st.width = S
+  idx_eq : st.idx = (MiddleBorder.bstate w S n).idx
+  next_eq : st.next = (MiddleBorder.bstate w S n).next
+  next_rel : 8 ≤ S → st.next = MiddleBorder.relTime S (st.idx + 1)
+  rel_le : 8 ≤ S → 1 ≤ st.idx → st.next ≤ n + MiddleBorder.gw S
+  copy1 : 8 ≤ S → ∀ i, st.idx < i → i ≤ MiddleBorder.numJobs →
+    InputCopy.FrontierView blank (st.cp1 i) (leftSym :: ((w.take n).drop (S / 2)))
+  copy2 : 8 ≤ S → ∀ i, st.idx < i → i ≤ MiddleBorder.numJobs →
+    InputCopy.FrontierView blank (st.cp2 i) (leftSym :: ((w.take n).drop (S / 2)))
+  job : 8 ≤ S → n < 4 * S → 1 ≤ st.idx →
+    ∃ ts₀ : OvTapes sc,
+      st.g = gsteps blank (rateM D) (n + MiddleBorder.gw S - st.next)
+        ⟨batchActs blank startSym endSym mark leftSym one zero D
+          (MiddleBorder.Wnd w S st.idx) (rdOf S st.idx) ts₀, ts₀⟩ ∧
+      BatchEntry blank leftSym (Lmax S + 1) (MiddleBorder.Wnd w S st.idx) ts₀
+  gwf : 8 ≤ S → n < 4 * S → st.idx = 0 →
+    st.g.rem = [] ∧ ∃ ω, Lmax S + 1 ≤ ω.length ∧ Tape.SeqView blank st.g.ts.F ω 0
+  foutWF : 8 ≤ S → n < 4 * S → st.idx ≤ 1 →
+    ∃ ω, Lmax S + 1 ≤ ω.length ∧ Tape.SeqView blank st.fout ω 0
+  out : 8 ≤ S → n < 4 * S → 2 ≤ st.idx →
+    ∃ ω, FlagWordOK one (Lmax S + 1) (MiddleBorder.Wnd w S (st.idx - 1)) ω ∧
+      Tape.SeqView blank st.fout ω (n - S)
+  outNaive : S < 8 → S / 2 < n → n < 4 * S →
+    Tape.read st.fout = (if IsPal ((w.drop (S / 2)).take (n - S)) then one else zero)
+
+/-! ### 補助的な評価 -/
+
+theorem three_S_le_Lmax {S : ℕ} (hS : 8 ≤ S) : 3 * S ≤ Lmax S := by
+  simp only [Lmax, MiddleBorder.numJobs, MiddleBorder.gw]
+  omega
+
+theorem gw_two {S : ℕ} (hS : 8 ≤ S) : 2 ≤ MiddleBorder.gw S := by
+  simp only [MiddleBorder.gw]; omega
+
+/-- ラウンド `n = relTime S p` に届いている入力コピーの中身はちょうど窓 `Wnd w S p`。 -/
+theorem fed_eq_wnd (w : List (Fin sc)) {S p n : ℕ} (hn : n = MiddleBorder.relTime S p) :
+    (w.take n).drop (S / 2) = MiddleBorder.Wnd w S p := by
+  rw [List.drop_take]
+  simp only [MiddleBorder.Wnd]
+  congr 1
+  simp only [MiddleBorder.relTime] at hn
+  omega
+
+theorem wnd_length_eq (w : List (Fin sc)) {S p : ℕ}
+    (hw : MiddleBorder.relTime S p ≤ w.length) :
+    (MiddleBorder.Wnd w S p).length = S + p * MiddleBorder.gw S := by
+  simp only [MiddleBorder.Wnd, List.length_take, List.length_drop]
+  simp only [MiddleBorder.relTime] at hw
+  omega
+
+/-- 素朴枝の窓の切り出し。 -/
+theorem naive_window_take (w : List (Fin sc)) {S n m : ℕ} (hm : m ≤ 3 * S)
+    (hm2 : m + S / 2 ≤ n) :
+    ((((w.take n).drop (S / 2)).take (3 * S)).take m) = (w.drop (S / 2)).take m := by
+  rw [List.drop_take, List.take_take, List.take_take]
+  congr 1
+  omega
+
+/-! ### 1 ラウンドの正当性 -/
+
+section Round
+
+variable {blank startSym endSym mark leftSym one zero : Fin sc}
+
+theorem mround_encodes_small (D : DecompOnTapes sc blank startSym endSym mark)
+    {w : List (Fin sc)} {S n : ℕ} {st : MState sc}
+    (hsmall : S < 8) (hn : S / 2 ≤ n)
+    (h : MEncodes blank startSym endSym mark leftSym one zero D w S n st) :
+    MEncodes blank startSym endSym mark leftSym one zero D w S (n + 1)
+      (mround blank startSym endSym mark leftSym one zero D
+        (w.take (n + 1)) (w.getD n blank) (n + 1) st) := by
+  have hbs : MiddleBorder.bstate w S (n + 1)
+      = MiddleBorder.bstep (w.take (n + 1)) (n + 1) (MiddleBorder.bstate w S n) :=
+    MiddleBorder.bstate_succ (by omega)
+  have hbw : (MiddleBorder.bstate w S n).width = S := MiddleBorder.bstate_width w S n
+  have hw8 : st.width < 8 := by rw [h.width_eq]; exact hsmall
+  have hbstep : MiddleBorder.bstate w S (n + 1)
+      = { MiddleBorder.bstate w S n with
+          out := MiddleBorder.naiveFlags
+            (((w.take (n + 1)).drop ((MiddleBorder.bstate w S n).width / 2)).take
+              (3 * (MiddleBorder.bstate w S n).width)) } := by
+    rw [hbs]
+    simp only [MiddleBorder.bstep, hbw, if_pos hsmall]
+  simp only [mround, if_pos hw8]
+  refine ⟨h.width_eq, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · show st.idx = _
+    rw [hbstep]; exact h.idx_eq
+  · show st.next = _
+    rw [hbstep]; exact h.next_eq
+  · exact h.next_rel
+  · intro h8; omega
+  · intro h8; omega
+  · intro h8; omega
+  · intro h8; omega
+  · intro h8; omega
+  · intro h8; omega
+  · intro h8; omega
+  · intro _ _ h4
+    show Tape.read (naiveWrite blank one zero
+      (((w.take (n + 1)).drop (st.width / 2)).take (3 * st.width)) (n + 1 - st.width)
+      st.fout) = _
+    rw [naiveWrite_read, h.width_eq,
+      naive_window_take w (m := n + 1 - S) (by omega) (by omega)]
+
+theorem mround_encodes_release (D : DecompOnTapes sc blank startSym endSym mark)
+    {w : List (Fin sc)} {S n : ℕ} {st : MState sc}
+    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
+    (hDec : MiddleBorder.DecOK (Fin sc))
+    (hbig : 8 ≤ S) (hev : 2 * (S / 2) = S)
+    (hn : S / 2 ≤ n) (hw : n + 1 ≤ w.length)
+    (hrel : n + 1 = st.next ∧ st.idx < MiddleBorder.numJobs)
+    (h : MEncodes blank startSym endSym mark leftSym one zero D w S n st) :
+    MEncodes blank startSym endSym mark leftSym one zero D w S (n + 1)
+      (mround blank startSym endSym mark leftSym one zero D
+        (w.take (n + 1)) (w.getD n blank) (n + 1) st) := by
+  have hg2 : 2 ≤ MiddleBorder.gw S := gw_two hbig
+  have hbs : MiddleBorder.bstate w S (n + 1)
+      = MiddleBorder.bstep (w.take (n + 1)) (n + 1) (MiddleBorder.bstate w S n) :=
+    MiddleBorder.bstate_succ (by omega)
+  have hbw : (MiddleBorder.bstate w S n).width = S := MiddleBorder.bstate_width w S n
+  have hcond : n + 1 = (MiddleBorder.bstate w S n).next ∧
+      (MiddleBorder.bstate w S n).idx < MiddleBorder.numJobs := by
+    rw [← h.next_eq, ← h.idx_eq]; exact hrel
+  have hbi : (MiddleBorder.bstate w S (n + 1)).idx = st.idx + 1 := by
+    rw [hbs]
+    simp only [MiddleBorder.bstep, hbw, if_neg (show ¬ S < 8 by omega), if_pos hcond]
+    rw [h.idx_eq]
+  have hbn : (MiddleBorder.bstate w S (n + 1)).next = n + 1 + MiddleBorder.gw S := by
+    rw [hbs]
+    simp only [MiddleBorder.bstep, hbw, if_neg (show ¬ S < 8 by omega), if_pos hcond]
+  -- 解放ラウンドの時刻
+  have hnext : st.next = MiddleBorder.relTime S (st.idx + 1) := h.next_rel hbig
+  have hn1 : n + 1 = MiddleBorder.relTime S (st.idx + 1) := by rw [hrel.1, hnext]
+  have hfed : (w.take (n + 1)).drop (S / 2) = MiddleBorder.Wnd w S (st.idx + 1) :=
+    fed_eq_wnd w hn1
+  have hylen : (MiddleBorder.Wnd w S (st.idx + 1)).length
+      = S + (st.idx + 1) * MiddleBorder.gw S := wnd_length_eq w (by omega)
+  have hy : ((w.take (n + 1)).drop (S / 2)).take (S + (st.idx + 1) * MiddleBorder.gw S)
+      = MiddleBorder.Wnd w S (st.idx + 1) := by
+    rw [hfed]
+    simp only [MiddleBorder.Wnd, List.take_take]
+    congr 1
+    omega
+  have hfeedw : ((w.take n).drop (S / 2)) ++ [w.getD n blank] = (w.take (n + 1)).drop (S / 2) :=
+    feedWord_succ w blank hn (by omega)
+  have hw8 : ¬ (st.width < 8) := by rw [h.width_eq]; omega
+  have hrel' : n + 1 = st.next ∧ st.idx < MiddleBorder.numJobs := hrel
+  simp only [mround, h.width_eq, if_neg (show ¬ (S < 8) by omega), if_pos hrel']
+  have hnum : st.idx + 1 ≤ MiddleBorder.numJobs := by
+    have := hrel.2; omega
+  have hcopy1 : ∀ i, st.idx < i → i ≤ MiddleBorder.numJobs →
+      InputCopy.FrontierView blank (feed blank (w.getD n blank) st.idx st.cp1 i)
+        (leftSym :: ((w.take (n + 1)).drop (S / 2))) := by
+    intro i h1 h2
+    have := feed_spec (a := w.getD n blank) (h.copy1 hbig) i h1 h2
+    rwa [List.cons_append, hfeedw] at this
+  have hcopy2 : ∀ i, st.idx < i → i ≤ MiddleBorder.numJobs →
+      InputCopy.FrontierView blank (feed blank (w.getD n blank) st.idx st.cp2 i)
+        (leftSym :: ((w.take (n + 1)).drop (S / 2))) := by
+    intro i h1 h2
+    have := feed_spec (a := w.getD n blank) (h.copy2 hbig) i h1 h2
+    rwa [List.cons_append, hfeedw] at this
+  have hXsv : Tape.SeqView blank
+      (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp1 (st.idx + 1)) blank .left)
+      (leftSym :: MiddleBorder.Wnd w S (st.idx + 1))
+      (MiddleBorder.Wnd w S (st.idx + 1)).length := by
+    have hfv := hcopy1 (st.idx + 1) (by omega) hnum
+    rw [hfed] at hfv
+    have := InputCopy.toSeqView hfv (by simp)
+    simpa using this
+  have hX2sv : Tape.SeqView blank
+      (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp2 (st.idx + 1)) blank .left)
+      (leftSym :: MiddleBorder.Wnd w S (st.idx + 1))
+      (MiddleBorder.Wnd w S (st.idx + 1)).length := by
+    have hfv := hcopy2 (st.idx + 1) (by omega) hnum
+    rw [hfed] at hfv
+    have := InputCopy.toSeqView hfv (by simp)
+    simpa using this
+  -- 新しいバッチの `F` テープ（＝古い読み出し側）
+  have hFentry : n + 1 < 4 * S → ∃ ω, Lmax S + 1 ≤ ω.length ∧
+      ∃ i, i ≤ (MiddleBorder.Wnd w S (st.idx + 1)).length ∧
+        Tape.SeqView blank st.fout ω i := by
+    intro h4
+    rcases Nat.lt_or_ge st.idx 2 with hlt | hge
+    · obtain ⟨ω, hω, hsv⟩ := h.foutWF hbig (by omega) (by omega)
+      exact ⟨ω, hω, 0, Nat.zero_le _, hsv⟩
+    · obtain ⟨ω, hFW, hsv⟩ := h.out hbig (by omega) hge
+      refine ⟨ω, hFW.1, n - S, ?_, hsv⟩
+      rw [hylen]
+      simp only [MiddleBorder.relTime] at hn1
+      omega
+  refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · show st.idx + 1 = _
+    rw [hbi]
+  · show n + 1 + MiddleBorder.gw S = _
+    rw [hbn]
+  · intro _
+    show n + 1 + MiddleBorder.gw S = MiddleBorder.relTime S (st.idx + 1 + 1)
+    rw [MiddleBorder.relTime_succ, ← hn1]
+  · intro _ _
+    exact Nat.le_refl _
+  · intro _ i h1 h2; exact hcopy1 i (Nat.lt_of_succ_lt h1) h2
+  · intro _ i h1 h2; exact hcopy2 i (Nat.lt_of_succ_lt h1) h2
+  · intro _ hjob4 _
+    obtain ⟨ts', hts'⟩ : ∃ z : OvTapes sc, z = OvTapes.mk st.g.ts.P (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp1 (st.idx + 1)) blank .left) st.g.ts.Cnt st.g.ts.U (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp2 (st.idx + 1)) blank .left) st.fout := ⟨_, rfl⟩
+    refine ⟨ts', ?_, ?_⟩
+    · rw [hy, Nat.sub_self, hts']
+      rfl
+    · refine ⟨⟨_, le_rfl, ?_⟩, ⟨_, le_rfl, ?_⟩, ?_⟩
+      · rw [hts']; exact hXsv
+      · rw [hts']; exact hX2sv
+      · rw [hts']; exact hFentry hjob4
+  · intro _ _ h0
+    exact absurd h0 (Nat.succ_ne_zero _)
+  · intro _ h4 h1
+    have h1' : st.idx + 1 ≤ 1 := h1
+    have h4' : n + 1 < 4 * S := h4
+    exact (h.gwf hbig (by omega) (by omega)).2
+  · intro _ h4 h2
+    have h4' : n + 1 < 4 * S := h4
+    have hp1 : 1 ≤ st.idx := by
+      have h2' : 2 ≤ st.idx + 1 := h2
+      omega
+    have hple : st.idx ≤ MiddleBorder.numJobs := by have := hrel.2; omega
+    obtain ⟨ts₀, hgeq, hBE⟩ := h.job hbig (by omega) hp1
+    obtain ⟨hXe, hX2e, ωF, hωF, iF, hiF, hsvF⟩ := hBE
+    have hrelle : MiddleBorder.relTime S st.idx ≤ w.length := by
+      have := MiddleBorder.relTime_succ S st.idx
+      omega
+    have hlenW : (MiddleBorder.Wnd w S st.idx).length = S + st.idx * MiddleBorder.gw S :=
+      wnd_length_eq w hrelle
+    have hWmax : (MiddleBorder.Wnd w S st.idx).length ≤ Lmax S := by
+      rw [hlenW]
+      have hmm : st.idx * MiddleBorder.gw S ≤ MiddleBorder.numJobs * MiddleBorder.gw S :=
+        Nat.mul_le_mul_right _ hple
+      simp only [Lmax]
+      omega
+    have hrd : rdOf S st.idx ≤ (MiddleBorder.Wnd w S st.idx).length := by
+      rw [hlenW]
+      have hexp : (st.idx + 1) * MiddleBorder.gw S
+          = st.idx * MiddleBorder.gw S + MiddleBorder.gw S := by ring
+      have hhalf : S / 2 + MiddleBorder.gw S ≤ S := by simp only [MiddleBorder.gw]; omega
+      simp only [rdOf, hexp]
+      omega
+    have hbatch := batchActs_word (one := one) (zero := zero) D hne
+      (fun hc => hleft (mem_wnd hc)) (fun hc => hend (mem_wnd hc))
+      (fun L hL _ => hDec (MiddleBorder.Wnd w S st.idx) L hL)
+      ts₀ ωF (rdOf S st.idx) (Lmax S + 1) (by omega) hωF hrd hXe hX2e ⟨iF, hiF, hsvF⟩
+    have hcount : n + MiddleBorder.gw S - st.next = MiddleBorder.gw S - 1 := by omega
+    have hdone := batch_complete D hbig hev
+      (show (MiddleBorder.Wnd w S st.idx).length ≤ 5 * S from wnd_length_le w hbig hple)
+      (batchActs blank startSym endSym mark leftSym one zero D (MiddleBorder.Wnd w S st.idx)
+        (rdOf S st.idx) ts₀) ts₀ hbatch.1
+    rw [hcount, hdone] at hgeq
+    obtain ⟨ω, hFW, hsv⟩ := hbatch.2
+    refine ⟨ω, ?_, ?_⟩
+    · show FlagWordOK one (Lmax S + 1) (MiddleBorder.Wnd w S (st.idx + 1 - 1)) ω
+      rw [Nat.add_sub_cancel]
+      exact hFW
+    · show Tape.SeqView blank st.g.ts.F ω (n + 1 - S)
+      rw [hgeq]
+      have hidx : n + 1 - S = rdOf S st.idx := by rw [← rdOf_eq S st.idx, hn1]
+      rw [hidx]
+      exact hsv
+  · intro hc; omega
+
+
+theorem mround_encodes_grind (D : DecompOnTapes sc blank startSym endSym mark)
+    {w : List (Fin sc)} {S n : ℕ} {st : MState sc}
+    (hbig : 8 ≤ S) (hn : S / 2 ≤ n) (hw : n + 1 ≤ w.length)
+    (hnrel : ¬ (n + 1 = st.next ∧ st.idx < MiddleBorder.numJobs))
+    (h : MEncodes blank startSym endSym mark leftSym one zero D w S n st) :
+    MEncodes blank startSym endSym mark leftSym one zero D w S (n + 1)
+      (mround blank startSym endSym mark leftSym one zero D
+        (w.take (n + 1)) (w.getD n blank) (n + 1) st) := by
+  have hbs : MiddleBorder.bstate w S (n + 1)
+      = MiddleBorder.bstep (w.take (n + 1)) (n + 1) (MiddleBorder.bstate w S n) :=
+    MiddleBorder.bstate_succ (by omega)
+  have hbw : (MiddleBorder.bstate w S n).width = S := MiddleBorder.bstate_width w S n
+  have hcond : ¬ (n + 1 = (MiddleBorder.bstate w S n).next ∧
+      (MiddleBorder.bstate w S n).idx < MiddleBorder.numJobs) := by
+    rw [← h.next_eq, ← h.idx_eq]; exact hnrel
+  have hbi : (MiddleBorder.bstate w S (n + 1)).idx = st.idx := by
+    rw [hbs]
+    simp only [MiddleBorder.bstep, hbw, if_neg (show ¬ S < 8 by omega), if_neg hcond]
+    rw [h.idx_eq]
+  have hbn : (MiddleBorder.bstate w S (n + 1)).next = st.next := by
+    rw [hbs]
+    simp only [MiddleBorder.bstep, hbw, if_neg (show ¬ S < 8 by omega), if_neg hcond]
+    rw [h.next_eq]
+  have hfeedw : ((w.take n).drop (S / 2)) ++ [w.getD n blank] = (w.take (n + 1)).drop (S / 2) :=
+    feedWord_succ w blank hn (by omega)
+  have hcopy1 : ∀ i, st.idx < i → i ≤ MiddleBorder.numJobs →
+      InputCopy.FrontierView blank (feed blank (w.getD n blank) st.idx st.cp1 i)
+        (leftSym :: ((w.take (n + 1)).drop (S / 2))) := by
+    intro i h1 h2
+    have := feed_spec (a := w.getD n blank) (h.copy1 hbig) i h1 h2
+    rwa [List.cons_append, hfeedw] at this
+  have hcopy2 : ∀ i, st.idx < i → i ≤ MiddleBorder.numJobs →
+      InputCopy.FrontierView blank (feed blank (w.getD n blank) st.idx st.cp2 i)
+        (leftSym :: ((w.take (n + 1)).drop (S / 2))) := by
+    intro i h1 h2
+    have := feed_spec (a := w.getD n blank) (h.copy2 hbig) i h1 h2
+    rwa [List.cons_append, hfeedw] at this
+  simp only [mround, h.width_eq, if_neg (show ¬ (S < 8) by omega), if_neg hnrel]
+  refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · show st.idx = _
+    rw [hbi]
+  · show st.next = _
+    rw [hbn]
+  · exact h.next_rel
+  · intro h8 h1
+    have hr := h.rel_le h8 h1
+    show st.next ≤ n + 1 + MiddleBorder.gw S
+    omega
+  · intro _ i h1 h2; exact hcopy1 i h1 h2
+  · intro _ i h1 h2; exact hcopy2 i h1 h2
+  · intro _ h4 h1
+    obtain ⟨ts₀, hgeq, hBE⟩ := h.job hbig (by omega) h1
+    refine ⟨ts₀, ?_, hBE⟩
+    have hr := h.rel_le hbig h1
+    show gstep blank (rateM D) st.g
+        = gsteps blank (rateM D) (n + 1 + MiddleBorder.gw S - st.next)
+          ⟨batchActs blank startSym endSym mark leftSym one zero D
+            (MiddleBorder.Wnd w S st.idx) (rdOf S st.idx) ts₀, ts₀⟩
+    rw [hgeq, ← gsteps_succ]
+    congr 1
+    omega
+  · intro _ h4 h0
+    obtain ⟨hrem, ω, hω, hsv⟩ := h.gwf hbig (by omega) h0
+    refine ⟨?_, ω, hω, ?_⟩
+    · show st.g.rem.drop (rateM D) = []
+      rw [hrem]; simp
+    · show Tape.SeqView blank (applyActs blank (st.g.rem.take (rateM D)) st.g.ts).F ω 0
+      rw [hrem]
+      simpa using hsv
+  · intro _ h4 h1
+    have h1' : st.idx ≤ 1 := h1
+    rw [if_neg (show ¬ (S < n + 1 ∧ 2 ≤ st.idx) by omega)]
+    exact h.foutWF hbig (by omega) h1'
+  · intro _ h4 h2
+    have h2' : 2 ≤ st.idx := h2
+    obtain ⟨ω, hFW, hsv⟩ := h.out hbig (by omega) h2'
+    have hLm := three_S_le_Lmax hbig
+    refine ⟨ω, hFW, ?_⟩
+    by_cases hSn : S < n + 1
+    · rw [if_pos (⟨hSn, h2'⟩ : S < n + 1 ∧ 2 ≤ st.idx)]
+      have hlt : n - S + 1 < ω.length := by
+        have hw1 := hFW.1
+        omega
+      have := Tape.seq_move_right hsv hlt
+      have heq : n - S + 1 = n + 1 - S := by omega
+      rwa [heq] at this
+    · rw [if_neg (show ¬ (S < n + 1 ∧ 2 ≤ st.idx) by omega)]
+      have heq : n + 1 - S = n - S := by omega
+      rw [heq]
+      exact hsv
+  · intro hc; omega
+
+/-- **1 ラウンドの主定理**：不変条件はラウンドをまたいで保たれる。 -/
+theorem mround_encodes (D : DecompOnTapes sc blank startSym endSym mark)
+    {w : List (Fin sc)} {S n : ℕ} {st : MState sc}
+    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
+    (hDec : MiddleBorder.DecOK (Fin sc)) (hev : 2 * (S / 2) = S)
+    (hn : S / 2 ≤ n) (hw : n + 1 ≤ w.length)
+    (h : MEncodes blank startSym endSym mark leftSym one zero D w S n st) :
+    MEncodes blank startSym endSym mark leftSym one zero D w S (n + 1)
+      (mround blank startSym endSym mark leftSym one zero D
+        (w.take (n + 1)) (w.getD n blank) (n + 1) st) := by
+  by_cases hsmall : S < 8
+  · exact mround_encodes_small D hsmall hn h
+  · by_cases hrel : n + 1 = st.next ∧ st.idx < MiddleBorder.numJobs
+    · exact mround_encodes_release D hne hleft hend hDec (by omega) hev hn hw hrel h
+    · exact mround_encodes_grind D (by omega) hn hw hrel h
+
+/-- **1 ラウンドの費用**は `CmT' D = rateM D + 148` 以下。 -/
+theorem mround_cost (D : DecompOnTapes sc blank startSym endSym mark) (n : ℕ)
+    (st : MState sc) : mcost D n st ≤ CmT' D :=
+  mcost_le D n st
+
+/-! ### ラウンドの反復 -/
+
+/-- ラウンド `n` 終了時のテープ機械の状態（`MiddleImpl.runToH` と同じ刻み）。 -/
+def mstate (blank startSym endSym mark leftSym one zero : Fin sc)
+    (D : DecompOnTapes sc blank startSym endSym mark)
+    (w : List (Fin sc)) (S : ℕ) (init : MState sc) : ℕ → MState sc
+  | 0 => init
+  | n + 1 =>
+      if n + 1 ≤ S / 2 then init
+      else mround blank startSym endSym mark leftSym one zero D
+        (w.take (n + 1)) (w.getD n blank) (n + 1)
+        (mstate blank startSym endSym mark leftSym one zero D w S init n)
+
+/-- 初期状態。 -/
+def minit (S : ℕ) (g0 : Grind sc) (fo : TapeConfiguration sc)
+    (c1 c2 : ℕ → TapeConfiguration sc) : MState sc :=
+  ⟨S, 0, MiddleBorder.relTime S 1, g0, fo, c1, c2⟩
+
+theorem minit_encodes (D : DecompOnTapes sc blank startSym endSym mark)
+    {w : List (Fin sc)} {S : ℕ} {g0 : Grind sc} {fo : TapeConfiguration sc}
+    {c1 c2 : ℕ → TapeConfiguration sc}
+    (hc1 : ∀ i, InputCopy.FrontierView blank (c1 i) [leftSym])
+    (hc2 : ∀ i, InputCopy.FrontierView blank (c2 i) [leftSym])
+    (hrem : g0.rem = [])
+    (hgF : ∃ ω, Lmax S + 1 ≤ ω.length ∧ Tape.SeqView blank g0.ts.F ω 0)
+    (hfo : ∃ ω, Lmax S + 1 ≤ ω.length ∧ Tape.SeqView blank fo ω 0) :
+    ∀ m, m ≤ S / 2 →
+      MEncodes blank startSym endSym mark leftSym one zero D w S m (minit S g0 fo c1 c2) := by
+  intro m hm
+  have hb : MiddleBorder.bstate w S m = ⟨S, 0, MiddleBorder.relTime S 1, [], 0, []⟩ :=
+    MiddleBorder.bstate_init hm
+  have hnil : (w.take m).drop (S / 2) = [] := by
+    refine List.drop_eq_nil_of_le ?_
+    simp only [List.length_take]
+    omega
+  refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · show (0 : ℕ) = (MiddleBorder.bstate w S m).idx
+    rw [hb]
+  · show MiddleBorder.relTime S 1 = (MiddleBorder.bstate w S m).next
+    rw [hb]
+  · intro _; rfl
+  · intro _ h1; exact absurd (show 1 ≤ 0 from h1) (by omega)
+  · intro _ i _ _; rw [hnil]; exact hc1 i
+  · intro _ i _ _; rw [hnil]; exact hc2 i
+  · intro _ _ h1; exact absurd (show 1 ≤ 0 from h1) (by omega)
+  · intro _ _ _; exact ⟨hrem, hgF⟩
+  · intro _ _ _; exact hfo
+  · intro _ _ h2; exact absurd (show 2 ≤ 0 from h2) (by omega)
+  · intro _ h2 _; exact absurd h2 (by omega)
+
+theorem mstate_encodes (D : DecompOnTapes sc blank startSym endSym mark)
+    {w : List (Fin sc)} {S : ℕ} {init : MState sc}
+    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
+    (hDec : MiddleBorder.DecOK (Fin sc)) (hev : 2 * (S / 2) = S)
+    (hinit : ∀ m, m ≤ S / 2 →
+      MEncodes blank startSym endSym mark leftSym one zero D w S m init) :
+    ∀ n, n ≤ w.length →
+      MEncodes blank startSym endSym mark leftSym one zero D w S n
+        (mstate blank startSym endSym mark leftSym one zero D w S init n) := by
+  intro n
+  induction n with
+  | zero => intro _; exact hinit 0 (Nat.zero_le _)
+  | succ n ih =>
+    intro hw
+    by_cases hle : n + 1 ≤ S / 2
+    · rw [mstate, if_pos hle]; exact hinit (n + 1) hle
+    · rw [mstate, if_neg hle]
+      exact mround_encodes D hne hleft hend hDec hev (by omega) hw (ih (by omega))
+
+end Round
+
+/-! ## §11 主定理：読み出し側の記号は `borderMiddle` のフラグに一致する -/
+
+section Read
+
+variable {blank startSym endSym mark leftSym one zero : Fin sc}
+
+/-- **主定理**：ラウンド `n ∈ [2S, 4S)` に読み出し側フラグテープで読める記号が `one` で
+あることは、`MiddleBorder.borderMiddle` がそのラウンドに出すフラグが `true` であること
+（＝ 中央部 `(w.drop (S/2)).take (n - S)` が回文であること）と同値。 -/
+theorem middle_flag_read (D : DecompOnTapes sc blank startSym endSym mark)
+    {w : List (Fin sc)} {S : ℕ} {init : MState sc}
+    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
+    (hDec : MiddleBorder.DecOK (Fin sc)) (hev : 2 * (S / 2) = S) (hS2 : 2 ≤ S)
+    (hinit : ∀ m, m ≤ S / 2 →
+      MEncodes blank startSym endSym mark leftSym one zero D w S m init)
+    (n : ℕ) (h1 : 2 * S ≤ n) (h2 : n < 4 * S) (hw : n ≤ w.length) :
+    (Tape.read (mstate blank startSym endSym mark leftSym one zero D w S init n).fout = one)
+      ↔ (MiddleBorder.borderMiddle (Fin sc)).flag
+          ((MiddleBorder.borderMiddle (Fin sc)).runToH w S n) n = true := by
+  have hM := mstate_encodes D hne hleft hend hDec hev hinit n hw
+  have hspec := (MiddleBorder.borderMiddle_spec hDec).correct w S n hS2 hev h1 h2 hw
+  rw [hspec]
+  rcases Nat.lt_or_ge S 8 with hsmall | hbig
+  · rw [hM.outNaive hsmall (by omega) h2]
+    by_cases hp : IsPal ((w.drop (S / 2)).take (n - S))
+    · rw [if_pos hp]; exact ⟨fun _ => hp, fun _ => rfl⟩
+    · rw [if_neg hp]
+      simp only [hp, iff_false]
+      exact fun hc => hne hc.symm
+  · obtain ⟨p, i, hp2, hple, hn, hi, hcov⟩ := MiddleBorder.find_batch hbig hev h1 h2
+    have hblk := MiddleBorder.inv_block w S hbig p (by omega) hple i hi
+    rw [← hn] at hblk
+    have hidx : (mstate blank startSym endSym mark leftSym one zero D w S init n).idx = p := by
+      rw [hM.idx_eq, hblk.2.1]
+    obtain ⟨ω, hFW, hsv⟩ := hM.out hbig h2 (by rw [hidx]; omega)
+    rw [hidx] at hFW
+    have hlen : n - S ≤ (MiddleBorder.Wnd w S (p - 1)).length := by
+      simp only [MiddleBorder.Wnd, List.length_take, List.length_drop]
+      omega
+    have hkey : (MiddleBorder.Wnd w S (p - 1)).take (n - S) = (w.drop (S / 2)).take (n - S) := by
+      simp only [MiddleBorder.Wnd, List.take_take]
+      congr 1
+      omega
+    rw [hFW.read hsv (by omega) hlen, hkey]
+
+end Read
+
+/-! ## §12 全体像と、残っている前提
+
+### できあがったもの
+
+* §1–§8：凍結窓 1 個分（＝ 1 バッチ）を平坦な動作列 `batchActs` に落とし、
+  その長さ（`Cbatch D * |y| + 1`）と、流し切ったあとの `F` テープの内容
+  （`FlagWordOK`：添字 `ℓ` で `one` が読めることと `y.take ℓ` の回文性が同値）を与えた。
+* §6：`rateM D = 50 * Cbatch D + 1` の速さで挽けば、解放から次の解放までの
+  `gw S - 1` ラウンドでバッチは必ず挽き終わる（`fits_of_length_le`, `batch_complete`）。
+  締切そのものは `MiddleBorder.borderMiddle_deadline` が与える。
+* §10–§11：ラウンド機械 `MState` / `mround` / `mcost` と不変条件 `MEncodes`、
+  その保存 `mround_encodes`、反復 `mstate_encodes`、そして主定理 `middle_flag_read`。
+
+### 1 ラウンドにやること（`mround`）
+
+* `S < 8`：窓は `≤ 21` 記号なので回文性は窓の決定可能な関数。判定結果を 1 セルに書く
+  （費用は `MiddleBorder` と同じ `3S² + 1` を計上）。
+* `8 ≤ S`：
+  * 到着記号を、まだ凍結していない入力コピー（`X` 用・`X2` 用の各 `numJobs` 本）へ
+    1 個ずつ追記する（`feed`、`2 * numJobs = 26` 動作）。`InputCopy.FrontierView` が
+    そのまま不変条件になる。
+  * 解放ラウンド `n = relTime S j`：バッチ `j` 用のコピー 2 本を 1 動作ずつで凍結し
+    （`InputCopy.toSeqView`：`SeqView` の添字 `|y|` に立つ）、フラグテープを入れ替える
+    （書き込み側 ↔ 読み出し側のダブルバッファ）。完成したバッチの `F` は
+    ちょうど読み出し開始位置 `rdOf S (j-1) = n - S` にヘッドが立っている。
+  * それ以外：`rateM D` 個の動作を挽き（`gstep`）、読み出し側を 1 セル右へ（`outStep`）。
+
+1 ラウンドの費用は `CmT' D = rateM D + 148` 以下（`mround_cost`）。
+
+### 残っている前提
+
+1. `DecompOnTapes` は抽象のまま（指示どおり）。`GSPreprocessTapes` 側で具体化すれば
+   `Cd`／`Dd` が定まり、`rateM D`・`Cbatch D`・`CmT' D` がすべて具体的な数になる。
+2. `minit_encodes` の初期条件（各コピーが `[leftSym]` の最前線であること、フラグテープ
+   2 本が長さ `Lmax S + 1` 以上の語を持ちヘッドが添字 `0` にあること）は仮定として
+   置いてある。これは段の立ち上げに 1 度だけ必要な `O(S)` の前処理
+   （空白を `Lmax S + 1` セル分書いて戻る／各コピーに `leftSym` を 1 個書く）で作れる。
+3. 入力コピーはバッチごとに専用の 2 本を使う（段あたり `2 * numJobs = 26` 本）。
+   凍結したコピーを作り直す必要がないので、追い付き用の FIFO は要らない。
+   1 ラウンドあたりの追記は 26 回で定数。
 -/
 
 end MiddleTapes
