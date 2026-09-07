@@ -732,7 +732,7 @@ theorem palPrefixFlagsGS_spec {x : List α} {dec : ℕ → ℕ × ℕ × ℕ} {k
 def totalSteps (x : List α) (dec : ℕ → ℕ × ℕ × ℕ) (k : ℕ) : ℕ :=
   borderJobCost x dec k (x.length + 1) x.length
 
-theorem stageCost_le {x : List α} {dec : ℕ → ℕ × ℕ × ℕ} {k L : ℕ} (hk : 0 < k)
+theorem borderStageCost_le {x : List α} {dec : ℕ → ℕ × ℕ × ℕ} {k L : ℕ} (hk : 0 < k)
     (hL : L ≤ x.length) (_hone : 1 ≤ L)
     (hOK : StageOK x k L (dec L).1 (dec L).2.1 (dec L).2.2) :
     ovCost ((x.take L).take (dec L).1) ((x.take L).drop (dec L).1)
@@ -771,7 +771,7 @@ theorem borderJobCost_le {x : List α} {dec : ℕ → ℕ × ℕ × ℕ}
     split_ifs with h0
     · exact Nat.zero_le _
     · have hOKL := hOK L (by omega) hL
-      have hstage := stageCost_le (dec := dec) (by omega) hL (by omega) hOKL
+      have hstage := borderStageCost_le (dec := dec) (by omega) hL (by omega) hOKL
       have hshort := hOKL.cut_short
       have hshrink : 3 * nextLen (dec L).1 + 1 ≤ L := nextLen_shrink (by omega)
       have hrec := ih (nextLen (dec L).1) (by omega)

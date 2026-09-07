@@ -14,6 +14,8 @@ import PalPeg.GSPreprocess
 import PalPeg.GSRealTime
 import PalPeg.GSVerifier
 import PalPeg.GSScanTapes
+import PalPeg.GSVerifierTapes
+import PalPeg.TextFeed
 import PalPeg.BorderJob
 import PalPeg.RTQueue
 import PalPeg.RTQueueTapes
@@ -23,6 +25,7 @@ import PalPeg.MiddleJob
 import PalPeg.Stages
 import PalPeg.Assembly
 import PalPeg.StageMatcher
+import PalPeg.OnlineMachine
 import PalPeg.Schedule
 import PalPeg.TapeLib
 import PalPeg.Speedup
@@ -263,3 +266,19 @@ import PalPeg.ProgramMachine
 /-- info: 'PalPeg.decompose_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.decompose_spec
+
+/-- info: 'PalPeg.output_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.output_correct
+
+/-- info: 'PalPeg.GSTapes.encodes_step'' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.GSTapes.encodes_step'
+
+/-- info: 'PalPeg.GSVTapes.vrun_tape_cost_init' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.GSVTapes.vrun_tape_cost_init
+
+/-- info: 'PalPeg.TextFeed.feed_online' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.TextFeed.feed_online
