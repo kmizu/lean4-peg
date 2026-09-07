@@ -44,8 +44,16 @@ import PalPeg.GSScanTapes
 
   `vprogram_cost : (vprogram …).length ≤ (2k+3) * (Φ(scanStep st) - Φ st) + 12 + 2|u|`
 
-  （`A = 2k+3`, `B = 12`, `C = 2`）。`(k-1)|u| < |x|`（L1）による全体の償却は
-  ここでは扱わず、1 歩あたりの費用を明示するに留める。
+  （`A = 2k+3`, `B = 12`, `C = 2`）。
+* さらに **`C * |u|` の項は L1（`(k-1)|u| < |x|`）を使わずに償却できる**（§8）。
+  ずらしの巻き戻し `2*checked` は、前回のずらし以降に成功した `v` の比較
+  （`Φ` が `+1` される歩）にそのまま付け替えられる（不変条件
+  `VCheckedInv : checked ≤ 2*q`、ポテンシャル `Ψ = 2*checked`）：
+
+  `vrun_tape_cost_init : vRunCostTapes … n (vt, (⟨|u|,0⟩,0))
+      ≤ (2k+3) * (Φ_end - Φ_start) + 18*n`
+
+  （`A' = 2k+3`, `B' = 18`。`|u|` に比例する項は残らない。）
 -/
 
 namespace PalPeg.GSVTapes
@@ -638,6 +646,402 @@ theorem vprogram_cost {k r : ℕ} {b : Bool} (hk : 0 < k) (hend : endSym ∉ v)
     omega
 
 end Cost
+
+/-!
+## 8. 実行全体の費用：`2|u|` の項の償却（L1 を使わない）
+
+1 歩の費用 `vprogram_cost` に現れる `2|u|` は、ずらしのときに `U` のヘッドを
+`checked` 歩戻す分（と `Txt2` の張り直し）である。これは **`checked` が
+「前回のずらし以降に成功した `v` の比較の 2 倍以下」** であること
+（不変条件 `VCheckedInv : checked ≤ 2*q`）から、既に `Φ` の増分として
+数え終わった比較に付け替えられる。
+
+形式化はポテンシャル `Ψ(z) = 2 * checked` を使う（＝「まだ払っていない巻き戻し費用」）：
+
+* 比較成功の一歩：`Φ` は `+1`、`checked` は `≤ +2` なので
+  `cost + ΔΨ ≤ 2 + 4*2 = 10 ≤ (2k+3)*1 + 18`。
+* ずらしの一歩：`Ψ` は `2*checked → 0` と減り、その減少がちょうど巻き戻し
+  `walkLen checked δ ≤ 2*checked + δ` の `2*checked` を払う。残る `δ` は
+  `gsShift_le_dPhi` で `Φ` の増分に吸収されるので
+  `cost + ΔΨ ≤ (2k+2)*ΔΦ + 8 + δ ≤ (2k+3)*ΔΦ + 18`。
+
+telescoping して `vrun_cost_le`：
+
+`vRunCostIdx n z + 2*(vRunState n z).2 ≤ (2k+3)*(Φ_end - Φ_start) + 18*n + 2*z.2`
+
+初期状態は `checked = 0` なので右端の項は消え、`|u|` に比例する項は
+**まったく残らない**（`vrun_cost_le_of_start`）。`VCheckedInv` は、
+ポテンシャルに載せた「借金」`2*checked ≤ 4*q ≤ 4*Φ` が常に
+過去の比較で裏付けられていることを保証する（`checkedInv_debt_le`）。
+
+テープ側の実行 `vRunCostTapes`（`vApplyActs` を `vStep` に沿って反復）は、
+符号化が保たれる限り `vRunCostIdx` と**一致する**（`vRunCostTapes_eq`）ので、
+同じ上界が実際の動作数に対して成り立つ（`vrun_tape_cost_le`,
+`vrun_tape_cost_init`）。`A' = 2k+3`, `B' = 18`。
+-/
+
+section RunDefs
+
+/-- 検証器つきの一歩のテープ動作数（添字レベルの式）。 -/
+def vStepTapeCost (u v : List (Fin sc)) (k p₁ r : ℕ) (Text : List (Fin sc)) (z : VState) : ℕ :=
+  GSTapes.stepCost v k p₁ r Text z.1 +
+    (if z.1.q ≠ v.length ∧ Text[z.1.pos + z.1.q]? = v[z.1.q]? then
+        2 * (vComp u Text z.1.pos (vComp u Text z.1.pos z.2) - z.2)
+      else walkLen z.2 (gsShift k p₁ r z.1.q))
+
+/-- `n` 歩後の検証器つき状態。 -/
+def vRunState (u v : List (Fin sc)) (k p₁ r : ℕ) (Text : List (Fin sc)) :
+    ℕ → VState → VState
+  | 0, z => z
+  | n + 1, z => vRunState u v k p₁ r Text n (vStep u v k p₁ r Text z)
+
+/-- `n` 歩の総動作数（添字レベル）。 -/
+def vRunCostIdx (u v : List (Fin sc)) (k p₁ r : ℕ) (Text : List (Fin sc)) : ℕ → VState → ℕ
+  | 0, _ => 0
+  | n + 1, z =>
+      vStepTapeCost u v k p₁ r Text z + vRunCostIdx u v k p₁ r Text n (vStep u v k p₁ r Text z)
+
+/-- 毎ステップのオラクルビット。 -/
+def vOracle (k p₁ r : ℕ) (st : ScanState) : Bool := decide (k * p₁ ≤ st.q ∧ st.q ≤ r)
+
+/-- テープ側の実行：`vApplyActs` を `vStep` に沿って反復する。 -/
+def vRunTapes (blank endSym mark : Fin sc) (u v : List (Fin sc)) (k p₁ r : ℕ)
+    (Text : List (Fin sc)) : ℕ → VTapes sc × VState → VTapes sc × VState
+  | 0, s => s
+  | n + 1, s =>
+      vRunTapes blank endSym mark u v k p₁ r Text n
+        (vApplyActs blank (vprogram blank endSym mark k (vOracle k p₁ r s.2.1) s.1) s.1,
+          vStep u v k p₁ r Text s.2)
+
+/-- テープ側の実行の総動作数。 -/
+def vRunCostTapes (blank endSym mark : Fin sc) (u v : List (Fin sc)) (k p₁ r : ℕ)
+    (Text : List (Fin sc)) : ℕ → VTapes sc × VState → ℕ
+  | 0, _ => 0
+  | n + 1, s =>
+      (vprogram blank endSym mark k (vOracle k p₁ r s.2.1) s.1).length +
+        vRunCostTapes blank endSym mark u v k p₁ r Text n
+          (vApplyActs blank (vprogram blank endSym mark k (vOracle k p₁ r s.2.1) s.1) s.1,
+            vStep u v k p₁ r Text s.2)
+
+/-- 最初の `n` 歩がすべてテキストの内側に収まること（符号化を保つための条件）。 -/
+def VFits (v : List (Fin sc)) (k p₁ r : ℕ) (Text : List (Fin sc)) : ℕ → ScanState → Prop
+  | 0, _ => True
+  | n + 1, st =>
+      (scanStep v k p₁ r Text st).pos + (scanStep v k p₁ r Text st).q < Text.length ∧
+        VFits v k p₁ r Text n (scanStep v k p₁ r Text st)
+
+/-- **不変条件**：`checked` は前回のずらし以降に成功した `v` の比較の 2 倍以下。
+ずらしで `checked` も `q` も基準に戻るので、`checked ≤ 2*q` の形で表せる。 -/
+def VCheckedInv (z : VState) : Prop := z.2 ≤ 2 * z.1.q
+
+end RunDefs
+
+/-! ### 不変条件 `checked ≤ 2*q` -/
+
+section Inv
+
+variable {k p₁ r : ℕ} {u v Text : List (Fin sc)} {z : VState}
+
+theorem vStep_snd_adv (h : z.1.q ≠ v.length ∧ Text[z.1.pos + z.1.q]? = v[z.1.q]?) :
+    (vStep u v k p₁ r Text z).2 = vComp u Text z.1.pos (vComp u Text z.1.pos z.2) := by
+  unfold vStep; rw [if_neg h.1, if_pos h.2]
+
+theorem vStep_snd_shift (h : ¬ (z.1.q ≠ v.length ∧ Text[z.1.pos + z.1.q]? = v[z.1.q]?)) :
+    (vStep u v k p₁ r Text z).2 = 0 := by rw [vStep_shift h]
+
+/-- 一歩で不変条件は保たれる：比較成功なら `q` が `+1`、`checked` は `≤ +2`、
+ずらしなら `checked := 0`。 -/
+theorem vStep_checkedInv (h : VCheckedInv z) :
+    VCheckedInv (vStep u v k p₁ r Text z) := by
+  unfold VCheckedInv at h ⊢
+  rw [vStep_fst]
+  by_cases hadv : z.1.q ≠ v.length ∧ Text[z.1.pos + z.1.q]? = v[z.1.q]?
+  · have hss : scanStep v k p₁ r Text z.1 = (⟨z.1.pos, z.1.q + 1⟩ : ScanState) :=
+      GSTapes.scanStep_adv hadv
+    have h3 := vComp_le_succ u Text z.1.pos z.2
+    have h4 := vComp_le_succ u Text z.1.pos (vComp u Text z.1.pos z.2)
+    rw [vStep_snd_adv hadv, hss]
+    show vComp u Text z.1.pos (vComp u Text z.1.pos z.2) ≤ 2 * (z.1.q + 1)
+    omega
+  · rw [vStep_snd_shift hadv]
+    exact Nat.zero_le _
+
+theorem vRunState_checkedInv (u v Text : List (Fin sc)) (k p₁ r : ℕ) :
+    ∀ (n : ℕ) (z : VState), VCheckedInv z →
+      VCheckedInv (vRunState u v k p₁ r Text n z) := by
+  intro n
+  induction n with
+  | zero => intro z h; exact h
+  | succ n ih => intro z h; exact ih _ (vStep_checkedInv h)
+
+/-- 初期状態は不変条件を満たす。 -/
+theorem checkedInv_init (pos : ℕ) : VCheckedInv ((⟨pos, 0⟩ : ScanState), 0) := by
+  show (0 : ℕ) ≤ 2 * 0
+  omega
+
+/-- ポテンシャルに載せた「借金」は常に過去の比較（＝`Φ` の増分）で裏付けられている。 -/
+theorem checkedInv_debt_le (k : ℕ) (h : VCheckedInv z) : 2 * z.2 ≤ 4 * Phi k z.1 := by
+  unfold VCheckedInv at h
+  have hq : z.1.q ≤ Phi k z.1 := by
+    show z.1.q ≤ (k + 1) * z.1.pos + z.1.q
+    omega
+  omega
+
+/-- `checked` は `|u|` を超えない。 -/
+theorem vStep_checked_le (h : z.2 ≤ u.length) :
+    (vStep u v k p₁ r Text z).2 ≤ u.length := by
+  by_cases hadv : z.1.q ≠ v.length ∧ Text[z.1.pos + z.1.q]? = v[z.1.q]?
+  · rw [vStep_snd_adv hadv]
+    exact vComp_le_length (vComp_le_length h)
+  · rw [vStep_snd_shift hadv]
+    exact Nat.zero_le _
+
+end Inv
+
+/-! ### 一歩の費用の式（テープの動作数との一致） -/
+
+section StepCostEq
+
+variable {blank startSym endSym mark : Fin sc} {u v Text : List (Fin sc)} {p₁ : ℕ}
+  {vt : VTapes sc} {z : VState} {e : VExt sc} {pos c : ℕ}
+
+theorem vcompActs_length_eq (hendu : endSym ∉ u)
+    (hU : Tape.SeqView blank e.U (startSym :: (u ++ [endSym])) (c + 1))
+    (hX : Tape.SeqView blank e.Txt2 Text (pos - u.length + c)) (hc : c ≤ u.length) :
+    (vcompActs endSym e).length = 2 * (vComp u Text pos c - c) := by
+  by_cases hh : Tape.read e.U ≠ endSym ∧ Tape.read e.U = Tape.read e.Txt2
+  · have hv : vComp u Text pos c = c + 1 := by
+      unfold vComp; rw [if_pos ((vcomp_iff hendu hU hX hc).1 hh)]
+    unfold vcompActs; rw [if_pos hh, hv]; simp
+  · have hv : vComp u Text pos c = c := by
+      unfold vComp
+      rw [if_neg (fun hcon => hh ((vcomp_iff hendu hU hX hc).2 hcon))]
+    unfold vcompActs; rw [if_neg hh, hv]; simp
+
+theorem vcomp2Acts_length_eq (hendu : endSym ∉ u)
+    (hU : Tape.SeqView blank e.U (startSym :: (u ++ [endSym])) (c + 1))
+    (hX : Tape.SeqView blank e.Txt2 Text (pos - u.length + c))
+    (hc : c ≤ u.length) (hpos : u.length ≤ pos) (hroom : pos < Text.length) :
+    (vcomp2Acts blank endSym e).length
+      = 2 * (vComp u Text pos (vComp u Text pos c) - c) := by
+  obtain ⟨h1U, h1X⟩ := vcompActs_spec hendu hU hX hc hpos hroom
+  have e1 := vcompActs_length_eq hendu hU hX hc
+  have e2 := vcompActs_length_eq (blank := blank) (startSym := startSym) hendu h1U h1X
+    (vComp_le_length hc)
+  have hle1 : c ≤ vComp u Text pos c := le_vComp u Text pos c
+  have hle2 : vComp u Text pos c ≤ vComp u Text pos (vComp u Text pos c) :=
+    le_vComp u Text pos (vComp u Text pos c)
+  unfold vcomp2Acts
+  rw [List.length_append, e1, e2]
+  omega
+
+/-- **一歩の動作数の式**：テープ上の動作列の長さは `vStepTapeCost`。 -/
+theorem vprogram_length_eq {k r : ℕ} {b : Bool} (hk : 0 < k) (hend : endSym ∉ v)
+    (hendu : endSym ∉ u)
+    (hE : VEncodes blank startSym endSym mark u v Text p₁ vt z)
+    (hq : z.1.q ≤ v.length) (hc : z.2 ≤ u.length) (hpos : u.length ≤ z.1.pos)
+    (hb : b = decide (k * p₁ ≤ z.1.q ∧ z.1.q ≤ r))
+    (hfit : (scanStep v k p₁ r Text z.1).pos + (scanStep v k p₁ r Text z.1).q < Text.length) :
+    (vprogram blank endSym mark k b vt).length = vStepTapeCost u v k p₁ r Text z := by
+  rw [vprogram_length, GSTapes.program_length hk hend hE.scan hq hb]
+  unfold vStepTapeCost
+  by_cases hadv : Tape.read vt.1.P ≠ endSym ∧ Tape.read vt.1.P = Tape.read vt.1.Txt
+  · have habs := (GSTapes.advance_iff hend hE.scan hq).1 hadv
+    have hss : scanStep v k p₁ r Text z.1 = (⟨z.1.pos, z.1.q + 1⟩ : ScanState) :=
+      GSTapes.scanStep_adv habs
+    have hroom : z.1.pos < Text.length := by
+      rw [hss] at hfit
+      exact lt_of_le_of_lt (Nat.le_add_right _ _) hfit
+    rw [if_pos hadv, if_pos habs,
+      vcomp2Acts_length_eq (startSym := startSym) hendu hE.pat hE.txt2 hc hpos hroom]
+  · have hna : ¬ (z.1.q ≠ v.length ∧ Text[z.1.pos + z.1.q]? = v[z.1.q]?) :=
+      fun hcon => hadv ((GSTapes.advance_iff hend hE.scan hq).2 hcon)
+    rw [if_neg hadv, if_neg hna, cOf_eq hE.pat, vDelta_eq hE hb]
+
+end StepCostEq
+
+/-! ### 一歩の償却（ポテンシャル `Ψ = 2*checked`） -/
+
+section Amortized
+
+variable {k p₁ r : ℕ} {u v Text : List (Fin sc)} {z : VState}
+
+theorem phi_advance (k : ℕ) (st : ScanState) :
+    Phi k (⟨st.pos, st.q + 1⟩ : ScanState) - Phi k st = 1 := by
+  obtain ⟨X, hX⟩ : ∃ X, (k + 1) * st.pos = X := ⟨_, rfl⟩
+  show (k + 1) * st.pos + (st.q + 1) - ((k + 1) * st.pos + st.q) = 1
+  rw [hX]
+  omega
+
+/-- **一歩の償却不等式**：`Ψ = 2*checked` を含めた費用は `(2k+3)*ΔΦ + 18` 以下。 -/
+theorem vStepTapeCost_amortized (hk : 0 < k) (u v Text : List (Fin sc)) (p₁ r : ℕ)
+    (z : VState) :
+    vStepTapeCost u v k p₁ r Text z + 2 * (vStep u v k p₁ r Text z).2 ≤
+      (2 * k + 3) * (Phi k (vStep u v k p₁ r Text z).1 - Phi k z.1) + 18 + 2 * z.2 := by
+  rw [vStep_fst]
+  unfold vStepTapeCost
+  by_cases hadv : z.1.q ≠ v.length ∧ Text[z.1.pos + z.1.q]? = v[z.1.q]?
+  · have hsc : GSTapes.stepCost v k p₁ r Text z.1 = 2 := by
+      unfold GSTapes.stepCost; rw [if_neg hadv.1, if_pos hadv.2]
+    have hss : scanStep v k p₁ r Text z.1 = (⟨z.1.pos, z.1.q + 1⟩ : ScanState) :=
+      GSTapes.scanStep_adv hadv
+    have h1 : z.2 ≤ vComp u Text z.1.pos z.2 := le_vComp u Text z.1.pos z.2
+    have h2 : vComp u Text z.1.pos z.2 ≤ vComp u Text z.1.pos (vComp u Text z.1.pos z.2) :=
+      le_vComp u Text z.1.pos (vComp u Text z.1.pos z.2)
+    have h3 : vComp u Text z.1.pos z.2 ≤ z.2 + 1 := vComp_le_succ u Text z.1.pos z.2
+    have h4 : vComp u Text z.1.pos (vComp u Text z.1.pos z.2)
+        ≤ vComp u Text z.1.pos z.2 + 1 :=
+      vComp_le_succ u Text z.1.pos (vComp u Text z.1.pos z.2)
+    rw [if_pos hadv, hsc, vStep_snd_adv hadv, hss, phi_advance, Nat.mul_one]
+    omega
+  · have hsc : GSTapes.stepCost v k p₁ r Text z.1 = GSTapes.shiftCost k p₁ r z.1.q := by
+      unfold GSTapes.stepCost
+      by_cases h1 : z.1.q = v.length
+      · rw [if_pos h1]
+      · rw [if_neg h1, if_neg (fun hcon => hadv ⟨h1, hcon⟩)]
+    have hss : scanStep v k p₁ r Text z.1
+        = (⟨z.1.pos + gsShift k p₁ r z.1.q, gsNextQ k p₁ r z.1.q⟩ : ScanState) :=
+      GSTapes.scanStep_shift hadv
+    have hsh := GSTapes.shiftCost_le (p₁ := p₁) (r := r) hk z.1
+    have hgs := gsShift_le_dPhi (p₁ := p₁) (r := r) hk z.1
+    have hw := walkLen_le z.2 (gsShift k p₁ r z.1.q)
+    rw [if_neg hadv, hsc, vStep_snd_shift hadv, hss]
+    obtain ⟨D, hD⟩ : ∃ D, Phi k (⟨z.1.pos + gsShift k p₁ r z.1.q,
+        gsNextQ k p₁ r z.1.q⟩ : ScanState) - Phi k z.1 = D := ⟨_, rfl⟩
+    rw [hD] at hsh hgs ⊢
+    have hsplit : (2 * k + 3) * D = (2 * k + 2) * D + D := by ring
+    omega
+
+theorem phi_vStep_le (hk : 0 < k) (hp : 0 < p₁) (u v Text : List (Fin sc)) (z : VState) :
+    Phi k z.1 ≤ Phi k (vStep u v k p₁ r Text z).1 := by
+  rw [vStep_fst]
+  exact le_of_lt (phi_step_lt (v := v) (T := Text) (p₁ := p₁) (r := r) hk hp z.1)
+
+theorem phi_vRunState_le (hk : 0 < k) (hp : 0 < p₁) (u v Text : List (Fin sc)) :
+    ∀ (n : ℕ) (z : VState), Phi k z.1 ≤ Phi k (vRunState u v k p₁ r Text n z).1 := by
+  intro n
+  induction n with
+  | zero => intro z; exact Nat.le_refl _
+  | succ n ih =>
+    intro z
+    exact le_trans (phi_vStep_le (r := r) hk hp u v Text z) (ih (vStep u v k p₁ r Text z))
+
+/-- **実行全体の償却**：`Ψ = 2*checked` を込めた総費用は
+`(2k+3)*(Φ_end - Φ_start) + 18*n + 2*checked_start` 以下。 -/
+theorem vrun_cost_le (hk : 0 < k) (hp : 0 < p₁) (u v Text : List (Fin sc)) :
+    ∀ (n : ℕ) (z : VState),
+      vRunCostIdx u v k p₁ r Text n z + 2 * (vRunState u v k p₁ r Text n z).2 ≤
+        (2 * k + 3) * (Phi k (vRunState u v k p₁ r Text n z).1 - Phi k z.1)
+          + 18 * n + 2 * z.2 := by
+  intro n
+  induction n with
+  | zero =>
+    intro z
+    show 0 + 2 * z.2 ≤ (2 * k + 3) * (Phi k z.1 - Phi k z.1) + 18 * 0 + 2 * z.2
+    rw [Nat.sub_self, Nat.mul_zero]
+  | succ n ih =>
+    intro z
+    have hstep := vStepTapeCost_amortized (r := r) hk u v Text p₁ z
+    have hih := ih (vStep u v k p₁ r Text z)
+    have hm1 := phi_vStep_le (r := r) hk hp u v Text z
+    have hm2 := phi_vRunState_le (r := r) hk hp u v Text n (vStep u v k p₁ r Text z)
+    obtain ⟨P0, hP0⟩ : ∃ P0, Phi k z.1 = P0 := ⟨_, rfl⟩
+    obtain ⟨P1, hP1⟩ : ∃ P1, Phi k (vStep u v k p₁ r Text z).1 = P1 := ⟨_, rfl⟩
+    obtain ⟨P2, hP2⟩ : ∃ P2,
+        Phi k (vRunState u v k p₁ r Text n (vStep u v k p₁ r Text z)).1 = P2 := ⟨_, rfl⟩
+    rw [hP0, hP1] at hstep
+    rw [hP0] at hm1
+    rw [hP1] at hm1 hih hm2
+    rw [hP2] at hih hm2
+    have hsum : (2 * k + 3) * (P2 - P1) + (2 * k + 3) * (P1 - P0)
+        = (2 * k + 3) * (P2 - P0) := by
+      rw [← Nat.mul_add, show P2 - P1 + (P1 - P0) = P2 - P0 from by omega]
+    show vStepTapeCost u v k p₁ r Text z
+        + vRunCostIdx u v k p₁ r Text n (vStep u v k p₁ r Text z)
+        + 2 * (vRunState u v k p₁ r Text n (vStep u v k p₁ r Text z)).2 ≤
+      (2 * k + 3)
+          * (Phi k (vRunState u v k p₁ r Text n (vStep u v k p₁ r Text z)).1 - Phi k z.1)
+        + 18 * (n + 1) + 2 * z.2
+    rw [hP0, hP2]
+    omega
+
+/-- `checked = 0` から始めれば、`|u|` に比例する項は残らない。 -/
+theorem vrun_cost_le_of_start (hk : 0 < k) (hp : 0 < p₁) (u v Text : List (Fin sc))
+    (n : ℕ) (z : VState) (h0 : z.2 = 0) :
+    vRunCostIdx u v k p₁ r Text n z ≤
+      (2 * k + 3) * (Phi k (vRunState u v k p₁ r Text n z).1 - Phi k z.1) + 18 * n := by
+  have h := vrun_cost_le (r := r) hk hp u v Text n z
+  rw [h0] at h
+  omega
+
+end Amortized
+
+/-! ### テープ側の実行との一致 -/
+
+section RunTapes
+
+variable {blank startSym endSym mark : Fin sc} {u v Text : List (Fin sc)} {p₁ : ℕ}
+
+/-- テープ上で実際に実行した動作数は、添字レベルの `vRunCostIdx` と一致する。 -/
+theorem vRunCostTapes_eq {k r : ℕ} (hk : 0 < k) (hend : endSym ∉ v) (hendu : endSym ∉ u) :
+    ∀ (n : ℕ) (vt : VTapes sc) (z : VState),
+      VEncodes blank startSym endSym mark u v Text p₁ vt z →
+      z.1.q ≤ v.length → z.2 ≤ u.length → u.length ≤ z.1.pos →
+      VFits v k p₁ r Text n z.1 →
+      vRunCostTapes blank endSym mark u v k p₁ r Text n (vt, z)
+        = vRunCostIdx u v k p₁ r Text n z := by
+  intro n
+  induction n with
+  | zero => intro vt z _ _ _ _ _; rfl
+  | succ n ih =>
+    intro vt z hE hq hc hpos hfits
+    obtain ⟨hfit, hfits'⟩ := hfits
+    have hb : vOracle k p₁ r z.1 = decide (k * p₁ ≤ z.1.q ∧ z.1.q ≤ r) := rfl
+    have hlen := vprogram_length_eq hk hend hendu hE hq hc hpos hb hfit
+    have hE' := vencodes_step hk hend hendu hE hq hc hpos hb hfit
+    have hrec := ih _ _ hE'
+      (by rw [vStep_fst]; exact scanStep_q_le hq)
+      (vStep_checked_le hc)
+      (by rw [vStep_fst]; exact le_trans hpos (scanStep_pos_le v k p₁ r Text z.1))
+      (by rw [vStep_fst]; exact hfits')
+    show (vprogram blank endSym mark k (vOracle k p₁ r z.1) vt).length
+        + vRunCostTapes blank endSym mark u v k p₁ r Text n
+            (vApplyActs blank (vprogram blank endSym mark k (vOracle k p₁ r z.1) vt) vt,
+              vStep u v k p₁ r Text z)
+      = vStepTapeCost u v k p₁ r Text z
+          + vRunCostIdx u v k p₁ r Text n (vStep u v k p₁ r Text z)
+    rw [hlen, hrec]
+
+/-- **主定理 3（実行全体の費用）**：テープ上の総動作数は
+`(2k+3)*(Φ_end - Φ_start) + 18*n + 2*checked_start`。`|u|` に比例する項は無い。 -/
+theorem vrun_tape_cost_le {k r : ℕ} (hk : 0 < k) (hp : 0 < p₁) (hend : endSym ∉ v)
+    (hendu : endSym ∉ u) (n : ℕ) (vt : VTapes sc) (z : VState)
+    (hE : VEncodes blank startSym endSym mark u v Text p₁ vt z)
+    (hq : z.1.q ≤ v.length) (hc : z.2 ≤ u.length) (hpos : u.length ≤ z.1.pos)
+    (hfits : VFits v k p₁ r Text n z.1) :
+    vRunCostTapes blank endSym mark u v k p₁ r Text n (vt, z) ≤
+      (2 * k + 3) * (Phi k (vRunState u v k p₁ r Text n z).1 - Phi k z.1)
+        + 18 * n + 2 * z.2 := by
+  rw [vRunCostTapes_eq hk hend hendu n vt z hE hq hc hpos hfits]
+  have h := vrun_cost_le (r := r) hk hp u v Text n z
+  omega
+
+/-- 初期状態 `(⟨|u|, 0⟩, 0)` からの実行：`|u|` に比例する項も定数項も残らない。 -/
+theorem vrun_tape_cost_init {k r : ℕ} (hk : 0 < k) (hp : 0 < p₁) (hend : endSym ∉ v)
+    (hendu : endSym ∉ u) (n : ℕ) (vt : VTapes sc)
+    (hE : VEncodes blank startSym endSym mark u v Text p₁ vt
+      ((⟨u.length, 0⟩ : ScanState), 0))
+    (hfits : VFits v k p₁ r Text n (⟨u.length, 0⟩ : ScanState)) :
+    vRunCostTapes blank endSym mark u v k p₁ r Text n (vt, ((⟨u.length, 0⟩ : ScanState), 0)) ≤
+      (2 * k + 3)
+          * (Phi k (vRunState u v k p₁ r Text n ((⟨u.length, 0⟩ : ScanState), 0)).1
+              - Phi k (⟨u.length, 0⟩ : ScanState))
+        + 18 * n := by
+  have h := vrun_tape_cost_le (r := r) hk hp hend hendu n vt _ hE
+    (Nat.zero_le _) (Nat.zero_le _) (Nat.le_refl _) hfits
+  simpa using h
+
+end RunTapes
 
 /-! ## 7. 小例 -/
 
