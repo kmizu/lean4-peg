@@ -184,3 +184,10 @@ lake build
   中央フラグ締切。ただし TM 化は rad のランダムアクセスで不可なので repo の境界列挙版 BorderJob に
   切替中）。L4 済＝Speedup（`multiStep_recognizedBy`）、TapeLib。
   稼働中：RTQueueTapes、Assembly（段の組み立て）、BorderJob、GSScanTapes、GSVerifier、GSPreprocess。
+- 進捗（コミット db53dea まで）：Assembly（段の組み立て `dyadicAnswer_correct`）、GSVerifier（u 検証器、
+  オラクルなし）、StageMatcher（GS 照合器が `MatchOracle` を満たす、`dyadic_gs_mem_PAL`：各段の分解
+  witness に `cut < W` があれば全体正しい）。稼働中：RTQueueTapes、BorderJob、GSScanTapes、
+  GSDecomp 弱定数版、GSPreprocess、OnlineMachine（全体機械の添字モデル、中央/前処理はインターフェース）、
+  ProgramMachine（構造化 `StructuredMachine` → `MultiStepMachine` → `RecognizedBy`）。
+- 残：BorderJob/GSPreprocess/走査/キューのテープ化を `StructuredMachine` で組み、OnlineMachine の
+  インターフェースを満たすことを示して最終定理 `RealTimeTM.RecognizedBy PAL`。
