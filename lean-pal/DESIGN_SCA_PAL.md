@@ -29,8 +29,11 @@
   gcd 周期が top 全体に伝播し p の最小性に矛盾。
 - (R) レプリカ：`Chain(n) = ℓ :: dropWhile (> ℓ-p) Chain(n-p)`（長さ集合として
   `S(n) ∩ [0, ℓ-p] = S(n-p) ∩ [0, ℓ-p]`）。`LSP(n-p) > ℓ-p` は起こり得る（例 `aaaabaa`）。
-- (M) 成熟条件：`ℓ ≥ 3p` なら `LSP(n-p) = ℓ-p`。よって鋸歯 `LSP(t+p) = LSP(t)+p` が成り立ち、
-  昇格時の新 top の cursor は「p ステップ前のノードの T 辺」に等しい。
+- (M) **誤り（Lean で反例確認、`Structure.lean` の `cexWord = 001000`）**：「`ℓ ≥ 3p` なら
+  `LSP(n-p) = ℓ-p`」は成り立たない（`001000`：top `000`, p=1, だが `00100` が時刻 5 の top）。
+  正しいのは禁止帯 `lsp_shift_bound`：時刻 n-p の接尾辞回文 M は `M ≤ ℓ-p` か `M ≥ ℓ`。
+  よって「昇格時の新 top の cursor ＝ p ステップ前ノードの T 辺」は、p ステップ前の top が
+  `ℓ-p` であった場合にしか使えず、長い「外側」回文が直前に死んだ場合（break 直後）は別扱いが要る。
 - (P) 予測補題：時刻 m+1 で top-group が破れた（`w[m+1] ≠ w[m+1-p]`）とき、
   下位要素（長さ < 2p）が全接頭辞になり得る最早時刻は `2m - ℓ + p ≥ m+1+(p-1)`。
   top が生き残った場合の全接頭辞到達時刻は `2m - ℓ`。
@@ -67,3 +70,17 @@
 - `PalPeg/Chain.lean`：鎖の抽象オンライン算法（group 圧縮なし、O(n)/step）を関数として定義し
   `∀ n, decide n = Pal n` を証明（機械化の仕様として使う）。
 - SCA 実装（§3）は着手せず。
+
+## 6. 成果物側の証明パターン（調査 2026-09-07）
+
+- `Closure/PrefixMachine.lean:208–353`：抽象設定 `AbsConfig`、`absStep`、`absRunFrom c w := w.foldl absStep c`
+  と `absRunFrom_append/_cons`。実機との対応は `foldl_step_encConfig` → `prefixMachine_run`
+  → `prefixMachine_accepts_iff_absRun`。
+- `Closure/PrefixMachineCorrectness.lean:283–605`：`Inv (w : Word) : AbsConfig → Prop`
+  （状態ごとの分岐、読了語 `w` とテープ形状の関係）、`inv_step : Inv w c → Inv (w ++ [t]) (absStep c t)`、
+  `inv_absRun` は `List.reverseRecOn` で帰納。
+- SCA を直接作った前例：`Closure/RegularToPEG.lean:17,52`（`scaOfDFA`、degree 1・radius 1）。
+  `RealTimeTM/ToSCA.lean:221` は radius 2、テープごとに `left/right/tail` の 3 ポート。
+- 汎用の「`Automaton.run` 上の不変量 ⇒ `Accepts ↔ P`」補題は無い。PAL 機械も
+  「抽象機械（永続レコード＋有限制御）→ `Inv w` → `Automaton` への符号化」の 3 層で書くのが自然。
+  抽象機械の仕様は `Chain.lean` の `chain`（`mem_PAL_iff_length_mem_chain`）。

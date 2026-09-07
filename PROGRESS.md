@@ -154,3 +154,7 @@ lake build
     （`w ∈ PAL ↔ w.length ∈ chain w`）。これは SCA の仕様層で、実時間ではない（O(n)/step）。
 - **未達**：`RecognizedBySCA PAL` そのもの。SCA 実装・実時間性（young run の cursor 実体化、
   break 後の下位構造再構築、実時間キュー）は設計に留まり、`DESIGN_SCA_PAL.md` §4 が証明義務。
+- 追記：`PalPeg/Structure.lean`（レプリカ補題、最小周期回文の境界、予測補題、禁止帯
+  `lsp_shift_bound`）。設計メモの (M)「成熟なら `LSP(n-p)=ℓ-p`」は **偽**（反例 `001000` を
+  Lean で機械化）。昇格時の cursor を「p ステップ前のスナップショット」から取る案は break 直後には
+  使えず、設計の見直しが要る（`DESIGN_SCA_PAL.md` §2 (M)、§4）。

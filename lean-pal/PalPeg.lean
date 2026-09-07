@@ -4,6 +4,7 @@ import PalPeg.EvenLength
 import PalPeg.Axioms
 import PalPeg.Words
 import PalPeg.Chain
+import PalPeg.Structure
 
 /-!
 # PalPeg
@@ -16,5 +17,6 @@ import PalPeg.Chain
 * `PalPeg.EvenLength` — 偶数長への制限（Loff–Moreira–Reis Conjecture 7 の条件付き反駁）
 * `PalPeg.Axioms`    — `#print axioms` の guard
 * `PalPeg.Words`     — 回文と周期の組合せ論（拡張則・境界・Fine–Wilf・group 補題）
+* `PalPeg.Structure` — レプリカ・境界・予測補題・禁止帯（`lsp_shift_bound`）と (M) の反例
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/

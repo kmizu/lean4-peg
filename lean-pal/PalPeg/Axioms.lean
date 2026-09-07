@@ -3,6 +3,7 @@ import PalPeg.Existence
 import PalPeg.EvenLength
 import PalPeg.Words
 import PalPeg.Chain
+import PalPeg.Structure
 
 /-!
 # 公理 guard
@@ -71,3 +72,15 @@ import PalPeg.Chain
 /-- info: 'PalPeg.mem_PAL_iff_length_mem_chain' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.mem_PAL_iff_length_mem_chain
+
+/-- info: 'PalPeg.suffixPal_replica' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.suffixPal_replica
+
+/-- info: 'PalPeg.pal_prefix_length_ge' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.pal_prefix_length_ge
+
+/-- info: 'PalPeg.lsp_shift_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.lsp_shift_bound

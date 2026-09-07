@@ -59,6 +59,11 @@ PegSeparation.RealTimeTM.RecognizedBy PalPeg.PAL
 | `chain`, `mem_chain_iff` | オンライン鎖算法：`ℓ ∈ chain w ↔ ℓ ≤ |w| ∧ 接尾辞回文` | `PalPeg/Chain.lean` |
 | `mem_PAL_iff_length_mem_chain` | `w ∈ PAL ↔ w.length ∈ chain w`（機械の仕様） | 同上 |
 | `chain_sorted`, `chain_eq_suffixPalLengths` | 鎖は狭義降順、素朴定義と一致 | 同上 |
+| `suffixPal_replica` | レプリカ：top（周期 `p`）の下の長さ `L ≤ ℓ-p` の接尾辞回文は時刻 `n-p` のものと一致 | `PalPeg/Structure.lean` |
+| `border_of_minimalPeriod` | 最小周期 `p` の回文の第 2 接尾辞回文は `x.drop p`、間に回文なし | 同上 |
+| `center_suffix_of_pal`, `pal_prefix_length_ge` | 予測補題：時刻 `m' ∈ [m,2m]` の全接頭辞回文は時刻 `m` の長さ `2m-m'` の接尾辞回文から生じる | 同上 |
+| `lsp_shift_bound` | 禁止帯：時刻 `n-p` の接尾辞回文長 `M` は `M ≤ ℓ-p` か `ℓ ≤ M`（`3p ≤ ℓ`） | 同上 |
+| `cex_x_longest`, `cex_long_pal` | `001000` による「`LSP(n-p) = ℓ-p`」の反例（機械化） | 同上 |
 
 証明の鎖（`pal_in_peg_of_realTime`）：
 
