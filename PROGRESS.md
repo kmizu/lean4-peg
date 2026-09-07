@@ -237,3 +237,8 @@ lake build
   前処理テープ化の strip2、段の照合フェーズ組み立て、全体 `StructuredMachine` 化、最終定理。
   **前処理の線形性が未解決の場合の代替案**：分割点を S/2 に置いたまま前処理に S/2 ラウンドしか使えないので、
   線形でなければ設計変更（別の照合器 or 別の分解法）が要る。
+- 進捗（コミット ff37ac6 まで）：MiddleTapes のラウンド組み立て完了（`middle_flag_read`）、Metered（固定 B
+  動作/ラウンド、`metered_phi`；`rem=0` 仮定の除去を続行中）。稼働中：PassSum（Σp_j ≤ C₁T の証明/反例）、
+  EndToEnd2（`decompose2` へ切替、残る仮定は `PassPeriodSum` のみ）、前処理テープ化の strip2、
+  StageMatcherTapes（段の照合フェーズ：setup → 固定 B 動作のラウンド）。
+  設計メモ：テープ集合は 4 組を回して使う（常駐 ≤ 3、退役後 4S ラウンドで O(S) のクリアを分散）。
