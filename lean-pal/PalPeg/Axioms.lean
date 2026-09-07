@@ -360,3 +360,7 @@ import PalPeg.ProgLang
 /-- info: 'PalPeg.ProgLang.progMachine_recognizedBy' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.ProgLang.progMachine_recognizedBy
+
+/-- info: 'PalPeg.passSumLinear_of_upSum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.passSumLinear_of_upSum
