@@ -1,7 +1,7 @@
 package pal
 
 import scala.collection.IndexedSeq
-
+import scala.collection.immutable.VectorMap
 import scala.collection.mutable
 
 /** A live view of a slice of the arrived characters; a growing window has no
@@ -174,8 +174,9 @@ object DelayedPal {
       result.get
     }
 
-    def statistics(): Map[String, Int] = {
-      Map(
+    /** Python's insertion-ordered dict of counters. */
+    def statistics(): VectorMap[String, Int] = {
+      VectorMap(
         "characters" -> data.length,
         "job_steps" -> (retiredJobSteps + stages.map(_.jobSteps).sum),
         "match_steps" -> (retiredMatchSteps + stages.map(_.matchSteps).sum),

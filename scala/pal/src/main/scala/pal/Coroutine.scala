@@ -98,6 +98,18 @@ abstract class Generator[E, R](val name: String) {
     */
   protected def step(response: Option[Boolean]): Action[E, R]
 
+  /** `yield event`: suspend at site `at`. */
+  protected final def emitAt(at: Int, event: E): Action[E, R] = {
+    site = at
+    Emit(event)
+  }
+
+  /** `yield from child`: suspend at site `at` until `child` returns. */
+  protected final def callAt(at: Int, child: Generator[E, ?]): Action[E, R] = {
+    site = at
+    Call(child)
+  }
+
   /** Python's `generator.send(response)`; the first activation is `send(None)`. */
   final def send(response: Option[Boolean]): Step[E, R] = {
     delegate match {

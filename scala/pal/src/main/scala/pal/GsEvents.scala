@@ -2,7 +2,7 @@ package pal
 
 import scala.collection.IndexedSeq
 
-import Action.{Call, Emit, Return}
+import Action.Return
 
 /** One resumable indexed operation (`gs_events.py` event tuple). */
 sealed abstract class IndexedOp(val op: String)
@@ -54,8 +54,7 @@ object GsEvents {
 
     private def outerHead(): Action[IndexedOp, Option[(Int, Int)]] = {
       if (p < size && bound.forall(p < _)) {
-        site = 1
-        Emit(Work)
+        emitAt(1, Work)
       } else {
         Return(None)
       }
@@ -63,8 +62,7 @@ object GsEvents {
 
     private def innerHead(): Action[IndexedOp, Option[(Int, Int)]] = {
       if (p + q < size && q < (k - 1) * p) {
-        site = 2
-        Emit(Compare(start + q, start + p + q))
+        emitAt(2, Compare(start + q, start + p + q))
       } else {
         afterInner()
       }
@@ -82,16 +80,19 @@ object GsEvents {
 
     protected def step(response: Option[Boolean]): Action[IndexedOp, Option[(Int, Int)]] = {
       site match {
+        // start: gs_events.py:13 def _first
         case 0 => outerHead()
+        // site 1 = gs_events.py:16 yield WORK
         case 1 => innerHead()
+        // site 2 = gs_events.py:18 yield ("compare", start + q, start + p + q)
         case 2 =>
           if (response.get) {
             q += 1
-            site = 3
-            Emit(Work)
+            emitAt(3, Work)
           } else {
             afterInner()
           }
+        // site 3 = gs_events.py:21 yield WORK
         case _ => innerHead()
       }
     }
@@ -107,8 +108,7 @@ object GsEvents {
 
     private def outerHead(): Action[IndexedOp, Option[Int]] = {
       if (p < size) {
-        site = 1
-        Emit(Work)
+        emitAt(1, Work)
       } else {
         Return(None)
       }
@@ -116,8 +116,7 @@ object GsEvents {
 
     private def innerHead(): Action[IndexedOp, Option[Int]] = {
       if (p + q < size) {
-        site = 2
-        Emit(Compare(start + q, start + p + q))
+        emitAt(2, Compare(start + q, start + p + q))
       } else {
         shift()
       }
@@ -136,16 +135,19 @@ object GsEvents {
 
     protected def step(response: Option[Boolean]): Action[IndexedOp, Option[Int]] = {
       site match {
+        // start: gs_events.py:29 def _second
         case 0 => outerHead()
+        // site 1 = gs_events.py:32 yield WORK
         case 1 => innerHead()
+        // site 2 = gs_events.py:34 yield ("compare", start + q, start + p + q)
         case 2 =>
           if (response.get) {
             q += 1
-            site = 3
-            Emit(Work)
+            emitAt(3, Work)
           } else {
             shift()
           }
+        // site 3 = gs_events.py:37 yield WORK
         case _ =>
           if (p + q > reach && q >= (k - 1) * p) {
             Return(Some(p))
@@ -163,19 +165,18 @@ object GsEvents {
     private var start = 0
     private var first = 0
     private var reach = 0
+    private var second = 0
     private var firstSearch: FirstPeriod = new FirstPeriod(0, 0, k)
     private var secondSearch: SecondPeriod = new SecondPeriod(0, 0, k, 0, 0)
 
     private def outer(): Action[IndexedOp, Decomposition] = {
       firstSearch = new FirstPeriod(start, size - start, k)
-      site = 1
-      Call(firstSearch)
+      callAt(1, firstSearch)
     }
 
     private def extendHead(): Action[IndexedOp, Decomposition] = {
       if (reach < size - start) {
-        site = 2
-        Emit(Compare(start + reach, start + reach - first))
+        emitAt(2, Compare(start + reach, start + reach - first))
       } else {
         searchSecond()
       }
@@ -183,21 +184,19 @@ object GsEvents {
 
     private def searchSecond(): Action[IndexedOp, Decomposition] = {
       secondSearch = new SecondPeriod(start, size - start, k, first, reach)
-      site = 4
-      Call(secondSearch)
+      callAt(4, secondSearch)
     }
 
     private def deleteHead(second: Int): Action[IndexedOp, Decomposition] = {
       firstSearch = new FirstPeriod(start, size - start, k, Some(second))
-      site = 5
-      Call(firstSearch)
+      callAt(5, firstSearch)
     }
-
-    private var second = 0
 
     protected def step(response: Option[Boolean]): Action[IndexedOp, Decomposition] = {
       site match {
+        // start: gs_events.py:49 def decomposition
         case 0 => outer()
+        // site 1 = gs_events.py:54 yield from _first(start, size - start, k)
         case 1 =>
           firstSearch.result match {
             case None => Return(Decomposition(start, None, 0))
@@ -206,15 +205,17 @@ object GsEvents {
               reach = found
               extendHead()
           }
+        // site 2 = gs_events.py:59 yield ("compare", start + reach, start + reach - first)
         case 2 =>
           if (response.get) {
             reach += 1
-            site = 3
-            Emit(Work)
+            emitAt(3, Work)
           } else {
             searchSecond()
           }
+        // site 3 = gs_events.py:62 yield WORK
         case 3 => extendHead()
+        // site 4 = gs_events.py:63 yield from _second(start, size - start, k, first, reach)
         case 4 =>
           secondSearch.result match {
             case None => Return(Decomposition(start, Some(first), reach))
@@ -222,14 +223,15 @@ object GsEvents {
               second = found
               deleteHead(second)
           }
+        // site 5 = gs_events.py:67 yield from _first(start, size - start, k, second)
         case 5 =>
           firstSearch.result match {
             case None => outer()
             case Some((period, _)) =>
               start += period
-              site = 6
-              Emit(Work)
+              emitAt(6, Work)
           }
+        // site 6 = gs_events.py:71 yield WORK
         case _ => deleteHead(second)
       }
     }
@@ -256,8 +258,7 @@ object GsEvents {
     private def stageHead(): Action[IndexedOp, Unit] = {
       if (limit != 0) {
         decomposition = new DecompositionJob(limit, k)
-        site = 1
-        Call(decomposition)
+        callAt(1, decomposition)
       } else {
         Return(())
       }
@@ -265,8 +266,7 @@ object GsEvents {
 
     private def positionHead(): Action[IndexedOp, Unit] = {
       if (position <= limit - minimum) {
-        site = 3
-        Emit(Work)
+        emitAt(3, Work)
       } else {
         limit = minimum - 1
         position = 0
@@ -276,8 +276,7 @@ object GsEvents {
 
     private def scanHead(): Action[IndexedOp, Unit] = {
       if (position + cut + matched < limit) {
-        site = 4
-        Emit(Compare(cut + matched, size - limit + position + cut + matched))
+        emitAt(4, Compare(cut + matched, size - limit + position + cut + matched))
       } else {
         afterScan()
       }
@@ -294,8 +293,7 @@ object GsEvents {
 
     private def checkHead(): Action[IndexedOp, Unit] = {
       if (checked < cut) {
-        site = 6
-        Emit(Compare(checked, size - limit + position + checked))
+        emitAt(6, Compare(checked, size - limit + position + checked))
       } else {
         afterCheck()
       }
@@ -303,8 +301,7 @@ object GsEvents {
 
     private def afterCheck(): Action[IndexedOp, Unit] = {
       if (checked == cut) {
-        site = 8
-        Emit(Border(limit - position))
+        emitAt(8, Border(limit - position))
       } else {
         shift()
       }
@@ -323,37 +320,43 @@ object GsEvents {
 
     protected def step(response: Option[Boolean]): Action[IndexedOp, Unit] = {
       site match {
+        // start: gs_events.py:74 def borders
         case 0 => stageHead()
+        // site 1 = gs_events.py:79 yield from decomposition(limit, k)
         case 1 =>
           val part = decomposition.result
           cut = part.cut
           period = part.period
           reach = part.reach
-          site = 2
-          Emit(Work)
+          emitAt(2, Work)
+        // site 2 = gs_events.py:81 yield WORK
         case 2 =>
           minimum = math.max(1, 2 * cut)
           matched = 0
           positionHead()
+        // site 3 = gs_events.py:84 yield WORK
         case 3 => scanHead()
+        // site 4 = gs_events.py:86 yield ("compare", cut + matched, size - limit + position + cut + matched)
         case 4 =>
           if (response.get) {
             matched += 1
-            site = 5
-            Emit(Work)
+            emitAt(5, Work)
           } else {
             afterScan()
           }
+        // site 5 = gs_events.py:89 yield WORK
         case 5 => scanHead()
+        // site 6 = gs_events.py:93 yield ("compare", checked, size - limit + position + checked)
         case 6 =>
           if (response.get) {
             checked += 1
-            site = 7
-            Emit(Work)
+            emitAt(7, Work)
           } else {
             afterCheck()
           }
+        // site 7 = gs_events.py:96 yield WORK
         case 7 => checkHead()
+        // site 8 = gs_events.py:98 yield ("border", limit - position)
         case _ => shift()
       }
     }
@@ -394,8 +397,7 @@ object GsEvents {
               return fillHead()
             }
           case Yielded(event) =>
-            site = 1
-            return Emit(event)
+            return emitAt(1, event)
         }
       }
       finalLoop()
@@ -403,18 +405,15 @@ object GsEvents {
 
     private def fillHead(): Action[IndexedOp, Unit] = {
       if (remaining > length) {
-        site = 2
-        Emit(Flag(false))
+        emitAt(2, Flag(false))
       } else {
-        site = 3
-        Emit(Flag(true))
+        emitAt(3, Flag(true))
       }
     }
 
     private def finalLoop(): Action[IndexedOp, Unit] = {
       if (remaining >= lower) {
-        site = 4
-        Emit(Flag(remaining == 0))
+        emitAt(4, Flag(remaining == 0))
       } else {
         Return(())
       }
@@ -422,14 +421,19 @@ object GsEvents {
 
     protected def step(response: Option[Boolean]): Action[IndexedOp, Unit] = {
       site match {
+        // start: gs_events.py:108 def palindrome_flags
         case 0 => pump(None)
+        // site 1 = gs_events.py:123 yield event
         case 1 => pump(response)
+        // site 2 = gs_events.py:131 yield ("flag", False)
         case 2 =>
           remaining -= 1
           fillHead()
+        // site 3 = gs_events.py:133 yield ("flag", True)
         case 3 =>
           remaining -= 1
           pump(None)
+        // site 4 = gs_events.py:136 yield ("flag", remaining == 0)
         case _ =>
           remaining -= 1
           finalLoop()

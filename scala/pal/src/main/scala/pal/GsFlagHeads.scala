@@ -2,7 +2,7 @@ package pal
 
 import scala.collection.mutable
 
-import Action.{Call, Emit, Return}
+import Action.Return
 import Coroutine.Local
 
 /** All palindrome-prefix flags, with finite control and local head operations.
@@ -23,28 +23,30 @@ object GsFlagHeads {
 
   /** `flag_controller(k)`: place `Cursor` on the longest proper prefix and run
     * the border controller in flag mode unless the interval is empty.
+    *
+    * `gs_dual_flags.dual_flag_controller` is the same control with the text
+    * origin `TextOrigin`, so both share this class ([[GsDualFlags.DualFlagController]]).
     */
-  final class FlagController(k: Int) extends HeadGenerator[Unit]("flag_controller") {
+  class FlagController(k: Int, name: String = "flag_controller", tailOrigin: String = "Origin")
+    extends HeadGenerator[Unit](name) {
     override def locals: Vector[(String, Local)] = Vector("k" -> k)
 
     protected def step(response: Option[Boolean]): Action[Event, Unit] = {
       site match {
-        case 0 =>
-          site = 1
-          Emit(copy("Cursor", "Upper"))
-        case 1 =>
-          site = 2
-          Emit(move(Movement("Cursor", -1)))
-        case 2 =>
-          site = 3
-          Emit(less("Cursor", "Lower"))
+        // start: gs_flag_heads.py:16 def flag_controller
+        case 0 => emitAt(1, copy("Cursor", "Upper"))
+        // site 1 = gs_flag_heads.py:17 yield ("copy", "Cursor", "Upper")
+        case 1 => emitAt(2, move(Movement("Cursor", -1)))
+        // site 2 = gs_flag_heads.py:18 yield ("move", (("Cursor", -1),))
+        case 2 => emitAt(3, less("Cursor", "Lower"))
+        // site 3 = gs_flag_heads.py:19 yield ("less", "Cursor", "Lower")
         case 3 =>
           if (!response.get) {
-            site = 4
-            Call(borderController(k, flags = true))
+            callAt(4, borderController(k, flags = true, tailOrigin = tailOrigin))
           } else {
             Return(())
           }
+        // site 4 = gs_flag_heads.py:20 yield from border_controller(k, flags=True)
         case _ => Return(())
       }
     }

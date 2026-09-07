@@ -2,9 +2,6 @@ package pal
 
 import scala.collection.mutable
 
-import Action.{Call, Emit, Return}
-import Coroutine.Local
-
 /** GS overlaps of u and reverse(u), without the separator mirror word.
   *
   * Pattern and text heads have the same coordinate interval [0, len(u)] but
@@ -15,39 +12,14 @@ import Coroutine.Local
   * Port of `gs_dual_flags.py`; see "Two oriented views" in `GS_LOCAL_CLOCK.md`.
   */
 object GsDualFlags {
-  import Event.*
-  import GsHeads.{HEADS, HeadGenerator, borderController, compileController, unitMoves}
+  import GsHeads.{HEADS, compileController, unitMoves}
 
   val DUAL_HEADS: Vector[String] = HEADS ++ Vector("TextOrigin", "Lower", "Upper", "Cursor")
 
   /** `dual_flag_controller(k)`: like `flag_controller`, with the text starting
     * at `TextOrigin` (the reverse view).
     */
-  final class DualFlagController(k: Int) extends HeadGenerator[Unit]("dual_flag_controller") {
-    override def locals: Vector[(String, Local)] = Vector("k" -> k)
-
-    protected def step(response: Option[Boolean]): Action[Event, Unit] = {
-      site match {
-        case 0 =>
-          site = 1
-          Emit(copy("Cursor", "Upper"))
-        case 1 =>
-          site = 2
-          Emit(move(Movement("Cursor", -1)))
-        case 2 =>
-          site = 3
-          Emit(less("Cursor", "Lower"))
-        case 3 =>
-          if (!response.get) {
-            site = 4
-            Call(borderController(k, flags = true, tailOrigin = "TextOrigin"))
-          } else {
-            Return(())
-          }
-        case _ => Return(())
-      }
-    }
-  }
+  final class DualFlagController(k: Int) extends GsFlagHeads.FlagController(k, "dual_flag_controller", "TextOrigin")
 
   def dualFlagController(k: Int = 8): DualFlagController = new DualFlagController(k)
 

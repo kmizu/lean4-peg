@@ -60,4 +60,11 @@ class GsMatchHeadsSuite extends munit.FunSuite {
         "  print(k, len(p.code), p.construction_states, len(unit_moves(p).code))")
     intercept[IllegalArgumentException](new StreamingMatcher("", Some(program)))
   }
+
+  test("k < 4 is rejected on the first activation, not at construction, as in Python") {
+    val controller = matcherController(3)
+    intercept[IllegalArgumentException](controller.send(None))
+    intercept[IllegalArgumentException](compileMatcher(3))
+    assertEquals(matcherController(4).send(None), Yielded(Event.copy("End", "Tail")))
+  }
 }

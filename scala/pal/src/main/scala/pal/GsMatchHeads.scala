@@ -2,7 +2,6 @@ package pal
 
 import scala.collection.mutable
 
-import Action.{Call, Emit}
 import Coroutine.Local
 
 /** Fixed-head GS matching, including the short-prefix verifier.
@@ -28,10 +27,6 @@ object GsMatchHeads {
     * The generator never returns; the compiler closes its branches anyway.
     */
   final class MatcherController(k: Int) extends HeadGenerator[Unit]("matcher_controller") {
-    if (k < 4) {
-      throw new IllegalArgumentException("fixed integer k >= 4 required")
-    }
-
     private var periodExists: Option[Boolean] = None
     private var prefixOk: Option[Boolean] = None
     private var phase: Option[Int] = None
@@ -44,133 +39,119 @@ object GsMatchHeads {
         prefixOk.map(value => "prefix_ok" -> (value: Local))
     }
 
-    private def offsetHead(): Action[Event, Unit] = {
-      site = 8
-      Emit(less("Walk", "Cut"))
-    }
+    private def offsetHead(): Action[Event, Unit] = emitAt(8, less("Walk", "Cut"))
 
-    private def outerLoop(): Action[Event, Unit] = {
-      site = 11
-      Emit(copy("Walk", "Origin"))
-    }
+    private def outerLoop(): Action[Event, Unit] = emitAt(11, copy("Walk", "Origin"))
 
-    private def matchHead(): Action[Event, Unit] = {
-      site = 13
-      Emit(Available("B"))
-    }
+    private def matchHead(): Action[Event, Unit] = emitAt(13, Available("B"))
 
     /** One iteration of `for phase in range(2)`. */
     private def forBody(): Action[Event, Unit] = {
       if (!prefixOk.get) {
         afterFor()
       } else {
-        site = 16
-        Emit(less("Walk", "Cut"))
+        emitAt(16, less("Walk", "Cut"))
       }
     }
 
-    private def afterFor(): Action[Event, Unit] = {
-      site = 19
-      Emit(equal("A", "End"))
-    }
+    private def afterFor(): Action[Event, Unit] = emitAt(19, equal("A", "End"))
 
     private def shiftDecision(): Action[Event, Unit] = {
       if (periodExists.get) {
-        site = 22
-        Emit(less("A", "KFirst"))
+        emitAt(22, less("A", "KFirst"))
       } else {
         resetShift()
       }
     }
 
-    private def resetShift(): Action[Event, Unit] = {
-      site = 25
-      Call(new ResetShift(k, true))
-    }
+    private def resetShift(): Action[Event, Unit] = callAt(25, new ResetShift(k, true))
 
     protected def step(response: Option[Boolean]): Action[Event, Unit] = {
       site match {
+        // start: gs_match_heads.py:15 def matcher_controller
         case 0 =>
-          site = 1
-          Emit(copy("End", "Tail"))
+          // Python checks k in the generator body: on the first next(), not at construction.
+          if (k < 4) {
+            throw new IllegalArgumentException("fixed integer k >= 4 required")
+          }
+          emitAt(1, copy("End", "Tail"))
+        // site 1 = gs_match_heads.py:18 yield ("copy", "End", "Tail")
         case 1 =>
           decompose = new Decompose(k)
-          site = 2
-          Call(decompose)
+          callAt(2, decompose)
+        // site 2 = gs_match_heads.py:19 yield from _decompose(k)
         case 2 =>
           periodExists = Some(decompose.result)
-          site = 3
-          Emit(copy("P", "Tail"))
-        case 3 =>
-          site = 4
-          Emit(copy("KP", "End"))
-        case 4 =>
-          site = 5
-          Emit(copy("A", "Cut"))
-        case 5 =>
-          site = 6
-          Emit(copy("B", "P"))
-        case 6 =>
-          site = 7
-          Emit(copy("Walk", "Origin"))
+          emitAt(3, copy("P", "Tail"))
+        // site 3 = gs_match_heads.py:20 yield ("copy", "P", "Tail")
+        case 3 => emitAt(4, copy("KP", "End"))
+        // site 4 = gs_match_heads.py:21 yield ("copy", "KP", "End")
+        case 4 => emitAt(5, copy("A", "Cut"))
+        // site 5 = gs_match_heads.py:22 yield ("copy", "A", "Cut")
+        case 5 => emitAt(6, copy("B", "P"))
+        // site 6 = gs_match_heads.py:23 yield ("copy", "B", "P")
+        case 6 => emitAt(7, copy("Walk", "Origin"))
+        // site 7 = gs_match_heads.py:24 yield ("copy", "Walk", "Origin")
         case 7 => offsetHead()
+        // site 8 = gs_match_heads.py:25 yield ("less", "Walk", "Cut")
         case 8 =>
           if (response.get) {
             // This initial text offset must consume arrived cells too. The indexed
             // reference can name a future position; a local head must wait before
             // crossing each of those characters.
-            site = 9
-            Emit(Available("B"))
+            emitAt(9, Available("B"))
           } else {
             outerLoop()
           }
+        // site 9 = gs_match_heads.py:29 yield ("available", "B")
         case 9 =>
           if (response.get) {
-            site = 10
-            Emit(move(Movement("Walk", 1), Movement("B", 1)))
+            emitAt(10, move(Movement("Walk", 1), Movement("B", 1)))
           } else {
-            site = 9
-            Emit(Available("B"))
+            emitAt(9, Available("B"))
           }
+        // site 10 = gs_match_heads.py:31 yield ("move", (("Walk", 1), ("B", 1)))
         case 10 => offsetHead()
-        case 11 =>
-          site = 12
-          Emit(copy("U", "P"))
+        // site 11 = gs_match_heads.py:33 yield ("copy", "Walk", "Origin")
+        case 11 => emitAt(12, copy("U", "P"))
+        // site 12 = gs_match_heads.py:34 yield ("copy", "U", "P")
         case 12 =>
           prefixOk = Some(true)
           matchHead()
+        // site 13 = gs_match_heads.py:37 yield ("available", "B")
         case 13 =>
           if (response.get) {
-            site = 14
-            Emit(symbols("A", "B"))
+            emitAt(14, symbols("A", "B"))
           } else {
             matchHead()
           }
+        // site 14 = gs_match_heads.py:39 yield ("symbols", "A", "B")
         case 14 =>
           if (response.get) {
-            site = 15
-            Emit(move(Movement("A", 1), Movement("B", 1)))
+            emitAt(15, move(Movement("A", 1), Movement("B", 1)))
           } else {
             shiftDecision()
           }
+        // site 15 = gs_match_heads.py:41 yield ("move", (("A", 1), ("B", 1)))
         case 15 =>
           phase = Some(0)
           forBody()
+        // site 16 = gs_match_heads.py:43 yield ("less", "Walk", "Cut")
         case 16 =>
           if (response.get) {
-            site = 17
-            Emit(symbols("Walk", "U"))
+            emitAt(17, symbols("Walk", "U"))
           } else {
             afterFor()
           }
+        // site 17 = gs_match_heads.py:45 yield ("symbols", "Walk", "U")
         case 17 =>
           if (response.get) {
-            site = 18
-            Emit(move(Movement("Walk", 1), Movement("U", 1)))
+            emitAt(18, move(Movement("Walk", 1), Movement("U", 1)))
           } else {
             prefixOk = Some(false)
             afterFor()
           }
+        // site 18 = gs_match_heads.py:48 yield ("move", (("Walk", 1), ("U", 1)))
         case 18 =>
           if (phase.contains(0)) {
             phase = Some(1)
@@ -178,35 +159,37 @@ object GsMatchHeads {
           } else {
             afterFor()
           }
+        // site 19 = gs_match_heads.py:49 yield ("equal", "A", "End")
         case 19 =>
           if (response.get) {
             if (prefixOk.get) {
-              site = 20
-              Emit(AssertEqual("Walk", "Cut"))
+              emitAt(20, AssertEqual("Walk", "Cut"))
             } else {
               shiftDecision()
             }
           } else {
             matchHead()
           }
-        case 20 =>
-          site = 21
-          Emit(Match("B"))
+        // site 20 = gs_match_heads.py:51 yield ("assert_equal", "Walk", "Cut")
+        case 20 => emitAt(21, Match("B"))
+        // site 21 = gs_match_heads.py:52 yield ("match", "B")
         case 21 => shiftDecision()
+        // site 22 = gs_match_heads.py:54 yield ("less", "A", "KFirst")
         case 22 =>
           if (response.get) {
             resetShift()
           } else {
-            site = 23
-            Emit(less("Reach", "A"))
+            emitAt(23, less("Reach", "A"))
           }
+        // site 23 = gs_match_heads.py:55 yield ("less", "Reach", "A")
         case 23 =>
           if (response.get) {
             resetShift()
           } else {
-            site = 24
-            Call(new PeriodShift(k, true))
+            callAt(24, new PeriodShift(k, true))
           }
+        // site 24 = gs_match_heads.py:56 yield from _period_shift(k, True)
+        // site 25 = gs_match_heads.py:58 yield from _reset_shift(k, True)
         case _ => outerLoop()
       }
     }

@@ -34,7 +34,11 @@ class DelayedPalSuite extends munit.FunSuite {
     }
     Vector("a" * 2048, "ab" * 1024, ("a" * 64 + "b") * 64).foreach { word =>
       val machine = checkPrefixes(word)
-      assert(machine.statistics()("completed_jobs") > 20)
+      val statistics = machine.statistics()
+      assert(statistics("completed_jobs") > 20)
+      // Python's dict order.
+      assertEquals(statistics.keys.toVector, Vector("characters", "job_steps", "match_steps", "completed_jobs", "live_stages"))
+      assertEquals(statistics("characters"), word.length)
     }
   }
 
