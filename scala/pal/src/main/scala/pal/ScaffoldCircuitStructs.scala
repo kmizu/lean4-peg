@@ -140,26 +140,29 @@ final class Stack(val pool: StackPool, val name: String, allocation: Option[Stri
 
 /** A two-stack tape with a focus symbol.
   *
-  * `slots` is either one count for both sides or a `(left, right)` pair.
-  * Moving copies the focus symbol, never a stack cell. Left and right cell
-  * tags therefore have separate finite domains, avoiding an unnecessary
-  * cross-product during computed-cell reads.
+  * Python accepted `slots` as one count for both sides or a `(left, right)`
+  * pair; here the constructor takes the single count and `Tape.withSides`
+  * takes the pair. Moving copies the focus symbol, never a stack cell. Left
+  * and right cell tags therefore have separate finite domains, avoiding an
+  * unnecessary cross-product during computed-cell reads.
   */
-final class Tape(
+final class Tape private (
     val circuit: Circuit,
     val name: String,
     alphabetValues: Iterable[Any],
-    slots: Int | (Int, Int) = 1,
-    val blank: Any = '_',
-    pool: Option[StackPool] = None
+    sizes: (Int, Int),
+    val blank: Any,
+    pool: Option[StackPool]
 ) {
+
+  /** `slots` cells on each side (Python `Tape(circuit, name, alphabet, slots=int, ...)`). */
+  def this(circuit: Circuit, name: String, alphabet: Iterable[Any], slots: Int = 1, blank: Any = '_', pool: Option[StackPool] = None) = {
+    this(circuit, name, alphabet, (slots, slots), blank, pool)
+  }
+
   val alphabet: Vector[Any] = alphabetValues.toVector
 
   val (left: Stack, right: Stack) = {
-    val sizes: (Int, Int) = slots match {
-      case count: Int => (count, count)
-      case pair: (Int, Int) @unchecked => pair
-    }
     pool match {
       case None =>
         def side(suffix: String, count: Int): Stack = new Stack(new StackPool(circuit, Vector((name + suffix) -> count), alphabet), name + suffix)
@@ -210,48 +213,64 @@ final class Tape(
   }
 }
 
-/** A signed unary counter: two stacks of which at most one is nonempty. */
+object Tape {
+
+  /** Python `Tape(..., slots=(left, right), ...)`: different cell counts per side. */
+  def withSides(circuit: Circuit, name: String, alphabet: Iterable[Any], slots: (Int, Int), blank: Any = '_', pool: Option[StackPool] = None): Tape = {
+    new Tape(circuit, name, alphabet, slots, blank, pool)
+  }
+}
+
+/** A signed unary counter: two stacks of which at most one is nonempty.
+  *
+  * The stacks are Python's `pos`/`neg` attributes, named `positiveStack` /
+  * `negativeStack` here so that `neg` keeps meaning Boolean negation. They are
+  * reassignable because `scaffold_window_stream` copies counters field-wise.
+  */
 final class Counter(pools: Map[String, StackPool], val name: String, allocationName: Option[String] = None) {
 
   def this(pool: StackPool, name: String, allocationName: Option[String]) = this(Map("pos" -> pool, "neg" -> pool), name, allocationName)
 
   def this(pool: StackPool, name: String) = this(pool, name, None)
 
-  val pos: Stack = new Stack(pools("pos"), name + ".pos", allocationName)
-  val neg: Stack = new Stack(pools("neg"), name + ".neg", allocationName)
+  var positiveStack: Stack = new Stack(pools("pos"), name + ".pos", allocationName)
+  var negativeStack: Stack = new Stack(pools("neg"), name + ".neg", allocationName)
 
-  def positive(): Expr = ScaffoldCircuit.neg(pos.empty())
+  /** Python-name alias of `positiveStack`. */
+  def pos: Stack = positiveStack
 
-  def negative(): Expr = ScaffoldCircuit.neg(neg.empty())
+  def positive(): Expr = neg(positiveStack.empty())
 
-  def zero(): Expr = conjunction(pos.empty(), neg.empty())
+  def negative(): Expr = neg(negativeStack.empty())
+
+  def zero(): Expr = conjunction(positiveStack.empty(), negativeStack.empty())
 
   def inc(enabled: Expr = TRUE, slot: Option[Int] = None): Unit = {
-    val empty = neg.empty()
-    neg.drop(conjunction(enabled, ScaffoldCircuit.neg(empty)))
-    pos.push(enabled = conjunction(enabled, empty), slot = slot)
+    val empty = negativeStack.empty()
+    negativeStack.drop(conjunction(enabled, neg(empty)))
+    positiveStack.push(enabled = conjunction(enabled, empty), slot = slot)
   }
 
   def dec(enabled: Expr = TRUE, slot: Option[Int] = None): Unit = {
-    val empty = pos.empty()
-    pos.drop(conjunction(enabled, ScaffoldCircuit.neg(empty)))
-    neg.push(enabled = conjunction(enabled, empty), slot = slot)
+    val empty = positiveStack.empty()
+    positiveStack.drop(conjunction(enabled, neg(empty)))
+    negativeStack.push(enabled = conjunction(enabled, empty), slot = slot)
   }
 
   def reset(enabled: Expr = TRUE): Unit = {
-    pos.clear(enabled)
-    neg.clear(enabled)
+    positiveStack.clear(enabled)
+    negativeStack.clear(enabled)
   }
 
   def copyFrom(other: Counter, enabled: Expr = TRUE): Unit = {
-    pos.copyFrom(other.pos, enabled)
-    neg.copyFrom(other.neg, enabled)
+    positiveStack.copyFrom(other.positiveStack, enabled)
+    negativeStack.copyFrom(other.negativeStack, enabled)
   }
 
   /** Python `finalize()`. */
   def commit(): Unit = {
-    pos.commit()
-    neg.commit()
+    positiveStack.commit()
+    negativeStack.commit()
   }
 }
 

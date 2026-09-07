@@ -163,11 +163,13 @@ object PyDiff {
     def empty(): Expr; def peek(): (Ref, Value[Any]); def pop(enabled: Expr = TRUE): (Ref, Value[Any]); def drop(enabled: Expr = TRUE): Unit
     def push(value: Ref = EMPTY, data: Option[Value[Any]] = None, enabled: Expr = TRUE, slot: Option[Int] = None): Unit
     def clear(enabled: Expr = TRUE): Unit; def copyFrom(other: Stack, enabled: Expr = TRUE): Unit; def commit(): Unit }
-  final class Tape(val circuit: Circuit, val name: String, alphabet: Iterable[Any], slots: Int | (Int, Int) = 1, val blank: Any = '_', pool: Option[StackPool] = None) {
+  final class Tape(val circuit: Circuit, val name: String, alphabet: Iterable[Any], slots: Int = 1, val blank: Any = '_', pool: Option[StackPool] = None) {
     val left, right: Stack; var focus: Value[Any]; def write(value: Value[Any], enabled: Expr = TRUE): Unit; def reset(enabled: Expr = TRUE): Unit
     def move(direction: Int, enabled: Expr = TRUE, slot: Option[Int] = None): Unit; def commit(): Unit }
+  object Tape { def withSides(circuit: Circuit, name: String, alphabet: Iterable[Any], slots: (Int, Int), blank: Any = '_', pool: Option[StackPool] = None): Tape }  // Python slots=(l, r)
   final class Counter(pools: Map[String, StackPool], val name: String, allocationName: Option[String] = None) { def this(pool: StackPool, name: String, allocationName: Option[String]); def this(pool: StackPool, name: String)
-    val pos, neg: Stack; def positive(), negative(), zero(): Expr; def inc/dec(enabled: Expr = TRUE, slot: Option[Int] = None): Unit; def reset(enabled); def copyFrom(other, enabled); def commit(): Unit }
+    var positiveStack, negativeStack: Stack /* Python pos/neg; reassignable */; def pos: Stack /* alias */
+    def positive(), negative(), zero(): Expr; def inc/dec(enabled: Expr = TRUE, slot: Option[Int] = None): Unit; def reset(enabled); def copyFrom(other, enabled); def commit(): Unit }
   final class Queue(pools: Map[String, StackPool], counterPools: Map[String, StackPool], val name: String, val sharedSlots: Boolean = false) { def this(pool: StackPool, counterPool: StackPool, name: String[, sharedSlots: Boolean])
     val stacks: VectorMap[String, Stack]; val m, c: Counter; var phase: Value[String]
     def push(value: Ref, enabled: Expr = TRUE): Unit; def pop(enabled: Expr = TRUE): Ref; def empty(): Expr; def clear(enabled); def work(enabled); def workUnit(enabled); def copyFrom(other, enabled); def commit(): Unit }

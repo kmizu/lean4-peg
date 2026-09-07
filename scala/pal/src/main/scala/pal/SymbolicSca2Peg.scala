@@ -34,15 +34,21 @@ sealed abstract class Expr extends Product with Serializable {
   /** The Python tuple arguments after the tag, in order (for serialization). */
   def args: Vector[Any]
 
+  /** Cached structural hash; 0 means "not computed yet" (the `java.lang.String` idiom).
+    *
+    * A single word is published at once, so a concurrent reader can only ever
+    * see 0 (and recompute the same value) or the finished hash - never a torn
+    * pair of fields. A genuine hash of 0 is simply recomputed on each call.
+    */
   private var hashCache: Int = 0
-  private var hashKnown: Boolean = false
 
   final override def hashCode: Int = {
-    if (!hashKnown) {
-      hashCache = MurmurHash3.productHash(this)
-      hashKnown = true
+    var h = hashCache
+    if (h == 0) {
+      h = MurmurHash3.productHash(this)
+      hashCache = h
     }
-    hashCache
+    h
   }
 
   final override def equals(other: Any): Boolean = {
@@ -563,6 +569,12 @@ private final class ScaffoldRenderer(scaffold: Scaffold) {
     s"$name = $body;"
   }
 
+  /** The rule lines, lazily.
+    *
+    * Single use: the iterator mutates this renderer's `shared`/`pending` state
+    * as it is consumed (that is what lets `E_i` numbering follow first use, as
+    * in the Python generator). Create a new `ScaffoldRenderer` for a second pass.
+    */
   def rules: Iterator[String] = {
     val start = Iterator.single(
       s"S = ${labelNames(scaffold.accepting)} (" + scaffold.alphabet.map(literal).mkString(" / ") + ")* !.;"

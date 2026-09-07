@@ -122,6 +122,22 @@ class SymbolicSca2PegSuite extends munit.FunSuite {
     }
   }
 
+  test("clearExpressionCache drops the interning index but keeps sharing active") {
+    Expr.share {
+      val first = symbol('a')
+      assert(symbol('a') eq first)
+      Expr.clearExpressionCache()
+      assert(Expr.sharing)
+      val second = symbol('a')
+      assertEquals(second, first)
+      assert(!(second eq first))
+      assert(symbol('a') eq second)
+    }
+    Expr.clearExpressionCache() // no index outside a share scope: a no-op
+    assert(!Expr.sharing)
+    assert(!(symbol('a') eq symbol('a')))
+  }
+
   test("Expr.make rebuilds every tag from its tuple shape and rejects malformed shapes") {
     val samples = Seq(TRUE, symbol('a'), SELF, NULL, old(Seq("top"), "a"), exists(Seq("top")), negate(TRUE),
       both(TRUE, symbol('a')), either(), pointer(Seq("top", "next")), select(TRUE, SELF, NULL),

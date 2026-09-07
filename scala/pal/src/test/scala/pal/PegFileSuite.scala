@@ -27,6 +27,11 @@ class PegFileSuite extends munit.FunSuite {
       } finally {
         lazyGrammar.close()
       }
+      // After close (unmapped), unloaded rules are refused instead of read from released memory;
+      // loaded ones stay usable and close is idempotent.
+      intercept[IllegalStateException] { lazyGrammar.rules("Unused") }
+      assert(lazyGrammar.accepts("a#a"))
+      lazyGrammar.close()
     } finally {
       Files.deleteIfExists(path)
       Files.deleteIfExists(directory)

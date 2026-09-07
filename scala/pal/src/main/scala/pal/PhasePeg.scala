@@ -292,8 +292,11 @@ private[pal] final class HashMemo extends Memo {
 
 /** Sparse rows become integer arrays when packrat cells grow dense.
   *
-  * Python stored dense rows as `array("H")` (16-bit) below 65533 input
-  * characters and `array("Q")` (64-bit) otherwise; `kind` reports which.
+  * Python stored dense rows as `array("H")` (unsigned 16-bit) below 65533 input
+  * characters and `array("Q")` (unsigned 64-bit) otherwise; `kind` reports
+  * which. Here kind "H" rows are `Array[Char]` (16-bit) and kind "Q" rows are
+  * `Array[Long]`, so the compact form really is four times smaller than a
+  * boxed map for the common short-input case.
   */
 final class CompactMemo(length: Int) extends Memo {
   val width: Int = length + 1
@@ -301,9 +304,11 @@ final class CompactMemo(length: Int) extends Memo {
   private val missing: Long = if (kind == "H") { 65535L } else { -1L } // "Q": 2**64 - 1 as an unsigned Long
   val threshold: Int = math.max(8, width / (if (kind == "H") { 32 } else { 8 }))
 
+  /** A row is a sparse map until it exceeds `threshold`, then a dense array of the kind's width. */
   private sealed trait Row
   private final class Sparse(val cells: mutable.HashMap[Int, Long]) extends Row
-  private final class Dense(val cells: Array[Long]) extends Row
+  private final class DenseH(val cells: Array[Char]) extends Row
+  private final class DenseQ(val cells: Array[Long]) extends Row
 
   private val rows = mutable.HashMap.empty[Int, Row]
 
@@ -315,7 +320,8 @@ final class CompactMemo(length: Int) extends Memo {
       case Some(row) =>
         val value = row match {
           case sparse: Sparse => sparse.cells.getOrElse(position, missing)
-          case dense: Dense => dense.cells(position)
+          case dense: DenseH => dense.cells(position).toLong
+          case dense: DenseQ => dense.cells(position)
         }
         if (value == missing) { -1 } else if (value == missing - 1) { -2 } else { value.toInt }
     }
@@ -324,7 +330,8 @@ final class CompactMemo(length: Int) extends Memo {
   def update(identity: Int, position: Int, value: Int): Unit = {
     val stored = if (value < 0) { missing + value + 1 } else { value.toLong }
     rows.get(identity) match {
-      case Some(dense: Dense) => dense.cells(position) = stored
+      case Some(dense: DenseH) => dense.cells(position) = stored.toChar
+      case Some(dense: DenseQ) => dense.cells(position) = stored
       case other =>
         val sparse = other match {
           case Some(existing: Sparse) => existing
@@ -334,11 +341,19 @@ final class CompactMemo(length: Int) extends Memo {
             fresh
         }
         sparse.cells(position) = stored
-        if (sparse.cells.size > threshold) {
-          val dense = Array.fill(width)(missing)
-          for ((index, cell) <- sparse.cells) { dense(index) = cell }
-          rows(identity) = new Dense(dense)
-        }
+        if (sparse.cells.size > threshold) { rows(identity) = densify(sparse) }
+    }
+  }
+
+  private def densify(sparse: Sparse): Row = {
+    if (kind == "H") {
+      val dense = Array.fill(width)(missing.toChar)
+      for ((index, cell) <- sparse.cells) { dense(index) = cell.toChar }
+      new DenseH(dense)
+    } else {
+      val dense = Array.fill(width)(missing)
+      for ((index, cell) <- sparse.cells) { dense(index) = cell }
+      new DenseQ(dense)
     }
   }
 }

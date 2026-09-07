@@ -28,8 +28,8 @@ object ScaffoldCircuit {
     }
   }
 
-  /** Collect the distinct non-`absorbing` operands in order, or `None` when `zero` short-circuits. */
-  private def operands(args: Seq[Expr], zero: Expr, unit: Expr): Option[Vector[Expr]] = {
+  /** The distinct non-`unit` operands in first-occurrence order plus their set, or `None` when `zero` short-circuits. */
+  private def operands(args: Seq[Expr], zero: Expr, unit: Expr): Option[(Vector[Expr], mutable.HashSet[Expr])] = {
     val result = Vector.newBuilder[Expr]
     val seen = mutable.HashSet.empty[Expr]
     var shortCircuit = false
@@ -42,42 +42,33 @@ object ScaffoldCircuit {
         result += arg
       }
     }
-    if (shortCircuit) { None } else { Some(result.result()) }
+    if (shortCircuit) { None } else { Some((result.result(), seen)) }
   }
 
-  def conjunction(args: Expr*): Expr = {
-    operands(args, zero = FALSE, unit = TRUE) match {
-      case None => FALSE
-      case Some(result) =>
-        val seen = result.toSet
+  /** Shared body of `conjunction` (`isOr = false`) and `disjunction` (`isOr = true`). */
+  private def connective(args: Seq[Expr], isOr: Boolean): Expr = {
+    val zero = if (isOr) { TRUE } else { FALSE }
+    val unit = if (isOr) { FALSE } else { TRUE }
+    operands(args, zero, unit) match {
+      case None => zero
+      case Some((result, seen)) =>
         if (result.exists(x => seen.contains(neg(x)))) {
-          FALSE
+          zero
         } else if (result.isEmpty) {
-          TRUE
+          unit
         } else if (result.length == 1) {
           result.head
+        } else if (isOr) {
+          Expr.intern(Expr.Or(result))
         } else {
           Expr.intern(Expr.And(result))
         }
     }
   }
 
-  def disjunction(args: Expr*): Expr = {
-    operands(args, zero = TRUE, unit = FALSE) match {
-      case None => TRUE
-      case Some(result) =>
-        val seen = result.toSet
-        if (result.exists(x => seen.contains(neg(x)))) {
-          TRUE
-        } else if (result.isEmpty) {
-          FALSE
-        } else if (result.length == 1) {
-          result.head
-        } else {
-          Expr.intern(Expr.Or(result))
-        }
-    }
-  }
+  def conjunction(args: Expr*): Expr = connective(args, isOr = false)
+
+  def disjunction(args: Expr*): Expr = connective(args, isOr = true)
 
   def choose(guard: Expr, yes: Expr, no: Expr): Expr = {
     if (guard == TRUE || yes == no) {
@@ -120,17 +111,19 @@ object ScaffoldCircuit {
 final class Value[+A] private (val domain: Vector[A], val bits: Vector[Expr], val valid: Expr) {
   import ScaffoldCircuit.*
 
+  /** Position of each domain element (Python `domain.index`, but O(1) after the first use). */
+  private lazy val positions: Map[Any, Int] = domain.zipWithIndex.toMap[Any, Int]
+
   /** `(value, guard)` pairs in domain order (Python `cases` dict). */
   def cases: Vector[(A, Expr)] = domain.map(value => value -> eqTo(value))
 
   /** Guard for `this == value` (Python `Value.eq`; renamed because `AnyRef.eq` is final). */
   def eqTo(value: Any): Expr = {
-    val index = domain.indexOf(value)
-    if (index < 0) {
-      FALSE
-    } else {
-      val tests = bits.zipWithIndex.map { case (bit, i) => if ((index & (1 << i)) != 0) { bit } else { neg(bit) } }
-      conjunction((valid +: tests)*)
+    positions.get(value) match {
+      case None => FALSE
+      case Some(index) =>
+        val tests = bits.zipWithIndex.map { case (bit, i) => if ((index & (1 << i)) != 0) { bit } else { neg(bit) } }
+        conjunction((valid +: tests)*)
     }
   }
 
@@ -139,7 +132,8 @@ final class Value[+A] private (val domain: Vector[A], val bits: Vector[Expr], va
     if (domain == this.domain) {
       this
     } else {
-      if (!this.domain.forall(value => domain.contains(value))) {
+      val available = domain.toSet
+      if (!this.domain.forall(value => available.contains(value))) {
         throw new IllegalArgumentException("cannot discard variants of a finite value")
       }
       val bits = (0 until bitWidth(domain.length)).map { bit =>

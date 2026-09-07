@@ -37,6 +37,13 @@ object ScaffoldCircuitQueueSuite {
 class ScaffoldCircuitQueueSuite extends munit.FunSuite {
   import ScaffoldCircuitQueueSuite.{queueFixture, referenceStep}
 
+  test("queue lowering is byte-identical to Python (1081833 bytes)") {
+    val output = queueFixture().compile()
+    assertEquals(output.getBytes("UTF-8").length, 1081833)
+    PyDiff.assertSameAsPython(output, "-c",
+      "from test_scaffold_circuit_queue import queue_fixture; print(queue_fixture().compile(), end='')")
+  }
+
   test("deque equivalence across rotations and empty pops") {
     val machine = queueFixture()
     val grammar = new Grammar(machine.compile())

@@ -46,6 +46,74 @@ class ScaffoldCircuitSuite extends munit.FunSuite {
     }
   }
 
+  test("balanced tape lowering is byte-identical to Python (1641 / 5700 bytes)") {
+    for ((quantum, bytes) <- Seq(1 -> 1641, 2 -> 5700)) {
+      val output = balancedTape(quantum).compile()
+      assertEquals(output.getBytes("UTF-8").length, bytes, s"quantum $quantum")
+      PyDiff.assertSameAsPython(output, "-c",
+        s"from test_scaffold_circuit import balanced_tape; print(balanced_tape($quantum).compile(), end='')")
+    }
+  }
+
+  test("Value.map merges the guards of colliding keys, byte-identical to Python") {
+    val c = new Circuit()
+    val count = c.get(PREVIOUS, "count", Vector(0, 1, 2, 3), 0)
+    val next = Value.select(c.input().eqTo('a'), count.map(n => (n + 1) % 4), count)
+    c.put("count", next)
+    val parity = next.map(n => n % 2)
+    assertEquals(parity.domain, Vector(0, 1))
+    c.put("parity", parity, Vector(0, 1), 0)
+    val machine = c.machine(parity.eqTo(1))
+    val expected = PyCircuit.expected(
+      """c = Circuit(); count = c.get(PREVIOUS, "count", (0, 1, 2, 3), 0)
+        |nxt = Value.select(c.input().eq("a"), count.map(lambda n: (n + 1) % 4), count)
+        |c.put("count", nxt); parity = nxt.map(lambda n: n % 2); c.put("parity", parity, (0, 1), 0)
+        |report(c.machine(parity.eq(1)), words("ab", 4))
+        |""".stripMargin)
+    assertEquals(PyCircuit.acceptanceBits(machine, Words.upTo("ab", 4).toVector), expected.bits)
+    assertEquals(machine.compile(), expected.peg)
+    for (word <- Words.upTo("ab", 4)) { assertEquals(machine.run(word), word.count(_ == 'a') % 2 == 1, word) }
+  }
+
+  test("Value.cycle(-1) counts down, byte-identical to Python") {
+    val c = new Circuit()
+    val count = c.get(PREVIOUS, "count", Vector(0, 1, 2, 3), 0)
+    val down = Value.select(c.input().eqTo('a'), count.cycle(-1), count)
+    c.put("count", down)
+    val machine = c.machine(down.eqTo(3))
+    val expected = PyCircuit.expected(
+      """c = Circuit(); count = c.get(PREVIOUS, "count", (0, 1, 2, 3), 0)
+        |down = Value.select(c.input().eq("a"), count.cycle(-1), count); c.put("count", down)
+        |report(c.machine(down.eq(3)), words("ab", 4))
+        |""".stripMargin)
+    assertEquals(PyCircuit.acceptanceBits(machine, Words.upTo("ab", 4).toVector), expected.bits)
+    assertEquals(machine.compile(), expected.peg)
+    for (word <- Words.upTo("ab", 4)) { assertEquals(machine.run(word), word.count(_ == 'a') % 4 == 1, word) }
+  }
+
+  test("Value.equal on same and different domains, byte-identical to Python") {
+    val c = new Circuit("ab")
+    val x = c.get(PREVIOUS, "x", Vector(0, 1, 2, 3), 0)
+    val y = c.get(PREVIOUS, "y", Vector(0, 1, 2), 0)
+    val nx = Value.select(c.input().eqTo('a'), x.cycle(1), x)
+    val ny = Value.select(c.input().eqTo('b'), y.map(n => (n + 1) % 3), y)
+    c.put("x", nx)
+    c.put("y", ny)
+    val machine = c.machine(conjunction(nx.equal(ny), nx.equal(x)))
+    val expected = PyCircuit.expected(
+      """c = Circuit("ab"); x = c.get(PREVIOUS, "x", (0, 1, 2, 3), 0); y = c.get(PREVIOUS, "y", (0, 1, 2), 0)
+        |nx = Value.select(c.input().eq("a"), x.cycle(1), x); ny = Value.select(c.input().eq("b"), y.map(lambda n: (n + 1) % 3), y)
+        |c.put("x", nx); c.put("y", ny)
+        |report(c.machine(conjunction(nx.equal(ny), nx.equal(x))), words("ab", 5))
+        |""".stripMargin)
+    assertEquals(PyCircuit.acceptanceBits(machine, Words.upTo("ab", 5).toVector), expected.bits)
+    assertEquals(machine.compile(), expected.peg)
+    for (word <- Words.upTo("ab", 5)) {
+      val agree = word.count(_ == 'a') % 4 == word.count(_ == 'b') % 3
+      assertEquals(machine.run(word), word.nonEmpty && word.last == 'b' && agree, word)
+    }
+  }
+
   test("finite binary value mapping and selection") {
     val circuit = new Circuit()
     val count = circuit.get(PREVIOUS, "count", Vector(0, 1, 2, 3), 0)

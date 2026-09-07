@@ -24,8 +24,26 @@ import scala.collection.mutable
   */
 final class RuleMap(data: ByteBuffer, offsets: Map[String, Int]) extends mutable.AbstractMap[String, PegAst] {
   private val loaded = mutable.LinkedHashMap.empty[String, PegAst]
+  @volatile private var released: Boolean = false
+
+  /** Stop reading the mapping and unmap it (Python `mmap.close()`); loaded rules stay usable.
+    *
+    * The JDK has no public unmap: the mapping is normally freed only when the
+    * buffer is garbage collected. `FileGrammar.close()` therefore asks
+    * `sun.misc.Unsafe.invokeCleaner` (reflectively; JDK 9+) to release it now,
+    * and falls back to GC release where that is unavailable. Either way, this
+    * map refuses to touch the bytes afterwards, so a use-after-close is an
+    * `IllegalStateException` rather than an access to unmapped memory.
+    */
+  private[pal] def release(): Unit = {
+    if (!released) {
+      released = true
+      RuleMap.unmap(data)
+    }
+  }
 
   override def default(name: String): PegAst = {
+    if (released) { throw new IllegalStateException("PEG file is closed") }
     val start = offsets.getOrElse(name, throw new NoSuchElementException(name))
     var end = start
     while (end < data.limit() && data.get(end) != '\n'.toByte) { end += 1 }
@@ -49,6 +67,24 @@ final class RuleMap(data: ByteBuffer, offsets: Map[String, Int]) extends mutable
   override def size: Int = loaded.size
 }
 
+object RuleMap {
+
+  /** Best-effort eager unmap of a direct/mapped buffer via `Unsafe.invokeCleaner`; silently a no-op elsewhere. */
+  private def unmap(buffer: ByteBuffer): Unit = {
+    if (buffer.isDirect) {
+      try {
+        val unsafeClass = Class.forName("sun.misc.Unsafe")
+        val field = unsafeClass.getDeclaredField("theUnsafe")
+        field.setAccessible(true)
+        val unsafe = field.get(null)
+        unsafeClass.getMethod("invokeCleaner", classOf[ByteBuffer]).invoke(unsafe, buffer)
+      } catch {
+        case _: ReflectiveOperationException | _: RuntimeException => () // GC will release the mapping instead
+      }
+    }
+  }
+}
+
 /** A grammar backed by a memory-mapped one-production-per-line file. */
 final class FileGrammar private (opened: FileGrammar.Opened, start: String)
     extends Grammar(opened.rules, start)
@@ -59,7 +95,11 @@ final class FileGrammar private (opened: FileGrammar.Opened, start: String)
   /** Number of productions indexed in the file (not the number loaded). */
   val ruleCount: Int = opened.ruleCount
 
-  def close(): Unit = opened.channel.close()
+  /** Unmap the file (see `RuleMap.release`) and close the channel. Idempotent. */
+  def close(): Unit = {
+    opened.rules.release()
+    opened.channel.close()
+  }
 }
 
 object FileGrammar {
