@@ -148,7 +148,8 @@ structure PrepOnTapes (sc : ℕ) (blank mark forb : Fin sc) where
   Cp : ℕ
   /-- 費用の切片。 -/
   Dp : ℕ
-  len_le : ∀ (x : List (Fin sc)) (L : ℕ) (ts : Tapes sc), (prog x L ts).length ≤ Cp * L + Dp
+  len_le : ∀ (w Text : List (Fin sc)) (L : ℕ) (ts : Tapes sc),
+    PrepPre blank mark L w Text ts → forb ∉ w → (prog (w.take L) L ts).length ≤ Cp * L + Dp
   post : ∀ (w Text : List (Fin sc)) (L : ℕ) (ts : Tapes sc),
     PrepPre blank mark L w Text ts → forb ∉ w → (res w L).1 < L →
     SetupPre blank mark (res w L).1 L (res w L).2.1 (res w L).2.2 w Text
@@ -576,7 +577,8 @@ theorem pg_window_prep (_hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
     rw [if_neg (by omega), ih (by omega), sgsteps_succ']
 
 /-- **前処理はラウンド `3(S/4)` までに完了する**。 -/
-theorem prep_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
+theorem prep_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Text' : List (Fin sc))
+    (hpp : PrepPre blank mark (S / 2) w Text' init.pg.ts) (hforb : forb ∉ w) :
     (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (3 * (S / 4))).pg
       = ⟨[], run blank (Pre.prog (w.take (S / 2)) (S / 2) init.pg.ts) init.pg.ts⟩ := by
   have hwin := pg_window_prep (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
@@ -594,7 +596,7 @@ theorem prep_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
         ⟨Pre.prog (w.take (S / 2)) (S / 2) init.pg.ts, init.pg.ts⟩ from rfl,
     show S / 4 - 1 + 1 = S / 4 from by omega]
   refine sgsteps_done blank (S / 4) _ _ ?_
-  have hlen := Pre.len_le (w.take (S / 2)) (S / 2) init.pg.ts
+  have hlen := Pre.len_le w Text' (S / 2) init.pg.ts hpp hforb
   have harith := prep_rate_ok (Cp := Pre.Cp) (Dp := Pre.Dp) (S := S) hS hq
   have hR : rateP Pre = 2 * Pre.Cp + Pre.Dp := rfl
   rw [hR]
@@ -670,7 +672,7 @@ theorem setup_complete' (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Textp : List (Fin
             (3 * (S / 4))).pg.ts⟩ := by
   have hpc := prep_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
-    (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
+    (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq Textp hpp hforb
   have hpre := Pre.post w Textp (S / 2) init.pg.ts hpp hforb hcut
   have hspec := setup_spec (startSym := startSym) (endSym := endSym) (k := k) hpre
   refine setup_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
@@ -769,6 +771,7 @@ theorem stage_tapes_spec'
   have hpc := prep_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
+    (w.drop S) hpinit hend
   have hpre := Pre.post w (w.drop S) (S / 2) init.pg.ts hpinit hend hcut
   have hsc := setup_complete' (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
