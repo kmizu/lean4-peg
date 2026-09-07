@@ -394,3 +394,11 @@ lake build
   13 スロットに拡張して `PrepInstance` を再埋め込み中。MiddleTapes (1)（窓仮説つき `DecompOnTapes`）着地、
   (2)–(5) 継続中。ジグザグ検証器のテープ/feed/Prog/段の 4 層と、スロット予定表（`stageInSlot`/`Restart`）の
   単進カウンタ実現を作業中。最終定理の残り：具体 Prog の差し込み（`hstepF/G/I`）と `hPAL` の接続。
+- 進捗（2026-09-10 早朝、コミット 2ffdf1b まで）：**ジグザグ u 検証器が全 5 層で完成**（`stage_tapes_specZ`：
+  `Metered` 無改造、A=9k+14/B=16、レート 918、Ψ なし）。段バンドル拡張＋`PrepInstance` 再埋め込み完了、
+  `progMachinePMb`（初期フラグ）で ε 受理を修正、`fullAnswer_zero`。MiddleTapes は S10/S11 と cp1/cp2 の
+  有限化（Fin 14 世代 = 28 テープ、4 本化には再利用スケジュールの再設計が要る）まで。
+  Opus のレート制限（8 時リセット）で中断：前処理 `decProgP` の第 2 フェーズ再証明、MiddleTapes の継ぎ目/
+  消去/具体 `batchProg`、スロット予定表 `SlotSchedule`（書きかけ）。残り：これらの再開、具体 Prog の
+  `FullMachineProg` への差し込み（`hround`/`hstepF/G/I`）、`pal_SAccepts_iff_embed`、最終定理。
+  数学は `Consumption`（残角 `ShortRunGap` 1 条件）を仮定として保持。
