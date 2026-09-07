@@ -169,106 +169,91 @@ theorem span_le (hk : 4 ≤ k) {r' : ℕ}
 
 end Local
 
-/-! ## §5 消費量補題 (C) の帰納段階（抽象版）
+/-! ## §5 消費量補題 (C) への還元：**run 終端条件 (E)**
 
-子の列を `(周期 qᵢ, 消費幅 spanᵢ)` の対の列で表す。`k = 8` に固定する
-（`(k-2) = 6`）。 -/
+`SpansOk` 型の議論（「非末子の消費幅 `spanᵢ` は次の兄弟の周期 `qᵢ₊₁` 以下」）は
+**偽**である。反例（`k = 8`）：周期語 `u = 0^m 1 (0^7 1)^8`（`m ≫ 8`）を取ると、
+第 1 子は `0`-ブロック（`q₁ = 1`, run ≒ `m`, `span₁ ≒ m - 7`）、そこから着地した
+第 2 子は `q₂ = 8` なので `span₁ ≫ q₂`。実測でも `max spanᵢ/qᵢ₊₁ = 2.88 > 1`。
 
-/-- 子の列の消費幅の総和。 -/
-def sumSpan : List (ℕ × ℕ) → ℕ
-  | [] => 0
-  | a :: t => a.2 + sumSpan t
+正しい還元は **run の終端**についての一様な条件である：
 
-/-- 先頭の子の周期。 -/
-def headRoot : List (ℕ × ℕ) → ℕ
-  | [] => 0
-  | a :: _ => a.1
+> **(E)** `c` のすべての子孫 `j` について `E_j < a_{c+1} + p_c + p_j`。
+> （`j` の run は「最初の周期ブロック + 自分の周期」を越えない。）
 
-@[simp] theorem sumSpan_nil : sumSpan [] = 0 := rfl
-@[simp] theorem headRoot_nil : headRoot [] = 0 := rfl
+(E) は (C) と子孫の開始位置の両方を含意する（`consumption_lt_period_of_runEnd`,
+`descendant_start_lt_of_runEnd`）。実測（敵対的生成器・`k = 8`・7,700 節点）では
 
-/-- 節点 `c`（周期 `p`）の子の列の整合性（`k = 8`）。
+* `max (E_j - a_{c+1} - p_j)/p_c = 0.9963`（(E) は成立、ただし余裕は小さい）、
+* `max (a_j - a_{c+1})/p_c = 0.816`、`max C(c)/p_c = 0.805`、
+* 兄弟比の最小値 `8.0`（`sibling_growth_eight` の `> 6` と整合）。 -/
 
-* 連続する子の周期は 3 倍以上（`sibling_growth_kidsOk` は 6 倍超を与える）、
-* **非末子の消費幅は次の兄弟の周期以下**（残る穴、`SpanLeNextSibling`）、
-* 末子は `span_m + 6 * q_m ≤ p`（`span_le`）、
-* 周期は正。 -/
-def SpansOk (p : ℕ) : List (ℕ × ℕ) → Prop
-  | [] => True
-  | [a] => 0 < a.1 ∧ a.2 + 6 * a.1 ≤ p
-  | a :: b :: t => 0 < a.1 ∧ 3 * a.1 ≤ b.1 ∧ a.2 ≤ b.1 ∧ SpansOk p (b :: t)
+/-- **(E) ⟹ (C)**。最後の子孫 `ℓ` について (E) が成り立てば、`c` の部分木を抜けた
+位置 `a_next = E_ℓ - k*p_ℓ + 1` は `a_{c+1} + p_c` に届かない：`C(c) < p_c`。
 
-/-- **等比和**：整合的な子の列の消費幅の総和は `6 * Σ span + 9 * q₁ ≤ 6 * p`。
-
-非末子は `spanᵢ ≤ qᵢ₊₁` で次の兄弟の周期に吸収され、成長 `3*qᵢ ≤ qᵢ₊₁` により
-`6 * spanᵢ + 9 * qᵢ ≤ 6 * qᵢ₊₁ + 3 * qᵢ₊₁ = 9 * qᵢ₊₁` と帰納が回る。 -/
-theorem spans_sum_bound (p : ℕ) :
-    ∀ ks : List (ℕ × ℕ), ks ≠ [] → SpansOk p ks →
-      6 * sumSpan ks + 9 * headRoot ks ≤ 6 * p := by
-  intro ks
-  induction ks with
-  | nil => intro h; exact absurd rfl h
-  | cons a t ih =>
-    cases t with
-    | nil =>
-      intro _ h
-      obtain ⟨-, hlast⟩ := h
-      simp only [sumSpan, headRoot]
-      omega
-    | cons b t' =>
-      intro _ h
-      obtain ⟨-, hgrow, hspan, hrest⟩ := h
-      have hIH := ih (by simp) hrest
-      have hh : headRoot (b :: t') = b.1 := rfl
-      rw [hh] at hIH
-      have hs : sumSpan (a :: b :: t') = a.2 + sumSpan (b :: t') := rfl
-      rw [hs, show headRoot (a :: b :: t') = a.1 from rfl]
-      omega
-
-/-- **消費量補題 (C) の帰納段階**：整合的な子の列に対し `Σ spanᵢ < p`。
-
-`C(c) = Σ spanᵢ` なので、これは `C(c) < p_c` そのものである。 -/
-theorem consumption_lt_period_abstract (p : ℕ) (hp : 0 < p) (ks : List (ℕ × ℕ))
-    (h : SpansOk p ks) : sumSpan ks < p := by
-  cases ks with
-  | nil => simpa using hp
-  | cons a t =>
-    have hb := spans_sum_bound p (a :: t) (by simp) h
-    have hpos : 0 < headRoot (a :: t) := by
-      cases t with
-      | nil => exact h.1
-      | cons b t' => exact h.1
-    omega
-
-/-- 子が無い節点（葉）の消費量は `0 < p`。 -/
-theorem consumption_lt_period_leaf (p : ℕ) (hp : 0 < p) : sumSpan [] < p := by
-  simpa using hp
-
-/-- 子が 1 つだけの節点：`span_le` の結論だけから `C(c) < p_c` が従う
-（追加の仮定は不要）。 -/
-theorem consumption_lt_period_single (p q s : ℕ) (_hq : 0 < q) (h : s + 6 * q ≤ p) :
-    sumSpan [(q, s)] < p := by
-  simp only [sumSpan]
+`E_ℓ - a_{c+1} < p + p_ℓ` と `a_next - a_{c+1} = (E_ℓ - a_{c+1}) - k*p_ℓ + 1` から
+`C(c) < p - (k-1)*p_ℓ + 1 ≤ p`。 -/
+theorem consumption_lt_period_of_runEnd {k p pl El C : ℕ} (hk : 4 ≤ k) (hpl : 0 < pl)
+    (hE : El < p + pl) (_hkpl : k * pl ≤ El) (hC : C + k * pl = El + 1) : C < p := by
+  have h1 : (k - 1) * pl + pl = k * pl := by rw [← Nat.succ_mul]; congr 1; omega
+  have h2 : 1 * pl ≤ (k - 1) * pl := Nat.mul_le_mul_right pl (by omega)
   omega
 
-/-! ## §6 残る穴の明示 -/
+/-- **(E) ⟹ 子孫の開始位置は `p_c` 未満**。`a_j + k*p_j ≤ E_j` と (E) から
+`a_j - a_{c+1} < p - (k-1)*p_j < p`。 -/
+theorem descendant_start_lt_of_runEnd {k p pj aj Ej : ℕ} (hk : 4 ≤ k) (_hpj : 0 < pj)
+    (hE : Ej < p + pj) (hwin : aj + k * pj ≤ Ej) : aj < p := by
+  have h1 : (k - 1) * pj + pj = k * pj := by rw [← Nat.succ_mul]; congr 1; omega
+  have h2 : 1 * pj ≤ (k - 1) * pj := Nat.mul_le_mul_right pj (by omega)
+  omega
 
-/-- **残る唯一の未証明の主張**：節点 `c` の非末子 `qᵢ` の消費幅は次の兄弟の周期以下。
+/-! ## §6 (E) の帰納：DOWN ステップでは `E_j - p_j` が真に減る -/
 
-`span_le` は `spanᵢ + 6 * qᵢ ≤ p_c` までしか与えないので、`p_c` が `qᵢ` に比べて
-大きいときにこれだけでは足りない。実測（`k = 8`）では
-`max spanᵢ / qᵢ₊₁ = 0.78`、`max spanᵢ / p_c = 0.081` である。
+/-- **(E) の DOWN ステップ**。節点 `j`（最小周期 `p`、到達域 `r`）の子
+（位置 `d = r - k*p + 1`、最小周期 `q < p`、到達域 `r'`）について
 
-意味論的には「非末子の run は早く終わる」——run が長く伸びる子のあとの脱出位置は
-`R_c` の外に出てしまい、その子が末子になる——という現象にあたる。 -/
-def SpanLeNextSibling (_p : ℕ) (ks : List (ℕ × ℕ)) : Prop :=
-  match ks with
-  | [] => True
-  | [_] => True
-  | a :: b :: _ => a.2 ≤ b.1
+```
+(d + r') - q < r - p        （相対座標での `E_child - q < E_parent - p`）
+```
 
-end PassSum9
-end PalPeg
+したがって (E) の量 `E_j - p_j` は DOWN ステップで真に減少し、(E) は
+親から子へ自動的に伝播する。`step_down_reach`（`r' < p + q`）と
+`d = r - k*p + 1`、`2*p + 1 ≤ k*p` から。 -/
+theorem runEnd_down_step {w : List α} {k p q r r' d : ℕ} (hk : 4 ≤ k)
+    (hd : k * p + d = r + 1)
+    (hleast : IsLeastKRep w k p) (hR : ReachOf w p r) (hkr : k * p ≤ r)
+    (hq : IsLeastKRep (w.drop d) k q) (hlt : q < p)
+    (hR' : ReachOf (w.drop d) q r') (hkq : k * q ≤ r') :
+    (d + r') + p < r + q := by
+  have hp : 0 < p := hleast.1.1
+  have hreach := step_down_reach hk hd hleast hR hkr hq hlt hR' hkq
+  have h4 : 4 * p ≤ k * p := Nat.mul_le_mul_right p (by omega)
+  omega
+
+/-! ## §7 残る穴の明示
+
+DOWN ステップは `runEnd_down_step` で閉じている。残るのは **UP ステップ**、すなわち
+`c` の部分木の中で run `j` を脱出して次の兄弟 `j+1`（なお `c` の子孫）に着地する場合に
+
+```
+E_{j+1} - p_{j+1} < a_{c+1} + p_c
+```
+
+を示すことである。手持ちの補題からは
+
+* `inner_run_lt`（親 `c` に対して）：`E_{j+1} < a_{j+1} + p_c + p_{j+1}`、
+* `a_{j+1} = E_j - k*p_j + 1`、帰納法の仮定 `E_j < a_{c+1} + p_c + p_j`
+
+しか出ず、これを合わせると `E_{j+1} - p_{j+1} < a_{c+1} + 2*p_c - (k-1)*p_j + 1` で、
+`p_c ≤ (k-1)*p_j` のときしか閉じない（実際 `p_j = 1`, `p_c = 433` のような
+「長い第 1 子のあとの着地」が実測の最悪ケースで、余裕は `3` セルしかない）。
+必要なのは「長い子の直後に着地した run はすぐ終わる」という追加の構造情報で、
+これは `R_c` の `p_c`-周期性による**平行移動の議論**（着地点から `p_c` を引いた
+仮想節点と、それを含む先行 run の極大性との矛盾）にあたる。 -/
+
+/-- **残る唯一の未証明の主張 (E)**（相対座標版）。`E` は `a_{c+1}` からの相対終端。 -/
+def RunEndBound (p : ℕ) (desc : List (ℕ × ℕ)) : Prop :=
+  ∀ e ∈ desc, e.1 < p + e.2
 
 section AxiomCheck
 open PalPeg.PassSum9
@@ -278,7 +263,8 @@ open PalPeg.PassSum9
 #print axioms PalPeg.PassSum9.sibling_growth_kidsOk
 #print axioms PalPeg.PassSum9.last_child_bound
 #print axioms PalPeg.PassSum9.span_le
-#print axioms PalPeg.PassSum9.spans_sum_bound
-#print axioms PalPeg.PassSum9.consumption_lt_period_abstract
+#print axioms PalPeg.PassSum9.consumption_lt_period_of_runEnd
+#print axioms PalPeg.PassSum9.descendant_start_lt_of_runEnd
+#print axioms PalPeg.PassSum9.runEnd_down_step
 #print axioms PalPeg.PassSum8.passPeriodSum_eight_of_hasTree
 end AxiomCheck
