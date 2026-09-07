@@ -54,7 +54,7 @@ def prjB (ts : BorderTapes.OvTapes sc) : GSPre.Tapes sc :=
     Cp := ts.S6, Cf := ts.S7, Cs := ts.S8, Cr := ts.S9
     -- 第 2 相の比較カウンタ `Ca`/`Cb` は、分解器の入口で空 (`EntryBlank`) であり
     -- 出口で分解器自身が書き直す `Cnt` / `U` に載せる。テープ本数は 15 のまま。
-    Ca := ts.Cnt, Cb := ts.U }
+    Ca := ts.Cnt, Cb := ts.U, Cc := ts.P }
 
 /-- 1 動作の埋め込み。`GSPre` の文字テープ動作 `V1`/`V2` は「読んだ記号を書き戻す」
 移動なので、`OvTapes` 側では現在の注目セル `ts.S1.focus` / `ts.S2.focus` を
@@ -71,6 +71,7 @@ def liftActB (ts : BorderTapes.OvTapes sc) : GSPre.Act sc → BorderTapes.Act sc
   | .Cr a m => .S9 a m
   | .Ca a m => .C a m
   | .Cb a m => .Uset a m
+  | .Cc a m => .Pset a m
 
 /-- 動作列の埋め込み（各段で現在のテープ束を見ながら写す）。 -/
 def liftActsB (blank : Fin sc) :
@@ -119,23 +120,22 @@ theorem prjB_run (blank : Fin sc) :
       rw [liftActsB_cons, BorderTapes.applyActs_cons, GSPre.applyActs_cons,
         ih (BorderTapes.applyAct blank ts (liftActB ts a)), prjB_applyAct]
 
-/-- 主テープのうち `P`/`X`/`X2`/`F` の 4 本は埋め込んだ動作列で一切動かない。
-`Cnt` と `U` は第 2 相の比較カウンタ `Ca`/`Cb` の置き場所に使うので除く
+/-- 主テープのうち `X`/`X2`/`F` の 3 本は埋め込んだ動作列で一切動かない。
+`Cnt`/`U`/`P` は第 2 相の比較カウンタ `Ca`/`Cb`/`Cc` の置き場所に使うので除く
 （どちらも `EntryBlank` で入口は空、出口は分解器自身が書き直す）。 -/
 theorem liftActsB_keep (blank : Fin sc) :
     ∀ (l : List (GSPre.Act sc)) (ts : BorderTapes.OvTapes sc),
-      (BorderTapes.applyActs blank (liftActsB blank l ts) ts).P = ts.P
-      ∧ (BorderTapes.applyActs blank (liftActsB blank l ts) ts).X = ts.X
+      (BorderTapes.applyActs blank (liftActsB blank l ts) ts).X = ts.X
       ∧ (BorderTapes.applyActs blank (liftActsB blank l ts) ts).X2 = ts.X2
       ∧ (BorderTapes.applyActs blank (liftActsB blank l ts) ts).F = ts.F := by
   intro l
   induction l with
-  | nil => intro ts; exact ⟨rfl, rfl, rfl, rfl⟩
+  | nil => intro ts; exact ⟨rfl, rfl, rfl⟩
   | cons a l ih =>
       intro ts
       have h := ih (BorderTapes.applyAct blank ts (liftActB ts a))
       rw [liftActsB_cons, BorderTapes.applyActs_cons]
-      cases a <;> exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
+      cases a <;> exact ⟨h.1, h.2.1, h.2.2⟩
 
 /-! ## 3. 入口のカウンタ作り -/
 
@@ -170,7 +170,6 @@ theorem decActsB_spec (hend : endSym ∉ x) (hmark : mark ≠ blank)
       ∧ (∃ a b D Q E, GSPre.Enc blank startSym endSym mark x a b
           ⟨D, Q, E, (decompose2 x 8).2.1, 0, (decompose2 x 8).1, (decompose2 x 8).2.2⟩
           (prjB (BorderTapes.applyActs blank (decActsB blank endSym mark x ts) ts)))
-      ∧ (BorderTapes.applyActs blank (decActsB blank endSym mark x ts) ts).P = ts.P
       ∧ (BorderTapes.applyActs blank (decActsB blank endSym mark x ts) ts).X = ts.X
       ∧ (BorderTapes.applyActs blank (decActsB blank endSym mark x ts) ts).X2 = ts.X2
       ∧ (BorderTapes.applyActs blank (decActsB blank endSym mark x ts) ts).F = ts.F := by
@@ -178,7 +177,7 @@ theorem decActsB_spec (hend : endSym ∉ x) (hmark : mark ≠ blank)
     (endSym := endSym) (mark := mark) (x := x) (k := 8) (by omega) hend hmark (prjB ts) hE
   have hk := liftActsB_keep blank
     (GSPre.decProg blank endSym mark 8 x.length (x.length + 1) (prjB ts)) ts
-  refine ⟨?_, ?_, hk.1, hk.2.1, hk.2.2.1, hk.2.2.2⟩
+  refine ⟨?_, ?_, hk.1, hk.2.1, hk.2.2⟩
   · rw [decActsB, liftActsB_length]
     have := h.1
     omega

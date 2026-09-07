@@ -81,6 +81,8 @@ structure Tapes (sc : ℕ) where
   Ca : TapeConfiguration sc
   /-- 第 2 相の符号つき比較カウンタ（負部）。それ以外の相では常に `0`。 -/
   Cb : TapeConfiguration sc
+  /-- 第 2 相の第 2 の符号つき比較カウンタ（負部）。それ以外の相では常に `0`。 -/
+  Cc : TapeConfiguration sc
 
 /-- 1 本のテープに対する 1 個のヘッド動作。文字テープ `V1`/`V2` は読んだ記号を
 書き戻して移動する（内容を壊さない移動）。カウンタは書く記号を明示する。 -/
@@ -96,6 +98,7 @@ inductive Act (sc : ℕ) where
   | Cr : Fin sc → Move → Act sc
   | Ca : Fin sc → Move → Act sc
   | Cb : Fin sc → Move → Act sc
+  | Cc : Fin sc → Move → Act sc
 
 def applyAct (blank : Fin sc) (ts : Tapes sc) : Act sc → Tapes sc
   | .V1 m => { ts with V1 := Tape.step blank ts.V1 ts.V1.focus m }
@@ -109,6 +112,7 @@ def applyAct (blank : Fin sc) (ts : Tapes sc) : Act sc → Tapes sc
   | .Cr a m => { ts with Cr := Tape.step blank ts.Cr a m }
   | .Ca a m => { ts with Ca := Tape.step blank ts.Ca a m }
   | .Cb a m => { ts with Cb := Tape.step blank ts.Cb a m }
+  | .Cc a m => { ts with Cc := Tape.step blank ts.Cc a m }
 
 def applyActs (blank : Fin sc) (l : List (Act sc)) (ts : Tapes sc) : Tapes sc :=
   l.foldl (applyAct blank) ts
@@ -280,7 +284,7 @@ theorem applyActs_mActs_pos (h : mCond blank endSym mark ts) :
         Cd := Tape.step blank (Tape.step blank ts.Cd blank .left) blank .stay
         Cq := Tape.step blank ts.Cq blank .right
         Ce := ts.Ce, Cp := ts.Cp, Cf := ts.Cf, Cs := ts.Cs, Cr := ts.Cr
-        Ca := ts.Ca, Cb := ts.Cb } := by
+        Ca := ts.Ca, Cb := ts.Cb, Cc := ts.Cc } := by
   simp only [mActs, if_pos h]
   rfl
 
@@ -533,7 +537,7 @@ theorem applyActs_rActs_pos (h : rCond endSym ts) :
         V2 := Tape.step blank ts.V2 ts.V2.focus .right
         Cr := Tape.step blank ts.Cr blank .right
         Cd := ts.Cd, Cq := ts.Cq, Ce := ts.Ce, Cp := ts.Cp, Cf := ts.Cf, Cs := ts.Cs
-        Ca := ts.Ca, Cb := ts.Cb } := by
+        Ca := ts.Ca, Cb := ts.Cb, Cc := ts.Cc } := by
   simp only [rActs, if_pos h]
   rfl
 
@@ -861,7 +865,7 @@ theorem applyActs_rewindUnit (ts : Tapes sc) :
         Cq := Tape.step blank (Tape.step blank ts.Cq blank .left) blank .stay
         Cd := Tape.step blank ts.Cd blank .right
         Ce := ts.Ce, Cp := ts.Cp, Cf := ts.Cf, Cs := ts.Cs, Cr := ts.Cr
-        Ca := ts.Ca, Cb := ts.Cb } := rfl
+        Ca := ts.Ca, Cb := ts.Cb, Cc := ts.Cc } := rfl
 
 /-- 巻き戻し 1 単位の実現。 -/
 theorem rewind_unit_enc {a b D Q E P F S R : ℕ} {ts : Tapes sc}
@@ -1090,7 +1094,7 @@ theorem applyActs_shiftHead (ts : Tapes sc) :
         Ce := Tape.step blank (Tape.step blank ts.Ce blank .left) blank .stay
         Cp := Tape.step blank ts.Cp blank .right
         V1 := ts.V1, Cd := ts.Cd, Cq := ts.Cq, Cf := ts.Cf, Cs := ts.Cs, Cr := ts.Cr
-        Ca := ts.Ca, Cb := ts.Cb } := rfl
+        Ca := ts.Ca, Cb := ts.Cb, Cc := ts.Cc } := rfl
 
 theorem shift_unit_enc {a b D Q E P F S R : ℕ} {ts : Tapes sc}
     (hE : Enc blank startSym endSym mark x a b ⟨D, Q, E + 1, P, F, S, R⟩ ts)
@@ -2156,7 +2160,7 @@ theorem applyActs_sActs_pos (h : sCond endSym orc ts) :
         V2 := Tape.step blank ts.V2 ts.V2.focus .right
         Cq := Tape.step blank ts.Cq blank .right
         Cd := ts.Cd, Ce := ts.Ce, Cp := ts.Cp, Cf := ts.Cf, Cs := ts.Cs, Cr := ts.Cr
-        Ca := ts.Ca, Cb := ts.Cb } := by
+        Ca := ts.Ca, Cb := ts.Cb, Cc := ts.Cc } := by
   simp only [sActs, if_pos h]
   rfl
 
@@ -4677,6 +4681,189 @@ theorem stepProg_split (blank endSym mark : Fin sc) (orcB orc orc2 : Tapes sc �
         stepTail blank endSym mark orcB orc orc2 k n Fo Fr ts := by
   rw [stepProg, stepTail, frProg_split]
   simp [List.append_assoc]
+
+/-! ### 第 2 相の符号つき比較カウンタ
+
+`orcR` は内側走査の**1 ステップごと**に評価されるので、`Cr`/`Cp`/`Cq` を毎回
+読み比べる実装では総コストが二乗になる。そこで
+
+```
+A := r - (p+q)      （符号つき）… 正部 `Ca`、負部 `Cb`
+B := (k-1)*p - (q+1)（符号つき）… 正部 `Cd`、負部 `Cc`
+```
+
+の 2 つを符号つきカウンタとして持ち回る。`orcR ⟺ A ≤ 0 ∧ B ≤ 0 ⟺ A₊ = 0 ∧ B₊ = 0`
+なので、判定は `Ca` と `Cd` の probe **2 回だけ**（`O(1)`）で済む。
+内側 1 ステップでは `q` が 1 増えるので `A`, `B` がそれぞれ 1 減るだけ。 -/
+
+/-- 符号つきカウンタの「負部」たちの値（正部は `Ctr` の `d` と `Ca` の値）。 -/
+structure Ctr3 where
+  /-- `A` の正部（テープ `Ca`）。 -/
+  ap : ℕ
+  /-- `A` の負部（テープ `Cb`）。 -/
+  an : ℕ
+  /-- `B` の負部（テープ `Cc`）。`B` の正部は `Ctr.d`（テープ `Cd`）。 -/
+  bn : ℕ
+  deriving DecidableEq
+
+/-- 第 2 相の符号化：`Enc` に加えて `Ca`/`Cb`/`Cc` の内容も指定する。 -/
+structure EncS (blank startSym endSym mark : Fin sc) (x : List (Fin sc))
+    (a b : ℕ) (c : Ctr) (g : Ctr3) (ts : Tapes sc) : Prop where
+  base : Enc blank startSym endSym mark x a b c ts
+  ca : Tape.CounterView' blank mark ts.Ca g.ap
+  cb : Tape.CounterView' blank mark ts.Cb g.an
+  cc : Tape.CounterView' blank mark ts.Cc g.bn
+
+/-- 符号つきカウンタが `(k, r, p, q)` を正しく表していること。 -/
+def SignedOK (k r p q : ℕ) (c : Ctr) (g : Ctr3) : Prop :=
+  g.ap = r - (p + q) ∧ g.an = (p + q) - r
+    ∧ c.d = (k - 1) * p - (q + 1) ∧ g.bn = (q + 1) - (k - 1) * p
+
+/-- **符号つきカウンタから読む中断オラクル**：`Ca` と `Cd` の probe だけを見る。 -/
+def orcAB (blank mark : Fin sc) (ts : Tapes sc) : Bool :=
+  decide (probe blank ts.Ca = mark ∧ probe blank ts.Cd = mark)
+
+/-- **`orcAB` は `orcR` と一致する**（`O(1)` 動作で同じ判定ができる）。 -/
+theorem orcAB_spec (hmark : mark ≠ blank) {k r p q a b : ℕ} {c : Ctr} {g : Ctr3}
+    {ts : Tapes sc} (hE : EncS blank startSym endSym mark x a b c g ts)
+    (hok : SignedOK k r p q c g) :
+    orcAB blank mark ts = decide (r < p + q + 1 ∧ (k - 1) * p ≤ q + 1) := by
+  obtain ⟨hap, _, hd, _⟩ := hok
+  have h1 : probe blank ts.Ca = mark ↔ g.ap = 0 := probe_iff hmark hE.ca
+  have h2 : probe blank ts.Cd = mark ↔ c.d = 0 := probe_iff hmark hE.base.cd
+  rw [orcAB]
+  refine decide_eq_decide.2 ⟨?_, ?_⟩
+  · rintro ⟨e1, e2⟩
+    rw [h1, hap] at e1
+    rw [h2, hd] at e2
+    omega
+  · rintro ⟨e1, e2⟩
+    refine ⟨h1.2 ?_, h2.2 ?_⟩
+    · rw [hap]; omega
+    · rw [hd]; omega
+
+/-! #### 符号つき 1 減算（`O(1)` 動作） -/
+
+/-- `A` を 1 減らす：正部 `Ca` が非零ならそれを 1 減らし、零なら負部 `Cb` を 1 増やす。 -/
+def sDecA (blank mark : Fin sc) (ts : Tapes sc) : List (Act sc) :=
+  if probe blank ts.Ca = mark then
+    [Act.Ca blank .left, Act.Ca mark .right, Act.Cb blank .right]
+  else [Act.Ca blank .left, Act.Ca blank .stay]
+
+/-- `B` を 1 減らす：正部 `Cd` が非零ならそれを 1 減らし、零なら負部 `Cc` を 1 増やす。 -/
+def sDecB (blank mark : Fin sc) (ts : Tapes sc) : List (Act sc) :=
+  if probe blank ts.Cd = mark then
+    [Act.Cd blank .left, Act.Cd mark .right, Act.Cc blank .right]
+  else [Act.Cd blank .left, Act.Cd blank .stay]
+
+theorem sDecA_length_le (blank mark : Fin sc) (ts : Tapes sc) :
+    (sDecA blank mark ts).length ≤ 3 := by rw [sDecA]; split <;> simp
+
+theorem sDecB_length_le (blank mark : Fin sc) (ts : Tapes sc) :
+    (sDecB blank mark ts).length ≤ 3 := by rw [sDecB]; split <;> simp
+
+theorem applyActs_sDecA_zero {ts : Tapes sc} (h : probe blank ts.Ca = mark) :
+    applyActs blank (sDecA blank mark ts) ts =
+      { ts with
+        Ca := Tape.step blank (Tape.step blank ts.Ca blank .left) mark .right
+        Cb := Tape.step blank ts.Cb blank .right } := by
+  rw [sDecA, if_pos h]; rfl
+
+theorem applyActs_sDecA_pos {ts : Tapes sc} (h : ¬ probe blank ts.Ca = mark) :
+    applyActs blank (sDecA blank mark ts) ts =
+      { ts with
+        Ca := Tape.step blank (Tape.step blank ts.Ca blank .left) blank .stay } := by
+  rw [sDecA, if_neg h]; rfl
+
+theorem applyActs_sDecB_zero {ts : Tapes sc} (h : probe blank ts.Cd = mark) :
+    applyActs blank (sDecB blank mark ts) ts =
+      { ts with
+        Cd := Tape.step blank (Tape.step blank ts.Cd blank .left) mark .right
+        Cc := Tape.step blank ts.Cc blank .right } := by
+  rw [sDecB, if_pos h]; rfl
+
+theorem applyActs_sDecB_pos {ts : Tapes sc} (h : ¬ probe blank ts.Cd = mark) :
+    applyActs blank (sDecB blank mark ts) ts =
+      { ts with
+        Cd := Tape.step blank (Tape.step blank ts.Cd blank .left) blank .stay } := by
+  rw [sDecB, if_neg h]; rfl
+
+/-- **`sDecA` は `A` をちょうど 1 減らす**（符号つきの意味で）。他のテープは不変。 -/
+theorem sDecA_enc (hmark : mark ≠ blank) {a b : ℕ} {c : Ctr} {g : Ctr3} {ts : Tapes sc}
+    (hE : EncS blank startSym endSym mark x a b c g ts) :
+    EncS blank startSym endSym mark x a b c
+      ⟨g.ap - 1, g.an + (if g.ap = 0 then 1 else 0), g.bn⟩
+      (applyActs blank (sDecA blank mark ts) ts) := by
+  obtain ⟨hb, hca, hcb, hcc⟩ := hE
+  by_cases h : probe blank ts.Ca = mark
+  · have hz : g.ap = 0 := (probe_iff hmark hca).1 h
+    have hca0 : Tape.CounterView' blank mark ts.Ca 0 := by rw [← hz]; exact hca
+    have e1 : g.ap - 1 = 0 := by omega
+    rw [applyActs_sDecA_zero h]
+    refine ⟨⟨hb.v1, hb.v2, hb.cd, hb.cq, hb.ce, hb.cp, hb.cf, hb.cs, hb.cr⟩, ?_, ?_, hcc⟩
+    · show Tape.CounterView' blank mark _ (g.ap - 1)
+      rw [e1]
+      simpa using Tape.counter'_dec_zero hca0
+    · show Tape.CounterView' blank mark _ (g.an + (if g.ap = 0 then 1 else 0))
+      rw [if_pos hz]
+      simpa using Tape.counter'_inc hcb
+  · have hz : g.ap ≠ 0 := fun hc => h ((probe_iff hmark hca).2 hc)
+    obtain ⟨m, hm⟩ : ∃ m, g.ap = m + 1 := ⟨g.ap - 1, by omega⟩
+    rw [applyActs_sDecA_pos h]
+    refine ⟨⟨hb.v1, hb.v2, hb.cd, hb.cq, hb.ce, hb.cp, hb.cf, hb.cs, hb.cr⟩, ?_, ?_, hcc⟩
+    · show Tape.CounterView' blank mark _ (g.ap - 1)
+      rw [hm]
+      simpa using Tape.counter'_dec (n := m) (by rw [← hm]; exact hca)
+    · show Tape.CounterView' blank mark ts.Cb (g.an + (if g.ap = 0 then 1 else 0))
+      rw [if_neg hz]
+      simpa using hcb
+
+/-- **`sDecB` は `B` をちょうど 1 減らす**（符号つきの意味で）。他のテープは不変。 -/
+theorem sDecB_enc (hmark : mark ≠ blank) {a b : ℕ} {c : Ctr} {g : Ctr3} {ts : Tapes sc}
+    (hE : EncS blank startSym endSym mark x a b c g ts) :
+    EncS blank startSym endSym mark x a b
+      ⟨c.d - 1, c.q, c.e, c.p, c.f, c.s, c.r⟩
+      ⟨g.ap, g.an, g.bn + (if c.d = 0 then 1 else 0)⟩
+      (applyActs blank (sDecB blank mark ts) ts) := by
+  obtain ⟨hb, hca, hcb, hcc⟩ := hE
+  by_cases h : probe blank ts.Cd = mark
+  · have hz : c.d = 0 := (probe_iff hmark hb.cd).1 h
+    have hcd0 : Tape.CounterView' blank mark ts.Cd 0 := by rw [← hz]; exact hb.cd
+    have e1 : c.d - 1 = 0 := by omega
+    rw [applyActs_sDecB_zero h]
+    refine ⟨⟨hb.v1, hb.v2, ?_, hb.cq, hb.ce, hb.cp, hb.cf, hb.cs, hb.cr⟩, hca, hcb, ?_⟩
+    · show Tape.CounterView' blank mark _ (c.d - 1)
+      rw [e1]
+      simpa using Tape.counter'_dec_zero hcd0
+    · show Tape.CounterView' blank mark _ (g.bn + (if c.d = 0 then 1 else 0))
+      rw [if_pos hz]
+      simpa using Tape.counter'_inc hcc
+  · have hz : c.d ≠ 0 := fun hc => h ((probe_iff hmark hb.cd).2 hc)
+    obtain ⟨m, hm⟩ : ∃ m, c.d = m + 1 := ⟨c.d - 1, by omega⟩
+    rw [applyActs_sDecB_pos h]
+    refine ⟨⟨hb.v1, hb.v2, ?_, hb.cq, hb.ce, hb.cp, hb.cf, hb.cs, hb.cr⟩, hca, hcb, ?_⟩
+    · show Tape.CounterView' blank mark _ (c.d - 1)
+      rw [hm]
+      simpa using Tape.counter'_dec (n := m) (by rw [← hm]; exact hb.cd)
+    · show Tape.CounterView' blank mark ts.Cc (g.bn + (if c.d = 0 then 1 else 0))
+      rw [if_neg hz]
+      simpa using hcc
+
+/-- **符号つき 1 減算は `SignedOK` を `q → q+1` へ進める**。 -/
+theorem signedOK_step {k r p q : ℕ} {c : Ctr} {g : Ctr3} (hok : SignedOK k r p q c g) :
+    SignedOK k r p (q + 1)
+      ⟨c.d - 1, c.q, c.e, c.p, c.f, c.s, c.r⟩
+      ⟨g.ap - 1, g.an + (if g.ap = 0 then 1 else 0), g.bn + (if c.d = 0 then 1 else 0)⟩ := by
+  obtain ⟨h1, h2, h3, h4⟩ := hok
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · show g.ap - 1 = r - (p + (q + 1))
+    omega
+  · show g.an + (if g.ap = 0 then 1 else 0) = (p + (q + 1)) - r
+    split_ifs <;> omega
+  · show c.d - 1 = (k - 1) * p - ((q + 1) + 1)
+    omega
+  · show g.bn + (if c.d = 0 then 1 else 0) = ((q + 1) + 1) - (k - 1) * p
+    split_ifs <;> omega
 
 /-- 第 2 相の内側中断オラクル（`Cr`, `Cp`, `Cq` の読み出しだけで決まる）。 -/
 def orcR (k : ℕ) (ts : Tapes sc) : Bool :=
