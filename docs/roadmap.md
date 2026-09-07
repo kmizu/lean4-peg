@@ -27,6 +27,17 @@
 | T7 | `CFL ⊆ PEL`（マクロなしのプレーン PEG）——Ford (POPL 2004) が最初に予想した、T3とは別の古い未解決問題を文書化する。「解決済みの半分」（`PEL ⊄ CFL`）を機械証明し、「未解決の半分」（`CFLSubsetPELConjecture`）を`Prop`として正確に固定、反例候補（偶数長回文）を`Language`として定義する | `PEL ⊄ CFL`の機械証明＋未解決問題を`axiom`/未証明プレースホルダなしで`Prop`として文書化・監査green | ✅ 完了（`Cfg/OpenProblems.lean`：`IsPEL`定義＋`abc_isPEL`（aⁿbⁿcⁿはプレーンPEGで認識される、`S_char`からほぼ無料）＋`pel_not_subset_cfl`（`PEL ⊄ CFL`、機械証明）＋`CFLSubsetPELConjecture`（`theorem`ではなく`Prop`の`def`として未解決のまま明示、答えを主張しない）＋`EvenPalindromes`（反例候補の最有力語族を`Language`として厳密定義、CFGは構築せず）。なぜT2のCPS構成がこの問題に転用できないかを考察として明記——継続を実引数として渡すマクロ層固有の力に依存するため。`Audit.lean`に2定理追加、`make verify`フルグリーン） |
 | T7追撃 | `CFLSubsetPELConjecture`に実際に挑む——最も自然な構成（教科書的回文CFG`Pal → a Pal a \| b Pal b \| ε`をそのままPEGへ書き写す）を機械検証し、未解決のまま終わらせず具体的な理解を積み増す | 素朴な構成の不完全性・健全性を両方機械証明、監査green（証明できなかった場合も反例探索の過程を誠実に記録） | ✅ 完了（未解決問題自体は今回も解決していないが、最も自然な一手を精密に理解した：Python実装でlength 20まで全数探索し「偽陽性ゼロ・偽陰性多数」というsound-but-incompleteな性質を発見（`"aaaa"`が最短の偽陰性）。原因はPEGの優先選択が一度局所成功した部分導出に後戻りできない点——同一文字の連続で最内層の再帰が貪欲に閉じ、外側の対応する文字を奪う。`Shallot/Peg/Palindrome.lean`でこれを`palGrammar`として定式化し、`exists_palindrome_palGrammar_rejects`（`"aaaa"`という具体的反例での不完全性、`pegRun_complete`/`pegRun_mono_le`/`derives_det`の合わせ技）と`palGrammar_sound`/`palGrammar_accepts_only_palindromes`（入力長についての強帰納法による健全性の全称証明、`seq_inv`を再利用）を両方machine-checkedな定理として完成。2つ目の構成（`+`で同一文字連続を最大貪欲消費）も計算機で試したがより悪化（Lean形式化はせず）。`pegRun`のwell-founded再帰が`rfl`/`decide`で簡約詰まりする件は既知の罠なので`simp`ベースで対処（[[lean4-gotchas]]の教訓がそのまま活きた）。`Audit.lean`に3定理追加、`make verify`フルグリーン） |
 
+## 2026-09-03 追記: T7 の現状（外部結果）
+
+- **`CFL ⊆ PEL` は否定的に解決された**: Kim & Park, "Separating Parsing Expression Grammars using
+  Cell-Probe Lower Bounds" (arXiv:2608.29592, 2026-08-30) が、線形 CFL `C` で `C ∈ PEG` かつ
+  `Cᴿ ∉ PEG` となるものを構成（SCA をセルプローブ・データ構造に変換し、Ko の Multiphase Inner Product
+  下界を移す）。`CFLSubsetPELConjecture`（`Cfg/OpenProblems.lean`）は偽。
+- **T7 追撃で反例候補にしていた偶数長回文は PEL の側にある**: Galil 1978（real-time 多テープ TM による
+  回文認識）＋ Kim–Park の「real-time TM → SCA」コンパイラ＋ LMR の `L ∈ PEG ⇔ Lᴿ ∈ SCA` を
+  合成すると PAL ∈ PEG。LMR の Conjecture 7 はこの合成で偽になる。詳細と Lean（Kim–Park の
+  アーティファクト上で機械検証、Galil の定理のみ仮定）は `docs/notes/palindromes-in-peg/`。
+
 ## 未証明TODO（sorryの代わりにここに置く）
 
 （なし — 定理はここから「証明済み」へしか動かない）
