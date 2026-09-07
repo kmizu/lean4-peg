@@ -28,6 +28,7 @@ import PalPeg.VerifierFeed
 import PalPeg.StageMatcherTapes
 import PalPeg.InputCopy
 import PalPeg.PatternTapes
+import PalPeg.Prologue
 import PalPeg.BorderJob
 import PalPeg.BorderJobTapes
 import PalPeg.MiddleTapes
