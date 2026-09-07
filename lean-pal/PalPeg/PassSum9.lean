@@ -407,6 +407,49 @@ theorem runEnd_up_step_le {w : List α} {k p q P rj r' t Rc : ℕ} (hk : 4 ≤ k
     show t + (rj - t - q) = rj - q from by omega, show t + (rj - t) = rj from by omega]
   exact hbreak
 
+/-! ## §9.5 (E) の反例と、正しい形 (E_k)
+
+より深い自己相似語（`rec3.py` 系、開始位置 `s` もランダム）で測り直すと **(E) は偽**：
+`p_c = 300`, `t_j = 11`, `p_j = 37`, `E_j - a_{c+1} = 338 = p_c + p_j + 1` という
+反例がある（比 `1.027`）。一方 `C(c) < p_c` は依然として成立（実測 `max C/p_c = 0.907`、
+非自明な部分木を持つ閉じた節点 332 個を含む）。
+
+正しい弱形は `k` 倍の余裕を持つ **(E_k)**：
+
+> `E_j - a_{c+1} < p_c + k * p_j`（実測の最悪比は `1.027`、要求は `< 8`）
+
+そして (E_k) は次の二分律から出る：
+
+* `t_j < (k-1) * p_j` なら `inner_run_lt`（`r_j < p_c + p_j`）から
+  `E_j = t_j + r_j < p_c + k * p_j`；
+* `t_j ≥ (k-1) * p_j` なら **(H)**（`E_j < a_{c+1} + p_c`）から自明。
+
+したがって残る主張は **(H) ただ一つ**になった。 -/
+
+/-- **(E_k) ⟹ (C)**。最後の子孫 `ℓ` について `E_ℓ - a_{c+1} < p_c + k * p_ℓ` なら
+`C(c) = E_ℓ - a_{c+1} - k * p_ℓ + 1 ≤ p_c`。厳密不等号にはあと 1 セル必要
+（`consumption_lt_period_of_dichotomy` を使う）。 -/
+theorem consumption_le_period_of_runEndK {k p pl El C : ℕ}
+    (hE : El < p + k * pl) (hC : C + k * pl = El + 1) : C ≤ p := by omega
+
+/-- **二分律 (G)∨(H) ⟹ (C)**（`k = 8`）。最後の子孫 `ℓ` が
+
+* `t_ℓ < (k-1) * p_ℓ` かつ `r_ℓ < p_c + p_ℓ`（`inner_run_lt`）、または
+* `E_ℓ - a_{c+1} < p_c`（(H)）
+
+のいずれかを満たせば `C(c) < p_c`。前者では
+`E_ℓ ≤ t_ℓ + r_ℓ ≤ ((k-1) p_ℓ - 1) + (p_c + p_ℓ - 1) = p_c + k p_ℓ - 2`、
+後者では `E_ℓ < p_c ≤ p_c + k p_ℓ - 1`。いずれも `C = E_ℓ - k p_ℓ + 1 < p_c`。 -/
+theorem consumption_lt_period_of_dichotomy {k p pl tl rl C : ℕ} (hk : 4 ≤ k) (hpl : 0 < pl)
+    (_hp : 0 < p)
+    (hcase : (tl < (k - 1) * pl ∧ rl < p + pl) ∨ tl + rl < p)
+    (hC : C + k * pl = (tl + rl) + 1) : C < p := by
+  have h1 : (k - 1) * pl + pl = k * pl := by rw [← Nat.succ_mul]; congr 1; omega
+  have h2 : 1 * pl ≤ k * pl := Nat.mul_le_mul_right pl (by omega)
+  rcases hcase with ⟨ht, hr⟩ | h
+  · omega
+  · omega
+
 /-! ## §10 領域を跨ぐ子孫は、領域先頭の周期を規定する
 
 (H)（`t_j > (k-1) * p_j` なる子孫は `E_j < a_{c+1} + p_c`）を攻めるための道具。
@@ -491,5 +534,6 @@ open PalPeg.PassSum9
 #print axioms PalPeg.PassSum9.region_prefix_period
 #print axioms PalPeg.PassSum9.first_period_le_of_crossing
 #print axioms PalPeg.PassSum9.first_period_le_of_deep_crossing
+#print axioms PalPeg.PassSum9.consumption_lt_period_of_dichotomy
 #print axioms PalPeg.PassSum8.passPeriodSum_eight_of_hasTree
 end AxiomCheck
