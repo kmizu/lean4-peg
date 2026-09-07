@@ -10,6 +10,9 @@ import java.nio.file.{Files, Path, StandardCopyOption}
   * constants are experimental, not a claim of correctness for PAL.
   * `--expanded-only` retains the intermediate PEG with each letter repeated
   * `budget` times; the default applies inverse repetition to unchanged strings.
+  * The full combined inverse artifact is not covered by the bounded
+  * differential test because the unchanged Python oracle exhausts its recursive
+  * AST-registration limit on the 1.4-million-rule expanded grammar.
   */
 object GenerateGalilPeg {
   final case class Options(output: Path, quantum: Int = 64, matchDelay: Int = 256, budget: Int = 2048,
@@ -39,6 +42,13 @@ object GenerateGalilPeg {
     Emitted(output, count, Files.size(output))
   }
 
+  /** Apply the generator's inverse-repetition pass to an expanded PEG artifact. */
+  def emitInverse(expanded: Path, output: Path, budget: Int): Emitted = {
+    val source = PhasePeg.inverseRepeat(Files.readString(expanded, UTF_8), budget)
+    Files.writeString(output, source, UTF_8)
+    Emitted(output, source.linesIterator.size.toLong, source.getBytes(UTF_8).length.toLong)
+  }
+
   def generate(options: Options, report: String => Unit = println): Vector[Emitted] = {
     val intermediate = if (options.expandedOnly) { options.output } else { withSuffix(options.output, ".expanded.peg") }
     val expanded = {
@@ -51,9 +61,7 @@ object GenerateGalilPeg {
     }
     report(s"emitted ${expanded.path}: ${expanded.rules} rules, ${expanded.bytes} bytes")
     val emitted = if (options.expandedOnly) { Vector(expanded) } else {
-      val source = PhasePeg.inverseRepeat(Files.readString(intermediate, UTF_8), options.budget)
-      Files.writeString(options.output, source, UTF_8)
-      val result = Emitted(options.output, source.linesIterator.size.toLong, source.getBytes(UTF_8).length.toLong)
+      val result = emitInverse(intermediate, options.output, options.budget)
       report(s"emitted ${result.path}: ${result.rules} rules, ${result.bytes} bytes")
       Vector(expanded, result)
     }

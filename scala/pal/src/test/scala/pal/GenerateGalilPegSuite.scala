@@ -44,20 +44,40 @@ class GenerateGalilPegSuite extends munit.FunSuite {
     }
   }
 
-  test("full fixed-arrival generator: expanded and inverse-repeated PEGs match Python byte for byte") {
+  test("full fixed-arrival generator: expanded PEG matches Python byte for byte") {
     inDirectory { directory =>
+      val scalaOutput = directory.resolve("scala.expanded.peg")
+      val pythonOutput = directory.resolve("python.expanded.peg")
+      val outputs = GenerateGalilPeg.generate(GenerateGalilPeg.Options(scalaOutput, quantum = 1, matchDelay = 2,
+        budget = 2, rawInstructions = true, omitInvariantMonitors = true, expandedOnly = true), _ => ())
+      assertEquals(outputs.size, 1)
+      PyDiff.python("generate_galil_peg.py", pythonOutput.toString, "--quantum", "1", "--match-delay", "2",
+        "--budget", "2", "--raw-instructions", "--omit-invariant-monitors", "--expanded-only")
+      // Stream both 50 MB artifacts: this checks every byte, not only lengths or digests.
+      assertEquals(Files.mismatch(scalaOutput, pythonOutput), -1L, scalaOutput.getFileName.toString)
+    }
+  }
+
+  test("generator inverse emitter matches unchanged Python on a bounded scaffold artifact") {
+    inDirectory { directory =>
+      val (_, _, machine) = TestScaffoldCircuitProgram.fixture()
+      val expanded = directory.resolve("bounded.expanded.peg")
       val scalaOutput = directory.resolve("scala.peg")
       val pythonOutput = directory.resolve("python.peg")
-      val outputs = GenerateGalilPeg.generate(GenerateGalilPeg.Options(scalaOutput, quantum = 1, matchDelay = 2,
-        budget = 2, rawInstructions = true, omitInvariantMonitors = true), _ => ())
-      assertEquals(outputs.size, 2)
-      PyDiff.python("generate_galil_peg.py", pythonOutput.toString, "--quantum", "1", "--match-delay", "2",
-        "--budget", "2", "--raw-instructions", "--omit-invariant-monitors")
-      val pairs = Vector(outputs.head.path -> directory.resolve("python.expanded.peg"), scalaOutput -> pythonOutput)
-      for ((actual, expected) <- pairs) {
-        // Stream both files: this checks every byte, not only lengths or digests.
-        assertEquals(Files.mismatch(actual, expected), -1L, actual.getFileName.toString)
-      }
+      GenerateGalilPeg.emitExpanded(machine, expanded)
+      val emitted = GenerateGalilPeg.emitInverse(expanded, scalaOutput, budget = 2)
+      val scalaSource = Files.readString(scalaOutput, UTF_8)
+      assertEquals(emitted.path, scalaOutput)
+      assertEquals(emitted.rules, scalaSource.linesIterator.size.toLong)
+      assertEquals(emitted.bytes, Files.size(scalaOutput))
+      // Raise only the test process's recursion resource limit: the unchanged
+      // Python oracle registers this AST recursively, while Scala tests likewise
+      // use an explicit 512 MiB thread stack in sbt. Its script and algorithm stay unchanged.
+      PyDiff.python("-c",
+        "import sys; sys.setrecursionlimit(100000); from pathlib import Path; from phase_peg import inverse_repeat; " +
+          "source, output = map(Path, __import__('sys').argv[1:]); output.write_text(inverse_repeat(source.read_text(), 2))",
+        expanded.toString, pythonOutput.toString)
+      assertEquals(Files.mismatch(scalaOutput, pythonOutput), -1L, scalaOutput.getFileName.toString)
     }
   }
 }
