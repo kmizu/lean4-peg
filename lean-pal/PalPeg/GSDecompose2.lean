@@ -20,6 +20,7 @@ namespace PalPeg
 
 universe u
 variable {α : Type u} [DecidableEq α]
+set_option linter.unusedSectionVars false
 
 /-! ## `secondPeriod` が成功したときの仕様 -/
 
@@ -389,5 +390,250 @@ theorem decompose2_ksimple {k : ℕ} (hk : 4 ≤ k) (x : List α)
     (hp₁ : (decompose2 x k).2.1 ≠ 0) :
     KSimple (x.drop (decompose2 x k).1) k (decompose2 x k).2.1 (decompose2 x k).2.2 :=
   (decompose2_gsDecomp hk x).ksimple hp₁
+
+/-! ## 仕事量カウンタ
+
+`PalPeg.GSPreprocess` の `stripLoopWork` / `decomposeLoopWork` / `decomposeWork` を
+`stripLoop2` 版に写したもの。`stripLoop2` は 1 反復ごとに `firstOuter` の走査に加えて
+`extendReach` の伸長も行うので、その分もカウントする。 -/
+
+def stripLoop2Work (x : List α) (k bound : ℕ) : ℕ → ℕ → ℕ
+  | 0, _ => 0
+  | fuel + 1, s =>
+      firstOuterWork (x.drop s) k bound (x.length + 1) 1 +
+        (match firstOuter (x.drop s) k bound (x.length + 1) 1 with
+         | none => 0
+         | some (p, _) =>
+             extendReachWork (x.drop s) p (x.length + 1) (k * p) +
+               stripLoop2Work x k bound fuel
+                 (s + (extendReach (x.drop s) p (x.length + 1) (k * p) - k * p + 1)))
+
+def decomposeLoop2Work (x : List α) (k : ℕ) : ℕ → ℕ → ℕ
+  | 0, _ => 0
+  | fuel + 1, s =>
+      decomposeStepWork x k s +
+        (match firstPeriod (x.drop s) k with
+         | none => 0
+         | some (p₁, m) =>
+             match secondPeriod (x.drop s) k p₁ (extendReach (x.drop s) p₁ (x.length + 1) m) with
+             | none => 0
+             | some p₂ =>
+                 stripLoop2Work x k p₂ (x.length + 1) s +
+                   decomposeLoop2Work x k fuel (stripLoop2 x k p₂ (x.length + 1) s))
+
+/-- **仕事量カウンタ**（`decompose2` 全体）。 -/
+def decompose2Work (x : List α) (k : ℕ) : ℕ := decomposeLoop2Work x k (x.length + 1) 0
+
+/-! ### 仕事量解析の現状
+
+1 反復あたりの内訳は次の 2 つで、後者は前進量に telescoping する：
+
+* `firstOuterWork (x.drop aⱼ) k T (|x|+1) 1 ≤ (2k+1)*pⱼ + 2`（`firstOuterWork_le_some`）、
+* `extendReachWork (x.drop aⱼ) pⱼ (|x|+1) (k*pⱼ) ≤ dⱼ + 1`（`extendReachWork_le'`、
+  `dⱼ = rⱼ - k*pⱼ + 1`）。
+
+`Σⱼ dⱼ` は 1 パスの前進量なので `stripLoop2_lt_second` より `< T`、反復回数も
+`dⱼ ≥ 1` より `< T`。したがって
+
+`1 パスの仕事 ≤ (2k+1) * Σⱼ pⱼ + 4*T`
+
+まで無条件に落ちる。残るのは **`Σⱼ pⱼ = O(T)`** のみで、これは未解決である
+（下の反例を参照）。 -/
+
+/-! ### 反例：連続する run の重なりは `pⱼ + pⱼ₊₁` 未満とは限らない
+
+`w = (b a⁹)⁴`（`b = 1`, `a = 0`, `k = 4`, `|w| = 40`）では
+
+* `p₀ = 10`（最小 4-繰り返し周期）、`r₀ = 40`、`d₀ = r₀ - k*p₀ + 1 = 1`、
+* `p₁ = 1`（`w.drop 1` の最小 4-繰り返し周期）
+
+なので重なり `k*p₀ - d₀ = 39` に対し `p₀ + p₁ = 11` であり `39 < 11` は成り立たない。
+（重なりのうち両方の周期を担うのは `min (k*p₀ - d₀) (k*p₁) = 4` 文字だけで、
+Fine–Wilf に要る `p₀ + p₁ - gcd = 10` に届かない。）
+同時に `(k-1)*p₀ = 30 < d₀ + p₁ = 2` も偽なので、
+`(k-2) * Σⱼ pⱼ < Σⱼ dⱼ + p_N` 型の総和評価はこの経路からは出ない。 -/
+
+/-- 反例の語。 -/
+def cexWord : List ℕ := (List.replicate 4 (1 :: List.replicate 9 0)).flatten
+
+example : cexWord.length = 40 := by decide
+
+example : firstPeriod cexWord 4 = some (10, 40) := by decide
+
+example : extendReach cexWord 10 (cexWord.length + 1) 40 = 40 := by decide
+
+example : firstPeriod (cexWord.drop 1) 4 = some (1, 4) := by decide
+
+/-! ## 入れ子木（nesting tree）の 2 本の補題
+
+1 パスの run 開始位置 `aⱼ`、最小周期 `pⱼ`、到達域 `rⱼ`、窓 `Wⱼ = [aⱼ, aⱼ + k*pⱼ)`、
+周期領域 `Rⱼ = [aⱼ, aⱼ + rⱼ)` に対し
+
+* **(A) 子**：`Wⱼ' ⊆ Rⱼ` かつ `pⱼ' ≠ pⱼ` なら `(k-1) * pⱼ' < pⱼ`；
+* **(B) 兄弟**：`aⱼ' < aⱼ + rⱼ` かつ `Wⱼ' ⊄ Rⱼ` なら `(aⱼ + rⱼ) - aⱼ' < pⱼ + pⱼ'`。
+
+反例 `(b a⁹)⁴` は (A) の側（`p=1` の窓が `p=10` の領域の内側）なので (B) の
+重なり制約は掛からない、という区別がここで効く。 -/
+
+/-- **内側ブロックの伝播**。周期 `p` の領域 `[0, r)` の内側に、長さ `p + g` 以上で
+周期 `g`（`g ∣ p`）のブロックがあれば、領域全体が周期 `g` を持つ。
+
+証明：`p`-周期性で添字を `p` で割った余りに落とし、ブロック `[t, t+L)` の中の
+代表元へ移してからブロックの `g`-周期性を使う。 -/
+theorem hasPeriod_of_inner_block {w : List α} {p g t L r : ℕ}
+    (hp : 0 < p) (hgp : g ∣ p)
+    (hper : HasPeriod (w.take r) p) (hr : r ≤ w.length)
+    (htL : t + L ≤ r) (hL : p + g ≤ L)
+    (hblock : HasPeriod ((w.drop t).take L) g) :
+    HasPeriod (w.take r) g := by
+  have hgp' : g ≤ p := Nat.le_of_dvd hp hgp
+  have hulen : (w.take r).length = r := by simp only [List.length_take]; omega
+  intro i hi
+  rw [hulen] at hi
+  -- ブロック内の代表元 `b`（`b ≡ i (mod p)`, `t ≤ b < t + p`）
+  have hdm := Nat.div_add_mod t p
+  have hmlt : t % p < p := Nat.mod_lt _ hp
+  have hilt : i % p < p := Nat.mod_lt _ hp
+  obtain ⟨b, hbt, hbp, hbmod⟩ : ∃ b, t ≤ b ∧ b < t + p ∧ b % p = i % p := by
+    by_cases hc : i % p < t % p
+    · refine ⟨p * (t / p) + i % p + p, by omega, by omega, ?_⟩
+      have he : p * (t / p) + i % p + p = p * (t / p + 1) + i % p := by ring
+      rw [he, Nat.mul_add_mod, Nat.mod_eq_of_lt hilt]
+    · refine ⟨p * (t / p) + i % p, by omega, by omega, ?_⟩
+      rw [Nat.mul_add_mod, Nat.mod_eq_of_lt hilt]
+  have hbr : b + g < r := by omega
+  -- 各点を `w` の添字に直す
+  have htake : ∀ j, j < r → (w.take r)[j]? = w[j]? := by
+    intro j hj; exact List.getElem?_take_of_lt hj
+  have hmod : ∀ j, j < r → w[j]? = w[j % p]? := by
+    intro j hj
+    have h := hasPeriod_getElem?_mod hper (by rw [hulen]; exact hj)
+    have hjp : j % p < r := lt_of_lt_of_le (Nat.mod_lt _ hp) (by omega)
+    rw [htake (j % p) hjp, htake j hj] at h
+    exact h.symm
+  -- ブロックの `g`-周期性
+  have hbg : w[b]? = w[b + g]? := by
+    have h := hblock (b - t) (by rw [List.length_take, List.length_drop]; omega)
+    rw [List.getElem?_take_of_lt (show b - t < L by omega),
+      List.getElem?_take_of_lt (show b - t + g < L by omega),
+      List.getElem?_drop, List.getElem?_drop,
+      show t + (b - t) = b from by omega,
+      show t + (b - t + g) = b + g from by omega] at h
+    exact h
+  have hmodeq : (b + g) % p = (i + g) % p := by
+    rw [Nat.add_mod b g p, Nat.add_mod i g p, hbmod]
+  rw [htake _ (by omega), htake _ (by omega), hmod i (by omega), hmod (i + g) (by omega),
+    ← hbmod, ← hmodeq, ← hmod b (by omega), ← hmod (b + g) (by omega)]
+  exact hbg
+
+/-- **核となる補題**。最小 `k`-繰り返し周期 `p`・到達域 `r` の領域 `[0, r)` の内側に、
+長さ `p + q` 以上の周期 `q` の窓があれば `p ∣ q`。 -/
+theorem dvd_of_inner_window {w : List α} {k p q t L r : ℕ} (_hk : 2 ≤ k)
+    (hleast : IsLeastKRep w k p) (hR : ReachOf w p r) (hkr : k * p ≤ r)
+    (hq : 0 < q) (htL : t + L ≤ r) (hpqL : p + q ≤ L)
+    (hwin : HasPeriod ((w.drop t).take L) q) : p ∣ q := by
+  have hp : 0 < p := hleast.1.1
+  have hrle : r ≤ w.length := hR.1
+  have hwlen : ((w.drop t).take L).length = L := by
+    rw [List.length_take, List.length_drop]; omega
+  have hwp : HasPeriod ((w.drop t).take L) p :=
+    hasPeriod_take_of_le (hasPeriod_drop_take hR.2.1 hrle (by omega)) (by omega)
+  have hgle : Nat.gcd p q ≤ p := Nat.gcd_le_left _ hp
+  have hgq : Nat.gcd p q ≤ q := Nat.gcd_le_right _ hq
+  have hgpos : 0 < Nat.gcd p q := Nat.gcd_pos_of_pos_left _ hp
+  have hg := fineWilf hwp hwin hp hq (by rw [hwlen]; omega)
+  have hall : HasPeriod (w.take r) (Nat.gcd p q) :=
+    hasPeriod_of_inner_block hp (Nat.gcd_dvd_left p q) hR.2.1 hrle htL (by omega) hg
+  have hgeq : Nat.gcd p q = p := by
+    by_contra hne
+    have hlt : Nat.gcd p q < p := by omega
+    have hkg : k * Nat.gcd p q ≤ k * p := Nat.mul_le_mul_left k (by omega)
+    have hkrep : KRep w k (Nat.gcd p q) :=
+      ⟨hgpos, by omega, hasPeriod_take_of_le hall (by omega)⟩
+    have := hleast.2 _ hkrep
+    omega
+  rw [← hgeq]; exact Nat.gcd_dvd_right p q
+
+/-- **(A) 子の周期の上界**。子の窓 `[t, t + k*q)` が親の周期領域 `[0, r)` に収まり、
+かつ `q ≠ p` なら `(k-1) * q < p`。 -/
+theorem child_period_bound {w : List α} {k p q t r : ℕ} (hk : 4 ≤ k)
+    (hleast : IsLeastKRep w k p) (hR : ReachOf w p r) (hkr : k * p ≤ r)
+    (hq : IsLeastKRep (w.drop t) k q) (hfit : t + k * q ≤ r) (hne : q ≠ p) :
+    (k - 1) * q < p := by
+  by_contra hcon
+  have hqpos : 0 < q := hq.1.1
+  have hppos : 0 < p := hleast.1.1
+  have hsub : (k - 1) * q + q = k * q := by
+    have h1 := Nat.sub_one_mul k q
+    have h2 : q ≤ k * q := Nat.le_mul_of_pos_left q (by omega)
+    omega
+  have hpq : p + q ≤ k * q := by omega
+  have hdvd : p ∣ q :=
+    dvd_of_inner_window (by omega) hleast hR hkr hqpos hfit hpq hq.1.2.2
+  have hple : p ≤ q := Nat.le_of_dvd hqpos hdvd
+  -- 子の窓は親の `p`-周期領域の内側なので `p`-周期的でもある
+  have hkple : k * p ≤ k * q := Nat.mul_le_mul_left k hple
+  have hpwin : HasPeriod ((w.drop t).take (k * q)) p :=
+    hasPeriod_take_of_le (hasPeriod_drop_take hR.2.1 hR.1 (by omega)) (by omega)
+  have hkrep : KRep (w.drop t) k p :=
+    ⟨hppos, by rw [List.length_drop]; have := hR.1; omega,
+      hasPeriod_take_of_le hpwin hkple⟩
+  have := hq.2 _ hkrep
+  omega
+
+/-- **(B) 兄弟の重なりの上界**。`t` が親の周期領域の内側 (`t < r`) でありながら
+子の窓がそこに収まらない (`r < t + k*q`) なら、重なり `r - t` は `p + q` 未満。 -/
+theorem sibling_overlap_lt {w : List α} {k p q t r : ℕ} (hk : 4 ≤ k)
+    (hleast : IsLeastKRep w k p) (hR : ReachOf w p r) (hkr : k * p ≤ r)
+    (hq : IsLeastKRep (w.drop t) k q) (htr : t < r) (hnfit : r < t + k * q) :
+    r - t < p + q := by
+  by_contra hcon
+  have hL : p + q ≤ r - t := by omega
+  have hqpos : 0 < q := hq.1.1
+  have hppos : 0 < p := hleast.1.1
+  have hrle : r ≤ w.length := hR.1
+  have hqwin : HasPeriod ((w.drop t).take (r - t)) q :=
+    hasPeriod_take_of_le hq.1.2.2 (by omega)
+  have hdvd : p ∣ q :=
+    dvd_of_inner_window (by omega) hleast hR hkr hqpos (by omega) hL hqwin
+  have hple : p ≤ q := Nat.le_of_dvd hqpos hdvd
+  -- 窓 `[t, t + k*q)` の長さ `q` の接頭辞は `p`-周期的、`p ∣ q` なので窓全体が `p`-周期的
+  have hpre : HasPeriod (((w.drop t).take (k * q)).take q) p := by
+    have h1 : ((w.drop t).take (k * q)).take q = (w.drop t).take q := by
+      rw [List.take_take]; congr 1
+      have : q ≤ k * q := Nat.le_mul_of_pos_left q (by omega)
+      omega
+    rw [h1]
+    exact hasPeriod_take_of_le (hasPeriod_drop_take hR.2.1 hrle (by omega)) (by omega)
+  have hpall : HasPeriod ((w.drop t).take (k * q)) p :=
+    hasPeriod_of_prefix_dvd hq.1.2.2 hqpos hdvd hpre
+  have hkple : k * p ≤ k * q := Nat.mul_le_mul_left k hple
+  have hkrep : KRep (w.drop t) k p :=
+    ⟨hppos, le_trans hkple hq.1.2.1, hasPeriod_take_of_le hpall hkple⟩
+  have hqp : q ≤ p := hq.2 _ hkrep
+  have hqeq : q = p := by omega
+  subst hqeq
+  -- `p`-周期性が到達域 `r` を越えて伸びてしまう
+  have hlenw : t + k * q ≤ w.length := by
+    have := hq.1.2.1; rw [List.length_drop] at this; omega
+  have hglue : HasPeriod (w.take (t + k * q)) q :=
+    hasPeriod_glue hR.2.1 hq.1.2.2 (by omega) (by omega) hlenw
+  have hr1 : HasPeriod (w.take (r + 1)) q := hasPeriod_take_of_le hglue (by omega)
+  rcases hR.2.2 with h | h
+  · omega
+  · exact h hr1
+
+/-! ### 残る構造帰納法
+
+(A)(B) から、親（周期 `P`、領域長 `r < P + T'`）の直下にある run 開始位置は
+「その領域内で連続する兄弟」であり、(B) より隣接する兄弟の間隔は
+`> r' - P - p'` で下から抑えられ、(A) より各子の周期は `< P/(k-1)`。
+よって `Σ(子の周期) ≤ (r + P/(k-1))/(k-2)` となり、周期についての強帰納法で
+`total(P) ≤ C * P` が従う。パスの最上位では「親」を `T`-周期領域そのもの
+（周期 `T`、根が原始的）とみなせばよい。
+
+この構造帰納法（木の形式化と `Σⱼ pⱼ ≤ C₁ * T` の証明）は未着手であり、
+`decompose2Work_le` はまだ述べていない。上の「1 パスの仕事 ≤ (2k+1) * Σⱼ pⱼ + 4*T」
+と合わせれば、`decomposeWork_le` と同じ幾何級数の総和で線形性が出る。 -/
 
 end PalPeg
