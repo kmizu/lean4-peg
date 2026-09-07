@@ -317,3 +317,15 @@ lake build
   のみ）を追加したが、`consumption_lt_period`（翻訳像 → Fine–Wilf 矛盾の場合分け）は
   本セッションでは組み上がらず、**新しい証明済み定理は追加できなかった**。唯一残る課題は
   依然として `PassSum8.PassHasTree`。
+- 進捗（2026-09-09 早朝、コミット 461ca0c 以降）：
+  * **`PassPeriodSum` の現在地（PassSum9）**：走行終端不変量 (E)「c の子孫 j は E_j < a_{c+1} + p_c + p_j」で
+    C(c) < p_c と子孫開始位置の上界が出る（証明済）。(E) の DOWN 側は証明済（`runEnd_down_step`）、UP 側は
+    「P + q ≤ r_j」の場合のみ証明済（`runEnd_up_step_le`、Fine–Wilf の周期伝播エンジン
+    `period_factor_propagate`）。**残る唯一の命題**：UP 側で r_j < P + q（実測 96% のケース）のとき、
+    最鋭の形は t + P ≤ p_c（t = 子孫の開始オフセット；実測 t ≤ 0.23(p_c − P)、(E) の実測スラックは 2–3 セル）。
+    「span_i ≤ q_{i+1}」（前回の帰着）は偽（u = 0^m 1 (0^7 1)^8 w で反例、実測比 2.88）。
+  * **有限制御化**：`setupProgL`（入力非依存の段セットアップ、カウンタ駆動＋左番兵、`VEncodes'` 到達）完成。
+    検証器は融合巻き戻し `uxWalk` まで完成（Prog 実現 `shiftProg`/`vprogX` は作業中）。BorderJob は uBack 済、
+    periodActs/resetWalk 作業中。**`DecompOnTapes` は充足不能と判明**（`Act` に P/U 書き込みがない；
+    `decompOnTapes_isEmpty`）→ `Pset`/`Uset` 構成子を追加中。`PrepOnTapes` に禁止記号パラメータと
+    `len_le` の前提条件を追加（費用はテープ内容依存のため）。TextFeed は `fill'`（横断書き込み）が作業中。
