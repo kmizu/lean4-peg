@@ -96,6 +96,91 @@ object PyDiff {
   read, edge, present`、`neg, conjunction, disjunction, choose, choosePointer`）。
   `Scaffold`/`Circuit` のメソッドも Python 名を camelCase 化。実装後、この Produces 節に
   実際のシグネチャを追記すること。
+- **実装済み API（2026-09-07、`scala/pal/src/main/scala/pal/`）**。すべて `package pal`。
+  Python の 1 文字 str（入力記号）は `Char`、Python `None`（値域の要素）は Scala `None`、
+  `ValueError` は `IllegalArgumentException`（メッセージは Python と同一）。
+  ```scala
+  // SymbolicSca2Peg.scala
+  sealed abstract class Expr { def tag: String; def args: Vector[Any] }   // hashCode はキャッシュ、equals は同一性ショートカット付き
+  object Expr {
+    case class Const(value: Boolean); case class Symbol(char: Char); case object Self; case object Null
+    case class Old(path: Vector[String], label: String); case class Exists(path: Vector[String])
+    case class Not(value: Expr); case class And(values: Vector[Expr]); case class Or(values: Vector[Expr])
+    case class Pointer(path: Vector[String]); case class Select(condition: Expr, yes: Expr, no: Expr)
+    case class Read(target: Expr, label: String); case class Edge(target: Expr, field: String); case class Present(target: Expr)
+    val TRUE, FALSE, SELF, NULL: Expr
+    def symbol(char: Char): Expr; def old(path: Seq[String], label: String): Expr; def exists(path: Seq[String]): Expr
+    def negate(value: Expr): Expr; def both(values: Expr*): Expr; def either(values: Expr*): Expr
+    def pointer(path: Seq[String]): Expr; def select(condition: Expr, yes: Expr, no: Expr): Expr
+    def read(target: Expr, label: String): Expr; def edge(target: Expr, field: String): Expr; def present(target: Expr): Expr
+    def make(tag: String, args: Seq[Any]): Expr            // scaffold_artifact 用の (tag, *args) からの再構成
+    def share[A](body: => A): A                            // share_expressions()（ネスト可）
+    def clearExpressionCache(): Unit; def sharing: Boolean; def intern[E <: Expr](expr: E): E
+  }
+  final class Node(var labels: VectorMap[String, Boolean], var pointers: VectorMap[String, Option[Node]])
+  final class Scaffold(initial: Iterable[(String, Boolean)], labels: Iterable[(String, Expr)],
+                       pointers: Iterable[(String, Expr)], val accepting: String, val alphabet: String = "ab") {
+    val initial: VectorMap[String, Boolean]; val labels, pointers: VectorMap[String, Expr]
+    def run(word: String): Boolean; def initialNode(): Node; def evaluate(word: String): Option[Node]
+    def step(root: Node, char: Char): Option[Node]; def compile(): String; def iterRules(): Iterator[String]
+  }
+  // PhasePeg.scala
+  object PhasePeg { val EMPTY: PegAst; def literal(c: Char): String; def inverseRepeat(source: String, width: Int, start: String = "S"): String }
+  sealed abstract class PegAst { val identity: Int }   // Empty, Terminal(char), AnyChar, Ref(name), Sequence, Choice, NotPredicate, AndPredicate, Star
+  final class CompactMemo(length: Int) { val width: Int; val kind: String /* "H" | "Q" */; def get(identity: Int, position: Int, default: Int = -1): Int; def update(identity: Int, position: Int, value: Int): Unit }
+  class Grammar protected (val rules: collection.Map[String, PegAst], val start: String) {
+    def this(source: String, start: String = "S")
+    def accepts(word: String, compact: Boolean = false): Boolean; def parsePrefix(word: String, compact: Boolean = false): Option[Int]
+  }
+  object Grammar { def parseRules(source: String, start: String): VectorMap[String, PegAst] }
+  // ScaffoldCircuit.scala
+  object ScaffoldCircuit { def neg(a: Expr): Expr; def conjunction(args: Expr*): Expr; def disjunction(args: Expr*): Expr
+                           def choose(guard: Expr, yes: Expr, no: Expr): Expr; def choosePointer(guard: Expr, yes: Expr, no: Expr): Expr }
+  final class Value[+A] { val domain: Vector[A]; val bits: Vector[Expr]; val valid: Expr
+    def cases: Vector[(A, Expr)]; def eqTo(value: Any): Expr /* Python eq */; def recode[B >: A](domain: Seq[B]): Value[B]
+    def map[B](f: A => B): Value[B]; def cycle(direction: Int = 1): Value[A]; def equal(other: Value[?]): Expr }
+  object Value { def apply[A](cases: Iterable[(A, Expr)]): Value[A]; def encoded[A](domain: Seq[A], bits: Iterable[Expr], valid: Expr = TRUE): Value[A]
+                 def constant[A](value: A): Value[A]; def select[A](guard: Expr, yes: Value[A], no: Value[A]): Value[A] }
+  final case class Ref(isNew: Expr = FALSE, prior: Expr = NULL) { def present(): Expr; def expression(): Expr }
+  object Ref { def select(guard: Expr, yes: Ref, no: Ref): Ref; val NEW, EMPTY, PREVIOUS: Ref }
+  final class Circuit(val alphabet: String = "ab", val checkInvariants: Boolean = true) {
+    val domains: LinkedHashMap[String, (Vector[Any], Any)]; val initial: LinkedHashMap[String, Boolean]
+    val labels, pointers: LinkedHashMap[String, Expr]; val currentValues: LinkedHashMap[String, Value[Any]]
+    val currentRefs: LinkedHashMap[String, Ref]; val labelIds: LinkedHashMap[(String, Int), String]
+    var fault: Option[Expr]; val pools: ArrayBuffer[StackPool]
+    def scalar[A](key: String, domain: Seq[A], initial: A): Unit; def get[A](target: Ref, key: String, domain: Seq[A], initial: A): Value[A]
+    def put(key: String, value: Value[Any]): Unit; def put[A](key: String, value: Value[A], domain: Seq[A], initial: A): Unit
+    def getRef(target: Ref, key: String): Ref; def putRef(key: String, value: Ref): Unit; def input(): Value[Char]
+    def require(condition: Expr, enabled: Expr = TRUE): Unit; def machine(accepting: Expr, initialAccepting: Boolean = false): Scaffold }
+  // ScaffoldCircuitStructs.scala（Python finalize() は commit()）
+  type CellTag = (String, Int)
+  final class StackPool(val circuit: Circuit, layout: Iterable[(String, Int)], payload: Seq[Any] = Vector(None)) {
+    val tags: Vector[CellTag]; val payload: Vector[Any]; val prefix: String; val used: LinkedHashMap[String, Int]
+    def key(tag: CellTag, field: String): String; def scalar[A](ref: Ref, tag: Value[?], field: String, domain: Seq[A], initial: A): Value[A]
+    def pointer(ref: Ref, tag: Value[?], field: String): Ref
+    def allocate(name: String, previous: Ref, previousTag: Value[?], value: Ref, data: Value[?], enabled: Expr, slot: Option[Int] = None): (Ref, Value[CellTag]) }
+  final class Stack(val pool: StackPool, val name: String, allocation: Option[String] = None) { var top: Ref; var tag: Value[CellTag]
+    def empty(): Expr; def peek(): (Ref, Value[Any]); def pop(enabled: Expr = TRUE): (Ref, Value[Any]); def drop(enabled: Expr = TRUE): Unit
+    def push(value: Ref = EMPTY, data: Option[Value[Any]] = None, enabled: Expr = TRUE, slot: Option[Int] = None): Unit
+    def clear(enabled: Expr = TRUE): Unit; def copyFrom(other: Stack, enabled: Expr = TRUE): Unit; def commit(): Unit }
+  final class Tape(val circuit: Circuit, val name: String, alphabet: Iterable[Any], slots: Int | (Int, Int) = 1, val blank: Any = '_', pool: Option[StackPool] = None) {
+    val left, right: Stack; var focus: Value[Any]; def write(value: Value[Any], enabled: Expr = TRUE): Unit; def reset(enabled: Expr = TRUE): Unit
+    def move(direction: Int, enabled: Expr = TRUE, slot: Option[Int] = None): Unit; def commit(): Unit }
+  final class Counter(pools: Map[String, StackPool], val name: String, allocationName: Option[String] = None) { def this(pool: StackPool, name: String, allocationName: Option[String]); def this(pool: StackPool, name: String)
+    val pos, neg: Stack; def positive(), negative(), zero(): Expr; def inc/dec(enabled: Expr = TRUE, slot: Option[Int] = None): Unit; def reset(enabled); def copyFrom(other, enabled); def commit(): Unit }
+  final class Queue(pools: Map[String, StackPool], counterPools: Map[String, StackPool], val name: String, val sharedSlots: Boolean = false) { def this(pool: StackPool, counterPool: StackPool, name: String[, sharedSlots: Boolean])
+    val stacks: VectorMap[String, Stack]; val m, c: Counter; var phase: Value[String]
+    def push(value: Ref, enabled: Expr = TRUE): Unit; def pop(enabled: Expr = TRUE): Ref; def empty(): Expr; def clear(enabled); def work(enabled); def workUnit(enabled); def copyFrom(other, enabled); def commit(): Unit }
+  // PegFile.scala
+  final class RuleMap(data: ByteBuffer, offsets: Map[String, Int]) extends mutable.AbstractMap[String, PegAst]  // apply() で遅延ロード、get/contains/size はロード済みのみ
+  final class FileGrammar(path: Path, start: String = "S") extends Grammar with AutoCloseable { val ruleCount: Int; def close(): Unit }
+  // GenerateScaffoldExamples.scala / GeneratePhaseExamples.scala
+  object GenerateScaffoldExamples { def markedPalindrome(): Scaffold; def summary(output: String): String; def locateDirectory(args: Array[String]): Path; def main(args: Array[String]): Unit }
+  object GeneratePhaseExamples { def examples(directory: Path): Vector[(String, String)]; def main(args: Array[String]): Unit }
+  ```
+  注意: `generated/scaffold_marked_palindrome.peg` は旧版 emitter の出力（同じ 35 規則、`E_i` 番号が異なる）で、
+  現行 Python 自身もバイト一致しない。Scala は現行 Python とバイト一致し、ゴールデンとは言語同値で検査している。
+  `generated/sparse_*.peg` は `symbolic_tm2peg`（Task 2d）の出力であり、このタスクの生成器の対象外。
 
 ### Task 2（並列）: L0 独立モジュール群（4 サブタスク、別エージェント）
 - 2a: scavm, scavm_structs, scavm_pal, stage5_port_block1 + tests
