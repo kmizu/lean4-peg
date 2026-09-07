@@ -2,6 +2,7 @@ import PalPeg.StageTapes
 import PalPeg.OnlineMachine
 import PalPeg.Prologue
 import PalPeg.InputCopy
+import PalPeg.InputCopySentinel
 
 /-!
 # 認識器全体をラウンドごとのテープ機械として組む (`FullMachineTapes`)
@@ -176,40 +177,68 @@ structure FullT (sc : ℕ) where
   cpy : Fin 4 → TapeConfiguration sc
   /-- スロットごとの段テープ集合。 -/
   slots : Fin 4 → StageT sc
+  /-- **消去済み（空白）配置**。解放されたスロットのコピーテープは
+  `Prologue.spreadClear` が窓 `[4 * S, 8 * S)` の間に消し終えている
+  （`clear_fits`）ので、再始動の瞬間には空白テープになっている。その保証を
+  「消去済み配置」として持ち回る（`StackView blank blankT []` が不変条件）。 -/
+  blankT : TapeConfiguration sc
 
 /-- ラウンド `n` にスロット `i` を占めている段（あれば）。 -/
 def stageInSlot (n : ℕ) (i : Fin 4) : Option ℕ :=
   (residentStages n).find? (fun S => decide (slotOf S = i.val))
 
-/-- **全体機械の 1 ラウンド**。 -/
-def fullRound {w : List (Fin sc)} (blank : Fin sc) (I : StageIface sc w) (n : ℕ)
-    (F : FullT sc) : FullT sc :=
+/-- **再始動スケジュール**：`rs n i = true` は「ラウンド `n` の頭でスロット `i` の
+入力コピーテープを作り直す」の意。幅 `S` の段の対 `(sIn, F)` の最前線側 `F` は
+区間 `(S/4, S/2]` に到着する記号だけを受け取るので、再始動は `rs (S/4 + 1) i = true`
+の形で起こる（`stage_birth_pair_sentinel`）。 -/
+abbrev Restart := ℕ → Fin 4 → Bool
+
+/-- **全体機械の 1 ラウンド**。再始動するスロットでは、消去済み（空白）配置に
+まず左端番兵 `leftSym` を置いてから（`InputCopySentinel.sentinelInit`、1 動作）
+到着記号を流し込む。再始動しないスロットは従来どおり 1 動作で追記する。 -/
+def fullRound {w : List (Fin sc)} (blank leftSym : Fin sc) (rs : Restart)
+    (I : StageIface sc w) (n : ℕ) (F : FullT sc) : FullT sc :=
   { inp := Tape.step blank F.inp (w.getD (n - 1) blank) .right
-    cpy := fun i => Tape.step blank (F.cpy i) (w.getD (n - 1) blank) .right
+    cpy := fun i =>
+      if rs n i then
+        Tape.step blank
+          (GSTapes.runProg blank F.blankT (InputCopySentinel.sentinelInit leftSym))
+          (w.getD (n - 1) blank) .right
+      else Tape.step blank (F.cpy i) (w.getD (n - 1) blank) .right
     slots := fun i =>
       match stageInSlot n i with
       | some S => I.srec S n
-      | none => F.slots i }
+      | none => F.slots i
+    blankT := F.blankT }
 
 /-- ラウンド `n` 終了時の全体状態。 -/
-def fullState {w : List (Fin sc)} (blank : Fin sc) (I : StageIface sc w)
-    (init : FullT sc) : ℕ → FullT sc
+def fullState {w : List (Fin sc)} (blank leftSym : Fin sc) (rs : Restart)
+    (I : StageIface sc w) (init : FullT sc) : ℕ → FullT sc
   | 0 => init
-  | n + 1 => fullRound blank I (n + 1) (fullState blank I init n)
+  | n + 1 => fullRound blank leftSym rs I (n + 1) (fullState blank leftSym rs I init n)
 
-theorem fullState_succ {w : List (Fin sc)} (blank : Fin sc) (I : StageIface sc w)
-    (init : FullT sc) (n : ℕ) :
-    fullState blank I init (n + 1)
-      = fullRound blank I (n + 1) (fullState blank I init n) := rfl
+theorem fullState_succ {w : List (Fin sc)} (blank leftSym : Fin sc) (rs : Restart)
+    (I : StageIface sc w) (init : FullT sc) (n : ℕ) :
+    fullState blank leftSym rs I init (n + 1)
+      = fullRound blank leftSym rs I (n + 1) (fullState blank leftSym rs I init n) := rfl
+
+@[simp] theorem fullState_blankT {w : List (Fin sc)} (blank leftSym : Fin sc)
+    (rs : Restart) (I : StageIface sc w) (init : FullT sc) :
+    ∀ n, (fullState blank leftSym rs I init n).blankT = init.blankT
+  | 0 => rfl
+  | n + 1 => fullState_blankT blank leftSym rs I init n
 
 /-- 大域入力テープはちょうど到着済みの記号列を保つ。 -/
-theorem fullState_inp {w : List (Fin sc)} {blank : Fin sc} {I : StageIface sc w}
+theorem fullState_inp {w : List (Fin sc)} {blank leftSym : Fin sc} {rs : Restart}
+    {I : StageIface sc w}
     {init : FullT sc} (hinit : InputCopy.FrontierView blank init.inp []) :
     ∀ n, n ≤ w.length →
-      InputCopy.FrontierView blank (fullState blank I init n).inp (w.take n) := by
+      InputCopy.FrontierView blank (fullState blank leftSym rs I init n).inp (w.take n) := by
   intro n
   induction n with
-  | zero => intro _; rw [show (fullState blank I init 0) = init from rfl]; simpa using hinit
+  | zero =>
+      intro _
+      rw [show (fullState blank leftSym rs I init 0) = init from rfl]; simpa using hinit
   | succ n ih =>
     intro hn
     rw [fullState_succ]
@@ -225,11 +254,142 @@ theorem fullState_inp {w : List (Fin sc)} {blank : Fin sc} {I : StageIface sc w}
     exact h
 
 /-- 常駐している段のテープ記録は、そのスロットに実際に載っている。 -/
-theorem fullState_slot {w : List (Fin sc)} {blank : Fin sc} {I : StageIface sc w}
+theorem fullState_slot {w : List (Fin sc)} {blank leftSym : Fin sc} {rs : Restart}
+    {I : StageIface sc w}
     {init : FullT sc} {n : ℕ} {i : Fin 4} {S : ℕ} (h : stageInSlot (n + 1) i = some S) :
-    (fullState blank I init (n + 1)).slots i = I.srec S (n + 1) := by
+    (fullState blank leftSym rs I init (n + 1)).slots i = I.srec S (n + 1) := by
   rw [fullState_succ, fullRound]
   simp only [h]
+
+/-! ### 入力コピーの左端番兵不変条件 -/
+
+/-- 最前線ビューから `PrepPreL.inb` の形（`InputCopySentinel.prepView_at` と同じ形）へ。
+1 歩左へ戻ってから `|v| - b` 歩左へ歩けば添字 `b` に立つ。 -/
+theorem prepViewOfFrontier {blank leftSym : Fin sc} {tp : TapeConfiguration sc}
+    {v : List (Fin sc)} (h : InputCopy.FrontierView blank tp (leftSym :: v))
+    (b : ℕ) (hb : b ≤ v.length) :
+    Tape.SeqView blank
+      (GSTapes.leftN blank (Tape.step blank tp blank .left) (v.length - b))
+      (leftSym :: v) b := by
+  refine GSTapes.seq_leftN (v.length - b) _ b ?_
+  rw [show b + (v.length - b) = v.length from by omega]
+  exact InputCopySentinel.toSeqView h
+
+/-- **入力コピーの左端番兵不変条件**：スロット `i` がラウンド `m + 1` に再始動し、
+それ以降ラウンド `n` まで再始動しないなら、ラウンド `n` 終了時のコピーテープは
+番兵 `leftSym` を先頭に持つ最前線ビューを満たす。 -/
+theorem fullState_cpy_sentinel {w : List (Fin sc)} {blank leftSym : Fin sc}
+    {rs : Restart} {I : StageIface sc w} {init : FullT sc}
+    (hb : Tape.StackView blank init.blankT []) {i : Fin 4} {m n : ℕ}
+    (hstart : rs (m + 1) i = true)
+    (hkeep : ∀ r, m + 1 < r → r ≤ n → rs r i = false)
+    (hmn : m + 1 ≤ n) (hn : n ≤ w.length) :
+    InputCopy.FrontierView blank ((fullState blank leftSym rs I init n).cpy i)
+      (leftSym :: ((w.take n).drop m)) := by
+  induction n with
+  | zero => omega
+  | succ n ih =>
+    have hlt : n < w.length := by omega
+    have hgd : w.getD n blank = w[n]'hlt := by
+      rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hlt]; rfl
+    rcases Nat.lt_or_ge m n with hmlt | hmge
+    · -- 継続ラウンド：追記のみ
+      have hrs : rs (n + 1) i = false := hkeep (n + 1) (by omega) le_rfl
+      have hprev := ih (fun r h1 h2 => hkeep r h1 (by omega)) (by omega) (by omega)
+      have happ := InputCopy.append_spec hprev (w.getD n blank)
+      have hcontent :
+          (leftSym :: ((w.take n).drop m)) ++ [w.getD n blank]
+            = leftSym :: ((w.take (n + 1)).drop m) := by
+        have htk : w.take (n + 1) = w.take n ++ [w[n]'hlt] := by
+          rw [List.take_add_one, List.getElem?_eq_getElem hlt]; rfl
+        have hlen : m ≤ (w.take n).length := by
+          rw [List.length_take]; omega
+        rw [hgd, htk, List.drop_append_of_le_length hlen]
+        simp
+      rw [fullState_succ, fullRound]
+      simpa only [hrs, Bool.false_eq_true, if_false, hcontent, Nat.add_sub_cancel]
+        using happ
+    · -- 再始動ラウンド：番兵を置いてから 1 記号
+      have hmn' : m = n := by omega
+      subst hmn'
+      have hrs : rs (m + 1) i = true := hstart
+      have hsent := InputCopySentinel.sentinelInit_spec
+        (blank := blank) (tp := init.blankT) hb leftSym
+      have happ := InputCopy.append_spec hsent (w.getD m blank)
+      have hcontent : [leftSym] ++ [w.getD m blank]
+          = leftSym :: ((w.take (m + 1)).drop m) := by
+        have htk : w.take (m + 1) = w.take m ++ [w[m]'hlt] := by
+          rw [List.take_add_one, List.getElem?_eq_getElem hlt]; rfl
+        have hlen : (w.take m).length = m := by rw [List.length_take]; omega
+        rw [hgd, htk, List.drop_append_of_le_length (by omega : m ≤ (w.take m).length),
+          List.drop_eq_nil_of_le (by omega : (w.take m).length ≤ m)]
+        simp
+      rw [fullState_succ, fullRound]
+      simp only [hrs, if_true, fullState_blankT]
+      simpa only [hcontent, Nat.add_sub_cancel] using happ
+
+/-- 上の不変条件を `PrepPreL.inb` の形（`InputCopySentinel.prepView_at` と同形）で。 -/
+theorem fullState_cpy_prepView {w : List (Fin sc)} {blank leftSym : Fin sc}
+    {rs : Restart} {I : StageIface sc w} {init : FullT sc}
+    (hb : Tape.StackView blank init.blankT []) {i : Fin 4} {m n : ℕ}
+    (hstart : rs (m + 1) i = true)
+    (hkeep : ∀ r, m + 1 < r → r ≤ n → rs r i = false)
+    (hmn : m + 1 ≤ n) (hn : n ≤ w.length)
+    (b : ℕ) (hbn : b ≤ ((w.take n).drop m).length) :
+    Tape.SeqView blank
+      (GSTapes.leftN blank
+        (Tape.step blank ((fullState blank leftSym rs I init n).cpy i) blank .left)
+        (((w.take n).drop m).length - b))
+      (leftSym :: ((w.take n).drop m)) b :=
+  prepViewOfFrontier (fullState_cpy_sentinel hb hstart hkeep hmn hn) b hbn
+
+/-- **段誕生の補題（対の両成分）**：幅 `S` の段はラウンド `S / 2` に生まれる。
+そのときパターンの源は凍結された対 `(sIn, F)` で、
+
+* 最前線側 `F` ＝ スロット `i` のコピーテープ（ラウンド `S / 4 + 1` に再始動）は
+  `leftSym :: (w.take (S / 2)).drop (S / 4)` の番兵つき最前線ビュー、
+* 凍結側 `sIn` は `leftSym :: w.take (S / 4)` の番兵つき最前線ビュー（前段が凍結した複製）、
+* 両者を繋ぐと内容はちょうど `w.take (S / 2)`。 -/
+theorem stage_birth_pair_sentinel {w : List (Fin sc)} {blank leftSym : Fin sc}
+    {rs : Restart} {I : StageIface sc w} {init : FullT sc}
+    (hb : Tape.StackView blank init.blankT []) {i : Fin 4} {S : ℕ} (hS : 4 ≤ S)
+    (hstart : rs (S / 4 + 1) i = true)
+    (hkeep : ∀ r, S / 4 + 1 < r → r ≤ S / 2 → rs r i = false)
+    (hn : S / 2 ≤ w.length)
+    {tpFrozen : TapeConfiguration sc}
+    (hfrozen : InputCopy.FrontierView blank tpFrozen (leftSym :: w.take (S / 4))) :
+    InputCopy.FrontierView blank
+        ((fullState blank leftSym rs I init (S / 2)).cpy i)
+        (leftSym :: ((w.take (S / 2)).drop (S / 4)))
+      ∧ InputCopy.FrontierView blank tpFrozen (leftSym :: w.take (S / 4))
+      ∧ w.take (S / 4) ++ (w.take (S / 2)).drop (S / 4) = w.take (S / 2) := by
+  refine ⟨fullState_cpy_sentinel hb hstart hkeep (by omega) hn, hfrozen, ?_⟩
+  have : (w.take (S / 2)).take (S / 4) = w.take (S / 4) := by
+    rw [List.take_take, Nat.min_eq_left (by omega)]
+  rw [← this, List.take_append_drop]
+
+/-- 段誕生時の対の両成分を `PrepPreL.inb` の形（`InputCopySentinel.prepView_at` と同形）で。 -/
+theorem stage_birth_pair_prepView {w : List (Fin sc)} {blank leftSym : Fin sc}
+    {rs : Restart} {I : StageIface sc w} {init : FullT sc}
+    (hb : Tape.StackView blank init.blankT []) {i : Fin 4} {S : ℕ} (hS : 4 ≤ S)
+    (hstart : rs (S / 4 + 1) i = true)
+    (hkeep : ∀ r, S / 4 + 1 < r → r ≤ S / 2 → rs r i = false)
+    (hn : S / 2 ≤ w.length)
+    {tpFrozen : TapeConfiguration sc}
+    (hfrozen : InputCopy.FrontierView blank tpFrozen (leftSym :: w.take (S / 4)))
+    (b₁ b₂ : ℕ) (hb₁ : b₁ ≤ ((w.take (S / 2)).drop (S / 4)).length)
+    (hb₂ : b₂ ≤ (w.take (S / 4)).length) :
+    Tape.SeqView blank
+        (GSTapes.leftN blank
+          (Tape.step blank ((fullState blank leftSym rs I init (S / 2)).cpy i) blank .left)
+          (((w.take (S / 2)).drop (S / 4)).length - b₁))
+        (leftSym :: ((w.take (S / 2)).drop (S / 4))) b₁
+      ∧ Tape.SeqView blank
+        (GSTapes.leftN blank (Tape.step blank tpFrozen blank .left)
+          ((w.take (S / 4)).length - b₂))
+        (leftSym :: w.take (S / 4)) b₂ := by
+  obtain ⟨hF, hI, _⟩ := stage_birth_pair_sentinel hb hS hstart hkeep hn hfrozen
+  exact ⟨prepViewOfFrontier hF b₁ hb₁, prepViewOfFrontier hI b₂ hb₂⟩
 
 /-! ## 4. 出力 -/
 
@@ -299,14 +459,15 @@ theorem sum_le_length_mul {l : List ℕ} {C : ℕ} (h : ∀ x ∈ l, x ≤ C) :
     omega
 
 /-- **全体機械の 1 ラウンドの費用**：常駐段の費用の総和 ＋ 大域入力 1 動作
-＋ スロット入力コピー 4 動作 ＋ 消去の定速チャンク `8 * C + 1` 動作
+＋ スロット入力コピー 4 動作 ＋ **番兵設置 4 動作**（再始動するスロットは高々 4 つ、
+1 スロットにつき `sentinelInit` の 1 動作）＋ 消去の定速チャンク `8 * C + 1` 動作
 ＋ 対複製の定速チャンク `20` 動作。 -/
 def fullCost {w : List (Fin sc)} (I : StageIface sc w) (n : ℕ) : ℕ :=
   ((residentStages n).map (fun S => I.cost S n)).sum
-    + 1 + 4 + (8 * I.C + 1) + 20
+    + 1 + 4 + 4 + (8 * I.C + 1) + 20
 
 /-- 1 ラウンドの動作数の明示上界。 -/
-def Cfull {w : List (Fin sc)} (I : StageIface sc w) : ℕ := 11 * I.C + 26
+def Cfull {w : List (Fin sc)} (I : StageIface sc w) : ℕ := 11 * I.C + 30
 
 /-- **`full_round_actions`**：全体機械の 1 ラウンドの動作数は `Cfull` 以下（定数）。 -/
 theorem full_round_actions {w : List (Fin sc)} (I : StageIface sc w) (n : ℕ) :
@@ -325,3 +486,16 @@ theorem full_round_actions {w : List (Fin sc)} (I : StageIface sc w) (n : ℕ) :
 
 end FullMachineTapes
 end PalPeg
+
+section Audit
+open PalPeg.FullMachineTapes
+#print axioms PalPeg.FullMachineTapes.fullState_cpy_sentinel
+#print axioms PalPeg.FullMachineTapes.fullState_cpy_prepView
+#print axioms PalPeg.FullMachineTapes.prepViewOfFrontier
+#print axioms PalPeg.FullMachineTapes.stage_birth_pair_sentinel
+#print axioms PalPeg.FullMachineTapes.stage_birth_pair_prepView
+#print axioms PalPeg.FullMachineTapes.fullState_inp
+#print axioms PalPeg.FullMachineTapes.fullState_slot
+#print axioms PalPeg.FullMachineTapes.full_answer_mem_PAL
+#print axioms PalPeg.FullMachineTapes.full_round_actions
+end Audit
