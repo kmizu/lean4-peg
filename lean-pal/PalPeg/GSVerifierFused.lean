@@ -575,6 +575,132 @@ theorem txt2Rewind_Txt2 {blank : Fin sc} {Text : List (Fin sc)} {vt0 vt' : VTape
   rw [vApplyActs'_replicate_X_left_eq, hc]
   exact GSTapes.seq_leftN c vt'.2.Txt2 i hX
 
+/-! ### `uxWalk`：`U` の巻き戻しに `Txt2` を相乗りさせた融合版
+
+`uWalk ++ txt2Rewind` は「`U` だけ `c+2` 歩」＋「`Txt2` だけ `c` 歩」という
+**別々の**動作列だった。有限制御では `U` の検索ループ（`startSym` を読むまで）が
+そのループ回数 `c+1` を暗黙に持っているので、そこへ `Txt2` の 1 歩を相乗りさせれば
+`Txt2` を数えずに動かせる。`uxWalk` は「`(U .left, X .left)` を `c+1` 回、
+続けて `(U .right, X .right)` を 1 回」——動作数はちょうど `2*(c+1)+2 = 2c+4`。
+最終的な `Txt2` の値は `uWalk ++ txt2Rewind` と同じ（`-(c+1)+1 = -c` で相殺）。 -/
+
+/-- `(U .left, X .left)` を `n` 回。 -/
+def uxWalkLoop : ℕ → List (VAct' sc)
+  | 0 => []
+  | n + 1 => [VAct'.U (sc := sc) .left, VAct'.X (sc := sc) .left] ++ uxWalkLoop n
+
+/-- `uxWalkLoop (checked+1)` に続けて `(U .right, X .right)`。 -/
+def uxWalk (vt : VTapes' sc) : List (VAct' sc) :=
+  uxWalkLoop (cOf vt.2 + 1) ++ [VAct'.U (sc := sc) .right, VAct'.X (sc := sc) .right]
+
+theorem uxWalkLoop_fst (blank : Fin sc) : ∀ (n : ℕ) (vt : VTapes' sc),
+    (vApplyActs' blank (uxWalkLoop n) vt).1 = vt.1 := by
+  intro n
+  induction n with
+  | zero => intro vt; rfl
+  | succ n ih =>
+      intro vt
+      rw [uxWalkLoop, vApplyActs'_append]
+      rw [show vApplyActs' blank
+          [VAct'.U (sc := sc) .left, VAct'.X (sc := sc) .left] vt
+          = (vt.1, ({ vt.2 with
+              U := Tape.step blank vt.2.U vt.2.U.focus .left,
+              Txt2 := Tape.step blank vt.2.Txt2 vt.2.Txt2.focus .left } : VExt sc)) from rfl]
+      exact ih _
+
+theorem uxWalkLoop_U (blank : Fin sc) : ∀ (n : ℕ) (vt : VTapes' sc),
+    (vApplyActs' blank (uxWalkLoop n) vt).2.U = GSTapes.leftN blank vt.2.U n := by
+  intro n
+  induction n with
+  | zero => intro vt; rfl
+  | succ n ih =>
+      intro vt
+      rw [uxWalkLoop, vApplyActs'_append]
+      rw [show vApplyActs' blank
+          [VAct'.U (sc := sc) .left, VAct'.X (sc := sc) .left] vt
+          = (vt.1, ({ vt.2 with
+              U := Tape.step blank vt.2.U vt.2.U.focus .left,
+              Txt2 := Tape.step blank vt.2.Txt2 vt.2.Txt2.focus .left } : VExt sc)) from rfl]
+      exact ih _
+
+theorem uxWalkLoop_Txt2 (blank : Fin sc) : ∀ (n : ℕ) (vt : VTapes' sc),
+    (vApplyActs' blank (uxWalkLoop n) vt).2.Txt2 = GSTapes.leftN blank vt.2.Txt2 n := by
+  intro n
+  induction n with
+  | zero => intro vt; rfl
+  | succ n ih =>
+      intro vt
+      rw [uxWalkLoop, vApplyActs'_append]
+      rw [show vApplyActs' blank
+          [VAct'.U (sc := sc) .left, VAct'.X (sc := sc) .left] vt
+          = (vt.1, ({ vt.2 with
+              U := Tape.step blank vt.2.U vt.2.U.focus .left,
+              Txt2 := Tape.step blank vt.2.Txt2 vt.2.Txt2.focus .left } : VExt sc)) from rfl]
+      exact ih _
+
+theorem uxWalk_fst (blank : Fin sc) (vt0 vt' : VTapes' sc) :
+    (vApplyActs' blank (uxWalk vt0) vt').1 = vt'.1 := by
+  unfold uxWalk
+  rw [vApplyActs'_append]
+  rw [show (vApplyActs' blank [VAct'.U (sc := sc) .right, VAct'.X (sc := sc) .right]
+      (vApplyActs' blank (uxWalkLoop (cOf vt0.2 + 1)) vt')).1
+      = (vApplyActs' blank (uxWalkLoop (cOf vt0.2 + 1)) vt').1 from rfl]
+  exact uxWalkLoop_fst blank _ vt'
+
+/-- **`uxWalk` の `U` 側の実現**：`startSym` を読む位置（添字 `0`）まで戻り、
+それから 1 右で添字 `1`（`checked = 0`）へ。 -/
+theorem uxWalk_U {blank startSym endSym : Fin sc} {u : List (Fin sc)} {vt0 vt' : VTapes' sc}
+    {c : ℕ} (hUeq : vt'.2.U = vt0.2.U)
+    (hU : Tape.SeqView blank vt'.2.U (startSym :: (u ++ [endSym])) (c + 1)) :
+    Tape.SeqView blank (vApplyActs' blank (uxWalk vt0) vt').2.U
+      (startSym :: (u ++ [endSym])) (0 + 1) := by
+  have hc' : cOf vt'.2 = c := cOf_eq hU
+  have hc : cOf vt0.2 = c := by
+    rw [show cOf vt0.2 = cOf vt'.2 from by unfold cOf; rw [hUeq]]
+    exact hc'
+  unfold uxWalk
+  rw [vApplyActs'_append]
+  rw [show (vApplyActs' blank [VAct'.U (sc := sc) .right, VAct'.X (sc := sc) .right]
+      (vApplyActs' blank (uxWalkLoop (cOf vt0.2 + 1)) vt')).2.U
+      = Tape.step blank
+          (vApplyActs' blank (uxWalkLoop (cOf vt0.2 + 1)) vt').2.U
+          (vApplyActs' blank (uxWalkLoop (cOf vt0.2 + 1)) vt').2.U.focus .right from rfl]
+  rw [uxWalkLoop_U, hc]
+  refine Tape.seq_move_right (GSTapes.seq_leftN (c + 1) vt'.2.U 0 ?_) ?_
+  · rw [show 0 + (c + 1) = c + 1 from by omega]; exact hU
+  · simp only [List.length_cons, List.length_append]; omega
+
+/-- **`uxWalk` の `Txt2` 側の実現**：`checked` 分だけ左へ（正味 `-(c+1)+1 = -c`、
+`uWalk ++ txt2Rewind` と同じ値）。`vt0.2.U` から読める `c := cOf vt0.2` を用いる。 -/
+theorem uxWalk_Txt2 {blank : Fin sc} {Text : List (Fin sc)} {vt0 vt' : VTapes' sc} {c i : ℕ}
+    (hc : cOf vt0.2 = c) (hi : 1 ≤ i) (hroom : i < Text.length)
+    (hX : Tape.SeqView blank vt'.2.Txt2 Text (i - 1 + (c + 1))) :
+    Tape.SeqView blank (vApplyActs' blank (uxWalk vt0) vt').2.Txt2 Text i := by
+  unfold uxWalk
+  rw [vApplyActs'_append]
+  rw [show (vApplyActs' blank [VAct'.U (sc := sc) .right, VAct'.X (sc := sc) .right]
+      (vApplyActs' blank (uxWalkLoop (cOf vt0.2 + 1)) vt')).2.Txt2
+      = Tape.step blank
+          (vApplyActs' blank (uxWalkLoop (cOf vt0.2 + 1)) vt').2.Txt2
+          (vApplyActs' blank (uxWalkLoop (cOf vt0.2 + 1)) vt').2.Txt2.focus .right from rfl]
+  rw [uxWalkLoop_Txt2, hc]
+  have hstep := GSTapes.seq_leftN (c + 1) vt'.2.Txt2 (i - 1) hX
+  have := Tape.seq_move_right hstep (by omega)
+  rwa [show i - 1 + 1 = i from by omega] at this
+
+theorem uxWalkLoop_length : ∀ (n : ℕ), (uxWalkLoop (sc := sc) n).length = 2 * n := by
+  intro n
+  induction n with
+  | zero => rfl
+  | succ n ih => unfold uxWalkLoop; rw [List.length_append, ih]; simp; omega
+
+/-- `uxWalk` の動作数は `2*(checked+1)+2 = 2*checked+4`。 -/
+theorem uxWalk_length (vt : VTapes' sc) : (uxWalk vt).length = 2 * cOf vt.2 + 4 := by
+  unfold uxWalk
+  rw [List.length_append, uxWalkLoop_length]
+  simp
+  omega
+
 end UWalk
 
 /-! ## 5. `vprogramX`：ずらし枝を相乗りループ＋巻き戻しへ置き換えた一歩の動作列 -/
@@ -614,7 +740,7 @@ def vprogramX (blank endSym mark : Fin sc) (k : ℕ) (vt : VTapes' sc) : List (V
         perProgramX blank mark (GSTapes.p1Of' vt.1) vt
       else
         resProgramX blank mark k (GSTapes.qOf' vt.1) vt) ++
-      uWalk vt ++ txt2Rewind vt
+      uxWalk vt
 
 theorem perProgramX_fst (blank mark : Fin sc) (n : ℕ) (vt : VTapes' sc) :
     (vApplyActs' blank (perProgramX blank mark n vt) vt).1
@@ -741,7 +867,7 @@ variable {blank startSym endSym mark : Fin sc} {u v Text : List (Fin sc)} {k p�
 
 /-- **主定理（実現、有限制御向け再構成）**：`vencodes_step'` と同じ主張を、
 `vprogram'` の代わりに `vprogramX`（相乗りループ＋巻き戻し＋残差補正）で示す。 -/
-theorem vencodes_stepX (hk : 0 < k) (hne : mark ≠ blank)
+theorem vencodes_stepX (hk : 0 < k) (hp : 0 < p₁) (hne : mark ≠ blank)
     (hend : endSym ∉ v) (hendu : endSym ∉ u)
     (hE : VEncodes' blank startSym endSym mark u v Text k p₁ r vt z)
     (hq : z.1.q ≤ v.length) (hc : z.2 ≤ u.length) (hpos : u.length ≤ z.1.pos)
@@ -802,7 +928,7 @@ theorem vencodes_stepX (hk : 0 < k) (hne : mark ≠ blank)
             perProgramX blank mark (GSTapes.p1Of' vt.1) vt
           else
             resProgramX blank mark k (GSTapes.qOf' vt.1) vt) ++
-          uWalk vt ++ txt2Rewind vt := by
+          uxWalk vt := by
       unfold vprogramX; rw [if_neg hadv]
     rw [hveq]
     simp only [vApplyActs'_append, vApplyActs'_map_S]
@@ -849,28 +975,24 @@ theorem vencodes_stepX (hk : 0 < k) (hne : mark ≠ blank)
           (z.1.pos - u.length + z.2 + p₁) := by rw [hvt2Txt2eq]; exact hLoopTxt2
       have hUvt2 : Tape.SeqView blank vt2.2.U (startSym :: (u ++ [endSym])) (z.2 + 1) := by
         rw [hvt2U]; exact hE.pat
-      have hUwalk : Tape.SeqView blank (vApplyActs' blank (uWalk vt) vt2).2.U
+      have huxU : Tape.SeqView blank (vApplyActs' blank (uxWalk vt) vt2).2.U
           (startSym :: (u ++ [endSym])) (0 + 1) :=
-        uWalk_U (blank := blank) (startSym := startSym) (endSym := endSym) (u := u)
+        uxWalk_U (blank := blank) (startSym := startSym) (endSym := endSym) (u := u)
           (vt0 := vt) (vt' := vt2) (c := z.2) hvt2U hUvt2
-      have hWfst : (vApplyActs' blank (uWalk vt) vt2).1 = vt2.1 := uWalk_fst blank vt vt2
-      have hWTxt2 : (vApplyActs' blank (uWalk vt) vt2).2.Txt2 = vt2.2.Txt2 :=
-        uWalk_Txt2 blank vt vt2
-      set vt3 := vApplyActs' blank (uWalk vt) vt2 with hvt3def
-      have hvt3Txt2 : Tape.SeqView blank vt3.2.Txt2 Text
-          ((z.1.pos + gsShift k p₁ r z.1.q - u.length + 0) + z.2) := by
-        rw [hWTxt2, hgs, show z.1.pos + p₁ - u.length + 0 + z.2
-          = z.1.pos - u.length + z.2 + p₁ from by omega]
-        exact hvt2Txt2
-      have hRfinal : Tape.SeqView blank
-          (vApplyActs' blank (txt2Rewind vt) vt3).2.Txt2 Text
+      have huxfst : (vApplyActs' blank (uxWalk vt) vt2).1 = vt2.1 := uxWalk_fst blank vt vt2
+      have htarg1 : 1 ≤ z.1.pos + gsShift k p₁ r z.1.q - u.length + 0 := by rw [hgs]; omega
+      have htargroom : z.1.pos + gsShift k p₁ r z.1.q - u.length + 0 < Text.length := by omega
+      have huxTxt2 : Tape.SeqView blank (vApplyActs' blank (uxWalk vt) vt2).2.Txt2 Text
           (z.1.pos + gsShift k p₁ r z.1.q - u.length + 0) :=
-        txt2Rewind_Txt2 (blank := blank) (vt0 := vt) (vt' := vt3) hcc hvt3Txt2
-      have hRfst : (vApplyActs' blank (txt2Rewind vt) vt3).1 = vt3.1 := txt2Rewind_fst blank vt vt3
+        uxWalk_Txt2 (blank := blank) (vt0 := vt) (vt' := vt2) hcc htarg1 htargroom
+          (by
+            rw [show z.1.pos + gsShift k p₁ r z.1.q - u.length + 0 - 1 + (z.2 + 1)
+              = z.1.pos - u.length + z.2 + p₁ from by rw [hgs]; omega]
+            exact hvt2Txt2)
       refine ⟨?_, ?_, ?_⟩
-      · rw [hRfst, hWfst, hvt2fst]; exact hscan
-      · rw [txt2Rewind_U blank vt vt3]; exact hUwalk
-      · exact hRfinal
+      · rw [huxfst, hvt2fst]; exact hscan
+      · exact huxU
+      · exact huxTxt2
     · -- リセットずらし：`resLoopX` の `Txt2` 総量は `stays k q 0`。
       have hcondT : ¬ (Tape.read (Tape.step blank (vt.1 GSTapes.tAn) blank .left) = mark ∧
           Tape.read (Tape.step blank (vt.1 GSTapes.tRn) blank .left) = mark) :=
@@ -888,13 +1010,14 @@ theorem vencodes_stepX (hk : 0 < k) (hne : mark ≠ blank)
       have hvt2U : vt2.2.U = vt.2.U := resProgramX_U blank mark k z.1.q vt
       have hUvt2 : Tape.SeqView blank vt2.2.U (startSym :: (u ++ [endSym])) (z.2 + 1) := by
         rw [hvt2U]; exact hE.pat
-      have hUwalk : Tape.SeqView blank (vApplyActs' blank (uWalk vt) vt2).2.U
+      have huxU : Tape.SeqView blank (vApplyActs' blank (uxWalk vt) vt2).2.U
           (startSym :: (u ++ [endSym])) (0 + 1) :=
-        uWalk_U (blank := blank) (startSym := startSym) (endSym := endSym) (u := u)
+        uxWalk_U (blank := blank) (startSym := startSym) (endSym := endSym) (u := u)
           (vt0 := vt) (vt' := vt2) (c := z.2) hvt2U hUvt2
-      have hWfst : (vApplyActs' blank (uWalk vt) vt2).1 = vt2.1 := uWalk_fst blank vt vt2
-      have hWTxt2 : (vApplyActs' blank (uWalk vt) vt2).2.Txt2 = vt2.2.Txt2 :=
-        uWalk_Txt2 blank vt vt2
+      have huxfst : (vApplyActs' blank (uxWalk vt) vt2).1 = vt2.1 := uxWalk_fst blank vt vt2
+      have hgspos : 1 ≤ gsShift k p₁ r z.1.q := by rw [hgs]; omega
+      have htarg1 : 1 ≤ z.1.pos + gsShift k p₁ r z.1.q - u.length + 0 := by omega
+      have htargroom : z.1.pos + gsShift k p₁ r z.1.q - u.length + 0 < Text.length := by omega
       rcases Nat.eq_zero_or_pos z.1.q with hq0 | hq0
       · -- `q = 0`：`stays k 0 0 = 0`、`resProgramX` の特別枝が `+1`。`gsShift = 1`。
         have hcd0 : ceilDiv 0 k = 0 := by
@@ -928,20 +1051,17 @@ theorem vencodes_stepX (hk : 0 < k) (hne : mark ≠ blank)
           have hroom1 := hroom
           rw [hgs1] at hroom1
           omega
-        have hvt3Txt2 : Tape.SeqView blank (vApplyActs' blank (uWalk vt) vt2).2.Txt2 Text
-            (z.1.pos + gsShift k p₁ r z.1.q - u.length + 0 + z.2) := by
-          rw [hWTxt2, hgs1,
-            show z.1.pos + 1 - u.length + 0 + z.2 = (z.1.pos - u.length + z.2) + 1 from by omega]
-          exact hvt2Txt2
-        have hRfinal : Tape.SeqView blank
-            (vApplyActs' blank (txt2Rewind vt) (vApplyActs' blank (uWalk vt) vt2)).2.Txt2 Text
+        have huxTxt2 : Tape.SeqView blank (vApplyActs' blank (uxWalk vt) vt2).2.Txt2 Text
             (z.1.pos + gsShift k p₁ r z.1.q - u.length + 0) :=
-          txt2Rewind_Txt2 (blank := blank) (vt0 := vt) (vt' := vApplyActs' blank (uWalk vt) vt2)
-            hcc hvt3Txt2
+          uxWalk_Txt2 (blank := blank) (vt0 := vt) (vt' := vt2) hcc htarg1 htargroom
+            (by
+              rw [show z.1.pos + gsShift k p₁ r z.1.q - u.length + 0 - 1 + (z.2 + 1)
+                = (z.1.pos - u.length + z.2) + 1 from by rw [hgs1]; omega]
+              exact hvt2Txt2)
         refine ⟨?_, ?_, ?_⟩
-        · rw [txt2Rewind_fst blank vt _, hWfst, hvt2fst]; exact hscan
-        · rw [txt2Rewind_U blank vt _]; exact hUwalk
-        · exact hRfinal
+        · rw [huxfst, hvt2fst]; exact hscan
+        · exact huxU
+        · exact huxTxt2
       · -- `q ≥ 1`：`stays k q 0 = ceilDiv q k = gsShift`。
         have hc1 : 1 ≤ ceilDiv z.1.q k := GSTapes.ceilDiv_pos hk hq0
         have hgs' : gsShift k p₁ r z.1.q = ceilDiv z.1.q k := by rw [hgs]; omega
@@ -971,21 +1091,18 @@ theorem vencodes_stepX (hk : 0 < k) (hne : mark ≠ blank)
         have hvt2Txt2 : Tape.SeqView blank vt2.2.Txt2 Text
             ((z.1.pos - u.length + z.2) + GSTapes.stays k z.1.q 0) := by
           rw [hvt2Txt2eq]; exact hL
-        have hvt3Txt2 : Tape.SeqView blank (vApplyActs' blank (uWalk vt) vt2).2.Txt2 Text
-            (z.1.pos + gsShift k p₁ r z.1.q - u.length + 0 + z.2) := by
-          rw [hWTxt2, hgs', ← hstaysval,
-            show z.1.pos + GSTapes.stays k z.1.q 0 - u.length + 0 + z.2
-              = (z.1.pos - u.length + z.2) + GSTapes.stays k z.1.q 0 from by omega]
-          exact hvt2Txt2
-        have hRfinal : Tape.SeqView blank
-            (vApplyActs' blank (txt2Rewind vt) (vApplyActs' blank (uWalk vt) vt2)).2.Txt2 Text
+        have huxTxt2 : Tape.SeqView blank (vApplyActs' blank (uxWalk vt) vt2).2.Txt2 Text
             (z.1.pos + gsShift k p₁ r z.1.q - u.length + 0) :=
-          txt2Rewind_Txt2 (blank := blank) (vt0 := vt) (vt' := vApplyActs' blank (uWalk vt) vt2)
-            hcc hvt3Txt2
+          uxWalk_Txt2 (blank := blank) (vt0 := vt) (vt' := vt2) hcc htarg1 htargroom
+            (by
+              rw [show z.1.pos + gsShift k p₁ r z.1.q - u.length + 0 - 1 + (z.2 + 1)
+                = (z.1.pos - u.length + z.2) + GSTapes.stays k z.1.q 0 from by
+                rw [hgs', ← hstaysval]; omega]
+              exact hvt2Txt2)
         refine ⟨?_, ?_, ?_⟩
-        · rw [txt2Rewind_fst blank vt _, hWfst, hvt2fst]; exact hscan
-        · rw [txt2Rewind_U blank vt _]; exact hUwalk
-        · exact hRfinal
+        · rw [huxfst, hvt2fst]; exact hscan
+        · exact huxU
+        · exact huxTxt2
 
 end VEncodesX
 
@@ -995,9 +1112,8 @@ section VProgXCost
 
 /-- `vprogramX` の動作数：比較枝は `≤ 8 + 4 = 12`（元の `vprogram'` と同じ形）、
 ずらし枝は「相乗りループ（`perProgramX`/`resProgramX`：周期なら `≤ 14*p₁+4`、
-リセットなら `≤ 9*q+4`）＋ `uWalk`（`= checked + 2`）＋ `txt2Rewind`
-（`= checked`）＋ probe 2 本（`= 4`）」。まとめて `p₁` と `q` の項を両方持つ形で
-一様に上から抑える。 -/
+リセットなら `≤ 9*q+4`）＋ `uxWalk`（`= 2*checked+4`）＋ probe 2 本（`= 4`）」。
+まとめて `p₁` と `q` の項を両方持つ形で一様に上から抑える。 -/
 theorem vprogramX_length_le (blank endSym mark : Fin sc) (k : ℕ) (vt : VTapes' sc) :
     (vprogramX blank endSym mark k vt).length
       ≤ 14 * GSTapes.p1Of' vt.1 + 9 * GSTapes.qOf' vt.1 + 12 + 2 * cOf vt.2 := by
@@ -1012,22 +1128,17 @@ theorem vprogramX_length_le (blank endSym mark : Fin sc) (k : ℕ) (vt : VTapes'
   · rw [if_neg hadv]
     have hAn := GSTapes.probeActs_length blank GSTapes.tAn
     have hRn := GSTapes.probeActs_length blank GSTapes.tRn
-    have hUW : (uWalk vt).length = cOf vt.2 + 2 := by
-      unfold uWalk
-      simp only [List.length_append, List.length_replicate, List.length_cons, List.length_nil]
-    have hTR : (txt2Rewind vt).length = cOf vt.2 := by
-      unfold txt2Rewind
-      simp only [List.length_replicate]
+    have hUXW : (uxWalk vt).length = 2 * cOf vt.2 + 4 := uxWalk_length vt
     simp only [List.length_append, List.length_map]
     by_cases hcond : Tape.read (Tape.step blank (vt.1 GSTapes.tAn) blank .left) = mark ∧
         Tape.read (Tape.step blank (vt.1 GSTapes.tRn) blank .left) = mark
     · rw [if_pos hcond]
       have hle := perProgramX_length_le blank mark (GSTapes.p1Of' vt.1) vt
-      rw [hAn, hRn, hUW, hTR]
+      rw [hAn, hRn, hUXW]
       omega
     · rw [if_neg hcond]
       have hle := resProgramX_length_le blank mark k (GSTapes.qOf' vt.1) vt
-      rw [hAn, hRn, hUW, hTR]
+      rw [hAn, hRn, hUXW]
       omega
 
 end VProgXCost
@@ -1051,12 +1162,13 @@ end VProgXCost
 #print axioms resProgramX_U
 #print axioms resProgramX_Txt2_of_ne
 #print axioms resProgramX_Txt2_of_eq
-#print axioms uWalk_fst
-#print axioms uWalk_Txt2
-#print axioms uWalk_U
-#print axioms txt2Rewind_fst
-#print axioms txt2Rewind_U
-#print axioms txt2Rewind_Txt2
+#print axioms uxWalkLoop_fst
+#print axioms uxWalkLoop_U
+#print axioms uxWalkLoop_Txt2
+#print axioms uxWalk_fst
+#print axioms uxWalk_U
+#print axioms uxWalk_Txt2
+#print axioms uxWalk_length
 #print axioms vencodes_stepX
 #print axioms perProgramX_length_le
 #print axioms resProgramX_length_le
