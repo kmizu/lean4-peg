@@ -644,6 +644,185 @@ theorem passPeriodSum_eight_of_treeFacts
 end PassSum10
 end PalPeg
 
+namespace PalPeg
+namespace PassSum10
+universe u
+variable {α : Type u} [DecidableEq α]
+set_option linter.unusedSectionVars false
+
+/-! ## (a) `LastChildBound` は無条件に成り立つ
+
+最後の根は実在の節点であり（`segLastRoot_spec`）、その窓は親の周期領域に収まるので
+`GSDecompose2.child_period_bound` がそのまま使える。 -/
+
+/-- 最後の根は「区間内の実在の節点の周期」である。 -/
+theorem segLastRoot_spec (x : List α) (k b L : ℕ) (hk : 3 ≤ k) :
+    ∀ (fuel s : ℕ), s ≤ x.length →
+      segLastRoot x k b L fuel s = 0 ∨
+        ∃ u q m, s ≤ u ∧ u ≤ x.length ∧
+          firstOuter (x.drop u) k b (x.length + 1) 1 = some (q, m) ∧
+          segEnd x k u q ≤ L ∧ segLastRoot x k b L fuel s = q := by
+  intro fuel
+  induction fuel with
+  | zero => intro s _; exact Or.inl rfl
+  | succ fuel ih =>
+    intro s hs
+    rcases hfo : firstOuter (x.drop s) k b (x.length + 1) 1 with _ | ⟨p, m⟩
+    · left; rw [segLastRoot, hfo]
+    · have hle := nextPos_le x k b hk hs hfo
+      have hgt := nextPos_gt x k b hk hs hfo
+      by_cases hcond : segEnd x k s p ≤ L
+      · have hege := segExit_ge x k b (segEnd x k s p) hk fuel _ hle
+        have hele := segExit_le x k b (segEnd x k s p) hk fuel _ hle
+        rcases ih (segExit x k b (segEnd x k s p) fuel (nextPos x k s p)) hele with hz | hex
+        · right
+          refine ⟨s, p, m, le_refl _, hs, hfo, hcond, ?_⟩
+          rw [segLastRoot, hfo]
+          simp only []
+          rw [if_pos hcond, hz]
+        · obtain ⟨u, q, m', hu, hule, hfo', hcond', heq⟩ := hex
+          right
+          refine ⟨u, q, m', by omega, hule, hfo', hcond', ?_⟩
+          rw [segLastRoot, hfo]
+          simp only []
+          rw [if_pos hcond, heq]
+          have hq : 0 < q := (stripLoop2_step_data x k b hk hule hfo').1.1.1
+          cases hqq : q with
+          | zero => omega
+          | succ q' => rfl
+      · left; rw [segLastRoot, hfo]; simp only []; rw [if_neg hcond]
+
+/-- **(a)**：`LastChildBound` は仮定なしで成り立つ（`k = 8`）。 -/
+theorem lastChildBound_holds (x : List α) (b : ℕ) : LastChildBound x 8 b := by
+  intro s p m hs hfo
+  obtain ⟨hleast, -, hkr, hR⟩ := stripLoop2_step_data x 8 b (by omega) hs hfo
+  have hle := nextPos_le x 8 b (by omega) hs hfo
+  have hp : 0 < p := hleast.1.1
+  set r := extendReach (x.drop s) p (x.length + 1) (8 * p) with hrdef
+  rcases segLastRoot_spec x 8 b (segEnd x 8 s p) (by omega) (x.length + 1)
+      (nextPos x 8 s p) hle with hz | hex
+  · rw [hz]; omega
+  · obtain ⟨u, q, m', hu, hule, hfo', hcond', heq⟩ := hex
+    rw [heq]
+    obtain ⟨hqleast, -, hkq, hRq⟩ := stripLoop2_step_data x 8 b (by omega) hule hfo'
+    -- 子の窓は親の周期領域に収まる
+    have hu' : s + (r - 8 * p + 1) ≤ u := by simpa only [nextPos, ← hrdef] using hu
+    have hwin : (u - s) + 8 * q ≤ r := by
+      have h1 : u + extendReach (x.drop u) q (x.length + 1) (8 * q) ≤ s + r := hcond'
+      have h2 : 8 * q ≤ extendReach (x.drop u) q (x.length + 1) (8 * q) := hkq
+      omega
+    have hlt : q < p := by
+      have h8 : 8 * q < 8 * p := by omega
+      omega
+    have hdrop : (x.drop s).drop (u - s) = x.drop u := by
+      rw [List.drop_drop]; congr 1; omega
+    have hq' : IsLeastKRep ((x.drop s).drop (u - s)) 8 q := by rw [hdrop]; exact hqleast
+    have := child_period_bound (w := x.drop s) (k := 8) (t := u - s) (by omega)
+      hleast hR hkr hq' hwin (by omega)
+    omega
+
+end PassSum10
+end PalPeg
+
+namespace PalPeg
+namespace PassSum10
+universe u
+variable {α : Type u} [DecidableEq α]
+set_option linter.unusedSectionVars false
+
+/-! ## (b) `RootGrowth` は消費量補題から出る -/
+
+/-- 区間ループが止まった位置に節点があるなら、その run の右端は上限を超えている。 -/
+theorem segExit_stop (x : List α) (k b L : ℕ) (hk : 3 ≤ k) :
+    ∀ (fuel s q m : ℕ), s ≤ x.length → x.length + 1 - s ≤ fuel →
+      firstOuter (x.drop (segExit x k b L fuel s)) k b (x.length + 1) 1 = some (q, m) →
+      L < segEnd x k (segExit x k b L fuel s) q := by
+  intro fuel
+  induction fuel with
+  | zero => intro s q m hs h1 _; omega
+  | succ fuel ih =>
+    intro s q m hs h1 hfo'
+    rcases hfo : firstOuter (x.drop s) k b (x.length + 1) 1 with _ | ⟨p, m'⟩
+    · simp only [segExit, hfo] at hfo'
+      exact absurd hfo' (by simp)
+    · have hle := nextPos_le x k b hk hs hfo
+      have hgt := nextPos_gt x k b hk hs hfo
+      by_cases hcond : segEnd x k s p ≤ L
+      · have hval : segExit x k b L (fuel + 1) s
+            = segExit x k b L fuel (nextPos x k s p) := by
+          simp only [segExit, hfo]; rw [if_pos hcond]
+        rw [hval] at hfo' ⊢
+        exact ih (nextPos x k s p) q m hle (by omega) hfo'
+      · have hval : segExit x k b L (fuel + 1) s = s := by
+          simp only [segExit, hfo]; rw [if_neg hcond]
+        rw [hval] at hfo' ⊢
+        rw [hfo] at hfo'
+        simp only [Option.some.injEq, Prod.mk.injEq] at hfo'
+        rw [← hfo'.1]
+        omega
+
+/-- **消費量補題**（1 パスの再帰の言葉で）：節点 `c` の部分木を抜けた位置は
+`a_{c+1} + p_c` に届かない。`PassSum9` の `consumption_lt_period_of_dichotomy` が
+(H) からこれを与える。 -/
+def Consumption (x : List α) (k b : ℕ) : Prop :=
+  ∀ s p m, s ≤ x.length →
+    firstOuter (x.drop s) k b (x.length + 1) 1 = some (p, m) →
+    subExit x k b s p - nextPos x k s p < p
+
+/-- **(b)**：消費量補題から (T3)（`RootGrowth`）が従う（`k = 8`）。
+
+`sibling_growth_eight` は `6 * p < p'` を与える。着地した節点の窓が `R_c` に収まる
+場合は `inner_run_lt` から run も `R_c` の中で終わってしまい、そこが「部分木の外」
+であることに矛盾するので、窓は必ず `R_c` を出る。 -/
+theorem rootGrowth_of_consumption (x : List α) (b : ℕ) (hcons : Consumption x 8 b) :
+    RootGrowth x 8 b := by
+  intro s p m p' m' hs hfo hfo'
+  obtain ⟨hleast, -, hkr, hR⟩ := stripLoop2_step_data x 8 b (by omega) hs hfo
+  have hle := nextPos_le x 8 b (by omega) hs hfo
+  have hp : 0 < p := hleast.1.1
+  set r := extendReach (x.drop s) p (x.length + 1) (8 * p) with hrdef
+  set e := subExit x 8 b s p with hedef
+  have hege : nextPos x 8 s p ≤ e := by
+    rw [hedef]; exact segExit_ge x 8 b _ (by omega) (x.length + 1) _ hle
+  have hele : e ≤ x.length := by
+    rw [hedef]; exact segExit_le x 8 b _ (by omega) (x.length + 1) _ hle
+  have hnext : nextPos x 8 s p = s + (r - 8 * p + 1) := rfl
+  have hC : e - nextPos x 8 s p < p := hcons s p m hs hfo
+  obtain ⟨hqleast, -, hkq, hRq⟩ := stripLoop2_step_data x 8 b (by omega) hele hfo'
+  -- `e` は上限 `E_c` を超える最初の節点
+  have hstop : segEnd x 8 s p < segEnd x 8 e p' := by
+    rw [hedef]
+    exact segExit_stop x 8 b _ (by omega) (x.length + 1) _ p' m' hle (by omega) hfo'
+  have hstop' : s + r < e + extendReach (x.drop e) p' (x.length + 1) (8 * p') := hstop
+  set t := e - s with htdef
+  have hdrop : (x.drop s).drop t = x.drop e := by
+    rw [List.drop_drop]; congr 1; omega
+  have hP : IsLeastKRep ((x.drop s).drop t) 8 p' := by rw [hdrop]; exact hqleast
+  have hRq' : ReachOf ((x.drop s).drop t) p'
+      (extendReach (x.drop e) p' (x.length + 1) (8 * p')) := by rw [hdrop]; exact hRq
+  have hp' : 0 < p' := hqleast.1.1
+  -- 窓が `R_c` に収まる場合は矛盾
+  have hnfit : r < t + 8 * p' := by
+    by_contra hfit
+    have hfitle : t + 8 * p' ≤ r := by omega
+    have hlt : p' < p := by omega
+    have hinner := PassSum9.inner_run_lt (w := x.drop s) (k := 8) (t := t) (by omega)
+      hleast hR hkr hp' hlt hRq' (by omega)
+    omega
+  have hgrow := PassSum9.sibling_growth_eight (w := x.drop s) (q := p) (t := t)
+    (C := e - nextPos x 8 s p) hleast hR hkr hP (by omega) hC hnfit
+  omega
+
+/-- **最終形（消費量補題から）**：`Consumption` から `EndToEnd2.PassPeriodSum 8 2`。 -/
+theorem passPeriodSum_eight_of_consumption
+    (h : ∀ (x : List (Fin 2)) (b : ℕ), Consumption x 8 b) :
+    EndToEnd2.PassPeriodSum 8 2 :=
+  passPeriodSum_eight_of_treeFacts
+    (fun x b => ⟨rootGrowth_of_consumption x b (h x b), lastChildBound_holds x b⟩)
+
+end PassSum10
+end PalPeg
+
 section AxiomCheck
 #print axioms PalPeg.PassSum10.nextPos_gt
 #print axioms PalPeg.PassSum10.segExit_ge
@@ -658,4 +837,9 @@ section AxiomCheck
 #print axioms PalPeg.PassSum10.segLastRoot_le_maxPeriod
 #print axioms PalPeg.PassSum10.passSum_le_two_max_of_treeFacts
 #print axioms PalPeg.PassSum10.passPeriodSum_eight_of_treeFacts
+#print axioms PalPeg.PassSum10.segLastRoot_spec
+#print axioms PalPeg.PassSum10.lastChildBound_holds
+#print axioms PalPeg.PassSum10.segExit_stop
+#print axioms PalPeg.PassSum10.rootGrowth_of_consumption
+#print axioms PalPeg.PassSum10.passPeriodSum_eight_of_consumption
 end AxiomCheck
