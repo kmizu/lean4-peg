@@ -10,6 +10,7 @@ import PalPeg.GroupsLogBound
 import PalPeg.Matching
 import PalPeg.GSScan
 import PalPeg.GSDecomp
+import PalPeg.GSRealTime
 import PalPeg.RTQueue
 import PalPeg.Manacher
 import PalPeg.ManacherHeads
@@ -215,6 +216,10 @@ import PalPeg.Speedup
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.GSCore.ksimple
 
-/-- info: 'PalPeg.Speedup.Main.multiStep_recognizedBy' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PalPeg.Speedup.multiStep_recognizedBy' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms PalPeg.Speedup.Main.multiStep_recognizedBy
+#print axioms PalPeg.Speedup.multiStep_recognizedBy
+
+/-- info: 'PalPeg.online_answer_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.online_answer_correct
