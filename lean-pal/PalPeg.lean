@@ -63,6 +63,8 @@ import PalPeg.TapeLib
 import PalPeg.Speedup
 import PalPeg.ProgramMachine
 import PalPeg.Main
+import PalPeg.InputEmbed
+import PalPeg.PassSumGen
 import PalPeg.PassSum11
 import PalPeg.MeteredX
 import PalPeg.VerifierFeedX

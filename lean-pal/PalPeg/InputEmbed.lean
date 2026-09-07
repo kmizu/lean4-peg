@@ -2,6 +2,7 @@ import PalPeg.FullMachineTapes
 import PalPeg.StageIfaceInstance
 import PalPeg.Words
 import PalPeg.PassSumRelabel
+import PalPeg.PassSumGen
 
 /-!
 # 入力アルファベットの埋め込み (`InputEmbed`)
@@ -117,7 +118,9 @@ theorem mem_map_cases (ι : Fin 2 ↪ Fin sc) (input : List (Fin 2)) :
 /-- **像に収まる語に対する周期和の上界**：`EndToEnd2.PassPeriodSum 8 C₁` から
 `PassSumRelabel.passPeriodSum_of_subset` で得られる。
 （注意：`StageIfaceInstance.stageIface` の `hsum` は `∀ y : List (Fin sc)` という
-全称の形なので、`sc ≥ 3` ではこの補題だけからは埋まらない。§6 の注記を見よ。） -/
+全称の形なので、`sc ≥ 3` ではこの補題だけからは埋まらない。そちらは
+`PassSumGen.hsum_of_consumption`（消費量補題の任意アルファベット版）で埋める：
+`full_answer_mem_PAL_of_embed'` を見よ。） -/
 theorem passPeriodSum_map {C₁ : ℕ} (hsum₂ : EndToEnd2.PassPeriodSum 8 C₁)
     (ι : Fin 2 ↪ Fin sc) (input : List (Fin 2)) (b s : ℕ) :
     stripLoop2Periods (input.map ι) 8 b ((input.map ι).length + 1) s ≤ C₁ * b :=
@@ -223,6 +226,48 @@ theorem full_answer_mem_PAL_of_embed
       ↔ (input.take n) ∈ PAL :=
   full_answer_mem_PAL_embed ι input _ n hn
 
+open PalPeg.StageTapes PalPeg.StageIfaceInstance in
+/-- **`stageIface` 版・数学的仮定は消費量補題だけ**：`hsum` を
+`PassSumGen.hsum_of_consumption` で消し、残る「数学的」仮定を
+`hcons : ∀ (x : List (Fin sc)) (b : ℕ), PassSum10.Consumption x 8 b`
+（`PassSum10` の消費量補題の任意アルファベット版）ひとつにしたもの。
+ほかの仮定はすべて機械側の構造的なもの（記号の相異・段幅の 2 冪性・誕生時テープ・
+費用関数の性質）である。 -/
+theorem full_answer_mem_PAL_of_embed'
+    {blank startSym endSym mark leftSym one zero : Fin sc}
+    (ι : Fin 2 ↪ Fin sc)
+    (hι : ∀ i, ι i ∉ ({blank, mark, leftSym, endSym, startSym, one, zero} : Set (Fin sc)))
+    (hcons : ∀ (x : List (Fin sc)) (b : ℕ), PassSum10.Consumption x 8 b)
+    (hmb : mark ≠ blank)
+    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark)
+    (input : List (Fin 2))
+    (cstOf : ℕ → ScanState → ℕ) (A B' U : ℕ)
+    (initOf : ℕ → StageT sc)
+    (hC : 0 < A + B')
+    (hcost : ∀ (S : ℕ) (st : ScanState), cstOf S st ≤ (A + B')
+      * (Phi 8 (scanStep (vOf (input.map ι) S) 8 (peOf (input.map ι) S)
+          (reOf (input.map ι) S) ((input.map ι).drop S) st) - Phi 8 st))
+    (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (vOf (input.map ι) S).length →
+      ((input.map ι).drop S)[st.pos + st.q]? = (vOf (input.map ι) S)[st.q]? →
+        cstOf S st ≤ 1)
+    (hne : one ≠ zero)
+    (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
+    (hinit : ∀ S, 16 ≤ S → S / 2 ≤ (input.map ι).length →
+      PrepPre blank mark leftSym (S / 2) (input.map ι) ((input.map ι).drop S)
+          (initOf S).pg.ts
+        ∧ ∀ m, m ≤ S / 2 →
+          MiddleTapes.MEncodes blank startSym endSym mark leftSym one zero D
+            (input.map ι) S m (initOf S).md)
+    (n : ℕ) (hn : n ≤ input.length) :
+    FullMachineTapes.fullAnswer
+        (stageIface 2 (PassSumGen.hsum_of_consumption hcons) hmb D (input.map ι) cstOf
+          A B' U initOf hC hcost hadvance hne
+          (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
+          (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
+          hpow hinit) n = true
+      ↔ (input.take n) ∈ PAL :=
+  full_answer_mem_PAL_embed ι input _ n hn
+
 /-! ## 6. 具体的な記号割り当て（`sc = 9`）
 
 入力 2 記号＋特殊 7 記号で `sc = 9` が足りる。 -/
@@ -294,6 +339,40 @@ theorem mem_range_emb9 (input : List (Fin 2)) :
   obtain ⟨a, -, rfl⟩ := List.mem_map.mp hc
   exact ⟨a, rfl⟩
 
+open PalPeg.StageTapes PalPeg.StageIfaceInstance in
+/-- **`sc = 9` の具体化**：記号は `symbols9`（`blank, mark, leftSym, endSym, startSym,
+one, zero = 0,1,2,3,4,5,6`）、入力は `emb9`（`7, 8`）。記号の相異と像の分離は
+`decide` で片づき、数学的仮定は消費量補題 `hcons` だけが残る。 -/
+theorem full_answer_mem_PAL_of_embed9
+    (hcons : ∀ (x : List (Fin 9)) (b : ℕ), PassSum10.Consumption x 8 b)
+    (D : MiddleTapes.DecompOnTapes 9 (symbols9 0) (symbols9 4) (symbols9 3) (symbols9 1))
+    (input : List (Fin 2))
+    (cstOf : ℕ → ScanState → ℕ) (A B' U : ℕ)
+    (initOf : ℕ → StageT 9)
+    (hC : 0 < A + B')
+    (hcost : ∀ (S : ℕ) (st : ScanState), cstOf S st ≤ (A + B')
+      * (Phi 8 (scanStep (vOf (input.map emb9) S) 8 (peOf (input.map emb9) S)
+          (reOf (input.map emb9) S) ((input.map emb9).drop S) st) - Phi 8 st))
+    (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (vOf (input.map emb9) S).length →
+      ((input.map emb9).drop S)[st.pos + st.q]? = (vOf (input.map emb9) S)[st.q]? →
+        cstOf S st ≤ 1)
+    (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
+    (hinit : ∀ S, 16 ≤ S → S / 2 ≤ (input.map emb9).length →
+      PrepPre (symbols9 0) (symbols9 1) (symbols9 2) (S / 2) (input.map emb9)
+          ((input.map emb9).drop S) (initOf S).pg.ts
+        ∧ ∀ m, m ≤ S / 2 →
+          MiddleTapes.MEncodes (symbols9 0) (symbols9 4) (symbols9 3) (symbols9 1)
+            (symbols9 2) (symbols9 5) (symbols9 6) D (input.map emb9) S m (initOf S).md)
+    (n : ℕ) (hn : n ≤ input.length) :
+    FullMachineTapes.fullAnswer
+        (stageIface 2 (PassSumGen.hsum_of_consumption hcons) symbols9_mark_ne_blank D
+          (input.map emb9) cstOf A B' U initOf hC hcost hadvance symbols9_one_ne_zero
+          (notMem_map_of_notMem_range (notMem_range_of_hi emb9_avoids (by simp)) input)
+          (notMem_map_of_notMem_range (notMem_range_of_hi emb9_avoids (by simp)) input)
+          hpow hinit) n = true
+      ↔ (input.take n) ∈ PAL :=
+  full_answer_mem_PAL_embed emb9 input _ n hn
+
 end Symbols9
 
 section Audit
@@ -314,6 +393,8 @@ section Audit
 #print axioms hsum_of_mem_word
 #print axioms hsum_of_mem_range9
 #print axioms mem_range_emb9
+#print axioms full_answer_mem_PAL_of_embed'
+#print axioms full_answer_mem_PAL_of_embed9
 
 end Audit
 
