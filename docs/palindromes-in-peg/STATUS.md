@@ -1,7 +1,7 @@
 # 回文言語の素の PEG — 経過と現状（2026-09-07、lean4-peg 移行時点）
 
 > Python 94モジュールと66テストのScala移植は完了し、対応ファイルを揃えている。
-> MAINで `pal.PortCoverageSuite` を含む対象3 Suite・計19テストとcompileを確認済み。FullWindowPALのSHA再現は未検証である。
+> 統合ブランチで `pal.PortCoverageSuite` を含む対象3 Suite・計19テストとcompileを確認済み。FullWindowPALのSHA再現は未検証である。
 > 対応表と作業単位は [移植計画](../superpowers/plans/2026-09-07-pal-python-to-scala.md) にまとめる。
 
 この repo で作業を続けるための入口。まずこれを読み、次に `PLAIN_PAL_ARTIFACT.md`
@@ -75,7 +75,9 @@ Scala側のCLIは `pal.GenerateWindowPal`、`pal.CompactScaffoldPeg`、
 
 Scala全体生成のヒープ必要量は未計測なので、sbtの既定ヒープに頼らず、十分なメモリを持つホストで適切なJVM heapを設定して実行する。
 
-`GenerateOnlinePeg` の互換性もテストで確認済み：cache signatureはScalaソースをハッシュし、`.sca`形式は相互運用できるが自動cache再利用は言語ごとに分かれる。`--memory-mib` はJVMの`-Xmx`で制約し、Pythonの`RLIMIT_AS`とは異なる。SIGTERM時は`interrupted`・`emitted=false`を報告して既存出力を保持し、終了コードはJVMが143、Pythonが130になる。現在は残る実装検証を進めている。
+`GenerateOnlinePeg` の互換性もテストで確認済み：cache signatureはScalaソースをハッシュし、`.sca`形式は相互運用できるが自動cache再利用は言語ごとに分かれる。`--memory-mib` はJVMの`-Xmx`で制約し、Pythonの`RLIMIT_AS`とは異なる。SIGTERM時は`interrupted`・`emitted=false`を報告して既存出力を保持し、終了コードはJVMが143、Pythonが130になる。
+
+レガシーfixtureの再現には `--quantum 1 --match-delay 2 --budget 2 --raw-instructions --omit-invariant-monitors` を指定する（既定の全体生成ではない）。逆変換後の698,145,389 bytesもScalaで生成済みだが、Pythonとの比較は未検証である。
 
 ```sh
 cd /path/to/lean4-peg
@@ -88,7 +90,7 @@ sbt -batch 'pal/runMain pal.VerifyWindowPal /tmp/pal-window-fast.peg --runner ..
 Scala版の既定の全体文法を生成して上記SHAと一致させる検証は未実施。移植の差分証拠は、
 各 `PyDiff` テストが明示するソース／fixture範囲に限る。
 
-ファイル対応の棚卸しは `pal.PortCoverageSuite` がPythonディレクトリを再帰走査して行い、MAINで94モジュール・66テスト、
+ファイル対応の棚卸しは `pal.PortCoverageSuite` がPythonディレクトリを再帰走査して行い、統合ブランチで94モジュール・66テスト、
 不足0件を確認した。件数はSuiteに固定せず、追加されたPythonファイルにも対応Scalaパスを要求する。
 
 `CompactScaffoldPeg` は1GiBの窓を連結して2GiB超のsourceを読む設計だが、1行には別の上限がある。
