@@ -15,6 +15,7 @@ import PalPeg.GSDecompL1
 import PalPeg.GSDecompose2
 import PalPeg.GSDecompose2Work
 import PalPeg.PassSum
+import PalPeg.PassSum2
 import PalPeg.GSPreprocess
 import PalPeg.GSPreprocessTapes
 import PalPeg.GSRealTime
