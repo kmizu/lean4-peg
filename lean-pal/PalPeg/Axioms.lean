@@ -6,6 +6,7 @@ import PalPeg.Chain
 import PalPeg.Structure
 import PalPeg.Groups
 import PalPeg.GroupsLog
+import PalPeg.GroupsLogBound
 import PalPeg.Matching
 import PalPeg.GSScan
 import PalPeg.RTQueue
@@ -199,3 +200,7 @@ import PalPeg.TapeLib
 /-- info: 'PalPeg.MiddleJob.padFlag_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.MiddleJob.padFlag_spec
+
+/-- info: 'PalPeg.groupCount_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.groupCount_le

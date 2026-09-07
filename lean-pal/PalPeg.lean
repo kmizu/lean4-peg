@@ -7,6 +7,7 @@ import PalPeg.Chain
 import PalPeg.Structure
 import PalPeg.Groups
 import PalPeg.GroupsLog
+import PalPeg.GroupsLogBound
 import PalPeg.Matching
 import PalPeg.GSScan
 import PalPeg.RTQueue
@@ -30,7 +31,7 @@ import PalPeg.TapeLib
 * `PalPeg.Words`     — 回文と周期の組合せ論（拡張則・境界・Fine–Wilf・group 補題）
 * `PalPeg.Structure` — レプリカ・境界・予測補題・禁止帯（`lsp_shift_bound`）と (M) の反例
 * `PalPeg.Groups`    — group 圧縮した鎖（2 回の記号参照/群）が `chain` を展開する
-* `PalPeg.GroupsLog` — group 併合・正準性・境界縮小 `3ℓ' < 2ℓ`（群数の対数上界は条件付き）
+* `PalPeg.GroupsLog` — group 併合・正準性・境界縮小 `3ℓ' < 2ℓ`；`GroupsLogBound` で群数 ≤ 2·log₂|v|+4 を無条件化
 * `PalPeg.Matching`  — KMP 一歩・境界鎖・Galil の予測補題（仕事 ≤ 保証ゼロ出力数）
 * `PalPeg.Manacher`  — Manacher の radius 走査の正しさ、接頭辞回文フラグ、仕事量 ≤ n
 * `PalPeg.ManacherHeads` — Manacher をテープ上で走らせたときのヘッド総移動 ≤ 7|x|（telescoping）
