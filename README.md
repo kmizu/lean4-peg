@@ -114,3 +114,13 @@ and its restrictions are documented in
   guarantees it matches a fresh extraction
 - Zero external dependencies (no Mathlib / Batteries); toolchain pinned to
   Lean v4.32.0
+
+## Palindromes in plain PEG (artifact)
+
+`docs/palindromes-in-peg.md` and `docs/palindromes-in-peg/` hold the construction of an
+ordinary (macro-free) PEG for the binary palindrome language: the generators that
+reproduce the 13,248,052-rule grammar byte for byte, the Rust runner, the verification
+logs, and the notes on why every simpler route fails. The formal side — SCA semantics,
+translation validation of the emitted grammar, and the correctness of the online
+recogniser — is future work in this repository; see
+`docs/palindromes-in-peg/STATUS.md` (start here) and `docs/palindromes-in-peg/PLAIN_PAL_ARTIFACT.md`.
