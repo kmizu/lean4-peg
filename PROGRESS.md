@@ -211,3 +211,7 @@ lake build
   数値比較を差分テープに置換、GSVerifierTapes の償却（L1 不要）、GSScanTapes のオラクル bit 除去（8 テープ）、
   TextFeed（`feed_online`）。稼働中：BorderJobTapes、GSPreprocessTapes、GSDecompL1、OnlineMachine 半分割、
   MiddleBorder（BorderJob 版 MiddleImpl）。
+- 22:00 の API 上限リセット後：半分割再スケジュール完了（`output_correctH`、`round_cost_leH` 条件なし、
+  常駐段 ≤ 3）をコミット（413fee4）。落ちた 7 本（L1 最終補題、BorderJobTapes、GSPreprocessTapes、
+  検証器/TextFeed の 8 テープ版移植、MiddleBorder、PatternTapes）を再開。加えて Main.lean（構造化機械 →
+  `RecognizedByTotalPEG PAL` の糊）と InputCopy.lean（入力コピーのフロンティア書き込み）を Sonnet に依頼。
