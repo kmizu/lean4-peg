@@ -1681,6 +1681,398 @@ theorem settle_sentinel_fresh {startSym : Fin sc} (X : List (Fin sc)) (aTop : Fi
     · rw [h0] at hc; simp at hc; exact hne hc.symm
     · rw [List.getElem?_eq_none (by rw [List.length_singleton]; omega)] at hc; simp at hc
 
+/-! ### 入力に依存しない準備フェーズ（`setupProgL`） -/
+
+/-- フェーズ 2（カウンタ駆動コピー＋ミラー＋復元）の動作列。 -/
+def phase2Acts (blank : Fin sc) (n : ℕ) : List (TAct 12 sc) :=
+  (decActsN blank sCs (copyRoundMirror blank sIn sU sC2) n
+      ++ [TAct.put sCs blank .left, TAct.keep sCs .right])
+    ++ xfer1Acts blank sC2 sCs n
+
+/-- **入力に依存しない準備フェーズのプログラム**。`s` にも `h` にも依存しない
+（`k` だけが構成の定数）。 -/
+def setupProgL (blank startSym endSym mark leftSym : Fin sc) (k : ℕ) :
+    Prog (ActG 12 sc) (CondG 12 sc) :=
+  Prog.seq (pushBothProg startSym)
+    (Prog.seq
+      (Prog.seq (decLoopProg blank sCs (copyRoundMirror blank sIn sU sC2) mark)
+        (xfer1Prog blank mark sC2 sCs))
+      (Prog.seq
+        (Prog.loop (sIn, leftSym) (TAct.copy sP sIn (sc := sc) .right).act
+          (ACT (TAct.keep sIn .left)))
+        (Prog.seq (pushBothProg endSym)
+          (Prog.seq (settleProgG sU blank startSym)
+            (Prog.seq (settleProgG sP blank startSym) (kLoopProg blank mark k))))))
+
+/-- `setupProgL` が実行する動作列。 -/
+def setupProgLActs (blank startSym endSym : Fin sc) (s hms k p₁ : ℕ) : List (TAct 12 sc) :=
+  pushBothActs startSym ++
+    (phase2Acts blank s ++
+      (copyActsN sIn sP hms ++
+        (pushBothActs endSym ++
+          ((TAct.put sU blank .left :: (leftWalkG sU (s + 1) ++ [TAct.keep sU .right])) ++
+            ((TAct.put sP blank .left :: (leftWalkG sP (hms + 1) ++ [TAct.keep sP .right])) ++
+              kLoopActs blank p₁ k)))))
+
+/-- `setupProgL` の実行結果テープ（フェーズごとの意味論的な合成）。 -/
+def setupTapesL (blank startSym endSym : Fin sc) (s hms k : ℕ) (S : Tapes sc) : Tapes sc :=
+  let S₁ := run blank (pushBoth startSym) S
+  let S₂ := runG blank (phase2Acts blank s) S₁
+  let S₃ := run blank (copyLoop blank sIn sP hms S₂) S₂
+  let S₄ := run blank (pushBoth endSym) S₃
+  let S₅ := run blank (settle blank sU s) S₄
+  let S₆ := run blank (settle blank sP hms) S₅
+  run blank (kLoop blank k S₆) S₆
+
+/-- **動作数**：`setupProgL` のトレース長。`setupProgActs` の
+`10 + 3*s + 3*hms + k*(7*p₁+4)` に対して、カウンタ駆動化のぶん `4 + 6*s` だけ増える
+（フェーズ 2 のミラー書き込み `s`、`decLoop` のプローブ＋復元 `2`、`xfer1` の `3*s+2`）。 -/
+theorem setupProgL_trace_length {startSym endSym : Fin sc} (s hms k p₁ : ℕ) :
+    (setupProgLActs blank startSym endSym s hms k p₁).length
+      = 14 + 9 * s + 3 * hms + k * (7 * p₁ + 4) := by
+  simp only [setupProgLActs, phase2Acts, pushBothActs, List.length_append, decActsN_length,
+    xfer1Acts_length, copyActsN_length, leftWalkG_length, kLoopActs_length, List.length_cons,
+    List.length_nil, copyRoundMirror, copyRoundG]
+  ring
+
+theorem setupProgL_exec {startSym endSym leftSym : Fin sc} {s h p₁ r k : ℕ}
+    {w' Text : List (Fin sc)} {S : Tapes sc}
+    (H : PrepPreL blank mark leftSym s h p₁ r w' Text S) (hne : mark ≠ blank)
+    (hSw : startSym ∉ w') (hSE : startSym ≠ endSym) :
+    ExecG Terminal blank (setupProgL blank startSym endSym mark leftSym k) S
+        (setupProgLActs blank startSym endSym s (h - s) k p₁) ∧
+      runG blank (setupProgLActs blank startSym endSym s (h - s) k p₁) S
+        = setupTapesL blank startSym endSym s (h - s) k S := by
+  obtain ⟨hpos, hle, hcut, hfresh, hIn, hU, hP, _hT, _hX2, hCs, hC1, hC2, _hAp, hAn, _hRp,
+    _hRn⟩ := H
+  -- フェーズ 1
+  obtain ⟨S₁, hS1⟩ : ∃ T, run blank (pushBoth startSym) S = T := ⟨_, rfl⟩
+  have p1U : Tape.StackView blank (S₁ sU) [startSym] := by
+    rw [← hS1, pushBoth_U]; exact Tape.push_spec hU startSym
+  have p1P : Tape.StackView blank (S₁ sP) [startSym] := by
+    rw [← hS1, pushBoth_P]; exact Tape.push_spec hP startSym
+  have p1ne : ∀ j : Fin 12, j ≠ sU → j ≠ sP → S₁ j = S j := by
+    intro j hu hp; rw [← hS1]; exact pushBoth_ne blank startSym hu hp S
+  -- フェーズ 2
+  have hcs1 : Tape.CounterView' blank mark (S₁ sCs) s := by
+    rw [p1ne sCs (by decide) (by decide)]; exact hCs
+  have hc21 : Tape.CounterView' blank mark (S₁ sC2) 0 := by
+    rw [p1ne sC2 (by decide) (by decide)]; exact hC2
+  have hIn1 : Tape.SeqView blank (S₁ sIn) (leftSym :: w') h := by
+    rw [p1ne sIn (by decide) (by decide)]; exact hIn
+  obtain ⟨S₂, hS2, p2In, p2U0, p2C2, p2ne⟩ :=
+    phase2_facts (blank := blank) mark S₁ s h (leftSym :: w') [startSym] hcs1 hc21
+      (by omega) hIn1 p1U
+  have p2U : Tape.StackView blank (S₂ sU) ((w'.take h).drop (h - s) ++ [startSym]) := by
+    rwa [take_drop_shift leftSym w' h s (by omega)] at p2U0
+  -- フェーズ 3
+  obtain ⟨S₃, hS3⟩ : ∃ T, run blank (copyLoop blank sIn sP (h - s) S₂) S₂ = T := ⟨_, rfl⟩
+  have p3 := copyLoop_spec blank (i := sIn) (j := sP) (by decide) (h - s) (h - s) S₂
+    (leftSym :: w') [startSym] (by omega) p2In
+    (by rw [p2ne sP (by decide) (by decide) (by decide) (by decide)]; exact p1P)
+  have p3ne : ∀ j : Fin 12, j ≠ sIn → j ≠ sP → S₃ j = S₂ j := by
+    intro j hi hp; rw [← hS3]; exact copyLoop_untouched blank hi hp _ _
+  have p3P : Tape.StackView blank (S₃ sP) (w'.take (h - s) ++ [startSym]) := by
+    have h2 := p3.2
+    rw [hS3, take_drop_shift leftSym w' (h - s) (h - s) (le_refl _), Nat.sub_self,
+      List.drop_zero] at h2
+    exact h2
+  -- フェーズ 4
+  obtain ⟨S₄, hS4⟩ : ∃ T, run blank (pushBoth endSym) S₃ = T := ⟨_, rfl⟩
+  have p4U : Tape.StackView blank (S₄ sU)
+      (endSym :: ((w'.take h).drop (h - s) ++ [startSym])) := by
+    rw [← hS4, pushBoth_U]
+    exact Tape.push_spec (by rw [p3ne sU (by decide) (by decide)]; exact p2U) endSym
+  have p4P : Tape.StackView blank (S₄ sP) (endSym :: (w'.take (h - s) ++ [startSym])) := by
+    rw [← hS4, pushBoth_P]; exact Tape.push_spec p3P endSym
+  have p4ne : ∀ j : Fin 12, j ≠ sU → j ≠ sP → S₄ j = S₃ j := by
+    intro j hu hp; rw [← hS4]; exact pushBoth_ne blank endSym hu hp S₃
+  -- 長さ
+  have hxlen : (w'.take h).length = h := by simp only [List.length_take]; omega
+  have hulen : ((w'.take h).drop (h - s)).length = s := by
+    rw [List.length_drop, hxlen]; omega
+  have hvlen : (w'.take (h - s)).length = h - s := by
+    simp only [List.length_take]; omega
+  -- フェーズ 5・6
+  have hs5 := settle_spec blank sU (n := s) p4U (by
+    simp only [List.length_cons, List.length_append, List.length_nil, hulen])
+  have hxl5 : ∃ x l, ((run blank (settle blank sU s) S₄) sU).left = x :: l := by
+    have hlenL : ((run blank (settle blank sU s) S₄) sU).left.length = 1 := by
+      rw [hs5.left_eq, List.length_reverse, List.length_take, Nat.min_eq_left (by
+        have := hs5.lt; omega)]
+    generalize hL : ((run blank (settle blank sU s) S₄) sU).left = L at hlenL ⊢
+    cases L with
+    | nil => simp at hlenL
+    | cons x l => exact ⟨x, l, rfl⟩
+  obtain ⟨x5, l5, hxl5⟩ := hxl5
+  obtain ⟨S₅, hS5⟩ : ∃ T, run blank (settle blank sU s) S₄ = T := ⟨_, rfl⟩
+  have p5ne : ∀ j : Fin 12, j ≠ sU → S₅ j = S₄ j := by
+    intro j hu; rw [← hS5]; exact settle_untouched blank hu _ _
+  have hp4P' : Tape.StackView blank (S₅ sP) (endSym :: (w'.take (h - s) ++ [startSym])) := by
+    rw [p5ne sP (by decide)]; exact p4P
+  have hs6 := settle_spec blank sP (n := h - s) hp4P' (by
+    simp only [List.length_cons, List.length_append, List.length_nil, hvlen])
+  have hxl6 : ∃ x l, ((run blank (settle blank sP (h - s)) S₅) sP).left = x :: l := by
+    have hlenL : ((run blank (settle blank sP (h - s)) S₅) sP).left.length = 1 := by
+      rw [hs6.left_eq, List.length_reverse, List.length_take, Nat.min_eq_left (by
+        have := hs6.lt; omega)]
+    generalize hL : ((run blank (settle blank sP (h - s)) S₅) sP).left = L at hlenL ⊢
+    cases L with
+    | nil => simp at hlenL
+    | cons x l => exact ⟨x, l, rfl⟩
+  obtain ⟨x6, l6, hxl6⟩ := hxl6
+  obtain ⟨S₆, hS6⟩ : ∃ T, run blank (settle blank sP (h - s)) S₅ = T := ⟨_, rfl⟩
+  have p6ne : ∀ j : Fin 12, j ≠ sP → S₆ j = S₅ j := by
+    intro j hp; rw [← hS6]; exact settle_untouched blank hp _ _
+  -- 触られなかったテープ
+  have hkeep : ∀ j : Fin 12, j ≠ sU → j ≠ sP → j ≠ sIn → j ≠ sCs → j ≠ sC2 → S₆ j = S j := by
+    intro j hu hp hi hcs hc2
+    rw [p6ne j hp, p5ne j hu, p4ne j hu hp, p3ne j hi hp, p2ne j hi hu hcs hc2, p1ne j hu hp]
+  have hC1' : Tape.CounterView' blank mark (S₆ sC1) p₁ := by
+    rw [hkeep sC1 (by decide) (by decide) (by decide) (by decide) (by decide)]; exact hC1
+  have hC2' : Tape.CounterView' blank mark (S₆ sC2) 0 := by
+    rw [p6ne sC2 (by decide), p5ne sC2 (by decide), p4ne sC2 (by decide) (by decide),
+      p3ne sC2 (by decide) (by decide)]
+    exact p2C2
+  have hAn' : Tape.CounterView' blank mark (S₆ sAn) 0 := by
+    rw [hkeep sAn (by decide) (by decide) (by decide) (by decide) (by decide)]; exact hAn
+  obtain ⟨e7, e7run⟩ := kLoopProg_exec (Terminal := Terminal) hne k S₆ p₁ 0 hC1' hC2' hAn'
+  -- 各段の作用
+  have hR1 : runG blank (pushBothActs startSym) S = S₁ := by
+    rw [pushBothActs_run, hS1]
+  have hR2 : runG blank (phase2Acts blank s) S₁ = S₂ := hS2
+  have hR3 : runG blank (copyActsN sIn sP (h - s)) S₂ = S₃ := by
+    rw [copyActsN_run', hS3]
+  have hR4 : runG blank (pushBothActs endSym) S₃ = S₄ := by
+    rw [pushBothActs_run, hS4]
+  have hR5 : runG blank
+      (TAct.put sU blank .left :: (leftWalkG sU (s + 1) ++ [TAct.keep sU .right])) S₄ = S₅ := by
+    rw [settleActs_run blank sU s S₄ hxl5, hS5]
+  have hR6 : runG blank
+      (TAct.put sP blank .left :: (leftWalkG sP (h - s + 1) ++ [TAct.keep sP .right])) S₅
+        = S₆ := by
+    rw [settleActs_run blank sP (h - s) S₅ hxl6, hS6]
+  -- 各段の `ExecG`
+  have E7 : ExecG Terminal blank (kLoopProg blank mark k) S₆ (kLoopActs blank p₁ k) := e7
+  have hsentU := settle_sentinel_fresh (startSym := startSym) ((w'.take h).drop (h - s)) endSym
+    (fun hc => hSw (List.mem_of_mem_take (List.mem_of_mem_drop hc))) hSE
+  have hsentP := settle_sentinel_fresh (startSym := startSym) (w'.take (h - s)) endSym
+    (fun hc => hSw (List.mem_of_mem_take hc)) hSE
+  have E6 : ExecG Terminal blank (settleProgG sP blank startSym) S₅
+      (TAct.put sP blank .left :: (leftWalkG sP (h - s + 1) ++ [TAct.keep sP .right])) := by
+    have := settleProgG_exec (Terminal := Terminal) (i := sP) (sent := startSym) hp4P'
+      hsentP.1 hsentP.2
+    rwa [show (w'.take (h - s) ++ [startSym]).length = h - s + 1 from by
+      simp only [List.length_append, List.length_cons, List.length_nil, hvlen]] at this
+  have E5 : ExecG Terminal blank (settleProgG sU blank startSym) S₄
+      (TAct.put sU blank .left :: (leftWalkG sU (s + 1) ++ [TAct.keep sU .right])) := by
+    have := settleProgG_exec (Terminal := Terminal) (i := sU) (sent := startSym) p4U
+      hsentU.1 hsentU.2
+    rwa [show ((w'.take h).drop (h - s) ++ [startSym]).length = s + 1 from by
+      simp only [List.length_append, List.length_cons, List.length_nil, hulen]] at this
+  have E4 : ExecG Terminal blank (pushBothProg endSym) S₃ (pushBothActs endSym) :=
+    pushBothProg_exec endSym S₃
+  have E3 : ExecG Terminal blank
+      (Prog.loop (sIn, leftSym) (TAct.copy sP sIn (sc := sc) .right).act
+        (ACT (TAct.keep sIn .left))) S₂ (copyActsN sIn sP (h - s)) :=
+    copyLoopSentL_exec (Terminal := Terminal) (by decide) hfresh (h - s) S₂ p2In
+  have hbody : ∀ x ∈ copyRoundMirror blank sIn sU sC2 (sc := sc), x.tape ≠ sCs := by
+    intro x hx
+    fin_cases hx <;> simp only [TAct.tape] <;> decide
+  have E2a : ExecG Terminal blank (decLoopProg blank sCs (copyRoundMirror blank sIn sU sC2) mark)
+      S₁ (decActsN blank sCs (copyRoundMirror blank sIn sU sC2) s
+        ++ [TAct.put sCs blank .left, TAct.keep sCs .right]) :=
+    decLoopProg_exec hne hbody s S₁ hcs1
+  have hmirD : Tape.CounterView' blank mark
+      (runG blank (decActsN blank sCs (copyRoundMirror blank sIn sU sC2) s) S₁ sC2) s := by
+    simpa using decCopyMirror_counter blank mark (cs := sCs) (mir := sC2) (i := sIn) (j := sU)
+      (by decide) (by decide) (by decide) s S₁ 0 hc21
+  have hT1c2 : Tape.CounterView' blank mark
+      (runG blank (decActsN blank sCs (copyRoundMirror blank sIn sU sC2) s
+        ++ [TAct.put sCs blank .left, TAct.keep sCs .right]) S₁ sC2) s := by
+    rw [runG_append, runG_untouched blank sC2 _ _ (by
+      intro x hx; fin_cases hx <;> simp only [TAct.tape] <;> decide)]
+    exact hmirD
+  have E2b : ExecG Terminal blank (xfer1Prog blank mark sC2 sCs)
+      (runG blank (decActsN blank sCs (copyRoundMirror blank sIn sU sC2) s
+        ++ [TAct.put sCs blank .left, TAct.keep sCs .right]) S₁)
+      (xfer1Acts blank sC2 sCs s) :=
+    xfer1Prog_exec hne (by decide) s _ hT1c2
+  have E2 : ExecG Terminal blank
+      (Prog.seq (decLoopProg blank sCs (copyRoundMirror blank sIn sU sC2) mark)
+        (xfer1Prog blank mark sC2 sCs)) S₁ (phase2Acts blank s) :=
+    execG_seq E2a E2b
+  have E1 : ExecG Terminal blank (pushBothProg startSym) S (pushBothActs startSym) :=
+    pushBothProg_exec startSym S
+  -- 合成
+  have F6 := execG_seq E6 (by rw [hR6]; exact E7)
+  have F5 := execG_seq E5 (by rw [hR5]; exact F6)
+  have F4 := execG_seq E4 (by rw [hR4]; exact F5)
+  have F3 := execG_seq E3 (by rw [hR3]; exact F4)
+  have F2 := execG_seq E2 (by rw [hR2]; exact F3)
+  have F1 := execG_seq E1 (by rw [hR1]; exact F2)
+  refine ⟨execG_of_eq rfl F1, ?_⟩
+  show runG blank (pushBothActs startSym ++
+      (phase2Acts blank s ++
+        (copyActsN sIn sP (h - s) ++
+          (pushBothActs endSym ++
+            ((TAct.put sU blank .left :: (leftWalkG sU (s + 1) ++ [TAct.keep sU .right])) ++
+              ((TAct.put sP blank .left ::
+                  (leftWalkG sP (h - s + 1) ++ [TAct.keep sP .right])) ++
+                kLoopActs blank p₁ k)))))) S
+    = setupTapesL blank startSym endSym s (h - s) k S
+  rw [runG_append, hR1, runG_append, hR2, runG_append, hR3, runG_append, hR4,
+    runG_append, hR5, runG_append, hR6, e7run]
+  simp only [setupTapesL]
+  rw [hS1, hR2, hS3, hS4, hS5, hS6]
+
+/-- **主定理**：`setupProgL`（`s`,`h` に依存しない単一の固定プログラム）は
+`PrepPreL` のもとで `PatternTapes.setup_spec` と同じ符号化を作る。 -/
+theorem setupProgL_spec {startSym endSym leftSym : Fin sc} {s h p₁ r k : ℕ}
+    {w' Text : List (Fin sc)} {S : Tapes sc}
+    (H : PrepPreL blank mark leftSym s h p₁ r w' Text S) (hne : mark ≠ blank)
+    (hSw : startSym ∉ w') (hSE : startSym ≠ endSym) :
+    (ExecG Terminal blank (setupProgL blank startSym endSym mark leftSym k) S
+        (setupProgLActs blank startSym endSym s (h - s) k p₁) ∧
+      runG blank (setupProgLActs blank startSym endSym s (h - s) k p₁) S
+        = setupTapesL blank startSym endSym s (h - s) k S) ∧
+      GSVTapes.VEncodes' blank startSym endSym mark
+        ((w'.take h).reverse.take s) ((w'.take h).reverse.drop s)
+        (TextFeed.padW blank Text 0) k p₁ r
+        (toGS (setupTapesL blank startSym endSym s (h - s) k S),
+          toVExt (setupTapesL blank startSym endSym s (h - s) k S))
+        (⟨0, 0⟩, 0) := by
+  refine ⟨setupProgL_exec (Terminal := Terminal) H hne hSw hSE, ?_⟩
+  obtain ⟨hpos, hle, hcut, hfresh, hIn, hU, hP, hT, hX2, hCs, hC1, hC2, hAp, hAn, hRp,
+    hRn⟩ := H
+  have hxlen : (w'.take h).length = h := by simp only [List.length_take]; omega
+  have hueq : ((w'.take h).drop (h - s)).reverse = (w'.take h).reverse.take s := by
+    rw [List.take_reverse, hxlen]
+  have hveq : (w'.take (h - s)).reverse = (w'.take h).reverse.drop s := by
+    rw [List.drop_reverse, hxlen, List.take_take, Nat.min_eq_left (by omega)]
+  -- フェーズ 1
+  obtain ⟨S₁, hS1⟩ : ∃ T, run blank (pushBoth startSym) S = T := ⟨_, rfl⟩
+  have p1U : Tape.StackView blank (S₁ sU) [startSym] := by
+    rw [← hS1, pushBoth_U]; exact Tape.push_spec hU startSym
+  have p1P : Tape.StackView blank (S₁ sP) [startSym] := by
+    rw [← hS1, pushBoth_P]; exact Tape.push_spec hP startSym
+  have p1ne : ∀ j : Fin 12, j ≠ sU → j ≠ sP → S₁ j = S j := by
+    intro j hu hp; rw [← hS1]; exact pushBoth_ne blank startSym hu hp S
+  -- フェーズ 2
+  have hcs1 : Tape.CounterView' blank mark (S₁ sCs) s := by
+    rw [p1ne sCs (by decide) (by decide)]; exact hCs
+  have hc21 : Tape.CounterView' blank mark (S₁ sC2) 0 := by
+    rw [p1ne sC2 (by decide) (by decide)]; exact hC2
+  have hIn1 : Tape.SeqView blank (S₁ sIn) (leftSym :: w') h := by
+    rw [p1ne sIn (by decide) (by decide)]; exact hIn
+  obtain ⟨S₂, hS2, p2In, p2U0, p2C2, p2ne⟩ :=
+    phase2_facts (blank := blank) mark S₁ s h (leftSym :: w') [startSym] hcs1 hc21
+      (by omega) hIn1 p1U
+  have p2U : Tape.StackView blank (S₂ sU) ((w'.take h).drop (h - s) ++ [startSym]) := by
+    rwa [take_drop_shift leftSym w' h s (by omega)] at p2U0
+  -- フェーズ 3
+  obtain ⟨S₃, hS3⟩ : ∃ T, run blank (copyLoop blank sIn sP (h - s) S₂) S₂ = T := ⟨_, rfl⟩
+  have p3 := copyLoop_spec blank (i := sIn) (j := sP) (by decide) (h - s) (h - s) S₂
+    (leftSym :: w') [startSym] (by omega) p2In
+    (by rw [p2ne sP (by decide) (by decide) (by decide) (by decide)]; exact p1P)
+  have p3ne : ∀ j : Fin 12, j ≠ sIn → j ≠ sP → S₃ j = S₂ j := by
+    intro j hi hp; rw [← hS3]; exact copyLoop_untouched blank hi hp _ _
+  have p3P : Tape.StackView blank (S₃ sP) (w'.take (h - s) ++ [startSym]) := by
+    have h2 := p3.2
+    rw [hS3, take_drop_shift leftSym w' (h - s) (h - s) (le_refl _), Nat.sub_self,
+      List.drop_zero] at h2
+    exact h2
+  -- フェーズ 4
+  obtain ⟨S₄, hS4⟩ : ∃ T, run blank (pushBoth endSym) S₃ = T := ⟨_, rfl⟩
+  have p4U : Tape.StackView blank (S₄ sU)
+      (endSym :: ((w'.take h).drop (h - s) ++ [startSym])) := by
+    rw [← hS4, pushBoth_U]
+    exact Tape.push_spec (by rw [p3ne sU (by decide) (by decide)]; exact p2U) endSym
+  have p4P : Tape.StackView blank (S₄ sP) (endSym :: (w'.take (h - s) ++ [startSym])) := by
+    rw [← hS4, pushBoth_P]; exact Tape.push_spec p3P endSym
+  have p4ne : ∀ j : Fin 12, j ≠ sU → j ≠ sP → S₄ j = S₃ j := by
+    intro j hu hp; rw [← hS4]; exact pushBoth_ne blank endSym hu hp S₃
+  have hulen : ((w'.take h).drop (h - s)).length = s := by
+    rw [List.length_drop, hxlen]; omega
+  have hvlen : (w'.take (h - s)).length = h - s := by
+    simp only [List.length_take]; omega
+  -- フェーズ 5
+  obtain ⟨S₅, hS5⟩ : ∃ T, run blank (settle blank sU s) S₄ = T := ⟨_, rfl⟩
+  have p5U : Tape.SeqView blank (S₅ sU)
+      (startSym :: ((w'.take h).reverse.take s ++ [endSym])) 1 := by
+    rw [← hS5]
+    have := settle_spec blank sU (n := s) p4U
+      (by simp only [List.length_append, List.length_cons, List.length_nil, hulen])
+    simpa [← hueq] using this
+  have p5ne : ∀ j : Fin 12, j ≠ sU → S₅ j = S₄ j := by
+    intro j hu; rw [← hS5]; exact settle_untouched blank hu _ _
+  -- フェーズ 6
+  obtain ⟨S₆, hS6⟩ : ∃ T, run blank (settle blank sP (h - s)) S₅ = T := ⟨_, rfl⟩
+  have p6P : Tape.SeqView blank (S₆ sP)
+      (startSym :: ((w'.take h).reverse.drop s ++ [endSym])) 1 := by
+    rw [← hS6]
+    have hp5 : Tape.StackView blank (S₅ sP) (endSym :: (w'.take (h - s) ++ [startSym])) := by
+      rw [p5ne sP (by decide)]; exact p4P
+    have := settle_spec blank sP (n := h - s) hp5
+      (by simp only [List.length_append, List.length_cons, List.length_nil, hvlen])
+    simpa [← hveq] using this
+  have p6ne : ∀ j : Fin 12, j ≠ sP → S₆ j = S₅ j := by
+    intro j hp; rw [← hS6]; exact settle_untouched blank hp _ _
+  have hkeep : ∀ j : Fin 12, j ≠ sU → j ≠ sP → j ≠ sIn → j ≠ sCs → j ≠ sC2 → S₆ j = S j := by
+    intro j hu hp hi hcs hc2
+    rw [p6ne j hp, p5ne j hu, p4ne j hu hp, p3ne j hi hp, p2ne j hi hu hcs hc2, p1ne j hu hp]
+  have hC2' : Tape.CounterView' blank mark (S₆ sC2) 0 := by
+    rw [p6ne sC2 (by decide), p5ne sC2 (by decide), p4ne sC2 (by decide) (by decide),
+      p3ne sC2 (by decide) (by decide)]
+    exact p2C2
+  obtain ⟨q1, q2, q3, _qlen, qne⟩ := kLoop_spec (blank := blank) (mark := mark) k S₆ p₁ 0
+    (by rw [hkeep sC1 (by decide) (by decide) (by decide) (by decide) (by decide)]; exact hC1)
+    hC2'
+    (by rw [hkeep sAn (by decide) (by decide) (by decide) (by decide) (by decide)]; exact hAn)
+  have hrun : setupTapesL blank startSym endSym s (h - s) k S
+      = run blank (kLoop blank k S₆) S₆ := by
+    have hS2' : runG blank (phase2Acts blank s) S₁ = S₂ := hS2
+    simp only [setupTapesL]; rw [hS1, hS2', hS3, hS4, hS5, hS6]
+  refine ⟨⟨?_, ?_, ?_, ?_, ⟨?_, ?_, ?_, ?_⟩⟩, ?_, ?_⟩
+  · show Tape.SeqView blank (setupTapesL blank startSym endSym s (h - s) k S sP) _ (0 + 1)
+    rw [hrun, qne sP (by decide) (by decide) (by decide), Nat.zero_add]
+    exact p6P
+  · show Tape.SeqView blank (setupTapesL blank startSym endSym s (h - s) k S sT) _ (0 + 0)
+    rw [hrun, qne sT (by decide) (by decide) (by decide), Nat.zero_add,
+      hkeep sT (by decide) (by decide) (by decide) (by decide) (by decide)]
+    exact hT
+  · show Tape.CounterView' blank mark (setupTapesL blank startSym endSym s (h - s) k S sC1) p₁
+    rw [hrun]; exact q1
+  · show Tape.CounterView' blank mark (setupTapesL blank startSym endSym s (h - s) k S sC2) 0
+    rw [hrun]; exact q2
+  · show Tape.CounterView' blank mark
+      (setupTapesL blank startSym endSym s (h - s) k S sAp) (0 - k * p₁)
+    rw [hrun, qne sAp (by decide) (by decide) (by decide),
+      hkeep sAp (by decide) (by decide) (by decide) (by decide) (by decide), Nat.zero_sub]
+    exact hAp
+  · show Tape.CounterView' blank mark
+      (setupTapesL blank startSym endSym s (h - s) k S sAn) (k * p₁ - 0)
+    rw [hrun, Nat.sub_zero]
+    simpa using q3
+  · show Tape.CounterView' blank mark (setupTapesL blank startSym endSym s (h - s) k S sRp) (r - 0)
+    rw [hrun, qne sRp (by decide) (by decide) (by decide),
+      hkeep sRp (by decide) (by decide) (by decide) (by decide) (by decide), Nat.sub_zero]
+    exact hRp
+  · show Tape.CounterView' blank mark (setupTapesL blank startSym endSym s (h - s) k S sRn) (0 - r)
+    rw [hrun, qne sRn (by decide) (by decide) (by decide),
+      hkeep sRn (by decide) (by decide) (by decide) (by decide) (by decide), Nat.zero_sub]
+    exact hRn
+  · show Tape.SeqView blank (setupTapesL blank startSym endSym s (h - s) k S sU) _ (0 + 1)
+    rw [hrun, qne sU (by decide) (by decide) (by decide), Nat.zero_add, p6ne sU (by decide)]
+    exact p5U
+  · show Tape.SeqView blank (setupTapesL blank startSym endSym s (h - s) k S sX2) _ (0 - _ + 0)
+    rw [hrun, qne sX2 (by decide) (by decide) (by decide),
+      hkeep sX2 (by decide) (by decide) (by decide) (by decide) (by decide), Nat.zero_sub,
+      Nat.zero_add]
+    exact hX2
+
+#print axioms setupProgL_spec
+
 end Twelve
 
 end PalPeg.PatternProg
