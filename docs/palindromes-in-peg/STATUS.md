@@ -1,7 +1,7 @@
 # 回文言語の素の PEG — 経過と現状（2026-09-07、lean4-peg 移行時点）
 
-> Python 94モジュールと66テストのScala対応ファイルは揃っている。
-> `pal.PortCoverageSuite` で対応先の存在を確認済みだが、全体テストの再実行やFullWindowPALのSHA再現とは別である。
+> Python 94モジュールと66テストのScala移植は完了し、対応ファイルを揃えている。
+> MAINで `pal.PortCoverageSuite` を含む対象3 Suite・計19テストとcompileを確認済み。FullWindowPALのSHA再現は未検証である。
 > 対応表と作業単位は [移植計画](../superpowers/plans/2026-09-07-pal-python-to-scala.md) にまとめる。
 
 この repo で作業を続けるための入口。まずこれを読み、次に `PLAIN_PAL_ARTIFACT.md`
