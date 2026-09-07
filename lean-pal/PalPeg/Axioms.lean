@@ -7,6 +7,7 @@ import PalPeg.Structure
 import PalPeg.Groups
 import PalPeg.GroupsLog
 import PalPeg.Matching
+import PalPeg.GSScan
 import PalPeg.RTQueue
 import PalPeg.Manacher
 import PalPeg.ManacherHeads
@@ -177,3 +178,15 @@ import PalPeg.TapeLib
 /-- info: 'PalPeg.Tape.push_spec' depends on axioms: [propext] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.Tape.push_spec
+
+/-- info: 'PalPeg.safe_shift' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.safe_shift
+
+/-- info: 'PalPeg.scan_sound_complete' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.scan_sound_complete
+
+/-- info: 'PalPeg.scanSteps_le_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.scanSteps_le_bound

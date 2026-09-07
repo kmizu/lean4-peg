@@ -1,3 +1,4 @@
+import Mathlib.Tactic.Ring
 import PalPeg.Matching
 
 /-!
@@ -163,16 +164,13 @@ theorem ksimple_of_shortest {v : List α} {k p₁ r : ℕ} (hp : 0 < p₁)
   exact ⟨by omega, h2⟩
 
 /-- 周期のない分解（`decomposition` が `Decomposition(start, None, 0)` を返す場合）でも
-`KSimple` は満たされる：この定義は空でない。 -/
-theorem ksimple_of_no_period (v : List α) (k : ℕ) (hk : 0 < k) :
+`KSimple` は満たされる：この定義は空でない（過剰制約ではない）。 -/
+theorem ksimple_of_no_repeat {v : List α} {k : ℕ}
+    (h : ∀ q p', q ≤ v.length → 0 < p' → k * p' ≤ q → ¬ HasPeriod (v.take q) p') :
     KSimple v k (v.length + 1) 0 := by
   refine ⟨Nat.succ_pos _, by simp [HasPeriod], ?_⟩
-  intro q p' hq hp' hkp _
-  exfalso
-  have hle : p' ≤ k * p' := by
-    have := Nat.mul_le_mul hk (Nat.le_refl p')
-    simpa using this
-  omega
+  intro q p' hq hp' hkp hper
+  exact absurd hper (h q p' hq hp' hkp)
 
 /-! ## 走査の状態と一歩 -/
 
@@ -240,6 +238,7 @@ theorem scanStep_q_le {v T : List α} {k p₁ r : ℕ} {st : ScanState} (h : st.
     (scanStep v k p₁ r T st).q ≤ v.length := by
   unfold scanStep gsNextQ; split_ifs <;> simp <;> omega
 
+omit [DecidableEq α] in
 /-- **L2（保持部分の正しさ）**：周期ずらしで残す `q - p₁` 文字は本当に一致している。 -/
 theorem safe_shift_matchLen {v T : List α} {k p₁ r : ℕ} (hK : KSimple v k p₁ r)
     {pos q : ℕ} (hq : q ≤ v.length) (hqr : q ≤ r) (hm : MatchLen v T pos q) :
@@ -274,6 +273,7 @@ theorem scanStep_inv {v T : List α} {k p₁ r : ℕ} (hK : KSimple v k p₁ r) 
 
 /-! ## L2：安全なずらし -/
 
+omit [DecidableEq α] in
 /-- 一致部分の内側にもうひとつ出現があれば、そのずれは一致部分の周期になる。 -/
 theorem hasPeriod_of_occ {v T : List α} {pos q δ : ℕ} (hq : q ≤ v.length)
     (hm : MatchLen v T pos q) (hδ : 0 < δ) (hocc : OccAt v T (pos + δ)) :
@@ -287,7 +287,13 @@ theorem hasPeriod_of_occ {v T : List α} {pos q δ : ℕ} (hq : q ≤ v.length)
   rw [← h1, ← h2]
   exact getElem?_congr (by omega)
 
-/-- **L2（安全なずらし）**：`KSimple` のもとで、`(pos, pos + shift)` には出現がない。 -/
+omit [DecidableEq α] in
+/-- **L2（安全なずらし）**：`KSimple` のもとで、`(pos, pos + shift)` には出現がない。
+
+`q = |v|`（報告直後）か位置 `q` での不一致か、という場合分けは実は不要：
+`pos + δ` に出現があれば `δ` は一致部分 `v.take q` の周期になり、
+`KSimple` の `no_small_repeat` がそれを禁じる。不一致は「ずらす」判断の理由であって
+安全性の根拠ではない。 -/
 theorem safe_shift {v T : List α} {k p₁ r : ℕ} (hK : KSimple v k p₁ r) (hk : 0 < k)
     {pos q : ℕ} (hq : q ≤ v.length) (hm : MatchLen v T pos q)
     {δ : ℕ} (hδ : 0 < δ) (hδ' : δ < gsShift k p₁ r q) :
@@ -318,7 +324,7 @@ theorem scanStep_pos_le_of_occ {v T : List α} {k p₁ r : ℕ} (hK : KSimple v 
   have hgap : st.pos < i → st.pos + gsShift k p₁ r st.q ≤ i := by
     intro hlt
     by_contra hcon
-    push_neg at hcon
+    push Not at hcon
     refine safe_shift hK hk hq hm (δ := i - st.pos) (by omega) (by omega) ?_
     rwa [show st.pos + (i - st.pos) = i from by omega]
   unfold scanStep
@@ -359,7 +365,7 @@ theorem phi_step_lt {v T : List α} {k p₁ r : ℕ} (hk : 0 < k) (hp : 0 < p₁
   have hpk : p₁ ≤ k * p₁ := by
     have := Nat.mul_le_mul hk (Nat.le_refl p₁); simpa using this
   have hshift : Phi k st < Phi k ⟨st.pos + gsShift k p₁ r st.q, gsNextQ k p₁ r st.q⟩ := by
-    simp only [Phi, ScanState.mk_pos, ScanState.mk_q]
+    simp only [Phi]
     unfold gsShift gsNextQ
     split_ifs with hc
     · have e1 : (k + 1) * (st.pos + p₁) = (k + 1) * st.pos + (k * p₁ + p₁) := by ring
@@ -376,7 +382,7 @@ theorem phi_step_lt {v T : List α} {k p₁ r : ℕ} (hk : 0 < k) (hp : 0 < p₁
   unfold scanStep
   split_ifs with h1 h2
   · exact hshift
-  · simp only [Phi, ScanState.mk_pos, ScanState.mk_q]; omega
+  · simp only [Phi]; omega
   · exact hshift
 
 theorem scan_complete {v T : List α} {k p₁ r : ℕ} (hK : KSimple v k p₁ r) (hk : 0 < k)
@@ -426,7 +432,7 @@ theorem scan_sound_complete {v T : List α} {k p₁ r : ℕ} (hK : KSimple v k p
   · intro h; exact (scan_sound hK fuel _ hinv i h).2
   · intro h
     refine scan_complete hK hk hv fuel _ hinv i h (by simp) ?_
-    simp only [Phi, ScanState.mk_pos, ScanState.mk_q]
+    simp only [Phi]
     omega
 
 /-- 出現の接尾辞版（`Matching.occursAt`）での言い換え。 -/
@@ -439,6 +445,7 @@ theorem scan_sound_complete_occursAt {v T : List α} {k p₁ r : ℕ} (hK : KSim
 
 /-! ## 短い接頭辞 `u` の検査（この段ではオラクル） -/
 
+omit [DecidableEq α] in
 theorem occAt_append_iff {u v T : List α} {i : ℕ} :
     OccAt (u ++ v) T i ↔ MatchLen u T i u.length ∧ OccAt v T (i + u.length) := by
   constructor
@@ -480,17 +487,18 @@ theorem gsScan_sound_complete {u v T : List α} {k p₁ r : ℕ} (hK : KSimple v
   constructor
   · rintro ⟨⟨p, hp, hpi⟩, hu⟩
     obtain ⟨h1, h2⟩ := scan_sound hK fuel _ hinv p hp
-    simp only [ScanState.mk_pos] at h1
+    have h1' : u.length ≤ p := h1
     have hpe : p = i + u.length := by omega
     exact ⟨hu, hpe ▸ h2⟩
   · rintro ⟨hu, hocc⟩
     refine ⟨⟨i + u.length, ?_, by omega⟩, hu⟩
     refine scan_complete hK hk hv fuel _ hinv _ hocc (by simp) ?_
-    simp only [Phi, ScanState.mk_pos, ScanState.mk_q]
+    simp only [Phi]
     omega
 
 /-! ## L3：線形時間 -/
 
+omit [DecidableEq α] in
 theorem phi_le_of_in_range {v T : List α} {k : ℕ} {st : ScanState}
     (hpos : st.pos + v.length ≤ T.length) (hq : st.q ≤ v.length) :
     Phi k st ≤ (k + 1) * T.length + v.length := by
@@ -549,7 +557,7 @@ section Examples
 
 /-- 周期を持たない場合の分解（`period = None`, `r = 0`）。 -/
 example : KSimple ([0, 1, 1] : List ℕ) 8 3 0 := by
-  refine ⟨by norm_num, by simp [HasPeriod], ?_⟩
+  refine ⟨by omega, by simp [HasPeriod], ?_⟩
   intro q p' hq hp' hkp _
   simp only [List.length_cons, List.length_nil] at hq
   omega
@@ -559,10 +567,12 @@ example : scanRun ([0, 1, 1] : List ℕ) 8 3 0 [0, 1, 1, 0, 1, 1] 20 ⟨0, 0⟩ 
 
 /-- 周期を持つ場合（`p₁ = 1`, `r = 8`）。周期ずらしの枝を通る。 -/
 example : KSimple ([0, 0, 0, 0, 0, 0, 0, 0] : List ℕ) 8 1 8 := by
-  refine ⟨by norm_num, ?_, ?_⟩
+  have key : ∀ j, j < 8 → (([0, 0, 0, 0, 0, 0, 0, 0] : List ℕ).take 8)[j]? = some 0 := by
+    decide
+  refine ⟨by omega, ?_, ?_⟩
   · intro i hi
     simp only [List.length_take, List.length_cons, List.length_nil] at hi
-    interval_cases i <;> rfl
+    rw [key i (by omega), key (i + 1) (by omega)]
   · intro q p' hq hp' hkp _
     simp only [List.length_cons, List.length_nil] at hq
     omega
