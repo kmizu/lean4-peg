@@ -11,6 +11,7 @@ import PalPeg.Matching
 import PalPeg.GSScan
 import PalPeg.GSDecomp
 import PalPeg.GSRealTime
+import PalPeg.GSVerifier
 import PalPeg.RTQueue
 import PalPeg.Manacher
 import PalPeg.ManacherHeads
@@ -228,3 +229,7 @@ import PalPeg.Speedup
 /-- info: 'PalPeg.dyadicAnswer_length_iff_mem_PAL' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.dyadicAnswer_length_iff_mem_PAL
+
+/-- info: 'PalPeg.vAnswer_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.vAnswer_correct

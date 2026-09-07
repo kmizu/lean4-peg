@@ -12,6 +12,7 @@ import PalPeg.Matching
 import PalPeg.GSScan
 import PalPeg.GSDecomp
 import PalPeg.GSRealTime
+import PalPeg.GSVerifier
 import PalPeg.RTQueue
 import PalPeg.Manacher
 import PalPeg.ManacherHeads
@@ -48,6 +49,7 @@ import PalPeg.Speedup
 * `PalPeg.GSDecomp`  — GS 分解 `GSCore/GSDecomp`、k 反復周期の補題、走査側帰結と `KSimple` への橋（L1 の厳密境界は未了）
 * `PalPeg.Speedup`   — 1 記号あたり B マイクロステップの機械 → 厳密実時間 `Machine`（線形加速、`multiStep_recognizedBy`）
 * `PalPeg.GSRealTime` — GS 走査の実時間実行：レート k+1 で `online_answer_correct`、有界遅れ不変量 `onlineRun_phi`、u 検証器の締切
+* `PalPeg.GSVerifier` — u 検証器を quota 2 で交互実行（オラクルなし `vAnswer_correct`、1 ラウンド ≤ 3(k+1)）
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/
