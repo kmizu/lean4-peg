@@ -191,3 +191,10 @@ lake build
   ProgramMachine（構造化 `StructuredMachine` → `MultiStepMachine` → `RecognizedBy`）。
 - 残：BorderJob/GSPreprocess/走査/キューのテープ化を `StructuredMachine` で組み、OnlineMachine の
   インターフェースを満たすことを示して最終定理 `RealTimeTM.RecognizedBy PAL`。
+- 進捗（コミット e9bfb1e まで）：ProgramMachine（構造化機械→`RecognizedBy`）、GSScanTapes（走査の
+  3 テープ化、判定 bit はオラクル→カウンタ化を続行中）、BorderJob（中央フラグの GS 境界列挙、仕事 ≤ 258|x|、
+  段ごとに L1 を仮定）、RTQueueTapes（キューの 9 テープ化、`lenr≤lenf` 判定は仮定→差分カウンタ化を続行中）。
+  **critical path：GSDecomp の真の L1 境界（`(k−1)s<|x|`, `(k−2)s<(k−1)p₁`）**。GSVerifier と BorderJob が
+  これを仮定してるので、GS の内側削除ループの補題を形式化中。
+  稼働中：GSPreprocess、OnlineMachine、GSVerifierTapes、BorderJobTapes、TextFeed（到着記号を FIFO 経由で
+  走査テープへ供給）。
