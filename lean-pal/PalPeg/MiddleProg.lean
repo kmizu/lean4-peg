@@ -437,6 +437,216 @@ theorem popRun_F (blank : Fin sc) :
   | zero => intro ts; rfl
   | succ n ih => intro ts; rw [popRun]; simp only [applyActs_cons]; rw [ih]; rfl
 
+/-! ### マーカを積む側：番人つきの語を歩きながら `S3` に単進で積む
+
+継ぎ目の右歩きの歩数 `L' = 2 * s - 1`（`nextLen s = max 1 (2*s) - 1`）は、`U` が保持する
+`startSym :: (u ++ [endSym])`（`|u| = s`）を `endSym` まで歩きながら 1 セルにつき 2 個
+積めば得られる（そのあと 1 個 pop して捨てる）。 -/
+
+/-- `U` を 1 セル右へ進めるごとに `S3` へ `mark` を 2 個積む動作列。 -/
+def pushRun (mark : Fin sc) : ℕ → List (Act sc)
+  | 0 => []
+  | n + 1 => Act.U .right :: Act.S3 mark .right :: Act.S3 mark .right :: pushRun mark n
+
+@[simp] theorem pushRun_length (mark : Fin sc) : ∀ n, (pushRun mark n).length = 3 * n := by
+  intro n
+  induction n with
+  | zero => rfl
+  | succ n ih => simp only [pushRun, List.length_cons, ih]; omega
+
+/-- 対応する有限制御（数値パラメータなし）。 -/
+def pushRunProg (endSym mark : Fin sc) : Prog (Act15 sc) (Cond15 sc) :=
+  Prog.loop (Cond15.neq tU endSym) (prAct (Act.U (sc := sc) .right))
+    (Prog.seq (ACT (Act.S3 mark .right)) (ACT (Act.S3 mark .right)))
+
+theorem pushRunProg_exec {endSym mark : Fin sc} {w : List (Fin sc)} :
+    ∀ (n i : ℕ) (ts : OvTapes sc), Tape.SeqView blank ts.U w i → i + n < w.length →
+      (∀ j, j < n → w[i + j]? ≠ some endSym) → w[i + n]? = some endSym →
+      ExecA Terminal blank (pushRunProg endSym mark) ts (pushRun mark n) := by
+  intro n
+  induction n with
+  | zero =>
+      intro i ts hU _ _ hstop
+      refine execA_of_eq (by simp [pushRun]) (execA_loop_stop ?_)
+      simp only [condOf15, tapeOf_tU, decide_eq_false_iff_not, not_not]
+      have := hU.focus_eq
+      rw [Nat.add_zero] at hstop
+      rw [hstop] at this
+      exact (Option.some_inj.1 this).symm
+  | succ n ih =>
+      intro i ts hU hlen hlt hstop
+      have h0 : w[i]? ≠ some endSym := by simpa using hlt 0 (Nat.succ_pos n)
+      have hne : ts.U.focus ≠ endSym := by
+        intro hc; exact h0 (by rw [hU.focus_eq, hc])
+      have hcond : condOf15 (Cond15.neq tU endSym) (fun j => (tapeOf ts j).focus) = true := by
+        simp only [condOf15, tapeOf_tU, decide_eq_true_eq]; exact hne
+      have hU1 : Tape.SeqView blank (applyAct blank ts (Act.U (sc := sc) .right)).U w (i + 1) :=
+        Tape.seq_move_right hU (by omega)
+      have hbody : ExecA Terminal blank
+          (Prog.seq (ACT (Act.S3 mark .right)) (ACT (Act.S3 mark .right)))
+          (applyAct blank ts (Act.U (sc := sc) .right))
+          [Act.S3 mark .right, Act.S3 mark .right] :=
+        execA_seq (execA_act _ _) (execA_act _ _)
+      have hUkeep : (applyActs blank [Act.S3 mark (sc := sc) .right, Act.S3 mark .right]
+          (applyAct blank ts (Act.U (sc := sc) .right))).U
+          = (applyAct blank ts (Act.U (sc := sc) .right)).U := rfl
+      have hrec : ExecA Terminal blank (pushRunProg endSym mark)
+          (applyActs blank [Act.S3 mark (sc := sc) .right, Act.S3 mark .right]
+            (applyAct blank ts (Act.U (sc := sc) .right))) (pushRun mark n) := by
+        refine ih (i + 1) _ (by rw [show (applyActs blank
+            [Act.S3 mark (sc := sc) .right, Act.S3 mark .right]
+            (applyAct blank ts (Act.U (sc := sc) .right))).U
+          = (applyAct blank ts (Act.U (sc := sc) .right)).U from rfl]; exact hU1)
+          (by omega) ?_ (by rw [show i + 1 + n = i + (n + 1) by omega]; exact hstop)
+        intro j hj
+        rw [show i + 1 + j = i + (j + 1) by omega]
+        exact hlt (j + 1) (by omega)
+      exact execA_of_eq (by simp [pushRun]) (execA_loop_cont hcond hbody hrec)
+
+/-- 積んだあとの `S3`：`2 * n` 個の `mark`。 -/
+theorem pushRun_S3 {mark : Fin sc} :
+    ∀ (n : ℕ) (ts : OvTapes sc) (l : List (Fin sc)), Tape.StackView blank ts.S3 l →
+      Tape.StackView blank (applyActs blank (pushRun mark n) ts).S3
+        (List.replicate (2 * n) mark ++ l) := by
+  intro n
+  induction n with
+  | zero => intro ts l h; simpa [pushRun] using h
+  | succ n ih =>
+      intro ts l h
+      rw [pushRun]
+      simp only [applyActs_cons]
+      have h1 : Tape.StackView blank
+          (applyAct blank (applyAct blank ts (Act.U (sc := sc) .right))
+            (Act.S3 mark .right)).S3 (mark :: l) := Tape.push_spec h mark
+      have h2 : Tape.StackView blank
+          (applyAct blank (applyAct blank (applyAct blank ts (Act.U (sc := sc) .right))
+            (Act.S3 mark .right)) (Act.S3 mark .right)).S3 (mark :: mark :: l) :=
+        Tape.push_spec h1 mark
+      have hthis := ih _ (mark :: mark :: l) h2
+      have heq : List.replicate (2 * (n + 1)) mark ++ l
+          = List.replicate (2 * n) mark ++ (mark :: mark :: l) := by
+        rw [show 2 * (n + 1) = 2 * n + 2 by ring, List.replicate_add, List.append_assoc]
+        rfl
+      rw [heq]
+      exact hthis
+
+/-- 積むあいだ `U` は右へ `n` セル進む。 -/
+theorem pushRun_U (mark : Fin sc) :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      (applyActs blank (pushRun mark n) ts).U = rightN blank ts.U n := by
+  intro n
+  induction n with
+  | zero => intro ts; rfl
+  | succ n ih => intro ts; rw [pushRun]; simp only [applyActs_cons]; rw [ih]; rfl
+
+/-! ### 複数の動作を 1 個のマーカで駆動する版（`X2` と `F` を同時に動かす） -/
+
+/-- `S3` のマーカ 1 個につき動作列 `as` を 1 回実行する動作列。 -/
+def popRunL (blank : Fin sc) (as : List (Act sc)) : ℕ → List (Act sc)
+  | 0 => []
+  | n + 1 => Act.S3 blank .stay :: (as ++ (Act.S3 blank .left :: popRunL blank as n))
+
+@[simp] theorem popRunL_length (blank : Fin sc) (as : List (Act sc)) :
+    ∀ n, (popRunL blank as n).length = (as.length + 2) * n := by
+  intro n
+  induction n with
+  | zero => simp [popRunL]
+  | succ n ih =>
+      simp only [popRunL, List.length_cons, List.length_append, ih]
+      ring
+
+/-- 対応する有限制御。`WK` は `as` を実行する部分プログラム。 -/
+def popRunLProg (blank : Fin sc) (WK : Prog (Act15 sc) (Cond15 sc)) :
+    Prog (Act15 sc) (Cond15 sc) :=
+  Prog.loop (Cond15.neq (tS 2) blank) (prAct (Act.S3 blank .stay))
+    (Prog.seq WK (ACT (Act.S3 blank .left)))
+
+theorem popRunLProg_exec {mark : Fin sc} {WK : Prog (Act15 sc) (Cond15 sc)}
+    {as : List (Act sc)} (hne : mark ≠ blank)
+    (hWK : ∀ ts : OvTapes sc, ExecA Terminal blank WK ts as)
+    (has : ∀ ts : OvTapes sc, (applyActs blank as ts).S3 = ts.S3) :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      (n = 0 ∧ Tape.StackView blank ts.S3 []) ∨
+        (∃ m, n = m + 1 ∧ Tape.StackTopView blank ts.S3 mark (List.replicate m mark)) →
+      ExecA Terminal blank (popRunLProg blank WK) ts (popRunL blank as n) := by
+  intro n
+  induction n with
+  | zero =>
+      intro ts h
+      rcases h with ⟨_, hv⟩ | ⟨m, hm, _⟩
+      · refine execA_of_eq (by simp [popRunL]) (execA_loop_stop ?_)
+        simp only [condOf15, tapeOf_tS3, decide_eq_false_iff_not, not_not]
+        exact hv.focus_blank
+      · omega
+  | succ n ih =>
+      intro ts h
+      rcases h with ⟨hc, _⟩ | ⟨m, hm, htop⟩
+      · omega
+      · have hmn : m = n := by omega
+        rw [hmn] at htop
+        have hcond : condOf15 (Cond15.neq (tS 2) blank)
+            (fun j => (tapeOf ts j).focus) = true := by
+          simp only [condOf15, tapeOf_tS3, decide_eq_true_eq]
+          rw [htop.focus_eq]; exact hne
+        have herase : Tape.StackView blank
+            (applyAct blank ts (Act.S3 blank .stay)).S3 (List.replicate n mark) :=
+          Tape.pop_erase htop
+        have h1 : ExecA Terminal blank (Prog.seq WK (ACT (Act.S3 blank .left)))
+            (applyAct blank ts (Act.S3 blank .stay)) (as ++ [Act.S3 blank .left]) :=
+          execA_seq (hWK _) (execA_act _ _)
+        have hS3 : (applyActs blank (as ++ [Act.S3 blank .left])
+            (applyAct blank ts (Act.S3 blank .stay))).S3
+            = Tape.step blank (applyAct blank ts (Act.S3 blank .stay)).S3 blank .left := by
+          rw [applyActs_append]
+          rw [show (applyActs blank [Act.S3 blank .left]
+              (applyActs blank as (applyAct blank ts (Act.S3 blank .stay)))).S3
+            = Tape.step blank
+              (applyActs blank as (applyAct blank ts (Act.S3 blank .stay))).S3 blank .left
+            from rfl, has]
+        have h2 : ExecA Terminal blank (popRunLProg blank WK)
+            (applyActs blank (as ++ [Act.S3 blank .left])
+              (applyAct blank ts (Act.S3 blank .stay))) (popRunL blank as n) := by
+          cases n with
+          | zero =>
+              simp only [List.replicate] at herase
+              exact ih _ (Or.inl ⟨rfl, by rw [hS3]; exact Tape.pop_empty herase⟩)
+          | succ n =>
+              rw [List.replicate_succ] at herase
+              exact ih _ (Or.inr ⟨n, rfl, by rw [hS3]; exact Tape.pop_spec herase⟩)
+        refine execA_of_eq ?_ (execA_loop_cont hcond h1 h2)
+        simp [popRunL]
+
+/-- `X2` と `F` を同時に右へ 1 歩ずつ運ぶ作業動作列。 -/
+def stepX2F (sc : ℕ) : List (Act sc) := [Act.X2 .right, Act.F .right]
+
+theorem stepX2F_S3 (ts : OvTapes sc) :
+    (applyActs blank (stepX2F sc) ts).S3 = ts.S3 := rfl
+
+/-- `stepX2F` を実行する部分プログラム。 -/
+def stepX2FProg : Prog (Act15 sc) (Cond15 sc) :=
+  Prog.seq (ACT (Act.X2 (sc := sc) .right)) (ACT (Act.F (sc := sc) .right))
+
+theorem stepX2FProg_exec (ts : OvTapes sc) :
+    ExecA Terminal blank (stepX2FProg : Prog (Act15 sc) (Cond15 sc)) ts (stepX2F sc) :=
+  execA_seq (execA_act _ _) (execA_act _ _)
+
+/-- `X2` / `F` の同時右歩き：どちらも `rightN … n`。 -/
+theorem popRunL_X2F (blank : Fin sc) :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      (applyActs blank (popRunL blank (stepX2F sc) n) ts).X2 = rightN blank ts.X2 n ∧
+        (applyActs blank (popRunL blank (stepX2F sc) n) ts).F = rightN blank ts.F n := by
+  intro n
+  induction n with
+  | zero => intro ts; exact ⟨rfl, rfl⟩
+  | succ n ih =>
+      intro ts
+      rw [popRunL]
+      simp only [applyActs_cons, applyActs_append]
+      obtain ⟨h1, h2⟩ := ih (applyAct blank
+        (applyActs blank (stepX2F sc) (applyAct blank ts (Act.S3 blank .stay)))
+        (Act.S3 blank .left))
+      exact ⟨by rw [h1]; rfl, by rw [h2]; rfl⟩
+
 /-! ## 3. 一般の while ループ -/
 
 /-- 1 反復が「頭のプローブ 1 動作 ＋ 本体」であるような、燃料つきの動作列。 -/
@@ -1067,6 +1277,11 @@ section AxiomCheck
 #print axioms PalPeg.MiddleProg.jobActsProg_exec
 #print axioms PalPeg.MiddleProg.batchProg_exec
 #print axioms PalPeg.MiddleProg.walkByMarkProg_exec
+#print axioms PalPeg.MiddleProg.pushRunProg_exec
+#print axioms PalPeg.MiddleProg.pushRun_S3
+#print axioms PalPeg.MiddleProg.pushRun_U
+#print axioms PalPeg.MiddleProg.popRunLProg_exec
+#print axioms PalPeg.MiddleProg.popRunL_X2F
 #print axioms PalPeg.MiddleProg.popRun_S3
 #print axioms PalPeg.MiddleProg.popRun_X
 #print axioms PalPeg.MiddleProg.batchProg_effect
