@@ -1336,6 +1336,7 @@ theorem oProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
                 (oProg blank endSym mark orcB k Fi fuel ts) ts))
         ∧ (firstOuter (x.drop s) k bound fuel p = none →
             ∃ P, 0 < P ∧ s + P ≤ x.length ∧
+              P ≤ p + firstOuterWork (x.drop s) k bound fuel p ∧
               Enc blank startSym endSym mark x s (s + P) ⟨(k - 1) * P, 0, 0, P, F, S, R⟩
                 (applyActs blank
                   (oProg blank endSym mark orcB k Fi fuel ts) ts))) := by
@@ -1351,7 +1352,7 @@ theorem oProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
         rw [oProg, applyActs_nil]
         exact hE
       · intro _
-        refine ⟨p, hp, hsp, ?_⟩
+        refine ⟨p, hp, hsp, by rw [firstOuterWork]; omega, ?_⟩
         rw [oProg, applyActs_nil]
         exact hE
   | succ fuel ih =>
@@ -1550,8 +1551,12 @@ theorem oProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
             exact hrec.2.2.1
           · intro hc
             rw [firstOuter, if_pos hg, if_neg hqne] at hc
-            obtain ⟨P, hP1, hP2, hP3⟩ := hrec.2.2.2 hc
-            exact ⟨P, hP1, hP2, by rw [happ]; exact hP3⟩
+            obtain ⟨P, hP1, hP2, hP4, hP3⟩ := hrec.2.2.2 hc
+            refine ⟨P, hP1, hP2, ?_, by rw [happ]; exact hP3⟩
+            rw [firstOuterWork, if_pos hg, if_neg hqne]
+            have hsn := shiftNoPeriod_le_succ (k := k) (by omega)
+              (firstInner (x.drop s) k p ((x.drop s).length + 1) 0)
+            omega
       · have hng : ¬ (p < (x.drop s).length ∧ p < bound) := fun hcc => hcg (hgiff.2 hcc)
         refine ⟨?_, ?_, ?_, ?_⟩
         · rw [oProg, if_neg hcg, firstOuterWork, if_neg hng]
@@ -1563,7 +1568,7 @@ theorem oProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
           rw [oProg, if_neg hcg, applyActs_nil]
           exact hE
         · intro _
-          refine ⟨p, hp, hsp, ?_⟩
+          refine ⟨p, hp, hsp, by rw [firstOuterWork, if_neg hng]; omega, ?_⟩
           rw [oProg, if_neg hcg, applyActs_nil]
           exact hE
 
@@ -1619,6 +1624,7 @@ theorem fpProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank
             (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts))
       ∧ (firstOuter (x.drop s) k bound Fo 1 = none →
           ∃ P, 0 < P ∧ s + P ≤ x.length ∧
+            P ≤ 1 + firstOuterWork (x.drop s) k bound Fo 1 ∧
             Enc blank startSym endSym mark x s (s + P) ⟨(k - 1) * P, 0, 0, P, F, S, R⟩
               (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts))) := by
   have hsle : s ≤ x.length := le_of_lt hs
@@ -1646,8 +1652,8 @@ theorem fpProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank
   · rw [happ]
     exact hex
   · intro hc
-    obtain ⟨P, hP1, hP2, hP3⟩ := hnone hc
-    exact ⟨P, hP1, hP2, by rw [happ]; exact hP3⟩
+    obtain ⟨P, hP1, hP2, hP4, hP3⟩ := hnone hc
+    exact ⟨P, hP1, hP2, hP4, by rw [happ]; exact hP3⟩
 
 /-! ## 10. `Cr := k*p₁` の設定（カウンタ転送）と `extendReach` の合成 -/
 
@@ -3246,6 +3252,21 @@ theorem firstOuter_pos (v : List (Fin sc)) (k bound : ℕ) :
         have := shiftNoPeriod_pos (firstInner v k p (v.length + 1) 0) k
         omega
 
+/-- `firstOuter` が成功したなら、その仕事量は少なくとも `1`。
+（外側 1 反復あたりの定数オーバーヘッドを仕事量へ付け替えるのに使う。） -/
+theorem firstOuterWork_pos (v : List (Fin sc)) (k bound : ℕ) :
+    ∀ (fuel p p' m : ℕ), firstOuter v k bound fuel p = some (p', m) →
+      1 ≤ firstOuterWork v k bound fuel p := by
+  intro fuel
+  induction fuel with
+  | zero => intro p p' m hc; simp [firstOuter] at hc
+  | succ fuel ih =>
+      intro p p' m hc
+      rw [firstOuter] at hc
+      by_cases h1 : p < v.length ∧ p < bound
+      · rw [firstOuterWork, if_pos h1]; omega
+      · rw [if_neg h1] at hc; simp at hc
+
 def afterFr (blank endSym mark : Fin sc) (orcB : Tapes sc → Bool) (k n Fo Fr : ℕ)
     (ts : Tapes sc) : Tapes sc :=
   applyActs blank (frProg blank endSym mark orcB k n Fo Fr ts) ts
@@ -3787,7 +3808,8 @@ def stripProg2 (blank endSym mark : Fin sc) (orcB : Tapes sc → Bool) (k n Fo F
           else [])
 
 /-- **主定理（削除ループ `stripLoop2` のテープ実現とコスト）**。
-`A = 16k + 32`, `B = k + 4`：総動作数は `A * stripLoop2Work + B * fuel` 以下。
+`A = 17k + 36`, `B = k + 4`：総動作数は `A * stripLoop2Work + B` 以下
+（1 反復あたりの定数 `k+4` は、その反復の `firstOuterWork ≥ 1` に付け替えてある）。
 終状態では `Cs` が新しい切断 `stripLoop2 x k bound fuel s` を保持する（`Cf`、`Cr` は不変）。 -/
 theorem stripProg2_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
     {bound n F : ℕ} (hn : x.length ≤ n)
@@ -3797,8 +3819,9 @@ theorem stripProg2_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ b
     ∀ (fuel s : ℕ) (ts : Tapes sc), s ≤ x.length →
       Enc blank startSym endSym mark x s s ⟨0, 0, 0, 0, F, s, 0⟩ ts →
       ((stripProg2 blank endSym mark orcB k n (x.length + 1) (x.length + 1) fuel ts).length
-          ≤ (16 * k + 32) * stripLoop2Work x k bound fuel s + (k + 4) * fuel
+          ≤ (17 * k + 36) * stripLoop2Work x k bound fuel s + (k + 4)
         ∧ (∃ P, stripLoop2 x k bound fuel s + P ≤ x.length ∧
+            P ≤ 1 + stripLoop2Work x k bound fuel s ∧
             Enc blank startSym endSym mark x (stripLoop2 x k bound fuel s)
               (stripLoop2 x k bound fuel s + P)
               ⟨(k - 1) * P, 0, 0, P, F, stripLoop2 x k bound fuel s, 0⟩
@@ -3809,7 +3832,7 @@ theorem stripProg2_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ b
   induction fuel with
   | zero =>
       intro s ts _ hE
-      refine ⟨by simp [stripProg2, stripLoop2Work], ⟨0, ?_, ?_⟩⟩
+      refine ⟨by simp [stripProg2, stripLoop2Work], ⟨0, ?_, by omega, ?_⟩⟩
       · rw [stripLoop2]; omega
       · rw [stripProg2, applyActs_nil, stripLoop2]
         simpa using hE
@@ -3825,7 +3848,7 @@ theorem stripProg2_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ b
         have hng : ¬ (1 < (x.drop s).length ∧ 1 < bound) := by rw [hdrop]; omega
         have hfo : firstOuter (x.drop s) k bound (x.length + 1) 1 = none := by
           rw [firstOuter, if_neg hng]
-        refine ⟨?_, ⟨0, ?_, ?_⟩⟩
+        refine ⟨?_, ⟨0, ?_, by omega, ?_⟩⟩
         · rw [stripProg2, if_pos hend2]
           simp
         · rw [stripLoop2]
@@ -3846,7 +3869,8 @@ theorem stripProg2_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ b
         rw [hFO] at hfcost
         rcases hfo : firstOuter (x.drop s) k bound (x.length + 1) 1 with _ | ⟨p, m⟩
         · -- 失敗：切断はそのまま
-          obtain ⟨P, hP1, hP2, hP3⟩ := hfnone hfo
+          obtain ⟨P, hP1, hP2, hP4, hP3⟩ := hfnone hfo
+          rw [hFO] at hP4
           have hprobe : ¬ (probe blank
               (applyActs blank (fpProg blank endSym mark orcB k n (x.length + 1) ts) ts).Cd
                 = mark) := by
@@ -3865,16 +3889,17 @@ theorem stripProg2_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ b
               (fuel + 1) ts = fpProg blank endSym mark orcB k n (x.length + 1) ts := by
             rw [stripProg2, if_neg hend2, hstep, if_neg hprobe]
             simp
-          refine ⟨?_, ⟨P, ?_, ?_⟩⟩
+          refine ⟨?_, ⟨P, ?_, ?_, ?_⟩⟩
           · rw [hprog, stripLoop2Work]
             simp only [hfo, hFO, Nat.add_zero]
-            have hmono : (2 * k + 22) * FO ≤ (16 * k + 32) * FO :=
+            have hmono : (2 * k + 22) * FO ≤ (17 * k + 36) * FO :=
               Nat.mul_le_mul_right FO (by omega)
-            have hj : k + 4 ≤ (k + 4) * (fuel + 1) :=
-              Nat.le_mul_of_pos_right _ (by omega)
             omega
           · rw [stripLoop2]
             simp only [hfo]
+            omega
+          · rw [stripLoop2Work]
+            simp only [hfo, hFO, Nat.add_zero]
             omega
           · rw [hprog, stripLoop2]
             simp only [hfo]
@@ -3958,8 +3983,10 @@ theorem stripProg2_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ b
             rw [hW2] at hrc
             rw [hstep] at hrc
             rw [hW2]
-            obtain ⟨A, hA⟩ : ∃ A, 16 * k + 32 = A := ⟨_, rfl⟩
+            obtain ⟨A, hA⟩ : ∃ A, 17 * k + 36 = A := ⟨_, rfl⟩
             rw [hA] at hrc ⊢
+            have hFO1 : 1 ≤ FO := by
+              rw [← hFO]; exact firstOuterWork_pos (x.drop s) k bound (x.length + 1) 1 p m hfo
             have hpFO : p ≤ FO := by
               have : p ≤ (k - 1) * p := Nat.le_mul_of_pos_left p (by omega)
               omega
@@ -3968,17 +3995,21 @@ theorem stripProg2_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ b
             have hkFO : 14 * (k * FO) ≤ (14 * k) * FO := by
               have : 14 * (k * FO) = (14 * k) * FO := by ring
               omega
-            have hm1 : (2 * k + 32) * FO + (14 * k) * FO ≤ A * FO := by
-              calc (2 * k + 32) * FO + (14 * k) * FO = (2 * k + 32 + 14 * k) * FO := by ring
-                _ ≤ A * FO := Nat.mul_le_mul_right FO (by omega)
+            have hm1 : (2 * k + 32) * FO + (14 * k) * FO + (k + 4) ≤ A * FO := by
+              have e1 : (2 * k + 32) * FO + (14 * k) * FO = (16 * k + 32) * FO := by ring
+              have e2 : (k + 4) ≤ (k + 4) * FO := Nat.le_mul_of_pos_right _ (by omega)
+              have e3 : (16 * k + 32) * FO + (k + 4) * FO = A * FO := by rw [← hA]; ring
+              omega
             have hm2 : 14 * ER ≤ A * ER := Nat.mul_le_mul_right ER (by omega)
             have hrkp : r ≤ k * p + ER := by omega
             have hkp2 : 11 * r + 3 * (k * p) ≤ 14 * (k * FO) + 11 * ER := by omega
-            have hfe : (k + 4) * (fuel + 1) = (k + 4) * fuel + (k + 4) := by ring
             omega
-          · rw [hprog, applyActs_append, hs']
-            obtain ⟨P', hP'1, hP'2⟩ := hre
-            exact ⟨P', hP'1, hP'2⟩
+          · rw [hprog, applyActs_append, hs', stripLoop2Work]
+            simp only [hfo, hFO, hER', hr']
+            obtain ⟨P', hP'1, hP'3, hP'2⟩ := hre
+            refine ⟨P', hP'1, ?_, hP'2⟩
+            refine Nat.le_trans hP'3 (Nat.add_le_add_left ?_ 1)
+            exact Nat.le_trans (Nat.le_add_left _ ER) (Nat.le_add_left _ FO)
 
 
 /-- `Cd` を `n` 回減らす（2 動作／回）。 -/
@@ -4573,13 +4604,15 @@ section Outer2d
 variable {blank startSym endSym mark : Fin sc} {x : List (Fin sc)} {k : ℕ}
 
 /-- **主定理（`decomposeLoop2` のテープ実現とコスト）**。
-`A = 16k + 65`, `B = (4k+12)*(|x|+1)`, `C = |x|+1`。 -/
+`A = 19k + 85`, `B = 4k + 16`, `C = |x|+1`：1 反復あたりのオーバーヘッドは
+`|x|` に依存しない定数 `B` に落としてあるので、`fuel = |x|+1` でも全体は
+`A * decomposeLoop2Work + B * (|x|+1) + (|x|+1)` に収まる。 -/
 theorem decProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank) :
     ∀ (fuel s : ℕ) (ts : Tapes sc), s ≤ x.length →
       Enc blank startSym endSym mark x s s ⟨0, 0, 0, 0, 0, s, 0⟩ ts →
       ((decProg blank endSym mark k x.length fuel ts).length
-          ≤ (16 * k + 65) * decomposeLoop2Work x k fuel s
-            + ((4 * k + 16) * (x.length + 1)) * fuel + (x.length + 1)
+          ≤ (19 * k + 85) * decomposeLoop2Work x k fuel s
+            + (4 * k + 16) * fuel + (x.length + 1)
         ∧ (∃ a b D Q E, Enc blank startSym endSym mark x a b
             ⟨D, Q, E, (decomposeLoop2 x k fuel s).2.1, 0,
               (decomposeLoop2 x k fuel s).1, (decomposeLoop2 x k fuel s).2.2⟩
@@ -4635,7 +4668,7 @@ theorem decProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blan
             = applyActs blank (dFp blank endSym mark k x.length ts) ts := rfl
         rcases hfp : firstPeriod (x.drop s) k with _ | ⟨p₁, m⟩
         · -- `firstPeriod` 失敗
-          obtain ⟨P, hP0, hPfit, hPenc⟩ := hfnone (by rw [firstPeriod] at hfp; exact hfp)
+          obtain ⟨P, hP0, hPfit, hPwk, hPenc⟩ := hfnone (by rw [firstPeriod] at hfp; exact hfp)
           have hprobe : ¬ (probe blank (dFpS blank endSym mark k x.length ts).Cd = mark) := by
             intro hc
             rw [hstate] at hc
@@ -4662,41 +4695,29 @@ theorem decProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blan
           · rw [hprog, List.length_append, hpOf, cleanProg_length, hwork]
             obtain ⟨FO, hFO⟩ : ∃ FO, firstOuterWork (x.drop s) k (x.drop s).length
                 ((x.drop s).length + 1) 1 = FO := ⟨_, rfl⟩
-            rw [hFO] at hfcost hdsw
-            have hmono : (2 * k + 22) * FO ≤ (16 * k + 65) * decomposeStepWork x k s := by
-              have h1 : (2 * k + 22) * FO ≤ (16 * k + 65) * FO :=
-                Nat.mul_le_mul_right FO (by omega)
-              have h2 : (16 * k + 65) * FO ≤ (16 * k + 65) * decomposeStepWork x k s :=
-                Nat.mul_le_mul_left _ hdsw
+            rw [hFO] at hfcost hdsw hPwk
+            obtain ⟨A, hA⟩ : ∃ A, 19 * k + 85 = A := ⟨_, rfl⟩
+            obtain ⟨B, hB⟩ : ∃ B, 4 * k + 16 = B := ⟨_, rfl⟩
+            rw [hA, hB]
+            -- `cleanProg` は `(2k+1) * P`、`P ≤ 1 + FO`
+            have hcl : 3 * P + 2 * ((k - 1) * P) = (2 * k + 1) * P := by
+              obtain ⟨kk, hkk⟩ : ∃ kk, k = kk + 1 := ⟨k - 1, by omega⟩
+              subst hkk
+              simp only [Nat.add_sub_cancel]
+              ring
+            have hclP : (2 * k + 1) * P ≤ (2 * k + 1) * (1 + FO) :=
+              Nat.mul_le_mul_left _ hPwk
+            have hclE : (2 * k + 1) * (1 + FO) = (2 * k + 1) + (2 * k + 1) * FO := by ring
+            have hsum : (2 * k + 22) * FO + (2 * k + 1) * FO ≤ A * FO := by
+              have : (2 * k + 22) * FO + (2 * k + 1) * FO = (4 * k + 23) * FO := by ring
+              have h2 : (4 * k + 23) * FO ≤ A * FO := Nat.mul_le_mul_right FO (by omega)
               omega
-            have hPx : P ≤ x.length := by omega
-            have hclean : 3 * P + 2 * ((k - 1) * P) ≤ (2 * k + 1) * x.length := by
-              have h1 : (k - 1) * P ≤ (k - 1) * x.length := Nat.mul_le_mul_left _ hPx
-              have h2 : 3 * P ≤ 3 * x.length := by omega
-              have h3 : 3 * x.length + 2 * ((k - 1) * x.length) ≤ (2 * k + 1) * x.length := by
-                have : 2 * ((k - 1) * x.length) = (2 * (k - 1)) * x.length := by ring
-                have h4 : 3 * x.length + (2 * (k - 1)) * x.length
-                    = (3 + 2 * (k - 1)) * x.length := by ring
-                have h5 : (3 + 2 * (k - 1)) * x.length ≤ (2 * k + 1) * x.length :=
-                  Nat.mul_le_mul_right _ (by omega)
-                omega
+            have hmono : A * FO ≤ A * decomposeStepWork x k s := Nat.mul_le_mul_left _ hdsw
+            have hconst : (k - 1) + 2 + (2 * k + 1) ≤ B * (fuel + 1) := by
+              have h1 : (k - 1) + 2 + (2 * k + 1) ≤ B := by omega
+              have h2 : B ≤ B * (fuel + 1) := Nat.le_mul_of_pos_right _ (by omega)
               omega
-            have hB : (2 * k + 1) * x.length + (k + 1)
-                ≤ ((4 * k + 16) * (x.length + 1)) * (fuel + 1) := by
-              have h1 : (2 * k + 1) * x.length + (k + 1) ≤ (4 * k + 16) * (x.length + 1) := by
-                have h2 : (2 * k + 1) * x.length ≤ (2 * k + 1) * (x.length + 1) :=
-                  Nat.mul_le_mul_left _ (by omega)
-                have h3 : k + 1 ≤ (k + 1) * (x.length + 1) :=
-                  Nat.le_mul_of_pos_right _ (by omega)
-                have h4 : (2 * k + 1) * (x.length + 1) + (k + 1) * (x.length + 1)
-                    = (3 * k + 2) * (x.length + 1) := by ring
-                have h5 : (3 * k + 2) * (x.length + 1) ≤ (4 * k + 16) * (x.length + 1) :=
-                  Nat.mul_le_mul_right _ (by omega)
-                omega
-              have h6 : (4 * k + 16) * (x.length + 1)
-                  ≤ ((4 * k + 16) * (x.length + 1)) * (fuel + 1) :=
-                Nat.le_mul_of_pos_right _ (by omega)
-              omega
+            have hBfuel : B * (fuel + 1) = B * fuel + B := by ring
             omega
           · rw [hprog, applyActs_append, hloop, hpOf]
             exact cleanProg_enc (blank := blank) (startSym := startSym) (endSym := endSym)
@@ -4807,14 +4828,14 @@ theorem decProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blan
                   ⟨(k - 1) * p'', 0, 0, p'', P', s'', 0⟩ ts'' →
                 (orcCf ts'' = true ↔ p'' < P') :=
               fun s'' p'' ts'' hEE => orcCf_spec hEE
-            obtain ⟨hstlen, P'', hP''fit, hP''enc⟩ := stripProg2_spec (blank := blank)
+            obtain ⟨hstlen, P'', hP''fit, hP''wk, hP''enc⟩ := stripProg2_spec (blank := blank)
               (startSym := startSym) (endSym := endSym) (mark := mark) (x := x) (k := k)
               (orcB := orcCf) (bound := P') (n := x.length) (F := P')
               hk hend hmark (le_refl _) horcCf (x.length + 1) s (dRstS blank t) hs hreset
             obtain ⟨s', hs'def⟩ : ∃ s', stripLoop2 x k P' (x.length + 1) s = s' := ⟨_, rfl⟩
             rw [hs'def] at hP''fit hP''enc
             obtain ⟨SLW, hSLW⟩ : ∃ SLW, stripLoop2Work x k P' (x.length + 1) s = SLW := ⟨_, rfl⟩
-            rw [hSLW] at hstlen
+            rw [hSLW] at hstlen hP''wk
             have hstrEq : dStr blank endSym mark k x.length t
                 = stripProg2 blank endSym mark orcCf k x.length (x.length + 1) (x.length + 1)
                     (x.length + 1) (dRstS blank t) := rfl
@@ -4868,22 +4889,22 @@ theorem decProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blan
               have hE'1 : E' ≤ 1 := by rw [hflag]; split <;> omega
               obtain ⟨W2, hW2⟩ : ∃ W2, decomposeLoop2Work x k fuel s' = W2 := ⟨_, rfl⟩
               rw [hW2] at hrc ⊢
-              obtain ⟨A, hA⟩ : ∃ A, 16 * k + 65 = A := ⟨_, rfl⟩
-              obtain ⟨B, hB⟩ : ∃ B, (4 * k + 16) * (x.length + 1) = B := ⟨_, rfl⟩
+              obtain ⟨A, hA⟩ : ∃ A, 19 * k + 85 = A := ⟨_, rfl⟩
+              obtain ⟨B, hB⟩ : ∃ B, 4 * k + 16 = B := ⟨_, rfl⟩
               rw [hA, hB] at hrc ⊢
               -- 各部品の評価
               have hstl : (dStr blank endSym mark k x.length t).length
-                  ≤ (16 * k + 32) * SLW + (k + 4) * (x.length + 1) := by
+                  ≤ (17 * k + 36) * SLW + (k + 4) := by
                 rw [hstrEq]; exact hstlen
-              have hP''x : P'' ≤ x.length := by omega
-              have hclean : 3 * P'' + 2 * ((k - 1) * P'')
-                  ≤ (2 * k + 1) * x.length := by
-                have h1 : (k - 1) * P'' ≤ (k - 1) * x.length := Nat.mul_le_mul_left _ hP''x
-                have h2 : 3 * x.length + 2 * ((k - 1) * x.length)
-                    = (3 + 2 * (k - 1)) * x.length := by ring
-                have h3 : (3 + 2 * (k - 1)) * x.length ≤ (2 * k + 1) * x.length :=
-                  Nat.mul_le_mul_right _ (by omega)
-                omega
+              -- `cleanProg` は `(2k+1) * P''`、`P'' ≤ 1 + SLW`
+              have hcl : 3 * P'' + 2 * ((k - 1) * P'') = (2 * k + 1) * P'' := by
+                obtain ⟨kk, hkk⟩ : ∃ kk, k = kk + 1 := ⟨k - 1, by omega⟩
+                subst hkk
+                simp only [Nat.add_sub_cancel]
+                ring
+              have hclP : (2 * k + 1) * P'' ≤ (2 * k + 1) * (1 + SLW) :=
+                Nat.mul_le_mul_left _ hP''wk
+              have hclE : (2 * k + 1) * (1 + SLW) = (2 * k + 1) + (2 * k + 1) * SLW := by ring
               -- リセットの償却
               have hres1 : 4 * q' + 2 * p₁ + 4 * P' + 2 * r + 2 * D' + 2 * E'
                   ≤ (4 * k + 16) * (FO + (ER + SO)) + 6 := by
@@ -4925,21 +4946,15 @@ theorem decProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blan
                 have h2 : (6 * k + 85) * (FO + (ER + SO)) ≤ A * (FO + (ER + SO)) :=
                   Nat.mul_le_mul_right _ (by omega)
                 omega
-              have hAstrip : (16 * k + 32) * SLW ≤ A * SLW := Nat.mul_le_mul_right _ (by omega)
+              have hAstrip : (17 * k + 36) * SLW + (2 * k + 1) * SLW ≤ A * SLW := by
+                have h1 : (17 * k + 36) * SLW + (2 * k + 1) * SLW = (19 * k + 37) * SLW := by ring
+                have h2 : (19 * k + 37) * SLW ≤ A * SLW := Nat.mul_le_mul_right _ (by omega)
+                omega
               have hBfuel : B * (fuel + 1) = B * fuel + B := by ring
               have hAexp : A * (FO + (ER + SO) + (SLW + W2))
                   = A * (FO + (ER + SO)) + A * SLW + A * W2 := by ring
-              have hBB : (k + 4) * (x.length + 1) + (2 * k + 1) * x.length + (k + 3) + 8 ≤ B := by
-                have h1 : (2 * k + 1) * x.length ≤ (2 * k + 1) * (x.length + 1) :=
-                  Nat.mul_le_mul_left _ (by omega)
-                have h2 : k + 3 + 8 ≤ (k + 11) * (x.length + 1) :=
-                  Nat.le_mul_of_pos_right _ (by omega)
-                have h3 : (k + 4) * (x.length + 1) + (2 * k + 1) * (x.length + 1)
-                    + (k + 11) * (x.length + 1) = (4 * k + 16) * (x.length + 1) := by ring
-                have h4 : (4 * k + 16) * (x.length + 1) ≤ (4 * k + 16) * (x.length + 1) :=
-                  le_refl _
-                rw [hB] at h3
-                omega
+              -- 1 反復あたりの定数は `B = 4k+16` に収まる
+              have hBB : (k + 3) + 8 + (k + 4) + (2 * k + 1) ≤ B := by omega
               omega
             · rw [happ, hloop]
               exact hre
@@ -4971,8 +4986,8 @@ theorem decProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blan
                 hqOf, hpOf, hfOf, hdOf]
               rw [hdsw]
               have hE'1 : E' ≤ 1 := by rw [hflag]; split <;> omega
-              obtain ⟨A, hA⟩ : ∃ A, 16 * k + 65 = A := ⟨_, rfl⟩
-              obtain ⟨B, hB⟩ : ∃ B, (4 * k + 16) * (x.length + 1) = B := ⟨_, rfl⟩
+              obtain ⟨A, hA⟩ : ∃ A, 19 * k + 85 = A := ⟨_, rfl⟩
+              obtain ⟨B, hB⟩ : ∃ B, 4 * k + 16 = B := ⟨_, rfl⟩
               rw [hA, hB]
               have hstep2 : (stepProg blank endSym mark (orcEnd endSym) (orcR k) (orc2R k) k
                   (x.drop s).length ((x.drop s).length + 1) (x.length + 1) ts).length
@@ -5000,9 +5015,6 @@ theorem decProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blan
                   Nat.mul_le_mul_right _ (by omega)
                 omega
               have hBB : k + 3 + 5 ≤ B * (fuel + 1) := by
-                have h1 : k + 8 ≤ (4 * k + 16) * (x.length + 1) :=
-                  le_trans (by omega) (Nat.le_mul_of_pos_right _ (by omega))
-                rw [hB] at h1
                 have h2 : B ≤ B * (fuel + 1) := Nat.le_mul_of_pos_right _ (by omega)
                 omega
               have hBfuel : B * (fuel + 1) = B * fuel + B := by ring
@@ -5016,13 +5028,12 @@ theorem decProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blan
 まっさらな初期状態（`x` を載せた `V1`/`V2` のヘッドが添字 `0`、カウンタはすべて `0`）から
 出発して、終状態は `Cs = (decompose2 x k).1`、`Cp = (decompose2 x k).2.1`、
 `Cr = (decompose2 x k).2.2` を保持する。動作数は
-`(16k+65) * decompose2Work x k + ((4k+16)*(|x|+1)) * (|x|+1) + (|x|+1)` 以下。 -/
+`(19k+85) * decompose2Work x k + (4k+17)*(|x|+1)` 以下（`fuel` に依存する項はない）。 -/
 theorem decompose2_on_tapes (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
     (ts : Tapes sc)
     (hE : Enc blank startSym endSym mark x 0 0 ⟨0, 0, 0, 0, 0, 0, 0⟩ ts) :
     ((decProg blank endSym mark k x.length (x.length + 1) ts).length
-        ≤ (16 * k + 65) * decompose2Work x k
-          + ((4 * k + 16) * (x.length + 1)) * (x.length + 1) + (x.length + 1)
+        ≤ (19 * k + 85) * decompose2Work x k + (4 * k + 17) * (x.length + 1)
       ∧ (∃ a b D Q E, Enc blank startSym endSym mark x a b
           ⟨D, Q, E, (decompose2 x k).2.1, 0, (decompose2 x k).1, (decompose2 x k).2.2⟩
           (applyActs blank
@@ -5031,7 +5042,11 @@ theorem decompose2_on_tapes (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark �
     (mark := mark) (x := x) (k := k) hk hend hmark (x.length + 1) 0 ts
     (Nat.zero_le _) hE
   rw [decompose2, decompose2Work]
-  exact h
+  refine ⟨?_, h.2⟩
+  have h1 := h.1
+  have h2 : (4 * k + 17) * (x.length + 1)
+      = (4 * k + 16) * (x.length + 1) + (x.length + 1) := by ring
+  omega
 
 end Outer2d
 
@@ -5083,7 +5098,9 @@ end Examples
   `Cs` へ流し込みながら両ヘッドを右へ）。`advanceProg_enc` / `advanceProg_length :
   ≤ 11r + 3(k*p) + 3`。1 反復 `stripStep`（`firstOuter` の成否は `Cd` の probe で判定）と
   ループ `stripProg2`、そして
-  **`stripProg2_spec : ≤ (16k+32) * stripLoop2Work x k bound fuel s + (k+4) * fuel`**
+  **`stripProg2_spec : ≤ (17k+36) * stripLoop2Work x k bound fuel s + (k+4)`**
+  （1 反復あたりの定数 `k+4` は、その反復の `firstOuterWork ≥ 1`（`firstOuterWork_pos`）
+  に付け替えてある。また終状態の周期 `P` は `P ≤ 1 + stripLoop2Work` を満たす）
   （`PalPeg.GSDecompose2` の `stripLoop2` / `stripLoop2Work` をそのまま鏡写しにしている）。
   終状態は `Cs = stripLoop2 x k bound fuel s` を保持する「きれいな状態」
   `Enc x s' (s'+P) ⟨(k-1)P,0,0,P,0,s',0⟩`。後始末 `cleanProg`（`(2k+1)*P` 動作）で
@@ -5124,17 +5141,22 @@ end Examples
    **`decProg_spec`**：
    ```
    (decProg blank endSym mark k |x| fuel ts).length
-     ≤ (16k+65) * decomposeLoop2Work x k fuel s
-       + ((4k+16)*(|x|+1)) * fuel + (|x|+1)
+     ≤ (19k+85) * decomposeLoop2Work x k fuel s + (4k+16) * fuel + (|x|+1)
    ```
    かつ終状態は `Cp = (decomposeLoop2 x k fuel s).2.1`、`Cf = 0`、
    `Cs = (decomposeLoop2 x k fuel s).1`、`Cr = (decomposeLoop2 x k fuel s).2.2`。
    系が **`decompose2_on_tapes`**（`fuel = |x|+1`, `s = 0`）：
    ```
-   length ≤ (16k+65) * decompose2Work x k + ((4k+16)*(|x|+1)) * (|x|+1) + (|x|+1)
+   length ≤ (19k+85) * decompose2Work x k + (4k+17) * (|x|+1)
    ```
    燃料切れの枝も `decomposeLoop2 x k 0 s = (|x|,0,0)` を `bottomProg` で忠実に写しており、
    ステートメントに条件は付かない。
+   1 反復あたりのオーバーヘッドは `|x|` に依存しない定数 `4k+16` である
+   （`stepProg` の `k+3`、フラグ消去と `resetProg` の `8`、削除ループの `k+4`、
+   `cleanProg` の `2k+1`）。`cleanProg` が扱う周期 `P` は
+   `P ≤ 1 + firstOuterWork`（`oProg_spec` / `fpProg_spec` の `none` 枝）と
+   `P ≤ 1 + stripLoop2Work`（`stripProg2_spec`）で仕事量へ押し込んであるので、
+   `fuel` に比例する `Θ(|x|²)` 項は残っていない。
 
 ### 残るオラクル：なし
 
@@ -5146,9 +5168,19 @@ end Examples
 `orcE ts = decide (0 < eOf ts)` という**テープの読み出し**だけで第 2 周期の有無を判定する。
 `dRst` / `dSwap` は先頭で `ezLoop blank (eOf t)`（`≤ 2` 動作）を実行してフラグを消すので、
 削除ループの入口も終状態も従来どおり `Ce = 0` である。
-コスト定数は変わらない（`A = 16k+65`、`B = (4k+16)*(|x|+1)`、`C = |x|+1`）：
 中断枝の 1 動作は `soProg_spec` の `(k+12) * secondOuterWork` の余裕に収まり、
-フラグ消去の `≤ 2` 動作は 1 反復あたりの `B` の余裕（従来 `4k+14` → `4k+16`）に収まる。
+フラグ消去の `≤ 2` 動作は 1 反復あたりの定数 `4k+16` に収まる。
+
+### 最終的なコスト定数
+
+```
+decompose2_on_tapes :
+  (decProg blank endSym mark k |x| (|x|+1) ts).length
+    ≤ (19k+85) * decompose2Work x k + (4k+17) * (|x|+1)
+```
+
+`fuel` に比例する項（旧 `((4k+16)*(|x|+1)) * fuel`、`fuel = |x|+1` では `Θ(|x|²)`）は
+消えたので、`decompose2Work x k = O(|x|)` が示せれば全体が `O(|x|)` になる。
 -/
 
 end PalPeg.GSPre
