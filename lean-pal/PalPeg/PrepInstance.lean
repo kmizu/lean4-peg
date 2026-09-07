@@ -188,6 +188,144 @@ theorem width_Cd_applyActs_le (blank : Fin sc) (l : List (GSPre.Act sc)) (ts : G
       simp only [GSPre.applyActs_cons, List.length_cons] at *
       omega
 
+
+/-- 残り 8 成分についても同様（`liftAct`/`applyAct` の定義が全成分で同じ形をしているため）。 -/
+
+theorem width_Cq_applyAct_le (blank : Fin sc) (a : GSPre.Act sc) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyAct blank ts a).Cq ≤ ClearAny.width ts.Cq + 1 := by
+  cases a with
+  | Cq b m => exact ClearAny.width_step blank ts.Cq b m
+  | _ => simp [GSPre.applyAct]
+
+theorem width_Cq_applyActs_le (blank : Fin sc) (l : List (GSPre.Act sc)) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyActs blank l ts).Cq ≤ ClearAny.width ts.Cq + l.length := by
+  induction l generalizing ts with
+  | nil => simp [GSPre.applyActs]
+  | cons a l ih =>
+      have h1 := width_Cq_applyAct_le blank a ts
+      have h2 := ih (GSPre.applyAct blank ts a)
+      simp only [GSPre.applyActs_cons, List.length_cons] at *
+      omega
+
+
+theorem width_Ce_applyAct_le (blank : Fin sc) (a : GSPre.Act sc) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyAct blank ts a).Ce ≤ ClearAny.width ts.Ce + 1 := by
+  cases a with
+  | Ce b m => exact ClearAny.width_step blank ts.Ce b m
+  | _ => simp [GSPre.applyAct]
+
+theorem width_Ce_applyActs_le (blank : Fin sc) (l : List (GSPre.Act sc)) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyActs blank l ts).Ce ≤ ClearAny.width ts.Ce + l.length := by
+  induction l generalizing ts with
+  | nil => simp [GSPre.applyActs]
+  | cons a l ih =>
+      have h1 := width_Ce_applyAct_le blank a ts
+      have h2 := ih (GSPre.applyAct blank ts a)
+      simp only [GSPre.applyActs_cons, List.length_cons] at *
+      omega
+
+
+theorem width_Cp_applyAct_le (blank : Fin sc) (a : GSPre.Act sc) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyAct blank ts a).Cp ≤ ClearAny.width ts.Cp + 1 := by
+  cases a with
+  | Cp b m => exact ClearAny.width_step blank ts.Cp b m
+  | _ => simp [GSPre.applyAct]
+
+theorem width_Cp_applyActs_le (blank : Fin sc) (l : List (GSPre.Act sc)) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyActs blank l ts).Cp ≤ ClearAny.width ts.Cp + l.length := by
+  induction l generalizing ts with
+  | nil => simp [GSPre.applyActs]
+  | cons a l ih =>
+      have h1 := width_Cp_applyAct_le blank a ts
+      have h2 := ih (GSPre.applyAct blank ts a)
+      simp only [GSPre.applyActs_cons, List.length_cons] at *
+      omega
+
+
+theorem width_Cf_applyAct_le (blank : Fin sc) (a : GSPre.Act sc) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyAct blank ts a).Cf ≤ ClearAny.width ts.Cf + 1 := by
+  cases a with
+  | Cf b m => exact ClearAny.width_step blank ts.Cf b m
+  | _ => simp [GSPre.applyAct]
+
+theorem width_Cf_applyActs_le (blank : Fin sc) (l : List (GSPre.Act sc)) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyActs blank l ts).Cf ≤ ClearAny.width ts.Cf + l.length := by
+  induction l generalizing ts with
+  | nil => simp [GSPre.applyActs]
+  | cons a l ih =>
+      have h1 := width_Cf_applyAct_le blank a ts
+      have h2 := ih (GSPre.applyAct blank ts a)
+      simp only [GSPre.applyActs_cons, List.length_cons] at *
+      omega
+
+
+theorem width_Cs_applyAct_le (blank : Fin sc) (a : GSPre.Act sc) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyAct blank ts a).Cs ≤ ClearAny.width ts.Cs + 1 := by
+  cases a with
+  | Cs b m => exact ClearAny.width_step blank ts.Cs b m
+  | _ => simp [GSPre.applyAct]
+
+theorem width_Cs_applyActs_le (blank : Fin sc) (l : List (GSPre.Act sc)) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyActs blank l ts).Cs ≤ ClearAny.width ts.Cs + l.length := by
+  induction l generalizing ts with
+  | nil => simp [GSPre.applyActs]
+  | cons a l ih =>
+      have h1 := width_Cs_applyAct_le blank a ts
+      have h2 := ih (GSPre.applyAct blank ts a)
+      simp only [GSPre.applyActs_cons, List.length_cons] at *
+      omega
+
+
+theorem width_Cr_applyAct_le (blank : Fin sc) (a : GSPre.Act sc) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyAct blank ts a).Cr ≤ ClearAny.width ts.Cr + 1 := by
+  cases a with
+  | Cr b m => exact ClearAny.width_step blank ts.Cr b m
+  | _ => simp [GSPre.applyAct]
+
+theorem width_Cr_applyActs_le (blank : Fin sc) (l : List (GSPre.Act sc)) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyActs blank l ts).Cr ≤ ClearAny.width ts.Cr + l.length := by
+  induction l generalizing ts with
+  | nil => simp [GSPre.applyActs]
+  | cons a l ih =>
+      have h1 := width_Cr_applyAct_le blank a ts
+      have h2 := ih (GSPre.applyAct blank ts a)
+      simp only [GSPre.applyActs_cons, List.length_cons] at *
+      omega
+
+
+theorem width_V1_applyAct_le (blank : Fin sc) (a : GSPre.Act sc) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyAct blank ts a).V1 ≤ ClearAny.width ts.V1 + 1 := by
+  cases a with
+  | V1 m => exact ClearAny.width_step blank ts.V1 ts.V1.focus m
+  | _ => simp [GSPre.applyAct]
+
+theorem width_V1_applyActs_le (blank : Fin sc) (l : List (GSPre.Act sc)) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyActs blank l ts).V1 ≤ ClearAny.width ts.V1 + l.length := by
+  induction l generalizing ts with
+  | nil => simp [GSPre.applyActs]
+  | cons a l ih =>
+      have h1 := width_V1_applyAct_le blank a ts
+      have h2 := ih (GSPre.applyAct blank ts a)
+      simp only [GSPre.applyActs_cons, List.length_cons] at *
+      omega
+
+
+theorem width_V2_applyAct_le (blank : Fin sc) (a : GSPre.Act sc) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyAct blank ts a).V2 ≤ ClearAny.width ts.V2 + 1 := by
+  cases a with
+  | V2 m => exact ClearAny.width_step blank ts.V2 ts.V2.focus m
+  | _ => simp [GSPre.applyAct]
+
+theorem width_V2_applyActs_le (blank : Fin sc) (l : List (GSPre.Act sc)) (ts : GSPre.Tapes sc) :
+    ClearAny.width (GSPre.applyActs blank l ts).V2 ≤ ClearAny.width ts.V2 + l.length := by
+  induction l generalizing ts with
+  | nil => simp [GSPre.applyActs]
+  | cons a l ih =>
+      have h1 := width_V2_applyAct_le blank a ts
+      have h2 := ih (GSPre.applyAct blank ts a)
+      simp only [GSPre.applyActs_cons, List.length_cons] at *
+      omega
+
 /-! ## 3b. 準備：ヘッドを右へ歩かせる（`leftWalk` の右版） -/
 
 /-- ヘッドを右へ `n` 歩（読んだ記号を書き戻す）。`PatternTapes.leftWalk` の右版。 -/
@@ -559,32 +697,501 @@ theorem prologue_spec (hpre : StageTapes.PrepPre blank mark L w Text S) :
 
 end Prologue
 
+/-! ## 3e. 1 本のテープに対する単発プログラムの埋め込み -/
+
+/-- `GSTapes.TapeProg`（1 本のテープに対する `(記号, 移動)` 列）を、固定したスロット `i`
+に対する `SAct` 列へ埋め込む。 -/
+def embedSlot (i : Fin 12) : GSTapes.TapeProg sc → List (SAct sc)
+  | [] => []
+  | (a, m) :: rest => SAct.put i a m :: embedSlot i rest
+
+@[simp] theorem embedSlot_length (i : Fin 12) (p : GSTapes.TapeProg sc) :
+    (embedSlot i p).length = p.length := by
+  induction p with
+  | nil => rfl
+  | cons hd tl ih => cases hd; simp [embedSlot, ih]
+
+theorem embedSlot_run (blank : Fin sc) (i : Fin 12) :
+    ∀ (p : GSTapes.TapeProg sc) (S : Tapes sc),
+      run blank (embedSlot i p) S i = GSTapes.runProg blank (S i) p := by
+  intro p
+  induction p with
+  | nil => intro S; rfl
+  | cons hd tl ih =>
+    intro S
+    obtain ⟨a, m⟩ := hd
+    show run blank (embedSlot i tl) (applyS blank S (SAct.put i a m)) i = _
+    rw [ih, applyS_put_self, GSTapes.runProg_cons]
+
+theorem embedSlot_other (blank : Fin sc) {i j : Fin 12} (h : j ≠ i) :
+    ∀ (p : GSTapes.TapeProg sc) (S : Tapes sc), run blank (embedSlot i p) S j = S j := by
+  intro p
+  induction p with
+  | nil => intro S; rfl
+  | cons hd tl ih =>
+    intro S
+    obtain ⟨a, m⟩ := hd
+    show run blank (embedSlot i tl) (applyS blank S (SAct.put i a m)) j = _
+    rw [ih, applyS_ne blank S (SAct.put i a m) (show j ≠ i from h)]
+
+/-! ## 3f. スタック・カウンタの形非依存クリア -/
+
+/-- `ClearAny.clearAny` が与える存在から選んだ、テープ 1 本を空スタックへ戻す
+（1 テープぶんの）プログラム。 -/
+noncomputable def clearProgFor (blank : Fin sc) (tp : TapeConfiguration sc) : GSTapes.TapeProg sc :=
+  Classical.choose (ClearAny.clearAny blank tp)
+
+theorem clearProgFor_spec (blank : Fin sc) (tp : TapeConfiguration sc) :
+    (clearProgFor blank tp).length ≤ 3 * ClearAny.width tp + 3 ∧
+      ClearAny.IsBlankTape blank (GSTapes.runProg blank tp (clearProgFor blank tp)) :=
+  Classical.choose_spec (ClearAny.clearAny blank tp)
+
+/-- スロット `i` を空スタック `[]` へ戻す動作列。 -/
+noncomputable def clearStackToEmptyProg (blank : Fin sc) (i : Fin 12) (S : Tapes sc) :
+    List (SAct sc) :=
+  embedSlot i (clearProgFor blank (S i))
+
+theorem clearStackToEmptyProg_length (blank : Fin sc) (i : Fin 12) (S : Tapes sc) :
+    (clearStackToEmptyProg blank i S).length ≤ 3 * ClearAny.width (S i) + 3 := by
+  rw [clearStackToEmptyProg, embedSlot_length]
+  exact (clearProgFor_spec blank (S i)).1
+
+theorem clearStackToEmptyProg_spec (blank : Fin sc) (i : Fin 12) (S : Tapes sc) :
+    Tape.StackView blank (run blank (clearStackToEmptyProg blank i S) S i) [] := by
+  rw [clearStackToEmptyProg, embedSlot_run]
+  exact (clearProgFor_spec blank (S i)).2
+
+theorem clearStackToEmptyProg_other (blank : Fin sc) {i j : Fin 12} (h : j ≠ i) (S : Tapes sc) :
+    run blank (clearStackToEmptyProg blank i S) S j = S j := by
+  rw [clearStackToEmptyProg]; exact embedSlot_other blank h _ S
+
+/-- スロット `i`（現在値は問わない）を単進カウンタの値 `0` へ戻す動作列：
+形非依存の全消去のあと、底のマーカ `mark` を 1 手で書き戻す
+（`CounterView' blank mark tp 0 ↔ StackView blank tp [mark]`）。 -/
+noncomputable def clearCounterToZeroProg (blank mark : Fin sc) (i : Fin 12) (S : Tapes sc) :
+    List (SAct sc) :=
+  clearStackToEmptyProg blank i S ++ [SAct.put i mark .right]
+
+theorem clearCounterToZeroProg_length (blank mark : Fin sc) (i : Fin 12) (S : Tapes sc) :
+    (clearCounterToZeroProg blank mark i S).length ≤ 3 * ClearAny.width (S i) + 4 := by
+  rw [clearCounterToZeroProg, List.length_append]
+  have h := clearStackToEmptyProg_length blank i S
+  simp only [List.length_cons, List.length_nil]
+  omega
+
+theorem clearCounterToZeroProg_spec (blank mark : Fin sc) (i : Fin 12) (S : Tapes sc) :
+    Tape.CounterView' blank mark (run blank (clearCounterToZeroProg blank mark i S) S i) 0 := by
+  rw [clearCounterToZeroProg, run_append]
+  have hstack := clearStackToEmptyProg_spec blank i S
+  have hstep : run blank [SAct.put i mark .right] (run blank (clearStackToEmptyProg blank i S) S) i
+      = Tape.step blank (run blank (clearStackToEmptyProg blank i S) S i) mark .right := by
+    show applyS blank (run blank (clearStackToEmptyProg blank i S) S) (SAct.put i mark .right) i
+      = _
+    exact applyS_put_self ..
+  rw [hstep, Tape.counterView'_zero]
+  simpa using Tape.push_spec hstack mark
+
+theorem clearCounterToZeroProg_other (blank mark : Fin sc) {i j : Fin 12} (h : j ≠ i)
+    (S : Tapes sc) : run blank (clearCounterToZeroProg blank mark i S) S j = S j := by
+  rw [clearCounterToZeroProg, run_append, run_cons, run_nil,
+    applyS_ne blank _ (SAct.put i mark .right) h, clearStackToEmptyProg_other blank h S]
+
+/-! ## 3g. 単進カウンタの増分ループ -/
+
+/-- `i` を `n` 回インクリメント。 -/
+def incLoop (blank : Fin sc) (i : Fin 12) : ℕ → List (SAct sc)
+  | 0 => []
+  | n + 1 => incAct blank i :: incLoop blank i n
+
+@[simp] theorem incLoop_length (blank : Fin sc) (i : Fin 12) (n : ℕ) :
+    (incLoop (sc := sc) blank i n).length = n := by
+  induction n with
+  | zero => rfl
+  | succ n ih => simp [incLoop, ih]
+
+theorem incLoop_untouched (blank : Fin sc) {i j : Fin 12} (h : j ≠ i) :
+    ∀ (n : ℕ) (S : Tapes sc), run blank (incLoop blank i n) S j = S j := by
+  intro n
+  induction n with
+  | zero => intro S; rfl
+  | succ n ih =>
+    intro S
+    rw [incLoop, run_cons, ih]
+    exact applyS_ne blank S (incAct blank i) (show j ≠ i from h)
+
+theorem incLoop_spec (blank mark : Fin sc) (i : Fin 12) :
+    ∀ (n : ℕ) (S : Tapes sc) (m0 : ℕ), Tape.CounterView' blank mark (S i) m0 →
+      Tape.CounterView' blank mark (run blank (incLoop blank i n) S i) (m0 + n) := by
+  intro n
+  induction n with
+  | zero => intro S m0 h; simpa [incLoop] using h
+  | succ n ih =>
+    intro S m0 h
+    rw [incLoop, run_cons]
+    have hstep : applyS blank S (incAct blank i) i = Tape.step blank (S i) blank .right := by
+      show applyS blank S (SAct.put i blank .right) i = _
+      exact applyS_put_self ..
+    have h2 : Tape.CounterView' blank mark (applyS blank S (incAct blank i) i) (m0 + 1) := by
+      rw [hstep]; exact Tape.counter'_inc h
+    have h3 := ih (applyS blank S (incAct blank i)) (m0 + 1) h2
+    rwa [show m0 + 1 + n = m0 + (n + 1) from by omega] at h3
+
+/-! ## 3h. epilogue：`decProg` の終状態から `SetupPre` を作る -/
+
+section Epilogue
+
+variable {blank startSym endSym mark : Fin sc} {L s : ℕ} {ts : Tapes sc}
+
+/-- **epilogue プログラム**：`decompose2_on_tapes` の終状態から `SetupPre` の形へ戻す。
+`sC2`（`Cd`）・`sAp`（`Cq`）・`sAn`（`Ce`）・`sRn`（`Cf`）は現在値によらず `0` に掃除し、
+`sP`（`V1`）・`sU`（`V2`）はスタック `[]` に掃除する。`sC1`（`Cp`、生の周期 `p₁`）と
+`sRp`（`Cr`、生の到達域 `r`）だけは `effPeriod`/`effReach` の正規化が要る：
+生の `p₁ = 0`（退化ケース）なら `sC1` を `L - s + 1` へ増分し、`sRp` を `0` へ掃除する。
+`p₁ ≠ 0` ならどちらも触らない（すでに正規化後の値と一致している）。
+`s` は呼び出し側が渡す `(decompose2 x 8).1`（`= cval (ts sCs)`）。 -/
+noncomputable def epilogueProg (blank mark : Fin sc) (L s : ℕ) (ts : Tapes sc) : List (SAct sc) :=
+  seqP blank (fun _ => if cval (ts sC1) = 0 then incLoop blank sC1 (L - s + 1) else [])
+    (seqP blank (fun S => clearCounterToZeroProg blank mark sC2 S)
+      (seqP blank (fun S => clearCounterToZeroProg blank mark sAp S)
+        (seqP blank (fun S => clearCounterToZeroProg blank mark sAn S)
+          (seqP blank (fun S => clearCounterToZeroProg blank mark sRn S)
+            (seqP blank
+              (fun S => if cval (ts sC1) = 0 then clearCounterToZeroProg blank mark sRp S else [])
+              (seqP blank (fun S => clearStackToEmptyProg blank sP S)
+                (fun S => clearStackToEmptyProg blank sU S))))))) ts
+
+/-- **epilogue の正しさ**：`decompose2_on_tapes` の終状態（生の周期 `p1raw`、生の到達域 `r`
+を保持していること）から出発すると、`sC1`/`sRp` は `effPeriod`/`effReach` が要求する
+正規化済みの値になり、`sC2/sAp/sAn/sRn` は `0`、`sP`/`sU` は空スタックになる。
+`sT`/`sX2`/`sIn`/`sCs` は不変。 -/
+theorem epilogue_spec (p1raw r : ℕ)
+    (hC1 : Tape.CounterView' blank mark (ts sC1) p1raw)
+    (hRp : Tape.CounterView' blank mark (ts sRp) r) :
+    Tape.CounterView' blank mark (run blank (epilogueProg blank mark L s ts) ts sC1)
+        (if p1raw = 0 then (L - s) + 1 else p1raw)
+      ∧ Tape.CounterView' blank mark (run blank (epilogueProg blank mark L s ts) ts sRp)
+          (if p1raw = 0 then 0 else r)
+      ∧ Tape.CounterView' blank mark (run blank (epilogueProg blank mark L s ts) ts sC2) 0
+      ∧ Tape.CounterView' blank mark (run blank (epilogueProg blank mark L s ts) ts sAp) 0
+      ∧ Tape.CounterView' blank mark (run blank (epilogueProg blank mark L s ts) ts sAn) 0
+      ∧ Tape.CounterView' blank mark (run blank (epilogueProg blank mark L s ts) ts sRn) 0
+      ∧ Tape.StackView blank (run blank (epilogueProg blank mark L s ts) ts sP) []
+      ∧ Tape.StackView blank (run blank (epilogueProg blank mark L s ts) ts sU) []
+      ∧ run blank (epilogueProg blank mark L s ts) ts sT = ts sT
+      ∧ run blank (epilogueProg blank mark L s ts) ts sX2 = ts sX2
+      ∧ run blank (epilogueProg blank mark L s ts) ts sIn = ts sIn
+      ∧ run blank (epilogueProg blank mark L s ts) ts sCs = ts sCs := by
+  have hcv : cval (ts sC1) = p1raw := cval_eq hC1
+  -- フェーズ 0：`sC1` の正規化（`p1raw = 0` のときだけ）。
+  obtain ⟨S₀, hS0⟩ : ∃ T,
+      run blank (if cval (ts sC1) = 0 then incLoop blank sC1 (L - s + 1) else []) ts = T :=
+    ⟨_, rfl⟩
+  have hS0C1 : Tape.CounterView' blank mark (S₀ sC1) (if p1raw = 0 then (L - s) + 1 else p1raw) := by
+    rw [← hS0, hcv]
+    split_ifs with h
+    · simpa using incLoop_spec blank mark sC1 (L - s + 1) ts 0 (by rw [h] at hC1; exact hC1)
+    · simpa using hC1
+  have hS0other : ∀ j : Fin 12, j ≠ sC1 → S₀ j = ts j := by
+    intro j hj
+    rw [← hS0]
+    split_ifs with h
+    · exact incLoop_untouched blank hj _ ts
+    · rfl
+  -- フェーズ 1–4：`sC2`, `sAp`, `sAn`, `sRn` を掃除。
+  obtain ⟨S₁, hS1⟩ : ∃ T, run blank (clearCounterToZeroProg blank mark sC2 S₀) S₀ = T := ⟨_, rfl⟩
+  obtain ⟨S₂, hS2⟩ : ∃ T, run blank (clearCounterToZeroProg blank mark sAp S₁) S₁ = T := ⟨_, rfl⟩
+  obtain ⟨S₃, hS3⟩ : ∃ T, run blank (clearCounterToZeroProg blank mark sAn S₂) S₂ = T := ⟨_, rfl⟩
+  obtain ⟨S₄, hS4⟩ : ∃ T, run blank (clearCounterToZeroProg blank mark sRn S₃) S₃ = T := ⟨_, rfl⟩
+  have hS1C2 : Tape.CounterView' blank mark (S₁ sC2) 0 := by
+    rw [← hS1]; exact clearCounterToZeroProg_spec blank mark sC2 S₀
+  have hS1other : ∀ j : Fin 12, j ≠ sC2 → S₁ j = S₀ j := by
+    intro j hj; rw [← hS1]; exact clearCounterToZeroProg_other blank mark hj S₀
+  have hS2Ap : Tape.CounterView' blank mark (S₂ sAp) 0 := by
+    rw [← hS2]; exact clearCounterToZeroProg_spec blank mark sAp S₁
+  have hS2other : ∀ j : Fin 12, j ≠ sAp → S₂ j = S₁ j := by
+    intro j hj; rw [← hS2]; exact clearCounterToZeroProg_other blank mark hj S₁
+  have hS3An : Tape.CounterView' blank mark (S₃ sAn) 0 := by
+    rw [← hS3]; exact clearCounterToZeroProg_spec blank mark sAn S₂
+  have hS3other : ∀ j : Fin 12, j ≠ sAn → S₃ j = S₂ j := by
+    intro j hj; rw [← hS3]; exact clearCounterToZeroProg_other blank mark hj S₂
+  have hS4Rn : Tape.CounterView' blank mark (S₄ sRn) 0 := by
+    rw [← hS4]; exact clearCounterToZeroProg_spec blank mark sRn S₃
+  have hS4other : ∀ j : Fin 12, j ≠ sRn → S₄ j = S₃ j := by
+    intro j hj; rw [← hS4]; exact clearCounterToZeroProg_other blank mark hj S₃
+  have hchain4 : ∀ j : Fin 12, j ≠ sC2 → j ≠ sAp → j ≠ sAn → j ≠ sRn → S₄ j = S₀ j := by
+    intro j h1 h2 h3 h4
+    rw [hS4other j h4, hS3other j h3, hS2other j h2, hS1other j h1]
+  -- フェーズ 5：`sRp` の正規化（`p1raw = 0` のときだけ掃除、そうでなければ不変）。
+  obtain ⟨S₅, hS5⟩ : ∃ T,
+      run blank (if cval (ts sC1) = 0 then clearCounterToZeroProg blank mark sRp S₄
+        else ([] : List (SAct sc))) S₄ = T := ⟨_, rfl⟩
+  have hRp4 : Tape.CounterView' blank mark (S₄ sRp) r := by
+    rw [hchain4 sRp (by decide) (by decide) (by decide) (by decide),
+      hS0other sRp (by decide)]
+    exact hRp
+  have hS5Rp : Tape.CounterView' blank mark (S₅ sRp) (if p1raw = 0 then 0 else r) := by
+    rw [← hS5, hcv]
+    split_ifs with h
+    · exact clearCounterToZeroProg_spec blank mark sRp S₄
+    · simpa using hRp4
+  have hS5other : ∀ j : Fin 12, j ≠ sRp → S₅ j = S₄ j := by
+    intro j hj
+    rw [← hS5]
+    split_ifs with h
+    · exact clearCounterToZeroProg_other blank mark hj S₄
+    · rfl
+  -- フェーズ 6–7：`sP`, `sU` を空スタックへ。
+  obtain ⟨S₆, hS6⟩ : ∃ T, run blank (clearStackToEmptyProg blank sP S₅) S₅ = T := ⟨_, rfl⟩
+  obtain ⟨S₇, hS7⟩ : ∃ T, run blank (clearStackToEmptyProg blank sU S₆) S₆ = T := ⟨_, rfl⟩
+  have hS6P : Tape.StackView blank (S₆ sP) [] := by
+    rw [← hS6]; exact clearStackToEmptyProg_spec blank sP S₅
+  have hS6other : ∀ j : Fin 12, j ≠ sP → S₆ j = S₅ j := by
+    intro j hj; rw [← hS6]; exact clearStackToEmptyProg_other blank hj S₅
+  have hS7U : Tape.StackView blank (S₇ sU) [] := by
+    rw [← hS7]; exact clearStackToEmptyProg_spec blank sU S₆
+  have hS7other : ∀ j : Fin 12, j ≠ sU → S₇ j = S₆ j := by
+    intro j hj; rw [← hS7]; exact clearStackToEmptyProg_other blank hj S₆
+  have hS7P : Tape.StackView blank (S₇ sP) [] := by
+    rw [hS7other sP (by decide)]; exact hS6P
+  -- 実行結果は `S₇`。
+  have hrun : run blank (epilogueProg blank mark L s ts) ts = S₇ := by
+    simp only [epilogueProg, seqP_run, hS0, hS1, hS2, hS3, hS4, hS5, hS6, hS7]
+  have hchain7 : ∀ j : Fin 12, j ≠ sP → j ≠ sU → j ≠ sRp → j ≠ sC2 → j ≠ sAp → j ≠ sAn →
+      j ≠ sRn → j ≠ sC1 → S₇ j = ts j := by
+    intro j h1 h2 h3 h4 h5 h6 h7 h8
+    rw [hS7other j h2, hS6other j h1, hS5other j h3, hchain4 j h4 h5 h6 h7, hS0other j h8]
+  have hS7sC1 : S₇ sC1 = S₀ sC1 := by
+    rw [hS7other sC1 (by decide), hS6other sC1 (by decide), hS5other sC1 (by decide),
+      hchain4 sC1 (by decide) (by decide) (by decide) (by decide)]
+  have hS7sRp : S₇ sRp = S₅ sRp := by
+    rw [hS7other sRp (by decide), hS6other sRp (by decide)]
+  have hS7sC2 : S₇ sC2 = S₁ sC2 := by
+    rw [hS7other sC2 (by decide), hS6other sC2 (by decide), hS5other sC2 (by decide),
+      hS4other sC2 (by decide), hS3other sC2 (by decide), hS2other sC2 (by decide)]
+  have hS7sAp : S₇ sAp = S₂ sAp := by
+    rw [hS7other sAp (by decide), hS6other sAp (by decide), hS5other sAp (by decide),
+      hS4other sAp (by decide), hS3other sAp (by decide)]
+  have hS7sAn : S₇ sAn = S₃ sAn := by
+    rw [hS7other sAn (by decide), hS6other sAn (by decide), hS5other sAn (by decide),
+      hS4other sAn (by decide)]
+  have hS7sRn : S₇ sRn = S₄ sRn := by
+    rw [hS7other sRn (by decide), hS6other sRn (by decide), hS5other sRn (by decide)]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [hrun, hS7sC1]; exact hS0C1
+  · rw [hrun, hS7sRp]; exact hS5Rp
+  · rw [hrun, hS7sC2]; exact hS1C2
+  · rw [hrun, hS7sAp]; exact hS2Ap
+  · rw [hrun, hS7sAn]; exact hS3An
+  · rw [hrun, hS7sRn]; exact hS4Rn
+  · rw [hrun]; exact hS7P
+  · rw [hrun]; exact hS7U
+  · rw [hrun, hchain7 sT (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide) (by decide)]
+  · rw [hrun, hchain7 sX2 (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide) (by decide)]
+  · rw [hrun, hchain7 sIn (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide) (by decide)]
+  · rw [hrun, hchain7 sCs (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide) (by decide)]
+
+end Epilogue
+
+/-! ## 3i. 全体の組み立て：`prologue` ＋ `decProg` ＋ `epilogue` -/
+
+section Full
+
+variable {blank startSym endSym mark : Fin sc} {L : ℕ} {w Text : List (Fin sc)} {ts : Tapes sc}
+
+/-- **全体プログラム**：prologue で `x = (w.take L).reverse` を `sP`/`sU` に書き、
+`GSPre.decProg`（`liftAct` で埋め込み）を挽き、epilogue で `SetupPre` の形へ戻す。 -/
+noncomputable def fullProg (blank startSym endSym mark : Fin sc) (w : List (Fin sc)) (L : ℕ)
+    (ts : Tapes sc) : List (SAct sc) :=
+  let x := PrepInstances.stagePat w L
+  let T1 := run blank (prologueProg blank startSym endSym L ts) ts
+  let decActs :=
+    (GSPre.decProg blank endSym mark 8 x.length (x.length + 1) (prj T1)).map liftAct
+  let T2 := run blank decActs T1
+  let s := (PrepInstances.rawRes w L).1
+  prologueProg blank startSym endSym L ts ++ decActs ++ epilogueProg blank mark L s T2
+
+/-- **主定理**：`PrepPre` から `SetupPre` を、`prepRes` が与える正規化済み三つ組で作る。
+`decompose2_on_tapes` を実際に呼ぶために必要な `endSym ∉ x` は、ここでは仮定として
+外から受け取る（`StageTapes.PrepOnTapes.post` にはこの仮定が現れないため、
+これをそのまま `PrepOnTapes` のインスタンスへは接続できない。本ファイル末尾の
+コメントを参照）。 -/
+theorem prepPre_to_setupPre (hmb : mark ≠ blank)
+    (hend : endSym ∉ PrepInstances.stagePat w L)
+    (hpre : StageTapes.PrepPre blank mark L w Text ts) :
+    SetupPre blank mark (PrepInstances.prepRes w L).1 L (PrepInstances.prepRes w L).2.1
+        (PrepInstances.prepRes w L).2.2 w Text
+      (run blank (fullProg blank startSym endSym mark w L ts) ts) := by
+  set x := PrepInstances.stagePat w L with hx
+  have hpos := hpre.hpos
+  have hle := hpre.hle
+  have hxlen : x.length = L := PrepInstances.stagePat_length hle
+  have hcut : (PrepInstances.rawRes w L).1 < L := PrepInstances.prep_cut_lt hpos hle
+  -- prologue
+  obtain ⟨hEncI, hT1T, hT1X2, hT1In⟩ := prologue_spec (blank := blank) (startSym := startSym)
+    (endSym := endSym) (mark := mark) (L := L) (w := w) (Text := Text) (S := ts) hpre
+  set T1 := run blank (prologueProg blank startSym endSym L ts) ts with hT1
+  -- decompose2_on_tapes（`liftAct` で 12 本テープへ埋め込む）
+  have hEncI' : GSPre.Enc blank startSym endSym mark x 0 0 ⟨0, 0, 0, 0, 0, 0, 0⟩ (prj T1) := by
+    rw [hx]; exact hEncI
+  obtain ⟨_, a, b, D, Q, E, hEncO⟩ := GSPre.decompose2_on_tapes (blank := blank)
+    (startSym := startSym) (endSym := endSym) (mark := mark) (x := x) (k := 8)
+    (by omega) hend hmb (prj T1) hEncI'
+  set decActs := (GSPre.decProg blank endSym mark 8 x.length (x.length + 1) (prj T1)).map liftAct
+    with hdecActs
+  set T2 := run blank decActs T1 with hT2
+  have hprjT2 : prj T2 = GSPre.applyActs blank
+      (GSPre.decProg blank endSym mark 8 x.length (x.length + 1) (prj T1)) (prj T1) := by
+    rw [hT2, hdecActs, prj_run]
+  have hEncO' : GSPre.Enc blank startSym endSym mark x a b
+      ⟨D, Q, E, (decompose2 x 8).2.1, 0, (decompose2 x 8).1, (decompose2 x 8).2.2⟩ (prj T2) := by
+    rw [hprjT2]; exact hEncO
+  have hT2C1 : Tape.CounterView' blank mark (T2 sC1) (decompose2 x 8).2.1 := hEncO'.cp
+  have hT2Rp : Tape.CounterView' blank mark (T2 sRp) (decompose2 x 8).2.2 := hEncO'.cr
+  have hT2Cs : Tape.CounterView' blank mark (T2 sCs) (decompose2 x 8).1 := hEncO'.cs
+  have hT2other : ∀ j : Fin 12, j ≠ sV1 → j ≠ sV2 → j ≠ sCd → j ≠ sCq → j ≠ sCe → j ≠ sC1 →
+      j ≠ sCf → j ≠ sCs → j ≠ sRp → T2 j = T1 j := by
+    intro j h1 h2 h3 h4 h5 h6 h7 h8 h9
+    rw [hT2, hdecActs]; exact run_liftActs_other blank _ T1 j h1 h2 h3 h4 h5 h6 h7 h8 h9
+  have hT2T : T2 sT = ts sT := by
+    rw [hT2other sT (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide) (by decide)]; exact hT1T
+  have hT2X2 : T2 sX2 = ts sX2 := by
+    rw [hT2other sX2 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide) (by decide)]; exact hT1X2
+  have hT2In' : T2 sIn = T1 sIn := by
+    rw [hT2other sIn (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide) (by decide)]
+  -- epilogue
+  set s := (PrepInstances.rawRes w L).1 with hs
+  have hs_eq : s = (decompose2 x 8).1 := by rw [hs, PrepInstances.rawRes]
+  have hT2C1' : Tape.CounterView' blank mark (T2 sC1) (decompose2 x 8).2.1 := hT2C1
+  obtain ⟨eC1, eRp, eC2, eAp, eAn, eRn, eP, eU, eT, eX2, eIn, eCs⟩ :=
+    epilogue_spec (blank := blank) (mark := mark) (L := L) (s := s) (ts := T2)
+      (decompose2 x 8).2.1 (decompose2 x 8).2.2 hT2C1' hT2Rp
+  set T3 := run blank (epilogueProg blank mark L s T2) T2 with hT3
+  have hrunFull : run blank (fullProg blank startSym endSym mark w L ts) ts = T3 := by
+    show run blank
+        (prologueProg blank startSym endSym L ts ++ decActs ++ epilogueProg blank mark L s T2) ts
+        = T3
+    rw [run_append, run_append, ← hT1, ← hT2, ← hT3]
+  -- 各成分の照合
+  have hrawEq : PrepInstances.rawRes w L = decompose2 x 8 := by rw [PrepInstances.rawRes, hx]
+  have hpr : PrepInstances.prepRes w L
+      = ((decompose2 x 8).1, effPeriod (x.drop (decompose2 x 8).1) (decompose2 x 8).2.1,
+          effReach (decompose2 x 8).2.1 (decompose2 x 8).2.2) := by
+    rw [PrepInstances.prepRes_eq, hrawEq, hx]
+  rw [hrunFull]
+  refine
+    { hpos := hpos
+      hle := hle
+      hcut := ?_
+      inb := ?_
+      emptyU := eU
+      emptyP := eP
+      txt := ?_
+      txt2 := ?_
+      cs := ?_
+      c1 := ?_
+      c2 := eC2
+      ap := eAp
+      an := eAn
+      rp := ?_
+      rn := eRn }
+  · show (PrepInstances.prepRes w L).1 < L
+    rw [hpr]; exact hcut
+  · rw [eIn, hT2In']; exact hT1In
+  · rw [eT, hT2T]; exact hpre.txt
+  · rw [eX2, hT2X2]; exact hpre.txt2
+  · show Tape.CounterView' blank mark (T3 sCs) (PrepInstances.prepRes w L).1
+    rw [eCs, hpr]; exact hT2Cs
+  · show Tape.CounterView' blank mark (T3 sC1) (PrepInstances.prepRes w L).2.1
+    rw [hpr, effPeriod]
+    have hvlen : (x.drop (decompose2 x 8).1).length = L - (decompose2 x 8).1 := by
+      rw [List.length_drop, hxlen]
+    rw [hvlen, ← hs_eq]; exact eC1
+  · show Tape.CounterView' blank mark (T3 sRp) (PrepInstances.prepRes w L).2.2
+    rw [hpr, effReach]; exact eRp
+
+end Full
+
 /-!
-## 4. 残作業（`prologue` は完成済み、`epilogue`/`prepInstance` が未着手）
+## 4. 到達点と `prepInstance` を阻む本質的なギャップ
 
-`prologue` は `prologueProg` / `prologue_spec`（本ファイル ## 3d 節）として
-`sorry` なしで完成した。残るのは以下の 2 点のみ。
+**完成した部分（`sorry` なし、`#print axioms` は `propext` / `Classical.choice` /
+`Quot.sound` のみ）：**
 
-`epilogue`：`decompose2_on_tapes` の終状態（`∃ a b D Q E, Enc … x a b ⟨D,Q,E,p₁,0,s,r⟩ …`）
-から、`ClearAny.clearAny` で `sP`（= `V1`）・`sU`（= `V2`）をスタック `[]` に、
-`ClearAny.clearAny` の結果に `SAct.put _ mark .right` を 1 手足すことで
-`sC2`（= `Cd`）・`sAp`（= `Cq`）・`sAn`（= `Ce`）・`sRn`（= `Cf`）を
-`CounterView' _ _ 0` に戻す（`CounterView' blank mark tp 0 ↔ StackView blank tp [mark]`、
-`Tape.push_spec` で最後の 1 手を正当化する）。この 2 つを両方 `run` で連結し、
-`SetupPre` の 15 個のフィールドをすべて `prj`/`liftAct` 越しに再構成すれば
-`PrepOnTapes.post` が閉じる。
+1. `liftAct` / `prj` / `prj_run` / `run_liftActs_other` — 9↔12 本の埋め込みと模倣補題。
+2. `width_*_applyAct(s)_le`（9 成分すべて）— `ClearAny.width_step` の `GSPre.Act` 版。
+3. `prologueProg` / `prologue_spec` — `PrepPre` から `GSPre.Enc … x 0 0 ⟨0,…,0⟩` を作る
+   （`x = (w.take L).reverse`）。長さちょうど `6 * L + 5`。
+4. `epilogueProg` / `epilogue_spec` — `decompose2_on_tapes` の終状態（生の `p₁`, `r`）から、
+   `effPeriod`/`effReach` の正規化（`p₁ = 0` の退化ケースを含む）・4 本のカウンタの掃除・
+   `sP`/`sU` の掃除を行う。正規化は **確率的なオラクル判定を要らない**：`epilogueProg` は
+   `Tapes sc` を引数に取る関数なので、分岐 `if cval (ts sC1) = 0 then … else …` を
+   定義の時点で（実行列を作る「地の Lean」で）評価でき、テープ上に probe 動作を
+   物理的に置く必要がない。
+5. `fullProg` / **`prepPre_to_setupPre`** — `prologueProg ++ decProg.map liftAct ++
+   epilogueProg` を実行すると、`PrepPre` から `PrepInstances.prepRes` が与える
+   正規化済み三つ組で `SetupPre` が成り立つことを完全に証明した。ただし
+   `mark ≠ blank` と **`endSym ∉ (w.take L).reverse`** を仮定として受け取る。
 
-`len_le`：`decProg` の長さは `PrepInstances.prep_prog_len_le`（`hsum` 付き）で
-`L` の 1 次式に抑えられる。prologue は `2 * L + O(1)`、epilogue の `clearAny` 部分は
-`width_Cd_applyActs_le` 系（4 本のカウンタ）と `V1`/`V2` の `SeqView` から来る
-`width ≤ x.length + 1 = L + 1`（一定、`decompose2_on_tapes` の動作でこの 2 本の幅は
-`SeqView` の性質上つねに `x.length + 1` — 増えない）という評価から `O(L)`。
-これらを合算すれば `Cp * L + Dp` の形に収まるはずだが、epilogue の具体的な動作列と
-`post` の証明を書き切っていないため、`prepInstance` 自体は本ファイルにまだ存在しない。
+**`prepInstance : StageTapes.PrepOnTapes sc blank mark` を作れない理由（本質的なギャップ）：**
 
-以上より、本ファイルは **模倣層（1〜4）と prologue（5）を `sorry` なしで提供**する
-にとどまり、epilogue・`prepInstance` 本体・`prepInstance_res` は未着手であることを
-ここに明記する。
+`StageTapes.PrepOnTapes` の `post` フィールドは
+
+```
+post : ∀ (w Text : List (Fin sc)) (L : ℕ) (ts : Tapes sc),
+  PrepPre blank mark L w Text ts → (res w L).1 < L →
+  SetupPre blank mark (res w L).1 L (res w L).2.1 (res w L).2.2 w Text
+    (run blank (prog (w.take L) L ts) ts)
+```
+
+であり、**`w` の中身（記号）には一切制約がない**。ところが `GSPre.decompose2_on_tapes`
+（`fullProg` が内部で唯一呼んでいる、分解を実際にテープ上で行う定理）は
+
+```
+theorem decompose2_on_tapes (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank) …
+```
+
+という形で `hend : endSym ∉ x` を**必須の仮定**として要求する（`V2` の走査で
+`endSym` を「パターンの終わりを示す番人」として読み分けるため、`x` の中に
+本物のデータとして `endSym` が現れると壊れる）。`x = (w.take L).reverse` なので、
+これは `endSym ∉ w.take L` と同値。
+
+`PrepPre`/`post` の型には、この `endSym ∉ w` に相当する仮定が **一切現れない**。
+一方で、この仮定は既に隣接ファイルで実際に使われている：`StageTapes.stage_tapes_spec'`
+自身が `hend : endSym ∉ w` を明示的な引数として持つ
+（`StageTapes.lean:727` 付近）。つまり `PrepOnTapes` を実際に呼び出す上位の定理は
+`endSym ∉ w` を知っているのに、`PrepOnTapes.post` の型そのものにはそれを渡す経路が
+ない。したがって：
+
+* `prepInstance : StageTapes.PrepOnTapes sc blank mark` は、**`PrepOnTapes` の定義を
+  変更せずには構成できない**（`post` が今のままでは、`w` にたまたま `endSym` が
+  含まれる入力に対して偽の主張になってしまうため）。
+* 修正の方向性は 2 つ考えられる（どちらも本ファイルの範囲外・`StageTapes.lean` の
+  変更を要する）：
+  (a) `PrepOnTapes.post`（および必要なら `PrepPre`）に `endSym ∉ w` を仮定として
+      追加する。`stage_tapes_spec'` は既にこの仮定を持っているので、呼び出し側の
+      変更は恐らく小さい。
+  (b) `PrepOnTapes` を「`hend` を追加引数に取る」形へ一般化する。
+
+**本ファイルの成果**：上記の型の変更をしなくても証明できる部分（`prepPre_to_setupPre`）は
+`hend`/`hmb` を明示的な仮定として受け取る形で **完全に**証明済みである。`PrepOnTapes.post`
+の型が `endSym ∉ w` を持てるようになった時点で、`prepInstance` の `post` フィールドは
+`prepPre_to_setupPre`（と `PrepInstances.prep_res_eq5` / `prep_prog_len_le` による
+`len_le`）をほぼそのまま繋ぐだけで完成するはずである。
+
+`len_le`（`Cp`/`Dp` の具体形）はこのギャップとは独立に導出可能で、
+`PrepInstances.prep_prog_len_le`（`hsum` 付きの線形上界）＋ `prologueProg_length`
+（ちょうど `6 * L + 5`）＋ epilogue の `O(L)` 上界（`incLoop` は `L - s + 1 ≤ L + 1`、
+4 本のカウンタの掃除は `width_*_applyActs_le` で `decProg` の長さに、`sP`/`sU` の掃除は
+`GSPre.Enc.v1`/`.v2` の `SeqView` から幅がつねに `x.length + 1 = L + 1`
+であることに帰着できる）を合算すれば得られるが、時間の都合上、数値定数の具体的な
+`omega` 詰めまでは本ファイルには含めていない。
 -/
 
 end PrepInstance
