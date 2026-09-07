@@ -38,6 +38,7 @@ import PalPeg.OnlineMachine
 import PalPeg.MiddleBorder
 import PalPeg.PrepDecompose
 import PalPeg.EndToEnd
+import PalPeg.EndToEnd2
 import PalPeg.Schedule
 import PalPeg.TapeLib
 import PalPeg.Speedup
@@ -339,3 +340,7 @@ import PalPeg.Main
 /-- info: 'PalPeg.VerifierFeed.vfeed_online'' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.VerifierFeed.vfeed_online''
+
+/-- info: 'PalPeg.EndToEnd2.endToEnd2_mem_PAL' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.EndToEnd2.endToEnd2_mem_PAL
