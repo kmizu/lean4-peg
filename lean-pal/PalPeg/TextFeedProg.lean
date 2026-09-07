@@ -411,9 +411,11 @@ theorem fillWrite_step (blank : Fin sc) (π : Role → Role) (qt2 : QT sc)
 theorem feedRound'_exec (hπ : Function.Injective π) (hne : mark ≠ blank) {qt0 : QT sc}
     {q : Queue (Fin sc)} (a : Fin sc) (cst : ℕ) (h : Encodes blank mark (qt0 ∘ π) q)
     (hq : Inv q) (T : Fin 8 → STape (Fin sc)) :
-    ∃ (acts : List (Fin 18 → Fin sc × Move)) (π1 π2 : Role → Role) (qtFinal : QT sc),
+    ∃ (acts : List (Fin 18 → Fin sc × Move)) (π1 π2 : Role → Role) (qtFinal : QT sc)
+      (TFinal : Fin 8 → STape (Fin sc)),
       Function.Injective π1 ∧ acts.length ≤ 60 ∧ Function.Injective π2 ∧
       Encodes blank mark (qtFinal ∘ π2) (RTQueue.tail (snoc q a)) ∧
+      applyTrace blank (Fin.append (TSQ qt0) T) acts = Fin.append (TSQ qtFinal) TFinal ∧
       Exec (IFR2 (Terminal := Terminal) blank endSym mark startSym) blank
         (feedRoundProg' blank mark π π1 q a) (Fin.append (TSQ qt0) T) acts := by
   -- stage 1: arrive
@@ -587,7 +589,33 @@ theorem feedRound'_exec (hπ : Function.Injective π) (hne : mark ≠ blank) {qt
       rw [hmid1]; exact hBCDE
     have hfinal := exec_seq hArrive hArrive2
     simpa only [Prog.seq, feedRoundProg', List.append_assoc] using hfinal
-  refine ⟨_, π1, π2, qt4, hinj1, ?_, hinj2, henc4, hgoal⟩
+  set Tscan4 : Fin 8 → STape (Fin sc) := applyTrace blank Tscan3
+    [actVec (I8 (Terminal := Terminal) blank endSym mark startSym)
+      (PalPeg.GSTapes.tT, true, Move.right) Tscan3] with hTscan4def
+  have hmid5 : applyTrace blank (Fin.append (TSQ qt4) Tscan3)
+      (List.map (extendVec (Fin.natAddEmb 10) (Fin.append (TSQ qt4) Tscan3))
+        [actVec (I8 (Terminal := Terminal) blank endSym mark startSym)
+          (PalPeg.GSTapes.tT, true, Move.right) Tscan3])
+      = Fin.append (TSQ qt4) Tscan4 := by
+    nth_rewrite 1 [show (Fin.append (TSQ qt4) Tscan3 : Fin 18 → STape (Fin sc))
+      = extend (Fin.natAddEmb 10) Tscan3 (Fin.append (TSQ qt4) Tscan3) from
+      (extend_natAdd_append Tscan3 (TSQ qt4) Tscan3).symm]
+    rw [applyTrace_extend, extend_natAdd_append]
+  have hTotal : applyTrace blank (Fin.append (TSQ qt0) T)
+      (List.map (extendVec (Fin.castAddEmb 8) (Fin.append (TSQ qt0) T)) (avecsQ blank L1 qt0)
+          ++ List.map (extendVec (Fin.castAddEmb 8) (Fin.append (TSQ qt1) T))
+            (avecsQ blank [⟨π1 Role.front, blank, Move.left⟩] qt1)
+        ++ [actVec (IFR2 (Terminal := Terminal) blank endSym mark startSym) (Sum.inr π1)
+            (Fin.append (TSQ qt2) T)]
+        ++ List.map (extendVec (Fin.castAddEmb 8) (Fin.append (TSQ qt3) Tscan3))
+          (avecsQ blank L3 qt3)
+        ++ List.map (extendVec (Fin.natAddEmb 10) (Fin.append (TSQ qt4) Tscan3))
+          [actVec (I8 (Terminal := Terminal) blank endSym mark startSym)
+            (PalPeg.GSTapes.tT, true, Move.right) Tscan3])
+      = Fin.append (TSQ qt4) Tscan4 := by
+    rw [applyTrace_append, applyTrace_append, applyTrace_append, applyTrace_append, hmid1, hmid2,
+      hmid3, hmid4, hmid5]
+  refine ⟨_, π1, π2, qt4, Tscan4, hinj1, ?_, hinj2, henc4, hTotal, hgoal⟩
   have e1 : (List.map (extendVec (Fin.castAddEmb 8) (Fin.append (TSQ qt0) T))
       (avecsQ blank L1 qt0)).length = n1 := by
     rw [List.length_map, avecsQ_length, hlen1]
@@ -630,7 +658,7 @@ theorem feedRound'_halts (hπ : Function.Injective π) (hne : mark ≠ blank) {q
       ∀ (l : List (Option Terminal)), l.length = n → ∀ (x : Option Terminal),
         (runInputs (IFR2 (Terminal := Terminal) blank endSym mark startSym) blank (l ++ [x])
             ([feedRoundProg' blank mark π π1 q a], Fin.append (TSQ qt0) T)).1 = [] := by
-  obtain ⟨acts, π1, π2, qtFinal, hinj1, hlen, hinj2, henc, hex⟩ :=
+  obtain ⟨acts, π1, π2, qtFinal, TFinal, hinj1, hlen, hinj2, henc, htape, hex⟩ :=
     feedRound'_exec hπ hne a cst h hq T
   exact ⟨π1, acts.length, hlen, fun l hl x => exec_halts hex l hl x⟩
 
@@ -665,6 +693,102 @@ theorem feedRound'_bound {Terminal : Type} (hπ : Function.Injective π) (hne : 
       (RTQueue.inv_snoc hq a)
   exact ⟨n1, n3, hb1, hb3, by omega⟩
 
+/-! ## 8. `startT'` フェーズの複数ラウンド化（`feed_online'` の前半） -/
+
+/-- `feed_online'` の「起動」フェーズが `n` ラウンド後に到達する待ち行列の抽象値
+（`startT'`/`startRound'`/`arrive'` が毎ラウンド `snoc` してから `tail` することの
+純粋な（実行によらない）記述）。 -/
+noncomputable def foldQ (blank : Fin sc) (Text : List (Fin sc)) (q0 : Queue (Fin sc)) :
+    ℕ → Queue (Fin sc)
+  | 0 => q0
+  | n + 1 => RTQueue.tail (snoc (foldQ blank Text q0 n) (Text.getD n blank))
+
+/-- `startT'` の `n` ラウンド分を `feedRoundProg'` の逐次合成として表す。
+`πF i`/`π1F i` はラウンド `i` の（到着前／到着後の）回転置換で、実行時にしか
+定まらないため、呼び出し側（`feedStartProgN_exec`）が与える。 -/
+noncomputable def feedStartProgN (blank mark : Fin sc) (Text : List (Fin sc))
+    (q0 : Queue (Fin sc)) (πF π1F : ℕ → Role → Role) : ℕ → Prog (Act18 sc) (Cond18 sc)
+  | 0 => Prog.skip
+  | n + 1 =>
+      Prog.seq (feedStartProgN blank mark Text q0 πF π1F n)
+        (feedRoundProg' blank mark (πF n) (π1F n) (foldQ blank Text q0 n) (Text.getD n blank))
+
+theorem feedStartProgN_congr (blank mark : Fin sc) (Text : List (Fin sc)) (q0 : Queue (Fin sc))
+    {πF π1F πF' π1F' : ℕ → Role → Role} :
+    ∀ (n : ℕ), (∀ i, i < n → πF i = πF' i) → (∀ i, i < n → π1F i = π1F' i) →
+      feedStartProgN blank mark Text q0 πF π1F n = feedStartProgN blank mark Text q0 πF' π1F' n
+  | 0, _, _ => rfl
+  | n + 1, hπ, hπ1 => by
+      show Prog.seq (feedStartProgN blank mark Text q0 πF π1F n)
+          (feedRoundProg' blank mark (πF n) (π1F n) (foldQ blank Text q0 n) (Text.getD n blank))
+        = Prog.seq (feedStartProgN blank mark Text q0 πF' π1F' n)
+          (feedRoundProg' blank mark (πF' n) (π1F' n) (foldQ blank Text q0 n) (Text.getD n blank))
+      rw [feedStartProgN_congr blank mark Text q0 n (fun i hi => hπ i (by omega))
+          (fun i hi => hπ1 i (by omega)),
+        hπ n (by omega), hπ1 n (by omega)]
+
+/-- **`startT'` フェーズの `n` ラウンド全体の `Exec`**：`feedRoundProg'` を `n` 回
+逐次合成したものが、初期状態から `≤ 60*n` マイクロステップで実行でき、待ち行列は
+`foldQ` が計算する抽象値（`n` 回の「到着してから取り出す」）を最後まで正しく
+符号化し続ける（回転置換の単射性・待ち行列の不変条件も保たれる）。 -/
+theorem feedStartProgN_exec (blank mark endSym startSym : Fin sc) (hne : mark ≠ blank)
+    (Text : List (Fin sc)) :
+    ∀ (n : ℕ) {qt0 : QT sc} {q0 : Queue (Fin sc)} {π0 : Role → Role},
+      Function.Injective π0 → Encodes blank mark (qt0 ∘ π0) q0 → Inv q0 →
+      ∀ (T0 : Fin 8 → STape (Fin sc)),
+      ∃ (πF π1F : ℕ → Role → Role) (acts : List (Fin 18 → Fin sc × Move)) (πEnd : Role → Role)
+        (qtEnd : QT sc) (TEnd : Fin 8 → STape (Fin sc)),
+        Function.Injective πEnd ∧ acts.length ≤ 60 * n ∧
+        Inv (foldQ blank Text q0 n) ∧
+        Encodes blank mark (qtEnd ∘ πEnd) (foldQ blank Text q0 n) ∧
+        applyTrace blank (Fin.append (TSQ qt0) T0) acts = Fin.append (TSQ qtEnd) TEnd ∧
+        Exec (IFR2 (Terminal := Terminal) blank endSym mark startSym) blank
+          (feedStartProgN blank mark Text q0 πF π1F n) (Fin.append (TSQ qt0) T0) acts := by
+  intro n
+  induction n with
+  | zero =>
+      intro qt0 q0 π0 hπ0 h0 hq0 T0
+      refine ⟨fun _ => π0, fun _ => π0, [], π0, qt0, T0, hπ0, by simp, hq0, h0, rfl, ?_⟩
+      show Exec (IFR2 (Terminal := Terminal) blank endSym mark startSym) blank Prog.skip
+        (Fin.append (TSQ qt0) T0) []
+      exact exec_skip _
+  | succ n ih =>
+      intro qt0 q0 π0 hπ0 h0 hq0 T0
+      obtain ⟨πF, π1F, acts, πEnd, qtEnd, TEnd, hinjEnd, hlen, hInvEnd, hEncEnd, hmidEnd,
+        hex⟩ := ih hπ0 h0 hq0 T0
+      obtain ⟨acts', π1', π2', qtFinal, TFinal', hinj1', hlen', hinj2', henc', htape', hex'⟩ :=
+        feedRound'_exec (Terminal := Terminal) (blank := blank) (endSym := endSym)
+          (mark := mark) (startSym := startSym) hinjEnd hne (Text.getD n blank) 0 hEncEnd
+          hInvEnd TEnd
+      set πF' : ℕ → Role → Role := Function.update πF n πEnd with hπF'def
+      set π1F' : ℕ → Role → Role := Function.update π1F n π1' with hπ1F'def
+      have hcongr : feedStartProgN blank mark Text q0 πF' π1F' n
+          = feedStartProgN blank mark Text q0 πF π1F n :=
+        feedStartProgN_congr blank mark Text q0 n
+          (fun i hi => by simp [hπF'def, Function.update, ne_of_lt hi])
+          (fun i hi => by simp [hπ1F'def, Function.update, ne_of_lt hi])
+      refine ⟨πF', π1F', acts ++ acts', π2', qtFinal, TFinal', hinj2', ?_, ?_, ?_, ?_, ?_⟩
+      · simp only [List.length_append]
+        omega
+      · exact RTQueue.inv_tail (RTQueue.inv_snoc hInvEnd (Text.getD n blank))
+      · exact henc'
+      · rw [applyTrace_append, hmidEnd]
+        exact htape'
+      · show Exec (IFR2 (Terminal := Terminal) blank endSym mark startSym) blank
+          (Prog.seq (feedStartProgN blank mark Text q0 πF' π1F' n)
+            (feedRoundProg' blank mark (πF' n) (π1F' n) (foldQ blank Text q0 n)
+              (Text.getD n blank)))
+          (Fin.append (TSQ qt0) T0) (acts ++ acts')
+        rw [hcongr]
+        have hexn : Exec (IFR2 (Terminal := Terminal) blank endSym mark startSym) blank
+            (feedRoundProg' blank mark (πF' n) (π1F' n) (foldQ blank Text q0 n)
+              (Text.getD n blank))
+            (applyTrace blank (Fin.append (TSQ qt0) T0) acts) acts' := by
+          rw [hmidEnd]
+          simp only [hπF'def, hπ1F'def, Function.update_self]
+          exact hex'
+        exact exec_seq hex hexn
+
 end Exec
 
 end PalPeg.TextFeedProg
@@ -678,3 +802,5 @@ end PalPeg.TextFeedProg
 #print axioms PalPeg.TextFeedProg.feedRound'_exec
 #print axioms PalPeg.TextFeedProg.feedRound'_halts
 #print axioms PalPeg.TextFeedProg.feedRound'_bound
+#print axioms PalPeg.TextFeedProg.feedStartProgN_congr
+#print axioms PalPeg.TextFeedProg.feedStartProgN_exec
