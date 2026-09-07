@@ -515,6 +515,58 @@ theorem first_period_le_of_deep_crossing {w : List α} {k p P t r q₁ Rc : ℕ}
     q₁ ≤ P :=
   first_period_le_of_crossing hPpos hq₁ (by omega)
     (region_prefix_period hreg hRc hrun ht (by omega) (by omega))
+/-! ## §11 DOWN 連鎖に沿った不変量 `E < p_c + q`
+
+数値実験（UP 節点 147 個）で判明した最良の形：
+
+* **UP 節点**（部分木を抜けて着地した節点）は `E' + t ≤ p_c + P - 1`、すなわち
+  `E' < p_c + P` を **例外なく**満たす（最悪値 `-1`）。
+* (E) が破れるのは DOWN 子だけ（`p_c = 300, t = 11, P = 37, E = 338`）。
+
+そして `E < p_c + q` は **DOWN ステップで保存される**（`down_step_invariant`）。
+`step_down_reach` から `E' + (k-1) * q ≤ E + q'` であり、`(k-1) * q' < q` と `q ≥ 1` から
+
+```
+E' ≤ E + q' - (k-1) * q < p_c + q + q' - (k-1) * q = p_c + q' - (k-2) * q < p_c + q'
+```
+
+したがって `E < p_c + q` は「連鎖の先頭」（第 1 子または UP 節点）でだけ確かめればよく、
+第 1 子は `inner_run_lt` で無条件、UP 節点が唯一残る（下の `UpRunEnd`）。
+そして `E < p_c + q` から `consumption_lt_period_of_runEnd` で `C(c) < p_c` が出る。 -/
+
+/-- **DOWN ステップの鋭い形**：`E_child + (k-1) * p ≤ E_parent + q`
+（親の開始位置を原点にとった相対座標。`E_parent = r`, `E_child = d + r'`）。 -/
+theorem runEnd_down_step_sharp {w : List α} {k p q r r' d : ℕ} (hk : 4 ≤ k)
+    (hd : k * p + d = r + 1)
+    (hleast : IsLeastKRep w k p) (hR : ReachOf w p r) (hkr : k * p ≤ r)
+    (hq : IsLeastKRep (w.drop d) k q) (hlt : q < p)
+    (hR' : ReachOf (w.drop d) q r') (hkq : k * q ≤ r') :
+    (d + r') + (k - 1) * p ≤ r + q := by
+  have hreach := step_down_reach hk hd hleast hR hkr hq hlt hR' hkq
+  have h1 : (k - 1) * p + p = k * p := by rw [← Nat.succ_mul]; congr 1; omega
+  omega
+
+/-- **不変量の保存**：`E < p_c + q` は DOWN ステップで保たれる。
+
+`hstep` は `runEnd_down_step_sharp`、`hgrow` は `child_period_bound`（`(k-1) q' < q`）。 -/
+theorem down_step_invariant {k pc q q' E E' : ℕ} (hk : 4 ≤ k) (_hq : 0 < q) (_hq' : 0 < q')
+    (hinv : E < pc + q) (_hgrow : (k - 1) * q' < q) (hstep : E' + (k - 1) * q ≤ E + q') :
+    E' < pc + q' := by
+  have h2 : 2 * q ≤ (k - 1) * q := Nat.mul_le_mul_right q (by omega)
+  omega
+
+/-- **残る唯一の主張 (E-UP)**：部分木を抜けて着地した節点（UP 節点）の run は
+`E' < p_c + P` で終わる。実測 147 例で例外なし（最悪の余裕 `1` セル）。 -/
+def UpRunEnd (pc P E' : ℕ) : Prop := E' < pc + P
+
+/-- **(E-UP) ⟹ 消費量補題**（連鎖の最後の節点に適用した形）。
+`E < p_c + q` と `C + k * q = E + 1` から `C < p_c`。 -/
+theorem consumption_of_invariant {k pc q E C : ℕ} (hk : 4 ≤ k) (hq : 0 < q)
+    (hinv : E < pc + q) (hC : C + k * q = E + 1) : C < pc := by
+  have h1 : (k - 1) * q + q = k * q := by rw [← Nat.succ_mul]; congr 1; omega
+  have h2 : 1 * q ≤ (k - 1) * q := Nat.mul_le_mul_right q (by omega)
+  omega
+
 
 section AxiomCheck
 open PalPeg.PassSum9
@@ -535,5 +587,8 @@ open PalPeg.PassSum9
 #print axioms PalPeg.PassSum9.first_period_le_of_crossing
 #print axioms PalPeg.PassSum9.first_period_le_of_deep_crossing
 #print axioms PalPeg.PassSum9.consumption_lt_period_of_dichotomy
+#print axioms PalPeg.PassSum9.runEnd_down_step_sharp
+#print axioms PalPeg.PassSum9.down_step_invariant
+#print axioms PalPeg.PassSum9.consumption_of_invariant
 #print axioms PalPeg.PassSum8.passPeriodSum_eight_of_hasTree
 end AxiomCheck
