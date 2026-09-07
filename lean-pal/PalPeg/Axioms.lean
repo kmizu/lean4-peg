@@ -17,6 +17,7 @@ import PalPeg.MiddleJob
 import PalPeg.Stages
 import PalPeg.Schedule
 import PalPeg.TapeLib
+import PalPeg.Speedup
 
 /-!
 # 公理 guard
@@ -213,3 +214,7 @@ import PalPeg.TapeLib
 /-- info: 'PalPeg.GSCore.ksimple' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.GSCore.ksimple
+
+/-- info: 'PalPeg.Speedup.Main.multiStep_recognizedBy' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.Speedup.Main.multiStep_recognizedBy

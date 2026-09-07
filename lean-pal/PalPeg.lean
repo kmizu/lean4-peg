@@ -18,6 +18,7 @@ import PalPeg.MiddleJob
 import PalPeg.Stages
 import PalPeg.Schedule
 import PalPeg.TapeLib
+import PalPeg.Speedup
 
 /-!
 # PalPeg
@@ -42,6 +43,7 @@ import PalPeg.TapeLib
 * `PalPeg.TapeLib`   — 成果物のテープ上の zipper / stack / seq / counter ビューと 1 アクション補題
 * `PalPeg.GSScan`    — Galil–Seiferas 走査：安全シフト、健全性/完全性、ポテンシャル `Φ=(k+1)pos+q`
 * `PalPeg.GSDecomp`  — GS 分解 `GSCore/GSDecomp`、k 反復周期の補題、走査側帰結と `KSimple` への橋（L1 の厳密境界は未了）
+* `PalPeg.Speedup`   — 1 記号あたり B マイクロステップの機械 → 厳密実時間 `Machine`（線形加速、`multiStep_recognizedBy`）
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/
