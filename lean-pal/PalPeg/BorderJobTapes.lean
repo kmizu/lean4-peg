@@ -267,6 +267,90 @@ theorem applyActs_scratchBlank {blank : Fin sc} {l : List (Act sc)} {ts : OvTape
     ScratchBlank blank (applyActs blank l ts) :=
   (applyActs_scratchEq l ts h).blank hb
 
+/-! ### `S2` 以外の作業テープの不変性
+
+`uFwd`／`uBack`（ひいては `uCheck`）は `S2` にだけ触れる（マーカの push/pop）。
+`S1, S3, …, S9` については引き続き完全に不変なので、`NoScratch`／`ScratchEq` の
+`S2` を除いた版を用意する。 -/
+
+/-- 作業テープ `S2` 以外に触れない動作（`S2` への動作は許す）。 -/
+def NoScratch2 : Act sc → Prop
+  | .S1 _ _ => False
+  | .S3 _ _ => False
+  | .S4 _ _ => False
+  | .S5 _ _ => False
+  | .S6 _ _ => False
+  | .S7 _ _ => False
+  | .S8 _ _ => False
+  | .S9 _ _ => False
+  | _ => True
+
+/-- 動作列が `S2` 以外の作業テープに触れないこと。 -/
+def NoScratchAll2 (l : List (Act sc)) : Prop := ∀ a ∈ l, NoScratch2 a
+
+theorem noScratchAll2_nil : NoScratchAll2 ([] : List (Act sc)) := by
+  intro a ha; simp at ha
+
+theorem noScratchAll2_cons {a : Act sc} {l : List (Act sc)} (ha : NoScratch2 a)
+    (hl : NoScratchAll2 l) : NoScratchAll2 (a :: l) := by
+  intro b hb
+  rcases List.mem_cons.1 hb with rfl | hb
+  · exact ha
+  · exact hl b hb
+
+theorem noScratchAll2_append {l₁ l₂ : List (Act sc)} (h₁ : NoScratchAll2 l₁)
+    (h₂ : NoScratchAll2 l₂) : NoScratchAll2 (l₁ ++ l₂) := by
+  intro a ha
+  rcases List.mem_append.1 ha with h | h
+  · exact h₁ a h
+  · exact h₂ a h
+
+/-- 2 つのテープ束が `S2` 以外の作業テープで一致していること。 -/
+structure ScratchEq2 (t u : OvTapes sc) : Prop where
+  s1 : t.S1 = u.S1
+  s3 : t.S3 = u.S3
+  s4 : t.S4 = u.S4
+  s5 : t.S5 = u.S5
+  s6 : t.S6 = u.S6
+  s7 : t.S7 = u.S7
+  s8 : t.S8 = u.S8
+  s9 : t.S9 = u.S9
+
+theorem ScratchEq2.trans {t u v : OvTapes sc} (h₁ : ScratchEq2 t u) (h₂ : ScratchEq2 u v) :
+    ScratchEq2 t v :=
+  ⟨h₁.s1.trans h₂.s1, h₁.s3.trans h₂.s3, h₁.s4.trans h₂.s4,
+    h₁.s5.trans h₂.s5, h₁.s6.trans h₂.s6, h₁.s7.trans h₂.s7, h₁.s8.trans h₂.s8,
+    h₁.s9.trans h₂.s9⟩
+
+theorem applyAct_scratchEq2 {blank : Fin sc} {a : Act sc} (ha : NoScratch2 a)
+    (ts : OvTapes sc) : ScratchEq2 (applyAct blank ts a) ts := by
+  cases a <;> first
+    | exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    | exact absurd ha (by simp [NoScratch2])
+
+theorem applyActs_scratchEq2 {blank : Fin sc} :
+    ∀ (l : List (Act sc)) (ts : OvTapes sc), NoScratchAll2 l →
+      ScratchEq2 (applyActs blank l ts) ts := by
+  intro l
+  induction l with
+  | nil => intro ts _; exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | cons a l ih =>
+    intro ts h
+    rw [applyActs_cons]
+    exact (ih _ (fun b hb => h b (List.mem_cons_of_mem _ hb))).trans
+      (applyAct_scratchEq2 (h a List.mem_cons_self) ts)
+
+/-- `ScratchEq2` と（`S2` 成分を除く）`ScratchBlank` の伝播。 -/
+theorem ScratchEq2.blankOthers {blank : Fin sc} {t u : OvTapes sc} (h : ScratchEq2 t u)
+    (hu : ScratchBlank blank u) :
+    Tape.StackView blank t.S1 [] ∧ Tape.StackView blank t.S3 [] ∧
+      Tape.StackView blank t.S4 [] ∧ Tape.StackView blank t.S5 [] ∧
+      Tape.StackView blank t.S6 [] ∧ Tape.StackView blank t.S7 [] ∧
+      Tape.StackView blank t.S8 [] ∧ Tape.StackView blank t.S9 [] :=
+  ⟨by rw [h.s1]; exact hu.s1, by rw [h.s3]; exact hu.s3, by rw [h.s4]; exact hu.s4,
+    by rw [h.s5]; exact hu.s5, by rw [h.s6]; exact hu.s6, by rw [h.s7]; exact hu.s7,
+    by rw [h.s8]; exact hu.s8, by rw [h.s9]; exact hu.s9⟩
+
 /-! ## 2. 動作列 -/
 
 /-- 周期ずらしの下げループ：`P` を 1 左、カウンタを 1 下げる、を `n` 回。 -/
@@ -299,18 +383,32 @@ def resetShift (sc k q : ℕ) : List (Act sc) :=
     (Act.P .left :: Act.P .right :: (if q = 0 then [Act.X (sc := sc) .left] else [])) ++
     posMoves sc (max 1 (ceilDiv q k))
 
-/-- `u` の直接照合の往路：`U` を右、`X2` を左。 -/
-def uFwd (sc : ℕ) : ℕ → List (Act sc)
+/-- `u` の直接照合の往路の 1 段（`uFwd` の実質部分）：`U` を右、`X2` を左、
+`S2` に `mark` を push する（`n` の単進コピーを積む）。 -/
+def uFwdStep (sc : ℕ) (mark : Fin sc) : ℕ → List (Act sc)
   | 0 => []
-  | n + 1 => Act.U .right :: Act.X2 .left :: uFwd sc n
+  | n + 1 => Act.U .right :: Act.X2 .left :: Act.S2 mark .right :: uFwdStep sc mark n
 
-/-- `u` の直接照合の復路。 -/
-def uBack (sc : ℕ) : ℕ → List (Act sc)
+/-- `u` の直接照合の往路：`uFwdStep` のあと `S2` を 1 回 pop し、`S2` の読みで
+`uBack` の反復回数（`n` が `0` か否か）を判定できるようにする。 -/
+def uFwd (sc : ℕ) (blank mark : Fin sc) (n : ℕ) : List (Act sc) :=
+  uFwdStep sc mark n ++ [Act.S2 blank .left]
+
+/-- `u` の直接照合の復路：`Prog.loop` の条件が反復の最後の動作
+（`S2` の pop）の直後に評価できるよう、各反復を「前回の pop 結果を消す
+（`S2 blank .stay`）→ `U` を左・`X2` を右 → 次の pop（`S2 blank .left`）」の
+順に組む（`GS_OVERLAP.md` の probe 方式、`BorderJobProg.lean` の `Obstructions`
+節を参照）。 -/
+def uBack (sc : ℕ) (blank : Fin sc) : ℕ → List (Act sc)
   | 0 => []
-  | n + 1 => Act.U .left :: Act.X2 .right :: uBack sc n
+  | n + 1 =>
+      Act.S2 blank .stay :: Act.U .left :: Act.X2 .right :: Act.S2 blank .left ::
+        uBack sc blank n
 
-/-- `u` の直接照合（往復）。ヘッドは元の位置に戻る。 -/
-def uCheck (sc c : ℕ) : List (Act sc) := uFwd sc c ++ uBack sc c
+/-- `u` の直接照合（往復）。ヘッドは元の位置に戻る。`S2` は往復の前後で空
+（`ScratchBlank`）。 -/
+def uCheck (sc : ℕ) (blank mark : Fin sc) (c : ℕ) : List (Act sc) :=
+  uFwd sc blank mark c ++ uBack sc blank c
 
 /-- `P` のヘッド位置から読み取れる一致長 `q`。 -/
 def qOf (ts : OvTapes sc) : ℕ := ts.P.left.length - 1
@@ -326,7 +424,7 @@ def shiftActs (blank mark : Fin sc) (k : ℕ) (b : Bool) (ts : OvTapes sc) : Lis
 def ovProgram (blank leftSym endSym mark one : Fin sc) (k c : ℕ) (b bu : Bool)
     (ts : OvTapes sc) : List (Act sc) :=
   if Tape.read ts.X = leftSym then
-    uCheck sc c ++ (if bu then [Act.Fset one] else []) ++ shiftActs blank mark k b ts
+    uCheck sc blank mark c ++ (if bu then [Act.Fset one] else []) ++ shiftActs blank mark k b ts
   else if Tape.read ts.P ≠ endSym ∧ Tape.read ts.P = Tape.read ts.X then
     [Act.P .right, Act.X .left]
   else shiftActs blank mark k b ts
@@ -371,41 +469,14 @@ theorem noScratch_resetShift (sc k q : ℕ) : NoScratchAll (resetShift sc k q) :
   · rw [if_pos h]; exact noScratchAll_cons trivial noScratchAll_nil
   · rw [if_neg h]; exact noScratchAll_nil
 
-theorem noScratch_uFwd (sc : ℕ) : ∀ n, NoScratchAll (uFwd sc n) := by
-  intro n
-  induction n with
-  | zero => exact noScratchAll_nil
-  | succ n ih => exact noScratchAll_cons trivial (noScratchAll_cons trivial ih)
-
-theorem noScratch_uBack (sc : ℕ) : ∀ n, NoScratchAll (uBack sc n) := by
-  intro n
-  induction n with
-  | zero => exact noScratchAll_nil
-  | succ n ih => exact noScratchAll_cons trivial (noScratchAll_cons trivial ih)
-
-theorem noScratch_uCheck (sc c : ℕ) : NoScratchAll (uCheck sc c) :=
-  noScratchAll_append (noScratch_uFwd sc c) (noScratch_uBack sc c)
-
+/-- `uFwd`／`uBack`／`uCheck` は `S2` に触れるので、もはや `NoScratchAll` ではない
+（`S2` は往復の前後でのみ空に戻る：`uCheck_S2`、`ovProgram_scratchBlank` を参照）。 -/
 theorem noScratch_shiftActs (blank mark : Fin sc) (k : ℕ) (b : Bool) (ts : OvTapes sc) :
     NoScratchAll (shiftActs blank mark k b ts) := by
   simp only [shiftActs]
   split_ifs
   · exact noScratch_periodActs _ _ _
   · exact noScratch_resetShift _ _ _
-
-theorem noScratch_ovProgram (blank leftSym endSym mark one : Fin sc) (k c : ℕ)
-    (b bu : Bool) (ts : OvTapes sc) :
-    NoScratchAll (ovProgram blank leftSym endSym mark one k c b bu ts) := by
-  simp only [ovProgram]
-  split_ifs
-  · refine noScratchAll_append (noScratchAll_append (noScratch_uCheck sc c) ?_)
-      (noScratch_shiftActs _ _ _ _ _)
-    exact noScratchAll_cons trivial noScratchAll_nil
-  · refine noScratchAll_append (noScratchAll_append (noScratch_uCheck sc c) ?_)
-      (noScratch_shiftActs _ _ _ _ _)
-    exact noScratchAll_nil
-  · exact noScratchAll_cons trivial (noScratchAll_cons trivial noScratchAll_nil)
-  · exact noScratch_shiftActs _ _ _ _ _
 
 /-! ## 3. 動作列の長さ -/
 
@@ -451,17 +522,27 @@ theorem resetShift_length (sc k q : ℕ) :
     posMoves_length]
   split_ifs <;> simp
 
-@[simp] theorem uFwd_length (sc n : ℕ) : (uFwd sc n).length = 2 * n := by
+@[simp] theorem uFwdStep_length (sc : ℕ) (mark : Fin sc) (n : ℕ) :
+    (uFwdStep sc mark n).length = 3 * n := by
   induction n with
-  | zero => simp [uFwd]
-  | succ n ih => simp only [uFwd, List.length_cons, ih]; omega
+  | zero => simp [uFwdStep]
+  | succ n ih => simp only [uFwdStep, List.length_cons, ih]; omega
 
-@[simp] theorem uBack_length (sc n : ℕ) : (uBack sc n).length = 2 * n := by
+/-- `uFwd` の動作数は `3n + 1`（`uFwdStep` の `3n` に閉じの pop `1` を足したもの）。 -/
+@[simp] theorem uFwd_length (sc : ℕ) (blank mark : Fin sc) (n : ℕ) :
+    (uFwd sc blank mark n).length = 3 * n + 1 := by
+  simp only [uFwd, List.length_append, uFwdStep_length, List.length_cons, List.length_nil]
+
+/-- `uBack` の動作数は `4n`（各反復が消去・`U`・`X2`・pop の 4 動作）。 -/
+@[simp] theorem uBack_length (sc : ℕ) (blank : Fin sc) (n : ℕ) :
+    (uBack sc blank n).length = 4 * n := by
   induction n with
   | zero => simp [uBack]
   | succ n ih => simp only [uBack, List.length_cons, ih]; omega
 
-@[simp] theorem uCheck_length (sc c : ℕ) : (uCheck sc c).length = 4 * c := by
+/-- `uCheck` の動作数は `7c + 1`（旧版の `4c` から、`S2` のマーカ往復のぶん増える）。 -/
+@[simp] theorem uCheck_length (sc : ℕ) (blank mark : Fin sc) (c : ℕ) :
+    (uCheck sc blank mark c).length = 7 * c + 1 := by
   simp only [uCheck, List.length_append, uFwd_length, uBack_length]
   omega
 
@@ -690,52 +771,140 @@ theorem resetWalk_F : ∀ n c (ts : OvTapes sc),
     | zero => simp only [resetWalk, applyActs_cons, applyAct]; exact ih _ _
     | succ c => simp only [resetWalk, applyActs_cons, applyAct]; exact ih _ _
 
-theorem uFwd_U : ∀ n (ts : OvTapes sc),
-    (applyActs blank (uFwd sc n) ts).U = rightN blank ts.U n := by
+theorem uFwdStep_U : ∀ n (ts : OvTapes sc),
+    (applyActs blank (uFwdStep sc mark n) ts).U = rightN blank ts.U n := by
   intro n
   induction n with
   | zero => intro ts; rfl
   | succ n ih =>
     intro ts
-    simp only [uFwd, applyActs_cons, applyAct, rightN]
+    simp only [uFwdStep, applyActs_cons, applyAct, rightN]
     exact ih _
 
-theorem uFwd_X2 : ∀ n (ts : OvTapes sc),
-    (applyActs blank (uFwd sc n) ts).X2 = GSTapes.leftN blank ts.X2 n := by
+theorem uFwdStep_X2 : ∀ n (ts : OvTapes sc),
+    (applyActs blank (uFwdStep sc mark n) ts).X2 = GSTapes.leftN blank ts.X2 n := by
   intro n
   induction n with
   | zero => intro ts; rfl
   | succ n ih =>
     intro ts
-    simp only [uFwd, applyActs_cons, applyAct, GSTapes.leftN]
+    simp only [uFwdStep, applyActs_cons, applyAct, GSTapes.leftN]
     exact ih _
 
-theorem uFwd_P : ∀ n (ts : OvTapes sc), (applyActs blank (uFwd sc n) ts).P = ts.P := by
+theorem uFwdStep_P : ∀ n (ts : OvTapes sc),
+    (applyActs blank (uFwdStep sc mark n) ts).P = ts.P := by
   intro n
   induction n with
   | zero => intro ts; rfl
-  | succ n ih => intro ts; simp only [uFwd, applyActs_cons, applyAct]; exact ih _
+  | succ n ih => intro ts; simp only [uFwdStep, applyActs_cons, applyAct]; exact ih _
 
-theorem uFwd_X : ∀ n (ts : OvTapes sc), (applyActs blank (uFwd sc n) ts).X = ts.X := by
+theorem uFwdStep_X : ∀ n (ts : OvTapes sc),
+    (applyActs blank (uFwdStep sc mark n) ts).X = ts.X := by
   intro n
   induction n with
   | zero => intro ts; rfl
-  | succ n ih => intro ts; simp only [uFwd, applyActs_cons, applyAct]; exact ih _
+  | succ n ih => intro ts; simp only [uFwdStep, applyActs_cons, applyAct]; exact ih _
 
-theorem uFwd_Cnt : ∀ n (ts : OvTapes sc), (applyActs blank (uFwd sc n) ts).Cnt = ts.Cnt := by
+theorem uFwdStep_Cnt : ∀ n (ts : OvTapes sc),
+    (applyActs blank (uFwdStep sc mark n) ts).Cnt = ts.Cnt := by
   intro n
   induction n with
   | zero => intro ts; rfl
-  | succ n ih => intro ts; simp only [uFwd, applyActs_cons, applyAct]; exact ih _
+  | succ n ih => intro ts; simp only [uFwdStep, applyActs_cons, applyAct]; exact ih _
 
-theorem uFwd_F : ∀ n (ts : OvTapes sc), (applyActs blank (uFwd sc n) ts).F = ts.F := by
+theorem uFwdStep_F : ∀ n (ts : OvTapes sc),
+    (applyActs blank (uFwdStep sc mark n) ts).F = ts.F := by
   intro n
   induction n with
   | zero => intro ts; rfl
-  | succ n ih => intro ts; simp only [uFwd, applyActs_cons, applyAct]; exact ih _
+  | succ n ih => intro ts; simp only [uFwdStep, applyActs_cons, applyAct]; exact ih _
+
+/-- `uFwdStep` は `S2` に `mark` の単進コピー `n` 個を積む（下に元の内容 `l`）。 -/
+theorem uFwdStep_S2 : ∀ n (ts : OvTapes sc) (l : List (Fin sc)),
+    Tape.StackView blank ts.S2 l →
+    Tape.StackView blank (applyActs blank (uFwdStep sc mark n) ts).S2
+      (List.replicate n mark ++ l) := by
+  intro n
+  induction n with
+  | zero => intro ts l h; simpa [uFwdStep] using h
+  | succ n ih =>
+    intro ts l h
+    simp only [uFwdStep, applyActs_cons]
+    set ts1 := applyAct blank ts (Act.U (sc := sc) .right) with hts1
+    set ts2 := applyAct blank ts1 (Act.X2 (sc := sc) .left) with hts2
+    set ts3 := applyAct blank ts2 (Act.S2 mark .right) with hts3
+    have hts3S2 : ts3.S2 = Tape.step blank ts.S2 mark .right := by
+      rw [hts3, hts2, hts1]; rfl
+    have h3 : Tape.StackView blank ts3.S2 (mark :: l) := by
+      rw [hts3S2]; exact Tape.push_spec h mark
+    have h2 := ih ts3 (mark :: l) h3
+    rw [show List.replicate (n + 1) mark ++ l = List.replicate n mark ++ (mark :: l) from by
+      simp [List.replicate_succ', List.append_assoc]]
+    exact h2
+
+theorem uFwd_U (n : ℕ) (ts : OvTapes sc) :
+    (applyActs blank (uFwd sc blank mark n) ts).U = rightN blank ts.U n := by
+  unfold uFwd
+  rw [applyActs_append]
+  simp only [applyActs_cons, applyActs_nil, applyAct]
+  exact uFwdStep_U blank mark n ts
+
+theorem uFwd_X2 (n : ℕ) (ts : OvTapes sc) :
+    (applyActs blank (uFwd sc blank mark n) ts).X2 = GSTapes.leftN blank ts.X2 n := by
+  unfold uFwd
+  rw [applyActs_append]
+  simp only [applyActs_cons, applyActs_nil, applyAct]
+  exact uFwdStep_X2 blank mark n ts
+
+theorem uFwd_P (n : ℕ) (ts : OvTapes sc) :
+    (applyActs blank (uFwd sc blank mark n) ts).P = ts.P := by
+  unfold uFwd
+  rw [applyActs_append]
+  simp only [applyActs_cons, applyActs_nil, applyAct]
+  exact uFwdStep_P blank mark n ts
+
+theorem uFwd_X (n : ℕ) (ts : OvTapes sc) :
+    (applyActs blank (uFwd sc blank mark n) ts).X = ts.X := by
+  unfold uFwd
+  rw [applyActs_append]
+  simp only [applyActs_cons, applyActs_nil, applyAct]
+  exact uFwdStep_X blank mark n ts
+
+theorem uFwd_Cnt (n : ℕ) (ts : OvTapes sc) :
+    (applyActs blank (uFwd sc blank mark n) ts).Cnt = ts.Cnt := by
+  unfold uFwd
+  rw [applyActs_append]
+  simp only [applyActs_cons, applyActs_nil, applyAct]
+  exact uFwdStep_Cnt blank mark n ts
+
+theorem uFwd_F (n : ℕ) (ts : OvTapes sc) :
+    (applyActs blank (uFwd sc blank mark n) ts).F = ts.F := by
+  unfold uFwd
+  rw [applyActs_append]
+  simp only [applyActs_cons, applyActs_nil, applyAct]
+  exact uFwdStep_F blank mark n ts
+
+/-- `uFwd`（push `n` 回 → 1 回 pop）の直後の `S2`：`n = 0` なら空のまま、
+`n = m + 1` なら最上段 `mark` が読める状態（残りは `m` 個の `mark`）。 -/
+theorem uFwd_S2 (n : ℕ) (ts : OvTapes sc) (h : Tape.StackView blank ts.S2 []) :
+    (n = 0 → Tape.StackView blank (applyActs blank (uFwd sc blank mark n) ts).S2 []) ∧
+      (∀ m, n = m + 1 →
+        Tape.StackTopView blank (applyActs blank (uFwd sc blank mark n) ts).S2 mark
+          (List.replicate m mark)) := by
+  have hpush := uFwdStep_S2 blank mark n ts [] h
+  rw [List.append_nil] at hpush
+  unfold uFwd
+  rw [applyActs_append]
+  simp only [applyActs_cons, applyActs_nil, applyAct]
+  constructor
+  · intro hn; subst hn; simpa using Tape.pop_empty hpush
+  · intro m hm
+    subst hm
+    rw [List.replicate_succ] at hpush
+    exact Tape.pop_spec hpush
 
 theorem uBack_U : ∀ n (ts : OvTapes sc),
-    (applyActs blank (uBack sc n) ts).U = GSTapes.leftN blank ts.U n := by
+    (applyActs blank (uBack sc blank n) ts).U = GSTapes.leftN blank ts.U n := by
   intro n
   induction n with
   | zero => intro ts; rfl
@@ -745,7 +914,7 @@ theorem uBack_U : ∀ n (ts : OvTapes sc),
     exact ih _
 
 theorem uBack_X2 : ∀ n (ts : OvTapes sc),
-    (applyActs blank (uBack sc n) ts).X2 = rightN blank ts.X2 n := by
+    (applyActs blank (uBack sc blank n) ts).X2 = rightN blank ts.X2 n := by
   intro n
   induction n with
   | zero => intro ts; rfl
@@ -754,32 +923,135 @@ theorem uBack_X2 : ∀ n (ts : OvTapes sc),
     simp only [uBack, applyActs_cons, applyAct, rightN]
     exact ih _
 
-theorem uBack_P : ∀ n (ts : OvTapes sc), (applyActs blank (uBack sc n) ts).P = ts.P := by
+theorem uBack_P : ∀ n (ts : OvTapes sc), (applyActs blank (uBack sc blank n) ts).P = ts.P := by
   intro n
   induction n with
   | zero => intro ts; rfl
   | succ n ih => intro ts; simp only [uBack, applyActs_cons, applyAct]; exact ih _
 
-theorem uBack_X : ∀ n (ts : OvTapes sc), (applyActs blank (uBack sc n) ts).X = ts.X := by
+theorem uBack_X : ∀ n (ts : OvTapes sc), (applyActs blank (uBack sc blank n) ts).X = ts.X := by
   intro n
   induction n with
   | zero => intro ts; rfl
   | succ n ih => intro ts; simp only [uBack, applyActs_cons, applyAct]; exact ih _
 
-theorem uBack_Cnt : ∀ n (ts : OvTapes sc), (applyActs blank (uBack sc n) ts).Cnt = ts.Cnt := by
+theorem uBack_Cnt : ∀ n (ts : OvTapes sc),
+    (applyActs blank (uBack sc blank n) ts).Cnt = ts.Cnt := by
   intro n
   induction n with
   | zero => intro ts; rfl
   | succ n ih => intro ts; simp only [uBack, applyActs_cons, applyAct]; exact ih _
 
-theorem uBack_F : ∀ n (ts : OvTapes sc), (applyActs blank (uBack sc n) ts).F = ts.F := by
+theorem uBack_F : ∀ n (ts : OvTapes sc), (applyActs blank (uBack sc blank n) ts).F = ts.F := by
   intro n
   induction n with
   | zero => intro ts; rfl
   | succ n ih => intro ts; simp only [uBack, applyActs_cons, applyAct]; exact ih _
+
+/-- `uBack`：開始時の `S2` が「`n = 0` で既に空」または
+「`n = m + 1` で最上段 `mark`・残り `m` 個」であれば、`n` 回の
+erase-then-pop を経て `S2` は空に戻る。 -/
+theorem uBack_S2 : ∀ n (ts : OvTapes sc),
+    (n = 0 ∧ Tape.StackView blank ts.S2 []) ∨
+      (∃ m, n = m + 1 ∧ Tape.StackTopView blank ts.S2 mark (List.replicate m mark)) →
+    Tape.StackView blank (applyActs blank (uBack sc blank n) ts).S2 [] := by
+  intro n
+  induction n with
+  | zero =>
+      intro ts h
+      rcases h with ⟨_, hv⟩ | ⟨m, hm, _⟩
+      · simpa [uBack] using hv
+      · omega
+  | succ n ih =>
+      intro ts h
+      rcases h with ⟨hc, _⟩ | ⟨m, hm, htop⟩
+      · omega
+      · have hmn : m = n := by omega
+        rw [hmn] at htop
+        simp only [uBack, applyActs_cons]
+        set ts1 := applyAct blank ts (Act.S2 blank .stay) with hts1
+        set ts2 := applyAct blank ts1 (Act.U (sc := sc) .left) with hts2
+        set ts3 := applyAct blank ts2 (Act.X2 (sc := sc) .right) with hts3
+        set ts4 := applyAct blank ts3 (Act.S2 blank .left) with hts4
+        have hts1S2 : ts1.S2 = Tape.step blank ts.S2 blank .stay := by rw [hts1]; rfl
+        have herase : Tape.StackView blank ts1.S2 (List.replicate n mark) := by
+          rw [hts1S2]; exact Tape.pop_erase htop
+        have hts4S2 : ts4.S2 = Tape.step blank ts1.S2 blank .left := by
+          rw [hts4, hts3, hts2]; rfl
+        cases n with
+        | zero =>
+            simp only [List.replicate] at herase
+            have : Tape.StackView blank ts4.S2 [] := by
+              rw [hts4S2]; exact Tape.pop_empty herase
+            exact ih ts4 (Or.inl ⟨rfl, this⟩)
+        | succ n =>
+            rw [List.replicate_succ] at herase
+            have : Tape.StackTopView blank ts4.S2 mark (List.replicate n mark) := by
+              rw [hts4S2]; exact Tape.pop_spec herase
+            exact ih ts4 (Or.inr ⟨n, rfl, this⟩)
+
+/-- **作業テープの不変性（`uCheck`）**：`uCheck` の前後で `S2` は空のまま
+（`ScratchBlank` の `S2` 成分だけを取り出した形）。 -/
+theorem uCheck_S2 (c : ℕ) (ts : OvTapes sc) (h : Tape.StackView blank ts.S2 []) :
+    Tape.StackView blank (applyActs blank (uCheck sc blank mark c) ts).S2 [] := by
+  unfold uCheck
+  rw [applyActs_append]
+  obtain ⟨h0, hs⟩ := uFwd_S2 blank mark c ts h
+  cases c with
+  | zero => exact uBack_S2 blank mark 0 _ (Or.inl ⟨rfl, h0 rfl⟩)
+  | succ c => exact uBack_S2 blank mark (c + 1) _ (Or.inr ⟨c, rfl, hs c rfl⟩)
+
+theorem noScratch2_uFwdStep (n : ℕ) : NoScratchAll2 (uFwdStep sc mark n) := by
+  induction n with
+  | zero => exact noScratchAll2_nil
+  | succ n ih =>
+      exact noScratchAll2_cons trivial (noScratchAll2_cons trivial
+        (noScratchAll2_cons trivial ih))
+
+theorem noScratch2_uFwd (n : ℕ) : NoScratchAll2 (uFwd sc blank mark n) :=
+  noScratchAll2_append (noScratch2_uFwdStep mark n)
+    (noScratchAll2_cons trivial noScratchAll2_nil)
+
+theorem noScratch2_uBack (n : ℕ) : NoScratchAll2 (uBack sc blank n) := by
+  induction n with
+  | zero => exact noScratchAll2_nil
+  | succ n ih =>
+      exact noScratchAll2_cons trivial (noScratchAll2_cons trivial
+        (noScratchAll2_cons trivial (noScratchAll2_cons trivial ih)))
+
+theorem noScratch2_uCheck (c : ℕ) : NoScratchAll2 (uCheck sc blank mark c) :=
+  noScratchAll2_append (noScratch2_uFwd blank mark c) (noScratch2_uBack blank c)
 
 end Proj
 
+/-- **作業テープの不変性（段の一歩）**：`ovProgram` は `ScratchBlank` を保つ。
+フロンティア枝は `uCheck` を経由するので `S2` が一時的に触れられるが
+（`uCheck_S2`）、他の 2 枝は従来どおり作業テープに一切触れない。 -/
+theorem ovProgram_scratchBlank (blank leftSym endSym mark one : Fin sc) (k c : ℕ)
+    (b bu : Bool) (ts : OvTapes sc) (hSB : ScratchBlank blank ts) :
+    ScratchBlank blank
+      (applyActs blank (ovProgram blank leftSym endSym mark one k c b bu ts) ts) := by
+  unfold ovProgram
+  by_cases h1 : Tape.read ts.X = leftSym
+  · rw [if_pos h1, applyActs_append, applyActs_append]
+    have hUC : ScratchBlank blank (applyActs blank (uCheck sc blank mark c) ts) := by
+      have heq2 := applyActs_scratchEq2 (blank := blank) (uCheck sc blank mark c) ts
+        (noScratch2_uCheck blank mark c)
+      obtain ⟨o1, o3, o4, o5, o6, o7, o8, o9⟩ := heq2.blankOthers hSB
+      exact ⟨o1, uCheck_S2 blank mark c ts hSB.s2, o3, o4, o5, o6, o7, o8, o9⟩
+    have hFset : NoScratchAll (if bu then [Act.Fset one] else []) := by
+      cases bu
+      · exact noScratchAll_nil
+      · exact noScratchAll_cons trivial noScratchAll_nil
+    have hMid := applyActs_scratchBlank hFset hUC
+    exact applyActs_scratchBlank (noScratch_shiftActs _ _ _ _ _) hMid
+  · rw [if_neg h1]
+    by_cases h2 : Tape.read ts.P ≠ endSym ∧ Tape.read ts.P = Tape.read ts.X
+    · rw [if_pos h2]
+      exact applyActs_scratchBlank
+        (noScratchAll_cons trivial (noScratchAll_cons trivial noScratchAll_nil)) hSB
+    · rw [if_neg h2]
+      exact applyActs_scratchBlank (noScratch_shiftActs _ _ _ _ _) hSB
 
 /-! ### 合成された動作列の効果 -/
 
@@ -875,25 +1147,25 @@ theorem resetShift_X_zero :
   simp [applyActs_append, applyAct, resetWalk_X, posMoves_X, GSTapes.moves, rightN]
 
 theorem uCheck_U :
-    (applyActs blank (uCheck sc n) ts).U
+    (applyActs blank (uCheck sc blank mark n) ts).U
       = GSTapes.leftN blank (rightN blank ts.U n) n := by
   simp [uCheck, applyActs_append, uFwd_U, uBack_U]
 
 theorem uCheck_X2 :
-    (applyActs blank (uCheck sc n) ts).X2
+    (applyActs blank (uCheck sc blank mark n) ts).X2
       = rightN blank (GSTapes.leftN blank ts.X2 n) n := by
   simp [uCheck, applyActs_append, uFwd_X2, uBack_X2]
 
-theorem uCheck_P : (applyActs blank (uCheck sc n) ts).P = ts.P := by
+theorem uCheck_P : (applyActs blank (uCheck sc blank mark n) ts).P = ts.P := by
   simp [uCheck, applyActs_append, uFwd_P, uBack_P]
 
-theorem uCheck_X : (applyActs blank (uCheck sc n) ts).X = ts.X := by
+theorem uCheck_X : (applyActs blank (uCheck sc blank mark n) ts).X = ts.X := by
   simp [uCheck, applyActs_append, uFwd_X, uBack_X]
 
-theorem uCheck_Cnt : (applyActs blank (uCheck sc n) ts).Cnt = ts.Cnt := by
+theorem uCheck_Cnt : (applyActs blank (uCheck sc blank mark n) ts).Cnt = ts.Cnt := by
   simp [uCheck, applyActs_append, uFwd_Cnt, uBack_Cnt]
 
-theorem uCheck_F : (applyActs blank (uCheck sc n) ts).F = ts.F := by
+theorem uCheck_F : (applyActs blank (uCheck sc blank mark n) ts).F = ts.F := by
   simp [uCheck, applyActs_append, uFwd_F, uBack_F]
 
 end Composite
@@ -1172,14 +1444,15 @@ theorem shiftActs_congr (blank mark : Fin sc) (k : ℕ) (b : Bool) (ts ts' : OvT
 /-- フロンティアでの `u` の直接照合が読む記号：`uFwd` を `j` 歩進めた時点で
 `U` は `u[j]`、`X2` はテキストの `T[pos + j]` を読む。オラクルビット `bu` が
 `MatchLen u T pos |u|` を表しうる根拠。 -/
-theorem uCheck_reads {blank leftSym startSym endSym : Fin sc} {u xw : List (Fin sc)}
+theorem uCheck_reads {blank leftSym startSym endSym mark : Fin sc} {u xw : List (Fin sc)}
     {L pos : ℕ} {ts : OvTapes sc}
     (hU : Tape.SeqView blank ts.U (startSym :: (u ++ [endSym])) 1)
     (hX2 : Tape.SeqView blank ts.X2 (leftSym :: xw) (L - pos))
     (hL : L ≤ xw.length) {j : ℕ} (hj : j < u.length) (hjL : pos + j < L)
     (hpu : pos + u.length ≤ L) :
-    u[j]? = some (Tape.read (applyActs blank (uFwd sc j) ts).U) ∧
-      ((xw.take L).reverse)[pos + j]? = some (Tape.read (applyActs blank (uFwd sc j) ts).X2) := by
+    u[j]? = some (Tape.read (applyActs blank (uFwd sc blank mark j) ts).U) ∧
+      ((xw.take L).reverse)[pos + j]?
+        = some (Tape.read (applyActs blank (uFwd sc blank mark j) ts).X2) := by
   constructor
   · rw [uFwd_U]
     have h := (seq_rightN j ts.U 1 hU (by simp; omega)).read_eq
@@ -1228,16 +1501,16 @@ theorem ovEncodes_step
         = ⟨st.pos + gsShift k p₁ r st.q, gsNextQ k p₁ r st.q⟩ := by
       unfold ovStep; rw [if_pos hfr]
     have hprog : ovProgram blank leftSym endSym mark one k c b bu ts
-        = uCheck sc c ++ (if bu then [Act.Fset one] else [])
+        = uCheck sc blank mark c ++ (if bu then [Act.Fset one] else [])
           ++ shiftActs blank mark k b ts := by
       unfold ovProgram; rw [if_pos hread]
     have hpu : st.pos + u.length ≤ L := by omega
     -- `uCheck` のあと
-    have hU1 : Tape.SeqView blank (applyActs blank (uCheck sc c) ts).U
+    have hU1 : Tape.SeqView blank (applyActs blank (uCheck sc blank mark c) ts).U
         (startSym :: (u ++ [endSym])) 1 := by
       rw [uCheck_U]
       exact GSTapes.seq_leftN c _ 1 (seq_rightN c ts.U 1 hE.upat (by simp; omega))
-    have hX21 : Tape.SeqView blank (applyActs blank (uCheck sc c) ts).X2
+    have hX21 : Tape.SeqView blank (applyActs blank (uCheck sc blank mark c) ts).X2
         (leftSym :: xw) (L - st.pos) := by
       rw [uCheck_X2]
       have h1 : Tape.SeqView blank (GSTapes.leftN blank ts.X2 c) (leftSym :: xw)
@@ -1248,14 +1521,14 @@ theorem ovEncodes_step
       rw [show L - st.pos - c + c = L - st.pos from by omega] at h2
       exact h2
     have hE1 : OvEncodes blank leftSym startSym endSym mark u v xw fw L p₁
-        (applyActs blank (uCheck sc c) ts) st :=
+        (applyActs blank (uCheck sc blank mark c) ts) st :=
       ⟨by rw [uCheck_P]; exact hE.pat, by rw [uCheck_X]; exact hE.txt,
         by rw [uCheck_Cnt]; exact hE.cnt, hU1, hX21, by rw [uCheck_F]; exact hE.flg⟩
     -- フラグ書き込みのあと
     have hE2 : OvEncodes blank leftSym startSym endSym mark u v xw
         (if bu then fw.set (L - st.pos) one else fw) L p₁
         (applyActs blank (if bu then [Act.Fset one] else [])
-          (applyActs blank (uCheck sc c) ts)) st := by
+          (applyActs blank (uCheck sc blank mark c) ts)) st := by
       by_cases hbv : bu = true
       · rw [if_pos hbv, if_pos hbv]
         simp only [applyActs_cons, applyActs_nil, applyAct]
@@ -1264,14 +1537,14 @@ theorem ovEncodes_step
       · rw [if_neg hbv, if_neg hbv]
         exact hE1
     have hPeq : (applyActs blank (if bu then [Act.Fset one] else [])
-        (applyActs blank (uCheck sc c) ts)).P = ts.P := by
+        (applyActs blank (uCheck sc blank mark c) ts)).P = ts.P := by
       by_cases hbv : bu = true
       · rw [if_pos hbv]
         simp only [applyActs_cons, applyActs_nil, applyAct, uCheck_P]
       · rw [if_neg hbv]
         simp only [applyActs_nil, uCheck_P]
     have hCeq : (applyActs blank (if bu then [Act.Fset one] else [])
-        (applyActs blank (uCheck sc c) ts)).Cnt = ts.Cnt := by
+        (applyActs blank (uCheck sc blank mark c) ts)).Cnt = ts.Cnt := by
       by_cases hbv : bu = true
       · rw [if_pos hbv]
         simp only [applyActs_cons, applyActs_nil, applyAct, uCheck_Cnt]
@@ -1337,9 +1610,11 @@ theorem ovEncodes_step
 /-- ずらし枝の動作数。`GSScanTapes.shiftCost` に `X2`/`F` の左移動 `2·gsShift` が加わる。 -/
 def ovShiftCost (k p₁ r q : ℕ) : ℕ := GSTapes.shiftCost k p₁ r q + 2 * gsShift k p₁ r q
 
-/-- フロンティア枝の動作数（`u` の往復照合 `4|u|` ＋ フラグ書き込み ＋ ずらし）。 -/
+/-- フロンティア枝の動作数（`u` の往復照合 `uCheck`＝`7|u|+1`（`S2` のマーカ往復込み）
+＋ フラグ書き込み ＋ ずらし）。 -/
 def ovFrontierCost (u T : List (Fin sc)) (k p₁ r : ℕ) (st : ScanState) : ℕ :=
-  4 * u.length + (if MatchLen u T st.pos u.length then 1 else 0) + ovShiftCost k p₁ r st.q
+  (7 * u.length + 1) + (if MatchLen u T st.pos u.length then 1 else 0)
+    + ovShiftCost k p₁ r st.q
 
 /-- 一歩の動作数（`ovProgram` の長さ）。 -/
 def ovStepCost (u v T : List (Fin sc)) (k p₁ r : ℕ) (st : ScanState) : ℕ :=
@@ -1453,13 +1728,13 @@ theorem ovShiftCost_le {k p₁ r : ℕ} (hk : 0 < k) (st : ScanState) :
   omega
 
 /-- **主定理 2b（償却）**：一歩の動作数はポテンシャルの増分で償却される。
-定数は `A = 6k + 8`, `B = 8`。 -/
+定数は `A = 9k + 11`（`uCheck` が `7|u|+1` になった分、旧 `6k+8` から増加）、`B = 8`。 -/
 theorem ovStepCost_le {u v T : List (Fin sc)} {k p₁ r minimum : ℕ}
     (hK : KSimple v k p₁ r) (hk : 0 < k)
     (hmin : max 1 (2 * u.length) ≤ minimum) (hchg : u.length ≤ k * p₁) {st : ScanState}
     (hrange : st.pos + minimum ≤ T.length) :
     ovStepCost u v T k p₁ r st ≤
-      (6 * k + 8) * (Phi k (ovStep u v T k p₁ r st) - Phi k st) + 8 := by
+      (9 * k + 11) * (Phi k (ovStep u v T k p₁ r st) - Phi k st) + 8 := by
   unfold ovStepCost ovStep
   split_ifs with hfr hadv
   · have hge := front_q_ge (T := T) hmin hrange hfr
@@ -1473,8 +1748,8 @@ theorem ovStepCost_le {u v T : List (Fin sc)} {k p₁ r minimum : ℕ}
     rw [hD] at hch hsh ⊢
     obtain ⟨A, hA⟩ : ∃ A, (k + 1) * D = A := ⟨_, rfl⟩
     obtain ⟨B, hB⟩ : ∃ B, (2 * k + 4) * D = B := ⟨_, rfl⟩
-    obtain ⟨C, hC⟩ : ∃ C, (6 * k + 8) * D = C := ⟨_, rfl⟩
-    have h3 : C = 4 * A + B := by rw [← hA, ← hB, ← hC]; ring
+    obtain ⟨C, hC⟩ : ∃ C, (9 * k + 11) * D = C := ⟨_, rfl⟩
+    have h3 : C = 7 * A + B := by rw [← hA, ← hB, ← hC]; ring
     rw [hA] at hch
     rw [hB] at hsh
     rw [hC]
@@ -1492,7 +1767,7 @@ theorem ovStepCost_le {u v T : List (Fin sc)} {k p₁ r minimum : ℕ}
         Phi k ⟨st.pos + gsShift k p₁ r st.q, gsNextQ k p₁ r st.q⟩ - Phi k st = D := ⟨_, rfl⟩
     rw [hD] at hsh ⊢
     obtain ⟨B, hB⟩ : ∃ B, (2 * k + 4) * D = B := ⟨_, rfl⟩
-    obtain ⟨C, hC⟩ : ∃ C, (6 * k + 8) * D = C := ⟨_, rfl⟩
+    obtain ⟨C, hC⟩ : ∃ C, (9 * k + 11) * D = C := ⟨_, rfl⟩
     have h3 : B ≤ C := by
       rw [← hB, ← hC]
       exact Nat.mul_le_mul (by omega) (Nat.le_refl D)
@@ -1519,7 +1794,7 @@ theorem ovRunCost_le {u v T : List (Fin sc)} {k p₁ r minimum : ℕ}
     (hmin : max 1 (2 * u.length) ≤ minimum) (hchg : u.length ≤ k * p₁) :
     ∀ (fuel : ℕ) (st : ScanState), OvInv u v T st →
       ovRunCost u v T k p₁ r minimum fuel st
-        ≤ (6 * k + 8) * ((k + 1) * (2 * T.length) + T.length - Phi k st)
+        ≤ (9 * k + 11) * ((k + 1) * (2 * T.length) + T.length - Phi k st)
           + 8 * ovCost u v T k p₁ r minimum fuel st := by
   intro fuel
   induction fuel with
@@ -1540,10 +1815,10 @@ theorem ovRunCost_le {u v T : List (Fin sc)} {k p₁ r minimum : ℕ}
       have hcost := ovStepCost_le (u := u) (v := v) (T := T) (minimum := minimum)
         hK hk hmin hchg hrange
       have hrec := ih _ hstep
-      have key : (6 * k + 8) * ((k + 1) * (2 * T.length) + T.length
+      have key : (9 * k + 11) * ((k + 1) * (2 * T.length) + T.length
               - Phi k (ovStep u v T k p₁ r st))
-          + (6 * k + 8) * (Phi k (ovStep u v T k p₁ r st) - Phi k st)
-          = (6 * k + 8) * ((k + 1) * (2 * T.length) + T.length - Phi k st) := by
+          + (9 * k + 11) * (Phi k (ovStep u v T k p₁ r st) - Phi k st)
+          = (9 * k + 11) * ((k + 1) * (2 * T.length) + T.length - Phi k st) := by
         rw [← Nat.mul_add]; congr 1; omega
       have hc1 : 1 ≤ (if st.pos + u.length + st.q = T.length then 1 + u.length else 1) := by
         split_ifs <;> omega
@@ -1559,7 +1834,7 @@ theorem stageTapeCost_le {x : List (Fin sc)} {dec : ℕ → ℕ × ℕ × ℕ} {
     ovRunCost ((x.take L).take (dec L).1) ((x.take L).drop (dec L).1)
       (x.take L).reverse k (dec L).2.1 (dec L).2.2 (max 1 (2 * (dec L).1))
       ((k + 2) * L + 1) ⟨0, 0⟩
-      ≤ (6 * k + 8) * ((k + 1) * (2 * L) + L)
+      ≤ (9 * k + 11) * ((k + 1) * (2 * L) + L)
         + 8 * ((k + 1) * ((k + 1) * (2 * L) + L)) := by
   obtain ⟨hcut, hks, hchg, hshort⟩ := hOK
   have hylen : (x.take L).length = L := by simp only [List.length_take]; omega
@@ -1589,15 +1864,16 @@ theorem stageTapeCost_le {x : List (Fin sc)} {dec : ℕ → ℕ × ℕ × ℕ} {
       ≤ 8 * ((k + 1) * ((k + 1) * (2 * L) + L)) := Nat.mul_le_mul (Nat.le_refl 8) h2
   omega
 
-/-- **段のテープコスト（`k = 8`）**：一段の動作数は `2432·L` 以下。 -/
+/-- **段のテープコスト（`k = 8`）**：一段の動作数は `2945·L` 以下
+（旧 `2432·L` から、`uCheck` が `7|u|+1` になった分だけ増加）。 -/
 theorem stage_tape_cost_le {x : List (Fin sc)} {dec : ℕ → ℕ × ℕ × ℕ} {L : ℕ}
     (hL : L ≤ x.length) (hone : 1 ≤ L)
     (hOK : StageOK x 8 L (dec L).1 (dec L).2.1 (dec L).2.2) :
     ovRunCost ((x.take L).take (dec L).1) ((x.take L).drop (dec L).1)
       (x.take L).reverse 8 (dec L).2.1 (dec L).2.2 (max 1 (2 * (dec L).1))
-      ((8 + 2) * L + 1) ⟨0, 0⟩ ≤ 2432 * L := by
+      ((8 + 2) * L + 1) ⟨0, 0⟩ ≤ 2945 * L := by
   have h := stageTapeCost_le (k := 8) (by omega) hL hone hOK
-  have e1 : (6 * 8 + 8) * ((8 + 1) * (2 * L) + L) = 1064 * L := by ring
+  have e1 : (9 * 8 + 11) * ((8 + 1) * (2 * L) + L) = 1577 * L := by ring
   have e2 : 8 * ((8 + 1) * ((8 + 1) * (2 * L) + L)) = 1368 * L := by ring
   omega
 
@@ -1616,10 +1892,11 @@ def borderJobTapeCost (x : List (Fin sc)) (dec : ℕ → ℕ × ℕ × ℕ) (k :
             ((k + 2) * L + 1) ⟨0, 0⟩
         + borderJobTapeCost x dec k fuel (nextLen (dec L).1)
 
-/-- **主定理 3（線形時間・テープ版）**：`k = 8` のとき総動作数は `4000·|x|` 以下。 -/
+/-- **主定理 3（線形時間・テープ版）**：`k = 8` のとき総動作数は `4500·|x|` 以下
+（旧 `4000·|x|` から、`stage_tape_cost_le` の増加ぶんだけ増加）。 -/
 theorem borderJobTapeCost_le {x : List (Fin sc)} {dec : ℕ → ℕ × ℕ × ℕ}
     (hOK : ∀ L, 1 ≤ L → L ≤ x.length → StageOK x 8 L (dec L).1 (dec L).2.1 (dec L).2.2) :
-    ∀ (fuel L : ℕ), L ≤ x.length → borderJobTapeCost x dec 8 fuel L ≤ 4000 * L := by
+    ∀ (fuel L : ℕ), L ≤ x.length → borderJobTapeCost x dec 8 fuel L ≤ 4500 * L := by
   intro fuel
   induction fuel with
   | zero => intro L _; simp [borderJobTapeCost]
@@ -1633,8 +1910,8 @@ theorem borderJobTapeCost_le {x : List (Fin sc)} {dec : ℕ → ℕ × ℕ × �
       have hshort := hOKL.cut_short
       have hshrink : 3 * nextLen (dec L).1 + 1 ≤ L := nextLen_shrink (by omega)
       have hrec := ih (nextLen (dec L).1) (by omega)
-      have h1334 : 4000 * nextLen (dec L).1 ≤ 1334 * (L - 1) := by
-        have h : 1334 * (3 * nextLen (dec L).1) ≤ 1334 * (L - 1) :=
+      have h1500 : 4500 * nextLen (dec L).1 ≤ 1500 * (L - 1) := by
+        have h : 1500 * (3 * nextLen (dec L).1) ≤ 1500 * (L - 1) :=
           Nat.mul_le_mul (Nat.le_refl _) (by omega)
         omega
       omega
@@ -1646,7 +1923,7 @@ def totalTapeSteps (x : List (Fin sc)) (dec : ℕ → ℕ × ℕ × ℕ) (k : �
 /-- **主定理 3（総和形）**：`palPrefixFlagsGS_work` のテープ版。 -/
 theorem palPrefixFlagsGS_tape_work {x : List (Fin sc)} {dec : ℕ → ℕ × ℕ × ℕ}
     (hOK : ∀ L, 1 ≤ L → L ≤ x.length → StageOK x 8 L (dec L).1 (dec L).2.1 (dec L).2.2) :
-    totalTapeSteps x dec 8 ≤ 4000 * x.length :=
+    totalTapeSteps x dec 8 ≤ 4500 * x.length :=
   borderJobTapeCost_le hOK (x.length + 1) x.length (Nat.le_refl _)
 
 
@@ -1861,7 +2138,8 @@ section Examples
 example : (periodActs (0 : Fin 3) 1 5).length = 6 * 5 + 2 := by decide
 example : (resetShift 3 8 20).length = 20 + (20 - 3) + 2 + 0 + 2 * 3 := by decide
 example : (resetShift 3 8 0).length = 0 + 0 + 2 + 1 + 2 * 1 := by decide
-example : (uCheck 3 7).length = 4 * 7 := by decide
+example : (uCheck 3 (0 : Fin 3) 1 7).length = 7 * 7 + 1 := by
+  rw [uCheck_length]
 example : (posMoves 3 6).length = 2 * 6 := by decide
 example : ovShiftCost 8 2 40 40 = 6 * 2 + 2 := by decide
 example : ovShiftCost 8 2 40 41 = 41 + (41 - 6) + 2 + 0 + 2 * 6 := by decide

@@ -137,6 +137,7 @@ def TS (ts : OvTapes sc) : Fin 15 → STape (Fin sc) := fun j => toS (tapeOf ts 
 @[simp] theorem tapeOf_tU (ts : OvTapes sc) : tapeOf ts tU = ts.U := rfl
 @[simp] theorem tapeOf_tX2 (ts : OvTapes sc) : tapeOf ts tX2 = ts.X2 := rfl
 @[simp] theorem tapeOf_tF (ts : OvTapes sc) : tapeOf ts tF = ts.F := rfl
+@[simp] theorem tapeOf_tS2 (ts : OvTapes sc) : tapeOf ts (tS 1) = ts.S2 := rfl
 
 theorem toS_step (blank : Fin sc) (tp : TapeConfiguration sc) (a : Fin sc) (m : Move) :
     toS (Tape.step blank tp a m) = (toS tp).applyAction blank (a, m) := by
@@ -414,9 +415,28 @@ end ExecA
 
 section Programs
 
-/-- `uFwd`：`U` が `endSym` を読むまで、`U` を右・`X2` を左へ。 -/
-def uFwdProg (endSym : Fin sc) : Prog (Act15 sc) (Cond15 sc) :=
-  Prog.loop (Cond15.neq tU endSym) (prAct (Act.U .right)) (ACT (Act.X2 .left))
+/-- `uFwdStep` の 1 段：`U` を右・`X2` を左・`S2` に `mark` を push。 -/
+def uFwdStepProg (mark : Fin sc) : Prog (Act15 sc) (Cond15 sc) :=
+  Prog.seq (ACT (Act.X2 .left)) (ACT (Act.S2 mark .right))
+
+/-- `uFwd`：`U` が `endSym` を読むまでループしたあと、`S2` を 1 回 pop する
+（`uFwd sc blank mark c` の実現、`Obstructions` 節の `uBack` とは異なりこちらは
+probe 不要でそのまま `Prog.loop` に写せる）。 -/
+def uFwdProg (blank endSym mark : Fin sc) : Prog (Act15 sc) (Cond15 sc) :=
+  Prog.seq
+    (Prog.loop (Cond15.neq tU endSym) (prAct (Act.U .right)) (uFwdStepProg mark))
+    (ACT (Act.S2 blank .left))
+
+/-- `uBack`：`S2` の pop の読み（`blank` かどうか）で停止判定するループ。各反復は
+「前回の pop 結果を消す（`S2 blank .stay`）→ `U` 左・`X2` 右 → 次の pop
+（`S2 blank .left`）」の順（`uBack` の probe 方式、`Obstructions` 節を参照）。 -/
+def uBackProg (blank : Fin sc) : Prog (Act15 sc) (Cond15 sc) :=
+  Prog.loop (Cond15.neq (tS 1) blank) (prAct (Act.S2 blank .stay))
+    (Prog.seq (ACT (Act.U .left)) (Prog.seq (ACT (Act.X2 .right)) (ACT (Act.S2 blank .left))))
+
+/-- `uCheck` 全体：`uFwdProg` のあと `uBackProg`。 -/
+def uCheckProg (blank endSym mark : Fin sc) : Prog (Act15 sc) (Cond15 sc) :=
+  Prog.seq (uFwdProg blank endSym mark) (uBackProg blank)
 
 /-- 一致枝：`P` を右・`X` を左。 -/
 def advStepProg : Prog (Act15 sc) (Cond15 sc) :=
@@ -442,55 +462,65 @@ variable {Terminal : Type} {blank : Fin sc}
 
 /-! ### `uFwd` -/
 
-/-- `uFwd` の実現。停止条件は「`U` が `endSym` を読む」。 -/
-theorem uFwdProg_exec (endSym : Fin sc) :
+/-- `uFwdStep` のループ部分の実現。停止条件は「`U` が `endSym` を読む」。 -/
+theorem uFwdStepProg_exec_loop (mark endSym : Fin sc) :
     ∀ (c : ℕ) (ts : OvTapes sc),
-      (∀ i, i < c → ((applyActs blank (uFwd sc i) ts).U).focus ≠ endSym) →
-      ((applyActs blank (uFwd sc c) ts).U).focus = endSym →
-      ExecA Terminal blank (uFwdProg endSym) ts (uFwd sc c) := by
+      (∀ i, i < c → ((applyActs blank (uFwdStep sc mark i) ts).U).focus ≠ endSym) →
+      ((applyActs blank (uFwdStep sc mark c) ts).U).focus = endSym →
+      ExecA Terminal blank
+        (Prog.loop (Cond15.neq tU endSym) (prAct (Act.U .right)) (uFwdStepProg mark))
+        ts (uFwdStep sc mark c) := by
   intro c
   induction c with
   | zero =>
       intro ts _ hstop
-      simp only [uFwd]
+      simp only [uFwdStep]
       refine execA_loop_stop ?_
       simp only [condOf15, tapeOf_tU, decide_eq_false_iff_not, not_not]
       exact hstop
   | succ c ih =>
-      intro ts hne hstop
-      have h0 : ts.U.focus ≠ endSym := hne 0 (Nat.succ_pos c)
+      intro ts hlt hstop
+      have h0 : ts.U.focus ≠ endSym := hlt 0 (Nat.succ_pos c)
       have hcond : condOf15 (Cond15.neq tU endSym) (fun j => (tapeOf ts j).focus) = true := by
         simp only [condOf15, tapeOf_tU, decide_eq_true_eq]
         exact h0
       set ts₁ := applyAct blank ts (Act.U (sc := sc) .right) with hts₁
-      have hstate : applyActs blank [Act.X2 (sc := sc) .left] ts₁
-          = applyActs blank (uFwd sc 1) ts := rfl
-      have h1 : ExecA Terminal blank (ACT (Act.X2 (sc := sc) .left)) ts₁
-          [Act.X2 (sc := sc) .left] := execA_act _ _
-      have hshift : ∀ i, applyActs blank (uFwd sc i)
-          (applyActs blank [Act.X2 (sc := sc) .left] ts₁)
-          = applyActs blank (uFwd sc (i + 1)) ts := by
+      have hstate : applyActs blank [Act.X2 (sc := sc) .left, Act.S2 mark .right] ts₁
+          = applyActs blank (uFwdStep sc mark 1) ts := rfl
+      have h1 : ExecA Terminal blank (uFwdStepProg mark) ts₁
+          [Act.X2 (sc := sc) .left, Act.S2 mark .right] :=
+        execA_seq (execA_act _ _) (execA_act _ _)
+      have hshift : ∀ i, applyActs blank (uFwdStep sc mark i)
+          (applyActs blank [Act.X2 (sc := sc) .left, Act.S2 mark .right] ts₁)
+          = applyActs blank (uFwdStep sc mark (i + 1)) ts := by
         intro i
-        show applyActs blank (uFwd sc i) (applyActs blank (uFwd sc 1) ts) = _
+        show applyActs blank (uFwdStep sc mark i) (applyActs blank (uFwdStep sc mark 1) ts) = _
         rw [← applyActs_append]
         rfl
-      have h2 := ih (applyActs blank [Act.X2 (sc := sc) .left] ts₁)
-        (by intro i hi; rw [hshift i]; exact hne (i + 1) (by omega))
+      have h2 := ih (applyActs blank [Act.X2 (sc := sc) .left, Act.S2 mark .right] ts₁)
+        (by intro i hi; rw [hshift i]; exact hlt (i + 1) (by omega))
         (by rw [hshift c]; exact hstop)
       exact execA_of_eq rfl (execA_loop_cont hcond h1 h2)
 
+/-- `uFwd` の実現（ループのあと `S2` を 1 回 pop）。 -/
+theorem uFwdProg_exec {mark : Fin sc} (endSym : Fin sc) (c : ℕ) (ts : OvTapes sc)
+    (hlt : ∀ i, i < c → ((applyActs blank (uFwdStep sc mark i) ts).U).focus ≠ endSym)
+    (hstop : ((applyActs blank (uFwdStep sc mark c) ts).U).focus = endSym) :
+    ExecA Terminal blank (uFwdProg blank endSym mark) ts (uFwd sc blank mark c) :=
+  execA_seq (uFwdStepProg_exec_loop mark endSym c ts hlt hstop) (execA_act _ _)
+
 /-- `SeqView` 版：`U` が `startSym :: (u ++ [endSym])` を位置 `1` で見ていて
-`endSym ∉ u` なら、`uFwdProg` は `uFwd sc u.length` をちょうど実行する。 -/
-theorem uFwdProg_exec_seqView {startSym endSym : Fin sc} {u : List (Fin sc)}
+`endSym ∉ u` なら、`uFwdProg` は `uFwd sc blank mark u.length` をちょうど実行する。 -/
+theorem uFwdProg_exec_seqView {mark startSym endSym : Fin sc} {u : List (Fin sc)}
     {ts : OvTapes sc} (hend : endSym ∉ u)
     (hU : Tape.SeqView blank ts.U (startSym :: (u ++ [endSym])) 1) :
-    ExecA Terminal blank (uFwdProg endSym) ts (uFwd sc u.length) := by
+    ExecA Terminal blank (uFwdProg blank endSym mark) ts (uFwd sc blank mark u.length) := by
   have hlen : (startSym :: (u ++ [endSym])).length = u.length + 2 := by simp
   have hread : ∀ i, i ≤ u.length →
       (startSym :: (u ++ [endSym]))[1 + i]?
-        = some ((applyActs blank (uFwd sc i) ts).U).focus := by
+        = some ((applyActs blank (uFwdStep sc mark i) ts).U).focus := by
     intro i hi
-    rw [uFwd_U]
+    rw [uFwdStep_U]
     exact (seq_rightN (blank := blank) (w := startSym :: (u ++ [endSym])) i ts.U 1 hU
       (by rw [hlen]; omega)).read_eq
   refine uFwdProg_exec endSym u.length ts (fun i hi => ?_) ?_
@@ -504,6 +534,94 @@ theorem uFwdProg_exec_seqView {startSym endSym : Fin sc} {u : List (Fin sc)}
       List.getElem?_append_right (le_refl _)] at h1
     simp only [Nat.sub_self, List.getElem?_cons_zero, Option.some.injEq] at h1
     exact h1.symm
+
+/-! ### `uBack`・`uCheck` -/
+
+/-- `uBack` の実現。開始時の `S2` が「`n = 0` で既に空」または
+「`n = m + 1` で最上段 `mark`・残り `m` 個」であれば（`uBack_S2` と同じ形の
+仮定）、`uBackProg` はちょうど `uBack sc blank n` を実行する。`mark ≠ blank`
+はループの停止判定（`S2` の pop で読む記号が `blank` かどうか）に必要。 -/
+theorem uBackProg_exec {mark : Fin sc} (hne : mark ≠ blank) :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      (n = 0 ∧ Tape.StackView blank ts.S2 []) ∨
+        (∃ m, n = m + 1 ∧ Tape.StackTopView blank ts.S2 mark (List.replicate m mark)) →
+      ExecA Terminal blank (uBackProg blank) ts (uBack sc blank n) := by
+  intro n
+  induction n with
+  | zero =>
+      intro ts h
+      rcases h with ⟨_, hv⟩ | ⟨m, hm, _⟩
+      · simp only [uBack]
+        refine execA_loop_stop ?_
+        simp only [condOf15, tapeOf_tS2, decide_eq_false_iff_not, not_not]
+        exact hv.focus_blank
+      · omega
+  | succ n ih =>
+      intro ts h
+      rcases h with ⟨hc, _⟩ | ⟨m, hm, htop⟩
+      · omega
+      · have hmn : m = n := by omega
+        rw [hmn] at htop
+        have hcond : condOf15 (Cond15.neq (tS 1) blank) (fun j => (tapeOf ts j).focus) = true := by
+          simp only [condOf15, tapeOf_tS2, decide_eq_true_eq]
+          rw [htop.focus_eq]
+          exact hne
+        set ts₁ := applyAct blank ts (Act.S2 blank .stay) with hts₁
+        have hts₁S2 : ts₁.S2 = Tape.step blank ts.S2 blank .stay := by rw [hts₁]; rfl
+        have herase : Tape.StackView blank ts₁.S2 (List.replicate n mark) := by
+          rw [hts₁S2]; exact Tape.pop_erase htop
+        have h1 : ExecA Terminal blank
+            (Prog.seq (ACT (Act.U (sc := sc) .left))
+              (Prog.seq (ACT (Act.X2 (sc := sc) .right)) (ACT (Act.S2 blank .left))))
+            ts₁ [Act.U .left, Act.X2 .right, Act.S2 blank .left] :=
+          execA_seq (execA_act _ _) (execA_seq (execA_act _ _) (execA_act _ _))
+        set ts₂ := applyAct blank ts₁ (Act.U (sc := sc) .left) with hts₂
+        set ts₃ := applyAct blank ts₂ (Act.X2 (sc := sc) .right) with hts₃
+        set ts₄ := applyAct blank ts₃ (Act.S2 blank .left) with hts₄
+        have hts₄eq : applyActs blank
+            [Act.U (sc := sc) .left, Act.X2 (sc := sc) .right, Act.S2 blank .left] ts₁ = ts₄ := by
+          rw [hts₄, hts₃, hts₂]; rfl
+        have hts₄S2 : ts₄.S2 = Tape.step blank ts₁.S2 blank .left := by
+          rw [hts₄, hts₃, hts₂]; rfl
+        have h2ih : ExecA Terminal blank (uBackProg blank) ts₄ (uBack sc blank n) := by
+          cases n with
+          | zero =>
+              simp only [List.replicate] at herase
+              have hz : Tape.StackView blank ts₄.S2 [] := by
+                rw [hts₄S2]; exact Tape.pop_empty herase
+              exact ih ts₄ (Or.inl ⟨rfl, hz⟩)
+          | succ n =>
+              rw [List.replicate_succ] at herase
+              have hs : Tape.StackTopView blank ts₄.S2 mark (List.replicate n mark) := by
+                rw [hts₄S2]; exact Tape.pop_spec herase
+              exact ih ts₄ (Or.inr ⟨n, rfl, hs⟩)
+        have h2 : ExecA Terminal blank (uBackProg blank)
+            (applyActs blank
+              [Act.U (sc := sc) .left, Act.X2 (sc := sc) .right, Act.S2 blank .left] ts₁)
+            (uBack sc blank n) := by rw [hts₄eq]; exact h2ih
+        exact execA_of_eq rfl (execA_loop_cont hcond h1 h2)
+
+/-- **`uCheck` の実現**：`uFwdProg` のあと `uBackProg`。`hUC` を具体的に
+埋める（`ovStepProg_exec` の仮定）。 -/
+theorem uCheckProg_exec {mark startSym endSym : Fin sc} {u : List (Fin sc)} {ts : OvTapes sc}
+    (hne : mark ≠ blank) (hend : endSym ∉ u)
+    (hU : Tape.SeqView blank ts.U (startSym :: (u ++ [endSym])) 1)
+    (hS2 : Tape.StackView blank ts.S2 []) :
+    ExecA Terminal blank (uCheckProg blank endSym mark) ts (uCheck sc blank mark u.length) := by
+  have hFwd := uFwdProg_exec_seqView (Terminal := Terminal) (blank := blank) (mark := mark)
+    hend hU
+  obtain ⟨h0, hs⟩ := uFwd_S2 blank mark u.length ts hS2
+  have hdisj : (u.length = 0 ∧
+        Tape.StackView blank (applyActs blank (uFwd sc blank mark u.length) ts).S2 []) ∨
+      (∃ m, u.length = m + 1 ∧ Tape.StackTopView blank
+          (applyActs blank (uFwd sc blank mark u.length) ts).S2 mark (List.replicate m mark)) := by
+    rcases Nat.eq_zero_or_pos u.length with h0' | h0'
+    · exact Or.inl ⟨h0', h0 h0'⟩
+    · obtain ⟨m, hm⟩ := Nat.exists_eq_succ_of_ne_zero h0'.ne'
+      exact Or.inr ⟨m, hm, hs m hm⟩
+  have hBack := uBackProg_exec (Terminal := Terminal) (blank := blank) hne u.length _ hdisj
+  unfold uCheckProg uCheck
+  exact execA_seq hFwd hBack
 
 /-! ### 一致枝・フラグ・段の一歩 -/
 
@@ -520,9 +638,9 @@ theorem fsetProg_exec (one : Fin sc) (bu : Bool) (ts : OvTapes sc) :
 /-- **段の一歩**。`ovStepProg` は `ovProgram` の動作列をちょうど実行する。 -/
 theorem ovStepProg_exec {leftSym endSym mark one : Fin sc} {k c : ℕ} {b bu : Bool}
     {UC SP : Prog (Act15 sc) (Cond15 sc)} (ts : OvTapes sc)
-    (hUC : ExecA Terminal blank UC ts (uCheck sc c))
+    (hUC : ExecA Terminal blank UC ts (uCheck sc blank mark c))
     (hSP1 : ExecA Terminal blank SP
-        (applyActs blank (uCheck sc c ++ (if bu then [Act.Fset one] else [])) ts)
+        (applyActs blank (uCheck sc blank mark c ++ (if bu then [Act.Fset one] else [])) ts)
         (shiftActs blank mark k b ts))
     (hSP2 : ExecA Terminal blank SP ts (shiftActs blank mark k b ts)) :
     ExecA Terminal blank (ovStepProg leftSym endSym one bu UC SP) ts
@@ -535,10 +653,10 @@ theorem ovStepProg_exec {leftSym endSym mark one : Fin sc} {k c : ℕ} {b bu : B
       exact hfront
     refine execA_ite_neg hcond ?_
     have h2 := fsetProg_exec (Terminal := Terminal) (blank := blank) one bu
-      (applyActs blank (uCheck sc c) ts)
+      (applyActs blank (uCheck sc blank mark c) ts)
     have hcat : applyActs blank (if bu then [Act.Fset one] else [])
-        (applyActs blank (uCheck sc c) ts)
-        = applyActs blank (uCheck sc c ++ (if bu then [Act.Fset one] else [])) ts :=
+        (applyActs blank (uCheck sc blank mark c) ts)
+        = applyActs blank (uCheck sc blank mark c ++ (if bu then [Act.Fset one] else [])) ts :=
       (applyActs_append _ _ _ _).symm
     have h3 := hSP1
     rw [← hcat] at h3
@@ -558,6 +676,25 @@ theorem ovStepProg_exec {leftSym endSym mark one : Fin sc} {k c : ℕ} {b bu : B
       refine execA_ite_neg ?_ hSP2
       simp only [condOf15, tapeOf_tP, tapeOf_tX, decide_eq_false_iff_not]
       exact hmatch
+
+/-- **段の一歩（`hUC` を解消した版）**：`UC := uCheckProg blank endSym mark` を選べば
+`hUC` は `uCheckProg_exec` から得られる。`SP`／`hSP1`／`hSP2` は
+`perLoopProg`／`resetProg` が未実装のため引き続き仮定として残す
+（`Obstructions` 節を参照）。 -/
+theorem ovStepProg_exec_uCheck {leftSym startSym endSym mark one : Fin sc} {k : ℕ}
+    {b bu : Bool} {SP : Prog (Act15 sc) (Cond15 sc)} {u : List (Fin sc)} {ts : OvTapes sc}
+    (hne : mark ≠ blank) (hend : endSym ∉ u)
+    (hU : Tape.SeqView blank ts.U (startSym :: (u ++ [endSym])) 1)
+    (hS2 : Tape.StackView blank ts.S2 [])
+    (hSP1 : ExecA Terminal blank SP
+        (applyActs blank
+          (uCheck sc blank mark u.length ++ (if bu then [Act.Fset one] else [])) ts)
+        (shiftActs blank mark k b ts))
+    (hSP2 : ExecA Terminal blank SP ts (shiftActs blank mark k b ts)) :
+    ExecA Terminal blank
+      (ovStepProg leftSym endSym one bu (uCheckProg blank endSym mark) SP) ts
+      (ovProgram blank leftSym endSym mark one k u.length b bu ts) :=
+  ovStepProg_exec ts (uCheckProg_exec hne hend hU hS2) hSP1 hSP2
 
 end ProgSpec
 
