@@ -63,6 +63,22 @@ import PalPeg.TapeLib
 import PalPeg.Speedup
 import PalPeg.ProgramMachine
 import PalPeg.Main
+import PalPeg.MeteredX
+import PalPeg.VerifierFeedX
+import PalPeg.StageTapesX
+import PalPeg.StageMatcherTapesX
+import PalPeg.GSPreprocessProg3
+import PalPeg.GSPreprocessProg2
+import PalPeg.GSPreprocessProg
+import PalPeg.PassSumRelabel
+import PalPeg.InputCopySentinel
+import PalPeg.PatternPairProg
+import PalPeg.StageMatcherProg
+import PalPeg.GSVerifierProgX
+import PalPeg.TextFeedProg2
+import PalPeg.TextFeedProg
+import PalPeg.ProgLangPersist2
+import PalPeg.ProgLangPersist
 
 /-!
 # PalPeg
