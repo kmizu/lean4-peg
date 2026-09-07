@@ -276,4 +276,96 @@ theorem dyadic_gs_mem_PAL {w : List (Fin 2)} {k : ℕ} {cut per rea : ℕ → �
     dyadicAnswer w (gsOracles w k cut per rea) w.length = true ↔ w ∈ PAL :=
   dyadicAnswer_length_iff_mem_PAL (gsOracles_spec hk hdec)
 
+
+/-! ## 半分割版（分割点 `S / 2`）の段照合器
+
+幅 `S` の段が分割点 `h = S / 2` を使う版。パターンは `x = (w.take h).reverse`
+（長さ `h`、時刻 `h` に確定）、テキストは `T = w.drop S`。
+入力時刻 `n` はテキストのラウンド `n - S` に対応する。
+
+`n ≥ 2S` で答えるとき、必要な出現の開始位置は `n - h ≥ 2S - S/2 > S` なので、
+テキスト `w.drop S` の中に完全に収まり、走査は時刻 `S` から **遅れなく**
+（1 ラウンド 1 テキスト文字で）進めればよい。前処理はラウンド `(h, S]` の
+`S - h = S/2` ラウンドを使える。 -/
+
+/-- **半分割版の段照合オラクル**。 -/
+def stageMatchH (w : List α) (S k s p₁ r : ℕ) (n : ℕ) : Bool :=
+  answer ((w.take (S / 2)).reverse.take s) ((w.take (S / 2)).reverse.drop s) k
+    (effPeriod ((w.take (S / 2)).reverse.drop s) p₁) (effReach p₁ r) (w.drop S) (n - S)
+
+/-- 走査器の出力と段の仕様（接尾辞出現）との橋渡し（半分割版）。 -/
+theorem answerH_iff_occursAt {w u v : List α} {S k p₁ r : ℕ}
+    (hK : KSimple v k p₁ r) (hk : 0 < k) (hv : 0 < v.length)
+    (huv : u ++ v = (w.take (S / 2)).reverse)
+    {n : ℕ} (h2S : 2 * S ≤ n) (hn : n ≤ w.length) :
+    answer u v k p₁ r (w.drop S) (n - S) = true
+      ↔ occursAt (w.take (S / 2)).reverse (w.take n) := by
+  have hSw : S ≤ w.length := by omega
+  have hxlen : ((w.take (S / 2)).reverse).length = S / 2 := by
+    rw [List.length_reverse, List.length_take_of_le (by omega)]
+  have hlen : (u ++ v).length = S / 2 := by rw [huv]; exact hxlen
+  have hmain := online_answer_correct (T := w.drop S) hK hk hv (n - S) (by rw [hlen]; omega)
+  rw [hmain, huv, hxlen, decide_eq_true_iff]
+  have hbound : (n - S - S / 2) + ((w.take (S / 2)).reverse).length ≤ (w.drop S).length := by
+    rw [hxlen, List.length_drop]; omega
+  rw [occAt_iff_occursAt hbound, hxlen, show n - S - S / 2 + S / 2 = n - S from by omega,
+    List.take_drop, show S + (n - S) = n from by omega]
+  refine occursAt_drop_iff ?_
+  rw [hxlen, List.length_take_of_le hn]
+  omega
+
+/-- **半分割版の主定理**：`s < S / 2` なる `GS` 分解が与えられれば、実時間 GS 照合器は
+時刻 `n ≥ 2S` において分割点 `S / 2` の照合条件を正しく答える。 -/
+theorem stageMatchH_spec {w : List α} {S k s p₁ r : ℕ} (hk : 0 < k) (hs : s < S / 2)
+    (H : GSCore ((w.take (S / 2)).reverse) k s p₁ r)
+    {n : ℕ} (h2S : 2 * S ≤ n) (hn : n ≤ w.length) :
+    stageMatchH w S k s p₁ r n = true ↔ occursAt (w.take (S / 2)).reverse (w.take n) := by
+  have hxlen : ((w.take (S / 2)).reverse).length = S / 2 := by
+    rw [List.length_reverse, List.length_take_of_le (by omega)]
+  have hv : 0 < ((w.take (S / 2)).reverse.drop s).length := by
+    rw [List.length_drop, hxlen]; omega
+  simp only [stageMatchH]
+  exact answerH_iff_occursAt H.ksimple_eff hk hv (List.take_append_drop s _) h2S hn
+
+/-- **オンライン性**（半分割版）。 -/
+theorem stageMatchH_take {w : List α} {S k s p₁ r n m : ℕ} (h2S : 2 * S ≤ n) (hnm : n ≤ m) :
+    stageMatchH (w.take m) S k s p₁ r n = stageMatchH w S k s p₁ r n := by
+  have hpat : (w.take m).take (S / 2) = w.take (S / 2) := by
+    rw [List.take_take, Nat.min_eq_left (by omega)]
+  have hT : (w.take m).drop S = (w.drop S).take (m - S) := by
+    rw [List.take_drop, show S + (m - S) = m from by omega]
+  have hxle : ((w.take (S / 2)).reverse).length ≤ S / 2 := by
+    rw [List.length_reverse, List.length_take]
+    omega
+  have hsum : (((w.take (S / 2)).reverse).take s).length
+      + (((w.take (S / 2)).reverse).drop s).length ≤ n - S := by
+    rw [← List.length_append, List.take_append_drop]
+    omega
+  simp only [stageMatchH, hpat, hT]
+  exact answer_take (by omega) hsum
+
+/-- 半分割版の段オラクル族（中央フラグは分割点 `S / 2` のもの）。 -/
+def gsOraclesH (w : List α) (k : ℕ) (cut per rea : ℕ → ℕ) :
+    ℕ → (ℕ → Bool) × (ℕ → Bool) :=
+  fun S => (stageMatchH w S k (cut S) (per S) (rea S), middleFlag w (S / 2))
+
+/-- **接続定理（半分割版）**。 -/
+theorem dyadic_gs_correctH {w : List α} {k : ℕ} {cut per rea : ℕ → ℕ} (hk : 0 < k)
+    (hdec : ∀ S, 2 ≤ S → 2 * S ≤ w.length →
+      GSCore ((w.take (S / 2)).reverse) k (cut S) (per S) (rea S) ∧ cut S < S / 2)
+    (n : ℕ) (hn : n ≤ w.length) :
+    dyadicAnswer w (gsOraclesH w k cut per rea) n = true ↔ IsPal (w.take n) := by
+  refine dyadicAnswer_correctH (fun S m hS2 h2S _ hm => ⟨?_, ?_⟩) n hn
+  · obtain ⟨H, hlt⟩ := hdec S hS2 (by omega)
+    exact stageMatchH_spec hk hlt H h2S hm
+  · simp [gsOraclesH, middleFlag]
+
+/-- 系（`α = Fin 2`、半分割版）。 -/
+theorem dyadic_gs_mem_PALH {w : List (Fin 2)} {k : ℕ} {cut per rea : ℕ → ℕ} (hk : 0 < k)
+    (hdec : ∀ S, 2 ≤ S → 2 * S ≤ w.length →
+      GSCore ((w.take (S / 2)).reverse) k (cut S) (per S) (rea S) ∧ cut S < S / 2) :
+    dyadicAnswer w (gsOraclesH w k cut per rea) w.length = true ↔ w ∈ PAL := by
+  rw [dyadic_gs_correctH hk hdec w.length le_rfl, List.take_length]
+  exact (mem_PAL_iff_isPal w).symm
+
 end PalPeg

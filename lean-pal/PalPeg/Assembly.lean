@@ -204,6 +204,53 @@ theorem dyadicAnswer_online [DecidableEq α] {w : List α}
   rw [dyadicAnswer_take_of_le w oracles hnm]
   exact dyadicAnswer_correct hO n hn
 
+/-! ## 半分割版（`half split`）の制御器
+
+幅 `S` の段が分割点 `h = S / 2` を使う版。段は依然として `n ∈ [2S, 4S)` で答えるが、
+分割は `h` で行うので、パターン `(w.take h).reverse` は時刻 `h` に確定し、
+前処理をラウンド `(h, S]` に回してから、テキスト `w.drop S` を時刻 `S` から
+実時間で走査できる（`PalPeg.StageMatcher` の `stageMatchH` を参照）。
+
+段の分割そのものは `pal_prefix_iff_stage` を `W := S / 2` で使うだけなので、
+必要なのは「オラクル対が満たすべき条件を各時刻で述べた版」である。 -/
+
+/-- 各時刻ごとの段の正当性（`stageAnswer_correct` の点ごと版）。 -/
+theorem stageAnswer_correct_at {w : List α} {W : ℕ} {ans flag : ℕ → Bool} {n : ℕ}
+    (hm : ans n = true ↔ occursAt (w.take W).reverse (w.take n))
+    (hf : flag n = true ↔ IsPal ((w.drop W).take (n - 2 * W)))
+    (hW : 2 * W ≤ n) (hn : n ≤ w.length) :
+    stageAnswer ans flag n = true ↔ IsPal (w.take n) := by
+  rw [pal_prefix_iff_stage hW hn, stageAnswer, Bool.and_eq_true, hm, hf]
+
+/-- **半分割版の主定理**：幅 `S` の段のオラクル対が、答える時刻 `n ∈ [2S, 4S)` において
+分割点 `S / 2` の照合・中央条件を満たせば、制御器 `dyadicAnswer` は正しい。 -/
+theorem dyadicAnswer_correctH [DecidableEq α] {w : List α}
+    {oracles : ℕ → (ℕ → Bool) × (ℕ → Bool)}
+    (hO : ∀ S n, 2 ≤ S → 2 * S ≤ n → n < 4 * S → n ≤ w.length →
+      ((oracles S).1 n = true ↔ occursAt (w.take (S / 2)).reverse (w.take n)) ∧
+        ((oracles S).2 n = true ↔ IsPal ((w.drop (S / 2)).take (n - 2 * (S / 2)))))
+    (n : ℕ) (hn : n ≤ w.length) :
+    dyadicAnswer w oracles n = true ↔ IsPal (w.take n) := by
+  unfold dyadicAnswer
+  split_ifs with h2 h4
+  · exact iff_of_true rfl (pal_take_lt_two w h2)
+  · rw [decide_eq_true_iff]
+    exact (pal_take_two_three (by omega) (by omega) hn).symm
+  · obtain ⟨hs1, hs2⟩ := stageOf_spec (n := n) (by omega)
+    have hS2 : 2 ≤ stageOf n := by omega
+    obtain ⟨hm, hf⟩ := hO (stageOf n) n hS2 hs1 hs2 hn
+    exact stageAnswer_correct_at hm hf (by omega) hn
+
+/-- 系（`α = Fin 2`）：半分割版でも読み終えた時刻の答えは `w ∈ PAL` と一致する。 -/
+theorem dyadicAnswer_length_iff_mem_PALH {w : List (Fin 2)}
+    {oracles : ℕ → (ℕ → Bool) × (ℕ → Bool)}
+    (hO : ∀ S n, 2 ≤ S → 2 * S ≤ n → n < 4 * S → n ≤ w.length →
+      ((oracles S).1 n = true ↔ occursAt (w.take (S / 2)).reverse (w.take n)) ∧
+        ((oracles S).2 n = true ↔ IsPal ((w.drop (S / 2)).take (n - 2 * (S / 2))))) :
+    dyadicAnswer w oracles w.length = true ↔ w ∈ PAL := by
+  rw [dyadicAnswer_correctH hO w.length le_rfl, List.take_length]
+  exact (mem_PAL_iff_isPal w).symm
+
 /-! ## 小例による健全性チェック -/
 
 example : liveStages 1 = [1] := by decide

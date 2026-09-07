@@ -755,5 +755,254 @@ theorem gsDecompW_exists {k : ℕ} (hk : 4 ≤ k) (x : List α) :
   obtain ⟨s, p₁, r, H, hb⟩ := exists_gsCore_aux k hk x.length x (le_refl _)
   exact ⟨s, p₁, r, H, hb⟩
 
+/-! ## GS の削除ループに向けた構造補題
+
+外側ループ 1 回ぶん（1 フェーズ）を固定する：`v`、その最小 `k`-繰り返し周期 `p₁`、
+到達域 `r`、最小の第 2 周期 `T = p₂`（原始的）、`m = max (k*T) (r+1) ≤ |v|`、
+`HasPeriod (v.take m) T`。GS の削除ループは「現接尾辞に `T` 未満の `k`-繰り返し周期が
+ある間、その最小周期 `p` のぶんだけ削る」を繰り返す。その解析に要る 2 本を証明する。 -/
+
+/-- **削除で現れうる短い周期の下界**。`w` の最小 `k`-繰り返し周期が `p`（到達域 `r ≥ k*p`）
+のとき、`w.drop p` の `k`-繰り返し周期 `q` が `q < p` を満たすなら `(k-1) * p < k * q`。
+
+つまり 1 周期ぶん削っても、最小周期は `k/(k-1)` 倍より大きくしか減らない。
+証明：`k*q ≤ (k-1)*p` なら `p + k*q ≤ k*p ≤ r` なので窓 `[p, p+k*q)` は `p`-周期領域の
+内側にあり、`p` だけ左にずらすと `w.take (k*q)` 自身が周期 `q` を持つ。これは `p` の
+最小性に反する。 -/
+theorem strip_period_drop {w : List α} {k p q r : ℕ} (hk : 2 ≤ k)
+    (hmin : ∀ q', KRep w k q' → p ≤ q') (hp : 0 < p)
+    (hper : HasPeriod (w.take r) p) (hrle : r ≤ w.length) (hkr : k * p ≤ r)
+    (hq : KRep (w.drop p) k q) (hqp : q < p) : (k - 1) * p < k * q := by
+  by_contra hcon
+  have hcon' : k * q ≤ (k - 1) * p := Nat.le_of_not_lt hcon
+  have hmul1 : (k - 1) * p + p = k * p := by
+    have h1 := Nat.sub_one_mul k p
+    have h2 : p ≤ k * p := Nat.le_mul_of_pos_left p (by omega)
+    omega
+  have hfit : p + k * q ≤ r := by omega
+  have hkqw : k * q ≤ w.length := by omega
+  -- `w.take (k*q) = (w.drop p).take (k*q)`
+  have hEq : w.take (k * q) = (w.drop p).take (k * q) := by
+    apply List.ext_getElem?
+    intro i
+    by_cases hi : i < k * q
+    · rw [List.getElem?_take_of_lt hi, List.getElem?_take_of_lt hi, List.getElem?_drop]
+      have h := hper i (by rw [List.length_take]; omega)
+      rw [List.getElem?_take_of_lt (show i < r by omega),
+        List.getElem?_take_of_lt (show i + p < r by omega)] at h
+      rw [h, Nat.add_comm p i]
+    · rw [List.getElem?_eq_none (by rw [List.length_take]; omega),
+        List.getElem?_eq_none (by rw [List.length_take, List.length_drop]; omega)]
+  have hkrep : KRep w k q := ⟨hq.1, hkqw, by rw [hEq]; exact hq.2.2⟩
+  have := hmin q hkrep
+  omega
+
+/-- **フェーズ不変量：削除中の到達域の上界**。`v.take m` が周期 `T`（`v.take T` は原始的、
+`2*T ≤ m ≤ |v|`）を持つとき、接尾辞 `v.drop D` の周期 `p < T` の窓が
+`T`-周期領域の内側（`D + rw ≤ m`）に収まるなら `rw < p + T`。
+
+証明：`p + T ≤ rw` とすると窓 `[D, D+rw)` は周期 `p` と `T` を同時に持ち、長さが
+`p + T` 以上なので Fine–Wilf から `g = gcd p T` も周期。窓を `T` の周期性で
+オフセット `e = D % T` へ平行移動し（`getElem?` の `mod` 表示）、
+`hasPeriod_of_suffix_gcd` を `v.take (e+T)` に適用して `v.take T` 自身が周期 `g` を
+持つことを得る。`g ∣ T`、`g ≤ p < T` なので `v.take T` は原始的でない。矛盾。 -/
+theorem reach_lt_add_of_periodic_window {v : List α} {T m D rw p : ℕ}
+    (hT : 0 < T) (hprim : Primitive (v.take T)) (hm : m ≤ v.length) (h2T : 2 * T ≤ m)
+    (hperT : HasPeriod (v.take m) T) (hp : 0 < p) (hpT : p < T)
+    (hDrw : D + rw ≤ m) (hper : HasPeriod ((v.drop D).take rw) p) :
+    rw < p + T := by
+  by_contra hcon
+  have hcon' : p + T ≤ rw := Nat.le_of_not_lt hcon
+  set e := D % T with he
+  have heT : e < T := Nat.mod_lt _ hT
+  have hwlen : ((v.drop D).take rw).length = rw := by
+    rw [List.length_take, List.length_drop]; omega
+  -- 窓は周期 `T` も持つ
+  have hperW : HasPeriod ((v.drop D).take rw) T := by
+    intro i hi
+    rw [hwlen] at hi
+    rw [List.getElem?_take_of_lt (show i < rw by omega),
+      List.getElem?_take_of_lt (show i + T < rw by omega),
+      List.getElem?_drop, List.getElem?_drop]
+    have h := hperT (D + i) (by rw [List.length_take]; omega)
+    rw [List.getElem?_take_of_lt (show D + i < m by omega),
+      List.getElem?_take_of_lt (show D + i + T < m by omega)] at h
+    rw [h]
+    exact getElem?_congr (by omega)
+  have hg := fineWilf hper hperW hp hT (by rw [hwlen]; omega)
+  have hgpos : 0 < Nat.gcd p T := Nat.gcd_pos_of_pos_left _ hp
+  have hgle : Nat.gcd p T ≤ p := Nat.gcd_le_left _ hp
+  have hgT : HasPeriod ((v.drop D).take T) (Nat.gcd p T) := hasPeriod_take_of_le hg (by omega)
+  -- オフセット `D` の窓を `e = D % T` へ移す
+  have hshift : (v.drop D).take T = (v.drop e).take T := by
+    apply List.ext_getElem?
+    intro i
+    by_cases hi : i < T
+    · rw [List.getElem?_take_of_lt hi, List.getElem?_take_of_lt hi,
+        List.getElem?_drop, List.getElem?_drop]
+      have e1 : (v.take m)[D + i]? = v[D + i]? := List.getElem?_take_of_lt (by omega)
+      have e2 : (v.take m)[e + i]? = v[e + i]? := List.getElem?_take_of_lt (by omega)
+      have h1 : (v.take m)[(D + i) % T]? = (v.take m)[D + i]? :=
+        hasPeriod_getElem?_mod hperT (by rw [List.length_take]; omega)
+      have h2 : (v.take m)[(e + i) % T]? = (v.take m)[e + i]? :=
+        hasPeriod_getElem?_mod hperT (by rw [List.length_take]; omega)
+      have h3 : (e + i) % T = (D + i) % T := Nat.mod_add_mod D T i
+      rw [← e1, ← e2, ← h1, ← h2, h3]
+    · rw [List.getElem?_eq_none (by rw [List.length_take, List.length_drop]; omega),
+        List.getElem?_eq_none (by rw [List.length_take, List.length_drop]; omega)]
+  rw [hshift] at hgT
+  -- `v.take (e+T)` の末尾 `T` 文字が周期 `g` ⟹ 全体が周期 `g`
+  have hxlen : (v.take (e + T)).length = e + T := by rw [List.length_take]; omega
+  have hsuf : (v.take (e + T)).drop ((v.take (e + T)).length - T) = (v.drop e).take T := by
+    rw [hxlen]
+    apply List.ext_getElem?
+    intro i
+    by_cases hi : i < T
+    · rw [List.getElem?_drop, List.getElem?_take_of_lt hi, List.getElem?_drop,
+        List.getElem?_take_of_lt (show e + T - T + i < e + T by omega)]
+      exact getElem?_congr (by omega)
+    · rw [List.getElem?_eq_none (by rw [List.length_drop, hxlen]; omega),
+        List.getElem?_eq_none (by rw [List.length_take, List.length_drop]; omega)]
+  have hxT : HasPeriod (v.take (e + T)) T := hasPeriod_take_of_le hperT (by omega)
+  have hall : HasPeriod (v.take (e + T)) (Nat.gcd p T) :=
+    hasPeriod_of_suffix_gcd hxT hT (Nat.gcd_dvd_right p T) (by rw [hsuf]; exact hgT)
+      (by rw [hxlen]; omega)
+  have hroot : HasPeriod (v.take T) (Nat.gcd p T) := hasPeriod_take_of_le hall (by omega)
+  have hrootlen : (v.take T).length = T := by rw [List.length_take]; omega
+  have hdvd : Nat.gcd p T ∣ (v.take T).length := by
+    rw [hrootlen]; exact Nat.gcd_dvd_right p T
+  exact not_primitive_of_period hgpos (by omega) hdvd hroot hprim
+
+/-- 周期の遺伝：`w.take r` が周期 `p` を持つなら `(w.drop d).take (r-d)` も。 -/
+theorem hasPeriod_drop_take {w : List α} {p r d : ℕ} (h : HasPeriod (w.take r) p)
+    (hrle : r ≤ w.length) (hd : d ≤ r) : HasPeriod ((w.drop d).take (r - d)) p := by
+  intro i hi
+  rw [List.length_take, List.length_drop] at hi
+  rw [List.getElem?_take_of_lt (show i < r - d by omega),
+    List.getElem?_take_of_lt (show i + p < r - d by omega),
+    List.getElem?_drop, List.getElem?_drop]
+  have h2 := h (d + i) (by rw [List.length_take]; omega)
+  rw [List.getElem?_take_of_lt (show d + i < r by omega),
+    List.getElem?_take_of_lt (show d + i + p < r by omega)] at h2
+  rw [h2]
+  exact getElem?_congr (by omega)
+
+/-- **残存 run と新しい周期の関係**。`w.take ρ` が周期 `p` を持ち、`q` が `w` の
+`k`-繰り返し周期で根 `w.take q` が原始的、かつ窓 `min (k*q) ρ` が `p + q` 以上なら
+`q ∣ p`。（Fine–Wilf ＋ 原始性。）これが削除ループでの周期の動きを支配する。 -/
+theorem dvd_of_residual_run {w : List α} {k p q ρ : ℕ} (hp : 0 < p) (hq : 0 < q)
+    (hres : HasPeriod (w.take ρ) p) (hρ : ρ ≤ w.length)
+    (hkq : KRep w k q) (hprim : Primitive (w.take q))
+    (hge : p + q ≤ min (k * q) ρ) : q ∣ p := by
+  have hkqw : k * q ≤ w.length := hkq.2.1
+  have hwlen : (w.take (min (k * q) ρ)).length = min (k * q) ρ := by
+    rw [List.length_take]; omega
+  have h1 : HasPeriod (w.take (min (k * q) ρ)) p := hasPeriod_take_of_le hres (by omega)
+  have h2 : HasPeriod (w.take (min (k * q) ρ)) q := hasPeriod_take_of_le hkq.2.2 (by omega)
+  have hgle : Nat.gcd p q ≤ p := Nat.gcd_le_left _ hp
+  have hg := fineWilf h1 h2 hp hq (by rw [hwlen]; omega)
+  have hgq : Nat.gcd p q ∣ q := Nat.gcd_dvd_right p q
+  have hroot : HasPeriod (w.take q) (Nat.gcd p q) := hasPeriod_take_of_le hg (by omega)
+  have hqlen : (w.take q).length = q := by rw [List.length_take]; omega
+  have hgpos : 0 < Nat.gcd p q := Nat.gcd_pos_of_pos_left _ hp
+  have hgeq : Nat.gcd p q = q := by
+    by_contra hne
+    have hlt : Nat.gcd p q < q := lt_of_le_of_ne (Nat.le_of_dvd hq hgq) hne
+    exact not_primitive_of_period hgpos (by omega) (by rw [hqlen]; exact hgq) hroot hprim
+  rw [← hgeq]; exact Nat.gcd_dvd_left p q
+
+theorem two_mul_le_of_dvd {p q : ℕ} (hp : 0 < p) (_hq : 0 < q) (hd : q ∣ p) (hne : q ≠ p) :
+    2 * q ≤ p := by
+  obtain ⟨t, ht⟩ := hd
+  have ht0 : t ≠ 0 := by rintro rfl; omega
+  have ht1 : t ≠ 1 := by rintro rfl; omega
+  calc 2 * q = q * 2 := Nat.mul_comm _ _
+    _ ≤ q * t := Nat.mul_le_mul_left q (by omega)
+    _ = p := ht.symm
+
+/-- **削除ループで最小周期は減らない**。`w` の最小 `k`-繰り返し周期 `p` の run が
+`(k+1)*p` 以上残っているとき、`p` を 1 周期ぶん削った `w.drop p` の最小 `k`-繰り返し
+周期 `q` は `p ≤ q` を満たす（実際は `p = q`：`p` 自身がまだ `k`-繰り返し周期）。
+
+証明：`q < p` なら `strip_period_drop` から `(k-1)*p < k*q`、一方
+`dvd_of_residual_run`（残存 run `r - p ≥ k*p`）から `q ∣ p`、ゆえに `2*q ≤ p`。
+両者は `k ≥ 4` で矛盾する。 -/
+theorem period_not_decreasing_of_strip {w : List α} {k p q r : ℕ} (hk : 4 ≤ k)
+    (hmin : ∀ q', KRep w k q' → p ≤ q') (hp : 0 < p)
+    (hper : HasPeriod (w.take r) p) (hrle : r ≤ w.length) (hkr : (k + 1) * p ≤ r)
+    (hq : IsLeastKRep (w.drop p) k q) : p ≤ q := by
+  by_contra hcon
+  have hqp : q < p := Nat.lt_of_not_le hcon
+  have hqpos : 0 < q := hq.1.1
+  have hmulk : k * p ≤ (k + 1) * p := Nat.mul_le_mul_right p (by omega)
+  have h4p : 4 * p ≤ k * p := Nat.mul_le_mul_right p hk
+  have hdrop : (k - 1) * p < k * q :=
+    strip_period_drop (by omega) hmin hp hper hrle (by omega) hq.1 hqp
+  have hsub1 : (k - 1) * p + p = k * p := by
+    have h1 := Nat.sub_one_mul k p
+    have h2 : p ≤ k * p := Nat.le_mul_of_pos_left p (by omega)
+    omega
+  have hsucc : k * p + p = (k + 1) * p := by rw [Nat.succ_mul]
+  have hres : HasPeriod ((w.drop p).take (r - p)) p :=
+    hasPeriod_drop_take hper hrle (by omega)
+  have hrho : r - p ≤ (w.drop p).length := by rw [List.length_drop]; omega
+  have hkqq : k * q ≤ k * p := Nat.mul_le_mul_left k (le_of_lt hqp)
+  have hpq2 : p + q ≤ k * q := by omega
+  have hpq3 : p + q ≤ r - p := by omega
+  have hdvd : q ∣ p :=
+    dvd_of_residual_run hp hqpos hres hrho hq.1
+      (IsLeastKRep.primitive (by omega) hq) (by omega)
+  have h2q : 2 * q ≤ p := two_mul_le_of_dvd hp hqpos hdvd (by omega)
+  have : k * (2 * q) ≤ k * p := Nat.mul_le_mul_left k h2q
+  have hkq2 : k * (2 * q) = 2 * (k * q) := by ring
+  omega
+
+/-- **run が尽きたときの周期の増加**。残存 run が `(k-1)*p` 以上あり、新しい
+`k`-繰り返し周期 `q`（根は原始的）が `p < q` を満たすなら `(k-2)*p < q`。
+すなわち周期は 1 回の run 交替ごとに `(k-2)` 倍より大きくなる。 -/
+theorem period_grows_at_transition {w : List α} {k p q ρ : ℕ} (hk : 3 ≤ k) (hp : 0 < p)
+    (hres : HasPeriod (w.take ρ) p) (hρ : ρ ≤ w.length) (hkρ : (k - 1) * p ≤ ρ)
+    (hq : KRep w k q) (hprim : Primitive (w.take q)) (hpq : p < q) : (k - 2) * p < q := by
+  by_contra hcon
+  have hcon' : q ≤ (k - 2) * p := Nat.le_of_not_lt hcon
+  have hsub : (k - 2) * p + p = (k - 1) * p := by
+    have h1 : (k - 2) * p + p = (k - 2 + 1) * p := by rw [Nat.succ_mul]
+    have h2 : k - 2 + 1 = k - 1 := by omega
+    rw [h1, h2]
+  have h2q : 2 * q ≤ k * q := Nat.mul_le_mul_right q (by omega)
+  have hdvd : q ∣ p :=
+    dvd_of_residual_run hp hq.1 hres hρ hq hprim (by omega)
+  have := Nat.le_of_dvd hp hdvd
+  omega
+
+/-! ## 削除ループの解析：現状と残るギャップ
+
+上の 4 本（`strip_period_drop`, `reach_lt_add_of_periodic_window`,
+`period_not_decreasing_of_strip`, `period_grows_at_transition`）から、GS の削除ループ
+（閾値 `T = p₂`、1 周期ぶんずつ削る）の構造は次のところまで確定する。
+`aᵢ` を run `i` の開始位置（`v` 座標）、`pᵢ` をそのときの最小 `k`-繰り返し周期、
+`rᵢ` をその到達域、`ρᵢ` を run を抜けた時点の残存到達域とすると：
+
+* `k * pᵢ ≤ rᵢ < pᵢ + T`（`reach_lt_add_of_periodic_window`、`aᵢ + rᵢ ≤ m` のとき）。
+  よって `(k-1) * pᵢ < T`。
+* run の中では周期は変わらない（`period_not_decreasing_of_strip`：`pᵢ` の run が
+  `(k+1)pᵢ` 以上残っていれば削っても最小周期は `pᵢ` のまま）。
+* run を抜けるとき `ρᵢ ∈ [(k-1)pᵢ, k*pᵢ)` で、次の周期は
+  `pᵢ₊₁ > (k-2) * pᵢ`（`period_grows_at_transition`）。**最小周期は run 交替ごとに
+  `(k-2)` 倍より大きく増える。**
+* 1 つの run の削除量は `ℓᵢ * pᵢ = rᵢ - ρᵢ < T - (k-2) * pᵢ`。
+
+**残るギャップ。** 上から run の本数は `N < log_{k-2}(T/(k-2)) + 1` に抑えられるが、
+各 run の削除量の上界は `T - (k-2)pᵢ` であって幾何級数にならない。総削除量は
+`Σᵢ (T - (k-2)pᵢ) = O(T log T)` にしかならず、GS が主張する `Σ 削除量 < p₂ = T`
+（`GS_LOCAL_CLOCK.md`）は出ない。`T` を `O(T)` に落とすには、2 本目以降の run の
+到達域 `rᵢ` を `T` ではなく `pᵢ + pᵢ₊₁` 程度で抑える必要があり、そのための補題は
+本ファイルにはない（`ρᵢ < pᵢ + pᵢ₊₁` は示せるが、`rᵢ` は `ρᵢ` より手前の情報を含まない）。
+
+したがって `GSDecomp`（`(k-1)*s < |x|` と `(k-2)*s < (k-1)*p₁`）の存在は依然として
+未証明であり、証明済みの存在定理は `gsDecompW_exists`（`s = 0 ∨ s + k*(k-1) ≤ |x|`、
+すなわち `1 * s < 1 * |x|`）のみである。`B * s < p₁` 型の下界はこの構成からは
+まったく出ない：最終接尾辞の最小周期 `p₁` と累積切断 `s` は無関係でありうる。 -/
+
 end PalPeg
 

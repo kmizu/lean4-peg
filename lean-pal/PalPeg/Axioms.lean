@@ -282,3 +282,11 @@ import PalPeg.ProgramMachine
 /-- info: 'PalPeg.TextFeed.feed_online' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.TextFeed.feed_online
+
+/-- info: 'PalPeg.output_correctH' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.output_correctH
+
+/-- info: 'PalPeg.round_cost_leH' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.round_cost_leH
