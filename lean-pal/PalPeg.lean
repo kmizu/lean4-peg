@@ -63,6 +63,14 @@ import PalPeg.TapeLib
 import PalPeg.Speedup
 import PalPeg.ProgramMachine
 import PalPeg.Main
+import PalPeg.PointwiseGap
+import PalPeg.FullMachineProg
+import PalPeg.StageLifecycleProg
+import PalPeg.StageTapesZ
+import PalPeg.GSVerifierProgZ
+import PalPeg.VerifierFeedZ
+import PalPeg.GSVerifierTapesZ
+import PalPeg.GSVerifierZ
 import PalPeg.InputEmbed
 import PalPeg.PassSumGen
 import PalPeg.PassSum11
