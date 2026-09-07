@@ -51,12 +51,13 @@ import PalPeg.ClearAny
 
 ## 未完成（`sorry` なし、単に未着手）
 
-* **epilogue**：`decompose2_on_tapes` が返す終状態から、`sP`/`sU` を
-  `ClearAny.clearAny` でスタック `[]` に、`sC2/sAp/sAn/sRn` を `ClearAny.clearAny`
-  ＋ `mark` 書き戻し 1 手で `CounterView' _ _ 0` に戻し、`SetupPre` を満たす配置を作る。
-* **`prepInstance` 本体**と `len_le`（`PrepInstances.prep_prog_len_le` 系の線形上界、
-  `prologueProg_length` の `6 * L + 5`、epilogue の `O(L)` 上界を合算するだけで
-  閉じるはずだが、epilogue が埋まっていないため未接続）。
+`epilogue` と `prepPre_to_setupPre`（`PrepOnTapes.post` に相当する内容）は完成した
+（`## 3h`, `## 3i`）。`StageTapes.PrepOnTapes` に `forb` パラメータを追加して
+`hend`（`endSym ∉ w`）のギャップも解消した。残るのは `prepInstance` 本体の
+`len_le` フィールドのみで、これは本ファイルの範囲では埋められない **`PrepOnTapes` の
+型そのものの追加のギャップ**（`len_le` が `ts` に一切の前提を課さないため、
+`decProg` の実際の内容依存コストを抑えられない）が原因である。詳細は本ファイル末尾の
+「## 4. 到達点と `prepInstance` を阻む本質的なギャップ」を参照。
 -/
 
 namespace PalPeg
@@ -836,6 +837,201 @@ theorem incLoop_spec (blank mark : Fin sc) (i : Fin 12) :
     have h3 := ih (applyS blank S (incAct blank i)) (m0 + 1) h2
     rwa [show m0 + 1 + n = m0 + (n + 1) from by omega] at h3
 
+/-! ## 3g2. 値／既知内容量で長さが抑えられるクリア
+
+`## 3f`/`## 3g` の `ClearAny` 版クリアは **テープの幅**（左右文脈の長さの和）で
+コストを見積もるが、`PrepPre`/`Enc` が与える `StackView`/`SeqView`/`CounterView'` は
+右側の余白の**長さを一切固定しない**（`Blanks blank t` の `t` は存在量化されるだけ）ので、
+「テープの幅は `L` で抑えられる」という主張は `PrepPre` だけからは出てこない
+（前処理段の入口ですでに余白が任意に長いかもしれない）。
+
+`len_le` を成立させるには、**幅ではなく「既知の値」または「既知の内容量」**でコストを
+測るクリア手順が要る：
+
+* カウンタ（`sC2`/`sAp`/`sAn`/`sRp`）：`decompose2_on_tapes` の `Enc` はどれも
+  **`0` から出発**するので（`Enc … 0 0 ⟨0,…,0⟩ …`）、その値は `decProg` の長さ以下
+  （`leftlen_*_applyActs_le`、`ClearAny.width_step` の `left.length` 版）。
+  値が分かっていれば、`decActs`（`Tape.counter'_dec`）を値の回数だけ回すだけで `0` に
+  戻せる。これは**現在の値**にしかコストが依存しない。
+* スタック（`sP`/`sU`）：`Enc` の `v1`/`v2` は `SeqView blank _ (pword …) (a+1)` の形。
+  ヘッド位置 `a`（`≤ x.length`）と語長 `pword.length`（`= x.length + 2`）は
+  どちらも `L` で抑えられる。**左に `a + 1` 歩、右に「残りの本物の内容」ぶん、
+  もう一度左に同じ歩数**という 3 段の掃き（`ClearAny.clearAny` と同じ構造）だが、
+  右側の掃きは `pword` の**既知の残り部分だけ**を通過し、その先の未知の余白 `t`
+  （既にすべて空白）へは踏み込まない（`rightSweep_prefix`）。 -/
+
+section ContentBoundedClear
+
+open PalPeg.Tape
+
+/-- 1 動作で `left.length` は高々 1 しか増えない（`ClearAny.width_step` の
+`left.length` だけを見る版：右文脈の長さに触れないので、右の余白が
+どれだけ長くても成り立つ）。 -/
+theorem left_length_step_le (blank : Fin sc) (tp : TapeConfiguration sc) (a : Fin sc)
+    (m : Move) : (Tape.step blank tp a m).left.length ≤ tp.left.length + 1 := by
+  cases m with
+  | stay => simp [Tape.step_stay]
+  | right => simp [Tape.step_right]
+  | left =>
+    cases hl : tp.left with
+    | nil => rw [Tape.step_left_of_left_nil hl]; simp
+    | cons n l => rw [Tape.step_left_of_left_cons hl]; simp only [List.length_cons]; omega
+
+/-- 右へ「空白を書きながら」`realPart.length + 1` 歩：`realPart` を消費しつくすと、
+その先はすでに全部空白の `t` なので、`t` の中身や長さを知らなくても結果は
+`StackView` になり得る形（左に積み上がるのは空白の列、右は `t.tail`）。
+`ClearAny.rightSweep_core` の「既知の接頭辞だけ」版。 -/
+theorem rightSweep_prefix (blank : Fin sc) :
+    ∀ (realPart : List (Fin sc)) (l : List (Fin sc)) (f : Fin sc) (t : List (Fin sc)),
+      Blanks blank t →
+      GSTapes.runProg blank (⟨l, f, realPart ++ t⟩ : TapeConfiguration sc)
+          (ClearAny.rightBlankProg blank (realPart.length + 1))
+        = ⟨List.replicate (realPart.length + 1) blank ++ l, blank, t.tail⟩ := by
+  intro realPart
+  induction realPart with
+  | nil =>
+    intro l f t ht
+    show GSTapes.runProg blank (⟨l, f, t⟩ : TapeConfiguration sc)
+        (ClearAny.rightBlankProg blank 1) = _
+    simp only [ClearAny.rightBlankProg, GSTapes.runProg_cons, GSTapes.runProg_nil]
+    rw [step_right (blank := blank) (tp := (⟨l, f, t⟩ : TapeConfiguration sc)) blank]
+    show (⟨blank :: l, t.headD blank, t.tail⟩ : TapeConfiguration sc)
+        = ⟨List.replicate 1 blank ++ l, blank, t.tail⟩
+    rw [ht.headD]
+    simp
+  | cons x xs ih =>
+    intro l f t ht
+    show GSTapes.runProg blank (⟨l, f, x :: xs ++ t⟩ : TapeConfiguration sc)
+        (ClearAny.rightBlankProg blank (xs.length + 1 + 1)) = _
+    rw [show xs.length + 1 + 1 = (xs.length + 1) + 1 from rfl, ClearAny.rightBlankProg,
+      GSTapes.runProg_cons]
+    rw [step_right (blank := blank) (tp := (⟨l, f, x :: xs ++ t⟩ : TapeConfiguration sc)) blank]
+    simp only [List.headD_cons, List.tail_cons, List.cons_append]
+    rw [ih (blank :: l) x t ht]
+    simp only [List.length_cons]
+    congr 1
+    rw [show (List.replicate (xs.length + 1 + 1) blank) =
+        List.replicate (xs.length + 1) blank ++ [blank] from by
+          rw [← List.replicate_succ']]
+    simp [List.append_assoc]
+
+/-! ### 値で測るカウンタのクリア（`decActs` の繰り返し） -/
+
+/-- `i` を `n` 回デクリメント。 -/
+def decLoop (blank : Fin sc) (i : Fin 12) : ℕ → List (SAct sc)
+  | 0 => []
+  | n + 1 => decActs blank i ++ decLoop blank i n
+
+@[simp] theorem decLoop_length (blank : Fin sc) (i : Fin 12) (n : ℕ) :
+    (decLoop (sc := sc) blank i n).length = 2 * n := by
+  induction n with
+  | zero => rfl
+  | succ n ih => simp [decLoop, decActs, ih]; omega
+
+theorem decLoop_untouched (blank : Fin sc) {i j : Fin 12} (h : j ≠ i) :
+    ∀ (n : ℕ) (S : Tapes sc), run blank (decLoop blank i n) S j = S j := by
+  intro n
+  induction n with
+  | zero => intro S; rfl
+  | succ n ih =>
+    intro S
+    rw [decLoop, run_append, ih]
+    show applyS blank (applyS blank S (SAct.put i blank .left)) (SAct.put i blank .stay) j = S j
+    rw [applyS_ne blank _ (SAct.put i blank .stay) h,
+      applyS_ne blank _ (SAct.put i blank .left) h]
+
+theorem decLoop_spec (blank mark : Fin sc) (i : Fin 12) :
+    ∀ (n : ℕ) (S : Tapes sc) (m0 : ℕ), Tape.CounterView' blank mark (S i) (m0 + n) →
+      Tape.CounterView' blank mark (run blank (decLoop blank i n) S i) m0 := by
+  intro n
+  induction n with
+  | zero => intro S m0 h; simpa [decLoop] using h
+  | succ n ih =>
+    intro S m0 h
+    rw [decLoop, run_append]
+    have hstep : run blank (decActs blank i) S i
+        = Tape.step blank (Tape.step blank (S i) blank .left) blank .stay := by
+      show applyS blank (applyS blank S (SAct.put i blank .left)) (SAct.put i blank .stay) i = _
+      rw [applyS_put_self, applyS_put_self]
+    have h2 : Tape.CounterView' blank mark (run blank (decActs blank i) S i) (m0 + n) := by
+      rw [hstep]
+      exact Tape.counter'_dec (by rw [show m0 + n + 1 = m0 + (n + 1) from by omega]; exact h)
+    exact ih (run blank (decActs blank i) S) m0 h2
+
+/-! ### 既知の内容量で測るスタック（`SeqView`）のクリア -/
+
+/-- `SeqView blank (S i) w p` の形（`w.length = p + 1 + q`）から、`sP`/`sU` を
+`StackView blank _ []` へ戻す動作列：左へ `p + 1` 歩、右へ `p + q + 1` 歩、
+また左へ `p + q + 1` 歩（`ClearAny.clearAny` と同じ 3 段構成だが、右の掃きは
+`w` の残り `q` 個ぶんだけを通過するので、右文脈の未知の余白の長さに依存しない）。 -/
+def clearSeqProg (blank : Fin sc) (i : Fin 12) (p q : ℕ) : List (SAct sc) :=
+  embedSlot i (ClearAny.leftBlankProg blank (p + 1)) ++
+    embedSlot i (ClearAny.rightBlankProg blank (p + q + 1)) ++
+    embedSlot i (ClearAny.leftBlankProg blank (p + q + 1))
+
+theorem clearSeqProg_length (blank : Fin sc) (i : Fin 12) (p q : ℕ) :
+    (clearSeqProg (sc := sc) blank i p q).length = 3 * p + 2 * q + 3 := by
+  simp only [clearSeqProg, List.length_append, embedSlot_length, ClearAny.leftBlankProg_length,
+    ClearAny.rightBlankProg_length]
+  omega
+
+theorem clearSeqProg_other (blank : Fin sc) {i j : Fin 12} (h : j ≠ i) (p q : ℕ)
+    (S : Tapes sc) : run blank (clearSeqProg blank i p q) S j = S j := by
+  rw [clearSeqProg, run_append, run_append, embedSlot_other blank h, embedSlot_other blank h,
+    embedSlot_other blank h]
+
+theorem clearSeqProg_spec (blank : Fin sc) (i : Fin 12) (p q : ℕ) (S : Tapes sc)
+    (w : List (Fin sc)) (hw : Tape.SeqView blank (S i) w p) (hq : q = w.length - p - 1) :
+    Tape.StackView blank (run blank (clearSeqProg blank i p q) S i) [] := by
+  obtain ⟨t, hrt, hbt⟩ := hw.right_eq
+  have hple : p ≤ w.length := hw.lt.le
+  have hlen1 : ((w.take p).reverse).length = p := by
+    rw [List.length_reverse, List.length_take]; omega
+  have hqeq : (List.replicate p blank ++ w.drop (p + 1)).length = p + q := by
+    rw [List.length_append, List.length_replicate, List.length_drop]; omega
+  -- フェーズ 1：左端へ。
+  obtain ⟨S1, hS1⟩ : ∃ T,
+      run blank (embedSlot i (ClearAny.leftBlankProg blank (p + 1))) S = T := ⟨_, rfl⟩
+  have hS1i : S1 i = ⟨[], blank, List.replicate p blank ++ (S i).right⟩ := by
+    rw [← hS1, embedSlot_run]
+    have h1 := ClearAny.leftSweep_core blank ((w.take p).reverse) (S i).focus (S i).right
+    rw [hlen1, ← hw.left_eq] at h1
+    exact h1
+  have hS1other : ∀ k : Fin 12, k ≠ i → S1 k = S k := by
+    intro k hk; rw [← hS1]; exact embedSlot_other blank hk _ S
+  -- フェーズ 2：右へ、`w` の残りぶんだけ。
+  obtain ⟨S2, hS2⟩ : ∃ T,
+      run blank (embedSlot i (ClearAny.rightBlankProg blank (p + q + 1))) S1 = T := ⟨_, rfl⟩
+  have hS2i : S2 i = ⟨List.replicate (p + q + 1) blank, blank, t.tail⟩ := by
+    rw [← hS2, embedSlot_run, hS1i, hrt, ← List.append_assoc]
+    have h2 := rightSweep_prefix blank (List.replicate p blank ++ w.drop (p + 1)) [] blank t hbt
+    rw [hqeq] at h2
+    simpa using h2
+  have hS2other : ∀ k : Fin 12, k ≠ i → S2 k = S1 k := by
+    intro k hk; rw [← hS2]; exact embedSlot_other blank hk _ S1
+  -- フェーズ 3：左端へ戻る（既に全部空白）。
+  obtain ⟨S3, hS3⟩ : ∃ T,
+      run blank (embedSlot i (ClearAny.leftBlankProg blank (p + q + 1))) S2 = T := ⟨_, rfl⟩
+  have hblanks : Blanks blank (List.replicate (p + q + 1) blank) := Tape.blanks_replicate blank _
+  have hS3i : S3 i = ⟨[], blank, List.replicate (p + q + 1) blank ++ t.tail⟩ := by
+    rw [← hS3, embedSlot_run, hS2i]
+    have h3 := ClearAny.leftSweep_blank blank (List.replicate (p + q + 1) blank) hblanks t.tail
+    rwa [List.length_replicate] at h3
+  have hrunFull : run blank (clearSeqProg blank i p q) S i = S3 i := by
+    show run blank
+        (embedSlot i (ClearAny.leftBlankProg blank (p + 1)) ++
+            embedSlot i (ClearAny.rightBlankProg blank (p + q + 1)) ++
+            embedSlot i (ClearAny.leftBlankProg blank (p + q + 1))) S i = S3 i
+    rw [run_append, run_append, hS1, hS2, hS3]
+  rw [hrunFull, hS3i]
+  refine ⟨rfl, rfl, ?_⟩
+  intro s hs
+  rcases List.mem_append.1 hs with h | h
+  · exact List.eq_of_mem_replicate h
+  · exact hbt _ (List.mem_of_mem_tail h)
+
+end ContentBoundedClear
+
 /-! ## 3h. epilogue：`decProg` の終状態から `SetupPre` を作る -/
 
 section Epilogue
@@ -843,30 +1039,43 @@ section Epilogue
 variable {blank startSym endSym mark : Fin sc} {L s : ℕ} {ts : Tapes sc}
 
 /-- **epilogue プログラム**：`decompose2_on_tapes` の終状態から `SetupPre` の形へ戻す。
-`sC2`（`Cd`）・`sAp`（`Cq`）・`sAn`（`Ce`）・`sRn`（`Cf`）は現在値によらず `0` に掃除し、
-`sP`（`V1`）・`sU`（`V2`）はスタック `[]` に掃除する。`sC1`（`Cp`、生の周期 `p₁`）と
-`sRp`（`Cr`、生の到達域 `r`）だけは `effPeriod`/`effReach` の正規化が要る：
-生の `p₁ = 0`（退化ケース）なら `sC1` を `L - s + 1` へ増分し、`sRp` を `0` へ掃除する。
-`p₁ ≠ 0` ならどちらも触らない（すでに正規化後の値と一致している）。
-`s` は呼び出し側が渡す `(decompose2 x 8).1`（`= cval (ts sCs)`）。 -/
-noncomputable def epilogueProg (blank mark : Fin sc) (L s : ℕ) (ts : Tapes sc) : List (SAct sc) :=
+`sC2`（`Cd`）・`sAp`（`Cq`）・`sAn`（`Ce`）は**現在の値**を `decLoop`（`Tape.counter'_dec` の
+繰り返し）でちょうどその値ぶんデクリメントして `0` にする（`ClearAny` の形非依存クリアと
+違い、コストは「値」に比例するだけで、右文脈の未知の余白の長さには依存しない）。
+`sRn`（`Cf`）は `Enc` の時点で既に `0` なので触らない。`sP`（`V1`）・`sU`（`V2`）は
+`clearSeqProg`（`## 3g2`）でスタック `[]` に掃除する：これも `pword` の**既知の長さ**
+ぶんしか動かない。`sC1`（`Cp`、生の周期 `p₁`）と `sRp`（`Cr`、生の到達域 `r`）だけは
+`effPeriod`/`effReach` の正規化が要る：生の `p₁ = 0`（退化ケース）なら `sC1` を
+`L - s + 1` へ増分し、`sRp` を（現在の値ぶんデクリメントして）`0` にする。
+`p₁ ≠ 0` ならどちらも触らない。 -/
+noncomputable def epilogueProg (blank _mark : Fin sc) (L s : ℕ) (ts : Tapes sc) : List (SAct sc) :=
   seqP blank (fun _ => if cval (ts sC1) = 0 then incLoop blank sC1 (L - s + 1) else [])
-    (seqP blank (fun S => clearCounterToZeroProg blank mark sC2 S)
-      (seqP blank (fun S => clearCounterToZeroProg blank mark sAp S)
-        (seqP blank (fun S => clearCounterToZeroProg blank mark sAn S)
-          (seqP blank (fun S => clearCounterToZeroProg blank mark sRn S)
+    (seqP blank (fun _ => decLoop blank sC2 (cval (ts sC2)))
+      (seqP blank (fun _ => decLoop blank sAp (cval (ts sAp)))
+        (seqP blank (fun _ => decLoop blank sAn (cval (ts sAn)))
+          (seqP blank
+            (fun _ => if cval (ts sC1) = 0 then decLoop blank sRp (cval (ts sRp)) else [])
             (seqP blank
-              (fun S => if cval (ts sC1) = 0 then clearCounterToZeroProg blank mark sRp S else [])
-              (seqP blank (fun S => clearStackToEmptyProg blank sP S)
-                (fun S => clearStackToEmptyProg blank sU S))))))) ts
+              (fun _ => clearSeqProg blank sP (ts sP).left.length
+                (L + 1 - (ts sP).left.length))
+              (fun _ => clearSeqProg blank sU (ts sU).left.length
+                (L + 1 - (ts sU).left.length))))))) ts
 
-/-- **epilogue の正しさ**：`decompose2_on_tapes` の終状態（生の周期 `p1raw`、生の到達域 `r`
-を保持していること）から出発すると、`sC1`/`sRp` は `effPeriod`/`effReach` が要求する
-正規化済みの値になり、`sC2/sAp/sAn/sRn` は `0`、`sP`/`sU` は空スタックになる。
-`sT`/`sX2`/`sIn`/`sCs` は不変。 -/
-theorem epilogue_spec (p1raw r : ℕ)
+/-- **epilogue の正しさと長さ**：`decompose2_on_tapes` の終状態（生の周期 `p1raw`、
+生の到達域 `r`、`sC2/sAp/sAn` の値 `D`/`Q`/`E`、`sP`/`sU` が長さ `L + 2` の語 `wp`/`wu`
+上の `SeqView`（ヘッド `pP`/`pU`）であること）から出発すると、`sC1`/`sRp` は
+`effPeriod`/`effReach` が要求する正規化済みの値になり、`sC2/sAp/sAn/sRn` は `0`、
+`sP`/`sU` は空スタックになる。`sT`/`sX2`/`sIn`/`sCs` は不変。動作数は
+`D`, `Q`, `E`, `r`, `L` の 1 次式で抑えられる。 -/
+theorem epilogue_spec (p1raw r D Q E pP pU : ℕ) (wp wu : List (Fin sc))
     (hC1 : Tape.CounterView' blank mark (ts sC1) p1raw)
-    (hRp : Tape.CounterView' blank mark (ts sRp) r) :
+    (hRp : Tape.CounterView' blank mark (ts sRp) r)
+    (hC2 : Tape.CounterView' blank mark (ts sC2) D)
+    (hAp : Tape.CounterView' blank mark (ts sAp) Q)
+    (hAn : Tape.CounterView' blank mark (ts sAn) E)
+    (hRn : Tape.CounterView' blank mark (ts sRn) 0)
+    (hVP : Tape.SeqView blank (ts sP) wp pP) (hwp : wp.length = L + 2)
+    (hVU : Tape.SeqView blank (ts sU) wu pU) (hwu : wu.length = L + 2) :
     Tape.CounterView' blank mark (run blank (epilogueProg blank mark L s ts) ts sC1)
         (if p1raw = 0 then (L - s) + 1 else p1raw)
       ∧ Tape.CounterView' blank mark (run blank (epilogueProg blank mark L s ts) ts sRp)
@@ -880,12 +1089,28 @@ theorem epilogue_spec (p1raw r : ℕ)
       ∧ run blank (epilogueProg blank mark L s ts) ts sT = ts sT
       ∧ run blank (epilogueProg blank mark L s ts) ts sX2 = ts sX2
       ∧ run blank (epilogueProg blank mark L s ts) ts sIn = ts sIn
-      ∧ run blank (epilogueProg blank mark L s ts) ts sCs = ts sCs := by
+      ∧ run blank (epilogueProg blank mark L s ts) ts sCs = ts sCs
+      ∧ (epilogueProg blank mark L s ts).length
+          ≤ (L + 1) + 2 * D + 2 * Q + 2 * E + 2 * r
+            + (3 * pP + 2 * (L + 1 - pP) + 3) + (3 * pU + 2 * (L + 1 - pU) + 3) := by
   have hcv : cval (ts sC1) = p1raw := cval_eq hC1
+  have hcvC2 : cval (ts sC2) = D := cval_eq hC2
+  have hcvAp : cval (ts sAp) = Q := cval_eq hAp
+  have hcvAn : cval (ts sAn) = E := cval_eq hAn
+  have hcvRp : cval (ts sRp) = r := cval_eq hRp
+  have hpPeq : (ts sP).left.length = pP := by
+    rw [hVP.left_eq, List.length_reverse, List.length_take]
+    have := hVP.lt; omega
+  have hpUeq : (ts sU).left.length = pU := by
+    rw [hVU.left_eq, List.length_reverse, List.length_take]
+    have := hVU.lt; omega
   -- フェーズ 0：`sC1` の正規化（`p1raw = 0` のときだけ）。
   obtain ⟨S₀, hS0⟩ : ∃ T,
       run blank (if cval (ts sC1) = 0 then incLoop blank sC1 (L - s + 1) else []) ts = T :=
     ⟨_, rfl⟩
+  have hS0len : (if cval (ts sC1) = 0 then incLoop blank sC1 (L - s + 1) else
+      ([] : List (SAct sc))).length ≤ L + 1 := by
+    split_ifs with h <;> simp
   have hS0C1 : Tape.CounterView' blank mark (S₀ sC1) (if p1raw = 0 then (L - s) + 1 else p1raw) := by
     rw [← hS0, hcv]
     split_ifs with h
@@ -897,102 +1122,155 @@ theorem epilogue_spec (p1raw r : ℕ)
     split_ifs with h
     · exact incLoop_untouched blank hj _ ts
     · rfl
-  -- フェーズ 1–4：`sC2`, `sAp`, `sAn`, `sRn` を掃除。
-  obtain ⟨S₁, hS1⟩ : ∃ T, run blank (clearCounterToZeroProg blank mark sC2 S₀) S₀ = T := ⟨_, rfl⟩
-  obtain ⟨S₂, hS2⟩ : ∃ T, run blank (clearCounterToZeroProg blank mark sAp S₁) S₁ = T := ⟨_, rfl⟩
-  obtain ⟨S₃, hS3⟩ : ∃ T, run blank (clearCounterToZeroProg blank mark sAn S₂) S₂ = T := ⟨_, rfl⟩
-  obtain ⟨S₄, hS4⟩ : ∃ T, run blank (clearCounterToZeroProg blank mark sRn S₃) S₃ = T := ⟨_, rfl⟩
+  -- フェーズ 1–3：`sC2`, `sAp`, `sAn` をデクリメントで掃除。
+  obtain ⟨S₁, hS1⟩ : ∃ T, run blank (decLoop blank sC2 (cval (ts sC2))) S₀ = T := ⟨_, rfl⟩
+  obtain ⟨S₂, hS2⟩ : ∃ T, run blank (decLoop blank sAp (cval (ts sAp))) S₁ = T := ⟨_, rfl⟩
+  obtain ⟨S₃, hS3⟩ : ∃ T, run blank (decLoop blank sAn (cval (ts sAn))) S₂ = T := ⟨_, rfl⟩
+  have hS0C2 : Tape.CounterView' blank mark (S₀ sC2) D := by
+    rw [hS0other sC2 (by decide)]; exact hC2
   have hS1C2 : Tape.CounterView' blank mark (S₁ sC2) 0 := by
-    rw [← hS1]; exact clearCounterToZeroProg_spec blank mark sC2 S₀
+    rw [← hS1]
+    have := decLoop_spec blank mark sC2 (cval (ts sC2)) S₀ 0 (by rw [hcvC2]; simpa using hS0C2)
+    simpa using this
   have hS1other : ∀ j : Fin 12, j ≠ sC2 → S₁ j = S₀ j := by
-    intro j hj; rw [← hS1]; exact clearCounterToZeroProg_other blank mark hj S₀
+    intro j hj; rw [← hS1]; exact decLoop_untouched blank hj _ S₀
+  have hS1Ap : Tape.CounterView' blank mark (S₁ sAp) Q := by
+    rw [hS1other sAp (by decide), hS0other sAp (by decide)]; exact hAp
   have hS2Ap : Tape.CounterView' blank mark (S₂ sAp) 0 := by
-    rw [← hS2]; exact clearCounterToZeroProg_spec blank mark sAp S₁
+    rw [← hS2]
+    have := decLoop_spec blank mark sAp (cval (ts sAp)) S₁ 0 (by rw [hcvAp]; simpa using hS1Ap)
+    simpa using this
   have hS2other : ∀ j : Fin 12, j ≠ sAp → S₂ j = S₁ j := by
-    intro j hj; rw [← hS2]; exact clearCounterToZeroProg_other blank mark hj S₁
+    intro j hj; rw [← hS2]; exact decLoop_untouched blank hj _ S₁
+  have hS2An : Tape.CounterView' blank mark (S₂ sAn) E := by
+    rw [hS2other sAn (by decide), hS1other sAn (by decide), hS0other sAn (by decide)]
+    exact hAn
   have hS3An : Tape.CounterView' blank mark (S₃ sAn) 0 := by
-    rw [← hS3]; exact clearCounterToZeroProg_spec blank mark sAn S₂
+    rw [← hS3]
+    have := decLoop_spec blank mark sAn (cval (ts sAn)) S₂ 0 (by rw [hcvAn]; simpa using hS2An)
+    simpa using this
   have hS3other : ∀ j : Fin 12, j ≠ sAn → S₃ j = S₂ j := by
-    intro j hj; rw [← hS3]; exact clearCounterToZeroProg_other blank mark hj S₂
-  have hS4Rn : Tape.CounterView' blank mark (S₄ sRn) 0 := by
-    rw [← hS4]; exact clearCounterToZeroProg_spec blank mark sRn S₃
-  have hS4other : ∀ j : Fin 12, j ≠ sRn → S₄ j = S₃ j := by
-    intro j hj; rw [← hS4]; exact clearCounterToZeroProg_other blank mark hj S₃
-  have hchain4 : ∀ j : Fin 12, j ≠ sC2 → j ≠ sAp → j ≠ sAn → j ≠ sRn → S₄ j = S₀ j := by
-    intro j h1 h2 h3 h4
-    rw [hS4other j h4, hS3other j h3, hS2other j h2, hS1other j h1]
-  -- フェーズ 5：`sRp` の正規化（`p1raw = 0` のときだけ掃除、そうでなければ不変）。
-  obtain ⟨S₅, hS5⟩ : ∃ T,
-      run blank (if cval (ts sC1) = 0 then clearCounterToZeroProg blank mark sRp S₄
-        else ([] : List (SAct sc))) S₄ = T := ⟨_, rfl⟩
-  have hRp4 : Tape.CounterView' blank mark (S₄ sRp) r := by
-    rw [hchain4 sRp (by decide) (by decide) (by decide) (by decide),
-      hS0other sRp (by decide)]
+    intro j hj; rw [← hS3]; exact decLoop_untouched blank hj _ S₂
+  have hS3Rn : Tape.CounterView' blank mark (S₃ sRn) 0 := by
+    rw [hS3other sRn (by decide), hS2other sRn (by decide), hS1other sRn (by decide),
+      hS0other sRn (by decide)]
+    exact hRn
+  have hchain3 : ∀ j : Fin 12, j ≠ sC2 → j ≠ sAp → j ≠ sAn → S₃ j = S₀ j := by
+    intro j h1 h2 h3
+    rw [hS3other j h3, hS2other j h2, hS1other j h1]
+  -- フェーズ 4：`sRp` の正規化（`p1raw = 0` のときだけデクリメントで `0` に）。
+  obtain ⟨S₄, hS4⟩ : ∃ T,
+      run blank (if cval (ts sC1) = 0 then decLoop blank sRp (cval (ts sRp))
+        else ([] : List (SAct sc))) S₃ = T := ⟨_, rfl⟩
+  have hS3Rp : Tape.CounterView' blank mark (S₃ sRp) r := by
+    rw [hchain3 sRp (by decide) (by decide) (by decide), hS0other sRp (by decide)]
     exact hRp
-  have hS5Rp : Tape.CounterView' blank mark (S₅ sRp) (if p1raw = 0 then 0 else r) := by
-    rw [← hS5, hcv]
+  have hS4Rp : Tape.CounterView' blank mark (S₄ sRp) (if p1raw = 0 then 0 else r) := by
+    rw [← hS4, hcv]
     split_ifs with h
-    · exact clearCounterToZeroProg_spec blank mark sRp S₄
-    · simpa using hRp4
-  have hS5other : ∀ j : Fin 12, j ≠ sRp → S₅ j = S₄ j := by
+    · have := decLoop_spec blank mark sRp (cval (ts sRp)) S₃ 0 (by
+        rw [hcvRp]; simpa using hS3Rp)
+      simpa using this
+    · simpa using hS3Rp
+  have hS4other : ∀ j : Fin 12, j ≠ sRp → S₄ j = S₃ j := by
+    intro j hj
+    rw [← hS4]
+    split_ifs with h
+    · exact decLoop_untouched blank hj _ S₃
+    · rfl
+  -- フェーズ 5–6：`sP`, `sU` を空スタックへ（`clearSeqProg`）。
+  obtain ⟨S₅, hS5⟩ : ∃ T,
+      run blank (clearSeqProg blank sP (ts sP).left.length (L + 1 - (ts sP).left.length)) S₄
+        = T := ⟨_, rfl⟩
+  obtain ⟨S₆, hS6⟩ : ∃ T,
+      run blank (clearSeqProg blank sU (ts sU).left.length (L + 1 - (ts sU).left.length)) S₅
+        = T := ⟨_, rfl⟩
+  have hS4P : Tape.SeqView blank (S₄ sP) wp pP := by
+    rw [hS4other sP (by decide), hchain3 sP (by decide) (by decide) (by decide),
+      hS0other sP (by decide)]
+    exact hVP
+  have hS5P : Tape.StackView blank (S₅ sP) [] := by
+    rw [← hS5, hpPeq]
+    exact clearSeqProg_spec blank sP pP (L + 1 - pP) S₄ wp hS4P (by rw [hwp]; omega)
+  have hS5other : ∀ j : Fin 12, j ≠ sP → S₅ j = S₄ j := by
     intro j hj
     rw [← hS5]
-    split_ifs with h
-    · exact clearCounterToZeroProg_other blank mark hj S₄
-    · rfl
-  -- フェーズ 6–7：`sP`, `sU` を空スタックへ。
-  obtain ⟨S₆, hS6⟩ : ∃ T, run blank (clearStackToEmptyProg blank sP S₅) S₅ = T := ⟨_, rfl⟩
-  obtain ⟨S₇, hS7⟩ : ∃ T, run blank (clearStackToEmptyProg blank sU S₆) S₆ = T := ⟨_, rfl⟩
+    have hj' : j ≠ sP := hj
+    rw [hpPeq]
+    exact clearSeqProg_other blank hj' _ _ S₄
+  have hS5U : Tape.SeqView blank (S₅ sU) wu pU := by
+    rw [hS5other sU (by decide), hS4other sU (by decide),
+      hchain3 sU (by decide) (by decide) (by decide), hS0other sU (by decide)]
+    exact hVU
+  have hS6U : Tape.StackView blank (S₆ sU) [] := by
+    rw [← hS6, hpUeq]
+    exact clearSeqProg_spec blank sU pU (L + 1 - pU) S₅ wu hS5U (by rw [hwu]; omega)
+  have hS6other : ∀ j : Fin 12, j ≠ sU → S₆ j = S₅ j := by
+    intro j hj
+    rw [← hS6]
+    have hj' : j ≠ sU := hj
+    rw [hpUeq]
+    exact clearSeqProg_other blank hj' _ _ S₅
   have hS6P : Tape.StackView blank (S₆ sP) [] := by
-    rw [← hS6]; exact clearStackToEmptyProg_spec blank sP S₅
-  have hS6other : ∀ j : Fin 12, j ≠ sP → S₆ j = S₅ j := by
-    intro j hj; rw [← hS6]; exact clearStackToEmptyProg_other blank hj S₅
-  have hS7U : Tape.StackView blank (S₇ sU) [] := by
-    rw [← hS7]; exact clearStackToEmptyProg_spec blank sU S₆
-  have hS7other : ∀ j : Fin 12, j ≠ sU → S₇ j = S₆ j := by
-    intro j hj; rw [← hS7]; exact clearStackToEmptyProg_other blank hj S₆
-  have hS7P : Tape.StackView blank (S₇ sP) [] := by
-    rw [hS7other sP (by decide)]; exact hS6P
-  -- 実行結果は `S₇`。
-  have hrun : run blank (epilogueProg blank mark L s ts) ts = S₇ := by
-    simp only [epilogueProg, seqP_run, hS0, hS1, hS2, hS3, hS4, hS5, hS6, hS7]
-  have hchain7 : ∀ j : Fin 12, j ≠ sP → j ≠ sU → j ≠ sRp → j ≠ sC2 → j ≠ sAp → j ≠ sAn →
-      j ≠ sRn → j ≠ sC1 → S₇ j = ts j := by
-    intro j h1 h2 h3 h4 h5 h6 h7 h8
-    rw [hS7other j h2, hS6other j h1, hS5other j h3, hchain4 j h4 h5 h6 h7, hS0other j h8]
-  have hS7sC1 : S₇ sC1 = S₀ sC1 := by
-    rw [hS7other sC1 (by decide), hS6other sC1 (by decide), hS5other sC1 (by decide),
-      hchain4 sC1 (by decide) (by decide) (by decide) (by decide)]
-  have hS7sRp : S₇ sRp = S₅ sRp := by
-    rw [hS7other sRp (by decide), hS6other sRp (by decide)]
-  have hS7sC2 : S₇ sC2 = S₁ sC2 := by
-    rw [hS7other sC2 (by decide), hS6other sC2 (by decide), hS5other sC2 (by decide),
-      hS4other sC2 (by decide), hS3other sC2 (by decide), hS2other sC2 (by decide)]
-  have hS7sAp : S₇ sAp = S₂ sAp := by
-    rw [hS7other sAp (by decide), hS6other sAp (by decide), hS5other sAp (by decide),
-      hS4other sAp (by decide), hS3other sAp (by decide)]
-  have hS7sAn : S₇ sAn = S₃ sAn := by
-    rw [hS7other sAn (by decide), hS6other sAn (by decide), hS5other sAn (by decide),
-      hS4other sAn (by decide)]
-  have hS7sRn : S₇ sRn = S₄ sRn := by
-    rw [hS7other sRn (by decide), hS6other sRn (by decide), hS5other sRn (by decide)]
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · rw [hrun, hS7sC1]; exact hS0C1
-  · rw [hrun, hS7sRp]; exact hS5Rp
-  · rw [hrun, hS7sC2]; exact hS1C2
-  · rw [hrun, hS7sAp]; exact hS2Ap
-  · rw [hrun, hS7sAn]; exact hS3An
-  · rw [hrun, hS7sRn]; exact hS4Rn
-  · rw [hrun]; exact hS7P
-  · rw [hrun]; exact hS7U
-  · rw [hrun, hchain7 sT (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide)]
-  · rw [hrun, hchain7 sX2 (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide)]
-  · rw [hrun, hchain7 sIn (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide)]
-  · rw [hrun, hchain7 sCs (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide)]
+    rw [hS6other sP (by decide)]; exact hS5P
+  -- 実行結果は `S₆`。
+  have hrun : run blank (epilogueProg blank mark L s ts) ts = S₆ := by
+    simp only [epilogueProg, seqP_run, hS0, hS1, hS2, hS3, hS4, hS5, hS6]
+  have hchain6 : ∀ j : Fin 12, j ≠ sP → j ≠ sU → j ≠ sRp → j ≠ sC2 → j ≠ sAp → j ≠ sAn →
+      j ≠ sC1 → S₆ j = ts j := by
+    intro j h1 h2 h3 h4 h5 h6 h7
+    rw [hS6other j h2, hS5other j h1, hS4other j h3, hchain3 j h4 h5 h6, hS0other j h7]
+  have hS6sC1 : S₆ sC1 = S₀ sC1 := by
+    rw [hS6other sC1 (by decide), hS5other sC1 (by decide), hS4other sC1 (by decide),
+      hchain3 sC1 (by decide) (by decide) (by decide)]
+  have hS6sRp : S₆ sRp = S₄ sRp := by
+    rw [hS6other sRp (by decide), hS5other sRp (by decide)]
+  have hS6sC2 : S₆ sC2 = S₁ sC2 := by
+    rw [hS6other sC2 (by decide), hS5other sC2 (by decide), hS4other sC2 (by decide),
+      hS3other sC2 (by decide), hS2other sC2 (by decide)]
+  have hS6sAp : S₆ sAp = S₂ sAp := by
+    rw [hS6other sAp (by decide), hS5other sAp (by decide), hS4other sAp (by decide),
+      hS3other sAp (by decide)]
+  have hS6sAn : S₆ sAn = S₃ sAn := by
+    rw [hS6other sAn (by decide), hS5other sAn (by decide), hS4other sAn (by decide)]
+  have hS6sRn : S₆ sRn = S₃ sRn := by
+    rw [hS6other sRn (by decide), hS5other sRn (by decide), hS4other sRn (by decide)]
+  have hlenIf1 : (if cval (ts sC1) = 0 then decLoop blank sRp (cval (ts sRp))
+      else ([] : List (SAct sc))).length ≤ 2 * r := by
+    split_ifs with h
+    · rw [decLoop_length, hcvRp]
+    · simp
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [hrun, hS6sC1]; exact hS0C1
+  · rw [hrun, hS6sRp]; exact hS4Rp
+  · rw [hrun, hS6sC2]; exact hS1C2
+  · rw [hrun, hS6sAp]; exact hS2Ap
+  · rw [hrun, hS6sAn]; exact hS3An
+  · rw [hrun, hS6sRn]; exact hS3Rn
+  · rw [hrun]; exact hS6P
+  · rw [hrun]; exact hS6U
+  · rw [hrun, hchain6 sT (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide)]
+  · rw [hrun, hchain6 sX2 (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide)]
+  · rw [hrun, hchain6 sIn (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide)]
+  · rw [hrun, hchain6 sCs (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide)]
+  · simp only [epilogueProg, seqP_length]
+    have e2 : (decLoop (sc := sc) blank sC2 (cval (ts sC2))).length = 2 * D := by
+      rw [decLoop_length, hcvC2]
+    have e3 : (decLoop (sc := sc) blank sAp (cval (ts sAp))).length = 2 * Q := by
+      rw [decLoop_length, hcvAp]
+    have e4 : (decLoop (sc := sc) blank sAn (cval (ts sAn))).length = 2 * E := by
+      rw [decLoop_length, hcvAn]
+    have e6 : (clearSeqProg (sc := sc) blank sP (ts sP).left.length
+        (L + 1 - (ts sP).left.length)).length = 3 * pP + 2 * (L + 1 - pP) + 3 := by
+      rw [hpPeq, clearSeqProg_length]
+    have e7 : (clearSeqProg (sc := sc) blank sU (ts sU).left.length
+        (L + 1 - (ts sU).left.length)).length = 3 * pU + 2 * (L + 1 - pU) + 3 := by
+      rw [hpUeq, clearSeqProg_length]
+    omega
 
 end Epilogue
 
@@ -1069,9 +1347,15 @@ theorem prepPre_to_setupPre (hmb : mark ≠ blank)
   set s := (PrepInstances.rawRes w L).1 with hs
   have hs_eq : s = (decompose2 x 8).1 := by rw [hs, PrepInstances.rawRes]
   have hT2C1' : Tape.CounterView' blank mark (T2 sC1) (decompose2 x 8).2.1 := hT2C1
-  obtain ⟨eC1, eRp, eC2, eAp, eAn, eRn, eP, eU, eT, eX2, eIn, eCs⟩ :=
+  have hpwlen : (GSPre.pword startSym endSym x).length = L + 2 := by
+    rw [GSPre.pword_length, hxlen]
+  have hT2vP : Tape.SeqView blank (T2 sP) (GSPre.pword startSym endSym x) (a + 1) := hEncO'.v1
+  have hT2vU : Tape.SeqView blank (T2 sU) (GSPre.pword startSym endSym x) (b + 1) := hEncO'.v2
+  obtain ⟨eC1, eRp, eC2, eAp, eAn, eRn, eP, eU, eT, eX2, eIn, eCs, _⟩ :=
     epilogue_spec (blank := blank) (mark := mark) (L := L) (s := s) (ts := T2)
-      (decompose2 x 8).2.1 (decompose2 x 8).2.2 hT2C1' hT2Rp
+      (decompose2 x 8).2.1 (decompose2 x 8).2.2 D Q E (a + 1) (b + 1)
+      (GSPre.pword startSym endSym x) (GSPre.pword startSym endSym x)
+      hT2C1' hT2Rp hEncO'.cd hEncO'.cq hEncO'.ce hEncO'.cf hT2vP hpwlen hT2vU hpwlen
   set T3 := run blank (epilogueProg blank mark L s T2) T2 with hT3
   have hrunFull : run blank (fullProg blank startSym endSym mark w L ts) ts = T3 := by
     show run blank
@@ -1128,70 +1412,82 @@ end Full
 2. `width_*_applyAct(s)_le`（9 成分すべて）— `ClearAny.width_step` の `GSPre.Act` 版。
 3. `prologueProg` / `prologue_spec` — `PrepPre` から `GSPre.Enc … x 0 0 ⟨0,…,0⟩` を作る
    （`x = (w.take L).reverse`）。長さちょうど `6 * L + 5`。
-4. `epilogueProg` / `epilogue_spec` — `decompose2_on_tapes` の終状態（生の `p₁`, `r`）から、
-   `effPeriod`/`effReach` の正規化（`p₁ = 0` の退化ケースを含む）・4 本のカウンタの掃除・
-   `sP`/`sU` の掃除を行う。正規化は **確率的なオラクル判定を要らない**：`epilogueProg` は
-   `Tapes sc` を引数に取る関数なので、分岐 `if cval (ts sC1) = 0 then … else …` を
-   定義の時点で（実行列を作る「地の Lean」で）評価でき、テープ上に probe 動作を
-   物理的に置く必要がない。
-5. `fullProg` / **`prepPre_to_setupPre`** — `prologueProg ++ decProg.map liftAct ++
+4. `decLoop` / `clearSeqProg`（`## 3g2`）— **値・既知内容量**でコストが決まるクリア：
+   `ClearAny` の形非依存クリアは右文脈の未知の余白の長さに依存してしまい（`PrepPre` は
+   その長さを一切固定しない）、`len_le` の証明に使えない。そこで
+   `decLoop`（カウンタを**現在の値**ぶんだけ `Tape.counter'_dec` する）と
+   `clearSeqProg`（`SeqView` の**既知の位置・既知の総語長**ぶんだけ掃く、
+   `rightSweep_prefix` で未知の余白 `t` には踏み込まない）に置き換えた。
+5. `epilogueProg` / `epilogue_spec` — 上の道具で `decompose2_on_tapes` の終状態
+   （生の `p₁ = D` ではなく実際は `Cp` の値 `p1raw`、`r`、`sC2/sAp/sAn` の値 `D`/`Q`/`E`）
+   から `effPeriod`/`effReach` の正規化（`p₁ = 0` の退化ケースを含む）・
+   4 本のカウンタの掃除・`sP`/`sU` の掃除を行う。正規化の分岐 `if cval (ts sC1) = 0 …`
+   は確率的なオラクル判定を要らない（`epilogueProg` は `Tapes sc` を引数に取る関数
+   なので、「地の Lean」で評価できる）。動作数は `D`, `Q`, `E`, `r`, `L`（および
+   `sP`/`sU` のヘッド位置 `pP`, `pU`）の 1 次式で抑えられる
+   （`epilogue_spec` の最後の結論）。
+6. `fullProg` / **`prepPre_to_setupPre`** — `prologueProg ++ decProg.map liftAct ++
    epilogueProg` を実行すると、`PrepPre` から `PrepInstances.prepRes` が与える
    正規化済み三つ組で `SetupPre` が成り立つことを完全に証明した。ただし
-   `mark ≠ blank` と **`endSym ∉ (w.take L).reverse`** を仮定として受け取る。
+   `mark ≠ blank` と `endSym ∉ (w.take L).reverse` を仮定として受け取る。
 
-**`prepInstance : StageTapes.PrepOnTapes sc blank mark` を作れない理由（本質的なギャップ）：**
+**`StageTapes.PrepOnTapes` の `forb` 一般化（コミット `d1f2280` の後、本タスクで実施）：**
 
-`StageTapes.PrepOnTapes` の `post` フィールドは
+`StageTapes.PrepOnTapes sc blank mark` に第 4 引数 `forb : Fin sc` を追加し、
+`post` に仮定 `forb ∉ w` を足した（`PrepPre` の直後、`(res w L).1 < L` の前）。
+`stround` / `ststate` / `prep_complete` / `setup_complete'` など `PrepOnTapes` を
+使うすべての定義・定理に `forb` を伝播し、`setup_complete'` には `hforb : forb ∉ w` を
+追加、`Pre.post` の呼び出し 2 箇所に渡した。`stage_tapes_spec'` では
+`Pre : PrepOnTapes sc blank mark endSym`（`forb := endSym` に固定）とし、
+既存の `hend : endSym ∉ w` をそのまま使う。`startSym ∉ w` に相当する仮定は
+コードベース中どこにも現れず（`grep` で確認）、`decompose2_on_tapes` も要求しない
+（`hk, hend, hmark` のみ）ので、`forb` は 1 本で足りる（ペア化は不要）。
+これで **`hend` のギャップは解消**され、`prepPre_to_setupPre` が
+`PrepOnTapes sc blank mark endSym` の `post` フィールドとして直接使えるようになった。
+`FullMachineTapes.lean` / `PrepInstances.lean` は `PrepOnTapes` に言及するのが
+コメントのみだったため無変更で再チェック済み。
+
+**新たに判明した、より根深いギャップ：`len_le` が `decompose2_on_tapes` ベースの
+`prog` では（今の `PrepOnTapes` の型のままでは）証明できない。**
+
+`PrepOnTapes.len_le` は
 
 ```
-post : ∀ (w Text : List (Fin sc)) (L : ℕ) (ts : Tapes sc),
-  PrepPre blank mark L w Text ts → (res w L).1 < L →
-  SetupPre blank mark (res w L).1 L (res w L).2.1 (res w L).2.2 w Text
-    (run blank (prog (w.take L) L ts) ts)
+len_le : ∀ (x : List (Fin sc)) (L : ℕ) (ts : Tapes sc), (prog x L ts).length ≤ Cp * L + Dp
 ```
 
-であり、**`w` の中身（記号）には一切制約がない**。ところが `GSPre.decompose2_on_tapes`
-（`fullProg` が内部で唯一呼んでいる、分解を実際にテープ上で行う定理）は
+という形で、**`ts` に一切の制約を課さない**（`PrepPre` すら要求しない）全称命題である。
+ところが `GSPreprocessTapes.decProg`（`decompose2_on_tapes`/`decProg_spec` の主体）の
+長さは `ts` の中身に本質的に依存する：たとえば `cleanProg blank k P`
+（`GSPreprocessTapes.lean:4054`）は `P := pOf (dFpS …)`——**現在ある時点でテープから
+読み取った値**——に比例する長さ `3 * P + 2 * (k - 1) * P` を持ち、`decProg_spec` /
+`decompose2_on_tapes` 自身も `hend : endSym ∉ x` と `hE : Enc … ts` を要求している
+（つまり「`ts` が `Enc` の形をしている」という保証がなければ、そもそも長さの主張が
+証明できない）。`Enc` が成り立たない・でたらめな `ts` を渡せば、`P` はいくらでも
+大きくなり得るので、**`Cp * L + Dp` で抑える固定の `Cp, Dp` は存在しない**
+（`hsum : EndToEnd2.PassPeriodSum 8 C₁` を足しても、それは「`x` から生成した正しい
+`ts`」に対する周期和の上界であって、任意の `ts` に対する `P` の値までは制御しない）。
 
-```
-theorem decompose2_on_tapes (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank) …
-```
+これは `hend` のギャップと**同型の問題**である：`post` は `PrepPre` を前提に取れるので
+解決できたが、`len_le` には対応する前提（`PrepPre` あるいは同等の「`ts` はこの
+`x, L` に対して正しく初期化されている」という仮定）が一切ない。したがって：
 
-という形で `hend : endSym ∉ x` を**必須の仮定**として要求する（`V2` の走査で
-`endSym` を「パターンの終わりを示す番人」として読み分けるため、`x` の中に
-本物のデータとして `endSym` が現れると壊れる）。`x = (w.take L).reverse` なので、
-これは `endSym ∉ w.take L` と同値。
+* `prepInstance : StageTapes.PrepOnTapes sc blank mark endSym` の `prog := fullProg`
+  ・`res := PrepInstances.prepRes` ・`post := prepPre_to_setupPre` はここまでの結果を
+  そのまま繋げば型に合うはずだが、**`len_le` フィールドだけは正しい `Cp, Dp` が
+  存在しないため埋められない**。
+* 修正の方向性は `hend` のときと同型：`PrepOnTapes.len_le` に `PrepPre blank mark L
+  (何らかの w with x = w.take L) ts` 相当の前提を追加する（`StageTapes.lean` の
+  変更を要する。本タスクでの `forb` 追加の許可は `post` 周りに限られていたため、
+  ここでは着手していない）。
 
-`PrepPre`/`post` の型には、この `endSym ∉ w` に相当する仮定が **一切現れない**。
-一方で、この仮定は既に隣接ファイルで実際に使われている：`StageTapes.stage_tapes_spec'`
-自身が `hend : endSym ∉ w` を明示的な引数として持つ
-（`StageTapes.lean:727` 付近）。つまり `PrepOnTapes` を実際に呼び出す上位の定理は
-`endSym ∉ w` を知っているのに、`PrepOnTapes.post` の型そのものにはそれを渡す経路が
-ない。したがって：
-
-* `prepInstance : StageTapes.PrepOnTapes sc blank mark` は、**`PrepOnTapes` の定義を
-  変更せずには構成できない**（`post` が今のままでは、`w` にたまたま `endSym` が
-  含まれる入力に対して偽の主張になってしまうため）。
-* 修正の方向性は 2 つ考えられる（どちらも本ファイルの範囲外・`StageTapes.lean` の
-  変更を要する）：
-  (a) `PrepOnTapes.post`（および必要なら `PrepPre`）に `endSym ∉ w` を仮定として
-      追加する。`stage_tapes_spec'` は既にこの仮定を持っているので、呼び出し側の
-      変更は恐らく小さい。
-  (b) `PrepOnTapes` を「`hend` を追加引数に取る」形へ一般化する。
-
-**本ファイルの成果**：上記の型の変更をしなくても証明できる部分（`prepPre_to_setupPre`）は
-`hend`/`hmb` を明示的な仮定として受け取る形で **完全に**証明済みである。`PrepOnTapes.post`
-の型が `endSym ∉ w` を持てるようになった時点で、`prepInstance` の `post` フィールドは
-`prepPre_to_setupPre`（と `PrepInstances.prep_res_eq5` / `prep_prog_len_le` による
-`len_le`）をほぼそのまま繋ぐだけで完成するはずである。
-
-`len_le`（`Cp`/`Dp` の具体形）はこのギャップとは独立に導出可能で、
-`PrepInstances.prep_prog_len_le`（`hsum` 付きの線形上界）＋ `prologueProg_length`
-（ちょうど `6 * L + 5`）＋ epilogue の `O(L)` 上界（`incLoop` は `L - s + 1 ≤ L + 1`、
-4 本のカウンタの掃除は `width_*_applyActs_le` で `decProg` の長さに、`sP`/`sU` の掃除は
-`GSPre.Enc.v1`/`.v2` の `SeqView` から幅がつねに `x.length + 1 = L + 1`
-であることに帰着できる）を合算すれば得られるが、時間の都合上、数値定数の具体的な
-`omega` 詰めまでは本ファイルには含めていない。
+**本ファイルの成果として持ち帰れるもの**：`prepPre_to_setupPre` は `post` フィールドの
+完全な証明として即使える。`epilogue_spec` の最後の結論（1 次式の長さ上界）は
+`epilogueProg` 単体の長さを `D, Q, E, r, L, pP, pU` で正確に抑えており、
+`len_le` を最終的に埋める際の主要な部品になる：残るのは
+`decProg` 自身の長さを（`PrepPre` 相当の前提のもとで）`L` の 1 次式で抑える
+`PrepInstances.prep_work_le`/`prep_prog_len_le` を、上記の `PrepOnTapes.len_le` の
+型変更後にそのまま接続することだけである。
 -/
 
 end PrepInstance

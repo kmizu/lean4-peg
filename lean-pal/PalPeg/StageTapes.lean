@@ -132,8 +132,14 @@ structure PrepPre (blank mark : Fin sc) (L : ℕ) (w Text : List (Fin sc))
 /-- **前処理のインタフェース**（`GSPreprocessTapes` の抽象化）。
 入力コピー `sIn` に載っているパターン `w.take L` から、切断点・周期・到達域の
 単進カウンタ（`sCs` / `sC1` / `sRp`）を作り、`PatternTapes.SetupPre` を満たす
-テープ配置を作る動作列。長さは `Cp * L + Dp` 以下。 -/
-structure PrepOnTapes (sc : ℕ) (blank mark : Fin sc) where
+テープ配置を作る動作列。長さは `Cp * L + Dp` 以下。
+
+`decompose2_on_tapes`（`GSPreprocessTapes.GSPre`）の具体化は、パターン `x` の中に
+「終端の番人」として使う記号 `forb` が現れないことを必要とする（さもないと `x` 内の
+データを番人と誤認する）。この必要条件は `PrepOnTapes` 自身には現れず、これを
+呼び出す `stage_tapes_spec'` 側がすでに `hend : endSym ∉ w` を持っているので、
+`forb` をパラメータとして持たせ、`post` にその不在仮定を追加する。 -/
+structure PrepOnTapes (sc : ℕ) (blank mark forb : Fin sc) where
   /-- 動作列（読んだ入力とパターン長とテープから決まる）。 -/
   prog : List (Fin sc) → ℕ → Tapes sc → List (SAct sc)
   /-- 分解 `(s, p₁, r)`。 -/
@@ -144,12 +150,12 @@ structure PrepOnTapes (sc : ℕ) (blank mark : Fin sc) where
   Dp : ℕ
   len_le : ∀ (x : List (Fin sc)) (L : ℕ) (ts : Tapes sc), (prog x L ts).length ≤ Cp * L + Dp
   post : ∀ (w Text : List (Fin sc)) (L : ℕ) (ts : Tapes sc),
-    PrepPre blank mark L w Text ts → (res w L).1 < L →
+    PrepPre blank mark L w Text ts → forb ∉ w → (res w L).1 < L →
     SetupPre blank mark (res w L).1 L (res w L).2.1 (res w L).2.2 w Text
       (run blank (prog (w.take L) L ts) ts)
 
 /-- 前処理を挽く速度。 -/
-def rateP {blank mark : Fin sc} (Pre : PrepOnTapes sc blank mark) : ℕ :=
+def rateP {blank mark forb : Fin sc} (Pre : PrepOnTapes sc blank mark forb) : ℕ :=
   2 * Pre.Cp + Pre.Dp
 
 /-- 準備フェーズ（`setupProgram`）を挽く速度。 -/
@@ -312,7 +318,7 @@ structure StageT (sc : ℕ) where
   /-- 前処理・準備フェーズの挽き（12 本）。 -/
   pg : SGrind sc
 
-variable {blank startSym endSym mark : Fin sc}
+variable {blank startSym endSym mark forb : Fin sc}
 
 /-- 準備フェーズの 1 ラウンド分の挽き（起動ラウンドではプログラムを載せる）。 -/
 def setupGrind (blank startSym endSym : Fin sc) (k S n : ℕ) (g : SGrind sc) : SGrind sc :=
@@ -322,7 +328,7 @@ def setupGrind (blank startSym endSym : Fin sc) (k S n : ℕ) (g : SGrind sc) : 
 /-- **段の 1 ラウンド**。`t` は到着済みの入力、`a` はこのラウンドに到着した記号、
 `n` は絶対ラウンド番号。 -/
 def stround (D : DecompOnTapes sc blank startSym endSym mark)
-    (Pre : PrepOnTapes sc blank mark) (leftSym one zero : Fin sc)
+    (Pre : PrepOnTapes sc blank mark forb) (leftSym one zero : Fin sc)
     (u v Text : List (Fin sc)) (k pe re : ℕ) (cst : ScanState → ℕ) (A B' S : ℕ)
     (t : List (Fin sc)) (a : Fin sc) (n : ℕ) (St : StageT sc) : StageT sc :=
   if n ≤ S / 2 then St
@@ -348,7 +354,7 @@ def stround (D : DecompOnTapes sc blank startSym endSym mark)
 
 /-- 1 ラウンドの費用。 -/
 def stcost (D : DecompOnTapes sc blank startSym endSym mark)
-    (Pre : PrepOnTapes sc blank mark) (u : List (Fin sc)) (U A B' k S : ℕ)
+    (Pre : PrepOnTapes sc blank mark forb) (u : List (Fin sc)) (U A B' k S : ℕ)
     (n : ℕ) (St : StageT sc) : ℕ :=
   if n ≤ S / 2 then 0
   else
@@ -360,12 +366,12 @@ def stcost (D : DecompOnTapes sc blank startSym endSym mark)
 
 /-- **1 ラウンドの費用の上界**。 -/
 def Cstage (D : DecompOnTapes sc blank startSym endSym mark)
-    (Pre : PrepOnTapes sc blank mark) (U A B' k : ℕ) : ℕ :=
+    (Pre : PrepOnTapes sc blank mark forb) (U A B' k : ℕ) : ℕ :=
   CmT' D + rateP Pre + rateS + 86 + roundBudget U A B' k
 
 /-- **`stage_round_actions`**：段の 1 ラウンドの動作数は `Cstage` 以下。 -/
 theorem stage_round_actions (D : DecompOnTapes sc blank startSym endSym mark)
-    (Pre : PrepOnTapes sc blank mark) (u : List (Fin sc)) (U A B' k S : ℕ)
+    (Pre : PrepOnTapes sc blank mark forb) (u : List (Fin sc)) (U A B' k S : ℕ)
     (n : ℕ) (St : StageT sc) :
     stcost D Pre u U A B' k S n St ≤ Cstage D Pre U A B' k := by
   have hm := mcost_le D n St.md
@@ -377,7 +383,7 @@ theorem stage_round_actions (D : DecompOnTapes sc blank startSym endSym mark)
 
 /-- ラウンド `n` 終了時の段の状態。 -/
 def ststate (D : DecompOnTapes sc blank startSym endSym mark)
-    (Pre : PrepOnTapes sc blank mark) (leftSym one zero : Fin sc)
+    (Pre : PrepOnTapes sc blank mark forb) (leftSym one zero : Fin sc)
     (u v Text : List (Fin sc)) (k pe re : ℕ) (cst : ScanState → ℕ) (A B' S : ℕ)
     (w : List (Fin sc)) (init : StageT sc) : ℕ → StageT sc
   | 0 => init
@@ -390,7 +396,7 @@ def ststate (D : DecompOnTapes sc blank startSym endSym mark)
 
 section Components
 
-variable {D : DecompOnTapes sc blank startSym endSym mark} {Pre : PrepOnTapes sc blank mark}
+variable {D : DecompOnTapes sc blank startSym endSym mark} {Pre : PrepOnTapes sc blank mark forb}
   {leftSym one zero : Fin sc}
   {u v Text : List (Fin sc)} {k pe re : ℕ} {cst : ScanState → ℕ} {A B' S : ℕ}
   {w : List (Fin sc)} {init : StageT sc}
@@ -526,7 +532,7 @@ end Components
 
 section Grind
 
-variable {D : DecompOnTapes sc blank startSym endSym mark} {Pre : PrepOnTapes sc blank mark}
+variable {D : DecompOnTapes sc blank startSym endSym mark} {Pre : PrepOnTapes sc blank mark forb}
   {leftSym one zero : Fin sc}
   {u v Text : List (Fin sc)} {k pe re : ℕ} {cst : ScanState → ℕ} {A B' S : ℕ}
   {w : List (Fin sc)} {init : StageT sc}
@@ -655,7 +661,7 @@ theorem setup_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) {p₁ : ℕ} (hkp :
 /-- **`setup_complete'`**：`hsetup` は `PrepOnTapes.post` と `PatternTapes.setup_spec` から
 自動的に従う。すなわち準備フェーズの完了は前処理インタフェースだけに依存する。 -/
 theorem setup_complete' (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Textp : List (Fin sc))
-    (hpp : PrepPre blank mark (S / 2) w Textp init.pg.ts)
+    (hpp : PrepPre blank mark (S / 2) w Textp init.pg.ts) (hforb : forb ∉ w)
     (hcut : (Pre.res w (S / 2)).1 < S / 2)
     (hkp : k * (Pre.res w (S / 2)).2.1 ≤ 5 * S) :
     (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg
@@ -665,7 +671,7 @@ theorem setup_complete' (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Textp : List (Fin
   have hpc := prep_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
-  have hpre := Pre.post w Textp (S / 2) init.pg.ts hpp hcut
+  have hpre := Pre.post w Textp (S / 2) init.pg.ts hpp hforb hcut
   have hspec := setup_spec (startSym := startSym) (endSym := endSym) (k := k) hpre
   refine setup_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
@@ -707,7 +713,7 @@ theorem stAnswerBit_eq {u v Text : List (Fin sc)} {k pe re : ℕ} {cst : ScanSta
 `GSCore`・費用関数の仕様だけである（起動フェーズの `hgm0` は `ststate_sm_idle` と
 `StageMatcherTapes.stage_init` から導かれる）。 -/
 theorem stage_tapes_spec'
-    {D : DecompOnTapes sc blank startSym endSym mark} {Pre : PrepOnTapes sc blank mark}
+    {D : DecompOnTapes sc blank startSym endSym mark} {Pre : PrepOnTapes sc blank mark endSym}
     {leftSym one zero : Fin sc}
     {w : List (Fin sc)} {S k s p₁ r A B' : ℕ} {cst : ScanState → ℕ} {init : StageT sc}
     (hmb : mark ≠ blank) (hS : 8 ≤ S) (hq : 4 * (S / 4) = S)
@@ -763,11 +769,11 @@ theorem stage_tapes_spec'
   have hpc := prep_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
-  have hpre := Pre.post w (w.drop S) (S / 2) init.pg.ts hpinit hcut
+  have hpre := Pre.post w (w.drop S) (S / 2) init.pg.ts hpinit hend hcut
   have hsc := setup_complete' (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq (w.drop S)
-    hpinit hcut (by rw [hres]; exact hkp)
+    hpinit hend hcut (by rw [hres]; exact hkp)
   have hE : GSVTapes.VEncodes' blank startSym endSym mark u v
       (TextFeed.padW blank (w.drop S) 0) k pe re
       (toGS (ststate D Pre leftSym one zero u v (w.drop S) k pe re cst A B' S w init S).pg.ts,
