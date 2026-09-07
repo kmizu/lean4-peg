@@ -10,11 +10,11 @@ import PalPeg.StageMatcherTapesX
 `mRate A B' k` を通してしか効かない）。したがって、有限制御の一歩 `GSVTapes.vprogramX`
 の償却定数
 
-* `A  := StageMatcherProg.xA k = 9k + 14`
-* `B' := StageMatcherProg.xB = 16`
+* `A  := StageMatcherProg.VerifierFeedX.xfA k = 9k + 14`
+* `B' := StageMatcherProg.VerifierFeedX.xfB = 16`
 
 をそのまま代入でき、1 ラウンドの計量動作数は
-`mRate (xA k) xB k = StageMatcherProg.xRate k = (k+1)(9k+30)`
+`mRate (VerifierFeedX.xfA k) VerifierFeedX.xfB k = StageMatcherProg.xRate k = (k+1)(9k+30)`
 （`k = 8` なら `918`）、1 ラウンドのテープ動作予算は
 `StageMatcherTapesX.roundBudgetX U k = 85 + U * xRate k` になる。本ファイルは
 その代入版 `stage_tapes_specX` と、1 ラウンドの動作数上界 `CstageX` を与える。
@@ -31,7 +31,7 @@ import PalPeg.StageMatcherTapesX
 実際にテープへ適用される動作列は **`GSVTapes.vprogram'`**（`GSTapes.program'` ＋
 `vExtActs'`）であって `GSVTapes.vprogramX` ではない。すなわち
 
-* **本ファイルの `stage_tapes_specX` は「定数 `(A,B') = (xA k, xB)` での段の仕様」であり、
+* **本ファイルの `stage_tapes_specX` は「定数 `(A,B') = (VerifierFeedX.xfA k, VerifierFeedX.xfB)` での段の仕様」であり、
   段が実際に実行するプログラムは依然として `vprogram'` である。**
 * `vprogramX` を実際に走らせる段を得るには、`VerifierFeed` に **供給つきの `vprogramX`
   一歩**（`vscanOne''` の X 版）が必要で、それが用意されれば
@@ -64,6 +64,7 @@ open PalPeg.MiddleTapes
 open PalPeg.VerifierFeed
 open PalPeg.StageMatcherTapes
 open PalPeg.StageMatcherProg
+open PalPeg.VerifierFeedX
 open PalPeg.StageMatcherTapesX
 open PalPeg.StageTapes
 
@@ -79,7 +80,7 @@ variable {blank startSym endSym mark forb : Fin sc}
 `CmT' D + rateP Pre + 160 + 86 + (85 + U * xRate k)`。 -/
 def CstageX (D : DecompOnTapes sc blank startSym endSym mark)
     (Pre : PrepOnTapes sc blank mark forb) (U k : ℕ) : ℕ :=
-  Cstage D Pre U (xA k) xB k
+  Cstage D Pre U (VerifierFeedX.xfA k) VerifierFeedX.xfB k
 
 theorem CstageX_eq (D : DecompOnTapes sc blank startSym endSym mark)
     (Pre : PrepOnTapes sc blank mark forb) (U k : ℕ) :
@@ -89,8 +90,8 @@ theorem CstageX_eq (D : DecompOnTapes sc blank startSym endSym mark)
 theorem stage_round_actionsX (D : DecompOnTapes sc blank startSym endSym mark)
     (Pre : PrepOnTapes sc blank mark forb) (u : List (Fin sc)) (U k S : ℕ)
     (n : ℕ) (St : StageT sc) :
-    stcost D Pre u U (xA k) xB k S n St ≤ CstageX D Pre U k :=
-  stage_round_actions D Pre u U (xA k) xB k S n St
+    stcost D Pre u U (VerifierFeedX.xfA k) VerifierFeedX.xfB k S n St ≤ CstageX D Pre U k :=
+  stage_round_actions D Pre u U (VerifierFeedX.xfA k) VerifierFeedX.xfB k S n St
 
 end Cost
 
@@ -101,10 +102,10 @@ section Answer
 variable {blank startSym endSym mark : Fin sc}
 
 /-- **`stage_tapes_specX`**：`StageTapes.stage_tapes_spec'` の
-`A := StageMatcherProg.xA k`, `B' := StageMatcherProg.xB` 版（結論は同一）。
+`A := StageMatcherProg.VerifierFeedX.xfA k`, `B' := StageMatcherProg.VerifierFeedX.xfB` 版（結論は同一）。
 1 ラウンドの計量動作数は `StageMatcherProg.xRate k`、1 ラウンドの動作数上界は
 `CstageX D Pre U k`（`stage_round_actionsX`）。仮定 `hC : 0 < A + B'` は
-`xB = 16` から自動的に消える。 -/
+`VerifierFeedX.xfB = 16` から自動的に消える。 -/
 theorem stage_tapes_specX
     {D : DecompOnTapes sc blank startSym endSym mark} {Pre : PrepOnTapes sc blank mark endSym}
     {leftSym one zero : Fin sc}
@@ -116,7 +117,7 @@ theorem stage_tapes_specX
     (hpinit : PrepPre blank mark (S / 2) w (w.drop S) init.pg.ts)
     (hk : 0 < k) (hs : s < S / 2)
     (H : GSCore ((w.take (S / 2)).reverse) k s p₁ r)
-    (hcost : ∀ st, cst st ≤ (xA k + xB)
+    (hcost : ∀ st, cst st ≤ (VerifierFeedX.xfA k + VerifierFeedX.xfB)
       * (Phi k (scanStep ((w.take (S / 2)).reverse.drop s) k
           (effPeriod ((w.take (S / 2)).reverse.drop s) p₁) (effReach p₁ r) (w.drop S) st)
         - Phi k st))
@@ -129,19 +130,19 @@ theorem stage_tapes_specX
     {n : ℕ} (h1 : 2 * S ≤ n) (h2 : n < 4 * S) (hw : n ≤ w.length) :
     stAnswerBit ((w.take (S / 2)).reverse.take s) ((w.take (S / 2)).reverse.drop s)
         (w.drop S) k (effPeriod ((w.take (S / 2)).reverse.drop s) p₁) (effReach p₁ r)
-        cst (xA k) xB S one n
+        cst (VerifierFeedX.xfA k) VerifierFeedX.xfB S one n
         (ststate D Pre leftSym one zero
           ((w.take (S / 2)).reverse.take s) ((w.take (S / 2)).reverse.drop s) (w.drop S)
           k (effPeriod ((w.take (S / 2)).reverse.drop s) p₁) (effReach p₁ r) cst
-          (xA k) xB S w init (n - 1))
+          (VerifierFeedX.xfA k) VerifierFeedX.xfB S w init (n - 1))
         (ststate D Pre leftSym one zero
           ((w.take (S / 2)).reverse.take s) ((w.take (S / 2)).reverse.drop s) (w.drop S)
           k (effPeriod ((w.take (S / 2)).reverse.drop s) p₁) (effReach p₁ r) cst
-          (xA k) xB S w init n) = true
+          (VerifierFeedX.xfA k) VerifierFeedX.xfB S w init n) = true
       ↔ (occursAt (w.take (S / 2)).reverse (w.take n)
           ∧ IsPal ((w.drop (S / 2)).take (n - S))) :=
   stage_tapes_spec' (hmb := hmb) (hS := hS) (hq := hq) (hres := hres) (hkp := hkp)
-    (hpinit := hpinit) (hk := hk) (hs := hs) (H := H) (hC := by unfold xB; omega)
+    (hpinit := hpinit) (hk := hk) (hs := hs) (H := H) (hC := by unfold VerifierFeedX.xfB; omega)
     (hcost := hcost) (hadvance := hadvance) (hne := hne) (hleft := hleft) (hend := hend)
     (hev := hev) (hminit := hminit) (h1 := h1) (h2 := h2) (hw := hw)
 

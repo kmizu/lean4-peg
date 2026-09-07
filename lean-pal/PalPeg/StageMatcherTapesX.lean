@@ -1,4 +1,5 @@
 import PalPeg.StageMatcherProg
+import PalPeg.VerifierFeedX
 
 /-!
 # 走査段（matcher フェーズ）の **有限制御版** 固定動作数ラウンド機械 (`StageMatcherTapesX`)
@@ -8,7 +9,9 @@ import PalPeg.StageMatcherProg
 **有限制御で実現できる形になっていない**（ずらし枝がオラクル的な巻き戻しを含む）。
 有限制御で実現できる一歩の動作列は `GSVTapes.vprogramX`
 （`PalPeg.GSVerifierFused`, 実現は `vencodes_stepX`）であり、その償却定数は
-`StageMatcherProg.xA k = 9k+14`, `StageMatcherProg.xB = 16` である。
+`StageMatcherProg.xA k = 9k+14`, `StageMatcherProg.xB = 16`（動作列の長さ）であり、
+**供給つき機械の実費用**（`VerifierFeedX.fcostX`）の償却定数は
+`VerifierFeedX.xfA k = 8k+47`, `VerifierFeedX.xfB = 82` である。
 
 本ファイルは、その `vprogramX` 版の段ライフサイクルを組み立てる。
 
@@ -31,9 +34,9 @@ import PalPeg.StageMatcherProg
 
 ## 定数
 
-* `A := StageMatcherProg.xA k = 9k+14`, `B' := StageMatcherProg.xB = 16`
-* 1 ラウンドの計量動作数 `B := StageMatcherProg.xRate k = mRate (xA k) xB k = (k+1)(9k+30)`
-* 1 ラウンドのテープ動作予算 `roundBudgetX U k = 85 + U * xRate k`
+* `A := VerifierFeedX.xfA k = 8k+47`, `B' := VerifierFeedX.xfB = 82`
+* 1 ラウンドの計量動作数 `B := xfRate k = mRate (xfA k) xfB k = (k+1)(8k+129)`
+* 1 ラウンドのテープ動作予算 `roundBudgetX U k = 85 + U * xfRate k`
   （`85 = 52`（到着）`+ 33`（`Txt2` 頭出し））
 
 ## `hcost`（`Metered` の義務）について
@@ -59,6 +62,7 @@ namespace StageMatcherTapesX
 open PalPeg.VerifierFeed
 open PalPeg.StageMatcherTapes
 open PalPeg.StageMatcherProg
+open PalPeg.VerifierFeedX
 
 variable {sc : ℕ}
 
@@ -108,18 +112,39 @@ def fedStep (hmb : mark ≠ blank) (hk : 0 < k) (hv : 0 < v.length)
     exact vscanOne''_feedInv (u := u) (v := v) (k := k) (p₁ := p₁) (r := r)
       (Text := Text) hk hmb hv hend hendu hb hmT hn (vfillIf1'_ready hF he) hfF hfok
 
-/-- **X 版の一歩の動作数**：有限制御の動作列 `vprogramX` そのもの ＋ 供給と適用の定数
-（`103 = 33`（`Txt2` 供給）`+ 70`）。 -/
-def fcostX (blank endSym mark : Fin sc) (k n : ℕ) (M : VMachine' sc) : ℕ :=
-  (GSVTapes.vprogramX blank endSym mark k (vfillIf1' blank mark n M).vt).length + 103
-
-/-- **求める X 版の一歩**：`fc = fcostX` を満たす `XStep`。 -/
+/-- **X 版の一歩**：`fc = VerifierFeedX.fcostX`（供給つき `vprogramX` 一歩の実費用）
+を満たす `XStep`。 -/
 def IsX (X : XStep sc blank startSym endSym mark u v Text k p₁ r) : Prop :=
-  ∀ (n : ℕ) (M : VMachine' sc), X.fc n M = fcostX blank endSym mark k n M
+  ∀ (n : ℕ) (M : VMachine' sc), X.fc n M = VerifierFeedX.fcostX blank endSym mark k n M
+
+/-- **X 版の一歩の実例**：`VerifierFeedX.fstepX`（供給つき `vprogramX` 一歩）は
+`fc := VerifierFeedX.fcostX` で `XStep` の実例になる。 -/
+def fedStepX (hk : 0 < k) (hp : 0 < p₁) (hmb : mark ≠ blank) (hv : 0 < v.length)
+    (hend : endSym ∉ v) (hendu : endSym ∉ u) (hb : blank ∉ Text) (hmT : mark ∉ Text) :
+    XStep sc blank startSym endSym mark u v Text k p₁ r where
+  run n M := VerifierFeedX.fstepX blank endSym mark u v k p₁ r n Text M
+  fc n M := VerifierFeedX.fcostX blank endSym mark k n M
+  ghost n M := VerifierFeedX.fstepX_z blank endSym mark u v k p₁ r n Text M
+  cost n M := VerifierFeedX.fstepX_cost blank endSym mark u v k p₁ r n Text M
+  inner n M hn hF hok he :=
+    VerifierFeedX.fstepX_feedInv hk hp hmb hv hend hendu hb hmT hn hF hok he
+
+theorem fedStepX_isX (hk : 0 < k) (hp : 0 < p₁) (hmb : mark ≠ blank) (hv : 0 < v.length)
+    (hend : endSym ∉ v) (hendu : endSym ∉ u) (hb : blank ∉ Text) (hmT : mark ∉ Text) :
+    IsX (fedStepX (startSym := startSym) (r := r) hk hp hmb hv hend hendu hb hmT) :=
+  fun _ _ => rfl
 
 end Instances
 
 /-! ## 2. 状態と 1 計量動作 -/
+
+/-- 1 ラウンドの計量動作数 `B = mRate A_X B_X k = (k+1)*(8k+129)`。 -/
+def xfRate (k : ℕ) : ℕ := PalPeg.mRate (VerifierFeedX.xfA k) VerifierFeedX.xfB k
+
+example : xfRate 8 = 9 * 193 := by norm_num [xfRate, PalPeg.mRate, VerifierFeedX.xfA,
+  VerifierFeedX.xfB]
+
+
 
 /-- 状態空間は `StageMatcherTapes.SMachine` と同一（テープ 12 本 ＋ 残り計量動作数）。
 違うのは 1 歩に走る動作列（`vprogramX`）とその費用だけである。 -/
@@ -145,9 +170,9 @@ def sactsX (n : ℕ) : ℕ → SMachineX sc → SMachineX sc
   | j + 1, S => sactsX n j (sactX X cst n S)
 
 /-- **1 ラウンド**（`StageMatcherTapes.sround` の X 版）：到着（両待ち行列）→
-`Txt2` の頭出し供給 → ちょうど `xRate k` 計量動作。 -/
+`Txt2` の頭出し供給 → ちょうど `xfRate k` 計量動作。 -/
 def sroundX (n : ℕ) (a : Fin sc) (S : SMachineX sc) : SMachineX sc :=
-  sactsX X cst (n + 1) (xRate k)
+  sactsX X cst (n + 1) (xfRate k)
     ⟨vfillHead2 blank mark (varrive' blank mark a S.M), S.rem⟩
 
 /-- **段の走行**：起動フェーズ後の絶対ラウンド `s, s+1, …` を回す。 -/
@@ -158,10 +183,10 @@ def stageX (s : ℕ) : ℕ → SMachineX sc → SMachineX sc
 
 end Acts
 
-/-- ラウンドあたりのテープ動作予算：`85 + U * xRate k`。 -/
-def roundBudgetX (U k : ℕ) : ℕ := 85 + U * xRate k
+/-- ラウンドあたりのテープ動作予算：`85 + U * xfRate k`。 -/
+def roundBudgetX (U k : ℕ) : ℕ := 85 + U * xfRate k
 
-theorem roundBudgetX_eq (U k : ℕ) : roundBudgetX U k = roundBudget U (xA k) xB k := rfl
+theorem roundBudgetX_eq (U k : ℕ) : roundBudgetX U k = roundBudget U (xfA k) xfB k := rfl
 
 /-! ## 3. ゴーストの一致 -/
 
@@ -190,19 +215,19 @@ theorem sactsX_ghost (n : ℕ) :
 
 theorem sroundX_ghost (n : ℕ) (a : Fin sc) (S : SMachineX sc) :
     gm (sroundX X cst n a S)
-      = macts v k p₁ r Text cst (n + 1) (mRate (xA k) xB k) (gm S) := by
-  rw [sroundX, sactsX_ghost]
+      = macts v k p₁ r Text cst (n + 1) (mRate (xfA k) xfB k) (gm S) := by
+  rw [sroundX, show xfRate k = mRate (xfA k) xfB k from rfl, sactsX_ghost]
   congr 1
   show (⟨(vfillHead2 blank mark (varrive' blank mark a S.M)).z.1, S.rem⟩ : MState) = gm S
   rw [vfillHead2_z, varrive'_z]
   rfl
 
 /-- **`stageX_round_spec`**：ラウンド `n` 後のゴーストは `Metered.metered` の絶対ラウンド
-`|u| + n` の状態にちょうど一致する（定数は `A := xA k`, `B' := xB`）。 -/
+`|u| + n` の状態にちょうど一致する（定数は `A := xfA k`, `B' := xfB`）。 -/
 theorem stageX_round_spec (hv : 0 < v.length) {S₀ : SMachineX sc}
-    (h0 : gm S₀ = metered u v k p₁ r Text cst (xA k) xB u.length) :
+    (h0 : gm S₀ = metered u v k p₁ r Text cst (xfA k) xfB u.length) :
     ∀ n, gm (stageX X cst u.length n S₀)
-      = metered u v k p₁ r Text cst (xA k) xB (u.length + n) := by
+      = metered u v k p₁ r Text cst (xfA k) xfB (u.length + n) := by
   intro n
   induction n with
   | zero => exact h0
@@ -213,9 +238,9 @@ theorem stageX_round_spec (hv : 0 < v.length) {S₀ : SMachineX sc}
 /-- 起動状態（`rem = 0`、走査状態 `⟨|u|, 0⟩`）は `metered … |u|` に一致する。 -/
 theorem gmX_start (hv : 0 < v.length) {S₀ : SMachineX sc}
     (hz : S₀.M.z = ((⟨u.length, 0⟩ : ScanState), 0)) (hr : S₀.rem = 0) :
-    gm S₀ = metered u v k p₁ r Text cst (xA k) xB u.length :=
+    gm S₀ = metered u v k p₁ r Text cst (xfA k) xfB u.length :=
   gm_start (u := u) (v := v) (k := k) (p₁ := p₁) (r := r) (Text := Text)
-    (cst := cst) (A := xA k) (B' := xB) hv hz hr
+    (cst := cst) (A := xfA k) (B' := xfB) hv hz hr
 
 end Ghost
 
@@ -274,7 +299,7 @@ theorem sroundX_bnd {n : ℕ} {a : Fin sc} (hn : n < Text.length) (ha : Text[n]?
       SMachineX sc).M.z.1 = S.M.z.1 from by rw [hz]]
     exact (hE hr).mono (Nat.le_succ n)
   have hres := sactsX_inner (X := X) (cst := cst) (by omega : n + 1 ≤ Text.length)
-    (xRate k) _ hstart
+    (xfRate k) _ hstart
   exact ⟨hres.1, hres.2.2⟩
 
 include hmb hb hmT in
@@ -366,7 +391,7 @@ theorem sactsX_cost (hU : 0 < U) (hcst : CostSpecX X U cst) (n : ℕ) :
     rw [sactsX]
     omega
 
-/-- **1 ラウンドの動作数**：ちょうど `85 + U * xRate k` テープ動作の予算に収まる。 -/
+/-- **1 ラウンドの動作数**：ちょうど `85 + U * xfRate k` テープ動作の予算に収まる。 -/
 theorem sroundX_cost (hU : 0 < U) (hcst : CostSpecX X U cst) (n : ℕ) (a : Fin sc)
     (S : SMachineX sc) :
     (sroundX X cst n a S).M.cost + U * spend cst (sroundX X cst n a S)
@@ -379,17 +404,18 @@ theorem sroundX_cost (hU : 0 < U) (hcst : CostSpecX X U cst) (n : ℕ) (a : Fin 
     have hz : (vfillHead2 blank mark (varrive' blank mark a S.M)).z = S.M.z := by
       rw [vfillHead2_z, varrive'_z]
     simp only [hz]
-  have h1 := sactsX_cost (X := X) hU hcst (n + 1) (xRate k)
+  have h1 := sactsX_cost (X := X) hU hcst (n + 1) (xfRate k)
     (⟨vfillHead2 blank mark (varrive' blank mark a S.M), S.rem⟩ : SMachineX sc)
   rw [hsp] at h1
   simp only [SMachine.mk_M] at h1
   have hdef : sroundX X cst n a S
-      = sactsX X cst (n + 1) (xRate k)
-        ⟨vfillHead2 blank mark (varrive' blank mark a S.M), S.rem⟩ := rfl
+      = sactsX X cst (n + 1) (xfRate k)
+        ⟨vfillHead2 blank mark (varrive' blank mark a S.M), S.rem⟩ := by
+    unfold sroundX; rfl
   rw [hdef, roundBudgetX]
   omega
 
-/-- **段全体の動作数**：`n` ラウンドで `n * (85 + U * xRate k)` テープ動作以内。 -/
+/-- **段全体の動作数**：`n` ラウンドで `n * (85 + U * xfRate k)` テープ動作以内。 -/
 theorem stageX_cost' (hU : 0 < U) (hcst : CostSpecX X U cst) :
     ∀ (n : ℕ) (S : SMachineX sc),
       (stageX X cst u.length n S).M.cost + U * spend cst (stageX X cst u.length n S)
@@ -426,15 +452,15 @@ section Init
 variable {blank startSym endSym mark : Fin sc} {u v Text : List (Fin sc)} {k p₁ r : ℕ}
   {cst : ScanState → ℕ}
 
-/-- **`stageX_init`**：`StageMatcherTapes.stage_init` の `A := xA k`, `B' := xB` 版。 -/
+/-- **`stageX_init`**：`StageMatcherTapes.stage_init` の `A := xfA k`, `B' := xfB` 版。 -/
 theorem stageX_init (hmb : mark ≠ blank) (hv : 0 < v.length)
     (hlen : u.length ≤ Text.length) :
     SBnd blank startSym endSym mark u v Text k p₁ r u.length
         (initSM blank startSym endSym mark u v Text k p₁ r) ∧
       gm (initSM blank startSym endSym mark u v Text k p₁ r)
-        = metered u v k p₁ r Text cst (xA k) xB u.length ∧
+        = metered u v k p₁ r Text cst (xfA k) xfB u.length ∧
       (initSM blank startSym endSym mark u v Text k p₁ r).M.cost ≤ 86 * u.length :=
-  stage_init (cst := cst) (A := xA k) (B' := xB) hmb hv hlen
+  stage_init (cst := cst) (A := xfA k) (B' := xfB) hmb hv hlen
 
 end Init
 
@@ -443,47 +469,34 @@ end Init
 section Amortized
 
 variable {blank startSym endSym mark : Fin sc} {u v Text : List (Fin sc)} {k p₁ r : ℕ}
+  {U n : ℕ} {M : VMachine' sc}
 
-/-- **`Ψ` 込みの償却義務**：`vprogramX_amortized` を計量値へ持ち上げた形。
-`Metered` の `hcost`（`cst st ≤ (A+B')·ΔΦ`）はこの形に置き換えられねばならない。 -/
-def XAmortized (U : ℕ) (blank endSym mark : Fin sc) (u v Text : List (Fin sc))
-    (k p₁ r : ℕ) : Prop :=
-  ∀ (n : ℕ) (M : VMachine' sc),
-    uceil U (fcostX blank endSym mark k n M) + 2 * (vStep u v k p₁ r Text M.z).2
-      ≤ xA k * (Phi k (vStep u v k p₁ r Text M.z).1 - Phi k M.z.1) + (xB + 103) + 2 * M.z.2
-
-/-- **`XAmortized` の履行**：`vprogramX_amortized`（`Φ` と `Ψ = 2·checked` の償却）から。
-供給後のテープが走査状態 `M.z` を符号化していること（`VEncodes'`）が仮定である。 -/
-theorem fcostX_amortized {U : ℕ} (hU : 0 < U) (hk : 0 < k) (hne : mark ≠ blank) (hend : endSym ∉ v)
-    {n : ℕ} {M : VMachine' sc}
-    (hE : GSVTapes.VEncodes' blank startSym endSym mark u v Text k p₁ r
-      (vfillIf1' blank mark n M).vt M.z)
-    (hq : M.z.1.q ≤ v.length) :
-    uceil U (fcostX blank endSym mark k n M) + 2 * (vStep u v k p₁ r Text M.z).2
-      ≤ xA k * (Phi k (vStep u v k p₁ r Text M.z).1 - Phi k M.z.1) + (xB + 103)
-        + 2 * M.z.2 := by
-  have h1 : uceil U (fcostX blank endSym mark k n M) ≤ fcostX blank endSym mark k n M :=
-    uceil_le_self hU _
-  have h2 := vprogramX_amortized (u := u) (v := v) (Text := Text) (p₁ := p₁) (r := r)
-    hk hne hend hE hq
-  simp only [fcostX] at h1 ⊢
+/-- **`Ψ` 込みの償却（計量値）**：`VerifierFeedX.fcostX_amortized` を `uceil` へ
+持ち上げた形。`Metered` の `hcost`（`cst st ≤ (A+B')·ΔΦ`）はこの形に
+置き換えられねばならない（`2·checked` は走査状態だけの関数では抑えられない）。 -/
+theorem uceil_fcostX_amortized (hU : 0 < U) (hk : 0 < k) (hp : 0 < p₁)
+    (hne : mark ≠ blank) (hend : endSym ∉ v) (hn : n ≤ Text.length)
+    (h : VFeedInv' blank startSym endSym mark u v Text k p₁ r n M)
+    (he : Enabled v n M.z.1) :
+    uceil U (VerifierFeedX.fcostX blank endSym mark k n M)
+        + 2 * (vStep u v k p₁ r Text M.z).2
+      ≤ VerifierFeedX.xfA k * (Phi k (vStep u v k p₁ r Text M.z).1 - Phi k M.z.1)
+        + VerifierFeedX.xfB + 2 * M.z.2 := by
+  have h1 : uceil U (VerifierFeedX.fcostX blank endSym mark k n M)
+      ≤ VerifierFeedX.fcostX blank endSym mark k n M := uceil_le_self hU _
+  have h2 := VerifierFeedX.fcostX_amortized hk hp hne hend hn h he
   omega
 
-/-- **`hadvance` の履行**（`StageMatcherProg.xcst_advance` の `fcostX` 版）。
-比較枝の動作数は `≤ 12` なので、計量単位を `U ≥ 12 + 103 = 115` に取れば
-前進ステップの計量費用は `1`（＝ 駐機しない）。 -/
-theorem fcostX_advance {U : ℕ} (hU : 115 ≤ U) (hend : endSym ∉ v) {n : ℕ}
-    {M : VMachine' sc} {z : VState}
-    (hE : GSVTapes.VEncodes' blank startSym endSym mark u v Text k p₁ r
-      (vfillIf1' blank mark n M).vt z)
-    (hq : z.1.q ≤ v.length)
-    (hadv : z.1.q ≠ v.length ∧ Text[z.1.pos + z.1.q]? = v[z.1.q]?) :
-    uceil U (fcostX blank endSym mark k n M) ≤ 1 := by
-  have h := vprogramX_adv_le (u := u) (v := v) (Text := Text) (p₁ := p₁) (r := r)
-    hend hE hq hadv
-  refine uceil_le_one (by omega) ?_
-  simp only [fcostX]
-  omega
+/-- **`hadvance` の履行**：計量単位を `U ≥ 8k+124` に取れば、前進（比較成功）
+ステップの計量費用は `1`（＝ 駐機しない）。 -/
+theorem uceil_fcostX_advance (hU : 8 * k + 124 ≤ U) (hk : 0 < k) (hne : mark ≠ blank)
+    (hend : endSym ∉ v) (hn : n ≤ Text.length)
+    (h : VFeedInv' blank startSym endSym mark u v Text k p₁ r n M)
+    (he : Enabled v n M.z.1)
+    (hadv : M.z.1.q ≠ v.length ∧ Text[M.z.1.pos + M.z.1.q]? = v[M.z.1.q]?) :
+    uceil U (VerifierFeedX.fcostX blank endSym mark k n M) ≤ 1 := by
+  have h1 := VerifierFeedX.fcostX_adv_le hk hne hend hn h he hadv
+  exact uceil_le_one (by omega) (by omega)
 
 end Amortized
 
@@ -493,15 +506,15 @@ section Answer
 
 variable {α : Type} [DecidableEq α] {u v Text : List α} {k p₁ r : ℕ} {cst : ScanState → ℕ}
 
-/-- **`stageX_answer_read`**：`A := xA k`, `B' := xB` での `Metered` の答えの正しさ。 -/
+/-- **`stageX_answer_read`**：`A := xfA k`, `B' := xfB` での `Metered` の答えの正しさ。 -/
 theorem stageX_answer_read (hK : KSimple v k p₁ r) (hk : 0 < k) (hv : 0 < v.length)
-    (hcost : ∀ st, cst st ≤ (xA k + xB)
+    (hcost : ∀ st, cst st ≤ (xfA k + xfB)
       * (Phi k (scanStep v k p₁ r Text st) - Phi k st))
     (hadvance : ∀ st, st.q ≠ v.length → Text[st.pos + st.q]? = v[st.q]? → cst st ≤ 1)
     (n : ℕ) (hn : (u ++ v).length ≤ n) :
-    manswer u v k p₁ r Text cst (xA k) xB n
+    manswer u v k p₁ r Text cst (xfA k) xfB n
       = decide (OccAt (u ++ v) Text (n - (u ++ v).length)) :=
-  stage_answer_read hK hk hv (by unfold xB; omega) hcost hadvance n hn
+  stage_answer_read hK hk hv (by unfold xfB; omega) hcost hadvance n hn
 
 end Answer
 
@@ -519,8 +532,10 @@ end Answer
 #print axioms sroundX_cost
 #print axioms stageX_cost
 #print axioms stageX_init
-#print axioms fcostX_amortized
-#print axioms fcostX_advance
+#print axioms fedStepX
+#print axioms fedStepX_isX
+#print axioms uceil_fcostX_amortized
+#print axioms uceil_fcostX_advance
 #print axioms stageX_answer_read
 
 end StageMatcherTapesX
