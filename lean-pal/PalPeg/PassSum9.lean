@@ -567,6 +567,42 @@ theorem consumption_of_invariant {k pc q E C : ℕ} (hk : 4 ≤ k) (hq : 0 < q)
   have h2 : 1 * q ≤ (k - 1) * q := Nat.mul_le_mul_right q (by omega)
   omega
 
+/-! ## §12 UP 節点の違反の場合分け
+
+`Consumption` の否定を UP 節点 `ν`（開始オフセット `t`、最小 `k`-繰り返し周期 `P`、
+run 長 `r'`）で書くと `p_c ≤ C = t + r' - k*P + 1` である。
+
+* **早い UP 節点（`t + 1 ≤ (k-1) * P`）** は `inner_run_lt` だけで矛盾する
+  （`up_violation_early`）：違反から `r' ≥ p_c + P` が出るが、領域の内側の run は
+  `r' < p_c + P` で終わらなければならない。
+  （`t < 2*P` は `k ≥ 4` ならこの場合に含まれる。）
+* 残るのは **遅い UP 節点（`(k-1) * P ≤ t`）** だけ（`UpLate`）。実測でも
+  `max t/((k-1)P) = 2.92` なのでこの場合は実在する。 -/
+
+/-- **早い UP 節点では違反が起きない**。`t + 1 ≤ (k-1) * P` なら
+`C = t + r' - k*P + 1 < p_c`。 -/
+theorem up_violation_early {w : List α} {k pc P t r' rc : ℕ} (hk : 4 ≤ k)
+    (hleast : IsLeastKRep w k pc) (hR : ReachOf w pc rc) (hkr : k * pc ≤ rc)
+    (hP : IsLeastKRep (w.drop t) k P) (hR' : ReachOf (w.drop t) P r')
+    (hPlt : P < pc) (ht : t < pc)
+    (hviol : pc + k * P ≤ t + r' + 1)
+    (hearly : t + 1 ≤ (k - 1) * P) : False := by
+  have hPpos : 0 < P := hP.1.1
+  have hpc : 0 < pc := hleast.1.1
+  have h1 : (k - 1) * P + P = k * P := by rw [← Nat.succ_mul]; congr 1; omega
+  have h3 : 3 * pc ≤ k * pc := Nat.mul_le_mul_right pc (by omega)
+  have hfit : t + (pc + P) ≤ rc := by omega
+  have hinner := inner_run_lt hk hleast hR hkr hPpos hPlt hR' hfit
+  omega
+
+/-- **残る場合**：遅い UP 節点（`(k-1) * P ≤ t`）。
+
+このとき違反からは `r' ≥ p_c + k*P - 1 - t` しか出ず、`t` が `p_c` に近いと
+`r' ≥ k*P`（自明）に退化するので、`inner_run_lt` では閉じない。
+必要なのは「`t` の手前にある run たち（`[t - P, t)` を覆う節点）と、
+領域の `p_c`-周期性によるコピー」を使う議論である。 -/
+def UpLate (k P t : ℕ) : Prop := (k - 1) * P ≤ t
+
 
 section AxiomCheck
 open PalPeg.PassSum9
@@ -590,5 +626,6 @@ open PalPeg.PassSum9
 #print axioms PalPeg.PassSum9.runEnd_down_step_sharp
 #print axioms PalPeg.PassSum9.down_step_invariant
 #print axioms PalPeg.PassSum9.consumption_of_invariant
+#print axioms PalPeg.PassSum9.up_violation_early
 #print axioms PalPeg.PassSum8.passPeriodSum_eight_of_hasTree
 end AxiomCheck
