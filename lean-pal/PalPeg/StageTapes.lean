@@ -147,6 +147,130 @@ theorem setup_rate_ok {S k p₁ : ℕ} (hS : 8 ≤ S) (hq : 4 * (S / 4) = S)
   have hexp : (S / 4) * rateS = 36 * (S / 4) := by rw [rateS]; ring
   omega
 
+/-! ## 3b. 準備フェーズのテープから照合器を起こす -/
+
+section StartVM
+
+variable {blank startSym endSym mark : Fin sc}
+
+/-- **準備フェーズの 12 本テープから作る照合器の初期機械**。走査 8 本と検証器 2 本は
+`PatternTapes.toGS` / `toVExt` でそのまま取り、待ち行列は 2 本とも空
+（`RTQueueTapes.initQT`）、書き込み済み記号数は `0`、ゴーストは `(⟨0,0⟩, 0)`。 -/
+def startVM (blank _startSym _endSym mark : Fin sc) (ts : Tapes sc) : VMachine' sc :=
+  { m1 := 0
+    m2 := 0
+    vt := (toGS ts, toVExt ts)
+    Q1 := (RTQueue.empty : RTQueue.Queue (Fin sc))
+    Q2 := (RTQueue.empty : RTQueue.Queue (Fin sc))
+    R1 := ⟨RTQueueTapes.initQT blank mark, 0⟩
+    R2 := ⟨RTQueueTapes.initQT blank mark, 0⟩
+    z := ((⟨0, 0⟩ : ScanState), 0) }
+
+/-- `startVM` の走査段は `TextFeed.FeedInv'` をラウンド `0` で満たす
+（`PatternTapes.setup_spec` の `VEncodes'` と `RTQueueTapes.initQT_encodes` から）。 -/
+theorem startVM_feedInv {u v Text : List (Fin sc)} {k p₁ r : ℕ} {ts : Tapes sc}
+    (hE : GSVTapes.VEncodes' blank startSym endSym mark u v (TextFeed.padW blank Text 0) k p₁ r
+      (toGS ts, toVExt ts) ((⟨0, 0⟩ : ScanState), 0)) :
+    TextFeed.FeedInv' blank startSym endSym mark v Text k p₁ r 0
+      (toM (startVM blank startSym endSym mark ts)) :=
+  { scan := hE.scan
+    buf := RTQueueTapes.initQT_encodes blank mark
+    qinv := RTQueue.inv_empty
+    qlist := by
+      show RTQueue.toList (RTQueue.empty : RTQueue.Queue (Fin sc)) = (Text.take 0).drop 0
+      simp [RTQueue.toList_empty]
+    mle := Nat.le_refl 0
+    hd := Nat.le_refl 0
+    qle := Nat.zero_le _ }
+
+/-- **`vstart_spec_of`**：`VerifierFeed.vstart_spec` を、`initVM'` ではなく
+`VEncodes'` を満たす任意のテープ配置から起こした機械について述べたもの。 -/
+theorem vstart_spec_of {u v Text : List (Fin sc)} {k p₁ r : ℕ} {ts : Tapes sc}
+    (hmb : mark ≠ blank) (hv : 0 < v.length) (hlen : u.length ≤ Text.length)
+    (hE : GSVTapes.VEncodes' blank startSym endSym mark u v (TextFeed.padW blank Text 0) k p₁ r
+      (toGS ts, toVExt ts) ((⟨0, 0⟩ : ScanState), 0)) :
+    VFeedInv' blank startSym endSym mark u v Text k p₁ r u.length
+        (vstartT' blank mark Text u.length (startVM blank startSym endSym mark ts)) ∧
+      (vstartT' blank mark Text u.length (startVM blank startSym endSym mark ts)).z
+        = vOnlineRun u v k p₁ r Text u.length ∧
+      (vstartT' blank mark Text u.length
+        (startVM blank startSym endSym mark ts)).cost ≤ 86 * u.length := by
+  set M0 := startVM blank startSym endSym mark ts with hM0
+  set MS := vstartT' blank mark Text u.length M0 with hMS
+  obtain ⟨s1, s2, _, s4⟩ := TextFeed.startT'_spec (blank := blank) (mark := mark) (v := v)
+    (startSym := startSym) (endSym := endSym) (k := k) (p₁ := p₁) (r := r) hmb rfl rfl
+    (startVM_feedInv hE) u.length hlen
+  have hproj : toM MS = TextFeed.startT' blank mark Text u.length (toM M0) := by
+    rw [hMS, toM_vstartT']
+  rw [← hproj] at s1 s2 s4
+  have hR1 : (toM MS).R.cost = MS.R1.cost := rfl
+  have hI0 : (toM M0).R.cost = 0 := rfl
+  rw [hR1, hI0] at s4
+  obtain ⟨x1, x2, x3⟩ := vstartT'_ext blank mark Text u.length M0
+  obtain ⟨q1, q2, q3, q4⟩ := vstartT'_queue2 (Text := Text) (M := M0) hmb u.length hlen
+    (RTQueueTapes.initQT_encodes blank mark) RTQueue.inv_empty
+    (by show RTQueue.toList (RTQueue.empty : RTQueue.Queue (Fin sc)) = []
+        simp [RTQueue.toList_empty])
+  rw [← hMS] at q1 q2 q3 q4
+  have hQ0 : M0.R2.cost = 0 := rfl
+  rw [hQ0] at q4
+  have hz : MS.z = ((⟨u.length, 0⟩ : ScanState), 0) := by
+    have h1 : MS.z.1 = (⟨u.length, 0⟩ : ScanState) := s2
+    have h2 : MS.z.2 = 0 := by rw [x3]; rfl
+    exact Prod.ext h1 h2
+  have hm2 : MS.m2 = 0 := by rw [x2]; rfl
+  have hvt2 : MS.vt.2 = M0.vt.2 := x1
+  have hstart : VFeedInv' blank startSym endSym mark u v Text k p₁ r u.length MS := by
+    refine ⟨s1.scan, ?_, ?_, s1.buf, s1.qinv, s1.qlist, s1.mle, q1, q2, ?_, ?_,
+      s1.hd, ?_, s1.qle, ?_, ?_⟩
+    · rw [hz]
+      show Tape.SeqView blank MS.vt.2.U (startSym :: (u ++ [endSym])) (0 + 1)
+      rw [hvt2]
+      exact hE.pat
+    · rw [hz, hm2]
+      show Tape.SeqView blank MS.vt.2.Txt2 (TextFeed.padW blank Text 0) (u.length - u.length + 0)
+      rw [hvt2, show u.length - u.length + 0 = 0 from by omega]
+      have := hE.txt2
+      rwa [show (0 : ℕ) - u.length + 0 = 0 from by omega] at this
+    · rw [hm2, q3]; simp
+    · rw [hm2]; exact Nat.zero_le _
+    · rw [hz, hm2]
+      show u.length - u.length + 0 ≤ 0
+      omega
+    · rw [hz]; exact Nat.zero_le _
+    · rw [hz]
+  have hcost0 : MS.cost ≤ 86 * u.length := by
+    show MS.R1.cost + MS.R2.cost ≤ 86 * u.length
+    have e : 86 * u.length = 60 * u.length + 26 * u.length := by ring
+    omega
+  exact ⟨hstart, by rw [hz, vOnlineRun_start hv u.length (Nat.le_refl _)], hcost0⟩
+
+/-- 準備フェーズのテープから起こした照合器の起動後の状態（`initSM` の一般化）。 -/
+def initSM' (blank startSym endSym mark : Fin sc) (u Text : List (Fin sc))
+    (ts : Tapes sc) : SMachine sc :=
+  ⟨vstartT' blank mark Text u.length (startVM blank startSym endSym mark ts), 0⟩
+
+/-- **`stage_init_of`**：`StageMatcherTapes.stage_init` の一般化。ゴーストは
+`Metered.metered … |u|` に一致し、起動フェーズの費用は `≤ 86 * |u|`。 -/
+theorem stage_init_of {u v Text : List (Fin sc)} {k p₁ r : ℕ} {ts : Tapes sc}
+    {cst : ScanState → ℕ} {A B' : ℕ}
+    (hmb : mark ≠ blank) (hv : 0 < v.length) (hlen : u.length ≤ Text.length)
+    (hE : GSVTapes.VEncodes' blank startSym endSym mark u v (TextFeed.padW blank Text 0) k p₁ r
+      (toGS ts, toVExt ts) ((⟨0, 0⟩ : ScanState), 0)) :
+    SBnd blank startSym endSym mark u v Text k p₁ r u.length
+        (initSM' blank startSym endSym mark u Text ts) ∧
+      gm (initSM' blank startSym endSym mark u Text ts)
+        = metered u v k p₁ r Text cst A B' u.length ∧
+      (initSM' blank startSym endSym mark u Text ts).M.cost ≤ 86 * u.length := by
+  obtain ⟨h1, h2, h3⟩ := vstart_spec_of hmb hv hlen hE
+  have hz : (initSM' blank startSym endSym mark u Text ts).M.z
+      = ((⟨u.length, 0⟩ : ScanState), 0) := by
+    show (vstartT' blank mark Text u.length (startVM blank startSym endSym mark ts)).z = _
+    rw [h2, vOnlineRun_start hv u.length (Nat.le_refl _)]
+  exact ⟨⟨h1, by simp [initSM']⟩, gm_start (cst := cst) (A := A) (B' := B') hv hz rfl, h3⟩
+
+end StartVM
+
 /-! ## 4. 段の状態と 1 ラウンド -/
 
 /-- **一つの段のテープ側の記録**。 -/
@@ -159,6 +283,11 @@ structure StageT (sc : ℕ) where
   pg : SGrind sc
 
 variable {blank startSym endSym mark : Fin sc}
+
+/-- 準備フェーズの 1 ラウンド分の挽き（起動ラウンドではプログラムを載せる）。 -/
+def setupGrind (blank startSym endSym : Fin sc) (k S n : ℕ) (g : SGrind sc) : SGrind sc :=
+  sgstep blank rateS
+    (if n = 3 * (S / 4) + 1 then ⟨setupProgram blank startSym endSym k g.ts, g.ts⟩ else g)
 
 /-- **段の 1 ラウンド**。`t` は到着済みの入力、`a` はこのラウンドに到着した記号、
 `n` は絶対ラウンド番号。 -/
@@ -173,12 +302,12 @@ def stround (D : DecompOnTapes sc blank startSym endSym mark)
         (if n = S / 2 + 1 then ⟨Pre.prog (t.take (S / 2)) (S / 2) St.pg.ts, St.pg.ts⟩
           else St.pg)⟩
   else if n ≤ S then
-    ⟨if n = S then ⟨initVM' blank startSym endSym mark u v Text k pe re, 0⟩ else St.sm,
+    ⟨if n = S then
+        ⟨startVM blank startSym endSym mark (setupGrind blank startSym endSym k S n St.pg).ts,
+          0⟩
+      else St.sm,
       mround blank startSym endSym mark leftSym one zero D t a n St.md,
-      sgstep blank rateS
-        (if n = 3 * (S / 4) + 1 then
-            ⟨setupProgram blank startSym endSym k St.pg.ts, St.pg.ts⟩
-          else St.pg)⟩
+      setupGrind blank startSym endSym k S n St.pg⟩
   else if n ≤ S + u.length then
     ⟨⟨vstartRound' blank mark (Text.getD (n - 1 - S) blank) St.sm.M, St.sm.rem⟩,
       mround blank startSym endSym mark leftSym one zero D t a n St.md, St.pg⟩
@@ -283,13 +412,20 @@ theorem ststate_sm_pre :
     rw [ststate_succ, stround]
     split_ifs <;> first | exact ih (by omega) | omega
 
-/-- ラウンド `S` に照合器が初期テープ配置（`VerifierFeed.initVM'`）で起動する。 -/
+/-- ラウンド `S` に照合器は、**準備フェーズが実際に作った 12 本のテープ**
+（`setupGrind` 後の `pg.ts`）から `startVM` で起こされる。 -/
 theorem ststate_sm_birth (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
     (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).sm
-      = ⟨initVM' blank startSym endSym mark u v Text k pe re, 0⟩ := by
+      = ⟨startVM blank startSym endSym mark
+          (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg.ts, 0⟩ := by
   obtain ⟨m, hm⟩ : ∃ m, S = m + 1 := ⟨S - 1, by omega⟩
-  rw [hm, ststate_succ, stround, if_neg (by omega), if_neg (by omega), if_pos le_rfl]
-  show (if m + 1 = m + 1 then _ else _) = _
+  have hst : ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S
+      = stround D Pre leftSym one zero u v Text k pe re cst A B' S
+          (w.take S) (w.getD (S - 1) blank) S
+          (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (S - 1)) := by
+    rw [hm]; exact ststate_succ m
+  rw [hst, stround, if_neg (by omega), if_neg (by omega), if_pos le_rfl]
+  show (if S = S then _ else _) = _
   rw [if_pos rfl]
 
 /-- **起動フェーズ**：ラウンド `(S, S + |u|]` では毎ラウンド 1 回の `vstartRound'`
@@ -298,8 +434,9 @@ theorem ststate_sm_birth (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
 theorem ststate_sm_start (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
     ∀ i, i ≤ u.length →
       (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (S + i)).sm
-        = ⟨vstartT' blank mark Text i
-            (initVM' blank startSym endSym mark u v Text k pe re), 0⟩ := by
+        = ⟨vstartT' blank mark Text i (startVM blank startSym endSym mark
+            (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg.ts),
+          0⟩ := by
   intro i
   induction i with
   | zero =>
@@ -323,7 +460,8 @@ theorem ststate_sm_start (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
 theorem ststate_sm_idle (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
     (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
         (S + u.length)).sm
-      = initSM blank startSym endSym mark u v Text k pe re :=
+      = initSM' blank startSym endSym mark u Text
+          (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg.ts :=
   ststate_sm_start (D := D) (Pre := Pre) (leftSym := leftSym) (one := one) (zero := zero)
     (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re) (cst := cst)
     (A := A) (B' := B') (w := w) (init := init) hS hq u.length le_rfl
@@ -334,7 +472,8 @@ theorem ststate_sm (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
     ∀ n, S + u.length ≤ n →
       (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init n).sm
       = stage blank endSym mark u v k pe re Text cst A B' u.length (n - (S + u.length))
-          (initSM blank startSym endSym mark u v Text k pe re) := by
+          (initSM' blank startSym endSym mark u Text
+            (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg.ts) := by
   intro n hn
   induction n, hn using Nat.le_induction with
   | base =>
@@ -436,8 +575,8 @@ theorem pg_install_setup (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
             (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
               (3 * (S / 4))).pg.ts⟩ := by
   rw [ststate_succ, stround, if_neg (by omega), if_neg (by omega), if_pos (by omega)]
-  show sgstep blank rateS (if 3 * (S / 4) + 1 = 3 * (S / 4) + 1 then _ else _) = _
-  rw [if_pos rfl]
+  show setupGrind blank startSym endSym k S (3 * (S / 4) + 1) _ = _
+  rw [setupGrind, if_pos rfl]
 
 /-- 準備フェーズの窓の内部では `pg` はただ挽かれるだけ。 -/
 theorem pg_window_setup (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
@@ -454,8 +593,8 @@ theorem pg_window_setup (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
     intro hj
     rw [show 3 * (S / 4) + 1 + (j + 1) = (3 * (S / 4) + 1 + j) + 1 from by omega,
       ststate_succ, stround, if_neg (by omega), if_neg (by omega), if_pos (by omega)]
-    show sgstep blank rateS (if 3 * (S / 4) + 1 + j + 1 = 3 * (S / 4) + 1 then _ else _) = _
-    rw [if_neg (by omega), ih (by omega), sgsteps_succ']
+    show setupGrind blank startSym endSym k S (3 * (S / 4) + 1 + j + 1) _ = _
+    rw [setupGrind, if_neg (by omega), ih (by omega), sgsteps_succ']
 
 /-- **準備フェーズはラウンド `S` までに完了する**（`k * p₁ ≤ S / 2` のとき）。 -/
 theorem setup_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) {p₁ : ℕ} (hkp : k * p₁ ≤ S / 2)
@@ -541,6 +680,9 @@ theorem stage_tapes_spec'
     {leftSym one zero : Fin sc}
     {w : List (Fin sc)} {S k s p₁ r A B' : ℕ} {cst : ScanState → ℕ} {init : StageT sc}
     (hmb : mark ≠ blank) (hS : 8 ≤ S) (hq : 4 * (S / 4) = S)
+    (hres : Pre.res w (S / 2)
+      = (s, effPeriod ((w.take (S / 2)).reverse.drop s) p₁, effReach p₁ r))
+    (hkp : k * effPeriod ((w.take (S / 2)).reverse.drop s) p₁ ≤ S / 2)
     (hk : 0 < k) (hs : s < S / 2)
     (H : GSCore ((w.take (S / 2)).reverse) k s p₁ r)
     (hC : 0 < A + B')
@@ -584,12 +726,31 @@ theorem stage_tapes_spec'
   have hbirth := ststate_sm_idle (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
+  -- 準備フェーズの出力テープ：`setup_complete'` ＋ `PatternTapes.setup_spec`
+  have hcut : (Pre.res w (S / 2)).1 < S / 2 := by rw [hres]; exact hs
+  have hwlen : S / 2 ≤ w.length := by omega
+  have hpc := prep_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+    (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
+    (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
+  have hpre := Pre.post w (w.drop S) (S / 2) init.pg.ts (by omega) hwlen hcut
+  have hsc := setup_complete' (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+    (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
+    (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq (w.drop S)
+    hwlen hcut (by rw [hres]; exact hkp)
+  have hE : GSVTapes.VEncodes' blank startSym endSym mark u v
+      (TextFeed.padW blank (w.drop S) 0) k pe re
+      (toGS (ststate D Pre leftSym one zero u v (w.drop S) k pe re cst A B' S w init S).pg.ts,
+        toVExt (ststate D Pre leftSym one zero u v (w.drop S) k pe re cst A B' S w init S).pg.ts)
+      ((⟨0, 0⟩ : ScanState), 0) := by
+    have h := (setup_spec (startSym := startSym) (endSym := endSym) (k := k) hpre).1
+    rw [hres] at h
+    rw [hsc, hpc]
+    exact h
   have hgm0 : gm (ststate D Pre leftSym one zero u v (w.drop S) k pe re cst A B' S w init
       (S + u.length)).sm
       = metered u v k pe re (w.drop S) cst A B' u.length := by
     rw [hbirth]
-    exact (stage_init (startSym := startSym) (endSym := endSym) (cst := cst) (A := A)
-      (B' := B') hmb hvpos hTlen).2.1
+    exact (stage_init_of (cst := cst) (A := A) (B' := B') hmb hvpos hTlen hE).2.1
   have hsm := ststate_sm (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
