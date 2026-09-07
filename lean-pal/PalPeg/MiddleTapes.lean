@@ -2,6 +2,9 @@ import PalPeg.BorderJobTapes
 import PalPeg.InputCopy
 import PalPeg.MiddleBorder
 
+-- `lake build` は lakefile の `autoImplicit = false` を使う。本ファイルは自動束縛変数に依存する。
+set_option autoImplicit true
+
 /-!
 # 中央フラグのテープ実現 (`MiddleTapes`)
 
