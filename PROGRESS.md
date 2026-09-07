@@ -255,3 +255,6 @@ lake build
   strip2 テープ化、`hgm0`（起動フェーズ分散）の解消、FullMachineTapes（全体機械：常駐 ≤3 段、
   入力コピーは「前段の凍結コピー＋新鮮なフロンティア」のペア方式）、PatternTapesPair（ペア源からのセットアップ）。
   残り：`StructuredMachine` 化（有限制御・テープ数固定）と最終定理。
+- 進捗（コミット d0236f1 まで）：StageTapes の `hgm0`/`hsetup` 解消、前処理テープ化が strip2 まで
+  （`stripProg2_spec ≤ (16k+32)·work + (k+4)·fuel`）。稼働中：外側ループ `decompose2_on_tapes`、
+  照合器初期テープの導出（設置ではなく `setup_spec` から）、FullMachineTapes、PatternTapesPair、PassSum4。
