@@ -283,3 +283,23 @@ lake build
     4 点発見（`PrepOnTapes.post` の前提条件欠如、二次費用、`p₁=0` で `hkp` 矛盾、`OvTapes` のテープ不足と
     `decompose`/`decompose2` の不一致）→ StageTapes / MiddleTapes / GSPreprocessTapes を修正中。
   * ClearAny（任意テープの消去 ≤ 3·幅+3）。
+- 進捗（コミット b36837a まで、2026-09-08 深夜）：
+  * **`PassPeriodSum` の現在地**：PassSum7 で「Σp ≤ 2·(パス内最大周期)」に帰着（スケール不変、実測最大 1.304、
+    自己相似族の極限 ≈1.31）。PassSum8 で木の再帰を閉じた：**残る唯一の命題は「同じ親の連続する子（兄弟）の
+    周期比 ≥ 14/5」**（`PassHasTree`；実測の最小比は 7.1、根同士は 7.4）。これが取れれば
+    `passPeriodSum_eight_of_hasTree : PassPeriodSum 8 2`。PassSum4 の `children_growth` は比 6/7 しか出せず、
+    差は「子の部分木の消費量 C(c) を |R_c| でなく再帰的に抑える」こと。`dichotomy_insufficient`（PassSum7）で
+    二分律だけでは不可能なことも形式的に示した。
+  * **有限制御化（ProgLang 移植）**：完了＝GS 走査器（GSScanProg）、実時間キュー（RTQueueProg）、
+    検証器の比較分岐（GSVerifierProg、8→10 テープ持ち上げ `exec_lift`）、境界列挙の一部（BorderJobProg）。
+    発見した「動作リストのままでは有限制御で実現不能」な箇所：(a) 検証器のシフト分岐（Txt2 の残差移動を走査の
+    シフトループに融合する必要）、(b) BorderJob の `periodActs`（カウンタ消去後の復元；第 2 カウンタが要る）、
+    `uBack`/`resetWalk`（probe-tail 形へ書き換え）、(c) TextFeed（テープ添字の直和で解釈を合成する組合せ子が
+    未作成）。段セットアップの移植 PatternProg は途中（1081 行、sorry なし、12 テープ実体化の手前）。
+  * **インタフェース修正**：`PrepPre` 前提条件、`rateS=160`、`DecompOnTapes.dec/decOK` フィールド化、
+    `OvTapes` に S1–S9、前処理費用の線形化、オラクル完全除去。`prepInstance`（decProg → `PrepOnTapes`）は
+    9 テープ→12 テープ埋め込み＋prologue/epilogue の構築が未着手（レート制限で中断）。
+  * **残作業（順）**：prepInstance と decompInstance の具体化 → `StageIface` の具体化（`stage_tapes_spec'`＋
+    `PrepInstances.prep_res_eq5`）→ 上記 (a)(b)(c) の書き換えと残りの移植（前処理・中央ジョブ・段・全体機械）→
+    全体機械を ProgLang の 1 ラウンド Prog として組み、`progMachine_recognizedBy` → `Main.pal_in_peg_of_structured`
+    で最終定理（`PassPeriodSum` が未証明なら「兄弟比 ≥ 14/5」を仮定した条件付き定理として明記）。
