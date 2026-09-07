@@ -198,7 +198,7 @@ theorem full_answer_mem_PAL_of_embed
     (hsum : ∀ (y : List (Fin sc)) (b s : ℕ),
       stripLoop2Periods y 8 b (y.length + 1) s ≤ C₁ * b)
     (hmb : mark ≠ blank)
-    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark)
+    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark leftSym)
     (input : List (Fin 2))
     (cstOf : ℕ → ScanState → ℕ) (A B' U : ℕ)
     (initOf : ℕ → StageT sc)
@@ -222,6 +222,7 @@ theorem full_answer_mem_PAL_of_embed
         (stageIface C₁ hsum hmb D (input.map ι) cstOf A B' U initOf hC hcost hadvance hne
           (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
           (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
+          (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
           hpow hinit) n = true
       ↔ (input.take n) ∈ PAL :=
   full_answer_mem_PAL_embed ι input _ n hn
@@ -239,7 +240,7 @@ theorem full_answer_mem_PAL_of_embed'
     (hι : ∀ i, ι i ∉ ({blank, mark, leftSym, endSym, startSym, one, zero} : Set (Fin sc)))
     (hcons : ∀ (x : List (Fin sc)) (b : ℕ), PassSum10.Consumption x 8 b)
     (hmb : mark ≠ blank)
-    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark)
+    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark leftSym)
     (input : List (Fin 2))
     (cstOf : ℕ → ScanState → ℕ) (A B' U : ℕ)
     (initOf : ℕ → StageT sc)
@@ -262,6 +263,7 @@ theorem full_answer_mem_PAL_of_embed'
     FullMachineTapes.fullAnswer
         (stageIface 2 (PassSumGen.hsum_of_consumption hcons) hmb D (input.map ι) cstOf
           A B' U initOf hC hcost hadvance hne
+          (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
           (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
           (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
           hpow hinit) n = true
@@ -345,7 +347,8 @@ one, zero = 0,1,2,3,4,5,6`）、入力は `emb9`（`7, 8`）。記号の相異�
 `decide` で片づき、数学的仮定は消費量補題 `hcons` だけが残る。 -/
 theorem full_answer_mem_PAL_of_embed9
     (hcons : ∀ (x : List (Fin 9)) (b : ℕ), PassSum10.Consumption x 8 b)
-    (D : MiddleTapes.DecompOnTapes 9 (symbols9 0) (symbols9 4) (symbols9 3) (symbols9 1))
+    (D : MiddleTapes.DecompOnTapes 9 (symbols9 0) (symbols9 4) (symbols9 3) (symbols9 1)
+      (symbols9 2))
     (input : List (Fin 2))
     (cstOf : ℕ → ScanState → ℕ) (A B' U : ℕ)
     (initOf : ℕ → StageT 9)
@@ -367,6 +370,7 @@ theorem full_answer_mem_PAL_of_embed9
     FullMachineTapes.fullAnswer
         (stageIface 2 (PassSumGen.hsum_of_consumption hcons) symbols9_mark_ne_blank D
           (input.map emb9) cstOf A B' U initOf hC hcost hadvance symbols9_one_ne_zero
+          (notMem_map_of_notMem_range (notMem_range_of_hi emb9_avoids (by simp)) input)
           (notMem_map_of_notMem_range (notMem_range_of_hi emb9_avoids (by simp)) input)
           (notMem_map_of_notMem_range (notMem_range_of_hi emb9_avoids (by simp)) input)
           hpow hinit) n = true

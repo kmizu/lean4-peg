@@ -229,7 +229,7 @@ def midInit (blank leftSym : Fin sc) (S n : ℕ) : MiddleTapes.MState sc :=
 
 /-- **誕生時の中央ジョブは `MEncodes` を満たす**（`MiddleTapes.minit_encodes`）。 -/
 theorem midInit_encodes {blank startSym endSym mark leftSym one zero : Fin sc}
-    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark)
+    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark leftSym)
     (w : List (Fin sc)) {S n : ℕ} (hn : MiddleTapes.Lmax S ≤ n) :
     ∀ m, m ≤ S / 2 →
       MiddleTapes.MEncodes blank startSym endSym mark leftSym one zero D w S m
@@ -274,7 +274,7 @@ def initOf (blank startSym endSym mark leftSym : Fin sc) (w : List (Fin sc)) (S 
 /-- **主定理（護られた `hinit`）**：`S / 2 ≤ w.length` のもとで、
 `StageIfaceInstance.stageIface` の `hinit` の中身が成り立つ。 -/
 theorem initOf_hinit {blank startSym endSym mark leftSym one zero : Fin sc}
-    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark)
+    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark leftSym)
     (w : List (Fin sc)) (hfresh : leftSym ∉ w) :
     ∀ S, 16 ≤ S → S / 2 ≤ w.length →
       StageTapes.PrepPre blank mark leftSym (S / 2) w (w.drop S)
@@ -294,7 +294,7 @@ theorem initOf_hinit {blank startSym endSym mark leftSym one zero : Fin sc}
 /-- **ギャップ 1**：`hinit` は護りなしでは**どんな `initOf` でも偽**。
 `PrepPre.hle` が `S / 2 ≤ w.length` を要求するのに、`S` は上限なく走るため。 -/
 theorem hinit_unsatisfiable {blank startSym endSym mark leftSym one zero : Fin sc}
-    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark)
+    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark leftSym)
     (w : List (Fin sc)) (I : ℕ → StageTapes.StageT sc) :
     ¬ (∀ S, 16 ≤ S →
         StageTapes.PrepPre blank mark leftSym (S / 2) w (w.drop S) (I S).pg.ts
@@ -352,7 +352,7 @@ noncomputable def stageIface_full
     (hsum : ∀ (y : List (Fin sc)) (b s : ℕ),
       stripLoop2Periods y 8 b (y.length + 1) s ≤ C₁ * b)
     (hmb : mark ≠ blank)
-    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark)
+    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark leftSym)
     (w : List (Fin sc))
     (cstOf : ℕ → ScanState → ℕ) (A B' U : ℕ)
     (hC : 0 < A + B')
@@ -362,13 +362,13 @@ noncomputable def stageIface_full
         - Phi 8 st))
     (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (StageIfaceInstance.vOf w S).length →
       (w.drop S)[st.pos + st.q]? = (StageIfaceInstance.vOf w S)[st.q]? → cstOf S st ≤ 1)
-    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
+    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w) (hstart : startSym ∉ w)
     (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S) :
     FullMachineTapes.StageIface sc w :=
   StageIfaceInstance.stageIface (blank := blank) (startSym := startSym) (endSym := endSym)
     (mark := mark) (leftSym := leftSym) (one := one) (zero := zero)
     C₁ hsum hmb D w cstOf A B' U (initOf blank startSym endSym mark leftSym w)
-    hC hcost hadvance hne hleft hend hpow (initOf_hinit D w hleft)
+    hC hcost hadvance hne hleft hend hstart hpow (initOf_hinit D w hleft)
 
 end Full
 

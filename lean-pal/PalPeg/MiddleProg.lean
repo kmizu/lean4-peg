@@ -840,7 +840,7 @@ variable {startSym endSym mark leftSym one zero : Fin sc}
 
 /-- `stageActs` のプローブ末尾形（走査の各反復に `nop` が 1 個増える）。 -/
 def stageBodyN (blank startSym endSym mark leftSym one : Fin sc)
-    (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) (L : ℕ)
+    (D : DecompOnTapes sc blank startSym endSym mark leftSym) (y : List (Fin sc)) (L : ℕ)
     (ts : OvTapes sc) : List (Act sc) :=
   D.acts y L ts ++
     ovRunActsN blank leftSym endSym mark one
@@ -851,13 +851,13 @@ def stageBodyN (blank startSym endSym mark leftSym one : Fin sc)
 
 /-- 段テープの消去は `stageActs` と**同一の動作列**（同じ長さ引数）を使う。 -/
 def stageActsN (blank startSym endSym mark leftSym one : Fin sc)
-    (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) (L : ℕ)
+    (D : DecompOnTapes sc blank startSym endSym mark leftSym) (y : List (Fin sc)) (L : ℕ)
     (ts : OvTapes sc) : List (Act sc) :=
   stageBodyN blank startSym endSym mark leftSym one D y L ts ++
     MiddleClear.clearPUC blank (stageBody blank startSym endSym mark leftSym one D y L ts).length
 
 /-- **段の本体の作用は変わらない**。 -/
-theorem stageBodyN_apply (D : DecompOnTapes sc blank startSym endSym mark)
+theorem stageBodyN_apply (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (y : List (Fin sc)) (L : ℕ) (ts : OvTapes sc) :
     applyActs blank (stageBodyN blank startSym endSym mark leftSym one D y L ts) ts
       = applyActs blank (stageBody blank startSym endSym mark leftSym one D y L ts) ts := by
@@ -865,14 +865,14 @@ theorem stageBodyN_apply (D : DecompOnTapes sc blank startSym endSym mark)
     ovRunActs_apply]
 
 /-- **段の作用は変わらない**。 -/
-theorem stageActsN_apply (D : DecompOnTapes sc blank startSym endSym mark)
+theorem stageActsN_apply (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (y : List (Fin sc)) (L : ℕ) (ts : OvTapes sc) :
     applyActs blank (stageActsN blank startSym endSym mark leftSym one D y L ts) ts
       = applyActs blank (stageActs blank startSym endSym mark leftSym one D y L ts) ts := by
   rw [stageActsN, stageActs, applyActs_append, applyActs_append, stageBodyN_apply]
 
 /-- **段の動作数の増分**は走査の反復回数（`≤ (8+2)*L+1`）だけ。 -/
-theorem stageActsN_length_le (D : DecompOnTapes sc blank startSym endSym mark)
+theorem stageActsN_length_le (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (y : List (Fin sc)) (L : ℕ) (ts : OvTapes sc) :
     (stageActsN blank startSym endSym mark leftSym one D y L ts).length
       ≤ (stageActs blank startSym endSym mark leftSym one D y L ts).length
@@ -891,7 +891,7 @@ def stageProg (DP OVR CLR : Prog (Act15 sc) (Cond15 sc)) : Prog (Act15 sc) (Cond
   Prog.seq (Prog.seq DP OVR) CLR
 
 theorem stageProg_exec {DP OVR CLR : Prog (Act15 sc) (Cond15 sc)}
-    (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) (L : ℕ)
+    (D : DecompOnTapes sc blank startSym endSym mark leftSym) (y : List (Fin sc)) (L : ℕ)
     (ts : OvTapes sc)
     (hDP : ExecA Terminal blank DP ts (D.acts y L ts))
     (hOVR : ExecA Terminal blank OVR (applyActs blank (D.acts y L ts) ts)
@@ -912,7 +912,7 @@ theorem stageProg_exec {DP OVR CLR : Prog (Act15 sc) (Cond15 sc)}
 
 /-- `jobLoop` のプローブ末尾形。 -/
 def jobLoopActsN (blank startSym endSym mark leftSym one : Fin sc)
-    (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) :
+    (D : DecompOnTapes sc blank startSym endSym mark leftSym) (y : List (Fin sc)) :
     ℕ → ℕ → OvTapes sc → List (Act sc)
   | 0, _, _ => []
   | fuel + 1, L, ts =>
@@ -932,7 +932,7 @@ def jobLoopActsN (blank startSym endSym mark leftSym one : Fin sc)
                   (stageActsN blank startSym endSym mark leftSym one D y L ts) ts)))
 
 /-- **ループの作用は変わらない**。 -/
-theorem jobLoopActsN_apply (D : DecompOnTapes sc blank startSym endSym mark)
+theorem jobLoopActsN_apply (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (y : List (Fin sc)) :
     ∀ (fuel L : ℕ) (ts : OvTapes sc),
       applyActs blank
@@ -951,7 +951,7 @@ theorem jobLoopActsN_apply (D : DecompOnTapes sc blank startSym endSym mark)
         rw [stageActsN_apply, ih]
 
 /-- **ループの動作数の増分**：各段につき `nop` 1 個と走査の反復ぶん。 -/
-theorem jobLoopActsN_length_le (D : DecompOnTapes sc blank startSym endSym mark)
+theorem jobLoopActsN_length_le (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (y : List (Fin sc)) (N : ℕ)
     (hnext : ∀ L, L ≤ N → nextLen (stageS D.dec y L) ≤ N) :
     ∀ (fuel L : ℕ) (ts : OvTapes sc), L ≤ N →
@@ -994,7 +994,7 @@ def jobLoopProg (leftSym : Fin sc) (STG SEAM : Prog (Act15 sc) (Cond15 sc)) :
 
 /-- **ループの実現**。`Inv fuel L ts` は「燃料・段幅・テープ」の不変条件。 -/
 theorem jobLoopProg_exec {STG SEAM : Prog (Act15 sc) (Cond15 sc)}
-    (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc))
+    (D : DecompOnTapes sc blank startSym endSym mark leftSym) (y : List (Fin sc))
     (Inv : ℕ → ℕ → OvTapes sc → Prop)
     (hcond : ∀ fuel L ts, Inv fuel L ts →
       condOf15 (Cond15.neq tX2 leftSym) (fun j => (tapeOf ts j).focus) = decide (L ≠ 0))
@@ -1076,7 +1076,7 @@ variable {startSym endSym mark leftSym one zero : Fin sc}
 
 /-- `jobActs` のプローブ末尾形。 -/
 def jobActsN (blank startSym endSym mark leftSym one : Fin sc)
-    (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) (rd : ℕ)
+    (D : DecompOnTapes sc blank startSym endSym mark leftSym) (y : List (Fin sc)) (rd : ℕ)
     (ts : OvTapes sc) : List (Act sc) :=
   homeActs sc y.length (y.length - stageS D.dec y y.length) y.length ++
     jobLoopActsN blank startSym endSym mark leftSym one D y (y.length + 1) y.length
@@ -1086,7 +1086,7 @@ def jobActsN (blank startSym endSym mark leftSym one : Fin sc)
 
 /-- `batchActs` のプローブ末尾形。 -/
 def batchActsN (blank startSym endSym mark leftSym one zero : Fin sc)
-    (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) (rd : ℕ)
+    (D : DecompOnTapes sc blank startSym endSym mark leftSym) (y : List (Fin sc)) (rd : ℕ)
     (ts : OvTapes sc) : List (Act sc) :=
   homeF sc y.length y.length ++ clearF zero y.length ++
     jobActsN blank startSym endSym mark leftSym one D y rd
@@ -1104,7 +1104,7 @@ def batchProg (PRE JA : Prog (Act15 sc) (Cond15 sc)) : Prog (Act15 sc) (Cond15 s
   Prog.seq PRE JA
 
 theorem jobActsProg_exec {H0 JL HR : Prog (Act15 sc) (Cond15 sc)}
-    (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) (rd : ℕ)
+    (D : DecompOnTapes sc blank startSym endSym mark leftSym) (y : List (Fin sc)) (rd : ℕ)
     (ts : OvTapes sc)
     (hH0 : ExecA Terminal blank H0 ts
       (homeActs sc y.length (y.length - stageS D.dec y y.length) y.length))
@@ -1128,7 +1128,7 @@ theorem jobActsProg_exec {H0 JL HR : Prog (Act15 sc) (Cond15 sc)}
   simp [jobActsN]
 
 theorem batchProg_exec {PRE JA : Prog (Act15 sc) (Cond15 sc)}
-    (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) (rd : ℕ)
+    (D : DecompOnTapes sc blank startSym endSym mark leftSym) (y : List (Fin sc)) (rd : ℕ)
     (ts : OvTapes sc)
     (hPRE : ExecA Terminal blank PRE ts
       (homeF sc y.length y.length ++ clearF zero y.length))
@@ -1146,7 +1146,7 @@ theorem batchProg_exec {PRE JA : Prog (Act15 sc) (Cond15 sc)}
 
 /-! ### 作用と動作数 -/
 
-theorem jobActsN_apply (D : DecompOnTapes sc blank startSym endSym mark)
+theorem jobActsN_apply (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (y : List (Fin sc)) (rd : ℕ) (ts : OvTapes sc) :
     applyActs blank (jobActsN blank startSym endSym mark leftSym one D y rd ts) ts
       = applyActs blank (jobActs blank startSym endSym mark leftSym one D y rd ts) ts := by
@@ -1154,7 +1154,7 @@ theorem jobActsN_apply (D : DecompOnTapes sc blank startSym endSym mark)
   rw [jobLoopActsN_apply]
 
 /-- **バッチの作用は変わらない**（`nop` は恒等、走査の作用は `ovRunTapes`）。 -/
-theorem batchProg_effect (D : DecompOnTapes sc blank startSym endSym mark)
+theorem batchProg_effect (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (y : List (Fin sc)) (rd : ℕ) (ts : OvTapes sc) :
     applyActs blank
         (batchActsN blank startSym endSym mark leftSym one zero D y rd ts) ts
@@ -1163,7 +1163,7 @@ theorem batchProg_effect (D : DecompOnTapes sc blank startSym endSym mark)
   simp only [batchActsN, batchActs, applyActs_append]
   rw [jobActsN_apply]
 
-theorem jobActsN_length_le (D : DecompOnTapes sc blank startSym endSym mark)
+theorem jobActsN_length_le (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (y : List (Fin sc)) (N : ℕ) (hN : y.length ≤ N)
     (hnext : ∀ L, L ≤ N → nextLen (stageS D.dec y L) ≤ N) (rd : ℕ) (ts : OvTapes sc) :
     (jobActsN blank startSym endSym mark leftSym one D y rd ts).length
@@ -1178,7 +1178,7 @@ theorem jobActsN_length_le (D : DecompOnTapes sc blank startSym endSym mark)
 
 /-- **バッチの動作数の増分**：段の個数（`≤ |y|+1`）に比例する定数倍のみ。
 （内訳：段ごとに `jobLoop` の `nop` 1 個と、段の走査の反復ごとの `nop`。） -/
-theorem batchProg_trace_length_le (D : DecompOnTapes sc blank startSym endSym mark)
+theorem batchProg_trace_length_le (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (y : List (Fin sc)) (N : ℕ) (hN : y.length ≤ N)
     (hnext : ∀ L, L ≤ N → nextLen (stageS D.dec y L) ≤ N) (rd : ℕ) (ts : OvTapes sc) :
     (batchActsN blank startSym endSym mark leftSym one zero D y rd ts).length
@@ -1225,7 +1225,7 @@ theorem avecs_split (blank : Fin sc) (l : List (Act sc)) (ts : OvTapes sc) (m : 
 /-- **ペース配分**：`mround` の 1 ラウンドは `batchProg` 自身の動作列（＝トレース）の
 接頭辞チャンクである。 -/
 theorem mroundProg_pacing {startSym endSym mark leftSym one zero : Fin sc}
-    (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) (rd : ℕ)
+    (D : DecompOnTapes sc blank startSym endSym mark leftSym) (y : List (Fin sc)) (rd : ℕ)
     (ts : OvTapes sc) (n : ℕ) :
     gsteps blank (rateM D) n
         ⟨batchActsN blank startSym endSym mark leftSym one zero D y rd ts, ts⟩
@@ -1239,7 +1239,7 @@ theorem mroundProg_pacing {startSym endSym mark leftSym one zero : Fin sc}
 /-- **バッチのトレース**：`batchProg` のマイクロステップ列は `batchActsN` そのもの。 -/
 theorem batchProg_trace {startSym endSym mark leftSym one zero : Fin sc}
     {PRE JA : Prog (Act15 sc) (Cond15 sc)}
-    (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) (rd : ℕ)
+    (D : DecompOnTapes sc blank startSym endSym mark leftSym) (y : List (Fin sc)) (rd : ℕ)
     (ts : OvTapes sc)
     (hPRE : ExecA Terminal blank PRE ts
       (homeF sc y.length y.length ++ clearF zero y.length))

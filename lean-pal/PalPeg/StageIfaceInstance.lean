@@ -69,7 +69,7 @@ noncomputable def stageIface
     (hsum : ∀ (y : List (Fin sc)) (b s : ℕ),
       stripLoop2Periods y 8 b (y.length + 1) s ≤ C₁ * b)
     (hmb : mark ≠ blank)
-    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark)
+    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark leftSym)
     (w : List (Fin sc))
     (cstOf : ℕ → ScanState → ℕ) (A B' U : ℕ)
     (initOf : ℕ → StageT sc)
@@ -78,7 +78,7 @@ noncomputable def stageIface
       * (Phi 8 (scanStep (vOf w S) 8 (peOf w S) (reOf w S) (w.drop S) st) - Phi 8 st))
     (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (vOf w S).length →
       (w.drop S)[st.pos + st.q]? = (vOf w S)[st.q]? → cstOf S st ≤ 1)
-    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
+    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w) (hstart : startSym ∉ w)
     (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinit : ∀ S, 16 ≤ S → S / 2 ≤ w.length →
       PrepPre blank mark leftSym (S / 2) w (w.drop S) (initOf S).pg.ts
@@ -89,18 +89,18 @@ noncomputable def stageIface
   srec := fun S n =>
     ststate D (PrepInstance.prepInstance (blank := blank) (startSym := startSym)
         (endSym := endSym) (mark := mark) C₁ hsum hmb)
-      leftSym one zero (uOf w S) (vOf w S) (w.drop S) 8 (peOf w S) (reOf w S)
+      one zero (uOf w S) (vOf w S) (w.drop S) 8 (peOf w S) (reOf w S)
       (cstOf S) A B' S w (initOf S) n
   bit := fun S n =>
     stAnswerBit (uOf w S) (vOf w S) (w.drop S) 8 (peOf w S) (reOf w S)
       (cstOf S) A B' S one n
       (ststate D (PrepInstance.prepInstance (blank := blank) (startSym := startSym)
           (endSym := endSym) (mark := mark) C₁ hsum hmb)
-        leftSym one zero (uOf w S) (vOf w S) (w.drop S) 8 (peOf w S) (reOf w S)
+        one zero (uOf w S) (vOf w S) (w.drop S) 8 (peOf w S) (reOf w S)
         (cstOf S) A B' S w (initOf S) (n - 1))
       (ststate D (PrepInstance.prepInstance (blank := blank) (startSym := startSym)
           (endSym := endSym) (mark := mark) C₁ hsum hmb)
-        leftSym one zero (uOf w S) (vOf w S) (w.drop S) 8 (peOf w S) (reOf w S)
+        one zero (uOf w S) (vOf w S) (w.drop S) 8 (peOf w S) (reOf w S)
         (cstOf S) A B' S w (initOf S) n)
   cost := fun S n =>
     stcost D (PrepInstance.prepInstance (blank := blank) (startSym := startSym)
@@ -108,7 +108,7 @@ noncomputable def stageIface
       (uOf w S) U A B' 8 S n
       (ststate D (PrepInstance.prepInstance (blank := blank) (startSym := startSym)
           (endSym := endSym) (mark := mark) C₁ hsum hmb)
-        leftSym one zero (uOf w S) (vOf w S) (w.drop S) 8 (peOf w S) (reOf w S)
+        one zero (uOf w S) (vOf w S) (w.drop S) 8 (peOf w S) (reOf w S)
         (cstOf S) A B' S w (initOf S) (n - 1))
   C := Cstage D (PrepInstance.prepInstance (blank := blank) (startSym := startSym)
       (endSym := endSym) (mark := mark) C₁ hsum hmb) U A B' 8
@@ -132,7 +132,7 @@ noncomputable def stageIface
       (prep_kp_5S (by omega) hSle)
       hpinit (by omega) (prep_cut_lt (by omega) hSle)
       (prep_core w (S / 2)) hC (hcost S) (hadvance S)
-      hne hleft hend hev hminit h1 h2 hw
+      hne hleft hend hstart hev hminit h1 h2 hw
   wid_even := fun S hS => (hpow S hS).2
 
 /-- **`stageIface_spec`**：上のインタフェースの主仕様の再掲。 -/
@@ -141,7 +141,7 @@ theorem stageIface_spec
     (hsum : ∀ (y : List (Fin sc)) (b s : ℕ),
       stripLoop2Periods y 8 b (y.length + 1) s ≤ C₁ * b)
     (hmb : mark ≠ blank)
-    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark)
+    (D : MiddleTapes.DecompOnTapes sc blank startSym endSym mark leftSym)
     (w : List (Fin sc))
     (cstOf : ℕ → ScanState → ℕ) (A B' U : ℕ)
     (initOf : ℕ → StageT sc)
@@ -150,7 +150,7 @@ theorem stageIface_spec
       * (Phi 8 (scanStep (vOf w S) 8 (peOf w S) (reOf w S) (w.drop S) st) - Phi 8 st))
     (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (vOf w S).length →
       (w.drop S)[st.pos + st.q]? = (vOf w S)[st.q]? → cstOf S st ≤ 1)
-    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
+    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w) (hstart : startSym ∉ w)
     (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinit : ∀ S, 16 ≤ S → S / 2 ≤ w.length →
       PrepPre blank mark leftSym (S / 2) w (w.drop S) (initOf S).pg.ts
@@ -158,11 +158,11 @@ theorem stageIface_spec
           MiddleTapes.MEncodes blank startSym endSym mark leftSym one zero D w S m
             (initOf S).md)
     (S n : ℕ) (hS : 16 ≤ S) (h1 : 2 * S ≤ n) (h2 : n < 4 * S) (hw : n ≤ w.length) :
-    (stageIface C₁ hsum hmb D w cstOf A B' U initOf hC hcost hadvance hne hleft hend
+    (stageIface C₁ hsum hmb D w cstOf A B' U initOf hC hcost hadvance hne hleft hend hstart
         hpow hinit).bit S n = true
       ↔ (occursAt (w.take (S / 2)).reverse (w.take n)
           ∧ IsPal ((w.drop (S / 2)).take (n - S))) :=
-  (stageIface C₁ hsum hmb D w cstOf A B' U initOf hC hcost hadvance hne hleft hend
+  (stageIface C₁ hsum hmb D w cstOf A B' U initOf hC hcost hadvance hne hleft hend hstart
     hpow hinit).spec S n hS h1 h2 hw
 
 /-- **全体の出力の正当性**：`FullMachineTapes.full_answer_mem_PAL` を上の
@@ -173,7 +173,7 @@ theorem full_answer_mem_PAL_of
     (hsum : ∀ (y : List (Fin 2)) (b s : ℕ),
       stripLoop2Periods y 8 b (y.length + 1) s ≤ C₁ * b)
     (hmb : mark ≠ blank)
-    (D : MiddleTapes.DecompOnTapes 2 blank startSym endSym mark)
+    (D : MiddleTapes.DecompOnTapes 2 blank startSym endSym mark leftSym)
     (w : List (Fin 2))
     (cstOf : ℕ → ScanState → ℕ) (A B' U : ℕ)
     (initOf : ℕ → StageT 2)
@@ -182,7 +182,7 @@ theorem full_answer_mem_PAL_of
       * (Phi 8 (scanStep (vOf w S) 8 (peOf w S) (reOf w S) (w.drop S) st) - Phi 8 st))
     (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (vOf w S).length →
       (w.drop S)[st.pos + st.q]? = (vOf w S)[st.q]? → cstOf S st ≤ 1)
-    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
+    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w) (hstart : startSym ∉ w)
     (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinit : ∀ S, 16 ≤ S → S / 2 ≤ w.length →
       PrepPre blank mark leftSym (S / 2) w (w.drop S) (initOf S).pg.ts
@@ -190,7 +190,7 @@ theorem full_answer_mem_PAL_of
           MiddleTapes.MEncodes blank startSym endSym mark leftSym one zero D w S m
             (initOf S).md) :
     FullMachineTapes.fullAnswer
-        (stageIface C₁ hsum hmb D w cstOf A B' U initOf hC hcost hadvance hne hleft hend
+        (stageIface C₁ hsum hmb D w cstOf A B' U initOf hC hcost hadvance hne hleft hend hstart
           hpow hinit) w.length = true
       ↔ w ∈ PAL :=
   FullMachineTapes.full_answer_mem_PAL _

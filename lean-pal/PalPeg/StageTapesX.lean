@@ -74,20 +74,20 @@ variable {sc : ℕ}
 
 section Cost
 
-variable {blank startSym endSym mark forb : Fin sc}
+variable {blank startSym endSym mark forb leftSym : Fin sc}
 
 /-- **X 版の 1 ラウンドの動作数上界**：
 `CmT' D + rateP Pre + 160 + 86 + (85 + U * xRate k)`。 -/
-def CstageX (D : DecompOnTapes sc blank startSym endSym mark)
+def CstageX (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (Pre : PrepOnTapes sc blank mark forb) (U k : ℕ) : ℕ :=
   Cstage D Pre U (VerifierFeedX.xfA k) VerifierFeedX.xfB k
 
-theorem CstageX_eq (D : DecompOnTapes sc blank startSym endSym mark)
+theorem CstageX_eq (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (Pre : PrepOnTapes sc blank mark forb) (U k : ℕ) :
     CstageX D Pre U k = CmT' D + rateP Pre + rateS + 86 + roundBudgetX U k := rfl
 
 /-- **`stage_round_actionsX`**：段の 1 ラウンドの動作数は `CstageX` 以下。 -/
-theorem stage_round_actionsX (D : DecompOnTapes sc blank startSym endSym mark)
+theorem stage_round_actionsX (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (Pre : PrepOnTapes sc blank mark forb) (u : List (Fin sc)) (U k S : ℕ)
     (n : ℕ) (St : StageT sc) :
     stcost D Pre u U (VerifierFeedX.xfA k) VerifierFeedX.xfB k S n St ≤ CstageX D Pre U k :=
@@ -99,7 +99,7 @@ end Cost
 
 section Answer
 
-variable {blank startSym endSym mark : Fin sc}
+variable {blank startSym endSym mark leftSym : Fin sc}
 
 /-- **`stage_tapes_specX`**：`StageTapes.stage_tapes_spec'` の
 `A := StageMatcherProg.VerifierFeedX.xfA k`, `B' := StageMatcherProg.VerifierFeedX.xfB` 版（結論は同一）。
@@ -107,8 +107,8 @@ variable {blank startSym endSym mark : Fin sc}
 `CstageX D Pre U k`（`stage_round_actionsX`）。仮定 `hC : 0 < A + B'` は
 `VerifierFeedX.xfB = 16` から自動的に消える。 -/
 theorem stage_tapes_specX
-    {D : DecompOnTapes sc blank startSym endSym mark} {Pre : PrepOnTapes sc blank mark endSym}
-    {leftSym one zero : Fin sc}
+    {D : DecompOnTapes sc blank startSym endSym mark leftSym} {Pre : PrepOnTapes sc blank mark endSym}
+    {one zero : Fin sc}
     {w : List (Fin sc)} {S k s p₁ r : ℕ} {cst : ScanState → ℕ} {init : StageT sc}
     (hmb : mark ≠ blank) (hS : 8 ≤ S) (hq : 4 * (S / 4) = S)
     (hres : Pre.res w (S / 2)
@@ -123,7 +123,7 @@ theorem stage_tapes_specX
         - Phi k st))
     (hadvance : ∀ st, st.q ≠ ((w.take (S / 2)).reverse.drop s).length →
       (w.drop S)[st.pos + st.q]? = ((w.take (S / 2)).reverse.drop s)[st.q]? → cst st ≤ 1)
-    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
+    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w) (hstart : startSym ∉ w)
     (hev : 2 * (S / 2) = S)
     (hminit : ∀ m, m ≤ S / 2 →
       MEncodes blank startSym endSym mark leftSym one zero D w S m init.md)
@@ -131,11 +131,11 @@ theorem stage_tapes_specX
     stAnswerBit ((w.take (S / 2)).reverse.take s) ((w.take (S / 2)).reverse.drop s)
         (w.drop S) k (effPeriod ((w.take (S / 2)).reverse.drop s) p₁) (effReach p₁ r)
         cst (VerifierFeedX.xfA k) VerifierFeedX.xfB S one n
-        (ststate D Pre leftSym one zero
+        (ststate D Pre one zero
           ((w.take (S / 2)).reverse.take s) ((w.take (S / 2)).reverse.drop s) (w.drop S)
           k (effPeriod ((w.take (S / 2)).reverse.drop s) p₁) (effReach p₁ r) cst
           (VerifierFeedX.xfA k) VerifierFeedX.xfB S w init (n - 1))
-        (ststate D Pre leftSym one zero
+        (ststate D Pre one zero
           ((w.take (S / 2)).reverse.take s) ((w.take (S / 2)).reverse.drop s) (w.drop S)
           k (effPeriod ((w.take (S / 2)).reverse.drop s) p₁) (effReach p₁ r) cst
           (VerifierFeedX.xfA k) VerifierFeedX.xfB S w init n) = true
@@ -144,7 +144,7 @@ theorem stage_tapes_specX
   stage_tapes_spec' (hmb := hmb) (hS := hS) (hq := hq) (hres := hres) (hkp := hkp)
     (hpinit := hpinit) (hk := hk) (hs := hs) (H := H) (hC := by unfold VerifierFeedX.xfB; omega)
     (hcost := hcost) (hadvance := hadvance) (hne := hne) (hleft := hleft) (hend := hend)
-    (hev := hev) (hminit := hminit) (h1 := h1) (h2 := h2) (hw := hw)
+    (hstart := hstart) (hev := hev) (hminit := hminit) (h1 := h1) (h2 := h2) (hw := hw)
 
 end Answer
 

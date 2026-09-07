@@ -245,26 +245,22 @@ structure DecompOnTapes2 (sc : ℕ) (blank startSym endSym mark : Fin sc) where
 
 /-- **`DecompOnTapes2` は `DecompOnTapes` の `dec := gsDec2 · 8` への特殊化**。
 段の正当性 `decOK` は `EndToEnd2.decOK2` が無条件に与える。 -/
-def DecompOnTapes2.toDecompOnTapes {blank startSym endSym mark : Fin sc}
+def DecompOnTapes2.toDecompOnTapes {blank startSym endSym mark leftSym : Fin sc}
     (D : DecompOnTapes2 sc blank startSym endSym mark) :
-    MiddleTapes.DecompOnTapes sc blank startSym endSym mark where
+    MiddleTapes.DecompOnTapes sc blank startSym endSym mark leftSym where
   dec := fun y L => EndToEnd2.gsDec2 y 8 L
   acts := D.acts
   Cd := D.Cd
   Dd := D.Dd
   decOK := fun y L hL => EndToEnd2.decOK2 y L hL
-  len_le := D.len_le
-  pat := fun y L h1 h2 ts hE => D.pat y L h1 h2 ts hE.scratch
-  upat := fun y L h1 h2 ts hE => D.upat y L h1 h2 ts hE.scratch
-  cnt := fun y L h1 h2 ts hE => D.cnt y L h1 h2 ts hE.scratch
-  keepX := D.keepX
-  keepX2 := D.keepX2
-  keepF := D.keepF
-  keepS := D.keepS
+  spec := fun y L h1 h2 _ _ ts hE _ =>
+    ⟨D.pat y L h1 h2 ts hE.scratch, D.upat y L h1 h2 ts hE.scratch,
+      D.cnt y L h1 h2 ts hE.scratch, D.keepS y L ts hE.scratch,
+      D.keepX y L ts, D.keepX2 y L ts, D.keepF y L ts, D.len_le y L ts⟩
 
-@[simp] theorem DecompOnTapes2.toDecompOnTapes_dec {blank startSym endSym mark : Fin sc}
+@[simp] theorem DecompOnTapes2.toDecompOnTapes_dec {blank startSym endSym mark leftSym : Fin sc}
     (D : DecompOnTapes2 sc blank startSym endSym mark) (y : List (Fin sc)) (L : ℕ) :
-    D.toDecompOnTapes.dec y L = EndToEnd2.gsDec2 y 8 L := rfl
+    (D.toDecompOnTapes (leftSym := leftSym)).dec y L = EndToEnd2.gsDec2 y 8 L := rfl
 
 /-- 切断位置は正規化で変わらないので、`pat` / `upat` の形は
 `MiddleTapes.DecompOnTapes` と同一である。 -/

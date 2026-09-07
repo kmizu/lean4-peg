@@ -324,7 +324,7 @@ structure StageT (sc : ℕ) where
   /-- 前処理・準備フェーズの挽き（12 本）。 -/
   pg : SGrind sc
 
-variable {blank startSym endSym mark forb : Fin sc}
+variable {blank startSym endSym mark forb leftSym : Fin sc}
 
 /-- 準備フェーズの 1 ラウンド分の挽き（起動ラウンドではプログラムを載せる）。 -/
 def setupGrind (blank startSym endSym : Fin sc) (k S n : ℕ) (g : SGrind sc) : SGrind sc :=
@@ -333,8 +333,8 @@ def setupGrind (blank startSym endSym : Fin sc) (k S n : ℕ) (g : SGrind sc) : 
 
 /-- **段の 1 ラウンド**。`t` は到着済みの入力、`a` はこのラウンドに到着した記号、
 `n` は絶対ラウンド番号。 -/
-def stround (D : DecompOnTapes sc blank startSym endSym mark)
-    (Pre : PrepOnTapes sc blank mark forb) (leftSym one zero : Fin sc)
+def stround (D : DecompOnTapes sc blank startSym endSym mark leftSym)
+    (Pre : PrepOnTapes sc blank mark forb) (one zero : Fin sc)
     (u v Text : List (Fin sc)) (k pe re : ℕ) (cst : ScanState → ℕ) (A B' S : ℕ)
     (t : List (Fin sc)) (a : Fin sc) (n : ℕ) (St : StageT sc) : StageT sc :=
   if n ≤ S / 2 then St
@@ -359,7 +359,7 @@ def stround (D : DecompOnTapes sc blank startSym endSym mark)
       mround blank startSym endSym mark leftSym one zero D t a n St.md, St.pg⟩
 
 /-- 1 ラウンドの費用。 -/
-def stcost (D : DecompOnTapes sc blank startSym endSym mark)
+def stcost (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (Pre : PrepOnTapes sc blank mark forb) (u : List (Fin sc)) (U A B' k S : ℕ)
     (n : ℕ) (St : StageT sc) : ℕ :=
   if n ≤ S / 2 then 0
@@ -371,12 +371,12 @@ def stcost (D : DecompOnTapes sc blank startSym endSym mark)
         else roundBudget U A B' k)
 
 /-- **1 ラウンドの費用の上界**。 -/
-def Cstage (D : DecompOnTapes sc blank startSym endSym mark)
+def Cstage (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (Pre : PrepOnTapes sc blank mark forb) (U A B' k : ℕ) : ℕ :=
   CmT' D + rateP Pre + rateS + 86 + roundBudget U A B' k
 
 /-- **`stage_round_actions`**：段の 1 ラウンドの動作数は `Cstage` 以下。 -/
-theorem stage_round_actions (D : DecompOnTapes sc blank startSym endSym mark)
+theorem stage_round_actions (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     (Pre : PrepOnTapes sc blank mark forb) (u : List (Fin sc)) (U A B' k S : ℕ)
     (n : ℕ) (St : StageT sc) :
     stcost D Pre u U A B' k S n St ≤ Cstage D Pre U A B' k := by
@@ -388,36 +388,36 @@ theorem stage_round_actions (D : DecompOnTapes sc blank startSym endSym mark)
   split_ifs <;> omega
 
 /-- ラウンド `n` 終了時の段の状態。 -/
-def ststate (D : DecompOnTapes sc blank startSym endSym mark)
-    (Pre : PrepOnTapes sc blank mark forb) (leftSym one zero : Fin sc)
+def ststate (D : DecompOnTapes sc blank startSym endSym mark leftSym)
+    (Pre : PrepOnTapes sc blank mark forb) (one zero : Fin sc)
     (u v Text : List (Fin sc)) (k pe re : ℕ) (cst : ScanState → ℕ) (A B' S : ℕ)
     (w : List (Fin sc)) (init : StageT sc) : ℕ → StageT sc
   | 0 => init
   | n + 1 =>
-      stround D Pre leftSym one zero u v Text k pe re cst A B' S
+      stround D Pre one zero u v Text k pe re cst A B' S
         (w.take (n + 1)) (w.getD n blank) (n + 1)
-        (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init n)
+        (ststate D Pre one zero u v Text k pe re cst A B' S w init n)
 
 /-! ## 5. 成分の同定 -/
 
 section Components
 
-variable {D : DecompOnTapes sc blank startSym endSym mark} {Pre : PrepOnTapes sc blank mark forb}
-  {leftSym one zero : Fin sc}
+variable {D : DecompOnTapes sc blank startSym endSym mark leftSym} {Pre : PrepOnTapes sc blank mark forb}
+  {one zero : Fin sc}
   {u v Text : List (Fin sc)} {k pe re : ℕ} {cst : ScanState → ℕ} {A B' S : ℕ}
   {w : List (Fin sc)} {init : StageT sc}
 
 /-- 展開補題。 -/
 theorem ststate_succ (n : ℕ) :
-    ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (n + 1)
-      = stround D Pre leftSym one zero u v Text k pe re cst A B' S
+    ststate D Pre one zero u v Text k pe re cst A B' S w init (n + 1)
+      = stround D Pre one zero u v Text k pe re cst A B' S
           (w.take (n + 1)) (w.getD n blank) (n + 1)
-          (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init n) := rfl
+          (ststate D Pre one zero u v Text k pe re cst A B' S w init n) := rfl
 
 /-- `n ≤ S/2` のあいだ、段の状態はまったく動かない。 -/
 theorem ststate_idle :
     ∀ n, n ≤ S / 2 →
-      ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init n = init := by
+      ststate D Pre one zero u v Text k pe re cst A B' S w init n = init := by
   intro n
   induction n with
   | zero => intro _; rfl
@@ -427,7 +427,7 @@ theorem ststate_idle :
 
 /-- **中央成分は `MiddleTapes.mstate` そのもの**。 -/
 theorem ststate_md :
-    ∀ n, (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init n).md
+    ∀ n, (ststate D Pre one zero u v Text k pe re cst A B' S w init n).md
       = mstate blank startSym endSym mark leftSym one zero D w S init.md n := by
   intro n
   induction n with
@@ -445,7 +445,7 @@ theorem ststate_md :
 /-- 照合器成分はラウンド `S` まで動かない。 -/
 theorem ststate_sm_pre :
     ∀ n, n < S →
-      (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init n).sm = init.sm := by
+      (ststate D Pre one zero u v Text k pe re cst A B' S w init n).sm = init.sm := by
   intro n
   induction n with
   | zero => intro _; rfl
@@ -457,14 +457,14 @@ theorem ststate_sm_pre :
 /-- ラウンド `S` に照合器は、**準備フェーズが実際に作った 12 本のテープ**
 （`setupGrind` 後の `pg.ts`）から `startVM` で起こされる。 -/
 theorem ststate_sm_birth (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
-    (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).sm
+    (ststate D Pre one zero u v Text k pe re cst A B' S w init S).sm
       = ⟨startVM blank startSym endSym mark
-          (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg.ts, 0⟩ := by
+          (ststate D Pre one zero u v Text k pe re cst A B' S w init S).pg.ts, 0⟩ := by
   obtain ⟨m, hm⟩ : ∃ m, S = m + 1 := ⟨S - 1, by omega⟩
-  have hst : ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S
-      = stround D Pre leftSym one zero u v Text k pe re cst A B' S
+  have hst : ststate D Pre one zero u v Text k pe re cst A B' S w init S
+      = stround D Pre one zero u v Text k pe re cst A B' S
           (w.take S) (w.getD (S - 1) blank) S
-          (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (S - 1)) := by
+          (ststate D Pre one zero u v Text k pe re cst A B' S w init (S - 1)) := by
     rw [hm]; exact ststate_succ m
   rw [hst, stround, if_neg (by omega), if_neg (by omega), if_pos le_rfl]
   show (if S = S then _ else _) = _
@@ -475,16 +475,16 @@ theorem ststate_sm_birth (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
 ラウンド `S + i` の照合器成分は `vstartT'` の `i` 段目そのもの。 -/
 theorem ststate_sm_start (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
     ∀ i, i ≤ u.length →
-      (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (S + i)).sm
+      (ststate D Pre one zero u v Text k pe re cst A B' S w init (S + i)).sm
         = ⟨vstartT' blank mark Text i (startVM blank startSym endSym mark
-            (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg.ts),
+            (ststate D Pre one zero u v Text k pe re cst A B' S w init S).pg.ts),
           0⟩ := by
   intro i
   induction i with
   | zero =>
     intro _
     rw [Nat.add_zero]
-    exact ststate_sm_birth (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+    exact ststate_sm_birth (D := D) (Pre := Pre) (one := one)
       (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
       (cst := cst) (A := A) (B' := B') (w := w) (init := init) hS hq
   | succ i ih =>
@@ -492,19 +492,19 @@ theorem ststate_sm_start (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
     rw [show S + (i + 1) = (S + i) + 1 from by omega, ststate_succ, stround,
       if_neg (by omega), if_neg (by omega), if_neg (by omega), if_pos (by omega)]
     show (⟨vstartRound' blank mark (Text.getD (S + i + 1 - 1 - S) blank)
-        (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (S + i)).sm.M,
-      (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (S + i)).sm.rem⟩
+        (ststate D Pre one zero u v Text k pe re cst A B' S w init (S + i)).sm.M,
+      (ststate D Pre one zero u v Text k pe re cst A B' S w init (S + i)).sm.rem⟩
         : SMachine sc) = _
     rw [ih (by omega), show S + i + 1 - 1 - S = i from by omega]
     rfl
 
 /-- ラウンド `S + |u|` の照合器成分はまさに `StageMatcherTapes.initSM`。 -/
 theorem ststate_sm_idle (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
-    (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
+    (ststate D Pre one zero u v Text k pe re cst A B' S w init
         (S + u.length)).sm
       = initSM' blank startSym endSym mark u Text
-          (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg.ts :=
-  ststate_sm_start (D := D) (Pre := Pre) (leftSym := leftSym) (one := one) (zero := zero)
+          (ststate D Pre one zero u v Text k pe re cst A B' S w init S).pg.ts :=
+  ststate_sm_start (D := D) (Pre := Pre) (one := one) (zero := zero)
     (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re) (cst := cst)
     (A := A) (B' := B') (w := w) (init := init) hS hq u.length le_rfl
 
@@ -512,15 +512,15 @@ theorem ststate_sm_idle (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
 照合器の反復 `i` に対応する（`Metered.metered_start` により `[0, |u|]` は停止区間）。 -/
 theorem ststate_sm (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
     ∀ n, S + u.length ≤ n →
-      (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init n).sm
+      (ststate D Pre one zero u v Text k pe re cst A B' S w init n).sm
       = stage blank endSym mark u v k pe re Text cst A B' u.length (n - (S + u.length))
           (initSM' blank startSym endSym mark u Text
-            (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg.ts) := by
+            (ststate D Pre one zero u v Text k pe re cst A B' S w init S).pg.ts) := by
   intro n hn
   induction n, hn using Nat.le_induction with
   | base =>
     rw [Nat.sub_self]
-    exact ststate_sm_idle (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+    exact ststate_sm_idle (D := D) (Pre := Pre) (one := one)
       (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
       (cst := cst) (A := A) (B' := B') (w := w) (init := init) hS hq
   | succ n hn ih =>
@@ -538,8 +538,8 @@ end Components
 
 section Grind
 
-variable {D : DecompOnTapes sc blank startSym endSym mark} {Pre : PrepOnTapes sc blank mark forb}
-  {leftSym one zero : Fin sc}
+variable {D : DecompOnTapes sc blank startSym endSym mark leftSym} {Pre : PrepOnTapes sc blank mark forb}
+  {one zero : Fin sc}
   {u v Text : List (Fin sc)} {k pe re : ℕ} {cst : ScanState → ℕ} {A B' S : ℕ}
   {w : List (Fin sc)} {init : StageT sc}
 
@@ -553,10 +553,10 @@ theorem sgsteps_succ' (blank : Fin sc) (R : ℕ) :
 
 /-- 誕生ラウンド `S/2 + 1` に前処理のプログラムが載る。 -/
 theorem pg_install_prep (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
-    (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (S / 2 + 1)).pg
+    (ststate D Pre one zero u v Text k pe re cst A B' S w init (S / 2 + 1)).pg
       = sgstep blank (rateP Pre)
           ⟨Pre.prog (w.take (S / 2)) (S / 2) init.pg.ts, init.pg.ts⟩ := by
-  rw [ststate_succ, ststate_idle (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+  rw [ststate_succ, ststate_idle (D := D) (Pre := Pre) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) (S / 2) le_rfl,
     stround, if_neg (by omega), if_pos (by omega)]
@@ -566,10 +566,10 @@ theorem pg_install_prep (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
 /-- 前処理の窓の内部では `pg` はただ挽かれるだけ。 -/
 theorem pg_window_prep (_hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
     ∀ j, S / 2 + 1 + j ≤ 3 * (S / 4) →
-      (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
+      (ststate D Pre one zero u v Text k pe re cst A B' S w init
           (S / 2 + 1 + j)).pg
       = sgsteps blank (rateP Pre) j
-          (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
+          (ststate D Pre one zero u v Text k pe re cst A B' S w init
             (S / 2 + 1)).pg := by
   intro j
   induction j with
@@ -584,14 +584,14 @@ theorem pg_window_prep (_hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
 /-- **前処理はラウンド `3(S/4)` までに完了する**。 -/
 theorem prep_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Text' : List (Fin sc))
     (hpp : PrepPre blank mark leftSym (S / 2) w Text' init.pg.ts) (hforb : forb ∉ w) :
-    (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (3 * (S / 4))).pg
+    (ststate D Pre one zero u v Text k pe re cst A B' S w init (3 * (S / 4))).pg
       = ⟨[], run blank (Pre.prog (w.take (S / 2)) (S / 2) init.pg.ts) init.pg.ts⟩ := by
-  have hwin := pg_window_prep (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+  have hwin := pg_window_prep (D := D) (Pre := Pre) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
     (S / 4 - 1) (by omega)
   rw [show S / 2 + 1 + (S / 4 - 1) = 3 * (S / 4) from by omega] at hwin
-  rw [hwin, pg_install_prep (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+  rw [hwin, pg_install_prep (D := D) (Pre := Pre) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq,
     show sgsteps blank (rateP Pre) (S / 4 - 1)
@@ -609,13 +609,13 @@ theorem prep_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Text' : List (Fin s
 
 /-- 準備フェーズのプログラムがラウンド `3(S/4) + 1` に載る。 -/
 theorem pg_install_setup (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
-    (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
+    (ststate D Pre one zero u v Text k pe re cst A B' S w init
         (3 * (S / 4) + 1)).pg
       = sgstep blank rateS
           ⟨setupProgram blank startSym endSym k
-              (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
+              (ststate D Pre one zero u v Text k pe re cst A B' S w init
                 (3 * (S / 4))).pg.ts,
-            (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
+            (ststate D Pre one zero u v Text k pe re cst A B' S w init
               (3 * (S / 4))).pg.ts⟩ := by
   rw [ststate_succ, stround, if_neg (by omega), if_neg (by omega), if_pos (by omega)]
   show setupGrind blank startSym endSym k S (3 * (S / 4) + 1) _ = _
@@ -624,10 +624,10 @@ theorem pg_install_setup (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
 /-- 準備フェーズの窓の内部では `pg` はただ挽かれるだけ。 -/
 theorem pg_window_setup (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
     ∀ j, 3 * (S / 4) + 1 + j ≤ S →
-      (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
+      (ststate D Pre one zero u v Text k pe re cst A B' S w init
           (3 * (S / 4) + 1 + j)).pg
       = sgsteps blank rateS j
-          (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
+          (ststate D Pre one zero u v Text k pe re cst A B' S w init
             (3 * (S / 4) + 1)).pg := by
   intro j
   induction j with
@@ -642,18 +642,18 @@ theorem pg_window_setup (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
 /-- **準備フェーズはラウンド `S` までに完了する**（`k * p₁ ≤ 5 * S` のとき）。 -/
 theorem setup_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) {p₁ : ℕ} (hkp : k * p₁ ≤ 5 * S)
     (hsetup : (setupProgram blank startSym endSym k
-        (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
+        (ststate D Pre one zero u v Text k pe re cst A B' S w init
           (3 * (S / 4))).pg.ts).length ≤ 7 * (S / 2 + k * p₁ + 1)) :
-    (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg
+    (ststate D Pre one zero u v Text k pe re cst A B' S w init S).pg
       = ⟨[], setupRun blank startSym endSym k
-          (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
+          (ststate D Pre one zero u v Text k pe re cst A B' S w init
             (3 * (S / 4))).pg.ts⟩ := by
-  have hwin := pg_window_setup (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+  have hwin := pg_window_setup (D := D) (Pre := Pre) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
     (S / 4 - 1) (by omega)
   rw [show 3 * (S / 4) + 1 + (S / 4 - 1) = S from by omega] at hwin
-  rw [hwin, pg_install_setup (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+  rw [hwin, pg_install_setup (D := D) (Pre := Pre) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq]
   rw [show sgsteps blank rateS (S / 4 - 1)
@@ -671,16 +671,16 @@ theorem setup_complete' (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Textp : List (Fin
     (hpp : PrepPre blank mark leftSym (S / 2) w Textp init.pg.ts) (hforb : forb ∉ w)
     (hcut : (Pre.res w (S / 2)).1 < S / 2)
     (hkp : k * (Pre.res w (S / 2)).2.1 ≤ 5 * S) :
-    (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg
+    (ststate D Pre one zero u v Text k pe re cst A B' S w init S).pg
       = ⟨[], setupRun blank startSym endSym k
-          (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
+          (ststate D Pre one zero u v Text k pe re cst A B' S w init
             (3 * (S / 4))).pg.ts⟩ := by
-  have hpc := prep_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+  have hpc := prep_complete (D := D) (Pre := Pre) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq Textp hpp hforb
   have hpre := Pre.post w Textp (S / 2) init.pg.ts leftSym hpp hforb hcut
   have hspec := setup_spec (startSym := startSym) (endSym := endSym) (k := k) hpre
-  refine setup_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+  refine setup_complete (D := D) (Pre := Pre) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init)
     hS hq (p₁ := (Pre.res w (S / 2)).2.1) hkp ?_
@@ -720,8 +720,8 @@ theorem stAnswerBit_eq {u v Text : List (Fin sc)} {k pe re : ℕ} {cst : ScanSta
 `GSCore`・費用関数の仕様だけである（起動フェーズの `hgm0` は `ststate_sm_idle` と
 `StageMatcherTapes.stage_init` から導かれる）。 -/
 theorem stage_tapes_spec'
-    {D : DecompOnTapes sc blank startSym endSym mark} {Pre : PrepOnTapes sc blank mark endSym}
-    {leftSym one zero : Fin sc}
+    {D : DecompOnTapes sc blank startSym endSym mark leftSym} {Pre : PrepOnTapes sc blank mark endSym}
+    {one zero : Fin sc}
     {w : List (Fin sc)} {S k s p₁ r A B' : ℕ} {cst : ScanState → ℕ} {init : StageT sc}
     (hmb : mark ≠ blank) (hS : 8 ≤ S) (hq : 4 * (S / 4) = S)
     (hres : Pre.res w (S / 2)
@@ -737,7 +737,7 @@ theorem stage_tapes_spec'
         - Phi k st))
     (hadvance : ∀ st, st.q ≠ ((w.take (S / 2)).reverse.drop s).length →
       (w.drop S)[st.pos + st.q]? = ((w.take (S / 2)).reverse.drop s)[st.q]? → cst st ≤ 1)
-    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
+    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w) (hstart : startSym ∉ w)
     (hev : 2 * (S / 2) = S)
     (hminit : ∀ m, m ≤ S / 2 →
       MEncodes blank startSym endSym mark leftSym one zero D w S m init.md)
@@ -745,11 +745,11 @@ theorem stage_tapes_spec'
     stAnswerBit ((w.take (S / 2)).reverse.take s) ((w.take (S / 2)).reverse.drop s)
         (w.drop S) k (effPeriod ((w.take (S / 2)).reverse.drop s) p₁) (effReach p₁ r)
         cst A B' S one n
-        (ststate D Pre leftSym one zero
+        (ststate D Pre one zero
           ((w.take (S / 2)).reverse.take s) ((w.take (S / 2)).reverse.drop s) (w.drop S)
           k (effPeriod ((w.take (S / 2)).reverse.drop s) p₁) (effReach p₁ r) cst A B' S w init
           (n - 1))
-        (ststate D Pre leftSym one zero
+        (ststate D Pre one zero
           ((w.take (S / 2)).reverse.take s) ((w.take (S / 2)).reverse.drop s) (w.drop S)
           k (effPeriod ((w.take (S / 2)).reverse.drop s) p₁) (effReach p₁ r) cst A B' S w init
           n) = true
@@ -768,39 +768,39 @@ theorem stage_tapes_spec'
   have hTlen : u.length ≤ (w.drop S).length := by
     rw [hulen, List.length_drop]; omega
   -- 起動フェーズの帰結：ラウンド `S + |u|` の照合器は `initSM`
-  have hbirth := ststate_sm_idle (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+  have hbirth := ststate_sm_idle (D := D) (Pre := Pre) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
   -- 準備フェーズの出力テープ：`setup_complete'` ＋ `PatternTapes.setup_spec`
   have hcut : (Pre.res w (S / 2)).1 < S / 2 := by rw [hres]; exact hs
-  have hpc := prep_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+  have hpc := prep_complete (D := D) (Pre := Pre) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
     (w.drop S) hpinit hend
   have hpre := Pre.post w (w.drop S) (S / 2) init.pg.ts leftSym hpinit hend hcut
-  have hsc := setup_complete' (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+  have hsc := setup_complete' (D := D) (Pre := Pre) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq (w.drop S)
     hpinit hend hcut (by rw [hres]; exact hkp)
   have hE : GSVTapes.VEncodes' blank startSym endSym mark u v
       (TextFeed.padW blank (w.drop S) 0) k pe re
-      (toGS (ststate D Pre leftSym one zero u v (w.drop S) k pe re cst A B' S w init S).pg.ts,
-        toVExt (ststate D Pre leftSym one zero u v (w.drop S) k pe re cst A B' S w init S).pg.ts)
+      (toGS (ststate D Pre one zero u v (w.drop S) k pe re cst A B' S w init S).pg.ts,
+        toVExt (ststate D Pre one zero u v (w.drop S) k pe re cst A B' S w init S).pg.ts)
       ((⟨0, 0⟩ : ScanState), 0) := by
     have h := (setup_spec (startSym := startSym) (endSym := endSym) (k := k) hpre).1
     rw [hres] at h
     rw [hsc, hpc]
     exact h
-  have hgm0 : gm (ststate D Pre leftSym one zero u v (w.drop S) k pe re cst A B' S w init
+  have hgm0 : gm (ststate D Pre one zero u v (w.drop S) k pe re cst A B' S w init
       (S + u.length)).sm
       = metered u v k pe re (w.drop S) cst A B' u.length := by
     rw [hbirth]
     exact (stage_init_of (cst := cst) (A := A) (B' := B') hmb hvpos hTlen hE).2.1
-  have hsm := ststate_sm (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+  have hsm := ststate_sm (D := D) (Pre := Pre) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
     (n - 1) (by rw [hulen]; omega)
-  have hghost : gm (ststate D Pre leftSym one zero
+  have hghost : gm (ststate D Pre one zero
       u v (w.drop S) k pe re cst A B' S w init (n - 1)).sm
       = metered u v k pe re (w.drop S) cst A B' (n - S - 1) := by
     rw [hsm, ← hbirth, stage_round_spec (blank := blank) (endSym := endSym)
@@ -812,8 +812,8 @@ theorem stage_tapes_spec'
     (n := n) h1 hw
   have hmid := middle_flag_read (blank := blank) (startSym := startSym) (endSym := endSym)
     (mark := mark) (leftSym := leftSym) (one := one) (zero := zero) D
-    hne hleft hend hev hS2 hminit n h1 h2 hw
-  have hmdst := ststate_md (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+    hne hleft hend hstart hev hS2 hminit n h1 h2 hw
+  have hmdst := ststate_md (D := D) (Pre := Pre) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) n
   rw [hmdst, hmid]
