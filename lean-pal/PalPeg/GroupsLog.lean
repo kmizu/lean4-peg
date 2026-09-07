@@ -7,30 +7,50 @@ import Mathlib.Data.Nat.Log
 `PalPeg.Groups` の群表現 `groupChainRev` は「隣り合う群が実は 1 本の等差数列」という
 冗長性を残す。本ファイルでは
 
-* `mergeAdj` … 隣接群を 1 パスで融合する正準化
-* `Canonical` … 隣接群がもう融合できない状態
-* `groupChainRevN` … 各ステップで正準化する群鎖
+* `mergeAdj` … 隣接群を 1 パスで融合する正準化（`expandAll_mergeAdj`, `honest_mergeAdj`）
+* `Canonical` … 隣接群がもう融合できない状態（`canonical_mergeAdj`）
+* `groupChainRevN` … 各ステップで正準化する群鎖（`expandAll_groupChainRevN`,
+  `canonical_groupChainRevN`）
 * `boundary_shrink` … 群境界で長さが 2/3 未満に落ちること（Fine–Wilf）
+* `gap_antitone` … 鎖の差は下るほど広がらない
+* `length_le_of_shrink`, `length_le_log_of_shrink` … 2/3 縮小列の長さの対数上界
+* `groupCount_le_of_tops_shrink` … 群数 ≤ `2 * log₂ |v| + 4`（境界縮小を仮定した形）
 
-を扱う。
+**未完部分**：`boundary_shrink` から `groupCount_le_of_tops_shrink` の仮定
+（隣接群の先頭が 2/3 で縮むこと）を導く一歩、すなわち「正準群列の隣接群から
+`chainRev v` の連続 3 要素を取り出す」補題は未形式化。
+`expandAll gs = chainRev v` のソート性に関する list 手術が必要になる。
+なお `Group.diff`（単項群の実効公差）を入れないと群数が語長に比例することは
+実測で確認済み（`Group.diff` の docstring 参照）。
 -/
 
 namespace PalPeg
 
 /-! ## 隣接群の融合 -/
 
+/-- 融合に使う**実効公差**。`count = 1` の群は公差が意味を持たない（`compress` は
+`p = 0` を置き、`groupFilterOne` は古い `p` をそのまま引き継ぐ）ので、
+単項の群については次の群の先頭との差を公差として採用する。
+
+この規約を入れないと、`chainRev [0,1,0,1,0,0,…] = [5,3,1,0]` のような鎖に対して
+`⟨1,5,1⟩, ⟨1,3,1⟩, ⟨1,1,2⟩`（`p` は履歴由来の 1）が「融合不能」と判定され、
+群数が語長に比例して増えてしまう（実測済み）。 -/
+def Group.diff (g₁ g₂ : Group) : ℕ := if g₁.count = 1 then g₁.top - g₂.top else g₁.p
+
 /-- 群 `g₁`, `g₂` が 1 本の等差数列をなす（融合可能）。
-`g₁` の末項 `top - (count-1)*p` の次が `g₂.top` であり、公差も一致すること。
-`count = 1` の群は公差が意味を持たない（`compress` の規約）ので、その場合は公差を問わない。 -/
+`g₁` の末項 `top - (count-1)*d` の次が `g₂.top` であり、公差も一致すること
+（`d = g₁.diff g₂` は実効公差。`g₁.count ≥ 2` なら `d = g₁.p` そのもの）。 -/
 def Mergeable (g₁ g₂ : Group) : Prop :=
-  1 ≤ g₁.count ∧ 1 ≤ g₂.count ∧
-    g₂.top + g₁.p = g₁.top - (g₁.count - 1) * g₁.p ∧ (g₂.p = g₁.p ∨ g₂.count = 1)
+  1 ≤ g₁.count ∧ 1 ≤ g₂.count ∧ g₂.top < g₁.top ∧
+    g₂.top + g₁.diff g₂ = g₁.top - (g₁.count - 1) * (g₁.diff g₂) ∧
+      (g₂.p = g₁.diff g₂ ∨ g₂.count = 1)
 
 instance (g₁ g₂ : Group) : Decidable (Mergeable g₁ g₂) := by
   unfold Mergeable; infer_instance
 
 /-- 融合の結果。 -/
-def Group.merge (g₁ g₂ : Group) : Group := ⟨g₁.p, g₁.top, g₁.count + g₂.count⟩
+def Group.merge (g₁ g₂ : Group) : Group :=
+  ⟨g₁.diff g₂, g₁.top, g₁.count + g₂.count⟩
 
 /-- 隣接群を左から貪欲に融合する 1 パス。融合後は同じ群をもう一度次の群と比較する。 -/
 def mergeAdj : List Group → List Group
@@ -67,21 +87,24 @@ theorem expand_merge {p t k p' t' k' : ℕ} (hk : 1 ≤ k) (hk' : 1 ≤ k')
   · rfl
   · simp
 
+/-- 単項の群は実効公差で置き換えても展開が変わらない。 -/
+theorem expand_diff_eq (g₁ g₂ : Group) :
+    Group.expand ⟨g₁.diff g₂, g₁.top, g₁.count⟩ = Group.expand g₁ := by
+  obtain ⟨p, t, k⟩ := g₁
+  simp only [Group.diff]
+  by_cases h : k = 1
+  · subst h; simp
+  · rw [if_neg h]
+
 theorem expand_Group_merge {g₁ g₂ : Group} (h : Mergeable g₁ g₂) :
     Group.expand (g₁.merge g₂) = Group.expand g₁ ++ Group.expand g₂ := by
-  obtain ⟨p, t, k⟩ := g₁
-  obtain ⟨p', t', k'⟩ := g₂
-  obtain ⟨hk, hk', hcond, hdisj⟩ := h
-  exact expand_merge hk hk' hcond hdisj
+  obtain ⟨hk, hk', _hlt, hcond, hdisj⟩ := h
+  rw [Group.merge, expand_merge hk hk' hcond hdisj, expand_diff_eq g₁ g₂]
 
-/-- 融合結果は正直（`Honest`）。 -/
-theorem honest_Group_merge {g₁ g₂ : Group} (h : Mergeable g₁ g₂)
-    (h1 : Honest g₁) (h2 : Honest g₂) : Honest (g₁.merge g₂) := by
-  obtain ⟨p, t, k⟩ := g₁
-  obtain ⟨p', t', k'⟩ := g₂
-  obtain ⟨hk, hk', hcond, hdisj⟩ := h
-  simp only [Honest] at h1 h2 ⊢
-  simp only [Group.merge] at *
+/-- 正直さの数値版。 -/
+theorem honest_merge_raw {p t k p' t' k' : ℕ} (hk : 1 ≤ k) (hk' : 1 ≤ k')
+    (hcond : t' + p = t - (k - 1) * p) (hdisj : p' = p ∨ k' = 1)
+    (h1 : (k - 1) * p ≤ t) (h2 : (k' - 1) * p' ≤ t') : (k + k' - 1) * p ≤ t := by
   obtain ⟨m, rfl⟩ : ∃ m, k = m + 1 := ⟨k - 1, by omega⟩
   obtain ⟨j, rfl⟩ : ∃ j, k' = j + 1 := ⟨k' - 1, by omega⟩
   simp only [Nat.add_sub_cancel] at h1 h2 hcond
@@ -102,6 +125,21 @@ theorem honest_Group_merge {g₁ g₂ : Group} (h : Mergeable g₁ g₂)
     have : m + 1 + (0 + 1) - 1 = m + 1 := by omega
     rw [this]
     exact hkp
+
+/-- 実効公差でも正直さは保たれる（単項なら `(count-1)*d = 0`）。 -/
+theorem honest_diff (g₁ g₂ : Group) (h1 : Honest g₁) :
+    (g₁.count - 1) * (g₁.diff g₂) ≤ g₁.top := by
+  simp only [Honest] at h1
+  simp only [Group.diff]
+  by_cases h : g₁.count = 1
+  · rw [if_pos h, h]; simp
+  · rw [if_neg h]; exact h1
+
+/-- 融合結果は正直（`Honest`）。 -/
+theorem honest_Group_merge {g₁ g₂ : Group} (h : Mergeable g₁ g₂)
+    (h1 : Honest g₁) (h2 : Honest g₂) : Honest (g₁.merge g₂) := by
+  obtain ⟨hk, hk', _hlt, hcond, hdisj⟩ := h
+  exact honest_merge_raw hk hk' hcond hdisj (honest_diff g₁ g₂ h1) h2
 
 /-! ### `mergeAdj` の性質 -/
 
@@ -185,7 +223,7 @@ theorem pos_mergeAdj : ∀ (gs : List Group), (∀ g ∈ gs, 1 ≤ g.count) →
 
 /-- `mergeAdj (g :: rest)` の先頭は `g` と同じ公差・同じ先頭をもち、個数だけ増えている。 -/
 theorem mergeAdj_head : ∀ (gs : List Group) (g : Group) (rest : List Group), gs = g :: rest →
-    ∃ k tl, mergeAdj gs = ⟨g.p, g.top, k⟩ :: tl ∧ g.count ≤ k := by
+    ∃ q k tl, mergeAdj gs = ⟨q, g.top, k⟩ :: tl ∧ g.count ≤ k ∧ (2 ≤ g.count → q = g.p) := by
   intro gs
   induction gs using mergeAdj.induct with
   | case1 => intro g rest h; cases h
@@ -193,21 +231,28 @@ theorem mergeAdj_head : ∀ (gs : List Group) (g : Group) (rest : List Group), g
       intro g rest h
       rw [List.cons.injEq] at h
       obtain ⟨rfl, _⟩ := h
-      exact ⟨g'.count, [], by rw [mergeAdj_singleton], Nat.le_refl _⟩
+      exact ⟨g'.p, g'.count, [], by rw [mergeAdj_singleton], Nat.le_refl _, fun _ => rfl⟩
   | case3 g₁ g₂ rest hm ih =>
       intro g rest' h
       rw [List.cons.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      obtain ⟨k, tl, hk, hk'⟩ := ih (g₁.merge g₂) rest rfl
-      refine ⟨k, tl, ?_, ?_⟩
+      obtain ⟨q, k, tl, hk, hk', hq⟩ := ih (g₁.merge g₂) rest rfl
+      refine ⟨q, k, tl, ?_, ?_, ?_⟩
       · rw [mergeAdj_cons_cons, if_pos hm]; exact hk
       · simp only [Group.merge] at hk'; omega
+      · intro h2
+        have hge : 2 ≤ (g₁.merge g₂).count := by
+          simp only [Group.merge]
+          have := hm.2.1
+          omega
+        rw [hq hge]
+        simp only [Group.merge, Group.diff, if_neg (show ¬ g₁.count = 1 by omega)]
   | case4 g₁ g₂ rest hm ih =>
       intro g rest' h
       rw [List.cons.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact ⟨g₁.count, mergeAdj (g₂ :: rest), by rw [mergeAdj_cons_cons, if_neg hm],
-        Nat.le_refl _⟩
+      exact ⟨g₁.p, g₁.count, mergeAdj (g₂ :: rest), by rw [mergeAdj_cons_cons, if_neg hm],
+        Nat.le_refl _, fun _ => rfl⟩
 
 /-! ## 正準形 -/
 
@@ -238,7 +283,7 @@ theorem canonical_mergeAdj : ∀ (gs : List Group), (∀ g ∈ gs, Honest g ∧ 
     | case4 g₁ g₂ rest hm ih =>
         intro hh
         rw [mergeAdj_cons_cons, if_neg hm]
-        obtain ⟨k, tl, hk, hkc⟩ := mergeAdj_head (g₂ :: rest) g₂ rest rfl
+        obtain ⟨q, k, tl, hk, hkc, hq⟩ := mergeAdj_head (g₂ :: rest) g₂ rest rfl
         rw [hk]
         refine List.isChain_cons.mpr ⟨?_, ?_⟩
         · intro y hy
@@ -246,14 +291,20 @@ theorem canonical_mergeAdj : ∀ (gs : List Group), (∀ g ∈ gs, Honest g ∧ 
           injection hy with hy2
           subst hy2
           intro hmg
-          refine hm ?_
-          obtain ⟨hc1, hc2, hc3, hc4⟩ := hmg
-          refine ⟨hc1, (hh g₂ (by simp)).2, hc3, ?_⟩
-          rcases hc4 with h | h
-          · exact Or.inl h
+          obtain ⟨hc1, _hc2, hc3, hc4, hc5⟩ := hmg
+          have hpos2 : 1 ≤ g₂.count := (hh g₂ (by simp)).2
+          have hd : g₁.diff (⟨q, g₂.top, k⟩ : Group) = g₁.diff g₂ := by
+            simp only [Group.diff]
+          refine hm ⟨hc1, hpos2, hc3, by rw [← hd]; exact hc4, ?_⟩
+          rcases hc5 with h | h
+          · by_cases hc : g₂.count = 1
+            · exact Or.inr hc
+            · refine Or.inl ?_
+              have hq2 : q = g₂.p := hq (by omega)
+              rw [← hq2, ← hd]
+              exact h
           · refine Or.inr ?_
             have hk1 : k = 1 := h
-            have := (hh g₂ (by simp)).2
             omega
         · rw [← hk]
           exact ih (fun g hg => hh g (by simp [List.mem_cons.mp hg]))
@@ -504,6 +555,41 @@ theorem length_le_log_of_shrink (ts : List ℕ) (n : ℕ)
     lt_of_le_of_lt (hn t ht) (Nat.lt_pow_succ_log_self (by omega) n))
   omega
 
+/-! ## 群数の対数上界 -/
+
+theorem mem_expandAll_of_mem {gs : List Group} {g : Group} (hg : g ∈ gs) {x : ℕ}
+    (hx : x ∈ g.expand) : x ∈ expandAll gs :=
+  List.mem_flatMap.mpr ⟨g, hg, hx⟩
+
+/-- 正準群鎖の各群の先頭は鎖の要素。 -/
+theorem top_mem_chainRev (v : List (Fin 2)) {g : Group} (hg : g ∈ groupChainRevN v) :
+    g.top ∈ chainRev v := by
+  rw [← expandAll_groupChainRevN v]
+  refine mem_expandAll_of_mem hg ?_
+  have hc : 1 ≤ g.count := pos_groupChainRevN v g hg
+  simp only [Group.expand, List.mem_map, List.mem_range]
+  exact ⟨0, by omega, by simp⟩
+
+/-- **群数の対数上界（境界縮小を仮定した形）**。
+群の先頭が境界ごとに `2/3` 未満へ縮むならば、群数は `2 * log₂ |v| + 4` 以下。
+
+境界縮小 `htops` は `boundary_shrink` と `gap_antitone` から従うはずのものだが、
+「正準群列の隣接群から鎖の連続 3 要素を取り出す」補題（`expandAll` と
+`chainRev` のソート性に関する list 手術）はまだ形式化していない。 -/
+theorem groupCount_le_of_tops_shrink (v : List (Fin 2))
+    (htops : ((groupChainRevN v).map Group.top).IsChain (fun a b => 3 * b < 2 * a)) :
+    (groupChainRevN v).length ≤ 2 * Nat.log 2 v.length + 4 := by
+  have hlen : ((groupChainRevN v).map Group.top).length = (groupChainRevN v).length :=
+    List.length_map ..
+  rw [← hlen]
+  refine length_le_log_of_shrink _ v.length htops ?_
+  intro t ht
+  rw [List.head?_map] at ht
+  simp only [Option.mem_def, Option.map_eq_some_iff] at ht
+  obtain ⟨g, hg, rfl⟩ := ht
+  have hmem : g ∈ groupChainRevN v := List.mem_of_mem_head? hg
+  exact ((mem_chainRev_iff v g.top).mp (top_mem_chainRev v hmem)).1
+
 /-! ### 健全性チェック -/
 
 example : groupChainRev [0, 0, 0, 0] = [⟨1, 4, 1⟩, ⟨1, 3, 2⟩, ⟨1, 1, 2⟩] := by decide
@@ -518,6 +604,14 @@ example : mergeAdj [⟨1, 4, 1⟩, ⟨1, 3, 2⟩, ⟨1, 1, 2⟩] = [⟨1, 4, 5�
 
 example : expandAll [(⟨1, 4, 5⟩ : Group)] = [4, 3, 2, 1, 0] := by decide
 
+/-- 実効公差の効果。履歴由来の `p = 1` を持つ単項群 2 つが、
+本当の公差 `2` の等差数列として融合される（`chainRev = [5,3,1,0]` の場合）。 -/
+example : mergeAdj [⟨1, 5, 1⟩, ⟨1, 3, 1⟩, ⟨1, 1, 2⟩] = [⟨2, 5, 2⟩, ⟨1, 1, 2⟩] := by
+  rw [mergeAdj_cons_cons, if_pos (by decide : Mergeable ⟨1, 5, 1⟩ ⟨1, 3, 1⟩),
+    show Group.merge ⟨1, 5, 1⟩ ⟨1, 3, 1⟩ = ⟨2, 5, 2⟩ from rfl,
+    mergeAdj_cons_cons, if_neg (by decide : ¬ Mergeable ⟨2, 5, 2⟩ ⟨1, 1, 2⟩),
+    mergeAdj_singleton]
+
 example : Canonical [(⟨1, 4, 5⟩ : Group)] := by
   refine ⟨?_, List.isChain_singleton _⟩
   intro g hg
@@ -526,3 +620,4 @@ example : Canonical [(⟨1, 4, 5⟩ : Group)] := by
   exact ⟨by simp [Honest], by decide⟩
 
 end PalPeg
+

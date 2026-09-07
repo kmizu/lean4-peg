@@ -6,9 +6,11 @@ import PalPeg.Words
 import PalPeg.Chain
 import PalPeg.Structure
 import PalPeg.Groups
+import PalPeg.GroupsLog
 import PalPeg.Matching
 import PalPeg.RTQueue
 import PalPeg.Manacher
+import PalPeg.Stages
 
 /-!
 # PalPeg
@@ -23,8 +25,10 @@ import PalPeg.Manacher
 * `PalPeg.Words`     — 回文と周期の組合せ論（拡張則・境界・Fine–Wilf・group 補題）
 * `PalPeg.Structure` — レプリカ・境界・予測補題・禁止帯（`lsp_shift_bound`）と (M) の反例
 * `PalPeg.Groups`    — group 圧縮した鎖（2 回の記号参照/群）が `chain` を展開する
+* `PalPeg.GroupsLog` — group 併合・正準性・境界縮小 `3ℓ' < 2ℓ`（群数の対数上界は条件付き）
 * `PalPeg.Matching`  — KMP 一歩・境界鎖・Galil の予測補題（仕事 ≤ 保証ゼロ出力数）
 * `PalPeg.Manacher`  — Manacher の radius 走査の正しさ、接頭辞回文フラグ、仕事量 ≤ n
+* `PalPeg.Stages`    — dyadic stage 分解 `Pal(n) ⇔ match_W ∧ middle_W`、段の被覆と同時稼働 ≤ 2
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/

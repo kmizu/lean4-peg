@@ -5,9 +5,11 @@ import PalPeg.Words
 import PalPeg.Chain
 import PalPeg.Structure
 import PalPeg.Groups
+import PalPeg.GroupsLog
 import PalPeg.Matching
 import PalPeg.RTQueue
 import PalPeg.Manacher
+import PalPeg.Stages
 
 /-!
 # 公理 guard
@@ -132,3 +134,27 @@ import PalPeg.Manacher
 /-- info: 'PalPeg.Manacher.work_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.Manacher.work_le
+
+/-- info: 'PalPeg.expandAll_groupChainRevN' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.expandAll_groupChainRevN
+
+/-- info: 'PalPeg.canonical_groupChainRevN' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.canonical_groupChainRevN
+
+/-- info: 'PalPeg.boundary_shrink' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.boundary_shrink
+
+/-- info: 'PalPeg.pal_prefix_iff_stage' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.pal_prefix_iff_stage
+
+/-- info: 'PalPeg.stageOf_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.stageOf_spec
+
+/-- info: 'PalPeg.live_stages' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.live_stages
