@@ -19,6 +19,7 @@ import PalPeg.GSScanTapes
 import PalPeg.GSVerifierTapes
 import PalPeg.TextFeed
 import PalPeg.InputCopy
+import PalPeg.PatternTapes
 import PalPeg.BorderJob
 import PalPeg.BorderJobTapes
 import PalPeg.RTQueue
@@ -76,6 +77,7 @@ import PalPeg.Main
 * `PalPeg.GSVerifierTapes` — u 検証器の 5 テープ化、走行費用 ≤ (2k+3)ΔΦ+18n（L1 不要で償却）
 * `PalPeg.TextFeed`   — 到着記号を FIFO で走査テープに供給、`feed_online` で `onlineRun` を再現
 * `PalPeg.InputCopy` — 入力コピー（フロンティア書き込み 1 動作/ラウンド、左読み）
+* `PalPeg.PatternTapes` — 段のセットアップ（入力コピーからパターン/U/カウンタ群を構築、≤ 21h 動作）
 * `PalPeg.BorderJob`  — 中央フラグの GS 系境界列挙（縮小段、`palPrefixFlagsGS_spec`、仕事 ≤ 258|x|）
 * `PalPeg.RTQueueTapes` — Hood–Melville キューを 9 本のスタックテープで実現（snoc ≤ 20、tail ≤ 27 動作；`lenr ≤ lenf` 判定は仮定）
 * `PalPeg.GSPreprocess` — 計算可能な GS 分解 `decompose`（Python と一致）、`decompose_spec : GSCore`、1 パス線形（全体は L1 待ち）
