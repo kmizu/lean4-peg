@@ -11,6 +11,7 @@ import PalPeg.Matching
 import PalPeg.RTQueue
 import PalPeg.Manacher
 import PalPeg.Stages
+import PalPeg.Schedule
 
 /-!
 # PalPeg
@@ -29,6 +30,7 @@ import PalPeg.Stages
 * `PalPeg.Matching`  — KMP 一歩・境界鎖・Galil の予測補題（仕事 ≤ 保証ゼロ出力数）
 * `PalPeg.Manacher`  — Manacher の radius 走査の正しさ、接頭辞回文フラグ、仕事量 ≤ n
 * `PalPeg.Stages`    — dyadic stage 分解 `Pal(n) ⇔ match_W ∧ middle_W`、段の被覆と同時稼働 ≤ 2
+* `PalPeg.Schedule`  — 順序処理の締切（`finishTime_le`）と Galil の FIFO サービス不等式（Lindley）
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/

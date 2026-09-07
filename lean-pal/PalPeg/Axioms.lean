@@ -10,6 +10,7 @@ import PalPeg.Matching
 import PalPeg.RTQueue
 import PalPeg.Manacher
 import PalPeg.Stages
+import PalPeg.Schedule
 
 /-!
 # 公理 guard
@@ -158,3 +159,11 @@ import PalPeg.Stages
 /-- info: 'PalPeg.live_stages' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.live_stages
+
+/-- info: 'PalPeg.finishTime_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.finishTime_le
+
+/-- info: 'PalPeg.fifo_meets_deadlines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.fifo_meets_deadlines
