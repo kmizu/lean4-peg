@@ -10,6 +10,7 @@ import PalPeg.GroupsLogBound
 import PalPeg.Matching
 import PalPeg.GSScan
 import PalPeg.GSDecomp
+import PalPeg.GSDecompL1
 import PalPeg.GSPreprocess
 import PalPeg.GSRealTime
 import PalPeg.GSVerifier
@@ -295,3 +296,11 @@ import PalPeg.Main
 /-- info: 'PalPeg.pal_in_peg_of_structured' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.pal_in_peg_of_structured
+
+/-- info: 'PalPeg.gsDecomp_exists' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.gsDecomp_exists
+
+/-- info: 'PalPeg.stageOK_exists' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.stageOK_exists

@@ -11,6 +11,7 @@ import PalPeg.GroupsLogBound
 import PalPeg.Matching
 import PalPeg.GSScan
 import PalPeg.GSDecomp
+import PalPeg.GSDecompL1
 import PalPeg.GSPreprocess
 import PalPeg.GSRealTime
 import PalPeg.GSVerifier
@@ -58,7 +59,7 @@ import PalPeg.Main
 * `PalPeg.Schedule`  — 順序処理の締切（`finishTime_le`）と Galil の FIFO サービス不等式（Lindley）
 * `PalPeg.TapeLib`   — 成果物のテープ上の zipper / stack / seq / counter ビューと 1 アクション補題
 * `PalPeg.GSScan`    — Galil–Seiferas 走査：安全シフト、健全性/完全性、ポテンシャル `Φ=(k+1)pos+q`
-* `PalPeg.GSDecomp`  — GS 分解 `GSCore/GSDecomp`、k 反復周期の補題、走査側帰結と `KSimple` への橋（L1 の厳密境界は未了）
+* `PalPeg.GSDecomp`  — GS 分解 `GSCore/GSDecomp`、k 反復周期の補題、走査側帰結と `KSimple` への橋；`GSDecompL1` で真の L1 境界 `gsDecomp_exists`（パスは p₂ 手前で停止）
 * `PalPeg.Speedup`   — 1 記号あたり B マイクロステップの機械 → 厳密実時間 `Machine`（線形加速、`multiStep_recognizedBy`）
 * `PalPeg.GSRealTime` — GS 走査の実時間実行：レート k+1 で `online_answer_correct`、有界遅れ不変量 `onlineRun_phi`、u 検証器の締切
 * `PalPeg.GSVerifier` — u 検証器を quota 2 で交互実行（オラクルなし `vAnswer_correct`、1 ラウンド ≤ 3(k+1)）
