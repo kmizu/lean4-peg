@@ -1,7 +1,7 @@
 # 回文言語の素の PEG — 経過と現状（2026-09-07、lean4-peg 移行時点）
 
 > Python 94モジュールと66テストのScala移植は完了し、対応ファイルを揃えている。
-> 統合ブランチで `pal.PortCoverageSuite` を含む対象3 Suite・計19テストとcompileを確認済み。FullWindowPALのSHA再現は未検証である。
+> 統合ブランチで `pal/test` の471テスト（0失敗・0エラー）とcompileを確認済み。FullWindowPALのSHA再現は未検証である。
 > 対応表と作業単位は [移植計画](../superpowers/plans/2026-09-07-pal-python-to-scala.md) にまとめる。
 
 この repo で作業を続けるための入口。まずこれを読み、次に `PLAIN_PAL_ARTIFACT.md`
@@ -77,7 +77,7 @@ Scala全体生成のヒープ必要量は未計測なので、sbtの既定ヒー
 
 `GenerateOnlinePeg` の互換性もテストで確認済み：cache signatureはScalaソースをハッシュし、`.sca`形式は相互運用できるが自動cache再利用は言語ごとに分かれる。`--memory-mib` はJVMの`-Xmx`で制約し、Pythonの`RLIMIT_AS`とは異なる。SIGTERM時は`interrupted`・`emitted=false`を報告して既存出力を保持し、終了コードはJVMが143、Pythonが130になる。
 
-レガシーfixtureの再現には `--quantum 1 --match-delay 2 --budget 2 --raw-instructions --omit-invariant-monitors` を指定する（既定の全体生成ではない）。逆変換後の698,145,389 bytesもScalaで生成済みだが、Pythonとの比較は未検証である。
+旧実験用で現在はlegacyと明記している `GenerateGalilPeg`（WindowPAL以前のコマンド）のfixture再現には、`--quantum 1 --match-delay 2 --budget 2 --raw-instructions --omit-invariant-monitors` を指定する（既定の全体生成ではない）。`--expanded-only` は1,420,678規則 / 50,121,014 bytesでPythonと一致し、逆変換後の698,145,389 bytesもScalaで生成済みだが、Python側は再帰ASTの深さ制限（`100000`）で失敗するため比較未検証であり、boundedな `emitInverse` は検証済みである。
 
 ```sh
 cd /path/to/lean4-peg

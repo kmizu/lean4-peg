@@ -17,8 +17,9 @@ Python と **バイト一致** を差分テストで確認する。
 
 **Status note (2026-09-07):** The source-level migration is complete:
 `pal.PortCoverageSuite` confirms that all 94 Python modules and 66 Python tests
-have corresponding Scala paths. This does not claim that the full test suite
-was rerun or that the FullWindowPAL SHA was reproduced. The Scala sources expose `pal.GenerateWindowPal`,
+have corresponding Scala paths. The integrated `pal/test` completed with 471
+passed tests, 0 failures, and 0 errors; the FullWindowPAL SHA was not reproduced.
+The Scala sources expose `pal.GenerateWindowPal`,
 `pal.CompactScaffoldPeg`, `pal.VerifyWindowPal`, `pal.GeneratePhaseExamples`,
 and `pal.GenerateScaffoldExamples`. The default full-grammar SHA has not been
 verified from Scala; only bounded/source-fixture byte-identity checks currently
