@@ -2,7 +2,6 @@
 
 > Scala移植は進行中であり、この文書は全Pythonモジュールの移植完了を主張しない。
 > 対応表と作業単位は [移植計画](../superpowers/plans/2026-09-07-pal-python-to-scala.md) にまとめる。
-> 親側の統合後に最終coverage auditを行う。
 
 この repo で作業を続けるための入口。まずこれを読み、次に `PLAIN_PAL_ARTIFACT.md`
 （証人と検証）、`HANDOFF.md`（Codex の構成過程の生ログ、時系列は新しい順）、
@@ -70,8 +69,8 @@ python3 analysis/grammar_scc.py /tmp/pal-window-fast.peg       # 約 22 分、�
 
 ### Scala 3 の再現入口（移植進行中）
 
-Scala sourcesのCLIは `pal.GenerateWindowPal`、`pal.CompactScaffoldPeg`、
-`pal.VerifyWindowPal` として、repo rootから次の形で実行する。
+Scala側のCLIは `pal.GenerateWindowPal`、`pal.CompactScaffoldPeg`、
+`pal.VerifyWindowPal` として、リポジトリのルートから次の形で実行する。
 
 ```sh
 cd /path/to/lean4-peg
@@ -81,12 +80,12 @@ sbt -batch 'pal/runMain pal.CompactScaffoldPeg /tmp/pal-window-original.peg /tmp
 sbt -batch 'pal/runMain pal.VerifyWindowPal /tmp/pal-window-fast.peg --runner ../docs/palindromes-in-peg/rust-peg/target/release/plain-peg-runner --log /tmp/verify.log'
 ```
 
-Scala版のdefault全体grammarを生成して上記SHAと一致させる検証は未実施。移植の差分証拠は、
-各 `PyDiff` テストが明示するsource/fixture範囲に限る。
+Scala版の既定の全体文法を生成して上記SHAと一致させる検証は未実施。移植の差分証拠は、
+各 `PyDiff` テストが明示するソース／fixture範囲に限る。
 
-`CompactScaffoldPeg` は1GiB windowを連結して2GiB超のsourceを読む設計だが、1行には別の上限がある。
-一方、`PegFile.FileGrammar` はファイルサイズが `Int.MaxValue`（約2GiB）を超えると明示的に拒否する。
-通常の再現手順はcompact後の文法をRust runnerへ渡すため、後者のreader制限はこのworkflowの障害にならない。
+`CompactScaffoldPeg` は1GiBの窓を連結して2GiB超のsourceを読む設計だが、1行には別の上限がある。
+一方、トップレベルの `pal.FileGrammar` はファイルサイズが `Int.MaxValue`（約2GiB）を超えると明示的に拒否する。
+通常の再現手順は圧縮後の文法をRust runnerへ渡すため、後者の読み込み制限はこの手順の障害にならない。
 
 ### Lean側の条件付き定理
 

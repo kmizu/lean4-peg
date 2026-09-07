@@ -96,8 +96,8 @@ Lean ネイティブ実行と抽出 Scala 実行を突き合わせる——レ�
 
 ## 回文PEGのScala 3移植
 
-`scala/pal` でPython版（当面の基準実装）の移植を進めている。Scalaの再現コマンド、reader制限、
-default全体grammar SHAの未検証範囲は [STATUS.md](docs/palindromes-in-peg/STATUS.md) にまとめている。
+`scala/pal` でPython版（当面の基準実装）の移植を進めている。Scalaの再現コマンド、読み込み制限、
+既定の全体文法SHAの未検証範囲は [STATUS.md](docs/palindromes-in-peg/STATUS.md) にまとめている。
 `PyDiff`のsource/fixtureバイト一致は、各テストが対象にした範囲だけの証拠やね。
 
 なお `lean-pal/` のLean成果物は、Kim–Parkの厳密実時間TMでPALを認識する機械の存在を仮定した

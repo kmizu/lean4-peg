@@ -208,8 +208,8 @@ class CompactScaffoldPegSuite extends munit.FunSuite {
       try {
         val mapped = new CompactScaffoldPeg.MappedFile(channel, windowShift = 2)
         assertEquals(mapped.size, 10L)
-        for ((position, expected) <- bytes.zipWithIndex) {
-          assertEquals(mapped.get(expected.toLong), position, expected)
+        for ((expected, index) <- bytes.zipWithIndex) {
+          assertEquals(mapped.get(index.toLong), expected, index)
         }
         assertEquals(mapped.slice(0L, 0L), "")
         assertEquals(mapped.slice(4L, 4L), "")

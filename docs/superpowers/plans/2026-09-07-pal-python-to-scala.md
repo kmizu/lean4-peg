@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** `docs/palindromes-in-peg/**/*.py`（約 170 ファイル、18,000 行）を全て Scala 3 に移植し、
+**Goal:** `docs/palindromes-in-peg/**/*.py`（94 モジュール＋66 テスト、計160ファイル、18,000 行）を全て Scala 3 に移植し、
 コウタが Scala だけで目視検証できるようにする。Python 版は当面残す（差分テストの基準）。
 
 **Architecture:** 既存の `scala/` sbt ビルドに新サブプロジェクト `pal`（`scala/pal/`）を追加。
@@ -16,8 +16,7 @@ Python と **バイト一致** を差分テストで確認する。
 だからこそバイト一致の差分テストを必須にする）。
 
 **Status note (2026-09-07):** This remains an implementation plan, not a
-claim that the port is complete. A final coverage audit is still needed after
-the current implementation work. The Scala sources expose `pal.GenerateWindowPal`,
+claim that the port is complete. The Scala sources expose `pal.GenerateWindowPal`,
 `pal.CompactScaffoldPeg`, `pal.VerifyWindowPal`, `pal.GeneratePhaseExamples`,
 and `pal.GenerateScaffoldExamples`. The default full-grammar SHA has not been
 verified from Scala; only bounded/source-fixture byte-identity checks currently
