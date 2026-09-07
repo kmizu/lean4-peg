@@ -380,3 +380,11 @@ lake build
   そのまま使える）方針に変更、作業中。(b) 前処理 `orcR` は 9 テープでは O(1)/step 不可（符号付きカウンタに
   4 本必要）→ 11 テープ化、作業中（段側の埋め込みは誕生時に空の `sT`/`sX2` を一時利用）。MiddleTapes 核の
   書き換え（窓仮説・継ぎ目・消去・cp1/cp2 有限化・S10/S11）も作業中。
+- 進捗（2026-09-09 夜、コミット 610446b まで）：`PassSumGen`（一般アルファベット `Consumption` ⟹ `PassPeriodSum`）
+  と `full_answer_mem_PAL_of_embed'`（唯一の数学仮定 `hcons`、sc=9 版あり）。前処理を 11 テープ化（`OvTapes` は
+  15 のまま：Ca↦Cnt、Cb↦U）。検証器：`rewind_not_pointwise` で巻き戻し設計の点ごと費用不可を証明→
+  **ジグザグ u 検証器**（`GSVerifierZ`、巻き戻しなし、1 前進あたり 4 移動で `prefix_verifier_deadline` から
+  締切成立）に切替、テープ/feed/Prog/段の 4 層を作業中。段ライフサイクル骨格 `StageLifecycleProg`
+  （`Resumable`＝PC テープでチャンク再開、`stageRoundProg_effect`）完成、全体機械ラウンド本体
+  `FullMachineProg`（4 スロット直列化、到着、消去、受理フラグ、`progMachinePM_rounds_effect` 接続）作業中。
+  MiddleTapes 核書き換えと `decProgP` は継続中。
