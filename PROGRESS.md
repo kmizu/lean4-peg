@@ -372,3 +372,11 @@ lake build
   第 2 フェーズ再設計（`orcR` 閾値カウントダウン、Cd 解放）中。中央ジョブは目印ツールキット完成、
   MiddleTapes 核の書き換え（フラグ/継ぎ目/消去＋gw カウンタ）待ち。数学：PassSum11 で循環角を
   `t + q₁ ≤ r₁` の下で閉じ、残りは `RemainingGap`（実測 8,820 子孫で 0 例）。
+- 進捗（2026-09-09 夕、コミット 8873899 まで）：`PrepPre`/`SetupPre` を番兵形に修正し全体ビルド成功。
+  `InputEmbed`（入力 Fin 2 ↪ Fin 9 の埋め込み、`full_answer_mem_PAL_embed`）、`ProgLangPersist2`
+  （複数テープ到着、`progMachinePM_rounds_effect`＝組み立て用ラウンド帰納）、`DecompUniform` 配線完了
+  （窓仮説つき `DecompOnTapesW`、Cd=40290C₁+220680）。**設計判断 2 つ**：(a) MeteredX の TightLag 経路は
+  `debtSlack_false` で不成立と証明→検証器の U テープを 2 本にして巻き戻し費用を消す（Ψ 不要、元の Metered が
+  そのまま使える）方針に変更、作業中。(b) 前処理 `orcR` は 9 テープでは O(1)/step 不可（符号付きカウンタに
+  4 本必要）→ 11 テープ化、作業中（段側の埋め込みは誕生時に空の `sT`/`sX2` を一時利用）。MiddleTapes 核の
+  書き換え（窓仮説・継ぎ目・消去・cp1/cp2 有限化・S10/S11）も作業中。
