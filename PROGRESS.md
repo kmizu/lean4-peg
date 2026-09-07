@@ -163,3 +163,18 @@ lake build
   `border_snapshot`）、`PalPeg/RTQueue.lean`（Hood–Melville 実時間キューの FIFO 仕様）。
   すべて sorry なし・公理 guard 済み。`DESIGN_SCA_PAL.md` §7 に dyadic stage 構成の要件と
   残る証明義務（オンライン Manacher、実時間 KMP の π 取得、SCA 符号化）を記載。
+
+## 8. 上位方針（2026-09-07 夜、Fable 5.1）
+
+目標 `RealTimeTM.RecognizedBy PAL` へは repo の dyadic stage 設計（`ALGORITHM_SPEC.md`）を
+層ごとに Lean 化する。RTTM（テープ双方向）を採用し、SCA 直接構成は取り下げ。
+
+- L0 部品（済・sorry なし）：Words, Chain, Structure, Groups, GroupsLog, Matching, RTQueue,
+  Manacher, Stages（`pal_prefix_iff_stage`, `live_stages`）, Schedule（`finishTime_le`,
+  `fifo_meets_deadlines`）。
+- L2 進行中：GSScan（GS 走査の安全シフト・正しさ・ポテンシャル）、GSDecomp（分解の存在と L1 境界）、
+  ManacherHeads（テープ上のヘッド移動の telescoping 上界）。
+- L4 進行中：Speedup（1 記号 B 操作の機械 → 厳密実時間 `Machine`、線形加速）、TapeLib
+  （zipper/stack/seq/counter ビュー）。
+- 未着手：u 検証器の締切補題、段の組み立て（抽象 dyadic 機械の全接頭辞正しさ）、
+  抽象機械の `MultiStepMachine` への符号化。
