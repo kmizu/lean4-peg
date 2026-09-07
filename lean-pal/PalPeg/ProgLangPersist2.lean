@@ -564,6 +564,155 @@ theorem progMachinePM_grind {I : InterpF Terminal A C Γ t} {inp : Fin t}
 
 end MachineM
 
+/-! ## 7. 初期受理フラグの一般化
+
+`progMachinePA` は初期受理フラグを `false` に固定しているので、`srun [] = sInit` より
+**空語を必ず拒否する**。空語が言語に属する場合（`[] ∈ PAL` など）に届かせるため、
+初期フラグ `b₀ : Bool` を指定できる版を与える。`b₀ = false` は元の機械そのもの
+（`progMachinePAb_false` / `progMachinePMb_false` は `rfl`）なので、
+既存の主張はすべてそのまま有効である。
+
+`ofPhases` は `initial` だけが `init` に依存し、`micro`（したがって `sRound`）は
+依存しないので、ラウンド系の補題は初期状態を任意に取る既存版
+（`progMachinePA_rounds`）をそのまま使い回せる。 -/
+
+section InitFlag
+
+variable [DecidableEq A] [DecidableEq C] [Fintype Γ] [DecidableEq Γ]
+
+/-- **初期受理フラグを指定できる版**（一般到着動作）。 -/
+noncomputable def progMachinePAb (I : InterpF Terminal A C Γ t) (prog : Prog A C)
+    (arr : ArriveAct Terminal Γ t) (htape : 0 < t) (hB : 0 < B) (blank : Γ) (b₀ : Bool) :
+    StructuredMachine Terminal ((CtrlS prog × Bool) × Fin B) Γ t B :=
+  ofPhases htape hB blank (startCtrlS prog, b₀) (fun q => q.2)
+    (roundBodyPA I prog arr hB)
+
+/-- `b₀ = false` は元の機械。 -/
+theorem progMachinePAb_false (I : InterpF Terminal A C Γ t) (prog : Prog A C)
+    (arr : ArriveAct Terminal Γ t) (htape : 0 < t) (hB : 0 < B) (blank : Γ) :
+    progMachinePAb I prog arr htape hB blank false
+      = progMachinePA I prog arr htape hB blank := rfl
+
+/-- 初期フラグはラウンド遷移に影響しない。 -/
+theorem progMachinePAb_sRound (I : InterpF Terminal A C Γ t) (prog : Prog A C)
+    (arr : ArriveAct Terminal Γ t) (htape : 0 < t) (hB : 0 < B) (blank : Γ) (b₀ : Bool) :
+    (progMachinePAb I prog arr htape hB blank b₀).sRound
+      = (progMachinePA I prog arr htape hB blank).sRound := rfl
+
+/-- 初期配置。 -/
+theorem progMachinePAb_sInit (I : InterpF Terminal A C Γ t) (prog : Prog A C)
+    (arr : ArriveAct Terminal Γ t) (htape : 0 < t) (hB : 0 < B) (blank : Γ) (b₀ : Bool) :
+    (progMachinePAb I prog arr htape hB blank b₀).sInit
+      = { state := ((startCtrlS prog, b₀), ⟨0, hB⟩),
+          tape := fun _ => STape.blankTape blank } := rfl
+
+/-- 初期配置からの実行（`srun`）版。 -/
+theorem progMachinePAb_srun (I : InterpF Terminal A C Γ t) (prog : Prog A C)
+    (arr : ArriveAct Terminal Γ t) (htape : 0 < t) (hB : 0 < B) (blank : Γ) (b₀ : Bool)
+    (w : List Terminal) :
+    ((((progMachinePAb I prog arr htape hB blank b₀).srun w).state.1.1.val,
+        ((progMachinePAb I prog arr htape hB blank b₀).srun w).state.1.2),
+      ((progMachinePAb I prog arr htape hB blank b₀).srun w).tape)
+        = w.foldl (roundSemA I arr blank (B - 1))
+            (([prog], b₀), fun _ => STape.blankTape blank) :=
+  (progMachinePA_rounds I prog arr htape hB blank w (startCtrlS prog, b₀)
+    (fun _ => STape.blankTape blank)).1
+
+/-- 受理条件は「ラウンド末の受理フラグ」。 -/
+theorem progMachinePAb_SAccepts_iff (I : InterpF Terminal A C Γ t) (prog : Prog A C)
+    (arr : ArriveAct Terminal Γ t) (htape : 0 < t) (hB : 0 < B) (blank : Γ) (b₀ : Bool)
+    (w : List Terminal) :
+    (progMachinePAb I prog arr htape hB blank b₀).SAccepts w
+      ↔ (w.foldl (roundSemA I arr blank (B - 1))
+          (([prog], b₀), fun _ => STape.blankTape blank)).1.2 = true := by
+  have h2 : ((progMachinePAb I prog arr htape hB blank b₀).srun w).state.1.2
+      = (w.foldl (roundSemA I arr blank (B - 1))
+          (([prog], b₀), fun _ => STape.blankTape blank)).1.2 :=
+    congrArg (fun z => z.1.2) (progMachinePAb_srun I prog arr htape hB blank b₀ w)
+  constructor
+  · intro hacc; rw [← h2]; exact hacc
+  · intro hacc
+    show ((progMachinePAb I prog arr htape hB blank b₀).srun w).state.1.2 = true
+    rw [h2]; exact hacc
+
+theorem progMachinePAb_recognizedBy [DecidableEq Terminal] (I : InterpF Terminal A C Γ t)
+    (prog : Prog A C) (arr : ArriveAct Terminal Γ t) (htape : 0 < t) (hB : 0 < B)
+    (blank : Γ) (b₀ : Bool) :
+    RecognizedBy { w | (progMachinePAb I prog arr htape hB blank b₀).SAccepts w } :=
+  StructuredMachine.structured_recognizedBy hB _
+
+/-- **多目標到着つき・初期フラグ指定版。** -/
+noncomputable def progMachinePMb (I : InterpF Terminal A C Γ t) (prog : Prog A C)
+    (tgt : Fin t → Bool) (encT : Terminal → Γ) (htape : 0 < t) (hB : 0 < B) (blank : Γ)
+    (b₀ : Bool) : StructuredMachine Terminal ((CtrlS prog × Bool) × Fin B) Γ t B :=
+  progMachinePAb I prog (inputActM tgt encT) htape hB blank b₀
+
+theorem progMachinePMb_false (I : InterpF Terminal A C Γ t) (prog : Prog A C)
+    (tgt : Fin t → Bool) (encT : Terminal → Γ) (htape : 0 < t) (hB : 0 < B) (blank : Γ) :
+    progMachinePMb I prog tgt encT htape hB blank false
+      = progMachinePM I prog tgt encT htape hB blank := rfl
+
+theorem progMachinePMb_srun (I : InterpF Terminal A C Γ t) (prog : Prog A C)
+    (tgt : Fin t → Bool) (encT : Terminal → Γ) (htape : 0 < t) (hB : 0 < B) (blank : Γ)
+    (b₀ : Bool) (w : List Terminal) :
+    ((((progMachinePMb I prog tgt encT htape hB blank b₀).srun w).state.1.1.val,
+        ((progMachinePMb I prog tgt encT htape hB blank b₀).srun w).state.1.2),
+      ((progMachinePMb I prog tgt encT htape hB blank b₀).srun w).tape)
+        = w.foldl (roundSemM I tgt encT blank (B - 1))
+            (([prog], b₀), fun _ => STape.blankTape blank) :=
+  progMachinePAb_srun I prog (inputActM tgt encT) htape hB blank b₀ w
+
+theorem progMachinePMb_SAccepts_iff (I : InterpF Terminal A C Γ t) (prog : Prog A C)
+    (tgt : Fin t → Bool) (encT : Terminal → Γ) (htape : 0 < t) (hB : 0 < B) (blank : Γ)
+    (b₀ : Bool) (w : List Terminal) :
+    (progMachinePMb I prog tgt encT htape hB blank b₀).SAccepts w
+      ↔ (w.foldl (roundSemM I tgt encT blank (B - 1))
+          (([prog], b₀), fun _ => STape.blankTape blank)).1.2 = true :=
+  progMachinePAb_SAccepts_iff I prog (inputActM tgt encT) htape hB blank b₀ w
+
+theorem progMachinePMb_recognizedBy [DecidableEq Terminal] (I : InterpF Terminal A C Γ t)
+    (prog : Prog A C) (tgt : Fin t → Bool) (encT : Terminal → Γ) (htape : 0 < t)
+    (hB : 0 < B) (blank : Γ) (b₀ : Bool) :
+    RecognizedBy { w | (progMachinePMb I prog tgt encT htape hB blank b₀).SAccepts w } :=
+  progMachinePAb_recognizedBy I prog (inputActM tgt encT) htape hB blank b₀
+
+/-- **ラウンド帰納（初期フラグ指定版）。** -/
+theorem progMachinePMb_rounds_effect (I : InterpF Terminal A C Γ t) (prog : Prog A C)
+    (tgt : Fin t → Bool) (encT : Terminal → Γ) (htape : 0 < t) (hB : 0 < B) (blank : Γ)
+    (b₀ : Bool)
+    (F : Terminal → (Fin t → STape Γ) → (Fin t → STape Γ))
+    (G : Terminal → (Fin t → STape Γ) → Bool → Bool)
+    (hround : ∀ (a : Terminal) (T : Fin t → STape Γ) (b : Bool),
+      roundSemM I tgt encT blank (B - 1) (([prog], b), T) a = (([prog], G a T b), F a T))
+    (w : List Terminal) :
+    ((progMachinePMb I prog tgt encT htape hB blank b₀).srun w).state.1.1.val = [prog] ∧
+      ((progMachinePMb I prog tgt encT htape hB blank b₀).srun w).state.1.2
+        = (foldEffect F G w (b₀, fun _ => STape.blankTape blank)).1 ∧
+      ((progMachinePMb I prog tgt encT htape hB blank b₀).srun w).tape
+        = (foldEffect F G w (b₀, fun _ => STape.blankTape blank)).2 := by
+  have h := progMachinePMb_srun I prog tgt encT htape hB blank b₀ w
+  have hf := roundSemM_foldl_effect I tgt encT blank (B - 1) [prog] F G hround w
+    (fun _ => STape.blankTape blank) b₀
+  rw [hf] at h
+  exact ⟨congrArg (fun z => z.1.1) h, congrArg (fun z => z.1.2) h, congrArg (fun z => z.2) h⟩
+
+/-- 受理条件も `foldEffect` で読める（初期フラグ指定版）。 -/
+theorem progMachinePMb_SAccepts_effect (I : InterpF Terminal A C Γ t) (prog : Prog A C)
+    (tgt : Fin t → Bool) (encT : Terminal → Γ) (htape : 0 < t) (hB : 0 < B) (blank : Γ)
+    (b₀ : Bool)
+    (F : Terminal → (Fin t → STape Γ) → (Fin t → STape Γ))
+    (G : Terminal → (Fin t → STape Γ) → Bool → Bool)
+    (hround : ∀ (a : Terminal) (T : Fin t → STape Γ) (b : Bool),
+      roundSemM I tgt encT blank (B - 1) (([prog], b), T) a = (([prog], G a T b), F a T))
+    (w : List Terminal) :
+    (progMachinePMb I prog tgt encT htape hB blank b₀).SAccepts w
+      ↔ (foldEffect F G w (b₀, fun _ => STape.blankTape blank)).1 = true := by
+  rw [progMachinePMb_SAccepts_iff I prog tgt encT htape hB blank b₀ w,
+    roundSemM_foldl_effect I tgt encT blank (B - 1) [prog] F G hround w
+      (fun _ => STape.blankTape blank) b₀]
+
+end InitFlag
+
 end PalPeg.ProgLangPersist2
 
 /-
@@ -578,5 +727,11 @@ end PalPeg.ProgLangPersist2
 #print axioms PalPeg.ProgLangPersist2.progMachinePM_single
 #print axioms PalPeg.ProgLangPersist2.progMachinePM_grind
 #print axioms PalPeg.ProgLangPersist2.progMachinePM_recognizedBy
+#print axioms PalPeg.ProgLangPersist2.progMachinePAb_false
+#print axioms PalPeg.ProgLangPersist2.progMachinePAb_srun
+#print axioms PalPeg.ProgLangPersist2.progMachinePMb_false
+#print axioms PalPeg.ProgLangPersist2.progMachinePMb_rounds_effect
+#print axioms PalPeg.ProgLangPersist2.progMachinePMb_SAccepts_effect
+#print axioms PalPeg.ProgLangPersist2.progMachinePMb_recognizedBy
 ```
 -/

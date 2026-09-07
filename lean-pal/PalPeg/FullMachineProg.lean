@@ -33,16 +33,15 @@ import PalPeg.InputCopySentinel
   `hPAL` は `InputEmbed.full_answer_mem_PAL_of_embed'`（`n ≤ |input|` で
   `fullAnswer I n = true ↔ input.take n ∈ PAL`）がそのまま与える。
 
-## 空語について（重要な設計上の観測）
+## 空語について
 
-`ProgLangPersist2.progMachinePA` は初期受理フラグを `false` に固定している
-（`ofPhases … (startCtrlS prog, false)`）。`srun [] = sInit` なので、
-**この機械は空語を必ず拒否する**。一方 `[] ∈ PAL` は真である。
-したがって本ファイルの最終定理は `input ≠ []` を仮定する形になっている
-（`SAccepts_nil : ¬ SAccepts []` も証明する）。
-`Main.pal_in_peg_of_structured` が要求する `∀ w, SAccepts w ↔ w ∈ PAL` に届かせるには、
-`progMachinePA` の初期フラグを `true`（＝`decide (IsPal [])`）にできるようにする
-1 行の一般化が必要である。**これは本ファイルでは修正できない**（既存ファイルの変更禁止）。
+`[] ∈ PAL` であり、`FullMachineTapes.fullAnswer Ifc 0 = decide (IsPal []) = true`
+（`fullAnswer_zero`）なので、機械の初期受理フラグは `true` でなければならない。
+`ProgLangPersist2.progMachinePA` は初期フラグを `false` に固定していたため、
+同ファイルに初期フラグ指定版 `progMachinePMb … b₀` を足した
+（`b₀ = false` は元の機械そのもの：`progMachinePMb_false` は `rfl`）。
+本ファイルは `b₀ := true` を使うので、**空語も正しく受理され**、
+最終定理から `input ≠ []` は消えている（`SAccepts_nil : SAccepts []`）。
 -/
 
 set_option autoImplicit false
@@ -298,6 +297,12 @@ open PalPeg.StageTapes
 
 variable {A C Γ : Type}
 
+/-- `fullAnswer` の 0 ラウンド目は「空語は回文」なので `true`。
+（`fullAnswer` の `n < 32` の表は `decide (IsPal (w.take n))` なので `n = 0` で正しい。） -/
+theorem fullAnswer_zero {sc : ℕ} {w : List (Fin sc)} (Ifc : StageIface sc w) :
+    fullAnswer Ifc 0 = true := by
+  simp [fullAnswer, IsPal]
+
 theorem foldEffect_append {Terminal : Type}
     (Fe : Terminal → (Fin T → STape Γ) → (Fin T → STape Γ))
     (Ge : Terminal → (Fin T → STape Γ) → Bool → Bool)
@@ -324,13 +329,17 @@ theorem foldEffect_fullState {sc : ℕ} {w : List (Fin sc)}
       Inv (n + 1) (fullRound bl leftSym rs Ifc (n + 1) F))
     (hinit : Inv 0 init) :
     ∀ m, m ≤ input.length →
-      foldEffect Fe Ge (input.take m) (false, encFull 0 init)
-          = ((if m = 0 then false else fullAnswer Ifc m),
+      foldEffect Fe Ge (input.take m) (true, encFull 0 init)
+          = (fullAnswer Ifc m,
               encFull m (FullMachineTapes.fullState bl leftSym rs Ifc init m))
         ∧ Inv m (FullMachineTapes.fullState bl leftSym rs Ifc init m) := by
   intro m
   induction m with
-  | zero => intro _; exact ⟨rfl, hinit⟩
+  | zero =>
+      intro _
+      refine ⟨?_, hinit⟩
+      rw [List.take_zero, foldEffect_nil, fullAnswer_zero]
+      rfl
   | succ m ih =>
       intro hm
       obtain ⟨iheq, ihinv⟩ := ih (by omega)
@@ -343,12 +352,12 @@ theorem foldEffect_fullState {sc : ℕ} {w : List (Fin sc)}
       refine ⟨?_, ?_⟩
       · rw [htake, foldEffect_append, iheq]
         show foldEffect Fe Ge [input.getD m 0]
-            ((if m = 0 then false else fullAnswer Ifc m),
+            (fullAnswer Ifc m,
               encFull m (FullMachineTapes.fullState bl leftSym rs Ifc init m)) = _
         rw [foldEffect_cons, foldEffect_nil]
         simp only []
         rw [hstepF m hlt _ ihinv, hstepG m hlt _ _ ihinv]
-        rw [if_neg (by omega), FullMachineTapes.fullState_succ]
+        rw [FullMachineTapes.fullState_succ]
       · rw [FullMachineTapes.fullState_succ]
         exact hstepI m hlt _ ihinv
 
@@ -363,11 +372,11 @@ open PalPeg.StageTapes
 variable {A C Γ : Type} [DecidableEq A] [DecidableEq C] [Fintype Γ] [DecidableEq Γ]
   {B : ℕ}
 
-/-- 空語は必ず拒否される（初期受理フラグが `false` に固定されているため）。 -/
+/-- 空語は受理される（初期受理フラグ `b₀ = true`、`[] ∈ PAL` と整合）。 -/
 theorem SAccepts_nil (I : InterpF (Fin 2) A C Γ T) (prog : Prog A C)
     (encT : Fin 2 → Γ) (htape : 0 < T) (hB : 0 < B) (blank : Γ) :
-    ¬ (progMachinePM I prog tgtFull encT htape hB blank).SAccepts [] := by
-  rw [progMachinePM_SAccepts_iff I prog tgtFull encT htape hB blank []]
+    (progMachinePMb I prog tgtFull encT htape hB blank true).SAccepts [] := by
+  rw [progMachinePMb_SAccepts_iff I prog tgtFull encT htape hB blank true []]
   simp
 
 /-- **主定理（受理判定）**：1 ラウンドの意味論が `fullRound` / `fullAnswer` を実現するなら、
@@ -390,20 +399,15 @@ theorem pal_machine_SAccepts_iff {sc : ℕ} {w : List (Fin sc)}
     (hstepI : ∀ n, n < input.length → ∀ F, Inv n F →
       Inv (n + 1) (fullRound bl leftSym rs Ifc (n + 1) F))
     (hinit : Inv 0 init)
-    (henc0 : encFull 0 init = fun _ => STape.blankTape blank)
-    (hne : input ≠ []) :
-    (progMachinePM I prog tgtFull encT htape hB blank).SAccepts input
+    (henc0 : encFull 0 init = fun _ => STape.blankTape blank) :
+    (progMachinePMb I prog tgtFull encT htape hB blank true).SAccepts input
       ↔ fullAnswer Ifc input.length = true := by
-  rw [progMachinePM_SAccepts_effect I prog tgtFull encT htape hB blank Fe Ge hround input]
+  rw [progMachinePMb_SAccepts_effect I prog tgtFull encT htape hB blank true Fe Ge hround input]
   rw [← henc0]
   have h := (foldEffect_fullState Ifc bl leftSym rs Fe Ge Inv encFull init input
     hstepF hstepG hstepI hinit input.length le_rfl).1
   rw [List.take_length] at h
   rw [h]
-  have : input.length ≠ 0 := by
-    intro h0
-    exact hne (List.eq_nil_of_length_eq_zero h0)
-  simp only [if_neg this]
 
 /-- **出口定理**：`fullAnswer` が接頭辞の回文性と一致する（`InputEmbed` の
 `full_answer_mem_PAL_of_embed'` がまさにこれを与える）なら、機械の受理言語は
@@ -427,20 +431,59 @@ theorem pal_SAccepts_iff_of {sc : ℕ} {w : List (Fin sc)}
       Inv (n + 1) (fullRound bl leftSym rs Ifc (n + 1) F))
     (hinit : Inv 0 init)
     (henc0 : encFull 0 init = fun _ => STape.blankTape blank)
-    (hPAL : ∀ n, n ≤ input.length → (fullAnswer Ifc n = true ↔ (input.take n) ∈ PAL))
-    (hne : input ≠ []) :
-    (progMachinePM I prog tgtFull encT htape hB blank).SAccepts input ↔ input ∈ PAL := by
+    (hPAL : ∀ n, n ≤ input.length → (fullAnswer Ifc n = true ↔ (input.take n) ∈ PAL)) :
+    (progMachinePMb I prog tgtFull encT htape hB blank true).SAccepts input ↔ input ∈ PAL := by
   rw [pal_machine_SAccepts_iff Ifc bl leftSym rs I prog encT htape hB blank Fe Ge hround
-    Inv encFull init input hstepF hstepG hstepI hinit henc0 hne,
+    Inv encFull init input hstepF hstepG hstepI hinit henc0,
     hPAL input.length le_rfl, List.take_length]
 
 /-- 機械の受理言語は厳密実時間で認識される（`ProgLangPersist2.progMachinePM_recognizedBy`）。 -/
 theorem pal_recognizedBy_of (I : InterpF (Fin 2) A C Γ T) (prog : Prog A C)
     (encT : Fin 2 → Γ) (htape : 0 < T) (hB : 0 < B) (blank : Γ) :
-    RecognizedBy { v | (progMachinePM I prog tgtFull encT htape hB blank).SAccepts v } :=
-  progMachinePM_recognizedBy I prog tgtFull encT htape hB blank
+    RecognizedBy { v | (progMachinePMb I prog tgtFull encT htape hB blank true).SAccepts v } :=
+  progMachinePMb_recognizedBy I prog tgtFull encT htape hB blank true
 
 end Exit
+
+/-! ### `hPAL` の充足（`InputEmbed` 復旧後に有効化する系）
+
+`InputEmbed.full_answer_mem_PAL_of_embed'` の結論は
+`fullAnswer (stageIface …) n = true ↔ (input.take n) ∈ PAL`（`n ≤ |input|`）であり、
+`pal_SAccepts_iff_of` の `hPAL` そのものである。したがって復旧後は
+ファイル冒頭の `import PalPeg.InputEmbed` を戻し、次をそのまま有効化すればよい
+（現在 `PalPeg.PrepInstance` が `GSPreprocessProg` の改修中で壊れており、
+`InputEmbed` を import できないためコメントのまま置く）。
+
+```lean
+open PalPeg.StageTapes PalPeg.StageIfaceInstance in
+theorem pal_SAccepts_iff_embed {sc : ℕ}
+    {bl startSym endSym mark leftSym one zero : Fin sc}
+    {A C Γ : Type} [DecidableEq A] [DecidableEq C] [Fintype Γ] [DecidableEq Γ] {B : ℕ}
+    (ι : Fin 2 ↪ Fin sc)
+    (hι : ∀ i, ι i ∉ ({bl, mark, leftSym, endSym, startSym, one, zero} : Set (Fin sc)))
+    (hcons : ∀ (x : List (Fin sc)) (b : ℕ), PassSum10.Consumption x 8 b)
+    (hmb : mark ≠ bl)
+    (D : MiddleTapes.DecompOnTapes sc bl startSym endSym mark leftSym)
+    (input : List (Fin 2)) (cstOf : ℕ → ScanState → ℕ) (Ac B' U : ℕ)
+    (initOf : ℕ → StageT sc)
+    (hC : 0 < Ac + B') (hcost : …) (hadvance : …) (hnez : one ≠ zero)
+    (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S) (hinitS : …)
+    -- 以下は本ファイル §5 と同じ機械側の仮定
+    (rs : Restart) (I : InterpF (Fin 2) A C Γ T) (prog : Prog A C) (encT : Fin 2 → Γ)
+    (htape : 0 < T) (hB : 0 < B) (blank : Γ) (Fe : …) (Ge : …) (hround : …)
+    (Inv : …) (encFull : …) (init : FullT sc)
+    (hstepF : …) (hstepG : …) (hstepI : …) (hinit : Inv 0 init) (henc0 : …) :
+    (progMachinePMb I prog tgtFull encT htape hB blank true).SAccepts input
+      ↔ input ∈ PAL :=
+  pal_SAccepts_iff_of
+    (stageIface 2 (PassSumGen.hsum_of_consumption hcons) hmb D (input.map ι) cstOf
+      Ac B' U initOf hC hcost hadvance hnez _ _ _ hpow hinitS)
+    bl leftSym rs I prog encT htape hB blank Fe Ge hround Inv encFull init input
+    hstepF hstepG hstepI hinit henc0
+    (fun n hn => InputEmbed.full_answer_mem_PAL_of_embed' ι hι hcons hmb D input
+      cstOf Ac B' U initOf hC hcost hadvance hnez hpow hinitS n hn)
+```
+-/
 
 end PalPeg.FullMachineProg
 
@@ -456,6 +499,27 @@ end PalPeg.FullMachineProg
 #print axioms PalPeg.FullMachineProg.slotSchedule_exec
 #print axioms PalPeg.FullMachineProg.seqList_exec
 #print axioms PalPeg.FullMachineProg.fullRoundProg_effect
+#print axioms PalPeg.FullMachineProg.foldEffect_fullState
+#print axioms PalPeg.FullMachineProg.SAccepts_nil
+#print axioms PalPeg.FullMachineProg.pal_machine_SAccepts_iff
+#print axioms PalPeg.FullMachineProg.pal_SAccepts_iff_of
+#print axioms PalPeg.FullMachineProg.pal_recognizedBy_of
+```
+-/
+
+/-
+公理チェック（0 エラー・警告なし・`sorry` なし。
+`propext / Classical.choice / Quot.sound` のみに依存）:
+
+```
+#print axioms PalPeg.FullMachineProg.T_eq
+#print axioms PalPeg.FullMachineProg.slotIdx_ne_of_ne
+#print axioms PalPeg.FullMachineProg.slotEmb
+#print axioms PalPeg.FullMachineProg.tgtFull_slot
+#print axioms PalPeg.FullMachineProg.slotSchedule_exec
+#print axioms PalPeg.FullMachineProg.seqList_exec
+#print axioms PalPeg.FullMachineProg.fullRoundProg_effect
+#print axioms PalPeg.FullMachineProg.fullAnswer_zero
 #print axioms PalPeg.FullMachineProg.foldEffect_fullState
 #print axioms PalPeg.FullMachineProg.SAccepts_nil
 #print axioms PalPeg.FullMachineProg.pal_machine_SAccepts_iff
