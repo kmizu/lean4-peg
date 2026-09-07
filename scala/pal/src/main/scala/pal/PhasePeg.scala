@@ -160,14 +160,36 @@ object PhasePeg {
 
     val returns: Map[PegAst, mutable.Set[(Int, Int)]] = {
       val table = nodes.map(expr => expr -> mutable.HashSet.empty[(Int, Int)]).toMap
-      var changed = true
-      while (changed) {
-        changed = false
-        for (expr <- nodes) {
-          val possible = possibleReturns(expr, table)
-          if (!possible.subsetOf(table(expr))) {
-            table(expr) ++= possible
-            changed = true
+      val dependents = Array.fill(nodes.size)(mutable.ArrayBuffer.empty[Int])
+      for ((expr, parent) <- nodes.zipWithIndex) {
+        val dependencies = expr match {
+          case Ref(name) => Vector(grammar.rules(name))
+          case Sequence(first, second) => Vector(first, second)
+          case Choice(first, second) => Vector(first, second)
+          case AndPredicate(inner) => Vector(inner)
+          // Star computes reflexive transitive closure, so its own newly found
+          // returns must trigger another composition with the inner relation.
+          case Star(inner) => Vector(inner, expr)
+          case Empty | AnyChar | Terminal(_) | NotPredicate(_) => Vector.empty
+        }
+        dependencies.map(ids).distinct.foreach(child => dependents(child) += parent)
+      }
+      val pending = mutable.ArrayDeque.from(nodes.indices)
+      val queued = Array.fill(nodes.size)(true)
+      // All transfer functions are monotone on finite phase-pair sets. Starting
+      // at bottom and rescheduling every dependent on growth reaches the same
+      // least fixed point as full sweeps, without rescanning unrelated rules.
+      // `nodes` and its numbering remain unchanged for byte-identical emission.
+      while (pending.nonEmpty) {
+        val index = pending.removeHead()
+        queued(index) = false
+        val expr = nodes(index)
+        val possible = possibleReturns(expr, table)
+        if (!possible.subsetOf(table(expr))) {
+          table(expr) ++= possible
+          for (parent <- dependents(index) if !queued(parent)) {
+            pending.append(parent)
+            queued(parent) = true
           }
         }
       }

@@ -75,6 +75,33 @@ class PhasePegSuite extends munit.FunSuite {
     }
   }
 
+  private def referenceChain(length: Int): String = {
+    "S = R0 !.;\n" + (0 until length).map { i =>
+      s"R$i = " + (if (i + 1 == length) { "\"aa\"" } else { s"R${i + 1}" }) + ";\n"
+    }.mkString
+  }
+
+  test("phase worklist preserves Python bytes for delayed references and cyclic closures") {
+    val cases = Vector(
+      referenceChain(300) -> 2,
+      "S = (\"aa\")* !.;" -> 7,
+      "S = &A A !.; A = \"aa\" B / \"\"; B = A;" -> 3
+    )
+    for ((source, width) <- cases) {
+      PyDiff.assertSameAsPython(inverseRepeat(source, width), "-c",
+        "import sys\nfrom phase_peg import inverse_repeat\nprint(inverse_repeat(sys.argv[1], int(sys.argv[2])), end='')",
+        source, width.toString)
+    }
+  }
+
+  test("phase returns propagate through a long reference chain") {
+    val transformed = new Grammar(inverseRepeat(referenceChain(8000), 2))
+    assert(transformed.accepts("a"))
+    for (word <- Vector("", "b", "aa", "ab")) {
+      assert(!transformed.accepts(word), word)
+    }
+  }
+
   test("sparse TM with two microsteps per character") {
     // The TM compiler (symbolic_tm2peg) is outside this port; Python produces the source grammar.
     val source = PyDiff.python("-c",
