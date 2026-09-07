@@ -15,6 +15,16 @@ Python と **バイト一致** を差分テストで確認する。
 **Spec:** `docs/palindromes-in-peg/STATUS.md` §2（構成）と §5B（移植は SHA 再現の鎖を切りうる →
 だからこそバイト一致の差分テストを必須にする）。
 
+**Status note (2026-09-07):** This remains an implementation plan, not a
+claim that the port is complete. The pending-at-snapshot inventory is recorded
+in `/tmp/pal-port-inventory.md`; its eight entries are now integrated or
+assigned, so a final coverage audit after parent integrations is still needed.
+The active Scala sources expose `pal.GenerateWindowPal`,
+`pal.CompactScaffoldPeg`, `pal.VerifyWindowPal`, `pal.GeneratePhaseExamples`,
+and `pal.GenerateScaffoldExamples`. The default full-grammar SHA has not been
+verified from Scala; only bounded/source-fixture byte-identity checks currently
+count as evidence.
+
 ## Global Constraints（全タスク共通・必読）
 
 1. **Scala 3 だがブレース構文を使う。** indentation syntax、`then`/`do` 省略記法、`end` マーカーは禁止。
@@ -29,8 +39,10 @@ Python と **バイト一致** を差分テストで確認する。
    enum に置き換える。`Expr` は `symbolic_sca2peg.py` の 14 タグ（and, or, not, const, symbol,
    self, select, read, present, pointer, old, null, exists, edge）で閉じているので sealed ADT。
    hash-consing（`Expr._pool`）は `Expr.share { ... }` 的な明示スコープで再現する。
-5. **順序に注意。** Python の `dict`/`set` の反復順は挿入順。Scala では `mutable.LinkedHashMap` /
-   `LinkedHashSet` / `Vector` を使い、`Map`/`Set`（不定順）を出力順に使わない。
+5. **順序に注意。** Python の `dict` の反復順は挿入順だが、`set` は挿入順ではない。Scala では
+   `mutable.LinkedHashMap` / `LinkedHashSet` / `Vector` を使い、`Map`/`Set` の不定順を出力順に
+   使わない。set 順が出力に影響する箇所は、`CPythonSetOrder` のように対象の CPython 順を明示的に
+   再現する。
    `sorted()` の比較（タプル辞書式、文字列）は Scala の `Ordering` で同じ結果になるよう明示する。
 6. **不変性の規約は緩める。** 生成器は数百万規則を扱う性能コードなので、局所的な
    `mutable.*` と `var` は可。ただし公開 API は不変値を返す。

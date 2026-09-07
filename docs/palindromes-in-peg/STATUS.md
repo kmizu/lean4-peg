@@ -1,5 +1,9 @@
 # 回文言語の素の PEG — 経過と現状（2026-09-07、lean4-peg 移行時点）
 
+> Scala移植は進行中であり、この文書は全Pythonモジュールの移植完了を主張しない。
+> `/tmp/pal-port-inventory.md` は pending-at-snapshot の一覧で、現在は統合済みまたは担当割当済み。
+> 親側の統合後に最終coverage auditを行う。
+
 この repo で作業を続けるための入口。まずこれを読み、次に `PLAIN_PAL_ARTIFACT.md`
 （証人と検証）、`HANDOFF.md`（Codex の構成過程の生ログ、時系列は新しい順）、
 `TRANSLATION_STRATEGY.md`（変換方針）を読む。
@@ -63,6 +67,28 @@ python3 verify_window_pal.py /tmp/pal-window-fast.peg --runner rust-peg/target/r
 python3 analysis/grammar_closure.py /tmp/pal-window-fast.peg   # 数分
 python3 analysis/grammar_scc.py /tmp/pal-window-fast.peg       # 約 22 分、メモリ数 GB
 ```
+
+### Scala 3 の再現入口（移植進行中）
+
+active sourcesにあるCLIは `pal.GenerateWindowPal`、`pal.CompactScaffoldPeg`、
+`pal.VerifyWindowPal` として、`scala/` から次の形で実行する。
+
+```sh
+cd scala
+sbt -batch 'pal/runMain pal.GenerateWindowPal /tmp/pal-window-original.peg --checkpoint /tmp/pal-window-original.sca --skip-optimize'
+sbt -batch 'pal/runMain pal.CompactScaffoldPeg /tmp/pal-window-original.peg /tmp/pal-window-fast.peg'
+sbt -batch 'pal/runMain pal.VerifyWindowPal /tmp/pal-window-fast.peg --runner ../docs/palindromes-in-peg/rust-peg/target/release/plain-peg-runner --log /tmp/verify.log'
+```
+
+Scala版のdefault全体grammarを生成して上記SHAと一致させる検証は未実施。現時点の証拠は、
+`PyDiff`による実装済みモジュールのsource/fixture範囲に限る。
+
+### Lean側の条件付き定理
+
+`lean-pal/` の `lake build` は、Kim–Park成果物の厳密実時間TMモデルを使った条件付き定理を
+ビルド・公理監査する。`RealTimeTM.RecognizedBy PAL`（そのモデルでPALを認識する機械の存在）が
+仮定であり、Galilの機械の書き下しと、文献の実時間性を厳密な1記号1遷移・各テープ1書込/1移動へ
+正規化することは未証明。従って無条件の `PAL ∈ PEG` の証明ではない。
 
 生成には 22 GiB 級のメモリと時間がかかる（詳細は `PLAIN_PAL_ARTIFACT.md`）。文法本体は
 repo に入れない（672 MB）。SHA で固定する。

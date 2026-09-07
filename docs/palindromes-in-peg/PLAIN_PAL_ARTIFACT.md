@@ -17,6 +17,13 @@ Inlining took 200.577 seconds. The raw grammar passed eight direct input
 checks: epsilon, `a`, `b`, `aa`, `aba`, `abba` were accepted; `ab` and `abab`
 were rejected. Its complete log is `/tmp/pal-window-raw-smoke.log`.
 
+## Scala port boundary
+
+Scala 3 ports under `scala/pal` use `PyDiff` for differential checks. A passing
+source/fixture byte-identity test is evidence only for that tested range; it
+does not establish that Scala reproduces the complete default window grammar.
+The full-grammar SHA above has not yet been independently reproduced by Scala.
+
 ## Completed verification
 
 The compact grammar was loaded once and run on all 63 binary words of
@@ -41,6 +48,26 @@ cargo build --offline --release --manifest-path rust-peg/Cargo.toml
 rust-peg/target/release/compact-scaffold-peg /tmp/pal-window-original.peg /tmp/pal-window-fast.peg
 python3 -u verify_window_pal.py /tmp/pal-window-fast.peg --runner rust-peg/target/release/plain-peg-runner --log /tmp/pal-window-fast-verify.log
 ```
+
+The corresponding Scala CLI shape is:
+
+```sh
+cd scala
+sbt -batch 'pal/runMain pal.GenerateWindowPal /tmp/pal-window-original.peg --checkpoint /tmp/pal-window-original.sca --skip-optimize'
+sbt -batch 'pal/runMain pal.CompactScaffoldPeg /tmp/pal-window-original.peg /tmp/pal-window-fast.peg'
+sbt -batch 'pal/runMain pal.VerifyWindowPal /tmp/pal-window-fast.peg --runner ../docs/palindromes-in-peg/rust-peg/target/release/plain-peg-runner --log /tmp/pal-window-fast-verify.log'
+```
+
+These commands document the object/CLI mapping, not a completed Scala SHA witness.
+
+## Formal conditional result
+
+The separate `lean-pal` package builds a conditional theorem: if a machine in
+Kim–Park's `RealTimeTM` model recognizes `PAL`, the SCA-to-PEG theorem yields a
+total PEG for `PAL` (and the even-length consequence). Existence of such a
+machine, and normalization of Galil's published machine to that exact
+one-transition/one-write/one-move model, remain assumptions. This is distinct
+from the finite artifact checks and is not an unconditional proof.
 
 The source checkpoint can resume emission with `generate_window_pal.py
 OUTPUT --resume /tmp/pal-window-original.sca`. This checkpoint is compiler
