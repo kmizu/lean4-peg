@@ -17,7 +17,8 @@ class MoveCenterFiniteSuite extends munit.FunSuite {
     val positions = Array.fill(p.ntapes)(0)
     val left = base
     val right = base + word.length - 1
-    for ((c, i) <- word.zipWithIndex.map { case (c, k) => (c, k + left) }) {
+    for ((c, k) <- word.zipWithIndex) {
+      val i = left + k
       tapes(WINDOW).write(i, (if (i % 2 == 1) { "C:" } else { "P:" }) + c)
     }
     tapes(WINDOW).write(left, boundary(word.head.toString, left = true, right = left == right))

@@ -42,6 +42,14 @@ class FppSubroutineSuite extends munit.FunSuite {
     routine.validate()
   }
 
+  test("the seven-tape Program.run entry is rejected on the marked kernel") {
+    val routine = buildMarkedProgram()
+    val error = intercept[IllegalStateException] {
+      routine.run("ab")
+    }
+    assert(error.getMessage.contains("runMarked"), error.getMessage)
+  }
+
   test("long runs and periodic inputs") {
     val routine = buildMarkedProgram()
     for (n <- Seq(32, 128, 512, 2048)) {

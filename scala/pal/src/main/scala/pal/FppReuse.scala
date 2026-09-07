@@ -25,9 +25,11 @@ object FppReuse {
     *
     * Python 版は `set(program.alphabet) | {END, BLANK, "0", "1"}` を反復するので、その順序は
     * `PYTHONHASHSEED` に依存する（状態番号と分岐表のキー順に影響し、checked-in の
-    * `generated/<name>-controller.json` はそれぞれ別の順序で書かれている）。ここでは既定を
+    * `generated/<name>-controller.json` は dp-search 系が `PYTHONHASHSEED=0` の順序、
+    * move-center はどの seed とも一致しない順序で書かれている）。ここでは既定を
     * 決定的な「アルファベット順 → END, BLANK, 0, 1」とし、ゴールデン再生成のために
-    * 明示的な順序を渡せるようにする（`ControllerArtifacts`）。
+    * 明示的な順序を渡せるようにする（`ControllerArtifacts`）。順序は状態番号だけを変え、
+    * 実行トレースは変えない（`ControllerArtifactsSuite` で確認）。
     */
   def defaultBodySymbols(alphabet: Seq[String]): Vector[String] =
     (alphabet ++ Seq(END, BLANK, "0", "1")).distinct.toVector

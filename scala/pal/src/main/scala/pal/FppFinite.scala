@@ -28,18 +28,15 @@ object FppFinite {
   val FRONT: Int = 6
 
   /** Python の `("halt",)` 等のタプルに対応する命令。 `Read` の分岐表は挿入順を保つ。 */
-  sealed trait Instruction {
-    /** Python の `instruction[0]`。 */
-    def op: String
-  }
+  sealed trait Instruction
 
   object Instruction {
-    case object Halt extends Instruction { val op = "halt" }
+    case object Halt extends Instruction
     /** Record the A head position externally, then continue at `next`. */
-    final case class Emit(next: Int) extends Instruction { val op = "emit" }
-    final case class Move(tape: Int, direction: Int, next: Int) extends Instruction { val op = "move" }
-    final case class Write(tape: Int, symbol: String, next: Int) extends Instruction { val op = "write" }
-    final case class Read(tape: Int, choices: VectorMap[String, Int]) extends Instruction { val op = "read" }
+    final case class Emit(next: Int) extends Instruction
+    final case class Move(tape: Int, direction: Int, next: Int) extends Instruction
+    final case class Write(tape: Int, symbol: String, next: Int) extends Instruction
+    final case class Read(tape: Int, choices: VectorMap[String, Int]) extends Instruction
   }
 
   /** 挿入順を保つ分岐表。Python の dict リテラルと同じ規則: 既存キーの更新は位置を保つ。 */

@@ -27,6 +27,10 @@ object DpFinite {
 
   class DpProgram(alphabetSymbols: Iterable[String], ntapes: Int = 12) extends Program(alphabetSymbols, ntapes) {
 
+    /** Python overrides `run`; the seven-tape kernel entry does not apply to this twelve-tape kernel. */
+    override def run(word: String, maxSteps: Option[Int]): Run =
+      throw new IllegalStateException("DpProgram: use runDp(word, lower), not the seven-tape Program.run")
+
     /** Python の `DpProgram.run(word, lower=0)`（基底の `run` とは戻り値が違うので別名）。 */
     def runDp(word: String, lower: Int = 0): DpRun = {
       if (word.exists(c => !sourceAlphabet.contains(c.toString))) {

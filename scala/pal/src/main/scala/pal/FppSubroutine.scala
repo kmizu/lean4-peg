@@ -28,6 +28,10 @@ object FppSubroutine {
   /** A kernel whose only input is `^word$` on SOURCE; the marks are decoded externally. */
   class MarkedProgram(alphabetSymbols: Iterable[String], ntapes: Int = 9) extends Program(alphabetSymbols, ntapes) {
 
+    /** Python overrides `run`; the seven-tape kernel entry does not apply to this nine-tape kernel. */
+    override def run(word: String, maxSteps: Option[Int]): Run =
+      throw new IllegalStateException("MarkedProgram: use runMarked(word), not the seven-tape Program.run")
+
     /** Python の `MarkedProgram.run(word)`（基底の `run` とは戻り値が違うので別名）。 */
     def runMarked(word: String): MarkedRun = {
       if (word.exists(c => !sourceAlphabet.contains(c.toString))) {

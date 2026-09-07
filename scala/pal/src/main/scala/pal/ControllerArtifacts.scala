@@ -1,7 +1,7 @@
 package pal
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Path, Paths}
 
 import scala.collection.immutable.VectorMap
 
@@ -17,17 +17,32 @@ import FppFinite.Instruction.*
   * 注意: `fpp_reuse.make_reusable` は Python の `set` を反復するので、その部分の状態番号と
   * 分岐表のキー順はゴールデンが書かれた時の `PYTHONHASHSEED` に依存する。dp-search 系の
   * 4 表は同じ順序（`SEARCH_BODY_ORDER`）、move-center は別の順序（`MOVE_CENTER_BODY_ORDER`）で
-  * 書かれている。ここではその順序を明示的に渡して同じバイト列を再現する。
+  * 書かれている。ここではその順序を明示的に渡して同じバイト列を再現する。したがって
+  * ゴールデンの規範的な生成器は Python ではなくこの object である。既定順序
+  * （`FppReuse.defaultBodySymbols`）で組んだ制御器がゴールデンと同じ挙動をすることは
+  * `ControllerArtifactsSuite` が実行トレース（歩数・ヘッド位置・全テープ内容）で確認する。
   */
 object ControllerArtifacts {
 
   val CONTRACT: String = "Finite research component; see FPP_CALLING_CONVENTION.md for input, " +
     "readiness, cancellation and scheduling boundaries. Not a PAL recognizer."
 
-  /** `set("abs#") | {END, BLANK, "0", "1"}` as iterated when the dp-search family was written. */
+  /** Historical order of `set(("a","b","s","#")) | {"$","_","0","1"}` embedded in
+    * `dp-search`, `dp-search-reusable`, `chain-monitor` and `chain-monitor-reusable`.
+    *
+    * Verified (2026-09-07): it is exactly the iteration order under `PYTHONHASHSEED=0`, i.e. with hash
+    * randomisation disabled; no seed in 1..3999 gives it. With it, all four tables are reproduced
+    * byte for byte.
+    */
   val SEARCH_BODY_ORDER: Seq[String] = Seq("#", "s", "b", "0", "_", "a", "1", "$")
 
-  /** The same set as iterated when move-center-controller.json was written. */
+  /** Historical order of the same set embedded in `move-center-controller.json`.
+    *
+    * No `PYTHONHASHSEED` in 0..3999 iterates the set this way (checked 2026-09-07); the file was
+    * written by an unrecorded process. The order is kept only to reproduce that file byte for
+    * byte; `ControllerArtifactsSuite` shows the default order builds a behaviourally identical
+    * controller.
+    */
   val MOVE_CENTER_BODY_ORDER: Seq[String] = Seq("s", "1", "$", "#", "_", "a", "b", "0")
 
   val TAPE_NAMES: Vector[String] = Vector("A", "B", "C", "S", "T", "BACK", "FRONT")
@@ -158,9 +173,22 @@ object ControllerArtifacts {
     "chain-monitor-reusable" -> (() => chainMonitorReusable()),
     "move-center" -> (() => moveCenter()))
 
-  /** `ControllerArtifacts [outputDir] [name...]`: write the tables (default: all, into `docs/palindromes-in-peg/generated`). */
+  /** `docs/palindromes-in-peg/generated`, found by walking up from the working directory
+    * (sbt runs with `scala/` as cwd; the same discovery as the test-side `PyDiff.pyDir`).
+    */
+  def defaultOutputDir: Path = {
+    val here = Paths.get("").toAbsolutePath
+    Iterator
+      .iterate(here)(_.getParent)
+      .takeWhile(_ != null)
+      .map(_.resolve("docs/palindromes-in-peg/generated"))
+      .find(Files.isDirectory(_))
+      .getOrElse(throw new IllegalStateException(s"docs/palindromes-in-peg/generated not found above $here"))
+  }
+
+  /** `ControllerArtifacts [outputDir] [name...]`: write the tables (default: all, into `defaultOutputDir`). */
   def main(args: Array[String]): Unit = {
-    val dir = Paths.get(args.headOption.getOrElse("docs/palindromes-in-peg/generated"))
+    val dir = args.headOption.map(Paths.get(_)).getOrElse(defaultOutputDir)
     val names = if (args.length > 1) { args.drop(1).toSeq } else { all.keys.toSeq }
     for (name <- names) {
       val generate = all.getOrElse(name, throw new IllegalArgumentException(s"unknown artifact $name"))

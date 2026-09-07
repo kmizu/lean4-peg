@@ -44,6 +44,14 @@ class DpFiniteSuite extends munit.FunSuite {
     }
   }
 
+  test("the seven-tape Program.run entry is rejected on the DP kernel") {
+    val machine = buildDpProgram()
+    val error = intercept[IllegalStateException] {
+      machine.run("ab")
+    }
+    assert(error.getMessage.contains("runDp"), error.getMessage)
+  }
+
   test("long chain skips strict lower bound") {
     val machine = buildDpProgram()
     for (n <- Seq(32, 128, 512, 2048)) {
