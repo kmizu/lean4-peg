@@ -34,10 +34,10 @@ TM に載せるにはこちらの「実際に計算する」版が要る。
    内側走査が本当に `IsLeastKRep` / `ReachOf` / `NoSecond` を計算することを、
    `GSDecomp.lean` の Fine–Wilf 系の道具（`fineWilf`, `hasPeriod_take_of_le`）で示す。
    走査側への橋渡しは `decompose_ksimple`。
-3. **仕事量**：`decomposeWork` を instrumented counter として定義し、外側 1 反復ぶんの
-   線形上界 `decomposeStepWork_le : decomposeStepWork x k s ≤ (3k+8)*|x| + (2k+5)` を示す
-   （ポテンシャル `Φ = (k+2)*p + q`）。削除ループを含む大域的な線形性は
-   GS Theorem 1 の償却を要し、`GSDecomp.lean` 同様ここでは扱わない（末尾の節を参照）。
+3. **仕事量**：`decomposeWork` を instrumented counter として定義し、
+   `decomposeWork_le : 4 ≤ k → decomposeWork x k ≤ (16k+38)*|x| + (2k+5)` を示す。
+   ポテンシャル `Φ = (k+2)*p + q` による走査の局所評価と、削除ループの停止条件から
+   得られる第 2 周期の幾何級数（`p₁' ≥ p₂ ≥ (k-1)*p₁`）による償却。詳細は末尾の節。
 -/
 
 namespace PalPeg
@@ -1254,34 +1254,796 @@ theorem decomposeStepWork_le (x : List α) (k s : ℕ) (hk : 3 ≤ k) (hs : s �
 
 end Dec6
 
-/-! ## 仕事量の小例と、大域的な線形性について
+/-! ## 大域的な線形仕事量に向けた鋭い評価
+
+`decomposeStepWork_le` は 1 パスを `O(|x|)` で押さえるが、GS の議論では 1 パスの仕事は
+`O(k*p₂ + (r - k*p₁))` であり、パスごとに `p₂` が `(k-1)` 倍以上に増える（幾何級数）。
+以下ではまずその鋭い評価を用意する。 -/
+
+/-- `q ≤ k*p` なら `⌈q/k⌉ ≤ p`。 -/
+theorem ceilDiv_le_of_le_mul {q k p : ℕ} (hk : 0 < k) (h : q ≤ k * p) : ceilDiv q k ≤ p := by
+  have hb := (ceilDiv_bounds (q := q) (k := k) hk).2
+  by_contra hcon
+  have h1 : k * (p + 1) ≤ k * ceilDiv q k := Nat.mul_le_mul_left k (by omega)
+  rw [Nat.mul_succ] at h1
+  omega
+
+/-- ずらし幅は候補周期を高々 2 倍にしかしない（`q ≤ k*p` のとき）。 -/
+theorem shiftNoPeriod_le_of_le_mul {q k p : ℕ} (hk : 0 < k) (hp : 0 < p) (h : q ≤ k * p) :
+    shiftNoPeriod q k ≤ p := by
+  have := ceilDiv_le_of_le_mul hk h
+  unfold shiftNoPeriod
+  omega
+
+section Dec7
+
+variable [DecidableEq α]
+
+/-- 内側走査は `(k-1)*p` を越えない（周期の仮定を使わない版）。 -/
+theorem firstInner_le_bound (v : List α) (k p : ℕ) :
+    ∀ (fuel q : ℕ), q ≤ (k - 1) * p → firstInner v k p fuel q ≤ (k - 1) * p := by
+  intro fuel
+  induction fuel with
+  | zero => intro q h; exact h
+  | succ fuel ih =>
+    intro q h
+    by_cases hc : p + q < v.length ∧ q < (k - 1) * p ∧ v[q]? = v[p + q]?
+    · rw [firstInner, if_pos hc]
+      exact ih (q + 1) (by omega)
+    · rw [firstInner, if_neg hc]
+      exact h
+
+/-- **`_first_period` が成功したときの仕事量は `O(k * p₁)`**（`|v|` に依存しない）。
+これが GS の「最小 `k`-繰り返し周期を見つけた時点で止まる」の定量版。 -/
+theorem firstOuterWork_le_some (v : List α) (k bound : ℕ) (hk : 3 ≤ k) :
+    ∀ (fuel p p₁ m : ℕ), 0 < p → firstOuter v k bound fuel p = some (p₁, m) →
+      firstOuterWork v k bound fuel p + (k + 2) * p ≤ (2 * k + 1) * p₁ + 2 := by
+  intro fuel
+  induction fuel with
+  | zero => intro p p₁ m _ h; exact absurd h (by simp [firstOuter])
+  | succ fuel ih =>
+    intro p p₁ m hp h
+    rw [firstOuter] at h
+    rw [firstOuterWork]
+    split at h
+    · next hg =>
+      rw [if_pos hg]
+      have hin := firstInnerWork_le v k p (v.length + 1) 0
+      split at h
+      · next hqeq =>
+        rw [if_pos hqeq]
+        rw [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, -⟩ := h
+        have h1 := Nat.sub_one_mul k p
+        have h2 : p ≤ k * p := Nat.le_mul_of_pos_left p (by omega)
+        have h3 : (2 * k + 1) * p = k * p + k * p + p := by ring
+        have h4 : (k + 2) * p = k * p + 2 * p := by ring
+        omega
+      · next hqne =>
+        rw [if_neg hqne]
+        have hsp := shiftNoPeriod_pos (firstInner v k p (v.length + 1) 0) k
+        have hkm := le_mul_shiftNoPeriod (firstInner v k p (v.length + 1) 0) k (by omega)
+        have hrec := ih (p + shiftNoPeriod (firstInner v k p (v.length + 1) 0) k) p₁ m
+          (by omega) h
+        have hd : (k + 2) * (p + shiftNoPeriod (firstInner v k p (v.length + 1) 0) k)
+            = (k + 2) * p + (k * shiftNoPeriod (firstInner v k p (v.length + 1) 0) k
+              + 2 * shiftNoPeriod (firstInner v k p (v.length + 1) 0) k) := by ring
+        omega
+    · exact absurd h (by simp)
+
+/-- **`bound` 付き `_first_period` の仕事量は `O(k * bound)`**。
+候補周期は 1 反復で高々 2 倍にしかならないので、`bound` を越えた時点で止まる走査は
+`bound` に比例した仕事しかしない。削除ループの最後の（失敗する）呼び出しに使う。 -/
+theorem firstOuterWork_le_min (v : List α) (k bound : ℕ) (hk : 3 ≤ k) :
+    ∀ (fuel p : ℕ), 0 < p → p ≤ 2 * min bound v.length + 1 →
+      firstOuterWork v k bound fuel p + (k + 2) * p
+        ≤ (k + 2) * (2 * min bound v.length + 1) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro p hp hple
+    simp only [firstOuterWork]
+    have h5 : (k + 2) * p ≤ (k + 2) * (2 * min bound v.length + 1) :=
+      Nat.mul_le_mul_left _ hple
+    omega
+  | succ fuel ih =>
+    intro p hp hple
+    have h5 : (k + 2) * p ≤ (k + 2) * (2 * min bound v.length + 1) :=
+      Nat.mul_le_mul_left _ hple
+    rw [firstOuterWork]
+    split
+    · next hg =>
+      obtain ⟨hg1, hg2⟩ := hg
+      have hin := firstInnerWork_le v k p (v.length + 1) 0
+      have hqb : firstInner v k p (v.length + 1) 0 ≤ (k - 1) * p :=
+        firstInner_le_bound v k p (v.length + 1) 0 (Nat.zero_le _)
+      have hkp : (k - 1) * p ≤ k * p := by
+        have h1 := Nat.sub_one_mul k p
+        have h2 : p ≤ k * p := Nat.le_mul_of_pos_left p (by omega)
+        omega
+      have hsle : shiftNoPeriod (firstInner v k p (v.length + 1) 0) k ≤ p :=
+        shiftNoPeriod_le_of_le_mul (by omega) hp (by omega)
+      have hsp := shiftNoPeriod_pos (firstInner v k p (v.length + 1) 0) k
+      have hkm := le_mul_shiftNoPeriod (firstInner v k p (v.length + 1) 0) k (by omega)
+      have hrec := ih (p + shiftNoPeriod (firstInner v k p (v.length + 1) 0) k)
+        (by omega) (by omega)
+      have hd : (k + 2) * (p + shiftNoPeriod (firstInner v k p (v.length + 1) 0) k)
+          = (k + 2) * p + (k * shiftNoPeriod (firstInner v k p (v.length + 1) 0) k
+            + 2 * shiftNoPeriod (firstInner v k p (v.length + 1) 0) k) := by ring
+      have hmb : (k + 2) * (p + 1) ≤ (k + 2) * (2 * min bound v.length + 1) :=
+        Nat.mul_le_mul_left _ (by omega)
+      have hd2 : (k + 2) * (p + 1) = (k + 2) * p + (k + 2) := by ring
+      split <;> omega
+    · omega
+
+end Dec7
+
+/-! ## `reach` 伸長と `_second_period` の鋭い評価 -/
+
+section Dec8
+
+variable [DecidableEq α]
+
+/-- `reach` 伸長の仕事量はちょうど伸ばした量 + 1。 -/
+theorem extendReachWork_le' (v : List α) (p : ℕ) :
+    ∀ (fuel r : ℕ), extendReachWork v p fuel r + r ≤ extendReach v p fuel r + 1 := by
+  intro fuel
+  induction fuel with
+  | zero => intro r; simp only [extendReachWork, extendReach]; omega
+  | succ fuel ih =>
+    intro r
+    by_cases hc : r < v.length ∧ v[r - p]? = v[r]?
+    · rw [extendReachWork, if_pos hc, extendReach, if_pos hc]
+      have := ih (r + 1); omega
+    · rw [extendReachWork, if_neg hc, extendReach, if_neg hc]; omega
+
+/-- 内側走査が「発見」で終わったなら、現在の候補 `p` は本当に第 2 周期。 -/
+theorem secondInner_second (v : List α) (k p r : ℕ) (hk : 3 ≤ k) (hp : 0 < p) :
+    ∀ (fuel q : ℕ), p + q ≤ v.length → HasPeriod (v.take (p + q)) p →
+      secondInner v k p r fuel q = none → Second v k r p := by
+  intro fuel
+  induction fuel with
+  | zero => intro q _ _ h; exact absurd h (by simp [secondInner])
+  | succ fuel ih =>
+    intro q hpq hper h
+    rw [secondInner] at h
+    split at h
+    · next hc =>
+      obtain ⟨h1, h2⟩ := hc
+      have hnext : HasPeriod (v.take (p + (q + 1))) p := hasPeriod_take_succ hper h1 h2
+      split at h
+      · next hfire =>
+        obtain ⟨hf1, hf2⟩ := hfire
+        have hkp : k * p ≤ p + (q + 1) := by
+          have e := Nat.sub_one_mul k p
+          have e2 : p ≤ k * p := Nat.le_mul_of_pos_left p (by omega)
+          omega
+        have hmax : max (k * p) (r + 1) ≤ p + (q + 1) := max_le hkp (by omega)
+        exact ⟨hp, by omega, hasPeriod_take_of_le hnext hmax⟩
+      · exact ih (q + 1) (by omega) hnext h
+    · exact absurd h (by simp)
+
+/-- 内側走査の脱出条件（周期の仮定なし版）。 -/
+theorem secondInner_exit (v : List α) (k p r : ℕ) :
+    ∀ (fuel q q' : ℕ), ¬(r < p + q ∧ (k - 1) * p ≤ q) →
+      secondInner v k p r fuel q = some q' → ¬(r < p + q' ∧ (k - 1) * p ≤ q') := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro q q' hne h
+    have : q' = q := by simpa [secondInner] using h.symm
+    subst this; exact hne
+  | succ fuel ih =>
+    intro q q' hne h
+    rw [secondInner] at h
+    split at h
+    · split at h
+      · exact absurd h (by simp)
+      · next hd => exact ih (q + 1) q' hd h
+    · have : q' = q := by simpa using h.symm
+      subst this; exact hne
+
+/-- **`_second_period` が成功したときは、返す `p₂` が最小の第 2 周期**。 -/
+theorem secondOuter_some (v : List α) (k p₁ r : ℕ) (hk : 3 ≤ k)
+    (hleast : IsLeastKRep v k p₁) (hreach : HasPeriod (v.take r) p₁) (hrle : r ≤ v.length) :
+    ∀ (fuel p q p₂ : ℕ), 0 < p →
+      (p < v.length → p + q ≤ v.length ∧ HasPeriod (v.take (p + q)) p ∧
+        ¬(r < p + q ∧ (k - 1) * p ≤ q)) →
+      (∀ p', p' < p → ¬ Second v k r p') →
+      secondOuter v k p₁ r fuel p q = some p₂ →
+      Second v k r p₂ ∧ ∀ p', p' < p₂ → ¬ Second v k r p' := by
+  have hp₁ : 0 < p₁ := hleast.1.1
+  intro fuel
+  induction fuel with
+  | zero => intro p q p₂ _ _ _ h; exact absurd h (by simp [secondOuter])
+  | succ fuel ih =>
+    intro p q p₂ hp hinv hbelow h
+    rw [secondOuter] at h
+    split at h
+    · next hg =>
+      obtain ⟨hpq, hper, hne⟩ := hinv hg
+      rcases hsi : secondInner v k p r (v.length + 1) q with _ | q'
+      · simp only [hsi] at h
+        rw [Option.some.injEq] at h
+        subst h
+        exact ⟨secondInner_second v k p r hk hp (v.length + 1) q hpq hper hsi, hbelow⟩
+      · simp only [hsi] at h
+        obtain ⟨hpq', hper', hne', hexit2⟩ :=
+          secondInner_spec v k p r (v.length + 1) q (by omega) hpq hper hne q' hsi
+        have hnp : ¬ Second v k r p := not_second_of_exit hk hp hper' hpq' hne' hexit2
+        have hbelow' : ∀ p'', p'' ≤ p → ¬ Second v k r p'' := by
+          intro p'' hp''
+          rcases Nat.lt_or_ge p'' p with hlt | hge
+          · exact hbelow p'' hlt
+          · have hpp : p'' = p := by omega
+            exact hpp ▸ hnp
+        split at h
+        · next hcase =>
+          obtain ⟨hc1, hc2⟩ := hcase
+          have hp₁q : p₁ ≤ q' := le_trans (Nat.le_mul_of_pos_left p₁ (by omega)) hc1
+          refine ih (p + p₁) (q' - p₁) p₂ (by omega) ?_ ?_ h
+          · intro _
+            have heq : p + p₁ + (q' - p₁) = p + q' := by omega
+            refine ⟨by omega, ?_, ?_⟩
+            · rw [heq, hasPeriod_take_iff hpq']
+              intro i hi
+              have e1 : v[i]? = v[i + p₁]? :=
+                (hasPeriod_take_iff hrle).mp hreach i (by omega)
+              have e2 : v[i + p₁]? = v[i + p₁ + p]? :=
+                (hasPeriod_take_iff hpq').mp hper' (i + p₁) (by omega)
+              rw [e1, e2]
+              exact getElem?_congr (by omega)
+            · rw [heq]
+              rintro ⟨hr1, hr2⟩
+              have hq'lt : q' < (k - 1) * p := by
+                by_contra hcon
+                exact hne' ⟨hr1, by omega⟩
+              have : (k - 1) * p ≤ (k - 1) * (p + p₁) := Nat.mul_le_mul_left _ (by omega)
+              omega
+          · intro p' hp'
+            rcases Nat.lt_or_ge p' p with hlt | hge
+            · exact hbelow p' hlt
+            · rcases Nat.eq_or_lt_of_le hge with heq | hgt
+              · exact heq ▸ hnp
+              · exact no_second_between_period hk hp hleast hper' hpq' hc1 hbelow' p' hgt hp'
+        · next hcase =>
+          have hsp := shiftNoPeriod_pos q' k
+          refine ih (p + shiftNoPeriod q' k) 0 p₂ (by omega) ?_ ?_ h
+          · intro hlt
+            refine ⟨by omega, ?_, ?_⟩
+            · rw [hasPeriod_take_iff (by omega)]
+              intro i hi; exact absurd hi (by omega)
+            · have hpos : 0 < (k - 1) * (p + shiftNoPeriod q' k) :=
+                Nat.mul_pos (by omega) (by omega)
+              rintro ⟨-, h2⟩
+              omega
+          · intro p' hp'
+            rcases Nat.lt_or_ge p' p with hlt | hge
+            · exact hbelow p' hlt
+            · rcases Nat.eq_or_lt_of_le hge with heq | hgt
+              · exact heq ▸ hnp
+              · exact no_second_between_shift hk hp hleast hper' hpq' hne' hcase hbelow'
+                  p' hgt hp'
+    · exact absurd h (by simp)
+
+/-- 発見で終わった内側走査の仕事量は `max (r+1-p) ((k-1)*p)` 止まり
+（返す `q` は条件が最初に成立する値なので）。 -/
+theorem secondInnerWork_le_none (v : List α) (k p r : ℕ) :
+    ∀ (fuel q : ℕ), ¬(r < p + q ∧ (k - 1) * p ≤ q) →
+      secondInner v k p r fuel q = none →
+      secondInnerWork v k p r fuel q + q ≤ max (r + 1 - p) ((k - 1) * p) + 1 := by
+  intro fuel
+  induction fuel with
+  | zero => intro q _ h; exact absurd h (by simp [secondInner])
+  | succ fuel ih =>
+    intro q hne h
+    rw [secondInner] at h
+    rw [secondInnerWork]
+    split at h
+    · next hc =>
+      rw [if_pos hc]
+      split at h
+      · next hfire =>
+        rw [if_pos hfire]
+        omega
+      · next hd =>
+        rw [if_neg hd]
+        have := ih (q + 1) hd h
+        omega
+    · next hc =>
+      exact absurd h (by simp)
+
+/-- **`_second_period` が成功したときの仕事量は `O(k*p₂ + r)`**。 -/
+theorem secondOuterWork_le_some (v : List α) (k first r : ℕ) (hk : 3 ≤ k) (hf : 0 < first) :
+    ∀ (fuel p q p₂ : ℕ), 0 < p →
+      (p < v.length → p + q ≤ v.length ∧ ¬(r < p + q ∧ (k - 1) * p ≤ q)) →
+      secondOuter v k first r fuel p q = some p₂ →
+      secondOuterWork v k first r fuel p q + ((k + 2) * p + q)
+        ≤ (2 * k + 1) * p₂ + r + 3 := by
+  intro fuel
+  induction fuel with
+  | zero => intro p q p₂ _ _ h; exact absurd h (by simp [secondOuter])
+  | succ fuel ih =>
+    intro p q p₂ hp hinv h
+    rw [secondOuter] at h
+    rw [secondOuterWork]
+    split at h
+    · next hg =>
+      rw [if_pos hg]
+      obtain ⟨hpq, hne⟩ := hinv hg
+      rcases hsi : secondInner v k p r (v.length + 1) q with _ | q'
+      · simp only [hsi] at h ⊢
+        rw [Option.some.injEq] at h
+        subst h
+        have hw := secondInnerWork_le_none v k p r (v.length + 1) q hne hsi
+        have e1 : (k - 1) * p + (k + 2) * p = (2 * k + 1) * p := by
+          have h1 := Nat.sub_one_mul k p
+          have h2 : p ≤ k * p := Nat.le_mul_of_pos_left p (by omega)
+          have h3 : (2 * k + 1) * p = k * p + k * p + p := by ring
+          have h4 : (k + 2) * p = k * p + 2 * p := by ring
+          omega
+        omega
+      · simp only [hsi] at h ⊢
+        have hw := secondInnerWork_le' v k p r (v.length + 1) q q' hsi
+        have hne' := secondInner_exit v k p r (v.length + 1) q q' hne hsi
+        obtain ⟨hq'ge, hq'le⟩ := secondInner_le v k p r (v.length + 1) q q' hpq hsi
+        split at h
+        · next hcase =>
+          obtain ⟨hc1, hc2⟩ := hcase
+          rw [if_pos ⟨hc1, hc2⟩]
+          have hfq : first ≤ q' := le_trans (Nat.le_mul_of_pos_left first (by omega)) hc1
+          have hrec := ih (p + first) (q' - first) p₂ (by omega) ?_ h
+          · have hd : (k + 2) * (p + first) = (k + 2) * p + (k + 2) * first := by ring
+            have hd2 : (k + 2) * first = k * first + 2 * first := by ring
+            have hd3 : first ≤ k * first := Nat.le_mul_of_pos_left first (by omega)
+            omega
+          · intro _
+            refine ⟨by omega, ?_⟩
+            rintro ⟨hr1, hr2⟩
+            have hq'lt : q' < (k - 1) * p := by
+              by_contra hcon
+              exact hne' ⟨by omega, by omega⟩
+            have : (k - 1) * p ≤ (k - 1) * (p + first) := Nat.mul_le_mul_left _ (by omega)
+            omega
+        · next hcase =>
+          rw [if_neg hcase]
+          have hsp := shiftNoPeriod_pos q' k
+          have hkm := le_mul_shiftNoPeriod q' k (by omega)
+          have hrec := ih (p + shiftNoPeriod q' k) 0 p₂ (by omega) ?_ h
+          · have hd : (k + 2) * (p + shiftNoPeriod q' k)
+                = (k + 2) * p + (k * shiftNoPeriod q' k + 2 * shiftNoPeriod q' k) := by ring
+            omega
+          · intro hlt
+            refine ⟨by omega, ?_⟩
+            have hpos : 0 < (k - 1) * (p + shiftNoPeriod q' k) :=
+              Nat.mul_pos (by omega) (by omega)
+            rintro ⟨-, h2⟩
+            omega
+    · exact absurd h (by simp)
+
+end Dec8
+
+/-! ## 削除ループの不変条件と仕事量 -/
+
+section Dec9
+
+variable [DecidableEq α]
+
+/-- 外側 1 反復ぶんの「これ以下の周期はもうない」の更新（`firstOuter` の共通部分）。 -/
+theorem firstOuter_step_below (v : List α) (k : ℕ) (hk : 3 ≤ k) {p : ℕ} (hp : 0 < p)
+    (hg1 : p < v.length)
+    (hqne : firstInner v k p (v.length + 1) 0 ≠ (k - 1) * p)
+    (hbelow : ∀ p', p' < p → ¬ KRep v k p') :
+    ∀ p', p' < p + shiftNoPeriod (firstInner v k p (v.length + 1) 0) k → ¬ KRep v k p' := by
+  have hstart : HasPeriod (v.take (p + 0)) p := by
+    rw [hasPeriod_take_iff (by omega)]
+    intro i hi; exact absurd hi (by omega)
+  obtain ⟨-, hq2, hq3, hq4, hq5⟩ :=
+    firstInner_spec v k p (v.length + 1) 0 (by omega) (by omega) (Nat.zero_le _) hstart
+  have hqlt : firstInner v k p (v.length + 1) 0 < (k - 1) * p := by omega
+  have hnp : ¬ KRep v k p := by
+    rintro ⟨-, hlen, hper⟩
+    have h1 := Nat.sub_one_mul k p
+    have h2 : p ≤ k * p := Nat.le_mul_of_pos_left p (by omega)
+    have hlt : p + firstInner v k p (v.length + 1) 0 < v.length := by omega
+    have hmatch : v[firstInner v k p (v.length + 1) 0]?
+        = v[p + firstInner v k p (v.length + 1) 0]? := by
+      refine ((hasPeriod_take_iff hlen).mp hper _ (by omega)).trans ?_
+      exact getElem?_congr (by omega)
+    exact hq5 ⟨hlt, hqlt, hmatch⟩
+  have hbelow' : ∀ p'', p'' ≤ p → ¬ KRep v k p'' := by
+    intro p'' hp''
+    rcases Nat.lt_or_ge p'' p with hlt | hge
+    · exact hbelow p'' hlt
+    · have hpp : p'' = p := by omega
+      exact hpp ▸ hnp
+  intro p' hp'
+  rcases Nat.lt_or_ge p' p with hlt | hge
+  · exact hbelow p' hlt
+  · rcases Nat.eq_or_lt_of_le hge with heq | hgt
+    · exact heq ▸ hnp
+    · exact no_krep_between hk hp hq4 hq2 hqlt hbelow' p' hgt hp'
+
+/-- **`bound` 付き `_first_period` が `none` を返したら、`bound` 未満の
+`k`-繰り返し周期は存在しない**。削除ループの停止条件がこれ。 -/
+theorem firstOuter_none_bnd (v : List α) (k bound : ℕ) (hk : 3 ≤ k) :
+    ∀ (fuel p : ℕ), 0 < p → v.length ≤ fuel + p → (∀ p', p' < p → ¬ KRep v k p') →
+      firstOuter v k bound fuel p = none → ∀ p', p' < bound → ¬ KRep v k p' := by
+  have hexit : ∀ (p : ℕ), (v.length ≤ p ∨ bound ≤ p) → (∀ p', p' < p → ¬ KRep v k p') →
+      ∀ p', p' < bound → ¬ KRep v k p' := by
+    intro p hpl hbelow p' hp'
+    rcases Nat.lt_or_ge p' p with hlt | hge
+    · exact hbelow p' hlt
+    · exact not_krep_of_length_le hk (by omega)
+  intro fuel
+  induction fuel with
+  | zero => intro p hp hf hbelow _; exact hexit p (Or.inl (by omega)) hbelow
+  | succ fuel ih =>
+    intro p hp hf hbelow h
+    rw [firstOuter] at h
+    split at h
+    · next hg =>
+      obtain ⟨hg1, -⟩ := hg
+      split at h
+      · exact absurd h (by simp)
+      · next hqne =>
+        refine ih _ ?_ ?_ ?_ h
+        · have := shiftNoPeriod_pos (firstInner v k p (v.length + 1) 0) k; omega
+        · have := shiftNoPeriod_pos (firstInner v k p (v.length + 1) 0) k; omega
+        · exact firstOuter_step_below v k hk hp hg1 hqne hbelow
+    · next hg =>
+      simp only [not_and] at hg
+      exact hexit p (by omega) hbelow
+
+/-- 削除ループは切断位置を後退させない。 -/
+theorem stripLoop_ge (x : List α) (k bound : ℕ) :
+    ∀ (fuel s : ℕ), s ≤ stripLoop x k bound fuel s := by
+  intro fuel
+  induction fuel with
+  | zero => intro s; exact le_refl _
+  | succ fuel ih =>
+    intro s
+    rw [stripLoop]
+    rcases hfo : firstOuter (x.drop s) k bound (x.length + 1) 1 with _ | ⟨p, m⟩
+    · simp only []
+      exact le_refl _
+    · simp only []
+      exact le_trans (Nat.le_add_right s p) (ih (s + p))
+
+/-- **削除ループの停止不変条件**：終了後の接尾辞には `bound` 未満の
+`k`-繰り返し周期がない。これが次のパスの最小周期 `p₁' ≥ p₂` を与える。 -/
+theorem stripLoop_spec (x : List α) (k bound : ℕ) (hk : 3 ≤ k) :
+    ∀ (fuel s : ℕ), s ≤ x.length → x.length ≤ fuel + s →
+      ∀ p', p' < bound → ¬ KRep (x.drop (stripLoop x k bound fuel s)) k p' := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro s hs hf p' hp'
+    have hsx : s = x.length := by omega
+    have hnil : x.drop (stripLoop x k bound 0 s) = ([] : List α) := by
+      show x.drop s = []
+      rw [hsx]; simp
+    rw [hnil]
+    exact not_krep_nil (by omega)
+  | succ fuel ih =>
+    intro s hs hf p' hp'
+    have hvlen : (x.drop s).length = x.length - s := by simp
+    rw [stripLoop]
+    rcases hfo : firstOuter (x.drop s) k bound (x.length + 1) 1 with _ | ⟨p, m⟩
+    · simp only []
+      exact firstOuter_none_bnd (x.drop s) k bound hk (x.length + 1) 1 (by omega) (by omega)
+        (by intro p'' h''; rintro ⟨h1, -, -⟩; omega) hfo p' hp'
+    · simp only []
+      have hlt := firstOuter_lt (x.drop s) k bound (x.length + 1) 1 p m (by omega) hfo
+      exact ih (s + p) (by omega) (by omega) p' hp'
+
+/-- **削除ループの仕事量**：進めた量に比例した分と、最後の失敗する走査 `O(k*bound)` のみ。 -/
+theorem stripLoopWork_le (x : List α) (k bound : ℕ) (hk : 3 ≤ k) :
+    ∀ (fuel s : ℕ),
+      stripLoopWork x k bound fuel s
+        ≤ (2 * k + 3) * (stripLoop x k bound fuel s - s) + (k + 2) * (2 * bound + 1) := by
+  intro fuel
+  induction fuel with
+  | zero => intro s; simp only [stripLoopWork]; omega
+  | succ fuel ih =>
+    intro s
+    rw [stripLoopWork, stripLoop]
+    rcases hfo : firstOuter (x.drop s) k bound (x.length + 1) 1 with _ | ⟨p, m⟩
+    · simp only []
+      have hmin := firstOuterWork_le_min (x.drop s) k bound hk (x.length + 1) 1 (by omega)
+        (by omega)
+      have hmul : (k + 2) * (2 * min bound (x.drop s).length + 1)
+          ≤ (k + 2) * (2 * bound + 1) :=
+        Nat.mul_le_mul_left _ (by have := min_le_left bound (x.drop s).length; omega)
+      omega
+    · simp only []
+      have hw := firstOuterWork_le_some (x.drop s) k bound hk (x.length + 1) 1 p m
+        (by omega) hfo
+      have hlt := firstOuter_lt (x.drop s) k bound (x.length + 1) 1 p m (by omega) hfo
+      have hrec := ih (s + p)
+      have hmono := stripLoop_ge x k bound fuel (s + p)
+      have hd : (2 * k + 3) * (stripLoop x k bound fuel (s + p) - s)
+          = (2 * k + 3) * (stripLoop x k bound fuel (s + p) - (s + p)) + (2 * k + 3) * p := by
+        rw [← Nat.mul_add]; congr 1; omega
+      have hd2 : (2 * k + 3) * p = (2 * k + 1) * p + 2 * p := by ring
+      omega
+
+end Dec9
+
+/-! ## パス間の成長（幾何級数） -/
+
+/-- 第 2 周期は `k`-繰り返し周期でもある。 -/
+theorem kRep_of_second {v : List α} {k r p : ℕ} (hs : Second v k r p) : KRep v k p := by
+  obtain ⟨hp, hlen, hper⟩ := hs
+  exact ⟨hp, le_trans (le_max_left _ _) hlen, hasPeriod_take_of_le hper (le_max_left _ _)⟩
+
+/-- 到達域 `r` を持つ最小周期 `p₁` 自身は第 2 周期になれない。 -/
+theorem not_second_reach {v : List α} {k r p₁ : ℕ} (hR : ReachOf v p₁ r) :
+    ¬ Second v k r p₁ := by
+  rintro ⟨hp, hlen, hper⟩
+  obtain ⟨hrle, hrper, hmax⟩ := hR
+  have h1 : r + 1 ≤ max (k * p₁) (r + 1) := le_max_right _ _
+  have hne : HasPeriod (v.take (r + 1)) p₁ := hasPeriod_take_of_le hper h1
+  rcases hmax with heq | hno
+  · omega
+  · exact hno hne
+
+/-- **最小の第 2 周期の根は原始的（basic）**。`IsLeastKRep.primitive` の第 2 周期版で、
+GS の重なり補題 `kRepetition_periods` を適用するために必要。 -/
+theorem second_primitive_of_least {v : List α} {k r p₂ : ℕ} (hk : 0 < k)
+    (hs : Second v k r p₂) (hmin : ∀ p', p' < p₂ → ¬ Second v k r p') :
+    Primitive (v.take p₂) := by
+  obtain ⟨hp₂, hlen, hper⟩ := hs
+  have hkm : k * p₂ ≤ max (k * p₂) (r + 1) := le_max_left _ _
+  have hple : p₂ ≤ k * p₂ := Nat.le_mul_of_pos_left p₂ hk
+  have htlen : (v.take p₂).length = p₂ := by simp only [List.length_take]; omega
+  intro z n hzn
+  by_contra hn
+  have hzl : n * z.length = p₂ := by
+    have hc := congrArg List.length hzn
+    rw [htlen, length_wpow] at hc
+    omega
+  have hn0 : n ≠ 0 := by rintro rfl; rw [Nat.zero_mul] at hzl; omega
+  have hn2 : 2 ≤ n := by omega
+  have hzpos : 0 < z.length := by
+    rcases Nat.eq_zero_or_pos z.length with h | h
+    · rw [h, Nat.mul_zero] at hzl; omega
+    · exact h
+  have hzlt : z.length < p₂ := by
+    have : 2 * z.length ≤ n * z.length := Nat.mul_le_mul_right _ hn2
+    omega
+  have hpre : HasPeriod (v.take p₂) z.length := by rw [hzn]; exact hasPeriod_wpow z n
+  have hdvd : z.length ∣ p₂ := ⟨n, by rw [← hzl]; exact Nat.mul_comm n z.length⟩
+  have htt : (v.take (max (k * p₂) (r + 1))).take p₂ = v.take p₂ := by
+    rw [List.take_take]; congr 1; omega
+  have hall : HasPeriod (v.take (max (k * p₂) (r + 1))) z.length :=
+    hasPeriod_of_prefix_dvd hper hp₂ hdvd (by rw [htt]; exact hpre)
+  have hgm : max (k * z.length) (r + 1) ≤ max (k * p₂) (r + 1) :=
+    max_le (le_trans (Nat.mul_le_mul_left k (by omega)) hkm) (le_max_right _ _)
+  exact hmin z.length hzlt ⟨hzpos, le_trans hgm hlen, hasPeriod_take_of_le hall hgm⟩
+
+section Dec10
+
+variable [DecidableEq α]
+
+/-- **外側 1 反復の鋭い仕事量**（第 2 周期が見つかる＝最後のパスでない場合）：
+`O(k*p₁ + k*p₂ + r)`。`|v|` には依存しない。 -/
+theorem decomposeStepWork_le_sharp (x : List α) (k s : ℕ) (hk : 3 ≤ k) {p₁ p₂ : ℕ}
+    (hfp : firstPeriod (x.drop s) k = some (p₁, k * p₁))
+    (hsp : secondPeriod (x.drop s) k p₁ (extendReach (x.drop s) p₁ (x.length + 1) (k * p₁))
+             = some p₂) :
+    decomposeStepWork x k s
+      ≤ (2 * k + 1) * p₁ + (2 * k + 1) * p₂
+        + 2 * extendReach (x.drop s) p₁ (x.length + 1) (k * p₁) + 6 := by
+  have hp₁ : 0 < p₁ :=
+    (firstOuter_lt (x.drop s) k (x.drop s).length ((x.drop s).length + 1) 1 p₁ (k * p₁)
+      (by omega) hfp).1
+  have h1 := firstOuterWork_le_some (x.drop s) k (x.drop s).length hk
+    ((x.drop s).length + 1) 1 p₁ (k * p₁) (by omega) hfp
+  have h2 := extendReachWork_le' (x.drop s) p₁ (x.length + 1) (k * p₁)
+  have h3 := secondOuterWork_le_some (x.drop s) k p₁
+    (extendReach (x.drop s) p₁ (x.length + 1) (k * p₁)) hk hp₁
+    ((x.drop s).length + 1) 1 0 p₂ (by omega) ?_ hsp
+  · have key : decomposeStepWork x k s
+        = firstOuterWork (x.drop s) k (x.drop s).length ((x.drop s).length + 1) 1
+          + (extendReachWork (x.drop s) p₁ (x.length + 1) (k * p₁)
+            + secondOuterWork (x.drop s) k p₁
+                (extendReach (x.drop s) p₁ (x.length + 1) (k * p₁))
+                ((x.drop s).length + 1) 1 0) := by
+      unfold decomposeStepWork; rw [hfp]
+    rw [key]
+    omega
+  · intro hlt
+    refine ⟨by omega, ?_⟩
+    rintro ⟨-, h4⟩
+    rw [Nat.mul_one] at h4
+    omega
+
+/-- **`decomposeLoop` の大域的な線形仕事量**。
+
+不変条件 `∀ p' < b, ¬ KRep (x.drop s) k p'`（削除ループが保証する）のもとで、
+残りのパス全体の仕事は `A*b` を引いた分しかかからない（`A = 11k+27`）。
+各パスは `O(k*p₂)` の仕事をし、次のパスの下界は `b' = p₂ ≥ (k-1)*p₁ ≥ 3*b` なので
+`A*b` の項が幾何級数を吸収する。 -/
+theorem decomposeLoopWork_le (x : List α) (k : ℕ) (hk : 4 ≤ k) :
+    ∀ (fuel s b : ℕ), s ≤ x.length → 0 < b → b ≤ x.length + 1 →
+      (∀ p', p' < b → ¬ KRep (x.drop s) k p') →
+      decomposeLoopWork x k fuel s + (11 * k + 27) * b
+        ≤ (11 * k + 27) * (x.length + 1) + (2 * k + 3) * (x.length - s)
+          + ((3 * k + 8) * x.length + (2 * k + 5)) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro s b hs hb hbx _
+    have hmulb : (11 * k + 27) * b ≤ (11 * k + 27) * (x.length + 1) :=
+      Nat.mul_le_mul_left _ hbx
+    simp only [decomposeLoopWork]
+    omega
+  | succ fuel ih =>
+    intro s b hs hb hbx hbelow
+    have hmulb : (11 * k + 27) * b ≤ (11 * k + 27) * (x.length + 1) :=
+      Nat.mul_le_mul_left _ hbx
+    have hstep := decomposeStepWork_le x k s (by omega) hs
+    have hvlen : (x.drop s).length = x.length - s := by simp
+    rw [decomposeLoopWork]
+    rcases hfp : firstPeriod (x.drop s) k with _ | ⟨p₁, m⟩
+    · simp only []
+      omega
+    · simp only []
+      obtain ⟨hleast, rfl⟩ := firstPeriod_some (x.drop s) k (by omega) hfp
+      have hp₁ : 0 < p₁ := hleast.1.1
+      have hkp₁len : k * p₁ ≤ (x.drop s).length := hleast.1.2.1
+      obtain ⟨hrge, hreach⟩ :=
+        extendReach_spec (x.drop s) p₁ (x.length + 1) (k * p₁) (by omega)
+          (Nat.le_mul_of_pos_left p₁ (by omega)) hkp₁len hleast.1.2.2
+      rcases hsp : secondPeriod (x.drop s) k p₁
+          (extendReach (x.drop s) p₁ (x.length + 1) (k * p₁)) with _ | p₂
+      · simp only []
+        omega
+      · simp only []
+        -- 記号を固定
+        set r := extendReach (x.drop s) p₁ (x.length + 1) (k * p₁) with hrdef
+        -- `p₂` は最小の第 2 周期
+        obtain ⟨hsecond, hsecmin⟩ :=
+          secondOuter_some (x.drop s) k p₁ r (by omega) hleast hreach.2.1 hreach.1
+            ((x.drop s).length + 1) 1 0 p₂ (by omega)
+            (by
+              intro hlt
+              refine ⟨by omega, ?_, ?_⟩
+              · rw [hasPeriod_take_iff (by omega)]
+                intro i hi; exact absurd hi (by omega)
+              · rintro ⟨-, h4⟩
+                rw [Nat.mul_one] at h4
+                omega)
+            (by intro p' hp'; rintro ⟨h4, -, -⟩; omega) hsp
+        have hprim : Primitive ((x.drop s).take p₂) :=
+          second_primitive_of_least (by omega) hsecond hsecmin
+        have hkrep₂ : KRep (x.drop s) k p₂ := kRep_of_second hsecond
+        have hle₁₂ : p₁ ≤ p₂ := hleast.2 p₂ hkrep₂
+        have hne₁₂ : p₁ ≠ p₂ := by
+          rintro rfl
+          exact not_second_reach hreach hsecond
+        have hlt₁₂ : p₁ < p₂ := by omega
+        have hgrow : (k - 1) * p₁ ≤ p₂ :=
+          kRepetition_periods (by omega) hleast.1 hkrep₂ hprim hlt₁₂
+        have hrlt : r < p₁ + p₂ :=
+          reach_lt_add_of_second (by omega) hreach.2.1 hreach.1 hp₁ hkrep₂ hprim hlt₁₂
+        have hbp₁ : b ≤ p₁ := by
+          by_contra hcon
+          exact hbelow p₁ (by omega) hleast.1
+        have h3b : 3 * b ≤ p₂ := by
+          have h1 : 3 * p₁ ≤ (k - 1) * p₁ := Nat.mul_le_mul_right p₁ (by omega)
+          have h2 : 3 * b ≤ 3 * p₁ := by omega
+          omega
+        have hkp₂ : k * p₂ ≤ (x.drop s).length := hkrep₂.2.1
+        have hp₂x : p₂ ≤ x.length + 1 := by
+          have : p₂ ≤ k * p₂ := Nat.le_mul_of_pos_left p₂ (by omega)
+          omega
+        -- 削除ループ
+        have hs'ge := stripLoop_ge x k p₂ (x.length + 1) s
+        have hs'le := stripLoop_le x k p₂ (x.length + 1) s hs
+        have hstrip := stripLoopWork_le x k p₂ (by omega) (x.length + 1) s
+        have hnext := stripLoop_spec x k p₂ (by omega) (x.length + 1) s hs (by omega)
+        -- 帰納法の仮定
+        have hrec := ih (stripLoop x k p₂ (x.length + 1) s) p₂ hs'le (by omega) hp₂x hnext
+        -- 鋭いパス評価
+        have hsharp := decomposeStepWork_le_sharp x k s (by omega) hfp hsp
+        -- 算術
+        have htel : (2 * k + 3) * (x.length - s)
+            = (2 * k + 3) * (stripLoop x k p₂ (x.length + 1) s - s)
+              + (2 * k + 3) * (x.length - stripLoop x k p₂ (x.length + 1) s) := by
+          rw [← Nat.mul_add]; congr 1; omega
+        have e0 : (k + 2) * (2 * p₂ + 1) = (2 * k + 4) * p₂ + (k + 2) := by ring
+        have e1 : (2 * k + 1) * p₁ ≤ (2 * k + 1) * p₂ := Nat.mul_le_mul_left _ hle₁₂
+        have e2 : p₁ ≤ p₂ := hle₁₂
+        have e3 : (k + 2) ≤ (k + 2) * p₂ := Nat.le_mul_of_pos_right _ (by omega)
+        have e4 : 6 ≤ 6 * p₂ := Nat.le_mul_of_pos_right _ (by omega)
+        -- パス費用 ≤ (7k+16) * p₂
+        have hpass : decomposeStepWork x k s + (k + 2) * (2 * p₂ + 1)
+            ≤ (7 * k + 18) * p₂ := by
+          have f1 : (2 * k + 1) * p₂ + (2 * k + 1) * p₂ + 2 * p₁ + 2 * p₂
+              + (2 * k + 4) * p₂ + (k + 2) * p₂ + 6 * p₂ ≤ (7 * k + 18) * p₂ := by
+            have g1 : 2 * p₁ ≤ 2 * p₂ := by omega
+            have g2 : (2 * k + 1) * p₂ + (2 * k + 1) * p₂ + 2 * p₂ + 2 * p₂
+                + (2 * k + 4) * p₂ + (k + 2) * p₂ + 6 * p₂ = (7 * k + 18) * p₂ := by ring
+            omega
+          omega
+        -- 幾何級数：(7k+16)*p₂ + A*b ≤ A*p₂
+        have hgeo : (7 * k + 18) * p₂ + (11 * k + 27) * b ≤ (11 * k + 27) * p₂ := by
+          have g1 : (11 * k + 27) * (3 * b) ≤ (11 * k + 27) * p₂ :=
+            Nat.mul_le_mul_left _ h3b
+          have g2 : (11 * k + 27) * (3 * b) = 3 * ((11 * k + 27) * b) := by ring
+          have g3 : 3 * ((7 * k + 18) * p₂) + (11 * k + 27) * p₂ = (32 * k + 81) * p₂ := by
+            ring
+          have g4 : 3 * ((11 * k + 27) * p₂) = (33 * k + 81) * p₂ := by ring
+          have g5 : (32 * k + 81) * p₂ ≤ (33 * k + 81) * p₂ :=
+            Nat.mul_le_mul_right p₂ (by omega)
+          omega
+        omega
+
+/-- **主定理（大域的な線形仕事量）**：GS 前処理の総仕事量は入力長の線形。
+`C = 16k+38`, `D = 2k+5`。 -/
+theorem decomposeWork_le (x : List α) (k : ℕ) (hk : 4 ≤ k) :
+    decomposeWork x k ≤ (16 * k + 38) * x.length + (2 * k + 5) := by
+  have h := decomposeLoopWork_le x k hk (x.length + 1) 0 1 (Nat.zero_le _) (by omega)
+    (by omega) (by intro p' hp'; rintro ⟨h1, -, -⟩; omega)
+  have e1 : (11 * k + 27) * (x.length + 1) = (11 * k + 27) * x.length + (11 * k + 27) := by
+    ring
+  have e2 : (11 * k + 27) * x.length + (2 * k + 3) * x.length + (3 * k + 8) * x.length
+      = (16 * k + 38) * x.length := by ring
+  have e3 : (11 * k + 27) * 1 = 11 * k + 27 := by ring
+  simp only [decomposeWork, Nat.sub_zero] at h ⊢
+  omega
+
+end Dec10
+
+/-! ## 仕事量の小例と、大域的な線形性
 
 `decomposeWork` は「どのループでも 1 反復 = 1 単位」で数える。1 反復は高々 1 回の記号比較と
-定数個の添字更新なので、比較回数もずらし回数もこのカウンタで押さえられる。
+定数個の添字更新なので、このカウンタは比較回数もずらし回数も同時に押さえる
 （`gs_overlap.Meter` は `comparisons` と `events` を別々に数えるので値は一致しないが、
-同じ定数倍の粒度である。）
+同じ定数倍の粒度）。
 
-**証明済み（線形）**：外側 1 反復ぶん、すなわち `_first_period` + `reach` 伸長 +
-`_second_period` の合計は `decomposeStepWork_le` により
+**主結果**（`decomposeWork_le`, `4 ≤ k`）：
 
 ```
-decomposeStepWork x k s ≤ (3k+8) * |x| + (2k+5)
+decomposeWork x k ≤ (16k+38) * |x| + (2k+5)
 ```
 
-で、内訳は `firstOuterWork_le`（`≤ (k+2)*(|v|+1-p)`）、`extendReachWork_le`
-（`≤ |v|+1-r`）、`secondOuterWork_le`（`≤ (k+2)*(2|v|+1) + |v| - ((k+2)p+q)`）である。
-いずれも `GSScan.Phi` と同じポテンシャル `Φ = (k+2)*p + q` による：
+証明は GS 1983 の償却解析をそのまま辿る。走査の局所評価はすべてポテンシャル
+`Φ = (k+2)*p + q`（`GSScan.Phi` と同じ）による：
 
-* 比較 1 回で `q` が 1 増え `ΔΦ = 1`、
-* `shiftNoPeriod` ずらしで `ΔΦ = (k+2)*shift - q ≥ q' + 2`（`k*shift ≥ q'`, `shift ≥ 1`）、
-* 周期ずらし（`p += p₁`, `q -= p₁`）で `ΔΦ = (k+1)*p₁ + (q'-q) ≥ (q'-q) + 2`。
+* `firstOuterWork_le_some`：`_first_period` は最小の `k`-繰り返し周期 `p₁` を見つけた
+  時点で止まるので、仕事は `|v|` ではなく `(2k+1)*p₁ + 2` で押さえられる。
+* `extendReachWork_le'`：`reach` 伸長の仕事はちょうど伸ばした量 + 1。
+* `secondOuterWork_le_some`：`_second_period` は第 2 周期 `p₂` を見つけた時点で止まり、
+  そのときの `q` は「条件が最初に成立する値」なので `max (r+1-p₂) ((k-1)*p₂)` 止まり。
+  よって仕事は `(2k+1)*p₂ + r + 3`。
+* `firstOuterWork_le_min`：`bound` 付き走査では候補周期が 1 反復で高々 2 倍にしか
+  ならない（`shiftNoPeriod_le_of_le_mul`）ので、仕事は `(k+2)*(2*min bound |v| + 1)`。
+* `stripLoopWork_le`：削除ループの各成功反復の仕事は見つけた周期 `p`（＝切断の前進量）に
+  比例するので、`(2k+3)*Δs` に償却できる。最後の失敗する走査だけが `O(k*p₂)`。
 
-**未証明（意図的）**：削除ループを含む `decomposeWork x k ≤ C*|x| + D` の大域版。
-これは外側反復が高々定数回であること（削除量の償却）を要し、`GSDecomp.lean` が
-「未証明（意図的に述べていない）」と明記している GS Theorem 1（L1 の上界
-`(k-1)*s < |x|` と `(k-2)*s < (k-1)*p₁`、すなわち `GSDecomp` の存在）と同じ内容である。
-本ファイルの範囲では、削除ループの各反復が切断位置を 1 以上進めること
-（`stripLoop_le` と `firstOuter_lt`）までを与える。 -/
+パス間の成長（幾何級数）に必要だった構造的事実：
+
+* `stripLoop_spec`：削除ループは `firstOuter (·, bound := p₂) = none` で止まるので、
+  終了後の接尾辞には `p₂` 未満の `k`-繰り返し周期が**存在しない**
+  （`firstOuter_none_bnd`）。したがって次のパスの最小周期は `p₁' ≥ p₂`。
+  ——「次のパスの最小周期 ≥ p₂」を保証しているのは、まさにこの削除ループの停止条件である。
+* `secondOuter_some`：`_second_period` の返す `p₂` は**最小の**第 2 周期。
+* `second_primitive_of_least`：最小の第 2 周期の根 `v.take p₂` は原始的
+  （`IsLeastKRep.primitive` の第 2 周期版）。これがないと重なり補題を使えない。
+* `GSDecomp.kRepetition_periods`：ゆえに `(k-1)*p₁ ≤ p₂`。
+* `GSDecomp.reach_lt_add_of_second`：ゆえに `r < p₁ + p₂`。
+
+これらから 1 パスの仕事（削除の前進量に比例する分を除く）は `(7k+18)*p₂` で押さえられ、
+不変条件の下界 `b` は `3*b ≤ (k-1)*p₁ ≤ p₂` を満たすので、ポテンシャル `(11k+27)*b` が
+幾何級数を吸収する（`decomposeLoopWork_le`）。最後のパスだけは `O(k*|x|)` かかりうるが
+（`decomposeStepWork_le`）、1 回しか起きないので線形性を壊さない。
+
+なお `GSDecomp.GSDecomp`（L1 の切断上界 `(k-1)*s < |x|`, `(k-2)*s < (k-1)*p₁`）は
+ここでも証明していない。上の議論はそれを経由せず、削除ループの停止条件と第 2 周期の
+幾何級数だけで線形性を出している。 -/
 
 section WorkExamples
 
@@ -1297,6 +2059,16 @@ example : decomposeStepWork ([0,0,0,0,0,0,0,0,1] : List ℕ) 8 0 ≤ (3 * 8 + 8)
 /-- 削除ループが動く例（`k = 4`）：外側 1 反復ぶんは 36、全体は 123。 -/
 example : decomposeStepWork ([0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1] : List ℕ) 4 0 = 36 := by
   decide
+
+example : decomposeWork ([0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1] : List ℕ) 4 = 123 := by decide
+
+/-- 大域的な線形上界の実例（`k = 8`, `|x| = 9`：`(16k+38)|x| + (2k+5) = 1515`）。 -/
+example : decomposeWork ([0,0,0,0,0,0,0,0,1] : List ℕ) 8
+    ≤ (16 * 8 + 38) * 9 + (2 * 8 + 5) := by decide
+
+/-- 削除ループが動く例でも同様（`k = 4`, `|x| = 20`：`(16k+38)|x| + (2k+5) = 2053`）。 -/
+example : decomposeWork ([0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1] : List ℕ) 4
+    ≤ (16 * 4 + 38) * 20 + (2 * 4 + 5) := by decide
 
 end WorkExamples
 
