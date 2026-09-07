@@ -219,3 +219,9 @@ lake build
   鍵は「パスは第 2 周期 T の手前で停止」を最大周期の帰納で示す `pass_stops_before_second`）。コミット 4696181。
   続き：計算可能 `decompose` の出力に対する L1（`decompose_gsDecomp`）、`PrepImpl` 実装（PrepDecompose）、
   検証器の Txt2 供給（VerifierFeed）。Main.lean に糊 `pal_in_peg_of_structured` あり。
+- 進捗（コミット 9907aac まで）：BorderJobTapes（6 テープ、仕事 ≤ 4000|x|）、InputCopy、MiddleBorder
+  （`MiddleImplSpecH (borderMiddle) 27901`、各段 L1 を仮定）、PrepDecompose（`PrepImplSpecH`、`decompose` の
+  L1 を仮定）。添字レベルの全体機械は両インターフェース実装が揃い、残る仮定は `decompose_gsDecomp` 1 本。
+  稼働中：decompose_gsDecomp、GSPreprocessTapes、PatternTapes、VerifierFeed、EndToEnd（添字の端到端定理）、
+  MiddleTapes（中央ジョブのテープ化＋二重バッファ出力）。残る大物：段のテープ組み立てと全体機械の
+  `StructuredMachine` 化。
