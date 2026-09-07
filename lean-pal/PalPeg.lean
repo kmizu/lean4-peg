@@ -32,6 +32,7 @@ import PalPeg.StageMatcher
 import PalPeg.OnlineMachine
 import PalPeg.MiddleBorder
 import PalPeg.PrepDecompose
+import PalPeg.EndToEnd
 import PalPeg.Schedule
 import PalPeg.TapeLib
 import PalPeg.Speedup
@@ -62,6 +63,7 @@ import PalPeg.Main
 * `PalPeg.OnlineMachine` — 全体機械の添字モデル（2 段、中央/前処理はインターフェース）`output_correctH`（半分割：段 S はパターン rev(w.take(S/2))、前処理 (S/2,S]、テキスト w.drop S）、ラウンド費用 ≤ 3(3(k+1)+Cm+Cp)
 * `PalPeg.MiddleBorder` — 境界列挙版の `MiddleImpl`、`MiddleImplSpecH` を Cm=27901 で満たす（各段 L1 を仮定）
 * `PalPeg.PrepDecompose` — `decompose` を (S/2,S] に均す `PrepImpl`、`PrepImplSpecH`（`decompose` の L1 を仮定）
+* `PalPeg.EndToEnd`  — 添字レベルの端到端：`endToEnd_mem_PAL`（仮定は `decompose` の L1 のみ）、ラウンド費用 ≤ 84846
 * `PalPeg.Schedule`  — 順序処理の締切（`finishTime_le`）と Galil の FIFO サービス不等式（Lindley）
 * `PalPeg.TapeLib`   — 成果物のテープ上の zipper / stack / seq / counter ビューと 1 アクション補題
 * `PalPeg.GSScan`    — Galil–Seiferas 走査：安全シフト、健全性/完全性、ポテンシャル `Φ=(k+1)pos+q`

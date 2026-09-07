@@ -31,6 +31,7 @@ import PalPeg.StageMatcher
 import PalPeg.OnlineMachine
 import PalPeg.MiddleBorder
 import PalPeg.PrepDecompose
+import PalPeg.EndToEnd
 import PalPeg.Schedule
 import PalPeg.TapeLib
 import PalPeg.Speedup
@@ -320,3 +321,7 @@ import PalPeg.Main
 /-- info: 'PalPeg.prepDecompose_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.prepDecompose_spec
+
+/-- info: 'PalPeg.endToEnd_mem_PAL' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.endToEnd_mem_PAL
