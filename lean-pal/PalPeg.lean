@@ -19,6 +19,8 @@ import PalPeg.PassSum2
 import PalPeg.PassSum3
 import PalPeg.PassSum4
 import PalPeg.PassSum5
+import PalPeg.PassSum6
+import PalPeg.PassSum7
 import PalPeg.GSPreprocess
 import PalPeg.GSPreprocessTapes
 import PalPeg.GSRealTime
