@@ -45,6 +45,8 @@ import PalPeg.TapeLib
 import PalPeg.Speedup
 import PalPeg.ProgramMachine
 import PalPeg.Main
+import PalPeg.FullMachineTapes
+import PalPeg.ClearAny
 
 /-!
 # 公理 guard
@@ -349,3 +351,7 @@ import PalPeg.Main
 /-- info: 'PalPeg.PatternTapesPair.setup_spec_pair' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.PatternTapesPair.setup_spec_pair
+
+/-- info: 'PalPeg.ClearAny.clearAny_chunks' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.ClearAny.clearAny_chunks

@@ -454,15 +454,15 @@ Fine–Wilf に要る `p₀ + p₁ - gcd = 10` に届かない。）
 `(k-2) * Σⱼ pⱼ < Σⱼ dⱼ + p_N` 型の総和評価はこの経路からは出ない。 -/
 
 /-- 反例の語。 -/
-def cexWord : List ℕ := (List.replicate 4 (1 :: List.replicate 9 0)).flatten
+def cexWordGS : List ℕ := (List.replicate 4 (1 :: List.replicate 9 0)).flatten
 
-example : cexWord.length = 40 := by decide
+example : cexWordGS.length = 40 := by decide
 
-example : firstPeriod cexWord 4 = some (10, 40) := by decide
+example : firstPeriod cexWordGS 4 = some (10, 40) := by decide
 
-example : extendReach cexWord 10 (cexWord.length + 1) 40 = 40 := by decide
+example : extendReach cexWordGS 10 (cexWordGS.length + 1) 40 = 40 := by decide
 
-example : firstPeriod (cexWord.drop 1) 4 = some (1, 4) := by decide
+example : firstPeriod (cexWordGS.drop 1) 4 = some (1, 4) := by decide
 
 /-! ## 入れ子木（nesting tree）の 2 本の補題
 
