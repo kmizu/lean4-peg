@@ -320,25 +320,75 @@ theorem zMove_matchIv {u T : List α} {pos : ℕ} {z : ZS} (h : ZWf u.length z)
     · exact hm
     · exact hm
 
-/-! ## 4. 一歩（走査＋2 単位動作） -/
+/-- **残り仕事量は 1 単位動作でちょうど 1 減る**（`ℕ` の切り捨て減算版：
+完了していれば `0` のまま）。 -/
+theorem zMove_rem_le {u T : List α} {pos : ℕ} {z : ZS} (h : ZWf u.length z)
+    (hfull : MatchLen u T (pos - u.length) u.length) :
+    zrem u.length (zMove u T pos z) ≤ zrem u.length z - 1 := by
+  by_cases hdn : zdone u.length z = true
+  · have h1 := zrem_eq_zero_of_done hdn
+    have h2 := zrem_eq_zero_of_done (zMove_done (T := T) (pos := pos) hdn)
+    omega
+  · have := zMove_rem h (by simpa using hdn) hfull
+    omega
+
+/-- `j` 単位動作。 -/
+def zMoves (u T : List α) (pos : ℕ) : ℕ → ZS → ZS
+  | 0, z => z
+  | j + 1, z => zMoves u T pos j (zMove u T pos z)
+
+theorem zMoves_wf {u T : List α} {pos : ℕ} :
+    ∀ (j : ℕ) {z : ZS}, ZWf u.length z → ZWf u.length (zMoves u T pos j z) := by
+  intro j
+  induction j with
+  | zero => intro z h; exact h
+  | succ j ih => intro z h; exact ih (zMove_wf h)
+
+theorem zMoves_matchIv {u T : List α} {pos : ℕ} :
+    ∀ (j : ℕ) {z : ZS}, ZWf u.length z →
+      MatchIv u T (pos - u.length) z.lo z.hi →
+      MatchIv u T (pos - u.length) (zMoves u T pos j z).lo (zMoves u T pos j z).hi := by
+  intro j
+  induction j with
+  | zero => intro z _ h; exact h
+  | succ j ih => intro z hw h; exact ih (zMove_wf hw) (zMove_matchIv hw h)
+
+theorem zMoves_rem_le {u T : List α} {pos : ℕ}
+    (hfull : MatchLen u T (pos - u.length) u.length) :
+    ∀ (j : ℕ) {z : ZS}, ZWf u.length z →
+      zrem u.length (zMoves u T pos j z) ≤ zrem u.length z - j := by
+  intro j
+  induction j with
+  | zero => intro z _; show zrem u.length z ≤ zrem u.length z - 0; omega
+  | succ j ih =>
+    intro z hw
+    have h1 := zMove_rem_le hw hfull
+    have h2 := ih (z := zMove u T pos z) (zMove_wf hw)
+    show zrem u.length (zMoves u T pos j (zMove u T pos z)) ≤ zrem u.length z - (j + 1)
+    omega
+
+/-! ## 4. 一歩（走査＋4 単位動作） -/
 
 /-- **ずらしのリセット**：ヘッドはそのまま、区間を空に。 -/
 def zReset (z : ZS) : ZS := ⟨z.head, z.head, z.head, false⟩
 
-/-- **一歩**：走査 1 歩 ＋（比較成功なら）検証器の 2 単位動作、ずらしならリセット。 -/
+/-- 1 歩あたりの単位動作の割当（quota）。 -/
+def zQuota : ℕ := 4
+
+/-- **一歩**：走査 1 歩 ＋（比較成功なら）検証器の `zQuota = 4` 単位動作、
+ずらしならリセット。 -/
 def vStepZ (u v : List α) (k p₁ r : ℕ) (T : List α) (z : VStateZ) : VStateZ :=
   if z.1.q = v.length then (scanStep v k p₁ r T z.1, zReset z.2)
   else if T[z.1.pos + z.1.q]? = v[z.1.q]? then
-    (scanStep v k p₁ r T z.1,
-      zMove u T z.1.pos (zMove u T z.1.pos z.2))
+    (scanStep v k p₁ r T z.1, zMoves u T z.1.pos zQuota z.2)
   else (scanStep v k p₁ r T z.1, zReset z.2)
 
 @[simp] theorem vStepZ_fst (u v : List α) (k p₁ r : ℕ) (T : List α) (z : VStateZ) :
     (vStepZ u v k p₁ r T z).1 = scanStep v k p₁ r T z.1 := by
   unfold vStepZ; split_ifs <;> rfl
 
-/-- **一歩の費用は定数**：`v` の比較 1 ＋ `u` の単位動作 2。 -/
-def vStepZCost : ℕ := 3
+/-- **一歩の費用は定数**：`v` の比較 1 ＋ `u` の単位動作 4。 -/
+def vStepZCost : ℕ := 5
 
 /-! ## 5. 不変条件 -/
 
@@ -348,13 +398,24 @@ def ZInv (u v T : List α) (z : VStateZ) : Prop :=
     ZWf u.length z.2 ∧
       MatchIv u T (z.1.pos - u.length) z.2.lo z.2.hi ∧
         (MatchLen u T (z.1.pos - u.length) u.length →
-          zrem u.length z.2 ≤ 2 * (v.length - z.1.q))
+          zrem u.length z.2 ≤ zQuota * (v.length - z.1.q))
 
 /-- **締切条件**：ずらし直後の残り仕事量 `≤ 2*(|v| - q')` を保証する形。
 `GSRealTime.prefix_verifier_deadline` は `|u| < 2*(|v| - gsNextQ …)` を与えるが、
 ジグザグでは（戻りの走行があるので）`|u| ≤ |v| - gsNextQ …` が要る。 -/
 def ZDeadline (u v : List α) (k p₁ r : ℕ) : Prop :=
-  ∀ q, q ≤ v.length → u.length + 1 ≤ v.length - gsNextQ k p₁ r q
+  ∀ q, q ≤ v.length → 2 * u.length + 1 ≤ zQuota * (v.length - gsNextQ k p₁ r q)
+
+/-- **`ZDeadline` は L1 の切り出しから従う**：`GSRealTime.prefix_verifier_deadline`
+（`|u| < 2*(|v| - gsNextQ …)`）を 2 倍すればよい（quota = 4）。 -/
+theorem zdeadline_of_prefix {u v : List α} {k p₁ r : ℕ} (hk : 3 ≤ k) (hp : 0 < p₁)
+    (hL1a : (k - 1) * u.length < (u ++ v).length)
+    (hL1b : (k - 2) * u.length < (k - 1) * p₁) :
+    ZDeadline u v k p₁ r := by
+  intro q hq
+  have h := prefix_verifier_deadline (u := u) (v := v) (r := r) hk hp hL1a hL1b hq
+  show 2 * u.length + 1 ≤ 4 * (v.length - gsNextQ k p₁ r q)
+  omega
 
 /-- ずらし直後は不変条件を満たす。 -/
 theorem zInv_shift {u v T : List α} {k p₁ r : ℕ} (hd : ZDeadline u v k p₁ r)
@@ -371,7 +432,8 @@ theorem zInv_shift {u v T : List α} {k p₁ r : ℕ} (hd : ZDeadline u v k p₁
       split_ifs <;> omega
     have hdd := hd q hq
     have hhead : z.head ≤ u.length := by omega
-    show zrem u.length (zReset z) ≤ 2 * (v.length - gsNextQ k p₁ r q)
+    show zrem u.length (zReset z) ≤ zQuota * (v.length - gsNextQ k p₁ r q)
+    simp only [zQuota] at hdd ⊢
     omega
 
 /-- **一歩で不変条件は保たれる**。 -/
@@ -393,28 +455,16 @@ theorem vStepZ_inv {u v T : List α} {k p₁ r : ℕ} (hp : 0 < p₁)
   · have hsucc : scanStep v k p₁ r T z.1 = (⟨z.1.pos, z.1.q + 1⟩ : ScanState) := by
       unfold scanStep; rw [if_neg h1, if_pos h2]
     rw [hsucc]
-    have hwf1 := zMove_wf (u := u) (T := T) (pos := z.1.pos) hwf
-    have hwf2 := zMove_wf (u := u) (T := T) (pos := z.1.pos) hwf1
-    have hm1 := zMove_matchIv (u := u) (T := T) (pos := z.1.pos) hwf hmiv
-    have hm2 := zMove_matchIv (u := u) (T := T) (pos := z.1.pos) hwf1 hm1
-    refine ⟨hpos, hwf2, hm2, ?_⟩
-    intro hfull
-    have hdd := hdead hfull
-    have hqlt : z.1.q < v.length := lt_of_le_of_ne hq h1
-    -- 2 単位動作で残りは 2 減る（完了していれば 0 のまま）
-    have key : ∀ w : ZS, ZWf u.length w →
-        zrem u.length (zMove u T z.1.pos w) + 1 = zrem u.length w ∨
-          (zrem u.length w = 0 ∧ zrem u.length (zMove u T z.1.pos w) = 0) := by
-      intro w hw
-      by_cases hdn : zdone u.length w = true
-      · exact Or.inr ⟨zrem_eq_zero_of_done hdn,
-          zrem_eq_zero_of_done (zMove_done (T := T) (pos := z.1.pos) hdn)⟩
-      · exact Or.inl (zMove_rem hw (by simpa using hdn) hfull)
-    have k1 := key z.2 hwf
-    have k2 := key (zMove u T z.1.pos z.2) hwf1
-    show zrem u.length (zMove u T z.1.pos (zMove u T z.1.pos z.2))
-      ≤ 2 * (v.length - (z.1.q + 1))
-    rcases k1 with e1 | ⟨e1a, e1b⟩ <;> rcases k2 with e2 | ⟨e2a, e2b⟩ <;> omega
+    refine ⟨hpos, zMoves_wf (T := T) (pos := z.1.pos) zQuota hwf, ?_, ?_⟩
+    · exact zMoves_matchIv (T := T) (pos := z.1.pos) zQuota hwf hmiv
+    · intro hfull
+      have hdd := hdead hfull
+      have hqlt : z.1.q < v.length := lt_of_le_of_ne hq h1
+      have hle := zMoves_rem_le (u := u) (T := T) (pos := z.1.pos) hfull zQuota hwf
+      show zrem u.length (zMoves u T z.1.pos zQuota z.2)
+        ≤ zQuota * (v.length - (z.1.q + 1))
+      simp only [zQuota] at hle hdd ⊢
+      omega
   · rw [show scanStep v k p₁ r T z.1
         = (⟨z.1.pos + gsShift k p₁ r z.1.q, gsNextQ k p₁ r z.1.q⟩ : ScanState) from by
       unfold scanStep; rw [if_neg h1, if_neg h2]]
@@ -441,7 +491,7 @@ theorem zReportFlag_complete {u v T : List α} {n : ℕ} {z : VStateZ} (h : ZInv
     (hq : z.1.q = v.length) (hn : z.1.pos + v.length = n) :
     zReportFlag u v n z = true := by
   obtain ⟨_, hwf, _, hdead⟩ := h
-  have hr : zrem u.length z.2 ≤ 2 * (v.length - z.1.q) := hdead hfull
+  have hr : zrem u.length z.2 ≤ zQuota * (v.length - z.1.q) := hdead hfull
   rw [hq] at hr
   simp only [Nat.sub_self, Nat.mul_zero, Nat.le_zero] at hr
   have hd : zdone u.length z.2 = true := zdone_of_zrem_eq_zero hwf hr
@@ -461,8 +511,33 @@ theorem zReportFlag_eq {u v T : List α} {n : ℕ} {z : VStateZ} (h : ZInv u v T
   · rintro ⟨hq, hn, hfull⟩
     exact zReportFlag_complete h hfull hq hn
 
-/-! ## 7. 公理の確認 -/
+/-! ## 7. テープ実現（`GSVerifierTapesZ`）への設計メモ
 
+本ファイルの `zMove` は「伸ばす端にいるときだけ照合し、反対端から戻る途中は
+ただ進む」形になっている。この「戻る途中か否か」の判定には `hi` の位置を
+テープ上に **印** として持つ必要があり、`VExt` に成分を足すことになる。
+
+**それは不要である**：戻りの走行でも毎回照合してしまえばよい（すでに照合済みの
+位置なので、候補が生きているかぎり必ず一致する）。すなわちテープ側は
+
+* `up` のとき：`endSym` を読んでいなければ `U` と `Txt2` を 1 つ右へ動かして照合、
+  読んでいれば向きを反転（`down` へ）、
+* `down` のとき：`startSym` を読んでいなければ `U` と `Txt2` を 1 つ左へ動かして照合、
+  読んでいれば向きを反転（`up` へ）
+
+とすればよく、必要な状態は **`U` のヘッド位置と向き 1 ビットだけ**である
+（`lo`/`hi` はゴースト）。照合完了は「`up` で `endSym` を読んでいる」ことに等しく、
+これもテープ読み取りで判定できる。向きの 1 ビットは有限制御（`GSVerifierProgZ`）か
+`VExt` の 1 セルテープに置く。
+
+この「戻りでも照合する」版は、`zMove` の分岐 `z.head = z.hi` を外し、
+`lo := min lo (head-1)` / `hi := max hi (head+1)` と書き換えたものであり、
+残り仕事量 `zrem` と本ファイルの補題はそのまま通る（`hfull` のもとで
+戻りの照合は必ず成功するため）。`GSVerifierTapesZ` はこちらを実装すべきである。 -/
+
+/-! ## 8. 公理の確認 -/
+
+#print axioms zdeadline_of_prefix
 #print axioms zMove_wf
 #print axioms zMove_rem
 #print axioms zMove_matchIv
