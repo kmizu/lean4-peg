@@ -24,6 +24,7 @@ import PalPeg.InputCopy
 import PalPeg.PatternTapes
 import PalPeg.BorderJob
 import PalPeg.BorderJobTapes
+import PalPeg.MiddleTapes
 import PalPeg.RTQueue
 import PalPeg.RTQueueTapes
 import PalPeg.Manacher
@@ -87,6 +88,7 @@ import PalPeg.Main
 * `PalPeg.BorderJobTapes` — 境界列挙の 6 テープ化、テープ仕事 ≤ 4000|x|、`flags_on_tape`
 * `PalPeg.GSDecompose2` — 失敗位置へジャンプする strip 規則の `decompose2`：`decompose2_gsDecomp`（L1 無条件）
 * `PalPeg.VerifierFeed` — 検証器の Txt2 も FIFO で供給（`.X .right` ごとの fill 版を続行中）
+* `PalPeg.MiddleTapes` — 中央ジョブのバッチをテープ上で実行（`batch_read_flag`、レート `rateM`；ラウンド組み立ては続行中）
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/

@@ -23,6 +23,7 @@ import PalPeg.InputCopy
 import PalPeg.PatternTapes
 import PalPeg.BorderJob
 import PalPeg.BorderJobTapes
+import PalPeg.MiddleTapes
 import PalPeg.RTQueue
 import PalPeg.RTQueueTapes
 import PalPeg.Manacher

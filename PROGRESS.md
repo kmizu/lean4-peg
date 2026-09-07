@@ -225,3 +225,8 @@ lake build
   稼働中：decompose_gsDecomp、GSPreprocessTapes、PatternTapes、VerifierFeed、EndToEnd（添字の端到端定理）、
   MiddleTapes（中央ジョブのテープ化＋二重バッファ出力）。残る大物：段のテープ組み立てと全体機械の
   `StructuredMachine` 化。
+- 進捗（コミット c62d193 まで）：`decompose2`（失敗位置へジャンプする strip）で L1 が無条件に成立
+  （`decompose2_gsDecomp`）。仕事量は窓の入れ子木で償却：子 `(k−1)q < p`（A）と兄弟の重なり `< p+q`（B）を
+  証明済み、残るは木の帰納 Σp ≤ C₁T（新エージェント）。PatternTapes（段セットアップ ≤ 21h）、VerifierFeed
+  （Txt2 も FIFO 供給；`.X .right` ごとの fill 版を続行中）、MiddleTapes（バッチ実行はテープ化済み、ラウンド
+  組み立て続行中）、GSPreprocessTapes（firstPeriod/extendReach/secondInner 済、残り続行中）。
