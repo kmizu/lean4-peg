@@ -29,6 +29,7 @@ import PalPeg.TextFeed
 import PalPeg.VerifierFeed
 import PalPeg.StageMatcherTapes
 import PalPeg.StageTapes
+import PalPeg.FullMachineTapes
 import PalPeg.InputCopy
 import PalPeg.PatternTapes
 import PalPeg.Prologue
@@ -107,6 +108,7 @@ import PalPeg.Main
 * `PalPeg.PassSum`   — 1 パスの連続 run start の二分律（(k−1) 倍で減るか増える）、領域端の単調性；`Σp_j ≤ C₁T` は未証明
 * `PalPeg.StageMatcherTapes` — 段の照合フェーズ：固定 `roundBudget = 85 + U·B` 動作/ラウンド、`stage_answer_stageMatchH`
 * `PalPeg.StageTapes` — 段のライフサイクル（前処理→セットアップ→照合＋中央）を 1 ラウンド ≤ `Cstage` 動作で実行、`stage_tapes_spec`
+* `PalPeg.FullMachineTapes` — 全体機械（4 スロット回転、常駐 ≤3 段、分散クリア）、`full_answer_mem_PAL`（段インターフェース前提）
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/
