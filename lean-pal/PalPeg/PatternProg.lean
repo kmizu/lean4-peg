@@ -224,6 +224,42 @@ theorem runG_local (blank : Fin sc) (cs : Fin t) :
       exact ih (applyG blank S a) (applyG blank T a)
         (fun b hb => huse b (List.mem_cons_of_mem a hb)) hstep l hl
 
+/-- **局所性（2 テープ版）**：テープ `cs1`,`cs2` のどちらも読みも書きもしない動作列は、
+その 2 本以外で一致する二つの状態を、その 2 本以外で一致したまま保つ。 -/
+theorem runG_local2 (blank : Fin sc) (cs1 cs2 : Fin t) :
+    ∀ (L : List (TAct t sc)) (S T : Tps t sc),
+      (∀ a ∈ L, cs1 ∉ a.uses ∧ cs2 ∉ a.uses) →
+      (∀ l, l ≠ cs1 → l ≠ cs2 → T l = S l) →
+      ∀ l, l ≠ cs1 → l ≠ cs2 → runG blank L T l = runG blank L S l := by
+  intro L
+  induction L with
+  | nil => intro S T _ h l hl1 hl2; exact h l hl1 hl2
+  | cons a L ih =>
+      intro S T huse h l hl1 hl2
+      have hause := huse a (List.mem_cons_self ..)
+      have hstep : ∀ m, m ≠ cs1 → m ≠ cs2 → applyG blank T a m = applyG blank S a m := by
+        intro m hm1 hm2
+        by_cases hma : m = a.tape
+        · have hm1' : a.tape ≠ cs1 := hma ▸ hm1
+          have hm2' : a.tape ≠ cs2 := hma ▸ hm2
+          rw [hma, applyG_self, applyG_self, h a.tape hm1' hm2']
+          congr 1
+          cases a with
+          | keep i m' => show (T i).focus = (S i).focus; rw [h i hm1' hm2']
+          | put i x m' => rfl
+          | copy i j m' =>
+              have hj1 : j ≠ cs1 := by
+                intro hc
+                exact hause.1 (by simp only [TAct.uses, List.mem_cons, List.not_mem_nil]; tauto)
+              have hj2 : j ≠ cs2 := by
+                intro hc
+                exact hause.2 (by simp only [TAct.uses, List.mem_cons, List.not_mem_nil]; tauto)
+              show (T j).focus = (S j).focus
+              rw [h j hj1 hj2]
+        · rw [applyG_ne blank _ _ hma, applyG_ne blank _ _ hma, h m hm1 hm2]
+      exact ih (applyG blank S a) (applyG blank T a)
+        (fun b hb => huse b (List.mem_cons_of_mem a hb)) hstep l hl1 hl2
+
 /-! ## 4. 動作列に対応するベクトル列 -/
 
 /-- `TAct` に対応する write+move ベクトル。 -/
@@ -623,6 +659,24 @@ theorem copyProgSent_exec {sent : Fin sc} {w : List (Fin sc)} (hij : j ≠ i)
     (runG blank (copyActsN i j b) S)
   exact execG_of_eq (copyActsN_snoc i j b).symm (execG_seq e1 e2)
 
+/-- **左端の番兵版**：先頭に本物の番兵 `leftSym`（実データではない、`w'` に現れない記号）
+を置いた語 `leftSym :: w'` に対して、ループだけを回すと（末尾の追加ラウンドは無し）、
+`leftSym` 自身は消費せずに `w'` の実データをちょうど `b` 個だけコピーして止まる。
+`s`,`h` が定数でない場合の「左端まで」コピーはこちらを使う。 -/
+theorem copyLoopSentL_exec {leftSym : Fin sc} {w' : List (Fin sc)} (hij : j ≠ i)
+    (hfresh : leftSym ∉ w') (b : ℕ) (S : Tps t sc)
+    (hS : Tape.SeqView blank (S i) (leftSym :: w') b) :
+    ExecG Terminal blank
+      (Prog.loop (i, leftSym) (TAct.copy j i (sc := sc) .right).act (ACT (TAct.keep i .left)))
+      S (copyActsN i j b) :=
+  copyLoopSent_exec (Terminal := Terminal) hij rfl
+    (fun m hm hc => by
+      obtain ⟨m', rfl⟩ := Nat.exists_eq_succ_of_ne_zero (by omega : m ≠ 0)
+      rw [List.getElem?_cons_succ] at hc
+      obtain ⟨hlt, hget⟩ := List.getElem?_eq_some_iff.1 hc
+      exact hfresh (hget ▸ List.getElem_mem hlt))
+    b S hS
+
 end CopyLoop
 
 /-! ## 9. 右向きコピーのループ（語の右端の空白で止まる） -/
@@ -858,6 +912,115 @@ theorem decCopy_run (blank : Fin sc) {cs i j : Fin 12} (hci : cs ≠ i) (hcj : c
         rw [applyG_ne blank _ _ hl', applyG_ne blank _ _ hl']
       rw [hD m hm]
       exact runG_local blank cs (copyRoundG i j) S T huse hST m hm
+
+/-! ### カウンタ駆動のコピー（ミラーあり）
+
+`s`,`h` は構成の定数ではない（段幅は 2 冪を渡り、切り分け `s` は入力から決まる）ので、
+`copyLoop` の回数をそのまま展開することはできない。カウンタテープ `cs`（値 `s`）を
+実際に 1 ずつ消費しながらコピーし、消費した分をミラーのカウンタ `mir`（`SetupPre` では
+未使用の `sC2` を使う）に転写しておく（`GSScanTapes.perDown`/`perUp` が `tC1`/`tC2` で
+やっているのと同じ手筋）。あとで `xfer1` で `mir → cs` に戻せば `cs` の値も復元できる。 -/
+
+/-- ミラー付きの 1 周回の本体（`cs` 自身には触れない）。 -/
+def copyRoundMirror (blank : Fin sc) (i j mir : Fin 12) : List (TAct 12 sc) :=
+  copyRoundG i j ++ [TAct.put mir blank .right]
+
+theorem decCopyMirror_run (blank mark : Fin sc) {cs mir i j : Fin 12}
+    (hci : cs ≠ i) (hcj : cs ≠ j) (hcm : cs ≠ mir) (hmi : mir ≠ i) (hmj : mir ≠ j) :
+    ∀ (n : ℕ) (S T : Tapes sc), (∀ l, l ≠ cs → l ≠ mir → T l = S l) →
+      ∀ l, l ≠ cs → l ≠ mir →
+        runG blank (decActsN blank cs (copyRoundMirror blank i j mir) n) T l
+          = run blank (copyLoop blank i j n S) S l := by
+  have huse : ∀ a ∈ copyRoundG (sc := sc) i j, cs ∉ a.uses ∧ mir ∉ a.uses := by
+    intro a ha
+    rcases List.mem_cons.1 ha with h | h
+    · subst h
+      refine ⟨?_, ?_⟩ <;>
+        simp only [TAct.uses, List.mem_cons, List.not_mem_nil, or_false] <;>
+        exact fun hc => by
+          rcases hc with hc | hc
+          · first | exact hcj hc | exact hmj hc
+          · first | exact hci hc | exact hmi hc
+    · rcases List.mem_cons.1 h with h | h
+      · subst h
+        refine ⟨?_, ?_⟩ <;> simp only [TAct.uses, List.mem_cons, List.not_mem_nil, or_false]
+        · exact hci
+        · exact hmi
+      · simp at h
+  have hmirNe : ∀ (X : Tps 12 sc) (m : Fin 12), m ≠ mir →
+      runG blank (copyRoundMirror blank i j mir) X m = runG blank (copyRoundG i j) X m := by
+    intro X m hm
+    rw [copyRoundMirror, runG_append]
+    exact applyG_ne blank _ _ hm
+  intro n
+  induction n with
+  | zero => intro S T hST l hl1 hl2; exact hST l hl1 hl2
+  | succ n ih =>
+      intro S T hST l hl1 hl2
+      rw [decActsN, runG_append, copyLoop, run_append]
+      refine ih _ _ (fun m hm1 hm2 => ?_) l hl1 hl2
+      have hD : ∀ m, m ≠ cs → m ≠ mir →
+          (runG blank (decRound blank cs (copyRoundMirror blank i j mir)) T) m
+            = (runG blank (copyRoundG i j) T) m := by
+        intro m hm hm'
+        rw [show decRound blank cs (copyRoundMirror blank i j mir)
+            = [TAct.put cs blank .left, TAct.put cs blank .stay] ++ copyRoundMirror blank i j mir
+            from rfl, runG_append, hmirNe _ m hm']
+        refine runG_local2 blank cs mir (copyRoundG i j) T _ (fun a ha => huse a ha)
+          (fun l' hl1' hl2' => ?_) m hm hm'
+        show applyG blank (applyG blank T (TAct.put cs blank .left))
+          (TAct.put cs blank .stay) l' = T l'
+        rw [applyG_ne blank _ _ hl1', applyG_ne blank _ _ hl1']
+      rw [hD m hm1 hm2]
+      exact runG_local2 blank cs mir (copyRoundG i j) S T (fun a ha => huse a ha) hST m hm1 hm2
+
+theorem decCopyMirror_counter (blank mark : Fin sc) {cs mir i j : Fin 12}
+    (hcm : cs ≠ mir) (hmi : mir ≠ i) (hmj : mir ≠ j) :
+    ∀ (n : ℕ) (T : Tapes sc) (m0 : ℕ), Tape.CounterView' blank mark (T mir) m0 →
+      Tape.CounterView' blank mark
+        (runG blank (decActsN blank cs (copyRoundMirror blank i j mir) n) T mir) (m0 + n) := by
+  have huseI : ∀ a ∈ copyRoundG (sc := sc) i j, mir ∉ a.uses := by
+    intro a ha
+    rcases List.mem_cons.1 ha with h | h
+    · subst h; simp only [TAct.uses, List.mem_cons, List.not_mem_nil, or_false]
+      exact fun hc => by rcases hc with hc | hc <;> [exact hmj hc; exact hmi hc]
+    · rcases List.mem_cons.1 h with h | h
+      · subst h; simp only [TAct.uses, List.mem_cons, List.not_mem_nil, or_false]; exact hmi
+      · simp at h
+  intro n
+  induction n with
+  | zero => intro T m0 hm; rw [decActsN]; simpa using hm
+  | succ n ih =>
+      intro T m0 hm
+      rw [decActsN, runG_append]
+      have hstep : Tape.CounterView' blank mark
+          ((runG blank (decRound blank cs (copyRoundMirror blank i j mir)) T) mir) (m0 + 1) := by
+        have heq : decRound blank cs (copyRoundMirror blank i j mir)
+            = ([TAct.put cs blank .left, TAct.put cs blank .stay] ++ copyRoundG i j)
+              ++ [TAct.put mir blank .right] := by
+          simp [decRound, copyRoundMirror]
+        rw [heq, runG_append, runG_append]
+        have hpm : (runG blank [TAct.put mir blank (sc := sc) .right]
+            (runG blank (copyRoundG i j)
+              (runG blank [TAct.put cs blank .left, TAct.put cs blank .stay] T))) mir
+            = Tape.step blank ((runG blank (copyRoundG i j)
+                (runG blank [TAct.put cs blank .left, TAct.put cs blank .stay] T)) mir) blank
+              .right := by
+          simp only [runG_cons, runG_nil, applyG_put_self]
+        rw [hpm]
+        refine Tape.counter'_inc ?_
+        have h1 : (runG blank [TAct.put cs blank (sc := sc) .left, TAct.put cs blank .stay] T) mir
+            = T mir := by
+          simp only [runG_cons, runG_nil]
+          rw [applyG_ne blank _ _ hcm.symm, applyG_ne blank _ _ hcm.symm]
+        have h2 : (runG blank (copyRoundG i j)
+            (runG blank [TAct.put cs blank (sc := sc) .left, TAct.put cs blank .stay] T)) mir
+            = (runG blank [TAct.put cs blank (sc := sc) .left, TAct.put cs blank .stay] T) mir :=
+          runG_untouched blank mir (copyRoundG i j) _
+            (fun a ha hc => huseI a ha (by cases a <;> simp_all [TAct.uses] <;> tauto))
+        rw [h2, h1]; exact hm
+      rw [show m0 + (n + 1) = (m0 + 1) + n from by ring]
+      exact ih _ (m0 + 1) hstep
 
 /-- 番兵駆動のコピーループも、（カウンタテープ以外で一致する状態から）
 元の `copyLoop` と同じ作用。 -/
