@@ -269,3 +269,17 @@ lake build
   稼働中：`decompose2_on_tapes`（外側ループ）、ProgLang（有限制御プログラム言語 → `StructuredMachine`：
   今のテープ実装は「動作リスト」意味論なので、これが最終定理への最大の残工事）、PassSum5（全探索の再確認と
   証明再挑戦）、ClearAny（任意形状のテープの消去 ≤ 3·幅+3）。
+- 進捗（コミット 377c425 まで）：
+  * `PassPeriodSum`：全探索＋状態空間探索で反例なし。Lean で DOWN 側を閉じた（PassSum5
+    `passSumLinear_of_upSum`：UP ジャンプの周期和 ≤ C·b ⟹ `PassPeriodSum`）。PassSum6 は UP 回数 n₀ で
+    `PassPeriodSum 8 (7(n₀+1))`（無条件）。**注意**：「1 パス ≤ 3 反復」は偽（[1,9,1,64,1]、b=65、Σ=76 の
+    5 反復例をシミュレータで確認）。正しい構造は「脱出周期 P > (k−1)p_c − 1 − 消費量 t_c」（Fine–Wilf）で、
+    根の周期は幾何的に成長する。証明は PassSum7 で継続中。
+  * ProgLang（有限制御プログラム言語 → `StructuredMachine`、`progMachine_recognizedBy`）完成。既存の
+    動作リスト実装の移植を GSScanProg から開始。
+  * 前処理テープ化 `decompose2_on_tapes` 完成、オラクル完全除去。ただし費用上界に fuel 由来の二次項があり
+    線形化中。
+  * PrepInstances：`stage_tapes_spec'` 用の `res`/`GSCore`/`hs` パッケージ済。インタフェース側の不備を
+    4 点発見（`PrepOnTapes.post` の前提条件欠如、二次費用、`p₁=0` で `hkp` 矛盾、`OvTapes` のテープ不足と
+    `decompose`/`decompose2` の不一致）→ StageTapes / MiddleTapes / GSPreprocessTapes を修正中。
+  * ClearAny（任意テープの消去 ≤ 3·幅+3）。
