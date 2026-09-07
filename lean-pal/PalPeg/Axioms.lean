@@ -12,6 +12,7 @@ import PalPeg.Manacher
 import PalPeg.ManacherHeads
 import PalPeg.Stages
 import PalPeg.Schedule
+import PalPeg.TapeLib
 
 /-!
 # 公理 guard
@@ -172,3 +173,7 @@ import PalPeg.Schedule
 /-- info: 'PalPeg.Manacher.headMove_total_run' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.Manacher.headMove_total_run
+
+/-- info: 'PalPeg.Tape.push_spec' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.Tape.push_spec

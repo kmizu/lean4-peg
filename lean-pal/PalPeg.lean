@@ -13,6 +13,7 @@ import PalPeg.Manacher
 import PalPeg.ManacherHeads
 import PalPeg.Stages
 import PalPeg.Schedule
+import PalPeg.TapeLib
 
 /-!
 # PalPeg
@@ -33,6 +34,7 @@ import PalPeg.Schedule
 * `PalPeg.ManacherHeads` — Manacher をテープ上で走らせたときのヘッド総移動 ≤ 7|x|（telescoping）
 * `PalPeg.Stages`    — dyadic stage 分解 `Pal(n) ⇔ match_W ∧ middle_W`、段の被覆と同時稼働 ≤ 2
 * `PalPeg.Schedule`  — 順序処理の締切（`finishTime_le`）と Galil の FIFO サービス不等式（Lindley）
+* `PalPeg.TapeLib`   — 成果物のテープ上の zipper / stack / seq / counter ビューと 1 アクション補題
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/

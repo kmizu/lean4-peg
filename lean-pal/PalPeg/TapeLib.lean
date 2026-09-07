@@ -512,17 +512,3 @@ theorem counter'_dec_zero {blank mark : Fin k} {tp : TapeConfiguration k}
   counterView'_zero.2 (peek_restore (pop_spec (counterView'_zero.1 h)))
 
 end PalPeg.Tape
-
-section AxiomCheck
-open PalPeg.Tape
-#print axioms PalPeg.Tape.step_right
-#print axioms PalPeg.Tape.Zipper.equivTape
-#print axioms PalPeg.Tape.push_spec
-#print axioms PalPeg.Tape.pop_spec
-#print axioms PalPeg.Tape.seq_move_right
-#print axioms PalPeg.Tape.seq_move_left
-#print axioms PalPeg.Tape.seq_write
-#print axioms PalPeg.Tape.counter_dec_zero
-#print axioms PalPeg.Tape.counter'_isZero_iff
-#print axioms PalPeg.Tape.counter'_dec
-end AxiomCheck
