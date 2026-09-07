@@ -47,6 +47,7 @@ import PalPeg.ProgramMachine
 import PalPeg.Main
 import PalPeg.FullMachineTapes
 import PalPeg.ClearAny
+import PalPeg.ProgLang
 
 /-!
 # 公理 guard
@@ -355,3 +356,7 @@ import PalPeg.ClearAny
 /-- info: 'PalPeg.ClearAny.clearAny_chunks' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.ClearAny.clearAny_chunks
+
+/-- info: 'PalPeg.ProgLang.progMachine_recognizedBy' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.ProgLang.progMachine_recognizedBy
