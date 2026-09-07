@@ -405,7 +405,7 @@ namespace DecompOnTapes
 variable {blank startSym endSym mark : Fin sc}
 
 /-- 段幅ごとの余裕込みの傾き。 -/
-def A (D : DecompOnTapes sc blank startSym endSym mark) : ℕ := D.Cd + 2949
+def A (D : DecompOnTapes sc blank startSym endSym mark) : ℕ := D.Cd + 3025
 
 /-- ジョブ全体（ループ部分）の費用係数。 -/
 def M (D : DecompOnTapes sc blank startSym endSym mark) : ℕ := 2 * D.A + D.Dd
@@ -608,7 +608,7 @@ theorem jobLoop_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (
       ((8 + 2) * L + 1) ⟨0, 0⟩ (applyActs blank (D.acts y L ts) ts) fw hinv0 hE0
     have hSAcost : ovRunCost ((y.take L).take (stageS D.dec y L)) ((y.take L).drop (stageS D.dec y L))
         ((y.take L).reverse) 8 (D.dec y L).2.1 (D.dec y L).2.2
-        (max 1 (2 * stageS D.dec y L)) ((8 + 2) * L + 1) ⟨0, 0⟩ ≤ 2945 * L :=
+        (max 1 (2 * stageS D.dec y L)) ((8 + 2) * L + 1) ⟨0, 0⟩ ≤ 3021 * L :=
       stage_tape_cost_le (x := y) (dec := D.dec y) hL (by omega) hOKL
     have hts2 : applyActs blank (stageActs blank startSym endSym mark leftSym one D y L ts) ts
         = ovRunTapes blank leftSym endSym mark one ((y.take L).take (stageS D.dec y L))
@@ -650,14 +650,14 @@ theorem jobLoop_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (
       (by rw [hhome]; exact seq_home hrun'.txt2 (Nat.sub_le _ _) (by rw [hcons]; omega))
       (by rw [hhome]; exact seq_home hrun'.flg (Nat.sub_le _ _) (by omega))
     have hstage : (stageActs blank startSym endSym mark leftSym one D y L ts).length
-        ≤ D.Cd * L + D.Dd + 2945 * L := by
+        ≤ D.Cd * L + D.Dd + 3021 * L := by
       simp only [stageActs, List.length_append, hSA]
       have := D.len_le y L ts
       omega
     refine ⟨?_, ?_⟩
     · rw [List.length_append, List.length_append, homeActs_length]
       have hMdef : (2 * D.A + D.Dd) * L = D.M * L := rfl
-      have hAdef : D.A * L = D.Cd * L + 2949 * L := by
+      have hAdef : D.A * L = D.Cd * L + 3025 * L := by
         simp only [DecompOnTapes.A, Nat.add_mul]
       have hgeo := geo_key (A := D.A) (B := D.Dd) (L := L) (L' := nextLen (stageS D.dec y L))
         (R := (jobLoop blank startSym endSym mark leftSym one D y fuel (nextLen (stageS D.dec y L))
