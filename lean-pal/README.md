@@ -32,43 +32,71 @@ PegSeparation.RealTimeTM.RecognizedBy PalPeg.PAL
 したがってここで示したのは「Galil の機械が成果物の厳密実時間モデルで書ける、と認めるなら `PAL ∈ PEG`」であり、
 無条件の `PAL ∈ PEG` ではない。
 
-### 証明したもの（`sorry` なし・新規 `axiom` なし）
+### ファイル構成（`PalPeg/*.lean`、層ごと）
 
-すべて `PalPeg` 名前空間。成果物の定義（`PegSeparation.*`）をそのまま使う。
+基礎（`Basic`／`Existence`／`EvenLength`／`Axioms`）は上の 2 節に既出のとおり。残りは以下の層に分かれる。
 
-| 定理 | 内容 | ファイル |
-|---|---|---|
-| `PAL : Language (Fin 2)` | `{ w \| w.reverse = w }` | `PalPeg/Basic.lean` |
-| `PAL_reverse_mem w` | `w.reverse ∈ PAL ↔ w ∈ PAL` | 同上 |
-| `PAL_reverse` | `PAL.reverse = PAL`（`Language.reverse` の形） | 同上 |
-| `pal_in_peg_of_realTime M hM` | `M : RealTimeTM.Machine (Fin 2) t s k`, `hM : ∀ w, M.Accepts w ↔ w ∈ PAL` ⇒ `∃ n (G : PegGrammar (Fin 2) n), G.IsLoffTotal ∧ ∀ w, G.Recognizes w ↔ w ∈ PAL` | `PalPeg/Existence.lean` |
-| `pal_recognizedByTotalPEG h` | `RealTimeTM.RecognizedBy PAL → RecognizedByTotalPEG PAL` | 同上 |
-| `EvenLength`, `OddLength` | `{ w \| Even w.length }`, `{ w \| Odd w.length }` | `PalPeg/EvenLength.lean` |
-| `evenLength_isRegular`, `oddLength_isRegular` | 2 状態（`Bool`）DFA `evenDFA` / `oddDFA` による `Language.IsRegular` | 同上 |
-| `evenPal_of_pal h` | `RecognizedByTotalPEG PAL → RecognizedByTotalPEG (PAL ⊓ EvenLength)` | 同上 |
-| `oddPal_of_pal h` | `RecognizedByTotalPEG PAL → RecognizedByTotalPEG (PAL ⊓ OddLength)` | 同上 |
-| `EvenPal`, `mem_PAL_inf_EvenLength_iff` | `EvenPal = { w \| ∃ u, w = u ++ u.reverse }`、`w ∈ PAL ⊓ EvenLength ↔ ∃ u, w = u ++ u.reverse` | 同上 |
-| `evenPal_ww_reverse_of_pal h` | `RecognizedByTotalPEG PAL → RecognizedByTotalPEG EvenPal`（LMR Conjecture 7 の原文の形） | 同上 |
-| `IsPal`, `HasPeriod` | `x.reverse = x`、`∀ i, i + p < |x| → x[i]? = x[i+p]?` | `PalPeg/Words.lean` |
-| `isPal_cons_append_iff` | `IsPal ([a] ++ x ++ [b]) ↔ a = b ∧ IsPal x`（拡張則） | 同上 |
-| `isPal_take_iff`, `isPal_drop_iff` | 回文の接頭辞／接尾辞が回文 ⟺ 境界（border） | 同上 |
-| `hasPeriod_iff_drop_eq_take` | 周期 ⟺ 境界 | 同上 |
-| `fineWilf` | `p + q - gcd p q ≤ |x|` での Fine–Wilf（Mathlib `List.HasPeriod.gcd` への橋） | 同上 |
-| `hasPeriod_of_suffix_gcd` | 末尾 `p` 記号が `g`-周期的（`g ∣ p`）なら全体も `g`-周期的 | 同上 |
-| `hasPeriod_minimal_of_suffix` | 最小周期 `p` の回文の、長さ `≥ 2p` の接尾辞回文の最小周期も `p`（group 補題） | 同上 |
-| `chain`, `mem_chain_iff` | オンライン鎖算法：`ℓ ∈ chain w ↔ ℓ ≤ |w| ∧ 接尾辞回文` | `PalPeg/Chain.lean` |
-| `mem_PAL_iff_length_mem_chain` | `w ∈ PAL ↔ w.length ∈ chain w`（機械の仕様） | 同上 |
-| `chain_sorted`, `chain_eq_suffixPalLengths` | 鎖は狭義降順、素朴定義と一致 | 同上 |
-| `suffixPal_replica` | レプリカ：top（周期 `p`）の下の長さ `L ≤ ℓ-p` の接尾辞回文は時刻 `n-p` のものと一致 | `PalPeg/Structure.lean` |
-| `border_of_minimalPeriod` | 最小周期 `p` の回文の第 2 接尾辞回文は `x.drop p`、間に回文なし | 同上 |
-| `center_suffix_of_pal`, `pal_prefix_length_ge` | 予測補題：時刻 `m' ∈ [m,2m]` の全接頭辞回文は時刻 `m` の長さ `2m-m'` の接尾辞回文から生じる | 同上 |
-| `lsp_shift_bound` | 禁止帯：時刻 `n-p` の接尾辞回文長 `M` は `M ≤ ℓ-p` か `ℓ ≤ M`（`3p ≤ ℓ`） | 同上 |
-| `cex_x_longest`, `cex_long_pal` | `001000` による「`LSP(n-p) = ℓ-p`」の反例（機械化） | 同上 |
-| `groupChainRev`, `expandAll_groupChainRev` | group 圧縮鎖（1 群あたり記号参照 2 回）が `chainRev` を展開する。群数の対数上界は未証明（併合なし） | `PalPeg/Groups.lean` |
-| `matchState_snoc_hit/_miss/_zero` | KMP 一歩（一致／境界鎖から復帰／0） | `PalPeg/Matching.lean` |
-| `predictability_step`, `work_le` | Galil 予測補題：failure 連鎖の仕事 ≤ 次の一致までの保証ゼロ数 | 同上 |
-| `border_snapshot` | 境界 `b` の状態は `j-b` 記号前のテキスト接頭辞の照合状態 | 同上 |
-| `RTQueue.Queue`, `toList_snoc/tail`, `head?_eq`, `inv_*` | Hood–Melville 実時間キュー（最悪 O(1)/操作）の FIFO 仕様 | `PalPeg/RTQueue.lean` |
+**語の組合せ論**
+- `Words` — 回文と周期の組合せ論（拡張則・境界・Fine–Wilf・group 補題）
+- `Groups` — group 圧縮した鎖（2 回の記号参照/群）が `chain` を展開する
+- `GroupsLog` — group 併合・正準性・境界縮小 `3ℓ' < 2ℓ`
+- `GroupsLogBound` — 群数 ≤ 2·log₂|v|+4 を無条件化
+
+**仕様（鎖・dyadic stage・組み立て）**
+- `Chain` — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
+- `Structure` — レプリカ・境界・予測補題・禁止帯（`lsp_shift_bound`）と反例
+- `Stages` — dyadic stage 分解 `Pal(n) ⇔ match_W ∧ middle_W`、段の被覆と同時稼働 ≤ 2
+- `Assembly` — 段の組み立て：照合/中央オラクル ⇒ `answer_correct`、`answer_length_iff_mem_PAL`
+- `OnlineMachine` — 全体機械の添字モデル（2 段）、`output_correctH`、ラウンド費用 ≤ 3(3(k+1)+Cm+Cp)
+- `MiddleBorder` — 境界列挙版の `MiddleImpl`、`MiddleImplSpecH` を Cm=27901 で満たす
+- `PrepDecompose` — `decompose` を (S/2,S] に均す `PrepImpl`、`PrepImplSpecH`
+
+**照合器（GS）**
+- `Matching` — KMP 一歩・境界鎖・Galil の予測補題（仕事 ≤ 保証ゼロ出力数）
+- `GSScan` — Galil–Seiferas 走査：安全シフト、健全性/完全性、ポテンシャル `Φ=(k+1)pos+q`
+- `GSDecomp` — GS 分解 `GSCore/GSDecomp`、k 反復周期の補題、走査側帰結と `KSimple` への橋
+- `GSRealTime` — GS 走査の実時間実行：レート k+1 で `online_answer_correct`、有界遅れ不変量
+- `GSVerifier` — u 検証器を quota 2 で交互実行（オラクルなし `vAnswer_correct`）
+- `StageMatcher` — GS 照合器が `MatchOracle` を満たす（`dyadic_gs_mem_PAL`、オンライン性）
+- `GSDecompose2Work` — `decompose2` の仕事量：Σp_j ≤ C₁T を仮定すれば線形（仮定の真偽を検証中）
+
+**中央フラグ**
+- `Manacher` — Manacher の radius 走査の正しさ、接頭辞回文フラグ、仕事量 ≤ n
+- `ManacherHeads` — Manacher をテープ上で走らせたときのヘッド総移動 ≤ 7|x|（telescoping）
+- `MiddleJob` — 中央回文フラグ：区切り埋め込みで偶奇統一、4 分割ジョブの費用 ≤ 128h
+- `BorderJob` — 中央フラグの GS 系境界列挙（縮小段、`palPrefixFlagsGS_spec`、仕事 ≤ 258|x|）
+
+**スケジューリング・キュー**
+- `RTQueue` — Hood–Melville 実時間キューと FIFO 仕様
+- `Schedule` — 順序処理の締切（`finishTime_le`）と Galil の FIFO サービス不等式（Lindley）
+
+**前処理（decompose, decompose2, L1）**
+- `GSPreprocess` — 計算可能な GS 分解 `decompose`（Python と一致）、`decompose_spec : GSCore`
+- `GSDecompose2` — 失敗位置へジャンプする strip 規則の `decompose2`：`decompose2_gsDecomp`（L1 無条件）
+- `GSDecompL1` — 真の L1 境界 `gsDecomp_exists`（パスは p₂ 手前で停止）
+
+**テープ化**
+- `TapeLib` — 成果物のテープ上の zipper / stack / seq / counter ビューと 1 アクション補題
+- `TextFeed` — 到着記号を FIFO で走査テープに供給、`feed_online` で `onlineRun` を再現
+- `VerifierFeed` — 検証器の Txt2 も FIFO で供給（`.X .right` ごとの fill 版を続行中）
+- `GSScanTapes` — GS 走査 1 歩を 3 テープ（P/Txt/Cnt）の動作列で実現、コスト ≤ (2k+2)ΔΦ+8
+- `GSVerifierTapes` — u 検証器の 5 テープ化、走行費用 ≤ (2k+3)ΔΦ+18n（L1 不要で償却）
+- `BorderJobTapes` — 境界列挙の 6 テープ化、テープ仕事 ≤ 4000|x|、`flags_on_tape`
+- `MiddleTapes` — 中央ジョブのバッチをテープ上で実行（`batch_read_flag`、ラウンド組み立ては続行中）
+- `PatternTapes` — 段のセットアップ（入力コピーからパターン/U/カウンタ群を構築、≤ 21h 動作）
+- `Prologue` — 段開始前の準備動作のテープ化
+- `RTQueueTapes` — Hood–Melville キューを 9 本のスタックテープで実現（snoc ≤ 20、tail ≤ 27 動作）
+- `GSPreprocessTapes` — 前処理のテープ化（firstPeriod/extendReach/secondOuter；strip2 続行中）
+- `StageMatcherTapes` — 段の照合フェーズ：固定 `roundBudget = 85 + U·B` 動作/ラウンド
+- `InputCopy` — 入力コピー（フロンティア書き込み 1 動作/ラウンド、左読み）
+
+**機械**
+- `Speedup` — 1 記号あたり B マイクロステップの機械 → 厳密実時間 `Machine`（線形加速）
+- `ProgramMachine` — 構造化機械 `StructuredMachine` → `MultiStepMachine` → `RecognizedBy`
+- `Metered` — 固定 B 動作/ラウンドの de-amortization（`metered_phi`、境界で `metered_answer_correct`）
+- `Main` — `pal_in_peg_of_structured`：PAL を SAccepts する構造化機械があれば `RecognizedByTotalPEG PAL`
+- `EndToEnd` — 添字レベルの端到端：`endToEnd_mem_PAL`（仮定は `decompose` の L1 のみ）
+- `EndToEnd2` — `decompose2` 版の端到端：仮定は `PassPeriodSum 8 C₁`（1 パスの周期和 ≤ C₁T）のみ
 
 証明の鎖（`pal_in_peg_of_realTime`）：
 
@@ -129,9 +157,27 @@ lake build
 `PalPeg` 5 モジュールの `lake build` は WSL2 上で約 2 分 30 秒。
 成果物側の linter 警告（`unusedFintypeInType` 等 93 行）は出るがエラーはない。
 
-## 次の一手
+エージェントがファイルを編集している最中は `lake build` が一時的に失敗することがある
+（依存モジュールの整合が取れていない中間状態）。編集が落ち着いてから再度ビルドし直すこと。
 
-仮定を消すこと。方針は RTTM ではなく成果物の SCA（`Scaffolding.Automaton (Fin 2) …`）を直接構成して
-`RecognizedBySCA PAL` を示し、`SCAToPEG.loffBackward` で PEG に落とす（`DESIGN_SCA_PAL.md`）。
-`Words.lean`／`Chain.lean` はその機械の仕様層と組合せ論の層。SCA の実装と実時間性
-（young run、break 後の再構築、Hood–Melville キュー）は未着手で、規模は調査 §6 の見積もりどおり。
+## 現在の到達点
+
+`PalPeg/*.lean` に列挙した全モジュールは `sorry` なし・標準 3 公理のみ（`Axioms.lean` の guard 参照）。
+そのうえで、添字レベルの端到端定理 `EndToEnd2.endToEnd2_mem_PAL` は
+
+```lean
+PassPeriodSum 8 C₁
+```
+
+というただ一つの数学的仮定の下で成立している（`decompose2` 版の `endToEnd_mem_PAL` 系列で唯一未証明のもの）。
+`PassPeriodSum b C₁` は「境界 `b` の 1 回の `stripLoop2` パスにおける各 run 開始点での最小 k 反復周期の総和が
+`C₁·b` 以下である」という主張で、実験的には係数 `≤ 0.39·b` 程度に収まることが分かっている
+（部分的な結果は `PassSum.lean` / `PassSum2.lean` にある）。この仮定を除けば、上の層構造（語の組合せ論から
+機械まで）はすべて証明済みであり、テープ実現も各コンポーネント単位では完了している。
+
+残っているエンジニアリング作業：
+
+- `decompose2` の strip2 テープ化（進行中、`GSPreprocessTapes` / `VerifierFeed` / `MiddleTapes` 参照）
+- 段のライフサイクル（生成・退役・切替のテープ上の組み立て、進行中）
+- 全体機械の `StructuredMachine` 化と最終定理 `RealTimeTM.RecognizedBy PAL` の取得
+  （`Main.pal_in_peg_of_structured` が構造化機械から総 PEG への糊）
