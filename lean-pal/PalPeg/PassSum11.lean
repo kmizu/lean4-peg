@@ -37,17 +37,29 @@ import PalPeg.PassSum10
 * `r₁ < P + q₁`（残り (2)、コピーが取れない）
 * `r₁ - q₁ < t`（着地位置が第 1 子の破れの直前 `q₁` セル以内にある配置）
 
-数値実験（自己相似語 60,000 本、開始位置も乱択、子孫 8,820 個）：
+数値実験（自己相似語 110,000 本、開始位置も乱択、子孫 **10,162 個**、seed 3 本）：
 
-* 跨ぎ `L = E_j - p_c > 0` は 248 例。**すべて `c` の直接の子**（間接の子孫は 0 例）。
-* 跨ぎ量の最大は **`L/p_j = 1.0`**（`p_c = 139`, `p_j = 15`, `t = 4`, `L = 15`）。
-  すなわち `E_j < p_c + p_j`（旧 (E)）は等号ぎりぎりで破れるが、
-  `L ≥ P + q₁`（本定理がコピーを取るのに必要な深さ）を満たす例は **0 件**。
-* 「遅い」子孫（`t ≥ (k-1) * p_j`）の跨ぎは **0 例 / 8,820**（`lateCross = 0`）。
-* 消費量比の最大は `C/p_c = 0.988`（`p_c = 1386`, `C = 1370`）。
+* 跨ぎ `L = E_j - p_c > 0` は **243 例、すべて `c` の直接の子**（間接の子孫は 0 例）。
+* 「遅い」子孫（`t ≥ (k-1) * p_j`）は 862 個あるが、そのうち **跨ぐものは 0 個**。
+* 跨ぎ量の最大は `L/p_j = 1.04`（旧 (E) `E_j < p_c + p_j` は僅かに偽）。
+  `far_crossing_contradiction` が要求する `p_c + P ≤ r'` を満たす跨ぎは **0 例**、
+  `crossing_copy_contradiction` が閉じる形は 243 例中 **192 例**、
+  残り 51 例はすべて `r₁ < P + q₁`（`RemainingGap` の第 1 枝）で、
+  第 2 枝 `r₁ < t + q₁` に落ちる例は **0 例**。
+* `Consumption` の違反 `C - p_c ≥ 0` への最接近は **`-8`**（8 セル足りない）。
+* 消費量比の最大は `C/p_c = 0.92`。
 
-跨ぎ量を目的関数にした山登り（乱択種 1,853 本 × 900 ステップ、3 系統）でも
-`L/p_j` は `1.0` を超えず、`L ≥ P + q₁` の配置は構成できなかった。
+## 本ファイル後に残る穴
+
+`far_crossing_contradiction`（§2）は `p_c + P ≤ r'` を**すべて**閉じるので、
+`Consumption` の違反に残された形はただ一つ：
+
+> **子孫 `j` の run が短い**：`r' < p_c + P`（`ShortRunGap`）。違反が要求する
+> `L ≥ k*P - 1` の下でこれは `t ≥ (k-1) * P`（遅い UP 節点）と**同値**
+> （`shortRun_iff_late`）。
+
+すなわち `PassSum9` の `up_violation_early` は本ファイルの
+`far_crossing_contradiction` に完全に含まれ、穴は「遅い UP 節点」1 個に一本化された。
 -/
 
 namespace PalPeg
@@ -116,10 +128,112 @@ theorem cycling_contradiction {w : List α} {pc P q1 r1 t r' Rc L : ℕ}
   refine crossing_copy_contradiction (Rc := Rc) (r' := r') hq1 hPpos hreg hRc hrun1 hbreak1
     ht (by omega) (by omega) hrunj hr'len hfitR hlow (by omega)
 
-/-- **残る穴の明示**。`crossing_copy_contradiction` の仮定のうち、
-数値実験で否定できていない唯一の配置は「コピーが取れない (`r₁ < P + q₁`)」か
-「着地が破れの直前 `q₁` セル以内 (`r₁ < t + q₁`)」のいずれかである。 -/
+/-! ## §2 遠い跨ぎ：run が `p_c + P` 以上あれば `c` の run 全体が `P`-周期になる
+
+ここだけ座標を **節点 `c` の run の先頭 `a_c`** にとる（`v = x.drop a_c`）。
+`c` の run `[0, rc)` は `p_c`-周期で `k * p_c ≤ rc`、`p_c` はこの位置の最小
+`k`-繰り返し周期（`IsLeastKRep v k pc`）である。
+
+子孫 `j` の run を `[s, s + r')`（`P`-周期、`s + r' ≤ rc`）とする。**`p_c + P ≤ r'`**
+なら、窓の中に「`p_c` だけ離れた同じ位置」が必ず入るので、区間 `[0, s + r')` 全体が
+`P`-周期になる（`v[i] = v[i + p_c]` を繰り返して窓の中へ運び、窓で `+P` し、戻す）。
+Fine–Wilf も割り切りも要らない。
+
+`s + r' ≥ k * P` なら `P` は `a_c` における `k`-繰り返し周期なので、最小性から
+`p_c ≤ P`。`P < p_c` に矛盾する。
+
+**被覆範囲**：領域座標で `E_j = t + r'`、`L = E_j - p_c` とすると
+`p_c + P ≤ r'` は `t ≤ L - P` と同値。`Consumption` の違反は `L ≥ k * P - 1` を
+要求するので、この定理は `t ≤ L - P` の全域を閉じる。とくに
+`up_violation_early`（`t + 1 ≤ (k-1) * P`）は `L ≥ k*P - 1` の下で
+`t ≤ (k-1)*P - 1 ≤ L - P` を満たすので、**本定理に含まれる**。
+残るのは `r' < p_c + P`（＝ `E_j < p_c + t + P`、`t > L - P`）だけである。 -/
+
+/-- **遠い跨ぎからの矛盾**。`c` の run（`p_c`-周期、最小 `k`-繰り返し周期 `p_c`）の
+内側にある `P`-周期の窓 `[s, s + r')` が `p_c + P ≤ r'` を満たし、その右端が
+`k * P` に達するなら、`p_c ≤ P` となって `P < p_c` に矛盾する。 -/
+theorem far_crossing_contradiction {v : List α} {k pc P s r' rc : ℕ}
+    (hleast : IsLeastKRep v k pc) (hR : ReachOf v pc rc)
+    (hPpos : 0 < P) (hPlt : P < pc)
+    (hrunj : HasPeriod ((v.drop s).take r') P)
+    (hself : pc + P ≤ r') (hfit : s + r' ≤ rc) (hkP : k * P ≤ s + r') : False := by
+  have hrcv : rc ≤ v.length := hR.1
+  have hreg : HasPeriod (v.take rc) pc := hR.2.1
+  have hpcpos : 0 < pc := hleast.1.1
+  have hreglen : (v.take rc).length = rc := by rw [List.length_take]; omega
+  have hregion : ∀ i, i + pc < rc → v[i]? = v[i + pc]? := by
+    intro i hi
+    have h := hreg i (by rw [hreglen]; exact hi)
+    rwa [List.getElem?_take_of_lt (show i < rc by omega),
+      List.getElem?_take_of_lt (show i + pc < rc by omega)] at h
+  have hdroplen : (v.drop s).length = v.length - s := by simp
+  have hwindow : ∀ m, m + P < r' → v[s + m]? = v[s + m + P]? := by
+    intro m hm
+    have h := hrunj m (by rw [List.length_take, hdroplen]; omega)
+    rw [List.getElem?_take_of_lt (show m < r' by omega),
+      List.getElem?_take_of_lt (show m + P < r' by omega),
+      List.getElem?_drop, List.getElem?_drop] at h
+    rw [show s + m + P = s + (m + P) from by omega]
+    exact h
+  -- `p_c` ずつ右へ運んで窓の中に入れる
+  have key : ∀ n i, s ≤ i + n → i + P < s + r' → v[i]? = v[i + P]? := by
+    intro n
+    induction n with
+    | zero =>
+      intro i hs hi
+      have h := hwindow (i - s) (by omega)
+      rwa [show s + (i - s) = i from by omega] at h
+    | succ n ih =>
+      intro i hs hi
+      by_cases hcase : s ≤ i
+      · have h := hwindow (i - s) (by omega)
+        rwa [show s + (i - s) = i from by omega] at h
+      · have h1 : v[i]? = v[i + pc]? := hregion i (by omega)
+        have h2 : v[i + P]? = v[i + P + pc]? := hregion (i + P) (by omega)
+        have h3 := ih (i + pc) (by omega) (by omega)
+        rw [h1, h2, show i + P + pc = i + pc + P from by omega]
+        exact h3
+  have hper : HasPeriod (v.take (s + r')) P := by
+    intro i hi
+    rw [List.length_take] at hi
+    rw [List.getElem?_take_of_lt (show i < s + r' by omega),
+      List.getElem?_take_of_lt (show i + P < s + r' by omega)]
+    exact key s i (by omega) (by omega)
+  have hkrep : KRep v k P := ⟨hPpos, by omega, hasPeriod_take_of_le hper (by omega)⟩
+  exact absurd (hleast.2 P hkrep) (by omega)
+
+/-- 系（領域座標）：`E_j = t + r'`、`L = E_j - p_c` としたとき、違反が要求する
+`k * P ≤ E_j`（絶対座標）と `t ≤ L - P` から矛盾。`s = d + t` は領域先頭 `d` からの
+オフセットで、`d + k * p_c = rc + 1`。 -/
+theorem far_crossing_region {v : List α} {k pc P d t r' rc : ℕ}
+    (hleast : IsLeastKRep v k pc) (hR : ReachOf v pc rc)
+    (hPpos : 0 < P) (hPlt : P < pc)
+    (hrunj : HasPeriod ((v.drop (d + t)).take r') P)
+    (_hd : d + k * pc = rc + 1)
+    (hfar : pc + P ≤ r') (hfit : d + t + r' ≤ rc) (hkP : k * P ≤ d + t + r') : False :=
+  far_crossing_contradiction hleast hR hPpos hPlt hrunj hfar (by omega) hkP
+
+/-- **残る穴の明示**（`crossing_copy_contradiction` 側）。コピー論法で閉じられない
+配置は「コピーが取れない (`r₁ < P + q₁`)」か「着地が第 1 子の破れの直前 `q₁` セル
+以内 (`r₁ < t + q₁`)」のいずれかである。 -/
 def RemainingGap (P q1 r1 t : ℕ) : Prop := r1 < P + q1 ∨ r1 < t + q1
+
+/-- **本ファイル後に残る穴（最終形）**。`far_crossing_contradiction` は
+`p_c + P ≤ r'` の全域を閉じるので、`Consumption` の違反に残された唯一の形は
+
+> 子孫 `j` の run が短い：`r' < p_c + P`（領域座標で `E_j < p_c + t + P`、
+> すなわち跨ぎ量 `L = E_j - p_c` に対して `t > L - P`）
+
+である。違反は `L ≥ k * P - 1` を要求するので、これは
+`t > (k-1) * P - 1`、つまり「遅い UP 節点」に他ならない。 -/
+def ShortRunGap (pc P r' : ℕ) : Prop := r' < pc + P
+
+/-- 遅さと短さの同値（違反の閾値 `L = k*P - 1` を代入した形）。 -/
+theorem shortRun_iff_late {k pc P t L r' : ℕ} (hk : 4 ≤ k) (_hPpos : 0 < P)
+    (hEj : t + r' = pc + L) (hviol : k * P ≤ L + 1) (hL : L + 1 ≤ k * P) :
+    ShortRunGap pc P r' ↔ (k - 1) * P ≤ t := by
+  have h1 : (k - 1) * P + P = k * P := by rw [← Nat.succ_mul]; congr 1; omega
+  constructor <;> intro h <;> simp only [ShortRunGap] at * <;> omega
 
 /-- 上の 2 条件は、`crossing_copy_contradiction` の残りの仮定が揃っていれば
 本当に「残り全部」である（対偶の形）。 -/
@@ -144,5 +258,8 @@ end PalPeg
 section AxiomCheck
 #print axioms PalPeg.PassSum11.crossing_copy_contradiction
 #print axioms PalPeg.PassSum11.cycling_contradiction
+#print axioms PalPeg.PassSum11.far_crossing_contradiction
+#print axioms PalPeg.PassSum11.far_crossing_region
 #print axioms PalPeg.PassSum11.gap_dichotomy
+#print axioms PalPeg.PassSum11.shortRun_iff_late
 end AxiomCheck
