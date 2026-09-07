@@ -103,11 +103,11 @@ final class HeadDistances(
         } else {
           val sourcePair = ordered(left, right)
           val original = counters(sourcePair)
-          val (positive, negative) = if (sourcePair._1 == left) { (original.pos, original.neg) } else { (original.neg, original.pos) }
+          val (positive, negative) = if (sourcePair._1 == left) { (original.positiveStack, original.negativeStack) } else { (original.negativeStack, original.positiveStack) }
           // Source pairs exclude target, so these updates cannot overwrite a
           // distance subsequently needed by this same head-copy operation.
-          counter.pos.copyFrom(positive, enabled)
-          counter.neg.copyFrom(negative, enabled)
+          counter.positiveStack.copyFrom(positive, enabled)
+          counter.negativeStack.copyFrom(negative, enabled)
         }
       }
     }
