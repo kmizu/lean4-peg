@@ -30,6 +30,7 @@ import PalPeg.Stages
 import PalPeg.Assembly
 import PalPeg.StageMatcher
 import PalPeg.OnlineMachine
+import PalPeg.MiddleBorder
 import PalPeg.Schedule
 import PalPeg.TapeLib
 import PalPeg.Speedup
@@ -58,6 +59,7 @@ import PalPeg.Main
 * `PalPeg.Assembly`  — 段の組み立て：照合/中央オラクル ⇒ `answer_correct`、`answer_length_iff_mem_PAL`、生成/退役/オンライン性
 * `PalPeg.StageMatcher` — GS 照合器が `MatchOracle` を満たす（`dyadic_gs_mem_PAL`、オンライン性 `answer_take`）
 * `PalPeg.OnlineMachine` — 全体機械の添字モデル（2 段、中央/前処理はインターフェース）`output_correctH`（半分割：段 S はパターン rev(w.take(S/2))、前処理 (S/2,S]、テキスト w.drop S）、ラウンド費用 ≤ 3(3(k+1)+Cm+Cp)
+* `PalPeg.MiddleBorder` — 境界列挙版の `MiddleImpl`、`MiddleImplSpecH` を Cm=27901 で満たす（各段 L1 を仮定）
 * `PalPeg.Schedule`  — 順序処理の締切（`finishTime_le`）と Galil の FIFO サービス不等式（Lindley）
 * `PalPeg.TapeLib`   — 成果物のテープ上の zipper / stack / seq / counter ビューと 1 アクション補題
 * `PalPeg.GSScan`    — Galil–Seiferas 走査：安全シフト、健全性/完全性、ポテンシャル `Φ=(k+1)pos+q`

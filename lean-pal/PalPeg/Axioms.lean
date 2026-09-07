@@ -29,6 +29,7 @@ import PalPeg.Stages
 import PalPeg.Assembly
 import PalPeg.StageMatcher
 import PalPeg.OnlineMachine
+import PalPeg.MiddleBorder
 import PalPeg.Schedule
 import PalPeg.TapeLib
 import PalPeg.Speedup
@@ -310,3 +311,7 @@ import PalPeg.Main
 /-- info: 'PalPeg.BorderTapes.flags_on_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.BorderTapes.flags_on_tape
+
+/-- info: 'PalPeg.MiddleBorder.borderMiddle_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.MiddleBorder.borderMiddle_spec
