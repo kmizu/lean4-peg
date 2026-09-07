@@ -13,6 +13,8 @@ import PalPeg.GSScan
 import PalPeg.GSDecomp
 import PalPeg.GSRealTime
 import PalPeg.GSVerifier
+import PalPeg.GSScanTapes
+import PalPeg.BorderJob
 import PalPeg.RTQueue
 import PalPeg.Manacher
 import PalPeg.ManacherHeads
@@ -23,6 +25,7 @@ import PalPeg.StageMatcher
 import PalPeg.Schedule
 import PalPeg.TapeLib
 import PalPeg.Speedup
+import PalPeg.ProgramMachine
 
 /-!
 # PalPeg
@@ -52,6 +55,9 @@ import PalPeg.Speedup
 * `PalPeg.Speedup`   — 1 記号あたり B マイクロステップの機械 → 厳密実時間 `Machine`（線形加速、`multiStep_recognizedBy`）
 * `PalPeg.GSRealTime` — GS 走査の実時間実行：レート k+1 で `online_answer_correct`、有界遅れ不変量 `onlineRun_phi`、u 検証器の締切
 * `PalPeg.GSVerifier` — u 検証器を quota 2 で交互実行（オラクルなし `vAnswer_correct`、1 ラウンド ≤ 3(k+1)）
+* `PalPeg.ProgramMachine` — 構造化機械 `StructuredMachine`（有限型の制御・記号）→ `MultiStepMachine` → `RecognizedBy`、phase 記法
+* `PalPeg.GSScanTapes` — GS 走査 1 歩を 3 テープ（P/Txt/Cnt）の動作列で実現、コスト ≤ (2k+2)ΔΦ+8
+* `PalPeg.BorderJob`  — 中央フラグの GS 系境界列挙（縮小段、`palPrefixFlagsGS_spec`、仕事 ≤ 258|x|）
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/

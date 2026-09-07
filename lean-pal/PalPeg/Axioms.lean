@@ -12,6 +12,8 @@ import PalPeg.GSScan
 import PalPeg.GSDecomp
 import PalPeg.GSRealTime
 import PalPeg.GSVerifier
+import PalPeg.GSScanTapes
+import PalPeg.BorderJob
 import PalPeg.RTQueue
 import PalPeg.Manacher
 import PalPeg.ManacherHeads
@@ -22,6 +24,7 @@ import PalPeg.StageMatcher
 import PalPeg.Schedule
 import PalPeg.TapeLib
 import PalPeg.Speedup
+import PalPeg.ProgramMachine
 
 /-!
 # 公理 guard
@@ -238,3 +241,15 @@ import PalPeg.Speedup
 /-- info: 'PalPeg.dyadic_gs_mem_PAL' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.dyadic_gs_mem_PAL
+
+/-- info: 'PalPeg.Program.StructuredMachine.structured_recognizedBy' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.Program.StructuredMachine.structured_recognizedBy
+
+/-- info: 'PalPeg.GSTapes.encodes_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.GSTapes.encodes_step
+
+/-- info: 'PalPeg.palPrefixFlagsGS_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.palPrefixFlagsGS_spec

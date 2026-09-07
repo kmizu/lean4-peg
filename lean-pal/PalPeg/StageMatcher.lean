@@ -75,7 +75,7 @@ theorem GSCore.ksimple_eff {x : List α} {k s p₁ r : ℕ} (H : GSCore x k s p�
     exact H.ksimple h
 
 /-- `k`-繰り返し接頭辞をもたないパターンは `s = 0` で切れる（仮定が空でないことの確認）。 -/
-theorem gsCore_zero_of_no_krep {x : List α} {k : ℕ} (h : ∀ p, ¬ KRep x k p) :
+theorem gsCore_zero_of_no_krep' {x : List α} {k : ℕ} (h : ∀ p, ¬ KRep x k p) :
     GSCore x k 0 0 0 :=
   ⟨Nat.zero_le _, fun _ => ⟨rfl, by simpa using h⟩, fun hne => absurd rfl hne,
     fun hne => absurd rfl hne, fun hne => absurd rfl hne, fun hne => absurd rfl hne⟩
