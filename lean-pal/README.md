@@ -64,6 +64,11 @@ PegSeparation.RealTimeTM.RecognizedBy PalPeg.PAL
 | `center_suffix_of_pal`, `pal_prefix_length_ge` | 予測補題：時刻 `m' ∈ [m,2m]` の全接頭辞回文は時刻 `m` の長さ `2m-m'` の接尾辞回文から生じる | 同上 |
 | `lsp_shift_bound` | 禁止帯：時刻 `n-p` の接尾辞回文長 `M` は `M ≤ ℓ-p` か `ℓ ≤ M`（`3p ≤ ℓ`） | 同上 |
 | `cex_x_longest`, `cex_long_pal` | `001000` による「`LSP(n-p) = ℓ-p`」の反例（機械化） | 同上 |
+| `groupChainRev`, `expandAll_groupChainRev` | group 圧縮鎖（1 群あたり記号参照 2 回）が `chainRev` を展開する。群数の対数上界は未証明（併合なし） | `PalPeg/Groups.lean` |
+| `matchState_snoc_hit/_miss/_zero` | KMP 一歩（一致／境界鎖から復帰／0） | `PalPeg/Matching.lean` |
+| `predictability_step`, `work_le` | Galil 予測補題：failure 連鎖の仕事 ≤ 次の一致までの保証ゼロ数 | 同上 |
+| `border_snapshot` | 境界 `b` の状態は `j-b` 記号前のテキスト接頭辞の照合状態 | 同上 |
+| `RTQueue.Queue`, `toList_snoc/tail`, `head?_eq`, `inv_*` | Hood–Melville 実時間キュー（最悪 O(1)/操作）の FIFO 仕様 | `PalPeg/RTQueue.lean` |
 
 証明の鎖（`pal_in_peg_of_realTime`）：
 

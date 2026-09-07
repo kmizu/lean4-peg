@@ -84,3 +84,25 @@
 - 汎用の「`Automaton.run` 上の不変量 ⇒ `Accepts ↔ P`」補題は無い。PAL 機械も
   「抽象機械（永続レコード＋有限制御）→ `Inv w` → `Automaton` への符号化」の 3 層で書くのが自然。
   抽象機械の仕様は `Chain.lean` の `chain`（`mem_PAL_iff_length_mem_chain`）。
+
+## 7. 代替構成：dyadic stage（`delayed_pal.py` 流）を永続モデルに載せる場合の要件
+
+段 W（出力 n ∈ [2W,4W)）で `Pal(n) ⇔ w[n-W+1..n] = rev(w[1..W]) ∧ w[W+1..n-W] が回文`。
+
+- (a) 固定パターン照合：パターン `rev(w[1..W])` は入力鎖をノード W から左へ辿る列そのもの。
+  KMP の advance は `prev`、failure は「周期分だけ過去の照合レコードへ戻る」（telescoping で
+  1 テキスト位置あたりの総コスト ≤ j ≤ 次の一致までの距離＝predictability、`Matching.lean`）。
+  **未解決**：failure 先の境界長 π(j) の取得。前処理レコード ρ_i（i 昇順生成）は π(i) < i への
+  辺を持てるが、照合器が状態 j→j+1 で ρ_{j+1} へ進むのは前方移動で不可。Galil 1981 / GS 1983 の
+  実時間照合が対応する問題で、ここが最大の証明義務。
+- (b) 中央回文フラグ：窓 x = w[W+1..3W] のオンライン Manacher を遅延 W・定数レートで走らせる。
+  中心は処理中の位置（FIFO から取り出したノード）、左読みは `prev`、rad 配列はスタック、右読みは
+  保留記号 FIFO の dequeue。フラグは L 昇順に生成・消費されるので FIFO 1 本。
+  償却 O(1) を締切不等式（総仕事 ≤ 3L ≤ rate·(W+L)）で最悪時に変換。
+- 同時に生きる段は ≤ 2。各段に FIFO 2 本＋照合レコード鎖＋rad スタック。全て 1 ノード/step に
+  詰める（同一ステップ生成セル同士は相互参照不可なので、レコードは「ノード＋スロット番号」）。
+- 再帰的に段を使う Fischer–Paterson 型は O(n log n)/全体（同時 O(log n) インスタンス）で実時間に
+  ならない。(b) を Manacher で閉じるのが要点。
+
+したがって証明義務は「実時間キュー（`RTQueue.lean`）」「予測補題（`Matching.lean`）」
+「オンライン Manacher の正しさと仕事量上界」「実時間 KMP の π 取得」「SCA 符号化」。

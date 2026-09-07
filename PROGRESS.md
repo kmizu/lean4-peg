@@ -158,3 +158,8 @@ lake build
   `lsp_shift_bound`）。設計メモの (M)「成熟なら `LSP(n-p)=ℓ-p`」は **偽**（反例 `001000` を
   Lean で機械化）。昇格時の cursor を「p ステップ前のスナップショット」から取る案は break 直後には
   使えず、設計の見直しが要る（`DESIGN_SCA_PAL.md` §2 (M)、§4）。
+- 追記（部品層）：`PalPeg/Groups.lean`（group 圧縮鎖、`expandAll_groupChainRev`；群数の対数上界は
+  未証明）、`PalPeg/Matching.lean`（KMP 一歩、Galil 予測補題 `predictability_step`/`work_le`、
+  `border_snapshot`）、`PalPeg/RTQueue.lean`（Hood–Melville 実時間キューの FIFO 仕様）。
+  すべて sorry なし・公理 guard 済み。`DESIGN_SCA_PAL.md` §7 に dyadic stage 構成の要件と
+  残る証明義務（オンライン Manacher、実時間 KMP の π 取得、SCA 符号化）を記載。

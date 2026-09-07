@@ -4,6 +4,9 @@ import PalPeg.EvenLength
 import PalPeg.Words
 import PalPeg.Chain
 import PalPeg.Structure
+import PalPeg.Groups
+import PalPeg.Matching
+import PalPeg.RTQueue
 
 /-!
 # 公理 guard
@@ -84,3 +87,35 @@ import PalPeg.Structure
 /-- info: 'PalPeg.lsp_shift_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.lsp_shift_bound
+
+/-- info: 'PalPeg.expandAll_groupChainRev' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.expandAll_groupChainRev
+
+/-- info: 'PalPeg.group_members_same_symbol' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.group_members_same_symbol
+
+/-- info: 'PalPeg.predictability_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.predictability_step
+
+/-- info: 'PalPeg.work_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.work_le
+
+/-- info: 'PalPeg.border_snapshot' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.border_snapshot
+
+/-- info: 'PalPeg.RTQueue.toList_snoc' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.RTQueue.toList_snoc
+
+/-- info: 'PalPeg.RTQueue.toList_tail' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.RTQueue.toList_tail
+
+/-- info: 'PalPeg.RTQueue.inv_tail' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.RTQueue.inv_tail
