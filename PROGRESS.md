@@ -215,3 +215,7 @@ lake build
   常駐段 ≤ 3）をコミット（413fee4）。落ちた 7 本（L1 最終補題、BorderJobTapes、GSPreprocessTapes、
   検証器/TextFeed の 8 テープ版移植、MiddleBorder、PatternTapes）を再開。加えて Main.lean（構造化機械 →
   `RecognizedByTotalPEG PAL` の糊）と InputCopy.lean（入力コピーのフロンティア書き込み）を Sonnet に依頼。
+- **L1 境界の真の存在定理が取れた**（`GSDecompL1.gsDecomp_exists`、`stageOK_exists`、`gsDecomp_verifier_data`；
+  鍵は「パスは第 2 周期 T の手前で停止」を最大周期の帰納で示す `pass_stops_before_second`）。コミット 4696181。
+  続き：計算可能 `decompose` の出力に対する L1（`decompose_gsDecomp`）、`PrepImpl` 実装（PrepDecompose）、
+  検証器の Txt2 供給（VerifierFeed）。Main.lean に糊 `pal_in_peg_of_structured` あり。
