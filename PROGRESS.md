@@ -242,3 +242,9 @@ lake build
   EndToEnd2（`decompose2` へ切替、残る仮定は `PassPeriodSum` のみ）、前処理テープ化の strip2、
   StageMatcherTapes（段の照合フェーズ：setup → 固定 B 動作のラウンド）。
   設計メモ：テープ集合は 4 組を回して使う（常駐 ≤ 3、退役後 4S ラウンドで O(S) のクリアを分散）。
+- 進捗（コミット 7fc4811 まで）：Metered（`rem=0` 仮定なし）、EndToEnd2（添字レベルの端到端、仮定は
+  `PassPeriodSum 8 C₁` のみ）、PassSum（二分律・領域端の増減）、StageMatcherTapes（段の照合フェーズを固定予算
+  で実行、`stage_answer_stageMatchH`）。稼働中：前処理 strip2 のテープ化、Prologue（テープ初期化/クリア）、
+  PassSum2（`Σp_j ≤ C₁T` の再挑戦：着地補題）、StageTapes（段の全ライフサイクル）。
+  **現状の唯一の数学的仮定**：`PassPeriodSum`（`decompose2` の 1 パス内 run start 周期和 ≤ C₁·p₂）。
+  実測（k=4、T≤60 全探索＋山登り）では最大 0.39T で線形が濃厚。
