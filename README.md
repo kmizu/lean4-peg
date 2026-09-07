@@ -123,4 +123,4 @@ reproduce the 13,248,052-rule grammar byte for byte, the Rust runner, the verifi
 logs, and the notes on why every simpler route fails. The formal side — SCA semantics,
 translation validation of the emitted grammar, and the correctness of the online
 recogniser — is future work in this repository; see
-`docs/palindromes-in-peg/PLAIN_PAL_ARTIFACT.md`.
+`docs/palindromes-in-peg/STATUS.md` (start here) and `docs/palindromes-in-peg/PLAIN_PAL_ARTIFACT.md`.
