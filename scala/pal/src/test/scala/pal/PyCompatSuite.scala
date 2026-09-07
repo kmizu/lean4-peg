@@ -72,4 +72,73 @@ class PyCompatSuite extends munit.FunSuite {
     assertEquals(PyFormat.intListRepr(Vector()), "[]")
     assertEquals(PyFormat.jsonString("a\"b\\c\n\u0001"), "\"a\\\"b\\\\c\\n\\u0001\"")
   }
+
+  private def fromBits(hex: String): Double = java.lang.Double.longBitsToDouble(java.lang.Long.parseUnsignedLong(hex, 16))
+
+  test("PyFormat.floatRepr on subnormals and boundaries (values printed by python3)") {
+    val cases = Vector(
+      "0000000000000001" -> "5e-324", // Double.MIN_VALUE: Double.toString says 4.9E-324
+      "0000000000000002" -> "1e-323",
+      "0000000000000003" -> "1.5e-323",
+      "0010000000000000" -> "2.2250738585072014e-308",
+      "7fefffffffffffff" -> "1.7976931348623157e+308",
+      "3e70000000000000" -> "5.960464477539063e-08",
+      "4340000000000000" -> "9007199254740992.0",
+      "4480f0cf064dd592" -> "1e+22",
+      "44b52d02c7e14af6" -> "1e+23",
+      "3fb999999999999a" -> "0.1",
+      "3f0a36e2eb1c432d" -> "5e-05",
+      "40fe240c9fbe76c9" -> "123456.789",
+      "4011666666666666" -> "4.35",
+      "3e7ad7f29abcaf48" -> "1e-07",
+      "430c6bf526340000" -> "1000000000000000.0",
+      "4341c37937e08001" -> "1.0000000000000002e+16",
+      "43118b54f22aeb03" -> "1234567890123456.8")
+    for ((bits, expected) <- cases) {
+      assertEquals(PyFormat.floatRepr(fromBits(bits)), expected, bits)
+    }
+    assertEquals(PyFormat.floatRepr(9.9e-324), "1e-323") // 9.9e-324 parses to the second subnormal
+    assertEquals(PyFormat.floatRepr(-5e-324), "-5e-324")
+  }
+
+  test("PyFormat.floatRepr agrees with repr() on 300 random bit patterns") {
+    val script =
+      """import random, struct
+        |random.seed(5)
+        |for i in range(300):
+        |    kind = i % 3
+        |    if kind == 0: bits = random.getrandbits(64)
+        |    elif kind == 1: bits = random.getrandbits(52)
+        |    else: bits = (random.getrandbits(11) << 52) | random.getrandbits(52)
+        |    x = struct.unpack(">d", bits.to_bytes(8, "big"))[0]
+        |    if x != x or x in (float("inf"), float("-inf")): continue
+        |    print(f"{bits:016x} {x!r}")
+        |""".stripMargin
+    val expected = PyDiff.python("-c", script)
+    val got = expected.linesIterator.map { line =>
+      val bits = line.substring(0, 16)
+      s"$bits ${PyFormat.floatRepr(fromBits(bits))}"
+    }.mkString("", "\n", "\n")
+    assertEquals(got, expected)
+  }
+
+  test("PyFormat.fixed keeps the sign of negative values and of -0.0") {
+    assertEquals(PyFormat.fixed(-0.0, 2), "-0.00")
+    assertEquals(PyFormat.fixed(-0.001, 2), "-0.00")
+    assertEquals(PyFormat.fixed(-1.005, 2), "-1.00")
+    assertEquals(PyFormat.fixed(2.5, 0), "2")
+    assertEquals(PyFormat.fixed(-0.4, 0), "-0")
+    assertEquals(PyFormat.fixed(0.0, 3), "0.000")
+  }
+
+  test("PyFormat.jsonString: ensure_ascii escapes everything outside ' '..'~'") {
+    assertEquals(PyFormat.jsonString("aé", ensureAscii = true), "\"a\\u00e9\"")
+    assertEquals(PyFormat.jsonString("aé"), "\"aé\"")
+    assertEquals(PyFormat.jsonString("日本", ensureAscii = true), "\"\\u65e5\\u672c\"")
+    assertEquals(PyFormat.jsonString("😀", ensureAscii = true), "\"\\ud83d\\ude00\"")
+    assertEquals(PyFormat.jsonString("\u007f", ensureAscii = true), "\"\\u007f\"")
+    assertEquals(PyFormat.jsonString("\u007f"), "\"\u007f\"")
+    assertEquals(PyFormat.jsonString("a\u001fb"), "\"a\\u001fb\"")
+    assertEquals(PyFormat.jsonString("ü\"\\", ensureAscii = true), "\"\\u00fc\\\"\\\\\"")
+  }
 }

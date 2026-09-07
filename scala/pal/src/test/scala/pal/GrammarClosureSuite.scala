@@ -16,10 +16,10 @@ class GrammarClosureSuite extends munit.FunSuite {
       "U = A;",
       "not a rule").iterator)
     assertEquals(report.rules, 3)
-    assertEquals(report.defined, Set("S", "A", "U"))
-    assertEquals(report.referenced, Set("A", "D"))
-    assertEquals(report.missing, Set("D"))
-    assertEquals(report.unusedDefs, Set("U"))
+    assertEquals(report.defined, 3)
+    assertEquals(report.referenced, 2)
+    assertEquals(report.missing, Vector("D"))
+    assertEquals(report.unused, Vector("U"))
     assertEquals(report.text,
       "rules=3 defined=3 referenced=2 MISSING=1 unused_defs=1\nmissing sample: [b'D']\n")
   }
@@ -29,6 +29,20 @@ class GrammarClosureSuite extends munit.FunSuite {
     try {
       java.nio.file.Files.writeString(file, "S = A \"B\" [C] D;\nA = \"x\";\nU = A;\nnot a rule\n")
       val report = GrammarClosure.analyzeFile(file)
+      PyDiff.assertSameAsPython(report.text, "analysis/grammar_closure.py", file.toString)
+    } finally {
+      java.nio.file.Files.deleteIfExists(file)
+      ()
+    }
+  }
+
+  test("a 20,000-rule synthetic grammar, streamed from disk, matches the Python script") {
+    val file = java.nio.file.Files.createTempFile("closure", ".peg")
+    try {
+      java.nio.file.Files.writeString(file, SyntheticGrammar(20000))
+      val report = GrammarClosure.analyzeFile(file)
+      assertEquals((report.rules, report.defined, report.referenced, report.missing.size, report.unused.size),
+        (20001, 20001, 20000, 0, 0))
       PyDiff.assertSameAsPython(report.text, "analysis/grammar_closure.py", file.toString)
     } finally {
       java.nio.file.Files.deleteIfExists(file)

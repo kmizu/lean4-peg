@@ -54,6 +54,25 @@ class VerifyWindowPalSuite extends munit.FunSuite {
     case other => other.toString
   }
 
+  private val seconds = "\"seconds\": [0-9.e+-]+".r
+
+  /** Scala and Python manifests / stdout differ only in the elapsed time. */
+  private def normalise(s: String): String = seconds.replaceAllIn(s, "\"seconds\": T")
+
+  /** Run the Python `verify` on the same arguments and return its stdout. */
+  private def pythonVerify(grammar: Path, runner: Path, words: Seq[String], log: Path, maxLength: Int): String = {
+    val pyWords = words.map(PyFormat.strRepr).mkString("[", ", ", "]")
+    PyDiff.python("-c",
+      s"""from pathlib import Path
+         |from verify_window_pal import verify
+         |try:
+         |    verify(Path(${PyFormat.strRepr(grammar.toString)}), Path(${PyFormat.strRepr(runner.toString)}),
+         |           $pyWords, Path(${PyFormat.strRepr(log.toString)}), $maxLength)
+         |except Exception as error:
+         |    print(f"raised {type(error).__name__}")
+         |""".stripMargin)
+  }
+
   directory.test("success requires all unchanged inputs") { root =>
     val result = runReports(root, "match\t\"\"\ttrue\tcharacters=0\trepeat=1\n" +
       "match\t\"ab\"\tfalse\tcharacters=2\trepeat=1\n")
@@ -109,6 +128,63 @@ class VerifyWindowPalSuite extends munit.FunSuite {
     assertEquals(Files.readAllBytes(grammarOf(root)).toVector, before.toVector)
   }
 
+  directory.test("a missing grammar is recorded like Python's FileNotFoundError") { root =>
+    installRunner(root, "")
+    val missing = root.resolve("missing.peg")
+    val error = intercept[PyError] {
+      verify(missing, runnerOf(root), Vector(""), logOf(root), 0, report = _ => ())
+    }
+    assertEquals(error.pyName, "FileNotFoundError")
+    val result = report(root)
+    assertEquals(result("status"), "\"failed\"")
+    assertEquals(result("error"), "\"FileNotFoundError: [Errno 2] No such file or directory: '" + missing + "'\"")
+    assert(!result.contains("sha256"))
+    assert(!result.contains("returncode"))
+    val scalaManifest = Files.readString(manifestOf(root))
+    assertEquals(pythonVerify(missing, runnerOf(root), Vector(""), logOf(root), 0), "raised FileNotFoundError\n")
+    assertEquals(normalise(scalaManifest), normalise(Files.readString(manifestOf(root))))
+  }
+
+  directory.test("a missing log directory fails before anything is written, like Python") { root =>
+    installRunner(root, "")
+    val log = root.resolve("nodir").resolve("run.log")
+    val error = intercept[PyError] {
+      verify(grammarOf(root), runnerOf(root), Vector(""), log, 0, report = _ => ())
+    }
+    assertEquals(error.pyName, "FileNotFoundError")
+    assertEquals(error.getMessage, s"[Errno 2] No such file or directory: '${root.resolve("nodir").resolve("run.json")}'")
+    assert(!Files.exists(root.resolve("nodir")))
+    assertEquals(Files.readString(manifestOf(root)), "{\"status\":\"passed\",\"checked\":999}\n") // untouched
+    assertEquals(pythonVerify(grammarOf(root), runnerOf(root), Vector(""), log, 0), "raised FileNotFoundError\n")
+  }
+
+  directory.test("a directory as grammar is recorded like Python's IsADirectoryError") { root =>
+    installRunner(root, "")
+    val error = intercept[PyError] {
+      verify(root, runnerOf(root), Vector(""), logOf(root), 0, report = _ => ())
+    }
+    assertEquals(error.pyName, "IsADirectoryError")
+    assertEquals(report(root)("error"), "\"IsADirectoryError: [Errno 21] Is a directory: '" + root + "'\"")
+    val scalaManifest = Files.readString(manifestOf(root))
+    assertEquals(pythonVerify(root, runnerOf(root), Vector(""), logOf(root), 0), "raised IsADirectoryError\n")
+    assertEquals(normalise(scalaManifest), normalise(Files.readString(manifestOf(root))))
+  }
+
+  directory.test("non-ASCII words and paths are escaped like json.dumps (ensure_ascii)") { root =>
+    val sub = root.resolve("ディレクトリ")
+    Files.createDirectory(sub)
+    Files.writeString(grammarOf(sub), "S <- !.\n")
+    installRunner(sub, "match\t\"caf\\u00e9\"\tfalse\tcharacters=4\trepeat=1\n")
+    val printed = new StringBuilder
+    verify(grammarOf(sub), runnerOf(sub), Vector("café"), logOf(sub), 0, report = line => printed.append(line).append('\n'))
+    val scalaManifest = Files.readString(manifestOf(sub))
+    assert(scalaManifest.contains("\\u30c7\\u30a3\\u30ec\\u30af\\u30c8\\u30ea"), scalaManifest)
+    assert(!scalaManifest.contains("ディレクトリ"), scalaManifest)
+    val pythonStdout = pythonVerify(grammarOf(sub), runnerOf(sub), Vector("café"), logOf(sub), 0)
+    assertEquals(normalise(printed.toString), normalise(pythonStdout))
+    assertEquals(normalise(scalaManifest), normalise(Files.readString(manifestOf(sub))))
+  }
+
   // ---- beyond the Python tests
 
   directory.test("the manifest and stdout agree with the Python script on the same fake runner") { root =>
@@ -118,18 +194,12 @@ class VerifyWindowPalSuite extends munit.FunSuite {
     verify(grammarOf(root), runnerOf(root), Vector("", "ab"), logOf(root), 1, report = line => printed.append(line).append('\n'))
     val scalaManifest = Files.readString(manifestOf(root))
     val scalaLog = Files.readString(logOf(root))
-    val expectedStdout = PyDiff.python("-c",
-      s"""from pathlib import Path
-         |from verify_window_pal import verify
-         |verify(Path(${PyFormat.strRepr(grammarOf(root).toString)}), Path(${PyFormat.strRepr(runnerOf(root).toString)}),
-         |       ["", "ab"], Path(${PyFormat.strRepr(logOf(root).toString)}), 1)
-         |""".stripMargin)
+    val pythonStdout = pythonVerify(grammarOf(root), runnerOf(root), Vector("", "ab"), logOf(root), 1)
     val pythonManifest = Files.readString(manifestOf(root))
-    val seconds = "\"seconds\": [0-9.e+-]+".r
-    def normalise(s: String): String = seconds.replaceAllIn(s, "\"seconds\": T")
+    val pythonLog = Files.readString(logOf(root))
     assertEquals(normalise(scalaManifest), normalise(pythonManifest))
-    assertEquals(normalise(printed.toString), normalise(expectedStdout))
-    assertEquals(scalaLog, Files.readString(logOf(root)))
+    assertEquals(normalise(printed.toString), normalise(pythonStdout))
+    assertEquals(scalaLog, pythonLog)
 
     // the same for a failing run: the recorded error text must match Python's
     installRunner(root, "match\t\"\"\ttrue\tcharacters=0\trepeat=1\nmatch\t\"ab\"\ttrue\tcharacters=2\trepeat=1\n")
@@ -137,16 +207,9 @@ class VerifyWindowPalSuite extends munit.FunSuite {
       verify(grammarOf(root), runnerOf(root), Vector("", "ab"), logOf(root), 1, report = _ => ())
     }
     val scalaFailure = Files.readString(manifestOf(root))
-    PyDiff.python("-c",
-      s"""from pathlib import Path
-         |from verify_window_pal import verify
-         |try:
-         |    verify(Path(${PyFormat.strRepr(grammarOf(root).toString)}), Path(${PyFormat.strRepr(runnerOf(root).toString)}),
-         |           ["", "ab"], Path(${PyFormat.strRepr(logOf(root).toString)}), 1)
-         |except AssertionError:
-         |    pass
-         |""".stripMargin)
-    assertEquals(normalise(scalaFailure), normalise(Files.readString(manifestOf(root))))
+    assertEquals(pythonVerify(grammarOf(root), runnerOf(root), Vector("", "ab"), logOf(root), 1), "raised AssertionError\n")
+    val pythonFailure = Files.readString(manifestOf(root))
+    assertEquals(normalise(scalaFailure), normalise(pythonFailure))
   }
 
   test("words(n) equals the Python word list") {

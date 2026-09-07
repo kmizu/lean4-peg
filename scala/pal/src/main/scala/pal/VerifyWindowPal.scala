@@ -2,7 +2,7 @@ package pal
 
 import java.io.{BufferedReader, BufferedWriter, InputStreamReader, IOException}
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path}
+import java.nio.file.{AccessDeniedException, Files, NoSuchFileException, Path}
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import scala.collection.immutable.VectorMap
@@ -35,7 +35,7 @@ object VerifyWindowPal {
   }
 
   private def jsonValue(value: Json): String = value match {
-    case Json.Str(s)  => PyFormat.jsonString(s)
+    case Json.Str(s)  => PyFormat.jsonString(s, ensureAscii = true) // json.dumps' default
     case Json.Int(n)  => n.toString
     case Json.Num(d)  => PyFormat.floatRepr(d)
     case Json.Bool(b) => if (b) "true" else "false"
@@ -43,7 +43,7 @@ object VerifyWindowPal {
 
   /** `json.dumps(dict, indent=2)` when `indent` is given, else the compact one-line form. */
   def dumps(fields: Iterable[(String, Json)], indent: Option[Int] = None): String = {
-    val entries = fields.map { case (k, v) => PyFormat.jsonString(k) + ": " + jsonValue(v) }
+    val entries = fields.map { case (k, v) => PyFormat.jsonString(k, ensureAscii = true) + ": " + jsonValue(v) }
     indent match {
       case Some(width) if entries.nonEmpty =>
         val pad = " " * width
@@ -75,6 +75,25 @@ object VerifyWindowPal {
   final class PyError(val pyName: String, message: String) extends RuntimeException(message)
 
   private def valueError(message: String): Nothing = throw new IllegalArgumentException(message)
+
+  /** Python's `OSError` subclasses and texts for the file operations the script performs
+    * (`str(e)` is `[Errno N] <strerror>: '<path>'`).
+    */
+  private def osError(error: IOException, path: Path): PyError = {
+    val shown = PyFormat.strRepr(path.toString)
+    error match {
+      case _: NoSuchFileException => new PyError("FileNotFoundError", s"[Errno 2] No such file or directory: $shown")
+      case _: AccessDeniedException => new PyError("PermissionError", s"[Errno 13] Permission denied: $shown")
+      case _ if Files.isDirectory(path) => // the JDK's message is the OS strerror in the current locale
+        new PyError("IsADirectoryError", s"[Errno 21] Is a directory: $shown")
+      case e => new PyError("OSError", Option(e.getMessage).getOrElse(""))
+    }
+  }
+
+  /** Run a file operation on `path`, translating an `IOException` into Python's error. */
+  private def onFile[A](path: Path)(body: => A): A = {
+    try { body } catch { case e: IOException => throw osError(e, path) }
+  }
 
   /** `f"{type(error).__name__}: {error}"` for the exceptions this module raises. */
   def describe(error: Throwable): String = {
@@ -239,7 +258,8 @@ object VerifyWindowPal {
     def save(): Unit = {
       manifest("checked") = Json.Int(checked)
       manifest("seconds") = Json.Num((System.nanoTime() - started) / 1e9)
-      Files.writeString(manifestPath, dumps(manifest, Some(2)) + "\n", StandardCharsets.UTF_8)
+      onFile(manifestPath) { Files.writeString(manifestPath, dumps(manifest, Some(2)) + "\n", StandardCharsets.UTF_8) }
+      ()
     }
 
     def handleLine(log: BufferedWriter, line: String): Unit = {
@@ -260,10 +280,12 @@ object VerifyWindowPal {
     // Invalidate an earlier success before hashing, launching, or parsing output.
     save()
     try {
-      val log = Files.newBufferedWriter(logPath, StandardCharsets.UTF_8)
+      val log = onFile(logPath)(Files.newBufferedWriter(logPath, StandardCharsets.UTF_8))
       try {
-        manifest("sha256") = Json.Str(sha256Hex(grammar))
-        manifest("bytes") = Json.Int(Files.size(grammar))
+        onFile(grammar) {
+          manifest("sha256") = Json.Str(sha256Hex(grammar))
+          manifest("bytes") = Json.Int(Files.size(grammar))
+        }
         save()
         process = launch(runner, grammar, words)
         val reader = new BufferedReader(new InputStreamReader(process.getInputStream, StandardCharsets.UTF_8))
