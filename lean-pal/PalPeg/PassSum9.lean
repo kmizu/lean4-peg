@@ -603,6 +603,67 @@ theorem up_violation_early {w : List α} {k pc P t r' rc : ℕ} (hk : 4 ≤ k)
 領域の `p_c`-周期性によるコピー」を使う議論である。 -/
 def UpLate (k P t : ℕ) : Prop := (k - 1) * P ≤ t
 
+/-! ## §13 深い跨ぎ（deep crossing）と貼り合わせ
+
+`Consumption` の違反は「子孫 `j` の run が `E_j ≥ p_c + k*p_j - 1` まで伸びる」＝
+**深い跨ぎ**を要求する。実測（子孫 2,286 個、うち `p_c` を跨ぐもの 69 個）では
+
+* 跨ぎは起きるが **深い跨ぎは 1 例も無い**（最大の跨ぎ量 `E_j - p_c = 381`、そのときの
+  `p_j = 593` なので `E_j - p_c < p_j`）、
+* 跨ぐ子孫は **例外なく `q₁ ≤ p_j`**（69/69、うち `q₁ = p_j` が 36 例）。
+
+深い跨ぎがあり、しかも第 1 子の周期が `q₁ = P` で run が重なる場合は、貼り合わせ
+（`GSDecompL1.hasPeriod_glue`）で `[0, E_j)` 全体が `P`-周期になり、長さ `p_c + P` の窓に
+`dvd_of_inner_window` を適用して `p_c ∣ P`、すなわち `p_c ≤ P` となって矛盾する
+（`deep_crossing_glue_contradiction`）。 -/
+
+/-- **深い跨ぎ＋重なりからの矛盾**。第 1 子の run（周期 `P`、長さ `r₁`）と
+深く跨ぐ run `j`（周期 `P`、`[t, t + r')`）が `P` セル以上重なるなら、
+貼り合わせで `[0, t + r')` が `P`-周期になり、`p_c ∣ P` から `p_c ≤ P` で矛盾。 -/
+theorem deep_crossing_glue_contradiction {w : List α} {k pc P t r1 r' rc : ℕ} (hk : 4 ≤ k)
+    (hleast : IsLeastKRep w k pc) (hR : ReachOf w pc rc) (hkr : k * pc ≤ rc)
+    (hPpos : 0 < P) (hPlt : P < pc)
+    (hrun1 : HasPeriod (w.take r1) P)
+    (hrunj : HasPeriod ((w.drop t).take r') P)
+    (hoverlap : t + P ≤ r1) (hle : r1 ≤ t + r')
+    (hdeep : pc + P ≤ t + r') (hfit : t + r' ≤ rc) : False := by
+  have hrcle : rc ≤ w.length := hR.1
+  have hglue : HasPeriod (w.take (t + r')) P :=
+    hasPeriod_glue hrun1 hrunj hoverlap hle (by omega)
+  have hwin : HasPeriod ((w.drop 0).take (pc + P)) P := by
+    simpa using hasPeriod_take_of_le hglue (show pc + P ≤ t + r' from hdeep)
+  have hdvd : pc ∣ P :=
+    dvd_of_inner_window (by omega) hleast hR hkr hPpos (by omega) (le_refl _) hwin
+  exact absurd (Nat.le_of_dvd hPpos hdvd) (by omega)
+
+/-- **深い跨ぎは第 1 子の周期を割り切らせる**：`q₁ < P` でも `q₁ ∣ P`。
+
+長さ `P + q₁` の窓が周期 `q₁`（第 1 子の run）と周期 `P`（跨ぎが作る領域先頭の
+`P`-周期性、`region_prefix_period`）を同時に持つので Fine–Wilf で `g = gcd(P, q₁)`。
+第 1 子の根 `w.take q₁` は最小 `k`-繰り返し周期の根なので原始的、よって `g = q₁`。 -/
+theorem deep_crossing_first_period_dvd {w : List α} {k q1 P L r1 : ℕ} (hk : 4 ≤ k)
+    (hq1 : IsLeastKRep w k q1) (hrun1 : HasPeriod (w.take r1) q1)
+    (hstretch : HasPeriod (w.take L) P) (hPpos : 0 < P)
+    (hr1 : P + q1 ≤ r1) (hL : P + q1 ≤ L) (hlen : P + q1 ≤ w.length) : q1 ∣ P := by
+  have hq1pos : 0 < q1 := hq1.1.1
+  have hwin1 : HasPeriod (w.take (P + q1)) q1 := hasPeriod_take_of_le hrun1 hr1
+  have hwinP : HasPeriod (w.take (P + q1)) P := hasPeriod_take_of_le hstretch hL
+  have hwlen : (w.take (P + q1)).length = P + q1 := by rw [List.length_take]; omega
+  have hgpos : 0 < Nat.gcd P q1 := Nat.gcd_pos_of_pos_left _ hPpos
+  have hgle : Nat.gcd P q1 ≤ q1 := Nat.gcd_le_right _ hq1pos
+  have hg : HasPeriod (w.take (P + q1)) (Nat.gcd P q1) :=
+    fineWilf hwinP hwin1 hPpos hq1pos (by rw [hwlen]; omega)
+  have hroot : HasPeriod (w.take q1) (Nat.gcd P q1) := by
+    have := hasPeriod_take_of_le hg (show q1 ≤ P + q1 from by omega)
+    simpa using this
+  have hrootlen : (w.take q1).length = q1 := by rw [List.length_take]; omega
+  have hgeq : Nat.gcd P q1 = q1 := by
+    by_contra hne
+    exact not_primitive_of_period hgpos (by rw [hrootlen]; omega)
+      (by rw [hrootlen]; exact Nat.gcd_dvd_right P q1) hroot
+      (IsLeastKRep.primitive (by omega) hq1)
+  rw [← hgeq]; exact Nat.gcd_dvd_left P q1
+
 
 section AxiomCheck
 open PalPeg.PassSum9
@@ -627,5 +688,7 @@ open PalPeg.PassSum9
 #print axioms PalPeg.PassSum9.down_step_invariant
 #print axioms PalPeg.PassSum9.consumption_of_invariant
 #print axioms PalPeg.PassSum9.up_violation_early
+#print axioms PalPeg.PassSum9.deep_crossing_glue_contradiction
+#print axioms PalPeg.PassSum9.deep_crossing_first_period_dvd
 #print axioms PalPeg.PassSum8.passPeriodSum_eight_of_hasTree
 end AxiomCheck
