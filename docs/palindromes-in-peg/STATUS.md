@@ -72,6 +72,8 @@ python3 analysis/grammar_scc.py /tmp/pal-window-fast.peg       # 約 22 分、�
 Scala側のCLIは `pal.GenerateWindowPal`、`pal.CompactScaffoldPeg`、
 `pal.VerifyWindowPal` として、リポジトリのルートから次の形で実行する。
 
+Scala全体生成のヒープ必要量は未計測なので、sbtの既定ヒープに頼らず、十分なメモリを持つホストで適切なJVM heapを設定して実行する。
+
 ```sh
 cd /path/to/lean4-peg
 cd scala
