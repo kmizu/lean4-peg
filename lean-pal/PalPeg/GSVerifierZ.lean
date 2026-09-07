@@ -83,242 +83,137 @@ theorem matchIv_full {u T : List α} {i lo hi : ℕ} (h : MatchIv u T i lo hi)
 
 /-! ## 2. 残り仕事量 -/
 
-/-- 照合完了（区間が `[0, |u|)`）。 -/
-def zdone (s : ℕ) (z : ZS) : Bool := decide (z.lo = 0 ∧ z.hi = s)
+/-- **照合完了**：`up` かつヘッドが右端（`endSym` を読む位置）にいる。
+これは **テープから読み取れる**判定である（`GSVerifierTapesZ` の
+`Tape.read U = endSym ∧ up`）。`ZWf` のもとで区間 `[0, |u|)` の照合完了と同値。 -/
+def zdone (s : ℕ) (z : ZS) : Bool := z.up && decide (z.head = s)
 
-/-- 照合を完了するまでに必要な残り単位動作数。上向きなら「`|u|` まで進む」＋
-（下端が未了なら）「`|u|` から `0` まで戻って照合する」`|u|` 動作。 -/
+/-- 照合を完了する（`up` で右端に着く）までに必要な残り単位動作数。
+`up` なら右端まで `s - head`。`down` なら左端まで `head`、反転 `1`、右端まで `s`。 -/
 def zrem (s : ℕ) (z : ZS) : ℕ :=
-  if z.lo = 0 ∧ z.hi = s then 0
-  else if z.up then (s - z.head) + (if z.lo = 0 then 0 else 1 + s)
-  else z.head + (if z.hi = s then 0 else 1 + s)
+  if z.up then s - z.head else z.head + 1 + s
 
-/-- 状態の整合性：`lo ≤ head ≤ hi ≤ |u|`、および「反対端が未了なら
-ヘッドは伸ばす側の端にいるか、戻る途中である」。 -/
+/-- 状態の整合性：`head ≤ |u|`, `hi ≤ |u|`、かつ **`up` なら照合済み区間は
+ちょうど `[0, head)`**。（`up` へ反転できるのは `head = 0` に着いたときだけで、
+そこで区間は `[0,0)` に張り直される。） -/
 def ZWf (s : ℕ) (z : ZS) : Prop :=
-  z.lo ≤ z.head ∧ z.head ≤ z.hi ∧ z.hi ≤ s ∧
-    (z.up = true → z.head = z.hi ∨ z.lo = 0) ∧
-    (z.up = false → z.head = z.lo ∨ z.hi = s)
+  z.head ≤ s ∧ z.hi ≤ s ∧ (z.up = true → z.lo = 0 ∧ z.hi = z.head)
 
 theorem zrem_eq_zero_of_done {s : ℕ} {z : ZS} (h : zdone s z = true) : zrem s z = 0 := by
-  simp only [zdone, decide_eq_true_eq] at h
-  unfold zrem
-  rw [if_pos h]
+  simp only [zdone, Bool.and_eq_true, decide_eq_true_eq] at h
+  simp only [zrem, h.1, if_true, h.2, Nat.sub_self]
 
 theorem zdone_of_zrem_eq_zero {s : ℕ} {z : ZS} (hw : ZWf s z)
     (h : zrem s z = 0) : zdone s z = true := by
-  obtain ⟨w1, w2, w3, w4, w5⟩ := hw
-  simp only [zdone, decide_eq_true_eq]
-  unfold zrem at h
-  by_cases hd : z.lo = 0 ∧ z.hi = s
-  · exact hd
-  · rw [if_neg hd] at h
-    exfalso
-    by_cases hup : z.up = true
-    · rw [if_pos hup] at h
-      by_cases hlo : z.lo = 0
-      · rw [if_pos hlo] at h
-        have hhi : z.hi ≠ s := fun hc => hd ⟨hlo, hc⟩
-        omega
-      · rw [if_neg hlo] at h
-        omega
-    · rw [if_neg hup] at h
-      by_cases hhi : z.hi = s
-      · rw [if_pos hhi] at h
-        have hlo : z.lo ≠ 0 := fun hc => hd ⟨hc, hhi⟩
-        omega
-      · rw [if_neg hhi] at h
-        omega
+  obtain ⟨w1, w2, _⟩ := hw
+  simp only [zdone, Bool.and_eq_true, decide_eq_true_eq]
+  by_cases hup : z.up = true
+  · refine ⟨hup, ?_⟩
+    simp only [zrem, hup, if_true] at h
+    omega
+  · exfalso
+    have hupf : z.up = false := by simpa using hup
+    simp only [zrem, hupf, Bool.false_eq_true, if_false] at h
+    omega
+
+/-- **完了なら照合済み区間は `[0, |u|)`**（`ZWf` から）。 -/
+theorem matchIv_of_done {s : ℕ} {z : ZS} (hw : ZWf s z) (h : zdone s z = true) :
+    z.lo = 0 ∧ z.hi = s := by
+  obtain ⟨w1, w2, w3⟩ := hw
+  simp only [zdone, Bool.and_eq_true, decide_eq_true_eq] at h
+  obtain ⟨e1, e2⟩ := w3 h.1
+  exact ⟨e1, by omega⟩
 
 /-! ## 3. 1 単位動作 -/
 
 variable [DecidableEq α]
 
-/-- **1 単位動作**：ヘッドを 1 セル動かす（伸ばす端なら 1 文字照合、
-反対端から戻る途中ならただ進む、テープ端なら反転）。 -/
+/-- **1 単位動作（ジグザグ掃引）**。
+
+* `up`：右端（`head = |u|`）に着いていれば**完了**なので動かない。そうでなければ
+  `u[head]` と `T[pos-|u|+head]` を照合し、一致すれば両ヘッドを 1 つ右へ動かして
+  照合済み区間を `[0, head+1)` に伸ばす（不一致なら止まる＝この候補は死ぬ）。
+* `down`：左端（`head = 0`）でなければ両ヘッドを 1 つ左へ動かすだけ
+  （**照合はしない**）。左端に着いたら `up` へ反転し、照合済み区間を `[0,0)` に張り直す。
+
+上りの掃引だけで `[0, |u|)` 全体を覆うので、下りの掃引で照合する必要はない。
+したがって **`U` と `Txt2` の整列は向きによらず同じ**（`U` の添字 `head+1`、
+`Txt2` の添字 `pos - |u| + head`）であり、テープ実現がきわめて簡単になる。
+
+実装（`GSVerifierTapesZ`）が持つ実状態は **`U` のヘッド位置と向き 1 ビットだけ**である
+（`lo`/`hi` はゴースト）。 -/
 def zMove (u T : List α) (pos : ℕ) (z : ZS) : ZS :=
   if z.up then
     (if z.head < u.length then
-        (if z.head = z.hi then
-            (if T[pos - u.length + z.head]? = u[z.head]? then
-                ⟨z.head + 1, z.lo, z.hi + 1, true⟩
-              else z)
-          else ⟨z.head + 1, z.lo, z.hi, true⟩)
-      else ⟨z.head, z.lo, z.hi, false⟩)
+        (if T[pos - u.length + z.head]? = u[z.head]? then
+            ⟨z.head + 1, z.lo, z.head + 1, true⟩
+          else z)
+      else z)
   else
-    (if 0 < z.head then
-        (if z.head = z.lo then
-            (if T[pos - u.length + (z.head - 1)]? = u[z.head - 1]? then
-                ⟨z.head - 1, z.lo - 1, z.hi, false⟩
-              else z)
-          else ⟨z.head - 1, z.lo, z.hi, false⟩)
-      else ⟨z.head, z.lo, z.hi, true⟩)
+    (if 0 < z.head then ⟨z.head - 1, z.lo, z.hi, false⟩ else ⟨0, 0, 0, true⟩)
 
 theorem zMove_wf {u T : List α} {pos : ℕ} {z : ZS} (h : ZWf u.length z) :
     ZWf u.length (zMove u T pos z) := by
-  obtain ⟨h1, h2, h3, h4, h5⟩ := h
-  unfold zMove
-  by_cases hup : z.up = true
-  · rw [if_pos hup]
-    have h4' := h4 hup
-    by_cases hlt : z.head < u.length
-    · rw [if_pos hlt]
-      by_cases he : z.head = z.hi
-      · rw [if_pos he]
-        by_cases hm : T[pos - u.length + z.head]? = u[z.head]?
-        · rw [if_pos hm]
-          refine ⟨?_, ?_, ?_, ?_, ?_⟩
-          · show z.lo ≤ z.head + 1; omega
-          · show z.head + 1 ≤ z.hi + 1; omega
-          · show z.hi + 1 ≤ u.length; omega
-          · intro _; exact Or.inl (show z.head + 1 = z.hi + 1 by omega)
-          · intro hc; exact absurd hc (by simp)
-        · rw [if_neg hm]; exact ⟨h1, h2, h3, h4, h5⟩
-      · rw [if_neg he]
-        have hlo : z.lo = 0 := by rcases h4' with hc | hc; exacts [absurd hc he, hc]
-        refine ⟨?_, ?_, ?_, ?_, ?_⟩
-        · show z.lo ≤ z.head + 1; omega
-        · show z.head + 1 ≤ z.hi; omega
-        · exact h3
-        · intro _; exact Or.inr (show z.lo = 0 from hlo)
-        · intro hc; exact absurd hc (by simp)
-    · rw [if_neg hlt]
-      refine ⟨h1, h2, h3, ?_, ?_⟩
-      · intro hc; exact absurd hc (by simp)
-      · intro _; exact Or.inr (show z.hi = u.length by omega)
-  · rw [if_neg hup]
-    have hupf : z.up = false := by simpa using hup
-    have h5' := h5 hupf
-    by_cases hpos : 0 < z.head
-    · rw [if_pos hpos]
-      by_cases he : z.head = z.lo
-      · rw [if_pos he]
-        by_cases hm : T[pos - u.length + (z.head - 1)]? = u[z.head - 1]?
-        · rw [if_pos hm]
-          refine ⟨?_, ?_, ?_, ?_, ?_⟩
-          · show z.lo - 1 ≤ z.head - 1; omega
-          · show z.head - 1 ≤ z.hi; omega
-          · exact h3
-          · intro hc; exact absurd hc (by simp)
-          · intro _; exact Or.inl (show z.head - 1 = z.lo - 1 by omega)
-        · rw [if_neg hm]; exact ⟨h1, h2, h3, h4, h5⟩
-      · rw [if_neg he]
-        have hhi : z.hi = u.length := by
-          rcases h5' with hc | hc; exacts [absurd hc he, hc]
-        refine ⟨?_, ?_, ?_, ?_, ?_⟩
-        · show z.lo ≤ z.head - 1; omega
-        · show z.head - 1 ≤ z.hi; omega
-        · exact h3
-        · intro hc; exact absurd hc (by simp)
-        · intro _; exact Or.inr hhi
-    · rw [if_neg hpos]
-      refine ⟨h1, h2, h3, ?_, ?_⟩
-      · intro _; exact Or.inr (show z.lo = 0 by omega)
-      · intro hc; exact absurd hc (by simp)
+  obtain ⟨h1, h2, h3⟩ := h
+  unfold zMove ZWf
+  split_ifs with hup hlt hc hpos <;>
+    refine ⟨by first | omega | (simp only []; omega),
+      by first | omega | (simp only []; omega), ?_⟩
+  · intro _; exact ⟨(h3 hup).1, by simp only []⟩
+  · exact h3
+  · exact h3
+  · intro hcon; exact absurd hcon (by simp)
+  · intro _; exact ⟨rfl, rfl⟩
 
-/-- 完了していれば区間は動かない。 -/
+/-- 完了していれば状態は動かない（`zMove` の不動点）。 -/
 theorem zMove_done {u T : List α} {pos : ℕ} {z : ZS} (h : zdone u.length z = true) :
-    zdone u.length (zMove u T pos z) = true := by
-  simp only [zdone, decide_eq_true_eq] at h ⊢
+    zMove u T pos z = z := by
+  simp only [zdone, Bool.and_eq_true, decide_eq_true_eq] at h
   unfold zMove
-  by_cases hup : z.up = true
-  · rw [if_pos hup]
-    by_cases hlt : z.head < u.length
-    · rw [if_pos hlt]
-      by_cases he : z.head = z.hi
-      · rw [if_pos he]
-        split_ifs
-        · exact ⟨h.1, by omega⟩
-        · exact h
-      · rw [if_neg he]; exact h
-    · rw [if_neg hlt]; exact h
-  · rw [if_neg hup]
-    by_cases hpos : 0 < z.head
-    · rw [if_pos hpos]
-      by_cases he : z.head = z.lo
-      · rw [if_pos he]
-        split_ifs
-        · exact ⟨by omega, h.2⟩
-        · exact h
-      · rw [if_neg he]; exact h
-    · rw [if_neg hpos]; exact h
+  rw [if_pos h.1, if_neg (by omega : ¬ z.head < u.length)]
 
 /-- **1 単位動作で残り仕事量はちょうど 1 減る**（未完了かつ `u` が全一致のとき）。 -/
 theorem zMove_rem {u T : List α} {pos : ℕ} {z : ZS} (h : ZWf u.length z)
     (hdone : zdone u.length z = false)
     (hfull : MatchLen u T (pos - u.length) u.length) :
     zrem u.length (zMove u T pos z) + 1 = zrem u.length z := by
-  obtain ⟨h1, h2, h3, h4, h5⟩ := h
-  simp only [zdone, decide_eq_false_iff_not, not_and] at hdone
-  have hf1 : z.head < u.length → T[pos - u.length + z.head]? = u[z.head]? :=
-    fun hlt => hfull z.head hlt
-  have hf2 : 0 < z.head → T[pos - u.length + (z.head - 1)]? = u[z.head - 1]? :=
-    fun hp => hfull (z.head - 1) (by omega)
+  obtain ⟨h1, h2, h3⟩ := h
+  simp only [zdone, Bool.and_eq_false_iff, decide_eq_false_iff_not, Bool.not_eq_true] at hdone
   by_cases hup : z.up = true
-  · have h4' := h4 hup
-    simp only [zMove, zrem, hup, if_true]
-    by_cases hlt : z.head < u.length
-    · rw [if_pos hlt]
-      by_cases he : z.head = z.hi
-      · rw [if_pos he, if_pos (hf1 hlt)]
-        simp only [hup, if_true]
-        split_ifs <;> omega
-      · rw [if_neg he]
-        have hlo : z.lo = 0 := by rcases h4' with hc | hc; exacts [absurd hc he, hc]
-        simp only [hup, if_true]
-        split_ifs <;> omega
-    · rw [if_neg hlt]
-      have hhi : z.hi = u.length := by omega
-      have hlo : z.lo ≠ 0 := fun hc => hdone hc hhi
-      simp only [Bool.false_eq_true, if_false]
-      split_ifs <;> omega
+  · have hne : z.head ≠ u.length := by
+      rcases hdone with hc | hc
+      · rw [hup] at hc; exact absurd hc (by simp)
+      · exact hc
+    have hlt : z.head < u.length := by omega
+    simp only [zMove, zrem, hup, if_true, if_pos hlt, if_pos (hfull z.head hlt)]
+    omega
   · have hupf : z.up = false := by simpa using hup
-    have h5' := h5 hupf
     simp only [zMove, zrem, hupf, Bool.false_eq_true, if_false]
     by_cases hpos : 0 < z.head
     · rw [if_pos hpos]
-      by_cases he : z.head = z.lo
-      · rw [if_pos he, if_pos (hf2 hpos)]
-        simp only [hupf, Bool.false_eq_true, if_false]
-        split_ifs <;> omega
-      · rw [if_neg he]
-        have hhi : z.hi = u.length := by rcases h5' with hc | hc; exacts [absurd hc he, hc]
-        simp only [hupf, Bool.false_eq_true, if_false]
-        split_ifs <;> omega
+      simp only [Bool.false_eq_true, if_false]
+      omega
     · rw [if_neg hpos]
-      have hhead : z.head = 0 := by omega
-      have hlo : z.lo = 0 := by omega
-      have hhi : z.hi ≠ u.length := hdone hlo
       simp only [if_true]
-      split_ifs <;> omega
+      omega
 
 /-- 1 単位動作は照合済み区間の正しさを保つ。 -/
 theorem zMove_matchIv {u T : List α} {pos : ℕ} {z : ZS} (h : ZWf u.length z)
     (hm : MatchIv u T (pos - u.length) z.lo z.hi) :
     MatchIv u T (pos - u.length) (zMove u T pos z).lo (zMove u T pos z).hi := by
-  obtain ⟨h1, h2, h3, h4, h5⟩ := h
+  obtain ⟨h1, h2, h3⟩ := h
   unfold zMove
-  by_cases hup : z.up = true
-  · rw [if_pos hup]
-    split_ifs with hlt he hc
-    · intro j hj1 hj2
-      rcases Nat.lt_or_ge j z.hi with hlt2 | hge
-      · exact hm j hj1 hlt2
-      · have hj : j = z.hi := by simp only [] at hj2; omega
-        rw [hj, ← he]; exact hc
-    · exact hm
-    · exact hm
-    · exact hm
-  · rw [if_neg hup]
-    split_ifs with hpos he hc
-    · intro j hj1 hj2
-      rcases Nat.lt_or_ge j z.lo with hlt2 | hge
-      · have hj : j = z.lo - 1 := by simp only [] at hj1; omega
-        rw [hj, ← he]; exact hc
-      · exact hm j hge hj2
-    · exact hm
-    · exact hm
-    · exact hm
+  split_ifs with hup hlt hc hpos
+  · intro j hj1 hj2
+    simp only [] at hj1 hj2
+    rcases Nat.lt_or_ge j z.head with hlt2 | hge
+    · exact hm j hj1 (by rw [(h3 hup).2]; exact hlt2)
+    · have hj : j = z.head := by omega
+      rw [hj]; exact hc
+  · exact hm
+  · exact hm
+  · exact hm
+  · exact matchIv_empty u T _ _
 
 /-- **残り仕事量は 1 単位動作でちょうど 1 減る**（`ℕ` の切り捨て減算版：
 完了していれば `0` のまま）。 -/
@@ -327,7 +222,7 @@ theorem zMove_rem_le {u T : List α} {pos : ℕ} {z : ZS} (h : ZWf u.length z)
     zrem u.length (zMove u T pos z) ≤ zrem u.length z - 1 := by
   by_cases hdn : zdone u.length z = true
   · have h1 := zrem_eq_zero_of_done hdn
-    have h2 := zrem_eq_zero_of_done (zMove_done (T := T) (pos := pos) hdn)
+    rw [zMove_done (T := T) (pos := pos) hdn]
     omega
   · have := zMove_rem h (by simpa using hdn) hfull
     omega
@@ -422,14 +317,14 @@ theorem zInv_shift {u v T : List α} {k p₁ r : ℕ} (hd : ZDeadline u v k p₁
     {pos q : ℕ} {z : ZS} (hz : ZWf u.length z) (hpos : u.length ≤ pos) (hq : q ≤ v.length)
     (hp : 0 < gsShift k p₁ r q) :
     ZInv u v T ((⟨pos + gsShift k p₁ r q, gsNextQ k p₁ r q⟩ : ScanState), zReset z) := by
-  obtain ⟨h1, h2, h3, _, _⟩ := hz
-  refine ⟨by simp only []; omega, ⟨by simp [zReset], by simp [zReset], by
-    simp only [zReset]; omega, by simp [zReset], by simp [zReset]⟩, ?_, ?_⟩
+  obtain ⟨h1, h2, h3⟩ := hz
+  refine ⟨by simp only []; omega,
+    ⟨by simp only [zReset]; omega, by simp only [zReset]; omega, by simp [zReset]⟩, ?_, ?_⟩
   · exact matchIv_empty u T _ _
   · intro _
     have hrem : zrem u.length (zReset z) ≤ z.head + 1 + u.length := by
       simp only [zrem, zReset, Bool.false_eq_true, if_false]
-      split_ifs <;> omega
+      omega
     have hdd := hd q hq
     have hhead : z.head ≤ u.length := by omega
     show zrem u.length (zReset z) ≤ zQuota * (v.length - gsNextQ k p₁ r q)
@@ -480,9 +375,10 @@ def zReportFlag (u v : List α) (n : ℕ) (z : VStateZ) : Bool :=
 theorem zReportFlag_sound {u v T : List α} {n : ℕ} {z : VStateZ} (h : ZInv u v T z)
     (hf : zReportFlag u v n z = true) :
     MatchLen u T (z.1.pos - u.length) u.length := by
-  obtain ⟨_, _, hmiv, _⟩ := h
-  simp only [zReportFlag, Bool.and_eq_true, decide_eq_true_eq, zdone] at hf
-  exact matchIv_full hmiv hf.2.1 hf.2.2
+  obtain ⟨_, hwf, hmiv, _⟩ := h
+  simp only [zReportFlag, Bool.and_eq_true] at hf
+  obtain ⟨hlo, hhi⟩ := matchIv_of_done hwf hf.2
+  exact matchIv_full hmiv hlo hhi
 
 /-- **報告の完全性**：`u` が全一致していて `q = |v|` なら、残り仕事量は `0`、
 すなわち照合は完了しており報告される。 -/
@@ -513,27 +409,26 @@ theorem zReportFlag_eq {u v T : List α} {n : ℕ} {z : VStateZ} (h : ZInv u v T
 
 /-! ## 7. テープ実現（`GSVerifierTapesZ`）への設計メモ
 
-本ファイルの `zMove` は「伸ばす端にいるときだけ照合し、反対端から戻る途中は
-ただ進む」形になっている。この「戻る途中か否か」の判定には `hi` の位置を
-テープ上に **印** として持つ必要があり、`VExt` に成分を足すことになる。
+§3 の `zMove` は次のようにテープで実現される（`U` は `startSym :: (u ++ [endSym])`、
+ヘッドは添字 `head + 1`、`Txt2` はヘッドが添字 `pos - |u| + head`。
+**この整列は向きによらない**）。
 
-**それは不要である**：戻りの走行でも毎回照合してしまえばよい（すでに照合済みの
-位置なので、候補が生きているかぎり必ず一致する）。すなわちテープ側は
+* `up`：`Tape.read U = endSym` なら**何もしない**（完了）。そうでなければ
+  `Tape.read U = Tape.read Txt2` を判定し、真なら `[U .right, X .right]`、
+  偽なら何もしない。これは既存の `GSVTapes.vcompActs endSym` そのものである。
+* `down`：`U` の 1 つ左を**覗いて**（動作 0）`startSym` なら向きを `up` に反転して
+  何もしない、そうでなければ `[U .left, X .left]`。
+  （`startSym ∉ u` なので、この覗きは「`head = 0` か」を正しく判定する。）
 
-* `up` のとき：`endSym` を読んでいなければ `U` と `Txt2` を 1 つ右へ動かして照合、
-  読んでいれば向きを反転（`down` へ）、
-* `down` のとき：`startSym` を読んでいなければ `U` と `Txt2` を 1 つ左へ動かして照合、
-  読んでいれば向きを反転（`up` へ）
+したがって 1 単位動作は **高々 2 動作**、`zQuota = 4` 単位で高々 8 動作である。
+完了判定は「`up` かつ `Tape.read U = endSym`」で、これもテープ読み取りだけで済む。
+向きの 1 ビットは有限制御（`GSVerifierProgZ`）に置く。
 
-とすればよく、必要な状態は **`U` のヘッド位置と向き 1 ビットだけ**である
-（`lo`/`hi` はゴースト）。照合完了は「`up` で `endSym` を読んでいる」ことに等しく、
-これもテープ読み取りで判定できる。向きの 1 ビットは有限制御（`GSVerifierProgZ`）か
-`VExt` の 1 セルテープに置く。
-
-この「戻りでも照合する」版は、`zMove` の分岐 `z.head = z.hi` を外し、
-`lo := min lo (head-1)` / `hi := max hi (head+1)` と書き換えたものであり、
-残り仕事量 `zrem` と本ファイルの補題はそのまま通る（`hfull` のもとで
-戻りの照合は必ず成功するため）。`GSVerifierTapesZ` はこちらを実装すべきである。 -/
+**ずらしのとき `U` は動かさない**（`zReset` は `head` をそのままにする）。`Txt2` は
+融合ループ（`perProgramX` / `resProgramX`）が `gsShift` だけ右へ運ぶので、新しい
+`pos + gsShift` に対して整列がそのまま保たれる。よって `uxWalk`（`U` の巻き戻しと
+`Txt2` の残差補正）は**まったく不要**であり、`Ψ = 2·checked` のような償却項は現れない
+（`PalPeg.PointwiseGap.rewind_not_pointwise` の反例を回避する）。 -/
 
 /-! ## 8. 公理の確認 -/
 
