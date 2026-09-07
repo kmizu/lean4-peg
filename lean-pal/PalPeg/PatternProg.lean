@@ -1534,6 +1534,153 @@ theorem setupProg_spec {startSym endSym : Fin sc} {s h p₁ r k : ℕ} {w Text :
         ∧ (setupProgram blank startSym endSym k S).length ≤ 7 * (h + k * p₁ + 1) :=
   ⟨setupProg_exec H hne, setup_spec H⟩
 
+/-! ## 13. 真に有限制御な版（`s`,`h` を定数として展開しない）
+
+`s`（段幅の切り分け）と `h`（`= S/2`、段幅は 2 冪を渡る）は構成の定数ではないので、
+`copyLoop` の回数として直接展開することはできない。ここでは
+
+* `s` 個のコピー：カウンタ `sCs` を実際に 1 ずつ消費しながら回し、消費した分を
+  ミラーの `sC2` に転写し（`decCopyMirror_run`/`decCopyMirror_counter`）、あとで
+  `xfer1Prog` で `sC2 → sCs` に戻して `sCs` の値も復元する。
+* `h - s` 個のコピー：入力コピーテープ `sIn` の左端に本物の番兵 `leftSym` を置いた
+  前提 `PrepPreL` を置き、`leftSym` を読むまで回すだけのループ（`copyLoopSentL_exec`）
+  で止める。
+* 積み終えたスタックを逐次ビューへ戻す 2 回の `settle` は、もとから番兵駆動
+  （`startSym` を読むまで）の `settleProgG` を使う（`s` に依存しない）。
+
+を使って、`s`,`h` を含まない**単一の固定 `Prog`** `setupProgL` を組む。 -/
+
+/-- カウンタ駆動ループ `decActsN` は、`cs` を触れない本体のもとで、`n` 周回後に
+`cs` 自身をちょうど `0` にする。 -/
+theorem decActsN_counter (blank mark : Fin sc) {cs : Fin 12} (body : List (TAct 12 sc))
+    (hbody : ∀ x ∈ body, x.tape ≠ cs) :
+    ∀ (n : ℕ) (S : Tapes sc), Tape.CounterView' blank mark (S cs) n →
+      Tape.CounterView' blank mark (runG blank (decActsN blank cs body n) S cs) 0 := by
+  intro n
+  induction n with
+  | zero => intro S h; simpa [decActsN] using h
+  | succ n ih =>
+      intro S h
+      rw [decActsN, runG_append]
+      refine ih _ ?_
+      have h1 : (runG blank (decRound blank cs body) S) cs
+          = Tape.step blank (Tape.step blank (S cs) blank .left) blank .stay := by
+        show (runG blank body (applyG blank (applyG blank S (TAct.put cs blank .left))
+          (TAct.put cs blank .stay))) cs = _
+        rw [runG_untouched blank cs body _ hbody, applyG_put_self, applyG_put_self]
+      rw [h1]
+      exact Tape.counter'_dec h
+
+/-- **フェーズ 2 の内容**：カウンタ駆動コピー＋ミラー＋復元の結果、`sIn`,`sU` は
+`copyLoop_spec` どおりの内容になり、`sC2` はちょうど `0` に戻り、それ以外のテープは
+`S₁` のまま。`sCs` 自身の値は以後どこにも使わないので追跡しない。 -/
+theorem phase2_facts (mark : Fin sc) (S₁ : Tapes sc) (s b : ℕ) (w l : List (Fin sc))
+    (hcs1 : Tape.CounterView' blank mark (S₁ sCs) s)
+    (hc2 : Tape.CounterView' blank mark (S₁ sC2) 0) (hb : s ≤ b + 1)
+    (hIn : Tape.SeqView blank (S₁ sIn) w b) (hU : Tape.StackView blank (S₁ sU) l) :
+    ∃ S₂ : Tapes sc,
+      runG blank
+        ((decActsN blank sCs (copyRoundMirror blank sIn sU sC2) s
+            ++ [TAct.put sCs blank .left, TAct.keep sCs .right])
+          ++ xfer1Acts blank sC2 sCs s) S₁ = S₂ ∧
+      Tape.SeqView blank (S₂ sIn) w (b - s) ∧
+      Tape.StackView blank (S₂ sU) (((w.take (b + 1)).drop (b + 1 - s)) ++ l) ∧
+      Tape.CounterView' blank mark (S₂ sC2) 0 ∧
+      ∀ j : Fin 12, j ≠ sIn → j ≠ sU → j ≠ sCs → j ≠ sC2 → S₂ j = S₁ j := by
+  set T1 := runG blank (decActsN blank sCs (copyRoundMirror blank sIn sU sC2) s) S₁ with hT1
+  have hbody : ∀ x ∈ copyRoundMirror blank sIn sU sC2 (sc := sc), x.tape ≠ sCs := by
+    intro x hx
+    fin_cases hx <;> simp only [TAct.tape] <;> decide
+  have hT1cs : Tape.CounterView' blank mark (T1 sCs) 0 :=
+    decActsN_counter blank mark (copyRoundMirror blank sIn sU sC2) hbody s S₁ hcs1
+  have hT1mir : Tape.CounterView' blank mark (T1 sC2) s := by
+    simpa using decCopyMirror_counter blank mark (mir := sC2) (i := sIn) (j := sU) (cs := sCs)
+      (by decide) (by decide) (by decide) s S₁ 0 hc2
+  have hcopyLoop := copyLoop_spec blank (i := sIn) (j := sU) (by decide) s b S₁ w l hb hIn hU
+  have hT1eq : ∀ j : Fin 12, j ≠ sCs → j ≠ sC2 → T1 j = run blank (copyLoop blank sIn sU s S₁) S₁ j
+      := decCopyMirror_run blank mark (cs := sCs) (mir := sC2) (i := sIn) (j := sU)
+        (by decide) (by decide) (by decide) (by decide) (by decide) s S₁ S₁
+        (fun m _ _ => rfl)
+  have hprobe : runG blank [TAct.put sCs blank (sc := sc) .left, TAct.keep sCs .right] T1 = T1 :=
+    probeRestore_id (mark := mark) hT1cs
+  have hstep : runG blank (decActsN blank sCs (copyRoundMirror blank sIn sU sC2) s
+      ++ [TAct.put sCs blank .left, TAct.keep sCs .right]) S₁ = T1 := by
+    rw [runG_append, hT1, hprobe]
+  refine ⟨runG blank (xfer1Acts blank sC2 sCs s) T1, by rw [runG_append, hstep], ?_, ?_, ?_, ?_⟩
+  · rw [xfer1Acts_run (mark := mark) (a := sC2) (b := sCs) (by decide) s T1
+      (by simpa using hT1mir) hT1cs,
+      xfer1_untouched blank (a := sC2) (b := sCs) (by decide) (by decide) s T1,
+      hT1eq sIn (by decide) (by decide)]
+    exact hcopyLoop.1
+  · rw [xfer1Acts_run (mark := mark) (a := sC2) (b := sCs) (by decide) s T1
+      (by simpa using hT1mir) hT1cs,
+      xfer1_untouched blank (a := sC2) (b := sCs) (by decide) (by decide) s T1,
+      hT1eq sU (by decide) (by decide)]
+    exact hcopyLoop.2
+  · obtain ⟨g1, -⟩ := xfer1_spec (blank := blank) (mark := mark) (a := sC2) (b := sCs)
+      (by decide) s T1 0 0 (by simpa using hT1mir) hT1cs
+    rw [xfer1Acts_run (mark := mark) (a := sC2) (b := sCs) (by decide) s T1
+      (by simpa using hT1mir) hT1cs]
+    simpa using g1
+  · intro j hji hju hjcs hjc2
+    rw [xfer1Acts_run (mark := mark) (a := sC2) (b := sCs) (by decide) s T1
+      (by simpa using hT1mir) hT1cs, xfer1_untouched blank (a := sC2) (b := sCs) hjc2 hjcs s T1,
+      hT1eq j hjcs hjc2, copyLoop_untouched blank hji hju s S₁]
+
+/-- **左端に番兵がある場合の準備前提**。`SetupPre` の `inb` を、本物の番兵 `leftSym`
+（`w'` には現れない記号）を先頭に置いた `leftSym :: w'` に対する（`h - 1` ではなく）
+`h` の位置での逐次ビューに置き換えたもの。`s`,`h` は入力ごとに変わる値のままでよく、
+`setupProgL` の構造自体はこれらに依存しない。 -/
+structure PrepPreL (blank mark leftSym : Fin sc) (s h p₁ r : ℕ) (w' Text : List (Fin sc))
+    (S : Tapes sc) : Prop where
+  hpos : 0 < h
+  hle : h ≤ w'.length
+  hcut : s < h
+  hfresh : leftSym ∉ w'
+  inb : Tape.SeqView blank (S sIn) (leftSym :: w') h
+  emptyU : Tape.StackView blank (S sU) []
+  emptyP : Tape.StackView blank (S sP) []
+  txt : Tape.SeqView blank (S sT) (TextFeed.padW blank Text 0) 0
+  txt2 : Tape.SeqView blank (S sX2) (TextFeed.padW blank Text 0) 0
+  cs : Tape.CounterView' blank mark (S sCs) s
+  c1 : Tape.CounterView' blank mark (S sC1) p₁
+  c2 : Tape.CounterView' blank mark (S sC2) 0
+  ap : Tape.CounterView' blank mark (S sAp) 0
+  an : Tape.CounterView' blank mark (S sAn) 0
+  rp : Tape.CounterView' blank mark (S sRp) r
+  rn : Tape.CounterView' blank mark (S sRn) 0
+
+/-- 添字シフトの補題：`m ≤ n` のとき、先頭に 1 個足した語の
+`take (n+1) |>.drop (n+1-m)` は、もとの語の `take n |>.drop (n-m)` に一致する。
+`leftSym` を先頭に加えたことによる `PrepPreL` 側の全ての位置計算はこれ 1 本に帰着する。 -/
+theorem take_drop_shift (a : Fin sc) (w' : List (Fin sc)) (n m : ℕ) (hm : m ≤ n) :
+    ((a :: w').take (n + 1)).drop (n + 1 - m) = (w'.take n).drop (n - m) := by
+  rw [show n + 1 - m = (n - m) + 1 from by omega]
+  rfl
+
+/-- `startSym` が本体に現れず `endSym` とも異なるとき、
+`aTop::(X++[startSym])` を逆順にした語は `startSym` を先頭にちょうど 1 回だけ持つ。
+`settleProgG_exec` の番兵条件 `hs0`/`hfresh` はこれで得られる。 -/
+theorem settle_sentinel_fresh {startSym : Fin sc} (X : List (Fin sc)) (aTop : Fin sc)
+    (hX : startSym ∉ X) (hne : startSym ≠ aTop) :
+    ((aTop :: (X ++ [startSym])).reverse)[0]? = some startSym ∧
+      ∀ m : ℕ, 0 < m → ((aTop :: (X ++ [startSym])).reverse)[m]? ≠ some startSym := by
+  have hrev : (aTop :: (X ++ [startSym])).reverse = startSym :: (X.reverse ++ [aTop]) := by
+    simp [List.reverse_cons, List.reverse_append]
+  rw [hrev]
+  refine ⟨rfl, ?_⟩
+  intro m hm hc
+  obtain ⟨m', rfl⟩ := Nat.exists_eq_succ_of_ne_zero (by omega : m ≠ 0)
+  rw [List.getElem?_cons_succ] at hc
+  rcases Nat.lt_or_ge m' X.reverse.length with hlt | hge
+  · rw [List.getElem?_append_left hlt] at hc
+    obtain ⟨hlt2, hget⟩ := List.getElem?_eq_some_iff.1 hc
+    exact hX (List.mem_reverse.1 (hget ▸ List.getElem_mem hlt2))
+  · rw [List.getElem?_append_right hge] at hc
+    rcases Nat.eq_zero_or_pos (m' - X.reverse.length) with h0 | hpos
+    · rw [h0] at hc; simp at hc; exact hne hc.symm
+    · rw [List.getElem?_eq_none (by rw [List.length_singleton]; omega)] at hc; simp at hc
+
 end Twelve
 
 end PalPeg.PatternProg
