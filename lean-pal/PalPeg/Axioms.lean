@@ -9,6 +9,7 @@ import PalPeg.GroupsLog
 import PalPeg.GroupsLogBound
 import PalPeg.Matching
 import PalPeg.GSScan
+import PalPeg.GSDecomp
 import PalPeg.RTQueue
 import PalPeg.Manacher
 import PalPeg.ManacherHeads
@@ -204,3 +205,11 @@ import PalPeg.TapeLib
 /-- info: 'PalPeg.groupCount_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.groupCount_le
+
+/-- info: 'PalPeg.kRepetition_periods' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.kRepetition_periods
+
+/-- info: 'PalPeg.GSCore.ksimple' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.GSCore.ksimple

@@ -10,6 +10,7 @@ import PalPeg.GroupsLog
 import PalPeg.GroupsLogBound
 import PalPeg.Matching
 import PalPeg.GSScan
+import PalPeg.GSDecomp
 import PalPeg.RTQueue
 import PalPeg.Manacher
 import PalPeg.ManacherHeads
@@ -40,6 +41,7 @@ import PalPeg.TapeLib
 * `PalPeg.Schedule`  — 順序処理の締切（`finishTime_le`）と Galil の FIFO サービス不等式（Lindley）
 * `PalPeg.TapeLib`   — 成果物のテープ上の zipper / stack / seq / counter ビューと 1 アクション補題
 * `PalPeg.GSScan`    — Galil–Seiferas 走査：安全シフト、健全性/完全性、ポテンシャル `Φ=(k+1)pos+q`
+* `PalPeg.GSDecomp`  — GS 分解 `GSCore/GSDecomp`、k 反復周期の補題、走査側帰結と `KSimple` への橋（L1 の厳密境界は未了）
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/
