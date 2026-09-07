@@ -1,24 +1,95 @@
 package pal
 
-/** Port of `test_galil_contracts.py`.
-  *
-  * The Python test drives `scaffold_galil.OnlineGalil`, which is ported by a
-  * later task (Task 3, SCAVM scaffolds). The end-to-end audit is therefore
-  * left ignored below with its body written against the structural interfaces
-  * of [[GalilContracts]]; the pure decoding helpers are checked against Python
-  * directly.
+import scala.collection.mutable
+
+import ScaffoldGalil.OnlineGalil
+
+/** Port of `test_galil_contracts.py`: check source boundaries against
+  * independently decoded words/coordinates. The pure decoding helpers are
+  * additionally checked against Python directly.
   */
 class GalilContractsSuite extends munit.FunSuite {
-  import GalilContracts.{interval, palindrome, smallLivePeriod}
+  import GalilContracts.{interval, palindrome, smallLivePeriod, ContractAudit}
 
-  test("main move replay and chain contracts (needs scaffold_galil.OnlineGalil)".ignore) {
-    // TODO(Task 3): once `ScaffoldGalil.OnlineGalil` exists, adapt it to
-    // `GalilContracts.Source`/`StepResult` and port the loop of
-    // `test_galil_contracts.py`:
-    //   for word in (...): source, audit = OnlineGalil(), ContractAudit()
-    //     for i, char in enumerate(word, 1): result = source.read(char)
-    //       loop: audit.observe(source, word[:i], result); break if result.input_ready; result = source.work()
-    //     counts["output"] == len(word); counts["move"] == counts["replay_return"]; ...
+  // audits the whole online controller on seven long words
+  override val munitTimeout: scala.concurrent.duration.Duration = scala.concurrent.duration.Duration(10, "min")
+
+  test("main move replay and chain contracts") {
+    val totals = mutable.LinkedHashMap.empty[String, Int]
+    val transcript = new StringBuilder
+    val words = Seq("a" * 16, "ab" * 12, "abba" * 8, "ab" + "a" * 20 + "ba", "a" * 12 + "b" + "a" * 12,
+      "ab" * 10 + "bbaa" + "ab" * 8, "abba" * 6 + "bab" + "abba" * 5)
+    for (word <- words) {
+      val source = new OnlineGalil
+      val audit = new ContractAudit
+      var maxWork = 0
+      println(s"GalilContracts audit starting word='$word'")
+      for ((char, index) <- word.zipWithIndex) {
+        val prefix = word.take(index + 1)
+        var result = source.read(char.toString)
+        var draining = true
+        var works = 0
+        def diagnostic: String = {
+          val root = source.vm.top.get
+          s"word='$word' prefix='$prefix' work=$works tick=${source.vm.t} " +
+            s"mode=${root.label("g.mode").asStr} search=${root.label("sp.mode").asStr} chain=${root.label("ch.mode").asStr}"
+        }
+        while (draining) {
+          audit.observe(source, prefix, result)
+          if (result.inputReady) {
+            draining = false
+          } else {
+            // A fixture watchdog, not a claimed real-time bound or an increased timeout.
+            assert(works < 100000, s"source did not reach its next read boundary: $diagnostic")
+            result = source.work()
+            works += 1
+            if (works % 10000 == 0) {
+              println(s"GalilContracts audit progress $diagnostic")
+            }
+          }
+        }
+        maxWork = math.max(maxWork, works)
+        transcript.append(s"'$word' prefix ${index + 1} work $works mode ${source.vm.top.get.label("g.mode").asStr}\n")
+      }
+      println(s"GalilContracts audit completed word='$word' ticks=${source.vm.t + 1} maxWork=$maxWork")
+      def count(event: String): Int = audit.counts.getOrElse(event, 0)
+      assertEquals(count("output"), word.length)
+      assertEquals(count("move"), count("replay_return"))
+      assertEquals(count("shift"), count("shift_return"))
+      for (row <- audit.rows if row.event == "output") {
+        for (size <- row("size") + 1 to math.min(word.length, row("size") + row("prediction"))) {
+          assertNotEquals(word.take(size), word.take(size).reverse, row)
+        }
+      }
+      for ((name, n) <- audit.counts) {
+        totals(name) = totals.getOrElse(name, 0) + n
+      }
+      for (row <- audit.rows) {
+        val values = row.values.map { case (key, value) => s"'$key': $value" }
+        transcript.append(s"'$word' {'event': '${row.event}', 'tick': ${row.tick}, ${values.mkString(", ")}}\n")
+      }
+    }
+    for (name <- Seq("main", "dp_found", "move", "replay_start", "replay_return", "shift", "shift_return")) {
+      assert(totals.getOrElse(name, 0) > 0, name)
+    }
+    PyDiff.assertSameAsPython(transcript.toString, "-c",
+      """from scaffold_galil import OnlineGalil
+        |from galil_contracts import ContractAudit
+        |words = ("a" * 16, "ab" * 12, "abba" * 8, "ab" + "a" * 20 + "ba", "a" * 12 + "b" + "a" * 12,
+        |         "ab" * 10 + "bbaa" + "ab" * 8, "abba" * 6 + "bab" + "abba" * 5)
+        |for word in words:
+        |  source, audit = OnlineGalil(), ContractAudit()
+        |  for i, char in enumerate(word, 1):
+        |    result, works = source.read(char), 0
+        |    while True:
+        |      audit.observe(source, word[:i], result)
+        |      if result.input_ready: break
+        |      assert works < 100000, (word, word[:i], works, source.vm.t, source.vm.top.label["g.mode"], source.vm.top.label["sp.mode"], source.vm.top.label["ch.mode"])
+        |      result = source.work()
+        |      works += 1
+        |    print(repr(word), "prefix", i, "work", works, "mode", source.vm.top.label["g.mode"])
+        |  for row in audit.rows: print(repr(word), row)
+        |""".stripMargin)
   }
 
   test("interval, palindrome and small_live_period agree with galil_contracts.py") {

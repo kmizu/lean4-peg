@@ -3,6 +3,8 @@ package pal
 import scala.collection.immutable.VectorMap
 import scala.collection.mutable
 
+import ScaffoldGalil.{OnlineGalil, OnlineStep}
+
 /** External, coordinate-based observations of the online source contracts.
   *
   * Nothing in this module participates in the recognizer's decisions. It decodes
@@ -11,11 +13,10 @@ import scala.collection.mutable
   *
   * Port of `galil_contracts.py`. The Python module reads the scaffold VM's
   * `Node` objects (`scavm.py`) and the `OnlineGalil`/`OnlineStep`/`Timing`
-  * objects of `scaffold_galil.py`/`galil_clock.py`, which belong to later
-  * tasks. This port therefore observes them through the small structural
+  * objects of `scaffold_galil.py`/`galil_clock.py`. It preserves the small structural
   * interfaces [[GalilContracts.Node]], [[GalilContracts.Source]],
-  * [[GalilContracts.StepResult]] and [[GalilContracts.Timing]]; the ports of
-  * those modules implement (or adapt to) these traits.
+  * [[GalilContracts.StepResult]] and [[GalilContracts.Timing]] for independent audits.
+  * The `observe` overload adapts the concrete online source without changing its VM state.
   */
 object GalilContracts {
 
@@ -49,6 +50,25 @@ object GalilContracts {
     def events: Map[String, Int]
   }
 
+  /** Read-only adapter: decode immutable nodes without VM hops or pointer mutation. */
+  private final class NodeAdapter(node: Scavm.Node) extends Node {
+    def t: Int = node.t
+    def label(key: String): LabelValue = node.label(key) match {
+      case Scavm.Label.Str(value) => value
+      case Scavm.Label.Num(value) => value
+      case Scavm.Label.Bool(value) => value
+      case other => throw new IllegalArgumentException(s"unsupported audit label: ${other.pythonRepr}")
+    }
+    def ptr(key: String): Option[Node] = node.pointer(key).map(new NodeAdapter(_))
+  }
+
+  /** Decode a concrete VM stack through the same observer used by synthetic sources. */
+  def depth(root: Scavm.Node, name: String): Int = depth(new NodeAdapter(root), name)
+
+  def number(root: Scavm.Node, name: String): Int = number(new NodeAdapter(root), name)
+
+  def place(root: Scavm.Node, name: String): Int = place(new NodeAdapter(root), name)
+
   /** A symbol of the doubled coordinate line: `None` at 0, the separator `"s"`
     * at even positions and the word's characters at odd ones.
     */
@@ -58,14 +78,14 @@ object GalilContracts {
     value match {
       case s: String => s
       case i: Int => i.toString
-      case b: Boolean => if (b) "True" else "False"
+      case b: Boolean => if (b) { "True" } else { "False" }
     }
   }
 
   private def labelInt(value: LabelValue): Int = {
     value match {
       case i: Int => i
-      case b: Boolean => if (b) 1 else 0
+      case b: Boolean => if (b) { 1 } else { 0 }
       case s: String => throw new IllegalArgumentException(s"integer label expected, got '$s'")
     }
   }
@@ -100,7 +120,7 @@ object GalilContracts {
 
   /** A head position on the doubled line. */
   def place(root: Node, name: String): Int = {
-    2 * depth(root, name + ".l") - (if (!labelBoolean(root.label(name + ".gap"))) 1 else 0)
+    2 * depth(root, name + ".l") - (if (!labelBoolean(root.label(name + ".gap"))) { 1 } else { 0 })
   }
 
   /** The cells of the doubled line between two positions, inclusive. */
@@ -109,7 +129,7 @@ object GalilContracts {
       throw new AssertionError((word, left, right).toString)
     }
     (left to right).toVector.map { p =>
-      if (p == 0) None else if (p % 2 == 0) Some("s") else Some(word(p / 2).toString)
+      if (p == 0) { None } else if (p % 2 == 0) { Some("s") } else { Some(word(p / 2).toString) }
     }
   }
 
@@ -251,7 +271,7 @@ object GalilContracts {
     }
 
     private def observeOutput(source: Source, root: Node, word: String, output: Int): Unit = {
-      check(output == (if (palindrome(word)) 1 else 0), (word, output))
+      check(output == (if (palindrome(word)) { 1 } else { 0 }), (word, output))
       val c = place(root, "C")
       val size = word.length
       check(c >= size && (c == size) == (output != 0), (word, c))
@@ -270,6 +290,25 @@ object GalilContracts {
         check((gain + 2) * timing.predictability >= ticks, (before, current))
       }
       lastOutput = Some(current)
+    }
+
+    /** Adapt the actual source while retaining the independent structural audit API. */
+    def observe(source: OnlineGalil, word: String, result: OnlineStep): Unit = {
+      val adaptedSource = new Source {
+        val top: Node = new NodeAdapter(source.vm.top.getOrElse(
+          throw new IllegalStateException("the source has not run yet")))
+        val timing: Timing = new Timing {
+          def moveSlope: Int = source.timing.moveSlope
+          def intervalOverhead: Int = source.timing.intervalOverhead
+          def predictability: Int = source.timing.predictability
+        }
+      }
+      val adaptedResult = new StepResult {
+        def output: Option[Int] = result.output
+        def inputReady: Boolean = result.inputReady
+        val events: Map[String, Int] = result.events.toMap
+      }
+      observe(adaptedSource, word, adaptedResult)
     }
 
     /** Observe the source after one `read`/`work` on the prefix `word`. */
