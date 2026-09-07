@@ -198,3 +198,12 @@ lake build
   これを仮定してるので、GS の内側削除ループの補題を形式化中。
   稼働中：GSPreprocess、OnlineMachine、GSVerifierTapes、BorderJobTapes、TextFeed（到着記号を FIFO 経由で
   走査テープへ供給）。
+- 進捗（コミット c9f36a2 まで）：GSPreprocess（計算可能分解）、OnlineMachine（全体機械の添字モデル、
+  `output_correct`）、GSVerifierTapes（u 検証器の 5 テープ化）。
+  設計修正：段 S の分割点を S/2 に変更（パターン `rev(w.take(S/2))` は S/2 で確定、前処理 (S/2,S]、
+  テキスト `w.drop S` を S から実時間走査）。これで「2W 時点での追いつき」の隙間が消える。Assembly /
+  StageMatcher / OnlineMachine を改修中。
+  L1 境界：欠けていた補題は「1 パス内の削除は位置 p₂ より手前で止まる」（run 0 は T 未満で終わり、
+  位置 T の最小周期は p₀ に戻るので単調性と矛盾）。新エージェントで証明中（GSDecompL1）。
+  稼働中：GSScanTapes カウンタ化、RTQueueTapes 差分カウンタ、TextFeed、BorderJobTapes、GSPreprocess 全体
+  線形上界、GSPreprocessTapes、GSVerifierTapes の償却。
