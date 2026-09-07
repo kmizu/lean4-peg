@@ -313,7 +313,7 @@ lake build
 - 進捗（このセッション、PassSum9.lean 追加、コミットせず）：`C(c) < p_c` を **8873 語・35117
   ノード**（seed 1–25、深さ2–6、長さ〜6万まで）で再確認、最大比 **0.9255**（反例なし）。
   ヒルクライム（ビット反転）は周期構造を壊すだけで有効な反例探索にならなかった。
-  Lean 側は `PalPeg/PassSum9.lean`（sorry なし、`#print axioms` は `[propext, Quot.sound]`
+  Lean 側の追加ファイルは既存定理の再掲だけだったので破棄した（`#print axioms` は `[propext, Quot.sound]`
   のみ）を追加したが、`consumption_lt_period`（翻訳像 → Fine–Wilf 矛盾の場合分け）は
   本セッションでは組み上がらず、**新しい証明済み定理は追加できなかった**。唯一残る課題は
   依然として `PassSum8.PassHasTree`。
