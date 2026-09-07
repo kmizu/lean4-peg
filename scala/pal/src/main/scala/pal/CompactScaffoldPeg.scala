@@ -193,15 +193,15 @@ object CompactScaffoldPeg {
     * (Python's single `mmap` has none) while keeping the same page-cache-backed
     * random access to rule bodies.
     */
-  private final class MappedFile(channel: FileChannel) {
-    private val WindowShift = 30
-    private val WindowSize = 1L << WindowShift
+  private[pal] final class MappedFile(channel: FileChannel, private[pal] val windowShift: Int = 30) {
+    require(windowShift >= 1 && windowShift <= 30, "mapped-file window shift must be between 1 and 30")
+    private val WindowSize = 1L << windowShift
     val size: Long = channel.size()
     private val windows: Array[ByteBuffer] = (0L until size by WindowSize).map { offset =>
       channel.map(FileChannel.MapMode.READ_ONLY, offset, math.min(WindowSize, size - offset))
     }.toArray
 
-    def get(position: Long): Byte = windows((position >> WindowShift).toInt).get((position & (WindowSize - 1)).toInt)
+    def get(position: Long): Byte = windows((position >> windowShift).toInt).get((position & (WindowSize - 1)).toInt)
 
     /** The bytes in `[from, until)` as ISO-8859-1 text (one char per byte). */
     def slice(from: Long, until: Long): String = {
@@ -210,7 +210,7 @@ object CompactScaffoldPeg {
       var position = from
       var copied = 0
       while (position < until) {
-        val window = windows((position >> WindowShift).toInt).duplicate()
+        val window = windows((position >> windowShift).toInt).duplicate()
         val offset = (position & (WindowSize - 1)).toInt
         val count = math.min(window.limit() - offset, (until - position).toInt)
         window.position(offset).get(bytes, copied, count)

@@ -1,7 +1,7 @@
 package pal
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path}
+import java.nio.file.{Files, Path, StandardOpenOption}
 
 import CompactScaffoldPeg.{compact, identifier}
 import TempDir.withTempDir
@@ -196,6 +196,32 @@ class CompactScaffoldPegSuite extends munit.FunSuite {
     assertEquals(identifier("E_1073741823"), (1073741823L << 2) | 3L)
     for (name <- Seq("E_1073741824", "B_1073741824", "P_1073741824", "E_9223372036854775808")) {
       interceptMessage[IllegalArgumentException]("rule index too large") { identifier(name) }
+    }
+  }
+
+  test("mapped files read and slice across tiny windows and exact boundaries") {
+    withTempDir("pal-mapped") { folder =>
+      val path = folder.resolve("bytes.bin")
+      val bytes = "0123456789".getBytes(StandardCharsets.ISO_8859_1)
+      Files.write(path, bytes)
+      val channel = java.nio.channels.FileChannel.open(path, StandardOpenOption.READ)
+      try {
+        val mapped = new CompactScaffoldPeg.MappedFile(channel, windowShift = 2)
+        assertEquals(mapped.size, 10L)
+        for ((position, expected) <- bytes.zipWithIndex) {
+          assertEquals(mapped.get(expected.toLong), position, expected)
+        }
+        assertEquals(mapped.slice(0L, 0L), "")
+        assertEquals(mapped.slice(4L, 4L), "")
+        assertEquals(mapped.slice(8L, 8L), "")
+        assertEquals(mapped.slice(10L, 10L), "")
+        assertEquals(mapped.slice(0L, 4L), "0123")
+        assertEquals(mapped.slice(3L, 9L), "345678")
+        assertEquals(mapped.slice(4L, 8L), "4567")
+        assertEquals(mapped.slice(8L, 10L), "89")
+      } finally {
+        channel.close()
+      }
     }
   }
 
