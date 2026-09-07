@@ -16,6 +16,7 @@ import PalPeg.Manacher
 import PalPeg.ManacherHeads
 import PalPeg.MiddleJob
 import PalPeg.Stages
+import PalPeg.Assembly
 import PalPeg.Schedule
 import PalPeg.TapeLib
 import PalPeg.Speedup
@@ -223,3 +224,7 @@ import PalPeg.Speedup
 /-- info: 'PalPeg.online_answer_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.online_answer_correct
+
+/-- info: 'PalPeg.dyadicAnswer_length_iff_mem_PAL' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.dyadicAnswer_length_iff_mem_PAL
