@@ -19,10 +19,9 @@ were rejected. Its complete log is `/tmp/pal-window-raw-smoke.log`.
 
 ## Scala port boundary
 
-Scala 3 ports under `scala/pal` use `PyDiff` for differential checks. A passing
-source/fixture byte-identity test is evidence only for that tested range; it
-does not establish that Scala reproduces the complete default window grammar.
-The full-grammar SHA above has not yet been independently reproduced by Scala.
+Scala 3 ports under `scala/pal` use `PyDiff` for differential checks. The
+full-grammar SHA above has not yet been independently reproduced by Scala;
+source/fixture byte identity is evidence only for the range named by each test.
 
 ## Completed verification
 
@@ -49,16 +48,17 @@ rust-peg/target/release/compact-scaffold-peg /tmp/pal-window-original.peg /tmp/p
 python3 -u verify_window_pal.py /tmp/pal-window-fast.peg --runner rust-peg/target/release/plain-peg-runner --log /tmp/pal-window-fast-verify.log
 ```
 
-The corresponding Scala CLI shape is:
+The corresponding Scala CLI shape (from the repository root) is:
 
 ```sh
+cd /path/to/lean4-peg
 cd scala
 sbt -batch 'pal/runMain pal.GenerateWindowPal /tmp/pal-window-original.peg --checkpoint /tmp/pal-window-original.sca --skip-optimize'
 sbt -batch 'pal/runMain pal.CompactScaffoldPeg /tmp/pal-window-original.peg /tmp/pal-window-fast.peg'
 sbt -batch 'pal/runMain pal.VerifyWindowPal /tmp/pal-window-fast.peg --runner ../docs/palindromes-in-peg/rust-peg/target/release/plain-peg-runner --log /tmp/pal-window-fast-verify.log'
 ```
 
-These commands document the object/CLI mapping, not a completed Scala SHA witness.
+The Scala command mapping is also documented in [STATUS.md](STATUS.md).
 
 ## Formal conditional result
 

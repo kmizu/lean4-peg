@@ -92,22 +92,13 @@ Lean ネイティブ実行と抽出 Scala 実行を突き合わせる——レ�
 - `sorry`・`admit`・`native_decide`・追加公理はソースに存在しない
   （`scripts/audit-source.sh` がソースレベルで、`Audit.lean` が意味レベルで拒否）
 - `scala/generated` はコミットされ、`scripts/check-drift.sh` が鮮度を機械保証
-- 外部依存ゼロ（Mathlib / Batteries 不使用）、ツールチェーンは v4.32.0 に固定
+- `lean/` コアは外部依存ゼロ（Mathlib / Batteries 不使用）、ツールチェーンは v4.32.0 に固定
 
 ## 回文PEGのScala 3移植
 
-`scala/pal` でPython版（当面の基準実装）の移植を進めている。active sourceにある生成・圧縮・
-検証CLIは、`scala/` から次の形で実行する：
-
-```sh
-sbt -batch 'pal/runMain pal.GenerateWindowPal /tmp/pal-window-original.peg --checkpoint /tmp/pal-window-original.sca --skip-optimize'
-sbt -batch 'pal/runMain pal.CompactScaffoldPeg /tmp/pal-window-original.peg /tmp/pal-window-fast.peg'
-sbt -batch 'pal/runMain pal.VerifyWindowPal /tmp/pal-window-fast.peg --runner ../docs/palindromes-in-peg/rust-peg/target/release/plain-peg-runner --log /tmp/pal-window-fast-verify.log'
-```
-
-Scala版のdefault全体grammar SHAは未検証。`PyDiff`のsource/fixtureバイト一致は、テストした範囲
-だけの証拠であり、全移植完了や全体SHAの再現を意味しない。pending-at-snapshotの棚卸しは
-`/tmp/pal-port-inventory.md`、親側統合後の最終coverage auditは別途必要やね。
+`scala/pal` でPython版（当面の基準実装）の移植を進めている。Scalaの再現コマンド、reader制限、
+default全体grammar SHAの未検証範囲は [STATUS.md](docs/palindromes-in-peg/STATUS.md) にまとめている。
+`PyDiff`のsource/fixtureバイト一致は、各テストが対象にした範囲だけの証拠やね。
 
 なお `lean-pal/` のLean成果物は、Kim–Parkの厳密実時間TMでPALを認識する機械の存在を仮定した
 条件付き定理をビルドする。Galilの機械をそのモデルへ書き下すことと、文献の実時間性を厳密な

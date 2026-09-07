@@ -112,8 +112,9 @@ and its restrictions are documented in
   at the semantic level)
 - `scala/generated` is committed; `scripts/check-drift.sh` mechanically
   guarantees it matches a fresh extraction
-- Zero external dependencies (no Mathlib / Batteries); toolchain pinned to
-  Lean v4.32.0
+- The `lean/` core has zero external dependencies (no Mathlib / Batteries);
+  its toolchain is pinned to Lean v4.32.0. The optional `lean-pal/` package
+  uses pinned Mathlib dependencies.
 
 ## Palindromes in plain PEG (artifact)
 
@@ -126,19 +127,8 @@ recogniser — is future work in this repository; see
 `docs/palindromes-in-peg/STATUS.md` (start here) and `docs/palindromes-in-peg/PLAIN_PAL_ARTIFACT.md`.
 
 The Python-to-Scala 3 port is in progress under `scala/pal`; Python remains the
-reference implementation. From `scala/`, the current generator/compactor/
-verifier entry points are:
-
-```sh
-sbt -batch 'pal/runMain pal.GenerateWindowPal /tmp/pal-window-original.peg --checkpoint /tmp/pal-window-original.sca --skip-optimize'
-sbt -batch 'pal/runMain pal.CompactScaffoldPeg /tmp/pal-window-original.peg /tmp/pal-window-fast.peg'
-sbt -batch 'pal/runMain pal.VerifyWindowPal /tmp/pal-window-fast.peg --runner ../docs/palindromes-in-peg/rust-peg/target/release/plain-peg-runner --log /tmp/pal-window-fast-verify.log'
-```
-
-The Scala default full-grammar SHA has not yet been verified. Differential
-source/fixture byte-identity tests are evidence only for their covered ranges;
-see the migration plan and `/tmp/pal-port-inventory.md`. Separately,
-`lean-pal/` contains a conditional theorem whose premise is a Kim–Park strict-
-real-time machine recognizing PAL. Writing Galil's machine in that exact model
-and proving the required normalization remain open assumptions; this is not an
-unconditional `PAL ∈ PEG` proof.
+reference implementation. Scala reproduction commands, reader limits, and the
+current SHA boundary are documented in [`STATUS.md`](docs/palindromes-in-peg/STATUS.md).
+The separate [`lean-pal/`](lean-pal/) package contains a conditional theorem;
+its strict-real-time machine premise and Galil normalization remain assumptions,
+so it is not an unconditional `PAL ∈ PEG` proof.

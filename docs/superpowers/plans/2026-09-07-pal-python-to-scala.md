@@ -16,10 +16,8 @@ Python と **バイト一致** を差分テストで確認する。
 だからこそバイト一致の差分テストを必須にする）。
 
 **Status note (2026-09-07):** This remains an implementation plan, not a
-claim that the port is complete. The pending-at-snapshot inventory is recorded
-in `/tmp/pal-port-inventory.md`; its eight entries are now integrated or
-assigned, so a final coverage audit after parent integrations is still needed.
-The active Scala sources expose `pal.GenerateWindowPal`,
+claim that the port is complete. A final coverage audit is still needed after
+the current implementation work. The Scala sources expose `pal.GenerateWindowPal`,
 `pal.CompactScaffoldPeg`, `pal.VerifyWindowPal`, `pal.GeneratePhaseExamples`,
 and `pal.GenerateScaffoldExamples`. The default full-grammar SHA has not been
 verified from Scala; only bounded/source-fixture byte-identity checks currently
