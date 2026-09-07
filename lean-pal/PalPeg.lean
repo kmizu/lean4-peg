@@ -16,6 +16,7 @@ import PalPeg.GSVerifier
 import PalPeg.GSScanTapes
 import PalPeg.BorderJob
 import PalPeg.RTQueue
+import PalPeg.RTQueueTapes
 import PalPeg.Manacher
 import PalPeg.ManacherHeads
 import PalPeg.MiddleJob
@@ -58,6 +59,7 @@ import PalPeg.ProgramMachine
 * `PalPeg.ProgramMachine` — 構造化機械 `StructuredMachine`（有限型の制御・記号）→ `MultiStepMachine` → `RecognizedBy`、phase 記法
 * `PalPeg.GSScanTapes` — GS 走査 1 歩を 3 テープ（P/Txt/Cnt）の動作列で実現、コスト ≤ (2k+2)ΔΦ+8
 * `PalPeg.BorderJob`  — 中央フラグの GS 系境界列挙（縮小段、`palPrefixFlagsGS_spec`、仕事 ≤ 258|x|）
+* `PalPeg.RTQueueTapes` — Hood–Melville キューを 9 本のスタックテープで実現（snoc ≤ 20、tail ≤ 27 動作；`lenr ≤ lenf` 判定は仮定）
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/

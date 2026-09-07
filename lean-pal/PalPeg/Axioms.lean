@@ -15,6 +15,7 @@ import PalPeg.GSVerifier
 import PalPeg.GSScanTapes
 import PalPeg.BorderJob
 import PalPeg.RTQueue
+import PalPeg.RTQueueTapes
 import PalPeg.Manacher
 import PalPeg.ManacherHeads
 import PalPeg.MiddleJob
@@ -253,3 +254,7 @@ import PalPeg.ProgramMachine
 /-- info: 'PalPeg.palPrefixFlagsGS_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.palPrefixFlagsGS_spec
+
+/-- info: 'PalPeg.RTQueueTapes.queue_on_tapes' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.RTQueueTapes.queue_on_tapes
