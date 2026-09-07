@@ -450,7 +450,7 @@ section Stage
 variable {startSym endSym mark leftSym one zero : Fin sc}
 
 /-- `stageActs` のプローブ末尾形（走査の各反復に `nop` が 1 個増える）。 -/
-def stageActsN (blank startSym endSym mark leftSym one : Fin sc)
+def stageBodyN (blank startSym endSym mark leftSym one : Fin sc)
     (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) (L : ℕ)
     (ts : OvTapes sc) : List (Act sc) :=
   D.acts y L ts ++
@@ -460,13 +460,27 @@ def stageActsN (blank startSym endSym mark leftSym one : Fin sc)
       (max 1 (2 * stageS D.dec y L)) (stageS D.dec y L) ((8 + 2) * L + 1) ⟨0, 0⟩
       (applyActs blank (D.acts y L ts) ts)
 
+/-- 段テープの消去は `stageActs` と**同一の動作列**（同じ長さ引数）を使う。 -/
+def stageActsN (blank startSym endSym mark leftSym one : Fin sc)
+    (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) (L : ℕ)
+    (ts : OvTapes sc) : List (Act sc) :=
+  stageBodyN blank startSym endSym mark leftSym one D y L ts ++
+    MiddleClear.clearPUC blank (stageBody blank startSym endSym mark leftSym one D y L ts).length
+
+/-- **段の本体の作用は変わらない**。 -/
+theorem stageBodyN_apply (D : DecompOnTapes sc blank startSym endSym mark)
+    (y : List (Fin sc)) (L : ℕ) (ts : OvTapes sc) :
+    applyActs blank (stageBodyN blank startSym endSym mark leftSym one D y L ts) ts
+      = applyActs blank (stageBody blank startSym endSym mark leftSym one D y L ts) ts := by
+  rw [stageBodyN, stageBody, applyActs_append, applyActs_append, ovRunActsN_apply,
+    ovRunActs_apply]
+
 /-- **段の作用は変わらない**。 -/
 theorem stageActsN_apply (D : DecompOnTapes sc blank startSym endSym mark)
     (y : List (Fin sc)) (L : ℕ) (ts : OvTapes sc) :
     applyActs blank (stageActsN blank startSym endSym mark leftSym one D y L ts) ts
       = applyActs blank (stageActs blank startSym endSym mark leftSym one D y L ts) ts := by
-  rw [stageActsN, stageActs, applyActs_append, applyActs_append, ovRunActsN_apply,
-    ovRunActs_apply]
+  rw [stageActsN, stageActs, applyActs_append, applyActs_append, stageBodyN_apply]
 
 /-- **段の動作数の増分**は走査の反復回数（`≤ (8+2)*L+1`）だけ。 -/
 theorem stageActsN_length_le (D : DecompOnTapes sc blank startSym endSym mark)
@@ -474,7 +488,7 @@ theorem stageActsN_length_le (D : DecompOnTapes sc blank startSym endSym mark)
     (stageActsN blank startSym endSym mark leftSym one D y L ts).length
       ≤ (stageActs blank startSym endSym mark leftSym one D y L ts).length
         + ((8 + 2) * L + 1) := by
-  rw [stageActsN, stageActs, List.length_append, List.length_append]
+  simp only [stageActsN, stageActs, stageBodyN, stageBody, List.length_append]
   have := ovRunActsN_length_le blank leftSym endSym mark one
     ((y.take L).take (stageS D.dec y L)) ((y.take L).drop (stageS D.dec y L))
     (y.take L).reverse 8 (D.dec y L).2.1 (D.dec y L).2.2
@@ -482,11 +496,12 @@ theorem stageActsN_length_le (D : DecompOnTapes sc blank startSym endSym mark)
     (applyActs blank (D.acts y L ts) ts)
   omega
 
-/-- 1 段の有限制御：分解器 `DP` のあと段の走査 `OVR`。数値パラメータを持たない。 -/
-def stageProg (DP OVR : Prog (Act15 sc) (Cond15 sc)) : Prog (Act15 sc) (Cond15 sc) :=
-  Prog.seq DP OVR
+/-- 1 段の有限制御：分解器 `DP`、段の走査 `OVR`、段テープの消去 `CLR`。
+数値パラメータを持たない。 -/
+def stageProg (DP OVR CLR : Prog (Act15 sc) (Cond15 sc)) : Prog (Act15 sc) (Cond15 sc) :=
+  Prog.seq (Prog.seq DP OVR) CLR
 
-theorem stageProg_exec {DP OVR : Prog (Act15 sc) (Cond15 sc)}
+theorem stageProg_exec {DP OVR CLR : Prog (Act15 sc) (Cond15 sc)}
     (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) (L : ℕ)
     (ts : OvTapes sc)
     (hDP : ExecA Terminal blank DP ts (D.acts y L ts))
@@ -495,10 +510,14 @@ theorem stageProg_exec {DP OVR : Prog (Act15 sc) (Cond15 sc)}
         ((y.take L).take (stageS D.dec y L)) ((y.take L).drop (stageS D.dec y L))
         (y.take L).reverse 8 (D.dec y L).2.1 (D.dec y L).2.2
         (max 1 (2 * stageS D.dec y L)) (stageS D.dec y L) ((8 + 2) * L + 1) ⟨0, 0⟩
-        (applyActs blank (D.acts y L ts) ts))) :
-    ExecA Terminal blank (stageProg DP OVR) ts
+        (applyActs blank (D.acts y L ts) ts)))
+    (hCLR : ExecA Terminal blank CLR
+      (applyActs blank (stageBodyN blank startSym endSym mark leftSym one D y L ts) ts)
+      (MiddleClear.clearPUC blank
+        (stageBody blank startSym endSym mark leftSym one D y L ts).length)) :
+    ExecA Terminal blank (stageProg DP OVR CLR) ts
       (stageActsN blank startSym endSym mark leftSym one D y L ts) :=
-  execA_seq hDP hOVR
+  execA_seq (execA_seq hDP hOVR) hCLR
 
 /-! ## 7. バッチのループ（本物の `Prog.loop`） -/
 

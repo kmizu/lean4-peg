@@ -504,6 +504,31 @@ theorem exec_sum_seq {blank : Γ} {p1 : Prog A₁ C₁} {T1 : Fin t₁ → STape
   rw [← hmid] at hR
   exact exec_seq hL hR
 
+/-- 移送は `InputFree` を保つ。 -/
+theorem InputFree.transport {ι : Fin t₁ ↪ Fin t} {I : Interp Terminal A C Γ t₁}
+    (hI : InputFree I) : InputFree (I.transport ι) := by
+  intro a x σ
+  show (fun j => match proj ι j with
+      | some i => I.actOf a x (fun k => σ (ι k)) i
+      | none => (σ j, Move.stay))
+    = (fun j => match proj ι j with
+      | some i => I.actOf a none (fun k => σ (ι k)) i
+      | none => (σ j, Move.stay))
+  funext j
+  cases h : proj ι j with
+  | none => rfl
+  | some i =>
+      simp only
+      rw [hI a x (fun k => σ (ι k))]
+
+/-- 直和は `InputFree` を保つ。 -/
+theorem InputFree.sum {I1 : Interp Terminal A₁ C₁ Γ t₁} {I2 : Interp Terminal A₂ C₂ Γ t₂}
+    (h1 : InputFree I1) (h2 : InputFree I2) : InputFree (Interp.sum I1 I2) := by
+  intro a x σ
+  cases a with
+  | inl a => exact InputFree.transport h1 a x σ
+  | inr a => exact InputFree.transport h2 a x σ
+
 end Sum
 
 /-! ## 8. タスク 1 (5)：`GSVerifierProg.exec_lift` の再導出 -/

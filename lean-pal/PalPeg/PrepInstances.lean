@@ -254,9 +254,9 @@ def DecompOnTapes2.toDecompOnTapes {blank startSym endSym mark : Fin sc}
   Dd := D.Dd
   decOK := fun y L hL => EndToEnd2.decOK2 y L hL
   len_le := D.len_le
-  pat := D.pat
-  upat := D.upat
-  cnt := D.cnt
+  pat := fun y L h1 h2 ts hE => D.pat y L h1 h2 ts hE.scratch
+  upat := fun y L h1 h2 ts hE => D.upat y L h1 h2 ts hE.scratch
+  cnt := fun y L h1 h2 ts hE => D.cnt y L h1 h2 ts hE.scratch
   keepX := D.keepX
   keepX2 := D.keepX2
   keepF := D.keepF

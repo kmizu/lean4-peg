@@ -316,9 +316,9 @@ theorem nb_junkTapes {blank c : Fin sc} (h : c ≠ blank) (M : ℕ) :
 反例は `Cnt` に `Cd + Dd + 2` 個の非空白セルを置いた入口である。`cnt` は出口で
 `CounterView'`（非空白セル ≤ 1）を要求するが、`len_le` により動作数は
 `Cd * 1 + Dd` 以下なので、消せる非空白セルも `Cd + Dd` 個以下しかない。 -/
-theorem decompOnTapes_isEmpty {blank startSym endSym mark : Fin sc}
+theorem decompOnTapes2_isEmpty {blank startSym endSym mark : Fin sc}
     (h : startSym ≠ blank) :
-    IsEmpty (MiddleTapes.DecompOnTapes sc blank startSym endSym mark) := by
+    IsEmpty (PrepInstances.DecompOnTapes2 sc blank startSym endSym mark) := by
   constructor
   intro D
   set M : ℕ := D.Cd + D.Dd + 2 with hM
@@ -334,14 +334,6 @@ theorem decompOnTapes_isEmpty {blank startSym endSym mark : Fin sc}
   rw [h4] at h2
   omega
 
-/-- `PrepInstances.DecompOnTapes2` も同じ理由で空である。 -/
-theorem decompOnTapes2_isEmpty {blank startSym endSym mark : Fin sc}
-    (h : startSym ≠ blank) :
-    IsEmpty (PrepInstances.DecompOnTapes2 sc blank startSym endSym mark) := by
-  constructor
-  intro D
-  exact (decompOnTapes_isEmpty (endSym := endSym) (mark := mark) h).false
-    D.toDecompOnTapes
 
 /-! ## 5. 直せる形での構成：入口を空白に限った分解器インタフェース
 
@@ -570,11 +562,8 @@ end Run
 /-! ### 5c. 入口を空白に限った分解器インタフェースとその実装 -/
 
 /-- **修正した入口条件**：作業テープに加えて段テープ `P` / `U` / `Cnt` も空白。 -/
-structure EntryBlank (blank : Fin sc) (ts : BorderTapes.OvTapes sc) : Prop where
-  scratch : BorderTapes.ScratchBlank blank ts
-  p : Tape.StackView blank ts.P []
-  u : Tape.StackView blank ts.U []
-  cnt : Tape.StackView blank ts.Cnt []
+abbrev EntryBlank (blank : Fin sc) (ts : BorderTapes.OvTapes sc) : Prop :=
+  MiddleTapes.EntryBlank blank ts
 
 /-- **修正した分解器インタフェース**（`MiddleTapes.DecompOnTapes` の
 `ScratchBlank` を `EntryBlank` に替えたもの）。 -/

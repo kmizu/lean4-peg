@@ -733,7 +733,7 @@ theorem stage_tapes_spec'
     (hadvance : ∀ st, st.q ≠ ((w.take (S / 2)).reverse.drop s).length →
       (w.drop S)[st.pos + st.q]? = ((w.take (S / 2)).reverse.drop s)[st.q]? → cst st ≤ 1)
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
-    (hDec : MiddleBorder.DecOK (Fin sc)) (hev : 2 * (S / 2) = S)
+    (hev : 2 * (S / 2) = S)
     (hminit : ∀ m, m ≤ S / 2 →
       MEncodes blank startSym endSym mark leftSym one zero D w S m init.md)
     {n : ℕ} (h1 : 2 * S ≤ n) (h2 : n < 4 * S) (hw : n ≤ w.length) :
@@ -807,11 +807,11 @@ theorem stage_tapes_spec'
     (n := n) h1 hw
   have hmid := middle_flag_read (blank := blank) (startSym := startSym) (endSym := endSym)
     (mark := mark) (leftSym := leftSym) (one := one) (zero := zero) D
-    hne hleft hend hDec hev hS2 hminit n h1 h2 hw
+    hne hleft hend hev hS2 hminit n h1 h2 hw
   have hmdst := ststate_md (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) n
-  rw [hmdst, hmid, (MiddleBorder.borderMiddle_spec hDec).correct w S n hS2 hev h1 h2 hw]
+  rw [hmdst, hmid]
   exact and_congr hmatch Iff.rfl
 
 end Answer

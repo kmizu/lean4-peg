@@ -79,7 +79,6 @@ noncomputable def stageIface
     (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (vOf w S).length →
       (w.drop S)[st.pos + st.q]? = (vOf w S)[st.q]? → cstOf S st ≤ 1)
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
-    (hDec : MiddleBorder.DecOK (Fin sc))
     (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinit : ∀ S, 16 ≤ S →
       PrepPre blank mark (S / 2) w (w.drop S) (initOf S).pg.ts
@@ -133,7 +132,7 @@ noncomputable def stageIface
       (prep_kp_5S (by omega) hSle)
       hpinit (by omega) (prep_cut_lt (by omega) hSle)
       (prep_core w (S / 2)) hC (hcost S) (hadvance S)
-      hne hleft hend hDec hev hminit h1 h2 hw
+      hne hleft hend hev hminit h1 h2 hw
   wid_even := fun S hS => (hpow S hS).2
 
 /-- **`stageIface_spec`**：上のインタフェースの主仕様の再掲。 -/
@@ -152,7 +151,6 @@ theorem stageIface_spec
     (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (vOf w S).length →
       (w.drop S)[st.pos + st.q]? = (vOf w S)[st.q]? → cstOf S st ≤ 1)
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
-    (hDec : MiddleBorder.DecOK (Fin sc))
     (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinit : ∀ S, 16 ≤ S →
       PrepPre blank mark (S / 2) w (w.drop S) (initOf S).pg.ts
@@ -161,11 +159,11 @@ theorem stageIface_spec
             (initOf S).md)
     (S n : ℕ) (hS : 16 ≤ S) (h1 : 2 * S ≤ n) (h2 : n < 4 * S) (hw : n ≤ w.length) :
     (stageIface C₁ hsum hmb D w cstOf A B' U initOf hC hcost hadvance hne hleft hend
-        hDec hpow hinit).bit S n = true
+        hpow hinit).bit S n = true
       ↔ (occursAt (w.take (S / 2)).reverse (w.take n)
           ∧ IsPal ((w.drop (S / 2)).take (n - S))) :=
   (stageIface C₁ hsum hmb D w cstOf A B' U initOf hC hcost hadvance hne hleft hend
-    hDec hpow hinit).spec S n hS h1 h2 hw
+    hpow hinit).spec S n hS h1 h2 hw
 
 /-- **全体の出力の正当性**：`FullMachineTapes.full_answer_mem_PAL` を上の
 インタフェースに適用したもの（2 記号アルファベット）。 -/
@@ -185,7 +183,6 @@ theorem full_answer_mem_PAL_of
     (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (vOf w S).length →
       (w.drop S)[st.pos + st.q]? = (vOf w S)[st.q]? → cstOf S st ≤ 1)
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
-    (hDec : MiddleBorder.DecOK (Fin 2))
     (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinit : ∀ S, 16 ≤ S →
       PrepPre blank mark (S / 2) w (w.drop S) (initOf S).pg.ts
@@ -194,7 +191,7 @@ theorem full_answer_mem_PAL_of
             (initOf S).md) :
     FullMachineTapes.fullAnswer
         (stageIface C₁ hsum hmb D w cstOf A B' U initOf hC hcost hadvance hne hleft hend
-          hDec hpow hinit) w.length = true
+          hpow hinit) w.length = true
       ↔ w ∈ PAL :=
   FullMachineTapes.full_answer_mem_PAL _
 
