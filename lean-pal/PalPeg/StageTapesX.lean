@@ -114,7 +114,7 @@ theorem stage_tapes_specX
     (hres : Pre.res w (S / 2)
       = (s, effPeriod ((w.take (S / 2)).reverse.drop s) p₁, effReach p₁ r))
     (hkp : k * effPeriod ((w.take (S / 2)).reverse.drop s) p₁ ≤ 5 * S)
-    (hpinit : PrepPre blank mark (S / 2) w (w.drop S) init.pg.ts)
+    (hpinit : PrepPre blank mark leftSym (S / 2) w (w.drop S) init.pg.ts)
     (hk : 0 < k) (hs : s < S / 2)
     (H : GSCore ((w.take (S / 2)).reverse) k s p₁ r)
     (hcost : ∀ st, cst st ≤ (VerifierFeedX.xfA k + VerifierFeedX.xfB)

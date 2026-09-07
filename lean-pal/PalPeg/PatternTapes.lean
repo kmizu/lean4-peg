@@ -583,7 +583,7 @@ theorem seqP_length (blank : Fin sc) (f g : Tapes sc → List (SAct sc)) (S : Ta
 def setupProgram (blank startSym endSym : Fin sc) (k : ℕ) : Tapes sc → List (SAct sc) :=
   seqP blank (fun _ => pushBoth startSym)
     (seqP blank (fun S => copyLoop blank sIn sU (cval (S sCs)) S)
-      (seqP blank (fun S => copyLoop blank sIn sP ((S sIn).left.length + 1) S)
+      (seqP blank (fun S => copyLoop blank sIn sP ((S sIn).left.length) S)
         (seqP blank (fun _ => pushBoth endSym)
           (seqP blank (fun S => settle blank sU ((S sU).left.length - 2))
             (seqP blank (fun S => settle blank sP ((S sP).left.length - 2))
@@ -597,17 +597,17 @@ def setupRun (blank startSym endSym : Fin sc) (k : ℕ) (S : Tapes sc) : Tapes s
 
 section Setup
 
-variable {blank startSym endSym mark : Fin sc} {k s h p₁ r : ℕ}
+variable {blank startSym endSym mark leftSym : Fin sc} {k s h p₁ r : ℕ}
   {w Text : List (Fin sc)} {S : Tapes sc}
 
 /-- 準備フェーズの入力仮定：入力の 2 本目のコピー、空の `sU`/`sP`、空白のテキスト 2 本、
 そして前処理が置いた単進カウンタ（`s` は `sCs`、`p₁` は `sC1`、`r` は `sRp`）。 -/
-structure SetupPre (blank mark : Fin sc) (s h p₁ r : ℕ) (w Text : List (Fin sc))
+structure SetupPre (blank mark leftSym : Fin sc) (s h p₁ r : ℕ) (w Text : List (Fin sc))
     (S : Tapes sc) : Prop where
   hpos : 0 < h
   hle : h ≤ w.length
   hcut : s < h
-  inb : Tape.SeqView blank (S sIn) w (h - 1)
+  inb : Tape.SeqView blank (S sIn) (leftSym :: w.take h) h
   emptyU : Tape.StackView blank (S sU) []
   emptyP : Tape.StackView blank (S sP) []
   txt : Tape.SeqView blank (S sT) (TextFeed.padW blank Text 0) 0
@@ -622,7 +622,7 @@ structure SetupPre (blank mark : Fin sc) (s h p₁ r : ℕ) (w Text : List (Fin 
 
 /-- **主定理**：準備フェーズは走査器・検証器の初期テープ配置を作り、
 その動作数は `≤ 7 * (h + k * p₁ + 1)`。 -/
-theorem setup_spec (H : SetupPre blank mark s h p₁ r w Text S) :
+theorem setup_spec (H : SetupPre blank mark leftSym s h p₁ r w Text S) :
     GSVTapes.VEncodes' blank startSym endSym mark
         ((w.take h).reverse.take s) ((w.take h).reverse.drop s)
         (TextFeed.padW blank Text 0) k p₁ r
@@ -640,7 +640,7 @@ theorem setup_spec (H : SetupPre blank mark s h p₁ r w Text S) :
   obtain ⟨S₁, hS1⟩ : ∃ T, run blank (pushBoth startSym) S = T := ⟨_, rfl⟩
   obtain ⟨S₂, hS2⟩ : ∃ T, run blank (copyLoop blank sIn sU (cval (S₁ sCs)) S₁) S₁ = T := ⟨_, rfl⟩
   obtain ⟨S₃, hS3⟩ : ∃ T,
-      run blank (copyLoop blank sIn sP ((S₂ sIn).left.length + 1) S₂) S₂ = T := ⟨_, rfl⟩
+      run blank (copyLoop blank sIn sP ((S₂ sIn).left.length) S₂) S₂ = T := ⟨_, rfl⟩
   obtain ⟨S₄, hS4⟩ : ∃ T, run blank (pushBoth endSym) S₃ = T := ⟨_, rfl⟩
   obtain ⟨S₅, hS5⟩ : ∃ T, run blank (settle blank sU ((S₄ sU).left.length - 2)) S₄ = T := ⟨_, rfl⟩
   obtain ⟨S₆, hS6⟩ : ∃ T, run blank (settle blank sP ((S₅ sP).left.length - 2)) S₅ = T := ⟨_, rfl⟩
@@ -654,32 +654,40 @@ theorem setup_spec (H : SetupPre blank mark s h p₁ r w Text S) :
   -- フェーズ 2
   have hcs : cval (S₁ sCs) = s := by
     rw [p1ne sCs (by decide) (by decide)]; exact cval_eq hCs
-  have p2 : Tape.SeqView blank (S₂ sIn) w (h - 1 - s) ∧
-      Tape.StackView blank (S₂ sU) (((w.take (h - 1 + 1)).drop (h - 1 + 1 - s)) ++ [startSym]) := by
+  have hvlen0 : (leftSym :: w.take h).length = h + 1 := by
+    simp only [List.length_cons, List.length_take]; omega
+  have p2 : Tape.SeqView blank (S₂ sIn) (leftSym :: w.take h) (h - s) ∧
+      Tape.StackView blank (S₂ sU)
+        ((((leftSym :: w.take h).take (h + 1)).drop (h + 1 - s)) ++ [startSym]) := by
     rw [← hS2, hcs]
-    exact copyLoop_spec blank (i := sIn) (j := sU) (by decide) s (h - 1) S₁ w [startSym] (by omega)
+    exact copyLoop_spec blank (i := sIn) (j := sU) (by decide) s h S₁ (leftSym :: w.take h)
+      [startSym] (by omega)
       (by rw [p1ne sIn (by decide) (by decide)]; exact hIn) p1U
   have p2ne : ∀ j : Fin 12, j ≠ sIn → j ≠ sU → S₂ j = S₁ j := by
     intro j hi hu; rw [← hS2]; exact copyLoop_untouched blank hi hu _ _
   have p2U : Tape.StackView blank (S₂ sU) ((w.take h).drop (h - s) ++ [startSym]) := by
     have := p2.2
-    rwa [show h - 1 + 1 = h from by omega] at this
+    rwa [List.take_of_length_le (by omega : (leftSym :: w.take h).length ≤ h + 1),
+      show h + 1 - s = (h - s) + 1 from by omega, List.drop_succ_cons] at this
   -- フェーズ 3
-  have hn3 : (S₂ sIn).left.length = h - 1 - s := by
+  have hn3 : (S₂ sIn).left.length = h - s := by
     rw [p2.1.left_eq]
     simp only [List.length_reverse, List.length_take]
     omega
-  have p3 : Tape.SeqView blank (S₃ sIn) w (h - 1 - s - (h - 1 - s + 1)) ∧
+  have p3 : Tape.SeqView blank (S₃ sIn) (leftSym :: w.take h) (h - s - (h - s)) ∧
       Tape.StackView blank (S₃ sP)
-        (((w.take (h - 1 - s + 1)).drop (h - 1 - s + 1 - (h - 1 - s + 1))) ++ [startSym]) := by
+        ((((leftSym :: w.take h).take (h - s + 1)).drop (h - s + 1 - (h - s))) ++ [startSym]) := by
     rw [← hS3, hn3]
-    exact copyLoop_spec blank (i := sIn) (j := sP) (by decide) (h - 1 - s + 1) (h - 1 - s) S₂ w
-      [startSym] (by omega) p2.1 (by rw [p2ne sP (by decide) (by decide)]; exact p1P)
+    exact copyLoop_spec blank (i := sIn) (j := sP) (by decide) (h - s) (h - s) S₂
+      (leftSym :: w.take h) [startSym] (by omega) p2.1
+      (by rw [p2ne sP (by decide) (by decide)]; exact p1P)
   have p3ne : ∀ j : Fin 12, j ≠ sIn → j ≠ sP → S₃ j = S₂ j := by
     intro j hi hp; rw [← hS3]; exact copyLoop_untouched blank hi hp _ _
   have p3P : Tape.StackView blank (S₃ sP) (w.take (h - s) ++ [startSym]) := by
     have := p3.2
-    rwa [Nat.sub_self, List.drop_zero, show h - 1 - s + 1 = h - s from by omega] at this
+    rwa [show h - s + 1 - (h - s) = 1 from by omega, List.take_succ_cons,
+      List.drop_succ_cons, List.drop_zero, List.take_take,
+      Nat.min_eq_left (by omega : h - s ≤ h)] at this
   -- フェーズ 4
   have p4U : Tape.StackView blank (S₄ sU)
       (endSym :: ((w.take h).drop (h - s) ++ [startSym])) := by
@@ -775,7 +783,7 @@ theorem setup_spec (H : SetupPre blank mark s h p₁ r w Text S) :
     omega
 
 /-- `k * p₁ ≤ |v| ≤ h` なので、準備フェーズのコストは入力長 `h` に線形。 -/
-theorem setup_cost_linear (H : SetupPre blank mark s h p₁ r w Text S) (hkp : k * p₁ ≤ h) :
+theorem setup_cost_linear (H : SetupPre blank mark leftSym s h p₁ r w Text S) (hkp : k * p₁ ≤ h) :
     (setupProgram blank startSym endSym k S).length ≤ 21 * h := by
   have h1 := (setup_spec (startSym := startSym) (endSym := endSym) (k := k) H).2
   have h2 : 0 < h := H.hpos

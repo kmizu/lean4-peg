@@ -1305,7 +1305,7 @@ def setupProgActs (blank startSym endSym : Fin sc) (s hms k p₁ : ℕ) : List (
 （＝トレースは `setupProgram` の動作列とちょうど対応する）。回数 `s`,`h - s` は
 テープの境界を調べずに済む構成の定数として渡す。 -/
 theorem setupProg_exec {startSym endSym : Fin sc} {s h p₁ r k : ℕ} {w Text : List (Fin sc)}
-    {S : Tapes sc} (H : SetupPre blank mark s h p₁ r w Text S) (hne : mark ≠ blank) :
+    {S : Tapes sc} {leftSym : Fin sc} (H : SetupPre blank mark leftSym s h p₁ r w Text S) (hne : mark ≠ blank) :
     ExecG Terminal blank (setupProg blank startSym endSym mark s (h - s) k) S
         (setupProgActs blank startSym endSym s (h - s) k p₁) ∧
       runG blank (setupProgActs blank startSym endSym s (h - s) k p₁) S
@@ -1323,31 +1323,39 @@ theorem setupProg_exec {startSym endSym : Fin sc} {s h p₁ r k : ℕ} {w Text :
   have hcs : cval (S₁ sCs) = s := by
     rw [p1ne sCs (by decide) (by decide)]; exact cval_eq hCs
   set S₂ := run blank (copyLoop blank sIn sU s S₁) S₁ with hS2
-  have p2 : Tape.SeqView blank (S₂ sIn) w (h - 1 - s) ∧ Tape.StackView blank (S₂ sU)
-      (((w.take (h - 1 + 1)).drop (h - 1 + 1 - s)) ++ [startSym]) := by
+  have p2 : Tape.SeqView blank (S₂ sIn) (leftSym :: w.take h) (h - s) ∧
+      Tape.StackView blank (S₂ sU)
+        ((((leftSym :: w.take h).take (h + 1)).drop (h + 1 - s)) ++ [startSym]) := by
     rw [hS2]
-    exact copyLoop_spec blank (i := sIn) (j := sU) (by decide) s (h - 1) S₁ w [startSym]
-      (by omega) (by rw [p1ne sIn (by decide) (by decide)]; exact hIn) p1U
+    exact copyLoop_spec blank (i := sIn) (j := sU) (by decide) s h S₁ (leftSym :: w.take h)
+      [startSym] (by omega) (by rw [p1ne sIn (by decide) (by decide)]; exact hIn) p1U
   have p2ne : ∀ j : Fin 12, j ≠ sIn → j ≠ sU → S₂ j = S₁ j := by
     intro j hi hu; rw [hS2]; exact copyLoop_untouched blank hi hu _ _
   have p2U : Tape.StackView blank (S₂ sU) ((w.take h).drop (h - s) ++ [startSym]) := by
-    have := p2.2; rwa [show h - 1 + 1 = h from by omega] at this
+    have := p2.2
+    rwa [List.take_of_length_le (by
+        simp only [List.length_cons, List.length_take]; omega),
+      show h + 1 - s = (h - s) + 1 from by omega, List.drop_succ_cons] at this
   -- フェーズ 3
-  have hn3 : (S₂ sIn).left.length = h - 1 - s := by
-    rw [p2.1.left_eq]; simp only [List.length_reverse, List.length_take]; omega
+  have hn3 : (S₂ sIn).left.length = h - s := by
+    rw [p2.1.left_eq]
+    simp only [List.length_reverse, List.length_take, List.length_cons]
+    omega
   set S₃ := run blank (copyLoop blank sIn sP (h - s) S₂) S₂ with hS3
-  have p3 : Tape.SeqView blank (S₃ sIn) w (h - 1 - s - (h - s)) ∧
+  have p3 : Tape.SeqView blank (S₃ sIn) (leftSym :: w.take h) (h - s - (h - s)) ∧
       Tape.StackView blank (S₃ sP)
-        (((w.take (h - 1 - s + 1)).drop (h - 1 - s + 1 - (h - s))) ++ [startSym]) := by
+        ((((leftSym :: w.take h).take (h - s + 1)).drop (h - s + 1 - (h - s))) ++ [startSym]) := by
     rw [hS3]
-    exact copyLoop_spec blank (i := sIn) (j := sP) (by decide) (h - s) (h - 1 - s) S₂ w
-      [startSym] (by omega) p2.1 (by rw [p2ne sP (by decide) (by decide)]; exact p1P)
+    exact copyLoop_spec blank (i := sIn) (j := sP) (by decide) (h - s) (h - s) S₂
+      (leftSym :: w.take h) [startSym] (by omega) p2.1
+      (by rw [p2ne sP (by decide) (by decide)]; exact p1P)
   have p3ne : ∀ j : Fin 12, j ≠ sIn → j ≠ sP → S₃ j = S₂ j := by
     intro j hi hp; rw [hS3]; exact copyLoop_untouched blank hi hp _ _
   have p3P : Tape.StackView blank (S₃ sP) (w.take (h - s) ++ [startSym]) := by
     have := p3.2
-    rwa [show h - 1 - s + 1 - (h - s) = 0 from by omega, List.drop_zero,
-      show h - 1 - s + 1 = h - s from by omega] at this
+    rwa [show h - s + 1 - (h - s) = 1 from by omega, List.take_succ_cons,
+      List.drop_succ_cons, List.drop_zero, List.take_take,
+      Nat.min_eq_left (by omega : h - s ≤ h)] at this
   -- フェーズ 4
   set S₄ := run blank (pushBoth endSym) S₃ with hS4
   have p4U : Tape.StackView blank (S₄ sU) (endSym :: ((w.take h).drop (h - s) ++ [startSym])) := by
@@ -1403,7 +1411,7 @@ theorem setupProg_exec {startSym endSym : Fin sc} {s h p₁ r k : ℕ} {w Text :
   -- `setupProgram` の各段は元のフォーミュラ（`cval`／`.left.length`）を使うので、
   -- それが `s`／`h - s` に一致することを確認しておく
   have hcount2 : cval (S₁ sCs) = s := hcs
-  have hcount3 : (S₂ sIn).left.length + 1 = h - s := by rw [hn3]; omega
+  have hcount3 : (S₂ sIn).left.length = h - s := by rw [hn3]
   have hlen6' : (S₅ sP).left.length - 2 = h - s := by
     rw [p5ne sP (by decide)]; exact hlen6
   have hkeep : ∀ j : Fin 12, j ≠ sU → j ≠ sP → j ≠ sIn → S₆ j = S j := by
@@ -1500,7 +1508,7 @@ theorem setupProg_trace_length {startSym endSym : Fin sc} (s hms k p₁ : ℕ) :
 継続はちょうど `[]`（＝停止）に戻る。`Exec`（＝`ExecK … [p] …`）の定義そのものから
 `r := []` として直ちに従う。 -/
 theorem setupProg_halts {startSym endSym : Fin sc} {s h p₁ r k : ℕ} {w Text : List (Fin sc)}
-    {S : Tapes sc} (H : SetupPre blank mark s h p₁ r w Text S) (hne : mark ≠ blank)
+    {S : Tapes sc} {leftSym : Fin sc} (H : SetupPre blank mark leftSym s h p₁ r w Text S) (hne : mark ≠ blank)
     (l : List (Option Terminal))
     (hl : l.length = (setupProgActs blank startSym endSym s (h - s) k p₁).length) :
     ∃ s', runInputs (IG Terminal 12 sc) blank l
@@ -1521,7 +1529,7 @@ theorem setupProg_halts {startSym endSym : Fin sc} {s h p₁ r k : ℕ} {w Text 
 （`TAct` レベルのトレース `setupProgActs` の作用が `setupProgram` の作用とテープ状態として
 一致するため）。 -/
 theorem setupProg_spec {startSym endSym : Fin sc} {s h p₁ r k : ℕ} {w Text : List (Fin sc)}
-    {S : Tapes sc} (H : SetupPre blank mark s h p₁ r w Text S) (hne : mark ≠ blank) :
+    {S : Tapes sc} {leftSym : Fin sc} (H : SetupPre blank mark leftSym s h p₁ r w Text S) (hne : mark ≠ blank) :
     (ExecG Terminal blank (setupProg blank startSym endSym mark s (h - s) k) S
         (setupProgActs blank startSym endSym s (h - s) k p₁) ∧
       runG blank (setupProgActs blank startSym endSym s (h - s) k p₁) S

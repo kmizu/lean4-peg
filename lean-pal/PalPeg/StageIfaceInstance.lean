@@ -80,8 +80,8 @@ noncomputable def stageIface
       (w.drop S)[st.pos + st.q]? = (vOf w S)[st.q]? → cstOf S st ≤ 1)
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
     (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
-    (hinit : ∀ S, 16 ≤ S →
-      PrepPre blank mark (S / 2) w (w.drop S) (initOf S).pg.ts
+    (hinit : ∀ S, 16 ≤ S → S / 2 ≤ w.length →
+      PrepPre blank mark leftSym (S / 2) w (w.drop S) (initOf S).pg.ts
         ∧ ∀ m, m ≤ S / 2 →
           MiddleTapes.MEncodes blank startSym endSym mark leftSym one zero D w S m
             (initOf S).md) :
@@ -121,7 +121,7 @@ noncomputable def stageIface
     intro S n hS h1 h2 hw
     have hSle : S / 2 ≤ w.length := by omega
     obtain ⟨hq, hev⟩ := hpow S hS
-    obtain ⟨hpinit, hminit⟩ := hinit S hS
+    obtain ⟨hpinit, hminit⟩ := hinit S hS hSle
     exact stage_tapes_spec' (D := D)
       (Pre := PrepInstance.prepInstance (blank := blank) (startSym := startSym)
         (endSym := endSym) (mark := mark) C₁ hsum hmb)
@@ -152,8 +152,8 @@ theorem stageIface_spec
       (w.drop S)[st.pos + st.q]? = (vOf w S)[st.q]? → cstOf S st ≤ 1)
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
     (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
-    (hinit : ∀ S, 16 ≤ S →
-      PrepPre blank mark (S / 2) w (w.drop S) (initOf S).pg.ts
+    (hinit : ∀ S, 16 ≤ S → S / 2 ≤ w.length →
+      PrepPre blank mark leftSym (S / 2) w (w.drop S) (initOf S).pg.ts
         ∧ ∀ m, m ≤ S / 2 →
           MiddleTapes.MEncodes blank startSym endSym mark leftSym one zero D w S m
             (initOf S).md)
@@ -184,8 +184,8 @@ theorem full_answer_mem_PAL_of
       (w.drop S)[st.pos + st.q]? = (vOf w S)[st.q]? → cstOf S st ≤ 1)
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
     (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
-    (hinit : ∀ S, 16 ≤ S →
-      PrepPre blank mark (S / 2) w (w.drop S) (initOf S).pg.ts
+    (hinit : ∀ S, 16 ≤ S → S / 2 ≤ w.length →
+      PrepPre blank mark leftSym (S / 2) w (w.drop S) (initOf S).pg.ts
         ∧ ∀ m, m ≤ S / 2 →
           MiddleTapes.MEncodes blank startSym endSym mark leftSym one zero D w S m
             (initOf S).md) :

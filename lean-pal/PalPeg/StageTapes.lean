@@ -100,18 +100,22 @@ theorem sgsteps_done (blank : Fin sc) {R : ℕ} :
 /-! ## 2. 前処理のテープ実装インタフェース -/
 
 /-- **前処理の入力仮定**。段が生まれる時点（絶対ラウンド `S/2`）に 12 本のテープが
-満たしている配置：入力コピー `sIn` にはパターン `w.take L` が載りヘッドは添字 `L - 1`、
+満たしている配置：入力コピー `sIn` には左端番兵つきのパターン `leftSym :: w.take L` が
+載りヘッドは添字 `L`（＝最後にコピーした記号の位置。番兵より右は未来の入力を含まない）、
 `sT` / `sX2` にはテキスト、`sU` / `sP` は空、単進カウンタ 7 本はすべて `0`。
 `PatternTapes.SetupPre` との差は、`sCs` / `sC1` / `sRp` が「まだ `0`」である点だけで、
 それらを埋めるのが前処理の仕事である。 -/
-structure PrepPre (blank mark : Fin sc) (L : ℕ) (w Text : List (Fin sc))
+structure PrepPre (blank mark leftSym : Fin sc) (L : ℕ) (w Text : List (Fin sc))
     (ts : Tapes sc) : Prop where
   /-- パターン長は正。 -/
   hpos : 0 < L
   /-- 到着済みの入力はパターンを含む。 -/
   hle : L ≤ w.length
-  /-- 入力コピー `sIn`：ヘッドは添字 `L - 1`。 -/
-  inb : Tape.SeqView blank (ts sIn) w (L - 1)
+  /-- 左端番兵は入力に現れない。 -/
+  hfresh : leftSym ∉ w
+  /-- 入力コピー `sIn`：左端番兵つきの `leftSym :: w.take L` の添字 `L`
+  （＝最後にコピーした記号 `w[L-1]` の位置）。 -/
+  inb : Tape.SeqView blank (ts sIn) (leftSym :: w.take L) L
   /-- 検証器の接頭辞テープは空。 -/
   emptyU : Tape.StackView blank (ts sU) []
   /-- 走査器のパターンテープは空。 -/
@@ -148,11 +152,12 @@ structure PrepOnTapes (sc : ℕ) (blank mark forb : Fin sc) where
   Cp : ℕ
   /-- 費用の切片。 -/
   Dp : ℕ
-  len_le : ∀ (w Text : List (Fin sc)) (L : ℕ) (ts : Tapes sc),
-    PrepPre blank mark L w Text ts → forb ∉ w → (prog (w.take L) L ts).length ≤ Cp * L + Dp
-  post : ∀ (w Text : List (Fin sc)) (L : ℕ) (ts : Tapes sc),
-    PrepPre blank mark L w Text ts → forb ∉ w → (res w L).1 < L →
-    SetupPre blank mark (res w L).1 L (res w L).2.1 (res w L).2.2 w Text
+  len_le : ∀ (w Text : List (Fin sc)) (L : ℕ) (ts : Tapes sc) (leftSym : Fin sc),
+    PrepPre blank mark leftSym L w Text ts → forb ∉ w →
+    (prog (w.take L) L ts).length ≤ Cp * L + Dp
+  post : ∀ (w Text : List (Fin sc)) (L : ℕ) (ts : Tapes sc) (leftSym : Fin sc),
+    PrepPre blank mark leftSym L w Text ts → forb ∉ w → (res w L).1 < L →
+    SetupPre blank mark leftSym (res w L).1 L (res w L).2.1 (res w L).2.2 w Text
       (run blank (prog (w.take L) L ts) ts)
 
 /-- 前処理を挽く速度。 -/
@@ -578,7 +583,7 @@ theorem pg_window_prep (_hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
 
 /-- **前処理はラウンド `3(S/4)` までに完了する**。 -/
 theorem prep_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Text' : List (Fin sc))
-    (hpp : PrepPre blank mark (S / 2) w Text' init.pg.ts) (hforb : forb ∉ w) :
+    (hpp : PrepPre blank mark leftSym (S / 2) w Text' init.pg.ts) (hforb : forb ∉ w) :
     (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (3 * (S / 4))).pg
       = ⟨[], run blank (Pre.prog (w.take (S / 2)) (S / 2) init.pg.ts) init.pg.ts⟩ := by
   have hwin := pg_window_prep (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
@@ -596,7 +601,7 @@ theorem prep_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Text' : List (Fin s
         ⟨Pre.prog (w.take (S / 2)) (S / 2) init.pg.ts, init.pg.ts⟩ from rfl,
     show S / 4 - 1 + 1 = S / 4 from by omega]
   refine sgsteps_done blank (S / 4) _ _ ?_
-  have hlen := Pre.len_le w Text' (S / 2) init.pg.ts hpp hforb
+  have hlen := Pre.len_le w Text' (S / 2) init.pg.ts leftSym hpp hforb
   have harith := prep_rate_ok (Cp := Pre.Cp) (Dp := Pre.Dp) (S := S) hS hq
   have hR : rateP Pre = 2 * Pre.Cp + Pre.Dp := rfl
   rw [hR]
@@ -663,7 +668,7 @@ theorem setup_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) {p₁ : ℕ} (hkp :
 /-- **`setup_complete'`**：`hsetup` は `PrepOnTapes.post` と `PatternTapes.setup_spec` から
 自動的に従う。すなわち準備フェーズの完了は前処理インタフェースだけに依存する。 -/
 theorem setup_complete' (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Textp : List (Fin sc))
-    (hpp : PrepPre blank mark (S / 2) w Textp init.pg.ts) (hforb : forb ∉ w)
+    (hpp : PrepPre blank mark leftSym (S / 2) w Textp init.pg.ts) (hforb : forb ∉ w)
     (hcut : (Pre.res w (S / 2)).1 < S / 2)
     (hkp : k * (Pre.res w (S / 2)).2.1 ≤ 5 * S) :
     (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg
@@ -673,7 +678,7 @@ theorem setup_complete' (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Textp : List (Fin
   have hpc := prep_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq Textp hpp hforb
-  have hpre := Pre.post w Textp (S / 2) init.pg.ts hpp hforb hcut
+  have hpre := Pre.post w Textp (S / 2) init.pg.ts leftSym hpp hforb hcut
   have hspec := setup_spec (startSym := startSym) (endSym := endSym) (k := k) hpre
   refine setup_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
@@ -722,7 +727,7 @@ theorem stage_tapes_spec'
     (hres : Pre.res w (S / 2)
       = (s, effPeriod ((w.take (S / 2)).reverse.drop s) p₁, effReach p₁ r))
     (hkp : k * effPeriod ((w.take (S / 2)).reverse.drop s) p₁ ≤ 5 * S)
-    (hpinit : PrepPre blank mark (S / 2) w (w.drop S) init.pg.ts)
+    (hpinit : PrepPre blank mark leftSym (S / 2) w (w.drop S) init.pg.ts)
     (hk : 0 < k) (hs : s < S / 2)
     (H : GSCore ((w.take (S / 2)).reverse) k s p₁ r)
     (hC : 0 < A + B')
@@ -772,7 +777,7 @@ theorem stage_tapes_spec'
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
     (w.drop S) hpinit hend
-  have hpre := Pre.post w (w.drop S) (S / 2) init.pg.ts hpinit hend hcut
+  have hpre := Pre.post w (w.drop S) (S / 2) init.pg.ts leftSym hpinit hend hcut
   have hsc := setup_complete' (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq (w.drop S)

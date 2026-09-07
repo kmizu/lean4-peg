@@ -902,6 +902,92 @@ theorem rewind_enc (k : ℕ) : ∀ (n c a b D Q E P F S R : ℕ) (ts : Tapes sc)
           rw [e4] at this
           exact this
 
+/-! ### 第 2 相用：`Cd` に触れない巻き戻し
+
+第 2 相のあいだ `Cd` は書かれるだけで一度も読まれない（予算カウンタとして働くのは
+第 1 相の `mProg` だけである）。そこで第 2 相では `Cd` を増やさない変種を使い、
+`Cd` を比較ガジェット用の空きテープとして確保する。 -/
+
+/-- `rewindUnit` から `Cd` の増加を除いたもの（4 動作）。 -/
+def rewindUnit2 (blank : Fin sc) : List (Act sc) :=
+  [Act.V1 .left, Act.V2 .left, Act.Cq blank .left, Act.Cq blank .stay]
+
+def rewindLoop2 (blank : Fin sc) (k : ℕ) : ℕ → ℕ → List (Act sc)
+  | 0, _ => []
+  | n + 1, 0 => (rewindUnit2 blank ++ [Act.Ce blank .right]) ++ rewindLoop2 blank k n (k - 1)
+  | n + 1, c + 1 => rewindUnit2 blank ++ rewindLoop2 blank k n c
+
+theorem rewindLoop2_length (blank : Fin sc) (k : ℕ) : ∀ n c,
+    (rewindLoop2 blank k n c).length = 4 * n + stays k n c := by
+  intro n
+  induction n with
+  | zero => intro c; simp [rewindLoop2, stays]
+  | succ n ih =>
+      intro c
+      cases c with
+      | zero =>
+          have h := ih (k - 1)
+          simp only [rewindLoop2, stays, List.length_append, rewindUnit2, List.length_cons,
+            List.length_nil, h]
+          omega
+      | succ c =>
+          have h := ih c
+          simp only [rewindLoop2, stays, List.length_append, rewindUnit2, List.length_cons,
+            List.length_nil, h]
+          omega
+
+theorem applyActs_rewindUnit2 (ts : Tapes sc) :
+    applyActs blank (rewindUnit2 blank) ts =
+      { ts with
+        V1 := Tape.step blank ts.V1 ts.V1.focus .left
+        V2 := Tape.step blank ts.V2 ts.V2.focus .left
+        Cq := Tape.step blank (Tape.step blank ts.Cq blank .left) blank .stay } := rfl
+
+theorem rewind2_unit_enc {a b D Q E P F S R : ℕ} {ts : Tapes sc}
+    (hE : Enc blank startSym endSym mark x (a + 1) (b + 1) ⟨D, Q + 1, E, P, F, S, R⟩ ts) :
+    Enc blank startSym endSym mark x a b ⟨D, Q, E, P, F, S, R⟩
+      (applyActs blank (rewindUnit2 blank) ts) := by
+  rw [applyActs_rewindUnit2]
+  exact ⟨pat_left hE.v1, pat_left hE.v2, hE.cd,
+    by simpa using Tape.counter'_dec (n := Q) hE.cq, hE.ce, hE.cp, hE.cf, hE.cs, hE.cr⟩
+
+/-- **`Cd` に触れない巻き戻しの実現**。 -/
+theorem rewind2_enc (k : ℕ) : ∀ (n c a b D Q E P F S R : ℕ) (ts : Tapes sc),
+    Enc blank startSym endSym mark x (a + n) (b + n) ⟨D, Q + n, E, P, F, S, R⟩ ts →
+      Enc blank startSym endSym mark x a b ⟨D, Q, E + stays k n c, P, F, S, R⟩
+        (applyActs blank (rewindLoop2 blank k n c) ts) := by
+  intro n
+  induction n with
+  | zero => intro c a b D Q E P F S R ts hE; simpa [rewindLoop2, stays] using hE
+  | succ n ih =>
+      intro c a b D Q E P F S R ts hE
+      have hE' : Enc blank startSym endSym mark x (a + n + 1) (b + n + 1)
+          ⟨D, (Q + n) + 1, E, P, F, S, R⟩ ts := by
+        have e1 : a + (n + 1) = a + n + 1 := by omega
+        have e2 : b + (n + 1) = b + n + 1 := by omega
+        have e3 : Q + (n + 1) = (Q + n) + 1 := by omega
+        rw [e1, e2, e3] at hE
+        exact hE
+      have hstep := rewind2_unit_enc hE'
+      cases c with
+      | zero =>
+          have hce : Enc blank startSym endSym mark x (a + n) (b + n)
+              ⟨D, Q + n, E + 1, P, F, S, R⟩
+              (applyActs blank (rewindUnit2 blank ++ [Act.Ce blank .right]) ts) := by
+            rw [applyActs_append]
+            refine ⟨hstep.v1, hstep.v2, hstep.cd, hstep.cq, ?_, hstep.cp, hstep.cf, hstep.cs,
+              hstep.cr⟩
+            exact Tape.counter'_inc hstep.ce
+          have := ih (k - 1) a b D Q (E + 1) P F S R _ hce
+          simp only [rewindLoop2, stays, applyActs_append]
+          have e5 : E + 1 + stays k n (k - 1) = E + (stays k n (k - 1) + 1) := by omega
+          rw [e5] at this
+          exact this
+      | succ c =>
+          have := ih c a b D Q E P F S R _ hstep
+          simp only [rewindLoop2, stays, applyActs_append]
+          exact this
+
 /-! ### `max 1 ⌈q/k⌉`：`Ce` が `0` なら `1` にする -/
 
 def maxOneActs (blank mark : Fin sc) (ts : Tapes sc) : List (Act sc) :=
@@ -1125,6 +1211,75 @@ theorem shiftPhase_enc (hk : 0 < k) (hmark : mark ≠ blank)
     omega
   rw [hmul] at h1
   exact h1
+
+/-- 第 2 相用の再配置（`Cd` に触れない）。 -/
+def shiftPhase2 (blank mark : Fin sc) (k : ℕ) (ts : Tapes sc) : List (Act sc) :=
+  (rewindLoop2 blank k (qOf ts) 0 ++
+      maxOneActs blank mark (applyActs blank (rewindLoop2 blank k (qOf ts) 0) ts)) ++
+    shiftLoop blank 1
+      (eOf (applyActs blank
+        (rewindLoop2 blank k (qOf ts) 0 ++
+          maxOneActs blank mark (applyActs blank (rewindLoop2 blank k (qOf ts) 0) ts)) ts))
+
+/-- **第 2 相の再配置の実現**：`Cd` は不変。動作数も `shiftPhase` より小さい。 -/
+theorem shiftPhase2_enc' (hk : 0 < k) (hmark : mark ≠ blank)
+    {s p q D F S R : ℕ} {ts : Tapes sc}
+    (hE : Enc blank startSym endSym mark x (s + q) (s + p + q) ⟨D, q, 0, p, F, S, R⟩ ts)
+    (hfit : s + p + shiftNoPeriod q k ≤ x.length) :
+    Enc blank startSym endSym mark x s (s + p + shiftNoPeriod q k)
+      ⟨D, 0, 0, p + shiftNoPeriod q k, F, S, R⟩
+      (applyActs blank (shiftPhase2 blank mark k ts) ts)
+    ∧ (shiftPhase2 blank mark k ts).length
+        ≤ 4 * q + ceilDiv q k + 3 + 4 * shiftNoPeriod q k := by
+  have hq : qOf ts = q := qOf_eq hE
+  have hE0 : Enc blank startSym endSym mark x (s + q) ((s + p) + q)
+      ⟨D, 0 + q, 0, p, F, S, R⟩ ts := by
+    have e1 : 0 + q = q := by omega
+    rw [e1]; exact hE
+  have h1 := rewind2_enc (blank := blank) (startSym := startSym) (endSym := endSym)
+    (mark := mark) (x := x) k q 0 s (s + p) D 0 0 p F S R ts hE0
+  have hst : 0 + stays k q 0 = ceilDiv q k := by rw [stays_zero k hk q]; omega
+  rw [hst] at h1
+  have h2 := maxOne_enc (a := s) (b := s + p) hmark h1
+  have hmaxe : max 1 (ceilDiv q k) = shiftNoPeriod q k := rfl
+  have h2' : Enc blank startSym endSym mark x s (s + p)
+      ⟨D, 0, shiftNoPeriod q k, p, F, S, R⟩
+      (applyActs blank (maxOneActs blank mark
+        (applyActs blank (rewindLoop2 blank k (qOf ts) 0) ts))
+        (applyActs blank (rewindLoop2 blank k (qOf ts) 0) ts)) := by
+    rw [hq]
+    simpa [hmaxe] using h2
+  have hmid : applyActs blank (rewindLoop2 blank k (qOf ts) 0 ++
+      maxOneActs blank mark (applyActs blank (rewindLoop2 blank k (qOf ts) 0) ts)) ts =
+      applyActs blank (maxOneActs blank mark
+        (applyActs blank (rewindLoop2 blank k (qOf ts) 0) ts))
+        (applyActs blank (rewindLoop2 blank k (qOf ts) 0) ts) := applyActs_append _ _ _ _
+  have he : eOf (applyActs blank (rewindLoop2 blank k (qOf ts) 0 ++
+      maxOneActs blank mark (applyActs blank (rewindLoop2 blank k (qOf ts) 0) ts)) ts)
+      = shiftNoPeriod q k := by
+    rw [hmid]; exact eOf_eq h2'
+  have h3 : Enc blank startSym endSym mark x s (s + p + shiftNoPeriod q k)
+      ⟨D, 0, 0, p + shiftNoPeriod q k, F, S, R⟩
+      (applyActs blank (shiftLoop blank 1 (shiftNoPeriod q k))
+        (applyActs blank (rewindLoop2 blank k (qOf ts) 0 ++
+          maxOneActs blank mark (applyActs blank (rewindLoop2 blank k (qOf ts) 0) ts)) ts)) := by
+    have hsl := shiftLoop_enc (blank := blank) (startSym := startSym) (endSym := endSym)
+      (mark := mark) (x := x) 1 (shiftNoPeriod q k) s (s + p) D 0 0 p F S R
+      (applyActs blank (rewindLoop2 blank k (qOf ts) 0 ++
+        maxOneActs blank mark (applyActs blank (rewindLoop2 blank k (qOf ts) 0) ts)) ts)
+      (by rw [hmid]; rw [show (0 : ℕ) + shiftNoPeriod q k = shiftNoPeriod q k from by omega]
+          exact h2') (by omega)
+    simpa using hsl
+  constructor
+  · rw [shiftPhase2, he, applyActs_append]
+    exact h3
+  · rw [shiftPhase2, he]
+    have hm := maxOneActs_length_le blank mark
+      (applyActs blank (rewindLoop2 blank k (qOf ts) 0) ts)
+    simp only [List.length_append, rewindLoop2_length, shiftLoop_length,
+      stays_zero k hk (qOf ts)]
+    rw [hq] at hm ⊢
+    omega
 
 /-! ### 添字レベルの補助 -/
 
@@ -2480,7 +2635,7 @@ def soShift (blank endSym mark : Fin sc) (orc orc2 : Tapes sc → Bool) (k Fs : 
   if sAbort endSym orc (soAfterInner blank endSym orc Fs ts) then []
   else if orc2 (soAfterInner blank endSym orc Fs ts) then
     periodShift blank (fOf (soAfterInner blank endSym orc Fs ts))
-  else shiftPhase blank mark k (soAfterInner blank endSym orc Fs ts)
+  else shiftPhase2 blank mark k (soAfterInner blank endSym orc Fs ts)
 
 def soAfterShift (blank endSym mark : Fin sc) (orc orc2 : Tapes sc → Bool) (k Fs : ℕ)
     (ts : Tapes sc) : Tapes sc :=
@@ -2760,7 +2915,7 @@ theorem soProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank
                 = false := by
               rw [horc2q]; exact decide_eq_false hb2
             have hshift : soShift blank endSym mark orc orc2 k ((x.drop s).length + 1) ts
-                = shiftPhase blank mark k
+                = shiftPhase2 blank mark k
                   (soAfterInner blank endSym orc ((x.drop s).length + 1) ts) := by
               rw [soShift, if_neg hab, horcF]
               simp
@@ -2770,12 +2925,11 @@ theorem soProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank
                 omega
               · have := shiftNoPeriod_le_of_pos (k := k) (by omega) h0
                 omega
-            obtain ⟨hE3, hlen3⟩ := shiftPhase_enc' (blank := blank) (startSym := startSym)
+            obtain ⟨hE3, hlen3⟩ := shiftPhase2_enc' (blank := blank) (startSym := startSym)
               (endSym := endSym) (mark := mark) (x := x) (k := k) (by omega) hmark hE2 hfitE
             have hE3' : Enc blank startSym endSym mark x s
                 (s + (p + shiftNoPeriod (q + j) k))
-                ⟨D + (q + j) + (k - 1) * shiftNoPeriod (q + j) k, 0, 0,
-                  p + shiftNoPeriod (q + j) k, first, S, r⟩
+                ⟨D, 0, 0, p + shiftNoPeriod (q + j) k, first, S, r⟩
                 (soAfterShift blank endSym mark orc orc2 k ((x.drop s).length + 1) ts) := by
               rw [soAfterShift, hshift]
               have e1 : s + p + shiftNoPeriod (q + j) k
@@ -2783,7 +2937,7 @@ theorem soProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank
               rw [e1] at hE3
               exact hE3
             obtain ⟨hrc, hre⟩ := ih (p + shiftNoPeriod (q + j) k) 0
-              (D + (q + j) + (k - 1) * shiftNoPeriod (q + j) k) _ (by omega) hE3'
+              D _ (by omega) hE3'
             have hprog : soProg blank endSym mark orc orc2 k ((x.drop s).length + 1) (fuel + 1) ts
                 = soTest blank ts ++ (soInner blank endSym orc ((x.drop s).length + 1) ts ++
                   (soShift blank endSym mark orc orc2 k ((x.drop s).length + 1) ts ++
@@ -2824,13 +2978,13 @@ theorem soProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank
               have hmul : 3 * W + C * W ≤ A * W := by
                 calc 3 * W + C * W = (3 + C) * W := by ring
                   _ ≤ A * W := Nat.mul_le_mul_right W (by omega)
-              have hke : (4 + (k - 1)) * e ≤ (k + 3) * e := Nat.mul_le_mul_right e (by omega)
-              have hke2 : (k + 3) * e ≤ (k + 3) * ((q + j) + 1) := Nat.mul_le_mul_left _ heq1
-              have hke3 : (k + 3) * ((q + j) + 1) = (k + 3) * (q + j) + (k + 3) := by ring
+              have hke : 4 * e ≤ 4 * ((q + j) + 1) := Nat.mul_le_mul_left 4 heq1
+              have hke3 : 4 * ((q + j) + 1) = 4 * (q + j) + 4 := by ring
               have hCqj : C * (q + j) = C * q + C * j := by ring
               have hCj : C * j ≤ C * W := Nat.mul_le_mul_left C (by omega)
-              have hsplit : 5 * (q + j) + (q + j) + (k + 3) * (q + j) = C * (q + j) := by
-                rw [← hC]; ring
+              have h9 : 9 * (q + j) ≤ C * (q + j) :=
+                Nat.mul_le_mul_right (q + j) (by omega)
+              have hA9 : 9 ≤ A := by omega
               omega
             · obtain ⟨D', q', E', P', hEnc', hfit', hq', hP', hD', hp2, hflag⟩ := hre
               have he' : shiftNoPeriod (q + j) k ≤ (q + j) + 1 :=

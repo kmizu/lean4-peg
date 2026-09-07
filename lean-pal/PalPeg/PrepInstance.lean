@@ -495,7 +495,8 @@ theorem copyLoop2_spec (blank : Fin sc) {i j1 j2 : Fin 12} (hij1 : j1 ≠ i) (hi
 
 section Prologue
 
-variable {blank startSym endSym mark : Fin sc} {L : ℕ} {w Text : List (Fin sc)} {S : Tapes sc}
+variable {blank startSym endSym mark leftSym : Fin sc} {L : ℕ} {w Text : List (Fin sc)}
+  {S : Tapes sc}
 
 /-- **prologue プログラム**：`sIn`（ヘッド `L - 1`）から `x = (w.take L).reverse` を
 `sP`/`sU` の両方へ `pword startSym endSym x`（ヘッド添字 `1`）の形で書き、`sIn` のヘッドを
@@ -507,29 +508,30 @@ def prologueProg (blank startSym endSym : Fin sc) (L : ℕ) : Tapes sc → List 
       (seqP blank (fun _ => pushBoth endSym)
         (seqP blank (fun _ => settle blank sU L)
           (seqP blank (fun _ => settle blank sP L)
-            (fun _ => rightWalk sIn (L - 1))))))
+            (fun _ => rightWalk sIn L)))))
 
-/-- **prologue の長さ**：`6 * L + 5` ちょうど（`L ≥ 1`）。 -/
-theorem prologueProg_length (hL : 0 < L) (S : Tapes sc) :
-    (prologueProg (sc := sc) blank startSym endSym L S).length = 6 * L + 5 := by
+/-- **prologue の長さ**：`6 * L + 6` ちょうど（`L ≥ 1`）。 -/
+theorem prologueProg_length (_hL : 0 < L) (S : Tapes sc) :
+    (prologueProg (sc := sc) blank startSym endSym L S).length = 6 * L + 6 := by
   simp only [prologueProg, seqP_length, pushBoth_length, copyLoop2_length, settle_length,
     rightWalk_length]
   omega
 
 theorem prologueProg_length_le (hL : 0 < L) (S : Tapes sc) :
-    (prologueProg (sc := sc) blank startSym endSym L S).length ≤ 6 * L + 5 :=
+    (prologueProg (sc := sc) blank startSym endSym L S).length ≤ 6 * L + 6 :=
   (prologueProg_length hL S).le
 
 /-- **prologue の正しさ**：`PrepPre` から出発すると、`prj` を通して `GSPre.Enc` が
 初期状態（`a = b = 0`, `Ctr` は全 `0`）で成立し、テキスト 2 本 (`sT`/`sX2`) は不変、
 `sIn` は元の `SeqView` に戻る。 -/
-theorem prologue_spec (hpre : StageTapes.PrepPre blank mark L w Text S) :
+theorem prologue_spec (hpre : StageTapes.PrepPre blank mark leftSym L w Text S) :
     GSPre.Enc blank startSym endSym mark (PrepInstances.stagePat w L) 0 0 ⟨0, 0, 0, 0, 0, 0, 0⟩
         (prj (run blank (prologueProg blank startSym endSym L S) S))
       ∧ run blank (prologueProg blank startSym endSym L S) S sT = S sT
       ∧ run blank (prologueProg blank startSym endSym L S) S sX2 = S sX2
-      ∧ Tape.SeqView blank (run blank (prologueProg blank startSym endSym L S) S sIn) w (L - 1) := by
-  obtain ⟨hpos, hle, hIn, hU, hP, hT, hX2, hCs, hC1, hC2, hAp, hAn, hRp, hRn⟩ := hpre
+      ∧ Tape.SeqView blank (run blank (prologueProg blank startSym endSym L S) S sIn)
+          (leftSym :: w.take L) L := by
+  obtain ⟨hpos, hle, hfresh, hIn, hU, hP, hT, hX2, hCs, hC1, hC2, hAp, hAn, hRp, hRn⟩ := hpre
   set x := PrepInstances.stagePat w L with hx
   have hxlen : x.length = L := PrepInstances.stagePat_length hle
   -- フェーズ 1：両方に `startSym`。
@@ -540,7 +542,7 @@ theorem prologue_spec (hpre : StageTapes.PrepPre blank mark L w Text S) :
     rw [hS1U]; simpa using Tape.push_spec hU startSym
   have hS1st2 : Tape.StackView blank (S₁ sP) [startSym] := by
     rw [hS1P]; simpa using Tape.push_spec hP startSym
-  have hS1In : Tape.SeqView blank (S₁ sIn) w (L - 1) := by
+  have hS1In : Tape.SeqView blank (S₁ sIn) (leftSym :: w.take L) L := by
     rw [← hS1]; rwa [pushBoth_ne blank startSym (show sIn ≠ sU by decide)
       (show sIn ≠ sP by decide)]
   have hS1T : S₁ sT = S sT := by
@@ -553,20 +555,20 @@ theorem prologue_spec (hpre : StageTapes.PrepPre blank mark L w Text S) :
     intro j hju hjp; rw [← hS1]; exact pushBoth_ne blank startSym hju hjp S
   -- フェーズ 2：`sIn` から両方へ `x` を積む。
   obtain ⟨S₂, hS2⟩ : ∃ T, run blank (copyLoop2 blank sIn sU sP L S₁) S₁ = T := ⟨_, rfl⟩
-  have hLb : L ≤ (L - 1) + 1 := by omega
+  have hLb : L ≤ L + 1 := by omega
   obtain ⟨h2i, h2u, h2p⟩ := copyLoop2_spec blank (show sU ≠ sIn by decide)
-    (show sP ≠ sIn by decide) (show sU ≠ sP by decide) L (L - 1) S₁ w [startSym] [startSym]
-    hLb hS1In hS1st1 hS1st2
+    (show sP ≠ sIn by decide) (show sU ≠ sP by decide) L L S₁ (leftSym :: w.take L)
+    [startSym] [startSym] hLb hS1In hS1st1 hS1st2
   rw [hS2] at h2i h2u h2p
-  have hb1 : (L - 1) + 1 = L := by omega
-  have hdrop0 : L - L = 0 := by omega
-  rw [hb1] at h2u h2p
-  have h2i' : Tape.SeqView blank (S₂ sIn) w 0 := by
-    rwa [show L - 1 - L = 0 from by omega] at h2i
+  have hvfull : ((leftSym :: w.take L).take (L + 1)).drop (L + 1 - L) = w.take L := by
+    rw [List.take_of_length_le (by simp only [List.length_cons, List.length_take]; omega),
+      show L + 1 - L = 1 from by omega, List.drop_succ_cons, List.drop_zero]
+  have h2i' : Tape.SeqView blank (S₂ sIn) (leftSym :: w.take L) 0 := by
+    rwa [Nat.sub_self] at h2i
   have h2u' : Tape.StackView blank (S₂ sU) (w.take L ++ [startSym]) := by
-    simpa [hdrop0] using h2u
+    rwa [hvfull] at h2u
   have h2p' : Tape.StackView blank (S₂ sP) (w.take L ++ [startSym]) := by
-    simpa [hdrop0] using h2p
+    rwa [hvfull] at h2p
   have h2T : S₂ sT = S sT := by
     rw [← hS2, copyLoop2_untouched blank (show sT ≠ sIn by decide) (show sT ≠ sU by decide)
       (show sT ≠ sP by decide) L S₁, hS1T]
@@ -626,15 +628,17 @@ theorem prologue_spec (hpre : StageTapes.PrepPre blank mark L w Text S) :
     intro j hju hjp hji
     rw [hS5other j hjp, hS4other j hju, hS3cnt j hju hjp, h2cnt j hji hju hjp, hS1cnt j hju hjp]
   -- フェーズ 6：`sIn` を `L - 1` へ戻す。
-  have hS5In' : Tape.SeqView blank (S₅ sIn) w 0 := by rw [hS5In]; exact h2i'
-  obtain ⟨S₆, hS6⟩ : ∃ T, run blank (rightWalk sIn (L - 1)) S₅ = T := ⟨_, rfl⟩
-  have hLlt : (0 : ℕ) + (L - 1) < w.length := by omega
-  have hS6In : Tape.SeqView blank (S₆ sIn) w (L - 1) := by
+  have hS5In' : Tape.SeqView blank (S₅ sIn) (leftSym :: w.take L) 0 := by
+    rw [hS5In]; exact h2i'
+  obtain ⟨S₆, hS6⟩ : ∃ T, run blank (rightWalk sIn L) S₅ = T := ⟨_, rfl⟩
+  have hLlt : (0 : ℕ) + L < (leftSym :: w.take L).length := by
+    simp only [List.length_cons, List.length_take]; omega
+  have hS6In : Tape.SeqView blank (S₆ sIn) (leftSym :: w.take L) L := by
     rw [← hS6]
-    have h := rightWalk_spec blank sIn (L - 1) 0 S₅ w hLlt hS5In'
+    have h := rightWalk_spec blank sIn L 0 S₅ (leftSym :: w.take L) hLlt hS5In'
     simpa using h
   have hS6other : ∀ j : Fin 12, j ≠ sIn → S₆ j = S₅ j := by
-    intro j hj; rw [← hS6]; exact rightWalk_untouched blank hj (L - 1) S₅
+    intro j hj; rw [← hS6]; exact rightWalk_untouched blank hj L S₅
   have hS6U : Tape.SeqView blank (S₆ sU)
       ((endSym :: (w.take L ++ [startSym])).reverse) 1 := by
     rw [hS6other sU (show sU ≠ sIn by decide)]; exact hS5U
@@ -1344,7 +1348,8 @@ end Epilogue
 
 section Full
 
-variable {blank startSym endSym mark : Fin sc} {L : ℕ} {w Text : List (Fin sc)} {ts : Tapes sc}
+variable {blank startSym endSym mark leftSym : Fin sc} {L : ℕ} {w Text : List (Fin sc)}
+  {ts : Tapes sc}
 
 /-- **全体プログラム**：prologue で `x = (w.take L).reverse` を `sP`/`sU` に書き、
 `GSPre.decProg`（`liftAct` で埋め込み）を挽き、epilogue で `SetupPre` の形へ戻す。 -/
@@ -1365,8 +1370,8 @@ noncomputable def fullProg (blank startSym endSym mark : Fin sc) (w : List (Fin 
 コメントを参照）。 -/
 theorem prepPre_to_setupPre (hmb : mark ≠ blank)
     (hend : endSym ∉ PrepInstances.stagePat w L)
-    (hpre : StageTapes.PrepPre blank mark L w Text ts) :
-    SetupPre blank mark (PrepInstances.prepRes w L).1 L (PrepInstances.prepRes w L).2.1
+    (hpre : StageTapes.PrepPre blank mark leftSym L w Text ts) :
+    SetupPre blank mark leftSym (PrepInstances.prepRes w L).1 L (PrepInstances.prepRes w L).2.1
         (PrepInstances.prepRes w L).2.2 w Text
       (run blank (fullProg blank startSym endSym mark w L ts) ts) := by
   set x := PrepInstances.stagePat w L with hx
@@ -1475,10 +1480,10 @@ theorem prepPre_to_setupPre (hmb : mark ≠ blank)
 theorem fullProg_length_le (C₁ : ℕ) (hmb : mark ≠ blank)
     (hend : endSym ∉ PrepInstances.stagePat w L)
     (hsum : ∀ (y : List (Fin sc)) (b s' : ℕ), stripLoop2Periods y 8 b (y.length + 1) s' ≤ C₁ * b)
-    (hpre : StageTapes.PrepPre blank mark L w Text ts) :
+    (hpre : StageTapes.PrepPre blank mark leftSym L w Text ts) :
     (fullProg blank startSym endSym mark w L ts).length
       ≤ (13 + 9 * ((19 * 8 + 85) * (34 * C₁ + 186) + (4 * 8 + 17))) * L
-        + (18 + 9 * ((19 * 8 + 85) * 21 + (4 * 8 + 17))) := by
+        + (19 + 9 * ((19 * 8 + 85) * 21 + (4 * 8 + 17))) := by
   set x := PrepInstances.stagePat w L with hx
   have hpos := hpre.hpos
   have hle := hpre.hle
@@ -1489,7 +1494,7 @@ theorem fullProg_length_le (C₁ : ℕ) (hmb : mark ≠ blank)
   set T1 := run blank (prologueProg blank startSym endSym L ts) ts with hT1
   have hEncI' : GSPre.Enc blank startSym endSym mark x 0 0 ⟨0, 0, 0, 0, 0, 0, 0⟩ (prj T1) := by
     rw [hx]; exact hEncI
-  have hprologueLen : (prologueProg blank startSym endSym L ts).length = 6 * L + 5 :=
+  have hprologueLen : (prologueProg blank startSym endSym L ts).length = 6 * L + 6 :=
     prologueProg_length hpos ts
   -- decompose2_on_tapes
   obtain ⟨hdeclen, a, b, D, Q, E, hEncO⟩ := GSPre.decompose2_on_tapes (blank := blank)
@@ -1605,10 +1610,10 @@ theorem fullProg_length_le (C₁ : ℕ) (hmb : mark ≠ blank)
   rw [hrunFull, hprologueLen]
   have haL : a ≤ L := by rw [← hxlen]; exact haLe
   have hbL : b ≤ L := by rw [← hxlen]; exact hbLe
-  have heq : 13 * L + 18
+  have heq : 13 * L + 19
         + 9 * ((19 * 8 + 85) * ((34 * C₁ + 186) * L + 21) + (4 * 8 + 17) * (L + 1))
       = (13 + 9 * ((19 * 8 + 85) * (34 * C₁ + 186) + (4 * 8 + 17))) * L
-        + (18 + 9 * ((19 * 8 + 85) * 21 + (4 * 8 + 17))) := by ring
+        + (19 + 9 * ((19 * 8 + 85) * 21 + (4 * 8 + 17))) := by ring
   rw [← heq]
   omega
 
@@ -1649,8 +1654,8 @@ theorem stagePat_forb_of {w : List (Fin sc)} {L : ℕ} (h : endSym ∉ w) :
 /-- **`Cp`**：`13 + 9 * ((19 * 8 + 85) * (34 * C₁ + 186) + (4 * 8 + 17))`。 -/
 def prepCp (C₁ : ℕ) : ℕ := 13 + 9 * ((19 * 8 + 85) * (34 * C₁ + 186) + (4 * 8 + 17))
 
-/-- **`Dp`**：`18 + 9 * ((19 * 8 + 85) * 21 + (4 * 8 + 17))`（`C₁` に依存しない）。 -/
-def prepDp : ℕ := 18 + 9 * ((19 * 8 + 85) * 21 + (4 * 8 + 17))
+/-- **`Dp`**：`19 + 9 * ((19 * 8 + 85) * 21 + (4 * 8 + 17))`（`C₁` に依存しない）。 -/
+def prepDp : ℕ := 19 + 9 * ((19 * 8 + 85) * 21 + (4 * 8 + 17))
 
 /-- **`prepInstance`**：`StageTapes.PrepOnTapes sc blank mark endSym` の具体化。
 `prog` は `fullProg`（prologue ＋ `decProg` ＋ epilogue）、`res` は
@@ -1666,13 +1671,13 @@ noncomputable def prepInstance (C₁ : ℕ)
   Cp := prepCp C₁
   Dp := prepDp
   len_le := by
-    intro w Text L ts hpre hforb
+    intro w Text L ts leftSym hpre hforb
     show (fullProg blank startSym endSym mark (w.take L) L ts).length ≤ prepCp C₁ * L + prepDp
     rw [fullProg_take_self]
     exact fullProg_length_le C₁ hmb (stagePat_forb_of hforb) hsum hpre
   post := by
-    intro w Text L ts hpre hforb _hcut
-    show SetupPre blank mark (PrepInstances.prepRes w L).1 L (PrepInstances.prepRes w L).2.1
+    intro w Text L ts leftSym hpre hforb _hcut
+    show SetupPre blank mark leftSym (PrepInstances.prepRes w L).1 L (PrepInstances.prepRes w L).2.1
         (PrepInstances.prepRes w L).2.2 w Text
         (run blank (fullProg blank startSym endSym mark (w.take L) L ts) ts)
     rw [fullProg_take_self]
@@ -1694,7 +1699,7 @@ theorem prepInstance_res (C₁ : ℕ)
 1. `liftAct` / `prj` / `prj_run` / `run_liftActs_other` — 9↔12 本の埋め込みと模倣補題。
 2. `width_*_applyAct(s)_le`（9 成分すべて）— `ClearAny.width_step` の `GSPre.Act` 版。
 3. `prologueProg` / `prologue_spec` — `PrepPre` から `GSPre.Enc … x 0 0 ⟨0,…,0⟩` を作る
-   （`x = (w.take L).reverse`）。長さちょうど `6 * L + 5`。
+   （`x = (w.take L).reverse`）。長さちょうど `6 * L + 6`。
 4. `decLoop` / `clearSeqProg`（`## 3g2`）— **値・既知内容量**でコストが決まるクリア：
    `ClearAny` の形非依存クリアは右文脈の未知の余白の長さに依存してしまい（`PrepPre` は
    その長さを一切固定しない）、`len_le` の証明に使えない。そこで

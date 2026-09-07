@@ -1339,6 +1339,1342 @@ theorem homeS1_spec (blank : Fin sc) (L : ℕ) (ts : OvTapes sc) (w : List (Fin 
 
 end EpilogueAux
 
+
+/-! ## 13. epilogue の部品（番人駆動の左歩き、押し込み、不変性） -/
+
+section EpiParts
+
+variable {blank startSym endSym mark : Fin sc}
+
+/-- 積み終えたスタックを、末尾に空白を 1 個足した語の逐次ビューとして見る。 -/
+theorem stack_to_seq_end (blank : Fin sc) (w : List (Fin sc)) (tp : TapeConfiguration sc)
+    (h : Tape.StackView blank tp w.reverse) :
+    Tape.SeqView blank tp (w ++ [blank]) w.length := by
+  refine ⟨?_, ?_, ⟨tp.right, ?_, h.right_blanks⟩⟩
+  · rw [h.left_eq, List.take_left]
+  · rw [List.getElem?_append_right (le_refl _)]
+    simp [h.focus_blank]
+  · rw [List.drop_eq_nil_of_le (by simp)]
+    simp
+
+/-- `P` を番人 `startSym` まで左へ歩く。 -/
+def toSentP (startSym : Fin sc) : ℕ → OvTapes sc → List (Act sc)
+  | 0, _ => []
+  | n + 1, ts =>
+      if ts.P.focus = startSym then []
+      else Act.P .left :: toSentP startSym n (applyAct blank ts (Act.P .left))
+
+/-- `U` を番人 `startSym` まで左へ歩く。 -/
+def toSentU (startSym : Fin sc) : ℕ → OvTapes sc → List (Act sc)
+  | 0, _ => []
+  | n + 1, ts =>
+      if ts.U.focus = startSym then []
+      else Act.U .left :: toSentU startSym n (applyAct blank ts (Act.U .left))
+
+/-- 番人駆動の左歩きの正当性（`P`）。 -/
+theorem toSentP_spec {v : List (Fin sc)} (hv : startSym ∉ v) :
+    ∀ (n i : ℕ) (ts : OvTapes sc), i ≤ n →
+      Tape.SeqView blank ts.P (startSym :: v) i →
+      Tape.SeqView blank (applyActs blank (toSentP (blank := blank) startSym n ts) ts).P
+          (startSym :: v) 0
+        ∧ (toSentP (blank := blank) startSym n ts).length = i := by
+  intro n
+  induction n with
+  | zero =>
+      intro i ts hi h
+      have : i = 0 := by omega
+      subst this
+      rw [show toSentP (blank := blank) startSym 0 ts = [] from rfl]
+      exact ⟨by simpa using h, rfl⟩
+  | succ n ih =>
+      intro i ts hi h
+      cases i with
+      | zero =>
+          have hf : ts.P.focus = startSym := by
+            have := h.focus_eq
+            simp at this
+            exact this.symm
+          rw [toSentP, if_pos hf]
+          exact ⟨by simpa using h, rfl⟩
+      | succ j =>
+          have hf : ¬ ts.P.focus = startSym := by
+            intro hc
+            have := h.focus_eq
+            rw [List.getElem?_cons_succ] at this
+            exact hv (hc ▸ (List.getElem?_eq_some_iff.1 this).2 ▸
+              List.getElem_mem (List.getElem?_eq_some_iff.1 this).1)
+          rw [toSentP, if_neg hf, applyActs_cons]
+          have hstep : (applyAct blank ts (Act.P .left)).P
+              = Tape.step blank ts.P ts.P.focus .left := rfl
+          have h' : Tape.SeqView blank (applyAct blank ts (Act.P .left)).P (startSym :: v) j := by
+            rw [hstep]; exact Tape.seq_move_left h
+          obtain ⟨g1, g2⟩ := ih j (applyAct blank ts (Act.P .left)) (by omega) h'
+          exact ⟨g1, by rw [List.length_cons, g2]⟩
+
+/-- 番人駆動の左歩きの正当性（`U`）。 -/
+theorem toSentU_spec {v : List (Fin sc)} (hv : startSym ∉ v) :
+    ∀ (n i : ℕ) (ts : OvTapes sc), i ≤ n →
+      Tape.SeqView blank ts.U (startSym :: v) i →
+      Tape.SeqView blank (applyActs blank (toSentU (blank := blank) startSym n ts) ts).U
+          (startSym :: v) 0
+        ∧ (toSentU (blank := blank) startSym n ts).length = i := by
+  intro n
+  induction n with
+  | zero =>
+      intro i ts hi h
+      have : i = 0 := by omega
+      subst this
+      rw [show toSentU (blank := blank) startSym 0 ts = [] from rfl]
+      exact ⟨by simpa using h, rfl⟩
+  | succ n ih =>
+      intro i ts hi h
+      cases i with
+      | zero =>
+          have hf : ts.U.focus = startSym := by
+            have := h.focus_eq
+            simp at this
+            exact this.symm
+          rw [toSentU, if_pos hf]
+          exact ⟨by simpa using h, rfl⟩
+      | succ j =>
+          have hf : ¬ ts.U.focus = startSym := by
+            intro hc
+            have := h.focus_eq
+            rw [List.getElem?_cons_succ] at this
+            exact hv (hc ▸ (List.getElem?_eq_some_iff.1 this).2 ▸
+              List.getElem_mem (List.getElem?_eq_some_iff.1 this).1)
+          rw [toSentU, if_neg hf, applyActs_cons]
+          have hstep : (applyAct blank ts (Act.U .left)).U
+              = Tape.step blank ts.U ts.U.focus .left := rfl
+          have h' : Tape.SeqView blank (applyAct blank ts (Act.U .left)).U (startSym :: v) j := by
+            rw [hstep]; exact Tape.seq_move_left h
+          obtain ⟨g1, g2⟩ := ih j (applyAct blank ts (Act.U .left)) (by omega) h'
+          exact ⟨g1, by rw [List.length_cons, g2]⟩
+
+end EpiParts
+
+
+/-! ### 13b. 各ループが触らないテープ -/
+
+section Keeps
+
+variable {blank startSym endSym mark : Fin sc}
+
+theorem splitLoop_keep :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      (applyActs blank (splitLoop blank mark n ts) ts).X = ts.X
+        ∧ (applyActs blank (splitLoop blank mark n ts) ts).X2 = ts.X2
+        ∧ (applyActs blank (splitLoop blank mark n ts) ts).F = ts.F
+        ∧ (applyActs blank (splitLoop blank mark n ts) ts).P = ts.P
+        ∧ (applyActs blank (splitLoop blank mark n ts) ts).Cnt = ts.Cnt
+        ∧ (applyActs blank (splitLoop blank mark n ts) ts).S2 = ts.S2
+        ∧ (applyActs blank (splitLoop blank mark n ts) ts).S3 = ts.S3
+        ∧ (applyActs blank (splitLoop blank mark n ts) ts).S4 = ts.S4
+        ∧ (applyActs blank (splitLoop blank mark n ts) ts).S5 = ts.S5
+        ∧ (applyActs blank (splitLoop blank mark n ts) ts).S6 = ts.S6
+        ∧ (applyActs blank (splitLoop blank mark n ts) ts).S7 = ts.S7
+        ∧ (applyActs blank (splitLoop blank mark n ts) ts).S9 = ts.S9 := by
+  intro n
+  induction n with
+  | zero => intro ts; exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | succ n ih =>
+      intro ts
+      rw [splitLoop]
+      split
+      · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+      · rw [applyActs_append]
+        have h := ih (applyActs blank (splitRound blank ts) ts)
+        rw [splitRound_run] at h
+        exact h
+
+theorem copyPLoop_keep (inc : Bool) :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      (applyActs blank (copyPLoop blank endSym inc n ts) ts).X = ts.X
+        ∧ (applyActs blank (copyPLoop blank endSym inc n ts) ts).X2 = ts.X2
+        ∧ (applyActs blank (copyPLoop blank endSym inc n ts) ts).F = ts.F
+        ∧ (applyActs blank (copyPLoop blank endSym inc n ts) ts).U = ts.U
+        ∧ (applyActs blank (copyPLoop blank endSym inc n ts) ts).S2 = ts.S2
+        ∧ (applyActs blank (copyPLoop blank endSym inc n ts) ts).S3 = ts.S3
+        ∧ (applyActs blank (copyPLoop blank endSym inc n ts) ts).S4 = ts.S4
+        ∧ (applyActs blank (copyPLoop blank endSym inc n ts) ts).S5 = ts.S5
+        ∧ (applyActs blank (copyPLoop blank endSym inc n ts) ts).S6 = ts.S6
+        ∧ (applyActs blank (copyPLoop blank endSym inc n ts) ts).S7 = ts.S7
+        ∧ (applyActs blank (copyPLoop blank endSym inc n ts) ts).S8 = ts.S8
+        ∧ (applyActs blank (copyPLoop blank endSym inc n ts) ts).S9 = ts.S9 := by
+  intro n
+  induction n with
+  | zero => intro ts; exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | succ n ih =>
+      intro ts
+      rw [copyPLoop]
+      split
+      · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+      · rw [applyActs_append]
+        have h := ih (applyActs blank (copyPRound blank inc ts) ts)
+        cases inc
+        · rw [copyPRound_run_false] at h; exact h
+        · rw [copyPRound_run_true] at h; exact h
+
+theorem ctrMoveLoop_keep :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      (applyActs blank (ctrMoveLoop blank mark n ts) ts).X = ts.X
+        ∧ (applyActs blank (ctrMoveLoop blank mark n ts) ts).X2 = ts.X2
+        ∧ (applyActs blank (ctrMoveLoop blank mark n ts) ts).F = ts.F
+        ∧ (applyActs blank (ctrMoveLoop blank mark n ts) ts).P = ts.P
+        ∧ (applyActs blank (ctrMoveLoop blank mark n ts) ts).U = ts.U
+        ∧ (applyActs blank (ctrMoveLoop blank mark n ts) ts).S1 = ts.S1
+        ∧ (applyActs blank (ctrMoveLoop blank mark n ts) ts).S2 = ts.S2
+        ∧ (applyActs blank (ctrMoveLoop blank mark n ts) ts).S3 = ts.S3
+        ∧ (applyActs blank (ctrMoveLoop blank mark n ts) ts).S4 = ts.S4
+        ∧ (applyActs blank (ctrMoveLoop blank mark n ts) ts).S5 = ts.S5
+        ∧ (applyActs blank (ctrMoveLoop blank mark n ts) ts).S7 = ts.S7
+        ∧ (applyActs blank (ctrMoveLoop blank mark n ts) ts).S8 = ts.S8
+        ∧ (applyActs blank (ctrMoveLoop blank mark n ts) ts).S9 = ts.S9 := by
+  intro n
+  induction n with
+  | zero => intro ts; exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | succ n ih =>
+      intro ts
+      rw [ctrMoveLoop]
+      split
+      · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+      · rw [applyActs_append]
+        have h := ih (applyActs blank (ctrMoveRound blank) ts)
+        rw [ctrMoveRound_run] at h
+        exact h
+
+theorem toSentP_keep :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      applyActs blank (toSentP (blank := blank) startSym n ts) ts
+        = { ts with P := (applyActs blank (toSentP (blank := blank) startSym n ts) ts).P } := by
+  intro n
+  induction n with
+  | zero => intro ts; cases ts; rfl
+  | succ n ih =>
+      intro ts
+      rw [toSentP]
+      split
+      · cases ts; rfl
+      · rw [applyActs_cons]
+        have h := ih (applyAct blank ts (Act.P .left))
+        rw [h]
+        cases ts
+        rfl
+
+theorem toSentU_keep :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      applyActs blank (toSentU (blank := blank) startSym n ts) ts
+        = { ts with U := (applyActs blank (toSentU (blank := blank) startSym n ts) ts).U } := by
+  intro n
+  induction n with
+  | zero => intro ts; cases ts; rfl
+  | succ n ih =>
+      intro ts
+      rw [toSentU]
+      split
+      · cases ts; rfl
+      · rw [applyActs_cons]
+        have h := ih (applyAct blank ts (Act.U .left))
+        rw [h]
+        cases ts
+        rfl
+
+theorem homeS1_main (L : ℕ) (ts : OvTapes sc) :
+    (applyActs blank (homeS1 blank L ts) ts).P = ts.P
+      ∧ (applyActs blank (homeS1 blank L ts) ts).X = ts.X
+      ∧ (applyActs blank (homeS1 blank L ts) ts).Cnt = ts.Cnt
+      ∧ (applyActs blank (homeS1 blank L ts) ts).U = ts.U
+      ∧ (applyActs blank (homeS1 blank L ts) ts).X2 = ts.X2
+      ∧ (applyActs blank (homeS1 blank L ts) ts).F = ts.F := by
+  rw [homeS1, seqA_run]
+  set ts₁ := applyActs blank (lwalkS blank SIdx.s1 (L + 2) ts) ts with hts₁
+  have hm := lwalkS_main (blank := blank) SIdx.s1 (L + 2) ts
+  rw [← hts₁] at hm
+  have hs := sAct_main (blank := blank) SIdx.s1 (sGet SIdx.s1 ts₁).focus Move.right ts₁
+  rw [show applyActs blank [sAct SIdx.s1 (sGet SIdx.s1 ts₁).focus Move.right] ts₁
+      = applyAct blank ts₁ (sAct SIdx.s1 (sGet SIdx.s1 ts₁).focus Move.right) from rfl]
+  exact ⟨by rw [hs.1, hm.1], by rw [hs.2.1, hm.2.1], by rw [hs.2.2.1, hm.2.2.1],
+    by rw [hs.2.2.2.1, hm.2.2.2.1], by rw [hs.2.2.2.2.1, hm.2.2.2.2.1],
+    by rw [hs.2.2.2.2.2, hm.2.2.2.2.2]⟩
+
+theorem homeS1_slot {j : SIdx} (hj : j ≠ .s1) (L : ℕ) (ts : OvTapes sc) :
+    sGet j (applyActs blank (homeS1 blank L ts) ts) = sGet j ts := by
+  rw [homeS1, seqA_run]
+  set ts₁ := applyActs blank (lwalkS blank SIdx.s1 (L + 2) ts) ts with hts₁
+  have ho : sGet j ts₁ = sGet j ts := by rw [hts₁]; exact lwalkS_other blank hj _ _
+  rw [show applyActs blank [sAct SIdx.s1 (sGet SIdx.s1 ts₁).focus Move.right] ts₁
+      = applyAct blank ts₁ (sAct SIdx.s1 (sGet SIdx.s1 ts₁).focus Move.right) from rfl,
+    sGet_sAct_ne hj, ho]
+
+end Keeps
+
+
+/-! ## 14. 作業テープ 9 本のまとめ消去（内容依存の長さ） -/
+
+section ClearAll
+
+variable {blank mark : Fin sc}
+
+/-- 1 動作でスロットの左文脈は高々 1 しか伸びない。 -/
+theorem left_len_step (blank : Fin sc) (i : SIdx) (a : Act sc) (ts : OvTapes sc) :
+    (sGet i (applyAct blank ts a)).left.length ≤ (sGet i ts).left.length + 1 := by
+  cases a <;> cases i <;>
+    first
+      | exact Nat.le_succ _
+      | exact PrepInstance.left_length_step_le blank _ _ _
+
+/-- 動作列を通した単調性。 -/
+theorem left_len_applyActs (blank : Fin sc) (i : SIdx) :
+    ∀ (l : List (Act sc)) (ts : OvTapes sc),
+      (sGet i (applyActs blank l ts)).left.length ≤ (sGet i ts).left.length + l.length := by
+  intro l
+  induction l with
+  | nil => intro ts; simp
+  | cons a l ih =>
+      intro ts
+      rw [applyActs_cons, List.length_cons]
+      have h1 := left_len_step blank i a ts
+      have h2 := ih (applyAct blank ts a)
+      omega
+
+/-- `SeqView` 形のスロットを、ヘッド位置をテープから読んで消去する。 -/
+def clearSlotSeq (blank : Fin sc) (i : SIdx) (wlen : ℕ) (ts : OvTapes sc) : List (Act sc) :=
+  clearSeqProgS blank i (sGet i ts).left.length (wlen - (sGet i ts).left.length - 1)
+
+/-- カウンタ形のスロットを、値をテープから読んで消去する。 -/
+def clearSlotCtr (blank : Fin sc) (i : SIdx) (ts : OvTapes sc) : List (Act sc) :=
+  clearCtrProg blank i ((sGet i ts).left.length - 1)
+
+theorem clearSlotSeq_spec (i : SIdx) (wlen : ℕ) (ts : OvTapes sc) (w : List (Fin sc)) (p : ℕ)
+    (hw : Tape.SeqView blank (sGet i ts) w p) (hlen : w.length = wlen) :
+    Tape.StackView blank (sGet i (applyActs blank (clearSlotSeq blank i wlen ts) ts)) [] := by
+  have hp : (sGet i ts).left.length = p := by
+    rw [hw.left_eq, List.length_reverse, List.length_take]
+    have := hw.lt; omega
+  rw [clearSlotSeq, hp]
+  exact clearSeqProgS_spec i p (wlen - p - 1) ts w hw (by omega)
+
+theorem clearSlotSeq_length (i : SIdx) (wlen : ℕ) (ts : OvTapes sc) (w : List (Fin sc)) (p : ℕ)
+    (hw : Tape.SeqView blank (sGet i ts) w p) (hlen : w.length = wlen) :
+    (clearSlotSeq blank i wlen ts).length = 3 * p + 2 * (wlen - p - 1) + 3 := by
+  have hp : (sGet i ts).left.length = p := by
+    rw [hw.left_eq, List.length_reverse, List.length_take]
+    have := hw.lt; omega
+  rw [clearSlotSeq, hp, clearSeqProgS_length]
+
+theorem clearSlotSeq_other {i j : SIdx} (h : j ≠ i) (wlen : ℕ) (ts : OvTapes sc) :
+    sGet j (applyActs blank (clearSlotSeq blank i wlen ts) ts) = sGet j ts :=
+  clearSeqProgS_other h _ _ ts
+
+theorem clearSlotSeq_main (i : SIdx) (wlen : ℕ) (ts : OvTapes sc) :
+    (applyActs blank (clearSlotSeq blank i wlen ts) ts).P = ts.P
+      ∧ (applyActs blank (clearSlotSeq blank i wlen ts) ts).X = ts.X
+      ∧ (applyActs blank (clearSlotSeq blank i wlen ts) ts).Cnt = ts.Cnt
+      ∧ (applyActs blank (clearSlotSeq blank i wlen ts) ts).U = ts.U
+      ∧ (applyActs blank (clearSlotSeq blank i wlen ts) ts).X2 = ts.X2
+      ∧ (applyActs blank (clearSlotSeq blank i wlen ts) ts).F = ts.F :=
+  clearSeqProgS_main i _ _ ts
+
+theorem clearSlotCtr_spec (i : SIdx) (ts : OvTapes sc) (n : ℕ)
+    (h : Tape.CounterView' blank mark (sGet i ts) n) :
+    Tape.StackView blank (sGet i (applyActs blank (clearSlotCtr blank i ts) ts)) [] := by
+  have hp : (sGet i ts).left.length = n + 1 := by rw [h.left_eq]; simp
+  rw [clearSlotCtr, hp]
+  simpa using clearCtrProg_spec (mark := mark) i n ts h
+
+theorem clearSlotCtr_length (i : SIdx) (ts : OvTapes sc) (n : ℕ)
+    (h : Tape.CounterView' blank mark (sGet i ts) n) :
+    (clearSlotCtr blank i ts).length = n + 2 := by
+  have hp : (sGet i ts).left.length = n + 1 := by rw [h.left_eq]; simp
+  rw [clearSlotCtr, hp, clearCtrProg_length]
+  simp
+
+theorem clearSlotCtr_other {i j : SIdx} (h : j ≠ i) (ts : OvTapes sc) :
+    sGet j (applyActs blank (clearSlotCtr blank i ts) ts) = sGet j ts :=
+  clearCtrProg_other h _ ts
+
+theorem clearSlotCtr_main (i : SIdx) (ts : OvTapes sc) :
+    (applyActs blank (clearSlotCtr blank i ts) ts).P = ts.P
+      ∧ (applyActs blank (clearSlotCtr blank i ts) ts).X = ts.X
+      ∧ (applyActs blank (clearSlotCtr blank i ts) ts).Cnt = ts.Cnt
+      ∧ (applyActs blank (clearSlotCtr blank i ts) ts).U = ts.U
+      ∧ (applyActs blank (clearSlotCtr blank i ts) ts).X2 = ts.X2
+      ∧ (applyActs blank (clearSlotCtr blank i ts) ts).F = ts.F :=
+  clearCtrProg_main i _ ts
+
+/-- **作業テープ 9 本をまとめて消去する動作列**。 -/
+def clearAllS (blank : Fin sc) (L : ℕ) (ts : OvTapes sc) : List (Act sc) :=
+  seqA blank (fun t => clearSlotSeq blank .s1 (L + 2) t)
+    (seqA blank (fun t => clearSlotSeq blank .s2 (L + 2) t)
+      (seqA blank (fun t => clearSlotCtr blank .s3 t)
+        (seqA blank (fun t => clearSlotCtr blank .s4 t)
+          (seqA blank (fun t => clearSlotCtr blank .s5 t)
+            (seqA blank (fun t => clearSlotCtr blank .s6 t)
+              (seqA blank (fun t => clearSlotCtr blank .s7 t)
+                (seqA blank (fun t => clearSlotCtr blank .s8 t)
+                  (fun t => clearSlotCtr blank .s9 t)))))))) ts
+
+/-- **9 本まとめ消去の正当性と長さ**。 -/
+theorem clearAllS_spec (L : ℕ) (ts : OvTapes sc) (w1 w2 : List (Fin sc))
+    (p1 p2 n3 n4 n5 n6 n7 n8 n9 : ℕ)
+    (hw1 : Tape.SeqView blank ts.S1 w1 p1) (hl1 : w1.length = L + 2)
+    (hw2 : Tape.SeqView blank ts.S2 w2 p2) (hl2 : w2.length = L + 2)
+    (h3 : Tape.CounterView' blank mark ts.S3 n3)
+    (h4 : Tape.CounterView' blank mark ts.S4 n4)
+    (h5 : Tape.CounterView' blank mark ts.S5 n5)
+    (h6 : Tape.CounterView' blank mark ts.S6 n6)
+    (h7 : Tape.CounterView' blank mark ts.S7 n7)
+    (h8 : Tape.CounterView' blank mark ts.S8 n8)
+    (h9 : Tape.CounterView' blank mark ts.S9 n9) :
+    ScratchBlank blank (applyActs blank (clearAllS blank L ts) ts)
+      ∧ (applyActs blank (clearAllS blank L ts) ts).P = ts.P
+      ∧ (applyActs blank (clearAllS blank L ts) ts).X = ts.X
+      ∧ (applyActs blank (clearAllS blank L ts) ts).Cnt = ts.Cnt
+      ∧ (applyActs blank (clearAllS blank L ts) ts).U = ts.U
+      ∧ (applyActs blank (clearAllS blank L ts) ts).X2 = ts.X2
+      ∧ (applyActs blank (clearAllS blank L ts) ts).F = ts.F
+      ∧ (clearAllS blank L ts).length
+          ≤ 6 * L + 26 + (n3 + n4 + n5 + n6 + n7 + n8 + n9) := by
+  obtain ⟨u1, hu1⟩ : ∃ t, applyActs blank (clearSlotSeq blank SIdx.s1 (L + 2) ts) ts = t := ⟨_, rfl⟩
+  obtain ⟨u2, hu2⟩ : ∃ t, applyActs blank (clearSlotSeq blank SIdx.s2 (L + 2) u1) u1 = t := ⟨_, rfl⟩
+  obtain ⟨u3, hu3⟩ : ∃ t, applyActs blank (clearSlotCtr blank SIdx.s3 u2) u2 = t := ⟨_, rfl⟩
+  obtain ⟨u4, hu4⟩ : ∃ t, applyActs blank (clearSlotCtr blank SIdx.s4 u3) u3 = t := ⟨_, rfl⟩
+  obtain ⟨u5, hu5⟩ : ∃ t, applyActs blank (clearSlotCtr blank SIdx.s5 u4) u4 = t := ⟨_, rfl⟩
+  obtain ⟨u6, hu6⟩ : ∃ t, applyActs blank (clearSlotCtr blank SIdx.s6 u5) u5 = t := ⟨_, rfl⟩
+  obtain ⟨u7, hu7⟩ : ∃ t, applyActs blank (clearSlotCtr blank SIdx.s7 u6) u6 = t := ⟨_, rfl⟩
+  obtain ⟨u8, hu8⟩ : ∃ t, applyActs blank (clearSlotCtr blank SIdx.s8 u7) u7 = t := ⟨_, rfl⟩
+  obtain ⟨u9, hu9⟩ : ∃ t, applyActs blank (clearSlotCtr blank SIdx.s9 u8) u8 = t := ⟨_, rfl⟩
+  have v1 : sGet SIdx.s1 ts = sGet SIdx.s1 ts := rfl
+  have v2 : sGet SIdx.s2 u1 = sGet SIdx.s2 ts := by
+    have e2_1 : sGet SIdx.s2 u1 = sGet SIdx.s2 ts := by
+      rw [← hu1]; exact clearSlotSeq_other (show SIdx.s2 ≠ SIdx.s1 by decide) (L + 2) ts
+    rw [e2_1]
+  have v3 : sGet SIdx.s3 u2 = sGet SIdx.s3 ts := by
+    have e3_1 : sGet SIdx.s3 u1 = sGet SIdx.s3 ts := by
+      rw [← hu1]; exact clearSlotSeq_other (show SIdx.s3 ≠ SIdx.s1 by decide) (L + 2) ts
+    have e3_2 : sGet SIdx.s3 u2 = sGet SIdx.s3 u1 := by
+      rw [← hu2]; exact clearSlotSeq_other (show SIdx.s3 ≠ SIdx.s2 by decide) (L + 2) u1
+    rw [e3_2, e3_1]
+  have v4 : sGet SIdx.s4 u3 = sGet SIdx.s4 ts := by
+    have e4_1 : sGet SIdx.s4 u1 = sGet SIdx.s4 ts := by
+      rw [← hu1]; exact clearSlotSeq_other (show SIdx.s4 ≠ SIdx.s1 by decide) (L + 2) ts
+    have e4_2 : sGet SIdx.s4 u2 = sGet SIdx.s4 u1 := by
+      rw [← hu2]; exact clearSlotSeq_other (show SIdx.s4 ≠ SIdx.s2 by decide) (L + 2) u1
+    have e4_3 : sGet SIdx.s4 u3 = sGet SIdx.s4 u2 := by
+      rw [← hu3]; exact clearSlotCtr_other (show SIdx.s4 ≠ SIdx.s3 by decide) u2
+    rw [e4_3, e4_2, e4_1]
+  have v5 : sGet SIdx.s5 u4 = sGet SIdx.s5 ts := by
+    have e5_1 : sGet SIdx.s5 u1 = sGet SIdx.s5 ts := by
+      rw [← hu1]; exact clearSlotSeq_other (show SIdx.s5 ≠ SIdx.s1 by decide) (L + 2) ts
+    have e5_2 : sGet SIdx.s5 u2 = sGet SIdx.s5 u1 := by
+      rw [← hu2]; exact clearSlotSeq_other (show SIdx.s5 ≠ SIdx.s2 by decide) (L + 2) u1
+    have e5_3 : sGet SIdx.s5 u3 = sGet SIdx.s5 u2 := by
+      rw [← hu3]; exact clearSlotCtr_other (show SIdx.s5 ≠ SIdx.s3 by decide) u2
+    have e5_4 : sGet SIdx.s5 u4 = sGet SIdx.s5 u3 := by
+      rw [← hu4]; exact clearSlotCtr_other (show SIdx.s5 ≠ SIdx.s4 by decide) u3
+    rw [e5_4, e5_3, e5_2, e5_1]
+  have v6 : sGet SIdx.s6 u5 = sGet SIdx.s6 ts := by
+    have e6_1 : sGet SIdx.s6 u1 = sGet SIdx.s6 ts := by
+      rw [← hu1]; exact clearSlotSeq_other (show SIdx.s6 ≠ SIdx.s1 by decide) (L + 2) ts
+    have e6_2 : sGet SIdx.s6 u2 = sGet SIdx.s6 u1 := by
+      rw [← hu2]; exact clearSlotSeq_other (show SIdx.s6 ≠ SIdx.s2 by decide) (L + 2) u1
+    have e6_3 : sGet SIdx.s6 u3 = sGet SIdx.s6 u2 := by
+      rw [← hu3]; exact clearSlotCtr_other (show SIdx.s6 ≠ SIdx.s3 by decide) u2
+    have e6_4 : sGet SIdx.s6 u4 = sGet SIdx.s6 u3 := by
+      rw [← hu4]; exact clearSlotCtr_other (show SIdx.s6 ≠ SIdx.s4 by decide) u3
+    have e6_5 : sGet SIdx.s6 u5 = sGet SIdx.s6 u4 := by
+      rw [← hu5]; exact clearSlotCtr_other (show SIdx.s6 ≠ SIdx.s5 by decide) u4
+    rw [e6_5, e6_4, e6_3, e6_2, e6_1]
+  have v7 : sGet SIdx.s7 u6 = sGet SIdx.s7 ts := by
+    have e7_1 : sGet SIdx.s7 u1 = sGet SIdx.s7 ts := by
+      rw [← hu1]; exact clearSlotSeq_other (show SIdx.s7 ≠ SIdx.s1 by decide) (L + 2) ts
+    have e7_2 : sGet SIdx.s7 u2 = sGet SIdx.s7 u1 := by
+      rw [← hu2]; exact clearSlotSeq_other (show SIdx.s7 ≠ SIdx.s2 by decide) (L + 2) u1
+    have e7_3 : sGet SIdx.s7 u3 = sGet SIdx.s7 u2 := by
+      rw [← hu3]; exact clearSlotCtr_other (show SIdx.s7 ≠ SIdx.s3 by decide) u2
+    have e7_4 : sGet SIdx.s7 u4 = sGet SIdx.s7 u3 := by
+      rw [← hu4]; exact clearSlotCtr_other (show SIdx.s7 ≠ SIdx.s4 by decide) u3
+    have e7_5 : sGet SIdx.s7 u5 = sGet SIdx.s7 u4 := by
+      rw [← hu5]; exact clearSlotCtr_other (show SIdx.s7 ≠ SIdx.s5 by decide) u4
+    have e7_6 : sGet SIdx.s7 u6 = sGet SIdx.s7 u5 := by
+      rw [← hu6]; exact clearSlotCtr_other (show SIdx.s7 ≠ SIdx.s6 by decide) u5
+    rw [e7_6, e7_5, e7_4, e7_3, e7_2, e7_1]
+  have v8 : sGet SIdx.s8 u7 = sGet SIdx.s8 ts := by
+    have e8_1 : sGet SIdx.s8 u1 = sGet SIdx.s8 ts := by
+      rw [← hu1]; exact clearSlotSeq_other (show SIdx.s8 ≠ SIdx.s1 by decide) (L + 2) ts
+    have e8_2 : sGet SIdx.s8 u2 = sGet SIdx.s8 u1 := by
+      rw [← hu2]; exact clearSlotSeq_other (show SIdx.s8 ≠ SIdx.s2 by decide) (L + 2) u1
+    have e8_3 : sGet SIdx.s8 u3 = sGet SIdx.s8 u2 := by
+      rw [← hu3]; exact clearSlotCtr_other (show SIdx.s8 ≠ SIdx.s3 by decide) u2
+    have e8_4 : sGet SIdx.s8 u4 = sGet SIdx.s8 u3 := by
+      rw [← hu4]; exact clearSlotCtr_other (show SIdx.s8 ≠ SIdx.s4 by decide) u3
+    have e8_5 : sGet SIdx.s8 u5 = sGet SIdx.s8 u4 := by
+      rw [← hu5]; exact clearSlotCtr_other (show SIdx.s8 ≠ SIdx.s5 by decide) u4
+    have e8_6 : sGet SIdx.s8 u6 = sGet SIdx.s8 u5 := by
+      rw [← hu6]; exact clearSlotCtr_other (show SIdx.s8 ≠ SIdx.s6 by decide) u5
+    have e8_7 : sGet SIdx.s8 u7 = sGet SIdx.s8 u6 := by
+      rw [← hu7]; exact clearSlotCtr_other (show SIdx.s8 ≠ SIdx.s7 by decide) u6
+    rw [e8_7, e8_6, e8_5, e8_4, e8_3, e8_2, e8_1]
+  have v9 : sGet SIdx.s9 u8 = sGet SIdx.s9 ts := by
+    have e9_1 : sGet SIdx.s9 u1 = sGet SIdx.s9 ts := by
+      rw [← hu1]; exact clearSlotSeq_other (show SIdx.s9 ≠ SIdx.s1 by decide) (L + 2) ts
+    have e9_2 : sGet SIdx.s9 u2 = sGet SIdx.s9 u1 := by
+      rw [← hu2]; exact clearSlotSeq_other (show SIdx.s9 ≠ SIdx.s2 by decide) (L + 2) u1
+    have e9_3 : sGet SIdx.s9 u3 = sGet SIdx.s9 u2 := by
+      rw [← hu3]; exact clearSlotCtr_other (show SIdx.s9 ≠ SIdx.s3 by decide) u2
+    have e9_4 : sGet SIdx.s9 u4 = sGet SIdx.s9 u3 := by
+      rw [← hu4]; exact clearSlotCtr_other (show SIdx.s9 ≠ SIdx.s4 by decide) u3
+    have e9_5 : sGet SIdx.s9 u5 = sGet SIdx.s9 u4 := by
+      rw [← hu5]; exact clearSlotCtr_other (show SIdx.s9 ≠ SIdx.s5 by decide) u4
+    have e9_6 : sGet SIdx.s9 u6 = sGet SIdx.s9 u5 := by
+      rw [← hu6]; exact clearSlotCtr_other (show SIdx.s9 ≠ SIdx.s6 by decide) u5
+    have e9_7 : sGet SIdx.s9 u7 = sGet SIdx.s9 u6 := by
+      rw [← hu7]; exact clearSlotCtr_other (show SIdx.s9 ≠ SIdx.s7 by decide) u6
+    have e9_8 : sGet SIdx.s9 u8 = sGet SIdx.s9 u7 := by
+      rw [← hu8]; exact clearSlotCtr_other (show SIdx.s9 ≠ SIdx.s8 by decide) u7
+    rw [e9_8, e9_7, e9_6, e9_5, e9_4, e9_3, e9_2, e9_1]
+  have sp1 : Tape.StackView blank (sGet SIdx.s1 u1) [] := by
+    rw [← hu1]
+    exact clearSlotSeq_spec SIdx.s1 (L + 2) ts w1 p1 (by rw [v1]; exact hw1) hl1
+  have ln1 : (clearSlotSeq blank SIdx.s1 (L + 2) ts).length = 3 * p1 + 2 * (L + 2 - p1 - 1) + 3 :=
+    clearSlotSeq_length SIdx.s1 (L + 2) ts w1 p1 (by rw [v1]; exact hw1) hl1
+  have pb1 : p1 ≤ L + 1 := by
+    have hlt := hw1.lt
+    rw [hl1] at hlt
+    omega
+  have sp2 : Tape.StackView blank (sGet SIdx.s2 u2) [] := by
+    rw [← hu2]
+    exact clearSlotSeq_spec SIdx.s2 (L + 2) u1 w2 p2 (by rw [v2]; exact hw2) hl2
+  have ln2 : (clearSlotSeq blank SIdx.s2 (L + 2) u1).length = 3 * p2 + 2 * (L + 2 - p2 - 1) + 3 :=
+    clearSlotSeq_length SIdx.s2 (L + 2) u1 w2 p2 (by rw [v2]; exact hw2) hl2
+  have pb2 : p2 ≤ L + 1 := by
+    have hlt := hw2.lt
+    rw [hl2] at hlt
+    omega
+  have sp3 : Tape.StackView blank (sGet SIdx.s3 u3) [] := by
+    rw [← hu3]
+    exact clearSlotCtr_spec (mark := mark) SIdx.s3 u2 n3 (by rw [v3]; exact h3)
+  have ln3 : (clearSlotCtr blank SIdx.s3 u2).length = n3 + 2 :=
+    clearSlotCtr_length (mark := mark) SIdx.s3 u2 n3 (by rw [v3]; exact h3)
+  have sp4 : Tape.StackView blank (sGet SIdx.s4 u4) [] := by
+    rw [← hu4]
+    exact clearSlotCtr_spec (mark := mark) SIdx.s4 u3 n4 (by rw [v4]; exact h4)
+  have ln4 : (clearSlotCtr blank SIdx.s4 u3).length = n4 + 2 :=
+    clearSlotCtr_length (mark := mark) SIdx.s4 u3 n4 (by rw [v4]; exact h4)
+  have sp5 : Tape.StackView blank (sGet SIdx.s5 u5) [] := by
+    rw [← hu5]
+    exact clearSlotCtr_spec (mark := mark) SIdx.s5 u4 n5 (by rw [v5]; exact h5)
+  have ln5 : (clearSlotCtr blank SIdx.s5 u4).length = n5 + 2 :=
+    clearSlotCtr_length (mark := mark) SIdx.s5 u4 n5 (by rw [v5]; exact h5)
+  have sp6 : Tape.StackView blank (sGet SIdx.s6 u6) [] := by
+    rw [← hu6]
+    exact clearSlotCtr_spec (mark := mark) SIdx.s6 u5 n6 (by rw [v6]; exact h6)
+  have ln6 : (clearSlotCtr blank SIdx.s6 u5).length = n6 + 2 :=
+    clearSlotCtr_length (mark := mark) SIdx.s6 u5 n6 (by rw [v6]; exact h6)
+  have sp7 : Tape.StackView blank (sGet SIdx.s7 u7) [] := by
+    rw [← hu7]
+    exact clearSlotCtr_spec (mark := mark) SIdx.s7 u6 n7 (by rw [v7]; exact h7)
+  have ln7 : (clearSlotCtr blank SIdx.s7 u6).length = n7 + 2 :=
+    clearSlotCtr_length (mark := mark) SIdx.s7 u6 n7 (by rw [v7]; exact h7)
+  have sp8 : Tape.StackView blank (sGet SIdx.s8 u8) [] := by
+    rw [← hu8]
+    exact clearSlotCtr_spec (mark := mark) SIdx.s8 u7 n8 (by rw [v8]; exact h8)
+  have ln8 : (clearSlotCtr blank SIdx.s8 u7).length = n8 + 2 :=
+    clearSlotCtr_length (mark := mark) SIdx.s8 u7 n8 (by rw [v8]; exact h8)
+  have sp9 : Tape.StackView blank (sGet SIdx.s9 u9) [] := by
+    rw [← hu9]
+    exact clearSlotCtr_spec (mark := mark) SIdx.s9 u8 n9 (by rw [v9]; exact h9)
+  have ln9 : (clearSlotCtr blank SIdx.s9 u8).length = n9 + 2 :=
+    clearSlotCtr_length (mark := mark) SIdx.s9 u8 n9 (by rw [v9]; exact h9)
+  have wf1 : sGet SIdx.s1 u9 = sGet SIdx.s1 u1 := by
+    have f1_2 : sGet SIdx.s1 u2 = sGet SIdx.s1 u1 := by
+      rw [← hu2]; exact clearSlotSeq_other (show SIdx.s1 ≠ SIdx.s2 by decide) (L + 2) u1
+    have f1_3 : sGet SIdx.s1 u3 = sGet SIdx.s1 u2 := by
+      rw [← hu3]; exact clearSlotCtr_other (show SIdx.s1 ≠ SIdx.s3 by decide) u2
+    have f1_4 : sGet SIdx.s1 u4 = sGet SIdx.s1 u3 := by
+      rw [← hu4]; exact clearSlotCtr_other (show SIdx.s1 ≠ SIdx.s4 by decide) u3
+    have f1_5 : sGet SIdx.s1 u5 = sGet SIdx.s1 u4 := by
+      rw [← hu5]; exact clearSlotCtr_other (show SIdx.s1 ≠ SIdx.s5 by decide) u4
+    have f1_6 : sGet SIdx.s1 u6 = sGet SIdx.s1 u5 := by
+      rw [← hu6]; exact clearSlotCtr_other (show SIdx.s1 ≠ SIdx.s6 by decide) u5
+    have f1_7 : sGet SIdx.s1 u7 = sGet SIdx.s1 u6 := by
+      rw [← hu7]; exact clearSlotCtr_other (show SIdx.s1 ≠ SIdx.s7 by decide) u6
+    have f1_8 : sGet SIdx.s1 u8 = sGet SIdx.s1 u7 := by
+      rw [← hu8]; exact clearSlotCtr_other (show SIdx.s1 ≠ SIdx.s8 by decide) u7
+    have f1_9 : sGet SIdx.s1 u9 = sGet SIdx.s1 u8 := by
+      rw [← hu9]; exact clearSlotCtr_other (show SIdx.s1 ≠ SIdx.s9 by decide) u8
+    rw [f1_9, f1_8, f1_7, f1_6, f1_5, f1_4, f1_3, f1_2]
+  have wf2 : sGet SIdx.s2 u9 = sGet SIdx.s2 u2 := by
+    have f2_3 : sGet SIdx.s2 u3 = sGet SIdx.s2 u2 := by
+      rw [← hu3]; exact clearSlotCtr_other (show SIdx.s2 ≠ SIdx.s3 by decide) u2
+    have f2_4 : sGet SIdx.s2 u4 = sGet SIdx.s2 u3 := by
+      rw [← hu4]; exact clearSlotCtr_other (show SIdx.s2 ≠ SIdx.s4 by decide) u3
+    have f2_5 : sGet SIdx.s2 u5 = sGet SIdx.s2 u4 := by
+      rw [← hu5]; exact clearSlotCtr_other (show SIdx.s2 ≠ SIdx.s5 by decide) u4
+    have f2_6 : sGet SIdx.s2 u6 = sGet SIdx.s2 u5 := by
+      rw [← hu6]; exact clearSlotCtr_other (show SIdx.s2 ≠ SIdx.s6 by decide) u5
+    have f2_7 : sGet SIdx.s2 u7 = sGet SIdx.s2 u6 := by
+      rw [← hu7]; exact clearSlotCtr_other (show SIdx.s2 ≠ SIdx.s7 by decide) u6
+    have f2_8 : sGet SIdx.s2 u8 = sGet SIdx.s2 u7 := by
+      rw [← hu8]; exact clearSlotCtr_other (show SIdx.s2 ≠ SIdx.s8 by decide) u7
+    have f2_9 : sGet SIdx.s2 u9 = sGet SIdx.s2 u8 := by
+      rw [← hu9]; exact clearSlotCtr_other (show SIdx.s2 ≠ SIdx.s9 by decide) u8
+    rw [f2_9, f2_8, f2_7, f2_6, f2_5, f2_4, f2_3]
+  have wf3 : sGet SIdx.s3 u9 = sGet SIdx.s3 u3 := by
+    have f3_4 : sGet SIdx.s3 u4 = sGet SIdx.s3 u3 := by
+      rw [← hu4]; exact clearSlotCtr_other (show SIdx.s3 ≠ SIdx.s4 by decide) u3
+    have f3_5 : sGet SIdx.s3 u5 = sGet SIdx.s3 u4 := by
+      rw [← hu5]; exact clearSlotCtr_other (show SIdx.s3 ≠ SIdx.s5 by decide) u4
+    have f3_6 : sGet SIdx.s3 u6 = sGet SIdx.s3 u5 := by
+      rw [← hu6]; exact clearSlotCtr_other (show SIdx.s3 ≠ SIdx.s6 by decide) u5
+    have f3_7 : sGet SIdx.s3 u7 = sGet SIdx.s3 u6 := by
+      rw [← hu7]; exact clearSlotCtr_other (show SIdx.s3 ≠ SIdx.s7 by decide) u6
+    have f3_8 : sGet SIdx.s3 u8 = sGet SIdx.s3 u7 := by
+      rw [← hu8]; exact clearSlotCtr_other (show SIdx.s3 ≠ SIdx.s8 by decide) u7
+    have f3_9 : sGet SIdx.s3 u9 = sGet SIdx.s3 u8 := by
+      rw [← hu9]; exact clearSlotCtr_other (show SIdx.s3 ≠ SIdx.s9 by decide) u8
+    rw [f3_9, f3_8, f3_7, f3_6, f3_5, f3_4]
+  have wf4 : sGet SIdx.s4 u9 = sGet SIdx.s4 u4 := by
+    have f4_5 : sGet SIdx.s4 u5 = sGet SIdx.s4 u4 := by
+      rw [← hu5]; exact clearSlotCtr_other (show SIdx.s4 ≠ SIdx.s5 by decide) u4
+    have f4_6 : sGet SIdx.s4 u6 = sGet SIdx.s4 u5 := by
+      rw [← hu6]; exact clearSlotCtr_other (show SIdx.s4 ≠ SIdx.s6 by decide) u5
+    have f4_7 : sGet SIdx.s4 u7 = sGet SIdx.s4 u6 := by
+      rw [← hu7]; exact clearSlotCtr_other (show SIdx.s4 ≠ SIdx.s7 by decide) u6
+    have f4_8 : sGet SIdx.s4 u8 = sGet SIdx.s4 u7 := by
+      rw [← hu8]; exact clearSlotCtr_other (show SIdx.s4 ≠ SIdx.s8 by decide) u7
+    have f4_9 : sGet SIdx.s4 u9 = sGet SIdx.s4 u8 := by
+      rw [← hu9]; exact clearSlotCtr_other (show SIdx.s4 ≠ SIdx.s9 by decide) u8
+    rw [f4_9, f4_8, f4_7, f4_6, f4_5]
+  have wf5 : sGet SIdx.s5 u9 = sGet SIdx.s5 u5 := by
+    have f5_6 : sGet SIdx.s5 u6 = sGet SIdx.s5 u5 := by
+      rw [← hu6]; exact clearSlotCtr_other (show SIdx.s5 ≠ SIdx.s6 by decide) u5
+    have f5_7 : sGet SIdx.s5 u7 = sGet SIdx.s5 u6 := by
+      rw [← hu7]; exact clearSlotCtr_other (show SIdx.s5 ≠ SIdx.s7 by decide) u6
+    have f5_8 : sGet SIdx.s5 u8 = sGet SIdx.s5 u7 := by
+      rw [← hu8]; exact clearSlotCtr_other (show SIdx.s5 ≠ SIdx.s8 by decide) u7
+    have f5_9 : sGet SIdx.s5 u9 = sGet SIdx.s5 u8 := by
+      rw [← hu9]; exact clearSlotCtr_other (show SIdx.s5 ≠ SIdx.s9 by decide) u8
+    rw [f5_9, f5_8, f5_7, f5_6]
+  have wf6 : sGet SIdx.s6 u9 = sGet SIdx.s6 u6 := by
+    have f6_7 : sGet SIdx.s6 u7 = sGet SIdx.s6 u6 := by
+      rw [← hu7]; exact clearSlotCtr_other (show SIdx.s6 ≠ SIdx.s7 by decide) u6
+    have f6_8 : sGet SIdx.s6 u8 = sGet SIdx.s6 u7 := by
+      rw [← hu8]; exact clearSlotCtr_other (show SIdx.s6 ≠ SIdx.s8 by decide) u7
+    have f6_9 : sGet SIdx.s6 u9 = sGet SIdx.s6 u8 := by
+      rw [← hu9]; exact clearSlotCtr_other (show SIdx.s6 ≠ SIdx.s9 by decide) u8
+    rw [f6_9, f6_8, f6_7]
+  have wf7 : sGet SIdx.s7 u9 = sGet SIdx.s7 u7 := by
+    have f7_8 : sGet SIdx.s7 u8 = sGet SIdx.s7 u7 := by
+      rw [← hu8]; exact clearSlotCtr_other (show SIdx.s7 ≠ SIdx.s8 by decide) u7
+    have f7_9 : sGet SIdx.s7 u9 = sGet SIdx.s7 u8 := by
+      rw [← hu9]; exact clearSlotCtr_other (show SIdx.s7 ≠ SIdx.s9 by decide) u8
+    rw [f7_9, f7_8]
+  have wf8 : sGet SIdx.s8 u9 = sGet SIdx.s8 u8 := by
+    have f8_9 : sGet SIdx.s8 u9 = sGet SIdx.s8 u8 := by
+      rw [← hu9]; exact clearSlotCtr_other (show SIdx.s8 ≠ SIdx.s9 by decide) u8
+    rw [f8_9]
+  have wf9 : sGet SIdx.s9 u9 = sGet SIdx.s9 u9 := rfl
+  have hrun : applyActs blank (clearAllS blank L ts) ts = u9 := by
+    rw [clearAllS, seqA_run, seqA_run, seqA_run, seqA_run, seqA_run, seqA_run, seqA_run,
+      seqA_run, hu1, hu2, hu3, hu4, hu5, hu6, hu7, hu8, hu9]
+  have hlen : (clearAllS blank L ts).length = (clearSlotSeq blank SIdx.s1 (L + 2) ts).length + (clearSlotSeq blank SIdx.s2 (L + 2) u1).length + (clearSlotCtr blank SIdx.s3 u2).length + (clearSlotCtr blank SIdx.s4 u3).length + (clearSlotCtr blank SIdx.s5 u4).length + (clearSlotCtr blank SIdx.s6 u5).length + (clearSlotCtr blank SIdx.s7 u6).length + (clearSlotCtr blank SIdx.s8 u7).length + (clearSlotCtr blank SIdx.s9 u8).length := by
+    rw [clearAllS, seqA_length, seqA_length, seqA_length, seqA_length, seqA_length,
+      seqA_length, seqA_length, seqA_length, hu1, hu2, hu3, hu4, hu5, hu6, hu7, hu8]
+    omega
+  have m1 := clearSlotSeq_main (blank := blank) SIdx.s1 (L + 2) ts
+  rw [hu1] at m1
+  have m2 := clearSlotSeq_main (blank := blank) SIdx.s2 (L + 2) u1
+  rw [hu2] at m2
+  have m3 := clearSlotCtr_main (blank := blank) SIdx.s3 u2
+  rw [hu3] at m3
+  have m4 := clearSlotCtr_main (blank := blank) SIdx.s4 u3
+  rw [hu4] at m4
+  have m5 := clearSlotCtr_main (blank := blank) SIdx.s5 u4
+  rw [hu5] at m5
+  have m6 := clearSlotCtr_main (blank := blank) SIdx.s6 u5
+  rw [hu6] at m6
+  have m7 := clearSlotCtr_main (blank := blank) SIdx.s7 u6
+  rw [hu7] at m7
+  have m8 := clearSlotCtr_main (blank := blank) SIdx.s8 u7
+  rw [hu8] at m8
+  have m9 := clearSlotCtr_main (blank := blank) SIdx.s9 u8
+  rw [hu9] at m9
+  rw [hrun]
+  refine ⟨⟨by have hh := sp1; rw [← wf1] at hh; exact hh, by have hh := sp2; rw [← wf2] at hh; exact hh, by have hh := sp3; rw [← wf3] at hh; exact hh, by have hh := sp4; rw [← wf4] at hh; exact hh, by have hh := sp5; rw [← wf5] at hh; exact hh, by have hh := sp6; rw [← wf6] at hh; exact hh, by have hh := sp7; rw [← wf7] at hh; exact hh, by have hh := sp8; rw [← wf8] at hh; exact hh, by have hh := sp9; rw [← wf9] at hh; exact hh⟩,
+    by rw [m9.1, m8.1, m7.1, m6.1, m5.1, m4.1, m3.1, m2.1, m1.1],
+    by rw [m9.2.1, m8.2.1, m7.2.1, m6.2.1, m5.2.1, m4.2.1, m3.2.1, m2.2.1, m1.2.1],
+    by rw [m9.2.2.1, m8.2.2.1, m7.2.2.1, m6.2.2.1, m5.2.2.1, m4.2.2.1, m3.2.2.1, m2.2.2.1, m1.2.2.1],
+    by rw [m9.2.2.2.1, m8.2.2.2.1, m7.2.2.2.1, m6.2.2.2.1, m5.2.2.2.1, m4.2.2.2.1, m3.2.2.2.1, m2.2.2.2.1, m1.2.2.2.1],
+    by rw [m9.2.2.2.2.1, m8.2.2.2.2.1, m7.2.2.2.2.1, m6.2.2.2.2.1, m5.2.2.2.2.1, m4.2.2.2.2.1, m3.2.2.2.2.1, m2.2.2.2.2.1, m1.2.2.2.2.1],
+    by rw [m9.2.2.2.2.2, m8.2.2.2.2.2, m7.2.2.2.2.2, m6.2.2.2.2.2, m5.2.2.2.2.2, m4.2.2.2.2.2, m3.2.2.2.2.2, m2.2.2.2.2.2, m1.2.2.2.2.2],
+    ?_⟩
+  rw [hlen, ln1, ln2, ln3, ln4, ln5, ln6, ln7, ln8, ln9]
+  omega
+
+end ClearAll
+
+
+/-! ## 15. epilogue -/
+
+section Epilogue
+
+variable {blank startSym endSym mark : Fin sc}
+
+theorem run_Pset (a : Fin sc) (m : Move) (ts : OvTapes sc) :
+    applyActs blank [Act.Pset a m] ts = { ts with P := Tape.step blank ts.P a m } := by
+  cases ts; rfl
+
+theorem run_Uset (a : Fin sc) (m : Move) (ts : OvTapes sc) :
+    applyActs blank [Act.Uset a m] ts = { ts with U := Tape.step blank ts.U a m } := by
+  cases ts; rfl
+
+theorem run_Cset (a : Fin sc) (m : Move) (ts : OvTapes sc) :
+    applyActs blank [Act.C a m] ts = { ts with Cnt := Tape.step blank ts.Cnt a m } := by
+  cases ts; rfl
+
+theorem run_Pmove (m : Move) (ts : OvTapes sc) :
+    applyActs blank [Act.P m] ts = { ts with P := Tape.step blank ts.P ts.P.focus m } := by
+  cases ts; rfl
+
+theorem run_Umove (m : Move) (ts : OvTapes sc) :
+    applyActs blank [Act.U m] ts = { ts with U := Tape.step blank ts.U ts.U.focus m } := by
+  cases ts; rfl
+
+theorem run_pushPU (a : Fin sc) (ts : OvTapes sc) :
+    applyActs blank [Act.Pset a .right, Act.Uset a .right] ts
+      = { ts with P := Tape.step blank ts.P a .right
+                  U := Tape.step blank ts.U a .right } := by
+  cases ts; rfl
+
+/-- `Cnt` に載せる値を決める分岐：`S6`（生の周期）が `0` なら `|x.drop s| + 1` を
+数えながら作り、そうでなければ `S6` の値を移す。 -/
+def cntBranch (blank endSym mark : Fin sc) (L : ℕ) (ts : OvTapes sc) : List (Act sc) :=
+  if Tape.read (Tape.step blank (sGet .s6 ts) blank .left) = mark then
+    seqA blank (fun t => copyPLoop blank endSym true (L + 1) t)
+      (fun _ => [Act.C blank .right]) ts
+  else
+    seqA blank (fun t => copyPLoop blank endSym false (L + 1) t)
+      (fun t => ctrMoveLoop blank mark (L + 1) t) ts
+
+/-- **一様な epilogue**。 -/
+def epilogueU (blank startSym endSym mark : Fin sc) (L : ℕ) (ts : OvTapes sc) : List (Act sc) :=
+  seqA blank (fun t => homeS1 blank L t)
+    (seqA blank (fun _ => [Act.Pset startSym .right, Act.Uset startSym .right])
+      (seqA blank (fun t => splitLoop blank mark (L + 1) t)
+        (seqA blank (fun _ => [Act.Uset endSym .right])
+          (seqA blank (fun t => toSentU (blank := blank) startSym (L + 3) t)
+            (seqA blank (fun _ => [Act.U .right])
+              (seqA blank (fun _ => [Act.C mark .right])
+                (seqA blank (fun t => cntBranch blank endSym mark L t)
+                  (seqA blank (fun _ => [Act.Pset endSym .right])
+                    (seqA blank (fun t => toSentP (blank := blank) startSym (L + 3) t)
+                      (seqA blank (fun _ => [Act.P .right])
+                        (fun t => clearAllS blank L t))))))))))) ts
+
+/-- **`cntBranch` の正当性と長さ**。 -/
+theorem cntBranch_spec {x : List (Fin sc)} (hend : endSym ∉ x) (hmark : mark ≠ blank)
+    (L s p1raw : ℕ) (hx : x.length = L) (hs : s ≤ L) (hp : p1raw ≤ L + 1)
+    (ts : OvTapes sc) (l : List (Fin sc))
+    (hS1 : Tape.SeqView blank ts.S1 (GSPre.pword startSym endSym x) (s + 1))
+    (hP : Tape.StackView blank ts.P l)
+    (hCnt : Tape.CounterView' blank mark ts.Cnt 0)
+    (hS6 : Tape.CounterView' blank mark ts.S6 p1raw) :
+    Tape.SeqView blank (applyActs blank (cntBranch blank endSym mark L ts) ts).S1
+        (GSPre.pword startSym endSym x) (L + 1)
+      ∧ Tape.StackView blank (applyActs blank (cntBranch blank endSym mark L ts) ts).P
+          ((x.drop s).reverse ++ l)
+      ∧ Tape.CounterView' blank mark
+          (applyActs blank (cntBranch blank endSym mark L ts) ts).Cnt
+          (if p1raw = 0 then (L - s) + 1 else p1raw)
+      ∧ Tape.CounterView' blank mark
+          (applyActs blank (cntBranch blank endSym mark L ts) ts).S6 0
+      ∧ (applyActs blank (cntBranch blank endSym mark L ts) ts).X = ts.X
+      ∧ (applyActs blank (cntBranch blank endSym mark L ts) ts).X2 = ts.X2
+      ∧ (applyActs blank (cntBranch blank endSym mark L ts) ts).F = ts.F
+      ∧ (applyActs blank (cntBranch blank endSym mark L ts) ts).U = ts.U
+      ∧ (applyActs blank (cntBranch blank endSym mark L ts) ts).S2 = ts.S2
+      ∧ (applyActs blank (cntBranch blank endSym mark L ts) ts).S3 = ts.S3
+      ∧ (applyActs blank (cntBranch blank endSym mark L ts) ts).S4 = ts.S4
+      ∧ (applyActs blank (cntBranch blank endSym mark L ts) ts).S5 = ts.S5
+      ∧ (applyActs blank (cntBranch blank endSym mark L ts) ts).S7 = ts.S7
+      ∧ (applyActs blank (cntBranch blank endSym mark L ts) ts).S8 = ts.S8
+      ∧ (applyActs blank (cntBranch blank endSym mark L ts) ts).S9 = ts.S9
+      ∧ (cntBranch blank endSym mark L ts).length ≤ 3 * L + 3 * p1raw + 1 := by
+  have hfuel : x.length - s ≤ L + 1 := by omega
+  by_cases hz : p1raw = 0
+  · subst hz
+    have htest : Tape.read (Tape.step blank (sGet SIdx.s6 ts) blank .left) = mark :=
+      (Tape.counter'_isZero_iff hmark hS6).2 rfl
+    rw [cntBranch, if_pos htest, seqA_run, seqA_length]
+    obtain ⟨g1, g2, g3, g4⟩ := copyPLoop_spec (startSym := startSym) (mark := mark) hend true
+      (L + 1) s 0 ts l hfuel (by omega) hS1 hP hCnt
+    obtain ⟨k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12⟩ :=
+      copyPLoop_keep (blank := blank) (endSym := endSym) true (L + 1) ts
+    set t1 := applyActs blank (copyPLoop blank endSym true (L + 1) ts) ts with ht1
+    rw [run_Cset]
+    refine ⟨by rw [hx] at g1; exact g1, g2, ?_, ?_, k1, k2, k3, k4, k5, k6, k7, k8, k10,
+      k11, k12, ?_⟩
+    · show Tape.CounterView' blank mark (Tape.step blank t1.Cnt blank .right) _
+      have : (0 : ℕ) + (x.length - s) + 1 = (L - s) + 1 := by rw [hx]; omega
+      rw [← this]
+      exact Tape.counter'_inc (by simpa using g3)
+    · show Tape.CounterView' blank mark t1.S6 0
+      rw [k9]; exact hS6
+    · rw [g4]
+      have h3 : (if (true : Bool) = true then 3 else 2) = 3 := rfl
+      rw [h3, hx]
+      simp only [List.length_cons, List.length_nil]
+      omega
+  · have htest : ¬ Tape.read (Tape.step blank (sGet SIdx.s6 ts) blank .left) = mark := by
+      intro hcon
+      exact hz ((Tape.counter'_isZero_iff hmark hS6).1 hcon)
+    rw [cntBranch, if_neg htest, seqA_run, seqA_length]
+    obtain ⟨g1, g2, g3, g4⟩ := copyPLoop_spec (startSym := startSym) (mark := mark) hend false
+      (L + 1) s 0 ts l hfuel (by omega) hS1 hP hCnt
+    obtain ⟨k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12⟩ :=
+      copyPLoop_keep (blank := blank) (endSym := endSym) false (L + 1) ts
+    set t1 := applyActs blank (copyPLoop blank endSym false (L + 1) ts) ts with ht1
+    have h6 : Tape.CounterView' blank mark t1.S6 p1raw := by rw [k9]; exact hS6
+    obtain ⟨c1, c2, c3⟩ := ctrMoveLoop_spec (blank := blank) hmark (L + 1) p1raw 0 t1
+      (by omega) h6 (by simpa using g3)
+    obtain ⟨d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13⟩ :=
+      ctrMoveLoop_keep (blank := blank) (mark := mark) (L + 1) t1
+    refine ⟨?_, ?_, ?_, c1, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · have hg := g1
+      rw [hx] at hg
+      rw [d6]; exact hg
+    · rw [d4]; exact g2
+    · rw [if_neg hz]; simpa using c2
+    · rw [d1, k1]
+    · rw [d2, k2]
+    · rw [d3, k3]
+    · rw [d5, k4]
+    · rw [d7, k5]
+    · rw [d8, k6]
+    · rw [d9, k7]
+    · rw [d10, k8]
+    · rw [d11, k10]
+    · rw [d12, k11]
+    · rw [d13, k12]
+    · rw [g4, c3]
+      have h2 : (if (false : Bool) = true then 3 else 2) = 2 := rfl
+      rw [h2, hx]
+      omega
+
+/-- **epilogue の正当性と長さ**。 -/
+theorem epilogueU_spec {x : List (Fin sc)} {L s p1raw D Q E r a b : ℕ}
+    (hmark : mark ≠ blank) (hend : endSym ∉ x) (hstart : startSym ∉ x)
+    (hse : startSym ≠ endSym) (hsb : startSym ≠ blank)
+    (hx : x.length = L) (hs : s ≤ L) (hp : p1raw ≤ L + 1)
+    (ts : OvTapes sc)
+    (hE : GSPre.Enc blank startSym endSym mark x a b ⟨D, Q, E, p1raw, 0, s, r⟩
+      (DecompInstance.prjB ts))
+    (hP0 : Tape.StackView blank ts.P []) (hU0 : Tape.StackView blank ts.U [])
+    (hC0 : Tape.StackView blank ts.Cnt []) :
+    Tape.SeqView blank (applyActs blank (epilogueU blank startSym endSym mark L ts) ts).P
+        (startSym :: (x.drop s ++ [endSym])) 1
+      ∧ Tape.SeqView blank (applyActs blank (epilogueU blank startSym endSym mark L ts) ts).U
+          (startSym :: (x.take s ++ [endSym])) 1
+      ∧ Tape.CounterView' blank mark
+          (applyActs blank (epilogueU blank startSym endSym mark L ts) ts).Cnt
+          (if p1raw = 0 then (L - s) + 1 else p1raw)
+      ∧ ScratchBlank blank (applyActs blank (epilogueU blank startSym endSym mark L ts) ts)
+      ∧ (applyActs blank (epilogueU blank startSym endSym mark L ts) ts).X = ts.X
+      ∧ (applyActs blank (epilogueU blank startSym endSym mark L ts) ts).X2 = ts.X2
+      ∧ (applyActs blank (epilogueU blank startSym endSym mark L ts) ts).F = ts.F
+      ∧ (epilogueU blank startSym endSym mark L ts).length
+          ≤ 19 * L + 44 + D + Q + E + r := by
+  set pw : List (Fin sc) := GSPre.pword startSym endSym x with hpw
+  have hpwlen : pw.length = L + 2 := by rw [hpw, GSPre.pword_length, hx]
+  have hE1 : Tape.SeqView blank ts.S1 pw (a + 1) := hE.v1
+  have hE2 : Tape.SeqView blank ts.S2 pw (b + 1) := hE.v2
+  have hE3 : Tape.CounterView' blank mark ts.S3 D := hE.cd
+  have hE4 : Tape.CounterView' blank mark ts.S4 Q := hE.cq
+  have hE5 : Tape.CounterView' blank mark ts.S5 E := hE.ce
+  have hE6 : Tape.CounterView' blank mark ts.S6 p1raw := hE.cp
+  have hE7 : Tape.CounterView' blank mark ts.S7 0 := hE.cf
+  have hE8 : Tape.CounterView' blank mark ts.S8 s := hE.cs
+  have hE9 : Tape.CounterView' blank mark ts.S9 r := hE.cr
+  have hale : a ≤ L := by rw [← hx]; exact GSPre.pat_le hE1
+  have hble : b ≤ L := by rw [← hx]; exact GSPre.pat_le hE2
+  -- 段階
+  obtain ⟨t1, e1⟩ : ∃ t, applyActs blank (homeS1 blank L ts) ts = t := ⟨_, rfl⟩
+  obtain ⟨t2, e2⟩ : ∃ t,
+      applyActs blank [Act.Pset startSym .right, Act.Uset startSym .right] t1 = t := ⟨_, rfl⟩
+  obtain ⟨t3, e3⟩ : ∃ t, applyActs blank (splitLoop blank mark (L + 1) t2) t2 = t := ⟨_, rfl⟩
+  obtain ⟨t4, e4⟩ : ∃ t, applyActs blank [Act.Uset endSym .right] t3 = t := ⟨_, rfl⟩
+  obtain ⟨t5, e5⟩ : ∃ t,
+      applyActs blank (toSentU (blank := blank) startSym (L + 3) t4) t4 = t := ⟨_, rfl⟩
+  obtain ⟨t6, e6⟩ : ∃ t, applyActs blank [Act.U .right] t5 = t := ⟨_, rfl⟩
+  obtain ⟨t7, e7⟩ : ∃ t, applyActs blank [Act.C mark .right] t6 = t := ⟨_, rfl⟩
+  obtain ⟨t8, e8⟩ : ∃ t, applyActs blank (cntBranch blank endSym mark L t7) t7 = t := ⟨_, rfl⟩
+  obtain ⟨t9, e9⟩ : ∃ t, applyActs blank [Act.Pset endSym .right] t8 = t := ⟨_, rfl⟩
+  obtain ⟨t10, e10⟩ : ∃ t,
+      applyActs blank (toSentP (blank := blank) startSym (L + 3) t9) t9 = t := ⟨_, rfl⟩
+  obtain ⟨t11, e11⟩ : ∃ t, applyActs blank [Act.P .right] t10 = t := ⟨_, rfl⟩
+  obtain ⟨t12, e12⟩ : ∃ t, applyActs blank (clearAllS blank L t11) t11 = t := ⟨_, rfl⟩
+  have hrun : applyActs blank (epilogueU blank startSym endSym mark L ts) ts = t12 := by
+    rw [epilogueU, seqA_run, seqA_run, seqA_run, seqA_run, seqA_run, seqA_run, seqA_run,
+      seqA_run, seqA_run, seqA_run, seqA_run, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12]
+  rw [hrun]
+  -- ## 段階 1：`S1` を添字 1 へ
+  have h1S1 : Tape.SeqView blank t1.S1 pw 1 := by
+    rw [← e1]
+    exact homeS1_spec blank L ts pw (a + 1) (by omega) hE1 (by omega)
+  have h1main := homeS1_main (blank := blank) L ts
+  rw [e1] at h1main
+  have h1slot : ∀ j : SIdx, j ≠ .s1 → sGet j t1 = sGet j ts := by
+    intro j hj; rw [← e1]; exact homeS1_slot hj L ts
+  -- ## 段階 2：`P`/`U` に番人
+  have he2 : t2 = { t1 with P := Tape.step blank t1.P startSym .right
+                            U := Tape.step blank t1.U startSym .right } := by
+    rw [← e2, run_pushPU]
+  have h2P : Tape.StackView blank t2.P [startSym] := by
+    rw [he2]
+    have : Tape.StackView blank t1.P [] := by rw [h1main.1]; exact hP0
+    simpa using Tape.push_spec this startSym
+  have h2U : Tape.StackView blank t2.U [startSym] := by
+    rw [he2]
+    have : Tape.StackView blank t1.U [] := by rw [h1main.2.2.2.1]; exact hU0
+    simpa using Tape.push_spec this startSym
+  have h2S1 : Tape.SeqView blank t2.S1 pw 1 := by rw [he2]; exact h1S1
+  have h2S8 : Tape.CounterView' blank mark t2.S8 s := by
+    rw [he2]
+    have := h1slot .s8 (by decide)
+    show Tape.CounterView' blank mark (sGet SIdx.s8 t1) s
+    rw [this]; exact hE8
+  -- ## 段階 3：切り出し
+  have hsplit := splitLoop_spec (blank := blank) hmark (L + 1) s 1 t2 pw [startSym]
+    (by omega) (by rw [hpwlen]; omega) h2S8 h2S1 h2U
+  rw [e3] at hsplit
+  obtain ⟨h3S1, h3U, h3S8, h3len⟩ := hsplit
+  have hkeep3 := splitLoop_keep (blank := blank) (mark := mark) (L + 1) t2
+  rw [e3] at hkeep3
+  have htakes : ((pw.take (1 + s)).drop 1) = x.take s := by
+    rw [hpw, GSPre.pword]
+    rw [show 1 + s = s + 1 from by omega]
+    rw [List.take_succ_cons, List.drop_succ_cons, List.drop_zero,
+      List.take_append_of_le_length (by omega : s ≤ x.length)]
+  rw [htakes] at h3U
+  -- ## 段階 4：`U` に `endSym`
+  set uw : List (Fin sc) := startSym :: (x.take s ++ [endSym]) with huw
+  have htkl : (x.take s).length = s := by rw [List.length_take]; omega
+  have huwlen : uw.length = s + 2 := by
+    rw [huw, List.length_cons, List.length_append, htkl, List.length_singleton]
+  have huwrev : uw.reverse = endSym :: ((x.take s).reverse ++ [startSym]) := by
+    rw [huw]; simp
+  have he4 : t4 = { t3 with U := Tape.step blank t3.U endSym .right } := by
+    rw [← e4, run_Uset]
+  have h4U : Tape.StackView blank t4.U uw.reverse := by
+    rw [he4, huwrev]; exact Tape.push_spec h3U endSym
+  -- ## 段階 5, 6：`U` を添字 1 へ
+  have h4seq : Tape.SeqView blank t4.U (uw ++ [blank]) (s + 2) := by
+    have := stack_to_seq_end blank uw t4.U h4U
+    rwa [huwlen] at this
+  have hvne : startSym ∉ ((x.take s ++ [endSym]) ++ [blank]) := by
+    intro hc
+    rcases List.mem_append.1 hc with hc | hc
+    · rcases List.mem_append.1 hc with hc | hc
+      · exact hstart (List.mem_of_mem_take hc)
+      · exact hse (by simpa using hc)
+    · exact hsb (by simpa using hc)
+  have huwb : uw ++ [blank] = startSym :: ((x.take s ++ [endSym]) ++ [blank]) := by
+    rw [huw]; rfl
+  obtain ⟨h5U, h5len⟩ := toSentU_spec (blank := blank) hvne (L + 3) (s + 2) t4
+    (by omega) (by rw [← huwb]; exact h4seq)
+  rw [e5] at h5U
+  have h5keep : t5 = { t4 with U := t5.U } := by rw [← e5]; exact toSentU_keep (L + 3) t4
+  have he6 : t6 = { t5 with U := Tape.step blank t5.U t5.U.focus .right } := by
+    rw [← e6, run_Umove]
+  have h6U : Tape.SeqView blank t6.U uw 1 := by
+    rw [he6]
+    have h5U' : Tape.SeqView blank t5.U (uw ++ [blank]) 0 := by rw [huwb]; exact h5U
+    have hstep := Tape.seq_move_right h5U' (by rw [List.length_append, huwlen]; omega)
+    exact DecompInstance.seqView_shrink hstep (fun c hc => by simpa using hc)
+      (by rw [huwlen]; omega)
+  -- ## 段階 7：`Cnt` を 0 に
+  have hCnt6 : Tape.StackView blank t6.Cnt [] := by
+    have c1 : t1.Cnt = ts.Cnt := h1main.2.2.1
+    have c2 : t2.Cnt = t1.Cnt := by rw [he2]
+    have c3 : t3.Cnt = t2.Cnt := hkeep3.2.2.2.2.1
+    have c4 : t4.Cnt = t3.Cnt := by rw [he4]
+    have c5 : t5.Cnt = t4.Cnt := by rw [h5keep]
+    have c6 : t6.Cnt = t5.Cnt := by rw [he6]
+    rw [c6, c5, c4, c3, c2, c1]; exact hC0
+  have he7 : t7 = { t6 with Cnt := Tape.step blank t6.Cnt mark .right } := by
+    rw [← e7, run_Cset]
+  have h7Cnt : Tape.CounterView' blank mark t7.Cnt 0 := by
+    rw [he7, Tape.counterView'_zero]
+    simpa using Tape.push_spec hCnt6 mark
+  -- 段階 7 までの `S1`, `S6`, `P`
+  have h7S1 : Tape.SeqView blank t7.S1 pw (s + 1) := by
+    have : t7.S1 = t3.S1 := by
+      rw [he7, he6, h5keep, he4]
+    rw [this]
+    rw [show s + 1 = 1 + s from by omega]
+    exact h3S1
+  have h7P : Tape.StackView blank t7.P [startSym] := by
+    have : t7.P = t2.P := by
+      rw [he7, he6, h5keep, he4, hkeep3.2.2.2.1]
+    rw [this]; exact h2P
+  have h7S6 : Tape.CounterView' blank mark t7.S6 p1raw := by
+    have : t7.S6 = t2.S6 := by
+      rw [he7, he6, h5keep, he4, hkeep3.2.2.2.2.2.2.2.2.2.1]
+    rw [this, he2]
+    have := h1slot .s6 (by decide)
+    show Tape.CounterView' blank mark (sGet SIdx.s6 t1) p1raw
+    rw [this]; exact hE6
+  -- ## 段階 8：分岐
+  obtain ⟨h8S1, h8P, h8Cnt, h8S6, h8X, h8X2, h8F, h8U, h8S2, h8S3, h8S4, h8S5, h8S7, h8S8,
+    h8S9, h8len⟩ := cntBranch_spec (blank := blank) (startSym := startSym) hend hmark L s p1raw
+      hx hs hp t7 [startSym] h7S1 h7P h7Cnt h7S6
+  rw [e8] at h8S1 h8P h8Cnt h8S6 h8X h8X2 h8F h8U h8S2 h8S3 h8S4 h8S5 h8S7 h8S8 h8S9
+  -- ## 段階 9, 10, 11：`P` を仕上げる
+  set pw' : List (Fin sc) := startSym :: (x.drop s ++ [endSym]) with hpw'
+  have hdrl : (x.drop s).length = L - s := by rw [List.length_drop]; omega
+  have hpw'len : pw'.length = (L - s) + 2 := by
+    rw [hpw', List.length_cons, List.length_append, hdrl, List.length_singleton]
+  have hpw'rev : pw'.reverse = endSym :: ((x.drop s).reverse ++ [startSym]) := by
+    rw [hpw']; simp
+  have he9 : t9 = { t8 with P := Tape.step blank t8.P endSym .right } := by
+    rw [← e9, run_Pset]
+  have h9P : Tape.StackView blank t9.P pw'.reverse := by
+    rw [he9, hpw'rev]; exact Tape.push_spec h8P endSym
+  have h9seq : Tape.SeqView blank t9.P (pw' ++ [blank]) ((L - s) + 2) := by
+    have := stack_to_seq_end blank pw' t9.P h9P
+    rwa [hpw'len] at this
+  have hvne' : startSym ∉ ((x.drop s ++ [endSym]) ++ [blank]) := by
+    intro hc
+    rcases List.mem_append.1 hc with hc | hc
+    · rcases List.mem_append.1 hc with hc | hc
+      · exact hstart (List.mem_of_mem_drop hc)
+      · exact hse (by simpa using hc)
+    · exact hsb (by simpa using hc)
+  have hpw'b : pw' ++ [blank] = startSym :: ((x.drop s ++ [endSym]) ++ [blank]) := by
+    rw [hpw']; rfl
+  obtain ⟨h10P, h10len⟩ := toSentP_spec (blank := blank) hvne' (L + 3) ((L - s) + 2) t9
+    (by omega) (by rw [← hpw'b]; exact h9seq)
+  rw [e10] at h10P
+  have h10keep : t10 = { t9 with P := t10.P } := by rw [← e10]; exact toSentP_keep (L + 3) t9
+  have he11 : t11 = { t10 with P := Tape.step blank t10.P t10.P.focus .right } := by
+    rw [← e11, run_Pmove]
+  have h11P : Tape.SeqView blank t11.P pw' 1 := by
+    rw [he11]
+    have h10P' : Tape.SeqView blank t10.P (pw' ++ [blank]) 0 := by rw [hpw'b]; exact h10P
+    have hstep := Tape.seq_move_right h10P' (by rw [List.length_append, hpw'len]; omega)
+    exact DecompInstance.seqView_shrink hstep (fun c hc => by simpa using hc)
+      (by rw [hpw'len]; omega)
+  -- ## 段階 12：作業テープの消去に必要なビュー
+  have h11S1 : Tape.SeqView blank t11.S1 pw (L + 1) := by
+    have : t11.S1 = t8.S1 := by rw [he11, h10keep, he9]
+    rw [this]; exact h8S1
+  have h11S2 : Tape.SeqView blank t11.S2 pw (b + 1) := by
+    have hc : t11.S2 = ts.S2 := by
+      rw [he11, h10keep, he9, h8S2, he7, he6, h5keep, he4, hkeep3.2.2.2.2.2.1, he2]
+      have := h1slot .s2 (by decide)
+      show sGet SIdx.s2 t1 = sGet SIdx.s2 ts
+      exact this
+    rw [hc]; exact hE2
+  have h11S3 : Tape.CounterView' blank mark t11.S3 D := by
+    have hc : t11.S3 = ts.S3 := by
+      rw [he11, h10keep, he9, h8S3, he7, he6, h5keep, he4, hkeep3.2.2.2.2.2.2.1, he2]
+      exact h1slot .s3 (by decide)
+    rw [hc]; exact hE3
+  have h11S4 : Tape.CounterView' blank mark t11.S4 Q := by
+    have hc : t11.S4 = ts.S4 := by
+      rw [he11, h10keep, he9, h8S4, he7, he6, h5keep, he4, hkeep3.2.2.2.2.2.2.2.1, he2]
+      exact h1slot .s4 (by decide)
+    rw [hc]; exact hE4
+  have h11S5 : Tape.CounterView' blank mark t11.S5 E := by
+    have hc : t11.S5 = ts.S5 := by
+      rw [he11, h10keep, he9, h8S5, he7, he6, h5keep, he4,
+        hkeep3.2.2.2.2.2.2.2.2.1, he2]
+      exact h1slot .s5 (by decide)
+    rw [hc]; exact hE5
+  have h11S6 : Tape.CounterView' blank mark t11.S6 0 := by
+    have hc : t11.S6 = t8.S6 := by rw [he11, h10keep, he9]
+    rw [hc]; exact h8S6
+  have h11S7 : Tape.CounterView' blank mark t11.S7 0 := by
+    have hc : t11.S7 = ts.S7 := by
+      rw [he11, h10keep, he9, h8S7, he7, he6, h5keep, he4,
+        hkeep3.2.2.2.2.2.2.2.2.2.2.1, he2]
+      exact h1slot .s7 (by decide)
+    rw [hc]; exact hE7
+  have h11S8 : Tape.CounterView' blank mark t11.S8 0 := by
+    have hc : t11.S8 = t3.S8 := by
+      rw [he11, h10keep, he9, h8S8, he7, he6, h5keep, he4]
+    rw [hc]; exact h3S8
+  have h11S9 : Tape.CounterView' blank mark t11.S9 r := by
+    have hc : t11.S9 = ts.S9 := by
+      rw [he11, h10keep, he9, h8S9, he7, he6, h5keep, he4,
+        hkeep3.2.2.2.2.2.2.2.2.2.2.2, he2]
+      exact h1slot .s9 (by decide)
+    rw [hc]; exact hE9
+  obtain ⟨h12sc, h12P, h12X, h12Cnt, h12U, h12X2, h12F, h12len⟩ :=
+    clearAllS_spec (blank := blank) (mark := mark) L t11 pw pw (L + 1) (b + 1) D Q E 0 0 0 r
+      h11S1 hpwlen h11S2 hpwlen h11S3 h11S4 h11S5 h11S6 h11S7 h11S8 h11S9
+  rw [e12] at h12sc h12P h12X h12Cnt h12U h12X2 h12F
+  -- 結論
+  refine ⟨?_, ?_, ?_, h12sc, ?_, ?_, ?_, ?_⟩
+  · rw [h12P]; exact h11P
+  · have q1 : t11.U = t10.U := by rw [he11]
+    have q2 : t10.U = t9.U := by rw [h10keep]
+    have q3 : t9.U = t8.U := by rw [he9]
+    have q4 : t7.U = t6.U := by rw [he7]
+    rw [h12U, q1, q2, q3, h8U, q4]
+    exact h6U
+  · rw [h12Cnt, he11, h10keep, he9]; exact h8Cnt
+  · rw [h12X, he11, h10keep, he9, h8X, he7, he6, h5keep, he4, hkeep3.1, he2]
+    exact h1main.2.1
+  · rw [h12X2, he11, h10keep, he9, h8X2, he7, he6, h5keep, he4, hkeep3.2.1, he2]
+    exact h1main.2.2.2.2.1
+  · rw [h12F, he11, h10keep, he9, h8F, he7, he6, h5keep, he4, hkeep3.2.2.1, he2]
+    exact h1main.2.2.2.2.2
+  · -- 長さ
+    have hlen : (epilogueU blank startSym endSym mark L ts).length
+        = (homeS1 blank L ts).length + 2 + (splitLoop blank mark (L + 1) t2).length + 1
+          + (toSentU (blank := blank) startSym (L + 3) t4).length + 1 + 1
+          + (cntBranch blank endSym mark L t7).length + 1
+          + (toSentP (blank := blank) startSym (L + 3) t9).length + 1
+          + (clearAllS blank L t11).length := by
+      rw [epilogueU, seqA_length, seqA_length, seqA_length, seqA_length, seqA_length,
+        seqA_length, seqA_length, seqA_length, seqA_length, seqA_length, seqA_length,
+        e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11]
+      simp only [List.length_cons, List.length_nil]
+      omega
+    rw [hlen, homeS1_length, h3len, h5len, h10len]
+    omega
+
+end Epilogue
+
+
+/-! ## 16. 一様な分解器の全体 -/
+
+section Full
+
+variable {blank startSym endSym mark leftSym : Fin sc}
+
+/-- **一様な分解器の動作列**：prologue（`X2` から窓を読む）＋ 分解本体 ＋ epilogue。
+`y` を参照せず、テープ状態と段幅 `L` だけの関数である。 -/
+def decompUniform (blank startSym endSym mark : Fin sc) (L : ℕ) (ts : OvTapes sc) :
+    List (Act sc) :=
+  seqA blank (fun t => prologueU blank startSym endSym mark L t)
+    (seqA blank (fun t => decActsL blank endSym mark L t)
+      (fun t => epilogueU blank startSym endSym mark L t)) ts
+
+/-- 費用の傾き（周期和定数 `C₁` に依存）。 -/
+def CdU (C₁ : ℕ) : ℕ := 40290 * C₁ + 220680
+
+/-- 費用の切片。 -/
+def DdU : ℕ := 25185
+
+/-- **主定理**：入口が `EntryBlank` で、`X2` が `leftSym :: y` を添字 `L` で保持していれば、
+`decompUniform` は `P` / `U` / `Cnt` に `EndToEnd2.gsDec2 y 8 L` の分解を載せ、
+`X` / `X2` / `F` を保ち、作業テープを空白に戻し、動作数は `L` の 1 次式で抑えられる。 -/
+theorem decompUniform_spec {y : List (Fin sc)} {L C₁ : ℕ}
+    (hmark : mark ≠ blank) (hend : endSym ∉ y) (hstart : startSym ∉ y)
+    (hse : startSym ≠ endSym) (hsb : startSym ≠ blank)
+    (hL : 1 ≤ L) (hLy : L ≤ y.length)
+    (hsum : ∀ (z : List (Fin sc)) (b s' : ℕ),
+      stripLoop2Periods z 8 b (z.length + 1) s' ≤ C₁ * b)
+    (ts : OvTapes sc) (hEB : MiddleTapes.EntryBlank blank ts)
+    (hX2 : Tape.SeqView blank ts.X2 (leftSym :: y) L) :
+    Tape.SeqView blank (applyActs blank (decompUniform blank startSym endSym mark L ts) ts).P
+        (startSym :: ((y.take L).drop (EndToEnd2.gsDec2 y 8 L).1 ++ [endSym])) 1
+      ∧ Tape.SeqView blank
+          (applyActs blank (decompUniform blank startSym endSym mark L ts) ts).U
+          (startSym :: ((y.take L).take (EndToEnd2.gsDec2 y 8 L).1 ++ [endSym])) 1
+      ∧ Tape.CounterView' blank mark
+          (applyActs blank (decompUniform blank startSym endSym mark L ts) ts).Cnt
+          (EndToEnd2.gsDec2 y 8 L).2.1
+      ∧ ScratchBlank blank
+          (applyActs blank (decompUniform blank startSym endSym mark L ts) ts)
+      ∧ (applyActs blank (decompUniform blank startSym endSym mark L ts) ts).X = ts.X
+      ∧ (applyActs blank (decompUniform blank startSym endSym mark L ts) ts).X2 = ts.X2
+      ∧ (applyActs blank (decompUniform blank startSym endSym mark L ts) ts).F = ts.F
+      ∧ (decompUniform blank startSym endSym mark L ts).length ≤ CdU C₁ * L + DdU := by
+  set x : List (Fin sc) := y.take L with hxdef
+  have hxlen : x.length = L := by rw [hxdef, List.length_take]; omega
+  have hendx : endSym ∉ x := fun hc => hend (List.mem_of_mem_take hc)
+  have hstartx : startSym ∉ x := fun hc => hstart (List.mem_of_mem_take hc)
+  set s : ℕ := (decompose2 x 8).1 with hsdef
+  set p1raw : ℕ := (decompose2 x 8).2.1 with hpdef
+  set rr : ℕ := (decompose2 x 8).2.2 with hrdef
+  have hH := decompose2_gsDecomp (k := 8) (by omega) x
+  have hsle : s ≤ L := by
+    have := hH.cut_le
+    rw [← hsdef, hxlen] at this
+    exact this
+  have hple : p1raw ≤ L + 1 := by
+    by_cases hz : p1raw = 0
+    · omega
+    · have hleast := hH.toGSCore.least (by rw [← hpdef]; exact hz)
+      have h8 : 8 * p1raw ≤ (x.drop s).length := by
+        rw [hpdef, hsdef]; exact hleast.1.2.1
+      have : (x.drop s).length ≤ L := by rw [List.length_drop]; omega
+      omega
+  -- 段階
+  obtain ⟨t1, e1⟩ : ∃ t, applyActs blank (prologueU blank startSym endSym mark L ts) ts = t :=
+    ⟨_, rfl⟩
+  obtain ⟨t2, e2⟩ : ∃ t, applyActs blank (decActsL blank endSym mark L t1) t1 = t := ⟨_, rfl⟩
+  obtain ⟨t3, e3⟩ : ∃ t, applyActs blank (epilogueU blank startSym endSym mark L t2) t2 = t :=
+    ⟨_, rfl⟩
+  have hrun : applyActs blank (decompUniform blank startSym endSym mark L ts) ts = t3 := by
+    rw [decompUniform, seqA_run, seqA_run, e1, e2, e3]
+  rw [hrun]
+  -- prologue
+  obtain ⟨hE1, k1X2, k1P, k1X, k1Cnt, k1U, k1F⟩ := prologueU_spec (blank := blank)
+    (startSym := startSym) (endSym := endSym) (mark := mark) (leftSym := leftSym)
+    hL hLy ts hEB.scratch hX2
+  rw [e1] at hE1 k1X2 k1P k1X k1Cnt k1U k1F
+  rw [← hxdef] at hE1
+  -- 分解本体
+  obtain ⟨hNlen, ⟨a, b, D, Q, E, hE2⟩, k2P, k2U, k2Cnt, k2X, k2X2, k2F⟩ :=
+    decActsL_spec (startSym := startSym) hxlen hendx hmark t1 hE1
+  rw [e2] at hE2 k2P k2U k2Cnt k2X k2X2 k2F
+  rw [← hsdef, ← hpdef, ← hrdef] at hE2
+  -- カウンタの値は分解本体の動作数で抑えられる
+  set N : ℕ := (decActsL blank endSym mark L t1).length with hNdef
+  have hval : ∀ (i : SIdx) (v : ℕ), Tape.CounterView' blank mark (sGet i t1) 0 →
+      Tape.CounterView' blank mark (sGet i t2) v → v ≤ N := by
+    intro i v h0 hv
+    have l0 : (sGet i t1).left.length = 1 := by rw [h0.left_eq]; simp
+    have l2 : (sGet i t2).left.length = v + 1 := by rw [hv.left_eq]; simp
+    have hmono := left_len_applyActs blank i (decActsL blank endSym mark L t1) t1
+    rw [e2] at hmono
+    rw [l0, l2, ← hNdef] at hmono
+    omega
+  have hD : D ≤ N := hval .s3 D hE1.cd hE2.cd
+  have hQ : Q ≤ N := hval .s4 Q hE1.cq hE2.cq
+  have hE : E ≤ N := hval .s5 E hE1.ce hE2.ce
+  have hR : rr ≤ N := hval .s9 rr hE1.cr hE2.cr
+  -- epilogue
+  obtain ⟨h3P, h3U, h3Cnt, h3sc, h3X, h3X2, h3F, h3len⟩ := epilogueU_spec (blank := blank)
+    (startSym := startSym) (endSym := endSym) (mark := mark) (x := x) (L := L) (s := s)
+    (p1raw := p1raw) (D := D) (Q := Q) (E := E) (r := rr) (a := a) (b := b)
+    hmark hendx hstartx hse hsb hxlen hsle hple t2 hE2
+    (by rw [k2P, k1P]; exact hEB.p) (by rw [k2U, k1U]; exact hEB.u)
+    (by rw [k2Cnt, k1Cnt]; exact hEB.cnt)
+  rw [e3] at h3P h3U h3Cnt h3sc h3X h3X2 h3F
+  -- `gsDec2` への橋渡し
+  have hfst : (EndToEnd2.gsDec2 y 8 L).1 = s := by
+    rw [EndToEnd2.gsDec2_fst, ← hxdef, ← hsdef]
+  have hdroplen : ((y.take L).drop s).length = L - s := by
+    rw [← hxdef, List.length_drop, hxlen]
+  have hsnd : (EndToEnd2.gsDec2 y 8 L).2.1 = if p1raw = 0 then (L - s) + 1 else p1raw := by
+    rw [EndToEnd2.gsDec2, ← hxdef, ← hpdef, ← hsdef]
+    split_ifs with hz
+    · rw [hdroplen]
+    · rfl
+  refine ⟨by rw [hfst]; exact h3P, by rw [hfst]; exact h3U, by rw [hsnd]; exact h3Cnt, h3sc,
+    by rw [h3X, k2X, k1X], by rw [h3X2, k2X2, k1X2], by rw [h3F, k2F, k1F], ?_⟩
+  -- 長さ
+  have hlen : (decompUniform blank startSym endSym mark L ts).length
+      = (prologueU blank startSym endSym mark L ts).length + N
+        + (epilogueU blank startSym endSym mark L t2).length := by
+    rw [decompUniform, seqA_length, seqA_length, e1, e2, ← hNdef]
+    omega
+  have hwork : decompose2Work x 8 ≤ (34 * C₁ + 186) * L + 21 := by
+    have h := decompose2Work_le x 8 C₁ (by omega) (fun b s' => hsum x b s')
+    rw [hxlen] at h
+    have harith : (4 * 8 + 2) * C₁ + 17 * 8 + 50 = 34 * C₁ + 186 := by ring
+    rw [harith] at h
+    omega
+  have hN : N ≤ (8058 * C₁ + 44131) * L + 5026 := by
+    have h1 : 237 * decompose2Work x 8 ≤ 237 * ((34 * C₁ + 186) * L + 21) :=
+      Nat.mul_le_mul_left _ hwork
+    have h2 : 237 * ((34 * C₁ + 186) * L + 21) + 49 * (L + 1)
+        = (8058 * C₁ + 44131) * L + 5026 := by ring
+    omega
+  have hsum5 : 5 * N ≤ (40290 * C₁ + 220655) * L + 25130 := by
+    have h5 := Nat.mul_le_mul_left 5 hN
+    have hbig : 5 * ((8058 * C₁ + 44131) * L + 5026)
+        = (40290 * C₁ + 220655) * L + 25130 := by ring
+    rw [← hbig]
+    exact h5
+  rw [hlen, prologueU_length hL ts]
+  simp only [CdU, DdU]
+  have hexp : (40290 * C₁ + 220680) * L = (40290 * C₁ + 220655) * L + 25 * L := by ring
+  rw [hexp]
+  omega
+
+end Full
+
+
+/-! ## 17. 一様な分解器のインタフェースと居住者
+
+`MiddleTapes.DecompOnTapes`（および `DecompInstance.DecompOnTapesB`）の
+`pat` / `upat` / `cnt` は、入口の仮定が `EntryBlank blank ts` **だけ**であり、
+「`X2` が段の語 `y` を保持している」ことをどこにも要求していない。したがって
+`acts` が `y` を参照しない**一様な**分解器は、その形のインタフェースを満たせない
+（`X2` に何が載っていても `y` の分解を書けと要求されるため）。
+
+そこで、入口条件に**窓の仮定**を加えたインタフェース `DecompOnTapesW` を置く。
+`MiddleTapes.DecompOnTapes` 側を `EntryBlank` に直したのと同じ手当てである。 -/
+
+section Iface
+
+/-- **窓の仮定つきの分解器インタフェース**：`acts` は段幅 `L` とテープ状態だけの関数
+（`y` を参照しない）。 -/
+structure DecompOnTapesW (sc : ℕ) (blank startSym endSym mark leftSym : Fin sc) where
+  /-- 計算する段の分解。 -/
+  dec : List (Fin sc) → ℕ → ℕ × ℕ × ℕ
+  /-- **一様な**動作列（`y` を参照しない）。 -/
+  acts : ℕ → OvTapes sc → List (Act sc)
+  /-- 費用の傾き。 -/
+  Cd : ℕ
+  /-- 費用の切片。 -/
+  Dd : ℕ
+  /-- 段の正当性。 -/
+  decOK : ∀ (y : List (Fin sc)) (L : ℕ), 1 ≤ L →
+    StageOK y 8 L (dec y L).1 (dec y L).2.1 (dec y L).2.2
+  /-- 入口（`EntryBlank` ＋ `X2` に窓）からの動作。 -/
+  spec : ∀ (y : List (Fin sc)) (L : ℕ), 1 ≤ L → L ≤ y.length → endSym ∉ y → startSym ∉ y →
+    ∀ ts : OvTapes sc, MiddleTapes.EntryBlank blank ts →
+      Tape.SeqView blank ts.X2 (leftSym :: y) L →
+      Tape.SeqView blank (applyActs blank (acts L ts) ts).P
+          (startSym :: ((y.take L).drop (dec y L).1 ++ [endSym])) 1
+        ∧ Tape.SeqView blank (applyActs blank (acts L ts) ts).U
+            (startSym :: ((y.take L).take (dec y L).1 ++ [endSym])) 1
+        ∧ Tape.CounterView' blank mark (applyActs blank (acts L ts) ts).Cnt (dec y L).2.1
+        ∧ ScratchBlank blank (applyActs blank (acts L ts) ts)
+        ∧ (applyActs blank (acts L ts) ts).X = ts.X
+        ∧ (applyActs blank (acts L ts) ts).X2 = ts.X2
+        ∧ (applyActs blank (acts L ts) ts).F = ts.F
+        ∧ (acts L ts).length ≤ Cd * L + Dd
+
+/-- **一様な分解器の居住者**（`dec := EndToEnd2.gsDec2 · 8`）。 -/
+def decompUniformInstance {blank startSym endSym mark leftSym : Fin sc} {C₁ : ℕ}
+    (hmark : mark ≠ blank) (hse : startSym ≠ endSym) (hsb : startSym ≠ blank)
+    (hsum : ∀ (z : List (Fin sc)) (b s' : ℕ),
+      stripLoop2Periods z 8 b (z.length + 1) s' ≤ C₁ * b) :
+    DecompOnTapesW sc blank startSym endSym mark leftSym where
+  dec := fun y L => EndToEnd2.gsDec2 y 8 L
+  acts := fun L ts => decompUniform blank startSym endSym mark L ts
+  Cd := CdU C₁
+  Dd := DdU
+  decOK := fun _ _ hL => EndToEnd2.decOK2 _ _ hL
+  spec := fun _ _ hL hLy hend hstart ts hEB hX2 =>
+    decompUniform_spec (leftSym := leftSym) hmark hend hstart hse hsb hL hLy hsum ts hEB hX2
+
+theorem decompUniformInstance_Cd {blank startSym endSym mark leftSym : Fin sc} {C₁ : ℕ}
+    (hmark : mark ≠ blank) (hse : startSym ≠ endSym) (hsb : startSym ≠ blank)
+    (hsum : ∀ (z : List (Fin sc)) (b s' : ℕ),
+      stripLoop2Periods z 8 b (z.length + 1) s' ≤ C₁ * b) :
+    (decompUniformInstance (leftSym := leftSym) hmark hse hsb hsum).Cd = 40290 * C₁ + 220680 :=
+  rfl
+
+theorem decompUniformInstance_Dd {blank startSym endSym mark leftSym : Fin sc} {C₁ : ℕ}
+    (hmark : mark ≠ blank) (hse : startSym ≠ endSym) (hsb : startSym ≠ blank)
+    (hsum : ∀ (z : List (Fin sc)) (b s' : ℕ),
+      stripLoop2Periods z 8 b (z.length + 1) s' ≤ C₁ * b) :
+    (decompUniformInstance (leftSym := leftSym) hmark hse hsb hsum).Dd = 25185 :=
+  rfl
+
+end Iface
+
+#print axioms decompUniform_spec
 #print axioms prologueU_spec
 #print axioms decActsL_spec
 #print axioms splitLoop_spec

@@ -609,6 +609,45 @@ def TightLagVirtual : Prop :=
   ∀ n, (k + 1) * n
     ≤ Phi k (vStep u v k p₁ r T (meteredX u v k p₁ r T cst A B' n).z).1 + k * v.length
 
+/-- **停留（フロンティア）状態では遅れ有界性は無条件に成り立つ**（`Ψ` は要らない）。
+`¬ Enabled` は `q ≠ |v| ∧ n ≤ pos + q` を与えるので `(k+1)n ≤ Φ + k·q ≤ Φ + k|v|`。 -/
+theorem stuck_lag_tight {v : List α} {k n : ℕ} {m : MStateX} (hq : m.z.1.q ≤ v.length)
+    (hne : ¬ Enabled v n m.z.1) :
+    (k + 1) * n ≤ Phi k m.z.1 + k * v.length := by
+  have hge : n ≤ m.z.1.pos + m.z.1.q := by
+    by_contra hc
+    exact hne (Or.inr (by omega))
+  have e2 : (k + 1) * n ≤ (k + 1) * (m.z.1.pos + m.z.1.q) := Nat.mul_le_mul_left _ hge
+  have e3 : (k + 1) * (m.z.1.pos + m.z.1.q)
+      = (k + 1) * m.z.1.pos + (k * m.z.1.q + m.z.1.q) := by ring
+  have e4 : k * m.z.1.q ≤ k * v.length := Nat.mul_le_mul_left _ hq
+  have e5 : Phi k m.z.1 = (k + 1) * m.z.1.pos + m.z.1.q := rfl
+  omega
+
+/-- **借金と余裕**：`Ψ` を担いだラウンド不変条件を閉じるのに必要な唯一の不等式。
+フロンティア停止状態で「未払いの借金 `Ψ` は残りの `q` 余裕で賄える」。 -/
+def DebtSlack (v : List α) (k C : ℕ) : Prop :=
+  ∀ z : VState, z.2 ≤ 2 * z.1.q → z.1.q ≤ v.length → z.1.q ≠ v.length →
+    Pot z ≤ C * (k * (v.length - z.1.q))
+
+/-- **`DebtSlack` は（状態述語としては）偽である**：`q = |v| − 1`, `checked = 2q` は
+`VCheckedInv` を満たすが、余裕は `C*k*1` しかない。したがって
+「`Ψ` を担いだラウンド不変条件」で `TightLagBoundary` を出す道は塞がっている。 -/
+theorem debtSlack_false {k C L : ℕ} (hL : 2 ≤ L) (hbig : C * k + 4 < 4 * L) :
+    ¬ DebtSlack (List.replicate L (Classical.arbitrary (α := ℕ))) k C := by
+  intro h
+  have hlen : (List.replicate L (Classical.arbitrary (α := ℕ))).length = L :=
+    List.length_replicate
+  have hq : (((⟨0, L - 1⟩ : ScanState), 2 * (L - 1)) : VState).1.q = L - 1 := rfl
+  have hc : (((⟨0, L - 1⟩ : ScanState), 2 * (L - 1)) : VState).2 = 2 * (L - 1) := rfl
+  have hmain := h ((⟨0, L - 1⟩ : ScanState), 2 * (L - 1))
+    (by rw [hq, hc]) (by rw [hq, hlen]; omega) (by rw [hq, hlen]; omega)
+  rw [hq, hlen] at hmain
+  have hP : Pot (((⟨0, L - 1⟩ : ScanState), 2 * (L - 1)) : VState) = 2 * (2 * (L - 1)) := by
+    rw [Pot, hc]
+  rw [hP, show L - (L - 1) = 1 from by omega, Nat.mul_one] at hmain
+  omega
+
 end Gap
 
 /-! ## 9. 穴を仮定した完全性と主定理
@@ -790,6 +829,8 @@ end Complete
 #print axioms manswerX_sound
 #print axioms mreportedX_complete
 #print axioms meteredX_boundary_of_occ
+#print axioms stuck_lag_tight
+#print axioms debtSlack_false
 #print axioms meteredX_answer_correct'
 
 end MeteredX
