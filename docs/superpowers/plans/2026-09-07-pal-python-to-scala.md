@@ -15,8 +15,10 @@ Python と **バイト一致** を差分テストで確認する。
 **Spec:** `docs/palindromes-in-peg/STATUS.md` §2（構成）と §5B（移植は SHA 再現の鎖を切りうる →
 だからこそバイト一致の差分テストを必須にする）。
 
-**Status note (2026-09-07):** This remains an implementation plan, not a
-claim that the port is complete. The Scala sources expose `pal.GenerateWindowPal`,
+**Status note (2026-09-07):** `pal.PortCoverageSuite` confirms that all 94
+Python modules and 66 Python tests have corresponding Scala paths. This file
+inventory does not claim that the full test suite was rerun or that the
+FullWindowPAL SHA was reproduced. The Scala sources expose `pal.GenerateWindowPal`,
 `pal.CompactScaffoldPeg`, `pal.VerifyWindowPal`, `pal.GeneratePhaseExamples`,
 and `pal.GenerateScaffoldExamples`. The default full-grammar SHA has not been
 verified from Scala; only bounded/source-fixture byte-identity checks currently

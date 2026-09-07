@@ -126,7 +126,7 @@ translation validation of the emitted grammar, and the correctness of the online
 recogniser — is future work in this repository; see
 `docs/palindromes-in-peg/STATUS.md` (start here) and `docs/palindromes-in-peg/PLAIN_PAL_ARTIFACT.md`.
 
-The Python-to-Scala 3 port is in progress under `scala/pal`; Python remains the
+The Python-to-Scala 3 counterparts are present under `scala/pal`; Python remains the
 reference implementation. Scala reproduction commands, reader limits, and the
 current SHA boundary are documented in [`STATUS.md`](docs/palindromes-in-peg/STATUS.md).
 The separate [`lean-pal/`](lean-pal/) package contains a conditional theorem;

@@ -1,6 +1,7 @@
 # 回文言語の素の PEG — 経過と現状（2026-09-07、lean4-peg 移行時点）
 
-> Scala移植は進行中であり、この文書は全Pythonモジュールの移植完了を主張しない。
+> Python 94モジュールと66テストのScala対応ファイルは揃っている。
+> `pal.PortCoverageSuite` で対応先の存在を確認済みだが、全体テストの再実行やFullWindowPALのSHA再現とは別である。
 > 対応表と作業単位は [移植計画](../superpowers/plans/2026-09-07-pal-python-to-scala.md) にまとめる。
 
 この repo で作業を続けるための入口。まずこれを読み、次に `PLAIN_PAL_ARTIFACT.md`
@@ -67,7 +68,7 @@ python3 analysis/grammar_closure.py /tmp/pal-window-fast.peg   # 数分
 python3 analysis/grammar_scc.py /tmp/pal-window-fast.peg       # 約 22 分、メモリ数 GB
 ```
 
-### Scala 3 の再現入口（移植進行中）
+### Scala 3 の再現入口
 
 Scala側のCLIは `pal.GenerateWindowPal`、`pal.CompactScaffoldPeg`、
 `pal.VerifyWindowPal` として、リポジトリのルートから次の形で実行する。
@@ -87,8 +88,8 @@ sbt -batch 'pal/runMain pal.VerifyWindowPal /tmp/pal-window-fast.peg --runner ..
 Scala版の既定の全体文法を生成して上記SHAと一致させる検証は未実施。移植の差分証拠は、
 各 `PyDiff` テストが明示するソース／fixture範囲に限る。
 
-ファイル対応の棚卸しは `pal.PortCoverageSuite` がPythonディレクトリを再帰走査して行う。
-件数を固定せず、追加されたPythonファイルにも対応Scalaパスを要求する。
+ファイル対応の棚卸しは `pal.PortCoverageSuite` がPythonディレクトリを再帰走査して行い、MAINで94モジュール・66テスト、
+不足0件を確認した。件数はSuiteに固定せず、追加されたPythonファイルにも対応Scalaパスを要求する。
 
 `CompactScaffoldPeg` は1GiBの窓を連結して2GiB超のsourceを読む設計だが、1行には別の上限がある。
 一方、トップレベルの `pal.FileGrammar` はファイルサイズが `Int.MaxValue`（約2GiB）を超えると明示的に拒否する。

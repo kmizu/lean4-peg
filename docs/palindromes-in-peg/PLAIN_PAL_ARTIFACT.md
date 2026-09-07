@@ -19,7 +19,7 @@ were rejected. Its complete log is `/tmp/pal-window-raw-smoke.log`.
 
 ## Scala port boundary
 
-Scala 3 ports under `scala/pal` use `PyDiff` for differential checks. The
+Scala 3 counterparts under `scala/pal` use `PyDiff` for differential checks. The
 full-grammar SHA above has not yet been independently reproduced by Scala;
 source/fixture byte identity is evidence only for the range named by each test.
 
