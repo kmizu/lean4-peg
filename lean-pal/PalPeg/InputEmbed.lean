@@ -123,6 +123,34 @@ theorem passPeriodSum_map {C₁ : ℕ} (hsum₂ : EndToEnd2.PassPeriodSum 8 C₁
     stripLoop2Periods (input.map ι) 8 b ((input.map ι).length + 1) s ≤ C₁ * b :=
   passPeriodSum_of_subset hsum₂ ι (input.map ι) (mem_map_cases ι input) b s
 
+/-- **像に収まる語なら記号は `ι 0` か `ι 1`**（`Set.range` 版）。 -/
+theorem mem_range_cases {ι : Fin 2 ↪ Fin sc} {c : Fin sc} (hc : c ∈ Set.range ι) :
+    c = ι 0 ∨ c = ι 1 := by
+  obtain ⟨i, rfl⟩ := hc
+  fin_cases i
+  · exact Or.inl rfl
+  · exact Or.inr rfl
+
+/-- **弱められた `hsum` の充足（`Set.range ι` 版）**：`EndToEnd2.PassPeriodSum 8 C₁` から、
+記号が `ι` の像に収まる**すべての** `y` について周期和の上界が従う。
+`StageTapes.PrepOnTapes.len_le`（したがって `PrepInstance.prepInstance` /
+`StageIfaceInstance.stageIface`）の `hsum` を
+`∀ y, (∀ c ∈ y, c ∈ A) → …` の形に弱めれば、`A := (· ∈ Set.range ι)` で
+これがそのまま埋める。 -/
+theorem hsum_of_mem_range {C₁ : ℕ} (hsum₂ : EndToEnd2.PassPeriodSum 8 C₁)
+    (ι : Fin 2 ↪ Fin sc) (y : List (Fin sc)) (hy : ∀ c ∈ y, c ∈ Set.range ι) (b s : ℕ) :
+    stripLoop2Periods y 8 b (y.length + 1) s ≤ C₁ * b :=
+  passPeriodSum_of_subset hsum₂ ι y (fun c hc => mem_range_cases (hy c hc)) b s
+
+/-- **弱められた `hsum` の充足（`w = input.map ι` 版）**：記号が実際の入力語
+`input.map ι` に現れるものだけからなる `y` について。 -/
+theorem hsum_of_mem_word {C₁ : ℕ} (hsum₂ : EndToEnd2.PassPeriodSum 8 C₁)
+    (ι : Fin 2 ↪ Fin sc) (input : List (Fin 2)) (y : List (Fin sc))
+    (hy : ∀ c ∈ y, c ∈ input.map ι) (b s : ℕ) :
+    stripLoop2Periods y 8 b (y.length + 1) s ≤ C₁ * b :=
+  passPeriodSum_of_subset hsum₂ ι y
+    (fun c hc => mem_map_cases ι input c (hy c hc)) b s
+
 /-! ## 5. 主定理 -/
 
 /-- **全体の出力の正当性（埋め込み版・インタフェース一般）**：
@@ -253,6 +281,19 @@ theorem passPeriodSum_map9 {C₁ : ℕ} (hsum₂ : EndToEnd2.PassPeriodSum 8 C�
     stripLoop2Periods (input.map emb9) 8 b ((input.map emb9).length + 1) s ≤ C₁ * b :=
   passPeriodSum_map hsum₂ emb9 input b s
 
+/-- `sc = 9` での弱められた `hsum` の充足。 -/
+theorem hsum_of_mem_range9 {C₁ : ℕ} (hsum₂ : EndToEnd2.PassPeriodSum 8 C₁)
+    (y : List (Fin 9)) (hy : ∀ c ∈ y, c ∈ Set.range emb9) (b s : ℕ) :
+    stripLoop2Periods y 8 b (y.length + 1) s ≤ C₁ * b :=
+  hsum_of_mem_range hsum₂ emb9 y hy b s
+
+/-- `sc = 9`：入力語の記号は `emb9` の像に入る（`hsum_of_mem_range9` の適用条件）。 -/
+theorem mem_range_emb9 (input : List (Fin 2)) :
+    ∀ c ∈ input.map emb9, c ∈ Set.range emb9 := by
+  intro c hc
+  obtain ⟨a, -, rfl⟩ := List.mem_map.mp hc
+  exact ⟨a, rfl⟩
+
 end Symbols9
 
 section Audit
@@ -269,6 +310,10 @@ section Audit
 #print axioms emb9_avoids
 #print axioms full_answer_mem_PAL_embed9
 #print axioms passPeriodSum_map9
+#print axioms hsum_of_mem_range
+#print axioms hsum_of_mem_word
+#print axioms hsum_of_mem_range9
+#print axioms mem_range_emb9
 
 end Audit
 
