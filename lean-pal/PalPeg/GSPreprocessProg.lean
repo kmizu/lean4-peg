@@ -34,12 +34,12 @@ inductive W9 where
   deriving DecidableEq, Fintype
 
 /-- 動作識別子：`(テープ番号, 書き込む記号, 移動)`。 -/
-abbrev A9 := Fin 9 × W9 × Move
+abbrev A9 := Fin 11 × W9 × Move
 
 /-- 条件識別子。 -/
 inductive Cond9 where
   /-- テープ `j` の読みがマーカ記号 `mark` でない（カウンタが非零）。 -/
-  | notMark (j : Fin 9) : Cond9
+  | notMark (j : Fin 11) : Cond9
   /-- `V2` の読みが右端番人 `endSym` でない。 -/
   | v2NotEnd : Cond9
   /-- `V1` と `V2` の読みが等しい。 -/
@@ -48,38 +48,40 @@ inductive Cond9 where
 
 /-! ### テープ番号 -/
 
-def tV1 : Fin 9 := ⟨0, by omega⟩
-def tV2 : Fin 9 := ⟨1, by omega⟩
-def tCd : Fin 9 := ⟨2, by omega⟩
-def tCq : Fin 9 := ⟨3, by omega⟩
-def tCe : Fin 9 := ⟨4, by omega⟩
-def tCp : Fin 9 := ⟨5, by omega⟩
-def tCf : Fin 9 := ⟨6, by omega⟩
-def tCs : Fin 9 := ⟨7, by omega⟩
-def tCr : Fin 9 := ⟨8, by omega⟩
+def tV1 : Fin 11 := ⟨0, by omega⟩
+def tV2 : Fin 11 := ⟨1, by omega⟩
+def tCd : Fin 11 := ⟨2, by omega⟩
+def tCq : Fin 11 := ⟨3, by omega⟩
+def tCe : Fin 11 := ⟨4, by omega⟩
+def tCp : Fin 11 := ⟨5, by omega⟩
+def tCf : Fin 11 := ⟨6, by omega⟩
+def tCs : Fin 11 := ⟨7, by omega⟩
+def tCr : Fin 11 := ⟨8, by omega⟩
+def tCa : Fin 11 := ⟨9, by omega⟩
+def tCb : Fin 11 := ⟨10, by omega⟩
 
 instance : Fintype Cond9 :=
-  Fintype.ofList ((List.finRange 9).map Cond9.notMark ++ [Cond9.v2NotEnd, Cond9.v12Eq])
+  Fintype.ofList ((List.finRange 11).map Cond9.notMark ++ [Cond9.v2NotEnd, Cond9.v12Eq])
     (by rintro (j | _ | _) <;> simp)
 
 variable {Terminal : Type}
 
 /-- 動作の解釈。入力記号は見ない。 -/
-def actOf9 (blank mark : Fin sc) (a : A9) (_ : Option Terminal) (σ : Fin 9 → Fin sc) :
-    Fin 9 → Fin sc × Move :=
+def actOf9 (blank mark : Fin sc) (a : A9) (_ : Option Terminal) (σ : Fin 11 → Fin sc) :
+    Fin 11 → Fin sc × Move :=
   touchVec a.1 (match a.2.1 with
     | W9.keep => σ a.1
     | W9.blk => blank
     | W9.mrk => mark) a.2.2 σ
 
 /-- 条件の解釈。 -/
-def condOf9 (endSym mark : Fin sc) : Cond9 → (Fin 9 → Fin sc) → Bool
+def condOf9 (endSym mark : Fin sc) : Cond9 → (Fin 11 → Fin sc) → Bool
   | .notMark j, σ => decide (σ j ≠ mark)
   | .v2NotEnd, σ => decide (σ tV2 ≠ endSym)
   | .v12Eq, σ => decide (σ tV1 = σ tV2)
 
 /-- 9 本テープの前処理器の解釈。 -/
-def I9 (blank endSym mark : Fin sc) : Interp Terminal A9 Cond9 (Fin sc) 9 where
+def I9 (blank endSym mark : Fin sc) : Interp Terminal A9 Cond9 (Fin sc) 11 where
   actOf := actOf9 blank mark
   condOf := condOf9 endSym mark
 
@@ -99,7 +101,7 @@ theorem toS_step (blank : Fin sc) (tp : TapeConfiguration sc) (a : Fin sc) (m : 
   cases m <;> cases L <;> cases R <;> rfl
 
 /-- 9 本のテープの取り出し。 -/
-def getT (ts : Tapes sc) : Fin 9 → TapeConfiguration sc
+def getT (ts : Tapes sc) : Fin 11 → TapeConfiguration sc
   | ⟨0, _⟩ => ts.V1
   | ⟨1, _⟩ => ts.V2
   | ⟨2, _⟩ => ts.Cd
@@ -109,18 +111,20 @@ def getT (ts : Tapes sc) : Fin 9 → TapeConfiguration sc
   | ⟨6, _⟩ => ts.Cf
   | ⟨7, _⟩ => ts.Cs
   | ⟨8, _⟩ => ts.Cr
-  | ⟨_ + 9, h⟩ => absurd h (by omega)
+  | ⟨9, _⟩ => ts.Ca
+  | ⟨10, _⟩ => ts.Cb
+  | ⟨_ + 11, h⟩ => absurd h (by omega)
 
 /-- 9 本まとめて。 -/
-def TS (ts : Tapes sc) : Fin 9 → STape (Fin sc) := fun j => toS (getT ts j)
+def TS (ts : Tapes sc) : Fin 11 → STape (Fin sc) := fun j => toS (getT ts j)
 
-@[simp] theorem TS_focus (ts : Tapes sc) (j : Fin 9) :
+@[simp] theorem TS_focus (ts : Tapes sc) (j : Fin 11) :
     ((TS ts) j).focus = (getT ts j).focus := rfl
 
 /-! ## 3. 動作列の write+move ベクトル列 -/
 
 /-- `Act` が触れるテープ。 -/
-def actTape : Act sc → Fin 9
+def actTape : Act sc → Fin 11
   | .V1 _ => tV1
   | .V2 _ => tV2
   | .Cd _ _ => tCd
@@ -130,6 +134,8 @@ def actTape : Act sc → Fin 9
   | .Cf _ _ => tCf
   | .Cs _ _ => tCs
   | .Cr _ _ => tCr
+  | .Ca _ _ => tCa
+  | .Cb _ _ => tCb
 
 /-- `Act` が書き込む記号。 -/
 def writeOf (ts : Tapes sc) : Act sc → Fin sc
@@ -142,6 +148,8 @@ def writeOf (ts : Tapes sc) : Act sc → Fin sc
   | .Cf a _ => a
   | .Cs a _ => a
   | .Cr a _ => a
+  | .Ca a _ => a
+  | .Cb a _ => a
 
 /-- `Act` の移動。 -/
 def moveOf : Act sc → Move
@@ -154,8 +162,10 @@ def moveOf : Act sc → Move
   | .Cf _ m => m
   | .Cs _ m => m
   | .Cr _ m => m
+  | .Ca _ m => m
+  | .Cb _ m => m
 
-theorem getT_applyAct (blank : Fin sc) (ts : Tapes sc) (a : Act sc) (j : Fin 9) :
+theorem getT_applyAct (blank : Fin sc) (ts : Tapes sc) (a : Act sc) (j : Fin 11) :
     getT (applyAct blank ts a) j
       = if j = actTape a then
           PalPeg.Tape.step blank (getT ts j) (writeOf ts a) (moveOf a)
@@ -163,14 +173,14 @@ theorem getT_applyAct (blank : Fin sc) (ts : Tapes sc) (a : Act sc) (j : Fin 9) 
   obtain ⟨v, hv⟩ := j
   cases a <;> interval_cases v <;>
     simp [applyAct, getT, actTape, writeOf, moveOf, tV1, tV2, tCd, tCq, tCe, tCp, tCf,
-      tCs, tCr, Fin.ext_iff]
+      tCs, tCr, tCa, tCb, Fin.ext_iff]
 
 /-- `Act` に対応する 9 テープ分の write+move ベクトル。 -/
-def avec (ts : Tapes sc) (a : Act sc) : Fin 9 → Fin sc × Move :=
+def avec (ts : Tapes sc) (a : Act sc) : Fin 11 → Fin sc × Move :=
   fun j => if j = actTape a then (writeOf ts a, moveOf a) else ((getT ts j).focus, Move.stay)
 
 /-- 動作列に対応するベクトル列（各段の状態で評価する）。 -/
-def avecs (blank : Fin sc) : List (Act sc) → Tapes sc → List (Fin 9 → Fin sc × Move)
+def avecs (blank : Fin sc) : List (Act sc) → Tapes sc → List (Fin 11 → Fin sc × Move)
   | [], _ => []
   | a :: l, ts => avec ts a :: avecs blank l (applyAct blank ts a)
 
@@ -261,7 +271,7 @@ def a9 (a : Act sc) : A9 :=
     | _ => W9.blk), moveOf a)
 
 /-- `mark` を書く版（カウンタ復元用）。 -/
-def a9m (j : Fin 9) (m : Move) : A9 := (j, W9.mrk, m)
+def a9m (j : Fin 11) (m : Move) : A9 := (j, W9.mrk, m)
 
 theorem actVec_gen (a : Act sc) (w : W9) (ts : Tapes sc)
     (hw : (match w with
@@ -314,7 +324,7 @@ theorem execA_loop_stop {c : Cond9} {a : A9} {b : Prog A9 Cond9} {ts : Tapes sc}
     ExecA Terminal blank endSym mark (Prog.loop c a b) ts [] :=
   exec_loop_stop (by rw [condOf_eq]; exact hc)
 
-theorem execA_loop_cont {c : Cond9} {a : Act sc} {w : W9} {j : Fin 9} {mv : Move}
+theorem execA_loop_cont {c : Cond9} {a : Act sc} {w : W9} {j : Fin 11} {mv : Move}
     {b : Prog A9 Cond9} {ts : Tapes sc} {L₁ L₂ : List (Act sc)}
     (hj : actTape a = j) (hmv : moveOf a = mv)
     (hw : (match w with
@@ -352,7 +362,7 @@ end ExecA
 具体的なテープに対して `rfl` で埋まる。 -/
 structure CT (sc : ℕ) where
   /-- テープ番号。 -/
-  idx : Fin 9
+  idx : Fin 11
   /-- そのテープへの動作の作り方。 -/
   act : Fin sc → Move → Act sc
   /-- そのテープの取り出し。 -/
@@ -384,6 +394,12 @@ def ctCs : CT sc :=
     fun _ => rfl, fun _ _ _ _ => rfl⟩
 def ctCr : CT sc :=
   ⟨tCr, Act.Cr, Tapes.Cr, fun _ _ => rfl, fun _ _ _ => rfl, fun _ _ => rfl,
+    fun _ => rfl, fun _ _ _ _ => rfl⟩
+def ctCa : CT sc :=
+  ⟨tCa, Act.Ca, Tapes.Ca, fun _ _ => rfl, fun _ _ _ => rfl, fun _ _ => rfl,
+    fun _ => rfl, fun _ _ _ _ => rfl⟩
+def ctCb : CT sc :=
+  ⟨tCb, Act.Cb, Tapes.Cb, fun _ _ => rfl, fun _ _ _ => rfl, fun _ _ => rfl,
     fun _ => rfl, fun _ _ _ _ => rfl⟩
 
 section CTLemmas
@@ -453,7 +469,7 @@ def dTest (c : CT sc) (blank mark : Fin sc) : List (Act sc) :=
 
 /-- 有限制御プログラム（テープ番号 `idx` のカウンタで駆動する）。
 `sc` にも `blank` にも依存しない、正真正銘の有限制御である。 -/
-def DLOOP (idx : Fin 9) (rest : Prog A9 Cond9) : Prog A9 Cond9 :=
+def DLOOP (idx : Fin 11) (rest : Prog A9 Cond9) : Prog A9 Cond9 :=
   Prog.seq (Prog.act (idx, W9.blk, Move.left))
     (Prog.seq
       (Prog.loop (Cond9.notMark idx) (idx, W9.blk, Move.stay)

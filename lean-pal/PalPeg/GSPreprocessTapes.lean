@@ -77,6 +77,10 @@ structure Tapes (sc : ℕ) where
   Cf : TapeConfiguration sc
   Cs : TapeConfiguration sc
   Cr : TapeConfiguration sc
+  /-- 第 2 相の符号つき比較カウンタ（正部）。それ以外の相では常に `0`。 -/
+  Ca : TapeConfiguration sc
+  /-- 第 2 相の符号つき比較カウンタ（負部）。それ以外の相では常に `0`。 -/
+  Cb : TapeConfiguration sc
 
 /-- 1 本のテープに対する 1 個のヘッド動作。文字テープ `V1`/`V2` は読んだ記号を
 書き戻して移動する（内容を壊さない移動）。カウンタは書く記号を明示する。 -/
@@ -90,6 +94,8 @@ inductive Act (sc : ℕ) where
   | Cf : Fin sc → Move → Act sc
   | Cs : Fin sc → Move → Act sc
   | Cr : Fin sc → Move → Act sc
+  | Ca : Fin sc → Move → Act sc
+  | Cb : Fin sc → Move → Act sc
 
 def applyAct (blank : Fin sc) (ts : Tapes sc) : Act sc → Tapes sc
   | .V1 m => { ts with V1 := Tape.step blank ts.V1 ts.V1.focus m }
@@ -101,6 +107,8 @@ def applyAct (blank : Fin sc) (ts : Tapes sc) : Act sc → Tapes sc
   | .Cf a m => { ts with Cf := Tape.step blank ts.Cf a m }
   | .Cs a m => { ts with Cs := Tape.step blank ts.Cs a m }
   | .Cr a m => { ts with Cr := Tape.step blank ts.Cr a m }
+  | .Ca a m => { ts with Ca := Tape.step blank ts.Ca a m }
+  | .Cb a m => { ts with Cb := Tape.step blank ts.Cb a m }
 
 def applyActs (blank : Fin sc) (l : List (Act sc)) (ts : Tapes sc) : Tapes sc :=
   l.foldl (applyAct blank) ts
@@ -271,7 +279,8 @@ theorem applyActs_mActs_pos (h : mCond blank endSym mark ts) :
         V2 := Tape.step blank ts.V2 ts.V2.focus .right
         Cd := Tape.step blank (Tape.step blank ts.Cd blank .left) blank .stay
         Cq := Tape.step blank ts.Cq blank .right
-        Ce := ts.Ce, Cp := ts.Cp, Cf := ts.Cf, Cs := ts.Cs, Cr := ts.Cr } := by
+        Ce := ts.Ce, Cp := ts.Cp, Cf := ts.Cf, Cs := ts.Cs, Cr := ts.Cr
+        Ca := ts.Ca, Cb := ts.Cb } := by
   simp only [mActs, if_pos h]
   rfl
 
@@ -523,7 +532,8 @@ theorem applyActs_rActs_pos (h : rCond endSym ts) :
       { V1 := Tape.step blank ts.V1 ts.V1.focus .right
         V2 := Tape.step blank ts.V2 ts.V2.focus .right
         Cr := Tape.step blank ts.Cr blank .right
-        Cd := ts.Cd, Cq := ts.Cq, Ce := ts.Ce, Cp := ts.Cp, Cf := ts.Cf, Cs := ts.Cs } := by
+        Cd := ts.Cd, Cq := ts.Cq, Ce := ts.Ce, Cp := ts.Cp, Cf := ts.Cf, Cs := ts.Cs
+        Ca := ts.Ca, Cb := ts.Cb } := by
   simp only [rActs, if_pos h]
   rfl
 
@@ -850,7 +860,8 @@ theorem applyActs_rewindUnit (ts : Tapes sc) :
         V2 := Tape.step blank ts.V2 ts.V2.focus .left
         Cq := Tape.step blank (Tape.step blank ts.Cq blank .left) blank .stay
         Cd := Tape.step blank ts.Cd blank .right
-        Ce := ts.Ce, Cp := ts.Cp, Cf := ts.Cf, Cs := ts.Cs, Cr := ts.Cr } := rfl
+        Ce := ts.Ce, Cp := ts.Cp, Cf := ts.Cf, Cs := ts.Cs, Cr := ts.Cr
+        Ca := ts.Ca, Cb := ts.Cb } := rfl
 
 /-- 巻き戻し 1 単位の実現。 -/
 theorem rewind_unit_enc {a b D Q E P F S R : ℕ} {ts : Tapes sc}
@@ -1078,7 +1089,8 @@ theorem applyActs_shiftHead (ts : Tapes sc) :
       { V2 := Tape.step blank ts.V2 ts.V2.focus .right
         Ce := Tape.step blank (Tape.step blank ts.Ce blank .left) blank .stay
         Cp := Tape.step blank ts.Cp blank .right
-        V1 := ts.V1, Cd := ts.Cd, Cq := ts.Cq, Cf := ts.Cf, Cs := ts.Cs, Cr := ts.Cr } := rfl
+        V1 := ts.V1, Cd := ts.Cd, Cq := ts.Cq, Cf := ts.Cf, Cs := ts.Cs, Cr := ts.Cr
+        Ca := ts.Ca, Cb := ts.Cb } := rfl
 
 theorem shift_unit_enc {a b D Q E P F S R : ℕ} {ts : Tapes sc}
     (hE : Enc blank startSym endSym mark x a b ⟨D, Q, E + 1, P, F, S, R⟩ ts)
@@ -2143,7 +2155,8 @@ theorem applyActs_sActs_pos (h : sCond endSym orc ts) :
       { V1 := Tape.step blank ts.V1 ts.V1.focus .right
         V2 := Tape.step blank ts.V2 ts.V2.focus .right
         Cq := Tape.step blank ts.Cq blank .right
-        Cd := ts.Cd, Ce := ts.Ce, Cp := ts.Cp, Cf := ts.Cf, Cs := ts.Cs, Cr := ts.Cr } := by
+        Cd := ts.Cd, Ce := ts.Ce, Cp := ts.Cp, Cf := ts.Cf, Cs := ts.Cs, Cr := ts.Cr
+        Ca := ts.Ca, Cb := ts.Cb } := by
   simp only [sActs, if_pos h]
   rfl
 
