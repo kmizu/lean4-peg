@@ -14,6 +14,7 @@ import PalPeg.GSDecomp
 import PalPeg.GSDecompL1
 import PalPeg.GSDecompose2
 import PalPeg.GSDecompose2Work
+import PalPeg.PassSum
 import PalPeg.GSPreprocess
 import PalPeg.GSPreprocessTapes
 import PalPeg.GSRealTime
@@ -97,6 +98,7 @@ import PalPeg.Main
 * `PalPeg.GSPreprocessTapes` — 前処理のテープ化（firstPeriod/extendReach/secondOuter、1 反復 ≤ (2k+65)·work+k+3；strip2 続行中）
 * `PalPeg.GSDecompose2Work` — `decompose2` の仕事量：Σp_j ≤ C₁T を仮定すれば線形（仮定の真偽を検証中）
 * `PalPeg.Metered`   — 固定 B 動作/ラウンドの de-amortization（`metered_phi`、境界で `metered_answer_correct`）
+* `PalPeg.PassSum`   — 1 パスの連続 run start の二分律（(k−1) 倍で減るか増える）、領域端の単調性；`Σp_j ≤ C₁T` は未証明
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/
