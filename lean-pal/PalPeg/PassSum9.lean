@@ -407,6 +407,72 @@ theorem runEnd_up_step_le {w : List α} {k p q P rj r' t Rc : ℕ} (hk : 4 ≤ k
     show t + (rj - t - q) = rj - q from by omega, show t + (rj - t) = rj from by omega]
   exact hbreak
 
+/-! ## §10 領域を跨ぐ子孫は、領域先頭の周期を規定する
+
+(H)（`t_j > (k-1) * p_j` なる子孫は `E_j < a_{c+1} + p_c`）を攻めるための道具。
+子孫 `j` の run が最初の周期ブロックの境界 `p_c` を越えると、領域の `p_c`-周期性により
+**領域の先頭 `[0, E_j - p_c)` が `p_j`-周期的**になる（`region_prefix_period`）。
+越え方が `k * p_j` 以上なら、先頭は `p_j` の `k`-繰り返しなので
+**第 1 子の周期は `q₁ ≤ p_j`**（`first_period_le_of_crossing`）。
+
+数値実験でも、(H) の場合（`t_j > (k-1) p_j`）には常に `p_j ≤ q₁`（実測 `max p_j/q₁ = 1.0`）で
+あり、この 2 つを合わせると `p_j = q₁` に押し込まれる。 -/
+
+/-- **領域先頭の周期**。領域 `w.take Rc` が `p`-周期的で、位置 `t ≤ p` から始まる
+長さ `r` の run が `P`-周期的なら、`p + L ≤ t + r` かつ `p + L + P ≤ Rc` のとき
+領域の先頭 `w.take L` は `P`-周期的。
+
+`w[i] = w[p+i]`（領域）`= w[p+i+P]`（run）`= w[i+P]`（領域）と辿る。 -/
+theorem region_prefix_period {w : List α} {p P t r L Rc : ℕ}
+    (hreg : HasPeriod (w.take Rc) p) (hRc : Rc ≤ w.length)
+    (hrun : HasPeriod ((w.drop t).take r) P)
+    (ht : t ≤ p) (hL : p + L ≤ t + r) (hfit : p + L + P ≤ Rc) :
+    HasPeriod (w.take L) P := by
+  have hreglen : (w.take Rc).length = Rc := by rw [List.length_take]; omega
+  have hrunlen : ((w.drop t).take r).length = min r (w.length - t) := by
+    rw [List.length_take, List.length_drop]
+  have hregion : ∀ j, j + p < Rc → w[j]? = w[j + p]? := by
+    intro j hj
+    have h := hreg j (by rw [hreglen]; exact hj)
+    rwa [List.getElem?_take_of_lt (show j < Rc by omega),
+      List.getElem?_take_of_lt (show j + p < Rc by omega)] at h
+  have hrunstep : ∀ m, m + P < r → m + t + P < w.length → w[t + m]? = w[t + m + P]? := by
+    intro m hm hm2
+    have h := hrun m (by rw [hrunlen]; omega)
+    rw [List.getElem?_take_of_lt (show m < r by omega),
+      List.getElem?_take_of_lt (show m + P < r by omega),
+      List.getElem?_drop, List.getElem?_drop] at h
+    rw [show t + m + P = t + (m + P) from by omega]
+    exact h
+  intro i hi
+  rw [List.length_take] at hi
+  rw [List.getElem?_take_of_lt (show i < L by omega),
+    List.getElem?_take_of_lt (show i + P < L by omega)]
+  have h1 : w[i]? = w[i + p]? := hregion i (by omega)
+  have h2 : w[t + (p + i - t)]? = w[t + (p + i - t) + P]? :=
+    hrunstep (p + i - t) (by omega) (by omega)
+  rw [show t + (p + i - t) = i + p from by omega,
+    show i + p + P = (i + P) + p from by omega] at h2
+  have h3 : w[i + P]? = w[(i + P) + p]? := hregion (i + P) (by omega)
+  rw [h1, h2, ← h3]
+
+/-- **深く跨ぐ子孫は第 1 子の周期を抑える**。領域の先頭 `k * P` セルが `P`-周期的なら、
+先頭位置の最小 `k`-繰り返し周期 `q₁` は `P` 以下。 -/
+theorem first_period_le_of_crossing {w : List α} {k q₁ P : ℕ} (hPpos : 0 < P)
+    (hq₁ : IsLeastKRep w k q₁) (hlen : k * P ≤ w.length)
+    (hper : HasPeriod (w.take (k * P)) P) : q₁ ≤ P :=
+  hq₁.2 P ⟨hPpos, hlen, hper⟩
+
+/-- 系：run が `p_c` を `k * P` 以上跨ぐなら `q₁ ≤ P`。 -/
+theorem first_period_le_of_deep_crossing {w : List α} {k p P t r q₁ Rc : ℕ} (hPpos : 0 < P)
+    (hreg : HasPeriod (w.take Rc) p) (hRc : Rc ≤ w.length)
+    (hrun : HasPeriod ((w.drop t).take r) P)
+    (hq₁ : IsLeastKRep w k q₁)
+    (ht : t ≤ p) (hdeep : p + k * P ≤ t + r) (hfit : p + k * P + P ≤ Rc) :
+    q₁ ≤ P :=
+  first_period_le_of_crossing hPpos hq₁ (by omega)
+    (region_prefix_period hreg hRc hrun ht (by omega) (by omega))
+
 section AxiomCheck
 open PalPeg.PassSum9
 #print axioms PalPeg.PassSum9.inner_run_lt
@@ -422,5 +488,8 @@ open PalPeg.PassSum9
 #print axioms PalPeg.PassSum9.factor_period_contradiction
 #print axioms PalPeg.PassSum9.factor_copy_eq
 #print axioms PalPeg.PassSum9.runEnd_up_step_le
+#print axioms PalPeg.PassSum9.region_prefix_period
+#print axioms PalPeg.PassSum9.first_period_le_of_crossing
+#print axioms PalPeg.PassSum9.first_period_le_of_deep_crossing
 #print axioms PalPeg.PassSum8.passPeriodSum_eight_of_hasTree
 end AxiomCheck
