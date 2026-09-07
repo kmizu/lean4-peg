@@ -13,7 +13,9 @@ import PalPeg.GSScan
 import PalPeg.GSDecomp
 import PalPeg.GSDecompL1
 import PalPeg.GSDecompose2
+import PalPeg.GSDecompose2Work
 import PalPeg.GSPreprocess
+import PalPeg.GSPreprocessTapes
 import PalPeg.GSRealTime
 import PalPeg.GSVerifier
 import PalPeg.GSScanTapes
@@ -89,6 +91,8 @@ import PalPeg.Main
 * `PalPeg.GSDecompose2` — 失敗位置へジャンプする strip 規則の `decompose2`：`decompose2_gsDecomp`（L1 無条件）
 * `PalPeg.VerifierFeed` — 検証器の Txt2 も FIFO で供給（`.X .right` ごとの fill 版を続行中）
 * `PalPeg.MiddleTapes` — 中央ジョブのバッチをテープ上で実行（`batch_read_flag`、レート `rateM`；ラウンド組み立ては続行中）
+* `PalPeg.GSPreprocessTapes` — 前処理のテープ化（firstPeriod/extendReach/secondOuter、1 反復 ≤ (2k+65)·work+k+3；strip2 続行中）
+* `PalPeg.GSDecompose2Work` — `decompose2` の仕事量：Σp_j ≤ C₁T を仮定すれば線形（仮定の真偽を検証中）
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/

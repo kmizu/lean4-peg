@@ -230,3 +230,10 @@ lake build
   証明済み、残るは木の帰納 Σp ≤ C₁T（新エージェント）。PatternTapes（段セットアップ ≤ 21h）、VerifierFeed
   （Txt2 も FIFO 供給；`.X .right` ごとの fill 版を続行中）、MiddleTapes（バッチ実行はテープ化済み、ラウンド
   組み立て続行中）、GSPreprocessTapes（firstPeriod/extendReach/secondInner 済、残り続行中）。
+- 進捗（コミット 4389b84 まで）：VerifierFeed の逐次 fill 版（`vfeed_online''`、仮定なし）、GSPreprocessTapes
+  が secondOuter まで（1 反復 ≤ (2k+65)·work）、GSDecompose2Work（線形は Σp_j ≤ C₁T を仮定；子 (A)・兄弟 (B)
+  補題は証明済み。ウチの見立てでは Σp_j は最悪 T log T になりうるので、Python で全探索して事実確認中）。
+  新規：Metered（1 ラウンド固定 B 動作の de-amortization 補題）。残り：MiddleTapes のラウンド組み立て、
+  前処理テープ化の strip2、段の照合フェーズ組み立て、全体 `StructuredMachine` 化、最終定理。
+  **前処理の線形性が未解決の場合の代替案**：分割点を S/2 に置いたまま前処理に S/2 ラウンドしか使えないので、
+  線形でなければ設計変更（別の照合器 or 別の分解法）が要る。
