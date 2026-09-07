@@ -13,6 +13,7 @@ import PalPeg.GSDecomp
 import PalPeg.GSDecompL1
 import PalPeg.GSDecompose2
 import PalPeg.GSDecompose2Work
+import PalPeg.PassSum5
 import PalPeg.GSPreprocess
 import PalPeg.GSPreprocessTapes
 import PalPeg.GSRealTime
@@ -341,7 +342,7 @@ import PalPeg.ProgLang
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.decompose2_gsDecomp
 
-/-- info: 'PalPeg.VerifierFeed.vfeed_online'' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'PalPeg.VerifierFeed.vfeed_online''' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.VerifierFeed.vfeed_online''
 
