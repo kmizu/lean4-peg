@@ -175,6 +175,26 @@ theorem homeF_eff {blank : Fin sc} (n m : ℕ) (ts : OvTapes sc) :
       { ts with F := rightN blank (GSTapes.leftN blank ts.F n) m } := by
   simp only [homeF, applyActs_append, mvF_eff, iterM_left, iterM_right]
 
+/-! ### 継ぎ目の動作列も作業テープに触れない -/
+
+theorem noScratch_mvX (m : Move) (n : ℕ) : NoScratchAll (mvX (sc := sc) m n) :=
+  noScratchAll_replicate (a := Act.X m) trivial n
+
+theorem noScratch_mvX2 (m : Move) (n : ℕ) : NoScratchAll (mvX2 (sc := sc) m n) :=
+  noScratchAll_replicate (a := Act.X2 m) trivial n
+
+theorem noScratch_mvF (m : Move) (n : ℕ) : NoScratchAll (mvF (sc := sc) m n) :=
+  noScratchAll_replicate (a := Act.F m) trivial n
+
+theorem noScratch_homeActs (sc n a b : ℕ) : NoScratchAll (homeActs sc n a b) := by
+  simp only [homeActs]
+  exact noScratchAll_append (noScratchAll_append (noScratchAll_append
+    (noScratchAll_append (noScratchAll_append (noScratch_mvX _ _) (noScratch_mvX2 _ _))
+      (noScratch_mvF _ _)) (noScratch_mvX _ _)) (noScratch_mvX2 _ _)) (noScratch_mvF _ _)
+
+theorem noScratch_homeF (sc n m : ℕ) : NoScratchAll (homeF sc n m) :=
+  noScratchAll_append (noScratch_mvF _ _) (noScratch_mvF _ _)
+
 /-! ## §1 「1 ラウンドに `rate` 動作だけ挽く」機構 -/
 
 /-- 挽き途中のジョブ：残りの動作列と現在のテープ。 -/
@@ -267,6 +287,22 @@ def ovRunActs (blank leftSym endSym mark one : Fin sc) (u v T : List (Fin sc))
               (decide (k * p₁ ≤ st.q ∧ st.q ≤ r))
               (decide (MatchLen u T st.pos u.length)) ts) ts)
 
+/-- 段の走査の動作列も作業テープに触れない。 -/
+theorem noScratch_ovRunActs {blank leftSym endSym mark one : Fin sc} {u v T : List (Fin sc)}
+    {k p₁ r minimum c : ℕ} :
+    ∀ (fuel : ℕ) (st : ScanState) (ts : OvTapes sc),
+      NoScratchAll (ovRunActs blank leftSym endSym mark one u v T k p₁ r minimum c
+        fuel st ts) := by
+  intro fuel
+  induction fuel with
+  | zero => intro st ts; exact noScratchAll_nil
+  | succ fuel ih =>
+    intro st ts
+    simp only [ovRunActs]
+    split_ifs with h
+    · exact noScratchAll_nil
+    · exact noScratchAll_append (noScratch_ovProgram _ _ _ _ _ _ _ _ _ _) (ih _ _)
+
 /-- 平坦化はテープへの作用を変えない。 -/
 theorem ovRunActs_apply {blank leftSym endSym mark one : Fin sc} {u v T : List (Fin sc)}
     {k p₁ r minimum c : ℕ} :
@@ -326,29 +362,40 @@ theorem ovRunActs_length {blank leftSym startSym endSym mark one : Fin sc}
 （分解器が内部で使う作業テープは、この 6 本とは別に持つものとし、その上の動作数も
 `Cd * L + Dd` に含まれているものとする。） -/
 structure DecompOnTapes (sc : ℕ) (blank startSym endSym mark : Fin sc) where
+  /-- この分解器が実際に計算する段の分解（`GSPreprocess` の素朴版でも
+  `EndToEnd2.gsDec2` の正規化版でもよい）。 -/
+  dec : List (Fin sc) → ℕ → ℕ × ℕ × ℕ
   /-- 段テープを載せ直す動作列。 -/
   acts : List (Fin sc) → ℕ → OvTapes sc → List (Act sc)
   /-- 費用の傾き。 -/
   Cd : ℕ
   /-- 費用の切片。 -/
   Dd : ℕ
+  /-- **段の正当性**（`MiddleBorder.DecOK` の `dec` 版）。 -/
+  decOK : ∀ (y : List (Fin sc)) (L : ℕ), 1 ≤ L →
+    StageOK y 8 L (dec y L).1 (dec y L).2.1 (dec y L).2.2
   len_le : ∀ (y : List (Fin sc)) (L : ℕ) (ts : OvTapes sc),
     (acts y L ts).length ≤ Cd * L + Dd
   pat : ∀ (y : List (Fin sc)) (L : ℕ), 1 ≤ L → L ≤ y.length → ∀ ts : OvTapes sc,
+    ScratchBlank blank ts →
     Tape.SeqView blank (applyActs blank (acts y L ts) ts).P
-      (startSym :: ((y.take L).drop (decompose (y.take L) 8).1 ++ [endSym])) 1
+      (startSym :: ((y.take L).drop (dec y L).1 ++ [endSym])) 1
   upat : ∀ (y : List (Fin sc)) (L : ℕ), 1 ≤ L → L ≤ y.length → ∀ ts : OvTapes sc,
+    ScratchBlank blank ts →
     Tape.SeqView blank (applyActs blank (acts y L ts) ts).U
-      (startSym :: ((y.take L).take (decompose (y.take L) 8).1 ++ [endSym])) 1
+      (startSym :: ((y.take L).take (dec y L).1 ++ [endSym])) 1
   cnt : ∀ (y : List (Fin sc)) (L : ℕ), 1 ≤ L → L ≤ y.length → ∀ ts : OvTapes sc,
-    Tape.CounterView' blank mark (applyActs blank (acts y L ts) ts).Cnt
-      (decompose (y.take L) 8).2.1
+    ScratchBlank blank ts →
+    Tape.CounterView' blank mark (applyActs blank (acts y L ts) ts).Cnt (dec y L).2.1
   keepX : ∀ (y : List (Fin sc)) (L : ℕ) (ts : OvTapes sc),
     (applyActs blank (acts y L ts) ts).X = ts.X
   keepX2 : ∀ (y : List (Fin sc)) (L : ℕ) (ts : OvTapes sc),
     (applyActs blank (acts y L ts) ts).X2 = ts.X2
   keepF : ∀ (y : List (Fin sc)) (L : ℕ) (ts : OvTapes sc),
     (applyActs blank (acts y L ts) ts).F = ts.F
+  /-- **作業テープ**：空白で渡せば空白で返す。 -/
+  keepS : ∀ (y : List (Fin sc)) (L : ℕ) (ts : OvTapes sc), ScratchBlank blank ts →
+    ScratchBlank blank (applyActs blank (acts y L ts) ts)
 
 namespace DecompOnTapes
 
@@ -364,8 +411,9 @@ end DecompOnTapes
 
 /-! ## §4 1 バッチ分の平坦な動作列 -/
 
-/-- 段の切り出し位置 `s`。 -/
-def stageS (y : List (Fin sc)) (L : ℕ) : ℕ := (decompose (y.take L) 8).1
+/-- 段の切り出し位置 `s`（分解器 `dec` に相対）。 -/
+def stageS (dec : List (Fin sc) → ℕ → ℕ × ℕ × ℕ) (y : List (Fin sc)) (L : ℕ) : ℕ :=
+  (dec y L).1
 
 /-- 幾何級数の評価に使う算術補題。 -/
 theorem geo_key {A B L L' R : ℕ} (h3 : 3 * L' + 1 ≤ L) (hR : R ≤ (2 * A + B) * L') :
@@ -384,9 +432,9 @@ def stageActs (blank startSym endSym mark leftSym one : Fin sc)
     (ts : OvTapes sc) : List (Act sc) :=
   D.acts y L ts ++
     ovRunActs blank leftSym endSym mark one
-      ((y.take L).take (stageS y L)) ((y.take L).drop (stageS y L)) (y.take L).reverse
-      8 (decompose (y.take L) 8).2.1 (decompose (y.take L) 8).2.2
-      (max 1 (2 * stageS y L)) (stageS y L) ((8 + 2) * L + 1) ⟨0, 0⟩
+      ((y.take L).take (stageS D.dec y L)) ((y.take L).drop (stageS D.dec y L)) (y.take L).reverse
+      8 (D.dec y L).2.1 (D.dec y L).2.2
+      (max 1 (2 * stageS D.dec y L)) (stageS D.dec y L) ((8 + 2) * L + 1) ⟨0, 0⟩
       (applyActs blank (D.acts y L ts) ts)
 
 /-- **バッチのループ部分**：段を縮めながら、同じ `F` テープに書き続ける。
@@ -398,8 +446,8 @@ def jobLoop (blank startSym endSym mark leftSym one : Fin sc)
   | fuel + 1, L, ts =>
       if L = 0 then [] else
         let a := stageActs blank startSym endSym mark leftSym one D y L ts
-        let L' := nextLen (stageS y L)
-        let h := homeActs sc L (L' - stageS y L') L'
+        let L' := nextLen (stageS D.dec y L)
+        let h := homeActs sc L (L' - stageS D.dec y L') L'
         a ++ h ++ jobLoop blank startSym endSym mark leftSym one D y fuel L'
           (applyActs blank h (applyActs blank a ts))
 
@@ -408,7 +456,7 @@ def jobLoop (blank startSym endSym mark leftSym one : Fin sc)
 def jobActs (blank startSym endSym mark leftSym one : Fin sc)
     (D : DecompOnTapes sc blank startSym endSym mark) (y : List (Fin sc)) (rd : ℕ)
     (ts : OvTapes sc) : List (Act sc) :=
-  let h0 := homeActs sc y.length (y.length - stageS y y.length) y.length
+  let h0 := homeActs sc y.length (y.length - stageS D.dec y y.length) y.length
   let l := jobLoop blank startSym endSym mark leftSym one D y (y.length + 1) y.length
     (applyActs blank h0 ts)
   h0 ++ l ++ homeF sc y.length rd
@@ -450,15 +498,51 @@ section JobLoop
 
 variable {blank startSym endSym mark leftSym one : Fin sc}
 
+/-! ### 作業テープの空白性はバッチ全体で保たれる -/
+
+/-- 一段：分解器が空白で返し、走査は作業テープに触れない。 -/
+theorem stageActs_scratch (D : DecompOnTapes sc blank startSym endSym mark)
+    (y : List (Fin sc)) (L : ℕ) (ts : OvTapes sc) (h : ScratchBlank blank ts) :
+    ScratchBlank blank
+      (applyActs blank (stageActs blank startSym endSym mark leftSym one D y L ts) ts) := by
+  rw [stageActs, applyActs_append]
+  exact applyActs_scratchBlank (noScratch_ovRunActs _ _ _) (D.keepS y L ts h)
+
+/-- ループ部分。 -/
+theorem jobLoop_scratch (D : DecompOnTapes sc blank startSym endSym mark)
+    (y : List (Fin sc)) :
+    ∀ (fuel L : ℕ) (ts : OvTapes sc), ScratchBlank blank ts →
+      ScratchBlank blank (applyActs blank
+        (jobLoop blank startSym endSym mark leftSym one D y fuel L ts) ts) := by
+  intro fuel
+  induction fuel with
+  | zero => intro L ts h; exact h
+  | succ fuel ih =>
+    intro L ts h
+    simp only [jobLoop]
+    by_cases h0 : L = 0
+    · rw [if_pos h0]; exact h
+    · rw [if_neg h0, applyActs_append, applyActs_append]
+      exact ih _ _ (applyActs_scratchBlank (noScratch_homeActs _ _ _ _)
+        (stageActs_scratch D y L ts h))
+
+/-- 1 バッチ分。 -/
+theorem jobActs_scratch (D : DecompOnTapes sc blank startSym endSym mark)
+    (y : List (Fin sc)) (rd : ℕ) (ts : OvTapes sc) (h : ScratchBlank blank ts) :
+    ScratchBlank blank
+      (applyActs blank (jobActs blank startSym endSym mark leftSym one D y rd ts) ts) := by
+  simp only [jobActs, applyActs_append]
+  exact applyActs_scratchBlank (noScratch_homeF _ _ _)
+    (jobLoop_scratch D y _ _ _ (applyActs_scratchBlank (noScratch_homeActs _ _ _ _) h))
+
 /-- **バッチのループ部分の主定理**：動作数は `D.M * L` 以下で、走り終えたあとの
 `F` テープは `jobFlags` を保持し、ヘッドは添字 `≤ L` にある。 -/
 theorem jobLoop_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (Fin sc)}
     (hleft : leftSym ∉ y) (hend : endSym ∉ y)
-    (hOK : ∀ L, 1 ≤ L → L ≤ y.length →
-      StageOK y 8 L (gsDec y 8 L).1 (gsDec y 8 L).2.1 (gsDec y 8 L).2.2) :
+ :
     ∀ (fuel L : ℕ) (ts : OvTapes sc) (fw : List (Fin sc)),
-      L ≤ y.length → y.length + 1 ≤ fw.length →
-      Tape.SeqView blank ts.X (leftSym :: y) (L - stageS y L) →
+      L ≤ y.length → y.length + 1 ≤ fw.length → ScratchBlank blank ts →
+      Tape.SeqView blank ts.X (leftSym :: y) (L - stageS D.dec y L) →
       Tape.SeqView blank ts.X2 (leftSym :: y) L →
       Tape.SeqView blank ts.F fw L →
       (jobLoop blank startSym endSym mark leftSym one D y fuel L ts).length ≤ D.M * L ∧
@@ -466,95 +550,99 @@ theorem jobLoop_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (
         Tape.SeqView blank
           (applyActs blank
             (jobLoop blank startSym endSym mark leftSym one D y fuel L ts) ts).F
-          (jobFlags y (gsDec y 8) one 8 fuel L fw) i := by
+          (jobFlags y (D.dec y) one 8 fuel L fw) i := by
+  have hOK : ∀ L, 1 ≤ L → L ≤ y.length →
+      StageOK y 8 L (D.dec y L).1 (D.dec y L).2.1 (D.dec y L).2.2 :=
+    fun L hL _ => D.decOK y L hL
   intro fuel
   induction fuel with
   | zero =>
-    intro L ts fw _ _ _ _ hF
+    intro L ts fw _ _ _ _ _ hF
     exact ⟨Nat.zero_le _, L, le_rfl, hF⟩
   | succ fuel ih =>
-    intro L ts fw hL hfw hX hX2 hF
+    intro L ts fw hL hfw hSB hX hX2 hF
     simp only [jobLoop, jobFlags]
     by_cases h0 : L = 0
     · rw [if_pos h0, if_pos (show L = 0 from h0)]
       exact ⟨Nat.zero_le _, L, le_rfl, hF⟩
     rw [if_neg h0, if_neg h0]
     -- 段のデータ
-    have hOKL : StageOK y 8 L (stageS y L) (decompose (y.take L) 8).2.1
-        (decompose (y.take L) 8).2.2 := hOK L (by omega) hL
+    have hOKL : StageOK y 8 L (stageS D.dec y L) (D.dec y L).2.1
+        (D.dec y L).2.2 := hOK L (by omega) hL
     have hylen : (y.take L).length = L := by simp only [List.length_take]; omega
-    have hcut : stageS y L ≤ L := hOKL.cut_le
-    have hshort : 7 * stageS y L < L := by have := hOKL.cut_short; omega
-    have hulen : ((y.take L).take (stageS y L)).length = stageS y L := by
+    have hcut : stageS D.dec y L ≤ L := hOKL.cut_le
+    have hshort : 7 * stageS D.dec y L < L := by have := hOKL.cut_short; omega
+    have hulen : ((y.take L).take (stageS D.dec y L)).length = stageS D.dec y L := by
       simp only [List.length_take]; omega
-    have hvlen : ((y.take L).drop (stageS y L)).length = L - stageS y L := by
+    have hvlen : ((y.take L).drop (stageS D.dec y L)).length = L - stageS D.dec y L := by
       simp only [List.length_drop]; omega
     have hTlen : ((y.take L).reverse).length = L := by
       simp only [List.length_reverse]; omega
-    have hlenuv : ((y.take L).take (stageS y L)).length
-        + ((y.take L).drop (stageS y L)).length = ((y.take L).reverse).length := by omega
-    have hendv : endSym ∉ (y.take L).drop (stageS y L) := fun hc =>
+    have hlenuv : ((y.take L).take (stageS D.dec y L)).length
+        + ((y.take L).drop (stageS D.dec y L)).length = ((y.take L).reverse).length := by omega
+    have hendv : endSym ∉ (y.take L).drop (stageS D.dec y L) := fun hc =>
       hend (List.mem_of_mem_take (List.mem_of_mem_drop hc))
-    have hmin : max 1 (2 * ((y.take L).take (stageS y L)).length) ≤ max 1 (2 * stageS y L) := by
+    have hmin : max 1 (2 * ((y.take L).take (stageS D.dec y L)).length) ≤ max 1 (2 * stageS D.dec y L) := by
       rw [hulen]
-    have hinv0 : OvInv ((y.take L).take (stageS y L)) ((y.take L).drop (stageS y L))
+    have hinv0 : OvInv ((y.take L).take (stageS D.dec y L)) ((y.take L).drop (stageS D.dec y L))
         ((y.take L).reverse) ⟨0, 0⟩ :=
       ⟨by simpa using matchLen_zero _ _ _, by simp only []; omega⟩
     -- 段テープの載せ替え後の符号化
     have hE0 : OvEncodes blank leftSym startSym endSym mark
-        ((y.take L).take (stageS y L)) ((y.take L).drop (stageS y L)) y fw L
-        (decompose (y.take L) 8).2.1 (applyActs blank (D.acts y L ts) ts) ⟨0, 0⟩ := by
-      refine ⟨D.pat y L (by omega) hL ts, ?_, D.cnt y L (by omega) hL ts,
-        D.upat y L (by omega) hL ts, ?_, ?_⟩
+        ((y.take L).take (stageS D.dec y L)) ((y.take L).drop (stageS D.dec y L)) y fw L
+        (D.dec y L).2.1 (applyActs blank (D.acts y L ts) ts) ⟨0, 0⟩ := by
+      refine ⟨D.pat y L (by omega) hL ts hSB, ?_, D.cnt y L (by omega) hL ts hSB,
+        D.upat y L (by omega) hL ts hSB, ?_, ?_⟩
       · rw [D.keepX y L ts]; simpa [hulen] using hX
       · rw [D.keepX2 y L ts]; simpa using hX2
       · rw [D.keepF y L ts]; simpa using hF
     have hK := hOKL.ksimple
-    have hrun := ovRunTapes_encodes (one := one) (c := stageS y L) (xw := y)
+    have hrun := ovRunTapes_encodes (one := one) (c := stageS D.dec y L) (xw := y)
       hK (by omega : (0:ℕ) < 8) hL hleft hendv rfl hulen.symm hlenuv hmin
       ((8 + 2) * L + 1) ⟨0, 0⟩ (applyActs blank (D.acts y L ts) ts) fw hinv0 hE0
-    have hSA := ovRunActs_length (one := one) (c := stageS y L) (xw := y) (startSym := startSym)
+    have hSA := ovRunActs_length (one := one) (c := stageS D.dec y L) (xw := y) (startSym := startSym)
       (mark := mark) hK (by omega : (0:ℕ) < 8) hL hleft hendv rfl hulen.symm hlenuv hmin
       ((8 + 2) * L + 1) ⟨0, 0⟩ (applyActs blank (D.acts y L ts) ts) fw hinv0 hE0
-    have hSAcost : ovRunCost ((y.take L).take (stageS y L)) ((y.take L).drop (stageS y L))
-        ((y.take L).reverse) 8 (decompose (y.take L) 8).2.1 (decompose (y.take L) 8).2.2
-        (max 1 (2 * stageS y L)) ((8 + 2) * L + 1) ⟨0, 0⟩ ≤ 2432 * L :=
-      stage_tape_cost_le (x := y) (dec := gsDec y 8) hL (by omega) hOKL
+    have hSAcost : ovRunCost ((y.take L).take (stageS D.dec y L)) ((y.take L).drop (stageS D.dec y L))
+        ((y.take L).reverse) 8 (D.dec y L).2.1 (D.dec y L).2.2
+        (max 1 (2 * stageS D.dec y L)) ((8 + 2) * L + 1) ⟨0, 0⟩ ≤ 2432 * L :=
+      stage_tape_cost_le (x := y) (dec := D.dec y) hL (by omega) hOKL
     have hts2 : applyActs blank (stageActs blank startSym endSym mark leftSym one D y L ts) ts
-        = ovRunTapes blank leftSym endSym mark one ((y.take L).take (stageS y L))
-            ((y.take L).drop (stageS y L)) ((y.take L).reverse) 8
-            (decompose (y.take L) 8).2.1 (decompose (y.take L) 8).2.2
-            (max 1 (2 * stageS y L)) (stageS y L) ((8 + 2) * L + 1) ⟨0, 0⟩
+        = ovRunTapes blank leftSym endSym mark one ((y.take L).take (stageS D.dec y L))
+            ((y.take L).drop (stageS D.dec y L)) ((y.take L).reverse) 8
+            (D.dec y L).2.1 (D.dec y L).2.2
+            (max 1 (2 * stageS D.dec y L)) (stageS D.dec y L) ((8 + 2) * L + 1) ⟨0, 0⟩
             (applyActs blank (D.acts y L ts) ts) := by
       simp only [stageActs, applyActs_append, ovRunActs_apply]
     have hrun' : OvEncodes blank leftSym startSym endSym mark
-        ((y.take L).take (stageS y L)) ((y.take L).drop (stageS y L)) y
-        (ovRunFlags ((y.take L).take (stageS y L)) ((y.take L).drop (stageS y L))
-          ((y.take L).reverse) one 8 (decompose (y.take L) 8).2.1
-          (decompose (y.take L) 8).2.2 (max 1 (2 * stageS y L)) ((8 + 2) * L + 1) ⟨0, 0⟩ fw)
-        L (decompose (y.take L) 8).2.1
+        ((y.take L).take (stageS D.dec y L)) ((y.take L).drop (stageS D.dec y L)) y
+        (ovRunFlags ((y.take L).take (stageS D.dec y L)) ((y.take L).drop (stageS D.dec y L))
+          ((y.take L).reverse) one 8 (D.dec y L).2.1
+          (D.dec y L).2.2 (max 1 (2 * stageS D.dec y L)) ((8 + 2) * L + 1) ⟨0, 0⟩ fw)
+        L (D.dec y L).2.1
         (applyActs blank (stageActs blank startSym endSym mark leftSym one D y L ts) ts)
-        (ovRunState ((y.take L).take (stageS y L)) ((y.take L).drop (stageS y L))
-          ((y.take L).reverse) 8 (decompose (y.take L) 8).2.1 (decompose (y.take L) 8).2.2
-          (max 1 (2 * stageS y L)) ((8 + 2) * L + 1) ⟨0, 0⟩) := by
+        (ovRunState ((y.take L).take (stageS D.dec y L)) ((y.take L).drop (stageS D.dec y L))
+          ((y.take L).reverse) 8 (D.dec y L).2.1 (D.dec y L).2.2
+          (max 1 (2 * stageS D.dec y L)) ((8 + 2) * L + 1) ⟨0, 0⟩) := by
       rw [hts2]; exact hrun
     -- 継ぎ目
-    have h3 : 3 * nextLen (stageS y L) + 1 ≤ L := nextLen_shrink hshort
-    have hL' : nextLen (stageS y L) ≤ y.length := by omega
-    have hfw2 : y.length + 1 ≤ (ovRunFlags ((y.take L).take (stageS y L))
-        ((y.take L).drop (stageS y L))
-        ((y.take L).reverse) one 8 (decompose (y.take L) 8).2.1
-        (decompose (y.take L) 8).2.2 (max 1 (2 * stageS y L)) ((8 + 2) * L + 1) ⟨0, 0⟩
+    have h3 : 3 * nextLen (stageS D.dec y L) + 1 ≤ L := nextLen_shrink hshort
+    have hL' : nextLen (stageS D.dec y L) ≤ y.length := by omega
+    have hfw2 : y.length + 1 ≤ (ovRunFlags ((y.take L).take (stageS D.dec y L))
+        ((y.take L).drop (stageS D.dec y L))
+        ((y.take L).reverse) one 8 (D.dec y L).2.1
+        (D.dec y L).2.2 (max 1 (2 * stageS D.dec y L)) ((8 + 2) * L + 1) ⟨0, 0⟩
         fw).length := by rw [ovRunFlags_length]; exact hfw
     have hhome := homeActs_eff (blank := blank) L
-      (nextLen (stageS y L) - stageS y (nextLen (stageS y L))) (nextLen (stageS y L))
+      (nextLen (stageS D.dec y L) - stageS D.dec y (nextLen (stageS D.dec y L))) (nextLen (stageS D.dec y L))
       (applyActs blank (stageActs blank startSym endSym mark leftSym one D y L ts) ts)
     have hcons : (leftSym :: y).length = y.length + 1 := by simp
-    have hih := ih (nextLen (stageS y L))
+    have hih := ih (nextLen (stageS D.dec y L))
       (applyActs blank (homeActs sc L
-        (nextLen (stageS y L) - stageS y (nextLen (stageS y L))) (nextLen (stageS y L)))
+        (nextLen (stageS D.dec y L) - stageS D.dec y (nextLen (stageS D.dec y L))) (nextLen (stageS D.dec y L)))
         (applyActs blank (stageActs blank startSym endSym mark leftSym one D y L ts) ts)) _
       hL' hfw2
+      (applyActs_scratchBlank (noScratch_homeActs _ _ _ _) (stageActs_scratch D y L ts hSB))
       (by rw [hhome]; exact seq_home hrun'.txt (Nat.sub_le _ _) (by rw [hcons]; omega))
       (by rw [hhome]; exact seq_home hrun'.txt2 (Nat.sub_le _ _) (by rw [hcons]; omega))
       (by rw [hhome]; exact seq_home hrun'.flg (Nat.sub_le _ _) (by omega))
@@ -568,10 +656,10 @@ theorem jobLoop_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (
       have hMdef : (2 * D.A + D.Dd) * L = D.M * L := rfl
       have hAdef : D.A * L = D.Cd * L + 2436 * L := by
         simp only [DecompOnTapes.A, Nat.add_mul]
-      have hgeo := geo_key (A := D.A) (B := D.Dd) (L := L) (L' := nextLen (stageS y L))
-        (R := (jobLoop blank startSym endSym mark leftSym one D y fuel (nextLen (stageS y L))
+      have hgeo := geo_key (A := D.A) (B := D.Dd) (L := L) (L' := nextLen (stageS D.dec y L))
+        (R := (jobLoop blank startSym endSym mark leftSym one D y fuel (nextLen (stageS D.dec y L))
           (applyActs blank (homeActs sc L
-            (nextLen (stageS y L) - stageS y (nextLen (stageS y L))) (nextLen (stageS y L)))
+            (nextLen (stageS D.dec y L) - stageS D.dec y (nextLen (stageS D.dec y L))) (nextLen (stageS D.dec y L)))
             (applyActs blank (stageActs blank startSym endSym mark leftSym one D y L ts)
               ts))).length) h3 (by rw [show (2 * D.A + D.Dd) = D.M from rfl]; exact hih.1)
       omega
@@ -588,10 +676,9 @@ def Cjob (D : DecompOnTapes sc blank startSym endSym mark) : ℕ := D.M + 8
 立つ。動作数は `Cjob D * |y|` 以下。 -/
 theorem jobActs_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (Fin sc)}
     (hleft : leftSym ∉ y) (hend : endSym ∉ y)
-    (hOK : ∀ L, 1 ≤ L → L ≤ y.length →
-      StageOK y 8 L (gsDec y 8 L).1 (gsDec y 8 L).2.1 (gsDec y 8 L).2.2)
     (ts : OvTapes sc) (fw : List (Fin sc)) (rd : ℕ)
     (hfw : y.length + 1 ≤ fw.length) (hrd : rd ≤ y.length)
+    (hSB : ScratchBlank blank ts)
     (hX : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X (leftSym :: y) i)
     (hX2 : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X2 (leftSym :: y) i)
     (hF : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.F fw i) :
@@ -599,17 +686,21 @@ theorem jobActs_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (
         ≤ Cjob D * y.length ∧
       Tape.SeqView blank
         (applyActs blank (jobActs blank startSym endSym mark leftSym one D y rd ts) ts).F
-        (jobFlags y (gsDec y 8) one 8 (y.length + 1) y.length fw) rd := by
+        (jobFlags y (D.dec y) one 8 (y.length + 1) y.length fw) rd := by
+  have hOK : ∀ L, 1 ≤ L → L ≤ y.length →
+      StageOK y 8 L (D.dec y L).1 (D.dec y L).2.1 (D.dec y L).2.2 :=
+    fun L hL _ => D.decOK y L hL
   obtain ⟨iX, hiX, hXv⟩ := hX
   obtain ⟨iX2, hiX2, hX2v⟩ := hX2
   obtain ⟨iF, hiF, hFv⟩ := hF
   have hcons : (leftSym :: y).length = y.length + 1 := by simp
   simp only [jobActs]
   have hh0 := homeActs_eff (blank := blank) y.length
-    (y.length - stageS y y.length) y.length ts
-  have hj := jobLoop_ok (one := one) D hleft hend hOK (y.length + 1) y.length
-    (applyActs blank (homeActs sc y.length (y.length - stageS y y.length) y.length) ts) fw
+    (y.length - stageS D.dec y y.length) y.length ts
+  have hj := jobLoop_ok (one := one) D hleft hend (y.length + 1) y.length
+    (applyActs blank (homeActs sc y.length (y.length - stageS D.dec y y.length) y.length) ts) fw
     le_rfl hfw
+    (applyActs_scratchBlank (noScratch_homeActs _ _ _ _) hSB)
     (by rw [hh0]; exact seq_home hXv hiX (by rw [hcons]; omega))
     (by rw [hh0]; exact seq_home hX2v hiX2 (by rw [hcons]; omega))
     (by rw [hh0]; exact seq_home hFv hiF (by omega))
@@ -636,6 +727,13 @@ def clearF (zero : Fin sc) : ℕ → List (Act sc)
   induction n with
   | zero => rfl
   | succ n ih => simp only [clearF, List.length_cons, ih]; omega
+
+/-- 初期化も作業テープに触れない。 -/
+theorem noScratch_clearF (zero : Fin sc) : ∀ n, NoScratchAll (clearF zero n) := by
+  intro n
+  induction n with
+  | zero => exact noScratchAll_cons trivial noScratchAll_nil
+  | succ n ih => exact noScratchAll_cons trivial (noScratchAll_cons trivial ih)
 
 /-- 埋めたあとのフラグ語。 -/
 def clearWord (zero : Fin sc) : ℕ → List (Fin sc) → List (Fin sc)
@@ -722,14 +820,22 @@ section Batch
 
 variable {blank startSym endSym mark leftSym one zero : Fin sc}
 
+/-- バッチ全体でも作業テープの空白性は保たれる。 -/
+theorem batchActs_scratch (D : DecompOnTapes sc blank startSym endSym mark)
+    (y : List (Fin sc)) (rd : ℕ) (ts : OvTapes sc) (h : ScratchBlank blank ts) :
+    ScratchBlank blank (applyActs blank
+      (batchActs blank startSym endSym mark leftSym one zero D y rd ts) ts) := by
+  simp only [batchActs, applyActs_append]
+  exact jobActs_scratch D y rd _ (applyActs_scratchBlank (noScratch_clearF _ _)
+    (applyActs_scratchBlank (noScratch_homeF _ _ _) h))
+
 /-- **バッチの主定理**：バッチを流し切ると、`F` のヘッドは添字 `rd` に立ち、そこで読める
 記号が `one` であることと `y.take rd` が回文であることが同値になる。 -/
 theorem batchActs_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List (Fin sc)}
     (hne : one ≠ zero) (hleft : leftSym ∉ y) (hend : endSym ∉ y)
-    (hOK : ∀ L, 1 ≤ L → L ≤ y.length →
-      StageOK y 8 L (gsDec y 8 L).1 (gsDec y 8 L).2.1 (gsDec y 8 L).2.2)
     (ts : OvTapes sc) (fw : List (Fin sc)) (rd : ℕ)
     (hfw : y.length + 1 ≤ fw.length) (h1 : 1 ≤ rd) (h2 : rd ≤ y.length)
+    (hSB : ScratchBlank blank ts)
     (hX : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X (leftSym :: y) i)
     (hX2 : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X2 (leftSym :: y) i)
     (hF : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.F fw i) :
@@ -738,6 +844,9 @@ theorem batchActs_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List
       (Tape.read (applyActs blank
         (batchActs blank startSym endSym mark leftSym one zero D y rd ts) ts).F = one
           ↔ IsPal (y.take rd)) := by
+  have hOK : ∀ L, 1 ≤ L → L ≤ y.length →
+      StageOK y 8 L (D.dec y L).1 (D.dec y L).2.1 (D.dec y L).2.2 :=
+    fun L hL _ => D.decOK y L hL
   obtain ⟨iF, hiF, hFv⟩ := hF
   simp only [batchActs]
   have hh := homeF_eff (blank := blank) y.length y.length ts
@@ -754,10 +863,12 @@ theorem batchActs_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List
     rw [hcl.2.1, hh]
   have hcw : y.length + 1 ≤ (clearWord zero y.length fw).length := by
     rw [clearWord_length]; exact hfw
-  have hjob := jobActs_ok (one := one) D hleft hend hOK
+  have hjob := jobActs_ok (one := one) D hleft hend
     (applyActs blank (clearF zero y.length)
       (applyActs blank (homeF sc y.length y.length) ts))
     (clearWord zero y.length fw) rd hcw h2
+    (applyActs_scratchBlank (noScratch_clearF _ _)
+      (applyActs_scratchBlank (noScratch_homeF _ _ _) hSB))
     (by rw [hXk]; exact hX) (by rw [hX2k]; exact hX2)
     ⟨0, Nat.zero_le _, hcl.2.2⟩
   refine ⟨?_, ?_⟩
@@ -770,20 +881,20 @@ theorem batchActs_ok (D : DecompOnTapes sc blank startSym endSym mark) {y : List
     have hread := hjob.2.read_eq
     have hz : (clearWord zero y.length fw)[rd]? = some zero :=
       clearWord_le zero y.length fw rd h2 (by omega)
-    have hiff := flags_on_tape_eq_palPrefixFlagsGS (x := y) (dec := gsDec y 8)
+    have hiff := flags_on_tape_eq_palPrefixFlagsGS (x := y) (dec := D.dec y)
       (one := one) (zero := zero) (k := 8) (fw := clearWord zero y.length fw)
       (by omega) hne hOK rd h1 h2 (by omega) hz
-    have hpal := palPrefixFlagsGS_spec (x := y) (dec := gsDec y 8) (k := 8)
+    have hpal := palPrefixFlagsGS_spec (x := y) (dec := D.dec y) (k := 8)
       (by omega) hOK rd h2
     constructor
     · intro hr
-      have : (jobFlags y (gsDec y 8) one 8 (y.length + 1) y.length
+      have : (jobFlags y (D.dec y) one 8 (y.length + 1) y.length
           (clearWord zero y.length fw))[rd]? = some one := by rw [hread, hr]
       have := hiff.1 this
       rw [hpal] at this
       simpa using this
     · intro hp
-      have : (palPrefixFlagsGS y (gsDec y 8) 8)[rd]? = some true := by
+      have : (palPrefixFlagsGS y (D.dec y) 8)[rd]? = some true := by
         rw [hpal]; simpa using hp
       have h' := hiff.2 this
       rw [hread] at h'
@@ -856,6 +967,8 @@ def outStep (sc : ℕ) : List (Act sc) := mvF .right 1
 
 @[simp] theorem outStep_length (sc : ℕ) : (outStep sc).length = 1 := by simp [outStep]
 
+theorem noScratch_outStep (sc : ℕ) : NoScratchAll (outStep sc) := noScratch_mvF _ _
+
 /-- 読み出しヘッドは 1 ラウンドで添字を 1 進める。 -/
 theorem outStep_spec {blank : Fin sc} {ts : OvTapes sc} {w : List (Fin sc)} {i : ℕ}
     (h : Tape.SeqView blank ts.F w i) (hi : i + 1 < w.length) :
@@ -881,13 +994,11 @@ theorem batch_read_flag (D : DecompOnTapes sc blank startSym endSym mark)
     {w : List (Fin sc)} {S p n : ℕ}
     (hne : one ≠ zero)
     (hleft : leftSym ∉ w) (hend : endSym ∉ w)
-    (hOK : ∀ L, 1 ≤ L → L ≤ (MiddleBorder.Wnd w S p).length →
-      StageOK (MiddleBorder.Wnd w S p) 8 L (gsDec (MiddleBorder.Wnd w S p) 8 L).1
-        (gsDec (MiddleBorder.Wnd w S p) 8 L).2.1 (gsDec (MiddleBorder.Wnd w S p) 8 L).2.2)
     (ts : OvTapes sc) (fw : List (Fin sc))
     (hfw : (MiddleBorder.Wnd w S p).length + 1 ≤ fw.length)
     (h1 : 1 ≤ n - S) (h2 : n - S ≤ (MiddleBorder.Wnd w S p).length)
     (hcov : n - S ≤ S + p * MiddleBorder.gw S)
+    (hSB : ScratchBlank blank ts)
     (hX : ∃ i, i ≤ (MiddleBorder.Wnd w S p).length ∧
       Tape.SeqView blank ts.X (leftSym :: MiddleBorder.Wnd w S p) i)
     (hX2 : ∃ i, i ≤ (MiddleBorder.Wnd w S p).length ∧
@@ -896,12 +1007,16 @@ theorem batch_read_flag (D : DecompOnTapes sc blank startSym endSym mark)
     (Tape.read (applyActs blank (batchActs blank startSym endSym mark leftSym one zero D
         (MiddleBorder.Wnd w S p) (n - S) ts) ts).F = one)
       ↔ IsPal ((w.drop (S / 2)).take (n - S)) := by
+  have hOK : ∀ L, 1 ≤ L → L ≤ (MiddleBorder.Wnd w S p).length →
+      StageOK (MiddleBorder.Wnd w S p) 8 L (D.dec (MiddleBorder.Wnd w S p) L).1
+        (D.dec (MiddleBorder.Wnd w S p) L).2.1 (D.dec (MiddleBorder.Wnd w S p) L).2.2 :=
+    fun L hL _ => D.decOK (MiddleBorder.Wnd w S p) L hL
   have hkey : (MiddleBorder.Wnd w S p).take (n - S) = (w.drop (S / 2)).take (n - S) := by
     simp only [MiddleBorder.Wnd, List.take_take]
     congr 1
     omega
   have h := (batchActs_ok D hne (fun hc => hleft (mem_wnd hc)) (fun hc => hend (mem_wnd hc))
-    hOK ts fw (n - S) hfw h1 h2 hX hX2 hF).2
+    ts fw (n - S) hfw h1 h2 hSB hX hX2 hF).2
   rw [h, hkey]
 
 end FlagRead
@@ -931,10 +1046,9 @@ variable {blank startSym endSym mark leftSym one zero : Fin sc}
 残り、ヘッドは読み出し位置 `rd` に立つ。 -/
 theorem batchActs_word (D : DecompOnTapes sc blank startSym endSym mark) {y : List (Fin sc)}
     (hne : one ≠ zero) (hleft : leftSym ∉ y) (hend : endSym ∉ y)
-    (hOK : ∀ L, 1 ≤ L → L ≤ y.length →
-      StageOK y 8 L (gsDec y 8 L).1 (gsDec y 8 L).2.1 (gsDec y 8 L).2.2)
     (ts : OvTapes sc) (fw : List (Fin sc)) (rd N : ℕ)
     (hfw : y.length + 1 ≤ fw.length) (hN : N ≤ fw.length) (hrd : rd ≤ y.length)
+    (hSB : ScratchBlank blank ts)
     (hX : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X (leftSym :: y) i)
     (hX2 : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X2 (leftSym :: y) i)
     (hF : ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.F fw i) :
@@ -943,6 +1057,9 @@ theorem batchActs_word (D : DecompOnTapes sc blank startSym endSym mark) {y : Li
       ∃ ω, FlagWordOK one N y ω ∧
         Tape.SeqView blank (applyActs blank
           (batchActs blank startSym endSym mark leftSym one zero D y rd ts) ts).F ω rd := by
+  have hOK : ∀ L, 1 ≤ L → L ≤ y.length →
+      StageOK y 8 L (D.dec y L).1 (D.dec y L).2.1 (D.dec y L).2.2 :=
+    fun L hL _ => D.decOK y L hL
   obtain ⟨iF, hiF, hFv⟩ := hF
   simp only [batchActs]
   have hh := homeF_eff (blank := blank) y.length y.length ts
@@ -959,10 +1076,12 @@ theorem batchActs_word (D : DecompOnTapes sc blank startSym endSym mark) {y : Li
     rw [hcl.2.1, hh]
   have hcw : y.length + 1 ≤ (clearWord zero y.length fw).length := by
     rw [clearWord_length]; exact hfw
-  have hjob := jobActs_ok (one := one) D hleft hend hOK
+  have hjob := jobActs_ok (one := one) D hleft hend
     (applyActs blank (clearF zero y.length)
       (applyActs blank (homeF sc y.length y.length) ts))
     (clearWord zero y.length fw) rd hcw hrd
+    (applyActs_scratchBlank (noScratch_clearF _ _)
+      (applyActs_scratchBlank (noScratch_homeF _ _ _) hSB))
     (by rw [hXk]; exact hX) (by rw [hX2k]; exact hX2)
     ⟨0, Nat.zero_le _, hcl.2.2⟩
   refine ⟨?_, ?_⟩
@@ -971,16 +1090,16 @@ theorem batchActs_word (D : DecompOnTapes sc blank startSym endSym mark) {y : Li
       simp only [Cbatch, Nat.add_mul]
     have := hjob.1
     omega
-  · refine ⟨jobFlags y (gsDec y 8) one 8 (y.length + 1) y.length
+  · refine ⟨jobFlags y (D.dec y) one 8 (y.length + 1) y.length
       (clearWord zero y.length fw), ⟨?_, ?_⟩, ?_⟩
     · rw [jobFlags_length, clearWord_length]; exact hN
     · intro ℓ h1 h2
       have hz : (clearWord zero y.length fw)[ℓ]? = some zero :=
         clearWord_le zero y.length fw ℓ h2 (by omega)
-      have hiff := flags_on_tape_eq_palPrefixFlagsGS (x := y) (dec := gsDec y 8)
+      have hiff := flags_on_tape_eq_palPrefixFlagsGS (x := y) (dec := D.dec y)
         (one := one) (zero := zero) (k := 8) (fw := clearWord zero y.length fw)
         (by omega) hne hOK ℓ h1 h2 (by omega) hz
-      have hpal := palPrefixFlagsGS_spec (x := y) (dec := gsDec y 8) (k := 8)
+      have hpal := palPrefixFlagsGS_spec (x := y) (dec := D.dec y) (k := 8)
         (by omega) hOK ℓ h2
       rw [hiff, hpal]
       simp
@@ -1007,7 +1126,8 @@ def BatchEntry (blank leftSym : Fin sc) (N : ℕ) (y : List (Fin sc)) (ts : OvTa
     Prop :=
   (∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X (leftSym :: y) i) ∧
     (∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.X2 (leftSym :: y) i) ∧
-    (∃ ω, N ≤ ω.length ∧ ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.F ω i)
+    (∃ ω, N ≤ ω.length ∧ ∃ i, i ≤ y.length ∧ Tape.SeqView blank ts.F ω i) ∧
+    ScratchBlank blank ts
 
 /-! ### 入力コピーの供給 -/
 
@@ -1086,7 +1206,10 @@ def mround (blank startSym endSym mark leftSym one zero : Fin sc)
     let y := (t.drop (st.width / 2)).take (st.width + j * MiddleBorder.gw st.width)
     let ts' : OvTapes sc :=
       { P := st.g.ts.P, X := Tape.step blank (c1 j) blank .left, Cnt := st.g.ts.Cnt,
-        U := st.g.ts.U, X2 := Tape.step blank (c2 j) blank .left, F := st.fout }
+        U := st.g.ts.U, X2 := Tape.step blank (c2 j) blank .left, F := st.fout,
+        S1 := st.g.ts.S1, S2 := st.g.ts.S2, S3 := st.g.ts.S3, S4 := st.g.ts.S4,
+        S5 := st.g.ts.S5, S6 := st.g.ts.S6, S7 := st.g.ts.S7, S8 := st.g.ts.S8,
+        S9 := st.g.ts.S9 }
     { width := st.width, idx := j, next := n + MiddleBorder.gw st.width,
       g := ⟨batchActs blank startSym endSym mark leftSym one zero D y
               (rdOf st.width j) ts', ts'⟩,
@@ -1156,7 +1279,8 @@ structure MEncodes (blank startSym endSym mark leftSym one zero : Fin sc)
           (MiddleBorder.Wnd w S st.idx) (rdOf S st.idx) ts₀, ts₀⟩ ∧
       BatchEntry blank leftSym (Lmax S + 1) (MiddleBorder.Wnd w S st.idx) ts₀
   gwf : 8 ≤ S → n < 4 * S → st.idx = 0 →
-    st.g.rem = [] ∧ ∃ ω, Lmax S + 1 ≤ ω.length ∧ Tape.SeqView blank st.g.ts.F ω 0
+    st.g.rem = [] ∧ (∃ ω, Lmax S + 1 ≤ ω.length ∧ Tape.SeqView blank st.g.ts.F ω 0) ∧
+      ScratchBlank blank st.g.ts
   foutWF : 8 ≤ S → n < 4 * S → st.idx ≤ 1 →
     ∃ ω, Lmax S + 1 ≤ ω.length ∧ Tape.SeqView blank st.fout ω 0
   out : 8 ≤ S → n < 4 * S → 2 ≤ st.idx →
@@ -1247,7 +1371,6 @@ theorem mround_encodes_small (D : DecompOnTapes sc blank startSym endSym mark)
 theorem mround_encodes_release (D : DecompOnTapes sc blank startSym endSym mark)
     {w : List (Fin sc)} {S n : ℕ} {st : MState sc}
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
-    (hDec : MiddleBorder.DecOK (Fin sc))
     (hbig : 8 ≤ S) (hev : 2 * (S / 2) = S)
     (hn : S / 2 ≤ n) (hw : n + 1 ≤ w.length)
     (hrel : n + 1 = st.next ∧ st.idx < MiddleBorder.numJobs)
@@ -1331,6 +1454,43 @@ theorem mround_encodes_release (D : DecompOnTapes sc blank startSym endSym mark)
       rw [hylen]
       simp only [MiddleBorder.relTime] at hn1
       omega
+  -- 作業テープ：解放時点で前のバッチは挽き終わっているので空白
+  have hgsb : n + 1 < 4 * S → ScratchBlank blank st.g.ts := by
+    intro h4
+    rcases Nat.eq_zero_or_pos st.idx with h0 | hp1
+    · exact (h.gwf hbig (by omega) h0).2.2
+    · have hple : st.idx ≤ MiddleBorder.numJobs := by have := hrel.2; omega
+      obtain ⟨ts₀, hgeq, hBE⟩ := h.job hbig (by omega) hp1
+      obtain ⟨hXe, hX2e, ⟨ωF, hωF, iF, hiF, hsvF⟩, hSB0⟩ := hBE
+      have hrelle : MiddleBorder.relTime S st.idx ≤ w.length := by
+        have := MiddleBorder.relTime_succ S st.idx
+        omega
+      have hlenW : (MiddleBorder.Wnd w S st.idx).length = S + st.idx * MiddleBorder.gw S :=
+        wnd_length_eq w hrelle
+      have hrd : rdOf S st.idx ≤ (MiddleBorder.Wnd w S st.idx).length := by
+        rw [hlenW]
+        have hexp : (st.idx + 1) * MiddleBorder.gw S
+            = st.idx * MiddleBorder.gw S + MiddleBorder.gw S := by ring
+        have hhalf : S / 2 + MiddleBorder.gw S ≤ S := by simp only [MiddleBorder.gw]; omega
+        simp only [rdOf, hexp]
+        omega
+      have hWmax : (MiddleBorder.Wnd w S st.idx).length ≤ Lmax S := by
+        rw [hlenW]
+        have hmm : st.idx * MiddleBorder.gw S ≤ MiddleBorder.numJobs * MiddleBorder.gw S :=
+          Nat.mul_le_mul_right _ hple
+        simp only [Lmax]
+        omega
+      have hbatch := batchActs_word (one := one) (zero := zero) D hne
+        (fun hc => hleft (mem_wnd hc)) (fun hc => hend (mem_wnd hc))
+        ts₀ ωF (rdOf S st.idx) (Lmax S + 1) (by omega) hωF hrd hSB0 hXe hX2e ⟨iF, hiF, hsvF⟩
+      have hcount : n + MiddleBorder.gw S - st.next = MiddleBorder.gw S - 1 := by omega
+      have hdone := batch_complete D hbig hev
+        (show (MiddleBorder.Wnd w S st.idx).length ≤ 5 * S from wnd_length_le w hbig hple)
+        (batchActs blank startSym endSym mark leftSym one zero D (MiddleBorder.Wnd w S st.idx)
+          (rdOf S st.idx) ts₀) ts₀ hbatch.1
+      rw [hcount, hdone] at hgeq
+      rw [hgeq]
+      exact batchActs_scratch D (MiddleBorder.Wnd w S st.idx) (rdOf S st.idx) ts₀ hSB0
   refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · show st.idx + 1 = _
     rw [hbi]
@@ -1344,20 +1504,23 @@ theorem mround_encodes_release (D : DecompOnTapes sc blank startSym endSym mark)
   · intro _ i h1 h2; exact hcopy1 i (Nat.lt_of_succ_lt h1) h2
   · intro _ i h1 h2; exact hcopy2 i (Nat.lt_of_succ_lt h1) h2
   · intro _ hjob4 _
-    obtain ⟨ts', hts'⟩ : ∃ z : OvTapes sc, z = OvTapes.mk st.g.ts.P (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp1 (st.idx + 1)) blank .left) st.g.ts.Cnt st.g.ts.U (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp2 (st.idx + 1)) blank .left) st.fout := ⟨_, rfl⟩
+    obtain ⟨ts', hts'⟩ : ∃ z : OvTapes sc, z = OvTapes.mk st.g.ts.P (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp1 (st.idx + 1)) blank .left) st.g.ts.Cnt st.g.ts.U (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp2 (st.idx + 1)) blank .left) st.fout st.g.ts.S1 st.g.ts.S2 st.g.ts.S3 st.g.ts.S4 st.g.ts.S5 st.g.ts.S6 st.g.ts.S7 st.g.ts.S8 st.g.ts.S9 := ⟨_, rfl⟩
     refine ⟨ts', ?_, ?_⟩
     · rw [hy, Nat.sub_self, hts']
       rfl
-    · refine ⟨⟨_, le_rfl, ?_⟩, ⟨_, le_rfl, ?_⟩, ?_⟩
+    · refine ⟨⟨_, le_rfl, ?_⟩, ⟨_, le_rfl, ?_⟩, ⟨?_, ?_⟩⟩
       · rw [hts']; exact hXsv
       · rw [hts']; exact hX2sv
       · rw [hts']; exact hFentry hjob4
+      · rw [hts']
+        have hg := hgsb hjob4
+        exact ⟨hg.s1, hg.s2, hg.s3, hg.s4, hg.s5, hg.s6, hg.s7, hg.s8, hg.s9⟩
   · intro _ _ h0
     exact absurd h0 (Nat.succ_ne_zero _)
   · intro _ h4 h1
     have h1' : st.idx + 1 ≤ 1 := h1
     have h4' : n + 1 < 4 * S := h4
-    exact (h.gwf hbig (by omega) (by omega)).2
+    exact (h.gwf hbig (by omega) (by omega)).2.1
   · intro _ h4 h2
     have h4' : n + 1 < 4 * S := h4
     have hp1 : 1 ≤ st.idx := by
@@ -1365,7 +1528,7 @@ theorem mround_encodes_release (D : DecompOnTapes sc blank startSym endSym mark)
       omega
     have hple : st.idx ≤ MiddleBorder.numJobs := by have := hrel.2; omega
     obtain ⟨ts₀, hgeq, hBE⟩ := h.job hbig (by omega) hp1
-    obtain ⟨hXe, hX2e, ωF, hωF, iF, hiF, hsvF⟩ := hBE
+    obtain ⟨hXe, hX2e, ⟨ωF, hωF, iF, hiF, hsvF⟩, hSB0⟩ := hBE
     have hrelle : MiddleBorder.relTime S st.idx ≤ w.length := by
       have := MiddleBorder.relTime_succ S st.idx
       omega
@@ -1386,8 +1549,7 @@ theorem mround_encodes_release (D : DecompOnTapes sc blank startSym endSym mark)
       omega
     have hbatch := batchActs_word (one := one) (zero := zero) D hne
       (fun hc => hleft (mem_wnd hc)) (fun hc => hend (mem_wnd hc))
-      (fun L hL _ => hDec (MiddleBorder.Wnd w S st.idx) L hL)
-      ts₀ ωF (rdOf S st.idx) (Lmax S + 1) (by omega) hωF hrd hXe hX2e ⟨iF, hiF, hsvF⟩
+      ts₀ ωF (rdOf S st.idx) (Lmax S + 1) (by omega) hωF hrd hSB0 hXe hX2e ⟨iF, hiF, hsvF⟩
     have hcount : n + MiddleBorder.gw S - st.next = MiddleBorder.gw S - 1 := by omega
     have hdone := batch_complete D hbig hev
       (show (MiddleBorder.Wnd w S st.idx).length ≤ 5 * S from wnd_length_le w hbig hple)
@@ -1469,13 +1631,16 @@ theorem mround_encodes_grind (D : DecompOnTapes sc blank startSym endSym mark)
     congr 1
     omega
   · intro _ h4 h0
-    obtain ⟨hrem, ω, hω, hsv⟩ := h.gwf hbig (by omega) h0
-    refine ⟨?_, ω, hω, ?_⟩
+    obtain ⟨hrem, ⟨ω, hω, hsv⟩, hsc⟩ := h.gwf hbig (by omega) h0
+    refine ⟨?_, ⟨ω, hω, ?_⟩, ?_⟩
     · show st.g.rem.drop (rateM D) = []
       rw [hrem]; simp
     · show Tape.SeqView blank (applyActs blank (st.g.rem.take (rateM D)) st.g.ts).F ω 0
       rw [hrem]
       simpa using hsv
+    · show ScratchBlank blank (applyActs blank (st.g.rem.take (rateM D)) st.g.ts)
+      rw [hrem]
+      simpa using hsc
   · intro _ h4 h1
     have h1' : st.idx ≤ 1 := h1
     rw [if_neg (show ¬ (S < n + 1 ∧ 2 ≤ st.idx) by omega)]
@@ -1503,7 +1668,7 @@ theorem mround_encodes_grind (D : DecompOnTapes sc blank startSym endSym mark)
 theorem mround_encodes (D : DecompOnTapes sc blank startSym endSym mark)
     {w : List (Fin sc)} {S n : ℕ} {st : MState sc}
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
-    (hDec : MiddleBorder.DecOK (Fin sc)) (hev : 2 * (S / 2) = S)
+    (hev : 2 * (S / 2) = S)
     (hn : S / 2 ≤ n) (hw : n + 1 ≤ w.length)
     (h : MEncodes blank startSym endSym mark leftSym one zero D w S n st) :
     MEncodes blank startSym endSym mark leftSym one zero D w S (n + 1)
@@ -1512,7 +1677,7 @@ theorem mround_encodes (D : DecompOnTapes sc blank startSym endSym mark)
   by_cases hsmall : S < 8
   · exact mround_encodes_small D hsmall hn h
   · by_cases hrel : n + 1 = st.next ∧ st.idx < MiddleBorder.numJobs
-    · exact mround_encodes_release D hne hleft hend hDec (by omega) hev hn hw hrel h
+    · exact mround_encodes_release D hne hleft hend (by omega) hev hn hw hrel h
     · exact mround_encodes_grind D (by omega) hn hw hrel h
 
 /-- **1 ラウンドの費用**は `CmT' D = rateM D + 148` 以下。 -/
@@ -1545,6 +1710,7 @@ theorem minit_encodes (D : DecompOnTapes sc blank startSym endSym mark)
     (hc2 : ∀ i, InputCopy.FrontierView blank (c2 i) [leftSym])
     (hrem : g0.rem = [])
     (hgF : ∃ ω, Lmax S + 1 ≤ ω.length ∧ Tape.SeqView blank g0.ts.F ω 0)
+    (hgsc : ScratchBlank blank g0.ts)
     (hfo : ∃ ω, Lmax S + 1 ≤ ω.length ∧ Tape.SeqView blank fo ω 0) :
     ∀ m, m ≤ S / 2 →
       MEncodes blank startSym endSym mark leftSym one zero D w S m (minit S g0 fo c1 c2) := by
@@ -1565,7 +1731,7 @@ theorem minit_encodes (D : DecompOnTapes sc blank startSym endSym mark)
   · intro _ i _ _; rw [hnil]; exact hc1 i
   · intro _ i _ _; rw [hnil]; exact hc2 i
   · intro _ _ h1; exact absurd (show 1 ≤ 0 from h1) (by omega)
-  · intro _ _ _; exact ⟨hrem, hgF⟩
+  · intro _ _ _; exact ⟨hrem, hgF, hgsc⟩
   · intro _ _ _; exact hfo
   · intro _ _ h2; exact absurd (show 2 ≤ 0 from h2) (by omega)
   · intro _ h2 _; exact absurd h2 (by omega)
@@ -1573,7 +1739,7 @@ theorem minit_encodes (D : DecompOnTapes sc blank startSym endSym mark)
 theorem mstate_encodes (D : DecompOnTapes sc blank startSym endSym mark)
     {w : List (Fin sc)} {S : ℕ} {init : MState sc}
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
-    (hDec : MiddleBorder.DecOK (Fin sc)) (hev : 2 * (S / 2) = S)
+    (hev : 2 * (S / 2) = S)
     (hinit : ∀ m, m ≤ S / 2 →
       MEncodes blank startSym endSym mark leftSym one zero D w S m init) :
     ∀ n, n ≤ w.length →
@@ -1587,7 +1753,7 @@ theorem mstate_encodes (D : DecompOnTapes sc blank startSym endSym mark)
     by_cases hle : n + 1 ≤ S / 2
     · rw [mstate, if_pos hle]; exact hinit (n + 1) hle
     · rw [mstate, if_neg hle]
-      exact mround_encodes D hne hleft hend hDec hev (by omega) hw (ih (by omega))
+      exact mround_encodes D hne hleft hend hev (by omega) hw (ih (by omega))
 
 end Round
 
@@ -1610,7 +1776,7 @@ theorem middle_flag_read (D : DecompOnTapes sc blank startSym endSym mark)
     (Tape.read (mstate blank startSym endSym mark leftSym one zero D w S init n).fout = one)
       ↔ (MiddleBorder.borderMiddle (Fin sc)).flag
           ((MiddleBorder.borderMiddle (Fin sc)).runToH w S n) n = true := by
-  have hM := mstate_encodes D hne hleft hend hDec hev hinit n hw
+  have hM := mstate_encodes D hne hleft hend hev hinit n hw
   have hspec := (MiddleBorder.borderMiddle_spec hDec).correct w S n hS2 hev h1 h2 hw
   rw [hspec]
   rcases Nat.lt_or_ge S 8 with hsmall | hbig

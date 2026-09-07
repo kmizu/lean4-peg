@@ -87,7 +87,9 @@ theorem seq_rightN {blank : Fin sc} {w : List (Fin sc)} :
 
 /-! ## 1. テープ状態と 1 セル動作 -/
 
-/-- 段が使う 6 本のテープ。 -/
+/-- 段が使う 6 本の主テープと、分解器（`GSPreprocessTapes.decProg`）が使う
+9 本の作業テープ `S1 … S9`。作業テープは段の境界では空白（`ScratchBlank`）であり、
+段の走査（`ovProgram` 系）は作業テープに一切触れない。 -/
 structure OvTapes (sc : ℕ) where
   P : TapeConfiguration sc
   X : TapeConfiguration sc
@@ -95,6 +97,15 @@ structure OvTapes (sc : ℕ) where
   U : TapeConfiguration sc
   X2 : TapeConfiguration sc
   F : TapeConfiguration sc
+  S1 : TapeConfiguration sc
+  S2 : TapeConfiguration sc
+  S3 : TapeConfiguration sc
+  S4 : TapeConfiguration sc
+  S5 : TapeConfiguration sc
+  S6 : TapeConfiguration sc
+  S7 : TapeConfiguration sc
+  S8 : TapeConfiguration sc
+  S9 : TapeConfiguration sc
 
 /-- 1 本のテープに対する 1 個のヘッド動作。`P`/`X`/`U`/`X2`/`F` の移動は読んだ記号を
 書き戻す（テープを書き換えない）。`C` はカウンタへの書き込み、`Fset` はフラグの書き込み。 -/
@@ -106,6 +117,15 @@ inductive Act (sc : ℕ) where
   | X2 : Move → Act sc
   | F : Move → Act sc
   | Fset : Fin sc → Act sc
+  | S1 : Fin sc → Move → Act sc
+  | S2 : Fin sc → Move → Act sc
+  | S3 : Fin sc → Move → Act sc
+  | S4 : Fin sc → Move → Act sc
+  | S5 : Fin sc → Move → Act sc
+  | S6 : Fin sc → Move → Act sc
+  | S7 : Fin sc → Move → Act sc
+  | S8 : Fin sc → Move → Act sc
+  | S9 : Fin sc → Move → Act sc
 
 def applyAct (blank : Fin sc) (ts : OvTapes sc) : Act sc → OvTapes sc
   | .P m => { ts with P := Tape.step blank ts.P ts.P.focus m }
@@ -115,6 +135,15 @@ def applyAct (blank : Fin sc) (ts : OvTapes sc) : Act sc → OvTapes sc
   | .X2 m => { ts with X2 := Tape.step blank ts.X2 ts.X2.focus m }
   | .F m => { ts with F := Tape.step blank ts.F ts.F.focus m }
   | .Fset a => { ts with F := Tape.step blank ts.F a .stay }
+  | .S1 a m => { ts with S1 := Tape.step blank ts.S1 a m }
+  | .S2 a m => { ts with S2 := Tape.step blank ts.S2 a m }
+  | .S3 a m => { ts with S3 := Tape.step blank ts.S3 a m }
+  | .S4 a m => { ts with S4 := Tape.step blank ts.S4 a m }
+  | .S5 a m => { ts with S5 := Tape.step blank ts.S5 a m }
+  | .S6 a m => { ts with S6 := Tape.step blank ts.S6 a m }
+  | .S7 a m => { ts with S7 := Tape.step blank ts.S7 a m }
+  | .S8 a m => { ts with S8 := Tape.step blank ts.S8 a m }
+  | .S9 a m => { ts with S9 := Tape.step blank ts.S9 a m }
 
 def applyActs (blank : Fin sc) (l : List (Act sc)) (ts : OvTapes sc) : OvTapes sc :=
   l.foldl (applyAct blank) ts
@@ -129,6 +158,114 @@ def applyActs (blank : Fin sc) (l : List (Act sc)) (ts : OvTapes sc) : OvTapes s
 theorem applyActs_append (blank : Fin sc) (l₁ l₂ : List (Act sc)) (ts : OvTapes sc) :
     applyActs blank (l₁ ++ l₂) ts = applyActs blank l₂ (applyActs blank l₁ ts) := by
   simp [applyActs]
+
+/-! ### 作業テープ（`S1 … S9`）の扱い
+
+段の走査が使う動作は主テープ 6 本にしか触れない（`NoScratch`）。分解器だけが
+`Act.S1 … Act.S9` を使い、その前後で作業テープは空白である（`ScratchBlank`）。 -/
+
+/-- 作業テープに触れない動作。 -/
+def NoScratch : Act sc → Prop
+  | .P _ => True
+  | .X _ => True
+  | .C _ _ => True
+  | .U _ => True
+  | .X2 _ => True
+  | .F _ => True
+  | .Fset _ => True
+  | _ => False
+
+/-- 動作列が作業テープに触れないこと。 -/
+def NoScratchAll (l : List (Act sc)) : Prop := ∀ a ∈ l, NoScratch a
+
+theorem noScratchAll_nil : NoScratchAll ([] : List (Act sc)) := by
+  intro a ha; simp at ha
+
+theorem noScratchAll_cons {a : Act sc} {l : List (Act sc)} (ha : NoScratch a)
+    (hl : NoScratchAll l) : NoScratchAll (a :: l) := by
+  intro b hb
+  rcases List.mem_cons.1 hb with rfl | hb
+  · exact ha
+  · exact hl b hb
+
+theorem noScratchAll_append {l₁ l₂ : List (Act sc)} (h₁ : NoScratchAll l₁)
+    (h₂ : NoScratchAll l₂) : NoScratchAll (l₁ ++ l₂) := by
+  intro a ha
+  rcases List.mem_append.1 ha with h | h
+  · exact h₁ a h
+  · exact h₂ a h
+
+theorem noScratchAll_replicate {a : Act sc} (ha : NoScratch a) (n : ℕ) :
+    NoScratchAll (List.replicate n a) := by
+  intro b hb; rw [List.eq_of_mem_replicate hb]; exact ha
+
+theorem noScratchAll_of_sublist {l₁ l₂ : List (Act sc)} (h : ∀ a ∈ l₁, a ∈ l₂)
+    (h₂ : NoScratchAll l₂) : NoScratchAll l₁ := fun a ha => h₂ a (h a ha)
+
+/-- 2 つのテープ束の作業テープが一致していること。 -/
+structure ScratchEq (t u : OvTapes sc) : Prop where
+  s1 : t.S1 = u.S1
+  s2 : t.S2 = u.S2
+  s3 : t.S3 = u.S3
+  s4 : t.S4 = u.S4
+  s5 : t.S5 = u.S5
+  s6 : t.S6 = u.S6
+  s7 : t.S7 = u.S7
+  s8 : t.S8 = u.S8
+  s9 : t.S9 = u.S9
+
+theorem ScratchEq.refl (t : OvTapes sc) : ScratchEq t t :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+theorem ScratchEq.trans {t u v : OvTapes sc} (h₁ : ScratchEq t u) (h₂ : ScratchEq u v) :
+    ScratchEq t v :=
+  ⟨h₁.s1.trans h₂.s1, h₁.s2.trans h₂.s2, h₁.s3.trans h₂.s3, h₁.s4.trans h₂.s4,
+    h₁.s5.trans h₂.s5, h₁.s6.trans h₂.s6, h₁.s7.trans h₂.s7, h₁.s8.trans h₂.s8,
+    h₁.s9.trans h₂.s9⟩
+
+/-- 作業テープが（ヘッドを原点に置いて）空白であること。 -/
+structure ScratchBlank (blank : Fin sc) (ts : OvTapes sc) : Prop where
+  s1 : Tape.StackView blank ts.S1 []
+  s2 : Tape.StackView blank ts.S2 []
+  s3 : Tape.StackView blank ts.S3 []
+  s4 : Tape.StackView blank ts.S4 []
+  s5 : Tape.StackView blank ts.S5 []
+  s6 : Tape.StackView blank ts.S6 []
+  s7 : Tape.StackView blank ts.S7 []
+  s8 : Tape.StackView blank ts.S8 []
+  s9 : Tape.StackView blank ts.S9 []
+
+theorem ScratchEq.blank {blank : Fin sc} {t u : OvTapes sc} (h : ScratchEq t u)
+    (hu : ScratchBlank blank u) : ScratchBlank blank t := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+    first
+      | (rw [h.s1]; exact hu.s1) | (rw [h.s2]; exact hu.s2) | (rw [h.s3]; exact hu.s3)
+      | (rw [h.s4]; exact hu.s4) | (rw [h.s5]; exact hu.s5) | (rw [h.s6]; exact hu.s6)
+      | (rw [h.s7]; exact hu.s7) | (rw [h.s8]; exact hu.s8) | (rw [h.s9]; exact hu.s9)
+
+theorem applyAct_scratchEq {blank : Fin sc} {a : Act sc} (ha : NoScratch a)
+    (ts : OvTapes sc) : ScratchEq (applyAct blank ts a) ts := by
+  cases a <;> first
+    | exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    | exact absurd ha (by simp [NoScratch])
+
+/-- **作業テープの不変性**：作業テープに触れない動作列は作業テープを変えない。 -/
+theorem applyActs_scratchEq {blank : Fin sc} :
+    ∀ (l : List (Act sc)) (ts : OvTapes sc), NoScratchAll l →
+      ScratchEq (applyActs blank l ts) ts := by
+  intro l
+  induction l with
+  | nil => intro ts _; exact ScratchEq.refl _
+  | cons a l ih =>
+    intro ts h
+    rw [applyActs_cons]
+    exact (ih _ (fun b hb => h b (List.mem_cons_of_mem _ hb))).trans
+      (applyAct_scratchEq (h a List.mem_cons_self) ts)
+
+theorem applyActs_scratchBlank {blank : Fin sc} {l : List (Act sc)} {ts : OvTapes sc}
+    (h : NoScratchAll l) (hb : ScratchBlank blank ts) :
+    ScratchBlank blank (applyActs blank l ts) :=
+  (applyActs_scratchEq l ts h).blank hb
 
 /-! ## 2. 動作列 -/
 
@@ -193,6 +330,82 @@ def ovProgram (blank leftSym endSym mark one : Fin sc) (k c : ℕ) (b bu : Bool)
   else if Tape.read ts.P ≠ endSym ∧ Tape.read ts.P = Tape.read ts.X then
     [Act.P .right, Act.X .left]
   else shiftActs blank mark k b ts
+
+/-! ### 段の動作列は作業テープに触れない -/
+
+theorem noScratch_perLoop (blank : Fin sc) : ∀ n, NoScratchAll (perLoop blank n) := by
+  intro n
+  induction n with
+  | zero => exact noScratchAll_nil
+  | succ n ih =>
+    exact noScratchAll_cons trivial (noScratchAll_cons trivial (noScratchAll_cons trivial ih))
+
+theorem noScratch_posMoves (sc : ℕ) : ∀ n, NoScratchAll (posMoves sc n) := by
+  intro n
+  induction n with
+  | zero => exact noScratchAll_nil
+  | succ n ih => exact noScratchAll_cons trivial (noScratchAll_cons trivial ih)
+
+theorem noScratch_periodActs (blank mark : Fin sc) (n : ℕ) :
+    NoScratchAll (periodActs blank mark n) := by
+  refine noScratchAll_append (noScratchAll_append (noScratch_perLoop blank n) ?_)
+    (noScratch_posMoves sc n)
+  exact noScratchAll_cons trivial (noScratchAll_cons trivial
+    (noScratchAll_replicate (a := Act.C blank Move.right) trivial n))
+
+theorem noScratch_resetWalk (sc k : ℕ) : ∀ (n c : ℕ), NoScratchAll (resetWalk sc k n c) := by
+  intro n
+  induction n with
+  | zero => intro c; exact noScratchAll_nil
+  | succ n ih =>
+    intro c
+    cases c with
+    | zero => exact noScratchAll_cons trivial (ih _)
+    | succ c => exact noScratchAll_cons trivial (noScratchAll_cons trivial (ih _))
+
+theorem noScratch_resetShift (sc k q : ℕ) : NoScratchAll (resetShift sc k q) := by
+  refine noScratchAll_append (noScratchAll_append (noScratch_resetWalk sc k q 0) ?_)
+    (noScratch_posMoves sc _)
+  refine noScratchAll_cons trivial (noScratchAll_cons trivial ?_)
+  by_cases h : q = 0
+  · rw [if_pos h]; exact noScratchAll_cons trivial noScratchAll_nil
+  · rw [if_neg h]; exact noScratchAll_nil
+
+theorem noScratch_uFwd (sc : ℕ) : ∀ n, NoScratchAll (uFwd sc n) := by
+  intro n
+  induction n with
+  | zero => exact noScratchAll_nil
+  | succ n ih => exact noScratchAll_cons trivial (noScratchAll_cons trivial ih)
+
+theorem noScratch_uBack (sc : ℕ) : ∀ n, NoScratchAll (uBack sc n) := by
+  intro n
+  induction n with
+  | zero => exact noScratchAll_nil
+  | succ n ih => exact noScratchAll_cons trivial (noScratchAll_cons trivial ih)
+
+theorem noScratch_uCheck (sc c : ℕ) : NoScratchAll (uCheck sc c) :=
+  noScratchAll_append (noScratch_uFwd sc c) (noScratch_uBack sc c)
+
+theorem noScratch_shiftActs (blank mark : Fin sc) (k : ℕ) (b : Bool) (ts : OvTapes sc) :
+    NoScratchAll (shiftActs blank mark k b ts) := by
+  simp only [shiftActs]
+  split_ifs
+  · exact noScratch_periodActs _ _ _
+  · exact noScratch_resetShift _ _ _
+
+theorem noScratch_ovProgram (blank leftSym endSym mark one : Fin sc) (k c : ℕ)
+    (b bu : Bool) (ts : OvTapes sc) :
+    NoScratchAll (ovProgram blank leftSym endSym mark one k c b bu ts) := by
+  simp only [ovProgram]
+  split_ifs
+  · refine noScratchAll_append (noScratchAll_append (noScratch_uCheck sc c) ?_)
+      (noScratch_shiftActs _ _ _ _ _)
+    exact noScratchAll_cons trivial noScratchAll_nil
+  · refine noScratchAll_append (noScratchAll_append (noScratch_uCheck sc c) ?_)
+      (noScratch_shiftActs _ _ _ _ _)
+    exact noScratchAll_nil
+  · exact noScratchAll_cons trivial (noScratchAll_cons trivial noScratchAll_nil)
+  · exact noScratch_shiftActs _ _ _ _ _
 
 /-! ## 3. 動作列の長さ -/
 

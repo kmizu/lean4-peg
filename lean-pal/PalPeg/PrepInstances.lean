@@ -206,12 +206,15 @@ theorem prep_prog_len_le {w : List (Fin sc)} {L C₁ : ℕ} (hw : L ≤ w.length
 
 /-- **`MiddleTapes.DecompOnTapes` の `EndToEnd2.gsDec2` 版**。
 
-`MiddleTapes.DecompOnTapes` は `decompose (y.take L) 8`（`GSPreprocess` の素朴版、
-正規化なし）で述べられているが、`EndToEnd2` の経路（`borderMiddle2` / `EndToEnd2.gsDec2`）が
-必要とするのは `decompose2` の**正規化済み**分解である。
+`MiddleTapes.DecompOnTapes` は分解 `dec` をパラメータに持つようになったので、本構造は
+その `dec := fun y L => EndToEnd2.gsDec2 y 8 L` への特殊化（`toDecompOnTapes` で変換）
+にすぎない。`EndToEnd2` の経路（`borderMiddle2` / `EndToEnd2.gsDec2`）が必要とするのは
+`decompose2` の**正規化済み**分解である。
 
-`EndToEnd2.gsDec2_fst` により切断位置 `.1` は両者で一致するので、`pat` / `upat` は同じ形だが、
-`cnt` が載せる周期だけが `EndToEnd2.gsDec2 y 8 L |>.2.1` に変わる。 -/
+`EndToEnd2.gsDec2_fst` により切断位置 `.1` は `decompose2` と一致するので、`pat` / `upat`
+の形は素朴版と同一で、`cnt` が載せる周期だけが `(EndToEnd2.gsDec2 y 8 L).2.1` になる。
+
+作業テープ `S1 … S9` は `acts` の前後で空白（`BorderTapes.ScratchBlank`）である。 -/
 structure DecompOnTapes2 (sc : ℕ) (blank startSym endSym mark : Fin sc) where
   acts : List (Fin sc) → ℕ → BorderTapes.OvTapes sc → List (BorderTapes.Act sc)
   Cd : ℕ
@@ -219,15 +222,15 @@ structure DecompOnTapes2 (sc : ℕ) (blank startSym endSym mark : Fin sc) where
   len_le : ∀ (y : List (Fin sc)) (L : ℕ) (ts : BorderTapes.OvTapes sc),
     (acts y L ts).length ≤ Cd * L + Dd
   pat : ∀ (y : List (Fin sc)) (L : ℕ), 1 ≤ L → L ≤ y.length →
-    ∀ ts : BorderTapes.OvTapes sc,
+    ∀ ts : BorderTapes.OvTapes sc, BorderTapes.ScratchBlank blank ts →
       Tape.SeqView blank (BorderTapes.applyActs blank (acts y L ts) ts).P
         (startSym :: ((y.take L).drop (EndToEnd2.gsDec2 y 8 L).1 ++ [endSym])) 1
   upat : ∀ (y : List (Fin sc)) (L : ℕ), 1 ≤ L → L ≤ y.length →
-    ∀ ts : BorderTapes.OvTapes sc,
+    ∀ ts : BorderTapes.OvTapes sc, BorderTapes.ScratchBlank blank ts →
       Tape.SeqView blank (BorderTapes.applyActs blank (acts y L ts) ts).U
         (startSym :: ((y.take L).take (EndToEnd2.gsDec2 y 8 L).1 ++ [endSym])) 1
   cnt : ∀ (y : List (Fin sc)) (L : ℕ), 1 ≤ L → L ≤ y.length →
-    ∀ ts : BorderTapes.OvTapes sc,
+    ∀ ts : BorderTapes.OvTapes sc, BorderTapes.ScratchBlank blank ts →
       Tape.CounterView' blank mark
         (BorderTapes.applyActs blank (acts y L ts) ts).Cnt (EndToEnd2.gsDec2 y 8 L).2.1
   keepX : ∀ (y : List (Fin sc)) (L : ℕ) (ts : BorderTapes.OvTapes sc),
@@ -236,6 +239,32 @@ structure DecompOnTapes2 (sc : ℕ) (blank startSym endSym mark : Fin sc) where
     (BorderTapes.applyActs blank (acts y L ts) ts).X2 = ts.X2
   keepF : ∀ (y : List (Fin sc)) (L : ℕ) (ts : BorderTapes.OvTapes sc),
     (BorderTapes.applyActs blank (acts y L ts) ts).F = ts.F
+  keepS : ∀ (y : List (Fin sc)) (L : ℕ) (ts : BorderTapes.OvTapes sc),
+    BorderTapes.ScratchBlank blank ts →
+      BorderTapes.ScratchBlank blank (BorderTapes.applyActs blank (acts y L ts) ts)
+
+/-- **`DecompOnTapes2` は `DecompOnTapes` の `dec := gsDec2 · 8` への特殊化**。
+段の正当性 `decOK` は `EndToEnd2.decOK2` が無条件に与える。 -/
+def DecompOnTapes2.toDecompOnTapes {blank startSym endSym mark : Fin sc}
+    (D : DecompOnTapes2 sc blank startSym endSym mark) :
+    MiddleTapes.DecompOnTapes sc blank startSym endSym mark where
+  dec := fun y L => EndToEnd2.gsDec2 y 8 L
+  acts := D.acts
+  Cd := D.Cd
+  Dd := D.Dd
+  decOK := fun y L hL => EndToEnd2.decOK2 y L hL
+  len_le := D.len_le
+  pat := D.pat
+  upat := D.upat
+  cnt := D.cnt
+  keepX := D.keepX
+  keepX2 := D.keepX2
+  keepF := D.keepF
+  keepS := D.keepS
+
+@[simp] theorem DecompOnTapes2.toDecompOnTapes_dec {blank startSym endSym mark : Fin sc}
+    (D : DecompOnTapes2 sc blank startSym endSym mark) (y : List (Fin sc)) (L : ℕ) :
+    D.toDecompOnTapes.dec y L = EndToEnd2.gsDec2 y 8 L := rfl
 
 /-- 切断位置は正規化で変わらないので、`pat` / `upat` の形は
 `MiddleTapes.DecompOnTapes` と同一である。 -/
