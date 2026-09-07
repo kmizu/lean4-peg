@@ -18,6 +18,7 @@ import PalPeg.ManacherHeads
 import PalPeg.MiddleJob
 import PalPeg.Stages
 import PalPeg.Assembly
+import PalPeg.StageMatcher
 import PalPeg.Schedule
 import PalPeg.TapeLib
 import PalPeg.Speedup
@@ -233,3 +234,7 @@ import PalPeg.Speedup
 /-- info: 'PalPeg.vAnswer_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.vAnswer_correct
+
+/-- info: 'PalPeg.dyadic_gs_mem_PAL' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.dyadic_gs_mem_PAL
