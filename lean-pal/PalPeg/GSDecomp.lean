@@ -521,5 +521,239 @@ theorem second_period_bounds {v : List α} {k p₁ p₂ r : ℕ} (hk : 2 ≤ k)
   ⟨kRepetition_periods hk hleast.1 h2 hb hlt,
     reach_lt_add_of_second hk hR.2.1 hR.1 hleast.1.1 h2 hb hlt⟩
 
+/-! ## 存在定理（証明可能な弱い上界つき）
+
+`GSDecompW` は `GSCore` に「素朴な計算だけで証明できる」切断長の上界を付けたもの。
+再帰は GS の削除ループを一段だけ真似る：
+
+* `v` に `k`-繰り返し接頭辞がなければ `s = 0`。
+* あって、第 2 周期がなければ（`NoSecond`）`s = 0`。
+* 第 2 周期 `p₂`（最小のものを取る；最小性から `Primitive (v.take p₂)`）があれば
+  `d₀ = r - k*p₁ + 1` だけ削って `v.drop d₀` に再帰する。`strip_kills_period` により
+  この `d₀` は `p₁` を殺す量である（停止性そのものには `1 ≤ d₀` で十分）。
+
+不変量（一段ぶん）：`kRepetition_periods` から `(k-1) * p₁ ≤ p₂`、
+`reach_lt_add_of_second` から `r < p₁ + p₂`、`_second` の成功条件から `k * p₂ ≤ |v|`。
+これらから
+
+```
+d₀ + (k-1) * p₁ ≤ p₂,     よって   k * d₀ + k*(k-1) ≤ k * d₀ + k*(k-1)*p₁ ≤ k * p₂ ≤ |v|.
+```
+
+再帰を合成すると `s = Σ dᵢ` は `s = 0 ∨ s + k*(k-1) ≤ |x|` を満たす。
+
+**この計算からは定数割合の上界は出ない。** 一段の不等式は本質的に `k * dᵢ ≤ nᵢ`
+（`nᵢ` は現在の接尾辞長）であり、`nᵢ₊₁ = nᵢ - dᵢ` と合わせると
+`Σ dᵢ < n₀` しか従わない（`dᵢ = nᵢ/k` を毎回取る敵対列が反例）。定数割合
+`s < |x|/(k-1)` を得るには「第 2 周期が反復ごとに定数倍で増える」ことが要り、
+それには GS の削除ループ（`p₂` 未満の `k`-繰り返し周期を全部消すまで削る）の
+run 構造の解析が必要で、ここでは行っていない。 -/
+
+/-- `GSCore` に、証明可能な切断長上界 `s = 0 ∨ s + k*(k-1) ≤ |x|` を付けたもの。 -/
+structure GSDecompW (x : List α) (k s p₁ r : ℕ) : Prop extends GSCore x k s p₁ r where
+  cut_bound_w : s = 0 ∨ s + k * (k - 1) ≤ x.length
+
+/-- 弱い版でも切断は真の接頭辞：`1 * s < 1 * |x|`（`x ≠ []`, `2 ≤ k`）。 -/
+theorem GSDecompW.cut_lt {x : List α} {k s p₁ r : ℕ} (H : GSDecompW x k s p₁ r)
+    (hk : 2 ≤ k) (hx : x ≠ []) : 1 * s < 1 * x.length := by
+  have hpos : 0 < x.length := List.length_pos_iff.mpr hx
+  have hkk : 0 < k * (k - 1) := Nat.mul_pos (by omega) (by omega)
+  rcases H.cut_bound_w with h | h
+  · omega
+  · omega
+
+/-- 弱い版からも走査側の仮定 `KSimple` が得られる。 -/
+theorem GSDecompW.ksimple {x : List α} {k s p₁ r : ℕ} (H : GSDecompW x k s p₁ r)
+    (hp₁ : p₁ ≠ 0) : KSimple (x.drop s) k p₁ r :=
+  H.toGSCore.ksimple hp₁
+
+/-! ### 補助：切断 0 の構成と切断の合成 -/
+
+theorem gsCore_zero_of_no_krep {v : List α} {k : ℕ} (h : ∀ p, ¬ KRep v k p) :
+    GSCore v k 0 0 0 := by
+  refine ⟨Nat.zero_le _, ?_, ?_, ?_, ?_, ?_⟩
+  · intro _; exact ⟨rfl, by simpa using h⟩
+  · intro hne; exact absurd rfl hne
+  · intro hne; exact absurd rfl hne
+  · intro hne; exact absurd rfl hne
+  · intro hne; exact absurd rfl hne
+
+theorem gsCore_zero_of_noSecond {v : List α} {k p₁ r : ℕ} (hp₁ : p₁ ≠ 0)
+    (hleast : IsLeastKRep v k p₁) (hR : ReachOf v p₁ r) (hkr : k * p₁ ≤ r)
+    (hns : NoSecond v k r) : GSCore v k 0 p₁ r := by
+  refine ⟨Nat.zero_le _, ?_, ?_, ?_, ?_, ?_⟩
+  · intro h0; exact absurd h0 hp₁
+  · intro _; rw [List.drop_zero]; exact hleast
+  · intro _; rw [List.drop_zero]; exact hR
+  · intro _; exact hkr
+  · intro _; rw [List.drop_zero]; exact hns
+
+/-- 切断の合成：`v.drop d₀` を `d₁` で切ることは `v` を `d₀ + d₁` で切ること。 -/
+theorem GSCore.drop_comp {v : List α} {k d₀ d₁ p₁ r : ℕ}
+    (H : GSCore (v.drop d₀) k d₁ p₁ r) (hd₀ : d₀ ≤ v.length) :
+    GSCore v k (d₀ + d₁) p₁ r := by
+  have hEq : v.drop (d₀ + d₁) = (v.drop d₀).drop d₁ := by
+    rw [List.drop_drop]
+  have hlen : (v.drop d₀).length = v.length - d₀ := List.length_drop
+  have hcut := H.cut_le
+  rw [hlen] at hcut
+  refine ⟨by omega, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [hEq]; exact H.none_case
+  · rw [hEq]; exact H.least
+  · rw [hEq]; exact H.reach
+  · exact H.reach_ge
+  · rw [hEq]; exact H.simple
+
+/-! ### 補助：最小の `k`-繰り返し周期、到達域、最小の第 2 周期 -/
+
+theorem exists_least_kRep {v : List α} {k : ℕ} (h : ∃ p, KRep v k p) :
+    ∃ p₁, IsLeastKRep v k p₁ := by
+  classical
+  exact ⟨Nat.find h, Nat.find_spec h, fun q hq => Nat.find_le hq⟩
+
+theorem exists_reach {v : List α} {k p₁ : ℕ} (h : KRep v k p₁) :
+    ∃ r, ReachOf v p₁ r ∧ k * p₁ ≤ r := by
+  classical
+  have hw : HasPeriod (v.take (k * p₁)) p₁ := h.2.2
+  have hwle : k * p₁ ≤ v.length := h.2.1
+  refine ⟨Nat.findGreatest (fun m => HasPeriod (v.take m) p₁) v.length,
+    ⟨Nat.findGreatest_le _,
+      Nat.findGreatest_spec (P := fun m => HasPeriod (v.take m) p₁) hwle hw, ?_⟩,
+    Nat.le_findGreatest (P := fun m => HasPeriod (v.take m) p₁) hwle hw⟩
+  rcases Nat.lt_or_ge (Nat.findGreatest (fun m => HasPeriod (v.take m) p₁) v.length)
+      v.length with hlt | hge
+  · exact Or.inr (Nat.findGreatest_is_greatest (P := fun m => HasPeriod (v.take m) p₁)
+      (Nat.lt_succ_self _) (by omega))
+  · have := Nat.findGreatest_le (P := fun m => HasPeriod (v.take m) p₁) v.length
+    exact Or.inl (by omega)
+
+theorem exists_least_second {v : List α} {k r : ℕ} (h : ¬ NoSecond v k r) :
+    ∃ p₂, 0 < p₂ ∧ max (k * p₂) (r + 1) ≤ v.length ∧
+      HasPeriod (v.take (max (k * p₂) (r + 1))) p₂ ∧
+      ∀ q, 0 < q → max (k * q) (r + 1) ≤ v.length →
+        HasPeriod (v.take (max (k * q) (r + 1))) q → p₂ ≤ q := by
+  classical
+  have hex : ∃ p, 0 < p ∧ max (k * p) (r + 1) ≤ v.length ∧
+      HasPeriod (v.take (max (k * p) (r + 1))) p := by
+    rcases Classical.em (∃ p, 0 < p ∧ max (k * p) (r + 1) ≤ v.length ∧
+        HasPeriod (v.take (max (k * p) (r + 1))) p) with h' | h'
+    · exact h'
+    · exact absurd (fun p hp hm hper => h' ⟨p, hp, hm, hper⟩) h
+  obtain ⟨h1, h2, h3⟩ := Nat.find_spec hex
+  exact ⟨Nat.find hex, h1, h2, h3, fun q hq hm hper => Nat.find_le ⟨hq, hm, hper⟩⟩
+
+/-- `_second` が返す最小の第 2 周期の根は原始的（basic）。 -/
+theorem least_second_primitive {v : List α} {k r p₂ : ℕ} (hk : 1 ≤ k) (hp₂ : 0 < p₂)
+    (hm : max (k * p₂) (r + 1) ≤ v.length)
+    (hper : HasPeriod (v.take (max (k * p₂) (r + 1))) p₂)
+    (hmin : ∀ q, 0 < q → max (k * q) (r + 1) ≤ v.length →
+        HasPeriod (v.take (max (k * q) (r + 1))) q → p₂ ≤ q) :
+    Primitive (v.take p₂) := by
+  intro z n hzn
+  by_contra hn
+  have hkp₂ : k * p₂ ≤ v.length := le_trans (le_max_left _ _) hm
+  have hp₂le : p₂ ≤ v.length := le_trans (Nat.le_mul_of_pos_left p₂ hk) hkp₂
+  have htlen : (v.take p₂).length = p₂ := by simp only [List.length_take]; omega
+  have hzl : n * z.length = p₂ := by
+    have hc := congrArg List.length hzn
+    rw [htlen, length_wpow] at hc; omega
+  have hn0 : n ≠ 0 := by rintro rfl; rw [Nat.zero_mul] at hzl; omega
+  have hn2 : 2 ≤ n := by omega
+  have hzpos : 0 < z.length := by
+    rcases Nat.eq_zero_or_pos z.length with h | h
+    · rw [h, Nat.mul_zero] at hzl; omega
+    · exact h
+  have hzlt : z.length < p₂ := by
+    have h2 : 2 * z.length ≤ n * z.length := Nat.mul_le_mul_right _ hn2
+    omega
+  have hdvd : z.length ∣ p₂ := ⟨n, by rw [← hzl]; exact Nat.mul_comm n z.length⟩
+  have hpre : HasPeriod (v.take p₂) z.length := by rw [hzn]; exact hasPeriod_wpow z n
+  have hp₂m : p₂ ≤ max (k * p₂) (r + 1) :=
+    le_trans (Nat.le_mul_of_pos_left p₂ hk) (le_max_left _ _)
+  have htt : (v.take (max (k * p₂) (r + 1))).take p₂ = v.take p₂ := by
+    rw [List.take_take]; congr 1; omega
+  have hall : HasPeriod (v.take (max (k * p₂) (r + 1))) z.length :=
+    hasPeriod_of_prefix_dvd hper hp₂ hdvd (by rw [htt]; exact hpre)
+  have hkz : max (k * z.length) (r + 1) ≤ max (k * p₂) (r + 1) := by
+    have h3 : k * z.length ≤ k * p₂ := Nat.mul_le_mul_left k (le_of_lt hzlt)
+    omega
+  have := hmin z.length hzpos (le_trans hkz hm) (hasPeriod_take_of_le hall hkz)
+  omega
+
+/-! ### 主定理 -/
+
+private theorem exists_gsCore_aux (k : ℕ) (hk : 4 ≤ k) :
+    ∀ (n : ℕ) (v : List α), v.length ≤ n →
+      ∃ d p₁ r, GSCore v k d p₁ r ∧ (d = 0 ∨ d + k * (k - 1) ≤ v.length) := by
+  intro n
+  induction n with
+  | zero =>
+    intro v hv
+    refine ⟨0, 0, 0, gsCore_zero_of_no_krep ?_, Or.inl rfl⟩
+    rintro p ⟨hp0, hlen, -⟩
+    have : 0 < k * p := Nat.mul_pos (by omega) hp0
+    omega
+  | succ n ih =>
+    intro v hv
+    by_cases hex : ∃ p, KRep v k p
+    · obtain ⟨p₁, hleast⟩ := exists_least_kRep hex
+      obtain ⟨r, hR, hkr⟩ := exists_reach hleast.1
+      have hp₁pos : 0 < p₁ := hleast.1.1
+      by_cases hns : NoSecond v k r
+      · exact ⟨0, p₁, r, gsCore_zero_of_noSecond (by omega) hleast hR hkr hns, Or.inl rfl⟩
+      · obtain ⟨p₂, hp₂, hm, hper₂, hmin₂⟩ := exists_least_second hns
+        have hkp₂n : k * p₂ ≤ v.length := le_trans (le_max_left _ _) hm
+        have hrn : r + 1 ≤ v.length := le_trans (le_max_right _ _) hm
+        have hkrep₂ : KRep v k p₂ :=
+          ⟨hp₂, hkp₂n, hasPeriod_take_of_le hper₂ (le_max_left _ _)⟩
+        have hle12 : p₁ ≤ p₂ := hleast.2 _ hkrep₂
+        have hne12 : p₁ ≠ p₂ := by
+          intro heq
+          have hmx : max (k * p₂) (r + 1) = r + 1 := by
+            have : k * p₂ = k * p₁ := by rw [heq]
+            omega
+          rw [hmx] at hper₂
+          rcases hR.2.2 with h | h
+          · omega
+          · exact h (heq ▸ hper₂)
+        have hlt12 : p₁ < p₂ := lt_of_le_of_ne hle12 hne12
+        have hprim : Primitive (v.take p₂) :=
+          least_second_primitive (by omega) hp₂ hm hper₂ hmin₂
+        have hkp : (k - 1) * p₁ ≤ p₂ :=
+          kRepetition_periods (by omega) hleast.1 hkrep₂ hprim hlt12
+        have hrlt : r < p₁ + p₂ :=
+          reach_lt_add_of_second (by omega) hR.2.1 hR.1 hp₁pos hkrep₂ hprim hlt12
+        have hmul1 : (k - 1) * p₁ + p₁ = k * p₁ := by
+          have := Nat.sub_one_mul k p₁
+          have hle : p₁ ≤ k * p₁ := Nat.le_mul_of_pos_left p₁ (by omega)
+          omega
+        -- 削除量
+        have hstep : (r - k * p₁ + 1) + (k - 1) * p₁ ≤ p₂ := by omega
+        have hmulk := Nat.mul_le_mul_left k hstep
+        rw [Nat.mul_add] at hmulk
+        have hk1 : k - 1 ≤ (k - 1) * p₁ := Nat.le_mul_of_pos_right (k - 1) hp₁pos
+        have hk2 : k * (k - 1) ≤ k * ((k - 1) * p₁) := Nat.mul_le_mul_left k hk1
+        have hd0le : r - k * p₁ + 1 ≤ k * (r - k * p₁ + 1) :=
+          Nat.le_mul_of_pos_left _ (by omega)
+        have hbound : (r - k * p₁ + 1) + k * (k - 1) ≤ v.length := by omega
+        have hlen' : (v.drop (r - k * p₁ + 1)).length ≤ n := by
+          rw [List.length_drop]; omega
+        obtain ⟨d₁, p₁', r', H', hb'⟩ := ih (v.drop (r - k * p₁ + 1)) hlen'
+        refine ⟨(r - k * p₁ + 1) + d₁, p₁', r', H'.drop_comp (by omega), Or.inr ?_⟩
+        rcases hb' with h | h
+        · rw [h]; omega
+        · rw [List.length_drop] at h; omega
+    · refine ⟨0, 0, 0, gsCore_zero_of_no_krep ?_, Or.inl rfl⟩
+      intro p hp
+      exact hex ⟨p, hp⟩
+
+/-- **GS 前処理の存在定理（弱い上界つき）**。任意の `x` と `4 ≤ k` に対し、
+`k`-simple な接尾辞への分解 `(s, p₁, r)` が存在し、切断長は
+`s = 0 ∨ s + k*(k-1) ≤ |x|` を満たす。 -/
+theorem gsDecompW_exists {k : ℕ} (hk : 4 ≤ k) (x : List α) :
+    ∃ s p₁ r, GSDecompW x k s p₁ r := by
+  obtain ⟨s, p₁, r, H, hb⟩ := exists_gsCore_aux k hk x.length x (le_refl _)
+  exact ⟨s, p₁, r, H, hb⟩
+
 end PalPeg
 
