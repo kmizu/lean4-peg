@@ -23,6 +23,7 @@ import PalPeg.TextFeed
 import PalPeg.VerifierFeed
 import PalPeg.InputCopy
 import PalPeg.PatternTapes
+import PalPeg.PatternTapesPair
 import PalPeg.BorderJob
 import PalPeg.BorderJobTapes
 import PalPeg.MiddleTapes
@@ -344,3 +345,7 @@ import PalPeg.Main
 /-- info: 'PalPeg.EndToEnd2.endToEnd2_mem_PAL' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.EndToEnd2.endToEnd2_mem_PAL
+
+/-- info: 'PalPeg.PatternTapesPair.setup_spec_pair' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.PatternTapesPair.setup_spec_pair
