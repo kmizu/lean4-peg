@@ -1341,19 +1341,31 @@ def BatchEntry (blank leftSym : Fin sc) (N : ℕ) (y : List (Fin sc)) (ts : OvTa
 
 /-! ### 入力コピーの供給 -/
 
-/-- 到着した記号 `a` を、まだ凍結していないコピー（添字 `j < i ≤ numJobs`）に追記する。 -/
-def feed (blank a : Fin sc) (j : ℕ) (c : ℕ → TapeConfiguration sc) :
-    ℕ → TapeConfiguration sc :=
-  fun i => if j < i ∧ i ≤ MiddleBorder.numJobs then Tape.step blank (c i) a .right else c i
+/-- **入力コピーの世代番号**（`0 … numJobs`）。バッチ番号は `1 … numJobs` しか
+現れないので、コピーの族は `Fin (numJobs + 1)` で足りる（無限族ではない）。 -/
+abbrev Gen : Type := Fin (MiddleBorder.numJobs + 1)
 
-theorem feed_spec {blank a : Fin sc} {j : ℕ} {c : ℕ → TapeConfiguration sc}
-    {v : List (Fin sc)} (h : ∀ i, j < i → i ≤ MiddleBorder.numJobs →
-      InputCopy.FrontierView blank (c i) v) :
-    ∀ i, j < i → i ≤ MiddleBorder.numJobs →
+/-- 自然数を世代番号へ（`numJobs` で切り詰める）。 -/
+def gen (j : ℕ) : Gen := ⟨min j MiddleBorder.numJobs, by
+  have : min j MiddleBorder.numJobs ≤ MiddleBorder.numJobs := Nat.min_le_right _ _
+  omega⟩
+
+@[simp] theorem gen_val_of_le {j : ℕ} (h : j ≤ MiddleBorder.numJobs) : (gen j).val = j := by
+  simp only [gen]
+  omega
+
+/-- 到着した記号 `a` を、まだ凍結していないコピー（世代 `j < i`）に追記する。 -/
+def feed (blank a : Fin sc) (j : ℕ) (c : Gen → TapeConfiguration sc) :
+    Gen → TapeConfiguration sc :=
+  fun i => if j < i.val then Tape.step blank (c i) a .right else c i
+
+theorem feed_spec {blank a : Fin sc} {j : ℕ} {c : Gen → TapeConfiguration sc}
+    {v : List (Fin sc)} (h : ∀ i : Gen, j < i.val → InputCopy.FrontierView blank (c i) v) :
+    ∀ i : Gen, j < i.val →
       InputCopy.FrontierView blank (feed blank a j c i) (v ++ [a]) := by
-  intro i h1 h2
-  simp only [feed, if_pos (⟨h1, h2⟩ : j < i ∧ i ≤ MiddleBorder.numJobs)]
-  exact InputCopy.append_spec (h i h1 h2) a
+  intro i h1
+  simp only [feed, if_pos h1]
+  exact InputCopy.append_spec (h i h1) a
 
 /-- ラウンド `n` の終わりにコピーが保持している語。 -/
 theorem feedWord_succ (w : List (Fin sc)) (blank : Fin sc) {S n : ℕ}
@@ -1398,9 +1410,9 @@ structure MState (sc : ℕ) where
   /-- 読み出し側フラグテープ。 -/
   fout : TapeConfiguration sc
   /-- 入力コピー（`X` 用、バッチ番号で添字づけ）。 -/
-  cp1 : ℕ → TapeConfiguration sc
+  cp1 : Gen → TapeConfiguration sc
   /-- 入力コピー（`X2` 用）。 -/
-  cp2 : ℕ → TapeConfiguration sc
+  cp2 : Gen → TapeConfiguration sc
 
 /-- **1 ラウンド**。`t` は到着済みの入力、`a` はこのラウンドに到着した記号。 -/
 def mround (blank startSym endSym mark leftSym one zero : Fin sc)
@@ -1415,11 +1427,11 @@ def mround (blank startSym endSym mark leftSym one zero : Fin sc)
     let c2 := feed blank a st.idx st.cp2
     let y := (t.drop (st.width / 2)).take (st.width + j * MiddleBorder.gw st.width)
     let ts' : OvTapes sc :=
-      { P := st.g.ts.P, X := Tape.step blank (c1 j) blank .left, Cnt := st.g.ts.Cnt,
-        U := st.g.ts.U, X2 := Tape.step blank (c2 j) blank .left, F := st.fout,
+      { P := st.g.ts.P, X := Tape.step blank (c1 (gen j)) blank .left, Cnt := st.g.ts.Cnt,
+        U := st.g.ts.U, X2 := Tape.step blank (c2 (gen j)) blank .left, F := st.fout,
         S1 := st.g.ts.S1, S2 := st.g.ts.S2, S3 := st.g.ts.S3, S4 := st.g.ts.S4,
         S5 := st.g.ts.S5, S6 := st.g.ts.S6, S7 := st.g.ts.S7, S8 := st.g.ts.S8,
-        S9 := st.g.ts.S9 }
+        S9 := st.g.ts.S9, S10 := st.g.ts.S10, S11 := st.g.ts.S11 }
     { width := st.width, idx := j, next := n + MiddleBorder.gw st.width,
       g := ⟨batchActs blank startSym endSym mark leftSym one zero D y
               (rdOf st.width j) ts', ts'⟩,
@@ -1429,8 +1441,8 @@ def mround (blank startSym endSym mark leftSym one zero : Fin sc)
       if st.width < n ∧ 2 ≤ st.idx then Tape.step blank st.fout st.fout.focus .right
       else st.fout
     let gg : Grind sc := gstep blank (rateM D) st.g
-    let d1 : ℕ → TapeConfiguration sc := feed blank a st.idx st.cp1
-    let d2 : ℕ → TapeConfiguration sc := feed blank a st.idx st.cp2
+    let d1 : Gen → TapeConfiguration sc := feed blank a st.idx st.cp1
+    let d2 : Gen → TapeConfiguration sc := feed blank a st.idx st.cp2
     { width := st.width, idx := st.idx, next := st.next, g := gg, fout := fo,
       cp1 := d1, cp2 := d2 }
 
@@ -1478,9 +1490,9 @@ structure MEncodes (blank startSym endSym mark leftSym one zero : Fin sc)
   next_eq : st.next = (MiddleBorder.bstate w S n).next
   next_rel : 8 ≤ S → st.next = MiddleBorder.relTime S (st.idx + 1)
   rel_le : 8 ≤ S → 1 ≤ st.idx → st.next ≤ n + MiddleBorder.gw S
-  copy1 : 8 ≤ S → ∀ i, st.idx < i → i ≤ MiddleBorder.numJobs →
+  copy1 : 8 ≤ S → ∀ i : Gen, st.idx < i.val →
     InputCopy.FrontierView blank (st.cp1 i) (leftSym :: ((w.take n).drop (S / 2)))
-  copy2 : 8 ≤ S → ∀ i, st.idx < i → i ≤ MiddleBorder.numJobs →
+  copy2 : 8 ≤ S → ∀ i : Gen, st.idx < i.val →
     InputCopy.FrontierView blank (st.cp2 i) (leftSym :: ((w.take n).drop (S / 2)))
   job : 8 ≤ S → n < 4 * S → 1 ≤ st.idx →
     ∃ ts₀ : OvTapes sc,
@@ -1623,31 +1635,31 @@ theorem mround_encodes_release (D : DecompOnTapes sc blank startSym endSym mark 
   simp only [mround, h.width_eq, if_neg (show ¬ (S < 8) by omega), if_pos hrel']
   have hnum : st.idx + 1 ≤ MiddleBorder.numJobs := by
     have := hrel.2; omega
-  have hcopy1 : ∀ i, st.idx < i → i ≤ MiddleBorder.numJobs →
+  have hcopy1 : ∀ i : Gen, st.idx < i.val →
       InputCopy.FrontierView blank (feed blank (w.getD n blank) st.idx st.cp1 i)
         (leftSym :: ((w.take (n + 1)).drop (S / 2))) := by
-    intro i h1 h2
-    have := feed_spec (a := w.getD n blank) (h.copy1 hbig) i h1 h2
+    intro i h1
+    have := feed_spec (a := w.getD n blank) (h.copy1 hbig) i h1
     rwa [List.cons_append, hfeedw] at this
-  have hcopy2 : ∀ i, st.idx < i → i ≤ MiddleBorder.numJobs →
+  have hcopy2 : ∀ i : Gen, st.idx < i.val →
       InputCopy.FrontierView blank (feed blank (w.getD n blank) st.idx st.cp2 i)
         (leftSym :: ((w.take (n + 1)).drop (S / 2))) := by
-    intro i h1 h2
-    have := feed_spec (a := w.getD n blank) (h.copy2 hbig) i h1 h2
+    intro i h1
+    have := feed_spec (a := w.getD n blank) (h.copy2 hbig) i h1
     rwa [List.cons_append, hfeedw] at this
   have hXsv : Tape.SeqView blank
-      (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp1 (st.idx + 1)) blank .left)
+      (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp1 (gen (st.idx + 1))) blank .left)
       (leftSym :: MiddleBorder.Wnd w S (st.idx + 1))
       (MiddleBorder.Wnd w S (st.idx + 1)).length := by
-    have hfv := hcopy1 (st.idx + 1) (by omega) hnum
+    have hfv := hcopy1 (gen (st.idx + 1)) (by rw [gen_val_of_le hnum]; omega)
     rw [hfed] at hfv
     have := InputCopy.toSeqView hfv (by simp)
     simpa using this
   have hX2sv : Tape.SeqView blank
-      (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp2 (st.idx + 1)) blank .left)
+      (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp2 (gen (st.idx + 1))) blank .left)
       (leftSym :: MiddleBorder.Wnd w S (st.idx + 1))
       (MiddleBorder.Wnd w S (st.idx + 1)).length := by
-    have hfv := hcopy2 (st.idx + 1) (by omega) hnum
+    have hfv := hcopy2 (gen (st.idx + 1)) (by rw [gen_val_of_le hnum]; omega)
     rw [hfed] at hfv
     have := InputCopy.toSeqView hfv (by simp)
     simpa using this
@@ -1715,10 +1727,10 @@ theorem mround_encodes_release (D : DecompOnTapes sc blank startSym endSym mark 
     rw [MiddleBorder.relTime_succ, ← hn1]
   · intro _ _
     exact Nat.le_refl _
-  · intro _ i h1 h2; exact hcopy1 i (Nat.lt_of_succ_lt h1) h2
-  · intro _ i h1 h2; exact hcopy2 i (Nat.lt_of_succ_lt h1) h2
+  · intro _ i h1; exact hcopy1 i (Nat.lt_of_succ_lt h1)
+  · intro _ i h1; exact hcopy2 i (Nat.lt_of_succ_lt h1)
   · intro _ hjob4 _
-    obtain ⟨ts', hts'⟩ : ∃ z : OvTapes sc, z = OvTapes.mk st.g.ts.P (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp1 (st.idx + 1)) blank .left) st.g.ts.Cnt st.g.ts.U (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp2 (st.idx + 1)) blank .left) st.fout st.g.ts.S1 st.g.ts.S2 st.g.ts.S3 st.g.ts.S4 st.g.ts.S5 st.g.ts.S6 st.g.ts.S7 st.g.ts.S8 st.g.ts.S9 := ⟨_, rfl⟩
+    obtain ⟨ts', hts'⟩ : ∃ z : OvTapes sc, z = OvTapes.mk st.g.ts.P (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp1 (gen (st.idx + 1))) blank .left) st.g.ts.Cnt st.g.ts.U (Tape.step blank (feed blank (w.getD n blank) st.idx st.cp2 (gen (st.idx + 1))) blank .left) st.fout st.g.ts.S1 st.g.ts.S2 st.g.ts.S3 st.g.ts.S4 st.g.ts.S5 st.g.ts.S6 st.g.ts.S7 st.g.ts.S8 st.g.ts.S9 st.g.ts.S10 st.g.ts.S11 := ⟨_, rfl⟩
     refine ⟨ts', ?_, ?_⟩
     · rw [hy, Nat.sub_self, hts']
       rfl
@@ -1729,7 +1741,8 @@ theorem mround_encodes_release (D : DecompOnTapes sc blank startSym endSym mark 
       · rw [hts']
         have hg := hgsb hjob4
         exact ⟨⟨hg.scratch.s1, hg.scratch.s2, hg.scratch.s3, hg.scratch.s4, hg.scratch.s5,
-          hg.scratch.s6, hg.scratch.s7, hg.scratch.s8, hg.scratch.s9⟩, hg.p, hg.u, hg.cnt⟩
+          hg.scratch.s6, hg.scratch.s7, hg.scratch.s8, hg.scratch.s9, hg.scratch.s10,
+          hg.scratch.s11⟩, hg.p, hg.u, hg.cnt⟩
   · intro _ _ h0
     exact absurd h0 (Nat.succ_ne_zero _)
   · intro _ h4 h1
@@ -1810,17 +1823,17 @@ theorem mround_encodes_grind (D : DecompOnTapes sc blank startSym endSym mark le
     rw [h.next_eq]
   have hfeedw : ((w.take n).drop (S / 2)) ++ [w.getD n blank] = (w.take (n + 1)).drop (S / 2) :=
     feedWord_succ w blank hn (by omega)
-  have hcopy1 : ∀ i, st.idx < i → i ≤ MiddleBorder.numJobs →
+  have hcopy1 : ∀ i : Gen, st.idx < i.val →
       InputCopy.FrontierView blank (feed blank (w.getD n blank) st.idx st.cp1 i)
         (leftSym :: ((w.take (n + 1)).drop (S / 2))) := by
-    intro i h1 h2
-    have := feed_spec (a := w.getD n blank) (h.copy1 hbig) i h1 h2
+    intro i h1
+    have := feed_spec (a := w.getD n blank) (h.copy1 hbig) i h1
     rwa [List.cons_append, hfeedw] at this
-  have hcopy2 : ∀ i, st.idx < i → i ≤ MiddleBorder.numJobs →
+  have hcopy2 : ∀ i : Gen, st.idx < i.val →
       InputCopy.FrontierView blank (feed blank (w.getD n blank) st.idx st.cp2 i)
         (leftSym :: ((w.take (n + 1)).drop (S / 2))) := by
-    intro i h1 h2
-    have := feed_spec (a := w.getD n blank) (h.copy2 hbig) i h1 h2
+    intro i h1
+    have := feed_spec (a := w.getD n blank) (h.copy2 hbig) i h1
     rwa [List.cons_append, hfeedw] at this
   simp only [mround, h.width_eq, if_neg (show ¬ (S < 8) by omega), if_neg hnrel]
   refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -1833,8 +1846,8 @@ theorem mround_encodes_grind (D : DecompOnTapes sc blank startSym endSym mark le
     have hr := h.rel_le h8 h1
     show st.next ≤ n + 1 + MiddleBorder.gw S
     omega
-  · intro _ i h1 h2; exact hcopy1 i h1 h2
-  · intro _ i h1 h2; exact hcopy2 i h1 h2
+  · intro _ i h1; exact hcopy1 i h1
+  · intro _ i h1; exact hcopy2 i h1
   · intro _ h4 h1
     obtain ⟨ts₀, hgeq, hBE⟩ := h.job hbig (by omega) h1
     refine ⟨ts₀, ?_, hBE⟩
@@ -1916,12 +1929,12 @@ def mstate (blank startSym endSym mark leftSym one zero : Fin sc)
 
 /-- 初期状態。 -/
 def minit (S : ℕ) (g0 : Grind sc) (fo : TapeConfiguration sc)
-    (c1 c2 : ℕ → TapeConfiguration sc) : MState sc :=
+    (c1 c2 : Gen → TapeConfiguration sc) : MState sc :=
   ⟨S, 0, MiddleBorder.relTime S 1, g0, fo, c1, c2⟩
 
 theorem minit_encodes (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     {w : List (Fin sc)} {S : ℕ} {g0 : Grind sc} {fo : TapeConfiguration sc}
-    {c1 c2 : ℕ → TapeConfiguration sc}
+    {c1 c2 : Gen → TapeConfiguration sc}
     (hc1 : ∀ i, InputCopy.FrontierView blank (c1 i) [leftSym])
     (hc2 : ∀ i, InputCopy.FrontierView blank (c2 i) [leftSym])
     (hrem : g0.rem = [])
@@ -1944,8 +1957,8 @@ theorem minit_encodes (D : DecompOnTapes sc blank startSym endSym mark leftSym)
     rw [hb]
   · intro _; rfl
   · intro _ h1; exact absurd (show 1 ≤ 0 from h1) (by omega)
-  · intro _ i _ _; rw [hnil]; exact hc1 i
-  · intro _ i _ _; rw [hnil]; exact hc2 i
+  · intro _ i _; rw [hnil]; exact hc1 i
+  · intro _ i _; rw [hnil]; exact hc2 i
   · intro _ _ h1; exact absurd (show 1 ≤ 0 from h1) (by omega)
   · intro _ _ _; exact ⟨hrem, hgF, hgsc⟩
   · intro _ _ _; exact hfo

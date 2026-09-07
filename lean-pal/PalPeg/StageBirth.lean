@@ -123,9 +123,9 @@ theorem copyTape_seqView {blank leftSym : Fin sc} {w : List (Fin sc)} {L n : ℕ
   rw [hlen] at h
   exact h
 
-/-! ## 2. 誕生時の 12 本テープ -/
+/-! ## 2. 誕生時の 15 本テープ -/
 
-/-- 誕生時の 12 本テープ：`sIn` は `copyTape`（番兵つき入力コピー）、
+/-- 誕生時の 15 本テープ：`sIn` は `copyTape`（番兵つき入力コピー）、
 7 本の単進カウンタは `0`、残り（`sU` / `sP` / `sT` / `sX2`）は空白。 -/
 def birthTapes (blank mark leftSym : Fin sc) (w : List (Fin sc)) (L n : ℕ) :
     Tapes sc := fun j =>
@@ -138,13 +138,13 @@ def birthTapes (blank mark leftSym : Fin sc) (w : List (Fin sc)) (L n : ℕ) :
   rw [birthTapes, if_pos rfl]
 
 theorem birthTapes_blank {blank mark leftSym : Fin sc} {w : List (Fin sc)} {L n : ℕ}
-    {j : Fin 12}
+    {j : Fin 15}
     (hj : j ≠ sIn) (hj2 : j = sU ∨ j = sP ∨ j = sT ∨ j = sX2) :
     birthTapes blank mark leftSym w L n j = blankTape blank n := by
   rw [birthTapes, if_neg hj, if_pos hj2]
 
 theorem birthTapes_counter {blank mark leftSym : Fin sc} {w : List (Fin sc)} {L n : ℕ}
-    {j : Fin 12}
+    {j : Fin 15}
     (hj : j ≠ sIn) (hj2 : ¬ (j = sU ∨ j = sP ∨ j = sT ∨ j = sX2)) :
     birthTapes blank mark leftSym w L n j = zeroCounter blank mark n := by
   rw [birthTapes, if_neg hj, if_neg hj2]
@@ -192,13 +192,15 @@ def blankOv (blank : Fin sc) (n : ℕ) : BorderTapes.OvTapes sc :=
     U := blankTape blank n, X2 := blankTape blank n, F := blankTape blank n
     S1 := blankTape blank n, S2 := blankTape blank n, S3 := blankTape blank n
     S4 := blankTape blank n, S5 := blankTape blank n, S6 := blankTape blank n
-    S7 := blankTape blank n, S8 := blankTape blank n, S9 := blankTape blank n }
+    S7 := blankTape blank n, S8 := blankTape blank n, S9 := blankTape blank n,
+    S10 := blankTape blank n, S11 := blankTape blank n }
 
 theorem blankOv_scratchBlank (blank : Fin sc) (n : ℕ) :
     BorderTapes.ScratchBlank blank (blankOv blank n) :=
   ⟨blankTape_stackView _ _, blankTape_stackView _ _, blankTape_stackView _ _,
    blankTape_stackView _ _, blankTape_stackView _ _, blankTape_stackView _ _,
-   blankTape_stackView _ _, blankTape_stackView _ _, blankTape_stackView _ _⟩
+   blankTape_stackView _ _, blankTape_stackView _ _, blankTape_stackView _ _,
+   blankTape_stackView _ _, blankTape_stackView _ _⟩
 
 /-- 空白の作業テープ束は段テープ `P` / `U` / `Cnt` も空なので `EntryBlank` を満たす。 -/
 theorem blankOv_entryBlank (blank : Fin sc) (n : ℕ) :
@@ -251,7 +253,7 @@ theorem bufSize_text (w : List (Fin sc)) (S : ℕ) : (w.drop S).length ≤ bufSi
 theorem bufSize_lmax (w : List (Fin sc)) (S : ℕ) : MiddleTapes.Lmax S ≤ bufSize w S := by
   simp only [bufSize]; omega
 
-/-- **段の誕生時の状態**：12 本の準備テープは `birthTapes`（動作列は空、
+/-- **段の誕生時の状態**：15 本の準備テープは `birthTapes`（動作列は空、
 つまり誕生ラウンドではまだ何も挽いていない）、中央ジョブは `midInit`、
 照合器は `StageTapes.startVM` を誕生時のテープに載せたもの。 -/
 def initOf (blank startSym endSym mark leftSym : Fin sc) (w : List (Fin sc)) (S : ℕ) :

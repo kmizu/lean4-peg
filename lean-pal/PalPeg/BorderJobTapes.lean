@@ -106,6 +106,8 @@ structure OvTapes (sc : ℕ) where
   S7 : TapeConfiguration sc
   S8 : TapeConfiguration sc
   S9 : TapeConfiguration sc
+  S10 : TapeConfiguration sc
+  S11 : TapeConfiguration sc
 
 /-- 1 本のテープに対する 1 個のヘッド動作。`P`/`X`/`U`/`X2`/`F` の移動は読んだ記号を
 書き戻す（テープを書き換えない）。`C` はカウンタへの書き込み、`Fset` はフラグの書き込み。 -/
@@ -130,6 +132,8 @@ inductive Act (sc : ℕ) where
   | S7 : Fin sc → Move → Act sc
   | S8 : Fin sc → Move → Act sc
   | S9 : Fin sc → Move → Act sc
+  | S10 : Fin sc → Move → Act sc
+  | S11 : Fin sc → Move → Act sc
 
 def applyAct (blank : Fin sc) (ts : OvTapes sc) : Act sc → OvTapes sc
   | .P m => { ts with P := Tape.step blank ts.P ts.P.focus m }
@@ -150,6 +154,8 @@ def applyAct (blank : Fin sc) (ts : OvTapes sc) : Act sc → OvTapes sc
   | .S7 a m => { ts with S7 := Tape.step blank ts.S7 a m }
   | .S8 a m => { ts with S8 := Tape.step blank ts.S8 a m }
   | .S9 a m => { ts with S9 := Tape.step blank ts.S9 a m }
+  | .S10 a m => { ts with S10 := Tape.step blank ts.S10 a m }
+  | .S11 a m => { ts with S11 := Tape.step blank ts.S11 a m }
 
 def applyActs (blank : Fin sc) (l : List (Act sc)) (ts : OvTapes sc) : OvTapes sc :=
   l.foldl (applyAct blank) ts
@@ -183,8 +189,42 @@ def NoScratch : Act sc → Prop
   | .Uset _ _ => True
   | _ => False
 
+/-- **新設の作業テープ `S10` / `S11` に触れない動作**。既存のプログラムはすべてこれを
+満たす（`S10` / `S11` は 11 本テープの前処理のために足したもので、`Act.S10` / `Act.S11`
+を明示的に使う箇所以外では現れない）。 -/
+def NoNew : Act sc → Prop
+  | .S10 _ _ => False
+  | .S11 _ _ => False
+  | _ => True
+
+/-- 動作列が `S10` / `S11` に触れないこと。 -/
+def NoNewAll (l : List (Act sc)) : Prop := ∀ a ∈ l, NoNew a
+
+theorem applyAct_keepNew {blank : Fin sc} {a : Act sc} (ha : NoNew a) (ts : OvTapes sc) :
+    (applyAct blank ts a).S10 = ts.S10 ∧ (applyAct blank ts a).S11 = ts.S11 := by
+  cases a <;> first | exact ⟨rfl, rfl⟩ | exact absurd ha (by simp [NoNew])
+
+theorem applyActs_keepNew {blank : Fin sc} :
+    ∀ (l : List (Act sc)) (ts : OvTapes sc), NoNewAll l →
+      (applyActs blank l ts).S10 = ts.S10 ∧ (applyActs blank l ts).S11 = ts.S11 := by
+  intro l
+  induction l with
+  | nil => intro ts _; exact ⟨rfl, rfl⟩
+  | cons a l ih =>
+      intro ts h
+      obtain ⟨h1, h2⟩ := applyAct_keepNew (blank := blank) (h a (List.mem_cons_self ..)) ts
+      obtain ⟨g1, g2⟩ := ih (applyAct blank ts a) (fun b hb => h b (List.mem_cons_of_mem _ hb))
+      exact ⟨by rw [applyActs_cons, g1, h1], by rw [applyActs_cons, g2, h2]⟩
+
 /-- 動作列が作業テープに触れないこと。 -/
 def NoScratchAll (l : List (Act sc)) : Prop := ∀ a ∈ l, NoScratch a
+
+/-- `NoScratch` な動作は当然 `S10` / `S11` にも触れない。 -/
+theorem noNew_of_noScratch {a : Act sc} (ha : NoScratch a) : NoNew a := by
+  cases a <;> trivial
+
+theorem noNewAll_of_noScratchAll {l : List (Act sc)} (h : NoScratchAll l) : NoNewAll l :=
+  fun a ha => noNew_of_noScratch (h a ha)
 
 theorem noScratchAll_nil : NoScratchAll ([] : List (Act sc)) := by
   intro a ha; simp at ha
@@ -221,15 +261,17 @@ structure ScratchEq (t u : OvTapes sc) : Prop where
   s7 : t.S7 = u.S7
   s8 : t.S8 = u.S8
   s9 : t.S9 = u.S9
+  s10 : t.S10 = u.S10
+  s11 : t.S11 = u.S11
 
 theorem ScratchEq.refl (t : OvTapes sc) : ScratchEq t t :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 theorem ScratchEq.trans {t u v : OvTapes sc} (h₁ : ScratchEq t u) (h₂ : ScratchEq u v) :
     ScratchEq t v :=
   ⟨h₁.s1.trans h₂.s1, h₁.s2.trans h₂.s2, h₁.s3.trans h₂.s3, h₁.s4.trans h₂.s4,
     h₁.s5.trans h₂.s5, h₁.s6.trans h₂.s6, h₁.s7.trans h₂.s7, h₁.s8.trans h₂.s8,
-    h₁.s9.trans h₂.s9⟩
+    h₁.s9.trans h₂.s9, h₁.s10.trans h₂.s10, h₁.s11.trans h₂.s11⟩
 
 /-- 作業テープが（ヘッドを原点に置いて）空白であること。 -/
 structure ScratchBlank (blank : Fin sc) (ts : OvTapes sc) : Prop where
@@ -242,19 +284,22 @@ structure ScratchBlank (blank : Fin sc) (ts : OvTapes sc) : Prop where
   s7 : Tape.StackView blank ts.S7 []
   s8 : Tape.StackView blank ts.S8 []
   s9 : Tape.StackView blank ts.S9 []
+  s10 : Tape.StackView blank ts.S10 []
+  s11 : Tape.StackView blank ts.S11 []
 
 theorem ScratchEq.blank {blank : Fin sc} {t u : OvTapes sc} (h : ScratchEq t u)
     (hu : ScratchBlank blank u) : ScratchBlank blank t := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     first
       | (rw [h.s1]; exact hu.s1) | (rw [h.s2]; exact hu.s2) | (rw [h.s3]; exact hu.s3)
       | (rw [h.s4]; exact hu.s4) | (rw [h.s5]; exact hu.s5) | (rw [h.s6]; exact hu.s6)
       | (rw [h.s7]; exact hu.s7) | (rw [h.s8]; exact hu.s8) | (rw [h.s9]; exact hu.s9)
+      | (rw [h.s10]; exact hu.s10) | (rw [h.s11]; exact hu.s11)
 
 theorem applyAct_scratchEq {blank : Fin sc} {a : Act sc} (ha : NoScratch a)
     (ts : OvTapes sc) : ScratchEq (applyAct blank ts a) ts := by
   cases a <;> first
-    | exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    | exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
     | exact absurd ha (by simp [NoScratch])
 
 /-- **作業テープの不変性**：作業テープに触れない動作列は作業テープを変えない。 -/
@@ -291,6 +336,8 @@ def NoScratch2 : Act sc → Prop
   | .S7 _ _ => False
   | .S8 _ _ => False
   | .S9 _ _ => False
+  | .S10 _ _ => False
+  | .S11 _ _ => False
   | _ => True
 
 /-- 動作列が `S2` 以外の作業テープに触れないこと。 -/
@@ -323,17 +370,19 @@ structure ScratchEq2 (t u : OvTapes sc) : Prop where
   s7 : t.S7 = u.S7
   s8 : t.S8 = u.S8
   s9 : t.S9 = u.S9
+  s10 : t.S10 = u.S10
+  s11 : t.S11 = u.S11
 
 theorem ScratchEq2.trans {t u v : OvTapes sc} (h₁ : ScratchEq2 t u) (h₂ : ScratchEq2 u v) :
     ScratchEq2 t v :=
   ⟨h₁.s1.trans h₂.s1, h₁.s3.trans h₂.s3, h₁.s4.trans h₂.s4,
     h₁.s5.trans h₂.s5, h₁.s6.trans h₂.s6, h₁.s7.trans h₂.s7, h₁.s8.trans h₂.s8,
-    h₁.s9.trans h₂.s9⟩
+    h₁.s9.trans h₂.s9, h₁.s10.trans h₂.s10, h₁.s11.trans h₂.s11⟩
 
 theorem applyAct_scratchEq2 {blank : Fin sc} {a : Act sc} (ha : NoScratch2 a)
     (ts : OvTapes sc) : ScratchEq2 (applyAct blank ts a) ts := by
   cases a <;> first
-    | exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    | exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
     | exact absurd ha (by simp [NoScratch2])
 
 theorem applyActs_scratchEq2 {blank : Fin sc} :
@@ -341,7 +390,7 @@ theorem applyActs_scratchEq2 {blank : Fin sc} :
       ScratchEq2 (applyActs blank l ts) ts := by
   intro l
   induction l with
-  | nil => intro ts _; exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | nil => intro ts _; exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | cons a l ih =>
     intro ts h
     rw [applyActs_cons]
@@ -354,10 +403,12 @@ theorem ScratchEq2.blankOthers {blank : Fin sc} {t u : OvTapes sc} (h : ScratchE
     Tape.StackView blank t.S1 [] ∧ Tape.StackView blank t.S3 [] ∧
       Tape.StackView blank t.S4 [] ∧ Tape.StackView blank t.S5 [] ∧
       Tape.StackView blank t.S6 [] ∧ Tape.StackView blank t.S7 [] ∧
-      Tape.StackView blank t.S8 [] ∧ Tape.StackView blank t.S9 [] :=
+      Tape.StackView blank t.S8 [] ∧ Tape.StackView blank t.S9 [] ∧
+      Tape.StackView blank t.S10 [] ∧ Tape.StackView blank t.S11 [] :=
   ⟨by rw [h.s1]; exact hu.s1, by rw [h.s3]; exact hu.s3, by rw [h.s4]; exact hu.s4,
     by rw [h.s5]; exact hu.s5, by rw [h.s6]; exact hu.s6, by rw [h.s7]; exact hu.s7,
-    by rw [h.s8]; exact hu.s8, by rw [h.s9]; exact hu.s9⟩
+    by rw [h.s8]; exact hu.s8, by rw [h.s9]; exact hu.s9,
+    by rw [h.s10]; exact hu.s10, by rw [h.s11]; exact hu.s11⟩
 
 /-! ### `S1` 以外の作業テープの不変性
 
@@ -375,6 +426,8 @@ def NoScratch3 : Act sc → Prop
   | .S7 _ _ => False
   | .S8 _ _ => False
   | .S9 _ _ => False
+  | .S10 _ _ => False
+  | .S11 _ _ => False
   | _ => True
 
 /-- 動作列が `S1` 以外の作業テープに触れないこと。 -/
@@ -413,16 +466,19 @@ structure ScratchEq3 (t u : OvTapes sc) : Prop where
   s7 : t.S7 = u.S7
   s8 : t.S8 = u.S8
   s9 : t.S9 = u.S9
+  s10 : t.S10 = u.S10
+  s11 : t.S11 = u.S11
 
 theorem ScratchEq3.trans {t u v : OvTapes sc} (h₁ : ScratchEq3 t u) (h₂ : ScratchEq3 u v) :
     ScratchEq3 t v :=
   ⟨h₁.s2.trans h₂.s2, h₁.s3.trans h₂.s3, h₁.s4.trans h₂.s4, h₁.s5.trans h₂.s5,
-    h₁.s6.trans h₂.s6, h₁.s7.trans h₂.s7, h₁.s8.trans h₂.s8, h₁.s9.trans h₂.s9⟩
+    h₁.s6.trans h₂.s6, h₁.s7.trans h₂.s7, h₁.s8.trans h₂.s8, h₁.s9.trans h₂.s9,
+    h₁.s10.trans h₂.s10, h₁.s11.trans h₂.s11⟩
 
 theorem applyAct_scratchEq3 {blank : Fin sc} {a : Act sc} (ha : NoScratch3 a)
     (ts : OvTapes sc) : ScratchEq3 (applyAct blank ts a) ts := by
   cases a <;> first
-    | exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    | exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
     | exact absurd ha (by simp [NoScratch3])
 
 /-- **作業テープの不変性（`S1` 以外）**：`S1` にしか触れない動作列は
@@ -432,7 +488,7 @@ theorem applyActs_scratchEq3 {blank : Fin sc} :
       ScratchEq3 (applyActs blank l ts) ts := by
   intro l
   induction l with
-  | nil => intro ts _; exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | nil => intro ts _; exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | cons a l ih =>
     intro ts h
     rw [applyActs_cons]
@@ -445,10 +501,12 @@ theorem ScratchEq3.blankOthers {blank : Fin sc} {t u : OvTapes sc} (h : ScratchE
     Tape.StackView blank t.S2 [] ∧ Tape.StackView blank t.S3 [] ∧
       Tape.StackView blank t.S4 [] ∧ Tape.StackView blank t.S5 [] ∧
       Tape.StackView blank t.S6 [] ∧ Tape.StackView blank t.S7 [] ∧
-      Tape.StackView blank t.S8 [] ∧ Tape.StackView blank t.S9 [] :=
+      Tape.StackView blank t.S8 [] ∧ Tape.StackView blank t.S9 [] ∧
+      Tape.StackView blank t.S10 [] ∧ Tape.StackView blank t.S11 [] :=
   ⟨by rw [h.s2]; exact hu.s2, by rw [h.s3]; exact hu.s3, by rw [h.s4]; exact hu.s4,
     by rw [h.s5]; exact hu.s5, by rw [h.s6]; exact hu.s6, by rw [h.s7]; exact hu.s7,
-    by rw [h.s8]; exact hu.s8, by rw [h.s9]; exact hu.s9⟩
+    by rw [h.s8]; exact hu.s8, by rw [h.s9]; exact hu.s9,
+    by rw [h.s10]; exact hu.s10, by rw [h.s11]; exact hu.s11⟩
 
 /-! ## 2. 動作列 -/
 
@@ -1289,8 +1347,8 @@ theorem shiftActs_scratchBlank {blank mark : Fin sc} {k : ℕ} {b : Bool}
     ScratchBlank blank (applyActs blank (shiftActs blank mark k b ts) ts') := by
   have heq3 := applyActs_scratchEq3 (blank := blank) (shiftActs blank mark k b ts) ts'
     (noScratch3_shiftActs blank mark k b ts)
-  obtain ⟨o2, o3, o4, o5, o6, o7, o8, o9⟩ := heq3.blankOthers hSB
-  refine ⟨?_, o2, o3, o4, o5, o6, o7, o8, o9⟩
+  obtain ⟨o2, o3, o4, o5, o6, o7, o8, o9, o10, o11⟩ := heq3.blankOthers hSB
+  refine ⟨?_, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11⟩
   simp only [shiftActs]
   split_ifs
   · exact periodActs_S1 blank mark _ ts' hSB.s1
@@ -1311,8 +1369,8 @@ theorem ovProgram_scratchBlank (blank leftSym endSym mark one : Fin sc) (k c : �
     have hUC : ScratchBlank blank (applyActs blank (uCheck sc blank mark c) ts) := by
       have heq2 := applyActs_scratchEq2 (blank := blank) (uCheck sc blank mark c) ts
         (noScratch2_uCheck blank mark c)
-      obtain ⟨o1, o3, o4, o5, o6, o7, o8, o9⟩ := heq2.blankOthers hSB
-      exact ⟨o1, uCheck_S2 blank mark c ts hSB.s2, o3, o4, o5, o6, o7, o8, o9⟩
+      obtain ⟨o1, o3, o4, o5, o6, o7, o8, o9, o10, o11⟩ := heq2.blankOthers hSB
+      exact ⟨o1, uCheck_S2 blank mark c ts hSB.s2, o3, o4, o5, o6, o7, o8, o9, o10, o11⟩
     have hFset : NoScratchAll (if bu then [Act.Fset one] else []) := by
       cases bu
       · exact noScratchAll_nil

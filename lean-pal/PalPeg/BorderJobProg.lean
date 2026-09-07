@@ -11,10 +11,10 @@ import PalPeg.ProgLangLib
 
 ## 設計
 
-* テープ束は `Fin 15`：主テープ `tP`/`tX`/`tCnt`/`tU`/`tX2`/`tF` と、分解器用の
+* テープ束は `Fin 17`：主テープ `tP`/`tX`/`tCnt`/`tU`/`tX2`/`tF` と、分解器用の
   作業テープ `tS1 … tS9`。`OvTapes` の全フィールドを覆っているので、
   `Act` の全 16 構成子がそのまま `Act15` に写る（`prAct`）。
-* `Act15 sc := Fin 15 × Option (Fin sc) × Move`（`none` は読んだ記号の書き戻し、
+* `Act15 sc := Fin 17 × Option (Fin sc) × Move`（`none` は読んだ記号の書き戻し、
   `some a` は `a` の書き込み）。
 * 条件は `Cond15.neq j a`（テープ `j` の読みが `a` でない）と `Cond15.matchPX e`
   （`P` の読みが `e` でなく `X` の読みと等しい）の 2 種類。`ovProgram` の分岐は
@@ -59,53 +59,53 @@ variable {sc : ℕ}
 /-! ## 1. テープ番号 -/
 
 /-- パターンテープ。 -/
-def tP : Fin 15 := 0
+def tP : Fin 17 := 0
 /-- テキストテープ（照合位置）。 -/
-def tX : Fin 15 := 1
+def tX : Fin 17 := 1
 /-- 周期カウンタ。 -/
-def tCnt : Fin 15 := 2
+def tCnt : Fin 17 := 2
 /-- 接頭辞 `u` のテープ。 -/
-def tU : Fin 15 := 3
+def tU : Fin 17 := 3
 /-- テキストテープ（段位置）。 -/
-def tX2 : Fin 15 := 4
+def tX2 : Fin 17 := 4
 /-- フラグテープ。 -/
-def tF : Fin 15 := 5
+def tF : Fin 17 := 5
 /-- 作業テープ `S1` … `S9`。 -/
-def tS : Fin 9 → Fin 15 := fun i => ⟨6 + i.val, by omega⟩
+def tS : Fin 11 → Fin 17 := fun i => ⟨6 + i.val, by omega⟩
 
 /-! ## 2. 有限な動作・条件の添字型 -/
 
 /-- 動作識別子：`(テープ番号, 書く記号（`none` は読みの書き戻し）, 移動)`。 -/
-abbrev Act15 (sc : ℕ) := Fin 15 × Option (Fin sc) × Move
+abbrev Act15 (sc : ℕ) := Fin 17 × Option (Fin sc) × Move
 
 /-- 条件識別子。 -/
 inductive Cond15 (sc : ℕ) where
   /-- テープ `j` の読みが `a` でない。 -/
-  | neq (j : Fin 15) (a : Fin sc) : Cond15 sc
+  | neq (j : Fin 17) (a : Fin sc) : Cond15 sc
   /-- 一致枝の条件（`P` の読みが `e` でなく `X` の読みと等しい）。 -/
   | matchPX (e : Fin sc) : Cond15 sc
   deriving DecidableEq
 
 instance : Fintype (Cond15 sc) :=
   Fintype.ofList
-    (((List.finRange 15).flatMap fun j => (List.finRange sc).map (Cond15.neq j)) ++
+    (((List.finRange 17).flatMap fun j => (List.finRange sc).map (Cond15.neq j)) ++
       (List.finRange sc).map Cond15.matchPX)
     (by rintro (j | e) <;> simp)
 
 variable {Terminal : Type}
 
 /-- 動作の解釈。入力記号は見ない。 -/
-def actOf15 (a : Act15 sc) (_ : Option Terminal) (σ : Fin 15 → Fin sc) :
-    Fin 15 → Fin sc × Move :=
+def actOf15 (a : Act15 sc) (_ : Option Terminal) (σ : Fin 17 → Fin sc) :
+    Fin 17 → Fin sc × Move :=
   touchVec a.1 (a.2.1.getD (σ a.1)) a.2.2 σ
 
 /-- 条件の解釈。 -/
-def condOf15 : Cond15 sc → (Fin 15 → Fin sc) → Bool
+def condOf15 : Cond15 sc → (Fin 17 → Fin sc) → Bool
   | .neq j a, σ => decide (σ j ≠ a)
   | .matchPX e, σ => decide (σ tP ≠ e ∧ σ tP = σ tX)
 
 /-- 15 本テープの境界列挙段の解釈。 -/
-def I15 : Interp Terminal (Act15 sc) (Cond15 sc) (Fin sc) 15 where
+def I15 : Interp Terminal (Act15 sc) (Cond15 sc) (Fin sc) 17 where
   actOf := actOf15
   condOf := condOf15
 
@@ -119,7 +119,7 @@ def toS (tp : TapeConfiguration sc) : STape (Fin sc) := ⟨tp.left, tp.focus, tp
 @[simp] theorem toS_focus (tp : TapeConfiguration sc) : (toS tp).focus = tp.focus := rfl
 
 /-- `OvTapes` の 15 本の射影。 -/
-def tapeOf (ts : OvTapes sc) (j : Fin 15) : TapeConfiguration sc :=
+def tapeOf (ts : OvTapes sc) (j : Fin 17) : TapeConfiguration sc :=
   match j.val with
   | 0 => ts.P
   | 1 => ts.X
@@ -135,12 +135,14 @@ def tapeOf (ts : OvTapes sc) (j : Fin 15) : TapeConfiguration sc :=
   | 11 => ts.S6
   | 12 => ts.S7
   | 13 => ts.S8
-  | _ => ts.S9
+  | 14 => ts.S9
+  | 15 => ts.S10
+  | _ => ts.S11
 
 /-- 15 本まとめて zipper 束へ。 -/
-def TS (ts : OvTapes sc) : Fin 15 → STape (Fin sc) := fun j => toS (tapeOf ts j)
+def TS (ts : OvTapes sc) : Fin 17 → STape (Fin sc) := fun j => toS (tapeOf ts j)
 
-@[simp] theorem TS_focus (ts : OvTapes sc) (j : Fin 15) :
+@[simp] theorem TS_focus (ts : OvTapes sc) (j : Fin 17) :
     ((TS ts) j).focus = (tapeOf ts j).focus := rfl
 
 @[simp] theorem tapeOf_tP (ts : OvTapes sc) : tapeOf ts tP = ts.P := rfl
@@ -160,7 +162,7 @@ theorem toS_step (blank : Fin sc) (tp : TapeConfiguration sc) (a : Fin sc) (m : 
 /-! ## 4. 動作列 `List (Act sc)` の write+move ベクトル列 -/
 
 /-- `Act` が触るテープ。 -/
-def actTape : Act sc → Fin 15
+def actTape : Act sc → Fin 17
   | .P _ => tP
   | .X _ => tX
   | .C _ _ => tCnt
@@ -179,6 +181,8 @@ def actTape : Act sc → Fin 15
   | .S7 _ _ => tS 6
   | .S8 _ _ => tS 7
   | .S9 _ _ => tS 8
+  | .S10 _ _ => tS 9
+  | .S11 _ _ => tS 10
 
 /-- `Act` が書き込む記号。 -/
 def writeOf (ts : OvTapes sc) : Act sc → Fin sc
@@ -200,6 +204,8 @@ def writeOf (ts : OvTapes sc) : Act sc → Fin sc
   | .S7 a _ => a
   | .S8 a _ => a
   | .S9 a _ => a
+  | .S10 a _ => a
+  | .S11 a _ => a
 
 /-- `Act` の移動。 -/
 def moveOf : Act sc → Move
@@ -221,6 +227,8 @@ def moveOf : Act sc → Move
   | .S7 _ m => m
   | .S8 _ m => m
   | .S9 _ m => m
+  | .S10 _ m => m
+  | .S11 _ m => m
 
 /-- `Act` に対応する `Prog` の動作識別子。 -/
 def prAct : Act sc → Act15 sc
@@ -242,9 +250,11 @@ def prAct : Act sc → Act15 sc
   | .S7 a m => (tS 6, some a, m)
   | .S8 a m => (tS 7, some a, m)
   | .S9 a m => (tS 8, some a, m)
+  | .S10 a m => (tS 9, some a, m)
+  | .S11 a m => (tS 10, some a, m)
 
 /-- `applyAct` は `actTape a` のテープだけを `Tape.step` で書き換える。 -/
-theorem tapeOf_applyAct (blank : Fin sc) (ts : OvTapes sc) (a : Act sc) (j : Fin 15) :
+theorem tapeOf_applyAct (blank : Fin sc) (ts : OvTapes sc) (a : Act sc) (j : Fin 17) :
     tapeOf (applyAct blank ts a) j
       = if j = actTape a then
           Tape.step blank (tapeOf ts j) (writeOf ts a) (moveOf a)
@@ -252,11 +262,11 @@ theorem tapeOf_applyAct (blank : Fin sc) (ts : OvTapes sc) (a : Act sc) (j : Fin
   cases a <;> fin_cases j <;> rfl
 
 /-- `Act` に対応する 15 テープ分の write+move ベクトル。 -/
-def avec (ts : OvTapes sc) (a : Act sc) : Fin 15 → Fin sc × Move :=
+def avec (ts : OvTapes sc) (a : Act sc) : Fin 17 → Fin sc × Move :=
   fun j => if j = actTape a then (writeOf ts a, moveOf a) else ((tapeOf ts j).focus, Move.stay)
 
 /-- 動作列に対応するベクトル列（各段の状態で評価する）。 -/
-def avecs (blank : Fin sc) : List (Act sc) → OvTapes sc → List (Fin 15 → Fin sc × Move)
+def avecs (blank : Fin sc) : List (Act sc) → OvTapes sc → List (Fin 17 → Fin sc × Move)
   | [], _ => []
   | a :: l, ts => avec ts a :: avecs blank l (applyAct blank ts a)
 

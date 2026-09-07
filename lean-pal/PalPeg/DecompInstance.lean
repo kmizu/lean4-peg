@@ -290,11 +290,11 @@ theorem nb_of_counterView' {blank mark : Fin sc} {tp : TapeConfiguration sc} {n 
 /-- 全テープ空白の束（`Cnt` だけ差し替えて反例に使う）。 -/
 def blankTapes (blank : Fin sc) : BorderTapes.OvTapes sc :=
   let t : TapeConfiguration sc := ⟨[], blank, []⟩
-  ⟨t, t, t, t, t, t, t, t, t, t, t, t, t, t, t⟩
+  ⟨t, t, t, t, t, t, t, t, t, t, t, t, t, t, t, t, t⟩
 
 theorem blankTapes_scratch (blank : Fin sc) :
     BorderTapes.ScratchBlank blank (blankTapes blank) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     exact ⟨rfl, rfl, Tape.blanks_nil blank⟩
 
 /-- 入口の `Cnt` に非空白セルを `M` 個並べた束。作業テープは空白のままなので
@@ -304,7 +304,7 @@ def junkTapes (blank c : Fin sc) (M : ℕ) : BorderTapes.OvTapes sc :=
 
 theorem junkTapes_scratch (blank c : Fin sc) (M : ℕ) :
     BorderTapes.ScratchBlank blank (junkTapes blank c M) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     exact ⟨rfl, rfl, Tape.blanks_nil blank⟩
 
 theorem nb_junkTapes {blank c : Fin sc} (h : c ≠ blank) (M : ℕ) :
@@ -701,7 +701,7 @@ def decompInstanceB (blank startSym endSym mark : Fin sc) :
   keepS := by
     intro y L ts h
     rw [decompActs_apply]
-    exact ⟨h.s1, h.s2, h.s3, h.s4, h.s5, h.s6, h.s7, h.s8, h.s9⟩
+    exact ⟨h.s1, h.s2, h.s3, h.s4, h.s5, h.s6, h.s7, h.s8, h.s9, h.s10, h.s11⟩
 
 /-- **`dec` は `EndToEnd2.gsDec2 · 8` である**。 -/
 theorem decompInstanceB_dec (y : List (Fin sc)) (L : ℕ) :
