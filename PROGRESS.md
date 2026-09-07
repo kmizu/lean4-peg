@@ -351,3 +351,16 @@ lake build
   * **残り**：段ライフサイクルを 1 本の持続 Prog に（idle→前処理 grind→セットアップ→照合＋中央ジョブ）、
     全体機械の 1 ラウンド Prog（4 スロット＋入力コピー＋消去）、Prog 機械の挙動とテープ意味論
     （`full_answer_mem_PAL_of`）の対応、`progMachineP_recognizedBy` + `pal_in_peg_of_structured` で最終定理。
+- 進捗（2026-09-09 昼、コミット 6eea622 まで）：
+  * **`PassPeriodSum`**：`PassSum10.passPeriodSum_eight_of_consumption` により残る仮定は `Consumption`
+    （再帰上の C(c) < p_c）ただ 1 つ。証明済みの部分ケース（PassSum9 冒頭の要約参照）：DOWN 伝播、
+    最初の子、早期 UP（`up_violation_early`、UP の ~95%）、深い横断の q₁ = P 重なり（glue）、q₁ < P（dvd、
+    両側）。残る角 2 つ（r₁ = L の循環構成、q₁ < P で Fine–Wilf 窓が入らん場合）は実測 0 例
+    （2286 子孫、横断 69 はすべて浅く・すべて直接の子）。循環構成の直接構成を試行中（見つかれば設計に影響）。
+  * **有限制御化**：TextFeed 完了（phase 2 `feed_online_prog`）、一様分解器の部品完了、前処理 Prog の
+    カウンタ層完了（分岐比較層を作業中）、中央ジョブ Prog は数値展開を除去済み（MiddleTapes 側の
+    フラグ番兵・S3/S4 複写・`keepS` 緩和・`clearF` 掃引の 4 点修正待ち）、StageTapes X 版
+    （`stage_tapes_specX`；feed 付き `vprogramX` ステップと Ψ 込み Metered を作業中）。
+  * **テープ意味論側**：`stageIface`＋`initOf_hinit`（`hinit` は `S/2 ≤ |w|` ガード付きで充足）、
+    `PrepPre.inb` は番兵つき `w.take L` の形に直す必要あり（未来の入力を要求してしまう；証明付き）。
+    `DecompOnTapes` の `EntryBlank` 前提と `gsDec2` 参照モデルへの置換を作業中。
