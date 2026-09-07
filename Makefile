@@ -3,7 +3,7 @@
 
 LAKE_ENV = command -v lake >/dev/null 2>&1 || . $$HOME/.elan/env;
 
-.PHONY: verify verify-fast audit lean lake-test regen check-drift scala diff json-suite macro-peg-diff counterexample-diff corpus-golden disksize clean
+.PHONY: verify verify-fast audit lean lake-test lean-pal regen check-drift scala diff json-suite macro-peg-diff counterexample-diff corpus-golden disksize clean
 
 verify: audit lean lake-test check-drift scala diff json-suite macro-peg-diff counterexample-diff
 	@echo "== make verify: ALL GREEN =="
@@ -19,6 +19,12 @@ lean:
 
 lake-test:
 	cd lean && $(LAKE_ENV) lake test
+
+# PAL ∈ PEG conditional on a real-time TM, via the Kim–Park artifact (lean-pal/).
+# Separate toolchain (v4.31.0 + Mathlib); downloads the Mathlib cache, so it is
+# deliberately NOT part of `verify`.
+lean-pal:
+	cd lean-pal && $(LAKE_ENV) lake exe cache get && lake build
 
 regen:
 	scripts/regen.sh

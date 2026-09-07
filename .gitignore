@@ -1,5 +1,6 @@
 # Lean / Lake
 lean/.lake/
+lean-pal/.lake/
 *.olean
 *.ilean
 
