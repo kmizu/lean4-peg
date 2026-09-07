@@ -1043,6 +1043,433 @@ theorem vrun_tape_cost_init {k r : ℕ} (hk : 0 < k) (hp : 0 < p₁) (hend : end
 
 end RunTapes
 
+/-!
+## 9. オラクル無しの層への移植 (`section NoOracle`)
+
+`GSScanTapes` の `section NoOracle`（8 本テープ `TapesState' = Fin 8 → TapeConfiguration`、
+オラクルビットを持たない `program'`）の上に、同じ検証器を積む。
+
+* テープ配置：`VTapes' sc := GSTapes.TapesState' sc × VExt sc`。走査段の 8 本
+  （`tP tT tC1 tC2 tAp tAn tRp tRn`）はそのまま、検証器の `U` / `Txt2` は
+  §1 の `VExt` を**そのまま再利用**する。
+* 動作型 `VAct'`：走査段の `GSTapes.Act'` を `S` で持ち上げ、`U` / `X` は前と同じ。
+  検証器側の動作列（`vcomp2Acts` / `walkActs`）は `S` を含まないので、
+  `liftAct : VAct sc → VAct' sc` で貼り替えるだけで、§2–§4 の仕様
+  （`vcomp2Acts_spec` / `walkActs_spec`）をそのまま使える
+  （`extActs'_map_liftAct`）。
+* ずらし幅はオラクルではなく**カウンタのマーカ読み取り**で決まる
+  （`vDelta'`, `GSTapes.period_iff'`）。したがって `vprogram'` にも
+  `vRunCostTapes'` にも `Bool` は一切現れない。
+
+定数：`vprogram_cost'` は `A'' = 8k+14`, `B'' = 12`, `C = 2`
+（走査段の `A' = 8k+13`, `B' = 8` に、ずらし幅 `δ ≤ ΔΦ` の分の `+D` と
+比較 `≤ 4` の分を足したもの）。実行全体では §8 と同じ `Ψ = 2*checked` の
+償却で `|u|` の項が消えて `A'' = 8k+14`, `B''' = 18`。
+-/
+
+section NoOracle
+
+/-- 走査段 8 本 ＋ 検証器 2 本。 -/
+abbrev VTapes' (sc : ℕ) := GSTapes.TapesState' sc × VExt sc
+
+/-- 10 本のテープに対する 1 動作。 -/
+inductive VAct' (sc : ℕ) where
+  | S : GSTapes.Act' sc → VAct' sc
+  | U : Move → VAct' sc
+  | X : Move → VAct' sc
+
+def vApplyAct' (blank : Fin sc) (vt : VTapes' sc) : VAct' sc → VTapes' sc
+  | .S a => (GSTapes.applyAct' blank vt.1 a, vt.2)
+  | .U m => (vt.1, { vt.2 with U := Tape.step blank vt.2.U vt.2.U.focus m })
+  | .X m => (vt.1, { vt.2 with Txt2 := Tape.step blank vt.2.Txt2 vt.2.Txt2.focus m })
+
+def vApplyActs' (blank : Fin sc) (l : List (VAct' sc)) (vt : VTapes' sc) : VTapes' sc :=
+  l.foldl (vApplyAct' blank) vt
+
+@[simp] theorem vApplyActs'_nil (blank : Fin sc) (vt : VTapes' sc) :
+    vApplyActs' blank [] vt = vt := rfl
+
+@[simp] theorem vApplyActs'_cons (blank : Fin sc) (a : VAct' sc) (l : List (VAct' sc))
+    (vt : VTapes' sc) :
+    vApplyActs' blank (a :: l) vt = vApplyActs' blank l (vApplyAct' blank vt a) := rfl
+
+theorem vApplyActs'_append (blank : Fin sc) (l₁ l₂ : List (VAct' sc)) (vt : VTapes' sc) :
+    vApplyActs' blank (l₁ ++ l₂) vt = vApplyActs' blank l₂ (vApplyActs' blank l₁ vt) := by
+  simp [vApplyActs']
+
+def vApplyExt' (blank : Fin sc) (e : VExt sc) : VAct' sc → VExt sc
+  | .S _ => e
+  | .U m => { e with U := Tape.step blank e.U e.U.focus m }
+  | .X m => { e with Txt2 := Tape.step blank e.Txt2 e.Txt2.focus m }
+
+def extActs' (blank : Fin sc) (l : List (VAct' sc)) (e : VExt sc) : VExt sc :=
+  l.foldl (vApplyExt' blank) e
+
+@[simp] theorem extActs'_nil (blank : Fin sc) (e : VExt sc) : extActs' blank [] e = e := rfl
+
+@[simp] theorem extActs'_cons (blank : Fin sc) (a : VAct' sc) (l : List (VAct' sc))
+    (e : VExt sc) : extActs' blank (a :: l) e = extActs' blank l (vApplyExt' blank e a) := rfl
+
+theorem vApplyActs'_snd (blank : Fin sc) : ∀ (l : List (VAct' sc)) (vt : VTapes' sc),
+    (vApplyActs' blank l vt).2 = extActs' blank l vt.2 := by
+  intro l
+  induction l with
+  | nil => intro vt; rfl
+  | cons a l ih =>
+    intro vt
+    rw [vApplyActs'_cons, extActs'_cons, ih]
+    cases a <;> rfl
+
+theorem vApplyActs'_map_S (blank : Fin sc) :
+    ∀ (l : List (GSTapes.Act' sc)) (vt : VTapes' sc),
+      vApplyActs' blank (l.map VAct'.S) vt = (GSTapes.applyActs' blank l vt.1, vt.2) := by
+  intro l
+  induction l with
+  | nil => intro vt; rfl
+  | cons a l ih =>
+    intro vt
+    rw [List.map_cons, vApplyActs'_cons, GSTapes.applyActs'_cons]
+    exact ih _
+
+/-- 検証器の動作列を新しい動作型へ貼り替える（`S` は現れないのでダミーでよい。
+ダミーとして選んだ `keep tP .stay` はテープを変えない）。 -/
+def liftAct : VAct sc → VAct' sc
+  | .S _ => .S (GSTapes.Act'.keep GSTapes.tP .stay)
+  | .U m => .U m
+  | .X m => .X m
+
+theorem applyAct'_keep_stay_id (blank : Fin sc) (ts : GSTapes.TapesState' sc) (i : Fin 8) :
+    GSTapes.applyAct' blank ts (GSTapes.Act'.keep i .stay) = ts := by
+  show GSTapes.upd ts i (Tape.step blank (ts i) (ts i).focus .stay) = ts
+  funext j
+  by_cases h : j = i
+  · subst h
+    rw [GSTapes.upd_self]
+    rfl
+  · rw [GSTapes.upd_ne _ _ h]
+
+/-- 貼り替えても検証器 2 本への作用は変わらない。 -/
+theorem extActs'_map_liftAct (blank : Fin sc) :
+    ∀ (l : List (VAct sc)) (e : VExt sc),
+      extActs' blank (l.map liftAct) e = extActs blank l e := by
+  intro l
+  induction l with
+  | nil => intro e; rfl
+  | cons a l ih =>
+    intro e
+    rw [List.map_cons, extActs'_cons, extActs_cons,
+      show vApplyExt' blank e (liftAct a) = vApplyExt blank e a from by cases a <;> rfl]
+    exact ih _
+
+/-- 貼り替えた検証器の動作列は走査段の 8 本を変えない。 -/
+theorem vApplyActs'_map_liftAct_fst (blank : Fin sc) :
+    ∀ (l : List (VAct sc)) (vt : VTapes' sc),
+      (vApplyActs' blank (l.map liftAct) vt).1 = vt.1 := by
+  intro l
+  induction l with
+  | nil => intro vt; rfl
+  | cons a l ih =>
+    intro vt
+    rw [List.map_cons, vApplyActs'_cons, ih]
+    cases a with
+    | S x => exact applyAct'_keep_stay_id blank vt.1 GSTapes.tP
+    | U m => rfl
+    | X m => rfl
+
+/-! ### 符号化とプログラム（オラクル無し） -/
+
+/-- ずらし幅：オラクルではなく符号付きカウンタのマーカ読み取りで決まる。 -/
+def vDelta' (blank mark : Fin sc) (k : ℕ) (ts : GSTapes.TapesState' sc) : ℕ :=
+  if Tape.read (Tape.step blank (ts GSTapes.tAn) blank .left) = mark ∧
+      Tape.read (Tape.step blank (ts GSTapes.tRn) blank .left) = mark then
+    GSTapes.p1Of' ts
+  else max 1 (ceilDiv (GSTapes.qOf' ts) k)
+
+/-- 検証器側の動作列（`S` を含まない）。 -/
+def vExtActs' (blank endSym mark : Fin sc) (k : ℕ) (vt : VTapes' sc) : List (VAct sc) :=
+  if Tape.read (vt.1 GSTapes.tP) ≠ endSym ∧
+      Tape.read (vt.1 GSTapes.tP) = Tape.read (vt.1 GSTapes.tT) then
+    vcomp2Acts blank endSym vt.2
+  else walkActs (cOf vt.2) (vDelta' blank mark k vt.1)
+
+/-- **オラクル無しの一歩の動作列**：走査段 `program'` → 検証器。`Bool` は現れない。 -/
+def vprogram' (blank endSym mark : Fin sc) (k : ℕ) (vt : VTapes' sc) : List (VAct' sc) :=
+  (GSTapes.program' blank endSym mark k vt.1).map VAct'.S ++
+    (vExtActs' blank endSym mark k vt).map liftAct
+
+/-- 10 本のテープが検証器つき状態を符号化していること（オラクル無し版）。 -/
+structure VEncodes' (blank startSym endSym mark : Fin sc) (u v Text : List (Fin sc))
+    (k p₁ r : ℕ) (vt : VTapes' sc) (z : VState) : Prop where
+  scan : GSTapes.Encodes' blank startSym endSym mark v Text k p₁ r vt.1 z.1
+  pat : Tape.SeqView blank vt.2.U (startSym :: (u ++ [endSym])) (z.2 + 1)
+  txt2 : Tape.SeqView blank vt.2.Txt2 Text (z.1.pos - u.length + z.2)
+
+section StepNo
+
+variable {blank startSym endSym mark : Fin sc} {u v Text : List (Fin sc)} {k p₁ r : ℕ}
+  {vt : VTapes' sc} {z : VState}
+
+theorem vDelta'_eq (hne : mark ≠ blank)
+    (hE : VEncodes' blank startSym endSym mark u v Text k p₁ r vt z) :
+    vDelta' blank mark k vt.1 = gsShift k p₁ r z.1.q := by
+  unfold vDelta' gsShift
+  by_cases hc : Tape.read (Tape.step blank (vt.1 GSTapes.tAn) blank .left) = mark ∧
+      Tape.read (Tape.step blank (vt.1 GSTapes.tRn) blank .left) = mark
+  · rw [if_pos hc, if_pos ((GSTapes.period_iff' hne hE.scan).1 hc), GSTapes.p1Of'_eq hE.scan]
+  · rw [if_neg hc, if_neg (fun hcon => hc ((GSTapes.period_iff' hne hE.scan).2 hcon)),
+      GSTapes.qOf'_eq hE.scan]
+
+/-- **主定理 1'（実現、オラクル無し）**。 -/
+theorem vencodes_step' (hk : 0 < k) (hne : mark ≠ blank)
+    (hend : endSym ∉ v) (hendu : endSym ∉ u)
+    (hE : VEncodes' blank startSym endSym mark u v Text k p₁ r vt z)
+    (hq : z.1.q ≤ v.length) (hc : z.2 ≤ u.length) (hpos : u.length ≤ z.1.pos)
+    (hfit : (scanStep v k p₁ r Text z.1).pos + (scanStep v k p₁ r Text z.1).q < Text.length) :
+    VEncodes' blank startSym endSym mark u v Text k p₁ r
+      (vApplyActs' blank (vprogram' blank endSym mark k vt) vt)
+      (vStep u v k p₁ r Text z) := by
+  have hscan := GSTapes.encodes_step' hk hne hend hE.scan hq hfit
+  have hsplit : vApplyActs' blank (vprogram' blank endSym mark k vt) vt
+      = vApplyActs' blank ((vExtActs' blank endSym mark k vt).map liftAct)
+          (GSTapes.applyActs' blank (GSTapes.program' blank endSym mark k vt.1) vt.1, vt.2) := by
+    rw [vprogram', vApplyActs'_append, vApplyActs'_map_S]
+  rw [hsplit]
+  by_cases hadv : Tape.read (vt.1 GSTapes.tP) ≠ endSym ∧
+      Tape.read (vt.1 GSTapes.tP) = Tape.read (vt.1 GSTapes.tT)
+  · obtain ⟨ha1, ha2⟩ := (GSTapes.advance_iff' hend hE.scan hq).1 hadv
+    have hss : scanStep v k p₁ r Text z.1 = (⟨z.1.pos, z.1.q + 1⟩ : ScanState) :=
+      GSTapes.scanStep_adv ⟨ha1, ha2⟩
+    have hvs : vStep u v k p₁ r Text z
+        = (scanStep v k p₁ r Text z.1,
+            vComp u Text z.1.pos (vComp u Text z.1.pos z.2)) := by
+      unfold vStep; rw [if_neg ha1, if_pos ha2]
+    have hroom : z.1.pos < Text.length := by
+      rw [hss] at hfit
+      exact lt_of_le_of_lt (Nat.le_add_right _ _) hfit
+    have hext : vExtActs' blank endSym mark k vt = vcomp2Acts blank endSym vt.2 := by
+      unfold vExtActs'; rw [if_pos hadv]
+    obtain ⟨hU2, hX2⟩ := vcomp2Acts_spec (blank := blank) (startSym := startSym)
+      (pos := z.1.pos) hendu hE.pat hE.txt2 hc hpos hroom
+    rw [hvs, hext]
+    refine ⟨?_, ?_, ?_⟩
+    · rw [vApplyActs'_map_liftAct_fst]
+      exact hscan
+    · rw [vApplyActs'_snd, extActs'_map_liftAct]
+      exact hU2
+    · rw [vApplyActs'_snd, extActs'_map_liftAct, hss]
+      exact hX2
+  · have hna : ¬ (z.1.q ≠ v.length ∧ Text[z.1.pos + z.1.q]? = v[z.1.q]?) :=
+      fun hcon => hadv ((GSTapes.advance_iff' hend hE.scan hq).2 hcon)
+    have hss : scanStep v k p₁ r Text z.1
+        = (⟨z.1.pos + gsShift k p₁ r z.1.q, gsNextQ k p₁ r z.1.q⟩ : ScanState) :=
+      GSTapes.scanStep_shift hna
+    have hd : vDelta' blank mark k vt.1 = gsShift k p₁ r z.1.q := vDelta'_eq hne hE
+    have hcc : cOf vt.2 = z.2 := cOf_eq hE.pat
+    have hroom : z.1.pos + gsShift k p₁ r z.1.q < Text.length := by
+      rw [hss] at hfit
+      exact lt_of_le_of_lt (Nat.le_add_right _ _) hfit
+    have hext : vExtActs' blank endSym mark k vt
+        = walkActs (cOf vt.2) (vDelta' blank mark k vt.1) := by
+      unfold vExtActs'; rw [if_neg hadv]
+    obtain ⟨hU2, hX2⟩ := walkActs_spec (blank := blank) (startSym := startSym) (u := u)
+      (Text := Text) (e := vt.2) (pos := z.1.pos) (c := z.2)
+      (d := gsShift k p₁ r z.1.q) hE.pat hE.txt2 hpos hroom
+    rw [vStep_shift hna, hext, hd, hcc]
+    refine ⟨?_, ?_, ?_⟩
+    · rw [vApplyActs'_map_liftAct_fst]
+      exact hscan
+    · rw [vApplyActs'_snd, extActs'_map_liftAct]
+      exact hU2
+    · rw [vApplyActs'_snd, extActs'_map_liftAct, hss]
+      exact hX2
+
+/-! ### 費用（オラクル無し） -/
+
+theorem vprogram_length' (blank endSym mark : Fin sc) (k : ℕ) (vt : VTapes' sc) :
+    (vprogram' blank endSym mark k vt).length
+      = (GSTapes.program' blank endSym mark k vt.1).length
+        + (vExtActs' blank endSym mark k vt).length := by
+  rw [vprogram', List.length_append, List.length_map, List.length_map]
+
+/-- **主定理 2'（費用、オラクル無し）**：`A'' = 8k+14`, `B'' = 12`, `C = 2`。 -/
+theorem vprogram_cost' (hk : 0 < k) (hne : mark ≠ blank) (hend : endSym ∉ v)
+    (hE : VEncodes' blank startSym endSym mark u v Text k p₁ r vt z)
+    (hq : z.1.q ≤ v.length) (hc : z.2 ≤ u.length) :
+    (vprogram' blank endSym mark k vt).length ≤
+      (8 * k + 14) * (Phi k (scanStep v k p₁ r Text z.1) - Phi k z.1) + 12 + 2 * u.length := by
+  have hp' := GSTapes.program_cost' (p₁ := p₁) (r := r) hk hne hend hE.scan hq
+  obtain ⟨D, hD⟩ : ∃ D, Phi k (scanStep v k p₁ r Text z.1) - Phi k z.1 = D := ⟨_, rfl⟩
+  rw [hD] at hp' ⊢
+  have hsplitD : (8 * k + 14) * D = (8 * k + 13) * D + D := by ring
+  rw [vprogram_length']
+  unfold vExtActs'
+  split_ifs with hadv
+  · have h4 := vcomp2Acts_length_le blank endSym vt.2
+    omega
+  · have hna : ¬ (z.1.q ≠ v.length ∧ Text[z.1.pos + z.1.q]? = v[z.1.q]?) :=
+      fun hcon => hadv ((GSTapes.advance_iff' hend hE.scan hq).2 hcon)
+    have hss : scanStep v k p₁ r Text z.1
+        = (⟨z.1.pos + gsShift k p₁ r z.1.q, gsNextQ k p₁ r z.1.q⟩ : ScanState) :=
+      GSTapes.scanStep_shift hna
+    have hd : vDelta' blank mark k vt.1 = gsShift k p₁ r z.1.q := vDelta'_eq hne hE
+    have hcc : cOf vt.2 = z.2 := cOf_eq hE.pat
+    have hwalk : (walkActs (sc := sc) (cOf vt.2) (vDelta' blank mark k vt.1)).length
+        ≤ 2 * z.2 + gsShift k p₁ r z.1.q := by
+      rw [walkActs_length, hd, hcc]
+      exact walkLen_le _ _
+    have hsh : gsShift k p₁ r z.1.q ≤ D := by
+      have h := gsShift_le_dPhi (p₁ := p₁) (r := r) hk z.1
+      rw [← hss, hD] at h
+      exact h
+    omega
+
+/-- 一歩の償却（`Ψ = 2*checked` 込み）：`A'' = 8k+14`, `B''' = 18`。 -/
+theorem vprogram'_amortized (hk : 0 < k) (hne : mark ≠ blank) (hend : endSym ∉ v)
+    (hE : VEncodes' blank startSym endSym mark u v Text k p₁ r vt z)
+    (hq : z.1.q ≤ v.length) :
+    (vprogram' blank endSym mark k vt).length + 2 * (vStep u v k p₁ r Text z).2 ≤
+      (8 * k + 14) * (Phi k (vStep u v k p₁ r Text z).1 - Phi k z.1) + 18 + 2 * z.2 := by
+  rw [vStep_fst]
+  have hp' := GSTapes.program_cost' (p₁ := p₁) (r := r) hk hne hend hE.scan hq
+  obtain ⟨D, hD⟩ : ∃ D, Phi k (scanStep v k p₁ r Text z.1) - Phi k z.1 = D := ⟨_, rfl⟩
+  rw [hD] at hp' ⊢
+  have hsplitD : (8 * k + 14) * D = (8 * k + 13) * D + D := by ring
+  rw [vprogram_length']
+  unfold vExtActs'
+  split_ifs with hadv
+  · obtain ⟨ha1, ha2⟩ := (GSTapes.advance_iff' hend hE.scan hq).1 hadv
+    have hvs : (vStep u v k p₁ r Text z).2
+        = vComp u Text z.1.pos (vComp u Text z.1.pos z.2) := vStep_snd_adv ⟨ha1, ha2⟩
+    have h3 := vComp_le_succ u Text z.1.pos z.2
+    have h4 := vComp_le_succ u Text z.1.pos (vComp u Text z.1.pos z.2)
+    have h5 := vcomp2Acts_length_le blank endSym vt.2
+    rw [hvs]
+    omega
+  · have hna : ¬ (z.1.q ≠ v.length ∧ Text[z.1.pos + z.1.q]? = v[z.1.q]?) :=
+      fun hcon => hadv ((GSTapes.advance_iff' hend hE.scan hq).2 hcon)
+    have hss : scanStep v k p₁ r Text z.1
+        = (⟨z.1.pos + gsShift k p₁ r z.1.q, gsNextQ k p₁ r z.1.q⟩ : ScanState) :=
+      GSTapes.scanStep_shift hna
+    have hd : vDelta' blank mark k vt.1 = gsShift k p₁ r z.1.q := vDelta'_eq hne hE
+    have hcc : cOf vt.2 = z.2 := cOf_eq hE.pat
+    have hwalk : (walkActs (sc := sc) (cOf vt.2) (vDelta' blank mark k vt.1)).length
+        ≤ 2 * z.2 + gsShift k p₁ r z.1.q := by
+      rw [walkActs_length, hd, hcc]
+      exact walkLen_le _ _
+    have hsh : gsShift k p₁ r z.1.q ≤ D := by
+      have h := gsShift_le_dPhi (p₁ := p₁) (r := r) hk z.1
+      rw [← hss, hD] at h
+      exact h
+    have hvs : (vStep u v k p₁ r Text z).2 = 0 := vStep_snd_shift hna
+    rw [hvs]
+    omega
+
+end StepNo
+
+/-! ### 実行全体（オラクル無し） -/
+
+/-- テープ側の実行（オラクル無し）。 -/
+def vRunTapes' (blank endSym mark : Fin sc) (u v : List (Fin sc)) (k p₁ r : ℕ)
+    (Text : List (Fin sc)) : ℕ → VTapes' sc × VState → VTapes' sc × VState
+  | 0, s => s
+  | n + 1, s =>
+      vRunTapes' blank endSym mark u v k p₁ r Text n
+        (vApplyActs' blank (vprogram' blank endSym mark k s.1) s.1,
+          vStep u v k p₁ r Text s.2)
+
+/-- その総動作数（オラクル無し）。 -/
+def vRunCostTapes' (blank endSym mark : Fin sc) (u v : List (Fin sc)) (k p₁ r : ℕ)
+    (Text : List (Fin sc)) : ℕ → VTapes' sc × VState → ℕ
+  | 0, _ => 0
+  | n + 1, s =>
+      (vprogram' blank endSym mark k s.1).length +
+        vRunCostTapes' blank endSym mark u v k p₁ r Text n
+          (vApplyActs' blank (vprogram' blank endSym mark k s.1) s.1,
+            vStep u v k p₁ r Text s.2)
+
+section RunNo
+
+variable {blank startSym endSym mark : Fin sc} {u v Text : List (Fin sc)} {k p₁ r : ℕ}
+
+/-- **主定理 3'（実行全体、オラクル無し）**：`Ψ = 2*checked` 込みの総動作数は
+`(8k+14)*(Φ_end - Φ_start) + 18*n + 2*checked_start` 以下。 -/
+theorem vrun_tape_cost_le' (hk : 0 < k) (hp : 0 < p₁) (hne : mark ≠ blank)
+    (hend : endSym ∉ v) (hendu : endSym ∉ u) :
+    ∀ (n : ℕ) (vt : VTapes' sc) (z : VState),
+      VEncodes' blank startSym endSym mark u v Text k p₁ r vt z →
+      z.1.q ≤ v.length → z.2 ≤ u.length → u.length ≤ z.1.pos →
+      VFits v k p₁ r Text n z.1 →
+      vRunCostTapes' blank endSym mark u v k p₁ r Text n (vt, z)
+          + 2 * (vRunState u v k p₁ r Text n z).2 ≤
+        (8 * k + 14) * (Phi k (vRunState u v k p₁ r Text n z).1 - Phi k z.1)
+          + 18 * n + 2 * z.2 := by
+  intro n
+  induction n with
+  | zero =>
+    intro vt z _ _ _ _ _
+    show 0 + 2 * z.2 ≤ (8 * k + 14) * (Phi k z.1 - Phi k z.1) + 18 * 0 + 2 * z.2
+    rw [Nat.sub_self, Nat.mul_zero]
+  | succ n ih =>
+    intro vt z hE hq hc hpos hfits
+    obtain ⟨hfit, hfits'⟩ := hfits
+    have hE' := vencodes_step' hk hne hend hendu hE hq hc hpos hfit
+    have hq' : (vStep u v k p₁ r Text z).1.q ≤ v.length := by
+      rw [vStep_fst]; exact scanStep_q_le hq
+    have hc' : (vStep u v k p₁ r Text z).2 ≤ u.length := vStep_checked_le hc
+    have hpos' : u.length ≤ (vStep u v k p₁ r Text z).1.pos := by
+      rw [vStep_fst]; exact le_trans hpos (scanStep_pos_le v k p₁ r Text z.1)
+    have hfits'' : VFits v k p₁ r Text n (vStep u v k p₁ r Text z).1 := by
+      rw [vStep_fst]; exact hfits'
+    have hih := ih _ _ hE' hq' hc' hpos' hfits''
+    have hstep := vprogram'_amortized hk hne hend hE hq
+    have hm1 := phi_vStep_le (r := r) hk hp u v Text z
+    have hm2 := phi_vRunState_le (r := r) hk hp u v Text n (vStep u v k p₁ r Text z)
+    obtain ⟨P0, hP0⟩ : ∃ P0, Phi k z.1 = P0 := ⟨_, rfl⟩
+    obtain ⟨P1, hP1⟩ : ∃ P1, Phi k (vStep u v k p₁ r Text z).1 = P1 := ⟨_, rfl⟩
+    obtain ⟨P2, hP2⟩ : ∃ P2,
+        Phi k (vRunState u v k p₁ r Text n (vStep u v k p₁ r Text z)).1 = P2 := ⟨_, rfl⟩
+    rw [hP0, hP1] at hstep
+    rw [hP0] at hm1
+    rw [hP1] at hm1 hih hm2
+    rw [hP2] at hih hm2
+    have hsum : (8 * k + 14) * (P2 - P1) + (8 * k + 14) * (P1 - P0)
+        = (8 * k + 14) * (P2 - P0) := by
+      rw [← Nat.mul_add, show P2 - P1 + (P1 - P0) = P2 - P0 from by omega]
+    show (vprogram' blank endSym mark k vt).length
+        + vRunCostTapes' blank endSym mark u v k p₁ r Text n
+            (vApplyActs' blank (vprogram' blank endSym mark k vt) vt,
+              vStep u v k p₁ r Text z)
+        + 2 * (vRunState u v k p₁ r Text n (vStep u v k p₁ r Text z)).2 ≤
+      (8 * k + 14)
+          * (Phi k (vRunState u v k p₁ r Text n (vStep u v k p₁ r Text z)).1 - Phi k z.1)
+        + 18 * (n + 1) + 2 * z.2
+    rw [hP0, hP2]
+    omega
+
+/-- **初期状態からの実行（オラクル無し）**：`|u|` に比例する項は残らない。
+`A'' = 8k+14`, `B''' = 18`。 -/
+theorem vrun_tape_cost_init' (hk : 0 < k) (hp : 0 < p₁) (hne : mark ≠ blank)
+    (hend : endSym ∉ v) (hendu : endSym ∉ u) (n : ℕ) (vt : VTapes' sc)
+    (hE : VEncodes' blank startSym endSym mark u v Text k p₁ r vt
+      ((⟨u.length, 0⟩ : ScanState), 0))
+    (hfits : VFits v k p₁ r Text n (⟨u.length, 0⟩ : ScanState)) :
+    vRunCostTapes' blank endSym mark u v k p₁ r Text n
+        (vt, ((⟨u.length, 0⟩ : ScanState), 0)) ≤
+      (8 * k + 14)
+          * (Phi k (vRunState u v k p₁ r Text n ((⟨u.length, 0⟩ : ScanState), 0)).1
+              - Phi k (⟨u.length, 0⟩ : ScanState))
+        + 18 * n := by
+  have h := vrun_tape_cost_le' hk hp hne hend hendu n vt _ hE
+    (Nat.zero_le _) (Nat.zero_le _) (Nat.le_refl _) hfits
+  have h0 : (((⟨u.length, 0⟩ : ScanState), (0 : ℕ))).2 = 0 := rfl
+  have h1 : (((⟨u.length, 0⟩ : ScanState), (0 : ℕ))).1 = (⟨u.length, 0⟩ : ScanState) := rfl
+  rw [h0, h1] at h
+  omega
+
+end RunNo
+
+end NoOracle
+
 /-! ## 7. 小例 -/
 
 section Examples
