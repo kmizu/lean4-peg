@@ -49,6 +49,16 @@ PegSeparation.RealTimeTM.RecognizedBy PalPeg.PAL
 | `oddPal_of_pal h` | `RecognizedByTotalPEG PAL → RecognizedByTotalPEG (PAL ⊓ OddLength)` | 同上 |
 | `EvenPal`, `mem_PAL_inf_EvenLength_iff` | `EvenPal = { w \| ∃ u, w = u ++ u.reverse }`、`w ∈ PAL ⊓ EvenLength ↔ ∃ u, w = u ++ u.reverse` | 同上 |
 | `evenPal_ww_reverse_of_pal h` | `RecognizedByTotalPEG PAL → RecognizedByTotalPEG EvenPal`（LMR Conjecture 7 の原文の形） | 同上 |
+| `IsPal`, `HasPeriod` | `x.reverse = x`、`∀ i, i + p < |x| → x[i]? = x[i+p]?` | `PalPeg/Words.lean` |
+| `isPal_cons_append_iff` | `IsPal ([a] ++ x ++ [b]) ↔ a = b ∧ IsPal x`（拡張則） | 同上 |
+| `isPal_take_iff`, `isPal_drop_iff` | 回文の接頭辞／接尾辞が回文 ⟺ 境界（border） | 同上 |
+| `hasPeriod_iff_drop_eq_take` | 周期 ⟺ 境界 | 同上 |
+| `fineWilf` | `p + q - gcd p q ≤ |x|` での Fine–Wilf（Mathlib `List.HasPeriod.gcd` への橋） | 同上 |
+| `hasPeriod_of_suffix_gcd` | 末尾 `p` 記号が `g`-周期的（`g ∣ p`）なら全体も `g`-周期的 | 同上 |
+| `hasPeriod_minimal_of_suffix` | 最小周期 `p` の回文の、長さ `≥ 2p` の接尾辞回文の最小周期も `p`（group 補題） | 同上 |
+| `chain`, `mem_chain_iff` | オンライン鎖算法：`ℓ ∈ chain w ↔ ℓ ≤ |w| ∧ 接尾辞回文` | `PalPeg/Chain.lean` |
+| `mem_PAL_iff_length_mem_chain` | `w ∈ PAL ↔ w.length ∈ chain w`（機械の仕様） | 同上 |
+| `chain_sorted`, `chain_eq_suffixPalLengths` | 鎖は狭義降順、素朴定義と一致 | 同上 |
 
 証明の鎖（`pal_in_peg_of_realTime`）：
 
@@ -111,5 +121,7 @@ lake build
 
 ## 次の一手
 
-仮定 `RealTimeTM.RecognizedBy PAL` を消すこと、すなわち Galil の機械を成果物の厳密実時間モデルで
-定義し正しさを証明すること。設計・規模の見積もりは調査 §4 末尾と §6。
+仮定を消すこと。方針は RTTM ではなく成果物の SCA（`Scaffolding.Automaton (Fin 2) …`）を直接構成して
+`RecognizedBySCA PAL` を示し、`SCAToPEG.loffBackward` で PEG に落とす（`DESIGN_SCA_PAL.md`）。
+`Words.lean`／`Chain.lean` はその機械の仕様層と組合せ論の層。SCA の実装と実時間性
+（young run、break 後の再構築、Hood–Melville キュー）は未着手で、規模は調査 §6 の見積もりどおり。

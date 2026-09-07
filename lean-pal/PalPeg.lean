@@ -2,6 +2,8 @@ import PalPeg.Basic
 import PalPeg.Existence
 import PalPeg.EvenLength
 import PalPeg.Axioms
+import PalPeg.Words
+import PalPeg.Chain
 
 /-!
 # PalPeg
@@ -13,4 +15,6 @@ import PalPeg.Axioms
 * `PalPeg.Existence` — 厳密実時間 TM が `PAL` を認識するならば total PEG が `PAL` を認識する
 * `PalPeg.EvenLength` — 偶数長への制限（Loff–Moreira–Reis Conjecture 7 の条件付き反駁）
 * `PalPeg.Axioms`    — `#print axioms` の guard
+* `PalPeg.Words`     — 回文と周期の組合せ論（拡張則・境界・Fine–Wilf・group 補題）
+* `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/

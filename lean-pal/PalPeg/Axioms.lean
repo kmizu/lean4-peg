@@ -1,6 +1,8 @@
 import PalPeg.Basic
 import PalPeg.Existence
 import PalPeg.EvenLength
+import PalPeg.Words
+import PalPeg.Chain
 
 /-!
 # 公理 guard
@@ -49,3 +51,23 @@ import PalPeg.EvenLength
 /-- info: 'PalPeg.evenPal_ww_reverse_of_pal' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.evenPal_ww_reverse_of_pal
+
+/-- info: 'PalPeg.fineWilf' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.fineWilf
+
+/-- info: 'PalPeg.hasPeriod_minimal_of_suffix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.hasPeriod_minimal_of_suffix
+
+/-- info: 'PalPeg.isPal_drop_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.isPal_drop_iff
+
+/-- info: 'PalPeg.mem_chain_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.mem_chain_iff
+
+/-- info: 'PalPeg.mem_PAL_iff_length_mem_chain' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.mem_PAL_iff_length_mem_chain
