@@ -29,8 +29,15 @@ object PyDiff {
       .directory(pyDir.toFile)
       .redirectErrorStream(false)
       .start()
+    // Drain both pipes concurrently: a large Python traceback can fill stderr
+    // while stdout stays open, deadlocking a sequential read of the two pipes.
+    val errorRead = new java.util.concurrent.FutureTask[String](
+      () => new String(process.getErrorStream.readAllBytes(), "UTF-8"))
+    val errorThread = new Thread(errorRead, "pal-python-stderr")
+    errorThread.setDaemon(true)
+    errorThread.start()
     val out = new String(process.getInputStream.readAllBytes(), "UTF-8")
-    val err = new String(process.getErrorStream.readAllBytes(), "UTF-8")
+    val err = errorRead.get()
     val code = process.waitFor()
     if (code != 0) {
       throw new IllegalStateException(s"python3 ${args.mkString(" ")} exited $code\n$err")
