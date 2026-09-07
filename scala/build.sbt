@@ -68,9 +68,21 @@ lazy val macroPegDiff = project
     commonTestSettings
   )
 
+// Scala 3 port of docs/palindromes-in-peg/*.py (the plain-PEG-for-PAL
+// generators, algorithms and analyses). Hand-written: strict lint settings.
+// Tests compare generator output byte-for-byte against the Python originals.
+lazy val pal = project
+  .in(file("pal"))
+  .settings(
+    name := "pal",
+    scalacOptions ++= strictOpts,
+    commonTestSettings,
+    Test / javaOptions := Seq("-Xss512m", "-Xmx8g")
+  )
+
 lazy val root = project
   .in(file("."))
-  .aggregate(runtime, generated, shallotCli, macroPegRef, macroPegDiff)
+  .aggregate(runtime, generated, shallotCli, macroPegRef, macroPegDiff, pal)
   .settings(
     name := "shallot-root",
     publish / skip := true
