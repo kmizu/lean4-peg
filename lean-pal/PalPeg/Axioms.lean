@@ -18,6 +18,7 @@ import PalPeg.GSScanTapes
 import PalPeg.GSVerifierTapes
 import PalPeg.TextFeed
 import PalPeg.BorderJob
+import PalPeg.BorderJobTapes
 import PalPeg.RTQueue
 import PalPeg.RTQueueTapes
 import PalPeg.Manacher
@@ -304,3 +305,7 @@ import PalPeg.Main
 /-- info: 'PalPeg.stageOK_exists' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.stageOK_exists
+
+/-- info: 'PalPeg.BorderTapes.flags_on_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.BorderTapes.flags_on_tape

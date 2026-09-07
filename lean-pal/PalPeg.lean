@@ -19,6 +19,7 @@ import PalPeg.GSScanTapes
 import PalPeg.GSVerifierTapes
 import PalPeg.TextFeed
 import PalPeg.BorderJob
+import PalPeg.BorderJobTapes
 import PalPeg.RTQueue
 import PalPeg.RTQueueTapes
 import PalPeg.Manacher
@@ -71,6 +72,7 @@ import PalPeg.Main
 * `PalPeg.RTQueueTapes` — Hood–Melville キューを 9 本のスタックテープで実現（snoc ≤ 20、tail ≤ 27 動作；`lenr ≤ lenf` 判定は仮定）
 * `PalPeg.GSPreprocess` — 計算可能な GS 分解 `decompose`（Python と一致）、`decompose_spec : GSCore`、1 パス線形（全体は L1 待ち）
 * `PalPeg.Main`      — `pal_in_peg_of_structured`：PAL を SAccepts する構造化機械があれば `RecognizedByTotalPEG PAL`
+* `PalPeg.BorderJobTapes` — 境界列挙の 6 テープ化、テープ仕事 ≤ 4000|x|、`flags_on_tape`
 * `PalPeg.RTQueue`   — Hood–Melville 実時間キューと FIFO 仕様
 * `PalPeg.Chain`     — 接尾辞回文鎖のオンライン参照算法と `w ∈ PAL ↔ |w| ∈ chain w`
 -/
