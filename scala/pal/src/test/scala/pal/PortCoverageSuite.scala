@@ -32,16 +32,6 @@ class PortCoverageSuite extends munit.FunSuite {
     name.replace("Sca2peg", "Sca2Peg").replace("Tm2peg", "Tm2Peg")
   }
 
-  private def testTarget(stem: String): Path = {
-    // This test imports a shared helper object rather than defining a Suite.
-    val file = if (stem == "scaffold_circuit_program") {
-      "TestScaffoldCircuitProgram.scala"
-    } else {
-      pascal(stem) + "Suite.scala"
-    }
-    scalaTest.resolve(file)
-  }
-
   test("every Python module and test has a Scala counterpart") {
     val modules = pythonFiles(test = false)
     val tests = pythonFiles(test = true)
@@ -55,7 +45,7 @@ class PortCoverageSuite extends munit.FunSuite {
     }
     val missingTests = tests.flatMap { path =>
       val stem = path.getFileName.toString.stripSuffix(".py").stripPrefix("test_")
-      val target = testTarget(stem)
+      val target = scalaTest.resolve(pascal(stem) + "Suite.scala")
       if (Files.isRegularFile(target)) { None } else { Some(s"test_$stem.py -> ${target.getFileName}") }
     }
     val missing = missingModules ++ missingTests
