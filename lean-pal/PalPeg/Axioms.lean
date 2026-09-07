@@ -10,6 +10,7 @@ import PalPeg.GroupsLogBound
 import PalPeg.Matching
 import PalPeg.GSScan
 import PalPeg.GSDecomp
+import PalPeg.GSPreprocess
 import PalPeg.GSRealTime
 import PalPeg.GSVerifier
 import PalPeg.GSScanTapes
@@ -258,3 +259,7 @@ import PalPeg.ProgramMachine
 /-- info: 'PalPeg.RTQueueTapes.queue_on_tapes' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.RTQueueTapes.queue_on_tapes
+
+/-- info: 'PalPeg.decompose_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.decompose_spec
