@@ -364,3 +364,11 @@ lake build
   * **テープ意味論側**：`stageIface`＋`initOf_hinit`（`hinit` は `S/2 ≤ |w|` ガード付きで充足）、
     `PrepPre.inb` は番兵つき `w.take L` の形に直す必要あり（未来の入力を要求してしまう；証明付き）。
     `DecompOnTapes` の `EntryBlank` 前提と `gsDec2` 参照モデルへの置換を作業中。
+- 進捗（2026-09-09 午後、コミット f4f40ca まで）：`lean-pal/ASSEMBLY_PLAN.md`（最終組み立て設計：T=260 テープ、
+  直列化＋テープ再開マーカー、`roundBody_exec` を核とする対応証明、残り約 6,300 行）。設計で見つかった
+  ギャップ 3 点を並行修正中：`progMachineP` の到着動作を複数テープ書き込みに一般化、入力アルファベットの
+  埋め込み ι : Fin 2 ↪ Fin sc（`full_answer_mem_PAL_of` は Fin 2 では空虚）、`MState.cp1/cp2` の有限化。
+  MeteredX（Ψ 込み Metered）は `TightLagBoundary` を残して完成（選言不変量で攻略中）。前処理 Prog は
+  第 2 フェーズ再設計（`orcR` 閾値カウントダウン、Cd 解放）中。中央ジョブは目印ツールキット完成、
+  MiddleTapes 核の書き換え（フラグ/継ぎ目/消去＋gw カウンタ）待ち。数学：PassSum11 で循環角を
+  `t + q₁ ≤ r₁` の下で閉じ、残りは `RemainingGap`（実測 8,820 子孫で 0 例）。
