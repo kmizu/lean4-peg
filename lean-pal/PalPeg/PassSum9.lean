@@ -49,6 +49,37 @@ import PalPeg.PassSum8
 であり、いずれも要求より十分な余裕がある。
 -/
 
+/-!
+## 要約：残る唯一の仮定（`PROGRESS.md` から参照するためのまとめ）
+
+**`PassSum10.Consumption x 8 b`**（1 パスの各節点 `c` について
+`subExit - nextPos < p_c`、すなわち消費量 `C(c) < p_c`）**だけ**が未証明であり、
+これがあれば `PassSum10.passPeriodSum_eight_of_consumption` により
+`EndToEnd2.PassPeriodSum 8 2` が `sorry` なしで従う。
+
+`Consumption` の場合分けと現状：
+
+* 連鎖の伝播（DOWN ステップで不変量 `E < p_c + q` が保たれる）
+  … **証明済** `runEnd_down_step_sharp`, `down_step_invariant`
+* 不変量から消費量 `C < p_c` … **証明済** `consumption_of_invariant`
+* 連鎖の先頭が第 1 子の場合 … **証明済** `inner_run_lt`
+* 連鎖の先頭が「早い」UP 節点（`t + 1 ≤ (k-1) * P`、実測で UP 節点の 95%）
+  … **証明済** `up_violation_early`
+* 深い跨ぎ＋`q₁ = P`＋重なり（`t + P ≤ r₁`）
+  … **証明済** `deep_crossing_glue_contradiction`
+* 深い跨ぎ＋`q₁ < P`＋`P + q₁ ≤ min (r₁, L)`（`L = E_j - p_c`）
+  … **証明済** `deep_crossing_first_period_dvd` に続けて
+  `deep_crossing_dvd_contradiction`（`L < r₁` の枝）/
+  `deep_crossing_run1_end_contradiction`（`r₁ < L` の枝）
+* **残り (1)**：`r₁ = L`（第 1 子の run の右端が跨ぎ量とちょうど一致する「巡回」配置）
+* **残り (2)**：`q₁ < P` かつ `r₁ < P + q₁`（第 1 子の run が `P` に比べて短い）
+
+数値実験（子孫 2,286 個、自己相似語＋乱択開始位置）：`p_c` を跨ぐ子孫は 69 個で
+**すべて `c` の直接の子**、**深い跨ぎ（`E_j - p_c ≥ k * p_j`）は 0 個**、
+跨ぐ子孫はすべて「早い」（`t < (k-1) * p_j`）。消費量比の最大は
+`C/p_c = 0.907`（乱択語）、`0.8085`（周期語への焼きなまし）。
+-/
+
 namespace PalPeg
 namespace PassSum9
 
@@ -664,6 +695,72 @@ theorem deep_crossing_first_period_dvd {w : List α} {k q1 P L r1 : ℕ} (hk : 4
       (IsLeastKRep.primitive (by omega) hq1)
   rw [← hgeq]; exact Nat.gcd_dvd_left P q1
 
+/-- **`q₁ ∣ P` からの矛盾**（`q₁ < P`, `r₁ ≥ L` の枝）。
+
+`L = E_j - p_c` を跨ぎ量とする。領域の `p_c`-周期性で run `j` の極大性
+`w[E_j] ≠ w[E_j - P]` を `L` の位置へ平行移動すると `w[L] ≠ w[L - P]` になる。
+ところが `q₁ ∣ P` なので第 1 子の run（`[0, r₁)`, `q₁`-周期）は `P`-周期でもあり、
+`L < r₁` なら `w[L - P] = w[L]`。矛盾。
+
+`L ≥ P` は深い跨ぎ（`L ≥ k * P`）から従う。 -/
+theorem deep_crossing_dvd_contradiction {w : List α} {pc P q1 r1 L Ej rc : ℕ}
+    (hreg : HasPeriod (w.take rc) pc) (hrc : rc ≤ w.length)
+    (hrun1 : HasPeriod (w.take r1) q1) (hdvd : q1 ∣ P)
+    (hL : L + pc = Ej) (hPL : P ≤ L) (hLr1 : L < r1) (hr1 : r1 ≤ w.length)
+    (hEj : Ej < rc) (hbreak : w[Ej - P]? ≠ w[Ej]?) : False := by
+  have hreglen : (w.take rc).length = rc := by rw [List.length_take]; omega
+  have hregion : ∀ i, i + pc < rc → w[i]? = w[i + pc]? := by
+    intro i hi
+    have h := hreg i (by rw [hreglen]; exact hi)
+    rwa [List.getElem?_take_of_lt (show i < rc by omega),
+      List.getElem?_take_of_lt (show i + pc < rc by omega)] at h
+  -- 平行移動
+  have h1 : w[L]? = w[Ej]? := by
+    have := hregion L (by omega)
+    rwa [show L + pc = Ej from hL] at this
+  have h2 : w[L - P]? = w[Ej - P]? := by
+    have := hregion (L - P) (by omega)
+    rwa [show L - P + pc = Ej - P from by omega] at this
+  -- `q₁ ∣ P` より run 1 は `P`-周期
+  obtain ⟨m, hm⟩ := hdvd
+  have hP1 : HasPeriod (w.take r1) P := by
+    have := hasPeriod_mul hrun1 m
+    rwa [show m * q1 = P from by rw [hm]; ring] at this
+  have hrun1len : (w.take r1).length = r1 := by rw [List.length_take]; omega
+  have h3 : w[L - P]? = w[L]? := by
+    have h := hP1 (L - P) (by rw [hrun1len]; omega)
+    rwa [List.getElem?_take_of_lt (show L - P < r1 by omega),
+      List.getElem?_take_of_lt (show L - P + P < r1 by omega),
+      show L - P + P = L from by omega] at h
+  exact hbreak (by rw [← h2, h3, h1])
+
+/-- **`r₁ < L` の枝**（第 1 子の run が跨ぎ量より短い場合）。
+`P`-ストレッチ `[0, L)` が `r₁` と `r₁ - P` を含み、`q₁ ∣ P` から
+`w[r₁ - P] = w[r₁ - q₁]`、したがって `w[r₁] = w[r₁ - q₁]` となって
+第 1 子の run の極大性に矛盾する。 -/
+theorem deep_crossing_run1_end_contradiction {w : List α} {P q1 r1 L : ℕ}
+    (hstretch : HasPeriod (w.take L) P) (hrun1 : HasPeriod (w.take r1) q1)
+    (hdvd : q1 ∣ P) (hq1pos : 0 < q1) (hq1P : q1 ≤ P) (hPr1 : P ≤ r1) (hr1L : r1 < L)
+    (hlen : L ≤ w.length) (hbreak : w[r1 - q1]? ≠ w[r1]?) : False := by
+  have hslen : (w.take L).length = L := by rw [List.length_take]; omega
+  have h1 : w[r1 - P]? = w[r1]? := by
+    have h := hstretch (r1 - P) (by rw [hslen]; omega)
+    rwa [List.getElem?_take_of_lt (show r1 - P < L by omega),
+      List.getElem?_take_of_lt (show r1 - P + P < L by omega),
+      show r1 - P + P = r1 from by omega] at h
+  obtain ⟨m, hm⟩ := hdvd
+  have hrlen : (w.take r1).length = r1 := by rw [List.length_take]; omega
+  have hper : HasPeriod (w.take r1) ((m - 1) * q1) := hasPeriod_mul hrun1 (m - 1)
+  have hmq : (m - 1) * q1 = P - q1 := by
+    rw [Nat.sub_mul, Nat.one_mul, hm, Nat.mul_comm]
+  rw [hmq] at hper
+  have h2 : w[r1 - P]? = w[r1 - q1]? := by
+    have h := hper (r1 - P) (by rw [hrlen]; omega)
+    rwa [List.getElem?_take_of_lt (show r1 - P < r1 by omega),
+      List.getElem?_take_of_lt (show r1 - P + (P - q1) < r1 by omega),
+      show r1 - P + (P - q1) = r1 - q1 from by omega] at h
+  exact hbreak (by rw [← h2, h1])
+
 
 section AxiomCheck
 open PalPeg.PassSum9
@@ -690,5 +787,7 @@ open PalPeg.PassSum9
 #print axioms PalPeg.PassSum9.up_violation_early
 #print axioms PalPeg.PassSum9.deep_crossing_glue_contradiction
 #print axioms PalPeg.PassSum9.deep_crossing_first_period_dvd
+#print axioms PalPeg.PassSum9.deep_crossing_dvd_contradiction
+#print axioms PalPeg.PassSum9.deep_crossing_run1_end_contradiction
 #print axioms PalPeg.PassSum8.passPeriodSum_eight_of_hasTree
 end AxiomCheck
