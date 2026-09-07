@@ -30,6 +30,7 @@ import PalPeg.Schedule
 import PalPeg.TapeLib
 import PalPeg.Speedup
 import PalPeg.ProgramMachine
+import PalPeg.Main
 
 /-!
 # 公理 guard
@@ -290,3 +291,7 @@ import PalPeg.ProgramMachine
 /-- info: 'PalPeg.round_cost_leH' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.round_cost_leH
+
+/-- info: 'PalPeg.pal_in_peg_of_structured' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.pal_in_peg_of_structured
