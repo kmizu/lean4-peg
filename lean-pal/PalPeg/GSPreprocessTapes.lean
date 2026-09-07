@@ -1,4 +1,5 @@
 import PalPeg.GSPreprocess
+import PalPeg.GSDecompose2
 import PalPeg.TapeLib
 
 /-!
@@ -804,6 +805,12 @@ theorem qOf_eq {a b : ℕ} {c : Ctr} {ts : Tapes sc}
 theorem eOf_eq {a b : ℕ} {c : Ctr} {ts : Tapes sc}
     (hE : Enc blank startSym endSym mark x a b c ts) : eOf ts = c.e := ctr_len hE.ce
 
+/-- `Cp` の読み出し。 -/
+def pOf (ts : Tapes sc) : ℕ := ts.Cp.left.length - 1
+
+theorem pOf_eq {a b : ℕ} {c : Ctr} {ts : Tapes sc}
+    (hE : Enc blank startSym endSym mark x a b c ts) : pOf ts = c.p := ctr_len hE.cp
+
 /-! ### 巻き戻し（`q` 歩ぶん左へ戻しつつ `Cd` を復元し、`⌈q/k⌉` を `Ce` に数える） -/
 
 /-- 巻き戻し 1 単位：`V1`・`V2` を 1 左、`Cq` を 1 下げ、`Cd` を 1 上げる（5 動作）。 -/
@@ -1143,6 +1150,41 @@ theorem mSteps_le_mWork (x : List (Fin sc)) : ∀ fuel a b d, mSteps x fuel a b 
         omega
       · rw [mSteps, if_neg hg, mWork, if_neg hg]; omega
 
+/-- `firstInner` は燃料が十分なら燃料に依存しない。 -/
+theorem firstInner_fuel (v : List (Fin sc)) (k p : ℕ) :
+    ∀ (f g q : ℕ), v.length ≤ f + q → f + 1 ≤ g →
+      (firstInner v k p (f + 1) q = firstInner v k p g q ∧
+        firstInnerWork v k p (f + 1) q = firstInnerWork v k p g q) := by
+  intro f
+  induction f with
+  | zero =>
+      intro g q hle hg
+      obtain ⟨g', rfl⟩ : ∃ g', g = g' + 1 := ⟨g - 1, by omega⟩
+      have hgd : ¬ (p + q < v.length ∧ q < (k - 1) * p ∧ v[q]? = v[p + q]?) := by
+        rintro ⟨h1, -, -⟩; omega
+      constructor
+      · conv_lhs => rw [firstInner, if_neg hgd]
+        conv_rhs => rw [firstInner, if_neg hgd]
+      · conv_lhs => rw [firstInnerWork, if_neg hgd]
+        conv_rhs => rw [firstInnerWork, if_neg hgd]
+  | succ f ih =>
+      intro g q hle hg
+      obtain ⟨g', rfl⟩ : ∃ g', g = g' + 1 := ⟨g - 1, by omega⟩
+      by_cases hgd : p + q < v.length ∧ q < (k - 1) * p ∧ v[q]? = v[p + q]?
+      · obtain ⟨hr1, hr2⟩ := ih g' (q + 1) (by omega) (by omega)
+        constructor
+        · conv_lhs => rw [firstInner, if_pos hgd]
+          conv_rhs => rw [firstInner, if_pos hgd]
+          rw [hr1]
+        · conv_lhs => rw [firstInnerWork, if_pos hgd]
+          conv_rhs => rw [firstInnerWork, if_pos hgd]
+          rw [hr2]
+      · constructor
+        · conv_lhs => rw [firstInner, if_neg hgd]
+          conv_rhs => rw [firstInner, if_neg hgd]
+        · conv_lhs => rw [firstInnerWork, if_neg hgd]
+          conv_rhs => rw [firstInnerWork, if_neg hgd]
+
 /-! ### `firstOuter` / `firstPeriod` のテープ実現 -/
 
 /-- 成功判定（`Cd = 0`、すなわち `q = (k-1)*p`）の probe と復元（2 動作）。 -/
@@ -1175,17 +1217,27 @@ instance oSucc_dec (blank endSym mark : Fin sc) (Fi : ℕ) (ts : Tapes sc) :
     Decidable (oSucc blank endSym mark Fi ts) := by unfold oSucc; infer_instance
 
 /-- `firstOuter`（`bound = |v|` 版、すなわち `firstPeriod`）の動作列。 -/
-def oProg (blank endSym mark : Fin sc) (k Fi : ℕ) : ℕ → Tapes sc → List (Act sc)
+def oCondB (endSym : Fin sc) (orcB : Tapes sc → Bool) (ts : Tapes sc) : Prop :=
+  Tape.read ts.V2 ≠ endSym ∧ orcB ts = true
+
+instance oCondB_dec (endSym : Fin sc) (orcB : Tapes sc → Bool) (ts : Tapes sc) :
+    Decidable (oCondB endSym orcB ts) := by unfold oCondB; infer_instance
+
+/-- `firstOuter v k bound` の動作列。番人 `endSym`（`p < |v|`）に加えて、
+候補上限 `p < bound` をオラクル `orcB` で判定する。 -/
+def oProg (blank endSym mark : Fin sc) (orcB : Tapes sc → Bool) (k Fi : ℕ) :
+    ℕ → Tapes sc → List (Act sc)
   | 0, _ => []
   | fuel + 1, ts =>
-      if Tape.read ts.V2 = endSym then []
-      else if oSucc blank endSym mark Fi ts then oHead blank endSym mark Fi ts
+      if oCondB endSym orcB ts then
+        (if oSucc blank endSym mark Fi ts then oHead blank endSym mark Fi ts
       else oHead blank endSym mark Fi ts ++
         (shiftPhase blank mark k (applyActs blank (oHead blank endSym mark Fi ts) ts) ++
-          oProg blank endSym mark k Fi fuel
+          oProg blank endSym mark orcB k Fi fuel
             (applyActs blank
               (shiftPhase blank mark k (applyActs blank (oHead blank endSym mark Fi ts) ts))
-              (applyActs blank (oHead blank endSym mark Fi ts) ts)))
+              (applyActs blank (oHead blank endSym mark Fi ts) ts))))
+      else []
 
 /-- 内側走査の直後の状態（外側 1 反復の途中状態）。 -/
 theorem oHead_enc (_hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
@@ -1261,53 +1313,72 @@ theorem shiftNoPeriod_le_of_pos (hk : 0 < k) {q : ℕ} (hq : 0 < q) : shiftNoPer
 /-- **主定理（`firstOuter` / `firstPeriod` のテープ実現とコスト）**。
 `A = 2k + 22`、`B = 0`：総動作数は `A * firstOuterWork` 以下。 -/
 theorem oProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
-    {s : ℕ} (hs : s ≤ x.length) :
+    {s bound Fi : ℕ} {orcB : Tapes sc → Bool} (hs : s ≤ x.length)
+    (hFi : (x.drop s).length + 1 ≤ Fi)
+    (horcB : ∀ ts', orcB ts' = decide (pOf ts' < bound)) :
     ∀ (fuel p F S R : ℕ) (ts : Tapes sc), 0 < p → s + p ≤ x.length →
       Enc blank startSym endSym mark x s (s + p) ⟨(k - 1) * p, 0, 0, p, F, S, R⟩ ts →
-      ((oProg blank endSym mark k ((x.drop s).length + 1) fuel ts).length
-          ≤ (2 * k + 22) * firstOuterWork (x.drop s) k (x.drop s).length fuel p
-        ∧ (∀ p' m, firstOuter (x.drop s) k (x.drop s).length fuel p = some (p', m) →
+      ((oProg blank endSym mark orcB k Fi fuel ts).length
+          ≤ (2 * k + 22) * firstOuterWork (x.drop s) k bound fuel p
+        ∧ (∀ p' m, firstOuter (x.drop s) k bound fuel p = some (p', m) →
             Enc blank startSym endSym mark x (s + (k - 1) * p') (s + m)
               ⟨0, (k - 1) * p', 0, p', F, S, R⟩
               (applyActs blank
-                (oProg blank endSym mark k ((x.drop s).length + 1) fuel ts) ts)
+                (oProg blank endSym mark orcB k Fi fuel ts) ts)
             ∧ (k - 1) * p'
-                ≤ firstOuterWork (x.drop s) k (x.drop s).length fuel p)
+                ≤ firstOuterWork (x.drop s) k bound fuel p)
         ∧ (∃ a b D Q E P, Enc blank startSym endSym mark x a b ⟨D, Q, E, P, F, S, R⟩
               (applyActs blank
-                (oProg blank endSym mark k ((x.drop s).length + 1) fuel ts) ts))) := by
+                (oProg blank endSym mark orcB k Fi fuel ts) ts))
+        ∧ (firstOuter (x.drop s) k bound fuel p = none →
+            ∃ P, 0 < P ∧ s + P ≤ x.length ∧
+              Enc blank startSym endSym mark x s (s + P) ⟨(k - 1) * P, 0, 0, P, F, S, R⟩
+                (applyActs blank
+                  (oProg blank endSym mark orcB k Fi fuel ts) ts))) := by
   have hdroplen : (x.drop s).length = x.length - s := by simp
   intro fuel
   induction fuel with
   | zero =>
-      intro p F S R ts _ _ hE
-      refine ⟨?_, ?_, ?_⟩
+      intro p F S R ts hp hsp hE
+      refine ⟨?_, ?_, ?_, ?_⟩
       · rw [oProg, firstOuterWork]; simp
       · intro p' m hc; rw [firstOuter] at hc; simp at hc
       · refine ⟨s, s + p, (k - 1) * p, 0, 0, p, ?_⟩
         rw [oProg, applyActs_nil]
         exact hE
+      · intro _
+        refine ⟨p, hp, hsp, ?_⟩
+        rw [oProg, applyActs_nil]
+        exact hE
   | succ fuel ih =>
       intro p F S R ts hp hsp hE
-      by_cases hguard : Tape.read ts.V2 = endSym
-      · have heq : s + p = x.length := (read_pat_end_iff hend hE.v2).1 hguard
-        have hng : ¬ (p < (x.drop s).length ∧ p < (x.drop s).length) := by
-          rw [hdroplen]; omega
-        refine ⟨?_, ?_, ?_⟩
-        · rw [oProg, if_pos hguard, firstOuterWork, if_neg hng]
-          simp
-        · intro p' m hc
-          rw [firstOuter, if_neg hng] at hc
-          simp at hc
-        · refine ⟨s, s + p, (k - 1) * p, 0, 0, p, ?_⟩
-          rw [oProg, if_pos hguard, applyActs_nil]
-          exact hE
-      · have hne : s + p ≠ x.length := fun hc => hguard (read_pat_end hE.v2 hc)
-        have hlt : s + p < x.length := by omega
-        have hg : p < (x.drop s).length ∧ p < (x.drop s).length := by rw [hdroplen]; omega
+      have hgiff : oCondB endSym orcB ts ↔ (p < (x.drop s).length ∧ p < bound) := by
+        have h1 : Tape.read ts.V2 = endSym ↔ s + p = x.length := read_pat_end_iff hend hE.v2
+        have h2 : orcB ts = true ↔ p < bound := by
+          rw [horcB ts, pOf_eq hE]; simp
+        unfold oCondB
+        constructor
+        · rintro ⟨ha, hb⟩
+          have hne : s + p ≠ x.length := fun hcc => ha (h1.2 hcc)
+          exact ⟨by rw [hdroplen]; omega, h2.1 hb⟩
+        · rintro ⟨ha, hb⟩
+          rw [hdroplen] at ha
+          refine ⟨fun hcc => ?_, h2.2 hb⟩
+          have := h1.1 hcc
+          omega
+      by_cases hcg : oCondB endSym orcB ts
+      · have hg : p < (x.drop s).length ∧ p < bound := hgiff.1 hcg
+        have hlt : s + p < x.length := by
+          have hgg := hg.1
+          rw [hdroplen] at hgg
+          omega
         obtain ⟨hhead, hqle, hlen, hmid⟩ :=
           oHead_enc (blank := blank) (startSym := startSym) (endSym := endSym) (mark := mark)
-            (x := x) (k := k) hk hend hmark hs hsp ((x.drop s).length + 1) hE
+            (x := x) (k := k) hk hend hmark hs hsp Fi hE
+        obtain ⟨hfi1, hfi2⟩ := firstInner_fuel (x.drop s) k p ((x.drop s).length) Fi 0
+          (by omega) hFi
+        rw [← hfi1] at hhead hqle hmid
+        rw [← hfi2] at hlen
         -- 内側走査の到達位置
         have hin := firstInner_le (x.drop s) k p ((x.drop s).length + 1) 0 (by omega)
         have hqfit : s + p + firstInner (x.drop s) k p ((x.drop s).length + 1) 0 ≤ x.length := by
@@ -1319,22 +1390,22 @@ theorem oProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
             ((x.drop s).length + 1) 0 ((k - 1) * p) (by omega) (by omega)
           have h3 := mSteps_le_mWork x ((x.drop s).length + 1) (s + 0) (s + p + 0) ((k - 1) * p)
           omega
-        by_cases hsucc : oSucc blank endSym mark ((x.drop s).length + 1) ts
+        by_cases hsucc : oSucc blank endSym mark Fi ts
         · -- 成功枝
           have hd0 : (k - 1) * p - firstInner (x.drop s) k p ((x.drop s).length + 1) 0 = 0 :=
             (probe_iff hmark hmid.cd).1 hsucc
           have hqeq : firstInner (x.drop s) k p ((x.drop s).length + 1) 0 = (k - 1) * p := by
             omega
-          have hprog : oProg blank endSym mark k ((x.drop s).length + 1) (fuel + 1) ts
-              = oHead blank endSym mark ((x.drop s).length + 1) ts := by
-            rw [oProg, if_neg hguard, if_pos hsucc]
+          have hprog : oProg blank endSym mark orcB k Fi (fuel + 1) ts
+              = oHead blank endSym mark Fi ts := by
+            rw [oProg, if_pos hcg, if_pos hsucc]
           have hres : Enc blank startSym endSym mark x (s + (k - 1) * p)
               (s + (p + (k - 1) * p)) ⟨0, (k - 1) * p, 0, p, F, S, R⟩
-              (applyActs blank (oHead blank endSym mark ((x.drop s).length + 1) ts) ts) := by
+              (applyActs blank (oHead blank endSym mark Fi ts) ts) := by
             have e1 : s + p + (k - 1) * p = s + (p + (k - 1) * p) := by omega
             rw [hqeq, Nat.sub_self, e1] at hhead
             exact hhead
-          refine ⟨?_, ?_, ?_⟩
+          refine ⟨?_, ?_, ?_, ?_⟩
           · rw [hprog, firstOuterWork, if_pos hg, if_pos hqeq]
             obtain ⟨W, hW⟩ : ∃ W, firstInnerWork (x.drop s) k p ((x.drop s).length + 1) 0 = W :=
               ⟨_, rfl⟩
@@ -1351,6 +1422,9 @@ theorem oProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
             rw [firstOuterWork, if_pos hg, if_pos hqeq]
             omega
           · exact ⟨_, _, _, _, _, _, by rw [hprog]; exact hres⟩
+          · intro hc
+            rw [firstOuter, if_pos hg, if_pos hqeq] at hc
+            simp at hc
         · -- 失敗枝：巻き戻して `p` をずらす
           have hd0 : (k - 1) * p - firstInner (x.drop s) k p ((x.drop s).length + 1) 0 ≠ 0 :=
             fun hc => hsucc ((probe_iff hmark hmid.cd).2 hc)
@@ -1378,8 +1452,8 @@ theorem oProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
                 F, S, R⟩
               (applyActs blank
                 (shiftPhase blank mark k
-                  (applyActs blank (oHead blank endSym mark ((x.drop s).length + 1) ts) ts))
-                (applyActs blank (oHead blank endSym mark ((x.drop s).length + 1) ts) ts)) := by
+                  (applyActs blank (oHead blank endSym mark Fi ts) ts))
+                (applyActs blank (oHead blank endSym mark Fi ts) ts)) := by
             have e1 : s + p +
                 shiftNoPeriod (firstInner (x.drop s) k p ((x.drop s).length + 1) 0) k
                 = s + (p +
@@ -1392,38 +1466,38 @@ theorem oProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
             (by have := shiftNoPeriod_pos (firstInner (x.drop s) k p
                   ((x.drop s).length + 1) 0) k; omega)
             (by omega) hnext
-          have hprog : oProg blank endSym mark k ((x.drop s).length + 1) (fuel + 1) ts
-              = oHead blank endSym mark ((x.drop s).length + 1) ts ++
+          have hprog : oProg blank endSym mark orcB k Fi (fuel + 1) ts
+              = oHead blank endSym mark Fi ts ++
                 (shiftPhase blank mark k
-                    (applyActs blank (oHead blank endSym mark ((x.drop s).length + 1) ts) ts) ++
-                  oProg blank endSym mark k ((x.drop s).length + 1) fuel
+                    (applyActs blank (oHead blank endSym mark Fi ts) ts) ++
+                  oProg blank endSym mark orcB k Fi fuel
                     (applyActs blank
                       (shiftPhase blank mark k
                         (applyActs blank
-                          (oHead blank endSym mark ((x.drop s).length + 1) ts) ts))
+                          (oHead blank endSym mark Fi ts) ts))
                       (applyActs blank
-                        (oHead blank endSym mark ((x.drop s).length + 1) ts) ts))) := by
-            rw [oProg, if_neg hguard, if_neg hsucc]
+                        (oHead blank endSym mark Fi ts) ts))) := by
+            rw [oProg, if_pos hcg, if_neg hsucc]
           have happ : applyActs blank
-              (oProg blank endSym mark k ((x.drop s).length + 1) (fuel + 1) ts) ts
+              (oProg blank endSym mark orcB k Fi (fuel + 1) ts) ts
               = applyActs blank
-                (oProg blank endSym mark k ((x.drop s).length + 1) fuel
+                (oProg blank endSym mark orcB k Fi fuel
                   (applyActs blank
                     (shiftPhase blank mark k
-                      (applyActs blank (oHead blank endSym mark ((x.drop s).length + 1) ts) ts))
-                    (applyActs blank (oHead blank endSym mark ((x.drop s).length + 1) ts) ts)))
+                      (applyActs blank (oHead blank endSym mark Fi ts) ts))
+                    (applyActs blank (oHead blank endSym mark Fi ts) ts)))
                 (applyActs blank
                   (shiftPhase blank mark k
-                    (applyActs blank (oHead blank endSym mark ((x.drop s).length + 1) ts) ts))
-                  (applyActs blank (oHead blank endSym mark ((x.drop s).length + 1) ts) ts)) := by
+                    (applyActs blank (oHead blank endSym mark Fi ts) ts))
+                  (applyActs blank (oHead blank endSym mark Fi ts) ts)) := by
             rw [hprog, applyActs_append, applyActs_append]
-          refine ⟨?_, ?_, ?_⟩
+          refine ⟨?_, ?_, ?_, ?_⟩
           · rw [hprog, firstOuterWork, if_pos hg, if_neg hqne]
             simp only [List.length_append]
             -- 記号を潰して算術に落とす
             obtain ⟨W, hW⟩ : ∃ W, firstInnerWork (x.drop s) k p ((x.drop s).length + 1) 0 = W :=
               ⟨_, rfl⟩
-            obtain ⟨Wo, hWo⟩ : ∃ Wo, firstOuterWork (x.drop s) k (x.drop s).length fuel
+            obtain ⟨Wo, hWo⟩ : ∃ Wo, firstOuterWork (x.drop s) k bound fuel
                 (p + shiftNoPeriod (firstInner (x.drop s) k p ((x.drop s).length + 1) 0) k)
                 = Wo := ⟨_, rfl⟩
             obtain ⟨q, hq⟩ : ∃ q, firstInner (x.drop s) k p ((x.drop s).length + 1) 0 = q :=
@@ -1470,7 +1544,25 @@ theorem oProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
             rw [firstOuterWork, if_pos hg, if_neg hqne]
             omega
           · rw [happ]
-            exact hrec.2.2
+            exact hrec.2.2.1
+          · intro hc
+            rw [firstOuter, if_pos hg, if_neg hqne] at hc
+            obtain ⟨P, hP1, hP2, hP3⟩ := hrec.2.2.2 hc
+            exact ⟨P, hP1, hP2, by rw [happ]; exact hP3⟩
+      · have hng : ¬ (p < (x.drop s).length ∧ p < bound) := fun hcc => hcg (hgiff.2 hcc)
+        refine ⟨?_, ?_, ?_, ?_⟩
+        · rw [oProg, if_neg hcg, firstOuterWork, if_neg hng]
+          simp
+        · intro p' m hcc
+          rw [firstOuter, if_neg hng] at hcc
+          simp at hcc
+        · refine ⟨s, s + p, (k - 1) * p, 0, 0, p, ?_⟩
+          rw [oProg, if_neg hcg, applyActs_nil]
+          exact hE
+        · intro _
+          refine ⟨p, hp, hsp, ?_⟩
+          rw [oProg, if_neg hcg, applyActs_nil]
+          exact hE
 
 /-! ## 9. 外側ループの入口整備と `firstPeriod` 全体 -/
 
@@ -1500,41 +1592,46 @@ theorem initActs_enc {s F S R : ℕ} {ts : Tapes sc} (hs : s < x.length)
   exact h2
 
 /-- `firstPeriod`（`= firstOuter v k |v| (|v|+1) 1`）のテープ実現。 -/
-def fpProg (blank endSym mark : Fin sc) (k n : ℕ) (ts : Tapes sc) : List (Act sc) :=
+def fpProg (blank endSym mark : Fin sc) (orcB : Tapes sc → Bool) (k n Fo : ℕ)
+    (ts : Tapes sc) : List (Act sc) :=
   initActs blank k ++
-    oProg blank endSym mark k (n + 1) (n + 1) (applyActs blank (initActs blank k) ts)
+    oProg blank endSym mark orcB k (n + 1) Fo (applyActs blank (initActs blank k) ts)
 
 /-- **主定理（`firstPeriod` のテープ実現とコスト）**。 -/
 theorem fpProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
-    {s F S R : ℕ} {ts : Tapes sc} (hs : s < x.length)
+    {s F S R bound Fo n : ℕ} {ts : Tapes sc} {orcB : Tapes sc → Bool} (hs : s < x.length)
+    (hn : (x.drop s).length ≤ n)
+    (horcB : ∀ ts', orcB ts' = decide (pOf ts' < bound))
     (hE : Enc blank startSym endSym mark x s s ⟨0, 0, 0, 0, F, S, R⟩ ts) :
-    ((fpProg blank endSym mark k (x.drop s).length ts).length
-        ≤ (k - 1) + 2 + (2 * k + 22) *
-            firstOuterWork (x.drop s) k (x.drop s).length ((x.drop s).length + 1) 1
-      ∧ (∀ p₁ m, firstPeriod (x.drop s) k = some (p₁, m) →
+    ((fpProg blank endSym mark orcB k n Fo ts).length
+        ≤ (k - 1) + 2 + (2 * k + 22) * firstOuterWork (x.drop s) k bound Fo 1
+      ∧ (∀ p₁ m, firstOuter (x.drop s) k bound Fo 1 = some (p₁, m) →
           Enc blank startSym endSym mark x (s + (k - 1) * p₁) (s + m)
             ⟨0, (k - 1) * p₁, 0, p₁, F, S, R⟩
-            (applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts)
-          ∧ (k - 1) * p₁ ≤ firstOuterWork (x.drop s) k (x.drop s).length
-              ((x.drop s).length + 1) 1)
+            (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts)
+          ∧ (k - 1) * p₁ ≤ firstOuterWork (x.drop s) k bound Fo 1)
       ∧ (∃ a b D Q E P, Enc blank startSym endSym mark x a b ⟨D, Q, E, P, F, S, R⟩
-            (applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts))) := by
+            (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts))
+      ∧ (firstOuter (x.drop s) k bound Fo 1 = none →
+          ∃ P, 0 < P ∧ s + P ≤ x.length ∧
+            Enc blank startSym endSym mark x s (s + P) ⟨(k - 1) * P, 0, 0, P, F, S, R⟩
+              (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts))) := by
   have hsle : s ≤ x.length := le_of_lt hs
   have hinit := initActs_enc (blank := blank) (startSym := startSym) (endSym := endSym)
     (mark := mark) (x := x) (k := k) hs hE
   have hinit' : Enc blank startSym endSym mark x s (s + 1) ⟨(k - 1) * 1, 0, 0, 1, F, S, R⟩
       (applyActs blank (initActs blank k) ts) := hinit
-  obtain ⟨hcost, hsome, hex⟩ := oProg_spec (blank := blank) (startSym := startSym)
-    (endSym := endSym) (mark := mark) (x := x) (k := k) hk hend hmark hsle
-    ((x.drop s).length + 1) 1 F S R (applyActs blank (initActs blank k) ts)
+  obtain ⟨hcost, hsome, hex, hnone⟩ := oProg_spec (blank := blank) (startSym := startSym)
+    (endSym := endSym) (mark := mark) (x := x) (k := k) (Fi := n + 1) hk hend hmark hsle
+    (by omega) horcB Fo 1 F S R (applyActs blank (initActs blank k) ts)
     (by omega) (by omega) hinit'
-  have happ : applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts =
+  have happ : applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts =
       applyActs blank
-        (oProg blank endSym mark k ((x.drop s).length + 1) ((x.drop s).length + 1)
+        (oProg blank endSym mark orcB k (n + 1) Fo
           (applyActs blank (initActs blank k) ts))
         (applyActs blank (initActs blank k) ts) := by
     rw [fpProg, applyActs_append]
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · rw [fpProg, List.length_append, initActs_length]
     omega
   · intro p₁ m hc
@@ -1542,6 +1639,9 @@ theorem fpProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank
     exact ⟨by rw [happ]; exact hEnc, hwk⟩
   · rw [happ]
     exact hex
+  · intro hc
+    obtain ⟨P, hP1, hP2, hP3⟩ := hnone hc
+    exact ⟨P, hP1, hP2, by rw [happ]; exact hP3⟩
 
 /-! ## 10. `Cr := k*p₁` の設定（カウンタ転送）と `extendReach` の合成 -/
 
@@ -1707,12 +1807,6 @@ theorem loadR_enc {a b D E P Q F S : ℕ} {ts : Tapes sc}
   rw [loadR, applyActs_append, applyActs_append]
   exact h3
 
-/-- `Cp` の読み出し。 -/
-def pOf (ts : Tapes sc) : ℕ := ts.Cp.left.length - 1
-
-theorem pOf_eq {a b : ℕ} {c : Ctr} {ts : Tapes sc}
-    (hE : Enc blank startSym endSym mark x a b c ts) : pOf ts = c.p := ctr_len hE.cp
-
 /-- `firstOuter` は成功時に `(p, p + (k-1)*p)` を返す。 -/
 theorem firstOuter_snd (v : List (Fin sc)) (k bound : ℕ) :
     ∀ (fuel p p' m : ℕ), firstOuter v k bound fuel p = some (p', m) → m = p' + (k - 1) * p' := by
@@ -1729,54 +1823,55 @@ theorem firstOuter_snd (v : List (Fin sc)) (k bound : ℕ) :
       · exact ih _ p' m hc
 
 /-- `firstPeriod` → `Cr := k*p₁` → `extendReach` の合成動作列。 -/
-def frProg (blank endSym mark : Fin sc) (k n Fr : ℕ) (ts : Tapes sc) : List (Act sc) :=
-  fpProg blank endSym mark k n ts ++
-    (loadR blank (qOf (applyActs blank (fpProg blank endSym mark k n ts) ts))
-        (pOf (applyActs blank (fpProg blank endSym mark k n ts) ts)) ++
+def frProg (blank endSym mark : Fin sc) (orcB : Tapes sc → Bool) (k n Fo Fr : ℕ)
+    (ts : Tapes sc) : List (Act sc) :=
+  fpProg blank endSym mark orcB k n Fo ts ++
+    (loadR blank (qOf (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts))
+        (pOf (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts)) ++
       rProg blank endSym Fr
         (applyActs blank
-          (loadR blank (qOf (applyActs blank (fpProg blank endSym mark k n ts) ts))
-            (pOf (applyActs blank (fpProg blank endSym mark k n ts) ts)))
-          (applyActs blank (fpProg blank endSym mark k n ts) ts)))
+          (loadR blank (qOf (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts))
+            (pOf (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts)))
+          (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts)))
 
 /-- **主定理（`firstPeriod` + `extendReach` のテープ実現とコスト）**。
 出力：`Cp = p₁`、`Cr = r`（`Cs` と `Cf` は不変）、ヘッドは `V1 = s + (r - p₁)`、`V2 = s + r`。 -/
 theorem frProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
-    {s F S : ℕ} {ts : Tapes sc} (hs : s < x.length)
+    {s F S bound Fo n : ℕ} {ts : Tapes sc} {orcB : Tapes sc → Bool} (hs : s < x.length)
+    (hn : (x.drop s).length ≤ n)
+    (horcB : ∀ ts', orcB ts' = decide (pOf ts' < bound))
     (hE : Enc blank startSym endSym mark x s s ⟨0, 0, 0, 0, F, S, 0⟩ ts)
-    {p₁ m : ℕ} (hfp : firstPeriod (x.drop s) k = some (p₁, m)) :
+    {p₁ m : ℕ} (hfp : firstOuter (x.drop s) k bound Fo 1 = some (p₁, m)) :
     (Enc blank startSym endSym mark x
         (s + (extendReach (x.drop s) p₁ (x.length + 1) m - p₁))
         (s + extendReach (x.drop s) p₁ (x.length + 1) m)
         ⟨0, 0, 0, p₁, F, S, extendReach (x.drop s) p₁ (x.length + 1) m⟩
-        (applyActs blank (frProg blank endSym mark k (x.drop s).length (x.length + 1) ts) ts)
-      ∧ (frProg blank endSym mark k (x.drop s).length (x.length + 1) ts).length
+        (applyActs blank (frProg blank endSym mark orcB k n Fo (x.length + 1) ts) ts)
+      ∧ (frProg blank endSym mark orcB k n Fo (x.length + 1) ts).length
           ≤ (k - 1) + 2
-            + (2 * k + 32) * firstOuterWork (x.drop s) k (x.drop s).length
-                ((x.drop s).length + 1) 1
+            + (2 * k + 32) * firstOuterWork (x.drop s) k bound Fo 1
             + 3 * extendReachWork (x.drop s) p₁ (x.length + 1) m
-      ∧ (k - 1) * p₁ ≤ firstOuterWork (x.drop s) k (x.drop s).length
-          ((x.drop s).length + 1) 1
+      ∧ (k - 1) * p₁ ≤ firstOuterWork (x.drop s) k bound Fo 1
       ∧ m ≤ extendReach (x.drop s) p₁ (x.length + 1) m
       ∧ extendReach (x.drop s) p₁ (x.length + 1) m
           ≤ m + extendReachWork (x.drop s) p₁ (x.length + 1) m) := by
   have hsle : s ≤ x.length := le_of_lt hs
-  obtain ⟨hfcost, hfsome, _⟩ := fpProg_spec (blank := blank) (startSym := startSym)
-    (endSym := endSym) (mark := mark) (x := x) (k := k) hk hend hmark hs hE
+  obtain ⟨hfcost, hfsome, _, _⟩ := fpProg_spec (blank := blank) (startSym := startSym)
+    (endSym := endSym) (mark := mark) (x := x) (k := k) hk hend hmark hs hn horcB hE
   obtain ⟨h1, hwk⟩ := hfsome p₁ m hfp
-  have hm : m = p₁ + (k - 1) * p₁ := firstOuter_snd (x.drop s) k (x.drop s).length _ 1 p₁ m hfp
+  have hm : m = p₁ + (k - 1) * p₁ := firstOuter_snd (x.drop s) k bound _ 1 p₁ m hfp
   -- カウンタ読み出し
-  have hq1 : qOf (applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts)
+  have hq1 : qOf (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts)
       = (k - 1) * p₁ := qOf_eq h1
-  have hp1 : pOf (applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts) = p₁ :=
+  have hp1 : pOf (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts) = p₁ :=
     pOf_eq h1
   -- `Cr := (k-1)*p₁ + p₁ = m`
   have h2 : Enc blank startSym endSym mark x (s + (k - 1) * p₁) (s + m)
       ⟨0, 0, 0, p₁, F, S, m⟩
       (applyActs blank
-        (loadR blank (qOf (applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts))
-          (pOf (applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts)))
-        (applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts)) := by
+        (loadR blank (qOf (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts))
+          (pOf (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts)))
+        (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts)) := by
     rw [hq1, hp1]
     have := loadR_enc (blank := blank) (startSym := startSym) (endSym := endSym) (mark := mark)
       (x := x) h1
@@ -1804,19 +1899,19 @@ theorem frProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank
       = extendReachWork (x.drop s) p₁ (x.length + 1) m := hcorr.2
   rw [hjw] at hlen3
   have hr : m + j = extendReach (x.drop s) p₁ (x.length + 1) m := hcorr.1
-  have happ : applyActs blank (frProg blank endSym mark k (x.drop s).length (x.length + 1) ts) ts
+  have happ : applyActs blank (frProg blank endSym mark orcB k n Fo (x.length + 1) ts) ts
       = applyActs blank
           (rProg blank endSym (x.length + 1)
             (applyActs blank
               (loadR blank
-                (qOf (applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts))
-                (pOf (applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts)))
-              (applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts)))
+                (qOf (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts))
+                (pOf (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts)))
+              (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts)))
           (applyActs blank
             (loadR blank
-              (qOf (applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts))
-              (pOf (applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts)))
-            (applyActs blank (fpProg blank endSym mark k (x.drop s).length ts) ts)) := by
+              (qOf (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts))
+              (pOf (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts)))
+            (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts)) := by
     rw [frProg, applyActs_append, applyActs_append]
   have hjle : j ≤ extendReachWork (x.drop s) p₁ (x.length + 1) m := by
     rw [← hjw, ← hj]
@@ -1829,8 +1924,7 @@ theorem frProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank
     exact h3
   · rw [frProg, List.length_append, List.length_append, loadR_length, hq1, hp1]
     have hple : p₁ ≤ (k - 1) * p₁ := Nat.le_mul_of_pos_left p₁ (by omega)
-    obtain ⟨Wo, hWo⟩ : ∃ Wo, firstOuterWork (x.drop s) k (x.drop s).length
-        ((x.drop s).length + 1) 1 = Wo := ⟨_, rfl⟩
+    obtain ⟨Wo, hWo⟩ : ∃ Wo, firstOuterWork (x.drop s) k bound Fo 1 = Wo := ⟨_, rfl⟩
     obtain ⟨ER, hER⟩ : ∃ ER, extendReachWork (x.drop s) p₁ (x.length + 1) m = ER := ⟨_, rfl⟩
     obtain ⟨T, hT⟩ : ∃ T, (k - 1) * p₁ = T := ⟨_, rfl⟩
     rw [hq1, hp1] at hlen3
@@ -3009,7 +3103,7 @@ end Second
 section Compose
 
 variable {blank startSym endSym mark : Fin sc} {x : List (Fin sc)} {k : ℕ}
-  {orc orc2 : Tapes sc → Bool}
+  {orcB orc orc2 : Tapes sc → Bool}
 
 /-- `Cr` の読み出し。 -/
 def rOf (ts : Tapes sc) : ℕ := ts.Cr.left.length - 1
@@ -3033,27 +3127,30 @@ theorem firstOuter_pos (v : List (Fin sc)) (k bound : ℕ) :
         have := shiftNoPeriod_pos (firstInner v k p (v.length + 1) 0) k
         omega
 
-def afterFr (blank endSym mark : Fin sc) (k n Fr : ℕ) (ts : Tapes sc) : Tapes sc :=
-  applyActs blank (frProg blank endSym mark k n Fr ts) ts
+def afterFr (blank endSym mark : Fin sc) (orcB : Tapes sc → Bool) (k n Fo Fr : ℕ)
+    (ts : Tapes sc) : Tapes sc :=
+  applyActs blank (frProg blank endSym mark orcB k n Fo Fr ts) ts
 
-def afterRepo (blank endSym mark : Fin sc) (k n Fr : ℕ) (ts : Tapes sc) : Tapes sc :=
+def afterRepo (blank endSym mark : Fin sc) (orcB : Tapes sc → Bool) (k n Fo Fr : ℕ)
+    (ts : Tapes sc) : Tapes sc :=
   applyActs blank
-    (repoProg blank (pOf (afterFr blank endSym mark k n Fr ts))
-      (rOf (afterFr blank endSym mark k n Fr ts)))
-    (afterFr blank endSym mark k n Fr ts)
+    (repoProg blank (pOf (afterFr blank endSym mark orcB k n Fo Fr ts))
+      (rOf (afterFr blank endSym mark orcB k n Fo Fr ts)))
+    (afterFr blank endSym mark orcB k n Fo Fr ts)
 
 /-- `decompose` の外側 1 反復の前半（削除ループを除く）全体の動作列。 -/
-def stepProg (blank endSym mark : Fin sc) (orc orc2 : Tapes sc → Bool) (k n Fr : ℕ)
+def stepProg (blank endSym mark : Fin sc) (orcB orc orc2 : Tapes sc → Bool) (k n Fo Fr : ℕ)
     (ts : Tapes sc) : List (Act sc) :=
-  frProg blank endSym mark k n Fr ts ++
-    (repoProg blank (pOf (afterFr blank endSym mark k n Fr ts))
-        (rOf (afterFr blank endSym mark k n Fr ts)) ++
-      spProg blank endSym mark orc orc2 k n (afterRepo blank endSym mark k n Fr ts))
+  frProg blank endSym mark orcB k n Fo Fr ts ++
+    (repoProg blank (pOf (afterFr blank endSym mark orcB k n Fo Fr ts))
+        (rOf (afterFr blank endSym mark orcB k n Fo Fr ts)) ++
+      spProg blank endSym mark orc orc2 k n (afterRepo blank endSym mark orcB k n Fo Fr ts))
 
 /-- **主定理（外側 1 反復のテープ実現とコスト）**：`A = 2k + 65`, `B = k + 3`。
 終状態は `Cf = p₁`、`Cr = r`、`Cs` は不変で、第 2 周期が見つかれば `Cp = p₂`。 -/
 theorem stepProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
-    {s S : ℕ} {ts : Tapes sc} (hs : s < x.length)
+    {s S : ℕ} {ts : Tapes sc} {orcB : Tapes sc → Bool} (hs : s < x.length)
+    (horcB : ∀ ts', orcB ts' = decide (pOf ts' < (x.drop s).length))
     (hE : Enc blank startSym endSym mark x s s ⟨0, 0, 0, 0, 0, S, 0⟩ ts)
     {p₁ m : ℕ} (hfp : firstPeriod (x.drop s) k = some (p₁, m))
     (horc : ∀ ts', orc ts' =
@@ -3061,31 +3158,31 @@ theorem stepProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ bla
         (k - 1) * pOf ts' ≤ qOf ts' + 1))
     (horc2 : ∀ ts', orc2 ts' =
       decide (k * p₁ ≤ qOf ts' ∧ qOf ts' ≤ extendReach (x.drop s) p₁ (x.length + 1) m)) :
-    ((stepProg blank endSym mark orc orc2 k (x.drop s).length (x.length + 1) ts).length
+    ((stepProg blank endSym mark orcB orc orc2 k (x.drop s).length ((x.drop s).length + 1) (x.length + 1) ts).length
         ≤ (2 * k + 65) * decomposeStepWork x k s + (k + 3)
       ∧ (∃ a b D' q' E' P',
           Enc blank startSym endSym mark x a b
             ⟨D', q', E', P', p₁, S, extendReach (x.drop s) p₁ (x.length + 1) m⟩
             (applyActs blank
-              (stepProg blank endSym mark orc orc2 k (x.drop s).length (x.length + 1) ts) ts)
+              (stepProg blank endSym mark orcB orc orc2 k (x.drop s).length ((x.drop s).length + 1) (x.length + 1) ts) ts)
           ∧ (∀ p₂, secondPeriod (x.drop s) k p₁
               (extendReach (x.drop s) p₁ (x.length + 1) m) = some p₂ → P' = p₂))) := by
   have hsle : s ≤ x.length := le_of_lt hs
   have hp₁ : 0 < p₁ := firstOuter_pos (x.drop s) k (x.drop s).length _ 1 p₁ m (by omega) hfp
   obtain ⟨hfr, hfrlen, hwk, hmr, hrle⟩ := frProg_spec (blank := blank) (startSym := startSym)
-    (endSym := endSym) (mark := mark) (x := x) (k := k) hk hend hmark hs hE hfp
+    (endSym := endSym) (mark := mark) (x := x) (k := k) hk hend hmark hs (le_refl _) horcB hE hfp
   obtain ⟨r, hrdef⟩ : ∃ r, extendReach (x.drop s) p₁ (x.length + 1) m = r := ⟨_, rfl⟩
   rw [hrdef] at hfr hmr hrle horc horc2
   have hm : m = p₁ + (k - 1) * p₁ :=
     firstOuter_snd (x.drop s) k (x.drop s).length _ 1 p₁ m hfp
   have hpr : p₁ ≤ r := by omega
   -- 再配置
-  have hpOf : pOf (afterFr blank endSym mark k (x.drop s).length (x.length + 1) ts) = p₁ :=
+  have hpOf : pOf (afterFr blank endSym mark orcB k (x.drop s).length ((x.drop s).length + 1) (x.length + 1) ts) = p₁ :=
     pOf_eq hfr
-  have hrOf : rOf (afterFr blank endSym mark k (x.drop s).length (x.length + 1) ts) = r :=
+  have hrOf : rOf (afterFr blank endSym mark orcB k (x.drop s).length ((x.drop s).length + 1) (x.length + 1) ts) = r :=
     rOf_eq hfr
   have hrepo : Enc blank startSym endSym mark x s (s + 1) ⟨0, 0, 0, 1, p₁, S, r⟩
-      (afterRepo blank endSym mark k (x.drop s).length (x.length + 1) ts) := by
+      (afterRepo blank endSym mark orcB k (x.drop s).length ((x.drop s).length + 1) (x.length + 1) ts) := by
     rw [afterRepo, hpOf, hrOf]
     exact repoProg_enc (blank := blank) (startSym := startSym) (endSym := endSym)
       (mark := mark) (x := x) hp₁ hpr hfr
@@ -3094,11 +3191,11 @@ theorem stepProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ bla
     (endSym := endSym) (mark := mark) (x := x) (k := k) (r := r) (orc := orc) (orc2 := orc2)
     hk hend hmark hsle hp₁ horc horc2 (by omega) hrepo
   have happ : applyActs blank
-      (stepProg blank endSym mark orc orc2 k (x.drop s).length (x.length + 1) ts) ts
+      (stepProg blank endSym mark orcB orc orc2 k (x.drop s).length ((x.drop s).length + 1) (x.length + 1) ts) ts
       = applyActs blank
         (spProg blank endSym mark orc orc2 k (x.drop s).length
-          (afterRepo blank endSym mark k (x.drop s).length (x.length + 1) ts))
-        (afterRepo blank endSym mark k (x.drop s).length (x.length + 1) ts) := by
+          (afterRepo blank endSym mark orcB k (x.drop s).length ((x.drop s).length + 1) (x.length + 1) ts))
+        (afterRepo blank endSym mark orcB k (x.drop s).length ((x.drop s).length + 1) (x.length + 1) ts) := by
     rw [stepProg, applyActs_append, applyActs_append]
     rfl
   refine ⟨?_, ?_⟩
@@ -3148,7 +3245,665 @@ theorem stepProg_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ bla
 
 end Compose
 
-/-! ## 13. 小例による健全性チェック -/
+/-! ## 13. 新しい削除規則（`stripLoop2`）：切断を `s + (r - k*p + 1)` へ進める -/
+
+section Advance
+
+variable {blank startSym endSym mark : Fin sc} {x : List (Fin sc)}
+
+/-- `Cr` を 1 減らして `V2` を 1 左へ、`Ce` を 1 増やす（4 動作）。 -/
+def rv2Unit (blank : Fin sc) : List (Act sc) :=
+  [Act.Cr blank .left, Act.Cr blank .stay, Act.V2 .left, Act.Ce blank .right]
+
+def rv2Loop (blank : Fin sc) : ℕ → List (Act sc)
+  | 0 => []
+  | n + 1 => rv2Unit blank ++ rv2Loop blank n
+
+@[simp] theorem rv2Loop_length (blank : Fin sc) (n : ℕ) : (rv2Loop blank n).length = 4 * n := by
+  induction n with
+  | zero => simp [rv2Loop]
+  | succ n ih => simp only [rv2Loop, List.length_append, rv2Unit, ih]; simp; omega
+
+theorem applyActs_rv2Unit (ts : Tapes sc) :
+    applyActs blank (rv2Unit blank) ts =
+      { ts with
+        Cr := Tape.step blank (Tape.step blank ts.Cr blank .left) blank .stay
+        V2 := Tape.step blank ts.V2 ts.V2.focus .left
+        Ce := Tape.step blank ts.Ce blank .right } := rfl
+
+theorem rv2Loop_enc : ∀ (n a b D Q E P F S R : ℕ) (ts : Tapes sc),
+    Enc blank startSym endSym mark x a (b + n) ⟨D, Q, E, P, F, S, R + n⟩ ts →
+      Enc blank startSym endSym mark x a b ⟨D, Q, E + n, P, F, S, R⟩
+        (applyActs blank (rv2Loop blank n) ts) := by
+  intro n
+  induction n with
+  | zero => intro a b D Q E P F S R ts hE; simpa [rv2Loop] using hE
+  | succ n ih =>
+      intro a b D Q E P F S R ts hE
+      have hE' : Enc blank startSym endSym mark x a (b + n + 1)
+          ⟨D, Q, E, P, F, S, (R + n) + 1⟩ ts := by
+        have e1 : b + (n + 1) = b + n + 1 := by omega
+        have e2 : R + (n + 1) = (R + n) + 1 := by omega
+        rw [e1, e2] at hE; exact hE
+      have hstep : Enc blank startSym endSym mark x a (b + n) ⟨D, Q, E + 1, P, F, S, R + n⟩
+          (applyActs blank (rv2Unit blank) ts) := by
+        rw [applyActs_rv2Unit]
+        exact ⟨hE'.v1, pat_left hE'.v2, hE'.cd, hE'.cq, Tape.counter'_inc hE'.ce, hE'.cp,
+          hE'.cf, hE'.cs, by simpa using Tape.counter'_dec (n := R + n) hE'.cr⟩
+      have := ih a b D Q (E + 1) P F S R _ hstep
+      have e3 : E + 1 + n = E + (n + 1) := by omega
+      rw [e3] at this
+      simp only [rv2Loop, applyActs_append]
+      exact this
+
+/-- `Cp` と `Ce` を 1 ずつ減らして `Cq` を 1 増やす（5 動作）。 -/
+def ecUnit (blank : Fin sc) : List (Act sc) :=
+  [Act.Cp blank .left, Act.Cp blank .stay, Act.Ce blank .left, Act.Ce blank .stay,
+    Act.Cq blank .right]
+
+def ecLoop (blank : Fin sc) : ℕ → List (Act sc)
+  | 0 => []
+  | n + 1 => ecUnit blank ++ ecLoop blank n
+
+@[simp] theorem ecLoop_length (blank : Fin sc) (n : ℕ) : (ecLoop blank n).length = 5 * n := by
+  induction n with
+  | zero => simp [ecLoop]
+  | succ n ih => simp only [ecLoop, List.length_append, ecUnit, ih]; simp; omega
+
+theorem applyActs_ecUnit (ts : Tapes sc) :
+    applyActs blank (ecUnit blank) ts =
+      { ts with
+        Cp := Tape.step blank (Tape.step blank ts.Cp blank .left) blank .stay
+        Ce := Tape.step blank (Tape.step blank ts.Ce blank .left) blank .stay
+        Cq := Tape.step blank ts.Cq blank .right } := rfl
+
+theorem ecLoop_enc : ∀ (n a b D Q E P F S R : ℕ) (ts : Tapes sc),
+    Enc blank startSym endSym mark x a b ⟨D, Q, E + n, P + n, F, S, R⟩ ts →
+      Enc blank startSym endSym mark x a b ⟨D, Q + n, E, P, F, S, R⟩
+        (applyActs blank (ecLoop blank n) ts) := by
+  intro n
+  induction n with
+  | zero => intro a b D Q E P F S R ts hE; simpa [ecLoop] using hE
+  | succ n ih =>
+      intro a b D Q E P F S R ts hE
+      have hE' : Enc blank startSym endSym mark x a b
+          ⟨D, Q, (E + n) + 1, (P + n) + 1, F, S, R⟩ ts := by
+        have e1 : E + (n + 1) = (E + n) + 1 := by omega
+        have e2 : P + (n + 1) = (P + n) + 1 := by omega
+        rw [e1, e2] at hE; exact hE
+      have hstep : Enc blank startSym endSym mark x a b ⟨D, Q + 1, E + n, P + n, F, S, R⟩
+          (applyActs blank (ecUnit blank) ts) := by
+        rw [applyActs_ecUnit]
+        exact ⟨hE'.v1, hE'.v2, hE'.cd, Tape.counter'_inc hE'.cq,
+          by simpa using Tape.counter'_dec (n := E + n) hE'.ce,
+          by simpa using Tape.counter'_dec (n := P + n) hE'.cp, hE'.cf, hE'.cs, hE'.cr⟩
+      have := ih a b D (Q + 1) E P F S R _ hstep
+      have e3 : Q + 1 + n = Q + (n + 1) := by omega
+      rw [e3] at this
+      simp only [ecLoop, applyActs_append]
+      exact this
+
+/-- `Cq` を 1 減らして `Cp` を 1 増やす（3 動作）。 -/
+def qpUnit (blank : Fin sc) : List (Act sc) :=
+  [Act.Cq blank .left, Act.Cq blank .stay, Act.Cp blank .right]
+
+def qpLoop (blank : Fin sc) : ℕ → List (Act sc)
+  | 0 => []
+  | n + 1 => qpUnit blank ++ qpLoop blank n
+
+@[simp] theorem qpLoop_length (blank : Fin sc) (n : ℕ) : (qpLoop blank n).length = 3 * n := by
+  induction n with
+  | zero => simp [qpLoop]
+  | succ n ih => simp only [qpLoop, List.length_append, qpUnit, ih]; simp; omega
+
+theorem applyActs_qpUnit (ts : Tapes sc) :
+    applyActs blank (qpUnit blank) ts =
+      { ts with
+        Cq := Tape.step blank (Tape.step blank ts.Cq blank .left) blank .stay
+        Cp := Tape.step blank ts.Cp blank .right } := rfl
+
+theorem qpLoop_enc : ∀ (n a b D Q E P F S R : ℕ) (ts : Tapes sc),
+    Enc blank startSym endSym mark x a b ⟨D, Q + n, E, P, F, S, R⟩ ts →
+      Enc blank startSym endSym mark x a b ⟨D, Q, E, P + n, F, S, R⟩
+        (applyActs blank (qpLoop blank n) ts) := by
+  intro n
+  induction n with
+  | zero => intro a b D Q E P F S R ts hE; simpa [qpLoop] using hE
+  | succ n ih =>
+      intro a b D Q E P F S R ts hE
+      have hE' : Enc blank startSym endSym mark x a b ⟨D, (Q + n) + 1, E, P, F, S, R⟩ ts := by
+        have e1 : Q + (n + 1) = (Q + n) + 1 := by omega
+        rw [e1] at hE; exact hE
+      have hstep : Enc blank startSym endSym mark x a b ⟨D, Q + n, E, P + 1, F, S, R⟩
+          (applyActs blank (qpUnit blank) ts) := by
+        rw [applyActs_qpUnit]
+        exact ⟨hE'.v1, hE'.v2, hE'.cd,
+          by simpa using Tape.counter'_dec (n := Q + n) hE'.cq, hE'.ce,
+          Tape.counter'_inc hE'.cp, hE'.cf, hE'.cs, hE'.cr⟩
+      have := ih a b D Q E (P + 1) F S R _ hstep
+      have e2 : P + 1 + n = P + (n + 1) := by omega
+      rw [e2] at this
+      simp only [qpLoop, applyActs_append]
+      exact this
+
+/-- `Ce` から `Cp`（`= p`）を `n` 回引く（`Cp` は復元）。動作数 `8*p*n`。 -/
+def subKLoop (blank : Fin sc) (p : ℕ) : ℕ → List (Act sc)
+  | 0 => []
+  | n + 1 => (ecLoop blank p ++ qpLoop blank p) ++ subKLoop blank p n
+
+@[simp] theorem subKLoop_length (blank : Fin sc) (p n : ℕ) :
+    (subKLoop blank p n).length = 8 * p * n := by
+  induction n with
+  | zero => simp [subKLoop]
+  | succ n ih =>
+      simp only [subKLoop, List.length_append, ecLoop_length, qpLoop_length, ih]
+      ring
+
+theorem subKLoop_enc (p : ℕ) : ∀ (n a b D E F S R : ℕ) (ts : Tapes sc),
+    Enc blank startSym endSym mark x a b ⟨D, 0, E + n * p, p, F, S, R⟩ ts →
+      Enc blank startSym endSym mark x a b ⟨D, 0, E, p, F, S, R⟩
+        (applyActs blank (subKLoop blank p n) ts) := by
+  intro n
+  induction n with
+  | zero => intro a b D E F S R ts hE; simpa [subKLoop] using hE
+  | succ n ih =>
+      intro a b D E F S R ts hE
+      have hE' : Enc blank startSym endSym mark x a b
+          ⟨D, 0, (E + n * p) + p, 0 + p, F, S, R⟩ ts := by
+        have e1 : E + (n + 1) * p = (E + n * p) + p := by ring
+        have e2 : (0 : ℕ) + p = p := by omega
+        rw [← e1, e2]; exact hE
+      have h1 := ecLoop_enc (blank := blank) (startSym := startSym) (endSym := endSym)
+        (mark := mark) (x := x) p a b D 0 (E + n * p) 0 F S R ts hE'
+      have h2 := qpLoop_enc (blank := blank) (startSym := startSym) (endSym := endSym)
+        (mark := mark) (x := x) p a b D 0 (E + n * p) 0 F S R _ h1
+      have e4 : (0 : ℕ) + p = p := by omega
+      rw [e4] at h2
+      have := ih a b D E F S R _ h2
+      simp only [subKLoop, applyActs_append]
+      exact this
+
+/-- `Ce` を 1 減らして `Cs` を 1 増やし、`V1`/`V2` を 1 右へ（5 動作）。 -/
+def csUnit (blank : Fin sc) : List (Act sc) :=
+  [Act.Ce blank .left, Act.Ce blank .stay, Act.Cs blank .right, Act.V1 .right, Act.V2 .right]
+
+def csLoop (blank : Fin sc) : ℕ → List (Act sc)
+  | 0 => []
+  | n + 1 => csUnit blank ++ csLoop blank n
+
+@[simp] theorem csLoop_length (blank : Fin sc) (n : ℕ) : (csLoop blank n).length = 5 * n := by
+  induction n with
+  | zero => simp [csLoop]
+  | succ n ih => simp only [csLoop, List.length_append, csUnit, ih]; simp; omega
+
+theorem applyActs_csUnit (ts : Tapes sc) :
+    applyActs blank (csUnit blank) ts =
+      { ts with
+        Ce := Tape.step blank (Tape.step blank ts.Ce blank .left) blank .stay
+        Cs := Tape.step blank ts.Cs blank .right
+        V1 := Tape.step blank ts.V1 ts.V1.focus .right
+        V2 := Tape.step blank ts.V2 ts.V2.focus .right } := rfl
+
+theorem csLoop_enc : ∀ (n a b D Q E P F S R : ℕ) (ts : Tapes sc),
+    Enc blank startSym endSym mark x a b ⟨D, Q, E + n, P, F, S, R⟩ ts →
+      a + n ≤ x.length → b + n ≤ x.length →
+      Enc blank startSym endSym mark x (a + n) (b + n) ⟨D, Q, E, P, F, S + n, R⟩
+        (applyActs blank (csLoop blank n) ts) := by
+  intro n
+  induction n with
+  | zero => intro a b D Q E P F S R ts hE _ _; simpa [csLoop] using hE
+  | succ n ih =>
+      intro a b D Q E P F S R ts hE ha hb
+      have hE' : Enc blank startSym endSym mark x a b ⟨D, Q, (E + n) + 1, P, F, S, R⟩ ts := by
+        have e1 : E + (n + 1) = (E + n) + 1 := by omega
+        rw [e1] at hE; exact hE
+      have hstep : Enc blank startSym endSym mark x (a + 1) (b + 1)
+          ⟨D, Q, E + n, P, F, S + 1, R⟩ (applyActs blank (csUnit blank) ts) := by
+        rw [applyActs_csUnit]
+        exact ⟨pat_right hE'.v1 (by omega), pat_right hE'.v2 (by omega), hE'.cd, hE'.cq,
+          by simpa using Tape.counter'_dec (n := E + n) hE'.ce, hE'.cp, hE'.cf,
+          Tape.counter'_inc hE'.cs, hE'.cr⟩
+      have := ih (a + 1) (b + 1) D Q E P F (S + 1) R _ hstep (by omega) (by omega)
+      have e2 : a + 1 + n = a + (n + 1) := by omega
+      have e3 : b + 1 + n = b + (n + 1) := by omega
+      have e4 : S + 1 + n = S + (n + 1) := by omega
+      rw [e2, e3, e4] at this
+      simp only [csLoop, applyActs_append]
+      exact this
+
+/-- `Cp` を `n` 回減らす（2 動作／回）。 -/
+def pzUnit (blank : Fin sc) : List (Act sc) :=
+  [Act.Cp blank .left, Act.Cp blank .stay]
+
+def pzLoop (blank : Fin sc) : ℕ → List (Act sc)
+  | 0 => []
+  | n + 1 => pzUnit blank ++ pzLoop blank n
+
+@[simp] theorem pzLoop_length (blank : Fin sc) (n : ℕ) : (pzLoop blank n).length = 2 * n := by
+  induction n with
+  | zero => simp [pzLoop]
+  | succ n ih => simp only [pzLoop, List.length_append, pzUnit, ih]; simp; omega
+
+theorem applyActs_pzUnit (ts : Tapes sc) :
+    applyActs blank (pzUnit blank) ts =
+      { ts with
+        Cp := Tape.step blank (Tape.step blank ts.Cp blank .left) blank .stay } := rfl
+
+theorem pzLoop_enc : ∀ (n a b D Q E P F S R : ℕ) (ts : Tapes sc),
+    Enc blank startSym endSym mark x a b ⟨D, Q, E, P + n, F, S, R⟩ ts →
+      Enc blank startSym endSym mark x a b ⟨D, Q, E, P, F, S, R⟩
+        (applyActs blank (pzLoop blank n) ts) := by
+  intro n
+  induction n with
+  | zero => intro a b D Q E P F S R ts hE; simpa [pzLoop] using hE
+  | succ n ih =>
+      intro a b D Q E P F S R ts hE
+      have hE' : Enc blank startSym endSym mark x a b ⟨D, Q, E, (P + n) + 1, F, S, R⟩ ts := by
+        have e1 : P + (n + 1) = (P + n) + 1 := by omega
+        rw [e1] at hE; exact hE
+      have hstep : Enc blank startSym endSym mark x a b ⟨D, Q, E, P + n, F, S, R⟩
+          (applyActs blank (pzUnit blank) ts) := by
+        rw [applyActs_pzUnit]
+        exact ⟨hE'.v1, hE'.v2, hE'.cd, hE'.cq, hE'.ce,
+          by simpa using Tape.counter'_dec (n := P + n) hE'.cp, hE'.cf, hE'.cs, hE'.cr⟩
+      have := ih a b D Q E P F S R _ hstep
+      simp only [pzLoop, applyActs_append]
+      exact this
+
+/-- **切断の前進**：`extendReach` 直後の状態から、切断を `r - k*p + 1` だけ進めた
+「まっさらな」状態（`V1 = V2 = s'`、カウンタは `Cs = S + (r - k*p + 1)` と `Cf` 以外すべて `0`）
+へ移る。動作数 `11*r + 3*k*p + 3` 以下。 -/
+def advanceProg (blank : Fin sc) (k P R : ℕ) : List (Act sc) :=
+  rvLoop blank (R - P) ++ (rv2Loop blank P ++ (subKLoop blank P k ++
+    (csLoop blank (R - k * P) ++
+      ((Act.Cs blank .right :: Act.V1 .right :: [Act.V2 (sc := sc) .right]) ++
+        pzLoop blank P))))
+
+theorem advanceProg_length (blank : Fin sc) {k P R : ℕ} (hPR : P ≤ R) (hkP : k * P ≤ R) :
+    (advanceProg blank k P R).length ≤ 11 * R + 3 * (k * P) + 3 := by
+  simp only [advanceProg, List.length_append, rvLoop_length, rv2Loop_length, subKLoop_length,
+    csLoop_length, pzLoop_length, List.length_cons, List.length_nil]
+  have h : 8 * P * k = 8 * (k * P) := by ring
+  omega
+
+theorem advanceProg_enc {s P R D F S : ℕ} {ts : Tapes sc} (hkP : k * P ≤ R) (hP : P ≤ R)
+    (hfit : s + (R - k * P + 1) ≤ x.length)
+    (hE : Enc blank startSym endSym mark x (s + (R - P)) (s + R) ⟨D, 0, 0, P, F, S, R⟩ ts) :
+    Enc blank startSym endSym mark x (s + (R - k * P + 1)) (s + (R - k * P + 1))
+      ⟨D, 0, 0, 0, F, S + (R - k * P + 1), 0⟩
+      (applyActs blank (advanceProg blank k P R) ts) := by
+  -- (1) `V1`/`V2` を `R - P` 左へ
+  have h1 := rvLoop_enc (blank := blank) (startSym := startSym) (endSym := endSym)
+    (mark := mark) (x := x) (R - P) s (s + P) D 0 0 P F S P _
+    (by rw [show s + P + (R - P) = s + R from by omega,
+      show P + (R - P) = R from by omega]; exact hE)
+  rw [show (0 : ℕ) + (R - P) = R - P from by omega] at h1
+  -- (2) `V2` を `P` 左へ（`Cr` を使い切る）
+  have h2 := rv2Loop_enc (blank := blank) (startSym := startSym) (endSym := endSym)
+    (mark := mark) (x := x) P s s D 0 (R - P) P F S 0 _
+    (by rw [show (0 : ℕ) + P = P from by omega]; exact h1)
+  rw [show R - P + P = R from by omega] at h2
+  -- (3) `Ce := r - k*p`
+  have h3 := subKLoop_enc (blank := blank) (startSym := startSym) (endSym := endSym)
+    (mark := mark) (x := x) P k s s D (R - k * P) F S 0 _
+    (by rw [show R - k * P + k * P = R from by omega]; exact h2)
+  -- (4) `Ce` を `Cs` へ流しつつ両ヘッドを右へ
+  have h4 := csLoop_enc (blank := blank) (startSym := startSym) (endSym := endSym)
+    (mark := mark) (x := x) (R - k * P) s s D 0 0 P F S 0 _
+    (by rw [show (0 : ℕ) + (R - k * P) = R - k * P from by omega]; exact h3)
+    (by omega) (by omega)
+  -- (5) もう 1 歩
+  have h5 : Enc blank startSym endSym mark x (s + (R - k * P) + 1) (s + (R - k * P) + 1)
+      ⟨D, 0, 0, P, F, S + (R - k * P) + 1, 0⟩
+      (applyActs blank (Act.Cs blank .right :: Act.V1 .right :: [Act.V2 (sc := sc) .right])
+        (applyActs blank (csLoop blank (R - k * P))
+          (applyActs blank (subKLoop blank P k)
+            (applyActs blank (rv2Loop blank P)
+              (applyActs blank (rvLoop blank (R - P)) ts))))) := by
+    have hres : applyActs blank
+        (Act.Cs blank .right :: Act.V1 .right :: [Act.V2 (sc := sc) .right])
+        (applyActs blank (csLoop blank (R - k * P))
+          (applyActs blank (subKLoop blank P k)
+            (applyActs blank (rv2Loop blank P)
+              (applyActs blank (rvLoop blank (R - P)) ts)))) =
+        { (applyActs blank (csLoop blank (R - k * P))
+            (applyActs blank (subKLoop blank P k)
+              (applyActs blank (rv2Loop blank P)
+                (applyActs blank (rvLoop blank (R - P)) ts)))) with
+          Cs := Tape.step blank (applyActs blank (csLoop blank (R - k * P))
+            (applyActs blank (subKLoop blank P k)
+              (applyActs blank (rv2Loop blank P)
+                (applyActs blank (rvLoop blank (R - P)) ts)))).Cs blank .right
+          V1 := Tape.step blank (applyActs blank (csLoop blank (R - k * P))
+            (applyActs blank (subKLoop blank P k)
+              (applyActs blank (rv2Loop blank P)
+                (applyActs blank (rvLoop blank (R - P)) ts)))).V1
+            (applyActs blank (csLoop blank (R - k * P))
+              (applyActs blank (subKLoop blank P k)
+                (applyActs blank (rv2Loop blank P)
+                  (applyActs blank (rvLoop blank (R - P)) ts)))).V1.focus .right
+          V2 := Tape.step blank (applyActs blank (csLoop blank (R - k * P))
+            (applyActs blank (subKLoop blank P k)
+              (applyActs blank (rv2Loop blank P)
+                (applyActs blank (rvLoop blank (R - P)) ts)))).V2
+            (applyActs blank (csLoop blank (R - k * P))
+              (applyActs blank (subKLoop blank P k)
+                (applyActs blank (rv2Loop blank P)
+                  (applyActs blank (rvLoop blank (R - P)) ts)))).V2.focus .right } := rfl
+    rw [hres]
+    exact ⟨pat_right h4.v1 (by omega), pat_right h4.v2 (by omega), h4.cd, h4.cq, h4.ce,
+      h4.cp, h4.cf, Tape.counter'_inc h4.cs, h4.cr⟩
+  -- (6) `Cp` を `0` へ
+  have h6 := pzLoop_enc (blank := blank) (startSym := startSym) (endSym := endSym)
+    (mark := mark) (x := x) P (s + (R - k * P) + 1) (s + (R - k * P) + 1) D 0 0 0 F
+    (S + (R - k * P) + 1) 0 _ (by rw [show (0 : ℕ) + P = P from by omega]; exact h5)
+  rw [advanceProg, applyActs_append, applyActs_append, applyActs_append, applyActs_append,
+    applyActs_append]
+  have e1 : s + (R - k * P) + 1 = s + (R - k * P + 1) := by omega
+  have e2 : S + (R - k * P) + 1 = S + (R - k * P + 1) := by omega
+  rw [e1, e2] at h6
+  exact h6
+
+end Advance
+
+/-! ### 削除ループ `stripLoop2` のテープ実現 -/
+
+section Strip2
+
+variable {blank startSym endSym mark : Fin sc} {x : List (Fin sc)} {k : ℕ}
+  {orcB : Tapes sc → Bool}
+
+/-- `frProg` の後半（`Cr := k*p` の設定と `extendReach`）。 -/
+def frTail (blank endSym : Fin sc) (Fr : ℕ) (t : Tapes sc) : List (Act sc) :=
+  loadR blank (qOf t) (pOf t) ++
+    rProg blank endSym Fr (applyActs blank (loadR blank (qOf t) (pOf t)) t)
+
+theorem frProg_split (blank endSym mark : Fin sc) (orcB : Tapes sc → Bool) (k n Fo Fr : ℕ)
+    (ts : Tapes sc) :
+    frProg blank endSym mark orcB k n Fo Fr ts
+      = fpProg blank endSym mark orcB k n Fo ts ++
+        frTail blank endSym Fr (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts) :=
+  rfl
+
+/-- 削除ループ 1 反復の動作列（`firstOuter` が成功したときだけ `extendReach` と
+切断の前進を行う）。成功判定は `Cd` の probe（成功なら `Cd = 0`）。 -/
+def stripStep (blank endSym mark : Fin sc) (orcB : Tapes sc → Bool) (k n Fo Fr : ℕ)
+    (ts : Tapes sc) : List (Act sc) :=
+  fpProg blank endSym mark orcB k n Fo ts ++
+    (if probe blank (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts).Cd = mark then
+       frTail blank endSym Fr (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts) ++
+         advanceProg blank k
+           (pOf (applyActs blank (frProg blank endSym mark orcB k n Fo Fr ts) ts))
+           (rOf (applyActs blank (frProg blank endSym mark orcB k n Fo Fr ts) ts))
+     else [])
+
+/-- 削除ループ全体の動作列。 -/
+def stripProg2 (blank endSym mark : Fin sc) (orcB : Tapes sc → Bool) (k n Fo Fr : ℕ) :
+    ℕ → Tapes sc → List (Act sc)
+  | 0, _ => []
+  | fuel + 1, ts =>
+      if Tape.read ts.V2 = endSym then []
+      else
+        stripStep blank endSym mark orcB k n Fo Fr ts ++
+          (if probe blank
+              (applyActs blank (fpProg blank endSym mark orcB k n Fo ts) ts).Cd = mark then
+            stripProg2 blank endSym mark orcB k n Fo Fr fuel
+              (applyActs blank (stripStep blank endSym mark orcB k n Fo Fr ts) ts)
+          else [])
+
+/-- **主定理（削除ループ `stripLoop2` のテープ実現とコスト）**。
+`A = 16k + 32`, `B = k + 4`：総動作数は `A * stripLoop2Work + B * fuel` 以下。
+終状態では `Cs` が新しい切断 `stripLoop2 x k bound fuel s` を保持する（`Cf`、`Cr` は不変）。 -/
+theorem stripProg2_spec (hk : 3 ≤ k) (hend : endSym ∉ x) (hmark : mark ≠ blank)
+    {bound n : ℕ} (hn : x.length ≤ n)
+    (horcB : ∀ ts', orcB ts' = decide (pOf ts' < bound)) :
+    ∀ (fuel s : ℕ) (ts : Tapes sc), s ≤ x.length →
+      Enc blank startSym endSym mark x s s ⟨0, 0, 0, 0, 0, s, 0⟩ ts →
+      ((stripProg2 blank endSym mark orcB k n (x.length + 1) (x.length + 1) fuel ts).length
+          ≤ (16 * k + 32) * stripLoop2Work x k bound fuel s + (k + 4) * fuel
+        ∧ (∃ P, stripLoop2 x k bound fuel s + P ≤ x.length ∧
+            Enc blank startSym endSym mark x (stripLoop2 x k bound fuel s)
+              (stripLoop2 x k bound fuel s + P)
+              ⟨(k - 1) * P, 0, 0, P, 0, stripLoop2 x k bound fuel s, 0⟩
+              (applyActs blank
+                (stripProg2 blank endSym mark orcB k n (x.length + 1) (x.length + 1)
+                  fuel ts) ts))) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro s ts _ hE
+      refine ⟨by simp [stripProg2, stripLoop2Work], ⟨0, ?_, ?_⟩⟩
+      · rw [stripLoop2]; omega
+      · rw [stripProg2, applyActs_nil, stripLoop2]
+        simpa using hE
+  | succ fuel ih =>
+      intro s ts hs hE
+      have hdrop : (x.drop s).length = x.length - s := by simp
+      have hnn : (x.drop s).length ≤ n := by omega
+      by_cases hend2 : Tape.read ts.V2 = endSym
+      · -- `s = |x|`：`firstOuter` は `none`
+        have heq : s = x.length := by
+          have := (read_pat_end_iff hend hE.v2).1 hend2
+          omega
+        have hng : ¬ (1 < (x.drop s).length ∧ 1 < bound) := by rw [hdrop]; omega
+        have hfo : firstOuter (x.drop s) k bound (x.length + 1) 1 = none := by
+          rw [firstOuter, if_neg hng]
+        refine ⟨?_, ⟨0, ?_, ?_⟩⟩
+        · rw [stripProg2, if_pos hend2]
+          simp
+        · rw [stripLoop2]
+          simp only [hfo]
+          omega
+        · rw [stripProg2, if_pos hend2, applyActs_nil, stripLoop2]
+          simp only [hfo]
+          simpa using hE
+      · have hslt : s < x.length := by
+          have hne : s ≠ x.length := fun hc => hend2 (read_pat_end hE.v2 hc)
+          omega
+        obtain ⟨hfcost, hfsome, hfex, hfnone⟩ := fpProg_spec (blank := blank)
+          (startSym := startSym) (endSym := endSym) (mark := mark) (x := x) (k := k)
+          (bound := bound) (Fo := x.length + 1) (n := n) hk hend hmark hslt hnn horcB hE
+        obtain ⟨FO, hFO⟩ : ∃ FO, firstOuterWork (x.drop s) k bound (x.length + 1) 1 = FO :=
+          ⟨_, rfl⟩
+        rw [hFO] at hfcost
+        rcases hfo : firstOuter (x.drop s) k bound (x.length + 1) 1 with _ | ⟨p, m⟩
+        · -- 失敗：切断はそのまま
+          obtain ⟨P, hP1, hP2, hP3⟩ := hfnone hfo
+          have hprobe : ¬ (probe blank
+              (applyActs blank (fpProg blank endSym mark orcB k n (x.length + 1) ts) ts).Cd
+                = mark) := by
+            intro hc
+            have hcd : Tape.CounterView' blank mark
+                (applyActs blank (fpProg blank endSym mark orcB k n (x.length + 1) ts) ts).Cd
+                ((k - 1) * P) := hP3.cd
+            have h0 := (probe_iff hmark hcd).1 hc
+            have hle : P ≤ (k - 1) * P := Nat.le_mul_of_pos_left P (by omega)
+            omega
+          have hstep : stripStep blank endSym mark orcB k n (x.length + 1) (x.length + 1) ts
+              = fpProg blank endSym mark orcB k n (x.length + 1) ts := by
+            rw [stripStep, if_neg hprobe]
+            simp
+          have hprog : stripProg2 blank endSym mark orcB k n (x.length + 1) (x.length + 1)
+              (fuel + 1) ts = fpProg blank endSym mark orcB k n (x.length + 1) ts := by
+            rw [stripProg2, if_neg hend2, hstep, if_neg hprobe]
+            simp
+          refine ⟨?_, ⟨P, ?_, ?_⟩⟩
+          · rw [hprog, stripLoop2Work]
+            simp only [hfo, hFO, Nat.add_zero]
+            have hmono : (2 * k + 22) * FO ≤ (16 * k + 32) * FO :=
+              Nat.mul_le_mul_right FO (by omega)
+            have hj : k + 4 ≤ (k + 4) * (fuel + 1) :=
+              Nat.le_mul_of_pos_right _ (by omega)
+            omega
+          · rw [stripLoop2]
+            simp only [hfo]
+            omega
+          · rw [hprog, stripLoop2]
+            simp only [hfo]
+            exact hP3
+        · -- 成功：`extendReach` して切断を進める
+          obtain ⟨hEnc1, hwk⟩ := hfsome p m hfo
+          have hprobe : probe blank
+              (applyActs blank (fpProg blank endSym mark orcB k n (x.length + 1) ts) ts).Cd
+                = mark := by
+            have hcd : Tape.CounterView' blank mark
+                (applyActs blank (fpProg blank endSym mark orcB k n (x.length + 1) ts) ts).Cd
+                0 := hEnc1.cd
+            exact (probe_iff hmark hcd).2 rfl
+          have hp : 0 < p := firstOuter_pos (x.drop s) k bound _ 1 p m (by omega) hfo
+          have hm : m = p + (k - 1) * p := firstOuter_snd (x.drop s) k bound _ 1 p m hfo
+          have hmk : m = k * p := by
+            have : k * p = (k - 1) * p + p := by
+              have hkk : k = (k - 1) + 1 := by omega
+              calc k * p = ((k - 1) + 1) * p := by rw [← hkk]
+                _ = (k - 1) * p + p := by ring
+            omega
+          obtain ⟨hEnc2, hrcost, hwk2, hmr, hrle⟩ := frProg_spec (blank := blank)
+            (startSym := startSym) (endSym := endSym) (mark := mark) (x := x) (k := k)
+            (bound := bound) (Fo := x.length + 1) (n := n) hk hend hmark hslt hnn horcB hE hfo
+          obtain ⟨r, hr⟩ : ∃ r, extendReach (x.drop s) p (x.length + 1) m = r := ⟨_, rfl⟩
+          rw [hr] at hEnc2 hmr hrle
+          obtain ⟨ER, hER⟩ : ∃ ER, extendReachWork (x.drop s) p (x.length + 1) m = ER :=
+            ⟨_, rfl⟩
+          rw [hER] at hrcost hrle
+          rw [hFO] at hrcost hwk2
+          have hr' : extendReach (x.drop s) p (x.length + 1) (k * p) = r := by
+            rw [← hmk]; exact hr
+          have hER' : extendReachWork (x.drop s) p (x.length + 1) (k * p) = ER := by
+            rw [← hmk]; exact hER
+          have hsr : s + r ≤ x.length := pat_le hEnc2.v2
+          have hpOf : pOf (applyActs blank
+              (frProg blank endSym mark orcB k n (x.length + 1) (x.length + 1) ts) ts) = p :=
+            pOf_eq hEnc2
+          have hrOf : rOf (applyActs blank
+              (frProg blank endSym mark orcB k n (x.length + 1) (x.length + 1) ts) ts) = r :=
+            rOf_eq hEnc2
+          have hkp : k * p ≤ r := by omega
+          have hpr : p ≤ r := by
+            have : p ≤ k * p := Nat.le_mul_of_pos_left p (by omega)
+            omega
+          have hfit : s + (r - k * p + 1) ≤ x.length := by omega
+          have hadv := advanceProg_enc (blank := blank) (startSym := startSym)
+            (endSym := endSym) (mark := mark) (x := x) (k := k) hkp hpr hfit hEnc2
+          -- 新しい切断
+          have hs' : stripLoop2 x k bound (fuel + 1) s
+              = stripLoop2 x k bound fuel (s + (r - k * p + 1)) := by
+            rw [stripLoop2]
+            simp only [hfo, hr']
+          have hstep : stripStep blank endSym mark orcB k n (x.length + 1) (x.length + 1) ts
+              = frProg blank endSym mark orcB k n (x.length + 1) (x.length + 1) ts ++
+                advanceProg blank k p r := by
+            rw [stripStep, if_pos hprobe, hpOf, hrOf, frProg_split]
+            simp [List.append_assoc]
+          have hnext : Enc blank startSym endSym mark x (s + (r - k * p + 1))
+              (s + (r - k * p + 1)) ⟨0, 0, 0, 0, 0, s + (r - k * p + 1), 0⟩
+              (applyActs blank
+                (stripStep blank endSym mark orcB k n (x.length + 1) (x.length + 1) ts) ts) := by
+            rw [hstep, applyActs_append, frProg_split, applyActs_append]
+            rw [frProg_split, applyActs_append] at hadv
+            exact hadv
+          obtain ⟨hrc, hre⟩ := ih (s + (r - k * p + 1)) _ (by omega) hnext
+          have hprog : stripProg2 blank endSym mark orcB k n (x.length + 1) (x.length + 1)
+              (fuel + 1) ts
+              = stripStep blank endSym mark orcB k n (x.length + 1) (x.length + 1) ts ++
+                stripProg2 blank endSym mark orcB k n (x.length + 1) (x.length + 1) fuel
+                  (applyActs blank
+                    (stripStep blank endSym mark orcB k n (x.length + 1) (x.length + 1) ts) ts) := by
+            rw [stripProg2, if_neg hend2, if_pos hprobe]
+          refine ⟨?_, ?_⟩
+          · rw [hprog, List.length_append, hstep, List.length_append, stripLoop2Work]
+            simp only [hfo, hFO, hER', hr']
+            have hadvlen := advanceProg_length blank (k := k) (P := p) (R := r) hpr hkp
+            obtain ⟨W2, hW2⟩ : ∃ W2, stripLoop2Work x k bound fuel (s + (r - k * p + 1)) = W2 :=
+              ⟨_, rfl⟩
+            rw [hW2] at hrc
+            rw [hstep] at hrc
+            rw [hW2]
+            obtain ⟨A, hA⟩ : ∃ A, 16 * k + 32 = A := ⟨_, rfl⟩
+            rw [hA] at hrc ⊢
+            have hpFO : p ≤ FO := by
+              have : p ≤ (k - 1) * p := Nat.le_mul_of_pos_left p (by omega)
+              omega
+            have hkpFO : k * p ≤ k * FO := Nat.mul_le_mul_left k hpFO
+            have hexp : A * (FO + (ER + W2)) = A * FO + A * ER + A * W2 := by ring
+            have hkFO : 14 * (k * FO) ≤ (14 * k) * FO := by
+              have : 14 * (k * FO) = (14 * k) * FO := by ring
+              omega
+            have hm1 : (2 * k + 32) * FO + (14 * k) * FO ≤ A * FO := by
+              calc (2 * k + 32) * FO + (14 * k) * FO = (2 * k + 32 + 14 * k) * FO := by ring
+                _ ≤ A * FO := Nat.mul_le_mul_right FO (by omega)
+            have hm2 : 14 * ER ≤ A * ER := Nat.mul_le_mul_right ER (by omega)
+            have hrkp : r ≤ k * p + ER := by omega
+            have hkp2 : 11 * r + 3 * (k * p) ≤ 14 * (k * FO) + 11 * ER := by omega
+            have hfe : (k + 4) * (fuel + 1) = (k + 4) * fuel + (k + 4) := by ring
+            omega
+          · rw [hprog, applyActs_append, hs']
+            obtain ⟨P', hP'1, hP'2⟩ := hre
+            exact ⟨P', hP'1, hP'2⟩
+
+
+/-- `Cd` を `n` 回減らす（2 動作／回）。 -/
+def dzUnit (blank : Fin sc) : List (Act sc) :=
+  [Act.Cd blank .left, Act.Cd blank .stay]
+
+def dzLoop (blank : Fin sc) : ℕ → List (Act sc)
+  | 0 => []
+  | n + 1 => dzUnit blank ++ dzLoop blank n
+
+@[simp] theorem dzLoop_length (blank : Fin sc) (n : ℕ) : (dzLoop blank n).length = 2 * n := by
+  induction n with
+  | zero => simp [dzLoop]
+  | succ n ih => simp only [dzLoop, List.length_append, dzUnit, ih]; simp; omega
+
+theorem applyActs_dzUnit (ts : Tapes sc) :
+    applyActs blank (dzUnit blank) ts =
+      { ts with
+        Cd := Tape.step blank (Tape.step blank ts.Cd blank .left) blank .stay } := rfl
+
+theorem dzLoop_enc : ∀ (n a b D Q E P F S R : ℕ) (ts : Tapes sc),
+    Enc blank startSym endSym mark x a b ⟨D + n, Q, E, P, F, S, R⟩ ts →
+      Enc blank startSym endSym mark x a b ⟨D, Q, E, P, F, S, R⟩
+        (applyActs blank (dzLoop blank n) ts) := by
+  intro n
+  induction n with
+  | zero => intro a b D Q E P F S R ts hE; simpa [dzLoop] using hE
+  | succ n ih =>
+      intro a b D Q E P F S R ts hE
+      have hE' : Enc blank startSym endSym mark x a b ⟨(D + n) + 1, Q, E, P, F, S, R⟩ ts := by
+        have e1 : D + (n + 1) = (D + n) + 1 := by omega
+        rw [e1] at hE; exact hE
+      have hstep : Enc blank startSym endSym mark x a b ⟨D + n, Q, E, P, F, S, R⟩
+          (applyActs blank (dzUnit blank) ts) := by
+        rw [applyActs_dzUnit]
+        exact ⟨hE'.v1, hE'.v2, by simpa using Tape.counter'_dec (n := D + n) hE'.cd,
+          hE'.cq, hE'.ce, hE'.cp, hE'.cf, hE'.cs, hE'.cr⟩
+      exact by simp only [dzLoop, applyActs_append]; exact ih a b D Q E P F S R _ hstep
+
+/-- 削除ループ終了後の後始末：`V2` を切断へ戻し、`Cd`/`Cp` を `0` にして「まっさら」な状態に
+する。動作数 `(2k+1)*P`。 -/
+def cleanProg (blank : Fin sc) (k P : ℕ) : List (Act sc) :=
+  pvLoop blank P ++ dzLoop blank ((k - 1) * P)
+
+theorem cleanProg_length (blank : Fin sc) (k P : ℕ) :
+    (cleanProg blank k P).length = 3 * P + 2 * ((k - 1) * P) := by
+  simp [cleanProg]
+
+theorem cleanProg_enc {s P F : ℕ} {ts : Tapes sc}
+    (hE : Enc blank startSym endSym mark x s (s + P) ⟨(k - 1) * P, 0, 0, P, F, s, 0⟩ ts) :
+    Enc blank startSym endSym mark x s s ⟨0, 0, 0, 0, F, s, 0⟩
+      (applyActs blank (cleanProg blank k P) ts) := by
+  have h1 := pvLoop_enc (blank := blank) (startSym := startSym) (endSym := endSym)
+    (mark := mark) (x := x) P s s ((k - 1) * P) 0 0 0 F s 0 ts
+    (by rw [show (0 : ℕ) + P = P from by omega]; exact hE)
+  have h2 := dzLoop_enc (blank := blank) (startSym := startSym) (endSym := endSym)
+    (mark := mark) (x := x) ((k - 1) * P) s s 0 0 0 0 F s 0 _
+    (by rw [show (0 : ℕ) + (k - 1) * P = (k - 1) * P from by omega]; exact h1)
+  rw [cleanProg, applyActs_append]
+  exact h2
+
+end Strip2
+
+/-! ## 14. 小例による健全性チェック -/
 
 section Examples
 
@@ -3162,54 +3917,67 @@ example : (cdIncs (0 : Fin 3) 7).length = 7 := by decide
 
 end Examples
 
-/-! ## 14. 到達点と残り
+/-! ## 15. 到達点と残り
 
 ### 完成しているもの（すべて sorry なし）
 
-* **配置**（§1–§3）：文字テープ 2 本 `V1`/`V2`（語 `startSym :: (x ++ [endSym])`、
-  ヘッドは `x` の絶対添字）とマーカ付き単進カウンタ 7 本
-  `Cd`（予算 `(k-1)p - q`）、`Cq`、`Ce`、`Cp`、`Cf`、`Cs`（切断）、`Cr`（reach）。
-  `v = x.drop s` は作り直さず、`v` の添字 `i` を `x` の添字 `s + i` として読む。
+* **配置**（§1–§3）：文字テープ 2 本 `V1`/`V2`（語 `startSym :: (x ++ [endSym])`、ヘッドは
+  `x` の絶対添字）とマーカ付き単進カウンタ 7 本 `Cd`（予算 `(k-1)p-q`）、`Cq`、`Ce`、`Cp`、
+  `Cf`、`Cs`（切断）、`Cr`（reach）。`v = x.drop s` は作り直さず `v` の添字 `i` を `x` の
+  添字 `s+i` として読む。
 * **内側の自己照合ループ**（§4–§5）：`mProg_spec` / `mProg_length : ≤ 5 * mWork` /
-  `mSteps_firstInner`。比較 `q < (k-1)*p` は `Cd` の probe で**実際に**判定する。
-* **`extendReach`**（§6）：`rProg_spec` / `rProg_length : ≤ 3 * rWork` /
-  `rSteps_extendReach`。
+  `mSteps_firstInner`。`q < (k-1)*p` は `Cd` の probe で実際に判定する。
+* **`extendReach`**（§6）：`rProg_spec` / `rProg_length : ≤ 3 * rWork` / `rSteps_extendReach`。
 * **外側 1 反復の再配置**（§7–§8）：`rewindLoop`（`⌈q/k⌉` を数える mod `k` スケジュール）、
-  `maxOneActs`、`shiftLoop`、合成 `shiftPhase` と `shiftPhase_enc'`（一般形）。
-* **`firstOuter` / `firstPeriod`**（§9）：`oProg_spec`
-  （`≤ (2k+22) * firstOuterWork`、および `(k-1)*p₁ ≤ firstOuterWork`）、`fpProg_spec`。
-* **`firstPeriod` + `extendReach`**（§10）：`loadR`（`Cr := Cq + Cp`）、`frProg_spec`
-  （`≤ (k-1)+2 + (2k+32)*firstOuterWork + 3*extendReachWork`、出力 `Cp = p₁`, `Cr = r`）。
-* **`_second_period` の内側ループ**（§11）：`sProg_spec`（`≤ 3 * sWork`）、
-  `sSteps_secondInner`、`sInner_none_iff`（中断とテープ読み取り `sAbort` の同値）。
-* **`_second_period` の外側ループ**（§12）：`periodShift`（周期ずらし、`V2` は不動）、
-  `soProg_spec`：**`≤ (k+12) * secondOuterWork + (k+9)*q + 2`**（入口 `q=0` なら
-  `≤ (k+12) * secondOuterWork + 2`）。償却は「`q` の減少ぶんを払う」形で、
-  ポテンシャル `(k+2)p + q` を使わずに `A * work + B` に収まる。
-  `spProg_spec` は `secondPeriod` への系。
-  中断条件と `k*first ≤ q' ∧ q' ≤ r` はオラクル（`GSScanTapes` と同じ扱い）。
-* **再配置**（§12）：`repoProg`（`extendReach` 直後 `(s+(r-p₁), s+r)` から第 2 相の入口
-  `(s, s+1)`、`Cf := p₁`、`Cp := 1`、`Cr` 保存）、動作数 `≤ 8r + 17p₁`。
+  `maxOneActs`、`shiftLoop`、`shiftPhase_enc'`（一般形）/`shiftPhase_enc`。
+* **`firstOuter`（`bound` 付き）**（§9）：`oProg` は番人 `endSym`（`p < |v|`）に加えて
+  候補上限 `p < bound` をオラクル `orcB` で判定する。`oProg_spec`：
+  `≤ (2k+22) * firstOuterWork (x.drop s) k bound fuel p`、成功時のテープ内容と
+  `(k-1)*p' ≤ firstOuterWork`、失敗時（`none`）は「きれいな状態」
+  `Enc x s (s+P) ⟨(k-1)P,0,0,P,F,S,R⟩`（`0 < P`）に止まる。
+  燃料非依存性 `firstInner_fuel` により内側燃料 `Fi` は `|v|+1` 以上なら何でもよい。
+* **`fpProg` / `frProg`**（§9–§10）：`initActs`、`loadR`、
+  `frProg_spec`：`≤ (k-1)+2 + (2k+32)*firstOuterWork + 3*extendReachWork`、出力
+  `Cp = p₁`、`Cr = r`、`V1 = s+(r-p₁)`、`V2 = s+r`、および `m ≤ r ≤ m + extendReachWork`。
+* **`_second_period`**（§11–§12）：内側 `sProg_spec`（`≤ 3 * sWork`）、
+  `sInner_none_iff`（中断のテープ判定）、周期ずらし `periodShift`、外側
+  `soProg_spec`：**`≤ (k+12) * secondOuterWork + (k+9)*q + 2`**（入口 `q=0` なら `+2` のみ）。
+  償却は `q` の減少ぶんを払う形で、ポテンシャル `(k+2)p+q` を使わずに済む。
+  `spProg_spec` は `secondPeriod` への系。再配置 `repoProg`（`≤ 8r + 17p₁`）。
 * **外側 1 反復の合成**（§12）：`stepProg_spec`：
-  **`≤ (2k+65) * decomposeStepWork x k s + (k+3)`**、
-  終状態は `Cf = p₁`、`Cr = r`、`Cs` 不変、第 2 周期があれば `Cp = p₂`。
+  **`≤ (2k+65) * decomposeStepWork x k s + (k+3)`**。
+* **新しい削除規則**（§13）：切断の前進 `advanceProg`
+  （`V1`/`V2` を切断へ戻し、`Cr` から `k` 回 `Cp` を引いて `d = r - k*p + 1` を作り、
+  `Cs` へ流し込みながら両ヘッドを右へ）。`advanceProg_enc` / `advanceProg_length :
+  ≤ 11r + 3(k*p) + 3`。1 反復 `stripStep`（`firstOuter` の成否は `Cd` の probe で判定）と
+  ループ `stripProg2`、そして
+  **`stripProg2_spec : ≤ (16k+32) * stripLoop2Work x k bound fuel s + (k+4) * fuel`**
+  （`PalPeg.GSDecompose2` の `stripLoop2` / `stripLoop2Work` をそのまま鏡写しにしている）。
+  終状態は `Cs = stripLoop2 x k bound fuel s` を保持する「きれいな状態」
+  `Enc x s' (s'+P) ⟨(k-1)P,0,0,P,0,s',0⟩`。後始末 `cleanProg`（`(2k+1)*P` 動作）で
+  まっさらな状態 `Enc x s' s' ⟨0,0,0,0,0,s',0⟩` に戻せる。
 
-### 未実装
+### 未実装（`decomposeLoop2` / `decompose2_on_tapes`）
 
-* **新しい削除規則 `strip2`**（切断を `s + (r - k*p₁ + 1)` へ進める版）と
-  `decomposeLoop2` / `decompose2_on_tapes`。
-  指標レベルの `decompose2` / `stripLoop2` / `decompose2Work`（`PalPeg/GSDecompAlg.lean`
-  に別担当が定義中）がまだ存在しないため、定義を鏡写しにできない。
-  テープ側で必要な部品は次の 2 つで、いずれも本ファイルの雛形の繰り返しで書ける：
-  1. `Cr` から `k` 回 `Cf`(= `p₁`) を引いて `1` を足し、`d = r - k*p₁ + 1` を得る
-     （`prLoop` と同型のループを `k` 回、`Ce` 退避つき。動作数 `O(k*p₁ + r)`）。
-  2. `d` を `Cs` へ流し込みつつ `V1` を `d` 右へ動かし、`V2`・他カウンタを新しい切断で
-     初期化し直す（`O(d + r + p₂)`。捨てた接頭辞 `d` と当該反復の仕事に課金する）。
-  そのうえで `oProg`/`stepProg` と同じ形の外側帰納法で
-  `decompose2_on_tapes : cost ≤ A * decompose2Work + B * (反復数)` が得られる。
-  1 反復ぶんの `(2k+65) * decomposeStepWork + (k+3)` は `stepProg_spec` で済んでいる。
-* `stripLoop` の `p < bound` 判定（`bound = p₂`）：`V1` の添字 `s + p₂` にマーカを書いて
-  読み取りで判定する（書き込みに `O(p₂)` の 1 パス、当該反復に課金）。
+必要な部品はすべて揃っていて、残りは次の 3 点である。
+
+1. **オラクル `orcB` の一本化**。`stripProg2` の上限は `bound = p₂` だが、`p₂` は反復ごとに
+   変わるので、プログラム側では `orcB ts' = decide (pOf ts' < fOf ts')`（`Cp` と `Cf` の
+   平行歩行）に統一し、削除ループの間 `Cf = p₂` を保つのが自然。そのため `oProg_spec` の
+   仮定 `horcB : ∀ ts', orcB ts' = decide (pOf ts' < bound)` を
+   「ループ状態 `Enc x s (s+p') ⟨(k-1)p',0,0,p',F,S,R⟩` 上でのみ
+   `oCondB ↔ (p' < |v| ∧ p' < bound)`」という形に弱めればよい
+   （`F`, `S`, `R` を `∀` の外へ出す必要がある）。
+2. **第 2 相の後始末**。`stepProg` 終了後（`V1 = s+q`, `V2 = s+p₂+q`, `Cp = p₂`,
+   `Cf = p₁`, `Cr = r`）から削除ループの入口（`Cf = p₂`、他は `0`、両ヘッド `s`）へ戻す
+   プログラム。`rvLoop`/`pvLoop`/`pzLoop`/`dzLoop`/`pfLoop` の組み合わせで `O(p₂+q+r+p₁)`。
+   課金には `p₂ ≤ 1 + 2*secondOuterWork` が要る（`oProg_spec` の `none` 節に
+   `P ≤ p + firstOuterWork` を足したのと同じ議論を `soProg_spec` にも足す）。
+3. **`decomposeLoop2` の外側帰納法**。`stepProg_spec` と `stripProg2_spec` と `cleanProg` を
+   つなぐだけで、形は `oProg_spec` / `stripProg2_spec` と同じ。
+   `decomposeLoop2Work x k fuel s = decomposeStepWork x k s + (… + stripLoop2Work … + 再帰)`
+   なので、1 反復あたり `(2k+65)*decomposeStepWork + (16k+32)*stripLoop2Work + O(k)` となり、
+   全体で `decompose2_on_tapes : ≤ (16k+65) * decompose2Work x k + O(k) * (反復数)` が出る。
 -/
 
 end PalPeg.GSPre
