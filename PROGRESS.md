@@ -251,3 +251,7 @@ lake build
 - 進捗（コミット f4d0e1c まで）：Prologue、README 更新、PassSum2/3（(j,j+2) 補題、同周期領域の右端一致、
   兄弟の成長条項）。`PassPeriodSum` は依然未証明（3 回の試行が「pass 固有の着地補題が要る」で一致）。
   稼働中：前処理 strip2 のテープ化、StageTapes（段ライフサイクル）。残り：全体機械、最終定理。
+- 進捗（コミット 479e7c7 まで）：StageTapes（段の全ライフサイクル、`stage_tapes_spec`）。稼働中：
+  strip2 テープ化、`hgm0`（起動フェーズ分散）の解消、FullMachineTapes（全体機械：常駐 ≤3 段、
+  入力コピーは「前段の凍結コピー＋新鮮なフロンティア」のペア方式）、PatternTapesPair（ペア源からのセットアップ）。
+  残り：`StructuredMachine` 化（有限制御・テープ数固定）と最終定理。
