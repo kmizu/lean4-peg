@@ -17,9 +17,10 @@ import PalPeg.GSDecompose2Work
    `(s, effPeriod (x.drop s) p₁, effReach p₁ r)`（`x = (w.take L).reverse`,
    `(s,p₁,r) = decompose2 x 8`）と、`stage_tapes_spec'` が要求する
    `hres` / `H : GSCore` / `hs` / `hkp` の各事実（`prep_res_eq`）。
-2. `hkp` の**退化ケースの不能性**（`prep_kp_zero_absurd`）：`p₁ = 0` のとき
-   `8 * effPeriod (x.drop s) p₁ ≤ L` は `L ≥ 1` で恒偽である。
-   つまり `stage_tapes_spec'` は `p₁ ≠ 0` の段でしか使えない。
+2. `hkp`：`stage_tapes_spec'` が現在要求する予算 `8 * pe ≤ 5 * S` は退化ケース
+   `p₁ = 0` も含めて**無条件**に成り立つ（`prep_kp_5S` / `prep_res_eq5`）。
+   なお素朴な形 `8 * effPeriod (x.drop s) p₁ ≤ L` は `p₁ = 0` のとき恒偽であり
+   （`prep_kp_zero_absurd`）、`rateS` を上げて予算を緩めたのはこのためである。
 3. `decompose2` の仕事量の線形上界（周期和の仮説 `hsum` つき）と、そこから出る
    `decProg` の長さの上界（`prep_prog_len_le`）。この上界は
    `decompose2_on_tapes` の第 2 項が `|x|` について **2 次**であるため、
@@ -131,6 +132,19 @@ theorem prep_kp_zero_absurd {w : List (Fin sc)} {L : ℕ} (hL : 0 < L) (hw : L �
   have hb : 7 * (rawRes w L).1 < L := prep_cut_bound hL hw
   omega
 
+/-- **`hkp`（無条件版）**：`StageTapes.stage_tapes_spec'` が実際に要求する予算
+`k * pe ≤ 5 * S`（`k = 8`）は、退化ケース `p₁ = 0` も含めて無条件に成り立つ。
+非退化なら `8 * pe ≤ S/2`、退化なら `pe = |v| + 1 ≤ S/2 + 1` なので
+`8 * pe ≤ 4 * S + 8 ≤ 5 * S`（`8 ≤ S`）。 -/
+theorem prep_kp_5S {w : List (Fin sc)} {S : ℕ} (hS : 8 ≤ S) (hw : S / 2 ≤ w.length) :
+    8 * effPeriod ((stagePat w (S / 2)).drop (rawRes w (S / 2)).1)
+        (rawRes w (S / 2)).2.1 ≤ 5 * S := by
+  by_cases hp : (rawRes w (S / 2)).2.1 = 0
+  · rw [effPeriod, if_pos hp, List.length_drop, stagePat_length hw]
+    omega
+  · have h := prep_kp (w := w) (L := S / 2) hw hp
+    omega
+
 /-! ## 4. `stage_tapes_spec'` が要求する事実の束 -/
 
 /-- **主補題 `prep_res_eq`**：`prepRes` を `PrepOnTapes.res` に据えたとき、
@@ -146,6 +160,18 @@ theorem prep_res_eq (w : List (Fin sc)) (S : ℕ) (hS : 0 < S / 2) (hw : S / 2 �
     rfl, prep_core w (S / 2), prep_cut_lt hS hw, ?_, ?_⟩
   · intro h hp; exact prep_kp_zero_absurd hS hw hp h
   · intro hp; exact prep_kp hw hp
+
+/-- **`prep_res_eq5`**：`StageTapes.stage_tapes_spec'` が現在要求する形の束。
+`hkp` は `5 * S` 版なので退化ケースも含めて**無条件**に成り立つ。 -/
+theorem prep_res_eq5 (w : List (Fin sc)) (S : ℕ) (hS : 8 ≤ S) (hw : S / 2 ≤ w.length) :
+    ∃ s p₁ r,
+      prepRes w (S / 2)
+          = (s, effPeriod ((stagePat w (S / 2)).drop s) p₁, effReach p₁ r)
+        ∧ GSCore (stagePat w (S / 2)) 8 s p₁ r
+        ∧ s < S / 2
+        ∧ 8 * effPeriod ((stagePat w (S / 2)).drop s) p₁ ≤ 5 * S :=
+  ⟨(rawRes w (S / 2)).1, (rawRes w (S / 2)).2.1, (rawRes w (S / 2)).2.2,
+    rfl, prep_core w (S / 2), prep_cut_lt (by omega) hw, prep_kp_5S hS hw⟩
 
 /-! ## 5. 仕事量とプログラム長 -/
 

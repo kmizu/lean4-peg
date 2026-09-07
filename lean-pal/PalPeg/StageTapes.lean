@@ -15,7 +15,7 @@ import PalPeg.EndToEnd2
 |---|---|
 | `n ≤ S/2` | 休止（段は未生成） |
 | `S/2 < n ≤ 3(S/4)` | 前処理 `PrepOnTapes.prog` を毎ラウンド `rateP` 動作ずつ挽く ＋ 中央仕事 `mround` |
-| `3(S/4) < n ≤ S` | 準備 `PatternTapes.setupProgram` を毎ラウンド `rateS = 36` 動作ずつ挽く ＋ `mround` |
+| `3(S/4) < n ≤ S` | 準備 `PatternTapes.setupProgram` を毎ラウンド `rateS = 160` 動作ずつ挽く ＋ `mround` |
 | `S < n ≤ S + |u|` | 照合器の起動フェーズ（`≤ 86` 動作／ラウンド） ＋ `mround` |
 | `S + |u| < n < 4S` | 照合器 `sround` ＋ 中央仕事 `mround` |
 
@@ -99,6 +99,36 @@ theorem sgsteps_done (blank : Fin sc) {R : ℕ} :
 
 /-! ## 2. 前処理のテープ実装インタフェース -/
 
+/-- **前処理の入力仮定**。段が生まれる時点（絶対ラウンド `S/2`）に 12 本のテープが
+満たしている配置：入力コピー `sIn` にはパターン `w.take L` が載りヘッドは添字 `L - 1`、
+`sT` / `sX2` にはテキスト、`sU` / `sP` は空、単進カウンタ 7 本はすべて `0`。
+`PatternTapes.SetupPre` との差は、`sCs` / `sC1` / `sRp` が「まだ `0`」である点だけで、
+それらを埋めるのが前処理の仕事である。 -/
+structure PrepPre (blank mark : Fin sc) (L : ℕ) (w Text : List (Fin sc))
+    (ts : Tapes sc) : Prop where
+  /-- パターン長は正。 -/
+  hpos : 0 < L
+  /-- 到着済みの入力はパターンを含む。 -/
+  hle : L ≤ w.length
+  /-- 入力コピー `sIn`：ヘッドは添字 `L - 1`。 -/
+  inb : Tape.SeqView blank (ts sIn) w (L - 1)
+  /-- 検証器の接頭辞テープは空。 -/
+  emptyU : Tape.StackView blank (ts sU) []
+  /-- 走査器のパターンテープは空。 -/
+  emptyP : Tape.StackView blank (ts sP) []
+  /-- テキスト 1 本目。 -/
+  txt : Tape.SeqView blank (ts sT) (TextFeed.padW blank Text 0) 0
+  /-- テキスト 2 本目。 -/
+  txt2 : Tape.SeqView blank (ts sX2) (TextFeed.padW blank Text 0) 0
+  /-- 作業用カウンタはすべて `0`。 -/
+  cs : Tape.CounterView' blank mark (ts sCs) 0
+  c1 : Tape.CounterView' blank mark (ts sC1) 0
+  c2 : Tape.CounterView' blank mark (ts sC2) 0
+  ap : Tape.CounterView' blank mark (ts sAp) 0
+  an : Tape.CounterView' blank mark (ts sAn) 0
+  rp : Tape.CounterView' blank mark (ts sRp) 0
+  rn : Tape.CounterView' blank mark (ts sRn) 0
+
 /-- **前処理のインタフェース**（`GSPreprocessTapes` の抽象化）。
 入力コピー `sIn` に載っているパターン `w.take L` から、切断点・周期・到達域の
 単進カウンタ（`sCs` / `sC1` / `sRp`）を作り、`PatternTapes.SetupPre` を満たす
@@ -113,8 +143,8 @@ structure PrepOnTapes (sc : ℕ) (blank mark : Fin sc) where
   /-- 費用の切片。 -/
   Dp : ℕ
   len_le : ∀ (x : List (Fin sc)) (L : ℕ) (ts : Tapes sc), (prog x L ts).length ≤ Cp * L + Dp
-  post : ∀ (w Text : List (Fin sc)) (L : ℕ) (ts : Tapes sc), 0 < L → L ≤ w.length →
-    (res w L).1 < L →
+  post : ∀ (w Text : List (Fin sc)) (L : ℕ) (ts : Tapes sc),
+    PrepPre blank mark L w Text ts → (res w L).1 < L →
     SetupPre blank mark (res w L).1 L (res w L).2.1 (res w L).2.2 w Text
       (run blank (prog (w.take L) L ts) ts)
 
@@ -123,7 +153,7 @@ def rateP {blank mark : Fin sc} (Pre : PrepOnTapes sc blank mark) : ℕ :=
   2 * Pre.Cp + Pre.Dp
 
 /-- 準備フェーズ（`setupProgram`）を挽く速度。 -/
-def rateS : ℕ := 36
+def rateS : ℕ := 160
 
 /-! ## 3. スケジュールの算術 -/
 
@@ -138,13 +168,13 @@ theorem prep_rate_ok {Cp Dp S : ℕ} (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
   omega
 
 /-- **準備フェーズは `S/4` ラウンドで終わる**：`setup_spec` の上界
-`7 * (S/2 + k*p₁ + 1)` は `(S/4) * 36` 以下（`k * p₁ ≤ S/2` のとき）。 -/
+`7 * (S/2 + k*p₁ + 1)` は `(S/4) * 160` 以下（`k * p₁ ≤ 5 * S` のとき）。 -/
 theorem setup_rate_ok {S k p₁ : ℕ} (hS : 8 ≤ S) (hq : 4 * (S / 4) = S)
-    (hkp : k * p₁ ≤ S / 2) :
+    (hkp : k * p₁ ≤ 5 * S) :
     7 * (S / 2 + k * p₁ + 1) ≤ (S / 4) * rateS := by
-  have hq1 : 1 ≤ S / 4 := by omega
+  have hq1 : 2 ≤ S / 4 := by omega
   have hhalf : S / 2 = 2 * (S / 4) := by omega
-  have hexp : (S / 4) * rateS = 36 * (S / 4) := by rw [rateS]; ring
+  have hexp : (S / 4) * rateS = 160 * (S / 4) := by rw [rateS]; ring
   omega
 
 /-! ## 3b. 準備フェーズのテープから照合器を起こす -/
@@ -596,8 +626,8 @@ theorem pg_window_setup (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
     show setupGrind blank startSym endSym k S (3 * (S / 4) + 1 + j + 1) _ = _
     rw [setupGrind, if_neg (by omega), ih (by omega), sgsteps_succ']
 
-/-- **準備フェーズはラウンド `S` までに完了する**（`k * p₁ ≤ S / 2` のとき）。 -/
-theorem setup_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) {p₁ : ℕ} (hkp : k * p₁ ≤ S / 2)
+/-- **準備フェーズはラウンド `S` までに完了する**（`k * p₁ ≤ 5 * S` のとき）。 -/
+theorem setup_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) {p₁ : ℕ} (hkp : k * p₁ ≤ 5 * S)
     (hsetup : (setupProgram blank startSym endSym k
         (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
           (3 * (S / 4))).pg.ts).length ≤ 7 * (S / 2 + k * p₁ + 1)) :
@@ -625,8 +655,9 @@ theorem setup_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) {p₁ : ℕ} (hkp :
 /-- **`setup_complete'`**：`hsetup` は `PrepOnTapes.post` と `PatternTapes.setup_spec` から
 自動的に従う。すなわち準備フェーズの完了は前処理インタフェースだけに依存する。 -/
 theorem setup_complete' (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Textp : List (Fin sc))
-    (hwlen : S / 2 ≤ w.length) (hcut : (Pre.res w (S / 2)).1 < S / 2)
-    (hkp : k * (Pre.res w (S / 2)).2.1 ≤ S / 2) :
+    (hpp : PrepPre blank mark (S / 2) w Textp init.pg.ts)
+    (hcut : (Pre.res w (S / 2)).1 < S / 2)
+    (hkp : k * (Pre.res w (S / 2)).2.1 ≤ 5 * S) :
     (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg
       = ⟨[], setupRun blank startSym endSym k
           (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
@@ -634,7 +665,7 @@ theorem setup_complete' (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Textp : List (Fin
   have hpc := prep_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
-  have hpre := Pre.post w Textp (S / 2) init.pg.ts (by omega) hwlen hcut
+  have hpre := Pre.post w Textp (S / 2) init.pg.ts hpp hcut
   have hspec := setup_spec (startSym := startSym) (endSym := endSym) (k := k) hpre
   refine setup_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
@@ -682,7 +713,8 @@ theorem stage_tapes_spec'
     (hmb : mark ≠ blank) (hS : 8 ≤ S) (hq : 4 * (S / 4) = S)
     (hres : Pre.res w (S / 2)
       = (s, effPeriod ((w.take (S / 2)).reverse.drop s) p₁, effReach p₁ r))
-    (hkp : k * effPeriod ((w.take (S / 2)).reverse.drop s) p₁ ≤ S / 2)
+    (hkp : k * effPeriod ((w.take (S / 2)).reverse.drop s) p₁ ≤ 5 * S)
+    (hpinit : PrepPre blank mark (S / 2) w (w.drop S) init.pg.ts)
     (hk : 0 < k) (hs : s < S / 2)
     (H : GSCore ((w.take (S / 2)).reverse) k s p₁ r)
     (hC : 0 < A + B')
@@ -728,15 +760,14 @@ theorem stage_tapes_spec'
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
   -- 準備フェーズの出力テープ：`setup_complete'` ＋ `PatternTapes.setup_spec`
   have hcut : (Pre.res w (S / 2)).1 < S / 2 := by rw [hres]; exact hs
-  have hwlen : S / 2 ≤ w.length := by omega
   have hpc := prep_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
-  have hpre := Pre.post w (w.drop S) (S / 2) init.pg.ts (by omega) hwlen hcut
+  have hpre := Pre.post w (w.drop S) (S / 2) init.pg.ts hpinit hcut
   have hsc := setup_complete' (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
     (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq (w.drop S)
-    hwlen hcut (by rw [hres]; exact hkp)
+    hpinit hcut (by rw [hres]; exact hkp)
   have hE : GSVTapes.VEncodes' blank startSym endSym mark u v
       (TextFeed.padW blank (w.drop S) 0) k pe re
       (toGS (ststate D Pre leftSym one zero u v (w.drop S) k pe re cst A B' S w init S).pg.ts,
