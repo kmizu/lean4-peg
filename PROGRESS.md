@@ -388,3 +388,9 @@ lake build
   （`Resumable`＝PC テープでチャンク再開、`stageRoundProg_effect`）完成、全体機械ラウンド本体
   `FullMachineProg`（4 スロット直列化、到着、消去、受理フラグ、`progMachinePM_rounds_effect` 接続）作業中。
   MiddleTapes 核書き換えと `decProgP` は継続中。
+- 進捗（2026-09-10 未明、コミット dc09d00 まで）：`FullMachineProg`（T=260、直列化ラウンド本体、ラウンド帰納、
+  `pal_SAccepts_iff_of`／`pal_recognizedBy_of`；空語 ε の受理は初期フラグの引数化で修正中）。前処理は 12 テープ
+  （符号付きカウンタの核 `orcAB` 完成、第 2 フェーズ仕様の再証明と組み立てを新 agent で継続）。段バンドルを
+  13 スロットに拡張して `PrepInstance` を再埋め込み中。MiddleTapes (1)（窓仮説つき `DecompOnTapes`）着地、
+  (2)–(5) 継続中。ジグザグ検証器のテープ/feed/Prog/段の 4 層と、スロット予定表（`stageInSlot`/`Restart`）の
+  単進カウンタ実現を作業中。最終定理の残り：具体 Prog の差し込み（`hstepF/G/I`）と `hPAL` の接続。
