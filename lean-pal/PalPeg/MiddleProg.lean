@@ -258,6 +258,185 @@ theorem homeLeft_length_le {n iX iX2 iF : ℕ} (h1 : iX ≤ n) (h2 : iX2 ≤ n) 
   simp only [List.length_append, mvX_length, mvX2_length, mvF_length]
   omega
 
+/-! ### 単進マーカで駆動する右歩き（`S3` を消費する）
+
+右歩きにはテープから読める停止条件が無いので、作業テープ `S3` に積んだ単進マーカを
+1 個 pop するごとに 1 歩進む（`uBack` と同じ probe 末尾形）。マーカは歩き終わりに
+消費され切るので、`S3` は前後で空スタックである。
+1 セルあたりの追加マイクロステップは 2 個（pop の消去と次の pop）。 -/
+
+@[simp] theorem tapeOf_tS3 (ts : OvTapes sc) : tapeOf ts (tS 2) = ts.S3 := rfl
+
+/-- `S3` のマーカを 1 個消費するごとに動作 `a` を 1 個実行する動作列。 -/
+def popRun (blank : Fin sc) (a : Act sc) : ℕ → List (Act sc)
+  | 0 => []
+  | n + 1 => Act.S3 blank .stay :: a :: Act.S3 blank .left :: popRun blank a n
+
+@[simp] theorem popRun_length (blank : Fin sc) (a : Act sc) :
+    ∀ n, (popRun blank a n).length = 3 * n := by
+  intro n
+  induction n with
+  | zero => rfl
+  | succ n ih => simp only [popRun, List.length_cons, ih]; omega
+
+/-- 対応する有限制御（数値パラメータなし）。 -/
+def popRunProg (blank : Fin sc) (a : Act sc) : Prog (Act15 sc) (Cond15 sc) :=
+  Prog.loop (Cond15.neq (tS 2) blank) (prAct (Act.S3 blank .stay))
+    (Prog.seq (ACT a) (ACT (Act.S3 blank .left)))
+
+/-- 歩きの先頭に最初の pop を置いたもの。 -/
+def walkByMarkActs (blank : Fin sc) (a : Act sc) (m : ℕ) : List (Act sc) :=
+  Act.S3 blank .left :: popRun blank a m
+
+@[simp] theorem walkByMarkActs_length (blank : Fin sc) (a : Act sc) (m : ℕ) :
+    (walkByMarkActs blank a m).length = 3 * m + 1 := by
+  simp [walkByMarkActs]
+
+/-- **マーカ駆動の歩きの有限制御**。数値パラメータを持たない。 -/
+def walkByMarkProg (blank : Fin sc) (a : Act sc) : Prog (Act15 sc) (Cond15 sc) :=
+  Prog.seq (ACT (Act.S3 blank .left)) (popRunProg blank a)
+
+theorem popRunProg_exec {mark : Fin sc} (hne : mark ≠ blank) (a : Act sc)
+    (ha : ∀ ts : OvTapes sc, (applyAct blank ts a).S3 = ts.S3) :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      (n = 0 ∧ Tape.StackView blank ts.S3 []) ∨
+        (∃ m, n = m + 1 ∧ Tape.StackTopView blank ts.S3 mark (List.replicate m mark)) →
+      ExecA Terminal blank (popRunProg blank a) ts (popRun blank a n) := by
+  intro n
+  induction n with
+  | zero =>
+      intro ts h
+      rcases h with ⟨_, hv⟩ | ⟨m, hm, _⟩
+      · refine execA_of_eq (by simp [popRun]) (execA_loop_stop ?_)
+        simp only [condOf15, tapeOf_tS3, decide_eq_false_iff_not, not_not]
+        exact hv.focus_blank
+      · omega
+  | succ n ih =>
+      intro ts h
+      rcases h with ⟨hc, _⟩ | ⟨m, hm, htop⟩
+      · omega
+      · have hmn : m = n := by omega
+        rw [hmn] at htop
+        have hcond : condOf15 (Cond15.neq (tS 2) blank)
+            (fun j => (tapeOf ts j).focus) = true := by
+          simp only [condOf15, tapeOf_tS3, decide_eq_true_eq]
+          rw [htop.focus_eq]; exact hne
+        have herase : Tape.StackView blank
+            (applyAct blank ts (Act.S3 blank .stay)).S3 (List.replicate n mark) :=
+          Tape.pop_erase htop
+        have h1 : ExecA Terminal blank (Prog.seq (ACT a) (ACT (Act.S3 blank .left)))
+            (applyAct blank ts (Act.S3 blank .stay)) [a, Act.S3 blank .left] :=
+          execA_seq (execA_act _ _) (execA_act _ _)
+        have hS3 : (applyActs blank [a, Act.S3 blank .left]
+            (applyAct blank ts (Act.S3 blank .stay))).S3
+            = Tape.step blank (applyAct blank ts (Act.S3 blank .stay)).S3 blank .left := by
+          show (applyAct blank (applyAct blank (applyAct blank ts (Act.S3 blank .stay)) a)
+            (Act.S3 blank .left)).S3 = _
+          rw [show (applyAct blank (applyAct blank (applyAct blank ts (Act.S3 blank .stay)) a)
+              (Act.S3 blank .left)).S3
+            = Tape.step blank (applyAct blank (applyAct blank ts (Act.S3 blank .stay)) a).S3
+              blank .left from rfl, ha]
+        have h2 : ExecA Terminal blank (popRunProg blank a)
+            (applyActs blank [a, Act.S3 blank .left]
+              (applyAct blank ts (Act.S3 blank .stay))) (popRun blank a n) := by
+          cases n with
+          | zero =>
+              simp only [List.replicate] at herase
+              exact ih _ (Or.inl ⟨rfl, by rw [hS3]; exact Tape.pop_empty herase⟩)
+          | succ n =>
+              rw [List.replicate_succ] at herase
+              exact ih _ (Or.inr ⟨n, rfl, by rw [hS3]; exact Tape.pop_spec herase⟩)
+        exact execA_of_eq rfl (execA_loop_cont hcond h1 h2)
+
+/-- **マーカ駆動の歩きの実現**：`S3` に高さ `m` の単進マーカが積んであれば、
+`walkByMarkProg` はちょうど `m` 回だけ動作 `a` を実行する。 -/
+theorem walkByMarkProg_exec {mark : Fin sc} (hne : mark ≠ blank) (a : Act sc)
+    (ha : ∀ ts : OvTapes sc, (applyAct blank ts a).S3 = ts.S3)
+    (m : ℕ) (ts : OvTapes sc)
+    (hS3 : Tape.StackView blank ts.S3 (List.replicate m mark)) :
+    ExecA Terminal blank (walkByMarkProg blank a) ts (walkByMarkActs blank a m) := by
+  refine execA_seq (execA_act (Terminal := Terminal) (blank := blank) (Act.S3 blank .left) ts) ?_
+  have hstep : (applyActs blank [Act.S3 blank .left] ts).S3
+      = Tape.step blank ts.S3 blank .left := rfl
+  cases m with
+  | zero =>
+      simp only [List.replicate] at hS3
+      exact popRunProg_exec hne a ha 0 _ (Or.inl ⟨rfl, by rw [hstep]; exact Tape.pop_empty hS3⟩)
+  | succ m =>
+      rw [List.replicate_succ] at hS3
+      exact popRunProg_exec hne a ha (m + 1) _
+        (Or.inr ⟨m, rfl, by rw [hstep]; exact Tape.pop_spec hS3⟩)
+
+/-- 歩き終わると `S3` は再び空スタック（マーカは消費され切る）。 -/
+theorem popRun_S3 {mark : Fin sc} (a : Act sc)
+    (ha : ∀ ts : OvTapes sc, (applyAct blank ts a).S3 = ts.S3) :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      (n = 0 ∧ Tape.StackView blank ts.S3 []) ∨
+        (∃ m, n = m + 1 ∧ Tape.StackTopView blank ts.S3 mark (List.replicate m mark)) →
+      Tape.StackView blank (applyActs blank (popRun blank a n) ts).S3 [] := by
+  intro n
+  induction n with
+  | zero =>
+      intro ts h
+      rcases h with ⟨_, hv⟩ | ⟨m, hm, _⟩
+      · exact hv
+      · omega
+  | succ n ih =>
+      intro ts h
+      rcases h with ⟨hc, _⟩ | ⟨m, hm, htop⟩
+      · omega
+      · have hmn : m = n := by omega
+        rw [hmn] at htop
+        rw [popRun]
+        have herase : Tape.StackView blank
+            (applyAct blank ts (Act.S3 blank .stay)).S3 (List.replicate n mark) :=
+          Tape.pop_erase htop
+        have hS3 : (applyAct blank (applyAct blank (applyAct blank ts (Act.S3 blank .stay)) a)
+            (Act.S3 blank .left)).S3
+            = Tape.step blank (applyAct blank ts (Act.S3 blank .stay)).S3 blank .left := by
+          rw [show (applyAct blank (applyAct blank (applyAct blank ts (Act.S3 blank .stay)) a)
+              (Act.S3 blank .left)).S3
+            = Tape.step blank (applyAct blank (applyAct blank ts (Act.S3 blank .stay)) a).S3
+              blank .left from rfl, ha]
+        simp only [applyActs_cons]
+        cases n with
+        | zero =>
+            simp only [List.replicate] at herase
+            exact ih _ (Or.inl ⟨rfl, by rw [hS3]; exact Tape.pop_empty herase⟩)
+        | succ n =>
+            rw [List.replicate_succ] at herase
+            exact ih _ (Or.inr ⟨n, rfl, by rw [hS3]; exact Tape.pop_spec herase⟩)
+
+/-- `X` の右歩き：作用はちょうど `rightN blank ts.X m`。 -/
+theorem popRun_X (blank : Fin sc) :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      (applyActs blank (popRun blank (Act.X (sc := sc) .right) n) ts).X
+        = rightN blank ts.X n := by
+  intro n
+  induction n with
+  | zero => intro ts; rfl
+  | succ n ih => intro ts; rw [popRun]; simp only [applyActs_cons]; rw [ih]; rfl
+
+/-- `X2` の右歩き。 -/
+theorem popRun_X2 (blank : Fin sc) :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      (applyActs blank (popRun blank (Act.X2 (sc := sc) .right) n) ts).X2
+        = rightN blank ts.X2 n := by
+  intro n
+  induction n with
+  | zero => intro ts; rfl
+  | succ n ih => intro ts; rw [popRun]; simp only [applyActs_cons]; rw [ih]; rfl
+
+/-- `F` の右歩き。 -/
+theorem popRun_F (blank : Fin sc) :
+    ∀ (n : ℕ) (ts : OvTapes sc),
+      (applyActs blank (popRun blank (Act.F (sc := sc) .right) n) ts).F
+        = rightN blank ts.F n := by
+  intro n
+  induction n with
+  | zero => intro ts; rfl
+  | succ n ih => intro ts; rw [popRun]; simp only [applyActs_cons]; rw [ih]; rfl
+
 /-! ## 3. 一般の while ループ -/
 
 /-- 1 反復が「頭のプローブ 1 動作 ＋ 本体」であるような、燃料つきの動作列。 -/
@@ -887,6 +1066,9 @@ section AxiomCheck
 #print axioms PalPeg.MiddleProg.jobLoopActsN_length_le
 #print axioms PalPeg.MiddleProg.jobActsProg_exec
 #print axioms PalPeg.MiddleProg.batchProg_exec
+#print axioms PalPeg.MiddleProg.walkByMarkProg_exec
+#print axioms PalPeg.MiddleProg.popRun_S3
+#print axioms PalPeg.MiddleProg.popRun_X
 #print axioms PalPeg.MiddleProg.batchProg_effect
 #print axioms PalPeg.MiddleProg.batchProg_trace_length_le
 #print axioms PalPeg.MiddleProg.mroundProg_pacing
