@@ -258,3 +258,7 @@ lake build
 - 進捗（コミット d0236f1 まで）：StageTapes の `hgm0`/`hsetup` 解消、前処理テープ化が strip2 まで
   （`stripProg2_spec ≤ (16k+32)·work + (k+4)·fuel`）。稼働中：外側ループ `decompose2_on_tapes`、
   照合器初期テープの導出（設置ではなく `setup_spec` から）、FullMachineTapes、PatternTapesPair、PassSum4。
+- 進捗（コミット 38b85df まで）：StageTapes の照合器初期テープをセットアップ出力から導出（設置を撤去）。
+  PassSum4（連続する子は `(k−2)/(k−1)` 倍まで；幾何成長せず、`PassPeriodSum` は仮定のまま）。
+  稼働中：`decompose2_on_tapes`（外側ループ）、FullMachineTapes、PatternTapesPair。
+  残り：`PrepOnTapes`/`DecompOnTapes` の具体化（有効周期の正規化込み）、`StructuredMachine` 化、最終定理。
