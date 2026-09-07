@@ -39,6 +39,7 @@ open PegSeparation.RealTimeTM
 open PalPeg.PatternTapes
 open PalPeg.StageMatcherTapes
 open PalPeg.MiddleTapes
+open PalPeg.VerifierFeed
 
 variable {sc : ℕ}
 
@@ -172,13 +173,15 @@ def stround (D : DecompOnTapes sc blank startSym endSym mark)
         (if n = S / 2 + 1 then ⟨Pre.prog (t.take (S / 2)) (S / 2) St.pg.ts, St.pg.ts⟩
           else St.pg)⟩
   else if n ≤ S then
-    ⟨St.sm, mround blank startSym endSym mark leftSym one zero D t a n St.md,
+    ⟨if n = S then ⟨initVM' blank startSym endSym mark u v Text k pe re, 0⟩ else St.sm,
+      mround blank startSym endSym mark leftSym one zero D t a n St.md,
       sgstep blank rateS
         (if n = 3 * (S / 4) + 1 then
             ⟨setupProgram blank startSym endSym k St.pg.ts, St.pg.ts⟩
           else St.pg)⟩
   else if n ≤ S + u.length then
-    ⟨St.sm, mround blank startSym endSym mark leftSym one zero D t a n St.md, St.pg⟩
+    ⟨⟨vstartRound' blank mark (Text.getD (n - 1 - S) blank) St.sm.M, St.sm.rem⟩,
+      mround blank startSym endSym mark leftSym one zero D t a n St.md, St.pg⟩
   else
     ⟨sround blank endSym mark u v k pe re Text cst A B' (n - 1 - S)
         (Text.getD (n - 1 - S) blank) St.sm,
@@ -268,9 +271,9 @@ theorem ststate_md :
     · rw [if_neg h, if_neg h, ih]
       split_ifs <;> rfl
 
-/-- 照合器成分は `S + |u|` まで動かない。 -/
-theorem ststate_sm_idle :
-    ∀ n, n ≤ S + u.length →
+/-- 照合器成分はラウンド `S` まで動かない。 -/
+theorem ststate_sm_pre :
+    ∀ n, n < S →
       (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init n).sm = init.sm := by
   intro n
   induction n with
@@ -278,23 +281,67 @@ theorem ststate_sm_idle :
   | succ n ih =>
     intro hn
     rw [ststate_succ, stround]
-    split_ifs <;> exact ih (by omega)
+    split_ifs <;> first | exact ih (by omega) | omega
+
+/-- ラウンド `S` に照合器が初期テープ配置（`VerifierFeed.initVM'`）で起動する。 -/
+theorem ststate_sm_birth (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
+    (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).sm
+      = ⟨initVM' blank startSym endSym mark u v Text k pe re, 0⟩ := by
+  obtain ⟨m, hm⟩ : ∃ m, S = m + 1 := ⟨S - 1, by omega⟩
+  rw [hm, ststate_succ, stround, if_neg (by omega), if_neg (by omega), if_pos le_rfl]
+  show (if m + 1 = m + 1 then _ else _) = _
+  rw [if_pos rfl]
+
+/-- **起動フェーズ**：ラウンド `(S, S + |u|]` では毎ラウンド 1 回の `vstartRound'`
+（到着 `varrive'` ＋ `Txt` の供給 ＋ 右送り、`≤ 86` 動作）を行う。したがって
+ラウンド `S + i` の照合器成分は `vstartT'` の `i` 段目そのもの。 -/
+theorem ststate_sm_start (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
+    ∀ i, i ≤ u.length →
+      (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (S + i)).sm
+        = ⟨vstartT' blank mark Text i
+            (initVM' blank startSym endSym mark u v Text k pe re), 0⟩ := by
+  intro i
+  induction i with
+  | zero =>
+    intro _
+    rw [Nat.add_zero]
+    exact ststate_sm_birth (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+      (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
+      (cst := cst) (A := A) (B' := B') (w := w) (init := init) hS hq
+  | succ i ih =>
+    intro hi
+    rw [show S + (i + 1) = (S + i) + 1 from by omega, ststate_succ, stround,
+      if_neg (by omega), if_neg (by omega), if_neg (by omega), if_pos (by omega)]
+    show (⟨vstartRound' blank mark (Text.getD (S + i + 1 - 1 - S) blank)
+        (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (S + i)).sm.M,
+      (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init (S + i)).sm.rem⟩
+        : SMachine sc) = _
+    rw [ih (by omega), show S + i + 1 - 1 - S = i from by omega]
+    rfl
+
+/-- ラウンド `S + |u|` の照合器成分はまさに `StageMatcherTapes.initSM`。 -/
+theorem ststate_sm_idle (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
+    (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
+        (S + u.length)).sm
+      = initSM blank startSym endSym mark u v Text k pe re :=
+  ststate_sm_start (D := D) (Pre := Pre) (leftSym := leftSym) (one := one) (zero := zero)
+    (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re) (cst := cst)
+    (A := A) (B' := B') (w := w) (init := init) hS hq u.length le_rfl
 
 /-- **照合器成分は `StageMatcherTapes.stage` そのもの**：絶対ラウンド `S + |u| + i` が
 照合器の反復 `i` に対応する（`Metered.metered_start` により `[0, |u|]` は停止区間）。 -/
-theorem ststate_sm (hSu : S / 2 < S + u.length) (hS4 : 3 * (S / 4) ≤ S) :
+theorem ststate_sm (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
     ∀ n, S + u.length ≤ n →
       (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init n).sm
       = stage blank endSym mark u v k pe re Text cst A B' u.length (n - (S + u.length))
-          init.sm := by
+          (initSM blank startSym endSym mark u v Text k pe re) := by
   intro n hn
   induction n, hn using Nat.le_induction with
   | base =>
     rw [Nat.sub_self]
     exact ststate_sm_idle (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
       (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
-      (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init)
-      (S + u.length) le_rfl
+      (cst := cst) (A := A) (B' := B') (w := w) (init := init) hS hq
   | succ n hn ih =>
     rw [ststate_succ, stround, if_neg (by omega), if_neg (by omega), if_neg (by omega),
       if_neg (by omega)]
@@ -435,6 +482,28 @@ theorem setup_complete (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) {p₁ : ℕ} (hkp :
     sgsteps_done blank (S / 4) _ _ (le_trans hsetup (setup_rate_ok hS hq hkp))]
   rfl
 
+
+/-- **`setup_complete'`**：`hsetup` は `PrepOnTapes.post` と `PatternTapes.setup_spec` から
+自動的に従う。すなわち準備フェーズの完了は前処理インタフェースだけに依存する。 -/
+theorem setup_complete' (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) (Textp : List (Fin sc))
+    (hwlen : S / 2 ≤ w.length) (hcut : (Pre.res w (S / 2)).1 < S / 2)
+    (hkp : k * (Pre.res w (S / 2)).2.1 ≤ S / 2) :
+    (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init S).pg
+      = ⟨[], setupRun blank startSym endSym k
+          (ststate D Pre leftSym one zero u v Text k pe re cst A B' S w init
+            (3 * (S / 4))).pg.ts⟩ := by
+  have hpc := prep_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+    (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
+    (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
+  have hpre := Pre.post w Textp (S / 2) init.pg.ts (by omega) hwlen hcut
+  have hspec := setup_spec (startSym := startSym) (endSym := endSym) (k := k) hpre
+  refine setup_complete (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+    (zero := zero) (u := u) (v := v) (Text := Text) (k := k) (pe := pe) (re := re)
+    (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init)
+    hS hq (p₁ := (Pre.res w (S / 2)).2.1) hkp ?_
+  rw [hpc]
+  exact hspec.2
+
 end Grind
 
 /-! ## 7. 段の出力ビットと主定理 -/
@@ -460,13 +529,18 @@ theorem stAnswerBit_eq {u v Text : List (Fin sc)} {k pe re : ℕ} {cst : ScanSta
   rw [show n - S - 1 = m from by omega] at hg
   rw [hg]
 
-/-- **主定理 `stage_tapes_spec`**：答える区間 `[2S, 4S)` の各ラウンドで、段の出力ビットは
+/-- **主定理 `stage_tapes_spec'`**：答える区間 `[2S, 4S)` の各ラウンドで、段の出力ビットは
 「パターン `(w.take (S/2)).reverse` が `w.take n` に出現する」かつ
-「中央部 `(w.drop (S/2)).take (n - S)` が回文である」と同値。 -/
-theorem stage_tapes_spec
+「中央部 `(w.drop (S/2)).take (n - S)` が回文である」と同値。
+
+残る仮定はインタフェース `PrepOnTapes` / `MiddleTapes.DecompOnTapes` と、記号の相異・
+`GSCore`・費用関数の仕様だけである（起動フェーズの `hgm0` は `ststate_sm_idle` と
+`StageMatcherTapes.stage_init` から導かれる）。 -/
+theorem stage_tapes_spec'
     {D : DecompOnTapes sc blank startSym endSym mark} {Pre : PrepOnTapes sc blank mark}
     {leftSym one zero : Fin sc}
     {w : List (Fin sc)} {S k s p₁ r A B' : ℕ} {cst : ScanState → ℕ} {init : StageT sc}
+    (hmb : mark ≠ blank) (hS : 8 ≤ S) (hq : 4 * (S / 4) = S)
     (hk : 0 < k) (hs : s < S / 2)
     (H : GSCore ((w.take (S / 2)).reverse) k s p₁ r)
     (hC : 0 < A + B')
@@ -476,15 +550,8 @@ theorem stage_tapes_spec
         - Phi k st))
     (hadvance : ∀ st, st.q ≠ ((w.take (S / 2)).reverse.drop s).length →
       (w.drop S)[st.pos + st.q]? = ((w.take (S / 2)).reverse.drop s)[st.q]? → cst st ≤ 1)
-    (hgm0 : gm (ststate D Pre leftSym one zero
-        ((w.take (S / 2)).reverse.take s) ((w.take (S / 2)).reverse.drop s) (w.drop S)
-        k (effPeriod ((w.take (S / 2)).reverse.drop s) p₁) (effReach p₁ r) cst A B' S w init
-        (S + ((w.take (S / 2)).reverse.take s).length)).sm
-      = metered ((w.take (S / 2)).reverse.take s) ((w.take (S / 2)).reverse.drop s) k
-          (effPeriod ((w.take (S / 2)).reverse.drop s) p₁) (effReach p₁ r) (w.drop S)
-          cst A B' ((w.take (S / 2)).reverse.take s).length)
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w)
-    (hDec : MiddleBorder.DecOK (Fin sc)) (hev : 2 * (S / 2) = S) (hS2 : 2 ≤ S)
+    (hDec : MiddleBorder.DecOK (Fin sc)) (hev : 2 * (S / 2) = S)
     (hminit : ∀ m, m ≤ S / 2 →
       MEncodes blank startSym endSym mark leftSym one zero D w S m init.md)
     {n : ℕ} (h1 : 2 * S ≤ n) (h2 : n < 4 * S) (hw : n ≤ w.length) :
@@ -505,23 +572,32 @@ theorem stage_tapes_spec
   set v := (w.take (S / 2)).reverse.drop s with hv
   set pe := effPeriod v p₁ with hpe
   set re := effReach p₁ r with hre
+  have hS2 : 2 ≤ S := by omega
   have hxlen : ((w.take (S / 2)).reverse).length = S / 2 := by
     rw [List.length_reverse, List.length_take_of_le (by omega)]
   have hulen : u.length = s := by
     rw [hu, List.length_take, hxlen]; omega
   have hvpos : 0 < v.length := by rw [hv, List.length_drop, hxlen]; omega
+  have hTlen : u.length ≤ (w.drop S).length := by
+    rw [hulen, List.length_drop]; omega
+  -- 起動フェーズの帰結：ラウンド `S + |u|` の照合器は `initSM`
+  have hbirth := ststate_sm_idle (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
+    (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
+    (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
+  have hgm0 : gm (ststate D Pre leftSym one zero u v (w.drop S) k pe re cst A B' S w init
+      (S + u.length)).sm
+      = metered u v k pe re (w.drop S) cst A B' u.length := by
+    rw [hbirth]
+    exact (stage_init (startSym := startSym) (endSym := endSym) (cst := cst) (A := A)
+      (B' := B') hmb hvpos hTlen).2.1
   have hsm := ststate_sm (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
     (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
-    (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init)
-    (by rw [hulen]; omega) (by omega) (n - 1) (by rw [hulen]; omega)
-  rw [ststate_sm_idle (D := D) (Pre := Pre) (leftSym := leftSym) (one := one)
-    (zero := zero) (u := u) (v := v) (Text := w.drop S) (k := k) (pe := pe) (re := re)
-    (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init)
-    (S + u.length) le_rfl] at hgm0
+    (cst := cst) (A := A) (B' := B') (S := S) (w := w) (init := init) hS hq
+    (n - 1) (by rw [hulen]; omega)
   have hghost : gm (ststate D Pre leftSym one zero
       u v (w.drop S) k pe re cst A B' S w init (n - 1)).sm
       = metered u v k pe re (w.drop S) cst A B' (n - S - 1) := by
-    rw [hsm, stage_round_spec (blank := blank) (endSym := endSym)
+    rw [hsm, ← hbirth, stage_round_spec (blank := blank) (endSym := endSym)
       (mark := mark) hvpos hgm0,
       show u.length + (n - 1 - (S + u.length)) = n - S - 1 from by rw [hulen]; omega]
   rw [stAnswerBit_eq (by omega) hghost, Bool.and_eq_true, decide_eq_true_iff]
