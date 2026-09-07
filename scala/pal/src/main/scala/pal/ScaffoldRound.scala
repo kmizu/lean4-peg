@@ -142,14 +142,16 @@ class RoundBuilder(
     result
   }
 
-  private def bool(value: RoundValue): Expr = {
+  /** The Boolean equation a translated label must be. */
+  protected def bool(value: RoundValue): Expr = {
     value match {
       case expr: Expr => expr
       case _ => throw new IllegalStateException("Boolean equation expected")
     }
   }
 
-  private def address(value: RoundValue): Address = {
+  /** The virtual address a translated pointer must be. */
+  protected def address(value: RoundValue): Address = {
     value match {
       case target: Address => target
       case _ => throw new IllegalStateException("pointer address expected")

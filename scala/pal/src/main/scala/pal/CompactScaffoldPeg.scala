@@ -25,6 +25,14 @@ import scala.collection.mutable
   * held as one string. Bytes are handled as ISO-8859-1 text (one char per byte)
   * so that Java regexes see exactly the Python bytes patterns and the output is
   * byte-identical.
+  *
+  * Capability limits relative to the Python script: the source is mapped in
+  * 1 GiB windows, allowing files larger than 2 GiB subject to available
+  * address space and JVM resources (Python: one `mmap`), but one production
+  * line must stay below 2 GiB; rule numbers
+  * (`E_n` etc.) must be below 2^30 per group because the offset tables are
+  * JVM arrays (Python has no corresponding fixed 2^30 cap). Both are far beyond
+  * the 672 MB / ten-million-rule grammars this tool exists for.
   */
 object CompactScaffoldPeg {
 
@@ -59,7 +67,11 @@ object CompactScaffoldPeg {
 
   private def reject(message: String): Nothing = throw new IllegalArgumentException(message)
 
-  /** Encode a rule name as `(index << 2) | group`; `S` is 0. */
+  /** Encode a rule name as `(index << 2) | group`; `S` is 0.
+    *
+    * Rule numbers of 2^30 and above are rejected (Python accepts any integer);
+    * the per-group offset tables are JVM arrays indexed by the number.
+    */
   def identifier(name: String): Long = {
     if (name == "S") {
       0L
@@ -165,16 +177,47 @@ object CompactScaffoldPeg {
     if (canonical(source) == canonical(target)) { reject("source and destination must be distinct files") }
     val channel = FileChannel.open(source, StandardOpenOption.READ)
     try {
-      val size = channel.size()
-      if (size > Int.MaxValue) { reject("PEG file larger than 2 GiB is not supported") }
-      val data = channel.map(FileChannel.MapMode.READ_ONLY, 0, size)
-      val compactor = new Compactor(data, size.toInt, inlinePrivate)
+      val compactor = new Compactor(new MappedFile(channel), inlinePrivate)
       val before = compactor.index()
       val live = compactor.reachable()
       val (after, fused) = compactor.emit(target, live, shortNames)
       CompactStats(before, after, fused, Files.size(source), Files.size(target), inlinePrivate)
     } finally {
       channel.close()
+    }
+  }
+
+  /** A read-only file mapped in 1 GiB windows and addressed by `Long` positions.
+    *
+    * `java.nio` maps at most 2 GiB per buffer; several windows lift that limit
+    * (Python's single `mmap` has none) while keeping the same page-cache-backed
+    * random access to rule bodies.
+    */
+  private final class MappedFile(channel: FileChannel) {
+    private val WindowShift = 30
+    private val WindowSize = 1L << WindowShift
+    val size: Long = channel.size()
+    private val windows: Array[ByteBuffer] = (0L until size by WindowSize).map { offset =>
+      channel.map(FileChannel.MapMode.READ_ONLY, offset, math.min(WindowSize, size - offset))
+    }.toArray
+
+    def get(position: Long): Byte = windows((position >> WindowShift).toInt).get((position & (WindowSize - 1)).toInt)
+
+    /** The bytes in `[from, until)` as ISO-8859-1 text (one char per byte). */
+    def slice(from: Long, until: Long): String = {
+      if (until - from > Int.MaxValue) { reject("production line larger than 2 GiB is not supported") }
+      val bytes = new Array[Byte]((until - from).toInt)
+      var position = from
+      var copied = 0
+      while (position < until) {
+        val window = windows((position >> WindowShift).toInt).duplicate()
+        val offset = (position & (WindowSize - 1)).toInt
+        val count = math.min(window.limit() - offset, (until - position).toInt)
+        window.position(offset).get(bytes, copied, count)
+        position += count
+        copied += count
+      }
+      new String(bytes, ISO)
     }
   }
 
@@ -224,29 +267,26 @@ object CompactScaffoldPeg {
   private final class Frame(val text: String, val tokens: Matcher, var cursor: Int, val depth: Int, val closing: Boolean)
 
   /** The three passes over one mapped source file. */
-  private final class Compactor(data: ByteBuffer, size: Int, inlinePrivate: Boolean) {
+  private final class Compactor(data: MappedFile, inlinePrivate: Boolean) {
+    private val size: Long = data.size
     private val offsets: Vector[LongVec] = GROUPS.map(_ => new LongVec)
     private val uses: Vector[IntVec] = GROUPS.map(_ => new IntVec)
     private val bodies = new Lru[Long, String](8192)
     private val shortNames = new Lru[String, String](65536)
 
-    private def slice(start: Int, end: Int): String = {
-      val bytes = new Array[Byte](end - start)
-      data.duplicate().position(start).get(bytes)
-      new String(bytes, ISO)
-    }
+    private def slice(start: Long, end: Long): String = data.slice(start, end)
 
-    /** Index of the next `'\n'` at or after `start`, else `size`. */
-    private def lineEnd(start: Int): Int = {
+    /** Position of the next `'\n'` at or after `start`, else `size`. */
+    private def lineEnd(start: Long): Long = {
       var end = start
       while (end < size && data.get(end) != '\n'.toByte) { end += 1 }
       end
     }
 
-    /** Index of the first `" = "` at or after `start` and before `limit`, else -1. */
-    private def separator(start: Int, limit: Int): Int = {
+    /** Position of the first `" = "` at or after `start` and before `limit`, else -1. */
+    private def separator(start: Long, limit: Long): Long = {
       var at = start
-      var found = -1
+      var found = -1L
       while (found < 0 && at + 3 <= limit) {
         if (data.get(at) == ' '.toByte && data.get(at + 1) == '='.toByte && data.get(at + 2) == ' '.toByte) { found = at } else { at += 1 }
       }
@@ -269,9 +309,10 @@ object CompactScaffoldPeg {
     /** Pass 1: record every production's offset and count references; returns the rule count. */
     def index(): Long = {
       var count = 0L
-      var start = 0
+      var start = 0L
       while (start < size) {
         val end = lineEnd(start)
+        // Python `line.rstrip(b"\r\n")`: CRLF sources are accepted.
         var stripped = end
         while (stripped > start && (data.get(stripped - 1) == '\r'.toByte || data.get(stripped - 1) == '\n'.toByte)) { stripped -= 1 }
         val sep = separator(start, stripped)
@@ -281,7 +322,7 @@ object CompactScaffoldPeg {
         if (!body.endsWith(";")) { reject("one complete production per line is required") }
         val (group, index) = ensure(identifier(head))
         if (offsets(group)(index) != MISSING) { reject("duplicate production") }
-        offsets(group)(index) = start.toLong
+        offsets(group)(index) = start
         for (ref <- references(body.substring(0, body.length - 1))) {
           val (a, b) = ensure(ref)
           uses(a)(b) = uses(a)(b) + 1
@@ -300,9 +341,10 @@ object CompactScaffoldPeg {
     /** The body text of a production, without its trailing `;` (and `\r`). */
     def body(code: Long): String = {
       bodies.getOrElseUpdate(code, {
-        val begin = offsets((code & 3).toInt)((code >> 2).toInt).toInt
+        val begin = offsets((code & 3).toInt)((code >> 2).toInt)
         val end = lineEnd(begin)
         val text = slice(separator(begin, size) + 3, end)
+        // Python `.rstrip(b"\r;")`.
         var stop = text.length
         while (stop > 0 && (text.charAt(stop - 1) == '\r' || text.charAt(stop - 1) == ';')) { stop -= 1 }
         text.substring(0, stop)
@@ -408,12 +450,12 @@ object CompactScaffoldPeg {
     }
 
     /** Pass 3: stream the live productions to `target`; returns (rules written, rules changed). */
-    def emit(target: Path, live: Vector[Array[Boolean]], shortNames: Boolean): (Long, Long) = {
+    def emit(target: Path, live: Vector[Array[Boolean]], useShortNames: Boolean): (Long, Long) = {
       var after = 0L
       var fused = 0L
       val output = new BufferedOutputStream(Files.newOutputStream(target), 1 << 16)
       try {
-        var start = 0
+        var start = 0L
         while (start < size) {
           val end = lineEnd(start)
           val sep = separator(start, end)
@@ -422,8 +464,8 @@ object CompactScaffoldPeg {
           if (live((code & 3).toInt)((code >> 2).toInt)) {
             var result = expanded(code)
             if (result != body(code)) { fused += 1 }
-            if (shortNames) {
-              head = this.shortNames.getOrElseUpdate(head, shortened(head))
+            if (useShortNames) {
+              head = shortNames.getOrElseUpdate(head, shortened(head))
               result = rename(result)
             }
             output.write((head + " = " + result + ";\n").getBytes(ISO))
@@ -440,6 +482,8 @@ object CompactScaffoldPeg {
 
   private def usage(): Nothing = {
     System.err.println("usage: CompactScaffoldPeg [--short-names] [--inline-private] SOURCE TARGET")
+    System.err.println("  Same arguments and output as compact_scaffold_peg.py. Limits: one production")
+    System.err.println("  line below 2 GiB and rule numbers below 2^30 per group (Python has no such caps).")
     sys.exit(2)
   }
 

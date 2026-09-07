@@ -3,7 +3,7 @@ package pal
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 
-import CompactScaffoldPeg.compact
+import CompactScaffoldPeg.{compact, identifier}
 import TempDir.withTempDir
 
 /** Inlining must preserve the recognized language and match the Python output (port of `test_compact_scaffold_peg.py`). */
@@ -168,6 +168,34 @@ class CompactScaffoldPegSuite extends munit.FunSuite {
         assertSameAsPython(source, after, shortNames, inlinePrivate, stats)
         assert(new Grammar(readText(after)).accepts("ab"))
       }
+    }
+  }
+
+  test("CRLF sources (with or without a final newline) compact like the Python script") {
+    val rules = Vector("S = E_0 !.;", "E_0 = E_1 / E_2;", "E_1 = E_3 E_4;", "E_2 = E_5 E_6;", "E_3 = &\"a\";",
+                       "E_4 = \"ab\" / \"a\";", "E_5 = !E_3;", "E_6 = \"b\" / \"E_9\";", "E_7 = E_8;", "E_8 = \"c\";")
+    withTempDir("pal-compact") { folder =>
+      for ((name, source) <- Seq("crlf" -> rules.mkString("", "\r\n", "\r\n"), "crlf-tail" -> rules.mkString("\r\n"));
+           shortNames <- Seq(false, true); inlinePrivate <- Seq(false, true)) {
+        val before = folder.resolve(s"$name.peg")
+        val after = folder.resolve(s"$name-$shortNames-$inlinePrivate.out")
+        write(before, source)
+        val stats = compact(before, after, shortNames = shortNames, inlinePrivate = inlinePrivate)
+        assertEquals(stats.beforeRules, rules.length.toLong)
+        assertSameAsPython(before, after, shortNames, inlinePrivate, stats)
+        val output = readText(after)
+        assert(!output.contains('\r'), (name, shortNames, inlinePrivate))
+        assert(output.endsWith(";\n"))
+        val grammar = new Grammar(output)
+        for (word <- words(4)) { assertEquals(grammar.accepts(word), new Grammar(rules.mkString("\n")).accepts(word), word) }
+      }
+    }
+  }
+
+  test("rule identifiers reject the documented 2^30 boundary before allocating tables") {
+    assertEquals(identifier("E_1073741823"), (1073741823L << 2) | 3L)
+    for (name <- Seq("E_1073741824", "B_1073741824", "P_1073741824", "E_9223372036854775808")) {
+      interceptMessage[IllegalArgumentException]("rule index too large") { identifier(name) }
     }
   }
 

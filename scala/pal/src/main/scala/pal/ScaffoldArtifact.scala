@@ -16,7 +16,10 @@ import scala.collection.mutable
   * Port of `scaffold_artifact.py`. The Python original serialized each record
   * with `marshal`; `PyMarshal` below writes and reads that format for the value
   * kinds involved (None, bool, int, str, tuple, dict), so checkpoints written by
-  * either implementation load in the other.
+  * either implementation load in the other. The files are round-trip compatible,
+  * not byte-identical: CPython marks back-references depending on object
+  * reference counts, and a `.gz` artifact's deflate level and header MTIME are
+  * those of `java.util.zip`, not of Python's `gzip` module.
   */
 object ScaffoldArtifact {
   import Expr.*

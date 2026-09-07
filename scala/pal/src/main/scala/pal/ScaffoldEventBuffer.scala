@@ -28,14 +28,8 @@ object ScaffoldEventBuffer {
   def substituteSource(source: Scaffold, symbols: collection.Map[Char, Expr]): (mutable.LinkedHashMap[String, Expr], mutable.LinkedHashMap[String, Expr]) = {
     val memo = new java.util.IdentityHashMap[Expr, Expr]()
 
-    def children(expr: Expr): Vector[Expr] = {
-      expr match {
-        case Not(_) | And(_) | Or(_) | Select(_, _, _) | Present(_) => expr.args.map(_.asInstanceOf[Expr])
-        case Read(target, _) => Vector(target)
-        case Edge(target, _) => Vector(target)
-        case _ => Vector.empty
-      }
-    }
+    // Python: every argument of not/and/or/select/present, the target of read/edge, else nothing.
+    def children(expr: Expr): Vector[Expr] = ScaffoldOptimize.children(expr)
 
     def rename(path: Vector[String]): Vector[String] = path.map(PREFIX + _)
 

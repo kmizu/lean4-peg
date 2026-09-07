@@ -123,10 +123,10 @@ final class DemandRoundBuilder(
           current.kind match {
             case Label =>
               val value = translate(stage.labels(current.key), current.slot, rootFor(current.slot), memo)
-              slotLabels(current.slot)(current.key) = value.asInstanceOf[Expr]
+              slotLabels(current.slot)(current.key) = bool(value)
             case Pointer =>
               val value = translate(stage.pointers(current.key), current.slot, rootFor(current.slot), memo)
-              slotPointers(current.slot)(current.key) = value.asInstanceOf[Address]
+              slotPointers(current.slot)(current.key) = address(value)
           }
           active -= work.remove(work.length - 1)
         } catch {
@@ -149,8 +149,8 @@ final class DemandRoundBuilder(
       val field = pending.remove(pending.length - 1)
       val value = resolve(field)
       field.kind match {
-        case Label => emitLabel(field.slot, field.key, value.asInstanceOf[Expr])
-        case Pointer => emitPointer(field.slot, field.key, value.asInstanceOf[Address])
+        case Label => emitLabel(field.slot, field.key, bool(value))
+        case Pointer => emitPointer(field.slot, field.key, address(value))
       }
     }
     new Scaffold(initial, labels, pointers, label(tags.last, accepting), alphabet)

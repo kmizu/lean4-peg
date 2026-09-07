@@ -2,6 +2,7 @@ package pal
 
 import java.nio.file.{Files, Path}
 import scala.jdk.StreamConverters.*
+import scala.util.Using
 
 /** Python `tempfile.TemporaryDirectory()` for tests. */
 object TempDir {
@@ -11,7 +12,9 @@ object TempDir {
     try {
       body(directory)
     } finally {
-      Files.walk(directory).toScala(Vector).sortBy(_.getNameCount)(using Ordering.Int.reverse).foreach(Files.deleteIfExists(_))
+      Using.resource(Files.walk(directory)) { walk =>
+        walk.toScala(Vector).sortBy(_.getNameCount)(using Ordering.Int.reverse).foreach(Files.deleteIfExists(_))
+      }
     }
   }
 }
