@@ -68,6 +68,37 @@ def sGet (i : SIdx) (ts : OvTapes sc) : TapeConfiguration sc :=
   | .s8 => ts.S8
   | .s9 => ts.S9
 
+/-! ### `S10` / `S11` に触れないことの基本補題
+
+`sAct` は `S1 … S9` にしか写らないので、`NoNew` は自動的に成り立つ。これと
+`NoNewAll` の `[]`/`::`/`++` に関する閉包を使って、この後の各動作列生成関数が
+すべて `S10`/`S11` に触れないことを一様に示していく。 -/
+
+theorem sAct_noNew (i : SIdx) (a : Fin sc) (m : Move) : NoNew (sAct (sc := sc) i a m) := by
+  cases i <;> trivial
+
+theorem noNewAll_nil : NoNewAll ([] : List (Act sc)) := fun a ha => by simp at ha
+
+theorem noNewAll_cons {a : Act sc} {l : List (Act sc)} (ha : NoNew a) (hl : NoNewAll l) :
+    NoNewAll (a :: l) := by
+  intro b hb
+  rcases List.mem_cons.1 hb with rfl | hb
+  · exact ha
+  · exact hl b hb
+
+theorem noNewAll_append {l₁ l₂ : List (Act sc)} (h₁ : NoNewAll l₁) (h₂ : NoNewAll l₂) :
+    NoNewAll (l₁ ++ l₂) := by
+  intro a ha
+  rcases List.mem_append.1 ha with h | h
+  · exact h₁ a h
+  · exact h₂ a h
+
+theorem noNewAll_singleton {a : Act sc} (ha : NoNew a) : NoNewAll [a] :=
+  noNewAll_cons ha noNewAll_nil
+
+theorem noNewAll_replicate {a : Act sc} (ha : NoNew a) (n : ℕ) : NoNewAll (List.replicate n a) := by
+  intro b hb; rw [List.eq_of_mem_replicate hb]; exact ha
+
 section Slots
 
 variable {blank : Fin sc}
@@ -108,6 +139,11 @@ def embedS (i : SIdx) : GSTapes.TapeProg sc → List (Act sc)
   induction p with
   | nil => rfl
   | cons hd tl ih => cases hd; simp [embedS, ih]
+
+theorem embedS_noNewAll (i : SIdx) (p : GSTapes.TapeProg sc) : NoNewAll (embedS (sc := sc) i p) := by
+  induction p with
+  | nil => exact noNewAll_nil
+  | cons hd tl ih => cases hd; exact noNewAll_cons (sAct_noNew i _ _) ih
 
 section EmbedRun
 
@@ -182,6 +218,9 @@ def clearCtrProg (blank : Fin sc) (i : SIdx) (n : ℕ) : List (Act sc) :=
     (clearCtrProg (sc := sc) blank i n).length = n + 2 := by
   simp [clearCtrProg]
 
+theorem clearCtrProg_noNewAll (i : SIdx) (n : ℕ) : NoNewAll (clearCtrProg (sc := sc) blank i n) :=
+  embedS_noNewAll i _
+
 theorem clearCtrProg_other {i j : SIdx} (h : j ≠ i) (n : ℕ) (ts : OvTapes sc) :
     sGet j (applyActs blank (clearCtrProg blank i n) ts) = sGet j ts :=
   embedS_other h _ ts
@@ -224,6 +263,11 @@ def clearSeqProgS (blank : Fin sc) (i : SIdx) (p q : ℕ) : List (Act sc) :=
   simp only [clearSeqProgS, List.length_append, embedS_length, ClearAny.leftBlankProg_length,
     ClearAny.rightBlankProg_length]
   omega
+
+theorem clearSeqProgS_noNewAll (i : SIdx) (p q : ℕ) :
+    NoNewAll (clearSeqProgS (sc := sc) blank i p q) :=
+  noNewAll_append (noNewAll_append (embedS_noNewAll i _) (embedS_noNewAll i _))
+    (embedS_noNewAll i _)
 
 theorem clearSeqProgS_other {i j : SIdx} (h : j ≠ i) (p q : ℕ) (ts : OvTapes sc) :
     sGet j (applyActs blank (clearSeqProgS blank i p q) ts) = sGet j ts := by
@@ -305,6 +349,12 @@ theorem seqA_run (blank : Fin sc) (f g : OvTapes sc → List (Act sc)) (ts : OvT
       = applyActs blank (g (applyActs blank (f ts) ts)) (applyActs blank (f ts) ts) := by
   rw [seqA, applyActs_append]
 
+/-- `seqA` で連結した動作列は、各段が `S10`/`S11` に触れなければ全体も触れない。 -/
+theorem seqA_noNewAll {blank : Fin sc} {f g : OvTapes sc → List (Act sc)}
+    (hf : ∀ t, NoNewAll (f t)) (hg : ∀ t, NoNewAll (g t)) (ts : OvTapes sc) :
+    NoNewAll (seqA blank f g ts) :=
+  noNewAll_append (hf ts) (hg _)
+
 /-! ## 5. 基本動作の成分ごとの効果 -/
 
 section Components
@@ -333,6 +383,9 @@ def mvX2L (n : ℕ) : List (Act sc) := List.replicate n (Act.X2 .left)
 
 @[simp] theorem mvX2L_length (n : ℕ) : (mvX2L (sc := sc) n).length = n := by simp [mvX2L]
 
+theorem mvX2L_noNewAll (n : ℕ) : NoNewAll (mvX2L (sc := sc) n) :=
+  noNewAll_replicate (by trivial) n
+
 theorem mvX2L_run (n : ℕ) (ts : OvTapes sc) :
     applyActs blank (mvX2L n) ts
       = { ts with X2 := DecompInstance.lwalk blank ts.X2 n } := by
@@ -355,14 +408,28 @@ variable {blank : Fin sc}
 def copyRound (ts : OvTapes sc) : List (Act sc) :=
   [sAct .s1 ts.X2.focus .right, sAct .s2 ts.X2.focus .right, Act.X2 .right]
 
+theorem copyRound_noNewAll (ts : OvTapes sc) : NoNewAll (copyRound ts) :=
+  noNewAll_cons (sAct_noNew .s1 _ _) (noNewAll_cons (sAct_noNew .s2 _ _)
+    (noNewAll_singleton (by trivial)))
+
 /-- 最後の 1 記号（`X2` は動かさない）。 -/
 def copyLast (ts : OvTapes sc) : List (Act sc) :=
   [sAct .s1 ts.X2.focus .right, sAct .s2 ts.X2.focus .right]
+
+theorem copyLast_noNewAll (ts : OvTapes sc) : NoNewAll (copyLast ts) :=
+  noNewAll_cons (sAct_noNew .s1 _ _) (noNewAll_singleton (sAct_noNew .s2 _ _))
 
 /-- `n` 記号ぶん。 -/
 def copyLoop (blank : Fin sc) : ℕ → OvTapes sc → List (Act sc)
   | 0, _ => []
   | n + 1, ts => copyRound ts ++ copyLoop blank n (applyActs blank (copyRound ts) ts)
+
+theorem copyLoop_noNewAll (blank : Fin sc) :
+    ∀ (n : ℕ) (ts : OvTapes sc), NoNewAll (copyLoop blank n ts) := by
+  intro n
+  induction n with
+  | zero => intro ts; exact noNewAll_nil
+  | succ n ih => intro ts; exact noNewAll_append (copyRound_noNewAll ts) (ih _)
 
 theorem copyLoop_length (blank : Fin sc) :
     ∀ (n : ℕ) (ts : OvTapes sc), (copyLoop blank n ts).length = 3 * n := by
@@ -498,6 +565,13 @@ def lwalkS (blank : Fin sc) (i : SIdx) : ℕ → OvTapes sc → List (Act sc)
   | n + 1, ts =>
       sAct i (sGet i ts).focus .left ::
         lwalkS blank i n (applyAct blank ts (sAct i (sGet i ts).focus .left))
+
+theorem lwalkS_noNewAll (blank : Fin sc) (i : SIdx) :
+    ∀ (n : ℕ) (ts : OvTapes sc), NoNewAll (lwalkS blank i n ts) := by
+  intro n
+  induction n with
+  | zero => intro ts; exact noNewAll_nil
+  | succ n ih => intro ts; exact noNewAll_cons (sAct_noNew i _ _) (ih _)
 
 theorem lwalkS_length (blank : Fin sc) (i : SIdx) :
     ∀ (n : ℕ) (ts : OvTapes sc), (lwalkS blank i n ts).length = n := by
@@ -639,10 +713,19 @@ variable {blank startSym endSym mark leftSym : Fin sc}
 /-- `S1`/`S2` の両方に記号 `a` を積む。 -/
 def pushBoth (a : Fin sc) : List (Act sc) := [sAct .s1 a .right, sAct .s2 a .right]
 
+theorem pushBoth_noNewAll (a : Fin sc) : NoNewAll (pushBoth (sc := sc) a) :=
+  noNewAll_cons (sAct_noNew .s1 _ _) (noNewAll_singleton (sAct_noNew .s2 _ _))
+
 /-- カウンタ 7 本（`S3 … S9`）に底のマーカを置いて値 `0` にする。 -/
 def zeroCtrs (mark : Fin sc) : List (Act sc) :=
   [sAct .s3 mark .right, sAct .s4 mark .right, sAct .s5 mark .right, sAct .s6 mark .right,
     sAct .s7 mark .right, sAct .s8 mark .right, sAct .s9 mark .right]
+
+theorem zeroCtrs_noNewAll (mark : Fin sc) : NoNewAll (zeroCtrs (sc := sc) mark) :=
+  noNewAll_cons (sAct_noNew .s3 _ _) (noNewAll_cons (sAct_noNew .s4 _ _)
+    (noNewAll_cons (sAct_noNew .s5 _ _) (noNewAll_cons (sAct_noNew .s6 _ _)
+      (noNewAll_cons (sAct_noNew .s7 _ _) (noNewAll_cons (sAct_noNew .s8 _ _)
+        (noNewAll_singleton (sAct_noNew .s9 _ _)))))))
 
 @[simp] theorem pushBoth_length (a : Fin sc) : (pushBoth a).length = 2 := rfl
 
@@ -677,6 +760,16 @@ def prologueU (blank startSym endSym mark : Fin sc) (L : ℕ) (ts : OvTapes sc) 
           (seqA blank (fun t => lwalkS blank .s1 (L + 1) t)
             (seqA blank (fun t => lwalkS blank .s2 (L + 1) t)
               (fun _ => zeroCtrs mark)))))) ts
+
+theorem prologueU_noNewAll {L : ℕ} (ts : OvTapes sc) :
+    NoNewAll (prologueU blank startSym endSym mark L ts) :=
+  seqA_noNewAll (fun _ => noNewAll_append (pushBoth_noNewAll startSym) (mvX2L_noNewAll (L - 1)))
+    (fun t => seqA_noNewAll (fun t => copyLoop_noNewAll blank (L - 1) t)
+      (fun t => seqA_noNewAll copyLast_noNewAll
+        (fun t => seqA_noNewAll (fun _ => pushBoth_noNewAll endSym)
+          (fun t => seqA_noNewAll (fun t => lwalkS_noNewAll blank .s1 (L + 1) t)
+            (fun t => seqA_noNewAll (fun t => lwalkS_noNewAll blank .s2 (L + 1) t)
+              (fun _ => zeroCtrs_noNewAll mark) t) t) t) t) t) ts
 
 theorem prologueU_length {L : ℕ} (hL : 1 ≤ L) (ts : OvTapes sc) :
     (prologueU (sc := sc) blank startSym endSym mark L ts).length = 6 * L + 11 := by
@@ -922,9 +1015,6 @@ theorem decActsL_spec {x : List (Fin sc)} {L : ℕ} (hx : x.length = L) (hend : 
           ⟨D, Q, E, (decompose2 x 8).2.1, 0, (decompose2 x 8).1, (decompose2 x 8).2.2⟩
           (DecompInstance.prjB
             (applyActs blank (decActsL blank endSym mark L ts) ts)))
-      ∧ (applyActs blank (decActsL blank endSym mark L ts) ts).P = ts.P
-      ∧ (applyActs blank (decActsL blank endSym mark L ts) ts).U = ts.U
-      ∧ (applyActs blank (decActsL blank endSym mark L ts) ts).Cnt = ts.Cnt
       ∧ (applyActs blank (decActsL blank endSym mark L ts) ts).X = ts.X
       ∧ (applyActs blank (decActsL blank endSym mark L ts) ts).X2 = ts.X2
       ∧ (applyActs blank (decActsL blank endSym mark L ts) ts).F = ts.F := by
@@ -932,6 +1022,113 @@ theorem decActsL_spec {x : List (Fin sc)} {L : ℕ} (hx : x.length = L) (hend : 
   rw [decActsL_eq hx]
   rw [hx] at h
   exact h
+
+/-- `decActsL` は分解器の内部使用のために `P`/`U`/`Cnt` を第 2 相の比較カウンタとして
+使うので、それらは一般には保たれない。しかし埋め込み `DecompInstance.liftActB` は
+`GSPre.Act` を `S1 … S9`／`C`／`Pset`／`Uset` へ写すだけで、`S10`/`S11` を触ることは
+ない。 -/
+theorem liftActB_noNew (ts' : BorderTapes.OvTapes sc) (act : GSPre.Act sc) :
+    NoNew (DecompInstance.liftActB ts' act) := by
+  cases act <;> trivial
+
+theorem liftActsB_noNewAll (blank : Fin sc) :
+    ∀ (l : List (GSPre.Act sc)) (ts' : BorderTapes.OvTapes sc),
+      NoNewAll (DecompInstance.liftActsB blank l ts') := by
+  intro l
+  induction l with
+  | nil => intro ts'; exact noNewAll_nil
+  | cons act l ih =>
+      intro ts'
+      rw [DecompInstance.liftActsB_cons]
+      exact noNewAll_cons (liftActB_noNew ts' act) (ih _)
+
+theorem decActsL_noNewAll (L : ℕ) (ts : OvTapes sc) :
+    NoNewAll (decActsL blank endSym mark L ts) :=
+  liftActsB_noNewAll blank _ ts
+
+/-- `decActsL` のあと、`P`/`U`/`Cnt` に残った第 2 相の比較カウンタの後始末を
+`MiddleClear.clearPUC` で行う一様版。掃除の長さは走った本体の動作数で決まる。 -/
+def decActsLClear (blank endSym mark : Fin sc) (L : ℕ) (ts : OvTapes sc) : List (Act sc) :=
+  decActsL blank endSym mark L ts ++
+    MiddleClear.clearPUC blank (decActsL blank endSym mark L ts).length
+
+theorem decActsLClear_noNewAll (L : ℕ) (ts : OvTapes sc) :
+    NoNewAll (decActsLClear blank endSym mark L ts) :=
+  noNewAll_append (decActsL_noNewAll L ts)
+    (noNewAll_of_noScratchAll (MiddleClear.clearPUC_noScratch blank _))
+
+/-- **`decActsLClear` の主補題**：`decActsL` の結果に `clearPUC` を重ねることで、
+`P`/`U`/`Cnt` を（入口が空スタックである限り）**空スタックへ戻して**返す。分解の
+符号化（`Enc`）と `X`/`X2`/`F` の保存は `clearPUC` が `S1 … S9` に触れないことから
+そのまま引き継がれる。 -/
+theorem decActsLClear_spec {x : List (Fin sc)} {L : ℕ} (hx : x.length = L) (hend : endSym ∉ x)
+    (hmark : mark ≠ blank) (ts : OvTapes sc)
+    (hE : GSPre.Enc blank startSym endSym mark x 0 0 ⟨0, 0, 0, 0, 0, 0, 0⟩
+      (DecompInstance.prjB ts))
+    (hP0 : Tape.StackView blank ts.P []) (hU0 : Tape.StackView blank ts.U [])
+    (hC0 : Tape.StackView blank ts.Cnt []) :
+    (decActsLClear blank endSym mark L ts).length
+        ≤ 16 * (237 * decompose2Work x 8 + 49 * (L + 1)) + 12
+      ∧ (∃ a b D Q E, GSPre.Enc blank startSym endSym mark x a b
+          ⟨D, Q, E, (decompose2 x 8).2.1, 0, (decompose2 x 8).1, (decompose2 x 8).2.2⟩
+          (DecompInstance.prjB
+            (applyActs blank (decActsLClear blank endSym mark L ts) ts)))
+      ∧ Tape.StackView blank (applyActs blank (decActsLClear blank endSym mark L ts) ts).P []
+      ∧ Tape.StackView blank (applyActs blank (decActsLClear blank endSym mark L ts) ts).U []
+      ∧ Tape.StackView blank (applyActs blank (decActsLClear blank endSym mark L ts) ts).Cnt []
+      ∧ (applyActs blank (decActsLClear blank endSym mark L ts) ts).X = ts.X
+      ∧ (applyActs blank (decActsLClear blank endSym mark L ts) ts).X2 = ts.X2
+      ∧ (applyActs blank (decActsLClear blank endSym mark L ts) ts).F = ts.F := by
+  obtain ⟨hlen1, ⟨a, b, D, Q, E, hE2⟩, k1X, k1X2, k1F⟩ :=
+    decActsL_spec (startSym := startSym) hx hend hmark ts hE
+  set t1 : OvTapes sc := applyActs blank (decActsL blank endSym mark L ts) ts with ht1
+  set nAct : ℕ := (decActsL blank endSym mark L ts).length with hndef
+  have hnear := MiddleClear.near_applyActs (blank := blank) (decActsL blank endSym mark L ts) ts 0
+    (MiddleClear.Near.of_stack hP0) (MiddleClear.Near.of_stack hU0)
+    (MiddleClear.Near.of_stack hC0)
+  simp only [Nat.zero_add, ← ht1, ← hndef] at hnear
+  obtain ⟨g1, g2, g3⟩ := MiddleClear.clearPUC_stack blank nAct t1 hnear.1 hnear.2.1 hnear.2.2
+  have hSC : ScratchEq (applyActs blank (MiddleClear.clearPUC blank nAct) t1) t1 :=
+    applyActs_scratchEq _ t1 (MiddleClear.clearPUC_noScratch blank nAct)
+  have happ : applyActs blank (decActsLClear blank endSym mark L ts) ts
+      = applyActs blank (MiddleClear.clearPUC blank nAct) t1 := by
+    rw [decActsLClear, applyActs_append, ← ht1, ← hndef]
+  have hE2' : GSPre.Enc blank startSym endSym mark x a b
+      ⟨D, Q, E, (decompose2 x 8).2.1, 0, (decompose2 x 8).1, (decompose2 x 8).2.2⟩
+      (DecompInstance.prjB (applyActs blank (MiddleClear.clearPUC blank nAct) t1)) := by
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · show Tape.SeqView blank (applyActs blank (MiddleClear.clearPUC blank nAct) t1).S1 _ _
+      rw [hSC.s1]; exact hE2.v1
+    · show Tape.SeqView blank (applyActs blank (MiddleClear.clearPUC blank nAct) t1).S2 _ _
+      rw [hSC.s2]; exact hE2.v2
+    · show Tape.CounterView' blank mark
+        (applyActs blank (MiddleClear.clearPUC blank nAct) t1).S3 _
+      rw [hSC.s3]; exact hE2.cd
+    · show Tape.CounterView' blank mark
+        (applyActs blank (MiddleClear.clearPUC blank nAct) t1).S4 _
+      rw [hSC.s4]; exact hE2.cq
+    · show Tape.CounterView' blank mark
+        (applyActs blank (MiddleClear.clearPUC blank nAct) t1).S5 _
+      rw [hSC.s5]; exact hE2.ce
+    · show Tape.CounterView' blank mark
+        (applyActs blank (MiddleClear.clearPUC blank nAct) t1).S6 _
+      rw [hSC.s6]; exact hE2.cp
+    · show Tape.CounterView' blank mark
+        (applyActs blank (MiddleClear.clearPUC blank nAct) t1).S7 _
+      rw [hSC.s7]; exact hE2.cf
+    · show Tape.CounterView' blank mark
+        (applyActs blank (MiddleClear.clearPUC blank nAct) t1).S8 _
+      rw [hSC.s8]; exact hE2.cs
+    · show Tape.CounterView' blank mark
+        (applyActs blank (MiddleClear.clearPUC blank nAct) t1).S9 _
+      rw [hSC.s9]; exact hE2.cr
+  refine ⟨?_, ⟨a, b, D, Q, E, by rw [happ]; exact hE2'⟩, by rw [happ]; exact g1,
+    by rw [happ]; exact g2, by rw [happ]; exact g3, ?_, ?_, ?_⟩
+  · rw [decActsLClear, List.length_append, ← hndef, MiddleClear.clearPUC_length]
+    omega
+  · rw [happ, MiddleClear.clearPUC_X, ht1, k1X]
+  · rw [happ, MiddleClear.clearPUC_X2, ht1, k1X2]
+  · rw [happ, MiddleClear.clearPUC_F, ht1, k1F]
 
 end DecRun
 
@@ -961,6 +1158,10 @@ def splitRound (blank : Fin sc) (ts : OvTapes sc) : List (Act sc) :=
   [Act.Uset (sGet .s1 ts).focus .right, sAct .s1 (sGet .s1 ts).focus .right,
     sAct .s8 blank .left, sAct .s8 blank .stay]
 
+theorem splitRound_noNewAll (ts : OvTapes sc) : NoNewAll (splitRound blank ts) :=
+  noNewAll_cons (by trivial) (noNewAll_cons (sAct_noNew .s1 _ _)
+    (noNewAll_cons (sAct_noNew .s8 _ _) (noNewAll_singleton (sAct_noNew .s8 _ _))))
+
 theorem splitRound_run (ts : OvTapes sc) :
     applyActs blank (splitRound blank ts) ts
       = { ts with U := Tape.step blank ts.U ts.S1.focus .right
@@ -975,6 +1176,18 @@ def splitLoop (blank mark : Fin sc) : ℕ → OvTapes sc → List (Act sc)
       if Tape.read (Tape.step blank (sGet .s8 ts) blank .left) = mark then []
       else splitRound blank ts
         ++ splitLoop blank mark n (applyActs blank (splitRound blank ts) ts)
+
+theorem splitLoop_noNewAll (blank mark : Fin sc) :
+    ∀ (n : ℕ) (ts : OvTapes sc), NoNewAll (splitLoop blank mark n ts) := by
+  intro n
+  induction n with
+  | zero => intro ts; exact noNewAll_nil
+  | succ n ih =>
+      intro ts
+      rw [splitLoop]
+      split
+      · exact noNewAll_nil
+      · exact noNewAll_append (splitRound_noNewAll ts) (ih _)
 
 /-- **`splitLoop` の正当性と長さ**。 -/
 theorem splitLoop_spec (hmark : mark ≠ blank) :
@@ -1062,6 +1275,13 @@ def copyPRound (blank : Fin sc) (inc : Bool) (ts : OvTapes sc) : List (Act sc) :
   else
     [Act.Pset (sGet .s1 ts).focus .right, sAct .s1 (sGet .s1 ts).focus .right]
 
+theorem copyPRound_noNewAll (blank : Fin sc) (inc : Bool) (ts : OvTapes sc) :
+    NoNewAll (copyPRound blank inc ts) := by
+  cases inc
+  · exact noNewAll_cons (by trivial) (noNewAll_singleton (sAct_noNew .s1 _ _))
+  · exact noNewAll_cons (by trivial) (noNewAll_cons (sAct_noNew .s1 _ _) (noNewAll_singleton (by trivial)))
+    -- inc = true : [Pset, sAct .s1, C blank .right]
+
 theorem copyPRound_run_true (ts : OvTapes sc) :
     applyActs blank (copyPRound blank true ts) ts
       = { ts with P := Tape.step blank ts.P ts.S1.focus .right
@@ -1086,6 +1306,18 @@ def copyPLoop (blank endSym : Fin sc) (inc : Bool) : ℕ → OvTapes sc → List
       if (sGet .s1 ts).focus = endSym then []
       else copyPRound blank inc ts
         ++ copyPLoop blank endSym inc n (applyActs blank (copyPRound blank inc ts) ts)
+
+theorem copyPLoop_noNewAll (blank endSym : Fin sc) (inc : Bool) :
+    ∀ (n : ℕ) (ts : OvTapes sc), NoNewAll (copyPLoop blank endSym inc n ts) := by
+  intro n
+  induction n with
+  | zero => intro ts; exact noNewAll_nil
+  | succ n ih =>
+      intro ts
+      rw [copyPLoop]
+      split
+      · exact noNewAll_nil
+      · exact noNewAll_append (copyPRound_noNewAll blank inc ts) (ih _)
 
 /-- **`copyPLoop` の正当性と長さ**。 -/
 theorem copyPLoop_spec {x : List (Fin sc)} (hend : endSym ∉ x) (inc : Bool) :
@@ -1174,6 +1406,10 @@ theorem copyPLoop_spec {x : List (Fin sc)} (hend : endSym ∉ x) (inc : Bool) :
 def ctrMoveRound (blank : Fin sc) : List (Act sc) :=
   [sAct .s6 blank .left, sAct .s6 blank .stay, Act.C blank .right]
 
+theorem ctrMoveRound_noNewAll (blank : Fin sc) : NoNewAll (ctrMoveRound blank) :=
+  noNewAll_cons (sAct_noNew .s6 _ _) (noNewAll_cons (sAct_noNew .s6 _ _)
+    (noNewAll_singleton (by trivial)))
+
 theorem ctrMoveRound_run (ts : OvTapes sc) :
     applyActs blank (ctrMoveRound blank) ts
       = { ts with S6 := Tape.step blank (Tape.step blank ts.S6 blank .left) blank .stay
@@ -1187,6 +1423,18 @@ def ctrMoveLoop (blank mark : Fin sc) : ℕ → OvTapes sc → List (Act sc)
       if Tape.read (Tape.step blank (sGet .s6 ts) blank .left) = mark then []
       else ctrMoveRound blank
         ++ ctrMoveLoop blank mark n (applyActs blank (ctrMoveRound blank) ts)
+
+theorem ctrMoveLoop_noNewAll (blank mark : Fin sc) :
+    ∀ (n : ℕ) (ts : OvTapes sc), NoNewAll (ctrMoveLoop blank mark n ts) := by
+  intro n
+  induction n with
+  | zero => intro ts; exact noNewAll_nil
+  | succ n ih =>
+      intro ts
+      rw [ctrMoveLoop]
+      split
+      · exact noNewAll_nil
+      · exact noNewAll_append (ctrMoveRound_noNewAll blank) (ih _)
 
 /-- **`ctrMoveLoop` の正当性と長さ**。 -/
 theorem ctrMoveLoop_spec (hmark : mark ≠ blank) :
@@ -1315,6 +1563,10 @@ def homeS1 (blank : Fin sc) (L : ℕ) (ts : OvTapes sc) : List (Act sc) :=
   seqA blank (fun t => lwalkS blank .s1 (L + 2) t)
     (fun t => [sAct .s1 (sGet .s1 t).focus .right]) ts
 
+theorem homeS1_noNewAll (blank : Fin sc) (L : ℕ) (ts : OvTapes sc) : NoNewAll (homeS1 blank L ts) :=
+  seqA_noNewAll (fun t => lwalkS_noNewAll blank .s1 (L + 2) t)
+    (fun _ => noNewAll_singleton (sAct_noNew .s1 _ _)) ts
+
 theorem homeS1_length (blank : Fin sc) (L : ℕ) (ts : OvTapes sc) :
     (homeS1 blank L ts).length = L + 3 := by
   rw [homeS1, seqA_length, lwalkS_length]
@@ -1364,12 +1616,36 @@ def toSentP (startSym : Fin sc) : ℕ → OvTapes sc → List (Act sc)
       if ts.P.focus = startSym then []
       else Act.P .left :: toSentP startSym n (applyAct blank ts (Act.P .left))
 
+theorem toSentP_noNewAll (startSym : Fin sc) :
+    ∀ (n : ℕ) (ts : OvTapes sc), NoNewAll (toSentP (blank := blank) startSym n ts) := by
+  intro n
+  induction n with
+  | zero => intro ts; exact noNewAll_nil
+  | succ n ih =>
+      intro ts
+      rw [toSentP]
+      split
+      · exact noNewAll_nil
+      · exact noNewAll_cons (by trivial) (ih _)
+
 /-- `U` を番人 `startSym` まで左へ歩く。 -/
 def toSentU (startSym : Fin sc) : ℕ → OvTapes sc → List (Act sc)
   | 0, _ => []
   | n + 1, ts =>
       if ts.U.focus = startSym then []
       else Act.U .left :: toSentU startSym n (applyAct blank ts (Act.U .left))
+
+theorem toSentU_noNewAll (startSym : Fin sc) :
+    ∀ (n : ℕ) (ts : OvTapes sc), NoNewAll (toSentU (blank := blank) startSym n ts) := by
+  intro n
+  induction n with
+  | zero => intro ts; exact noNewAll_nil
+  | succ n ih =>
+      intro ts
+      rw [toSentU]
+      split
+      · exact noNewAll_nil
+      · exact noNewAll_cons (by trivial) (ih _)
 
 /-- 番人駆動の左歩きの正当性（`P`）。 -/
 theorem toSentP_spec {v : List (Fin sc)} (hv : startSym ∉ v) :
@@ -1675,6 +1951,14 @@ theorem clearSlotSeq_main (i : SIdx) (wlen : ℕ) (ts : OvTapes sc) :
       ∧ (applyActs blank (clearSlotSeq blank i wlen ts) ts).F = ts.F :=
   clearSeqProgS_main i _ _ ts
 
+theorem clearSlotSeq_noNewAll (i : SIdx) (wlen : ℕ) (ts : OvTapes sc) :
+    NoNewAll (clearSlotSeq blank i wlen ts) :=
+  clearSeqProgS_noNewAll i _ _
+
+theorem clearSlotCtr_noNewAll (i : SIdx) (ts : OvTapes sc) :
+    NoNewAll (clearSlotCtr blank i ts) :=
+  clearCtrProg_noNewAll i _
+
 theorem clearSlotCtr_spec (i : SIdx) (ts : OvTapes sc) (n : ℕ)
     (h : Tape.CounterView' blank mark (sGet i ts) n) :
     Tape.StackView blank (sGet i (applyActs blank (clearSlotCtr blank i ts) ts)) [] := by
@@ -1714,6 +1998,17 @@ def clearAllS (blank : Fin sc) (L : ℕ) (ts : OvTapes sc) : List (Act sc) :=
                 (seqA blank (fun t => clearSlotCtr blank .s8 t)
                   (fun t => clearSlotCtr blank .s9 t)))))))) ts
 
+theorem clearAllS_noNewAll (L : ℕ) (ts : OvTapes sc) : NoNewAll (clearAllS blank L ts) := by
+  refine seqA_noNewAll (fun t => clearSlotSeq_noNewAll .s1 (L + 2) t)
+    (fun t => seqA_noNewAll (fun t => clearSlotSeq_noNewAll .s2 (L + 2) t)
+      (fun t => seqA_noNewAll (fun t => clearSlotCtr_noNewAll .s3 t)
+        (fun t => seqA_noNewAll (fun t => clearSlotCtr_noNewAll .s4 t)
+          (fun t => seqA_noNewAll (fun t => clearSlotCtr_noNewAll .s5 t)
+            (fun t => seqA_noNewAll (fun t => clearSlotCtr_noNewAll .s6 t)
+              (fun t => seqA_noNewAll (fun t => clearSlotCtr_noNewAll .s7 t)
+                (fun t => seqA_noNewAll (fun t => clearSlotCtr_noNewAll .s8 t)
+                  (fun t => clearSlotCtr_noNewAll .s9 t) t) t) t) t) t) t) t) ts
+
 /-- **9 本まとめ消去の正当性と長さ**。 -/
 theorem clearAllS_spec (L : ℕ) (ts : OvTapes sc) (w1 w2 : List (Fin sc))
     (p1 p2 n3 n4 n5 n6 n7 n8 n9 : ℕ)
@@ -1725,7 +2020,8 @@ theorem clearAllS_spec (L : ℕ) (ts : OvTapes sc) (w1 w2 : List (Fin sc))
     (h6 : Tape.CounterView' blank mark ts.S6 n6)
     (h7 : Tape.CounterView' blank mark ts.S7 n7)
     (h8 : Tape.CounterView' blank mark ts.S8 n8)
-    (h9 : Tape.CounterView' blank mark ts.S9 n9) :
+    (h9 : Tape.CounterView' blank mark ts.S9 n9)
+    (h10 : Tape.StackView blank ts.S10 []) (h11 : Tape.StackView blank ts.S11 []) :
     ScratchBlank blank (applyActs blank (clearAllS blank L ts) ts)
       ∧ (applyActs blank (clearAllS blank L ts) ts).P = ts.P
       ∧ (applyActs blank (clearAllS blank L ts) ts).X = ts.X
@@ -2000,8 +2296,12 @@ theorem clearAllS_spec (L : ℕ) (ts : OvTapes sc) (w1 w2 : List (Fin sc))
   rw [hu8] at m8
   have m9 := clearSlotCtr_main (blank := blank) SIdx.s9 u8
   rw [hu9] at m9
+  have hkeepNew := applyActs_keepNew (blank := blank) (clearAllS blank L ts) ts
+    (clearAllS_noNewAll L ts)
+  have sp10 : Tape.StackView blank u9.S10 [] := by rw [← hrun]; rw [hkeepNew.1]; exact h10
+  have sp11 : Tape.StackView blank u9.S11 [] := by rw [← hrun]; rw [hkeepNew.2]; exact h11
   rw [hrun]
-  refine ⟨⟨by have hh := sp1; rw [← wf1] at hh; exact hh, by have hh := sp2; rw [← wf2] at hh; exact hh, by have hh := sp3; rw [← wf3] at hh; exact hh, by have hh := sp4; rw [← wf4] at hh; exact hh, by have hh := sp5; rw [← wf5] at hh; exact hh, by have hh := sp6; rw [← wf6] at hh; exact hh, by have hh := sp7; rw [← wf7] at hh; exact hh, by have hh := sp8; rw [← wf8] at hh; exact hh, by have hh := sp9; rw [← wf9] at hh; exact hh⟩,
+  refine ⟨⟨by have hh := sp1; rw [← wf1] at hh; exact hh, by have hh := sp2; rw [← wf2] at hh; exact hh, by have hh := sp3; rw [← wf3] at hh; exact hh, by have hh := sp4; rw [← wf4] at hh; exact hh, by have hh := sp5; rw [← wf5] at hh; exact hh, by have hh := sp6; rw [← wf6] at hh; exact hh, by have hh := sp7; rw [← wf7] at hh; exact hh, by have hh := sp8; rw [← wf8] at hh; exact hh, by have hh := sp9; rw [← wf9] at hh; exact hh, sp10, sp11⟩,
     by rw [m9.1, m8.1, m7.1, m6.1, m5.1, m4.1, m3.1, m2.1, m1.1],
     by rw [m9.2.1, m8.2.1, m7.2.1, m6.2.1, m5.2.1, m4.2.1, m3.2.1, m2.2.1, m1.2.1],
     by rw [m9.2.2.1, m8.2.2.1, m7.2.2.1, m6.2.2.1, m5.2.2.1, m4.2.2.1, m3.2.2.1, m2.2.2.1, m1.2.2.1],
@@ -2056,6 +2356,15 @@ def cntBranch (blank endSym mark : Fin sc) (L : ℕ) (ts : OvTapes sc) : List (A
   else
     seqA blank (fun t => copyPLoop blank endSym false (L + 1) t)
       (fun t => ctrMoveLoop blank mark (L + 1) t) ts
+
+theorem cntBranch_noNewAll (blank endSym mark : Fin sc) (L : ℕ) (ts : OvTapes sc) :
+    NoNewAll (cntBranch blank endSym mark L ts) := by
+  rw [cntBranch]
+  split
+  · exact seqA_noNewAll (fun t => copyPLoop_noNewAll blank endSym true (L + 1) t)
+      (fun _ => noNewAll_singleton (by trivial)) ts
+  · exact seqA_noNewAll (fun t => copyPLoop_noNewAll blank endSym false (L + 1) t)
+      (fun t => ctrMoveLoop_noNewAll blank mark (L + 1) t) ts
 
 /-- **一様な epilogue**。 -/
 def epilogueU (blank startSym endSym mark : Fin sc) (L : ℕ) (ts : OvTapes sc) : List (Act sc) :=
@@ -2171,7 +2480,8 @@ theorem epilogueU_spec {x : List (Fin sc)} {L s p1raw D Q E r a b : ℕ}
     (hE : GSPre.Enc blank startSym endSym mark x a b ⟨D, Q, E, p1raw, 0, s, r⟩
       (DecompInstance.prjB ts))
     (hP0 : Tape.StackView blank ts.P []) (hU0 : Tape.StackView blank ts.U [])
-    (hC0 : Tape.StackView blank ts.Cnt []) :
+    (hC0 : Tape.StackView blank ts.Cnt [])
+    (hS10 : Tape.StackView blank ts.S10 []) (hS11 : Tape.StackView blank ts.S11 []) :
     Tape.SeqView blank (applyActs blank (epilogueU blank startSym endSym mark L ts) ts).P
         (startSym :: (x.drop s ++ [endSym])) 1
       ∧ Tape.SeqView blank (applyActs blank (epilogueU blank startSym endSym mark L ts) ts).U
@@ -2214,6 +2524,67 @@ theorem epilogueU_spec {x : List (Fin sc)} {L s p1raw D Q E r a b : ℕ}
       applyActs blank (toSentP (blank := blank) startSym (L + 3) t9) t9 = t := ⟨_, rfl⟩
   obtain ⟨t11, e11⟩ : ∃ t, applyActs blank [Act.P .right] t10 = t := ⟨_, rfl⟩
   obtain ⟨t12, e12⟩ : ∃ t, applyActs blank (clearAllS blank L t11) t11 = t := ⟨_, rfl⟩
+  -- `S10`/`S11` はこの段のどの動作にも触れられないので、入口の値がそのまま `t11` まで残る。
+  have hnS10 : t11.S10 = ts.S10 := by
+    have g1 := (applyActs_keepNew (blank := blank) (homeS1 blank L ts) ts (homeS1_noNewAll blank L ts)).1
+    rw [e1] at g1
+    have g2 := (applyActs_keepNew (blank := blank) [Act.Pset startSym .right, Act.Uset startSym .right] t1
+        (noNewAll_cons (by trivial) (noNewAll_singleton (by trivial)))).1
+    rw [e2] at g2
+    have g3 := (applyActs_keepNew (blank := blank) (splitLoop blank mark (L + 1) t2) t2
+        (splitLoop_noNewAll blank mark (L + 1) t2)).1
+    rw [e3] at g3
+    have g4 := (applyActs_keepNew (blank := blank) [Act.Uset endSym .right] t3 (noNewAll_singleton (by trivial))).1
+    rw [e4] at g4
+    have g5 := (applyActs_keepNew (blank := blank) (toSentU (blank := blank) startSym (L + 3) t4) t4
+        (toSentU_noNewAll (blank := blank) startSym (L + 3) t4)).1
+    rw [e5] at g5
+    have g6 := (applyActs_keepNew (blank := blank) [Act.U .right] t5 (noNewAll_singleton (by trivial))).1
+    rw [e6] at g6
+    have g7 := (applyActs_keepNew (blank := blank) [Act.C mark .right] t6 (noNewAll_singleton (by trivial))).1
+    rw [e7] at g7
+    have g8 := (applyActs_keepNew (blank := blank) (cntBranch blank endSym mark L t7) t7
+        (cntBranch_noNewAll blank endSym mark L t7)).1
+    rw [e8] at g8
+    have g9 := (applyActs_keepNew (blank := blank) [Act.Pset endSym .right] t8 (noNewAll_singleton (by trivial))).1
+    rw [e9] at g9
+    have g10 := (applyActs_keepNew (blank := blank) (toSentP (blank := blank) startSym (L + 3) t9) t9
+        (toSentP_noNewAll (blank := blank) startSym (L + 3) t9)).1
+    rw [e10] at g10
+    have g11 := (applyActs_keepNew (blank := blank) [Act.P .right] t10 (noNewAll_singleton (by trivial))).1
+    rw [e11] at g11
+    rw [g11, g10, g9, g8, g7, g6, g5, g4, g3, g2, g1]
+  have hnS11 : t11.S11 = ts.S11 := by
+    have g1 := (applyActs_keepNew (blank := blank) (homeS1 blank L ts) ts (homeS1_noNewAll blank L ts)).2
+    rw [e1] at g1
+    have g2 := (applyActs_keepNew (blank := blank) [Act.Pset startSym .right, Act.Uset startSym .right] t1
+        (noNewAll_cons (by trivial) (noNewAll_singleton (by trivial)))).2
+    rw [e2] at g2
+    have g3 := (applyActs_keepNew (blank := blank) (splitLoop blank mark (L + 1) t2) t2
+        (splitLoop_noNewAll blank mark (L + 1) t2)).2
+    rw [e3] at g3
+    have g4 := (applyActs_keepNew (blank := blank) [Act.Uset endSym .right] t3 (noNewAll_singleton (by trivial))).2
+    rw [e4] at g4
+    have g5 := (applyActs_keepNew (blank := blank) (toSentU (blank := blank) startSym (L + 3) t4) t4
+        (toSentU_noNewAll (blank := blank) startSym (L + 3) t4)).2
+    rw [e5] at g5
+    have g6 := (applyActs_keepNew (blank := blank) [Act.U .right] t5 (noNewAll_singleton (by trivial))).2
+    rw [e6] at g6
+    have g7 := (applyActs_keepNew (blank := blank) [Act.C mark .right] t6 (noNewAll_singleton (by trivial))).2
+    rw [e7] at g7
+    have g8 := (applyActs_keepNew (blank := blank) (cntBranch blank endSym mark L t7) t7
+        (cntBranch_noNewAll blank endSym mark L t7)).2
+    rw [e8] at g8
+    have g9 := (applyActs_keepNew (blank := blank) [Act.Pset endSym .right] t8 (noNewAll_singleton (by trivial))).2
+    rw [e9] at g9
+    have g10 := (applyActs_keepNew (blank := blank) (toSentP (blank := blank) startSym (L + 3) t9) t9
+        (toSentP_noNewAll (blank := blank) startSym (L + 3) t9)).2
+    rw [e10] at g10
+    have g11 := (applyActs_keepNew (blank := blank) [Act.P .right] t10 (noNewAll_singleton (by trivial))).2
+    rw [e11] at g11
+    rw [g11, g10, g9, g8, g7, g6, g5, g4, g3, g2, g1]
+  have h11S10 : Tape.StackView blank t11.S10 [] := by rw [hnS10]; exact hS10
+  have h11S11 : Tape.StackView blank t11.S11 [] := by rw [hnS11]; exact hS11
   have hrun : applyActs blank (epilogueU blank startSym endSym mark L ts) ts = t12 := by
     rw [epilogueU, seqA_run, seqA_run, seqA_run, seqA_run, seqA_run, seqA_run, seqA_run,
       seqA_run, seqA_run, seqA_run, seqA_run, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12]
@@ -2413,7 +2784,7 @@ theorem epilogueU_spec {x : List (Fin sc)} {L s p1raw D Q E r a b : ℕ}
     rw [hc]; exact hE9
   obtain ⟨h12sc, h12P, h12X, h12Cnt, h12U, h12X2, h12F, h12len⟩ :=
     clearAllS_spec (blank := blank) (mark := mark) L t11 pw pw (L + 1) (b + 1) D Q E 0 0 0 r
-      h11S1 hpwlen h11S2 hpwlen h11S3 h11S4 h11S5 h11S6 h11S7 h11S8 h11S9
+      h11S1 hpwlen h11S2 hpwlen h11S3 h11S4 h11S5 h11S6 h11S7 h11S8 h11S9 h11S10 h11S11
   rw [e12] at h12sc h12P h12X h12Cnt h12U h12X2 h12F
   -- 結論
   refine ⟨?_, ?_, ?_, h12sc, ?_, ?_, ?_, ?_⟩
@@ -2460,14 +2831,14 @@ variable {blank startSym endSym mark leftSym : Fin sc}
 def decompUniform (blank startSym endSym mark : Fin sc) (L : ℕ) (ts : OvTapes sc) :
     List (Act sc) :=
   seqA blank (fun t => prologueU blank startSym endSym mark L t)
-    (seqA blank (fun t => decActsL blank endSym mark L t)
+    (seqA blank (fun t => decActsLClear blank endSym mark L t)
       (fun t => epilogueU blank startSym endSym mark L t)) ts
 
 /-- 費用の傾き（周期和定数 `C₁` に依存）。 -/
-def CdU (C₁ : ℕ) : ℕ := 40290 * C₁ + 220680
+def CdU (C₁ : ℕ) : ℕ := 644640 * C₁ + 3530505
 
 /-- 費用の切片。 -/
-def DdU : ℕ := 25185
+def DdU : ℕ := 402195
 
 /-- **主定理**：入口が `EntryBlank` で、`X2` が `leftSym :: y` を添字 `L` で保持していれば、
 `decompUniform` は `P` / `U` / `Cnt` に `EndToEnd2.gsDec2 y 8 L` の分解を載せ、
@@ -2517,7 +2888,8 @@ theorem decompUniform_spec {y : List (Fin sc)} {L C₁ : ℕ}
   -- 段階
   obtain ⟨t1, e1⟩ : ∃ t, applyActs blank (prologueU blank startSym endSym mark L ts) ts = t :=
     ⟨_, rfl⟩
-  obtain ⟨t2, e2⟩ : ∃ t, applyActs blank (decActsL blank endSym mark L t1) t1 = t := ⟨_, rfl⟩
+  obtain ⟨t2, e2⟩ : ∃ t, applyActs blank (decActsLClear blank endSym mark L t1) t1 = t :=
+    ⟨_, rfl⟩
   obtain ⟨t3, e3⟩ : ∃ t, applyActs blank (epilogueU blank startSym endSym mark L t2) t2 = t :=
     ⟨_, rfl⟩
   have hrun : applyActs blank (decompUniform blank startSym endSym mark L ts) ts = t3 := by
@@ -2529,19 +2901,39 @@ theorem decompUniform_spec {y : List (Fin sc)} {L C₁ : ℕ}
     hL hLy ts hEB.scratch hX2
   rw [e1] at hE1 k1X2 k1P k1X k1Cnt k1U k1F
   rw [← hxdef] at hE1
+  -- `S10`/`S11` はどの段の動作にも触れられないので、入口の値がそのまま残る。
+  have hnT1S10 : t1.S10 = ts.S10 := by
+    rw [← e1]
+    exact (applyActs_keepNew (blank := blank) (prologueU blank startSym endSym mark L ts) ts
+      (prologueU_noNewAll ts)).1
+  have hnT1S11 : t1.S11 = ts.S11 := by
+    rw [← e1]
+    exact (applyActs_keepNew (blank := blank) (prologueU blank startSym endSym mark L ts) ts
+      (prologueU_noNewAll ts)).2
   -- 分解本体
   obtain ⟨hNlen, ⟨a, b, D, Q, E, hE2⟩, k2P, k2U, k2Cnt, k2X, k2X2, k2F⟩ :=
-    decActsL_spec (startSym := startSym) hxlen hendx hmark t1 hE1
+    decActsLClear_spec (startSym := startSym) hxlen hendx hmark t1 hE1
+    (by rw [k1P]; exact hEB.p) (by rw [k1U]; exact hEB.u) (by rw [k1Cnt]; exact hEB.cnt)
   rw [e2] at hE2 k2P k2U k2Cnt k2X k2X2 k2F
   rw [← hsdef, ← hpdef, ← hrdef] at hE2
+  have hnT2S10 : t2.S10 = ts.S10 := by
+    rw [← e2]
+    rw [(applyActs_keepNew (blank := blank) (decActsLClear blank endSym mark L t1) t1
+      (decActsLClear_noNewAll L t1)).1]
+    exact hnT1S10
+  have hnT2S11 : t2.S11 = ts.S11 := by
+    rw [← e2]
+    rw [(applyActs_keepNew (blank := blank) (decActsLClear blank endSym mark L t1) t1
+      (decActsLClear_noNewAll L t1)).2]
+    exact hnT1S11
   -- カウンタの値は分解本体の動作数で抑えられる
-  set N : ℕ := (decActsL blank endSym mark L t1).length with hNdef
+  set N : ℕ := (decActsLClear blank endSym mark L t1).length with hNdef
   have hval : ∀ (i : SIdx) (v : ℕ), Tape.CounterView' blank mark (sGet i t1) 0 →
       Tape.CounterView' blank mark (sGet i t2) v → v ≤ N := by
     intro i v h0 hv
     have l0 : (sGet i t1).left.length = 1 := by rw [h0.left_eq]; simp
     have l2 : (sGet i t2).left.length = v + 1 := by rw [hv.left_eq]; simp
-    have hmono := left_len_applyActs blank i (decActsL blank endSym mark L t1) t1
+    have hmono := left_len_applyActs blank i (decActsLClear blank endSym mark L t1) t1
     rw [e2] at hmono
     rw [l0, l2, ← hNdef] at hmono
     omega
@@ -2553,9 +2945,8 @@ theorem decompUniform_spec {y : List (Fin sc)} {L C₁ : ℕ}
   obtain ⟨h3P, h3U, h3Cnt, h3sc, h3X, h3X2, h3F, h3len⟩ := epilogueU_spec (blank := blank)
     (startSym := startSym) (endSym := endSym) (mark := mark) (x := x) (L := L) (s := s)
     (p1raw := p1raw) (D := D) (Q := Q) (E := E) (r := rr) (a := a) (b := b)
-    hmark hendx hstartx hse hsb hxlen hsle hple t2 hE2
-    (by rw [k2P, k1P]; exact hEB.p) (by rw [k2U, k1U]; exact hEB.u)
-    (by rw [k2Cnt, k1Cnt]; exact hEB.cnt)
+    hmark hendx hstartx hse hsb hxlen hsle hple t2 hE2 k2P k2U k2Cnt
+    (by rw [hnT2S10]; exact hEB.scratch.s10) (by rw [hnT2S11]; exact hEB.scratch.s11)
   rw [e3] at h3P h3U h3Cnt h3sc h3X h3X2 h3F
   -- `gsDec2` への橋渡し
   have hfst : (EndToEnd2.gsDec2 y 8 L).1 = s := by
@@ -2581,21 +2972,22 @@ theorem decompUniform_spec {y : List (Fin sc)} {L C₁ : ℕ}
     have harith : (4 * 8 + 2) * C₁ + 17 * 8 + 50 = 34 * C₁ + 186 := by ring
     rw [harith] at h
     omega
-  have hN : N ≤ (8058 * C₁ + 44131) * L + 5026 := by
+  have hN : N ≤ (128928 * C₁ + 706096) * L + 80428 := by
     have h1 : 237 * decompose2Work x 8 ≤ 237 * ((34 * C₁ + 186) * L + 21) :=
       Nat.mul_le_mul_left _ hwork
-    have h2 : 237 * ((34 * C₁ + 186) * L + 21) + 49 * (L + 1)
-        = (8058 * C₁ + 44131) * L + 5026 := by ring
+    have h2 : 16 * (237 * ((34 * C₁ + 186) * L + 21) + 49 * (L + 1)) + 12
+        = (128928 * C₁ + 706096) * L + 80428 := by ring
     omega
-  have hsum5 : 5 * N ≤ (40290 * C₁ + 220655) * L + 25130 := by
+  have hsum5 : 5 * N ≤ (644640 * C₁ + 3530480) * L + 402140 := by
     have h5 := Nat.mul_le_mul_left 5 hN
-    have hbig : 5 * ((8058 * C₁ + 44131) * L + 5026)
-        = (40290 * C₁ + 220655) * L + 25130 := by ring
+    have hbig : 5 * ((128928 * C₁ + 706096) * L + 80428)
+        = (644640 * C₁ + 3530480) * L + 402140 := by ring
     rw [← hbig]
     exact h5
   rw [hlen, prologueU_length hL ts]
   simp only [CdU, DdU]
-  have hexp : (40290 * C₁ + 220680) * L = (40290 * C₁ + 220655) * L + 25 * L := by ring
+  have hexp : (644640 * C₁ + 3530505) * L + 402195
+      = (644640 * C₁ + 3530480) * L + 402140 + (25 * L + 55) := by ring
   rw [hexp]
   omega
 
@@ -2662,15 +3054,50 @@ theorem decompUniformInstance_Cd {blank startSym endSym mark leftSym : Fin sc} {
     (hmark : mark ≠ blank) (hse : startSym ≠ endSym) (hsb : startSym ≠ blank)
     (hsum : ∀ (z : List (Fin sc)) (b s' : ℕ),
       stripLoop2Periods z 8 b (z.length + 1) s' ≤ C₁ * b) :
-    (decompUniformInstance (leftSym := leftSym) hmark hse hsb hsum).Cd = 40290 * C₁ + 220680 :=
+    (decompUniformInstance (leftSym := leftSym) hmark hse hsb hsum).Cd = 644640 * C₁ + 3530505 :=
   rfl
 
 theorem decompUniformInstance_Dd {blank startSym endSym mark leftSym : Fin sc} {C₁ : ℕ}
     (hmark : mark ≠ blank) (hse : startSym ≠ endSym) (hsb : startSym ≠ blank)
     (hsum : ∀ (z : List (Fin sc)) (b s' : ℕ),
       stripLoop2Periods z 8 b (z.length + 1) s' ≤ C₁ * b) :
-    (decompUniformInstance (leftSym := leftSym) hmark hse hsb hsum).Dd = 25185 :=
+    (decompUniformInstance (leftSym := leftSym) hmark hse hsb hsum).Dd = 402195 :=
   rfl
+
+/-- **`DecompOnTapesW` から `MiddleTapes.DecompOnTapes` へ**。`acts` は `y` を無視して
+段幅 `L` とテープだけで決まるので、そのまま `y` 付きの形に持ち上がる。 -/
+def DecompOnTapesW.toDecompOnTapes {blank startSym endSym mark leftSym : Fin sc}
+    (W : DecompOnTapesW sc blank startSym endSym mark leftSym) :
+    MiddleTapes.DecompOnTapes sc blank startSym endSym mark leftSym where
+  dec := W.dec
+  acts := fun _ L ts => W.acts L ts
+  Cd := W.Cd
+  Dd := W.Dd
+  decOK := W.decOK
+  spec := fun y L h1 h2 hend hstart ts hEB hX2 => W.spec y L h1 h2 hend hstart ts hEB hX2
+
+/-- **`MiddleTapes.DecompOnTapes` の居住者**：一様分解器から作る。
+これで `MiddleTapes` の展開は vacuous ではなくなる
+（`DecompInstance.decompOnTapes_isEmpty` は古い弱い入口条件に対する結果）。 -/
+def middleDecompInstance {blank startSym endSym mark leftSym : Fin sc} {C₁ : ℕ}
+    (hmark : mark ≠ blank) (hse : startSym ≠ endSym) (hsb : startSym ≠ blank)
+    (hsum : ∀ (z : List (Fin sc)) (b s' : ℕ),
+      stripLoop2Periods z 8 b (z.length + 1) s' ≤ C₁ * b) :
+    MiddleTapes.DecompOnTapes sc blank startSym endSym mark leftSym :=
+  (decompUniformInstance (leftSym := leftSym) hmark hse hsb hsum).toDecompOnTapes
+
+theorem middleDecompInstance_Cd {blank startSym endSym mark leftSym : Fin sc} {C₁ : ℕ}
+    (hmark : mark ≠ blank) (hse : startSym ≠ endSym) (hsb : startSym ≠ blank)
+    (hsum : ∀ (z : List (Fin sc)) (b s' : ℕ),
+      stripLoop2Periods z 8 b (z.length + 1) s' ≤ C₁ * b) :
+    (middleDecompInstance (leftSym := leftSym) hmark hse hsb hsum).Cd
+      = 644640 * C₁ + 3530505 := rfl
+
+theorem middleDecompInstance_Dd {blank startSym endSym mark leftSym : Fin sc} {C₁ : ℕ}
+    (hmark : mark ≠ blank) (hse : startSym ≠ endSym) (hsb : startSym ≠ blank)
+    (hsum : ∀ (z : List (Fin sc)) (b s' : ℕ),
+      stripLoop2Periods z 8 b (z.length + 1) s' ≤ C₁ * b) :
+    (middleDecompInstance (leftSym := leftSym) hmark hse hsb hsum).Dd = 402195 := rfl
 
 end Iface
 
