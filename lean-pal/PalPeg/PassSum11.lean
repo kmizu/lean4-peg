@@ -55,7 +55,8 @@ import PalPeg.PassSum10
 `Consumption` の違反に残された形はただ一つ：
 
 > **子孫 `j` の run が短い**：`r' < p_c + P`（`ShortRunGap`）。違反が要求する
-> `L ≥ k*P - 1` の下でこれは `t ≥ (k-1) * P`（遅い UP 節点）と**同値**
+> `L ≥ k*P - 1` の下でこれは `t ≥ (k-1) * P`（遅い節点）を**含意**する。
+> 同値が証明されているのは閾値ちょうど `L + 1 = k*P` の場合のみ
 > （`shortRun_iff_late`）。
 
 すなわち `PassSum9` の `up_violation_early` は本ファイルの
@@ -225,7 +226,8 @@ def RemainingGap (P q1 r1 t : ℕ) : Prop := r1 < P + q1 ∨ r1 < t + q1
 > すなわち跨ぎ量 `L = E_j - p_c` に対して `t > L - P`）
 
 である。違反は `L ≥ k * P - 1` を要求するので、これは
-`t > (k-1) * P - 1`、つまり「遅い UP 節点」に他ならない。 -/
+`t > (k-1) * P - 1`、つまり「遅い節点」を含意する。逆向きは一般には
+従わず、次の同値定理は閾値ちょうどの場合に限定される。 -/
 def ShortRunGap (pc P r' : ℕ) : Prop := r' < pc + P
 
 /-- 遅さと短さの同値（違反の閾値 `L = k*P - 1` を代入した形）。 -/

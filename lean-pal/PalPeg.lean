@@ -74,6 +74,7 @@ import PalPeg.GSVerifierZ
 import PalPeg.InputEmbed
 import PalPeg.PassSumGen
 import PalPeg.PassSum11
+import PalPeg.Consumption
 import PalPeg.MeteredX
 import PalPeg.VerifierFeedX
 import PalPeg.StageTapesX

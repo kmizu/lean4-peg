@@ -1,5 +1,18 @@
 # Fable 5 引継ぎ — PAL 判定機・SCA・PEG の Lean 4 形式化
 
+## 最新の追記：Consumption の解決（2026-09-08）
+
+`lean-pal/PalPeg/Consumption.lean` の `PassSum10.consumption_eight` で、任意の
+アルファベット・入力 `x`・上限 `b` に対する `Consumption x 8 b` を無条件に証明した。
+反例なら消費位置全体が小周期の 8 乗で被覆される。その 1 周期幅内にある「親の先頭と
+同じ位相」の位置から小周期を先頭へコピーし、親の最小周期性に矛盾させる。
+遅い UP の追加仮定も、外部の局所周期定理も不要。
+`passPeriodSumGen_eight` / `passPeriodSum_eight` も無条件の系として接続。
+`lake build --quiet PalPeg.Consumption` 成功。主定理と両方の系の公理 guard は
+`propext / Classical.choice / Quot.sound` のみで、`sorryAx` や追加公理はない。
+下記の古い進捗にある「Consumption は未証明」はこの結果で更新される。
+具体的な有限制御機械の組み立てなど、別途残る作業まで完了したという意味ではない。
+
 更新: 2026-09-07 17:50 JST。これは今回の引継ぎメモ。
 過去の構成ログ `docs/palindromes-in-peg/PROGRESS.md` は別ファイルとして保持している。
 
@@ -402,3 +415,18 @@ lake build
   消去/具体 `batchProg`、スロット予定表 `SlotSchedule`（書きかけ）。残り：これらの再開、具体 Prog の
   `FullMachineProg` への差し込み（`hround`/`hstepF/G/I`）、`pal_SAccepts_iff_embed`、最終定理。
   数学は `Consumption`（残角 `ShortRunGap` 1 条件）を仮定として保持。
+- 進捗（2026-09-08、Codex・サブエージェントなしで Consumption を再開）：
+  `Consumption.lean` を追加。`segExit_crossing` は実行ループの境界横断から最初の横断ステップを抽出。
+  `not_consumption_witness` は `¬ Consumption x k b`（`k ≥ 4`）から、親の周期境界より手前で
+  始まり、それを越える内側 run と `(k-1)*q < p` / `(k-1)*q ≤ u-nextPos` を導く。
+  `lake build PalPeg.Consumption` 成功、公理は `propext / Classical.choice / Quot.sound` のみ。
+  **Consumption 自体は未証明**。次は横断前の実行経路を保持して、遅い横断が起きないことを証明する。
+  PassSum11 の短さと遅さの「一般の違反で同値」というコメントを修正（同値は閾値ちょうどのみ）。
+- Consumption 続き：`SegPath` で実行経路を保持するよう反例抽出を強化。
+  `step_covers_krep` / `SegPath.covers` / `inner_step_period_bound` をつなぎ、
+  `consumption_failure_cover` を証明した：反例なら親の残存領域の先頭 p セルの各位置が
+  `(k-1)*q < p` を満たす周期 q の k 乗で始まる。経路の途中の位置も含む。
+  `lake build --quiet PalPeg.Consumption` 成功、反例抽出と被覆定理の公理監査も成功。
+  未証明なのは、この小周期 k 乗による全位置被覆が親の最小周期と両立しないこと。
+  Mignosi–Restivo–Salemi, *Periodicity and the golden ratio*, DOI
+  `10.1016/S0304-3975(98)00037-1` は片側局所周期の関連文献（抄録確認のみ、定理適用は未確定）。

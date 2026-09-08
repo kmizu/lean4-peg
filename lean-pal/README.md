@@ -135,8 +135,8 @@ PegSeparation.RealTimeTM.RecognizedBy PalPeg.PAL
 - `EndToEnd` — 添字レベルの端到端：`endToEnd_mem_PAL`（仮定は `decompose` の L1 のみ）
 - `EndToEnd2` — `decompose2` 版の端到端：仮定は `PassPeriodSum 8 C₁`（1 パスの周期和 ≤ C₁T）のみ
 
-**数学的仮定 `PassSum*`（`Consumption` の証明を目指す一連のファイル）**
-- `PassSum` — 1 パスあたりのステップ二分律（`pⱼ₊₁ < pⱼ` か否か）、周期和上界はまだ開いている
+**周期和の証明 `PassSum*` / `Consumption`**
+- `PassSum` — 1 パスあたりのステップ二分律（`pⱼ₊₁ < pⱼ` か否か）
 - `PassSum2` — `(j,j+2)` の降下補題（真の孫か親を大きく飛び越す UP かの二択）
 - `PassSum3` — 同一周期の共終性・兄弟成長補題（`same_period_nested`、`crossing_siblings_overlap_lt`）
 - `PassSum4` — 子の成長比 `(k-2)/(k-1)` の下界
@@ -145,7 +145,9 @@ PegSeparation.RealTimeTM.RecognizedBy PalPeg.PAL
 - `PassSum7` — スケール不変な形 `Σp ≤ 2·max p` への還元と、二分律だけでは不十分であることの反例
 - `PassSum8` — 兄弟成長比 `γ≥14/5` から木の漸化式を閉じ `PassPeriodSum 8 2` を得る
 - `PassSum9` — 走査終端不変量 (E)、`C(c)<p_c` の DOWN 側証明と UP 側の部分結果（`region_prefix_period` 等）
-- `PassSum10` — `lastChildBound`/`RootGrowth` の無条件証明と最終組み立て `passPeriodSum_eight_of_consumption`
+- `PassSum10` — 無条件の `lastChildBound`、Consumption からの `RootGrowth` と最終組み立て
+- `Consumption` — `consumption_eight`：任意アルファベットで `Consumption x 8 b` を無条件に証明。
+  `passPeriodSumGen_eight` / `passPeriodSum_eight` で両方の周期和定理へ接続
 - `PassSumRelabel` — `stripLoop2Periods` の単射リラベリング不変性、2 記号版 `PassPeriodSum` への一般化
 
 証明の鎖（`pal_in_peg_of_realTime`）：
@@ -214,16 +216,14 @@ lake build
 
 `PalPeg/*.lean` に列挙した全モジュールは `sorry` なし・標準 3 公理のみ（`Axioms.lean` の guard 参照）。
 
-**唯一証明されていない数学的主張は `Consumption`**（`stripLoop2` 再帰における `C(c) < p_c`、
-`PassSum10.passPeriodSum_eight_of_consumption` の前提）である。これを仮定すれば
-`PassPeriodSum 8 2` が無条件に得られ、添字レベルの端到端定理 `EndToEnd2.endToEnd2_mem_PAL` まで
-`decompose2` 版の鎖が閉じる。`PassSum9` の要約にある通り、`Consumption` の下位ケースのうち
-
-- DOWN 側（走査終端不変量 (E) からの帰結）
-- UP 側の一部（`region_prefix_period` 等の周期伝播の帰結）
-
-はすでに証明済みで、残る場合分けが未決着のまま開いている。この仮定を除けば、上の層構造
-（語の組合せ論から機械まで）はすべて証明済みである。
+**Consumption は証明済み**（2026-09-08）。`Consumption.lean` の
+`PassSum10.consumption_eight` は `stripLoop2` 再帰における `C(c) < p_c` を、
+入力・上限・アルファベットについて無条件に与える。周期幅の全位置被覆から、親と同位相の
+位置の小周期を先頭へコピーして矛盾を得るため、遅い UP の追加仮定は不要。
+`PassSum10.passPeriodSum_eight` が `EndToEnd2.PassPeriodSum 8 2` を、
+`PassSum10.passPeriodSumGen_eight` が任意アルファベット版を与える。
+既存の `hcons` 引数には `PassSum10.consumption_eight` を渡せる。
+これらの定理は `lake build PalPeg.Consumption` と同ファイルの公理 guard で検証できる。
 
 有限制御（`ProgLang`）への移植は、走査器・キュー・検証器・境界列挙・段のセットアップ・
 テキスト供給・永続制御機械について完了している
@@ -235,5 +235,5 @@ lake build
 - 中央ジョブのバッチとテープの縫い目（`MiddleProg` / `MiddleTapes` / `MiddleClear` の統合、継続中）
 - 段のライフサイクル全体の組み立て（`StageTapes` / `StageTapesX` / `StageBirth` / `StageIfaceInstance`、継続中）
 - 全体機械のラウンド組み立て（`FullMachineTapes` のスロット回転を `StructuredMachine` 化まで通す）
-- 上記に加え `Consumption` を証明した上での最終定理 `RealTimeTM.RecognizedBy PAL` の取得
+- 上記を組み立てた上での最終定理 `RealTimeTM.RecognizedBy PAL` の取得
   （`Main.pal_in_peg_of_structured` が構造化機械から総 PEG への糊）
