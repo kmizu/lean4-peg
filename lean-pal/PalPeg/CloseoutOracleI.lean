@@ -190,7 +190,7 @@ theorem ipack_of_invLPC {raw : List (Fin 2)} (hlr : H_lrepC raw)
     {x : State GalilVM} (hIC : InvLPC raw x.ctl x.vm)
     (hsh : ShiftLocal centre place entry q first raw x) :
     IPack centre place entry q first raw x :=
-  ⟨lpack_of_invLPC hlr hIC, hsh⟩
+  ⟨lpackG_of_lpack (lpack_of_invLPC hlr hIC), hsh⟩
 
 end PackOf
 
@@ -323,7 +323,7 @@ theorem bootIPack_of_parts
     (hls : H_landShift centre place entry q first) :
     BootIPack centre place entry q first := by
   intro a rest
-  refine ⟨⟨lpack_boot (a :: rest), hbs a rest⟩, ?_⟩
+  refine ⟨⟨lpackG_of_lpack (lpack_boot (a :: rest)), hbs a rest⟩, ?_⟩
   intro c1 t hst hI
   exact ipack_of_invLPC centre place entry q first (hlr (a :: rest)) hI (hls a rest c1 t hst hI)
 
