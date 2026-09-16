@@ -3,6 +3,12 @@ import PalPeg.GSPreprocessProg2
 /-!
 # 第 2 相のオラクル `orcR` / `orc2R` の資源解析 (`GSPreprocessProg3`)
 
+**現在の実装**：`GSPreprocessTapes` は12本のテープを使い、符号つき差を
+各走査ステップで更新する。`sActs_step_enc` もこの実装を扱う。
+以下の9本・しきい値のみの設計案と末尾の資源棚卸しは以前の検討記録であり、
+現在のテープ本数・定理の型・コスト定数を記述するものではない。
+分解器全体を入力長非依存の有限 `Prog` にする接続は未完了である。
+
 `PalPeg.GSPreprocessProg2` で `orcCf` の比較ガジェット `CMPLT_PF` を作ったが、
 `orcR` / `orc2R` については同じ構成が使えない。本ファイルはその理由を明示し、
 代わりに必要となる**しきい値による書き換え**を証明する。
@@ -89,22 +95,17 @@ theorem orcR_threshold_spec {s q' D' E' p' F' S' r : ℕ} {ts' : Tapes sc}
   rw [orcR_spec (k := k) hE]
   exact decide_eq_decide.2 (orcR_iff_threshold k r p' q')
 
-/-- 内側走査 1 ステップ (`sActs` の継続枝) は `p` と `r` を変えず `q` だけ 1 増やす。
-これが単調性（＝カウントダウンでよいこと）の根拠。 -/
-theorem sActs_step_enc {s q' D' E' p' F' S' r : ℕ} {ts : Tapes sc}
+/-- 内側走査は `p` と `r` を保ち、`q` を増やして符号つき差を更新する。 -/
+theorem sActs_step_enc {s q' D' E' p' F' S' r : ℕ} {g : Ctr3} {ts : Tapes sc}
+    (hend : endSym ∉ x) (hmark : mark ≠ blank)
     (h : sCond endSym (orcR k) ts)
-    (hE : Enc blank startSym endSym mark x (s + q') (s + p' + q')
-      ⟨D', q', E', p', F', S', r⟩ ts)
-    (hlt : s + p' + q' < x.length) :
-    Enc blank startSym endSym mark x (s + (q' + 1)) (s + p' + (q' + 1))
-      ⟨D', q' + 1, E', p', F', S', r⟩ (applyActs blank (sActs blank endSym (orcR k) ts) ts) := by
-  rw [applyActs_sActs_pos h]
-  have h1 : s + q' < x.length := by omega
-  have e1 : s + (q' + 1) = s + q' + 1 := by omega
-  have e2 : s + p' + (q' + 1) = s + p' + q' + 1 := by omega
-  rw [e1, e2]
-  exact ⟨pat_right hE.v1 h1, pat_right hE.v2 hlt, hE.cd,
-    Tape.counter'_inc hE.cq, hE.ce, hE.cp, hE.cf, hE.cs, hE.cr⟩
+    (hE : EncS blank startSym endSym mark x (s + q') (s + p' + q')
+      ⟨D', q', E', p', F', S', r⟩ g ts) :
+    EncS blank startSym endSym mark x (s + (q' + 1)) (s + p' + (q' + 1))
+      ⟨D' - 1, q' + 1, E', p', F', S', r⟩
+      ⟨g.ap - 1, g.an + (if g.ap = 0 then 1 else 0), g.bn + (if D' = 0 then 1 else 0)⟩
+      (applyActs blank (sActs blank endSym mark (orcR k) ts) ts) := by
+  simpa only [Nat.add_assoc] using encS_s_step hend hmark hE (by omega) h
 
 end Spec
 

@@ -169,7 +169,10 @@ theorem birthTapes_prepPre {blank mark leftSym : Fin sc} {w Text : List (Fin sc)
       ap := ?_
       an := ?_
       rp := ?_
-      rn := ?_ }
+      rn := ?_
+      scr := ?_
+      scr2 := ?_
+      scr3 := ?_ }
   · rw [birthTapes_sIn]
     exact copyTape_seqView hle
   · rw [birthTapes_blank (by decide) (by decide)]; exact blankTape_stackView _ _
@@ -180,6 +183,10 @@ theorem birthTapes_prepPre {blank mark leftSym : Fin sc} {w Text : List (Fin sc)
   · rw [birthTapes_counter (by decide) (by decide)]; exact zeroCounter_view _ _ _
   · rw [birthTapes_counter (by decide) (by decide)]; exact zeroCounter_view _ _ _
   · rw [birthTapes_counter (by decide) (by decide)]; exact zeroCounter_view _ _ _
+  · rw [birthTapes_counter (by decide) (by decide)]; exact zeroCounter_view _ _ _
+  · rw [birthTapes_counter (by decide) (by decide)]; exact zeroCounter_view _ _ _
+  · rw [birthTapes_counter (by decide) (by decide)]; exact zeroCounter_view _ _ _
+
   · rw [birthTapes_counter (by decide) (by decide)]; exact zeroCounter_view _ _ _
   · rw [birthTapes_counter (by decide) (by decide)]; exact zeroCounter_view _ _ _
   · rw [birthTapes_counter (by decide) (by decide)]; exact zeroCounter_view _ _ _
@@ -364,13 +371,12 @@ noncomputable def stageIface_full
         - Phi 8 st))
     (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (StageIfaceInstance.vOf w S).length →
       (w.drop S)[st.pos + st.q]? = (StageIfaceInstance.vOf w S)[st.q]? → cstOf S st ≤ 1)
-    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w) (hstart : startSym ∉ w)
-    (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S) :
+    (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w) (hstart : startSym ∉ w) :
     FullMachineTapes.StageIface sc w :=
   StageIfaceInstance.stageIface (blank := blank) (startSym := startSym) (endSym := endSym)
     (mark := mark) (leftSym := leftSym) (one := one) (zero := zero)
     C₁ hsum hmb D w cstOf A B' U (initOf blank startSym endSym mark leftSym w)
-    hC hcost hadvance hne hleft hend hstart hpow (initOf_hinit D w hleft)
+    hC hcost hadvance hne hleft hend hstart (initOf_hinit D w hleft)
 
 end Full
 

@@ -1283,9 +1283,10 @@ theorem initQT_encodes (blank mark : Fin k) :
   exact ⟨hst, hst, hst, ⟨hst, hst, hst, hst, hst, hst⟩,
     ⟨1, hd, rfl, fun hc => absurd rfl hc⟩⟩
 
-/-- **Corollary.**  Starting from blank tapes, any sequence of `n` queue
+/-- **Corollary.** Starting from the initialized empty-queue tapes, any sequence of `n` queue
 operations is realised in at most `31 * n` tape actions, and the tapes then
-encode exactly the FIFO list produced by those operations. -/
+encode exactly the FIFO list produced by those operations. Construction of
+these marked initial tapes from blank tapes is proved separately in `RTQueueInit`. -/
 theorem queue_on_tapes_empty (blank mark : Fin k) (hne : mark ≠ blank) (ops : List (Op k)) :
     Encodes blank mark (runOps blank mark ops empty ⟨initQT blank mark, 0⟩).2.qt
         (runOps blank mark ops empty ⟨initQT blank mark, 0⟩).1 ∧
@@ -1301,4 +1302,3 @@ theorem queue_on_tapes_empty (blank mark : Fin k) (hne : mark ≠ blank) (ops : 
 
 end RTQueueTapes
 end PalPeg
-

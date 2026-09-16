@@ -153,10 +153,26 @@ section Run
 
 variable {blank startSym endSym mark : Fin sc} {x : List (Fin sc)}
 
-/-- **分解器を `S1 … S9` の中で走らせる動作列**（`k = 8`）。 -/
+/-- Put bottom markers on the three initially empty auxiliary tapes. -/
+def initSignedB (mark : Fin sc) : List (BorderTapes.Act sc) :=
+  [.C mark .right, .Uset mark .right, .Pset mark .right]
+
+theorem initSignedB_enc (ts : BorderTapes.OvTapes sc)
+    (hE : GSPre.Enc blank startSym endSym mark x 0 0 ⟨0, 0, 0, 0, 0, 0, 0⟩ (prjB ts))
+    (hP : Tape.StackView blank ts.P []) (hU : Tape.StackView blank ts.U [])
+    (hC : Tape.StackView blank ts.Cnt []) :
+    GSPre.EncS blank startSym endSym mark x 0 0 ⟨0, 0, 0, 0, 0, 0, 0⟩ ⟨0, 0, 0⟩
+      (prjB (BorderTapes.applyActs blank (initSignedB mark) ts)) := by
+  refine ⟨?_, stackView_nil_to_counter_zero hC, stackView_nil_to_counter_zero hU,
+    stackView_nil_to_counter_zero hP⟩
+  exact ⟨hE.v1, hE.v2, hE.cd, hE.cq, hE.ce, hE.cp, hE.cf, hE.cs, hE.cr⟩
+
+/-- Run decomposition after initializing its auxiliary comparison counters. -/
 def decActsB (blank endSym mark : Fin sc) (x : List (Fin sc))
     (ts : BorderTapes.OvTapes sc) : List (BorderTapes.Act sc) :=
-  liftActsB blank (GSPre.decProg blank endSym mark 8 x.length (x.length + 1) (prjB ts)) ts
+  let t := BorderTapes.applyActs blank (initSignedB mark) ts
+  initSignedB mark ++ liftActsB blank
+    (GSPre.decProg blank endSym mark 8 x.length (x.length + 1) (prjB t)) t
 
 /-- **主補題（肯定）**：作業テープ上に `GSPre` の入口符号化があれば、`decActsB` は
 `OvTapes` の主テープ 6 本に一切触れずに分解を計算し、出口では `Cs`(=`S8`) / `Cp`(=`S6`) /
@@ -164,24 +180,31 @@ def decActsB (blank endSym mark : Fin sc) (x : List (Fin sc))
 `237 * decompose2Work x 8 + 49 * (|x| + 1)` 以下。 -/
 theorem decActsB_spec (hend : endSym ∉ x) (hmark : mark ≠ blank)
     (ts : BorderTapes.OvTapes sc)
-    (hE : GSPre.Enc blank startSym endSym mark x 0 0 ⟨0, 0, 0, 0, 0, 0, 0⟩ (prjB ts)) :
+    (hE : GSPre.Enc blank startSym endSym mark x 0 0 ⟨0, 0, 0, 0, 0, 0, 0⟩ (prjB ts))
+    (hP : Tape.StackView blank ts.P []) (hU : Tape.StackView blank ts.U [])
+    (hC : Tape.StackView blank ts.Cnt []) :
     (decActsB blank endSym mark x ts).length
-        ≤ 237 * decompose2Work x 8 + 49 * (x.length + 1)
+        ≤ 304 * decompose2Work x 8 + 83 * (x.length + 1)
       ∧ (∃ a b D Q E, GSPre.Enc blank startSym endSym mark x a b
           ⟨D, Q, E, (decompose2 x 8).2.1, 0, (decompose2 x 8).1, (decompose2 x 8).2.2⟩
           (prjB (BorderTapes.applyActs blank (decActsB blank endSym mark x ts) ts)))
       ∧ (BorderTapes.applyActs blank (decActsB blank endSym mark x ts) ts).X = ts.X
       ∧ (BorderTapes.applyActs blank (decActsB blank endSym mark x ts) ts).X2 = ts.X2
       ∧ (BorderTapes.applyActs blank (decActsB blank endSym mark x ts) ts).F = ts.F := by
+  let t := BorderTapes.applyActs blank (initSignedB mark) ts
   have h := GSPre.decompose2_on_tapes (sc := sc) (blank := blank) (startSym := startSym)
-    (endSym := endSym) (mark := mark) (x := x) (k := 8) (by omega) hend hmark (prjB ts) hE
+    (endSym := endSym) (mark := mark) (x := x) (k := 8) (by omega) hend hmark (prjB t)
+      (initSignedB_enc ts hE hP hU hC)
   have hk := liftActsB_keep blank
-    (GSPre.decProg blank endSym mark 8 x.length (x.length + 1) (prjB ts)) ts
+    (GSPre.decProg blank endSym mark 8 x.length (x.length + 1) (prjB t)) t
+  simp only [decActsB, BorderTapes.applyActs_append]
   refine ⟨?_, ?_, hk.1, hk.2.1, hk.2.2⟩
-  · rw [decActsB, liftActsB_length]
+  · rw [List.length_append, liftActsB_length]
+    change 3 + _ ≤ _
     have := h.1
+    dsimp only [t] at this
     omega
-  · rw [decActsB, prjB_run]
+  · rw [prjB_run]
     exact h.2
 
 end Run

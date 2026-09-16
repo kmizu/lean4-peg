@@ -361,4 +361,3 @@ theorem ofPhases_sInit (htape : 0 < t) (hB : 0 < B) (blank : Γ) (init : Ctrl)
 end Phases
 
 end PalPeg.Program
-

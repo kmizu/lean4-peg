@@ -8,6 +8,10 @@
 背景と鎖の全体は [`../docs/palindromes-in-peg/FORMALIZATION_SURVEY.md`](../docs/palindromes-in-peg/FORMALIZATION_SURVEY.md)
 （特に §1, §3, §4）を参照。
 
+現行の機械構成と残る接続は [`ASSEMBLY_PLAN.md`](ASSEMBLY_PLAN.md) を参照。
+単一Progへの一本化を前提にした旧制御層は
+[`archive/single-prog/`](archive/single-prog/README.md) に退避し、ビルド対象から外した。
+
 ## 何を証明し、何を仮定しているか
 
 ### 仮定（Lean では証明していない）

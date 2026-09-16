@@ -44,6 +44,14 @@ inductive Cond9 where
   | v2NotEnd : Cond9
   /-- `V1` と `V2` の読みが等しい。 -/
   | v12Eq : Cond9
+  /-- Inner scan condition while the two positive-counter heads are probed. -/
+  | sReady : Cond9
+  /-- Outer second-phase guard with `Cq` and the abort flag `Ce` probed. -/
+  | soReady : Cond9
+  /-- First-phase scan guard, with the countdown `Cd` probed. -/
+  | mReady : Cond9
+  /-- First-search outer guard, probing countdown and optional bound distance. -/
+  | foReady (bounded : Bool) : Cond9
   deriving DecidableEq
 
 /-! ### テープ番号 -/
@@ -62,8 +70,15 @@ def tCb : Fin 12 := ⟨10, by omega⟩
 def tCc : Fin 12 := ⟨11, by omega⟩
 
 instance : Fintype Cond9 :=
-  Fintype.ofList ((List.finRange 12).map Cond9.notMark ++ [Cond9.v2NotEnd, Cond9.v12Eq])
-    (by rintro (j | _ | _) <;> simp)
+  Fintype.ofList ((List.finRange 12).map Cond9.notMark ++
+    [Cond9.v2NotEnd, Cond9.v12Eq, Cond9.sReady, Cond9.soReady, Cond9.mReady,
+      Cond9.foReady false, Cond9.foReady true])
+    (by
+      intro c
+      cases c with
+      | notMark j => simp
+      | foReady b => cases b <;> simp
+      | _ => simp)
 
 variable {Terminal : Type}
 
@@ -80,6 +95,11 @@ def condOf9 (endSym mark : Fin sc) : Cond9 → (Fin 12 → Fin sc) → Bool
   | .notMark j, σ => decide (σ j ≠ mark)
   | .v2NotEnd, σ => decide (σ tV2 ≠ endSym)
   | .v12Eq, σ => decide (σ tV1 = σ tV2)
+  | .sReady, σ => decide (σ tV2 ≠ endSym ∧ σ tV1 = σ tV2 ∧
+      ¬ (σ tCa = mark ∧ σ tCd = mark))
+  | .soReady, σ => decide (σ tCe = mark ∧ ¬ (σ tCq = mark ∧ σ tV2 = endSym))
+  | .mReady, σ => decide (σ tV2 ≠ endSym ∧ σ tCd ≠ mark ∧ σ tV1 = σ tV2)
+  | .foReady b, σ => decide (σ tCd ≠ mark ∧ σ tV2 ≠ endSym ∧ (b = true → σ tCa ≠ mark))
 
 /-- 9 本テープの前処理器の解釈。 -/
 def I9 (blank endSym mark : Fin sc) : Interp Terminal A9 Cond9 (Fin sc) 12 where

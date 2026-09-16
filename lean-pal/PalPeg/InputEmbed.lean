@@ -177,11 +177,12 @@ theorem full_answer_mem_PAL_embed_length (ι : Fin 2 ↪ Fin sc) (input : List (
 `Fin 2` 上に引き戻したもの）。 -/
 theorem stage_bit_embed (ι : Fin 2 ↪ Fin sc) (input : List (Fin 2))
     (I : FullMachineTapes.StageIface sc (input.map ι)) (S n : ℕ)
-    (hS : 16 ≤ S) (h1 : 2 * S ≤ n) (h2 : n < 4 * S) (hn : n ≤ input.length) :
+    (hpow : ∃ j, S = 2 ^ j) (hS : 16 ≤ S) (h1 : 2 * S ≤ n)
+    (h2 : n < 4 * S) (hn : n ≤ input.length) :
     I.bit S n = true
       ↔ (occursAt (input.take (S / 2)).reverse (input.take n)
           ∧ IsPal ((input.drop (S / 2)).take (n - S))) := by
-  rw [I.spec S n hS h1 h2 (by simpa using hn)]
+  rw [I.spec S n hpow hS h1 h2 (by simpa using hn)]
   rw [map_take, map_take, map_reverse, occursAt_map ι.injective,
     map_drop, map_take, isPal_map ι.injective]
 
@@ -210,7 +211,6 @@ theorem full_answer_mem_PAL_of_embed
       ((input.map ι).drop S)[st.pos + st.q]? = (vOf (input.map ι) S)[st.q]? →
         cstOf S st ≤ 1)
     (hne : one ≠ zero)
-    (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinit : ∀ S, 16 ≤ S → S / 2 ≤ (input.map ι).length →
       PrepPre blank mark leftSym (S / 2) (input.map ι) ((input.map ι).drop S)
           (initOf S).pg.ts
@@ -223,7 +223,7 @@ theorem full_answer_mem_PAL_of_embed
           (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
           (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
           (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
-          hpow hinit) n = true
+          hinit) n = true
       ↔ (input.take n) ∈ PAL :=
   full_answer_mem_PAL_embed ι input _ n hn
 
@@ -252,7 +252,6 @@ theorem full_answer_mem_PAL_of_embed'
       ((input.map ι).drop S)[st.pos + st.q]? = (vOf (input.map ι) S)[st.q]? →
         cstOf S st ≤ 1)
     (hne : one ≠ zero)
-    (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinit : ∀ S, 16 ≤ S → S / 2 ≤ (input.map ι).length →
       PrepPre blank mark leftSym (S / 2) (input.map ι) ((input.map ι).drop S)
           (initOf S).pg.ts
@@ -266,7 +265,7 @@ theorem full_answer_mem_PAL_of_embed'
           (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
           (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
           (notMem_map_of_notMem_range (notMem_range_of_hi hι (by simp)) input)
-          hpow hinit) n = true
+          hinit) n = true
       ↔ (input.take n) ∈ PAL :=
   full_answer_mem_PAL_embed ι input _ n hn
 
@@ -359,7 +358,6 @@ theorem full_answer_mem_PAL_of_embed9
     (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (vOf (input.map emb9) S).length →
       ((input.map emb9).drop S)[st.pos + st.q]? = (vOf (input.map emb9) S)[st.q]? →
         cstOf S st ≤ 1)
-    (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinit : ∀ S, 16 ≤ S → S / 2 ≤ (input.map emb9).length →
       PrepPre (symbols9 0) (symbols9 1) (symbols9 2) (S / 2) (input.map emb9)
           ((input.map emb9).drop S) (initOf S).pg.ts
@@ -373,7 +371,7 @@ theorem full_answer_mem_PAL_of_embed9
           (notMem_map_of_notMem_range (notMem_range_of_hi emb9_avoids (by simp)) input)
           (notMem_map_of_notMem_range (notMem_range_of_hi emb9_avoids (by simp)) input)
           (notMem_map_of_notMem_range (notMem_range_of_hi emb9_avoids (by simp)) input)
-          hpow hinit) n = true
+          hinit) n = true
       ↔ (input.take n) ∈ PAL :=
   full_answer_mem_PAL_embed emb9 input _ n hn
 

@@ -7,7 +7,7 @@ import PalPeg.TapeLib
 /-!
 # スロット・スケジュールをテープで駆動する (`SlotSchedule`)
 
-`FullMachineProg.slotSchedule_exec` は仮定
+段の選択をテープ上で判定するには、条件
 
 * `hsched : I.condOf cAct (fun j => (Tp j).focus) = (stageInSlot n i).isSome`
 

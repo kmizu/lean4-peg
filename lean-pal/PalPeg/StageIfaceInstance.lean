@@ -79,7 +79,6 @@ noncomputable def stageIface
     (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (vOf w S).length →
       (w.drop S)[st.pos + st.q]? = (vOf w S)[st.q]? → cstOf S st ≤ 1)
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w) (hstart : startSym ∉ w)
-    (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinit : ∀ S, 16 ≤ S → S / 2 ≤ w.length →
       PrepPre blank mark leftSym (S / 2) w (w.drop S) (initOf S).pg.ts
         ∧ ∀ m, m ≤ S / 2 →
@@ -118,9 +117,9 @@ noncomputable def stageIface
     show stcost _ _ _ _ _ _ _ _ _ _ = 0
     rw [stcost, if_pos hn]
   spec := by
-    intro S n hS h1 h2 hw
+    intro S n hpow hS h1 h2 hw
     have hSle : S / 2 ≤ w.length := by omega
-    obtain ⟨hq, hev⟩ := hpow S hS
+    obtain ⟨hq, hev⟩ := FullMachineTapes.dyadic_quarters hpow hS
     obtain ⟨hpinit, hminit⟩ := hinit S hS hSle
     exact stage_tapes_spec' (D := D)
       (Pre := PrepInstance.prepInstance (blank := blank) (startSym := startSym)
@@ -133,7 +132,6 @@ noncomputable def stageIface
       hpinit (by omega) (prep_cut_lt (by omega) hSle)
       (prep_core w (S / 2)) hC (hcost S) (hadvance S)
       hne hleft hend hstart hev hminit h1 h2 hw
-  wid_even := fun S hS => (hpow S hS).2
 
 /-- **`stageIface_spec`**：上のインタフェースの主仕様の再掲。 -/
 theorem stageIface_spec
@@ -151,19 +149,19 @@ theorem stageIface_spec
     (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (vOf w S).length →
       (w.drop S)[st.pos + st.q]? = (vOf w S)[st.q]? → cstOf S st ≤ 1)
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w) (hstart : startSym ∉ w)
-    (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinit : ∀ S, 16 ≤ S → S / 2 ≤ w.length →
       PrepPre blank mark leftSym (S / 2) w (w.drop S) (initOf S).pg.ts
         ∧ ∀ m, m ≤ S / 2 →
           MiddleTapes.MEncodes blank startSym endSym mark leftSym one zero D w S m
             (initOf S).md)
-    (S n : ℕ) (hS : 16 ≤ S) (h1 : 2 * S ≤ n) (h2 : n < 4 * S) (hw : n ≤ w.length) :
+    (S n : ℕ) (hpow : ∃ j, S = 2 ^ j) (hS : 16 ≤ S)
+    (h1 : 2 * S ≤ n) (h2 : n < 4 * S) (hw : n ≤ w.length) :
     (stageIface C₁ hsum hmb D w cstOf A B' U initOf hC hcost hadvance hne hleft hend hstart
-        hpow hinit).bit S n = true
+        hinit).bit S n = true
       ↔ (occursAt (w.take (S / 2)).reverse (w.take n)
           ∧ IsPal ((w.drop (S / 2)).take (n - S))) :=
   (stageIface C₁ hsum hmb D w cstOf A B' U initOf hC hcost hadvance hne hleft hend hstart
-    hpow hinit).spec S n hS h1 h2 hw
+    hinit).spec S n hpow hS h1 h2 hw
 
 /-- **全体の出力の正当性**：`FullMachineTapes.full_answer_mem_PAL` を上の
 インタフェースに適用したもの（2 記号アルファベット）。 -/
@@ -183,7 +181,6 @@ theorem full_answer_mem_PAL_of
     (hadvance : ∀ (S : ℕ) (st : ScanState), st.q ≠ (vOf w S).length →
       (w.drop S)[st.pos + st.q]? = (vOf w S)[st.q]? → cstOf S st ≤ 1)
     (hne : one ≠ zero) (hleft : leftSym ∉ w) (hend : endSym ∉ w) (hstart : startSym ∉ w)
-    (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinit : ∀ S, 16 ≤ S → S / 2 ≤ w.length →
       PrepPre blank mark leftSym (S / 2) w (w.drop S) (initOf S).pg.ts
         ∧ ∀ m, m ≤ S / 2 →
@@ -191,7 +188,7 @@ theorem full_answer_mem_PAL_of
             (initOf S).md) :
     FullMachineTapes.fullAnswer
         (stageIface C₁ hsum hmb D w cstOf A B' U initOf hC hcost hadvance hne hleft hend hstart
-          hpow hinit) w.length = true
+          hinit) w.length = true
       ↔ w ∈ PAL :=
   FullMachineTapes.full_answer_mem_PAL _
 

@@ -143,8 +143,20 @@ theorem pair_copy_rate_ok {S : ℕ} (hS : 8 ≤ S) (hq : 4 * (S / 4) = S) :
 
 variable {sc : ℕ}
 
-/-- **段のインタフェース**：`StageTapes` が与えるもの（幅ごとのテープ記録・出力ビット・
-1 ラウンド費用・主仕様 `stage_tapes_spec`）を、全体機械から見た形にまとめたもの。 -/
+/-- Actual dyadic stage widths admit the exact halves and quarters used
+by setup. No divisibility assumption on arbitrary natural numbers is needed. -/
+theorem dyadic_quarters {S : ℕ} (h : ∃ j, S = 2 ^ j) (hS : 16 ≤ S) :
+    4 * (S / 4) = S ∧ 2 * (S / 2) = S := by
+  refine ⟨?_, two_mul_half h (by omega)⟩
+  obtain ⟨j, rfl⟩ := h
+  rcases j with _ | (_ | j)
+  · norm_num at hS
+  · norm_num at hS
+  · simp only [Nat.pow_succ]
+    omega
+
+/-- **段のインタフェース**：実際に使う2冪幅の主仕様と、各幅のテープ記録・
+出力ビット・ラウンド費用をまとめる。 -/
 structure StageIface (sc : ℕ) (w : List (Fin sc)) where
   /-- 幅 `S` の段のラウンド `n` 終了時の 12 本テープの記録。 -/
   srec : ℕ → ℕ → StageT sc
@@ -159,12 +171,10 @@ structure StageIface (sc : ℕ) (w : List (Fin sc)) where
   cost_idle : ∀ S n, n ≤ S / 2 → cost S n = 0
   /-- **主仕様**（`StageTapes.stage_tapes_spec`）：答える区間で出力ビットは
   「パターン出現」かつ「中央が回文」と同値。 -/
-  spec : ∀ S n, 16 ≤ S → 2 * S ≤ n → n < 4 * S → n ≤ w.length →
+  spec : ∀ S n, (∃ j, S = 2 ^ j) → 16 ≤ S → 2 * S ≤ n → n < 4 * S → n ≤ w.length →
     (bit S n = true ↔
       (occursAt (w.take (S / 2)).reverse (w.take n) ∧
         IsPal ((w.drop (S / 2)).take (n - S))))
-  /-- 幅は偶数（2 冪なので）。 -/
-  wid_even : ∀ S, 16 ≤ S → 2 * (S / 2) = S
 
 /-! ## 3. 全体機械 -/
 
@@ -434,8 +444,8 @@ theorem full_answer_correct {w : List (Fin sc)} (I : StageIface sc w)
   have hS := stageOf_ge (show 32 ≤ n by omega)
   obtain ⟨h1, h2⟩ := stageOf_spec (n := n) (by omega)
   rw [fullAnswer, if_neg h32, any_stageOf I (by omega),
-    I.spec (stageOf n) n hS h1 h2 hn]
-  have heven := I.wid_even (stageOf n) hS
+    I.spec (stageOf n) n (stageOf_isPow n) hS h1 h2 hn]
+  have heven := two_mul_half (stageOf_isPow n) (show 2 ≤ stageOf n by omega)
   rw [show n - stageOf n = n - 2 * (stageOf n / 2) from by omega]
   exact (pal_prefix_iff_stage (W := stageOf n / 2) (by omega) hn).symm
 

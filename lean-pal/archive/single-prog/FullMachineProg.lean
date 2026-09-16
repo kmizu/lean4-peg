@@ -469,7 +469,6 @@ theorem pal_SAccepts_iff_embed {sc : ℕ}
       ((input.map ι).drop S)[st.pos + st.q]? = (vOf (input.map ι) S)[st.q]? →
         cstOf S st ≤ 1)
     (hnez : one ≠ zero)
-    (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinitS : ∀ S, 16 ≤ S → S / 2 ≤ (input.map ι).length →
       PrepPre bl mark leftSym (S / 2) (input.map ι) ((input.map ι).drop S)
           (initOf S).pg.ts
@@ -493,7 +492,7 @@ theorem pal_SAccepts_iff_embed {sc : ℕ}
               (InputEmbed.notMem_map_of_notMem_range (InputEmbed.notMem_range_of_hi hι (by simp)) input)
               (InputEmbed.notMem_map_of_notMem_range (InputEmbed.notMem_range_of_hi hι (by simp)) input)
               (InputEmbed.notMem_map_of_notMem_range (InputEmbed.notMem_range_of_hi hι (by simp)) input)
-              hpow hinitS) (n + 1) F))
+              hinitS) (n + 1) F))
     (hstepG : ∀ n, n < input.length → ∀ F b, Inv n F →
       Ge (input.getD n 0) (encFull n F) b
         = fullAnswer (stageIface 2 (PassSumGen.hsum_of_consumption hcons) hmb D (input.map ι)
@@ -501,7 +500,7 @@ theorem pal_SAccepts_iff_embed {sc : ℕ}
             (InputEmbed.notMem_map_of_notMem_range (InputEmbed.notMem_range_of_hi hι (by simp)) input)
             (InputEmbed.notMem_map_of_notMem_range (InputEmbed.notMem_range_of_hi hι (by simp)) input)
             (InputEmbed.notMem_map_of_notMem_range (InputEmbed.notMem_range_of_hi hι (by simp)) input)
-            hpow hinitS) (n + 1))
+            hinitS) (n + 1))
     (hstepI : ∀ n, n < input.length → ∀ F, Inv n F →
       Inv (n + 1) (fullRound bl leftSym rs
         (stageIface 2 (PassSumGen.hsum_of_consumption hcons) hmb D (input.map ι) cstOf
@@ -509,7 +508,7 @@ theorem pal_SAccepts_iff_embed {sc : ℕ}
           (InputEmbed.notMem_map_of_notMem_range (InputEmbed.notMem_range_of_hi hι (by simp)) input)
           (InputEmbed.notMem_map_of_notMem_range (InputEmbed.notMem_range_of_hi hι (by simp)) input)
           (InputEmbed.notMem_map_of_notMem_range (InputEmbed.notMem_range_of_hi hι (by simp)) input)
-          hpow hinitS) (n + 1) F))
+          hinitS) (n + 1) F))
     (hinit : Inv 0 init)
     (henc0 : encFull 0 init = fun _ => STape.blankTape blank) :
     (progMachinePMb I prog tgtFull encT htape hB blank true).SAccepts input
@@ -520,11 +519,11 @@ theorem pal_SAccepts_iff_embed {sc : ℕ}
       (InputEmbed.notMem_map_of_notMem_range (InputEmbed.notMem_range_of_hi hι (by simp)) input)
       (InputEmbed.notMem_map_of_notMem_range (InputEmbed.notMem_range_of_hi hι (by simp)) input)
       (InputEmbed.notMem_map_of_notMem_range (InputEmbed.notMem_range_of_hi hι (by simp)) input)
-      hpow hinitS)
+      hinitS)
     bl leftSym rs I prog encT htape hB blank Fe Ge hround Inv encFull init input
     hstepF hstepG hstepI hinit henc0
     (fun n hn => InputEmbed.full_answer_mem_PAL_of_embed' ι hι hcons hmb D input
-      cstOf Ac B' U initOf hC hcost hadvance hnez hpow hinitS n hn)
+      cstOf Ac B' U initOf hC hcost hadvance hnez hinitS n hn)
 
 open PalPeg.StageTapes PalPeg.StageIfaceInstance in
 /-- **`sc = 9` 特殊化**：`InputEmbed.emb9`（特殊記号 `0..6`、入力記号 `7, 8`）による
@@ -545,7 +544,6 @@ theorem pal_SAccepts_iff_embed9
       ((input.map InputEmbed.emb9).drop S)[st.pos + st.q]?
           = (vOf (input.map InputEmbed.emb9) S)[st.q]? →
         cstOf S st ≤ 1)
-    (hpow : ∀ S, 16 ≤ S → 4 * (S / 4) = S ∧ 2 * (S / 2) = S)
     (hinitS : ∀ S, 16 ≤ S → S / 2 ≤ (input.map InputEmbed.emb9).length →
       PrepPre (InputEmbed.symbols9 0) (InputEmbed.symbols9 1) (InputEmbed.symbols9 2)
           (S / 2) (input.map InputEmbed.emb9) ((input.map InputEmbed.emb9).drop S)
@@ -572,7 +570,7 @@ theorem pal_SAccepts_iff_embed9
               (InputEmbed.emb9_leftSym_notMem input) (InputEmbed.emb9_endSym_notMem input)
               (InputEmbed.notMem_map_of_notMem_range
                 (InputEmbed.notMem_range_of_hi InputEmbed.emb9_avoids (by simp)) input)
-              hpow hinitS) (n + 1) F))
+              hinitS) (n + 1) F))
     (hstepG : ∀ n, n < input.length → ∀ F b, Inv n F →
       Ge (input.getD n 0) (encFull n F) b
         = fullAnswer (stageIface 2 (PassSumGen.hsum_of_consumption hcons)
@@ -581,7 +579,7 @@ theorem pal_SAccepts_iff_embed9
             (InputEmbed.emb9_leftSym_notMem input) (InputEmbed.emb9_endSym_notMem input)
             (InputEmbed.notMem_map_of_notMem_range
               (InputEmbed.notMem_range_of_hi InputEmbed.emb9_avoids (by simp)) input)
-            hpow hinitS) (n + 1))
+            hinitS) (n + 1))
     (hstepI : ∀ n, n < input.length → ∀ F, Inv n F →
       Inv (n + 1) (fullRound (InputEmbed.symbols9 0) (InputEmbed.symbols9 2) rs
         (stageIface 2 (PassSumGen.hsum_of_consumption hcons) InputEmbed.symbols9_mark_ne_blank D
@@ -590,7 +588,7 @@ theorem pal_SAccepts_iff_embed9
           (InputEmbed.emb9_leftSym_notMem input) (InputEmbed.emb9_endSym_notMem input)
           (InputEmbed.notMem_map_of_notMem_range
             (InputEmbed.notMem_range_of_hi InputEmbed.emb9_avoids (by simp)) input)
-          hpow hinitS) (n + 1) F))
+          hinitS) (n + 1) F))
     (hinit : Inv 0 init)
     (henc0 : encFull 0 init = fun _ => STape.blankTape blank) :
     (progMachinePMb I prog tgtFull encT htape hB blank true).SAccepts input
@@ -602,11 +600,11 @@ theorem pal_SAccepts_iff_embed9
       (InputEmbed.emb9_leftSym_notMem input) (InputEmbed.emb9_endSym_notMem input)
       (InputEmbed.notMem_map_of_notMem_range
         (InputEmbed.notMem_range_of_hi InputEmbed.emb9_avoids (by simp)) input)
-      hpow hinitS)
+      hinitS)
     (InputEmbed.symbols9 0) (InputEmbed.symbols9 2) rs I prog encT htape hB blank Fe Ge hround
     Inv encFull init input hstepF hstepG hstepI hinit henc0
     (fun n hn => InputEmbed.full_answer_mem_PAL_of_embed9 hcons D input
-      cstOf Ac B' U initOf hC hcost hadvance hpow hinitS n hn)
+      cstOf Ac B' U initOf hC hcost hadvance hinitS n hn)
 
 end Exit
 

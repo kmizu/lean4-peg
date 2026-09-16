@@ -133,6 +133,11 @@ structure PrepPre (blank mark leftSym : Fin sc) (L : ℕ) (w Text : List (Fin sc
   rp : Tape.CounterView' blank mark (ts sRp) 0
   rn : Tape.CounterView' blank mark (ts sRn) 0
 
+  /-- Auxiliary counters used by the signed second-phase comparisons. -/
+  scr : Tape.CounterView' blank mark (ts sScr) 0
+  scr2 : Tape.CounterView' blank mark (ts sScr2) 0
+  scr3 : Tape.CounterView' blank mark (ts sScr3) 0
+
 /-- **前処理のインタフェース**（`GSPreprocessTapes` の抽象化）。
 入力コピー `sIn` に載っているパターン `w.take L` から、切断点・周期・到達域の
 単進カウンタ（`sCs` / `sC1` / `sRp`）を作り、`PatternTapes.SetupPre` を満たす
@@ -823,4 +828,3 @@ end Answer
 
 end StageTapes
 end PalPeg
-

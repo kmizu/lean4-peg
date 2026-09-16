@@ -997,8 +997,10 @@ variable {blank startSym endSym mark : Fin sc}
 
 /-- `DecompInstance.decActsB` の一様版：語 `x` の長さの代わりに段幅 `L` を使う。 -/
 def decActsL (blank endSym mark : Fin sc) (L : ℕ) (ts : OvTapes sc) : List (Act sc) :=
+  let t := applyActs blank (DecompInstance.initSignedB mark) ts
+  DecompInstance.initSignedB mark ++
   DecompInstance.liftActsB blank
-    (GSPre.decProg blank endSym mark 8 L (L + 1) (DecompInstance.prjB ts)) ts
+    (GSPre.decProg blank endSym mark 8 L (L + 1) (DecompInstance.prjB t)) t
 
 theorem decActsL_eq {x : List (Fin sc)} {L : ℕ} (hx : x.length = L) (ts : OvTapes sc) :
     decActsL blank endSym mark L ts = DecompInstance.decActsB blank endSym mark x ts := by
@@ -1008,9 +1010,11 @@ theorem decActsL_eq {x : List (Fin sc)} {L : ℕ} (hx : x.length = L) (ts : OvTa
 theorem decActsL_spec {x : List (Fin sc)} {L : ℕ} (hx : x.length = L) (hend : endSym ∉ x)
     (hmark : mark ≠ blank) (ts : OvTapes sc)
     (hE : GSPre.Enc blank startSym endSym mark x 0 0 ⟨0, 0, 0, 0, 0, 0, 0⟩
-      (DecompInstance.prjB ts)) :
+      (DecompInstance.prjB ts))
+    (hP : Tape.StackView blank ts.P []) (hU : Tape.StackView blank ts.U [])
+    (hC : Tape.StackView blank ts.Cnt []) :
     (decActsL blank endSym mark L ts).length
-        ≤ 237 * decompose2Work x 8 + 49 * (L + 1)
+        ≤ 304 * decompose2Work x 8 + 83 * (L + 1)
       ∧ (∃ a b D Q E, GSPre.Enc blank startSym endSym mark x a b
           ⟨D, Q, E, (decompose2 x 8).2.1, 0, (decompose2 x 8).1, (decompose2 x 8).2.2⟩
           (DecompInstance.prjB
@@ -1018,7 +1022,7 @@ theorem decActsL_spec {x : List (Fin sc)} {L : ℕ} (hx : x.length = L) (hend : 
       ∧ (applyActs blank (decActsL blank endSym mark L ts) ts).X = ts.X
       ∧ (applyActs blank (decActsL blank endSym mark L ts) ts).X2 = ts.X2
       ∧ (applyActs blank (decActsL blank endSym mark L ts) ts).F = ts.F := by
-  have h := DecompInstance.decActsB_spec (startSym := startSym) hend hmark ts hE
+  have h := DecompInstance.decActsB_spec (startSym := startSym) hend hmark ts hE hP hU hC
   rw [decActsL_eq hx]
   rw [hx] at h
   exact h
@@ -1043,8 +1047,10 @@ theorem liftActsB_noNewAll (blank : Fin sc) :
       exact noNewAll_cons (liftActB_noNew ts' act) (ih _)
 
 theorem decActsL_noNewAll (L : ℕ) (ts : OvTapes sc) :
-    NoNewAll (decActsL blank endSym mark L ts) :=
-  liftActsB_noNewAll blank _ ts
+    NoNewAll (decActsL blank endSym mark L ts) := by
+  apply noNewAll_append
+  · simp [DecompInstance.initSignedB, NoNewAll, NoNew]
+  · exact liftActsB_noNewAll blank _ _
 
 /-- `decActsL` のあと、`P`/`U`/`Cnt` に残った第 2 相の比較カウンタの後始末を
 `MiddleClear.clearPUC` で行う一様版。掃除の長さは走った本体の動作数で決まる。 -/
@@ -1057,6 +1063,7 @@ theorem decActsLClear_noNewAll (L : ℕ) (ts : OvTapes sc) :
   noNewAll_append (decActsL_noNewAll L ts)
     (noNewAll_of_noScratchAll (MiddleClear.clearPUC_noScratch blank _))
 
+set_option maxHeartbeats 800000 in
 /-- **`decActsLClear` の主補題**：`decActsL` の結果に `clearPUC` を重ねることで、
 `P`/`U`/`Cnt` を（入口が空スタックである限り）**空スタックへ戻して**返す。分解の
 符号化（`Enc`）と `X`/`X2`/`F` の保存は `clearPUC` が `S1 … S9` に触れないことから
@@ -1068,7 +1075,7 @@ theorem decActsLClear_spec {x : List (Fin sc)} {L : ℕ} (hx : x.length = L) (he
     (hP0 : Tape.StackView blank ts.P []) (hU0 : Tape.StackView blank ts.U [])
     (hC0 : Tape.StackView blank ts.Cnt []) :
     (decActsLClear blank endSym mark L ts).length
-        ≤ 16 * (237 * decompose2Work x 8 + 49 * (L + 1)) + 12
+        ≤ 16 * (304 * decompose2Work x 8 + 83 * (L + 1)) + 12
       ∧ (∃ a b D Q E, GSPre.Enc blank startSym endSym mark x a b
           ⟨D, Q, E, (decompose2 x 8).2.1, 0, (decompose2 x 8).1, (decompose2 x 8).2.2⟩
           (DecompInstance.prjB
@@ -1080,7 +1087,7 @@ theorem decActsLClear_spec {x : List (Fin sc)} {L : ℕ} (hx : x.length = L) (he
       ∧ (applyActs blank (decActsLClear blank endSym mark L ts) ts).X2 = ts.X2
       ∧ (applyActs blank (decActsLClear blank endSym mark L ts) ts).F = ts.F := by
   obtain ⟨hlen1, ⟨a, b, D, Q, E, hE2⟩, k1X, k1X2, k1F⟩ :=
-    decActsL_spec (startSym := startSym) hx hend hmark ts hE
+    decActsL_spec (startSym := startSym) hx hend hmark ts hE hP0 hU0 hC0
   set t1 : OvTapes sc := applyActs blank (decActsL blank endSym mark L ts) ts with ht1
   set nAct : ℕ := (decActsL blank endSym mark L ts).length with hndef
   have hnear := MiddleClear.near_applyActs (blank := blank) (decActsL blank endSym mark L ts) ts 0
@@ -2835,10 +2842,10 @@ def decompUniform (blank startSym endSym mark : Fin sc) (L : ℕ) (ts : OvTapes 
       (fun t => epilogueU blank startSym endSym mark L t)) ts
 
 /-- 費用の傾き（周期和定数 `C₁` に依存）。 -/
-def CdU (C₁ : ℕ) : ℕ := 644640 * C₁ + 3530505
+def CdU (C₁ : ℕ) : ℕ := 826880 * C₁ + 4530185
 
 /-- 費用の切片。 -/
-def DdU : ℕ := 402195
+def DdU : ℕ := 517475
 
 /-- **主定理**：入口が `EntryBlank` で、`X2` が `leftSym :: y` を添字 `L` で保持していれば、
 `decompUniform` は `P` / `U` / `Cnt` に `EndToEnd2.gsDec2 y 8 L` の分解を載せ、
@@ -2972,22 +2979,22 @@ theorem decompUniform_spec {y : List (Fin sc)} {L C₁ : ℕ}
     have harith : (4 * 8 + 2) * C₁ + 17 * 8 + 50 = 34 * C₁ + 186 := by ring
     rw [harith] at h
     omega
-  have hN : N ≤ (128928 * C₁ + 706096) * L + 80428 := by
-    have h1 : 237 * decompose2Work x 8 ≤ 237 * ((34 * C₁ + 186) * L + 21) :=
+  have hN : N ≤ (165376 * C₁ + 906032) * L + 103484 := by
+    have h1 : 304 * decompose2Work x 8 ≤ 304 * ((34 * C₁ + 186) * L + 21) :=
       Nat.mul_le_mul_left _ hwork
-    have h2 : 16 * (237 * ((34 * C₁ + 186) * L + 21) + 49 * (L + 1)) + 12
-        = (128928 * C₁ + 706096) * L + 80428 := by ring
+    have h2 : 16 * (304 * ((34 * C₁ + 186) * L + 21) + 83 * (L + 1)) + 12
+        = (165376 * C₁ + 906032) * L + 103484 := by ring
     omega
-  have hsum5 : 5 * N ≤ (644640 * C₁ + 3530480) * L + 402140 := by
+  have hsum5 : 5 * N ≤ (826880 * C₁ + 4530160) * L + 517420 := by
     have h5 := Nat.mul_le_mul_left 5 hN
-    have hbig : 5 * ((128928 * C₁ + 706096) * L + 80428)
-        = (644640 * C₁ + 3530480) * L + 402140 := by ring
+    have hbig : 5 * ((165376 * C₁ + 906032) * L + 103484)
+        = (826880 * C₁ + 4530160) * L + 517420 := by ring
     rw [← hbig]
     exact h5
   rw [hlen, prologueU_length hL ts]
   simp only [CdU, DdU]
-  have hexp : (644640 * C₁ + 3530505) * L + 402195
-      = (644640 * C₁ + 3530480) * L + 402140 + (25 * L + 55) := by ring
+  have hexp : (826880 * C₁ + 4530185) * L + 517475
+      = (826880 * C₁ + 4530160) * L + 517420 + (25 * L + 55) := by ring
   rw [hexp]
   omega
 
@@ -3054,14 +3061,14 @@ theorem decompUniformInstance_Cd {blank startSym endSym mark leftSym : Fin sc} {
     (hmark : mark ≠ blank) (hse : startSym ≠ endSym) (hsb : startSym ≠ blank)
     (hsum : ∀ (z : List (Fin sc)) (b s' : ℕ),
       stripLoop2Periods z 8 b (z.length + 1) s' ≤ C₁ * b) :
-    (decompUniformInstance (leftSym := leftSym) hmark hse hsb hsum).Cd = 644640 * C₁ + 3530505 :=
+    (decompUniformInstance (leftSym := leftSym) hmark hse hsb hsum).Cd = 826880 * C₁ + 4530185 :=
   rfl
 
 theorem decompUniformInstance_Dd {blank startSym endSym mark leftSym : Fin sc} {C₁ : ℕ}
     (hmark : mark ≠ blank) (hse : startSym ≠ endSym) (hsb : startSym ≠ blank)
     (hsum : ∀ (z : List (Fin sc)) (b s' : ℕ),
       stripLoop2Periods z 8 b (z.length + 1) s' ≤ C₁ * b) :
-    (decompUniformInstance (leftSym := leftSym) hmark hse hsb hsum).Dd = 402195 :=
+    (decompUniformInstance (leftSym := leftSym) hmark hse hsb hsum).Dd = 517475 :=
   rfl
 
 /-- **`DecompOnTapesW` から `MiddleTapes.DecompOnTapes` へ**。`acts` は `y` を無視して
@@ -3091,13 +3098,13 @@ theorem middleDecompInstance_Cd {blank startSym endSym mark leftSym : Fin sc} {C
     (hsum : ∀ (z : List (Fin sc)) (b s' : ℕ),
       stripLoop2Periods z 8 b (z.length + 1) s' ≤ C₁ * b) :
     (middleDecompInstance (leftSym := leftSym) hmark hse hsb hsum).Cd
-      = 644640 * C₁ + 3530505 := rfl
+      = 826880 * C₁ + 4530185 := rfl
 
 theorem middleDecompInstance_Dd {blank startSym endSym mark leftSym : Fin sc} {C₁ : ℕ}
     (hmark : mark ≠ blank) (hse : startSym ≠ endSym) (hsb : startSym ≠ blank)
     (hsum : ∀ (z : List (Fin sc)) (b s' : ℕ),
       stripLoop2Periods z 8 b (z.length + 1) s' ≤ C₁ * b) :
-    (middleDecompInstance (leftSym := leftSym) hmark hse hsb hsum).Dd = 402195 := rfl
+    (middleDecompInstance (leftSym := leftSym) hmark hse hsb hsum).Dd = 517475 := rfl
 
 end Iface
 

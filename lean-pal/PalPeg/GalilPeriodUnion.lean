@@ -1,0 +1,148 @@
+import PalPeg.GalilScaffoldChainFallback
+
+/-!
+# 局所周期の合併・切り出し・偶奇・鏡映
+
+Galil 型の実時間回文照合で必要になる、純粋な語の組合せ論の 4 本立て。
+
+* `PeriodOn x p a b` — 添字区間 `[a, b]` 上で `p` が `x` の周期であること。
+* `periodOn_union` — 少なくとも `p` 個の位置で重なる 2 つの周期区間は合併できる。
+* `hasPeriod_slice_iff` — `PeriodOn` は切り出した部分列の `HasPeriod` と同値。
+* `encoded_periodOn_even` — 符号化語（偶数位置が区切り `2`、奇数位置が文字）の
+  局所周期は必ず偶数。
+* `periodOn_mirror` — 回文中心 `C` の内側では、右側の周期区間が左側へ鏡映される。
+-/
+
+set_option autoImplicit false
+namespace PalPeg
+open Manacher
+
+universe u
+variable {α : Type u}
+
+/-! ## 区間上の周期 -/
+
+/-- `x` has period `p` on the index interval `[a, b]` (inclusive, indices in range). -/
+def PeriodOn (x : List α) (p a b : ℕ) : Prop := ∀ i, a ≤ i → i + p ≤ b → x[i]? = x[i + p]?
+
+/-- 周期 `0` はどの区間でも自明に成り立つ。 -/
+theorem periodOn_zero (x : List α) (a b : ℕ) : PeriodOn x 0 a b := by
+  intro i _ _
+  simp
+
+/-- 区間を狭める向きの単調性。 -/
+theorem PeriodOn.mono {x : List α} {p a b a' b' : ℕ} (h : PeriodOn x p a b)
+    (ha : a ≤ a') (hb : b' ≤ b) : PeriodOn x p a' b' :=
+  fun i hi hib => h i (le_trans ha hi) (le_trans hib hb)
+
+/-! ## 1. 重なり合う 2 つの周期区間の合併 -/
+
+/-- **周期区間の合併**。区間 `[a, b]` と `[a', b']` が共に周期 `p` を持ち、
+重なり `[max a a', min b b']` が少なくとも `p` 個の位置を含むなら、
+合併区間 `[min a a', max b b']` 上でも `p` は周期である。
+
+重なりが `p` 個以上あるので、合併区間内の任意の `i` について `i` と `i + p` は
+必ず同じ一方の区間に収まる（そうでないと重なりが `p` 未満になる）。 -/
+theorem periodOn_union {x : List α} {p a b a' b' : ℕ} (h1 : PeriodOn x p a b)
+    (h2 : PeriodOn x p a' b') (hov : a' ≤ b ∧ a ≤ b')
+    (hlen : p ≤ min b b' + 1 - max a a') :
+    PeriodOn x p (min a a') (max b b') := by
+  obtain ⟨hov1, hov2⟩ := hov
+  rcases Nat.eq_zero_or_pos p with rfl | hp
+  · exact periodOn_zero x _ _
+  intro i hi hib
+  by_cases hcase : a ≤ i ∧ i + p ≤ b
+  · exact h1 i hcase.1 hcase.2
+  · have hcase' : a' ≤ i ∧ i + p ≤ b' := by omega
+    exact h2 i hcase'.1 hcase'.2
+
+/-! ## 2. 切り出した部分列の周期との同値 -/
+
+/-- `x` の添字区間 `[a, b]` を切り出した部分列 `(x.drop a).take (b + 1 - a)` が
+周期 `p` を持つことと、`x` が `[a, b]` 上で周期 `p` を持つことは同値。 -/
+theorem hasPeriod_slice_iff {x : List α} {p a b : ℕ} (hb : b < x.length) (hab : a ≤ b) :
+    HasPeriod ((x.drop a).take (b + 1 - a)) p ↔ PeriodOn x p a b := by
+  have hlen : ((x.drop a).take (b + 1 - a)).length = b + 1 - a := by
+    rw [List.length_take, List.length_drop]
+    omega
+  constructor
+  · intro h i hi hip
+    have hj : i - a + p < ((x.drop a).take (b + 1 - a)).length := by rw [hlen]; omega
+    have key := h (i - a) hj
+    rw [getElem?_take_drop (m := b + 1 - a) (by omega),
+      getElem?_take_drop (m := b + 1 - a) (by omega)] at key
+    rw [show a + (i - a) = i from by omega, show a + (i - a + p) = i + p from by omega] at key
+    exact key
+  · intro h j hj
+    rw [hlen] at hj
+    rw [getElem?_take_drop (m := b + 1 - a) (by omega),
+      getElem?_take_drop (m := b + 1 - a) (by omega)]
+    have key := h (a + j) (by omega) (by omega)
+    rw [show a + (j + p) = a + j + p from by omega]
+    exact key
+
+/-! ## 3. 符号化語の局所周期は偶数 -/
+
+/-- 文字の符号 `letter a`（値は `0` か `1`）は区切り記号 `2` とは異なる。 -/
+theorem letter_ne_two (a : Fin 2) : GalilScaffoldPlace.letter a ≠ 2 := by
+  fin_cases a <;> decide
+
+/-- **符号化語の周期は偶数**。`encoded raw` は偶数位置に区切り `2`、奇数位置に
+文字を置くので、長さ `p` の周期が区間 `[a, b]`（`a + p ≤ b`）で成り立つなら
+`p` は偶数でなければならない。`p` が奇数だと `a` と `a + p` の偶奇が食い違い、
+区切りと文字を同一視することになって矛盾する。 -/
+theorem encoded_periodOn_even {raw : List (Fin 2)} {p a b : ℕ}
+    (h : PeriodOn (GalilScaffoldChainInputSupply.encoded raw) p a b)
+    (hp : 0 < p) (hab : a + p ≤ b)
+    (hb : b < (GalilScaffoldChainInputSupply.encoded raw).length) :
+    p % 2 = 0 := by
+  by_contra hodd
+  have hlen : (GalilScaffoldChainInputSupply.encoded raw).length = 2 * raw.length + 1 := by
+    simp [GalilScaffoldChainInputSupply.encoded, GalilScaffoldChainInputSupply.pairs_length]
+  rw [hlen] at hb
+  have key := h a (le_refl a) hab
+  have hmod : a % 2 = 0 ∨ a % 2 = 1 := by omega
+  rcases hmod with h0 | h0
+  · obtain ⟨n, hn⟩ : ∃ n, a + p = 2 * n + 1 := ⟨(a + p) / 2, by omega⟩
+    obtain ⟨m, hm⟩ : ∃ m, a = 2 * m := ⟨a / 2, by omega⟩
+    have hmle : m ≤ raw.length := by omega
+    have hnlt : n < raw.length := by omega
+    rw [hn, hm] at key
+    rw [GalilScaffoldChainInputSupply.encoded_even raw m hmle,
+      GalilScaffoldChainInputSupply.encoded_odd raw n hnlt] at key
+    exact letter_ne_two _ (Option.some.inj key).symm
+  · obtain ⟨n, hn⟩ : ∃ n, a + p = 2 * n := ⟨(a + p) / 2, by omega⟩
+    obtain ⟨m, hm⟩ : ∃ m, a = 2 * m + 1 := ⟨a / 2, by omega⟩
+    have hmlt : m < raw.length := by omega
+    have hnle : n ≤ raw.length := by omega
+    rw [hn, hm] at key
+    rw [GalilScaffoldChainInputSupply.encoded_odd raw m hmlt,
+      GalilScaffoldChainInputSupply.encoded_even raw n hnle] at key
+    exact letter_ne_two _ (Option.some.inj key)
+
+/-! ## 4. 回文中心を通した周期区間の鏡映 -/
+
+set_option linter.unusedVariables false in
+/-- **周期区間の鏡映**。`PalAt x C k` の内側では、右半分 `[C, C + k]` の周期 `p`
+（`p ≤ k`）が左半分 `[C - k, C]` にそのまま移る。
+
+注意: 実際の証明に `hp : p ≤ k` は不要（`C - k ≤ i` と `i + p ≤ C` だけで
+`2 * C - (i + p) + p = 2 * C - i ≤ C + k` が出る）。呼び出し側の仕様に合わせて
+仮定はそのまま残し、未使用変数の linter だけ黙らせている。 -/
+theorem periodOn_mirror {x : List α} {C k p : ℕ} (hpal : PalAt x C k) (hp : p ≤ k)
+    (h : PeriodOn x p C (C + k)) : PeriodOn x p (C - k) C := by
+  intro i hi hip
+  have hm1 : x[i]? = x[2 * C - i]? := Manacher.mirror_getElem? hpal (by omega) (by omega)
+  have hm2 : x[i + p]? = x[2 * C - (i + p)]? :=
+    Manacher.mirror_getElem? hpal (by omega) (by omega)
+  have hstep : x[2 * C - (i + p)]? = x[2 * C - (i + p) + p]? := h _ (by omega) (by omega)
+  rw [show 2 * C - (i + p) + p = 2 * C - i from by omega] at hstep
+  rw [hm1, hm2]
+  exact hstep.symm
+
+#print axioms periodOn_union
+#print axioms hasPeriod_slice_iff
+#print axioms encoded_periodOn_even
+#print axioms periodOn_mirror
+
+end PalPeg
