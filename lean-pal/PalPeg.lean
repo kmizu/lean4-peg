@@ -607,6 +607,11 @@ import PalPeg.GalilChainTickable
 import PalPeg.GalilLastRadius
 import PalPeg.LocalInputView
 import PalPeg.GalilSegmentConstruct
+import PalPeg.CloseoutRadPack
+import PalPeg.CloseoutReportCase
+import PalPeg.CloseoutReadinessAudit
+import PalPeg.CloseoutFairWitness
+import PalPeg.CloseoutCoreAudit
 import PalPeg.GalilReadyFuelUses
 import PalPeg.LocalWF
 import PalPeg.GalilTrailRad
