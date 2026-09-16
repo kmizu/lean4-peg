@@ -112,8 +112,9 @@ and its restrictions are documented in
   at the semantic level)
 - `scala/generated` is committed; `scripts/check-drift.sh` mechanically
   guarantees it matches a fresh extraction
-- Zero external dependencies (no Mathlib / Batteries); toolchain pinned to
-  Lean v4.32.0
+- The `lean/` core has zero external dependencies (no Mathlib / Batteries);
+  its toolchain is pinned to Lean v4.32.0. The optional `lean-pal/` package
+  uses pinned Mathlib dependencies.
 
 ## Palindromes in plain PEG (artifact)
 
@@ -124,3 +125,10 @@ logs, and the notes on why every simpler route fails. The formal side — SCA se
 translation validation of the emitted grammar, and the correctness of the online
 recogniser — is future work in this repository; see
 `docs/palindromes-in-peg/STATUS.md` (start here) and `docs/palindromes-in-peg/PLAIN_PAL_ARTIFACT.md`.
+
+The Python-to-Scala 3 counterparts are present under `scala/pal`; Python remains the
+reference implementation. Scala reproduction commands, reader limits, and the
+current SHA boundary are documented in [`STATUS.md`](docs/palindromes-in-peg/STATUS.md).
+The separate [`lean-pal/`](lean-pal/) package contains a conditional theorem;
+its strict-real-time machine premise and Galil normalization remain assumptions,
+so it is not an unconditional `PAL ∈ PEG` proof.

@@ -1,5 +1,9 @@
 # 回文言語の素の PEG — 経過と現状（2026-09-07、lean4-peg 移行時点）
 
+> Python 94モジュールと66テストのScala移植は完了し、対応ファイルを揃えている。
+> 統合ブランチで `pal/test` の471テスト（0失敗・0エラー）とcompileを確認済み。FullWindowPALのSHA再現は未検証である。
+> 対応表と作業単位は [移植計画](../superpowers/plans/2026-09-07-pal-python-to-scala.md) にまとめる。
+
 この repo で作業を続けるための入口。まずこれを読み、次に `PLAIN_PAL_ARTIFACT.md`
 （証人と検証）、`HANDOFF.md`（Codex の構成過程の生ログ、時系列は新しい順）、
 `TRANSLATION_STRATEGY.md`（変換方針）を読む。
@@ -63,6 +67,42 @@ python3 verify_window_pal.py /tmp/pal-window-fast.peg --runner rust-peg/target/r
 python3 analysis/grammar_closure.py /tmp/pal-window-fast.peg   # 数分
 python3 analysis/grammar_scc.py /tmp/pal-window-fast.peg       # 約 22 分、メモリ数 GB
 ```
+
+### Scala 3 の再現入口
+
+Scala側のCLIは `pal.GenerateWindowPal`、`pal.CompactScaffoldPeg`、
+`pal.VerifyWindowPal` として、リポジトリのルートから次の形で実行する。
+
+Scala全体生成のヒープ必要量は未計測なので、sbtの既定ヒープに頼らず、十分なメモリを持つホストで適切なJVM heapを設定して実行する。
+
+`GenerateOnlinePeg` の互換性もテストで確認済み：cache signatureはScalaソースをハッシュし、`.sca`形式は相互運用できるが自動cache再利用は言語ごとに分かれる。`--memory-mib` はJVMの`-Xmx`で制約し、Pythonの`RLIMIT_AS`とは異なる。SIGTERM時は`interrupted`・`emitted=false`を報告して既存出力を保持し、終了コードはJVMが143、Pythonが130になる。
+
+旧実験用で現在はlegacyと明記している `GenerateGalilPeg`（WindowPAL以前のコマンド）のfixture再現には、`--quantum 1 --match-delay 2 --budget 2 --raw-instructions --omit-invariant-monitors` を指定する（既定の全体生成ではない）。`--expanded-only` は1,420,678規則 / 50,121,014 bytesでPythonと一致し、逆変換後の698,145,389 bytesもScalaで生成済みだが、Python側は再帰ASTの深さ制限（`100000`）で失敗するため比較未検証であり、boundedな `emitInverse` は検証済みである。
+
+```sh
+cd /path/to/lean4-peg
+cd scala
+sbt -batch 'pal/runMain pal.GenerateWindowPal /tmp/pal-window-original.peg --checkpoint /tmp/pal-window-original.sca --skip-optimize'
+sbt -batch 'pal/runMain pal.CompactScaffoldPeg /tmp/pal-window-original.peg /tmp/pal-window-fast.peg'
+sbt -batch 'pal/runMain pal.VerifyWindowPal /tmp/pal-window-fast.peg --runner ../docs/palindromes-in-peg/rust-peg/target/release/plain-peg-runner --log /tmp/verify.log'
+```
+
+Scala版の既定の全体文法を生成して上記SHAと一致させる検証は未実施。移植の差分証拠は、
+各 `PyDiff` テストが明示するソース／fixture範囲に限る。
+
+ファイル対応の棚卸しは `pal.PortCoverageSuite` がPythonディレクトリを再帰走査して行い、統合ブランチで94モジュール・66テスト、
+不足0件を確認した。件数はSuiteに固定せず、追加されたPythonファイルにも対応Scalaパスを要求する。
+
+`CompactScaffoldPeg` は1GiBの窓を連結して2GiB超のsourceを読む設計だが、1行には別の上限がある。
+一方、トップレベルの `pal.FileGrammar` はファイルサイズが `Int.MaxValue`（約2GiB）を超えると明示的に拒否する。
+通常の再現手順は圧縮後の文法をRust runnerへ渡すため、後者の読み込み制限はこの手順の障害にならない。
+
+### Lean側の条件付き定理
+
+`lean-pal/` の `lake build` は、Kim–Park成果物の厳密実時間TMモデルを使った条件付き定理を
+ビルド・公理監査する。`RealTimeTM.RecognizedBy PAL`（そのモデルでPALを認識する機械の存在）が
+仮定であり、Galilの機械の書き下しと、文献の実時間性を厳密な1記号1遷移・各テープ1書込/1移動へ
+正規化することは未証明。従って無条件の `PAL ∈ PEG` の証明ではない。
 
 生成には 22 GiB 級のメモリと時間がかかる（詳細は `PLAIN_PAL_ARTIFACT.md`）。文法本体は
 repo に入れない（672 MB）。SHA で固定する。

@@ -1,5 +1,6 @@
 # Lean / Lake
 lean/.lake/
+lean-pal/.lake/
 *.olean
 *.ilean
 
@@ -20,3 +21,5 @@ scala/.scala-build/
 # Editors
 .idea/
 .vscode/
+__pycache__/
+.claude/worktrees/
