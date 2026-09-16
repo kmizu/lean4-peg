@@ -93,62 +93,49 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 - 設計・現状の正本は `lean-pal/ASSEMBLY_PLAN.md`（組み立て方針、新しい順に追記）と `lean-pal/DESIGN_SCA_PAL.md`、`ALGORITHM_SPEC.md`。
 - 旧制御層は `lean-pal/archive/single-prog/` に退避済みでビルド対象外。
 
-## lean-pal 無条件 PAL ∈ PEG の進捗（2026-09-17 時点・作業停止中）
+## lean-pal 無条件 PAL ∈ PEG の進捗（2026-09-17 朝 時点）
 
-**状態: 全体 build 成功・標準公理のみ・無条件 PAL は未完。** 全モジュール sorry なし。新モジュールは `PalPeg.lean` の `import PalPeg.GalilSegmentConstruct` の直後に登録済み。
+**状態: 全体 build 成功・標準公理のみ・無条件 PAL は未完。** 全モジュール sorry なし。新モジュールは `PalPeg.lean` の `import PalPeg.GalilSegmentConstruct` の直後に登録。
 
 ### 1. 最上位の定理と残りの仮定
 
 | 定理 | ファイル | 仮定 |
 |---|---|---|
-| `pal_in_peg_final3` | `GalilFinalAssembly3` | `H_oracle`, `H_needLB'`, `H_realizeLB'`（`H_base` は `PreTraceB` で除去済み） |
-| `pal_in_peg_final2'_trail` | `GalilLookRefined` | `H_oracle`, `H_trail`, `H_base`, `H_realizeL'`（lookahead を遅れ量依存に修正した版） |
-| `pal_in_peg_of_local_latch` | `LocalTrackingLatch` | 局所機械の oracle 4 系統 + `H_ledger` |
+| `pal_in_peg_final4` | `GalilFinalAssembly4` | `H_oracle2`（boot 側 oracle、`CycleOracleMC2C`）, `H_needLB'`, `H_realizeLB'` |
+| `pal_in_peg_final2'_trailF` | `GalilTrailProof` | `H_oracle`, `H_trailF`, `H_base`, `H_realizeL'` |
+| `pal_in_peg_of_local_core` | `LocalLatchRealize` | 局所 oracle（`LocalSysConcrete.localSys_oracles` の残差）+ `H_ledger`（`LocalLedgerShift` で放電済み、`habs`/飢餓同値が残り） |
 
-チェーン: `pal_in_peg_final*` ← `pal_in_peg_of_latch'`（ラッチ意味論）← 抑制走行 τ=2^18 ← 台帳 `ledger_throttledL_2p18` ← `checkpoints_cost` ← `cycleOracleMC_of_pieces` の葉。
+- `H_oracle2` ← `GalilFinalAssembly4.h_oracle2_of_leaves` ← `GalilOracleMC3.h_oracle_of_leaves''`（`hquiet`/`houtReplay` 除去、`hfoundReplay` 追加）。葉の現状は §3。
+- `H_needLB'` ← `H_trailF`（`GalilTrailProof`）← scan 側 `GalilTrailScan/Budget/Front/Sane/Order` + verifier 側 `GalilTrailChain/Assembly`。残りは scan 不変量 pack `RadPack`（`GalilTrailRad`、進行中）1 つに集約。
+- `H_realizeLB'`: 局所実現。`LocalSysConcrete`（tick/到着/stutter/出力 oracle は無仮定）、`LocalRealizesScan`（rewind/choose 閉）、`LocalRealizesPhase`（shift/copy/home/markEnd 閉、fpp は局所 1 量子のみ残）。**scan/init/replayStart は抽象 tick の非決定性で閉じない**（§2）。
 
-### 2. 層ごとの到達点（証明済み）
+### 2. 設計上の重要事実（2026-09-17 深夜〜朝に判明）
 
-- **台帳（実時間）**: Lindley 再帰、`Cw`（最左 live 中心）、定数 2·c2 ≤ 2^18。`GalilLindley`/`GalilLedger*`/`GalilThrottledRun*`。
-- **停止性の測度**: 中心不変のサイクルは辞書式測度 `mu`（中心, 右ヘッド）で処理（`GalilLexMeasure.checkpoints_cost'`）。
-- **入力消費**: `GalilLookRefined` で `lookChain'`（watch 正 lag=2 手、lag 0=1 手、back=1、copy=0）。`needL'` 上界は `Trail` 不変量に還元（`needL'_le_of_trail`）。旧定義は偽（`GalilNeedBound.not_needLB_of_caughtUp`）。
-- **長さ下限 hfloor**: `GalilChainCoupling` で `hbudget` を無仮定で証明（`hbudget_of_invLP`）。`hcopy` は boot からの走行で出る（`copyPack_*`, `hfloor_of_reach`）。
-- **shift 無し break**: `GalilNoShiftStage.foundRouteMC_noshift'` で `hstage/hcanon/hlast/hlag` を除去。place 4h の角は回文性で排除。
-- **replay**: `GalilReplaySpan.replay_after_fallback_general''`（静穏／chain 生存／break→restart の 3 分岐）。`ReplaySpan` は `ReplayBudget` + `RestartShape`（具体機械で証明済み）に置換。
-- **局所実現**: `LocalTrackingLatch`（`started` ビットで空語を分離、`run_on_time_shift`, `reported_of_shift`）。TickL1–3, LocalChain, LocalAlloc, LocalSchedule, LocalStepRealize。
-- **完全性**: MInv、最左 live 中心の保存（match/fallback/shift/replay）、半径上界 `found_radius_le_all_stages`。
+- **抽象 `Tick (galilFrameS …)` は到達可能状態でも一意でない**（`GalilTickDet`）: (a) broken chain で `restart` と `scan_wait` stutter が競合（Scala は restart 優先）、(b) 探索量子は `ReadFun GalilDpCode.code` + `PrepareControl.Tick` 決定性を仮定すれば関数的、(c) chain は関数的、(e) `beginFallbackVM'`（着地場所）、`initVM`/`replayStartVM`（`periodOnly`, `walker` 自由）が非関数的。`tickFun`（`GalilTickFun`）は choice で 1 つ選ぶだけ。**方針**: モデルは編集せず（使用箇所 300 超）、Scala の優先順位と固定値を表す `Fair` を定義して `Tick ∧ Fair` の一意性を証明（`GalilTickFair`、進行中）。構成側の witness と局所 step が `Fair` を満たすことを別途確認。
+- **偽だった葉（同じ型: 任意状態への量化）**: `hquiet`（`SearchQuiet` は「found に到達しない」と同値、`GalilLeafQuiet`）、`houtReplay`（`InvScan` に出力なし → `InvScanO := InvScan ∧ OutputRel`、`GalilLeafOutReplay`）、`hpres`（`SearchReady` は負債 1 単位分保存されない → `SearchReadyB := ReadyRem ∧ RunEntriesAll`、`GalilLeafPres`；`watchSegE_construct` は再証明要、`GalilSegmentConstructB` 進行中）、`hpos`（区間終端の右ヘッド位置、`GalilLeafPos`: 区間予算 `position r.right + count true ≤ 2m−2` から出す）。
+- **偽だった仮定（前夜まで）**: `periodLength` +1、`hbg`、`hfast`、`WatchOk`、`lookChain` 常時 2 手、`ReplaySpan`（反例 `aaaaabaaaab`）、`Trail`（fallback 後は右スタック非空 → `TrailF`）、`ReplayStageInv`/`FoundStage` の普遍形（到達可能 found に限定 → `ReplayBudgetR`）。
+- found 時の半径 k ≤ 2n（`found_radius_le_two_period`）が replay 予算の鍵。`OffCompareFoundStage` は `GalilFoundStageInv` で閉じた。
 
-### 3. モデル上の発見（偽だった仮定と対処）
+### 3. `H_oracle2` の葉（`GalilOracleMC3.h_oracle_of_leaves''` 基準）
 
-- `periodLength` の +1 → 除去（Scala 準拠）。
-- `hbg`（背景 tick で chain 起動しない）偽 / found during replay あり / prep で mismatch → fallback 出口を追加。
-- `WatchOk`+`hgood` 矛盾（`GalilReplayGeneral` は空虚）→ `SpanCore` 系に作り直し。
-- `hfast` 偽（fallback/shift 中は scan 停止）→ ラッチ意味論へ。τ=2^17 不足 → 2^18。
-- `lookChain` 常に 2 手は偽 → 遅れ量依存に。
-- `ReplaySpan` 偽（反例 `aaaaabaaaab`、`cx_span` を decide で証明、Python 参照機でも確認）。
-- `periodOnly` は VM 上で false に戻らない。`2h ≤ radius` は偽で `2h ≤ radius + cycle (+ remaining)` が正。
-- Lean の `Internal` watch には break 構成子がない（正 lag で不一致だと後続なし）。Scala は break して restart で AssertionError。`ReplayBudget` 条項 3 で回避中。
+閉: `hex`, `hsearch`, `hsegmentM`（`segment_of_invLPC`+`hends_C`）, `hends`, `hbudget`（`replayBudgetR_of_decodes'`）, `hrs`（`restartShape_sharedC`）, `hended`, `hlastMatch`（`hquiet` 依存を除去中）, `hstr`（`Final4` で不要）。
+残: `hpres`→`SearchReadyB` 版区間構成（進行中）; `hstage`（`ReplayStage` を `GalilReplaySpan` 内で持ち回り、進行中、mid-replay restart の `3·radius ≤ 5·last` が新義務）; `hshape`（`StartShape`）; `hlastMismatch` の最終文字分岐（`LastMismatchReport`）と `EntryRefreshed`; `hmismatch` ← `GalilLeafMismatch` の残差 `hdp`（DP pack、進行中）/`hfb`（fallback tick 数、進行中）/`hpos`（区間予算前提を pieces に追加、進行中）; `hfound`/`hfoundBg` ← 着地不変量に `Restarted`/`StageEntry` を追加（`GalilInvPlus3`、進行中）+ found tick からの経路構成（未着手、最大の残り）; `hfoundReplay`（replay 中 found の経路、未着手）。
 
 ### 4. 残りの課題（優先順）
-
-1. **`ReplayBudget` の条項 2・3**（`R+2 ≤ j`, `2n+3+k ≤ (j−R−2)(delay−1)`、実質 `k ≤ 4n−1`）。現状の半径上界 `4090h−2052` では弱い。条項 1 は found→`Candidate` の接続のみ残る。Opus。
-2. **`H_trail`**: トレース帰納で R の単調性・右スタック空、L/C の frontier 形、verifier の追従（`pos v + lag = pos R`）。verifier 右スタック空の前提が最弱点。Opus。
-3. **`hcopy` の接続**: `InvLP`/`CycleOutL` に `CopyPack` を足すか boot 走行を持ち回る。Sonnet 可。
-4. **`hcenR` の InvScan 分岐**: `InvScan` に中心ヘッド表現を足す。Sonnet 可。
-5. **`foundRouteMC_noshift'` の新仮定**（`hwatch2/hes0` は `prep_segment_construct`、`hpal1/hpal2` は `candidate_palAt`）と右ヘッド ≤ 2m−1。Sonnet 可。
-6. **`H_oracle`**: `cycleOracleMC_of_pieces` の残りの葉を上記で放電。Opus。
-7. **局所実現の oracle 4 系統**（tick 模倣＋ラッチ、stutter、到着符号化、1τ ずらした台帳を `stAbs` について）。旧 `O_step_throttledG` は非シフト・`stTG` 用で流用不可。Opus。
+1. `Fair` 一意性（`GalilTickFair`）→ 構成 witness/局所 step の `Fair` 監査 → `Realizes` の scan/init/replayStart。
+2. found 経路の葉（`hfound`/`hfoundBg`/`hfoundReplay`）: `InvLPS` 上で `prep_segment_construct_of_found` → rounds/break 分岐 → `foundRouteMC_shift`/`foundRouteMC_noshift_dC`。
+3. §3 の進行中項目の登録と `h_oracle_of_leaves'''` への集約。
+4. `RadPack` で `H_trailF` を閉じる。局所側: `LocalWF`（fpp 量子、側条件）。
+5. 局所台帳の `habs`/飢餓同値（`LocalSysConcrete.H_ready`, `H_feed_track`）。
 
 ### 5. 再開手順
-
 ```sh
-cd lean-pal && . ~/.elan/env && lake build --quiet PalPeg        # 全体（長い）
-cd lean-pal && lake env lean PalPeg/X.lean                        # 単一ファイル確認（サブエージェントはこれのみ）
-sed -i "/^import PalPeg.GalilSegmentConstruct$/a import PalPeg.X" PalPeg.lean   # 登録
+cd lean-pal && . ~/.elan/env && lake build --quiet PalPeg > /tmp/b.log 2>&1; echo $?   # 全体（20 分）
+cd lean-pal && lake env lean PalPeg/X.lean                                          # 単一ファイル
+sed -i "/^import PalPeg.GalilSegmentConstruct$/a import PalPeg.X" PalPeg.lean        # 登録（build 中は登録しない）
 ```
-
-- サブエージェント規約: 新規ファイル 1 本、既存ファイル編集禁止、sorry 禁止、`lake build` 禁止、末尾に `#print axioms`。登録と全体 build は親が行う。簡単な作業は Sonnet、設計は Opus。
-- 詳細な経緯は `CLAUDE_RESUME.md` と `lean-pal/ASSEMBLY_PLAN.md` の先頭エントリ。
+- サブエージェント規約: 定理 1 つ・ファイル:行番号・使う補題名を指定、新規ファイル 1 本、既存編集禁止（例外は明示）、sorry 禁止、`lake build` 禁止、`#print axioms`。中心部の設計は自分で書く。
+- 詳細は `CLAUDE_RESUME.md` / `lean-pal/ASSEMBLY_PLAN.md` 先頭。
 
 ## 進捗ノートの扱い
 
