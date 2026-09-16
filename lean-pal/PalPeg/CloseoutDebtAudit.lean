@@ -146,6 +146,47 @@ theorem stage_budget_closes {k Rad : ℕ} (hstage : 3 * Rad ≤ 5 * k) :
     ((pacedComparisons 2048 (dpEvents (stageWindow k)) : ℕ) : ℤ) ≤ stageDebt Rad (k : ℤ) :=
   stage_fits hstage (paced_bound k)
 
+/-! ## 4. The *true* window: one cell more (`CloseoutPreload3` §1) -/
+
+/-- **The window the preparation really copies.**  The span handed to `prepare`
+is `8 * max k 1` (`CloseoutPreload3.grow_span_calibration`), and the copy takes
+`span + 1` cells of the place stream, so the calibrated window of a stage with
+lower bound `k` is `stageWindow k + 1`.  `stageWindow` itself stays as it was —
+`CloseoutRunEntriesS.stageWindow_restart` reads `stageWindow 0 = 8` off it — but
+every *window-length* clause downstream uses `stageWindow1`. -/
+def stageWindow1 (k : ℕ) : ℕ := 8 * max k 1 + 1
+
+theorem stageWindow1_eq (k : ℕ) : stageWindow1 k = stageWindow k + 1 := rfl
+
+/-- **The stage budget still closes for the true window.**  The extra cell costs
+`3186` instructions, i.e. less than one comparison at `64 * 2048` ticks each. -/
+theorem paced_bound1 (k : ℕ) :
+    8192 * pacedComparisons 2048 (dpEvents (stageWindow1 k)) ≤ 1593 * k + 9894 := by
+  unfold pacedComparisons dpEvents stageWindow1
+  have harg : 3186 * (8 * max k 1 + 1) + 1683 + 63 = 25488 * max k 1 + 4932 := by ring
+  rw [harg, Nat.div_div_eq_div_mul]
+  have h2 : (25488 * max k 1 + 4932) / (64 * 2048) * (64 * 2048)
+      ≤ 25488 * max k 1 + 4932 := Nat.div_mul_le_self _ _
+  rcases Nat.eq_zero_or_pos k with hk | hk
+  · subst hk
+    norm_num at h2 ⊢
+  · have hM : max k 1 = k := by omega
+    rw [hM] at h2 ⊢
+    omega
+
+/-- `stage_budget_closes` for the true window. -/
+theorem stage_budget_closes1 {k Rad : ℕ} (hstage : 3 * Rad ≤ 5 * k) :
+    ((pacedComparisons 2048 (dpEvents (stageWindow1 k)) : ℕ) : ℤ) ≤ stageDebt Rad (k : ℤ) :=
+  stage_fits hstage (paced_bound1 k)
+
+/-- **The entry length of a stage**: the eight preparation events of the
+`.run` entry plus the charged prefix of the stage's DP run.  This is the lower
+bound the readiness ledger has to carry (`CloseoutPreload.RdPaced`). -/
+def dpEntry (k : ℕ) : ℕ := 8 + dpEvents (stageWindow1 k)
+
+theorem dpEvents_le_dpEntry (k : ℕ) : dpEvents (stageWindow1 k) ≤ dpEntry k := by
+  unfold dpEntry; omega
+
 end PalPeg.CloseoutDebtAudit
 
 #print axioms PalPeg.CloseoutDebtAudit.stageDebt_zero_reset
@@ -154,3 +195,6 @@ end PalPeg.CloseoutDebtAudit
 #print axioms PalPeg.CloseoutDebtAudit.stage_fits
 #print axioms PalPeg.CloseoutDebtAudit.paced_bound
 #print axioms PalPeg.CloseoutDebtAudit.stage_budget_closes
+#print axioms PalPeg.CloseoutDebtAudit.paced_bound1
+#print axioms PalPeg.CloseoutDebtAudit.stage_budget_closes1
+#print axioms PalPeg.CloseoutDebtAudit.dpEvents_le_dpEntry

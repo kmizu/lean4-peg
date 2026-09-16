@@ -1047,4 +1047,77 @@ theorem runEntryS_of_entryPaced (center : GalilScaffoldPlace.Place) (a : Bool)
 
 #print axioms runEntryS_of_entryPaced
 
+/-! ## 8. The same, for the *true* window `stageWindow1` -/
+
+/-- **The entry theorem, generalised over the window length.**  Identical to
+`dpSafeStage_entry_paced` except that the window is an arbitrary `W` and the
+budget closure for `W` is a hypothesis.  This is what lets the calibration be
+corrected without touching the proof: `CloseoutPreload3` §1 shows the window the
+preparation really copies is `stageWindow1 k = stageWindow k + 1`. -/
+theorem dpSafeStage_entry_pacedW (v : SearchVM) (w : List (Fin 3))
+    (lower Rad k slack W : ℕ) (as : List Bool)
+    (hw : w.length = W)
+    (hbud : ((pacedComparisons 2048 (dpEvents W) : ℕ) : ℤ)
+      ≤ PalPeg.GalilReplaySpan.stageDebt Rad (k : ℤ))
+    (hdp : v.dp = ⟨GalilScaffoldPreload.initial w lower, false⟩)
+    (hmode : v.search.mode = .run)
+    (hc : Canonical v.search.debt)
+    (hdebt : PalPeg.GalilReplaySpan.stageDebt Rad (k : ℤ) ≤ value v.search.debt)
+    (hslack : slack ≤ 2047)
+    (hlen : dpEvents W ≤ as.length)
+    (hpaced : PacedL 2048 slack as) :
+    DpSafeStage v as := by
+  set N : ℕ := dpEvents W with hN
+  refine dpSafeStage_entry v w lower as (as.take N) (as.drop N) hdp hmode
+    (by rw [List.take_append_drop]) ?_ hc ?_
+  · have hlenpre : (as.take N).length = N := by
+      rw [List.length_take]; omega
+    rw [hlenpre, hw, hN]
+    exact dpEvents_budget _
+  · have h1 : (as.take N).count true ≤ pacedComparisons 2048 N :=
+      pacedL_count_take hslack hpaced
+    have h3 : (((as.take N).count true : ℕ) : ℤ) ≤ ((pacedComparisons 2048 N : ℕ) : ℤ) :=
+      Int.ofNat_le.mpr h1
+    omega
+
+#print axioms dpSafeStage_entry_pacedW
+
+/-- **The budget-free entry theorem for the true window.**
+`dpSafeStage_entry_paced` with `stageWindow1` in place of `stageWindow`; the
+budget still closes unconditionally (`CloseoutDebtAudit.stage_budget_closes1`). -/
+theorem dpSafeStage_entry_paced1 (v : SearchVM) (w : List (Fin 3))
+    (lower Rad k slack : ℕ) (as : List Bool)
+    (hw : w.length = PalPeg.CloseoutDebtAudit.stageWindow1 k)
+    (hdp : v.dp = ⟨GalilScaffoldPreload.initial w lower, false⟩)
+    (hmode : v.search.mode = .run)
+    (hc : Canonical v.search.debt)
+    (hstage : 3 * Rad ≤ 5 * k)
+    (hdebt : PalPeg.GalilReplaySpan.stageDebt Rad (k : ℤ) ≤ value v.search.debt)
+    (hslack : slack ≤ 2047)
+    (hlen : dpEvents (PalPeg.CloseoutDebtAudit.stageWindow1 k) ≤ as.length)
+    (hpaced : PacedL 2048 slack as) :
+    DpSafeStage v as :=
+  dpSafeStage_entry_pacedW v w lower Rad k slack _ as hw
+    (PalPeg.CloseoutDebtAudit.stage_budget_closes1 hstage) hdp hmode hc hdebt hslack hlen hpaced
+
+#print axioms dpSafeStage_entry_paced1
+
+/-- `runEntryS_of_entryPaced` for the true window. -/
+theorem runEntryS_of_entryPaced1 (center : GalilScaffoldPlace.Place) (a : Bool)
+    (v v' : SearchVM) (as : List Bool) (w : List (Fin 3)) (lower Rad k slack : ℕ)
+    (hw : w.length = PalPeg.CloseoutDebtAudit.stageWindow1 k)
+    (hhand : searchStep center a v v' → v.search.mode ≠ .run → v'.search.mode = .run →
+      v'.dp = ⟨GalilScaffoldPreload.initial w lower, false⟩ ∧ Canonical v'.search.debt ∧
+        PalPeg.GalilReplaySpan.stageDebt Rad (k : ℤ) ≤ value v'.search.debt)
+    (hstage : 3 * Rad ≤ 5 * k) (hslack : slack ≤ 2047)
+    (hlen : dpEvents (PalPeg.CloseoutDebtAudit.stageWindow1 k) ≤ as.length)
+    (hpaced : PacedL 2048 slack as) :
+    RunEntryS center a v v' as := by
+  intro hs hne hr
+  obtain ⟨h1, h2, h3⟩ := hhand hs hne hr
+  exact dpSafeStage_entry_paced1 v' w lower Rad k slack as hw h1 hr h2 hstage h3 hslack hlen
+    hpaced
+
+#print axioms runEntryS_of_entryPaced1
+
 end PalPeg.CloseoutReadyStage
