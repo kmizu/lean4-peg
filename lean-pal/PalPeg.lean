@@ -607,6 +607,9 @@ import PalPeg.GalilChainTickable
 import PalPeg.GalilLastRadius
 import PalPeg.LocalInputView
 import PalPeg.GalilSegmentConstruct
+import PalPeg.CloseoutWatchRound7
+import PalPeg.CloseoutPackRun3
+import PalPeg.CloseoutPreload5
 import PalPeg.CloseoutPackRun2
 import PalPeg.CloseoutCoreEnc9
 import PalPeg.CloseoutWatchRound5
