@@ -94,7 +94,7 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 theorem leftLive_pt {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hIP : ∀ i, i ≤ Tc w.length → IPack centre place entry q first w (st i)) :
     ∀ i, i ≤ Tc w.length → PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm :=
-  fun i hi => leftLive_of_lpack (hIP i hi).pack
+  fun i hi => leftLive_of_lpackG (hIP i hi).pack
 
 /-- **`CloseoutRadPack3.sanePack_trace'`, pointwise.** -/
 theorem sanePack_pt {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM}

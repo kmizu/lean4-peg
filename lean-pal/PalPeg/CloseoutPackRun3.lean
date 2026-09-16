@@ -188,6 +188,10 @@ structure BigResid5 (w : List (Fin 2)) : Prop where
     x.ctl.mode = Mode.shift →
     ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos x.vm →
     ∃ r, ScanInvariant w (position x.vm.center) r x.vm.left x.vm.right
+  rShiftDoneMinv : ∀ x : State GalilVM, BigPack2 centre place entry q first w x →
+    x.ctl.mode = Mode.shift →
+    ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos x.vm →
+    MInv w x.ctl x.vm
   rChoosePack : ∀ x : State GalilVM, BigPack2 centre place entry q first w x →
     x.ctl.mode = Mode.choose → x.ctl.odd = true → ∀ t : GalilVM,
     (galilFrameS (PofC centre place entry w) q first).choose x.vm t →
@@ -211,25 +215,18 @@ structure BigResid5 (w : List (Fin 2)) : Prop where
 `rMismatchMinv` by `minv_of_mismatch` exactly as in `bigResid'_of_big4`. -/
 theorem lticks_of_big5 {w : List (Fin 2)} (hr : BigResid5 centre place entry q first w)
     {x : State GalilVM} (hx : BigPack2 centre place entry q first w x) :
-    LTickLeaves centre place entry q first w x.ctl x.vm where
-  initPack := hr.rInitPack x hx
+    LTickLeavesG centre place entry q first w x.ctl x.vm where
+  initPackG := fun hm t ht => lpackG_of_lpack (hr.rInitPack x hx hm t ht)
   scanLeft := fun hm => by
     obtain ⟨r, hi⟩ := hr.rScanInvR x hx hm
     exact left_pos_of_two (margin_of_scanInv hi (hx.extra.scanMargin hm r hi))
   scanInvR := hr.rScanInvR x hx
   scanCanR := fun hm => canR_of_bigPack2 centre place entry q first hx.big hx.extra hm
-  shiftMinv := fun hm s'' _ hcmp hb =>
-    minv_of_mismatch (c := {x.ctl with clock := 2048}) rfl (beginShift_heads hb)
-      (hr.rMismatchMinv x hx hm s'' hcmp)
-  fallbackMinv := fun hm s'' _ hcmp hb =>
-    minv_of_mismatch (c := {x.ctl with clock := 2048}) rfl (beginFallback_heads hb)
-      (hr.rMismatchMinv x hx hm s'' hcmp)
-  shiftOneMinv := hr.rShiftOneMinv x hx
   shiftDoneScan := hr.rShiftDoneScan x hx
-  choosePack := hr.rChoosePack x hx
+  shiftDoneMinv := hr.rShiftDoneMinv x hx
+  choosePackL := fun hm ho t ht => (hr.rChoosePack x hx hm ho t ht).1
   rewindLeft := fun hm => left_pos_of_two (hx.extra.rewindMargin hm)
-  rewindPairMinv := hr.rRewindPairMinv x hx
-  replayPack := hr.rReplayPack x hx
+  replayPackG := fun hm t o ht => lpackG_of_lpack (hr.rReplayPack x hx hm t o ht)
 
 end Resid5
 
@@ -254,7 +251,7 @@ theorem bigPack2_tick {w : List (Fin 2)} (hr : BigResid5 centre place entry q fi
       (auxPack_of_bigPack centre place entry q first hx.big) hx.big.live h) hlv
   obtain ⟨c, s⟩ := x
   obtain ⟨c', t⟩ := y
-  exact lpack_tick centre place entry q first hx.big.ipack.pack
+  exact lpackG_tick centre place entry q first hx.big.ipack.pack
     (lticks_of_big5 centre place entry q first hr hx) h
 
 /-- **The enlarged pack at an `InvLPC` origin.** -/

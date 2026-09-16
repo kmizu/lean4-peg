@@ -183,6 +183,10 @@ structure BigResid' (w : List (Fin 2)) : Prop where
     x.ctl.mode = Mode.shift →
     ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos x.vm →
     ∃ r, ScanInvariant w (position x.vm.center) r x.vm.left x.vm.right
+  rShiftDoneMinv : ∀ x : State GalilVM, BigPack centre place entry q first w x →
+    x.ctl.mode = Mode.shift →
+    ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos x.vm →
+    MInv w x.ctl x.vm
   rChoosePack : ∀ x : State GalilVM, BigPack centre place entry q first w x →
     x.ctl.mode = Mode.choose → x.ctl.odd = true → ∀ t : GalilVM,
     (galilFrameS (PofC centre place entry w) q first).choose x.vm t →
@@ -205,19 +209,16 @@ structure BigResid' (w : List (Fin 2)) : Prop where
 /-- The twelve corners, repackaged as `CloseoutLPack3.LTickLeaves`. -/
 theorem lticks_of_bigResid' {w : List (Fin 2)} (hr : BigResid' centre place entry q first w)
     {x : State GalilVM} (hx : BigPack centre place entry q first w x) :
-    LTickLeaves centre place entry q first w x.ctl x.vm :=
-  { initPack := hr.rInitPack x hx
+    LTickLeavesG centre place entry q first w x.ctl x.vm :=
+  { initPackG := fun hm t ht => lpackG_of_lpack (hr.rInitPack x hx hm t ht)
     scanLeft := hr.rScanLeft x hx
     scanInvR := hr.rScanInvR x hx
     scanCanR := hr.rScanCanR x hx
-    shiftMinv := hr.rShiftMinv x hx
-    fallbackMinv := hr.rFallbackMinv x hx
-    shiftOneMinv := hr.rShiftOneMinv x hx
     shiftDoneScan := hr.rShiftDoneScan x hx
-    choosePack := hr.rChoosePack x hx
+    shiftDoneMinv := hr.rShiftDoneMinv x hx
+    choosePackL := fun hm ho t ht => (hr.rChoosePack x hx hm ho t ht).1
     rewindLeft := hr.rRewindLeft x hx
-    rewindPairMinv := hr.rRewindPairMinv x hx
-    replayPack := hr.rReplayPack x hx }
+    replayPackG := fun hm t o ht => lpackG_of_lpack (hr.rReplayPack x hx hm t o ht) }
 
 /-- `AuxPack` is the non-`IPack`, non-`CentreLive` part of `BigPack`. -/
 theorem auxPack_of_bigPack {w : List (Fin 2)} {x : State GalilVM}
@@ -243,7 +244,7 @@ theorem bigPack_tick' {w : List (Fin 2)} (hr : BigResid' centre place entry q fi
       hx.live h) hlv
   obtain ⟨c, s⟩ := x
   obtain ⟨c', t⟩ := y
-  exact lpack_tick centre place entry q first hx.ipack.pack
+  exact lpackG_tick centre place entry q first hx.ipack.pack
     (lticks_of_bigResid' centre place entry q first hr hx) h
 
 end Resid
@@ -432,6 +433,10 @@ structure BigResid4 (w : List (Fin 2)) : Prop where
     x.ctl.mode = Mode.shift →
     ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos x.vm →
     ∃ r, ScanInvariant w (position x.vm.center) r x.vm.left x.vm.right
+  rShiftDoneMinv : ∀ x : State GalilVM, BigPack centre place entry q first w x →
+    x.ctl.mode = Mode.shift →
+    ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos x.vm →
+    MInv w x.ctl x.vm
   rChoosePack : ∀ x : State GalilVM, BigPack centre place entry q first w x →
     x.ctl.mode = Mode.choose → x.ctl.odd = true → ∀ t : GalilVM,
     (galilFrameS (PofC centre place entry w) q first).choose x.vm t →
@@ -466,6 +471,7 @@ theorem bigResid'_of_big4 {w : List (Fin 2)} (h : BigResid4 centre place entry q
       (h.rMismatchMinv x hx hm s'' hcmp)
   rShiftOneMinv := h.rShiftOneMinv
   rShiftDoneScan := h.rShiftDoneScan
+  rShiftDoneMinv := h.rShiftDoneMinv
   rChoosePack := h.rChoosePack
   rRewindLeft := fun x hx hm => left_pos_of_two (h.rRewindMargin x hx hm)
   rRewindPairMinv := h.rRewindPairMinv

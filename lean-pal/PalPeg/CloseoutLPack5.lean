@@ -91,6 +91,56 @@ open PalPeg.GalilTruncTick
 open PalPeg.GalilFinalAssembly4
 open GalilScaffoldInputHead GalilScaffoldCounter GalilScaffoldChainVerifier
 
+/-! ## 0. The guarded centre invariant and the guarded left-head pack
+
+`CloseoutPackRun4.minv_false_at_mismatch` refutes the unguarded third field of
+`CloseoutLPack.LPack` (`c.mode ≠ Mode.init → MInv w c s`) along a real run: a
+mismatching comparison kills the current centre, and the whole fallback phase
+runs with no live centre at all.  `MInvG` demands the centre invariant **only in
+scan mode**, and `LPackG` is `LPack` with that weakened field.  The run payload
+`IPack` below carries `LPackG`; §2 of `CloseoutPackRun5` shows the weakening is
+free, because the only consumer of the payload in the whole chain is
+`H_trailI`, which reads `lrep` and `scanInv` and never `minv`.
+-/
+
+/-- **The guarded centre invariant.** -/
+def MInvG (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
+  c.mode = Mode.scan → MInv w c s
+
+theorem minvG_of_minv {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (h : MInv w c s) : MInvG w c s := fun _ => h
+
+/-- **The guarded left-head pack**: `CloseoutLPack.LPack` with its third field
+guarded by `scan`. -/
+structure LPackG (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+  lrep : c.mode ≠ Mode.init →
+    GalilScaffoldInputTrace.Represents s.left.head w ∧ s.left.head.focus ≠ none
+  scanInv : c.mode = Mode.scan → c.replaying = false →
+    ∃ rad : ℕ, ScanInvariant w (position s.center) rad s.left s.right
+  minvG : MInvG w c s
+
+/-- **`LPackG` is a weakening of `LPack`.** -/
+theorem lpackG_of_lpack {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (h : LPack w c s) : LPackG w c s :=
+  ⟨h.lrep, h.scanInv, fun hm => h.minv (by rw [hm]; decide)⟩
+
+/-- **`LeftLive` is read off the weakened pack**: it only ever used `lrep`. -/
+theorem leftLive_of_lpackG {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (h : LPackG w c s) : PalPeg.GalilTrailSane.LeftLive c s := by
+  refine ⟨fun hm _ => ?_, fun hm => ?_⟩
+  · obtain ⟨hh, hp⟩ := h.lrep (by rw [hm]; decide)
+    exact pos_of_rep hh hp
+  · obtain ⟨hh, hp⟩ := h.lrep (by rw [hm]; decide)
+    exact pos_of_rep hh hp
+
+/-- The boot state, where every field is vacuous. -/
+theorem lpackG_boot (w : List (Fin 2)) : LPackG w (boot w).ctl (boot w).vm :=
+  lpackG_of_lpack (lpack_boot w)
+
+#print axioms lpackG_of_lpack
+#print axioms leftLive_of_lpackG
+#print axioms lpackG_boot
+
 /-! ## 1. The state-local shift-entry conditions -/
 
 section Pack
@@ -134,7 +184,7 @@ structure ShiftLocal (w : List (Fin 2)) (x : State GalilVM) : Prop where
 /-- **The run-level pack.**  `CloseoutLPack.LPack` together with the
 shift-entry conditions at the same state. -/
 structure IPack (w : List (Fin 2)) (x : State GalilVM) : Prop where
-  pack : LPack w x.ctl x.vm
+  pack : LPackG w x.ctl x.vm
   shift : ShiftLocal centre place entry q first w x
 
 end Pack
@@ -557,5 +607,303 @@ theorem pal_in_peg_final5 (entry q : ℕ) (first : Fin 9)
   · exact GalilEmptyWord.realize_accept'_nil L blank initQ outQ n htape hn
 
 #print axioms pal_in_peg_final5
+
+/-! ## 3. `LPackG` along one tick -/
+
+/-- A VM step that leaves the three heads and the replay counter alone
+transports the weakened pack.  `hscm` replaces `CloseoutLPack3.lpack_of_same`'s
+use of `hni` for the `minv` field: the landing only has to be in `scan` mode
+when the source is. -/
+theorem lpackG_of_same {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
+    (hP : LPackG w c s) (hni : c.mode ≠ Mode.init)
+    (hL : t.left = s.left) (hC : t.center = s.center) (hR : t.right = s.right)
+    (hrep : t.replay = s.replay) (hr : c'.replaying = c.replaying)
+    (hsc : c'.mode = Mode.scan → c'.replaying = false → c.mode = Mode.scan ∧ c.replaying = false)
+    (hscm : c'.mode = Mode.scan → c.mode = Mode.scan) :
+    LPackG w c' t := by
+  refine ⟨fun _ => by rw [hL]; exact hP.lrep hni, ?_,
+    fun hm' => minv_same hr hR hC hrep (hP.minvG (hscm hm'))⟩
+  intro hm hrr
+  obtain ⟨hm0, hr0⟩ := hsc hm hrr
+  obtain ⟨r, hi⟩ := hP.scanInv hm0 hr0
+  exact ⟨r, by rw [hL, hR, hC]; exact hi⟩
+
+#print axioms lpackG_of_same
+
+section LeavesG
+variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
+  (entry q : ℕ) (first : Fin 9)
+
+/-- **(NAMED) the leaves of one tick, re-cut.**  `CloseoutLPack3.LTickLeaves`
+with the four fallback-phase `MInv` corners dropped (their landing mode is not
+`scan`, so `MInvG` is vacuous there) and one new corner added at the
+`shift → scan` exit. -/
+structure LTickLeavesG (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+  /-- The `init` landing. -/
+  initPackG : c.mode = Mode.init → ∀ t : GalilVM,
+    (galilFrameS (PofC centre place entry w) q first).init s t →
+    LPackG w {c with mode := Mode.scan, output := true} t
+  /-- **The origin corner** (unchanged). -/
+  scanLeft : c.mode = Mode.scan → 0 < position (GalilScaffoldInputHead.left s.left)
+  /-- The scan invariant in `scan` mode including a replay (unchanged). -/
+  scanInvR : c.mode = Mode.scan →
+    ∃ r, ScanInvariant w (position s.center) r s.left s.right
+  /-- The right head can move in `scan` mode (unchanged). -/
+  scanCanR : c.mode = Mode.scan → GalilScaffoldChainVerifier.canRight s.right
+  /-- **The shift exit, scan half** (unchanged): the new centre's radius. -/
+  shiftDoneScan : c.mode = Mode.shift →
+    ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s →
+    ∃ r, ScanInvariant w (position s.center) r s.left s.right
+  /-- **NEW — the shift exit, centre half.**  `shift_done` moves no head, so
+  this is `MInv` at the shifted state; the intended proof is
+  `GalilLiveCentreShift.leftmost_shift` at the candidate period carried by
+  `CloseoutPackRun3.Extra.cand`.  This is the *only* corner the re-cut adds,
+  and it replaces `shiftMinv` + `shiftOneMinv`, which had to hold at every
+  intermediate shift unit. -/
+  shiftDoneMinv : c.mode = Mode.shift →
+    ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s →
+    MInv w c s
+  /-- `choose` re-centres on the right head — **head half only**; the landing
+  mode is `rewind`, so the old `MInv` half is vacuous. -/
+  choosePackL : c.mode = Mode.choose → c.odd = true → ∀ t : GalilVM,
+    (galilFrameS (PofC centre place entry w) q first).choose s t →
+    GalilScaffoldInputTrace.Represents t.left.head w ∧ t.left.head.focus ≠ none
+  /-- A rewind unit walks `L` one place left (unchanged). -/
+  rewindLeft : c.mode = Mode.rewind → 0 < position (GalilScaffoldInputHead.left s.left)
+  /-- **The fallback landing.**  `replayStart` lands in `scan`, so this is where
+  the centre invariant comes back: `GalilLiveCentreFallback.leftmost_after_fallback`
+  together with `GalilLiveCentreReplay.minv_after_fallback`. -/
+  replayPackG : c.mode = Mode.replayStart → ∀ (t : GalilVM) (o : Bool),
+    (galilFrameS (PofC centre place entry w) q first).replayStart s t →
+    LPackG w {c with mode := Mode.scan, clock := 2048, output := o, replaying := (galilFrameS (PofC centre place entry w) q first).replayPos t} t
+
+/-- **`LPackG` survives one tick, given the re-cut leaves.**  The five
+fallback-phase branches (`scan_shift`, `scan_fallback`, `shift_one`,
+`rewind_pair`, `choose_select`) now discharge their centre obligation by
+`Mode.noConfusion`: their landing mode is `shift`, `copy`, `shift`, `rewind`,
+`rewind`. -/
+theorem lpackG_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
+    (hP : LPackG w c s) (hL : LTickLeavesG centre place entry q first w c s)
+    (h : Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩ ⟨c', t⟩) :
+    LPackG w c' t := by
+  cases h
+  case init =>
+    rename_i hm hi
+    exact hL.initPackG hm _ hi
+  case scan_wait =>
+    rename_i hm hav hb
+    obtain ⟨hl, hr, -, hC, -, -, -, -, -, hrep, -, -⟩ :=
+      backgroundS_fields (PofC centre place entry w) q first hb
+    exact lpackG_of_same hP (by rw [hm]; decide) hl hC hr hrep rfl
+      (fun hm' hr' => ⟨hm', hr'⟩) (fun hm' => hm')
+  case scan_count =>
+    rename_i hm hc hav hb
+    obtain ⟨hl, hr, -, hC, -, -, -, -, -, hrep, -, -⟩ :=
+      backgroundS_fields (PofC centre place entry w) q first hb
+    exact lpackG_of_same hP (by rw [hm]; decide) hl hC hr hrep rfl
+      (fun hm' hr' => ⟨hm', hr'⟩) (fun hm' => hm')
+  case restart =>
+    rename_i hm hb
+    obtain ⟨wch, -, -, -, -, ht⟩ : restartVM entry s t := hb
+    subst ht
+    exact lpackG_of_same hP (by rw [hm]; decide) rfl rfl rfl rfl rfl
+      (fun hm' hr' => ⟨hm', hr'⟩) (fun hm' => hm')
+  case scan_match =>
+    rename_i s' o hmt hm hc hcmp hav hpl ho
+    obtain ⟨vs, vq, hvl, hvr, hmatch, rfl⟩ :=
+      compare_matched_form centre place entry q first hcmp hmt
+    have hni : c.mode ≠ Mode.init := by rw [hm]; decide
+    have hpl' : t = (if c.replaying then
+        {afterCompare s vs vq with replay := dec (afterCompare s vs vq).replay}
+      else afterCompare s vs vq) := hpl
+    have htl : t.left = (afterCompare s vs vq).left := by
+      rw [hpl']; cases c.replaying <;> rfl
+    have htr : t.right = (afterCompare s vs vq).right := by
+      rw [hpl']; cases c.replaying <;> rfl
+    have htc : t.center = s.center := by rw [hpl']; cases c.replaying <;> rfl
+    have hcan := hL.scanCanR hm
+    obtain ⟨r, hi⟩ := hL.scanInvR hm
+    have hi' := matched_invariant' w vq hvl hvr hmatch hcan hi
+    obtain ⟨hrepr, hpres⟩ := hP.lrep hni
+    refine ⟨fun _ => ?_, fun _ _ => ⟨r + 1, ?_⟩, fun _ => ?_⟩
+    · rw [htl, afterCompare_left, hvl]
+      exact lrep_left hrepr hpres (hL.scanLeft hm)
+    · rw [htc, htl, htr]; exact hi'
+    · cases hcr : c.replaying with
+      | false =>
+        have ht : t = afterCompare s vs vq := by rw [hpl', hcr]; rfl
+        have hm0 := minv_match (raw := w) (c := c) (vq := vq) o 2048 hcr hvl hvr hcan hmatch hi
+          (hP.minvG hm)
+        exact minv_same (by simp) (by rw [ht]) (by rw [ht]) (by rw [ht]) hm0
+      | true =>
+        have ht : t = replayDec true (afterCompare s vs vq) := by rw [hpl', hcr]; rfl
+        have hm0 := minv_matchR (raw := w) (c := c) (vs := vs) (vq := vq)
+          (PofC centre place entry w) (fun _ => rfl) o 2048 hcr hvr hcan hi (hP.minvG hm)
+        exact minv_same (by rw [ht]; rfl) (by rw [ht]) (by rw [ht]) (by rw [ht]) hm0
+  case scan_shift =>
+    rename_i s' hmt hg hm hc hr hcmp hav hb
+    obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
+      compare_mismatch_form centre place entry q first hcmp hmt
+    have hni : c.mode ≠ Mode.init := by rw [hm]; decide
+    obtain ⟨wch, hchain, ht⟩ : beginShiftVM' (afterMismatch s vs vq) t := hb
+    obtain ⟨hrepr, hpres⟩ := hP.lrep hni
+    refine ⟨fun _ => ?_, fun hm' _ => Mode.noConfusion hm',
+      fun hm' => Mode.noConfusion hm'⟩
+    have htl : t.left = GalilScaffoldInputHead.left s.left := by
+      rw [ht]; show vs.left = _; exact hvl
+    rw [htl]; exact lrep_left hrepr hpres (hL.scanLeft hm)
+  case scan_fallback =>
+    rename_i s' hmt hm hc hg hr hcmp hav hb
+    obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
+      compare_mismatch_form centre place entry q first hcmp hmt
+    have hni : c.mode ≠ Mode.init := by rw [hm]; decide
+    obtain ⟨pl, ht⟩ : beginFallbackVM' (afterMismatch s vs vq) t := hb
+    obtain ⟨hrepr, hpres⟩ := hP.lrep hni
+    refine ⟨fun _ => ?_, fun hm' _ => Mode.noConfusion hm',
+      fun hm' => Mode.noConfusion hm'⟩
+    have htl : t.left = GalilScaffoldInputHead.left s.left := by
+      rw [ht]; show vs.left = _; exact hvl
+    rw [htl]; exact lrep_left hrepr hpres (hL.scanLeft hm)
+  case shift_one =>
+    rename_i hm hp hi
+    have hni : c.mode ≠ Mode.init := by rw [hm]; decide
+    obtain ⟨hcC, hcL, hcL2, wch, hw, hv⟩ := hi.1
+    have ht := hi.2
+    rw [hv] at ht
+    obtain ⟨hrepr, hpres⟩ := hP.lrep hni
+    refine ⟨fun _ => ?_, fun hm' _ => Mode.noConfusion (hm.symm.trans hm'),
+      fun hm' => Mode.noConfusion (hm.symm.trans hm')⟩
+    have htl : t.left = GalilScaffoldChainVerifier.right
+        (GalilScaffoldChainVerifier.right s.left) := by rw [ht]; rfl
+    rw [htl]
+    obtain ⟨h1, h2⟩ := lrep_right hrepr hpres hcL
+    exact lrep_right h1 h2 hcL2
+  case shift_done =>
+    rename_i o hm hp ho
+    have hni : c.mode ≠ Mode.init := by rw [hm]; decide
+    exact ⟨fun _ => hP.lrep hni, fun _ _ => hL.shiftDoneScan hm hp,
+      fun _ => minv_same rfl rfl rfl rfl (hL.shiftDoneMinv hm hp)⟩
+  case copy_one =>
+    rename_i hm hp hi
+    obtain ⟨-, hset⟩ := hi
+    exact lpackG_of_same hP (by rw [hm]; decide) (by rw [hset]; rfl) (by rw [hset]; rfl)
+      (by rw [hset]; rfl) (by rw [hset]; rfl) rfl
+      (fun hm' _ => Mode.noConfusion (hm.symm.trans hm'))
+      (fun hm' => Mode.noConfusion (hm.symm.trans hm'))
+  case copy_done =>
+    rename_i hm hp hi
+    obtain ⟨-, hset⟩ := hi
+    exact lpackG_of_same hP (by rw [hm]; decide) (by rw [hset]; rfl) (by rw [hset]; rfl)
+      (by rw [hset]; rfl) (by rw [hset]; rfl) rfl (fun hm' _ => Mode.noConfusion hm')
+      (fun hm' => Mode.noConfusion hm')
+  case home_start =>
+    rename_i hm hl hi
+    obtain ⟨-, hset⟩ := hi
+    exact lpackG_of_same hP (by rw [hm]; decide) (by rw [hset]; rfl) (by rw [hset]; rfl)
+      (by rw [hset]; rfl) (by rw [hset]; rfl) rfl (fun hm' _ => Mode.noConfusion hm')
+      (fun hm' => Mode.noConfusion hm')
+  case home_step =>
+    rename_i hm hl hi
+    obtain ⟨-, hset⟩ := hi
+    exact lpackG_of_same hP (by rw [hm]; decide) (by rw [hset]; rfl) (by rw [hset]; rfl)
+      (by rw [hset]; rfl) (by rw [hset]; rfl) rfl
+      (fun hm' _ => Mode.noConfusion (hm.symm.trans hm'))
+      (fun hm' => Mode.noConfusion (hm.symm.trans hm'))
+  case fpp_slice =>
+    rename_i hm hi
+    obtain ⟨-, hset⟩ := hi
+    exact lpackG_of_same hP (by rw [hm]; decide) (by rw [hset]; rfl) (by rw [hset]; rfl)
+      (by rw [hset]; rfl) (by rw [hset]; rfl) rfl
+      (fun hm' _ => Mode.noConfusion (hm.symm.trans hm'))
+      (fun hm' => Mode.noConfusion (hm.symm.trans hm'))
+  case fpp_done =>
+    rename_i hm hi
+    obtain ⟨-, hset⟩ := hi
+    exact lpackG_of_same hP (by rw [hm]; decide) (by rw [hset]; rfl) (by rw [hset]; rfl)
+      (by rw [hset]; rfl) (by rw [hset]; rfl) rfl (fun hm' _ => Mode.noConfusion hm')
+      (fun hm' => Mode.noConfusion hm')
+  case markEnd_step =>
+    rename_i hm he hi
+    obtain ⟨-, hset⟩ := hi
+    exact lpackG_of_same hP (by rw [hm]; decide) (by rw [hset]; rfl) (by rw [hset]; rfl)
+      (by rw [hset]; rfl) (by rw [hset]; rfl) rfl
+      (fun hm' _ => Mode.noConfusion (hm.symm.trans hm'))
+      (fun hm' => Mode.noConfusion (hm.symm.trans hm'))
+  case markEnd_found =>
+    rename_i hm he hi
+    obtain ⟨⟨-, heq⟩, hset⟩ := hi
+    exact lpackG_of_same hP (by rw [hm]; decide)
+      (by rw [hset, heq]; rfl) (by rw [hset, heq]; rfl) (by rw [hset, heq]; rfl)
+      (by rw [hset]; rfl) rfl (fun hm' _ => Mode.noConfusion hm')
+      (fun hm' => Mode.noConfusion hm')
+  case choose_step =>
+    rename_i hm hs hi
+    obtain ⟨⟨-, heq⟩, hset⟩ := hi
+    exact lpackG_of_same hP (by rw [hm]; decide)
+      (by rw [hset, heq]; rfl) (by rw [hset, heq]; rfl) (by rw [hset, heq]; rfl)
+      (by rw [hset]; rfl) rfl
+      (fun hm' _ => Mode.noConfusion (hm.symm.trans hm'))
+      (fun hm' => Mode.noConfusion (hm.symm.trans hm'))
+  case rewind_done =>
+    rename_i hm hfi hi
+    obtain ⟨heq, hset⟩ := hi
+    exact lpackG_of_same hP (by rw [hm]; decide)
+      (by rw [hset, heq]; rfl) (by rw [hset, heq]; rfl) (by rw [hset, heq]; rfl)
+      (by rw [hset]; rfl) rfl (fun hm' _ => Mode.noConfusion hm')
+      (fun hm' => Mode.noConfusion hm')
+  case choose_select =>
+    rename_i hm hodd hs hi
+    obtain ⟨hrepr, hpres⟩ := hL.choosePackL hm hodd _ hi
+    exact ⟨fun _ => ⟨hrepr, hpres⟩, fun hm' _ => Mode.noConfusion hm',
+      fun hm' => Mode.noConfusion hm'⟩
+  case rewind_one =>
+    rename_i hm hfi hpr hi
+    have hni : c.mode ≠ Mode.init := by rw [hm]; decide
+    obtain ⟨⟨-, heq⟩, hset⟩ := hi
+    have htl : t.left = GalilScaffoldInputHead.left s.left := by rw [hset, heq]; rfl
+    obtain ⟨hrepr, hpres⟩ := hP.lrep hni
+    refine ⟨fun _ => ?_, fun hm' _ => Mode.noConfusion (hm.symm.trans hm'),
+      fun hm' => Mode.noConfusion (hm.symm.trans hm')⟩
+    rw [htl]; exact lrep_left hrepr hpres (hL.rewindLeft hm)
+  case rewind_pair =>
+    rename_i hm hfi hpr hi
+    have hni : c.mode ≠ Mode.init := by rw [hm]; decide
+    have heq := hi.1.2
+    have hset := hi.2
+    have htl : t.left = GalilScaffoldInputHead.left s.left := by rw [hset, heq]; rfl
+    obtain ⟨hrepr, hpres⟩ := hP.lrep hni
+    refine ⟨fun _ => ?_, fun hm' _ => Mode.noConfusion (hm.symm.trans hm'),
+      fun hm' => Mode.noConfusion (hm.symm.trans hm')⟩
+    rw [htl]; exact lrep_left hrepr hpres (hL.rewindLeft hm)
+  case replayStart =>
+    rename_i o hm ho ho' hi
+    exact hL.replayPackG hm _ o hi
+
+/-- `lpackG_tick` in state form. -/
+theorem lpackG_tick' {w : List (Fin 2)} {x y : State GalilVM}
+    (hP : LPackG w x.ctl x.vm) (hL : LTickLeavesG centre place entry q first w x.ctl x.vm)
+    (h : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y) :
+    LPackG w y.ctl y.vm := by
+  obtain ⟨c, s⟩ := x
+  obtain ⟨c', t⟩ := y
+  exact lpackG_tick centre place entry q first hP hL h
+
+/-- **The tick induction**: `LPackG` at every state of a pre-loaded trace. -/
+theorem lpackG_steps {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PreTrace centre place entry q first w st Tc)
+    (hLv : ∀ i, i ≤ Tc w.length → LTickLeavesG centre place entry q first w (st i).ctl (st i).vm) :
+    ∀ i, i ≤ Tc w.length → LPackG w (st i).ctl (st i).vm := by
+  intro i
+  induction i with
+  | zero => intro _; rw [hP.start]; exact lpackG_boot w
+  | succ n ih =>
+    intro hi
+    exact lpackG_tick' centre place entry q first (ih (by omega)) (hLv n (by omega))
+      (hP.trace.tick n (by omega))
+
+end LeavesG
+
+#print axioms lpackG_tick
+#print axioms lpackG_steps
 
 end PalPeg.CloseoutLPack5
