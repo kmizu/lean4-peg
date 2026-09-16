@@ -58,7 +58,7 @@ stage.  Its precise type is
   `PreloadAtEntry : ∀ (v v' : SearchVM) (center : GalilScaffoldPlace.Place) (a : Bool)
       (k : ℕ), searchStep center a v v' → v.search.mode ≠ .run → v'.search.mode = .run →
       ∃ (w : List (Fin 3)) (lower : ℕ),
-        w.length = PalPeg.CloseoutDebtAudit.stageWindow k ∧ PreloadAt v.toPrep w lower`
+        w.length = PalPeg.CloseoutDebtAudit.stageWindow1 k ∧ PreloadAt v.toPrep w lower`
 
 and `runEntriesS_of_preloadInv` below shows that this, plus the two debt facts,
 is all that `RunEntriesS` still needs.  §3 proves the corresponding statement
@@ -79,7 +79,7 @@ open PalPeg.GalilScaffoldPrepareControl (State Tick Run prepare)
 open PalPeg.GalilScaffoldCounter (Counter Canonical value)
 open PalPeg.CloseoutReadyStage
 open PalPeg.CloseoutRunEntriesS
-open PalPeg.CloseoutDebtAudit (dpEvents stageWindow)
+open PalPeg.CloseoutDebtAudit (dpEvents stageWindow stageWindow1 dpEntry)
 
 /-! ## 1. The preload tape shape and the per-tick half -/
 
@@ -204,6 +204,29 @@ theorem runEntryS_of_preloadAt (center : GalilScaffoldPlace.Place) (a : Bool)
 
 #print axioms runEntryS_of_preloadAt
 
+/-- **`RunEntryS` from the preload shape, for the true window.**  Same as
+`runEntryS_of_preloadAt` but calibrated at `stageWindow1 k = 8 * max k 1 + 1`,
+the window the preparation really copies (`CloseoutPreload3` §1).  The hand-over
+is §2, the budget is `CloseoutReadyStage.runEntryS_of_entryPaced1`. -/
+theorem runEntryS_of_preloadAt1 (center : GalilScaffoldPlace.Place) (a : Bool)
+    (v v' : SearchVM) (as : List Bool) (w : List (Fin 3)) (lower Rad k slack : ℕ)
+    (hw : w.length = stageWindow1 k)
+    (hpre : searchStep center a v v' → v.search.mode ≠ .run → v'.search.mode = .run →
+      PreloadAt v.toPrep w lower)
+    (hcan : searchStep center a v v' → v.search.mode ≠ .run → v'.search.mode = .run →
+      Canonical v'.search.debt)
+    (hdebt : searchStep center a v v' → v.search.mode ≠ .run → v'.search.mode = .run →
+      PalPeg.GalilReplaySpan.stageDebt Rad (k : ℤ) ≤ value v'.search.debt)
+    (hstage : 3 * Rad ≤ 5 * k) (hslack : slack ≤ 2047)
+    (hlen : dpEvents (stageWindow1 k) ≤ as.length) (hpaced : PacedL 2048 slack as) :
+    RunEntryS center a v v' as :=
+  runEntryS_of_entryPaced1 center a v v' as w lower Rad k slack hw
+    (fun hs hne hr => ⟨run_entry_preload hs hne hr (hpre hs hne hr), hcan hs hne hr,
+      hdebt hs hne hr⟩)
+    hstage hslack hlen hpaced
+
+#print axioms runEntryS_of_preloadAt1
+
 /-- **The named residual, as a predicate.**  At every `.run` entry the
 predecessor is in preload shape for the calibrated window of the current stage,
 and the entry debt is the stage debt.  This is all that `RunEntriesS` still
@@ -212,14 +235,16 @@ def EntryPreload (Q : SearchVM → List Bool → Prop) (Rad k slack : ℕ) : Pro
   ∀ (v v' : SearchVM) (center : GalilScaffoldPlace.Place) (a : Bool) (as : List Bool),
     Q v (a :: as) → searchStep center a v v' →
       ((v.search.mode ≠ .run → v'.search.mode = .run →
-        (∃ (w : List (Fin 3)) (lower : ℕ), w.length = stageWindow k ∧
+        (∃ (w : List (Fin 3)) (lower : ℕ), w.length = stageWindow1 k ∧
           PreloadAt v.toPrep w lower) ∧
         Canonical v'.search.debt ∧
-        PalPeg.GalilReplaySpan.stageDebt Rad (k : ℤ) ≤ value v'.search.debt) ∧
-        dpEvents (stageWindow k) ≤ as.length ∧ PacedL 2048 slack as) ∧ Q v' as
+        PalPeg.GalilReplaySpan.stageDebt Rad (k : ℤ) ≤ value v'.search.debt ∧
+        dpEvents (stageWindow1 k) ≤ as.length ∧ PacedL 2048 slack as)) ∧ Q v' as
 
 /-- **`RunEntriesS` for every event list from the preload invariant.**  The
-budget half is `dpSafeStage_entry_paced` (budget-free); the shape half is §2. -/
+budget half is `dpSafeStage_entry_paced1` (budget-free); the shape half is §2.
+The length and pacing clauses sit *inside* the `.run`-entry implication: that is
+where they are used, and it is what lets an invariant carry them. -/
 theorem runEntriesS_of_preloadInv {Q : SearchVM → List Bool → Prop} {Rad k slack : ℕ}
     (hstage : 3 * Rad ≤ 5 * k) (hslack : slack ≤ 2047)
     (hQ : EntryPreload Q Rad k slack) :
@@ -229,14 +254,13 @@ theorem runEntriesS_of_preloadInv {Q : SearchVM → List Bool → Prop} {Rad k s
   | nil => intro v _; trivial
   | cons a as ih =>
     intro v hq center v' hstep
-    obtain ⟨hentry, hnext⟩ := hQ v v' center a as hq hstep
-    obtain ⟨hdata, hlen, hpaced⟩ := hentry
+    obtain ⟨hdata, hnext⟩ := hQ v v' center a as hq hstep
     refine ⟨?_, ih v' hnext⟩
     by_cases hne : v.search.mode = .run
     · intro _ hne' _; exact absurd hne hne'
     · by_cases hr : v'.search.mode = .run
-      · obtain ⟨⟨w, lower, hw, hpre⟩, hcan, hdebt⟩ := hdata hne hr
-        exact runEntryS_of_preloadAt center a v v' as w lower Rad k slack hw
+      · obtain ⟨⟨w, lower, hw, hpre⟩, hcan, hdebt, hlen, hpaced⟩ := hdata hne hr
+        exact runEntryS_of_preloadAt1 center a v v' as w lower Rad k slack hw
           (fun _ _ _ => hpre) (fun _ _ _ => hcan) (fun _ _ _ => hdebt)
           hstage hslack hlen hpaced
       · intro _ _ hr'; exact absurd hr' hr
@@ -250,12 +274,14 @@ holds with a slack that, together with the controller clock, fills a full
 quantum.  This is the `Rd` that `GalilReplaySpan.ReadyClosure` is meant to be
 instantiated at. -/
 def RdPaced (c : Control) (s : GalilVM) : Prop :=
-  ∀ n : ℕ, ∃ k : ℕ, 2048 ≤ c.clock + k ∧ ReadyPacedS (searchLens.get s) n k
+  ∃ n0 : ℕ, ∀ n : ℕ, n0 ≤ n →
+    ∃ k : ℕ, 2048 ≤ c.clock + k ∧ ReadyPacedS (searchLens.get s) n k
 
 /-- `ReadyClosure.ready` for `RdPaced`. -/
 theorem rdPaced_ready (c : Control) (s : GalilVM) (h : RdPaced c s) :
     PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get s) := by
-  obtain ⟨k, -, hk⟩ := h 0
+  obtain ⟨n0, h⟩ := h
+  obtain ⟨k, -, hk⟩ := h n0 (le_refl _)
   exact readyPacedS_ready hk
 
 /-- `ReadyClosure.seg` for `RdPaced`: the ledger travels along a chain-idle
@@ -264,19 +290,21 @@ theorem rdPaced_seg (P : Shared) (q : ℕ) (first : Fin 9) (es : List Bool)
     (c c' : Control) (s t : GalilVM)
     (hseg : WatchSegE P q first 2048 es c s c' t) (hidle : t.chain = ChainVM.idle)
     (h : RdPaced c s) : RdPaced c' t := by
-  intro n
-  obtain ⟨k, hk, hp⟩ := h (n + es.length)
+  obtain ⟨n0, h⟩ := h
+  refine ⟨n0, fun n hn => ?_⟩
+  obtain ⟨k, hk, hp⟩ := h (n + es.length) (by omega)
   exact readyPacedS_watchSegE P q first hseg hidle n k hk hp
 
 /-- `ReadyClosure.restart` for `RdPaced`: at a `Restarted`/`StageEntry` state with
 a full clock the ledger reduces to the residual `RunEntriesS` datum, by
 `readyPacedS_restarted`. -/
 theorem rdPaced_restart {raw : List (Fin 2)} (c : Control) (u : GalilVM) (Rad : ℕ)
-    (last : Counter) (hclk : c.clock = 2048) (hR : Restarted raw u Rad last)
-    (hE : ∀ as : List Bool, PacedL 2048 0 as → RunEntriesS as (searchLens.get u)) :
+    (last : Counter) (n0 : ℕ) (hclk : c.clock = 2048) (hR : Restarted raw u Rad last)
+    (hE : ∀ (m : ℕ) (as : List Bool), n0 + m ≤ as.length → PacedL 2048 0 as →
+      RunEntriesS as (searchLens.get u)) :
     RdPaced c u := by
-  intro n
-  exact ⟨0, by omega, readyPacedS_restarted hR n 0 (fun as _ hp => hE as hp)⟩
+  refine ⟨n0, fun n hn => ⟨0, by omega, ?_⟩⟩
+  exact readyPacedS_restarted hR n 0 (fun as hlen hp => hE (n - n0) as (by omega) hp)
 
 #print axioms rdPaced_ready
 #print axioms rdPaced_seg
