@@ -4742,6 +4742,827 @@ end StageConstructP
 #print axioms replay_after_fallback_general''_fuel'
 #print axioms replay_after_fallback_general''_fuel'_of_decodes
 
+/-! ## 15. The one-stage begin-side readiness, with the replay's comparison count
+
+`RunEntriesPaced` is false (`CloseoutRunEntriesPaced`): a paced list that is
+merely too long asks for more comparisons than the stage debt.  The stage debt
+at the `.run` entry of the stage a restart `begin last radius` dispatches is
+`2·max k 1 - Rad` (`initialDebt radius = -Rad`, `+2` per grow tick, `max k 1`
+grow ticks for `value last = k`): `stageDebt`.  `RunEntriesStage delay` is the
+paced statement with that side condition; it is the ONE named hypothesis of this
+section (the concrete proof is the calibrated-stage lemmas
+`runEntries_of_calibrated` / `runEntries_two_stages`, not assembled here).
+
+The construction then carries the comparison count: `ReplayStageDC … c s K`
+adds to `ReplayStageD` that the segment's comparisons plus the `K` still to be
+made stay within the stage debt.  The count is `0` at a restart, grows by one
+per comparison, and the entry inequality — the replay's remaining comparisons
+fit the stage debt of the restart that begins it — is the second named fact
+`ReplayFitsStage raw` (used at the replay entry, `Rad = 0`, and at every
+mid-replay restart). -/
+
+section StageDebt
+
+open GalilScaffoldTop GalilScaffoldController GalilScaffoldCounter GalilScaffoldInputHead
+  GalilScaffoldChainVerifier
+open PalPeg.GalilTickFun PalPeg.GalilTickFun2 PalPeg.GalilReportReplay PalPeg.GalilReplayChainSeg
+  PalPeg.GalilStructuredSkeleton PalPeg.GalilReplayGeneral2 PalPeg.GalilBranchInvariants2
+  PalPeg.GalilReplayGeneral PalPeg.GalilSegmentConstruct PalPeg.GalilBranchInvariants
+
+/-- The debt at the `.run` entry of the stage begun by `begin last radius`
+(`value last = k`, `value radius = Rad`). -/
+def stageDebt (Rad : ℕ) (k : ℤ) : ℤ := 2 * max k 1 - Rad
+
+/-- **Named hypothesis.**  The `.run`-entry data of a `StageEntry` restart, for
+every clock-paced event list whose comparisons fit the stage debt. -/
+def RunEntriesStage (delay : ℕ) : Prop :=
+  ∀ (v : SearchVM) (last radius : Counter) (Rad : ℕ),
+    v.search = GalilScaffoldSearchFinish.begin last radius → Canonical last → 0 ≤ value last →
+    Canonical radius → value radius = Rad → StageEntry Rad last →
+    ∀ av : List Bool,
+      (((GalilScaffoldAdvanceClock.advances delay delay (av.map (fun b => (b, true)))).count true
+        : ℕ) : ℤ) ≤ stageDebt Rad (value last) →
+      RunEntriesAllD (GalilScaffoldAdvanceClock.advances delay delay (av.map (fun b => (b, true)))) v
+
+/-- **Named hypothesis.**  The comparisons a restart still has to replay fit the
+stage debt of the stage it begins. -/
+def ReplayFitsStage (raw : List (Fin 2)) : Prop :=
+  ∀ (r : GalilVM) (Rad : ℕ) (last : Counter) (m : ℕ),
+    Restarted raw r Rad last → StageEntry Rad last → r.replay = ofNat m →
+    (m : ℤ) ≤ stageDebt Rad (value last)
+
+/-- `ReplayStageD` with the comparison count: the segment's comparisons plus the
+`K` still to come fit the stage debt. -/
+def ReplayStageDC (raw : List (Fin 2)) (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ)
+    (c : Control) (s : GalilVM) (K : ℕ) : Prop :=
+  ∃ (r : GalilVM) (Rad : ℕ) (last : Counter) (es : List Bool) (c0 : Control),
+    Restarted raw r Rad last ∧ StageEntry Rad last ∧ c0.clock = delay ∧
+      WatchSegE P q first delay es c0 r c s ∧
+      ((es.count true + K : ℕ) : ℤ) ≤ stageDebt Rad (value last)
+
+/-- `EntryS` with the counted stage datum. -/
+def EntryC (raw : List (Fin 2)) (P : Shared) (q : ℕ) (first : Fin 9) (delay B : ℕ)
+    (c : Control) (s : GalilVM) (k r : ℕ) : Prop :=
+  Entry raw delay B c s k r ∧ ReplayStageDC raw P q first delay c s r ∧ Canonical s.length ∧
+    (r = 0 → OutputRel raw c s)
+
+/-- `LiveEndS` with the counted stage datum in the break branch. -/
+def LiveEndC (raw : List (Fin 2)) (P : Shared) (q : ℕ) (first : Fin 9) (delay B : ℕ)
+    (cc b : Fin 3) (xs : List (Fin 3)) (c : Control) (s : GalilVM) (k m : ℕ) : Prop :=
+  (∃ (es : List Bool) (c' : Control) (t : GalilVM),
+      ReplayChainSeg P q first delay es c s c' t ∧ es.count true = m ∧
+      c'.mode = .scan ∧ c'.clock = delay ∧ c'.replaying = false ∧ t.replay = reset ∧
+      ChainW raw (position t.center) B (position t.right) (budOf delay B c' t) false cc b xs t.chain ∧
+      position t.right = B ∧ MInv raw c' t ∧
+      ScanInvariant raw (position t.center) (k + m) t.left t.right ∧
+      position t.right = position s.right + m ∧ t.center = s.center ∧ Frontier t ∧
+      t.remaining = s.remaining) ∨
+  (∃ (es : List Bool) (c' : Control) (t : GalilVM) (m' : ℕ),
+      ReplayChainSeg2 P q first delay es c s c' t ∧ m' < m ∧
+      c'.mode = .scan ∧ c'.clock = delay ∧ c'.replaying = decide (0 < m') ∧ t.replay = ofNat m' ∧
+      t.chain = .idle ∧ SearchReady (searchLens.get t) ∧ MInv raw c' t ∧
+      ScanInvariant raw (position t.center) (k + (m - m')) t.left t.right ∧
+      RadiusRep t.radius (k + (m - m')) ∧ position t.right = position s.right + (m - m') ∧
+      t.center = s.center ∧ Frontier t ∧ t.remaining = s.remaining ∧ Bnd B t ∧
+      (P.onLetter = onLetterVM raw → P.leftFirst = leftFirstVM → m' = 0 → OutputRel raw c' t) ∧
+      ReplayStageDC raw P q first delay c' t m' ∧ Canonical t.length)
+
+variable {raw : List (Fin 2)} {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+
+theorem replayStageD_of_DC {c : Control} {s : GalilVM} {K : ℕ}
+    (h : ReplayStageDC raw P q first delay c s K) : ReplayStageD raw P q first delay c s := by
+  obtain ⟨r, Rad, last, es, c0, hR, hSt, hcl, hseg, -⟩ := h
+  exact ⟨r, Rad, last, es, c0, hR, hSt, hcl, hseg⟩
+
+theorem replayStageDC_trans {c c' : Control} {s s' : GalilVM} {es : List Bool} {K K' : ℕ}
+    (hst : ReplayStageDC raw P q first delay c s K) (hseg : WatchSegE P q first delay es c s c' s')
+    (hK : es.count true + K' ≤ K) : ReplayStageDC raw P q first delay c' s' K' := by
+  obtain ⟨r, Rad, last, es0, c0, hR, hSt, hcl, hseg0, hcnt⟩ := hst
+  refine ⟨r, Rad, last, es0 ++ es, c0, hR, hSt, hcl, watchSegE_trans P q first delay hseg0 hseg, ?_⟩
+  rw [List.count_append]
+  have : ((es0.count true + es.count true + K' : ℕ) : ℤ) ≤ ((es0.count true + K : ℕ) : ℤ) := by
+    exact_mod_cast (by omega : es0.count true + es.count true + K' ≤ es0.count true + K)
+  exact le_trans this hcnt
+
+/-- **The next paced event is covered at every counted stage state.** -/
+theorem stage_readyB'' (hE : RunEntriesStage delay) (hdec : Decodes P) {c : Control} {s : GalilVM}
+    {K : ℕ} (hst : ReplayStageDC raw P q first delay c s K) (hidle : s.chain = .idle) (a : Bool)
+    (ha : a = true → c.clock = 1) (hK : a = true → 1 ≤ K) :
+    SearchReadyBD (searchLens.get s) [a] := by
+  obtain ⟨r, Rad, last, es, c0, hR, hSt, hcl0, hseg, hcnt⟩ := hst
+  have hrun := watchSegE_searchRun P q first delay hdec.2 hseg hidle
+  obtain ⟨av, -, hes, hcl, -⟩ := watchSegE_clock P q first delay hseg
+  have hev : es ++ [a] = GalilScaffoldAdvanceClock.advances delay c0.clock
+      ((av ++ [a]).map (fun b => (b, true))) := by
+    rw [List.map_append, GalilScaffoldAdvanceClock.advances_append, map_fst_map_pair, ← hcl, ← hes]
+    congr 1
+    cases a with
+    | false => simp [GalilScaffoldAdvanceClock.advances]
+    | true => simp [GalilScaffoldAdvanceClock.advances, ha rfl]
+  have hcnt' : (((es ++ [a]).count true : ℕ) : ℤ) ≤ stageDebt Rad (value last) := by
+    refine le_trans ?_ hcnt
+    rw [List.count_append]
+    have : (es ++ [a]).count true ≤ es.count true + K := by
+      rw [List.count_append]
+      cases a with
+      | false => simp
+      | true => simp; exact hK rfl
+    exact_mod_cast (by rw [List.count_append] at this; exact this)
+  have hall : RunEntriesAllD (es ++ [a]) (searchLens.get r) := by
+    rw [hev, hcl0]
+    rw [hev, hcl0] at hcnt'
+    exact hE (searchLens.get r) last r.radius Rad hR.2.2.2.2.2.2.1 hR.2.2.2.2.2.2.2.2.1
+      hR.2.2.2.2.2.2.2.2.2 hR.2.2.2.2.1.1 hR.2.2.2.2.1.2 hSt (av ++ [a]) hcnt'
+  exact searchReadyBD_searchRun hrun [a]
+    ⟨GalilSearchReadyInv.searchReady_restarted hR (es ++ [a]), hall⟩
+
+theorem searchReady_of_stage'' (hE : RunEntriesStage delay) (hdec : Decodes P) {c : Control}
+    {s : GalilVM} {K : ℕ} (hst : ReplayStageDC raw P q first delay c s K) (hidle : s.chain = .idle)
+    {a : Bool} (ha : a = true → c.clock = 1) (hK : a = true → 1 ≤ K) {v : SearchVM}
+    (he : searchEffect P a s v) : SearchReady v :=
+  searchReadyBD_ready (searchReadyBD_effect P hidle (stage_readyB'' hE hdec hst hidle a ha hK) he)
+
+end StageDebt
+
+section StageLiveC
+
+open GalilScaffoldTop GalilScaffoldController GalilScaffoldCounter GalilScaffoldInputHead
+  GalilScaffoldChainVerifier
+open PalPeg.GalilTickFun PalPeg.GalilTickFun2 PalPeg.GalilReportReplay PalPeg.GalilReplayChainSeg
+  PalPeg.GalilStructuredSkeleton PalPeg.GalilReplayGeneral2 PalPeg.GalilBranchInvariants2
+  PalPeg.GalilReplayGeneral PalPeg.GalilSegmentConstruct PalPeg.GalilBranchInvariants
+
+variable (raw : List (Fin 2)) (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) (B E : ℕ)
+  (lim : Bool) (cc b : Fin 3) (xs : List (Fin 3))
+
+/-- **The break at the window's end, the restart, and the re-entry of the
+stage.**  `chain_breakW` with the restarted state shown to be
+`Restarted raw u (k+1) last` with `StageEntry (k+1) last`. -/
+theorem chain_breakWC (hex : ∀ s, P.replayExhausted s = zero s.replay) (hrs : RestartShapeL P) (hfit : ReplayFitsStage raw)
+    (hBl : B < (encoded raw).length)
+    (c : Control) (s : GalilVM) (k m : ℕ)
+    (hm : c.mode = .scan) (hr : c.replaying = true) (hc : c.clock = 1)
+    (hpart : ChainW raw (position s.center) E (position s.right) (budOf delay E c s) true cc b xs s.chain)
+    (hRE : position s.right = E) (hEB : E < B)
+    (hmis : Mispredicted raw cc b xs (position s.center + 1) (E + 1))
+    (h4 : position s.center + 4 * (xs.length + 1) ≤ E)
+    (hbd : Bnd B s) (hM : MInv raw c s) (hi : ScanInvariant raw (position s.center) k s.left s.right)
+    (hrp : s.replay = ofNat (m+1)) (hfr : Frontier s) (hrad : RadiusRep s.radius k)
+    (hcen : GalilScaffoldInputTrace.Represents s.center.head raw ∧ s.center.head.focus ≠ none)
+    (hlen : Canonical s.length) :
+    ∃ (c1 : Control) (u : GalilVM),
+      ReplayChainSeg2 P q first delay [true] c s c1 u ∧
+      c1.mode = .scan ∧ c1.clock = delay ∧ c1.replaying = decide (0 < m) ∧
+      u.chain = .idle ∧ GalilBranchInvariants2.SearchReady (searchLens.get u) ∧
+      MInv raw c1 u ∧ ScanInvariant raw (position u.center) (k+1) u.left u.right ∧
+      u.replay = ofNat m ∧ position u.right = position s.right + 1 ∧
+      u.center = s.center ∧ Frontier u ∧ u.remaining = s.remaining ∧
+      RadiusRep u.radius (k+1) ∧ Bnd B u ∧
+      (P.onLetter = onLetterVM raw → P.leftFirst = leftFirstVM → OutputRel raw c1 u) ∧
+      ReplayStageDC raw P q first delay c1 u m ∧ Canonical u.length := by
+  have hne : s.chain ≠ .idle := chainW_ne_idle hpart
+  have hbud : budOf delay E c s = 0 + 1 := by
+    unfold budOf; rw [hc, hRE]; simp
+  rw [hbud] at hpart
+  obtain ⟨y, hstep, hy⟩ := chainW_step hpart (by omega) (by omega)
+  rw [hRE] at hy
+  obtain ⟨w', hmat, hw', hst3⟩ := chainW_break' hy (by omega) hmis h4
+  obtain ⟨hav, hcmp, hmt, hq, ho, hflag, hchu, hMu, hiu, hurep, hposu, hCu, hfru, hremu, hradu, hbdu,
+      hout⟩ :=
+    forced_compare raw P q first delay B hex c s k m (.broken w') hr hne hbd hM hi hrp hfr hrad
+      (fun _ => ⟨y, hstep, hmat⟩)
+  obtain ⟨s', hb', hidle', hl', hr', hC', hrep', hrad', hrem', hsearch', hlow', hlen'⟩ :=
+    hrs (cmpU s (.broken w')) w' hchu hw'
+  have hRC : position s.right = position s.center + k := hi.rightPos
+  have hclen : Canonical s'.length := by
+    rw [hlen', cmpU_length]; exact inc_canonical _ (inc_canonical _ hlen)
+  have hi' : ScanInvariant raw (position s'.center) (k+1) s'.left s'.right := by
+    rw [hl', hr', hC']; exact hiu
+  have hrad'' : RadiusRep s'.radius (k+1) := by rw [hrad']; exact hradu
+  have hRst : Restarted raw s' (k+1) w'.machine.control.last :=
+    ⟨hidle', by rw [hC', hCu]; exact hcen.1, by rw [hC', hCu]; exact hcen.2, hi', hrad'', hclen,
+      by rw [hsearch', hrad'], hlow', hw'.lastCanonical, hw'.lastNonneg⟩
+  have hSt : StageEntry (k+1) w'.machine.control.last := by
+    intro k' hk'
+    rw [hk'] at hst3
+    omega
+  refine ⟨{cmpC P delay c s (.broken w') with clock := delay}, s',
+    .breakC c s (cmpVS s (.broken w')) (searchLens.get s) (cmpO P c s (.broken w')) w' hm hr hc hav hne
+      hcmp hmt rfl hq ho (.restartC (cmpC P delay c s (.broken w')) (cmpU s (.broken w')) s' hm hb'
+        hl' hr' hC' hrep' (.stop _ _)),
+    hm, rfl, hflag, hidle', ?_, ?_, hi', by rw [hrep', hurep], by rw [hr', hposu], by rw [hC', hCu],
+    frontier_congr hr' hrep' hfru, by rw [hrem', hremu], hrad'',
+    bnd_congr hr' hrep' hbdu, ?_, ⟨s', k+1, w'.machine.control.last, [], _, hRst, hSt, rfl, .stop _ _,
+      by simpa using hfit s' (k+1) w'.machine.control.last m hRst hSt (by rw [hrep', hurep])⟩,
+    hclen⟩
+  · apply searchReady_of_begin (last := w'.machine.control.last)
+    rw [hsearch', hrad']
+  · exact minv_same rfl hr' hC' hrep' hMu
+  · intro hP hP'
+    have h0 := hout hP hP'
+    intro ho' k' hk hk2 hpos
+    exact h0 ho' k' hk hk2 (by rw [← hr']; exact hpos)
+
+/-- **The live chain along the rest of the replay**, carrying the stage into
+the break branch. -/
+theorem chain_runWC (hex : ∀ s, P.replayExhausted s = zero s.replay) (hd : 1 ≤ delay)
+    (hrs : RestartShapeL P) (hfit : ReplayFitsStage raw) (hBl : B < (encoded raw).length) (hEB : E ≤ B)
+    (hlimF : lim = false → E = B) (hlimT : lim = true → E < B) :
+    ∀ (m : ℕ) (c : Control) (s : GalilVM) (k : ℕ),
+      c.mode = .scan → 1 ≤ c.clock → c.replaying = decide (0 < m) → (m = 0 → c.clock = delay) →
+      s.replay = ofNat m → Bnd B s →
+      ChainW raw (position s.center) E (position s.right) (budOf delay E c s) lim cc b xs s.chain →
+      position s.right ≤ E →
+      (lim = true → Mispredicted raw cc b xs (position s.center + 1) (E + 1) ∧
+        position s.center + 4 * (xs.length + 1) ≤ E) →
+      MInv raw c s → ScanInvariant raw (position s.center) k s.left s.right → Frontier s →
+      RadiusRep s.radius k →
+      (GalilScaffoldInputTrace.Represents s.center.head raw ∧ s.center.head.focus ≠ none) →
+      Canonical s.length →
+      LiveEndC raw P q first delay B cc b xs c s k m := by
+  intro m
+  induction m with
+  | zero =>
+    intro c s k hm hclk hrp hc0 hrep hbd hpart hRE hbrk hM hi hfr hrad _ _
+    have hRB : position s.right = B := by simpa using hbd 0 hrep
+    cases lim with
+    | true => exact absurd (hlimT rfl) (by omega)
+    | false =>
+      have hEq := hlimF rfl
+      subst hEq
+      exact Or.inl ⟨[], c, s, .stop _ _, rfl, hm, hc0 rfl, by simpa using hrp, hrep, hpart, hRB, hM,
+        by simpa using hi, by simp, rfl, hfr, rfl⟩
+  | succ n ih =>
+    intro c s k hm hclk hrp hc0 hrep hbd hpart hRE hbrk hM hi hfr hrad hcen hcan
+    have hrt : c.replaying = true := by rw [hrp]; simp
+    obtain ⟨j, hj⟩ : ∃ j, c.clock = j + 1 := ⟨c.clock - 1, by omega⟩
+    have hElen : E < (encoded raw).length := by omega
+    obtain ⟨es1, s1, hseg1, hcnt1, hp1, hl1, hr1, hC1, hrep1, hrem1, hrad1⟩ :=
+      chain_countdownW raw P q first delay E lim cc b xs hElen j c s hm hrt hj hpart hRE
+    have hM1 : MInv raw {c with clock := 1} s1 := minv_same rfl hr1 hC1 hrep1 hM
+    have hi1 : ScanInvariant raw (position s1.center) k s1.left s1.right := by
+      rw [hl1, hr1, hC1]; exact hi
+    have hfr1 : Frontier s1 := frontier_congr hr1 hrep1 hfr
+    have hbd1 : Bnd B s1 := bnd_congr hr1 hrep1 hbd
+    have hrad1' : RadiusRep s1.radius k := by rw [hrad1]; exact hrad
+    have hrep1' : s1.replay = ofNat (n+1) := by rw [hrep1, hrep]
+    have hcen1 : GalilScaffoldInputTrace.Represents s1.center.head raw ∧ s1.center.head.focus ≠ none := by
+      rw [hC1]; exact hcen
+    have hcan1 : Canonical s1.length := replayChainSeg_canonical hseg1 hcan
+    by_cases hlt : position s1.right + 1 ≤ E
+    · obtain ⟨c2, u, hseg2, hm2, hc2, hr2, hp2, hM2, hi2, hrep2, hpos2, hC2, hfr2, hrem2, hrad2, hbd2⟩ :=
+        chain_compareW raw P q first delay B E lim cc b xs hex hd hElen {c with clock := 1} s1 k n hm hrt rfl
+          hp1 hlt hbd1 hM1 hi1 hrep1' hfr1 hrad1'
+      have hbrk2 : lim = true → Mispredicted raw cc b xs (position u.center + 1) (E + 1) ∧
+          position u.center + 4 * (xs.length + 1) ≤ E := by
+        rw [hC2, hC1]; exact hbrk
+      have hcen2 : GalilScaffoldInputTrace.Represents u.center.head raw ∧ u.center.head.focus ≠ none := by
+        rw [hC2]; exact hcen1
+      have hcan2 : Canonical u.length := replayChainSeg_canonical hseg2 hcan1
+      rcases ih c2 u (k+1) hm2 (by rw [hc2]; exact hd) hr2 (fun _ => hc2) hrep2 hbd2 hp2 (by omega) hbrk2
+          hM2 hi2 hfr2 hrad2 hcen2 hcan2 with hA | hB'
+      · obtain ⟨es3, c3, t3, hseg3, hcnt3, hm3, hc3, hr3, hrep3, hp3, hB3, hM3, hi3, hpos3, hC3, hfr3,
+          hrem3⟩ := hA
+        refine Or.inl ⟨es1 ++ ([true] ++ es3), c3, t3,
+          replayChainSeg_trans P q first delay hseg1 (replayChainSeg_trans P q first delay hseg2 hseg3),
+          ?_, hm3, hc3, hr3, hrep3, hp3, hB3, hM3, ?_, ?_, ?_, hfr3, ?_⟩
+        · simp only [List.count_append, hcnt1, hcnt3, List.count_singleton_self]; omega
+        · rw [show k + (n+1) = k+1+n from by omega]; exact hi3
+        · rw [hpos3, hpos2, hr1]; omega
+        · rw [hC3, hC2, hC1]
+        · rw [hrem3, hrem2, hrem1]
+      · obtain ⟨es3, c3, t3, m', hseg3, hlt3, hm3, hc3, hr3, hrep3, hidle3, hsr3, hM3, hi3, hrad3, hpos3,
+          hC3, hfr3, hrem3, hbd3, hout3, hst3, hcan3⟩ := hB'
+        refine Or.inr ⟨es1 ++ ([true] ++ es3), c3, t3, m',
+          replayChainSeg2_trans (replayChainSeg2_of_seg hseg1)
+            (replayChainSeg2_trans (replayChainSeg2_of_seg hseg2) hseg3),
+          by omega, hm3, hc3, hr3, hrep3, hidle3, hsr3, hM3, ?_, ?_, ?_, ?_, hfr3, ?_, hbd3, hout3,
+          hst3, hcan3⟩
+        · rw [show k + (n + 1 - m') = k + 1 + (n - m') from by omega]; exact hi3
+        · rw [show k + (n + 1 - m') = k + 1 + (n - m') from by omega]; exact hrad3
+        · rw [hpos3, hpos2, hr1]; omega
+        · rw [hC3, hC2, hC1]
+        · rw [hrem3, hrem2, hrem1]
+    · have hRE1 : position s1.right = E := by rw [hr1] at hlt ⊢; omega
+      cases lim with
+      | false =>
+        exfalso
+        have hEq := hlimF rfl
+        have := hbd1 (n+1) hrep1'
+        omega
+      | true =>
+        obtain ⟨hmis, h4⟩ := hbrk rfl
+        obtain ⟨c2, u, hseg2, hm2, hc2, hr2, hidle2, hsr2, hM2, hi2, hrep2, hpos2, hC2, hfr2, hrem2, hrad2,
+            hbd2, hout2, hst2, hcan2⟩ :=
+          chain_breakWC raw P q first delay B E cc b xs hex hrs hfit hBl {c with clock := 1} s1 k n hm hrt rfl
+            hp1 hRE1 (hlimT rfl) (by rw [hC1]; exact hmis) (by rw [hC1]; exact h4) hbd1 hM1 hi1 hrep1'
+            hfr1 hrad1' hcen1 hcan1
+        refine Or.inr ⟨es1 ++ [true], c2, u, n,
+          replayChainSeg2_trans (replayChainSeg2_of_seg hseg1) hseg2, by omega, hm2, hc2, hr2, hrep2,
+          hidle2, hsr2, hM2, ?_, ?_, ?_, ?_, hfr2, ?_, hbd2, fun hP hP' _ => hout2 hP hP', hst2, hcan2⟩
+        · rw [show k + (n + 1 - n) = k + 1 from by omega]; exact hi2
+        · rw [show k + (n + 1 - n) = k + 1 from by omega]; exact hrad2
+        · rw [hpos2, hr1]; omega
+        · rw [hC2, hC1]
+        · rw [hrem2, hrem1]
+
+end StageLiveC
+
+section StageConstructC
+
+open GalilScaffoldTop GalilScaffoldController GalilScaffoldCounter GalilScaffoldInputHead
+  GalilScaffoldChainVerifier
+open PalPeg.GalilTickFun PalPeg.GalilTickFun2 PalPeg.GalilReportReplay PalPeg.GalilReplayChainSeg
+  PalPeg.GalilStructuredSkeleton PalPeg.GalilReplayGeneral2 PalPeg.GalilBranchInvariants2
+  PalPeg.GalilReplayGeneral PalPeg.GalilSegmentConstruct PalPeg.GalilBranchInvariants
+
+variable {raw : List (Fin 2)} {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ} {B : ℕ}
+
+/-- **From a found tick to a busy landing**, with the stage re-entered after a
+break. -/
+theorem found_resultC (hP : P.onLetter = onLetterVM raw) (hP' : P.leftFirst = leftFirstVM)
+    {c c2 : Control} {s s2 : GalilVM} {k r r0 k2 m2 : ℕ} {cc b : Fin 3} {xs : List (Fin 3)}
+    (ih : ∀ m' < r0, ∀ (c : Control) (s : GalilVM) (k : ℕ), EntryC raw P q first delay B c s k m' →
+      Result3S raw P q first delay B c s k m')
+    (hidle : s.chain = .idle) (hrt : c.replaying = true)
+    (hft : FoundTick P q first delay c s c2 s2)
+    (hst1 : StepsAll (galilFrameS P q first) delay (SoundScanNR raw) 1 ⟨c, s⟩ ⟨c2, s2⟩)
+    (hQ2 : SoundScanNR raw ⟨c2, s2⟩) (hne2 : s2.chain ≠ .idle)
+    (hi2 : ScanInvariant raw (position s2.center) k2 s2.left s2.right)
+    (hlive : LiveEndC raw P q first delay B cc b xs c2 s2 k2 m2)
+    (hk : k2 + m2 = k + r) (hp : position s2.right + m2 = position s.right + r)
+    (hC : s2.center = s.center) (hrem : s2.remaining = s.remaining) (hmr : m2 ≤ r) (hrr0 : r ≤ r0)
+    (hcen : GalilScaffoldInputTrace.Represents s.center.head raw ∧ s.center.head.focus ≠ none) :
+    BusyS raw P q first delay B c s k r := by
+  rcases hlive with hA | hB'
+  · obtain ⟨es, c', t, hseg, -, hm', hc', hr', hrep', hpart', hBt, hM', hi', hpos', hC', hfr', hrem'⟩ :=
+      hA
+    obtain ⟨n, hst⟩ := replayChainSeg_stepsAll raw P hP hP' q first delay hseg (position s2.center) k2
+      hi2 hQ2
+    exact Or.inl ⟨0, c, s, c2, s2, es, c', t, 1 + n, cc, b, xs,
+      .zero _ (GalilReplaySegment.soundScanNR_replaying raw hrt), hidle, hrt, hft, hseg,
+      stepsAll_trans hst1 hst, replayChainSeg_chain P q first delay hseg hne2, hm', hc', hr', hrep',
+      replayChainSeg_ne_idle P q first delay hseg hne2, hpart', hBt, hM',
+      by rw [← hk]; exact hi', by omega, by rw [hC', hC], hfr', replayRest_of_reset hrep',
+      by rw [hrem', hrem]⟩
+  · obtain ⟨es, c', t, m', hseg, hlt, hm', hc', hr', hrep', hidle', hsr', hM', hi', hrad', hpos', hC',
+      hfr', hrem', hbd', hout', hstage, hcanl⟩ := hB'
+    obtain ⟨n, hst⟩ := replayChainSeg2_stepsAll raw hP hP' hseg (position s2.center) k2 hi2 hQ2
+    have hres := ih m' (by omega) c' t (k2 + (m2 - m'))
+      ⟨⟨hm', hc', hr', hrep', hidle', hsr', hM', hi', hfr', hrad', hbd',
+        by rw [hC', hC]; exact hcen.1, by rw [hC', hC]; exact hcen.2⟩, hstage, hcanl,
+        fun h0 => hout' hP hP' h0⟩
+    exact resultS_prepend_restart (stepsAll_trans hst1 hst)
+      ⟨1, c2, s2, es, c', t, hst1, hseg, hne2, hidle'⟩ (by omega) (by omega) (by rw [hC', hC])
+      (by rw [hrem', hrem]) hres
+
+/-- The countdown of an idle replay stretch, carrying the stage. -/
+theorem idle_countdown3SC (hP : P.onLetter = onLetterVM raw) (hP' : P.leftFirst = leftFirstVM)
+    (hex : ∀ s, P.replayExhausted s = zero s.replay) (hd : 1 ≤ delay)
+    (hsearch : ∀ s : GalilVM, SearchReady (searchLens.get s) → ∀ a : Bool,
+      ∃ v, searchEffect P a s v)
+    (hE : RunEntriesStage delay) (hdec : Decodes P) (hfit : ReplayFitsStage raw)
+    (hshape : StartShape' raw P q first delay) (hbudget : ReplayBudgetRD raw P q first delay)
+    (hrs : RestartShapeL P) (hBl : B < (encoded raw).length) {r : ℕ}
+    (ih : ∀ m' < r, ∀ (c : Control) (s : GalilVM) (k : ℕ), EntryC raw P q first delay B c s k m' →
+      Result3S raw P q first delay B c s k m') :
+    ∀ (j : ℕ) (c : Control) (s : GalilVM) (k m : ℕ), m + 1 ≤ r → c.mode = .scan →
+      c.replaying = true →
+      c.clock = j + 1 → s.chain = ChainVM.idle → SearchReady (searchLens.get s) →
+      s.replay = ofNat (m+1) → MInv raw c s →
+      ScanInvariant raw (position s.center) k s.left s.right → Frontier s →
+      RadiusRep s.radius k → Bnd B s →
+      (GalilScaffoldInputTrace.Represents s.center.head raw ∧ s.center.head.focus ≠ none) →
+      ReplayStageDC raw P q first delay c s (m+1) → Canonical s.length →
+      (∃ (c1 : Control) (t : GalilVM),
+        WatchSegE P q first delay (List.replicate j false) c s c1 t ∧
+        StepsAll (galilFrameS P q first) delay (SoundScanNR raw) j ⟨c, s⟩ ⟨c1, t⟩ ∧
+        c1.mode = c.mode ∧ c1.replaying = c.replaying ∧ c1.clock = 1 ∧
+        t.chain = ChainVM.idle ∧ SearchReady (searchLens.get t) ∧
+        t.left = s.left ∧ t.right = s.right ∧ t.center = s.center ∧
+        t.replay = s.replay ∧ t.remaining = s.remaining ∧ t.radius = s.radius ∧
+        ReplayStageDC raw P q first delay c1 t (m+1) ∧ t.length = s.length) ∨
+      BusyS raw P q first delay B c s k (m+1) := by
+  intro j
+  induction j with
+  | zero =>
+    intro c s k m _ hm hr hc hidle hsr _ _ _ _ _ _ _ hst _
+    exact Or.inl ⟨c, s, .stop _ _, .zero _ (GalilReplaySegment.soundScanNR_replaying raw hr),
+      rfl, rfl, hc, hidle, hsr, rfl, rfl, rfl, rfl, rfl, rfl, hst, rfl⟩
+  | succ j ihj =>
+    intro c s k m hmr hm hr hc hidle hsr hrep hM hi hfr hrad hbd hcen hst hlen
+    obtain ⟨v, hv⟩ := hsearch s hsr false
+    have hclt : 1 < c.clock := by omega
+    by_cases hf : v.search.mode = .found
+    · obtain ⟨s', hb, hch', hl', hr', hC', hrep', hget'⟩ :=
+        background_found_step P q first s hidle hv hf
+      have hfld := backgroundS_fields P q first hb
+      have hrem' : s'.remaining = s.remaining := hfld.2.2.2.2.2.2.2.2.1
+      have hrad' : s'.radius = s.radius := hfld.2.2.2.2.2.1
+      have hlen' : s'.length = s.length := hfld.2.2.2.2.2.2.1
+      obtain ⟨n, hn, ha, hpl⟩ := hshape c s false v hm hr hidle hsr hv hf (Or.inl rfl) (replayStageD_of_DC hst)
+      obtain ⟨xs, b, hsplit⟩ := stream_split hpl hn
+      obtain ⟨E, lim, hE1, hlimF, hlimT, hRE, hwin, hbrk⟩ :=
+        window_of_foundS hbudget c s false v k (m+1) n xs b hm hr hidle hsr hv hf hM hi hrad hrep
+          (Nat.succ_pos m) hfr ha hn hpl hsplit (replayStageD_of_DC hst)
+      have hBeq : position s.right + (m+1) = B := hbd (m+1) hrep
+      have hpart0 : ChainW raw (position s'.center) E (position s'.right)
+          (budOf delay E {c with clock := c.clock - 1} s') lim (P.centre s) b xs s'.chain := by
+        rw [hch', hC', hr']
+        refine chainW_start ⟨hcen.1, hcen.2, rfl⟩ hrad hi.rightPos.symm ha hpl hsplit hwin
+          (fun hl => ?_)
+        have h1 := (hbrk hl).2.2
+        unfold budOf; rw [hr']; simp only; omega
+      have hlive := chain_runWC raw P q first delay B E lim (P.centre s) b xs hex hd hrs hfit hBl (by omega)
+        (fun h => by rw [← hBeq]; exact hlimF h) (fun h => by rw [← hBeq]; exact hlimT h)
+        (m+1) {c with clock := c.clock - 1} s' k hm (by simp; omega) (by simpa using hr)
+        (fun h => absurd h (Nat.succ_ne_zero m)) (by rw [hrep', hrep]) (bnd_congr hr' hrep' hbd) hpart0
+        (by rw [hr']; omega) (by rw [hC']; exact fun h => ⟨(hbrk h).1, (hbrk h).2.1⟩)
+        (minv_same rfl hr' hC' hrep' hM) (by rw [hl', hr', hC']; exact hi) (frontier_congr hr' hrep' hfr)
+        (by rw [hrad']; exact hrad) (by rw [hC']; exact hcen) (by rw [hlen']; exact hlen)
+      have hQ : SoundScanNR raw ⟨{c with clock := c.clock - 1}, s'⟩ :=
+        GalilReplaySegment.soundScanNR_replaying raw hr
+      exact Or.inr <| found_resultC hP hP' ih hidle hr
+        (.bg c s s' hm hr hclt hidle hb (by rw [hget']; exact hf))
+        (.succ (GalilReplaySegment.soundScanNR_replaying raw hr)
+          (.scan_count c s s' hm (Or.inl hr) hclt hb) (.zero _ hQ))
+        hQ (by rw [hch']; exact chainStart_ne_idle _ _ _ _ _) (by rw [hl', hr', hC']; exact hi) hlive
+        rfl (by rw [hr']) hC' hrem' le_rfl hmr hcen
+    · obtain ⟨s', hb, hch', hl', hr', hC', hrep', hget'⟩ :=
+        idle_background_exists P q first s hidle hv hf
+      have hsr' : SearchReady (searchLens.get s') := by
+        rw [hget']; exact searchReady_of_stage'' hE hdec hst hidle (fun h0 => by cases h0) (fun h0 => by cases h0) hv
+      have hfld := backgroundS_fields P q first hb
+      have hrem' : s'.remaining = s.remaining := hfld.2.2.2.2.2.2.2.2.1
+      have hrad' : s'.radius = s.radius := hfld.2.2.2.2.2.1
+      have hlen' : s'.length = s.length := hfld.2.2.2.2.2.2.1
+      have hQ' : SoundScanNR raw ⟨{c with clock := c.clock - 1}, s'⟩ :=
+        GalilReplaySegment.soundScanNR_replaying raw hr
+      have hst' : ReplayStageDC raw P q first delay {c with clock := c.clock - 1} s' (m+1) :=
+        replayStageDC_trans hst (.countR c s s' hm hr hclt hidle hb (.stop _ _)) (by simp)
+      have hstp1 : StepsAll (galilFrameS P q first) delay (SoundScanNR raw) 1 ⟨c, s⟩
+          ⟨{c with clock := c.clock - 1}, s'⟩ :=
+        .succ (GalilReplaySegment.soundScanNR_replaying raw hr)
+          (.scan_count c s s' hm (Or.inl hr) hclt hb) (.zero _ hQ')
+      rcases ihj {c with clock := c.clock - 1} s' k m hmr hm hr (by simp; omega) hch' hsr'
+          (by rw [hrep', hrep]) (minv_same rfl hr' hC' hrep' hM) (by rw [hl', hr', hC']; exact hi)
+          (frontier_congr hr' hrep' hfr) (by rw [hrad']; exact hrad) (bnd_congr hr' hrep' hbd)
+          (by rw [hC']; exact hcen) hst' (by rw [hlen']; exact hlen) with hA | hB'
+      · obtain ⟨c1, t, hseg, hstp, hm1, hr1, hc1, hidle1, hsr1, hl1, hrr1, hC1, hrp1, hrem1,
+          hrd1, hst1, hln1⟩ := hA
+        exact Or.inl ⟨c1, t, .countR c s s' hm hr hclt hidle hb hseg,
+          .succ (GalilReplaySegment.soundScanNR_replaying raw hr)
+            (.scan_count c s s' hm (Or.inl hr) hclt hb) hstp,
+          hm1, hr1, hc1, hidle1, hsr1, by rw [hl1, hl'], by rw [hrr1, hr'], by rw [hC1, hC'],
+          by rw [hrp1, hrep'], by rw [hrem1, hrem'], by rw [hrd1, hrad'], hst1, by rw [hln1, hlen']⟩
+      · exact Or.inr (busyS_prepend hstp1 rfl (by rw [hr']) hC' hrem' hB')
+
+/-- The comparison of an idle replay stretch, carrying the stage; the quiet
+branch exports the output soundness of the refreshed state. -/
+theorem idle_compare3SC (hP : P.onLetter = onLetterVM raw) (hP' : P.leftFirst = leftFirstVM)
+    (hex : ∀ s, P.replayExhausted s = zero s.replay) (hd : 1 ≤ delay)
+    (hsearch : ∀ s : GalilVM, SearchReady (searchLens.get s) → ∀ a : Bool,
+      ∃ v, searchEffect P a s v)
+    (hE : RunEntriesStage delay) (hdec : Decodes P) (hfit : ReplayFitsStage raw)
+    (hshape : StartShape' raw P q first delay) (hbudget : ReplayBudgetRD raw P q first delay)
+    (hrs : RestartShapeL P) (hBl : B < (encoded raw).length) {r : ℕ}
+    (ih : ∀ m' < r, ∀ (c : Control) (s : GalilVM) (k : ℕ), EntryC raw P q first delay B c s k m' →
+      Result3S raw P q first delay B c s k m')
+    (c : Control) (s : GalilVM) (k m : ℕ) (hmr : m + 1 ≤ r)
+    (hm : c.mode = .scan) (hr : c.replaying = true) (hc : c.clock = 1)
+    (hidle : s.chain = ChainVM.idle) (hsr : SearchReady (searchLens.get s))
+    (hM : MInv raw c s) (hi : ScanInvariant raw (position s.center) k s.left s.right)
+    (hrp : s.replay = ofNat (m+1)) (hfr : Frontier s) (hrad : RadiusRep s.radius k)
+    (hbd : Bnd B s)
+    (hcen : GalilScaffoldInputTrace.Represents s.center.head raw ∧ s.center.head.focus ≠ none)
+    (hst : ReplayStageDC raw P q first delay c s (m+1)) (hlen : Canonical s.length) :
+    (∃ (c1 : Control) (u : GalilVM),
+      WatchSegE P q first delay [true] c s c1 u ∧
+      StepsAll (galilFrameS P q first) delay (SoundScanNR raw) 1 ⟨c, s⟩ ⟨c1, u⟩ ∧
+      c1.mode = .scan ∧ c1.clock = delay ∧ c1.replaying = decide (0 < m) ∧
+      u.chain = ChainVM.idle ∧ SearchReady (searchLens.get u) ∧ MInv raw c1 u ∧
+      ScanInvariant raw (position u.center) (k+1) u.left u.right ∧
+      u.replay = ofNat m ∧ position u.right = position s.right + 1 ∧
+      u.center = s.center ∧ Frontier u ∧ u.remaining = s.remaining ∧
+      RadiusRep u.radius (k+1) ∧ Bnd B u ∧
+      ReplayStageDC raw P q first delay c1 u m ∧ Canonical u.length ∧ OutputRel raw c1 u) ∨
+    BusyS raw P q first delay B c s k (m+1) := by
+  classical
+  have hbound : position s.right + (m+1) ≤ 2 * arrived s.right := hfr (m+1) hrp
+  have hav : canRight s.right := GalilReplaySegment.canRight_of_frontier (Nat.succ_pos m) hbound
+  have hmatch : read (left s.left) = read (right s.right) := replay_match_of_minv hM hr hav hi
+  have hpos : position (right s.right) = position s.right + 1 :=
+    right_position s.right hav (represented_position _ raw hi.rightRep hi.rightPresent).1
+  have hBeq : position s.right + (m+1) = B := hbd (m+1) hrp
+  obtain ⟨vq, hq⟩ := hsearch s hsr true
+  by_cases hf : vq.search.mode = .found
+  · -- the comparison starts the chain
+    obtain ⟨n, hn, ha, hpl⟩ := hshape c s true vq hm hr hidle hsr hq hf (Or.inr hc) (replayStageD_of_DC hst)
+    obtain ⟨xs, b, hsplit⟩ := stream_split hpl hn
+    obtain ⟨E, lim, hE1, hlimF, hlimT, hRE, hwin, hbrk⟩ :=
+      window_of_foundS hbudget c s true vq k (m+1) n xs b hm hr hidle hsr hq hf hM hi hrad hrp
+        (Nat.succ_pos m) hfr ha hn hpl hsplit (replayStageD_of_DC hst)
+    have hpart0 : ChainW raw (position s.center) E (position s.right)
+        ((E - position s.right) * (delay - 1)) lim (P.centre s) b xs
+        (chainStart (vq.dp.config.tapes 11) (P.centre s) (P.place s) s.center s.radius) :=
+      chainW_start ⟨hcen.1, hcen.2, rfl⟩ hrad hi.rightPos.symm ha hpl hsplit hwin
+        (fun hl => (hbrk hl).2.2)
+    obtain ⟨z, hch, hz⟩ := chainW_matched hpart0 (by omega) hRE
+    have hnez : z ≠ ChainVM.idle := chainW_ne_idle hz
+    set vs : ScanVM := ⟨left s.left, right s.right, z⟩ with hvsdef
+    have hmt : (galilFrame P q first).matched (scanLens.set s vs) := hmatch
+    set u : GalilVM := replayDec true (afterCompare s vs vq) with hudef
+    set o : Bool := if P.onLetter u then decide (P.leftFirst u) else c.output with hodef
+    have ho : refresh (galilFrame P q first) u c.output o := by
+      refine ⟨fun hl => ?_, fun hl => ?_⟩
+      · have hl' : P.onLetter u := hl
+        show (if P.onLetter u then decide (P.leftFirst u) else c.output) = true ↔ P.leftFirst u
+        rw [if_pos hl']; exact decide_eq_true_iff
+      · have hl' : ¬ P.onLetter u := hl
+        show (if P.onLetter u then decide (P.leftFirst u) else c.output) = c.output
+        rw [if_neg hl']
+    have hurep : u.replay = ofNat m := by
+      rw [hudef, replayDec_true_replay, afterCompare_replay, hrp, dec_ofNat_succ]
+    have hflag : (!P.replayExhausted u) = decide (0 < m) := by
+      rw [hex, hurep]
+      cases m with
+      | zero => rw [(zero_ofNat_iff 0).2 rfl]; simp
+      | succ k => rw [zero_ofNat_succ k]; simp
+    have hiu : ScanInvariant raw (position u.center) (k+1) u.left u.right := by
+      have h0 := matched_invariant' raw vq (vs := vs) rfl rfl hmatch hav hi
+      rw [hudef, replayDec_left, replayDec_right, replayDec_center, afterCompare_center]
+      exact h0
+    have hMu : MInv raw {c with clock := delay, output := o, replaying := !P.replayExhausted u} u :=
+      minv_matchR P hex o delay hr rfl hav hi hM
+    have hneu : u.chain ≠ .idle := by rw [hudef, replayDec_chain, afterCompare_chain]; exact hnez
+    have hur : u.right = right s.right := by rw [hudef, replayDec_right, afterCompare_right]
+    have hCu : u.center = s.center := by rw [hudef, replayDec_center, afterCompare_center]
+    have hposu : position u.right = position s.right + 1 := by rw [hur]; exact hpos
+    have hpu : ChainW raw (position u.center) E (position u.right)
+        (budOf delay E {c with clock := delay, output := o, replaying := !P.replayExhausted u} u)
+        lim (P.centre s) b xs u.chain := by
+      have e : budOf delay E {c with clock := delay, output := o, replaying := !P.replayExhausted u} u =
+          (E - position s.right) * (delay - 1) + 1 := by
+        unfold budOf; rw [hposu]
+        show delay + (E - (position s.right + 1)) * (delay - 1) = _
+        have := bud_arith delay (E - (position s.right + 1)) hd
+        rw [show E - (position s.right + 1) + 1 = E - position s.right from by omega] at this
+        omega
+      rw [e, hposu, hCu, hudef, replayDec_chain, afterCompare_chain]
+      exact hz
+    have hbdu : Bnd B u := by
+      intro m' hm'
+      have hmm : m' = m := (ofNat_inj (hurep.symm.trans hm')).symm
+      subst hmm
+      rw [hur, hpos]; omega
+    have hfru : Frontier u := by
+      intro m' hm'
+      have hmm : m' = m := (ofNat_inj (hurep.symm.trans hm')).symm
+      subst hmm
+      rw [hur]
+      exact right_frontier_step s.right m' hbound
+    have hradu : RadiusRep u.radius (k+1) := by
+      rw [hudef, replayDec_radius, afterCompare_radius]; exact radius_rep_inc hrad
+    have hlenu : Canonical u.length := by
+      rw [hudef]
+      show Canonical (inc (inc s.length))
+      exact inc_canonical _ (inc_canonical _ hlen)
+    have hQu : SoundScanNR raw
+        ⟨{c with clock := delay, output := o, replaying := !P.replayExhausted u}, u⟩ :=
+      fun _ _ => outputRel_of_refresh' raw P hP hP' q first u c.output o hiu ho _ rfl
+    have hlive := chain_runWC raw P q first delay B E lim (P.centre s) b xs hex hd hrs hfit hBl (by omega)
+      (fun h => by rw [← hBeq]; exact hlimF h) (fun h => by rw [← hBeq]; exact hlimT h)
+      m {c with clock := delay, output := o, replaying := !P.replayExhausted u} u (k+1) hm hd hflag
+      (fun _ => rfl) hurep hbdu hpu (by rw [hposu]; exact hRE)
+      (by rw [hCu]; exact fun h => ⟨(hbrk h).1, (hbrk h).2.1⟩) hMu hiu hfru hradu
+      (by rw [hCu]; exact hcen) hlenu
+    have ht := scan_match_found_S' P q first delay c s vs vq o hm (Or.inl hr) hc hidle rfl rfl hmt
+      hq hf hch (by rw [hr]; exact ho)
+    rw [hr] at ht
+    exact Or.inr <| found_resultC hP hP' ih hidle hr
+      (.cmp c s vs vq o hm hr hc hav hidle rfl rfl hmt hq hf hch ho)
+      (.succ (GalilReplaySegment.soundScanNR_replaying raw hr) (by simpa using ht) (.zero _ hQu))
+      hQu hneu hiu hlive (by omega) (by rw [hposu]; omega) hCu rfl (by omega) hmr hcen
+  · -- a quiet comparison
+    set vs : ScanVM := ⟨left s.left, right s.right, ChainVM.idle⟩ with hvsdef
+    have hmt : (galilFrame P q first).matched (scanLens.set s vs) := hmatch
+    set u : GalilVM := replayDec true (afterCompare s vs vq) with hudef
+    set o : Bool := if P.onLetter u then decide (P.leftFirst u) else c.output with hodef
+    have ho : refresh (galilFrame P q first) u c.output o := by
+      refine ⟨fun hl => ?_, fun hl => ?_⟩
+      · have hl' : P.onLetter u := hl
+        show (if P.onLetter u then decide (P.leftFirst u) else c.output) = true ↔ P.leftFirst u
+        rw [if_pos hl']; exact decide_eq_true_iff
+      · have hl' : ¬ P.onLetter u := hl
+        show (if P.onLetter u then decide (P.leftFirst u) else c.output) = c.output
+        rw [if_neg hl']
+    have hurep : u.replay = ofNat m := by
+      rw [hudef, replayDec_true_replay, afterCompare_replay, hrp, dec_ofNat_succ]
+    have hflag : (!P.replayExhausted u) = decide (0 < m) := by
+      rw [hex, hurep]
+      cases m with
+      | zero => rw [(zero_ofNat_iff 0).2 rfl]; simp
+      | succ k => rw [zero_ofNat_succ k]; simp
+    have hiu : ScanInvariant raw (position u.center) (k+1) u.left u.right := by
+      have h0 := matched_invariant' raw vq (vs := vs) rfl rfl hmatch hav hi
+      rw [hudef, replayDec_left, replayDec_right, replayDec_center, afterCompare_center]
+      exact h0
+    have hur : u.right = right s.right := by rw [hudef, replayDec_right, afterCompare_right]
+    have hout : OutputRel raw {c with clock := delay, output := o, replaying := !P.replayExhausted u} u :=
+      outputRel_of_refresh' raw P hP hP' q first u c.output o hiu ho _ rfl
+    refine Or.inl ⟨{c with clock := delay, output := o, replaying := !P.replayExhausted u}, u,
+      .matchIdleR c s vs vq o hm hr hc hav hidle rfl rfl rfl hmt hq hf ho (.stop _ _), ?_,
+      hm, rfl, hflag, ?_, ?_, ?_, hiu, hurep, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hout⟩
+    · have ht := scan_match_idle_S' P q first delay c s vs vq o hm (Or.inl hr) hc hidle rfl rfl rfl
+        hmt hq hf (by rw [hr]; exact ho)
+      rw [hr] at ht
+      exact .succ (GalilReplaySegment.soundScanNR_replaying raw hr) (by simpa using ht)
+        (.zero _ (fun _ _ => hout))
+    · rw [hudef, replayDec_chain, afterCompare_chain]
+    · have hgetU : searchLens.get u = vq := by rw [hudef, replayDec_search]; rfl
+      rw [hgetU]; exact searchReady_of_stage'' hE hdec hst hidle (fun _ => hc) (fun _ => Nat.succ_pos m) hq
+    · exact minv_matchR P hex o delay hr rfl hav hi hM
+    · rw [hur]; exact hpos
+    · rw [hudef, replayDec_center, afterCompare_center]
+    · intro m' hm'
+      have hmm : m' = m := (ofNat_inj (hurep.symm.trans hm')).symm
+      subst hmm
+      rw [hur]
+      exact right_frontier_step s.right m' hbound
+    · rw [hudef]; rfl
+    · rw [hudef, replayDec_radius, afterCompare_radius]; exact radius_rep_inc hrad
+    · intro m' hm'
+      have hmm : m' = m := (ofNat_inj (hurep.symm.trans hm')).symm
+      subst hmm
+      rw [hur, hpos]; omega
+    · exact replayStageDC_trans hst
+        (.matchIdleR c s vs vq o hm hr hc hav hidle rfl rfl rfl hmt hq hf ho (.stop _ _)) (by simp; omega)
+    · rw [hudef]
+      show Canonical (inc (inc s.length))
+      exact inc_canonical _ (inc_canonical _ hlen)
+
+/-- **The idle replay with chain starts, breaks and restarts, carrying the
+stage**, by strong induction on the comparisons left. -/
+theorem replay_construct3SC (hP : P.onLetter = onLetterVM raw) (hP' : P.leftFirst = leftFirstVM)
+    (hex : ∀ s, P.replayExhausted s = zero s.replay) (hd : 1 ≤ delay)
+    (hsearch : ∀ s : GalilVM, SearchReady (searchLens.get s) → ∀ a : Bool,
+      ∃ v, searchEffect P a s v)
+    (hE : RunEntriesStage delay) (hdec : Decodes P) (hfit : ReplayFitsStage raw)
+    (hshape : StartShape' raw P q first delay) (hbudget : ReplayBudgetRD raw P q first delay)
+    (hrs : RestartShapeL P) (hBl : B < (encoded raw).length) :
+    ∀ (r : ℕ) (c : Control) (s : GalilVM) (k : ℕ), EntryC raw P q first delay B c s k r →
+      Result3S raw P q first delay B c s k r := by
+  intro r
+  induction r using Nat.strong_induction_on with
+  | _ r ih =>
+    intro c s k hE
+    obtain ⟨⟨hm, hc, hrp, hrep, hidle, hsr, hM, hi, hfr, hrad, hbd, hcen1, hcen2⟩, hst, hlen, hout0⟩ := hE
+    cases r with
+    | zero =>
+      have hrf : c.replaying = false := by rw [hrp]; simp
+      exact Or.inl ⟨[], c, s, .stop _ _, fun hlast => .zero _ hlast, by simp, by simp,
+        ⟨⟨hm, hc, hrf, hrep, hidle, hsr, hM, by simpa using hi, by simp, rfl, hfr,
+          replayRest_of_reset hrep, rfl⟩, hout0 rfl⟩⟩
+    | succ n =>
+      have hrt : c.replaying = true := by rw [hrp]; simp
+      rcases idle_countdown3SC (q := q) (first := first) hP hP' hex hd hsearch hE hdec hfit hshape hbudget hrs
+          hBl ih (delay - 1) c s k n le_rfl hm hrt (by omega) hidle hsr hrep hM hi hfr hrad hbd
+          ⟨hcen1, hcen2⟩ hst hlen with hA | hB1
+      · obtain ⟨c1, t1, hseg1, hstp1, hm1, hr1, hc1, hidle1, hsr1, hl1, hrr1, hC1, hrp1, hrem1,
+          hrd1, hst1, hln1⟩ := hA
+        have hm1' : c1.mode = Mode.scan := by rw [hm1, hm]
+        have hr1' : c1.replaying = true := by rw [hr1, hrt]
+        have hM1 : MInv raw c1 t1 := minv_same (by rw [hr1]) hrr1 hC1 hrp1 hM
+        have hi1 : ScanInvariant raw (position t1.center) k t1.left t1.right := by
+          rw [hl1, hrr1, hC1]; exact hi
+        have hfr1 : Frontier t1 := frontier_congr hrr1 hrp1 hfr
+        rcases idle_compare3SC (q := q) (first := first) hP hP' hex hd hsearch hE hdec hfit hshape hbudget hrs
+            hBl ih c1 t1 k n le_rfl hm1' hr1' hc1 hidle1 hsr1 hM1 hi1 (by rw [hrp1, hrep]) hfr1
+            (by rw [hrd1]; exact hrad) (bnd_congr hrr1 hrp1 hbd)
+            (by rw [hC1]; exact ⟨hcen1, hcen2⟩) hst1 (by rw [hln1]; exact hlen) with hA2 | hB2
+        · obtain ⟨c2, u, hseg2, hstp2, hm2, hc2, hr2, hidle2, hsr2, hM2, hi2, hrep2, hpos2, hC2, hfr2,
+            hrem2, hrad2, hbd2, hst2, hlen2, hout2⟩ := hA2
+          have hres := ih n (by omega) c2 u (k+1)
+            ⟨⟨hm2, hc2, hr2, hrep2, hidle2, hsr2, hM2, hi2, hfr2, hrad2, hbd2,
+              by rw [hC2, hC1]; exact hcen1, by rw [hC2, hC1]; exact hcen2⟩, hst2, hlen2,
+              fun _ => hout2⟩
+          refine resultS_prepend_quiet (watchSegE_trans P q first delay hseg1 hseg2) ?_ (by omega)
+            (by rw [hpos2, hrr1]; omega) (by rw [hC2, hC1]) (by rw [hrem2, hrem1]) ?_ ?_ hres
+          · have := stepsAll_trans hstp1 hstp2
+            rw [List.length_append, List.length_replicate]; simpa using this
+          · rw [List.length_append, List.length_replicate]; simp; cases delay with
+            | zero => omega
+            | succ d => simp; ring
+          · simp [List.count_replicate]; omega
+        · exact Or.inr (busyS_prepend hstp1 rfl (by rw [hrr1]) hC1 hrem1 hB2)
+      · exact Or.inr hB1
+
+/-- **`replay_after_fallback_general''_fuel`.**  `replay_after_fallback_general''`
+with the budget restricted to the found ticks of the replay run
+(`ReplayBudgetRD`, the delay-generic `GalilFoundStage.ReplayBudgetR`) and no
+reachability invariant: the stage datum `ReplayStageD` is carried by the
+construction and re-entered at every mid-replay restart.  The restart shape is
+`RestartShapeL` (true of `restartVM`, `restartShapeL_sharedC`).  Branch (iii)
+additionally reports the output soundness at the idle landing. -/
+theorem replay_after_fallback_general''_fuel'' (raw : List (Fin 2)) (P : Shared)
+    (hP : P.onLetter = onLetterVM raw) (hP' : P.leftFirst = leftFirstVM) (q : ℕ) (first : Fin 9)
+    (delay : ℕ) (hex : ∀ s, P.replayExhausted s = zero s.replay) (hd : 1 ≤ delay)
+    (hsearch : ∀ s : GalilVM, SearchReady (searchLens.get s) → ∀ a : Bool,
+      ∃ v, searchEffect P a s v)
+    (hE : RunEntriesStage delay) (hdec : Decodes P) (hfit : ReplayFitsStage raw)
+    (hshape : StartShape' raw P q first delay) (hbudget : ReplayBudgetRD raw P q first delay)
+    (hrs : RestartShapeL P)
+    (r : ℕ) (hr0 : 0 < r) (c : Control) (t : GalilVM)
+    (hm : c.mode = Mode.scan) (hc : c.clock = delay) (hrpl : c.replaying = true)
+    (hR : Restarted raw t 0 reset) (hrep : t.replay = ofNat r)
+    (hM : MInv raw c t) (hfr : Frontier t) (hsi : ShiftIdle t) :
+    (∃ (es : List Bool) (c' : Control) (t' : GalilVM),
+      WatchSegE P q first delay es c t c' t' ∧
+      (SoundScanNR raw ⟨c', t'⟩ →
+        StepsAll (galilFrameS P q first) delay (SoundScanNR raw) es.length ⟨c, t⟩ ⟨c', t'⟩) ∧
+      es.length = r * delay ∧ es.count true = r ∧
+      position t'.right = position t.right + r ∧ t'.center = t.center ∧
+      GalilReplaySegment.InvScan delay raw c' t' r) ∨
+    ChainEnd raw P q first delay (position t.right + r) c t 0 r ∨
+    (BrokeAndRestarted raw P q first delay c t ∧
+      ∃ (n : ℕ) (c' : Control) (t' : GalilVM),
+        (SoundScanNR raw ⟨c', t'⟩ →
+          StepsAll (galilFrameS P q first) delay (SoundScanNR raw) n ⟨c, t⟩ ⟨c', t'⟩) ∧
+        position t'.right = position t.right + r ∧ t'.center = t.center ∧
+        GalilReplaySegment.InvScan delay raw c' t' r ∧ OutputRel raw c' t') := by
+  have hB : position t.right + r < (encoded raw).length := by
+    have h1 := hfr r hrep
+    have h2 := arrived_le_of_represents hR.2.2.2.1.rightRep
+    simp only [encoded, List.length_append, List.length_singleton, pairs_length]
+    omega
+  have hbd : Bnd (position t.right + r) t := by
+    intro m hm'
+    rw [ofNat_inj (hrep.symm.trans hm')]
+  have hst0 : ReplayStageDC raw P q first delay c t r :=
+    ⟨t, 0, reset, [], c, hR, stageEntry_zero reset, hc, .stop _ _,
+      by simpa using hfit t 0 reset r hR (stageEntry_zero reset) hrep⟩
+  rcases replay_construct3SC (q := q) (first := first) hP hP' hex hd hsearch hE hdec hfit hshape hbudget hrs hB
+      r c t 0
+      ⟨⟨hm, hc, by rw [hrpl]; simp [hr0], hrep, hR.1, searchReady_of_restarted hR, hM,
+        hR.2.2.2.1, hfr, hR.2.2.2.2.1, hbd, hR.2.1, hR.2.2.1⟩, hst0, hR.2.2.2.2.2.1,
+        fun h0 => absurd h0 (by omega)⟩ with hQ | hBusy
+  · obtain ⟨es, c', t', hseg, hst, hlen, hcnt, ⟨hm', hc', hr', hrep', hidle', hsr', hM', hi', hpos', hC',
+      hfr', hrr', hrem'⟩, -⟩ := hQ
+    exact Or.inl ⟨es, c', t', hseg, hst, hlen, hcnt, hpos', hC',
+      GalilReplaySegment.inv_after_replay delay raw c' t' r hm' hc' hr' hidle' (by simpa using hi')
+        hM' hsr' hrep' (GalilReplaySegment.shiftIdle_congr hrem' hsi)⟩
+  · rcases hBusy with hCh | hRs
+    · exact Or.inr (Or.inl hCh)
+    · obtain ⟨hw, n, c', t', hrun, ⟨hm', hc', hr', hrep', hidle', hsr', hM', hi', hpos', hC', hfr', hrr',
+        hrem'⟩, hout⟩ := hRs
+      exact Or.inr (Or.inr ⟨hw, n, c', t', hrun, hpos', hC',
+        GalilReplaySegment.inv_after_replay delay raw c' t' r hm' hc' hr' hidle' (by simpa using hi')
+          hM' hsr' hrep' (GalilReplaySegment.shiftIdle_congr hrem' hsi), hout⟩)
+
+
+/-- `replay_after_fallback_general''_fuel` at `delay = 2048` for a decoding
+machine: no chain-start hypothesis at all. -/
+theorem replay_after_fallback_general''_fuel''_of_decodes (raw : List (Fin 2)) (P : Shared)
+    (hP : P.onLetter = onLetterVM raw) (hP' : P.leftFirst = leftFirstVM) (q : ℕ) (first : Fin 9)
+    (hex : ∀ s, P.replayExhausted s = zero s.replay)
+    (hsearch : ∀ s : GalilVM, SearchReady (searchLens.get s) → ∀ a : Bool,
+      ∃ v, searchEffect P a s v)
+    (hE : RunEntriesStage 2048) (hfit : ReplayFitsStage raw)
+    (hdec : Decodes P) (hbudget : ReplayBudgetRD raw P q first 2048)
+    (hrs : RestartShapeL P)
+    (r : ℕ) (hr0 : 0 < r) (c : Control) (t : GalilVM)
+    (hm : c.mode = Mode.scan) (hc : c.clock = 2048) (hrpl : c.replaying = true)
+    (hR : Restarted raw t 0 reset) (hrep : t.replay = ofNat r)
+    (hM : MInv raw c t) (hfr : Frontier t) (hsi : ShiftIdle t) :
+    (∃ (es : List Bool) (c' : Control) (t' : GalilVM),
+      WatchSegE P q first 2048 es c t c' t' ∧
+      (SoundScanNR raw ⟨c', t'⟩ →
+        StepsAll (galilFrameS P q first) 2048 (SoundScanNR raw) es.length ⟨c, t⟩ ⟨c', t'⟩) ∧
+      es.length = r * 2048 ∧ es.count true = r ∧
+      position t'.right = position t.right + r ∧ t'.center = t.center ∧
+      GalilReplaySegment.InvScan 2048 raw c' t' r) ∨
+    ChainEnd raw P q first 2048 (position t.right + r) c t 0 r ∨
+    (BrokeAndRestarted raw P q first 2048 c t ∧
+      ∃ (n : ℕ) (c' : Control) (t' : GalilVM),
+        (SoundScanNR raw ⟨c', t'⟩ →
+          StepsAll (galilFrameS P q first) 2048 (SoundScanNR raw) n ⟨c, t⟩ ⟨c', t'⟩) ∧
+        position t'.right = position t.right + r ∧ t'.center = t.center ∧
+        GalilReplaySegment.InvScan 2048 raw c' t' r ∧ OutputRel raw c' t') :=
+  replay_after_fallback_general''_fuel'' raw P hP hP' q first 2048 hex (by omega) hsearch hE hdec hfit
+    (startShape'_of_decodes hdec) hbudget hrs r hr0 c t hm hc hrpl hR hrep hM hfr hsi
+
+
+
+
+end StageConstructC
+
+#print axioms stage_readyB''
+#print axioms searchReady_of_stage''
+#print axioms chain_breakWC
+#print axioms replay_construct3SC
+#print axioms replay_after_fallback_general''_fuel''
+#print axioms replay_after_fallback_general''_fuel''_of_decodes
+
 #print axioms maximal_window
 #print axioms coreX_good
 #print axioms coreX_break
