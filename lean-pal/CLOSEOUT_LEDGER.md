@@ -22,6 +22,51 @@
 
 ---
 
+## 2026-09-19 `SweptOff` はラウンド内で `ReadsInv` を完全に代替する、周期補題を窓全体に一般化
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### ラウンド内では `SweptOff` だけで足りる
+
+ラウンド内では witness の `n` が**そのまま**ラウンドの `used` で、
+`RoundScan.fresh` が `used < 2h` を与えるので `origin_prediction_index`
+（非巻き戻し版）が直接使える。周期性は不要。
+
+| 名前 | 内容 |
+|---|---|
+| `encoded_of_sweptOff` | `SweptOff` ＋ `n < 2h` ＋ unbroken から `symbol = (encoded raw)[C+R+2−2h+n]?` |
+| `advance_of_sweptOff` | **`H_advance` の結論を `SweptOff` から**（`sweptOff_consume` ＋ 非 terminal） |
+
+つまり `ReadsInv` は `SweptOff` に完全に置き換えられる（`sweptOff_of_readsInv` は
+片方向だが、`SweptOff` 側が真に弱く、かつ shift 相を生き延びる）。
+
+### 周期補題を窓全体に一般化
+
+`CloseoutAdvanceT.period_at_next`（`j = C+R+2` 固定）を任意の `j` に：
+
+```
+theorem period_window (hpal : PalAt x (C+h) (R+h)) (hnext : PalAt x (C+2h) (R+1))
+    (hs : 2h ≤ R) (hp : 0 < h) (hroom : R+2 ≤ C)
+    (hj1 : C + 2h − R ≤ j) (hj2 : j ≤ C + R + 2h) :
+    x[j − 2h]? = x[j]?
+```
+
+`C+2h` について鏡映 → `C+h` について鏡映。`hj1` は `C+2h−R−1` ではなく
+`C+2h−R` でないと 2 回目の鏡映が半径を 1 超える（omega が正しく拒否した）。
+利用域は `2h ≤ R` より `j = C+R+2` も `C+R+3` も内側。
+
+### 残差の形（測定確定）
+
+ラウンド**内**は閉じた。ラウンド**境界**では witness は `sweptOff_shift` で運ばれるが
+座標 `(C,R) → (C+h,R+h)` の再アンカーが要る。`ShiftInv` は座標側を既に持っており
+（`roundScan_of_shiftInv` が新ラウンドの `pred` を `ShiftInv.pred` から出す）、
+`period_window` が符号語側の周期を与える。残るのは両者を噛み合わせる配線と、
+**最初のラウンド**（`H_freshShift` / `H_fresh` = `first_round` の組み上げ、前提約 25 個）。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `SweptOff` — sweep witness を `Offset` 形にして shift 相を生き延びさせた
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**

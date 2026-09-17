@@ -134,10 +134,92 @@ theorem bounce_of_sweptOff {raw : List (Fin 2)} {C R h n : ℕ}
   rw [hsym, hp]
   simp only [List.length_append, hlen, hh]
 
+/-! ## The encoded index, inside a round
+
+Within one round the witness's `n` **is** the round's `used`, so
+`GalilGoodLag.origin_prediction_index` applies directly (`used < 2h` by
+`RoundScan.fresh`) and no periodicity is needed.  `H_advance`'s conclusion
+follows from `SweptOff` alone.
+-/
+
+/-- **The prediction as an index of the encoded word, inside a round.** -/
+theorem encoded_of_sweptOff {raw : List (Fin 2)} {C R h n : ℕ}
+    {w : GalilScaffoldChainWatch.State} (hS : SweptOff raw C R h n w)
+    (hn : n < 2 * h) (hb : w.machine.control.broken = false) :
+    GalilScaffoldChainConsume.symbol w.machine.control.period.focus =
+      (encoded raw)[C + R + 2 - 2 * h + n]? := by
+  obtain ⟨o, extra, hC, hRR, hh, hlen, hsym, hbr⟩ := symbol_of_sweptOff hS
+  have hb' : (GalilScaffoldChainSweep.run o.shifted.machine.control extra).broken = false := by
+    -- the reference run and the origin's shifted control have the same `broken`
+    have h2 := (Offset.shift o.shiftRun o.offset).run extra
+    rw [← GalilScaffoldChainSweep.run_append] at h2
+    rw [h2.broken, ← hbr]
+    exact hb
+  have h3 := origin_prediction_index o h hh extra (by rw [hlen]; exact hn) hb'
+  have h4 : GalilScaffoldChainConsume.symbol w.machine.control.period.focus
+      = GalilScaffoldChainConsume.symbol
+        (GalilScaffoldChainSweep.run o.shifted.machine.control extra).period.focus := by
+    have h2 := (Offset.shift o.shiftRun o.offset).run extra
+    rw [← GalilScaffoldChainSweep.run_append] at h2
+    rw [hsym, h2.prediction.1]
+  rw [h4, h3, hC, hRR, hlen]
+
+/-- **`H_advance`'s conclusion from `SweptOff`.**  The consume grows the
+continuation by one, and the round is not yet terminal. -/
+theorem advance_of_sweptOff {raw : List (Fin 2)} {C R h used : ℕ} {s : GalilVM}
+    {w0 : GalilScaffoldChainWatch.State}
+    (hI : RoundScan raw C R h used s w0) (hS : SweptOff raw C R h used w0)
+    (hg : GalilScaffoldChainWatch.Good w0) (hend : singlePositive s.cycle = false) :
+    GalilScaffoldChainConsume.symbol
+        (GalilScaffoldChainWatch.immediate w0).machine.control.period.focus =
+      (encoded raw)[C + R + 2 + (used + 1) - 2 * h]? := by
+  obtain ⟨-, a, ha, hra⟩ := hg
+  have hne : used + 1 ≠ 2 * h := by
+    intro heq
+    rw [hI.terminal_iff.mpr heq] at hend
+    cases hend
+  have hlt : used + 1 < 2 * h := by have := hI.fresh; omega
+  have hunb : (GalilScaffoldChainWatch.immediate w0).machine.control.broken = false := by
+    show (GalilScaffoldChainConsume.consume w0.machine.control
+      (read (right w0.machine.verifier))).broken = false
+    rw [hra]
+    exact consume_keeps_unbroken _ a ha hI.caught.unbroken
+  have h := encoded_of_sweptOff (sweptOff_consume hS hra) hlt hunb
+  rw [h]
+  congr 1
+  have := hI.size
+  have := hI.posH
+  omega
+
+/-! ## The local period on the overlap of the two palindromes -/
+
+/-- **`x[j − 2h] = x[j]` for every `j` in the overlap.**  `CloseoutAdvanceT`'s
+`period_at_next` at a general index: mirror `j` about `C + 2h`, then about
+`C + h`. -/
+theorem period_window {raw : List (Fin 2)} {C R h j : ℕ}
+    (hpal : Manacher.PalAt (encoded raw) (C + h) (R + h))
+    (hnext : Manacher.PalAt (encoded raw) (C + 2 * h) (R + 1))
+    (hs : 2 * h ≤ R) (hp : 0 < h) (hroom : R + 2 ≤ C)
+    (hj1 : C + 2 * h - R ≤ j) (hj2 : j ≤ C + R + 2 * h) :
+    (encoded raw)[j - 2 * h]? = (encoded raw)[j]? := by
+  have hm : 2 * (C + 2 * h) - j = 2 * C + 4 * h - j := by omega
+  have e1 : (encoded raw)[j]? = (encoded raw)[2 * (C + 2 * h) - j]? :=
+    Manacher.mirror_getElem? hnext (by omega) (by omega)
+  rw [hm] at e1
+  have e2 : (encoded raw)[2 * C + 4 * h - j]?
+      = (encoded raw)[2 * (C + h) - (2 * C + 4 * h - j)]? :=
+    Manacher.mirror_getElem? hpal (by omega) (by omega)
+  have hmid : 2 * (C + h) - (2 * C + 4 * h - j) = j - 2 * h := by omega
+  rw [hmid] at e2
+  exact (e1.trans e2).symm
+
 #print axioms sweptOff_of_readsInv
 #print axioms sweptOff_consume
 #print axioms sweptOff_shift
 #print axioms symbol_of_sweptOff
 #print axioms bounce_of_sweptOff
+#print axioms encoded_of_sweptOff
+#print axioms advance_of_sweptOff
+#print axioms period_window
 
 end PalPeg.CloseoutSweptOff
