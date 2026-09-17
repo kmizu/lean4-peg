@@ -37,6 +37,10 @@ open PalPeg.CloseoutRadPack2 PalPeg.CloseoutRadPack4
 open PalPeg.CloseoutPackRun26 PalPeg.CloseoutPackRun30 PalPeg.CloseoutPackRun32
 open PalPeg.CloseoutPackRun26 PalPeg.CloseoutPackRun34 PalPeg.CloseoutFrontExtra
 open PalPeg.CloseoutLPack PalPeg.CloseoutPackRun10 PalPeg.CloseoutPackRun30
+open PalPeg.CloseoutLPack5 PalPeg.CloseoutLPack6 PalPeg.CloseoutPackRun12
+open PalPeg.GalilTrailSane PalPeg.GalilChainCoupling PalPeg.GalilBranchInvariants
+open PalPeg.CloseoutPackRun11 PalPeg.CloseoutPackRun9 PalPeg.CloseoutPackRun8
+open PalPeg.GalilTrailChain PalPeg.GalilFinalAssembly PalPeg.GalilThrottledRun
 
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
@@ -122,6 +126,107 @@ theorem shiftReaders_of_run {w : List (Fin 2)}
 
 #print axioms saneVer_of_shiftLocalS
 #print axioms shiftReaders_of_run
+
+/-! ## `SaneVer` along the trace, guarded
+
+`CloseoutPackRun26.saneTickG` (:444) calls its entry hypothesis at exactly one
+branch — `scan_shift` (:481) — which owns `hmt` and `hg`.  So the guard can be
+added to the hypothesis for free.  `CloseoutPackRun30.verSane_ptG` (:591) is the
+trace-level reader; both are re-cut here. -/
+
+theorem saneTickS (onLetter leftFirst : GalilVM → Prop)
+    (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
+    (entry q : ℕ) (first : Fin 9) (delay : ℕ) {c c' : Control} {s t : GalilVM}
+    (hx : SaneVer s.chain) (hC : GalilFrontMono.Sane s.center)
+    (hen : c.mode = Mode.scan → c.replaying = false → ∀ s'' t'' : GalilVM,
+      (galilFrameS (sharedC onLetter leftFirst centre place entry) q first).compare s s'' →
+      ¬ (galilFrameS (sharedC onLetter leftFirst centre place entry) q first).matched s'' →
+      shiftGuardVM s'' → beginShiftVM' s'' t'' → SaneVer t''.chain)
+    (h : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay
+      ⟨c, s⟩ ⟨c', t⟩) : SaneVer t.chain := by
+  cases h
+  case init =>
+    rename_i hm hi
+    obtain ⟨-, -, -, -, -, -, -, -, -, hch, -⟩ : initVM entry s t := hi
+    exact saneVer_congr hch saneVer_idle
+  case scan_wait =>
+    rename_i hm hav hb
+    obtain ⟨-, -, hch, -⟩ :=
+      backgroundS_fields (sharedC onLetter leftFirst centre place entry) q first hb
+    exact chainAt_sane hch hx hC
+  case scan_count =>
+    rename_i hm hc hav hb
+    obtain ⟨-, -, hch, -⟩ :=
+      backgroundS_fields (sharedC onLetter leftFirst centre place entry) q first hb
+    exact chainAt_sane hch hx hC
+  case restart =>
+    rename_i hm hb
+    obtain ⟨w, -, -, -, -, ht⟩ : restartVM entry s t := hb
+    subst ht
+    exact saneVer_idle
+  case scan_match =>
+    rename_i s' o hmt hm hc hcmp hav hpl ho
+    obtain ⟨a, found, ans, cc, wk, hch, -⟩ :=
+      compare_chainAt onLetter leftFirst centre place entry q first hcmp
+    have hpl' : t = (if c.replaying then
+        {s' with replay := GalilScaffoldCounter.dec s'.replay} else s') := hpl
+    have htc : t.chain = s'.chain := by rw [hpl']; cases c.replaying <;> rfl
+    exact saneVer_congr htc (chainAt_sane hch hx hC)
+  case scan_shift =>
+    rename_i s' hmt hg hm hc hr hcmp hav hb
+    exact hen hm hr s' t hcmp hmt hg hb
+  case scan_fallback =>
+    rename_i s' hmt hm hc hg hr hcmp hav hb
+    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    subst ht
+    exact saneVer_idle
+  case shift_one =>
+    rename_i hm hp hi
+    obtain ⟨-, -, -, w, hw, hv⟩ := hi.1
+    have ht := hi.2
+    rw [hv] at ht
+    subst ht
+    have hws : s.chain = .watch w := hw
+    exact fun r hr => hx r (by rw [hws]; exact hr)
+  case shift_done =>
+    rename_i o hm hp ho
+    exact hx
+  case replayStart =>
+    rename_i o hm ho ho' hi
+    obtain ⟨-, -, -, -, -, -, -, -, -, hch, -⟩ : replayStartVM entry s t := hi
+    exact saneVer_congr hch saneVer_idle
+  all_goals
+    (rename_i hi
+     have hch : t.chain = s.chain := (congrArg GalilVM.chain hi.2).trans rfl
+     exact saneVer_congr hch hx)
+
+
+
+theorem verSane_ptS {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM}
+    {Tc : ℕ → ℕ} (hP : PreTrace centre place entry q first w st Tc)
+    (hll : ∀ i, i ≤ Tc w.length → PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm)
+    (hsv : ∀ i, i ≤ Tc w.length → ScanNR (st i) → ∀ s'' t'' : GalilVM,
+      (galilFrameS (PofC centre place entry w) q first).compare (st i).vm s'' →
+      ¬ (galilFrameS (PofC centre place entry w) q first).matched s'' →
+      shiftGuardVM s'' → beginShiftVM' s'' t'' → SaneVer t''.chain) :
+    ∀ i, i ≤ Tc w.length → ∀ p, verOf (st i).vm.chain = some p →
+      GalilFrontMono.Sane p := by
+  have hsane := sanePack_pt centre place entry q first hw hP hll
+  intro i
+  induction i with
+  | zero => intro _; rw [hP.start]; exact saneVer_idle
+  | succ i ih =>
+    intro hi
+    have hlt : i < Tc w.length := by omega
+    have hle : i ≤ Tc w.length := by omega
+    exact saneTickS (onLetterVM w) leftFirstVM centre place entry q first 2048
+      (ih hle) (hsane i hle).saneC
+      (fun hm hr s'' t'' hcmp hmt hg hb => hsv i hle ⟨hm, hr⟩ s'' t'' hcmp hmt hg hb)
+      (hP.trace.tick i hlt)
+
+
+#print axioms saneTickS
+#print axioms verSane_ptS
 
 end
 
