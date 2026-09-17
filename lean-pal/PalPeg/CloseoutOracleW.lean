@@ -1,5 +1,6 @@
 import PalPeg.CloseoutCheckW
 import PalPeg.CloseoutExtraOracle
+import PalPeg.CloseoutShiftS
 
 /-!
 # The oracle and boot over `IPackMW`
@@ -74,7 +75,8 @@ open PalPeg.CloseoutPackRun35
 open GalilScaffoldInputHead GalilScaffoldCounter GalilScaffoldChainVerifier
 open PalPeg.CloseoutPackRun36 PalPeg.CloseoutPackW PalPeg.CloseoutStageCheck
 open PalPeg.CloseoutCheckW PalPeg.CloseoutExtraOracle PalPeg.CloseoutExtraFree
-open PalPeg.CloseoutFrontExtra
+open PalPeg.CloseoutFrontExtra PalPeg.CloseoutStageOracle PalPeg.CloseoutStageBoot
+open PalPeg.CloseoutShiftS PalPeg.CloseoutPackRun34 PalPeg.GalilLookRefined
 
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
@@ -209,6 +211,66 @@ theorem packRunR_MW {w : List (Fin 2)}
   exact ⟨g, hg0, hgk, htr, fun i hi => (hbig i hi).ipackM⟩
 
 
+/-- **`H_bootIMW` from `BootIPack`.** -/
+theorem h_bootIMW_of_bootIPack
+    (hsl : ∀ w : List (Fin 2), H_shiftLocalG centre place entry q first w)
+    (hb : BootIPack centre place entry q first) :
+    H_bootIMW centre place entry q first := by
+  intro a rest
+  obtain ⟨c1, t, hsteps, hI, hpos⟩ := invLPS_init centre place entry q first a rest
+  obtain ⟨hp0, hp1⟩ := hb a rest
+  obtain ⟨g, hg0, hg1, htr⟩ := stepsAll_fn hsteps
+  have hstI : StepsI centre place entry q first (a :: rest) 1
+      ⟨GalilScaffoldController.initial 2048, GalilBootVM.initVM0 (a :: rest)⟩ ⟨c1, t⟩ := by
+    refine ⟨g, hg0, hg1, htr, ?_⟩
+    intro i hi
+    interval_cases i
+    · rw [hg0]; exact hp0
+    · rw [hg1]; exact hp1 c1 t hsteps hI.1
+  have hstG := stepsIMG_of_stepsIM centre place entry q first
+    (stepsIM_of_stepsIO centre place entry q first
+      (stepsIO_of_stepsI centre place entry q first hstI))
+  obtain ⟨g2, hg20, hg21, htr2, hp2⟩ := hstG
+  refine ⟨c1, t, ⟨g2, hg20, hg21, htr2, fun i hi => ⟨(hp2 i hi).pack, ?_⟩⟩, hI, hpos⟩
+  cases i with
+  | zero => rw [hg20]; exact lpackM2_boot (a :: rest)
+  | succ n =>
+    cases n with
+    | zero =>
+      rw [hg21]
+      exact lpackM2_of_invLPC centre place entry q first (hsl _) hI.1
+    | succ n => omega
+
+
+/-- **`needL'` over `PreTraceIMW`.** -/
+theorem needIMW'_le_W {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hfour : H_fourOther centre place entry q first w)
+    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
+    (hsd : H_shiftDoneP centre place entry q first w)
+    (hpos0 : ChainPosInv w (st 0).ctl (st 0).vm) :
+    ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
+      PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 := by
+  have hbase := hP.base.pre
+  have hreach : ∀ i, i ≤ Tc w.length →
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 i (st 0) (st i) := by
+    intro i hi
+    exact PalPeg.CloseoutPackRun2.steps_of_trace hbase.trace i hi
+  have hLP : ∀ i, i ≤ Tc w.length →
+      PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm :=
+    fun i hi => (hP.packs i hi).pack
+  have hll : ∀ i, i ≤ Tc w.length →
+      PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm :=
+    fun i hi => leftLive_of_lpackM (hLP i hi)
+  intro m hm i hi
+  exact needL'_le_of_trailF w st m i
+    (trailF_ptS centre place entry q first hw hbase hfour hbg hmatch hsd hpos0
+      hreach hLP hll hm i hi)
+
+
+#print axioms needIMW'_le_W
+#print axioms h_bootIMW_of_bootIPack
 #print axioms packRunR_MW
 #print axioms reachAtIMW_of_reachAtC3R_W
 #print axioms cycleOutIMW_of_cycleOutMC3R_W

@@ -22,6 +22,63 @@
 
 ---
 
+## 2026-09-19 wave 10 — `ShiftLocalG` も消えた: **8 前提・反証済みゼロ**（`pal_in_peg_final30`）
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`pal_in_peg_final30`（`CloseoutFinalW`）— 標準公理のみ。
+**`WatchShiftG` も `ShiftLocalG` もコードに現れない。**
+
+### `hsl` も偽だった
+
+wave 9 の `final29` は `hsl : ∀ w y, ShiftLocalG … w y` を持っていたが、これも
+`WatchShiftG` と同じ反例で偽。`ShiftLocalG` の全場の前提は
+`beginShiftVM' s'' t''` で、`beginShiftVM h w s t := s.chain = .watch w ∧ t = …`
+（`GalilScaffoldTopShiftCycle:23`）は **`shiftGuardVM` を含まない**。よって
+`ChainStep.backDone` で生まれたばかりの watch（`distance = reset`）が前提を
+満たしつつ `4 * periodLength ≤ distance` を破る。
+
+### 弱化ではなく削除
+
+`CloseoutShiftS`（wave 8）が trail 橋を `ChainPosInv` に載せ替えた結果、
+**`IPackMG.shift` を読む者は誰もいなくなった**（唯一の読者
+`halfBound_of_ipackMG` / `shiftVerSane_ptMG` は両方置換済み）。
+よって場ごと削除できる。
+
+`CloseoutPackRun30.IPackMG` から直接落とすと旧鎖 `final17 → … → final25` が
+壊れる（実測: 全体 build で `final18` が `sorryAx`、ロールバック済み）ので、
+`CloseoutStageCheck` と同じ**非破壊複製**で層を作った:
+
+| ファイル | 内容 |
+|---|---|
+| `CloseoutPackW` | `IPackMW := LPackM ∧ LPackM2`（`IPackMG2` から `shift` を落としたもの）、`BigPack2MG7W`/`BigPack2MG7W''`、`lticksN_of_lpackM2_W`、`ipackMW_tick`、`bigPack2MG7W''_tick` |
+| `CloseoutCheckW` | `StepsIMW`/`ReachAtIMW`/`CycleOutIMW`/`CycleOracleIMW`/`checkpoints_costIMW_upto1`/`PreTraceIMW`/`preTraceIMW_exists` |
+| `CloseoutOracleW` | `PackRunRMW`、**`packRunR_MW`（shift 仮説ゼロ）**、`ipackMW_of_invLPC`、`h_bootIMW_of_bootIPack`、`h_oracleIMW_of_MC3_W`、`needIMW'_le_W` |
+| `CloseoutFinalW` | `H_realizeLIMW'`、`pal_in_peg_final5MW`、**`pal_in_peg_final30`** |
+
+`lticksN_of_lpackM2_pt7` は `shift` 場を一度も使っていなかったので、W 化は
+`hx.ipackM.base.pack` → `hx.ipackM.pack` の置換のみ。
+
+### `hC` の型
+
+`H_realizeLIMG2'` は `PreTraceIMG2` を仮定に取るが、その結論
+（`SAccepts ↔ LatchTrue …`）は run pack に一切触れず `stLG' τF w st (Tc w.length)`
+だけを読む。よって自然な領域は `PreTraceB` で、`H_realizeLIMW'` はそれを取る。
+`IPackMW` がその `base` を供給する。
+
+### `final30` の 8 前提（すべて未反証）
+
+| 前提 | 状態 |
+|---|---|
+| `hSP` | 実質的義務（周期と `PalAt`）。`BigPack2MG7W` 上に再基底化 |
+| `hme` | 真の見込み（`marksInv'_of_run'` が既存、`Fair` 配線が必要） |
+| `hor` | producer ゼロ。最大の残り |
+| `hC`（`H_realizeLIMW'`） | 局所機械の実現 |
+| `hfour`, `hbgP`, `hmatchP`, `hsdP` | Run34 の 4 guarded 分岐仮説。`chainPosInv_tick` が 23 形状中 20 を閉じており、残りは 3 形状分 |
+
+**wave 6 からの推移**: 8（`hsc` 偽）→ 7 → 5（`hws` 偽）→ 9（`hsl` 偽）→ **8（反証済みゼロ）**。
+数の増減より「偽の前提が残っているか」が判定基準。
+
 ## 2026-09-19 wave 9 — 偽の `hws` が最上位から消えた（`pal_in_peg_final29`）
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
