@@ -22,6 +22,69 @@
 
 ---
 
+## 2026-09-19 `H_advanceT` を再切り出して配線 — `ShiftRound` の tick 残差は `H_freshShift` 1 つ
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 再切り出し（`ShiftPal` と同じ形）
+
+`CloseoutPackRun37.H_advanceT` は `Good w0` 相当のデータを持たず、consume が失敗すると
+period tape が動かないので偽だった。消費者（`shiftRound_tick` の `scan_shift` 分岐、
+唯一の使用箇所）が持っているデータを定義に入れた：
+
+```
+def H_advanceT (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
+  c.mode = Mode.scan → c.replaying = false → s.periodOnly = true →
+  ∀ C R used w0, RoundScan w C R (periodLength w0) used s w0 →
+    singlePositive s.cycle = true →
+    canRight s.right →
+    symbol w0.machine.control.period.focus = read (right s.right) →
+    symbol (immediate w0).machine.control.period.focus = (encoded w)[C + R + 2]?
+```
+
+`canRight s.right` は tick の `hav`（`:353`）、guard の予測は `hpred`（`:420`）で、
+どちらも呼び出し点（`:430`）のスコープ内。モード前提は `ReadsRound` と同形にするため
+（Run37 は `CloseoutRoundReads` を import できない — 逆向きの依存がある）。
+
+### `Good` の第 2 成分は `RoundScan` + `canRight right` から出る
+
+`sym_of_guard`: `GalilRoundPeriod.RoundScan.break_of_match` の手順をそのまま使う。
+`canRight v.right` が scan の右ヘッドを bound し、`CaughtScan.aligned` がその bound を
+verifier へ運び（`canRight_of_bound`）、2 つの表現が同じ記号を読む。予測が `some a` で
+あることは `hI.pred` を terminal の index `C+R+1` に落として `getElem?_eq_getElem`。
+
+**`canRight w0.machine.verifier` は新しい義務ではなかった** — `RoundScan` と
+`canRight v.right` から導ける。
+
+### 新規（`CloseoutAdvanceT`）
+
+| 名前 | 内容 |
+|---|---|
+| `sym_of_guard` | guard での consume 成功（`Good` の第 2 成分） |
+| `advanceT_of_guard` | `H_advanceT` の結論。`terminal_palindrome` が `palNext` を、`sym_of_guard` が consume を供給 |
+| `h_advanceT_of_readsRound` | **`H_advanceT` は運ばれた `ReadsRound` から出る定理** |
+| `shiftRound_tick_A` | `shiftRound_tick` の `H_advanceT` を除去。残差は `H_freshShift` だけ |
+
+`H_advanceT`: `REFORMULATED` ＋ `INTEGRATED`（`ReadsRound` から供給、
+`shiftRound_tick_A` で利用、`shiftRound_tick` の入力から消えた）。
+
+### `hSP` の残差（現在）
+
+| 義務 | 状態 |
+|---|---|
+| `H_freshShift`（fresh chain の初回 shift、`periodOnly = false`） | `OPEN`。内容は `GalilScaffoldTopFreshEntry` |
+| `H_fresh`（`shiftPal_of_readOrigin` の `periodOnly = false` 分岐） | `OPEN`。同じく `GalilScaffoldTopFreshEntry` |
+| `H_readsShift`（`ReadsInv` を shift 相を通す） | `OPEN`。`ShiftInv` に sweep witness を足せば出る |
+| `CopyIdle`（`shiftRound_tick` の入力） | 未評価 |
+
+運ぶ場（`ChainRound`・`ReadsRound`・`ShiftRound`・`PeriodShape`・`NoReplayWatch`）のうち
+`PeriodShape`/`NoReplayWatch` は tick 保存済み、`ChainRound`/`ReadsRound`/`ShiftRound` の
+tick はそれぞれ `H_shiftDone`（← `ShiftRound`）／`H_readsShift`／`H_freshShift` 1 つずつ。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `H_advanceT` の数学的内容を証明（最重量と測定した葉）
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**

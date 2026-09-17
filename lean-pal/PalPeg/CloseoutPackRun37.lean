@@ -144,11 +144,23 @@ end Entry
 /-- **(NAMED) the prediction after the terminal consume.**  `H_advance`'s
 shape at `used = 2h − 1`: after consuming `x[C+R+1]` the chain predicts
 `x[C+R+2]`, one period behind its verifier.  (`origin_prediction_index`
-stops at `extra.length < 2h`; this is the wrapped, `mod 2h` form.) -/
-def H_advanceT (w : List (Fin 2)) (s : GalilVM) : Prop :=
+stops at `extra.length < 2h`; this is the wrapped, `mod 2h` form.)
+
+The target's own guard data is part of the statement: without it the claim is
+**false**, because a failing consume sets `broken := true` and leaves the period
+tape where it was, so the prediction would still be `x[C+R+1]`.  Both extra
+premises — `canRight s.right` and the guard's prediction — are in scope at the
+only consumer (`shiftRound_tick`'s `scan_shift` branch, where `shiftGuardVM`
+holds), so nothing new is owed.  `CloseoutAdvanceT.h_advanceT_of_readsRound`
+discharges it from the carried `ReadsRound`. -/
+def H_advanceT (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
+  c.mode = Mode.scan → c.replaying = false → s.periodOnly = true →
   ∀ (C R used : ℕ) (w0 : GalilScaffoldChainWatch.State),
     RoundScan w C R (periodLength w0) used s w0 →
     singlePositive s.cycle = true →
+    GalilScaffoldChainVerifier.canRight s.right →
+    GalilScaffoldChainConsume.symbol w0.machine.control.period.focus
+      = GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right) →
     GalilScaffoldChainConsume.symbol
         (GalilScaffoldChainWatch.immediate w0).machine.control.period.focus =
       (encoded w)[C + R + 2]?
@@ -330,7 +342,7 @@ other target mode vacuous.  Named: `H_advanceT`, `H_freshShift`. -/
 theorem shiftRound_tick {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
     (hCR : ChainRound w x.ctl x.vm)
     (hSR : ShiftRound w x.ctl x.vm)
-    (hT : H_advanceT w x.vm)
+    (hT : H_advanceT w x.ctl x.vm)
     (hF : H_freshShift w x.vm y.vm)
     (hblk : GalilBranchInvariants.BlockInv x.vm.chain)
     (hci : CopyIdle x.vm)
@@ -427,7 +439,7 @@ theorem shiftRound_tick {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
               show read vs.left = read vs.right
               rw [hvl, hvr]; exact he
             exact absurd (hiff.2 hm2) (by decide)
-          have hadv := hT C R used w2 hI hend
+          have hadv := hT hm hr hpo C R used w2 hI hend hav hpred
           have hblk' : GalilBranchInvariants.OnBlock w2.machine.control.period := by
             have hb0 : GalilBranchInvariants.BlockInv s.chain := hblk
             rw [hw0] at hb0

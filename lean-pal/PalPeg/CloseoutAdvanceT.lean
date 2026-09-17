@@ -111,17 +111,20 @@ theorem period_at_next {raw : List (Fin 2)} {C R h : ℕ}
 /-! ## 3. `H_advanceT`'s content -/
 
 /-- **The prediction after the terminal consume, from the carried sweep
-witness and the two palindromes.**  This is `H_advanceT`'s conclusion. -/
+witness and the two palindromes.**  This is `H_advanceT`'s conclusion.  Only
+`Good`'s second component is used, so it is taken directly. -/
 theorem advanceT_of_readsInv {raw : List (Fin 2)} {C R h used : ℕ} {s : GalilVM}
     {w0 : GalilScaffoldChainWatch.State}
     (hI : RoundScan raw C R h used s w0) (hRI : ReadsInv raw C R h used w0)
-    (hg : GalilScaffoldChainWatch.Good w0) (hend : singlePositive s.cycle = true)
+    (hsym : ∃ a, GalilScaffoldChainConsume.symbol w0.machine.control.period.focus = some a ∧
+      read (right w0.machine.verifier) = some a)
+    (hend : singlePositive s.cycle = true)
     (hnext : Manacher.PalAt (encoded raw) (C + 2 * h) (R + 1)) :
     GalilScaffoldChainConsume.symbol
         (GalilScaffoldChainWatch.immediate w0).machine.control.period.focus =
       (encoded raw)[C + R + 2]? := by
   obtain ⟨o, extra, hC, hRR, hh, hlen, hctl⟩ := hRI
-  obtain ⟨-, a, ha, hra⟩ := hg
+  obtain ⟨a, ha, hra⟩ := hsym
   have hterm : used + 1 = 2 * h := hI.terminal_iff.mp hend
   have hrun : (GalilScaffoldChainWatch.immediate w0).machine.control =
       GalilScaffoldChainSweep.run o.shifted.machine.control (extra ++ [a]) := by
@@ -147,9 +150,102 @@ theorem advanceT_of_readsInv {raw : List (Fin 2)} {C R h used : ℕ} {s : GalilV
     exact hp
   exact period_at_next hpal hnext hI.size hI.posH hI.room
 
+/-! ## 4. The guard supplies what is left -/
+
+/-- **The consume at a guarded terminal succeeds.**  `Good`'s second component,
+from the round and the guard's prediction.  The derivation is
+`GalilRoundPeriod.RoundScan.break_of_match`'s: `canRight v.right` bounds the
+scan's right head, `CaughtScan.aligned` carries the bound to the verifier
+(`canRight_of_bound`), and the two representations then read the same
+symbol. -/
+theorem sym_of_guard {raw : List (Fin 2)} {C R h used : ℕ} {v : GalilVM}
+    {w : GalilScaffoldChainWatch.State}
+    (hI : RoundScan raw C R h used v w) (hav : canRight v.right)
+    (hend : singlePositive v.cycle = true)
+    (hpred : GalilScaffoldChainConsume.symbol w.machine.control.period.focus
+      = read (right v.right)) :
+    ∃ a, GalilScaffoldChainConsume.symbol w.machine.control.period.focus = some a ∧
+      read (right w.machine.verifier) = some a := by
+  have hc := hI.caught
+  have hs := hc.scan
+  have hrrep := right_word v.right raw hs.rightRep hav
+  have hrpres := right_present v.right raw hs.rightRep hs.rightPresent hav
+  have hrpos := right_position v.right hav
+    (represented_position v.right.head raw hs.rightRep hs.rightPresent).1
+  have hbound := position_bound (right v.right) raw hrrep hrpres
+  have hvc : canRight w.machine.verifier :=
+    canRight_of_bound w.machine.verifier raw hc.verifierRep hc.verifierPresent
+      (by rw [hc.aligned]; omega)
+  have hvrep := right_word _ raw hc.verifierRep hvc
+  have hvpres := right_present _ raw hc.verifierRep hc.verifierPresent hvc
+  have hvpos := right_position w.machine.verifier hvc
+    (represented_position w.machine.verifier.head raw hc.verifierRep hc.verifierPresent).1
+  have hread : read (right w.machine.verifier) = read (right v.right) := by
+    rw [represented_read _ raw hvrep hvpres, represented_read _ raw hrrep hrpres,
+      hvpos, hrpos, hc.aligned]
+  have he := hI.terminal_iff.mp hend
+  have hsz := hI.size
+  have hph := hI.posH
+  have hrm := hI.room
+  have hidx : C + R + 2 + used - 2 * h = C + R + 1 := by omega
+  have hlt : C + R + 1 < (encoded raw).length := by
+    have := hs.palindrome.2.1
+    have := hs.rightPos
+    omega
+  obtain ⟨a, ha⟩ : ∃ a, (encoded raw)[C + R + 1]? = some a :=
+    ⟨(encoded raw)[C + R + 1], List.getElem?_eq_getElem hlt⟩
+  have hp2 : GalilScaffoldChainConsume.symbol w.machine.control.period.focus = some a := by
+    rw [hI.pred, hidx]; exact ha
+  exact ⟨a, hp2, by rw [hread, ← hpred]; exact hp2⟩
+
+/-- **`H_advanceT`'s conclusion from the round, the sweep witness and the
+guard.**  `terminal_palindrome` supplies `palNext` and `sym_of_guard` the
+consume. -/
+theorem advanceT_of_guard {raw : List (Fin 2)} {C R h used : ℕ} {s : GalilVM}
+    {w0 : GalilScaffoldChainWatch.State}
+    (hI : RoundScan raw C R h used s w0) (hRI : ReadsInv raw C R h used w0)
+    (hav : canRight s.right) (hend : singlePositive s.cycle = true)
+    (hpred : GalilScaffoldChainConsume.symbol w0.machine.control.period.focus
+      = read (right s.right)) :
+    GalilScaffoldChainConsume.symbol
+        (GalilScaffoldChainWatch.immediate w0).machine.control.period.focus =
+      (encoded raw)[C + R + 2]? :=
+  advanceT_of_readsInv hI hRI (sym_of_guard hI hav hend hpred) hend
+    (terminal_palindrome hI hend hav hpred)
+
+section
+variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
+  (entry q : ℕ) (first : Fin 9)
+
+/-- **`H_advanceT` is a theorem given the carried `ReadsRound`.**  The two are
+now the same shape: both are premised on `scan` / not-replaying / `periodOnly`
+and quantify over the rounds of the state. -/
+theorem h_advanceT_of_readsRound {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hRR : PalPeg.CloseoutRoundReads.ReadsRound w c s) :
+    H_advanceT w c s := fun hm hr hpo C R used w0 hI hend hav hpred =>
+  advanceT_of_guard hI (hRR hm hr hpo w0 hI.chain C R used hI) hav hend hpred
+
+/-- **`ShiftRound` along a tick with `H_advanceT` gone.** -/
+theorem shiftRound_tick_A {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
+    (hCR : ChainRound w x.ctl x.vm)
+    (hSR : ShiftRound w x.ctl x.vm)
+    (hRR : PalPeg.CloseoutRoundReads.ReadsRound w x.ctl x.vm)
+    (hF : H_freshShift w x.vm y.vm)
+    (hblk : GalilBranchInvariants.BlockInv x.vm.chain)
+    (hci : CopyIdle x.vm)
+    (h : Tick (galilFrameS (PofC centre place entry w) q first) delay x y) :
+    ShiftRound w y.ctl y.vm :=
+  shiftRound_tick centre place entry q first hCR hSR (h_advanceT_of_readsRound hRR) hF hblk hci h
+
+end
+
 #print axioms origin_prediction_bounce
 #print axioms origin_prediction_wrap
 #print axioms period_at_next
 #print axioms advanceT_of_readsInv
+#print axioms sym_of_guard
+#print axioms advanceT_of_guard
+#print axioms h_advanceT_of_readsRound
+#print axioms shiftRound_tick_A
 
 end PalPeg.CloseoutAdvanceT
