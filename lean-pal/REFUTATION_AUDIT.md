@@ -238,7 +238,7 @@
 | 入力 | 状態 |
 |---|---|
 | `hready : ChainTickable` | **命題が不適切**（`.broken` は機械が正当に到達する状態で `ChainReady .broken = False`）。ただし置換経路も**現時点で塞がっている** — 下記 §4.7 |
-| `hland : ∀ c s, LiveScanWatch c s → LandingReadyC s` | **過剰量化**。`canRight s.right` を全 live 状態で要求する run の事実。run 形（`∀ m z, Steps … m x z → …`）にする必要がある。※これが偽かどうかは未検査であり、「偽」とは書かない |
+| `hland : ∀ c s, LiveScanWatch c s → LandingReadyC s` | **過剰量化**（`canRight s.right` を全 live 状態で要求する run の事実）。※偽かどうかは未検査であり「偽」とは書かない。**ラウンドからの導出は下記 §4.8 で 3 分の 2 まで進み、残りは 1 点**（`0 ≤ value distance` の供給元） |
 
 ## 4.7 自分の過大主張をもう 1 件訂正（本監査で自己発見）
 
@@ -261,6 +261,23 @@
 
 （本件と §4.5 は、指摘を受ける前に自分で見つけた。それが基準であるべきで、
 外部指摘で崩れた §0.5 の 6 件との違いはそこにある。）
+
+## 4.8 `LandingReadyC` をラウンドから導く（本監査で進捗）
+
+`CloseoutLandingRound.lean`（新規、3 定理・標準公理のみ）。`LandingReadyC` の 3 連言を
+運ばれる事実から出した：
+
+| 連言 | 供給元 | 状態 |
+|---|---|---|
+| `canRight s.right` | 呼び出し側（run pack の `Extra7.scanAvail`） | 入力 |
+| `ChainReady s.chain` | `chainReady_of_round`：3 条項すべてラウンドから — (1) `positive lag → Good` は `RoundScan.caught.lagZero` で**空虚**、(2) `WatchBlock w` は `BlockInv (.watch w)`（`GalilBranchInvariants:429`）＝ `Coupled.block` ＝ `AuxPack` の場、(3) `∀ m, Internal w m → canRight m.verifier` は `internal_of_zero` で `m = w` に潰れ、`canRight_verifier_of_round`（`CaughtScan.aligned` ＋ `not_canRight_iff`）で出る | **PROVED** |
+| `∀ w, s.chain = .watch w → 0 ≤ value w.machine.control.distance` | **未特定** | 残り 1 点 |
+
+最後の 1 点について分かっていること：`Canonical c := c.pos = [] ∨ c.neg = []` なので
+`Canonical` 単体では非負は出ない（`pos = []` 側なら `value ≤ 0`）。`negative distance = false`
+に相当する供給元が必要で、**まだ特定できていない**。`ReadOrigin.canonicalDistance` /
+`ReadOrigin.ordered`（`GalilScaffoldChainRestart.Ordered`）が候補だが未確認。
+「無い」とは書かない。
 
 ## 5. 検査の再現手順
 
