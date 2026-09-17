@@ -1,5 +1,16 @@
 ## n20 (2026-09-17 朝) 葉の放電・偽仮定 4 件・非決定性
 
+## n68 (2026-09-19 未明) `Extra.ready` も死に場・`hshift` 放電・`ShiftPeriodC` は葉でなかった・`final17`
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 新規 6 本登録（`CloseoutPreload38`、`CloseoutPackRun45`、`CloseoutWatchRound45`、`46`、`CloseoutPackRun44`）、sorry なし、build ログ `build_n68d.log` EXIT=0。
+- **pack（監査）**: `CloseoutPackRun45`: **`Extra5.ready`/`Extra6.ready` は `final22` 経路のどのモードでも読まれん**（読み手は `scanAvail` と `rewindMargin` のみ）。`Extra5S`/`Extra6S`（scan/shift 相対 `ready`）、読み手を全部再証明（本体不変）、`extraTick5S_of_readyField2`（`ready` 半分を `readyField2_tick` から）、`pal_in_peg_final23`（:359、仮定の本数・形は final22 と同じ）。**ギャップ**: `readyField2_tick` が要求する `BigPack2M''` は削除済みの DP 場を持つ `Extra3` を含むので `BigPack2MG6S''` から供給できん（pack を使うのは `notInit` 1 点だけ）→ `ready` ごと削除する `Extra7`/`final24`（`CloseoutPackRun46` 進行中）。
+- **readiness**: `CloseoutPreload38`: `scan_shift` は比較量子を 1 つ消費し（`hcmp` は `compareFound`）clock を 2048 にするので slack 0 = 比較後の値 → **`hshift` 放電**（`readyField2_shift` :51）、`readyField2_tick'`（:88）、`readyField2_along_run`（:114）。残 `hact`（active chain 時の paced 台帳）は `paced` の idle 条件を外せば消える → `CloseoutPreload39` 進行中。
+- **pack（`WatchShiftS` 供給）**: `CloseoutPackRun44`: `position_le_of_represents`（:47）、`consumeAvail_of_supply`（:74、葉 (1) を `LagPos`（watching chain で `0 < lag`）1 つに）、`h_bgP2_of_start`（:126、葉 (2) を `BgStartP2`（source chain idle の場合のみ）に）。`LagPos` は `ChainPos` の watch 節に組み込むのが正しい（`CloseoutPackRun47` 進行中）。
+- **watch**: `CloseoutWatchRound45`: **`ShiftPeriodC` は葉でなかった**（`ShiftRoundDataL` の `chain` 場と `remaining` 場から `period_of_beginShift` :81 で導出）、`watchStart_distance_zero`/`_broken_false`（birth では無料）、`PrepBirthLagC'`/`WatchDrainC'` の分割、**`foundExit_compare_final17`**（:219、`LandingFreshC` 消滅）。残 2 葉（prep 区間輸送、時計台帳）→ `CloseoutWatchRound47` 進行中。`CloseoutWatchRound46`: `chainW_true_of_window`（:106、`lim = false` の着地を明示予算 `2|xs| + 4 + (R_head − C)` で `lim = true` に格上げ）、`reach_watch`（:150）で **`n ≤ 2|xs| + 4 + (R_head − C)` が無条件**。残 1 葉 `PhaseWindowC`（:170）: `2|xs| + 4 + d ≤ 2047`。**未解決の較正問題**: `R_f ≤ 2h` はあるが `h` の上界が無く、`h ≤ 681`（= `d ≤ 1363`）が要る。`h` が入力とともに伸びるなら `delay = 2048` 内に copy/back 相が収まらん → Scala で copy/back 相が 1 比較周期に収まるのか、多周期に跨るのかを調査中（scout）。
+- 進行中: `CloseoutPackRun46`（`Extra7`）、`47`、`CloseoutPreload39`、`CloseoutWatchRound47`、scout（周期上界と相の跨り）。
+- 残: n67 と同じ + 較正（`h` の上界）。
+
+
 ## n67 (2026-09-18 深夜) `pal_in_peg_final22`（DP 関連が経路から消滅）・`ChainPosInv2` で先読み不要・`ChainWatchReachC` は歩数 1 葉
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 新規 3 本登録（`CloseoutWatchRound43`、`CloseoutPackRun41`、`CloseoutPackRun43`）、sorry なし、build ログ `build_n67b.log` EXIT=0。
