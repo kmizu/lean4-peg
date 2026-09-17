@@ -22,6 +22,67 @@
 
 ---
 
+## 2026-09-19 `H_fourOther` 除去 — `ChainPosInv2` 経路へ（`pal_in_peg_final31`）
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+`CloseoutPackRun41` と `CloseoutPackRun48` は Run34 より**先に進んでいた**のに
+run に繋がれていなかった。繋いだ。
+
+### `ChainPosInv2` が `H_fourOther` を要らなくする
+
+`CloseoutPackRun41.ChainPosInv2` は chain 半分を `ChainStep` / `ChainMatched` の
+下で**自己完結**させる（`chainPos_step` / `chainPos_matched`）。よって Run38 の
+「1 tick 先読み」が消え、`watchShiftS_of_chainPosInv2` は
+**`H_fourOther` を取らない** — target の verifier 対は `chainPos_step` から出る
+（unmatched な比較の chain 効果は素の `ChainStep`）。
+
+`H_fourOther` は `guard_budget` が `h ≤ R + 1` しか出さない難所だったので、
+これが不要になるのは大きい。
+
+### Run48 が 4 分岐すべてを処理済み
+
+| `chainPosInv2_tick` の仮説 | Run48 の producer |
+|---|---|
+| `H_bgP2` | `h_bgP2_of_supply`（:163） |
+| `H_matchP2` | `h_matchP2_of_target`（:243） |
+| `H_shiftEntry2` | `h_shiftEntry2_of_target`（:374） |
+| `H_shiftDoneRad2` | `h_shiftDoneRad2_of_supply`（:446） |
+
+`shift_one` は `chainPosInv2_tick` で**無条件に閉じる**（`shiftTick` は centre/left
+しか動かさず、`chainShiftOne` は verifier と lag を固定し、`right` は
+`shiftLens` の成分でないので `t.right = s.right`）。
+
+### `ConsumeAvail` も位置予算に還元
+
+`CloseoutPackRun47.consumeAvail_of_next_supply` は `ConsumeAvail` を
+**次の右ヘッドセル**についての 4 事実（`Represents` / `focus ≠ none` /
+`canRight` / `position R' = position R + 1`）＋ `LagNonneg` ＋ `ChainPos` に
+落とす。後ろ 2 つは `ChainPosInv2` の中、`canRight` は wave 5 の
+`canRight_next_of_bound` が位置上界から出す。`consumeAvail_of_bound`
+（`CloseoutConsumeAvail`）。残る入力は **verifier ヘッドの `Represents`** 1 点。
+
+### 前提の推移（正直に）
+
+`final30`（8）→ `final31`（9）。**数は 1 増えた。**
+
+| 消えた | 入った |
+|---|---|
+| `hfour`（`H_fourOther`） | `hentry`（`H_shiftEntry2`） |
+| `hbgP` → `H_bgP2`（より弱い） | `hav`（`ConsumeAvail`） |
+| `hmatchP` → `H_matchP2` | |
+| `hsdP` → `H_shiftDoneRad2`（より弱い） | |
+
+本質的な前進は「1 tick 先読みの消滅」と「`H_fourOther` の不要化」。
+`hav` は `consumeAvail_of_bound` で verifier の `Represents` 1 点に絞れている。
+
+### 新規（全て標準公理のみ）
+
+`CloseoutShiftS2`（`chainPosInv2_steps`, `shiftLocalS_of_chainPosInv2`,
+`shiftLocalS_of_run2`）、`CloseoutTrailS2`（`radPack_ptS2`, `trailF_ptS2`,
+`needIMW'_le_W2`）、`CloseoutFinalS2`（`pal_in_peg_final5MW2`,
+`consumeAvail_idle`, **`pal_in_peg_final31`**）、
+`CloseoutConsumeAvail`（`consumeAvail_of_bound`）。
 ## 2026-09-19 3 分岐仮説を Run38 の残差へ（`CloseoutBranchRes`）
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
