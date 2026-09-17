@@ -22,6 +22,64 @@
 
 ---
 
+## 2026-09-19 `H_advanceT` の数学的内容を証明（最重量と測定した葉）
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 前エントリの測定を訂正
+
+前エントリで「`H_advanceT` は符号語が index `C+R+2` まで周期 `2h` を持つことを要求し、
+原点の不一致 `C+R+1` の窓の外」と書いた。**窓の見積もりが誤りだった。**
+`ShiftInv` は palindrome を **2 つ**持つ：`pal : PalAt x (C+h) (R+h)`（ラウンドの
+caught scan）と `palNext : PalAt x (C+2h) (R+1)`（`terminal_palindrome`）。
+`C+R+2` をまず `C+2h` について鏡映し、次に `C+h` について鏡映すると
+
+```
+C+R+2  ↦  2(C+2h) − (C+R+2) = C+4h−R−2  ↦  2(C+h) − (C+4h−R−2) = C+R+2−2h
+```
+
+で `C+R+2−2h` に着く。どちらの鏡映も `2h ≤ R` より半径の内側。
+
+### tape 側：巻き戻しは障害ではなく本質
+
+`GalilScaffoldChainPrediction.continued_prediction` は予測を
+`bounce[(pre.length + extra.length) % (2*(xs.length+1))]?` として与え、
+**`extra.length` に上界を課さない**。必要な `SamePrediction` は
+`ReadOrigin` が `Offset.shift org.shiftRun org.offset` で持っている。
+よって `extra.length = 2h` の予測は `extra.length = 0` の予測に等しく、
+後者は `origin_prediction_index` が `x[C+R+2−2h]` に変換できる。
+
+### 新規（`CloseoutAdvanceT`）
+
+| 名前 | 内容 |
+|---|---|
+| `origin_prediction_bounce` | 長さの上界なしの `bounce` 形（`continued_prediction` に `ReadOrigin` の `Offset` を食わせる） |
+| `origin_prediction_wrap` | `extra.length = 2h` で `x[org.center + org.radius + 2 − 2h]` |
+| `period_at_next` | `x[C+R+2−2h] = x[C+R+2]`（鏡映 2 回） |
+| `advanceT_of_readsInv` | `H_advanceT` の結論。入力は `RoundScan` + `ReadsInv` + `Good w0` + terminal + `palNext` |
+
+すべて標準 3 公理のみ。
+
+### `H_advanceT` は再切り出しが必要（測定結果）
+
+`CloseoutPackRun37.H_advanceT`（`:148`）は `Good w0` を premise に持たない。
+ところが consume が失敗すると `broken := true` になって period tape は**動かない**ので、
+予測は `x[C+R+1]` のままになる。よって現在の形は**偽の疑いが強い**。
+
+`Good w0`（`GalilScaffoldChainWatch:13`）= `canRight verifier ∧ ∃ a, symbol period.focus = some a
+∧ read (right verifier) = some a`。shift 入口では shift guard が
+`symbol wch.period.focus = read s'.right` を与え、`CaughtScan.aligned` が
+`position verifier = position right` を与えるので第 2 成分は出る。第 1 成分
+`canRight verifier` は `ChainPack.repVmid` 系から。
+
+**対処方針**: `ShiftPal` と同じく、消費者（`shiftRound_tick` の `scan_shift` 分岐、
+guard が手元にある）が持っているデータを `H_advanceT` の定義に入れる。
+これは `REFORMULATED` で、前提数は増えない。
+
+`H_advanceT`: `PROVED`（内容は `advanceT_of_readsInv`）＋ `REFORMULATED` 待ち（配線）。
+
+---
+
 ## 2026-09-19 `hSP` の tick 機構が完成、残差は shift 相の受け渡し 1 点に
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
