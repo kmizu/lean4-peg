@@ -86,6 +86,27 @@
   内容は `GalilScaffoldTopFirstRound.first_round`）の 2 つ。両方とも
   「run の断片を `ReadOrigin` に組み上げる」同種の作業。
 
+### 供給経路を 1 本の定理にした
+
+`h_readsShift_of_rounds`（`CloseoutReadsOrigin`）: controller `Rounds` ＋ 第 1 ラウンドの
+`Entry` から `H_readsShift` が直接出る。基底の `Entry` は
+`GalilScaffoldTopFirstRound.first_round` が産出し、これは**名前付き葉を持たない定理**
+（前提は全部 run データ: `WatchSeg`、終端比較、shift 入口と `ChainShiftRun`、
+found 量子の `SafeQuanta`/`Result`/`Candidate`）。`Rounds` は
+`CloseoutWatchRound9.roundOne_of_segRun` が構成し、その残差は
+`ShiftAtMismatchC`（入力依存、OPEN）のみ。
+
+### 測定した負の結果 — `H_freshShift` は `OriginAt` からは出ない
+
+`shiftRound_tick` の `scan_shift` 分岐は `s.periodOnly` で分かれ、`false` 側が
+`H_freshShift`。`round_of_originAt` は `periodOnly` を要求しないので `OriginAt` で
+覆えるかと期待したが**覆えない**：`OriginAt` はラウンドの `used` を `0` に固定するので
+`RoundScan.count` が `value s.cycle = 2h` を与え、`RoundScan.terminal_iff` により
+`shiftInv_entry` が必要とする `singlePositive s.cycle = true` は `1 = 2h` と同値になる。
+fresh chain の初回 shift は `WatchSeg` の全掃引後、`used = 2h − 1` で起きる。
+よって `H_freshShift` は `first_round` 自身の義務として残る。
+（仮定せず確認した。型名の一致で producer を判断しないという §1 の教訓の適用。）
+
 ### 誤りの訂正（自分の前ターンの見立て）
 
 「次は `segment_to_checkpoint` を `hsegmentM` の消費者に配線する」は**外れ**。

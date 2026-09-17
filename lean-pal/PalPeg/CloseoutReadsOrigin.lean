@@ -116,6 +116,39 @@ theorem roundBundle_tick_O {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s 
   PalPeg.CloseoutRoundBundle.roundBundle_tick centre place entry q first hB hinv hci
     (h_readsShift_of_originShift hOS) hF h
 
+/-- **`H_readsShift` from a controller `Rounds` and the first round's origin.**
+The whole supply chain in one statement: `originAt_of_rounds` carries the origin
+along the rounds and `roundScan_unique` pins the landing's coordinates.  The
+base `Entry` is what `GalilScaffoldTopFirstRound.first_round` — an
+unconditional theorem — produces at a fresh chain's first shift, and the
+`Rounds` is what `CloseoutWatchRound9.roundOne_of_segRun` builds (modulo
+`ShiftAtMismatchC`). -/
+theorem h_readsShift_of_rounds {w : List (Fin 2)} {P : Shared} {qq : ℕ} {fst : Fin 9}
+    {delay hh m : ℕ} {c0 c1 : Control} {s0 s1 : GalilVM} {c : Control}
+    {w0 : GalilScaffoldChainWatch.State} {o : ReadOrigin w}
+    (hr : Rounds P qq fst delay hh m c0 s0 c1 s1)
+    (hp : s0.periodOnly = true) (hs : s0.chain = ChainVM.watch w0)
+    (hz : zero w0.lag = true)
+    (he : Entry w o (toOnly s0 w0)) (hint : o.interior.length + 1 = hh)
+    (hroom : o.radius + 2 ≤ o.center)
+    (hpl : ∀ v : GalilScaffoldChainWatch.State, s1.chain = ChainVM.watch v →
+      periodLength v = hh) :
+    H_readsShift w c s1 :=
+  h_readsShift_of_originAt
+    (PalPeg.CloseoutOriginRounds.originAt_of_rounds hr hp hs hz he hint hroom hpl)
+
+/-! ### `H_freshShift` is **not** reachable this way (measured, negative)
+
+`shiftRound_tick`'s `scan_shift` branch splits on `s.periodOnly`; the `false`
+side is `H_freshShift`.  One might hope `OriginAt` covers it too, since
+`round_of_originAt` does not ask for `periodOnly`.  It does not: `OriginAt`
+pins the round's `used` to `0`, so `RoundScan.count` gives
+`value s.cycle = 2h`, and `RoundScan.terminal_iff` then makes
+`singlePositive s.cycle = true` — which `shiftInv_entry` needs — equivalent to
+`1 = 2h`.  A fresh chain's first shift happens at `used = 2h - 1`, after the
+whole `WatchSeg` sweep, not at a round start.  So `H_freshShift` stays
+`GalilScaffoldTopFirstRound.first_round`'s own obligation. -/
+
 /-- **`OriginShift` from the previous round start and one round segment.**
 `CloseoutRoundSeg.originAt_of_roundSeg`: the leaf is in the same currency as
 the found-route family's `ShiftRoundC`, not a separate obligation. -/
@@ -135,6 +168,7 @@ end
 #print axioms h_readsShift_of_originShift
 #print axioms h_readsBirth_of_originAt
 #print axioms roundBundle_tick_O
+#print axioms h_readsShift_of_rounds
 #print axioms originShift_of_roundSeg
 
 end PalPeg.CloseoutReadsOrigin

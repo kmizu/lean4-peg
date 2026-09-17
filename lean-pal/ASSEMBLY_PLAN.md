@@ -35,6 +35,16 @@ watch で `Entry` を満たさないので、この前提なしでは偽にな�
 （`OriginShift` と `H_freshShift`）は**どちらも「run の断片を `ReadOrigin` に組み上げる」
 同じ通貨**で、`hor` の found 経路系（`CloseoutWatchRound5.ShiftRoundC`）と同一。
 
+### 追記（同ターン）
+
+`h_readsShift_of_rounds`: controller `Rounds` ＋ 第 1 ラウンドの `Entry` から
+`H_readsShift` が 1 行で出る。基底の `first_round` は名前付き葉を持たない定理、
+`Rounds` は `roundOne_of_segRun` が構成（残差は `ShiftAtMismatchC` のみ）。
+**負の結果**: `H_freshShift` は `OriginAt` からは出ない — `OriginAt` は `used = 0`
+（`value s.cycle = 2h`）を固定するので `shiftInv_entry` が要る
+`singlePositive s.cycle = true` と両立せず、fresh chain の初回 shift は
+`used = 2h − 1` で起きる。`H_freshShift` は `first_round` 自身の義務。
+
 ### 訂正
 
 前ターンの「次は `segment_to_checkpoint` を `hsegmentM` の消費者に配線」は外れ。
