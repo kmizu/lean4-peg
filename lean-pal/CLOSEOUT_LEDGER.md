@@ -22,6 +22,56 @@
 
 ---
 
+## 2026-09-19 `ReplayStage` は来歴だった — `WatchSegE` の連結で運べる
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 測定
+
+`GalilFoundStage:98`:
+
+```
+ReplayStage raw P qq first c s :=
+  ∃ r Rad last es c0, Restarted raw r Rad last ∧ StageEntry Rad last ∧
+    c0.clock = 2048 ∧ WatchSegE P qq first 2048 es c0 r c s
+```
+
+**局所的な性質ではなく来歴**（「restart から watch 区間で到達した」）。
+だから輸送補題は `WatchSegE` の連結。
+
+tree には**分割**方向しかなかった（`watchSegE_append : WatchSegE (es1 ++ es2) →
+∃ mid, …`）。`CloseoutWatchRound18` のヘッダが「join は無い」と書いている。
+
+### 新規（`CloseoutStageTrans`）
+
+| 名前 | 内容 |
+|---|---|
+| `watchSegE_trans` | **連結方向**。第 1 区間への帰納、7 構成子（`stop`/`wait`/`count`/`match`/`matchIdle`/`countR`/`matchIdleR`）すべて |
+| `replayStage_trans` | `ReplayStage` ＋ `WatchSegE` → `ReplayStage`（来歴に区間を継ぎ足す） |
+| `invSS_of_watchSegE` | `InvLPS` origin ＋ watch 区間 ＋ 着地の `Inv ∨ InvScan` → `InvSS` |
+
+すべて標準 3 公理のみ。
+
+### `hsc` の残差（更新）
+
+`InvSS` lift は **watch 区間で到達する着地では成立**する。残るのは watch 区間で
+ない run の着地だが、それらは `Inv` を直接持っている：
+
+| 着地 | `Inv` の出所 |
+|---|---|
+| `FallbackRouteMC2.landed` / `.replaying` | `hI : Inv raw cT sT` を場として持つ |
+| `FoundRouteMC2.shift` / `.noShift` | `hM : MInv` ＋ `hR : ∃ Rad last, Restarted` ＋ `hres : FoundResidual` → `GalilRunSkeleton.inv_of_residual` |
+| `FoundRouteMC2.broke` | `hIT : InvLP2` ＋ `hcenT : CentreRep` のみ — **ここが残る**（centre 不変で右ヘッドだけ進む＝ scan 中の着地） |
+| `ReachAtC2` の継続 | `InvLPC` のみ — ここも残る |
+
+つまり `hsc` は **`FoundRouteMC2.broke` と `ReachAtC2` の継続**の 2 箇所に絞れた。
+どちらも「centre が動かない scan 中の着地」で、run が watch 区間であることを
+示せば `replayStage_trans` で閉じる。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `hor` の橋を締めた — `H_oracle2` との差は `ReplayStage` **だけ**
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
