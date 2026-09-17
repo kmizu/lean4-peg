@@ -22,6 +22,74 @@
 
 ---
 
+## 2026-09-19 **`hpack` は偽だった** — 最上位 4 前提のうち 1 つが反証された
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 事実
+
+`CloseoutFinalW4.pal_in_peg_final37` の第 4 前提
+
+```
+hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack q first w c s
+```
+
+は**成立しない**。機械検査済み（`CloseoutPackRefute.lean`）。
+
+`ChainPosInv2` の場は 3 つだけ（`CloseoutPackRun41:215`: `Coupled'`、非 idle chain の
+payload、shift モードの台帳）で、`chainPosInv2_of_idle` は **chain が idle なら任意の
+`w` `c` `s` に対して**それを与える。ところが `ChainPack` は run の事実を主張する：
+
+| 場 | なぜ偽になるか |
+|---|---|
+| `scanBound : c.mode = .scan → ∃ m, 1 ≤ m ∧ m < w.length ∧ position s.right ≤ 2m−1` | `w.length ≤ 1` で存在量化が**充足不能**（`1 ≤ m < w.length`）。PAL は 1 文字語を含み、run の開始点（`Tick.init` の着地）は scan モード・idle chain |
+| `centreCanR : canRight s.center` | **モード前提なし**。中心頭が入力末尾に達した状態（走査完了時）で偽 |
+| `shiftCanR` / `saneR` / `centreSane` / `scanCentre` / `lenNonneg` … | 同様に、`ChainPosInv2` が許す状態で破れる |
+
+| 定理 | 内容 |
+|---|---|
+| `hpack_false_at_short_word` | `w.length ≤ 1`、scan モード、idle chain で矛盾 |
+| `chainPack_false_at_short_word` | `ChainPack` 自体が短い語の scan モードで無人 |
+| `hpack_false_at_exhausted_centre` | `centreCanR` による、より単純な反証（モード不要） |
+
+### 原因（2 層）
+
+直接原因: `ChainPack` は「run に沿って確立される事実の束」を**一状態述語**として書き、
+その前提を一状態不変量 `ChainPosInv2` にしている。`ChainPack` 自身の docstring が
+そう言っている——`scanBudget_of_chainPack`: 「`ChainPack` is established **along the
+run** (where the bound comes from)」。
+
+その原因: 以前このセッション系列で、別葉だった `ScanBudget`（`CloseoutFinalPack` の
+`hbudget`）を束のフィールド `scanBound` に**畳み込んだ**。台帳の自分のルール
+「未解消の前提を構造体フィールドへ移しただけなら `OPEN` のまま」に照らせば、
+これは前進ゼロだった。しかも `ScanBudget` 自体が既に（同じ反例で）偽だったので、
+畳み込みは偽の葉を偽の束に変えた。
+
+### 直し方（論証）
+
+`ScanBudget` の**唯一の用途**は `matchRes2_of_chainPack`（`CloseoutChainPack:135`）の
+`canRight_of_position_bound` で `hcan : canRight s.right` を得ることだけ。つまり
+本当に必要なのは `canRight s.right` であって、チェックポイント `m` ではない。
+そして `canRight` も一状態の事実ではない（末尾で破れる）。
+
+したがって正しい形は、束を `Steps` に沿って運ぶこと——`CloseoutRoundBundle.RoundBundle`
+（`roundBundle_tick` / `roundBundle_steps`）と同じ構成。boot 状態では全ヘッドが
+入力原点にあるので `canRight` は全部成立し、各 tick はヘッドを保つか run 自身の
+予算の下で 1 進めるだけ。
+
+* `hpack` — **REFUTED**。
+* `ChainPack` — **REFORMULATED 待ち**（run 沿いの束へ）。
+* `ScanBudget` / `hbudget` — **REFUTED**（同じ反例）。
+
+### 最上位の正直な状態
+
+`pal_in_peg_final37` の型は正しく、`#check` は 4 引数、`#print axioms` は標準 3 公理。
+しかし 4 前提のうち `hpack` は**偽**なので、これは「4 つの証明可能な前提」ではない。
+計画書 §10.5（前提ゼロ）は未達であり、この経路では到達できない。
+`hpack` を run 沿いの束に置き換えるのが次の主要作業。
+
+---
+
 ## 2026-09-19 `H_readsShift` は「shift 完了時の read origin」に還元された
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**

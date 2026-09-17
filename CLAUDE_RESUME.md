@@ -1,3 +1,43 @@
+## n79 (2026-09-19) **`hpack` は偽だった** — 最上位 4 前提のうち 1 つを反証
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+`pal_in_peg_final37` の第 4 前提
+`hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack q first w c s` は**成立しない**。
+機械検査済み（`PalPeg/CloseoutPackRefute.lean`）。
+
+`ChainPosInv2` の場は 3 つだけ（`Coupled'`、非 idle chain の payload、shift 台帳）で、
+`chainPosInv2_of_idle` は chain が idle なら**任意の `w` `c` `s`** に対してそれを与える。
+ところが `ChainPack` は run の事実を主張する：
+
+- `scanBound : c.mode = .scan → ∃ m, 1 ≤ m ∧ m < w.length ∧ position s.right ≤ 2m−1`
+  は `w.length ≤ 1` で**充足不能**（PAL は 1 文字語を含み、run の開始点は
+  `Tick.init` の着地＝scan モード・idle chain）
+- `centreCanR : canRight s.center` は**モード前提なし**で、中心頭が入力末尾に達した
+  状態（走査完了時）で偽
+
+反証: `hpack_false_at_short_word` / `chainPack_false_at_short_word` /
+`hpack_false_at_exhausted_centre`。
+
+**原因（2 層）**: 直接原因は `ChainPack` が「run に沿って確立される事実の束」を
+一状態述語として書き、前提を一状態不変量にしていること（`ChainPack` 自身の docstring が
+「established **along the run**」と書いている）。その原因は、以前このセッション系列で
+別葉だった `ScanBudget`（`CloseoutFinalPack` の `hbudget`）を束のフィールド `scanBound` に
+**畳み込んだ**こと。台帳の自分のルール「未解消の前提を構造体フィールドへ移しただけなら
+OPEN のまま」に照らせば前進ゼロで、しかも `ScanBudget` 自体が既に同じ反例で偽だった。
+
+**直し方（論証）**: `ScanBudget` の唯一の用途は `matchRes2_of_chainPack` で
+`canRight_of_position_bound` により `canRight s.right` を得ることだけ。必要なのは
+チェックポイント `m` ではなく `canRight`。そして `canRight` も一状態の事実ではない。
+よって正しい形は束を `Steps` に沿って運ぶこと——`CloseoutRoundBundle.RoundBundle`
+（`roundBundle_tick` / `roundBundle_steps`）と同じ構成。boot 状態では全ヘッドが入力原点に
+あるので `canRight` は全部成立し、各 tick はヘッドを保つか 1 進めるだけ。
+
+**最上位の正直な状態**: `pal_in_peg_final37` の型は正しく `#check` は 4 引数、
+`#print axioms` は標準 3 公理。しかし 4 前提のうち `hpack` は**偽**なので、これは
+「4 つの証明可能な前提」ではない。計画書 §10.5（前提ゼロ）は未達であり、この経路では
+到達できない。`hpack` を run 沿いの束に置き換えるのが次の主要作業。
+
 ## n78 (2026-09-19) `H_readsShift` は「shift 完了時の read origin」に還元 — `hSP` の残差が 2 つとも同じ通貨に
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
