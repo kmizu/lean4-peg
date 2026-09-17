@@ -22,6 +22,70 @@
 
 ---
 
+## 2026-09-19 `RoundBundle` — `hSP` の生産経路を組み上げて残差をコンパイラに検証させた
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+ここまで「残差は N 個」と書いてきたのは**主張**であって検証ではなかった。
+5 つの場を 1 つの構造体にまとめ、tick を組み上げて型チェックさせた。
+
+```
+structure RoundBundle (w) (c : Control) (s : GalilVM) : Prop where
+  chainRound : ChainRound w c s
+  readsRound : ReadsRound w c s
+  shiftRound : ShiftRound w c s
+  periodShape : PeriodShape s
+  noReplay   : NoReplayWatch c s
+
+theorem roundBundle_tick (hB : RoundBundle w c s) (hinv : ChainPosInv2 w c s)
+    (hci : CopyIdle s) (hSh : H_readsShift w c s) (hF : H_freshShift w s t)
+    (h : Tick … ⟨c,s⟩ ⟨c',t⟩) : RoundBundle w c' t
+
+theorem shiftPal_of_roundBundle (hm) (hr) (hB : RoundBundle w c s)
+    (hcan : canRight s.right)
+    (hfresh : s.periodOnly = false → ShiftPal …) : ShiftPal …
+
+theorem roundBundle_steps …   -- run 版
+```
+
+**`H_shiftDone` は入力でない** — 束自身の `ShiftRound` から
+`h_shiftDone_of_shiftRound` で出る。これが組み上げて初めて確認できたこと。
+
+### `hSP` の残差（コンパイラが検証した形）
+
+| 義務 | 状態 |
+|---|---|
+| `H_readsShift` | `OPEN`。`ReadsInv` を shift 相を通す（`ShiftInv` に sweep witness を足す） |
+| `H_freshShift` | `OPEN`。fresh chain の初回 shift |
+| `H_fresh` | `OPEN`。`H_freshShift` と**同じ義務**（`shiftPal_of_readOrigin` の `periodOnly = false` 分岐） |
+| `ChainPosInv2` | 主経路が既に運んでいる（`ChainPack.inv`） |
+| `CopyIdle` | 既存の `LPackM` 系 tick 補題が既に `c.mode = Mode.shift → CopyIdle s` として threaded。新規ではない |
+| `canRight s.right` | `ChainPack` から出る（`repR` + `scanBound` + `canRight_of_position_bound`） |
+
+### `H_freshShift` / `H_fresh` の正本を測定
+
+内容は `GalilScaffoldTopFirstRound.first_round`（登録済み・証明済み）。これは
+found 探索から最初の shift までを通して
+
+```
+(∃ k, Steps … ⟨c0,v0⟩ ⟨…, e⟩) ∧ e.chain = .watch v ∧ zero v.lag = true ∧
+  e.periodOnly = true ∧ ∃ o' : ReadOrigin raw, Entry raw o' (toOnly e v) ∧
+    o'.interior.length+1 = h ∧ o'.center = position cen ∧ o'.shifts = 0 ∧ …
+```
+
+を与える。ただし前提が約 25 個（found 探索 `SafeQuanta`、DP の `Result`/`Candidate`、
+watch 区間 `WatchSeg`、終端比較、shift の `ChainShiftRun`、prep の credit 履歴）。
+`ShiftInv` への対応は座標 `C = o.center − h`、`R = o.radius − h` で合う
+（`pal` が found 中心の palindrome、`origin` が found 中心の不一致、
+`pred` が `origin_prediction_index` の `extra = []`）。
+
+**これは `hor` の `hfound`/`hfoundBg`/`hfoundReplay` と同族の「found 経路の組み上げ」**
+であり、残る最大の作業。前提を run から放電する配線が本体。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `H_advanceT` を再切り出して配線 — `ShiftRound` の tick 残差は `H_freshShift` 1 つ
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
