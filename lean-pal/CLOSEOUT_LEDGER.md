@@ -22,6 +22,65 @@
 
 ---
 
+## 2026-09-19 `hme` の 3 入力すべてに道がついた（`hwin` → `WalkerPin` ＋ `WalkerInOrigin`）
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+`pal_in_peg_final36` は **5 前提**（`hSP`, `hme`, `hor`, `hC`, `hpack`）。
+
+`hme`（`H_marksEntry'`）の除去は `CloseoutPackRun17.marks_steps`
+（`H_marksEntry'` を**使わない** run 版）を使う。その 3 側入力の現状:
+
+| 入力 | 状態 |
+|---|---|
+| `h4 : first ≠ 4` | `first` を具体値に固定すれば `decide`。`centreC`/`placeC` は `first` に依存しない |
+| `hfl : 0 ≤ value length` | **証明済み**（`CloseoutSpanTick.lenNonneg_of_span_radius`） |
+| `hwin : WindowInOrigin at copy` | **分解済み**（本項） |
+
+### `hwin` の分解
+
+`WindowInOrigin s := (stream s.fpp.walker).length ≤ position s.right` と
+`WalkerInOrigin s := (stream s.walker).length ≤ position s.right` は
+**同じ境界を 2 つの別の walker に課したもの**。
+
+`CloseoutPackRun25.windowInOrigin_of_fair` が両者を `scan → copy` 着地で
+橋渡しするが、そこで使う `Fair.fallbackPlace` の内容は
+`GalilTickFair.Fair` を読むと
+
+```
+fallbackPlace : x.ctl.mode = Mode.scan → y.ctl.mode = Mode.copy →
+  y.vm.fpp.walker = y.vm.walker
+```
+
+すなわち **「着地状態で 2 つの walker が一致する」だけ**。これは着地状態
+単独の性質なので、`Fair` を仮定に取る必要がない。
+
+`CloseoutWinOrigin`:
+- `WalkerPin s := s.fpp.walker = s.walker`（名前を付けた）
+- `windowInOrigin_of_pin : WalkerPin s → WalkerInOrigin s → WindowInOrigin s`
+- `pin_of_fair` — 旧橋がこれを経由することの確認
+
+`ChainPack` の `winOrigin` 場を `walkerPin` / `walkerOrigin` の 2 場に置き換え、
+`marksInputs_of_chainPack` が `windowInOrigin_of_pin` で組み直す。
+
+### `SpanRep` による `hfl` の決着（`CloseoutSpanTick`）
+
+`hfl` については 3 度訂正した。最終的な形:
+
+- `lenPos_of_spanRep : SpanRep s → 0 ≤ value s.radius → 0 < value s.length`
+- `radiusNonneg_of_radiusRep : RadiusRep r Rad → 0 ≤ value r`
+- `lenNonneg_of_span_radius` — 2 つを合わせた `hfl` の形
+
+`GalilSpanCounter` に `SpanRep` の遷移補題が全形状分あり
+（`spanRepS_shiftTick` を含む）、`length` が減ることと `SpanRep` が保たれることは
+両立する（`radius` も同時に減る）。
+
+### 残る作業
+
+`packRunR_MW` の `hme` 使用 2 箇所（`CloseoutOracleW:170`, `CloseoutPackW:156`）を
+`ChainPack.marks` / `marksInputs_of_chainPack` に差し替える配線。
+`packRunR_MW` に各状態の `ChainPack` を届ける必要があり、それには
+`ChainPosInv2` を run に通す（`chainPosInv2_steps` は run 版を持っている）。
+
 ## 2026-09-19 ⚠️ 運用ミス — main への直コミットを 2 回やった
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**

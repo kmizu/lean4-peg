@@ -1,6 +1,7 @@
 import PalPeg.CloseoutVerRep
 import PalPeg.CloseoutShiftS2
 import PalPeg.CloseoutMarksFree
+import PalPeg.CloseoutWinOrigin
 
 /-!
 # `ChainPack`: `ChainPosInv2` with the three supply clauses folded in
@@ -73,9 +74,13 @@ structure ChainPack (q : ℕ) (first : Fin 9) (w : List (Fin 2)) (c : Control) (
   scanCentre : c.mode = Mode.scan → CentreLedger s
   scanBound : c.mode = Mode.scan →
     ∃ m : ℕ, 1 ≤ m ∧ m < w.length ∧ position s.right ≤ 2 * m - 1
-  /-- The FPP window has not crossed the input origin — the `hwin` input of
-  `CloseoutPackRun17.marks_steps`. -/
-  winOrigin : c.mode = Mode.copy → PalPeg.CloseoutPackRun17.WindowInOrigin s
+  /-- The FPP walker and the search walker agree — the content of
+  `Fair.fallbackPlace` at a `scan → copy` landing, as a single-state property
+  (`CloseoutWinOrigin.WalkerPin`). -/
+  walkerPin : c.mode = Mode.copy → PalPeg.CloseoutWinOrigin.WalkerPin s
+  /-- The search walker has not crossed the input origin
+  (`CloseoutPackRun25.WalkerInOrigin`). -/
+  walkerOrigin : c.mode = Mode.copy → PalPeg.CloseoutPackRun25.WalkerInOrigin s
   /-- The length counter is non-negative at a `scan` state — the `hfl` input of
   the same, proved from `EntryCounters` by
   `CloseoutLenNonneg.lenNonneg_of_entryCounters`. -/
@@ -259,9 +264,13 @@ structure ChainSide (q : ℕ) (first : Fin 9) (w : List (Fin 2)) (c : Control) (
     ScanInvariant w (position s.center) rad s.left s.right → value s.radius ≤ (rad : ℤ)
   scanRad : c.mode = Mode.scan → ∀ rad : ℕ,
     ScanInvariant w (position s.center) rad s.left s.right → value s.radius ≤ (rad : ℤ)
-  /-- The FPP window has not crossed the input origin (needed by the marks
-  route, `CloseoutPackRun17.marks_steps`). -/
-  winOrigin : c.mode = Mode.copy → PalPeg.CloseoutPackRun17.WindowInOrigin s
+  /-- The FPP walker and the search walker agree — the content of
+  `Fair.fallbackPlace` at a `scan → copy` landing, as a single-state property
+  (`CloseoutWinOrigin.WalkerPin`). -/
+  walkerPin : c.mode = Mode.copy → PalPeg.CloseoutWinOrigin.WalkerPin s
+  /-- The search walker has not crossed the input origin
+  (`CloseoutPackRun25.WalkerInOrigin`). -/
+  walkerOrigin : c.mode = Mode.copy → PalPeg.CloseoutPackRun25.WalkerInOrigin s
   /-- The length counter is non-negative at a `scan` state (the other marks
   input; `CloseoutLenNonneg.lenNonneg_of_entryCounters` proves it from
   `EntryCounters`). -/
@@ -301,7 +310,8 @@ theorem chainPack_of_lpackM2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
   scanRad := hS.scanRad
   scanCentre := hS.scanCentre
   scanBound := hS.scanBound
-  winOrigin := hS.winOrigin
+  walkerPin := hS.walkerPin
+  walkerOrigin := hS.walkerOrigin
   lenNonneg := hS.lenNonneg
   cpack := hS.cpack
   wpack := hS.wpack
@@ -326,7 +336,9 @@ theorem marksInputs_of_chainPack {w : List (Fin 2)} {x : State GalilVM}
     (∀ (m : ℕ) (z : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 m x z →
       z.ctl.mode = Mode.copy → PalPeg.CloseoutPackRun17.WindowInOrigin z.vm) :=
-  ⟨fun _ z _ hm => (hp z).lenNonneg hm, fun _ z _ hm => (hp z).winOrigin hm⟩
+  ⟨fun _ z _ hm => (hp z).lenNonneg hm,
+   fun _ z _ hm => PalPeg.CloseoutWinOrigin.windowInOrigin_of_pin
+     ((hp z).walkerPin hm) ((hp z).walkerOrigin hm)⟩
 
 #print axioms marksInputs_of_chainPack
 
