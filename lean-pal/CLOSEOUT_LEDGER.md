@@ -22,6 +22,62 @@
 
 ---
 
+## 2026-09-19 wave 8 完 — trail 橋が `WatchShiftG` から外れた（`pal_in_peg_final5MG2T`）
+
+**全体 build 成功（EXIT=0、エラー 0）・標準公理のみ・無条件 PAL は未完。**
+
+`hws`（偽）の **2 役割のうち 1 つを完全に除去**した。
+
+### 到達点: `pal_in_peg_final5MG2T`（`CloseoutShiftFinal`）
+
+`WatchShiftG` を**一切取らない**。trail 橋の全体が `ChainPosInv` の上で動く:
+
+```
+ChainPosInv
+  → shiftLocalS_of_run        （guarded な ShiftLocalS、run の各点）
+  → radPack_ptS               （halfBound_of_shiftLocalS / saneVer_of_shiftLocalS 経由）
+  → trailF_ptS
+  → needIMG2'_le_S
+  → pal_in_peg_final5MG2T
+```
+
+boot の `ChainPosInv` は無料（`boot w` の chain は idle、`chainPosInv_of_idle`）。
+`hws` の代わりに入るのは `CloseoutPackRun34` の 4 **guarded** 分岐仮説
+（`H_fourOther`, `H_bgP`, `H_matchP`, `H_shiftDoneP`）で、いずれも
+`shiftGuardVM` 付き・unmatched なターゲットに限定されており、Run32 の反例
+（誕生直後 `distance = reset`）には当たらない。
+
+### 残る `hws` の役割と、試して退けた手
+
+残るのは**逆方向** — `packRunR_MG27P` の中で `ipackMG2_tick_pt7` の
+`hsh : ShiftLocalG y`（`CloseoutPackRun46:160`）として `IPackMG.shift`
+（`Run30:83`）を**埋める**側。
+
+trail 橋が外れた今、この場は**誰も読まない**。よって
+
+```
+shift : x.vm.chain = ChainVM.idle → ShiftLocalG centre place entry q first w x
+```
+
+に弱めれば `shiftLocalG_of_chainIdle` で無料になり、`hws` は完全に消える。
+
+**この編集は実際に試し、ロールバックした。** 理由: `IPackMG` は
+`final17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27` の**一本道**を
+支えており（`CloseoutPackRun33/35/36/42/43/45/46/50/51` + `Preload36/40` +
+`Realize1` + `StageFinal` + `ExtraFinal`）、場を弱めると旧リンクが壊れる。
+実測: Run30 単体は通ったが全体 build で `final18` が `sorryAx` になった。
+**ロールバック後、既存ファイルの差分ゼロ・全体 build EXIT=0 を確認済み。**
+
+非破壊の経路は Run30 §1 と Run36 §2 の **`S` 複製**（弱めた場を持つ
+`IPackMGS` / `IPackMG2S`）— `CloseoutStageCheck` と同じ機械変換。**次 wave の主題。**
+
+### 新規（`CloseoutShiftS` / `CloseoutShiftFinal`、全て標準公理のみ）
+
+`shiftLocalS_of_chainPosInv`, `chainPosInv_steps`, `shiftLocalS_of_run`,
+`saneVer_of_shiftLocalS`, `shiftReaders_of_run`, `saneTickS`, `verSane_ptS`,
+`shiftOrd_ptS`, `radPack_ptS`, `trailF_ptS`, `needIMG2'_le_S`,
+`boot_chain_idle`, `pal_in_peg_final5MG2T`。
+
 ## 2026-09-19 wave 8 続き — `trailF_ptS` まで到達、`hws` 除去の最後の一手の設計
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
