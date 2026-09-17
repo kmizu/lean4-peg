@@ -22,6 +22,278 @@
 
 ---
 
+## 2026-09-19 wave 8 完 — trail 橋が `WatchShiftG` から外れた（`pal_in_peg_final5MG2T`）
+
+**全体 build 成功（EXIT=0、エラー 0）・標準公理のみ・無条件 PAL は未完。**
+
+`hws`（偽）の **2 役割のうち 1 つを完全に除去**した。
+
+### 到達点: `pal_in_peg_final5MG2T`（`CloseoutShiftFinal`）
+
+`WatchShiftG` を**一切取らない**。trail 橋の全体が `ChainPosInv` の上で動く:
+
+```
+ChainPosInv
+  → shiftLocalS_of_run        （guarded な ShiftLocalS、run の各点）
+  → radPack_ptS               （halfBound_of_shiftLocalS / saneVer_of_shiftLocalS 経由）
+  → trailF_ptS
+  → needIMG2'_le_S
+  → pal_in_peg_final5MG2T
+```
+
+boot の `ChainPosInv` は無料（`boot w` の chain は idle、`chainPosInv_of_idle`）。
+`hws` の代わりに入るのは `CloseoutPackRun34` の 4 **guarded** 分岐仮説
+（`H_fourOther`, `H_bgP`, `H_matchP`, `H_shiftDoneP`）で、いずれも
+`shiftGuardVM` 付き・unmatched なターゲットに限定されており、Run32 の反例
+（誕生直後 `distance = reset`）には当たらない。
+
+### 残る `hws` の役割と、試して退けた手
+
+残るのは**逆方向** — `packRunR_MG27P` の中で `ipackMG2_tick_pt7` の
+`hsh : ShiftLocalG y`（`CloseoutPackRun46:160`）として `IPackMG.shift`
+（`Run30:83`）を**埋める**側。
+
+trail 橋が外れた今、この場は**誰も読まない**。よって
+
+```
+shift : x.vm.chain = ChainVM.idle → ShiftLocalG centre place entry q first w x
+```
+
+に弱めれば `shiftLocalG_of_chainIdle` で無料になり、`hws` は完全に消える。
+
+**この編集は実際に試し、ロールバックした。** 理由: `IPackMG` は
+`final17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27` の**一本道**を
+支えており（`CloseoutPackRun33/35/36/42/43/45/46/50/51` + `Preload36/40` +
+`Realize1` + `StageFinal` + `ExtraFinal`）、場を弱めると旧リンクが壊れる。
+実測: Run30 単体は通ったが全体 build で `final18` が `sorryAx` になった。
+**ロールバック後、既存ファイルの差分ゼロ・全体 build EXIT=0 を確認済み。**
+
+非破壊の経路は Run30 §1 と Run36 §2 の **`S` 複製**（弱めた場を持つ
+`IPackMGS` / `IPackMG2S`）— `CloseoutStageCheck` と同じ機械変換。**次 wave の主題。**
+
+### 新規（`CloseoutShiftS` / `CloseoutShiftFinal`、全て標準公理のみ）
+
+`shiftLocalS_of_chainPosInv`, `chainPosInv_steps`, `shiftLocalS_of_run`,
+`saneVer_of_shiftLocalS`, `shiftReaders_of_run`, `saneTickS`, `verSane_ptS`,
+`shiftOrd_ptS`, `radPack_ptS`, `trailF_ptS`, `needIMG2'_le_S`,
+`boot_chain_idle`, `pal_in_peg_final5MG2T`。
+
+## 2026-09-19 wave 8 続き — `trailF_ptS` まで到達、`hws` 除去の最後の一手の設計
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`radPack_ptS` に続いて **`trailF_ptS`**（`CloseoutShiftS`）も標準公理で通った。
+`trailF_ptMG`（`CloseoutPackRun30:626`）が `WatchShiftG` に触れるのは
+`radPack_ptMG` 経由**のみ**で、他の材料（`LeftLive`/`SanePack`/`ScanT`/
+`ChainBudget`/`VerF`）は無改造で通る。
+
+### `hws` が残る理由（正確に）
+
+`pal_in_peg_final27` の `hws` は **2 つの役割**を持つ:
+
+1. **pack の場を埋める**: `packRunR_MG27P` → `ipackMG2_tick_pt7` の
+   `hsh : ShiftLocalG y`（`CloseoutPackRun46:160`）。`IPackMG.shift` 場
+   （`Run30:83`）の中身。
+2. **pack の場を読む**: `trailF_ptMG` → `radPack_ptMG` → `halfBound_of_ipackMG` /
+   `shiftVerSane_ptMG`。
+
+**(2) は解決済み**（`radPack_ptS` / `trailF_ptS`）。残るは (1)。
+
+### 試して退けた手: `ShiftLocalG` の定義に guard を足す
+
+`CloseoutPackRun26` の `ShiftLocalG` に `¬matched ∧ shiftGuardVM` を足すと、
+逆変換 `shiftLocal_of_shiftLocalG`（:231）が通らなくなる。これは
+`h_shiftLocalC_of_G`（:322）→ `H_shiftLocalC` → `ipack_of_invLPC'`
+（`CloseoutOracleI2:140`）という **pack の根本**に効いており、`ShiftLocal`
+（guard なし）を要求する。波及が大きすぎるので**編集をロールバックした**
+（既存ファイルは無傷、差分ゼロを確認）。
+
+### 残る一手（次 wave の主題）
+
+`IPackMG` の `shift` 場は **`trailF_ptMG` でしか読まれない**。
+`pal_in_peg_final5MG2S` の中の `needIMG2'_le`（`Run36:474`、`h_trailI_MG2` 経由で
+`trailF_ptMG` を使う）を `trailF_ptS` に差し替えれば、**その場は誰からも
+読まれなくなる**。そうなれば `IPackMG` から `shift` 場を落とせ、(1) も消える。
+
+必要な作業:
+1. `needIMG2'_le` の S 版（`trailF_ptS` を使う）。入力に `ChainPosInv` 入口・
+   `hreach`・`LPackM`・`LeftLive` が要る — いずれも `PreTraceIMG2` の
+   `packs`（`IPackMG2`）から出るはず。
+2. `pal_in_peg_final5MG2S` をその S 版に差し替え。
+3. `IPackMG` から `shift` 場を落とす（`Run30/36/43/45/46` の再ビルド）。
+
+これで `hws` は `H_fourOther` / `H_bgP` / `H_matchP` / `H_shiftDoneP` と
+入口 `ChainPosInv` に置き換わる。4 分岐仮説はすべて `shiftGuardVM` 付きの
+文脈なので、Run32 の反例（誕生直後 `distance = reset`）には当たらない。
+
+## 2026-09-19 wave 8 — `hws` を通さない `RadPack` 経路（`CloseoutShiftS`）
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+前項で `hws`（`∀ y, WatchShiftG … y`）が偽だと記録した。本項はその**除去経路を
+実際に配線した**もの。`CloseoutPackRun34` が guarded 版（`WatchShiftS` /
+`ShiftLocalS` / `ChainPosInv` / `watchShiftS_of_chainPosInv` / `chainPosInv_tick`）を
+用意していたが run に繋がれていなかった。`CloseoutShiftS` がその配線。
+
+### なぜ小さく済んだか
+
+`IPackMG.shift`（= `ShiftLocalG`）の**射影は 4 箇所しかない**
+（`CloseoutPackRun30:535, 538, 540, 562`）。その 2 読者が全て:
+
+| 読者 | guarded 版 |
+|---|---|
+| `halfBound_of_ipackMG`（Run30:523） | `halfBound_of_shiftLocalS`（Run34:165、**既存**） |
+| `shiftVerSane_ptMG`（Run30:558） | `saneVer_of_shiftLocalS`（本 wave） |
+
+さらに trace 側の 2 つも guard を足すだけで通った。いずれも entry 仮説を
+`scan_shift` 分岐の 1 箇所でしか呼ばず、そこは `hmt`/`hg` を持つ:
+
+| trace 読者 | guarded 版 |
+|---|---|
+| `shiftOrd_ptG`（Run30:567）＋`shiftOrd_tickG` | `shiftOrd_ptS`（本 wave）＋`shiftOrd_tickS`（Run34:197、**既存**） |
+| `verSane_ptG`（Run30:591）＋`saneTickG`（Run26:444） | `verSane_ptS`＋`saneTickS`（本 wave） |
+
+### 成果（`CloseoutShiftS`、全て標準公理のみ）
+
+| 定理 | 内容 |
+|---|---|
+| `shiftLocalS_of_chainPosInv` | idle 分岐は無料、watch 分岐は guarded な `WatchShiftS` 経由 |
+| `chainPosInv_steps` | `chainPosInv_tick` の run 帰納 |
+| `shiftLocalS_of_run` | run の各状態で `ShiftLocalS` |
+| `saneVer_of_shiftLocalS` | Run30:558 読者の guarded 版 |
+| `shiftReaders_of_run` | 両読者を `ChainPosInv` から直接 |
+| `saneTickS` / `verSane_ptS` | trace 側 `SaneVer` |
+| `shiftOrd_ptS` | trace 側 `ShiftOrd` |
+| **`radPack_ptS`** | **`hws` を一切通さない `RadPack`** |
+
+### 残差
+
+`radPack_ptS` の入力は `H_fourOther`, `H_bgP`, `H_matchP`, `H_shiftDoneP`
+（`CloseoutPackRun34` の 4 分岐仮説）と入口の `ChainPosInv`、それに
+`LPackM` / `LeftLive` / `PreTrace` / `Steps`（いずれも pack から）。
+4 分岐仮説はすべて `shiftGuardVM` 付きの文脈なので、Run32 の反例
+（誕生直後 `distance = reset`）には当たらない。
+
+**次**: `radPack_ptS` を `trailF_ptMG` → `H_trailF` → 最上位へ繋ぎ、
+`pal_in_peg_final27` の `hws` を 4 分岐仮説に差し替える。
+
+## 2026-09-19 ⚠️ `hws`（`WatchShiftG` の全称形）は **偽** — `final27` の扱いに注意
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`pal_in_peg_final27` の 5 前提のうち `hws : ∀ w y, WatchShiftG centreC placeC entry q first w y`
+は、リポジトリ内の既存解析によれば **成立しない**。したがって `final27` は
+「偽かもしれない前提からの含意」であり、**この前提が残る限り定理は無内容になりうる**。
+wave 6/7 の「8 → 7 → 5」という数え方は、この事実を併記せずに述べてはならない。
+
+### 根拠（`CloseoutPackRun32` 冒頭の caveat、`CloseoutPackRun34` §2）
+
+`WatchShiftG` は **unguarded** な比較ターゲット `s''` について主張する。
+`ChainStep.backDone` で生まれたばかりの watch は `watchControl` の
+`distance = reset`（値 `0`）を持つので、誕生直後の scan 比較では
+`4 * periodLength wch ≤ value wch.machine.control.distance` が
+`periodLength ≥ 1` のとき破れる。よって
+「`∀ y, WatchShiftG … y` はそれらの状態で真であるいかなる不変量からも産出できない」
+（Run32:33–40）。
+
+`ShiftLocalG`（`CloseoutPackRun26:198`）も同じ弱点を持つ。全場の前提は
+`beginShiftVM' s'' t''` だが、`beginShiftVM h w s t := s.chain = .watch w ∧ t = …`
+（`GalilScaffoldTopShiftCycle:23`）であって **`shiftGuardVM` を含まない**。
+Run34 §2 は「`shiftLocalG_of_watchShiftS` は as stated では **not provable**」と明記する。
+
+**注**: Run32/Run34 の記述は「design, not proved here」であり、Lean による反証は
+まだ書かれていない。反例の形は具体的に特定されているが、`compareFound` の
+witness 構成が未着手。**反証を Lean で確定させることが先決**（`CloseoutCandOrient` で
+`H_candOrient` を反証したのと同じ形）。
+
+### 修理経路（`CloseoutPackRun34` に既存、未配線）
+
+| 提供物 | 内容 |
+|---|---|
+| `WatchShiftS`（:67） | `WatchShiftG` の payload を `¬ matched s'' ∧ shiftGuardVM s''` の下に制限 |
+| `ShiftLocalS`（:89） | 同じく guard 付きの `ShiftLocalG` |
+| `shiftLocalS_of_watchShiftS`（:128）, `shiftLocalS_of_chainIdle`（:122） | 産出 |
+| `halfBound_of_shiftLocalS`（:165）, `shiftOrd_tickS`（:197） | **消費側の再配線済み** |
+| `ChainPosInv`（:322）, `watchShiftS_of_chainPosInv`（:353） | `Coupled.sum`（`SumRel` = `distance + lag = radius`）＋位置 payload から guarded 版を出す |
+| `chainPosInv_tick`（:411） | 23 tick 形状のうち **20 を閉じる** |
+
+残差は 4 つの分岐仮説: `H_fourOther`（post-shift `Other` 半分）、
+`H_bgP`（`scan_wait`/`scan_count`）、`H_matchP`（`scan_match`）、`H_shiftDoneP`（`shift_done`）。
+
+### 次 wave（wave 8）の主題
+
+`IPackMG` の `ShiftLocalG` 場を `ShiftLocalS` へ落とす再配線。
+`ShiftLocalG` の出現は 10 ファイル 17 箇所（`CloseoutPackRun26/30/34/36/43/45/46/51`,
+`CloseoutShiftLocalFree`, `CloseoutExtraFree`）。
+`shiftLocalS_of_shiftLocalG` は一方向なので、pack の場を弱める向きの変更になる。
+wave 7 で作った `extra7_of_front_steps_pack` は `ShiftLocalS.move`
+（`ScanNR x` の下で `canRight x.vm.right`）をそのまま埋める。
+
+## 2026-09-19 wave 7 後の偵察 — 残り 5 前提の構造
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+`pal_in_peg_final27`（5 前提）は main にマージ済み（PR #66）。
+
+wave 7 完了後、残り 5 つ（`hSP`, `hws`, `hme`, `hor`, `hC`）の到達可能性を調べた。
+**新しい定理は作っていない。以下は次 wave のための設計情報。**
+
+### `hme`（`H_marksEntry'`）— 経路は存在するが `Fair` が必要
+
+`CloseoutPackRun17` に **`H_marksEntry'` を一切使わない** run 版が既にある:
+
+- `marksEntry'_of_layout`（`Run16:176`）は `ChooseLayout → MarksEntry'` を**副条件なし**で出す。
+- `chooseLayout_of_wpack`（`Run17:118`）は `WPack` から `ChooseLayout` を出す。
+- `marks_steps`（`Run17:406`）は `CPack`/`WPack`/`MarksInv'` を run に沿って同時に運ぶ。
+- `marksInv'_of_run'`（`Run17:430`）が結論。
+
+残る入力は 3 つ:
+1. `h4 : first ≠ 4` — `first` の選択に関する側条件（`Fin 9` の 9 通り中 8 通りで成立）。
+2. `hfl : ∀ m z, Steps … → z.ctl.mode = scan → 0 ≤ value z.vm.length`。
+   **`CPack.canon : Canonical s.length` では出ない**（`Canonical` と `0 ≤ value` は
+   リポジトリ内でも常に別々の条件として並記される、例 `CloseoutPackRun49:85`）。
+3. `hwin : ∀ m z, … → z.ctl.mode = copy → WindowInOrigin z.vm`。
+   `WindowInOrigin s := (stream s.fpp.walker).length ≤ position s.right`（FPP walker、
+   `WalkerInOrigin` の**主 walker とは別**）。producer は `CloseoutPackRun25:124` だが
+   **`FairSteps` を要求する**（`windowInOrigin_of_fair` が `Fair` の `fallbackPlace` を使う）。
+
+**したがって `hme` の除去は `PackRunRMG2P` の run を `Steps` から `FairSteps` へ
+上げる作業とセットになる。** `Fair` 自体は `GalilTickFair` で完成しており
+（`Tick ∧ Fair` は全状態で一意）、構成側の witness が `Fair` を満たすことの確認が
+別途必要。これが次 wave の主題。
+
+### `hws`（`WatchShiftG`）— 5 連言のうち 1 つは wave 7 で無料に
+
+`WatchShiftG`（`CloseoutPackRun26`）は `ScanNR x → x.vm.chain ≠ idle → compare x.vm s'' →
+s''.chain = .watch wch →` の下で 5 つを主張する:
+
+1. `canRight x.vm.right` — **wave 7 の `extra7_of_front_steps_pack` で出る**（`ScanNR` は
+   `Extra7` の発火条件と同一）。
+2. `4 * periodLength wch ≤ value wch.machine.control.distance`
+3. `∀ rad, ScanInvariant … → value wch.machine.control.distance ≤ 2 * rad`
+   — 素材は `Coupled'.sum : SumRel s.chain (value s.radius)`、
+   `SumRel (.watch w) R = (broken = false → distance + lag = R)`（`GalilChainCoupling`）。
+   `lag` の非負性と radius の一致（`RadiusRep`）が要る。
+4. `canRight wch.machine.verifier`
+5. `Sane wch.machine.verifier`
+
+`Coupled'.block : BlockInv s.chain` は `.watch w` で `WatchBlock w = OnBlock w.machine.control.period`
+のみ。**4 と 5（chain の verifier ヘッドの健全性）は既存の不変量に無い。** 新規に要る。
+
+### `hSP`（`ShiftPal`）— 空虚ではない
+
+`ShiftPalAt w s s'`（`CloseoutPackRun31`）は `s'.chain = .watch wch → shiftGuardVM s' →
+∀ r₀, ScanInvariant … → 1 ≤ periodLength wch ∧ periodLength wch ≤ r₀ + 1 ∧
+PalAt (encoded w) (center + periodLength wch) (r₀ + 1 - periodLength wch)`。
+`ShiftLocalG` を空虚にした「`InvLPC` の chain は idle」の手は使えない
+（run 途中では chain は動いている）。実質的な周期・回文の主張で、
+Galil の move 補題（`GalilMoveLemma`）圏の内容。
+
+### `hor` / `hC`
+
+`hor`（`CycleOracleMC3`）: producer はゼロのまま（6 consume, 0 produce）。最大の残り。
+`hC`（`H_realizeLIMG2'`）: `h_realizeLIMG'_of_G2`（`Run36:499`）で `H_realizeLIMG'` に
+還元される。局所機械の実現。
+
 ## 2026-09-19 wave 7 — `hee`/`het` を **無条件化**: 最上位は **5 前提**
 
 **`pal_in_peg_final27`（`CloseoutExtraFinal`）— 標準公理のみ・5 前提。**
