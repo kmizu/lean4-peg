@@ -146,8 +146,15 @@ hypotheses, from one bundle plus the run's position budget.
 def ScanBudget (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
     (entry q : ℕ) (first : Fin 9) (w : List (Fin 2)) : Prop :=
   ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPosInv2 w c s →
-    0 < s.right.head.left.length ∧
-      ∃ m : ℕ, 1 ≤ m ∧ m < w.length ∧ position s.right ≤ 2 * m - 1
+    ∃ m : ℕ, 1 ≤ m ∧ m < w.length ∧ position s.right ≤ 2 * m - 1
+
+/-- The left-length half of the old `ScanBudget` is a consequence of
+`ChainPack.repR`: `present_iff_left` turns `focus ≠ none` into
+`0 < left.length`. -/
+theorem leftLen_of_chainPack {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hp : ChainPack w c s) (hm : c.mode = Mode.scan) : 0 < s.right.head.left.length := by
+  obtain ⟨hrr, hfr⟩ := hp.repR hm
+  exact (PalPeg.CloseoutLPack3.present_iff_left hrr).1 hfr
 
 /-- `MatchRes2` needs the payload only through `canR`, which `ChainPack.repR`
 and the budget already give; so the idle case is not special. -/
@@ -155,8 +162,8 @@ theorem matchRes2_of_budget {w : List (Fin 2)} {c : Control} {s : GalilVM}
     (hp : ChainPack w c s) (hm : c.mode = Mode.scan)
     (hb : ScanBudget centre place entry q first w) :
     MatchRes2 w c s := by
-  obtain ⟨hlv, m, hm1, hmlt, hpos⟩ := hb c s hm hp.inv
-  exact matchRes2_of_chainPack hp hm hlv hm1 hmlt hpos
+  obtain ⟨m, hm1, hmlt, hpos⟩ := hb c s hm hp.inv
+  exact matchRes2_of_chainPack hp hm (leftLen_of_chainPack hp hm) hm1 hmlt hpos
 
 /-- **`H_matchRes2` from `ChainPack`.** -/
 theorem h_matchRes2_of_chainPack {w : List (Fin 2)}
@@ -193,7 +200,7 @@ theorem bgStartP2_of_chainPack {w : List (Fin 2)}
     BgStartP2 centre place entry q first w :=
   PalPeg.CloseoutPackRun47.bgStartP2_of_centre centre place entry q first
     (fun c s hm hx => by
-      obtain ⟨hlv, m, hm1, hmlt, hpos⟩ := hb c s hm hx
+      obtain ⟨m, hm1, hmlt, hpos⟩ := hb c s hm hx
       obtain ⟨hrr, hfr⟩ := (hp c s hx).repR hm
       exact PalPeg.CloseoutCanRightBound.canRight_of_position_bound hrr hfr hm1 (by omega) hpos)
     (fun c s hm hx => (hp c s hx).scanRad hm)
