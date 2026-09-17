@@ -22,6 +22,66 @@
 
 ---
 
+## 2026-09-19 `SweptOff` — sweep witness を `Offset` 形にして shift 相を生き延びさせた
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 前エントリの結論を訂正（良い方向に）
+
+前エントリで「原点はラウンド単位で運ばれる。per-tick の束に per-round の step を
+接ぐ配線が必要で、粒度が違う。これが `hSP` の残り本体」と書いた。
+**ラウンド単位の再構築は不要だった。**
+
+`ReadsInv` が壊れるのは witness を**等式**で述べているせい。ところが
+「period tape と `broken` は同じ、カウンタは定数差」という関係は開発側に既にあり
+（`ReadOrigin.Offset`）、その代数も揃っている：
+
+| 補題 | 場所 | 内容 |
+|---|---|---|
+| `Offset.of_eq` | `GalilScaffoldChainReadOrigin:28` | 等式は `Offset 0` |
+| `Offset.consume` | `:32` | 両側 1 consume で `k` 不変 |
+| `Offset.run` | `:46` | 継続全体で `k` 不変 |
+| `Offset.trans` | `:53` | offset は加法的 |
+| `Offset.shift` | `:60` | `n` 歩の `ChainShiftRun` は `k` を `n` ずらす |
+
+### 新規（`CloseoutSweptOff`）
+
+```
+def SweptOff (raw) (C R h n : ℕ) (w : State) : Prop :=
+  ∃ (o : ReadOrigin raw) (extra : List (Fin 3)) (k : ℤ),
+    o.center = C ∧ o.radius = R ∧ o.interior.length + 1 = h ∧ extra.length = n ∧
+    Offset k w.machine.control
+      (run (ready o.token o.interior o.boundary) (o.pre ++ extra))
+```
+
+| 名前 | 内容 |
+|---|---|
+| `sweptOff_of_readsInv` | `ReadsInv` から（`Offset.of_eq` + `Offset.shift o.shiftRun o.offset` + `Offset.run` + `Offset.trans`） |
+| `sweptOff_consume` | consume で `n ↦ n+1`（`Offset.consume`） |
+| `sweptOff_shift` | **shift 相を生き延びる**（`Offset.shift`、`n` は不変） |
+| `symbol_of_sweptOff` | 予測は参照 run から読める（`Offset.prediction` は `period` の等式そのもの） |
+| `bounce_of_sweptOff` | 予測の `bounce` index、**長さの上界なし**（`successful_prediction`） |
+
+すべて標準 3 公理のみ。
+
+### これが `H_readsShift` を消す
+
+witness をラウンド境界で作り直す必要がなくなり、**運ばれる**。
+`ReadsRound` を `SweptOff` 基底に置き換えれば `H_readsShift` は消える。
+`H_advance` / `H_advanceT` も `bounce_of_sweptOff` + `origin_prediction_index`
+（非巻き戻し）／mod 形（巻き戻し）から出る — どちらも既に証明済みの部品。
+
+### `hSP` の残差（更新）
+
+| 義務 | 状態 |
+|---|---|
+| `H_freshShift` / `H_fresh` | `OPEN`。**同じ義務**。内容は `GalilScaffoldTopFirstRound.first_round`（前提約 25 個）。最初のラウンドの原点構成 |
+| `H_readsShift` | `REFORMULATED`（`SweptOff` 基底へ）。配線待ち |
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `H_readsShift` の構造的原因を特定 — 原点は tick でなく**ラウンド**単位で運ばれる
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
