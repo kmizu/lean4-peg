@@ -1,5 +1,6 @@
 import PalPeg.CloseoutPackRun34
 import PalPeg.CloseoutFrontExtra
+import PalPeg.CloseoutPackRun30
 
 /-!
 # `ShiftLocalS` along a run, from `ChainPosInv`
@@ -35,6 +36,7 @@ open PalPeg.CloseoutLPack5 PalPeg.CloseoutPackRun6 PalPeg.CloseoutPackRun10
 open PalPeg.CloseoutRadPack2 PalPeg.CloseoutRadPack4
 open PalPeg.CloseoutPackRun26 PalPeg.CloseoutPackRun30 PalPeg.CloseoutPackRun32
 open PalPeg.CloseoutPackRun26 PalPeg.CloseoutPackRun34 PalPeg.CloseoutFrontExtra
+open PalPeg.CloseoutLPack PalPeg.CloseoutPackRun10 PalPeg.CloseoutPackRun30
 
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
@@ -77,6 +79,49 @@ theorem shiftLocalS_of_run {w : List (Fin 2)}
 #print axioms shiftLocalS_of_chainPosInv
 #print axioms chainPosInv_steps
 #print axioms shiftLocalS_of_run
+
+/-! ## The two `.shift` readers, re-cut to the guard
+
+`IPackMG.shift`'s four fields are projected at exactly four places
+(`CloseoutPackRun30:535, 538, 540, 562`), inside two readers:
+`halfBound_of_ipackMG` (:523) and `shiftVerSane_ptMG` (:558).
+`CloseoutPackRun34.halfBound_of_shiftLocalS` (:165) already re-cuts the first.
+This is the second. -/
+
+/-- **The Run30:558 reader re-cut to the guard.** -/
+theorem saneVer_of_shiftLocalS {w : List (Fin 2)} {x : State GalilVM}
+    (hsh : ShiftLocalS centre place entry q first w x) (hs : ScanNR x) {s'' t'' : GalilVM}
+    (hcmp : (galilFrameS (PofC centre place entry w) q first).compare x.vm s'')
+    (hmt : ¬ (galilFrameS (PofC centre place entry w) q first).matched s'')
+    (hg : shiftGuardVM s'') (hb : beginShiftVM' s'' t'') :
+    SaneVer t''.chain :=
+  saneVer_beginShift hb (hsh.ver hs s'' t'' hcmp hmt hg hb)
+
+/-- **Both readers along a run, from `ChainPosInv` alone.**  This is the pair
+`shiftEntry_ptMG` / `shiftVerSane_ptMG` needs, with the false
+`∀ y, WatchShiftG … y` replaced by the four guarded branch hypotheses. -/
+theorem shiftReaders_of_run {w : List (Fin 2)}
+    (hfour : H_fourOther centre place entry q first w)
+    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
+    (hsd : H_shiftDoneP centre place entry q first w)
+    {n : ℕ} {x y : State GalilVM} (hx : ChainPosInv w x.ctl x.vm)
+    (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y)
+    (hp : PalPeg.CloseoutPackRun10.LPackM w y.ctl y.vm) (hs : ScanNR y)
+    {s'' t'' : GalilVM}
+    (hcmp : (galilFrameS (PofC centre place entry w) q first).compare y.vm s'')
+    (hmt : ¬ (galilFrameS (PofC centre place entry w) q first).matched s'')
+    (hg : shiftGuardVM s'') (hb : beginShiftVM' s'' t'') :
+    (∃ rad : ℕ,
+      ScanInvariant w (position y.vm.center) rad y.vm.left y.vm.right ∧
+      GalilScaffoldChainVerifier.canRight y.vm.right ∧
+      ∀ wch : GalilScaffoldChainWatch.State, s''.chain = .watch wch →
+        2 * periodLength wch ≤ rad) ∧ SaneVer t''.chain := by
+  have hsh := shiftLocalS_of_run centre place entry q first hfour hbg hmatch hsd hx h
+  exact ⟨halfBound_of_shiftLocalS centre place entry q first hp hsh hs hcmp hmt hg hb,
+    saneVer_of_shiftLocalS centre place entry q first hsh hs hcmp hmt hg hb⟩
+
+#print axioms saneVer_of_shiftLocalS
+#print axioms shiftReaders_of_run
 
 end
 
