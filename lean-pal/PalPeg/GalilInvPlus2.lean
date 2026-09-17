@@ -1,3 +1,4 @@
+import PalPeg.GalilFoundLandingL
 import PalPeg.GalilInvPlus
 import PalPeg.GalilChainCoupling
 import PalPeg.GalilNoShiftStage
@@ -501,5 +502,206 @@ theorem cycleOracleMC'_of_MC2 {P : Shared} {q : ℕ} {first : Fin 9} {raw : List
 #print axioms cycleOutMC_of_invLP2
 #print axioms cycleOracleMC_of_MC2
 #print axioms cycleOracleMC'_of_MC2
+
+/-! ## (d) The no-shift route with the landing invariant exported
+
+`CloseoutWatchPhase2.landingRestart_of_inv` turns a landing's full `Inv` pack
+into `LandingRestart`, but the no-shift route chain
+(`GalilFoundLandingL.foundRouteMC_noshift` →
+`GalilNoShiftStage.foundRouteMC_noshift'` → `foundRouteMC_noshift''`) throws the
+pack away at its first link.  The two theorems below re-run that chain on
+`GalilFoundLandingL.foundRouteMC_noshift_Inv`, which keeps it.  Only the
+conclusion changes; the hypotheses and the proof scripts are those of the
+originals. -/
+
+section NoShiftInv
+
+open PalPeg.GalilCostedFound PalPeg.GalilFoundLandingL PalPeg.GalilNoShiftStage
+
+theorem foundRouteMC_noshift'_Inv (centre : GalilVM → Fin 3)
+    (place : GalilVM → GalilScaffoldPlace.Place) (entry qq : ℕ) (first : Fin 9)
+    (raw : List (Fin 2))
+    (hex : ∀ s, (PofC centre place entry raw).replayExhausted s = zero s.replay)
+    {c0 : Control} {r : GalilVM} (hI : InvLP raw c0 r)
+    (hlive : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry raw) qq first) 2048 m ⟨c0, r⟩ z →
+      CentreLive z.ctl z.vm)
+    (hcenS : ∀ k : ℕ, PalPeg.GalilReplaySegment.InvScan 2048 raw c0 r k →
+      GalilScaffoldInputTrace.Represents r.center.head raw ∧ r.center.head.focus ≠ none)
+    {es0 : List Bool} {cF : Control} {sF : GalilVM}
+    (hseg0 : WatchSegE (PofC centre place entry raw) qq first 2048 es0 c0 r cF sF)
+    (hmF : cF.mode = .scan) (hrF : cF.replaying = false)
+    (hcF : cF.clock = 1) (havF : canRight sF.right) (hidle : sF.chain = .idle)
+    (vq : SearchVM) (hq : searchEffect (PofC centre place entry raw) true sF vq)
+    (hfound : vq.search.mode = .found)
+    (hmt : read (left sF.left) = read (right sF.right))
+    (ch : ChainVM)
+    (hch : ChainMatched (chainStart (vq.dp.config.tapes 11) ((PofC centre place entry raw).centre sF)
+      ((PofC centre place entry raw).place sF) sF.center sF.radius) ch)
+    (hchne : ch ≠ .idle) (oF : Bool)
+    (hoF : refresh (galilFrame (PofC centre place entry raw) qq first)
+      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF)
+    {es : List Bool} {c2 : Control} {s2 : GalilVM}
+    (hprepSeg : WatchSegE (PofC centre place entry raw) qq first 2048 es
+      {cF with clock := 2048, output := oF, replaying := false}
+      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+    (cen : Fin 3) (ys : List (Fin 3)) (b : Fin 3)
+    (hwatch2 : s2.chain = .watch (freshWatch sF.center cen ys b sF.radius))
+    (hes0 : es.count true = 0)
+    (hpal1 : PalAt (encoded raw) (position r.center - (ys.length + 1)) (ys.length + 1))
+    (hpal2 : PalAt (encoded raw) (position r.center - 2 * (ys.length + 1)) (2 * (ys.length + 1)))
+    {c3 : Control} {s3 : GalilVM}
+    (hseg : WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3)
+    (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
+    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
+    (vs3 : ScanVM) (vq3 : SearchVM)
+    (hcmp3 : (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3))
+    (hmt3 : (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3))
+    (hq3 : searchEffect (PofC centre place entry raw) true s3 vq3)
+    (o3 : Bool) (ho3 : refresh (galilFrame (PofC centre place entry raw) qq first)
+      (afterCompare s3 vs3 vq3) c3.output o3)
+    (w3' : GalilScaffoldChainWatch.State) (hbroken : (afterCompare s3 vs3 vq3).chain = .broken w3')
+    (hmargin : negative w3'.margin = false) :
+    ∃ (cT : Control) (sT : GalilVM) (k : ℕ) (L : List Piece),
+      StepsAll (galilFrameS (PofC centre place entry raw) qq first) 2048 (SoundScanNR raw) k
+        ⟨c0, r⟩ ⟨cT, sT⟩ ∧
+      CostedRun r sT k L ∧ InvLP raw cT sT ∧
+      position sT.center = position r.center ∧ position r.right < position sT.right ∧
+      sT.right = (afterCompare s3 vs3 vq3).right ∧ Inv raw cT sT := by
+  set P := PofC centre place entry raw with hPdef
+  -- (3) the centre representation
+  have hcenR : GalilScaffoldInputTrace.Represents r.center.head raw ∧ r.center.head.focus ≠ none :=
+    hI.1.1.elim centreRep_of_inv (fun ⟨k, h⟩ => hcenS k h)
+  -- the entering counters
+  obtain ⟨R, hi0, hRR0, -, -⟩ := hI.2
+  obtain ⟨hsc0, _, hrad0, hrc0, _⟩ := watchSegE_heads P qq first 2048 hseg0
+  have hcen : sF.center = r.center := watchSegE_center P qq first 2048 hseg0
+  have hrcF : Canonical sF.radius := hrc0 hRR0.1
+  have hradF : value sF.radius = (R : ℤ) + es0.count true := by rw [hrad0, hRR0.2]
+  -- the scan invariant at the breaking comparison
+  have hinvF : ScanInvariant raw (position sF.center) (R + es0.count true) sF.left sF.right := by
+    rw [hcen]; exact scan_events_invariant (hsc0 raw (position r.center) R) hi0
+  have hinv1 := matched_invariant' raw vq (s := sF) (vs := ⟨left sF.left, right sF.right, ch⟩)
+    rfl rfl hmt havF hinvF
+  obtain ⟨hsc1, _, hrad1, _, _⟩ := watchSegE_heads P qq first 2048 hprepSeg
+  have hcen2 : s2.center = sF.center := by
+    have h0 := watchSegE_center P qq first 2048 hprepSeg
+    rw [afterCompare_center] at h0; exact h0
+  have hinv2 := scan_events_invariant (hsc1 raw (position sF.center) _) hinv1
+  have hne2 : s2.chain ≠ .idle := by rw [hwatch2]; intro h0; cases h0
+  obtain ⟨es2, hticks, hsc2, hcen21, _, hrad2, _, _⟩ := watchSeg_events P qq first 2048 hseg hne2
+  have hi3 : ScanInvariant raw (position s3.center)
+      (R + es0.count true + 1 + es.count true + es2.count true) s3.left s3.right := by
+    rw [hcen21, hcen2]
+    exact scan_events_invariant (hsc2 raw (position sF.center) _) hinv2
+  have hinv3 := matched_invariant raw P qq first vq3 hcmp3 hmt3 hav3 hi3
+  -- the chain: a watch run out of `freshWatch`, then the break
+  rw [hwatch2, hs3] at hticks
+  have hrun3 := chainTicks_watch_run es2 hticks
+  have hmatch3 : read (left s3.left) = read (right s3.right) := by
+    obtain ⟨⟨hl0, hr0, _⟩, _⟩ := hcmp3
+    rw [scanLens.get_set] at hl0 hr0
+    have hp0 := matched_parts P qq first hmt3
+    rw [hl0, hr0] at hp0; exact hp0
+  obtain ⟨-, -, htick⟩ := compare_parts P qq first hcmp3 hmatch3
+  have hvs3 : vs3.chain = .broken w3' := by rw [← afterCompare_chain s3 vs3 vq3]; exact hbroken
+  rw [hs3, hvs3] at htick
+  obtain ⟨y, hy, hym⟩ := htick
+  cases hy with
+  | watchStep _ m hint =>
+  have hym' : ChainMatched (.watch m) (.broken w3') := by simpa using hym
+  cases hym' with
+  | breaks _ _ hbr =>
+  have hrunM := run_snoc hrun3 (.step hint (.idle m))
+  obtain ⟨-, -, -, -, -, hdR, -, -⟩ := fresh_break_ledger _ cen ys b _ hrcF hrunM hbr
+  have hc2 : (es2 ++ [false]).count true = es2.count true := by simp
+  rw [hc2] at hdR
+  -- the places
+  have hplaces := fresh_break_places raw sF.center cen ys b sF.radius hrcF
+    (by rw [hcen]; exact hcenR.1) (by rw [hcen]; exact hcenR.2)
+    (by rw [hcen]; exact hpal1) (by rw [hcen]; exact hpal2) hrunM hbr hmargin
+    (fun R' hR' => by
+      have hp := hinv3.palindrome
+      have e : R' = R + es0.count true + 1 + es.count true + es2.count true + 1 := by
+        have : (R' : ℤ) = (R : ℤ) + es0.count true + 1 + es2.count true + 1 := by
+          rw [hR', hdR, hradF]
+        rw [hes0]; omega
+      rw [e, ← hcen2, ← hcen21]; exact hp)
+  obtain ⟨hcanon, hlast, hlag, hst⟩ := fresh_break_stage _ cen ys b _ hrcF hrunM hbr hplaces
+  refine foundRouteMC_noshift_Inv centre place entry qq first raw hex hI hlive hcenR hseg0 hmF hrF hcF
+    havF hidle vq hq hfound hmt ch hch hchne oF hoF hprepSeg hseg hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3
+    hcmp3 hmt3 hq3 o3 ho3 w3' hbroken hmargin hlast hlag hcanon (fun R' hR' => hst R' ?_)
+  have hv := hR'.2
+  rw [afterCompare_radius, inc_value, hrad2, hrad1, afterCompare_radius, inc_value, hes0] at hv
+  rw [hdR]
+  push_cast at hv ⊢
+  linarith
+
+#print axioms freshWatch_eq
+#print axioms centreRep_of_inv
+
+/-- **`foundRouteMC_noshift''` with the landing invariant exported.**  Same
+hypotheses as `foundRouteMC_noshift''`; the conclusion adds `Inv raw cT sT`,
+taken from `foundRouteMC_noshift'_Inv`. -/
+theorem foundRouteMC_noshift''_Inv (centre : GalilVM → Fin 3)
+    (place : GalilVM → GalilScaffoldPlace.Place) (entry qq : ℕ) (first : Fin 9)
+    (raw : List (Fin 2))
+    (hex : ∀ s, (PofC centre place entry raw).replayExhausted s = zero s.replay)
+    {c0 : Control} {r : GalilVM} (hI : InvLPC raw c0 r)
+    (hlive : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry raw) qq first) 2048 m ⟨c0, r⟩ z →
+      CentreLive z.ctl z.vm)
+    {es0 : List Bool} {cF : Control} {sF : GalilVM}
+    (hseg0 : WatchSegE (PofC centre place entry raw) qq first 2048 es0 c0 r cF sF)
+    (hmF : cF.mode = .scan) (hrF : cF.replaying = false)
+    (hcF : cF.clock = 1) (havF : canRight sF.right) (hidle : sF.chain = .idle)
+    (vq : SearchVM) (hq : searchEffect (PofC centre place entry raw) true sF vq)
+    (hfound : vq.search.mode = .found)
+    (hmt : read (left sF.left) = read (right sF.right))
+    (ch : ChainVM)
+    (hch : ChainMatched (chainStart (vq.dp.config.tapes 11) ((PofC centre place entry raw).centre sF)
+      ((PofC centre place entry raw).place sF) sF.center sF.radius) ch)
+    (hchne : ch ≠ .idle) (oF : Bool)
+    (hoF : refresh (galilFrame (PofC centre place entry raw) qq first)
+      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF)
+    {es : List Bool} {c2 : Control} {s2 : GalilVM}
+    (hprepSeg : WatchSegE (PofC centre place entry raw) qq first 2048 es
+      {cF with clock := 2048, output := oF, replaying := false}
+      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+    (cen : Fin 3) (ys : List (Fin 3)) (b : Fin 3)
+    (hwatch2 : s2.chain = .watch (GalilNoShiftStage.freshWatch sF.center cen ys b sF.radius))
+    (hes0 : es.count true = 0)
+    (hpal1 : PalAt (encoded raw) (position r.center - (ys.length + 1)) (ys.length + 1))
+    (hpal2 : PalAt (encoded raw) (position r.center - 2 * (ys.length + 1)) (2 * (ys.length + 1)))
+    {c3 : Control} {s3 : GalilVM}
+    (hseg : WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3)
+    (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
+    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
+    (vs3 : ScanVM) (vq3 : SearchVM)
+    (hcmp3 : (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3))
+    (hmt3 : (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3))
+    (hq3 : searchEffect (PofC centre place entry raw) true s3 vq3)
+    (o3 : Bool) (ho3 : refresh (galilFrame (PofC centre place entry raw) qq first)
+      (afterCompare s3 vs3 vq3) c3.output o3)
+    (w3' : GalilScaffoldChainWatch.State) (hbroken : (afterCompare s3 vs3 vq3).chain = .broken w3')
+    (hmargin : negative w3'.margin = false) :
+    ∃ (cT : Control) (sT : GalilVM) (k : ℕ) (L : List Piece),
+      StepsAll (galilFrameS (PofC centre place entry raw) qq first) 2048 (SoundScanNR raw) k
+        ⟨c0, r⟩ ⟨cT, sT⟩ ∧
+      CostedRun r sT k L ∧ InvLP2 raw cT sT ∧
+      position sT.center = position r.center ∧ position r.right < position sT.right ∧
+      sT.right = (afterCompare s3 vs3 vq3).right ∧ Inv raw cT sT := by
+  obtain ⟨cT, sT, k, L, hrun, hcr, hIT, h1, h2, h3, hInv⟩ :=
+    foundRouteMC_noshift'_Inv centre place entry qq first raw hex hI.1.1 hlive
+      (fun _ _ => hI.2) hseg0 hmF hrF hcF havF hidle vq hq hfound hmt ch hch hchne oF hoF hprepSeg
+      cen ys b hwatch2 hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3
+      w3' hbroken hmargin
+  exact ⟨cT, sT, k, L, hrun, hcr,
+    invLP2_of_stepsAll centre place entry qq first hI.1.2 hrun hIT, h1, h2, h3, hInv⟩
+
+end NoShiftInv
+
+#print axioms foundRouteMC_noshift'_Inv
+#print axioms foundRouteMC_noshift''_Inv
 
 end PalPeg.GalilInvPlus2
