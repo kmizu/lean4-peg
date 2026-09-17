@@ -42,7 +42,8 @@ open PalPeg.GalilTrailSane PalPeg.GalilChainCoupling PalPeg.GalilBranchInvariant
 open PalPeg.CloseoutPackRun11 PalPeg.CloseoutPackRun9 PalPeg.CloseoutPackRun8
 open PalPeg.GalilTrailChain PalPeg.GalilFinalAssembly PalPeg.GalilThrottledRun
 open PalPeg.CloseoutRadPack PalPeg.CloseoutRadPack2 PalPeg.CloseoutRadPack3 PalPeg.CloseoutRadPack4
-open PalPeg.GalilTrailRad
+open PalPeg.GalilTrailRad PalPeg.GalilTrailProof PalPeg.GalilTrailAssembly
+open PalPeg.GalilTrailScan PalPeg.GalilTrailBudget PalPeg.GalilTrailFront
 
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
@@ -301,6 +302,32 @@ theorem radPack_ptS {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State G
   exact fun i hi => radPack_of_parts (hL i hi) (hS i hi) (hll i hi) (hV i hi)
 
 #print axioms radPack_ptS
+
+/-- **`TrailF` along the trace without `hws`.**  `CloseoutPackRun30.trailF_ptMG`
+(:625) reaches `WatchShiftG` only through `radPack_ptMG`; `radPack_ptS` replaces
+it, and every other ingredient (`LeftLive`, `SanePack`, `ScanT`, `ChainBudget`,
+`VerF`) is untouched. -/
+theorem trailF_ptS {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM}
+    {Tc : ℕ → ℕ} (hP : PreTrace centre place entry q first w st Tc)
+    (hfour : H_fourOther centre place entry q first w)
+    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
+    (hsd : H_shiftDoneP centre place entry q first w)
+    (hpos0 : ChainPosInv w (st 0).ctl (st 0).vm)
+    (hreach : ∀ i, i ≤ Tc w.length →
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 i (st 0) (st i))
+    (hLP : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
+    (hll : ∀ i, i ≤ Tc w.length → PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm)
+    {m : ℕ} (hm : m < w.length) :
+    ∀ i, i ≤ Tc (m+1) → TrailF w m (st i) := by
+  have hsane := sanePack_pt centre place entry q first hw hP hll
+  have hrad := radPack_ptS centre place entry q first hw hP hfour hbg hmatch hsd hpos0
+    hreach hLP hll
+  have hscan := scanT_pt centre place entry q first hw hP hrad hsane hm
+  have hB := chainBudget_pt centre place entry q first hw hP hrad hsane hm
+  have hV := verF_trace centre place entry q first hP hm hscan hB
+  exact fun i hi => trailF_of_scanT (hscan i hi) (hV i hi).ver (hV i hi).lagPos
+
+#print axioms trailF_ptS
 
 end
 
