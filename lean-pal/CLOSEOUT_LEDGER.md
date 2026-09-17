@@ -22,6 +22,47 @@
 
 ---
 
+## 2026-09-19 訂正 — `hfl`（`0 ≤ value length`）は単純な tick 不変量では**ない**
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`hme` 除去のために `CloseoutPackRun17.marksInv'_of_run'` の入力
+`hfl : ∀ m z, Steps … → z.ctl.mode = scan → 0 ≤ value z.vm.length`
+を閉じようとした。
+
+**誤った見立て**: `length := …` の代入箇所を grep すると `reset` / `ofNat _` /
+`inc` しか出てこない（`GalilBootVM:45`, `GalilScaffoldTopRewind:56,178`,
+`CloseoutWatchRound30:209`, `CloseoutWatchRound33:312`, `CloseoutPackRun50:54`,
+`GalilLeafQuiet:121`）。よって「`length` は減らない」と判断した。
+
+**これは間違い。** `shiftTick`（`GalilScaffoldChainInputSupply:1445`）は
+
+```
+def shiftTick (s : ShiftState) : ShiftState :=
+  ⟨right s.center, right (right s.left), dec s.remaining, dec s.radius,
+    dec (dec s.length)⟩
+```
+
+で **`length` を 2 回 `dec`** する。`shift_one` は `shiftLens.set s (shiftLens.get t)`
+経由なので、可視の `length := dec …` として grep に出てこない。
+`GalilScaffoldTopShift:11` の docstring は最初から「`length -= 2`」と書いていた。
+
+**教訓**: 代入箇所の構文的 grep はレコード更新をすり抜ける。フィールドの
+振る舞いは、そのフィールドを含むレンズ／レコードの更新関数
+（ここでは `shiftTick`）まで追う必要がある。
+
+### `hfl` の真の義務
+
+`shift_one` が撃てるのは `remainingPos s`（`positive s.shift.remaining = true`）の
+間だけで、`ShiftGeom`（`CloseoutPackRun23:86`）が `remaining` と
+ヘッド位置を結びつけている。`CPack.span : value s.length ≤ 2 * position s.right + 1`
+と合わせて `shift` phase の下界を出すのが本筋。
+
+### 残したもの（`CloseoutLenNonneg`、標準公理のみ）
+
+`value_reset`, `value_ofNat`, `nonneg_ofNat`, `nonneg_inc`, `value_inc`,
+`nonneg_reset` — カウンタの基礎補題。これらは正しく、`hfl` の本証明でも使える。
+
 ## 2026-09-19 wave 10 — `ShiftLocalG` も消えた: **8 前提・反証済みゼロ**（`pal_in_peg_final30`）
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
