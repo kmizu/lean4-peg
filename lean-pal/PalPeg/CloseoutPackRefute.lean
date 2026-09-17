@@ -1,4 +1,5 @@
 import PalPeg.CloseoutChainPack
+import PalPeg.GalilFinalAssembly
 
 /-!
 # `hpack` is false as stated — `ChainPack.scanBound` is a run property
@@ -112,8 +113,38 @@ into the bundle as `scanBound`, which the ledger's own rule marks as no
 reduction at all — and here it also turned a leaf that was already false into a
 false bundle. -/
 
+/-! ## The witness, so the refutation is unconditional
+
+`hpack_false_at_short_word` takes the scan-mode control and the idle-chain VM as
+hypotheses.  Both exist outright: `GalilBootVM.initVM0 w` has `chain := .idle`
+by definition (`GalilBootVM:41`) and `GalilScaffoldController.initial 2048` with
+its mode set to `scan` is a `Control`.  With `w := [0]` (length `1 ≤ 1`) the
+refutation needs no hypotheses at all. -/
+theorem hpack_false {q : ℕ} {first : Fin 9}
+    (hp : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
+      ChainPosInv2 w c s → ChainPack q first w c s) : False :=
+  hpack_false_at_short_word hp [(0 : Fin 2)] (by simp)
+    { GalilScaffoldController.initial 2048 with mode := Mode.scan }
+    (GalilBootVM.initVM0 [(0 : Fin 2)]) rfl rfl
+
+/-- **`ScanBudget` is false too, with the same witness.**  `CloseoutFinalPack`'s
+`hbudget` was a separate leaf before it was folded into `ChainPack.scanBound`,
+and it has the identical defect: `∃ m, 1 ≤ m ∧ m < w.length` is unsatisfiable at
+`w.length ≤ 1`, while `ChainPosInv2` is free at an idle chain. -/
+theorem scanBudget_false {centre : GalilVM → Fin 3}
+    {place : GalilVM → GalilScaffoldPlace.Place} {entry q : ℕ} {first : Fin 9}
+    (hb : ∀ w : List (Fin 2),
+      PalPeg.CloseoutChainPack.ScanBudget centre place entry q first w) : False := by
+  obtain ⟨m, hm1, hmlt, -⟩ :=
+    hb [(0 : Fin 2)] { GalilScaffoldController.initial 2048 with mode := Mode.scan }
+      (GalilBootVM.initVM0 [(0 : Fin 2)]) rfl (chainPosInv2_of_idle rfl)
+  simp at hmlt
+  omega
+
 #print axioms hpack_false_at_short_word
 #print axioms chainPack_false_at_short_word
 #print axioms hpack_false_at_exhausted_centre
+#print axioms hpack_false
+#print axioms scanBudget_false
 
 end PalPeg.CloseoutPackRefute

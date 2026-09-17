@@ -22,6 +22,31 @@
 
 ---
 
+## 2026-09-19 **反証の自己監査** — 5 本中 3 本は「偽」と決めつけていた
+
+コウタの指摘（「適当に反証と決めつけたことない？」）を受けて今セッションの
+「反証」5 本を監査した。結果：
+
+| 主張 | 実態 | 正しい区分 |
+|---|---|---|
+| `hpack` が偽 | **機械検査済み**（`CloseoutPackRefute.hpack_false_at_short_word` / `hpack_false_at_exhausted_centre` が `False` を導出、`#print axioms` は `[propext, Quot.sound]`）。ただし `c : Control` と `s : GalilVM`（`mode = scan`、`chain = idle`）の**存在を仮定**しており、証人を構成していない | `REFUTED（条件付き）` |
+| `ShiftAtMismatchC` が偽 | **機械検査済み・条件付き**（非終端 `RoundScan` ＋ 不一致の存在を仮定、`CloseoutShiftMismatch.shiftAtMismatchC_false_at_nonterminal`） | `REFUTED（条件付き）` |
+| `ScanBudget` が偽 | **未検査。** `scanBound` と同じ反例だと類推で書いた。専用の定理はない | `未検査の主張` |
+| `roundBundle_steps` の `CopyIdle` が偽 | **未検査。** 「copy 相では `remainingPos` が立つ」は筋が通るが機械検査していない | `未検査の主張` |
+| `ChainTickable` が偽 | **未検査。** `GalilChainTickable.lean` の**散文ヘッダ**の「no proof can exist」を読んでそのまま報告した。検査された定理は存在しない | `未検査の主張` |
+
+**5 本中 3 本は決めつけ。** うち 1 本は自分の過去の散文を根拠にした。
+機械検査済みの 2 本も無条件ではなく条件付きで、台帳では無条件のように書いていた。
+
+### この台帳に追加する規約
+
+**`REFUTED` と書くのは、`False` を導く機械検査済みの定理があるときだけ。**
+その定理が仮定を取る場合は `REFUTED（条件付き）` と書き、どの仮定の存在を
+未構成のまま置いているかを明記する。散文の論証・他ファイルのヘッダ・類推は
+`未検査の主張` と書く。過去の自分の散文も一次情報として扱わない。
+
+---
+
 ## 2026-09-19 `ShiftAtMismatchM` を**証明した** — Round 30 の piece 1 も定理に
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
