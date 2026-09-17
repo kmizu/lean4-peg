@@ -22,6 +22,47 @@
 
 ---
 
+## 2026-09-19 3 分岐仮説を Run38 の残差へ（`CloseoutBranchRes`）
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`CloseoutPackRun38` が Run34 の 3 分岐仮説**すべての分解を既に持っていた**。
+run に繋がれていなかったので繋いだ。
+
+| Run34 仮説 | Run38 producer | 残差 |
+|---|---|---|
+| `H_bgP` | `posPayload_background`（:157） | `H_bgRes` |
+| `H_matchP` | `posPayload_match`（:220） | `H_matchRes` |
+| `H_shiftDoneP` | `posPayload_shiftDone`（:314） | `H_shiftDoneRes`（恒等） |
+
+### `H_bgRes` / `H_matchRes` は実質的な前進
+
+`BgRes`（`Run38:140`）は payload を 3 つに割る:
+
+- `src : SrcPos s` — chain 側の台帳（live watch の verifier が `Sane`、
+  `back` 相は既に `lag` 分後ろにいる）。**`step_pos`（`Run38:76`）が
+  1 `ChainStep` を越えて `position verifier + lag` を運ぶ。**
+- `start` — chain が idle のときの `canRight` と radius 台帳
+- `verNext` — 1 chain tick 先の verifier の `canRight ∧ Sane`
+
+### `H_shiftDoneRes` は恒等（Run38 が明記）
+
+Run38 は「`ChainPosInv` は `shift` mode を越えて何も届かない」と記録しており、
+`posPayload_shiftDone := hres` は恒等。その**真の分解**は本セッションの
+`CloseoutShiftDoneP`:
+
+- `canR` ← `ShiftGeom.RRep` ＋ 位置上界（`canRight_of_position_bound`、wave 5）
+- `radLe` ← `ScanInvariant.rightPos` と `ShiftGeom` の位置関係（`rem = 0`）
+- 残り 2 場 → `ChainSideAt`（verifier の位置台帳と 1 tick 先の健全性）
+
+### 新規（`CloseoutBranchRes`、標準公理のみ）
+
+`chainPosInv_steps_res`, `shiftLocalS_of_run_res` — `shiftLocalS_of_run` 以上が
+Run34 の仮説ではなく **Run38 の残差**に依存するようになった。
+
+**次**: `SrcPos` を run に沿って確立する（`step_pos` が 1 step 分を持っている）。
+`verNext` は `GalilArriveChain.caught_arrive` / `immediate_arrive` が近い。
+
 ## 2026-09-19 `H_shiftDoneP` の分解（`CloseoutShiftDoneP`）
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
