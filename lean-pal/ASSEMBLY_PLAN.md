@@ -1,5 +1,16 @@
 ## n20 (2026-09-17 朝) 葉の放電・偽仮定 4 件・非決定性
 
+## n70 (2026-09-19 未明) readiness が最後の消費先 `hpres` に接続・`final18`・`0 < lag` は機械と矛盾
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 新規 3 本登録（`CloseoutPackRun47`、`CloseoutWatchRound47`、`CloseoutPreload40`）、sorry なし、build ログ `build_n70c.log` EXIT=0。
+- **readiness（接続完了）**: `CloseoutPreload40`: `searchReadyS_of_readyPacedS`、`HpresAt`（:74、chain idle + (`a = true → clock ≤ 1`) + `searchEffect` ⇒ `SearchReady v`）、`searchReadyB_of_readyField3`（:81、`ReadyFieldP3 (n+1)` の scan 状態から）、`hpresAt_along_run`（:100）、`h_oracle_hpres_of_readiness`（:123）。**2 つの構造的事実**: (a) `GalilOracleMC3.h_oracle_of_leaves''` の `hpres` は普遍法則で `GalilLeafPres.hpres_false_at` が反証済み → 状態限定形でしか放電できん、(b) `ReadyPacedS` は `SearchReadyS`（`ReadyRemS = PrepInv ∧ DpSafeStage`）で閉じており `SearchReadyB`（`ReadyRem ∧ RunEntriesAll`）ではないが、`hpres` の結論は素の `SearchReady` なので `DpSafe` 変換は不要。残 `hOP`（`GalilOracleMC3` を点ごとの葉で受ける `h_oracle_of_leaves'''`）→ `CloseoutOracle5` 進行中。これが済めば **readiness 層は `final24` 経路に未解決の消費先を持たん**。
+- **pack（訂正）**: `CloseoutPackRun47`: 「`ChainPos.watch` に `0 < value lag` を足す」は**機械と矛盾**（`Outer.immediate` は `zero lag = true` がガード、`lagPos_contradicts_immediate` :91；`take` も `value lag = 1` から lag 0 の `.watch` に落ちる、`take_lag_vanishes` :63）。正しい形は `LagNonneg`（:105）+ **1 セル先の供給**: `consumeAvail_of_next_supply`（:114）は目標側の右ヘッド（そこでの `canR` は `PosPayload2` の場そのもの）から出す。`bgStartP2_of_centre`（:163）で `BgStartP2` を `CentreLedger`（:153、中心ヘッドの present + 半径の**等式**）に還元（`scanGeomR` の `ScanInvariant` は不等式しか与えず、`CentreRep` は rewind/replayStart にガードされてる）。
+- **watch**: `CloseoutWatchRound47`: `sumRel_ticks`/`sumRel_internal`（半径台帳の輸送、閉）、**`watchDrainC'_of_clock`**（:119、`m' := es2.count true`、`d1 := 0`）、**`foundExit_compare_final18`**（:166、`hdrain` → `hclock : WatchClockC`）。残 2 葉は同型のマッチ時計事実: `WatchClockC`（`2047·#true ≤ #false`）と `PrepClockC`（`2048·#true ≤ 2h+2`、prep 流の長さは `2h+3`）→ `CloseoutWatchRound49` 進行中。
+- 進行中: `CloseoutPackRun48`、`CloseoutOracle5`、`CloseoutWatchRound48`（相跨ぎ）、`49`。
+- **偽だった主張の訂正**: 「watching chain は `0 < lag`」→ `immediate` のガードと矛盾。
+- 残: pack `hSP`/`hws` 供給 + `Extra7` 残差 2 + `hme`/`hsl`/`hsc`/`hbs`/`hls`/`hC`; readiness `hOP` のみ; watch 相跨ぎ + `ReplayBornRoundC` + マッチ時計 2 葉 + `PrepBirthLagC'` + tie + `RestartLandingDataC`; core debris 配線・有限制御。
+
+
 ## n69 (2026-09-19 未明) `pal_in_peg_final24`（Extra は `scanAvail` のみ、残差 2 つ）・**周期 `h` は非有界**（`ChainWatchPhaseC` の形が誤り）・readiness の tick は残差ゼロ
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 新規 2 本登録（`CloseoutPackRun46`、`CloseoutPreload39`）、sorry なし、build ログ `build_n69b.log` EXIT=0。
