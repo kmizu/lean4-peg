@@ -22,6 +22,54 @@
 
 ---
 
+## 2026-09-19 wave 8 続き — `trailF_ptS` まで到達、`hws` 除去の最後の一手の設計
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`radPack_ptS` に続いて **`trailF_ptS`**（`CloseoutShiftS`）も標準公理で通った。
+`trailF_ptMG`（`CloseoutPackRun30:626`）が `WatchShiftG` に触れるのは
+`radPack_ptMG` 経由**のみ**で、他の材料（`LeftLive`/`SanePack`/`ScanT`/
+`ChainBudget`/`VerF`）は無改造で通る。
+
+### `hws` が残る理由（正確に）
+
+`pal_in_peg_final27` の `hws` は **2 つの役割**を持つ:
+
+1. **pack の場を埋める**: `packRunR_MG27P` → `ipackMG2_tick_pt7` の
+   `hsh : ShiftLocalG y`（`CloseoutPackRun46:160`）。`IPackMG.shift` 場
+   （`Run30:83`）の中身。
+2. **pack の場を読む**: `trailF_ptMG` → `radPack_ptMG` → `halfBound_of_ipackMG` /
+   `shiftVerSane_ptMG`。
+
+**(2) は解決済み**（`radPack_ptS` / `trailF_ptS`）。残るは (1)。
+
+### 試して退けた手: `ShiftLocalG` の定義に guard を足す
+
+`CloseoutPackRun26` の `ShiftLocalG` に `¬matched ∧ shiftGuardVM` を足すと、
+逆変換 `shiftLocal_of_shiftLocalG`（:231）が通らなくなる。これは
+`h_shiftLocalC_of_G`（:322）→ `H_shiftLocalC` → `ipack_of_invLPC'`
+（`CloseoutOracleI2:140`）という **pack の根本**に効いており、`ShiftLocal`
+（guard なし）を要求する。波及が大きすぎるので**編集をロールバックした**
+（既存ファイルは無傷、差分ゼロを確認）。
+
+### 残る一手（次 wave の主題）
+
+`IPackMG` の `shift` 場は **`trailF_ptMG` でしか読まれない**。
+`pal_in_peg_final5MG2S` の中の `needIMG2'_le`（`Run36:474`、`h_trailI_MG2` 経由で
+`trailF_ptMG` を使う）を `trailF_ptS` に差し替えれば、**その場は誰からも
+読まれなくなる**。そうなれば `IPackMG` から `shift` 場を落とせ、(1) も消える。
+
+必要な作業:
+1. `needIMG2'_le` の S 版（`trailF_ptS` を使う）。入力に `ChainPosInv` 入口・
+   `hreach`・`LPackM`・`LeftLive` が要る — いずれも `PreTraceIMG2` の
+   `packs`（`IPackMG2`）から出るはず。
+2. `pal_in_peg_final5MG2S` をその S 版に差し替え。
+3. `IPackMG` から `shift` 場を落とす（`Run30/36/43/45/46` の再ビルド）。
+
+これで `hws` は `H_fourOther` / `H_bgP` / `H_matchP` / `H_shiftDoneP` と
+入口 `ChainPosInv` に置き換わる。4 分岐仮説はすべて `shiftGuardVM` 付きの
+文脈なので、Run32 の反例（誕生直後 `distance = reset`）には当たらない。
+
 ## 2026-09-19 wave 8 — `hws` を通さない `RadPack` 経路（`CloseoutShiftS`）
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
