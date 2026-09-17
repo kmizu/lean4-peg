@@ -22,6 +22,37 @@
 
 ---
 
+## 2026-09-19 `ChainPack` を run pack と `ChainSide` に分解（前提数は 5 のまま）
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+`hpack`（`ChainPack`）の 18 場のうち、run 上に既にあるものを切り出した。
+
+| `ChainPack` の場 | 出所（run 上で無料） |
+|---|---|
+| `repR` | `LPackM.scanGeom`（非 replaying）/ `LPackM2.scanGeomR`（replaying）の `ScanInvariant.rightRep` / `rightPresent` |
+| `saneR` | `SanePack.saneR` |
+| `centreSane` | `SanePack.saneC` |
+
+`LPackM2` は `IPackMW` の成分として `packRunR_MW` が run 全体で運ぶ。
+`SanePack` は `CloseoutLPack6.sanePack_pt` が `PreTrace` ＋ `LeftLive` だけから
+trace 上で確立する（**追加入力なし**）。
+
+`chainPack_of_lpackM2 : ChainPosInv2 → LPackM2 → SanePack → ChainSide → ChainPack`。
+
+### 正直な評価
+
+**前提数は 5 のまま**（`hpack` → `hside` の置き換え）。中身は 3 場小さくなったが、
+数は減っていない。これは言い換えに近い。
+
+`ChainSide` に残る 12 場: `repV`, `repVmid`, `lagCan`, `backLag`, `replayPay`,
+`radNext`, `startLedger`, `centreCanR`, `centreLedgerPos`, `scanRad`,
+`scanCentre`, `scanBound`, `shiftCanR`, `shiftRad`。
+
+このうち `scanRad` / `scanCentre` / `centreLedgerPos` / `shiftRad` は
+`ScanInvariant` と `CentreLedger` と `ShiftGeom` の帰結なので、次に落とせる見込み。
+`repV` / `repVmid` / `lagCan` / `backLag` が chain 機械の本体。
+
 ## 2026-09-19 訂正 — 「見込みなし」は誤り。`hbudget` 除去（`final36`、5 前提）
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**

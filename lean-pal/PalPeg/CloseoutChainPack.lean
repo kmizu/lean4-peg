@@ -197,6 +197,84 @@ theorem h_shiftRes2_of_chainPack {w : List (Fin 2)}
 
 #print axioms h_shiftDoneRad2_of_chainPack
 
+/-! ## `ChainPack` from the run pack
+
+`packRunR_MW` carries `IPackMW = LPackM ∧ LPackM2` and `AuxPack` at every state
+of the run, and `LPackM2` already holds the scan and shift geometry:
+
+* `LPackM.scanGeom` / `LPackM2.scanGeomR` give `ScanInvariant` at a `scan`
+  state (non-replaying and replaying respectively), whose `rightRep` /
+  `rightPresent` are `repR`;
+* `LPackM2.shiftGeom` gives `ShiftGeom`, whose `RRep` and position relation are
+  `shiftCanR` / `shiftRad`;
+* `AuxPack.front.sane` is `saneR`.
+
+So the residue of `ChainPack` is the chain-side data (`repV`, `repVmid`,
+`lagCan`, `backLag`, `replayPay`, `startLedger`, the centre pair and the
+checkpoint bound), which `ChainSide` names.
+-/
+
+/-- **(NAMED) the chain-side residue of `ChainPack`.** -/
+structure ChainSide (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+  repV : c.mode = Mode.scan → VerRep w s.chain
+  repVmid : ∀ (y : ChainVM) (wch : GalilScaffoldChainWatch.State),
+    ChainStep s.chain y → y = .watch wch →
+      GalilScaffoldInputTrace.Represents wch.machine.verifier.head w ∧
+        wch.machine.verifier.head.focus ≠ none
+  lagCan : c.mode = Mode.scan → LagCan s.chain
+  backLag : ∀ (v : GalilScaffoldChainPeriod.Tape) (h lag margin : Counter) (ver : PlaceHead),
+    s.chain = .back v h lag margin ver → Canonical lag ∧ 0 ≤ value lag
+  replayPay : c.replaying = true → s.chain ≠ ChainVM.idle → PosPayload2 w s
+  radNext : ∀ rad : ℕ,
+    ScanInvariant w (position s.center) rad (GalilScaffoldInputHead.left s.left) (right s.right) →
+      value s.radius + 1 ≤ (rad : ℤ)
+  startLedger : s.chain = ChainVM.idle → CentreLedger s
+  centreCanR : GalilScaffoldChainVerifier.canRight s.center
+  centreLedgerPos : c.mode = Mode.scan →
+    (position s.center : ℤ) + value s.radius = position s.right
+  scanCentre : c.mode = Mode.scan → CentreLedger s
+  scanBound : c.mode = Mode.scan →
+    ∃ m : ℕ, 1 ≤ m ∧ m < w.length ∧ position s.right ≤ 2 * m - 1
+  shiftCanR : c.mode = Mode.shift → GalilScaffoldChainVerifier.canRight s.right
+  shiftRad : c.mode = Mode.shift → ∀ rad : ℕ,
+    ScanInvariant w (position s.center) rad s.left s.right → value s.radius ≤ (rad : ℤ)
+  scanRad : c.mode = Mode.scan → ∀ rad : ℕ,
+    ScanInvariant w (position s.center) rad s.left s.right → value s.radius ≤ (rad : ℤ)
+
+/-- **`ChainPack` from `LPackM2`, `SanePack` and the chain-side residue.**  `repR` is the
+only field the geometry pack supplies; everything else is chain-side. -/
+theorem chainPack_of_lpackM2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hinv : ChainPosInv2 w c s) (hP : PalPeg.CloseoutPackRun23.LPackM2 w c s)
+    (hSP : PalPeg.GalilTrailSane.SanePack c s)
+    (hS : ChainSide w c s) : ChainPack w c s where
+  inv := hinv
+  repR := fun hm => by
+    cases hr : c.replaying with
+    | false =>
+      obtain ⟨rad, hi⟩ := hP.packM.scanGeom hm hr
+      exact ⟨hi.rightRep, hi.rightPresent⟩
+    | true =>
+      obtain ⟨rad, hi⟩ := hP.scanGeomR hm hr
+      exact ⟨hi.rightRep, hi.rightPresent⟩
+  repV := hS.repV
+  repVmid := hS.repVmid
+  lagCan := hS.lagCan
+  shiftCanR := hS.shiftCanR
+  shiftRad := hS.shiftRad
+  saneR := hSP.saneR
+  backLag := hS.backLag
+  replayPay := hS.replayPay
+  radNext := hS.radNext
+  startLedger := hS.startLedger
+  centreSane := hSP.saneC
+  centreCanR := hS.centreCanR
+  centreLedgerPos := hS.centreLedgerPos
+  scanRad := hS.scanRad
+  scanCentre := hS.scanCentre
+  scanBound := hS.scanBound
+
+#print axioms chainPack_of_lpackM2
+
 #print axioms chainPack_supply
 /-- **`BgStartP2` from `ChainPack`.**  `background` leaves `right`, `center` and
 `radius` alone (`backgroundS_fields`), and a birth installs
