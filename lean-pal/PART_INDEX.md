@@ -28,11 +28,40 @@ grep -rn ": False" PalPeg/*.lean
 
 ## 1. 最上位の定理
 
-| 定理 | ファイル | 前提 | 状態 |
+`pal_in_peg_final*` は **47 本**ある。番号は「いつ書いたか」であって「何であるか」ではない。
+2026-09-19 に前提を数え直した結果（以前「正本は `final30`」と書いたが、`final31`〜`final36`
+を確認していなかった。以下は確認済み）：
+
+| 定理 | ファイル | 前提数 | 反証済みを含むか |
 |---|---|---|---|
-| **`pal_in_peg_final30`** | `CloseoutFinalW` | 8: `hSP` `hme` `hor` `hC` `hfour` `hbgP` `hmatchP` `hsdP` | **正本**。反証済みゼロ |
-| `pal_in_peg_final37` | `CloseoutFinalW4` | 4: `hSP` `hor` `hC` `hpack` | `hpack` が**偽**（`CloseoutPackRefute.hpack_false`） |
+| **`pal_in_peg_final30`** | `CloseoutFinalW` | **8**（`hSP` `hme` `hor` `hC` `hfour` `hbgP` `hmatchP` `hsdP`） | **なし** ← **正本** |
+| `pal_in_peg_final31` | `CloseoutFinalS2` | 9（`hfour` が消え `hentry` ＋ `hav` が増えた） | なし |
+| `pal_in_peg_final33` | `CloseoutFinalPack` | 8 | **2 つ**（`hpack`、`hbudget` = `ScanBudget`） |
+| `pal_in_peg_final36` | `CloseoutFinalW3` | **5**（`hSP` `hme` `hor` `hC` `hpack`） | 1 つ（`hpack`） |
+| `pal_in_peg_final37` | `CloseoutFinalW4` | 4（`hSP` `hor` `hC` `hpack`） | 1 つ（`hpack`） |
 | `pal_in_peg_final5MW4` | `CloseoutFinalW5` | `final5MW3` の `hpk` を `VerRun` に置換 | 通る |
+
+**8 未満にする道**: `final36` は 5 前提で偽は `hpack` 1 本だけ。ただし `final36` は
+`hpack` から 4 供給（`H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2`）を
+導いており、それらは `∀ c s` 量化。`LPackM3` は**特定の状態**で `MatchRes2` を出すので
+`∀ c s` には届かない。`final31` はその 4 供給を前提として持つので 9 本になる。
+**したがって 8 未満にするには 4 供給を run 形（`∀ m z, Steps … m x z → …`）にする
+threading が必要で、それが残っている本体。**
+
+## 1b. 依存閉包（2026-09-19 実測）
+
+| 指標 | 本数 |
+|---|---|
+| 実在モジュール | 1143 |
+| **正本 `final30` の推移的 import 閉包** | **526** |
+| 閉包の外 | 617 |
+| `PalPeg.lean` 登録 | 1101 |
+| 登録されていて閉包の外 | 583 |
+
+つまり正本が使うのは 526 本で、登録済み 1101 本のうち 583 本は正本に効かない。
+20 分の全体 build の半分以上が正本外。**ただし閉包の外にも健全で有用なものがある**
+（`CloseoutPackRun49` / `CloseoutWatchRound53` / `CloseoutRealize1` はそこから回収した）。
+登録を外すなら、外す前にここに在り処を記録すること。
 
 ## 2. `hSP`（`ShiftPal`）の鎖
 
