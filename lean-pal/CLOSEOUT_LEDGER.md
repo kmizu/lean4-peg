@@ -22,6 +22,53 @@
 
 ---
 
+## 2026-09-19 `hSP` の残差を 2 点に確定 — ラウンド区間と最初のラウンド
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 3 ターンの測定の結論（検証済み）
+
+| 範囲 | 状態 |
+|---|---|
+| ラウンド**内** | **閉じた**。witness の `n` はラウンドの `used`、`RoundScan.fresh` が `used < 2h` を与え、`encoded_of_sweptOff` / `advance_of_sweptOff` が周期性なしで予測と前進を出す |
+| shift 相 | witness は**生き延びる**（`sweptOff_shift` / `sweptOff_shiftOne`、`Offset` は period tape と `broken` だけを要求する）。座標は生き延びない |
+| ラウンド**境界** | 原点の再アンカーは**不可約**。古い原点の `SweptOff` は予測を `2h` 左の index で述べ、`period_window` は 1 段だけ橋渡しする。ラウンド `m` には `m` 段必要で、それはまさに `rounds_origin` が `CompareRounds` 上で回している帰納 |
+
+### 新規（`CloseoutRoundSeg`）
+
+```
+def RoundSeg (w) (s s' : GalilVM) : Prop :=
+  ∀ wch wch', s.chain = .watch wch → s'.chain = .watch wch' →
+    periodLength wch' = periodLength wch ∧
+    CompareRounds (periodLength wch) (toOnly s wch) 1 (toOnly s' wch')
+
+theorem originAt_next_of_roundSeg (hO : OriginAt w s) (hR : RoundSeg w s s')
+    (hch) (hch') : ∃ C R, RoundScan w C R (periodLength wch') 0 s' wch' ∧
+                            ReadsInv w C R (periodLength wch') 0 wch'
+
+theorem originAt_of_roundSeg … : OriginAt w s'
+```
+
+**両半分が同じ座標で同時に出る** — `roundScan_entry` が round datum を、
+`readsInv_of_entry` が sweep witness を。
+
+また `sweptOff_shiftOne`（`chainShiftOne` は `period`/`forward`/`broken` を保ち
+3 カウンタを減らす ＝ `Offset` 1 段）を証明。
+
+### `hSP` の残差（確定、2 点）
+
+| 義務 | 正本 | 内容 |
+|---|---|---|
+| `RoundSeg` | `GalilScaffoldTopRoundS.round_next` | 1 ラウンドの射影。`ScanSeg` ＋ 終端比較 ＋ shift から |
+| `H_freshShift` / `H_fresh` | `GalilScaffoldTopFirstRound.first_round` | **最初の**ラウンド（前提約 25 個） |
+
+どちらも**同種の作業**（制御 run の区間を `ReadOrigin` に組み上げる）で、
+`hor` の `hfound`/`hfoundBg`/`hfoundReplay` と同じ系統。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `SweptOff` はラウンド内で `ReadsInv` を完全に代替する、周期補題を窓全体に一般化
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**

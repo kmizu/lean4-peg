@@ -94,6 +94,24 @@ theorem sweptOff_shift {raw : List (Fin 2)} {C R h n : ℕ}
   obtain ⟨o, extra, k, hC, hRR, hh, hlen, hoff⟩ := hS
   exact ⟨o, extra, k + m, hC, hRR, hh, hlen, Offset.shift hr hoff⟩
 
+/-- **One shift unit transports it.**  `chainShiftOne` keeps `period`,
+`forward` and `broken` and decrements the three counters, which is exactly an
+`Offset` step of one.  (`Offset.shift` does the whole `ChainShiftRun` at once;
+this is the single-unit form the `shift_one` tick needs.) -/
+theorem sweptOff_shiftOne {raw : List (Fin 2)} {C R h n : ℕ}
+    {w : GalilScaffoldChainWatch.State} (hS : SweptOff raw C R h n w) :
+    SweptOff raw C R h n (chainShiftOne w) := by
+  obtain ⟨o, extra, k, hC, hRR, hh, hlen, hoff⟩ := hS
+  refine ⟨o, extra, k + 1, hC, hRR, hh, hlen, ?_⟩
+  obtain ⟨⟨hp, hf⟩, hb, hd, hbd, hl⟩ := hoff
+  refine ⟨⟨hp, hf⟩, hb, ?_, ?_, ?_⟩
+  · show value (dec w.machine.control.distance) = _
+    rw [dec_value, hd]; ring
+  · show value (dec w.machine.control.boundary) = _
+    rw [dec_value, hbd]; ring
+  · show value (dec w.machine.control.last) = _
+    rw [dec_value, hl]; ring
+
 /-- **The prediction is readable off the reference run.**  `Offset.prediction`
 is `period` equality, so the two focuses are the same token. -/
 theorem symbol_of_sweptOff {raw : List (Fin 2)} {C R h n : ℕ}
@@ -216,6 +234,7 @@ theorem period_window {raw : List (Fin 2)} {C R h j : ℕ}
 #print axioms sweptOff_of_readsInv
 #print axioms sweptOff_consume
 #print axioms sweptOff_shift
+#print axioms sweptOff_shiftOne
 #print axioms symbol_of_sweptOff
 #print axioms bounce_of_sweptOff
 #print axioms encoded_of_sweptOff
