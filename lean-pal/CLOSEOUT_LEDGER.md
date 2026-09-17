@@ -22,6 +22,63 @@
 
 ---
 
+## 2026-09-19 区間予算はタダだった — チェックポイントまでの区間を**構成**する
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 転換点
+
+既存区間を**分割**する（`CloseoutSegPrefix`）と接頭辞は得られるが、その着地を
+`SegReached` の 11 場で再装備しなければならない。ところが
+`CloseoutReadyStage.watchSegE_constructS`（証明済み）は**長さを指定して区間を構成**し、
+着地で必要なものを全部返す：
+
+```
+c'.mode = .scan ∧ 1 ≤ c'.clock ∧ t.chain = ChainVM.idle ∧
+SearchReady (searchLens.get t) ∧ MInv raw c' t ∧
+ScanInvariant raw (position t.center) r' t.left t.right ∧
+(es.length = n ∨ SegEnd P c' t)
+```
+
+そして `GalilOneFallback.watchSegE_right_position` が
+`position t.right = position s.right + es.count true` を与える。
+`es.count true ≤ es.length` なので
+
+```
+n := 2 * m - 1 - position s.right
+```
+
+と取れば出口ヘッドはチェックポイントで抑えられる — **予算の仮説は一切不要**。
+もう一方の分岐は `SegEnd` で、そこは oracle の `hends` / `hended` 葉が既に引き取る。
+
+### 新規（`CloseoutSegCheckpoint`）
+
+| 名前 | 内容 |
+|---|---|
+| `segment_to_checkpoint` | **`hsegmentM` の形**（`SegReachedW` ＋ `AtTarget ∨ SegEnd`）で、target 上界を**仮定ではなく導出**。`reportPointAt_of_seg` が要る 3 場（`replaying`・`scan`・`minv`）も全部揃っている |
+
+標準 3 公理のみ。
+
+### 効果
+
+`GalilLeafPos` のヘッダは「予算の放電は `hsegmentM` に属し、それ自体まだ
+`cycleOracleMC2C_of_pieces` の仮説」と書いていた。**その予算が消えた。**
+
+### 区間分解の残差（更新）
+
+| 義務 | 状態 |
+|---|---|
+| `RoundDataC` / `MatchTickC` | **閉** |
+| `SegCrossSplit` | **閉** |
+| 区間予算 / 終端ヘッド上界 / `hpos` | **閉**（`segment_to_checkpoint`、構成で導出） |
+| `ShiftAtMismatchC` | `OPEN`（入力依存） |
+| `segment_to_checkpoint` を `hsegmentM` 消費者へ配線 | 未着手 |
+| 下流の `TerminalN` 再配線 | 未着手（機械的） |
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `SegCrossSplit` を証明した — 終端ヘッド上界の名前付き葉が消えた
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
