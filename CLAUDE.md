@@ -95,12 +95,13 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 
 ## lean-pal 無条件 PAL ∈ PEG の進捗（2026-09-19 時点）
 
-**状態: 全体 build 成功・標準公理のみ・無条件 PAL は未完。最上位は `pal_in_peg_final29`（`CloseoutWeakFinal`、9 前提・**偽の前提ゼロ**）。`final27` の 5 前提には偽の `hws` が含まれていた。** 全モジュール sorry なし。新モジュールは `PalPeg.lean` の `import PalPeg.GalilSegmentConstruct` の直後に登録。
+**状態: 全体 build 成功・標準公理のみ・無条件 PAL は未完。最上位は `pal_in_peg_final30`（`CloseoutFinalW`、**8 前提・反証済みゼロ**）。`final27` の 5 前提には偽の `hws`、`final29` の 9 前提には偽の `hsl` が含まれていた。** 全モジュール sorry なし。新モジュールは `PalPeg.lean` の `import PalPeg.GalilSegmentConstruct` の直後に登録。
 
 ### 1. 最上位の定理と残りの仮定
 
 | 定理 | ファイル | 仮定 |
 |---|---|---|
+| **`pal_in_peg_final30`** | **`CloseoutFinalW`** | **8 前提・反証済みゼロ**: `hSP`, `hme`, `hor`, `hC`, `hfour`, `hbgP`, `hmatchP`, `hsdP`。`final29` の `hsl`（`ShiftLocalG`）も偽だったため（`beginShiftVM'` は `shiftGuardVM` を含まない）、弱化ではなく**場ごと削除**。wave 8 で trail 橋を `ChainPosInv` に載せ替えた結果 `IPackMG.shift` を読む者が消えたので可能になった。非破壊複製: `CloseoutPackW`（`IPackMW`）/ `CheckW` / `OracleW`（`packRunR_MW` は shift 仮説ゼロ）/ `FinalW`。`hC` は `PreTraceB` を取る `H_realizeLIMW'` へ |
 | **`pal_in_peg_final29`** | **`CloseoutWeakFinal`** | **9 前提・偽の前提ゼロ**: `hSP`, `hsl`（`ShiftLocalG`）, `hme`, `hor`, `hC`, `hfour`, `hbgP`, `hmatchP`, `hsdP`。`final27` の 5 前提のうち `hws`（`∀ w y, WatchShiftG`）は **偽**（`CloseoutPackRun32`: `ChainStep.backDone` 生まれの watch は `distance = reset`）。2 つの弱化で除去: trail 橋を `ChainPosInv` に載せ替え（`CloseoutShiftS`/`ShiftFinal`）、pack 側は必要な `ShiftLocalG` を直接取る（`CloseoutShiftWeak`）。後ろ 4 前提は Run34 の guarded 分岐仮説 |
 | **`pal_in_peg_final27`** | **`CloseoutExtraFinal`** | **5 前提**: `hSP`, `hws`, `hme`, `hor`, `hC`。`final26` の 7 前提から `hee`/`het` が消えた。理由: 両者は `packRunR_MG27` の `hprefix`（run 各点の `Extra7`＝`canRight`）を作るためだけに存在し、その上界は front ポテンシャル（`front = position + replay value`、`front_stepsAll_mono` で単調、非 replaying では `front = position`）に乗って run の出口から遡る。出口の上界は `CycleOutMC3` の定義と `ReportPointAt.atPlace` が持つ（`CloseoutFrontExtra`/`ExtraFree`/`ExtraOracle`） |
 | **`pal_in_peg_final26`** | **`CloseoutStageFinal`** | **7 前提**: `hSP`, `hws`, `hee`, `het`, `hme`, `hor`, `hC`。`final25` の 8 前提から `hsc`（`H_stageScan`、反証済み）が消えた。理由: `CycleOutMC3` は両出口で `InvLPS` を返しており（`GalilInvPlus3:193, :212`）、boot も `Inv` 分岐に着地する（`invLPC_init:94`）。チェックポイント層を `InvLPS` 上で再走させれば `hstage_of_scanBranch` は呼ばれない（`CloseoutStageCheck`/`StageBoot`/`StageOracle`）。残差の正本は `lean-pal/CLOSEOUT_LEDGER.md` |

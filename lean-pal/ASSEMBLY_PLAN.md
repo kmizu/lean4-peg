@@ -46,6 +46,38 @@ Scala `ScaffoldChain.start()` は `periodOnly = false` **かつ** `cycle.reset()
 
 よって `cpack_steps` で `CPack` を歩数に沿って運べば `hcan` は定理（`hcan_of_cpack`）。新規入力なし。
 
+## 2026-09-19 wave 10 — `ShiftLocalG` も消えた: **8 前提・反証済みゼロ**（`pal_in_peg_final30`）
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+`pal_in_peg_final30`（`lean-pal/PalPeg/CloseoutFinalW.lean`）は
+`[propext, Classical.choice, Quot.sound]` のみに依存し、
+**`WatchShiftG` も `ShiftLocalG` もコードに現れない**。
+
+`final29` の `hsl : ∀ w y, ShiftLocalG … w y` も偽だった（`ShiftLocalG` の全場の
+前提は `beginShiftVM'` で、`beginShiftVM` は `s''.chain = .watch w` のみ要求する
+ので、`ChainStep.backDone` 生まれの `distance = reset` の watch が前提を満たしつつ
+`4 * periodLength ≤ distance` を破る）。
+
+弱化ではなく**削除**した。wave 8 で trail 橋を `ChainPosInv` に載せ替えた結果
+`IPackMG.shift` を読む者が誰もいなくなったため。`Run30` から直接落とすと旧鎖
+`final17 → … → final25` が壊れる（実測・ロールバック済み）ので非破壊複製:
+
+- `CloseoutPackW` — `IPackMW := LPackM ∧ LPackM2`、`BigPack2MG7W`、`ipackMW_tick`
+- `CloseoutCheckW` — `StepsIMW` 〜 `preTraceIMW_exists`
+- `CloseoutOracleW` — **`packRunR_MW`（shift 仮説ゼロ）**、boot、oracle、`needL'`
+- `CloseoutFinalW` — `H_realizeLIMW'`、**`pal_in_peg_final30`**
+
+`hC` は `PreTraceB` を取る形（`H_realizeLIMW'`）に変えた。`LatchTrue` は
+`stLG' τF w st (Tc w.length)` だけを読み run pack に触れないので、これが自然な領域。
+
+`final30` の 8 前提（すべて未反証）: `hSP`, `hme`, `hor`, `hC`,
+`hfour`, `hbgP`, `hmatchP`, `hsdP`。後ろ 4 つは Run34 の guarded 分岐仮説で
+`chainPosInv_tick` が 23 形状中 20 を閉じており残り 3 形状分。
+
+**wave 6 からの推移**: 8（`hsc` 偽）→ 7 → 5（`hws` 偽）→ 9（`hsl` 偽）→
+**8（反証済みゼロ）**。数の増減より「偽の前提が残っているか」が判定基準。
+
 ## 2026-09-19 wave 9 — 偽の `hws` が最上位から消えた（`pal_in_peg_final29`）
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
