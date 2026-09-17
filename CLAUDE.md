@@ -123,6 +123,14 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 
 - **`Fair` 完成（`GalilTickFair`）: `Tick ∧ Fair` は全状態で一意、残差なし。** 抽象 `Tick` 単体は一意でない（`GalilTickDet`）: (a) broken chain で `restart` と `scan_wait` stutter が競合（Scala は restart 優先）、(b) 探索量子は `ReadFun GalilDpCode.code` + `PrepareControl.Tick` 決定性を仮定すれば関数的、(c) chain は関数的、(e) `beginFallbackVM'`（着地場所）、`initVM`/`replayStartVM`（`periodOnly`, `walker` 自由）が非関数的。`tickFun`（`GalilTickFun`）は choice で 1 つ選ぶだけ。**方針**: モデルは編集せず（使用箇所 300 超）、Scala の優先順位と固定値を表す `Fair` を定義して `Tick ∧ Fair` の一意性を証明（`GalilTickFair`、進行中）。構成側の witness と局所 step が `Fair` を満たすことを別途確認。
 - **偽だった葉（同じ型: 任意状態への量化）**: `hquiet`（`SearchQuiet` は「found に到達しない」と同値、`GalilLeafQuiet`）、`houtReplay`（`InvScan` に出力なし → `InvScanO := InvScan ∧ OutputRel`、`GalilLeafOutReplay`）、`hpres`（`SearchReady` は負債 1 単位分保存されない → `SearchReadyB := ReadyRem ∧ RunEntriesAll`、`GalilLeafPres`；`watchSegE_construct` は再証明要、`GalilSegmentConstructB` 進行中）、`hpos`（区間終端の右ヘッド位置、`GalilLeafPos`: 区間予算 `position r.right + count true ≤ 2m−2` から出す）。
+- **モデル欠陥 `M-watchBreak`（2026-09-19、機械検査済み）**: Scala 正本
+  `ScaffoldChain.step()` は `Mode.Watch` かつ `lag.sign > 0` で `consume()` を呼び、
+  不一致なら `Mode.Broken` に落とす（`ScaffoldChain.scala:136,178`）。Lean の `ChainStep`
+  には `.watch → .broken` の構成子が無く、break は `ChainMatched.breaks` にしか無い上に
+  その `BreakStep` は `zero w.lag = true` を要求するので **lag ゼロ経路のみ**。結果、
+  正 lag ＋ 不一致の watch に**後続状態が存在しない**（`PalPeg.ChainStepGap.
+  no_chainStep_at_positive_lag_mismatch`）。**これが `WatchOk` が偽である根本原因。**
+  直すには `ChainStep` に正 lag 版 break を足す（影響 202 箇所、`M-periodOnly` と同規模）。
 - **`WatchOk` は 2026-09-19 に無条件で反証された（機械検査済み）**: `PalPeg.WatchOkRefute.watchOk_false`
   （引数は `WatchOk Ok` のみ、公理は `propext`/`Quot.sound`、`sorryAx` なし）。`born` が
   **任意の lag/margin** で `Ok` を与え、`good` がその正 lag で `Good`（period テープの焦点記号と

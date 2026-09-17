@@ -1,6 +1,90 @@
 
 
 
+
+## 2026-09-19 n80: モデル欠陥 `M-watchBreak` を特定・機械検査 — `WatchOk` が偽である根本原因
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+`WatchOk` の反証（n79）の原因を Scala 正本と突き合わせて掘った結果、**モデル欠陥**だった。
+
+### Scala 正本（`scala/pal/src/main/scala/pal/ScaffoldChain.scala:136,178`）
+
+```scala
+def step(answer: TapeView): Unit = {                    // 背景の 1 量子
+  mode match {
+    case Mode.Copy  => stepCopy(answer)
+    case Mode.Back  => stepBack()
+    case Mode.Watch if lag.sign > 0 => if (consume()) { lag.dec() }   // ← ここ
+    case Mode.Idle | Mode.Watch | Mode.Broken => ()
+  }
+}
+private def consume(): Boolean = {
+  verifier.right()
+  val token = period.read()
+  if (!verifier.read().contains(token.takeRight(1))) { mode = Mode.Broken; false }
+  else { distance.inc(); …; period.move(direction); true }
+}
+def matched(): Unit = {                                 // 新しい place が合流
+  margin.inc(); if (periodOnly) cycle.dec()
+  if (mode == Mode.Watch && lag.sign == 0) consume() else lag.inc()
+}
+```
+
+`consume()` は **`step()`（正 lag）と `matched()`（lag ゼロ）の両方から呼ばれ、
+どちらでも不一致なら `Mode.Broken` に落ちる。**
+
+### Lean 側の欠落
+
+`ChainStep` には `.watch → .broken` の構成子が無い（`watchStep` は `Internal w w'` を
+取り、`Internal` は `.idle`（lag ゼロ）と `.take`（正 lag ＋ `Good`）の 2 つだけ）。
+break は `ChainMatched.breaks` にあるが、その `BreakStep` は **`zero w.lag = true`** を
+要求するので **lag ゼロ経路のみ**。つまり `step()` 経路（正 lag）の break が欠けている。
+
+機械検査済み（`PalPeg/ChainStepGap.lean`、標準公理のみ・`sorryAx` なし）：
+
+* `no_chainStep_at_positive_lag_mismatch (hp : positive w.lag = true)
+  (hng : ¬ Good w) : ¬ ∃ z, ChainStep (.watch w) z`
+* `no_chainTick_false_at_positive_lag_mismatch` — 背景量子（`a = false`）でも同じ
+
+**現行モデルでは、正 lag で period と入力が食い違う watch に後続状態が存在しない。**
+Scala ではそこで `Broken` に落ちる。
+
+### これが `WatchOk` が偽である理由
+
+`ChainStep` が break できないので、正 lag での背景遷移は `Internal.take` しかなく、
+それは `Good` を要求する。だから `WatchOk.good` は「正 lag では period と入力が常に
+一致する」と主張することになる。それは Galil の chain の設計（**予測が外れたら壊れる**。
+周期区間の終端検出はまさにその break で行う）に正面から反する。**`WatchOk` は偶然
+偽なのではなく、モデルの欠落を埋めるために書かれた偽の仮定だった。**
+
+### 直し方と影響範囲
+
+```
+| watchBreak (w w') (hb : BreakStepPos w w') : ChainStep (.watch w) (.broken w')
+
+def BreakStepPos (w w') : Prop :=
+  positive w.lag = true ∧ canRight w.machine.verifier ∧
+  ∃ a, symbol w.machine.control.period.focus = some a ∧
+    read (right w.machine.verifier) ≠ some a ∧
+    w' = ⟨consume w.machine, w.lag, w.margin⟩
+```
+
+`step()` は break 時に `lag.dec()` も `margin.inc()` もしない（`if (consume()) { lag.dec() }`、
+`margin.inc()` は `matched()` 側）ので lag と margin は据え置き。
+
+影響範囲: `ChainStep`/`ChainMatched` の構成子で分岐する箇所は **202**。`M-periodOnly`
+修正（300 超）と同規模の機械的作業。これを入れれば `ChainTickable` の正直な形
+（ready **または** broken）が `WatchOk` なしで証明できるようになり、`hSP` の
+唯一の残り障害 `hready` が消える見込み。
+
+### 付随して分かったこと
+
+`WatchOk` を仮定する定理は全部空虚になった: `GalilChainTickable` の全定理、
+`GalilReplayGeneral` の 7 本、`GalilOneFallback`、`CloseoutTickFalse.chainOk_tick_false`。
+`WatchOk` に言及するファイルは 24。
+
 ## 2026-09-19 n79: `WatchOk` を無条件で反証 — `hSP` の壁の正体が確定した
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
