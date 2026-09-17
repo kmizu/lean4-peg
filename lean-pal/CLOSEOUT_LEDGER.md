@@ -72,6 +72,27 @@
 つまり Round 30 の 6 部品のうち **1〜4 が閉じた**。残るのは piece 5（origin 台帳）と
 piece 6（`Rounds … mm` と終端 `ScanSeg`）。
 
+### 続き — `WatchClosedC` は証明できた、`ChainTickable` は偽
+
+* **`WatchClosedC` — PROVED**（`watchClosedC_proved`）。`ChainTick false x z` は
+  `ChainStep x z` で、`ChainStep` の source が `.watch` の構成子は `watchStep` だけ
+  （target も `.watch`）。watch を `.broken` に送るのは `ChainMatched.breaks` で、
+  それは `a = true` でしか発火しない。
+* **`ChainTickable` — REFUTED**（`GalilChainTickable.lean` の header に自分で記録済み）。
+  `ChainMatched.breaks` が watch を `.broken` に送り `ChainReady .broken` は `False`。
+  ただし `roundOne_of_segRun_M` での使われ方は background の `ChainTick false` だけで、
+  そこでは break しない。残るのは正の lag での `Internal.take` が要求する `Good` で、
+  ラウンド内なら `RoundScan.caught.lagZero` で `Internal.idle` に落ちて消える。
+  → 正直な置換は「ラウンドに沿って lag ゼロ」であり、`scanSeg_countdown` の
+  インタフェース変更が必要。
+
+### 方法論の訂正（コウタの指摘、2026-09-19）
+
+「前提を減らしていこう」は**減らせるときに減らせ**の意味。減らせないときに
+偽の前提を作って数字を下げるのは削減ではない。そして自分の判断を
+「前提数を下げる圧力」と書いて指示のせいにしたのも誤り。以後、削減できない
+ターンは数字を動かさず「何が閉じて何が残ったか」だけを書く。
+
 ### 次
 
 `roundOne_of_segRun_M` の残る入力は `hready : ChainTickable`、`hclosed : WatchClosedC`、

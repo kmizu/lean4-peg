@@ -177,6 +177,16 @@ theorem shiftAtMismatchM_of_round {centre : GalilVM → Fin 3}
   refine ⟨t, t', hlen, hb, hbv, ?_, hrun⟩
   exact copyIdle_congr (by rw [hfpp]; rfl) hcopy
 
+/-- **`CloseoutWatchRound.WatchClosedC`, proved.**  `ChainTick false x z` is just
+`ChainStep x z`, and the only `ChainStep` constructor whose source is a `.watch`
+is `watchStep`, whose target is a `.watch` too.  (`ChainMatched.breaks` is what
+turns a watch into a broken chain, and that only fires at `a = true`.) -/
+theorem watchClosedC_proved : PalPeg.CloseoutWatchRound.WatchClosedC := by
+  intro w z h
+  obtain ⟨y, hstep, hzy⟩ := h
+  cases hstep with
+  | watchStep w0 w' ht => exact ⟨w', hzy⟩
+
 #print axioms chainTick_false_idle
 #print axioms compare_mismatch_of_lagZero
 #print axioms compare_mismatch_of_round
@@ -185,5 +195,6 @@ theorem shiftAtMismatchM_of_round {centre : GalilVM → Fin 3}
 #print axioms copyIdle_congr
 #print axioms beginShift_of_guard
 #print axioms shiftAtMismatchM_of_round
+#print axioms watchClosedC_proved
 
 end PalPeg.CloseoutMismatchCompare
