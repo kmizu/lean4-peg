@@ -35,9 +35,14 @@ scope にある。3 ファイル（`CloseoutPackRun37` / `CloseoutAdvanceT` /
 cycle の `InvLPC` 起点がこれ）、`roundBundle_steps_run`（側入力を run の状態に量化）、
 `shiftPal_of_run`（`hSP` の内容を run から出す）。
 
-`hSP` の残差は run 形の 4 つ: `ChainPosInv2`（4 供給で搬送）、
-`mode = shift → CopyIdle`（真）、`H_readsShift`（⟸ `OriginShift`）、
-`H_freshShift`（⟸ `first_round`）。`canRight` は `Extra8.scanAvail` 場。
+さらに `CopyIdle` の残差は**タダ**だった: `AuxPack.copyP` が
+`CopyPack c s := c.mode ≠ Mode.copy → CopyIdle s` で `shift ≠ copy`。`AuxPack` は
+`auxPack_steps` で run 搬送され `packRunR_MW` が既に走らせている
+（`copyIdle_shift_of_auxPack` / `shiftPal_of_run_aux`）。
+
+**`hSP` の残差は run 形の 3 つ**: `ChainPosInv2`（4 供給で搬送）、
+`H_readsShift`（⟸ `OriginShift` ⟸ `Rounds`）、`H_freshShift`（⟸ `first_round`）。
+`canRight` と `AuxPack` は `BigPack2MG7W` の場。
 
 ### これからの道筋（`final30` の 8 前提）
 

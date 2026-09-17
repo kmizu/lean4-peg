@@ -111,8 +111,54 @@ theorem shiftPal_of_run {w : List (Fin 2)} {delay n : ℕ} {x y : State GalilVM}
 
 end
 
+/-- **The `CopyIdle` residue is free.**  `AuxPack.copyP` is
+`CopyPack c s := c.mode ≠ Mode.copy → CopyIdle s` (`GalilChainCoupling:695`),
+and `shift ≠ copy`.  `AuxPack` travels the run by
+`CloseoutPackRun2.auxPack_steps`, which `packRunR_MW` already runs. -/
+theorem copyIdle_shift_of_auxPack {c : Control} {s : GalilVM}
+    (h : PalPeg.CloseoutPackRun2.AuxPack c s) (hm : c.mode = Mode.shift) : CopyIdle s :=
+  h.copyP (by rw [hm]; decide)
+
+section
+variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
+  (entry q : ℕ) (first : Fin 9)
+
+/-- **`ShiftPal` from the run, with the `CopyIdle` residue discharged.**  Three
+run-form inputs are left: `ChainPosInv2` (which the four branch supplies carry),
+`H_readsShift` (`CloseoutReadsOrigin.h_readsShift_of_originShift`) and
+`H_freshShift` (`GalilScaffoldTopFirstRound.first_round`). -/
+theorem shiftPal_of_run_aux {w : List (Fin 2)} {delay n : ℕ} {x y : State GalilVM}
+    (hidle : x.vm.chain = ChainVM.idle)
+    (h : Steps (galilFrameS (PofC centre place entry w) q first) delay n x y)
+    (haux : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
+      PalPeg.CloseoutPackRun2.AuxPack z.ctl z.vm)
+    (hpos : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
+      ChainPosInv2 w z.ctl z.vm)
+    (hSh : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
+      H_readsShift w z.ctl z.vm)
+    (hF : ∀ (m : ℕ) (z z' : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
+      Tick (galilFrameS (PofC centre place entry w) q first) delay z z' →
+      H_freshShift w z.vm z'.vm)
+    (hm : y.ctl.mode = Mode.scan) (hr : y.ctl.replaying = false)
+    (hcan : canRight y.vm.right)
+    (hfresh : y.vm.periodOnly = false →
+      ShiftPal centre place entry q first w y.vm) :
+    ShiftPal centre place entry q first w y.vm :=
+  shiftPal_of_run centre place entry q first hidle h
+    (fun m z hz => ⟨hpos m z hz, fun hs => copyIdle_shift_of_auxPack (haux m z hz) hs,
+      hSh m z hz⟩)
+    hF hm hr hcan hfresh
+
+end
+
 #print axioms roundBundle_of_idle
 #print axioms roundBundle_steps_run
 #print axioms shiftPal_of_run
+#print axioms copyIdle_shift_of_auxPack
+#print axioms shiftPal_of_run_aux
 
 end PalPeg.CloseoutBundleRun

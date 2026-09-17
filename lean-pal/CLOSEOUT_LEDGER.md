@@ -88,9 +88,16 @@ shift 相では copy 機構が idle なので、これは真の命題。
 | `roundBundle_steps_run` | 側入力を run 自身の状態に量化した版（再添字は `Steps.succ ht`） |
 | `shiftPal_of_run` | **`hSP` の内容を run から**: 起点 idle → 束が travel → `shiftPal_of_roundBundle` |
 
-`hSP` の残差はこれで run 形の 4 つ: `ChainPosInv2`（4 供給で搬送）、
-`mode = shift → CopyIdle`（真）、`H_readsShift`（⟸ `OriginShift`）、`H_freshShift`
-（⟸ `first_round`）。`canRight` は `BigPack2MG7W` の `Extra8.scanAvail` 場。
+さらに `CopyIdle` の残差は**タダ**だった: `AuxPack.copyP` が
+`CopyPack c s := c.mode ≠ Mode.copy → CopyIdle s`（`GalilChainCoupling:695`）で、
+`shift ≠ copy`。`AuxPack` は `CloseoutPackRun2.auxPack_steps` で run 搬送され、
+`packRunR_MW` が既に走らせている（`copyIdle_shift_of_auxPack` /
+`shiftPal_of_run_aux`）。
+
+**`hSP` の残差は run 形の 3 つ**: `ChainPosInv2`（4 供給で搬送）、
+`H_readsShift`（⟸ `OriginShift` ⟸ `Rounds`）、`H_freshShift`（⟸ `first_round`、
+葉なしの定理）。`canRight` は `BigPack2MG7W` の `Extra8.scanAvail` 場、
+`AuxPack` も同じ束の場。
 
 ### これからの道筋（`final30` の 8 前提）
 
