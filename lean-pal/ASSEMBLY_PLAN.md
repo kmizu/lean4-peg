@@ -1,3 +1,28 @@
+## n81 (2026-09-19) `ShiftAtMismatchM` を**証明した** — Round 30 の piece 1〜4 が閉じた
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+`roundOne_of_segRun_M`（`Rounds … 1` の構成器）の唯一の残差 `ShiftAtMismatchM` を、
+**運ばれる不変量だけから証明した**（`CloseoutMismatchCompare.shiftAtMismatchM_of_round`）。
+
+`CloseoutWatchRound30` が「piece 1」と呼んで NAMED leaf にしていた事実——不一致比較の
+無効 chain tick が watch を保つ——も定理になった。**ラウンド終端では lag がゼロ**
+（`RoundScan.caught.lagZero`）なので、`Internal.idle` ＋ `ChainStep.watchStep` ＋
+`ChainTick false` = step で恒等になる。
+
+`CloseoutMismatchCompare.lean`（新規、8 定理）: `chainTick_false_idle`、
+`compare_mismatch_of_lagZero`（**不一致比較を構成**）、`compare_mismatch_of_round`、
+`chainStep_watch_of_lagZero`、`compare_chain_of_mismatch`（与えられた比較の双対）、
+`copyIdle_congr`、`beginShift_of_guard`、**`shiftAtMismatchM_of_round`**。
+
+前提は全部運ばれる不変量: 終端の `RoundScan` ＋ 周期の紐付け、`used + 1 = 2h`、
+`Canonical s1.length`（`CPack.canon`）、`CopyIdle s1`（`AuxPack.copyP`）、
+中心不変量 ＋ `CentreRep`。
+
+**Round 30 の 6 部品のうち 1〜4 が PROVED。** 残りは piece 5（origin 台帳）と
+piece 6（`Rounds … mm` と終端 `ScanSeg`）。次は `roundOne_of_segRun_M` の残る入力
+（`ChainTickable` / `WatchClosedC` / `RoundDataC`）の現状を測る。
+
 ## n80 (2026-09-19) **正直な最上位は `final30`（8 前提・反証済みゼロ）** — `final37` の 4 は偽を 1 つ含む
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**

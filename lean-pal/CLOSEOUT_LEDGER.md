@@ -22,6 +22,63 @@
 
 ---
 
+## 2026-09-19 `ShiftAtMismatchM` を**証明した** — Round 30 の piece 1 も定理に
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 何が閉じたか
+
+`roundOne_of_segRun_M`（`Rounds … 1` の構成器）の唯一の残差だった
+`CloseoutShiftMismatch.ShiftAtMismatchM` を、**運ばれる不変量だけから証明した**
+（`CloseoutMismatchCompare.shiftAtMismatchM_of_round`）。
+
+`CloseoutWatchRound30` の header が「piece 1」と呼んで NAMED leaf にしていた事実
+——「不一致比較の無効 chain tick が watch を保つ」——も定理になった。理由は
+**ラウンド終端では lag がゼロ**（`RoundScan.caught.lagZero`）だから：
+
+* `Internal.idle w (positive_eq_false_of_zero hz) : Internal w w`;
+* `ChainStep.watchStep w w · : ChainStep (.watch w) (.watch w)`;
+* `ChainTick a x z := ∃ y, ChainStep x y ∧ (if a then ChainMatched y z else z = y)` で
+  `a = false` なら tick は step そのもの。
+
+**`CloseoutMismatchCompare.lean`（新規、8 定理）**
+
+| 定理 | 内容 |
+|---|---|
+| `chainTick_false_idle` | lag ゼロの watch では無効 tick は恒等 |
+| `compare_mismatch_of_lagZero` | **不一致比較を構成する**（`galilFrame.compare` = `Frame.pull scanLens (scanFrame …)` を展開） |
+| `compare_mismatch_of_round` | 同、`RoundScan` から |
+| `chainStep_watch_of_lagZero` | lag ゼロの watch から出る chain step は恒等 |
+| `compare_chain_of_mismatch` | **与えられた**比較も watch を保つ（構成の双対） |
+| `copyIdle_congr` | `CopyIdle` は FPP 成分だけを読む |
+| `beginShift_of_guard` | shift 入口を構成（`beginShiftVM` は `t` を一意に固定） |
+| **`shiftAtMismatchM_of_round`** | **`ShiftAtMismatchM` を証明** |
+
+`ShiftAtMismatchM` の前提になったのは**全部運ばれる不変量**:
+ラウンド終端の `RoundScan` ＋ 周期の紐付け、`used + 1 = 2h`（終端性）、
+`Canonical s1.length`（`CPack.canon`）、`CopyIdle s1`（`AuxPack.copyP`）、
+中心不変量 ＋ `CentreRep`。
+
+### 状態区分
+
+* `ShiftAtMismatchC` — **REFUTED**（前ターン）。
+* `ShiftAtMismatchN` — **REFORMULATED**（不十分）。
+* **`ShiftAtMismatchM` — PROVED**（`shiftAtMismatchM_of_round`）。
+* `CloseoutWatchRound30` の piece 1 — **PROVED**（`compare_chain_of_mismatch`）。
+* piece 2（`beginShiftVM` の存在）— **PROVED**（`beginShift_of_guard`）。
+* piece 3（`CopyIdle` の輸送）— **PROVED**（`copyIdle_congr`）。
+* piece 4（`ShiftRun` の存在）— **PROVED**（前ターン、`shiftRun_exists_round`）。
+
+つまり Round 30 の 6 部品のうち **1〜4 が閉じた**。残るのは piece 5（origin 台帳）と
+piece 6（`Rounds … mm` と終端 `ScanSeg`）。
+
+### 次
+
+`roundOne_of_segRun_M` の残る入力は `hready : ChainTickable`、`hclosed : WatchClosedC`、
+`hdata : RoundDataC`。これらの現状を測ってから `Rounds` の供給を組む。
+
+---
+
 ## 2026-09-19 **正直な最上位は `final30`（8 前提・反証済みゼロ）** — `final37` の 4 は偽を 1 つ含む
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
