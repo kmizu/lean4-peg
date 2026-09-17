@@ -22,6 +22,71 @@
 
 ---
 
+## 2026-09-19 wave 7 後の偵察 — 残り 5 前提の構造
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+`pal_in_peg_final27`（5 前提）は main にマージ済み（PR #66）。
+
+wave 7 完了後、残り 5 つ（`hSP`, `hws`, `hme`, `hor`, `hC`）の到達可能性を調べた。
+**新しい定理は作っていない。以下は次 wave のための設計情報。**
+
+### `hme`（`H_marksEntry'`）— 経路は存在するが `Fair` が必要
+
+`CloseoutPackRun17` に **`H_marksEntry'` を一切使わない** run 版が既にある:
+
+- `marksEntry'_of_layout`（`Run16:176`）は `ChooseLayout → MarksEntry'` を**副条件なし**で出す。
+- `chooseLayout_of_wpack`（`Run17:118`）は `WPack` から `ChooseLayout` を出す。
+- `marks_steps`（`Run17:406`）は `CPack`/`WPack`/`MarksInv'` を run に沿って同時に運ぶ。
+- `marksInv'_of_run'`（`Run17:430`）が結論。
+
+残る入力は 3 つ:
+1. `h4 : first ≠ 4` — `first` の選択に関する側条件（`Fin 9` の 9 通り中 8 通りで成立）。
+2. `hfl : ∀ m z, Steps … → z.ctl.mode = scan → 0 ≤ value z.vm.length`。
+   **`CPack.canon : Canonical s.length` では出ない**（`Canonical` と `0 ≤ value` は
+   リポジトリ内でも常に別々の条件として並記される、例 `CloseoutPackRun49:85`）。
+3. `hwin : ∀ m z, … → z.ctl.mode = copy → WindowInOrigin z.vm`。
+   `WindowInOrigin s := (stream s.fpp.walker).length ≤ position s.right`（FPP walker、
+   `WalkerInOrigin` の**主 walker とは別**）。producer は `CloseoutPackRun25:124` だが
+   **`FairSteps` を要求する**（`windowInOrigin_of_fair` が `Fair` の `fallbackPlace` を使う）。
+
+**したがって `hme` の除去は `PackRunRMG2P` の run を `Steps` から `FairSteps` へ
+上げる作業とセットになる。** `Fair` 自体は `GalilTickFair` で完成しており
+（`Tick ∧ Fair` は全状態で一意）、構成側の witness が `Fair` を満たすことの確認が
+別途必要。これが次 wave の主題。
+
+### `hws`（`WatchShiftG`）— 5 連言のうち 1 つは wave 7 で無料に
+
+`WatchShiftG`（`CloseoutPackRun26`）は `ScanNR x → x.vm.chain ≠ idle → compare x.vm s'' →
+s''.chain = .watch wch →` の下で 5 つを主張する:
+
+1. `canRight x.vm.right` — **wave 7 の `extra7_of_front_steps_pack` で出る**（`ScanNR` は
+   `Extra7` の発火条件と同一）。
+2. `4 * periodLength wch ≤ value wch.machine.control.distance`
+3. `∀ rad, ScanInvariant … → value wch.machine.control.distance ≤ 2 * rad`
+   — 素材は `Coupled'.sum : SumRel s.chain (value s.radius)`、
+   `SumRel (.watch w) R = (broken = false → distance + lag = R)`（`GalilChainCoupling`）。
+   `lag` の非負性と radius の一致（`RadiusRep`）が要る。
+4. `canRight wch.machine.verifier`
+5. `Sane wch.machine.verifier`
+
+`Coupled'.block : BlockInv s.chain` は `.watch w` で `WatchBlock w = OnBlock w.machine.control.period`
+のみ。**4 と 5（chain の verifier ヘッドの健全性）は既存の不変量に無い。** 新規に要る。
+
+### `hSP`（`ShiftPal`）— 空虚ではない
+
+`ShiftPalAt w s s'`（`CloseoutPackRun31`）は `s'.chain = .watch wch → shiftGuardVM s' →
+∀ r₀, ScanInvariant … → 1 ≤ periodLength wch ∧ periodLength wch ≤ r₀ + 1 ∧
+PalAt (encoded w) (center + periodLength wch) (r₀ + 1 - periodLength wch)`。
+`ShiftLocalG` を空虚にした「`InvLPC` の chain は idle」の手は使えない
+（run 途中では chain は動いている）。実質的な周期・回文の主張で、
+Galil の move 補題（`GalilMoveLemma`）圏の内容。
+
+### `hor` / `hC`
+
+`hor`（`CycleOracleMC3`）: producer はゼロのまま（6 consume, 0 produce）。最大の残り。
+`hC`（`H_realizeLIMG2'`）: `h_realizeLIMG'_of_G2`（`Run36:499`）で `H_realizeLIMG'` に
+還元される。局所機械の実現。
+
 ## 2026-09-19 wave 7 — `hee`/`het` を **無条件化**: 最上位は **5 前提**
 
 **`pal_in_peg_final27`（`CloseoutExtraFinal`）— 標準公理のみ・5 前提。**
