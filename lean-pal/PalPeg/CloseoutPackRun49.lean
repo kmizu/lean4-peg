@@ -173,11 +173,26 @@ theorem lpackM3_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
       | false =>
         rw [if_neg (by simp)] at hteq
         subst hteq
-        exact absurd (hiff.2 hmt) (by simp)
+        refine absurd (hiff.2 ?_) (by simp)
+        have h0 : GalilScaffoldInputHead.read
+              (afterBirth (chainBorn (decide (vq.search.mode
+                = GalilScaffoldSearchFinish.Mode.found)) s.chain)
+                (afterMismatch s vs vq)).left
+            = GalilScaffoldInputHead.read
+              (afterBirth (chainBorn (decide (vq.search.mode
+                = GalilScaffoldSearchFinish.Mode.found)) s.chain)
+                (afterMismatch s vs vq)).right := hmt
+        rw [afterBirth_left, afterBirth_right] at h0
+        exact h0
     subst ha
     rw [if_pos rfl] at hteq
     subst hteq
     obtain ⟨htl, htr, htc, htcen, htrad⟩ := hts
+    rw [afterBirth_left] at htl
+    rw [afterBirth_right] at htr
+    rw [afterBirth_chain] at htc
+    rw [afterBirth_center] at htcen
+    rw [afterBirth_radius] at htrad
     have hsr : (afterCompare s vs vq).right = vs.right := rfl
     have hsc : (afterCompare s vs vq).chain = vs.chain := rfl
     have hscen : (afterCompare s vs vq).center = s.center := rfl
@@ -227,8 +242,21 @@ theorem lpackM3_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     rw [if_neg (by simp)] at hteq
     subst hteq
     have hsc : (afterMismatch s vs vq).chain = vs.chain := rfl
-    obtain ⟨wch, hcw, hteq2⟩ : beginShiftVM' (afterMismatch s vs vq) t := hb
+    obtain ⟨wch, hcw0, hteq2⟩ :
+      beginShiftVM' (afterBirth (chainBorn (decide (vq.search.mode
+        = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
+    have hcw : (afterMismatch s vs vq).chain = ChainVM.watch wch := by
+      have h0 : (afterBirth (chainBorn (decide (vq.search.mode
+          = GalilScaffoldSearchFinish.Mode.found)) s.chain)
+          (afterMismatch s vs vq)).chain = ChainVM.watch wch := hcw0
+      rw [afterBirth_chain] at h0
+      exact h0
     have hcw' : vs.chain = ChainVM.watch wch := hcw
+    have hneidle : s.chain ≠ ChainVM.idle := by
+      intro hidle
+      rw [hidle] at hch
+      exact chainAt_idle_not_watch hch wch hcw'
+    rw [afterBirth_of_ne_idle hneidle] at hteq2
     have hLv : LagCan (ChainVM.watch wch) := by
       rcases hch with ⟨hne, y, hst, hmy⟩ | ⟨-, -, hz⟩ | ⟨-, -, hz⟩
       · simp only [Bool.false_eq_true, ↓reduceIte] at hmy
