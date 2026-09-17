@@ -1,5 +1,39 @@
 ## n20 (2026-09-17 朝) 葉の放電・偽仮定 4 件・非決定性
 
+## n74 (2026-09-19 未明) 外部レビューを受けて**台帳導入**・`H_candOrient` 反例確定・自分の誤報 1 件を訂正・oracle から `hpres` 消滅
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 新規登録: `CloseoutCandOrient`、`CloseoutWatchRound52`、`CloseoutPackRun49`、`CloseoutOracle6`、`CloseoutWatchRound53`、および `GalilReplaySpan.lean` への**追記のみ**の §24。sorry なし。
+
+### 進め方の是正（`lean4-peg-closeout-followup-2026-09-17.md` を受けて）
+
+外部レビューの指摘を妥当と認める。**「新ファイル＋新しい `finalN`＋build 緑」を単独では前進として数えない。** `final13 → final24` の番号増加は義務の減少を意味しない。
+新設した **`lean-pal/CLOSEOUT_LEDGER.md`** が残差の正本（区分: `OPEN`/`REFUTED`/`REFORMULATED`/`PROVED`/`INTEGRATED`）。
+未解消の前提を `H_x → H_y`・構造体フィールド・instance・別 oracle へ移しただけなら `OPEN` のまま。
+`#print axioms` は推移的公理依存の検査であって、引数に置いた前提の成立は検証しない。
+
+### REFUTED を 1 件、Lean で確定
+
+`H_candOrient`（裸の prefix→suffix `Candidate` 移送）は**偽**。証人 `W = [0,0,0,0,0,1]`, `n=5`, `lower=0`, `h=1`（`W.take 5` の接頭辞 3/5 は回文、`W.drop 3 = [0,0,1]` は非回文）。
+`PalPeg/CloseoutCandOrient.lean`: `prefix_ok`、`suffix_bad`、**`unrestricted_transport_false`**、対比として正しい橋 `correct_bridge`（= `GalilDpSuffix.candidate_iff`、同一窓 + 反転）。標準公理のみ。回帰テストとして常駐させ、旧契約名が消えても反例が残るようにした。
+なお `Extra.cand` は既に主経路から削除済み（n67/n69）なので、この反例は削除が正しかったことの裏付け。
+
+### 自分の誤報の訂正
+
+n72 で「`WatchFreshAtC` は文脈だけで閉じた」と書いたのは**誤り**。`CloseoutWatchRound52` により、着地の chain は `copy`（`chainStart` は `ChainVM.copy`、`ChainMatched` は構成子を保つ）であって `watch` ではないので、`WatchFreshAtC … cP sP` は**前提が充足不能＝空虚**（`landing_chain_copy`:120、`landing_not_watch`:135、`watchFreshAtC_vacuous`:148）。watch 誕生は着地の `2h+3` prep tick 後で、そこでの clock は fresh でない。→ 誕生時刻版 `WatchBirthFreshC` が `OPEN`。純益は、**反証済みの `WatchFreshC` schema と `watchClockC_of_fresh` が経路から外れた**こと（`WatchClockAtC` は birth ごとに証明可能な形）。
+
+### oracle: 反証済みの普遍葉が経路から消えた
+
+`GalilReplaySpan.lean` §24（追記のみ、既存宣言は不変）: `HpresRun`、`hpresRun_mono`、`found_resultRP`、`idle_countdown3RP`、`idle_compare3RP`、`replay_construct3RP`、`replay_after_fallback_general''RP` — 不変版の 6 つの `hpres` 使用箇所を全部放電。`CloseoutOracle6`: `invScanO_of_replay_generalR'`、`cycleOracleMC2C_of_piecesP'`、**`h_oracle_of_leaves5`**。
+**`hpres`/`hpresRep`（普遍形、`hpres_false_at` が反証）は oracle のどこにも現れなくなった。** ただし後継の `hpresRepAt`/`hpresT` は「供給可能」であって**まだ供給されてへん**＝台帳では `REFORMULATED`。実供給は `CloseoutOracle7` で試行中。
+
+### その他
+
+- `CloseoutPackRun49`: `LPackM3` = `LPackM2` + `centreLedger` + `lagCan`、`lpackM3_tick`（全 23 分岐）。`MatchRes2` の成分は `repR`/`saneR`/`canR`/`repNext`/`radNext`（中心台帳が `rad = value radius + 1` を厳密に固定）/`startLedger`/`lagCan`/`backLag` が閉。残 `repVmid`/`replayPay`/`repV`/`canRNext`。
+- `CloseoutWatchRound53`: **`WatchTailC` は定理**（`watchTailC_of_coreX`:213）。credit の形は不安定だが**形の対が安定**（`WRel`: `queued` か `immediate`）、run 長は不変なので `ChainWRun` の測度修正は不要。入力は Round50 の呼び出し側に既にあり新規の未解決なし。`ClockOneC` は `MatchCoreC`（純粋に機械レベル）1 つから従う。
+- **build 失敗の記録**: 一つ前の全体 build は EXIT=1 / errors=4。全部 `Lean exited with code 139`（SIGSEGV）で、サブエージェントが `lean -o` で `.olean` を上書きしたことによる成果物の競合。証明の失敗ではない。再実行で緑。今後、全体 build 中は共有 `.lake` への書き込みを行わせない。
+- `M-periodOnly`（chain 誕生時に `periodOnly = false` と `cycle.reset()` が漏れている）の先送りを解除し、隔離 worktree で専任担当を開始。boolean 一個の代入では不十分で、誕生条件は「その遷移で新しい chain が実際に誕生すること」（`found = true` ではない）。
+
+
 ## n73 (2026-09-19 未明) chain 台帳の葉が 3 つ閉・fallback replay は `Mode.scan` + `replaying` フラグ・oracle 橋が閉
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 新規 3 本登録（`CloseoutPackRun48`、`CloseoutPreload41`、`CloseoutWatchRound50`）、sorry なし、build ログ `build_n73c.log` EXIT=0。
