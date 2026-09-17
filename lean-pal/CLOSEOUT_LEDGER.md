@@ -22,6 +22,63 @@
 
 ---
 
+## 2026-09-19 `H_readsShift` の構造的原因を特定 — 原点は tick でなく**ラウンド**単位で運ばれる
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 測定
+
+`CloseoutPackRun37.ReadsInv` は sweep witness を**等式**で述べている：
+
+```
+w0.machine.control = GalilScaffoldChainSweep.run o.shifted.machine.control extra
+```
+
+ところが `chainShiftOne`（`GalilScaffoldChainInputSupply:1481`）は
+`distance`/`boundary`/`last` を減らすので、**shift 相でこの等式は壊れる**。
+残るのは弱い `Offset`（period tape と `broken` は同じ、カウンタは定数差）だけで、
+それがまさに `ReadOrigin.offset` が記録しているもの。これが `H_readsShift` の
+構造的原因。
+
+### 正しい担い手は既に一段上にある
+
+| 補題 | 場所 | 内容 |
+|---|---|---|
+| `Entry raw o s` | `GalilScaffoldChainReadOrigin:976` | ラウンド開始での原点データ。`machine : s.watch.machine = o.shifted.machine` を含む |
+| `rounds_origin` | `:1010` | `Entry raw o s → CompareRounds h s m s' → ∃ o', Entry raw o' s' ∧ o'.center = o.center + m*h ∧ o'.radius = o.radius + m*h` |
+| `roundScan_entry` | `GalilRoundPeriod:327` | `Entry → RoundScan raw o.center o.radius h 0` |
+| `rounds_lift` | `GalilScaffoldTopRounds:65` | 制御側の `Rounds` が `CompareRounds` に射影される |
+
+**原点は tick 単位でなくラウンド単位で運ばれる**。`m = 1` で `rounds_origin` は
+ちょうど次ラウンドの座標 `(C + h, R + h)` に着く — `roundScan_of_shiftInv` が
+数値的に作る対と同じ。per-tick の不変量（`ChainRound`/`ShiftRound`）が数値を運び、
+`Entry` が原点を運び、両者はラウンド境界で結ばれる。
+
+### 新規（`CloseoutOriginAt`）
+
+| 名前 | 内容 |
+|---|---|
+| `OriginAt w s` | 「watch している chain は必ずある read origin のラウンド開始にいる」を単一状態の場に |
+| `readsInv_of_entry` | `Entry.machine` から `ReadsInv w o.center o.radius h 0 wch`（`extra = []`） |
+| `round_of_originAt` | `OriginAt` から `RoundScan` と `ReadsInv` を**同じ `(C,R)` で**同時に |
+| `originAt_next` | ラウンド境界の step（`rounds_origin` を `m = 1` で） |
+
+### 残る作業の形（測定確定）
+
+束を `ReadsRound` から `OriginAt` へ再基底化すれば `H_readsShift` は消える。
+ラウンド境界の step は `originAt_next`（証明済み）。**残るのは最初のラウンドだけ**
+（`H_freshShift` / `H_fresh`、内容は `GalilScaffoldTopFirstRound.first_round`、
+前提約 25 個）。
+
+再基底化には `CompareRounds h _ 1 _` をラウンド完了時に供給する必要があり、
+これは `round_next`/`rounds_lift`（制御側の 1 ラウンド分の Steps から射影）。
+つまり per-tick の束に per-round の step を接ぐ配線が必要で、粒度が違う。
+これが `hSP` の残り本体。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `RoundBundle` — `hSP` の生産経路を組み上げて残差をコンパイラに検証させた
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
