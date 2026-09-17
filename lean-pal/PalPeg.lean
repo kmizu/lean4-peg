@@ -611,6 +611,9 @@ import PalPeg.CloseoutConsumeAvail
 import PalPeg.CloseoutFinalS2
 import PalPeg.CloseoutTrailS2
 import PalPeg.CloseoutShiftS2
+import PalPeg.CloseoutBranchRes
+import PalPeg.CloseoutShiftDoneP
+import PalPeg.CloseoutLenNonneg
 import PalPeg.CloseoutFinalW
 import PalPeg.CloseoutOracleW
 import PalPeg.CloseoutCheckW

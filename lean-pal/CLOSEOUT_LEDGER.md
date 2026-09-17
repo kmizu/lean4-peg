@@ -83,6 +83,132 @@ run に繋がれていなかった。繋いだ。
 `needIMW'_le_W2`）、`CloseoutFinalS2`（`pal_in_peg_final5MW2`,
 `consumeAvail_idle`, **`pal_in_peg_final31`**）、
 `CloseoutConsumeAvail`（`consumeAvail_of_bound`）。
+## 2026-09-19 3 分岐仮説を Run38 の残差へ（`CloseoutBranchRes`）
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`CloseoutPackRun38` が Run34 の 3 分岐仮説**すべての分解を既に持っていた**。
+run に繋がれていなかったので繋いだ。
+
+| Run34 仮説 | Run38 producer | 残差 |
+|---|---|---|
+| `H_bgP` | `posPayload_background`（:157） | `H_bgRes` |
+| `H_matchP` | `posPayload_match`（:220） | `H_matchRes` |
+| `H_shiftDoneP` | `posPayload_shiftDone`（:314） | `H_shiftDoneRes`（恒等） |
+
+### `H_bgRes` / `H_matchRes` は実質的な前進
+
+`BgRes`（`Run38:140`）は payload を 3 つに割る:
+
+- `src : SrcPos s` — chain 側の台帳（live watch の verifier が `Sane`、
+  `back` 相は既に `lag` 分後ろにいる）。**`step_pos`（`Run38:76`）が
+  1 `ChainStep` を越えて `position verifier + lag` を運ぶ。**
+- `start` — chain が idle のときの `canRight` と radius 台帳
+- `verNext` — 1 chain tick 先の verifier の `canRight ∧ Sane`
+
+### `H_shiftDoneRes` は恒等（Run38 が明記）
+
+Run38 は「`ChainPosInv` は `shift` mode を越えて何も届かない」と記録しており、
+`posPayload_shiftDone := hres` は恒等。その**真の分解**は本セッションの
+`CloseoutShiftDoneP`:
+
+- `canR` ← `ShiftGeom.RRep` ＋ 位置上界（`canRight_of_position_bound`、wave 5）
+- `radLe` ← `ScanInvariant.rightPos` と `ShiftGeom` の位置関係（`rem = 0`）
+- 残り 2 場 → `ChainSideAt`（verifier の位置台帳と 1 tick 先の健全性）
+
+### 新規（`CloseoutBranchRes`、標準公理のみ）
+
+`chainPosInv_steps_res`, `shiftLocalS_of_run_res` — `shiftLocalS_of_run` 以上が
+Run34 の仮説ではなく **Run38 の残差**に依存するようになった。
+
+**次**: `SrcPos` を run に沿って確立する（`step_pos` が 1 step 分を持っている）。
+`verNext` は `GalilArriveChain.caught_arrive` / `immediate_arrive` が近い。
+
+## 2026-09-19 `H_shiftDoneP` の分解（`CloseoutShiftDoneP`）
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`chainPosInv_tick`（`CloseoutPackRun34:411`）は 23 tick 形状のうち 20 を閉じ、
+3 つを named hypothesis として残す。使用箇所は各 1 箇所:
+
+| 仮説 | 使用 tick |
+|---|---|
+| `H_bgP` | `scan_wait`（:17）, `scan_count`（:20） |
+| `H_matchP` | `scan_match`（:23） |
+| `H_shiftDoneP` | `shift_done`（:26） |
+
+`shift_done` は **VM が不変**（制御だけ `shift → scan`）なので 3 つの中で最も軽い。
+
+### 分解結果
+
+`PosPayload` の 4 場のうち **2 つは scan 幾何から無料**:
+
+- `canR : canRight s.right` ← `ShiftGeom`（`CloseoutPackRun23:86`）の
+  `RRep w s`（`Represents s.right.head w ∧ focus ≠ none`）と位置上界から
+  `canRight_of_position_bound`（wave 5）で出る。`canR_of_shiftGeom`。
+- `radLe` は `ScanInvariant.rightPos` と `ShiftGeom` の
+  `position s.right = position s.center + rem + r` を突き合わせる。
+  `shift_done` は `¬ remainingPos s` なので `rem = 0`。`radEq_of_shiftGeom_done`。
+
+残り 2 場は chain 側で、`ShiftGeom` は何も言わない:
+
+```lean
+def ChainSideAt (w : List (Fin 2)) (s : GalilVM) : Prop :=
+  (∀ wch, s.chain = .watch wch →
+      (position wch.machine.verifier : ℤ) + value wch.lag = position s.right) ∧
+  (∀ a z wch, ChainTick a s.chain z → z = .watch wch →
+      canRight wch.machine.verifier ∧ Sane wch.machine.verifier)
+```
+
+`posPayload_of_shiftGeom` がこの 2 つを組み合わせて `PosPayload` を出す。
+すべて標準公理のみ。
+
+**残る義務**: `ChainSideAt`（verifier の位置台帳と 1 chain tick 先の健全性）。
+これは chain machine の不変量で、`Coupled'.sum : SumRel`
+（`.watch w` で `distance + lag = radius`）が `pos` 場の素材。
+`verNext` は `GalilArriveChain` の `caught_arrive` / `immediate_arrive`
+（`canRight` を前提に取る形）が近い。
+
+## 2026-09-19 訂正 — `hfl`（`0 ≤ value length`）は単純な tick 不変量では**ない**
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`hme` 除去のために `CloseoutPackRun17.marksInv'_of_run'` の入力
+`hfl : ∀ m z, Steps … → z.ctl.mode = scan → 0 ≤ value z.vm.length`
+を閉じようとした。
+
+**誤った見立て**: `length := …` の代入箇所を grep すると `reset` / `ofNat _` /
+`inc` しか出てこない（`GalilBootVM:45`, `GalilScaffoldTopRewind:56,178`,
+`CloseoutWatchRound30:209`, `CloseoutWatchRound33:312`, `CloseoutPackRun50:54`,
+`GalilLeafQuiet:121`）。よって「`length` は減らない」と判断した。
+
+**これは間違い。** `shiftTick`（`GalilScaffoldChainInputSupply:1445`）は
+
+```
+def shiftTick (s : ShiftState) : ShiftState :=
+  ⟨right s.center, right (right s.left), dec s.remaining, dec s.radius,
+    dec (dec s.length)⟩
+```
+
+で **`length` を 2 回 `dec`** する。`shift_one` は `shiftLens.set s (shiftLens.get t)`
+経由なので、可視の `length := dec …` として grep に出てこない。
+`GalilScaffoldTopShift:11` の docstring は最初から「`length -= 2`」と書いていた。
+
+**教訓**: 代入箇所の構文的 grep はレコード更新をすり抜ける。フィールドの
+振る舞いは、そのフィールドを含むレンズ／レコードの更新関数
+（ここでは `shiftTick`）まで追う必要がある。
+
+### `hfl` の真の義務
+
+`shift_one` が撃てるのは `remainingPos s`（`positive s.shift.remaining = true`）の
+間だけで、`ShiftGeom`（`CloseoutPackRun23:86`）が `remaining` と
+ヘッド位置を結びつけている。`CPack.span : value s.length ≤ 2 * position s.right + 1`
+と合わせて `shift` phase の下界を出すのが本筋。
+
+### 残したもの（`CloseoutLenNonneg`、標準公理のみ）
+
+`value_reset`, `value_ofNat`, `nonneg_ofNat`, `nonneg_inc`, `value_inc`,
+`nonneg_reset` — カウンタの基礎補題。これらは正しく、`hfl` の本証明でも使える。
 
 ## 2026-09-19 wave 10 — `ShiftLocalG` も消えた: **8 前提・反証済みゼロ**（`pal_in_peg_final30`）
 
