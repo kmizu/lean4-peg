@@ -22,6 +22,73 @@
 
 ---
 
+## 2026-09-19 `hme` は `hpack` の中にあった — **4 前提**
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+`pal_in_peg_final37`（`CloseoutFinalW4`）は **4 前提**（`hSP`, `hor`, `hC`, `hpack`）。
+
+### まず、自分の誤りの訂正（`INTEGRATED` ではなく設計誤認）
+
+直前に「`BigPack2MG7W''` に 5 場（`cpack`/`wpack`/`lenNonneg`/`walkerPin`/`walkerOrigin`）
+を足して `bigPack2MG7W''_tick` で保存すれば 4 前提になる」と書いた。**この配線は前提を
+減らさない。** 設計して測った結果：
+
+- `CloseoutPackRun17.wpack_tick` は着地の `hwin : c'.mode = .copy → WindowInOrigin t` を
+  **毎 tick 入力として要求する**（:147）。よって `WPack` を run に沿って運ぶには
+  run レベルの `hwin` が必要で、これは `hme` と同じ 1 前提。
+- `hwin` を場にして tick で保存する道は**閉じている**。`scan → copy` は `scan_fallback`
+  一択で、着地の `fpp.walker` は `beginFallbackVM p s1 s2` の `walker := p`
+  （`GalilScaffoldChainFallback:404`）。`sharedC` は `bf` に `beginFallbackVM'`
+  （`= ∃ p, beginFallbackVM p`、`GalilScaffoldTopGuards:38`）を入れるので `p` は
+  **存在量化されたまま**で、`Tick` は `p` を一切縛らない。これは CLAUDE.md §2 の
+  モデル欠陥 (e)「`beginFallbackVM'`（着地場所）が非関数的」そのもの。
+
+つまり `hme` は「`Fair` を足す」か「モデルを変える」以外では**単独では**落ちない。
+
+### 正しい道：`hme` の内容は既に `hpack` が配っていた
+
+`hme` の使用箇所は `packRunR_MW` の中の **2 箇所だけ**で、どちらも産物は `MarksInv'`。
+
+| 箇所 | 用途 |
+|---|---|
+| `CloseoutOracleW:170` | `marksInv'_of_run … hme` — run 起点の `MarksInv'` |
+| `CloseoutOracleW:205` | `bigPack2MG7W''_tick … hme` — 1 tick 先の `MarksInv'` |
+
+そして `MarksInv' first c s` は **`ChainPack` の場**（`CloseoutChainPack:281` `marks`）で、
+`hpack` が `ChainPosInv2` を満たす全状態で配っている。前提 `ChainPosInv2` は：
+
+- 起点：`InvLPC` は chain idle を強制（`CloseoutShiftLocalFree.chainIdle_of_invS`）→
+  `CloseoutPackRun41.chainPosInv2_of_idle`。
+- run 上：`CloseoutShiftS2.chainPosInv2_steps` が運ぶ。必要な 4 供給
+  `H_bgP2`/`H_matchP2`/`H_shiftEntry2`/`H_shiftDoneRad2` は **`final36` が既に `hpack` から
+  導出している**（`h_bgP2_of_chainPack`, `h_matchP2_of_target`, `h_shiftEntry2_of_target`,
+  `h_shiftDoneRad2_of_chainPack`）。
+
+よって `hme` の代わりに現れるものは**ない**。
+
+### 新規
+
+| 名前 | ファイル | 内容 |
+|---|---|---|
+| `bigPack2MG7W''_tick_M` | `CloseoutMarksPack` | `bigPack2MG7W''_tick` の `hme` を着地の `MarksInv'` 入力に置換（残り 60 行は逐語） |
+| `packRunR_MWP` | `CloseoutMarksPack` | `packRunR_MW` の `hme` を 4 供給 + `hpk` に置換、`MarksInv'` は全部 `ChainPack.marks` |
+| `pal_in_peg_final37` | `CloseoutFinalW4` | 4 前提 |
+
+`hme`: `INTEGRATED`（`hpack` から供給、主経路で `hme` は消滅）。
+
+### 残り 4 前提
+
+| 前提 | 内容 | 状態 |
+|---|---|---|
+| `hSP` | scan 状態の `ShiftPal`（周期と `PalAt`、Galil の move 補題） | `OPEN` |
+| `hor` | `CycleOracleMC3`（`h_oracle_of_leaves''` の 13〜14 葉、最大は `hfound`/`hfoundBg`/`hfoundReplay`） | `OPEN` |
+| `hC` | `H_realizeLIMW'`（局所機械の実現） | `OPEN` |
+| `hpack` | `ChainPosInv2 → ChainPack`。残差は `ChainSide`（`CloseoutChainPack:241`）。`lagCan`/`backLag` は `CloseoutLagAll.LagAll` で閉、`walkerPin` はモデル欠陥 (e) により `Fair` 必須、残りは `repV`/`repVmid`/`scanBound` | `OPEN` |
+
+計画書 §10.5（前提ゼロ）は**未達**。
+
+---
+
 ## 2026-09-19 `Fair` 依存は 2 箇所とも「1 つの pin」だった
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
