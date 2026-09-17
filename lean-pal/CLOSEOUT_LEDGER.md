@@ -22,6 +22,53 @@
 
 ---
 
+## 2026-09-19 `hor` の葉が 13 → 11 — `Decodes` はタダだった
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 鍵：`Decodes` は義務ではない
+
+`Decodes P`（`GalilScaffoldTopReadyFound:22`）は `P.centre` と `P.place` だけを縛る：
+
+```
+(∀ u a ls rs q gap, u.center = represent ⟨a :: ls,gap⟩ (rs.map some) q →
+   read ⟨a :: ls,gap⟩ = some (P.centre u) ∧ P.place u = ⟨a :: ls,gap⟩) ∧
+(∀ u v, u.center = v.center → P.place u = P.place v)
+```
+
+`centreC` / `placeC` は `s.center` の具体関数なので、これは
+**`GalilFinalAssembly2.decodesC (entry) (w)` として既に証明済み**（`:327`）。
+`Closeout*` 全域で `hP : Decodes (PofC centreC placeC entry w)` が素通し
+仮説として threaded されていたが、それは全部タダだった。
+
+### 閉じた 2 葉
+
+| 葉 | producer |
+|---|---|
+| `hrs`（`RestartShape`） | `GalilReplaySpan.restartShape_sharedC` — 無条件 |
+| `hbudget`（`ReplayBudgetR`） | `GalilFoundStageInv.replayBudgetR_of_decodes'` を `decodesC` で |
+
+### 新規（`CloseoutOracle8`）
+
+| 名前 | 内容 |
+|---|---|
+| `hbudget_C` | `∀ w, ReplayBudgetR w (PofC centreC placeC entry w) q first 2048` |
+| `hrs_C` | `∀ w, RestartShape (PofC centreC placeC entry w)` |
+| `h_oracle_of_leaves7` | `h_oracle_of_leaves6` の 13 葉 → **11 葉** |
+
+残る 11 葉: `hreadyB`, `hpresRepAt`, `hshape`, `hstage`, `hended`, `hlastMatch`,
+`hlastMismatch`, `hmismatch`, `hfound`, `hfoundBg`, `hfoundReplay`, `hstr`。
+
+### `hstage` は再切り出し案件（測定）
+
+`GalilFoundStageInv` のヘッダ自身が書いている通り、`ReplayStageInv` は
+`MInv` ＋ `SearchReady` を持つ**任意の** `(c, s)` を量化しており、その形では
+**証明不能**。`hsc` や `H_advanceT` と同じ再切り出し案件で、grind する義務ではない。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `hSP` の残差は `hor` の found 経路の葉の**中**にあった — 2 つの壁は 1 つ
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
