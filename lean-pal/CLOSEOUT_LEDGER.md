@@ -22,6 +22,61 @@
 
 ---
 
+## 2026-09-19 終端ヘッド上界は `hpos` と同一で、`hpos` は交差点での分割だった
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 同定
+
+`CloseoutTerminalN` が残した終端ヘッド上界
+`position (afterCompare s3 vs3 vq3).right ≤ 2*m − 1` は、`afterCompare` が右ヘッドを
+`right s3.right` に置くので `position (right s3.right) ≤ 2*m − 1` ＝
+**`GalilLeafMismatch.hmismatch_of_residues` の `hpos` 残差そのもの**。
+
+`GalilLeafPos` のヘッダが既に示している通り `hpos` は**偽**
+（`not_hpos_of_report_place`: 許容端 `position r.right = 2*m − 1` の entry からは
+比較が `2*m` に着地する）。置換は `hpos_of_segBudget` で、区間予算
+`position r.right + es.count true ≤ 2*m − 2` を要求する。
+`segment_of_invLPC` / `segment_of_invLPCS` は `SegReachedW ∧ SegEnd` を産出するが
+`m` を知らないので予算は出ない。
+
+### 形は証明済みの二分法で決まっている
+
+`GalilLeafPos.hpos_or_reportPoint`（証明済み）:
+
+```
+position t.right ≤ 2*m−1 →
+  position (right t.right) ≤ 2*m−1 ∨ ReportPointAt w m ⟨c', t⟩
+```
+
+各比較で「チェックポイント内に留まる」か「その状態が `m` の報告点そのもの」
+（そこで oracle は `ReachAtC2` 分岐を取る）のどちらか。これを区間に沿って反復するのが
+欠けている段で、`GalilOneFallback.watchSegE_right_position` によりヘッド前進は
+`es.count true` なので**イベント列の算術**に落ちる。
+
+### 新規（`CloseoutSegBudget`）
+
+| 名前 | 内容 |
+|---|---|
+| `headBound_iff_count` | ヘッド上界 ⇔ 区間の一致回数の上界（`seg_right_place` で） |
+| `SegCrossSplit` | **（NAMED）交差点での分割**。一致回数がチェックポイントを越えるなら、ちょうど乗る接頭辞がある。分割自体は `watchSegE_append`（既存）で、名前を付けたのは「接頭辞の選び方＝回数がちょうど届く」 |
+| `hpos_or_report_of_split` | 分割から三分岐（内側 / 報告点 / 交差接頭辞）。`hpos_or_reportPoint` と組み合わせ |
+
+すべて標準 3 公理のみ。
+
+### 区間分解の残差（更新）
+
+| 義務 | 状態 |
+|---|---|
+| `RoundDataC` / `MatchTickC` | **閉**（前エントリ） |
+| 終端ヘッド上界 ＝ `hpos` | `SegCrossSplit` 1 つに帰着。材料は `watchSegE_append` ＋ イベント列の算術 |
+| `ShiftAtMismatchC` | `OPEN`（入力依存） |
+| 下流の `TerminalN` 再配線 | 未着手（機械的） |
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `RoundDataC` の残差を配線した — 偽の葉 1 つを証明済みの葉に置換、欠けた出口を補充
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
