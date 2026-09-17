@@ -22,6 +22,64 @@
 
 ---
 
+## 2026-09-19 **正直な最上位は `final30`（8 前提・反証済みゼロ）** — `final37` の 4 は偽を 1 つ含む
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 事実
+
+`hpack` が偽と分かったあと、その用途を追跡して分かったこと：
+
+* **`pal_in_peg_final30`（`CloseoutFinalW`）は `hpack` を必要としない。**
+  8 前提 `hSP` `hme` `hor` `hC` `hfour` `hbgP` `hmatchP` `hsdP` で、
+  自身の docstring が「eight hypotheses, none refuted」と書いている。
+  `#print axioms` は標準 3 公理のみ（本ターン再確認）。
+* `final37` が 8 → 4 に減らした経路（`final5MW3` の `hpk`）は**偽の前提を通っていた**。
+
+したがって**正直な最良状態は `final30` の 8 前提**であり、`final37` の 4 前提は
+「4 つの証明可能な前提」ではない。台帳の区分でいえば、`final31`〜`final37` の
+削減のうち `hpack` を経由した分は前進として数えられない。
+
+### `final5MW3` 経路の修理（本ターン）
+
+捨てずに直した。`CloseoutVerSide.lean`：
+
+| 定理 | 内容 |
+|---|---|
+| `shiftLocalS_of_parts` | `shiftLocalS_of_chainPack` を 4 射影（`inv`/`repR`/`repV`/`lagCan`）に分解 |
+| `VerRun` | **run 形の残差**：run が到達する各 scan 状態で `VerRep w z.vm.chain ∧ LagCan z.vm.chain`。`chainPosInv2_of_idle` では反証できない |
+| `shiftLocalS_of_verRun` | `repR` は run 自身の `LPackM2`（pre-trace の pack）から、`ChainPosInv2` は 4 供給で運ばれ、仮定は `VerRun` だけ |
+| `radPack_ptS4` / `trailF_ptS4` / `needIMW'_le_W4` | `hpk` を `VerRun` に差し替えた鎖 |
+| `verRun_of_hpack` | 旧（偽）仮定 ⟹ 新仮定（失うものはない） |
+
+`CloseoutFinalW5.lean`: **`pal_in_peg_final5MW4`** = `final5MW3` の `hpk` を
+`hver : ∀ w st, st 0 = boot w → VerRun … w (st 0)` に置換。標準公理のみで通る。
+
+つまり `final5MW3` 経路の `hpack` 依存は `VerRun`（2 事実・run 形）に縮んだ。
+ただし `final37` の**他の** `hpack` 用途（4 供給 `hbgP`/`hmatchP`/`hentry`/`hsdP` の
+導出と `packRunR_MWP`）は `VerRun` では覆えない。それらは `final30` では
+**前提として明示されている**（`hfour`/`hbgP`/`hmatchP`/`hsdP`）ので、
+`final30` に戻るのが正しい。
+
+### 状態区分
+
+* `hpack` — **REFUTED**（`scanBound` 由来。`ChainSideR` で矛盾は除去したが導出不能は残る）。
+* `final37` の 4 前提 — 1 つ（`hpack`）が偽。**前進として数えない。**
+* `final30` の 8 前提 — 反証済みゼロ。**これが正本。**
+* `VerRun` — **OPEN**（run 形、2 事実）。`final5MW3` 経路の `hpack` 依存の全量。
+
+### これからの道筋（`final30` の 8 前提）
+
+| 前提 | 現状 |
+|---|---|
+| `hSP` | `RoundBundle` ＋ `OriginShift`（`Rounds` から `originAt_of_rounds`）＋ `H_freshShift`（`first_round`、葉なしの定理）に還元済み。`ShiftRun` piece 4 は本ターン **PROVED** |
+| `hme` | `CloseoutMarksFree.marks_steps_free` が `H_marksEntry'` なしで運ぶ。残差は `WindowInOrigin`（モデル欠陥 (e)）——横移動なので前進ではない |
+| `hor` | 11 葉 ＋ `hsc`。`ShiftAtMismatchM`（本ターン再定式化）で found 経路が 3 分岐に |
+| `hC` | 局所実現、未分解 |
+| `hfour` / `hbgP` / `hmatchP` / `hsdP` | tick 補題。前提は `ChainPosInv2` ＋ tick データで、結論は tick の目標状態に束縛されるので `hpack` のようには反証できない |
+
+---
+
 ## 2026-09-19 **`hpack` は偽だった** — 最上位 4 前提のうち 1 つが反証された
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**

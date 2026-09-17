@@ -95,7 +95,7 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 
 ## lean-pal 無条件 PAL ∈ PEG の進捗（2026-09-19 時点、最上位 4 前提）
 
-**状態: 全体 build 成功・標準公理のみ・無条件 PAL は未完。最上位は `pal_in_peg_final37`（`CloseoutFinalW4`、**4 前提**: `hSP` `hor` `hC` `hpack`）。`#check` で 4 引数、`#print axioms` は標準 3 公理のみ。ただし **`hpack` は偽**（`CloseoutPackRefute`、2026-09-19 反証）——`ChainPack` は run 沿いの束を一状態述語として書いており、`ChainPosInv2` からは出ない。よって「4 つの証明可能な前提」ではない。計画書 §10.5（前提ゼロ）は未達。** 全モジュール sorry なし。新モジュールは `PalPeg.lean` の `import PalPeg.GalilSegmentConstruct` の直後に登録。
+**状態: 全体 build 成功・標準公理のみ・無条件 PAL は未完。正本の最上位は `pal_in_peg_final30`（`CloseoutFinalW`、**8 前提・反証済みゼロ**: `hSP` `hme` `hor` `hC` `hfour` `hbgP` `hmatchP` `hsdP`）。`pal_in_peg_final37`（`CloseoutFinalW4`）は 4 前提だが `hpack` が**偽**（`CloseoutPackRefute`、2026-09-19 反証）——`ChainPack` は run 沿いの束を一状態述語として書いており `ChainPosInv2` からは出ない。よって 8 → 4 の削減は偽の前提を通っており、前進として数えない。計画書 §10.5（前提ゼロ）は未達。** 全モジュール sorry なし。新モジュールは `PalPeg.lean` の `import PalPeg.GalilSegmentConstruct` の直後に登録。
 
 ### 1. 最上位の定理と残りの仮定
 
