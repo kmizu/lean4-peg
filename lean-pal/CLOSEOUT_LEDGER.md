@@ -22,6 +22,63 @@
 
 ---
 
+## 2026-09-19 ⚠️ 重大な訂正 — `hor` は「producer ゼロ」ではない。13〜14 葉に分解済み
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+本セッションで繰り返し「`hor`（`CycleOracleMC3`）は producer がリポジトリに
+1 つも無く、束への畳み込みでは原理的に届かない」と述べた。**これは誤り。**
+
+### 実際の状況
+
+`GalilOracleMC3.h_oracle_of_leaves''`（:335）が **14 葉**から `H_oracle` を出す:
+
+`hpres`, `hshape`, `hbudget`, `hstage`, `hrs`, `hends`, `hended`,
+`hlastMatch`, `hlastMismatch`, `hmismatch`, `hfound`, `hfoundBg`,
+`hfoundReplay`, `hstr`
+
+そして **14 葉すべてに関連ファイルが存在する**:
+
+| 葉 | ファイル |
+|---|---|
+| `hbudget` / `hrs` | `CloseoutRestartShape`（本セッション wave 5 で作成） |
+| `hends` | `GalilLeafEnds` |
+| `hended` / `hlastMatch` | `GalilLeafReport` |
+| `hpres` | `CloseoutOracle7` |
+| `hshape` | `GalilReplaySpan` |
+| `hstage` / `hmismatch` | `CloseoutOracleI2` |
+| `hlastMismatch` | `CloseoutOracle5` |
+| `hfound` / `hfoundBg` | `CloseoutFoundBackground` |
+| `hfoundReplay` | `CloseoutFoundReplay`（`foundInReplayRouteMC3_of_leaf` は **MC3** 用） |
+
+### さらに: ビルド可能なのに未登録のファイルがあった
+
+`CloseoutOracle7.h_oracle_of_leaves6` は **13 葉**版（`hends`/`hstr` が消え
+`hreadyB`/`hpresRepAt` に置き換わっている）で、**単体ビルドが通るのに
+`PalPeg.lean` に未登録**だった。`CloseoutOracle6` も同様。両方登録した。
+
+未登録のまま眠っていた `Closeout*`（ビルド可否を実測）:
+
+| ファイル | 状態 |
+|---|---|
+| `CloseoutOracle6` / `CloseoutOracle7` | **ビルド可能** → 登録した |
+| `CloseoutFoundRoute1` | エラー 3 |
+| `CloseoutPackRun49` | エラー 5（既報） |
+| `CloseoutPackRun50` | エラー 5 |
+| `CloseoutRealize1` | エラー 3 |
+| `CloseoutCoreEnc25` / `CloseoutWatchRound52` / `CloseoutWatchRound53` | 未測定 |
+
+### 教訓
+
+「producer がゼロ」の判定を `grep -c "theorem.*: <型名>"` だけでやったのが誤り。
+producer は**別名で**存在し（`h_oracle_of_leaves''` の結論は `H_oracle`）、
+葉に分解された形で各ファイルに散っている。**CLAUDE.md の §3 に
+「閉: `hex`, `hsearch`, `hsegmentM`, `hends`, `hbudget`, `hrs`, `hended`,
+`hlastMatch`, `hstr`」と書いてあったのを読まずに「ゼロ」と結論した。**
+
+前提の到達可能性を判定するときは、(1) 型名の grep だけで済ませない、
+(2) CLAUDE.md / 台帳の既存記録を読む、(3) 未登録ファイルの有無を確認する。
+
 ## 2026-09-19 `hme` の 3 入力すべてに道がついた（`hwin` → `WalkerPin` ＋ `WalkerInOrigin`）
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
