@@ -271,21 +271,32 @@
 |---|---|---|
 | `canRight s.right` | 呼び出し側（run pack の `Extra7.scanAvail`） | 入力 |
 | `ChainReady s.chain` | `chainReady_of_round`：3 条項すべてラウンドから — (1) `positive lag → Good` は `RoundScan.caught.lagZero` で**空虚**、(2) `WatchBlock w` は `BlockInv (.watch w)`（`GalilBranchInvariants:429`）＝ `Coupled.block` ＝ `AuxPack` の場、(3) `∀ m, Internal w m → canRight m.verifier` は `internal_of_zero` で `m = w` に潰れ、`canRight_verifier_of_round`（`CaughtScan.aligned` ＋ `not_canRight_iff`）で出る | **PROVED** |
-| `∀ w, s.chain = .watch w → 0 ≤ value w.machine.control.distance` | 参照 run については `distance_nonneg_of_run` で**証明済み**。実 chain は `Offset k`（`k ≥ 0`）だけ小さいので負になり得る。供給元**未特定** | 残り 1 点 |
+| `∀ w, s.chain = .watch w → 0 ≤ value w.machine.control.distance` | `SumRel` で `value distance = value s.radius` に落とし、中心台帳の等式 ＋ 走査不変量で非負を出した（`distance_eq_radius_of_round` / `radius_nonneg_of_ledger`） | **PROVED**（中心台帳の等式が入力） |
 
-最後の 1 点を追った結果（`distance_nonneg_of_run`、本監査で証明）：
+最後の 1 点を追い切った（本監査、`CloseoutLandingRound` 全 7 定理・標準公理のみ）：
 
-- `Ordered s := value last ≤ value boundary ∧ value boundary ≤ value distance` で、
-  `GalilScaffoldChainRestart.run_order` は `Ordered` の保存と **`last` の単調性**を
-  同時に返す。`GalilScaffoldChainConsume.ready` は 3 counter すべて `reset`（値 `0`）。
-  よって**参照 run では `0 ≤ value distance` が出る**（機械検査済み）。
-- しかし `CloseoutSweptOff.SweptOff` が与えるのは `Offset k w.machine.control d`
-  （`d` は参照 run）であり、`ReadOrigin.offset` の `k` は
-  `(shifts * (interior.length+1) : ℕ)` で**非負**。したがって
-  `value w.machine.control.distance = value d.distance - k` は**負になり得る**。
-- 実 chain の `distance` 非負は shift guard（shift 前に `4h ≤ distance` を要求）に
-  結びついた **run の事実**であり、**その供給元は本監査では特定できていない**。
-  「無い」とは書かない。
+1. `distance_nonneg_of_run`：参照 run（`run (ready …) pre`）では `Ordered` ＋
+   `run_order` の `last` 単調性 ＋ `ready` の 3 counter が `0` から
+   `0 ≤ value distance` が出る。ただし実 chain は `Offset k`（`k ≥ 0`）だけ小さいので
+   これだけでは足りない。
+2. **`distance_eq_radius_of_round`**：`GalilChainCoupling.SumRel (.watch w) R :=
+   broken = false → value distance + value lag = R`（`GalilChainCoupling:193`）を
+   `AuxPack.coupled.sum`（`R := value s.radius`）で使い、`RoundScan.caught` の
+   `lagZero` / `unbroken` を合わせると **`value distance = value s.radius`**。
+   つまり `distance` の非負性は**半径カウンタの非負性と同値**。
+3. **`radius_nonneg_of_ledger`**：中心台帳の等式
+   `(position s.center : ℤ) + value s.radius = position s.right`
+   （`CloseoutPackRun47.CentreLedger` の第 3 連言）と運ばれる走査不変量
+   `ScanInvariant.rightPos`（`position r = center + radius`）から `0 ≤ value s.radius`。
+4. **`landingReadyC_of_parts`**：以上を合成。入力は
+   ラウンド / `BlockInv`（`AuxPack.coupled.block`）/ `canRight s.right`
+   （`Extra7.scanAvail`）/ `SumRel`（`AuxPack.coupled.sum`）/ 運ばれる走査不変量
+   （`LPackM.scanGeom`）/ **中心台帳の等式**。
+
+**残っているのは中心台帳の等式 1 つだけ。** grep の結果、この等式は
+`ChainPack` / `ChainSide` / `ChainSideR` / `CentreLedger` にしか現れず、
+ほかに運ばれていない。つまり `hland`（過剰量化で使えない側入力）は
+**「運ばれる事実 ＋ `ChainSideR` の 1 場（`centreLedgerPos`）」に落ちた**。
 
 `Canonical` 単体では非負は出ない（`Canonical c := c.pos = [] ∨ c.neg = []` で
 `pos = []` 側なら `value ≤ 0`）ことも確認済み。

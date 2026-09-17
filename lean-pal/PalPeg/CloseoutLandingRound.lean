@@ -128,9 +128,65 @@ theorem distance_nonneg_of_run (token boundary : Fin 3) (xs pre : List (Fin 3)) 
 結びついた run の事実であり、**その供給元は本監査では特定できていない**。
 「無い」とは書かない。 -/
 
+/-! ## `0 ≤ value distance` は `SumRel` で半径の非負性に落ちる
+
+`GalilChainCoupling.SumRel (.watch w) R := w.machine.control.broken = false →
+value w.machine.control.distance + value w.lag = R`（`GalilChainCoupling:193`）で、
+`AuxPack.coupled.sum` が `R := value s.radius` でそれを与える。ラウンドでは
+`RoundScan.caught.lagZero` と `caught.unbroken` があるので
+
+```
+value w.machine.control.distance = value s.radius
+```
+
+となり、`distance` の非負性は**半径カウンタの非負性**と同値になる。 -/
+theorem distance_eq_radius_of_round {raw : List (Fin 2)} {C R h used : ℕ} {s : GalilVM}
+    {w0 : GalilScaffoldChainWatch.State}
+    (hI : PalPeg.GalilRoundPeriod.RoundScan raw C R h used s w0)
+    (hsum : PalPeg.GalilChainCoupling.SumRel s.chain (value s.radius)) :
+    value w0.machine.control.distance = value s.radius := by
+  have hs : PalPeg.GalilChainCoupling.SumRel (ChainVM.watch w0) (value s.radius) := by
+    rw [← hI.chain]; exact hsum
+  have he := hs hI.caught.unbroken
+  have hz : value w0.lag = 0 := by
+    have := hI.caught.lagZero
+    simp only [GalilScaffoldCounter.zero, Bool.and_eq_true, List.isEmpty_iff] at this
+    simp [value, this.1, this.2]
+  omega
+
+/-- **半径カウンタの非負性**は、中心台帳の等式と運ばれる走査不変量から出る。
+`CentreLedger` の第 3 連言 `(position s.center : ℤ) + value s.radius = position s.right`
+（`CloseoutPackRun47:153`）と `ScanInvariant.rightPos`
+（`position r = center + radius`）を合わせると `value s.radius = rad ≥ 0`。 -/
+theorem radius_nonneg_of_ledger {raw : List (Fin 2)} {s : GalilVM}
+    (hledger : (position s.center : ℤ) + value s.radius = position s.right)
+    (hcen : ∃ rad : ℕ, ScanInvariant raw (position s.center) rad s.left s.right) :
+    0 ≤ value s.radius := by
+  obtain ⟨rad, hsc⟩ := hcen
+  have hr := hsc.rightPos
+  omega
+
+/-- **`LandingReadyC` from the round, with the `distance` floor derived.**
+入力は全部運ばれるもの：ラウンド、`BlockInv`（`AuxPack.coupled.block`）、
+`canRight s.right`（`Extra7.scanAvail`）、`SumRel`（`AuxPack.coupled.sum`）、
+運ばれる走査不変量（`LPackM.scanGeom`）、そして中心台帳の等式。 -/
+theorem landingReadyC_of_parts {raw : List (Fin 2)} {C R h used : ℕ} {s : GalilVM}
+    {w0 : GalilScaffoldChainWatch.State}
+    (hI : PalPeg.GalilRoundPeriod.RoundScan raw C R h used s w0)
+    (hblk : BlockInv s.chain) (hav : canRight s.right)
+    (hsum : PalPeg.GalilChainCoupling.SumRel s.chain (value s.radius))
+    (hledger : (position s.center : ℤ) + value s.radius = position s.right)
+    (hcen : ∃ rad : ℕ, ScanInvariant raw (position s.center) rad s.left s.right) :
+    LandingReadyC s :=
+  landingReadyC_of_round hI hblk hav
+    (by rw [distance_eq_radius_of_round hI hsum]; exact radius_nonneg_of_ledger hledger hcen)
+
 #print axioms canRight_verifier_of_round
 #print axioms chainReady_of_round
 #print axioms landingReadyC_of_round
 #print axioms distance_nonneg_of_run
+#print axioms distance_eq_radius_of_round
+#print axioms radius_nonneg_of_ledger
+#print axioms landingReadyC_of_parts
 
 end PalPeg.CloseoutLandingRound
