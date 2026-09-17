@@ -22,6 +22,69 @@
 
 ---
 
+## 2026-09-19 `ChainPack` 束ね＋偽の `hni` 除去（`pal_in_peg_final33`）
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### トップダウンに切り替えた
+
+それまで葉から積むボトムアップで、前提の**言い換え**を作っていた
+（`final30` 8 → `final31` 9 → `final32` 10 と増えた）。最終定理から降りて
+各前提の producer と入力を測る形に変えた。
+
+### `chainPosInv2_tick` の 4 分岐は `ChainPack` 1 つに束ねられる
+
+`CloseoutPackRun48` の 4 producer の入力は**同じ形**をしている:
+
+```
+∀ c s, c.mode = Mode.scan → ChainPosInv2 w c s → <s についての局所事実>
+```
+
+局所事実は `RRep`（右ヘッド）、`VerRep`（verifier ヘッド）、`LagCan`（lag）、
+shift 相の `canRight s.right` と radius 台帳。これを `ChainPosInv2` に畳んだのが
+`ChainPack`（`CloseoutChainPack`）。
+
+さらに **`H_matchRes2` と `H_shiftRes2` は同一の `MatchRes2` pack を要求する**
+（一方は matching 比較の source、他方は mismatching guarded 比較）ので
+`matchRes2_of_chainPack` 1 本で両方が落ちる。
+
+### ⚠️ `hni`（scan 状態の chain は非 idle）は **偽**
+
+`initVM` は `t.chain = .idle`（`GalilScaffoldTopReplay:24`）を出し、
+`invLPC_init`（`GalilFinalAssembly4:85`）はその着地を `mode := .scan` に置く。
+**scan かつ chain idle な状態が実在する。**
+
+`MatchRes2` はこれを必要としない — `repV` は `.watch` で guard され
+`startLedger` は `.idle` で guard される — ので、`canR` を
+`canRight_of_position_bound`（wave 5）で位置上界から出す形に直して除去した。
+`hnr`（scan 状態で非 replaying）も同時に不要になった。
+
+### 前提数の推移
+
+`final30` 8 → `final31` 9 → `final32` 10 → **`final33` 8**。
+
+`final32 → final33` の 2 減は言い換えではなく、**偽の前提 1 つの除去**と
+それに連動した 1 つの不要化。
+
+### `final33` の 8 前提
+
+`hSP`, `hme`, `hor`, `hC`, `hpack`（`ChainPack`）, `hbudget`（`ScanBudget`）,
+`hstart`（`BgStartP2`）, `hav`（`ConsumeAvail`）。
+
+**`hav` にも偽の疑いがある**: `∀ w st i, ConsumeAvail (st i).vm.chain` は
+verifier が入力末尾にいる状態で `canRight (right verifier)` を主張する。
+`consumeAvail_of_verRep`（`CloseoutVerRep`）が位置予算への還元を持っているので、
+次はそこを配線して全称形を落とす。
+
+### 副産物
+
+- `CloseoutVerRep`: `VerRep`（verifier ヘッドの `Represents` 対）、
+  `verRep_next`（1 `right` の運搬、`right_word`/`right_present`）、
+  `consumeAvail_of_verRep`。
+- **`CloseoutPackRun49` は `PalPeg.lean` に未登録で、単体ビルドでエラー 5 件。**
+  `MatchRest` を材料にしようとして import した瞬間に露出した。CLAUDE.md の
+  「build が通ったこととそのファイルがビルドされたことは別」の実例。
+
 ## 2026-09-19 `H_fourOther` 除去 — `ChainPosInv2` 経路へ（`pal_in_peg_final31`）
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
