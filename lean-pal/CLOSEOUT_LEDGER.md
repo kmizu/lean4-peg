@@ -40,7 +40,7 @@
 | `hsc` | **道具あり・検証済み** | `CloseoutInvScanS.replayStage_of_invSS`。`InvS` の replay 枝強化で消費側 1 行が消える |
 | `hme` | **道具あり・検証済み** | `hcan`・`hplace` は定理化済み。残りは走行の各 tick が `Fair` を満たすことの監査のみ（`tick_fair_unique` は `GalilTickFair:437` で証明済み） |
 | `hSP` | 残差絞り込み済み | `ChainRound` 経由 |
-| `hws` | 残差絞り込み済み | `MatchRes2` の未証明成分 4 個 |
+| `hws` | `WatchShiftG`（chain–scan 結合） | 最上位引数 | `ChainPosInv2`（`CloseoutPackRun41:215`）+ `Coupled'`（`PackRun40:77`） → `MatchRes2`（`PackRun48:208`）。**`matchRes2_of_lpackM3`（`PackRun49:420`）は完成済み**で、残差は `MatchRest`（`PackRun49:405`）の 4 場 `repV`/`repVmid`/`replayPay`/`canRNext`。**そのうち `canRNext` は位置上界から出る**（`CloseoutCanRightBound.canRight_next_of_bound`、2026-09-19 証明）。 | `pal_in_peg_final25` |
 | `hor` | **別種** | 葉 15 個。閉 9、進行中 3、未着手 3（`hfound`/`hfoundBg`/`hfoundReplay` の found 経路構成） |
 | `hC` | **別種** | `H_realizeLIMG2'` は局所機械の**存在証明**（`∃ Q' Γ' … L, ∀ w, SAccepts ↔ LatchTrue`）。仮定を減らす対象でなく機械を作る対象 |
 
@@ -56,7 +56,7 @@
 | `het` | `Extra7` tick | `CloseoutPackRun46:296` | 残差は **1 つ**: `(mode ≠ scan ∨ clock = 1) → y.mode = scan → ¬y.replaying → canRight y.vm.right` | 同上 |
 | `hme` | `H_marksEntry'`（rewind 角） | `CloseoutPackRun16:165` | `h_marksEntry'_of_layout` → `marksEntry'_of_run`（`PackRun17:387`）。4 入力のうち **`hcan` は定理化済み**（`CloseoutReplayCanRight.hcan_of_cpack`）、**`hplace` も制限版が出た**（`CloseoutPlaceBound.hplace_of_order`、`GalilTrailOrder.Order.cr` から）。残るのは量化のずれ 1 点: `hwin` の産出元 `wpack_of_fair`（`PackRun25:121`）は `FairSteps` 上だが `marksEntry'_of_run` は `Steps` 上。原因は `windowInOrigin_tick`（`PackRun25:80`）が `Fair` を取ること。**`Fair` の一意性 `tick_fair_unique` は `GalilTickFair:437` で証明済み（sorry なし）**なので、残りは最上位走行の各 tick が `Fair` を満たすことの監査のみ。 | `pal_in_peg_final25` |
 | `hsc` | `H_stageScan`（`CloseoutOracleI2:173`） | 最上位引数 | **REFUTED**（§4）。再切り出しの配線図: 消費側は `hstage_of_scanBranch`（`CloseoutOracleI2:179`）**ただ 1 つ**で、`InvS`（`GalilOracleDischarge:79`）の replay 枝から `InvScan` を取り出して `hsc` を当てている。よって `InvS` の replay 枝を `InvScan ∧ ReplayStage` に差し替えれば `hsc` は消える。産出側の第 1 段は証明済み（`CloseoutStageScan1.replayStage_of_replay_after_fallback`）。`InvS` の出現は 45 箇所で、そのうち replay 枝を作る産出点だけが `ReplayStage` の供給を要する。 | `pal_in_peg_final25` |
-| `hor` | `CycleOracleMC3` | 最上位引数 | §3 の葉一覧 | 同上 |
+| `hor` | `CycleOracleMC3`（`GalilInvPlus3:216`） | 最上位引数 | **重要な訂正（2026-09-19）**: `h_oracle_of_leaves5`（`CloseoutOracle6:323`）の 15 葉は**旧系統 `H_oracle` 向け**で、`final25` が要求する `CycleOracleMC3` への橋は**存在しない**（`MC3` を産出する定理が repo に無く、消費する定理だけがある）。つまり `hor` は葉を潰す前に「`MC3` を出す定理を書く」段階がある。その日に向けて閉じた材料: **`hrs`（`RestartShape`）と `hbudget`（`ReplayBudgetR`）は無条件で証明済み**（`CloseoutRestartShape.restartShape_PofC` / `replayBudgetR_PofC`、後者は `decodesC` だけ）。`hended` も `GalilLeafReport.hended_C` で閉（残差 `EntryRefreshed` 1 つ）。`hshape`（`StartShape`）は `canRight s.center` を要求し `GalilWatchOkInst:61` が「導出不能」と明記。`EntryRefreshed` は出力の**完全性**（`IsPal → output = true`）を要するが `OutputRel` は健全性のみ。 | `pal_in_peg_final25` |
 | `hbirth` | `M-periodOnly` の副産物。`afterBirth` が `S.onLetter`/`S.leftFirst`/`S.replayExhausted` を変えないこと。`Shared` の 3 場は抽象関数なので一般には偽 | `LocalTick1.tickL1_abs` / `LocalReplayParked.tickL1_abs''_nonreplay` の引数 | 具体 `PofC` で放電可能（`afterBirth` は `periodOnly` と `cycle` しか触らず、`replayExhausted = zero ∘ replay`）。未供給 |
 | `hC` | `H_realizeLIMG2'`（局所実現） | `CloseoutPackRun36:488` | 局所側（`LocalSysConcrete`/`LocalRealizes*`）、`Fair` 依存 | `pal_in_peg_final5MG2` |
 
@@ -175,10 +175,29 @@
 `extra7_of_run` の 9 本すべてが `[propext, Classical.choice, Quot.sound]` のみで通った。
 `front_clock_tick` の 23 構成子のうち比較枝（`Or.inr`）は 3 つだけであることも確認。
 
-**接続点**: `CloseoutPackRun46.extra7_steps`（:270）が「原点の `Extra7` ＋ tick 保存」から
-走行先の `Extra7` を出している。`extra7_of_run` はそれを丸ごと置き換えるので、
-**`hee` と `het` が同時に消える**（8 前提 → 6 前提）。`replayStart` が第 1 枝に入るのは
-`RewindEq` の等式 `position center + r = position right`（`GalilFrontMono:90`）による。
+**接続点と残る障害（2026-09-19 の調査）**: `Extra7` は `BigPack2MG7''` の第 5 場で、
+`packRunR_MG27`（`CloseoutPackRun46:223`）が走行の各点 `g i` で要求する。`hreach` が
+`Steps … (j+i) ⟨c,r⟩ (g i)` を与えるので `extra7_of_run` の形には合う。
+
+**ただし `extra7_of_run` は走行長の上界 `n < delay * (2 * w.length)` を要求し、
+`PackRunRMG2`（`CloseoutPackRun36:588`）の `∀ (j : ℕ)` にはその上界がない。** これは
+当初の見立ての誤りで、配線は 1 行では済まない。
+
+**正しい route を実装した（`PalPeg/CloseoutCanRightBound.lean`、標準 3 公理のみで検証済み）**:
+`CycleOracleIMG2`（`CloseoutPackRun36:256`）と `CycleOutIMG2`（:247）は**始点と終点の両方で
+`position r.right ≤ 2 * m - 1` を保つ**設計で、`1 ≤ m ≤ w.length` なので
+`position right ≤ 2*w.length - 1 < 2*w.length`。入力枯渇は `position = 2*w.length`
+（`GalilEndOfInput.not_canRight_iff`）なので、これがそのまま `canRight` を与える
+（`canRight_of_position_bound`）。
+
+さらに `CostedRun.right_mono`（`GalilTraceCost:80`、右ヘッドは単調非減少）により、
+出口の上界が走行の各中間点にも及ぶ（`canRight_of_costedRun`）。走行長の議論は不要。
+
+残る作業は `packRunR_MG27` の `hprefix` をこの経路に差し替えること。
+
+**この位置上界は 3 箇所に効く**（教訓: 同じ義務が名前を変えて複数箇所に出る）:
+`hee`/`het`（`extra7_of_bound`）、`MatchRest.canRNext`（`canRight_next_of_bound`）、
+`hor` の `hended`（既に `GalilLeafReport.hended_C` が同じ上界を使って閉じている）。
 
 ---
 

@@ -616,6 +616,8 @@ import PalPeg.CloseoutReplayCanRight
 import PalPeg.CloseoutPlaceBound
 import PalPeg.CloseoutClockFront
 import PalPeg.CloseoutInvScanS
+import PalPeg.CloseoutCanRightBound
+import PalPeg.CloseoutRestartShape
 import PalPeg.CloseoutPeriodOnlyRegression
 import PalPeg.CloseoutWatchRound50
 import PalPeg.CloseoutPreload41
