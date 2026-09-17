@@ -68,6 +68,8 @@ structure ChainPack (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   scanRad : c.mode = Mode.scan → ∀ rad : ℕ,
     ScanInvariant w (position s.center) rad s.left s.right → value s.radius ≤ (rad : ℤ)
   scanCentre : c.mode = Mode.scan → CentreLedger s
+  scanBound : c.mode = Mode.scan →
+    ∃ m : ℕ, 1 ≤ m ∧ m < w.length ∧ position s.right ≤ 2 * m - 1
 
 /-- The three clauses, in the shape `h_bgP2_of_supply` asks for. -/
 theorem chainPack_supply {w : List (Fin 2)}
@@ -147,6 +149,14 @@ def ScanBudget (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPl
     (entry q : ℕ) (first : Fin 9) (w : List (Fin 2)) : Prop :=
   ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPosInv2 w c s →
     ∃ m : ℕ, 1 ≤ m ∧ m < w.length ∧ position s.right ≤ 2 * m - 1
+
+/-- **`ScanBudget` is a `ChainPack` field.**  The bound lives on the state, and
+`ChainPack` is established along the run (where the bound comes from), so it
+travels with the bundle rather than as a separate hypothesis. -/
+theorem scanBudget_of_chainPack {w : List (Fin 2)}
+    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack w c s) :
+    ScanBudget centre place entry q first w :=
+  fun c s hm hx => (hp c s hx).scanBound hm
 
 /-- The left-length half of the old `ScanBudget` is a consequence of
 `ChainPack.repR`: `present_iff_left` turns `focus ≠ none` into

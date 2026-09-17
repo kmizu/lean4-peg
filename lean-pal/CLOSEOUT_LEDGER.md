@@ -22,6 +22,46 @@
 
 ---
 
+## 2026-09-19 訂正 — 「見込みなし」は誤り。`hbudget` 除去（`final36`、5 前提）
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+直前の項で `hbudget` と `hme` を「見込みなし」と書いた。**両方とも誤り。**
+
+### `hbudget` は `ChainPack` の場だった（5 分で落ちた）
+
+「`ChainPosInv2` は単一状態の述語なので run 文脈がなく位置上界が出ない」と
+書いたが、**位置上界も単一状態の性質**であり、`ChainPack` は run に沿って
+確立される束なので、そこに畳めばよかっただけ。
+
+`ChainPack` に `scanBound` 場を追加し、`scanBudget_of_chainPack` で読み戻す。
+`hbudget` は `hpack`（既存前提）に吸収され、**`pal_in_peg_final36` は 5 前提**:
+`hSP`, `hme`, `hor`, `hC`, `hpack`。
+
+### `hme` も道がある
+
+`CloseoutPackRun17.marks_steps`（:406）は `CPack`/`WPack`/`MarksInv'` を run に
+沿って運び、**`H_marksEntry'` を使わない** — `marksInv'_tick` に
+`marksEntry'_of_layout (chooseLayout_of_wpack h4 hW hm hs)` を渡す形で、
+レイアウトを `WPack` から読む。
+
+その 3 入力の現状:
+
+| 入力 | 状態 |
+|---|---|
+| `h4 : first ≠ 4` | `first` 具体化時の側条件 |
+| `hfl : … → 0 ≤ value length` | **証明済み**（`lenNonneg_of_entryCounters`） |
+| `hwin : … → copy → WindowInOrigin z.vm` | 単一状態の性質（`(stream s.fpp.walker).length ≤ position s.right`）。`ChainPack` と同じく束の場にできる |
+
+`CloseoutMarksFree.MarksRun`（`WindowInOrigin` at copy ＋ `EntryCounters` at
+scan）と `marksInv'_of_marksRun` を置いた。`hfl` は `MarksRun` の第 2 成分から
+自動で出る。
+
+**教訓**: 「単一状態の述語だから run 文脈が要る」は逆だった。単一状態の性質こそ
+run に沿って運ぶ束の場に置けばよい。`hav`/`hstart`/`hbudget` の 3 つが同じ形で
+落ちた。「見込みなし」と書く前に、その述語が単一状態のものか run のものかを
+見分けること。
+
 ## 2026-09-19 `hav`/`hstart` 除去と `hfl` の証明（`pal_in_peg_final35`、6 前提）
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**

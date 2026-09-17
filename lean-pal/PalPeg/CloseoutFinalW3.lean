@@ -153,7 +153,12 @@ theorem pal_in_peg_final5MW3 (entry q : ℕ) (first : Fin 9)
 
 #print axioms pal_in_peg_final5MW3
 
-/-- **`pal_in_peg_final33` with `hav` and `hstart` gone: six hypotheses.**
+/-- **`pal_in_peg_final33` with `hav`, `hstart` and `hbudget` gone: five
+hypotheses.**
+
+`hbudget` is a `ChainPack` field too (`scanBound`): the position bound is a
+property of the state, and `ChainPack` is what travels along the run, so it
+belongs in the bundle rather than beside it.
 
 `hstart` is not an independent obligation either:
 `CloseoutPackRun47.bgStartP2_of_centre` already produces `BgStartP2` from three
@@ -167,7 +172,7 @@ over the four local facts that are already `ChainPack` fields.  Nothing replaces
 it: `shiftLocalS_of_chainPack` needs no mode hypothesis either, because every
 field of `ShiftLocalS` is premised on `ScanNR x`, so the mode is available from
 inside the field. -/
-theorem pal_in_peg_final35 (entry q : ℕ) (first : Fin 9)
+theorem pal_in_peg_final36 (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
@@ -177,7 +182,6 @@ theorem pal_in_peg_final35 (entry q : ℕ) (first : Fin 9)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hpack : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
       ChainPosInv2 w c s → ChainPack w c s)
-    (hbudget : ∀ w : List (Fin 2), ScanBudget centreC placeC entry q first w)
     :
     RecognizedByTotalPEG PAL :=
   pal_in_peg_final5MW3 entry q first
@@ -192,16 +196,17 @@ theorem pal_in_peg_final35 (entry q : ℕ) (first : Fin 9)
       hor)
     hC
     (fun w => h_bgP2_of_chainPack centreC placeC entry q first (hpack w)
-      (bgStartP2_of_chainPack centreC placeC entry q first (hpack w) (hbudget w)))
+      (bgStartP2_of_chainPack centreC placeC entry q first (hpack w)
+        (scanBudget_of_chainPack centreC placeC entry q first (hpack w))))
     (fun w => h_matchP2_of_target centreC placeC entry q first
-      (h_matchRes2_of_chainPack centreC placeC entry q first (hpack w) (hbudget w)))
+      (h_matchRes2_of_chainPack centreC placeC entry q first (hpack w) (scanBudget_of_chainPack centreC placeC entry q first (hpack w))))
     (fun w => h_shiftEntry2_of_target centreC placeC entry q first
-      (h_shiftRes2_of_chainPack centreC placeC entry q first (hpack w) (hbudget w)))
+      (h_shiftRes2_of_chainPack centreC placeC entry q first (hpack w) (scanBudget_of_chainPack centreC placeC entry q first (hpack w))))
     (fun w => h_shiftDoneRad2_of_chainPack centreC placeC entry q first (hpack w))
     (fun w st hst => by rw [hst]; exact chainPosInv2_of_idle (boot_chain_idle w))
     (fun w => hpack w)
 
-#print axioms pal_in_peg_final35
+#print axioms pal_in_peg_final36
 
 
 end PalPeg.CloseoutFinalW3
