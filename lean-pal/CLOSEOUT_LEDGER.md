@@ -22,6 +22,43 @@
 
 ---
 
+## 2026-09-19 `RoundDataC` の残差を配線した — 偽の葉 1 つを証明済みの葉に置換、欠けた出口を補充
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 新規（`CloseoutTerminalN`）
+
+| 名前 | 内容 |
+|---|---|
+| `BrokeEndN` | **第 5 の出口**。`BreakEndC` が不一致出口を述べるのと同じ形で、watch 区間 → clock-1 着地 → そこで**一致**かつラウンドの**終端**。入力について何も仮定しない（`terminal_match_breaks` がまさにその着地で chain が壊れると言う） |
+| `TerminalN` | `TerminalC` ＋ 第 5 出口 |
+| `terminalN_of_C` | `TerminalC` は `TerminalN` の一場合 |
+| `roundStepC_of_alignN` | `roundStepC_of_align` を逐語コピーし、(1) 4 出口を `TerminalN` 用に再タグ、(2) 一致分岐を `singlePositive s1.cycle` で分割（非終端側は `MatchTickN`、終端側は第 5 出口） |
+
+すべて標準 3 公理のみ。
+
+### 収支
+
+- `MatchTickC`（**偽**）→ `MatchTickN`（**証明済み**、`matchTickN_of_round` /
+  `matchTickN_of_chainRound` が `RoundBundle` の `ChainRound` 場から供給）
+- 欠けていた出口を補充（入力についての新しい義務ではない）
+- **新しい葉はゼロ**
+
+`RoundDataC`: `INTEGRATED`（`roundStepC_of_alignN` で利用、`MatchTickC` は消滅）。
+
+### 区間分解の残差（更新）
+
+| 義務 | 状態 |
+|---|---|
+| `RoundDataC` / `MatchTickC` | **閉**（上記） |
+| `ShiftAtMismatchC` | `OPEN`（入力依存。`CloseoutWatchRound9` の残差） |
+| 終端ヘッド上界 `position (afterCompare s3 vs3 vq3).right ≤ 2*m − 1` | `OPEN`。`ChainPack.scanBound` / `CloseoutCanRightBound` 系と同種 |
+| 下流（`watchRun_terminal'` 等）の `TerminalN` 再配線 | 未着手（機械的） |
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 Scala 正本が答えを持っていた — 終端一致は scan を止めない
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
