@@ -22,6 +22,48 @@
 
 ---
 
+## 2026-09-19 `Fair` 依存は 2 箇所とも「1 つの pin」だった
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+`pal_in_peg_final36` は **5 前提**（`hSP`, `hme`, `hor`, `hC`, `hpack`）。
+
+`hme` 除去の最後のブロッカーは「`hwin`（`WindowInOrigin` at copy）の producer が
+`FairSteps` を要求する」ことだった。実際に読むと、`Fair` を使う 2 つの tick
+補題はどちらも **1 箇所でしか** `Fair` を参照せず、その中身は
+状態対についての等式ひとつだけだった。
+
+| 補題 | `Fair` 参照 | 中身 | pin 版 |
+|---|---|---|---|
+| `CloseoutPackRun25.windowInOrigin_tick`（:80） | `fallbackPlace` 1 箇所（`scan_fallback` 分岐） | `y.vm.fpp.walker = y.vm.walker` | `CloseoutWinTick.windowInOrigin_tick_pin` |
+| `CloseoutPackRun28.walkerInv_tick`（:308） | `keepsSearchCursor` 1 箇所（`init` 分岐） | `t.walker = s.walker` | `CloseoutWalkerTick.walkerInv_tick_pin` |
+
+どちらも `Fair entry delay ⟨c,s⟩ ⟨c',t⟩` を、その 1 つの等式を述べる仮説に
+置き換えるだけで通った（196 行の場合分けはそのまま）。
+
+**これで `WindowInOrigin` / `WalkerInOrigin` の連鎖が `Fair` から完全に独立した。**
+
+### `hme` 除去の材料（すべて揃った）
+
+| `marks_steps` の入力 | 状態 |
+|---|---|
+| `h4 : first ≠ 4` | `first` 具体化で `decide`（`centreC`/`placeC` は `first` に依存しない） |
+| `hfl : 0 ≤ value length` | **証明済み**（`CloseoutSpanTick.lenNonneg_of_span_radius`） |
+| `hwin : WindowInOrigin at copy` | **分解済み**（`WalkerPin` ＋ `WalkerInOrigin`）＋ tick 保存が `Fair` 不要 |
+| `CPack` / `WPack` / `MarksInv'` | `ChainPack` の場（`cpack_of_entry` / `wpack_of_mode` で起点は無料） |
+| `MarksEntry'` の供給 | `marksEntry'_of_layout (chooseLayout_of_wpack h4 hW hm hs)` — `WPack` から |
+
+**残る作業**: `BigPack2MG7W''` に `cpack` / `wpack` / `lenNonneg` / `walkerPin` /
+`walkerOrigin` を場として足し、`bigPack2MG7W''_tick` で `cpack_tick` /
+`wpack_tick` / `windowInOrigin_tick_pin` / `walkerInv_tick_pin` により保存する。
+それで `hme` が落ちて **4 前提**になる。
+
+### 教訓（`Fair` について）
+
+「producer が `Fair` を要求する」を見て「`Fair` を run に通す構造変更が必要」と
+判断したのは早すぎた。**`Fair` の 3 clause はそれぞれ状態対についての等式で、
+補題が実際に使うのはそのうち 1 つだけ**という場合がある。`Fair` を仮説から
+外すには、使用箇所を数えてその clause だけを取り出せばよい。
+
 ## 2026-09-19 ⚠️ 重大な訂正 — `hor` は「producer ゼロ」ではない。13〜14 葉に分解済み
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
