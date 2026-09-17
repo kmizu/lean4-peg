@@ -137,6 +137,45 @@ Scala 正本（`ScaffoldGalil.scala:254`）は消費者側が正しいと言っ�
 * `ShiftAtMismatchC` — **REFUTED**。
 * `ShiftAtMismatchN` — **OPEN**（ただし前提が機械の `canShift` と一致した真の命題）。
 
+### 自己訂正 — `ShiftAtMismatchN` もまだ過剰主張だった
+
+再定式化 1 回では足りなかった。`N` の結論には依然
+
+```
+read (right s1.right) = GalilScaffoldChainConsume.symbol w.machine.control.period.focus
+```
+
+が入っていて、**これが機械の分岐条件そのもの**。終端 `RoundScan` では
+右ヘッドが `C+R+1+used = C+R+2h` にあり（`rightPos`）、`pred` は `used = 2h−1` で
+`(encoded raw)[C+R+1]?` なので、この一致は入力依存の等式
+`(encoded raw)[C+R+1]? = (encoded raw)[C+R+2h+1]?` に等しい。破れたら機械は
+`beginFallback()` に行く。普遍的に主張する葉は fallback 分岐を死んだコードにしてしまう。
+
+`CloseoutWatchRound30` は既に正しい形を持っていた：`ShiftRoundAtC'` は
+post-compare guard を**トリガー（前提）**として取る。同じ形にした。
+
+| 定理 | 内容 |
+|---|---|
+| `ShiftTrigger` | 機械の `beginChainShift` 条件（compare・`¬ matched`・search effect・予測一致・guard）。`¬ ShiftTrigger` が `beginFallback` |
+| `ShiftAtMismatchM` | 入力依存の 2 事実（cycle 終端・トリガー）を前提に移し、葉に残るのは**機械的な部品**だけ: `Canonical s1.length`、`beginShift`、`beginShiftVM h w`、`CopyIdle`、`h` 単位の `ShiftRun` |
+| `roundOne_of_segRun_M` | 終端出口を 3 分割: cycle 終端かつ一致（chain が break、`CloseoutTerminalBreak.terminal_match_breaks`）／cycle 終端かつ不一致かつトリガー成立（shift、`Rounds … 1`）／それ以外（`beginFallback`＝oracle の `hmismatch`） |
+
+`M` は `N` から導かない（`N` は自分の存在量化した compare で部品を返すので、
+消費者が固定した compare では出ない）。`N` は最初の不十分な再定式化の記録として残す。
+
+* `ShiftAtMismatchN` — **REFORMULATED**（不十分。予測一致をまだ主張）。
+* `ShiftAtMismatchM` — **OPEN**。ただし残るのは機械的部品のみ。内訳と見通し:
+  - `Canonical s1.length` / `CopyIdle s1` — 運ばれる状態不変量（Round 30 の piece 3）。
+  - `P.beginShift` / `beginShiftVM h w` — 具体 `PofC` では `P.beginShift = beginShiftVM'` で
+    `beginShift_exists` が guard から出す。`periodLength w = h` の紐付けのみ。
+  - `ShiftRun ⟨…⟩ h t'` — Round 30/33 の piece 4（`ShiftRunC`/`ShiftRunCL`）。
+    `ShiftRun.next` が各段で要求するのは `positive s.remaining = true`（`ofNat h` からの
+    算術）と `canRight s.center` / `canRight s.left` / `canRight (right s.left)` の
+    ヘッド余裕。中心は `C` から `C+h`、左ヘッドは `C−R−1` から `C−R−1+2h` へ動き、
+    `RoundScan.size : 2h ≤ R` より両方 `[C−R, C+R]` の内側に収まる。よって
+    `ScanInvariant` の `Represents` ＋ `size` から `h` についての帰納法で**構成可能**。
+    これが次の一手。
+
 これで「名前付き葉が偽なのは、唯一の消費者が到達しない状態まで量化しているから」という
 同一の欠陥が 5 例目（`ShiftPal` / `H_advanceT` / `MatchTickC` / `hpos` / `ShiftAtMismatchC`）。
 **新しい葉を測るときは、まず消費者がその分岐で何を知っているかを先に読む。**

@@ -63,6 +63,23 @@ watch で `Entry` を満たさないので、この前提なしでは偽にな�
 `ShiftAtMismatchC`）。新しい葉を測るときは、まず**消費者がその分岐で何を知っているか**
 を先に読む。
 
+### 追記 3（同ターン）— 自己訂正: `ShiftAtMismatchN` もまだ過剰主張だった
+
+`N` の結論には予測一致 `read (right s1.right) = symbol w.machine.control.period.focus`
+が残っていて、終端 `RoundScan` ではこれは入力依存の等式
+`(encoded raw)[C+R+1]? = (encoded raw)[C+R+2h+1]?` に等しい（破れたら `beginFallback()`）。
+`CloseoutWatchRound30.ShiftRoundAtC'` が既に正しい形（guard をトリガーとして前提に取る）
+を持っていたので、それに合わせた。
+
+`ShiftTrigger`（機械の `beginChainShift` 条件）、`ShiftAtMismatchM`（入力依存の 2 事実を
+前提に移し、葉は機械的部品だけ）、`roundOne_of_segRun_M`（終端出口を 3 分割: break /
+shift / fallback）。全部標準公理のみ・sorryAx なし。
+
+**次の一手**: `ShiftRun` の存在（Round 30/33 の piece 4）。`ShiftRun.next` が要求するのは
+`positive s.remaining = true` の算術と 3 つの `canRight`。中心は `C → C+h`、左ヘッドは
+`C−R−1 → C−R−1+2h` で、`RoundScan.size : 2h ≤ R` より両方 `[C−R, C+R]` の内側。
+`ScanInvariant` の `Represents` ＋ `size` から `h` の帰納法で構成できる。
+
 ### 訂正
 
 前ターンの「次は `segment_to_checkpoint` を `hsegmentM` の消費者に配線」は外れ。
