@@ -1,3 +1,46 @@
+## n78 (2026-09-19) `H_readsShift` は「shift 完了時の read origin」に還元 — `hSP` の残差が 2 つとも同じ通貨に
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+最上位は `pal_in_peg_final37`（`CloseoutFinalW4`）の **4 前提**（`hSP` `hor` `hC` `hpack`）のまま。
+`#check` で 4 引数、`#print axioms` は `[propext, Classical.choice, Quot.sound]` を再確認。
+計画書 §10.5（前提ゼロ）は**未達**。残差の正本は `lean-pal/CLOSEOUT_LEDGER.md`。
+
+### 先に立てた論証
+
+`H_readsShift` の消費点は `readsRound_tick` の `Tick.shift_done` **1 箇所のみ**。
+そこに何が足りないかを 3 方向から測った：(1) `ReadsInv` は等式なので `chainShiftOne` の
+カウンタ減算で壊れ運べない、(2) `SweptOff` は `Offset` なので shift を生き延びるが
+bounce→`encoded` の辞書が 1 周期対しか遡れず累積継続を変換できない（その変換が
+`rounds_origin` の帰納法そのもの）、(3) `good_of_periodOn` も入力が `Entry` で同じ壁。
+残るのは一つ、**ラウンド開始の read origin**。
+
+### やったこと（`PalPeg/CloseoutReadsOrigin.lean` 新規、7 定理）
+
+`readsRun_of_originAt`（`OriginAt → ReadsRun`：`round_of_originAt` が `used = 0` の
+`RoundScan` ＋ `ReadsInv` を返し、`roundScan_unique` が任意の `RoundScan` の `used` を
+`0` に強制する）、`readsRound_of_originAt`、`h_readsShift_of_originAt`、
+`h_readsBirth_of_originAt`、`roundBundle_tick_O`（束の tick の葉を `OriginShift` に置換）、
+`originShift_of_roundSeg`。
+
+`H_readsShift` は `positive s.remaining = false`（shift 完了）を前提に追加して再定式化
+（`CloseoutRoundUnique`、呼び出し側 1 箇所修正）。shift 途中の chain は部分 shift 済みの
+watch で `Entry` を満たさないので、この前提なしでは偽になる。
+
+### 状態
+
+`H_readsShift` は **REFORMULATED**（供給未完なので OPEN のまま）。新 NAMED `OriginShift` は
+`originAt_of_rounds`（証明済み）が controller `Rounds` から供給し、その `Rounds` は
+`CloseoutWatchRound9` が無条件に構成する。つまり `hSP` の残差 2 つ
+（`OriginShift` と `H_freshShift`）は**どちらも「run の断片を `ReadOrigin` に組み上げる」
+同じ通貨**で、`hor` の found 経路系（`CloseoutWatchRound5.ShiftRoundC`）と同一。
+
+### 訂正
+
+前ターンの「次は `segment_to_checkpoint` を `hsegmentM` の消費者に配線」は外れ。
+`hsegmentM` は `h_oracle_of_leaves*` の葉から既に落ちている（`segment_of_invLPC` が
+`hreadyB` に置換済み）。`segment_to_checkpoint` が閉じたのは `hmismatch` の `hpos` 残差側。
+
 ## n77 (2026-09-19) 最上位 4 前提を維持しつつ残差を 3 つの壁に統合、`hor` に初めて producer を付与
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**

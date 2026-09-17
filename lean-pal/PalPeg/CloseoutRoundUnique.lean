@@ -84,6 +84,7 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 carried through the shift phase (`CloseoutPackRun37.ShiftInv`). -/
 def H_readsShift (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
   c.mode = Mode.shift → c.replaying = false → s.periodOnly = true →
+  positive s.remaining = false →
   ∀ wch : GalilScaffoldChainWatch.State, s.chain = ChainVM.watch wch →
     ∀ C R used : ℕ, RoundScan w C R (periodLength wch) used s wch →
       ReadsInv w C R (periodLength wch) used wch
@@ -255,7 +256,11 @@ theorem readsRound_tick {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
     exact absurd hm' (by simp [hm])
   | shift_done c s o hm hp ho =>
     intro _ hr' hpo' wch hchain C R used hI
-    exact hSh hm hr' hpo' wch hchain C R used hI
+    have hz : positive s.remaining = false := by
+      cases hq : positive s.remaining with
+      | false => rfl
+      | true => exact absurd (Or.inl hq) hp
+    exact hSh hm hr' hpo' hz wch hchain C R used hI
   | copy_one c s t hm hp hs =>
     intro hm' _ _ _ _ _ _ _ _
     exact absurd hm' (by simp [hm])

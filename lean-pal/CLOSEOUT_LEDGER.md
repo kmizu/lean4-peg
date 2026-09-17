@@ -22,6 +22,80 @@
 
 ---
 
+## 2026-09-19 `H_readsShift` は「shift 完了時の read origin」に還元された
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+最上位は `pal_in_peg_final37` の **4 前提**（`hSP` `hor` `hC` `hpack`）のまま。
+`#check` で 4 引数、`#print axioms` は標準 3 公理のみを再確認済み。
+
+### 先に立てた論証（コードを書く前）
+
+`hSP` の残差は `RoundBundle` の tick 残差 2 つ（`H_readsShift` / `H_freshShift`）。
+`H_readsShift` の消費点は `CloseoutRoundUnique.readsRound_tick` の
+**`Tick.shift_done` 1 箇所のみ**（他の 23 形は idle 着地か scan 以外の mode で空虚）。
+そこで「何が本当に足りないか」を 3 方向から測った：
+
+1. **`ReadsInv` を運ぶ**: 不可。証人は等式
+   `w.machine.control = run o.shifted.machine.control extra` で、
+   `chainShiftOne` が `distance`/`boundary`/`last` を減算するので shift 相で壊れる。
+2. **`SweptOff` を運ぶ**: 等式の代わりに `Offset` なので shift を**生き延びる**
+   （`sweptOff_shift` / `sweptOff_shiftOne`、証明済み）。しかし座標が動かない一方で
+   ラウンド座標は shift ごとに `h` 進む。bounce→`encoded` の辞書
+   （`GalilGoodLag.origin_prediction_index` ← `reads_previous_window`）は
+   **1 周期対分しか遡れない**（`extra.length < 2h`）ので、累積した継続は変換できない。
+   その変換こそ `rounds_origin` が `CompareRounds` 上で行う帰納法である。
+3. **`Good` ＋ `PeriodOn` で代替する**: 再 shift ラウンドの `Good` は
+   `GalilGoodLag.good_of_periodOn` が与えるが、その入力が `Entry` なので同じ壁。
+
+つまり残っているのは一つ、**ラウンド開始の read origin**。そしてそれが在れば
+`H_readsShift` は含意されるどころか**即座に出る**：`round_of_originAt` が
+`used = 0` の `RoundScan` とその `ReadsInv` を同時に返し、
+`roundScan_unique`（状態がラウンド座標を決める）により、同じ状態の**任意の**
+`RoundScan` の `used` は `0` でなければならない。
+
+### やったこと
+
+**`CloseoutReadsOrigin.lean`（新規）**
+
+| 定理 | 内容 |
+|---|---|
+| `readsRun_of_originAt` | `OriginAt w s → ReadsRun w s`（上の `roundScan_unique` 論証） |
+| `readsRound_of_originAt` | 束が運ぶ premised 形 |
+| `h_readsShift_of_originAt` | `shift_done` の葉 |
+| `h_readsBirth_of_originAt` | 同（replay 中は `h_readsBirth_vacuous` で既に空虚） |
+| `roundBundle_tick_O` | `roundBundle_tick` の `H_readsShift` を `OriginShift` に置換 |
+| `originShift_of_roundSeg` | `OriginAt` ＋ `RoundSeg` から（`originAt_of_roundSeg`） |
+
+**`H_readsShift` の再定式化**（`CloseoutRoundUnique`）: `positive s.remaining = false`
+（= shift 完了）を前提に追加。消費者が既に持っているデータを文に入れる、
+`ShiftPal` / `MatchTickC` / `H_advanceT` と同じ型の修正。shift 途中の chain は
+部分 shift 済みの watch で `Entry` を満たさないので、この前提なしの
+`OriginShift` は偽になる（過剰量化の再発を避けた）。呼び出し側 1 箇所を
+`hSh hm hr' hpo' hz wch hchain C R used hI` に修正。
+
+### 状態区分（台帳規約に従う）
+
+* `H_readsShift` — **REFORMULATED**。shift 完了前提を追加し、`OriginShift` へ還元。
+  **供給は未完なので OPEN のまま数える。**
+* `OriginShift`（新 NAMED）— **OPEN**。ただし `originAt_of_rounds`（証明済み、
+  `CloseoutOriginRounds`）が controller `Rounds` から供給し、その `Rounds` は
+  `CloseoutWatchRound9` が無条件に構成する。つまりこの葉は
+  **`hor` の found 経路系（`CloseoutWatchRound5.ShiftRoundC`）と同じ通貨**であり、
+  独立した壁ではない。
+* `hSP` の残差 — `OriginShift` ＋ `H_freshShift`（第 1 ラウンド、
+  内容は `GalilScaffoldTopFirstRound.first_round`）の 2 つ。両方とも
+  「run の断片を `ReadOrigin` に組み上げる」同種の作業。
+
+### 誤りの訂正（自分の前ターンの見立て）
+
+「次は `segment_to_checkpoint` を `hsegmentM` の消費者に配線する」は**外れ**。
+`hsegmentM` は `h_oracle_of_leaves*` の葉から既に落ちている
+（`GalilOracleLeaves2.segment_of_invLPC` が `hreadyB` に置換済み）。
+`segment_to_checkpoint` が閉じたのは `hmismatch` の `hpos` 残差側の予算であって、
+`hsegmentM` ではない。配線先を型名でなく葉リストで確認すべきだった。
+
+---
+
 ## 2026-09-19 区間予算はタダだった — チェックポイントまでの区間を**構成**する
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
