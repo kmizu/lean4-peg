@@ -1,5 +1,16 @@
 ## n20 (2026-09-17 朝) 葉の放電・偽仮定 4 件・非決定性
 
+## n71 (2026-09-19 未明) 相跨ぎで較正の穴が解消（`h ≤ 681` 不要）・マッチ時計 2 葉が閉じて `final19`
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 新規 2 本登録（`CloseoutWatchRound48`、`CloseoutWatchRound49`）、sorry なし、build ログ `build_n71b.log` EXIT=0。
+- **watch（較正の穴を解消）**: `CloseoutWatchRound48`: copy/back 相を複数クロック窓に跨がせる `ChainWatchReachM`（:175）、`reachM_run`（:189）、**`chainWatchReachM_of_background`（:230、跨ぎ回数は無制限、run 長は毎 tick 減る）**。`landing_run`（:126）は窓予算だけで閉じ**クロックが入らん**ので、n68 で問題になった `h ≤ 681` の要求は**消滅**。残 2 葉: `WindowEndC`（:116、`position sT.right + R < |encoded raw|`、旧 `PhaseWindowC` の生き残り）、`ClockOneC`（:159、clock 1 で match なら clock 2048・半径 `R+1` に転送、mismatch なら round 自身の出口 `X`；未閉部分は新規マッチ位置の `BlockOn` と `ChainMatched`（`inc lag`/`inc margin`）を run の残りと可換にすること）。消費側は Round42 の `ReplayBornRoundC` を**半径自由**にした `ReplayBornRoundC'`（:265）に直すだけで、`liveChainRoundC_of_reachM`（:281）が両分岐を同じ経路に流す。
+- **watch（マッチ時計）**: `CloseoutWatchRound49`: `fresh_advances_pace`（:61、`2048·#true ≤ length`、`advances_le_compares` + `compare_budget`）、`pace_of_length`（`2048·#true ≤ len ↔ 2047·#true ≤ #false`）、**`watchClockC_of_fresh`（:95、`WatchClockC` 閉）**、**`prepClockC_of_length`（:117、`2048·m ≤ 2h+2` は `2h+3` 版からパリティで無料）**、**`foundExit_compare_final19`**（:141、`WatchClockC` → `WatchFreshC`）。**訂正**: `CloseoutPreload22.ClockInv delay c` は位相 `1 ≤ clock ≤ delay` だけで計数恒等式ではない（`run_invariant` は `#true + clock' = clock + 2048·fires` なので `clock < 2048` だと余分に 1 回 fire できる）→ 新鮮さ `clock = 2048` が本質的に要る。
+- **収束**: 残る watch 葉 `WatchFreshC`・`PrepPaceC`・`PrepBirthLagC'` は**全部同じ対象**（found tick から着地までの `WatchSegE`、開始時の時計が fresh）に帰着 → `CloseoutWatchRound51` 進行中。
+- 進行中: `CloseoutPackRun48`、`CloseoutOracle5`（`h_oracle_of_leaves'''`）、`CloseoutWatchRound50`（`WindowEndC`/`ClockOneC`）、`51`。
+- **偽だった主張の訂正**: 「`ClockInv` から計数不等式が出る」→ 位相だけ、新鮮さが要る。
+- 残: pack `hSP`/`hws` 供給 + `Extra7` 残差 2 + `hme`/`hsl`/`hsc`/`hbs`/`hls`/`hC`; readiness `hOP` のみ; watch found→着地 segment + `WindowEndC`/`ClockOneC` + `ReplayBornRoundC'` + tie + `RestartLandingDataC`; core debris 配線・有限制御。
+
+
 ## n70 (2026-09-19 未明) readiness が最後の消費先 `hpres` に接続・`final18`・`0 < lag` は機械と矛盾
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 新規 3 本登録（`CloseoutPackRun47`、`CloseoutWatchRound47`、`CloseoutPreload40`）、sorry なし、build ログ `build_n70c.log` EXIT=0。
