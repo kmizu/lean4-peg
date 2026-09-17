@@ -81,6 +81,42 @@ run** (where the bound comes from)」。
 * `ChainPack` — **REFORMULATED 待ち**（run 沿いの束へ）。
 * `ScanBudget` / `hbudget` — **REFUTED**（同じ反例）。
 
+### 修理の第 1 段（同ターン）
+
+**`CloseoutBudgetFree.lean`**
+
+| 定理 | 内容 |
+|---|---|
+| `scanBudget_of_front_run` | **`ScanBudget` の producer**。`CloseoutFrontExtra` の `front_eq_position` ＋ `front_stepsAll_mono` ＋ `position_le_of_front_run` が cycle の出口上界を run に沿って遡らせる。`Extra7` から `hee`/`het` を消したのと同じ機構 |
+| `avail2_of_front_run` | 上界の 2 つの用途（`canR` = 1 歩、`canRNext` = 2 歩。strict `m < w.length` は 2 歩目に使う）を同時に出す |
+| `ChainSideW` | 修理された前提の形（run 搬送の `BigPack2MG7W''` を前提に取るので `chainPosInv2_of_idle` では反証できない） |
+| `chainSideW_of_hpack` | 旧仮定 ⟹ 新仮定（失うものはない） |
+
+**`CloseoutChainSideR.lean`**
+
+`ChainSideR` = `CloseoutChainPack.ChainSide` から `scanBound` を除いたもの。
+`chainSide_of_chainSideR`（run 予算を戻す）、`chainPack_of_chainSideR`、
+`chainSideR_of_chainSide`。
+
+**何が直って何が直っていないか。** 実証された矛盾（`w.length ≤ 1` での
+`scanBound`）は消えた——`∀ w c s, ChainPosInv2 → ChainSideR` には一行の反例がない。
+しかし**真になったわけではない**：`ChainSideR` は依然 run の事実
+（`centreCanR`、`marks`、`cpack`、`wpack`、中心台帳）を 3 場の前提の下で主張する。
+違いは「**矛盾している**」から「**導出できない**」に変わったこと。前提を run 搬送
+パックに変える（`ChainSideW`）のが本筋。
+
+**対応表（`ChainPack` の場 → run 搬送パックの供給元）**
+
+| `ChainPack` の場 | 供給元 |
+|---|---|
+| `repR` | `LPackM.scanGeom` / `LPackM2.scanGeomR` の `ScanInvariant.rightRep`/`rightPresent`（`chainPack_of_lpackM2` が既に使っている） |
+| `saneR` / `centreSane` | `GalilTrailSane.SanePack` |
+| `marks` | `BigPack2MG7W''.marks` |
+| `scanBound` | `scanBudget_of_front_run`（本ターン） |
+| scan での `canR` | `Extra7.scanAvail` |
+| `cpack` | `GalilCentreLive.cpack_of_entry`（`InvS` ＋ `EntryCounters`） |
+| `walkerPin` / `walkerOrigin` | **モデル欠陥 (e)** — 未解決 |
+
 ### 最上位の正直な状態
 
 `pal_in_peg_final37` の型は正しく、`#check` は 4 引数、`#print axioms` は標準 3 公理。

@@ -33,6 +33,22 @@ OPEN のまま」に照らせば前進ゼロで、しかも `ScanBudget` 自体�
 （`roundBundle_tick` / `roundBundle_steps`）と同じ構成。boot 状態では全ヘッドが入力原点に
 あるので `canRight` は全部成立し、各 tick はヘッドを保つか 1 進めるだけ。
 
+### 追記（同ターン）— 修理の第 1 段
+
+`CloseoutBudgetFree.lean`: `scanBudget_of_front_run`（偽だった `scanBound` の**本物の
+producer**。`position_le_of_front_run` が cycle の出口上界を run に沿って遡らせる。
+`Extra7` から `hee`/`het` を消したのと同じ機構）、`avail2_of_front_run`、
+`ChainSideW`（修理された前提の形）、`chainSideW_of_hpack`。
+
+`CloseoutChainSideR.lean`: `ChainSideR` = `ChainSide` − `scanBound`、
+`chainSide_of_chainSideR`、`chainPack_of_chainSideR`、`chainSideR_of_chainSide`。
+
+**正直な評価**: 実証された矛盾（`w.length ≤ 1` での `scanBound`）は消えたが、
+`ChainSideR` は依然 run の事実を 3 場の前提の下で主張するので真にはなっていない。
+「矛盾している」→「導出できない」に変わっただけ。前提を run 搬送パック
+（`BigPack2MG7W''`）に変えるのが本筋で、各場の供給元は台帳に対応表で記録した。
+残差は `walkerPin`/`walkerOrigin`（モデル欠陥 (e)）。
+
 **最上位の正直な状態**: `pal_in_peg_final37` の型は正しく `#check` は 4 引数、
 `#print axioms` は標準 3 公理。しかし 4 前提のうち `hpack` は**偽**なので、これは
 「4 つの証明可能な前提」ではない。計画書 §10.5（前提ゼロ）は未達であり、この経路では
