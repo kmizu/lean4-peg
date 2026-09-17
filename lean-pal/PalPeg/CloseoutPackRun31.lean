@@ -215,7 +215,14 @@ def ShiftPalAt (w : List (Fin 2)) (s s' : GalilVM) : Prop :=
       Manacher.PalAt (encoded w) (position s.center + periodLength wch)
         (r₀ + 1 - periodLength wch)
 
-/-- **`ShiftPal` from `ChainRound` and `WatchShift`, with no named branch.**
+/-- **`ShiftPal` from `ChainRound` and `canRight R`, with no named branch.**
+
+The earlier version took `CloseoutPackRun24.WatchShift` here, but the proof
+reads exactly one clause off it — `canRight s.right` — so that single-state
+fact is what the theorem actually needs.  `WatchShift` is also refuted in the
+same way `WatchShiftG` is (a watch born at `ChainStep.backDone` has
+`distance = reset`, breaking `4·periodLength ≤ distance` at an unguarded
+target), so depending on it was depending on a false statement.
 
 Both branches the earlier version named are now discharged:
 
@@ -227,7 +234,7 @@ Both branches the earlier version named are now discharged:
 theorem shiftPal_of_chainRound {w : List (Fin 2)} {c : Control} {s : GalilVM}
     (hm : c.mode = Mode.scan) (hr : c.replaying = false) (hpo : s.periodOnly = true)
     (hCR : ChainRound w c s)
-    (hws : WatchShift centre place entry q first w ⟨c, s⟩) :
+    (hcan : GalilScaffoldChainVerifier.canRight s.right) :
     ShiftPal centre place entry q first w s := by
   intro s' hcmp hmt wch hchain hg r₀ hi
   have hcf : compareFound (PofC centre place entry w) q first s s' := hcmp
@@ -265,9 +272,6 @@ theorem shiftPal_of_chainRound {w : List (Fin 2)} {c : Control} {s : GalilVM}
       have hpred : GalilScaffoldChainConsume.symbol wch.machine.control.period.focus =
           read (right s.right) := by
         rw [← hvr]; rw [hteq] at hsym; exact hsym
-      -- `canRight` of the right head, from `WatchShift`
-      have hni : s.chain ≠ ChainVM.idle := by rw [hw0]; exact fun h => by cases h
-      have hcan : canRight s.right := (hws hni s' hcmp wch hchain).2.1
       -- the geometry: `r₀` and the centre
       have hterm := hI.terminal_iff.mp hend
       have hsize := hI.size
@@ -294,18 +298,18 @@ theorem shiftPal_of_chainRound {w : List (Fin 2)} {c : Control} {s : GalilVM}
       exact absurd heq (by decide)
 
 /-- **The target theorem.**  `ShiftPal` at a scan state, not replaying, from
-`ChainRound` and `WatchShift`; the only remaining branch is `periodOnly =
+`ChainRound` and `canRight R`; the only remaining branch is `periodOnly =
 false` (the first shift of a fresh chain, whose content is
 `GalilScaffoldTopFreshEntry`), the named `H_fresh`. -/
 theorem shiftPal_of_readOrigin {w : List (Fin 2)} {c : Control} {s : GalilVM}
     (hm : c.mode = Mode.scan) (hr : c.replaying = false)
     (hCR : ChainRound w c s)
-    (hws : WatchShift centre place entry q first w ⟨c, s⟩)
+    (hcan : GalilScaffoldChainVerifier.canRight s.right)
     (H_fresh : s.periodOnly = false → ShiftPal centre place entry q first w s) :
     ShiftPal centre place entry q first w s := by
   cases hpo : s.periodOnly with
   | false => exact H_fresh hpo
-  | true => exact shiftPal_of_chainRound centre place entry q first hm hr hpo hCR hws
+  | true => exact shiftPal_of_chainRound centre place entry q first hm hr hpo hCR hcan
 
 /-! ## 3. `ChainRound` along a tick -/
 

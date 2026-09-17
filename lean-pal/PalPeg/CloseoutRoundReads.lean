@@ -1,4 +1,5 @@
 import PalPeg.CloseoutPackRun37
+import PalPeg.CloseoutPackRun41
 
 /-!
 # `H_advance` is a carried datum, not an obligation
@@ -42,7 +43,7 @@ open GalilScaffoldCounter GalilScaffoldInputHead GalilScaffoldChainVerifier
 open PalPeg.GalilRunSkeleton PalPeg.GalilFrontMono
 open PalPeg.CloseoutLPack3 PalPeg.CloseoutPackRun24 PalPeg.CloseoutPackRun29
 open PalPeg.GalilRoundPeriod PalPeg.GalilChainCoupling PalPeg.CloseoutPackRun31
-open PalPeg.CloseoutPackRun37
+open PalPeg.CloseoutPackRun37 PalPeg.CloseoutPackRun40 PalPeg.CloseoutPackRun41
 
 /-- **(NAMED) the `Reads`-trace datum, closed over the rounds at one state.**
 Every round the state is in carries its origin's sweep witness. -/
@@ -270,8 +271,44 @@ theorem chainRound_tick_RR {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM
 
 end
 
+/-! ## `BlockInv` is free on the run
+
+`chainRound_tick`'s fifth input is `GalilBranchInvariants.BlockInv x.vm.chain`.
+That is a field of `CloseoutPackRun40.Coupled'` (`:79`), which is in turn the
+`coupled` field of `CloseoutPackRun41.ChainPosInv2` — the invariant the main
+path already carries.  So it is not an obligation either.
+-/
+
+/-- `BlockInv` read off `ChainPosInv2`. -/
+theorem blockInv_of_chainPosInv2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (h : ChainPosInv2 w c s) : GalilBranchInvariants.BlockInv s.chain :=
+  h.coupled.block
+
+section
+variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
+  (entry q : ℕ) (first : Fin 9)
+
+/-- **`ChainRound` along a tick with neither `H_advance` nor `BlockInv`.**
+`H_advance` comes from the carried `ReadsRound`, `BlockInv` from the carried
+`ChainPosInv2`.  Only `H_shiftDone` (→ `CloseoutPackRun37.ShiftRound`) and
+`H_birth` are left. -/
+theorem chainRound_tick_free {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
+    (hCR : ChainRound w x.ctl x.vm)
+    (hRR : ReadsRound w x.ctl x.vm)
+    (hinv : ChainPosInv2 w x.ctl x.vm)
+    (hS : H_shiftDone centre place entry q first w x.ctl x.vm)
+    (hB : H_birth w x.ctl x.vm y.vm)
+    (h : Tick (galilFrameS (PofC centre place entry w) q first) delay x y) :
+    ChainRound w y.ctl y.vm :=
+  chainRound_tick_RR centre place entry q first hCR hRR hS hB
+    (blockInv_of_chainPosInv2 hinv) h
+
+end
+
 #print axioms h_advance_of_readsRun
 #print axioms chainRound_tick_R
 #print axioms chainRound_tick_RR
+#print axioms blockInv_of_chainPosInv2
+#print axioms chainRound_tick_free
 
 end PalPeg.CloseoutRoundReads

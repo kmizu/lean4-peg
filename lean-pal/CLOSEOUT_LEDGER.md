@@ -22,6 +22,73 @@
 
 ---
 
+## 2026-09-19 `WatchShift` は 1 節しか使われていなかった、`BlockInv` は run に乗っていた
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### `hws : WatchShift` → `hcan : canRight s.right`
+
+`shiftPal_of_chainRound` は `CloseoutPackRun24.WatchShift` を取っていたが、
+証明中の使用は **1 箇所** だけで、読んでいたのは
+
+```
+have hcan : canRight s.right := (hws hni s' hcmp wch hchain).2.1
+```
+
+つまり 6 節あるうちの `canRight x.vm.right` 1 節のみ。しかも `WatchShift` は
+`WatchShiftG` と同じ理由で**偽**（`ChainStep.backDone` の生まれたての watch は
+`distance = reset` なので、guard なしの target では `4·periodLength ≤ distance` を破る）。
+偽の命題に依存していたことになる。
+
+`hws` を `hcan : canRight s.right`（単一状態）に置換。`shiftPal_of_readOrigin` も同様。
+
+`WatchShift` への依存: 主経路から**消滅**（`shiftPal_of_*` は唯一の利用者だった）。
+
+### `BlockInv` は義務ではなかった
+
+`chainRound_tick` の第 5 入力 `GalilBranchInvariants.BlockInv x.vm.chain` は
+`CloseoutPackRun40.Coupled'` の場（`:79`）で、それは `CloseoutPackRun41.ChainPosInv2`
+の `coupled` 場。主経路が既に運んでいる。`blockInv_of_chainPosInv2` は 1 行。
+
+また `BlockInv` 自体は `GalilBranchInvariants` で完全に閉じている
+（`blockInv_step` / `blockInv_matched` / `blockInv_tick` / `blockInv_steps`、
+`BlockInv .idle = True`）。
+
+### 結果
+
+```
+theorem shiftPal_of_readOrigin (hm : c.mode = Mode.scan) (hr : c.replaying = false)
+    (hCR : ChainRound w c s) (hcan : canRight s.right)
+    (H_fresh : s.periodOnly = false → ShiftPal centre place entry q first w s) :
+    ShiftPal centre place entry q first w s
+
+theorem chainRound_tick_free (hCR : ChainRound w x.ctl x.vm) (hRR : ReadsRound w x.ctl x.vm)
+    (hinv : ChainPosInv2 w x.ctl x.vm)
+    (hS : H_shiftDone …) (hB : H_birth w x.ctl x.vm y.vm)
+    (h : Tick …) : ChainRound w y.ctl y.vm
+```
+
+### `hSP` の残差（更新）
+
+| 義務 | 状態 |
+|---|---|
+| `ChainRound`（単一状態） | `OPEN`。tick は `chainRound_tick_free`、残り `H_shiftDone`・`H_birth` のみ |
+| `ReadsRound`（単一状態） | `OPEN`。材料は `readsInv_immediate`（scan_match）と lag ゼロの `Internal.idle`（background） |
+| `canRight s.right`（scan 時） | `ChainPack` から出る（`repR` + `scanBound` + `canRight_of_position_bound`） |
+| `H_shiftDone` | `h_shiftDone_of_shiftRound` ← `ShiftRound`（単一状態）。tick は `shiftRound_tick`、残り `H_advanceT`・`H_freshShift` |
+| `H_birth` | `OPEN` |
+| `H_fresh` | `OPEN`。内容は `GalilScaffoldTopFreshEntry` |
+
+`H_advanceT` の測定: 端末 consume の予測は period tape が巻き戻るので
+`origin_prediction_index`（非巻き戻し版）が使えない。`continued_prediction` の mod 形
+（`GalilScaffoldChainPrediction`）を使うと `bounce[(pre.length + 2h) % 2h] = bounce[pre.length % 2h]`
+になり、結局 `(encoded raw)[C+R+2-2h]? = (encoded raw)[C+R+2]?`、つまり
+**符号語が index `C+R+2` まで周期 `2h` を持つこと**を要求する。ところが原点の不一致は
+`C+R+1` にあるので、その窓の外。`H_advanceT` は `hSP` 系で最も重い葉であり、
+新しい周期の議論（新ラウンドの原点 `(C+h, R+h)` に対する周期）が必要。
+
+---
+
 ## 2026-09-19 `H_advance` は既に解けていた — `CloseoutPackRun37` の在庫を読み落としていた
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
