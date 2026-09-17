@@ -22,6 +22,58 @@
 
 ---
 
+## 2026-09-19 ⚠️ `hws`（`WatchShiftG` の全称形）は **偽** — `final27` の扱いに注意
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`pal_in_peg_final27` の 5 前提のうち `hws : ∀ w y, WatchShiftG centreC placeC entry q first w y`
+は、リポジトリ内の既存解析によれば **成立しない**。したがって `final27` は
+「偽かもしれない前提からの含意」であり、**この前提が残る限り定理は無内容になりうる**。
+wave 6/7 の「8 → 7 → 5」という数え方は、この事実を併記せずに述べてはならない。
+
+### 根拠（`CloseoutPackRun32` 冒頭の caveat、`CloseoutPackRun34` §2）
+
+`WatchShiftG` は **unguarded** な比較ターゲット `s''` について主張する。
+`ChainStep.backDone` で生まれたばかりの watch は `watchControl` の
+`distance = reset`（値 `0`）を持つので、誕生直後の scan 比較では
+`4 * periodLength wch ≤ value wch.machine.control.distance` が
+`periodLength ≥ 1` のとき破れる。よって
+「`∀ y, WatchShiftG … y` はそれらの状態で真であるいかなる不変量からも産出できない」
+（Run32:33–40）。
+
+`ShiftLocalG`（`CloseoutPackRun26:198`）も同じ弱点を持つ。全場の前提は
+`beginShiftVM' s'' t''` だが、`beginShiftVM h w s t := s.chain = .watch w ∧ t = …`
+（`GalilScaffoldTopShiftCycle:23`）であって **`shiftGuardVM` を含まない**。
+Run34 §2 は「`shiftLocalG_of_watchShiftS` は as stated では **not provable**」と明記する。
+
+**注**: Run32/Run34 の記述は「design, not proved here」であり、Lean による反証は
+まだ書かれていない。反例の形は具体的に特定されているが、`compareFound` の
+witness 構成が未着手。**反証を Lean で確定させることが先決**（`CloseoutCandOrient` で
+`H_candOrient` を反証したのと同じ形）。
+
+### 修理経路（`CloseoutPackRun34` に既存、未配線）
+
+| 提供物 | 内容 |
+|---|---|
+| `WatchShiftS`（:67） | `WatchShiftG` の payload を `¬ matched s'' ∧ shiftGuardVM s''` の下に制限 |
+| `ShiftLocalS`（:89） | 同じく guard 付きの `ShiftLocalG` |
+| `shiftLocalS_of_watchShiftS`（:128）, `shiftLocalS_of_chainIdle`（:122） | 産出 |
+| `halfBound_of_shiftLocalS`（:165）, `shiftOrd_tickS`（:197） | **消費側の再配線済み** |
+| `ChainPosInv`（:322）, `watchShiftS_of_chainPosInv`（:353） | `Coupled.sum`（`SumRel` = `distance + lag = radius`）＋位置 payload から guarded 版を出す |
+| `chainPosInv_tick`（:411） | 23 tick 形状のうち **20 を閉じる** |
+
+残差は 4 つの分岐仮説: `H_fourOther`（post-shift `Other` 半分）、
+`H_bgP`（`scan_wait`/`scan_count`）、`H_matchP`（`scan_match`）、`H_shiftDoneP`（`shift_done`）。
+
+### 次 wave（wave 8）の主題
+
+`IPackMG` の `ShiftLocalG` 場を `ShiftLocalS` へ落とす再配線。
+`ShiftLocalG` の出現は 10 ファイル 17 箇所（`CloseoutPackRun26/30/34/36/43/45/46/51`,
+`CloseoutShiftLocalFree`, `CloseoutExtraFree`）。
+`shiftLocalS_of_shiftLocalG` は一方向なので、pack の場を弱める向きの変更になる。
+wave 7 で作った `extra7_of_front_steps_pack` は `ShiftLocalS.move`
+（`ScanNR x` の下で `canRight x.vm.right`）をそのまま埋める。
+
 ## 2026-09-19 wave 7 後の偵察 — 残り 5 前提の構造
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
