@@ -22,6 +22,53 @@
 
 ---
 
+## 2026-09-19 `hSP` の残差は `hor` の found 経路の葉の**中**にあった — 2 つの壁は 1 つ
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 発見
+
+`hSP` に残った 2 点（`RoundSeg`＝1 ラウンドの射影、最初のラウンド）は
+**既に found 経路側で述べられていた**。`CloseoutWatchRound5.ShiftRoundC`
+（`:328`、**NAMED (open)**）は、fuel を使い切ったか guard が立っている
+live watch 着地について
+
+```
+WatchSeg → 終端不一致 → shiftGuard → beginShift → ChainShiftRun →
+  Entry raw org (toOnly (shift 後の状態) v) → Rounds … → ScanSeg … → break
+```
+
+を一括で主張する。つまり**最初のラウンドの原点と後続ラウンドの両方**を含む。
+
+**`hSP` のラウンド組み上げと `hor` の `hfound` 系は同じ named leaf であり、
+独立した 2 つの問題ではない。**
+
+### 新規（`CloseoutOriginRounds`）— 連結を定理にした
+
+| 名前 | 内容 |
+|---|---|
+| `originAt_of_entry` | 状態での `Entry` は**そのまま** `OriginAt`（watch は状態で一意なので側条件なし） |
+| `originAt_of_rounds` | `Entry` ＋ 制御側 `Rounds` から終端での `OriginAt`（`rounds_lift` → `rounds_origin`。座標は `m*h` 増えるので `radius + 2 ≤ center` は保たれる） |
+| `round_of_rounds` | ↑と `round_of_originAt` の合成。**`ShiftRoundC` の `Entry` ＋ `Rounds` が配るもの**：全ラウンド開始での `RoundScan` と `ReadsInv` |
+
+すべて標準 3 公理のみ。
+
+### 残差の全体像（更新）
+
+| 最上位前提 | 残差 |
+|---|---|
+| `hSP` | `ShiftRoundC` の中身（`Entry` ＋ `Rounds` ＋ `ScanSeg`）。連結は `round_of_rounds` で証明済み |
+| `hor` | `h_oracle_of_leaves''` の 13〜14 葉。最大は `hfound`/`hfoundBg`/`hfoundReplay` ← **同じ `ShiftRoundC` 系** |
+| `hC` | `H_realizeLIMW'`（局所機械の実現） |
+| `hpack` | `ChainSide` の残り（`repV`/`repVmid`/`scanBound`/`marks`） |
+
+**`hSP` と `hor` は 1 つの壁に統合された。** 残る独立な壁は
+`ShiftRoundC` 系 ＋ `hC` ＋ `hpack` の 3 つ。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `hSP` の残差を 2 点に確定 — ラウンド区間と最初のラウンド
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
