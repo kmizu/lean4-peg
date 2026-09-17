@@ -1,5 +1,16 @@
 ## n20 (2026-09-17 朝) 葉の放電・偽仮定 4 件・非決定性
 
+## n72 (2026-09-19 未明) oracle の `hpres` は scan 側のみ放電・`WatchFreshC` は全区間量化で偽（着地形は文脈から閉）
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 新規 2 本登録（`CloseoutOracle5`、`CloseoutWatchRound51`）、sorry なし、build ログ `build_n72b.log` EXIT=0。
+- **oracle**: `CloseoutOracle5`: `reachAtC2_of_target_matchP`（:64、`GalilOracleMC2.reachAtC2_of_target_match` を `HpresAt` で再証明；唯一の使用箇所 `MC2:544` は chain idle の scan 着地で `clock = 1`、まさに `HpresAt` の側条件）、`cycleOracleMC2C_of_piecesP`（:160、`hpres` を `hpresRep`（普遍、fallback replay 専用）と `hpresT`（到達可能性限定）に分割）、`h_oracle_of_leaves4`（:274）。**`hpres` は未放電**で、残差 `hpresRep` は `Mode.replay` 状態（`GalilReplaySpan:1480–1900` の `replay_construct3`/`idle_countdown3`/`idle_compare3`）にあり、`ReadyFieldP3` は `Mode.scan` 条件付きなので `hpresAt_along_run` が届かん → readiness に replay 節（`CloseoutPreload41` 進行中）。もう 1 つ小さい隙: `hpresT` の配線に run 述語の橋（oracle の `StepsAll … (SoundScanNR raw)` vs Preload40 の `BigPack2M''`）。
+  - **oracle 葉の現況**: 閉 = `hex`, `hsearch`, `hends`, `hbudget`, `hrs`, `hended`, `hlastMatch`, `hstr`。残 = `hpresRep`, `hstage`（`ReplayStageInv`、mid-replay restart の `3·radius ≤ 5·last`）, `hshape`（`StartShape` は偽 → `StartShape'`）, `hlastMismatch`（最終文字分岐 + `EntryRefreshed`）, `hmismatch`（`hdp` → `MismatchDp`+`StageBudgetAt`、`hpos` → 区間予算；`hfb` 閉）, `hfound`/`hfoundBg`（着地不変量に `Restarted`/`StageEntry` + found tick からの経路構成、**最大の未着手**）, `hfoundReplay`（未着手）, `hreadyB`（着地での `RunEntriesAll`）。
+- **watch（2 つの訂正）**: `CloseoutWatchRound51`: (a) `FoundCompareCtxC` は `cF.clock = 1` と `cP = {cF with clock := 2048}` を持つので **fresh clock は found tick でなく着地**（`foundCtx_landing_clock` :44）、文脈に `WatchSegE … cF sF cP sP` は無く輸送は `(cP, sP)` から始めるしかない。(b) **`WatchFreshC`（Round49:87）は偽** — 全 watch 区間を量化して `cb.clock = 2048` を主張するが `WatchSegE.stop` は任意の clock で成立（`not_watchFreshC` :68）。`WatchClockC`（Round47:111）も `watchClockC_of_fresh` 経由でこの欠陥を継承 → **`final19` の葉は着地形に切り直す必要**（`CloseoutWatchRound52` 進行中）。着地限定形 `WatchFreshAtC`（:78）は **文脈だけで閉**（`watchFreshAtC_of_ctx` :86、`cP.clock = 2048` は場、birth の `BlockInv` は `blockInv_matched`∘`blockInv_chainStart`）。`prepPaceC_of_seg`（:105）は `PrepSegLenC`（:99、長さ `2h+3`・マッチ数 `m` の着地区間）1 つを残して閉。`PrepBirthLagC'` の残りは台帳恒等式 `value w0.lag = value sF.radius + m` で、着地区間の chain tick が `prepEvents sm dm bs cs` と一致することを言えば `prep_value` で出る。
+- 進行中: `CloseoutPackRun48`、`CloseoutPreload41`（replay 節）、`CloseoutWatchRound50`（`WindowEndC`/`ClockOneC`）、`52`。
+- **偽だった主張の訂正**: 「fresh clock は found tick にある」→ 着地。「`WatchFreshC` は成り立つ」→ 全区間量化で偽。
+- 残: n71 と同じ（watch は着地形への切り直し、oracle は上記一覧）。
+
+
 ## n71 (2026-09-19 未明) 相跨ぎで較正の穴が解消（`h ≤ 681` 不要）・マッチ時計 2 葉が閉じて `final19`
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 新規 2 本登録（`CloseoutWatchRound48`、`CloseoutWatchRound49`）、sorry なし、build ログ `build_n71b.log` EXIT=0。
