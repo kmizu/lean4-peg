@@ -22,6 +22,56 @@
 
 ---
 
+## 2026-09-19 `hav`/`hstart` 除去と `hfl` の証明（`pal_in_peg_final35`、6 前提）
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+**トップダウンに徹し、書く前に「減る見込み」を論証する**方式に変えた。
+前回は分解＝言い換えで前提が増えていた（8 → 9 → 10）。
+
+### 純減 2 件
+
+| 除去 | 事前の論証 | 結果 |
+|---|---|---|
+| `hav`（`ConsumeAvail`） | `watchShiftS_of_chainPosInv2` の `ConsumeAvail` 使用は `chainPos_step P.chainPos hav hstep` の **1 箇所だけ**で、`CloseoutPackRun48.chainPos_step_of_supply` が同じ材料（`Represents` 対 / verifier 対 / `LagCan` / `ChainPos` — すべて `ChainPack` の場）で代替する | 8 → 7 |
+| `hstart`（`BgStartP2`） | `CloseoutPackRun47.bgStartP2_of_centre` が**既存**で、その 3 入力（`canRight s.right` / radius 台帳 / `CentreLedger`）はすべて `ChainPack` の場（第 1 は位置上界経由） | 7 → 6 |
+
+`hav` の置き換えで mode 前提を入れずに済んだのは、`ShiftLocalS` の全場が
+`ScanNR x` を前提に持つので mode が場の内側から取れるため
+（`shiftLocalS_of_chainPack`）。
+
+### `hfl`（`0 ≤ value length`）を証明した — 前回の訂正の訂正
+
+tick 不変量としては偽（`shiftTick` が `dec (dec length)`）だが、
+**不変量そのものが事実を含んでいた**:
+
+`GalilGlueBLeaves.EntryCounters`（:74）は
+`∃ Rad : ℕ, ScanInvariant … Rad … ∧ RadiusRep r.radius Rad ∧ SpanRep r ∧ Canonical r.length`。
+`RadiusRep c n := Canonical c ∧ value c = n`（`n : ℕ`）と
+`SpanRep r := value r.length = 2 * value r.radius + 1` から
+`value length = 2·Rad + 1 ≥ 1`。`lenPos_of_entryCounters`。
+
+前回「`CPack.canon` では出ない」と判断したのは正しかったが、
+**`EntryCounters` を見落としていた。**
+
+### `ScanBudget` の縮小
+
+第 1 連言（`0 < left.length`）は `ChainPack.repR` と
+`CloseoutLPack3.present_iff_left` から出るので落とした。残るは位置上界のみ。
+
+### ⚠️ 残り 6 前提の到達可能性（見込みが立たないもの）
+
+| 前提 | 状態 |
+|---|---|
+| `hbudget`（位置上界） | **見込みなし**: 使用 3 箇所すべて文脈が `ChainPosInv2` だけ。`ChainPosInv2` は**単一状態の述語**なので run 文脈がなく、wave 7 の `front` ポテンシャル経路（run の出口上界が必要）が刺さらない。`ScanBudget` を run 文脈付きに変える構造変更が要る |
+| `hme` | **見込みなし**: `marksInv'_of_run'` の残り 2 入力のうち `hwin`（`WindowInOrigin`）の producer（`CloseoutPackRun25:124`）が **`FairSteps` を要求**する。`FairSteps → Steps` の一方向しかなく、逆には各 tick の `Fair` が要る。run pack を `FairSteps` に上げる構造変更とセット。`h4 : first ≠ 4` は `first` 具体化時の側条件 |
+| `hSP` | 周期と `PalAt` の実質的主張（Galil の move 補題圏） |
+| `hor` | `CycleOracleMC3` の producer はゼロ。最大の残り |
+| `hC` | 局所機械の実現 |
+| `hpack`（`ChainPack`） | `ChainPosInv2` の各場を run に沿って確立する層。`repR`/`repV` は `Represents` の運搬（`right_word`/`right_present`）があるが、tick 全形状の保存は未着手 |
+
+**計画書 §10.5 の完成条件（追加引数なしの `RecognizedByTotalPEG PAL`）は未達。**
+
 ## 2026-09-19 `ChainPack` 束ね＋偽の `hni` 除去（`pal_in_peg_final33`）
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
