@@ -1,3 +1,4 @@
+import PalPeg.PackedRun
 import PalPeg.CloseoutScanMargin4
 
 /-!
@@ -332,14 +333,10 @@ theorem lpackN_steps {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ �
     (hP : PreTrace centre place entry q first w st Tc)
     (hLv : ∀ i, i ≤ Tc w.length →
       LTickLeavesN centre place entry q first w (st i).ctl (st i).vm) :
-    ∀ i, i ≤ Tc w.length → LPackM w (st i).ctl (st i).vm := by
-  intro i
-  induction i with
-  | zero => intro _; rw [hP.start]; exact lpackM_boot w
-  | succ n ih =>
-    intro hi
-    exact lpackN_tick' centre place entry q first (ih (by omega)) (hLv n (by omega))
-      (hP.trace.tick n (by omega))
+    ∀ i, i ≤ Tc w.length → LPackM w (st i).ctl (st i).vm :=
+  hP.trace.carried (Pk := fun z => LPackM w z.ctl z.vm)
+    (by rw [hP.start]; exact lpackM_boot w)
+    (fun n hn ht hp => lpackN_tick' centre place entry q first hp (hLv n (by omega)) ht)
 
 end LeavesN
 

@@ -900,14 +900,10 @@ theorem lpackG_tick' {w : List (Fin 2)} {x y : State GalilVM}
 theorem lpackG_steps {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hP : PreTrace centre place entry q first w st Tc)
     (hLv : ∀ i, i ≤ Tc w.length → LTickLeavesG centre place entry q first w (st i).ctl (st i).vm) :
-    ∀ i, i ≤ Tc w.length → LPackG w (st i).ctl (st i).vm := by
-  intro i
-  induction i with
-  | zero => intro _; rw [hP.start]; exact lpackG_boot w
-  | succ n ih =>
-    intro hi
-    exact lpackG_tick' centre place entry q first (ih (by omega)) (hLv n (by omega))
-      (hP.trace.tick n (by omega))
+    ∀ i, i ≤ Tc w.length → LPackG w (st i).ctl (st i).vm :=
+  hP.trace.carried (Pk := fun z => LPackG w z.ctl z.vm)
+    (by rw [hP.start]; exact lpackG_boot w)
+    (fun n hn ht hp => lpackG_tick' centre place entry q first hp (hLv n (by omega)) ht)
 
 end LeavesG
 

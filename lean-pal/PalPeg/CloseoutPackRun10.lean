@@ -1,3 +1,4 @@
+import PalPeg.PackedRun
 import PalPeg.CloseoutPackRun8
 import PalPeg.CloseoutScanMargin3
 
@@ -446,14 +447,10 @@ theorem lpackM_steps {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ �
     (hP : PreTrace centre place entry q first w st Tc)
     (hLv : ∀ i, i ≤ Tc w.length →
       LTickLeavesM centre place entry q first w (st i).ctl (st i).vm) :
-    ∀ i, i ≤ Tc w.length → LPackM w (st i).ctl (st i).vm := by
-  intro i
-  induction i with
-  | zero => intro _; rw [hP.start]; exact lpackM_boot w
-  | succ n ih =>
-    intro hi
-    exact lpackM_tick' centre place entry q first (ih (by omega)) (hLv n (by omega))
-      (hP.trace.tick n (by omega))
+    ∀ i, i ≤ Tc w.length → LPackM w (st i).ctl (st i).vm :=
+  hP.trace.carried (Pk := fun z => LPackM w z.ctl z.vm)
+    (by rw [hP.start]; exact lpackM_boot w)
+    (fun n hn ht hp => lpackM_tick' centre place entry q first hp (hLv n (by omega)) ht)
 
 /-- **The run payload over the guarded pack.** -/
 structure IPackM (w : List (Fin 2)) (x : State GalilVM) : Prop where

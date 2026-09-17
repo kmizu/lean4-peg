@@ -77,4 +77,49 @@ end PackedRun
 #print axioms PackedRun.mono
 #print axioms PackedRun.pack_at
 
+/-! ## `Trace` に沿った不変量
+
+`_run` 218 本 / `_steps` 74 本 / `_boot` 30 本は、どれも同じ帰納法を書き直している
+（`CloseoutLPack2.lpack_steps` がその典型：`i` に帰納、底は boot、段は tick 補題）。
+それを 1 本にする。`Trace` 上の dot 記法で `htr.carried h0 hstep` と書ける。 -/
+
+namespace GalilCheckpoints.Trace
+
+/-- **不変量は trace に沿って運ばれる。** 始点で成立し、各 tick で保存されるなら、
+trace の各点で成立する。 -/
+theorem carried {F : Frame σ} {delay : ℕ} {Q Pk : State σ → Prop} {st : ℕ → State σ}
+    {e : ℕ} (htr : Trace F delay Q st e) (h0 : Pk (st 0))
+    (hstep : ∀ i, i < e → Tick F delay (st i) (st (i + 1)) → Pk (st i) → Pk (st (i + 1))) :
+    ∀ i, i ≤ e → Pk (st i) := by
+  intro i
+  induction i with
+  | zero => intro _; exact h0
+  | succ n ih => intro _; exact hstep n (by omega) (htr.tick n (by omega)) (ih (by omega))
+
+/-- **`Q` も使える版**（tick 補題が trace の `good` を要求するとき）。 -/
+theorem carried' {F : Frame σ} {delay : ℕ} {Q Pk : State σ → Prop} {st : ℕ → State σ}
+    {e : ℕ} (htr : Trace F delay Q st e) (h0 : Pk (st 0))
+    (hstep : ∀ i, i < e → Q (st i) → Q (st (i + 1)) →
+      Tick F delay (st i) (st (i + 1)) → Pk (st i) → Pk (st (i + 1))) :
+    ∀ i, i ≤ e → Pk (st i) :=
+  htr.carried h0 (fun i hi ht hp =>
+    hstep i hi (htr.good i (by omega)) (htr.good (i + 1) (by omega)) ht hp)
+
+end GalilCheckpoints.Trace
+
+namespace PackedRun
+
+/-- **boot ＋ tick から pack つき run を作る。** `*_steps` 系の結論そのもの。 -/
+theorem of_tick {F : Frame σ} {delay : ℕ} {Q Pk : State σ → Prop} {st : ℕ → State σ}
+    {e : ℕ} (htr : Trace F delay Q st e) (h0 : Pk (st 0))
+    (hstep : ∀ i, i < e → Tick F delay (st i) (st (i + 1)) → Pk (st i) → Pk (st (i + 1))) :
+    PackedRun F delay Q Pk e (st 0) (st e) :=
+  ⟨st, rfl, rfl, htr, htr.carried h0 hstep⟩
+
+end PackedRun
+
+#print axioms GalilCheckpoints.Trace.carried
+#print axioms GalilCheckpoints.Trace.carried'
+#print axioms PackedRun.of_tick
+
 end PalPeg
