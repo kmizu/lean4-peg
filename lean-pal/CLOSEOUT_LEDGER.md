@@ -22,6 +22,51 @@
 
 ---
 
+## 2026-09-19 `H_shiftDoneP` の分解（`CloseoutShiftDoneP`）
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`chainPosInv_tick`（`CloseoutPackRun34:411`）は 23 tick 形状のうち 20 を閉じ、
+3 つを named hypothesis として残す。使用箇所は各 1 箇所:
+
+| 仮説 | 使用 tick |
+|---|---|
+| `H_bgP` | `scan_wait`（:17）, `scan_count`（:20） |
+| `H_matchP` | `scan_match`（:23） |
+| `H_shiftDoneP` | `shift_done`（:26） |
+
+`shift_done` は **VM が不変**（制御だけ `shift → scan`）なので 3 つの中で最も軽い。
+
+### 分解結果
+
+`PosPayload` の 4 場のうち **2 つは scan 幾何から無料**:
+
+- `canR : canRight s.right` ← `ShiftGeom`（`CloseoutPackRun23:86`）の
+  `RRep w s`（`Represents s.right.head w ∧ focus ≠ none`）と位置上界から
+  `canRight_of_position_bound`（wave 5）で出る。`canR_of_shiftGeom`。
+- `radLe` は `ScanInvariant.rightPos` と `ShiftGeom` の
+  `position s.right = position s.center + rem + r` を突き合わせる。
+  `shift_done` は `¬ remainingPos s` なので `rem = 0`。`radEq_of_shiftGeom_done`。
+
+残り 2 場は chain 側で、`ShiftGeom` は何も言わない:
+
+```lean
+def ChainSideAt (w : List (Fin 2)) (s : GalilVM) : Prop :=
+  (∀ wch, s.chain = .watch wch →
+      (position wch.machine.verifier : ℤ) + value wch.lag = position s.right) ∧
+  (∀ a z wch, ChainTick a s.chain z → z = .watch wch →
+      canRight wch.machine.verifier ∧ Sane wch.machine.verifier)
+```
+
+`posPayload_of_shiftGeom` がこの 2 つを組み合わせて `PosPayload` を出す。
+すべて標準公理のみ。
+
+**残る義務**: `ChainSideAt`（verifier の位置台帳と 1 chain tick 先の健全性）。
+これは chain machine の不変量で、`Coupled'.sum : SumRel`
+（`.watch w` で `distance + lag = radius`）が `pos` 場の素材。
+`verNext` は `GalilArriveChain` の `caught_arrive` / `immediate_arrive`
+（`canRight` を前提に取る形）が近い。
+
 ## 2026-09-19 訂正 — `hfl`（`0 ≤ value length`）は単純な tick 不変量では**ない**
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
