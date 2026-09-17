@@ -1,5 +1,18 @@
 ## n20 (2026-09-17 朝) 葉の放電・偽仮定 4 件・非決定性
 
+## n69 (2026-09-19 未明) `pal_in_peg_final24`（Extra は `scanAvail` のみ、残差 2 つ）・**周期 `h` は非有界**（`ChainWatchPhaseC` の形が誤り）・readiness の tick は残差ゼロ
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 新規 2 本登録（`CloseoutPackRun46`、`CloseoutPreload39`）、sorry なし、build ログ `build_n69b.log` EXIT=0。
+- **pack**: `CloseoutPackRun46`: `Extra7`（:70、`scanAvail` のみ）/`Extra8`（`rewindMargin` + `scanAvail`）、読み手を全部再証明（本体不変）、**`pal_in_peg_final24`**（:319）。仮定: `hSP`（`BigPack2MG7` 上）, `hws`, `hee : H_extraEntry7`, `het`（素の `Extra7` tick）, `hme`, `hsl`, `hsc`, `hor : CycleOracleMC3`, `hbs`, `hls`, `hC`。**`ready`/`failed`/`cand` を全部削除した結果、`ReadyFieldP`/`ReadyPacedS`/readiness 連鎖は pack 経路から完全に消滅**。残差はちょうど 2 つ:
+  - 入口: `∀ c r, InvLPC w c r → position r.right ≠ 2 * w.length`（右ヘッドの end-of-input）
+  - tick: `(mode ≠ scan ∨ clock = 1) → y.mode = scan → y.replaying = false → canRight y.vm.right`（`scan_match` の clock 1、`shift_done`、`replayStart` でのみ発火）
+- **watch（較正の訂正）**: scout 調査の結果、**chain の周期 `h` は非有界**（入力とともに伸びる；`found_radius_le_two_period` は半径を周期で抑えるだけで逆は無い、`GalilReplayBudgetProof:19–22`、`GalilReplaySpan:116–118`）。よって `ChainWatchPhaseC`（`CloseoutWatchRound43:120`、copy/back 相が 1 クロック窓 2048 に収まる）は**一般には偽**で、`chainWatchPhaseC_of_window`（Round46:189）が `h ≤ 681` で止まったのは正しい。機械側は問題なく、Scala は 1 tick に 1 `stepCopy`/`stepBack`（`ScaffoldChain.scala:178–187`）で相は複数の比較周期を跨ぐ。→ obligation を跨ぎ可能な形に書き直す（`CloseoutWatchRound48` 進行中: clock 1 の match tick で継続、mismatch なら相を抜けて round 自身の shift/fallback 出口へ）。
+- **readiness**: `CloseoutPreload39`: `paced` の idle 条件を外すのは偽（`scan_count` が clock を減らすので凍結ビューでは slack が買えん）。正しいのは **slack 0 の節** `paced0`（比較着地は `clock := 2048` なので常にこれ）: `ReadyFieldP3`（:57）、`readyField3_entry_of_datum`（:75、入口は chain に言及せず free）、`readyField3_background`/`_shift`/**`readyField3_tick`**（:157、残差は `hentry`/`hentry'` のみでどちらも入口定理が点ごとに放電）、`readyField3_along_run`（:244）。**`hact` は消滅**。`Extra.ready` が消えた今、readiness の唯一の消費先は `CycleOracleMC3` の `hpres`（`SearchReadyB`）→ `CloseoutPreload40` 進行中。
+- 進行中: `CloseoutPackRun47`（`ChainPos'` + 葉 2–5）、`CloseoutPreload40`、`CloseoutWatchRound47`（prep 輸送・時計台帳）、`48`。
+- **偽だった主張の訂正**: 「copy/back 相は 1 クロック窓に収まる」→ 偽（`h` 非有界）。「`paced` の idle 条件は外せる」→ 偽、slack 0 の節に分ける。
+- 残: pack `hSP`/`hws` の供給 + 上記 2 残差 + `hme`/`hsl`/`hsc`/`hor`/`hbs`/`hls`/`hC`; readiness `hpres` 接続; watch 相跨ぎ + `ReplayBornRoundC` + prep 2 葉 + tie + `RestartLandingDataC`; core debris 配線・有限制御。
+
+
 ## n68 (2026-09-19 未明) `Extra.ready` も死に場・`hshift` 放電・`ShiftPeriodC` は葉でなかった・`final17`
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 新規 6 本登録（`CloseoutPreload38`、`CloseoutPackRun45`、`CloseoutWatchRound45`、`46`、`CloseoutPackRun44`）、sorry なし、build ログ `build_n68d.log` EXIT=0。
