@@ -93,7 +93,7 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 - 設計・現状の正本は `lean-pal/ASSEMBLY_PLAN.md`（組み立て方針、新しい順に追記）と `lean-pal/DESIGN_SCA_PAL.md`、`ALGORITHM_SPEC.md`。
 - 旧制御層は `lean-pal/archive/single-prog/` に退避済みでビルド対象外。
 
-## lean-pal 無条件 PAL ∈ PEG の進捗（2026-09-17 夜 時点）
+## lean-pal 無条件 PAL ∈ PEG の進捗（2026-09-18 未明 時点）
 
 **状態: 全体 build 成功・標準公理のみ・無条件 PAL は未完。** 全モジュール sorry なし。新モジュールは `PalPeg.lean` の `import PalPeg.GalilSegmentConstruct` の直後に登録。
 
@@ -101,7 +101,7 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 
 | 定理 | ファイル | 仮定 |
 |---|---|---|
-| `pal_in_peg_final13` | `CloseoutPackRun12` | `BigResid6`（6 契約）, `H_extraEntry/Tick`, `H_shiftLocalC`, `H_stageScan`, `CycleOracleMC3`, `H_bootShift`, `H_landShift`, `H_realizeLIM'`（最上位。found 葉は `foundExit_compare_final9`、readiness は `PostRunC`、核は `chooseVm_tapeActK`；詳細 `CLAUDE_RESUME.md` n36） |
+| `pal_in_peg_final13` | `CloseoutPackRun12` | `BigResid6`（6 契約）, `H_extraEntry/Tick`, `H_shiftLocalC`, `H_stageScan`, `CycleOracleMC3`, `H_bootShift`, `H_landShift`, `H_realizeLIM'`（最上位。found 葉は `foundExit_compare_final9`、readiness は `PostRunC`、核は `chooseVm_tapeActK`；詳細 `CLAUDE_RESUME.md` n37；`rewindMargin` は `CentreMargin` 1 葉に集約、`.double` 出口義務は Scala に合わせ再定式化要） |
 | `pal_in_peg_final4` | `GalilFinalAssembly4` | `H_oracle2`（boot 側 oracle、`CycleOracleMC2C`）, `H_needLB'`, `H_realizeLB'` |
 | `pal_in_peg_final2'_trailF` | `GalilTrailProof` | `H_oracle`, `H_trailF`, `H_base`, `H_realizeL'` |
 | `pal_in_peg_of_local_core` | `LocalLatchRealize` | 局所 oracle（`LocalSysConcrete.localSys_oracles` の残差）+ `H_ledger`（`LocalLedgerShift` で放電済み、`habs`/飢餓同値が残り） |
