@@ -46,6 +46,70 @@ Scala `ScaffoldChain.start()` は `periodOnly = false` **かつ** `cycle.reset()
 
 よって `cpack_steps` で `CPack` を歩数に沿って運べば `hcan` は定理（`hcan_of_cpack`）。新規入力なし。
 
+## 2026-09-19 wave 7 — `hee`/`het` を無条件化、最上位は **5 前提**
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`pal_in_peg_final27`（`lean-pal/PalPeg/CloseoutExtraFinal.lean`）は
+`[propext, Classical.choice, Quot.sound]` のみに依存し、残る仮定は 5 つ:
+`hSP`, `hws`, `hme`, `hor`, `hC`。
+
+`hee`（`H_extraEntry7`）と `het`（`Extra7` の tick 保存）は、いずれも
+`packRunR_MG27` の `hprefix` を作るためだけに存在した。その `hprefix`（run の
+各 scan/非 replaying 状態で `canRight`）は、**front ポテンシャルに乗って伝わる**:
+
+- `front s = position s.right + value s.replay` は `CentreLive` run 上で単調
+  （`GalilFrontMono.front_stepsAll_mono`、既存）。
+- `FrontPack.rest = ReplayRest` より非 replaying 状態では `replay = reset`、
+  すなわち `front s = position s.right`。
+- よって出口 `y` が非 replaying かつ cycle の上界を持てば
+  `position x.right = front x ≤ front y = position y.right ≤ 2m-1`。
+
+右ヘッド自身の単調性（34 ケースの `Tick` 解析）は一切不要。`extra7_of_bound` の
+残り 2 入力は `LPackM.scanGeom` の `ScanInvariant` から出る（発火条件が
+`Extra7` の語る条件と完全一致）。帰納の循環は `bigPack2MG7''_tickE` が
+`Extra7` を「構築済み pack の関数」として受け取ることで解消。
+
+呼び出し側は全て上界を持つ: 進行分岐は `CycleOutMC3` の定義、checkpoint 分岐は
+`ReportPointAt` の `notReplaying`/`atPlace`/`pos`/`le`。
+
+新規: `CloseoutFrontExtra`, `CloseoutExtraFree`, `CloseoutExtraOracle`,
+`CloseoutExtraFinal`（全て標準公理のみ）。
+
+**訂正**: wave 5 の「`hee`/`het` の残差は偽の疑いが強い」は誤り。偽なのは
+「任意の状態で `canRight`」であって、run 文脈では真。
+
+## 2026-09-19 wave 6 — `hsc` 完全除去、最上位は **7 前提**
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`pal_in_peg_final26`（`lean-pal/PalPeg/CloseoutStageFinal.lean`）は
+`[propext, Classical.choice, Quot.sound]` のみに依存し、残る仮定は 7 つ:
+`hSP`, `hws`, `hee`, `het`, `hme`, `hor`, `hC`。
+
+wave 5 の `pal_in_peg_final25`（8 前提）から `hsc`（`H_stageScan`）が消えた。
+`hsc` は wave 5 で反証済みだったが、**再切り出しすら不要**だった:
+
+1. 主経路上の消費者は `cycleOracleIMG2_of_cycleOracleMC3R`（`CloseoutPackRun36:673`）
+   だけで、そこが `hstage_of_scanBranch` を呼び `InvLPC → InvLPS` に持ち上げている。
+2. その持ち上げの `Inv` 側は `replayStage_of_inv` で既に無条件（`CloseoutOracleI2:179`）。
+3. `CycleOutMC3` は**両出口で `InvLPS` を返している**（`GalilInvPlus3:193, :212`）。
+   `hIS.1` で捨てていただけ。
+4. boot も `Inv` 分岐に着地する（`GalilFinalAssembly4.invLPC_init:94` の `hI : Inv`）。
+
+よって Run36 §2 のチェックポイント再帰を `InvLPS` 上で再走させれば
+`hstage_of_scanBranch` は一度も呼ばれない。`preTraceIMG2S_exists` の結論
+`PreTraceIMG2` は Run36 の同名 structure そのものなので下流は無改造。
+
+新規（全て標準公理のみ）: `CloseoutStageRecur`, `CloseoutStageCheck`,
+`CloseoutStageBoot`, `CloseoutStageOracle`, `CloseoutStageFinal`。
+PR #65 マージ済み。残差の正本は `lean-pal/CLOSEOUT_LEDGER.md`。
+
+**次の狙い**: `hee`/`het`/`hws` の共通核は `canRight`（`extra7_of_bound` で
+位置上界から出せるが、`PackRunRMG2` の `hprefix` に位置上界が無い）。
+`hme` は `ChooseLayout` の run 不変性に還元できる（`marksEntry'_of_layout` は
+**副条件なし**、`CloseoutPackRun16`）。
+
 ## n20 (2026-09-17 朝) 葉の放電・偽仮定 4 件・非決定性
 
 ## n74 (2026-09-19 未明) 外部レビューを受けて**台帳導入**・`H_candOrient` 反例確定・自分の誤報 1 件を訂正・oracle から `hpres` 消滅

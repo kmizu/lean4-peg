@@ -22,6 +22,55 @@
 
 ---
 
+## 2026-09-19 wave 7 — `hee`/`het` を **無条件化**: 最上位は **5 前提**
+
+**`pal_in_peg_final27`（`CloseoutExtraFinal`）— 標準公理のみ・5 前提。**
+残り: `hSP`, `hws`, `hme`, `hor`, `hC`。
+
+`hee`（`H_extraEntry7`）と `het`（`Extra7` の tick 保存）は、どちらも
+`packRunR_MG27` の `hprefix`（`CloseoutPackRun46:229`）を作るためだけに存在した。
+`hprefix` は「`InvLPC` 起点の run の各点で `Extra7`」、すなわち scan かつ
+非 replaying な各状態で `canRight`。
+
+wave 5 の `CloseoutCanRightBound.extra7_of_bound` は位置上界からこれを出すが、
+`PackRunRMG2` に位置上界が無かった。**上界は front ポテンシャルに乗って伝わる。**
+
+- `GalilRunTrace.front s = position s.right + value s.replay`（`:39`）は
+  `CentreLive` run 上で単調（`GalilFrontMono.front_stepsAll_mono`、**既存**）。
+- `FrontPack.rest` は `ReplayRest`、すなわち `c.replaying = false → s.replay = reset`。
+  よって**非 replaying 状態では `front s = position s.right`**（`front_eq_position`）。
+- ゆえに run の出口 `y` が非 replaying かつ cycle の上界を持てば、
+  `position x.right = front x ≤ front y = position y.right ≤ 2m-1`。
+
+右ヘッド自身の単調性（34 ケースの `Tick` 解析）は**一切不要**。
+
+`extra7_of_bound` の残り 2 入力（`Represents … w`, `focus ≠ none`）は
+`LPackM.scanGeom`（`CloseoutPackRun10:139`）の `ScanInvariant` から出る。
+`scanGeom` の発火条件は `mode = scan ∧ replaying = false` で、
+**`Extra7` が語る条件と完全に一致**する（`rrep_of_lpackM`）。
+
+帰納の循環（`Extra7 (g (n+1))` が構築中の pack を要求）は
+`bigPack2MG7''_tickE` が `Extra7` を**その pack の関数として**受け取ることで解消。
+
+呼び出し側は全て上界を持っている:
+- 進行分岐: `CycleOutMC3` の定義に `position sT.right ≤ 2m-1`（`GalilInvPlus3:213`）、
+  非 replaying は `InvLPS` から `invS_mode`。
+- checkpoint 分岐: `ReportPointAt`（`GalilReportPrefix`）の場が
+  `notReplaying`, `atPlace : position = 2m-1`, `pos : 1 ≤ m`, `le : m ≤ w.length`。
+
+| 新規ファイル | 内容 | 公理 |
+|---|---|---|
+| `CloseoutFrontExtra` | `front_eq_position`, `position_le_of_front_steps`, `rrep_of_lpackM`, `extra7_of_front_steps_pack` | 標準 |
+| `CloseoutExtraFree` | `steps_to_end_of_trace`, `bigPack2MG7''_tickE`, **`packRunR_MG27P`**（`Extra7` 入力ゼロ） | 標準 |
+| `CloseoutExtraOracle` | `reachAtIMG2S_of_reachAtC3R_P`, `cycleOutIMG2S_of_cycleOutMC3R_P`, `h_oracleIMG2S_of_MC3_P` | 標準 |
+| `CloseoutExtraFinal` | **`pal_in_peg_final27`（5 前提）** | 標準 |
+
+**台帳判定**: `hee` → **PROVED**、`het` → **PROVED**。
+wave 5 の「`hee`/`het` の残差は偽の疑いが強い」という記録は**誤り**だった。
+偽なのは「任意の状態で `canRight`」であって、run 文脈では真。訂正する。
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
 ## 2026-09-19 wave 6 — `hsc`（`H_stageScan`）を **完全除去**: 最上位は **7 前提**
 
 **`pal_in_peg_final26`（`CloseoutStageFinal`）— 標準公理のみ・7 前提。**
