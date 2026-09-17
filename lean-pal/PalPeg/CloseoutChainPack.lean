@@ -1,5 +1,6 @@
 import PalPeg.CloseoutVerRep
 import PalPeg.CloseoutShiftS2
+import PalPeg.CloseoutMarksFree
 
 /-!
 # `ChainPack`: `ChainPosInv2` with the three supply clauses folded in
@@ -70,6 +71,13 @@ structure ChainPack (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   scanCentre : c.mode = Mode.scan → CentreLedger s
   scanBound : c.mode = Mode.scan →
     ∃ m : ℕ, 1 ≤ m ∧ m < w.length ∧ position s.right ≤ 2 * m - 1
+  /-- The FPP window has not crossed the input origin — the `hwin` input of
+  `CloseoutPackRun17.marks_steps`. -/
+  winOrigin : c.mode = Mode.copy → PalPeg.CloseoutPackRun17.WindowInOrigin s
+  /-- The length counter is non-negative at a `scan` state — the `hfl` input of
+  the same, proved from `EntryCounters` by
+  `CloseoutLenNonneg.lenNonneg_of_entryCounters`. -/
+  lenNonneg : c.mode = Mode.scan → 0 ≤ value s.length
 
 /-- The three clauses, in the shape `h_bgP2_of_supply` asks for. -/
 theorem chainPack_supply {w : List (Fin 2)}
@@ -240,6 +248,13 @@ structure ChainSide (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
     ScanInvariant w (position s.center) rad s.left s.right → value s.radius ≤ (rad : ℤ)
   scanRad : c.mode = Mode.scan → ∀ rad : ℕ,
     ScanInvariant w (position s.center) rad s.left s.right → value s.radius ≤ (rad : ℤ)
+  /-- The FPP window has not crossed the input origin (needed by the marks
+  route, `CloseoutPackRun17.marks_steps`). -/
+  winOrigin : c.mode = Mode.copy → PalPeg.CloseoutPackRun17.WindowInOrigin s
+  /-- The length counter is non-negative at a `scan` state (the other marks
+  input; `CloseoutLenNonneg.lenNonneg_of_entryCounters` proves it from
+  `EntryCounters`). -/
+  lenNonneg : c.mode = Mode.scan → 0 ≤ value s.length
 
 /-- **`ChainPack` from `LPackM2`, `SanePack` and the chain-side residue.**  `repR` is the
 only field the geometry pack supplies; everything else is chain-side. -/
@@ -272,6 +287,31 @@ theorem chainPack_of_lpackM2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
   scanRad := hS.scanRad
   scanCentre := hS.scanCentre
   scanBound := hS.scanBound
+  winOrigin := hS.winOrigin
+  lenNonneg := hS.lenNonneg
+
+/-! ## The marks route from `ChainPack`
+
+`CloseoutMarksFree.MarksRun` is `WindowInOrigin` at the run's `copy` states plus
+`EntryCounters` at its `scan` states, and the second half only feeds `hfl`
+(`0 ≤ value length`).  Both are now `ChainPack` fields (`winOrigin`,
+`lenNonneg`), so a run all of whose states carry `ChainPack` supplies the marks
+route with **no `H_marksEntry'`**.
+-/
+
+/-- `hfl` and `hwin` — the two side inputs of
+`CloseoutPackRun17.marks_steps` — read off `ChainPack` along a run. -/
+theorem marksInputs_of_chainPack {w : List (Fin 2)} {x : State GalilVM}
+    (hp : ∀ (z : State GalilVM), ChainPack w z.ctl z.vm) :
+    (∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 m x z →
+      z.ctl.mode = Mode.scan → 0 ≤ value z.vm.length) ∧
+    (∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 m x z →
+      z.ctl.mode = Mode.copy → PalPeg.CloseoutPackRun17.WindowInOrigin z.vm) :=
+  ⟨fun _ z _ hm => (hp z).lenNonneg hm, fun _ z _ hm => (hp z).winOrigin hm⟩
+
+#print axioms marksInputs_of_chainPack
 
 #print axioms chainPack_of_lpackM2
 
