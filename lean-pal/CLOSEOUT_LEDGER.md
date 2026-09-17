@@ -22,6 +22,64 @@
 
 ---
 
+## 2026-09-19 区間分解は壁ではなかった（既に構成済み）。その残差 `MatchTickC` は**偽**
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 地図の訂正
+
+前エントリで区間分解（`ScanToScan` / `RoundSeg`）を「壁」と呼んだ。
+`CloseoutWatchRound9` のヘッダを読むと、**構成は既に無条件・sorry なしで存在する**：
+
+| 項目 | 内容 |
+|---|---|
+| `scanSeg_countdown` | shift 後の idle 区間を `ScanSeg` として |
+| `scanSeg_matchStep` | 一致比較 1 個を長さ 1 の `ScanSeg` として**構成** |
+| `scanRun_construct` / `scanRun_of_distance` | fuel 帰納の `ScanSeg` 版 |
+| `segRun_terminal` | live な shift 後着地から `SegEndS` 着地へ 1 本の `ScanSeg` |
+| `roundOne_of_segRun` | **run から `Rounds` 1 歩を構成** |
+
+その残差は同ヘッダが列挙している 3 つだけ：
+
+1. `CloseoutWatchRound.RoundDataC` — `CloseoutWatchRound2.roundStepC_of_align` が
+   `MatchTickC` まで落としている
+2. `CloseoutWatchRound9.ShiftAtMismatchC` — 入力依存、`OPEN`
+3. 終端のヘッド上界 `position (afterCompare s3 vs3 vq3).right ≤ 2*m - 1`
+
+### そして (1) は偽
+
+`CloseoutWatchRound2.MatchTickC`（`:136`）は
+
+```
+∀ s1 w1, s1.chain = .watch w1 → canRight s1.right →
+  read (left s1.left) = read (right s1.right) → zero w1.lag = true ∧ Good w1
+```
+
+で、**非 terminal の前提を持たない**。ところが
+`CloseoutPackRun31.not_good_of_terminal_match` がまったく同じ前提 ＋
+`singlePositive s.cycle = true` の下で逆を証明している（ラウンドの終端では
+一致比較が chain を**壊す**ので `Good` は成立しない）。
+`GalilRoundPeriod.RoundScan.good_of_match` の方は
+`hend : singlePositive v.cycle = false` を持っている。
+
+機械検査: `CloseoutMatchTickRefute.matchTickC_false_at_terminal`（標準 3 公理）。
+
+`MatchTickC`: `REFUTED`。`RoundDataC` は現在の `MatchTickC` 経由では閉じない。
+再切り出しはラウンドの非終端性を前提に入れ、終端一致は
+`RoundScan.break_of_match` に回すこと（機械が実際にそう動く）。
+
+### 区間分解の残差（更新）
+
+| 義務 | 状態 |
+|---|---|
+| `MatchTickC` | `REFUTED` → 非終端を前提に入れる再切り出し（`good_of_match` がそのまま使える） |
+| `ShiftAtMismatchC` | `OPEN`（入力依存） |
+| 終端ヘッド上界 | `OPEN`。`ChainPack.scanBound` / `CloseoutCanRightBound` 系の位置上界と同種 |
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `ReplayStage` は来歴だった — `WatchSegE` の連結で運べる
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
