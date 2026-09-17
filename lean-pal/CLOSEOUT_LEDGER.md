@@ -107,6 +107,40 @@ fresh chain の初回 shift は `WatchSeg` の全掃引後、`used = 2h − 1` �
 よって `H_freshShift` は `first_round` 自身の義務として残る。
 （仮定せず確認した。型名の一致で producer を判断しないという §1 の教訓の適用。）
 
+### `ShiftAtMismatchC` は過剰主張 — 反証して再定式化した（同じ欠陥の 5 例目）
+
+`CloseoutWatchRound9.roundOne_of_segRun` の唯一の残差 `ShiftAtMismatchC` を測ったら、
+「入力依存」どころか**入力の一部を主張**していた。`SegEndS` の第 3 出口は選言
+
+```
+singlePositive s1.cycle = true ∨ read (left s1.left) ≠ read (right s1.right)
+```
+
+で、消費者は第 1 選言を早期出口に回すので、`ShiftAtMismatchC` を適用する分岐では
+cycle 終端は**未知**。にもかかわらず葉の結論に `singlePositive s1.cycle = true` が入っている。
+
+Scala 正本（`ScaffoldGalil.scala:254`）は消費者側が正しいと言っている：
+`canShift`（`shiftGuardVM`）は `if periodOnly then singlePositive cycle` を含むので、
+**周期中の**不一致では `periodOnly` の chain は shift せず `beginFallback()` に行く。
+
+**`CloseoutShiftMismatch.lean`（新規）**
+
+| 定理 | 内容 |
+|---|---|
+| `shiftAtMismatchC_false_at_nonterminal` | **REFUTED**（機械検査済み）。非終端 `RoundScan` は `terminal_iff` で `singlePositive s.cycle = false` を与え、葉の結論と矛盾する。到達可能な配置に接地している |
+| `ShiftAtMismatchN` | 再定式化。cycle 終端を結論から前提へ移す |
+| `shiftAtMismatchN_of_C` | 真に弱い |
+| `roundOne_of_segRun_N` | 消費者。終端出口が「cycle 終端」と「周期中の不一致」を区別し、shift block に渡すのは前者だけ。新しい場合は機械の `beginFallback`＝oracle の `hmismatch`（`FallbackRouteMC2`）分岐 |
+
+既存の `roundOne_of_segRun` は壊していない（下流の `CloseoutWatchRound11/14/30` はそのまま）。
+
+* `ShiftAtMismatchC` — **REFUTED**。
+* `ShiftAtMismatchN` — **OPEN**（ただし前提が機械の `canShift` と一致した真の命題）。
+
+これで「名前付き葉が偽なのは、唯一の消費者が到達しない状態まで量化しているから」という
+同一の欠陥が 5 例目（`ShiftPal` / `H_advanceT` / `MatchTickC` / `hpos` / `ShiftAtMismatchC`）。
+**新しい葉を測るときは、まず消費者がその分岐で何を知っているかを先に読む。**
+
 ### 誤りの訂正（自分の前ターンの見立て）
 
 「次は `segment_to_checkpoint` を `hsegmentM` の消費者に配線する」は**外れ**。

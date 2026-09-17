@@ -45,6 +45,24 @@ watch で `Entry` を満たさないので、この前提なしでは偽にな�
 `singlePositive s.cycle = true` と両立せず、fresh chain の初回 shift は
 `used = 2h − 1` で起きる。`H_freshShift` は `first_round` 自身の義務。
 
+### 追記 2（同ターン）— `ShiftAtMismatchC` を反証して再定式化
+
+`roundOne_of_segRun` の唯一の残差 `ShiftAtMismatchC` は**過剰主張**だった。`SegEndS` の
+第 3 出口は「cycle 終端 ∨ 不一致」の選言で、消費者は不一致側で cycle 終端を知らんのに、
+葉の結論が `singlePositive s1.cycle = true` を主張していた。Scala 正本
+（`ScaffoldGalil.scala:254`）では `canShift` が `if periodOnly then singlePositive cycle`
+を含むので、**周期中の**不一致では機械は shift せず `beginFallback()` に行く。
+
+`CloseoutShiftMismatch.lean`（新規）: `shiftAtMismatchC_false_at_nonterminal`（反証、
+非終端 `RoundScan` の `terminal_iff` に接地）、`ShiftAtMismatchN`（cycle 終端を前提へ）、
+`shiftAtMismatchN_of_C`、`roundOne_of_segRun_N`（終端出口が 2 種を区別し、新しい場合は
+機械の `beginFallback`＝oracle の `hmismatch` 分岐）。既存の `roundOne_of_segRun` は
+壊していない。
+
+**同一の欠陥が 5 例目**（`ShiftPal` / `H_advanceT` / `MatchTickC` / `hpos` /
+`ShiftAtMismatchC`）。新しい葉を測るときは、まず**消費者がその分岐で何を知っているか**
+を先に読む。
+
 ### 訂正
 
 前ターンの「次は `segment_to_checkpoint` を `hsegmentM` の消費者に配線」は外れ。
