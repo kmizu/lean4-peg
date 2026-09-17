@@ -64,6 +64,58 @@ theorem marksInv'_of_marksRun {raw : List (Fin 2)} (h4 : first ≠ 4)
     (fun m z hz hm => lenNonneg_of_entryCounters (hM.2 m z hz hm))
     hM.1 hP hx
 
+/-- **`MarksInv'` one tick, with no `H_marksEntry'`.**  `marks_steps` at `n = 1`:
+the layout comes from `WPack`, which the same step carries. -/
+theorem marksInv'_tick_free {raw : List (Fin 2)} (h4 : first ≠ 4)
+    {x y : State GalilVM}
+    (h : Steps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay 1 x y)
+    (hM : MarksRun onLetter leftFirst centre place entry q first delay raw x)
+    (hP : CPack q x.ctl x.vm) (hW : WPack q first x.ctl x.vm)
+    (hI : MarksInv' first x.ctl x.vm) :
+    MarksInv' first y.ctl y.vm :=
+  (marks_steps onLetter leftFirst centre place entry q first delay h4 h
+    (fun m z hz hm => lenNonneg_of_entryCounters (hM.2 m z hz hm)) hM.1 hP hW hI).2.2
+
+/-- **`CPack`/`WPack`/`MarksInv'` all three along a run, `H_marksEntry'`-free.** -/
+theorem marks_steps_free {raw : List (Fin 2)} (h4 : first ≠ 4) {n : ℕ} {x y : State GalilVM}
+    (h : Steps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay n x y)
+    (hM : MarksRun onLetter leftFirst centre place entry q first delay raw x)
+    (hP : CPack q x.ctl x.vm) (hW : WPack q first x.ctl x.vm)
+    (hI : MarksInv' first x.ctl x.vm) :
+    CPack q y.ctl y.vm ∧ WPack q first y.ctl y.vm ∧ MarksInv' first y.ctl y.vm :=
+  marks_steps onLetter leftFirst centre place entry q first delay h4 h
+    (fun m z hz hm => lenNonneg_of_entryCounters (hM.2 m z hz hm)) hM.1 hP hW hI
+
+/-! ## `EntryCounters` is free on the run
+
+`InvLP := InvL ∧ EntryCounters` (`GalilInvPlus:47`), so the second component of
+`MarksRun` is available at every `InvLPC` state — and the run pack establishes
+`InvLPC` at its origin.  Only the `WindowInOrigin` half is a genuine input.
+-/
+
+/-- `EntryCounters` read off `InvLPC`. -/
+theorem entryCounters_of_invLPC {raw : List (Fin 2)} {c : Control} {r : GalilVM}
+    (h : PalPeg.GalilInvPlus2.InvLPC raw c r) : EntryCounters raw r :=
+  h.1.1.2
+
+/-- **`MarksRun` from the `WindowInOrigin` half alone**, when the run's states
+all carry `InvLPC`. -/
+theorem marksRun_of_window {raw : List (Fin 2)} {x : State GalilVM}
+    (hwin : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay m x z →
+      z.ctl.mode = Mode.copy → WindowInOrigin z.vm)
+    (hinv : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay m x z →
+      z.ctl.mode = Mode.scan → PalPeg.GalilInvPlus2.InvLPC raw z.ctl z.vm) :
+    MarksRun onLetter leftFirst centre place entry q first delay raw x :=
+  ⟨hwin, fun m z hz hm => entryCounters_of_invLPC (hinv m z hz hm)⟩
+
+#print axioms entryCounters_of_invLPC
+#print axioms marksRun_of_window
+
+#print axioms marksInv'_tick_free
+#print axioms marks_steps_free
+
 #print axioms marksInv'_of_marksRun
 
 end
