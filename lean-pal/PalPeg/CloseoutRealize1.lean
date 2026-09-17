@@ -78,7 +78,8 @@ theorem h_realizeSMG2'_of_LIMG2' {centre : GalilVM → Fin 3}
     (h : H_realizeLIMG2' centre place entry q first) :
     H_realizeSMG2' centre place entry q first := by
   obtain ⟨Q', Γ', iQ, dQ, iΓ, dΓ, t, K, L, blank, initQ, outQ, n, htape, hn, hreal⟩ := h
-  exact ⟨Q', Γ', iQ, dQ, iΓ, dΓ, t, n * PalPeg.Local.cnt K,
+  exact ⟨PalPeg.Local.Ctrl (Fin 2) Q' Γ' t K × Fin (n * PalPeg.Local.cnt K), Γ',
+    inferInstance, inferInstance, iΓ, dΓ, t, n * PalPeg.Local.cnt K,
     L.realize blank initQ (GalilEmptyWord.accept' initQ outQ) n htape hn,
     Nat.mul_pos hn (PalPeg.Local.cnt_pos K),
     GalilEmptyWord.realize_accept'_nil L blank initQ outQ n htape hn, hreal⟩
