@@ -40,9 +40,18 @@ cycle の `InvLPC` 起点がこれ）、`roundBundle_steps_run`（側入力を r
 `auxPack_steps` で run 搬送され `packRunR_MW` が既に走らせている
 （`copyIdle_shift_of_auxPack` / `shiftPal_of_run_aux`）。
 
-**`hSP` の残差は run 形の 3 つ**: `ChainPosInv2`（4 供給で搬送）、
-`H_readsShift`（⟸ `OriginShift` ⟸ `Rounds`）、`H_freshShift`（⟸ `first_round`）。
-`canRight` と `AuxPack` は `BigPack2MG7W` の場。
+さらに `ChainPosInv2` も**不要**だった。`roundBundle_tick` の `hinv` は 3 箇所とも
+`blockInv_of_chainPosInv2` 経由で `BlockInv s.chain` だけを使い、それは
+`Coupled.block` ＝ `AuxPack.coupled` の場。よって `roundBundle_tick_B` /
+`roundBundle_steps_B` / `shiftPal_of_run_B` は `ChainPosInv2` を取らない。
+
+**`hSP` の残差は run 形の 2 つ ＋ fresh 分岐**: `H_readsShift`（⟸ `OriginShift` ⟸
+`Rounds`）、`H_freshShift`（⟸ `first_round`）、`periodOnly = false` の `ShiftPal`。
+`BlockInv`/`CopyIdle`/`canRight` は全部 `BigPack2MG7W` の場から無料。
+
+**正直な評価**: 前提数の削減ではなく構造の直し。台帳のルールでは `OPEN` のまま。
+意味があるのは 3 つとも「run データの組み立て」に帰着し、その組み立て器
+（`Rounds` ← `roundOne_of_segRun_M`、`first_round`）が名前付き葉を持たない定理である点。
 
 ### これからの道筋（`final30` の 8 前提）
 

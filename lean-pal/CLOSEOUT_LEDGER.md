@@ -94,10 +94,24 @@ shift 相では copy 機構が idle なので、これは真の命題。
 `packRunR_MW` が既に走らせている（`copyIdle_shift_of_auxPack` /
 `shiftPal_of_run_aux`）。
 
-**`hSP` の残差は run 形の 3 つ**: `ChainPosInv2`（4 供給で搬送）、
-`H_readsShift`（⟸ `OriginShift` ⟸ `Rounds`）、`H_freshShift`（⟸ `first_round`、
-葉なしの定理）。`canRight` は `BigPack2MG7W` の `Extra8.scanAvail` 場、
-`AuxPack` も同じ束の場。
+さらに `ChainPosInv2` も**不要**だった。`roundBundle_tick` は `hinv` を 3 箇所に渡すが、
+どれも `CloseoutRoundReads.blockInv_of_chainPosInv2` 経由で **`BlockInv s.chain` だけ**を
+使う（`chainRound_tick_B` の `hblk`、`readsRound_tick` の `hblk`、`shiftRound_tick_A` の
+`hblk`）。そして `BlockInv s.chain` は `Coupled.block`（`GalilChainCoupling:361`）＝
+`AuxPack.coupled` の場。よって `roundBundle_tick_B` / `roundBundle_steps_B` /
+`shiftPal_of_run_B` は `ChainPosInv2` を一切取らない。
+
+**`hSP` の残差は run 形の 2 つ ＋ fresh 分岐**: `H_readsShift`（⟸ `OriginShift` ⟸ `Rounds`）、
+`H_freshShift`（⟸ `first_round`）、それに `periodOnly = false` の `ShiftPal`（同じ
+`first_round`）。`BlockInv` / `CopyIdle` / `canRight` は全部 `BigPack2MG7W` の場
+（`AuxPack` と `Extra8.scanAvail`）から無料。
+
+**正直な評価**: これは前提数の削減ではなく**構造の直し**。`hSP` を 1 本の仮定から
+3 つの run 形残差に分解しただけなので、台帳のルールでは `OPEN` のまま。意味があるのは
+3 つとも「run データの組み立て」に帰着し、その組み立て器（`Rounds` ←
+`roundOne_of_segRun_M`、`first_round`）が**名前付き葉を持たない定理**である点。
+`packRunR_MW` への配線は、その組み立てを実際に書いてからにする（今書いても
+仮定が 1 → 3 に増えるだけ）。
 
 ### これからの道筋（`final30` の 8 前提）
 

@@ -42,6 +42,10 @@ open PalPeg.CloseoutRoundReads PalPeg.CloseoutRoundUnique
 open PalPeg.CloseoutPeriodShape PalPeg.CloseoutNoReplayWatch
 open PalPeg.CloseoutRoundBundle
 open PalPeg.CloseoutPackRun29
+open PalPeg.CloseoutBirthFree
+open PalPeg.CloseoutAdvanceT
+open PalPeg.CloseoutPackRun2
+open PalPeg.GalilBranchInvariants
 
 /-- **The bundle at an idle chain.**  `ChainRound` / `ReadsRound` / `ShiftRound`
 all quantify over a *watching* chain, so they are vacuous; `PeriodShape` and
@@ -155,10 +159,112 @@ theorem shiftPal_of_run_aux {w : List (Fin 2)} {delay n : ℕ} {x y : State Gali
 
 end
 
+/-! ## `ChainPosInv2` is not needed either — only `BlockInv`
+
+`roundBundle_tick` passes its `hinv : ChainPosInv2 w c s` to three places, and
+every one of them uses it **only** through
+`CloseoutRoundReads.blockInv_of_chainPosInv2` — i.e. only `BlockInv s.chain`:
+
+* `chainRound_tick_S` → `chainRound_tick_BF` → `chainRound_tick_B`'s `hblk`;
+* `readsRound_tick_S` → `readsRound_tick`'s `hblk`;
+* `shiftRound_tick_A`'s `hblk` (already taken as `blockInv_of_chainPosInv2 hinv`).
+
+And `BlockInv s.chain` is `Coupled.block` (`GalilChainCoupling:361`), a field of
+`AuxPack.coupled` — the same run-carried pack that gave `CopyIdle`.  So the
+bundle's tick needs **no** `ChainPosInv2` at all. -/
+
+section
+variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
+  (entry q : ℕ) (first : Fin 9)
+
+/-- **`roundBundle_tick` with `ChainPosInv2` replaced by `BlockInv`.** -/
+theorem roundBundle_tick_B {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s t : GalilVM}
+    (hB : RoundBundle w c s)
+    (hblk : BlockInv s.chain)
+    (hci : c.mode = Mode.shift → CopyIdle s)
+    (hSh : H_readsShift w c s)
+    (hF : H_freshShift w s t)
+    (h : Tick (galilFrameS (PofC centre place entry w) q first) delay ⟨c, s⟩ ⟨c', t⟩) :
+    RoundBundle w c' t where
+  chainRound :=
+    chainRound_tick_B centre place entry q first (x := ⟨c, s⟩) (y := ⟨c', t⟩)
+      hB.chainRound hB.readsRound hB.periodShape
+      (h_shiftDone_of_shiftRound centre place entry q first hB.shiftRound)
+      (h_birthR_vacuous centre place entry q first hB.noReplay hB.periodShape h) hblk h
+  readsRound :=
+    PalPeg.CloseoutRoundUnique.readsRound_tick centre place entry q first
+      (x := ⟨c, s⟩) (y := ⟨c', t⟩)
+      hB.chainRound hB.readsRound hB.periodShape hSh
+      (h_readsBirth_vacuous centre place entry q first hB.noReplay hB.periodShape h) hblk h
+  shiftRound :=
+    shiftRound_tick_A centre place entry q first (x := ⟨c, s⟩) (y := ⟨c', t⟩)
+      hB.chainRound hB.shiftRound hB.readsRound hF hblk hci h
+  periodShape := periodShape_tick centre place entry q first hB.periodShape h
+  noReplay := noReplayWatch_tick centre place entry q first hB.noReplay hB.periodShape h
+
+/-- **The bundle along a run, with `AuxPack` doing the work of `ChainPosInv2`.** -/
+theorem roundBundle_steps_B {w : List (Fin 2)} {delay : ℕ} :
+    ∀ {n : ℕ} {x y : State GalilVM},
+      Steps (galilFrameS (PofC centre place entry w) q first) delay n x y →
+      RoundBundle w x.ctl x.vm →
+      (∀ (m : ℕ) (z : State GalilVM),
+        Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
+        AuxPack z.ctl z.vm ∧ H_readsShift w z.ctl z.vm) →
+      (∀ (m : ℕ) (z z' : State GalilVM),
+        Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
+        Tick (galilFrameS (PofC centre place entry w) q first) delay z z' →
+        H_freshShift w z.vm z'.vm) →
+      RoundBundle w y.ctl y.vm := by
+  intro n x y h
+  induction h with
+  | zero x => intro hx _ _; exact hx
+  | @succ n x z y ht hr ih =>
+    intro hx hsup hF
+    obtain ⟨haux0, hSh0⟩ := hsup 0 x (.zero x)
+    refine ih (roundBundle_tick_B centre place entry q first hx haux0.coupled.block
+      (fun hs => copyIdle_shift_of_auxPack haux0 hs) hSh0 (hF 0 x z (.zero x) ht) ht) ?_ ?_
+    · intro m z' hz'
+      exact hsup (m + 1) z' (.succ ht hz')
+    · intro m z' z'' hz' htk
+      exact hF (m + 1) z' z'' (.succ ht hz') htk
+
+/-- **`ShiftPal` from the run: `hSP`'s content with two residues left.**
+`AuxPack` (a field of the premise bundle, carried by `auxPack_steps`) supplies
+both `BlockInv` and `CopyIdle`; what remains is `H_readsShift`
+(`CloseoutReadsOrigin.h_readsShift_of_originShift`) and `H_freshShift`
+(`GalilScaffoldTopFirstRound.first_round`). -/
+theorem shiftPal_of_run_B {w : List (Fin 2)} {delay n : ℕ} {x y : State GalilVM}
+    (hidle : x.vm.chain = ChainVM.idle)
+    (h : Steps (galilFrameS (PofC centre place entry w) q first) delay n x y)
+    (haux : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
+      AuxPack z.ctl z.vm)
+    (hSh : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
+      H_readsShift w z.ctl z.vm)
+    (hF : ∀ (m : ℕ) (z z' : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
+      Tick (galilFrameS (PofC centre place entry w) q first) delay z z' →
+      H_freshShift w z.vm z'.vm)
+    (hm : y.ctl.mode = Mode.scan) (hr : y.ctl.replaying = false)
+    (hcan : canRight y.vm.right)
+    (hfresh : y.vm.periodOnly = false →
+      ShiftPal centre place entry q first w y.vm) :
+    ShiftPal centre place entry q first w y.vm :=
+  shiftPal_of_roundBundle centre place entry q first hm hr
+    (roundBundle_steps_B centre place entry q first h (roundBundle_of_idle hidle)
+      (fun m z hz => ⟨haux m z hz, hSh m z hz⟩) hF)
+    hcan hfresh
+
+end
+
 #print axioms roundBundle_of_idle
 #print axioms roundBundle_steps_run
 #print axioms shiftPal_of_run
 #print axioms copyIdle_shift_of_auxPack
 #print axioms shiftPal_of_run_aux
+#print axioms roundBundle_tick_B
+#print axioms roundBundle_steps_B
+#print axioms shiftPal_of_run_B
 
 end PalPeg.CloseoutBundleRun
