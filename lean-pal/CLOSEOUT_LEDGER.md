@@ -22,6 +22,59 @@
 
 ---
 
+## 2026-09-19 Scala 正本が答えを持っていた — 終端一致は scan を止めない
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 仕様（`ScaffoldGalil.scala:254` `stepScan`）
+
+```scala
+chain.checkPair(left.read())
+if (left.read() == right.read()) {
+  matchedPlace()                                  // 外側が一致
+} else if (!replaying && chain.canShift && chain.prediction() == right.read()) {
+  beginChainShift()
+} else {
+  beginFallback()
+}
+```
+
+`matchedPlace()`（`:280`）は `length` を 2 回 inc し、`chain.matched()` を呼び、
+replay を払うだけで、**scan を終わらせない**。`ScaffoldChain.matched()`
+（`ScaffoldChain.scala:156`）は `periodOnly` なら `cycle.dec()` し、watch かつ
+lag ゼロなら `consume()` を呼ぶ — それが終端一致で失敗する consume。
+
+**つまり終端一致はセグメントを止めない。** watch が broken になって scan は続き、
+機械は後で broken chain に対して `restart` する（`Tick.restart` の source モードは
+`.scan`）。Lean モデルも一致する：
+
+```
+ChainMatched | breaks (w w') (hb : BreakStep w w') : ChainMatched (.watch w) (.broken w')
+```
+
+### 新規（`CloseoutTerminalBreak`）
+
+| 名前 | 内容 |
+|---|---|
+| `terminal_match_breaks` | 終端一致は watch を broken に変える（`break_of_match` ＋ `ChainMatched.breaks`） |
+| `terminal_match_not_watch` | よって target の chain は watch でない（`watch` 分岐は `not_good_of_terminal_match` ＋ `outer_of_zero` で矛盾） |
+
+どちらも標準 3 公理のみ。
+
+### 結論
+
+1. `TerminalC` には**第 5 の出口**が必要で、その内容は「chain がもう watch でない」。
+   入力についての新しい義務ではなく、**欠けている選択肢**だけ。
+2. **`hor` の `InvSS` lift ではこの経路は既に問題ない** — 破断後に機械は restart し、
+   restart 着地は `Restarted` ＝ `Inv`、つまり `InvSS` の `Inv` 分岐に落ちる。
+
+前エントリの「配線には第 5 出口が必要か、終端一致が到達不能かのどちらか」という
+問いに、仕様が**前者**と答えた。到達可能で、行き先も分かった。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 配線の前に測定: `TerminalC` の 4 出口は終端一致の破断を覆っていない
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
