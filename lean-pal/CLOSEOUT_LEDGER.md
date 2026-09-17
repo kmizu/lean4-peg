@@ -22,6 +22,57 @@
 
 ---
 
+## 2026-09-19 wave 8 — `hws` を通さない `RadPack` 経路（`CloseoutShiftS`）
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+前項で `hws`（`∀ y, WatchShiftG … y`）が偽だと記録した。本項はその**除去経路を
+実際に配線した**もの。`CloseoutPackRun34` が guarded 版（`WatchShiftS` /
+`ShiftLocalS` / `ChainPosInv` / `watchShiftS_of_chainPosInv` / `chainPosInv_tick`）を
+用意していたが run に繋がれていなかった。`CloseoutShiftS` がその配線。
+
+### なぜ小さく済んだか
+
+`IPackMG.shift`（= `ShiftLocalG`）の**射影は 4 箇所しかない**
+（`CloseoutPackRun30:535, 538, 540, 562`）。その 2 読者が全て:
+
+| 読者 | guarded 版 |
+|---|---|
+| `halfBound_of_ipackMG`（Run30:523） | `halfBound_of_shiftLocalS`（Run34:165、**既存**） |
+| `shiftVerSane_ptMG`（Run30:558） | `saneVer_of_shiftLocalS`（本 wave） |
+
+さらに trace 側の 2 つも guard を足すだけで通った。いずれも entry 仮説を
+`scan_shift` 分岐の 1 箇所でしか呼ばず、そこは `hmt`/`hg` を持つ:
+
+| trace 読者 | guarded 版 |
+|---|---|
+| `shiftOrd_ptG`（Run30:567）＋`shiftOrd_tickG` | `shiftOrd_ptS`（本 wave）＋`shiftOrd_tickS`（Run34:197、**既存**） |
+| `verSane_ptG`（Run30:591）＋`saneTickG`（Run26:444） | `verSane_ptS`＋`saneTickS`（本 wave） |
+
+### 成果（`CloseoutShiftS`、全て標準公理のみ）
+
+| 定理 | 内容 |
+|---|---|
+| `shiftLocalS_of_chainPosInv` | idle 分岐は無料、watch 分岐は guarded な `WatchShiftS` 経由 |
+| `chainPosInv_steps` | `chainPosInv_tick` の run 帰納 |
+| `shiftLocalS_of_run` | run の各状態で `ShiftLocalS` |
+| `saneVer_of_shiftLocalS` | Run30:558 読者の guarded 版 |
+| `shiftReaders_of_run` | 両読者を `ChainPosInv` から直接 |
+| `saneTickS` / `verSane_ptS` | trace 側 `SaneVer` |
+| `shiftOrd_ptS` | trace 側 `ShiftOrd` |
+| **`radPack_ptS`** | **`hws` を一切通さない `RadPack`** |
+
+### 残差
+
+`radPack_ptS` の入力は `H_fourOther`, `H_bgP`, `H_matchP`, `H_shiftDoneP`
+（`CloseoutPackRun34` の 4 分岐仮説）と入口の `ChainPosInv`、それに
+`LPackM` / `LeftLive` / `PreTrace` / `Steps`（いずれも pack から）。
+4 分岐仮説はすべて `shiftGuardVM` 付きの文脈なので、Run32 の反例
+（誕生直後 `distance = reset`）には当たらない。
+
+**次**: `radPack_ptS` を `trailF_ptMG` → `H_trailF` → 最上位へ繋ぎ、
+`pal_in_peg_final27` の `hws` を 4 分岐仮説に差し替える。
+
 ## 2026-09-19 ⚠️ `hws`（`WatchShiftG` の全称形）は **偽** — `final27` の扱いに注意
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
