@@ -22,6 +22,62 @@
 
 ---
 
+## 2026-09-19 全部が帰着する 1 つの義務: run の区間分解（`ScanToScan`）
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### `SpanRep` は tick 不変量ではない（測定）
+
+`GalilScaffoldTopSearch:48` / `:53`:
+
+```
+afterCompare  s vs vq = {… with radius := inc s.radius, length := inc (inc s.length), …}
+afterMismatch s vs vq = {… with radius := inc s.radius}
+```
+
+一致比較は両方を上げて `value length = 2 * value radius + 1` を保つ
+（`spanRep_afterCompare`）が、**不一致**比較は radius だけ上げて破る。
+`beginShiftVM` が `length` を 2 上げて戻すので `scan_shift` tick は複合として
+保つが、中間の `afterMismatch` では破れており、`scan_fallback` 後は fallback
+サイクルが両カウンタをリセットするまで破れたまま（`spanRep_of_fallback`）。
+
+つまり `SpanRep` は **scan 状態の不変量**で、`GalilSpanCounter` の transport
+補題は全部区間形（`spanRep_scanSeg`, `spanRep_watchSeg`, `spanRep_watchSegE`,
+`spanRep_shift`, `spanRep_rounds`, `spanRep_restart`, `spanRep_of_init`,
+`spanRep_of_fallback`）。
+
+### 新規（`CloseoutSegment`）
+
+```
+def ScanToScan (P) (q) (first) (raw) : Prop :=
+  ∀ k c c' s s', StepsAll (galilFrameS P q first) 2048 (SoundScanNR raw) k ⟨c,s⟩ ⟨c',s'⟩ →
+    c.mode = Mode.scan → c'.mode = Mode.scan →
+    ∃ n h m cm sm, ScanSeg P q first 2048 n c s cm sm ∧ Rounds P q first 2048 h m cm sm c' s'
+```
+
+| 名前 | 内容 |
+|---|---|
+| `spanRep_of_scanToScan` | 区間分解から `SpanRep` の run 輸送（`spanRep_scanSeg` → `spanRep_rounds`） |
+| `invLPS_of_landing` | **`hor` の `InvLPS` 着地 lift**。`invLPS_of_landed` の 3 入力のうち `CopyPack` は `InvLPS` origin（`hO.1.1.2`）、`SpanRep` は上の輸送、残るは着地の `Inv` |
+
+### 帰着の全体像（測定確定）
+
+| 必要なもの | 経由 |
+|---|---|
+| `SpanRep` at oracle landings（`hor` の lift の半分） | `spanRep_of_scanToScan` ✓ |
+| `RoundSeg`（`hSP` のラウンド境界） | `rounds_lift` → `rounds_origin` |
+| `H_freshShift` / `H_fresh` | `first_round` を最初の区間に |
+| `hor` の found 葉（`hfound`/`hfoundBg`/`hfoundReplay`） | `ShiftRoundC` ＝ `WatchSeg` ＋ 終端 ＋ shift ＋ `Rounds` ＋ `ScanSeg` |
+
+**残る独立な壁は 3 つ**:
+1. **`ScanToScan`**（run の区間分解）— `hSP` と `hor` の大部分がここに帰着
+2. **`hC`**（`H_realizeLIMW'`、局所機械の実現）
+3. **`hpack`** のうちモデル欠陥 (e) に触る部分（`marks` / `hwin`、fallback 着地場所の自由度）
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 訂正: `hor` に producer は無かった — `H_oracle` とは別物。橋を作った
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
