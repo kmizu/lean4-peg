@@ -22,6 +22,59 @@
 
 ---
 
+## 2026-09-19 wave 9 — 偽の `hws` が最上位から消えた（`pal_in_peg_final29`）
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`pal_in_peg_final29`（`CloseoutWeakFinal`）— 標準公理のみ。
+**`WatchShiftG` はもう現れない。** 前提は 9 個で `final27`（5 個）より多いが、
+**偽の前提がゼロ**になった。これが本質。数より正しさ。
+
+### `hws` を消した 2 つの弱化
+
+1. **trail 側**（wave 8）: `pal_in_peg_final5MG2T` は trail 橋の全体を
+   `ChainPosInv` の上で走らせる。`radPack` → `trailF` → `needL'` の鎖から
+   `WatchShiftG` が消えた。
+2. **pack 側**（本 wave）: `packRunR_MG27P` は `hws` を **1 箇所でしか使わない** —
+   `ipackMG2_tick_pt7` の
+
+   ```
+   have hsh : ShiftLocalG … w y := by
+     by_cases hi : y.vm.chain = ChainVM.idle
+     · exact shiftLocalG_of_chainIdle … hi
+     · exact shiftLocalG_of_watchShiftG … hi (hws y)
+   ```
+
+   つまり pack が実際に必要とするのは `ShiftLocalG` であり、`WatchShiftG` は
+   それを**含意するだけ**（`shiftLocalG_of_watchShiftG`, `Run26:237`）。
+   `ShiftLocalG` を直接取れば**厳密に弱い前提**になり、`WatchShiftG` の
+   第 5 連言も idle 場合分けも落ちる。`packRunR_MG27L`（`CloseoutShiftWeak`）。
+
+### `final29` の 9 前提
+
+| 前提 | 状態 |
+|---|---|
+| `hSP` | 実質的義務（周期と `PalAt`） |
+| **`hsl`**（`∀ w y, ShiftLocalG`） | `hws` の代替。4 場のうち `move` は wave 7 の `Extra7` で**すでに無料**。残り `guard`/`coupled`/`ver` |
+| `hme` | 真の見込み（`marksInv'_of_run'` が既存、`Fair` 配線が必要） |
+| `hor` | producer ゼロ。最大の残り |
+| `hC` | 局所機械の実現 |
+| `hfour`, `hbgP`, `hmatchP`, `hsdP` | Run34 の 4 guarded 分岐仮説。すべて `shiftGuardVM` 付き・unmatched 限定で Run32 の反例には当たらない |
+
+### 次
+
+`hsl` の 3 場（`guard`/`coupled`/`ver`）は `ShiftLocalS`（guarded）なら
+`ChainPosInv` から出る（`shiftLocalS_of_run`、wave 8）。`ShiftLocalG` を
+`ShiftLocalS` に落とすには `IPackMG.shift` 場の弱化が必要で、それは
+Run30 §1 / Run36 §2 の非破壊 `S` 複製（`CloseoutStageCheck` と同じ機械変換）。
+そこまで行けば `hsl` も `hfour`/`hbgP`/`hmatchP`/`hsdP` に吸収され、
+最上位は `hSP`, `hme`, `hor`, `hC` + 4 分岐仮説の **8 前提・すべて未反証**になる。
+
+### 新規（`CloseoutShiftWeak` / `CloseoutWeakFinal`、標準公理のみ）
+
+`ipackMG2_tick_pt7L`, `bigPack2MG7''_tickL`, `packRunR_MG27L`,
+**`pal_in_peg_final29`**。
+
 ## 2026-09-19 wave 8 完 — trail 橋が `WatchShiftG` から外れた（`pal_in_peg_final5MG2T`）
 
 **全体 build 成功（EXIT=0、エラー 0）・標準公理のみ・無条件 PAL は未完。**

@@ -46,6 +46,36 @@ Scala `ScaffoldChain.start()` は `periodOnly = false` **かつ** `cycle.reset()
 
 よって `cpack_steps` で `CPack` を歩数に沿って運べば `hcan` は定理（`hcan_of_cpack`）。新規入力なし。
 
+## 2026-09-19 wave 9 — 偽の `hws` が最上位から消えた（`pal_in_peg_final29`）
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+`pal_in_peg_final29`（`lean-pal/PalPeg/CloseoutWeakFinal.lean`）は
+`[propext, Classical.choice, Quot.sound]` のみに依存し、**`WatchShiftG` は
+もう現れない**。前提は 9 個で `final27`（5 個）より多いが、**偽の前提が
+ゼロ**になった。数より正しさ。
+
+`hws : ∀ w y, WatchShiftG … w y` は偽（`CloseoutPackRun32` の caveat:
+`ChainStep.backDone` で生まれた watch は `distance = reset` なので
+`4·periodLength ≤ distance` が破れる）。2 つの弱化で消した:
+
+1. **trail 側**（wave 8）: `pal_in_peg_final5MG2T` が trail 橋の全体を
+   `ChainPosInv` の上で走らせる（`ChainPosInv → shiftLocalS_of_run →
+   radPack_ptS → trailF_ptS → needIMG2'_le_S`）。boot の `ChainPosInv` は
+   chain が idle なので無料。
+2. **pack 側**（wave 9）: `packRunR_MG27P` は `hws` を 1 箇所でしか使わず、
+   そこが必要とするのは `ShiftLocalG`。`WatchShiftG` はそれを含意するだけ
+   （`shiftLocalG_of_watchShiftG`）なので、`ShiftLocalG` を直接取れば
+   厳密に弱い前提になる（`packRunR_MG27L`）。
+
+`final29` の 9 前提: `hSP`, `hsl`（`ShiftLocalG`）, `hme`, `hor`, `hC`,
+`hfour`, `hbgP`, `hmatchP`, `hsdP`。後ろ 4 つは Run34 の guarded 分岐仮説で
+すべて `shiftGuardVM` 付き・unmatched 限定。`hsl` の 4 場のうち `move` は
+wave 7 の `Extra7` で既に無料。
+
+新規: `CloseoutShiftS`, `CloseoutShiftFinal`, `CloseoutShiftWeak`,
+`CloseoutWeakFinal`（全て標準公理のみ）。
+
 ## 2026-09-19 wave 7 — `hee`/`het` を無条件化、最上位は **5 前提**
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
