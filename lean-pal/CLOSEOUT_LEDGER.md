@@ -22,6 +22,53 @@
 
 ---
 
+## 2026-09-19 訂正 — `SpanRep` の tick 保存は**既存**（`hfl` の真の証明経路）
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+`pal_in_peg_final36` は **5 前提**（`hSP`, `hme`, `hor`, `hC`, `hpack`）。
+
+### 3 度目の訂正
+
+`hfl`（`0 ≤ value length`）について:
+
+1. 最初「`length` は減らない」→ 誤り（`shiftTick` が `dec (dec length)`）
+2. 次「tick 不変量としては閉じない」→ **これも誤り**
+
+`GalilSpanCounter` に `SpanRep`（`value length = 2·value radius + 1`）の
+遷移補題が**全形状分ある**:
+
+| 補題 | 対象 |
+|---|---|
+| `spanRep_afterCompare` | 比較 |
+| `spanRep_replayDec` | replay 減算 |
+| `spanRep_background` | background |
+| `spanRep_watchSegE` / `spanRep_watchSeg` / `spanRep_scanSeg` | 区間 |
+| **`spanRepS_shiftTick`** | **`shiftTick`**（`length` と `radius` が同時に減るので関係は保たれる） |
+| `spanRepS_shiftRun` / `spanRep_shift` / `spanRep_rounds` | shift 相 |
+| `spanRep_restart` / `spanRep_of_init` | restart / init |
+
+つまり **`length` が減ることと `SpanRep` が保たれることは両立する** — ウチが
+「`length` が減るから `hfl` は tick 不変量にならない」と結論したのは、
+`radius` も同時に減ることを見落としていたため。
+
+`SpanRep` は `InvLP` からも出る（`CloseoutWatchPhase.spanRep_of_invLP`）。
+`radius` の非負性（`RadiusRep` の `value = Rad : ℕ`）と合わせて
+`value length = 2·Rad + 1 ≥ 1`（`CloseoutLenNonneg.lenPos_of_entryCounters`、
+**証明済み**）。
+
+### `hme` 除去の残り
+
+`ChainPack` に marks 経路の必要物すべて（`cpack` / `wpack` / `marks` /
+`winOrigin` / `lenNonneg`）が場として入った。2 つの `hme` 使用箇所
+（`CloseoutOracleW:170` の `marksInv'_of_run`、`CloseoutPackW:156` の
+`marksInv'_tick`）はどちらも `MarksInv'` を作るためなので、`ChainPack.marks`
+で置き換えられる。
+
+**残る作業**: `packRunR_MW` に `ChainPosInv2` を通して各状態で `ChainPack` を
+取れるようにする（現在 `packRunR_MW` は `IPackMW` しか運んでいない）。
+`chainPosInv2_steps` が run に沿った `ChainPosInv2` を出すので、起点の
+`ChainPosInv2` を入力に足せば届く。
+
 ## 2026-09-19 `H_fourOther` 除去 — `ChainPosInv2` 経路へ（`pal_in_peg_final31`）
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
