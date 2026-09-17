@@ -46,6 +46,37 @@ Scala `ScaffoldChain.start()` は `periodOnly = false` **かつ** `cycle.reset()
 
 よって `cpack_steps` で `CPack` を歩数に沿って運べば `hcan` は定理（`hcan_of_cpack`）。新規入力なし。
 
+## 2026-09-19 wave 6 — `hsc` 完全除去、最上位は **7 前提**
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`pal_in_peg_final26`（`lean-pal/PalPeg/CloseoutStageFinal.lean`）は
+`[propext, Classical.choice, Quot.sound]` のみに依存し、残る仮定は 7 つ:
+`hSP`, `hws`, `hee`, `het`, `hme`, `hor`, `hC`。
+
+wave 5 の `pal_in_peg_final25`（8 前提）から `hsc`（`H_stageScan`）が消えた。
+`hsc` は wave 5 で反証済みだったが、**再切り出しすら不要**だった:
+
+1. 主経路上の消費者は `cycleOracleIMG2_of_cycleOracleMC3R`（`CloseoutPackRun36:673`）
+   だけで、そこが `hstage_of_scanBranch` を呼び `InvLPC → InvLPS` に持ち上げている。
+2. その持ち上げの `Inv` 側は `replayStage_of_inv` で既に無条件（`CloseoutOracleI2:179`）。
+3. `CycleOutMC3` は**両出口で `InvLPS` を返している**（`GalilInvPlus3:193, :212`）。
+   `hIS.1` で捨てていただけ。
+4. boot も `Inv` 分岐に着地する（`GalilFinalAssembly4.invLPC_init:94` の `hI : Inv`）。
+
+よって Run36 §2 のチェックポイント再帰を `InvLPS` 上で再走させれば
+`hstage_of_scanBranch` は一度も呼ばれない。`preTraceIMG2S_exists` の結論
+`PreTraceIMG2` は Run36 の同名 structure そのものなので下流は無改造。
+
+新規（全て標準公理のみ）: `CloseoutStageRecur`, `CloseoutStageCheck`,
+`CloseoutStageBoot`, `CloseoutStageOracle`, `CloseoutStageFinal`。
+PR #65 マージ済み。残差の正本は `lean-pal/CLOSEOUT_LEDGER.md`。
+
+**次の狙い**: `hee`/`het`/`hws` の共通核は `canRight`（`extra7_of_bound` で
+位置上界から出せるが、`PackRunRMG2` の `hprefix` に位置上界が無い）。
+`hme` は `ChooseLayout` の run 不変性に還元できる（`marksEntry'_of_layout` は
+**副条件なし**、`CloseoutPackRun16`）。
+
 ## n20 (2026-09-17 朝) 葉の放電・偽仮定 4 件・非決定性
 
 ## n74 (2026-09-19 未明) 外部レビューを受けて**台帳導入**・`H_candOrient` 反例確定・自分の誤報 1 件を訂正・oracle から `hpres` 消滅
