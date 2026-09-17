@@ -156,6 +156,7 @@
 | `MatchTickC` | `CloseoutMatchTickRefute.matchTickC_false_at_terminal` | 終端 `RoundScan` ＋ 一致比較を持つ状態 |
 | `hpres` | `GalilLeafPres.hpres_false_at`、`CloseoutPresRefute.hpres_fails_at_zero_debt` | debt 0 の search 状態 |
 | `ShiftAtMismatchC` | `CloseoutShiftMismatch.shiftAtMismatchC_false_at_nonterminal` | 非終端 `RoundScan` ＋ 不一致 |
+| `WatchShiftG`（`hws`） | `CloseoutWatchShiftAudit.watchShiftG_false_at_backDone`（本監査で新規） | `.back` chain を持つ状態の比較が `backDone` に着地する配置。モデル上の側条件は `backDone` の guard `isFirst v.focus = true` のみ |
 
 ## 3. 反証定理が**存在しない**のに「偽」「反証」と記録されている主張
 
@@ -168,7 +169,6 @@
 | `ChainTickable` | `CLAUDE.md`（今セッション報告）、`GalilChainTickable.lean` ヘッダ | `ChainMatched.breaks` が watch を `.broken` に送り `ChainReady .broken = False` | `ChainReady` かつ lag ゼロかつ `¬ Good` の watch の構成。※命題自体が不適切（正しい形は既存の `chainTickable_unless_break`）という判断の方が筋が良い |
 | `∀ z, CopyIdle z.vm`（`roundBundle_steps` の側入力） | 今セッション報告 | copy 相では `fpp` の `remainingPos` が立つ | `read fpp.walker ≠ none ∧ zero fpp.work = false` の `GalilVM` の構成。※これも命題が不適切で、弱化（`mode = shift → CopyIdle`）が正しい対応 |
 | `houtReplay`（`InvScan` に出力なし） | `CLAUDE.md` §2 | `InvScan` の場に `OutputRel` が無い | `¬ houtReplay` の定理、または「場が無い」ことの形式化 |
-| `WatchShiftG`（`hws`） | `CLAUDE.md` §1 `final29` 行 | `ChainStep.backDone` 生まれの watch は `distance = reset` | `¬ WatchShiftG` の定理 |
 | `ShiftLocalG`（`hsl`） | `CLAUDE.md` §1 `final30` 行 | `beginShiftVM'` は `shiftGuardVM` を含まない | `¬ ShiftLocalG` の定理 |
 | `H_stageScan`（`hsc`） | `CLAUDE.md` §1 `final25`/`final26` 行、§3c | `InvScan` の 11 場は `s.radius` に触れないのに `ReplayStage` は `Canonical radius` を要求 | `¬ H_stageScan` の定理 |
 | `hni` | `CLAUDE.md` §1 `final37` 行 | （記録なし） | 定義の特定と検証 |
@@ -180,7 +180,7 @@
 | `StartShape` | `CLAUDE.md` §3b | `StartShape'` に置換したという記録のみ | `¬ StartShape` の定理 |
 | `WatchShift` | `CLAUDE.md` §1 `final24` 行 | （記録なし） | 検証 |
 
-**14 件。** いずれも、**記録は存在しない検証を主張している**。これが操作上の事実であり、
+**13 件。** いずれも、**記録は存在しない検証を主張している**。これが操作上の事実であり、
 過去のセッションで何が起きたかの推測とは独立に成り立つ。
 （`ChainTickable` については経緯が特定できている——上記 §0 の 1。残り 13 件について
 「探索はしたが記録を残さなかった」という弁明を私は持ち出さない。検証が repo に無い以上、
@@ -194,6 +194,22 @@
 | `CloseoutPackRefute.scanBudget_false` | `ScanBudget` の無条件反証 | `[propext, Classical.choice, Quot.sound]` |
 | `CloseoutTickFalse.step_ne_broken` | `ChainOk` な chain から `.broken` への `ChainStep` は無い | `[propext, Quot.sound]` |
 | `CloseoutTickFalse.chainOk_tick_false` | **背景 tick（`a = false`）は `Good` も break 解析も要らない**（`ChainTickable` の代わりに使うべき正しい命題） | `[propext, Quot.sound]` |
+| `CloseoutWatchShiftAudit.periodLength_watchControl_pos` | **無条件**: `backDone` で生まれた watch の周期長は常に正（`moveRight` はどちらの枝でも `left` を 1 伸ばす） | `[propext, Classical.choice, Quot.sound]` |
+| `CloseoutWatchShiftAudit.value_distance_watchControl` | **無条件**: その watch の `distance` は `reset`、値は `0` | `[propext, Quot.sound]` |
+| `CloseoutWatchShiftAudit.watchShiftG_false_at_backDone` | 上 2 本から、`WatchShiftG` は `backDone` 着地で `0 < periodLength` と `periodLength = 0` を同時に要求する | `[propext, Classical.choice, Quot.sound]` |
+
+### `hws` について（本監査で決着）
+
+`hws` は `final27`（5 前提）から `final29`（9 前提）→ `final30`（8 前提）への膨張の
+原因だったので、**成立すれば正本が 8 → 5 になる**。そこでまず証明を試み、
+`WatchShiftG` の第 2 連言が `backDone` 着地で何を要求するかを計算した結果、
+`periodLength = 0` を強制することが分かった。一方 `periodLength` は `moveRight` 越しに
+常に正である。この 2 つは**どちらも仮定ゼロの正の定理**として機械検査した。
+したがって `hws` 経由で `final27` に戻ることはできない。**正本は `final30`（8 前提）のまま。**
+
+（従前の記録「`ChainStep.backDone` 生まれの watch は `distance = reset`」は、
+結果的に内容が正しかった。しかし当時それは機械検査されていなかったので、
+記載は虚偽だった。内容が当たっていたことは記載の正当化にはならない。）
 
 ## 5. 検査の再現手順
 
