@@ -169,7 +169,157 @@ theorem compare_fields {s s' : GalilVM}
     s'.right = GalilScaffoldChainVerifier.right s.right ∧ s'.replay = s.replay := by
   obtain ⟨vs, vq, a, -, hvr, -, -, -, hteq⟩ :
     compareFound (sharedC onLetter leftFirst centre place entry) q first s s' := hcmp
-  exact ⟨by rw [hteq]; cases a <;> exact hvr, by rw [hteq]; cases a <;> rfl⟩
+  exact ⟨by rw [hteq, afterBirth_right]; cases a <;> exact hvr,
+    by rw [hteq, afterBirth_replay]; cases a <;> rfl⟩
+
+/-- **The frontier moves only on a comparison, and a comparison resets the clock.**
+Either the tick leaves the frontier where it was, or it is a comparison: it gains
+at most one frontier unit, and it fires at `clock = 1` and leaves `clock = delay`.
+(`replayStart` is in the first case by `RewindEq`'s equation
+`position center + r = position right`.) -/
+theorem front_clock_tick {c c' : Control} {s t : GalilVM} (hP : FrontPack c s)
+    (h : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay
+      ⟨c, s⟩ ⟨c', t⟩) :
+    front t = front s ∨ (front t ≤ front s + 1 ∧ c.clock = 1 ∧ c'.clock = delay) := by
+  cases h
+  case init =>
+    rename_i hm hi
+    exact absurd hm hP.notInit
+  case scan_wait =>
+    rename_i hm hav hb
+    obtain ⟨-, hr, -, -, -, -, -, -, -, hpr, -, -⟩ :=
+      backgroundS_fields (sharedC onLetter leftFirst centre place entry) q first hb
+    exact Or.inl (front_congr hr hpr)
+  case scan_count =>
+    rename_i hm hc hav hb
+    obtain ⟨-, hr, -, -, -, -, -, -, -, hpr, -, -⟩ :=
+      backgroundS_fields (sharedC onLetter leftFirst centre place entry) q first hb
+    exact Or.inl (front_congr hr hpr)
+  case scan_match =>
+    rename_i s' o hmt hm hc hcmp hav hpl ho
+    obtain ⟨hs'r, hs'p⟩ := compare_fields onLetter leftFirst centre place entry q first hcmp
+    have hpl' : t = (if c.replaying then
+        {s' with replay := GalilScaffoldCounter.dec s'.replay} else s') := hpl
+    cases hcr : c.replaying with
+    | false =>
+      rw [hcr, if_neg (by simp)] at hpl'
+      have hcan : GalilScaffoldChainVerifier.canRight s.right := by
+        rcases hav with h | h
+        · rw [hcr] at h; cases h
+        · exact h
+      obtain ⟨hpos, -⟩ := right_sane hcan hP.sane
+      have htr : t.right = GalilScaffoldChainVerifier.right s.right := by rw [hpl']; exact hs'r
+      have htp : t.replay = s.replay := by rw [hpl']; exact hs'p
+      refine Or.inr ⟨?_, hc, rfl⟩
+      simp only [front, htr, htp, hpos]; push_cast; omega
+    | true =>
+      rw [hcr, if_pos rfl] at hpl'
+      obtain ⟨m, hm'⟩ := hP.replayPos hcr
+      have hb := hP.frontier (m+1) hm'
+      obtain ⟨hpos, -⟩ := right_sane (canRight_of_budget hb) hP.sane
+      have htr : t.right = GalilScaffoldChainVerifier.right s.right := by rw [hpl', ← hs'r]
+      have htp : t.replay = GalilScaffoldCounter.dec s.replay := by rw [hpl', ← hs'p]
+      refine Or.inl ?_
+      simp only [front, htr, htp, hpos, dec_value]; push_cast; omega
+  case scan_shift =>
+    rename_i s' hmt hg hm hc hr hcmp hav hb
+    obtain ⟨hs'r, hs'p⟩ := compare_fields onLetter leftFirst centre place entry q first hcmp
+    obtain ⟨w, -, ht⟩ : beginShiftVM' s' t := hb
+    have hcan : GalilScaffoldChainVerifier.canRight s.right := by
+      rcases hav with h | h
+      · rw [hr] at h; cases h
+      · exact h
+    obtain ⟨hpos, -⟩ := right_sane hcan hP.sane
+    have htr : t.right = GalilScaffoldChainVerifier.right s.right := by rw [ht]; exact hs'r
+    have htp : t.replay = s.replay := by rw [ht]; exact hs'p
+    refine Or.inr ⟨?_, hc, rfl⟩
+    simp only [front, htr, htp, hpos]; push_cast; omega
+  case scan_fallback =>
+    rename_i s' hmt hm hc hg hr hcmp hav hb
+    obtain ⟨hs'r, hs'p⟩ := compare_fields onLetter leftFirst centre place entry q first hcmp
+    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    have hcan : GalilScaffoldChainVerifier.canRight s.right := by
+      rcases hav with h | h
+      · rw [hr] at h; cases h
+      · exact h
+    obtain ⟨hpos, -⟩ := right_sane hcan hP.sane
+    have htr : t.right = GalilScaffoldChainVerifier.right s.right := by rw [ht]; exact hs'r
+    have htp : t.replay = s.replay := by rw [ht]; exact hs'p
+    refine Or.inr ⟨?_, hc, rfl⟩
+    simp only [front, htr, htp, hpos]; push_cast; omega
+  case shift_one =>
+    rename_i hm hp hi
+    exact Or.inl (front_congr ((congrArg GalilVM.right hi.2).trans rfl)
+      ((congrArg GalilVM.replay hi.2).trans rfl))
+  case shift_done => exact Or.inl rfl
+  case copy_one =>
+    rename_i hm hp hi
+    exact Or.inl (front_congr ((congrArg GalilVM.right hi.2).trans rfl)
+      ((congrArg GalilVM.replay hi.2).trans rfl))
+  case copy_done =>
+    rename_i hm hp hi
+    exact Or.inl (front_congr ((congrArg GalilVM.right hi.2).trans rfl)
+      ((congrArg GalilVM.replay hi.2).trans rfl))
+  case home_start =>
+    rename_i hm hl hi
+    exact Or.inl (front_congr ((congrArg GalilVM.right hi.2).trans rfl)
+      ((congrArg GalilVM.replay hi.2).trans rfl))
+  case home_step =>
+    rename_i hm hl hi
+    exact Or.inl (front_congr ((congrArg GalilVM.right hi.2).trans rfl)
+      ((congrArg GalilVM.replay hi.2).trans rfl))
+  case fpp_slice =>
+    rename_i hm hi
+    exact Or.inl (front_congr ((congrArg GalilVM.right hi.2).trans rfl)
+      ((congrArg GalilVM.replay hi.2).trans rfl))
+  case fpp_done =>
+    rename_i hm hi
+    exact Or.inl (front_congr ((congrArg GalilVM.right hi.2).trans rfl)
+      ((congrArg GalilVM.replay hi.2).trans rfl))
+  case markEnd_found =>
+    rename_i hm he hi
+    have htr : t.right = s.right := (congrArg GalilVM.right hi.2).trans (by rw [hi.1.2]; rfl)
+    exact Or.inl (front_congr htr ((congrArg GalilVM.replay hi.2).trans rfl))
+  case markEnd_step =>
+    rename_i hm he hi
+    exact Or.inl (front_congr ((congrArg GalilVM.right hi.2).trans rfl)
+      ((congrArg GalilVM.replay hi.2).trans rfl))
+  case choose_select =>
+    rename_i hm hodd hs hi
+    have htr : t.right = s.right := (congrArg GalilVM.right hi.2).trans (by rw [hi.1]; rfl)
+    exact Or.inl (front_congr htr ((congrArg GalilVM.replay hi.2).trans rfl))
+  case choose_step =>
+    rename_i hm hs hi
+    have htr : t.right = s.right := (congrArg GalilVM.right hi.2).trans (by rw [hi.1.2]; rfl)
+    exact Or.inl (front_congr htr ((congrArg GalilVM.replay hi.2).trans rfl))
+  case rewind_done =>
+    rename_i hm hfi hi
+    have htr : t.right = s.right := (congrArg GalilVM.right hi.2).trans (by rw [hi.1]; rfl)
+    exact Or.inl (front_congr htr ((congrArg GalilVM.replay hi.2).trans rfl))
+  case rewind_one =>
+    rename_i hm hpr hfi hi
+    have htr : t.right = s.right := (congrArg GalilVM.right hi.2).trans (by rw [hi.1.2]; rfl)
+    exact Or.inl (front_congr htr ((congrArg GalilVM.replay hi.2).trans rfl))
+  case rewind_pair =>
+    rename_i hm hpr hfi hi
+    have htr : t.right = s.right := (congrArg GalilVM.right hi.2).trans (by rw [hi.1.2]; rfl)
+    exact Or.inl (front_congr htr ((congrArg GalilVM.replay hi.2).trans rfl))
+  case replayStart =>
+    rename_i o hm ho ho' hi
+    have hi' : replayStartVM entry s t := hi
+    obtain ⟨r, hrad, heq, -⟩ := hP.rewind (Or.inr hm)
+    have hsr : s.replay = GalilScaffoldCounter.reset :=
+      hP.rest (Or.inl (hP.flag (by rw [hm]; decide)))
+    have htr : t.right = s.center := hi'.2.1
+    have htp : t.replay = ofNat r := hi'.1.trans hrad
+    refine Or.inl ?_
+    simp only [front, htr, htp, hsr, ofNat_value]
+    simp [GalilScaffoldCounter.value, GalilScaffoldCounter.reset]
+    omega
+  case restart =>
+    rename_i hm hb
+    obtain ⟨w, -, -, -, -, ht⟩ : restartVM entry s t := hb
+    exact Or.inl (front_congr (by rw [ht]) (by rw [ht]))
 
 /-- **(a) `front_tick_mono`.** -/
 theorem front_tick_mono {c c' : Control} {s t : GalilVM} (hP : FrontPack c s)

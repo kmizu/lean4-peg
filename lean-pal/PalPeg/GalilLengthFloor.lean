@@ -74,11 +74,29 @@ theorem compare_counters {s s' : GalilVM}
   | true =>
     rw [if_pos rfl] at hteq
     subst hteq
-    exact ⟨rfl, rfl, rfl, fun _ => rfl, fun hn => absurd (hiff.1 rfl) hn⟩
+    refine ⟨?_, ?_, ?_, fun _ => ?_, fun hn => absurd ?_ hn⟩
+    · rw [afterBirth_fpp]; rfl
+    · rw [afterBirth_remaining]; rfl
+    · rw [afterBirth_radius]; rfl
+    · rw [afterBirth_length]; rfl
+    · show GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).right
+      rw [afterBirth_left, afterBirth_right]
+      exact hiff.1 rfl
   | false =>
     rw [if_neg (by simp)] at hteq
     subst hteq
-    exact ⟨rfl, rfl, rfl, fun hm => absurd (hiff.2 hm) (by simp), fun _ => rfl⟩
+    refine ⟨?_, ?_, ?_, fun hm => absurd (hiff.2 ?_) (by simp), fun _ => ?_⟩
+    · rw [afterBirth_fpp]; rfl
+    · rw [afterBirth_remaining]; rfl
+    · rw [afterBirth_radius]; rfl
+    · show GalilScaffoldInputHead.read (afterMismatch s vs vq).left
+        = GalilScaffoldInputHead.read (afterMismatch s vs vq).right
+      have h0 : GalilScaffoldInputHead.read (afterBirth _ (afterMismatch s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth _ (afterMismatch s vs vq)).right := hm
+      rw [afterBirth_left, afterBirth_right] at h0
+      exact h0
+    · rw [afterBirth_length]; rfl
 
 /-- The budget hypothesis at one state: every guarded shift entry out of a
 comparison has its semiperiod within the compared radius. -/

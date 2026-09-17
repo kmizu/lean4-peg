@@ -312,9 +312,16 @@ theorem reachAtC_of_target_match (centre : GalilVM → Fin 3)
   obtain ⟨R, hi⟩ := hs.scan
   set vs : ScanVM := ⟨left t.left, right t.right, ChainVM.idle⟩ with hvs
   have hmt0 : (galilFrame P q first).matched (scanLens.set t vs) := hmt
+  have hborn : chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) t.chain
+      = false := by
+    have hd : decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found) = false := by
+      simp [hnf]
+    unfold chainBorn
+    rw [hd]
+    exact Bool.and_false _
   have hcmp : (galilFrameS P q first).compare t (afterCompare t vs vq) :=
     ⟨vs, vq, true, rfl, rfl, ⟨fun _ => hmt0, fun _ => rfl⟩, hq,
-      Or.inr (Or.inl ⟨hs.idle, by simp [hnf], rfl⟩), rfl⟩
+      Or.inr (Or.inl ⟨hs.idle, by simp [hnf], rfl⟩), by rw [hborn]; rfl⟩
   have hmt1 : (galilFrameS P q first).matched (afterCompare t vs vq) := hmt
   set u : GalilVM := afterCompare t vs vq with hu
   set o : Bool := if P.onLetter u then decide (P.leftFirst u) else c'.output with ho'
@@ -329,7 +336,7 @@ theorem reachAtC_of_target_match (centre : GalilVM → Fin 3)
   have hsrc : SoundScanNR raw ⟨c', t⟩ := stepsAll_last hrun0
   obtain ⟨⟨k1, hrun1⟩, hrp, hfr⟩ :=
     PalPeg.GalilReportPrefix.reportAt_of_match raw P rfl rfl q first 2048 hsrc hs.mode hc1 hnr
-      hav hs.minv hi hpos hm1 hmle vs vq o rfl rfl hcmp hmt1 ho
+      hav hs.minv hi hpos hm1 hmle vs vq o false rfl rfl hcmp hmt1 ho
   have hsound := stepsAll_last hrun1
   have hpl : (galilFrameS P q first).matchedPlace c'.replaying u u := by
     show u = (if c'.replaying then _ else u)
@@ -374,10 +381,11 @@ theorem foundCost_of_noshift (raw : List (Fin 2)) (P : Shared) (hP : P.onLetter 
     (ch : ChainVM)
     (hch : ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre sF) (P.place sF) sF.center sF.radius) ch)
     (hchne : ch ≠ .idle) (oF : Bool)
-    (hoF : refresh (galilFrame P qq first) (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF)
+    (hoF : refresh (galilFrame P qq first)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output oF)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE P qq first 2048 es {cF with clock := 2048, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c3 : Control} {s3 : GalilVM} (hseg : WatchSeg P qq first 2048 c2 s2 c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
     (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
@@ -406,10 +414,11 @@ theorem foundCost_of_shift (raw : List (Fin 2)) (P : Shared) (hP : P.onLetter = 
     (ch : ChainVM)
     (hch : ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre sF) (P.place sF) sF.center sF.radius) ch)
     (hchne : ch ≠ .idle) (oF : Bool)
-    (hoF : refresh (galilFrame P qq first) (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF)
+    (hoF : refresh (galilFrame P qq first)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output oF)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE P qq first 2048 es {cF with clock := 2048, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c1 : Control} {s1 : GalilVM} (hseg : WatchSeg P qq first 2048 c2 s2 c1 s1)
     (h : ℕ) (hm1 : c1.mode = .scan) (hr1 : c1.replaying = false) (hc1 : c1.clock = 1)
     (w : GalilScaffoldChainWatch.State) (hs1 : s1.chain = .watch w) (hz : zero w.lag = true)

@@ -73,9 +73,14 @@ theorem idle_background_exists (P : Shared) (q : ℕ) (first : Fin 9) (s : Galil
     ∃ s', (galilFrameS P q first).background s s' ∧ s'.chain = ChainVM.idle ∧
       s'.left = s.left ∧ s'.right = s.right ∧ s'.center = s.center ∧ s'.replay = s.replay ∧
       searchLens.get s' = v := by
+  have hb : chainBorn (decide (v.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain
+      = false := by
+    unfold chainBorn; rw [decide_eq_false hnf]; exact Bool.and_false _
   refine ⟨searchLens.set (scanLens.set s ⟨s.left, s.right, ChainVM.idle⟩) v, ?_, rfl, rfl, rfl, rfl,
     rfl, rfl⟩
-  exact ⟨rfl, rfl, hv, Or.inr (Or.inl ⟨hidle, decide_eq_false hnf, rfl⟩), rfl⟩
+  refine ⟨rfl, rfl, hv, Or.inr (Or.inl ⟨hidle, decide_eq_false hnf, rfl⟩), ?_⟩
+  rw [searchLens.get_set, hb, afterBirth_false]
+  rfl
 
 /-- The background tick of the `foundBackground` exit: when the search effect
 of the event `false` reports `found` on an idle chain, `backgroundS`'s own
@@ -89,10 +94,27 @@ theorem background_found_step (P : Shared) (q : ℕ) (first : Fin 9) (s : GalilV
       s'.chain = chainStart (v.dp.config.tapes 11) (P.centre s) (P.place s) s.center s.radius ∧
       s'.left = s.left ∧ s'.right = s.right ∧ s'.center = s.center ∧ s'.replay = s.replay ∧
       searchLens.get s' = v := by
-  refine ⟨searchLens.set (scanLens.set s ⟨s.left, s.right,
-    chainStart (v.dp.config.tapes 11) (P.centre s) (P.place s) s.center s.radius⟩) v,
-    ?_, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  exact ⟨rfl, rfl, hv, Or.inr (Or.inr ⟨hidle, decide_eq_true hf, rfl⟩), rfl⟩
+  refine ⟨afterBirth (chainBorn (decide (v.search.mode = GalilScaffoldSearchFinish.Mode.found))
+      s.chain)
+      (searchLens.set (scanLens.set s ⟨s.left, s.right,
+        chainStart (v.dp.config.tapes 11) (P.centre s) (P.place s) s.center s.radius⟩) v),
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · refine ⟨?_, ?_, ?_, ?_, ?_⟩
+    · rw [afterBirth_left]; rfl
+    · rw [afterBirth_right]; rfl
+    · rw [afterBirth_searchGet, searchLens.get_set]; exact hv
+    · rw [afterBirth_searchGet, searchLens.get_set]
+      refine Or.inr (Or.inr ⟨hidle, decide_eq_true hf, ?_⟩)
+      rw [if_neg (by decide), afterBirth_chain]
+      rfl
+    · rw [afterBirth_searchGet, afterBirth_scanGet, searchLens.get_set]
+      rfl
+  · rw [afterBirth_chain]; rfl
+  · rw [afterBirth_left]; rfl
+  · rw [afterBirth_right]; rfl
+  · rw [afterBirth_center]; rfl
+  · rw [afterBirth_replay]; rfl
+  · rw [afterBirth_searchGet]; exact searchLens.get_set _ _
 
 /-- **L7a: the chain-idle segment exists.**  From a scan state with a positive
 clock and an idle chain, carrying `SearchReady`, `MInv` and `ScanInvariant`,

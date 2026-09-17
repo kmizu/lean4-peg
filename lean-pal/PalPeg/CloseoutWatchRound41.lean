@@ -100,7 +100,7 @@ def MismatchLandingLagZeroL (centre : GalilVM → Fin 3)
     ChainMatched (chainStart (vq.dp.config.tapes 11)
       ((PofC centre place entry raw).centre sF) ((PofC centre place entry raw).place sF)
       sF.center sF.radius) ch →
-    sP = afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq →
+    sP = afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) →
     ∀ (c1 : Control) (s1 : GalilVM) (h : ℕ),
       LandingL (PofC centre place entry raw) qq first cP sP c1 s1 →
       ShiftRoundDataL centre place entry qq first raw m h lower sF vq c1 s1 →
@@ -122,7 +122,7 @@ def PrepBirthLagC (P : Shared) (q : ℕ) (first : Fin 9) (c0 : Control) (r : Gal
     searchEffect P true sF vq → vq.search.mode = .found →
     ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre sF) (P.place sF)
       sF.center sF.radius) ch →
-    sP = afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq →
+    sP = afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) →
     ∀ (c1 : Control) (s1 : GalilVM) (w : GalilScaffoldChainWatch.State),
       LandingL P q first cP sP c1 s1 → c1.clock = 1 → s1.chain = ChainVM.watch w →
       ∃ (m : ℤ) (w0 : GalilScaffoldChainWatch.State) (es2 : List Bool) (cb : Control)

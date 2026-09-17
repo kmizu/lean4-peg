@@ -25,6 +25,16 @@ open GalilScaffoldTop GalilScaffoldController GalilScaffoldChainInputSupply Loca
 open GalilScaffoldInputHead (PlaceHead)
 open GalilScaffoldChainVerifier (canRight)
 
+/-- The chain birth reset commutes with an arrival: `arriveVM` only appends to
+the three `incoming` FIFOs, and `afterBirth` only touches `periodOnly` and
+`cycle`. -/
+theorem arriveVM_afterBirth (a : Fin 2) (b : Bool) (s : GalilVM) :
+    arriveVM a (afterBirth b s) = afterBirth b (arriveVM a s) := by
+  cases b <;> rfl
+
+theorem arriveVM_chain (a : Fin 2) (s : GalilVM) : (arriveVM a s).chain = s.chain := rfl
+
+
 /-! ## 1. Arrival on one head -/
 
 def arrivePH (a : Fin 2) (p : PlaceHead) : PlaceHead :=
@@ -164,6 +174,7 @@ theorem compareFound_arrive {P : Shared} {a : Fin 2} (hP : SharedArrive P a) (q 
     have := hns hx b vq hse
     simpa using this
   · subst ht
+    rw [arriveVM_afterBirth, arriveVM_chain]
     cases b <;> rfl
 
 theorem backgroundS_arrive {P : Shared} {a : Fin 2} (hP : SharedArrive P a) (q : ℕ) (first : Fin 9)
@@ -181,10 +192,13 @@ theorem backgroundS_arrive {P : Shared} {a : Fin 2} (hP : SharedArrive P a) (q :
     have := hns hx false _ hse
     show decide ((searchLens.get t).search.mode = .found) = false
     simpa using this
-  · calc arriveVM a t
-        = arriveVM a (searchLens.set (scanLens.set s (scanLens.get t)) (searchLens.get t)) :=
+  · rw [arriveVM_chain]
+    calc arriveVM a t
+        = arriveVM a (afterBirth (chainBorn (decide ((searchLens.get t).search.mode
+              = GalilScaffoldSearchFinish.Mode.found)) s.chain)
+            (searchLens.set (scanLens.set s (scanLens.get t)) (searchLens.get t))) :=
           congrArg _ hset
-      _ = _ := rfl
+      _ = _ := by rw [arriveVM_afterBirth]; rfl
 
 
 /-! ## 4. Lens-pulled relations of the other modes -/

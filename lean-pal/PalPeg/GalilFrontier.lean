@@ -221,8 +221,9 @@ theorem frontier_tick (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM 
     obtain ⟨vs, vq, a, -, hvr, -, -, -, hteq⟩ :
       compareFound (sharedC onLetter leftFirst centre place entry) q first s s' := hcmp
     have hs'r : s'.right = GalilScaffoldChainVerifier.right s.right := by
-      rw [hteq]; cases a <;> exact hvr
-    have hs'p : s'.replay = s.replay := by rw [hteq]; cases a <;> rfl
+      rw [hteq, GalilScaffoldChainInputSupply.afterBirth_right]; cases a <;> exact hvr
+    have hs'p : s'.replay = s.replay := by
+      rw [hteq, GalilScaffoldChainInputSupply.afterBirth_replay]; cases a <;> rfl
     have hpl' : t = (if c.replaying then
         {s' with replay := GalilScaffoldCounter.dec s'.replay} else s') := hpl
     cases hcr : c.replaying with
@@ -243,14 +244,16 @@ theorem frontier_tick (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM 
     rename_i s' hmt hg hm hc hr hcmp hav hb
     obtain ⟨vs, vq, a, -, -, -, -, -, hteq⟩ :
       compareFound (sharedC onLetter leftFirst centre place entry) q first s s' := hcmp
-    have hs'p : s'.replay = s.replay := by rw [hteq]; cases a <;> rfl
+    have hs'p : s'.replay = s.replay := by
+      rw [hteq, GalilScaffoldChainInputSupply.afterBirth_replay]; cases a <;> rfl
     obtain ⟨w, -, ht⟩ : beginShiftVM' s' t := hb
     exact frontier_of_reset (by rw [ht]; show s'.replay = _; rw [hs'p]; exact hrest (Or.inl hr))
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨vs, vq, a, -, -, -, -, -, hteq⟩ :
       compareFound (sharedC onLetter leftFirst centre place entry) q first s s' := hcmp
-    have hs'p : s'.replay = s.replay := by rw [hteq]; cases a <;> rfl
+    have hs'p : s'.replay = s.replay := by
+      rw [hteq, GalilScaffoldChainInputSupply.afterBirth_replay]; cases a <;> rfl
     obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
     exact frontier_of_reset (by rw [ht]; show s'.replay = _; rw [hs'p]; exact hrest (Or.inl hr))
   case shift_one =>

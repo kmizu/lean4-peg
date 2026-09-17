@@ -314,7 +314,9 @@ theorem active_background_exists (P : Shared) (q : ℕ) (first : Fin 9) (s : Gal
       s'.replay = s.replay := by
   refine ⟨searchLens.set (scanLens.set s ⟨s.left, s.right, z⟩) (searchLens.get s),
     ?_, rfl, rfl, rfl, rfl, rfl⟩
-  exact ⟨rfl, rfl, Or.inr ⟨hne, rfl⟩, Or.inl ⟨hne, ⟨z, hstep, rfl⟩⟩, rfl⟩
+  refine ⟨rfl, rfl, Or.inr ⟨hne, rfl⟩, Or.inl ⟨hne, ⟨z, hstep, rfl⟩⟩, ?_⟩
+  rw [afterBirth_of_ne_idle hne]
+  rfl
 
 /-- The chain-side enabling hypothesis of the construction: a live, ready
 chain can always tick, on either event, into a chain that is ready again.

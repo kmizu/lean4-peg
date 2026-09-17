@@ -117,7 +117,8 @@ theorem replayRest_tick (onLetter leftFirst : GalilVM → Prop) (centre : GalilV
     rename_i s' o hmt hm hc hcmp hav hpl ho
     obtain ⟨vs, vq, a, -, -, -, -, -, hteq⟩ :
       compareFound (sharedC onLetter leftFirst centre place entry) q first s s' := hcmp
-    have hs'p : s'.replay = s.replay := by rw [hteq]; cases a <;> rfl
+    have hs'p : s'.replay = s.replay := by
+      rw [hteq, GalilScaffoldChainInputSupply.afterBirth_replay]; cases a <;> rfl
     have hpl' : t = (if c.replaying then
         {s' with replay := GalilScaffoldCounter.dec s'.replay} else s') := hpl
     intro hd
@@ -145,7 +146,8 @@ theorem replayRest_tick (onLetter leftFirst : GalilVM → Prop) (centre : GalilV
     rename_i s' hmt hg hm hc hr hcmp hav hb
     obtain ⟨vs, vq, a, -, -, -, -, -, hteq⟩ :
       compareFound (sharedC onLetter leftFirst centre place entry) q first s s' := hcmp
-    have hs'p : s'.replay = s.replay := by rw [hteq]; cases a <;> rfl
+    have hs'p : s'.replay = s.replay := by
+      rw [hteq, GalilScaffoldChainInputSupply.afterBirth_replay]; cases a <;> rfl
     obtain ⟨w, -, ht⟩ : beginShiftVM' s' t := hb
     exact replayRest_of_reset (s := t)
       (by rw [ht]; show s'.replay = _; rw [hs'p]; exact hrest (Or.inl hr))
@@ -153,7 +155,8 @@ theorem replayRest_tick (onLetter leftFirst : GalilVM → Prop) (centre : GalilV
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨vs, vq, a, -, -, -, -, -, hteq⟩ :
       compareFound (sharedC onLetter leftFirst centre place entry) q first s s' := hcmp
-    have hs'p : s'.replay = s.replay := by rw [hteq]; cases a <;> rfl
+    have hs'p : s'.replay = s.replay := by
+      rw [hteq, GalilScaffoldChainInputSupply.afterBirth_replay]; cases a <;> rfl
     obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
     exact replayRest_of_reset (s := t)
       (by rw [ht]; show s'.replay = _; rw [hs'p]; exact hrest (Or.inl hr))

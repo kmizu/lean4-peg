@@ -400,33 +400,35 @@ theorem scan_fallback_cycle_All (onLetter leftFirst : GalilVM → Prop) (rs : Ga
     rw [hl, hrr] at h2
     exact h2
   have hcmpS : (galilFrameS (galilShared onLetter leftFirst shiftGuardVM beginShiftVM' beginFallbackVM' rs centre place entry) q first).compare
-      s (afterMismatch s vs vq) :=
+      s (afterMismatchB s vs vq) :=
     ⟨vs, vq, false, hl, hrr, Iff.intro (fun h0 => by cases h0) (fun h0 => absurd h0 hmis'), hq, hch, rfl⟩
   have hmisS : ¬ (galilFrameS (galilShared onLetter leftFirst shiftGuardVM beginShiftVM' beginFallbackVM' rs centre place entry) q first).matched
-      (afterMismatch s vs vq) := by
+      (afterMismatchB s vs vq) := by
     intro h0
     apply hmis
-    have h1 : read (afterMismatch s vs vq).left = read (afterMismatch s vs vq).right := h0
-    rw [afterMismatch_left, afterMismatch_right, hl, hrr] at h1
+    have h1 : read (afterMismatchB s vs vq).left = read (afterMismatchB s vs vq).right := h0
+    rw [afterMismatchB_left, afterMismatchB_right, afterMismatch_left, afterMismatch_right, hl, hrr] at h1
     exact h1
   have hav' : (galilFrameS (galilShared onLetter leftFirst shiftGuardVM beginShiftVM' beginFallbackVM' rs centre place entry) q first).available s := hav
   have ht1 : Tick (galilFrameS (galilShared onLetter leftFirst shiftGuardVM beginShiftVM' beginFallbackVM' rs centre place entry) q first) delay ⟨c, s⟩
       ⟨{c with clock := delay, mode := .copy},
-        {afterMismatch s vs vq with fpp := FppControl.beginFallback (afterMismatch s vs vq).fpp.program p (afterMismatch s vs vq).length, chain := .idle, search := {(afterMismatch s vs vq).search with mode := .idle}}⟩ :=
-    .scan_fallback c s _ _ hm (Or.inr hav') hc hcmpS hmisS (Or.inr hg) hr ⟨p, rfl⟩
+        {afterMismatchB s vs vq with fpp := FppControl.beginFallback (afterMismatchB s vs vq).fpp.program p (afterMismatchB s vs vq).length, chain := .idle, search := {(afterMismatchB s vs vq).search with mode := .idle}}⟩ :=
+    .scan_fallback c s _ _ hm (Or.inr hav') hc hcmpS hmisS (Or.inr (not_shiftGuard_afterMismatchB _ _ _ _ _ hch hg)) hr ⟨p, rfl⟩
   have hm2 : ({c with clock := delay, mode := .copy} : Control).mode = .copy := rfl
-  have hi2 : ShiftIdle {afterMismatch s vs vq with fpp := FppControl.beginFallback (afterMismatch s vs vq).fpp.program p (afterMismatch s vs vq).length, chain := .idle, search := {(afterMismatch s vs vq).search with mode := .idle}} := by
+  have hi2 : ShiftIdle {afterMismatchB s vs vq with fpp := FppControl.beginFallback (afterMismatchB s vs vq).fpp.program p (afterMismatchB s vs vq).length, chain := .idle, search := {(afterMismatchB s vs vq).search with mode := .idle}} := by
     rw [shiftIdle_iff] at hi ⊢
+    show positive (afterMismatchB s vs vq).remaining = false
+    rw [afterMismatchB_remaining]
     exact hi
-  have hcan' : Canonical (afterMismatch s vs vq).length := by rw [afterMismatch_length]; exact hcan
-  have hv' : value (afterMismatch s vs vq).length = ℓ := by rw [afterMismatch_length]; exact hv
+  have hcan' : Canonical (afterMismatchB s vs vq).length := by rw [afterMismatchB_length, afterMismatch_length]; exact hcan
+  have hv' : value (afterMismatchB s vs vq).length = ℓ := by rw [afterMismatchB_length, afterMismatch_length]; exact hv
   obtain ⟨n, o, t, hst, hl', hR, hC, hrep, hrad, hlen, hw, hprog, hi', ho, ho0, hsearch, hlower, _⟩ :=
     fallback_to_scan_All onLetter leftFirst shiftGuardVM beginShiftVM' beginFallbackVM' rs centre place entry q hq0 first
-      h7 h8 delay _ hm2 _ hi2 (afterMismatch s vs vq).fpp.program p (afterMismatch s vs vq).length hcan' ℓ hv'
+      h7 h8 delay _ hm2 _ hi2 (afterMismatchB s vs vq).fpp.program p (afterMismatchB s vs vq).length hcan' ℓ hv'
       rfl hne heven
-  have hright : ({afterMismatch s vs vq with fpp := FppControl.beginFallback (afterMismatch s vs vq).fpp.program p (afterMismatch s vs vq).length, chain := .idle, search := {(afterMismatch s vs vq).search with mode := .idle}} : GalilVM).right = right s.right := by
-    show (afterMismatch s vs vq).right = _
-    rw [afterMismatch_right, hrr]
+  have hright : ({afterMismatchB s vs vq with fpp := FppControl.beginFallback (afterMismatchB s vs vq).fpp.program p (afterMismatchB s vs vq).length, chain := .idle, search := {(afterMismatchB s vs vq).search with mode := .idle}} : GalilVM).right = right s.right := by
+    show (afterMismatchB s vs vq).right = _
+    rw [afterMismatchB_right, afterMismatch_right, hrr]
   rw [hright] at hl' hR hC
   exact ⟨n, o, t, fun Q hQ hQs hQend => stepsAll_trans (.succ hQs ht1 (.zero _ (hQ _ (fun h0 => by cases h0)))) (hst Q hQ hQend),
     hl', hR, hC, hrep, hrad, hlen, hw, hprog, hi', ho, ho0, hsearch, hlower⟩

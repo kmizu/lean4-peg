@@ -96,14 +96,15 @@ variable (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM → Fin 3)
 /-- `GalilChainCoupling.compare_inv` over `Coupled'`. -/
 theorem compare'_inv {c : Control} {s s' : GalilVM} (hC : Coupled' c s) (hm : c.mode = Mode.scan)
     (hcmp : (galilFrameS (sharedC onLetter leftFirst centre place entry) q first).compare s s') :
-    BlockInv s'.chain ∧ s'.periodOnly = s.periodOnly ∧ s'.remaining = s.remaining ∧
+    BlockInv s'.chain ∧
+    (s.chain ≠ ChainVM.idle → s'.periodOnly = s.periodOnly) ∧ s'.remaining = s.remaining ∧
     ((galilFrameS (sharedC onLetter leftFirst centre place entry) q first).matched s' →
-      s'.radius = inc s.radius ∧ s'.cycle = cycleAfter s ∧
+      s'.radius = inc s.radius ∧ (s.chain ≠ ChainVM.idle → s'.cycle = cycleAfter s) ∧
       SumRel s'.chain (value s.radius + 1) ∧
       WatchOK s'.chain (c.mode ≠ Mode.shift)
         (Other' s.periodOnly c.mode (value s.radius) (value s.cycle) (value s.remaining))) ∧
     (¬ (galilFrameS (sharedC onLetter leftFirst centre place entry) q first).matched s' →
-      s'.radius = inc s.radius ∧ s'.cycle = s.cycle ∧
+      s'.radius = inc s.radius ∧ (s.chain ≠ ChainVM.idle → s'.cycle = s.cycle) ∧
       SumRel s'.chain (value s.radius) ∧
       WatchOK s'.chain (c.mode ≠ Mode.shift)
         (Other' s.periodOnly c.mode (value s.radius) (value s.cycle) (value s.remaining))) := by
@@ -115,12 +116,33 @@ theorem compare'_inv {c : Control} {s s' : GalilVM} (hC : Coupled' c s) (hm : c.
     rw [if_pos rfl] at hteq
     subst hteq
     obtain ⟨hb, hs, hw⟩ := chainAt_true_inv hch hF hC.block hC.sum hC.watch
-    exact ⟨hb, rfl, rfl, fun _ => ⟨rfl, rfl, hs, hw⟩, fun hn => absurd (hiff.1 rfl) hn⟩
+    simp only [afterBirth_chain, afterBirth_radius, afterBirth_remaining, afterBirth_left,
+      afterBirth_right, afterBirth_center, afterBirth_replay, afterBirth_searchGet]
+    refine ⟨hb, fun hne => ?_, rfl, fun _ => ⟨rfl, fun hne => ?_, hs, hw⟩,
+      fun hn => absurd ?_ hn⟩
+    · rw [afterBirth_of_ne_idle hne]; rfl
+    · rw [afterBirth_of_ne_idle hne]; rfl
+    · show GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).right
+      rw [afterBirth_left, afterBirth_right]
+      exact hiff.1 rfl
   | false =>
     rw [if_neg (by simp)] at hteq
     subst hteq
     obtain ⟨hb, hs, hw⟩ := chainAt_false_inv hch hF hC.block hC.sum hC.watch
-    exact ⟨hb, rfl, rfl, fun hmt => absurd (hiff.2 hmt) (by simp), fun _ => ⟨rfl, rfl, hs, hw⟩⟩
+    simp only [afterBirth_chain, afterBirth_radius, afterBirth_remaining, afterBirth_left,
+      afterBirth_right, afterBirth_center, afterBirth_replay, afterBirth_searchGet]
+    refine ⟨hb, fun hne => ?_, rfl, fun hmt => absurd (hiff.2 ?_) (by simp),
+      fun _ => ⟨rfl, fun hne => ?_, hs, hw⟩⟩
+    · rw [afterBirth_of_ne_idle hne]; rfl
+    swap
+    · rw [afterBirth_of_ne_idle hne]; rfl
+    · show GalilScaffoldInputHead.read (afterMismatch s vs vq).left
+        = GalilScaffoldInputHead.read (afterMismatch s vs vq).right
+      have h0 : GalilScaffoldInputHead.read (afterBirth _ (afterMismatch s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth _ (afterMismatch s vs vq)).right := hmt
+      rw [afterBirth_left, afterBirth_right] at h0
+      exact h0
 
 /-- **`coupled'_tick`**: the mirror of `GalilChainCoupling.coupled_tick` with
 the strengthened half.  The shift exit (`scan_shift`) is the content. -/
@@ -139,7 +161,13 @@ theorem coupled'_tick {c c' : Control} {s t : GalilVM} (hC : Coupled' c s)
     have hF : c.mode ≠ Mode.shift := by rw [hm]; decide
     obtain ⟨hb', hs', hw'⟩ := chainAt_false_inv hch hF hC.block hC.sum hC.watch
     refine ⟨fun h1 => absurd hm h1, hb', by rw [hrad]; exact hs', ?_⟩
-    rw [hpo, hrad, hcyc, hrem]; exact hw'
+    rw [hpo, hrad, hcyc, hrem]
+    cases hbb : chainBorn (decide ((searchLens.get t).search.mode
+        = GalilScaffoldSearchFinish.Mode.found)) s.chain with
+    | false => simpa using hw'
+    | true =>
+      intro w0 hx _
+      exact absurd hx (chainBorn_true_not_watch hbb hch w0)
   case scan_count =>
     rename_i hm hc hav hb
     obtain ⟨-, -, hch, -, hpo, hrad, -, hcyc, hrem, -, -, -⟩ :=
@@ -147,7 +175,13 @@ theorem coupled'_tick {c c' : Control} {s t : GalilVM} (hC : Coupled' c s)
     have hF : c.mode ≠ Mode.shift := by rw [hm]; decide
     obtain ⟨hb', hs', hw'⟩ := chainAt_false_inv hch hF hC.block hC.sum hC.watch
     refine ⟨fun h1 => absurd hm h1, hb', by rw [hrad]; exact hs', ?_⟩
-    rw [hpo, hrad, hcyc, hrem]; exact hw'
+    rw [hpo, hrad, hcyc, hrem]
+    cases hbb : chainBorn (decide ((searchLens.get t).search.mode
+        = GalilScaffoldSearchFinish.Mode.found)) s.chain with
+    | false => simpa using hw'
+    | true =>
+      intro w0 hx _
+      exact absurd hx (chainBorn_true_not_watch hbb hch w0)
   case restart =>
     rename_i hm hb
     obtain ⟨w, -, -, -, -, ht⟩ : restartVM entry s t := hb
@@ -165,6 +199,17 @@ theorem coupled'_tick {c c' : Control} {s t : GalilVM} (hC : Coupled' c s)
     have hty : t.cycle = s'.cycle := by rw [hpl']; cases c.replaying <;> rfl
     have htp : t.periodOnly = s'.periodOnly := by rw [hpl']; cases c.replaying <;> rfl
     have htm : t.remaining = s'.remaining := by rw [hpl']; cases c.replaying <;> rfl
+    by_cases hne : s.chain = ChainVM.idle
+    · refine ⟨fun h1 => absurd hm h1, by rw [htc]; exact hb, ?_, ?_⟩
+      · rw [htc, htr, hrad, inc_value]; exact hs
+      · intro w0 hx _
+        obtain ⟨vs0, vq0, a0, -, -, -, -, hch0, hteq0⟩ :
+          compareFound (sharedC onLetter leftFirst centre place entry) q first s s' := hcmp
+        rw [hne] at hch0
+        rw [htc, hteq0, afterBirth_chain] at hx
+        exact absurd (by cases a0 <;> exact hx) (chainAt_idle_not_watch hch0 w0)
+    have hpo := hpo hne
+    have hcyc := hcyc hne
     refine ⟨fun h1 => absurd hm h1, by rw [htc]; exact hb, ?_, ?_⟩
     · rw [htc, htr, hrad, inc_value]; exact hs
     · rw [htc, htr, hty, htp, htm, hpo, hrem, hrad, hcyc]
@@ -182,6 +227,16 @@ theorem coupled'_tick {c c' : Control} {s t : GalilVM} (hC : Coupled' c s)
     obtain ⟨hrad, hcyc, hs, hw⟩ := hmis hmt
     obtain ⟨w, hs0, ht⟩ : beginShiftVM' s' t := hb
     obtain ⟨w1, hw1, hz, hph, hbr, hif, -⟩ := hg
+    have hne : s.chain ≠ ChainVM.idle := by
+      intro hidle
+      obtain ⟨vs0, vq0, a0, -, -, -, -, hch0, hteq0⟩ :
+        compareFound (sharedC onLetter leftFirst centre place entry) q first s s' := hcmp
+      rw [hidle] at hch0
+      have hw1' := hw1
+      rw [hteq0, afterBirth_chain] at hw1'
+      exact chainAt_idle_not_watch hch0 w1 (by cases a0 <;> exact hw1')
+    have hpo := hpo hne
+    have hcyc := hcyc hne
     rw [hw1] at hs0
     cases hs0
     rw [hw1] at hbl hs hw
@@ -311,9 +366,18 @@ theorem four_of_other' {w : List (Fin 2)} {x : State GalilVM} {s'' : GalilVM}
     (hO : Other' x.vm.periodOnly x.ctl.mode (value x.vm.radius) (value x.vm.cycle)
       (value x.vm.remaining) (periodLength wch)) :
     4 * (periodLength wch : ℤ) ≤ value wch.machine.control.distance := by
+  have hne : x.vm.chain ≠ ChainVM.idle := by
+    intro hidle
+    obtain ⟨vs0, vq0, a0, -, -, -, -, hch0, hteq0⟩ :
+      compareFound (PofC centre place entry w) q first x.vm s'' := hcmp
+    rw [hidle] at hch0
+    rw [hteq0, afterBirth_chain] at hch
+    exact chainAt_idle_not_watch hch0 wch (by cases a0 <;> exact hch)
   obtain ⟨-, hpo, -, -, hmis⟩ :=
     compare'_inv (onLetterVM w) leftFirstVM centre place entry q first hx hs.1 hcmp
+  have hpo := hpo hne
   obtain ⟨-, hcyc, hsum, -⟩ := hmis hmt
+  have hcyc := hcyc hne
   obtain ⟨hpo', hh, -, hns⟩ := hO
   have h3 : (1 : ℤ) ≤ periodLength wch := by exact_mod_cast hh
   have h2 := hns (by rw [hs.1]; decide)

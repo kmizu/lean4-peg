@@ -164,7 +164,7 @@ theorem noshift_minv (raw : List (Fin 2)) (P : Shared)
     (ch : ChainVM) (hchne : ch ≠ .idle) (oF : Bool)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE P qq first delay es {cF with clock := delay, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c3 : Control} {s3 : GalilVM} (hseg : WatchSeg P qq first delay c2 s2 c3 s3)
     (hr3 : c3.replaying = false) (hav3 : canRight s3.right)
     (vs3 : ScanVM) (vq3 : SearchVM)
@@ -188,13 +188,13 @@ theorem noshift_minv (raw : List (Fin 2)) (P : Shared)
   have hM2 := minv_watchSegE raw P hex qq first delay hprepSeg _ hinv1 hM1
   have hcen2 : s2.center = sF.center := by
     have h0 := watchSegE_center P qq first delay hprepSeg
-    rw [afterCompare_center] at h0; exact h0
+    rw [afterBirth_center, afterCompare_center] at h0; exact h0
   have hinv2 : ScanInvariant raw (position sF.center) (Rad + es0.count true + 1 + es.count true)
       s2.left s2.right :=
     scan_events_invariant
       ((watchSegE_heads P qq first delay hprepSeg).1 raw (position sF.center) _) hinv1
   have hne2 : s2.chain ≠ .idle :=
-    watchSegE_ne_idle P qq first delay hprepSeg (by rw [afterCompare_chain]; exact hchne)
+    watchSegE_ne_idle P qq first delay hprepSeg (by rw [afterBirth_chain, afterCompare_chain]; exact hchne)
   obtain ⟨es2, _, hsc2, hcen21, _, _, _, _⟩ := watchSeg_events P qq first delay hseg hne2
   have hM3 := minv_watchSeg raw P qq first delay hseg _ (by rw [hcen2]; exact hinv2) hM2
   have hi3 : ScanInvariant raw (position s3.center)
@@ -224,7 +224,7 @@ theorem noshift_restarted (raw : List (Fin 2)) (P : Shared)
     (vq : SearchVM) (ch : ChainVM) (hchne : ch ≠ .idle) (oF : Bool)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE P qq first delay es {cF with clock := delay, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c3 : Control} {s3 : GalilVM} (hseg : WatchSeg P qq first delay c2 s2 c3 s3)
     (hav3 : canRight s3.right) (vs3 : ScanVM) (vq3 : SearchVM)
     (hcmp3 : (galilFrame P qq first).compare s3 (scanLens.set s3 vs3))
@@ -256,15 +256,16 @@ theorem noshift_restarted (raw : List (Fin 2)) (P : Shared)
   obtain ⟨hsc1, _, hrad1, hrc1, hlc1'⟩ := watchSegE_heads P qq first delay hprepSeg
   have hcen2 : s2.center = sF.center := by
     have h0 := watchSegE_center P qq first delay hprepSeg
-    rw [afterCompare_center] at h0; exact h0
+    rw [afterBirth_center, afterCompare_center] at h0; exact h0
   have hinv2 : ScanInvariant raw (position sF.center) (Rad + es0.count true + 1 + es.count true)
       s2.left s2.right :=
     scan_events_invariant (hsc1 raw (position sF.center) _) hinv1
   have hRad2 : RadiusRep s2.radius (Rad + es0.count true + 1 + es.count true) := by
     refine ⟨hrc1 hRad1.1, ?_⟩
+    rw [afterBirth_radius] at hrad1
     rw [hrad1, hRad1.2]; push_cast; ring
   have hne2 : s2.chain ≠ .idle :=
-    watchSegE_ne_idle P qq first delay hprepSeg (by rw [afterCompare_chain]; exact hchne)
+    watchSegE_ne_idle P qq first delay hprepSeg (by rw [afterBirth_chain, afterCompare_chain]; exact hchne)
   obtain ⟨es2, _, hsc2, hcen21, _, hrad2, hrc2, hlc2⟩ := watchSeg_events P qq first delay hseg hne2
   have hi3 : ScanInvariant raw (position s3.center)
       (Rad + es0.count true + 1 + es.count true + es2.count true) s3.left s3.right := by
@@ -346,7 +347,7 @@ theorem foundRouteMC_noshift (centre : GalilVM → Fin 3)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE (PofC centre place entry raw) qq first 2048 es
       {cF with clock := 2048, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c3 : Control} {s3 : GalilVM}
     (hseg : WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
@@ -392,7 +393,7 @@ theorem foundRouteMC_noshift (centre : GalilVM → Fin 3)
     refine PalPeg.GalilReplaySegment.shiftIdle_congr ?_ hsi0
     show s3.remaining = r.remaining
     rw [watchSeg_remaining _ qq first 2048 hseg, watchSegE_remaining _ qq first 2048 hprepSeg,
-      afterCompare_remaining, watchSegE_remaining _ qq first 2048 hseg0]
+      afterBirth_remaining, afterCompare_remaining, watchSegE_remaining _ qq first 2048 hseg0]
   have hInv : Inv raw (foundLandingControl c3 2048 o3) (foundLandingVM (afterCompare s3 vs3 vq3) w3' entry) :=
     { rest := ⟨Rad', _, hRst⟩, minv := hM, mode := ⟨hm3, rfl, rfl⟩
       stage := fun Rad last h0 => by
@@ -449,7 +450,7 @@ theorem foundRouteMC_noshift_Inv (centre : GalilVM → Fin 3)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE (PofC centre place entry raw) qq first 2048 es
       {cF with clock := 2048, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c3 : Control} {s3 : GalilVM}
     (hseg : WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
@@ -495,7 +496,7 @@ theorem foundRouteMC_noshift_Inv (centre : GalilVM → Fin 3)
     refine PalPeg.GalilReplaySegment.shiftIdle_congr ?_ hsi0
     show s3.remaining = r.remaining
     rw [watchSeg_remaining _ qq first 2048 hseg, watchSegE_remaining _ qq first 2048 hprepSeg,
-      afterCompare_remaining, watchSegE_remaining _ qq first 2048 hseg0]
+      afterBirth_remaining, afterCompare_remaining, watchSegE_remaining _ qq first 2048 hseg0]
   have hInv : Inv raw (foundLandingControl c3 2048 o3) (foundLandingVM (afterCompare s3 vs3 vq3) w3' entry) :=
     { rest := ⟨Rad', _, hRst⟩, minv := hM, mode := ⟨hm3, rfl, rfl⟩
       stage := fun Rad last h0 => by
@@ -563,7 +564,7 @@ theorem foundRouteMC_shift (centre : GalilVM → Fin 3)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE (PofC centre place entry raw) qq first 2048 es
       {cF with clock := 2048, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c1 : Control} {s1 : GalilVM}
     (hseg : WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c1 s1)
     (h : ℕ) (hm1 : c1.mode = .scan) (hr1 : c1.replaying = false) (hc1 : c1.clock = 1)
@@ -745,7 +746,7 @@ theorem foundRouteMC_shift_Inv (centre : GalilVM → Fin 3)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE (PofC centre place entry raw) qq first 2048 es
       {cF with clock := 2048, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c1 : Control} {s1 : GalilVM}
     (hseg : WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c1 s1)
     (h : ℕ) (hm1 : c1.mode = .scan) (hr1 : c1.replaying = false) (hc1 : c1.clock = 1)

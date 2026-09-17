@@ -53,7 +53,8 @@ theorem life_restarted (P : Shared) (qq : ℕ) (first : Fin 9) (delay : ℕ)
     (ch : ChainVM)
     (hch : ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre sF) (P.place sF) sF.center sF.radius) ch)
     (oF : Bool)
-    (hoF : refresh (galilFrame P qq first) (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF)
+    (hoF : refresh (galilFrame P qq first)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output oF)
     (dm : Bool) (entry : ℕ) (hres : ∀ s t, restartVM entry s t → P.restart s t) :
     ∃ (h : ℕ) (ys : List (Fin 3)) (b : Fin 3),
       GalilDpCorrect.Candidate ((GalilScaffoldPlace.stream ⟨a :: ls,gap⟩).take (span+1)) lower h ∧
@@ -62,7 +63,7 @@ theorem life_restarted (P : Shared) (qq : ℕ) (first : Fin 9) (delay : ℕ)
       ∀ {c2 : Control} {s2 : GalilVM},
         WatchSegE P qq first delay (bs ++ dm :: cs)
           {cF with clock := delay, output := oF, replaying := false}
-          (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2 →
+          (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2 →
       ∀ {c1 : Control} {s1 : GalilVM} (hseg : WatchSeg P qq first delay c2 s2 c1 s1)
         -- the terminal comparison
         (hm1 : c1.mode = .scan) (hr1 : c1.replaying = false) (hc1 : c1.clock = 1)

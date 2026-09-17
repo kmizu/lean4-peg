@@ -83,9 +83,12 @@ theorem postCompare_shape (P : Shared) (q : ℕ) (first : Fin 9) {t s' : GalilVM
   subst ha
   rw [if_pos rfl] at hteq
   subst hteq
-  refine ⟨vq, hq, afterCompare_center _ _ _, afterCompare_radius _ _ _, ?_⟩
+  refine ⟨vq, hq, ?_, ?_, ?_⟩
+  · rw [afterBirth_center]; exact afterCompare_center _ _ _
+  · rw [afterBirth_radius]; exact afterCompare_radius _ _ _
   intro hf
-  rw [afterCompare_chain, afterCompare_center, afterCompare_radius]
+  rw [afterBirth_chain, afterBirth_center, afterBirth_radius,
+    afterCompare_chain, afterCompare_center, afterCompare_radius]
   rcases hch with ⟨hne, -⟩ | ⟨-, hfalse, -⟩ | ⟨-, -, hstart⟩
   · exact absurd hidle hne
   · rw [hf] at hfalse; simp at hfalse

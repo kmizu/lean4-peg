@@ -62,19 +62,21 @@ theorem entryCostC_of_ctx (centre : GalilVM → Fin 3)
   have hst : StepsAll (galilFrameS (PofC centre place entry raw) q first) 2048 (SoundScanNR raw)
       (es0.length + 1) ⟨c, r⟩
       ⟨{cF with clock := 2048, output := oF, replaying := false},
-        afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq⟩ :=
+        afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)⟩ :=
     stepsAll_trans (stepsAll_mono (fun st h _ _ => h) hst0)
       (.succ (fun _ _ => houtF) htick (.zero _ (fun _ _ => houtP)))
   -- the cost: the segment's pieces, then the found comparison piece
   obtain ⟨L, k', w1, hcr, hk, hw1, -, -, -, -⟩ :=
     costedRun_watchSegE raw (PofC centre place entry raw) q first hseg hi hclk havF
   have hw : w1 ≤ 2048 := by omega
-  have hpos : position (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq).right =
+  have hpos : position (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)).right =
       position sF.right + 1 := by
+    rw [afterBirth_right]
     have := hiF.rightPos; have := hiP.rightPos; omega
-  have h1 := costedRun_single (a := sF) (b := afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)
-    (cmpPiece (position sF.right + 1) w1 hw) (by simp [cmpPiece]) (by simp [cmpPiece, hpos])
-    (by rw [cmpPiece_adv, afterCompare_center]; simp)
+  have h1 := costedRun_single (a := sF) (b := afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq))
+    (cmpPiece (position sF.right + 1) w1 hw) (by simp [cmpPiece])
+    (by simp [cmpPiece, hpos])
+    (by rw [cmpPiece_adv, afterBirth_center, afterCompare_center]; simp)
   rw [cmpPiece_ticks] at h1
   refine ⟨es0.length + 1, L ++ [cmpPiece (position sF.right + 1) w1 hw], hst, ?_⟩
   have := costedRun_trans hcr h1

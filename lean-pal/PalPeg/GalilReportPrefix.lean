@@ -87,46 +87,53 @@ theorem reportAt_of_match
     (hav : canRight s.right) (hM : MInv w c s)
     {r : ℕ} (hi : ScanInvariant w (position s.center) r s.left s.right)
     (hpos : position s.right = 2 * m - 2) (hm1 : 1 ≤ m) (hmle : m ≤ w.length)
-    (vs : ScanVM) (vq : SearchVM) (o : Bool)
+    (vs : ScanVM) (vq : SearchVM) (o : Bool) (bb : Bool)
     (hl : vs.left = GalilScaffoldInputHead.left s.left)
     (hrr : vs.right = right s.right)
-    (hcmp : (galilFrameS P q first).compare s (afterCompare s vs vq))
-    (hmt : (galilFrameS P q first).matched (afterCompare s vs vq))
-    (ho : refresh (galilFrameS P q first) (afterCompare s vs vq) c.output o) :
+    (hcmp : (galilFrameS P q first).compare s (afterBirth bb (afterCompare s vs vq)))
+    (hmt : (galilFrameS P q first).matched (afterBirth bb (afterCompare s vs vq)))
+    (ho : refresh (galilFrameS P q first) (afterBirth bb (afterCompare s vs vq)) c.output o) :
     (∃ k : ℕ, StepsAll (galilFrameS P q first) delay (SoundScanNR w) k ⟨c, s⟩
-        ⟨{c with clock := delay, output := o, replaying := false}, afterCompare s vs vq⟩) ∧
+        ⟨{c with clock := delay, output := o, replaying := false}, afterBirth bb (afterCompare s vs vq)⟩) ∧
       ReportPointAt w m
-        ⟨{c with clock := delay, output := o, replaying := false}, afterCompare s vs vq⟩ ∧
+        ⟨{c with clock := delay, output := o, replaying := false}, afterBirth bb (afterCompare s vs vq)⟩ ∧
       Refreshed P q first
-        ⟨{c with clock := delay, output := o, replaying := false}, afterCompare s vs vq⟩ := by
-  have hmt0 : (galilFrame P q first).matched (scanLens.set s vs) := hmt
+        ⟨{c with clock := delay, output := o, replaying := false}, afterBirth bb (afterCompare s vs vq)⟩ := by
+  have hmt0 : (galilFrame P q first).matched (scanLens.set s vs) := by
+    have h0 : GalilScaffoldInputHead.read (afterBirth bb (afterCompare s vs vq)).left
+      = GalilScaffoldInputHead.read (afterBirth bb (afterCompare s vs vq)).right := hmt
+    rw [afterBirth_left, afterBirth_right] at h0
+    exact h0
   have hmatch : GalilScaffoldInputHead.read (GalilScaffoldInputHead.left s.left) =
       GalilScaffoldInputHead.read (right s.right) := by
     have h0 := matched_parts P q first hmt0
     rw [hl, hrr] at h0; exact h0
   have hi' : ScanInvariant w (position s.center) (r + 1)
-      (afterCompare s vs vq).left (afterCompare s vs vq).right :=
-    matched_invariant' w vq hl hrr hmatch hav hi
-  have hpl : (galilFrameS P q first).matchedPlace c.replaying (afterCompare s vs vq)
-      (afterCompare s vs vq) := by
-    show afterCompare s vs vq = (if c.replaying then _ else afterCompare s vs vq)
+      (afterBirth bb (afterCompare s vs vq)).left (afterBirth bb (afterCompare s vs vq)).right := by
+    rw [afterBirth_left, afterBirth_right]
+    exact matched_invariant' w vq hl hrr hmatch hav hi
+  have hpl : (galilFrameS P q first).matchedPlace c.replaying (afterBirth bb (afterCompare s vs vq))
+      (afterBirth bb (afterCompare s vs vq)) := by
+    show afterBirth bb (afterCompare s vs vq) = (if c.replaying then _ else afterBirth bb (afterCompare s vs vq))
     rw [hnr]; simp
   have htick : Tick (galilFrameS P q first) delay ⟨c, s⟩
-      ⟨{c with clock := delay, output := o, replaying := false}, afterCompare s vs vq⟩ := by
+      ⟨{c with clock := delay, output := o, replaying := false}, afterBirth bb (afterCompare s vs vq)⟩ := by
     have h := Tick.scan_match (F := galilFrameS P q first) (delay := delay) c s
-      (afterCompare s vs vq) (afterCompare s vs vq) o hm (Or.inr hav) hclk hcmp hmt hpl ho
+      (afterBirth bb (afterCompare s vs vq)) (afterBirth bb (afterCompare s vs vq)) o hm (Or.inr hav) hclk hcmp hmt hpl ho
     rw [hnr] at h
     simpa using h
   have hsound : SoundScanNR w
-      ⟨{c with clock := delay, output := o, replaying := false}, afterCompare s vs vq⟩ := by
+      ⟨{c with clock := delay, output := o, replaying := false}, afterBirth bb (afterCompare s vs vq)⟩ := by
     intro _ _
-    exact outputRel_of_refreshS' w P hP hP' q first (afterCompare s vs vq) c.output o hi' ho _ rfl
+    exact outputRel_of_refreshS' w P hP hP' q first (afterBirth bb (afterCompare s vs vq)) c.output o hi' ho _ rfl
   have hp1 : position (right s.right) = position s.right + 1 :=
     right_position s.right hav (represented_position _ w hi.rightRep hi.rightPresent).1
-  have hlast' : position (afterCompare s vs vq).right = 2 * m - 1 := by
-    rw [afterCompare_right, hrr, hp1, hpos]; omega
+  have hlast' : position (afterBirth bb (afterCompare s vs vq)).right = 2 * m - 1 := by
+    rw [afterBirth_right, afterCompare_right, hrr, hp1, hpos]; omega
   refine ⟨⟨1, .succ hsrc htick (.zero _ hsound)⟩, ?_, ?_⟩
-  · exact ⟨rfl, ⟨r + 1, hi'⟩, minv_match o delay hnr hl hrr hav hmatch hi hM, hlast', hm1, hmle⟩
+  · refine ⟨rfl, ⟨r + 1, ?_⟩, ?_, hlast', hm1, hmle⟩
+    · rw [afterBirth_center, afterCompare_center]; exact hi'
+    · exact minv_afterBirth bb (minv_match o delay hnr hl hrr hav hmatch hi hM)
   · exact ⟨c.output, (refreshS_iff P q first _ _ _).1 ho⟩
 
 /-! ## (3) The replay ending on `2m - 1` -/

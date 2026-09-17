@@ -210,13 +210,16 @@ theorem lpackM2_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     obtain ⟨vs, vq, hvl, hvr, hmatch, rfl⟩ :=
       compare_matched_form centre place entry q first hcmp hmt
     have hpl' : t = (if c.replaying then
-        {afterCompare s vs vq with replay := dec (afterCompare s vs vq).replay}
-      else afterCompare s vs vq) := hpl
-    have htl : t.left = (afterCompare s vs vq).left := by
+        {afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq) with
+          replay := dec (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).replay}
+      else afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)) := hpl
+    have htl : t.left = (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).left := by
       rw [hpl']; cases c.replaying <;> rfl
-    have htr : t.right = (afterCompare s vs vq).right := by
+    have htr : t.right = (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).right := by
       rw [hpl']; cases c.replaying <;> rfl
-    have htc : t.center = s.center := by rw [hpl']; cases c.replaying <;> rfl
+    have htc : t.center = s.center := by
+      rw [hpl']
+      cases c.replaying <;> simp [afterBirth_center, afterCompare_center]
     have hcan := hL.scanCanR hm
     obtain ⟨r, hi⟩ : ∃ r, ScanInvariant w (position s.center) r s.left s.right := by
       cases hrep : c.replaying with
@@ -224,16 +227,17 @@ theorem lpackM2_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
       | true => exact hP.scanGeomR hm hrep
     have hi' := matched_invariant' w vq hvl hvr hmatch hcan hi
     refine ⟨hM, fun _ _ => ⟨r + 1, ?_⟩, ?_, ?_, ?_, ?_⟩
-    · rw [htc, htl, htr]; exact hi'
+    · rw [htc, htl, htr, afterBirth_left, afterBirth_right]; exact hi'
     all_goals vac hm
   case scan_shift =>
     rename_i s' hmt hg hm hc hr hcmp hav hb
     have hSG : ShiftGeom w t := hL2.shiftEntry hm hr _ _ hcmp hmt hg hb
     obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
       compare_mismatch_form centre place entry q first hcmp hmt
-    obtain ⟨wch, hchain, ht⟩ : beginShiftVM' (afterMismatch s vs vq) t := hb
+    obtain ⟨wch, hchain, ht⟩ :
+      beginShiftVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
     have htr : t.right = GalilScaffoldChainVerifier.right s.right := by
-      rw [ht]; show vs.right = _; exact hvr
+      rw [ht, afterBirth_right, afterMismatch_right]; exact hvr
     obtain ⟨r0, hi⟩ := hP.packM.scanGeom hm hr
     have hcan := hL.scanCanR hm
     refine ⟨hM, ?_, fun _ => hSG, fun _ => ⟨?_, ?_⟩, ?_, ?_⟩
@@ -245,9 +249,10 @@ theorem lpackM2_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
       compare_mismatch_form centre place entry q first hcmp hmt
-    obtain ⟨pl, ht⟩ : beginFallbackVM' (afterMismatch s vs vq) t := hb
+    obtain ⟨pl, ht⟩ :
+      beginFallbackVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
     have htr : t.right = GalilScaffoldChainVerifier.right s.right := by
-      rw [ht]; show vs.right = _; exact hvr
+      rw [ht, afterBirth_right, afterMismatch_right]; exact hvr
     obtain ⟨r0, hi⟩ := hP.packM.scanGeom hm hr
     have hcan := hL.scanCanR hm
     refine ⟨hM, ?_, ?_, fun _ => ⟨?_, ?_⟩, ?_, ?_⟩

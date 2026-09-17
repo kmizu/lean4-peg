@@ -217,7 +217,7 @@ theorem foundRoute_of_pieces
       t.center t.radius) ch)
     (hchne : ch ≠ ChainVM.idle)
     -- the preparation period
-    (hprep : PrepData 2048 (afterCompare t ⟨left t.left, right t.right, ch⟩ vq) h)
+    (hprep : PrepData 2048 (afterBirth true (afterCompare t ⟨left t.left, right t.right, ch⟩ vq)) h)
     (hKinv2 : ∀ s2 : GalilVM, K.Inv s2)
     -- the watch phase reaches a real exit
     (hrealStop : ∀ (c1 : Control) (s1 : GalilVM),
@@ -297,15 +297,15 @@ theorem foundRoute_of_pieces
     hchS, hh⟩ := hprep
   obtain ⟨oF, hoF⟩ := PalPeg.GalilCycleGlue.refresh_frame_exists
     (PofC centre place entry raw) q first
-    (afterCompare t ⟨left t.left, right t.right, ch⟩ vq) c'.output
+    (afterBirth true (afterCompare t ⟨left t.left, right t.right, ch⟩ vq)) c'.output
   -- (2) the preparation segment
   obtain ⟨bs, cs, dm, c2, s2, hprepSeg, hbs, hcs, hdm, _hchain2, _hwatch2, hm2, hr2, _ho2,
     hlow2, _hhi2, _hl2, _hr2, _hc2, _hrad2, _hlen2, _hpo2, _hrep2, _hget2⟩ :=
     PalPeg.GalilPrepConstruct.prep_segment_construct (PofC centre place entry raw) q first 2048
       answer cen p q' ver radius' u h ys b hcopyR hu hposH hfocus hback
-      (afterCompare t ⟨left t.left, right t.right, ch⟩ vq).chain hchS
+      (afterBirth true (afterCompare t ⟨left t.left, right t.right, ch⟩ vq)).chain hchS
       {c' with clock := 2048, output := oF, replaying := false}
-      (afterCompare t ⟨left t.left, right t.right, ch⟩ vq) hsg.mode rfl rfl rfl hh
+      (afterBirth true (afterCompare t ⟨left t.left, right t.right, ch⟩ vq)) hsg.mode rfl rfl rfl hh
   -- (3) the watch phase
   obtain ⟨c1, s1, _hprepSeg', _hbs', _hcs', _hdm', hwseg, _hinv1, hm1, hr1, hc1, hstop⟩ :=
     prep_then_watch_construct (PofC centre place entry raw) q first 2048 K fuel h hprepSeg

@@ -150,10 +150,16 @@ theorem tick_exists_R (x : State GalilVM)
     obtain ⟨z, hz⟩ := hchain' true vq
     let vs : ScanVM := ⟨left s.left, right s.right, z⟩
     have hmt0 : (galilFrame P q first).matched (scanLens.set s vs) := hmatch
-    have hcmp : (galilFrameS P q first).compare s (afterCompare s vs vq) :=
+    have hcmp : (galilFrameS P q first).compare s
+        (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)) :=
       ⟨vs, vq, true, rfl, rfl, ⟨fun _ => hmt0, fun _ => rfl⟩, hq, hz, rfl⟩
-    have hmt1 : (galilFrameS P q first).matched (afterCompare s vs vq) := hmatch
-    let s'' : GalilVM := replayDec c.replaying (afterCompare s vs vq)
+    have hmt1 : (galilFrameS P q first).matched
+        (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)) := by
+      show GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).right
+      rw [afterBirth_left, afterBirth_right]
+      exact hmatch
+    let s'' : GalilVM := replayDec c.replaying (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq))
     let o : Bool := if P.onLetter s'' then decide (P.leftFirst s'') else c.output
     have ho : refresh (galilFrameS P q first) s'' c.output o := by
       refine ⟨fun hl => ?_, fun hl => ?_⟩

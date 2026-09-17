@@ -95,7 +95,9 @@ theorem background_chainStep (P : Shared) (q : ℕ) (first : Fin 9) {s : GalilVM
     ∃ s', (galilFrameS P q first).background s s' ∧ s'.chain = y := by
   refine ⟨searchLens.set (scanLens.set s ⟨s.left, s.right, y⟩) (searchLens.get s), ?_, rfl⟩
   show backgroundS P q first s _
-  exact ⟨rfl, rfl, Or.inr ⟨hne, rfl⟩, Or.inl ⟨hne, ⟨y, hstep, rfl⟩⟩, rfl⟩
+  refine ⟨rfl, rfl, Or.inr ⟨hne, rfl⟩, Or.inl ⟨hne, ⟨y, hstep, rfl⟩⟩, ?_⟩
+  rw [afterBirth_of_ne_idle hne]
+  rfl
 
 /-! ## 3. A `ChainW`-run of the chain -/
 

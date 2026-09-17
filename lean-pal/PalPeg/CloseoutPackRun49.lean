@@ -218,7 +218,11 @@ theorem lpackM3_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
       | true =>
         rw [if_pos rfl] at hteq
         subst hteq
-        exact absurd (hiff.1 rfl) hmt
+        refine absurd ?_ hmt
+        show GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).left
+          = GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).right
+        rw [afterBirth_left, afterBirth_right]
+        exact hiff.1 rfl
     subst ha
     rw [if_neg (by simp)] at hteq
     subst hteq

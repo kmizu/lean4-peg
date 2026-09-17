@@ -96,13 +96,15 @@ theorem compare_heads {s s' : GalilVM}
   | true =>
     rw [if_pos rfl] at hteq
     subst hteq
-    exact ⟨by rw [afterCompare_left, hvl], by rw [afterCompare_right, hvr],
-      afterCompare_center _ _ _⟩
+    exact ⟨by rw [afterBirth_left, afterCompare_left, hvl],
+      by rw [afterBirth_right, afterCompare_right, hvr],
+      by rw [afterBirth_center]; exact afterCompare_center _ _ _⟩
   | false =>
     rw [if_neg (by simp)] at hteq
     subst hteq
-    exact ⟨by rw [afterMismatch_left, hvl], by rw [afterMismatch_right, hvr],
-      afterMismatch_center _ _ _⟩
+    exact ⟨by rw [afterBirth_left, afterMismatch_left, hvl],
+      by rw [afterBirth_right, afterMismatch_right, hvr],
+      by rw [afterBirth_center]; exact afterMismatch_center _ _ _⟩
 
 end Heads
 

@@ -59,14 +59,18 @@ theorem scan_match_found_S' (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ)
     (hq : searchEffect P true s vq) (hf : vq.search.mode = .found)
     (hch : ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre s) (P.place s) s.center
       s.radius) vs.chain)
-    (ho : refresh (galilFrame P q first) (replayDec c.replaying (afterCompare s vs vq)) c.output o) :
+    (ho : refresh (galilFrame P q first) (replayDec c.replaying (afterBirth true (afterCompare s vs vq))) c.output o) :
     Tick (galilFrameS P q first) delay ⟨c, s⟩
-      ⟨{c with clock := delay, output := o, replaying := c.replaying && !P.replayExhausted (replayDec c.replaying (afterCompare s vs vq))}, replayDec c.replaying (afterCompare s vs vq)⟩ := by
-  have hcmp' : (galilFrameS P q first).compare s (afterCompare s vs vq) :=
+      ⟨{c with clock := delay, output := o, replaying := c.replaying && !P.replayExhausted (replayDec c.replaying (afterBirth true (afterCompare s vs vq)))}, replayDec c.replaying (afterBirth true (afterCompare s vs vq))⟩ := by
+  have hcmp' : (galilFrameS P q first).compare s
+      (afterBirth true (afterCompare s vs vq)) :=
     ⟨vs, vq, true, hl, hrr, ⟨fun _ => hmt, fun _ => rfl⟩, hq,
-      Or.inr (Or.inr ⟨hidle, by simp [hf], by simpa using hch⟩), rfl⟩
-  have hmt' : (galilFrameS P q first).matched (afterCompare s vs vq) := by
-    show (galilFrame P q first).matched (afterCompare s vs vq)
+      Or.inr (Or.inr ⟨hidle, by simp [hf], by simpa using hch⟩),
+      by rw [hidle, chainBorn, ChainVM.isIdle, hf]; rfl⟩
+  have hmt' : (galilFrameS P q first).matched (afterBirth true (afterCompare s vs vq)) := by
+    show GalilScaffoldInputHead.read (afterBirth true (afterCompare s vs vq)).left
+      = GalilScaffoldInputHead.read (afterBirth true (afterCompare s vs vq)).right
+    rw [afterBirth_left, afterBirth_right]
     exact hmt
   exact Tick.scan_match (F := galilFrameS P q first) (delay := delay) c s _ _ o hm hav hc
     hcmp' hmt' (matchedPlace_replayDec P q first _ _) ho
@@ -86,10 +90,10 @@ inductive FoundTick (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) :
       (hq : searchEffect P true s vq) (hf : vq.search.mode = .found)
       (hch : ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre s) (P.place s) s.center
         s.radius) vs.chain)
-      (ho : refresh (galilFrame P q first) (replayDec true (afterCompare s vs vq)) c.output o) :
+      (ho : refresh (galilFrame P q first) (replayDec true (afterBirth true (afterCompare s vs vq))) c.output o) :
       FoundTick P q first delay c s
-        {c with clock := delay, output := o, replaying := !P.replayExhausted (replayDec true (afterCompare s vs vq))}
-        (replayDec true (afterCompare s vs vq))
+        {c with clock := delay, output := o, replaying := !P.replayExhausted (replayDec true (afterBirth true (afterCompare s vs vq)))}
+        (replayDec true (afterBirth true (afterCompare s vs vq)))
 
 /-- What the found tick installs: `chainStart` plainly (background) or its
 match credit (comparison). -/
@@ -105,7 +109,7 @@ theorem foundTick_start (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ)
     exact Or.inl ⟨_, hf, background_found_chain P q first hb hidle hf⟩
   | cmp vs vq o hm hr hc ha hidle hl hrr hmt hq hf hch ho =>
     refine Or.inr ⟨vq, hf, ?_⟩
-    rw [replayDec_chain, afterCompare_chain]
+    rw [replayDec_chain, afterBirth_chain, afterCompare_chain]
     exact hch
 
 /-! ## The chain-start obligation -/
@@ -463,7 +467,7 @@ theorem idle_compare (hex : ∀ s, P.replayExhausted s = zero s.replay) (hd : 1 
     have hnez : z ≠ ChainVM.idle := by rw [hzdef]; intro h0; cases h0
     set vs : ScanVM := ⟨left s.left, right s.right, z⟩ with hvsdef
     have hmt : (galilFrame P q first).matched (scanLens.set s vs) := hmatch
-    set u : GalilVM := replayDec true (afterCompare s vs vq) with hudef
+    set u : GalilVM := replayDec true (afterBirth true (afterCompare s vs vq)) with hudef
     set o : Bool := if P.onLetter u then decide (P.leftFirst u) else c.output with hodef
     have ho : refresh (galilFrame P q first) u c.output o := by
       refine ⟨fun hl => ?_, fun hl => ?_⟩
@@ -474,7 +478,7 @@ theorem idle_compare (hex : ∀ s, P.replayExhausted s = zero s.replay) (hd : 1 
         show (if P.onLetter u then decide (P.leftFirst u) else c.output) = c.output
         rw [if_neg hl']
     have hurep : u.replay = ofNat m := by
-      rw [hudef, replayDec_true_replay, afterCompare_replay, hrp, dec_ofNat_succ]
+      rw [hudef, replayDec_true_replay, afterBirth_replay, afterCompare_replay, hrp, dec_ofNat_succ]
     have hflag : (!P.replayExhausted u) = decide (0 < m) := by
       rw [hex, hurep]
       cases m with
@@ -482,21 +486,25 @@ theorem idle_compare (hex : ∀ s, P.replayExhausted s = zero s.replay) (hd : 1 
       | succ k => rw [zero_ofNat_succ k]; simp
     have hiu : ScanInvariant raw (position u.center) (k+1) u.left u.right := by
       have h0 := matched_invariant' raw vq (vs := vs) rfl rfl hmatch hav hi
-      rw [hudef, replayDec_left, replayDec_right, replayDec_center, afterCompare_center]
+      rw [hudef, replayDec_left, replayDec_right, replayDec_center, afterBirth_left, afterBirth_right, afterBirth_center, afterCompare_center]
       exact h0
-    have hMu : MInv raw {c with clock := delay, output := o, replaying := !P.replayExhausted u} u :=
-      minv_matchR P hex o delay hr rfl hav hi hM
-    have hneu : u.chain ≠ .idle := by rw [hudef, replayDec_chain, afterCompare_chain]; exact hnez
+    have hMu : MInv raw {c with clock := delay, output := o, replaying := !P.replayExhausted u} u := by
+      have he : (!P.replayExhausted u)
+          = (!P.replayExhausted (replayDec true (afterCompare s vs vq))) := by
+        rw [hex, hex, hudef, replayDec_true_replay, afterBirth_replay, replayDec_true_replay]
+      rw [he]
+      exact minv_afterBirth true (minv_matchR P hex o delay hr rfl hav hi hM)
+    have hneu : u.chain ≠ .idle := by rw [hudef, replayDec_chain, afterBirth_chain, afterCompare_chain]; exact hnez
     have hoku : ChainOk Ok u.chain := by
-      rw [hudef, replayDec_chain, afterCompare_chain]; exact hokz
+      rw [hudef, replayDec_chain, afterBirth_chain, afterCompare_chain]; exact hokz
     have hposu : position u.right = position s.right + 1 := by
-      rw [hudef, replayDec_right, afterCompare_right]; exact hpos
-    have hCu : u.center = s.center := by rw [hudef, replayDec_center, afterCompare_center]
+      rw [hudef, replayDec_right, afterBirth_right, afterCompare_right]; exact hpos
+    have hCu : u.center = s.center := by rw [hudef, replayDec_center, afterBirth_center, afterCompare_center]
     have hfru : Frontier u := by
       intro m' hm'
       have hmm : m' = m := (ofNat_inj (hurep.symm.trans hm')).symm
       subst hmm
-      have hur : u.right = right s.right := by rw [hudef, replayDec_right, afterCompare_right]
+      have hur : u.right = right s.right := by rw [hudef, replayDec_right, afterBirth_right, afterCompare_right]
       rw [hur]
       exact right_frontier_step s.right m' hbound
     obtain ⟨es, c', t, hseg, -, hm', hc', hr', hrep', hne', hok', hM', hi', hpos', hC', hfr',

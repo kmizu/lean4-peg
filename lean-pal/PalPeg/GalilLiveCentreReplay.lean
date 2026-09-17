@@ -58,6 +58,16 @@ theorem minv_match {raw : List (Fin 2)} {c : Control} {s : GalilVM} {vs : ScanVM
   rw [hpos] at hlive
   exact leftmost_match hL hlive
 
+/-- `MInv` reads only `replay`, `right` and `center`, none of which the chain
+birth touches. -/
+theorem minv_afterBirth {raw : List (Fin 2)} {c : Control} {s : GalilVM} (b : Bool)
+    (h : MInv raw c s) : MInv raw c (afterBirth b s) := by
+  refine ⟨fun hr => ?_, fun hr => ?_⟩
+  · obtain ⟨m, hm0, hm1, hm2⟩ := h.1 hr
+    exact ⟨m, hm0, by rw [afterBirth_replay]; exact hm1,
+      by rw [afterBirth_right, afterBirth_center]; exact hm2⟩
+  · rw [afterBirth_right, afterBirth_center]; exact h.2 hr
+
 /-- A matched comparison during a replay: the counter decreases with the
 distance; when it reaches zero the right head is at the saved place. -/
 theorem minv_matchR {raw : List (Fin 2)} (P : Shared) (hex : ∀ s, P.replayExhausted s = zero s.replay)

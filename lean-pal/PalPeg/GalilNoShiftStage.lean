@@ -284,7 +284,7 @@ theorem foundRouteMC_noshift' (centre : GalilVM → Fin 3)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE (PofC centre place entry raw) qq first 2048 es
       {cF with clock := 2048, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     (cen : Fin 3) (ys : List (Fin 3)) (b : Fin 3)
     (hwatch2 : s2.chain = .watch (freshWatch sF.center cen ys b sF.radius))
     (hes0 : es.count true = 0)
@@ -326,7 +326,7 @@ theorem foundRouteMC_noshift' (centre : GalilVM → Fin 3)
   obtain ⟨hsc1, _, hrad1, _, _⟩ := watchSegE_heads P qq first 2048 hprepSeg
   have hcen2 : s2.center = sF.center := by
     have h0 := watchSegE_center P qq first 2048 hprepSeg
-    rw [afterCompare_center] at h0; exact h0
+    rw [afterBirth_center, afterCompare_center] at h0; exact h0
   have hinv2 := scan_events_invariant (hsc1 raw (position sF.center) _) hinv1
   have hne2 : s2.chain ≠ .idle := by rw [hwatch2]; intro h0; cases h0
   obtain ⟨es2, hticks, hsc2, hcen21, _, hrad2, _, _⟩ := watchSeg_events P qq first 2048 hseg hne2
@@ -372,7 +372,8 @@ theorem foundRouteMC_noshift' (centre : GalilVM → Fin 3)
     havF hidle vq hq hfound hmt ch hch hchne oF hoF hprepSeg hseg hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3
     hcmp3 hmt3 hq3 o3 ho3 w3' hbroken hmargin hlast hlag hcanon (fun R' hR' => hst R' ?_)
   have hv := hR'.2
-  rw [afterCompare_radius, inc_value, hrad2, hrad1, afterCompare_radius, inc_value, hes0] at hv
+  rw [afterCompare_radius, inc_value, hrad2, hrad1, afterBirth_radius,
+    afterCompare_radius, inc_value, hes0] at hv
   rw [hdR]
   push_cast at hv ⊢
   linarith

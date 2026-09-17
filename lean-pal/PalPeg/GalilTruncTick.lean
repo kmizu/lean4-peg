@@ -8,6 +8,23 @@ open PalPeg PalPeg.Program PalPeg.GalilScaffoldTop PalPeg.GalilScaffoldControlle
   PalPeg.GalilScaffoldChainInputSupply PegSeparation PalPeg.GalilStructuredSkeleton
 open PalPeg.GalilTickArrive PalPeg.GalilLatchTracking PalPeg.GalilArriveChain
 open PalPeg.GalilThrottledRun
+
+/-- The chain birth reset commutes with truncation: `truncVM` only shortens the
+three heads and the chain's verifier, and `afterBirth` only touches
+`periodOnly` and `cycle`. -/
+theorem truncVM_afterBirth (d : ℕ) (b : Bool) (s : GalilVM) :
+    truncVM d (afterBirth b s) = afterBirth b (truncVM d s) := by
+  cases b <;> rfl
+
+theorem truncVM_chain (d : ℕ) (s : GalilVM) :
+    (truncVM d s).chain = truncChain d s.chain := rfl
+
+/-- Truncation keeps the chain idle or non-idle, so it does not change whether
+a chain is born. -/
+theorem chainBorn_truncChain (b : Bool) (d : ℕ) (x : ChainVM) :
+    chainBorn b (truncChain d x) = chainBorn b x := by
+  cases x <;> simp [chainBorn, truncChain, ChainVM.isIdle]
+
 abbrev PH := GalilScaffoldInputHead.PlaceHead
 
 /-! ## 1. Heads -/
@@ -512,6 +529,7 @@ theorem compareFound_trunc {P : Shared} (hP : SharedTrunc raw j P) (q : ℕ) (fi
   · rw [hP.centre, hP.place]
     exact chainAt_trunc raw j hch hz
   · subst ht
+    rw [truncVM_afterBirth, truncVM_chain, chainBorn_truncChain]
     cases b <;> rfl
 
 theorem backgroundS_trunc {P : Shared} (hP : SharedTrunc raw j P) (q : ℕ) (first : Fin 9)
@@ -528,10 +546,13 @@ theorem backgroundS_trunc {P : Shared} (hP : SharedTrunc raw j P) (q : ℕ) (fir
     rw [hr]
   · rw [hP.centre, hP.place]
     exact chainAt_trunc raw j hch hz
-  · calc truncVM (raw.length - j) t
-        = truncVM (raw.length - j) (searchLens.set (scanLens.set s (scanLens.get t)) (searchLens.get t)) :=
+  · rw [truncVM_chain, chainBorn_truncChain]
+    calc truncVM (raw.length - j) t
+        = truncVM (raw.length - j) (afterBirth (chainBorn (decide ((searchLens.get t).search.mode
+              = GalilScaffoldSearchFinish.Mode.found)) s.chain)
+            (searchLens.set (scanLens.set s (scanLens.get t)) (searchLens.get t))) :=
           congrArg _ hset
-      _ = _ := rfl
+      _ = _ := by rw [truncVM_afterBirth]; rfl
 
 theorem refresh_trunc {P : Shared} (hP : SharedTrunc raw j P) (q : ℕ) (first : Fin 9)
     {s : GalilVM} {old o : Bool} (h : refresh (galilFrameS P q first) s old o) :
@@ -782,9 +803,11 @@ theorem compareFound_suf {P : Shared} {q : ℕ} {first : Fin 9} {s t : GalilVM}
   subst ht
   have hl' : SufPH raw vs.left := by rw [hl]; exact sufPH_left hs.1
   have hr' : SufPH raw vs.right := by rw [hr]; exact sufPH_right hs.2.2.1
-  cases b
-  · exact ⟨hl', hs.2.1, hr', hch'⟩
-  · exact ⟨hl', hs.2.1, hr', hch'⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rw [afterBirth_left]; cases b <;> exact hl'
+  · rw [afterBirth_center]; cases b <;> exact hs.2.1
+  · rw [afterBirth_right]; cases b <;> exact hr'
+  · rw [afterBirth_chain]; cases b <;> exact hch'
 
 theorem backgroundS_suf {P : Shared} (q : ℕ) (first : Fin 9) {s t : GalilVM}
     (hs : SufVM raw s) (h : backgroundS P q first s t) : SufVM raw t := by

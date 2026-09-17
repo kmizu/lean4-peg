@@ -131,10 +131,16 @@ theorem compare_progress_gen (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ
     let vs : ScanVM := ⟨GalilScaffoldInputHead.left s.left,
       GalilScaffoldChainVerifier.right s.right, z⟩
     have hmt0 : (galilFrame P q first).matched (scanLens.set s vs) := hmt
-    have hcmp : (galilFrameS P q first).compare s (afterCompare s vs vq) :=
+    have hcmp : (galilFrameS P q first).compare s
+        (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)) :=
       ⟨vs, vq, true, rfl, rfl, ⟨fun _ => hmt0, fun _ => rfl⟩, hq, hz, rfl⟩
-    have hmt1 : (galilFrameS P q first).matched (afterCompare s vs vq) := hmt
-    let s'' : GalilVM := replayDec c.replaying (afterCompare s vs vq)
+    have hmt1 : (galilFrameS P q first).matched
+        (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)) := by
+      show GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).right
+      rw [afterBirth_left, afterBirth_right]
+      exact hmt
+    let s'' : GalilVM := replayDec c.replaying (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq))
     let o : Bool := if P.onLetter s'' then decide (P.leftFirst s'') else c.output
     have ho : refresh (galilFrameS P q first) s'' c.output o := by
       refine ⟨fun hl => ?_, fun hl => ?_⟩
@@ -152,15 +158,23 @@ theorem compare_progress_gen (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ
     let vs : ScanVM := ⟨GalilScaffoldInputHead.left s.left,
       GalilScaffoldChainVerifier.right s.right, z⟩
     have hmt0 : ¬ (galilFrame P q first).matched (scanLens.set s vs) := hmt
-    have hcmp : (galilFrameS P q first).compare s (afterMismatch s vs vq) :=
+    have hcmp : (galilFrameS P q first).compare s
+        (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) :=
       ⟨vs, vq, false, rfl, rfl, Iff.intro (fun h0 => by cases h0) (fun h0 => absurd h0 hmt0),
         hq, hz, rfl⟩
-    have hmt1 : ¬ (galilFrameS P q first).matched (afterMismatch s vs vq) := hmt
-    by_cases hg : P.shiftGuard (afterMismatch s vs vq)
-    · obtain ⟨t, hb⟩ := hshift (afterMismatch s vs vq) hg
+    have hmt1 : ¬ (galilFrameS P q first).matched
+        (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) := by
+      intro h0
+      apply hmt
+      have h1 : GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)).right := h0
+      rw [afterBirth_left, afterBirth_right] at h1
+      exact h1
+    by_cases hg : P.shiftGuard (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq))
+    · obtain ⟨t, hb⟩ := hshift (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) hg
       exact ⟨_, Tick.scan_shift (F := galilFrameS P q first) (delay := delay) c s _ t hm
         (Or.inr hav') hc hcmp hmt1 hr hg hb⟩
-    · obtain ⟨t, hb⟩ := hfall (afterMismatch s vs vq)
+    · obtain ⟨t, hb⟩ := hfall (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq))
       exact ⟨_, Tick.scan_fallback (F := galilFrameS P q first) (delay := delay) c s _ t hm
         (Or.inr hav') hc hcmp hmt1 (Or.inr hg) hr hb⟩
 

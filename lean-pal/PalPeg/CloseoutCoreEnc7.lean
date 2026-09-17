@@ -484,7 +484,7 @@ def NAMED_scanShape (M : Steps P) : Prop :=
   ∀ m : Mirrored1 P, m.vm.ctl.mode = .scan → ¬ Starved m.vm →
     ((∃ ch : ChainVM, (M.scan m).vm = PalPeg.LocalTick1.matchVm ch m.vm ∧
         (M.scan m).mirL = m.mirL) ∨
-     (∃ (ch : ChainVM) (c : Control), (M.scan m).vm = PalPeg.LocalTick1.bgState ch c m.vm ∧
+     (∃ (ch : ChainVM) (c : Control), (M.scan m).vm = PalPeg.LocalTick1.bgState m.vm.chain ch c m.vm ∧
         (M.scan m).mirL = m.mirL))
 
 /-- **Residual: the matched half of a `.scan` tick, tape by tape.**  `matchVm`
@@ -503,7 +503,7 @@ chain. -/
 def NAMED_scanBgChain {Q : Type} {t : ℕ} (enc : Mirrored1 P → Q × (Fin t → STape Γc))
     (M : Steps P) : Prop :=
   ∀ (m : Mirrored1 P) (j : Fin t) (ch : ChainVM) (c : Control),
-    (M.scan m).vm = PalPeg.LocalTick1.bgState ch c m.vm → (M.scan m).mirL = m.mirL →
+    (M.scan m).vm = PalPeg.LocalTick1.bgState m.vm.chain ch c m.vm → (M.scan m).mirL = m.mirL →
       ∃ (w : Window Γc Kc) (d : ℤ), |d| ≤ (Kc : ℤ) ∧
         TEq ((enc (M.scan m)).2 j) (sweep blankc Kc ((enc m).2 j) w d)
 

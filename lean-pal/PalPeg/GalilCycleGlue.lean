@@ -196,8 +196,8 @@ theorem foundCycle_of_constructions
         ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre t) (P.place t) t.center t.radius)
           ch ∧ ch ≠ ChainVM.idle)
     -- GAP: the state the chain starts in satisfies the watch-phase invariant.
-    (hKinv : ∀ (t : GalilVM) (vq : SearchVM) (ch : ChainVM), K.Inv (afterCompare t
-      ⟨left t.left, right t.right, ch⟩ vq))
+    (hKinv : ∀ (t : GalilVM) (vq : SearchVM) (ch : ChainVM),
+      K.Inv (afterBirth true (afterCompare t ⟨left t.left, right t.right, ch⟩ vq)))
     -- GAP: the watch phase ends at a mismatch with the chain watching at lag zero
     -- (`WatchStop.mismatchWatch`), at clock one.
     (hwatch : ∀ (c : Control) (t : GalilVM), WatchStop P qq first c t →
@@ -273,12 +273,12 @@ theorem foundCycle_of_constructions
   -- (2) the chain start and the exit output of the found comparison
   obtain ⟨ch, hchm, hchne⟩ := hch sF vq
   obtain ⟨oF, hoF⟩ := refresh_frame_exists P qq first
-    (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output
+    (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output
   -- (3) the preparation and watch segments
   obtain ⟨cM, sM, hprepSeg, hseg, _hinvM, hmM, hrM, _hclkM, hstop⟩ :=
     watchSegE_watchSeg_construct P qq first delay hd K fuel2
       {cF with clock := delay, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq))
       (hKinv sF vq ch) hmF rfl hd
   obtain ⟨hcM, havM, w, hsM, hz, vs, vq', hcmp, hmis, hq'⟩ := hwatch cM sM hstop
   -- (4) the shift phase
@@ -301,7 +301,7 @@ theorem foundCycle_of_constructions
   obtain ⟨⟨cen3, r3, hinv3⟩, hmargin, hlast, hlag⟩ := hterm s3 vs3 vq3 w3' hbr3
   exact ⟨a, ls, rs, qs, gap, es0, cF, sF, vq, ch, oF, [],
     {cF with clock := delay, output := oF, replaying := false},
-    afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq, cM, sM, h, w, vs, vq', s2', t', v, cyc,
+    afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq), cM, sM, h, w, vs, vq', s2', t', v, cyc,
     o, org, lower, span, m, c', s', n, c3, s3, w3, vs3, vq3, o3, cen3, r3, w3', entry,
     hP, hP', hex, hraw, hout0, hseg0, hmF, hrF, hcF, havF, hidleF, hcenF, hq, hfnd, hmt, hchm,
     hchne, hoF, hprepSeg, hseg, hmM, hrM, hcM, hsM, hz, havM, hcmp, hmis, hq', hg, hb, hs2', hi2,

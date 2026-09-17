@@ -65,7 +65,8 @@ theorem scan_background (P : Shared) (q : ℕ) (first : Fin 9) {s : GalilVM}
     (fun v => chainAt_exists false (decide (v.search.mode = .found)) (v.dp.config.tapes 11)
       (P.centre s) (P.place s) s.center s.radius s.chain hready)
   obtain ⟨hc, _, hpo⟩ := background_only P q first hb w hs hz
-  obtain ⟨hl, hr, _, hcen, _, _, _, hcy, _⟩ := backgroundS_fields P q first hb
+  obtain ⟨hl, hr, _, hcen, _, _, _, -, _⟩ := backgroundS_fields P q first hb
+  have hcy := (backgroundS_periodOnly_of_ne_idle P q first hb (by rw [hs]; intro h0; cases h0)).2
   exact ⟨s', hb, hc, hpo, hcy, hcen, hr, hl⟩
 
 /-- The output refresh of `galilFrame`, built explicitly. -/

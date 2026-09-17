@@ -152,7 +152,7 @@ theorem round_next (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) (h : ℕ
     exact h0
   have hcmpS : (galilFrameS P q first).compare s1 (afterMismatch s1 vs vq) :=
     ⟨vs, vq, false, hl, hr, Iff.intro (fun h0 => by cases h0) (fun h0 => absurd h0 hmis), hq,
-      Or.inl ⟨hne1, ht2⟩, rfl⟩
+      Or.inl ⟨hne1, ht2⟩, by rw [hs1]; rfl⟩
   have hmisS : ¬ (galilFrameS P q first).matched (afterMismatch s1 vs vq) := by
     intro h0
     apply hmatch0

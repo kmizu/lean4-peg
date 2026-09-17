@@ -67,7 +67,8 @@ theorem first_shift_stepsAll (raw : List (Fin 2)) (P : Shared) (hP : P.onLetter 
     exact h0
   have hcmpS : (galilFrameS P q first).compare s1 (afterMismatch s1 vs vq) :=
     ⟨vs, vq, false, hl, hr, Iff.intro (fun h0 => by cases h0) (fun h0 => absurd h0 hmis), hq,
-      Or.inl ⟨hne1, ht2⟩, rfl⟩
+      Or.inl ⟨hne1, ht2⟩,
+      by simp [afterBirth_of_ne_idle (found := decide (vq.search.mode = .found)) hne1]⟩
   have hmisS : ¬ (galilFrameS P q first).matched (afterMismatch s1 vs vq) := by
     intro h0
     apply hmatch0
@@ -116,11 +117,12 @@ theorem life_stepsAll (raw : List (Fin 2)) (P : Shared) (hP : P.onLetter = onLet
     (ch : ChainVM)
     (hch : ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre sF) (P.place sF) sF.center sF.radius) ch)
     (hchne : ch ≠ .idle) (oF : Bool)
-    (hoF : refresh (galilFrame P qq first) (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF)
+    (hoF : refresh (galilFrame P qq first)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output oF)
     -- the preparation and the watch
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE P qq first delay es {cF with clock := delay, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c1 : Control} {s1 : GalilVM} (hseg : WatchSeg P qq first delay c2 s2 c1 s1)
     -- the terminal comparison and the first shift
     (h : ℕ) (hm1 : c1.mode = .scan) (hr1 : c1.replaying = false) (hc1 : c1.clock = 1)
@@ -158,7 +160,10 @@ theorem life_stepsAll (raw : List (Fin 2)) (P : Shared) (hP : P.onLetter = onLet
       ⟨{c3 with clock := delay, output := o3, replaying := false}, afterCompare s3 vs3 vq3⟩ := by
   -- the found tick
   have htickF := found_start_match P qq first delay cF sF hmF hrF hcF havF hidle vq hq hfound hmt ch hch oF hoF
-  obtain ⟨hinv1, hout1⟩ := outputRel_matched_refresh' raw P hP hP' qq first vq rfl rfl hmt havF hscan cF.output oF hoF
+  have hoF' : refresh (galilFrame P qq first)
+      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF :=
+    (refresh_afterBirth raw P hP hP' qq first true _ _ _).mp hoF
+  obtain ⟨hinv1, hout1⟩ := outputRel_matched_refresh' raw P hP hP' qq first vq rfl rfl hmt havF hscan cF.output oF hoF'
     {cF with clock := delay, output := oF, replaying := false} rfl
   -- the preparation
   obtain ⟨k1, hst1⟩ := watchSegE_stepsAll raw P hP hP' qq first delay hprepSeg cen (R+1) hinv1 hout1

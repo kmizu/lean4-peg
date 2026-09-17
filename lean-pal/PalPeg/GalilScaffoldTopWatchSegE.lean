@@ -180,7 +180,7 @@ theorem watchSegE_events (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) {e
   | wait c s s' _ _ _ hb _ ih =>
     have ht := backgroundS_chainTick P q first hb hne
     obtain ⟨hch, hsc, hcen, hpo, hrad, hrc, hlc⟩ := ih (chainTick_ne_idle' ht hne)
-    obtain ⟨hl, hr, hcen', hpo', hrad', hlen'⟩ := background_frame P q first hb
+    obtain ⟨hl, hr, hcen', hpo', hrad', hlen'⟩ := background_frame_ne_idle P q first hb hne
     refine ⟨.cons ht hch, fun raw c0 r => ?_, by rw [hcen, hcen'], by rw [hpo, hpo'],
       by rw [hrad, hrad']; simp, fun h0 => hrc (by rw [hrad']; exact h0), fun h0 => hlc (by rw [hlen']; exact h0)⟩
     have := hsc raw c0 r
@@ -189,7 +189,7 @@ theorem watchSegE_events (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) {e
   | count c s s' _ _ _ _ hb _ ih =>
     have ht := backgroundS_chainTick P q first hb hne
     obtain ⟨hch, hsc, hcen, hpo, hrad, hrc, hlc⟩ := ih (chainTick_ne_idle' ht hne)
-    obtain ⟨hl, hr, hcen', hpo', hrad', hlen'⟩ := background_frame P q first hb
+    obtain ⟨hl, hr, hcen', hpo', hrad', hlen'⟩ := background_frame_ne_idle P q first hb hne
     refine ⟨.cons ht hch, fun raw c0 r => ?_, by rw [hcen, hcen'], by rw [hpo, hpo'],
       by rw [hrad, hrad']; simp, fun h0 => hrc (by rw [hrad']; exact h0), fun h0 => hlc (by rw [hlen']; exact h0)⟩
     have := hsc raw c0 r

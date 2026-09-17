@@ -93,8 +93,9 @@ theorem compare_heads {s s' : GalilVM}
       s'.right = GalilScaffoldChainVerifier.right s.right ∧ s'.center = s.center := by
   obtain ⟨vs, vq, a, hvl, hvr, -, -, -, hteq⟩ :
     compareFound (sharedC onLetter leftFirst centre place entry) q first s s' := hcmp
-  exact ⟨by rw [hteq]; cases a <;> exact hvl, by rw [hteq]; cases a <;> exact hvr,
-    by rw [hteq]; cases a <;> rfl⟩
+  exact ⟨by rw [hteq, afterBirth_left]; cases a <;> exact hvl,
+    by rw [hteq, afterBirth_right]; cases a <;> exact hvr,
+    by rw [hteq, afterBirth_center]; cases a <;> rfl⟩
 
 
 /-! ## 3. One tick -/

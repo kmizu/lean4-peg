@@ -59,7 +59,10 @@ theorem readyField2_shift {w : List (Fin 2)} {n n' : ℕ} {c : Control} {s s' t 
   obtain ⟨vs, vq, a, -, -, -, hse, hch, hs'⟩ := hcmp
   obtain ⟨wch, -, ht⟩ : beginShiftVM' s' t := hb
   have hget : searchLens.get t = vq := by
-    subst ht; subst hs'; cases a <;> rfl
+    subst ht; subst hs'
+    cases a <;>
+      simp [afterBirth_search, afterBirth_dp, afterBirth_lower, afterBirth_walker,
+        afterCompare, afterMismatch, searchLens, scanLens]
   have hp : ReadyPacedS (searchLens.get t) n' 0 := by
     rw [hget]
     by_cases hidle : s.chain = ChainVM.idle

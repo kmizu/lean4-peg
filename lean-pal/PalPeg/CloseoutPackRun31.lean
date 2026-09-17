@@ -214,12 +214,19 @@ theorem shiftPal_of_chainRound {w : List (Fin 2)} {c : Control} {s : GalilVM}
   cases a with
   | true =>
     rw [if_pos rfl] at hteq
-    exact H_matched s' hcmp (hteq ▸ hiff.1 rfl) wch hchain hg r₀ hi
+    refine H_matched s' hcmp ?_ wch hchain hg r₀ hi
+    rw [hteq]
+    show GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).left
+      = GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).right
+    rw [afterBirth_left, afterBirth_right]
+    exact hiff.1 rfl
   | false =>
     rw [if_neg (by simp)] at hteq
-    have hchain' : vs.chain = .watch wch := by rw [hteq] at hchain; exact hchain
+    have hchain' : vs.chain = .watch wch := by rw [hteq, afterBirth_chain] at hchain; exact hchain
     rcases chainAt_false_watch hch hchain' with ⟨w0, hw0, hint⟩ | hnot
-    · -- the chain was watching `w0` at `s`
+    · -- the chain was watching `w0` at `s`, so it is not idle and no chain is born
+      have hne : s.chain ≠ ChainVM.idle := by rw [hw0]; intro h0; cases h0
+      rw [afterBirth_of_ne_idle hne] at hteq
       obtain ⟨C, R, used, hI⟩ := hCR hm hr hpo w0 hw0
       have hz := hI.caught.lagZero
       have hwe : wch = w0 := internal_of_zero hz hint
@@ -358,7 +365,13 @@ theorem chainRound_tick {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
     obtain ⟨hl, hr, hch, -, hpo, -, -, hcyc, -, -, -, -⟩ :=
       backgroundS_fields (PofC centre place entry w) q first hb
     rcases chainAt_false_watch hch hchain with ⟨w0, hw0, hint⟩ | hnot
-    · obtain ⟨C, R, used, hI⟩ := hCR hm' hr' (hpo ▸ hpo') w0 hw0
+    · have hne : s.chain ≠ ChainVM.idle := by rw [hw0]; intro h0; cases h0
+      have hb0 : chainBorn (decide ((searchLens.get t).search.mode
+          = GalilScaffoldSearchFinish.Mode.found)) s.chain = false := by
+        unfold chainBorn
+        cases h0 : s.chain <;> simp_all [ChainVM.isIdle]
+      rw [hb0, if_neg (by decide)] at hpo hcyc
+      obtain ⟨C, R, used, hI⟩ := hCR hm' hr' (hpo ▸ hpo') w0 hw0
       have hwe := internal_of_zero hI.caught.lagZero hint
       subst hwe
       exact ⟨C, R, used, roundScan_transport hI hchain hl hr hcyc⟩
@@ -368,7 +381,13 @@ theorem chainRound_tick {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
     obtain ⟨hl, hr, hch, -, hpo, -, -, hcyc, -, -, -, -⟩ :=
       backgroundS_fields (PofC centre place entry w) q first hb
     rcases chainAt_false_watch hch hchain with ⟨w0, hw0, hint⟩ | hnot
-    · obtain ⟨C, R, used, hI⟩ := hCR hm' hr' (hpo ▸ hpo') w0 hw0
+    · have hne : s.chain ≠ ChainVM.idle := by rw [hw0]; intro h0; cases h0
+      have hb0 : chainBorn (decide ((searchLens.get t).search.mode
+          = GalilScaffoldSearchFinish.Mode.found)) s.chain = false := by
+        unfold chainBorn
+        cases h0 : s.chain <;> simp_all [ChainVM.isIdle]
+      rw [hb0, if_neg (by decide)] at hpo hcyc
+      obtain ⟨C, R, used, hI⟩ := hCR hm' hr' (hpo ▸ hpo') w0 hw0
       have hwe := internal_of_zero hI.caught.lagZero hint
       subst hwe
       exact ⟨C, R, used, roundScan_transport hI hchain hl hr hcyc⟩
@@ -397,15 +416,22 @@ theorem chainRound_tick {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
     cases a with
     | false =>
       rw [if_neg (by simp)] at hteq
-      subst hteq
-      exact absurd (hiff.2 hmt) (by simp)
+      refine absurd (hiff.2 ?_) (by simp)
+      rw [hteq] at hmt
+      have h0 : GalilScaffoldInputHead.read (afterBirth _ (afterMismatch s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth _ (afterMismatch s vs vq)).right := hmt
+      rw [afterBirth_left, afterBirth_right] at h0
+      exact h0
     | true =>
       rw [if_pos rfl] at hteq
-      subst hteq
-      have hchain' : vs.chain = .watch wch := hchain
-      have hpo : s.periodOnly = true := hpo'
+      have hchain' : vs.chain = .watch wch := by
+        rw [hteq, afterBirth_chain] at hchain; exact hchain
       rcases chainAt_true_watch hch hchain' with ⟨w0, w1, hw0, hint, hout⟩ | hnot
-      · obtain ⟨C, R, used, hI⟩ := hCR hm hrep hpo w0 hw0
+      · have hne : s.chain ≠ ChainVM.idle := by rw [hw0]; intro h0; cases h0
+        rw [afterBirth_of_ne_idle hne] at hteq
+        have hpo : s.periodOnly = true := by rw [hteq] at hpo'; exact hpo'
+        subst hteq
+        obtain ⟨C, R, used, hI⟩ := hCR hm hrep hpo w0 hw0
         have hz := hI.caught.lagZero
         have hwe := internal_of_zero hz hint
         subst w1

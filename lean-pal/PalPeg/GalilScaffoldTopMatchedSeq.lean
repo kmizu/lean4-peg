@@ -51,7 +51,8 @@ theorem background_only (P : Shared) (q : ℕ) (first : Fin 9) {s s' : GalilVM}
     (hb : (galilFrameS P q first).background s s') (w : GalilScaffoldChainWatch.State)
     (hs : s.chain = .watch w) (hz : zero w.lag = true) :
     s'.chain = .watch w ∧ toOnly s' w = toOnly s w ∧ s'.periodOnly = s.periodOnly := by
-  obtain ⟨hl, hr, _, hcen, hpo, hrad, _, hcy, _⟩ := backgroundS_fields P q first hb
+  obtain ⟨hl, hr, _, hcen, -, hrad, _, -, _⟩ := backgroundS_fields P q first hb
+  obtain ⟨hpo, hcy⟩ := backgroundS_periodOnly_of_ne_idle P q first hb (by rw [hs]; intro h0; cases h0)
   have ht := backgroundS_chainTick P q first hb (by rw [hs]; intro h0; cases h0)
   rw [hs] at ht
   have hc := chainTick_false_idle hz ht

@@ -172,7 +172,7 @@ theorem round_stepsAll (raw : List (Fin 2)) (P : Shared) (hP : P.onLetter = onLe
     exact h0
   have hcmpS : (galilFrameS P q first).compare s1 (afterMismatch s1 vs vq) :=
     ⟨vs, vq, false, hl, hr, Iff.intro (fun h0 => by cases h0) (fun h0 => absurd h0 hmis), hq,
-      Or.inl ⟨hne1, ht2⟩, rfl⟩
+      Or.inl ⟨hne1, ht2⟩, (afterBirth_of_ne_idle hne1).symm⟩
   have hmisS : ¬ (galilFrameS P q first).matched (afterMismatch s1 vs vq) := by
     intro h0
     apply hmatch0

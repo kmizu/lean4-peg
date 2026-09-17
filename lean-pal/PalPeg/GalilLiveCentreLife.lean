@@ -45,11 +45,12 @@ theorem life_minv (raw : List (Fin 2)) (P : Shared)
     (ch : ChainVM)
     (hch : ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre sF) (P.place sF) sF.center sF.radius) ch)
     (hchne : ch ≠ .idle) (oF : Bool)
-    (hoF : refresh (galilFrame P qq first) (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF)
+    (hoF : refresh (galilFrame P qq first)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output oF)
     -- the preparation and the watch
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE P qq first delay es {cF with clock := delay, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c1 : Control} {s1 : GalilVM} (hseg : WatchSeg P qq first delay c2 s2 c1 s1)
     -- the terminal comparison and the first shift
     (h : ℕ) (hm1 : c1.mode = .scan) (hr1 : c1.replaying = false) (hc1 : c1.clock = 1)
@@ -107,14 +108,14 @@ theorem life_minv (raw : List (Fin 2)) (P : Shared)
   have hM2 := minv_watchSegE _ P hex qq first delay hprepSeg (R+1) hinv1 hM1
   have hcen2 : s2.center = sF.center := by
     have h0 := watchSegE_center P qq first delay hprepSeg
-    rw [afterCompare_center] at h0; exact h0
+    rw [afterBirth_center, afterCompare_center] at h0; exact h0
   have hinv2 : ScanInvariant ((a :: ls).reverse ++ rs ++ q) (position sF.center)
       (R+1+es.count true) s2.left s2.right :=
     scan_events_invariant ((watchSegE_heads P qq first delay hprepSeg).1 _ (position sF.center) (R+1))
       hinv1
   -- the watch segment
   have hne2 : s2.chain ≠ .idle :=
-    watchSegE_ne_idle P qq first delay hprepSeg (by rw [afterCompare_chain]; exact hchne)
+    watchSegE_ne_idle P qq first delay hprepSeg (by rw [afterBirth_chain, afterCompare_chain]; exact hchne)
   obtain ⟨es2, _, hsc2, hcen21, _⟩ := watchSeg_events P qq first delay hseg hne2
   have hM3 := minv_watchSeg _ P qq first delay hseg _ (by rw [hcen2]; exact hinv2) hM2
   have hi1 : ScanInvariant ((a :: ls).reverse ++ rs ++ q) (position sF.center)

@@ -103,7 +103,7 @@ theorem compareFound_chainTick {P : Shared} {s s'' : GalilVM}
     ∃ a : Bool, ChainTick a s.chain s''.chain := by
   obtain ⟨vs, vq, a, -, -, -, -, hch, hteq⟩ : compareFound P q first s s'' := hcmp
   have hc : s''.chain = vs.chain := by
-    rw [hteq]; cases a <;> rfl
+    rw [hteq, afterBirth_of_ne_idle hni]; cases a <;> rfl
   rw [hc]
   rcases hch with ⟨-, ht⟩ | ⟨hi, -⟩ | ⟨hi, -⟩
   · exact ⟨a, ht⟩

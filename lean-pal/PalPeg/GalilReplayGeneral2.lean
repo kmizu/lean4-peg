@@ -761,7 +761,7 @@ theorem idle_compare2 (hex : ∀ s, P.replayExhausted s = zero s.replay) (hd : 1
     have hnez : z ≠ ChainVM.idle := chainPart_ne_idle hz
     set vs : ScanVM := ⟨left s.left, right s.right, z⟩ with hvsdef
     have hmt : (galilFrame P q first).matched (scanLens.set s vs) := hmatch
-    set u : GalilVM := replayDec true (afterCompare s vs vq) with hudef
+    set u : GalilVM := replayDec true (afterBirth true (afterCompare s vs vq)) with hudef
     set o : Bool := if P.onLetter u then decide (P.leftFirst u) else c.output with hodef
     have ho : refresh (galilFrame P q first) u c.output o := by
       refine ⟨fun hl => ?_, fun hl => ?_⟩
@@ -772,7 +772,7 @@ theorem idle_compare2 (hex : ∀ s, P.replayExhausted s = zero s.replay) (hd : 1
         show (if P.onLetter u then decide (P.leftFirst u) else c.output) = c.output
         rw [if_neg hl']
     have hurep : u.replay = ofNat m := by
-      rw [hudef, replayDec_true_replay, afterCompare_replay, hrp, dec_ofNat_succ]
+      rw [hudef, replayDec_true_replay, afterBirth_replay, afterCompare_replay, hrp, dec_ofNat_succ]
     have hflag : (!P.replayExhausted u) = decide (0 < m) := by
       rw [hex, hurep]
       cases m with
@@ -780,16 +780,20 @@ theorem idle_compare2 (hex : ∀ s, P.replayExhausted s = zero s.replay) (hd : 1
       | succ k => rw [zero_ofNat_succ k]; simp
     have hiu : ScanInvariant raw (position u.center) (k+1) u.left u.right := by
       have h0 := matched_invariant' raw vq (vs := vs) rfl rfl hmatch hav hi
-      rw [hudef, replayDec_left, replayDec_right, replayDec_center, afterCompare_center]
+      rw [hudef, replayDec_left, replayDec_right, replayDec_center, afterBirth_left, afterBirth_right, afterBirth_center, afterCompare_center]
       exact h0
-    have hMu : MInv raw {c with clock := delay, output := o, replaying := !P.replayExhausted u} u :=
-      minv_matchR P hex o delay hr rfl hav hi hM
-    have hneu : u.chain ≠ .idle := by rw [hudef, replayDec_chain, afterCompare_chain]; exact hnez
-    have hur : u.right = right s.right := by rw [hudef, replayDec_right, afterCompare_right]
-    have hCu : u.center = s.center := by rw [hudef, replayDec_center, afterCompare_center]
+    have hMu : MInv raw {c with clock := delay, output := o, replaying := !P.replayExhausted u} u := by
+      have he : (!P.replayExhausted u)
+          = (!P.replayExhausted (replayDec true (afterCompare s vs vq))) := by
+        rw [hex, hex, hudef, replayDec_true_replay, afterBirth_replay, replayDec_true_replay]
+      rw [he]
+      exact minv_afterBirth true (minv_matchR P hex o delay hr rfl hav hi hM)
+    have hneu : u.chain ≠ .idle := by rw [hudef, replayDec_chain, afterBirth_chain, afterCompare_chain]; exact hnez
+    have hur : u.right = right s.right := by rw [hudef, replayDec_right, afterBirth_right, afterCompare_right]
+    have hCu : u.center = s.center := by rw [hudef, replayDec_center, afterBirth_center, afterCompare_center]
     have hpu : PartS raw B u := by
       unfold PartS
-      rw [hudef, replayDec_chain, afterCompare_chain, ← hudef, hur, hpos, hCu]; exact hz
+      rw [hudef, replayDec_chain, afterBirth_chain, afterCompare_chain, ← hudef, hur, hpos, hCu]; exact hz
     have hbdu : Bnd B u := by
       intro m' hm'
       have hmm : m' = m := (ofNat_inj (hurep.symm.trans hm')).symm

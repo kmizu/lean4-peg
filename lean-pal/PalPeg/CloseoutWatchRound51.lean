@@ -58,7 +58,7 @@ theorem foundCtx_landing_chain (centre : GalilVM → Fin 3)
     BlockInv sP.chain := by
   obtain ⟨es0, cF, sF, vq, ch, oF, a, ls, rs, qw, gap, -, -, -, -, -, -, -, -, -, -, -, hch, -, -,
     -, hsP⟩ := hctx
-  rw [hsP, afterCompare_chain]
+  rw [hsP, afterBirth_chain, afterCompare_chain]
   exact blockInv_matched hch (blockInv_chainStart _ _ _ _ _)
 
 /-! ## 2. `WatchFreshC` is false -/

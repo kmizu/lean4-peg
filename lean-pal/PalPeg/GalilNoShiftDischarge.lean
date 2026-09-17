@@ -133,19 +133,19 @@ theorem foundRouteMC_noshift_d (centre : GalilVM → Fin 3)
       ((PofC centre place entry raw).place sF) sF.center sF.radius) ch)
     (hchne : ch ≠ .idle) (oF : Bool)
     (hoF : refresh (galilFrame (PofC centre place entry raw) qq first)
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output oF)
     -- the continuation after the preparation, over the landing it produces
     (hcont : ∀ (c2 : Control) (s2 : GalilVM),
       WatchSegE (PofC centre place entry raw) qq first 2048 (List.replicate (2*h+2) false)
         {cF with clock := 2048, output := oF, replaying := false}
-        (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2 →
+        (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2 →
       s2.chain = .watch (freshWatch sF.center cen ys b sF.radius) →
       c2.mode = .scan → c2.replaying = false → c2.output = oF →
       2048 - (2*h+2) ≤ c2.clock → c2.clock ≤ 2048 →
-      s2.left = (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq).left →
-      s2.right = (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq).right →
-      s2.center = (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq).center →
-      s2.radius = (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq).radius →
+      s2.left = (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)).left →
+      s2.right = (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)).right →
+      s2.center = (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)).center →
+      s2.radius = (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)).radius →
       ∃ (c3 : Control) (s3 : GalilVM) (w3 : GalilScaffoldChainWatch.State) (vs3 : ScanVM)
         (vq3 : SearchVM) (o3 : Bool) (w3' : GalilScaffoldChainWatch.State),
         WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3 ∧
@@ -166,13 +166,14 @@ theorem foundRouteMC_noshift_d (centre : GalilVM → Fin 3)
       ∃ (s3 : GalilVM) (vs3 : ScanVM) (vq3 : SearchVM),
         sT.right = (afterCompare s3 vs3 vq3).right := by
   classical
-  have hchain : (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq).chain = ch :=
-    afterCompare_chain _ _ _
+  have hchain : (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)).chain
+      = ch := by
+    rw [afterBirth_chain]; exact afterCompare_chain _ _ _
   obtain ⟨c2, s2, hseg2, hchz, hm2, hr2, ho2, hlo, hhi, hl2, hr2', hc2, hrad2, _, _, _, _⟩ :=
     prep_segment_construct_bg (PofC centre place entry raw) qq first 2048 (vq.dp.config.tapes 11)
       cen p q' sF.center sF.radius u h ys b hcopy hu hpos hfocus hback ch hch
       {cF with clock := 2048, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) hmF rfl rfl hchain hh
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) hmF rfl rfl hchain hh
   have hwatch2 : s2.chain = .watch (freshWatch sF.center cen ys b sF.radius) := by
     rw [hchz, freshWatch_eq _ _ _ _ _ h hlen]
   obtain ⟨c3, s3, w3, vs3, vq3, o3, w3', hseg, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3,

@@ -118,7 +118,7 @@ def PrepBirthLagC' (P : Shared) (q : ℕ) (first : Fin 9) (c0 : Control) (r : Ga
     searchEffect P true sF vq → vq.search.mode = .found →
     ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre sF) (P.place sF)
       sF.center sF.radius) ch →
-    sP = afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq →
+    sP = afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) →
     ∀ (c1 : Control) (s1 : GalilVM) (w : GalilScaffoldChainWatch.State),
       LandingL P q first cP sP c1 s1 → c1.clock = 1 → s1.chain = ChainVM.watch w →
       ∃ (m : ℤ) (w0 : GalilScaffoldChainWatch.State) (es2 : List Bool) (cb : Control)

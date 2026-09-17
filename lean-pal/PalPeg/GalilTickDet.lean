@@ -226,8 +226,10 @@ the restart goes to `chain = .idle`.  Hence two distinct successors. -/
 theorem backgroundS_stutter (Pw : Shared) (qq : ℕ) (firstT : Fin 9) {s : GalilVM}
     (hne : s.chain ≠ .idle) (hst : ChainStep s.chain s.chain) :
     (galilFrameS Pw qq firstT).background s s := by
-  refine ⟨rfl, rfl, Or.inr ⟨hne, rfl⟩, Or.inl ⟨hne, ⟨s.chain, hst, ?_⟩⟩, rfl⟩
-  simp
+  refine ⟨rfl, rfl, Or.inr ⟨hne, rfl⟩, Or.inl ⟨hne, ⟨s.chain, hst, ?_⟩⟩, ?_⟩
+  · simp
+  · rw [afterBirth_of_ne_idle hne]
+    rfl
 
 /-- **(a) The scan mode is nondeterministic whenever a restart is enabled.** -/
 theorem scan_restart_not_det (Pw : Shared) (qq : ℕ) (firstT : Fin 9) (delay : ℕ)

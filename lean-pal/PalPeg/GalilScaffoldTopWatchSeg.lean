@@ -62,10 +62,23 @@ theorem afterCompare_periodOnly (s : GalilVM) (vs : ScanVM) (vq : SearchVM) :
 theorem background_frame (P : Shared) (q : ℕ) (first : Fin 9) {s s' : GalilVM}
     (hb : (galilFrameS P q first).background s s') :
     s'.left = s.left ∧ s'.right = s.right ∧
-      s'.center = s.center ∧ s'.periodOnly = s.periodOnly ∧ s'.radius = s.radius ∧
+      s'.center = s.center ∧
+      s'.periodOnly =
+        (if chainBorn (decide ((searchLens.get s').search.mode = .found)) s.chain then false
+          else s.periodOnly) ∧ s'.radius = s.radius ∧
       s'.length = s.length := by
   obtain ⟨hl, hr, _, hcen, hpo, hrad, hlen, _⟩ := backgroundS_fields P q first hb
   exact ⟨hl, hr, hcen, hpo, hrad, hlen⟩
+
+/-- `M-periodOnly`: on a chain that is alive no birth happens, so the background
+really does preserve `periodOnly` — the pre-fix form of `background_frame`. -/
+theorem background_frame_ne_idle (P : Shared) (q : ℕ) (first : Fin 9) {s s' : GalilVM}
+    (hb : (galilFrameS P q first).background s s') (hne : s.chain ≠ .idle) :
+    s'.left = s.left ∧ s'.right = s.right ∧
+      s'.center = s.center ∧ s'.periodOnly = s.periodOnly ∧ s'.radius = s.radius ∧
+      s'.length = s.length := by
+  obtain ⟨hl, hr, hcen, _, hrad, hlen⟩ := background_frame P q first hb
+  exact ⟨hl, hr, hcen, (backgroundS_periodOnly_of_ne_idle P q first hb hne).1, hrad, hlen⟩
 
 /-- A chain tick never returns to `idle`. -/
 theorem chainTick_ne_idle' {a : Bool} {x z : ChainVM} (h : ChainTick a x z) (hx : x ≠ .idle) :
@@ -95,7 +108,7 @@ theorem watchSeg_events (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ)
   | wait c s s' _ _ _ hb _ ih =>
     have ht := backgroundS_chainTick P q first hb hne
     obtain ⟨es, hch, hsc, hcen, hpo, hrad, hrc, hlc⟩ := ih (chainTick_ne_idle' ht hne)
-    obtain ⟨hl, hr, hcen', hpo', hrad', hlen'⟩ := background_frame P q first hb
+    obtain ⟨hl, hr, hcen', hpo', hrad', hlen'⟩ := background_frame_ne_idle P q first hb hne
     refine ⟨false :: es, .cons ht hch, fun raw c0 r => ?_, by rw [hcen, hcen'], by rw [hpo, hpo'],
       by rw [hrad, hrad']; simp, fun h0 => hrc (by rw [hrad']; exact h0), fun h0 => hlc (by rw [hlen']; exact h0)⟩
     have := hsc raw c0 r
@@ -104,7 +117,7 @@ theorem watchSeg_events (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ)
   | count c s s' _ _ _ _ hb _ ih =>
     have ht := backgroundS_chainTick P q first hb hne
     obtain ⟨es, hch, hsc, hcen, hpo, hrad, hrc, hlc⟩ := ih (chainTick_ne_idle' ht hne)
-    obtain ⟨hl, hr, hcen', hpo', hrad', hlen'⟩ := background_frame P q first hb
+    obtain ⟨hl, hr, hcen', hpo', hrad', hlen'⟩ := background_frame_ne_idle P q first hb hne
     refine ⟨false :: es, .cons ht hch, fun raw c0 r => ?_, by rw [hcen, hcen'], by rw [hpo, hpo'],
       by rw [hrad, hrad']; simp, fun h0 => hrc (by rw [hrad']; exact h0), fun h0 => hlc (by rw [hlen']; exact h0)⟩
     have := hsc raw c0 r

@@ -135,9 +135,16 @@ theorem reachAtC2_of_target_matchF (centre : GalilVM → Fin 3)
   have hLT : Canonical t.length := canonical_length_watchSegE P q first 2048 hw hLE
   set vs : ScanVM := ⟨left t.left, right t.right, ChainVM.idle⟩ with hvs
   have hmt0 : (galilFrame P q first).matched (scanLens.set t vs) := hmt
+  have hborn : chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) t.chain
+      = false := by
+    have hd : decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found) = false := by
+      simp [hnf]
+    unfold chainBorn
+    rw [hd]
+    exact Bool.and_false _
   have hcmp : (galilFrameS P q first).compare t (afterCompare t vs vq) :=
     ⟨vs, vq, true, rfl, rfl, ⟨fun _ => hmt0, fun _ => rfl⟩, hq,
-      Or.inr (Or.inl ⟨hs.idle, by simp [hnf], rfl⟩), rfl⟩
+      Or.inr (Or.inl ⟨hs.idle, by simp [hnf], rfl⟩), by rw [hborn]; rfl⟩
   have hmt1 : (galilFrameS P q first).matched (afterCompare t vs vq) := hmt
   set u : GalilVM := afterCompare t vs vq with hu
   set o : Bool := if P.onLetter u then decide (P.leftFirst u) else c'.output with ho'
@@ -152,7 +159,7 @@ theorem reachAtC2_of_target_matchF (centre : GalilVM → Fin 3)
   have hsrc : SoundScanNR raw ⟨c', t⟩ := stepsAll_last hrun0
   obtain ⟨⟨k1, hrun1⟩, hrp, hfr⟩ :=
     PalPeg.GalilReportPrefix.reportAt_of_match raw P rfl rfl q first 2048 hsrc hs.mode hc1 hnr
-      hav hs.minv hi hpos hm1 hmle vs vq o rfl rfl hcmp hmt1 ho
+      hav hs.minv hi hpos hm1 hmle vs vq o false rfl rfl hcmp hmt1 ho
   have hsound := stepsAll_last hrun1
   have hpl : (galilFrameS P q first).matchedPlace c'.replaying u u := by
     show u = (if c'.replaying then _ else u)

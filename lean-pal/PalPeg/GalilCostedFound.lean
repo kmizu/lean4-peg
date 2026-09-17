@@ -282,10 +282,11 @@ theorem found_prefix_costed (raw : List (Fin 2)) (P : Shared) (hP : P.onLetter =
     (ch : ChainVM)
     (hch : ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre sF) (P.place sF) sF.center sF.radius) ch)
     (hchne : ch ≠ .idle) (oF : Bool)
-    (hoF : refresh (galilFrame P qq first) (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF)
+    (hoF : refresh (galilFrame P qq first)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output oF)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE P qq first delay es {cF with clock := delay, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c1 : Control} {s1 : GalilVM} (hseg : WatchSeg P qq first delay c2 s2 c1 s1)
     (hav1 : canRight s1.right) (p0 : ℕ) (hp0 : p0 + cF.clock ≤ delay) :
     ∃ (k kc p1 r1 : ℕ) (L : List Piece),
@@ -293,10 +294,14 @@ theorem found_prefix_costed (raw : List (Fin 2)) (P : Shared) (hP : P.onLetter =
       k + p0 = kc + p1 ∧ p1 + c1.clock ≤ delay ∧ CostedRun sF s1 kc L ∧
       ScanInvariant raw cen r1 s1.left s1.right ∧ s1.center = sF.center := by
   have htickF := found_start_match P qq first delay cF sF hmF hrF hcF havF hidle vq hq hfound hmt ch hch oF hoF
+  have hoF' : refresh (galilFrame P qq first)
+      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF :=
+    (refresh_afterBirth_iff hP hP' true _ _ _).1 hoF
   obtain ⟨hinv1, hout1⟩ := outputRel_matched_refresh' raw P hP hP' qq first vq rfl rfl hmt havF hscan
-    cF.output oF hoF {cF with clock := delay, output := oF, replaying := false} rfl
-  have hneA : (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq).chain ≠ .idle := by
-    rw [afterCompare_chain]; exact hchne
+    cF.output oF hoF' {cF with clock := delay, output := oF, replaying := false} rfl
+  have hneA : (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)).chain
+      ≠ .idle := by
+    rw [afterBirth_chain, afterCompare_chain]; exact hchne
   have hprep := watchSeg_of_E P qq first delay hprepSeg hneA
   have hinv2 := (watchSegE_output_inv raw P hP hP' qq first delay hprepSeg cen (R+1) hinv1 hout1).2
   have hne2 : s2.chain ≠ .idle := watchSegE_ne_idle P qq first delay hprepSeg hneA
@@ -315,13 +320,16 @@ theorem found_prefix_costed (raw : List (Fin 2)) (P : Shared) (hP : P.onLetter =
       position sF.right + 1 := by
     have := hinv1.rightPos; have := hscan.rightPos; omega
   have hw : p0 ≤ 2048 := by omega
-  have h0 := costedRun_single (a := sF) (b := afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)
-    (cmpPiece (position sF.right + 1) p0 hw) (by simp [cmpPiece]) (by simp [cmpPiece, hposA])
-    (by rw [cmpPiece_adv, afterCompare_center]; simp)
+  have h0 := costedRun_single (a := sF)
+    (b := afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq))
+    (cmpPiece (position sF.right + 1) p0 hw) (by simp [cmpPiece, afterBirth_right])
+    (by simp [cmpPiece, afterBirth_right, hposA])
+    (by rw [cmpPiece_adv, afterBirth_center, afterCompare_center]; simp)
   rw [cmpPiece_ticks] at h0
   refine ⟨k1 + k2 + 1, (p0 + 1) + kc1 + kc2, p2, r2, _,
     .succ houtF htickF (stepsAll_trans hst1 hst2), by omega, hp2,
-    costedRun_trans (costedRun_trans h0 hcr1) hcr2, hi3', by rw [hce2, hce1, afterCompare_center]⟩
+    costedRun_trans (costedRun_trans h0 hcr1) hcr2, hi3',
+    by rw [hce2, hce1, afterBirth_center, afterCompare_center]⟩
 
 /-- The breaking matched comparison and the restart tick: one piece at the
 new right place whose wait holds the `p` pending counting ticks and the
@@ -355,10 +363,11 @@ theorem costedRun_found_noshift (raw : List (Fin 2)) (P : Shared) (hP : P.onLett
     (ch : ChainVM)
     (hch : ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre sF) (P.place sF) sF.center sF.radius) ch)
     (hchne : ch ≠ .idle) (oF : Bool)
-    (hoF : refresh (galilFrame P qq first) (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF)
+    (hoF : refresh (galilFrame P qq first)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output oF)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE P qq first delay es {cF with clock := delay, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c3 : Control} {s3 : GalilVM} (hseg : WatchSeg P qq first delay c2 s2 c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
     (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
@@ -417,10 +426,11 @@ theorem costedRun_found_shift (raw : List (Fin 2)) (P : Shared) (hP : P.onLetter
     (ch : ChainVM)
     (hch : ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre sF) (P.place sF) sF.center sF.radius) ch)
     (hchne : ch ≠ .idle) (oF : Bool)
-    (hoF : refresh (galilFrame P qq first) (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF)
+    (hoF : refresh (galilFrame P qq first)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output oF)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE P qq first delay es {cF with clock := delay, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c1 : Control} {s1 : GalilVM} (hseg : WatchSeg P qq first delay c2 s2 c1 s1)
     (h : ℕ) (hm1 : c1.mode = .scan) (hr1 : c1.replaying = false) (hc1 : c1.clock = 1)
     (w : GalilScaffoldChainWatch.State) (hs1 : s1.chain = .watch w) (hz : zero w.lag = true)

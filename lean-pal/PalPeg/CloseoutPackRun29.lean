@@ -102,14 +102,15 @@ theorem shiftEntry_of_guard {w : List (Fin 2)} {s s' t : GalilVM} {r₀ : ℕ}
     ShiftGeom w t := by
   obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
     compare_mismatch_form centre place entry q first hcmp hmt
-  obtain ⟨wch, hchain, ht⟩ : beginShiftVM' (afterMismatch s vs vq) t := hb
-  have hg' : shiftGuardVM (afterMismatch s vs vq) := hg
+  obtain ⟨wch, hchain, ht⟩ :
+    beginShiftVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
+  have hg' : shiftGuardVM (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) := hg
   obtain ⟨h1, hle, hpal⟩ := hSP _ hcmp wch hchain hg' r₀ hi
   have htl : t.left = GalilScaffoldInputHead.left s.left := by
-    rw [ht]; show vs.left = _; exact hvl
+    rw [ht, afterBirth_left, afterMismatch_left]; exact hvl
   have htr : t.right = GalilScaffoldChainVerifier.right s.right := by
-    rw [ht]; show vs.right = _; exact hvr
-  have htc : t.center = s.center := by rw [ht]; rfl
+    rw [ht, afterBirth_right, afterMismatch_right]; exact hvr
+  have htc : t.center = s.center := by rw [ht, afterBirth_center, afterMismatch_center]
   have htm : t.remaining = ofNat (periodLength wch) := by rw [ht]
   have hLpos : 1 ≤ position s.left := scanInv_pos hi
   have hLp := hi.leftPos

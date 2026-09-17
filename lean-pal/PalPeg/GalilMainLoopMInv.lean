@@ -54,9 +54,10 @@ def FoundCycle (P : Shared) (qq : ℕ) (first : Fin 9) (delay : ℕ) (raw : List
     read (left sF.left) = read (right sF.right) ∧
     ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre sF) (P.place sF) sF.center sF.radius) ch ∧
     ch ≠ .idle ∧
-    refresh (galilFrame P qq first) (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF ∧
+    refresh (galilFrame P qq first)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output oF ∧
     WatchSegE P qq first delay es {cF with clock := delay, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2 ∧
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2 ∧
     WatchSeg P qq first delay c2 s2 cM sM ∧
     cM.mode = .scan ∧ cM.replaying = false ∧ cM.clock = 1 ∧
     sM.chain = .watch w ∧ zero w.lag = true ∧ canRight sM.right ∧
