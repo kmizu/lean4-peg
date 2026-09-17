@@ -1,6 +1,7 @@
 import PalPeg.CloseoutPackRun34
 import PalPeg.CloseoutFrontExtra
 import PalPeg.CloseoutPackRun30
+import PalPeg.CloseoutPackRun36
 
 /-!
 # `ShiftLocalS` along a run, from `ChainPosInv`
@@ -328,6 +329,39 @@ theorem trailF_ptS {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State Ga
   exact fun i hi => trailF_of_scanT (hscan i hi) (hV i hi).ver (hV i hi).lagPos
 
 #print axioms trailF_ptS
+
+/-! ## `needL'` without `hws`
+
+`CloseoutPackRun36.needIMG2'_le` (:474) is the only consumer of
+`h_trailI_MG2`, hence of `trailF_ptMG`, hence of `IPackMG.shift`.  Over
+`trailF_ptS` the same bound needs no `WatchShiftG`. -/
+
+theorem needIMG2'_le_S {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PalPeg.CloseoutPackRun36.PreTraceIMG2 centre place entry q first w st Tc)
+    (hfour : H_fourOther centre place entry q first w)
+    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
+    (hsd : H_shiftDoneP centre place entry q first w)
+    (hpos0 : ChainPosInv w (st 0).ctl (st 0).vm) :
+    ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
+      PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 := by
+  have hbase := hP.base.pre
+  have hreach : ∀ i, i ≤ Tc w.length →
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 i (st 0) (st i) := by
+    intro i hi
+    exact PalPeg.CloseoutPackRun2.steps_of_trace hbase.trace i hi
+  have hLP : ∀ i, i ≤ Tc w.length →
+      PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm :=
+    fun i hi => (hP.packs i hi).base.pack
+  have hll : ∀ i, i ≤ Tc w.length →
+      PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm :=
+    fun i hi => leftLive_of_lpackM (hLP i hi)
+  intro m hm i hi
+  exact needL'_le_of_trailF w st m i
+    (trailF_ptS centre place entry q first hw hbase hfour hbg hmatch hsd hpos0
+      hreach hLP hll hm i hi)
+
+#print axioms needIMG2'_le_S
 
 end
 
