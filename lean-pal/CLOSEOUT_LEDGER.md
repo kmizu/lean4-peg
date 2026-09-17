@@ -22,6 +22,65 @@
 
 ---
 
+## 2026-09-19 `LagAll` — chain 進化の全体で閉じた lag 不変量
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`ChainSide`（`hpack` の chain 側残差）の 12 場のうち、`lagCan` と `backLag` を
+**tick 不変量として閉じた**。
+
+### なぜ 2 場を組にする必要があったか
+
+`CloseoutPackRun48.lagCan_step` は `LagCan`（`watch` 形状の lag）を
+`ChainStep` で保存するが、**`back` 形状の lag を入力に取る**（`hback`）。
+`ChainStep.backDone` が `back` の lag をそのまま新しい watch に installするため。
+
+`ChainStep` の構成子（`GalilScaffoldTopChainVM:50`）を読むと:
+
+| 構成子 | `lag` |
+|---|---|
+| `copyBit` | 不変 |
+| `copyEnd`（`.copy → .back`） | 不変 |
+| `backStep` | 不変 |
+| `backDone`（`.back → .watch`） | 不変（`back` の lag が watch に入る） |
+| `watchStep` | **ここだけ動く**（`Internal` 経由） |
+
+よって「全形状の lag が canonical かつ非負」は `ChainStep` で閉じ、
+`watch` の場合だけ `lagCan_step` が処理する。`hback` の側入力が消える。
+
+### `LagAll`（`CloseoutLagAll`、標準公理のみ）
+
+```lean
+def LagAll (z : ChainVM) : Prop :=
+  (∀ wch, z = .watch wch → Canonical wch.lag ∧ 0 ≤ value wch.lag) ∧
+  (∀ v h lag margin ver, z = .back v h lag margin ver → Canonical lag ∧ 0 ≤ value lag) ∧
+  (∀ t h p v lag margin ver, z = .copy t h p v lag margin ver → Canonical lag ∧ 0 ≤ value lag)
+```
+
+- `lagAll_idle` / `lagAll_broken` — 自明
+- **`lagAll_step`** — `ChainStep` で閉じる
+- **`lagAll_matched`** — `ChainMatched` で閉じる。全構成子が `lag` を保つか `inc` し、
+  `inc` は両半分を保つ（`inc_canonical` と `nonneg_inc`）
+- `lagAll_lagCan` / `lagAll_back` — Run48 の 2 入力を読み戻す
+
+**chain の進化は `ChainStep` と `ChainMatched` のみ**なので、`LagAll` は
+chain 進化の全体で閉じている。
+
+### 現状
+
+`pal_in_peg_final36` は **5 前提**（`hSP`, `hme`, `hor`, `hC`, `hpack`）。
+`LagAll` は `hpack` の 12 場残差のうち 2 場を落とす材料で、**まだ配線していない**
+（配線しても数は減らず、`ChainSide` が小さくなるだけ）。
+
+前提数を実際に減らすには `ChainSide` を**丸ごと**閉じる必要がある。残る主要な壁:
+
+| 場 | 状態 |
+|---|---|
+| `repV` / `repVmid` | `VerRep` の tick 保存。`verRep_next`（1 `right` の運搬）はあるが全形状は未 |
+| `scanBound` | checkpoint の位置予算。run 文脈が要る（wave 7 の `front` 経路） |
+| `centreCanR` / `centreLedgerPos` / `scanCentre` | `CentreLedger` と `ScanInvariant` の帰結の見込み |
+| `replayPay` / `radNext` / `startLedger` | 未調査 |
+
 ## 2026-09-19 `ChainPack` を run pack と `ChainSide` に分解（前提数は 5 のまま）
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
