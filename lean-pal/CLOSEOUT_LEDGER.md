@@ -22,6 +22,48 @@
 
 ---
 
+## 2026-09-19 配線の前に測定: `TerminalC` の 4 出口は終端一致の破断を覆っていない
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+`MatchTickN` を `roundStepC_of_align` に配線する前に、終端側の行き先を測った。
+
+```
+TerminalC P q first h Prep c s :=
+  LiveScanWatch c s ∧ Prep c s ∧
+    (roundFuel h s = 0 ∨ shiftGuardVM s ∨ ¬ canRight s.right ∨ BreakEndC P q first c s)
+
+BreakEndC P q first c s :=
+  ∃ c1 s1, WatchSeg P q first 2048 c s c1 s1 ∧ c1.clock = 1 ∧ LiveScanWatch c1 s1 ∧
+    read (left s1.left) ≠ read (right s1.right)
+```
+
+`BreakEndC` は **不一致**出口（`read left ≠ read right`）。ところが終端**一致**では
+
+- `not_good_of_terminal_match`（`CloseoutPackRun31:318`）より chain は `Good` でなく、
+- `break_at_terminal`（`CloseoutMatchTickN`）より `BreakStep` が起きる
+
+ので、セグメントは「終端一致で chain が壊れて restart する」形で終わる。
+これは `TerminalC` の 4 出口のどれでもない（`BreakEndC` は不一致を要求する）。
+
+`shiftGuardVM` が終端一致で立つかも検討したが、guard の予測節は
+`symbol period.focus = read s.right`（現ヘッド）で、`prediction_terminal` と
+`Good` は `read (right s.right)`（1 歩先）についての言明なので、直接の矛盾は出ない。
+guard を post-compare 状態 `s'` で評価すると `read s'.right = read (right s.right)` に
+なるが、その時の watch は post-compare のもの（`Good` なら `immediate w0`、
+さもなくば broken）で、対応付けは自明でない。
+
+**結論（測定）**: 配線には `TerminalC` に**第 5 の出口**（終端一致で chain が破断）が
+必要か、あるいは終端一致が到達不能であることの証明が必要。どちらかを決めるまで
+配線を書かない（前提を増やさないため）。
+
+`MatchTickN` 自体は証明済み（`matchTickN_of_round` / `matchTickN_of_chainRound`）で、
+`roundStepC_of_align` の非終端側はそのまま埋まる。残るのは終端側の行き先だけ。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `MatchTickC` を再切り出したら**定理になった**
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
