@@ -25,10 +25,25 @@ ChainTick a x z := ∃ y, ChainStep x y ∧ (if a then ChainMatched y z else z =
 
 So at `a = false` the tick **is** the step, and no step out of a non-broken
 chain lands in `.broken` (the only `ChainStep` constructor with a `.broken`
-target is `brokenIdle`, whose source is `.broken`).  Hence the background
-countdown — `CloseoutWatchRound.watchSeg_countdown` /
-`CloseoutWatchRound9.scanSeg_countdown` tick with the `false` event — owes no
-`Good` and no break analysis.
+target is `brokenIdle`, whose source is `.broken`).  So the break analysis is
+free at `a = false`.
+
+**But this does not yet give the background countdown what it needs.**  The
+theorem below is stated **relative to a `WatchOk` instance** (`hOk`), because
+`chainOk_tick`'s watch case goes through `internal_exists`, which uses
+`WatchOk.good`.  And:
+
+* **no `WatchOk` instance exists in this repository** (`grep` for `WatchOk `
+  outside its own definition and the `hOk` binders finds none);
+* `GalilWatchOkInst.no_watchOk_instance` rules out instances that additionally
+  satisfy `∀ w, Ok w → Good w` **unconditionally** — but `WatchOk.good` only
+  asks for `Good` at *positive lag*, so that theorem does **not** settle
+  `WatchOk` alone.
+
+Whether `WatchOk` is satisfiable is therefore **unsettled**, and it is not
+claimed here either way.  Until an instance exists, re-basing
+`CloseoutWatchRound.watchSeg_countdown` / `CloseoutWatchRound9.scanSeg_countdown`
+on `ChainOk` is blocked.
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完.**
 -/

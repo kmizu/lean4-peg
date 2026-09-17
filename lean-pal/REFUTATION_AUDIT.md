@@ -237,8 +237,30 @@
 
 | 入力 | 状態 |
 |---|---|
-| `hready : ChainTickable` | **命題が不適切**（`.broken` は機械が正当に到達する状態で `ChainReady .broken = False`）。背景 tick に必要なのは `CloseoutTickFalse.chainOk_tick_false`（本監査で証明）で、`watchSeg_countdown` を `ChainOk` に載せ替える必要がある |
+| `hready : ChainTickable` | **命題が不適切**（`.broken` は機械が正当に到達する状態で `ChainReady .broken = False`）。ただし置換経路も**現時点で塞がっている** — 下記 §4.7 |
 | `hland : ∀ c s, LiveScanWatch c s → LandingReadyC s` | **過剰量化**。`canRight s.right` を全 live 状態で要求する run の事実。run 形（`∀ m z, Steps … m x z → …`）にする必要がある。※これが偽かどうかは未検査であり、「偽」とは書かない |
+
+## 4.7 自分の過大主張をもう 1 件訂正（本監査で自己発見）
+
+前ターンの報告と `CloseoutTickFalse` のヘッダに「背景 tick に必要なのは
+`chainOk_tick_false` で、`watchSeg_countdown` を `ChainOk` に載せ替えればよい」と
+書いた。これは**強すぎる**。
+
+`chainOk_tick_false` は **`WatchOk` インスタンス相対**の定理である
+（`chainOk_tick` の watch 枝が `internal_exists` を通り、それが `WatchOk.good` を使う）。
+そして：
+
+- **`WatchOk` のインスタンスは repo に存在しない**（`WatchOk ` を定義本体と `hOk`
+  束縛を除いて grep して 0 件）。
+- `GalilWatchOkInst.no_watchOk_instance` が否定しているのは「`WatchOk Ok` **かつ**
+  `∀ w, Ok w → Good w`（無条件）」の組。`WatchOk.good` は*正の lag でのみ* `Good` を
+  要求するので、この定理は **`WatchOk` 単体を決着させていない**。
+
+したがって `WatchOk` が充足可能かは**未決**であり、どちらとも主張しない。
+インスタンスが無い限り `ChainOk` への載せ替えは**塞がっている**。ヘッダを訂正した。
+
+（本件と §4.5 は、指摘を受ける前に自分で見つけた。それが基準であるべきで、
+外部指摘で崩れた §0.5 の 6 件との違いはそこにある。）
 
 ## 5. 検査の再現手順
 
