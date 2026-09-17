@@ -12,6 +12,7 @@ import PalPeg.CloseoutRealize1
 import PalPeg.CloseoutMarksFree
 import PalPeg.CloseoutTickFalse
 import PalPeg.PackedRun
+import PalPeg.WatchOkRefute
 
 /-!
 # Canonical — 意味のある名前で正本部品を再輸出する
@@ -73,6 +74,12 @@ alias refuted_scanBudget := PalPeg.CloseoutPackRefute.scanBudget_false
 
 /-- **`WatchShiftG` は偽**（`backDone` 着地で `periodLength = 0` と `≥ 1` を同時に要求）。 -/
 alias refuted_watchShiftG := PalPeg.CloseoutWatchShiftAudit.watchShiftG_false_at_backDone
+
+/-- **`WatchOk` は偽**（無条件）。`born` が任意 lag で `Ok` を与え、`good` がその正 lag で
+period と入力の一致を強制するが、`born` の仮説は両者を関係づけない。
+**帰結**: `ChainTickable` を `ChainOk`＋`WatchOk` 上に載せ替える道は閉じた。`hready` を
+消すには `ChainOk` を `.copy`/`.back` で lag/margin を縛る形に再設計する必要がある。 -/
+alias refuted_watchOk := PalPeg.WatchOkRefute.watchOk_false
 
 /-! ## 3. run に沿って運ばれる左パック（偽の `ChainPack` の代替）
 

@@ -123,7 +123,18 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 
 - **`Fair` 完成（`GalilTickFair`）: `Tick ∧ Fair` は全状態で一意、残差なし。** 抽象 `Tick` 単体は一意でない（`GalilTickDet`）: (a) broken chain で `restart` と `scan_wait` stutter が競合（Scala は restart 優先）、(b) 探索量子は `ReadFun GalilDpCode.code` + `PrepareControl.Tick` 決定性を仮定すれば関数的、(c) chain は関数的、(e) `beginFallbackVM'`（着地場所）、`initVM`/`replayStartVM`（`periodOnly`, `walker` 自由）が非関数的。`tickFun`（`GalilTickFun`）は choice で 1 つ選ぶだけ。**方針**: モデルは編集せず（使用箇所 300 超）、Scala の優先順位と固定値を表す `Fair` を定義して `Tick ∧ Fair` の一意性を証明（`GalilTickFair`、進行中）。構成側の witness と局所 step が `Fair` を満たすことを別途確認。
 - **偽だった葉（同じ型: 任意状態への量化）**: `hquiet`（`SearchQuiet` は「found に到達しない」と同値、`GalilLeafQuiet`）、`houtReplay`（`InvScan` に出力なし → `InvScanO := InvScan ∧ OutputRel`、`GalilLeafOutReplay`）、`hpres`（`SearchReady` は負債 1 単位分保存されない → `SearchReadyB := ReadyRem ∧ RunEntriesAll`、`GalilLeafPres`；`watchSegE_construct` は再証明要、`GalilSegmentConstructB` 進行中）、`hpos`（区間終端の右ヘッド位置、`GalilLeafPos`: 区間予算 `position r.right + count true ≤ 2m−2` から出す）。
-- **偽だった仮定（前夜まで）**: `periodLength` +1、`hbg`、`hfast`、`WatchOk`、`lookChain` 常時 2 手、`ReplaySpan`（反例 `aaaaabaaaab`）、`Trail`（fallback 後は右スタック非空 → `TrailF`）、`ReplayStageInv`/`FoundStage` の普遍形（到達可能 found に限定 → `ReplayBudgetR`）。
+- **`WatchOk` は 2026-09-19 に無条件で反証された（機械検査済み）**: `PalPeg.WatchOkRefute.watchOk_false`
+  （引数は `WatchOk Ok` のみ、公理は `propext`/`Quot.sound`、`sorryAx` なし）。`born` が
+  **任意の lag/margin** で `Ok` を与え、`good` がその正 lag で `Good`（period テープの焦点記号と
+  入力右ヘッドの記号の一致）を強制するが、`born` の仮説（`canRight ver` と `OnBlock v`）は
+  両者を関係づけない。証人は `bornVer`/`bornBlock`（`symbol (moveRight bornBlock).focus = some 0`
+  と `read (right bornVer) = some 2` をカーネルで計算）と `lag = ⟨[0],[]⟩`。
+  `born` の過剰量化は `ChainOk` の設計が強制している（`| .back v _ _ _ ver => OnBlock v ∧ canRight ver`
+  が lag/margin を無視し、`ChainStep.backDone` はそれを watch へ継承する）。
+  **帰結**: `hready : ChainTickable` を `ChainOk`＋`WatchOk` 上に載せ替える道は閉じた。
+  消すには `ChainOk` を `.copy`/`.back` で lag/margin を縛り、誕生義務を `.back` の場として
+  持たせる再設計が必要。これは `hSP` の唯一の残り障害。
+- **偽だった仮定（前夜まで）**: `periodLength` +1、`hbg`、`hfast`、`lookChain` 常時 2 手、`ReplaySpan`（反例 `aaaaabaaaab`）、`Trail`（fallback 後は右スタック非空 → `TrailF`）、`ReplayStageInv`/`FoundStage` の普遍形（到達可能 found に限定 → `ReplayBudgetR`）。
 - found 時の半径 k ≤ 2n（`found_radius_le_two_period`）が replay 予算の鍵。`OffCompareFoundStage` は `GalilFoundStageInv` で閉じた。
 
 ### 3. `H_oracle2` の葉（`GalilOracleMC3.h_oracle_of_leaves''` 基準）

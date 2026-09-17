@@ -132,7 +132,8 @@ threading が必要で、それが残っている本体。**
 | `hpack` | `CloseoutPackRefute.hpack_false`（**無条件**） |
 | `ScanBudget` | `CloseoutPackRefute.scanBudget_false`（無条件） |
 | `SearchQuiet` | `GalilLeafQuiet.not_searchQuiet` |
-| `WatchOk` ＋無条件 `Good` | `GalilWatchOkInst.no_watchOk_instance` |
+| **`WatchOk`（単体）** | **`WatchOkRefute.watchOk_false`（無条件、2026-09-19）** |
+| `WatchOk` ＋無条件 `Good` | `GalilWatchOkInst.no_watchOk_instance`（lag = reset 版） |
 | `Trail` | `GalilTrailProof.not_trail_cx`（反例語） |
 | `ReplaySpan` | `GalilReplaySpan.cx_*`（`aaaaabaaaab`） |
 | `hpos` | `GalilLeafPos.not_hpos_of_report_place` / `not_hpos_of_tight_entry` |

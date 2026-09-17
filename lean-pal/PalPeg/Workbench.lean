@@ -105,9 +105,11 @@ import PalPeg.GalilSourceCost
 * `CloseoutClockFront` — front ポテンシャル `pot` と `front_le_of_run`、
   **`canRight_of_run`** / **`extra7_of_run`**。`hee`/`het` を消したのと同じ機構で、
   `LandingReadyC` が要求する `canRight s.right` の供給元になり得る。
-* `CloseoutWatchRound53` — `wrel_run`、`watchTailC_of_coreX`、**`good_of_pos`**。
-  `good_of_pos` は `WatchOk.good`（正の lag で `Good`）の内容そのもの。
-  `WatchOk` インスタンス不在が `ChainTickable` の壁なので、ここは直接効く。
+* `CloseoutWatchRound53` — `wrel_run`、`watchTailC_of_coreX`、`good_of_pos`。
+  `good_of_pos` は `ChainW`（窓つきの束）から `Good` を出す。**`WatchOk` 自体は
+  2026-09-19 に無条件で反証された**（`PalPeg.WatchOkRefute.watchOk_false`）ので、
+  `WatchOk` のインスタンスを作る道ではなく、`ChainOk` を lag/margin を縛る形に
+  再設計するときの `Good` 供給元として使う。
 * `CloseoutLagAll` — `LagAll`（step/matched/idle/broken で閉じる）と `lagAll_lagCan`。
   `LagCan` は `LPackM3` の場なので、無条件化の候補。
 * `CloseoutSegment` — `ScanToScan`（run の区間分解）。`hSP` のラウンド境界と

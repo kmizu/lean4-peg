@@ -1,5 +1,63 @@
 
 
+
+## 2026-09-19 n79: `WatchOk` を無条件で反証 — `hSP` の壁の正体が確定した
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+再編でできた地図を使って `hSP` の唯一の残り障害 `hready : ChainTickable` に当たった。
+まず**インスタンスを構成しようとして** `WatchOk.born` で詰まり、障害が偽の形だったので
+反証に回った（`PalPeg/WatchOkRefute.lean`）。
+
+### 反証
+
+`watchOk_false {Ok} (hOk : WatchOk Ok) : False` — 引数は反証対象のみ、公理は
+`propext`/`Quot.sound`、`sorryAx` なし。`no_watchOk : ¬ ∃ Ok, WatchOk Ok`。
+
+論法: `born` は **lag と margin を任意に量化して** `Ok ⟨⟨ver, watchControl v⟩, lag, margin⟩`
+を与える。`good` は正の lag で `Good` を要求し、`Good` は period テープの焦点記号と
+入力右ヘッドの記号の**一致**を要求する。`born` の仮説（`canRight ver`、`OnBlock v`）は
+その 2 つを一切関係づけないので、lag を正に取って不一致な証人を入れれば矛盾する。
+
+証人はカーネル計算で確定（`#eval`。自分のコード読みは信用しない）:
+`symbol (GalilScaffoldChainPeriod.moveRight bornBlock).focus = some 0`、
+`read (right bornVer) = some 2`、`positive ⟨[0],[]⟩ = true`。
+
+既存の `GalilWatchOkInst.no_watchOk_instance` は `WatchOk` に**加えて**無条件の
+`∀ w, Ok w → Good w` を仮定した組を否定するもの（`born` を `lag = reset` で使う）。
+本件は lag を正に取って `WatchOk.good` だけを使い、**`WatchOk` 単体**を否定する。
+
+### 原因は `ChainOk` の設計（過剰量化の 6 例目）
+
+```
+def ChainOk (Ok : WState → Prop) : ChainVM → Prop
+  | .back v _ _ _ ver => OnBlock v ∧ canRight ver      -- lag/margin を無視
+```
+
+`ChainStep.backDone` は `.back v h lag margin ver` から
+`.watch ⟨⟨ver, watchControl v⟩, lag, margin⟩` へ遷移して lag/margin を継承する。
+`ChainOk` が `.back` の lag/margin を無視する限り、`ChainStep` での閉性には
+**任意 lag/margin での `Ok`** が要る。それが `born` であり、それが `good` と衝突する。
+
+**これは「名前付き葉が偽になるのは、唯一の消費者が到達しない状態まで量化しているとき」
+という同じ欠陥の 6 例目。** 実機で生まれた watch の lag/margin は `.copy` 相が積んだ値で
+あって任意ではない。
+
+### 次
+
+`hready` を消すには `ChainOk` を再設計する:
+
+```
+| .copy t h p v lag margin ver => (∃ n, CopyInv t h p v n) ∧ canRight ver ∧ <誕生義務>
+| .back v h lag margin ver     => OnBlock v ∧ canRight ver ∧ Ok ⟨⟨ver, watchControl v⟩, lag, margin⟩
+```
+
+`.back` に誕生義務を場として持たせれば `backDone` は自由になり、`born` は `WatchOk` の場から
+消える。新たに必要になるのは `copyBit`（`margin ↦ decFour margin`、`v ↦ put v a`）と
+`copyEnd`（`v ↦ write v (.last b)`）での義務の保存。`Good` の供給元は
+`CloseoutWatchRound53.good_of_pos`（`ChainW` から `Good`）。
+
 ## 2026-09-19 n78: 証明をコードとして再編 — 根を 3 本に、`PackedRun` を括り出し
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
