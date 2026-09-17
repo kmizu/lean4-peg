@@ -232,7 +232,7 @@ theorem shiftRound_tick_A {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
     (hRR : PalPeg.CloseoutRoundReads.ReadsRound w x.ctl x.vm)
     (hF : H_freshShift w x.vm y.vm)
     (hblk : GalilBranchInvariants.BlockInv x.vm.chain)
-    (hci : CopyIdle x.vm)
+    (hci : x.ctl.mode = Mode.shift → CopyIdle x.vm)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) delay x y) :
     ShiftRound w y.ctl y.vm :=
   shiftRound_tick centre place entry q first hCR hSR (h_advanceT_of_readsRound hRR) hF hblk hci h

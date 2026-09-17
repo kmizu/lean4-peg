@@ -68,6 +68,30 @@
 * `final30` の 8 前提 — 反証済みゼロ。**これが正本。**
 * `VerRun` — **OPEN**（run 形、2 事実）。`final5MW3` 経路の `hpack` 依存の全量。
 
+### `hSP` を run 形に（同ターン）— `CopyIdle` の偽の前提も除去
+
+`CloseoutRoundBundle.roundBundle_steps` の側入力は `∀ z : State GalilVM` で
+**全状態**に量化されていた（`ChainPosInv2` と `CopyIdle`）。`CopyIdle` は copy 相で偽なので、
+これは `hpack` と同じ欠陥。使用箇所を測ると `hci` は `shiftRound_tick` の
+`shift_one` 分岐 1 箇所だけで、そこには `hm : c.mode = Mode.shift` が scope にある。
+
+**修正**（3 ファイル）: `CloseoutPackRun37.shiftRound_tick` /
+`CloseoutAdvanceT.shiftRound_tick_A` / `CloseoutRoundBundle.roundBundle_tick` の
+`hci : CopyIdle x.vm` を `hci : x.ctl.mode = Mode.shift → CopyIdle x.vm` に。
+shift 相では copy 機構が idle なので、これは真の命題。
+
+**`CloseoutBundleRun.lean`（新規）**
+
+| 定理 | 内容 |
+|---|---|
+| `roundBundle_of_idle` | **idle chain で束が成立**（3 場は watch 量化で空虚、2 場は `_of_idle`）。cycle の `InvLPC` 起点がこれ |
+| `roundBundle_steps_run` | 側入力を run 自身の状態に量化した版（再添字は `Steps.succ ht`） |
+| `shiftPal_of_run` | **`hSP` の内容を run から**: 起点 idle → 束が travel → `shiftPal_of_roundBundle` |
+
+`hSP` の残差はこれで run 形の 4 つ: `ChainPosInv2`（4 供給で搬送）、
+`mode = shift → CopyIdle`（真）、`H_readsShift`（⟸ `OriginShift`）、`H_freshShift`
+（⟸ `first_round`）。`canRight` は `BigPack2MG7W` の `Extra8.scanAvail` 場。
+
 ### これからの道筋（`final30` の 8 前提）
 
 | 前提 | 現状 |

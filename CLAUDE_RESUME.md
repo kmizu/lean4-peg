@@ -23,6 +23,22 @@
 ただし `final37` の他の `hpack` 用途（4 供給の導出と `packRunR_MWP`）は `VerRun` では
 覆えない。それらは `final30` では前提として明示されているので、`final30` に戻るのが正しい。
 
+### 追記（同ターン）— `hSP` を run 形に、`CopyIdle` の偽の前提も除去
+
+`roundBundle_steps` の側入力は `∀ z : State GalilVM`（全状態）で量化されていて、
+`CopyIdle` は copy 相で偽だった（`hpack` と同じ欠陥）。`hci` の使用箇所は
+`shiftRound_tick` の `shift_one` 分岐 1 箇所だけで、そこには `c.mode = Mode.shift` が
+scope にある。3 ファイル（`CloseoutPackRun37` / `CloseoutAdvanceT` /
+`CloseoutRoundBundle`）で `hci` を `x.ctl.mode = Mode.shift → CopyIdle x.vm` に修正。
+
+`CloseoutBundleRun.lean`（新規）: `roundBundle_of_idle`（**idle chain で束が成立**——
+cycle の `InvLPC` 起点がこれ）、`roundBundle_steps_run`（側入力を run の状態に量化）、
+`shiftPal_of_run`（`hSP` の内容を run から出す）。
+
+`hSP` の残差は run 形の 4 つ: `ChainPosInv2`（4 供給で搬送）、
+`mode = shift → CopyIdle`（真）、`H_readsShift`（⟸ `OriginShift`）、
+`H_freshShift`（⟸ `first_round`）。`canRight` は `Extra8.scanAvail` 場。
+
 ### これからの道筋（`final30` の 8 前提）
 
 `hSP` は `RoundBundle` ＋ `OriginShift` ＋ `H_freshShift` に還元済み（`ShiftRun` piece 4 は

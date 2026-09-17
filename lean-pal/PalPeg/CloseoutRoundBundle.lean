@@ -60,7 +60,7 @@ from the bundle's own `ShiftRound` through `h_shiftDone_of_shiftRound`. -/
 theorem roundBundle_tick {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s t : GalilVM}
     (hB : RoundBundle w c s)
     (hinv : ChainPosInv2 w c s)
-    (hci : CopyIdle s)
+    (hci : c.mode = Mode.shift → CopyIdle s)
     (hSh : H_readsShift w c s)
     (hF : H_freshShift w s t)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) delay ⟨c, s⟩ ⟨c', t⟩) :
@@ -92,7 +92,7 @@ theorem shiftPal_of_roundBundle {w : List (Fin 2)} {c : Control} {s : GalilVM}
 theorem roundBundle_steps {w : List (Fin 2)} {delay n : ℕ} {x y : State GalilVM}
     (hx : RoundBundle w x.ctl x.vm)
     (hinv : ∀ z : State GalilVM, ChainPosInv2 w z.ctl z.vm)
-    (hci : ∀ z : State GalilVM, CopyIdle z.vm)
+    (hci : ∀ z : State GalilVM, z.ctl.mode = Mode.shift → CopyIdle z.vm)
     (hSh : ∀ z : State GalilVM, H_readsShift w z.ctl z.vm)
     (hF : ∀ z z' : State GalilVM, H_freshShift w z.vm z'.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) delay n x y) :

@@ -345,7 +345,7 @@ theorem shiftRound_tick {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
     (hT : H_advanceT w x.ctl x.vm)
     (hF : H_freshShift w x.vm y.vm)
     (hblk : GalilBranchInvariants.BlockInv x.vm.chain)
-    (hci : CopyIdle x.vm)
+    (hci : x.ctl.mode = Mode.shift → CopyIdle x.vm)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) delay x y) :
     ShiftRound w y.ctl y.vm := by
   obtain ⟨c, s⟩ := x
@@ -471,7 +471,7 @@ theorem shiftRound_tick {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
     have hpos : positive s.remaining = true := by
       rcases hp with hp | hp
       · exact hp
-      · exact absurd hp hci
+      · exact absurd hp (hci hm)
     have hwch : wch = chainShiftOne w := by
       rw [htchain] at hchain
       cases hchain
