@@ -95,6 +95,27 @@ theorem chainAt_false_watch {found : Bool} {ans : GalilScaffoldTape.Tape} {cc : 
     unfold chainStart at hz
     cases hz
 
+/-- **A watch born by `chainAt false` (`ChainStep.backDone`) has phase `0`.**
+Same statement as `CloseoutPackRun37.chainAt_false_born`, repeated here because
+that file imports this one. -/
+theorem chainAt_false_born {found : Bool} {ans : GalilScaffoldTape.Tape} {cc : Fin 3}
+    {walker : GalilScaffoldPlace.Place} {ver : PlaceHead} {radius : Counter} {x z : ChainVM}
+    (h : chainAt false found ans cc walker ver radius x z)
+    {wch : GalilScaffoldChainWatch.State} (hz : z = .watch wch)
+    (hnot : ∀ w0, x ≠ .watch w0) : wch.machine.control.phase = 0 := by
+  rcases h with ⟨-, y, hstep, hzy⟩ | ⟨-, -, rfl⟩ | ⟨-, -, hzc⟩
+  · rw [if_neg (by simp)] at hzy
+    subst hzy
+    subst hz
+    cases hstep with
+    | watchStep w w' ht => exact absurd rfl (hnot w)
+    | backDone v h lag margin ver hf => rfl
+  · cases hz
+  · rw [if_neg (by simp)] at hzc
+    subst hzc
+    unfold chainStart at hz
+    cases hz
+
 /-- The source of a watch after `chainAt true`: a watch stepped `Internal`
 then `Outer true`, or not a watch at all. -/
 theorem chainAt_true_watch {found : Bool} {ans : GalilScaffoldTape.Tape} {cc : Fin 3}
@@ -194,27 +215,34 @@ def ShiftPalAt (w : List (Fin 2)) (s s' : GalilVM) : Prop :=
       Manacher.PalAt (encoded w) (position s.center + periodLength wch)
         (r₀ + 1 - periodLength wch)
 
-/-- **`ShiftPal` from `ChainRound` and `WatchShift`**, modulo the two named
-branches `H_matched` (a matched comparison target — never used by
-`shiftEntry_of_guard`) and `H_born` (a chain born during the comparison). -/
+/-- **`ShiftPal` from `ChainRound` and `canRight R`, with no named branch.**
+
+The earlier version took `CloseoutPackRun24.WatchShift` here, but the proof
+reads exactly one clause off it — `canRight s.right` — so that single-state
+fact is what the theorem actually needs.  `WatchShift` is also refuted in the
+same way `WatchShiftG` is (a watch born at `ChainStep.backDone` has
+`distance = reset`, breaking `4·periodLength ≤ distance` at an unguarded
+target), so depending on it was depending on a false statement.
+
+Both branches the earlier version named are now discharged:
+
+* a **matched** target contradicts `ShiftPal`'s own `¬ matched s'` — the
+  restriction `Tick.scan_shift` always supplies;
+* a chain **born** during the comparison (`ChainStep.backDone`) has phase `0`
+  (`CloseoutPackRun37.chainAt_false_born`) while `shiftGuardVM` demands phase
+  `4`, so it cannot pass the guard. -/
 theorem shiftPal_of_chainRound {w : List (Fin 2)} {c : Control} {s : GalilVM}
     (hm : c.mode = Mode.scan) (hr : c.replaying = false) (hpo : s.periodOnly = true)
     (hCR : ChainRound w c s)
-    (hws : WatchShift centre place entry q first w ⟨c, s⟩)
-    (H_matched : ∀ s' : GalilVM,
-      (galilFrameS (PofC centre place entry w) q first).compare s s' →
-      (galilFrameS (PofC centre place entry w) q first).matched s' → ShiftPalAt w s s')
-    (H_born : ∀ s' : GalilVM,
-      (galilFrameS (PofC centre place entry w) q first).compare s s' →
-      (∀ w0, s.chain ≠ .watch w0) → ShiftPalAt w s s') :
+    (hcan : GalilScaffoldChainVerifier.canRight s.right) :
     ShiftPal centre place entry q first w s := by
-  intro s' hcmp wch hchain hg r₀ hi
+  intro s' hcmp hmt wch hchain hg r₀ hi
   have hcf : compareFound (PofC centre place entry w) q first s s' := hcmp
   obtain ⟨vs, vq, a, hvl, hvr, hiff, -, hch, hteq⟩ := hcf
   cases a with
   | true =>
     rw [if_pos rfl] at hteq
-    refine H_matched s' hcmp ?_ wch hchain hg r₀ hi
+    refine absurd (?_ : (galilFrameS (PofC centre place entry w) q first).matched s') hmt
     rw [hteq]
     show GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).left
       = GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).right
@@ -244,9 +272,6 @@ theorem shiftPal_of_chainRound {w : List (Fin 2)} {c : Control} {s : GalilVM}
       have hpred : GalilScaffoldChainConsume.symbol wch.machine.control.period.focus =
           read (right s.right) := by
         rw [← hvr]; rw [hteq] at hsym; exact hsym
-      -- `canRight` of the right head, from `WatchShift`
-      have hni : s.chain ≠ ChainVM.idle := by rw [hw0]; exact fun h => by cases h
-      have hcan : canRight s.right := (hws hni s' hcmp wch hchain).2.1
       -- the geometry: `r₀` and the centre
       have hterm := hI.terminal_iff.mp hend
       have hsize := hI.size
@@ -263,27 +288,28 @@ theorem shiftPal_of_chainRound {w : List (Fin 2)} {c : Control} {s : GalilVM}
       rw [hcen, show C + periodLength wch + periodLength wch = C + 2 * periodLength wch by omega,
         show r₀ + 1 - periodLength wch = R + 1 by omega]
       exact hpal
-    · exact H_born s' hcmp hnot wch hchain hg r₀ hi
+    · -- a chain born during the comparison has phase `0` and cannot pass the guard
+      have hph0 : wch.machine.control.phase = 0 :=
+        chainAt_false_born hch hchain' hnot
+      obtain ⟨w1, hw1, -, hph, -, -, -⟩ := hg
+      have hw1' : wch = w1 := by rw [hchain] at hw1; cases hw1; rfl
+      have heq : wch.machine.control.phase = 4 := by rw [hw1']; exact hph
+      rw [hph0] at heq
+      exact absurd heq (by decide)
 
 /-- **The target theorem.**  `ShiftPal` at a scan state, not replaying, from
-`ChainRound` and `WatchShift`; the `periodOnly = false` branch (the first
-shift of a fresh chain, whose content is `GalilScaffoldTopFreshEntry`) is the
-named `H_fresh`. -/
+`ChainRound` and `canRight R`; the only remaining branch is `periodOnly =
+false` (the first shift of a fresh chain, whose content is
+`GalilScaffoldTopFreshEntry`), the named `H_fresh`. -/
 theorem shiftPal_of_readOrigin {w : List (Fin 2)} {c : Control} {s : GalilVM}
     (hm : c.mode = Mode.scan) (hr : c.replaying = false)
     (hCR : ChainRound w c s)
-    (hws : WatchShift centre place entry q first w ⟨c, s⟩)
-    (H_matched : ∀ s' : GalilVM,
-      (galilFrameS (PofC centre place entry w) q first).compare s s' →
-      (galilFrameS (PofC centre place entry w) q first).matched s' → ShiftPalAt w s s')
-    (H_born : ∀ s' : GalilVM,
-      (galilFrameS (PofC centre place entry w) q first).compare s s' →
-      (∀ w0, s.chain ≠ .watch w0) → ShiftPalAt w s s')
+    (hcan : GalilScaffoldChainVerifier.canRight s.right)
     (H_fresh : s.periodOnly = false → ShiftPal centre place entry q first w s) :
     ShiftPal centre place entry q first w s := by
   cases hpo : s.periodOnly with
   | false => exact H_fresh hpo
-  | true => exact shiftPal_of_chainRound centre place entry q first hm hr hpo hCR hws H_matched H_born
+  | true => exact shiftPal_of_chainRound centre place entry q first hm hr hpo hCR hcan
 
 /-! ## 3. `ChainRound` along a tick -/
 

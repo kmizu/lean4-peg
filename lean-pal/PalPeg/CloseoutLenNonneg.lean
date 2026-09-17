@@ -1,6 +1,7 @@
 import PalPeg.CloseoutPackRun17
 import PalPeg.CloseoutRadPack
 import PalPeg.GalilCentreLive
+import PalPeg.GalilGlueBLeaves
 
 /-!
 # The `length` counter is never negative
@@ -82,5 +83,38 @@ So `0 ≤ value s.length` at `scan` states (`CloseoutPackRun17.marksInv'_of_run'
 the head positions.  That is the real obligation, recorded in
 `CLOSEOUT_LEDGER.md`.
 -/
+
+/-! ## `0 ≤ value length` from `EntryCounters`
+
+The tick-invariant route fails (`shiftTick` decrements), but the **invariant**
+already contains the fact.  `GalilGlueBLeaves.EntryCounters` (:74) is
+
+```
+∃ Rad : ℕ, ScanInvariant … Rad … ∧ RadiusRep r.radius Rad ∧ SpanRep r ∧ Canonical r.length
+```
+
+and `RadiusRep c n := Canonical c ∧ value c = n` with `n : ℕ`, while
+`SpanRep r := value r.length = 2 * value r.radius + 1`.  So
+`value length = 2 * Rad + 1 ≥ 1`.
+-/
+
+open PalPeg.GalilGlueBLeaves PalPeg.GalilScaffoldChainInputSupply
+
+/-- **`0 < value r.length` at every `EntryCounters` state.** -/
+theorem lenPos_of_entryCounters {raw : List (Fin 2)} {r : GalilVM}
+    (h : EntryCounters raw r) : 0 < value r.length := by
+  obtain ⟨Rad, -, hRR, hS, -⟩ := h
+  have hrad : value r.radius = (Rad : ℤ) := hRR.2
+  have : value r.length = 2 * (Rad : ℤ) + 1 := by rw [hS, hrad]
+  omega
+
+/-- **`0 ≤ value r.length`**, the shape `CloseoutPackRun17.marksInv'_of_run'`
+asks for. -/
+theorem lenNonneg_of_entryCounters {raw : List (Fin 2)} {r : GalilVM}
+    (h : EntryCounters raw r) : 0 ≤ value r.length :=
+  le_of_lt (lenPos_of_entryCounters h)
+
+#print axioms lenPos_of_entryCounters
+#print axioms lenNonneg_of_entryCounters
 
 end PalPeg.CloseoutLenNonneg
