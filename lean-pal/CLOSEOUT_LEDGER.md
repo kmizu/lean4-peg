@@ -22,6 +22,51 @@
 
 ---
 
+## 2026-09-19 `H_advance` は既に解けていた — `CloseoutPackRun37` の在庫を読み落としていた
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 訂正: `hSP` の残差を過大に見積もっていた
+
+前エントリで「`ChainRound` の tick 残差は `H_advance`/`H_shiftDone`/`H_birth` + `BlockInv`」
+と書いたが、`CloseoutPackRun37`（登録済み・build 済み）を読むと **`H_advance` と
+`H_shiftDone` はどちらも producer を持っていた**。
+
+| 残差 | producer | 場所 |
+|---|---|---|
+| `H_advance` | `h_advance_of_readsInv`（`GalilGoodLag.origin_prediction_index` を 1 つ長い継続で適用） | `CloseoutPackRun37:483` |
+| ↑の入力 `ReadsInv` の step | `readsInv_immediate` | `CloseoutPackRun37:517` |
+| `H_shiftDone` | `h_shiftDone_of_shiftRound`（`ShiftInv` を shift 相を通して運ぶ） | `CloseoutPackRun37:130` |
+
+これは「`hor` は producer ゼロ」と誤断した時と同じ失敗（型名だけを grep して、
+その義務を解決するモジュールのヘッダを読まなかった）。**`Closeout*` の残差を評価する
+前に、同族ファイルのヘッダ（`/-! ... -/`）を読むこと。**
+
+### 新規
+
+| 名前 | ファイル | 内容 |
+|---|---|---|
+| `ReadsRun` / `ReadsRound` | `CloseoutRoundReads` | `ReadsInv` をその状態の全ラウンドについて閉じた単一状態の場。`ReadsRound` は `ChainRound` と同じ前提（scan・非 replay・`periodOnly`）を持つ |
+| `h_advance_of_readsRun` | `CloseoutRoundReads` | `H_advance` を `ReadsRun` から（1 行） |
+| `chainRound_tick_RR` | `CloseoutRoundReads` | `chainRound_tick` の 200 行を逐語コピーし、`hA` を消費する **1 行だけ** を `h_advance_of_readsInv hI (hRR hm hrep hpo w0 hw0 C R used hI) hg hend` に差し替え |
+
+`H_advance`: `INTEGRATED`（`ReadsRound` から供給、`chainRound_tick_RR` で利用、
+`chainRound_tick` の入力から消えた）。数学（`origin_prediction_index`）は既に閉じていて、
+欠けていたのは `ReadsInv` が言及する `(C, R, used)` を `H_advance` の量化と噛み合わせる
+帳簿だけだった。
+
+### `hSP` の残差（更新）
+
+| 義務 | 状態 |
+|---|---|
+| `ChainRound`（単一状態、`CloseoutPackRun31:183`） | `OPEN`。tick は `chainRound_tick_RR` が 20 形を閉じ、残り `H_shiftDone`（→ `ShiftRound`）、`H_birth`、`BlockInv` |
+| `ReadsRound`（単一状態） | `OPEN`。tick 保存の材料は `readsInv_immediate`（scan_match）と lag ゼロでの `Internal.idle`（background） |
+| `ShiftRound`（単一状態、`CloseoutPackRun37:88`） | `OPEN`。tick は `shiftRound_tick`、残り `H_advanceT`（巻き戻し点の予測。材料は `GalilScaffoldChainPrediction.continued_prediction` の mod 形）と `H_freshShift` |
+| `WatchShift`（単一状態、`CloseoutPackRun24:45`） | `OPEN` |
+| `H_fresh`（`periodOnly = false` の初回 shift） | `OPEN`。内容は `GalilScaffoldTopFreshEntry` |
+
+---
+
 ## 2026-09-19 `ShiftPal` は過剰量化だった — `shiftPal_of_chainRound` の名前付き分岐が 2 → 0
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
