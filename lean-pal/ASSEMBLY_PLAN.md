@@ -80,6 +80,21 @@ shift / fallback）。全部標準公理のみ・sorryAx なし。
 `C−R−1 → C−R−1+2h` で、`RoundScan.size : 2h ≤ R` より両方 `[C−R, C+R]` の内側。
 `ScanInvariant` の `Represents` ＋ `size` から `h` の帰納法で構成できる。
 
+### 追記 4（同ターン）— piece 4（`ShiftRun` の存在）を構成した
+
+`ShiftAtMismatchM` に残った唯一の非自明な部品は**入力依存ではなかった**。
+右移動が塞がるのは最終 gap セルちょうど（`GalilEndOfInput.not_canRight_iff`）なので、
+`ShiftRun.next` の 3 つの `canRight` は厳密な位置上界にすぎない。
+
+`CloseoutShiftRun.lean`（新規）: `canRight_of_lt`、`right_step`、`shiftRun_exists`
+（`n` の帰納法）、`shiftRun_exists_entry`（shift 入口形）。
+**`ShiftRunC` / `ShiftRunCL` / piece 4 は PROVED。**
+
+残る供給は運ばれてる状態不変量だけ: 中心頭は `CloseoutPackRun21.CentreRep`
+（`InvLPC` の場）、左頭は `RoundScan.caught.scan`。位置上界は `RoundScan.rightPos` ＋
+`not_canRight_iff` ＋ `size : 2h ≤ R` の算術。**次は中心頭の位置と `C` の関係**
+（`RoundScan` の場にはない）。
+
 ### 訂正
 
 前ターンの「次は `segment_to_checkpoint` を `hsegmentM` の消費者に配線」は外れ。

@@ -176,6 +176,38 @@ post-compare guard を**トリガー（前提）**として取る。同じ形に
     `ScanInvariant` の `Represents` ＋ `size` から `h` についての帰納法で**構成可能**。
     これが次の一手。
 
+### piece 4（`ShiftRun` の存在）を構成した — `ShiftRunC` / `ShiftRunCL` は PROVED
+
+`ShiftAtMismatchM` に残った唯一の非自明な部品、`h` 単位の `ShiftRun` の存在
+（= `CloseoutWatchRound30` の piece 4、`CloseoutWatchRound33.ShiftRunCL`）は
+**入力依存ではなかった**。`ShiftRun.next` が各段で要求するのは
+
+* `positive s.remaining = true` — `ofNat h` と `dec` の算術;
+* `canRight s.center` / `canRight s.left` / `canRight (right s.left)` — ヘッド余裕。
+
+右移動が塞がるのは**最終 gap セルちょうど**（`GalilEndOfInput.not_canRight_iff`）なので、
+ヘッド余裕は厳密な位置上界にすぎない。
+
+**`CloseoutShiftRun.lean`（新規）**
+
+| 定理 | 内容 |
+|---|---|
+| `canRight_of_lt` | `position p < 2 * raw.length → canRight p` |
+| `right_step` | 表現された頭の 1 歩（位置＋1、`Represents` 保存、`focus` 保存） |
+| `shiftRun_exists` | `n` についての帰納法。`∃ t, ShiftRun s n t`（前提は 2 つの位置上界と 2 つの表現） |
+| `shiftRun_exists_entry` | shift 入口の `ShiftState` 形に特化（counter 側は `ofNat` で放電） |
+
+* `ShiftRunC` / `ShiftRunCL` / piece 4 — **PROVED**（2 つのヘッド上界と 2 つの表現から）。
+
+残る供給は状態不変量だけで、しかも**両方とも運ばれている**：
+中心頭の `Represents` ＋ `focus ≠ none` は `CloseoutPackRun21.CentreRep`
+（`InvLPC = InvLP2 ∧ CentreRep` の場）、左頭のそれは
+`RoundScan.caught.scan`（`ScanInvariant.leftRep` / `leftPresent`）。
+位置上界は `RoundScan.rightPos`（`position v.right = C+R+1+used`）と
+`not_canRight_iff`（`position v.right ≤ 2L`）と `size : 2h ≤ R` の算術に帰着する
+（終端 `used = 2h−1` で `C+R+2h ≤ 2L`）。**残りは中心頭の位置と `C` の関係だけ**で、
+これは `RoundScan` の場にはないので次に測る。
+
 これで「名前付き葉が偽なのは、唯一の消費者が到達しない状態まで量化しているから」という
 同一の欠陥が 5 例目（`ShiftPal` / `H_advanceT` / `MatchTickC` / `hpos` / `ShiftAtMismatchC`）。
 **新しい葉を測るときは、まず消費者がその分岐で何を知っているかを先に読む。**
