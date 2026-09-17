@@ -22,6 +22,67 @@
 
 ---
 
+## 2026-09-19 `hSP` の tick 機構が完成、残差は shift 相の受け渡し 1 点に
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### `NoReplayWatch`: watch ＋ `periodOnly` なら replay 中ではない
+
+**論証（コードを書く前）**: `replaying` が `true` に*上がる*のは fallback 出口と
+`replayStart` だけで、どちらも `chain := .idle`。idle から watch に戻るには誕生が必要で
+誕生は `periodOnly := false`。`periodOnly` を再び立てるのは `beginShiftVM` だけで、
+それを発火する `scan_shift` tick は `hr : c.replaying = false` を持つ
+（`GalilScaffoldTop:123`）。よって「`periodOnly = true` ∧ chain が watch ⇒
+`replaying = false`」は tick 不変量。
+
+`noReplayWatch_tick` を **23 形すべて、sorry なし**で証明した。
+
+### `H_birthR` と `H_readsBirth` は空虚
+
+`replay_false_of_tick`（同じ 23 形の場合分けで結論を `c` 側にしたもの）から
+`h_birthR_vacuous` / `h_readsBirth_vacuous` が各 3 行。**`chainRound_tick` の
+コピーは不要だった** — 空虚性を独立定理にして `hB` の位置に渡すだけで済む。
+
+### `ReadsRound` の tick
+
+`roundScan_unique`（`count` が `used` を、`rightPos`/`leftPos` が `C+R` と `C−R` を
+決める。減算は `size`/`room` で安全）を使って `readsRound_tick` を証明。
+watch を scan かつ `periodOnly` で着地させられる形は 3 つだけで、
+`scan_wait`/`scan_count` は `internal_of_zero` で watch 状態が不変、
+`scan_match` は `readsInv_immediate`、`shift_done` が `H_readsShift`。
+
+### 到達点
+
+```
+theorem chainRound_tick_S (hCR : ChainRound) (hRR : ReadsRound) (hps : PeriodShape)
+    (hn : NoReplayWatch) (hinv : ChainPosInv2) (hS : H_shiftDone) (h : Tick …)
+    : ChainRound w c' t
+
+theorem readsRound_tick_S (hCR) (hRR) (hps) (hn) (hinv)
+    (hSh : H_readsShift) (h : Tick …) : ReadsRound w c' t
+
+theorem shiftPal_of_readOrigin (hm) (hr) (hCR : ChainRound w c s)
+    (hcan : canRight s.right) (H_fresh : periodOnly = false → ShiftPal …) : ShiftPal …
+```
+
+運ぶ場 5 つのうち **`PeriodShape` と `NoReplayWatch` は tick 保存済み**、
+`ChainPosInv2` は主経路が既に運んでいる。`canRight` は `ChainPack` から出る。
+
+### `hSP` の残差（この 3 ターンでの推移）
+
+| 開始時 | 現在 |
+|---|---|
+| `ChainRound`, `WatchShift`（**偽**）, `H_matched`, `H_born`, `H_advance`, `BlockInv`, `H_birth`, `H_shiftDone`, `H_fresh` | `H_shiftDone` / `H_readsShift`（どちらも shift 相の受け渡し 1 点）, `H_fresh` |
+
+`H_shiftDone` ← `h_shiftDone_of_shiftRound` ← `ShiftRound`（単一状態）。
+その tick は `shiftRound_tick`、残り `H_advanceT`・`H_freshShift`。
+`H_readsShift` は同じ受け渡しの `ReadsInv` 版で、`ShiftInv` に sweep witness を
+足せば同時に出る。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `H_birth` の「誕生」半分は `periodOnly` と両立しない — `ChainRound` の tick 残差が 2 つに
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
