@@ -22,6 +22,53 @@
 
 ---
 
+## 2026-09-19 wave 6 — `hsc`（`H_stageScan`）を **完全除去**: 最上位は **7 前提**
+
+**`pal_in_peg_final26`（`CloseoutStageFinal`）— 標準公理のみ・7 前提。**
+残り: `hSP`, `hws`, `hee`, `het`, `hme`, `hor`, `hC`。
+
+`hsc` は wave 5 で **REFUTED**（`InvScan` の 11 場は `s.radius` に触れないのに
+`ReplayStage` は `Canonical radius` を要求）。今回の結論は、**再切り出しすら要らず
+そのまま消える**というもの。
+
+根拠の連鎖:
+
+1. `hsc` の主経路上の消費者は `cycleOracleIMG2_of_cycleOracleMC3R`
+   （`CloseoutPackRun36:673`）ただ 1 つ。そこで `hstage_of_scanBranch` を呼び、
+   `InvLPC` を `CycleOracleMC3` の要求する `InvLPS` に持ち上げている。
+2. その `hstage_of_scanBranch`（`CloseoutOracleI2:179`）は
+   `rcases hIC.1.1.1.1 with h | ⟨k, h⟩` で分岐し、**`Inv` 側は
+   `replayStage_of_inv h` で無条件に閉じている**。`hsc` が要るのは `InvScan` 側だけ。
+3. ところが `CycleOutMC3` は **両方の出口で `InvLPS` を返している**
+   （`ReachAtC3` の継続 `GalilInvPlus3:193`、進行分岐 `:212`）。
+   `reachAtC2_of_3` と `cycleOutIMG2_of_cycleOutMC3R` が `hIS.1` で捨てていただけ。
+4. boot も `Inv` 分岐に着地する: `GalilFinalAssembly4.invLPC_init:94` が
+   `hI : Inv (a :: rest) … t` を作ってから、どちらの選言だったかを忘れている。
+
+すなわち **stage は、必要とされるすべての地点ですでに産出されている**。
+Run36 §2 のチェックポイント再帰を `InvLPC` ではなく `InvLPS` の上で走らせれば、
+`hstage_of_scanBranch` は一度も呼ばれない。
+
+| 新規ファイル | 内容 | 公理 |
+|---|---|---|
+| `CloseoutStageRecur` | `reachIMG2_fuel_stageFree`（`InvLPS` を運ぶ再帰）, `cycleOracleIMG2_stageFree` | 標準 |
+| `CloseoutStageCheck` | Run36 §2 を `InvLPS` 上で再走: `ReachAtIMG2S`/`CycleOutIMG2S`/`CycleOracleIMG2S`/`checkpoints_costIMG2S_upto1`/`preTraceIMG2S_exists` | 標準 |
+| `CloseoutStageBoot` | `invLPS_init` — `invLPC_init` に `replayStage_of_inv hI` を足しただけ | 標準 |
+| `CloseoutStageOracle` | `h_bootIMG2S_of_bootIPack`, `h_oracleIMG2S_of_MC3`（**`hsc` 引数なし**） | 標準 |
+| `CloseoutStageFinal` | `pal_in_peg_final5MG2S`, **`pal_in_peg_final26`（7 前提）** | 標準 |
+
+**ドロップイン性の要点**: `preTraceIMG2S_exists` の結論 `PreTraceIMG2` は
+Run36 の同名 structure **そのもの**（StageCheck 側の複製定義は削除済み）。
+よって下流（`h_trailI_MG2` / `needIMG2'_le` / `pal_in_peg_of_latch'`）は無改造。
+
+**台帳判定**: `hsc` → **REMOVED**（REFUTED のまま、置換も不要）。
+wave 5 で書いた `InvScanS` / `InvLPCS` 再切り出し（`CloseoutStageSupply`,
+`CloseoutStageFree`, `CloseoutStageLanding`, `CloseoutStageScan1`）は
+**この経路では不要**になった。`CycleOracleMC3` を無条件に作る段（`hor`）で
+replay 着地の stage を供給するときに再利用できるので残す。
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
 ## 0. 最上位
 
 `pal_in_peg_final25` — `PalPeg/CloseoutPackRun51.lean`（`final24` + `hbs`/`hls`/`hsl` 供給）。状態 `OPEN`（下記 **8** 前提が未供給）。
@@ -37,7 +84,7 @@
 | 前提 | 種類 | 残り |
 |---|---|---|
 | `hee` / `het` | **道具あり・検証済み** | `CloseoutClockFront.extra7_of_run` が `CloseoutPackRun46.extra7_steps` を置換して同時に消える |
-| `hsc` | **道具あり・検証済み** | `CloseoutInvScanS.replayStage_of_invSS`。`InvS` の replay 枝強化で消費側 1 行が消える |
+| `hsc` | `H_stageScan`（`CloseoutOracleI2:173`） | 最上位引数 | **REFUTED**（§4）。**2026-09-19: 連鎖が全段つながった（標準公理のみ、`final25` への配線は未了）**。突破口は `ReplayStage`（`GalilFoundStage:98`）が着地状態に `Restarted` を要求せず、**`Restarted` な祖先から `WatchSegE` で到達したこと**だけを言う点。着地でこれは真。(a) 消費側 `CloseoutStageSupply.invLPS_of_invLPCS` が `hstage_of_scanBranch` の `hsc` 無し版。(b) 橋 `CloseoutStageFree.cycleOracleIMG2_stageFree` で `hsc` が `hup : InvLPC → InvLPCS` に置換。(c) 産出側 restart 枝は `invLPCS_of_inv`、replay 枝は `CloseoutStageLanding.invLPCS_of_replayLanding`（`ReplayLanding` の `rest : Restarted raw s 0 reset` と `clock : c.clock = 2048`、`replay_after_fallback` が返す `hseg` の 3 つがそのまま `invLPCS_of_seg` の入力）。残るのは `invLPC_after_replayLanding` の結論に `InvLPCS` を通す編集と、`final25` の引数列からの除去。 | `pal_in_peg_final25` |
 | `hme` | **道具あり・検証済み** | `hcan`・`hplace` は定理化済み。残りは走行の各 tick が `Fair` を満たすことの監査のみ（`tick_fair_unique` は `GalilTickFair:437` で証明済み） |
 | `hSP` | 残差絞り込み済み | `ChainRound` 経由 |
 | `hws` | `WatchShiftG`（chain–scan 結合） | 最上位引数 | `ChainPosInv2`（`CloseoutPackRun41:215`）+ `Coupled'`（`PackRun40:77`） → `MatchRes2`（`PackRun48:208`）。**`matchRes2_of_lpackM3`（`PackRun49:420`）は完成済み**で、残差は `MatchRest`（`PackRun49:405`）の 4 場 `repV`/`repVmid`/`replayPay`/`canRNext`。**そのうち `canRNext` は位置上界から出る**（`CloseoutCanRightBound.canRight_next_of_bound`、2026-09-19 証明）。 | `pal_in_peg_final25` |

@@ -607,6 +607,11 @@ import PalPeg.GalilChainTickable
 import PalPeg.GalilLastRadius
 import PalPeg.LocalInputView
 import PalPeg.GalilSegmentConstruct
+import PalPeg.CloseoutStageFinal
+import PalPeg.CloseoutStageOracle
+import PalPeg.CloseoutStageBoot
+import PalPeg.CloseoutStageCheck
+import PalPeg.CloseoutStageRecur
 import PalPeg.CloseoutCandOrient
 import PalPeg.CloseoutShiftLocalFree
 import PalPeg.CloseoutStageScan1
@@ -618,6 +623,10 @@ import PalPeg.CloseoutClockFront
 import PalPeg.CloseoutInvScanS
 import PalPeg.CloseoutCanRightBound
 import PalPeg.CloseoutRestartShape
+import PalPeg.CloseoutStageSupply
+import PalPeg.CloseoutWalkerSupply
+import PalPeg.CloseoutStageFree
+import PalPeg.CloseoutStageLanding
 import PalPeg.CloseoutPeriodOnlyRegression
 import PalPeg.CloseoutWatchRound50
 import PalPeg.CloseoutPreload41
