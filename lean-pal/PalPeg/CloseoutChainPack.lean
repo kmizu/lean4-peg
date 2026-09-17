@@ -61,6 +61,13 @@ structure ChainPack (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
     ScanInvariant w (position s.center) rad (GalilScaffoldInputHead.left s.left) (right s.right) →
       value s.radius + 1 ≤ (rad : ℤ)
   startLedger : s.chain = ChainVM.idle → CentreLedger s
+  centreSane : Sane s.center
+  centreCanR : GalilScaffoldChainVerifier.canRight s.center
+  centreLedgerPos : c.mode = Mode.scan →
+    (position s.center : ℤ) + value s.radius = position s.right
+  scanRad : c.mode = Mode.scan → ∀ rad : ℕ,
+    ScanInvariant w (position s.center) rad s.left s.right → value s.radius ≤ (rad : ℤ)
+  scanCentre : c.mode = Mode.scan → CentreLedger s
 
 /-- The three clauses, in the shape `h_bgP2_of_supply` asks for. -/
 theorem chainPack_supply {w : List (Fin 2)}
@@ -174,6 +181,26 @@ theorem h_shiftRes2_of_chainPack {w : List (Fin 2)}
 #print axioms h_shiftDoneRad2_of_chainPack
 
 #print axioms chainPack_supply
+/-- **`BgStartP2` from `ChainPack`.**  `background` leaves `right`, `center` and
+`radius` alone (`backgroundS_fields`), and a birth installs
+`chainStart answer c walker s.center s.radius`, i.e. a `.copy` chain whose
+verifier is `s.center` and whose lag is `s.radius`.  So `ChainPos` at the target
+is `canRight s.center ∧ Sane s.center ∧ position s.center + radius =
+position s.right` — the three `ChainPack` fields added above. -/
+theorem bgStartP2_of_chainPack {w : List (Fin 2)}
+    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack w c s)
+    (hb : ScanBudget centre place entry q first w) :
+    BgStartP2 centre place entry q first w :=
+  PalPeg.CloseoutPackRun47.bgStartP2_of_centre centre place entry q first
+    (fun c s hm hx => by
+      obtain ⟨hlv, m, hm1, hmlt, hpos⟩ := hb c s hm hx
+      obtain ⟨hrr, hfr⟩ := (hp c s hx).repR hm
+      exact PalPeg.CloseoutCanRightBound.canRight_of_position_bound hrr hfr hm1 (by omega) hpos)
+    (fun c s hm hx => (hp c s hx).scanRad hm)
+    (fun c s hm hx => (hp c s hx).scanCentre hm)
+
+#print axioms bgStartP2_of_chainPack
+
 #print axioms h_bgP2_of_chainPack
 
 end
