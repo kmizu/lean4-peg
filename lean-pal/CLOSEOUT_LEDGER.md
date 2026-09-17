@@ -22,6 +22,52 @@
 
 ---
 
+## 2026-09-19 `MatchTickC` を再切り出したら**定理になった**
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 消費点は 1 箇所
+
+`halign : MatchTickC` は `CloseoutWatchRound2.roundStepC_of_align` の `:193`、
+`by_cases hmm : read (left s1.left) = read (right s1.right)` の一致分岐**だけ**で
+使われる（`obtain ⟨hz, hg⟩ := halign s1 w1 hw1 hav1 hmm`）。つまり消費者は
+`singlePositive s1.cycle` を自分で場合分けできる。
+
+### 再切り出しと証明（`CloseoutMatchTickN`）
+
+```
+def MatchTickN (raw) : Prop :=
+  ∀ s1 w1, s1.chain = .watch w1 → canRight s1.right →
+    read (left s1.left) = read (right s1.right) →
+    singlePositive s1.cycle = false →              -- 追加した前提
+    zero w1.lag = true ∧ Good w1
+```
+
+| 名前 | 内容 |
+|---|---|
+| `matchTickN_of_round` | **ラウンド datum から証明**。`lagZero` は `CaughtScan` の場、`Good` は `RoundScan.good_of_match`（その非終端前提が、まさに今足した前提） |
+| `matchTickN_of_chainRound` | `RoundBundle` が既に運んでいる `ChainRound` 場から |
+| `break_at_terminal` | 終端一致は `RoundScan.break_of_match` で `BreakStep` を返す ＝ `TerminalC` の cycle-end 出口。分岐を足しても何も失われない |
+
+すべて標準 3 公理のみ。
+
+`MatchTickC`: `REFUTED` → `MatchTickN` に `REFORMULATED` ＋ **`PROVED`**
+（`ChainRound` から供給）。
+
+### 区間分解の残差（更新）
+
+| 義務 | 状態 |
+|---|---|
+| `RoundDataC` | `MatchTickN` は証明済み。残るのは `roundStepC_of_align` の一致分岐を `singlePositive` で割り、終端を `TerminalC` の cycle-end に回す**配線** |
+| `ShiftAtMismatchC` | `OPEN`（入力依存） |
+| 終端ヘッド上界 | `OPEN`。`ChainPack.scanBound` 系と同種 |
+
+つまり区間分解の残差は、**配線 1 つ ＋ 入力依存の `ShiftAtMismatchC` ＋ 位置上界 1 つ**。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 区間分解は壁ではなかった（既に構成済み）。その残差 `MatchTickC` は**偽**
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
