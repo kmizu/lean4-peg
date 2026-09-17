@@ -95,6 +95,18 @@ shift / fallback）。全部標準公理のみ・sorryAx なし。
 `not_canRight_iff` ＋ `size : 2h ≤ R` の算術。**次は中心頭の位置と `C` の関係**
 （`RoundScan` の場にはない）。
 
+### 追記 5（同ターン）— piece 4 をラウンドから直接出した
+
+`shiftRun_exists_round`: 終端 `RoundScan` ＋ `CentreRep`（`InvLPC` の場）だけから
+`ShiftRun` の存在が出る。運ばれる中心不変量
+`ScanInvariant raw (position s.center) rad s1.left s1.right` が
+（`leftPos`/`rightPos` でヘッドから `(center, radius)` が一意に決まるので）
+中心頭を `C + h` に固定し、`RoundScan.rightPos` が右頭を `C + R + 2h` に置き、
+`GalilEndOfInput.position_le` がそれを `2 * raw.length` で抑え、
+`size : 2h ≤ R` が中心の `h` 歩と左頭の `2h` 歩の両方に余裕を残す。
+`left_word` / `left_present` / `left_position` で左頭を 1 歩左へ。
+**piece 4 は完全に閉じた**（新しい仮定ゼロ）。
+
 ### 訂正
 
 前ターンの「次は `segment_to_checkpoint` を `hsegmentM` の消費者に配線」は外れ。

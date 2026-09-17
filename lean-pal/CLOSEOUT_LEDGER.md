@@ -199,14 +199,22 @@ post-compare guard を**トリガー（前提）**として取る。同じ形に
 
 * `ShiftRunC` / `ShiftRunCL` / piece 4 — **PROVED**（2 つのヘッド上界と 2 つの表現から）。
 
+`shiftRun_exists_round` で**ラウンドから直接**出るところまで閉じた：終端 `RoundScan` では
+2 つのヘッド上界は算術で、運ばれる中心不変量
+（`ScanInvariant raw (position s.center) rad s1.left s1.right`）が中心頭を `C + h` に固定し、
+`RoundScan.rightPos` が右頭を `C + R + 2h` に置き、`GalilEndOfInput.position_le` が
+それを `2 * raw.length` で抑え、`RoundScan.size : 2h ≤ R` が中心の `h` 歩と左頭の `2h` 歩の
+両方に余裕を残す。入力は**ラウンドと `CentreRep`（`InvLPC` の場）だけ**。
+
 残る供給は状態不変量だけで、しかも**両方とも運ばれている**：
 中心頭の `Represents` ＋ `focus ≠ none` は `CloseoutPackRun21.CentreRep`
 （`InvLPC = InvLP2 ∧ CentreRep` の場）、左頭のそれは
 `RoundScan.caught.scan`（`ScanInvariant.leftRep` / `leftPresent`）。
 位置上界は `RoundScan.rightPos`（`position v.right = C+R+1+used`）と
 `not_canRight_iff`（`position v.right ≤ 2L`）と `size : 2h ≤ R` の算術に帰着する
-（終端 `used = 2h−1` で `C+R+2h ≤ 2L`）。**残りは中心頭の位置と `C` の関係だけ**で、
-これは `RoundScan` の場にはないので次に測る。
+（終端 `used = 2h−1` で `C+R+2h ≤ 2L`）。中心頭の位置と `C` の関係は
+運ばれる中心不変量（`ScanInvariant` の `leftPos`/`rightPos` で `(center, radius)` が
+ヘッドから一意に決まる）から `omega` で出た。
 
 これで「名前付き葉が偽なのは、唯一の消費者が到達しない状態まで量化しているから」という
 同一の欠陥が 5 例目（`ShiftPal` / `H_advanceT` / `MatchTickC` / `hpos` / `ShiftAtMismatchC`）。

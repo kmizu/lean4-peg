@@ -110,9 +110,50 @@ theorem shiftRun_exists_entry (raw : List (Fin 2)) (h : ℕ) (s1 : GalilVM)
   shiftRun_exists raw h _ (ofNat_canonical h)
     (by show value (ofNat h) = (h : ℤ); rw [ofNat_value]) hcr hcp hlr hlp hcb hlb
 
+/-- **Piece 4 from the round itself.**  At a terminal `RoundScan` the two head
+bounds are arithmetic: the carried centre invariant
+(`CloseoutLPack5` / `CloseoutChainPack`'s `ScanInvariant raw (position s.center) rad …`)
+pins the centre head at `C + h`, `RoundScan.rightPos` puts the right head at
+`C + R + 2h`, `GalilEndOfInput.position_le` bounds that by `2 * raw.length`, and
+`RoundScan.size : 2 * h ≤ R` leaves room for both the centre's `h` steps and the
+left head's `2h`.  The only inputs are the round and the centre head's
+representation — i.e. `CloseoutPackRun21.CentreRep`, a field of `InvLPC`. -/
+theorem shiftRun_exists_round {raw : List (Fin 2)} {C R h used : ℕ} {s1 : GalilVM}
+    {w0 : GalilScaffoldChainWatch.State}
+    (hI : PalPeg.GalilRoundPeriod.RoundScan raw C R h used s1 w0)
+    (hterm : used + 1 = 2 * h)
+    (hcen : ∃ rad : ℕ, ScanInvariant raw (position s1.center) rad s1.left s1.right)
+    (hcr : GalilScaffoldInputTrace.Represents s1.center.head raw)
+    (hcp : s1.center.head.focus ≠ none) :
+    ∃ t' : ShiftState,
+      ShiftRun ⟨s1.center, GalilScaffoldInputHead.left s1.left, ofNat h, inc s1.radius,
+        inc (inc s1.length)⟩ h t' := by
+  obtain ⟨rad, hsc⟩ := hcen
+  have hsize := hI.size
+  have hposH := hI.posH
+  have hroom := hI.room
+  have hrp := hI.rightPos
+  have hlpos := hI.leftPos
+  have hcr2 := hsc.rightPos
+  have hcl2 := hsc.leftPos
+  have hbound : position s1.right ≤ 2 * raw.length :=
+    PalPeg.GalilEndOfInput.position_le _ raw hI.caught.scan.rightRep
+  have hll : 0 < s1.left.head.left.length :=
+    (represented_position s1.left.head raw hI.caught.scan.leftRep
+      hI.caught.scan.leftPresent).1
+  have hlp1 := left_position s1.left hll
+  have hlw : GalilScaffoldInputTrace.Represents
+      (GalilScaffoldInputHead.left s1.left).head raw :=
+    left_word s1.left raw hI.caught.scan.leftRep hI.caught.scan.leftPresent
+  have hlpres : (GalilScaffoldInputHead.left s1.left).head.focus ≠ none :=
+    PalPeg.GalilRoundPeriod.left_present s1.left raw hI.caught.scan.leftRep
+      hI.caught.scan.leftPresent (by omega)
+  exact shiftRun_exists_entry raw h s1 hcr hcp hlw hlpres (by omega) (by omega)
+
 #print axioms canRight_of_lt
 #print axioms right_step
 #print axioms shiftRun_exists
 #print axioms shiftRun_exists_entry
+#print axioms shiftRun_exists_round
 
 end PalPeg.CloseoutShiftRun
