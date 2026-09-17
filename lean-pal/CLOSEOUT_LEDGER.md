@@ -22,6 +22,71 @@
 
 ---
 
+## 2026-09-19 `ShiftPal` は過剰量化だった — `shiftPal_of_chainRound` の名前付き分岐が 2 → 0
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+`pal_in_peg_final37` は **4 前提**（実測: `#check` で 4 引数、`#print axioms` は標準 3 公理）。
+
+### 何が起きていたか
+
+`CloseoutPackRun29.ShiftPal` は比較先 `s'` を「`compare s s'` かつ `s'.chain = .watch wch`
+かつ `shiftGuardVM s'`」で量化していたが、**`¬ matched s'` を落としていた**。
+一方 `Tick.scan_shift`（`GalilScaffoldTop`）は `hmt : ¬ matched s'` を要求するので、
+matched な `s'` で guard が立つ場合はフレームが一切使わない。
+`ShiftPal` の唯一の消費者 `shiftEntry_of_guard`（`CloseoutPackRun29:108`、grep で確認：
+適用箇所は全体で 1 箇所のみ）も `hmt` を持っている。
+
+つまり `ShiftPal` は消費者が必要としない強さを要求しており、その差分がそのまま
+`shiftPal_of_chainRound` の名前付き分岐 `H_matched` になっていた。
+
+### 対処
+
+`ShiftPal` の定義に `¬ (galilFrameS …).matched s' →` を追加（`CloseoutPackRun29:82`、
+**定義を直接編集**）。`ShiftPal` は 44 箇所で言及されるが、ほとんどは
+`hSP : ScanNR x → ShiftPal … x.vm` を素通しするだけなので、修正が必要だったのは
+消費者 1 箇所（`hSP _ hcmp hmt wch …`）と産出側 2 箇所だけ。全体 build で確認。
+
+`H_matched` は `a = true` 分岐で `matched s'` を構成していたので、そのまま `absurd … hmt`。
+
+### `H_born` も空虚だった
+
+`H_born`（比較中に誕生した chain）は `ChainStep.backDone` の生まれたての watch で、
+**phase = 0**（`CloseoutPackRun37.chainAt_false_born`）。ところが `shiftGuardVM`
+（`GalilScaffoldTopGuards:24`）は **phase = 4** を要求する。よって guard を通れない。
+`CloseoutPackRun37` は `CloseoutPackRun31` を import するので循環を避けて Run31 内に
+`chainAt_false_born` を複製した（証明は `chainAt_false_watch` と同構造）。
+
+これは `hws`/`hsl` を**反証**したのと同じ「生まれたての watch」の観察だが、今回は
+逆向きに効いて分岐を**空虚化**した。
+
+### 結果
+
+```
+theorem shiftPal_of_chainRound (hm : c.mode = Mode.scan) (hr : c.replaying = false)
+    (hpo : s.periodOnly = true) (hCR : ChainRound w c s)
+    (hws : WatchShift centre place entry q first w ⟨c, s⟩) :
+    ShiftPal centre place entry q first w s
+```
+
+名前付き分岐**ゼロ**。`shiftPal_of_readOrigin` も `H_fresh` 1 つだけになった。
+
+`ShiftPal`: `REFORMULATED`（消費者が持つ `¬ matched` を定義に入れた。弱化なので
+利用側は全て無修正で通る — 全体 build で確認）。
+`H_matched` / `H_born`: `PROVED`（どちらも空虚）。
+
+### `hSP` の残差（更新）
+
+| 義務 | 場所 | 状態 |
+|---|---|---|
+| `ChainRound`（単一状態） | `CloseoutPackRun31:183` | `OPEN`。tick 保存は `chainRound_tick` が 20 形を閉じ、残り `H_advance`/`H_shiftDone`/`H_birth` + `BlockInv` |
+| `WatchShift`（単一状態） | `CloseoutPackRun24:45` | `OPEN` |
+| `H_fresh`（`periodOnly = false` の初回 shift） | `CloseoutPackRun31` | `OPEN`。内容は `GalilScaffoldTopFreshEntry` |
+
+**注意**: これらを `ChainPack` の場に移すだけなら台帳規約どおり `OPEN` のまま。
+最上位の前提数は 4 → 3 になるが、証明義務は減らない。
+
+---
+
 ## 2026-09-19 `hme` は `hpack` の中にあった — **4 前提**
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**

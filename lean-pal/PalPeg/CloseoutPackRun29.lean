@@ -78,10 +78,16 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 the scan radius `r₀` at `s`: the period is non-empty, at most `r₀ + 1`, and
 the palindrome of radius `r₀ + 1 − periodLength wch` is known at the
 destination centre `position C + periodLength wch`.  Content:
-`GalilScaffoldChainReadOrigin.reshift_palindrome`. -/
+`GalilScaffoldChainReadOrigin.reshift_palindrome`.
+
+The target is restricted to a **mismatch** (`¬ matched s'`): `Tick.scan_shift`
+only fires at a mismatch, so `shiftEntry_of_guard` — the sole consumer — always
+has that datum, and without the restriction the producer would owe a matched
+branch it can never be asked for. -/
 def ShiftPal (w : List (Fin 2)) (s : GalilVM) : Prop :=
   ∀ s' : GalilVM,
     (galilFrameS (PofC centre place entry w) q first).compare s s' →
+    ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
     ∀ wch : GalilScaffoldChainWatch.State, s'.chain = .watch wch →
     shiftGuardVM s' →
     ∀ r₀ : ℕ, ScanInvariant w (position s.center) r₀ s.left s.right →
@@ -105,7 +111,7 @@ theorem shiftEntry_of_guard {w : List (Fin 2)} {s s' t : GalilVM} {r₀ : ℕ}
   obtain ⟨wch, hchain, ht⟩ :
     beginShiftVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
   have hg' : shiftGuardVM (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) := hg
-  obtain ⟨h1, hle, hpal⟩ := hSP _ hcmp wch hchain hg' r₀ hi
+  obtain ⟨h1, hle, hpal⟩ := hSP _ hcmp hmt wch hchain hg' r₀ hi
   have htl : t.left = GalilScaffoldInputHead.left s.left := by
     rw [ht, afterBirth_left, afterMismatch_left]; exact hvl
   have htr : t.right = GalilScaffoldChainVerifier.right s.right := by
