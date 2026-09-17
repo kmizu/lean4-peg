@@ -22,6 +22,45 @@
 
 ---
 
+## 2026-09-19 `ChainPack` に marks 3 pack を追加＋全体 build を壊して復旧（教訓）
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+`pal_in_peg_final36` は **5 前提**のまま（`hSP`, `hme`, `hor`, `hC`, `hpack`）。
+
+### `hme` 除去の材料が揃った
+
+`ChainPack` に `CPack` / `WPack` / `MarksInv'` を場として追加した。これで
+`CloseoutPackRun17.marks_steps`（`H_marksEntry'` を**使わない** run 版）の
+必要物がすべて束の中に入る:
+
+| `marks_steps` の入力 | 供給元 |
+|---|---|
+| `h4 : first ≠ 4` | `first` を具体値に固定すれば `decide`。`centreC`/`placeC` は `first` に依存しない |
+| `hfl : 0 ≤ value length` | `ChainPack.lenNonneg`（証明は `lenNonneg_of_entryCounters`） |
+| `hwin : WindowInOrigin at copy` | `ChainPack.winOrigin` |
+| `CPack` / `WPack` / `MarksInv'` | `ChainPack.cpack` / `.wpack` / `.marks` |
+
+`cpack_of_entry`（`InvS` ＋ `EntryCounters` → `CPack`、`GalilCentreLive:670`）と
+`wpack_of_mode`（`CloseoutPackRun17:107`）があるので、これらは run の起点では
+無料。**配線は未了。**
+
+### ⚠️ 教訓: `structure` の引数を変えると下流が静かに壊れる
+
+`ChainPack` に `CPack q c s` / `WPack q first c s` を足した結果、`q` と `first`
+が structure の引数に昇格し、`ChainPack w c s` が `ChainPack q first w c s` に
+なった。**単体ビルド（`lake build PalPeg.CloseoutChainPack`）は通ったが、
+全体 build が エラー 11 / sorryAx 5 で落ちた**（`CloseoutWatchSupply`,
+`CloseoutFinalPack`, `CloseoutFinalW3` の 3 ファイル）。
+
+これは CLAUDE.md の「`lake build --quiet PalPeg` が通ったことと、そのファイルが
+ビルドされたことは別」の**裏返し**の事例:
+**単体が通ったことと、下流が壊れていないことも別。**
+
+対処: 3 ファイルで `ChainPack w …` → `ChainPack q first w …` に統一して復旧。
+
+**規則**: `structure` / `def` の引数（section 変数の捕捉を含む）を変えたら、
+単体ビルドで満足せず必ず全体 build を回す。
+
 ## 2026-09-19 `LagAll` — chain 進化の全体で閉じた lag 不変量
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**

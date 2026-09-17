@@ -118,7 +118,7 @@ theorem watchShiftS_of_supply {w : List (Fin 2)} {x : State GalilVM}
 
 /-- **`ShiftLocalS` from `ChainPack` alone.**  No `ConsumeAvail`. -/
 theorem shiftLocalS_of_chainPack {w : List (Fin 2)} {x : State GalilVM}
-    (hp : ChainPack w x.ctl x.vm) :
+    (hp : ChainPack q first w x.ctl x.vm) :
     PalPeg.CloseoutPackRun34.ShiftLocalS centre place entry q first w x := by
   by_cases hi : x.vm.chain = ChainVM.idle
   · exact PalPeg.CloseoutPackRun34.shiftLocalS_of_chainIdle centre place entry q first hi
@@ -138,7 +138,7 @@ theorem shiftLocalS_of_run3 {w : List (Fin 2)}
     (hsd : H_shiftDoneRad2 centre place entry q first w)
     {n : ℕ} {x y : State GalilVM} (hx : ChainPosInv2 w x.ctl x.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y)
-    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack w c s) :
+    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack q first w c s) :
     ShiftLocalS centre place entry q first w y :=
   PalPeg.CloseoutWatchSupply.shiftLocalS_of_chainPack centre place entry q first
     (hp y.ctl y.vm
@@ -155,7 +155,7 @@ theorem radPack_ptS3 {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State 
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 i (st 0) (st i))
     (hLP : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
     (hll : ∀ i, i ≤ Tc w.length → PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm)
-    (hpk : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack w c s) :
+    (hpk : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack q first w c s) :
     ∀ i, i ≤ Tc w.length → RadPack (st i).ctl (st i).vm := by
   have hsh : ∀ i, i ≤ Tc w.length → ShiftLocalS centre place entry q first w (st i) := fun i hi =>
     PalPeg.CloseoutWatchSupply.shiftLocalS_of_run3 centre place entry q first hbg hmatch hentry hsd hpos0 (hreach i hi) hpk
@@ -189,7 +189,7 @@ theorem trailF_ptS3 {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State G
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 i (st 0) (st i))
     (hLP : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
     (hll : ∀ i, i ≤ Tc w.length → PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm)
-    (hpk : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack w c s)
+    (hpk : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack q first w c s)
     {m : ℕ} (hm : m < w.length) :
     ∀ i, i ≤ Tc (m+1) → TrailF w m (st i) := by
   have hsane := sanePack_pt centre place entry q first hw hP hll
@@ -208,7 +208,7 @@ theorem needIMW'_le_W3 {w : List (Fin 2)} (hw : 0 < w.length)
     (hentry : H_shiftEntry2 centre place entry q first w)
     (hsd : H_shiftDoneRad2 centre place entry q first w)
     (hpos0 : ChainPosInv2 w (st 0).ctl (st 0).vm)
-    (hpk : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack w c s) :
+    (hpk : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack q first w c s) :
     ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
       PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 := by
   have hbase := hP.base.pre

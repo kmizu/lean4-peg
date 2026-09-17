@@ -35,13 +35,15 @@ open GalilScaffoldCounter GalilScaffoldInputHead GalilScaffoldChainVerifier
 open PalPeg.GalilRunSkeleton PalPeg.GalilFrontMono
 open PalPeg.CloseoutPackRun26 PalPeg.CloseoutPackRun41 PalPeg.CloseoutPackRun47
 open PalPeg.CloseoutPackRun44 PalPeg.CloseoutPackRun48 PalPeg.CloseoutVerRep
+open PalPeg.GalilCentreLive PalPeg.CloseoutPackRun16 PalPeg.CloseoutPackRun17
 
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
 
 /-- **`ChainPosInv2` plus the three head/counter supply clauses.** -/
-structure ChainPack (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+structure ChainPack (q : ℕ) (first : Fin 9) (w : List (Fin 2)) (c : Control) (s : GalilVM) :
+    Prop where
   inv : ChainPosInv2 w c s
   repR : c.mode = Mode.scan →
     GalilScaffoldInputTrace.Represents s.right.head w ∧ s.right.head.focus ≠ none
@@ -78,10 +80,18 @@ structure ChainPack (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   the same, proved from `EntryCounters` by
   `CloseoutLenNonneg.lenNonneg_of_entryCounters`. -/
   lenNonneg : c.mode = Mode.scan → 0 ≤ value s.length
+  /-- The centre pack, which `GalilCentreLive.cpack_of_entry` produces from
+  `InvS` plus `EntryCounters`. -/
+  cpack : CPack q c s
+  /-- The window pack, free outside the FPP phases
+  (`CloseoutPackRun17.wpack_of_mode`). -/
+  wpack : WPack q first c s
+  /-- The marks invariant itself. -/
+  marks : MarksInv' first c s
 
 /-- The three clauses, in the shape `h_bgP2_of_supply` asks for. -/
 theorem chainPack_supply {w : List (Fin 2)}
-    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack w c s) :
+    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack q first w c s) :
     (∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPosInv2 w c s →
       GalilScaffoldInputTrace.Represents s.right.head w ∧ s.right.head.focus ≠ none) ∧
     (∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPosInv2 w c s →
@@ -97,16 +107,16 @@ theorem chainPack_supply {w : List (Fin 2)}
 /-- **`H_bgP2` from `ChainPack` plus the chain-start clause.**  Three of
 `h_bgP2_of_supply`'s four inputs are now fields. -/
 theorem h_bgP2_of_chainPack {w : List (Fin 2)}
-    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack w c s)
+    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack q first w c s)
     (hstart : BgStartP2 centre place entry q first w) :
     H_bgP2 centre place entry q first w :=
-  let S := chainPack_supply (w := w) hp
+  let S := chainPack_supply q first (w := w) hp
   h_bgP2_of_supply centre place entry q first S.1 S.2.1 S.2.2 hstart
 
 /-- **`H_shiftDoneRad2` from `ChainPack`.**  Both of
 `h_shiftDoneRad2_of_supply`'s inputs are now fields. -/
 theorem h_shiftDoneRad2_of_chainPack {w : List (Fin 2)}
-    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack w c s) :
+    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack q first w c s) :
     H_shiftDoneRad2 centre place entry q first w :=
   h_shiftDoneRad2_of_supply centre place entry q first
     (fun c s hm _ hx => (hp c s hx).shiftCanR hm)
@@ -118,7 +128,7 @@ fields, eight are `ChainPack` fields or immediate consequences: `repV` is
 `canR`/`radLe` are `PosPayload2`, and `repNext`/`canRNext` come from the bound
 via `right_word`/`right_present`/`canRight_next_of_bound`. -/
 theorem matchRes2_of_chainPack {w : List (Fin 2)} {c : Control} {s : GalilVM} {m : ℕ}
-    (hp : ChainPack w c s) (hm : c.mode = Mode.scan)
+    (hp : ChainPack q first w c s) (hm : c.mode = Mode.scan)
     (hlv : 0 < s.right.head.left.length)
     (hm1 : 1 ≤ m) (hmlt : m < w.length)
     (hpos : position s.right ≤ 2 * m - 1) :
@@ -162,7 +172,7 @@ def ScanBudget (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPl
 `ChainPack` is established along the run (where the bound comes from), so it
 travels with the bundle rather than as a separate hypothesis. -/
 theorem scanBudget_of_chainPack {w : List (Fin 2)}
-    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack w c s) :
+    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack q first w c s) :
     ScanBudget centre place entry q first w :=
   fun c s hm hx => (hp c s hx).scanBound hm
 
@@ -170,22 +180,22 @@ theorem scanBudget_of_chainPack {w : List (Fin 2)}
 `ChainPack.repR`: `present_iff_left` turns `focus ≠ none` into
 `0 < left.length`. -/
 theorem leftLen_of_chainPack {w : List (Fin 2)} {c : Control} {s : GalilVM}
-    (hp : ChainPack w c s) (hm : c.mode = Mode.scan) : 0 < s.right.head.left.length := by
+    (hp : ChainPack q first w c s) (hm : c.mode = Mode.scan) : 0 < s.right.head.left.length := by
   obtain ⟨hrr, hfr⟩ := hp.repR hm
   exact (PalPeg.CloseoutLPack3.present_iff_left hrr).1 hfr
 
 /-- `MatchRes2` needs the payload only through `canR`, which `ChainPack.repR`
 and the budget already give; so the idle case is not special. -/
 theorem matchRes2_of_budget {w : List (Fin 2)} {c : Control} {s : GalilVM}
-    (hp : ChainPack w c s) (hm : c.mode = Mode.scan)
+    (hp : ChainPack q first w c s) (hm : c.mode = Mode.scan)
     (hb : ScanBudget centre place entry q first w) :
     MatchRes2 w c s := by
   obtain ⟨m, hm1, hmlt, hpos⟩ := hb c s hm hp.inv
-  exact matchRes2_of_chainPack hp hm (leftLen_of_chainPack hp hm) hm1 hmlt hpos
+  exact matchRes2_of_chainPack q first hp hm (leftLen_of_chainPack q first hp hm) hm1 hmlt hpos
 
 /-- **`H_matchRes2` from `ChainPack`.** -/
 theorem h_matchRes2_of_chainPack {w : List (Fin 2)}
-    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack w c s)
+    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack q first w c s)
     (hb : ScanBudget centre place entry q first w)
     :
     H_matchRes2 centre place entry q first w := fun c s s' t o b hm hx _ _ _ _ _ =>
@@ -194,7 +204,7 @@ theorem h_matchRes2_of_chainPack {w : List (Fin 2)}
 /-- **`H_shiftRes2` from the same bundle** — it asks for the identical
 `MatchRes2` pack, at a mismatching guarded comparison instead. -/
 theorem h_shiftRes2_of_chainPack {w : List (Fin 2)}
-    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack w c s)
+    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack q first w c s)
     (hb : ScanBudget centre place entry q first w)
     :
     H_shiftRes2 centre place entry q first w := fun c s s' t hm hx _ _ _ _ =>
@@ -223,7 +233,8 @@ checkpoint bound), which `ChainSide` names.
 -/
 
 /-- **(NAMED) the chain-side residue of `ChainPack`.** -/
-structure ChainSide (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+structure ChainSide (q : ℕ) (first : Fin 9) (w : List (Fin 2)) (c : Control) (s : GalilVM) :
+    Prop where
   repV : c.mode = Mode.scan → VerRep w s.chain
   repVmid : ∀ (y : ChainVM) (wch : GalilScaffoldChainWatch.State),
     ChainStep s.chain y → y = .watch wch →
@@ -255,13 +266,16 @@ structure ChainSide (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   input; `CloseoutLenNonneg.lenNonneg_of_entryCounters` proves it from
   `EntryCounters`). -/
   lenNonneg : c.mode = Mode.scan → 0 ≤ value s.length
+  cpack : CPack q c s
+  wpack : WPack q first c s
+  marks : MarksInv' first c s
 
 /-- **`ChainPack` from `LPackM2`, `SanePack` and the chain-side residue.**  `repR` is the
 only field the geometry pack supplies; everything else is chain-side. -/
 theorem chainPack_of_lpackM2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
     (hinv : ChainPosInv2 w c s) (hP : PalPeg.CloseoutPackRun23.LPackM2 w c s)
     (hSP : PalPeg.GalilTrailSane.SanePack c s)
-    (hS : ChainSide w c s) : ChainPack w c s where
+    (hS : ChainSide q first w c s) : ChainPack q first w c s where
   inv := hinv
   repR := fun hm => by
     cases hr : c.replaying with
@@ -289,6 +303,9 @@ theorem chainPack_of_lpackM2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
   scanBound := hS.scanBound
   winOrigin := hS.winOrigin
   lenNonneg := hS.lenNonneg
+  cpack := hS.cpack
+  wpack := hS.wpack
+  marks := hS.marks
 
 /-! ## The marks route from `ChainPack`
 
@@ -302,7 +319,7 @@ route with **no `H_marksEntry'`**.
 /-- `hfl` and `hwin` — the two side inputs of
 `CloseoutPackRun17.marks_steps` — read off `ChainPack` along a run. -/
 theorem marksInputs_of_chainPack {w : List (Fin 2)} {x : State GalilVM}
-    (hp : ∀ (z : State GalilVM), ChainPack w z.ctl z.vm) :
+    (hp : ∀ (z : State GalilVM), ChainPack q first w z.ctl z.vm) :
     (∀ (m : ℕ) (z : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 m x z →
       z.ctl.mode = Mode.scan → 0 ≤ value z.vm.length) ∧
@@ -323,7 +340,7 @@ verifier is `s.center` and whose lag is `s.radius`.  So `ChainPos` at the target
 is `canRight s.center ∧ Sane s.center ∧ position s.center + radius =
 position s.right` — the three `ChainPack` fields added above. -/
 theorem bgStartP2_of_chainPack {w : List (Fin 2)}
-    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack w c s)
+    (hp : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack q first w c s)
     (hb : ScanBudget centre place entry q first w) :
     BgStartP2 centre place entry q first w :=
   PalPeg.CloseoutPackRun47.bgStartP2_of_centre centre place entry q first

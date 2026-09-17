@@ -107,7 +107,7 @@ theorem pal_in_peg_final33 (entry q : ℕ) (first : Fin 9)
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hpack : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack w c s)
+      ChainPosInv2 w c s → ChainPack q first w c s)
     (hbudget : ∀ w : List (Fin 2), ScanBudget centreC placeC entry q first w)
     (hstart : ∀ w : List (Fin 2), BgStartP2 centreC placeC entry q first w)
     (hav : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (i : ℕ),

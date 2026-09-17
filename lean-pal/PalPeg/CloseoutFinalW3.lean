@@ -100,7 +100,7 @@ theorem pal_in_peg_final5MW3 (entry q : ℕ) (first : Fin 9)
     (hpos2 : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → ChainPosInv2 w (st 0).ctl (st 0).vm)
     (hpk : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack w c s)
+      ChainPosInv2 w c s → ChainPack q first w c s)
     :
     RecognizedByTotalPEG PAL := by
   classical
@@ -181,7 +181,7 @@ theorem pal_in_peg_final36 (entry q : ℕ) (first : Fin 9)
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hpack : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack w c s)
+      ChainPosInv2 w c s → ChainPack q first w c s)
     :
     RecognizedByTotalPEG PAL :=
   pal_in_peg_final5MW3 entry q first
