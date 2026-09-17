@@ -22,6 +22,68 @@
 
 ---
 
+## 2026-09-19 `hor` の橋を締めた — `H_oracle2` との差は `ReplayStage` **だけ**
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 前エントリより遥かに近かった
+
+前エントリで `hor = H_oracle（11 葉）＋ InvLPS 着地 lift（Inv ＋ SpanRep）` と書いたが、
+**`H_oracle` は遠回りだった**。定義を並べると：
+
+```
+GalilOracleMC2.CycleOutMC2C : … ∧ InvLPC raw cT sT ∧ mu raw sT < mu raw r ∧ …
+GalilInvPlus3.CycleOutMC3   : … ∧ InvLPS P q first raw cT sT ∧ mu raw sT < mu raw r ∧ …
+```
+
+**完全に同一**で、着地が `InvLPC` か `InvLPS = InvLPC ∧ ReplayStage` かだけが違う
+（`ReachAtC2` / `ReachAtC3` も同じ 1 箇所）。そして
+`GalilFinalAssembly4.H_oracle2`（`:248`）は `CycleOracleMC2C` 基底で、
+`h_oracle2_of_leaves`（`:330`）が産出する。
+
+つまり **`hor` と `H_oracle2` の差は `ReplayStage` 1 つだけ**。
+
+### さらに `InvSS` で `hsc` ちょうどに絞れる
+
+`CloseoutInvScanS.InvSS`（`:47`）は `InvS` の scan 分岐に `ReplayStage` を束ねた形で、
+`replayStage_of_invSS`（`:62`）が取り出す。よって
+
+```
+hor  =  H_oracle2  +  「着地の scan 分岐が stage datum を持つ」
+```
+
+後者はまさに **`hsc` の再切り出し**（`InvScan` は `s.radius` に触れないが
+`ReplayStage` は canonical radius を要求する、という反証への対処）。
+
+### 新規（`CloseoutOracleBridge` 追加分）
+
+| 名前 | 内容 |
+|---|---|
+| `reachAtC3_of_C2` | `ReachAtC2 → ReachAtC3`（`ReplayStage` のみ） |
+| `cycleOutMC3_of_MC2C` | `CycleOutMC2C → CycleOutMC3` |
+| `cycleOracleMC3_of_MC2C` | origin はタダ（`InvLPS → InvLPC` は `.1`） |
+| `hor_of_H_oracle2` | `hor ← H_oracle2 ＋ ReplayStage lift` |
+| **`hor_of_H_oracle2_invSS`** | **`hor ← H_oracle2 ＋ InvSS 着地**（＝ `hsc` そのもの） |
+
+すべて標準 3 公理のみ。
+
+また `GalilOracleMC2.FallbackRouteMC2` の `landed`/`replaying` 構成子（`:289`/`:295`）は
+`hI : Inv raw cT sT` と `hSpan : SpanRep sT` を**場として持っている**ので、
+fallback 経路の着地は `Inv` 分岐に落ちて lift を満たす。残るのは scan 分岐だけ。
+
+### 残る独立な壁（更新）
+
+| 壁 | 内容 |
+|---|---|
+| `ScanToScan`（run の区間分解） | `hSP` のラウンド境界・最初のラウンド、`hor` の found 葉（`ShiftRoundC`） |
+| **`hsc`（`InvSS` 着地）** | `hor` と `H_oracle2` の差。scan 分岐の stage datum |
+| `hC` | `H_realizeLIMW'` |
+| `hpack` のモデル欠陥 (e) 部分 | `marks` / `hwin` |
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 全部が帰着する 1 つの義務: run の区間分解（`ScanToScan`）
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
