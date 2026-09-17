@@ -211,6 +211,35 @@
 結果的に内容が正しかった。しかし当時それは機械検査されていなかったので、
 記載は虚偽だった。内容が当たっていたことは記載の正当化にはならない。）
 
+## 4.5 未検証記述のもう 1 件（本監査で発見・訂正済み）
+
+`PalPeg/CloseoutMatchTickN.lean` のヘッダに、`MatchTickN` の終端側を
+「`TerminalC` の *cycle end* 出口（ヘッダが挙げる 4 つの停止理由の 1 つ）に回す」と
+書いていた。**`TerminalC` の 4 出口にそのようなものは無い**
+（`roundFuel h s = 0` / `shiftGuardVM s` / `¬ canRight s.right` / `BreakEndC`、
+`CloseoutWatchRound:186`）。これも検査していない記述である。
+
+正しくは**第 5 出口**が必要で、それは `CloseoutTerminalN.BrokeEndN`
+（`WatchSeg` 到達 ＋ clock 1 ＋ 一致 ＋ `singlePositive cycle = true`）であり、
+消費者 `CloseoutTerminalN.roundStepC_of_alignN` は既に `MatchTickN` を取って
+`TerminalN`（5 出口）を返す形で存在する。ヘッダを訂正した。
+
+## 4.6 `RoundDataC` の現状（本監査で確認）
+
+- `RoundDataC` の残差は `MatchTickC` 1 本（`CloseoutWatchRound2:132`「all that is
+  left of `RoundDataC`」）。
+- `MatchTickC` は反証済み（`CloseoutMatchTickRefute`、条件付き）。
+- 再定式化 `MatchTickN` は**証明済み**（`CloseoutMatchTickN.matchTickN_of_round` /
+  `matchTickN_of_chainRound`）。
+- 消費者 `roundStepC_of_alignN` は既に `MatchTickN` を取る形で存在。
+
+よって `RoundDataC` 側は配線済み。`roundStepC_of_alignN` に残る入力は 2 本：
+
+| 入力 | 状態 |
+|---|---|
+| `hready : ChainTickable` | **命題が不適切**（`.broken` は機械が正当に到達する状態で `ChainReady .broken = False`）。背景 tick に必要なのは `CloseoutTickFalse.chainOk_tick_false`（本監査で証明）で、`watchSeg_countdown` を `ChainOk` に載せ替える必要がある |
+| `hland : ∀ c s, LiveScanWatch c s → LandingReadyC s` | **過剰量化**。`canRight s.right` を全 live 状態で要求する run の事実。run 形（`∀ m z, Steps … m x z → …`）にする必要がある。※これが偽かどうかは未検査であり、「偽」とは書かない |
+
 ## 5. 検査の再現手順
 
 ```sh

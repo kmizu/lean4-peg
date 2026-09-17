@@ -13,9 +13,15 @@ matched comparison breaks the chain instead
 `by_cases hmm : read (left s1.left) = read (right s1.right)` — so the fix is the
 same shape as `ShiftPal`'s and `H_advanceT`'s: put the datum the consumer can
 supply into the statement.  Here that datum is the round's non-terminality,
-which `roundStepC_of_align` can obtain by a `by_cases` on
-`singlePositive s1.cycle`, routing the terminal case to `TerminalC`'s *cycle
-end* exit (one of the four ways its header says a segment stops).
+which `roundStepC_of_align` obtains by a `by_cases` on `singlePositive s1.cycle`.
+
+*(Correction, 2026-09-19: an earlier version of this header said the terminal
+half is routed to "`TerminalC`'s cycle end exit".  That was wrong and was not
+checked — `TerminalC`'s exits are `roundFuel h s = 0`, `shiftGuardVM s`,
+`¬ canRight s.right` and `BreakEndC`, none of which is a cycle end.  The
+terminal half needs a **fifth** exit, which is `CloseoutTerminalN.BrokeEndN`;
+`CloseoutTerminalN.roundStepC_of_alignN` is the consumer that takes
+`MatchTickN` and returns `TerminalN`.)*
 
 With that premise the statement is not merely true, it is **already proved** in
 `GalilRoundPeriod`:
