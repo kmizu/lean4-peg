@@ -97,8 +97,40 @@ theorem landingReadyC_of_round {raw : List (Fin 2)} {C R h used : ℕ} {s : Gali
   have : w = w0 := by rw [hI.chain] at hw; cases hw; rfl
   rw [this]; exact hdist
 
+/-! ## `0 ≤ value distance`: 参照 run については出る、実 chain については出ない
+
+`GalilScaffoldChainRestart.Ordered s := value s.last ≤ value s.boundary ∧
+value s.boundary ≤ value s.distance` で、`run_order` は `Ordered` の保存と
+**`last` の単調性**（`value s.last ≤ value (run s xs).last`）を同時に返す。
+`GalilScaffoldChainConsume.ready` は 3 counter すべて `reset`（値 `0`）なので、
+参照 run では `0 ≤ value last ≤ value boundary ≤ value distance` が出る。 -/
+theorem distance_nonneg_of_run (token boundary : Fin 3) (xs pre : List (Fin 3)) :
+    0 ≤ value (GalilScaffoldChainSweep.run
+      (GalilScaffoldChainConsume.ready token xs boundary) pre).distance := by
+  have hinit : PalPeg.GalilScaffoldChainRestart.Ordered
+      (GalilScaffoldChainConsume.ready token xs boundary) := by
+    simp [PalPeg.GalilScaffoldChainRestart.Ordered,
+      GalilScaffoldChainConsume.ready, GalilScaffoldCounter.reset, value]
+  have hlast0 : value (GalilScaffoldChainConsume.ready token xs boundary).last = 0 := by
+    simp [GalilScaffoldChainConsume.ready, GalilScaffoldCounter.reset, value]
+  obtain ⟨hord, hmono⟩ :=
+    PalPeg.GalilScaffoldChainRestart.run_order
+      (GalilScaffoldChainConsume.ready token xs boundary) pre hinit
+  rw [hlast0] at hmono
+  exact le_trans hmono (le_trans hord.1 hord.2)
+
+/-! **ここで止まる。**  `CloseoutSweptOff.SweptOff` が与えるのは
+`Offset k w.machine.control d`（`d` は上の参照 run）であり、`Offset` は 3 counter が
+定数 `k` だけずれることを言う。`ReadOrigin.offset` の `k` は
+`(shifts * (interior.length+1) : ℕ)` で**非負**なので、
+`value w.machine.control.distance = value d.distance - k` は**負になり得る**。
+実 chain の `distance` 非負は shift guard（`4h ≤ distance` を shift 前に要求する）に
+結びついた run の事実であり、**その供給元は本監査では特定できていない**。
+「無い」とは書かない。 -/
+
 #print axioms canRight_verifier_of_round
 #print axioms chainReady_of_round
 #print axioms landingReadyC_of_round
+#print axioms distance_nonneg_of_run
 
 end PalPeg.CloseoutLandingRound

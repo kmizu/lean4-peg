@@ -271,13 +271,24 @@
 |---|---|---|
 | `canRight s.right` | 呼び出し側（run pack の `Extra7.scanAvail`） | 入力 |
 | `ChainReady s.chain` | `chainReady_of_round`：3 条項すべてラウンドから — (1) `positive lag → Good` は `RoundScan.caught.lagZero` で**空虚**、(2) `WatchBlock w` は `BlockInv (.watch w)`（`GalilBranchInvariants:429`）＝ `Coupled.block` ＝ `AuxPack` の場、(3) `∀ m, Internal w m → canRight m.verifier` は `internal_of_zero` で `m = w` に潰れ、`canRight_verifier_of_round`（`CaughtScan.aligned` ＋ `not_canRight_iff`）で出る | **PROVED** |
-| `∀ w, s.chain = .watch w → 0 ≤ value w.machine.control.distance` | **未特定** | 残り 1 点 |
+| `∀ w, s.chain = .watch w → 0 ≤ value w.machine.control.distance` | 参照 run については `distance_nonneg_of_run` で**証明済み**。実 chain は `Offset k`（`k ≥ 0`）だけ小さいので負になり得る。供給元**未特定** | 残り 1 点 |
 
-最後の 1 点について分かっていること：`Canonical c := c.pos = [] ∨ c.neg = []` なので
-`Canonical` 単体では非負は出ない（`pos = []` 側なら `value ≤ 0`）。`negative distance = false`
-に相当する供給元が必要で、**まだ特定できていない**。`ReadOrigin.canonicalDistance` /
-`ReadOrigin.ordered`（`GalilScaffoldChainRestart.Ordered`）が候補だが未確認。
-「無い」とは書かない。
+最後の 1 点を追った結果（`distance_nonneg_of_run`、本監査で証明）：
+
+- `Ordered s := value last ≤ value boundary ∧ value boundary ≤ value distance` で、
+  `GalilScaffoldChainRestart.run_order` は `Ordered` の保存と **`last` の単調性**を
+  同時に返す。`GalilScaffoldChainConsume.ready` は 3 counter すべて `reset`（値 `0`）。
+  よって**参照 run では `0 ≤ value distance` が出る**（機械検査済み）。
+- しかし `CloseoutSweptOff.SweptOff` が与えるのは `Offset k w.machine.control d`
+  （`d` は参照 run）であり、`ReadOrigin.offset` の `k` は
+  `(shifts * (interior.length+1) : ℕ)` で**非負**。したがって
+  `value w.machine.control.distance = value d.distance - k` は**負になり得る**。
+- 実 chain の `distance` 非負は shift guard（shift 前に `4h ≤ distance` を要求）に
+  結びついた **run の事実**であり、**その供給元は本監査では特定できていない**。
+  「無い」とは書かない。
+
+`Canonical` 単体では非負は出ない（`Canonical c := c.pos = [] ∨ c.neg = []` で
+`pos = []` 側なら `value ≤ 0`）ことも確認済み。
 
 ## 5. 検査の再現手順
 
