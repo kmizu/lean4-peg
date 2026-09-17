@@ -22,6 +22,62 @@
 
 ---
 
+## 2026-09-19 訂正: `hor` に producer は無かった — `H_oracle` とは別物。橋を作った
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### ウチの「訂正」自体が誤りだった
+
+以前「`hor` は producer ゼロで原理的に到達不能」と書いたのを
+「誤り。`h_oracle_of_leaves''` が 14 葉から産出する」と訂正した。
+**その訂正が誤りだった。** 定義を読むと：
+
+| 名前 | origin | 着地の不変量 |
+|---|---|---|
+| `GalilTraceCost.CycleOracleMC`（`H_oracle` の中身） | `InvL raw c r` | `InvL raw cT sT` |
+| `GalilInvPlus3.CycleOracleMC3`（`hor` の型） | `InvLPS P q first raw c r` | `InvLPS P q first raw cT sT` |
+
+`ReachAtC` / `ReachAtC3` も同じ 1 箇所だけ違う（`GalilTraceCost:115` vs
+`GalilInvPlus3:194`）。そして tree 中の `h_oracle_of_leaves*` は**全部**
+（`GalilOracleMC2`, `GalilOracleLeaves2`, `GalilOracleMC3`,
+`GalilSegmentConstructB`, `GalilReadyFuelUses`, `GalilLeafReport`,
+`CloseoutOracle5`〜`CloseoutOracle8`）`GalilFinalAssembly.H_oracle` を結論とする。
+つまり `hor` には producer が無く、両者は交換不能（`MC3` は強い着地不変量を
+**配らねばならない**）。
+
+**教訓**: 型名の一致だけでなく、**定義を展開して origin と結論の不変量を照合する**。
+`h_oracle_of_leaves` という名前が同じでも結論が違う。
+
+### 橋（`CloseoutOracleBridge`）— 差は 2 つだった
+
+| 名前 | 内容 |
+|---|---|
+| `invL_of_invLPS` | origin 側はタダ（`InvLPS → InvL` は射影 4 つ） |
+| `reachAtC3_of_C` | `ReachAtC → ReachAtC3`（継続の不変量を lift） |
+| `cycleOutMC3_of_MC'` | `CycleOutMC' → CycleOutMC3`（不変量のみ） |
+| `cycleOutMC3_of_MC` | `CycleOutMC → CycleOutMC3`。**差は 2 つ**：`GalilLexMeasure.cycleOutMC'_of_MC` が中心進行を `mu` 進行に変換（`mu_lt_of_centre`）、lift が不変量を動かす |
+| `cycleOracleMC3_of_MC` / `hor_of_H_oracle` | `hor` を `H_oracle` ＋ lift から |
+
+すべて標準 3 公理のみ。
+
+### `hor` の残差（確定）
+
+```
+hor  =  H_oracle（11 葉、CloseoutOracle8.h_oracle_of_leaves7）
+      +  InvLPS 着地 lift（着地での Inv ＋ SpanRep）
+```
+
+lift はタダではない: `GalilInvPlus3.invLPS_of_landed` は着地の
+`Inv raw cT sT`（`InvL` では不足 — `InvS` の半分は `Inv ∨ InvScan`）と
+`SpanRep sT`、および origin の `CopyPack` から作る。`CopyPack` は `InvLPS`
+origin が持つので、残るのは**着地の `Inv` と `SpanRep`**。
+これは `CloseoutStageBoot` / `CloseoutStageCheck` が boot 状態でやった
+`InvLPS` lifting と同種の作業。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 訂正: `hended` / `hlastMatch` は閉じていない（側入力 `hpres` が偽）
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**

@@ -113,6 +113,7 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 | `pal_in_peg_of_local_core` | `LocalLatchRealize` | 局所 oracle（`LocalSysConcrete.localSys_oracles` の残差）+ `H_ledger`（`LocalLedgerShift` で放電済み、`habs`/飢餓同値が残り） |
 
 - `H_oracle2` ← `GalilFinalAssembly4.h_oracle2_of_leaves` ← `GalilOracleMC3.h_oracle_of_leaves''`（`hquiet`/`houtReplay` 除去、`hfoundReplay` 追加）。葉の現状は §3。
+- **重要（2026-09-19 訂正）**: `h_oracle_of_leaves*` は**全部** `GalilFinalAssembly.H_oracle`（= `CycleOracleMC`、origin/着地とも `InvL`）を結論とする。最上位の `hor` は `CycleOracleMC3`（origin/着地とも `InvLPS`）で**別物**。橋は `CloseoutOracleBridge.hor_of_H_oracle`（`H_oracle` ＋ `InvLPS` 着地 lift）。差は 2 つ（不変量と、中心進行 vs `mu` 進行）。**型名の一致で producer を判断せず、定義を展開して origin と結論の不変量を照合すること。**
 - `H_needLB'` ← `H_trailF`（`GalilTrailProof`）← scan 側 `GalilTrailScan/Budget/Front/Sane/Order` + verifier 側 `GalilTrailChain/Assembly`。残りは scan 不変量 pack `RadPack`（`GalilTrailRad`、進行中）1 つに集約。
 - `H_realizeLB'`: 局所実現。`LocalSysConcrete`（tick/到着/stutter/出力 oracle は無仮定）、`LocalRealizesScan`（rewind/choose 閉）、`LocalRealizesPhase`（shift/copy/home/markEnd 閉、fpp は局所 1 量子のみ残）。**scan/init/replayStart は抽象 tick の非決定性で閉じない**（§2）。
 
