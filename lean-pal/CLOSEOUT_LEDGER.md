@@ -22,6 +22,46 @@
 
 ---
 
+## 2026-09-19 `SegCrossSplit` を証明した — 終端ヘッド上界の名前付き葉が消えた
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 新規（`CloseoutSegPrefix`）
+
+| 名前 | 内容 |
+|---|---|
+| `watchSegE_prefix_count` | **任意の `n ≤ es.count true` について、`es = es1 ++ es2` で `es1.count true = n` かつ `es1` 上の `WatchSegE` が存在する。** 導出への帰納、7 構成子すべて（background 2 つは `false` を運んで `n` を素通し、matched 3 つは `true` を運んで `n` がゼロかで分岐） |
+| `segCrossSplit_proved` | **`SegCrossSplit` を証明**。`n := 2*m − 1 − position r.right` で接頭辞を取る |
+
+どちらも標準 3 公理のみ。
+
+### 効果
+
+`CloseoutSegBudget.hpos_or_report_of_split` に `segCrossSplit_proved` を食わせると、
+終端ヘッド上界は**名前付き葉なしの三分岐**になる：
+
+1. チェックポイント内に留まる（`hpos_or_reportPoint` の第 1 分岐）
+2. その状態が `m` の報告点（oracle は `ReachAtC2` を取る）
+3. 交差接頭辞が存在（`reportPointAt_of_seg` でその着地が報告点）
+
+`SegCrossSplit`: `PROVED`。終端ヘッド上界 / `hpos`: 名前付き葉は消え、残るのは
+第 3 分岐の着地を `SegReachedW` に持ち上げる配線（`reportPointAt_of_seg` は
+`SegReachedW` を要求するが、接頭辞から得られるのは `WatchSegE`）。
+
+### 区間分解の残差（更新）
+
+| 義務 | 状態 |
+|---|---|
+| `RoundDataC` / `MatchTickC` | **閉** |
+| `SegCrossSplit` | **閉** |
+| 終端ヘッド上界 / `hpos` | 接頭辞の `WatchSegE → SegReachedW` 持ち上げのみ |
+| `ShiftAtMismatchC` | `OPEN`（入力依存） |
+| 下流の `TerminalN` 再配線 | 未着手（機械的） |
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 終端ヘッド上界は `hpos` と同一で、`hpos` は交差点での分割だった
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
