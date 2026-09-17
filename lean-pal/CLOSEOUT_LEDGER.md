@@ -22,6 +22,45 @@
 
 ---
 
+## 2026-09-19 訂正: `hended` / `hlastMatch` は閉じていない（側入力 `hpres` が偽）
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+`CLAUDE.md` §3 は `hended` と `hlastMatch` を「閉」に挙げていたが**誤り**。
+
+producer は 3 つあるが（`GalilLeafReport.hended_C`（`:234`）、
+`GalilLeafReport.hlastMatch_C`（`:352`）、`GalilOracleMC4.hlastMatch_C'`（`:71`））、
+どれも側入力
+
+```
+hpres : ∀ w s a v, SearchReady (searchLens.get s) →
+          searchEffect (PofC centre place entry w) a s v → SearchReady v
+```
+
+を取る。ところが `GalilLeafPres.searchReady_run_true_iff` が既に正確な法則
+
+```
+SearchReady v' ↔ 1 ≤ value v.search.debt
+```
+
+を証明している（`.run → .run` の event `true` 量子について）。つまり readiness は
+**debt に 1 単位残っているときだけ**生き残る。`SearchReady v` は
+`0 ≤ value v.search.debt` しか与えないので、debt 0 では破れる。
+
+機械検査可能な形で記録した: `CloseoutPresRefute.hpres_fails_at_zero_debt`
+（標準 3 公理のみ）。
+
+`hpres`: `REFUTED`。`hended` / `hlastMatch`: `OPEN`（`h_oracle_of_leaves7` の葉のまま）。
+閉じるには `GalilLeafPres` が指定する `SearchReadyB := ReadyRem ∧ RunEntriesAll` への
+再切り出しが必要で、現在の `hpres` を証明しようとしても無駄。
+
+CLAUDE.md §3 の「閉」リストも訂正した。併せて **`Decodes` はタダ**（`decodesC` が
+証明済み、`Closeout*` 全域の `hP : Decodes (PofC …)` は全部不要）を明記した。
+
+**最上位は変わらず 4 前提**（`hSP` `hor` `hC` `hpack`）。計画書 §10.5 は未達。
+
+---
+
 ## 2026-09-19 `hor` の葉が 13 → 11 — `Decodes` はタダだった
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
