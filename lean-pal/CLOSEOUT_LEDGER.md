@@ -22,6 +22,55 @@
 
 ---
 
+## 2026-09-19 `H_birth` の「誕生」半分は `periodOnly` と両立しない — `ChainRound` の tick 残差が 2 つに
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+### 論証（コードを書く前に立てた見込み）
+
+`H_birth` の第 2 の選択肢「source の chain は watch でないのに target はそう」は
+`ChainStep` の構成子を読むと **`backDone` からしか**生じない
+（`chainAt_false_watch`/`chainAt_true_watch` の `hnot` 分岐に残るのはその 1 つだけ）。
+つまり source の chain は `.back`。ところが：
+
+| 事実 | 出典 |
+|---|---|
+| `beginShiftVM` が `periodOnly := true` の唯一の writer、かつ `shiftGuardVM` ⇒ chain は `.watch` | `CloseoutPeriodOnlyRegression.shift_sets_periodOnly`、`GalilScaffoldTopGuards:24` |
+| `.copy` への唯一の経路は誕生 `chainStart`、`afterBirth` は `periodOnly := false` | `GalilScaffoldTopSearch:78` |
+| `.back` への唯一の経路は `.copy` からの `copyEnd` | `GalilScaffoldTopChainVM:59` |
+
+よって「`periodOnly = true` → chain は `idle`/`watch`/`broken`」は tick 不変量で、
+`.back` は排除される。
+
+### 新規
+
+| 名前 | ファイル | 内容 |
+|---|---|---|
+| `WatchLike` / `PeriodShape` | `CloseoutPeriodShape` | 上の不変量 |
+| `watchLike_chainStep`/`chainMatched`/`chainTick`/`chainAt` | 同 | `ChainStep` の 7 構成子で `copy`/`back` の source が `False` になるので `cases h <;> first | exact hx | exact hx.elim | trivial` |
+| `periodShape_tick` | 同 | **23 形すべて、sorry なし**。非 scan の相 tick は `fppLens`/`shiftLens`/`rewindLens` 越しなので `chain`/`periodOnly` を触らず `rfl`（`phase_case`）。`shift_one` は `chainShiftOne` で watch のまま、`shift_done` は VM 不変 |
+| `periodShape_steps` | 同 | run 版 |
+| `chainAt_false_back` / `chainAt_true_back` | `CloseoutBirthFree` | 誕生した watch の source は `.back`、ゆえに `¬ WatchLike` |
+| `H_birthR` | 同 | `H_birth` の replaying 半分だけ |
+| `chainRound_tick_B` / `chainRound_tick_BF` | 同 | `chainRound_tick_RR` を逐語コピーし、`hB` を消費する **4 行**だけ差し替え（3 つは誕生分岐で矛盾、1 つは `H_birthR`） |
+
+`H_birth` の誕生半分: `PROVED`（空虚）。`BlockInv`: `INTEGRATED`（`ChainPosInv2` から）。
+
+### `ChainRound` の tick 残差
+
+```
+theorem chainRound_tick_BF (hCR : ChainRound) (hRR : ReadsRound) (hps : PeriodShape)
+    (hinv : ChainPosInv2) (hS : H_shiftDone) (hB : H_birthR) (h : Tick …) :
+    ChainRound w y.ctl y.vm
+```
+
+運ぶ場 4 つ（`ChainRound`・`ReadsRound`・`PeriodShape`・`ChainPosInv2`）のうち
+`PeriodShape` は tick 保存済み、`ChainPosInv2` は主経路が既に運んでいる。
+残る意味的義務は **`H_shiftDone`**（→ `ShiftRound`、残り `H_advanceT`・`H_freshShift`）と
+**`H_birthR`**（replay 終了時のラウンド datum）、および `ReadsRound` の tick 保存。
+
+---
+
 ## 2026-09-19 `WatchShift` は 1 節しか使われていなかった、`BlockInv` は run に乗っていた
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
