@@ -46,6 +46,39 @@ Scala `ScaffoldChain.start()` は `periodOnly = false` **かつ** `cycle.reset()
 
 よって `cpack_steps` で `CPack` を歩数に沿って運べば `hcan` は定理（`hcan_of_cpack`）。新規入力なし。
 
+## 2026-09-19 wave 7 — `hee`/`het` を無条件化、最上位は **5 前提**
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`pal_in_peg_final27`（`lean-pal/PalPeg/CloseoutExtraFinal.lean`）は
+`[propext, Classical.choice, Quot.sound]` のみに依存し、残る仮定は 5 つ:
+`hSP`, `hws`, `hme`, `hor`, `hC`。
+
+`hee`（`H_extraEntry7`）と `het`（`Extra7` の tick 保存）は、いずれも
+`packRunR_MG27` の `hprefix` を作るためだけに存在した。その `hprefix`（run の
+各 scan/非 replaying 状態で `canRight`）は、**front ポテンシャルに乗って伝わる**:
+
+- `front s = position s.right + value s.replay` は `CentreLive` run 上で単調
+  （`GalilFrontMono.front_stepsAll_mono`、既存）。
+- `FrontPack.rest = ReplayRest` より非 replaying 状態では `replay = reset`、
+  すなわち `front s = position s.right`。
+- よって出口 `y` が非 replaying かつ cycle の上界を持てば
+  `position x.right = front x ≤ front y = position y.right ≤ 2m-1`。
+
+右ヘッド自身の単調性（34 ケースの `Tick` 解析）は一切不要。`extra7_of_bound` の
+残り 2 入力は `LPackM.scanGeom` の `ScanInvariant` から出る（発火条件が
+`Extra7` の語る条件と完全一致）。帰納の循環は `bigPack2MG7''_tickE` が
+`Extra7` を「構築済み pack の関数」として受け取ることで解消。
+
+呼び出し側は全て上界を持つ: 進行分岐は `CycleOutMC3` の定義、checkpoint 分岐は
+`ReportPointAt` の `notReplaying`/`atPlace`/`pos`/`le`。
+
+新規: `CloseoutFrontExtra`, `CloseoutExtraFree`, `CloseoutExtraOracle`,
+`CloseoutExtraFinal`（全て標準公理のみ）。
+
+**訂正**: wave 5 の「`hee`/`het` の残差は偽の疑いが強い」は誤り。偽なのは
+「任意の状態で `canRight`」であって、run 文脈では真。
+
 ## 2026-09-19 wave 6 — `hsc` 完全除去、最上位は **7 前提**
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
