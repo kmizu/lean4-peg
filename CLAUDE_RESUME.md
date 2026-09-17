@@ -1,3 +1,60 @@
+## n77 (2026-09-19) 最上位 4 前提を維持しつつ残差を 3 つの壁に統合、`hor` に初めて producer を付与
+
+**全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
+
+最上位は `pal_in_peg_final37`（`CloseoutFinalW4`）の **4 前提**（`hSP` `hor` `hC` `hpack`）。
+計画書 §10.5（前提ゼロ）は未達。残差の正本は `lean-pal/CLOSEOUT_LEDGER.md`。
+
+### 残る独立な壁は 3 つ
+
+| 壁 | 内容 | 帰着 |
+|---|---|---|
+| **`ScanToScan`**（run の区間分解） | scan-to-scan の run が `ScanSeg` ＋ `Rounds` に分解する | `hSP` のラウンド境界と最初のラウンド、`hor` の found 葉（`ShiftRoundC`）、`SpanRep` 輸送 |
+| **`hC`** | `H_realizeLIMW'`、局所機械の実現 | 未分解 |
+| **`hpack`** のモデル欠陥 (e) 部分 | `marks` / `hwin` — `beginFallbackVM'` の着地場所が存在量化 | `Fair` かモデル変更が必要 |
+
+### `hSP` の分解（`ShiftPal` → 束 ＋ 2 葉）
+
+`shiftPal_of_readOrigin` の入力は `ChainRound` ＋ `canRight s.right` ＋ `H_fresh` だけになった。
+運ぶ 5 場を `CloseoutRoundBundle.RoundBundle` にまとめ、`roundBundle_tick` で組み上げて
+コンパイラに残差を検証させた。
+
+| 場 | tick | 残差 |
+|---|---|---|
+| `ChainRound` | `chainRound_tick_S` | なし（`H_shiftDone` は束自身の `ShiftRound` から） |
+| `ReadsRound` | `readsRound_tick_S` | `H_readsShift`（`SweptOff` 基底化で消える） |
+| `ShiftRound` | `shiftRound_tick_A` | `H_freshShift` |
+| `PeriodShape` | `periodShape_tick`（23 形） | なし |
+| `NoReplayWatch` | `noReplayWatch_tick`（23 形） | なし |
+
+証明した葉: `H_matched`（過剰量化）、`H_born`（phase 0 vs 4）、`H_advance`（`ReadsInv`）、
+`BlockInv`（`ChainPosInv2`）、`H_birth` の誕生半分（`PeriodShape`）、
+`H_birthR`/`H_readsBirth`（`NoReplayWatch`）、**`H_advanceT`**（palindrome 2 枚の鏡映 ＋
+`continued_prediction` の mod 形）。
+`WatchShift`（**偽**）は 1 節しか使われておらず `canRight s.right` に置換。
+
+### `hor` に初めて producer を付けた
+
+**訂正**: 「`h_oracle_of_leaves''` が `hor` を産出する」は誤り。tree 中の
+`h_oracle_of_leaves*` は**全部** `GalilFinalAssembly.H_oracle`（`CycleOracleMC`、
+origin/着地とも `InvL`）を結論とし、`hor` は `CycleOracleMC3`（origin/着地とも
+`InvLPS`）で別物。
+
+`CloseoutOracleBridge.hor_of_H_oracle` が橋（差は 2 つ：不変量と、中心進行 vs `mu` 進行）。
+`CloseoutOracle8.h_oracle_of_leaves7` で `H_oracle` の葉を **13 → 11**
+（`hbudget` と `hrs` を閉じた。鍵は **`Decodes` がタダ** — `decodesC` が証明済み）。
+
+### 訂正した自分の誤り（このセッション）
+
+1. 「`BigPack2MG7W''` に 5 場足す配線で `hme` が落ちる」→ 落ちない（`wpack_tick` が毎 tick `hwin` を要求）
+2. 「`hended`/`hlastMatch` は閉」→ **閉じてない**。producer の側入力 `hpres` が偽（`searchReady_run_true_iff`、機械検査: `CloseoutPresRefute`）
+3. 「`hor` に producer がある」→ 無い（型名は同じでも結論が違う）
+4. 「原点はラウンド単位でしか運べない」→ `Offset` 形なら shift 相を生き延びる（`SweptOff`）
+5. 「`H_advanceT` は窓の外」→ palindrome が 2 枚あるので窓の内側
+
+**教訓**: 型名の一致で producer を判断せず、**定義を展開して origin と結論の不変量を照合する**。
+CLAUDE.md §1 に記録した。
+
 ## n76 (2026-09-19) 最上位を 8 → 4 前提に。`hsc`/`hws`/`hsl`/`hni` は反証、`hbudget`/`hav`/`hstart`/`hee`/`het`/`hfl`/`hme` は run 束の場へ
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**
