@@ -11,6 +11,7 @@ import PalPeg.CloseoutBudgetFree
 import PalPeg.CloseoutRealize1
 import PalPeg.CloseoutMarksFree
 import PalPeg.CloseoutTickFalse
+import PalPeg.PackedRun
 
 /-!
 # Canonical — 意味のある名前で正本部品を再輸出する
@@ -44,10 +45,18 @@ namespace PalPeg.Canonical
 
 /-! ## 1. 最上位
 
-正本は 8 前提（`hSP` `hme` `hor` `hC` `hfour` `hbgP` `hmatchP` `hsdP`）。
-反証済みの前提を含まない。計画書 §10.5（前提ゼロ）は未達。 -/
+`pal_in_peg_final30` は Prop 引数 8 本（`hSP` `hme` `hor` `hC` `hfour` `hbgP`
+`hmatchP` `hsdP`）で、そのどれも反証されていない（確認したのは `final30` `final31`
+`final33` `final36` `final37` の 5 本）。
 
-/-- **正本の最上位定理**（旧名 `pal_in_peg_final30`）。8 前提・反証済みゼロ。 -/
+**「8 が最小」とは主張しない。** `pal_in_peg_final*` は 47 本あり、全部の型を見ていない。
+また Prop 引数の本数は前提の本数ではない（`∀ w, H_x w` は 1 本に見えて族、instance は
+自動放電される）。数えるべきは **producer が無い前提**であり、それは型を見て初めて決まる。
+
+計画書 §10.5（前提ゼロ）は未達。 -/
+
+/-- **現時点の正本の最上位定理**（旧名 `pal_in_peg_final30`）。
+Prop 引数 8 本、反証済みの前提を含まない。最小性は未検証。 -/
 alias pal_in_peg_of_eight_leaves := PalPeg.CloseoutFinalW.pal_in_peg_final30
 
 /-! ## 2. 反証済み — 使ってはいけない
@@ -161,5 +170,21 @@ alias marks_along_run_without_entry := PalPeg.CloseoutMarksFree.marks_steps_free
 
 /-- **`hC` の `LocalStep` 証人は付随的**: 任意の厳密実時間 `StructuredMachine` で足りる。 -/
 alias realize_is_machine_generic := PalPeg.CloseoutRealize1.h_realizeSMG2'_of_LIMG2'
+
+/-! ## 9. 括り出した汎用部品
+
+pack を各点で運ぶ有限 run。`StepsI` / `StepsIM` / `StepsIMW` / `StepsIMG` /
+`StepsIMG2` / `StepsIO` の共通形で、`*_trans` 6 本と `*_of_*` 3 本の共通部分を
+ここに集約した（`PalPeg/PackedRun.lean`、`GalilCheckpoints` だけに依存、σ 一般）。
+**pack の変種を新しく作るとき、連結と弱化を書き直さない。** -/
+
+/-- **pack を各点で運ぶ有限 run**（`Steps*` 族の共通形）。 -/
+alias packed_run := PalPeg.PackedRun
+
+/-- **pack つき run は連結できる。** -/
+alias packed_run_trans := PalPeg.PackedRun.trans
+
+/-- **pack は弱めてよい。** -/
+alias packed_run_weaken := PalPeg.PackedRun.mono
 
 end PalPeg.Canonical

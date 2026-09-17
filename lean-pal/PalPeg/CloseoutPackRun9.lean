@@ -1,3 +1,4 @@
+import PalPeg.PackedRun
 import PalPeg.CloseoutPackRun8
 
 /-!
@@ -66,14 +67,8 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 theorem stepsIO_trans {w : List (Fin 2)} {k1 k2 : ℕ} {x y z : State GalilVM}
     (h1 : StepsIO centre place entry q first w k1 x y)
     (h2 : StepsIO centre place entry q first w k2 y z) :
-    StepsIO centre place entry q first w (k1 + k2) x z := by
-  obtain ⟨g1, hg10, hg1k, htr1, hp1⟩ := h1
-  obtain ⟨g2, hg20, hg2k, htr2, hp2⟩ := h2
-  have hj : g1 k1 = g2 0 := by rw [hg1k, hg20]
-  refine ⟨concat g1 g2 k1, ?_, ?_, trace_concat htr1 htr2 hj,
-    pack_concat hj hp1 hp2⟩
-  · rw [concat_le g1 g2 (Nat.zero_le _)]; exact hg10
-  · rw [concat_end g1 g2 hj]; exact hg2k
+    StepsIO centre place entry q first w (k1 + k2) x z :=
+  PalPeg.PackedRun.trans h1 h2
 
 /-- `CloseoutOracleI2.ipack_last_of_stepsI` over the `MInv`-free payload. -/
 theorem ipackO_last_of_stepsIO {w : List (Fin 2)} {k : ℕ} {x y : State GalilVM}

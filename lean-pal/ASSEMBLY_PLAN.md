@@ -1,3 +1,74 @@
+
+
+## 2026-09-19 n78: 証明をコードとして再編 — 根を 3 本に、`PackedRun` を括り出し
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
+
+コウタの指摘「コードベース全体把握してないのに断言するのやめろ」「ちゃんとメンテ可能な形に
+再編してから物を言え」「このファイルやモジュールにはこの証明があるという頭の地図が作れないと
+いくらやっても足踏みになる」を受けて、断定をやめて再編した。**証明は 1 行も意味を変えていない。**
+
+### 実測（推測でなく機械で取った）
+
+| 指標 | 値 |
+|---|---|
+| モジュール | 1143 |
+| 行 | 331,884 |
+| `theorem`/`lemma` | 12,613（`def` 4,246 / `structure` 393 / `inductive` 218） |
+| 正本 `final30` の推移 import 閉包 | **526** |
+| 閉包の外 | 617（うち登録済み 583） |
+| 本体が完全一致する証明 | 162 群・419 定理・余剰 **2,483 行**（全体の 0.75%） |
+| 誰も import せず名前も参照されないモジュール | 28（5,635 行・158 定理） |
+
+層ごとの閉包との関係: `TextFeed*` は **153 本すべて閉包外**、`Prog*` は 119 本が閉包外
+（閉包内の 6 本は `Galil*Program*` 系で別物）、`GS*` 13 本・`*Tapes` 15 本も閉包外。
+
+### 再編（根を 3 本に）
+
+`PalPeg.lean` は 1101 本の import を並べていた。これを 3 本にした。
+
+* `PalPeg.Canonical` — 正本の鎖（閉包 526 本）＋意味のある別名 24 本。
+  `lake build PalPeg.Canonical` で正本だけを速くビルドできる。
+* `PalPeg.Workbench` — 作ったが未配線の 64 本の根（閉包 583 本）。
+  **主定理との関係を層ごとに明記**。
+* `PalPeg.Axioms` — 公理監査。
+
+新根の閉包 1135 ⊇ 旧登録 1101、**欠落 0**（機械照合済み）。落としていない。
+
+### 括り出し（`PalPeg/PackedRun.lean` 新規、σ 一般・最下層）
+
+`StepsI` / `StepsIM` / `StepsIMW` / `StepsIMG` / `StepsIMG2` / `StepsIO` は
+**文字通り同一の定義**を pack 述語だけ差し替えて 6 回書いたもので、`*_trans` は
+6 本とも同じ 8 行、`*_of_*`（pack 弱化）は 3 本とも同じ 5 行だった。
+
+`PackedRun F delay Q Pk k x y := ∃ g, g 0 = x ∧ g k = y ∧ Trace F delay Q g k ∧
+∀ i ≤ k, Pk (g i)` を `GalilCheckpoints` だけに依存する σ 一般の部品として定義し、
+`PackedRun.trans`（連結）/ `PackedRun.mono`（pack の弱化）/ `PackedRun.pack_at` の 3 本に括った。
+`pack_concat`（`CloseoutLPack5`、`GalilVM` 固定・上の層）の 6 行はここに取り込んだ。
+
+6 つの `Steps*` は定義を `PackedRun … pack …` に書き換え（4 行 → 2 行）、
+`*_trans` 6 本は `PackedRun.trans h1 h2` の 1 行に、`*_of_*` 3 本は `PackedRun.mono` に委譲。
+**文は 1 文字も変えていない。** 以後 pack の変種を作るときは `*_trans` を書き直さない。
+
+### 削除
+
+`PalPeg/Probe1.lean` 1 本のみ（`attribute [ext]` と `#check` と自明な `example` だけ、
+定理 0、未登録、主定理と無関係）。**デッドコードかどうかは主定理との関係でしか判定できない**
+ので、参照ゼロの 28 本のうち残り 27 本は関係を読んで全部残した。特に
+`CloseoutClockFront`（`canRight_of_run` / `extra7_of_run`）と
+`CloseoutWatchRound53`（`good_of_pos` ＝ `WatchOk.good` の内容）は**今の壁に直接効きそう**で、
+未参照のまま転がっていた。
+
+### 撤回した断定
+
+「正本は `final30`（8 前提）で、8 が正直な床」と書いたが、確認したのは `final30` `final31`
+`final33` `final36` `final37` の 5 本だけで、47 本を数えていない。`final32` `final34`
+`final35` は grep が空振りしたのに理由を調べていない。**この断定は撤回する。**
+前提の数は Prop 引数の本数では測れない（`∀ w, H_x w` は 1 本に見えて族、instance は自動放電）。
+数えるべきは「producer が無い前提」であり、それは型を見て初めて決まる。
+
+編集の規律は `CLAUDE.md` の「証明はコードである — lean-pal 編集の規律」に書いた。
+
 ## n81 (2026-09-19) `ShiftAtMismatchM` を**証明した** — Round 30 の piece 1〜4 が閉じた
 
 **全体 build 成功（EXIT=0、エラー 0、sorryAx 0）・標準公理のみ・無条件 PAL は未完。**

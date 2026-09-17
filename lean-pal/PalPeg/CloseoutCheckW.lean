@@ -1,3 +1,4 @@
+import PalPeg.PackedRun
 import PalPeg.CloseoutPackW
 import PalPeg.CloseoutStageCheck
 
@@ -77,21 +78,14 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
   (entry q : ℕ) (first : Fin 9)
 
 def StepsIMW (w : List (Fin 2)) (k : ℕ) (x y : State GalilVM) : Prop :=
-  ∃ g : ℕ → State GalilVM, g 0 = x ∧ g k = y ∧
-    Trace (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) g k ∧
-    ∀ i, i ≤ k → IPackMW centre place entry q first w (g i)
+  PackedRun (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+    (IPackMW centre place entry q first w) k x y
 
 theorem stepsIMW_trans {w : List (Fin 2)} {k1 k2 : ℕ} {x y z : State GalilVM}
     (h1 : StepsIMW centre place entry q first w k1 x y)
     (h2 : StepsIMW centre place entry q first w k2 y z) :
-    StepsIMW centre place entry q first w (k1 + k2) x z := by
-  obtain ⟨g1, hg10, hg1k, htr1, hp1⟩ := h1
-  obtain ⟨g2, hg20, hg2k, htr2, hp2⟩ := h2
-  have hj : g1 k1 = g2 0 := by rw [hg1k, hg20]
-  refine ⟨concat g1 g2 k1, ?_, ?_, trace_concat htr1 htr2 hj,
-    pack_concat hj hp1 hp2⟩
-  · rw [concat_le g1 g2 (Nat.zero_le _)]; exact hg10
-  · rw [concat_end g1 g2 hj]; exact hg2k
+    StepsIMW centre place entry q first w (k1 + k2) x z :=
+  PalPeg.PackedRun.trans h1 h2
 
 theorem ipackMW_last_of_stepsIMW {w : List (Fin 2)} {k : ℕ} {x y : State GalilVM}
     (h : StepsIMW centre place entry q first w k x y) :
