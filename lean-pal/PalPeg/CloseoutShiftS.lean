@@ -41,6 +41,8 @@ open PalPeg.CloseoutLPack5 PalPeg.CloseoutLPack6 PalPeg.CloseoutPackRun12
 open PalPeg.GalilTrailSane PalPeg.GalilChainCoupling PalPeg.GalilBranchInvariants
 open PalPeg.CloseoutPackRun11 PalPeg.CloseoutPackRun9 PalPeg.CloseoutPackRun8
 open PalPeg.GalilTrailChain PalPeg.GalilFinalAssembly PalPeg.GalilThrottledRun
+open PalPeg.CloseoutRadPack PalPeg.CloseoutRadPack2 PalPeg.CloseoutRadPack3 PalPeg.CloseoutRadPack4
+open PalPeg.GalilTrailRad
 
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
@@ -227,6 +229,78 @@ theorem verSane_ptS {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State G
 
 #print axioms saneTickS
 #print axioms verSane_ptS
+
+/-! ## `ShiftOrd` along the trace, guarded
+
+`CloseoutPackRun34.shiftOrd_tickS` (:197) is the guarded tick; this is the
+trace-level reader (`CloseoutPackRun30.shiftOrd_ptG` :567) over it. -/
+
+theorem shiftOrd_ptS {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM}
+    {Tc : ℕ → ℕ} (hP : PreTrace centre place entry q first w st Tc)
+    (hll : ∀ i, i ≤ Tc w.length → PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm)
+    (hen : ∀ i, i ≤ Tc w.length → ScanNR (st i) → ∀ s'' t'' : GalilVM,
+      (galilFrameS (PofC centre place entry w) q first).compare (st i).vm s'' →
+      ¬ (galilFrameS (PofC centre place entry w) q first).matched s'' →
+      shiftGuardVM s'' → beginShiftVM' s'' t'' → ShiftBud t'') :
+    ∀ i, i ≤ Tc w.length → ShiftOrd (st i).ctl (st i).vm := by
+  have hsane := sanePack_pt centre place entry q first hw hP hll
+  have hL := radLedger_pt centre place entry q first hw hP hll
+  intro i
+  induction i with
+  | zero => intro _; rw [hP.start]; exact shiftOrd_boot w
+  | succ i ih =>
+    intro hi
+    have hlt : i < Tc w.length := by omega
+    have hle : i ≤ Tc w.length := by omega
+    exact shiftOrd_tickS (onLetterVM w) leftFirstVM centre place entry q first 2048
+      (ih hle) (hL i hle).canonRem (hsane i hle).saneC
+      (copyIdle_trace centre place entry q first hP i hle)
+      (fun hm hr s'' t'' hcmp hmt hg hb => hen i hle ⟨hm, hr⟩ s'' t'' hcmp hmt hg hb)
+      (hP.trace.tick i hlt)
+
+
+#print axioms shiftOrd_ptS
+
+/-! ## `RadPack` without `hws`
+
+`CloseoutPackRun30.radPack_ptMG` (:612) reads `IPackMG.shift` through the two
+readers, which is where the false `∀ y, WatchShiftG … y` enters.  Here the same
+`RadPack` comes from `ChainPosInv` travelling along the trace, with
+`CloseoutPackRun34`'s four guarded branch hypotheses in its place. -/
+
+theorem radPack_ptS {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM}
+    {Tc : ℕ → ℕ} (hP : PreTrace centre place entry q first w st Tc)
+    (hfour : H_fourOther centre place entry q first w)
+    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
+    (hsd : H_shiftDoneP centre place entry q first w)
+    (hpos0 : ChainPosInv w (st 0).ctl (st 0).vm)
+    (hreach : ∀ i, i ≤ Tc w.length →
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 i (st 0) (st i))
+    (hLP : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
+    (hll : ∀ i, i ≤ Tc w.length → PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm) :
+    ∀ i, i ≤ Tc w.length → RadPack (st i).ctl (st i).vm := by
+  have hsh : ∀ i, i ≤ Tc w.length → ShiftLocalS centre place entry q first w (st i) := fun i hi =>
+    shiftLocalS_of_run centre place entry q first hfour hbg hmatch hsd hpos0 (hreach i hi)
+  have hen : ∀ i, i ≤ Tc w.length → ScanNR (st i) → ∀ s'' t'' : GalilVM,
+      (galilFrameS (PofC centre place entry w) q first).compare (st i).vm s'' →
+      ¬ (galilFrameS (PofC centre place entry w) q first).matched s'' →
+      shiftGuardVM s'' → beginShiftVM' s'' t'' → ShiftBud t'' := by
+    intro i hi hs s'' t'' hcmp hmt hg hb
+    obtain ⟨rad, hscan, hcan, hh⟩ :=
+      halfBound_of_shiftLocalS centre place entry q first (hLP i hi) (hsh i hi) hs hcmp hmt hg hb
+    exact shiftBud_of_scanInv (onLetterVM w) leftFirstVM centre place entry q first
+      hscan hcan hcmp hb hh
+  have hsv : ∀ i, i ≤ Tc w.length → ScanNR (st i) → ∀ s'' t'' : GalilVM,
+      (galilFrameS (PofC centre place entry w) q first).compare (st i).vm s'' →
+      ¬ (galilFrameS (PofC centre place entry w) q first).matched s'' →
+      shiftGuardVM s'' → beginShiftVM' s'' t'' → SaneVer t''.chain := fun i hi hs s'' t'' =>
+    saneVer_of_shiftLocalS centre place entry q first (hsh i hi) hs
+  have hL := radLedger_pt centre place entry q first hw hP hll
+  have hS := shiftOrd_ptS centre place entry q first hw hP hll hen
+  have hV := verSane_ptS centre place entry q first hw hP hll hsv
+  exact fun i hi => radPack_of_parts (hL i hi) (hS i hi) (hll i hi) (hV i hi)
+
+#print axioms radPack_ptS
 
 end
 
