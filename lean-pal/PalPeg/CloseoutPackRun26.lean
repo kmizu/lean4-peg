@@ -122,7 +122,8 @@ theorem compare_watch_target {w : List (Fin 2)} {s : GalilVM}
     · rw [hw]
       exact ChainStep.watchStep _ _ (GalilScaffoldChainWatch.Internal.idle _ hz)
     · simp
-  · simp
+  · rw [afterBirth_of_ne_idle hne]
+    simp
 
 /-- **`ShiftLocal` is false at any `shift`-mode state that has a `compareFound`
 target with a watching chain**: its `mode` field would say `scan`. -/

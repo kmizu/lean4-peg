@@ -123,9 +123,15 @@ theorem readyField2_tick {w : List (Fin 2)} {n n' : ℕ} {x y : State GalilVM}
     have hpl' : t = (if c.replaying then {s' with replay := GalilScaffoldCounter.dec s'.replay}
         else s') := hpl
     have hget : searchLens.get t = vq := by
-      subst hpl'; subst hs'; cases c.replaying <;> cases a <;> rfl
+      subst hpl'; subst hs'
+      cases c.replaying <;> cases a <;>
+        simp [afterBirth_search, afterBirth_dp, afterBirth_lower, afterBirth_walker,
+          afterBirth_chain, afterCompare, afterMismatch, searchLens, scanLens]
     have hchain : t.chain = vs.chain := by
-      subst hpl'; subst hs'; cases c.replaying <;> cases a <;> rfl
+      subst hpl'; subst hs'
+      cases c.replaying <;> cases a <;>
+        simp [afterBirth_search, afterBirth_dp, afterBirth_lower, afterBirth_walker,
+          afterBirth_chain, afterCompare, afterMismatch, searchLens, scanLens]
     by_cases hidle : s.chain = ChainVM.idle
     · have hp0 : ReadyPacedS (searchLens.get s) (n' + 1) (2048 - c.clock) :=
         readyPacedS_mono (n := n) (n' := n' + 1) (by omega) le_rfl (hf.paced hm0 hidle)

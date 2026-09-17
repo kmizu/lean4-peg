@@ -51,6 +51,20 @@ def arriveVM' (a : Fin 2) (s : GalilVM) : GalilVM :=
 
 def arriveState' (a : Fin 2) (st : State GalilVM) : State GalilVM := ⟨st.ctl, arriveVM' a st.vm⟩
 
+theorem arriveVM'_chain (a : Fin 2) (s : GalilVM) :
+    (arriveVM' a s).chain = arriveChain a s.chain := rfl
+
+/-- The birth reset commutes with an arrival. -/
+theorem arriveVM'_afterBirth (a : Fin 2) (b : Bool) (s : GalilVM) :
+    arriveVM' a (afterBirth b s) = afterBirth b (arriveVM' a s) := by
+  cases b <;> rfl
+
+/-- An arrival does not change whether the chain is idle, so it does not change
+whether a chain is born. -/
+theorem chainBorn_arriveChain (b : Bool) (a : Fin 2) (x : ChainVM) :
+    chainBorn b (arriveChain a x) = chainBorn b x := by
+  cases x <;> simp [chainBorn, arriveChain, ChainVM.isIdle]
+
 theorem arriveChain_idle_iff (a : Fin 2) (x : ChainVM) : arriveChain a x = .idle ↔ x = .idle := by
   cases x <;> simp [arriveChain]
 
@@ -262,6 +276,7 @@ theorem compareFound_arrive' {P : Shared} {a : Fin 2} (hP : SharedArrive' P a) (
   · rw [hP.centre, hP.place]
     exact chainAt_arrive a hch
   · subst ht
+    rw [arriveVM'_afterBirth, arriveVM'_chain, chainBorn_arriveChain]
     cases b <;> rfl
 
 theorem backgroundS_arrive' {P : Shared} {a : Fin 2} (hP : SharedArrive' P a) (q : ℕ) (first : Fin 9)
@@ -275,10 +290,13 @@ theorem backgroundS_arrive' {P : Shared} {a : Fin 2} (hP : SharedArrive' P a) (q
     rw [hr]
   · rw [hP.centre, hP.place]
     exact chainAt_arrive a hch
-  · calc arriveVM' a t
-        = arriveVM' a (searchLens.set (scanLens.set s (scanLens.get t)) (searchLens.get t)) :=
+  · rw [arriveVM'_chain, chainBorn_arriveChain]
+    calc arriveVM' a t
+        = arriveVM' a (afterBirth (chainBorn (decide ((searchLens.get t).search.mode
+              = GalilScaffoldSearchFinish.Mode.found)) s.chain)
+            (searchLens.set (scanLens.set s (scanLens.get t)) (searchLens.get t))) :=
           congrArg _ hset
-      _ = _ := rfl
+      _ = _ := by rw [arriveVM'_afterBirth]; rfl
 
 theorem rel_arrive' {σ' : Type} (L : Lens GalilVM σ') (arrV : σ' → σ') (R : σ' → σ' → Prop) (a : Fin 2)
     (hget : ∀ s, L.get (arriveVM' a s) = arrV (L.get s))

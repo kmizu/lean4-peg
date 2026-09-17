@@ -234,16 +234,21 @@ theorem posPayload_match {w : List (Fin 2)} (hres : H_matchRes centre place entr
     | false =>
       rw [if_neg (by simp)] at hteq
       subst hteq
-      exact absurd (hiff.2 hmt) (by simp)
+      refine absurd (hiff.2 ?_) (by simp)
+      have h0 : GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)).right := hmt
+      rw [afterBirth_left, afterBirth_right] at h0
+      exact h0
   subst ha
   rw [if_pos rfl] at hteq
   subst hteq
   obtain ⟨htl, htr, htc, htcen, htrad⟩ := hts
-  have hsl : (afterCompare s vs vq).left = vs.left := rfl
-  have hsr : (afterCompare s vs vq).right = vs.right := rfl
-  have hsc : (afterCompare s vs vq).chain = vs.chain := rfl
-  have hscen : (afterCompare s vs vq).center = s.center := rfl
-  have hsrad : (afterCompare s vs vq).radius = inc s.radius := rfl
+  have hsl : (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).left = vs.left := afterBirth_left _ _
+  have hsr : (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).right = vs.right := afterBirth_right _ _
+  have hsc : (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).chain = vs.chain := afterBirth_chain _ _
+  have hscen : (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).center = s.center := afterBirth_center _ _
+  have hsrad : (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).radius = inc s.radius :=
+    afterBirth_radius _ _
   rw [hsl, hvl] at htl
   rw [hsr, hvr] at htr
   rw [hsc] at htc
@@ -325,9 +330,18 @@ theorem other_guard_lower {w : List (Fin 2)} {x : State GalilVM} {s'' : GalilVM}
     (hO : Other x.vm.periodOnly x.ctl.mode (value x.vm.radius) (value x.vm.cycle)
       (value x.vm.remaining) (periodLength wch)) :
     2 * (periodLength wch : ℤ) - 1 ≤ value wch.machine.control.distance := by
+  have hne : x.vm.chain ≠ ChainVM.idle := by
+    intro hidle
+    obtain ⟨vs0, vq0, a0, -, -, -, -, hch0, hteq0⟩ :
+      compareFound (PofC centre place entry w) q first x.vm s'' := hcmp
+    rw [hidle] at hch0
+    rw [hteq0, afterBirth_chain] at hch
+    exact chainAt_idle_not_watch hch0 wch (by cases a0 <;> exact hch)
   obtain ⟨-, hpo, -, -, hmis⟩ :=
     compare_inv (onLetterVM w) leftFirstVM centre place entry q first hx hs.1 hcmp
+  have hpo := hpo hne
   obtain ⟨-, hcyc, hsum, -⟩ := hmis hmt
+  have hcyc := hcyc hne
   obtain ⟨w1, hw1, hz, -, hbr, hif, -⟩ := hg
   rw [hw1] at hch
   injection hch with hwe

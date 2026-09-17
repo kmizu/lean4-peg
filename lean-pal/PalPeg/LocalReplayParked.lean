@@ -474,18 +474,24 @@ theorem tickL1_replaying_false {S : Shared} {q : ℕ} {first : Fin 9} {delay : �
     {x y : GalilVML P} (h : TickL1 S q first delay x y) (hr : x.ctl.replaying = false) :
     y.ctl.replaying = false := by
   cases h with
-  | wait z ch hm _ hav hs hch => exact hr
-  | count z ch hm hav hc hs hch => exact hr
+  | wait z ch hm _ hav hs hch => rw [LocalTick1.bgState_ctl]; exact hr
+  | count z ch hm hav hc hs hch => rw [LocalTick1.bgState_ctl]; exact hr
   | «match» z ch o hm hav hc hpol hrep hper hahead hcan hs hmt hch ho =>
+      rw [LocalTick1.birthL_ctl]
       show (x.ctl.replaying && _) = false
       rw [hr]; rfl
 
 /-- **項目 5。**  replay でない局所走査ティックは `abs''` でもそのまま scaffold `Tick`。 -/
 theorem tickL1_abs''_nonreplay {S : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
-    {x y : GalilVML P} (hinv : Inv x) (h : TickL1 S q first delay x y)
+    {x y : GalilVML P}
+    (hbirth : ∀ (bb : Bool) (s : GalilVM),
+      (S.onLetter (GalilScaffoldChainInputSupply.afterBirth bb s) ↔ S.onLetter s) ∧
+      (S.leftFirst (GalilScaffoldChainInputSupply.afterBirth bb s) ↔ S.leftFirst s) ∧
+      S.replayExhausted (GalilScaffoldChainInputSupply.afterBirth bb s) = S.replayExhausted s)
+    (hinv : Inv x) (h : TickL1 S q first delay x y)
     (hr : x.ctl.replaying = false) :
     Tick (galilFrameS S q first) delay (absState'' x) (absState'' y) := by
-  have ht := LocalTick1.tickL1_abs hinv h
+  have ht := LocalTick1.tickL1_abs hbirth hinv h
   show Tick (galilFrameS S q first) delay ⟨x.ctl, abs'' x⟩ ⟨y.ctl, abs'' y⟩
   rw [abs''_eq_abs' hr, abs''_eq_abs' (tickL1_replaying_false h hr)]
   exact ht
@@ -511,9 +517,11 @@ theorem abs''_commitRestart {x : GalilVML P} (hr : x.ctl.replaying = false) (ent
 /-! ## 7. `replayStart` までの fallback 側は駐車 view に触れない -/
 
 theorem tickL1_right_nonmatch {S : Shared}
-    {x z : GalilVML P} (hs : LocalTick1.SearchLocal S false x z) (ch : ChainVM) (c : Control) :
-    (bgState ch c z).right = x.right ∧ (bgState ch c z).pending = x.pending :=
-  ⟨hs.frame.right, hs.frame.pending⟩
+    {x z : GalilVML P} (hs : LocalTick1.SearchLocal S false x z) (src ch : ChainVM)
+    (c : Control) :
+    (bgState src ch c z).right = x.right ∧ (bgState src ch c z).pending = x.pending :=
+  ⟨(LocalTick1.bgState_right _ _ _ _).trans hs.frame.right,
+    (LocalTick1.bgState_pending _ _ _ _).trans hs.frame.pending⟩
 
 theorem commitShift_right (jR : Fin P) (bR : Bool) (w : GalilScaffoldChainWatch.State)
     (x : GalilVML P) : (LocalTick2.commitShift jR bR w x).right = x.right := rfl

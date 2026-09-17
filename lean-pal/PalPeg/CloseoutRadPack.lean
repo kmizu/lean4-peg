@@ -94,7 +94,7 @@ theorem compare_radius {s s' : GalilVM}
     s'.radius = GalilScaffoldCounter.inc s.radius := by
   obtain ⟨vs, vq, a, -, -, -, -, -, hteq⟩ :
     compareFound (sharedC onLetter leftFirst centre place entry) q first s s' := hcmp
-  rw [hteq]; cases a <;> rfl
+  rw [hteq, afterBirth_radius]; cases a <;> rfl
 
 /-- The remaining counter is untouched by a comparison. -/
 theorem compare_remaining {s s' : GalilVM}
@@ -102,7 +102,7 @@ theorem compare_remaining {s s' : GalilVM}
     s'.remaining = s.remaining := by
   obtain ⟨vs, vq, a, -, -, -, -, -, hteq⟩ :
     compareFound (sharedC onLetter leftFirst centre place entry) q first s s' := hcmp
-  rw [hteq]; cases a <;> rfl
+  rw [hteq, afterBirth_remaining]; cases a <;> rfl
 
 /-- `R` moves exactly one place right at a comparison tick. -/
 theorem rightStep {c : Control} {s : GalilVM} (hm : c.mode = Mode.scan)

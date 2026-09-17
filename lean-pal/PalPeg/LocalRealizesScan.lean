@@ -432,11 +432,12 @@ scan tick, mirror included. -/
 theorem tickL1_center {S : Shared} {q : ℕ} {firstT : Fin 9} {d : ℕ} {x y : GalilVML P}
     (h : PalPeg.LocalTick1.TickL1 S q firstT d x y) : y.center = x.center := by
   cases h with
-  | wait z ch hm hr hav hs hch => exact hs.frame.center
-  | count z ch hm hav hc hs hch => exact hs.frame.center
+  | wait z ch hm hr hav hs hch =>
+      exact (PalPeg.LocalTick1.bgState_center _ _ _ _).trans hs.frame.center
+  | count z ch hm hav hc hs hch =>
+      exact (PalPeg.LocalTick1.bgState_center _ _ _ _).trans hs.frame.center
   | «match» z ch o hm hav hc hpol hrep hper hahead hcan hs hmt hch ho =>
-      show z.center = x.center
-      exact hs.frame.center
+      exact (PalPeg.LocalTick1.birthL_center _ _).trans hs.frame.center
 
 /-- **The physical half of a non-replaying scan tick**, mirror included. -/
 theorem physWF_mir_of_tickL1 {S : Shared} {q : ℕ} {firstT : Fin 9} {d : ℕ}

@@ -372,9 +372,22 @@ theorem shiftRound_tick {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
     | true =>
       rw [if_pos rfl] at hteq
       subst hteq
-      exact absurd (hiff.1 rfl) hmt
+      refine absurd ?_ hmt
+      show GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).right
+      rw [afterBirth_left, afterBirth_right]
+      exact hiff.1 rfl
     | false =>
       rw [if_neg (by simp)] at hteq
+      have hg0 : shiftGuardVM (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) := by
+        rw [← hteq]; exact hg
+      obtain ⟨w1', hw1', -, -, -, -, -⟩ := hg0
+      have hne : s.chain ≠ ChainVM.idle := by
+        intro hidle
+        rw [hidle] at hch
+        rw [afterBirth_chain] at hw1'
+        exact chainAt_idle_not_watch hch w1' hw1'
+      rw [afterBirth_of_ne_idle hne] at hteq
       subst hteq
       have hg' : shiftGuardVM (afterMismatch s vs vq) := hg
       obtain ⟨w1, hw1, -, hph, -, hif, hsym⟩ := hg'

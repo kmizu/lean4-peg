@@ -289,9 +289,12 @@ theorem mirInv_stay {m : Mirrored2 P} (h : MirInv m) (hc : WF m.vm.center)
 theorem tickL1_center {S : GalilScaffoldChainInputSupply.Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
     {x y : GalilVML P} (h : LocalTick1.TickL1 S q first delay x y) : y.center = x.center := by
   cases h with
-  | wait z ch hm hr hav hs hch => exact hs.frame.center
-  | count z ch hm hav hc hs hch => exact hs.frame.center
-  | «match» z ch o hm hav hc hpol hrep hper hahead hcan hs hmt hch ho => exact hs.frame.center
+  | wait z ch hm hr hav hs hch =>
+      exact (LocalTick1.bgState_center _ _ _ _).trans hs.frame.center
+  | count z ch hm hav hc hs hch =>
+      exact (LocalTick1.bgState_center _ _ _ _).trans hs.frame.center
+  | «match» z ch o hm hav hc hpol hrep hper hahead hcan hs hmt hch ho =>
+      exact (LocalTick1.birthL_center _ _).trans hs.frame.center
 
 theorem commitReplay_center (entry : ℕ) (x : GalilVML P) :
     (LocalTick2.commitReplay entry x).center = x.center := rfl

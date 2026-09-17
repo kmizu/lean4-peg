@@ -202,13 +202,25 @@ theorem compare_len {s s' : GalilVM}
   | true =>
     rw [if_pos rfl] at hteq
     subst hteq
-    refine ⟨hvr, rfl, rfl, Or.inr rfl, fun hn => absurd ?_ hn⟩
-    have h1 := hiff.1 rfl
-    exact h1
+    refine ⟨?_, ?_, ?_, Or.inr ?_, fun hn => absurd ?_ hn⟩
+    · rw [afterBirth_right]; exact hvr
+    · rw [afterBirth_remaining]; rfl
+    · rw [afterBirth_fpp]; rfl
+    · rw [afterBirth_length]; rfl
+    · have h1 := hiff.1 rfl
+      show GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).right
+      rw [afterBirth_left, afterBirth_right]
+      exact h1
   | false =>
     rw [if_neg (by simp)] at hteq
     subst hteq
-    exact ⟨hvr, rfl, rfl, Or.inl rfl, fun _ => rfl⟩
+    refine ⟨?_, ?_, ?_, Or.inl ?_, fun _ => ?_⟩
+    · rw [afterBirth_right]; exact hvr
+    · rw [afterBirth_remaining]; rfl
+    · rw [afterBirth_fpp]; rfl
+    · rw [afterBirth_length]; rfl
+    · rw [afterBirth_length]; rfl
 
 theorem cpack_tick {c c' : Control} {s t : GalilVM} (hP : CPack q c s)
     (hfl : c.mode = Mode.scan → 0 ≤ value s.length)

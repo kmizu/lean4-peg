@@ -79,10 +79,15 @@ theorem compare_event_true_of_matched (P : Shared) (q : ℕ) (first : Fin 9) {s 
   | false =>
       exfalso
       have hm' : (galilFrameS P q first).matched (scanLens.set s vs) := by
-        subst ht; exact hmt
+        subst ht
+        have h0 : GalilScaffoldInputHead.read (PalPeg.GalilScaffoldChainInputSupply.afterBirth _ (afterMismatch s vs vq)).left
+          = GalilScaffoldInputHead.read (PalPeg.GalilScaffoldChainInputSupply.afterBirth _ (afterMismatch s vs vq)).right := hmt
+        rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_left, PalPeg.GalilScaffoldChainInputSupply.afterBirth_right] at h0
+        exact h0
       exact Bool.noConfusion (ha.mpr hm')
   | true =>
-      have hget : searchLens.get s' = vq := by subst ht; rfl
+      have hget : searchLens.get s' = vq := by
+        subst ht; rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_searchGet]; rfl
       rw [hget]
       rcases hse with ⟨-, hs⟩ | ⟨hne, -⟩
       · exact hs
@@ -100,9 +105,17 @@ theorem compare_event_false_of_mismatch (P : Shared) (q : ℕ) (first : Fin 9) {
       exfalso
       refine hmt ?_
       have : (galilFrameS P q first).matched (scanLens.set s vs) := ha.mp rfl
-      subst ht; exact this
+      subst ht
+      show GalilScaffoldInputHead.read
+          (PalPeg.GalilScaffoldChainInputSupply.afterBirth _ (afterCompare s vs vq)).left
+        = GalilScaffoldInputHead.read
+          (PalPeg.GalilScaffoldChainInputSupply.afterBirth _ (afterCompare s vs vq)).right
+      rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_left,
+        PalPeg.GalilScaffoldChainInputSupply.afterBirth_right]
+      exact this
   | false =>
-      have hget : searchLens.get s' = vq := by subst ht; rfl
+      have hget : searchLens.get s' = vq := by
+        subst ht; rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_searchGet]; rfl
       rw [hget]
       rcases hse with ⟨-, hs⟩ | ⟨hne, -⟩
       · exact hs

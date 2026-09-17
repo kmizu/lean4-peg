@@ -1,3 +1,51 @@
+## n75 (2026-09-19) `hbs`/`hls`/`hsl` を定理化して最上位を 8 前提に、`M-periodOnly` をモデルに実装、`hsc` は反証して再切り出しへ
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 新規登録: `CloseoutCandOrient`、`CloseoutShiftLocalFree`、`CloseoutStageScan1`、`CloseoutPackRun51`、`CloseoutBirthFrame`、`CloseoutPeriodOnlyRegression`。sorry なし。
+
+### 最上位: 11 前提 → 8 前提
+
+`pal_in_peg_final25`（`CloseoutPackRun51`）。`final24` の 11 前提のうち 3 つが**義務ではなかった**ことを確認して供給した。
+
+- `hsl`（`H_shiftLocalG`）: `InvLPC` のどの状態も chain は idle。`Inv.rest` が `Restarted` を出し、その第 1 連言が `r.chain = .idle`。scan 側は `InvScan.chainIdle`。chain が idle なら `ShiftLocalG` の全場は `beginShiftVM'` の watch 前提を要求するので空虚（`shiftLocalG_of_chainIdle`）。→ `CloseoutShiftLocalFree.chainIdle_of_invS` / `h_shiftLocalG`。
+- `hbs`/`hls`（`H_bootShift`/`H_landShift`）: 同じ理由。`initVM0` が `chain := .idle` を置き、`initial` からの唯一の tick `Tick.init` がそれを保つ。既に `CloseoutPackRun6` に定理としてあった。
+
+残る 8: `hSP`, `hws`, `hee`, `het`, `hme`, `hsc`, `hor`, `hC`。
+
+### `hsc`（`H_stageScan`）は偽。再切り出しの第 1 段を証明
+
+`H_stageScan` は「`InvScan` を満たす**すべて**の状態で `ReplayStage`」を要求する。`InvScan`（`GalilReplaySegment:317-341`）の 11 場は `s.radius` に一言も触れないのに、`ReplayStage` の `Restarted` は `RadiusRep r.radius Rad`＝`Canonical r.radius` を要求する。`Counter = ⟨pos neg : List Unit⟩` なので、任意の `InvScan` 住人の `radius` だけを値 `0` の非正準表現 `⟨[()],[()]⟩` に差し替えると 11 場は全部生き残り `ReplayStage` だけ壊れる。
+
+修正は既知の型の再切り出し `InvScanS := InvScan ∧ ReplayStage`（`InvScan → InvScanO`、`SearchReady → SearchReadyB` と同じ手）。産出側は既にデータを持っていた: `replay_after_fallback` は `Restarted raw t 0 reset` と `c.clock = 2048` を前提に持ち、`WatchSegE` を返しながら `stage` 場だけ捨てていた（`GalilReplaySegment:310` の docstring がその旨を記録している）。`CloseoutStageScan1.replayStage_of_seg` / `replayStage_of_replay_after_fallback` で拾い直した。
+
+### `M-periodOnly`: モデルの欠陥を実装して全体に通した
+
+Scala `ScaffoldChain.start()` は `periodOnly = false` **かつ** `cycle.reset()` を行うが、Lean のモデルはどちらも落としていた。誕生条件は `found = true` ではなく「その遷移で新しい chain が実際に始まること」なので `chainBorn (found) (x : ChainVM) := x.isIdle && found`、状態側を `afterBirth born s`（`GalilScaffoldTopSearch:70,77`）で包む。`compareFound`/`backgroundS` の遷移先をこれで包んだ。
+
+- 抽象側の破損は**射影を 1 個挟むだけ**の型ずれで、`GalilFrontier`、`GalilReplayRest`、`GalilScaffoldTopRoundS`、`GalilScaffoldTopFirstRound`、`GalilScaffoldTopFoundLife`、`GalilScaffoldTopLifeRestart`、`GalilScaffoldTopFoundLoop`、`GalilScaffoldTopFallbackCycleS`、`GalilScaffoldTopFallbackRestart`、`GalilScaffoldTopOutputRound`、`GalilScaffoldTopFallbackAll`、`GalilScaffoldTopOutputCycle`、`GalilTickFun`、`GalilTickFun2`、`GalilCycleNoShift`、`LocalReplaySwap`、`LocalReplayParked`。`GalilScaffoldTopSegmentHeads.watchSegE_heads` だけは単調形 `t.periodOnly = true → s.periodOnly = true` に弱めた。
+- 伝播を止めた補題が 2 本。(1) `not_shiftGuard_afterMismatchB`（`GalilScaffoldTopFallbackCycleS`）: 誕生時は `chainStart` が `.copy` を返すのに `shiftGuardVM` は `.watch` を要求するので、誕生の有無にかかわらず guard は立たない。これで `¬ shiftGuardVM (afterMismatch …)` を仮定に持つ 20 ファイルへの伝播が消えた。(2) `refresh_afterBirth_iff`（`GalilScaffoldTopSearch`）: `P.onLetter = onLetterVM raw` と `P.leftFirst = leftFirstVM` の下で `refresh` は `afterBirth` 不変。`outputRel_matched_refresh'` 系の呼び出しをそのまま生かせる。
+- 局所側は `LocalTick1` に `birthL` / `abs_birthL` / `inv_birthL` / `stepLocal_birthL` / `matchCtl_congr` を入れ、`bgState` に誕生元 chain を渡し、局所歩数 `c₁` を 66 → 67（match 分岐が `searchSteps + 3`）に上げて `tickL1_local` / `tickL1_inv` / `tickL1_abs` を再証明。
+- `tickL1_abs` は新たに側条件 `hbirth`（`onLetter`/`leftFirst`/`replayExhausted` が `afterBirth` 不変）を取る。`Shared` の 3 場は抽象関数なので一般には示せないが、具体 `PofC` では `onLetterVM` が `position s.right`、`leftFirstVM` が `position s.left`、`replayExhaustedVM` が `s.replay` しか読まず、`afterBirth` はその 3 つを触らないので定理になる（`CloseoutBirthFrame.hbirth_PofC`）。
+- 回帰テスト `CloseoutPeriodOnlyRegression.birth_resets` は修正前は失敗し修正後は通る。
+
+### `hee` の残差は真偽未確定（偽の疑いが強い）
+
+`H_extraEntry7` の残差は `∀ c r, InvLPC w c r → position r.right ≠ 2*w.length`。`Inv`（`GalilRunInv:29-49`）の 10 場のうち右ヘッドに触れるのは `input : Represents r.right.head raw` だけで、これは**内容を縛るが位置を縛らない**。入力を食い切った状態（`Tick.scan_wait` が回る状態）でも全場が成立しうる。攻め口は (a) `w = []` で `2*w.length = 0` と初期位置 `0` が一致する反例、(b) `InvLPC` への右ヘッド余裕場の追加（`hsc` と同じ再切り出し）。台帳に記録した。
+
+### 既に反証済み（回帰テストとして常駐）
+
+`H_candOrient`（裸の prefix→suffix `Candidate` 移送）は偽。証人 `W = [0,0,0,0,0,1]`, `n=5`, `lower=0`, `h=1`。`CloseoutCandOrient.unrestricted_transport_false`。正しい橋は同一窓＋反転の `GalilDpSuffix.candidate_iff`。
+
+### `hme` への合成: `hcan` は `CPack` から出る（`CloseoutReplayCanRight`）
+
+`CloseoutPackRun28.walkerInOrigin_of_run`（`WalkerInOrigin` の産出元、そこから `hme`）は義務 `hcan`＝「到達可能な各状態で `replaying = true` なら右ヘッドが動ける」を持っていた。これは仮定ではなく合成で出る。
+
+- `FrontPack.replayPos`（`GalilFrontMono:98`）: `replaying = true → ∃ m, replay = ofNat (m+1)`。
+- `FrontPack.frontier`: `Frontier s`＝`position right + m ≤ 2 * arrived right`。
+- 右へ動けないなら終端 gap で右スタック空＝`PopsIncoming`。`consume_not_replaying_false`（`GalilFrontier:342`）がこれと正の replay カウンタから `False` を出す。
+- **`CPack.front : FrontPack c s`**（`GalilCentreLive:152`）。`CloseoutPackRun25.wpack_of_fair` は既に `CPack` を持ち回っており、`cpack_tick` の唯一の入力 `hfl` もその仮定にある。
+
+よって `cpack_steps` で `CPack` を歩数に沿って運べば `hcan` は定理（`hcan_of_cpack`）。新規入力なし。
+
 ## n20 (2026-09-17 朝) 葉の放電・偽仮定 4 件・非決定性
 
 ## n74 (2026-09-19 未明) 外部レビューを受けて**台帳導入**・`H_candOrient` 反例確定・自分の誤報 1 件を訂正・oracle から `hpres` 消滅

@@ -179,13 +179,24 @@ theorem compare_matched_form {w : List (Fin 2)} {s s' : GalilVM}
       vs.right = GalilScaffoldChainVerifier.right s.right ∧
       GalilScaffoldInputHead.read (GalilScaffoldInputHead.left s.left) =
         GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right) ∧
-      s' = afterCompare s vs vq := by
+      s' = afterBirth (chainBorn (decide (vq.search.mode
+          = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq) := by
   obtain ⟨vs, vq, a, hvl, hvr, hiff, -, -, hteq⟩ :
     compareFound (PofC centre place entry w) q first s s' := hcmp
   have hread : GalilScaffoldInputHead.read vs.left = GalilScaffoldInputHead.read vs.right := by
     cases a with
-    | true => rw [if_pos rfl] at hteq; subst hteq; exact hmt
-    | false => rw [if_neg (by simp)] at hteq; subst hteq; exact hmt
+    | true =>
+      rw [if_pos rfl] at hteq; subst hteq
+      have h0 : GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).right := hmt
+      rw [afterBirth_left, afterBirth_right] at h0
+      exact h0
+    | false =>
+      rw [if_neg (by simp)] at hteq; subst hteq
+      have h0 : GalilScaffoldInputHead.read (afterBirth _ (afterMismatch s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth _ (afterMismatch s vs vq)).right := hmt
+      rw [afterBirth_left, afterBirth_right] at h0
+      exact h0
   have ha : a = true := hiff.2 hread
   subst ha
   rw [if_pos rfl] at hteq
@@ -198,11 +209,19 @@ theorem compare_mismatch_form {w : List (Fin 2)} {s s' : GalilVM}
     ∃ (vs : ScanVM) (vq : SearchVM),
       vs.left = GalilScaffoldInputHead.left s.left ∧
       vs.right = GalilScaffoldChainVerifier.right s.right ∧
-      s' = afterMismatch s vs vq := by
+      s' = afterBirth (chainBorn (decide (vq.search.mode
+          = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq) := by
   obtain ⟨vs, vq, a, hvl, hvr, hiff, -, -, hteq⟩ :
     compareFound (PofC centre place entry w) q first s s' := hcmp
   cases a with
-  | true => rw [if_pos rfl] at hteq; exact absurd (hteq ▸ hiff.1 rfl) hmt
+  | true =>
+    rw [if_pos rfl] at hteq
+    refine absurd ?_ hmt
+    rw [hteq]
+    show GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).left
+      = GalilScaffoldInputHead.read (afterBirth _ (afterCompare s vs vq)).right
+    rw [afterBirth_left, afterBirth_right]
+    exact hiff.1 rfl
   | false => rw [if_neg (by simp)] at hteq; exact ⟨vs, vq, hvl, hvr, hteq⟩
 
 end Compare
@@ -324,41 +343,57 @@ theorem lpack_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
       compare_matched_form centre place entry q first hcmp hmt
     have hni : c.mode ≠ Mode.init := by rw [hm]; decide
     have hpl' : t = (if c.replaying then
-        {afterCompare s vs vq with replay := dec (afterCompare s vs vq).replay}
-      else afterCompare s vs vq) := hpl
-    have htl : t.left = (afterCompare s vs vq).left := by
+        {afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq) with replay := dec (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).replay}
+      else afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)) := hpl
+    have htl : t.left = (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).left := by
       rw [hpl']; cases c.replaying <;> rfl
-    have htr : t.right = (afterCompare s vs vq).right := by
+    have htr : t.right = (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).right := by
       rw [hpl']; cases c.replaying <;> rfl
-    have htc : t.center = s.center := by rw [hpl']; cases c.replaying <;> rfl
+    have htc : t.center = s.center := by
+      rw [hpl']
+      cases c.replaying <;> simp [afterBirth_center, afterCompare_center]
     have hcan := hL.scanCanR hm
     obtain ⟨r, hi⟩ := hL.scanInvR hm
     have hi' := matched_invariant' w vq hvl hvr hmatch hcan hi
     obtain ⟨hrepr, hpres⟩ := hP.lrep hni
     refine ⟨fun _ => ?_, fun _ _ => ⟨r + 1, ?_⟩, fun _ => ?_⟩
-    · rw [htl, afterCompare_left, hvl]
+    · rw [htl, afterBirth_left, afterCompare_left, hvl]
       exact lrep_left hrepr hpres (hL.scanLeft hm)
-    · rw [htc, htl, htr]; exact hi'
+    · rw [htc, htl, htr, afterBirth_left, afterBirth_right]; exact hi'
     · cases hcr : c.replaying with
       | false =>
-        have ht : t = afterCompare s vs vq := by rw [hpl', hcr]; rfl
+        have ht : t = afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq) := by rw [hpl', hcr]; rfl
         have hm0 := minv_match (raw := w) (c := c) (vq := vq) o 2048 hcr hvl hvr hcan hmatch hi (hP.minv hni)
-        exact minv_same (by simp) (by rw [ht]) (by rw [ht]) (by rw [ht]) hm0
+        exact minv_same (by simp) (by rw [ht, afterBirth_right])
+          (by rw [ht, afterBirth_center]) (by rw [ht, afterBirth_replay]) hm0
       | true =>
-        have ht : t = replayDec true (afterCompare s vs vq) := by rw [hpl', hcr]; rfl
+        rw [hcr, if_pos rfl] at hpl'
+        have ht : t = replayDec true (afterBirth (chainBorn (decide (vq.search.mode
+            = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)) := hpl'
         have hm0 := minv_matchR (raw := w) (c := c) (vs := vs) (vq := vq) (PofC centre place entry w)
           (fun _ => rfl) o 2048 hcr hvr hcan hi (hP.minv hni)
-        exact minv_same (by rw [ht]; rfl) (by rw [ht]) (by rw [ht]) (by rw [ht]) hm0
+        have hm1 := minv_afterBirth (raw := w)
+          (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) hm0
+        refine minv_same ?_ ?_ ?_ ?_ hm1
+        · show (true && !GalilScaffoldCounter.zero t.replay)
+            = !GalilScaffoldCounter.zero (replayDec true (afterCompare s vs vq)).replay
+          rw [ht, replayDec_true_replay, afterBirth_replay, replayDec_true_replay]
+          simp
+        · rw [ht, replayDec_right, afterBirth_right, afterBirth_right, replayDec_right]
+        · rw [ht, replayDec_center, afterBirth_center, afterBirth_center, replayDec_center]
+        · rw [ht, replayDec_true_replay, afterBirth_replay, afterBirth_replay,
+            replayDec_true_replay]
   case scan_shift =>
     rename_i s' hmt hg hm hc hr hcmp hav hb
     obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
       compare_mismatch_form centre place entry q first hcmp hmt
     have hni : c.mode ≠ Mode.init := by rw [hm]; decide
-    obtain ⟨wch, hchain, ht⟩ : beginShiftVM' (afterMismatch s vs vq) t := hb
+    obtain ⟨wch, hchain, ht⟩ :
+      beginShiftVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
     obtain ⟨hrepr, hpres⟩ := hP.lrep hni
     refine ⟨fun _ => ?_, fun hm' _ => Mode.noConfusion hm', fun _ => ?_⟩
     · have htl : t.left = GalilScaffoldInputHead.left s.left := by
-        rw [ht]; show vs.left = _; exact hvl
+        rw [ht, afterBirth_left, afterMismatch_left]; exact hvl
       rw [htl]; exact lrep_left hrepr hpres (hL.scanLeft hm)
     · exact hL.shiftMinv hm _ _ hcmp ⟨wch, hchain, ht⟩
   case scan_fallback =>
@@ -366,11 +401,12 @@ theorem lpack_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
       compare_mismatch_form centre place entry q first hcmp hmt
     have hni : c.mode ≠ Mode.init := by rw [hm]; decide
-    obtain ⟨pl, ht⟩ : beginFallbackVM' (afterMismatch s vs vq) t := hb
+    obtain ⟨pl, ht⟩ :
+      beginFallbackVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
     obtain ⟨hrepr, hpres⟩ := hP.lrep hni
     refine ⟨fun _ => ?_, fun hm' _ => Mode.noConfusion hm', fun _ => ?_⟩
     · have htl : t.left = GalilScaffoldInputHead.left s.left := by
-        rw [ht]; show vs.left = _; exact hvl
+        rw [ht, afterBirth_left, afterMismatch_left]; exact hvl
       rw [htl]; exact lrep_left hrepr hpres (hL.scanLeft hm)
     · exact hL.fallbackMinv hm _ _ hcmp ⟨pl, ht⟩
   case shift_one =>

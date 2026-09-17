@@ -548,7 +548,7 @@ theorem spanRep_found_noshift (P : Shared) (qq : ℕ) (first : Fin 9) (delay : �
     (vq : SearchVM) (ch : ChainVM) (oF : Bool)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE P qq first delay es {cF with clock := delay, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {c3 : Control} {s3 : GalilVM} (hseg : WatchSeg P qq first delay c2 s2 c3 s3)
     (vs3 : ScanVM) (vq3 : SearchVM) (w3' : GalilScaffoldChainWatch.State) (entry : ℕ)
     (hS0 : SpanRep r) :
@@ -568,7 +568,7 @@ theorem spanRep_found_shift (P : Shared) (qq : ℕ) (first : Fin 9) (delay : ℕ
     (vq : SearchVM) (ch : ChainVM) (oF : Bool)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
     (hprepSeg : WatchSegE P qq first delay es {cF with clock := delay, output := oF, replaying := false}
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2)
     {cM : Control} {sM : GalilVM} (hseg : WatchSeg P qq first delay c2 s2 cM sM)
     (h : ℕ) (w : GalilScaffoldChainWatch.State) (s2' : GalilVM) (t' : ShiftState)
     (v : GalilScaffoldChainWatch.State) (cycle : Counter)

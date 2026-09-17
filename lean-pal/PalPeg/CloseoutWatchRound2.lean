@@ -286,7 +286,7 @@ def FoundCompareCtxC (centre : GalilVM → Fin 3)
     refresh (galilFrame (PofC centre place entry raw) qq first)
       (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF ∧
     cP = {cF with clock := 2048, output := oF, replaying := false} ∧
-    sP = afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq
+    sP = afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)
 
 /-- **The terminal record.**  `CloseoutWatchRound.TerminalC` at the end of the
 rounds, together with the found-tick context the tails also require. -/

@@ -93,7 +93,7 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 - 設計・現状の正本は `lean-pal/ASSEMBLY_PLAN.md`（組み立て方針、新しい順に追記）と `lean-pal/DESIGN_SCA_PAL.md`、`ALGORITHM_SPEC.md`。
 - 旧制御層は `lean-pal/archive/single-prog/` に退避済みでビルド対象外。
 
-## lean-pal 無条件 PAL ∈ PEG の進捗（2026-09-18 未明 時点）
+## lean-pal 無条件 PAL ∈ PEG の進捗（2026-09-19 時点）
 
 **状態: 全体 build 成功・標準公理のみ・無条件 PAL は未完。** 全モジュール sorry なし。新モジュールは `PalPeg.lean` の `import PalPeg.GalilSegmentConstruct` の直後に登録。
 
@@ -101,6 +101,7 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 
 | 定理 | ファイル | 仮定 |
 |---|---|---|
+| **`pal_in_peg_final25`** | **`CloseoutPackRun51`** | **8 前提**: `hSP`（scan 状態の `ShiftPal`）, `hws`（`WatchShiftG`）, `hee`（`Extra7` 入口）, `het`（`Extra7` tick）, `hme`（`H_marksEntry'`）, `hsc`（`H_stageScan`、**反証済み**・再切り出し待ち）, `hor`（`CycleOracleMC3`）, `hC`（`H_realizeLIMG2'`）。`final24` の 11 前提のうち `hbs`/`hls`/`hsl` は木の中の定理で供給済み（`InvLPC` の chain は常に idle → `ShiftLocal*` は空虚）。残差の正本は `lean-pal/CLOSEOUT_LEDGER.md` |
 | `pal_in_peg_final24` | `CloseoutPackRun46` | `hSP`（scan 状態の `ShiftPal`）, `WatchShiftG`, `Extra7`（`scanAvail` のみ）入口/tick, `H_extraEntry3/Tick3`, `H_marksEntry'`, `H_shiftLocalG`, `H_realizeLIMG'`, `H_shiftLocalC`, `H_stageScan`, `CycleOracleMC3`, `H_bootShift`, `H_landShift`, `H_realizeLIM'`（最上位。found 葉は `foundExit_compare_final9`、readiness は `PostRunC`、核は `chooseVm_tapeActK`；詳細 `CLAUDE_RESUME.md` n74；残差の正本は `lean-pal/CLOSEOUT_LEDGER.md`；**モデル欠陥: chain 誕生で `periodOnly` 未リセット（修正保留）**；readiness 帰納段 `postRunF_step` 成立；found 葉は `foundExit_compare_final14`（`FoundExitLPS`）、readiness 往復は `galilFrameS` 上で閉、core `shiftVm_tapeActKQ` K=28）；`BigResid6` は `bigResid6_of_lpackM2`（残 `ShiftPal`・`WatchShift`）；readiness は `PostRunF` 往復（Preload31）；readiness は `ScanRealized` 矛盾（n49）で `PostRunPh/F` へ再基底化中；rewind 角は `MarksEntry` 1 点；found 葉は `foundExit_compare_final19`；`ShiftLocal` は反証→`ShiftLocalG`（final16、`IPackMG` 再配線中）；`rewindMargin` は `CentreMargin` 1 葉に集約、`.double` 出口義務は Scala に合わせ再定式化要） |
 | `pal_in_peg_final4` | `GalilFinalAssembly4` | `H_oracle2`（boot 側 oracle、`CycleOracleMC2C`）, `H_needLB'`, `H_realizeLB'` |
 | `pal_in_peg_final2'_trailF` | `GalilTrailProof` | `H_oracle`, `H_trailF`, `H_base`, `H_realizeL'` |
@@ -121,6 +122,15 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 
 閉: `hex`, `hsearch`, `hsegmentM`（`segment_of_invLPC`+`hends_C`）, `hends`, `hbudget`（`replayBudgetR_of_decodes'`）, `hrs`（`restartShape_sharedC`）, `hended`, `hlastMatch`（`hquiet` 依存を除去中）, `hstr`（`Final4` で不要）。
 残: `hpres`→`SearchReadyB` 版区間構成（進行中）; `hstage`（`ReplayStage` を `GalilReplaySpan` 内で持ち回り、進行中、mid-replay restart の `3·radius ≤ 5·last` が新義務）; `hshape`（`StartShape`）; `hlastMismatch` の最終文字分岐（`LastMismatchReport`）と `EntryRefreshed`; `hmismatch` ← `GalilLeafMismatch` の残差 `hdp`（DP pack、進行中）/`hfb`（fallback tick 数、進行中）/`hpos`（区間予算前提を pieces に追加、進行中）; `hfound`/`hfoundBg` ← 着地不変量に `Restarted`/`StageEntry` を追加（`GalilInvPlus3`、進行中）+ found tick からの経路構成（未着手、最大の残り）; `hfoundReplay`（replay 中 found の経路、未着手）。
+
+### 3c. 2026-09-19 の追加（`M-periodOnly` とモデルの忠実性）
+
+- **モデル欠陥 `M-periodOnly` を実装**: Scala `ScaffoldChain.start()` の `periodOnly = false` と `cycle.reset()` が Lean に無かった。`chainBorn (found) (x : ChainVM) := x.isIdle && found`（誕生条件は「その遷移で新しい chain が実際に始まること」）と `afterBirth born s`（`GalilScaffoldTopSearch:70,77`）を入れ、`compareFound`/`backgroundS`/`background_found_step` の遷移先を包んだ。全体 build 緑。回帰テスト `CloseoutPeriodOnlyRegression.birth_resets`。
+- 伝播を止めた補題: `not_shiftGuard_afterMismatchB`（誕生時の chain は `chainStart`＝`.copy`、`shiftGuardVM` は `.watch` を要求 → guard は立たない）と `refresh_afterBirth_iff`（`P.onLetter = onLetterVM raw`・`P.leftFirst = leftFirstVM` の下で `refresh` は `afterBirth` 不変）。
+- 局所側: `LocalTick1` に `birthL`/`abs_birthL`/`inv_birthL`/`stepLocal_birthL`/`matchCtl_congr` と射影群、`bgState` に誕生元 chain を追加、`c₁` を 66 → 67。`tickL1_abs` は側条件 `hbirth` を取り、具体 `PofC` では定理（`CloseoutBirthFrame.hbirth_PofC`）。
+- **`hsc`（`H_stageScan`）は反証**: `InvScan` の 11 場は `s.radius` に触れないのに `ReplayStage` は `Canonical radius` を要求。再切り出し `InvScanS := InvScan ∧ ReplayStage`、産出側の第 1 段は `CloseoutStageScan1`。
+- **`hme` への合成**: `walkerInOrigin_of_run` の義務 `hcan` は `CPack.front : FrontPack` の `replayPos` + `frontier` と `consume_not_replaying_false` から出る（`CloseoutReplayCanRight`）。新規入力なし。
+- `hee`/`het` の残差（scan 状態で `canRight`）は**偽の疑いが強い**。`Inv.input` は右ヘッドの内容を縛るが位置を縛らない。
 
 ### 3b. 2026-09-17 朝の追加
 - `StartShape` は偽 → `StartShape'`（`GalilReplaySpan.startShape'_of_decodes`）。`hpres` は `ReadyFuel`（`GalilSegmentConstructB`/`GalilReadyFuelUses`）と `RunEntriesAtBegin`（replay、`''_fuel`）に置換。`hfb` 閉（`GalilLeafFb`）。`hdp` → `MismatchDp`+`StageBudgetAt`（`GalilLeafDp`）。`hpos` → 区間予算（`GalilOracleMC4`）。`TrailF` は `RadPack` の tick 保存 1 つ（`GalilTrailRad`）。局所 7/10 モード閉（`LocalWF`）。

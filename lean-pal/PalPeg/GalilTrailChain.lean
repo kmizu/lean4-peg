@@ -289,10 +289,16 @@ theorem compare_chainAt {s s' : GalilVM}
   | true =>
     rw [if_pos rfl] at hteq
     subst hteq
-    exact ⟨true, _, _, _, _, hch, fun hn => absurd (hiff.1 rfl) hn⟩
+    rw [afterBirth_chain]
+    exact ⟨true, _, _, _, _, hch, fun hn => absurd (by
+      have h0 : GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).left
+        = GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).right := by
+        rw [afterBirth_left, afterBirth_right]; exact hiff.1 rfl
+      exact h0) hn⟩
   | false =>
     rw [if_neg (by simp)] at hteq
     subst hteq
+    rw [afterBirth_chain]
     exact ⟨false, _, _, _, _, hch, fun _ => rfl⟩
 
 /-- **`trailChain_scanTick`.**  Both chain clauses survive every tick of

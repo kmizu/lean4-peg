@@ -185,6 +185,7 @@ theorem compareFound_trunc' {P : Shared} (hP : SharedTrunc raw j P) (q : ℕ) (f
   · rw [hP.centre, hP.place]
     exact chainAt_trunc raw j hch hz
   · subst ht
+    rw [truncVM_afterBirth, truncVM_chain, chainBorn_truncChain]
     cases b <;> rfl
 
 theorem backgroundS_trunc' {P : Shared} (hP : SharedTrunc raw j P) (q : ℕ) (first : Fin 9)
@@ -201,10 +202,13 @@ theorem backgroundS_trunc' {P : Shared} (hP : SharedTrunc raw j P) (q : ℕ) (fi
     rw [hr]
   · rw [hP.centre, hP.place]
     exact chainAt_trunc raw j hch hz
-  · calc truncVM (raw.length - j) t
-        = truncVM (raw.length - j) (searchLens.set (scanLens.set s (scanLens.get t)) (searchLens.get t)) :=
+  · rw [truncVM_chain, chainBorn_truncChain]
+    calc truncVM (raw.length - j) t
+        = truncVM (raw.length - j) (afterBirth (chainBorn (decide ((searchLens.get t).search.mode
+              = GalilScaffoldSearchFinish.Mode.found)) s.chain)
+            (searchLens.set (scanLens.set s (scanLens.get t)) (searchLens.get t))) :=
           congrArg _ hset
-      _ = _ := rfl
+      _ = _ := by rw [truncVM_afterBirth]; rfl
 
 /-- **`tick_trunc'`.** A pre-loaded tick whose endpoints consumed at most `j`
 letters and whose source lookahead (`look'`: in scan mode, R one move right and

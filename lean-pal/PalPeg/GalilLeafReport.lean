@@ -290,11 +290,16 @@ theorem reachAtC2_of_target_match_found (centre : GalilVM -> Fin 3)
     ⟨_, ChainMatched.copy _ _ _ _ _ _ _⟩
   set vs : ScanVM := ⟨left t.left, right t.right, ch⟩ with hvs
   have hmt0 : (galilFrame P q first).matched (scanLens.set t vs) := hmt
-  have hcmp : (galilFrameS P q first).compare t (afterCompare t vs vq) :=
+  have hcmp : (galilFrameS P q first).compare t (afterBirth true (afterCompare t vs vq)) :=
     ⟨vs, vq, true, rfl, rfl, ⟨fun _ => hmt0, fun _ => rfl⟩, hq,
-      Or.inr (Or.inr ⟨hs.idle, by simp [hf], by simpa using hchm⟩), rfl⟩
-  have hmt1 : (galilFrameS P q first).matched (afterCompare t vs vq) := hmt
-  set u : GalilVM := afterCompare t vs vq with hu
+      Or.inr (Or.inr ⟨hs.idle, by simp [hf], by simpa using hchm⟩),
+      by rw [hs.idle, chainBorn, ChainVM.isIdle, hf]; rfl⟩
+  have hmt1 : (galilFrameS P q first).matched (afterBirth true (afterCompare t vs vq)) := by
+    show GalilScaffoldInputHead.read (afterBirth true (afterCompare t vs vq)).left
+      = GalilScaffoldInputHead.read (afterBirth true (afterCompare t vs vq)).right
+    rw [afterBirth_left, afterBirth_right]
+    exact hmt
+  set u : GalilVM := afterBirth true (afterCompare t vs vq) with hu
   set o : Bool := if P.onLetter u then decide (P.leftFirst u) else c'.output with ho'
   have ho : refresh (galilFrameS P q first) u c'.output o := by
     refine ⟨fun hl => ?_, fun hl => ?_⟩
@@ -307,7 +312,7 @@ theorem reachAtC2_of_target_match_found (centre : GalilVM -> Fin 3)
   have hsrc : SoundScanNR raw ⟨c', t⟩ := stepsAll_last hrun0
   obtain ⟨⟨k1, hrun1⟩, hrp, hfr⟩ :=
     PalPeg.GalilReportPrefix.reportAt_of_match raw P rfl rfl q first 2048 hsrc hs.mode hc1 hnr
-      hav hs.minv hi hpos hm1 hmle vs vq o rfl rfl hcmp hmt1 ho
+      hav hs.minv hi hpos hm1 hmle vs vq o true rfl rfl hcmp hmt1 ho
   have hsound := stepsAll_last hrun1
   have hpl : (galilFrameS P q first).matchedPlace c'.replaying u u := by
     show u = (if c'.replaying then _ else u)

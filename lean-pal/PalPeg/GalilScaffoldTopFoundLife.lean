@@ -37,7 +37,8 @@ theorem found_life (P : Shared) (qq : ℕ) (first : Fin 9) (delay : ℕ)
     (ch : ChainVM)
     (hch : ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre sF) (P.place sF) sF.center sF.radius) ch)
     (oF : Bool)
-    (hoF : refresh (galilFrame P qq first) (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF)
+    (hoF : refresh (galilFrame P qq first)
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output oF)
     (dm : Bool) :
     ∃ (h : ℕ) (ys : List (Fin 3)) (b : Fin 3),
       GalilDpCorrect.Candidate ((GalilScaffoldPlace.stream ⟨a :: ls,gap⟩).take (span+1)) lower h ∧
@@ -46,7 +47,7 @@ theorem found_life (P : Shared) (qq : ℕ) (first : Fin 9) (delay : ℕ)
       ∀ {c2 : Control} {s2 : GalilVM},
         WatchSegE P qq first delay (bs ++ dm :: cs)
           {cF with clock := delay, output := oF, replaying := false}
-          (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) c2 s2 →
+          (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) c2 s2 →
       ∀ {c1 : Control} {s1 : GalilVM} (hseg : WatchSeg P qq first delay c2 s2 c1 s1)
         -- the terminal comparison
         (hm1 : c1.mode = .scan) (hr1 : c1.replaying = false) (hc1 : c1.clock = 1)
@@ -119,13 +120,13 @@ theorem found_life (P : Shared) (qq : ℕ) (first : Fin 9) (delay : ℕ)
   -- the found tick
   have htickF := found_start_match P qq first delay cF sF hmF hrF hcF havF hidle vq hq hfound hmt ch hchF oF hoF
   -- the chain after the preparation
-  have hchain0 := hprep bs cs hbs hcs ch hch hprepSeg (by rw [afterCompare_chain])
+  have hchain0 := hprep bs cs hbs hcs ch hch hprepSeg (by rw [afterBirth_chain, afterCompare_chain])
   -- the scan invariant after the found tick and the preparation
   have hinvF : ScanInv ((a :: ls).reverse ++ (rs ++ q)) sF (r0+1) :=
     ⟨hscan, hR, hrc, hlc, ⟨a, ls, rs, q, gap, hcen, by simp [List.append_assoc]⟩⟩
   have hinv1 := scanInv_compare_matched hinvF ⟨left sF.left, right sF.right, ch⟩ vq rfl rfl havF hmt
-  obtain ⟨_, hscP, hcenP, _, hradP, hrcP, hlcP⟩ := watchSegE_events P qq first delay hprepSeg (by rw [afterCompare_chain]; show ch ≠ .idle; intro h0; rw [h0] at hchF; cases hchF)
-  rw [afterCompare_center] at hcenP
+  obtain ⟨_, hscP, hcenP, _, hradP, hrcP, hlcP⟩ := watchSegE_events P qq first delay hprepSeg (by rw [afterBirth_chain, afterCompare_chain]; show ch ≠ .idle; intro h0; rw [h0] at hchF; cases hchF)
+  rw [afterBirth_center, afterCompare_center] at hcenP
   have hi0 : ScanInvariant ((a :: ls).reverse ++ (rs ++ q)) (position sF.center)
       (r0+1+1 + (bs ++ dm :: cs).count true) s2.left s2.right := by
     have := scan_events_invariant (hscP ((a :: ls).reverse ++ (rs ++ q)) (position sF.center) (r0+1+1)) (by
@@ -134,9 +135,9 @@ theorem found_life (P : Shared) (qq : ℕ) (first : Fin 9) (delay : ℕ)
       exact h0)
     exact this
   have hrad0 : value s2.radius = ((r0+1+1 + (bs ++ dm :: cs).count true : ℕ) : ℤ) := by
-    rw [hradP, afterCompare_radius, inc_value, hR]; push_cast; ring
-  have hrc0 : Canonical s2.radius := hrcP (by rw [afterCompare_radius]; exact inc_canonical _ hrc)
-  have hlc0 : Canonical s2.length := hlcP (by rw [afterCompare_length]; exact inc_canonical _ (inc_canonical _ hlc))
+    rw [hradP, afterBirth_radius, afterCompare_radius, inc_value, hR]; push_cast; ring
+  have hrc0 : Canonical s2.radius := hrcP (by rw [afterBirth_radius, afterCompare_radius]; exact inc_canonical _ hrc)
+  have hlc0 : Canonical s2.length := hlcP (by rw [afterBirth_length, afterCompare_length]; exact inc_canonical _ (inc_canonical _ hlc))
   have hlag : value (watchStart sF.center (P.centre sF) ys b (GalilScaffoldChainCredits.run
       (GalilScaffoldChainCredits.start sF.radius)
       (GalilScaffoldChainCredits.prepEvents true dm bs cs))).lag =
@@ -154,7 +155,7 @@ theorem found_life (P : Shared) (qq : ℕ) (first : Fin 9) (delay : ℕ)
       sF.radius hrc hrp true dm h ys b hcand hys bs cs hbs hcs _ hlag hseg hchain0' hcenP hrad0 hrc0 hlc0 hi0
       hm1 hr1 hc1 w hs1 hphase hz hav vs vq' hcmp hmis hq' predicted hpred hread hg s2' hb hs2' hi2 hchain o ho
       hrounds hcenter hseg3 hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 hend3 w3' hbr3 o3 ho3
-  obtain ⟨k1, hst1⟩ := watchSeg_steps P qq first delay (watchSeg_of_E P qq first delay hprepSeg (by rw [afterCompare_chain]; show ch ≠ .idle; intro h0; rw [h0] at hchF; cases hchF))
+  obtain ⟨k1, hst1⟩ := watchSeg_steps P qq first delay (watchSeg_of_E P qq first delay hprepSeg (by rw [afterBirth_chain, afterCompare_chain]; show ch ≠ .idle; intro h0; rw [h0] at hchF; cases hchF))
   refine ⟨⟨_, steps_trans (.succ htickF hst1) hst2⟩, hw3, hbroken, org, hint, hocen, hshifts, he, hres⟩
 
 #print axioms found_life

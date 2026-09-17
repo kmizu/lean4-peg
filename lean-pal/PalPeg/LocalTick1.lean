@@ -155,7 +155,7 @@ theorem stepLocalN_dpRun (g : ℕ → Fin 12 → GalilScaffoldTape.Tape → Gali
 def searchSteps : ℕ := 64
 
 /-- **The per-tick local budget of a scan tick.** -/
-def c₁ : ℕ := 66
+def c₁ : ℕ := 67
 
 /-! ## 2. The well-formedness invariant -/
 
@@ -338,14 +338,167 @@ def scanStep2 (ch : ChainVM) (w : GalilVML P) : GalilVML P :=
 /-- The VM part of a matched scan tick. -/
 def matchVm (ch : ChainVM) (w : GalilVML P) : GalilVML P := scanStep2 ch (scanStep1 w)
 
-/-- The state after a background-only scan tick: a new chain tag and a new
-controller record, nothing else. -/
-def bgState (ch : ChainVM) (c : Control) (z : GalilVML P) : GalilVML P :=
-  { z with chain := ch, ctl := c }
+/-- **The local half of `chain.start()`.**  A chain birth must also clear
+`periodOnly` and reset the `cycle` counter (Scala `ScaffoldChain.start()`,
+`ScaffoldChain.scala:89-90`); `LocalCounter.resetSeg` does the counter in one
+tape action, so this stays a local step. -/
+def birthL (born : Bool) (z : GalilVML P) : GalilVML P :=
+  if born then
+    { z with periodOnly := false,
+             phys := Function.update z.phys (z.roles Ctr.cycle)
+                       (LocalCounter.resetSeg (z.phys (z.roles Ctr.cycle))) }
+  else z
+
+@[simp] theorem birthL_false (z : GalilVML P) : birthL false z = z := rfl
+
+theorem birthL_roles (b : Bool) (z : GalilVML P) : (birthL b z).roles = z.roles := by
+  cases b <;> rfl
+
+@[simp] theorem birthL_ctl (b : Bool) (z : GalilVML P) : (birthL b z).ctl = z.ctl := by
+  cases b <;> rfl
+
+/-- A birth reset is one tape action. -/
+theorem stepLocal_birthL (b : Bool) (z : GalilVML P) : StepLocal z (birthL b z) := by
+  unfold birthL
+  split
+  · refine ⟨fun j => ?_, (stepLocal_refl z).2⟩
+    by_cases hj : j = z.roles Ctr.cycle
+    · subst hj
+      simpa [Function.update_self] using tapeLocal_resetSeg (z.phys (z.roles Ctr.cycle))
+    · simpa [Function.update_of_ne hj] using tapeLocal_refl (z.phys j)
+  · exact stepLocal_refl z
+
+
+/-- **`birthL` realizes `afterBirth`.**  `periodOnly` is a field; the `cycle`
+counter is the one tape `resetSeg` clears, and `RolesInjective` keeps every
+other counter where it was. -/
+theorem abs_birthL {z : GalilVML P} (hro : RolesInjective z) (b : Bool) :
+    abs' (birthL b z) = afterBirth b (abs' z) := by
+  cases b
+  · rfl
+  · have hupd : ∀ c : Ctr, c ≠ Ctr.cycle →
+        Function.update z.phys (z.roles Ctr.cycle)
+          (LocalCounter.resetSeg (z.phys (z.roles Ctr.cycle))) (z.roles c)
+          = z.phys (z.roles c) := by
+      intro c hc
+      exact Function.update_of_ne (roles_ne hro hc) _ _
+    simp only [birthL, if_true, afterBirth, if_true, abs', PalPeg.LocalState.abs,
+      absCtrs, LocalRoles.absL, Function.update_self, LocalCounter.absCtr_reset,
+      hupd Ctr.remaining (by decide), hupd Ctr.radius (by decide),
+      hupd Ctr.length (by decide), hupd Ctr.replay (by decide),
+      hupd Ctr.lower (by decide), hupd Ctr.span (by decide),
+      hupd Ctr.work (by decide), hupd Ctr.debt (by decide),
+      hupd Ctr.fppWork (by decide)]
+
+/-- `refresh` reads only the heads and the replay flag, none of which a birth
+touches. -/
+theorem refresh_afterBirth {S : Shared} {q : ℕ} {first : Fin 9} {s : GalilVM} {i o : Bool}
+    (hol : ∀ bb : Bool, S.onLetter (afterBirth bb s) ↔ S.onLetter s)
+    (hlf : ∀ bb : Bool, S.leftFirst (afterBirth bb s) ↔ S.leftFirst s)
+    (bb : Bool) (h : refresh (galilFrameS S q first) s i o) :
+    refresh (galilFrameS S q first) (afterBirth bb s) i o := by
+  refine ⟨fun hon => ?_, fun hon => ?_⟩
+  · exact (h.1 ((hol bb).mp hon)).trans (hlf bb).symm
+  · exact h.2 (fun hc => hon ((hol bb).mpr hc))
+
+/-- `replayDec` and `afterBirth` touch disjoint fields, so they commute. -/
+theorem replayDec_afterBirth (b bb : Bool) (s : GalilVM) :
+    replayDec b (afterBirth bb s) = afterBirth bb (replayDec b s) := by
+  cases b <;> cases bb <;> rfl
+
+/-- `Inv` ignores the controller record. -/
+theorem inv_setChainCtl' {z : GalilVML P} (h : Inv z) (c : Control) :
+    Inv { z with ctl := c } :=
+  ⟨h.roles, h.attached, h.views, h.radiusShaped, h.lowerShaped, h.lengthShaped, h.shaped⟩
+
+/-- `Inv` ignores the chain tag and the controller record. -/
+theorem inv_setChainCtl {z : GalilVML P} (h : Inv z) (ch : ChainVM) (c : Control) :
+    Inv { z with chain := ch, ctl := c } :=
+  ⟨h.roles, h.attached, h.views, h.radiusShaped, h.lowerShaped, h.lengthShaped, h.shaped⟩
+
+/-- **`Inv` survives a birth reset.**  `roles`/`pol`/views/mirror sources are
+untouched; the one rewritten counter is `reset`, which is `SegCtr … 0`.  The
+mirrors are attached to `radius`/`lower`/`length`, all distinct from `cycle`. -/
+theorem inv_birthL {z : GalilVML P} (hinv : Inv z) (b : Bool) : Inv (birthL b z) := by
+  cases b
+  · exact hinv
+  · refine ⟨hinv.roles, ?_, hinv.views, hinv.radiusShaped, hinv.lowerShaped,
+      hinv.lengthShaped, ?_⟩
+    · obtain ⟨h1, h2, h3⟩ := hinv.attached
+      refine ⟨?_, ?_, ?_⟩
+      · show z.radiusMir.src = _
+        rw [h1]
+        exact (Function.update_of_ne (roles_ne hinv.roles (by decide)) _ _).symm
+      · show z.lowerMir.src = _
+        rw [h2]
+        exact (Function.update_of_ne (roles_ne hinv.roles (by decide)) _ _).symm
+      · show z.lengthMir.src = _
+        rw [h3]
+        exact (Function.update_of_ne (roles_ne hinv.roles (by decide)) _ _).symm
+    · intro c
+      show ∃ v, LocalCounter.SegCtr
+        (Function.update z.phys (z.roles Ctr.cycle)
+          (LocalCounter.resetSeg (z.phys (z.roles Ctr.cycle))) (z.roles c)) v
+      by_cases hc : c = Ctr.cycle
+      · subst hc
+        rw [Function.update_self]
+        exact ⟨0, LocalCounter.segCtr_reset _⟩
+      · rw [Function.update_of_ne (roles_ne hinv.roles hc)]
+        exact hinv.shaped c
+
+/-- The birth reset touches `periodOnly` and `cycle` only, so the search view is
+unchanged. -/
+theorem searchLens_birthL {z : GalilVML P} (hro : RolesInjective z) (b : Bool) :
+    searchLens.get (abs' (birthL b z)) = searchLens.get (abs' z) := by
+  rw [abs_birthL hro]
+  cases b <;> rfl
+
+/-- The state after a background-only scan tick: a new chain tag, a new
+controller record, and — when this tick starts a chain — the birth reset. -/
+def bgState (src : ChainVM) (ch : ChainVM) (c : Control) (z : GalilVML P) : GalilVML P :=
+  birthL (chainBorn (decide ((searchLens.get (abs' z)).search.mode
+      = GalilScaffoldSearchFinish.Mode.found)) src)
+    { z with chain := ch, ctl := c }
+
+@[simp] theorem bgState_ctl (src ch : ChainVM) (c : Control) (z : GalilVML P) :
+    (bgState src ch c z).ctl = c := by
+  show (birthL _ { z with chain := ch, ctl := c }).ctl = c
+  rw [birthL_ctl]
+
+@[simp] theorem birthL_center (b : Bool) (z : GalilVML P) : (birthL b z).center = z.center := by
+  cases b <;> rfl
+
+@[simp] theorem birthL_right (b : Bool) (z : GalilVML P) : (birthL b z).right = z.right := by
+  cases b <;> rfl
+
+@[simp] theorem birthL_pending (b : Bool) (z : GalilVML P) :
+    (birthL b z).pending = z.pending := by
+  cases b <;> rfl
+
+@[simp] theorem bgState_right (src ch : ChainVM) (c : Control) (z : GalilVML P) :
+    (bgState src ch c z).right = z.right := by
+  show (birthL _ { z with chain := ch, ctl := c }).right = z.right
+  rw [birthL_right]
+
+@[simp] theorem bgState_pending (src ch : ChainVM) (c : Control) (z : GalilVML P) :
+    (bgState src ch c z).pending = z.pending := by
+  show (birthL _ { z with chain := ch, ctl := c }).pending = z.pending
+  rw [birthL_pending]
+
+@[simp] theorem bgState_center (src ch : ChainVM) (c : Control) (z : GalilVML P) :
+    (bgState src ch c z).center = z.center := by
+  show (birthL _ { z with chain := ch, ctl := c }).center = z.center
+  rw [birthL_center]
 
 /-- The controller record a matched comparison installs. -/
 def matchCtl (S : Shared) (delay : ℕ) (o : Bool) (c : Control) (v : GalilVM) : Control :=
   { c with clock := delay, output := o, replaying := c.replaying && !S.replayExhausted v }
+
+/-- `matchCtl` reads `v` only through `S.replayExhausted`. -/
+theorem matchCtl_congr (S : Shared) (delay : ℕ) (o : Bool) (c : Control) (v v' : GalilVM)
+    (h : S.replayExhausted v = S.replayExhausted v') :
+    matchCtl S delay o c v = matchCtl S delay o c v' := by
+  unfold matchCtl; rw [h]
 
 theorem scanStep1_phys (w : GalilVML P) : (scanStep1 w).phys = physStep1 w := rfl
 theorem scanStep1_roles (w : GalilVML P) : (scanStep1 w).roles = w.roles := rfl
@@ -353,8 +506,14 @@ theorem scanStep1_pol (w : GalilVML P) : (scanStep1 w).pol = w.pol := rfl
 theorem scanStep1_ctl (w : GalilVML P) : (scanStep1 w).ctl = w.ctl := rfl
 theorem scanStep1_periodOnly (w : GalilVML P) : (scanStep1 w).periodOnly = w.periodOnly := rfl
 
-theorem abs_bgState (ch : ChainVM) (c : Control) (z : GalilVML P) :
-    abs' (bgState ch c z) = { abs' z with chain := ch } := rfl
+theorem abs_bgState {z : GalilVML P} (hro : RolesInjective z) (src ch : ChainVM) (c : Control) :
+    abs' (bgState src ch c z)
+      = afterBirth (chainBorn (decide ((searchLens.get (abs' z)).search.mode
+            = GalilScaffoldSearchFinish.Mode.found)) src)
+          { abs' z with chain := ch } := by
+  have hro' : RolesInjective { z with chain := ch, ctl := c } := hro
+  rw [bgState, abs_birthL hro']
+  rfl
 
 /-! ### Locality of the two concrete micro-steps -/
 
@@ -381,9 +540,20 @@ theorem stepLocal_scanStep2 (ch : ChainVM) (c : Control) (w : GalilVML P) :
   unfold physStep2
   split_ifs <;> first | exact tapeLocal_push _ | exact tapeLocal_refl _
 
-/-- A pure finite-control update (chain tag and controller record) is local. -/
-theorem stepLocal_bgState (w : GalilVML P) (ch : ChainVM) (c : Control) :
-    StepLocal w (bgState ch c w) := stepLocal_refl w
+/-- A background scan tick is local: the chain tag and controller record are
+finite control, and a chain birth touches exactly one counter tape, with the
+single action `LocalCounter.resetSeg`. -/
+theorem stepLocal_bgState (w : GalilVML P) (src ch : ChainVM) (c : Control) :
+    StepLocal w (bgState src ch c w) := by
+  unfold bgState birthL
+  split
+  · refine ⟨fun j => ?_, ?_⟩
+    · by_cases hj : j = w.roles Ctr.cycle
+      · subst hj
+        simpa [Function.update_self] using tapeLocal_resetSeg (w.phys (w.roles Ctr.cycle))
+      · simpa [Function.update_of_ne hj] using tapeLocal_refl (w.phys j)
+    · exact (stepLocal_refl w).2
+  · exact stepLocal_refl w
 
 /-! ### The bank after the two micro-steps -/
 
@@ -616,7 +786,7 @@ inductive TickL1 {P : ℕ} (S : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) 
         ((searchLens.get (abs' z)).dp.config.tapes 11)
         (S.centre (abs' x)) (S.place (abs' x))
         (abs' x).center (abs' x).radius x.chain ch) :
-      TickL1 S q first delay x (bgState ch x.ctl z)
+      TickL1 S q first delay x (bgState x.chain ch x.ctl z)
   | count (x z : GalilVML P) (ch : ChainVM)
       (hm : x.ctl.mode = .scan)
       (hav : x.ctl.replaying = true ∨ (galilFrameS S q first).available (abs' x))
@@ -627,7 +797,7 @@ inductive TickL1 {P : ℕ} (S : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) 
         ((searchLens.get (abs' z)).dp.config.tapes 11)
         (S.centre (abs' x)) (S.place (abs' x))
         (abs' x).center (abs' x).radius x.chain ch) :
-      TickL1 S q first delay x (bgState ch { x.ctl with clock := x.ctl.clock - 1 } z)
+      TickL1 S q first delay x (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z)
   | «match» (x z : GalilVML P) (ch : ChainVM) (o : Bool)
       (hm : x.ctl.mode = .scan)
       (hav : x.ctl.replaying = true ∨ (galilFrameS S q first).available (abs' x))
@@ -646,7 +816,8 @@ inductive TickL1 {P : ℕ} (S : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) 
         (abs' x).center (abs' x).radius x.chain (matchScan x ch).chain)
       (ho : refresh (galilFrameS S q first) (abs' (matchVm ch z)) x.ctl.output o) :
       TickL1 S q first delay x
-        { matchVm ch z with ctl := matchCtl S delay o x.ctl (abs' (matchVm ch z)) }
+        (birthL (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) x.chain)
+        { matchVm ch z with ctl := matchCtl S delay o x.ctl (abs' (matchVm ch z)) })
 
 /-! ### Locality: every local scan tick costs at most `c₁ = 66` steps -/
 
@@ -656,19 +827,22 @@ theorem tickL1_local {S : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ} {x y :
   | wait z ch hm hr hav hs hch =>
       refine stepLocalN_le (n := searchSteps + 1) (by decide) ?_
       exact stepLocalN_trans searchSteps 1 hs.steps
-        (stepLocalN_one (stepLocal_bgState z ch _))
+        (stepLocalN_one (stepLocal_bgState z x.chain ch _))
   | count z ch hm hav hc hs hch =>
       refine stepLocalN_le (n := searchSteps + 1) (by decide) ?_
       exact stepLocalN_trans searchSteps 1 hs.steps
-        (stepLocalN_one (stepLocal_bgState z ch _))
+        (stepLocalN_one (stepLocal_bgState z x.chain ch _))
   | «match» z ch o hm hav hc hpol hrep hper hahead hcan hs hmt hch ho =>
       have h2 : StepLocalN 2 z
           { matchVm ch z with ctl := matchCtl S delay o x.ctl (abs' (matchVm ch z)) } :=
         stepLocalN_trans 1 1 (stepLocalN_one (stepLocal_scanStep1 z))
           (stepLocalN_one (stepLocal_scanStep2 ch
             (matchCtl S delay o x.ctl (abs' (matchVm ch z))) (scanStep1 z)))
-      exact stepLocalN_le (n := searchSteps + 2) (by decide)
-        (stepLocalN_trans searchSteps 2 hs.steps h2)
+      have h3 : StepLocalN 3 z (birthL (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) x.chain)
+        { matchVm ch z with ctl := matchCtl S delay o x.ctl (abs' (matchVm ch z)) }) :=
+        stepLocalN_trans 2 1 h2 (stepLocalN_one (stepLocal_birthL _ _))
+      exact stepLocalN_le (n := searchSteps + 3) (by decide)
+        (stepLocalN_trans searchSteps 3 hs.steps h3)
 
 /-! ### The invariants are preserved -/
 
@@ -731,11 +905,11 @@ theorem tickL1_inv {S : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ} {x y : G
     (hinv : Inv x) (h : TickL1 S q first delay x y) : Inv y := by
   cases h with
   | wait z ch hm hr hav hs hch =>
-      obtain ⟨i1, i2, i3, i4, i5, i6, i7⟩ := hs.inv hinv
-      exact ⟨i1, i2, i3, i4, i5, i6, i7⟩
+      unfold bgState
+      exact inv_birthL (inv_setChainCtl (hs.inv hinv) ch _) _
   | count z ch hm hav hc hs hch =>
-      obtain ⟨i1, i2, i3, i4, i5, i6, i7⟩ := hs.inv hinv
-      exact ⟨i1, i2, i3, i4, i5, i6, i7⟩
+      unfold bgState
+      exact inv_birthL (inv_setChainCtl (hs.inv hinv) ch _) _
   | «match» z ch o hm hav hc hpol hrep hper hahead hcan hs hmt hch ho =>
       have hinvz : Inv z := hs.inv hinv
       have hf := hs.frame
@@ -752,79 +926,214 @@ theorem tickL1_inv {S : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ} {x y : G
         rw [hzp, hf.ctl]; exact hrep
       have hperz : z.periodOnly = true → 0 < LocalCounter.val (z.phys (z.roles .cycle)) := by
         rw [hzc, hf.periodOnly]; exact hper
-      obtain ⟨i1, i2, i3, i4, i5, i6, i7⟩ := inv_matchVm hinvz ch hrepz hperz
-      exact ⟨i1, i2, i3, i4, i5, i6, i7⟩
+      exact inv_birthL (inv_setChainCtl' (inv_matchVm hinvz ch hrepz hperz) _) _
 
 /-! ### The abstraction: a local scan tick is a scaffold `Tick` -/
 
 theorem tickL1_abs {S : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ} {x y : GalilVML P}
+    (hbirth : ∀ (bb : Bool) (s : GalilVM),
+      (S.onLetter (afterBirth bb s) ↔ S.onLetter s) ∧
+      (S.leftFirst (afterBirth bb s) ↔ S.leftFirst s) ∧
+      S.replayExhausted (afterBirth bb s) = S.replayExhausted s)
     (hinv : Inv x) (h : TickL1 S q first delay x y) :
     Tick (galilFrameS S q first) delay (absState' x) (absState' y) := by
   cases h with
   | wait z ch hm hr hav hs hch =>
       have hf := hs.frame
-      have habs : abs' (bgState ch x.ctl z)
-          = searchLens.set
-              (scanLens.set (abs' x) (scanLens.get (abs' (bgState ch x.ctl z))))
-              (searchLens.get (abs' (bgState ch x.ctl z))) := by
-        show abs' (bgState ch x.ctl z)
+      have habs : abs' (bgState x.chain ch x.ctl z)
+          = afterBirth (chainBorn (decide ((searchLens.get
+                (abs' (bgState x.chain ch x.ctl z))).search.mode = .found)) (abs' x).chain)
+              (searchLens.set
+                (scanLens.set (abs' x)
+                  (scanLens.get (abs' (bgState x.chain ch x.ctl z))))
+                (searchLens.get (abs' (bgState x.chain ch x.ctl z)))) := by
+        have hro'' : RolesInjective { z with chain := ch, ctl := x.ctl } :=
+          (inv_setChainCtl (hs.inv hinv) ch x.ctl).roles
+        have hsl0 : searchLens.get (abs' (bgState x.chain ch x.ctl z))
+            = searchLens.get (abs' z) := by
+          show searchLens.get (abs' (birthL _ { z with chain := ch, ctl := x.ctl }))
+            = searchLens.get (abs' z)
+          rw [searchLens_birthL hro'']
+          rfl
+        rw [hsl0]
+        show abs' (birthL _ { z with chain := ch, ctl := x.ctl }) = _
+        rw [abs_birthL hro'']
+        refine congrArg (afterBirth _) ?_
+        show { abs' z with chain := ch }
             = searchLens.set
-                (scanLens.set (abs' x) ⟨(abs' z).left, (abs' z).right, ch⟩)
+                (scanLens.set (abs' x) (scanLens.get (abs' (bgState x.chain ch x.ctl z))))
                 (searchLens.get (abs' z))
-        rw [abs_bgState, searchFrame_abs hinv.roles hf]
+        have hsc : scanLens.get (abs' (bgState x.chain ch x.ctl z))
+            = ⟨(abs' z).left, (abs' z).right, ch⟩ := by
+          show scanLens.get (abs' (birthL _ { z with chain := ch, ctl := x.ctl })) = _
+          rw [abs_birthL hro'']
+          cases hb0 : chainBorn
+            (decide ((searchLens.get (abs' z)).search.mode = .found)) x.chain <;> rfl
+        rw [hsc, searchFrame_abs hinv.roles hf]
         ext <;> rfl
-      have hb : (galilFrameS S q first).background (abs' x) (abs' (bgState ch x.ctl z)) := by
-        refine ⟨?_, ?_, hs.effect, hch, habs⟩
-        · show absHead' z.left z.pending = _
-          rw [hf.left, hf.pending]
-          rfl
-        · show absHead' z.right z.pending = _
-          rw [hf.right, hf.pending]
-          rfl
+      have hro' : RolesInjective { z with chain := ch, ctl := x.ctl } :=
+        (inv_setChainCtl (hs.inv hinv) ch x.ctl).roles
+      have hsl : searchLens.get (abs' (bgState x.chain ch x.ctl z))
+          = searchLens.get (abs' z) := by
+        show searchLens.get (abs' (birthL _ { z with chain := ch, ctl := x.ctl }))
+          = searchLens.get (abs' z)
+        rw [searchLens_birthL hro']
+        rfl
+      have habsB : abs' (bgState x.chain ch x.ctl z)
+          = afterBirth (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found))
+              x.chain) { abs' z with chain := ch } := by
+        show abs' (birthL _ { z with chain := ch, ctl := x.ctl }) = _
+        rw [abs_birthL hro']
+        rfl
+      have hleft : (abs' (bgState x.chain ch x.ctl z)).left = (abs' x).left := by
+        rw [habsB]
+        cases hb0 : chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) x.chain <;>
+          · show absHead' z.left z.pending = _
+            rw [hf.left, hf.pending]
+            rfl
+      have hright : (abs' (bgState x.chain ch x.ctl z)).right = (abs' x).right := by
+        rw [habsB]
+        cases hb0 : chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) x.chain <;>
+          · show absHead' z.right z.pending = _
+            rw [hf.right, hf.pending]
+            rfl
+      have hb : (galilFrameS S q first).background (abs' x) (abs' (bgState x.chain ch x.ctl z)) := by
+        refine ⟨hleft, hright, ?_, ?_, habs⟩
+        · rw [hsl]; exact hs.effect
+        · have hch' : (abs' (bgState x.chain ch x.ctl z)).chain = ch := by
+            rw [habsB]
+            cases hb0 : chainBorn
+              (decide ((searchLens.get (abs' z)).search.mode = .found)) x.chain <;> rfl
+          rw [hsl, hch']
+          exact hch
+      have hctl : (bgState x.chain ch x.ctl z).ctl = x.ctl := bgState_ctl _ _ _ _
+      show Tick (galilFrameS S q first) delay ⟨x.ctl, abs' x⟩
+        ⟨(bgState x.chain ch x.ctl z).ctl, abs' (bgState x.chain ch x.ctl z)⟩
+      rw [hctl]
       exact Tick.scan_wait (F := galilFrameS S q first) (delay := delay)
         x.ctl (abs' x) _ hm ⟨hr, hav⟩ hb
   | count z ch hm hav hc hs hch =>
       have hf := hs.frame
-      have habs : abs' (bgState ch { x.ctl with clock := x.ctl.clock - 1 } z)
-          = searchLens.set
-              (scanLens.set (abs' x)
-                (scanLens.get (abs' (bgState ch { x.ctl with clock := x.ctl.clock - 1 } z))))
-              (searchLens.get (abs' (bgState ch { x.ctl with clock := x.ctl.clock - 1 } z))) := by
-        show abs' (bgState ch { x.ctl with clock := x.ctl.clock - 1 } z)
+      have hro' : RolesInjective { z with chain := ch, ctl := { x.ctl with clock := x.ctl.clock - 1 } } :=
+        (inv_setChainCtl (hs.inv hinv) ch { x.ctl with clock := x.ctl.clock - 1 }).roles
+      have habsB : abs' (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z)
+          = afterBirth (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found))
+              x.chain) { abs' z with chain := ch } := by
+        show abs' (birthL _ { z with chain := ch, ctl := { x.ctl with clock := x.ctl.clock - 1 } }) = _
+        rw [abs_birthL hro']
+        rfl
+      have hsl : searchLens.get (abs' (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z))
+          = searchLens.get (abs' z) := by
+        show searchLens.get (abs' (birthL _ { z with chain := ch, ctl := { x.ctl with clock := x.ctl.clock - 1 } }))
+          = searchLens.get (abs' z)
+        rw [searchLens_birthL hro']
+        rfl
+      have habs : abs' (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z)
+          = afterBirth (chainBorn (decide ((searchLens.get
+                (abs' (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z))).search.mode = .found)) (abs' x).chain)
+              (searchLens.set
+                (scanLens.set (abs' x)
+                  (scanLens.get (abs' (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z))))
+                (searchLens.get (abs' (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z)))) := by
+        rw [hsl]
+        show abs' (birthL _ { z with chain := ch, ctl := { x.ctl with clock := x.ctl.clock - 1 } }) = _
+        rw [abs_birthL hro']
+        refine congrArg (afterBirth _) ?_
+        show { abs' z with chain := ch }
             = searchLens.set
-                (scanLens.set (abs' x) ⟨(abs' z).left, (abs' z).right, ch⟩)
+                (scanLens.set (abs' x)
+                  (scanLens.get (abs' (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z))))
                 (searchLens.get (abs' z))
-        rw [abs_bgState, searchFrame_abs hinv.roles hf]
+        have hsc : scanLens.get (abs' (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z))
+            = ⟨(abs' z).left, (abs' z).right, ch⟩ := by
+          show scanLens.get (abs' (birthL _ { z with chain := ch, ctl := { x.ctl with clock := x.ctl.clock - 1 } })) = _
+          rw [abs_birthL hro']
+          cases hb0 : chainBorn
+            (decide ((searchLens.get (abs' z)).search.mode = .found)) x.chain <;> rfl
+        rw [hsc, searchFrame_abs hinv.roles hf]
         ext <;> rfl
+      have hleft : (abs' (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z)).left = (abs' x).left := by
+        rw [habsB]
+        cases hb0 : chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) x.chain <;>
+          · show absHead' z.left z.pending = _
+            rw [hf.left, hf.pending]
+            rfl
+      have hright : (abs' (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z)).right = (abs' x).right := by
+        rw [habsB]
+        cases hb0 : chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) x.chain <;>
+          · show absHead' z.right z.pending = _
+            rw [hf.right, hf.pending]
+            rfl
       have hb : (galilFrameS S q first).background (abs' x)
-          (abs' (bgState ch { x.ctl with clock := x.ctl.clock - 1 } z)) := by
-        refine ⟨?_, ?_, hs.effect, hch, habs⟩
-        · show absHead' z.left z.pending = _
-          rw [hf.left, hf.pending]
-          rfl
-        · show absHead' z.right z.pending = _
-          rw [hf.right, hf.pending]
-          rfl
+          (abs' (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z)) := by
+        refine ⟨hleft, hright, ?_, ?_, habs⟩
+        · rw [hsl]; exact hs.effect
+        · have hch' : (abs' (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z)).chain = ch := by
+            rw [habsB]
+            cases hb0 : chainBorn
+              (decide ((searchLens.get (abs' z)).search.mode = .found)) x.chain <;> rfl
+          rw [hsl, hch']
+          exact hch
+      have hctl : (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z).ctl = { x.ctl with clock := x.ctl.clock - 1 } := bgState_ctl _ _ _ _
+      show Tick (galilFrameS S q first) delay ⟨x.ctl, abs' x⟩
+        ⟨(bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z).ctl, abs' (bgState x.chain ch { x.ctl with clock := x.ctl.clock - 1 } z)⟩
+      rw [hctl]
       exact Tick.scan_count (F := galilFrameS S q first) (delay := delay)
         x.ctl (abs' x) _ hm hav hc hb
   | «match» z ch o hm hav hc hpol hrep hper hahead hcan hs hmt hch ho =>
       have hf := hs.frame
       have habs := abs_matchVm hinv hpol hf hrep hper hahead hcan ch
       have hcmp : (galilFrameS S q first).compare (abs' x)
-          (afterCompare (abs' x) (matchScan x ch) (searchLens.get (abs' z))) :=
+          (afterBirth (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found))
+              (abs' x).chain)
+            (afterCompare (abs' x) (matchScan x ch) (searchLens.get (abs' z)))) :=
         ⟨matchScan x ch, searchLens.get (abs' z), true, rfl, rfl,
-          ⟨fun _ => hmt, fun _ => rfl⟩, hs.effect, hch, rfl⟩
-      have hmt' : (galilFrameS S q first).matched
-          (afterCompare (abs' x) (matchScan x ch) (searchLens.get (abs' z))) := hmt
+          ⟨fun _ => hmt, fun _ => rfl⟩, hs.effect, hch, by simp⟩
+      have hmt' : (galilFrameS S q first).matched (afterBirth (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) (abs' x).chain) (afterCompare (abs' x) (matchScan x ch) (searchLens.get (abs' z)))) := by
+        show GalilScaffoldInputHead.read (scanLens.get (afterBirth (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) (abs' x).chain) (afterCompare (abs' x) (matchScan x ch) (searchLens.get (abs' z))))).left
+          = GalilScaffoldInputHead.read (scanLens.get (afterBirth (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) (abs' x).chain) (afterCompare (abs' x) (matchScan x ch) (searchLens.get (abs' z))))).right
+        show GalilScaffoldInputHead.read (afterBirth (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) (abs' x).chain) (afterCompare (abs' x) (matchScan x ch) (searchLens.get (abs' z)))).left
+          = GalilScaffoldInputHead.read (afterBirth (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) (abs' x).chain) (afterCompare (abs' x) (matchScan x ch) (searchLens.get (abs' z)))).right
+        rw [afterBirth_left, afterBirth_right]
+        exact hmt
       have ho' : refresh (galilFrameS S q first)
-          (replayDec x.ctl.replaying
-            (afterCompare (abs' x) (matchScan x ch) (searchLens.get (abs' z))))
+          (replayDec x.ctl.replaying (afterBirth (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) (abs' x).chain) (afterCompare (abs' x) (matchScan x ch) (searchLens.get (abs' z)))))
           x.ctl.output o := by
-        rw [← habs]; exact ho
+        rw [replayDec_afterBirth, ← habs]
+        exact refresh_afterBirth (fun bb => (hbirth bb _).1) (fun bb => (hbirth bb _).2.1) _ ho
       have ht := Tick.scan_match (F := galilFrameS S q first) (delay := delay)
         x.ctl (abs' x) _ _ o hm hav hc hcmp hmt'
         (matchedPlace_replayDec S q first x.ctl.replaying _) ho'
-      rw [← habs] at ht
+      have habsB : abs' (birthL (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) (abs' x).chain) { matchVm ch z with
+            ctl := matchCtl S delay o x.ctl (abs' (matchVm ch z)) })
+          = afterBirth (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) (abs' x).chain) (replayDec x.ctl.replaying (afterCompare (abs' x) (matchScan x ch) (searchLens.get (abs' z)))) := by
+        have hroM : RolesInjective { matchVm ch z with
+            ctl := matchCtl S delay o x.ctl (abs' (matchVm ch z)) } := by
+          intro a b hab
+          have hz : RolesInjective z := by
+            intro a' b' h'
+            apply hinv.roles
+            rw [← hf.roles]
+            exact h'
+          exact hz hab
+        rw [abs_birthL hroM, ← habs]
+        rfl
+      rw [replayDec_afterBirth] at ht
+      rw [← habsB] at ht
+      show Tick (galilFrameS S q first) delay ⟨x.ctl, abs' x⟩
+        ⟨(birthL (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) (abs' x).chain) { matchVm ch z with
+            ctl := matchCtl S delay o x.ctl (abs' (matchVm ch z)) }).ctl,
+         abs' (birthL (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) (abs' x).chain) { matchVm ch z with
+            ctl := matchCtl S delay o x.ctl (abs' (matchVm ch z)) })⟩
+      have hre : S.replayExhausted (abs' (birthL (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) (abs' x).chain) { matchVm ch z with ctl := matchCtl S delay o x.ctl (abs' (matchVm ch z)) }))
+          = S.replayExhausted (abs' (matchVm ch z)) := by
+        rw [habsB, habs]
+        exact (hbirth _ _).2.2
+      have hctl2 : (birthL (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) (abs' x).chain) { matchVm ch z with ctl := matchCtl S delay o x.ctl (abs' (matchVm ch z)) }).ctl
+          = matchCtl S delay o x.ctl (abs' (birthL (chainBorn (decide ((searchLens.get (abs' z)).search.mode = .found)) (abs' x).chain) { matchVm ch z with ctl := matchCtl S delay o x.ctl (abs' (matchVm ch z)) })) := by
+        rw [birthL_ctl]
+        exact matchCtl_congr S delay o x.ctl _ _ hre.symm
+      rw [hctl2]
       exact ht
 
 #print axioms stepLocalN_trans

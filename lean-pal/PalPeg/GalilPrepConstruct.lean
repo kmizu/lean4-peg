@@ -90,7 +90,9 @@ theorem active_background_exists (P : Shared) (q : ℕ) (first : Fin 9) (s : Gal
       s'.replay = s.replay ∧ searchLens.get s' = searchLens.get s := by
   refine ⟨searchLens.set (scanLens.set s ⟨s.left, s.right, z⟩) (searchLens.get s),
     ?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  exact ⟨rfl, rfl, Or.inr ⟨hne, rfl⟩, Or.inl ⟨hne, ⟨z, hstep, rfl⟩⟩, rfl⟩
+  refine ⟨rfl, rfl, Or.inr ⟨hne, rfl⟩, Or.inl ⟨hne, ⟨z, hstep, rfl⟩⟩, ?_⟩
+  rw [afterBirth_of_ne_idle hne]
+  rfl
 
 /-! ## A chain run, driven as a background segment -/
 

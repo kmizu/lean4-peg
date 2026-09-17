@@ -300,8 +300,8 @@ theorem compareFound_fields {s s' : GalilVM}
     ∃ a : Bool, searchEffect (sharedC onLetter leftFirst centre place entry) a s (searchLens.get s') := by
   obtain ⟨vs, vq, a, -, hvr, -, hse, -, hteq⟩ := hcmp
   refine ⟨?_, a, ?_⟩
-  · rw [hteq]; cases a <;> exact hvr
-  · have hq : searchLens.get s' = vq := by rw [hteq]; cases a <;> rfl
+  · rw [hteq, afterBirth_right]; cases a <;> exact hvr
+  · have hq : searchLens.get s' = vq := by rw [hteq, afterBirth_searchGet]; cases a <;> rfl
     rw [hq]; exact hse
 
 /-- **The invariant along one `Fair` tick.** -/

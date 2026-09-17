@@ -274,13 +274,16 @@ theorem lpackM_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
       compare_matched_form centre place entry q first hcmp hmt
     have hni : c.mode ≠ Mode.init := by rw [hm]; decide
     have hpl' : t = (if c.replaying then
-        {afterCompare s vs vq with replay := dec (afterCompare s vs vq).replay}
-      else afterCompare s vs vq) := hpl
-    have htl : t.left = (afterCompare s vs vq).left := by
+        {afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq) with
+          replay := dec (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).replay}
+      else afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)) := hpl
+    have htl : t.left = (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).left := by
       rw [hpl']; cases c.replaying <;> rfl
-    have htr : t.right = (afterCompare s vs vq).right := by
+    have htr : t.right = (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterCompare s vs vq)).right := by
       rw [hpl']; cases c.replaying <;> rfl
-    have htc : t.center = s.center := by rw [hpl']; cases c.replaying <;> rfl
+    have htc : t.center = s.center := by
+      rw [hpl']
+      cases c.replaying <;> simp [afterBirth_center, afterCompare_center]
     have hcan := hL.scanCanR hm
     obtain ⟨r, hi⟩ := hL.scanInvR hm
     have hi' := matched_invariant' w vq hvl hvr hmatch hcan hi
@@ -288,19 +291,20 @@ theorem lpackM_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     have hpres := hpres0 (by rw [hm]; exact strictAt_scan)
     obtain ⟨hr1, hr2⟩ := lrep_left hrepr hpres (hL.scanLeft hm)
     refine ⟨fun _ => ⟨?_, fun _ => ?_⟩, fun _ _ => ⟨r + 1, ?_⟩⟩
-    · rw [htl, afterCompare_left, hvl]; exact hr1
-    · rw [htl, afterCompare_left, hvl]; exact hr2
-    · rw [htc, htl, htr]; exact hi'
+    · rw [htl, afterBirth_left, afterCompare_left, hvl]; exact hr1
+    · rw [htl, afterBirth_left, afterCompare_left, hvl]; exact hr2
+    · rw [htc, htl, htr, afterBirth_left, afterBirth_right]; exact hi'
   case scan_shift =>
     rename_i s' hmt hg hm hc hr hcmp hav hb
     obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
       compare_mismatch_form centre place entry q first hcmp hmt
     have hni : c.mode ≠ Mode.init := by rw [hm]; decide
-    obtain ⟨wch, hchain, ht⟩ : beginShiftVM' (afterMismatch s vs vq) t := hb
+    obtain ⟨wch, hchain, ht⟩ :
+      beginShiftVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
     obtain ⟨hrepr, hpres0⟩ := hP.lrepM hni
     have hpres := hpres0 (by rw [hm]; exact strictAt_scan)
     have htl : t.left = GalilScaffoldInputHead.left s.left := by
-      rw [ht]; show vs.left = _; exact hvl
+      rw [ht, afterBirth_left, afterMismatch_left]; exact hvl
     refine ⟨fun _ => ⟨?_, fun hs => ?_⟩, fun hm' _ => Mode.noConfusion hm'⟩
     · rw [htl]; exact represents_left hrepr hpres
     · rcases hs with h | h <;> exact Mode.noConfusion h
@@ -309,11 +313,12 @@ theorem lpackM_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
       compare_mismatch_form centre place entry q first hcmp hmt
     have hni : c.mode ≠ Mode.init := by rw [hm]; decide
-    obtain ⟨pl, ht⟩ : beginFallbackVM' (afterMismatch s vs vq) t := hb
+    obtain ⟨pl, ht⟩ :
+      beginFallbackVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
     obtain ⟨hrepr, hpres0⟩ := hP.lrepM hni
     have hpres := hpres0 (by rw [hm]; exact strictAt_scan)
     have htl : t.left = GalilScaffoldInputHead.left s.left := by
-      rw [ht]; show vs.left = _; exact hvl
+      rw [ht, afterBirth_left, afterMismatch_left]; exact hvl
     refine ⟨fun _ => ⟨?_, fun hs => ?_⟩, fun hm' _ => Mode.noConfusion hm'⟩
     · rw [htl]; exact represents_left hrepr hpres
     · rcases hs with h | h <;> exact Mode.noConfusion h

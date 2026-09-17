@@ -41,9 +41,21 @@ theorem backgroundS_exists (P : Shared) (q : ℕ) (first : Fin 9) (s : GalilVM)
     ∃ s', (galilFrameS P q first).background s s' := by
   obtain ⟨v, hv⟩ := hsearch
   obtain ⟨z, hz⟩ := hchain v
-  refine ⟨searchLens.set (scanLens.set s ⟨s.left, s.right, z⟩) v, ?_⟩
+  refine ⟨afterBirth (chainBorn (decide (v.search.mode = .found)) s.chain)
+    (searchLens.set (scanLens.set s ⟨s.left, s.right, z⟩) v), ?_⟩
   show backgroundS P q first s _
-  exact ⟨rfl, rfl, hv, hz, rfl⟩
+  have hv' : searchLens.get (afterBirth (chainBorn (decide (v.search.mode = .found)) s.chain)
+      (searchLens.set (scanLens.set s ⟨s.left, s.right, z⟩) v)) = v := by
+    rw [afterBirth_searchGet]; rfl
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · rw [afterBirth_left]; rfl
+  · rw [afterBirth_right]; rfl
+  · rw [hv']; exact hv
+  · rw [hv', afterBirth_chain]; exact hz
+  · have hs' : scanLens.get (afterBirth (chainBorn (decide (v.search.mode = .found)) s.chain)
+        (searchLens.set (scanLens.set s ⟨s.left, s.right, z⟩) v)) = ⟨s.left, s.right, z⟩ := by
+      rw [afterBirth_scanGet]; rfl
+    rw [hv', hs']
 
 /-- Progress at a comparison on `galilFrameS`: with R available, the clock
 at one and the controller not replaying, the outer symbols either agree
@@ -67,11 +79,19 @@ theorem compare_progress_S (onLetter leftFirst : GalilVM → Prop) (rs : GalilVM
     obtain ⟨vq, hq⟩ := hsearch true
     obtain ⟨z, hz⟩ := hchain true vq
     let vs : ScanVM := ⟨left s.left, right s.right, z⟩
+    let u : GalilVM := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+      (afterCompare s vs vq)
     have hmt0 : (galilFrame P q first).matched (scanLens.set s vs) := hmt
-    have hcmp : (galilFrameS P q first).compare s (afterCompare s vs vq) :=
+    have hcmp : (galilFrameS P q first).compare s u :=
       ⟨vs, vq, true, rfl, rfl, ⟨fun _ => hmt0, fun _ => rfl⟩, hq, hz, rfl⟩
-    have hmt1 : (galilFrameS P q first).matched (afterCompare s vs vq) := hmt
-    let s'' : GalilVM := replayDec c.replaying (afterCompare s vs vq)
+    have hmt1 : (galilFrameS P q first).matched u := by
+      show (galilFrame P q first).matched u
+      have : GalilScaffoldInputHead.read (scanLens.get u).left =
+        GalilScaffoldInputHead.read (scanLens.get u).right := by
+        rw [show scanLens.get u = scanLens.get (afterCompare s vs vq) from afterBirth_scanGet _ _]
+        exact hmt
+      exact this
+    let s'' : GalilVM := replayDec c.replaying u
     let o : Bool := if onLetter s'' then decide (leftFirst s'') else c.output
     have ho : refresh (galilFrameS P q first) s'' c.output o := by
       refine ⟨fun hl => ?_, fun hl => ?_⟩
@@ -88,15 +108,22 @@ theorem compare_progress_S (onLetter leftFirst : GalilVM → Prop) (rs : GalilVM
     obtain ⟨vq, hq⟩ := hsearch false
     obtain ⟨z, hz⟩ := hchain false vq
     let vs : ScanVM := ⟨left s.left, right s.right, z⟩
+    let u : GalilVM := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+      (afterMismatch s vs vq)
     have hmt0 : ¬ (galilFrame P q first).matched (scanLens.set s vs) := hmt
-    have hcmp : (galilFrameS P q first).compare s (afterMismatch s vs vq) :=
+    have hcmp : (galilFrameS P q first).compare s u :=
       ⟨vs, vq, false, rfl, rfl, Iff.intro (fun h0 => by cases h0) (fun h0 => absurd h0 hmt0), hq, hz, rfl⟩
-    have hmt1 : ¬ (galilFrameS P q first).matched (afterMismatch s vs vq) := hmt
-    by_cases hg : shiftGuardVM (afterMismatch s vs vq)
-    · obtain ⟨t, hb⟩ := beginShift_exists (afterMismatch s vs vq) hg
+    have hmt1 : ¬ (galilFrameS P q first).matched u := by
+      intro h0
+      have h1 : GalilScaffoldInputHead.read (scanLens.get u).left =
+        GalilScaffoldInputHead.read (scanLens.get u).right := h0
+      rw [show scanLens.get u = scanLens.get (afterMismatch s vs vq) from afterBirth_scanGet _ _] at h1
+      exact hmt h1
+    by_cases hg : shiftGuardVM u
+    · obtain ⟨t, hb⟩ := beginShift_exists u hg
       exact ⟨_, Tick.scan_shift (F := galilFrameS P q first) (delay := delay) c s _ t hm
         (Or.inr hav') hc hcmp hmt1 hr hg hb⟩
-    · obtain ⟨t, hb⟩ := beginFallback_exists (afterMismatch s vs vq)
+    · obtain ⟨t, hb⟩ := beginFallback_exists u
       exact ⟨_, Tick.scan_fallback (F := galilFrameS P q first) (delay := delay) c s _ t hm
         (Or.inr hav') hc hcmp hmt1 (Or.inr hg) hr hb⟩
 

@@ -168,10 +168,16 @@ theorem lastMatch_report (centre : GalilVM → Fin 3)
   obtain ⟨z, hz⟩ := hchain t true vq
   set vs : ScanVM := ⟨left t.left, right t.right, z⟩ with hvs
   have hmt0 : (galilFrame P q first).matched (scanLens.set t vs) := hmt
-  have hcmp : (galilFrameS P q first).compare t (afterCompare t vs vq) :=
+  have hcmp : (galilFrameS P q first).compare t
+      (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) t.chain) (afterCompare t vs vq)) :=
     ⟨vs, vq, true, rfl, rfl, ⟨fun _ => hmt0, fun _ => rfl⟩, hq, hz, rfl⟩
-  have hmt1 : (galilFrameS P q first).matched (afterCompare t vs vq) := hmt
-  set u : GalilVM := afterCompare t vs vq with hu
+  have hmt1 : (galilFrameS P q first).matched
+      (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) t.chain) (afterCompare t vs vq)) := by
+    show GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) t.chain) (afterCompare t vs vq)).left
+      = GalilScaffoldInputHead.read (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) t.chain) (afterCompare t vs vq)).right
+    rw [afterBirth_left, afterBirth_right]
+    exact hmt
+  set u : GalilVM := afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) t.chain) (afterCompare t vs vq) with hu
   set o : Bool := if P.onLetter u then decide (P.leftFirst u) else c'.output with ho'
   have ho : refresh (galilFrameS P q first) u c'.output o := by
     refine ⟨fun hl => ?_, fun hl => ?_⟩
@@ -183,7 +189,7 @@ theorem lastMatch_report (centre : GalilVM → Fin 3)
       rw [if_neg hl']
   exact PalPeg.GalilReportReach.scaffoldRun_report_of_last_consume raw
     (PofC centre place entry) (fun _ => q) (fun _ => first) 2048 rfl rfl hx hprefix hm hc1
-    hpop hinc hfr hM hi hi.rightRep vs vq o rfl rfl hcmp hmt1 ho
+    hpop hinc hfr hM hi hi.rightRep vs vq o _ rfl rfl hcmp hmt1 ho
 
 #print axioms segment_of_invS
 #print axioms lastMatch_report

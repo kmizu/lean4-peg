@@ -137,7 +137,8 @@ theorem compareFound_idle_ne_watch (P : Shared) (q : ℕ) (first : Fin 9) {s s''
   rw [hi] at hch
   have hz := chainAt_idle_ne_watch hch
   have hchain : s''.chain = vs.chain := by
-    rw [ht]; cases a <;> simp [afterCompare, afterMismatch, searchLens, scanLens]
+    rw [ht, afterBirth_chain]
+    cases a <;> simp [afterCompare, afterMismatch, searchLens, scanLens]
   rw [hchain]; exact hz
 
 #print axioms chainMatched_copy_ne_watch

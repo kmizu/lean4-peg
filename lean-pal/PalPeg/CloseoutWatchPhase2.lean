@@ -239,9 +239,9 @@ def ShiftTailC (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPl
       sF.center sF.radius) ch ∧
     ch ≠ ChainVM.idle ∧
     refresh (galilFrame (PofC centre place entry raw) qq first)
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF ∧
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output oF ∧
     cP = {cF with clock := 2048, output := oF, replaying := false} ∧
-    sP = afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq ∧
+    sP = afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) ∧
     GalilDpCorrect.Result ((GalilScaffoldPlace.stream ⟨a :: ls, gap⟩).take (span+1)) lower 0
       (GalilScaffoldProgram.denote vq.dp.config) ∧
     (GalilScaffoldProgram.denote vq.dp.config).pc = 346 ∧
@@ -340,9 +340,9 @@ def NoShiftTailC (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffold
       sF.center sF.radius) ch ∧
     ch ≠ ChainVM.idle ∧
     refresh (galilFrame (PofC centre place entry raw) qq first)
-      (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) cF.output oF ∧
+      (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) cF.output oF ∧
     cP = {cF with clock := 2048, output := oF, replaying := false} ∧
-    sP = afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq ∧
+    sP = afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) ∧
     (∀ (es : List Bool) (c2 : Control) (s2 : GalilVM),
       WatchSegE (PofC centre place entry raw) qq first 2048 es cP sP c2 s2 →
       ∃ (cen : Fin 3) (ys : List (Fin 3)) (b : Fin 3) (c3 : Control) (s3 : GalilVM)

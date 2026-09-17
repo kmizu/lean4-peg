@@ -494,10 +494,12 @@ theorem physWF_of_tickL3 {S : Shared} {qq : ℕ} {firstT : Fin 9} {x y : GalilVM
 theorem pending_tickL1 {S : Shared} {qq : ℕ} {firstT : Fin 9} {d : ℕ} {x y : GalilVML P}
     (h : PalPeg.LocalTick1.TickL1 S qq firstT d x y) : y.pending = x.pending := by
   cases h with
-  | wait z ch hm hr hav hs hch => exact hs.frame.pending
-  | count z ch hm hav hc hs hch => exact hs.frame.pending
+  | wait z ch hm hr hav hs hch =>
+      exact (PalPeg.LocalTick1.bgState_pending _ _ _ _).trans hs.frame.pending
+  | count z ch hm hav hc hs hch =>
+      exact (PalPeg.LocalTick1.bgState_pending _ _ _ _).trans hs.frame.pending
   | «match» z ch o hm hav hc hpol hrep hper hahead hcan hs hmt hch ho =>
-      show z.pending = x.pending; exact hs.frame.pending
+      exact (PalPeg.LocalTick1.birthL_pending _ _).trans hs.frame.pending
 
 /-- **A non-replaying scan tick keeps the physical pack.** -/
 theorem physWF_of_tickL1 {S : Shared} {qq : ℕ} {firstT : Fin 9} {d : ℕ} {x y : GalilVML P}

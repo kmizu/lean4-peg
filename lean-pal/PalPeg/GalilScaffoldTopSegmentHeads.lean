@@ -18,28 +18,38 @@ open GalilScaffoldTop GalilScaffoldController GalilScaffoldCounter GalilScaffold
 theorem watchSegE_heads (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) {es : List Bool}
     {c c' : Control} {s t : GalilVM} (h : WatchSegE P q first delay es c s c' t) :
     (∀ (raw : List (Fin 2)) (c0 r : ℕ), ScanEvents raw c0 r s.left s.right es t.left t.right) ∧
-      t.periodOnly = s.periodOnly ∧
+      (t.periodOnly = true → s.periodOnly = true) ∧
       value t.radius = value s.radius + es.count true ∧
       (Canonical s.radius → Canonical t.radius) ∧ (Canonical s.length → Canonical t.length) := by
   induction h with
   | stop c s =>
-    exact ⟨fun _ _ _ => .stop _ _ _, rfl, by simp, id, id⟩
+    exact ⟨fun _ _ _ => .stop _ _ _, id, by simp, id, id⟩
   | wait c s s' _ _ _ hb _ ih =>
     obtain ⟨hsc, hpo, hrad, hrc, hlc⟩ := ih
     obtain ⟨hl, hr, _, hpo', hrad', hlen'⟩ := background_frame P q first hb
-    refine ⟨fun raw c0 r => ?_, by rw [hpo, hpo'], by rw [hrad, hrad']; simp,
+    refine ⟨fun raw c0 r => ?_, fun h0 => ?_, by rw [hrad, hrad']; simp,
       fun h0 => hrc (by rw [hrad']; exact h0), fun h0 => hlc (by rw [hlen']; exact h0)⟩
-    have := hsc raw c0 r
-    rw [hl, hr] at this
-    exact .skip _ _ _ this
+    · have := hsc raw c0 r
+      rw [hl, hr] at this
+      exact .skip _ _ _ this
+    · have h1 := hpo h0
+      rw [hpo'] at h1
+      split at h1
+      · exact absurd h1 (by simp)
+      · exact h1
   | count c s s' _ _ _ _ hb _ ih =>
     obtain ⟨hsc, hpo, hrad, hrc, hlc⟩ := ih
     obtain ⟨hl, hr, _, hpo', hrad', hlen'⟩ := background_frame P q first hb
-    refine ⟨fun raw c0 r => ?_, by rw [hpo, hpo'], by rw [hrad, hrad']; simp,
+    refine ⟨fun raw c0 r => ?_, fun h0 => ?_, by rw [hrad, hrad']; simp,
       fun h0 => hrc (by rw [hrad']; exact h0), fun h0 => hlc (by rw [hlen']; exact h0)⟩
-    have := hsc raw c0 r
-    rw [hl, hr] at this
-    exact .skip _ _ _ this
+    · have := hsc raw c0 r
+      rw [hl, hr] at this
+      exact .skip _ _ _ this
+    · have h1 := hpo h0
+      rw [hpo'] at h1
+      split at h1
+      · exact absurd h1 (by simp)
+      · exact h1
   | «match» c s vs vq o _ _ ha _ _ hcmp hmt _ _ _ ih =>
     obtain ⟨hsc, hpo, hrad, hrc, hlc⟩ := ih
     have hmatch : read (left s.left) = read (right s.right) := by
@@ -74,11 +84,16 @@ theorem watchSegE_heads (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) {es
   | countR c s s' _ _ _ _ hb _ ih =>
     obtain ⟨hsc, hpo, hrad, hrc, hlc⟩ := ih
     obtain ⟨hl, hr, _, hpo', hrad', hlen'⟩ := background_frame P q first hb
-    refine ⟨fun raw c0 r => ?_, by rw [hpo, hpo'], by rw [hrad, hrad']; simp,
+    refine ⟨fun raw c0 r => ?_, fun h0 => ?_, by rw [hrad, hrad']; simp,
       fun h0 => hrc (by rw [hrad']; exact h0), fun h0 => hlc (by rw [hlen']; exact h0)⟩
-    have := hsc raw c0 r
-    rw [hl, hr] at this
-    exact .skip _ _ _ this
+    · have := hsc raw c0 r
+      rw [hl, hr] at this
+      exact .skip _ _ _ this
+    · have h1 := hpo h0
+      rw [hpo'] at h1
+      split at h1
+      · exact absurd h1 (by simp)
+      · exact h1
   | matchIdleR c s vs vq o _ _ _ ha _ hl hr _ hmt _ _ _ _ ih =>
     obtain ⟨hsc, hpo, hrad, hrc, hlc⟩ := ih
     have hmatch : read (left s.left) = read (right s.right) := by

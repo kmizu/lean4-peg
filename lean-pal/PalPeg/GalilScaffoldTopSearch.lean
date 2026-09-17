@@ -63,6 +63,67 @@ def compareVM (P : Shared) (q : ℕ) (first : Fin 9) (s t : GalilVM) : Prop :=
     (searchQuantum a (searchLens.get s) vq ∨ searchIdle (searchLens.get s) vq) ∧
     t = (if a then afterCompare s vs vq else afterMismatch s vs vq)
 
+/-- **`M-periodOnly`.**  `chain.start()` is called in this transition: the chain
+was idle and the search has just landed in `found` (Scala
+`ScaffoldGalil.background`, `ScaffoldGalil.scala:226-228`).  A tick of a chain
+that is already alive is *not* a birth, and `found` alone is not either. -/
+def chainBorn (found : Bool) (x : ChainVM) : Bool := x.isIdle && found
+
+/-- The `GalilVM` half of `chain.start()`: `cycle.reset()` and
+`periodOnly = false` (Scala `ScaffoldChain.start()`, `ScaffoldChain.scala:89-90`).
+`chainStart` builds the `ChainVM`; these two fields live on the VM, so a birth
+must clear them here or a chain born after a shift-then-restart inherits the
+previous continuation's flag and countdown. -/
+def afterBirth (born : Bool) (s : GalilVM) : GalilVM :=
+  if born then {s with periodOnly := false, cycle := GalilScaffoldCounter.reset} else s
+
+theorem afterBirth_false (s : GalilVM) : afterBirth false s = s := rfl
+
+theorem afterBirth_periodOnly (b : Bool) (s : GalilVM) :
+    (afterBirth b s).periodOnly = if b then false else s.periodOnly := by cases b <;> rfl
+
+theorem afterBirth_cycle (b : Bool) (s : GalilVM) :
+    (afterBirth b s).cycle = if b then GalilScaffoldCounter.reset else s.cycle := by
+  cases b <;> rfl
+
+theorem afterBirth_left (b : Bool) (s : GalilVM) : (afterBirth b s).left = s.left := by
+  cases b <;> rfl
+theorem afterBirth_right (b : Bool) (s : GalilVM) : (afterBirth b s).right = s.right := by
+  cases b <;> rfl
+theorem afterBirth_chain (b : Bool) (s : GalilVM) : (afterBirth b s).chain = s.chain := by
+  cases b <;> rfl
+theorem afterBirth_center (b : Bool) (s : GalilVM) : (afterBirth b s).center = s.center := by
+  cases b <;> rfl
+theorem afterBirth_radius (b : Bool) (s : GalilVM) : (afterBirth b s).radius = s.radius := by
+  cases b <;> rfl
+theorem afterBirth_length (b : Bool) (s : GalilVM) : (afterBirth b s).length = s.length := by
+  cases b <;> rfl
+theorem afterBirth_remaining (b : Bool) (s : GalilVM) :
+    (afterBirth b s).remaining = s.remaining := by cases b <;> rfl
+theorem afterBirth_replay (b : Bool) (s : GalilVM) : (afterBirth b s).replay = s.replay := by
+  cases b <;> rfl
+theorem afterBirth_fpp (b : Bool) (s : GalilVM) : (afterBirth b s).fpp = s.fpp := by
+  cases b <;> rfl
+theorem afterBirth_search (b : Bool) (s : GalilVM) : (afterBirth b s).search = s.search := by
+  cases b <;> rfl
+theorem afterBirth_dp (b : Bool) (s : GalilVM) : (afterBirth b s).dp = s.dp := by cases b <;> rfl
+theorem afterBirth_lower (b : Bool) (s : GalilVM) : (afterBirth b s).lower = s.lower := by
+  cases b <;> rfl
+theorem afterBirth_walker (b : Bool) (s : GalilVM) : (afterBirth b s).walker = s.walker := by
+  cases b <;> rfl
+
+theorem afterBirth_searchGet (b : Bool) (s : GalilVM) :
+    searchLens.get (afterBirth b s) = searchLens.get s := by cases b <;> rfl
+theorem afterBirth_scanGet (b : Bool) (s : GalilVM) :
+    scanLens.get (afterBirth b s) = scanLens.get s := by cases b <;> rfl
+
+/-- `chainBorn` forces the source chain to be idle, so on an active chain the
+birth reset is the identity. -/
+theorem afterBirth_of_ne_idle {found : Bool} {s t : GalilVM} (h : s.chain ≠ .idle) :
+    afterBirth (chainBorn found s.chain) t = t := by
+  unfold afterBirth chainBorn
+  cases hx : s.chain <;> simp_all [ChainVM.isIdle]
+
 /-- The chain effect of a comparison: an ordinary chain tick on the match
 event, or — when the chain is idle and the search quantum ends `found` —
 `chain.start()` followed by the match credit. -/
@@ -148,7 +209,8 @@ def compareFound (P : Shared) (q : ℕ) (first : Fin 9) (s t : GalilVM) : Prop :
     searchEffect P a s vq ∧
     chainAt a (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11) (P.centre s) (P.place s) s.center s.radius
       s.chain vs.chain ∧
-    t = (if a then afterCompare s vs vq else afterMismatch s vs vq)
+    t = afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+      (if a then afterCompare s vs vq else afterMismatch s vs vq)
 
 /-- The background of a scan tick: heads and clock untouched, the search
 stepped without advance, and the chain effect `chainAt false` — an ordinary
@@ -158,7 +220,8 @@ def backgroundS (P : Shared) (q : ℕ) (first : Fin 9) (s s' : GalilVM) : Prop :
   s'.left = s.left ∧ s'.right = s.right ∧ searchEffect P false s (searchLens.get s') ∧
   chainAt false (decide ((searchLens.get s').search.mode = .found)) ((searchLens.get s').dp.config.tapes 11)
     (P.centre s) (P.place s) s.center s.radius s.chain s'.chain ∧
-  s' = searchLens.set (scanLens.set s (scanLens.get s')) (searchLens.get s')
+  s' = afterBirth (chainBorn (decide ((searchLens.get s').search.mode = .found)) s.chain)
+    (searchLens.set (scanLens.set s (scanLens.get s')) (searchLens.get s'))
 
 def galilFrameS (P : Shared) (q : ℕ) (first : Fin 9) : Frame GalilVM :=
   {galilFrame P q first with compare := compareFound P q first, background := backgroundS P q first}
@@ -170,12 +233,57 @@ theorem backgroundS_fields (P : Shared) (q : ℕ) (first : Fin 9) {s s' : GalilV
     s'.left = s.left ∧ s'.right = s.right ∧
       chainAt false (decide ((searchLens.get s').search.mode = .found)) ((searchLens.get s').dp.config.tapes 11)
         (P.centre s) (P.place s) s.center s.radius s.chain s'.chain ∧
-      s'.center = s.center ∧ s'.periodOnly = s.periodOnly ∧ s'.radius = s.radius ∧
-      s'.length = s.length ∧ s'.cycle = s.cycle ∧ s'.remaining = s.remaining ∧ s'.replay = s.replay ∧
+      s'.center = s.center ∧
+      s'.periodOnly =
+        (if chainBorn (decide ((searchLens.get s').search.mode = .found)) s.chain then false
+          else s.periodOnly) ∧ s'.radius = s.radius ∧
+      s'.length = s.length ∧
+      s'.cycle =
+        (if chainBorn (decide ((searchLens.get s').search.mode = .found)) s.chain then
+          GalilScaffoldCounter.reset else s.cycle) ∧
+      s'.remaining = s.remaining ∧ s'.replay = s.replay ∧
       s'.fpp = s.fpp ∧ searchEffect P false s (searchLens.get s') := by
   obtain ⟨hl, hr, hse, hch, hset⟩ := hb
   refine ⟨hl, hr, hch, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hse⟩
-  all_goals (rw [hset]; rfl)
+  · conv_lhs => rw [hset]
+    rw [afterBirth_center]; rfl
+  · conv_lhs => rw [hset]
+    rw [afterBirth_periodOnly]; rfl
+  · conv_lhs => rw [hset]
+    rw [afterBirth_radius]; rfl
+  · conv_lhs => rw [hset]
+    rw [afterBirth_length]; rfl
+  · conv_lhs => rw [hset]
+    rw [afterBirth_cycle]; rfl
+  · conv_lhs => rw [hset]
+    rw [afterBirth_remaining]; rfl
+  · conv_lhs => rw [hset]
+    rw [afterBirth_replay]; rfl
+  · conv_lhs => rw [hset]
+    rw [afterBirth_fpp]; rfl
+
+/-- On an active chain no birth happens, so the background preserves both fields
+(the pre-`M-periodOnly` form of `backgroundS_fields`, for the many callers that
+already know the chain is alive). -/
+theorem backgroundS_periodOnly_of_ne_idle (P : Shared) (q : ℕ) (first : Fin 9) {s s' : GalilVM}
+    (hb : (galilFrameS P q first).background s s') (hne : s.chain ≠ .idle) :
+    s'.periodOnly = s.periodOnly ∧ s'.cycle = s.cycle := by
+  obtain ⟨-, -, -, -, hp, -, -, hc, -⟩ := backgroundS_fields P q first hb
+  have hz : chainBorn (decide ((searchLens.get s').search.mode = .found)) s.chain = false := by
+    unfold chainBorn; cases hx : s.chain <;> simp_all [ChainVM.isIdle]
+  rw [hz] at hp hc
+  exact ⟨hp, hc⟩
+
+/-- At a birth the two fields are cleared, exactly as Scala's `start()` does. -/
+theorem backgroundS_birth_reset (P : Shared) (q : ℕ) (first : Fin 9) {s s' : GalilVM}
+    (hb : (galilFrameS P q first).background s s') (hi : s.chain = .idle)
+    (hf : (searchLens.get s').search.mode = .found) :
+    s'.periodOnly = false ∧ s'.cycle = GalilScaffoldCounter.reset := by
+  obtain ⟨-, -, -, -, hp, -, -, hc, -⟩ := backgroundS_fields P q first hb
+  have hz : chainBorn (decide ((searchLens.get s').search.mode = .found)) s.chain = true := by
+    unfold chainBorn; rw [hi, hf]; rfl
+  rw [hz] at hp hc
+  exact ⟨hp, hc⟩
 
 /-- With an active chain the background's chain effect is a disabled tick. -/
 theorem backgroundS_chainTick (P : Shared) (q : ℕ) (first : Fin 9) {s s' : GalilVM}
@@ -273,7 +381,8 @@ theorem scan_match_S (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) (c : C
       GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right))) s.chain vs.chain := ht0
   rw [decide_eq_true hmatch] at ht'
   have hcmp' : (galilFrameS P q first).compare s (afterCompare s vs vq) :=
-    ⟨vs, vq, true, hl', hr', ⟨fun _ => hmt, fun _ => rfl⟩, hq, Or.inl ⟨hne, ht'⟩, rfl⟩
+    ⟨vs, vq, true, hl', hr', ⟨fun _ => hmt, fun _ => rfl⟩, hq, Or.inl ⟨hne, ht'⟩,
+      by simp [afterBirth_of_ne_idle (found := decide (vq.search.mode = .found)) hne]⟩
   have hmt' : (galilFrameS P q first).matched (afterCompare s vs vq) := by
     show (galilFrame P q first).matched (afterCompare s vs vq)
     exact hmt
@@ -301,7 +410,8 @@ theorem scan_match_idle_S (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) (
         afterCompare s vs vq⟩ := by
   have hcmp' : (galilFrameS P q first).compare s (afterCompare s vs vq) :=
     ⟨vs, vq, true, hl, hrr, ⟨fun _ => hmt, fun _ => rfl⟩, hq,
-      Or.inr (Or.inl ⟨hidle, by simp [hnf], hvs⟩), rfl⟩
+      Or.inr (Or.inl ⟨hidle, by simp [hnf], hvs⟩),
+      by simp [chainBorn, afterBirth, hnf]⟩
   have hmt' : (galilFrameS P q first).matched (afterCompare s vs vq) := by
     show (galilFrame P q first).matched (afterCompare s vs vq)
     exact hmt
@@ -366,7 +476,8 @@ theorem scan_match_S' (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) (c : 
       GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right))) s.chain vs.chain := ht0
   rw [decide_eq_true hmatch] at ht'
   have hcmp' : (galilFrameS P q first).compare s (afterCompare s vs vq) :=
-    ⟨vs, vq, true, hl', hr', ⟨fun _ => hmt, fun _ => rfl⟩, hq, Or.inl ⟨hne, ht'⟩, rfl⟩
+    ⟨vs, vq, true, hl', hr', ⟨fun _ => hmt, fun _ => rfl⟩, hq, Or.inl ⟨hne, ht'⟩,
+      by simp [afterBirth_of_ne_idle (found := decide (vq.search.mode = .found)) hne]⟩
   have hmt' : (galilFrameS P q first).matched (afterCompare s vs vq) := by
     show (galilFrame P q first).matched (afterCompare s vs vq)
     exact hmt
@@ -387,7 +498,8 @@ theorem scan_match_idle_S' (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) 
       ⟨{c with clock := delay, output := o, replaying := c.replaying && !P.replayExhausted (replayDec c.replaying (afterCompare s vs vq))}, replayDec c.replaying (afterCompare s vs vq)⟩ := by
   have hcmp' : (galilFrameS P q first).compare s (afterCompare s vs vq) :=
     ⟨vs, vq, true, hl, hrr, ⟨fun _ => hmt, fun _ => rfl⟩, hq,
-      Or.inr (Or.inl ⟨hidle, by simp [hnf], hvs⟩), rfl⟩
+      Or.inr (Or.inl ⟨hidle, by simp [hnf], hvs⟩),
+      by simp [chainBorn, afterBirth, hnf]⟩
   have hmt' : (galilFrameS P q first).matched (afterCompare s vs vq) := by
     show (galilFrame P q first).matched (afterCompare s vs vq)
     exact hmt
@@ -397,5 +509,77 @@ theorem scan_match_idle_S' (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) 
 #print axioms tick_S_of_tick
 #print axioms chainTick_idle
 #print axioms scan_match_S
+
+
+/-- **An idle chain never becomes a `watch` on one transition.**  The idle
+branches of `chainAt` give either `.idle` or `chainStart`, and `chainStart` is a
+`.copy` that `ChainMatched` keeps a `.copy`. -/
+theorem chainAt_idle_not_watch {a found : Bool} {answer : GalilScaffoldTape.Tape} {c : Fin 3}
+    {walker : GalilScaffoldPlace.Place} {ver : GalilScaffoldInputHead.PlaceHead}
+    {radius : GalilScaffoldCounter.Counter} {z : ChainVM}
+    (hch : chainAt a found answer c walker ver radius ChainVM.idle z)
+    (w : GalilScaffoldChainWatch.State) : z ≠ .watch w := by
+  rcases hch with ⟨hne, -⟩ | ⟨-, -, hz⟩ | ⟨-, -, hz⟩
+  · exact absurd rfl hne
+  · rw [hz]; exact ChainVM.noConfusion
+  · cases a with
+    | false =>
+      rw [if_neg (by decide), chainStart] at hz
+      rw [hz]; exact ChainVM.noConfusion
+    | true =>
+      rw [if_pos rfl, chainStart] at hz
+      intro hw
+      rw [hw] at hz
+      cases hz
+
+/-- **A chain born on this transition is a `copy`, never a `watch`.**
+`chainBorn = true` forces the source chain idle and the search `found`, and the
+idle branch of `chainAt` installs `chainStart`, which is a `.copy`. -/
+theorem chainBorn_true_not_watch {found : Bool} {answer : GalilScaffoldTape.Tape} {c : Fin 3}
+    {walker : GalilScaffoldPlace.Place} {ver : GalilScaffoldInputHead.PlaceHead}
+    {radius : GalilScaffoldCounter.Counter} {x z : ChainVM}
+    (hb : chainBorn found x = true)
+    (hch : chainAt false found answer c walker ver radius x z)
+    (w : GalilScaffoldChainWatch.State) : z ≠ .watch w := by
+  have hx : x = ChainVM.idle := by
+    unfold chainBorn at hb
+    cases x <;> simp [ChainVM.isIdle] at hb ⊢
+  have hf : found = true := by
+    unfold chainBorn at hb
+    rw [hx] at hb
+    simpa [ChainVM.isIdle] using hb
+  rcases hch with ⟨hne, -⟩ | ⟨-, hf0, -⟩ | ⟨-, -, hz⟩
+  · exact absurd hx hne
+  · rw [hf] at hf0; exact absurd hf0 (by decide)
+  · rw [if_neg (by decide), chainStart] at hz
+    rw [hz]; exact ChainVM.noConfusion
+
+/-- **The birth reset is invisible to the output rule.**  `onLetterVM` reads
+only `position s.right`, `leftFirstVM` only `position s.left`, and `afterBirth`
+touches neither (it clears `periodOnly` and resets `cycle`).  So a `refresh` at
+the birth-adjusted state is a `refresh` at the plain one and back. -/
+theorem refresh_afterBirth_iff {P : Shared} {q : ℕ} {first : Fin 9} {raw : List (Fin 2)}
+    (hP : P.onLetter = onLetterVM raw) (hP' : P.leftFirst = leftFirstVM)
+    (b : Bool) (s : GalilVM) (old o : Bool) :
+    refresh (galilFrame P q first) (afterBirth b s) old o
+      ↔ refresh (galilFrame P q first) s old o := by
+  have hl : (galilFrame P q first).onLetter (afterBirth b s)
+      ↔ (galilFrame P q first).onLetter s := by
+    show P.onLetter (afterBirth b s) ↔ P.onLetter s
+    rw [hP]
+    unfold onLetterVM
+    rw [afterBirth_right]
+  have hf : (galilFrame P q first).leftFirst (afterBirth b s)
+      ↔ (galilFrame P q first).leftFirst s := by
+    show P.leftFirst (afterBirth b s) ↔ P.leftFirst s
+    rw [hP']
+    unfold leftFirstVM
+    rw [afterBirth_left]
+  unfold refresh
+  constructor
+  · rintro ⟨h1, h2⟩
+    exact ⟨fun hx => (h1 (hl.2 hx)).trans hf, fun hx => h2 (fun hy => hx (hl.1 hy))⟩
+  · rintro ⟨h1, h2⟩
+    exact ⟨fun hx => (h1 (hl.1 hx)).trans hf.symm, fun hx => h2 (fun hy => hx (hl.2 hy))⟩
 
 end PalPeg.GalilScaffoldChainInputSupply
