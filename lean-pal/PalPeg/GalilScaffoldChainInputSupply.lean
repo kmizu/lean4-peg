@@ -1142,17 +1142,14 @@ theorem shift_from_right (word : List (Fin 3)) (center radius step : ℕ)
 The short palindrome needed for another shift is inherited from the old
 center, so no new DP candidate is required on this branch. -/
 theorem reshift_from_right (word : List (Fin 3)) (center radius step : ℕ)
-    (hold : Manacher.PalAt word center radius)
+    (hold : Manacher.PalAt word center step)
     (hcurrent : Manacher.PalAt word (center+step) (radius+step))
     (hstep : 0 < step) (hsmall : step ≤ radius)
     (hend : center+step+(radius+step)+1 < word.length)
     (hright : ∀ j, center+step < j →
       j+2*step ≤ center+step+(radius+step)+1 → word[j]? = word[j+2*step]?) :
     Manacher.PalAt word (center+2*step) (radius+1) := by
-  have hshort : Manacher.PalAt word center step := by
-    refine ⟨by have := hold.1; omega,by have := hold.2.1; omega,?_⟩
-    intro i hi
-    exact hold.2.2 i (by omega)
+  have hshort : Manacher.PalAt word center step := hold
   have hshort' : Manacher.PalAt word (center+step-step) step := by
     simpa using hshort
   have h := shift_from_right word (center+step) (radius+step) step hcurrent hstep
@@ -2749,7 +2746,10 @@ theorem OnlyOrigin.reshift_palindrome {raw : List (Fin 2)} (o : OnlyOrigin raw)
     (right_present s.right raw hi.caught.scan.rightRep hi.caught.scan.rightPresent hc)
   rw [hrpos,hi.caught.scan.rightPos] at hbound
   apply reshift_from_right (encoded raw) o.center o.radius (o.interior.length+1)
-    o.scan.palindrome hi.caught.scan.palindrome (by omega) (by have := o.size; omega) hbound
+    ⟨by have := o.scan.palindrome.1; have := o.size; omega,
+      by have := o.scan.palindrome.2.1; have := o.size; omega,
+      fun i hi => o.scan.palindrome.2.2 i (by have := o.size; omega)⟩
+      hi.caught.scan.palindrome (by omega) (by have := o.size; omega) hbound
   intro j hj hj'
   apply hperiod j (by omega)
   rw [hpos]

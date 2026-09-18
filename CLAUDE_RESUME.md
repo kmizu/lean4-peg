@@ -1,3 +1,45 @@
+## 2026-09-19 n139: `reshift_from_right` の `hold` は半径 `step` 分で足りた（fresh 側の origin が DP から出る）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。
+無条件 PAL は未完。§10.5 は未達。**
+
+### 弱化（一次情報で測って実施）
+
+`GalilScaffoldChainInputSupply.reshift_from_right` は
+`hold : Manacher.PalAt word center radius` を取っていたが、
+本体での使用は **2 行だけ**（`:1153`/`:1155`）で、`PalAt word center step` を
+作るためにしか使っていなかった。仮定をそこまで弱め、呼び出し側 3 箇所
+（`CloseoutPackRun31:178`、`GalilScaffoldChainReadOrigin:657`、
+`GalilScaffoldChainInputSupply:2748`）を inline の縮小で通した。全体 build 緑。
+
+**意味**: 「origin の回文」は半径 `radius` 分は要らず、**周期長 `h` 分だけあれば足りる**。
+そして `GalilDpCorrect.Candidate w lower h` の第 3 節
+`(w.take (2h+1)).reverse = w.take (2h+1)` はまさに中心 `h`・半径 `h` の回文。
+`CloseoutWatchPhase3.palAt_pair_of_candidate` がそれを
+`PalAt (encoded raw) (pos − h) h` の形で出す。
+
+**`periodOnly = true` 側は `RoundScan` が前ラウンドの origin を運んでいたが、
+fresh 側は DP の `Candidate` が直接 origin をくれる——運ぶ必要がなかった。**
+
+### fresh 側 `ShiftPal` の残差（`reshift_from_right` の引数ごとに測った）
+
+| 引数 | fresh 側の出どころ | 状態 |
+|---|---|---|
+| `hold : PalAt word (pos−h) h` | `palAt_pair_of_candidate` 第 1 成分 | **揃った**（今回） |
+| `hcurrent : PalAt word pos r₀` | `ShiftPal` の仮説 `hScanInv.palindrome` | **揃っている** |
+| `hstep : 0 < h` | `Candidate` の `lower < h` | **揃っている** |
+| `hsmall : h ≤ r₀ − h`（＝ `2h ≤ r₀`） | 未特定 | **要る**（台帳 1 本） |
+| `hend : pos + r₀ + 1 < length` | 入力長の台帳 | 要る |
+| `hright : 右側で周期 `2h`` | `Candidate` の 2 回文（半径 `h` と `2h`、`palAt_pair_of_candidate` が両方出す）の重なり | **材料あり** |
+
+**`hright` が本体。** `periodOnly = true` 側は `hI.pal`（前ラウンド origin、半径 `R`）の
+鏡映（`Manacher.mirror_getElem?`）＋ `hI.pred` で出していた。fresh 側は
+`Candidate` が中心を `h` ずらした 2 つの回文をくれるので、**重なりから周期 `2h` が出る**——
+純粋な語の組合せ論で、`GalilPeriodUnion.periodOn_union`（重なりが p 個以上ある
+2 つの周期区間の合併）が既にある層。
+
+**残りは「2 回文 → 周期 2h → 右側の周期性」1 本と `2h ≤ r₀` の台帳 1 本。**
+
 ## 2026-09-19 n138: 残る `ShiftPal` 2 本の中身を特定した（chain 台帳の 1 場）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。

@@ -175,7 +175,9 @@ theorem terminal_palindrome {w : List (Fin 2)} {C R h used : ℕ} {s : GalilVM}
   have hrp1 := right_position s.right hc
     (represented_position _ w hscan.rightRep hscan.rightPresent).1
   rw [hrp1, hrpos] at hbound
-  apply reshift_from_right (encoded w) C R h hI.pal hcur hposH (by omega) (by omega)
+  apply reshift_from_right (encoded w) C R h
+    ⟨by have := hI.pal.1; omega, by have := hI.pal.2.1; omega,
+      fun i hi => hI.pal.2.2 i (by omega)⟩ hcur hposH (by omega) (by omega)
   intro j hj1 hj2
   by_cases hjle : j ≤ C + R
   · have e1 := Manacher.mirror_getElem? hI.pal (show C - R ≤ j by omega) hjle
