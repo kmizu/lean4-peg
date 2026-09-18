@@ -162,6 +162,25 @@ theorem shiftPalAt_fresh_of_candidate {w : List (Fin 2)} {s s' : GalilVM}
 
 #print axioms shiftPalAt_fresh_of_candidate
 
+/-- **`BlockOn` は周期 `2(|xs|+1)` そのもの。**  `GalilReplaySpan.ChainW` の
+`.watch` 枝が運ぶ `BlockOn raw cc b xs anchor E` は「入力の `[anchor, E]` が
+長さ `2h` のブロックの巡回である」という言明で、周期の形に直すと
+`FreshShiftLedger` の `hLeft` にそのまま使える。`ChainW` は
+`CloseoutWatchRound43.ChainWRun` が run に沿って運んでるので、これが
+`hLeft` の供給経路になる。 -/
+theorem periodOn_of_blockOn {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
+    {anchor E : ℕ} (h : PalPeg.GalilReplaySpan.BlockOn raw cc b xs anchor E) :
+    PeriodOn (encoded raw) (2 * (xs.length + 1)) anchor E := by
+  intro i hi hb
+  have h1 := h (i - anchor) (by omega)
+  have h2 := h (i - anchor + 2 * (xs.length + 1)) (by omega)
+  rw [show anchor + (i - anchor) = i from by omega] at h1
+  rw [show anchor + (i - anchor + 2 * (xs.length + 1))
+      = i + 2 * (xs.length + 1) from by omega] at h2
+  rw [h1, h2, Nat.add_mod_right]
+
+#print axioms periodOn_of_blockOn
+
 /-- **(NAMED) 準備直後の watch の台帳。**  `shiftPalAt_fresh_of_candidate` の 5 残差を
 1 つの場にまとめたもの。`ShiftPal` の `periodOnly = false` 分岐に必要な全部で、
 3 種類しかない（n144）:

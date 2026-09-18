@@ -1,3 +1,54 @@
+## n219 — 公理進捗: `BlockOn → PeriodOn` の橋を架けた（`hLeft` の供給経路が通った）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 3 連言の成分 `hLeft` を、run が実際に運んでるデータから供給する橋が架かった |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 架けた橋
+
+```lean
+theorem periodOn_of_blockOn {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
+    {anchor E : ℕ} (h : PalPeg.GalilReplaySpan.BlockOn raw cc b xs anchor E) :
+    PeriodOn (encoded raw) (2 * (xs.length + 1)) anchor E
+```
+
+`BlockOn raw cc b xs anchor E := ∀ j, anchor + j ≤ E →
+  (encoded raw)[anchor + j]? = (bounce cc b xs)[j % (2 * (xs.length + 1))]?`
+は「入力の `[anchor, E]` が長さ `2h` のブロックの巡回」。周期の形に直すだけ（`Nat.add_mod_right`）。
+
+**これが無かったせいで、`ChainW` が運ぶ `BlockOn` と第 3 連言の `hLeft` が繋がってへんかった。**
+`grep` で確認したとおり `BlockOn` から `PeriodOn` を出す補題は存在せえへんかった。
+
+### 供給経路（これで通った）
+
+```
+CloseoutWatchRound43.ChainWRun（run が運ぶ）
+  → GalilReplaySpan.ChainW (.watch 枝) → BlockOn raw cc b xs (C+1) E
+  → periodOn_of_blockOn（本ノート）
+  → PeriodOn (encoded w) (2h) (C+1) E
+  → .mono → hLeft : PeriodOn (encoded w) (2h) (c−r₀) c
+```
+
+残るのは区間の合わせ込み（`C+1 ≤ c − r₀` と `c ≤ E`）だけ。
+
+### ビルド確認の注意（再確認）
+
+バックグラウンドの通知は `failed`／`exit code 1` やったが、これは末尾の
+`grep -c "error"` が 0 件で返した終了コードで、ビルドの結果やない。
+`BUILD=` 行は `0`、エラー 0。**CLAUDE.md の「`BUILD=` 行だけを信じる」規律どおり。**
+
+### 次
+
+`ShiftInv` の `pal : PalAt (C+h) (R+h)` / `palNext : PalAt (C+2h) (R+1)` は、
+既存の `periodOn_span_of_next`（`GalilLiveCentreLife:179`、`GalilRoundsLeftmost:120`、
+`GalilCycleFoundBackground:260` で使用実績あり）と `palAt_shift_of_period` で
+周期から回文を伸ばす形。材料は揃ってる。
 ## n218 — 公理進捗: `obligation_shiftPalResiduesAlongRun` の供給鎖が全部繋がった
 
 **公理への進捗**
