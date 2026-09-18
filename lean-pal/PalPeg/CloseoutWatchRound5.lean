@@ -376,7 +376,6 @@ the round's compose by `CloseoutWatchRun.watchSeg_append`. -/
 theorem shiftExitTailC_of_parts (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry qq : ℕ) (first : Fin 9)
     (raw : List (Fin 2)) (m h lower span : ℕ) {c0 cP : Control} {r sP : GalilVM}
-    (hlive : PrepLandingLiveC (PofC centre place entry raw) qq first cP sP)
     (hdp : FoundDpShiftC centre place entry qq first raw lower span c0 r)
     (hround : ShiftRoundC centre place entry qq first raw m h lower) :
     ShiftExitTailC centre place entry qq first raw m h c0 r cP sP := by
@@ -386,8 +385,10 @@ theorem shiftExitTailC_of_parts (centre : GalilVM → Fin 3)
   obtain ⟨hres, hpc⟩ := hdp a ls rs qw gap es0 cF sF vq hseg0 hCen hq hfound
   refine ⟨a, ls, rs, qw, gap, es0, cF, sF, vq, ch, oF, lower, span, hraw, hseg0, hmF, hrF, hcF,
     havF, hidle, hCen, hq, hfound, hmt, hch, hchne, hoF, hcPeq, hsPeq, hres, hpc, ?_⟩
-  intro es c2 s2 hseg
-  obtain ⟨cT, sT, hsegT, hLT, hexit⟩ := hrun es c2 s2 hseg (hlive es c2 s2 hseg)
+  intro es c2 s2 hseg hwLanding
+  obtain ⟨hmL, hrL, hcL⟩ := watchSegE_live_control (delay := 2048) (by omega) hseg
+    (by rw [hcPeq]; exact hmF) (by rw [hcPeq]) (by simp [hcPeq])
+  obtain ⟨cT, sT, hsegT, hLT, hexit⟩ := hrun es c2 s2 hseg ⟨hmL, hrL, hcL, hwLanding⟩
   obtain ⟨c1, s1, w, vs, vq', s2', t', v, cycle, o, org, mm, c', s', n, c3, s3, w3, vs3, vq3,
     o3, w3', hsegR, hm1, hr1, hc1, hs1, hz, hav, hcmp, hmis, hq', hg, hb, hs2', hi2, hchain,
     ho, hint, he, hoc, ha, hpos11, hlow, hrounds, hseg3, hm3, hr3, hc3, hs3, hav3, hcmp3,
@@ -459,7 +460,6 @@ theorem breakExitTailC_of_parts (centre : GalilVM → Fin 3)
     (raw : List (Fin 2)) (m h lower span : ℕ) {c0 cP : Control} {r sP : GalilVM}
     (hkeep : CompareKeepsWatchC (PofC centre place entry raw) qq first)
     (hnn : DistanceNonnegC)
-    (hlive : PrepLandingLiveC (PofC centre place entry raw) qq first cP sP)
     (hdp : FoundDpBreakC centre place entry qq first raw lower span h c0 r)
     (hland : ∀ sF : GalilVM, BreakLandingC centre place entry qq first raw h sF cP sP)
     (hterm : BreakTerminalC centre place entry qq first raw m h) :
@@ -472,7 +472,10 @@ theorem breakExitTailC_of_parts (centre : GalilVM → Fin 3)
     hseg0, hmF, hrF, hcF, havF, hidle, hq, hfound, hmt, hch, hchne, hoF, hcPeq, hsPeq, ?_⟩
   intro es c2 s2 hseg
   obtain ⟨cen, ys, b, hys, hwatch2, hes0⟩ := hland sF es c2 s2 hseg
-  obtain ⟨cT, sT, hsegT, hLT, hexit⟩ := hrun es c2 s2 hseg (hlive es c2 s2 hseg)
+  obtain ⟨hmL, hrL, hcL⟩ := watchSegE_live_control (delay := 2048) (by omega) hseg
+    (by rw [hcPeq]; exact hmF) (by rw [hcPeq]) (by simp [hcPeq])
+  obtain ⟨cT, sT, hsegT, hLT, hexit⟩ :=
+    hrun es c2 s2 hseg ⟨hmL, hrL, hcL, _, hwatch2⟩
   obtain ⟨c3, s3, w3, vs3, vq3, o3, w3', hsegR, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3,
     ho3, hbroken, hz3, hfuel, hbound⟩ := hterm cT sT hLT hexit
   have hmargin : negative w3'.margin = false :=

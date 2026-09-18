@@ -349,14 +349,18 @@ theorem foundExitW_of_routeS {P : Shared} {q : ℕ} {first : Fin 9} {raw : List 
 theorem foundExit_of_split3S {P : Shared} {q : ℕ} {first : Fin 9} {raw : List (Fin 2)}
     {m h : ℕ} {c cP : Control} {r sP : GalilVM}
     (hfb : FallbackReachS P q first raw m c r cP sP)
-    (hlive : PrepLandingLiveC P q first cP sP)
+    (hneP : sP.chain ≠ ChainVM.idle)
+    (hreachWatch : ∃ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+      WatchSegE P q first 2048 es cP sP c2 s2 ∧ LiveScanWatch c2 s2)
     (hf : TerminalRunFallbackC P q first h cP sP) :
     FoundExitLPS P q first raw m c r := by
-  have hliveP : LiveScanWatch cP sP := hlive [] cP sP (.stop _ _)
-  obtain ⟨cT, sT, hseg1, hliveT, hbe⟩ := hf [] cP sP (.stop _ _) hliveP
+  obtain ⟨es0, c2, s2, hsegE0, hlive2⟩ := hreachWatch
+  obtain ⟨cT, sT, hseg1, hliveT, hbe⟩ := hf es0 c2 s2 hsegE0 hlive2
   obtain ⟨c1, s1, hseg2, hclk, hlive1, hav, hne⟩ := hbe
   obtain ⟨es, hsegE⟩ :=
-    watchSegE_of_watchSeg (PalPeg.CloseoutWatchRun.watchSeg_append hseg1 hseg2)
+    watchSegE_of_watchSeg (PalPeg.CloseoutWatchRun.watchSeg_append
+      (PalPeg.CloseoutWatchRun.watchSeg_append
+        (PalPeg.CloseoutWatchRound18.watchSeg_of_watchSegE' hsegE0 hneP) hseg1) hseg2)
   exact foundExitW_of_routeS hfb es c1 s1 hsegE hlive1 hclk hav hne
 
 /-- `CloseoutWatchRound29.foundExit_compare_final9F'` at the honest landing. -/
@@ -368,12 +372,14 @@ theorem foundExit_compare_final9S' {centre : GalilVM → Fin 3}
     (hrun : TerminalRunC (PofC centre place entry w) q first h cP sP)
     (hsplit3 : ExitSplit3C centre place entry q first w h cP sP)
     (hfb : FallbackReachS (PofC centre place entry w) q first w m c r cP sP)
-    (hlive : PrepLandingLiveC (PofC centre place entry w) q first cP sP) :
+    (hneP : sP.chain ≠ ChainVM.idle)
+    (hreachWatch : ∃ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+      WatchSegE (PofC centre place entry w) q first 2048 es cP sP c2 s2 ∧ LiveScanWatch c2 s2) :
     FoundExitLPS (PofC centre place entry w) q first w m c r := by
   rcases hsplit3 hrun with hs | hb | hf
   · exact .exit (hTwo (fun _ => Or.inl hs))
   · exact .exit (hTwo (fun _ => Or.inr (terminalRunBreakC_of_break0 hb)))
-  · exact foundExit_of_split3S hfb hlive hf
+  · exact foundExit_of_split3S hfb hneP hreachWatch hf
 
 /-! ## 6. `foundExit_compare_final14` -/
 
@@ -399,7 +405,9 @@ theorem foundExit_compare_final14 (centre : GalilVM → Fin 3)
     (hfbS : FallbackReachS (PofC centre place entry w) q first w m c r cP sP)
     (hstage : ReplayStage w (PofC centre place entry w) q first c r)
     (hmP : cP.mode = .scan) (hrP : cP.replaying = false) (hcP : 1 ≤ cP.clock)
-    (hwatch : PrepLandingWatchC (PofC centre place entry w) q first cP sP)
+    (hreachWatch : ∃ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+      WatchSegE (PofC centre place entry w) q first 2048 es cP sP c2 s2 ∧
+        PalPeg.CloseoutWatchRun.LiveScanWatch c2 s2)
     (hat : FoundDpAtC centre place entry q first w lower span h c r)
     (hreach : ShiftReachC centre place entry q first w h)
     (hround : ShiftRoundAtC centre place entry q first w m h lower)
@@ -411,11 +419,9 @@ theorem foundExit_compare_final14 (centre : GalilVM → Fin 3)
         (BreakTermData centre place entry q first w m h) c0 s0) :
     FoundExitLPS (PofC centre place entry w) q first w m c r := by
   classical
-  have hlive : PrepLandingLiveC (PofC centre place entry w) q first cP sP :=
-    PalPeg.CloseoutWatchRound7.prepLandingLiveC_of_watch (PofC centre place entry w) q first
-      hmP hrP hcP hwatch
   have hsplit4 : ExitSplit4C centre place entry q first w h cP sP :=
-    exitSplit4C_of_tick centre place entry q first w h cP sP (hlive [] cP sP (.stop _ _))
+    exitSplit4C_of_tick centre place entry q first w h cP sP
+      (PalPeg.CloseoutWatchRound2.chain_ne_idle_of_foundCompareCtx hctx)
       (watchPrefixC_of_unique _ _ _ _ _)
   have hstp := PalPeg.CloseoutWatchRound6.lagStepC_of_parts hcan hsane hstart
   have hre := PalPeg.CloseoutWatchRound6.ledgerReachC_of_origin centre place entry q first 2048 w
@@ -433,14 +439,15 @@ theorem foundExit_compare_final14 (centre : GalilVM → Fin 3)
     foundExit_compare_final9S' (h := h) (fun hsplit =>
       PalPeg.CloseoutWatchRound15.foundExit_compare_final8 centre place entry q first w m h
         lower span hP hex hready hcan hsane hstart hor hzl hnn hpm hE hsW a ls rs qw gap hprep
-        hmis hctx hsplit hstage hmP hrP hcP hwatch hat hreach hround hland hstepBreak)
-      hT.2 hs3 hfbS hlive
+        hmis hctx hsplit hstage hmP hrP hcP hat hreach hround hland hstepBreak)
+      hT.2 hs3 hfbS (PalPeg.CloseoutWatchRound2.chain_ne_idle_of_foundCompareCtx hctx)
+      hreachWatch
   rcases hsplit4 hT.2 with hs | hb | hf | hm
   · exact via3 (fun _ => Or.inl hs)
   · exact via3 (fun _ => Or.inr (Or.inl hb))
   · exact via3 (fun _ => Or.inr (Or.inr (terminalRunFallbackC_of_G hf)))
   · have htail : PalPeg.CloseoutWatchPhase2.ShiftTailC centre place entry q first w m c r cP sP :=
-      mismatchShift_to_shiftRoute centre place entry q first w m h lower span hlive
+      mismatchShift_to_shiftRoute centre place entry q first w m h lower span
         (PalPeg.CloseoutWatchRound10.foundDpShiftC_of_at centre place entry q first w hP
           lower span h hstage hat)
         hmsr hctx hm
@@ -480,7 +487,9 @@ theorem foundExit_compare_final14_of_context (centre : GalilVM → Fin 3)
     (hreplay : ReplayRunC (PofC centre place entry w) q first w cP sP)
     (hstage : ReplayStage w (PofC centre place entry w) q first c r)
     (hmP : cP.mode = .scan) (hrP : cP.replaying = false) (hcP : 1 ≤ cP.clock)
-    (hwatch : PrepLandingWatchC (PofC centre place entry w) q first cP sP)
+    (hreachWatch : ∃ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+      WatchSegE (PofC centre place entry w) q first 2048 es cP sP c2 s2 ∧
+        PalPeg.CloseoutWatchRun.LiveScanWatch c2 s2)
     (hat : FoundDpAtC centre place entry q first w lower span h c r)
     (hreach : ShiftReachC centre place entry q first w h)
     (hround : ShiftRoundAtC centre place entry q first w m h lower)
@@ -495,7 +504,7 @@ theorem foundExit_compare_final14_of_context (centre : GalilVM → Fin 3)
     hstart hor hzl hnn hpm hE hsW a ls rs qw gap hprep hmis hctx
     (fallbackReachS_of_context centre place entry q hq0 first h7 h8 w m c r cP sP hE.inv.1.1.2
       hex hsiP hMP hEP houtP hns hentry hpiece hreplay)
-    hstage hmP hrP hcP hwatch hat hreach hround hmsr hland hstepBreak
+    hstage hmP hrP hcP hreachWatch hat hreach hround hmsr hland hstepBreak
 
 end PalPeg.CloseoutWatchRound31
 

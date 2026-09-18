@@ -247,6 +247,7 @@ def ShiftTailC (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPl
     (GalilScaffoldProgram.denote vq.dp.config).pc = 346 ∧
     (∀ (es : List Bool) (c2 : Control) (s2 : GalilVM),
       WatchSegE (PofC centre place entry raw) qq first 2048 es cP sP c2 s2 →
+      (∃ wLive : GalilScaffoldChainWatch.State, s2.chain = ChainVM.watch wLive) →
       ∃ (c1 : Control) (s1 : GalilVM) (h : ℕ) (w : GalilScaffoldChainWatch.State)
         (vs : ScanVM) (vq' : SearchVM) (s2' : GalilVM) (t' : ShiftState)
         (v : GalilScaffoldChainWatch.State) (cycle : Counter) (o : Bool)
@@ -308,7 +309,7 @@ theorem roundsRouteLPraw_of_tail (centre : GalilVM → Fin 3)
   obtain ⟨c1, s1, h, w, vs, vq', s2', t', v, cycle, o, org, mm, c', s', n, c3, s3, w3, vs3, vq3,
     o3, w3', hseg, hm1, hr1, hc1, hs1, hz, hav, hcmp, hmis, hq', hg, hb, hs2', hi2, hchain, ho,
     hint, he, hoc, ha, hpos11, hlow, hrounds, hseg3, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3,
-    ho3, hbroken, hmargin, hlast, hlag, hbound⟩ := htl es c2 s2 hprepSeg
+    ho3, hbroken, hmargin, hlast, hlag, hbound⟩ := htl es c2 s2 hprepSeg hw
   obtain ⟨cT, sT, k, L, hst, hcr, hLP, hprog, hright⟩ :=
     PalPeg.GalilFoundLandingL.foundRouteMC_shift centre place entry qq first raw hex
       (invLPC_invLP hE.invLPC)

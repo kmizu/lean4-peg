@@ -142,7 +142,6 @@ theorem shiftTailC_of_parts (centre : GalilVM → Fin 3)
     (hP : Decodes (PofC centre place entry raw))
     {c0 cP : Control} {r sP : GalilVM}
     (hst : ReplayStage raw (PofC centre place entry raw) qq first c0 r)
-    (hlive : PrepLandingLiveC (PofC centre place entry raw) qq first cP sP)
     (hat : FoundDpAtC centre place entry qq first raw lower span h c0 r)
     (hreach : ShiftReachC centre place entry qq first raw h)
     (hround : ShiftRoundAtC centre place entry qq first raw m h lower)
@@ -150,7 +149,7 @@ theorem shiftTailC_of_parts (centre : GalilVM → Fin 3)
     (hrun : TerminalRunShiftC (PofC centre place entry raw) qq first h cP sP) :
     ShiftTailC centre place entry qq first raw m c0 r cP sP :=
   PalPeg.CloseoutWatchRound5.shiftExitTailC_of_parts centre place entry qq first raw m h
-    lower span hlive
+    lower span
     (PalPeg.CloseoutWatchRound10.foundDpShiftC_of_at centre place entry qq first raw hP
       lower span h hst hat)
     (PalPeg.CloseoutWatchRound7.shiftRoundC_of_parts centre place entry qq first raw m h lower
@@ -168,7 +167,6 @@ theorem noShiftTailC0L_of_parts (centre : GalilVM → Fin 3)
     (hst : ReplayStage raw (PofC centre place entry raw) qq first c0 r)
     (hkeep : CompareKeepsWatchC (PofC centre place entry raw) qq first)
     (hnn : DistanceNonnegC)
-    (hlive : PrepLandingLiveC (PofC centre place entry raw) qq first cP sP)
     (hat : FoundDpAtC centre place entry qq first raw lower span h c0 r)
     (hland : ∀ sF : GalilVM, BreakLandingLedgerC centre place entry qq first raw h sF cP sP)
     (hstep : ∀ (c : Control) (s : GalilVM), LiveScanWatch c s →
@@ -178,7 +176,7 @@ theorem noShiftTailC0L_of_parts (centre : GalilVM → Fin 3)
     (hrun : TerminalRunBreakC (PofC centre place entry raw) qq first h cP sP) :
     NoShiftTailC0L centre place entry qq first raw m c0 r cP sP :=
   PalPeg.CloseoutWatchRound10.breakExitTailLC_of_parts centre place entry qq first raw m h
-    lower span hkeep hnn hlive
+    lower span hkeep hnn
     (PalPeg.CloseoutWatchRound10.foundDpBreakC_of_at centre place entry qq first raw hP
       lower span h hst hat)
     hland
@@ -197,7 +195,6 @@ theorem breakRouteLPraw_of_parts (centre : GalilVM → Fin 3)
     (hst : ReplayStage raw (PofC centre place entry raw) qq first c0 r)
     (hkeep : CompareKeepsWatchC (PofC centre place entry raw) qq first)
     (hnn : DistanceNonnegC)
-    (hlive : PrepLandingLiveC (PofC centre place entry raw) qq first cP sP)
     (hat : FoundDpAtC centre place entry qq first raw lower span h c0 r)
     (hland : ∀ sF : GalilVM, BreakLandingLedgerC centre place entry qq first raw h sF cP sP)
     (hstep : ∀ (c : Control) (s : GalilVM), LiveScanWatch c s →
@@ -208,7 +205,7 @@ theorem breakRouteLPraw_of_parts (centre : GalilVM → Fin 3)
     BreakRouteLPraw (PofC centre place entry raw) qq first raw m c0 r cP sP :=
   PalPeg.CloseoutWatchPhase3.breakRouteLPraw_of_tail0L centre place entry qq first raw m hex hE
     (noShiftTailC0L_of_parts centre place entry qq first raw m h lower span hP hst
-      hkeep hnn hlive hat hland hstep hctx hrun)
+      hkeep hnn hat hland hstep hctx hrun)
 
 /-! ## 4. `foundExit_compare_final6` on the per-landing pieces -/
 
@@ -255,7 +252,6 @@ theorem foundExit_compare_final7 (centre : GalilVM → Fin 3)
     (hsplit : ExitSplitC centre place entry q first w h cP sP)
     (hstage : ReplayStage w (PofC centre place entry w) q first c r)
     (hmP : cP.mode = .scan) (hrP : cP.replaying = false) (hcP : 1 ≤ cP.clock)
-    (hwatch : PrepLandingWatchC (PofC centre place entry w) q first cP sP)
     (hat : FoundDpAtC centre place entry q first w lower span h c r)
     (hreach : ShiftReachC centre place entry q first w h)
     (hround : ShiftRoundAtC centre place entry q first w m h lower)
@@ -273,20 +269,17 @@ theorem foundExit_compare_final7 (centre : GalilVM → Fin 3)
     PalPeg.CloseoutWatchRound6.compareKeepsWatchC_of_reach (PofC centre place entry w) q first
       hstp hre hled (PalPeg.CloseoutWatchRound4.caughtAtMatchC_of_zeroLag hled hzl)
       (PalPeg.CloseoutWatchRound6.predictC_of_match hled hzl hpm)
-  have hlive : PrepLandingLiveC (PofC centre place entry w) q first cP sP :=
-    PalPeg.CloseoutWatchRound7.prepLandingLiveC_of_watch (PofC centre place entry w) q first
-      hmP hrP hcP hwatch
   PalPeg.CloseoutWatchRound6.foundExit_compare_final6 centre place entry q first w m h
     hP hex hready hcan hsane hstart hor hzl hnn hpm hE hsW hLR a ls rs qw gap hprep hmis hctx
     hsplit
     (PalPeg.CloseoutWatchRound5.shiftExitTailC_of_parts centre place entry q first w m h
-      lower span hlive
+      lower span
       (PalPeg.CloseoutWatchRound10.foundDpShiftC_of_at centre place entry q first w hP
         lower span h hstage hat)
       (PalPeg.CloseoutWatchRound7.shiftRoundC_of_parts centre place entry q first w m h lower
         hreach hround))
     (PalPeg.CloseoutWatchRound5.breakExitTailC_of_parts centre place entry q first w m h
-      lower span hkeep hnn hlive
+      lower span hkeep hnn
       (PalPeg.CloseoutWatchRound10.foundDpBreakC_of_at centre place entry q first w hP
         lower span h hstage hat)
       hland

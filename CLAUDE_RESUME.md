@@ -1,3 +1,64 @@
+## 2026-09-19 n127: 反証済み `PrepLandingWatchC`（`hpack` 節 4）を found 経路から**消した**
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。
+無条件 PAL は未完。§10.5 は未達。**
+
+コウタの指摘 2 つがそのまま当たった:
+
+* 「難しく考えなさんな。未解決問題とはいえ難問というより単純に規模が大きいだけの問題」
+* 「producer がいないってことはモデル化を何か間違ってる」
+
+### 何が間違っていたか
+
+`CloseoutWatchRound23.split4_of_prefix` は `hliveP : LiveScanWatch cP sP`
+（＝誕生状態の chain が `.watch`）を取っていたが、**本体で 1 回しか使っておらず、
+しかも `sP.chain ≠ ChainVM.idle` を取り出すためだけ**だった。誕生直後の chain は
+`.copy` なので `.watch` は偽（`FoundPackRefute`）、しかし**非 idle は真**で、
+`FoundCompareCtxC` が `ch ≠ ChainVM.idle` を конъюнкт として直接持っている。
+
+`CloseoutWatchRound40` の docstring は「`exitSplit4C_of_tick` は `.watch` を要求するが
+`ChainW` は `.copy`/`.back` のこともある」と書いて**新しい仮定を立てる方向へ逃げていた**。
+仮定を弱めるのが正しかった。**自分の過去の記述を判断材料にした失敗の再発。**
+
+### 効いた置き換えは 2 種類だけ
+
+| 消費者が要求していたもの | 実際に使っていたもの | 出どころ |
+|---|---|---|
+| `LiveScanWatch cP sP`（誕生状態が watch） | `sP.chain ≠ .idle` | `CloseoutWatchRound2.chain_ne_idle_of_foundCompareCtx`（新規、タダ） |
+| 全着地で `LiveScanWatch`（`hlive`） | その着地の watch だけ | `∀` にガードとして追加（`TerminalRunShiftC` は元から同じガードを持っていた） |
+
+**producer が無かったのは、`ShiftTailC` の末尾 `∀` にガードが無く、それを供給するのが
+`TerminalRunShiftC`（ガード付き）だったから。** 橋渡しのためだけに `hlive` が要り、
+その `hlive` が `hwatch` を要求していた。ガードを揃えたら鎖ごと消えた。
+
+### 変更（全体 build 緑）
+
+* `CloseoutWatchPhase2.ShiftTailC` — 末尾 `∀ es c2 s2` に watch ガードを追加
+* `watchSegE_live_control` を `CloseoutWatchRound7` → `GalilScaffoldTopWatchSegE`（定義ファイル）へ移動。
+  `WatchSegE` の素の構造的事実なのに下流に埋まっていて上流から使えなかった
+* `split4_of_prefix` / `exitSplit4C_of_tick`（Round23）、`split3_of_prefix` /
+  `exitSplit3C_of_tick`（Round19）、`exitSplit4C_of_liveScanWatch`（Round42）— 仮定を弱化
+* `shiftExitTailC_of_parts` / `breakExitTailC_of_parts`（Round5）、
+  `breakExitTailLC_of_parts`（Round10）、`mismatchShift_to_shiftRoute`（Round25）、
+  `shiftTailC_of_dataL`（Round37）/ `dataL'`（Round41）— `hlive` を**引数ごと削除**
+* `foundExit_of_split3` / `_split3S` / `_split3F` の 3 変種 — **到達 watch 着地版**に置換
+  （`foundExit_of_split3_atReachedWatch` ほか）。仮定は
+  `∃ es c2 s2, WatchSegE … cP sP c2 s2 ∧ LiveScanWatch c2 s2`
+* `CloseoutFoundRoute1` の `hpack` 束の**節 4 を同じ形に差し替え**
+* Round14/15 は `hwatch` を完全に失った
+
+### 帰結
+
+**`(hwatch : PrepLandingWatchC …)` の宣言は `PalPeg/` 全体で 0 本になった**
+（残る参照は `open` 行と docstring のみ）。found 経路は反証済みの仮定に依存しなくなり、
+代わりに要求するのは `∃ es c2 s2, WatchSegE ∧ LiveScanWatch c2 s2`——これは
+`FoundPackCorrected.ReachesWatchPhase` ＋ `watchSegE_live_control` そのもので、
+n125/n126 で作った `ReachesWatchFromRun.reachesWatchPhase_or_segEnd_at_foundBirth` の
+**第 1 枝が出す**。第 2 枝（`SegEnd` で早期終了＝準備中の不一致）の配線が次の仕事。
+
+公理の本数は変わらない（`hpack` は公理ではなく `obligation_cycleOracle` の部分木内部の
+仮定だった）。**変わったのは、その部分木が偽の仮定を通らなくなったこと。**
+
 ## 2026-09-19 n126: `PalInPegUnconditional.lean` の docstring が腐っていた（表 9 行 vs `axiom` 4 本）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。

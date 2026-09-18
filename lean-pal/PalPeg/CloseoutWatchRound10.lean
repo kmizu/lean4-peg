@@ -255,7 +255,6 @@ theorem breakExitTailLC_of_parts (centre : GalilVM → Fin 3)
     (raw : List (Fin 2)) (m h lower span : ℕ) {c0 cP : Control} {r sP : GalilVM}
     (hkeep : CompareKeepsWatchC (PofC centre place entry raw) qq first)
     (hnn : DistanceNonnegC)
-    (hlive : PrepLandingLiveC (PofC centre place entry raw) qq first cP sP)
     (hdp : FoundDpBreakC centre place entry qq first raw lower span h c0 r)
     (hland : ∀ sF : GalilVM, BreakLandingLedgerC centre place entry qq first raw h sF cP sP)
     (hterm : BreakTerminalC centre place entry qq first raw m h) :
@@ -268,7 +267,10 @@ theorem breakExitTailLC_of_parts (centre : GalilVM → Fin 3)
     hseg0, hmF, hrF, hcF, havF, hidle, hq, hfound, hmt, hch, hchne, hoF, hcPeq, hsPeq, ?_⟩
   intro es c2 s2 hseg
   obtain ⟨cen, ys, b, w2, es', hys, hwatch2, hrun0, hes', hes0⟩ := hland sF es c2 s2 hseg
-  obtain ⟨cT, sT, hsegT, hLT, hexit⟩ := hrun es c2 s2 hseg (hlive es c2 s2 hseg)
+  obtain ⟨hmL, hrL, hcL⟩ := watchSegE_live_control (delay := 2048) (by omega) hseg
+    (by rw [hcPeq]; exact hmF) (by rw [hcPeq]) (by simp [hcPeq])
+  obtain ⟨cT, sT, hsegT, hLT, hexit⟩ :=
+    hrun es c2 s2 hseg ⟨hmL, hrL, hcL, _, hwatch2⟩
   obtain ⟨c3, s3, w3, vs3, vq3, o3, w3', hsegR, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3,
     ho3, hbroken, hz3, hfuel, hbound⟩ := hterm cT sT hLT hexit
   have hmargin : negative w3'.margin = false :=
@@ -288,7 +290,6 @@ theorem breakRouteLPraw_of_ledger_parts (centre : GalilVM → Fin 3)
     (hE : StageEntryC (PofC centre place entry raw) qq first raw c0 r)
     (hkeep : CompareKeepsWatchC (PofC centre place entry raw) qq first)
     (hnn : DistanceNonnegC)
-    (hlive : PrepLandingLiveC (PofC centre place entry raw) qq first cP sP)
     (hdp : FoundDpBreakC centre place entry qq first raw lower span h c0 r)
     (hland : ∀ sF : GalilVM, BreakLandingLedgerC centre place entry qq first raw h sF cP sP)
     (hterm : BreakTerminalC centre place entry qq first raw m h)
@@ -297,7 +298,7 @@ theorem breakRouteLPraw_of_ledger_parts (centre : GalilVM → Fin 3)
     PalPeg.CloseoutWatchPhase2.BreakRouteLPraw (PofC centre place entry raw) qq first raw m
       c0 r cP sP :=
   PalPeg.CloseoutWatchPhase3.breakRouteLPraw_of_tail0L centre place entry qq first raw m hex hE
-    (breakExitTailLC_of_parts centre place entry qq first raw m h lower span hkeep hnn hlive hdp
+    (breakExitTailLC_of_parts centre place entry qq first raw m h lower span hkeep hnn hdp
       hland hterm hctx hrun)
 
 #print axioms breakExitTailLC_of_parts

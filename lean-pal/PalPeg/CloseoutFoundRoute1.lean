@@ -309,7 +309,9 @@ theorem foundExit_compare_final20 (centre : GalilVM → Fin 3)
       PrepInputsG3 (PofC centre place entry w) q first ⟨a :: ls, gap⟩ lower span cP sP ∧
       MismatchExitG (PofC centre place entry w) q first w m c r cP sP ∧
       FallbackReachS (PofC centre place entry w) q first w m c r cP sP ∧
-      PrepLandingWatchC (PofC centre place entry w) q first cP sP ∧
+      (∃ (esW : List Bool) (c2 : Control) (s2 : GalilVM),
+        WatchSegE (PofC centre place entry w) q first 2048 esW cP sP c2 s2 ∧
+          PalPeg.CloseoutWatchRun.LiveScanWatch c2 s2) ∧
       PrepBirthLagC' (PofC centre place entry w) q first c r cP sP ∧
       LandingFreshC' (PofC centre place entry w) q first cP sP ∧
       (∀ sF : GalilVM,
@@ -319,12 +321,12 @@ theorem foundExit_compare_final20 (centre : GalilVM → Fin 3)
     foundCompareCtxC_of_found centre place entry q first w hE.invLPC hsW hc1 hav hmt hq
   obtain ⟨es0, cF, sF, vq, ch, oF, a, ls, rs, qw, gap, hraw, hseg, hmF, hrF, hcF, havF, hidle,
     hcen, hqe, hf, hmtF, hch, hchne, hoF, hcPe, hsPe⟩ := id hctx
-  obtain ⟨hprep, hmis, hfbS, hwatch, hbirth, hfresh, hland⟩ :=
+  obtain ⟨hprep, hmis, hfbS, hreachWatch, hbirth, hfresh, hland⟩ :=
     hpack cP sP a ls rs qw gap hctx hraw
   obtain ⟨hmP, hrP, hcP⟩ := foundCompareCtxC_control hctx
   exact foundExit_compare_final19 centre place entry q first w m h lower span μ hP hex hready
     hcan hsane hstart hor hzl hnn hpm hE hsW a ls rs qw gap hprep hmis hctx hfbS hE.stage
-    hmP hrP (by rw [hcP]; omega) hwatch hat hreach hround h3 h4 hinv horacle hfit hrest htie
+    hmP hrP (by rw [hcP]; omega) hreachWatch hat hreach hround h3 h4 hinv horacle hfit hrest htie
     hbirth hfreshClk hfresh hland hstepBreak
 
 

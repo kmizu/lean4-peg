@@ -235,7 +235,9 @@ theorem foundExit_compare_final17 (centre : GalilVM → Fin 3)
     (hfbS : FallbackReachS (PofC centre place entry w) q first w m c r cP sP)
     (hstage : ReplayStage w (PofC centre place entry w) q first c r)
     (hmP : cP.mode = .scan) (hrP : cP.replaying = false) (hcP : 1 ≤ cP.clock)
-    (hwatch : PrepLandingWatchC (PofC centre place entry w) q first cP sP)
+    (hreachWatch : ∃ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+      WatchSegE (PofC centre place entry w) q first 2048 es cP sP c2 s2 ∧
+        PalPeg.CloseoutWatchRun.LiveScanWatch c2 s2)
     (hat : FoundDpAtC centre place entry q first w lower span h c r)
     (hreach : ShiftReachC centre place entry q first w h)
     (hround : ShiftRoundAtC centre place entry q first w m h lower)
@@ -257,13 +259,11 @@ theorem foundExit_compare_final17 (centre : GalilVM → Fin 3)
   classical
   have hlag0 := mismatchLandingLagZeroL_of_ctx' centre place entry q first w m lower hP hE hbirth
     hdrain hfresh
-  have hlive : PrepLandingLiveC (PofC centre place entry w) q first cP sP :=
-    PalPeg.CloseoutWatchRound7.prepLandingLiveC_of_watch (PofC centre place entry w) q first
-      hmP hrP hcP hwatch
   have hrouteL := mismatchShiftRouteL_of_tick centre place entry q first w m lower μ h3 h4 hinv
     horacle hfit hrest htie
   have hsplit4 : ExitSplit4C centre place entry q first w h cP sP :=
-    exitSplit4C_of_tick centre place entry q first w h cP sP (hlive [] cP sP (.stop _ _))
+    exitSplit4C_of_tick centre place entry q first w h cP sP
+      (PalPeg.CloseoutWatchRound2.chain_ne_idle_of_foundCompareCtx hctx)
       (watchPrefixC_of_unique _ _ _ _ _)
   have hstp := PalPeg.CloseoutWatchRound6.lagStepC_of_parts hcan hsane hstart
   have hre := PalPeg.CloseoutWatchRound6.ledgerReachC_of_origin centre place entry q first 2048 w
@@ -281,14 +281,15 @@ theorem foundExit_compare_final17 (centre : GalilVM → Fin 3)
     foundExit_compare_final9S' (h := h) (fun hsplit =>
       PalPeg.CloseoutWatchRound15.foundExit_compare_final8 centre place entry q first w m h
         lower span hP hex hready hcan hsane hstart hor hzl hnn hpm hE hsW a ls rs qw gap hprep
-        hmis hctx hsplit hstage hmP hrP hcP hwatch hat hreach hround hland hstepBreak)
-      hT.2 hs3 hfbS hlive
+        hmis hctx hsplit hstage hmP hrP hcP hat hreach hround hland hstepBreak)
+      hT.2 hs3 hfbS (PalPeg.CloseoutWatchRound2.chain_ne_idle_of_foundCompareCtx hctx)
+      hreachWatch
   rcases hsplit4 hT.2 with hs | hb | hf | hm
   · exact via3 (fun _ => Or.inl hs)
   · exact via3 (fun _ => Or.inr (Or.inl hb))
   · exact via3 (fun _ => Or.inr (Or.inr (terminalRunFallbackC_of_G hf)))
   · have htail : ShiftTailC centre place entry q first w m c r cP sP :=
-      shiftTailC_of_dataL' centre place entry q first w m h lower span hlive
+      shiftTailC_of_dataL' centre place entry q first w m h lower span
         (PalPeg.CloseoutWatchRound10.foundDpShiftC_of_at centre place entry q first w hP
           lower span h hstage hat)
         hrouteL hlag0 hctx hm

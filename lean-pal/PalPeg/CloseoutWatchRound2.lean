@@ -288,6 +288,23 @@ def FoundCompareCtxC (centre : GalilVM → Fin 3)
     cP = {cF with clock := 2048, output := oF, replaying := false} ∧
     sP = afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)
 
+
+/-- **誕生した chain は idle ではない。**  `FoundCompareCtxC` の `ch ≠ .idle` を
+`sP.chain` に移すだけ（`sP = afterBirth true (afterCompare …)` で chain は素通し）。
+
+`exitSplit4C_of_tick` / `split4_of_prefix` が要求していた `LiveScanWatch cP sP` は
+**強すぎた**——中では `sP.chain ≠ .idle` を取り出すためにしか使われていない。
+誕生直後の chain は `.copy` なので `.watch` は偽だが、非 idle は真。 -/
+theorem chain_ne_idle_of_foundCompareCtx {centre : GalilVM → Fin 3}
+    {place : GalilVM → GalilScaffoldPlace.Place} {entry qq : ℕ} {first : Fin 9}
+    {raw : List (Fin 2)} {c0 : Control} {r : GalilVM} {cP : Control} {sP : GalilVM}
+    (hctx : FoundCompareCtxC centre place entry qq first raw c0 r cP sP) :
+    sP.chain ≠ ChainVM.idle := by
+  obtain ⟨es0, cF, sF, vq, ch, oF, a, ls, rs, qw, gap, hraw, hseg0, hmF, hrF, hcF, havF,
+    hidle, hCen, hq, hfound, hmt, hch, hchne, hoF, hcPeq, hsPeq⟩ := hctx
+  have hChainEq : sP.chain = ch := by rw [hsPeq, afterBirth_chain]; rfl
+  rw [hChainEq]; exact hchne
+
 /-- **The terminal record.**  `CloseoutWatchRound.TerminalC` at the end of the
 rounds, together with the found-tick context the tails also require. -/
 def TerminalC' (centre : GalilVM → Fin 3)

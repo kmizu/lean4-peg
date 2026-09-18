@@ -292,7 +292,9 @@ theorem foundExit_compare_final15 (centre : GalilVM → Fin 3)
     (hbr : RestartLandingC (PofC centre place entry w) q first w m cP sP)
     (hstage : ReplayStage w (PofC centre place entry w) q first c r)
     (hmP : cP.mode = .scan) (hrP : cP.replaying = false) (hcP : 1 ≤ cP.clock)
-    (hwatch : PrepLandingWatchC (PofC centre place entry w) q first cP sP)
+    (hreachWatch : ∃ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+      WatchSegE (PofC centre place entry w) q first 2048 es cP sP c2 s2 ∧
+        PalPeg.CloseoutWatchRun.LiveScanWatch c2 s2)
     (hat : FoundDpAtC centre place entry q first w lower span h c r)
     (hreach : ShiftReachC centre place entry q first w h)
     (hround : ShiftRoundAtC centre place entry q first w m h lower)
@@ -307,7 +309,7 @@ theorem foundExit_compare_final15 (centre : GalilVM → Fin 3)
     hstart hor hzl hnn hpm hE hsW a ls rs qw gap hprep hmis hctx
     (fallbackReachS_of_context' centre place entry q hq0 first h7 h8 w m c r cP sP hE.inv.1.1.2
       hex hsiP hMP hEP houtP hns hentry hpiece hreplay hce hbr)
-    hstage hmP hrP hcP hwatch hat hreach hround hmsr hland hstepBreak
+    hstage hmP hrP hcP hreachWatch hat hreach hround hmsr hland hstepBreak
 
 #print axioms foundExit_compare_final15
 

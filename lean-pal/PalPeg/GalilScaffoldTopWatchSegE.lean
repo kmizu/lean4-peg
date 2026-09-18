@@ -251,4 +251,35 @@ theorem prep_watch_start (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ)
 #print axioms watchSegE_events
 #print axioms prep_watch_start
 
+/-! ## `WatchSegE` の制御は live scan を保つ
+
+`CloseoutWatchRound7` にあったものをここへ移した（`WatchSegE` の素の構造的事実で、
+上流の `CloseoutWatchPhase2` / `CloseoutWatchRound5` からも必要になったため）。 -/
+
+/-- **Derived.**  A `WatchSegE` out of a live scan control lands on a live scan
+control: `wait` keeps the control, `count` only decrements a clock it knows is
+`> 1`, the two matching constructors reset the clock to `delay` and clear
+`replaying`, and the two replay constructors (`countR`, `matchIdleR`, the only
+ones that could set `replaying := true`) are unreachable from
+`c.replaying = false`. -/
+theorem watchSegE_live_control {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    (hdelay : 1 ≤ delay) {es : List Bool} {c c' : Control} {s t : GalilVM}
+    (h : WatchSegE P q first delay es c s c' t) :
+    c.mode = .scan → c.replaying = false → 1 ≤ c.clock →
+      c'.mode = .scan ∧ c'.replaying = false ∧ 1 ≤ c'.clock := by
+  induction h with
+  | stop c s => intro h1 h2 h3; exact ⟨h1, h2, h3⟩
+  | wait c s s' hm hr hn hb rest ih => intro h1 h2 h3; exact ih h1 h2 h3
+  | count c s s' hm hr ha hc hb rest ih =>
+      intro h1 h2 h3; exact ih h1 h2 (by simp; omega)
+  | «match» c s vs vq o hm hr ha hc hne hcmp hmt hq ho rest ih =>
+      intro h1 h2 h3; exact ih h1 (by simp) (by simpa using hdelay)
+  | matchIdle c s vs vq o hm hr ha hc hidle hl hrr hvs hmt hq hnf ho rest ih =>
+      intro h1 h2 h3; exact ih h1 (by simp) (by simpa using hdelay)
+  | countR c s s' hm hr hc hidle hb rest ih =>
+      intro h1 h2 h3; rw [hr] at h2; exact absurd h2 (by simp)
+  | matchIdleR c s vs vq o hm hr hc ha hidle hl hrr hvs hmt hq hnf ho rest ih =>
+      intro h1 h2 h3; rw [hr] at h2; exact absurd h2 (by simp)
+
+
 end PalPeg.GalilScaffoldChainInputSupply
