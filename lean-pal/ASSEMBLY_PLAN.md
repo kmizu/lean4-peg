@@ -32,6 +32,68 @@
 
 
 
+## 2026-09-19 n111: `ScanToScan`（区間抽出）を迂回できる — `scanSeg_snoc_tick`
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` なし）。公理は 3 義務のまま変化なし
+（`obligation_cycleOracle` / `obligation_localRealization` /
+`obligation_shiftPalAtScanStates`）。無条件 PAL は未完。計画書 §10.5 は未達。**
+
+### 測定（一次情報を読んだ結果）
+
+`obligation_shiftPalAtScanStates` の残差は `CloseoutRoundSeg` によれば 2 つ
+（`RoundSeg` ＝ `CompareRounds h _ 1 _` と `H_fresh`）で、どちらも
+`GalilScaffoldTopRoundS.round_next` / `GalilScaffoldTopFirstRound.first_round` が
+要求する **`ScanSeg`（run の区間）** に帰着する。区間を run から抽出するのが
+CLAUDE.md §1 の壁 (1)（`ScanToScan`、`CloseoutSegment`）。
+
+さらに `CloseoutOriginRounds` のヘッダは、**`hSP` の残差と `hor` の found 経路の葉
+`ShiftRoundC` は同じもの**だと定理にしている。つまり 2 つの壁ではなく 1 つ。
+
+### 迂回路が通った
+
+`ScanSeg` は `wait` / `count` / `match` の 3 構成子が `Tick` の
+`scan_wait` / `scan_count` / `scan_match` と 1 対 1（`scanSeg_steps` がその対応を作る）。
+障害は inductive が**前からしか積めない**ことだけやった。
+
+`PalPeg/MatchedRunSnoc.lean`（新規、全定理が標準公理のみ）:
+
+| 定理 | 内容 |
+|---|---|
+| `onlyMatchedRun_snoc` / `_head` / `_trans` | 射影側の末尾伸長・先頭剥がし・連結 |
+| `matchedSeq_snoc_background` / `_compare` | VM 側（`MatchedSeq`）の末尾伸長 |
+| `scanSeg_snoc_wait` / `_count` / `_match` | 制御つき（`ScanSeg`）の末尾伸長 |
+| `compare_matched_parts` | `compareFound` ＋ `matched` ＋ watch から `galilFrame` 側の比較と `afterCompare` を取り出す（tick 逆向きの核） |
+| **`scanSeg_snoc_tick`** | **run の 1 tick を `ScanSeg` に吸収。`Tick` の 24 構成子を全部潰して出口は 3 つだけ** |
+| `restartNeedsBroken_of_restartVM` | 上の側条件を具体枠で放電 |
+
+`scanSeg_snoc_tick` の 3 つの出口:
+
+1. `ScanSeg` が 1 手伸びる
+2. mode が scan を離れる（`scan_shift` / `scan_fallback` ＝ ラウンド境界）
+3. chain が watch でなくなる（終端の一致比較で chain が壊れる場合）
+
+側条件 `singlePositive cycle = false` は `RoundScan.fresh` ＋ `terminal_iff` から無償。
+
+### `ScanToScan` は要らない公算が大きい（反証はまだ無い）
+
+`CloseoutSegment` は「`SpanRep` は `ScanToScan` の下流」と書いていたが、`SpanRep` は
+n109〜n110 で `BranchSupply.spanRepOnScanAndShift_alongTrace` により **tick ごとに**
+証明できた。`RoundSeg` も同型で、区間を抽出せずに tick ごとに積めば足りるはず。
+
+なお `ScanToScan` は「任意の scan→scan 健全 run が `ScanSeg` ＋ `Rounds` に分解する」と
+全称量化しており、`ScanSeg.match` が `hwatch`（chain が watch）を要求する一方で
+**idle chain の一致比較も合法な `Tick`** である以上、**偽の疑いが強い**。
+機械検査した反証はまだ無いので `REFUTED` とは書かない。
+
+### 次
+
+`scanSeg_snoc_tick` を run 不変量
+（「いまの状態はあるラウンド起点から `n` 手の一致比較で到達した」）に仕立て、
+ラウンド境界（`scan_shift`）で `CompareRounds.next` を組む。
+`CompareRounds.next` は `OnlyMatchedRun` ＋ 終端不一致 ＋ `ShiftRun` / `ChainShiftRun` を
+要求するので、前者はこの経路で、後者は `scan_shift` tick の構成子が持っている。
+
+
 ## 2026-09-19 n110: `obligation_marksEntry` を放電（公理 4 → 3）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` なし）。`PalPeg/Axioms.lean` のラチェット緑。
