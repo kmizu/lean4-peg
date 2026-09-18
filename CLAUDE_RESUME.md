@@ -1,3 +1,59 @@
+## 2026-09-19 n129: 節 4 の供給 — `SegEnd` 枝は fallback へ。`LiveScanWatch` ガードの棚卸し
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。
+無条件 PAL は未完。§10.5 は未達。**
+
+### 放電済み（今回）
+
+`CloseoutWatchRound21.fallbackLanding_of_pack` の `hlive : LiveScanWatch c1 s1` は
+**過剰**だった——`obtain ⟨hm, hr, -, -⟩ := hlive` で clock と watch を捨てており、
+使っていたのは `mode = scan` と `replaying = false` だけ。その 2 つに弱めて
+呼び出し側 4 箇所（Round21/29/31/36）を通した。全体 build 緑。
+
+### 次の設計判断（材料は揃っている）
+
+`ReachesWatchFromRun.reachesWatchPhase_or_segEnd` の**第 2 枝**（準備完了前に不一致）を
+`FoundExitLPS.landedS` に着地させたい。材料:
+
+* 第 2 枝が返すのは `WatchSegE … es cP sP c' s'` ＋ `SegEnd P c' s'` ＋ `CopyOrBack s'.chain`
+  ＋ `c'.mode = .scan` ＋ `c'.replaying = false`
+* `SegEnd` は live 構成では `.mismatch` のみ（clock = 1、`canRight`、不一致）
+* `FoundPackCorrected.no_shift_from_copyChain` が「`.copy` 相では shift guard が立たず
+  `scan_fallback` へ」を証明済み
+* `FoundExitLPS` は `exit` と `landedS` の 2 構成子で、fallback 着地は `landedS`
+
+受け皿は `CloseoutWatchRound31.FallbackReachS` だが、その guard が `LiveScanWatch c1 s1`。
+
+**訂正（自分の見立ての修正）**: これを「`s1.chain ≠ .idle`」まで弱めるのは**行き過ぎ**。
+`ChainStep` が `.copy` から出るには `CopyInv`（`t.focus = 8`、`t.left ≠ []`、
+`read (left p) = some a`）が要るので、「chain が 1 手進める」
+（`WatchMismatchNoShiftC` の第 1 節）は任意の非 idle では出ない。
+**正しい弱化先は「tick できる相」** :
+
+    CopyOrBack s1.chain ∨ (∃ w, s1.chain = ChainVM.watch w)
+
+`CopyOrBack` は `CopyInv` を含むので第 1 節が `copyOrBack_tick_false_exists` で出る。
+第 2 節（不一致後に shift guard が立たない）は `.copy` 相では
+`FoundPackRefute.chainTick_copy_not_watch` でむしろ**簡単**。
+
+`LiveScanWatch` を guard に持つ定義の棚卸し（弱化候補）:
+
+| 定義 | ファイル |
+|---|---|
+| `WatchFallbackC` | `CloseoutWatchRound21:85` |
+| `WatchMismatchNoShiftC` / `WatchFallbackCostC` | `CloseoutWatchRound22:131` / `:143` |
+| `LandingRestartReachF` | `CloseoutWatchRound29:104` |
+| `FallbackReachS` | `CloseoutWatchRound31:246` |
+
+**`TerminalRunC` / `TerminalRunFallbackC` の `LiveScanWatch` は本物**（watch 無しで
+ラウンドは回らない）。弱化してはいけない。
+
+### 診断の定着
+
+**`LiveScanWatch` を取る定理は、まず本体での使われ方を数える。**
+`obtain ⟨…, -, -⟩` で捨てているなら、その分は過剰。今日これで 3 件
+（`split4_of_prefix` / `split3_of_prefix` / `fallbackLanding_of_pack`）が落ちた。
+
 ## 2026-09-19 n128: `hpack` の**両方の偽の節**（4 と 7）を found 経路から消した
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。
