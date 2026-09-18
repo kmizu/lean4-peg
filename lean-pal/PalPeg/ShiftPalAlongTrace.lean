@@ -169,6 +169,7 @@ theorem shiftPalAt_fresh_of_candidate {w : List (Fin 2)} {s s' : GalilVM}
 * `0 < h` / `2h ≤ r₀` / `r₀ ≤ 4h` / `hEnd` — 半径と周期の**大小**
 * 最後の等式 — period テープの**位相**（`RoundScan.pred` の `periodOnly = false` 版） -/
 def FreshShiftLedger (w : List (Fin 2)) (s s' : GalilVM) : Prop :=
+  shiftGuardVM s' →
   ∀ wch : GalilScaffoldChainWatch.State, s'.chain = ChainVM.watch wch →
     ∀ r₀ : ℕ, ScanInvariant w (position s.center) r₀ s.left s.right →
       Manacher.PalAt (encoded w) (position s.center - periodLength wch) (periodLength wch) ∧
@@ -197,7 +198,7 @@ theorem shiftPal_of_freshShiftLedger {w : List (Fin 2)} {s : GalilVM}
     | false => rw [if_neg (by simp)]; exact hvr
     | true => rw [if_pos rfl]; exact hvr
   obtain ⟨hIn, hOut, hPos, hLo, hHi, hEnd, hCaught⟩ :=
-    hLedger s' hCompare wch hChain r₀ hScanInv
+    hLedger s' hCompare hGuard wch hChain r₀ hScanInv
   exact shiftPalAt_fresh_of_candidate hChain hGuard hRight hCan hScanInv rfl
     hIn hOut hPos hLo hHi hEnd hCaught
 

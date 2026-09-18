@@ -1,3 +1,49 @@
+## n212 — 公理進捗: `obligation_shiftPalResiduesAlongRun` 第 3 連言を 2 段階弱めた
+
+**公理への進捗（これを毎回書く）**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 3 連言 `FreshShiftLedger` に **2 本のガードを追加**（`compareFound` / `shiftGuardVM`）。真に弱くなった |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 何を弱めたか
+
+旧（n210 時点）:
+```lean
+z.vm.periodOnly = false → ∀ s' : GalilVM, FreshShiftLedger w z.vm s'
+FreshShiftLedger w s s' := ∀ wch, s'.chain = watch wch → ∀ r₀, ScanInvariant … → (7 成分)
+```
+
+新:
+```lean
+z.vm.periodOnly = false → ∀ s' : GalilVM,
+  compareFound (PofC centreC placeC entry w) q first z.vm s' → FreshShiftLedger w z.vm s'
+FreshShiftLedger w s s' := shiftGuardVM s' →
+  ∀ wch, s'.chain = watch wch → ∀ r₀, ScanInvariant … → (7 成分)
+```
+
+根拠（一次情報、`ShiftPalAlongTrace.shiftPal_of_freshShiftLedger:186` の本体）:
+```lean
+intro s' hCompare hNotMatched wch hChain hGuard r₀ hScanInv
+```
+消費者は `hCompare`（`compareFound … s s'`）と `hGuard`（`shiftGuardVM s'`）を**両方持ってる**のに、
+`FreshShiftLedger` はどちらもガードに入れてへんかった。CLAUDE.md の過剰量化の型そのもの。
+
+効果: `wch`（周期テープ）が任意でなく `s'` の chain に、さらに `s'` が `s` の実際の比較先に縛られた。
+旧形は任意の `wch` に対し `2·periodLength wch ≤ r₀ ≤ 4·periodLength wch` を主張してて、
+`p` を大きく取れば破れる形やった。
+
+### 次の一手（残り 7 成分のうち `hCaught` を消す）
+
+`shiftGuardVM` は `symbol wch.machine.control.period.focus = read s'.right` を持ち、
+`shiftPalAt_fresh_of_candidate` は `hRight : s'.right = right s.right` を持つ。
+`hCaught` は `(encoded w)[position s.center + r₀ + 1 - 2h]? = symbol …focus` なので、
+`ScanInvariant` が右ヘッドの読む位置を与えれば `enc[c+r₀+1-2h]? = enc[c+r₀+1]?`（周期 `2h`）に落ちる。
+これは `hOut`（`PalAt` 半径 `2h`）から出るはず。出れば **7 成分が 6 成分になる**。
 ## n211 — 公理 `obligation_shiftPalResiduesAlongRun` を弱めた（`∀ s'` の過剰量化を除去）
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
