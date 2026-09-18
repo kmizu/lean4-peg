@@ -78,6 +78,7 @@ import PalPeg.ShiftPhaseDeterminism
 import PalPeg.RoundSegFromRun
 import PalPeg.ShiftPalAlongTrace
 import PalPeg.FoundPackRefute
+import PalPeg.FoundPackCorrected
 
 /-!
 # `Workbench` — 作ったが正本の鎖に配線されていない部品
@@ -265,6 +266,27 @@ producer は `CloseoutWatchRound10.prepLandingWatchC_of_short`）。**束ねる�
 `OutputRel` / `ScanInvariant` / `chain` はすべて congruence で移る。
 これで `foundCompareCtxC_of_found`（`FoundCompareCtxC` の producer）が使えるようになり、
 上の到達可能性込みの反証が書けた。
+
+## `FoundPackCorrected` — `PrepLanding*` の正しい形（`∀` → `∃`、未配線）
+
+| 定理 | 内容 |
+|---|---|
+| `ReachesWatchPhase`（def） | **誕生から watch 相に到達する区間が「ある」**（存在形） |
+| **`prepLandingWatchC_at_reachedWatch`** | **到達先では `PrepLandingWatchC` が正しく成り立つ**（`prepLandingWatchC_of_short` を当てる） |
+| `watchSegE_match_needs_only_nonIdle` | `WatchSegE` の `match` は `chain ≠ .idle` しか要求しない（copy/back 相も区間に載る） |
+
+**壊れていたのは結論の量化子だった。** `PrepLandingWatchC` は
+
+    ∀ es c2 s2, WatchSegE … cP sP c2 s2 → （c2 s2 で watch）
+
+で、`WatchSegE.stop cP sP` が無条件に存在するため `sP` 自身が watch であることを
+強制する。誕生直後の chain は `.copy` なのでこれは偽（`FoundPackRefute`）。
+`WatchSegE` の側は壊れておらず copy/back も素通しできるので、正しいのは
+
+    ∃ es c2 s2, WatchSegE … cP sP c2 s2 ∧ （c2 s2 で watch）
+
+**`∀ → ∃` の付け替えは要求を空虚に弱めたのではなく、量化子の位置を直したもの。**
+到達先では既存の producer がそのまま効く。
 
 ## `ShiftPalAlongTrace` — `hSP` の正しい形（trace 形、未配線）
 
