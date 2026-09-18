@@ -88,6 +88,43 @@ theorem prepLandingLiveC_watch_start (P : Shared) (q : ℕ) (first : Fin 9)
     ∃ w : GalilScaffoldChainWatch.State, sP.chain = ChainVM.watch w :=
   (hLive [] cP sP (.stop cP sP)).2.2.2
 
+
+/-! ## chain の相は一方向（`.copy → .back → .watch`）
+
+`ChainStep`（`GalilScaffoldTopChainVM:50`）の構成子:
+
+    copyBit  : .copy → .copy   （周期テープに 1 記号書く）
+    copyEnd  : .copy → .back   （LAST を書いて巻き戻しへ）
+    backStep : .back → .back
+    backDone : .back → .watch
+    watchStep: .watch → .watch
+
+**`.copy` から `.watch` へ直接行く構成子は無い。** `ChainMatched` は形を保つので、
+`ChainTick`（= `ChainStep` ＋ 一致なら `ChainMatched`）1 手でも `.copy` から
+`.watch` には届かない。つまり found 比較直後の chain は
+**1 tick 後ですら watch ではない**。 -/
+
+/-- **誕生直後の chain は 1 tick では watch にならない。** -/
+theorem chainTick_copy_not_watch {a : Bool} {t : GalilScaffoldTape.Tape} {h : Counter}
+    {p : GalilScaffoldPlace.Place} {v : GalilScaffoldChainPeriod.Tape}
+    {lag margin : Counter} {ver : PlaceHead} {z : ChainVM}
+    (hTick : ChainTick a (ChainVM.copy t h p v lag margin ver) z)
+    (wv : GalilScaffoldChainWatch.State) : z ≠ ChainVM.watch wv := by
+  obtain ⟨y, hStep, hAfter⟩ := hTick
+  cases hStep with
+  | copyBit _ _ _ _ _ _ _ _ _ _ _ =>
+    cases a with
+    | false => rw [show z = _ from hAfter]; intro hEq; exact ChainVM.noConfusion hEq
+    | true =>
+      obtain ⟨lag', margin', hCopy⟩ := chainMatched_copy_stays_copy hAfter
+      rw [hCopy]; intro hEq; exact ChainVM.noConfusion hEq
+  | copyEnd _ _ _ _ _ _ _ _ _ _ _ =>
+    cases a with
+    | false => rw [show z = _ from hAfter]; intro hEq; exact ChainVM.noConfusion hEq
+    | true =>
+      cases hAfter with
+      | back _ _ _ _ _ => intro hEq; exact ChainVM.noConfusion hEq
+
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
@@ -154,6 +191,7 @@ theorem hpack_false_of_foundReachable {raw : List (Fin 2)} {c c' : Control} {r t
 end
 
 #print axioms chainMatched_copy_stays_copy
+#print axioms chainTick_copy_not_watch
 #print axioms chainStart_is_copy
 #print axioms hpack_false_of_foundCompareCtx
 

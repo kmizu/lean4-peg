@@ -237,6 +237,9 @@ inductive で、**`Tick` の `scan_wait` / `scan_count` / `scan_match` と 1 対
 |---|---|
 | `chainMatched_copy_stays_copy` | `ChainMatched` は `.copy` から `.copy` にしか行かない |
 | `chainStart_is_copy` | `chainStart` は `.copy`（`rfl`、公理ゼロ） |
+| `chainTick_copy_not_watch` | **誕生直後の chain は 1 tick でも watch にならない**（`ChainStep` に `.copy → .watch` が無い） |
+| `prepLandingLiveC_watch_start` | `PrepLandingLiveC` も watch 始点を強制する |
+| `prepLandingLiveC_false_of_foundCompareCtx` | `PrepLandingLiveC` も found 比較直後で偽 |
 | **`hpack_false_of_foundCompareCtx`** | **`FoundCompareCtxC` の証人 ＋ `PrepLandingWatchC` から `False`** |
 | **`hpack_false_of_foundReachable`** | **`InvLPC` ＋ `SegReachedW` ＋ found 比較から `False`（証人は `foundCompareCtxC_of_found` が作る）** |
 
