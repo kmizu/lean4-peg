@@ -210,7 +210,7 @@ theorem given_landingObligationsSansRadiusLedger (entry q : ℕ) (first : Fin 9)
 残る義務は `ScanLandingObligationsAt` の **3 場**（`bg` / `matchLand` / `entryLand`）と `hver`。 -/
 theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
     (hShiftPalAlongRun : ∀ (w : List (Fin 2)) (c : Control) (r : GalilVM),
-      PalPeg.GalilInvPlus2.InvLPC w c r →
+      PalPeg.GalilInvPlus3.InvLPS (PofC centreC placeC entry w) q first w c r →
       ∀ (m : ℕ) (z : GalilScaffoldTop.State GalilVM),
         Steps (galilFrameS (PofC centreC placeC entry w) q first) 2048 m ⟨c, r⟩ z →
         ScanNR z → GalilScaffoldChainVerifier.canRight z.vm.right →

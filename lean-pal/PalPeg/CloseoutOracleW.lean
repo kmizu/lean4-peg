@@ -84,7 +84,8 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 
 /-- `CloseoutExtraFree.PackRunRMG2P` over `IPackMW`. -/
 def PackRunRMW (w : List (Fin 2)) : Prop :=
-  ∀ (c : Control) (r : GalilVM), InvLPC w c r →
+  ∀ (c : Control) (r : GalilVM),
+    PalPeg.GalilInvPlus3.InvLPS (PofC centre place entry w) q first w c r →
     ∀ (M : ℕ), 1 ≤ M → M ≤ w.length →
     ∀ (j : ℕ) (x : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 j ⟨c, r⟩ x →
@@ -106,7 +107,8 @@ theorem ipackMW_of_invLPC {w : List (Fin 2)}
 bounds the pack now asks for are read off `ReportPointAt` and `InvLPS`. -/
 theorem reachAtIMW_of_reachAtC3R_W {w : List (Fin 2)}
     (hpr : PackRunRMW centre place entry q first w)
-    {m : ℕ} {c : Control} {r : GalilVM} (hIC : InvLPC w c r)
+    {m : ℕ} {c : Control} {r : GalilVM}
+    (hIC : PalPeg.GalilInvPlus3.InvLPS (PofC centre place entry w) q first w c r)
     (hx : IPackMW centre place entry q first w ⟨c, r⟩)
     (h : ReachAtC3 (PofC centre place entry w) q first w m c r) :
     ReachAtIMW centre place entry q first w m c r := by
@@ -126,7 +128,8 @@ theorem reachAtIMW_of_reachAtC3R_W {w : List (Fin 2)}
 theorem cycleOutIMW_of_cycleOutMC3R_W {w : List (Fin 2)}
     (hpr : PackRunRMW centre place entry q first w)
     {m : ℕ} (hm1 : 1 ≤ m) (hmle : m ≤ w.length)
-    {c : Control} {r : GalilVM} (hIC : InvLPC w c r)
+    {c : Control} {r : GalilVM}
+    (hIC : PalPeg.GalilInvPlus3.InvLPS (PofC centre place entry w) q first w c r)
     (hx : IPackMW centre place entry q first w ⟨c, r⟩)
     (h : CycleOutMC3 (PofC centre place entry w) q first w m c r) :
     CycleOutIMW centre place entry q first w m c r := by
@@ -145,7 +148,7 @@ theorem h_oracleIMW_of_MC3_W
       CycleOracleMC3 (PofC centre place entry w) q first w) :
     H_oracleIMW centre place entry q first := by
   intro w hw m c r hm1 hmle hI hp
-  exact cycleOutIMW_of_cycleOutMC3R_W centre place entry q first (hpr w) hm1 hmle hI.1
+  exact cycleOutIMW_of_cycleOutMC3R_W centre place entry q first (hpr w) hm1 hmle hI
     (ipackMW_of_invLPC centre place entry q first (hsl w) hI.1)
     (hor w hw m c r hm1 hmle hI hp)
 
@@ -157,7 +160,8 @@ theorem packRunR_MW {w : List (Fin 2)}
     (hme : H_marksEntry' (PofC centre place entry w) q first)
     :
     PackRunRMW centre place entry q first w := by
-  intro c r hIC M hm1 hmle j x hjx k y hx h hry hyb
+  intro c r hInvLPS M hm1 hmle j x hjx k y hx h hry hyb
+  have hIC : InvLPC w c r := hInvLPS.1
   have hlv0 : ∀ (m : ℕ) (z : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
       CentreLive z.ctl z.vm :=

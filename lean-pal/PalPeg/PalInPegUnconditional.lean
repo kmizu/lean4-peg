@@ -1,6 +1,7 @@
 import PalPeg.PalInPeg
 import PalPeg.BranchSupply
 import PalPeg.ShiftPalAlongTrace
+import PalPeg.CloseoutFoundRoutes
 
 /-!
 # `PalInPeg.unconditional` — 目標そのもの。穴は `axiom` で明示する
@@ -115,7 +116,7 @@ open PalPeg.GalilFinalAssembly (boot)
 消費者が持っている（下の定理の仮説）。 -/
 axiom obligation_shiftPalResiduesAlongRun (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (c : GalilScaffoldController.Control) (r : GalilVM),
-      PalPeg.GalilInvPlus2.InvLPC w c r →
+      PalPeg.GalilInvPlus3.InvLPS (PofC centreC placeC entry w) q first w c r →
       (∀ (m : ℕ) (z : GalilScaffoldTop.State GalilVM),
         Steps (galilFrameS (PofC centreC placeC entry w) q first) 2048 m ⟨c, r⟩ z →
         PalPeg.CloseoutRoundUnique.H_readsShift w z.ctl z.vm) ∧
@@ -137,16 +138,16 @@ axiom obligation_shiftPalResiduesAlongRun (entry q : ℕ) (first : Fin 9) :
 それを捨てていた（`obtain` して使わない、という CLAUDE.md の過剰量化の兆候そのもの）。 -/
 theorem obligation_shiftPalAlongRun (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (c : GalilScaffoldController.Control) (r : GalilVM),
-      PalPeg.GalilInvPlus2.InvLPC w c r →
+      PalPeg.GalilInvPlus3.InvLPS (PofC centreC placeC entry w) q first w c r →
       ∀ (m : ℕ) (z : GalilScaffoldTop.State GalilVM),
         Steps (galilFrameS (PofC centreC placeC entry w) q first) 2048 m ⟨c, r⟩ z →
         ScanNR z → GalilScaffoldChainVerifier.canRight z.vm.right →
         ShiftPal centreC placeC entry q first w z.vm := by
-  intro w c r hInvLPC m z hSteps hScan hCanRight
-  exact PalPeg.ShiftPalAlongTrace.shiftPal_alongRun centreC placeC entry q first hInvLPC
-    (obligation_shiftPalResiduesAlongRun entry q first w c r hInvLPC).1
-    (obligation_shiftPalResiduesAlongRun entry q first w c r hInvLPC).2.1
-    (obligation_shiftPalResiduesAlongRun entry q first w c r hInvLPC).2.2
+  intro w c r hInvLPS m z hSteps hScan hCanRight
+  exact PalPeg.ShiftPalAlongTrace.shiftPal_alongRun centreC placeC entry q first hInvLPS.1
+    (obligation_shiftPalResiduesAlongRun entry q first w c r hInvLPS).1
+    (obligation_shiftPalResiduesAlongRun entry q first w c r hInvLPS).2.1
+    (obligation_shiftPalResiduesAlongRun entry q first w c r hInvLPS).2.2
     m z hSteps hScan.1 hScan.2 hCanRight
 
 /-! ### trace 形 `ShiftPal` の 3 原子（n132 で `obligation_shiftPalAlongTrace` を割った）
@@ -211,8 +212,12 @@ theorem obligation_shiftPalResiduesAlongTrace (entry q : ℕ) (first : Fin 9) :
   have hInvLPC : PalPeg.GalilInvPlus2.InvLPC (a :: rest) (st 1).ctl (st 1).vm :=
     PalPeg.GalilOracleMC2.invLPC_of_boot centreC placeC entry q first 2048 hSteps01
       ⟨hInvL, hEntryCounters⟩ (PalPeg.GalilInvPlus2.centreRep_of_restarted hRestarted)
+  -- `ReplayStage` は `Inv` から無条件（`CloseoutFoundRoutes.replayStage_of_inv`）
+  have hInvLPS : PalPeg.GalilInvPlus3.InvLPS (PofC centreC placeC entry (a :: rest)) q first
+      (a :: rest) (st 1).ctl (st 1).vm :=
+    ⟨hInvLPC, PalPeg.CloseoutFoundRoutes.replayStage_of_inv hInv⟩
   obtain ⟨hReadsShift, hFreshShift, hFreshLedger⟩ :=
-    obligation_shiftPalResiduesAlongRun entry q first (a :: rest) (st 1).ctl (st 1).vm hInvLPC
+    obligation_shiftPalResiduesAlongRun entry q first (a :: rest) (st 1).ctl (st 1).vm hInvLPS
   refine ⟨fun j hj1 hjle => ?_, fun j hj1 hjlt => ?_, fun j hj1 hjle => ?_⟩
   · exact hReadsShift (j - 1) (st j)
       (PalPeg.GalilTrailFront.steps_between hPreTrace.trace hj1 hjle)

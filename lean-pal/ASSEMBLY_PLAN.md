@@ -1,3 +1,41 @@
+## 2026-09-19 n177: `obligation_shiftPalResiduesAlongRun` の仮説を `InvLPC` → `InvLPS` に強めた（公理は弱くなる）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+### 見つけたもの: `ReplayStage` は欠けていたのではなく**捨てられていた**
+
+`CloseoutOracleW.h_oracleIMW_of_MC3_W:148` は `hI : InvLPS` を持っているのに
+**`hI.1`（`InvLPC` の部分）だけ**を `PackRunRMW` に渡していた。
+`InvLPS = InvLPC ∧ ReplayStage`（`GalilInvPlus3:86`）なので、
+**`ReplayStage` はその場で無償**だった。CLAUDE.md §3 が `hstage` を「残り葉」として
+挙げていたが、この経路では既に手元にある。
+
+### やったこと（(A) の操作）
+
+`PackRunRMW` の origin 仮説を `InvLPC` → `InvLPS` に上げ、下流に伝播:
+
+| ファイル | 変更 |
+|---|---|
+| `CloseoutOracleW` | `PackRunRMW` の def、`reachAtIMW_of_reachAtC3R_W`、`cycleOutIMW_of_cycleOutMC3R_W`、`h_oracleIMW_of_MC3_W`（`hI.1` → `hI`）、`packRunR_MW` の本体 |
+| `CloseoutMarksPack` | 2 つの producer の本体（`hIC := hInvLPS.1`）＋ `packRunR_MW_marksFree` の `hShiftPalAlongRun` 仮説 |
+| `CloseoutFinalBranch` | `given_scanLandingObligations` の `hShiftPalAlongRun` 仮説 |
+| `PalInPegUnconditional` | 公理と定理の仮説 |
+
+trace 形の導出（n175）も `st 1` で `InvLPS` が要るようになったが、
+**`CloseoutFoundRoutes.replayStage_of_inv` が `Inv` から無条件で `ReplayStage` を出す**ので
+`inv_of_boot_tick` の `hInv` からタダ。
+
+### なぜこれが前進か
+
+`StageEntryC = InvLPS ＋ ReadyFuel`（`CloseoutContracts:65`）。
+found 経路の入口（`prepInputs3_of_found_or_later`）は `StageEntryC` を要求する。
+**`InvLPS` が手に入ったので、残る差は `ReadyFuel` 1 つだけ**になった。
+`SegReachedW` の方は `GalilInvPlus.segment_of_invLP` ＋ 既に閉じている `hlive`/`hends` で出る。
+
+公理は 3 本のまま（本数は動かないが、`obligation_shiftPalResiduesAlongRun` の文は
+**弱くなった**——より強い仮説を取るようになった）。
+
 ## 2026-09-19 n175: **計器が動いた。公理 4 → 3。**
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット更新。

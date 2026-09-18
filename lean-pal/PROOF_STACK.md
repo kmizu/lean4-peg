@@ -83,8 +83,12 @@
 CLAUDE.md の記述では `CycleOracleMC3` は origin/着地とも `InvLPS` なので、
 **文脈上は `InvLPS` が来ている可能性が高い**（未検証——`PackRunRMW` の呼び出し元を辿って確認する）。
 
-これが通れば (a)(b)(c) の producer が全部 `StageEntryC` から届くようになり、
-残りは `ReplayStage` ＋ `ReadyFuel` の 2 葉に集約される。
+**済（n177）**: `PackRunRMW` を `InvLPS` に上げた。`h_oracleIMW_of_MC3_W:148` が
+`hI : InvLPS` を持ちながら `hI.1` だけ渡していた（destructure して捨てる）ので、
+`ReplayStage` はその場で無償だった。全体 build 緑。
+
+**残る差は `ReadyFuel` 1 つ**（`StageEntryC = InvLPS ＋ ReadyFuel`）。
+`SegReachedW` は `GalilInvPlus.segment_of_invLP` ＋ 既に閉じている `hlive`/`hends`。
 
 ### n175 の教訓（これが一番大事）
 
