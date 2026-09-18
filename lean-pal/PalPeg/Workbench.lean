@@ -83,6 +83,8 @@ import PalPeg.CopyPhaseTick
 import PalPeg.CopyPhaseTickMatched
 import PalPeg.AnswerAheadDecode
 import PalPeg.ChainReachesWatchFromFound
+import PalPeg.LiveSegmentConstruct
+import PalPeg.ReachesWatchFromRun
 
 /-!
 # `Workbench` — 作ったが正本の鎖に配線されていない部品
@@ -290,20 +292,18 @@ producer は `CloseoutWatchRound10.prepLandingWatchC_of_short`）。**束ねる�
 与えるので、run が誕生からその長さの `WatchSegE` を走れば終端は watch。
 **chain の中身はもう一切残っていない**——純粋な予算・スケジュールの問題になった。
 
-**訂正（n125）: その「予算」は現状の構成では届かない。** `reachesWatchPhase_of_backgroundRun`
-の `hClock : n < cP.clock` は `watchSegE_backgroundRun_live` が `.count` / `.wait` だけで
-区間を作るために要る。一次情報を読むと `WatchSegE.count` は `1 < c.clock` を要求し、
-`.match` は `c.clock = 1` で `clock := delay` に戻す（`GalilScaffoldTopWatchSegE.lean:26,33`）。
-`delay = 2048` なので **background だけで走れるのは 2047 手**、つまり `2h+2 < 2048`
-（`h ≤ 1022`）の準備に限られる。半周期 `h` は入力長に比例して伸びるので、
-一般には準備が入力記号をまたぎ、区間に `.match`（事象 `true`）が混ざる。
-`found_to_watchStart_least` がイベントの中身を問わないのはそのため。
+**訂正（n125）: `reachesWatchPhase_of_backgroundRun` の `hClock : n < cP.clock` は強すぎた。**
+`watchSegE_backgroundRun_live` が `.count` / `.wait` だけで区間を作るので、
+`delay = 2048` の下では background だけで走れるのは 2047 手、つまり `2h+2 < 2048`
+（`h ≤ 1022`）の準備に限られる（`GalilScaffoldTopWatchSegE.lean:26,33`）。
 
-さらに、`.match` を載せるには比較が実際に一致している必要があり、不一致なら区間は
-そこで終わる（chain は `.copy` 相なので `shiftGuard` は立たず `scan_fallback` へ——
-`no_shift_from_copyChain`）。したがって **`ReachesWatchPhase` の無条件形は成り立たず、
-正しい目標は「watch に到達する ∨ 準備完了前に不一致で fallback に落ちる」の選言**。
-後者の半分は `no_shift_from_copyChain` が既に持っている。
+**ただし「無条件形は成り立たない」まで言ったのは考えすぎだった。**
+idle chain 版 `GalilSegmentConstructB.watchSegE_constructB` は `n < c.clock` を
+**要求していない**——clock を構成の中で処理し、結論は既に `es.length = n ∨ SegEnd P c' t`
+という 2 択になっている。live 版も同じ形でよく、唯一足りなかった部品が
+「一致事象で chain が 1 手進める」＝ `CopyPhaseTickMatched.copyOrBack_tick_true_exists`。
+できたのが `LiveSegmentConstruct.watchSegE_constructLive` と
+`ReachesWatchFromRun.reachesWatchPhase_or_segEnd`（下）。
 
 **壊れていたのは結論の量化子だった。** `PrepLandingWatchC` は
 
@@ -353,6 +353,26 @@ copy/back の `ChainStep` は lag を触らず `ChainMatched` は `inc` する�
 `hCursor : (denote y.config).pos 11 = h`（DP 出力カーソル）。**これが無いと `h` の
 一意性が言えず、「長さ `2h+2`」という主張そのものが `dm` 依存になって壊れる。**
 誕生した chain と `chainStart` の同一視は `chainMatched_unique`。
+
+## `LiveSegmentConstruct` / `ReachesWatchFromRun` — clock の余裕なしの区間構成（未配線）
+
+| 定理 | 内容 |
+|---|---|
+| `LiveSegmentConstruct.match_step_live` | 一致比較 1 手分の証人（`WatchSegE.match` の側条件をすべて作る） |
+| **`LiveSegmentConstruct.watchSegE_constructLive`** | **live chain 版の区間構成。`n` 手走破 ∨ `SegEnd`。clock の余裕は不要** |
+| **`ReachesWatchFromRun.reachesWatchPhase_or_segEnd`** | **`ReachesWatchPhase` ∨ `SegEnd` で早期終了** |
+| `ReachesWatchFromRun.prepLandingWatchC_or_segEnd` | 節 4 の正しい形まで（到達した側） |
+
+探索側の帳簿（`ReadyFuel` / `hsearch`）は live chain では**丸ごと不要**——
+`searchEffect P a s v` は `s.chain ≠ .idle` の枝で `v = searchLens.get s` に潰れ、
+`chainBorn` も `false` になるので誕生も起きない。`SegEnd` の 5 枝のうち live で
+実際に出るのは `.mismatch` だけ。
+
+**残る配線**: found 文脈から 3 入力を作る（`CopyOrBack` ← `copyOrBack_of_chainMatched_chainStart`
+＋ `copyInv_of_found`、`LagPos` ← `lagPos_of_chainMatched_chainStart`、
+`hChainReachesWatch` ← `chainReachesWatch_of_found`）。`FoundCompareCtxC`
+（`CloseoutWatchRound2:270`）が材料を持っている。**残る側条件は `sF.radius = ofNat (r0+1)`**
+（`found_to_watchStart_least` が `ofNat (r0+1)` 形を、`LagPos` が `positive sF.radius` を要求）。
 
 ## `ShiftPalAlongTrace` — `hSP` の正しい形（trace 形、未配線）
 

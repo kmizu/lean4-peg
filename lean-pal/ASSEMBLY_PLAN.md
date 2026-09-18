@@ -1,34 +1,27 @@
-## 2026-09-19 n125: n124 の「残るは予算だけ」は**誤り**だった — clock を一次情報で測り直した
+## 2026-09-19 n125: live chain 版の区間構成ができた — clock の余裕は要らなかった（n124 の訂正 2 段）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。
 無条件 PAL は未完。§10.5 は未達。**
 
-### まず訂正（自分の見積もりが甘かった）
+### まず訂正 2 段（自分の見積もりが 2 回とも外れた）
 
-n124 は「残る外部入力 4 つのうち 3 つは found 文脈にある、最後の 1 つ
-`clock の余裕 n < cP.clock` は予算層の話」と書いた。**この「予算層の話」という
-片付け方が間違っていた。** 一次情報を読み直すと:
+**訂正 1（n124 が甘かった）**: 「残る外部入力 4 つのうち最後の 1 つ
+`clock の余裕 n < cP.clock` は予算層の話」と書いたが、`watchSegE_backgroundRun_live`
+（`.count` / `.wait` だけで作る区間）が走れるのは高々 2047 手で、準備に要る `2h+2` 手は
+`h ≤ 1022` の入力にしか収まらない。一次情報:
 
-* `WatchSegE.count` は `1 < c.clock` を要求し `clock := c.clock - 1`
-  （`GalilScaffoldTopWatchSegE.lean:26`）
-* `WatchSegE.match` は `c.clock = 1` を要求し `clock := delay` に戻す（同 `:33`）
-* `delay = 2048`
+* `WatchSegE.count` は `1 < c.clock` を要求し `clock := c.clock - 1`（`GalilScaffoldTopWatchSegE.lean:26`）
+* `WatchSegE.match` は `c.clock = 1` を要求し `clock := delay`(=2048) に戻す（同 `:33`）
 
-つまり `watchSegE_backgroundRun_live`（`.count` / `.wait` だけで作る区間）が走れるのは
-**高々 2047 手**。準備に要るのは `2h+2` 手で、半周期 `h` は入力長に比例して伸びる。
-**`h ≤ 1022` の場合しか載らない。** 一般には準備が入力記号をまたぎ、区間に
-`.match`（事象 `true`）が混ざる。`found_to_watchStart_least` がイベント列の中身を
-問わない形で書かれているのは、まさにそのため。
+**訂正 2（訂正 1 のあと考えすぎた）**: そこから「`ReachesWatchPhase` の無条件形は
+成り立たない、選言に作り直して消費者も書き換えが要る」と書いた。**これは考えすぎ。**
+既存の idle chain 版 `GalilSegmentConstructB.watchSegE_constructB` は `n < c.clock` を
+**要求していない**——clock を構成の中で処理し、結論は既に
+`es.length = n ∨ SegEnd P c' t` という 2 択になっている。呼び出し側が渡す `n` は
+`headRank r.right * 2048 + c.clock`（入力が尽きるまでの全機械ステップ数）。
 
-さらに `.match` を載せるには比較が実際に一致していなければならない。不一致なら
-区間はそこで終わる（chain は `.copy` 相なので `shiftGuard` は立たず `scan_fallback` へ)。
-したがって:
-
-**`ReachesWatchPhase` の無条件形は成り立たない。正しい目標は
-「watch に到達する ∨ 準備完了前に不一致で fallback に落ちる」の選言。**
-
-後者の半分は `FoundPackCorrected.no_shift_from_copyChain` が既に持っている
-（誕生直後の scan 状態からは shift に行けない）。
+**live chain 版も同じ形でよかった。** 新しい概念は要らない。
+異なる操作的意味論を持つ機械同士の対応を、既にある型に合わせて写すだけ。
 
 ### 今日証明したもの（すべて標準公理、`sorry` ゼロ）
 
@@ -69,13 +62,39 @@ copy/back の `ChainStep` は lag を触らず `ChainMatched` は `inc` する�
 **不変量は `positive` で書くこと。** `zero lag = false` では `inc` で保たれない
 （`⟨[], [()]⟩` の `inc` は `reset`）。`positive` なら保たれる。
 
+**`PalPeg/LiveSegmentConstruct.lean`（新規）** — `constructB` の live chain 版
+
+| 定理 | 内容 |
+|---|---|
+| `match_step_live` | 一致比較 1 手分の証人（`WatchSegE.match` の側条件をすべて作る） |
+| `watchSegE_constructLive` | **live chain 版の区間構成。clock の余裕は要らない** |
+
+探索側の帳簿（`ReadyFuel` / `hsearch`）は live chain では**丸ごと不要**——
+`searchEffect P a s v` は `s.chain ≠ .idle` の枝で `v = searchLens.get s` に潰れ、
+`chainBorn` も `false` になるので誕生も起きない。`SegEnd` の 5 枝のうち live で
+実際に出るのは `.mismatch` だけ（`.ended` は `.wait` で素通しして chain を進める方が得、
+`.found` / `.foundBackground` は探索が不活性、`.lastLetter` は入力側の都合）。
+
+**`PalPeg/ReachesWatchFromRun.lean`（新規）** — 橋
+
+| 定理 | 内容 |
+|---|---|
+| `reachesWatchPhase_or_segEnd` | **`ReachesWatchPhase` ∨ `SegEnd` で早期終了**（clock の余裕なし） |
+| `prepLandingWatchC_or_segEnd` | 節 4 の正しい形まで（到達した側） |
+
 ### 次にやること
 
-1. `watchSegE_backgroundRun_live` の `.match` 版。要る witness は
-   `copyOrBack_tick_true_exists`（今日できた）／ `searchEffect`（`hsearch` 側入力、
-   `constructB` と同じ）／ `refresh` の出力（`constructB` と同じ構成）。
-   結論は **3 択**の選言:「watch 到達」「`n` 手走破でまだ copy/back」「不一致で区間終了」。
-2. その選言を `foundExit_compare_final18` の節 4 / 節 7 に配線する。**消費者側を
+1. found 文脈から `reachesWatchPhase_or_segEnd` の 3 入力を作る配線:
+   `CopyOrBack sP.chain`（`copyOrBack_of_chainMatched_chainStart` ＋ `copyInv_of_found`）、
+   `LagPos sP.chain`（`lagPos_of_chainMatched_chainStart`）、
+   `hChainReachesWatch`（`chainReachesWatch_of_found`）。
+   `FoundCompareCtxC`（`CloseoutWatchRound2:270`）が `ChainMatched (chainStart … sF.radius) ch` と
+   `sP = afterBirth true (afterCompare …)` を持っているので材料は揃っている。
+   **残る側条件は `sF.radius = ofNat (r0+1)`**（`found_to_watchStart_least` が
+   `ofNat (r0+1)` 形を要求し、`LagPos` も `positive sF.radius` を要求する）。
+   これは radius 台帳の話で、found 時点で radius が正の canonical counter であること。
+   `hmP` / `hrP` / `hcP`（`1 ≤ cP.clock`）は `foundExit_compare_final20` に既にある。
+2. その 2 択を `foundExit_compare_final18` の節 4 / 節 7 に配線する。**消費者側を
    書き換える必要がある**（`hpack` の `∀` 形は `FoundPackRefute` で反証済み）。
 3. 4 義務のうち最短は `obligation_shiftPalAlongTrace`。`ShiftPalAlongTrace.
    shiftPal_alongTrace` が既に正しい形で、残差は `H_readsShift` / `H_freshShiftAtShiftEntry` /
