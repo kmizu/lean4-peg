@@ -192,4 +192,153 @@ theorem scanSeg_snoc_match {P : Shared} {q : ℕ} {first : Fin 9} {delay n : ℕ
 #print axioms scanSeg_snoc_count
 #print axioms scanSeg_snoc_match
 
+
+/-! ## `Tick` 1 手を `ScanSeg` に吸収する
+
+ここが「区間抽出（`ScanToScan`）なしで run から `ScanSeg` を作る」の要。
+scan 相の `Tick` は `scan_wait` / `scan_count` / `scan_match` / `scan_shift` /
+`scan_fallback` の 5 つしかなく、前 3 つは `ScanSeg` の構成子そのもの、
+後ろ 2 つは mode が scan を離れる（＝ラウンド境界）。 -/
+
+/-- **一致比較 tick の分解。**  `compareFound` から `galilFrame` 側の比較を取り出す。
+chain が watch していれば `chainBorn` は false なので `afterBirth` は恒等。 -/
+theorem compare_matched_parts {P : Shared} {q : ℕ} {first : Fin 9} {t u : GalilVM}
+    (hCompare : (galilFrameS P q first).compare t u)
+    (hMatched : (galilFrameS P q first).matched u)
+    {wch : GalilScaffoldChainWatch.State} (hWatch : t.chain = ChainVM.watch wch) :
+    ∃ (vs : ScanVM) (vq : SearchVM),
+      u = afterCompare t vs vq ∧ vs.chain = u.chain ∧
+      searchEffect P true t vq ∧
+      (galilFrame P q first).compare t (scanLens.set t vs) ∧
+      (galilFrame P q first).matched (scanLens.set t vs) := by
+  obtain ⟨vs, vq, a, hvl, hvr, hiff, hsearch, hchain, hteq⟩ := hCompare
+  have hNotIdle : t.chain ≠ ChainVM.idle := by rw [hWatch]; intro h0; cases h0
+  have hATrue : a = true := by
+    cases a with
+    | true => rfl
+    | false =>
+      exfalso
+      rw [if_neg (by simp)] at hteq
+      subst hteq
+      refine absurd (hiff.2 ?_) (by simp)
+      have h0 : GalilScaffoldInputHead.read
+            (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found))
+              t.chain) (afterMismatch t vs vq)).left
+          = GalilScaffoldInputHead.read
+            (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found))
+              t.chain) (afterMismatch t vs vq)).right := hMatched
+      rw [afterBirth_left, afterBirth_right] at h0
+      exact h0
+  subst hATrue
+  rw [if_pos rfl, afterBirth_of_ne_idle hNotIdle] at hteq
+  have hMatchedSet : (galilFrame P q first).matched (scanLens.set t vs) := hiff.1 rfl
+  have hChainTick : ChainTick true t.chain vs.chain := by
+    rcases hchain with ⟨-, hct⟩ | ⟨hidle, -, -⟩ | ⟨hidle, -, -⟩
+    · exact hct
+    · exact absurd hidle hNotIdle
+    · exact absurd hidle hNotIdle
+  refine ⟨vs, vq, hteq, by rw [hteq]; rfl, hsearch, ?_, hMatchedSet⟩
+  refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+  · show (scanLens.get (scanLens.set t vs)).left = GalilScaffoldInputHead.left t.left
+    rw [scanLens.get_set]; exact hvl
+  · show (scanLens.get (scanLens.set t vs)).right = GalilScaffoldChainVerifier.right t.right
+    rw [scanLens.get_set]; exact hvr
+  · show ChainTick (decide (GalilScaffoldInputHead.read (GalilScaffoldInputHead.left t.left)
+      = GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right t.right))) t.chain
+      (scanLens.get (scanLens.set t vs)).chain
+    rw [scanLens.get_set]
+    have hread : GalilScaffoldInputHead.read (GalilScaffoldInputHead.left t.left)
+        = GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right t.right) := by
+      have h0 : GalilScaffoldInputHead.read (scanLens.get (scanLens.set t vs)).left
+          = GalilScaffoldInputHead.read (scanLens.get (scanLens.set t vs)).right := hMatchedSet
+      rw [scanLens.get_set] at h0
+      rw [← hvl, ← hvr]; exact h0
+    rw [decide_eq_true hread]
+    exact hChainTick
+  · rw [scanLens.get_set]
+
+#print axioms compare_matched_parts
+
+/-- **run の 1 tick を `ScanSeg` に吸収する。**  3 つの出口しかない:
+
+1. `ScanSeg` が 1 手伸びる（`scan_wait` / `scan_count` / `scan_match`）
+2. mode が scan を離れる（`scan_shift` / `scan_fallback` ＝ ラウンド境界）
+3. chain が watch でなくなる（終端の一致比較で chain が壊れる場合）
+
+`hContinuing`（周期がまだ終端でない）は `ScanSeg.match` が要求するもので、呼び手は
+`RoundScan.fresh`（`used < 2h`）と `RoundScan.terminal_iff` から無償で作れる。
+
+`hRestartNeedsBroken` は `P.restart` が壊れた chain でしか起きないという枠の性質で、
+`PofC`（`restartVM`）では定義からの定理。 -/
+theorem scanSeg_snoc_tick {P : Shared} {q : ℕ} {first : Fin 9} {delay n : ℕ}
+    {c : Control} {s : GalilVM} {x y : State GalilVM}
+    (hRestartNeedsBroken : ∀ u v : GalilVM, P.restart u v → ∃ wb, u.chain = ChainVM.broken wb)
+    (hSeg : ScanSeg P q first delay n c s x.ctl x.vm)
+    (hScan : x.ctl.mode = Mode.scan) (hNotReplaying : x.ctl.replaying = false)
+    (hWatching : ∃ wch, x.vm.chain = ChainVM.watch wch)
+    (hContinuing : singlePositive x.vm.cycle = false)
+    (hTick : Tick (galilFrameS P q first) delay x y) :
+    (∃ m, ScanSeg P q first delay m c s y.ctl y.vm) ∨ y.ctl.mode ≠ Mode.scan ∨
+      (∀ w, y.vm.chain ≠ ChainVM.watch w) := by
+  cases hTick with
+  | init c0 s0 s0' hm _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | scan_wait c0 s0 s0' hm hav hBg =>
+    exact Or.inl ⟨n, scanSeg_snoc_wait hSeg hScan hNotReplaying hav.2 hBg⟩
+  | scan_count c0 s0 s0' hm hav hClock hBg =>
+    exact Or.inl ⟨n, scanSeg_snoc_count hSeg hScan hNotReplaying
+      (hav.resolve_left (by rw [hNotReplaying]; simp)) hClock hBg⟩
+  | scan_match c0 s0 s0' s0'' o hm hav hClock hCompare hMatched hPlace hRefresh =>
+    obtain ⟨wch, hWatch⟩ := hWatching
+    obtain ⟨vs, vq, hteq, -, hSearch, hCmp', hMt'⟩ :=
+      compare_matched_parts hCompare hMatched hWatch
+    have hPlace' : s0'' = s0' := by
+      have h0 : s0'' = (if c0.replaying then
+        { s0' with replay := GalilScaffoldCounter.dec s0'.replay } else s0') := hPlace
+      rw [hNotReplaying] at h0
+      simpa using h0
+    subst hPlace'
+    subst hteq
+    by_cases hTargetWatch : ∃ w', vs.chain = ChainVM.watch w'
+    · refine Or.inl ⟨n + 1, ?_⟩
+      rw [hNotReplaying]
+      simpa using scanSeg_snoc_match hSeg hScan hNotReplaying
+        (hav.resolve_left (by rw [hNotReplaying]; simp)) hClock hContinuing hCmp' hMt'
+        hTargetWatch hSearch hRefresh
+    · exact Or.inr (Or.inr (fun w hc => hTargetWatch ⟨w, hc⟩))
+  | scan_shift c0 s0 s0' s0'' hm _ _ _ _ _ _ _ =>
+    exact Or.inr (Or.inl (fun h => Mode.noConfusion h))
+  | scan_fallback c0 s0 s0' s0'' hm _ _ _ _ _ _ _ =>
+    exact Or.inr (Or.inl (fun h => Mode.noConfusion h))
+  | shift_one c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | shift_done c0 s0 o hm _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | replayStart c0 s0 s0' o hm _ _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | restart c0 s0 s0' hm hRst =>
+    obtain ⟨wch, hWatch⟩ := hWatching
+    obtain ⟨wb, hBroken⟩ := hRestartNeedsBroken _ _ hRst
+    exact absurd (hWatch.symm.trans hBroken) (fun h => ChainVM.noConfusion h)
+  | copy_one c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | copy_done c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | home_start c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | home_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | fpp_slice c0 s0 s0' hm _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | fpp_done c0 s0 s0' hm _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | markEnd_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | markEnd_found c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | choose_select c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | choose_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | rewind_done c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | rewind_one c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | rewind_pair c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+
+#print axioms scanSeg_snoc_tick
+
+
+/-- **`restartVM` は壊れた chain でしか起きない。**  `scanSeg_snoc_tick` の
+`hRestartNeedsBroken` を具体枠（`sharedC` / `PofC`）で放電する。 -/
+theorem restartNeedsBroken_of_restartVM (entry : ℕ) :
+    ∀ u v : GalilVM, restartVM entry u v → ∃ wb, u.chain = ChainVM.broken wb :=
+  fun _ _ h => ⟨h.choose, h.choose_spec.1⟩
+
+#print axioms restartNeedsBroken_of_restartVM
+
 end PalPeg.MatchedRunSnoc

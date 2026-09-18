@@ -156,6 +156,10 @@ import PalPeg.MatchedRunSnoc
 | `onlyMatchedRun_trans` | 2 本を連結 |
 | `matchedSeq_snoc_background` | `MatchedSeq` に background 量子を末尾から足す（カウント不変） |
 | `matchedSeq_snoc_compare` | `MatchedSeq` に一致比較を末尾から足す（カウント +1） |
+| `scanSeg_snoc_wait` / `_count` / `_match` | `ScanSeg`（制御つき）を末尾から伸ばす 3 本 |
+| `compare_matched_parts` | `compareFound` ＋ `matched` ＋ watch から `galilFrame` 側の比較と `afterCompare` を取り出す |
+| **`scanSeg_snoc_tick`** | **run の 1 tick を `ScanSeg` に吸収する。出口は 3 つだけ: 伸びる / mode が scan を離れる / chain が watch でなくなる** |
+| `restartNeedsBroken_of_restartVM` | `scanSeg_snoc_tick` の側条件を具体枠で放電 |
 
 **主定理との関係**: `obligation_shiftPalAtScanStates` の残差は
 `CloseoutRoundSeg` によれば `RoundSeg`（＝`CompareRounds h _ 1 _`）と `H_fresh` の
@@ -168,9 +172,18 @@ inductive で、**`Tick` の `scan_wait` / `scan_count` / `scan_match` と 1 対
 ただし前からしか積めないので、run を歩きながら積むには末尾伸長が要る。それがこの 5 本。
 これがあれば `CompareRounds.next` の `OnlyMatchedRun` 引数は区間抽出なしで手に入る。
 
-**まだ配線していない**: 次に要るのは `Tick` の scan 分岐から `background` /
-`compare`+`matched` を取り出して snoc につなぐ tick 補題と、それを run 不変量
-（「いまの状態はあるラウンド起点から `n` 手の一致比較で到達した」）に仕立てる部分。
+**`scanSeg_snoc_tick` で tick 補題は済んだ**（標準 3 公理）。残るのは、これを run 不変量
+（「いまの状態はあるラウンド起点から `n` 手の一致比較で到達した」）に仕立てて、
+ラウンド境界（`scan_shift`）で `CompareRounds.next` を組む部分。
+
+**`CloseoutSegment.ScanToScan` は要らないかもしれない。** あのファイルは
+「`SpanRep` は `ScanToScan` の下流」と書いていたが、`SpanRep` は 2026-09-19 に
+`BranchSupply.spanRepOnScanAndShift_alongTrace` で **tick ごとに**証明できた。
+`RoundSeg` も同じで、区間を抽出せずに tick ごとに積めば足りる公算が大きい。
+なお `ScanToScan` は「任意の scan→scan 健全 run が `ScanSeg` ＋ `Rounds` に分解する」
+と全称量化しており、`ScanSeg.match` が `hwatch`（chain が watch）を要求する一方で
+idle chain の一致比較も合法な tick である以上、**偽の疑いが強い**
+（機械検査した反証はまだ無いので `REFUTED` とは書かない）。
 
 `CloseoutFinalVer.given_globalRun41Landings_and_verifierRun` は前提数では `final39` に劣るが、**残す**:
 分岐前提が Run41 系（`H_BackgroundLandingChainLedger` / `H_MatchLandingChainLedger` / `H_ShiftEntryChainLedger` / `H_ShiftExitRadiusLedger`）で、
