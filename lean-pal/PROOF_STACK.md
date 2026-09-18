@@ -150,6 +150,54 @@ CLAUDE.md の記述では `CycleOracleMC3` は origin/着地とも `InvLPS` な�
 (2) `PostRun` と `RestartS2` の中身を読んで producer が本当に無いか確かめる。
 **どちらも「書く」前に「読む」作業。**
 
+### n180: **`StageEntryC.fuel` は偽の疑いが濃い**（`REFUTED` とは書かない）
+
+n179 の地図に従って `ReadyFuel` を展開した（一次情報）:
+
+    ReadyFuel v n K  := ∀ as, n ≤ as.length → as.count true ≤ K → SearchReadyB v as
+                                                                  (GalilSegmentConstructB:71)
+    SearchReadyB v as := ReadyRem v as ∧ RunEntriesAll as v        (GalilLeafPres:237)
+    RunEntriesAll     := GalilSearchReadyInv.RunEntry の ∀-閉包     (GalilLeafPres:228)
+    RunEntry c a v v' as := searchStep … → v.mode ≠ .run → v'.mode = .run → DpSafeRem v' as
+                                                                  (GalilSearchReadyInv:161)
+    DpSafeRem v as := ∃ w lower s0 bs, … ∧ ((bs ++ as).count true : ℤ) ≤ value s0.debt ∧ …
+                                                                  (GalilSearchReadyInv:53)
+
+**つまり `.run` 入口の債務 `s0.debt` が、以後のマッチを全部払えと要求している。**
+
+`StageEntryC.fuel`（`CloseoutContracts:68`）の `K` は `headRank r.right`——
+右ヘッドの残り段数。一方 `CloseoutRunEntriesPaced` の監査が一次情報で確定させたのは
+「`initialDebt reset = reset`、`begin` が dispatch する grow tick 1 回で `+2`、
+よって `.run` 入口の債務は **2**」。
+
+**`headRank r.right ≥ 3` になる入力（長さ数文字以上）で `StageEntryC.fuel` は成り立たない
+はず。** これは `RunEntriesAtBegin` / `RunEntriesPaced 2048` が偽である理由と**同型**で、
+どちらも機械検査済み（`CloseoutReadinessAudit` / `CloseoutRunEntriesPaced`）。
+
+**`REFUTED` とは書かない**——`StageEntryC.fuel` そのものについて `False` を導く
+機械検査済みの定理はまだ無い。書けるのは「**偽の疑いが濃い**」まで。
+
+### 帰結（`PROOF_STACK` の見立ての訂正）
+
+n176 で「`StageEntryC = InvLPS ＋ ReadyFuel` なので残る差は `ReadyFuel` 1 つ」と書いたが、
+**その `ReadyFuel` が埋めるべき穴ではなく偽の契約である可能性が高い。**
+found 経路の入口 `prepInputs3_of_found_or_later` が `StageEntryC` を取っている以上、
+そこも切り直しが要る。
+
+### 次にやること（優先順）
+
+1. **反証を試みる**: `CloseoutReadinessAudit` の有限トレースを `ReadyFuel v n K`
+   （`K = 3`）に合わせて作り直す。成功すれば `StageEntryC` の切り直しが確定する
+2. 切り直しの形: `RunEntriesS`（`CloseoutReadyStage:444`、`DpSafeStage` で**stage で切った**版）が
+   正しい通貨。`CloseoutPreload11.runEntriesS_of_restartS2` が既にそれを出している
+3. `StageEntryC.fuel` を `RunEntriesS` 系に差し替えた `StageEntryS` を作り、
+   消費者（`reachAtC3_of_crossF_C` など）を追従させる
+
+**注意**: `RunEntriesAll`（`GalilLeafPres:228`）と `RunEntriesAllD`（`GalilReplaySpan:3685`）は
+**同じ定義の重複**（どちらも `GalilSearchReadyInv.RunEntry` の ∀-閉包）。
+`ReadyFuelD` の docstring も「`GalilSegmentConstructB.ReadyFuel`, restated」と書いている。
+通貨は実質 2 つ（`…All` 系と `…S` 系）。
+
 ### n175 の教訓（これが一番大事）
 
 **44 本書いて計器は 1 本も動かなかった。0 本書いて 1 本外れた。**

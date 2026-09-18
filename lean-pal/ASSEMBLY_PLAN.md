@@ -1,3 +1,41 @@
+## 2026-09-19 n180: **`StageEntryC.fuel` は偽の疑いが濃い**（`REFUTED` とは書かない）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+`ReadyFuel` を一次情報で展開した:
+
+    ReadyFuel v n K   := ∀ as, n ≤ as.length → as.count true ≤ K → SearchReadyB v as
+    SearchReadyB v as := ReadyRem v as ∧ RunEntriesAll as v
+    RunEntry … as     := … → v'.mode = .run → DpSafeRem v' as
+    DpSafeRem v as    := ∃ … s0 bs, … ∧ ((bs ++ as).count true : ℤ) ≤ value s0.debt ∧ …
+
+**`.run` 入口の債務が以後のマッチを全部払えと要求している。**
+`StageEntryC.fuel`（`CloseoutContracts:68`）の `K` は `headRank r.right`（右ヘッドの残り段数）。
+一方 `CloseoutRunEntriesPaced` の監査が確定させた `.run` 入口の債務は **2**
+（`initialDebt reset = reset` ＋ grow tick 1 回の `+2`）。
+
+**`headRank ≥ 3` になる入力で `StageEntryC.fuel` は成り立たないはず。**
+`RunEntriesAtBegin` / `RunEntriesPaced 2048` が偽である理由と同型で、両方とも機械検査済み。
+
+**`REFUTED` とは書かない**——`StageEntryC.fuel` について `False` を導く機械検査済みの
+定理はまだ無い。
+
+### n176 の見立てを訂正する
+
+n176 で「残る差は `ReadyFuel` 1 つ」と書いたが、**埋めるべき穴ではなく偽の契約である
+可能性が高い**。found 経路の入口 `prepInputs3_of_found_or_later` が `StageEntryC` を取って
+いる以上、そこも切り直しが要る。
+
+正しい通貨は `RunEntriesS`（`CloseoutReadyStage:444`、`DpSafeStage` で**stage で切った**版）で、
+`CloseoutPreload11.runEntriesS_of_restartS2` が既にそれを出している。
+
+### ついでの発見
+
+`GalilLeafPres.RunEntriesAll` と `GalilReplaySpan.RunEntriesAllD` は**同じ定義の重複**。
+`ReadyFuelD` の docstring も「`GalilSegmentConstructB.ReadyFuel`, restated」。
+通貨は実質 2 つ（`…All` 系と `…S` 系）。
+
 ## 2026-09-19 n178: `ReadyFuel` の素朴な形は 2 つとも機械検査で偽（探して助かった）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
