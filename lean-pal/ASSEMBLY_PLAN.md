@@ -1,3 +1,46 @@
+## 2026-09-19 n133: 3 原子の producer を一次情報で測った（CLAUDE.md の記述は楽観的だった）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6（n132 の分解後）。
+無条件 PAL は未完。§10.5 は未達。**
+
+### 訂正: `first_round` は `H_freshShiftAtShiftEntry` を出さない
+
+CLAUDE.md と `PalInPegUnconditional` の表は「`H_freshShiftAtShiftEntry`（←`first_round`）」と
+書いていたが、**一次情報を読むと違う**:
+
+* `GalilScaffoldTopFirstRound.first_round` の結論は
+  `(∃ k, Steps …) ∧ e.chain = .watch v ∧ zero v.lag = true ∧ e.periodOnly = true ∧
+   ∃ o' : ReadOrigin raw, Entry raw o' (toOnly e v) ∧ …`
+  ——**origin/`Entry` 形**。
+* `H_freshShiftAtShiftEntry` が要るのは `∃ C R k, ShiftInv w C R (periodLength wch) k t wch` で、
+  `ShiftInv`（`CloseoutPackRun37:59`）は 13 場（`kle` / `posH` / `size` / `room` /
+  `remaining` / `canon` / `count` / `leftRep` / `leftPresent` / `leftPos` / `rightRep` / …）の
+  **幾何と台帳**。
+
+`Entry` → `ShiftInv` の橋が要る。**1 適用では落ちない。**
+同様に `obligation_readsShiftAlongTrace` の候補 `RoundSegFromRun.readsShift_at_actual` も
+前ラウンド起点の `OriginAt` ＋ 構成 run / 実 run の対を要求する（n125 で測定済み）。
+
+**過去の自分の記述（CLAUDE.md の「経路と残り」欄）を一次情報として使わない**——
+今日 4 回目の同じ教訓。
+
+### 見えた筋: `obligation_shiftPalAtFreshChainAlongTrace` は**半分が空虚**
+
+`ShiftPal` は `∀ s', compare s s' → ¬matched s' → ∀ wch, s'.chain = .watch wch →
+shiftGuardVM s' → …` の形。`periodOnly = false` の点で chain の相を場合分けすると:
+
+| `s.chain` の相 | 状況 |
+|---|---|
+| `CopyOrBack`（lag 正） | **空虚**——`CopyPhaseNoShift.not_shiftGuardVM_of_copyOrBack_tick` が
+  「compare の行き先に shift guard は立たない」を証明済み |
+| `.watch`（準備完了、まだ shift していない） | **本体**——「準備した周期が入力の本物の周期」 |
+
+後者は DP 正当性（n114 で「探索側は無条件で証明済み」と測定済み）の帰結のはずで、
+新しい数学ではなく層の配線。**`ShiftPal` の `periodOnly = false` 分岐は
+「copy/back なら空虚、watch なら DP 正当性」に割れる。**
+
+次はこの割り方を実装して、空虚な側を落とす。
+
 ## 2026-09-19 n132: トップダウンに切り替え — `obligation_shiftPalAlongTrace` を 3 原子に割った
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット更新済み・緑。
