@@ -835,6 +835,113 @@ theorem radiusExact_after_shiftOne {w : List (Fin 2)} {s t : GalilVM}
   push_cast
   omega
 
+/-! ### mode で守った `radiusExact` の tick 保存
+
+壊れるのは `rewindLens` の 3 遷移（`markBack` / `rewindOne` / `rewindPair`）だけで、
+行き先はすべて `choose` / `rewind` / `replayStart`。そこを guard で除外すれば、
+出口の `replayStartVM` が前提なしで再確立するので**追加の葉なしで閉じる**。 -/
+
+/-- **mode で守った `radiusExact`。** rewind 相（`choose` / `rewind`）と `replayStart` を
+除外する。 -/
+def RadiusExactOffRewindPhase (c : Control) (s : GalilVM) : Prop :=
+  c.mode ≠ Mode.choose → c.mode ≠ Mode.rewind → c.mode ≠ Mode.replayStart →
+    (position s.center : ℤ) + value s.radius = position s.right
+
+/-- **1 tick 保存。**  側入力は init 相の `radius = 0`、scan 相の右ヘッド供給、
+shift 相の中心ヘッド供給だけ。 -/
+theorem radiusExactOffRewindPhase_tick {w : List (Fin 2)} {x y : State GalilVM}
+    (hTick : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y)
+    (hRadiusZeroAtInit : x.ctl.mode = Mode.init → value x.vm.radius = 0)
+    (hScanSupply : x.ctl.mode = Mode.scan →
+      GalilScaffoldChainVerifier.canRight x.vm.right ∧ 0 < x.vm.right.head.left.length)
+    (hShiftSupply : x.ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight x.vm.center ∧
+        0 < x.vm.center.head.left.length ∧ 1 ≤ value x.vm.radius)
+    (hPrev : RadiusExactOffRewindPhase x.ctl x.vm) :
+    RadiusExactOffRewindPhase y.ctl y.vm := by
+  cases hTick with
+  | init c s s' hm hInit =>
+    intro _ _ _
+    exact radiusExact_after_initVM (entry := entry) hInit (hRadiusZeroAtInit hm)
+  | scan_wait c s s' hm _ hBg =>
+    intro _ _ _
+    exact radiusExact_after_background centre place entry q first hBg
+      (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
+  | scan_count c s s' hm _ _ hBg =>
+    intro _ _ _
+    exact radiusExact_after_background centre place entry q first hBg
+      (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
+  | scan_match c s s' s'' o hm _ _ hCompare _ hPlace _ =>
+    intro _ _ _
+    obtain ⟨hCanRight, hLeftNonempty⟩ := hScanSupply hm
+    exact radiusExact_after_matchedPlace centre place entry q first hPlace
+      (radiusExact_after_compare centre place entry q first hCompare hCanRight hLeftNonempty
+        (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide)))
+  | scan_shift c s s' s'' hm _ _ hCompare _ _ _ hBegin =>
+    intro _ _ _
+    obtain ⟨hCanRight, hLeftNonempty⟩ := hScanSupply hm
+    exact radiusExact_after_beginShift hBegin
+      (radiusExact_after_compare centre place entry q first hCompare hCanRight hLeftNonempty
+        (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide)))
+  | scan_fallback c s s' s'' hm _ _ hCompare _ _ _ hBegin =>
+    intro _ _ _
+    obtain ⟨hCanRight, hLeftNonempty⟩ := hScanSupply hm
+    exact radiusExact_after_beginFallback hBegin
+      (radiusExact_after_compare centre place entry q first hCompare hCanRight hLeftNonempty
+        (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide)))
+  | shift_one c s s' hm _ hOne =>
+    intro _ _ _
+    obtain ⟨hCanRightCentre, hCentreLeftNonempty, hRadiusPos⟩ := hShiftSupply hm
+    exact radiusExact_after_shiftOne centre place entry q first hOne hCanRightCentre
+      hCentreLeftNonempty hRadiusPos
+      (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
+  | shift_done c s o hm _ _ =>
+    intro _ _ _
+    exact hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide)
+  | replayStart c s s' o hm hRS _ _ =>
+    intro _ _ _
+    exact radiusExact_after_replayStart (entry := entry) hRS
+  | restart c s s' hm hRestart =>
+    intro _ _ _
+    exact radiusExact_after_restart (entry := entry) hRestart
+      (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
+  | copy_one c s s' hm _ h =>
+    intro _ _ _
+    exact radiusExact_after_fppLensStep h.2
+      (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
+  | copy_done c s s' hm _ h =>
+    intro _ _ _
+    exact radiusExact_after_fppLensStep h.2
+      (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
+  | home_start c s s' hm _ h =>
+    intro _ _ _
+    exact radiusExact_after_fppLensStep h.2
+      (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
+  | home_step c s s' hm _ h =>
+    intro _ _ _
+    exact radiusExact_after_fppLensStep h.2
+      (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
+  | fpp_slice c s s' hm h =>
+    intro _ _ _
+    exact radiusExact_after_fppLensStep h.2
+      (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
+  | fpp_done c s s' hm h =>
+    intro _ _ _
+    exact radiusExact_after_fppLensStep h.2
+      (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
+  | markEnd_step c s s' hm _ h =>
+    intro _ _ _
+    exact radiusExact_after_fppLensStep h.2
+      (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
+  | markEnd_found c s s' hm _ h => intro hne _ _; exact absurd rfl hne
+  | choose_select c s s' hm _ _ h => intro _ hne _; exact absurd rfl hne
+  | choose_step c s s' hm _ h => intro hne _ _; exact absurd hm hne
+  | rewind_done c s s' hm _ h => intro _ _ hne; exact absurd rfl hne
+  | rewind_one c s s' hm _ _ h => intro _ hne _; exact absurd hm hne
+  | rewind_pair c s s' hm _ _ h => intro _ hne _; exact absurd hm hne
+
+#print axioms radiusExactOffRewindPhase_tick
+
 #print axioms radiusExact_after_shiftOne
 
 #print axioms radiusExact_after_compare
