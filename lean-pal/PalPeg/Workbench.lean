@@ -72,6 +72,7 @@ import PalPeg.GalilScaffoldPrepareClock
 import PalPeg.GalilScaffoldStructured
 import PalPeg.GalilSourceCost
 import PalPeg.CloseoutFinalVer
+import PalPeg.CloseoutFinalBranch
 
 /-!
 # `Workbench` — 作ったが正本の鎖に配線されていない部品
@@ -136,6 +137,7 @@ import PalPeg.CloseoutFinalVer
 | 定理 | 前提数 | 偽の前提 | 機械検査 |
 |---|---|---|---|
 | **`CloseoutFinalFour.pal_in_peg_final39`** | **7** | **なし**（正本、`Canonical` 参照） | — |
+| `CloseoutFinalBranch.pal_in_peg_final41` | 6（Prop 引数） | なし。ただし `hB` は**4 義務の束**なので義務の実数は 9。前進は「global → run 形」の弱化であって本数の削減ではない | — |
 | `CloseoutFinalW.pal_in_peg_final30` | 8 | なし（一代前、`hfour` を含む） | — |
 | `CloseoutFinalVer.pal_in_peg_final38` | 9 | なし | — |
 | `CloseoutFinalS2.pal_in_peg_final31` | 9 | `hav` | `ConsumeAvailRefute.hav_false` |

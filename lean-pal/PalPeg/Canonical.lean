@@ -16,6 +16,7 @@ import PalPeg.WatchOkRefute
 import PalPeg.ChainStepGap
 import PalPeg.CloseoutFinalFour
 import PalPeg.ConsumeAvailRefute
+import PalPeg.BranchSupply
 
 /-!
 # Canonical — 意味のある名前で正本部品を再輸出する
@@ -85,6 +86,21 @@ alias need_bound_from_shiftLocal_run := PalPeg.ShiftLocalRun.needIMW'_le_of_shif
 /-- **`hfour` 抜きで run 沿いに `ShiftLocalS`**（旧名 `shiftLocalS_of_run'`）。
 分岐前提は `H_bgP` / `H_matchP` / `H_shiftDoneP` の 3 本のみ。 -/
 alias shiftLocal_along_run_without_four := PalPeg.ShiftLocalRun.shiftLocalS_of_run'
+
+/-- **4 分岐義務の状態局所版**（旧名 `CloseoutPackRun41.chainPosInv2_tick_at`）。
+`H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2` は
+`chainPosInv2_tick` の中で**その `(c, s)` でしか使われない**ので、束 `BranchAt` に
+局所化できる。これが run 形化の入り口。 -/
+alias chainPosInv2_tick_local := PalPeg.CloseoutPackRun41.chainPosInv2_tick_at
+
+/-- **4 分岐義務の run 形**（旧名 `BranchSupply.chainPosInv2_steps_run`）。
+`∀ c s` の形では放電できない（材料の `LPackM2.shiftGeom`・chain 側台帳 `ChainPos`・
+入力供給はいずれも run に沿ってしか存在しない）。global → run 形は一方向
+（`BranchSupply.branchRun_of_global`）。 -/
+alias chainPosInv2_along_run := PalPeg.BranchSupply.chainPosInv2_steps_run
+
+/-- **`needL'` の上界を run 形の義務から**（旧名 `BranchSupply.needIMW'_le_B`）。 -/
+alias need_bound_from_branch_run := PalPeg.BranchSupply.needIMW'_le_B
 
 /-! ## 2. 反証済み — 使ってはいけない
 

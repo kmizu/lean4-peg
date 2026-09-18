@@ -267,13 +267,52 @@ def H_shiftDoneRad2 (w : List (Fin 2)) : Prop :=
       ∀ rad : ℕ, ScanInvariant w (position s.center) rad s.left s.right →
         value s.radius ≤ (rad : ℤ)
 
-/-- **One tick of `ChainPosInv2`.**  `shift_one` closes outright; the four
-named hypotheses cover the three scan landings and the shift entry. -/
-theorem chainPosInv2_tick {w : List (Fin 2)}
+/-- **(NAMED, state-local) the four branch obligations at one source state.**
+
+`H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2` are each
+`∀ (c : Control) (s : GalilVM), …` over the **source** state of the landing, and
+`chainPosInv2_tick` applies all four at its own `(c, s)` and nowhere else.
+Bundling them per state is what lets a run carry them: the facts that discharge
+them (`LPackM2.shiftGeom`, the chain-side ledger `ChainPos`, the input supply)
+exist **along the run**, not at an arbitrary state, so an obligation written
+`∀ c s, …` cannot be met. Compare `CloseoutVerSide.VerRun` and
+`CloseoutMarksFree.MarksRun`, and the refutation
+`ConsumeAvailRefute.hav_false` of the same mistake made with `∀ st`. -/
+structure BranchAt (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+  bg : ∀ t : GalilVM, c.mode = Mode.scan → ChainPosInv2 w c s →
+    (galilFrameS (PofC centre place entry w) q first).background s t →
+    ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → PosPayload2 w t
+  matchLand : ∀ (s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPosInv2 w c s →
+    (galilFrameS (PofC centre place entry w) q first).compare s s' →
+    (galilFrameS (PofC centre place entry w) q first).matched s' →
+    (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
+    ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
+    t.chain ≠ ChainVM.idle → PosPayload2 w t
+  entryLand : ∀ s' t : GalilVM, c.mode = Mode.scan → ChainPosInv2 w c s →
+    (galilFrameS (PofC centre place entry w) q first).compare s s' →
+    ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
+    shiftGuardVM s' → beginShiftVM' s' t → ShiftPos2 t
+  shiftDone : c.mode = Mode.shift →
+    ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s →
+    ChainPosInv2 w c s → s.chain ≠ ChainVM.idle →
+    GalilScaffoldChainVerifier.canRight s.right ∧
+      ∀ rad : ℕ, ScanInvariant w (position s.center) rad s.left s.right →
+        value s.radius ≤ (rad : ℤ)
+
+/-- The global hypotheses restrict to any state. -/
+theorem branchAt_of_global {w : List (Fin 2)}
     (hbg : H_bgP2 centre place entry q first w) (hmatch : H_matchP2 centre place entry q first w)
     (hentry : H_shiftEntry2 centre place entry q first w)
-    (hsd : H_shiftDoneRad2 centre place entry q first w)
-    {x y : State GalilVM} (hx : ChainPosInv2 w x.ctl x.vm)
+    (hsd : H_shiftDoneRad2 centre place entry q first w) (c : Control) (s : GalilVM) :
+    BranchAt centre place entry q first w c s :=
+  ⟨fun t => hbg c s t, fun s' t o b => hmatch c s s' t o b,
+    fun s' t => hentry c s s' t, hsd c s⟩
+
+/-- **One tick of `ChainPosInv2`, from the state-local bundle.**  `shift_one`
+closes outright; `BranchAt` covers the three scan landings and the shift entry. -/
+theorem chainPosInv2_tick_at {w : List (Fin 2)}
+    {x y : State GalilVM} (hB : BranchAt centre place entry q first w x.ctl x.vm)
+    (hx : ChainPosInv2 w x.ctl x.vm)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y) :
     ChainPosInv2 w y.ctl y.vm := by
   obtain ⟨c, s⟩ := x
@@ -289,17 +328,17 @@ theorem chainPosInv2_tick {w : List (Fin 2)}
       exact fun _ hni => absurd hch hni
     case scan_wait =>
       rename_i hm hav hb
-      exact fun hs hni => hbg c s t hm hx hb hs hni
+      exact fun hs hni => hB.bg t hm hx hb hs hni
     case scan_count =>
       rename_i hm hc hav hb
-      exact fun hs hni => hbg c s t hm hx hb ⟨hm, hs.2⟩ hni
+      exact fun hs hni => hB.bg t hm hx hb ⟨hm, hs.2⟩ hni
     case scan_match =>
       rename_i s' o hmt hm hc hcmp hav hpl ho
-      exact fun hs hni => hmatch c s s' t o _ hm hx hcmp hmt hpl hs hni
+      exact fun hs hni => hB.matchLand s' t o _ hm hx hcmp hmt hpl hs hni
     case shift_done =>
       rename_i o hm hp ho
       exact fun _ hni =>
-        ⟨(hsd c s hm hp hx hni).1, (hsd c s hm hp hx hni).2, hx.shiftPay hm⟩
+        ⟨(hB.shiftDone hm hp hx hni).1, (hB.shiftDone hm hp hx hni).2, hx.shiftPay hm⟩
     case replayStart =>
       rename_i o hm ho ho' hi
       obtain ⟨-, -, -, -, -, -, -, -, -, hch, -⟩ : replayStartVM entry s t := hi
@@ -317,7 +356,7 @@ theorem chainPosInv2_tick {w : List (Fin 2)}
     cases h
     case scan_shift =>
       rename_i s' hmt hg hm hc hr hcmp hav hb
-      exact fun _ => hentry c s s' t hm hx hcmp hmt hg hb
+      exact fun _ => hB.entryLand s' t hm hx hcmp hmt hg hb
     case shift_one =>
       rename_i hm hp hi
       obtain ⟨-, -, -, wv, hw, hv⟩ := hi.1
@@ -344,6 +383,20 @@ theorem chainPosInv2_tick {w : List (Fin 2)}
     all_goals
       exact fun h1 => by simp_all
 
+/-- **One tick of `ChainPosInv2`** (the global form, unchanged).  Kept so that
+every existing caller works; new code should use `chainPosInv2_tick_at`. -/
+theorem chainPosInv2_tick {w : List (Fin 2)}
+    (hbg : H_bgP2 centre place entry q first w) (hmatch : H_matchP2 centre place entry q first w)
+    (hentry : H_shiftEntry2 centre place entry q first w)
+    (hsd : H_shiftDoneRad2 centre place entry q first w)
+    {x y : State GalilVM} (hx : ChainPosInv2 w x.ctl x.vm)
+    (h : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y) :
+    ChainPosInv2 w y.ctl y.vm :=
+  chainPosInv2_tick_at centre place entry q first
+    (branchAt_of_global centre place entry q first hbg hmatch hentry hsd _ _) hx h
+
+#print axioms branchAt_of_global
+#print axioms chainPosInv2_tick_at
 #print axioms chainPosInv2_tick
 
 /-! ## 5. `WatchShiftS` with neither `H_fourOther` nor a lookahead -/

@@ -7,6 +7,88 @@
 
 
 
+
+## 2026-09-19 n85: 4 分岐義務を run 形に弱めた — `∀ c s` では原理的に放電できない
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。正本の最上位は引き続き `pal_in_peg_final39`（7 前提）。**
+
+### 何をしたか
+
+`CloseoutPackRun41` の 4 分岐義務（`H_bgP2` / `H_matchP2` / `H_shiftEntry2` /
+`H_shiftDoneRad2`）はどれも `∀ (c : Control) (s : GalilVM), …` で**任意の状態**を
+量化している。ところが `chainPosInv2_tick` の本体を読むと、**4 本とも自分の `(c, s)` で
+しか使っていない**（Run41 の旧 :289/:292/:296/:301/:318 の 5 箇所、すべて `hbg c s` の形）。
+
+1. **状態局所化**（`CloseoutPackRun41` を編集、後方互換）
+   * `BranchAt w c s` — 4 義務を 1 状態に束ねた構造
+   * `chainPosInv2_tick_at` — 旧 `chainPosInv2_tick` の本体、`BranchAt` を取る
+   * `branchAt_of_global` — global 4 本から `BranchAt` を作る
+   * `chainPosInv2_tick` — 旧の名前と型のままのラッパー（**既存の呼び出し側は無改造**）
+2. **run 形化**（新規 `PalPeg/BranchSupply.lean`）
+   * `BranchRun w x := ∀ m z, Steps … m x z → BranchAt w z.ctl z.vm`
+   * `branchRun_of_global`（global → run 形、**逆は無い**）
+   * `chainPosInv2_steps_run` — `ChainPosInv2` を run 形の義務で運ぶ
+     （再指標化は `Steps.succ ht`、`CloseoutBundleRun.roundBundle_steps_run` と同形）
+   * `shiftLocalS_of_branchRun` / `needIMW'_le_B`（3 段の本体は n83 で括り出した
+     `ShiftLocalRun.needIMW'_le_of_shiftLocal` に載せた）
+3. **最上位**（新規 `PalPeg/CloseoutFinalBranch.lean`）
+   * `pal_in_peg_final41` — Prop 引数 6 本（`hSP` `hme` `hor` `hC` `hB` `hver`）
+
+### なぜ run 形でなければならないか（これが本質）
+
+4 義務を放電する材料は run に沿ってしか存在しない：
+
+* `LPackM2.shiftGeom`（`CloseoutPackRun23:103`）— `H_shiftDoneRad2` の `canRight` と
+  半径上界はここから出る（`CloseoutShiftDoneP.canR_of_shiftGeom` /
+  `radEq_of_shiftGeom_done`）。`LPackM2` は run の各点に `IPackMW.m2` としてある。
+* chain 側台帳 `ChainPos`（Run41、Run38 の `SrcPos` を吸収）— `chainPos_step` /
+  `chainPos_matched` で run を運ばれる。
+* 入力供給（verifier が入力を表現する）— `CloseoutVerSide.VerRun` が run 形で束ねている。
+
+**任意の状態にこれらは無い。だから `∀ c s` の形のままでは原理的に放電できない。**
+これは `hpack` が偽だったのと同じ病の裏返し: `hpack` は run の事実を一状態述語として
+書いたので**偽**になり、4 分岐義務は一状態述語の族を global に量化したので
+**放電不能**になっていた。正しいのはどちらでもなく、**run に沿って量化する**こと。
+
+### 本数の誠実な読み方 — `final41` は正本ではない
+
+`pal_in_peg_final41` の Prop 引数は 6 本だが、**`hB` は 4 義務の束**である。
+義務の実数で数えれば 9（run 形 4 ＋ `hver` ＋ `hSP`/`hme`/`hor`/`hC`）で、
+`final39` の 7 より多い。**前進は本数ではなく「global → run 形」の弱化**であって、
+義務が減ったわけではない。だから：
+
+* **正本の最上位は引き続き `pal_in_peg_final39`（7 本、束ねていない）。**
+* `pal_in_peg_final41` は**放電の作業場**として `Workbench` §2 に登録。
+
+（Prop 引数の本数＝前提の本数ではない、という CLAUDE.md の規律をここでも適用した。
+束ねて数字を作らない。）
+
+### 次の一手
+
+`BranchRun` の 4 場を run の各点で実際に放電する：
+
+1. `shiftDone` ← `LPackM2.shiftGeom`（run の各点にある）＋ 区間予算
+   ＋ `CloseoutShiftDoneP.canR_of_shiftGeom` / `radEq_of_shiftGeom_done`。
+   **これが一番近い。** `LPackM2` は `PreTraceIMW.packs i hi |>.m2` で取れる。
+2. `bg` / `matchLand` ← `ChainPos` の run 搬送（`chainPos_step` / `chainPos_matched`）。
+   側入力の `ConsumeAvail` は全状態版が偽（`ConsumeAvailRefute.hav_false`）なので
+   `CloseoutWatchSupply.chainPos_step_of_supply` ＋ `VerRun` を使う。
+3. `entryLand` ← `ShiftPos2` の確立（`beginShiftVM'` の 1 consume）。
+
+放電できた分だけ `BranchRun` の場が減り、全部落ちれば `final41` は
+`hSP` `hme` `hor` `hC` `hver` の 5 本になる。
+
+### 注意（引き継ぎ）
+
+* `AuxPack` は **boot では成り立たない**（`AuxPack.front.notInit : mode ≠ init`）。
+  だから `LPackM3` を boot 根の run に載せる道は無い。`AuxPack` は常に cycle 起点の
+  `InvLPC` から `CloseoutPackRun2.auxPack_steps` で立てる。
+* `CloseoutPackRun36.lticksN_of_lpackM2_pt` は `BigPack2MG`（＝`IPackMG` ＋ `Extra'`）を
+  要るので W 経路では使えない。**W 版 `CloseoutPackW.lticksN_of_lpackM2_W` を使うこと。**
+* `CloseoutBranchRes.shiftLocalS_of_run_res` はまだ `hfour` を取る（n83 以前）。
+  残差経路では `ShiftLocalRun.shiftLocalS_of_run'` に載せ替える。
+
 ## 2026-09-19 n84: 3 分岐前提は同じ 1 つの run 形事実に合流する — 9 → 5 の筋
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
