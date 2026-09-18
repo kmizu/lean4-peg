@@ -1,3 +1,48 @@
+## 2026-09-19 n144: `hCaught` の正体 — chain の予測証明書（回文からは出ない）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。
+無条件 PAL は未完。§10.5 は未達。**
+
+### `hCaught` を展開すると
+
+`shiftPalAt_fresh_of_candidate` の中で導いた 2 つを並べる:
+
+* `hsym'`（**ガードから出る**）: `symbol wch…period.focus = (encoded w)[pos + r₀ + 1]?`
+  （`shiftGuardVM` の予測節 ＋ `right_read_index` ＋ `ScanInvariant.rightPos`）
+* `hCaught`（**残差**）: `(encoded w)[pos + r₀ + 1 − 2h]? = symbol wch…period.focus`
+
+合わせると `(encoded w)[pos + r₀ + 1 − 2h]? = (encoded w)[pos + r₀ + 1]?`。
+
+**`pos + r₀ + 1` は現在の回文の右端 `pos + r₀` の 1 つ外**。だから
+`periodOn_right_of_palAt_pair` が出す `PeriodOn (encoded w) (2h) pos (pos + r₀)` では
+**原理的に届かない**（`j + 2h ≤ pos + r₀` までしか主張しない）。
+`reshift_from_right` が `hright` の最後の 1 添字を別に要求するのはそのため。
+
+### したがって `hCaught` は「chain の予測証明書」
+
+意味は「period テープの焦点（＝chain が次に来ると予測している記号）が、
+入力の `2h` 手前の記号と一致する」——**period テープが入力と `2h` ずれて整合している**こと。
+
+* `periodOnly = true` 側ではこれが `RoundScan.pred`
+  （`symbol focus = (encoded raw)[C + R + 2 + used − 2h]?`、終端で添字が `C + R + 1`
+  ＝ `pos + r₀ + 1 − 2h` に一致。n142 の測定どおり）
+* `periodOnly = false` 側は `RoundScan` が使えない（n143: `cycle` 凍結）ので、
+  **準備直後の period テープの整合を運ぶ場**が要る
+
+**回文からは出ない**（新しく読んだ記号についての主張なので）。
+DP の `Candidate` は period テープの**中身**を保証するが、
+「いまどの位相を指しているか」は chain の台帳の話。
+
+### 残差 5 本の性格が確定した
+
+| 残差 | 性格 | 出どころ |
+|---|---|---|
+| `hIn` / `hOut` | period テープの**中身**（DP の `Candidate`） | `prep_watch_start_least` ＋ `palAt_pair_of_candidate` |
+| `hLo` / `hHi` | 半径と周期の**大小** | `found_radius_le_two_period` ＋ 伸び |
+| `hCaught` | period テープの**位相** | 準備直後の整合を運ぶ場（`RoundScan.pred` の `periodOnly = false` 版） |
+
+3 種類に分かれた。**`hCaught` だけが新しい場**で、残り 4 つは既存の定理からの配線。
+
 ## 2026-09-19 n143: **訂正** — `RoundScan` は `periodOnly = false` では偽。`ChainRound` のガードは必要だった
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。
