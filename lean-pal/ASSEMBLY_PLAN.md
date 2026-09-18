@@ -1,3 +1,52 @@
+## 2026-09-19 n194: **n189 の書き方を訂正**＋2 本の線の食い違いが本当の壁
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。コードは変更していない（訂正と診断のみ）。**
+
+### 訂正（自分の誇張）
+
+n189 で「準備相を歩きから切り離した／段境界を越える状態局所の背骨を作った」と書いたが、
+**`CloseoutPreload28/35/36` の線はもともと状態局所だった。** 一次情報:
+
+    CloseoutPreload35.dpSafe_of_stagePrepD_slack
+      (hp : PrepAt k m v) … (hq : StagePrepS k m D slack v x (a :: as)) …
+
+`StagePrepS _ _ _ _ w v as := ∃ bs, ReachP w bs v ∧ …` の基点 `w` が
+**`PrepAt` 状態そのもの**（段の `begin` ではない）。段境界では
+`prepAt_of_double_exit` が `PrepAt` を再成立させるので、この `ReachP` は往復で切れない。
+
+`StageLocalPrep`（n189）が実際に足したのは 2 つだけ:
+* 包装（`PrepPhase` = `PrepAt` ＋ `PrepTrace` ＋ 非 `.run`）
+* `preloadAt_of_prepPhase` ——較正仮説
+  `((stream s.walker).take (span+1)).length = stageWindow1 k` を落とした
+  （消費者が読むのは `W.length ≤ m + 1` だけで、これは `List.length_take` でタダ）
+
+**診断そのもの（`PostRun` / `NoReturn` がなぜ落ちないか）は有効。** 誇張したのは
+「新しく作った」の部分。
+
+### 本当の壁: 2 本の線が噛み合っていない
+
+| 線 | `ReachP` の基点 | 状態 | 出せるもの |
+|---|---|---|---|
+| 旧（`Preload6/8/11/37`） | 段の `begin` ／ restart からの `ReachL` | `NoReturn` は偽、`PostRun` は producer なし | `ReadyPacedS`（**状態量化**）を `readyField2_entry_of_datum` で |
+| 新（`Preload28/35/36`） | `PrepAt` 状態（境界で再成立） | **証明できる**（n190〜n193 で算術も詰めた） | run に沿った `DpSafeStage` のみ |
+
+`CloseoutPreload36` 自身が「What this is and is not」でこう書いている——
+run 帰納は機械自身の状態しか届かないので `PostRunPh` / `PostRunC` は作れない。
+
+**食い違いの場所は `CloseoutContracts.StageEntryC.fuel : ReadyPacedS`。**
+`ReadyPacedS v n k := ∀ as, n ≤ as.length → PacedL 2048 k as → SearchReadyS v as` は
+**任意のペース付きリスト**に量化していて、新しい線は原理的にこれを出せない。
+
+### 次にやること（公理への最短路）
+
+`ReadyPacedS` が消費者に対して過剰量化していないかを測る
+（CLAUDE.md の過剰量化 8 例と同じ検査）。消費者は
+`CloseoutReadyStage.segment_of_invLPCS` / `readyPacedS_watchSegE` /
+`reachAtC3_of_crossS` で、どれも **run に沿った watched segment** を作るために使う。
+run 形に切り直せるなら、新しい線が `StageEntryC` を直接埋める。
+切り直せないなら、旧線の `PostRun` を倒すしかない。**まずこれを測る。**
+
 ## 2026-09-19 n193: 算術の穴 2 は「boot 段だけ」に落ちた——しかも boot は slack 0
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。

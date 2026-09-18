@@ -52,6 +52,23 @@
 [3] obligation_localRealization — H_realizeLIMW'。壁は n174（run 機構が fairness を捨てている）
 ```
 
+### n194（訂正）: n189 の「背骨を作った」は誇張。線は 2 本あって噛み合っていない
+
+`CloseoutPreload28/35/36` の線は**もともと状態局所**だった
+（`dpSafe_of_stagePrepD_slack` の `StagePrepS` は基点が `PrepAt` 状態、
+境界は `prepAt_of_double_exit` で再成立）。`StageLocalPrep` が足したのは
+包装と、較正仮説を落とした `preloadAt_of_prepPhase` だけ。診断自体は有効。
+
+**本当の壁**: 旧線（`Preload6/8/11/37`）は `ReadyPacedS`（**状態量化**）を出せるが
+`NoReturn`（偽）／`PostRun`（producer なし）を要る。新線（`Preload28/35/36`）は
+証明できるが run に沿った事実しか出ない。`CloseoutPreload36` 自身が
+「run 帰納は `PostRunPh`/`PostRunC` を作れない」と書いている。
+**食い違いの場所は `StageEntryC.fuel : ReadyPacedS`。**
+
+→ 次: `ReadyPacedS` が消費者（`segment_of_invLPCS` / `readyPacedS_watchSegE` /
+`reachAtC3_of_crossS`、どれも run に沿った watched segment を作る）に対して
+**過剰量化していないか**を測る。run 形に切れれば新線が `StageEntryC` を直接埋める。
+
 ### n189: `PostRun` と `NoReturn` は同じ欠陥だった（producer 不在の理由が確定）
 
 `StageEntryC.fuel = ReadyPacedS` の producer を辿ると
