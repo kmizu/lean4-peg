@@ -147,32 +147,23 @@ axiom obligation_freshShiftAtShiftEntryAlongTrace (entry q : ℕ) (first : Fin 9
         PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centreC placeC entry q first w
           (st j).ctl (st j).vm (st (j+1)).vm
 
-/-- **(OBLIGATION)** `periodOnly = false`（＝chain 誕生後まだ shift していない）点での
-`ShiftPal`。原子 3 本目。`periodOnly = true` 側は `shiftPal_of_chainRound` が閉じている
-ので、残るのはこの分岐だけ。 -/
-axiom obligation_shiftPalAtFreshWatchAlongTrace (entry q : ℕ) (first : Fin 9) :
-    ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
-      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
-      ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
-      ∀ wv : GalilScaffoldChainWatch.State, (st j).vm.chain = ChainVM.watch wv →
-        ShiftPal centreC placeC entry q first w (st j).vm
+/-- **(OBLIGATION)** 準備直後の watch の台帳（`ShiftPalAlongTrace.FreshShiftLedger`）。
 
-/-- **もう公理ではない。**  chain が watch でない点では `ShiftPal` は空虚
-（`ShiftPalAlongTrace.shiftPal_of_chainNotWatch`——`shiftGuardVM` が `phase = 4` を要求するが
-copy/back/idle/broken から 1 手で生まれる watch は `phase ≤ 1`）。
-**`CopyOrBack` も `CopyInv` も lag も「found 時の半径が正」も要らない。** -/
-theorem obligation_shiftPalAtFreshChainAlongTrace (entry q : ℕ) (first : Fin 9) :
+n141〜n144 で `periodOnly = false` ＋ watch の `ShiftPal` を**この 1 場に還元**した。
+中身は 3 種類しかない:
+
+* period テープの**中身**（DP の `Candidate` 由来の 2 回文）
+* 半径と周期の**大小**（`0 < h` / `2h ≤ r₀` / `r₀ ≤ 4h` / 入力長）
+* period テープの**位相**（`RoundScan.pred` の `periodOnly = false` 版。`cycle` は
+  誕生時に reset され `periodOnly = false` の間凍結するので `RoundScan` は使えない——n143）
+
+`FreshShiftLedger` は watch 相だけを語るので、非 watch の空虚性
+（`shiftPal_of_chainNotWatch`）は自動的に含まれる。 -/
+axiom obligation_freshShiftLedgerAlongTrace (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
       ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
-        ShiftPal centreC placeC entry q first w (st j).vm := by
-  classical
-  intro w st Tc hPre j hj1 hjle hpo
-  by_cases hW : ∃ wv : GalilScaffoldChainWatch.State, (st j).vm.chain = ChainVM.watch wv
-  · obtain ⟨wv, hwv⟩ := hW
-    exact obligation_shiftPalAtFreshWatchAlongTrace entry q first w st Tc hPre j hj1 hjle hpo wv hwv
-  · exact PalPeg.ShiftPalAlongTrace.shiftPal_of_chainNotWatch centreC placeC entry q first
-      (fun wv hEq => hW ⟨wv, hEq⟩)
+      ∀ s' : GalilVM, PalPeg.ShiftPalAlongTrace.FreshShiftLedger w (st j).vm s'
 
 /-- **もう公理ではない。**  `ShiftPalAlongTrace.shiftPal_alongTrace` の適用で、
 上の 3 原子に割れた。2 つの側条件（`0 < w.length` と `1 ≤ Tc w.length`）は文脈から出る:
@@ -197,8 +188,8 @@ theorem obligation_shiftPalAlongTrace (entry q : ℕ) (first : Fin 9) :
     (fun j' h1 h2 => obligation_readsShiftAlongTrace entry q first w st Tc hPre j' h1 h2)
     (fun j' h1 h2 =>
       obligation_freshShiftAtShiftEntryAlongTrace entry q first w st Tc hPre j' h1 h2)
-    (fun j' h1 h2 h3 =>
-      obligation_shiftPalAtFreshChainAlongTrace entry q first w st Tc hPre j' h1 h2 h3)
+    (fun j' h1 h2 h3 s' =>
+      obligation_freshShiftLedgerAlongTrace entry q first w st Tc hPre j' h1 h2 h3 s')
     j hj1 hjle hm hr
 
 /-- **(OBLIGATION)** `CycleOracleMC3`。 -/

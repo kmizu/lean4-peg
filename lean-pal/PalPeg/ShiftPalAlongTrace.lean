@@ -59,61 +59,6 @@ theorem chainIdle_after_init {w : List (Fin 2)} (x y : State GalilVM)
   obtain ⟨-, -, -, -, -, -, -, -, -, hChain, -, -, -, -, -⟩ : initVM entry x.vm y.vm := hInit
   exact hChain
 
-/-- **`RoundBundle` を trace に沿って（`st 1` から）。** -/
-theorem roundBundle_alongTrace {w : List (Fin 2)}
-    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
-    (hPreTrace : PreTrace centre place entry q first w st Tc)
-    (hTcPos : 1 ≤ Tc w.length)
-    (hAuxPack : ∀ j, 1 ≤ j → j ≤ Tc w.length → AuxPack (st j).ctl (st j).vm)
-    (hReadsShift : ∀ j, 1 ≤ j → j ≤ Tc w.length → H_readsShift w (st j).ctl (st j).vm)
-    (hFreshShift : ∀ j, 1 ≤ j → j < Tc w.length →
-      H_freshShiftAtShiftEntry centre place entry q first w (st j).ctl (st j).vm (st (j+1)).vm) :
-    ∀ j, 1 ≤ j → j ≤ Tc w.length → RoundBundle w (st j).ctl (st j).vm := by
-  have hBase : RoundBundle w (st 1).ctl (st 1).vm := by
-    refine roundBundle_of_idle ?_
-    refine chainIdle_after_init centre place entry q first (st 0) (st 1)
-      (hPreTrace.trace.tick 0 (by omega)) ?_
-    rw [hPreTrace.start]; rfl
-  intro j
-  induction j with
-  | zero => intro hIndexPos; exact absurd hIndexPos (by omega)
-  | succ n ih =>
-    intro _ hIndexLeTc
-    rcases Nat.eq_zero_or_pos n with hn | hn
-    · subst hn; exact hBase
-    · exact roundBundle_tick_B centre place entry q first (c := (st n).ctl) (s := (st n).vm)
-        (c' := (st (n+1)).ctl) (t := (st (n+1)).vm)
-        (ih hn (by omega))
-        (hAuxPack n hn (by omega)).coupled.block
-        (fun hShift => copyIdle_shift_of_auxPack (hAuxPack n hn (by omega)) hShift)
-        (hReadsShift n hn (by omega))
-        (hFreshShift n hn (by omega))
-        (hPreTrace.trace.tick n (by omega))
-
-/-- **`ShiftPal` を trace の scan 点で**（`hSP` の正しい形）。 -/
-theorem shiftPal_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
-    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
-    (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hTcPos : 1 ≤ Tc w.length)
-    (hReadsShift : ∀ j, 1 ≤ j → j ≤ Tc w.length → H_readsShift w (st j).ctl (st j).vm)
-    (hFreshShift : ∀ j, 1 ≤ j → j < Tc w.length →
-      H_freshShiftAtShiftEntry centre place entry q first w (st j).ctl (st j).vm (st (j+1)).vm)
-    (hFreshBranch : ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
-      ShiftPal centre place entry q first w (st j).vm) :
-    ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).ctl.mode = Mode.scan →
-      (st j).ctl.replaying = false → ShiftPal centre place entry q first w (st j).vm := by
-  have hAuxPack := auxPack_alongTrace_afterFirstStep centre place entry q first hw
-    hPreTraceIMW.base.pre
-  have hCanRight := canRightAtScanOrShift_alongTrace centre place entry q first hw hPreTraceIMW
-  have hBundle := roundBundle_alongTrace centre place entry q first hPreTraceIMW.base.pre hTcPos
-    hAuxPack hReadsShift hFreshShift
-  intro j hIndexPos hIndexLeTc hMode hNotReplaying
-  exact shiftPal_of_roundBundle centre place entry q first hMode hNotReplaying
-    (hBundle j hIndexPos hIndexLeTc)
-    (hCanRight j hIndexLeTc (Or.inl hMode))
-    (hFreshBranch j hIndexPos hIndexLeTc)
-
-
 /-! ## `periodOnly = false` 分岐の**空虚な半分**
 
 `obligation_shiftPalAtFreshChainAlongTrace`（n132 の原子 3 本目）は
@@ -214,6 +159,104 @@ theorem shiftPalAt_fresh_of_candidate {w : List (Fin 2)} {s s' : GalilVM}
     hIn hOut hScanInv.palindrome hPos hLo hHi hEnd hpredIdx
 
 #print axioms shiftPalAt_fresh_of_candidate
+
+/-- **(NAMED) 準備直後の watch の台帳。**  `shiftPalAt_fresh_of_candidate` の 5 残差を
+1 つの場にまとめたもの。`ShiftPal` の `periodOnly = false` 分岐に必要な全部で、
+3 種類しかない（n144）:
+
+* `hIn` / `hOut` — period テープの**中身**（DP の `Candidate` 由来）
+* `0 < h` / `2h ≤ r₀` / `r₀ ≤ 4h` / `hEnd` — 半径と周期の**大小**
+* 最後の等式 — period テープの**位相**（`RoundScan.pred` の `periodOnly = false` 版） -/
+def FreshShiftLedger (w : List (Fin 2)) (s s' : GalilVM) : Prop :=
+  ∀ wch : GalilScaffoldChainWatch.State, s'.chain = ChainVM.watch wch →
+    ∀ r₀ : ℕ, ScanInvariant w (position s.center) r₀ s.left s.right →
+      Manacher.PalAt (encoded w) (position s.center - periodLength wch) (periodLength wch) ∧
+      Manacher.PalAt (encoded w) (position s.center - 2 * periodLength wch)
+        (2 * periodLength wch) ∧
+      0 < periodLength wch ∧
+      2 * periodLength wch ≤ r₀ ∧ r₀ ≤ 4 * periodLength wch ∧
+      position s.center + r₀ + 1 < (encoded w).length ∧
+      (encoded w)[position s.center + r₀ + 1 - 2 * periodLength wch]? =
+        GalilScaffoldChainConsume.symbol wch.machine.control.period.focus
+
+/-- **`ShiftPal` を `FreshShiftLedger` 1 つから。**  比較の行き先の右ヘッドが
+`right s.right` であることは `compareFound` の `hvr` から出る（`afterBirth` /
+`afterCompare` / `afterMismatch` はどれも右ヘッドを `vs.right` にする）。 -/
+theorem shiftPal_of_freshShiftLedger {w : List (Fin 2)} {s : GalilVM}
+    (hCan : canRight s.right)
+    (hLedger : ∀ s' : GalilVM, FreshShiftLedger w s s') :
+    ShiftPal centre place entry q first w s := by
+  intro s' hCompare hNotMatched wch hChain hGuard r₀ hScanInv
+  obtain ⟨vs, vq, a, hvl, hvr, hiff, hsearch, hchainAt, hteq⟩ :
+    compareFound (PofC centre place entry w) q first s s' := hCompare
+  have hRight : s'.right = right s.right := by
+    rw [hteq, afterBirth_right]
+    cases a with
+    | false => rw [if_neg (by simp)]; exact hvr
+    | true => rw [if_pos rfl]; exact hvr
+  obtain ⟨hIn, hOut, hPos, hLo, hHi, hEnd, hCaught⟩ := hLedger s' wch hChain r₀ hScanInv
+  exact shiftPalAt_fresh_of_candidate hChain hGuard hRight hCan hScanInv rfl
+    hIn hOut hPos hLo hHi hEnd hCaught
+
+#print axioms shiftPal_of_freshShiftLedger
+
+/-- **`RoundBundle` を trace に沿って（`st 1` から）。** -/
+theorem roundBundle_alongTrace {w : List (Fin 2)}
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTrace : PreTrace centre place entry q first w st Tc)
+    (hTcPos : 1 ≤ Tc w.length)
+    (hAuxPack : ∀ j, 1 ≤ j → j ≤ Tc w.length → AuxPack (st j).ctl (st j).vm)
+    (hReadsShift : ∀ j, 1 ≤ j → j ≤ Tc w.length → H_readsShift w (st j).ctl (st j).vm)
+    (hFreshShift : ∀ j, 1 ≤ j → j < Tc w.length →
+      H_freshShiftAtShiftEntry centre place entry q first w (st j).ctl (st j).vm (st (j+1)).vm) :
+    ∀ j, 1 ≤ j → j ≤ Tc w.length → RoundBundle w (st j).ctl (st j).vm := by
+  have hBase : RoundBundle w (st 1).ctl (st 1).vm := by
+    refine roundBundle_of_idle ?_
+    refine chainIdle_after_init centre place entry q first (st 0) (st 1)
+      (hPreTrace.trace.tick 0 (by omega)) ?_
+    rw [hPreTrace.start]; rfl
+  intro j
+  induction j with
+  | zero => intro hIndexPos; exact absurd hIndexPos (by omega)
+  | succ n ih =>
+    intro _ hIndexLeTc
+    rcases Nat.eq_zero_or_pos n with hn | hn
+    · subst hn; exact hBase
+    · exact roundBundle_tick_B centre place entry q first (c := (st n).ctl) (s := (st n).vm)
+        (c' := (st (n+1)).ctl) (t := (st (n+1)).vm)
+        (ih hn (by omega))
+        (hAuxPack n hn (by omega)).coupled.block
+        (fun hShift => copyIdle_shift_of_auxPack (hAuxPack n hn (by omega)) hShift)
+        (hReadsShift n hn (by omega))
+        (hFreshShift n hn (by omega))
+        (hPreTrace.trace.tick n (by omega))
+
+/-- **`ShiftPal` を trace の scan 点で**（`hSP` の正しい形）。 -/
+theorem shiftPal_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hTcPos : 1 ≤ Tc w.length)
+    (hReadsShift : ∀ j, 1 ≤ j → j ≤ Tc w.length → H_readsShift w (st j).ctl (st j).vm)
+    (hFreshShift : ∀ j, 1 ≤ j → j < Tc w.length →
+      H_freshShiftAtShiftEntry centre place entry q first w (st j).ctl (st j).vm (st (j+1)).vm)
+    (hFreshLedger : ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
+      ∀ s' : GalilVM, FreshShiftLedger w (st j).vm s') :
+    ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).ctl.mode = Mode.scan →
+      (st j).ctl.replaying = false → ShiftPal centre place entry q first w (st j).vm := by
+  have hAuxPack := auxPack_alongTrace_afterFirstStep centre place entry q first hw
+    hPreTraceIMW.base.pre
+  have hCanRight := canRightAtScanOrShift_alongTrace centre place entry q first hw hPreTraceIMW
+  have hBundle := roundBundle_alongTrace centre place entry q first hPreTraceIMW.base.pre hTcPos
+    hAuxPack hReadsShift hFreshShift
+  intro j hIndexPos hIndexLeTc hMode hNotReplaying
+  exact shiftPal_of_roundBundle centre place entry q first hMode hNotReplaying
+    (hBundle j hIndexPos hIndexLeTc)
+    (hCanRight j hIndexLeTc (Or.inl hMode))
+    (fun hpo => shiftPal_of_freshShiftLedger centre place entry q first
+      (hCanRight j hIndexLeTc (Or.inl hMode))
+      (hFreshLedger j hIndexPos hIndexLeTc hpo))
+
+
 
 end
 
