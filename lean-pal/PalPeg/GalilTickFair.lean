@@ -491,6 +491,28 @@ theorem replayStartVM_keeps_cursor (entry : ℕ) (s : GalilVM) :
       GalilScaffoldControl.reset entry s.dp, GalilScaffoldCounter.reset, s.periodOnly, s.walker⟩,
     ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, rfl⟩
 
+/-- **`Fair` の第 3 場は `Tick` からタダ。**
+
+`initVM`（`GalilScaffoldTopReplay:20`）と `replayStartVM`（`:33`）の定義そのものの
+15 連言の最後 2 つが `t.periodOnly = s.periodOnly ∧ t.walker = s.walker`。
+だから `keepsSearchCursor` は供給する必要がない。
+
+**CLAUDE.md §2 の「(e) …`initVM`/`replayStartVM`（`periodOnly`, `walker` 自由）が
+非関数的」は古い記述だった**（2026-09-19, n173 で訂正）。`Fair` の実質は 2 場:
+`restartFirst`（`fair_restart`）と `fallbackPlace`（`fallbackAt_walker_self`）。 -/
+theorem keepsSearchCursor_of_tick {c : Control} {s : GalilVM} {y : State GalilVM}
+    (h : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay ⟨c, s⟩ y)
+    (hm : c.mode = Mode.init ∨ c.mode = Mode.replayStart) :
+    y.vm.periodOnly = s.periodOnly ∧ y.vm.walker = s.walker := by
+  rcases hm with hm | hm
+  · obtain ⟨t, hi, hy⟩ := tick_init_cases hm h
+    obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, hpo, hw⟩ : initVM entry s t := hi
+    rw [hy]; exact ⟨hpo, hw⟩
+  · obtain ⟨t, o, hi, -, -, hy⟩ := tick_replayStart_cases hm h
+    obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, hpo, hw⟩ : replayStartVM entry s t := hi
+    rw [hy]; exact ⟨hpo, hw⟩
+
+#print axioms keepsSearchCursor_of_tick
 #print axioms fair_restart
 #print axioms initVM_keeps_cursor
 #print axioms replayStartVM_keeps_cursor

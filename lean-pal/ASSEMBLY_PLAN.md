@@ -1,3 +1,25 @@
+## 2026-09-19 n173: `Fair` の第 3 場が `Tick` からタダであることを**定理で**示した
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。**
+
+`GalilTickFair.keepsSearchCursor_of_tick`（標準 3 公理のみ）:
+
+    Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay ⟨c, s⟩ y →
+    (c.mode = Mode.init ∨ c.mode = Mode.replayStart) →
+      y.vm.periodOnly = s.periodOnly ∧ y.vm.walker = s.walker
+
+`initVM`（`GalilScaffoldTopReplay:20`）と `replayStartVM`（`:33`）の定義そのものの
+15 連言の最後 2 つが `t.periodOnly = s.periodOnly ∧ t.walker = s.walker` なので、
+`tick_init_cases` / `tick_replayStart_cases` で取り出すだけ。
+
+**CLAUDE.md §2 の記述を散文でなく定理で直した。**
+`Fair` の実質は 2 場（`restartFirst` ＋ `fallbackPlace`）で、どちらも witness がある
+（`fair_restart` / `fallbackAt_walker_self`）。
+
+**4 → 3 の道で「強めたオラクルが供給すべきもの」は 3 場から 2 場に減った。**
+公理は 4 本のまま。
+
 ## 2026-09-19 n172: `Fair` は 3 場すべて witness がある——公理を強める根拠が立った
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
