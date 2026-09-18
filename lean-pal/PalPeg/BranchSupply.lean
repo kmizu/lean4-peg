@@ -1029,6 +1029,223 @@ theorem radiusExactOffRewindPhase_tick {w : List (Fin 2)} {x y : State GalilVM}
 
 #print axioms radiusExactOffRewindPhase_tick
 
+/-! ### `SpanRep`（`length = 2·radius + 1`）を scan / shift 相で trace に運ぶ
+
+`GalilGlueBLeaves.EntryCounters` の 4 節のうち 3 つ（`ScanInvariant` / `RadiusRep` /
+`Canonical length`）は既にタダで、残るのが `SpanRep`（`GalilSpanCounter`）。
+
+一次情報で確認した `length` / `radius` の遷移:
+
+    afterCompare   : radius := inc、length := inc (inc)      → SpanRep 保存
+    afterMismatch  : radius := inc、length 不変              → **壊れる**
+    beginShiftVM   : length := inc (inc)、radius 不変        → 不一致の分を**回復**
+    shiftTick      : length -= 2、radius -= 1                → 保存
+    beginFallbackAt: どちらも不変                            → 壊れたまま
+    rewindFrame.choose / replayStartVM : length := 1、radius := 0 → 前提なしで再確立
+    boot           : 両方 reset                              → SpanRep は**偽**
+
+よって guard は**許可リスト** `scan ∨ shift`。copy / home / fpp / markEnd / choose /
+rewind 相では（不一致 fallback の後）壊れているが、`EntryCounters` が要るのは
+scan 状態だけなのでそれで足りる。 -/
+
+/-- **一致比較は `SpanRep` を保つ。**  `compareFound` の分岐 `a` は
+`matched s'` から `true` に決まる（`afterBirth` は左右のヘッドを触らない）。 -/
+theorem spanRep_after_matchedCompare {w : List (Fin 2)} {s s' : GalilVM}
+    (hCompare : (galilFrameS (PofC centre place entry w) q first).compare s s')
+    (hMatched : (galilFrameS (PofC centre place entry w) q first).matched s')
+    (hPrev : SpanRep s) :
+    SpanRep s' := by
+  obtain ⟨vs, vq, a, hvl, hvr, hiff, -, hch, hteq⟩ :
+    compareFound (PofC centre place entry w) q first s s' := hCompare
+  have ha : a = true := by
+    cases a with
+    | true => rfl
+    | false =>
+      rw [if_neg (by simp)] at hteq
+      subst hteq
+      refine absurd (hiff.2 ?_) (by simp)
+      have h0 : GalilScaffoldInputHead.read
+            (afterBirth (chainBorn (decide (vq.search.mode
+              = GalilScaffoldSearchFinish.Mode.found)) s.chain)
+              (afterMismatch s vs vq)).left
+          = GalilScaffoldInputHead.read
+            (afterBirth (chainBorn (decide (vq.search.mode
+              = GalilScaffoldSearchFinish.Mode.found)) s.chain)
+              (afterMismatch s vs vq)).right := hMatched
+      rw [afterBirth_left, afterBirth_right] at h0
+      exact h0
+  subst ha
+  rw [if_pos rfl] at hteq
+  subst hteq
+  unfold SpanRep at hPrev ⊢
+  rw [afterBirth_length, afterBirth_radius, afterCompare_length, afterCompare_radius,
+    inc_value, inc_value, inc_value]
+  omega
+
+/-- **不一致比較 ＋ `beginShift` は `SpanRep` を回復する。**
+不一致は `radius` だけ inc して `length` を触らないので壊れるが、
+shift 入口の `length += 2` でちょうど戻る。 -/
+theorem spanRep_after_mismatchBeginShift {w : List (Fin 2)} {s s' t : GalilVM}
+    (hCompare : (galilFrameS (PofC centre place entry w) q first).compare s s')
+    (hNotMatched : ¬ (galilFrameS (PofC centre place entry w) q first).matched s')
+    (hBegin : beginShiftVM' s' t)
+    (hPrev : SpanRep s) :
+    SpanRep t := by
+  obtain ⟨vs, vq, a, hvl, hvr, hiff, -, hch, hteq⟩ :
+    compareFound (PofC centre place entry w) q first s s' := hCompare
+  have ha : a = false := by
+    cases a with
+    | false => rfl
+    | true =>
+      exfalso
+      rw [if_pos rfl] at hteq
+      subst hteq
+      refine hNotMatched ?_
+      have h0 := hiff.1 rfl
+      show GalilScaffoldInputHead.read
+          (afterBirth (chainBorn (decide (vq.search.mode
+            = GalilScaffoldSearchFinish.Mode.found)) s.chain)
+            (afterCompare s vs vq)).left
+        = GalilScaffoldInputHead.read
+          (afterBirth (chainBorn (decide (vq.search.mode
+            = GalilScaffoldSearchFinish.Mode.found)) s.chain)
+            (afterCompare s vs vq)).right
+      rw [afterBirth_left, afterBirth_right]
+      exact h0
+  subst ha
+  rw [if_neg (by simp)] at hteq
+  subst hteq
+  obtain ⟨v, hv⟩ := hBegin
+  unfold SpanRep at hPrev ⊢
+  rw [hv.2]
+  show value (GalilScaffoldCounter.inc (GalilScaffoldCounter.inc
+      (afterBirth (chainBorn (decide (vq.search.mode
+        = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)).length))
+    = 2 * value (afterBirth (chainBorn (decide (vq.search.mode
+        = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)).radius + 1
+  rw [afterBirth_length, afterBirth_radius, afterMismatch_length, afterMismatch_radius,
+    inc_value, inc_value, inc_value]
+  omega
+
+/-- **(不変量)** `SpanRep` を scan / shift 相だけで主張する（許可リスト）。 -/
+def SpanRepOnScanAndShift (c : Control) (s : GalilVM) : Prop :=
+  c.mode = Mode.scan ∨ c.mode = Mode.shift → SpanRep s
+
+/-- `length` / `radius` を触らない遷移では `SpanRep` はそのまま。 -/
+theorem spanRep_congr {s t : GalilVM} (hLen : t.length = s.length) (hRad : t.radius = s.radius)
+    (h : SpanRep s) : SpanRep t := by
+  unfold SpanRep at h ⊢
+  rw [hLen, hRad]
+  exact h
+
+/-- **1 tick 保存。**  側入力は boot の `radius = reset` / `length = reset` だけ。
+guard が `scan ∨ shift` の許可リストなので、行き先がその外なら空虚。 -/
+theorem spanRepOnScanAndShift_tick {w : List (Fin 2)} {x y : State GalilVM}
+    (hTick : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y)
+    (hBootCounters : x.ctl.mode = Mode.init →
+      x.vm.radius = GalilScaffoldCounter.reset ∧ x.vm.length = GalilScaffoldCounter.reset)
+    (hPrev : SpanRepOnScanAndShift x.ctl x.vm) :
+    SpanRepOnScanAndShift y.ctl y.vm := by
+  cases hTick with
+  | init c s s' hm hInit =>
+    intro _
+    obtain ⟨-, -, -, hlen, hrad, -⟩ : initVM entry s s' := hInit
+    obtain ⟨h0r, h0l⟩ := hBootCounters hm
+    exact spanRep_of_init hlen hrad h0r h0l
+  | scan_wait c s s' hm _ hBg =>
+    intro _
+    exact spanRep_background (PofC centre place entry w) q first hBg (hPrev (Or.inl hm))
+  | scan_count c s s' hm _ _ hBg =>
+    intro _
+    exact spanRep_background (PofC centre place entry w) q first hBg (hPrev (Or.inl hm))
+  | scan_match c s s' s'' o hm _ _ hCompare hMatched hPlace _ =>
+    intro _
+    have hpl : s'' = (if c.replaying then {s' with replay := dec s'.replay} else s') := hPlace
+    have hts : s''.length = s'.length ∧ s''.radius = s'.radius := by
+      rw [hpl]; split <;> exact ⟨rfl, rfl⟩
+    exact spanRep_congr hts.1 hts.2
+      (spanRep_after_matchedCompare centre place entry q first (w := w) hCompare hMatched
+        (hPrev (Or.inl hm)))
+  | scan_shift c s s' s'' hm _ _ hCompare hNotMatched _ _ hBegin =>
+    intro _
+    exact spanRep_after_mismatchBeginShift centre place entry q first (w := w) hCompare
+      hNotMatched hBegin (hPrev (Or.inl hm))
+  | scan_fallback c s s' s'' hm _ _ _ _ _ _ _ =>
+    rintro (hg | hg) <;> exact Mode.noConfusion hg
+  | shift_one c s s' hm _ hOne =>
+    intro _
+    obtain ⟨-, -, -, wv, hw, hGet⟩ := hOne.1
+    have hSet := hOne.2
+    rw [hGet] at hSet
+    subst hSet
+    have h0 : SpanRepS (shiftLens.get s).shift := hPrev (Or.inr hm)
+    have h1 := spanRepS_shiftTick h0
+    show SpanRep (shiftLens.set s
+      ⟨shiftTick (shiftLens.get s).shift, ChainVM.watch (chainShiftOne wv),
+        inc (inc (shiftLens.get s).cycle)⟩)
+    unfold SpanRep
+    unfold SpanRepS at h1
+    rw [shiftLens_set_radius, shiftLens_set_length]
+    exact h1
+  | shift_done c s o hm _ _ => intro _; exact hPrev (Or.inr hm)
+  | replayStart c s s' o hm hRS _ _ =>
+    intro _
+    obtain ⟨-, -, -, -, hrad, hlen, -⟩ : replayStartVM entry s s' := hRS
+    exact spanRep_of_fallback hlen hrad
+  | restart c s s' hm hRestart =>
+    intro _
+    obtain ⟨v, -, -, -, -, ht⟩ : restartVM entry s s' := hRestart
+    exact spanRep_congr (by rw [ht]) (by rw [ht]) (hPrev (Or.inl hm))
+  | copy_one c s s' hm _ h => rintro (hg | hg) <;> rw [hm] at hg <;> exact Mode.noConfusion hg
+  | copy_done c s s' hm _ h => rintro (hg | hg) <;> exact Mode.noConfusion hg
+  | home_start c s s' hm _ h => rintro (hg | hg) <;> exact Mode.noConfusion hg
+  | home_step c s s' hm _ h => rintro (hg | hg) <;> rw [hm] at hg <;> exact Mode.noConfusion hg
+  | fpp_slice c s s' hm h => rintro (hg | hg) <;> rw [hm] at hg <;> exact Mode.noConfusion hg
+  | fpp_done c s s' hm h => rintro (hg | hg) <;> exact Mode.noConfusion hg
+  | markEnd_step c s s' hm _ h => rintro (hg | hg) <;> rw [hm] at hg <;> exact Mode.noConfusion hg
+  | markEnd_found c s s' hm _ h => rintro (hg | hg) <;> exact Mode.noConfusion hg
+  | choose_select c s s' hm _ _ h => rintro (hg | hg) <;> exact Mode.noConfusion hg
+  | choose_step c s s' hm _ h => rintro (hg | hg) <;> rw [hm] at hg <;> exact Mode.noConfusion hg
+  | rewind_done c s s' hm _ h => rintro (hg | hg) <;> exact Mode.noConfusion hg
+  | rewind_one c s s' hm _ _ h => rintro (hg | hg) <;> rw [hm] at hg <;> exact Mode.noConfusion hg
+  | rewind_pair c s s' hm _ _ h => rintro (hg | hg) <;> rw [hm] at hg <;> exact Mode.noConfusion hg
+
+/-- **trace 全域での搬送。**  新規入力ゼロ（boot の counters は `PreTrace.start`）。 -/
+theorem spanRepOnScanAndShift_alongTrace {w : List (Fin 2)}
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTrace : PreTrace centre place entry q first w st Tc) :
+    ∀ i, i ≤ Tc w.length → SpanRepOnScanAndShift (st i).ctl (st i).vm := by
+  have hBoot : ∀ j, j ≤ Tc w.length → (st j).ctl.mode = Mode.init →
+      (st j).vm.radius = GalilScaffoldCounter.reset ∧
+        (st j).vm.length = GalilScaffoldCounter.reset := by
+    intro j hj hMode
+    have hj0 : j = 0 := by
+      rcases Nat.eq_zero_or_pos j with h | h
+      · exact h
+      · exfalso
+        obtain ⟨n, rfl⟩ : ∃ n, j = n + 1 := ⟨j - 1, by omega⟩
+        exact tick_target_mode_ne_init (hPreTrace.trace.tick n (by omega)) hMode
+    subst hj0
+    rw [hPreTrace.start]
+    exact ⟨rfl, rfl⟩
+  intro i
+  induction i with
+  | zero =>
+    intro _
+    rw [hPreTrace.start]
+    rintro (hg | hg) <;> exact Mode.noConfusion hg
+  | succ n ih =>
+    intro hIndexLeTc
+    exact spanRepOnScanAndShift_tick centre place entry q first
+      (hPreTrace.trace.tick n (by omega)) (hBoot n (by omega)) (ih (by omega))
+
+#print axioms spanRepOnScanAndShift_tick
+#print axioms spanRepOnScanAndShift_alongTrace
+
+#print axioms spanRep_after_matchedCompare
+#print axioms spanRep_after_mismatchBeginShift
+#print axioms spanRep_congr
+
 /-! ### 中心ヘッドと右ヘッドの入力表現（同時不変量）
 
 `LPackM2.centreRep` の guard は `rewind ∨ replayStart` だけ（`Run23:105`）。
