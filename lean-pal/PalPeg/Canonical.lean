@@ -17,6 +17,7 @@ import PalPeg.ChainStepGap
 import PalPeg.CloseoutFinalFour
 import PalPeg.ConsumeAvailRefute
 import PalPeg.BranchSupply
+import PalPeg.AuxPackNotAtBoot
 
 /-!
 # Canonical — 意味のある名前で正本部品を再輸出する
@@ -163,6 +164,13 @@ alias refuted_watchOk := PalPeg.WatchOkRefute.watchOk_false
 verifier を持つ watch 状態で破れる。**帰結**: `given_consumeAvailEverywhere_FALSE_HYP` は無価値。
 正しい形は `CloseoutVerSide.VerRun`（run 形）。 -/
 alias refuted_consumeAvail_universal := PalPeg.ConsumeAvailRefute.hav_false
+
+/-- **`AuxPack` は boot では偽**（旧名 `AuxPackNotAtBoot.not_auxPack_at_boot`）。
+`AuxPack.front.notInit : c.mode ≠ Mode.init` と `initial delay` の mode が衝突する。
+**帰結**: `CloseoutPackRun49.lpackM3_steps` は全点の `AuxPack` を要求するので
+**boot 根の trace には適用できない**（`hLv 0` が充足不能）。`LPackM3` を運ぶなら
+添字を `1 ≤ i` に制限するか、cycle 起点（`InvLPC` の scan 状態）から運ぶ。 -/
+alias auxPack_is_false_at_boot := PalPeg.AuxPackNotAtBoot.not_auxPack_at_boot
 
 /-- **モデル欠陥 `M-watchBreak`**（`WatchOk` が偽である根本原因）。
 Scala 正本の `ScaffoldChain.step()` は `Mode.Watch` かつ正 lag で `consume()` を呼び、

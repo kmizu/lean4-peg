@@ -17,6 +17,50 @@
 
 
 
+
+## 2026-09-19 n95: `AuxPack` は boot で偽 — `lpackM3_steps` は boot 根では使えない（機械検査）
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 6 義務を axiom として持つ。無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+`CentreLedger` の等式（`radiusExact`）を自前で運ぶ前に、既存の
+`CloseoutPackRun49.lpackM3_tick` が同じ保存を全 tick 形について証明済みなので、
+`lpackM3_steps` に乗れないかを確認した。**乗れない。**
+
+```
+-- PalPeg/AuxPackNotAtBoot.lean
+theorem not_auxPack_at_boot (w : List (Fin 2)) : ¬ AuxPack (boot w).ctl (boot w).vm :=
+  fun hAuxPack => hAuxPack.front.notInit rfl
+```
+
+`AuxPack` は `FrontPack` を場に持ち、`FrontPack.notInit : c.mode ≠ Mode.init`。
+boot の制御は `initial 2048 = ⟨.init, …⟩` なので衝突する。
+`lpackM3_steps` は `hLv : ∀ i ≤ Tc w.length, … ∧ AuxPack (st i).ctl (st i).vm ∧ …` を
+取るが `st 0 = boot w` なので **`hLv 0` が充足不能**。
+つまりこの定理は boot 根の trace には適用できない（偽の前提を要求しているのと同じで、
+前進として数えられない）。
+
+### `LPackM3` を運ぶための選択肢
+
+1. 添字を `1 ≤ i` に制限する（`mode ≠ init` は 1 手目以降は定理:
+   `BranchSupply.mode_ne_init_alongTrace_afterFirstStep`）
+2. `AuxPack` の場を mode で守る
+3. cycle 起点（`InvLPC` の scan 状態）から運ぶ ——
+   `CloseoutOracleW.packRunR_MW` が実際にやっていること（`auxPack_steps` を
+   `hlive_of_invLPC` ＋ `InvLPC` 起点の `AuxPack` から回す）
+
+**1 が一番安い**（`FrontPack` は `frontPack_alongTrace` で 1 手目以降タダ。
+残るは `Coupled` と `CopyPack`）。
+
+### 教訓
+
+`lpackM3_steps` は build が通っていて `#print axioms` も標準公理のみだが、
+**前提が充足不能なので誰も使えない**。これは「build が通る」「公理が綺麗」では
+検出できない種類の不良で、**前提の充足可能性を確認しないと前進と誤認する**。
+`unconditional` の axiom 方式にした理由がまさにこれ:
+目標から逆に辿るので、使えない補題は自然に浮かび上がる。
+
 ## 2026-09-19 n94: 目標 `PalInPeg.unconditional` を作り、残り 7 義務を `axiom` として明示
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
