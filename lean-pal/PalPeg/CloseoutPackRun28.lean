@@ -309,7 +309,6 @@ theorem walkerInv_tick
     (hplace : ∀ u, (GalilScaffoldPlace.stream (place u)).length ≤ position u.right)
     (hdelay : 2 ≤ delay) {c c' : Control} {s t : GalilVM}
     (hcan : c.replaying = true → GalilScaffoldChainVerifier.canRight s.right)
-    (hf : Fair entry delay ⟨c, s⟩ ⟨c', t⟩)
     (h : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay
       ⟨c, s⟩ ⟨c', t⟩)
     (hI : WalkerInv c s) : WalkerInv c' t := by
@@ -317,7 +316,8 @@ theorem walkerInv_tick
   case init =>
     rename_i hm hi
     have hi' : initVM entry s t := hi
-    have hw : t.walker = s.walker := (hf.keepsSearchCursor (Or.inl hm)).2
+    have hw : t.walker = s.walker :=
+      (PalPeg.GalilTickDet.initVM_keepsSearchCursor hi').2
     rcases hI with ⟨-, h0⟩ | ⟨h1, -⟩ | ⟨h1, -⟩
     · refine Or.inr (Or.inl ⟨by simp, ?_⟩)
       unfold Bounded
@@ -505,35 +505,39 @@ theorem walkerInv_tick
 
 /-! ## 5. `Fair` runs -/
 
-theorem walkerInv_of_fair
+/-- **`Fair` はもう要らない**（2026-09-19）。`walkerInv_tick` が `Fair` を読んでいた
+唯一の箇所は `keepsSearchCursor` で、`M-initCursor` の修正でそれが定理
+（`GalilTickDet.initVM_keepsSearchCursor`）になったため。 -/
+theorem walkerInv_of_run
     (hplace : ∀ u, (GalilScaffoldPlace.stream (place u)).length ≤ position u.right)
     (hdelay : 2 ≤ delay) {n : ℕ} {x y : State GalilVM}
-    (h : FairSteps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first)
-      entry delay n x y)
+    (h : Steps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first)
+      delay n x y)
     (hcan : ∀ (m : ℕ) (z : State GalilVM),
-      FairSteps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first)
-        entry delay m x z → z.ctl.replaying = true → GalilScaffoldChainVerifier.canRight z.vm.right)
+      Steps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first)
+        delay m x z → z.ctl.replaying = true → GalilScaffoldChainVerifier.canRight z.vm.right)
     (hx : WalkerInv x.ctl x.vm) : WalkerInv y.ctl y.vm := by
   induction h with
   | zero x => exact hx
-  | @succ n x w y ht hf hr ih =>
-    exact ih (fun m z hz => hcan (m+1) z (.succ ht hf hz))
+  | @succ n x w y ht hr ih =>
+    exact ih (fun m z hz => hcan (m+1) z (.succ ht hz))
       (walkerInv_tick onLetter leftFirst centre place entry q first delay hplace hdelay
-        (hcan 0 x (.zero x)) hf ht hx)
+        (hcan 0 x (.zero x)) ht hx)
 
-/-- **`WalkerInOrigin` at every `copy` state of a `Fair` run** — the `hwalk`
-hypothesis of `CloseoutPackRun25.wpack_of_fair`. -/
+/-- **`WalkerInOrigin` at every `copy` state of a run** — the `hwalk`
+hypothesis of `CloseoutPackRun25.wpack_of_fair`.
+**2026-09-19: `Fair` を外した**（`M-initCursor` の修正で不要になった）。 -/
 theorem walkerInOrigin_of_run
     (hplace : ∀ u, (GalilScaffoldPlace.stream (place u)).length ≤ position u.right)
     (hdelay : 2 ≤ delay) {x : State GalilVM}
     (hcan : ∀ (m : ℕ) (z : State GalilVM),
-      FairSteps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first)
-        entry delay m x z → z.ctl.replaying = true → GalilScaffoldChainVerifier.canRight z.vm.right)
+      Steps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first)
+        delay m x z → z.ctl.replaying = true → GalilScaffoldChainVerifier.canRight z.vm.right)
     (hx : WalkerInv x.ctl x.vm) (m : ℕ) (z : State GalilVM)
-    (hz : FairSteps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first)
-      entry delay m x z) (hm : z.ctl.mode = Mode.copy) : WalkerInOrigin z.vm :=
+    (hz : Steps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first)
+      delay m x z) (hm : z.ctl.mode = Mode.copy) : WalkerInOrigin z.vm :=
   walkerInOrigin_of_inv
-    (walkerInv_of_fair onLetter leftFirst centre place entry q first delay hplace hdelay hz hcan hx) hm
+    (walkerInv_of_run onLetter leftFirst centre place entry q first delay hplace hdelay hz hcan hx) hm
 
 #print axioms walkerInOrigin_of_run
 
