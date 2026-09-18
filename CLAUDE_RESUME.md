@@ -1,3 +1,40 @@
+## 2026-09-19 n168: **trace の出どころは `obligation_cycleOracle` — 4 → 3 の道が見えた**
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器はまだ動いていない。**
+
+`preTraceB_exists`（`GalilFinalBaseNeed:193`）を一次情報で読んだ。trace は
+
+    hor : CycleOracleMC (PofC centre place entry w) q first w
+    → checkpoints_cost_upto1 … hor …
+    → ⟨st, Tc, …⟩
+
+で作られている。**trace の tick 列は `obligation_cycleOracle`（4 本のうちの 1 本）が
+供給する run そのもの。**
+
+### 帰結: 1 本の文を強めて 1 本を丸ごと消せる
+
+| 操作 | 効果 |
+|---|---|
+| `obligation_cycleOracle` の文に「run の各 tick は `Fair`」を入れる | 1 本の中身が強くなる |
+| `obligation_localRealization` が**公理から外れる** | **本数 4 → 3** |
+
+**これは (C)（本数が減る操作）。** 強める側は妥当: `Fair` は Scala の優先順位と固定値を
+表すもの（CLAUDE.md §2）なので、**実機の run は定義上 `Fair`**。
+オラクルの仕事は run を提示することなので、提示する run が fair であることは
+モデルの忠実性の要求そのもの。
+
+### 段取り（`PROOF_STACK.md` に記録）
+
+1. `PreTraceB` に `fair` 場を足す
+2. `preTraceB_exists` の `hor` を `Fair` 版オラクルに差し替え、`checkpoints_cost_upto1` から運ぶ
+3. `obligation_cycleOracle` の文に `Fair` を追加
+4. `Realizes` の scan / init / replayStart を `tick_fair_unique` で閉じる
+5. `H_realizeLIMW'` の `∃ … L` を構成して `obligation_localRealization` を**外す**
+
+**未検証**: 4 が本当に閉じるか。CLAUDE.md §1 は「phase 側は閉、scan/init/replayStart が
+非決定性で閉じない」と書いているので `Fair` を入れれば閉じる見込みだが、実証はまだ。
+
 ## 2026-09-19 n167: `localRealization` に producer がいない理由の診断
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

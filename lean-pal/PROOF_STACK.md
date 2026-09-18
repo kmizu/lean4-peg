@@ -430,7 +430,40 @@ implications」）で、**構成しているのは次の 3 箇所だけ**（実�
 3. `Realizes` の scan / init / replayStart を `tick_fair_unique` で閉じる
 4. `H_realizeLIMW'` の `∃ … L` を構成する（`LocalSysConcrete.sysC` が候補）
 
-**1 で義務は弱くなる（(A)）が、2 が本体。**
+### 決定的な発見（n167）: trace の出どころは `obligation_cycleOracle`
+
+`preTraceB_exists`（`GalilFinalBaseNeed:193`）を読んだ。trace は
+
+    hor : CycleOracleMC (PofC centre place entry w) q first w
+    → checkpoints_cost_upto1 … hor …
+    → ⟨st, Tc, …⟩
+
+で作られている。**つまり trace の tick 列は `obligation_cycleOracle`（4 本のうちの 1 本）が
+供給する run そのもの。**
+
+→ **`cycleOracle` の文に「run の各 tick は `Fair`」を入れれば trace が `Fair` になる。**
+
+| 操作 | 効果 |
+|---|---|
+| `obligation_cycleOracle` の文を強める（`Fair` な run を要求） | 1 本の中身が強くなる |
+| `obligation_localRealization` が**公理から外れる** | **本数 4 → 3** |
+
+**これは (C)。本数が減る。** しかも強める側は妥当: `Fair` は Scala の優先順位と固定値を
+表すものなので（CLAUDE.md §2）、**実機の run は定義上 `Fair`**。
+オラクルの仕事は run を提示することなので、提示する run が fair であることは
+モデルの忠実性の要求そのもの。
+
+### 段取り（改訂）
+
+1. `Fair` の定義を確認し、`PreTraceB` に `fair` 場を足す
+2. `preTraceB_exists` の `hor` を `Fair` 版オラクルに差し替え、
+   `checkpoints_cost_upto1` から `Fair` を運ぶ
+3. `PalInPegUnconditional` の `obligation_cycleOracle` の文に `Fair` を追加
+4. `Realizes` の scan / init / replayStart を `tick_fair_unique` で閉じる
+5. `H_realizeLIMW'` の `∃ … L` を構成して `obligation_localRealization` を**外す**
+
+**未検証**: 4 が本当に閉じるか（CLAUDE.md §1 は「phase 側は閉、scan/init/replayStart が
+非決定性で閉じない」と書いているので、`Fair` を入れれば閉じる見込みだが実証はまだ）。
 
 ---
 
