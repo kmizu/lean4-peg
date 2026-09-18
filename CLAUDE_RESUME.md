@@ -1,3 +1,43 @@
+## n221 — 公理進捗: `ShiftInv.palNext` の producer を書いた（実質 3 場すべてに producer）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 梃子の第 2 連言 `ShiftInv` の `palNext` に **producer が付いた**。これで実質 3 場すべてが埋まる目処 |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 書いたもの
+
+```lean
+theorem palAt_next_of_period {x : List α} {C R h : ℕ}
+    (hpal : Manacher.PalAt x (C + h) (R + h)) (hp : 0 < h)
+    (hlen : C + 2 * h + (R + 1) < x.length)
+    (hper : PeriodOn x (2 * h) C (C + 2 * h + R + 1)) :
+    Manacher.PalAt x (C + 2 * h) (R + 1)
+```
+
+構成は 2 行の事実だけ:
+
+* 左側 — `C+h` を軸にした鏡映で `x[C+2h−i]? = x[C+i]?`（`i ≤ h` と `i > h` の両方で同じ結論）
+* 右側 — 周期 1 歩で `x[C+i]? = x[C+i+2h]?`
+
+`Manacher.palAt_succ_iff` も `palAt_shift_of_period` も要らんかった。半径 `R+1` を直接構成できる。
+入力の `hper` は n219 の `periodOn_of_blockOn` が `ChainW` の `BlockOn` から供給する。
+
+### `ShiftInv`（19 場）の供給状況
+
+| 場 | 供給 |
+|---|---|
+| `pal : PalAt (C+h) (R+h)` | `ScanInvariant.palindrome` そのもの（添字書き換えのみ） |
+| `palNext : PalAt (C+2h) (R+1)` | **`palAt_next_of_period`（本ノート）** |
+| `origin : enc[C−R−1]? ≠ enc[C+R+2h+1]?` | shift 遷移の `hmt : ¬ matched u`（走査が伸びへんかった）＋ 周期 `2h` で右添字を `C+R+1` に戻す。`RoundScan.origin` と同値 |
+| 枠 15 場 | `beginShiftVM` の遷移から計算 |
+
+**未知の数学は残ってへん。残りは配線の作業量だけ。**
 ## n220 — 公理進捗: 第 2 連言 `ShiftInv` の実質 3 場すべてに供給元が付いた
 
 **公理への進捗**

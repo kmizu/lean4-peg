@@ -241,6 +241,38 @@ theorem reshift_of_palAt_period (word : List (Fin 3)) (C h r : ℕ)
       rw [show C + r + 1 - 2 * h + 2 * h = C + r + 1 from by omega]
       exact hpred.symm
 
+/-- **`ShiftInv.palNext` の producer。**  シフト後の回文
+`PalAt x (C+h) (R+h)`（＝ `ShiftInv.pal`、走査不変量の `palindrome` そのもの）と
+周期 `2h` から、次の中心 `C+2h` の回文が半径 `R+1` で出る。
+
+各添字 `i ≤ R+1` について、左側は `C+h` を軸にした鏡映で `x[C+2h-i]? = x[C+i]?`
+（`i ≤ h` と `i > h` の両方で同じ結論）、右側は周期 1 歩で `x[C+i]? = x[C+i+2h]?`。
+`Manacher.palAt_succ_iff` は要らん——半径 `R+1` を直接構成する。 -/
+theorem palAt_next_of_period {x : List α} {C R h : ℕ}
+    (hpal : Manacher.PalAt x (C + h) (R + h)) (hp : 0 < h)
+    (hlen : C + 2 * h + (R + 1) < x.length)
+    (hper : PeriodOn x (2 * h) (C + 1) (C + 2 * h + R + 1)) :
+    Manacher.PalAt x (C + 2 * h) (R + 1) := by
+  have hrc : R + h ≤ C + h := hpal.1
+  refine ⟨by omega, by omega, ?_⟩
+  intro i hi
+  rcases Nat.eq_zero_or_pos i with rfl | hipos
+  · simp
+  have hm : x[C + 2 * h - i]? = x[C + i]? := by
+    rcases Nat.lt_or_ge h i with hih | hih
+    · have hmir := hpal.2.2 (i - h) (by omega)
+      rw [show C + h - (i - h) = C + 2 * h - i from by omega,
+          show C + h + (i - h) = C + i from by omega] at hmir
+      exact hmir
+    · have hmir := hpal.2.2 (h - i) (by omega)
+      rw [show C + h - (h - i) = C + i from by omega,
+          show C + h + (h - i) = C + 2 * h - i from by omega] at hmir
+      exact hmir.symm
+  have hpe : x[C + i]? = x[C + i + 2 * h]? := hper (C + i) (by omega) (by omega)
+  rw [hm, hpe, show C + i + 2 * h = C + 2 * h + i from by omega]
+
+#print axioms palAt_next_of_period
+
 #print axioms reshift_of_palAt_period
 
 /-- **`phase = 4` への特化.**  四つの検証済み半周期は `r ≤ 4 * h` のときだけ
