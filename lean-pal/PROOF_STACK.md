@@ -299,7 +299,12 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
       (c.mode = Mode.scan  → RoundHistory P q first delay w c s) ∧
       (c.mode = Mode.shift → ShiftPhaseHistory w s)
 
-* tick 保存 → 4 遷移を `Tick` の構成子で振り分けるだけ
+* carrier の定義と取り出しは**済（n163）**:
+  `RoundCarrier` / `h_readsShift_of_roundCarrier` / `originShift_of_roundCarrier`
+* tick 保存 → 4 遷移を `Tick` の構成子で振り分ける。
+  **各構成子の行き先の control を一次情報で確認してから書く**（mode の判定に要る）。
+  `RoundHistory` の射影は 12 成分の存在命題なので
+  `onlyMatchedRun_of_roundHistory` を通す（`obtain ⟨wch, hwch⟩` では取れない）
 * `H_readsShift` → scan 相は空虚（guard が `mode = shift`）、
   shift 相で `remaining` が尽きた点は `shiftPhaseHistory_readsShift`（済）
 * **基底が最後の壁**: `scan_fallback` で copy 相に落ちると chain が作り直されるので

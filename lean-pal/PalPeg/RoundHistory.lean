@@ -920,6 +920,48 @@ theorem shiftPhaseHistory_of_scanShift {P : Shared} {q : ℕ} {first : Fin 9} {d
     hBeginShift, .stop _ _ _, (shiftLens.set_get s2).symm, hChainTarget⟩
 
 #print axioms shiftPhaseHistory_of_scanShift
+
+/-! ## 結合 carrier
+
+ラウンドは scan 相と shift 相を交互に通るので、carrier も mode で分岐する。
+4 つの相遷移（`roundHistory_tick` / `shiftPhaseHistory_of_scanShift` /
+`shiftPhaseHistory_tick` / `roundHistory_of_shiftDone`）を `Tick` の構成子で
+振り分ければ tick 保存になる。
+
+**`scan_fallback` と `restart` では carrier は原理的に保たれない**——そこで chain が
+作り直されるので、新しいラウンドの `OriginAt` は
+`GalilScaffoldTopFirstRound.first_round`（無条件）が出す。そこが基底。 -/
+
+/-- **(NAMED) ラウンドの carrier。**  mode で分岐する。 -/
+def RoundCarrier (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ)
+    (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
+  (c.mode = Mode.scan → RoundHistory P q first delay w c s) ∧
+  (c.mode = Mode.shift → ShiftPhaseHistory w s)
+
+/-- **`H_readsShift` は carrier から出る。**  scan 相では guard（`mode = shift`）で空虚、
+shift 相で `remaining` が尽きた点は `shiftPhaseHistory_readsShift`。
+
+**これが目標**: `RoundCarrier` を run / trace の全点で持てれば
+`obligation_shiftPalResidues*` の第 1 残差（`H_readsShift`）が公理から外れる。 -/
+theorem h_readsShift_of_roundCarrier {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hCarrier : RoundCarrier P q first delay w c s) :
+    PalPeg.CloseoutRoundUnique.H_readsShift w c s := by
+  intro hMode hNotReplaying hPeriodOnly hExhausted
+  exact shiftPhaseHistory_readsShift (hCarrier.2 hMode) hExhausted hMode hNotReplaying
+    hPeriodOnly hExhausted
+
+/-- **carrier の shift 半分だけを使う版。**  `OriginShift`（`CloseoutReadsOrigin:84`）と
+同じ内容。 -/
+theorem originShift_of_roundCarrier {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hCarrier : RoundCarrier P q first delay w c s) :
+    PalPeg.CloseoutReadsOrigin.OriginShift w c s := by
+  intro hMode _ _ hExhausted
+  exact shiftPhaseHistory_originAt (hCarrier.2 hMode) hExhausted
+
+#print axioms h_readsShift_of_roundCarrier
+#print axioms originShift_of_roundCarrier
 #print axioms h_readsShift_of_run
 
 #print axioms chainShiftRun_tick

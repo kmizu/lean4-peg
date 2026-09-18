@@ -1,3 +1,38 @@
+## 2026-09-19 n163: 結合 carrier `RoundCarrier` と `H_readsShift` の取り出し
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器はまだ動いていない。**
+
+`PalPeg/RoundHistory.lean` は **37 宣言**（全部標準 3 公理以内、3 本は公理ゼロ）。
+
+    RoundCarrier P q first delay w c s :=
+      (c.mode = Mode.scan  → RoundHistory P q first delay w c s) ∧
+      (c.mode = Mode.shift → ShiftPhaseHistory w s)
+
+    h_readsShift_of_roundCarrier   : RoundCarrier … → H_readsShift w c s
+    originShift_of_roundCarrier    : RoundCarrier … → OriginShift w c s
+
+**これが目標の形**: `RoundCarrier` を run / trace の全点で持てれば
+`obligation_shiftPalResidues*` の第 1 残差（`H_readsShift`）が公理から外れる。
+
+### 途中で `sorry` を書きかけて止めた（記録）
+
+tick 振り分けを書こうとして `| _ => sorry` を含むスクリプトを組み立てたが、
+実行前に気づいて破棄した（スクリプトは `skip` を出力してファイルを書いていない）。
+原因は `RoundHistory` の射影を `obtain ⟨wch, hwch⟩` で取ろうとしたこと——
+実際は 12 成分の存在命題で、`onlyMatchedRun_of_roundHistory` を通さないといけない。
+**急いで通すために `sorry` を置くのは禁止。** 確定できる分だけ入れた。
+
+### 残り
+
+1. `roundCarrier_tick` — 4 遷移を `Tick` の構成子で振り分ける。
+   `scan_wait` / `scan_count` / `scan_match` は `roundHistory_tick`、
+   `scan_shift` は `shiftPhaseHistory_of_scanShift`、
+   `shift_one` は `shiftPhaseHistory_tick`、`shift_done` は `roundHistory_of_shiftDone`。
+   各構成子の**行き先の control** を一次情報で確認してから書く（mode の判定に要る）
+2. 基底 — `scan_fallback` / `restart` では carrier は原理的に保たれない。
+   新しいラウンドの `OriginAt` は `first_round`（無条件）が出す
+
 ## 2026-09-19 n162: **ラウンドの 4 つの相遷移が全部揃った**（`RoundHistory` 34 宣言）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
