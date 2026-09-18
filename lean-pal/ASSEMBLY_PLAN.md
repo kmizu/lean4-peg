@@ -15,6 +15,63 @@
 
 
 
+
+## 2026-09-19 n93: `CentreEq` の遷移保存を 8 本 landing — rewind 相だけが heads を動かす
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+`CentreEq s := (position s.center : ℤ) + value s.radius = position s.right`
+（＝`CloseoutPackRun47.CentreLedger` の第 3 節）の遷移保存を、一次情報で確認した分だけ
+機械検査した（`PalPeg/BranchSupply.lean` §5d、8 本すべて一発で通った）。
+
+| 定理 | 遷移 | 効果 |
+|---|---|---|
+| `centreEq_boot` | boot | `center = right`、`radius = 0` |
+| `centreEq_init` | `initVM` | `center = right`、radius 保持（init 相で 0） |
+| `centreEq_background` | `backgroundS` | 3 つとも不変 |
+| `centreEq_beginShift` | `beginShiftVM'` | 3 つとも不変 |
+| `centreEq_beginFallback` | `beginFallbackVM'` | 3 つとも不変 |
+| `centreEq_restart` | `restartVM` | 3 つとも不変 |
+| `centreEq_replayStart` | `replayStartVM` | **前提なしで再確立**（`center = right`、`radius = reset`） |
+| `centreEq_of_eq_heads` | 汎用 | `center = right ∧ radius = 0 → CentreEq` |
+
+### レンズで切り分けた結論（重要）
+
+* `fppLens.get s = s.fpp` のみ（`TopVM:53`）→ **fpp 相の 8 遷移**
+  （`copyOne`/`copyEnd`/`fppStart`/`homeStep`/`fppSlice`/`fppDone`/`atEnd`/`markForward`）は
+  center/radius/right を**触らない**ので `CentreEq` は自明に保存される。
+* `rewindLens.get s = ⟨s.fpp, s.left, s.center, s.right, s.length, s.radius⟩`（`TopVM:73`）
+  → **`markBack` / `rewindOne` / `rewindPair` の 3 遷移だけ**が heads と radius を動かす。
+* `matchedPlace` は `t = (if b then {s with replay := dec s.replay} else s)`
+  （`TopMerge:59`）で右ヘッドを動かさない。右ヘッドが進むのは `compare`（`afterCompare`）で、
+  そこでは `radiusAfter = inc` が同時に効くので保存される。
+
+### 帰結: mode guard で残差ゼロになる見込み
+
+rewind 相（`choose` / `rewind`）を除外し、`replayStart` も除外した
+
+```
+CentreEqG c s := c.mode ≠ Mode.choose → c.mode ≠ Mode.rewind →
+                 c.mode ≠ Mode.replayStart → CentreEq s
+```
+
+なら、**壊れる 3 遷移はすべて行き先が除外領域**で、出口の `replayStartVM` が
+前提なしで再確立するので、**追加の葉なしで tick 保存が示せる**見込み。
+（`markBack` の行き先 mode が `choose` であることは `Tick`（`GalilScaffoldTop:109`）の
+構成子表で確認済み。）
+
+### 次のセッションの手順
+
+1. `CentreEqG` を定義し `centreEqG_tick` を `cases` で書く（24 構成子）。
+   除外領域が行き先の場合は `intro` の第 1〜3 引数で矛盾（`by decide`）。
+   残りは §5d の 8 本と fppLens の射影（`Frame.pull` の定義を確認）で埋まる。
+   **注意**: `cases ht` は非変数の状態では dependent elimination に失敗するので、
+   状態を変数に一般化した補助補題にしてから `cases` する（n91 で確立した型）。
+2. `centreEqG_trace` を帰納で出す（`chainPosInv2_trace` と同じ形）。
+3. `CentreLedger` が全 scan 状態で出る → `BgStartP2` → `bg` 場が `hver` に合流。
+   `shiftDoneLedger` も落ちる。`hme` の `EntryCounters` 半分も `RadiusRep` 経由で落ちる。
+
 ## 2026-09-19 n92: `CentreEq` 不変量の tick ごとの分析 — 次のセッションはこれを書く
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。

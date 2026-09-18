@@ -613,6 +613,102 @@ theorem initLedger_of_trace {w : List (Fin 2)} (hw : 0 < w.length)
 
 #print axioms initLedger_of_trace
 
+/-! ## 5d. `CentreEq` — 半径カウンタが中心から右ヘッドまでの距離を正確に測る
+
+```
+CentreEq s := (position s.center : ℤ) + value s.radius = position s.right
+```
+
+これが `CloseoutPackRun47.CentreLedger` の第 3 節で、`RadLedger.le`（`≤`）からは出ない
+（`LPackM2` の 6 場に radius を縛るものは無い）。一次情報で遷移ごとの効果を確認した：
+
+| 遷移 | center | radius | right |
+|---|---|---|---|
+| `backgroundS` | 不変 | 不変 | 不変 |
+| `shiftTick`（`ChainInputSupply:1445`） | `right s.center`（+1） | `dec`（−1） | 不変 |
+| `afterCompare` の `radiusAfter`（`TopSearch:37`） | 不変 | **無条件 `inc`** | +1 |
+| `beginShiftVM`（`TopShiftCycle:23`） | 不変 | 不変 | 不変 |
+| `beginFallbackVM`（`TopFallbackCycle:19`） | 不変 | 不変 | 不変 |
+| `restartVM`（`TopRestart:19`） | 不変 | 不変 | 不変 |
+| `initVM` / `replayStartVM`（`TopReplay:20,28`） | `= right` | 0 | — |
+| fpp 相（`copyOne`/`copyEnd`/`fppStart`/`homeStep`/`fppSlice`/`fppDone`/`atEnd`/`markForward`） | 不変（`fppLens` は `s.fpp` だけを見る） | 不変 | 不変 |
+| **rewind 相**（`markBack`/`rewindOne`/`rewindPair`、`rewindLens`） | **動く** | **動く** | **動く** |
+
+`rewindLens.get s = ⟨s.fpp, s.left, s.center, s.right, s.length, s.radius⟩` なので
+rewind 相だけが heads と radius を動かす。そこを mode guard で除外すれば
+（`choose` / `rewind` / `replayStart`）、`replayStartVM` が出口で
+`center = right`、`radius = 0` として**再確立**するので残差ゼロで運べる見込み。 -/
+
+/-- 中心と右ヘッドが同じで半径が 0 なら成立。 -/
+theorem centreEq_of_eq_heads {s : GalilVM} (hc : s.center = s.right)
+    (hz : value s.radius = 0) :
+    (position s.center : ℤ) + value s.radius = position s.right := by
+  rw [hc, hz]; omega
+
+/-- boot で成立。 -/
+theorem centreEq_boot (w : List (Fin 2)) :
+    (position (boot w).vm.center : ℤ) + value (boot w).vm.radius
+      = position (boot w).vm.right :=
+  centreEq_of_eq_heads (by rfl) (by rfl)
+
+/-- `beginShiftVM'` は center / radius / right を触らない。 -/
+theorem centreEq_beginShift {s t : GalilVM} (hb : beginShiftVM' s t)
+    (h : (position s.center : ℤ) + value s.radius = position s.right) :
+    (position t.center : ℤ) + value t.radius = position t.right := by
+  obtain ⟨v, -, ht⟩ := hb
+  rw [ht]; exact h
+
+/-- `beginFallbackVM'` も触らない。 -/
+theorem centreEq_beginFallback {s t : GalilVM} (hb : beginFallbackVM' s t)
+    (h : (position s.center : ℤ) + value s.radius = position s.right) :
+    (position t.center : ℤ) + value t.radius = position t.right := by
+  obtain ⟨p, ht⟩ := hb
+  rw [ht]; exact h
+
+/-- `restartVM` も触らない。 -/
+theorem centreEq_restart {s t : GalilVM} (hb : restartVM entry s t)
+    (h : (position s.center : ℤ) + value s.radius = position s.right) :
+    (position t.center : ℤ) + value t.radius = position t.right := by
+  obtain ⟨v, -, -, -, -, ht⟩ := hb
+  rw [ht]; exact h
+
+/-- **`replayStartVM` は前提なしで `CentreEq` を再確立する**（`center = right`、
+`radius = reset`）。rewind 相で壊れた等式がここで戻る。 -/
+theorem centreEq_replayStart {s t : GalilVM} (hb : replayStartVM entry s t) :
+    (position t.center : ℤ) + value t.radius = position t.right := by
+  obtain ⟨-, hr, -, hc, hrad, -, -, -, -, -, -, -, -⟩ := hb
+  refine centreEq_of_eq_heads ?_ ?_
+  · rw [hc, hr]
+  · rw [hrad]; rfl
+
+/-- `initVM` は `center = right` にし radius を保つので、init 相の `radius = 0`
+（`RadLedger.initZero`）から成立。 -/
+theorem centreEq_init {s t : GalilVM} (hb : initVM entry s t)
+    (hz : value s.radius = 0) :
+    (position t.center : ℤ) + value t.radius = position t.right := by
+  obtain ⟨hr, -, hc, -, hrad, -, -, -, -, -, -, -, -⟩ := hb
+  refine centreEq_of_eq_heads ?_ ?_
+  · rw [hc, hr]
+  · rw [hrad]; exact hz
+
+/-- `backgroundS` は center / radius / right を触らない。 -/
+theorem centreEq_background {w : List (Fin 2)} {s t : GalilVM}
+    (hb : (galilFrameS (PofC centre place entry w) q first).background s t)
+    (h : (position s.center : ℤ) + value s.radius = position s.right) :
+    (position t.center : ℤ) + value t.radius = position t.right := by
+  obtain ⟨-, hr, -, hcen, -, hrad, -⟩ :=
+    backgroundS_fields (PofC centre place entry w) q first hb
+  rw [hcen, hr, hrad]; exact h
+
+#print axioms centreEq_background
+#print axioms centreEq_of_eq_heads
+#print axioms centreEq_boot
+#print axioms centreEq_beginShift
+#print axioms centreEq_beginFallback
+#print axioms centreEq_restart
+#print axioms centreEq_replayStart
+#print axioms centreEq_init
+
 /-! ## 6. 残差は 3 場 — `shiftDone` は完全に放電された
 
 §3 で半径台帳（`RadLedger`）、§5 で `canRight`（trace 予算 ＋ `LPackM2.shiftGeom`）が
