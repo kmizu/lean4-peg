@@ -24,7 +24,7 @@ run 形の 1 本 `BranchSupply.BranchRun` に**まとめると同時に弱めら
 
 ## 本数の誠実な読み方
 
-`pal_in_peg_final41` の Prop 引数は 6 本だが、**`hB` は 4 つの義務の束**である。
+`pal_in_peg_final41` の Prop 引数は 6 本だが、**`hbranch` は 4 つの義務の束**である。
 義務の個数で数えれば `final39`（7 本すべて別々）より多い。
 **前進は本数ではなく「global → run 形」の弱化**で、放電できる形になったことである。
 正本の最上位は引き続き `pal_in_peg_final39`（7 本、束ねていない）とする。
@@ -103,7 +103,7 @@ open PalPeg.CloseoutFinalW PalPeg.CloseoutFinalFour PalPeg.CloseoutFinalVer
 open PalPeg.CloseoutVerSide PalPeg.BranchSupply PalPeg.CloseoutPackRun41
 
 /-- **`pal_in_peg_final38` の中 4 本を run 形 1 本にした最上位。**
-Prop 引数 6 本・反証済みゼロ。ただし `hB` は 4 義務の束なので、**本数の削減ではなく
+Prop 引数 6 本・反証済みゼロ。ただし `hbranch` は 4 義務の束なので、**本数の削減ではなく
 「global → run 形」の弱化**である（正本は `pal_in_peg_final39`）。
 
 | 前提 | 内容 |
@@ -112,7 +112,7 @@ Prop 引数 6 本・反証済みゼロ。ただし `hB` は 4 義務の束なの
 | `hme` | `H_marksEntry'`（残差は `WindowInOrigin`、`CloseoutMarksFree`） |
 | `hor` | `CycleOracleMC3`（11 葉） |
 | `hC` | `H_realizeLIMW'`（局所実現） |
-| `hB` | **`BranchRun`** — run の各点で `BranchAt`（4 分岐義務の run 形） |
+| `hbranch` | **`BranchRun`** — run の各点で `BranchAt`（4 分岐義務の run 形） |
 | `hver` | `VerRun` — chain の verifier が入力を表現し lag が正規（run 形） |
 -/
 theorem pal_in_peg_final41 (entry q : ℕ) (first : Fin 9)
@@ -123,7 +123,7 @@ theorem pal_in_peg_final41 (entry q : ℕ) (first : Fin 9)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hB : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
+    (hbranch : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → BranchRun centreC placeC entry q first w (st 0))
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
@@ -141,9 +141,9 @@ theorem pal_in_peg_final41 (entry q : ℕ) (first : Fin 9)
     hC
     (fun w st _ hw h => needIMW'_le_B centreC placeC entry q first hw h
       (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
-      (hB w st h.base.pre.start) (hver w st h.base.pre.start))
+      (hbranch w st h.base.pre.start) (hver w st h.base.pre.start))
 
-/-- **`pal_in_peg_final41` の `hB` から半径台帳を落とした版。**
+/-- **`pal_in_peg_final41` の `hbranch` から半径台帳を落とした版。**
 
 `BranchAt.shiftDone` は `canRight s.right` と半径台帳の連言だったが、後者は
 `CloseoutRadPack.RadLedger.le`（`position center + value radius ≤ position right`）と

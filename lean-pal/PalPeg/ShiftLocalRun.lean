@@ -15,9 +15,9 @@ import PalPeg.CloseoutPackRun40
 | S4 | `CloseoutVerSide.radPack_ptS4` / `trailF_ptS4` | `ChainPosInv2` ＋ `VerRun` |
 | （本ファイル） | — | `ChainPosInv'`（前提追加なし） |
 
-3 段の本体は `hsh : ∀ i ≤ Tc w.length, ShiftLocalS … (st i)` しか使っていない
-（`radPack_ptS` の最初の `have` がそれで、以降 `hfour`/`hbg`/`hmatch`/`hsd`/`hpos0`/`hreach`
-は一切現れない）。よって **`hsh` を引数に取る形**で 1 度だけ書けば 4 版すべてが乗る。
+3 段の本体は `hshiftLocal : ∀ i ≤ Tc w.length, ShiftLocalS … (st i)` しか使っていない
+（`radPack_ptS` の最初の `have` がそれで、以降 `hfour`/`hbg`/`hmatch`/`hsd`/`hposInv0`/`hreach`
+は一切現れない）。よって **`hshiftLocal` を引数に取る形**で 1 度だけ書けば 4 版すべてが乗る。
 それが §2 の `radPack_pt_of_shiftLocal` / `trailF_pt_of_shiftLocal` /
 `needIMW'_le_of_shiftLocal`。
 
@@ -107,78 +107,78 @@ section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
 
-/-! ## 2. `RadPack` / `TrailF` / `needL'` を `hsh` だけから -/
+/-! ## 2. `RadPack` / `TrailF` / `needL'` を `hshiftLocal` だけから -/
 
 /-- **`RadPack` along the trace from pointwise `ShiftLocalS`.**  This is
 `CloseoutShiftS.radPack_ptS` with its first `have` taken as an argument; the
-rest of that proof never mentions `hfour`/`hbg`/`hmatch`/`hsd`/`hpos0`. -/
+rest of that proof never mentions `hfour`/`hbg`/`hmatch`/`hsd`/`hposInv0`. -/
 theorem radPack_pt_of_shiftLocal {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
-    (hP : PreTrace centre place entry q first w st Tc)
-    (hsh : ∀ i, i ≤ Tc w.length → ShiftLocalS centre place entry q first w (st i))
-    (hLP : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
+    (hpre : PreTrace centre place entry q first w st Tc)
+    (hshiftLocal : ∀ i, i ≤ Tc w.length → ShiftLocalS centre place entry q first w (st i))
+    (hpackM2At : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
     (hll : ∀ i, i ≤ Tc w.length → PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm) :
     ∀ i, i ≤ Tc w.length → RadPack (st i).ctl (st i).vm := by
   have hen : ∀ i, i ≤ Tc w.length → ScanNR (st i) → ∀ s'' t'' : GalilVM,
       (galilFrameS (PofC centre place entry w) q first).compare (st i).vm s'' →
       ¬ (galilFrameS (PofC centre place entry w) q first).matched s'' →
       shiftGuardVM s'' → beginShiftVM' s'' t'' → ShiftBud t'' := by
-    intro i hi hs s'' t'' hcmp hmt hg hb
+    intro i hile hs s'' t'' hcmp hmt hg hb
     obtain ⟨rad, hscan, hcan, hh⟩ :=
-      halfBound_of_shiftLocalS centre place entry q first (hLP i hi) (hsh i hi) hs hcmp hmt hg hb
+      halfBound_of_shiftLocalS centre place entry q first (hpackM2At i hile) (hshiftLocal i hile) hs hcmp hmt hg hb
     exact shiftBud_of_scanInv (onLetterVM w) leftFirstVM centre place entry q first
       hscan hcan hcmp hb hh
   have hsv : ∀ i, i ≤ Tc w.length → ScanNR (st i) → ∀ s'' t'' : GalilVM,
       (galilFrameS (PofC centre place entry w) q first).compare (st i).vm s'' →
       ¬ (galilFrameS (PofC centre place entry w) q first).matched s'' →
-      shiftGuardVM s'' → beginShiftVM' s'' t'' → SaneVer t''.chain := fun i hi hs s'' t'' =>
-    saneVer_of_shiftLocalS centre place entry q first (hsh i hi) hs
-  have hL := radLedger_pt centre place entry q first hw hP hll
-  have hS := shiftOrd_ptS centre place entry q first hw hP hll hen
-  have hV := verSane_ptS centre place entry q first hw hP hll hsv
-  exact fun i hi => radPack_of_parts (hL i hi) (hS i hi) (hll i hi) (hV i hi)
+      shiftGuardVM s'' → beginShiftVM' s'' t'' → SaneVer t''.chain := fun i hile hs s'' t'' =>
+    saneVer_of_shiftLocalS centre place entry q first (hshiftLocal i hile) hs
+  have hlagCan := radLedger_pt centre place entry q first hw hpre hll
+  have hS := shiftOrd_ptS centre place entry q first hw hpre hll hen
+  have hverRun := verSane_ptS centre place entry q first hw hpre hll hsv
+  exact fun i hile => radPack_of_parts (hlagCan i hile) (hS i hile) (hll i hile) (hverRun i hile)
 
 /-- **`TrailF` along the trace from pointwise `ShiftLocalS`.** -/
 theorem trailF_pt_of_shiftLocal {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
-    (hP : PreTrace centre place entry q first w st Tc)
-    (hsh : ∀ i, i ≤ Tc w.length → ShiftLocalS centre place entry q first w (st i))
-    (hLP : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
+    (hpre : PreTrace centre place entry q first w st Tc)
+    (hshiftLocal : ∀ i, i ≤ Tc w.length → ShiftLocalS centre place entry q first w (st i))
+    (hpackM2At : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
     (hll : ∀ i, i ≤ Tc w.length → PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm)
     {m : ℕ} (hm : m < w.length) :
     ∀ i, i ≤ Tc (m+1) → TrailF w m (st i) := by
-  have hsane := sanePack_pt centre place entry q first hw hP hll
-  have hrad := radPack_pt_of_shiftLocal centre place entry q first hw hP hsh hLP hll
-  have hscan := scanT_pt centre place entry q first hw hP hrad hsane hm
-  have hB := chainBudget_pt centre place entry q first hw hP hrad hsane hm
-  have hV := verF_trace centre place entry q first hP hm hscan hB
-  exact fun i hi => trailF_of_scanT (hscan i hi) (hV i hi).ver (hV i hi).lagPos
+  have hsanePack := sanePack_pt centre place entry q first hw hpre hll
+  have hrad := radPack_pt_of_shiftLocal centre place entry q first hw hpre hshiftLocal hpackM2At hll
+  have hscan := scanT_pt centre place entry q first hw hpre hrad hsanePack hm
+  have hbranch := chainBudget_pt centre place entry q first hw hpre hrad hsanePack hm
+  have hverRun := verF_trace centre place entry q first hpre hm hscan hbranch
+  exact fun i hile => trailF_of_scanT (hscan i hile) (hverRun i hile).ver (hverRun i hile).lagPos
 
 /-- **`needL'` over `PreTraceIMW` from pointwise `ShiftLocalS`.**  The four
-`needIMW'_le_*` variants differ only in how they build `hsh`. -/
+`needIMW'_le_*` variants differ only in how they build `hshiftLocal`. -/
 theorem needIMW'_le_of_shiftLocal {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
-    (hP : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hsh : ∀ i, i ≤ Tc w.length → ShiftLocalS centre place entry q first w (st i)) :
+    (hpre : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hshiftLocal : ∀ i, i ≤ Tc w.length → ShiftLocalS centre place entry q first w (st i)) :
     ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
       PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 := by
-  have hbase := hP.base.pre
-  have hLP : ∀ i, i ≤ Tc w.length →
+  have hbase := hpre.base.pre
+  have hpackM2At : ∀ i, i ≤ Tc w.length →
       PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm :=
-    fun i hi => (hP.packs i hi).pack
+    fun i hile => (hpre.packs i hile).pack
   have hll : ∀ i, i ≤ Tc w.length →
       PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm :=
-    fun i hi => leftLive_of_lpackM (hLP i hi)
-  intro m hm i hi
+    fun i hile => leftLive_of_lpackM (hpackM2At i hile)
+  intro m hm i hile
   exact needL'_le_of_trailF w st m i
-    (trailF_pt_of_shiftLocal centre place entry q first hw hbase hsh hLP hll hm i hi)
+    (trailF_pt_of_shiftLocal centre place entry q first hw hbase hshiftLocal hpackM2At hll hm i hile)
 
 /-! ## 3. `ChainPosInv'` を run 沿いに運ぶ（`hfour` なし） -/
 
 /-- `ChainPosInv'` は idle chain で無条件。 -/
 theorem chainPosInv'_of_idle {w : List (Fin 2)} {c : Control} {s : GalilVM}
-    (hi : s.chain = ChainVM.idle) : ChainPosInv' w c s :=
-  ⟨coupled'_of_idle hi, fun _ hni => absurd hi hni⟩
+    (hile : s.chain = ChainVM.idle) : ChainPosInv' w c s :=
+  ⟨coupled'_of_idle hile, fun _ hni => absurd hile hni⟩
 
 /-- **`ChainPosInv'` along a run.**  `final30` の 3 分岐前提だけで閉じる。 -/
 theorem chainPosInv'_steps {w : List (Fin 2)}
@@ -196,9 +196,9 @@ theorem chainPosInv'_steps {w : List (Fin 2)}
 with `hfour` gone. -/
 theorem shiftLocalS_of_chainPosInv' {w : List (Fin 2)} {x : State GalilVM}
     (h : ChainPosInv' w x.ctl x.vm) : ShiftLocalS centre place entry q first w x := by
-  by_cases hi : x.vm.chain = ChainVM.idle
-  · exact shiftLocalS_of_chainIdle centre place entry q first hi
-  · exact shiftLocalS_of_watchShiftS centre place entry q first hi
+  by_cases hile : x.vm.chain = ChainVM.idle
+  · exact shiftLocalS_of_chainIdle centre place entry q first hile
+  · exact shiftLocalS_of_watchShiftS centre place entry q first hile
       (watchShiftS_of_chainPosInv' centre place entry q first h)
 
 /-- **`ShiftLocalS` at every state of a run, with no `hfour`.** -/
@@ -215,15 +215,15 @@ theorem shiftLocalS_of_run' {w : List (Fin 2)}
 as `pal_in_peg_final30`, and the boot obligation is a theorem. -/
 theorem needIMW'_le_W' {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
-    (hP : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hpre : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
     (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
     (hsd : H_shiftDoneP centre place entry q first w)
-    (hpos0 : ChainPosInv' w (st 0).ctl (st 0).vm) :
+    (hposInv0 : ChainPosInv' w (st 0).ctl (st 0).vm) :
     ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
       PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 :=
-  needIMW'_le_of_shiftLocal centre place entry q first hw hP
-    (fun i hi => shiftLocalS_of_run' centre place entry q first hbg hmatch hsd hpos0
-      (PalPeg.CloseoutPackRun2.steps_of_trace hP.base.pre.trace i hi))
+  needIMW'_le_of_shiftLocal centre place entry q first hw hpre
+    (fun i hile => shiftLocalS_of_run' centre place entry q first hbg hmatch hsd hposInv0
+      (PalPeg.CloseoutPackRun2.steps_of_trace hpre.base.pre.trace i hile))
 
 end
 

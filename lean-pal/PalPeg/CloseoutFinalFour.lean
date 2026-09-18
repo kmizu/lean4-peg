@@ -102,18 +102,18 @@ theorem pal_in_peg_of_needLe (entry q : ℕ) (first : Fin 9)
     RecognizedByTotalPEG PAL := by
   classical
   obtain ⟨Q', Γ', iQ, dQ, iΓ, dΓ, t, K, L, blank, initQ, outQ, n, htape, hn, hreal⟩ := hC
-  have key : ∀ w : List (Fin 2), ∃ (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+  have preTrace_exists : ∀ w : List (Fin 2), ∃ (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc := by
     intro w
     by_cases hw : 0 < w.length
     · obtain ⟨st, Tc, h⟩ := preTraceIMW_exists centreC placeC entry q first hboot hA w hw
       exact ⟨st, Tc, fun _ => h⟩
     · exact ⟨fun _ => boot w, fun _ => 0, fun h => absurd h hw⟩
-  choose stP TcP hP using key
+  choose stP TcP hpreTrace using preTrace_exists
   let M := L.realize blank initQ (GalilEmptyWord.accept' initQ outQ) n htape hn
-  have hpre : ∀ w : List (Fin 2), 0 < w.length → PreloadL' w (stP w) (TcP w) := by
+  have hpreload : ∀ w : List (Fin 2), 0 < w.length → PreloadL' w (stP w) (TcP w) := by
     intro w hw
-    have h := hP w hw
+    have h := hpreTrace w hw
     exact ⟨h.base.pre.tc0, fun m hm => h.base.pre.mono m (m+1) (by omega) hm,
       needL'_boot w (stP w) h.base.pre.start,
       needLe_of_pointwise' w (stP w) (TcP w) (hneed w (stP w) (TcP w) hw h)⟩
@@ -125,7 +125,7 @@ theorem pal_in_peg_of_needLe (entry q : ℕ) (first : Fin 9)
     (fun w => arrLG' τF w (stP w) (TcP w w.length))
     (fun w => (w.length + 1) * τF) ?_ ?_ ?_ ?_
   · intro w hw
-    have h := hP w hw
+    have h := hpreTrace w hw
     exact abstractRun_throttledL'_2p18 w (stP w) (TcP w w.length)
       (PofC centreC placeC entry w) q first 2048
       (fun j => sharedC_trunc_vm w j centreC placeC entry (fun s => (centrePlaceC w j s).1)
@@ -134,11 +134,11 @@ theorem pal_in_peg_of_needLe (entry q : ℕ) (first : Fin 9)
       (by rw [h.base.pre.start]; rfl) (needL'_boot w (stP w) h.base.pre.start)
       (by rw [h.base.pre.start]; exact sufVM_boot w) h.base.pre.trace.tick
   · intro w hw
-    exact hreal w hw _ _ (hP w hw).base
+    exact hreal w hw _ _ (hpreTrace w hw).base
   · exact ledger_throttledL'_2p18 (PofC centreC placeC entry) (fun _ => q) (fun _ => first)
-      stP TcP hpre (fun w hw => (hP w hw).base.pre.report w.length (by omega) le_rfl)
-      (fun w hw => base_of_preTraceB (hP w hw).base)
-      (fun w hw => (hP w hw).base.pre.cost)
+      stP TcP hpreload (fun w hw => (hpreTrace w hw).base.pre.report w.length (by omega) le_rfl)
+      (fun w hw => base_of_preTraceB (hpreTrace w hw).base)
+      (fun w hw => (hpreTrace w hw).base.pre.cost)
   · exact GalilEmptyWord.realize_accept'_nil L blank initQ outQ n htape hn
 
 /-- **`pal_in_peg_final5MW` から `hfour` が消えた版。** -/

@@ -226,6 +226,18 @@ sed -i "/^import PalPeg.GalilSegmentConstruct$/a import PalPeg.X" PalPeg.lean   
   意味から引けない。意味のある別名は `PalPeg/Canonical.lean` に置く（**カーネルが検査する
   索引**：名前が動けば build が壊れる。markdown の索引は黙って腐る）。
 - 反証済みのものは `refuted_` を前置して、使ってはいけないことを名前で示す。
+- **仮定名・変数名は「何を言っているか」を表す。位置で付けない。**
+  コウタの指摘（2026-09-19）:「変数名とか仮定につける名前も大事。あとでみたときに
+  直感的になんか変なことしてるなってわかるから」。**名前は臭い検出器である。**
+  実例: 偽だった前提が `hav` / `hpack` という名前だったので過剰量化が見えなかった。
+  `hconsumeAvailEverywhere` / `hchainPackAtAnyState` なら一目で分かった。
+  - ✗ `hP` `hR` `hL` `h1` `hz` `hE` `hi` `key` `hm2`（位置・登場順で付けた名前）
+  - ✓ `hpre`（`PreTrace`）`hradLedger` `hlagCan` `hipos`（`1 ≤ i`）`hradZero`
+    `hentryCounters` `hile`（`i ≤ Tc`）`hpackM2` `hverRun` `hfront` `hshiftLocal`
+  - 同じ名前を別の意味で使い回さない（`hpre` を `PreTrace` と `PreloadL'` の両方に
+    使うと衝突する。`hpreTrace` / `hpreload` に分ける）。
+  - **過剰量化した仮定には、その過剰量化が名前に出る名前を付ける**
+    （`…Everywhere` / `…AtAnyState`）。そうすれば書いた瞬間に気づける。
 
 ### 3. コピペ証明を残さない
 
