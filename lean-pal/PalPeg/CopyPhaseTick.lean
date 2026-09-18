@@ -459,4 +459,44 @@ theorem copyInv_of_answerAhead_placeAhead {answer : GalilScaffoldTape.Tape} {cen
 #print axioms copyOrBack_chainStart
 #print axioms copyInv_of_answerAhead_placeAhead
 
+
+/-! ## `found_to_watchStart_least` の適用形
+
+`GalilPrepLeast.found_to_watchStart_least` は**任意の** `bs` / `cs`
+（長さ `h` / `h+1`）について `ChainTicks (bs ++ dm :: cs) x1 (.watch …)` を与える。
+一方 `FoundPackCorrected.reachesWatchPhase_of_backgroundRun` が要るのは
+「長さ `n` の**任意の**イベント列で watch に着く」形。
+
+長さ `2h+2` のリストは必ず `bs ++ dm :: cs`（`|bs| = h`、`|cs| = h+1`）に分割できるので、
+前者から後者が出る。 -/
+
+/-- 長さ `2h+2` のリストは `bs ++ dm :: cs`（`|bs| = h`、`|cs| = h+1`）に分割できる。 -/
+theorem list_split_mid {α : Type} (es : List α) (h : ℕ) (hLen : es.length = 2 * h + 2) :
+    ∃ (bs : List α) (dm : α) (cs : List α),
+      es = bs ++ dm :: cs ∧ bs.length = h ∧ cs.length = h + 1 := by
+  have hDrop : (es.drop h).length = h + 2 := by
+    rw [List.length_drop, hLen]; omega
+  cases hRest : es.drop h with
+  | nil => rw [hRest] at hDrop; simp at hDrop
+  | cons dm cs =>
+    refine ⟨es.take h, dm, cs, ?_, ?_, ?_⟩
+    · rw [← hRest, List.take_append_drop]
+    · rw [List.length_take, hLen]; omega
+    · rw [hRest] at hDrop; simpa using hDrop
+
+/-- **適用形**: 任意の長さ `2h+2` のイベント列で watch に着く。 -/
+theorem chainReachesWatch_of_split {x1 : ChainVM} {h : ℕ}
+    (hTicks : ∀ (bs : List Bool) (dm : Bool) (cs : List Bool),
+      bs.length = h → cs.length = h + 1 →
+      ∃ w : GalilScaffoldChainWatch.State, ChainTicks (bs ++ dm :: cs) x1 (ChainVM.watch w)) :
+    ∀ es : List Bool, es.length = 2 * h + 2 →
+      ∃ w : GalilScaffoldChainWatch.State, ChainTicks es x1 (ChainVM.watch w) := by
+  intro es hLen
+  obtain ⟨bs, dm, cs, hEq, hbs, hcs⟩ := list_split_mid es h hLen
+  rw [hEq]
+  exact hTicks bs dm cs hbs hcs
+
+#print axioms list_split_mid
+#print axioms chainReachesWatch_of_split
+
 end PalPeg.CopyPhaseTick
