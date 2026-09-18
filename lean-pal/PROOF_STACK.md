@@ -231,11 +231,11 @@ found 経路の入口 `prepInputs3_of_found_or_later` が `StageEntryC` を取�
 
 ### 手順
 
-1. `CloseoutContracts.StageEntryC` を `StageEntryS := InvLPS ∧ Rd c r` に切り直す
-   （`Rd` はパラメータ、`ReadyClosure` を別に持ち回る）
-2. `CloseoutReportCase.reachAtC3_of_crossF` と `reachAtC3_of_target_matchF` を
-   新通貨で再証明（上の置換表どおり）
-3. `CloseoutContracts.reachAtC3_of_crossF_C` を追従
+1. **済（n184）**: `StageEntryC.fuel` を `ReadyPacedS … (2048 - c.clock)` に差し替え
+2. **不要だった**: `CloseoutReadyStage.reachAtC3_of_crossS:945` と
+   `reachAtC3_of_target_matchS:841` が**既に存在していた**（docstring の
+   「§5–§6 re-prove … on `ReadyPacedS`」は計画ではなく完了報告）
+3. **済（n184）**: `reachAtC3_of_crossF_C` を `reachAtC3_of_crossS` に向け直した
 4. found 経路の入口（`CloseoutPrepInputs3.prepInputs3_of_found_or_later`）の
    `StageEntryC` を `StageEntryS` に
 5. `Rd := RdPaced` を選べば `CloseoutPreload11.readyClosure_S2` が producer。

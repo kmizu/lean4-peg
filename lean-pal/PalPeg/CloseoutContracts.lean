@@ -1,4 +1,5 @@
 import PalPeg.CloseoutReportCase
+import PalPeg.CloseoutReadyStage
 import PalPeg.CloseoutRadPack
 import PalPeg.CloseoutCoreAudit
 import PalPeg.CloseoutFairWitness
@@ -58,14 +59,15 @@ open PalPeg.GalilTickFair (Fair)
 stage data — the radius evaluation of a found tick and the preparation segment
 both read it, and it cannot be recovered after dropping to `InvLPC`) together
 with the entry search budget in the exact shape
-`CloseoutReportCase.reachAtC3_of_crossF` consumes.
+`CloseoutReadyStage.reachAtC3_of_crossS` consumes（`ReadyFuel` 版は偽、`PalPeg/ReadyFuelRefute`）。
 
 Note what is **not** here: no `hpres`, no `StartShape`, no `InvL`-for-every-state
 reinforcement, and no unconditional position premise. -/
 structure StageEntryC (P : Shared) (q : ℕ) (first : Fin 9) (raw : List (Fin 2))
     (c : Control) (r : GalilVM) : Prop where
   inv : InvLPS P q first raw c r
-  fuel : ReadyFuel (searchLens.get r) (headRank r.right * 2048 + c.clock) (headRank r.right)
+  fuel : PalPeg.CloseoutReadyStage.ReadyPacedS (searchLens.get r)
+    (headRank r.right * 2048 + c.clock) (2048 - c.clock)
 
 theorem StageEntryC.invLPC {P : Shared} {q : ℕ} {first : Fin 9} {raw : List (Fin 2)}
     {c : Control} {r : GalilVM} (h : StageEntryC P q first raw c r) : InvLPC raw c r :=
@@ -76,7 +78,7 @@ theorem StageEntryC.stage {P : Shared} {q : ℕ} {first : Fin 9} {raw : List (Fi
     ReplayStage raw P q first c r := invLPS_stage h.inv
 
 /-- **Connected, consumer side.**  The crossing case of `MC4` over the contract:
-this is `CloseoutReportCase.reachAtC3_of_crossF` with its two entry premises
+this is `CloseoutReadyStage.reachAtC3_of_crossS` with its two entry premises
 replaced by the single bundle. -/
 theorem reachAtC3_of_crossF_C (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry q : ℕ) (first : Fin 9)
@@ -86,7 +88,7 @@ theorem reachAtC3_of_crossF_C (centre : GalilVM → Fin 3)
     (hsW : SegReachedW centre place entry q first raw c r c' t)
     (hlt : position r.right < 2 * m - 1) (hge : 2 * m - 1 ≤ position t.right) :
     ReachAtC3 (PofC centre place entry raw) q first raw m c r :=
-  PalPeg.CloseoutReportCase.reachAtC3_of_crossF centre place entry q first raw m hm1 hmle
+  PalPeg.CloseoutReadyStage.reachAtC3_of_crossS centre place entry q first raw m hm1 hmle
     hE.inv hE.fuel hsW hlt hge
 
 /-! ## 2. `SegResult` — the result of one watched segment -/

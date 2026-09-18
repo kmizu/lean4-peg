@@ -1,3 +1,49 @@
+## 2026-09-19 n184: **`StageEntryC` の偽の場を修理した**（置換先は既に存在していた）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+n181 で反証した `StageEntryC.fuel` を差し替えた:
+
+    -  fuel : ReadyFuel   (searchLens.get r) (headRank r.right * 2048 + c.clock) (headRank r.right)
+    +  fuel : ReadyPacedS (searchLens.get r) (headRank r.right * 2048 + c.clock) (2048 - c.clock)
+
+そして `reachAtC3_of_crossF_C` の中身を
+`CloseoutReportCase.reachAtC3_of_crossF` から
+**`CloseoutReadyStage.reachAtC3_of_crossS`** に向け直した。
+
+### 新しい定理はゼロ本（4 回連続）
+
+`reachAtC3_of_crossS`（`CloseoutReadyStage:945`）と `reachAtC3_of_target_matchS`（`:841`）は
+**既に書かれていた**。`CloseoutReadyStage` の冒頭 docstring が
+「§5–§6 re-prove … `reachAtC3_of_crossF` on `ReadyPacedS`」と書いていて、
+**それは計画ではなく完了報告だった**（宣言の存在を `grep "^theorem"` で確認済み）。
+
+`.fuel` の消費者は `CloseoutContracts:90` の **1 箇所だけ**だったので、
+差し替えは 3 行（場の型・呼び先・import）で済んだ。
+
+### スタック管理の効果（コウタの「stackで管理はよかったんかも」への答え）
+
+| n | 出来事 | 新規に書いた定理 |
+|---|---|---|
+| n175 | **公理 4 → 3** | **0** |
+| n177 | `ReplayStage` が捨てられていたのを発見・修理 | 0 |
+| n181 | `StageEntryC.fuel` を反証 | 0（証人は全部既存） |
+| n184 | `reachAtC3_of_crossS` が既にあった | 0 |
+
+その前（n148〜n164）は **44 本書いて計器は 1 本も動かなかった**。
+`PROOF_STACK.md` に「**書く前に探す**」を規律として書いたのが転換点。
+
+**ただし「終わりが見えた」とはまだ書かない。** 見えてきたのは残り作業の形であって、
+計器は 3 本のまま。
+
+### 残り
+
+| 公理 | 底 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` ＋ `obligation_cycleOracle` | found 経路の入口 `StageEntryC` が**修理できた**ので、次は `RdPaced`/`ReadyPacedS` の producer。`CloseoutPreload11.readyClosure_S2` の底は `PostRun` ＋ `RestartS2` |
+| `obligation_localRealization` | run 機構が fairness を捨てている（n174）。`Fair` の実質 2 場には witness あり（n172） |
+
 ## 2026-09-19 n183: `ReadyFuel` の API 全体に `ReadyPacedS` の双子がある（切り直しは機械的）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
