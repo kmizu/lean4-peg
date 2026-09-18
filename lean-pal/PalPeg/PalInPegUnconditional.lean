@@ -5,7 +5,7 @@ import PalPeg.BranchSupply
 # `PalInPeg.unconditional` — 目標そのもの。穴は `axiom` で明示する
 
 **これが目標の形**: `RecognizedByTotalPEG PAL` を**前提ゼロ**で（＝閉じた項として）持つ。
-いま足りない 9 個の原子的な義務を `axiom` として明示し、`#print axioms unconditional` を
+いま足りない 8 個の原子的な義務を `axiom` として明示し、`#print axioms unconditional` を
 そのまま TODO リストにする。
 
 ```
@@ -89,20 +89,25 @@ run に沿ってしか存在しないので**原理的に落ちない**。`hpack
 
 `bg` 場（`scan_wait` / `scan_count` 着地）は放電済みなのでここに無い。 -/
 
-/-- **(OBLIGATION)** `scan_match` 着地の位置台帳（trace 形）。 -/
-axiom obligation_matchLanding_alongTrace (entry q : ℕ) (first : Fin 9) :
-    ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
-      ∀ j, j ≤ Tc w.length →
-        PalPeg.BranchSupply.MatchLandingAt centreC placeC entry q first w (st j).ctl (st j).vm
+/-- **(OBLIGATION)** `MatchRes2` の残差 `MatchRest`（trace 形）。
 
-/-- **(OBLIGATION)** `scan_shift` 入口の shift 相台帳（trace 形）。 -/
-axiom obligation_shiftEntryLanding_alongTrace (entry q : ℕ) (first : Fin 9) :
+`scan_match` 着地と `scan_shift` 入口の 2 義務は**同じ `MatchRes2 w c s`** を入力に
+取るので（`CloseoutPackRun48.matchLanding_of_matchRes2` /
+`shiftEntryLanding_of_matchRes2`）、この 1 つに合流した。
+`MatchRes2` 自体は `CloseoutPackRun49.matchRes2_of_lpackM3` が `LPackM3`（運べる）
+＋ `LTickLeavesN`（タダ）＋ `LTickLeaves3`（`backLag` は放電済み）＋ `MatchRest` から出す。
+
+`MatchRest` の 4 場: `repV`（verifier の入力表現、`VerRun` と同内容）/
+`repVmid`（1 `ChainStep` 先でも表現、`right_word` で出るはず）/
+`replayPay`（replaying 時の source の payload）/
+`canRNext`（`canRight (right s.right)`、**最終位置で偽の疑いあり**——
+Scala 正本 `ScaffoldGalil.scala:255` の `available` は比較を `canRight right` で
+守っているので、入力が尽きた時点では比較自体が起きない。要確認）。 -/
+axiom obligation_matchRest_alongTrace (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
       ∀ j, j ≤ Tc w.length →
-        PalPeg.BranchSupply.ShiftEntryLandingAt centreC placeC entry q first w
-          (st j).ctl (st j).vm
+        PalPeg.CloseoutPackRun49.MatchRest w (st j).ctl (st j).vm
 
 /-! `chain` の `.back` 相の lag 形状は**放電済み**
 （`BranchSupply.chainBackLagAt_alongTrace`、新規入力ゼロ）。
@@ -151,16 +156,13 @@ theorem unconditional : RecognizedByTotalPEG PAL :=
     (obligation_cycleOracle 0 0 0)
     (obligation_localRealization 0 0 0)
     (fun w st Tc hPreTraceIMW =>
-      PalPeg.BranchSupply.scanLandingObligations_alongTrace_of_atoms centreC placeC 0 0 0
+      PalPeg.BranchSupply.scanLandingObligations_alongTrace_of_matchRest centreC placeC 0 0 0
         hPreTraceIMW
         (fun x hBig hScanNR => obligation_shiftPalAtScanStates 0 0 0 w x hBig hScanNR)
         (obligation_verifierRunAlongRun 0 0 0 w st hPreTraceIMW.base.pre.start)
-        (PalPeg.BranchSupply.chainBackLagAt_alongTrace centreC placeC 0 0 0 hPreTraceIMW)
         (obligation_shiftExitLedger_alongTrace 0 0 0 w st Tc hPreTraceIMW)
-        (PalPeg.BranchSupply.rewindMarginAt_alongTrace centreC placeC 0 0 0
-          hPreTraceIMW.base.pre (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW))
-        (obligation_matchLanding_alongTrace 0 0 0 w st Tc hPreTraceIMW)
-        (obligation_shiftEntryLanding_alongTrace 0 0 0 w st Tc hPreTraceIMW))
+        (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW)
+        (obligation_matchRest_alongTrace 0 0 0 w st Tc hPreTraceIMW))
     (obligation_verifierRunAlongRun 0 0 0)
 
 #print axioms unconditional

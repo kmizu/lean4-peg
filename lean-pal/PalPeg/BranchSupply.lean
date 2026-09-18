@@ -1744,6 +1744,113 @@ theorem rewindMarginAt_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM
 #print axioms rcouple_alongTrace
 #print axioms rewindMarginAt_alongTrace
 
+/-- **`MatchRes2` を trace の scan 状態で。**  `LPackM3` ＋ `LTickLeavesN` ＋
+`LTickLeaves3` ＋ `MatchRest` から（`matchRes2_of_lpackM3`）。 -/
+theorem matchRes2_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
+      ScanNR x → ShiftPal centre place entry q first w x.vm)
+    (hShiftExitLedger : ∀ j, j ≤ Tc w.length →
+      ShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm)
+    (hCentreMargin : ∀ j, j ≤ Tc w.length →
+      PalPeg.CloseoutPackRun13.CentreMargin (st j).ctl (st j).vm)
+    (hMatchRest : ∀ j, j ≤ Tc w.length →
+      PalPeg.CloseoutPackRun49.MatchRest w (st j).ctl (st j).vm) :
+    ∀ j, j ≤ Tc w.length → (st j).ctl.mode = Mode.scan →
+      MatchRes2 w (st j).ctl (st j).vm := by
+  have hPreTrace := hPreTraceIMW.base.pre
+  have hLPackM2 : ∀ j, j ≤ Tc w.length → LPackM2 w (st j).ctl (st j).vm :=
+    fun j hj => (hPreTraceIMW.packs j hj).m2
+  intro j hIndexLeTc hMode
+  -- scan 相なので `1 ≤ j`（boot は init 相）
+  have hIndexPos : 1 ≤ j := by
+    rcases Nat.eq_zero_or_pos j with rfl | h; swap; · exact h
+    exfalso; rw [hPreTrace.start] at hMode; exact Mode.noConfusion hMode
+  have hw : 0 < w.length := by
+    rcases Nat.eq_zero_or_pos w.length with hlen | h; swap; · exact h
+    exfalso
+    rw [hlen, hPreTrace.tc0] at hIndexLeTc
+    omega
+  have hTcPos : 1 ≤ Tc w.length := by omega
+  have hRewindMargin := rewindMarginAt_alongTrace centre place entry q first hPreTrace
+    hCentreMargin
+  have hChainBackLag := chainBackLagAt_alongTrace centre place entry q first hPreTraceIMW
+  have hRes : ∀ j, j ≤ Tc w.length →
+      ChainBackLagAndShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm :=
+    fun j hj => ⟨(hChainBackLag j hj).backLag, (hShiftExitLedger j hj).shiftExitLedger,
+      (hRewindMargin j hj).rewindMargin⟩
+  have hAuxPack := auxPack_alongTrace_afterFirstStep centre place entry q first hw hPreTrace
+  have hPack3 := lpackM3_alongTrace_afterFirstStep centre place entry q first hw
+    hPreTraceIMW hTcPos hSP hRes
+  have hBig : BigPack2MG7W centre place entry q first w (st j) :=
+    ⟨hPreTraceIMW.packs j hIndexLeTc, hAuxPack j hIndexPos hIndexLeTc,
+     PalPeg.GalilTrailRad.centreLive_trace centre place entry q first w hw st Tc
+       hPreTrace j hIndexLeTc,
+     ⟨(hRewindMargin j hIndexLeTc).rewindMargin,
+      fun hm _ => scanRightHeadCanRight_alongTrace centre place entry q first hw
+        hPreTrace hLPackM2 hTcPos j hIndexLeTc hm⟩⟩
+  exact PalPeg.CloseoutPackRun49.matchRes2_of_lpackM3 centre place entry q first
+    (hPack3 j hIndexPos hIndexLeTc)
+    (lticksN_of_lpackM2_W centre place entry q first hBig (hLPackM2 j hIndexLeTc))
+    (lTickLeaves3_alongTrace centre place entry q first hw hPreTrace
+      (radLedger_pt centre place entry q first hw hPreTrace
+        (fun k hk => leftLive_of_lpackM (hPreTraceIMW.packs k hk).pack))
+      hLPackM2
+      (PalPeg.CloseoutLPack6.sanePack_pt centre place entry q first hw hPreTrace
+        (fun k hk => leftLive_of_lpackM (hPreTraceIMW.packs k hk).pack))
+      hTcPos hRes j hIndexLeTc)
+    hMode (hMatchRest j hIndexLeTc)
+
+#print axioms matchRes2_alongTrace
+
+/-! ## 5j. `MatchRest` 1 つから 2 つの landing 義務が出る
+
+`CloseoutPackRun48` の `matchLanding_of_matchRes2` と
+`shiftEntryLanding_of_matchRes2` は**同じ `MatchRes2 w c s`** を入力に取る
+（`H_shiftRes2` の結論がそれ）。そして
+`CloseoutPackRun49.matchRes2_of_lpackM3` が `LPackM3`（§5e）＋ `LTickLeavesN`（タダ）
+＋ `LTickLeaves3`（`backLag` は放電済み、残りは `shiftExitLedger` と `rewindMargin`）
+＋ **`MatchRest`** から `MatchRes2` を出す。
+
+よって `matchLanding` / `shiftEntryLanding` の 2 義務は `MatchRest` 1 つに合流する。 -/
+
+/-- **trace 形の scan landing 義務を、残った 3 つの残差だけから。**
+`bg` は §5f、`matchLand` / `entryLand` は `MatchRest` 経由。
+`backLag` は §5h で放電済みなので現れない。 -/
+theorem scanLandingObligations_alongTrace_of_matchRest {w : List (Fin 2)}
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
+      ScanNR x → ShiftPal centre place entry q first w x.vm)
+    (hVerRun : VerRun centre place entry q first w (st 0))
+    (hShiftExitLedger : ∀ j, j ≤ Tc w.length →
+      ShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm)
+    (hCentreMargin : ∀ j, j ≤ Tc w.length →
+      PalPeg.CloseoutPackRun13.CentreMargin (st j).ctl (st j).vm)
+    (hMatchRest : ∀ j, j ≤ Tc w.length →
+      PalPeg.CloseoutPackRun49.MatchRest w (st j).ctl (st j).vm) :
+    ScanLandingObligationsAlongTrace centre place entry q first w st Tc := by
+  have hPreTrace := hPreTraceIMW.base.pre
+  have hRewindMargin := rewindMarginAt_alongTrace centre place entry q first hPreTrace
+    hCentreMargin
+  have hChainBackLag := chainBackLagAt_alongTrace centre place entry q first hPreTraceIMW
+  refine scanLandingObligations_alongTrace_of_atoms centre place entry q first hPreTraceIMW
+    hSP hVerRun hChainBackLag hShiftExitLedger hRewindMargin ?_ ?_
+  · -- `matchLand`
+    intro j hIndexLeTc
+    refine ⟨fun s' t o b hMode hInv => ?_⟩
+    refine PalPeg.CloseoutPackRun48.matchLanding_of_matchRes2 centre place entry q first
+      (matchRes2_alongTrace centre place entry q first hPreTraceIMW hSP hShiftExitLedger
+        hCentreMargin hMatchRest j hIndexLeTc hMode) s' t o b hMode hInv
+  · -- `entryLand`
+    intro j hIndexLeTc
+    refine ⟨fun s' t hMode hInv => ?_⟩
+    refine PalPeg.CloseoutPackRun48.shiftEntryLanding_of_matchRes2 centre place entry q first
+      (matchRes2_alongTrace centre place entry q first hPreTraceIMW hSP hShiftExitLedger
+        hCentreMargin hMatchRest j hIndexLeTc hMode) s' t hMode hInv
+
+#print axioms scanLandingObligations_alongTrace_of_matchRest
+
 
 #print axioms landingObligationsAlongRun_of_globalHypotheses
 #print axioms chainPosInv2_alongRun

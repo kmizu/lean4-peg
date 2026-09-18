@@ -236,14 +236,25 @@ def H_matchRes2 (w : List (Fin 2)) : Prop :=
     ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
     t.chain ≠ ChainVM.idle → MatchRes2 w c s
 
-/-- **`H_MatchLandingChainLedger` modulo `MatchRes2`.**  The consuming half of the landing
-(`Outer.immediate`, at zero lag) is fed by the *target's* supply
-`canRNext`; the background half (`Internal.take`, at positive lag) by the
-source's own `canR`.  So `ConsumeAvail` never appears. -/
-theorem h_matchP2_of_target {w : List (Fin 2)} (hres : H_matchRes2 centre place entry q first w) :
-    H_MatchLandingChainLedger centre place entry q first w := by
-  intro c s s' t o b hm hx hcmp hmt hpl hs hni
-  have R := hres c s s' t o b hm hx hcmp hmt hpl hs hni
+/-- **`scan_match` 着地の位置台帳、状態局所版。**  着地の消費側
+（`Outer.immediate`、lag ゼロ）は**目標側**の供給 `canRNext` で、背景側
+（`Internal.take`、正 lag）は源の `canR` で満たされる。だから `ConsumeAvail` は現れない。  もとの `h_matchP2_of_target` は
+`hres : H_matchRes2 …`（global）を取っていたが、本体はそれを源状態 `(c, s)` でだけ
+使うので、`MatchRes2 w c s` を直接取る形にした。global 版は下のラッパー。
+
+trace 形の義務を放電するにはこの形が必要（global 形は放電の材料が run に沿ってしか
+存在しないので原理的に満たせない）。 -/
+theorem matchLanding_of_matchRes2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hres : MatchRes2 w c s) :
+    ∀ (s' t : GalilVM) (o b : Bool), c.mode = Mode.scan →
+      ChainPositionInvariantWithShiftPhase w c s →
+      (galilFrameS (PofC centre place entry w) q first).compare s s' →
+      (galilFrameS (PofC centre place entry w) q first).matched s' →
+      (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
+      ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
+      t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t := by
+  intro s' t o b hm hx hcmp hmt hpl hs hni
+  have R := hres
   have hpl' : t = (if c.replaying then {s' with replay := dec s'.replay} else s') := hpl
   have hts : t.left = s'.left ∧ t.right = s'.right ∧ t.chain = s'.chain ∧
       t.center = s'.center ∧ t.radius = s'.radius := by
@@ -318,8 +329,16 @@ theorem h_matchP2_of_target {w : List (Fin 2)} (hres : H_matchRes2 centre place 
       rw [hposR]
       exact chainPos_matched (hstart _ _ _) (fun _ h => by cases h) hz
 
+/-- **global 版**（旧 `h_matchP2_of_target` の型そのまま）。既存の呼び出し側のために残す。 -/
+theorem h_matchP2_of_target {w : List (Fin 2)} (hres : H_matchRes2 centre place entry q first w) :
+    H_MatchLandingChainLedger centre place entry q first w :=
+  fun c s s' t o b hm hx hcmp hmt hpl hs hni =>
+    matchLanding_of_matchRes2 centre place entry q first
+      (hres c s s' t o b hm hx hcmp hmt hpl hs hni) s' t o b hm hx hcmp hmt hpl hs hni
+
 end Match
 
+#print axioms matchLanding_of_matchRes2
 #print axioms h_matchP2_of_target
 
 
@@ -367,15 +386,20 @@ def H_shiftRes2 (w : List (Fin 2)) : Prop :=
     ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
     shiftGuardVM s' → beginShiftVM' s' t → MatchRes2 w c s
 
-/-- **`H_ShiftEntryChainLedger` modulo `MatchRes2`.**  The mismatching comparison moves
-the right head and takes one plain `ChainStep` (source supply); `beginShiftVM`
-then performs one `immediate` consume, whose supply is the *moved* right head
-`right s.right` — the target-side route again. -/
-theorem h_shiftEntry2_of_target {w : List (Fin 2)}
-    (hres : H_shiftRes2 centre place entry q first w) :
-    H_ShiftEntryChainLedger centre place entry q first w := by
-  intro c s s' t hm hx hcmp hmt hg hb
-  have R := hres c s s' t hm hx hcmp hmt hg hb
+/-- **`scan_shift` 入口の shift 相台帳、状態局所版。**  不一致比較が右ヘッドを動かして
+素の `ChainStep` を 1 つ取り（源の供給）、`beginShiftVM` が `immediate` 消費を 1 回行う。
+その供給は**動いた**右ヘッド `right s.right`（目標側の経路）。  入力は `matchLanding_of_matchRes2`
+と**同じ `MatchRes2 w c s`**（`H_shiftRes2` の結論がそれ）。だから 2 つの義務は
+`MatchRest` 1 つに合流する。 -/
+theorem shiftEntryLanding_of_matchRes2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hres : MatchRes2 w c s) :
+    ∀ s' t : GalilVM, c.mode = Mode.scan →
+      ChainPositionInvariantWithShiftPhase w c s →
+      (galilFrameS (PofC centre place entry w) q first).compare s s' →
+      ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
+      shiftGuardVM s' → beginShiftVM' s' t → ShiftPhaseChainLedger t := by
+  intro s' t hm hx hcmp hmt hg hb
+  have R := hres
   obtain ⟨vs, vq, a, hvl, hvr, hiff, -, hch, hteq⟩ :
     compareFound (PofC centre place entry w) q first s s' := hcmp
   have ha : a = false := by
@@ -454,8 +478,17 @@ theorem h_shiftDoneRad2_of_supply {w : List (Fin 2)}
     H_ShiftExitRadiusLedger centre place entry q first w :=
   fun c s hm hp hx _ => ⟨hav c s hm hp hx, hrad c s hm hp hx⟩
 
+/-- **global 版**（旧 `h_shiftEntry2_of_target` の型そのまま）。 -/
+theorem h_shiftEntry2_of_target {w : List (Fin 2)}
+    (hres : H_shiftRes2 centre place entry q first w) :
+    H_ShiftEntryChainLedger centre place entry q first w :=
+  fun c s s' t hm hx hcmp hmt hg hb =>
+    shiftEntryLanding_of_matchRes2 centre place entry q first
+      (hres c s s' t hm hx hcmp hmt hg hb) s' t hm hx hcmp hmt hg hb
+
 end ShiftEntry
 
+#print axioms shiftEntryLanding_of_matchRes2
 #print axioms h_shiftEntry2_of_target
 #print axioms h_shiftDoneRad2_of_supply
 
