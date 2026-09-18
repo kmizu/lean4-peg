@@ -1,3 +1,46 @@
+## n220 — 公理進捗: 第 2 連言 `ShiftInv` の実質 3 場すべてに供給元が付いた
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 梃子である第 2 連言 `ShiftInv` の**実質 3 場すべてに供給元が確定**。未知の数学ゼロ |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### `ShiftInv`（19 場）の内訳
+
+| 場 | 供給元 |
+|---|---|
+| `pal : PalAt (encoded raw) (C+h) (R+h)` | **`ScanInvariant.palindrome` そのもの**。`CloseoutAdvanceT:146` と `CloseoutPackRun31:167` はどちらも `hI.caught.scan.palindrome` を `R + 1 - h + used = R + h` で書き換えてるだけ。新しい数学ゼロ |
+| `palNext : PalAt (encoded raw) (C+2h) (R+1)` | `palAt_shift_of_period` が `pal` ＋ 周期 `2h` から `PalAt (C+2h) R` を出す。**足りん 1 箇所**は Scala の shift 条件の後半 `chain.prediction() == right.read()`（Lean では `shiftGuardVM` の `symbol …period.focus = read s.right`）が与える |
+| `origin : enc[C−R−1]? ≠ enc[C+R+2h+1]?` | scan の不一致（`RoundScan.origin` と同型） |
+| 枠 15 場 | `beginShiftVM` の遷移から計算 |
+
+周期 `2h` は n219 で架けた `periodOn_of_blockOn` が `ChainW` の `BlockOn` から供給する。
+
+### 注意（消費者と producer の取り違えを 1 件回避）
+
+`CloseoutAdvanceT.period_at_next:95` は `pal` と `palNext` を**両方取って**予測添字の等式を出す
+**消費者**であって、`palNext` の producer やない。署名を読んで気づいた。
+
+### 公理全体の絵（確定版）
+
+```
+CloseoutWatchRound43.ChainWRun（run が運ぶ）
+  → GalilReplaySpan.ChainW (.watch) = BlockOn + CoreX + margin 等式
+  → periodOn_of_blockOn（n219）→ PeriodOn (2h)
+  ＋ ScanInvariant.palindrome（run が InvLPC で運ぶ）
+  ＋ shiftGuardVM の予測場
+  → ShiftInv（第 2 連言）
+  → roundScan_of_shiftInv → RoundScan
+       ├→ 第 1 連言 H_readsShift のガード
+       └→ 第 3 連言 FreshShiftLedger の 5 成分
+```
+
+**未知の箱も未知の数学も無い。残りは配線の作業量だけ。**
 ## n219 — 公理進捗: `BlockOn → PeriodOn` の橋を架けた（`hLeft` の供給経路が通った）
 
 **公理への進捗**
