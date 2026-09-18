@@ -270,6 +270,27 @@ theorem coreX_immediate {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
 
 #print axioms coreX_immediate
 
+/-- **`ShiftInv` の `lagZero` / `unbroken` をガードから。**  `immediate` は `lag` を
+触らんので `lagZero` はそのまま。`broken` は `GalilScaffoldChainVerifier.consume` が
+`GalilScaffoldChainConsume.consume` を呼ぶところで、`shiftGuardVM` の予測一致
+（周期テープの focus と右ヘッドの読みが同じ）が `GalilGoodLag.consume_keeps_unbroken`
+の仮説をちょうど与える。 -/
+theorem immediate_lag_unbroken {w : GalilScaffoldChainWatch.State} {a : Fin 3}
+    (hlag : zero w.lag = true) (hbroken : w.machine.control.broken = false)
+    (hsym : GalilScaffoldChainConsume.symbol w.machine.control.period.focus = some a)
+    (hread : GalilScaffoldInputHead.read
+      (GalilScaffoldChainVerifier.right w.machine.verifier) = some a) :
+    zero (GalilScaffoldChainWatch.immediate w).lag = true ∧
+      (GalilScaffoldChainWatch.immediate w).machine.control.broken = false := by
+  refine ⟨hlag, ?_⟩
+  show (GalilScaffoldChainConsume.consume w.machine.control
+    (GalilScaffoldInputHead.read
+      (GalilScaffoldChainVerifier.right w.machine.verifier))).broken = false
+  rw [hread]
+  exact consume_keeps_unbroken w.machine.control a hsym hbroken
+
+#print axioms immediate_lag_unbroken
+
 /-- **(NAMED) 準備直後の watch の台帳。**  `shiftPalAt_fresh_of_candidate` の 5 残差を
 1 つの場にまとめたもの。`ShiftPal` の `periodOnly = false` 分岐に必要な全部で、
 3 種類しかない（n144）:

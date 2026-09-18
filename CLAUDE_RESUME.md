@@ -1,3 +1,37 @@
+## n227 — 公理進捗: `ShiftInv` 23 場中 18 場が証明済み（`immediate_lag_unbroken`）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 2 連言 `ShiftInv` の `lagZero` / `unbroken` が出た。**23 場中 18 場が証明済み**、残り 5 場 |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+```lean
+theorem immediate_lag_unbroken {w : GalilScaffoldChainWatch.State} {a : Fin 3}
+    (hlag : zero w.lag = true) (hbroken : w.machine.control.broken = false)
+    (hsym : GalilScaffoldChainConsume.symbol w.machine.control.period.focus = some a)
+    (hread : GalilScaffoldInputHead.read
+      (GalilScaffoldChainVerifier.right w.machine.verifier) = some a) :
+    zero (GalilScaffoldChainWatch.immediate w).lag = true ∧
+      (GalilScaffoldChainWatch.immediate w).machine.control.broken = false
+```
+
+`immediate` は `lag` を触らんので `lagZero` は直。`unbroken` は
+`GalilScaffoldChainVerifier.consume` が `GalilScaffoldChainConsume.consume` を呼ぶところで、
+`shiftGuardVM` の**予測一致**（周期テープの focus と右ヘッドの読みが同じ）が
+`consume_keeps_unbroken` の仮説をちょうど与える。
+Scala の `chain.canShift && chain.prediction() == right.read()` がここで効いてる。
+
+### `ShiftInv`（23 場）の到達状況
+
+| 状態 | 場 |
+|---|---|
+| **証明済み 18** | 枠 10（n224）＋ `pal`/`palNext`/`origin`（n222/n223）＋ `verifierRep`/`verifierPresent`/`aligned`（n226）＋ `lagZero`/`unbroken`（本ノート） |
+| 残り 5 | `kle`（自明）`posH`（`periodLength_consume`）`pred`（`CoreX` の `OnBlock`）`size`（margin 等式の算術）`room`（位置境界の算術） |
 ## n226 — 公理進捗: `ShiftInv` 23 場中 16 場が証明済み（`coreX_immediate`）
 
 **公理への進捗**
