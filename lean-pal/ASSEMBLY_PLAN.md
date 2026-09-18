@@ -1,3 +1,40 @@
+## 2026-09-19 n167: `localRealization` に producer がいない理由の診断
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器は動いていない。**
+
+コウタの指摘「localRealization も一見難しく見えてるだけ。producer がいないってことは
+モデル化を何か間違ってる」を追った。
+
+### 確認できた事実（一次情報）
+
+1. `Realizes`（`LocalSysConcrete:285`）は「mode の局所 step **関数** `f` が
+   trace の次状態に着地する」を要求する
+2. trace `stOf` は `PreTrace` の `trace` 場（`Tick (st i) (st (i+1))`）でしか縛られていない。
+   **`Tick` は非決定的**（`GalilTickDet`、CLAUDE.md §2 に 5 分岐）
+3. `Fair` を足すと一意: **`GalilTickFair.tick_fair_unique`（`:429`）は証明済み**、
+   docstring は「with no reachability pack at all」
+4. **`Fair` は `PalPeg/Local*.lean` のどこでも使われていない**
+   （`grep -rln "Fair" PalPeg/Local*.lean` が空）
+
+### 推論（未検証・機械検査した反証は無い）
+
+`Realizes` は「決定的な関数に、非決定的な trace と一致せよ」と要求していることになり、
+producer が原理的に作れない。**直し方の候補**: `PreTrace`（または `PreTraceB` / `InvC`）に
+`Fair` の場を足す。`PreTraceIMW` は上位で**仮説**として現れるので、
+場を足すと義務は**弱くなる**（(A) の操作）。
+
+構成側（実 run から trace を作るところ）が `Fair` を供給できるかは別途確認が必要。
+CLAUDE.md §2 自身が「構成側の witness と局所 step が `Fair` を満たすことを別途確認」と
+書いている——つまり**この作業は当初から予定されていて、未着手のまま**だった。
+
+### 2 本の筋の比較（どちらも未着手部分がある）
+
+| 筋 | 状態 |
+|---|---|
+| `H_readsShift`（第 1 残差） | **部品は全部揃った**（`RoundHistory` 44 宣言）。残りは `first_round` の 30+ 仮説を run から供給する配線＝ CLAUDE.md §3 の found 経路（「未着手、最大の残り」） |
+| `obligation_localRealization` | 診断は付いた（上）。`PreTrace` に `Fair` を足す構造変更＋構成側の `Fair` 供給 |
+
 ## 2026-09-19 n166: **自分が撒いた過剰量化を直した**（`roundCarrier_tick` の側条件）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

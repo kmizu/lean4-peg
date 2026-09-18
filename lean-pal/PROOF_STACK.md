@@ -370,6 +370,38 @@ fpp は局所 1 量子のみ残）/ `LocalWF` / `LocalTick1`。
 **`H_readsShift` の筋（第 1）は found 経路の配線待ちで、そこはプロジェクト最大の
 既知項目。こちらの方が安い可能性がある。**
 
+### 診断（n166、確認できた事実と推論を分けて書く）
+
+**確認できた事実**:
+
+1. `Realizes`（`LocalSysConcrete:285`）は
+   「mode の局所 step **関数** `f` が trace の次状態に着地する」を要求する:
+
+       Realizes raw stOf f md :=
+         ∀ m k j, InvC raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
+           Needy raw stOf k j m.vm → needT' raw stOf k ≤ j →
+             Needy raw stOf (k+1) j (f m).vm ∧ PhysWF (f m).vm ∧ MirInv1 (f m)
+
+2. trace `stOf` は `PreTrace` の `trace` 場（`Tick (st i) (st (i+1))`）でしか縛られていない。
+   **`Tick` は非決定的**（`GalilTickDet`、CLAUDE.md §2 に 5 つの分岐が列挙されている）
+3. `Fair`（Scala の優先順位と固定値）を足すと一意になる:
+   **`GalilTickFair.tick_fair_unique`（`:429`）は証明済み**、docstring は
+   「with no reachability pack at all」
+4. **`Fair` は `PalPeg/Local*.lean` のどこでも使われていない**
+   （`grep -rln "Fair" PalPeg/Local*.lean` が空）
+
+**推論（未検証）**: だから `Realizes` は「決定的な関数に、非決定的な trace と
+一致せよ」と要求していることになり、producer が原理的に作れない。
+コウタの言う「モデル化を何か間違ってる」はこれではないか。
+
+**直し方の候補**: `PreTrace`（または `PreTraceB` / `InvC`）に `Fair` の場を足す。
+`PreTraceIMW` は上位で**仮説**として現れるので、場を足すと義務は**弱くなる**（(A) の操作）。
+構成側（実 run から trace を作るところ）が `Fair` を供給できるかは別途確認が必要——
+CLAUDE.md §2 は「構成側の witness と局所 step が `Fair` を満たすことを別途確認」と書いている。
+
+**注意**: `Realizes` が `Fair` なしでは証明不可能だと**機械検査した反証はまだ無い**。
+上は「`Fair` が未使用」「`Tick` が非決定的」「対策は証明済み」の 3 事実からの推論。
+
 ---
 
 ## この session で機械検査／一次情報で確定したこと
