@@ -99,12 +99,30 @@ open PalPeg.GalilFinalAssembly (boot)
 採った**（CLAUDE.md「偽の前提で数字を作らない」）。 -/
 
 /-- **(OBLIGATION)** `InvLPC` 起点から到達する scan 状態で `ShiftPal`（run 形）。 -/
-axiom obligation_shiftPalAlongRun (entry q : ℕ) (first : Fin 9) :
+axiom obligation_shiftPalAtWatchAlongRun (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (c : GalilScaffoldController.Control) (r : GalilVM),
       PalPeg.GalilInvPlus2.InvLPC w c r →
       ∀ (m : ℕ) (z : GalilScaffoldTop.State GalilVM),
         Steps (galilFrameS (PofC centreC placeC entry w) q first) 2048 m ⟨c, r⟩ z →
-        ScanNR z → ShiftPal centreC placeC entry q first w z.vm
+        ScanNR z →
+        ∀ wv : GalilScaffoldChainWatch.State, z.vm.chain = ChainVM.watch wv →
+          ShiftPal centreC placeC entry q first w z.vm
+
+/-- **もう公理ではない。**  run 形も trace 形と同じく、chain が watch でない点では
+`ShiftPal` は空虚（`ShiftPalAlongTrace.shiftPal_of_chainNotWatch`）。 -/
+theorem obligation_shiftPalAlongRun (entry q : ℕ) (first : Fin 9) :
+    ∀ (w : List (Fin 2)) (c : GalilScaffoldController.Control) (r : GalilVM),
+      PalPeg.GalilInvPlus2.InvLPC w c r →
+      ∀ (m : ℕ) (z : GalilScaffoldTop.State GalilVM),
+        Steps (galilFrameS (PofC centreC placeC entry w) q first) 2048 m ⟨c, r⟩ z →
+        ScanNR z → ShiftPal centreC placeC entry q first w z.vm := by
+  classical
+  intro w c r hInv m z hSteps hScan
+  by_cases hW : ∃ wv : GalilScaffoldChainWatch.State, z.vm.chain = ChainVM.watch wv
+  · obtain ⟨wv, hwv⟩ := hW
+    exact obligation_shiftPalAtWatchAlongRun entry q first w c r hInv m z hSteps hScan wv hwv
+  · exact PalPeg.ShiftPalAlongTrace.shiftPal_of_chainNotWatch centreC placeC entry q first
+      (fun wv hEq => hW ⟨wv, hEq⟩)
 
 /-! ### trace 形 `ShiftPal` の 3 原子（n132 で `obligation_shiftPalAlongTrace` を割った）
 

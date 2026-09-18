@@ -1,3 +1,43 @@
+## 2026-09-19 n137: run 形も watch 点に狭めた（同じ 1 定理で 2 本）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット更新済み・緑。公理は 6。
+無条件 PAL は未完。§10.5 は未達。**
+
+`ShiftPalAlongTrace.shiftPal_of_chainNotWatch`（n136）を `obligation_shiftPalAlongRun` にも
+当てた。**同じ 1 つの定理が run 形と trace 形の両方を狭めた。**
+
+| 旧 | 新（狭まった公理） |
+|---|---|
+| `obligation_shiftPalAlongRun` | `obligation_shiftPalAtWatchAlongRun`（`∀ wv, z.vm.chain = .watch wv →` を追加） |
+| `obligation_shiftPalAtFreshChainAlongTrace` | `obligation_shiftPalAtFreshWatchAlongTrace`（同型） |
+
+どちらも旧版は**定理になった**（`by_cases` で watch / 非 watch に割って、非 watch 側は空虚）。
+
+### 現在の 6 本（実測）
+
+    [propext, Classical.choice, Quot.sound,
+     obligation_cycleOracle,                       -- CycleOracleMC3（found 経路）
+     obligation_freshShiftAtShiftEntryAlongTrace,  -- trace 各 tick で H_freshShiftAtShiftEntry
+     obligation_localRealization,                  -- H_realizeLIMW'（局所実現）
+     obligation_readsShiftAlongTrace,              -- trace 各点で H_readsShift
+     obligation_shiftPalAtFreshWatchAlongTrace,    -- watch 点で ShiftPal（trace 形）
+     obligation_shiftPalAtWatchAlongRun]           -- watch 点で ShiftPal（run 形）
+
+### 残る `ShiftPal` 2 本の中身（測定済み）
+
+`periodOnly = true` 側は `CloseoutPackRun31.shiftPal_of_chainRound` が
+`ChainRound`（`:204`、`periodOnly = true` を guard に持つ）から閉じている。
+残るのは **`periodOnly = false` ＋ watch** の場合で、そこでは `shiftGuardVM` の分岐が
+`singlePositive s.cycle = true` ではなく **`negative wch.margin = false`** になる。
+
+到達可能性の確認: 誕生 watch は `phase = 0` だが、4 回の boundary event で `phase = 4` に
+達し得る。その間 `periodOnly` は `beginShift` まで `false` のままなので、
+**「新しく準備した chain の最初の shift」がこの場合**。空虚ではなく実質がある。
+
+内容は「DP が見つけた周期が入力の本物の周期である」——n114 で探索側（`GalilDpCorrect`）は
+無条件に証明済みと測定してあるので、新しい数学ではなく `margin` 側の `RoundScan` 相当を
+立てる層の配線。**`ChainRound` の `periodOnly = false` 版（margin 基準）が次の仕事。**
+
 ## 2026-09-19 n136: `ShiftPal` は chain が watch でない限り**空虚**（lag も「found 半径正」も不要）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット更新済み・緑。公理は 6。
