@@ -85,6 +85,7 @@ import PalPeg.AnswerAheadDecode
 import PalPeg.ChainReachesWatchFromFound
 import PalPeg.LiveSegmentConstruct
 import PalPeg.ReachesWatchFromRun
+import PalPeg.CopyPhaseNoShift
 
 /-!
 # `Workbench` — 作ったが正本の鎖に配線されていない部品

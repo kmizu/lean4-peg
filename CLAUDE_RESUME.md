@@ -1,3 +1,48 @@
+## 2026-09-19 n131: `WatchMismatchNoShiftC` のガードを「tick できる相」に広げた
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。
+無条件 PAL は未完。§10.5 は未達。**
+
+n130 で「正しい弱化先は `CopyOrBack ∨ watch`」と書いた線をそのまま実装した。
+
+### 新規 `PalPeg/CopyPhaseNoShift.lean`（すべて標準公理）
+
+| 定理 | 内容 |
+|---|---|
+| `tick_false_not_watch_or_posLag` | copy/back の background 1 手の行き先は、watch でないか、**lag が正の** watch |
+| `not_shiftGuardVM_of_copyOrBack_tick` | **copy/back 相では不一致の行き先に shift guard が立たない** |
+| `watchMismatchNoShift_parts_of_copyOrBack` | `WatchMismatchNoShiftC` の 2 節が copy/back 相でそろう |
+| `TickablePhase` / `LiveScanTickable`（def） | 「tick できる相」＝ lag 正の `CopyOrBack` か watch |
+| `liveScanTickable_ne_idle` | それは非 idle |
+
+第 2 節の内訳:
+* `.copy` から出た 1 手は `.copy` か `.back` で **watch ではない**（`chainStep_copy_shape`）
+* `.back` から `backDone` で生まれた watch は **lag をそのまま受け継ぐ**
+  （`chainStep_back_shape'`）。誕生 chain の lag は正なので `shiftGuardVM` の
+  `zero w.lag = true` が落ちる
+
+### ガードの差し替え
+
+`CloseoutWatchRound22.WatchMismatchNoShiftC` の guard を
+`LiveScanWatch c1 s1` → `CopyPhaseNoShift.LiveScanTickable c1 s1` に変更。
+producer `CloseoutWatchRound23.watchMismatchNoShiftC_of_split` は**選言対応**にした:
+
+* watch 相 → 従来どおり `TerminalRunFallbackGC` 経由
+* copy/back 相 → `watchMismatchNoShift_parts_of_copyOrBack`（新しい直接経路）
+
+変換補題 `CloseoutWatchRound22.liveScanTickable_of_liveScanWatch` を置いて、
+既存の `LiveScanWatch` 消費者（Round22 / Round36）を通した。
+
+**import の向き**: `CopyPhaseNoShift` は `CopyPhaseTickMatched` だけを import する
+（`FoundPackRefute` を入れるとビルドサイクル——あれは `CloseoutFoundRoute1` を引く）。
+その形なら `CloseoutWatchRound22` から import できる。
+
+### 次
+
+`WatchFallbackC` / `FallbackReachS` / `LandingRestartReachF` の guard も同じく
+`LiveScanTickable` に広げる。そうすると `reachesWatchPhase_or_segEnd` の**第 2 枝**
+（準備完了前の不一致）が `FoundExitLPS.landedS` に着地でき、節 4 の供給が閉じる。
+
 ## 2026-09-19 n130: `LiveScanWatch` ガードの線引きが確定した（`CopyOrBack ∨ watch` が正しい弱化先）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。

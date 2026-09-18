@@ -137,7 +137,11 @@ theorem watchMismatchNoShiftC_of_split {P : Shared} {q : ℕ} {first : Fin 9} {h
     (hf : TerminalRunFallbackGC P q first h cP sP) :
     WatchMismatchNoShiftC P q first cP sP := by
   intro es c1 s1 hseg hlive hclk hav hne
-  obtain ⟨cT, sT, hrun, -, hbe⟩ := hf es c1 s1 hseg hlive
+  rcases hlive.2.2.2 with ⟨hPhase, hLag⟩ | ⟨wLive, hwLive⟩
+  · -- copy/back 相: watch ラウンドの機械を経由せず直接出る
+    exact PalPeg.CopyPhaseNoShift.watchMismatchNoShift_parts_of_copyOrBack hPhase hLag
+  obtain ⟨cT, sT, hrun, -, hbe⟩ :=
+    hf es c1 s1 hseg ⟨hlive.1, hlive.2.1, hlive.2.2.1, wLive, hwLive⟩
   obtain ⟨hcT, hsT⟩ := watchSeg_stuck_of_mismatch hrun hclk hav hne
   subst hcT; subst hsT
   obtain ⟨c1', s1', hseg', -, -, -, -, hG⟩ := hbe

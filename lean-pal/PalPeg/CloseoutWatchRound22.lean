@@ -1,3 +1,4 @@
+import PalPeg.CopyPhaseNoShift
 import PalPeg.CloseoutWatchRound21
 
 /-!
@@ -124,13 +125,24 @@ theorem tickPack_of_landing (centre : GalilVM → Fin 3)
 
 /-! ## 3. The one hypothesis -/
 
-/-- **(a)-residual.**  At every clock-`1` available watching mismatch reached
-from `⟨cP, sP⟩`: a disabled chain tick exists, and every disabled chain tick
-fails the shift guard after the mismatch (the `MismatchExitG` shape). -/
+/-- `LiveScanWatch` は「tick できる相」版を含意する。 -/
+theorem liveScanTickable_of_liveScanWatch {c : Control} {s : GalilVM}
+    (h : LiveScanWatch c s) : PalPeg.CopyPhaseNoShift.LiveScanTickable c s := by
+  obtain ⟨hm, hr, hc, w, hw⟩ := h
+  exact ⟨hm, hr, hc, Or.inr ⟨w, hw⟩⟩
+
+/-- **(a)-residual.**  At every clock-`1` available mismatch reached from `⟨cP, sP⟩`
+whose chain is in a **tickable phase**: a disabled chain tick exists, and every
+disabled chain tick fails the shift guard after the mismatch.
+
+**n130/n131**: guard を `LiveScanWatch` から `LiveScanTickable` に広げた。
+copy/back 相でも成り立ち（`CopyPhaseNoShift.watchMismatchNoShift_parts_of_copyOrBack`）、
+found 誕生直後の不一致 fallback がこの契約に載る。 -/
 def WatchMismatchNoShiftC (P : Shared) (q : ℕ) (first : Fin 9)
     (cP : Control) (sP : GalilVM) : Prop :=
   ∀ (es : List Bool) (c1 : Control) (s1 : GalilVM),
-    WatchSegE P q first 2048 es cP sP c1 s1 → LiveScanWatch c1 s1 →
+    WatchSegE P q first 2048 es cP sP c1 s1 →
+    PalPeg.CopyPhaseNoShift.LiveScanTickable c1 s1 →
     c1.clock = 1 → canRight s1.right →
     read (left s1.left) ≠ read (right s1.right) →
     (∃ z, ChainTick false s1.chain z) ∧
@@ -176,7 +188,8 @@ theorem watchFallbackC_of_context (centre : GalilVM → Fin 3)
     WatchFallbackC centre place entry q first raw m c r cP sP := by
   intro es c1 s1 hseg hlive hclk hav hne
   obtain ⟨hns, hcost⟩ := hres
-  obtain ⟨⟨z, hz⟩, hg⟩ := hns es c1 s1 hseg hlive hclk hav hne
+  obtain ⟨⟨z, hz⟩, hg⟩ :=
+    hns es c1 s1 hseg (liveScanTickable_of_liveScanWatch hlive) hclk hav hne
   have hneChain : s1.chain ≠ ChainVM.idle := by
     obtain ⟨w, hw⟩ := hlive.2.2.2
     rw [hw]; exact ChainVM.noConfusion
