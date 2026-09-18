@@ -1,3 +1,61 @@
+## n201 — `DpBudgetBalance`：`ReadyIface` の 2 場がぴったり釣り合う算術を切り出した
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 測ったこと
+
+`GalilBranchInvariants2.DpSafeHere:295` は継続 `as` を**存在量化**してるので、`as` を全部 false に
+取れば「DP 開始以降の比較回数 ≤ 開始時債務」に潰れる。つまり `ready` が要求するのは
+**局所的な債務超過なし**だけで、`DpSafeStage`（リスト依存）ほど強くない。
+
+そのうえで `ReadyIface` の 2 つの輸送場の収支を並べると:
+
+| 場 | ガード | DP の残り必要イベント `need` | slack `k` | 債務 |
+|---|---|---|---|---|
+| `background` | — | `-1` | `≤ k + 1` | 不変 |
+| `comparison` | `2048 ≤ k + 1` | `-1` | `→ 0` | 比較 1 消費 |
+
+背景では `need + k` の和が保存され、比較（ガードにより `k = 2047` でしか起きん）では
+和がちょうど `2048` 減る。よって
+
+```
+spent + ⌈(need + k) / 2048⌉ ≤ debt
+```
+
+は**両方の刻みで厳密に保存される**。機械の至る所に 2048 が出てくる理由がこれや。
+
+### 書いたもの
+
+`PalPeg/DpBudgetBalance.lean`（5 定理、標準 3 公理、全体 build 緑）:
+
+* `DpBudget need spent debt k := spent + (need + k + 2047) / 2048 ≤ debt`
+* `dpBudget_spent` — `ready` が要る `spent ≤ debt`
+* `dpBudget_mono` — slack を下げるのは弱める
+* `dpBudget_background` / `dpBudget_comparison` — 2 場ぶんの保存
+* `dpBudget_comparison_needs_full_slack` — **ガードが鋭いことの証人**。
+  `k = 2046` では `DpBudget 2 0 1 2046` は成り立つのに、比較後の `DpBudget 1 1 1 0` が破れる。
+  つまり `ReadyIface.comparison` の `2048 ≤ k + 1` は `2047 ≤ k + 1` に弱められへん。
+
+（最初 `dpBudget_comparison_sharp` として `¬ DpBudget (need-1) 1 0 0` を書いたが、
+これは `hneed` を使わん自明な文で「鋭さ」を何も示せてへんかった。linter の未使用警告で気づいて
+本物の証人に差し替えた。）
+
+### これが `ReadyPacedS` と違う点
+
+`ReadyPacedS` は同じ上界を `PacedL 2048 k as`（任意の継続）から得る。`PacedL` は
+**リストの先頭からの累積**上界なので、長い背景で予算を貯めてから一気に撃つ列
+（`replicate (2048*m) false ++ replicate m true` は `PacedL 2048 0`）を許すが、機械は出せへん。
+`DpBudget` は**現在の slack** に対して述べるので、そういうスケジュールは最初から入らへん。
+
+### 残り
+
+この算術を `DpReached` / `SearchVM` / `ReadyIface` に接続すること。**まだ接続してへんので
+何も落ちてへん**（公理 3 本のまま）。次は
+
+1. `need` を `dpEvents w.length - bs.length` として `DpReached w lower s0 bs v.search v.dp` に結ぶ
+2. `spent` を `bs.count true`、`debt` を `value s0.debt` に結ぶ
+3. run 相の 1 刻みで `DpReached` が伸びること（背景・比較とも）を確認
+4. prep / wait / double 相（`StageDoubleLeg` 済み）と合わせて `Φ` を定義し `ReadyIface` の 4 場を証明
 ## n200 — `StageEntryC.fuel` を `ReadyIface` の存在形に切り直した（継ぎ目が run 線に届く形になった）
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本、`Axioms.lean` のラチェット健在）・
