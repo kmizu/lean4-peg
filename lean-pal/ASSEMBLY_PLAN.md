@@ -32,6 +32,59 @@
 
 
 
+## 2026-09-19 n124: 節 4 / 節 7 の供給経路が繋がった — 残るは `AnswerAhead` の復号 1 本
+
+**全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
+
+### 今日繋げた経路（すべて標準公理、`sorry` ゼロ）
+
+    FoundCompareCtxC
+      → copyOrBack_of_chainMatched_chainStart      （CopyPhaseTick）
+      → CopyOrBack sP.chain
+      → watchSegE_backgroundRun_live               （CopyPhaseTick、帰納の本体）
+      → 「watch 到達」∨「n 手走破でまだ copy/back」
+      → reachesWatchPhase_of_backgroundRun         （FoundPackCorrected）
+      → ReachesWatchPhase
+      → prepLandingWatchC_at_reachedWatch          （節 4 の正しい形）
+        reachesWatchPhase_of_breakLandingAtReachedWatch（節 7 も同じ供給）
+
+### 残る外部入力は 4 つ、うち 3 つは found 文脈にある
+
+| 入力 | 出どころ | 状態 |
+|---|---|---|
+| chain が `n` 手で watch に着く | `GalilPrepLeast.found_to_watchStart_least` | **既存**（イベント列の中身を問わない） |
+| clock の余裕 `n < cP.clock` | 誕生時の clock は `delay = 2048`、`n = 2h+2` | 予算層 |
+| `PlaceAhead walker n` | `GalilPrepLeast.found_copy_walk_least` の `CopyWalk` | 既存（取り出しは未実装） |
+| **`AnswerAhead answer n`** | `GalilScaffoldChainAnswer.found_output` の復号 | **未実装（次の 1 本）** |
+
+### `AnswerAhead` の復号（次にやること）
+
+`found_output` は `SafeQuanta` ＋ `Result` から
+
+    denote (y.config.tapes 11) = GalilDpCounters.output h ∧
+    head (y.config.tapes 11) = h ∧ (tapes 11).focus = 8 ∧ (tapes 11).left ≠ []
+
+を与える（標準公理）。一方
+
+    output h i = if i = 0 then 4 else if i ≤ h then 8 else 6
+    denote t   = read (t.left.reverse ++ t.focus :: t.right)
+    head t     = t.left.length
+    AnswerAhead t n := ∃ ls, t.focus :: t.left = List.replicate n 8 ++ 4 :: ls
+
+なので、`t.left.reverse` は index 0..h-1 で `[4, 8, …, 8]`、つまり
+`t.left = [8, …, 8, 4]`（8 が `h-1` 個）、`t.focus` は index `h` で `8`。
+したがって `t.focus :: t.left = List.replicate h 8 ++ 4 :: []` で
+**`AnswerAhead t h` が `ls = []` で成り立つ**。
+
+証明は `denote` の index 等式からリスト等式を復元する機械的な作業
+（`List.ext_getElem?` 系）。**これが節 4 / 節 7 の供給に残る唯一の未実装。**
+
+### `StartShape` は使わないこと
+
+`GalilLeafStartShape.not_startShape` が**あらゆる `Shared` について**反証済み
+（`∀ s : GalilVM` が無制約で、`.found` 状態の任意の VM に DP の形を要求する）。
+`AnswerAhead` / `PlaceAhead` は `found_copy_walk_least` / `found_output` から取ること。
+
 ## 2026-09-19 n123: live chain 版区間構成の材料一覧（これで全部）
 
 **全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
