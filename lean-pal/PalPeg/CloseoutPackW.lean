@@ -77,7 +77,7 @@ structure BigPack2MG7W (centre : GalilVM → Fin 3) (place : GalilVM → GalilSc
   ipackM : IPackMW centre place entry q first w x
   aux : AuxPack x.ctl x.vm
   live : CentreLive x.ctl x.vm
-  extra : Extra8 x
+  extra : Extra8 first x
 
 /-- `CloseoutPackRun46.BigPack2MG7''` over `IPackMW`. -/
 structure BigPack2MG7W'' (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
@@ -94,7 +94,7 @@ theorem bigPack2MG7W_of_W'' {w : List (Fin 2)} {x : State GalilVM}
       ¬ (galilFrameS (PofC centre place entry w) q first).atFirst x.vm) :
     BigPack2MG7W centre place entry q first w x :=
   ⟨hx.ipackM, hx.aux, hx.live,
-    extra8_of_extra7 hx.extra (fun hm => two_le_left_of_marksInv' hx.marks hm (hnf hm))⟩
+    extra8_of_extra7 hx.extra (fun hm => two_le_left_of_marksInv' hx.marks hm)⟩
 
 /-- Forgetting the `shift` field of the big pack. -/
 theorem bigPack2MG7W_of_bigPack2MG7 {w : List (Fin 2)} {x : State GalilVM}
@@ -123,7 +123,7 @@ theorem lticksN_of_lpackM2_W {w : List (Fin 2)} {x : State GalilVM}
   choosePackL := fun hm _ t ht => by
     rw [choose_left_eq_right (PofC centre place entry w) q first ht]
     exact hP.rrep (by rw [hm]; decide)
-  rewindLeft := fun hm _ => left_pos_of_two (hx.extra.rewindMargin hm)
+  rewindLeft := fun hm hnf => left_pos_of_two (hx.extra.rewindMargin hm hnf)
   replayPackN := fun hm _ _ h =>
     lpackM_replayStart_of_centreRep centre place entry q first (hP.centreRep (Or.inr hm)) h
 

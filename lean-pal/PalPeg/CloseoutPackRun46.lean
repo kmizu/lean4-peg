@@ -64,19 +64,23 @@ structure Extra7 (x : State GalilVM) : Prop where
     GalilScaffoldChainVerifier.canRight x.vm.right
 
 /-- **(NAMED) `CloseoutPackRun45.Extra6S` minus the dead `ready` field.** -/
-structure Extra8 (x : State GalilVM) : Prop where
-  rewindMargin : x.ctl.mode = Mode.rewind → 2 ≤ position x.vm.left
+structure Extra8 (first : Fin 9) (x : State GalilVM) : Prop where
+  rewindMargin : x.ctl.mode = Mode.rewind →
+    (marksTape x.vm.fpp).focus ≠ first → 2 ≤ position x.vm.left
   scanAvail : x.ctl.mode = Mode.scan → x.ctl.replaying = false →
     GalilScaffoldChainVerifier.canRight x.vm.right
 
 theorem extra7_of_extra5S {x : State GalilVM} (h : Extra5S x) : Extra7 x := ⟨h.scanAvail⟩
 
-theorem extra8_of_extra6S {x : State GalilVM} (h : Extra6S x) : Extra8 x :=
-  ⟨h.rewindMargin, h.scanAvail⟩
+theorem extra8_of_extra6S {first : Fin 9} {x : State GalilVM} (h : Extra6S x) :
+    Extra8 first x :=
+  ⟨fun hm _ => h.rewindMargin hm, h.scanAvail⟩
 
 /-- **`extra6S_of_extra5S` over the slim extras.** -/
-theorem extra8_of_extra7 {x : State GalilVM} (h : Extra7 x)
-    (hrm : x.ctl.mode = Mode.rewind → 2 ≤ position x.vm.left) : Extra8 x :=
+theorem extra8_of_extra7 {first : Fin 9} {x : State GalilVM} (h : Extra7 x)
+    (hrm : x.ctl.mode = Mode.rewind →
+      (marksTape x.vm.fpp).focus ≠ first → 2 ≤ position x.vm.left) :
+    Extra8 first x :=
   ⟨hrm, h.scanAvail⟩
 
 #print axioms extra7_of_extra5S
@@ -99,7 +103,7 @@ structure BigPack2MG7 (w : List (Fin 2)) (x : State GalilVM) : Prop where
   ipackM : IPackMG2 centre place entry q first w x
   aux : AuxPack x.ctl x.vm
   live : CentreLive x.ctl x.vm
-  extra : Extra8 x
+  extra : Extra8 first x
 
 /-- `CloseoutPackRun45.BigPack2MG6S''` over `Extra7`. -/
 structure BigPack2MG7'' (w : List (Fin 2)) (x : State GalilVM) : Prop where
@@ -115,7 +119,7 @@ theorem bigPack2MG7_of_bigPack2MG7'' {w : List (Fin 2)} {x : State GalilVM}
       ¬ (galilFrameS (PofC centre place entry w) q first).atFirst x.vm) :
     BigPack2MG7 centre place entry q first w x :=
   ⟨hx.ipackM, hx.aux, hx.live,
-    extra8_of_extra7 hx.extra (fun hm => two_le_left_of_marksInv' hx.marks hm (hnf hm))⟩
+    extra8_of_extra7 hx.extra (fun hm hnfoc => two_le_left_of_marksInv' hx.marks hm hnfoc)⟩
 
 /-- **(NAMED) the pack-relative tick obligation over `Extra7`.** -/
 def H_extraTick7P (w : List (Fin 2)) : Prop :=
@@ -145,7 +149,7 @@ theorem lticksN_of_lpackM2_pt7 {w : List (Fin 2)} {x : State GalilVM}
   choosePackL := fun hm _ t ht => by
     rw [choose_left_eq_right (PofC centre place entry w) q first ht]
     exact hP.rrep (by rw [hm]; decide)
-  rewindLeft := fun hm _ => left_pos_of_two (hx.extra.rewindMargin hm)
+  rewindLeft := fun hm hnf => left_pos_of_two (hx.extra.rewindMargin hm hnf)
   replayPackN := fun hm _ _ h =>
     lpackM_replayStart_of_centreRep centre place entry q first (hP.centreRep (Or.inr hm)) h
 

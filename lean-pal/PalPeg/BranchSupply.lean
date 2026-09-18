@@ -2197,7 +2197,8 @@ structure ChainBackLagAndShiftExitLedgerAt (w : List (Fin 2)) (c : Control) (s :
     s.chain = .back v h lag margin ver → Canonical lag ∧ 0 ≤ value lag
   shiftExitLedger : c.mode = Mode.shift →
     ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s → CentreLedger s
-  rewindMargin : c.mode = Mode.rewind → 2 ≤ position s.left
+  rewindMargin : c.mode = Mode.rewind →
+    (marksTape s.fpp).focus ≠ first → 2 ≤ position s.left
 
 /-- **`LTickLeaves3` は残り 2 場だけから trace 全域で出る。** -/
 theorem lTickLeaves3_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
@@ -2516,7 +2517,8 @@ structure ShiftExitLedgerAt (w : List (Fin 2)) (c : Control) (s : GalilVM) : Pro
 
 /-- **(ATOM)** rewind 相での左ヘッドの余裕。 -/
 structure RewindMarginAt (c : Control) (s : GalilVM) : Prop where
-  rewindMargin : c.mode = Mode.rewind → 2 ≤ position s.left
+  rewindMargin : c.mode = Mode.rewind →
+    (marksTape s.fpp).focus ≠ first → 2 ≤ position s.left
 
 /-- **原子的な残差から trace 形の scan landing 義務を組み立てる。** -/
 theorem scanLandingObligations_alongTrace_of_atoms {w : List (Fin 2)}
@@ -2528,7 +2530,7 @@ theorem scanLandingObligations_alongTrace_of_atoms {w : List (Fin 2)}
     (hChainBackLag : ∀ j, j ≤ Tc w.length → ChainBackLagAt (st j).vm)
     (hShiftExitLedger : ∀ j, j ≤ Tc w.length →
       ShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm)
-    (hRewindMargin : ∀ j, j ≤ Tc w.length → RewindMarginAt (st j).ctl (st j).vm)
+    (hRewindMargin : ∀ j, j ≤ Tc w.length → RewindMarginAt first (st j).ctl (st j).vm)
     (hMatchLanding : ∀ j, j ≤ Tc w.length →
       MatchLandingAt centre place entry q first w (st j).ctl (st j).vm)
     (hShiftEntryLanding : ∀ j, j ≤ Tc w.length →
@@ -2642,16 +2644,17 @@ r + pairOff c + 2 ≤ position s.center`（`Run13:227`）。
 `position p = if p.gap then 2·|left| else 2·|left| − 1`（`ChainInputSupply:496`）なので
 これは**リストの長さの算術**であって幾何ではない。 -/
 
-/-- **`RewindMarginAt` は `CentreMargin` だけから出る。** -/
+/-- **`RewindMarginAt` は `MarksInv'`（＝既存の公理 `obligation_marksEntry`）から出る。**
+`rewind_one` / `rewind_pair` は `¬ atFirst` を構成子として持つので、`two_le_left_of_marksInv'`
+がそのまま効く。`CentreMargin` は**要らない**（それは `+1` 分だけ強すぎた）。 -/
 theorem rewindMarginAt_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hPreTrace : PreTrace centre place entry q first w st Tc)
-    (hCentreMargin : ∀ i, i ≤ Tc w.length →
-      PalPeg.CloseoutPackRun13.CentreMargin (st i).ctl (st i).vm) :
-    ∀ i, i ≤ Tc w.length → RewindMarginAt (st i).ctl (st i).vm :=
+    (hMarksInv : ∀ i, i ≤ Tc w.length →
+      PalPeg.CloseoutPackRun16.MarksInv' first (st i).ctl (st i).vm) :
+    ∀ i, i ≤ Tc w.length → RewindMarginAt first (st i).ctl (st i).vm :=
   fun i hIndexLeTc =>
-    ⟨fun hMode => PalPeg.CloseoutPackRun13.rewindMargin_of_centreMargin
-      (rcouple_alongTrace centre place entry q first hPreTrace i hIndexLeTc)
-      (hCentreMargin i hIndexLeTc) hMode⟩
+    ⟨fun hMode hNotAtFirst => PalPeg.CloseoutPackRun16.two_le_left_of_marksInv'
+      (hMarksInv i hIndexLeTc) hMode hNotAtFirst⟩
 
 #print axioms rcouple_alongTrace
 #print axioms rewindMarginAt_alongTrace
@@ -2667,8 +2670,6 @@ theorem matchRes2_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc
       ShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm)
     (hMarksInv : ∀ j, j ≤ Tc w.length →
       PalPeg.CloseoutPackRun16.MarksInv' first (st j).ctl (st j).vm)
-    (hCentreMargin : ∀ j, j ≤ Tc w.length →
-      PalPeg.CloseoutPackRun13.CentreMargin (st j).ctl (st j).vm)
     (hMatchRest : ∀ j, j ≤ Tc w.length →
       PalPeg.CloseoutPackRun49.MatchRest w (st j).ctl (st j).vm) :
     ∀ j, j ≤ Tc w.length → (st j).ctl.mode = Mode.scan →
@@ -2688,7 +2689,7 @@ theorem matchRes2_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc
     omega
   have hTcPos : 1 ≤ Tc w.length := by omega
   have hRewindMargin := rewindMarginAt_alongTrace centre place entry q first hPreTrace
-    hCentreMargin
+    hMarksInv
   have hChainBackLag := chainBackLagAt_alongTrace centre place entry q first hPreTraceIMW
   have hRes : ∀ j, j ≤ Tc w.length →
       ChainBackLagAndShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm :=
@@ -2742,8 +2743,6 @@ theorem scanLandingObligations_alongTrace_of_matchRest {w : List (Fin 2)}
       ShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm)
     (hMarksInv : ∀ j, j ≤ Tc w.length →
       PalPeg.CloseoutPackRun16.MarksInv' first (st j).ctl (st j).vm)
-    (hCentreMargin : ∀ j, j ≤ Tc w.length →
-      PalPeg.CloseoutPackRun13.CentreMargin (st j).ctl (st j).vm)
     (hMatchRest : ∀ j, j ≤ Tc w.length →
       PalPeg.CloseoutPackRun49.MatchRest w (st j).ctl (st j).vm) :
     ScanLandingObligationsAlongTrace centre place entry q first w st Tc := by
@@ -2751,7 +2750,7 @@ theorem scanLandingObligations_alongTrace_of_matchRest {w : List (Fin 2)}
   have hChainVerifierSupply := chainVerifierSupply_alongTrace_of_centreMargin centre place
     entry q first hPreTraceIMW hMarksInv
   have hRewindMargin := rewindMarginAt_alongTrace centre place entry q first hPreTrace
-    hCentreMargin
+    hMarksInv
   have hChainBackLag := chainBackLagAt_alongTrace centre place entry q first hPreTraceIMW
   refine scanLandingObligations_alongTrace_of_atoms centre place entry q first hPreTraceIMW
     hSP hChainVerifierSupply hChainBackLag hShiftExitLedger hRewindMargin ?_ ?_
@@ -2760,13 +2759,13 @@ theorem scanLandingObligations_alongTrace_of_matchRest {w : List (Fin 2)}
     refine ⟨fun s' t hMode hInv => ?_⟩
     refine PalPeg.CloseoutPackRun48.matchLanding_of_matchRes2 centre place entry q first
       (matchRes2_alongTrace centre place entry q first hPreTraceIMW hSP hChainVerifierSupply hShiftExitLedger
-        hMarksInv hCentreMargin hMatchRest j hIndexLeTc hMode) s' t hMode hInv
+        hMarksInv hMatchRest j hIndexLeTc hMode) s' t hMode hInv
   · -- `entryLand`
     intro j hIndexLeTc
     refine ⟨fun s' t hMode hInv => ?_⟩
     refine PalPeg.CloseoutPackRun48.shiftEntryLanding_of_matchRes2 centre place entry q first
       (matchRes2_alongTrace centre place entry q first hPreTraceIMW hSP hChainVerifierSupply hShiftExitLedger
-        hMarksInv hCentreMargin hMatchRest j hIndexLeTc hMode) s' t hMode hInv
+        hMarksInv hMatchRest j hIndexLeTc hMode) s' t hMode hInv
 
 #print axioms scanLandingObligations_alongTrace_of_matchRest
 

@@ -105,22 +105,20 @@ run に沿ってしか存在しないので**原理的に落ちない**。`hpack
 （`representsAfterRight_free`）`canRight` の供給が一切要らず、誕生の
 `Represents s.center.head w` だけが外部入力で、それは `HeadsRepresent.centre`。 -/
 
-/-- **(OBLIGATION)** rewind 相での中心の余裕
-`r + pairOff c + 2 ≤ position s.center`（trace 形）。
+/-! rewind 相の左ヘッド余裕（旧 `obligation_centreMargin_alongTrace`）は**放電済み**
+（`BranchSupply.rewindMarginAt_alongTrace`、新規入力ゼロ）。
 
-もとは `RewindMarginAt`（`2 ≤ position left`）だったが、`CloseoutPackRun13` の
-`rcouple_of_run`（**葉なし**）で `RCouple` が trace 全域でタダになるので、
-`rewindMargin_of_centreMargin` によりこの 1 葉に縮んだ
-（`BranchSupply.rewindMarginAt_alongTrace`）。
+`CloseoutPackRun16.MarksInv'` の第 2 成分が
+`position left + r + pairOff c ≤ position center`（`RCouple` が持っていない向き）で、
+第 1 成分 ＋ `¬ atFirst` から `2 ≤ position left`（`two_le_left_of_marksInv'`）。
+`Tick.rewind_one` / `rewind_pair` は `¬ atFirst` を**構成子として持つ**ので、
+`rewindLeft` / `Extra8.rewindMargin` / `RewindMarginAt` をその guard で再定式化すれば
+`MarksInv'`（＝既存の公理 `obligation_marksEntry`）だけで閉じる。
 
-`position p = if p.gap then 2·|left| else 2·|left| − 1` なので、これは
-**リストの長さの算術**であって幾何ではない。内容は「rewind が中心を使い切る前に
-FIRST で止まる」＝ marks テープと入力ヘッドの整合なので、
-`obligation_marksEntry` と材料を共有する。 -/
-axiom obligation_centreMargin_alongTrace (entry q : ℕ) (first : Fin 9) :
-    ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
-      ∀ j, j ≤ Tc w.length → PalPeg.CloseoutPackRun13.CentreMargin (st j).ctl (st j).vm
+**`CentreMargin` は `+1` 分だけ強すぎた**（guard なしでは
+`one_le_left_of_marksInv'` の `1 ≤ position left` しか出ない）。
+n96 の「`rewindMargin` を `CentreMargin` 1 葉に縮めた」は数だけの削減で、
+内容は強化だった——**過剰量化の 11 例目、自分で撒いた 4 例目**。 -/
 
 /-! chain の verifier 側供給（旧 `obligation_verifierRunAlongRun`）は**放電済み**
 （`BranchSupply.chainVerifierSupply_alongTrace`、新規入力は `CentreMargin` だけ）。
@@ -134,7 +132,7 @@ axiom obligation_centreMargin_alongTrace (entry q : ℕ) (first : Fin 9) :
 
 /-! ## 目標 -/
 
-/-- **目標**: `PAL ∈ PEG` を前提ゼロで。いまは上の 5 個の `axiom` に依存している。
+/-- **目標**: `PAL ∈ PEG` を前提ゼロで。いまは上の 4 個の `axiom` に依存している。
 `#print axioms unconditional` が標準 3 公理だけになったら証明完了。 -/
 theorem unconditional : RecognizedByTotalPEG PAL :=
   given_scanLandingObligations 0 0 0
@@ -151,7 +149,6 @@ theorem unconditional : RecognizedByTotalPEG PAL :=
             hPreTraceIMW.base.pre (obligation_marksEntry 0 0 0 w)))
         (PalPeg.BranchSupply.marksInv_alongTrace centreC placeC 0 0 0 hPreTraceIMW.base.pre
           (obligation_marksEntry 0 0 0 w))
-        (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW)
         (PalPeg.BranchSupply.matchRest_alongTrace centreC placeC 0 0 0 hPreTraceIMW
           (PalPeg.BranchSupply.marksInv_alongTrace centreC placeC 0 0 0 hPreTraceIMW.base.pre
             (obligation_marksEntry 0 0 0 w))))
