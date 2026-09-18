@@ -495,6 +495,23 @@ theorem replayLedger_of_trace {w : List (Fin 2)} (hw : 0 < w.length)
   exact ⟨centreCanRight_of_trace centre place entry q first hw hP hR htc h1 hi
     ((hm2 i hi).centreRep (Or.inr hmo)), (hsane i hi).saneC⟩
 
+/-- **`CentreLedger` の等式は `EntryCounters` から出る。**
+`GalilGlueBLeaves.EntryCounters w s := ∃ Rad, ScanInvariant w (position s.center) Rad …
+∧ RadiusRep s.radius Rad ∧ …` で、`RadiusRep counter rad := Canonical counter ∧
+value counter = rad`、`ScanInvariant.rightPos : position right = position center + Rad`。
+差をとれば等式。
+
+**これが `RadLedger.le`（`≤`）と等式の差**: `RadLedger` は半径カウンタが距離を
+**超えない**ことしか言わない（探索が活性のあいだ右ヘッドだけ進む場合があるため）。
+正確さは `RadiusRep` が担保する。 -/
+theorem centreEq_of_entryCounters {w : List (Fin 2)} {s : GalilVM}
+    (hE : PalPeg.GalilGlueBLeaves.EntryCounters w s) :
+    (position s.center : ℤ) + value s.radius = position s.right := by
+  obtain ⟨Rad, hi, hRR, -, -⟩ := hE
+  rw [hRR.2, hi.rightPos]
+  push_cast
+  omega
+
 /-- **`CentreLedger` は等式だけに落ちる。** -/
 theorem centreLedger_of_eq {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
@@ -512,6 +529,22 @@ theorem centreLedger_of_eq {w : List (Fin 2)} (hw : 0 < w.length)
 
 #print axioms centreCanRight_of_trace
 #print axioms replayLedger_of_trace
+/-- **`CentreLedger` は `EntryCounters` ＋ `CentreRep` から完全に出る。** -/
+theorem centreLedger_of_entryCounters {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PreTrace centre place entry q first w st Tc)
+    (hR : ∀ j, j ≤ Tc w.length → PalPeg.CloseoutRadPack.RadLedger (st j).ctl (st j).vm)
+    (hsane : ∀ j, j ≤ Tc w.length → PalPeg.GalilTrailSane.SanePack (st j).ctl (st j).vm)
+    (htc : 1 ≤ Tc w.length)
+    {i : ℕ} (h1 : 1 ≤ i) (hi : i ≤ Tc w.length)
+    (hcr : PalPeg.GalilInvPlus2.CentreRep w (st i).vm)
+    (hE : PalPeg.GalilGlueBLeaves.EntryCounters w (st i).vm) :
+    PalPeg.CloseoutPackRun47.CentreLedger (st i).vm :=
+  centreLedger_of_eq centre place entry q first hw hP hR hsane htc h1 hi hcr
+    (centreEq_of_entryCounters hE)
+
+#print axioms centreEq_of_entryCounters
+#print axioms centreLedger_of_entryCounters
 #print axioms centreLedger_of_eq
 
 /-! ## 6. 残差は 3 場 — `shiftDone` は完全に放電された

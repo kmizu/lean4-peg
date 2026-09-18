@@ -12,6 +12,61 @@
 
 
 
+
+## 2026-09-19 n90: `CentreLedger` の等式の出処は `EntryCounters` の `RadiusRep`
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+n89 で `CentreLedger` は等式
+`position center + value radius = position right` 1 本に縮んだ。その出処が確定した。
+
+```
+GalilGlueBLeaves.EntryCounters w s :=
+  ∃ Rad, ScanInvariant w (position s.center) Rad s.left s.right ∧
+         RadiusRep s.radius Rad ∧ SpanRep s ∧ Canonical s.length
+RadiusRep counter rad := Canonical counter ∧ value counter = rad
+ScanInvariant.rightPos : position r = center + radius
+```
+
+差をとれば等式（`BranchSupply.centreEq_of_entryCounters`、標準公理のみ）。
+`centreLedger_of_entryCounters` で `CentreLedger` が `EntryCounters` ＋ `CentreRep` から
+完全に出る（`canRight center` と `Sane center` は n89 でタダ）。
+
+### なぜ `RadLedger` では足りないのか（重要）
+
+`RadLedger.le` は `position center + value radius ≤ position right` で**不等号**。
+探索が活性のあいだ右ヘッドだけ進む場合があるので（`compareVM` の `radiusAfter` は
+「search 活性 ∧ chain idle なら不変」）、等式は一般には成り立たない。
+**正確さを担保するのは `RadiusRep`**（半径カウンタの値が `Rad` に等しい）。
+だから `CentreLedger` は「どの scan 状態でも」ではなく、
+`EntryCounters` が成り立つ状態（`Inv` ＋ `SpanRep`、`InvLPC` の各点）で使うもの。
+
+### 残差の現状（`bg` 場まで）
+
+`bg` ← `bg_at_of_supply`（状態局所、n88）の 4 入力:
+
+| 入力 | 状態 |
+|---|---|
+| `hrepR` | **タダ**（`LPackM2.packM.scanGeom` / `scanGeomR`） |
+| `hrepV` | `hver`（`VerRun`）の第 1 成分 |
+| `hL` | `hver` の第 2 成分 |
+| `hstart`（`BgStartP2`） | `bgStartP2_of_centre` の 3 入力のうち `canRight s.right` と半径台帳は**タダ**、`CentreLedger` は **`EntryCounters` ＋ `CentreRep` に帰着** |
+
+つまり `bg` 場の残差は **`EntryCounters` ＋ `CentreRep` を chain 誕生点（scan かつ idle chain）で持つこと**に縮んだ。
+
+### 次の一手
+
+1. `EntryCounters` を trace の scan 状態で供給する経路を確定する。
+   `GalilGlueBLeaves.entryCounters_of_inv (h : Inv raw c r) (hS : SpanRep r)` があるので、
+   `Inv` と `SpanRep` が trace の scan 点で取れるかを調べる
+   （`CloseoutMarksFree.entryCounters_of_invLPC` は `InvLPC` からは取れると書いている）。
+2. `CentreRep` は `LPackM2.centreRep` の guard が `rewind ∨ replayStart` なので
+   scan では取れない。scan 相の中心ヘッド表現の供給元を探す
+   （`MInv` か `ScanInvariant` の left/right から中心を復元できるか）。
+3. `LTickLeaves3` の残り 3 場（`backLag` / `initLedger` / `shiftDoneLedger`）は
+   `LPackM3` 経路用。`bg` を `EntryCounters` 経路で直接落とすなら `LPackM3` は不要になる。
+
 ## 2026-09-19 n89: 中心ヘッドも動ける — `CentreLedger` は**等式 1 本**に縮んだ
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
