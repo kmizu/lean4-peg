@@ -1,3 +1,37 @@
+## n226 — 公理進捗: `ShiftInv` 23 場中 16 場が証明済み（`coreX_immediate`）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 2 連言 `ShiftInv` の `verifierRep` / `verifierPresent` / `aligned` が出た。**23 場中 16 場が証明済み**、残り 7 場 |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+```lean
+theorem coreX_immediate
+    (h : PalPeg.GalilReplaySpan.CoreX raw cc b xs anchor w.machine)
+    (hc : GalilScaffoldChainVerifier.canRight w.machine.verifier) :
+    Represents (GalilScaffoldChainWatch.immediate w).machine.verifier.head raw ∧
+      (GalilScaffoldChainWatch.immediate w).machine.verifier.head.focus ≠ none ∧
+      ∃ pre : List (Fin 3),
+        position (GalilScaffoldChainWatch.immediate w).machine.verifier = anchor + pre.length
+```
+
+`GalilScaffoldChainVerifier.consume s = ⟨right s.verifier, …⟩` で verifier が 1 進むだけなので、
+`BranchSupply.representsAfterRight_free`（**無条件**、`canRight` 不要）と
+`right_position` でそのまま移る。
+
+### `ShiftInv`（23 場）の到達状況
+
+| 状態 | 場 |
+|---|---|
+| **証明済み 16** | 枠 10（n224）＋ `pal`/`palNext`/`origin`（n222/n223）＋ `verifierRep`/`verifierPresent`/`aligned`（本ノート） |
+| 残り 7 | `kle`（自明）`posH`（自明）`lagZero`（ガード直読み）`unbroken`（ガード＋`consume_keeps_unbroken`）`pred`（`CoreX` の `OnBlock`）`size`（margin 等式の算術）`room`（位置境界の算術） |
+
+**数学はもう一つも残ってへん。** 残り 7 場は自明・直読み・算術のみ。
 ## n225 — 公理進捗: `ShiftInv` 23 場すべてに出所が確定（残りは組み立てのみ）
 
 **公理への進捗**

@@ -245,6 +245,31 @@ theorem shiftInv_frame_of_beginShift {raw : List (Fin 2)} {h r₀ : ℕ} {s t : 
 
 #print axioms shiftInv_frame_of_beginShift
 
+/-- **`CoreX` を `immediate` に運ぶ。**  `GalilScaffoldChainVerifier.consume` は
+`verifier` を `right` で 1 つ進めるだけなので、`GalilReplaySpan.ChainW` の `.watch`
+枝が持つ `CoreX` の verifier 側の場（表現・focus・位置）はそのまま
+`GalilScaffoldChainWatch.immediate w` に移る。これが `ShiftInv` の
+`verifierRep` / `verifierPresent` / `aligned` の供給になる。 -/
+theorem coreX_immediate {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
+    {anchor : ℕ} {w : GalilScaffoldChainWatch.State}
+    (h : PalPeg.GalilReplaySpan.CoreX raw cc b xs anchor w.machine)
+    (hc : GalilScaffoldChainVerifier.canRight w.machine.verifier) :
+    GalilScaffoldInputTrace.Represents
+        (GalilScaffoldChainWatch.immediate w).machine.verifier.head raw ∧
+      (GalilScaffoldChainWatch.immediate w).machine.verifier.head.focus ≠ none ∧
+      ∃ pre : List (Fin 3),
+        position (GalilScaffoldChainWatch.immediate w).machine.verifier
+          = anchor + pre.length := by
+  obtain ⟨-, hrep, hfoc, pre, -, -, hpos⟩ := h
+  obtain ⟨h1, h2⟩ := PalPeg.BranchSupply.representsAfterRight_free w.machine.verifier hrep hfoc
+  refine ⟨h1, h2, pre, ?_⟩
+  show position (GalilScaffoldChainVerifier.right w.machine.verifier) = anchor + pre.length
+  rw [right_position w.machine.verifier hc
+    (represented_position w.machine.verifier.head raw hrep hfoc).1]
+  omega
+
+#print axioms coreX_immediate
+
 /-- **(NAMED) 準備直後の watch の台帳。**  `shiftPalAt_fresh_of_candidate` の 5 残差を
 1 つの場にまとめたもの。`ShiftPal` の `periodOnly = false` 分岐に必要な全部で、
 3 種類しかない（n144）:
