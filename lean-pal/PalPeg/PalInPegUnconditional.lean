@@ -118,11 +118,22 @@ axiom obligation_shiftExitLedger_alongTrace (entry q : ℕ) (first : Fin 9) :
         PalPeg.BranchSupply.ShiftExitLedgerAt centreC placeC entry q first w
           (st j).ctl (st j).vm
 
-/-- **(OBLIGATION)** rewind 相での `2 ≤ position left`（trace 形）。 -/
-axiom obligation_rewindMargin_alongTrace (entry q : ℕ) (first : Fin 9) :
+/-- **(OBLIGATION)** rewind 相での中心の余裕
+`r + pairOff c + 2 ≤ position s.center`（trace 形）。
+
+もとは `RewindMarginAt`（`2 ≤ position left`）だったが、`CloseoutPackRun13` の
+`rcouple_of_run`（**葉なし**）で `RCouple` が trace 全域でタダになるので、
+`rewindMargin_of_centreMargin` によりこの 1 葉に縮んだ
+（`BranchSupply.rewindMarginAt_alongTrace`）。
+
+`position p = if p.gap then 2·|left| else 2·|left| − 1` なので、これは
+**リストの長さの算術**であって幾何ではない。内容は「rewind が中心を使い切る前に
+FIRST で止まる」＝ marks テープと入力ヘッドの整合なので、
+`obligation_marksEntry` と材料を共有する。 -/
+axiom obligation_centreMargin_alongTrace (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
-      ∀ j, j ≤ Tc w.length → PalPeg.BranchSupply.RewindMarginAt (st j).ctl (st j).vm
+      ∀ j, j ≤ Tc w.length → PalPeg.CloseoutPackRun13.CentreMargin (st j).ctl (st j).vm
 
 /-- **(OBLIGATION)** chain の verifier が入力を表現し lag が正規（run 形）。 -/
 axiom obligation_verifierRunAlongRun (entry q : ℕ) (first : Fin 9) :
@@ -146,7 +157,8 @@ theorem unconditional : RecognizedByTotalPEG PAL :=
         (obligation_verifierRunAlongRun 0 0 0 w st hPreTraceIMW.base.pre.start)
         (PalPeg.BranchSupply.chainBackLagAt_alongTrace centreC placeC 0 0 0 hPreTraceIMW)
         (obligation_shiftExitLedger_alongTrace 0 0 0 w st Tc hPreTraceIMW)
-        (obligation_rewindMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW)
+        (PalPeg.BranchSupply.rewindMarginAt_alongTrace centreC placeC 0 0 0
+          hPreTraceIMW.base.pre (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW))
         (obligation_matchLanding_alongTrace 0 0 0 w st Tc hPreTraceIMW)
         (obligation_shiftEntryLanding_alongTrace 0 0 0 w st Tc hPreTraceIMW))
     (obligation_verifierRunAlongRun 0 0 0)

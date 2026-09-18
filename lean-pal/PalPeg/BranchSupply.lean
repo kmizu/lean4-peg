@@ -1,5 +1,6 @@
 import PalPeg.CloseoutVerSide
 import PalPeg.CloseoutPackRun49
+import PalPeg.CloseoutPackRun13
 import PalPeg.ShiftLocalRun
 
 /-!
@@ -1702,6 +1703,46 @@ theorem chainBackLagAt_alongTrace {w : List (Fin 2)}
       hIndexLeTc).backLagField⟩
 
 #print axioms chainBackLagAt_alongTrace
+
+/-! ## 5i. `RewindMarginAt` は `CentreMargin` 1 葉に縮む — `RCouple` はタダ
+
+`CloseoutPackRun13` に材料が揃っていた:
+
+* `rcouple_of_run`（:213）— **葉なし**。rewind 以外の mode で始まる run の各点で
+  `RCouple` が成り立つ。boot は `mode = init ≠ rewind` なので trace 全域でタダ
+* `rewindMargin_of_centreMargin`（:234）— `RCouple` ＋ `CentreMargin` から
+  `2 ≤ position s.left`
+
+`CentreMargin c s := c.mode = Mode.rewind → ∀ r, s.radius = ofNat r →
+r + pairOff c + 2 ≤ position s.center`（`Run13:227`）。
+
+`position p = if p.gap then 2·|left| else 2·|left| − 1`（`ChainInputSupply:496`）なので
+これは**リストの長さの算術**であって幾何ではない。 -/
+
+/-- **`RCouple` は trace 全域でタダ**（`rcouple_of_run` は葉を取らない）。 -/
+theorem rcouple_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTrace : PreTrace centre place entry q first w st Tc) :
+    ∀ i, i ≤ Tc w.length →
+      PalPeg.CloseoutPackRun13.RCouple (st i).ctl (st i).vm :=
+  fun i hIndexLeTc =>
+    PalPeg.CloseoutPackRun13.rcouple_of_run (PofC centre place entry w) q first 2048
+      (PalPeg.CloseoutPackRun2.steps_of_trace hPreTrace.trace i hIndexLeTc)
+      (by decide : Mode.init ≠ Mode.rewind)
+      (by rw [hPreTrace.start]; rfl)
+
+/-- **`RewindMarginAt` は `CentreMargin` だけから出る。** -/
+theorem rewindMarginAt_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTrace : PreTrace centre place entry q first w st Tc)
+    (hCentreMargin : ∀ i, i ≤ Tc w.length →
+      PalPeg.CloseoutPackRun13.CentreMargin (st i).ctl (st i).vm) :
+    ∀ i, i ≤ Tc w.length → RewindMarginAt (st i).ctl (st i).vm :=
+  fun i hIndexLeTc =>
+    ⟨fun hMode => PalPeg.CloseoutPackRun13.rewindMargin_of_centreMargin
+      (rcouple_alongTrace centre place entry q first hPreTrace i hIndexLeTc)
+      (hCentreMargin i hIndexLeTc) hMode⟩
+
+#print axioms rcouple_alongTrace
+#print axioms rewindMarginAt_alongTrace
 
 
 #print axioms landingObligationsAlongRun_of_globalHypotheses
