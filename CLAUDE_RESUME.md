@@ -19,6 +19,87 @@
 
 
 
+
+## 2026-09-19 n97: 公理を 1 個放電（10 → 9）＋ 「狭く切った不変量」が詰まりの正体
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 9 個の原子的義務を axiom として持つ。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
+
+### ラチェットで初めて公理が減った
+
+`obligation_chainBackLag_alongTrace` を削除し `BranchSupply.chainBackLagAt_alongTrace`
+で置き換えた（**新規入力ゼロ**）。`Axioms.lean` の guard も 10 → 9 に更新。
+
+### コウタの基準で診断した結果（2 つの構造的な問題だけだった）
+
+> 「producer がないのは何か間違っているとおもう。単なる機械のエミュレートが正しい証明やん。
+> そこが難解なら何かがミスっている」「純粋に作業量が多いならわかる」
+> 「構成的にできればあとは本当に作業になる」
+
+**(a) 不変量が狭く切られていた。**
+`CloseoutPackRun48.LagCan` は `.watch` 相だけ。実機の lag は `chain.start()` で
+`radius` から作られ `inc`/`dec` でしか動かないので `Canonical` と非負は構成から自明。
+全構成子に広げた `ChainLagCanonical` を作ったら落ちた。
+
+**(b) 分類器に対する補題が無く各所で手開きしていた。**
+`compareFound` の 8 番目の成分 `chainAt`（`GalilScaffoldTopSearch:130`）が
+tick の chain 効果の分類器そのもの:
+
+```
+chainAt a found … x z :=
+  (x ≠ .idle ∧ ChainTick a x z) ∨ (x = .idle ∧ found = false ∧ z = .idle) ∨
+  (x = .idle ∧ found = true ∧ (if a then ChainMatched (chainStart …) z else z = chainStart …))
+```
+
+`lpackM3_tick` はこれを各ケースで手で開いていた（`Run49:162–290` の約 60 行、
+`lagCan` 用と `chainPos` 用に二重化）。**分類器に対する補題 1 本
+（`chainLagCanonical_chainAt`）で chain の不変量が全部乗った。**
+
+さらに `fppLens` / `rewindLens` はどちらも `chain` を含まないので、fpp 相 8 遷移と
+rewind/choose 相 6 遷移は `chainLagCanonical_of_chainEq` 1 本で潰れた。
+
+**難解な箇所は 1 つも無かった。** 詰まっていたのは可読性と構造の問題だけ。
+
+### 同じパターンが次にも当てはまる — `CentreRep`
+
+`obligation_shiftExitLedger_alongTrace` の `CentreLedger` は
+`canRight center ∧ Sane center ∧ radiusExact`。`Sane` は `SanePack.saneC` でタダ、
+`radiusExact` は tick 全 24 ケース済み（n96）。残るのは `canRight s.center` で、
+それには `CentreRep`（中心ヘッドが入力を表現）が要る。
+
+**`LPackM2.centreRep` の guard は `rewind ∨ replayStart` だけ**（`Run23:105`）。
+`LagCan` と同じ「狭く切った」パターン。`Represents` はテープ内容の性質でヘッド移動で
+保たれる（`right_word` / `left_word` が既にある）ので、広げるのは機械的。
+
+側入力は**タダ**: `position center ≤ position right`（`RadLedger.le` ＋ `.nonneg`）
+＋ `position right ≤ 2|w| − 1`（`rightHeadPos_le_alongTrace`）→ `canRight` は
+`canRight_of_position_bound` で出る。中心が動くのは `init`（`= right s.right`）/
+`shift_one`（`= right s.center`）/ `replayStart`（`= s.center`）/ `choose_select`
+（`center.copyFrom(right)`）/ rewind（`= left s.center`）の 5〜6 ケースだけ
+（`fppLens` は center を含まない）。
+
+**注意（同時帰納になる）**: `CentreRep (st (i+1))` は `right_word` に
+`canRight (st i).vm.center` を要し、それは `CentreRep (st i)` から出る。
+`i` に関する 1 本の帰納の中で導けばよい。
+
+### 先に確かめること — `MatchRest.canRNext` は最終位置で偽の疑い
+
+`obligation_matchLanding_alongTrace` の経路は
+`CloseoutPackRun49.matchRes2_of_lpackM3`（`LPackM3` は運べる）＋ `MatchRest` の 4 場。
+そのうち `canRNext : canRight (right s.right)` は
+`canRight_next_of_bound` に `m < w.length`（**厳密**）を要する。
+いま持っている予算は `position right ≤ 2|w| − 1` なので、
+`position (right right) = position right + 1 ≤ 2|w|` となり**最終位置で `canRight` が偽**。
+**`MatchRest` に乗る前に、最終位置で `canRNext` が本当に要るのかを確かめること。**
+（要るなら `MatchRest` の切り方が間違っている＝また「狭く/広く切った」問題。）
+
+### 残り 9 個
+
+`matchLanding` / `shiftEntryLanding` / `shiftExitLedger` / `rewindMargin` /
+`shiftPalAtScanStates` / `verifierRunAlongRun` / `marksEntry` / `cycleOracle` /
+`localRealization`。
+
 ## 2026-09-19 n96: 目標を固定し公理を原子化（10 個）— `bg` 場を放電、経路を全原子に記録
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
