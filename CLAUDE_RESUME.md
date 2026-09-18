@@ -1,3 +1,27 @@
+## 2026-09-19 n160: shift 相の carrier（`ShiftPhaseHistory`）とその tick 保存
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器はまだ動いていない。**
+
+`PalPeg/RoundHistory.lean` は **30 宣言**（全部標準 3 公理以内、3 本は公理ゼロ）。
+
+* `ShiftPhaseHistory w s` — `roundSeg_of_run` の仮説を束ねた shift 相の履歴
+* `shiftPhaseHistory_originAt` — `remaining` が尽きた点で `OriginAt`（次ラウンドの起点）
+* `shiftPhaseHistory_readsShift` — 同じ点で **`H_readsShift`**
+* `shiftPhaseHistory_tick` — shift 相の 1 tick で伸びる
+
+`RoundHistory` は `ScanSeg` を持つので scan 相しか覆わない。ラウンドは
+scan 相 ＋ shift 相なので、**2 つの carrier の選言**を run に沿って運ぶ形になる。
+
+### 残り（相の遷移 2 つ ＋ 結合 carrier）
+
+| 遷移 | 要るもの |
+|---|---|
+| `scan_shift`（`RoundHistory` → `ShiftPhaseHistory`） | `hTerminal`（`scanSeg_only` の `periodOnly` ＋ guard）／`hCanRight`（`Extra7`）／`hPredict`（guard ＋ `watch_eq_of_mismatch_lagZero`）／`hLengthCanonical`（**済**）／`hRight`・`hLeft`（比較）／`hBeginShift`（`beginShiftVM'`）／**`WatchBlock w₀`（`RoundHistory` に足す必要がある）** |
+| `shift_done`（`ShiftPhaseHistory` → `RoundHistory`） | `shiftPhaseHistory_originAt`（**済**）＋ `roundHistory_start` |
+
+**`RoundHistory` に `WatchBlock w₀` を足すのが次の一手。**
+
 ## 2026-09-19 n159: **`H_readsShift` がラウンド起点の `OriginAt` から出る鎖が繋がった**
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

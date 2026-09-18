@@ -285,8 +285,14 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
 
 * **基底**: chain 誕生時の `OriginAt` ← `GalilScaffoldTopFirstRound.first_round`（無条件）
 * **帰納**: `originAt_next_of_run`（済）でラウンドごとに引き継ぐ
-* **境界検出**: run のどこが `scan_shift` かを特定して、`roundHistory_of_steps` の
-  `hScanWatchAll` と `chainShiftRun_of_steps` の `hShiftAll` を供給する
+* **境界検出**: 2 つの carrier の**選言**を run に沿って運ぶ
+  （`RoundHistory` = scan 相、`ShiftPhaseHistory` = shift 相。どちらも tick 保存は済 n160）。
+  残るのは相の遷移 2 つ:
+  * `scan_shift`（`RoundHistory` → `ShiftPhaseHistory`）——
+    `hTerminal` / `hCanRight` / `hPredict` / `hRight` / `hLeft` / `hBeginShift` を
+    tick と guard から取る。**`WatchBlock w₀` を `RoundHistory` に足す必要がある**
+  * `shift_done`（`ShiftPhaseHistory` → `RoundHistory`）——
+    `shiftPhaseHistory_originAt`（済）＋ `roundHistory_start`
 
 これができたら `H_readsShift` が trace / run の全点で出て、
 `obligation_shiftPalResidues*` の第 1 残差が**公理から外れる**（(C) の操作）。

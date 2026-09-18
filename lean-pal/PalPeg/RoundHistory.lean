@@ -675,6 +675,112 @@ theorem h_readsShift_of_run {c : Control}
 end Handoff
 
 #print axioms originAt_next_of_run
+
+/-! ## shift 相の carrier
+
+`RoundHistory` は scan 相しか覆わない（`ScanSeg` が scan 相の区間）。
+ラウンドの shift 相を run に沿って運ぶには別の carrier が要る。
+中身は `roundSeg_of_run` の仮説を束ねたもの。
+
+* `shiftPhaseHistory_originAt` — `remaining` が尽きた点で `OriginAt`
+* `shiftPhaseHistory_readsShift` — 同じ点で `H_readsShift` -/
+
+/-- **(NAMED) shift 相の履歴。**  `roundSeg_of_run` の仮説の束。 -/
+def ShiftPhaseHistory (w : List (Fin 2)) (s : GalilVM) : Prop :=
+  ∃ (s₀ s1 s2 : GalilVM) (w₀ wch v : GalilScaffoldChainWatch.State) (n k : ℕ)
+    (vs : ScanVM) (vq : SearchVM),
+    OriginAt w s₀ ∧ s₀.chain = ChainVM.watch w₀ ∧
+    PalPeg.GalilBranchInvariants.WatchBlock w₀ ∧
+    OnlyMatchedRun (toOnly s₀ w₀) n (toOnly s1 wch) ∧
+    singlePositive s1.cycle = true ∧ canRight s1.right ∧
+    GalilScaffoldInputHead.read (right s1.right) =
+      GalilScaffoldChainConsume.symbol wch.machine.control.period.focus ∧
+    Canonical s1.length ∧
+    vs.right = right s1.right ∧ vs.left = GalilScaffoldInputHead.left s1.left ∧
+    beginShiftVM (periodLength wch) wch (afterMismatch s1 vs vq) s2 ∧
+    ChainShiftRun (shiftLens.get s2).shift
+      (GalilScaffoldChainWatch.immediate wch) (shiftLens.get s2).cycle k
+      (shiftLens.get s).shift v (shiftLens.get s).cycle ∧
+    s = shiftLens.set s2 (shiftLens.get s) ∧
+    s.chain = ChainVM.watch v
+
+/-- **`remaining` が尽きた shift 点では `OriginAt`。**（次のラウンドの起点） -/
+theorem shiftPhaseHistory_originAt {w : List (Fin 2)} {s : GalilVM}
+    (hHistory : ShiftPhaseHistory w s)
+    (hExhausted : positive (shiftLens.get s).shift.remaining = false) :
+    OriginAt w s := by
+  obtain ⟨s₀, s1, s2, w₀, wch, v, n, k, vs, vq, hOrigin, hChainStart, hBlockStart,
+    hMatchedRun, hTerminal, hCanRight, hPredict, hLengthCanonical, hRight, hLeft,
+    hBeginShift, hShiftRun, hFrame, hChainEnd⟩ := hHistory
+  exact originAt_next_of_run hOrigin hChainStart
+    (roundSeg_of_run hChainStart hBlockStart hMatchedRun hTerminal hCanRight hPredict
+      hLengthCanonical hRight hLeft hBeginShift hShiftRun hExhausted hFrame hChainEnd)
+
+/-- **同じ点で `H_readsShift`。** -/
+theorem shiftPhaseHistory_readsShift {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hHistory : ShiftPhaseHistory w s)
+    (hExhausted : positive (shiftLens.get s).shift.remaining = false) :
+    PalPeg.CloseoutRoundUnique.H_readsShift w c s :=
+  PalPeg.CloseoutReadsOrigin.h_readsShift_of_originAt
+    (shiftPhaseHistory_originAt hHistory hExhausted)
+
+#print axioms ShiftPhaseHistory
+#print axioms shiftPhaseHistory_originAt
+#print axioms shiftPhaseHistory_readsShift
+
+/-- **shift 相の 1 tick で `ShiftPhaseHistory` が伸びる。** -/
+theorem shiftPhaseHistory_tick {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {w : List (Fin 2)} {x y : State GalilVM}
+    (hHistory : ShiftPhaseHistory w x.vm)
+    (hShift : x.ctl.mode = Mode.shift)
+    (hCopyIdle : CopyIdle x.vm)
+    (hTick : Tick (galilFrameS P q first) delay x y)
+    (hStayShift : y.ctl.mode = Mode.shift) :
+    ShiftPhaseHistory w y.vm := by
+  obtain ⟨s₀, s1, s2, w₀, wch, v, n, k, vs, vq, hOrigin, hChainStart, hBlockStart,
+    hMatchedRun, hTerminal, hCanRight, hPredict, hLengthCanonical, hRight, hLeft,
+    hBeginShift, hShiftRun, hFrame, hChainEnd⟩ := hHistory
+  cases hTick with
+  | shift_one c0 s0 s0' hm hRemainingPos hShiftOne =>
+    have hRemaining : positive (shiftLens.get s0).shift.remaining = true := by
+      rcases hRemainingPos with hp | hp
+      · exact hp
+      · exact absurd hp hCopyIdle
+    obtain ⟨hChainTarget, hRunTarget⟩ :=
+      chainShiftRun_snoc_shiftOne hShiftRun hChainEnd hRemaining hShiftOne
+    have hFrameStep : s0' = shiftLens.set s0 (shiftLens.get s0') := hShiftOne.2
+    have hFrameHere : s0 = shiftLens.set s2 (shiftLens.get s0) := hFrame
+    have hFrameTarget : s0' = shiftLens.set s2 (shiftLens.get s0') := by
+      rw [hFrameStep]
+      conv_lhs => rw [hFrameHere]
+      exact shiftLens.set_set _ _ _
+    exact ⟨s₀, s1, s2, w₀, wch, chainShiftOne v, n, k + 1, vs, vq,
+      hOrigin, hChainStart, hBlockStart, hMatchedRun, hTerminal, hCanRight, hPredict,
+      hLengthCanonical, hRight, hLeft, hBeginShift, hRunTarget, hFrameTarget, hChainTarget⟩
+  | shift_done c0 s0 o0 hm _ _ => simp at hStayShift
+  | init c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_wait c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_count c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_match c0 s0 s0' s0'' o0 hm _ _ _ _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_shift c0 s0 s0' s0'' hm _ _ _ _ _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_fallback c0 s0 s0' s0'' hm _ _ _ _ _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | copy_one c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | copy_done c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | home_start c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | home_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | fpp_slice c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | fpp_done c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | markEnd_found c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | markEnd_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | choose_select c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | choose_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | rewind_done c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | rewind_one c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | rewind_pair c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | replayStart c0 s0 s0' o0 hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | restart c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
+
+#print axioms shiftPhaseHistory_tick
 #print axioms h_readsShift_of_run
 
 #print axioms chainShiftRun_tick
