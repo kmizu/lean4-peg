@@ -99,8 +99,16 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 目標は閉じた項として存在し、足りない義務は `axiom` で明示されている。
 `PalPeg/Axioms.lean` の `#guard_msgs in #print axioms` がラチェットで、
 1 個外すと guard が壊れて更新を強制される。**標準 3 公理だけになったら §10.5 達成。**
-いまは 10 個の原子的義務が残っている（経路は `PalPeg/PalInPegUnconditional.lean` の
-docstring に表で記録）。
+いまは **7 個**の原子的義務が残っている（`centreMargin` / `cycleOracle` /
+`localRealization` / `marksEntry` / `matchRest` / `shiftPalAtScanStates` /
+`verifierRunAlongRun`。経路は `PalPeg/PalInPegUnconditional.lean` の docstring に表で記録）。
+
+**自分が書いた義務も過剰量化しうる。** 2026-09-19 に `obligation_matchRest_alongTrace` の
+場 `canRNext`（`canRight (right s.right)` を trace 全域で、mode guard なし）が
+**偽**だと機械検査で確定した（`MatchRestRefute.matchRest_alongTrace_false`）。
+報告点は `position right = 2|w| − 1` ちょうどなので 2 歩分の余裕は原理的に無い。
+**「着地状態の性質」を「源状態の性質」として書くと 1 歩ぶん強くなる。**
+義務を書く前に、消費者がその分岐で何を要求しているかを読む。
 
 * 公理は**1 場ずつの原子**に分解する（束ねると「1 個外す」が測れない）
 * 義務は**trace 形**で書く。global 形（`∀ c s`）は放電の材料が run に沿ってしか

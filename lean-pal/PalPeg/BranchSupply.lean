@@ -2203,6 +2203,7 @@ theorem matchRes2_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc
     (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
     (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
       ScanNR x → ShiftPal centre place entry q first w x.vm)
+    (hVerRun : VerRun centre place entry q first w (st 0))
     (hShiftExitLedger : ∀ j, j ≤ Tc w.length →
       ShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm)
     (hCentreMargin : ∀ j, j ≤ Tc w.length →
@@ -2253,6 +2254,8 @@ theorem matchRes2_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc
         (fun k hk => leftLive_of_lpackM (hPreTraceIMW.packs k hk).pack))
       hTcPos hRes j hIndexLeTc)
     hMode (hMatchRest j hIndexLeTc)
+    (hVerRun j (st j)
+      (PalPeg.CloseoutPackRun2.steps_of_trace hPreTrace.trace j hIndexLeTc) hMode).1
 
 #print axioms matchRes2_alongTrace
 
@@ -2293,13 +2296,13 @@ theorem scanLandingObligations_alongTrace_of_matchRest {w : List (Fin 2)}
     intro j hIndexLeTc
     refine ⟨fun s' t o b hMode hInv => ?_⟩
     refine PalPeg.CloseoutPackRun48.matchLanding_of_matchRes2 centre place entry q first
-      (matchRes2_alongTrace centre place entry q first hPreTraceIMW hSP hShiftExitLedger
+      (matchRes2_alongTrace centre place entry q first hPreTraceIMW hSP hVerRun hShiftExitLedger
         hCentreMargin hMatchRest j hIndexLeTc hMode) s' t o b hMode hInv
   · -- `entryLand`
     intro j hIndexLeTc
     refine ⟨fun s' t hMode hInv => ?_⟩
     refine PalPeg.CloseoutPackRun48.shiftEntryLanding_of_matchRes2 centre place entry q first
-      (matchRes2_alongTrace centre place entry q first hPreTraceIMW hSP hShiftExitLedger
+      (matchRes2_alongTrace centre place entry q first hPreTraceIMW hSP hVerRun hShiftExitLedger
         hCentreMargin hMatchRest j hIndexLeTc hMode) s' t hMode hInv
 
 #print axioms scanLandingObligations_alongTrace_of_matchRest

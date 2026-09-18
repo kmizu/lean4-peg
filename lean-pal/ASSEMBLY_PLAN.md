@@ -22,6 +22,79 @@
 
 
 
+
+## 2026-09-19 n100: `MatchRest` は主張が強すぎた — `canRNext` を反証し `repV` を放電（4 場 → 2 場）
+
+**全体 build 成功（EXIT=0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 7 個の原子的義務を axiom として持つ。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
+
+### 公理 8 → 7（`shiftExitLedger` 放電）
+
+`obligation_shiftExitLedger_alongTrace` を `BranchSupply.shiftExitLedgerAt_alongTrace`
+で放電。新規入力は既存の公理 `obligation_centreMargin_alongTrace` だけ。
+
+    canRight center   HeadsRepresent ＋ 中心の位置上界（RadLedger.le ＋ .nonneg）
+    Sane center       LPackM2.shiftGeom が直接持っている
+    radiusExact       RadiusExactOffRewindPhase（shift 相は rewind guard の外）
+
+原因は `LPackM2.centreRep` の guard が `rewind ∨ replayStart` だけだったこと
+（`LagCan` と同じ「狭く切った」パターン、6 例目）。
+
+側条件が 2 つ「タダ」になった:
+1. `radiusExact_after_shiftOne` の `1 ≤ value radius` は算術に使われていなかった
+2. `0 < head.left.length` は `represented_position`（`Represents` ＋ `focus ≠ none`）から直接
+
+### `MatchRest.canRNext` は偽だった（機械検査済み・REFUTED 条件付き）
+
+`PalPeg.MatchRestRefute.matchRest_alongTrace_false`
+（`PreTrace` ＋ `0 < |w|` ＋ trace 全域の `MatchRest` → `False`。標準公理のみ）。
+
+    canRNext : canRight (right s.right)     -- mode guard すら無し
+
+`ReportPointAt.atPrefix` は報告点で `position right = 2|w| − 1` を**等式**で与える。
+`not_canRight_iff`（`¬canRight p ↔ position p = 2|w|`）より 2 歩分の余裕は原理的に無い。
+
+コウタの診断そのまま:「反証ができたとしたら、定理の内容がまずかったんやろ」
+「定理の主張が強すぎたが一番ありそう」。
+
+| | |
+|---|---|
+| 書いた義務 | 源状態で **2 歩分**（trace 全域・guard なし） |
+| 実機の要求 | compare 前に `canRight right`（**1 歩分**、Scala `available`） |
+| 消費者の要求 | **着地状態**の `canRight t.right`（1 歩分） |
+
+正しい切り方: `matchLand` / `entryLand` の**仮説**に `canRight t.right` を移し、
+消費者 `chainPosInv2_tick_of_landingObligationsAt` が
+`y.ctl.mode = scan ∨ shift → canRight y.vm.right` を取る。本線はこれを
+`BranchSupply.canRightAtScanOrShift_alongTrace` で埋める（新規入力ゼロ）。
+旧 global/`Steps` 経路には過剰量化の供給を明示仮定として足し、
+名前に過剰量化を出した（`hCanRightAtAnyScanOrShiftState`）。
+
+### `MatchRest.repV` も放電（新規入力ゼロ）
+
+`CloseoutVerSide.VerRun` の第 1 成分が `VerRep w z.vm.chain` そのもの。
+`steps_of_trace` で trace の scan 状態に落ちる。
+**`MatchRest` は 4 場 → 2 場**（`repVmid` / `replayPay`）。
+
+### 次の 2 手（`obligation_matchRest_alongTrace` を消すため）
+
+1. **`repVmid`**（1 `ChainStep` 先の verifier 表現）。`ChainStep` は**7 構成子**
+   （`idle` / `brokenIdle` / `copyBit` / `copyEnd` / `backStep` / `backDone` / `watchStep`）。
+   `.watch` を作るのは `backDone`（verifier = `.back` の `ver`、不変）と
+   `watchStep`（`Internal`: `idle` は不変、`take` は `right`）。
+   よって **`ChainPositionLedger` と同じ 3 相を覆う `VerRep` 全相版**を作り、
+   誕生（`chainStart` の verifier = `s.center`）を `HeadsRepresent.centre`（証明済み）
+   から出せば、`repV` / `repVmid` だけでなく
+   **`obligation_verifierRunAlongRun` 自体も落ちる見込み**（7 → 5）。
+   移動補題は既にある: `CloseoutVerRep.verRep_next` / `verRep_of_chainPos`。
+2. **`replayPay`**（replaying 時の payload）。3 節のうち `canR` は
+   `canRightAtScanOrShift_alongTrace`、`radLe` は `radiusLe_of_radLedger` で**タダ**。
+   残るのは `ChainPositionLedger s.chain (position s.right)` で、これは
+   `ChainPositionInvariantWithShiftPhase.payload` の guard が `ScanNR`
+   （＝ `replaying = false`）に切られているために抜けている。
+   **guard から `replaying = false` を外す**のが筋（また「狭く切った guard」）。
+
 ## 2026-09-19 n99: 公理 9 → 8、そして中心ヘッドの遷移表（`CentreRep` 広げ用）
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
