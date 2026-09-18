@@ -23,6 +23,86 @@
 
 
 
+
+## 2026-09-19 n101: 公理 7 → 5（`matchRest` ＋ `verifierRunAlongRun`）
+
+**全体 build 成功（EXIT=0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 5 個の原子的義務を axiom として持つ
+（`centreMargin` / `cycleOracle` / `localRealization` / `marksEntry` /
+`shiftPalAtScanStates`）。無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
+
+### 公理の推移
+
+```
+11 相当 → 10 → 9 → 8 → 7 → 5
+  bg 場              放電（CentreLedger ← LPackM3）
+  chainBackLag       放電（不変量を全構成子に広げた）
+  rewindMargin       → centreMargin に縮小（RCouple はタダ）
+  matchLanding + shiftEntryLanding → matchRest 1 つに合流
+  shiftExitLedger    放電（HeadsRepresent ＋ ShiftGeom ＋ RadiusExact）
+  matchRest          放電（4 場とも）
+  verifierRunAlongRun 放電（run 形 → trace 形に切り直し）
+```
+
+### `MatchRest` の 4 場の決着
+
+| 場 | 決着 |
+|---|---|
+| `canRNext` | **偽**（`MatchRestRefute.matchRest_alongTrace_false`）。着地側の 1 歩分に切り直し |
+| `repV` | `VerRun` の第 1 成分そのもの → `ChainVerifierRepresents` |
+| `replayPay` | `ChainPositionInvariantWithShiftPhase.payload` の guard を `ScanNR` → `mode = scan` に広げたら**義務ごと消滅** |
+| `repVmid` | `ChainVerifierRepresents` を 1 手進めるだけ |
+
+`replayPay` が存在した理由: `payload` の guard が `ScanNR`（`mode = scan ∧
+replaying = false`）で replay 中の台帳が抜けていた。guard を広げたら源で両分岐が出た。
+**「狭く切った guard」の 8 例目。** 副産物として `bg` / `matchLand` の `ScanNR` 仮説と
+そこでしか使われていなかった `(o b : Bool)` が全部落ちた。
+
+### `VerRun` は run 形だったから出なかった
+
+`CloseoutVerSide.VerRun` は `Steps` 到達可能な**任意の**状態に量化していた
+（`Tick` は決定的でないので trace からは出ない）。trace の点で述べた
+`BranchSupply.ChainVerifierSupplyAlongTrace` に切り直すと
+
+    VerRep  ← ChainVerifierRepresents の .watch 場
+    LagCan  ← ChainLagCanonical の .watch 場
+
+でどちらも搬送済み。**過剰量化の 10 例目。run 形と trace 形は別物。**
+
+### 鍵: `right` は入力端で no-op
+
+    canRight p = (gap = false ∨ head.right ≠ [] ∨ head.incoming ≠ [])
+    moveRight h = match h.right with | a :: rs => … | [] => match h.incoming with | [] => h | …
+
+`¬canRight p` なら `gap = true` かつ右も incoming も空で `moveRight h = h`。
+`representsAfterRight_free` でこれを示したので **`ChainVerifierRepresents` は
+`canRight` の供給を一切要らない**。`verRep_next` が `canRight` を取っていたのは
+無条件版を書いていなかったからで、障害ではなかった。
+
+### 残り 5 個の分析
+
+| 公理 | 内容 | 次の一手 |
+|---|---|---|
+| `centreMargin` | rewind 相で `r + pairOff c + 2 ≤ position center` | **marks テープの下限が必要**（下記） |
+| `marksEntry` | `H_marksEntry'`（rewind 入口の marks 不変量） | `centreMargin` と同じ壁 |
+| `shiftPalAtScanStates` | scan 状態の `ShiftPal` | `ChainOk` の再設計（`WatchOk` 反証済み、n74 系） |
+| `cycleOracle` | `CycleOracleMC3` | §3 の葉（found 経路が最大） |
+| `localRealization` | `H_realizeLIMW'` | producer なし。難易度は宣言しない |
+
+**`centreMargin` の位置づけ（今日確定）**: `GalilCentreLive.CPack` は既に marks テープの
+束縛を**場として運んでいる**:
+
+    CPack.rewind : c.mode = Mode.rewind → mh s + (if c.pair then 1 else 0) ≤ 2 * position s.center
+    （`mh s = GalilScaffoldTape.head (marksTape s.fpp)`）
+
+これは `position center` の**下限**を与えるので `CentreLive`（`0 < position center`）は
+そこから出る（`centreLive_of_pack`）。ところが `CentreMargin` に必要なのは
+`position right ≥ 2·r + pairOff + 2`、すなわち **`mh` の下限**（rewind の歩数 `r` が
+marks テープの FIRST までに収まること）で、`CPack` の場はすべて `mh` の**上限**。
+よって新しい場（rewind 中に `2·value radius + pairOff + 4 ≤ mh s` に相当するもの）が要る。
+`radiusExact` が rewind 中も保存されること（`position center + radius = position right`、
+`0 < position center` が要る＝`CentreLive`）は既に材料がある。
+
 ## 2026-09-19 n100: `MatchRest` は主張が強すぎた — `canRNext` を反証し `repV` を放電（4 場 → 2 場）
 
 **全体 build 成功（EXIT=0・sorryAx 0）。既存の旗艦定理は標準公理のみ。

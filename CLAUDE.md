@@ -99,9 +99,21 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 目標は閉じた項として存在し、足りない義務は `axiom` で明示されている。
 `PalPeg/Axioms.lean` の `#guard_msgs in #print axioms` がラチェットで、
 1 個外すと guard が壊れて更新を強制される。**標準 3 公理だけになったら §10.5 達成。**
-いまは **7 個**の原子的義務が残っている（`centreMargin` / `cycleOracle` /
-`localRealization` / `marksEntry` / `matchRest` / `shiftPalAtScanStates` /
-`verifierRunAlongRun`。経路は `PalPeg/PalInPegUnconditional.lean` の docstring に表で記録）。
+いまは **5 個**の原子的義務が残っている（`centreMargin` / `cycleOracle` /
+`localRealization` / `marksEntry` / `shiftPalAtScanStates`。経路は
+`PalPeg/PalInPegUnconditional.lean` の docstring に表で記録）。
+
+**guard を狭く切ると義務が増える。** 2026-09-19 に `ChainPositionInvariantWithShiftPhase.payload`
+の guard が `ScanNR`（`mode = scan ∧ replaying = false`）だったせいで replay 中の
+台帳が抜け、その穴埋め用に `MatchRest.replayPay` という義務が立っていた。
+guard を `mode = scan` に広げたら**義務ごと消えた**。同型の例が 8 件
+（`LagCan` は `.watch` だけ / `CentreRep` は `rewind ∨ replayStart` だけ /
+`VerRep` は `.watch` だけ …）。**新しい場を足す前に、既存の guard が必要以上に
+狭くないかを見る。**
+
+**run 形（`∀ z, Steps j x z → …`）と trace 形（`∀ i ≤ Tc, … (st i) …`）は別物。**
+`Tick` は決定的でないので trace 形から run 形は出ない。run に沿う事実は trace 形で書く
+（`obligation_verifierRunAlongRun` が落ちたのはこの切り直しだけが理由）。
 
 **自分が書いた義務も過剰量化しうる。** 2026-09-19 に `obligation_matchRest_alongTrace` の
 場 `canRNext`（`canRight (right s.right)` を trace 全域で、mode guard なし）が
