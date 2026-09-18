@@ -23,19 +23,35 @@ import PalPeg.BranchSupply
 * 「トップダウンにまずそれを書いておいてビルド通すために前提をいったん axiom に
   しておく。で、検証したい前提ごとに axiom をはずして全部外せたら証明完了」
 
-## 10 個の原子的義務と、それぞれの経路（2026-09-19 実測）
+## 4 個の原子的義務と、それぞれの経路
+
+**この表は `axiom` 宣言（`:85` / `:96` / `:104` / `:109`）と一致していなければならない。**
+2026-09-19（n126）に**この docstring が腐っていた**のを直した——表は 9 行あったが
+`axiom` 宣言は 4 本で、`obligation_verifierRunAlongRun` / `matchLanding_alongTrace` /
+`shiftEntryLanding_alongTrace` / `chainBackLag_alongTrace` / `shiftExitLedger_alongTrace` /
+`rewindMargin_alongTrace` の 6 行は既に存在しない公理を載せたままだった。
+CLAUDE.md（`4 個`）と `#print axioms` は一致していたので、**ズレていたのはここだけ**。
+CLAUDE.md の「ファイル自身の docstring も一次情報ではない」に自分で引っかかった。
+**数えるときは `grep "^axiom " PalPeg/PalInPegUnconditional.lean` か `#print axioms`。**
 
 | axiom | 内容 | 経路と残り |
 |---|---|---|
 | `obligation_shiftPalAlongRun` / `obligation_shiftPalAlongTrace` | scan 状態で `ShiftPal`（run 形／trace 形） | `ShiftPalAlongTrace.shiftPal_alongTrace` と `CloseoutBundleRun.shiftPal_of_run_B`。残差はどちらも `H_readsShift`（←`RoundSegFromRun.readsShift_at_actual`）＋ `H_freshShiftAtShiftEntry`（←`first_round`）＋ `periodOnly = false` 分岐 |
+| `obligation_cycleOracle` | `CycleOracleMC3` | `CloseoutOracleBridge.hor_of_H_oracle` ＋ `CloseoutOracle8.h_oracle_of_leaves7`。11 葉（CLAUDE.md §3） |
+| `obligation_localRealization` | `H_realizeLIMW'`（局所実現） | **producer なし**（5 機械の鎖の 2→3 段）。難易度は宣言しない——`LagCan` / `CentreRep` と同じ「切り方の誤り」の可能性が高い |
+
+### 公理としては消えた 6 本（経路メモは残す）
+
+`#print axioms` にはもう出てこない。下は当時の経路メモで、**現状の義務ではない**。
+
+| 旧 axiom | 内容 | 当時の経路メモ |
+|---|---|---|
 | `obligation_verifierRunAlongRun` | `VerRun`（verifier が入力を表現、lag 正規） | `chainPos_step_of_supply` が要求する 4 局所事実の残り 2 つ。`ConsumeAvail` の全状態版は偽（`ConsumeAvailRefute.hav_false`） |
 | `obligation_matchLanding_alongTrace` | `scan_match` 着地 | `CloseoutPackRun49.matchRes2_of_lpackM3`（`LPackM3` は §5e で運べる）＋ `h_matchP2_of_target`。残差は `MatchRest` の 3 場: `repV`（←`VerRun`）/ `repVmid`（verifier 1 歩先、`right_word` で出るはず）/ `replayPay`（replaying 時の payload）。`canRNext` は**反証済みで削除**（`MatchRestRefute`） |
 | `obligation_shiftEntryLanding_alongTrace` | `scan_shift` 入口 | `beginShiftVM'` は `immediate`（1 consume）を当てる。`ShiftPhaseChainLedger` の確立 |
 | `obligation_chainBackLag_alongTrace` | chain `.back` 相の lag 形状 | **producer なし**。`LagCan` は `.watch` 相のみ。`.back` は `ChainStep.copyEnd` が `.copy` の lag を持ち込むところで確立される。`CloseoutChainPack` / `CloseoutChainSideR` に同名の場があるのでその証明を参照 |
 | `obligation_shiftExitLedger_alongTrace` | `shift_done` での `CentreLedger` | 3 節のうち `canRight center` / `Sane center` は §5b でタダ。残るは等式 `radiusExact`。scan 状態では `LPackM3` からタダなので、**shift 相へ運ぶ**のが仕事: `beginShiftVM` は center/radius/right を触らず（§5d）、`shiftTick` は center +1・radius −1・right 不変で保存する。side condition は `canRight s.center`（shift 相では `CentreRep` が無いので要調達）と `0 < value s.radius`（`RadLedger.shiftBud` ＋ `remainingPos` から出る） |
 | `obligation_rewindMargin_alongTrace` | rewind 相の `2 ≤ position left` | **producer なし**。`LPackM2.centreOrder` は `position left ≤ position center`（上界）なので別物。CLAUDE.md は「`CentreMargin` 1 葉に集約」と記録 |
-| `obligation_cycleOracle` | `CycleOracleMC3` | `CloseoutOracleBridge.hor_of_H_oracle` ＋ `CloseoutOracle8.h_oracle_of_leaves7`。11 葉（CLAUDE.md §3） |
-| `obligation_localRealization` | `H_realizeLIMW'`（局所実現） | **producer なし**（5 機械の鎖の 2→3 段）。難易度は宣言しない——`LagCan` / `CentreRep` と同じ「切り方の誤り」の可能性が高い |
 
 ### 放電済み（この近傍のタダ飯）
 

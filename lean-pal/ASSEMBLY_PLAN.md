@@ -1,3 +1,27 @@
+## 2026-09-19 n126: `PalInPegUnconditional.lean` の docstring が腐っていた（表 9 行 vs `axiom` 4 本）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。
+無条件 PAL は未完。§10.5 は未達。**
+
+コウタの指摘「4 本って書いてることとちゃうやん」で発覚。照合結果:
+
+| 出どころ | 数 |
+|---|---|
+| `#print axioms PalPeg.PalInPeg.unconditional` | **4**（`shiftPalAlongRun` / `shiftPalAlongTrace` / `cycleOracle` / `localRealization`） |
+| `grep "^axiom " PalPeg/PalInPegUnconditional.lean` | **4**（`:85` `:96` `:104` `:109`） |
+| `CLAUDE.md:102` | **4** |
+| **同ファイルの docstring の表** | **9 行**（← ズレていたのはここだけ） |
+
+`obligation_verifierRunAlongRun` / `matchLanding_alongTrace` / `shiftEntryLanding_alongTrace` /
+`chainBackLag_alongTrace` / `shiftExitLedger_alongTrace` / `rewindMargin_alongTrace` の 6 行が、
+**既に存在しない公理を載せたまま**だった（`axiom` 宣言ゼロ、参照は docstring のみ）。
+経路メモは捨てずに「公理としては消えた 6 本」節へ移した。
+
+**CLAUDE.md の「ファイル自身の docstring も一次情報ではない」に自分で引っかかった。**
+n116 で `CloseoutRealize1.lean` について同じことを書いたのに、正本の入口ファイルで
+同じ腐り方をさせていた。**数えるときは `grep "^axiom "` か `#print axioms`。**
+表を書き換えるときは同時に `axiom` 宣言と突き合わせる。
+
 ## 2026-09-19 n125: live chain 版の区間構成ができた — clock の余裕は要らなかった（n124 の訂正 2 段）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。
