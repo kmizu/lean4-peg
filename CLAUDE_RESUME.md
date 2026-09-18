@@ -1,3 +1,31 @@
+## 2026-09-19 n171: **`Fair` の 3 場の内訳を割った——1 場はタダ、1 場は形式化のミス**
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。**
+
+`Fair`（`GalilTickFair:195`）は 3 場。4 → 3 の道でこれを供給しないといけないので、
+1 場ずつ一次情報で測った。
+
+| 場 | 状態 |
+|---|---|
+| `keepsSearchCursor` | **タダ**。`initVM`（`GalilScaffoldTopReplay:20`）と `replayStartVM`（`:33`）の定義の 15 連言の最後 2 つが `t.periodOnly = s.periodOnly ∧ t.walker = s.walker`。`tick_init_cases` / `tick_replayStart_cases` で取り出すだけ |
+| `fallbackPlace` | `beginFallbackVM'`（`GalilScaffoldTopGuards:45`）が place `p` を「`(stream p).length ≤ position s.right`」だけで縛っている。**実機は search の walker から一意に計算する** → `t.fpp.walker = t.walker` を定義に足せば消える。**形式化のミス** |
+| `restartFirst` | `restartGuardVM`（`GalilSharedFunctional:146`）が `chain = .broken w` を要求するので、**broken chain のない区間では空虚**。Scala は restart 優先（`ScaffoldGalil`） |
+
+### CLAUDE.md を訂正した
+
+§2 の「(e) `beginFallbackVM'`（着地場所）、`initVM`/`replayStartVM`（`periodOnly`, `walker`
+自由）が非関数的」は**古い**。`initVM`/`replayStartVM` は既に両方を固定している。
+**この誤った記述を信じて「fair を供給するのは 3 場ぶん」と見積もっていた。**
+
+### 帰結（4 → 3 の道の見積もり改訂）
+
+供給すべきは実質 2 場、しかもうち 1 場（`fallbackPlace`）は
+**`beginFallbackVM'` の定義に 1 連言足せば消える**。
+残るのは `restartFirst` だけで、それは broken chain のある区間に限られる。
+
+**「Fair を通すのは大工事」という見積もりは過大だった。**
+
 ## 2026-09-19 n170: **コウタの「定理ふえすぎてへん？」に答えて 44 → 35 に削った**
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
