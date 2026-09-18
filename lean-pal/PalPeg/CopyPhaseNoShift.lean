@@ -122,6 +122,166 @@ theorem tick_not_watch_or_posLag {a : Bool} {x z : ChainVM}
 
 #print axioms tick_not_watch_or_posLag
 
+
+/-! ## lag は要らなかった — `phase` で落ちる
+
+`shiftGuardVM` は `w.machine.control.phase = 4` を要求する。
+`ChainStep.backDone` で生まれた watch の control は `watchControl v` で、
+そのフィールド順は `period, distance, boundary, last, phase, forward, broken`
+（`GalilScaffoldChainConsume:15`）なので **`phase = 0`**。
+
+1 tick 後も 4 にならない:
+* `Outer.queued` は machine を触らない → phase 0
+* `Outer.immediate` は `consume` を通すが、`phase := if boundaryEvent then advancePhase s.phase
+  else s.phase` で `advancePhase 0 = ⟨min 4 1, _⟩ = 1`、不一致枝は `broken := true` で phase 不変
+* `ChainMatched.breaks` の行き先は `.broken` で watch ではない
+
+**つまり `ShiftPal` の空虚性に lag の正値は要らない**（n134 の `shiftPal_of_copyOrBack` は
+`LagPos` を取っていたが、不要だった）。これで「found 時の半径が正」への依存がこの経路から消える。 -/
+
+/-- `phase = 0` から `consume` しても 4 にはならない。 -/
+theorem consume_phase_ne_four (c : GalilScaffoldChainConsume.State) (seen : Option (Fin 3))
+    (h0 : c.phase = 0) : (GalilScaffoldChainConsume.consume c seen).phase ≠ 4 := by
+  have hval : ((GalilScaffoldChainConsume.consume c seen).phase).val ≤ 1 := by
+    simp only [GalilScaffoldChainConsume.consume, GalilScaffoldChainConsume.advancePhase, h0]
+    repeat' split
+    all_goals simp
+  intro hEq
+  rw [hEq] at hval
+  exact absurd hval (by decide)
+
+/-- **`backDone` 生まれの watch は 1 tick 後も phase ≠ 4。** -/
+theorem tick_watch_phase_ne_four {a : Bool} {x z : ChainVM}
+    (hPhase : CopyOrBack x) (hTick : ChainTick a x z)
+    (w : GalilScaffoldChainWatch.State) (hEq : z = ChainVM.watch w) :
+    w.machine.control.phase ≠ 4 := by
+  obtain ⟨y, hStep, hAfter⟩ := hTick
+  rcases hPhase with ⟨t, h, p, v, lag, margin, ver, m, rfl, hCopyInv⟩ |
+    ⟨v, h, lag, margin, ver, rfl⟩
+  · exfalso
+    exact PalPeg.CopyPhaseTick.chainStep_copy_shape hStep |>.elim
+      (fun ⟨t', h', p', v', margin', hy⟩ => by
+        cases a
+        · exact ChainVM.noConfusion (hEq.symm.trans ((hAfter : z = y).trans hy))
+        · rw [hy] at hAfter
+          cases hAfter with
+          | copy _ _ _ _ _ _ _ => exact ChainVM.noConfusion hEq)
+      (fun ⟨v', h', margin', hy⟩ => by
+        cases a
+        · exact ChainVM.noConfusion (hEq.symm.trans ((hAfter : z = y).trans hy))
+        · rw [hy] at hAfter
+          cases hAfter with
+          | back _ _ _ _ _ => exact ChainVM.noConfusion hEq)
+  · rcases chainStep_back_shape' hStep with ⟨v', hy⟩ | ⟨wv, hy, hWatchLag⟩
+    · exfalso
+      cases a
+      · exact ChainVM.noConfusion (hEq.symm.trans ((hAfter : z = y).trans hy))
+      · rw [hy] at hAfter
+        cases hAfter with
+        | back _ _ _ _ _ => exact ChainVM.noConfusion hEq
+    · have hPhase0 : wv.machine.control.phase = 0 := by
+        rw [hy] at hStep
+        cases hStep with
+        | backDone _ _ _ _ _ _ => rfl
+      cases a
+      · have : z = ChainVM.watch wv := (hAfter : z = y).trans hy
+        rw [this] at hEq
+        cases hEq
+        exact hPhase0 ▸ (by decide)
+      · rw [hy] at hAfter
+        cases hAfter with
+        | watch w0 w1 hOuter =>
+          cases hOuter with
+          | queued hz =>
+            have : w = GalilScaffoldChainWatch.queued wv := by
+              cases hEq; rfl
+            rw [this]
+            show (wv.machine).control.phase ≠ 4
+            rw [hPhase0]; decide
+          | immediate hz hg =>
+            have : w = GalilScaffoldChainWatch.immediate wv := by
+              cases hEq; rfl
+            rw [this]
+            show (GalilScaffoldChainVerifier.consume wv.machine).control.phase ≠ 4
+            exact consume_phase_ne_four _ _ hPhase0
+        | breaks w0 w1 hBreak => exact ChainVM.noConfusion hEq
+
+#print axioms consume_phase_ne_four
+#print axioms tick_watch_phase_ne_four
+
+
+/-- **watch でない chain の 1 手の行き先は「watch でない」か「phase ≠ 4 の watch」。**
+
+`CopyOrBack` も `CopyInv` も要らない——純粋に構成子の形だけ。
+
+* `.idle` — 誕生すれば `chainStart` ＝ `.copy`、しなければ `.idle`。どちらも watch でない
+* `.copy` — `copyBit` / `copyEnd` で `.copy` / `.back`
+* `.back` — `backStep` で `.back`、`backDone` で `watchControl` の watch（`phase = 0`）
+* `.broken` — `brokenIdle` で `.broken`（`ChainMatched` に `.broken` の構成子は無いので
+  一致事象はそもそも起きない）
+-/
+theorem tick_watch_phase_ne_four_of_notWatch {a : Bool} {x z : ChainVM}
+    (hNotWatch : ∀ wv : GalilScaffoldChainWatch.State, x ≠ ChainVM.watch wv)
+    (hTick : ChainTick a x z)
+    (w : GalilScaffoldChainWatch.State) (hEq : z = ChainVM.watch w) :
+    w.machine.control.phase ≠ 4 := by
+  obtain ⟨y, hStep, hAfter⟩ := hTick
+  cases hStep with
+  | idle =>
+    cases a
+    · exact absurd ((hAfter : z = ChainVM.idle).symm.trans hEq) (by simp)
+    · cases (hAfter : ChainMatched ChainVM.idle z) with
+      | idle => exact absurd hEq (by simp)
+  | brokenIdle wb =>
+    cases a
+    · exact absurd ((hAfter : z = ChainVM.broken wb).symm.trans hEq) (by simp)
+    · exact (by cases (hAfter : ChainMatched (ChainVM.broken wb) z))
+  | copyBit _ _ _ _ _ _ _ _ _ _ _ =>
+    cases a
+    · exact absurd ((hAfter : z = _).symm.trans hEq) (by simp)
+    · cases (hAfter : ChainMatched _ z) with
+      | copy _ _ _ _ _ _ _ => exact absurd hEq (by simp)
+  | copyEnd _ _ _ _ _ _ _ _ _ _ _ =>
+    cases a
+    · exact absurd ((hAfter : z = _).symm.trans hEq) (by simp)
+    · cases (hAfter : ChainMatched _ z) with
+      | back _ _ _ _ _ => exact absurd hEq (by simp)
+  | backStep _ _ _ _ _ _ =>
+    cases a
+    · exact absurd ((hAfter : z = _).symm.trans hEq) (by simp)
+    · cases (hAfter : ChainMatched _ z) with
+      | back _ _ _ _ _ => exact absurd hEq (by simp)
+  | backDone v h lag margin ver hf =>
+    have hPhase0 :
+        (⟨⟨ver, watchControl v⟩, lag, margin⟩ : GalilScaffoldChainWatch.State).machine.control.phase
+          = 0 := rfl
+    cases a
+    · have hz : z = ChainVM.watch ⟨⟨ver, watchControl v⟩, lag, margin⟩ := hAfter
+      rw [hz] at hEq
+      cases hEq
+      rw [hPhase0]; decide
+    · cases (hAfter : ChainMatched (ChainVM.watch ⟨⟨ver, watchControl v⟩, lag, margin⟩) z) with
+      | watch w0 w1 hOuter =>
+        cases hOuter with
+        | queued hzq =>
+          have : w = GalilScaffoldChainWatch.queued ⟨⟨ver, watchControl v⟩, lag, margin⟩ := by
+            cases hEq; rfl
+          rw [this]
+          show (⟨⟨ver, watchControl v⟩, lag, margin⟩ :
+            GalilScaffoldChainWatch.State).machine.control.phase ≠ 4
+          rw [hPhase0]; decide
+        | immediate hzi hgi =>
+          have : w = GalilScaffoldChainWatch.immediate ⟨⟨ver, watchControl v⟩, lag, margin⟩ := by
+            cases hEq; rfl
+          rw [this]
+          show (GalilScaffoldChainVerifier.consume
+            (⟨ver, watchControl v⟩ : GalilScaffoldChainVerifier.State)).control.phase ≠ 4
+          exact consume_phase_ne_four _ _ hPhase0
+      | breaks w0 w1 hBreak => exact absurd hEq (by simp)
+  | watchStep w0 w1 hi => exact absurd rfl (hNotWatch w0)
+
+#print axioms tick_watch_phase_ne_four_of_notWatch
+
 /-! ## 「tick できる相」 -/
 
 /-- **tick できる相**: lag が正の `CopyOrBack` か、watch。

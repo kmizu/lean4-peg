@@ -1,3 +1,58 @@
+## 2026-09-19 n136: `ShiftPal` は chain が watch でない限り**空虚**（lag も「found 半径正」も不要）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット更新済み・緑。公理は 6。
+無条件 PAL は未完。§10.5 は未達。**
+
+### 主定理（標準公理、`sorry` ゼロ）
+
+    ShiftPalAlongTrace.shiftPal_of_chainNotWatch
+      (hNotWatch : ∀ wv, s.chain ≠ ChainVM.watch wv) : ShiftPal centre place entry q first w s
+
+**`CopyOrBack` も `CopyInv` も `LagPos` も「found 時の半径が正」も要らない。**
+
+### なぜ lag が関係なかったか（n134/n135 の見立ての訂正）
+
+`shiftGuardVM` は `w.machine.control.phase = 4` を要求する。
+`GalilScaffoldChainConsume.State` のフィールド順は
+`period, distance, boundary, last, phase, forward, broken`（`:15`）で、
+`ChainStep.backDone` が置く `watchControl v = ⟨moveRight v, reset, reset, reset, 0, true, false⟩`
+の **5 番目 `0` が `phase`**。つまり誕生 watch は `phase = 0`。
+
+1 tick 後も 4 にならない:
+
+* `Outer.queued` は machine を触らない → phase 0
+* `Outer.immediate` は `consume` を通すが
+  `phase := if boundaryEvent then advancePhase s.phase else s.phase` で
+  `advancePhase 0 = ⟨min 4 1, _⟩ = 1`、不一致枝は `broken := true` で phase 不変
+  （`CopyPhaseNoShift.consume_phase_ne_four`）
+* `ChainMatched.breaks` の行き先は `.broken` で watch でない
+
+`.idle` からは誕生しても `chainStart = .copy`、`.broken` からは `.broken`、
+`.copy` からは `.copy`/`.back`——**どれも watch でない**。
+支えは `CopyPhaseNoShift.tick_watch_phase_ne_four_of_notWatch`（構成子の形だけ）。
+
+**n134 で `LagPos` を、n135 で「found 半径正」を要求すると測ったが、どちらも不要だった。**
+一次情報（`watchControl` のフィールド順）を見て初めて分かった。
+「壁に当たったら形式化のミスを疑う」がそのまま効いた。
+
+### 公理の狭まり
+
+`obligation_shiftPalAtFreshChainAlongTrace`（定理になった）
+→ `obligation_shiftPalAtFreshWatchAlongTrace`（公理、**追加条件つき**）:
+
+    ∀ wv : GalilScaffoldChainWatch.State, (st j).vm.chain = ChainVM.watch wv → ShiftPal …
+
+本数は 6 のままだが、**中身は「chain が既に watch の点」だけに縮んだ**。
+残るのは「準備し終えた周期が入力の本物の周期」という DP 正当性の帰結（n114 で
+探索側は無条件に証明済みと測定）。
+
+### 副産物: 「found 時の半径が正」の需要が 3 → 2 に減った
+
+n135 で「1 本潰すと 3 箇所に効く」と書いた側条件のうち、
+**`LagPos` 経由の 1 箇所は消えた**（`phase` で落ちるので lag が不要）。
+残るのは `reachesWatchPhase_or_segEnd_at_foundBirth_canonical` と
+`first_round` / `chain_life` の既存仮定。
+
 ## 2026-09-19 n135: `LagPos` を trace に載せる道の測定（`IPackMW` に lag 場は無い）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。

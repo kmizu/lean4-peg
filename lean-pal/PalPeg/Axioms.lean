@@ -396,6 +396,6 @@ run 形／trace 形の 2 つに割った——旧版は偽の疑いが濃かっ�
  PalPeg.PalInPeg.obligation_localRealization,
  PalPeg.PalInPeg.obligation_readsShiftAlongTrace,
  PalPeg.PalInPeg.obligation_shiftPalAlongRun,
- PalPeg.PalInPeg.obligation_shiftPalAtFreshChainAlongTrace] -/
+ PalPeg.PalInPeg.obligation_shiftPalAtFreshWatchAlongTrace] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.PalInPeg.unconditional

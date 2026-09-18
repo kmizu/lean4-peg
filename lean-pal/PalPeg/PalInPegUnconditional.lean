@@ -132,11 +132,29 @@ axiom obligation_freshShiftAtShiftEntryAlongTrace (entry q : ℕ) (first : Fin 9
 /-- **(OBLIGATION)** `periodOnly = false`（＝chain 誕生後まだ shift していない）点での
 `ShiftPal`。原子 3 本目。`periodOnly = true` 側は `shiftPal_of_chainRound` が閉じている
 ので、残るのはこの分岐だけ。 -/
-axiom obligation_shiftPalAtFreshChainAlongTrace (entry q : ℕ) (first : Fin 9) :
+axiom obligation_shiftPalAtFreshWatchAlongTrace (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
       ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
+      ∀ wv : GalilScaffoldChainWatch.State, (st j).vm.chain = ChainVM.watch wv →
         ShiftPal centreC placeC entry q first w (st j).vm
+
+/-- **もう公理ではない。**  chain が watch でない点では `ShiftPal` は空虚
+（`ShiftPalAlongTrace.shiftPal_of_chainNotWatch`——`shiftGuardVM` が `phase = 4` を要求するが
+copy/back/idle/broken から 1 手で生まれる watch は `phase ≤ 1`）。
+**`CopyOrBack` も `CopyInv` も lag も「found 時の半径が正」も要らない。** -/
+theorem obligation_shiftPalAtFreshChainAlongTrace (entry q : ℕ) (first : Fin 9) :
+    ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
+        ShiftPal centreC placeC entry q first w (st j).vm := by
+  classical
+  intro w st Tc hPre j hj1 hjle hpo
+  by_cases hW : ∃ wv : GalilScaffoldChainWatch.State, (st j).vm.chain = ChainVM.watch wv
+  · obtain ⟨wv, hwv⟩ := hW
+    exact obligation_shiftPalAtFreshWatchAlongTrace entry q first w st Tc hPre j hj1 hjle hpo wv hwv
+  · exact PalPeg.ShiftPalAlongTrace.shiftPal_of_chainNotWatch centreC placeC entry q first
+      (fun wv hEq => hW ⟨wv, hEq⟩)
 
 /-- **もう公理ではない。**  `ShiftPalAlongTrace.shiftPal_alongTrace` の適用で、
 上の 3 原子に割れた。2 つの側条件（`0 < w.length` と `1 ≤ Tc w.length`）は文脈から出る:

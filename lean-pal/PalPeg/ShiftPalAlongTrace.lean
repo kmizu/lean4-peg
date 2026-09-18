@@ -125,35 +125,40 @@ theorem shiftPal_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
 lag をそのまま受け継ぐ（`backDone`）か `inc` する（`Outer.queued`）ので、誕生 chain の
 正 lag が保たれて guard が落ちる（`CopyPhaseNoShift.tick_not_watch_or_posLag`）。 -/
 
-/-- **`CopyOrBack`（lag 正）の点では `ShiftPal` は空虚に成り立つ。** -/
-theorem shiftPal_of_copyOrBack {w : List (Fin 2)} {s : GalilVM}
-    (hPhase : PalPeg.CopyPhaseTick.CopyOrBack s.chain)
-    (hLag : PalPeg.CopyPhaseTickMatched.LagPos s.chain) :
+/-- **chain が watch でない点では `ShiftPal` は空虚に成り立つ**——`CopyOrBack` も
+`CopyInv` も lag も要らない。純粋に構成子の形だけ。
+
+`shiftGuardVM` は `w.machine.control.phase = 4` を要求するが、copy/back から 1 手で
+生まれる watch の control は `watchControl v` で `phase = 0`、`Outer` を通しても
+`phase ≤ 1`（`CopyPhaseNoShift.tick_watch_phase_ne_four`）。
+**これで「found 時の半径が正」への依存がこの経路から消えた**（n134 の版は `LagPos` を
+取っていたが不要だった）。 -/
+theorem shiftPal_of_chainNotWatch {w : List (Fin 2)} {s : GalilVM}
+    (hNotWatch : ∀ wv : GalilScaffoldChainWatch.State, s.chain ≠ ChainVM.watch wv) :
     ShiftPal centre place entry q first w s := by
   intro s' hCompare hNotMatched wch hChain hGuard r₀ hScanInv
   exfalso
   obtain ⟨vs, vq, a, hvl, hvr, hiff, hsearch, hchainAt, hteq⟩ :
     compareFound (PofC centre place entry w) q first s s' := hCompare
-  have hNotIdle : s.chain ≠ ChainVM.idle := PalPeg.CopyPhaseTick.copyOrBack_not_idle hPhase
-  have hTick : ChainTick a s.chain vs.chain := by
-    rcases hchainAt with ⟨-, hct⟩ | ⟨hidle, -, -⟩ | ⟨hidle, -, -⟩
-    · exact hct
-    · exact absurd hidle hNotIdle
-    · exact absurd hidle hNotIdle
   have hChainEq : s'.chain = vs.chain := by
     rw [hteq, afterBirth_chain]
     split <;> rfl
-  rw [hChainEq] at hChain
-  obtain ⟨wg, hwg, hZeroLag, -, -, -, -⟩ := hGuard
+  obtain ⟨wg, hwg, -, hPhase4, -, -, -⟩ := hGuard
   rw [hChainEq] at hwg
-  rcases PalPeg.CopyPhaseNoShift.tick_not_watch_or_posLag hPhase hLag hTick with hNot | ⟨wv, hEq, hZeroFalse⟩
-  · exact hNot wch hChain
-  · rw [hwg] at hEq
-    cases hEq
-    rw [hZeroFalse] at hZeroLag
-    exact absurd hZeroLag (by decide)
+  rcases hchainAt with ⟨-, hct⟩ | ⟨-, -, hzidle⟩ | ⟨-, -, hbirth⟩
+  · exact PalPeg.CopyPhaseNoShift.tick_watch_phase_ne_four_of_notWatch hNotWatch hct wg hwg hPhase4
+  · rw [hzidle] at hwg; exact ChainVM.noConfusion hwg
+  · cases a with
+    | false =>
+      simp only [Bool.false_eq_true, if_false] at hbirth
+      rw [hbirth] at hwg
+      exact ChainVM.noConfusion hwg
+    | true =>
+      simp only [if_true, chainStart] at hbirth
+      rw [hwg] at hbirth
+      cases hbirth
 
-#print axioms shiftPal_of_copyOrBack
+#print axioms shiftPal_of_chainNotWatch
 
 end
 
