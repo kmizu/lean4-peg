@@ -132,6 +132,21 @@ RoundHistory P q first delay w (c : Control) (s : GalilVM) : Prop :=
 
 **これが `hSP` 2 本（run 形・trace 形）の残り全部。**
 
+### 進捗
+
+* **済（n148）**: `PalPeg/RoundHistory.lean` — `RoundHistory` ＋ 起点 ＋ tick 保存 ＋
+  run 沿い ＋ 射影取り出し（5 宣言、標準 3 公理のみ、全体 build 緑）。
+  **計器は動いていない**（これは足場で、(C) ではない）
+* **次（特定済み・未着手）**: `chain_shift_period`——
+  `ChainShiftRun s w cycle n t v finish → periodLength v = periodLength w`。
+  **存在しない**。`chain_shift_lag`（`GalilScaffoldTopRounds:19`）と
+  `chain_shift_phase`（`GalilScaffoldChainReadOrigin:451`）が同じ帰納法なので同型に通る。
+  `ChainShiftRun.next` の 1 手は `chainShiftOne w`、これが period テープの
+  `left.length + right.length` を変えないことを示す
+* その次: `scan_shift` tick から `CompareRounds h … 1 …` を組む
+  （`GalilScaffoldTopRoundS.round_next` の入力をそろえる）→ `RoundSeg` →
+  `originAt_of_roundSeg` で起点を貼り替え → `originShift_of_roundSeg` → `H_readsShift`
+
 ---
 
 ## この session で機械検査／一次情報で確定したこと

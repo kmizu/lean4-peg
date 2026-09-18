@@ -1,3 +1,48 @@
+## 2026-09-19 n148: `RoundHistory` — ラウンドの履歴を運ぶ不変量（公理は 4 本のまま）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器は動いていない**（これは (C) の前段の足場）。
+
+### 新規 `PalPeg/RoundHistory.lean`（5 宣言、標準 3 公理のみ）
+
+    RoundHistory P q first delay w c s :=
+      ∃ n c₀ s₀ w₀, ScanSeg P q first delay n c₀ s₀ c s ∧
+        OriginAt w s₀ ∧ s₀.periodOnly = true ∧
+        s₀.chain = ChainVM.watch w₀ ∧ zero w₀.lag = true
+
+* `roundHistory_start` — ラウンド起点そのもの（`ScanSeg.stop`）
+* `roundHistory_tick` — scan 相の 1 tick で伸びる（`MatchedRunSnoc.scanSeg_snoc_tick`）
+* `roundHistory_of_steps` — run に沿って伸びる（側条件は `hScanWatchAll`）
+* `onlyMatchedRun_of_roundHistory` — 下層の射影を取り出す（`CompareRounds.next` の第 1 引数）
+
+**区間抽出（`CloseoutSegment.ScanToScan`）は使っていない。**
+
+### なぜこれが要るか（測定済みの negative）
+
+ラウンド境界（`scan_shift`）で read origin を貼り替えるには
+`CompareRounds h (toOnly s w₀) 1 (toOnly s' v)`——**ラウンド 1 周ぶんの履歴**が要る
+（`CloseoutRoundSeg.originAt_next_of_roundSeg`）。1 手の `Tick` からは作れないので、
+**状態局所な不変量では閉じない**。だから履歴（`ScanSeg`）を持ち歩く。
+
+### 次の小ブロック（特定済み・未着手）
+
+`CompareRounds.next` の残り入力のうち、**`periodLength` が shift を通って保存される**
+という補題が**存在しない**:
+
+    chain_shift_period : ChainShiftRun s w cycle n t v finish → periodLength v = periodLength w
+
+`chain_shift_lag`（`GalilScaffoldTopRounds:19`）と `chain_shift_phase`
+（`GalilScaffoldChainReadOrigin:451`）が同じ帰納法で書かれているので、
+`chainShiftOne` が period テープの `left.length + right.length` を変えないことを
+示せば同型に通る。`periodLength (immediate w) = periodLength w` は既に 5 箇所で使われている。
+
+### 今回やった honest な訂正
+
+`lake build` を `(… ; echo BUILD=$?)` で包んでいたのでサブシェルの終了コードは
+`echo` の 0 になる。**background task の通知の「exit code 0」を build 成功と読んで
+一度間違えた**（実際は `BUILD=1`、docstring 直後に `set_option … in` を置いた構文エラー）。
+以後 `BUILD=` の行を必ず読む。
+
 ## 2026-09-19 n147: **訂正** — 「中身は strictly weaker」は嘘やった
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
