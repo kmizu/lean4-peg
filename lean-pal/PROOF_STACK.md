@@ -85,7 +85,16 @@
 （`StageBudgetShift.budget_adv_nat_shift` / `budget_adv_shift`、標準 3 公理）。
 `k ≤ 8` は 9 ケース手計算（`k=1,2,3,5,6` で余裕 0）、`k ≥ 9` は緩い上界で足りる。
 
-残りの算術 2 つ: `CloseoutPreload35` §3 の 4 窓、段境界のイベント供給。
+### n191: 2 つめの穴を `k ≤ 3` に縮めた
+
+`CloseoutPreload35` §3 の残差記録「`8 ≤ mw < 32`」は両端とも間違いだった。
+同じ入力で `16 ≤ mw` から成立する（`StageBudgetShift.bal_of_paced_slack_S16`）。
+`mw ≤ 3` は較正が空虚にする。**真の残差は `4 ≤ mw ≤ 15` ＝ `k ≤ 3`**
+（`window_covered_of_k` / `window_residual`）。
+
+残りの算術 1 つ: 段境界のイベント供給（`dpEvents (m+1) ≤ as.length` の再供給）。
+それと `k ≤ 3` の小段（slack 2047 で 2 単位足りない。実機の clock 位相を
+読めば消える見込み——未検証）。
 
 ### n176: 残り 3 本のうち 2 本が同じ底を共有している（実測）
 

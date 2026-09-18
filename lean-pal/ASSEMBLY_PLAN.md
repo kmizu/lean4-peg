@@ -1,3 +1,40 @@
+## 2026-09-19 n191: 2 つめの算術の穴を `32 ≤ mw` → `16 ≤ mw` に縮めた（残りは `k ≤ 3`）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+`PalPeg/StageBudgetShift.lean` §2（3 定理追加、標準 3 公理のみ）:
+
+    bal_of_paced_slack_S16 … (hmw : 16 ≤ mw) … :
+      4 * dpDemandS k (2*mw) + 4 * (bs ++ [a]).count true ≤ mw
+    window_covered_of_k (hcal : 8 * max k 1 ≤ 2*mw) (hk : 4 ≤ k) : 16 ≤ mw
+    window_residual (hcal : …) (hmw : mw < 16) : k ≤ 3 ∧ 4 ≤ mw
+
+### 記録が両端とも間違っていた
+
+`CloseoutPreload35` §3 は残差を「4 窓 `8 ≤ mw < 32`」と記録していたが、
+**同じ入力**（`prepLen_le` / `dpEvents_win_le` / 窓全体のペーシング）で
+`16 ≤ mw` から成立する。`32` は保守的な当て推量だった。
+`mw ≤ 3` は `8 * max k 1 ≤ 2*mw` が `4 ≤ mw` を強制するので空虚。
+**真の残差は `4 ≤ mw ≤ 15`、較正 `4 * max k 1 ≤ mw` で言い換えると `k ≤ 3`。**
+
+`16` はこの入力に対して sharp: `mw = 15` では最悪の
+`(prepLen k, dpEvents (2mw+1), count)` が balance `16 > 15` を与える。
+余裕が 2 以下なのは `mw ∈ {16,17,18,20,21,22}` だけ（`mw=16` と `mw=20` で 0）。
+
+証明は `mw < 20` / `mw ≥ 20` で分割。前者は `4 * max k 1 ≤ mw ≤ 19` から
+`max k 1 ≤ 4` が出るので `interval_cases mw` で 4 ケース。
+後者は `omega` が直接通る（`16 ≤ mw` のままでは `omega` が
+2 つの `/2048` を含む tight な系で落ちる——反例は無い、不完全性）。
+
+### 算術の穴の現況
+
+| # | 穴 | 状態 |
+|---|---|---|
+| 1 | `depth_exceeds_prepLen`（`D ≤ prepLen k` が満たせない） | **閉（n190）** |
+| 2 | slack 2047 の 2 単位（`CloseoutPreload35` §3） | **`k ≤ 3` に縮小（n191）** |
+| 3 | 段境界のイベント供給 | 未着手 |
+
 ## 2026-09-19 n190: 記録済みの否定的結果（`depth_exceeds_prepLen`）を予算の緩和で閉じた
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
