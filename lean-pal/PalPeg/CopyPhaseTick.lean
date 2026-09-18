@@ -412,4 +412,51 @@ theorem watchSegE_backgroundRun_live (P : Shared) (q : ℕ) (first : Fin 9) (del
 
 #print axioms watchSegE_backgroundRun_live
 
+
+/-! ## 誕生した chain は `CopyOrBack`
+
+found 比較の `FoundCompareCtxC` は `sP.chain = ch` と
+`ChainMatched (chainStart answer c walker ver radius) ch` を与える
+（`CloseoutWatchRound2:270`）。`chainStart` は `.copy` で、`ChainMatched` は形を保つので
+`ch` は同じ `answer` / `reset` / `walker` / `period.start c` を持つ `.copy`——
+**lag と margin だけが違う**。`CopyInv` は lag / margin に触れないので、
+誕生時の `CopyInv` がそのまま `ch` にも効く。
+
+残る外部入力は `CopyInv answer reset walker (period.start c) n` そのもの。
+その 4 節のうち `OnPrefix (period.start c)` は `onPrefix_start` でタダ、
+`reset.neg = []` も計算、残るのは `AnswerAhead answer n`（DP 出力テープの形）と
+`PlaceAhead walker n`（walker の残り）。 -/
+
+/-- **誕生直後（`ChainMatched` 1 歩）の chain は `CopyOrBack`。** -/
+theorem copyOrBack_of_chainMatched_chainStart
+    {answer : GalilScaffoldTape.Tape} {cen : Fin 3} {walker : GalilScaffoldPlace.Place}
+    {ver : GalilScaffoldInputHead.PlaceHead} {radius : Counter} {ch : ChainVM} {n : ℕ}
+    (hMatched : ChainMatched (chainStart answer cen walker ver radius) ch)
+    (hCopyInv : CopyInv answer reset walker (GalilScaffoldChainPeriod.start cen) n) :
+    CopyOrBack ch := by
+  cases hMatched with
+  | copy _ _ _ _ _ _ _ => exact Or.inl ⟨_, _, _, _, _, _, _, n, rfl, hCopyInv⟩
+
+/-- **`chainStart` 自身も `CopyOrBack`**（`ChainMatched` を経由しない側）。 -/
+theorem copyOrBack_chainStart {answer : GalilScaffoldTape.Tape} {cen : Fin 3}
+    {walker : GalilScaffoldPlace.Place} {ver : GalilScaffoldInputHead.PlaceHead}
+    {radius : Counter} {n : ℕ}
+    (hCopyInv : CopyInv answer reset walker (GalilScaffoldChainPeriod.start cen) n) :
+    CopyOrBack (chainStart answer cen walker ver radius) :=
+  Or.inl ⟨_, _, _, _, _, _, _, n, rfl, hCopyInv⟩
+
+/-- **`CopyInv` の 4 節のうち 2 節はタダ。**  残る外部入力は `AnswerAhead`（DP 出力
+テープの形）と `PlaceAhead`（walker の残り）だけ。 -/
+theorem copyInv_of_answerAhead_placeAhead {answer : GalilScaffoldTape.Tape} {cen : Fin 3}
+    {walker : GalilScaffoldPlace.Place} {n : ℕ}
+    (hAnswer : AnswerAhead answer n) (hPlace : PlaceAhead walker n)
+    (hZero : n = 0 → positive reset = true ∧
+      ∃ b : Fin 3, (GalilScaffoldChainPeriod.start cen).focus = GalilScaffoldChainPeriod.Token.plain b) :
+    CopyInv answer reset walker (GalilScaffoldChainPeriod.start cen) n :=
+  ⟨hAnswer, hPlace, onPrefix_start cen, rfl, hZero⟩
+
+#print axioms copyOrBack_of_chainMatched_chainStart
+#print axioms copyOrBack_chainStart
+#print axioms copyInv_of_answerAhead_placeAhead
+
 end PalPeg.CopyPhaseTick
