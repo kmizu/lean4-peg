@@ -1,3 +1,42 @@
+## n208 — `StageRunPhase`：4 相の枠と相間の受け渡しが全部つながった
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+`PalPeg/StageRunPhase.lean`（2 定理、標準 3 公理、全体 build 緑、一発で通った）:
+
+* `RunPhase k mw v := mode = run ∧ span = ofNat mw ∧ lower = ofNat k ∧ Canonical debt`
+* `runPhase_step` — `.run` に留まる刻みは枠を保つ。`runTrace_frame` を 1 手トレースで読み、
+  `stageSpan` が `.run` でも `.wait` でも span である（`stageSpan s = if mode = double then work else span`）
+  ことが窓を出口越しに運ぶ鍵
+* `waitPhase_of_runExit` — `.wait` に着地すると `WaitPhase k mw`。`run_exit_frame` を空トレースで読んだだけ
+
+### 相の鎖が閉じた
+
+```
+RunPhase --waitPhase_of_runExit--> WaitPhase --doubleLeg_head_of_waitExit--> DoubleLeg
+   ^                                                                            |
+   |                                                                     doubleLeg_exit
+   |                                                                            v
+   +--- dpBudgetAt_of_prepEntry (+ RunPhase の枠) <--- PrepAt k (2mw) + StageInvS
+```
+
+各辺はステップ局所で、未来のイベント列に一切量化してへん。
+
+### 見つかった未決の分岐（正直に）
+
+`GalilScaffoldSearchRun.ExitMode` は `.run` から**直接 `.double`** への着地も許す。
+`run_exit_frame` はそこで `work = ofNat mw` / `span = reset` / `quarter = 0` を与えるが、
+`StageDoubleLeg.DoubleLeg` はさらに `value debt = 0` を要求し、それを立てるのは `.wait` 脚
+（`wait_exit_debt_zero`）や。**機械がその出口を実際に取れるかは未確定**で、
+束ねのときに排除するか債務を別に運ぶかせなあかん。ファイルの docstring に明記した。
+
+### 残り
+
+1. 上の未決分岐の処理
+2. 4 相の選言を 1 つの `Φ` にして `ReadyIface P Φ` のインスタンスを作る
+3. wait 出口の `a = false` を `Φ` の slack 添字から出す（n207 で翻訳可能性は確認済み）
+
+**今回も何も落としてへん**（公理 3 本のまま）。
 ## n207 — `StageWaitPhase`：4 相のうち 3 相がステップ局所になった
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
