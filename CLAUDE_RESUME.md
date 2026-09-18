@@ -1,3 +1,46 @@
+## 2026-09-19 n169: `Fair` が閉じるのは「決定性の半分」——残るのは局所側の構成
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器はまだ動いていない。**
+
+n168 の段取り 4 を一次情報で検証した。`LocalRealizesScan` の残り義務:
+
+| mode | 決定性の半分 | 局所の半分 |
+|---|---|---|
+| `rewind` / `choose` | **閉**（`tick_det_rewind` / `tick_det_choose`） | `H_rewindWF` / `H_chooseWF` |
+| `init` | `H_initFun` | `H_initLoc` |
+| `replayStart` | `H_rsFun` | `H_replayStartLoc` |
+| `scan` | **`H_scanDet`** | **`H_scanLoc`** |
+
+`PalPeg/GalilTickFair.lean` に**そのまま合う 3 本が証明済み**:
+
+    tick_fair_scan_unique        (:308)
+    tick_fair_init_unique        (:381)
+    tick_fair_replayStart_unique (:400)
+
+どれも `hm : c.mode = …` ＋ 両 tick の `Fair` から `y₁ = y₂` を出す。
+
+**結論: `Fair` は決定性の半分を閉じる。そこが「原理的に作れない」部分だった。**
+残るのは局所側の**構成**（`H_scanLoc` / `H_initLoc` / `H_replayStartLoc` ＋
+`H_rewindWF` / `H_chooseWF` ＋ fpp の 1 量子）で、不可能ではない。
+
+`scan` の非決定性の原因も特定済み: `Tick.restart` が 5 つの scan 構成子と競合すること
+（`Fair.restartFirst` が潰す）と `SafeQuanta` / `chainAt` が関係であること
+（`GalilTickDet.safeQuanta_unique` / `chainAt_unique` が潰す）。**どちらも `Fair` 側で済んでいる。**
+
+### この session の総括（計器は動いていない）
+
+* 公理 **4 本**（n132 で 6 に増やしたのを n145 で 4 に戻した。以後増やしていない）
+* 新規 `PalPeg/RoundHistory.lean` **44 宣言**——`H_readsShift` を run 全点で出す機械が完成
+  （残りは `first_round` の配線＝ found 経路）
+* `obligation_localRealization` の診断: `PreTrace` が `Fair` を記録していないので
+  決定的な局所 step に非決定的な trace と一致せよと要求していた。
+  `Fair` は証明済みだが `Local*` で未使用
+* trace の出どころは `obligation_cycleOracle` なので、その文に `Fair` を入れれば
+  決定性の半分が閉じる（**4 → 3 の道**）
+* 自分の嘘 2 件を訂正（「残差化で弱くなった」は嘘 / build 通知の誤読）
+* `sorry` を書きかけて実行前に止めた
+
 ## 2026-09-19 n168: **trace の出どころは `obligation_cycleOracle` — 4 → 3 の道が見えた**
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

@@ -462,8 +462,36 @@ implications」）で、**構成しているのは次の 3 箇所だけ**（実�
 4. `Realizes` の scan / init / replayStart を `tick_fair_unique` で閉じる
 5. `H_realizeLIMW'` の `∃ … L` を構成して `obligation_localRealization` を**外す**
 
-**未検証**: 4 が本当に閉じるか（CLAUDE.md §1 は「phase 側は閉、scan/init/replayStart が
-非決定性で閉じない」と書いているので、`Fair` を入れれば閉じる見込みだが実証はまだ）。
+### 段取り 4 の検証結果（n168、一次情報）
+
+`LocalRealizesScan` が残している義務を宣言の存在で確認した:
+
+| mode | 決定性の半分 | 局所の半分 |
+|---|---|---|
+| `rewind` / `choose` | **閉**（`tick_det_rewind` / `tick_det_choose`） | `H_rewindWF` / `H_chooseWF` |
+| `init` | `H_initFun` | `H_initLoc` |
+| `replayStart` | `H_rsFun` | `H_replayStartLoc` |
+| `scan` | **`H_scanDet`** | **`H_scanLoc`** |
+
+そして `PalPeg/GalilTickFair.lean` に**そのまま合う 3 本が証明済み**:
+
+    tick_fair_scan_unique        (:308)  hm : c.mode = Mode.scan        ＋ 両 tick の Fair → y₁ = y₂
+    tick_fair_init_unique        (:381)  hm : c.mode = Mode.init        ＋ 同 → y₁ = y₂
+    tick_fair_replayStart_unique (:400)  hm : c.mode = Mode.replayStart ＋ 同 → y₁ = y₂
+
+**つまり `Fair` は決定性の半分（`H_scanDet` / `H_initFun` / `H_rsFun`）を閉じる。**
+これが「原理的に作れない」部分だった。
+
+**残るのは局所側の構成**（`H_scanLoc` / `H_initLoc` / `H_replayStartLoc` ＋
+`H_rewindWF` / `H_chooseWF` ＋ fpp の 1 量子）。こちらは**構成作業**で、
+不可能ではない。`LocalReplayParked.commitReplayParked` が `H_replayStartLoc` の
+意図された witness だが `LocalTick2.commitReplay` に `LocalTick1.Inv` 保存の補題が
+まだ無い（`LocalRealizesScan` の冒頭に書いてある）。
+
+**注意**: `scan` 相の非決定性の原因は `Tick.restart` が 5 つの scan 構成子と競合すること
+（`Fair.restartFirst` がそれを潰す）と、`background` / `compare` の
+`SafeQuanta` / `chainAt` が関係であること（`GalilTickDet.safeQuanta_unique` /
+`chainAt_unique` が潰す）。**どちらも `Fair` 側で済んでいる。**
 
 ---
 
