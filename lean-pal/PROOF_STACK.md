@@ -1,3 +1,45 @@
+## n214 — 公理進捗: `FreshShiftLedger` の成分を 7 → 6 に減らした（`hEnd` 除去）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 3 連言 `FreshShiftLedger` の**成分が 1 本消えた**（7 → 6） |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 消した成分
+
+`hEnd : position s.center + r₀ + 1 < (encoded w).length`
+
+消費者 `shiftPal_of_freshShiftLedger` は `hCan : canRight s.right` を持ってる。
+右ヘッドが右に動けるということは、その先に記号が実在するということ:
+
+```lean
+right_word / right_present  → (right s.right).head は raw を表現し focus ≠ none
+represented_position        → 長さの下界・上界
+right_position              → position (right s.right) = position s.right + 1
+hScanInv.rightPos           → position s.right = position s.center + r₀
+```
+
+`scan_initial` が同じ手順で `position p < (encoded raw).length` を出してたので、それをなぞっただけ。
+**新規補題ゼロ。**
+
+### `FreshShiftLedger` の残り 6 成分
+
+| 成分 | 形 |
+|---|---|
+| `hIn` | `PalAt (encoded w) (c − h) h` — 語のみ |
+| `hOut` | `PalAt (encoded w) (c − 2h) (2h)` — 語のみ |
+| `hPos` | `0 < periodLength wch` — 機械 |
+| `hLo` | `2h ≤ r₀` — 機械と語の橋 |
+| `hHi` | `r₀ ≤ 4h` — 機械と語の橋 |
+| `hCaught` | `enc[c+r₀+1−2h]? = enc[c+r₀+1]?` — 語のみ（n213） |
+
+6 成分中 3 つが語だけ。n210 以降この公理に入れた変更は
+**ガード 2 本追加（n211/n212）→ 機械の状態を 1 成分から除去（n213）→ 成分 1 本除去（n214）**。
 ## n213 — 公理進捗: `FreshShiftLedger` の `hCaught` から機械の状態を消した
 
 **公理への進捗**

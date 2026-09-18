@@ -178,7 +178,6 @@ def FreshShiftLedger (w : List (Fin 2)) (s s' : GalilVM) : Prop :=
         (2 * periodLength wch) ∧
       0 < periodLength wch ∧
       2 * periodLength wch ≤ r₀ ∧ r₀ ≤ 4 * periodLength wch ∧
-      position s.center + r₀ + 1 < (encoded w).length ∧
       (encoded w)[position s.center + r₀ + 1 - 2 * periodLength wch]? =
         (encoded w)[position s.center + r₀ + 1]?
 
@@ -198,8 +197,21 @@ theorem shiftPal_of_freshShiftLedger {w : List (Fin 2)} {s : GalilVM}
     cases a with
     | false => rw [if_neg (by simp)]; exact hvr
     | true => rw [if_pos rfl]; exact hvr
-  obtain ⟨hIn, hOut, hPos, hLo, hHi, hEnd, hCaught'⟩ :=
+  obtain ⟨hIn, hOut, hPos, hLo, hHi, hCaught'⟩ :=
     hLedger s' hCompare hGuard wch hChain r₀ hScanInv
+  -- the frontier is inside the encoded word: the right head can still move.
+  have hrp : position (right s.right) = position s.right + 1 :=
+    right_position s.right hCan
+      (represented_position s.right.head w hScanInv.rightRep hScanInv.rightPresent).1
+  have hEnd : position s.center + r₀ + 1 < (encoded w).length := by
+    have hpos := represented_position (right s.right).head w
+      (right_word s.right w hScanInv.rightRep hCan)
+      (right_present s.right w hScanInv.rightRep hScanInv.rightPresent hCan)
+    have hb : position (right s.right) < (encoded w).length := by
+      simp only [encoded, List.length_append, List.length_singleton, pairs_length]
+      unfold position
+      split <;> omega
+    rw [← hScanInv.rightPos, ← hrp]; exact hb
   -- the frontier symbol: the shift guard reads it off the right head, and the
   -- scan invariant places that head at `centre + r₀ + 1`.
   obtain ⟨wg, hwg, -, -, -, -, hsym⟩ := id hGuard
