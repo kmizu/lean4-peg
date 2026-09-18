@@ -32,6 +32,37 @@
 
 
 
+## 2026-09-19 n115: found 経路の `hpack` 7 節のうち少なくとも 2 節は既に無条件で産出済み
+
+**全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
+
+`hor`（`obligation_cycleOracle`）の found 葉の最上位は
+`CloseoutFoundRoute1.foundExit_compare_final20` で、その `hpack` は 7 節の束:
+
+| 節 | producer | 公理 |
+|---|---|---|
+| `PrepInputsG3` | **`CloseoutLaterEntry.prepInputs3_of_found_C`** | 標準 3 のみ（実測） |
+| `MismatchExitG` | 未確認（`CloseoutPrepInputs2:145` に定義） | — |
+| `FallbackReachS` | 未確認 | — |
+| `PrepLandingWatchC` | **`CloseoutWatchRound10:153`** | 未実測 |
+| `PrepBirthLagC'` | 未確認 | — |
+| `LandingFreshC'` | 未確認 | — |
+| `BreakLandingC` | 未確認 | — |
+
+`prepInputs3_of_found_C` は `StageEntryC` ＋ `SegReachedW` ＋ tick のデータ ＋
+`PostCompareG` から `PrepInputsG3` を**無条件で**出す
+（`prepInputs3_of_found_or_later` は `Classical.choice` すら使わない）。
+
+**つまり found 経路は「未着手」ではなく、部品が散らばったまま束が組まれていない状態。**
+`hpack` は 7 節の**束**なので、CLAUDE.md の「葉を束に畳み込むと偽になりうる」の
+対象でもある。次に触るときは 7 節を個別に測ること。
+
+### このセッションで 2 回やった同じ誤り
+
+n114 と n115 はどちらも「CLAUDE.md の散文（過去の自分の記述）を信じて
+『未着手』『最大の残り』と報告し、一次情報を見たら既に証明されていた」という形。
+**地図を更新する前に断定しない。** 部品の不在は grep 1 回では示せない。
+
 ## 2026-09-19 n114: 探索（DP）側は**無条件で証明済み**だった — 自分の前の報告を訂正
 
 **全体 build 成功（EXIT=0）。公理は 4 義務のまま変化なし。無条件 PAL は未完。§10.5 は未達。**
