@@ -1,3 +1,41 @@
+## n202 — `DpBudgetState`：会計を `SearchVM` の上に載せた（run 相の 4 場が出た）
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+n201 の算術を `DpReached` に接続した。`PalPeg/DpBudgetState.lean`（6 定理、標準 3 公理）:
+
+```lean
+def DpBudgetAt (v : SearchVM) (k : ℕ) : Prop :=
+  ∃ w lower s0 bs, s0.mode = .run ∧ Canonical s0.debt ∧ 0 ≤ value s0.debt ∧
+    DpReached w lower s0 bs v.search v.dp ∧
+    DpBudget (dpEvents w.length - bs.length) (bs.count true) (value s0.debt).toNat k
+```
+
+* `dpSafeHere_of_dpBudgetAt` — **`ready`**。`DpSafeHere` は継続を存在量化してるので、
+  全背景の継続（`List.replicate (dpEvents w.length) false`）を取れば `spent ≤ debt` に潰れる。
+* `dpBudgetAt_mono` — **`mono`**。
+* `dpBudgetAt_background` / `dpBudgetAt_comparison` — **輸送 2 場**。`DpBudgetBalance` の算術そのまま。
+* `dpBudgetAt_need_pos` — run 中は DP が予算を使い切ってへん。
+  `CloseoutReadyStage.dpSafeStage_pre_ne_nil` を**空の課金接頭辞**で読んだだけ（新しい数学ゼロ）。
+* `dpEvents_covers` — `3186n + 1683 ≤ 64 * dpEvents n`。
+
+### いま立ってるもの
+
+**`ReadyIface` の 4 場が、run 相については揃った。** ただし `DpBudgetAt` が言うのは run 相だけで、
+`ReadyIface` の `Φ` は prep / `.wait` / `.double` 相でも成り立たなあかんし、
+各 `.run` 入口で `DpBudgetAt` を**再確立**せなあかん。再確立こそがステージ債務と
+`bal_of_paced_slack_S` の出番や。
+
+### 残り
+
+1. 非 run 相で `Φ` を定義（`SearchReady` の `run → …` 節が空虚になるので `PrepInv` だけが要る）
+2. `.run` 入口で `DpBudgetAt v' 0` を作る：`run_entry_startRun` が `v'.dp = ⟨Preload.initial w lower, false⟩`
+   を与えるので `DpReached w lower v'.search [] v'.search v'.dp` は `dpReached_start`。
+   あとは `DpBudget (dpEvents w.length) 0 debt 0` ＝ 債務がステージ 1 本ぶんの比較を賄えること。
+   これが `bal_of_paced_slack_S` の内容や。
+3. 4 相を束ねて `Φ` を定義し、`ReadyIface P Φ` を証明 → `StageEntryC.fuel` が埋まる
+
+**今回も何も落としてへん**（公理 3 本のまま）。
 ## n201 — `DpBudgetBalance`：`ReadyIface` の 2 場がぴったり釣り合う算術を切り出した
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**

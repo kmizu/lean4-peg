@@ -81,6 +81,7 @@ import PalPeg.StageBudgetShift
 import PalPeg.StageCycleSearch
 import PalPeg.StageDoubleLeg
 import PalPeg.DpBudgetBalance
+import PalPeg.DpBudgetState
 import PalPeg.MatchedRunSnoc
 import PalPeg.ShiftPhaseDeterminism
 import PalPeg.RoundSegFromRun
