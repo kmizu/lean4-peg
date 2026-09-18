@@ -80,7 +80,9 @@ hypothesis `hpresT` removed: it is supplied from `hpresRepAt` by
 `hpresT_of_hpresRepAt`.  `hpresRepAt` survives (see the header). -/
 theorem h_oracle_of_leaves6 (entry q : ℕ) (first : Fin 9)
     (hreadyB : ∀ (w : List (Fin 2)) (c : Control) (r : GalilVM), InvLPC w c r →
-      ReadyFuel (searchLens.get r) (headRank r.right * 2048 + c.clock) (headRank r.right))
+      ∃ Φ : SearchVM → ℕ → ℕ → Prop,
+        PalPeg.CloseoutReadyStage.ReadyIface (PofC centreC placeC entry w) Φ ∧
+          Φ (searchLens.get r) (headRank r.right * 2048 + c.clock) (2048 - c.clock))
     (hpresRepAt : ∀ (w : List (Fin 2)) (c : Control) (r : GalilVM), InvLPC w c r →
       PalPeg.CloseoutPreload41.HpresRepAt centreC placeC entry q first w ⟨c, r⟩)
     (hshape : ∀ w : List (Fin 2),

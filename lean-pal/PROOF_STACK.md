@@ -1,3 +1,54 @@
+## n210 — 経路を検証し、`obligation_cycleOracle` の経路から**反証済みの前提**を外した
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本、変化なし）・無条件 PAL は未完。**
+
+### 方法の訂正（コウタの指摘）
+
+「定理を 40 本足して公理が 1 本も落ちてへんことに疑問を持て」。正しい。
+n195〜n209 の 15 ティックは **`StageEntryC.fuel` を磨いてたが、それはどの公理の経路にも無い**。
+計器は `#print axioms` やのに、ウチは「定理を何本足したか」で満足してた。
+**「何も落としてへん」が 2 回続いた時点で止まるべきやった。**
+
+### 経路の検証（grep、docstring は一次情報にせず）
+
+| 名前 | コード上の参照 |
+|---|---|
+| `CloseoutOracle8.h_oracle_of_leaves7` | **ゼロ**（3 件とも docstring/コメント） |
+| `CloseoutOracleBridge.hor_of_H_oracle` | **ゼロ** |
+| `obligation_cycleOracle` | `PalInPegUnconditional.lean:346` で公理として直接使用 |
+
+**記録されてた経路は散文であって鎖やない。** さらに両経路とも反証済みの葉を通ってた:
+
+* `GalilFinalAssembly4.h_oracle2_of_leaves` — `hpres` / `hquiet` / `houtReplay`（CLAUDE.md の反証済み 3 葉）
+* `CloseoutOracle6/7/8.h_oracle_of_leaves5/6/7` — `hreadyB : ReadyFuel …`（`ReadyFuelRefute.not_readyFuel_v0`）
+
+型は合っている: `hor_of_H_oracle2_invSS` / `hor_of_H_oracle` の結論は
+`∀ w, 0 < w.length → CycleOracleMC3 (PofC …) q first w` で、**公理の型そのもの**。
+つまり仮説さえ埋まれば公理はその場で定理に置き換わる。
+
+### やったこと（前提を 1 本崩した）
+
+`CloseoutOracle6.h_oracle_of_leaves5` は `hreadyB`（反証済み `ReadyFuel`）を
+`GalilSegmentConstructB.segment_of_invLPCB` に食わせてた。結論が同型の
+`CloseoutReadyStage.segment_of_invLPCS`（n200 で `Φ` ＋ `ReadyIface` に一般化した版）に差し替え、
+`hreadyB` の型を
+
+```lean
+∃ Φ, ReadyIface (PofC centreC placeC entry w) Φ ∧
+  Φ (searchLens.get r) (headRank r.right * 2048 + c.clock) (2048 - c.clock)
+```
+
+に切り直した（`CloseoutOracle6` / `7` / `8` の 3 ファイル）。全体 build 緑。
+
+**これで `obligation_cycleOracle` の経路が「偽の前提を要求する」状態でなくなった。**
+n195〜n209 の readiness 仕事は、ようやくここで公理の経路に接続された
+（接続先は `StageEntryC.fuel`＝`ReachAtC3` 側やのうて、`h_oracle_of_leaves5`＝`H_oracle` 側やった）。
+
+### 正直な計測
+
+**公理は 3 本のまま。** 落ちたのは「反証済み前提の要求」であって公理やない。
+次にやるのは `h_oracle_of_leaves7` の残り 10 葉のうち producer が実在するものを数えること。
+**producer が無い葉の数が、この公理までの本当の距離。**
 ## n209 — 未来リスト依存を全部外した。4 相の不変量が完全に継続フリーになった
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**

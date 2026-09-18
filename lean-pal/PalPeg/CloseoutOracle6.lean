@@ -322,7 +322,9 @@ theorem cycleOracleMC2C_of_piecesP' (centre : GalilVM → Fin 3)
 
 theorem h_oracle_of_leaves5 (entry q : ℕ) (first : Fin 9)
     (hreadyB : ∀ (w : List (Fin 2)) (c : Control) (r : GalilVM), InvLPC w c r →
-      ReadyFuel (searchLens.get r) (headRank r.right * 2048 + c.clock) (headRank r.right))
+      ∃ Φ : SearchVM → ℕ → ℕ → Prop,
+        PalPeg.CloseoutReadyStage.ReadyIface (PofC centreC placeC entry w) Φ ∧
+          Φ (searchLens.get r) (headRank r.right * 2048 + c.clock) (2048 - c.clock))
     (hpresRepAt : ∀ (w : List (Fin 2)) (c : Control) (r : GalilVM), InvLPC w c r →
       PalPeg.CloseoutPreload41.HpresRepAt centreC placeC entry q first w ⟨c, r⟩)
     (hpresT : ∀ (w : List (Fin 2)) (c : Control) (r : GalilVM) (c' : Control) (t : GalilVM),
@@ -391,11 +393,12 @@ theorem h_oracle_of_leaves5 (entry q : ℕ) (first : Fin 9)
       (fun s hs a => hsearch_C centreC placeC entry w s hs a)
       (hpresRepAt w) (hpresT w) (hshape w) (hbudget w) (hstage w) (hrs w)
       (fun m c r _ _ hIC _ => by
+        obtain ⟨Φ, hiface, hfuel⟩ := hreadyB w c r hIC
         obtain ⟨c', t, hsW, hEnd⟩ :=
-          segment_of_invLPCB centreC placeC entry q first w
+          PalPeg.CloseoutReadyStage.segment_of_invLPCS centreC placeC entry q first w
             (fun s => hex_C centreC placeC entry w s)
-            (fun s hs a => hsearch_C centreC placeC entry w s hs a) c r hIC
-            (hreadyB w c r hIC)
+            (fun s hs a => hsearch_C centreC placeC entry w s hs a) hiface c r hIC
+            hfuel
         exact ⟨c', t, hsW, Or.inr hEnd⟩)
       (hended w) (hlastMatch w) (hlastMismatch w) (hmismatch w) (hfound w) (hfoundBg w)
       (hfoundReplay w)) (hstr w)
