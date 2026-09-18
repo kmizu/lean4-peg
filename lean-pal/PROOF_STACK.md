@@ -250,7 +250,9 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
    `hm1`/`hr1`/`hc1`/`hcmp`/`hmis`/`hg`/`hb` を取る。
    `hs2 : beginShiftVM (periodLength wch') wch' (afterMismatch s1 vs vq) s2` は
    `beginShiftVM'` の定義（`GalilScaffoldTopGuards:35`）から。
-   `wch' = wch` は `watch_eq_of_mismatch_lagZero`（**済**）
+   `wch' = wch` は `watch_eq_of_mismatch_lagZero`（**済**）。
+   shift 状態の形の一致は `shiftEntry_shape`（**済 n155**、側条件は
+   比較の `vs.left = left s1.left` だけ）
 3. `hpred` は `shiftGuardVM (afterMismatch s1 vs vq)` の最後の節から
    （`afterMismatch` の right は `right s1.right`。**済**）
 4. shift 相を `chainShiftRun_of_steps`（**済**）で通す。基底は `beginShiftVM` が

@@ -1,3 +1,26 @@
+## 2026-09-19 n155: shift 入口の形が `round_next` の要求とぴったり一致することを確定
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器は動いていない。**
+
+`shiftEntry_shape`（`PalPeg/RoundHistory.lean`、18 宣言目）。一発で通った。
+
+`round_next` と `CompareRounds.next` は shift 相の起点を
+`⟨s1.center, left s1.left, ofNat h, inc s1.radius, inc (inc s1.length)⟩` という
+**明示の形**で要求する。これが run の実状態と一致することを一次情報で照合した:
+
+* `ScanVM` は `left` / `right` / `chain` の 3 場だけ（`GalilScaffoldTopScan:26`）なので
+  `scanLens.set` は center / radius / length を触らない
+* `afterMismatch s vs vq = {searchLens.set (scanLens.set s vs) vq with radius := radiusAfter s}`
+  （`GalilScaffoldTopSearch:52`）、`radiusAfter s = inc s.radius`（無条件）
+* `beginShiftVM h w s t` は `remaining := ofNat h` / `length := inc (inc s.length)` /
+  `chain := .watch (immediate w)` / `cycle := reset` を置く（`GalilScaffoldTopShiftCycle:23`）
+
+**必要な側条件は比較の `vs.left = left s1.left` だけ。**
+ついでに `(shiftLens.get s2).chain = .watch (immediate wch)` と
+`(shiftLens.get s2).cycle = reset` も出るので、`chainShiftRun_of_steps` の基底
+（`.stop`）がそのまま立つ。
+
 ## 2026-09-19 n154: 組み立てに足りない部品がゼロになった
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

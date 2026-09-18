@@ -163,6 +163,40 @@ theorem onlyMatchedRun_of_roundHistory {c : Control} {s : GalilVM}
 
 end
 
+/-! ## shift 入口の形
+
+`round_next` と `CompareRounds.next` は shift 相の起点を
+`⟨s1.center, left s1.left, ofNat h, inc s1.radius, inc (inc s1.length)⟩`
+という**明示の形**で要求する。run から呼ぶにはこれに一致させないといけない。
+
+一次情報で照合した:
+
+* `ScanVM` は `left` / `right` / `chain` の 3 場だけ（`GalilScaffoldTopScan:26`）なので
+  `scanLens.set` は center / radius / length を触らない
+* `afterMismatch s vs vq = {searchLens.set (scanLens.set s vs) vq with radius := radiusAfter s}`
+  （`GalilScaffoldTopSearch:52`）、`radiusAfter s = inc s.radius`（無条件）
+* `beginShiftVM h w s t` は `remaining := ofNat h` / `length := inc (inc s.length)` /
+  `chain := .watch (immediate w)` / `cycle := reset` / `periodOnly := true` を置く
+  （`GalilScaffoldTopShiftCycle:23`）
+
+よって比較の `hLeft : vs.left = left s1.left` だけで形が一致する。 -/
+
+/-- **shift 入口の shift 状態は `round_next` の要求する形そのもの。** -/
+theorem shiftEntry_shape {h : ℕ} {s1 s2 : GalilVM} {vs : ScanVM} {vq : SearchVM}
+    {wch : GalilScaffoldChainWatch.State}
+    (hLeft : vs.left = GalilScaffoldInputHead.left s1.left)
+    (hBeginShift : beginShiftVM h wch (afterMismatch s1 vs vq) s2) :
+    (shiftLens.get s2).shift
+        = ⟨s1.center, GalilScaffoldInputHead.left s1.left, ofNat h, inc s1.radius,
+           inc (inc s1.length)⟩ ∧
+      (shiftLens.get s2).chain = ChainVM.watch (GalilScaffoldChainWatch.immediate wch) ∧
+      (shiftLens.get s2).cycle = reset := by
+  obtain ⟨-, hTarget⟩ := hBeginShift
+  refine ⟨?_, ?_, ?_⟩ <;> rw [hTarget] <;>
+    simp [shiftLens, afterMismatch, scanLens, searchLens, radiusAfter, hLeft]
+
+#print axioms shiftEntry_shape
+
 /-! ## shift 相では `shiftLens` の外は変わらない
 
 `round_next` の結論は状態を `shiftLens.set s2 ⟨t', .watch v, cycle⟩` の形で書く。
