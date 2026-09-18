@@ -1,3 +1,36 @@
+## 2026-09-19 n159: **`H_readsShift` がラウンド起点の `OriginAt` から出る鎖が繋がった**
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器はまだ動いていない。**
+
+`PalPeg/RoundHistory.lean` は 24 宣言。`PROOF_STACK.md` 手順 8・9・11 が済んだ。
+
+    roundSeg_of_run        : RoundSeg w s₀ sEnd
+    originAt_next_of_run   : OriginAt w sEnd          （手順 9）
+    h_readsShift_of_run    : H_readsShift w c sEnd    （手順 11）
+
+つまり **ラウンド起点の `OriginAt` ＋ そのラウンドの run の材料**から
+`H_readsShift` が出る。全部標準 3 公理のみ。
+
+`roundSeg_of_run` の第 1 節（`periodLength v = periodLength w₀`）は 3 段の合成:
+
+* scan 相 → `periodLength_onlyMatchedRun`
+* `immediate` 1 手 → `GalilChainCoupling.periodLength_consume`
+  （側条件 `WatchBlock` も `periodLength_onlyMatchedRun` が返す）
+* shift 相 → `chain_shift_periodLength`（公理ゼロ）
+
+### 計器を動かすために残っていること
+
+`H_readsShift` を **trace / run の全点で**得るには、`RoundHistory`（＝ラウンド起点の
+`OriginAt`）を run に沿って引き継ぐ帰納が要る:
+
+* 基底: chain 誕生時の `OriginAt` ← `GalilScaffoldTopFirstRound.first_round`（**無条件**）
+* 帰納: `originAt_next_of_run`（**済**）でラウンドごとに引き継ぐ
+* ラウンド境界の検出: run のどこが `scan_shift` かを特定する（`RoundHistory` の
+  `hScanWatchAll` 側条件と `shift` 相の `hShiftAll` 側条件をどう供給するか）
+
+**これが最後の壁。** 計器（`#print axioms`）はまだ 4 本。
+
 ## 2026-09-19 n158: **ラウンド 1 周を run から組めた**（`compareRounds_one_of_run`）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

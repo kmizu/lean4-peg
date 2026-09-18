@@ -1,5 +1,6 @@
 import PalPeg.MatchedRunSnoc
 import PalPeg.CloseoutRoundSeg
+import PalPeg.CloseoutReadsOrigin
 
 /-!
 # `RoundHistory` — ラウンドの履歴を状態と一緒に運ぶ
@@ -595,6 +596,86 @@ theorem compareRounds_one_of_run {s₀ s1 s2 sEnd : GalilVM}
     (shiftRun_of_chain hShiftRun) hShiftRun (.stop _)
 
 #print axioms compareRounds_one_of_run
+
+/-- **`RoundSeg` を run から**（`PROOF_STACK.md` 手順 8）。
+
+第 1 節 `periodLength v = periodLength w₀` は 3 段の合成:
+
+* scan 相 → `periodLength_onlyMatchedRun`
+* `immediate` 1 手 → `GalilChainCoupling.periodLength_consume`（側条件は `WatchBlock`、
+  これも `periodLength_onlyMatchedRun` が一緒に返す）
+* shift 相 → `chain_shift_periodLength`（公理ゼロ） -/
+theorem roundSeg_of_run {w : List (Fin 2)} {s₀ s1 s2 sEnd : GalilVM}
+    {w₀ wch v : GalilScaffoldChainWatch.State} {n k : ℕ}
+    {vs : ScanVM} {vq : SearchVM}
+    (hChainStart : s₀.chain = ChainVM.watch w₀)
+    (hBlockStart : PalPeg.GalilBranchInvariants.WatchBlock w₀)
+    (hMatchedRun : OnlyMatchedRun (toOnly s₀ w₀) n (toOnly s1 wch))
+    (hTerminal : singlePositive s1.cycle = true)
+    (hCanRight : canRight s1.right)
+    (hPredict : GalilScaffoldInputHead.read (right s1.right) =
+      GalilScaffoldChainConsume.symbol wch.machine.control.period.focus)
+    (hLengthCanonical : Canonical s1.length)
+    (hRight : vs.right = right s1.right)
+    (hLeft : vs.left = GalilScaffoldInputHead.left s1.left)
+    (hBeginShift : beginShiftVM (periodLength wch) wch (afterMismatch s1 vs vq) s2)
+    (hShiftRun : ChainShiftRun (shiftLens.get s2).shift
+      (GalilScaffoldChainWatch.immediate wch) (shiftLens.get s2).cycle k
+      (shiftLens.get sEnd).shift v (shiftLens.get sEnd).cycle)
+    (hExhausted : positive (shiftLens.get sEnd).shift.remaining = false)
+    (hFrame : sEnd = shiftLens.set s2 (shiftLens.get sEnd))
+    (hChainEnd : sEnd.chain = ChainVM.watch v) :
+    RoundSeg w s₀ sEnd := by
+  intro wchA wchB hChainA hChainB
+  have hEqA : wchA = w₀ := by rw [hChainStart] at hChainA; cases hChainA; rfl
+  have hEqB : wchB = v := by rw [hChainEnd] at hChainB; cases hChainB; rfl
+  rw [hEqA, hEqB]
+  obtain ⟨hPeriodScan, hBlockEnd⟩ := periodLength_onlyMatchedRun hMatchedRun hBlockStart
+  simp only [toOnly] at hPeriodScan hBlockEnd
+  have hPeriodImmediate :
+      periodLength (GalilScaffoldChainWatch.immediate wch) = periodLength wch :=
+    PalPeg.GalilChainCoupling.periodLength_consume wch.machine wch.lag wch.margin
+      wch.lag (inc wch.margin) hBlockEnd
+  have hPeriodShift : periodLength v = periodLength (GalilScaffoldChainWatch.immediate wch) :=
+    chain_shift_periodLength hShiftRun
+  refine ⟨by rw [hPeriodShift, hPeriodImmediate, hPeriodScan], ?_⟩
+  rw [← hPeriodScan]
+  exact compareRounds_one_of_run hMatchedRun hTerminal hCanRight hPredict hLengthCanonical
+    hRight hLeft hBeginShift hShiftRun hExhausted hFrame hChainEnd
+
+#print axioms roundSeg_of_run
+
+/-! ## 手順 9〜11: `OriginAt` の引き継ぎと `H_readsShift`
+
+`roundSeg_of_run` の上に 1 行ずつ乗るだけ。`hsome` はラウンド起点の chain が
+watch であることから無償。 -/
+
+section Handoff
+variable {w : List (Fin 2)} {s₀ s1 s2 sEnd : GalilVM}
+  {w₀ wch v : GalilScaffoldChainWatch.State} {n k : ℕ} {vs : ScanVM} {vq : SearchVM}
+
+/-- **手順 9: 次のラウンド起点の `OriginAt`。** -/
+theorem originAt_next_of_run
+    (hOrigin : OriginAt w s₀)
+    (hChainStart : s₀.chain = ChainVM.watch w₀)
+    (hRoundSeg : RoundSeg w s₀ sEnd) :
+    OriginAt w sEnd :=
+  originAt_of_roundSeg hOrigin hRoundSeg (fun _ _ => ⟨w₀, hChainStart⟩)
+
+/-- **手順 11: `H_readsShift`。**  `OriginShift` 経由。 -/
+theorem h_readsShift_of_run {c : Control}
+    (hOrigin : OriginAt w s₀)
+    (hChainStart : s₀.chain = ChainVM.watch w₀)
+    (hRoundSeg : RoundSeg w s₀ sEnd) :
+    PalPeg.CloseoutRoundUnique.H_readsShift w c sEnd :=
+  PalPeg.CloseoutReadsOrigin.h_readsShift_of_originShift
+    (PalPeg.CloseoutReadsOrigin.originShift_of_roundSeg hOrigin hRoundSeg
+      (fun _ _ => ⟨w₀, hChainStart⟩))
+
+end Handoff
+
+#print axioms originAt_next_of_run
+#print axioms h_readsShift_of_run
 
 #print axioms chainShiftRun_tick
 #print axioms chainShiftRun_of_steps
