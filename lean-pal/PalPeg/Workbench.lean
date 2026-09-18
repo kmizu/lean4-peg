@@ -76,6 +76,7 @@ import PalPeg.CloseoutFinalBranch
 import PalPeg.MatchedRunSnoc
 import PalPeg.ShiftPhaseDeterminism
 import PalPeg.RoundSegFromRun
+import PalPeg.ShiftPalAlongTrace
 
 /-!
 # `Workbench` — 作ったが正本の鎖に配線されていない部品
@@ -228,6 +229,30 @@ inductive で、**`Tick` の `scan_wait` / `scan_count` / `scan_match` と 1 対
 **残り**: (a) `OriginAt` を「いまのラウンド起点で」持つ run 不変量に仕立てる
 （ラウンド境界で `originAt_at_actual` を使う）、(b) `round_next` の入力の配線、
 (c) `H_freshShiftAtShiftEntry`（新鮮な chain の第 1 ラウンド、`first_round`）。
+
+## `ShiftPalAlongTrace` — `hSP` の正しい形（trace 形、未配線）
+
+| 定理 | 内容 |
+|---|---|
+| `chainIdle_after_init` | `init` の行き先は chain が idle（`initVM` が置く） |
+| `roundBundle_alongTrace` | `RoundBundle` を trace に沿って（`st 1` から） |
+| **`shiftPal_alongTrace`** | **`ShiftPal` を trace の scan 点で** |
+
+**主定理との関係**: 公理 `obligation_shiftPalAtScanStates` は一状態述語
+`BigPack2MG7W` の下で `ShiftPal` を要求していたが、その guard は chain の周期テープと
+入力語 `w` を一切結びつけていない（n112、**偽の疑いが濃い**）。`shiftPal_alongTrace` が
+正しい形で、残差は 3 つだけ:
+
+| 残差 | 形 | 出どころ |
+|---|---|---|
+| `H_readsShift` | trace 形 | `RoundSegFromRun.readsShift_at_actual`（実状態で出る） |
+| `H_freshShiftAtShiftEntry` | tick 形 | 狭めた版、`GalilScaffoldTopFirstRound.first_round` |
+| `hFreshBranch`（`periodOnly = false`） | 状態ごと | 同上 |
+
+`AuxPack`（`auxPack_alongTrace_afterFirstStep`）と `canRight`
+（`canRightAtScanOrShift_alongTrace`）は中で放電済み。起点が `st 1` なのは
+`AuxPack` が boot では偽だから（`AuxPackNotAtBoot`）で、`st 1` の chain が idle なのは
+`initVM` が `t.chain = .idle` を置くから。
 
 ## `H_freshShift` を消費者の scope に狭めた（2026-09-19）
 
