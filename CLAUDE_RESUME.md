@@ -1,3 +1,55 @@
+## 2026-09-19 n142: `hCaught` は終端での `RoundScan.pred` と同じ添字（`RoundScan` に `periodOnly` の場は無い）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。
+無条件 PAL は未完。§10.5 は未達。**
+
+### 測定 1: 添字が一致する
+
+`GalilRoundPeriod.RoundScan` の
+`pred : symbol w.machine.control.period.focus = (encoded raw)[C + R + 2 + used − 2h]?`
+は、`position s.center = C + h`・`r₀ = R + h` を入れると
+`shiftPalAt_fresh_of_candidate` の `hCaught` の添字
+`position s.center + r₀ + 1 − 2h` = **`C + R + 1`** と一致する
+（終端 `used = 2h − 1` のとき。`terminal_palindrome` も同じ書き換えをしている）。
+
+**つまり `hCaught` は新しい場ではなく、`RoundScan.pred` の終端形。**
+
+### 測定 2: `RoundScan` に `periodOnly` の場は無い
+
+`RoundScan` の全 12 場（`chain` / `caught` / `canon` / `count` / `fresh` / `size` /
+`posH` / `pal` / `room` / `origin` / `pred`）は幾何と台帳だけで、
+**`periodOnly` に触れる場は 1 つも無い**。
+
+`CloseoutPackRun31.ChainRound` の `s.periodOnly = true →` ガードは
+**定義上の選択**であって `RoundScan` が要求しているものではない。
+
+### 残る本当の差（`periodOnly = false` 側）
+
+`shiftPal_of_chainRound` は `hend : singlePositive s.cycle = true`（ガードの
+`periodOnly = true` 枝）から `terminal_iff` 経由で `used = 2h − 1` を得ている。
+`periodOnly = false` 枝のガードは `negative wch.margin = false` で、**`used` を固定しない**。
+
+Scala 正本（CLAUDE.md の記録: `ScaffoldGalil.scala:254`）でも `canShift` は
+`periodOnly` のとき `singlePositive cycle` を要求し、そうでないときは margin を見る。
+したがって最初の shift では `used` は cycle では固定されず、
+**`phase = 4`（4 回の boundary event）が進行の指標**になる。
+
+**次に測るべきはここ**: `phase = 4` ＋ `negative margin = false` から
+`used` の位置（＝周期境界にいること）が出るか。`GalilScaffoldChainConsume.consume` の
+`phase := if boundaryEvent then advancePhase s.phase else s.phase` と
+`distance`/`boundary`/`last` の更新が一次情報。
+
+### 今日の到達点（まとめ）
+
+* 反証済み `hpack` 節 4 / 節 7 を found 経路から**除去**（`(hwatch : PrepLandingWatchC …)` は 0 本）
+* 過剰仮定の弱化 6 件（`split4/3_of_prefix` / `fallbackLanding_of_pack` /
+  `fallbackTick_of_watchTick` / `reshift_from_right` / `WatchMismatchNoShiftC` の guard）
+* 公理の原子化（`shiftPalAlongTrace` → 3 原子）と狭化（run/trace 両方を **watch 点**に）
+* fresh 側 `ShiftPal` の数学の芯完成（`periodOn_mirror'` / `periodOn_of_palAt_pair` /
+  `periodOn_right_of_palAt_pair` / `reshift_of_palAt_pair` / `shiftPalAt_fresh_of_candidate`）
+* 過去の自分の記述の訂正 6 件（`first_round`／`fresh_shift_entry`／`PalInPegUnconditional`
+  の docstring／`LagPos` 不要／`shiftPal_of_readOrigin` の docstring／「found 半径正」の需要 3→2）
+
 ## 2026-09-19 n141: fresh 側 `ShiftPal` の**数学的な芯が完成**（4 段、全部標準公理）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。
