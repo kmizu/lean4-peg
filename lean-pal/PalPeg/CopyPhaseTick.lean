@@ -281,4 +281,135 @@ theorem copyChain_tick_false_exists {t : GalilScaffoldTape.Tape} {h : Counter}
 #print axioms backChain_tick_false_not_idle
 #print axioms copyChain_tick_false_exists
 
+
+/-! ## 相の不変量 `CopyOrBack` は 1 手で保たれる（watch に着くまで）
+
+帰納の本体を回すには「chain の相が copy（`CopyInv` つき）か back のまま」が要る。
+`copyBit` は `t.focus = 8` を要求するが、`CopyInv t h p v 0` は
+`AnswerAhead t 0`（＝ `t.focus = 4`、`answerAhead_zero`）を含むので、
+**残り 0 のときは `copyBit` が撃てない**。したがって `copyBit` が撃てたなら残りは
+`n+1` の形で、`copyInv_step` が行き先の `CopyInv` を与える。 -/
+
+/-- **区間に沿って運ぶ相の不変量。** -/
+def CopyOrBack (x : ChainVM) : Prop :=
+  (∃ (t : GalilScaffoldTape.Tape) (h : Counter) (p : GalilScaffoldPlace.Place)
+      (v : GalilScaffoldChainPeriod.Tape) (lag margin : Counter)
+      (ver : GalilScaffoldInputHead.PlaceHead) (m : ℕ),
+      x = ChainVM.copy t h p v lag margin ver ∧ CopyInv t h p v m) ∨
+  (∃ (v : GalilScaffoldChainPeriod.Tape) (h lag margin : Counter)
+      (ver : GalilScaffoldInputHead.PlaceHead), x = ChainVM.back v h lag margin ver)
+
+theorem copyOrBack_not_idle {x : ChainVM} (h : CopyOrBack x) : x ≠ ChainVM.idle := by
+  rcases h with ⟨_, _, _, _, _, _, _, _, rfl, -⟩ | ⟨_, _, _, _, _, rfl⟩ <;>
+    intro hEq <;> exact ChainVM.noConfusion hEq
+
+/-- **`.copy` の 1 手の行き先は「`CopyInv` つきの `.copy`」か「`.back`」。** -/
+theorem copyInv_step_shape {t : GalilScaffoldTape.Tape} {h : Counter}
+    {p : GalilScaffoldPlace.Place} {v : GalilScaffoldChainPeriod.Tape} {m : ℕ}
+    {lag margin : Counter} {ver : GalilScaffoldInputHead.PlaceHead} {y : ChainVM}
+    (hInv : CopyInv t h p v m)
+    (hStep : ChainStep (ChainVM.copy t h p v lag margin ver) y) :
+    CopyOrBack y := by
+  cases hStep with
+  | copyBit _ _ _ _ _ _ _ a hOne hLegal hPresent =>
+    refine Or.inl ⟨_, _, _, _, _, _, _, ?_, rfl, ?_⟩
+    · exact m - 1
+    · cases m with
+      | zero =>
+        exfalso
+        have h4 : t.focus = 4 := answerAhead_zero hInv.1
+        rw [h4] at hOne
+        exact absurd hOne (by decide)
+      | succ k => simpa using copyInv_step hInv a
+  | copyEnd _ _ _ _ _ _ _ b _ _ _ => exact Or.inr ⟨_, _, _, _, _, rfl⟩
+
+/-- **`CopyOrBack` は background の 1 手で保たれる**——ただし `.back → .watch` の
+ときだけ外れる。そこが到達点なので、結論は選言にする。 -/
+theorem copyOrBack_tick_false {x z : ChainVM} (hInv : CopyOrBack x)
+    (hTick : ChainTick false x z) :
+    CopyOrBack z ∨ ∃ w : GalilScaffoldChainWatch.State, z = ChainVM.watch w := by
+  obtain ⟨y, hStep, hAfter⟩ := hTick
+  have hzy : z = y := hAfter
+  subst hzy
+  rcases hInv with ⟨t, h, p, v, lag, margin, ver, m, rfl, hCopyInv⟩ | ⟨v, h, lag, margin, ver, rfl⟩
+  · exact Or.inl (copyInv_step_shape hCopyInv hStep)
+  · rcases chainStep_back_shape hStep with ⟨v', rfl⟩ | ⟨w, rfl⟩
+    · exact Or.inl (Or.inr ⟨_, _, _, _, _, rfl⟩)
+    · exact Or.inr ⟨w, rfl⟩
+
+/-- **`CopyOrBack` なら background の 1 手が必ずある。** -/
+theorem copyOrBack_tick_false_exists {x : ChainVM} (hInv : CopyOrBack x) :
+    ∃ z : ChainVM, ChainTick false x z := by
+  rcases hInv with ⟨t, h, p, v, lag, margin, ver, m, rfl, hCopyInv⟩ | ⟨v, h, lag, margin, ver, rfl⟩
+  · exact copyChain_tick_false_exists hCopyInv lag margin ver
+  · exact backChain_tick_false_exists v h lag margin ver
+
+#print axioms copyOrBack_not_idle
+#print axioms copyInv_step_shape
+#print axioms copyOrBack_tick_false
+#print axioms copyOrBack_tick_false_exists
+
+
+/-! ## 帰納の本体: live chain 版の background 区間構成
+
+`constructB`（idle 版）の live chain 対応物。探索側の帳簿が丸ごと不要になるので
+（`searchEffect` が不活性分岐）、必要なのは
+
+* chain の 1 手（`copyOrBack_tick_false_exists`）
+* 相の保存（`copyOrBack_tick_false`）
+* VM の 1 手（`live_background_exists`）
+* clock の余裕（`n < c.clock`）
+
+だけ。結論は**選言**——「watch に着いた（＝ `ReachesWatchPhase` の中身）」か
+「`n` 手走り切ってまだ copy/back」。 -/
+
+/-- **live chain 版の background 区間構成。**  `n < c.clock` の間、`wait` / `count` だけで
+`n` 手の区間が走る。途中で chain が watch に着いたらそこで止まる。 -/
+theorem watchSegE_backgroundRun_live (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) :
+    ∀ (n : ℕ) (c : Control) (s : GalilVM),
+      c.mode = Mode.scan → c.replaying = false → n < c.clock →
+      CopyOrBack s.chain →
+      ∃ (es : List Bool) (c' : Control) (s' : GalilVM),
+        WatchSegE P q first delay es c s c' s' ∧ es.count true = 0 ∧
+        ((∃ w : GalilScaffoldChainWatch.State, s'.chain = ChainVM.watch w) ∨
+          (es.length = n ∧ CopyOrBack s'.chain)) := by
+  intro n
+  induction n with
+  | zero =>
+    intro c s hScan hNotReplaying _ hInv
+    exact ⟨[], c, s, .stop _ _, rfl, Or.inr ⟨rfl, hInv⟩⟩
+  | succ n ih =>
+    intro c s hScan hNotReplaying hClock hInv
+    obtain ⟨z, hTick⟩ := copyOrBack_tick_false_exists hInv
+    obtain ⟨s1, hBg, hChain, -, -, -, -, -⟩ :=
+      live_background_exists P q first s (copyOrBack_not_idle hInv) hTick
+    have hNext : CopyOrBack s1.chain ∨ ∃ w : GalilScaffoldChainWatch.State,
+        s1.chain = ChainVM.watch w := by
+      rw [hChain]; exact copyOrBack_tick_false hInv hTick
+    by_cases hAvailable : canRight s.right
+    · have hClockTwo : 1 < c.clock := by omega
+      rcases hNext with hInv1 | hWatch
+      · obtain ⟨es, c', s', hSeg, hCount, hEnd⟩ :=
+          ih { c with clock := c.clock - 1 } s1 hScan hNotReplaying (by simp; omega) hInv1
+        refine ⟨false :: es, c', s',
+          .count c s s1 hScan hNotReplaying hAvailable hClockTwo hBg hSeg, by simpa using hCount, ?_⟩
+        rcases hEnd with hW | ⟨hLen, hI⟩
+        · exact Or.inl hW
+        · exact Or.inr ⟨by simp [hLen], hI⟩
+      · exact ⟨[false], _, s1,
+          .count c s s1 hScan hNotReplaying hAvailable hClockTwo hBg (.stop _ _), by simp,
+          Or.inl hWatch⟩
+    · rcases hNext with hInv1 | hWatch
+      · obtain ⟨es, c', s', hSeg, hCount, hEnd⟩ :=
+          ih c s1 hScan hNotReplaying (by omega) hInv1
+        refine ⟨false :: es, c', s',
+          .wait c s s1 hScan hNotReplaying hAvailable hBg hSeg, by simpa using hCount, ?_⟩
+        rcases hEnd with hW | ⟨hLen, hI⟩
+        · exact Or.inl hW
+        · exact Or.inr ⟨by simp [hLen], hI⟩
+      · exact ⟨[false], c, s1,
+          .wait c s s1 hScan hNotReplaying hAvailable hBg (.stop _ _), by simp, Or.inl hWatch⟩
+
+#print axioms watchSegE_backgroundRun_live
+
 end PalPeg.CopyPhaseTick
