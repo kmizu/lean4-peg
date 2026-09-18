@@ -32,6 +32,59 @@
 
 
 
+## 2026-09-19 n123: live chain 版区間構成の材料一覧（これで全部）
+
+**全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
+
+次のセッションが `GalilSegmentConstructB.watchSegE_constructB` の live chain 版を
+書くときに要るものを、**全部一次情報で確認して**並べる。
+
+### chain 側（すべて既存、標準公理）
+
+| 定理 | 場所 | 内容 |
+|---|---|---|
+| `copy_step_exists` | `GalilBranchInvariants:350` | `CopyInv` から `ChainStep` の存在 |
+| `copyInv_step` | `GalilBranchInvariants:369` | `CopyInv … (n+1)` は 1 手で `CopyInv … n` |
+| `copy_run_to_back` | `GalilBranchInvariants:383` | copy 相は `n+1` 手で `.back` に着き `OnBlock v'` を渡す |
+| `chainReady_of_blockInv` | `GalilChainReadyProgress:59` | `BlockInv` ＋ 各相の追加事実から `ChainReady` |
+| `found_to_watchStart_least` | `GalilPrepLeast:121` | `SafeQuanta` ＋ `Result` から `ChainTicks (bs ++ dm :: cs) x1 (.watch (watchStart …))`（イベント列の中身は任意） |
+
+### 今日足した差分（`PalPeg/CopyPhaseTick.lean`、標準公理）
+
+| 定理 | 内容 |
+|---|---|
+| `chainStep_copy_shape` | `.copy` から出る `ChainStep` の行き先は `.copy` か `.back` |
+| `chainMatched_exists_copy_or_back` | その両方に `ChainMatched` の構成子がある |
+| `copyChain_tick_exists` | よって `ChainTick a` は一致ビット `a` によらず存在する |
+| `copyChain_tick_not_idle` | 行き先は idle にならない（次段の `WatchSegE.match` の側条件） |
+
+### run 側（既存、模倣する対象）
+
+| 定理 | 場所 | 内容 |
+|---|---|---|
+| `watchSegE_constructB` | `GalilSegmentConstructB:124` | **idle chain 版**。結論は `(es.length = n ∨ SegEnd P c' t)` |
+| `watchSegE_constructS` | `CloseoutReadyStage:544` | 同上（`ReadyPacedS` 版） |
+| `watchSegE_events` | `GalilScaffoldTopWatchSegE:170` | 区間から `ChainTicks es s.chain t.chain`（`chain ≠ idle` が要る） |
+| `chainTicks_unique` | `GalilScaffoldTopChainUnique:87` | `ChainTicks` は行き先を一意に決める |
+
+### 到達後（今日実装、`PalPeg/FoundPackCorrected.lean`）
+
+    reachesWatchPhase_of_chainTicks → ReachesWatchPhase
+      → prepLandingWatchC_at_reachedWatch（節 4 の正しい形）
+      → BreakLandingAtReachedWatch / reachesWatchPhase_of_breakLandingAtReachedWatch（節 7）
+
+### 書くべきもの（唯一の残り）
+
+`watchSegE_constructB` の **live chain 版**。変更点は 3 つだけ:
+
+1. 不変量 `s.chain = ChainVM.idle` を「`s.chain` が `.copy` で `∃ n, CopyInv …`」に替える
+   （`copyInv_step` で運ぶ）。
+2. 構成子は `matchIdle` / `countR` / `matchIdleR` の代わりに `match` / `count` / `wait`
+   （`WatchSegE.match` の側条件は `s.chain ≠ .idle` だけ、`copyChain_tick_not_idle` で維持）。
+3. chain の 1 手は `copyChain_tick_exists` から取る（`WatchOk` 経由は不可、反証済み）。
+
+`MInv` と `ScanInvariant` は chain に触れないので `constructB` の扱いをそのまま使える。
+
 ## 2026-09-19 n122: live chain 版区間構成の材料も既にある（`copy_step_exists`）
 
 **全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
