@@ -122,6 +122,34 @@ CLAUDE.md の記述では `CycleOracleMC3` は origin/着地とも `InvLPS` な�
 無駄にする事故を避けられた。CLAUDE.md の「まず証明を書こうとする」は
 「先に既存の反証を探す」と両立する。
 
+### n179: `ReadyFuel` 近傍の地図（実測、これ以上掘る前に見るもの）
+
+`StageEntryC.fuel : GalilSegmentConstructB.ReadyFuel (searchLens.get r)
+(headRank r.right * 2048 + c.clock) (headRank r.right)` の producer を探した結果:
+
+| 項目 | 状態 |
+|---|---|
+| `ReadyFuel` そのものの producer | **無い**。`CloseoutWatchRound11:191,216` / `CloseoutReportCase:322` はどれも仮説として取っている |
+| `readyFuel_restarted`（`GalilSegmentConstructB:109`） | `Restarted` ＋ `hE : ∀ as, n ≤ as.length → as.count true ≤ K → RunEntriesAll as …` から出す。**`hE` が残差** |
+| `readyFuel_of_stage`（`GalilReplaySpan:3764`） | `ReplayStage` ＋ `RunEntriesAtBegin` から。**`RunEntriesAtBegin` は偽**（n178） |
+| **正しい形の機械**（`CloseoutPreload11`） | `runEntriesS_of_restartS2:327` が `Restarted` ＋ `StageEntry` ＋ `CentreLongAt` ＋ `DepthAt` ＋ `PostRun` から `RunEntriesS as` を出す（条件は `D + dpEvents(…) ≤ as.length` ＋ `PacedL 2048 0 as`）。`readyClosure_S2:347` がそれを `ReadyClosure … RdPaced` に束ねる |
+| その底 | `PostRun`（`CloseoutPreload8`）と `RestartS2`（`CloseoutPreload11:320`）。**どちらも producer 無し** |
+| `ReadyClosure` の消費者 | `CloseoutWatchRound28.replayRunC_of_decodes`（**replay 経路**。`StageEntryC.fuel` ではない） |
+
+**通貨が 3 つある**: `RunEntriesAll`（`GalilLeafPres:228`）/ `RunEntriesAllD`
+（`GalilReplaySpan:3685`）/ `RunEntriesS`（`CloseoutPreload*`）。
+`ReadyFuel` は `RunEntriesAll`、`ReadyFuelD` は `RunEntriesAllD`、
+`CloseoutPreload11` の機械は `RunEntriesS`。**橋が要る。**
+
+条件の形も違う: `ReadyFuel` は `as.count true ≤ K`（マッチ回数の上界）、
+`runEntriesS_of_restartS2` は `PacedL 2048 0 as`（比較の間隔）。
+長さ `headRank * 2048 + clock` の paced 列なら true の個数は `headRank` 程度なので
+**方向としては噛み合うはず**（未検証）。
+
+**次にやること**: (1) 3 つの `RunEntries*` の関係を一次情報で確認する、
+(2) `PostRun` と `RestartS2` の中身を読んで producer が本当に無いか確かめる。
+**どちらも「書く」前に「読む」作業。**
+
 ### n175 の教訓（これが一番大事）
 
 **44 本書いて計器は 1 本も動かなかった。0 本書いて 1 本外れた。**
