@@ -1,6 +1,7 @@
 import PalPeg.LiveSegmentConstruct
 import PalPeg.FoundPackCorrected
 import PalPeg.ChainReachesWatchFromFound
+import PalPeg.CloseoutPreload5
 
 /-!
 # `ReachesWatchPhase` を run から出す（clock の余裕なし）
@@ -133,5 +134,49 @@ theorem reachesWatchPhase_or_segEnd_at_foundBirth (P : Shared) (q : ℕ) (first 
     hChainReachesWatch
 
 #print axioms reachesWatchPhase_or_segEnd_at_foundBirth
+
+
+/-! ## 半径の側条件を標準形に
+
+コードベースの他所（`GalilScaffoldChainCredits:63`、`GalilScaffoldChainReady:39`）は
+誕生時の半径の側条件を `Canonical radius ∧ 0 < value radius` の対で書いている。
+`CloseoutPreload5.canonical_eq_ofNat` でそれが `ofNat (r0+1)` 形に落ちるので、
+`reachesWatchPhase_or_segEnd_at_foundBirth` も同じ対で取れるようにする。 -/
+
+/-- `Canonical` ＋ 正値なら `ofNat (r0+1)` 形。 -/
+theorem eq_ofNat_succ_of_canonical_pos {c : Counter}
+    (hCanonical : Canonical c) (hPos : 0 < value c) : ∃ r0 : ℕ, c = ofNat (r0 + 1) := by
+  have hEq := PalPeg.CloseoutPreload5.canonical_eq_ofNat hCanonical (le_of_lt hPos)
+  obtain ⟨n, hn⟩ : ∃ n : ℕ, (value c).toNat = n := ⟨_, rfl⟩
+  rw [hn] at hEq
+  have hSucc : n - 1 + 1 = n := by omega
+  exact ⟨n - 1, by rw [hSucc]; exact hEq⟩
+
+/-- **`reachesWatchPhase_or_segEnd_at_foundBirth` の標準側条件版。**  半径は
+`Canonical` ＋ 正値で取る（コードベースの他所と同じ形）。 -/
+theorem reachesWatchPhase_or_segEnd_at_foundBirth_canonical (P : Shared) (q : ℕ) (first : Fin 9)
+    {cP : Control} {sP : GalilVM}
+    {answer : GalilScaffoldTape.Tape} {cen : Fin 3}
+    {walker : GalilScaffoldPlace.Place} {ver : GalilScaffoldInputHead.PlaceHead}
+    {radius : Counter} {h : ℕ}
+    (hScan : cP.mode = Mode.scan) (hNotReplaying : cP.replaying = false)
+    (hClock : 1 ≤ cP.clock)
+    (hRadiusCanonical : Canonical radius) (hRadiusPos : 0 < value radius)
+    (hBirth : ChainMatched (chainStart answer cen walker ver radius) sP.chain)
+    (hCopyInv : PalPeg.GalilBranchInvariants.CopyInv answer reset walker
+      (GalilScaffoldChainPeriod.start cen) h)
+    (hChainReachesWatch : ∀ es : List Bool, es.length = 2 * h + 2 →
+      ∃ w : GalilScaffoldChainWatch.State, ChainTicks es sP.chain (ChainVM.watch w)) :
+    ReachesWatchPhase P q first cP sP ∨
+      ∃ (es : List Bool) (c' : Control) (s' : GalilVM),
+        WatchSegE P q first 2048 es cP sP c' s' ∧ SegEnd P c' s' ∧
+        c'.mode = Mode.scan ∧ c'.replaying = false ∧ CopyOrBack s'.chain := by
+  obtain ⟨r0, hRadius⟩ := eq_ofNat_succ_of_canonical_pos hRadiusCanonical hRadiusPos
+  subst hRadius
+  exact reachesWatchPhase_or_segEnd_at_foundBirth P q first hScan hNotReplaying hClock
+    hBirth hCopyInv hChainReachesWatch
+
+#print axioms eq_ofNat_succ_of_canonical_pos
+#print axioms reachesWatchPhase_or_segEnd_at_foundBirth_canonical
 
 end PalPeg.ReachesWatchFromRun
