@@ -1,3 +1,54 @@
+## n215 — 公理進捗: 第 3 連言が「証明済みの語の補題の 5 仮説」に一致した
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 3 連言 `FreshShiftLedger` が `GalilPeriodUnion.reshift_of_palAt_pair`（**証明済み**）の残り 5 仮説とちょうど一致する形になった。供給元を 5 本とも名指しした |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 到達点
+
+`ShiftPalAlongTrace.shiftPalAt_fresh_of_candidate` の核は
+
+```lean
+PalPeg.reshift_of_palAt_pair (encoded w) (position s.center) h r₀
+  hIn hOut hScanInv.palindrome hPos hLo hHi hEnd hpredIdx
+```
+
+で、`reshift_of_palAt_pair`（`GalilPeriodUnion:218`）は**既に証明されてる純粋な語の補題**。
+n213/n214 で
+
+* `hcur` ← `hScanInv.palindrome`（元から無料）
+* `hend` ← `hCan` から導出（n214、成分から除去）
+* `hpred` ← `shiftGuardVM` ＋ `right_read_index` で語の言明に（n213）
+
+を片付けたので、**`FreshShiftLedger` の残りはちょうど `reshift_of_palAt_pair` の 5 仮説**:
+
+| 成分 | 内容 | 供給元 |
+|---|---|---|
+| `hIn` | `PalAt (encoded w) (c−h) h` | 周期テープの中身（DP の `Candidate` 由来） |
+| `hOut` | `PalAt (encoded w) (c−2h) (2h)` | 同上 |
+| `hPos` | `0 < periodLength wch` | **`CloseoutWatchShiftAudit.periodLength_watchControl_pos` が実在**（`backDone` 生まれの watch 用） |
+| `hLo` | `2h ≤ r₀` | `CloseoutLPack` 系が場として運ぶ（`shiftBud_of_scanInv` は逆に仮説で取ってる＝消費者） |
+| `hHi` | `r₀ ≤ 4h` | **producer 見つからず** |
+
+### `hHi` は形式化のミスの疑い（producer ゼロ）
+
+`grep "≤ 4 \* periodLength"` の結果は `ShiftPalAlongTrace` 自身以外ゼロ。
+逆向きなら `CloseoutPackRun40:249` に `4 * (periodLength w : ℤ) ≤ value s.radius + 1` がある。
+常設制約「producerがないときは確実に形式化ミス」に従えば、`hHi` は切り方が間違ってる。
+`reshift_of_palAt_pair` 側で `hle : r ≤ 4 * h` は `periodOn_right_of_palAt_pair` にだけ使われてるので、
+そこを機械が実際に持ってる向き（`4h ≤ r + 1`）で通せるかを次に見る。
+
+### 次の一手
+
+1. `periodOn_right_of_palAt_pair` の `hle` を機械の持つ向きに合わせられるか（`hHi` の切り直し）
+2. `hPos`: 「shift 相の watch は `backDone` 生まれ」を run から取る配線
+3. `hLo`: `LPack` 系の場を shift 相まで運ぶ配線
 ## n214 — 公理進捗: `FreshShiftLedger` の成分を 7 → 6 に減らした（`hEnd` 除去）
 
 **公理への進捗**
