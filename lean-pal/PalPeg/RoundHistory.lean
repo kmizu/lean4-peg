@@ -163,6 +163,44 @@ theorem onlyMatchedRun_of_roundHistory {c : Control} {s : GalilVM}
 
 end
 
+/-! ## shift の手数は `remaining` の初期値で決まる
+
+`CompareRounds.next` は shift 相をちょうど `h` 手として要求する。run から呼ぶときは
+「shift mode に留まった手数 `k`」しか分からないので、`k = h` が要る。
+`GalilScaffoldTopInvariant.shift_run_remaining` は「ちょうど `h` 手なら尽きる」の向きで、
+**逆向きは無い**ので作る。
+
+`shiftTick`（`GalilScaffoldChainInputSupply:1442`）は `remaining := dec s.remaining`。
+`ChainShiftRun.next` は `positive s.remaining = true` を要求するので、
+`remaining` が尽きた時点で止まる手数は初期値で一意。 -/
+
+/-- **`k` 手歩いて `remaining` が尽きたなら `k = h`。** -/
+theorem chainShiftRun_length_eq {w : GalilScaffoldChainWatch.State} {cycle : Counter} :
+    ∀ {h k : ℕ} {a b : ShiftState} {v : GalilScaffoldChainWatch.State} {finish : Counter},
+      a.remaining = ofNat h → ChainShiftRun a w cycle k b v finish →
+      positive b.remaining = false → k = h := by
+  intro h k
+  induction k generalizing h w cycle with
+  | zero =>
+    intro a b v finish hStart hShiftRun hExhausted
+    cases hShiftRun
+    rw [hStart, positive_ofNat] at hExhausted
+    have hZero : h = 0 := by simpa using hExhausted
+    omega
+  | succ k ih =>
+    intro a b v finish hStart hShiftRun hExhausted
+    cases hShiftRun with
+    | next _ _ _ hEnabled _ _ _ rest =>
+      rw [hStart, positive_ofNat] at hEnabled
+      have hPos : 0 < h := by simpa using hEnabled
+      obtain ⟨h', rfl⟩ : ∃ h', h = h' + 1 := ⟨h - 1, by omega⟩
+      have hNext : (shiftTick a).remaining = ofNat h' := by
+        show dec a.remaining = ofNat h'
+        rw [hStart, dec_ofNat_succ]
+      exact congrArg (· + 1) (ih hNext rest hExhausted)
+
+#print axioms chainShiftRun_length_eq
+
 /-! ## shift 入口の形
 
 `round_next` と `CompareRounds.next` は shift 相の起点を

@@ -264,7 +264,11 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
    つまり「lens の場以外は変わらない」。`Lens.set_set` で `Steps` に沿って合成
 6. `shift_done` tick は VM を変えない（`Tick ⟨c, s⟩ ⟨{c with mode := .scan, output := o}, s⟩`、
    `GalilScaffoldTop:136`）
-7. `GalilScaffoldTopRoundS.round_next` を適用 → `CompareRounds h (toOnly s₀ w₀) 1 (toOnly post v)`
+7. `GalilScaffoldTopRoundS.round_next`（または `CompareRounds.next` を直接）を適用
+   → `CompareRounds h (toOnly s₀ w₀) 1 (toOnly post v)`。
+   shift 相の手数が `h` であることは `chainShiftRun_length_eq`（**済 n156**）で、
+   `ShiftRun` は `shiftRun_of_chain hchain` からタダ、
+   `hlen : Canonical (inc (inc s1.length))` は `inc_canonical` 2 回
 8. `RoundSeg w s₀ post` を作る。第 1 節 `periodLength v = periodLength w₀` は
    `periodLength_onlyMatchedRun`（scan 相、**済**）＋ `periodLength_consume`（`immediate`）＋
    `chain_shift_periodLength`（shift 相、**済**）の合成
@@ -273,8 +277,8 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
 11. `CloseoutReadsOrigin.originShift_of_roundSeg` → `OriginShift` → `h_readsShift_of_originShift`
     → **`H_readsShift`**
 
-**部品はもう全部ある（n154）。あとは 1〜11 を繋ぐ組み立てだけ。**
-`PalPeg/RoundHistory.lean` は 17 宣言、全部標準 3 公理以内（3 本は公理ゼロ）。
+**部品はもう全部ある（n156）。あとは 1〜11 を繋ぐ組み立てだけ。**
+`PalPeg/RoundHistory.lean` は 19 宣言、全部標準 3 公理以内（3 本は公理ゼロ）。
 
 ---
 

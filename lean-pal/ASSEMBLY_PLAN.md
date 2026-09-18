@@ -1,3 +1,32 @@
+## 2026-09-19 n156: `shift` の手数が初期値で決まることを証明（`RoundHistory` 19 宣言）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器は動いていない。**
+
+`chainShiftRun_length_eq`:
+
+    a.remaining = ofNat h → ChainShiftRun a w cycle k b v finish →
+    positive b.remaining = false → k = h
+
+`CompareRounds.next` は shift 相をちょうど `h` 手として要求するのに、run からは
+「shift mode に留まった手数 `k`」しか分からないので `k = h` が要る。
+`GalilScaffoldTopInvariant.shift_run_remaining` は「ちょうど `h` 手なら尽きる」の向きだけで
+**逆向きが無かった**ので作った。`shiftTick` は `remaining := dec s.remaining`
+（`GalilScaffoldChainInputSupply:1442`）で、`ChainShiftRun.next` は
+`positive s.remaining = true` を要求するから手数は初期値で一意。
+
+### `PalPeg/RoundHistory.lean` の 19 宣言（全部標準 3 公理以内、うち 3 本は公理ゼロ）
+
+| 群 | 宣言 |
+|---|---|
+| ラウンド履歴 | `RoundHistory` / `roundHistory_start` / `roundHistory_tick` / `roundHistory_of_steps` / `onlyMatchedRun_of_roundHistory` |
+| shift 相の収集 | `chainShiftRun_snoc` / `chainShiftRun_snoc_shiftOne` / `chainShiftRun_tick` / `chainShiftRun_of_steps` / `chainShiftRun_length_eq` |
+| period テープ | `chain_shift_period` / `chain_shift_periodLength` / `chain_shift_period_focus` / `periodLength_onlyMatchedRun` |
+| 比較の watch | `positive_false_of_zero` / `internal_eq_of_lagZero` / `outer_eq_of_false` / `watch_eq_of_mismatch_lagZero` |
+| 形の一致 | `shiftEntry_shape` / `shiftLens_frame_tick` / `shiftLens_frame_steps` |
+
+**`PROOF_STACK.md` の手順 11 段に必要な部品は全部そろった。残るのは組み立てだけ。**
+
 ## 2026-09-19 n155: shift 入口の形が `round_next` の要求とぴったり一致することを確定
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
