@@ -25,65 +25,75 @@
 ```
 [0] GOAL  PalPeg.PalInPeg.unconditional : RecognizedByTotalPEG PAL
           計器 = #print axioms。標準 3 公理だけになったら §10.5 達成
-          いま 4 本:
+          **いま 3 本（2026-09-19 n175 で 4 → 3）**:
             obligation_cycleOracle
             obligation_localRealization
             obligation_shiftPalResiduesAlongRun
-            obligation_shiftPalResiduesAlongTrace
 
-[1] obligation_shiftPalResiduesAlongTrace ＋ …AlongRun
-          ※ 2 本あるが **中身は同内容**（量化が trace 形／run 形の違いだけ）。
-            どちらも残差は次の 3 つ:
-              (a) H_readsShift
-              (b) H_freshShiftAtShiftEntry
-              (c) FreshShiftLedger
-            → (a)(b)(c) を潰せば公理 2 本が同時に落ちる。だからここを先に攻める
+[済] obligation_shiftPalResiduesAlongTrace — **公理から外れた（n175）**
+          trace は st 0 = boot w から始まるので st 1 で InvLPC が立ち、
+          trace 形は run 形の特殊化になる。既存部品だけで繋がった:
+            GalilTrailFront.inv_of_boot_tick / GalilOracleDischarge.invS_of_inv /
+            GalilGlueBLeaves.entryCounters_of_inv / GalilOracleMC2.invLPC_of_boot /
+            GalilInvPlus2.centreRep_of_restarted / GalilTrailFront.steps_between
+          recipe は BranchSupply.cpack_alongTrace にそのまま書いてあった。
+          **新しい定理は 1 本も書いていない。**
 
-[2] (c) ShiftPalAlongTrace.FreshShiftLedger
-          n141〜n144 で `periodOnly = false` ＋ watch の ShiftPal をこの 1 場に還元済み。
-          中身は 7 連言で、3 種類:
-            ① period テープの中身   : PalAt (encoded w) (pos−h) h ／ PalAt (encoded w) (pos−2h) (2h)
-            ② 半径と周期の大小      : 0 < h ／ 2h ≤ r₀ ／ r₀ ≤ 4h ／ pos+r₀+1 < length
-            ③ period テープの位相   : (encoded w)[pos+r₀+1−2h]? = symbol wch…period.focus
+[1] obligation_shiftPalResiduesAlongRun（← 次の的）
+          ∀ w c r, InvLPC w c r → ∀ Steps から届く z について
+            (a) H_readsShift w z.ctl z.vm
+            (b) H_freshShiftAtShiftEntry …（tick 形）
+            (c) FreshShiftLedger w z.vm s'（periodOnly = false 点）
+          (a) の機械は PalPeg/RoundHistory.lean（35 宣言）で完成。
+          残りは first_round の 30+ 仮説を run から供給する配線（found 経路）。
+          **その前に (b)(c) の producer を探す**——n175 の教訓（書く前に探す）。
 
-[3] ① の橋 — **済（pop）**
-          `GalilScaffoldChainInputSupply.candidate_palAt`（`PalPeg/GalilCandidatePeriod.lean:45`）が
-          **もう証明している**（標準 3 公理のみ）:
-
-            (hc : GalilDpCorrect.Candidate ((stream ⟨a::ls,gap⟩).take (span+1)) lower h) :
-              let C := position (represent ⟨a::ls,gap⟩ (rs.map some) q)
-              PalAt (encoded ((a::ls).reverse ++ rs ++ q)) (C − h) h ∧
-              PalAt (encoded ((a::ls).reverse ++ rs ++ q)) (C − 2h) (2h)
-
-          ついでに `candidate_periodOn` が `PeriodOn (encoded …) (2h) (C−4h) C` も出す。
-          **`first_round` の文脈で全部そろう**（`hcand` / `hcen0 : v0.center = cen` /
-          `hcen : cen = represent …` / `hys : ys.length+1 = h`）。
-          → CLAUDE.md「既にあるものを探す」の通りやった。新しい数学は要らんかった。
-
-[4] `FreshShiftLedger` を **1 個の named fact に絞る**（← いまここ）
-          ① が定理になったので、残差は「この状態の watch の周期が、この中心での
-          DP の `Candidate` 由来である」という 1 場に絞れる。仮に `PeriodFromCandidate`:
-
-            ∀ wch, s'.chain = .watch wch →
-              ∃ a ls rs q gap span lower,
-                w = (a::ls).reverse ++ rs ++ q ∧
-                position s.center = position (represent ⟨a::ls,gap⟩ (rs.map some) q) ∧
-                GalilDpCorrect.Candidate ((stream ⟨a::ls,gap⟩).take (span+1)) lower (periodLength wch)
-
-          これがあれば ① は `candidate_palAt` で無償、② の `0 < h` は `Candidate` の
-          `lower < h`（`lower` が 0 のときは別途）、`r₀ ≤ 4h` は Galil の move 不等式
-          （`GalilMoveLemma.galil_move_of_contract`、CLAUDE.md 記載）、
-          `2h ≤ r₀` は shift guard、`pos+r₀+1 < length` は `ScanInvariant` 側。
-          残るのは ③（period テープの位相）。
-
-          **既存の担い手候補**（未検証、次に読む）:
-          * `CloseoutPackRun42.Extra4.cand` — `mode = shift` guard 付きで
-            `∃ n lower h, Candidate ((stream (P.place x.vm)).take n) lower h`。
-            ただし `h` を `periodLength wch` に縛っていない
-          * `CloseoutFoundCompare:86,96` / `CloseoutFoundBackground:77,164` —
-            found 経路で `Candidate` を出している。`periodLength` との結びつきを確認する
-          * `CloseoutWatchRound5:452` / `CloseoutWatchRound10:333`
+[2] obligation_cycleOracle    — CycleOracleMC3。葉は CLAUDE.md §3 に 11 個
+[3] obligation_localRealization — H_realizeLIMW'。壁は n174（run 機構が fairness を捨てている）
 ```
+
+### n176: 残り 3 本のうち 2 本が同じ底を共有している（実測）
+
+`obligation_shiftPalResiduesAlongRun` の 3 残差の producer を辿ると全部
+**found 経路の底**に集まる:
+
+    (a) H_readsShift             → first_round（第 1 shift）／RoundHistory（以降）
+    (b) H_freshShiftAtShiftEntry → first_round
+    (c) FreshShiftLedger         → prep_of_prepInputsG3 の Candidate ＋ 着地 watch
+
+そして found 経路の入口は `CloseoutPrepInputs3.prepInputs3_of_found_or_later` で、
+その 2 大入力が **`StageEntryC`** と **`SegReachedW`**。両方とも producer がゼロ
+（`grep` で consumer しか出ない）。ただし:
+
+| 入力 | `InvLPC` からの差 |
+|---|---|
+| `SegReachedW` | `GalilInvPlus.segment_of_invLP`（`InvLP` から区間を出す）がある。残る名前付き仮説は `hlive`（`GalilOracleLeaves2.hlive_of_invLPC` で無償）と `hends`（CLAUDE.md §3 で**閉**）。`hsegmentM`（`segment_of_invLPC` ＋ `hends_C`）も **閉** |
+| `StageEntryC` | **`= InvLPS ＋ ReadyFuel`**（`CloseoutContracts:65`）、`InvLPS = InvLPC ＋ ReplayStage`。差は **`ReplayStage` ＋ `ReadyFuel` の 2 つだけ** |
+
+**`ReplayStage` と `ReadyFuel` は CLAUDE.md §3 が `obligation_cycleOracle` の
+残り葉として挙げている `hstage` と `hpres` そのもの。**
+つまり 3 本のうち 2 本（`shiftPalResiduesAlongRun` と `cycleOracle`）が
+**同じ 2 つの葉で詰まっている**。
+
+### 次の一手（(A) の操作：公理を弱める）
+
+`obligation_shiftPalResiduesAlongRun` の仮説を `InvLPC` から **`StageEntryC`**（または
+`InvLPS`）に強める＝**公理は弱くなる**。ただし消費者
+（`CloseoutMarksPack.packRunR_MW_marksFree` → `PackRunRMW`）が `InvLPS` を供給できることが条件。
+CLAUDE.md の記述では `CycleOracleMC3` は origin/着地とも `InvLPS` なので、
+**文脈上は `InvLPS` が来ている可能性が高い**（未検証——`PackRunRMW` の呼び出し元を辿って確認する）。
+
+これが通れば (a)(b)(c) の producer が全部 `StageEntryC` から届くようになり、
+残りは `ReplayStage` ＋ `ReadyFuel` の 2 葉に集約される。
+
+### n175 の教訓（これが一番大事）
+
+**44 本書いて計器は 1 本も動かなかった。0 本書いて 1 本外れた。**
+コウタの「定理ふえすぎてへん？ほんとうに必要？」の直後にこれが出たのは偶然ではない。
+**既存部品を探す姿勢に切り替えたから見つかった。**
+
+以後: **新しい定理を書く前に、その繋ぎを既にやっているファイルを探す。**
+とくに `BranchSupply` / `Closeout*` は同じ形の配線を既に持っている可能性が高い。
 
 ---
 
