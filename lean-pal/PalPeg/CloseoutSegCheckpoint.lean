@@ -72,7 +72,7 @@ theorem segment_to_checkpoint (raw : List (Fin 2)) (P : Shared)
       ScanInvariant raw (position t.center) r' t.left t.right ∧
       (position t.right ≤ 2 * m - 1 ∨ SegEnd P c' t) := by
   obtain ⟨es, c', t, r', hw, hm', hclk', hidle', hsr', hM', hi', hend⟩ :=
-    watchSegE_constructS raw P hex q first hsearch
+    watchSegE_constructS raw P hex q first hsearch (readyIface_readyPacedS P)
       (2 * m - 1 - position s.right) c s r k hm hclk hk hidle hsr hM hi
   refine ⟨es, c', t, r', hw, hm', hclk', hidle', hsr', hM', hi', ?_⟩
   rcases hend with hlen | hse

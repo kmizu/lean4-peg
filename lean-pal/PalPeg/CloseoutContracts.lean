@@ -61,13 +61,24 @@ both read it, and it cannot be recovered after dropping to `InvLPC`) together
 with the entry search budget in the exact shape
 `CloseoutReadyStage.reachAtC3_of_crossS` consumes（`ReadyFuel` 版は偽、`PalPeg/ReadyFuelRefute`）。
 
+`fuel` は `ReadyPacedS` そのものやなく、**`ReadyIface` を満たす任意の `Φ`** を要求する。
+消費者が使うのは `ReadyIface` の 4 場だけで（`ready` / `mono` / `background` /
+`comparison`）、`ReadyPacedS` の `∀ as : List Bool` をリストに具体化する箇所は 1 つも無い。
+`ReadyPacedS` は `readyIface_readyPacedS` でこの形に入るので、この場は真に弱い。
+弱める理由は `ReadyPacedS` が `PacedL 2048 k` の**全**リストに量化する点にある——`PacedL` は
+累積の上界なので、背景で予算を貯めて一気に比較を撃つスケジュールを許すが、実機は
+比較を `clock = 1` でしか撃たず直後に `clock := 2048` に戻すのでそれを出せへん。
+`ReadyIface.comparison` の `2048 ≤ k + 1` がそのクロック規律そのものであり、
+クロック添字の run 局所な `Φ` はこの場を正当に満たせる。
+
 Note what is **not** here: no `hpres`, no `StartShape`, no `InvL`-for-every-state
 reinforcement, and no unconditional position premise. -/
 structure StageEntryC (P : Shared) (q : ℕ) (first : Fin 9) (raw : List (Fin 2))
     (c : Control) (r : GalilVM) : Prop where
   inv : InvLPS P q first raw c r
-  fuel : PalPeg.CloseoutReadyStage.ReadyPacedS (searchLens.get r)
-    (headRank r.right * 2048 + c.clock) (2048 - c.clock)
+  fuel : ∃ Φ : SearchVM → ℕ → ℕ → Prop,
+    PalPeg.CloseoutReadyStage.ReadyIface P Φ ∧
+      Φ (searchLens.get r) (headRank r.right * 2048 + c.clock) (2048 - c.clock)
 
 theorem StageEntryC.invLPC {P : Shared} {q : ℕ} {first : Fin 9} {raw : List (Fin 2)}
     {c : Control} {r : GalilVM} (h : StageEntryC P q first raw c r) : InvLPC raw c r :=
@@ -88,8 +99,10 @@ theorem reachAtC3_of_crossF_C (centre : GalilVM → Fin 3)
     (hsW : SegReachedW centre place entry q first raw c r c' t)
     (hlt : position r.right < 2 * m - 1) (hge : 2 * m - 1 ≤ position t.right) :
     ReachAtC3 (PofC centre place entry raw) q first raw m c r :=
-  PalPeg.CloseoutReadyStage.reachAtC3_of_crossS centre place entry q first raw m hm1 hmle
-    hE.inv hE.fuel hsW hlt hge
+    by
+  obtain ⟨Φ, hiface, hfuel⟩ := hE.fuel
+  exact PalPeg.CloseoutReadyStage.reachAtC3_of_crossS centre place entry q first raw m hm1 hmle
+    hE.inv hiface hfuel hsW hlt hge
 
 /-! ## 2. `SegResult` — the result of one watched segment -/
 

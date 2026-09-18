@@ -285,7 +285,7 @@ theorem rdPaced_ready (c : Control) (s : GalilVM) (h : RdPaced c s) :
   exact readyPacedS_ready hk
 
 /-- `ReadyClosure.seg` for `RdPaced`: the ledger travels along a chain-idle
-segment, by `readyPacedS_watchSegE`. -/
+segment, by `readyIface_watchSegE` at `Φ = ReadyPacedS`. -/
 theorem rdPaced_seg (P : Shared) (q : ℕ) (first : Fin 9) (es : List Bool)
     (c c' : Control) (s t : GalilVM)
     (hseg : WatchSegE P q first 2048 es c s c' t) (hidle : t.chain = ChainVM.idle)
@@ -293,7 +293,7 @@ theorem rdPaced_seg (P : Shared) (q : ℕ) (first : Fin 9) (es : List Bool)
   obtain ⟨n0, h⟩ := h
   refine ⟨n0, fun n hn => ?_⟩
   obtain ⟨k, hk, hp⟩ := h (n + es.length) (by omega)
-  exact readyPacedS_watchSegE P q first hseg hidle n k hk hp
+  exact readyIface_watchSegE P q first hseg hidle (readyIface_readyPacedS P) n k hk hp
 
 /-- `ReadyClosure.restart` for `RdPaced`: at a `Restarted`/`StageEntry` state with
 a full clock the ledger reduces to the residual `RunEntriesS` datum, by

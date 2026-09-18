@@ -1,3 +1,52 @@
+## n200 — `StageEntryC.fuel` を `ReadyIface` の存在形に切り直した（継ぎ目が run 線に届く形になった）
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本、`Axioms.lean` のラチェット健在）・
+無条件 PAL は未完。**
+
+n199 の訂正どおり道を戻して、n195 の計画 1〜3 を実行した。
+
+### 1. `ReadyIface` を `CloseoutReadyStage` §4 末尾に移した
+
+`PalPeg/ReadyInterface.lean` は**削除**（Workbench の登録も）。定義が 4 つの証人
+（`readyPacedS_ready` / `_mono` / `_effect_false` / `_effect_true`）の真下に来たので、
+別ファイルに置く理由が無くなった。コピペを残さんため。
+
+### 2. 5 定理を `Φ` ＋ `ReadyIface P Φ` で再証明（その場で一般化、22 パッチ）
+
+`watchSegE_constructS` / `segment_of_invLPCS` / `readyPacedS_watchSegE`（→ **`readyIface_watchSegE`** に改名）/
+`reachAtC3_of_target_matchS` / `reachAtC3_of_crossS`。
+本文の変更は 4 補題呼び出しを 4 場に置き換えただけ。外部呼び出しは 3 箇所
+（`CloseoutSegCheckpoint` / `CloseoutContracts` / `CloseoutPreload`）で、
+`readyIface_readyPacedS P` を渡して従来どおりの挙動を回復。
+
+### 3. `StageEntryC.fuel` を切り直した
+
+```lean
+-- 旧
+fuel : ReadyPacedS (searchLens.get r) (headRank r.right * 2048 + c.clock) (2048 - c.clock)
+-- 新
+fuel : ∃ Φ : SearchVM → ℕ → ℕ → Prop,
+  ReadyIface P Φ ∧ Φ (searchLens.get r) (headRank r.right * 2048 + c.clock) (2048 - c.clock)
+```
+
+`readyIface_readyPacedS` で旧形は新形に入るので**真に弱い**（操作 (A)）。
+`StageEntryC` を構成してる箇所は**ゼロ**（全部仮説として受け取るだけ。継ぎ目やから当然）、
+`.fuel` の使用は `reachAtC3_of_crossF_C` の 1 箇所だけやったので、切り直しの波及はそこだけ。
+
+### なぜこれが効くのか
+
+`ReadyPacedS` は `PacedL 2048 k` の**全**リストに量化する。`PacedL` は累積の上界なので、
+背景で予算を貯めて一気に比較を撃つスケジュールを許すが、実機は比較を `clock = 1` でしか撃たず
+直後に `clock := 2048` に戻すのでそれを出せへん。`ReadyIface.comparison` の `2048 ≤ k + 1` が
+そのクロック規律そのものやから、**クロック添字の run 局所な `Φ` はこの場を正当に満たせる**。
+
+### 残り
+
+**`Φ` を実際に供給すること。** ステージ周期不変量（`StageDoubleLeg` が 1 相、
+prep 相は `StagePrepS` が既にステップ局所）をクロック添字で組み、`ReadyIface` の 4 場を証明する。
+
+**今回も公理は落ちてへん**（3 本のまま）。落ちたのは `StageEntryC.fuel` の強さだけ。
+`NoReturn` / `EntryDepthG` を取る `runEntriesS_of_namedG` 経路は第 1 ステージ用として温存してある。
 ## n199 — n196 の判断は間違い。`ReadyIface` は producer を助ける。`EntryDepthG` も起点依存
 
 **状態: 全体 build 成功・標準公理のみ（3 本）・無条件 PAL は未完。このターンは Lean 編集なし。**

@@ -38,7 +38,7 @@ replaces each of them by strictly smaller pieces and re-derives the entry point.
    `DistanceNonnegC`.
 7. `searchGet_watchSegE_const`, `readyPacedS_watchSegE_watch` — the
    `ReadyPacedS` transport for the *watch* phase, the counterpart of
-   `CloseoutReadyStage.readyPacedS_watchSegE` (which needs an idle chain).  On
+   `CloseoutReadyStage.readyIface_watchSegE` (which needs an idle chain).  On
    a non-idle chain `searchEffect` is `vq = searchLens.get s`
    (`GalilScaffoldTopSearch`), so the search state — and with it every
    readiness predicate about it — is *constant* along the whole segment.  The
@@ -320,7 +320,7 @@ theorem searchGet_watchSegE_const (P : Shared) (q : ℕ) (first : Fin 9)
       rw [hidle] at hwe; exact absurd hwe (by intro h0; cases h0)
 
 /-- **Derived — the watch counterpart of
-`CloseoutReadyStage.readyPacedS_watchSegE`.**  That lemma needs the chain idle
+`CloseoutReadyStage.readyIface_watchSegE`.**  That lemma needs the chain idle
 and pays clock slack per tick; here the DP does not move at all, so the paced
 closure transports with *no* change of budget. -/
 theorem readyPacedS_watchSegE_watch (P : Shared) (q : ℕ) (first : Fin 9)

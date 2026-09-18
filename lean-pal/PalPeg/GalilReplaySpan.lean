@@ -5596,7 +5596,7 @@ end StageConstructC
 /-! ## 16. The construction over an abstract readiness ledger
 
 `CloseoutReadyStage` (which imports this file) replaces the readiness ledger by
-`ReadyPacedS`, with `readyPacedS_watchSegE` (transport along a chain-idle
+`ReadyPacedS`, with `readyIface_watchSegE` (transport along a chain-idle
 segment), `readyPacedS_ready` and `readyPacedS_restarted`.  Those three facts
 are all the construction ever uses of a ledger, so it is restated here over an
 *abstract* ledger `Rd : Control → GalilVM → Prop` with exactly that closure
