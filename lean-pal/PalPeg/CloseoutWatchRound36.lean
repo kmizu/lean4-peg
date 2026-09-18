@@ -193,14 +193,12 @@ theorem fallbackReachS_of_context' (centre : GalilVM → Fin 3)
     FallbackReachS (PofC centre place entry raw) q first raw m c r cP sP := by
   intro es c1 s1 hseg hlive hclk hav hne
   -- the tick pack at the mismatch (Round 22's `watchFallbackC_of_context`, (a) part)
-  obtain ⟨⟨z, hz⟩, hg⟩ :=
-    hns es c1 s1 hseg (PalPeg.CloseoutWatchRound22.liveScanTickable_of_liveScanWatch hlive)
-      hclk hav hne
-  obtain ⟨w, hw⟩ := hlive.2.2.2
+  obtain ⟨⟨z, hz⟩, hg⟩ := hns es c1 s1 hseg hlive hclk hav hne
   obtain ⟨hsi, hM, hK, hout⟩ :=
     tickPack_of_landing centre place entry q first raw hex hseg hav hsiP hMP hEP houtP
   have hT : FallbackTick centre place entry raw s1 :=
-    fallbackTick_of_watchTick centre place entry raw (by rw [hw]; exact ChainVM.noConfusion) hz
+    fallbackTick_of_watchTick centre place entry raw
+      (PalPeg.CopyPhaseNoShift.liveScanTickable_ne_idle hlive) hz
       (hg ⟨left s1.left, right s1.right, z⟩ (searchLens.get s1) hz)
   obtain ⟨n, R, cT, sT, hL⟩ :=
     fallbackLanding_of_pack centre place entry q hq0 first h7 h8 raw ⟨hlive.1, hlive.2.1⟩ hclk

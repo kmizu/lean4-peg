@@ -1,3 +1,4 @@
+import PalPeg.CopyPhaseNoShift
 import PalPeg.CloseoutWatchRound29
 import PalPeg.CloseoutWatchRound28
 
@@ -246,7 +247,8 @@ theorem cycleOutMC3_of_foundExitLPS (centre : GalilVM → Fin 3)
 def FallbackReachS (P : Shared) (q : ℕ) (first : Fin 9) (raw : List (Fin 2)) (m : ℕ)
     (c : Control) (r : GalilVM) (cP : Control) (sP : GalilVM) : Prop :=
   ∀ (es : List Bool) (c1 : Control) (s1 : GalilVM),
-    WatchSegE P q first 2048 es cP sP c1 s1 → LiveScanWatch c1 s1 →
+    WatchSegE P q first 2048 es cP sP c1 s1 →
+    PalPeg.CopyPhaseNoShift.LiveScanTickable c1 s1 →
     c1.clock = 1 → canRight s1.right →
     read (left s1.left) ≠ read (right s1.right) →
     ∃ (cT : Control) (sT : GalilVM) (k : ℕ) (L : List Piece),
@@ -338,7 +340,8 @@ theorem foundExitW_of_routeS {P : Shared} {q : ℕ} {first : Fin 9} {raw : List 
     (hclk : c1.clock = 1) (hav : canRight s1.right)
     (hne : read (left s1.left) ≠ read (right s1.right)) :
     FoundExitLPS P q first raw m c r := by
-  obtain ⟨cT, sT, k, L, hst, hcr, hland, hprog, hpos⟩ := h es c1 s1 hseg hlive hclk hav hne
+  obtain ⟨cT, sT, k, L, hst, hcr, hland, hprog, hpos⟩ :=
+    h es c1 s1 hseg ⟨hlive.1, hlive.2.1, hlive.2.2.1, Or.inr hlive.2.2.2⟩ hclk hav hne
   rcases hland with ⟨hLP, hL⟩ | hS
   · have hI := PalPeg.CloseoutWatchPhase.inv_of_invLP hLP hL
     have hSp := PalPeg.CloseoutWatchPhase.spanRep_of_invLP hLP
