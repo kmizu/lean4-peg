@@ -281,6 +281,33 @@ n182 の置換表を一次情報で確認したら、**`CloseoutReadyStage` に�
 3. `CloseoutContracts.reachAtC3_of_crossF_C` と found 経路の入口を追従
 4. producer は `CloseoutPreload11.readyClosure_S2`（底は `PostRun` ＋ `RestartS2`）
 
+### n185: `PostRun` / `RestartS2` の地図（`readiness` 部分系、最深部）
+
+`StageEntryC` は修理できた（n184）。次の底は `RdPaced` の producer
+`CloseoutPreload11.readyClosure_S2` が取る 2 つ:
+
+    PostRun := ∀ v as, v.search.mode = .run → DpSafeStage v as → RunEntriesS as v
+                                                       (`CloseoutPreload8:253`)
+    RestartS2 raw := ∀ u Rad last, Restarted raw u Rad last → StageEntry Rad last →
+      ∃ D ≤ prepLen (value last).toNat, CentreLongAt … ∧ DepthAt (searchLens.get u) D
+                                                       (`CloseoutPreload11:320`)
+
+| 項目 | 状態 |
+|---|---|
+| `PostRun` の変種の鎖 | `postRunP_of_postRun`（`Preload17:71`）/ `postRunC_of_postRunP`（`Preload24:89`）/ `postRunPh_of_postRunP`・`postRunC_of_postRunPh`（`Preload30:106,109`）/ `postRunC'_of_double_leg`（`Preload26:143`）——**全部「変種 → 変種」** |
+| 帰納段 | `CloseoutPreload35.postRunF_step`（1 つの `.run` 点から次へ） |
+| 脚のデータ | `CloseoutPreload36.StageLegs`（`postRunF_step` が読む形） |
+| **基底** | **無い**（`PostRun*` を仮説なしで出す定理は 1 本も無い） |
+| `RestartS2` | **producer 無し** |
+| ファイル数 | `CloseoutPreload1`〜`41`。**プロジェクト最深部** |
+
+`CloseoutPreload41` の冒頭は replay 半分の 3 つの所見（`ReadyFieldP4` は不要、
+`hpresRep` は普遍なので反証、…）で、**まだ基底に到達していない**。
+
+**次にやること**: `postRunF_step` ＋ `StageLegs` の帰納が何で止まっているかを
+`CloseoutPreload35` / `36` の冒頭で確認する。CLAUDE.md n49 の
+「readiness は `ScanRealized` 矛盾で `PostRunPh/F` へ再基底化中」がその記録。
+
 ### n175 の教訓（これが一番大事）
 
 **44 本書いて計器は 1 本も動かなかった。0 本書いて 1 本外れた。**

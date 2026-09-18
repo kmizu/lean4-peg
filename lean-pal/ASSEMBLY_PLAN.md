@@ -1,3 +1,32 @@
+## 2026-09-19 n185: `PostRun` / `RestartS2` の地図（`readiness` 部分系、最深部）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+n184 で `StageEntryC` を修理したので、次の底は `RdPaced` の producer
+`CloseoutPreload11.readyClosure_S2` が取る `PostRun` ＋ `RestartS2`。探した結果:
+
+* `PostRun`（`CloseoutPreload8:253`）の変種の鎖は揃っている
+  （`postRunP_of_postRun` / `postRunC_of_postRunP` / `postRunPh_of_postRunP` /
+  `postRunC_of_postRunPh` / `postRunC'_of_double_leg`）が、**全部「変種 → 変種」**
+* 帰納段 `CloseoutPreload35.postRunF_step` と脚のデータ `CloseoutPreload36.StageLegs` はある
+* **基底が無い**（`PostRun*` を仮説なしで出す定理は 1 本も無い）
+* `RestartS2`（`CloseoutPreload11:320`）も **producer 無し**
+* `CloseoutPreload` は 1〜41 の 41 ファイル。**プロジェクト最深部**
+
+`CloseoutPreload41` の冒頭は replay 半分の所見で、まだ基底に到達していない。
+
+**次**: `postRunF_step` ＋ `StageLegs` の帰納が何で止まっているかを
+`CloseoutPreload35` / `36` の冒頭で確認する。
+
+### いまの全体像（公理 3 本）
+
+| 公理 | 底 | 状態 |
+|---|---|---|
+| `obligation_shiftPalResiduesAlongRun` | found 経路 → `StageEntryC`（**修理済み n184**）→ `RdPaced` → `PostRun` ＋ `RestartS2` | 基底待ち |
+| `obligation_cycleOracle` | 同上（底を共有、n176） | 同上 |
+| `obligation_localRealization` | run 機構が fairness を捨てている（n174）。`Fair` の実質 2 場には witness あり（n172）／`keepsSearchCursor` は定理で無償化（n173） | 別系統 |
+
 ## 2026-09-19 n184: **`StageEntryC` の偽の場を修理した**（置換先は既に存在していた）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
