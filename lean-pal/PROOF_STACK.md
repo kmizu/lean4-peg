@@ -308,6 +308,42 @@ n182 の置換表を一次情報で確認したら、**`CloseoutReadyStage` に�
 `CloseoutPreload35` / `36` の冒頭で確認する。CLAUDE.md n49 の
 「readiness は `ScanRealized` 矛盾で `PostRunPh/F` へ再基底化中」がその記録。
 
+### n186: `PostRunF` 帰納の**具体的な穴**が出た（`8 ≤ mw < 32` の窓）
+
+`CloseoutPreload35` の冒頭（一次情報）:
+
+* §6 **`postRunF_step`** は存在する——「1 つの `.run` 入口の datum から次の入口の datum へ」
+* §5 `postRunF_next_entry` — dispatch 状態 → 準備脚 → 入口 tick で次の datum
+* §3 **ここが穴**: 「the `.double` exit satisfies `StageInvS` when `32 ≤ mw`
+  (`bal_of_paced_slack_S`, `stageInvS_of_double_exit`); **the four windows
+  `8 ≤ mw < 32` do not absorb the two extra units at slack `2047`**」
+
+### 穴の大きさ（計算）
+
+窓は restart で `mw = 8 * max k 1`、`.double` で倍々。だから
+
+    8 ≤ mw < 32  ⟺  k ≤ 3（の初期 stage、倍化 0〜1 回まで）
+
+**つまり穴は「lower bound `k` が 3 以下の初期 stage」だけ**で、`k ≥ 4` なら
+`8k ≥ 32` で §3 が閉じる。境界ケース 4 つ（`mw ∈ {8, 16}` × 位相）。
+
+### 追加の穴: 帰納の基底
+
+`postRunF_step` は帰納段。**基底（boot / restart 後の最初の `.run` 入口の `PostRunF` datum）を
+出す定理は見つかっていない。** `CloseoutPreload.run_entry_preload:130` は
+`.run` 入口の DP 機械が `GalilScaffoldPreload.initial w lower` であることを言う
+**局所事実**で、基底ではない。
+
+### 次にやること（優先順）
+
+1. `stageInvS_of_double_exit` の `32 ≤ mw` 条件を、`8 ≤ mw < 32` の 4 窓について
+   別途詰める（`dpDemandS k m := (prepLen k + 2047)/2048 +
+   (prepLen k + 2047 + dpEvents (m+1))/2048 + 1` の算術。`CloseoutPreload35` §2）
+2. 基底を探す/作る: restart 直後（`Rad = 0`, `k = value last`）の最初の `.run` 入口
+3. 1 ＋ 2 ＋ `postRunF_step` で `PostRunF` の帰納を閉じ、`PostRun` へ落とす
+
+**これが `shiftPalResiduesAlongRun` と `cycleOracle` の共通の底の最後。**
+
 ### n175 の教訓（これが一番大事）
 
 **44 本書いて計器は 1 本も動かなかった。0 本書いて 1 本外れた。**

@@ -1,3 +1,36 @@
+## 2026-09-19 n186: `PostRunF` 帰納の**具体的な穴**が出た（`8 ≤ mw < 32` の窓）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+`CloseoutPreload35` の冒頭（一次情報）が穴を明記していた:
+
+> §3 the `.double` exit satisfies `StageInvS` when `32 ≤ mw`
+> (`bal_of_paced_slack_S`, `stageInvS_of_double_exit`); **the four windows
+> `8 ≤ mw < 32` do not absorb the two extra units at slack `2047`**
+
+帰納段 `postRunF_step`（§6）と次入口の構成 `postRunF_next_entry`（§5）は**ある**。
+
+### 穴の大きさ
+
+窓は restart で `mw = 8 * max k 1`、`.double` で倍々。だから
+`8 ≤ mw < 32 ⟺ k ≤ 3` の初期 stage だけ。`k ≥ 4` なら `8k ≥ 32` で §3 が閉じる。
+**境界ケースは 4 つ**。
+
+### もう 1 つの穴: 帰納の基底
+
+`postRunF_step` は帰納段で、**基底（boot / restart 後の最初の `.run` 入口の datum）を
+出す定理は見つかっていない**。`CloseoutPreload.run_entry_preload:130` は
+`.run` 入口の DP 機械の同定という局所事実で、基底ではない。
+
+### 次（優先順、`PROOF_STACK.md` に記録）
+
+1. `8 ≤ mw < 32` の 4 窓を `dpDemandS` の算術で詰める
+2. 基底を探す/作る（restart 直後の最初の `.run` 入口）
+3. 1 ＋ 2 ＋ `postRunF_step` で `PostRunF` の帰納を閉じ `PostRun` へ
+
+**これが `shiftPalResiduesAlongRun` と `cycleOracle` の共通の底の最後。**
+
 ## 2026-09-19 n185: `PostRun` / `RestartS2` の地図（`readiness` 部分系、最深部）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
