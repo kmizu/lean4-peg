@@ -1,3 +1,39 @@
+## 2026-09-19 n164: **`H_readsShift` を run の全点で組めた**（`RoundHistory` 42 宣言）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器はまだ動いていない。**
+
+`PROOF_STACK.md` 手順 1〜11 が全部繋がった:
+
+    scanShift_parts / shiftDone_parts  — Tick の場合分けをデータ抽出に閉じ込める
+    roundCarrier_tick                  — 4 遷移を振り分けて carrier を 1 tick 運ぶ
+    roundCarrier_of_steps              — run に沿って運ぶ
+    h_readsShift_alongSteps            — run の全点で H_readsShift
+
+`scanShift_parts` / `shiftDone_parts` は「scan→shift の tick は `scan_shift` だけ」
+「shift→scan の tick は `shift_done` だけ」を 23 構成子の照合で示したもの。
+行き先の control を一次情報（`GalilScaffoldTop:110-172`）で全部確認した:
+
+| 構成子 | 行き先 mode |
+|---|---|
+| `scan_wait` / `scan_count` / `scan_match` / `restart` | source と同じ（scan） |
+| `scan_shift` | `.shift` |
+| `scan_fallback` | `.copy` |
+| `shift_one` | source と同じ（shift） |
+| `shift_done` | `.scan`（VM は不変） |
+
+### 計器を動かすために残っていること
+
+`h_readsShift_alongSteps` の 2 つの入力:
+
+1. **起点の `RoundCarrier`** — scan 相なら `RoundHistory`（起点の `OriginAt` が要る）。
+   chain 誕生直後は `OriginAt` がまだ無く、最初の shift で
+   `GalilScaffoldTopFirstRound.first_round`（**無条件**）が `Entry` を出す。
+   **ここが基底。**
+2. **側条件** — 区間の全点が scan / shift 相 ∧ 非 replay ∧ `CopyIdle`、
+   scan 点では周期が終端でない・右ヘッドが読める・chain が watch。
+   これは既存の pack（`Extra7` / `AuxPack` / `LPackM`）から出る見込み（未検証）
+
 ## 2026-09-19 n163: 結合 carrier `RoundCarrier` と `H_readsShift` の取り出し
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

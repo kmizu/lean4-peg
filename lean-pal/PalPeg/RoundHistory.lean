@@ -962,6 +962,186 @@ theorem originShift_of_roundCarrier {P : Shared} {q : ℕ} {first : Fin 9} {dela
 
 #print axioms h_readsShift_of_roundCarrier
 #print axioms originShift_of_roundCarrier
+
+/-! ## tick の振り分けに要るデータ抽出
+
+`scan` 相から `shift` 相へ行く tick は `scan_shift` だけ、`shift` 相から `scan` 相へ
+行く tick は `shift_done` だけ。行き先の control（`GalilScaffoldTop:110-172`）を
+一次情報で照合した:
+
+| 構成子 | 行き先 mode |
+|---|---|
+| `scan_wait` / `scan_count` / `scan_match` / `restart` | source と同じ（scan） |
+| `scan_shift` | `.shift` |
+| `scan_fallback` | `.copy` |
+| `shift_one` | source と同じ（shift） |
+| `shift_done` | `.scan` |
+ -/
+
+/-- **scan → shift の tick は `scan_shift`。** -/
+theorem scanShift_parts {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {x y : State GalilVM}
+    (hTick : Tick (galilFrameS P q first) delay x y)
+    (hSourceMode : x.ctl.mode = Mode.scan) (hTargetMode : y.ctl.mode = Mode.shift) :
+    ∃ u : GalilVM, (galilFrameS P q first).compare x.vm u ∧
+      ¬ (galilFrameS P q first).matched u ∧
+      (galilFrameS P q first).shiftGuard u ∧
+      (galilFrameS P q first).beginShift u y.vm := by
+  cases hTick with
+  | init c0 s0 s0' hm _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | scan_wait c0 s0 s0' hm _ _ => exact absurd (hSourceMode.symm.trans hTargetMode) (by decide)
+  | scan_count c0 s0 s0' hm _ _ _ => exact absurd (hSourceMode.symm.trans hTargetMode) (by decide)
+  | scan_match c0 s0 s0' s0'' o0 hm _ _ _ _ _ _ => exact absurd (hSourceMode.symm.trans hTargetMode) (by decide)
+  | scan_shift c0 s0 s0' s0'' hm _ _ hcmp hmt _ hg hb => exact ⟨s0', hcmp, hmt, hg, hb⟩
+  | scan_fallback c0 s0 s0' s0'' hm _ _ _ _ _ _ _ => simp at hTargetMode
+  | shift_one c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | shift_done c0 s0 o0 hm hp _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | copy_one c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | copy_done c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | home_start c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | home_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | fpp_slice c0 s0 s0' hm _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | fpp_done c0 s0 s0' hm _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | markEnd_found c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | markEnd_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | choose_select c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | choose_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | rewind_done c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | rewind_one c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | rewind_pair c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | replayStart c0 s0 s0' o0 hm _ _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | restart c0 s0 s0' hm _ => exact absurd (hSourceMode.symm.trans hTargetMode) (by decide)
+
+/-- **shift → scan の tick は `shift_done`**（`remaining` が尽きていて VM は不変）。 -/
+theorem shiftDone_parts {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {x y : State GalilVM}
+    (hTick : Tick (galilFrameS P q first) delay x y)
+    (hSourceMode : x.ctl.mode = Mode.shift) (hTargetMode : y.ctl.mode = Mode.scan) :
+    ¬ (galilFrameS P q first).remainingPos x.vm ∧ y.vm = x.vm := by
+  cases hTick with
+  | init c0 s0 s0' hm _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | scan_wait c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | scan_count c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | scan_match c0 s0 s0' s0'' o0 hm _ _ _ _ _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | scan_shift c0 s0 s0' s0'' hm _ _ hcmp hmt _ hg hb => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | scan_fallback c0 s0 s0' s0'' hm _ _ _ _ _ _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | shift_one c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hTargetMode) (by decide)
+  | shift_done c0 s0 o0 hm hp _ => exact ⟨hp, rfl⟩
+  | copy_one c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | copy_done c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | home_start c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | home_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | fpp_slice c0 s0 s0' hm _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | fpp_done c0 s0 s0' hm _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | markEnd_found c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | markEnd_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | choose_select c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | choose_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | rewind_done c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | rewind_one c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | rewind_pair c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | replayStart c0 s0 s0' o0 hm _ _ _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+  | restart c0 s0 s0' hm _ => exact absurd (hm.symm.trans hSourceMode) (by decide)
+
+#print axioms scanShift_parts
+#print axioms shiftDone_parts
+
+/-- **carrier は scan / shift 相の 1 tick で保たれる。**
+
+`Tick` の場合分けは `scanShift_parts` / `shiftDone_parts` に任せて、
+4 遷移をそのまま呼ぶ。
+
+**`scan_fallback` と `restart` は含まれない**（`hTargetMode` が scan / shift に限るので）。
+そこでは chain が作り直されるので carrier は**原理的に**保たれず、
+新しいラウンドの `OriginAt` は `GalilScaffoldTopFirstRound.first_round` が出す。 -/
+theorem roundCarrier_tick {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {w : List (Fin 2)} {x y : State GalilVM}
+    (hRestartNeedsBroken : ∀ u v : GalilVM, P.restart u v → ∃ wb, u.chain = ChainVM.broken wb)
+    (hShiftGuardVM : ∀ u : GalilVM, (galilFrameS P q first).shiftGuard u → shiftGuardVM u)
+    (hBeginShiftVM : ∀ u t : GalilVM,
+      (galilFrameS P q first).beginShift u t → beginShiftVM' u t)
+    (hCarrier : RoundCarrier P q first delay w x.ctl x.vm)
+    (hSourceMode : x.ctl.mode = Mode.scan ∨ x.ctl.mode = Mode.shift)
+    (hNotReplaying : x.ctl.replaying = false)
+    (hCopyIdle : CopyIdle x.vm)
+    (hContinuing : x.ctl.mode = Mode.scan → singlePositive x.vm.cycle = false)
+    (hCanRightSource : x.ctl.mode = Mode.scan → canRight x.vm.right)
+    (hWatchingTarget : y.ctl.mode = Mode.scan → ∃ wch, y.vm.chain = ChainVM.watch wch)
+    (hTick : Tick (galilFrameS P q first) delay x y) :
+    RoundCarrier P q first delay w y.ctl y.vm := by
+  refine ⟨fun hTargetScan => ?_, fun hTargetShift => ?_⟩
+  · rcases hSourceMode with hSource | hSource
+    · obtain ⟨n, s₀, w₀, wch, -, -, -, -, -, hChainTerm, -, -, -, -, -⟩ :=
+        onlyMatchedRun_of_roundHistory (hCarrier.1 hSource)
+      exact roundHistory_tick hRestartNeedsBroken (hCarrier.1 hSource) hSource hNotReplaying
+        ⟨wch, hChainTerm⟩ (hContinuing hSource) hTick hTargetScan
+        (hWatchingTarget hTargetScan)
+    · obtain ⟨hNotRemaining, hVmEq⟩ := shiftDone_parts hTick hSource hTargetScan
+      have hExhausted : positive (shiftLens.get x.vm).shift.remaining = false := by
+        by_contra hContra
+        simp only [Bool.not_eq_false] at hContra
+        exact hNotRemaining (Or.inl hContra)
+      rw [hVmEq]
+      exact roundHistory_of_shiftDone (hCarrier.2 hSource) hExhausted
+  · rcases hSourceMode with hSource | hSource
+    · obtain ⟨u, hCompare, hNotMatched, hGuard, hBegin⟩ :=
+        scanShift_parts hTick hSource hTargetShift
+      exact shiftPhaseHistory_of_scanShift (hCarrier.1 hSource) hCompare hNotMatched
+        (hShiftGuardVM u hGuard) (hBeginShiftVM u y.vm hBegin) (hCanRightSource hSource)
+    · exact shiftPhaseHistory_tick (hCarrier.2 hSource) hSource hCopyIdle hTick hTargetShift
+
+#print axioms roundCarrier_tick
+
+/-- **carrier は run に沿って保たれる。**  側条件は区間の全点が
+scan / shift 相 ∧ 非 replay ∧ `CopyIdle`、かつ scan 点では
+周期が終端でない・右ヘッドが読める・chain が watch。 -/
+theorem roundCarrier_of_steps {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {w : List (Fin 2)} {k : ℕ} {x y : State GalilVM}
+    (hRestartNeedsBroken : ∀ u v : GalilVM, P.restart u v → ∃ wb, u.chain = ChainVM.broken wb)
+    (hShiftGuardVM : ∀ u : GalilVM, (galilFrameS P q first).shiftGuard u → shiftGuardVM u)
+    (hBeginShiftVM : ∀ u t : GalilVM,
+      (galilFrameS P q first).beginShift u t → beginShiftVM' u t)
+    (hSteps : Steps (galilFrameS P q first) delay k x y)
+    (hCarrier : RoundCarrier P q first delay w x.ctl x.vm)
+    (hSide : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS P q first) delay m x z →
+      (z.ctl.mode = Mode.scan ∨ z.ctl.mode = Mode.shift) ∧
+      z.ctl.replaying = false ∧ CopyIdle z.vm ∧
+      (z.ctl.mode = Mode.scan → singlePositive z.vm.cycle = false) ∧
+      (z.ctl.mode = Mode.scan → canRight z.vm.right) ∧
+      (z.ctl.mode = Mode.scan → ∃ wch, z.vm.chain = ChainVM.watch wch)) :
+    RoundCarrier P q first delay w y.ctl y.vm := by
+  induction hSteps with
+  | zero u => exact hCarrier
+  | @succ j u z t hTick hRest ih =>
+    obtain ⟨hMode, hNotReplaying, hCopyIdle, hContinuing, hCanRight, -⟩ := hSide 0 u (.zero u)
+    obtain ⟨-, -, -, -, -, hWatchingTarget⟩ := hSide 1 z (.succ hTick (.zero z))
+    exact ih (roundCarrier_tick hRestartNeedsBroken hShiftGuardVM hBeginShiftVM hCarrier
+        hMode hNotReplaying hCopyIdle hContinuing hCanRight hWatchingTarget hTick)
+      (fun m' z' hz' => hSide (m' + 1) z' (.succ hTick hz'))
+
+/-- **`H_readsShift` を run の全点で**（`PROOF_STACK.md` 手順 1〜11 の結論）。 -/
+theorem h_readsShift_alongSteps {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {w : List (Fin 2)} {k : ℕ} {x y : State GalilVM}
+    (hRestartNeedsBroken : ∀ u v : GalilVM, P.restart u v → ∃ wb, u.chain = ChainVM.broken wb)
+    (hShiftGuardVM : ∀ u : GalilVM, (galilFrameS P q first).shiftGuard u → shiftGuardVM u)
+    (hBeginShiftVM : ∀ u t : GalilVM,
+      (galilFrameS P q first).beginShift u t → beginShiftVM' u t)
+    (hSteps : Steps (galilFrameS P q first) delay k x y)
+    (hCarrier : RoundCarrier P q first delay w x.ctl x.vm)
+    (hSide : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS P q first) delay m x z →
+      (z.ctl.mode = Mode.scan ∨ z.ctl.mode = Mode.shift) ∧
+      z.ctl.replaying = false ∧ CopyIdle z.vm ∧
+      (z.ctl.mode = Mode.scan → singlePositive z.vm.cycle = false) ∧
+      (z.ctl.mode = Mode.scan → canRight z.vm.right) ∧
+      (z.ctl.mode = Mode.scan → ∃ wch, z.vm.chain = ChainVM.watch wch)) :
+    PalPeg.CloseoutRoundUnique.H_readsShift w y.ctl y.vm :=
+  h_readsShift_of_roundCarrier
+    (roundCarrier_of_steps hRestartNeedsBroken hShiftGuardVM hBeginShiftVM hSteps hCarrier hSide)
+
+#print axioms roundCarrier_of_steps
+#print axioms h_readsShift_alongSteps
 #print axioms h_readsShift_of_run
 
 #print axioms chainShiftRun_tick

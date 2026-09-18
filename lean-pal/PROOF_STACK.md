@@ -301,10 +301,16 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
 
 * carrier の定義と取り出しは**済（n163）**:
   `RoundCarrier` / `h_readsShift_of_roundCarrier` / `originShift_of_roundCarrier`
-* tick 保存 → 4 遷移を `Tick` の構成子で振り分ける。
-  **各構成子の行き先の control を一次情報で確認してから書く**（mode の判定に要る）。
-  `RoundHistory` の射影は 12 成分の存在命題なので
-  `onlyMatchedRun_of_roundHistory` を通す（`obtain ⟨wch, hwch⟩` では取れない）
+* tick 保存 → **済（n164）**: `scanShift_parts` / `shiftDone_parts`（23 構成子の照合）
+  ＋ `roundCarrier_tick` ＋ `roundCarrier_of_steps` ＋ **`h_readsShift_alongSteps`**
+
+### 残り 2 つ（これで第 1 残差が公理から外れる）
+
+1. **起点の `RoundCarrier`（基底）** — chain 誕生直後は `OriginAt` がまだ無い。
+   最初の shift で `GalilScaffoldTopFirstRound.first_round`（**無条件**）が `Entry` を出す
+2. **側条件** — 区間の全点が scan / shift 相 ∧ 非 replay ∧ `CopyIdle`、
+   scan 点では周期が終端でない・右ヘッドが読める・chain が watch。
+   既存の pack（`Extra7` / `AuxPack` / `LPackM`）から出る見込み（**未検証**）
 * `H_readsShift` → scan 相は空虚（guard が `mode = shift`）、
   shift 相で `remaining` が尽きた点は `shiftPhaseHistory_readsShift`（済）
 * **基底が最後の壁**: `scan_fallback` で copy 相に落ちると chain が作り直されるので
