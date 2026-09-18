@@ -1,10 +1,11 @@
 import PalPeg.PalInPeg
+import PalPeg.BranchSupply
 
 /-!
 # `PalInPeg.unconditional` — 目標そのもの。穴は `axiom` で明示する
 
 **これが目標の形**: `RecognizedByTotalPEG PAL` を**前提ゼロ**で（＝閉じた項として）持つ。
-いま足りない 7 個の義務を `axiom` として明示し、`#print axioms unconditional` を
+いま足りない 6 個の義務を `axiom` として明示し、`#print axioms unconditional` を
 そのまま TODO リストにする。
 
 ```
@@ -45,6 +46,7 @@ open PalPeg PalPeg.GalilScaffoldTop PalPeg.GalilScaffoldChainInputSupply PegSepa
 open PalPeg.GalilFinalAssembly2 PalPeg.GalilRunSkeleton PalPeg.GalilInvPlus3
 open PalPeg.CloseoutPackW PalPeg.CloseoutPackRun26 PalPeg.CloseoutPackRun29
 open PalPeg.CloseoutPackRun16 PalPeg.CloseoutFinalW PalPeg.CloseoutPackRun34
+open PalPeg.GalilFinalAssembly (boot)
 
 /-! ## 未証明の義務（外すべき `axiom`）-/
 
@@ -67,31 +69,35 @@ axiom obligation_cycleOracle (entry q : ℕ) (first : Fin 9) :
 axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
     H_realizeLIMW' centreC placeC entry q first
 
-/-- **(OBLIGATION)** `scan_wait` / `scan_count` landing の位置台帳。 -/
-axiom obligation_backgroundLandingPayload (entry q : ℕ) (first : Fin 9) :
-    ∀ w : List (Fin 2), H_BackgroundLandingPayload centreC placeC entry q first w
+/-- **(OBLIGATION)** trace の各点での 3 つの scan landing 義務
+（`bg` / `matchLand` / `entryLand`）。**trace 形なので放電可能**（global 形の
+`H_BackgroundLandingPayload` 等は材料が run に沿ってしか無いので原理的に落ちない）。
+`shift_done` 出口の義務は既に完全放電済み（半径台帳は `RadLedger`、
+`canRight` は trace 予算）。 -/
+axiom obligation_scanLandingObligationsAlongTrace (entry q : ℕ) (first : Fin 9) :
+    ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      PalPeg.BranchSupply.ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc
 
-/-- **(OBLIGATION)** `scan_match` landing の位置台帳。 -/
-axiom obligation_matchLandingPayload (entry q : ℕ) (first : Fin 9) :
-    ∀ w : List (Fin 2), H_MatchLandingPayload centreC placeC entry q first w
-
-/-- **(OBLIGATION)** `shift_done` 出口の位置台帳。 -/
-axiom obligation_shiftExitPayload (entry q : ℕ) (first : Fin 9) :
-    ∀ w : List (Fin 2), H_ShiftExitPayload centreC placeC entry q first w
+/-- **(OBLIGATION)** chain の verifier が入力を表現し lag が正規であること（run 形）。
+`ConsumeAvail` を全状態に量化した版は**偽**（`ConsumeAvailRefute.hav_false`）なので、
+run 形の `VerRun` がその正しい代替。 -/
+axiom obligation_verifierRunAlongRun (entry q : ℕ) (first : Fin 9) :
+    ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM),
+      st 0 = boot w → PalPeg.CloseoutVerSide.VerRun centreC placeC entry q first w (st 0)
 
 /-! ## 目標 -/
 
 /-- **目標**: `PAL ∈ PEG` を前提ゼロで。いまは上の 7 個の `axiom` に依存している。
 `#print axioms unconditional` が標準 3 公理だけになったら証明完了。 -/
 theorem unconditional : RecognizedByTotalPEG PAL :=
-  given_globalScanLandings 0 0 0
+  given_scanLandingObligations 0 0 0
     (obligation_shiftPalAtScanStates 0 0 0)
     (obligation_marksEntry 0 0 0)
     (obligation_cycleOracle 0 0 0)
     (obligation_localRealization 0 0 0)
-    (obligation_backgroundLandingPayload 0 0 0)
-    (obligation_matchLandingPayload 0 0 0)
-    (obligation_shiftExitPayload 0 0 0)
+    (obligation_scanLandingObligationsAlongTrace 0 0 0)
+    (obligation_verifierRunAlongRun 0 0 0)
 
 #print axioms unconditional
 
