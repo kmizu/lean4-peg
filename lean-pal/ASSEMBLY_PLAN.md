@@ -32,6 +32,43 @@
 
 
 
+## 2026-09-19 n120: `hpack` 7 節の監査完了 — **壊れているのはちょうど 2 節、同じ欠陥**
+
+**全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
+
+`CloseoutFoundRoute1.foundExit_compare_final20` の `hpack`（7 節の束）を
+1 節ずつ定義に当たって測った結果:
+
+| # | 節 | 判定 | 理由 |
+|---|---|---|---|
+| 1 | `PrepInputsG3` | **健全** | `ChainMatched (chainStart …) sP.chain` を言う。誕生直後の `.copy` と整合 |
+| 2 | `MismatchExitG` | **健全** | `GalilPrepMatch.PrepChain s1.chain` で guard（prep 相向けに設計されている） |
+| 3 | `FallbackReachS` | **健全** | `LiveScanWatch c1 s1` を**仮説**に取る（watch でなければ空虚） |
+| 4 | `PrepLandingWatchC` | **偽** | `∀ es c2 s2, WatchSegE … → ∃ w, s2.chain = .watch w`。`WatchSegE.stop` で `sP` 自身に当たる |
+| 5 | `PrepBirthLagC'` | **健全** | 誕生データ（`sP = afterBirth true (afterCompare …)`）を仮説に取る |
+| 6 | `LandingFreshC'` | **健全** | `s1.chain = .watch w` を**仮説**に取る |
+| 7 | `BreakLandingC` | **偽** | `∀ es c2 s2, WatchSegE … → s2.chain = .watch (freshWatch …)`。同じ形 |
+
+**壊れているのはちょうど 2 節で、どちらも同じ形**——
+「`∀ (WatchSegE 区間)` の結論で watch を要求する」。`WatchSegE.stop cP sP` が
+無条件に存在するので、その `∀` が誕生状態 `sP` 自身に当たる。
+
+機械検査（`PalPeg/FoundPackRefute.lean`、標準公理のみ）:
+
+    hpack_false_of_foundCompareCtx          （節 4）
+    prepLandingLiveC_false_of_foundCompareCtx（節 4 の親戚 `PrepLandingLiveC`）
+    breakLandingC_false_of_foundCompareCtx   （節 7）
+    hpack_false_of_foundReachable            （到達可能性込み）
+
+### 直し方（節 4 は実装済み、節 7 は同型）
+
+`FoundPackCorrected.ReachesWatchPhase`（`∀` → `∃`）に付け替え、到達先で主張する。
+節 4 については `prepLandingWatchC_at_reachedWatch` が既存 producer
+（`CloseoutWatchRound10.prepLandingWatchC_of_short`）をそのまま当てる形で実装済み。
+節 7 も同じ形に直せる（`BreakLandingC` の結論を到達先 `(c2, s2)` で主張する）。
+
+**5 節は触らなくてよい。** 健全な 5 節を巻き添えで書き換えないこと。
+
 ## 2026-09-19 n119: `ReachesWatchPhase` の chain 側は既に証明済み — 残りは「誕生後 `2h+1` tick を scan で走れるか」
 
 **全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**

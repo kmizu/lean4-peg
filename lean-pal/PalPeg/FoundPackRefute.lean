@@ -160,6 +160,32 @@ theorem prepLandingLiveC_false_of_foundCompareCtx {w : List (Fin 2)} {c cP : Con
   rw [hChainEq, hCopy] at hWatch
   exact ChainVM.noConfusion hWatch
 
+
+/-- `BreakLandingC` も `es = []` 実例で watch 始点を強制する。 -/
+theorem breakLandingC_watch_start {raw : List (Fin 2)} {h : ℕ} {sF : GalilVM}
+    {cP : Control} {sP : GalilVM}
+    (hBreak : PalPeg.CloseoutWatchRound5.BreakLandingC centre place entry q first raw h sF
+      cP sP) :
+    ∃ wv : GalilScaffoldChainWatch.State, sP.chain = ChainVM.watch wv := by
+  obtain ⟨cen, ys, b, -, hChain, -⟩ := hBreak [] cP sP (.stop cP sP)
+  exact ⟨_, hChain⟩
+
+/-- **REFUTED（条件付き）その 3**: `BreakLandingC` も found 比較直後で偽。
+`hpack` の 7 節のうち、これと `PrepLandingWatchC` の 2 つが同じ欠陥を持つ。 -/
+theorem breakLandingC_false_of_foundCompareCtx {w : List (Fin 2)} {c cP : Control}
+    {r sP sF : GalilVM} {h : ℕ}
+    (hCtx : FoundCompareCtxC centre place entry q first w c r cP sP)
+    (hBreak : PalPeg.CloseoutWatchRound5.BreakLandingC centre place entry q first w h sF
+      cP sP) :
+    False := by
+  obtain ⟨es0, cF, sF0, vq, ch, oF, a, ls, rs, qw, gap, hraw, hseg, hmF, hrF, hcF, havF, hidle,
+    hcen, hqe, hf, hmtF, hch, hchne, hoF, hcPe, hsPe⟩ := hCtx
+  obtain ⟨wv, hWatch⟩ := breakLandingC_watch_start centre place entry q first hBreak
+  have hChainEq : sP.chain = ch := by rw [hsPe, afterBirth_chain]; rfl
+  obtain ⟨lag', margin', hCopy⟩ := chainMatched_copy_stays_copy hch
+  rw [hChainEq, hCopy] at hWatch
+  exact ChainVM.noConfusion hWatch
+
 /-- **到達可能性まで込めた反証。**  `CloseoutFoundRoute1.foundCompareCtxC_of_found` が
 `InvLPC` ＋ `SegReachedW` ＋ found 比較のデータから `FoundCompareCtxC` の証人を出すので、
 `hpack` の 4 番目の節（`PrepLandingWatchC`）だけを弱く取り出した形が**そこで偽**になる。
@@ -186,6 +212,8 @@ theorem hpack_false_of_foundReachable {raw : List (Fin 2)} {c c' : Control} {r t
 
 #print axioms prepLandingLiveC_watch_start
 #print axioms prepLandingLiveC_false_of_foundCompareCtx
+#print axioms breakLandingC_watch_start
+#print axioms breakLandingC_false_of_foundCompareCtx
 #print axioms hpack_false_of_foundReachable
 
 end
