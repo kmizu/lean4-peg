@@ -1,3 +1,55 @@
+## n206 — 入口定理から未来リスト依存を外し、prep 脚の pacing 算術も揃えた
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 1. `dpBudgetAt_of_stagePrepS` → `dpBudgetAt_of_prepEntry`（仮説を真に弱めた）
+
+n205 の証明を読み直したら、`StagePrepS k m D slack v x (a :: as)` の
+
+* 長さ節 `D + dpEvents (m+1) ≤ bs.length + as.length` を**一度も使うてへん**
+* pacing 節も接頭辞 `bs ++ [a]` しか読んでへん（`pacedL_prefix_count_slack` 経由）
+
+ことが分かった。よって未来リスト `as`・`DepthAt`・slack をすべて落として
+
+```lean
+theorem dpBudgetAt_of_prepEntry
+    (hp : PrepAt k m v) (hE : StageInvS k m v)
+    (hreach : ReachP v bs x)
+    (hadv : 2048 * ((bs ++ [a]).count true) ≤ prepLen k + 2047)
+    (hs : searchStep c a x x') (hrun : x'.search.mode = Mode.run) :
+    DpBudgetAt x' 0
+```
+
+に切り直した（操作 (A)、真に弱い）。**これで `Φ` が継続への量化を一切持たんで済む。**
+`ReadyPacedS` の `∀ as` を捨てた目的からして、ここが継続に依存してたら意味が無かった。
+
+### 2. prep 脚の pacing も同じ形で釣り合う（`DpBudgetBalance` §2）
+
+```lean
+def PrepPaced (spent len slack0 k : ℕ) : Prop := 2048 * spent + k ≤ len + slack0
+```
+
+* `prepPaced_background` — `k' ≤ k + 1`、`len + 1`
+* `prepPaced_comparison` — `2048 ≤ k + 1` のとき `spent + 1`、`len + 1`、`k → 0`
+* `prepPaced_entry` — 上の `hadv`（`2048 * (spent + [a]) ≤ prepLen k₀ + 2047`）を
+  `len + 1 ≤ D ≤ prepLen k₀` と `slack0 ≤ 2047` から出す
+
+比較で `2048*spent + 2047 ≤ len + slack0` から `2048*(spent+1) ≤ len + slack0 + 1` が
+**ちょうど**出る。DP 側（`DpBudget`）と同じ厳密な釣り合いや。
+
+### いま揃ってる部品（`Φ` 組み上げ用）
+
+| 相 | ステップ | 入口/出口 |
+|---|---|---|
+| run | `dpBudgetAt_background` / `_comparison` | 入口 `dpBudgetAt_of_prepEntry` |
+| prep | `PrepPaced` の 2 補題 ＋ `ReachP` の snoc | 出口が run 入口 |
+| double | `StageDoubleLeg.doubleLeg_step` / `_exit` | 出口が `PrepAt k (2mw)` |
+| wait | **未着手**（`wait_step_cases` が材料） | 出口が double 脚の先頭 |
+
+`PrepInv` は全相で `prepInv_searchStep`。`ready`/`mono` は `ReadyAt` で済み。
+
+**今回も何も落としてへん**（公理 3 本のまま）。残りは wait 相と、4 相を 1 つの `Φ` に束ねて
+`ReadyIface P Φ` のインスタンスを作ること。
 ## n205 — `StageEntryBudget`：入口の残差も埋まった。`ReadyIface` の中身が全部揃った
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**

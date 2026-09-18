@@ -101,4 +101,42 @@ theorem dpBudget_comparison_needs_full_slack :
 #print axioms dpBudget_comparison
 #print axioms dpBudget_comparison_needs_full_slack
 
+/-! ## 2. The preparation leg, on the same accounting
+
+The leg that runs from the stage origin to the `.run` entry is paced by the same
+clock, so it balances the same way: a background tick adds one event and buys at
+most one unit of slack, and a comparison — again only at `k = 2047` — spends one
+unit of the leg's comparison count while resetting the slack.
+-/
+
+/-- **The preparation leg's pacing.**  `spent` comparisons over `len` events,
+`slack0` the slack the leg started at, `k` the current slack. -/
+def PrepPaced (spent len slack0 k : ℕ) : Prop := 2048 * spent + k ≤ len + slack0
+
+theorem prepPaced_background {spent len slack0 k k' : ℕ} (hk : k' ≤ k + 1)
+    (h : PrepPaced spent len slack0 k) : PrepPaced spent (len + 1) slack0 k' := by
+  unfold PrepPaced at h ⊢; omega
+
+theorem prepPaced_comparison {spent len slack0 k : ℕ} (hk : 2048 ≤ k + 1)
+    (h : PrepPaced spent len slack0 k) : PrepPaced (spent + 1) (len + 1) slack0 0 := by
+  unfold PrepPaced at h ⊢; omega
+
+/-- **What the leg hands to the entry.**  `StageEntryBudget.dpBudgetAt_of_prepEntry`
+asks for `2048 * (bs ++ [a]).count true ≤ prepLen k₀ + 2047`; this is that bound,
+from the leg's own accounting together with the depth `len + 1 ≤ D ≤ prepLen k₀`
+and the entry slack `slack0 ≤ 2047`. -/
+theorem prepPaced_entry {spent len slack0 k D prep : ℕ} {a : Bool}
+    (h : PrepPaced spent len slack0 k) (hk : a = true → 2048 ≤ k + 1)
+    (hlen : len + 1 ≤ D) (hD : D ≤ prep) (hslack : slack0 ≤ 2047) :
+    2048 * (spent + (if a then 1 else 0)) ≤ prep + 2047 := by
+  unfold PrepPaced at h
+  cases a
+  · simp only [Bool.false_eq_true, if_false, add_zero]; omega
+  · have h2047 := hk rfl
+    simp only [if_true]; omega
+
+#print axioms prepPaced_background
+#print axioms prepPaced_comparison
+#print axioms prepPaced_entry
+
 end PalPeg.DpBudgetBalance
