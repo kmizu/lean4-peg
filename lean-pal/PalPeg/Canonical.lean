@@ -108,6 +108,21 @@ alias need_bound_from_branch_run := PalPeg.BranchSupply.needIMW'_le_B
 `PreTrace` ＋ `LeftLive` だけで trace の全点に与える。 -/
 alias radius_ledger_is_free := PalPeg.BranchSupply.radLe_of_radLedger
 
+/-- **`init` へ戻る `Tick` 構成子は無い**（旧名 `BranchSupply.tick_mode_ne_init`）。
+`Tick`（`GalilScaffoldTop:109`）の全構成子の行き先 mode は scan/shift/copy/home/fpp/
+markEnd/choose/rewind/replayStart か「変えない」。だから trace は 1 手目以降 `init` に
+戻らず、`GalilTrailRad.frontPack_trace` が trace の各点で使える。 -/
+alias tick_never_enters_init := PalPeg.BranchSupply.tick_mode_ne_init
+
+/-- **右ヘッドは trace 全域で `2|w| − 1` 以下**（旧名 `BranchSupply.rightPos_le_trace`）。
+終端の報告点（`ReportPointAt.atPrefix`）から front ポテンシャルの単調性で後ろ向きに
+伝播する。これが `canRight` の源。 -/
+alias right_head_bounded_along_trace := PalPeg.BranchSupply.rightPos_le_trace
+
+/-- **shift 相の `canRight` はタダ**（旧名 `BranchSupply.shiftCan_of_trace`）。
+trace 予算 ＋ `LPackM2.shiftGeom` の `RRep`。新規入力ゼロ。 -/
+alias shift_canRight_is_free := PalPeg.BranchSupply.shiftCan_of_trace
+
 /-! ## 2. 反証済み — 使ってはいけない
 
 `hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack q first w c s` は**偽**。

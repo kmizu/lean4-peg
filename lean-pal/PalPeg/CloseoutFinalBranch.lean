@@ -184,6 +184,51 @@ theorem pal_in_peg_final42 (entry q : ℕ) (first : Fin 9)
       (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
       (hres w st Tc h) (hver w st h.base.pre.start))
 
+/-- **`shiftDone` 義務を完全に放電した最上位。**
+
+`BranchAt.shiftDone` の 2 節はどちらも新規入力ゼロで出る：
+
+* 半径台帳 ← `CloseoutRadPack.RadLedger.le` ＋ `ScanInvariant.rightPos`
+  （`RadLedger` は `CloseoutLPack6.radLedger_pt` が `PreTrace` ＋ `LeftLive` から trace 全点に）
+* `canRight s.right` ← trace 予算。終端の報告点 `ReportPointAt.atPrefix`
+  （`position right = 2|w| − 1`）から front ポテンシャルの単調性で**後ろ向き**に伝播し
+  （`front_tick_mono`、`position right ≤ front`）、shift 相の右ヘッドの
+  `Represents`/`focus ≠ none` は `LPackM2.shiftGeom` の `RRep` が持つ。
+  1 手目以降 `mode ≠ init` は定理（`tick_mode_ne_init`: `Tick` に `mode := .init` へ行く
+  構成子が無い）なので `frontPack_trace` が使える。
+
+残る義務は `BranchRes3` の **3 場**（`bg` / `matchLand` / `entryLand`）と `hver`。 -/
+theorem pal_in_peg_final43 (entry q : ℕ) (first : Fin 9)
+    (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
+      BigPack2MG7W centreC placeC entry q first w x →
+      ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
+    (hme : ∀ w : List (Fin 2), H_marksEntry' (PofC centreC placeC entry w) q first)
+    (hor : ∀ w : List (Fin 2), 0 < w.length →
+      CycleOracleMC3 (PofC centreC placeC entry w) q first w)
+    (hC : H_realizeLIMW' centreC placeC entry q first)
+    (hres : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      BranchRes3Trace centreC placeC entry q first w st Tc)
+    (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
+      st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
+    RecognizedByTotalPEG PAL :=
+  pal_in_peg_of_needLe entry q first
+    (h_bootIMW_of_bootIPack centreC placeC entry q first
+      (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
+      (bootIPack_of_parts centreC placeC entry q first h_lrepC
+        (CloseoutPackRun6.h_bootShift centreC placeC entry q first)
+        (CloseoutPackRun6.h_landShift centreC placeC entry q first)))
+    (h_oracleIMW_of_MC3_W centreC placeC entry q first
+      (fun w => packRunR_MW centreC placeC entry q first (hSP w) (hme w))
+      (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
+      hor)
+    hC
+    (fun w st Tc hw h => needIMW'_le_R3 centreC placeC entry q first hw h
+      (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
+      (hres w st Tc h) (hver w st h.base.pre.start))
+
+#print axioms pal_in_peg_final43
+
 #print axioms pal_in_peg_final42
 
 #print axioms pal_in_peg_final41

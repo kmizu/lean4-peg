@@ -9,6 +9,82 @@
 
 
 
+
+## 2026-09-19 n87: `shiftDone` 義務を**完全に放電** — 新規入力ゼロ
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+`BranchAt.shiftDone`（＝旧 `H_shiftDoneRad2`）の 2 節が両方とも消えた。
+
+### 半径台帳（n86）
+
+`RadLedger.le : position center + value radius ≤ position right` ＋
+`ScanInvariant.rightPos` の差。`RadLedger` は `CloseoutLPack6.radLedger_pt` が
+`PreTrace` ＋ `LeftLive` だけで trace 全点に与える。
+
+### `canRight s.right`（今回）
+
+**終端の報告点から後ろ向きに伝播する。**
+
+1. `PreTrace.report` → `GalilLedgerAssembly.ReportPointAt.atPrefix`:
+   `position (st (Tc |w|)).vm.right = 2|w| − 1`
+2. front ポテンシャル（`GalilRunTrace.front s = position right + value replay`）は
+   tick で単調（`GalilFrontMono.front_tick_mono`）→ `front_mono_trace`（trace 指標の帰納）
+3. `position right ≤ front`（`FrontPack.replayPos` / `.rest` だけから）→ `position_le_front`
+4. 終端では `front = position right`（`CloseoutFrontExtra.front_eq_position`、
+   `ReportPointAt.notReplaying`）
+5. よって `position (st i).vm.right ≤ 2|w| − 1` が trace 全域で成立（`rightPos_le_trace`）
+6. `CloseoutCanRightBound.canRight_of_position_bound` に `m = |w|` で流す。
+   shift 相の右ヘッドの `Represents`/`focus ≠ none` は
+   **`LPackM2.shiftGeom` の `RRep`** が持つ（`LPackM2` は `PreTraceIMW.packs .m2`）
+
+**鍵になった補題（新規・一発で通った）**:
+`tick_mode_ne_init` — **`Tick` には `mode := .init` へ行く構成子が無い**
+（`GalilScaffoldTop:109` の全構成子の行き先 mode は scan/shift/copy/home/fpp/markEnd/
+choose/rewind/replayStart か「変えない」）。だから trace は 1 手目以降 `init` に戻らず
+（`mode_ne_init_of_trace`）、`GalilTrailRad.frontPack_trace` が trace の各点で使える。
+`i = 0` は `mode = init ≠ shift` で除外される（`initial delay = ⟨.init, …⟩`）。
+
+`Steps` 版（`CloseoutFrontExtra.position_le_of_front_steps`）ではなく **trace 指標**で
+書く必要があった: 中間状態の `CentreLive` を `centreLive_trace` は trace の点でしか
+与えないのに対し、`Steps` 版は任意の到達状態を量化するから。
+
+### 最上位
+
+`CloseoutFinalBranch.pal_in_peg_final43` — Prop 引数 6 本
+（`hSP` `hme` `hor` `hC` `hres` `hver`）。残差は `BranchRes3` の **3 場**
+（`bg` / `matchLand` / `entryLand`）＋ `hver`。**義務の実数 8。**
+
+### 本数の誠実な読み方
+
+| 定理 | Prop 引数 | 義務の実数 | 形 |
+|---|---|---|---|
+| `final39`（正本） | 7 | 7 | 分岐 3 本は **global**（放電不能） |
+| `final43` | 6 | 8 | 分岐 3 場は **run/trace 形**（放電可能） |
+
+義務の実数では `final39` の 7 が最小なので**正本は据え置き**。ただし `final39` の
+`hbgP`/`hmatchP`/`hsdP` は global なので原理的に放電できず、実際に詰めるのは `final43` 側。
+
+### 次の一手 — `bg` と `matchLand`
+
+`H_bgP2` の docstring が明記している：「Everything chain-side now follows from
+`chainPos_step`; what is left at the source is the chain-start shape
+(`s.chain = idle`) together with `ConsumeAvail`」。`CloseoutPackRun48.h_bgP2_of_supply`
+の 4 入力のうち
+
+* `hrepR`（右ヘッドが入力を表現）← **`LPackM2.packM.scanGeom` でタダ**
+* `hrepV`（verifier が入力を表現）← **`hver`（`VerRun`）の第 1 成分**
+* `hL`（`LagCan`）← **`hver` の第 2 成分**
+* `hstart`（`BgStartP2`）← `CloseoutPackRun47.bgStartP2_of_centre` が
+  `canRight s.right`（scan 相、`Extra7`）＋ 半径台帳（済）＋ `CentreLedger`
+  （`LPackM3.centreLedger`）から出す
+
+**ただし Run48 のこれらの入力は「任意の scan 状態 ＋ `ChainPosInv2`」形なので、
+そのままでは `hrepV` が偽の疑いが強い。trace 形に書き換えてから使うこと。**
+うまく行けば `bg` / `matchLand` が `hver` に合流し、`final43` は
+`hSP` `hme` `hor` `hC` `entryLand` `hver` の **義務 6 本**（`final39` の 7 を下回る）。
+
 ## 2026-09-19 n86: `shiftDone` 義務の半径台帳は**タダ** — `RadLedger` から出る
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。

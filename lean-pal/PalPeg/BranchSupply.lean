@@ -62,6 +62,8 @@ open PalPeg.CloseoutPackRun26 PalPeg.CloseoutPackRun34 PalPeg.CloseoutPackRun41
 open PalPeg.CloseoutPackRun44 PalPeg.CloseoutPackRun47 PalPeg.CloseoutPackRun48
 open PalPeg.CloseoutPackRun41 PalPeg.CloseoutShiftS2
 open PalPeg.CloseoutVerSide PalPeg.CloseoutVerRep PalPeg.ShiftLocalRun
+open PalPeg.GalilRunTrace PalPeg.CloseoutFrontExtra PalPeg.CloseoutCanRightBound
+open PalPeg.CloseoutPackRun23 PalPeg.GalilLedgerAssembly
 
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
@@ -265,9 +267,173 @@ theorem needIMW'_le_R {w : List (Fin 2)} (hw : 0 < w.length)
     obtain ⟨rad, hi'⟩ := (hP.packs i hi).m2.scanGeomR hm hr
     exact ⟨hi'.rightRep, hi'.rightPresent⟩
 
+/-! ## 5. `shiftCan` — 右ヘッドが動けることは trace の予算から出る
+
+`BranchRes.shiftCan` は `canRight s.right`。`CloseoutCanRightBound.canRight_of_position_bound`
+は `position p ≤ 2m − 1`（`1 ≤ m ≤ |w|`）から `canRight p` を出す。`m = |w|` を取れば
+必要なのは **`position (st i).vm.right ≤ 2|w| − 1`**。
+
+これは trace の終端の報告点から**後ろ向き**に出る：
+`PreTrace.report` の `ReportPointAt.atPrefix` が終端で `position right = 2|w| − 1` を与え、
+front ポテンシャル（`front = position + replay`）は tick で単調（`front_tick_mono`）、
+かつ `position right ≤ front`（`FrontPack` だけから）。よって
+
+```
+position (st i).right ≤ front (st i) ≤ front (st (Tc |w|)) = position (st (Tc |w|)).right = 2|w| − 1
+```
+
+`Steps` 版（`CloseoutFrontExtra.position_le_of_front_steps`）ではなく **trace 指標**で
+書く必要がある: 中間状態の `CentreLive` は `centreLive_trace` が trace の点でしか
+与えないのに対し、`Steps` 版は任意の到達状態を量化するから。 -/
+
+/-- `position right ≤ front`（`FrontPack` だけから）。 -/
+theorem position_le_front {c : Control} {s : GalilVM} (hP : FrontPack c s) :
+    (position s.right : ℤ) ≤ front s := by
+  unfold front
+  cases hr : c.replaying with
+  | true =>
+    obtain ⟨m, hm⟩ := hP.replayPos hr
+    rw [hm, GalilScaffoldCounter.ofNat_value]
+    omega
+  | false =>
+    rw [hP.rest (Or.inl hr)]
+    simp [GalilScaffoldCounter.value, GalilScaffoldCounter.reset]
+
+/-- **front は trace に沿って単調。** -/
+theorem front_mono_trace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PreTrace centre place entry q first w st Tc)
+    (hf : ∀ j, 1 ≤ j → j ≤ Tc w.length → FrontPack (st j).ctl (st j).vm) :
+    ∀ i k, 1 ≤ i → i + k ≤ Tc w.length → front (st i).vm ≤ front (st (i + k)).vm := by
+  intro i k
+  induction k with
+  | zero => intro _ _; exact le_rfl
+  | succ n ih =>
+    intro h1 hk
+    refine le_trans (ih h1 (by omega)) ?_
+    have ht := hP.trace.tick (i + n) (by omega)
+    have hm := front_tick_mono (onLetterVM w) leftFirstVM centre place entry q first 2048
+      (hf (i + n) (by omega) (by omega)) ht
+    have he : i + (n + 1) = i + n + 1 := by omega
+    rw [he]
+    exact hm
+
+/-- **右ヘッドは trace 全域で `2|w| − 1` 以下。** -/
+theorem rightPos_le_trace {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PreTrace centre place entry q first w st Tc)
+    (hf : ∀ j, 1 ≤ j → j ≤ Tc w.length → FrontPack (st j).ctl (st j).vm)
+    (htc : 1 ≤ Tc w.length) :
+    ∀ i, 1 ≤ i → i ≤ Tc w.length → position (st i).vm.right ≤ 2 * w.length - 1 := by
+  intro i h1 hi
+  have hrp := hP.report w.length hw le_rfl
+  have hfe : front (st (Tc w.length)).vm = ((position (st (Tc w.length)).vm.right : ℕ) : ℤ) :=
+    front_eq_position (hf _ htc le_rfl) hrp.notReplaying
+  have hmono := front_mono_trace centre place entry q first hP hf i (Tc w.length - i) h1 (by omega)
+  rw [show i + (Tc w.length - i) = Tc w.length by omega] at hmono
+  have hple := position_le_front (hf i h1 hi)
+  rw [hfe, hrp.atPrefix] at hmono
+  have : ((position (st i).vm.right : ℕ) : ℤ) ≤ ((2 * w.length - 1 : ℕ) : ℤ) :=
+    le_trans hple hmono
+  exact_mod_cast this
+
+/-- **`mode := .init` にする `Tick` 構成子は存在しない。**  `Tick`（`GalilScaffoldTop:109`）の
+24 構成子の行き先の mode は scan / shift / copy / home / fpp / markEnd / choose / rewind /
+replayStart か「変えない」のいずれかで、`init` は源の mode としてしか現れない。 -/
+theorem tick_mode_ne_init {σ : Type} {F : Frame σ} {delay : ℕ} {x y : State σ}
+    (h : Tick F delay x y) : y.ctl.mode ≠ Mode.init := by
+  cases h <;> simp_all
+
+/-- **trace は 1 手目以降 `init` に戻らない。** -/
+theorem mode_ne_init_of_trace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PreTrace centre place entry q first w st Tc) :
+    ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).ctl.mode ≠ Mode.init := by
+  intro j hj1 hj
+  obtain ⟨n, rfl⟩ : ∃ n, j = n + 1 := ⟨j - 1, by omega⟩
+  exact tick_mode_ne_init (hP.trace.tick n (by omega))
+
+/-- **`shiftCan` は trace 予算と `LPackM2.shiftGeom` から出る — 新規入力ゼロ。**
+shift 相では `ShiftGeom` の `RRep` が右ヘッドの `Represents` と `focus ≠ none` を持ち、
+`FrontPack` は `GalilTrailRad.frontPack_trace` が `mode ≠ init`（1 手目以降は定理）
+のもとで trace の各点に与える。 -/
+theorem shiftCan_of_trace {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PreTrace centre place entry q first w st Tc)
+    (hm2 : ∀ j, j ≤ Tc w.length →
+      PalPeg.CloseoutPackRun23.LPackM2 w (st j).ctl (st j).vm) :
+    ∀ i, i ≤ Tc w.length → (st i).ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight (st i).vm.right := by
+  have hf : ∀ j, 1 ≤ j → j ≤ Tc w.length → FrontPack (st j).ctl (st j).vm :=
+    fun j hj1 hj => frontPack_trace centre place entry q first w hw st Tc hP j hj
+      (mode_ne_init_of_trace centre place entry q first hP j hj1 hj)
+  intro i hi hmo
+  have h1 : 1 ≤ i := by
+    rcases Nat.eq_zero_or_pos i with rfl | h; swap; · exact h
+    exfalso
+    rw [hP.start] at hmo
+    exact Mode.noConfusion hmo
+  obtain ⟨rem, r, -, -, ⟨hrep, hpres⟩, -, -, -, -, -, -⟩ := (hm2 i hi).shiftGeom hmo
+  exact canRight_of_position_bound hrep hpres (m := w.length) hw le_rfl
+    (rightPos_le_trace centre place entry q first hw hP hf (by omega) i h1 hi)
+
+#print axioms position_le_front
+#print axioms front_mono_trace
+#print axioms rightPos_le_trace
+#print axioms tick_mode_ne_init
+#print axioms mode_ne_init_of_trace
+#print axioms shiftCan_of_trace
+
 #print axioms branchAt_of_res
 #print axioms chainPosInv2_trace
 #print axioms needIMW'_le_R
+
+/-! ## 6. 残差は 3 場 — `shiftDone` は完全に放電された
+
+§3 で半径台帳（`RadLedger`）、§5 で `canRight`（trace 予算 ＋ `LPackM2.shiftGeom`）が
+出たので、`BranchAt.shiftDone` は**新規入力ゼロで**得られる。残るのは
+`bg` / `matchLand` / `entryLand` の 3 場。 -/
+
+/-- **(NAMED, trace 形) 残り 3 場。** -/
+structure BranchRes3 (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+  bg : ∀ t : GalilVM, c.mode = Mode.scan → ChainPosInv2 w c s →
+    (galilFrameS (PofC centre place entry w) q first).background s t →
+    ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → PosPayload2 w t
+  matchLand : ∀ (s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPosInv2 w c s →
+    (galilFrameS (PofC centre place entry w) q first).compare s s' →
+    (galilFrameS (PofC centre place entry w) q first).matched s' →
+    (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
+    ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
+    t.chain ≠ ChainVM.idle → PosPayload2 w t
+  entryLand : ∀ s' t : GalilVM, c.mode = Mode.scan → ChainPosInv2 w c s →
+    (galilFrameS (PofC centre place entry w) q first).compare s s' →
+    ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
+    shiftGuardVM s' → beginShiftVM' s' t → ShiftPos2 t
+
+/-- **(NAMED, trace 形) 残り 3 場を trace の各点で。** -/
+def BranchRes3Trace (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ) : Prop :=
+  ∀ i, i ≤ Tc w.length → BranchRes3 centre place entry q first w (st i).ctl (st i).vm
+
+/-- **`needL'` の上界を残り 3 場だけから。**  `shiftDone` 場は内部で放電する
+（半径台帳は `radLedger_pt`、`canRight` は `shiftCan_of_trace`、どちらも新規入力ゼロ）。 -/
+theorem needIMW'_le_R3 {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hpos0 : ChainPosInv2 w (st 0).ctl (st 0).vm)
+    (hres : BranchRes3Trace centre place entry q first w st Tc)
+    (hV : VerRun centre place entry q first w (st 0)) :
+    ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
+      PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 := by
+  have hll : ∀ i, i ≤ Tc w.length →
+      PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm :=
+    fun i hi => leftLive_of_lpackM (hP.packs i hi).pack
+  have hR := radLedger_pt centre place entry q first hw hP.base.pre hll
+  have hcan := shiftCan_of_trace centre place entry q first hw hP.base.pre
+    (fun j hj => (hP.packs j hj).m2)
+  refine needIMW'_le_R centre place entry q first hw hP hpos0 (fun i hi => ?_) hV
+  exact ⟨(hres i hi).bg, (hres i hi).matchLand, (hres i hi).entryLand,
+    fun hmo _ => hcan i hi hmo⟩
+
+#print axioms branchAt_of_res
+#print axioms needIMW'_le_R3
 
 #print axioms branchRun_of_global
 #print axioms chainPosInv2_steps_run
