@@ -943,6 +943,78 @@ theorem radiusExactOffRewindPhase_tick {w : List (Fin 2)} {x y : State GalilVM}
 
 #print axioms radiusExactOffRewindPhase_tick
 
+/-! ### 中心ヘッドと右ヘッドの入力表現（同時不変量）
+
+`LPackM2.centreRep` の guard は `rewind ∨ replayStart` だけ（`Run23:105`）。
+`LagCan` と同じ「狭く切った」パターンなので全域に広げる。
+`choose_select` が `center := x.right` なので**右ヘッドの表現と同時**に運ぶ。
+
+一次情報で確認した遷移表:
+
+| tick | center | right |
+|---|---|---|
+| `init`（`initVM`） | `right s.right` | `right s.right` |
+| `compare`（`compareFound` ＋ `afterBirth`） | 不変 | `right s.right` |
+| `shift_one`（`shiftTick`） | `right s.center` | 不変（`shiftLens` に無い） |
+| `choose_select`（`rewindFrame.choose`） | `x.right` | 不変 |
+| `rewind_pair`（`rewindFrame.rewindPair`） | `left x.center` | 不変 |
+| `replayStart`（`replayStartVM`） | `s.center` | `s.center` |
+| それ以外 | 不変 | 不変 |
+
+`right_word` / `right_present` の `canRight` は位置上界から出る
+（`canRight_of_position_bound`、`m = |w|`）。`left_word` は `focus ≠ none` だけ。
+
+`initialHead raw = ⟨⟨none, [], [], raw⟩, true⟩` は focus が `none` なので
+**boot では偽**。`1 ≤ i` から始めるので `init` ケースは `mode ≠ init` で空虚。 -/
+
+/-- **(不変量)** 中心ヘッドと右ヘッドがどちらも入力を表現し、focus が立っている。 -/
+structure HeadsRepresent (w : List (Fin 2)) (s : GalilVM) : Prop where
+  centre : GalilScaffoldInputTrace.Represents s.center.head w ∧ s.center.head.focus ≠ none
+  right : GalilScaffoldInputTrace.Represents s.right.head w ∧ s.right.head.focus ≠ none
+
+/-- `compare` は右ヘッドを 1 つ動かし中心は触らない。 -/
+theorem compare_heads {w : List (Fin 2)} {s t : GalilVM}
+    (hCompare : (galilFrameS (PofC centre place entry w) q first).compare s t) :
+    t.right = GalilScaffoldChainVerifier.right s.right ∧ t.center = s.center := by
+  obtain ⟨vs, vq, a, -, hvr, -, -, -, hteq⟩ :
+    compareFound (PofC centre place entry w) q first s t := hCompare
+  refine ⟨?_, ?_⟩
+  · rw [hteq]
+    cases a <;> simp [afterBirth_right, afterCompare_right, afterMismatch_right, hvr]
+  · rw [hteq]
+    cases a <;> simp [afterBirth_center, afterCompare_center, afterMismatch_center]
+
+/-- 位置上界から `canRight`。 -/
+theorem canRight_of_bound {w : List (Fin 2)} (hw : 0 < w.length) {p : PlaceHead}
+    (hRep : GalilScaffoldInputTrace.Represents p.head w) (hFocus : p.head.focus ≠ none)
+    (hBound : position p ≤ 2 * w.length - 1) :
+    GalilScaffoldChainVerifier.canRight p :=
+  canRight_of_position_bound hRep hFocus (m := w.length) hw le_rfl hBound
+
+/-- 動いた右ヘッドも表現する。 -/
+theorem headsRepresent_rightMove {w : List (Fin 2)} (hw : 0 < w.length) {p : PlaceHead}
+    (hRep : GalilScaffoldInputTrace.Represents p.head w) (hFocus : p.head.focus ≠ none)
+    (hBound : position p ≤ 2 * w.length - 1) :
+    GalilScaffoldInputTrace.Represents (GalilScaffoldChainVerifier.right p).head w ∧
+      (GalilScaffoldChainVerifier.right p).head.focus ≠ none :=
+  let hCan := canRight_of_bound (w := w) hw hRep hFocus hBound
+  ⟨right_word p w hRep hCan, right_present p w hRep hFocus hCan⟩
+
+/-- 左へ動いたヘッドも表現する。`left_present` は `2 ≤ position p` を要するが、
+中心ヘッドについてはそれが `CloseoutPackRun13.CentreMargin`
+（`r + pairOff c + 2 ≤ position s.center`）から出る。 -/
+theorem headsRepresent_leftMove {w : List (Fin 2)} {p : PlaceHead}
+    (hRep : GalilScaffoldInputTrace.Represents p.head w) (hFocus : p.head.focus ≠ none)
+    (hTwoLe : 2 ≤ position p) :
+    GalilScaffoldInputTrace.Represents (GalilScaffoldInputHead.left p).head w ∧
+      (GalilScaffoldInputHead.left p).head.focus ≠ none :=
+  ⟨left_word p w hRep hFocus, PalPeg.GalilRoundPeriod.left_present p w hRep hFocus hTwoLe⟩
+
+#print axioms compare_heads
+#print axioms canRight_of_bound
+#print axioms headsRepresent_rightMove
+#print axioms headsRepresent_leftMove
+
 /-! ### chain の lag は構成から正規 — `ChainBackLagAt` は人工的な残差だった
 
 実機（`ScaffoldChain`）の lag は `chain.start()` で `radius` から作られ `inc` / `dec` で
