@@ -30,6 +30,70 @@
 
 
 
+
+## 2026-09-19 n108: `marksEntry` は `SpanRep`（mode guard 付き）1 点に帰着した
+
+**全体 build 成功（EXIT=0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 4 個の原子的義務を axiom として持つ。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**（このエントリは調査結果のみ。）
+
+### `marksEntry` を回避する経路（`H_marksEntry'` を使わない）
+
+`CloseoutMarksFree.marksInv'_of_marksRun` は `H_marksEntry'` **なしで** `MarksInv'` を
+run に沿って与える。入力は 4 つ:
+
+| 入力 | 状態 |
+|---|---|
+| `first ≠ 4` | 側条件（`first = 0` なので `by decide`） |
+| `CPack q x.ctl x.vm` | **タダ**: `cpack_of_entry q (invS_of_inv hInv) hEC`（`GalilTrailRad.live_pack_trace` の証明が `st 1` で `hInv` / `hEC` を実際に作っている） |
+| `x.ctl.mode = Mode.scan` | **タダ**: `init_tick_target_is_scan`（`st 1` は scan） |
+| `MarksRun … raw x` | 2 半分（下記） |
+
+`MarksRun` の 2 半分:
+
+| 半分 | 状態 |
+|---|---|
+| `WindowInOrigin`（copy 状態） | **タダ**（`CloseoutPackRun25.windowInOrigin_alongRun`、n107） |
+| `EntryCounters`（scan 状態） | 分解すると 4 節（下記） |
+
+### `EntryCounters` の 4 節 — 3 つは今日の成果でタダ
+
+    EntryCounters raw r := ∃ Rad,
+      ScanInvariant raw (position r.center) Rad r.left r.right ∧
+      RadiusRep r.radius Rad ∧ SpanRep r ∧ Canonical r.length
+    （`GalilGlueBLeaves:74`）
+
+| 節 | 出どころ |
+|---|---|
+| `ScanInvariant …` | **タダ**: `LPackM.scanGeom` / `LPackM2.scanGeomR`（trace は各点で `IPackMW` を持つ）。`Rad` はここから取る |
+| `RadiusRep r.radius Rad`（＝`Canonical radius ∧ value radius = Rad`） | **タダ**: `RadLedger.canon` ＋ `BranchSupply.radiusExactOffRewindPhase_alongTrace`（**今日証明**）＋ `ScanInvariant.rightPos`（`position right = position center + Rad`） |
+| `Canonical r.length` | **タダ**: `CPack.canon` |
+| `SpanRep r`（`value length = 2 * value radius + 1`） | **残り 1 点** |
+
+### 残り 1 点: `SpanRep` の mode guard 付き tick 搬送
+
+`GalilSpanCounter` は遷移ごとの補題を既に持っている:
+
+    spanRep_afterCompare / spanRep_background / spanRep_shift / spanRep_rounds /
+    spanRep_restart / spanRep_of_init / spanRep_of_fallback /
+    spanRepS_shiftTick / spanRepS_shiftRun / spanRep_replayDec
+
+**無いのは `Tick` の 24 構成子に対する 1 本と、run/trace 搬送。**
+そして rewind 相では破れる（`length` は毎 tick +1、`radius` は 2 tick ごとに +1 なので
+`length = 2·radius + 1` はペア境界でしか成り立たない）。つまり
+`RadiusExactOffRewindPhase`（今日書いた）と**同じ形の mode guard** が必要:
+
+    def SpanRepOffRewindPhase (c : Control) (s : GalilVM) : Prop :=
+      c.mode ≠ Mode.choose → c.mode ≠ Mode.rewind → c.mode ≠ Mode.replayStart →
+        value s.length = 2 * value s.radius + 1
+
+出口の `replayStartVM` は `length := ofNat 1`、`radius := reset` なので
+`spanRep_of_fallback` と同型で前提なしに再確立する（`radiusExact` と同じ理屈）。
+
+**これが `marksEntry` を落とす最後の 1 本。** 今日 2 回書いた形
+（`radiusExactOffRewindPhase_tick` / `headsRepresent_tick`、どちらも 24 ケース）と
+同じ作業で、材料（遷移ごとの補題）は既に全部ある。
+
 ## 2026-09-19 n107: `M-fallbackPlace` を修正し `WindowInOrigin` を `Fair` なしに（`marksEntry` の実体が確定）
 
 **全体 build 成功（EXIT=0）。既存の旗艦定理は標準公理のみ。
