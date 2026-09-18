@@ -1,3 +1,73 @@
+## n199 — n196 の判断は間違い。`ReadyIface` は producer を助ける。`EntryDepthG` も起点依存
+
+**状態: 全体 build 成功・標準公理のみ（3 本）・無条件 PAL は未完。このターンは Lean 編集なし。**
+
+### 1. `EntryDepthG` も `NoReturn` と同型（過剰量化の 9 例目）
+
+一次情報 `CloseoutPreload5.EntryDepthG:607`:
+
+```lean
+def EntryDepthG (u : GalilVM) (D : ℕ) : Prop :=
+  ∀ bs v v' c a, ReachL (searchLens.get u) bs v → searchStep c a v v' →
+    v.search.mode ≠ .run → v'.search.mode = .run → bs.length + 1 ≤ D
+```
+
+restart 起点 `u` から到達する**すべての** `.run` 入口が `D ≤ prepLen k` 手以内、と主張してる。
+第 2 ステージの入口は `prepLen k + mw + …` 手目やから、**第 2 ステージが存在した時点で破れる**。
+
+よって `runEntriesS_of_namedG` は起点依存の仮説を **2 本**（`NoReturn` と `EntryDepthG`）
+取っており、どちらも第 1 ステージでしか成り立たん。
+機械検査した反証はまだ無いので `REFUTED` とは書かへん。
+
+### 2. `ReadyPacedS` 自体が怪しい（疑い。反証はまだ無い）
+
+`DpSafeStage v as`（`CloseoutReadyStage:93`）は
+
+```lean
+as = pre ++ post ∧ 3186*w.length+1683 ≤ 64*(bs ++ pre).length ∧
+  ((bs ++ pre).count true : ℤ) ≤ value s0.debt
+```
+
+——`as` の先頭 `≈ dpEvents(2mw+1) ≈ 100·mw` 手の**比較回数**が債務（`≈ 2·max k 1`）以内、を要求する。
+
+一方 `PacedL 2048 slack as := ∀ n, 2048 * (as.take n).count true ≤ n + slack` は**累積**の上界で、
+「長い背景のあとに比較をまとめて撃つ」バーストを許す
+（例: `replicate (2048*m) false ++ replicate m true` は slack 0 で paced）。
+実機の制御はバーストを出せへん——比較は `clock = 1` でしか起きず、直後に `clock := 2048` に戻る。
+
+`ReadyPacedS v n 0 = ∀ as, n ≤ as.length → PacedL 2048 0 as → SearchReadyS v as` の `n` は
+**下界**なので、バースト列も全部対象に入る。バーストを跨ぐステージの `DpSafeStage` は
+比較回数が債務を超えて破れるはず。**つまり `ReadyPacedS` は機械が絶対に出さんスケジュールにまで
+量化しており、偽の疑いが濃い。** 前身の `ReadyFuel` が偽やったのと同じ病。
+
+### 3. n196 の訂正（ウチの判断ミス）
+
+n196 で「`ReadyIface` による `Φ` 抽象化は producer を 1mm も助けへん」と書いた。**間違いやった。**
+
+`ReadyIface` の場を読み直すと:
+
+```lean
+comparison : 2048 ≤ k + 1 → s.chain = ChainVM.idle →
+  Φ (searchLens.get s) (n + 1) k → searchEffect P true s v → Φ v n 0
+```
+
+**比較は slack が満杯（`k = 2047`）のときしか許されへん。** これがまさにバーストを禁じる
+クロック規律や。つまり `ReadyIface` は最初から「機械が実際に出すスケジュール」だけを要求してる。
+`ReadyPacedS` がそれを満たすのは、`ReadyPacedS` が（おそらく）強すぎる＝偽やから。
+**クロック添字の run 局所な `Φ` なら、`ReadyIface` を正当に満たせる。**
+
+n195 は正しい道具を、間違った理由で作った。n196 はそれを、不十分な理由で捨てた。両方ウチの判断ミスや。
+
+### 次（道が戻った）
+
+1. `watchSegE_constructS` と 4 消費者を `Φ` ＋ `ReadyIface P Φ` で再証明（n195 の計画どおり）。
+2. `StageEntryC.fuel` を `∃ Φ, ReadyIface P Φ ∧ Φ …` に切り直す。
+3. ステージ周期不変量（`StageDoubleLeg` はその 1 相）を **clock/slack 添字**で組み、`Φ` として供給する。
+   slack ≤ 2047 は制御の `2048 ≤ clock + k` が与えるので、純 `SearchVM` の `∀ as` では出えへんかった
+   ものがここで出る。
+4. `runEntriesS_of_namedG` 経路（`NoReturn` ＋ `EntryDepthG`）は第 1 ステージ専用として温存。
+
+**今回も何も落としてへん**（公理 3 本のまま）。
 ## n198 — `StageDoubleLeg`：ステージ周期 4 相のうち double 相をステップ局所にした
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
