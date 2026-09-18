@@ -80,7 +80,9 @@ import PalPeg.ShiftPalAlongTrace
 import PalPeg.FoundPackRefute
 import PalPeg.FoundPackCorrected
 import PalPeg.CopyPhaseTick
+import PalPeg.CopyPhaseTickMatched
 import PalPeg.AnswerAheadDecode
+import PalPeg.ChainReachesWatchFromFound
 
 /-!
 # `Workbench` — 作ったが正本の鎖に配線されていない部品
@@ -288,6 +290,21 @@ producer は `CloseoutWatchRound10.prepLandingWatchC_of_short`）。**束ねる�
 与えるので、run が誕生からその長さの `WatchSegE` を走れば終端は watch。
 **chain の中身はもう一切残っていない**——純粋な予算・スケジュールの問題になった。
 
+**訂正（n125）: その「予算」は現状の構成では届かない。** `reachesWatchPhase_of_backgroundRun`
+の `hClock : n < cP.clock` は `watchSegE_backgroundRun_live` が `.count` / `.wait` だけで
+区間を作るために要る。一次情報を読むと `WatchSegE.count` は `1 < c.clock` を要求し、
+`.match` は `c.clock = 1` で `clock := delay` に戻す（`GalilScaffoldTopWatchSegE.lean:26,33`）。
+`delay = 2048` なので **background だけで走れるのは 2047 手**、つまり `2h+2 < 2048`
+（`h ≤ 1022`）の準備に限られる。半周期 `h` は入力長に比例して伸びるので、
+一般には準備が入力記号をまたぎ、区間に `.match`（事象 `true`）が混ざる。
+`found_to_watchStart_least` がイベントの中身を問わないのはそのため。
+
+さらに、`.match` を載せるには比較が実際に一致している必要があり、不一致なら区間は
+そこで終わる（chain は `.copy` 相なので `shiftGuard` は立たず `scan_fallback` へ——
+`no_shift_from_copyChain`）。したがって **`ReachesWatchPhase` の無条件形は成り立たず、
+正しい目標は「watch に到達する ∨ 準備完了前に不一致で fallback に落ちる」の選言**。
+後者の半分は `no_shift_from_copyChain` が既に持っている。
+
 **壊れていたのは結論の量化子だった。** `PrepLandingWatchC` は
 
     ∀ es c2 s2, WatchSegE … cP sP c2 s2 → （c2 s2 で watch）
@@ -300,6 +317,42 @@ producer は `CloseoutWatchRound10.prepLandingWatchC_of_short`）。**束ねる�
 
 **`∀ → ∃` の付け替えは要求を空虚に弱めたのではなく、量化子の位置を直したもの。**
 到達先では既存の producer がそのまま効く。
+
+## `CopyPhaseTickMatched` — 一致事象でも copy/back の `ChainTick` はある（未配線）
+
+| 定理 | 内容 |
+|---|---|
+| `zero_false_of_positive` / `positive_inc` | 正値カウンタの基本（**`zero` の否定では `inc` で保たれない**: `⟨[], [()]⟩` の `inc` は `reset`） |
+| `LagPos`（def） | chain の lag が正（`.copy` / `.back` 相でだけ内容がある） |
+| **`lagPos_tick`** | **`LagPos` は 1 tick で保たれる**（事象によらず） |
+| `lagPos_chainStart` / `lagPos_of_chainMatched_chainStart` | 誕生時の lag は `radius = ofNat (r0+1)` で正 |
+| `chainStep_back_shape'` | `.back` の 1 手は lag を保った `.back` か lag を受け継いだ `.watch` |
+| **`backChain_tick_true_exists`** | **`.back` 相でも一致事象の `ChainTick` は存在する**（lag 正のとき） |
+| **`copyOrBack_tick_true_exists`** | **`CopyOrBack` ＋ lag 正なら一致事象でも 1 手ある** |
+| **`copyOrBack_tick_true`** | **一致事象でも相は copy/back か watch に閉じる**（`breaks` は lag 正で排除） |
+
+**以前 `sorry` を書きかけた場所の本当の障害はここだった。** `.back` から `backDone` で
+生まれた watch に `ChainMatched` を当てるには `Outer w true w'` が要り、その 2 枝は
+`queued`（`zero w.lag = false`）と `immediate`（`zero w.lag = true` ∧ `Good w`）。
+`Good` は誕生時には出ない（`WatchOkRefute.watchOk_false`）。しかし
+**誕生した chain の lag は正**（`chainStart … radius` が `lag = margin = radius`、
+copy/back の `ChainStep` は lag を触らず `ChainMatched` は `inc` するだけ）なので
+`Outer.queued` が無条件に使え、`Good` は要らない。同じ正値が `ChainMatched.breaks`
+（`BreakStep` は `zero w.lag = true` を要求、`GalilScaffoldTopChainVM:27`）も排除する。
+
+**不変量は `positive` で書くこと。** `zero lag = false` では `inc` で保たれない。
+
+## `ChainReachesWatchFromFound` — `hChainReachesWatch` の供給（未配線）
+
+| 定理 | 内容 |
+|---|---|
+| **`chainReachesWatch_of_found`** | **found 文脈から「長さ `2h+2` の任意のイベント列で watch に着く」** |
+
+`found_to_watchStart_least` の `dm` は**引数**なので、`list_split_mid` が出す実際の
+中央要素ごとに定理を当て直す。そのとき `h` が揺れないことを保証するのが
+`hCursor : (denote y.config).pos 11 = h`（DP 出力カーソル）。**これが無いと `h` の
+一意性が言えず、「長さ `2h+2`」という主張そのものが `dm` 依存になって壊れる。**
+誕生した chain と `chainStart` の同一視は `chainMatched_unique`。
 
 ## `ShiftPalAlongTrace` — `hSP` の正しい形（trace 形、未配線）
 

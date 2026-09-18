@@ -1,3 +1,88 @@
+## 2026-09-19 n125: n124 の「残るは予算だけ」は**誤り**だった — clock を一次情報で測り直した
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。
+無条件 PAL は未完。§10.5 は未達。**
+
+### まず訂正（自分の見積もりが甘かった）
+
+n124 は「残る外部入力 4 つのうち 3 つは found 文脈にある、最後の 1 つ
+`clock の余裕 n < cP.clock` は予算層の話」と書いた。**この「予算層の話」という
+片付け方が間違っていた。** 一次情報を読み直すと:
+
+* `WatchSegE.count` は `1 < c.clock` を要求し `clock := c.clock - 1`
+  （`GalilScaffoldTopWatchSegE.lean:26`）
+* `WatchSegE.match` は `c.clock = 1` を要求し `clock := delay` に戻す（同 `:33`）
+* `delay = 2048`
+
+つまり `watchSegE_backgroundRun_live`（`.count` / `.wait` だけで作る区間）が走れるのは
+**高々 2047 手**。準備に要るのは `2h+2` 手で、半周期 `h` は入力長に比例して伸びる。
+**`h ≤ 1022` の場合しか載らない。** 一般には準備が入力記号をまたぎ、区間に
+`.match`（事象 `true`）が混ざる。`found_to_watchStart_least` がイベント列の中身を
+問わない形で書かれているのは、まさにそのため。
+
+さらに `.match` を載せるには比較が実際に一致していなければならない。不一致なら
+区間はそこで終わる（chain は `.copy` 相なので `shiftGuard` は立たず `scan_fallback` へ)。
+したがって:
+
+**`ReachesWatchPhase` の無条件形は成り立たない。正しい目標は
+「watch に到達する ∨ 準備完了前に不一致で fallback に落ちる」の選言。**
+
+後者の半分は `FoundPackCorrected.no_shift_from_copyChain` が既に持っている
+（誕生直後の scan 状態からは shift に行けない）。
+
+### 今日証明したもの（すべて標準公理、`sorry` ゼロ）
+
+**`PalPeg/ChainReachesWatchFromFound.lean`（新規）**
+
+| 定理 | 内容 |
+|---|---|
+| `chainReachesWatch_of_found` | found 文脈から「長さ `2h+2` の任意のイベント列で watch に着く」 |
+
+`found_to_watchStart_least` の `dm`（中央の事象）は**引数**なので、`list_split_mid` が
+出す実際の中央要素ごとに定理を当て直す。そのとき `h` が揺れないことを保証するのが
+`hCursor : (denote y.config).pos 11 = h`（DP 出力カーソル）。**これが無いと `h` の
+一意性が言えず、「長さ `2h+2`」という主張そのものが `dm` 依存になって壊れる。**
+誕生 chain と `chainStart` の同一視は `chainMatched_unique`。
+
+**`PalPeg/CopyPhaseTickMatched.lean`（新規）** — `.match` を区間に載せるための前提
+
+| 定理 | 内容 |
+|---|---|
+| `LagPos`（def） | chain の lag が正（`.copy` / `.back` 相でだけ内容がある） |
+| `lagPos_tick` | `LagPos` は 1 tick で保たれる（事象によらず） |
+| `lagPos_chainStart` / `lagPos_of_chainMatched_chainStart` | 誕生時の lag は `radius = ofNat (r0+1)` で正 |
+| `chainStep_back_shape'` | `.back` の 1 手は lag を保った `.back` か lag を受け継いだ `.watch` |
+| `backChain_tick_true_exists` | **`.back` 相でも一致事象の `ChainTick` は存在する**（lag 正のとき） |
+| `copyOrBack_tick_true_exists` | `CopyOrBack` ＋ lag 正なら一致事象でも 1 手ある |
+| `copyOrBack_tick_true` | 一致事象でも相は copy/back か watch に閉じる |
+
+**以前 `sorry` を書きかけた場所の本当の障害はここだった。** `.back` から `backDone` で
+生まれた watch に `ChainMatched` を当てるには `Outer w true w'` が要り、その 2 枝は
+`queued`（`zero w.lag = false`）と `immediate`（`zero w.lag = true` ∧ `Good w`）。
+`Good` は誕生時には出ない（`WatchOkRefute.watchOk_false`）。しかし
+**誕生した chain の lag は正**（`chainStart … radius` が `lag = margin = radius` を置き、
+copy/back の `ChainStep` は lag を触らず `ChainMatched` は `inc` するだけ）なので
+`Outer.queued` が無条件に使え、`Good` は要らない。
+同じ正値が `ChainMatched.breaks`（`BreakStep` は `zero w.lag = true` を要求、
+`GalilScaffoldTopChainVM:27`）も排除する。
+
+**不変量は `positive` で書くこと。** `zero lag = false` では `inc` で保たれない
+（`⟨[], [()]⟩` の `inc` は `reset`）。`positive` なら保たれる。
+
+### 次にやること
+
+1. `watchSegE_backgroundRun_live` の `.match` 版。要る witness は
+   `copyOrBack_tick_true_exists`（今日できた）／ `searchEffect`（`hsearch` 側入力、
+   `constructB` と同じ）／ `refresh` の出力（`constructB` と同じ構成）。
+   結論は **3 択**の選言:「watch 到達」「`n` 手走破でまだ copy/back」「不一致で区間終了」。
+2. その選言を `foundExit_compare_final18` の節 4 / 節 7 に配線する。**消費者側を
+   書き換える必要がある**（`hpack` の `∀` 形は `FoundPackRefute` で反証済み）。
+3. 4 義務のうち最短は `obligation_shiftPalAlongTrace`。`ShiftPalAlongTrace.
+   shiftPal_alongTrace` が既に正しい形で、残差は `H_readsShift` / `H_freshShiftAtShiftEntry` /
+   `hFreshBranch` の 3 本。ただし `H_readsShift` の producer
+   `RoundSegFromRun.readsShift_at_actual` は前ラウンド起点の `OriginAt` と
+   構成 run / 実 run の対を要求するので、1 手では落ちない。
+
 
 
 
