@@ -85,13 +85,48 @@ n109〜n110 で `BranchSupply.spanRepOnScanAndShift_alongTrace` により **tick
 **idle chain の一致比較も合法な `Tick`** である以上、**偽の疑いが強い**。
 機械検査した反証はまだ無いので `REFUTED` とは書かない。
 
-### 次
+### 続き（同日、`scanSeg_of_steps` 以降）
 
-`scanSeg_snoc_tick` を run 不変量
-（「いまの状態はあるラウンド起点から `n` 手の一致比較で到達した」）に仕立て、
-ラウンド境界（`scan_shift`）で `CompareRounds.next` を組む。
-`CompareRounds.next` は `OnlyMatchedRun` ＋ 終端不一致 ＋ `ShiftRun` / `ChainShiftRun` を
-要求するので、前者はこの経路で、後者は `scan_shift` tick の構成子が持っている。
+`scanSeg_snoc_tick` を `Steps` に沿って回して run 不変量に仕立てた:
+
+* `scanSeg_of_steps` — scan ＋ watch の区間に沿って `ScanSeg` が伸びる
+  （出口 2 / 3 は呼び手の不変量が潰す）
+* `onlyMatchedRun_of_steps` — その末尾で **実際の状態の** `OnlyMatchedRun`
+  （`CompareRounds.next` の第 1 引数そのもの）
+* `compare_mismatched_parts` — ラウンド境界（`scan_shift`）で `round_next` に渡す
+  `vs` / `vq` / `hcmp` / `hmis` / `hq` を `compareFound` から取り出す
+
+さらに `PalPeg/ShiftPhaseDeterminism.lean`（新規、全定理が標準公理のみ）:
+
+| 定理 | 内容 |
+|---|---|
+| `refresh_det` | 出力の更新は一意 |
+| `shiftOne_det` | 1 単位の shift は行き先を一意に決める |
+| `tick_shift_det` | shift 相の tick は一意（`Fair` 不要） |
+| `steps_shift_det` | 中間が全部 shift 相なら同じ長さの 2 本は同じ状態に着く |
+| `steps_shift_exit_unique` | **shift 相の出口は状態も長さも一意**（長さを仮定しなくてよい） |
+
+### `round_next` の入力はすべて出どころが付いた
+
+| `round_next` の入力 | 出どころ |
+|---|---|
+| `hseg : ScanSeg` | `scanSeg_of_steps`（新規） |
+| `w0` / `hp0` / `hs0` / `hz0`（ラウンド起点） | ラウンド不変量 |
+| `hm1` / `hr1` / `hc1`（終端の制御） | `scan_shift` tick の構成子 |
+| `w` / `hs1`（終端の watch） | 不変量 |
+| `hav : canRight s1.right` | tick の `replaying ∨ available` |
+| `vs` / `vq` / `hcmp` / `hmis` / `hq` | `compare_mismatched_parts`（新規） |
+| `hend : singlePositive cycle = true` | `RoundScan.terminal_iff` |
+| `hpred` | `shiftGuardVM` の最終連言 |
+| `hlen : Canonical s1.length` | `CPack.canon` |
+| `hg` / `s2` / `hb` / `hs2` | `scan_shift` tick の `hg` / `hBegin` |
+| `hi2 : CopyIdle s2` | `AuxPack.copyP` |
+| `hchain : ChainShiftRun` | `shiftRun_exists_round` ＋ `shift_run_chain`（ラウンド不変量だけから出る） |
+| `o` / `ho : refresh` | `CloseoutFoundRoute1.exists_refresh`（refresh は全域） |
+
+**残るのは配線と、構成した着地と run の実際の着地の同一視。** 後者の差は shift 相
+だけで（scan 側は `onlyMatchedRun_of_steps` が実際の状態で直接出す）、
+`steps_shift_exit_unique` で `Fair` なしに閉じられる。
 
 
 ## 2026-09-19 n110: `obligation_marksEntry` を放電（公理 4 → 3）
