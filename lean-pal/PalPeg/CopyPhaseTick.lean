@@ -1,4 +1,5 @@
 import PalPeg.GalilBranchInvariants
+import PalPeg.GalilSegmentConstruct
 
 /-!
 # copy 相の `ChainTick` は一致ビットによらず存在する
@@ -91,5 +92,51 @@ theorem copyChain_tick_not_idle {t : GalilScaffoldTape.Tape} {h : Counter}
 #print axioms chainMatched_exists_copy_or_back
 #print axioms copyChain_tick_exists
 #print axioms copyChain_tick_not_idle
+
+
+/-! ## live chain の background 量子は**探索を動かさない**
+
+`searchEffect P a s vq` の定義（`GalilScaffoldTopSearch:179`）は
+
+    (s.chain = .idle ∧ searchStep (P.place s) a (searchLens.get s) vq) ∨
+    (s.chain ≠ .idle ∧ vq = searchLens.get s)
+
+で、**chain が live なら探索は完全に不活性**（`vq = searchLens.get s`）。
+したがって live chain 版の区間構成は `ReadyFuel` / `SearchReady` の帳簿を
+**一切必要としない**——`constructB`（idle 版）より簡単になる。
+
+n121 / n123 に「構造的に並行」と書いたが、実際には**探索側の帳簿が丸ごと消える**ぶん
+簡単。`GalilSegmentConstruct.idle_background_exists` の live 版がこれ。 -/
+
+/-- **live chain の background 量子は存在し、探索も heads も動かさない。**
+`idle_background_exists` の live 版。chain が非 idle なので `chainBorn` は false で
+`afterBirth` は恒等、`searchEffect` は不活性分岐。 -/
+theorem live_background_exists (P : Shared) (q : ℕ) (first : Fin 9) (s : GalilVM)
+    {z : ChainVM} (hNotIdle : s.chain ≠ ChainVM.idle)
+    (hTick : ChainTick false s.chain z) :
+    ∃ s', (galilFrameS P q first).background s s' ∧ s'.chain = z ∧
+      s'.left = s.left ∧ s'.right = s.right ∧ s'.center = s.center ∧ s'.replay = s.replay ∧
+      searchLens.get s' = searchLens.get s := by
+  have hSearch : searchEffect P false s (searchLens.get s) := Or.inr ⟨hNotIdle, rfl⟩
+  have hBorn : chainBorn
+      (decide ((searchLens.get s).search.mode = GalilScaffoldSearchFinish.Mode.found))
+      s.chain = false := by
+    unfold chainBorn
+    cases hc : s.chain with
+    | idle => exact absurd hc hNotIdle
+    | copy _ _ _ _ _ _ _ => exact Bool.false_and _
+    | back _ _ _ _ _ => exact Bool.false_and _
+    | watch _ => exact Bool.false_and _
+    | broken _ => exact Bool.false_and _
+  refine ⟨searchLens.set (scanLens.set s ⟨s.left, s.right, z⟩) (searchLens.get s),
+    ?_, rfl, rfl, rfl, rfl, rfl, ?_⟩
+  · refine ⟨rfl, rfl, ?_, Or.inl ⟨hNotIdle, ?_⟩, ?_⟩
+    · rw [searchLens.get_set]; exact hSearch
+    · exact hTick
+    · rw [searchLens.get_set, hBorn, afterBirth_false]
+      rfl
+  · rw [searchLens.get_set]
+
+#print axioms live_background_exists
 
 end PalPeg.CopyPhaseTick
