@@ -32,6 +32,51 @@
 
 
 
+## 2026-09-19 n114: 探索（DP）側は**無条件で証明済み**だった — 自分の前の報告を訂正
+
+**全体 build 成功（EXIT=0）。公理は 4 義務のまま変化なし。無条件 PAL は未完。§10.5 は未達。**
+
+### 訂正
+
+n113 のあと「`cycleOracle` の found 経路は未着手、探索の `Result` を run から供給する
+のが最大の残り」と書いた。**これは誤り。** CLAUDE.md §3 の散文
+（「`hfound`/`hfoundBg`/`hfoundReplay` ← 未着手、最大の残り」）を一次情報として
+扱ってしまった。CLAUDE.md 自身が禁じている振る舞い
+（「散文の論証・他ファイルのヘッダ・類推・**過去の自分の記述**は一次情報として
+扱わない」）をやった。
+
+### 一次情報で確認したこと（すべて標準 3 公理のみ、`#print axioms` 実測）
+
+| 定理 | 内容 |
+|---|---|
+| `GalilDpCorrect.initial_correct` | **無条件**。fresh な物理プリロードから走らせると `∃ y qs, Completed GalilDpCode.code (initial w lower) qs y ∧ Result w lower 0 y` |
+| `GalilDpCorrect.Result` | 「OUTPUT が `first` 以上の**最小**候補を符号化している（`Candidate` と最小性つき）」または「候補が存在しないことを正しく報告」 |
+| `GalilMinimalPeriod.result_least` | `Result` ＋ `pc = 346` から `∃ k, Candidate ∧ pos 11 = k ∧ 最小性` |
+| `GalilScaffoldSearchRun.dp_quanta_safe` / `calibrated_quanta_safe` | **無条件**。run 相の探索状態と較正済み予算から `SafeQuanta s ⟨Preload.initial w lower, false⟩ used t ⟨v,true⟩ ∧ t.mode ≠ .run ∧ Result w lower 0 (denote v)` |
+| `GalilTickFair.readFun_code` | **`decide` で証明済み**（`ReadFunB` 経由）。これで `safeQuanta_unique` が探索量子の決定性を与える |
+
+さらに `calibrated_quanta_safe` / `dp_quanta_safe` は既に
+`GalilScaffoldStagePrepare`（:207, :304）、`GalilBranchInvariants2`（:251）、
+`GalilScaffoldChainFallback`（:1848）で**消費されている**。
+
+### したがって
+
+**探索の正しさ（DP が最小周期を出すこと、量子化しても結果が同じこと、決定的であること）
+は既に無条件で証明され、ステージ層まで配線されている。**
+
+`CloseoutPrepInputs3.PrepInputsG3` が `SafeQuanta` ＋ `Result` を**仮説として束ねている**
+のは、ステージ層とそこの間が繋がっていないだけ。つまり found 経路の残りは
+「新しい数学」ではなく**層と層の配線**。
+
+`first_round` が要る `Candidate` も `result_least` から出る。
+
+### 次
+
+`GalilScaffoldStagePrepare` の結論と `CloseoutPrepInputs3.PrepInputsG3` の間を繋ぐ。
+これが通れば `hor` の found 葉と、`shiftPal*` の基底（新鮮な chain の第 1 shift、
+`first_round`）の両方に効く。
+
+
 ## 2026-09-19 n113: 偽の疑いが濃い公理を run 形／trace 形に差し替えた（3 → 4）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` なし）。ラチェット緑（4 義務に更新）。

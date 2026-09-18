@@ -226,6 +226,17 @@ guard を `mode = scan` に広げたら**義務ごと消えた**。同型の例�
 閉: `hex`, `hsearch`, `hsegmentM`（`segment_of_invLPC`+`hends_C`）, `hends`, **`hbudget`（`replayBudgetR_of_decodes'` を `decodesC` で — `CloseoutOracle8.hbudget_C`）**, **`hrs`（`restartShape_sharedC` — `CloseoutOracle8.hrs_C`）**, `hstr`（`Final4` で不要）。
 **訂正（2026-09-19）**: `hended`/`hlastMatch` は**閉じていない**。producer（`GalilLeafReport.hended_C`/`hlastMatch_C`、`GalilOracleMC4.hlastMatch_C'`）は側入力 `hpres`（bare `SearchReady` が search quantum で保存される）を取るが、それは**偽**。`GalilLeafPres.searchReady_run_true_iff` が `SearchReady v' ↔ 1 ≤ value v.search.debt` を証明済みで、debt 0 で破れる（機械検査: `CloseoutPresRefute.hpres_fails_at_zero_debt`）。閉じるには `GalilLeafPres` が指定する `SearchReadyB := ReadyRem ∧ RunEntriesAll` への再切り出しが必要。
 **`Decodes` はタダ**: `GalilFinalAssembly2.decodesC` が証明済み（`Decodes` は `P.centre`/`P.place` だけを縛り、`centreC`/`placeC` は `s.center` の具体関数）。`Closeout*` 全域の `hP : Decodes (PofC …)` 素通し仮説は全部不要。
+**訂正（2026-09-19, n114）: 探索（DP）側は無条件で証明済み。**
+`GalilDpCorrect.initial_correct`（fresh プリロードから `Result`）、
+`GalilScaffoldSearchRun.dp_quanta_safe` / `calibrated_quanta_safe`
+（run 相の探索状態から `SafeQuanta` ＋ `Result`）、
+`GalilTickFair.readFun_code`（`decide` で証明、`safeQuanta_unique` の前提）、
+`GalilMinimalPeriod.result_least`（`Result` → `Candidate` ＋ 最小性）は
+すべて標準 3 公理のみで、既に `GalilScaffoldStagePrepare` / `GalilBranchInvariants2` /
+`GalilScaffoldChainFallback` で消費されている。
+`CloseoutPrepInputs3.PrepInputsG3` が `Result` を仮説として束ねているのは
+**ステージ層とそこの間が繋がっていないだけ**で、found 経路の残りは新しい数学ではなく層の配線。
+
 残: `hpres`→`SearchReadyB` 版区間構成（進行中）; `hstage`（`ReplayStage` を `GalilReplaySpan` 内で持ち回り、進行中、mid-replay restart の `3·radius ≤ 5·last` が新義務）; `hshape`（`StartShape`）; `hlastMismatch` の最終文字分岐（`LastMismatchReport`）と `EntryRefreshed`; `hmismatch` ← `GalilLeafMismatch` の残差 `hdp`（DP pack、進行中）/`hfb`（fallback tick 数、進行中）/`hpos`（区間予算前提を pieces に追加、進行中）; `hfound`/`hfoundBg` ← 着地不変量に `Restarted`/`StageEntry` を追加（`GalilInvPlus3`、進行中）+ found tick からの経路構成（未着手、最大の残り）; `hfoundReplay`（replay 中 found の経路、未着手）。
 
 ### 3c. 2026-09-19 の追加（`M-periodOnly` とモデルの忠実性）
