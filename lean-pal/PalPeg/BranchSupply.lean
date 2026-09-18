@@ -1069,6 +1069,92 @@ theorem backgroundLanding_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
 #print axioms bgStart_at_of_centreLedger
 #print axioms backgroundLanding_alongTrace
 
+/-! ## 5g. 原子的な残差から `ScanLandingObligationsAlongTrace` を組み立てる
+
+`bg` 場は §5f で放電できたので、残る義務は**原子的な 5 つ**（それぞれ 1 場の構造体に
+分けた。束ねると「公理を 1 個外す」が測れなくなるため）:
+
+| 原子 | 内容 |
+|---|---|
+| `MatchLandingAt` | `scan_match` 着地の位置台帳 |
+| `ShiftEntryLandingAt` | `scan_shift` 入口の shift 相台帳 |
+| `ChainBackLagAt` | chain の `.back` 相の lag 形状 |
+| `ShiftExitLedgerAt` | `shift_done` での `CentreLedger` |
+| `RewindMarginAt` | rewind 相での `2 ≤ position left` |
+
+これに `hSP`（`ShiftPal`）と `hVerRun`（`VerRun`）を加えた 7 つが全入力。
+`w = []` のときは `Tc 0 = 0` で `i = 0`（boot、mode = init）しか無く 3 場とも
+scan guard で空虚なので自由。 -/
+
+/-- **(ATOM)** `scan_match` 着地の位置台帳。 -/
+structure MatchLandingAt (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+  matchLand : ∀ (s' t : GalilVM) (o b : Bool), c.mode = Mode.scan →
+    ChainPositionInvariantWithShiftPhase w c s →
+    (galilFrameS (PofC centre place entry w) q first).compare s s' →
+    (galilFrameS (PofC centre place entry w) q first).matched s' →
+    (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
+    ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
+    t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t
+
+/-- **(ATOM)** `scan_shift` 入口の shift 相台帳。 -/
+structure ShiftEntryLandingAt (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+  entryLand : ∀ s' t : GalilVM, c.mode = Mode.scan →
+    ChainPositionInvariantWithShiftPhase w c s →
+    (galilFrameS (PofC centre place entry w) q first).compare s s' →
+    ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
+    shiftGuardVM s' → beginShiftVM' s' t → ShiftPhaseChainLedger t
+
+/-- **(ATOM)** chain の `.back` 相の lag 形状。 -/
+structure ChainBackLagAt (s : GalilVM) : Prop where
+  backLag : ∀ (v : Tape) (h lag margin : Counter) (ver : PlaceHead),
+    s.chain = .back v h lag margin ver → Canonical lag ∧ 0 ≤ value lag
+
+/-- **(ATOM)** `shift_done` での `CentreLedger`。 -/
+structure ShiftExitLedgerAt (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+  shiftExitLedger : c.mode = Mode.shift →
+    ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s → CentreLedger s
+
+/-- **(ATOM)** rewind 相での左ヘッドの余裕。 -/
+structure RewindMarginAt (c : Control) (s : GalilVM) : Prop where
+  rewindMargin : c.mode = Mode.rewind → 2 ≤ position s.left
+
+/-- **原子的な残差から trace 形の scan landing 義務を組み立てる。** -/
+theorem scanLandingObligations_alongTrace_of_atoms {w : List (Fin 2)}
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
+      ScanNR x → ShiftPal centre place entry q first w x.vm)
+    (hVerRun : VerRun centre place entry q first w (st 0))
+    (hChainBackLag : ∀ j, j ≤ Tc w.length → ChainBackLagAt (st j).vm)
+    (hShiftExitLedger : ∀ j, j ≤ Tc w.length →
+      ShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm)
+    (hRewindMargin : ∀ j, j ≤ Tc w.length → RewindMarginAt (st j).ctl (st j).vm)
+    (hMatchLanding : ∀ j, j ≤ Tc w.length →
+      MatchLandingAt centre place entry q first w (st j).ctl (st j).vm)
+    (hShiftEntryLanding : ∀ j, j ≤ Tc w.length →
+      ShiftEntryLandingAt centre place entry q first w (st j).ctl (st j).vm) :
+    ScanLandingObligationsAlongTrace centre place entry q first w st Tc := by
+  intro i hIndexLeTc
+  refine { bg := ?_, matchLand := (hMatchLanding i hIndexLeTc).matchLand,
+           entryLand := (hShiftEntryLanding i hIndexLeTc).entryLand }
+  rcases Nat.eq_zero_or_pos w.length with hlen | hw
+  · intro t hMode _ _ _ _
+    exfalso
+    rw [hlen, hPreTraceIMW.base.pre.tc0] at hIndexLeTc
+    have hzero : i = 0 := by omega
+    subst hzero
+    rw [hPreTraceIMW.base.pre.start] at hMode
+    exact Mode.noConfusion hMode
+  · have hTcPos : 1 ≤ Tc w.length :=
+      hPreTraceIMW.base.tc1 ▸ hPreTraceIMW.base.pre.mono 1 w.length hw le_rfl
+    exact backgroundLanding_alongTrace centre place entry q first hw hPreTraceIMW hTcPos hSP
+      hVerRun
+      (fun j hj => ⟨(hChainBackLag j hj).backLag,
+        (hShiftExitLedger j hj).shiftExitLedger, (hRewindMargin j hj).rewindMargin⟩)
+      i hIndexLeTc
+
+#print axioms scanLandingObligations_alongTrace_of_atoms
+
 
 #print axioms landingObligationsAlongRun_of_globalHypotheses
 #print axioms chainPosInv2_alongRun

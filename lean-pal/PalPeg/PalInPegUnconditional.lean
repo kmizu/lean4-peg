@@ -5,7 +5,7 @@ import PalPeg.BranchSupply
 # `PalInPeg.unconditional` — 目標そのもの。穴は `axiom` で明示する
 
 **これが目標の形**: `RecognizedByTotalPEG PAL` を**前提ゼロ**で（＝閉じた項として）持つ。
-いま足りない 6 個の義務を `axiom` として明示し、`#print axioms unconditional` を
+いま足りない 10 個の原子的な義務を `axiom` として明示し、`#print axioms unconditional` を
 そのまま TODO リストにする。
 
 ```
@@ -69,19 +69,52 @@ axiom obligation_cycleOracle (entry q : ℕ) (first : Fin 9) :
 axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
     H_realizeLIMW' centreC placeC entry q first
 
-/-- **(OBLIGATION)** trace の各点での 3 つの scan landing 義務
-（`bg` / `matchLand` / `entryLand`）。**trace 形なので放電可能**（global 形の
-`H_BackgroundLandingPayload` 等は材料が run に沿ってしか無いので原理的に落ちない）。
-`shift_done` 出口の義務は既に完全放電済み（半径台帳は `RadLedger`、
-`canRight` は trace 予算）。 -/
-axiom obligation_scanLandingObligationsAlongTrace (entry q : ℕ) (first : Fin 9) :
+/-! ### scan landing 義務 — 原子に分解した 5 つ（すべて trace 形）
+
+束ねると「公理を 1 個外す」が測れなくなるので 1 場ずつに分けた。
+**すべて trace 形**（`PreTraceIMW` を取り `st j` で述べる）である点が本質:
+状態全体に量化した global 形は、放電の材料（`LPackM2`・chain 側台帳・入力供給）が
+run に沿ってしか存在しないので**原理的に落ちない**。`hpack` / `hav` が偽だったのと
+同じ病。
+
+`bg` 場（`scan_wait` / `scan_count` 着地）は放電済みなのでここに無い。 -/
+
+/-- **(OBLIGATION)** `scan_match` 着地の位置台帳（trace 形）。 -/
+axiom obligation_matchLanding_alongTrace (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
-      PalPeg.BranchSupply.ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc
+      ∀ j, j ≤ Tc w.length →
+        PalPeg.BranchSupply.MatchLandingAt centreC placeC entry q first w (st j).ctl (st j).vm
 
-/-- **(OBLIGATION)** chain の verifier が入力を表現し lag が正規であること（run 形）。
-`ConsumeAvail` を全状態に量化した版は**偽**（`ConsumeAvailRefute.hav_false`）なので、
-run 形の `VerRun` がその正しい代替。 -/
+/-- **(OBLIGATION)** `scan_shift` 入口の shift 相台帳（trace 形）。 -/
+axiom obligation_shiftEntryLanding_alongTrace (entry q : ℕ) (first : Fin 9) :
+    ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      ∀ j, j ≤ Tc w.length →
+        PalPeg.BranchSupply.ShiftEntryLandingAt centreC placeC entry q first w
+          (st j).ctl (st j).vm
+
+/-- **(OBLIGATION)** chain の `.back` 相の lag 形状（trace 形）。 -/
+axiom obligation_chainBackLag_alongTrace (entry q : ℕ) (first : Fin 9) :
+    ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      ∀ j, j ≤ Tc w.length → PalPeg.BranchSupply.ChainBackLagAt (st j).vm
+
+/-- **(OBLIGATION)** `shift_done` での `CentreLedger`（trace 形）。 -/
+axiom obligation_shiftExitLedger_alongTrace (entry q : ℕ) (first : Fin 9) :
+    ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      ∀ j, j ≤ Tc w.length →
+        PalPeg.BranchSupply.ShiftExitLedgerAt centreC placeC entry q first w
+          (st j).ctl (st j).vm
+
+/-- **(OBLIGATION)** rewind 相での `2 ≤ position left`（trace 形）。 -/
+axiom obligation_rewindMargin_alongTrace (entry q : ℕ) (first : Fin 9) :
+    ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      ∀ j, j ≤ Tc w.length → PalPeg.BranchSupply.RewindMarginAt (st j).ctl (st j).vm
+
+/-- **(OBLIGATION)** chain の verifier が入力を表現し lag が正規（run 形）。 -/
 axiom obligation_verifierRunAlongRun (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM),
       st 0 = boot w → PalPeg.CloseoutVerSide.VerRun centreC placeC entry q first w (st 0)
@@ -96,7 +129,16 @@ theorem unconditional : RecognizedByTotalPEG PAL :=
     (obligation_marksEntry 0 0 0)
     (obligation_cycleOracle 0 0 0)
     (obligation_localRealization 0 0 0)
-    (obligation_scanLandingObligationsAlongTrace 0 0 0)
+    (fun w st Tc hPreTraceIMW =>
+      PalPeg.BranchSupply.scanLandingObligations_alongTrace_of_atoms centreC placeC 0 0 0
+        hPreTraceIMW
+        (fun x hBig hScanNR => obligation_shiftPalAtScanStates 0 0 0 w x hBig hScanNR)
+        (obligation_verifierRunAlongRun 0 0 0 w st hPreTraceIMW.base.pre.start)
+        (obligation_chainBackLag_alongTrace 0 0 0 w st Tc hPreTraceIMW)
+        (obligation_shiftExitLedger_alongTrace 0 0 0 w st Tc hPreTraceIMW)
+        (obligation_rewindMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW)
+        (obligation_matchLanding_alongTrace 0 0 0 w st Tc hPreTraceIMW)
+        (obligation_shiftEntryLanding_alongTrace 0 0 0 w st Tc hPreTraceIMW))
     (obligation_verifierRunAlongRun 0 0 0)
 
 #print axioms unconditional
