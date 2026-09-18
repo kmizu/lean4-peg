@@ -111,7 +111,11 @@ theorem given_chainPackAtAnyState_scanBudget_bgStart_and_consumeAvailEverywhere_
     (hbudget : ∀ w : List (Fin 2), ScanBudget centreC placeC entry q first w)
     (hstart : ∀ w : List (Fin 2), BgStartP2 centreC placeC entry q first w)
     (hav : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (i : ℕ),
-      ConsumeAvail (st i).vm.chain) :
+      ConsumeAvail (st i).vm.chain)
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right) :
     RecognizedByTotalPEG PAL :=
   given_consumeAvailEverywhere_FALSE_HYP entry q first hSP hme hor hC
     (fun w => h_bgP2_of_chainPack centreC placeC entry q first (hpack w) (hstart w))
@@ -120,7 +124,7 @@ theorem given_chainPackAtAnyState_scanBudget_bgStart_and_consumeAvailEverywhere_
     (fun w => h_shiftEntry2_of_target centreC placeC entry q first
       (h_shiftRes2_of_chainPack centreC placeC entry q first (hpack w) (hbudget w)))
     (fun w => h_shiftDoneRad2_of_chainPack centreC placeC entry q first (hpack w))
-    hav
+    hav hCanRightAtAnyScanOrShiftState
 
 #print axioms given_chainPackAtAnyState_scanBudget_bgStart_and_consumeAvailEverywhere_FALSE_HYP
 

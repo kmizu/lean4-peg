@@ -130,7 +130,7 @@ theorem h_shiftDoneRad2_of_chainPack {w : List (Fin 2)}
 /-- **`MatchRes2` from `ChainPack` plus the position budget.**  Of its twelve
 fields, eight are `ChainPack` fields or immediate consequences: `repV` is
 `VerRep`, `repVmid` is `verRep_of_chainPos` (one `right` on the verifier),
-`canR`/`radLe` are `ScanPositionPayloadWithChainLedger`, and `repNext`/`canRNext` come from the bound
+`canR`/`radLe` are `ScanPositionPayloadWithChainLedger`, and `repNext` comes from the bound
 via `right_word`/`right_present`/`canRight_next_of_bound`. -/
 theorem matchRes2_of_chainPack {w : List (Fin 2)} {c : Control} {s : GalilVM} {m : ℕ}
     (hp : ChainPack q first w c s) (hm : c.mode = Mode.scan)
@@ -151,9 +151,6 @@ theorem matchRes2_of_chainPack {w : List (Fin 2)} {c : Control} {s : GalilVM} {m
       saneR := hp.saneR
       canR := hcan
       repNext := ⟨right_word _ w hrr hcan, PalPeg.CloseoutScanMargin4.right_present hrr hfr hcan⟩
-      canRNext := PalPeg.CloseoutCanRightBound.canRight_next_of_bound
-        (right_word _ w hrr hcan)
-        (PalPeg.CloseoutScanMargin4.right_present hrr hfr hcan) hcan hlv hm1 hmlt hpos
       radNext := hp.radNext
       startLedger := hp.startLedger }
 

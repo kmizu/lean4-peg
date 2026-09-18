@@ -95,6 +95,10 @@ theorem given_bootOracleRealize_and_consumeAvailEverywhere (entry q : ℕ) (firs
       st 0 = boot w → ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hav : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (i : ℕ),
       ConsumeAvail (st i).vm.chain)
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
     :
     RecognizedByTotalPEG PAL := by
   classical
@@ -116,7 +120,8 @@ theorem given_bootOracleRealize_and_consumeAvailEverywhere (entry q : ℕ) (firs
       needLe_of_pointwise' w (stP w) (TcP w)
         (PalPeg.CloseoutTrailS2.needIMW'_le_W2 centreC placeC entry q first hw h
           (hbgP w) (hmatchP w) (hentry w) (hsdP w)
-          (hpos2 w (stP w) h.base.pre.start) (fun i _ => hav w (stP w) i))⟩
+          (hpos2 w (stP w) h.base.pre.start) (fun i _ => hav w (stP w) i)
+          hCanRightAtAnyScanOrShiftState)⟩
   refine pal_in_peg_of_latch' (Nat.mul_pos hn (PalPeg.Local.cnt_pos K)) M
     (PofC centreC placeC entry) (fun _ => q) (fun _ => first) 2048
     (fun w => PofC_onLetter centreC placeC entry w)
@@ -168,7 +173,11 @@ theorem given_consumeAvailEverywhere_FALSE_HYP (entry q : ℕ) (first : Fin 9)
     (hentry : ∀ w : List (Fin 2), H_ShiftEntryChainLedger centreC placeC entry q first w)
     (hsdP : ∀ w : List (Fin 2), H_ShiftExitRadiusLedger centreC placeC entry q first w)
     (hav : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (i : ℕ),
-      ConsumeAvail (st i).vm.chain) :
+      ConsumeAvail (st i).vm.chain)
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right) :
     RecognizedByTotalPEG PAL :=
   given_bootOracleRealize_and_consumeAvailEverywhere entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
@@ -182,7 +191,7 @@ theorem given_consumeAvailEverywhere_FALSE_HYP (entry q : ℕ) (first : Fin 9)
       hor)
     hC hbgP hmatchP hentry hsdP
     (fun w st hst => by rw [hst]; exact chainPosInv2_of_idle (boot_chain_idle w))
-    hav
+    hav hCanRightAtAnyScanOrShiftState
 
 #print axioms consumeAvail_idle
 #print axioms given_consumeAvailEverywhere_FALSE_HYP

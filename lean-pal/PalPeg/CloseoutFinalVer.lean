@@ -118,7 +118,12 @@ theorem given_globalRun41Landings_and_verifierRun (entry q : ℕ) (first : Fin 9
     (hentry : ∀ w : List (Fin 2), H_ShiftEntryChainLedger centreC placeC entry q first w)
     (hsdP : ∀ w : List (Fin 2), H_ShiftExitRadiusLedger centreC placeC entry q first w)
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
-      st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
+      st 0 = boot w → VerRun centreC placeC entry q first w (st 0))
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
+    :
     RecognizedByTotalPEG PAL :=
   given_bootOracleRealize_and_verifierRun entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
@@ -132,7 +137,7 @@ theorem given_globalRun41Landings_and_verifierRun (entry q : ℕ) (first : Fin 9
       hor)
     hC hbgP hmatchP hentry hsdP
     (fun w st hst => by rw [hst]; exact chainPosInv2_of_idle (boot_chain_idle w))
-    hver
+    hver hCanRightAtAnyScanOrShiftState
 
 #print axioms given_globalRun41Landings_and_verifierRun
 

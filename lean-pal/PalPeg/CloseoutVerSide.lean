@@ -101,10 +101,14 @@ theorem shiftLocalS_of_verRun {w : List (Fin 2)}
     {n : ℕ} {x y : State GalilVM} (hx : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y)
     (hV : VerRun centre place entry q first w x)
-    (hLP : PalPeg.CloseoutPackRun23.LPackM2 w y.ctl y.vm) :
+    (hLP : PalPeg.CloseoutPackRun23.LPackM2 w y.ctl y.vm)
+    (hCanRightAtAnyScanOrShiftState : ∀ z : State GalilVM,
+      z.ctl.mode = Mode.scan ∨ z.ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
+    :
     ShiftLocalS centre place entry q first w y := by
   refine shiftLocalS_of_parts centre place entry q first
-    (chainPosInv2_steps centre place entry q first hbg hmatch hentry hsd hx h)
+    (chainPosInv2_steps centre place entry q first hbg hmatch hentry hsd (fun _ z' _ => hCanRightAtAnyScanOrShiftState z') hx h)
     (fun hm => ?_) (fun hm => (hV n y h hm).1) (fun hm => (hV n y h hm).2)
   cases hr : y.ctl.replaying with
   | false =>
@@ -122,11 +126,15 @@ theorem verRun_of_hpack {w : List (Fin 2)} {x : State GalilVM}
     (hbg : H_BackgroundLandingChainLedger centre place entry q first w) (hmatch : H_MatchLandingChainLedger centre place entry q first w)
     (hentry : H_ShiftEntryChainLedger centre place entry q first w)
     (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
-    (hx : ChainPositionInvariantWithShiftPhase w x.ctl x.vm) :
+    (hx : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
+    (hCanRightAtAnyScanOrShiftState : ∀ z : State GalilVM,
+      z.ctl.mode = Mode.scan ∨ z.ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
+    :
     VerRun centre place entry q first w x := by
   intro m z hz hm
   have hP := hp z.ctl z.vm
-    (chainPosInv2_steps centre place entry q first hbg hmatch hentry hsd hx hz)
+    (chainPosInv2_steps centre place entry q first hbg hmatch hentry hsd (fun _ z' _ => hCanRightAtAnyScanOrShiftState z') hx hz)
   exact ⟨hP.repV hm, hP.lagCan hm⟩
 
 /-! ## Up to the top: `hpk` replaced by `VerRun` -/
@@ -143,11 +151,15 @@ theorem radPack_ptS4 {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State 
     (hLP : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
     (hLP2 : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun23.LPackM2 w (st i).ctl (st i).vm)
     (hll : ∀ i, i ≤ Tc w.length → PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm)
-    (hV : VerRun centre place entry q first w (st 0)) :
+    (hV : VerRun centre place entry q first w (st 0))
+    (hCanRightAtAnyScanOrShiftState : ∀ z : State GalilVM,
+      z.ctl.mode = Mode.scan ∨ z.ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
+    :
     ∀ i, i ≤ Tc w.length → RadPack (st i).ctl (st i).vm := by
   have hsh : ∀ i, i ≤ Tc w.length → ShiftLocalS centre place entry q first w (st i) := fun i hi =>
     shiftLocalS_of_verRun centre place entry q first hbg hmatch hentry hsd hpos0
-      (hreach i hi) hV (hLP2 i hi)
+      (hreach i hi) hV (hLP2 i hi) hCanRightAtAnyScanOrShiftState
   have hen : ∀ i, i ≤ Tc w.length → ScanNR (st i) → ∀ s'' t'' : GalilVM,
       (galilFrameS (PofC centre place entry w) q first).compare (st i).vm s'' →
       ¬ (galilFrameS (PofC centre place entry w) q first).matched s'' →
@@ -180,11 +192,14 @@ theorem trailF_ptS4 {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State G
     (hLP2 : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun23.LPackM2 w (st i).ctl (st i).vm)
     (hll : ∀ i, i ≤ Tc w.length → PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm)
     (hV : VerRun centre place entry q first w (st 0))
+    (hCanRightAtAnyScanOrShiftState : ∀ z : State GalilVM,
+      z.ctl.mode = Mode.scan ∨ z.ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
     {m : ℕ} (hm : m < w.length) :
     ∀ i, i ≤ Tc (m+1) → TrailF w m (st i) := by
   have hsane := sanePack_pt centre place entry q first hw hP hll
   have hrad := radPack_ptS4 centre place entry q first hw hP hbg hmatch hentry hsd hpos0
-    hreach hLP hLP2 hll hV
+    hreach hLP hLP2 hll hV hCanRightAtAnyScanOrShiftState
   have hscan := scanT_pt centre place entry q first hw hP hrad hsane hm
   have hB := chainBudget_pt centre place entry q first hw hP hrad hsane hm
   have hVf := verF_trace centre place entry q first hP hm hscan hB
@@ -199,7 +214,11 @@ theorem needIMW'_le_W4 {w : List (Fin 2)} (hw : 0 < w.length)
     (hentry : H_ShiftEntryChainLedger centre place entry q first w)
     (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
     (hpos0 : ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
-    (hV : VerRun centre place entry q first w (st 0)) :
+    (hV : VerRun centre place entry q first w (st 0))
+    (hCanRightAtAnyScanOrShiftState : ∀ z : State GalilVM,
+      z.ctl.mode = Mode.scan ∨ z.ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
+    :
     ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
       PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 := by
   have hbase := hP.base.pre
@@ -219,7 +238,7 @@ theorem needIMW'_le_W4 {w : List (Fin 2)} (hw : 0 < w.length)
   intro m hm i hi
   exact needL'_le_of_trailF w st m i
     (trailF_ptS4 centre place entry q first hw hbase hbg hmatch hentry hsd hpos0
-      hreach hLP hLP2 hll hV hm i hi)
+      hreach hLP hLP2 hll hV hCanRightAtAnyScanOrShiftState hm i hi)
 
 end
 

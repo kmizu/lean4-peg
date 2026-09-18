@@ -29,7 +29,7 @@ import PalPeg.BranchSupply
 |---|---|---|
 | `obligation_shiftPalAtScanStates` | scan 状態で `ShiftPal` | `CloseoutBundleRun.shiftPal_of_run`。残差は `ChainPositionInvariantWithShiftPhase`(run) ＋ `H_readsShift` ＋ `H_freshShift` ＋ `periodOnly = false` 分岐。**global 形なので run 形に書き換えてから使う** |
 | `obligation_verifierRunAlongRun` | `VerRun`（verifier が入力を表現、lag 正規） | `chainPos_step_of_supply` が要求する 4 局所事実の残り 2 つ。`ConsumeAvail` の全状態版は偽（`ConsumeAvailRefute.hav_false`） |
-| `obligation_matchLanding_alongTrace` | `scan_match` 着地 | `CloseoutPackRun49.matchRes2_of_lpackM3`（`LPackM3` は §5e で運べる）＋ `h_matchP2_of_target`。残差は `MatchRest` の 4 場: `repV`（←`VerRun`）/ `repVmid`（verifier 1 歩先、`right_word` で出るはず）/ `replayPay`（replaying 時の payload）/ `canRNext`（`canRight (right right)`、`canRight_next_of_bound` に `m < w.length` の**厳密**予算が要る） |
+| `obligation_matchLanding_alongTrace` | `scan_match` 着地 | `CloseoutPackRun49.matchRes2_of_lpackM3`（`LPackM3` は §5e で運べる）＋ `h_matchP2_of_target`。残差は `MatchRest` の 3 場: `repV`（←`VerRun`）/ `repVmid`（verifier 1 歩先、`right_word` で出るはず）/ `replayPay`（replaying 時の payload）。`canRNext` は**反証済みで削除**（`MatchRestRefute`） |
 | `obligation_shiftEntryLanding_alongTrace` | `scan_shift` 入口 | `beginShiftVM'` は `immediate`（1 consume）を当てる。`ShiftPhaseChainLedger` の確立 |
 | `obligation_chainBackLag_alongTrace` | chain `.back` 相の lag 形状 | **producer なし**。`LagCan` は `.watch` 相のみ。`.back` は `ChainStep.copyEnd` が `.copy` の lag を持ち込むところで確立される。`CloseoutChainPack` / `CloseoutChainSideR` に同名の場があるのでその証明を参照 |
 | `obligation_shiftExitLedger_alongTrace` | `shift_done` での `CentreLedger` | 3 節のうち `canRight center` / `Sane center` は §5b でタダ。残るは等式 `radiusExact`。scan 状態では `LPackM3` からタダなので、**shift 相へ運ぶ**のが仕事: `beginShiftVM` は center/radius/right を触らず（§5d）、`shiftTick` は center +1・radius −1・right 不変で保存する。side condition は `canRight s.center`（shift 相では `CentreRep` が無いので要調達）と `0 < value s.radius`（`RadLedger.shiftBud` ＋ `remainingPos` から出る） |
@@ -97,12 +97,17 @@ run に沿ってしか存在しないので**原理的に落ちない**。`hpack
 `MatchRes2` 自体は `CloseoutPackRun49.matchRes2_of_lpackM3` が `LPackM3`（運べる）
 ＋ `LTickLeavesN`（タダ）＋ `LTickLeaves3`（`backLag` は放電済み）＋ `MatchRest` から出す。
 
-`MatchRest` の 4 場: `repV`（verifier の入力表現、`VerRun` と同内容）/
+`MatchRest` の 3 場: `repV`（verifier の入力表現、`VerRun` と同内容）/
 `repVmid`（1 `ChainStep` 先でも表現、`right_word` で出るはず）/
-`replayPay`（replaying 時の source の payload）/
-`canRNext`（`canRight (right s.right)`、**最終位置で偽の疑いあり**——
-Scala 正本 `ScaffoldGalil.scala:255` の `available` は比較を `canRight right` で
-守っているので、入力が尽きた時点では比較自体が起きない。要確認）。 -/
+`replayPay`（replaying 時の source の payload）。
+
+**2026-09-19: 4 番目の場 `canRNext`（`canRight (right s.right)`）は削除した。**
+`MatchRestRefute.matchRest_alongTrace_false` が機械検査済みで `False` を導く——
+`ReportPointAt.atPrefix` は報告点で `position right = 2|w| − 1` を**等式**で与えるので、
+右ヘッドに 2 歩分の余裕は原理的に無い。**主張が強すぎた**のであって、
+未証明の難所ではなかった。消費者が要るのは**着地状態の 1 歩分**
+（`canRight t.right`）で、それは `BranchSupply.canRightAtScanOrShift_alongTrace` が
+trace から無償で出す。義務は `matchLand` / `entryLand` の仮説に移した。 -/
 axiom obligation_matchRest_alongTrace (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →

@@ -222,7 +222,6 @@ structure MatchRes2 (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   canR : canRight s.right
   repNext : GalilScaffoldInputTrace.Represents (right s.right).head w ∧
     (right s.right).head.focus ≠ none
-  canRNext : canRight (right s.right)
   radNext : ∀ rad : ℕ,
     ScanInvariant w (position s.center) rad (GalilScaffoldInputHead.left s.left) (right s.right) →
       value s.radius + 1 ≤ (rad : ℤ)
@@ -252,8 +251,9 @@ theorem matchLanding_of_matchRes2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
       (galilFrameS (PofC centre place entry w) q first).matched s' →
       (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
       ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
-      t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t := by
-  intro s' t o b hm hx hcmp hmt hpl hs hni
+      t.chain ≠ ChainVM.idle → GalilScaffoldChainVerifier.canRight t.right →
+      ScanPositionPayloadWithChainLedger w t := by
+  intro s' t o b hm hx hcmp hmt hpl hs hni hCanRightAtTarget
   have R := hres
   have hpl' : t = (if c.replaying then {s' with replay := dec s'.replay} else s') := hpl
   have hts : t.left = s'.left ∧ t.right = s'.right ∧ t.chain = s'.chain ∧
@@ -297,7 +297,8 @@ theorem matchLanding_of_matchRes2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
     (PalPeg.CloseoutLPack3.present_iff_left R.repR.1).1 R.repR.2
   have hposR : position (right s.right) = position s.right + 1 :=
     right_position s.right R.canR hlv
-  refine ⟨by rw [htr]; exact R.canRNext, ?_, ?_⟩
+  have hCanRightNext : canRight (right s.right) := by rw [← htr]; exact hCanRightAtTarget
+  refine ⟨hCanRightAtTarget, ?_, ?_⟩
   · intro rad hsc'
     rw [htcen, htl, htr] at hsc'
     rw [htrad, inc_value]
@@ -310,7 +311,7 @@ theorem matchLanding_of_matchRes2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
         chainPos_step_of_supply R.repR.1 R.repR.2 Ps.canR R.repV R.lagCan Ps.chainPos hst
       have hLy : LagCan y := lagCan_step R.lagCan R.backLag hst
       have := chainPos_matched_of_target (R := s.right) (R' := right s.right)
-        R.repNext.1 R.repNext.2 R.canRNext hposR (fun wch hw => R.repVmid y wch hst hw) hLy hy hmy
+        R.repNext.1 R.repNext.2 hCanRightNext hposR (fun wch hw => R.repVmid y wch hst hw) hLy hy hmy
       rw [hposR]
       exact this
     · rw [hz]; exact chainPos_idle _
@@ -332,9 +333,10 @@ theorem matchLanding_of_matchRes2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
 /-- **global 版**（旧 `h_matchP2_of_target` の型そのまま）。既存の呼び出し側のために残す。 -/
 theorem h_matchP2_of_target {w : List (Fin 2)} (hres : H_matchRes2 centre place entry q first w) :
     H_MatchLandingChainLedger centre place entry q first w :=
-  fun c s s' t o b hm hx hcmp hmt hpl hs hni =>
+  fun c s s' t o b hm hx hcmp hmt hpl hs hni hCanRightAtTarget =>
     matchLanding_of_matchRes2 centre place entry q first
       (hres c s s' t o b hm hx hcmp hmt hpl hs hni) s' t o b hm hx hcmp hmt hpl hs hni
+      hCanRightAtTarget
 
 end Match
 
@@ -397,8 +399,9 @@ theorem shiftEntryLanding_of_matchRes2 {w : List (Fin 2)} {c : Control} {s : Gal
       ChainPositionInvariantWithShiftPhase w c s →
       (galilFrameS (PofC centre place entry w) q first).compare s s' →
       ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
-      shiftGuardVM s' → beginShiftVM' s' t → ShiftPhaseChainLedger t := by
-  intro s' t hm hx hcmp hmt hg hb
+      shiftGuardVM s' → beginShiftVM' s' t →
+      GalilScaffoldChainVerifier.canRight t.right → ShiftPhaseChainLedger t := by
+  intro s' t hm hx hcmp hmt hg hb hCanRightAtTarget
   have R := hres
   obtain ⟨vs, vq, a, hvl, hvr, hiff, -, hch, hteq⟩ :
     compareFound (PofC centre place entry w) q first s s' := hcmp
@@ -459,8 +462,9 @@ theorem shiftEntryLanding_of_matchRes2 {w : List (Fin 2)} {c : Control} {s : Gal
   show ChainPositionLedger t.chain (position t.right)
   have htc : t.chain = ChainVM.watch (GalilScaffoldChainWatch.immediate v) := by rw [hteq2]
   have htr : t.right = right s.right := by rw [hteq2]; rw [hsr, hvr]
+  have hCanRightNext : canRight (right s.right) := by rw [← htr]; exact hCanRightAtTarget
   rw [htc, htr]
-  exact chainPos_immediate R.repNext.1 R.repNext.2 R.canRNext hposR
+  exact chainPos_immediate R.repNext.1 R.repNext.2 hCanRightNext hposR
     (R.repVmid y v hst hyw) hLy hPy
 
 /-- **(NAMED) `ShiftDoneSupply`.**  `H_ShiftExitRadiusLedger` has *no* chain content at
@@ -482,9 +486,9 @@ theorem h_shiftDoneRad2_of_supply {w : List (Fin 2)}
 theorem h_shiftEntry2_of_target {w : List (Fin 2)}
     (hres : H_shiftRes2 centre place entry q first w) :
     H_ShiftEntryChainLedger centre place entry q first w :=
-  fun c s s' t hm hx hcmp hmt hg hb =>
+  fun c s s' t hm hx hcmp hmt hg hb hCanRightAtTarget =>
     shiftEntryLanding_of_matchRes2 centre place entry q first
-      (hres c s s' t hm hx hcmp hmt hg hb) s' t hm hx hcmp hmt hg hb
+      (hres c s s' t hm hx hcmp hmt hg hb) s' t hm hx hcmp hmt hg hb hCanRightAtTarget
 
 end ShiftEntry
 

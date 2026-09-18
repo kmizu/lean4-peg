@@ -120,6 +120,10 @@ theorem given_bootOracleRealize_and_verifierRun (entry q : ℕ) (first : Fin 9)
       st 0 = boot w → ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → VerRun centreC placeC entry q first w (st 0))
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
     :
     RecognizedByTotalPEG PAL := by
   classical
@@ -142,7 +146,7 @@ theorem given_bootOracleRealize_and_verifierRun (entry q : ℕ) (first : Fin 9)
         (PalPeg.CloseoutVerSide.needIMW'_le_W4 centreC placeC entry q first hw h
           (hbgP w) (hmatchP w) (hentry w) (hsdP w)
           (hpos2 w (stP w) h.base.pre.start)
-          (hver w (stP w) h.base.pre.start))⟩
+          (hver w (stP w) h.base.pre.start) hCanRightAtAnyScanOrShiftState)⟩
   refine pal_in_peg_of_latch' (Nat.mul_pos hn (PalPeg.Local.cnt_pos K)) M
     (PofC centreC placeC entry) (fun _ => q) (fun _ => first) 2048
     (fun w => PofC_onLetter centreC placeC entry w)

@@ -126,7 +126,12 @@ theorem given_landingObligationsAlongRun (entry q : ℕ) (first : Fin 9)
     (hLandingObligations : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → LandingObligationsAlongRun centreC placeC entry q first w (st 0))
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
-      st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
+      st 0 = boot w → VerRun centreC placeC entry q first w (st 0))
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
+    :
     RecognizedByTotalPEG PAL :=
   given_needBound entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
@@ -141,7 +146,8 @@ theorem given_landingObligationsAlongRun (entry q : ℕ) (first : Fin 9)
     hC
     (fun w st _ hw h => needBound_of_landingObligationsAlongRun centreC placeC entry q first hw h
       (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
-      (hLandingObligations w st h.base.pre.start) (hver w st h.base.pre.start))
+      (hLandingObligations w st h.base.pre.start) (hver w st h.base.pre.start)
+      (fun _ z _ => hCanRightAtAnyScanOrShiftState z))
 
 /-- **`given_landingObligationsAlongRun` の `hLandingObligations` から半径台帳を落とした版。**
 
@@ -182,7 +188,8 @@ theorem given_landingObligationsSansRadiusLedger (entry q : ℕ) (first : Fin 9)
     hC
     (fun w st Tc hw h => needBound_of_landingObligationsSansRadiusLedger centreC placeC entry q first hw h
       (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
-      (hres w st Tc h) (hver w st h.base.pre.start))
+      (hres w st Tc h) (hver w st h.base.pre.start)
+      (canRightAtScanOrShift_alongTrace centreC placeC entry q first hw h))
 
 /-- **`shiftDone` 義務を完全に放電した最上位。**
 

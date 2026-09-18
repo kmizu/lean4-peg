@@ -101,6 +101,10 @@ theorem given_bootOracleRealize_and_chainPackAtAnyState (entry q : ℕ) (first :
       st 0 = boot w → ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hpk : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
       ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
     :
     RecognizedByTotalPEG PAL := by
   classical
@@ -122,7 +126,7 @@ theorem given_bootOracleRealize_and_chainPackAtAnyState (entry q : ℕ) (first :
       needLe_of_pointwise' w (stP w) (TcP w)
         (PalPeg.CloseoutWatchSupply.needIMW'_le_W3 centreC placeC entry q first hw h
           (hbgP w) (hmatchP w) (hentry w) (hsdP w)
-          (hpos2 w (stP w) h.base.pre.start) (hpk w))⟩
+          (hpos2 w (stP w) h.base.pre.start) (hpk w) hCanRightAtAnyScanOrShiftState)⟩
   refine pal_in_peg_of_latch' (Nat.mul_pos hn (PalPeg.Local.cnt_pos K)) M
     (PofC centreC placeC entry) (fun _ => q) (fun _ => first) 2048
     (fun w => PofC_onLetter centreC placeC entry w)
@@ -182,6 +186,10 @@ theorem given_chainPackAtAnyState_andMore_FALSE_HYP (entry q : ℕ) (first : Fin
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hpack : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
       ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
     :
     RecognizedByTotalPEG PAL :=
   given_bootOracleRealize_and_chainPackAtAnyState entry q first
@@ -204,7 +212,7 @@ theorem given_chainPackAtAnyState_andMore_FALSE_HYP (entry q : ℕ) (first : Fin
       (h_shiftRes2_of_chainPack centreC placeC entry q first (hpack w) (scanBudget_of_chainPack centreC placeC entry q first (hpack w))))
     (fun w => h_shiftDoneRad2_of_chainPack centreC placeC entry q first (hpack w))
     (fun w st hst => by rw [hst]; exact chainPosInv2_of_idle (boot_chain_idle w))
-    (fun w => hpack w)
+    (fun w => hpack w) hCanRightAtAnyScanOrShiftState
 
 #print axioms given_chainPackAtAnyState_andMore_FALSE_HYP
 

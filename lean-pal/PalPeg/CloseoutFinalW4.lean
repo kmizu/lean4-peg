@@ -107,6 +107,10 @@ theorem given_chainPackAtAnyState_FALSE_HYP (entry q : ℕ) (first : Fin 9)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hpack : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
       ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
     :
     RecognizedByTotalPEG PAL := by
   have hbgP : ∀ w : List (Fin 2), H_BackgroundLandingChainLedger centreC placeC entry q first w := fun w =>
@@ -131,12 +135,12 @@ theorem given_chainPackAtAnyState_FALSE_HYP (entry q : ℕ) (first : Fin 9)
         (CloseoutPackRun6.h_landShift centreC placeC entry q first)))
     (h_oracleIMW_of_MC3_W centreC placeC entry q first
       (fun w => packRunR_MWP centreC placeC entry q first (hSP w)
-        (hbgP w) (hmatchP w) (hentry w) (hsdP w) (hpack w))
+        (hbgP w) (hmatchP w) (hentry w) (hsdP w) (hpack w) hCanRightAtAnyScanOrShiftState)
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       hor)
     hC hbgP hmatchP hentry hsdP
     (fun w st hst => by rw [hst]; exact chainPosInv2_of_idle (boot_chain_idle w))
-    (fun w => hpack w)
+    (fun w => hpack w) hCanRightAtAnyScanOrShiftState
 
 #print axioms given_chainPackAtAnyState_FALSE_HYP
 

@@ -243,7 +243,8 @@ def H_MatchLandingChainLedger (w : List (Fin 2)) : Prop :=
     (galilFrameS (PofC centre place entry w) q first).matched s' →
     (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
     ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
-    t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t
+    t.chain ≠ ChainVM.idle → GalilScaffoldChainVerifier.canRight t.right →
+    ScanPositionPayloadWithChainLedger w t
 
 /-- **(NAMED) `H_ShiftEntryChainLedger`.**  The `scan_shift` landing establishes the
 shift-mode ledger at the entry state (`beginShiftVM'` applies
@@ -253,7 +254,8 @@ def H_ShiftEntryChainLedger (w : List (Fin 2)) : Prop :=
   ∀ (c : Control) (s s' t : GalilVM), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
     (galilFrameS (PofC centre place entry w) q first).compare s s' →
     ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
-    shiftGuardVM s' → beginShiftVM' s' t → ShiftPhaseChainLedger t
+    shiftGuardVM s' → beginShiftVM' s' t →
+    GalilScaffoldChainVerifier.canRight t.right → ShiftPhaseChainLedger t
 
 /-- **(NAMED) `H_ShiftExitRadiusLedger`.**  At the `shift_done` exit only the *radius
 ledger* is missing: the chain half is `ChainPositionInvariantWithShiftPhase.shiftPay`, and `canRight R`
@@ -287,11 +289,13 @@ structure LandingObligationsAt (w : List (Fin 2)) (c : Control) (s : GalilVM) : 
     (galilFrameS (PofC centre place entry w) q first).matched s' →
     (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
     ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
-    t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t
+    t.chain ≠ ChainVM.idle → GalilScaffoldChainVerifier.canRight t.right →
+    ScanPositionPayloadWithChainLedger w t
   entryLand : ∀ s' t : GalilVM, c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
     (galilFrameS (PofC centre place entry w) q first).compare s s' →
     ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
-    shiftGuardVM s' → beginShiftVM' s' t → ShiftPhaseChainLedger t
+    shiftGuardVM s' → beginShiftVM' s' t →
+    GalilScaffoldChainVerifier.canRight t.right → ShiftPhaseChainLedger t
   shiftDone : c.mode = Mode.shift →
     ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s →
     ChainPositionInvariantWithShiftPhase w c s → s.chain ≠ ChainVM.idle →
@@ -312,6 +316,8 @@ theorem landingObligationsAt_of_globalHypotheses {w : List (Fin 2)}
 closes outright; `LandingObligationsAt` covers the three scan landings and the shift entry. -/
 theorem chainPosInv2_tick_of_landingObligationsAt {w : List (Fin 2)}
     {x y : State GalilVM} (hB : LandingObligationsAt centre place entry q first w x.ctl x.vm)
+    (hCanRightAtTarget : y.ctl.mode = Mode.scan ∨ y.ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight y.vm.right)
     (hx : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y) :
     ChainPositionInvariantWithShiftPhase w y.ctl y.vm := by
@@ -334,7 +340,8 @@ theorem chainPosInv2_tick_of_landingObligationsAt {w : List (Fin 2)}
       exact fun hs hni => hB.bg t hm hx hb ⟨hm, hs.2⟩ hni
     case scan_match =>
       rename_i s' o hmt hm hc hcmp hav hpl ho
-      exact fun hs hni => hB.matchLand s' t o _ hm hx hcmp hmt hpl hs hni
+      exact fun hs hni =>
+        hB.matchLand s' t o _ hm hx hcmp hmt hpl hs hni (hCanRightAtTarget (Or.inl hs.1))
     case shift_done =>
       rename_i o hm hp ho
       exact fun _ hni =>
@@ -356,7 +363,8 @@ theorem chainPosInv2_tick_of_landingObligationsAt {w : List (Fin 2)}
     cases h
     case scan_shift =>
       rename_i s' hmt hg hm hc hr hcmp hav hb
-      exact fun _ => hB.entryLand s' t hm hx hcmp hmt hg hb
+      exact fun hModeShift =>
+        hB.entryLand s' t hm hx hcmp hmt hg hb (hCanRightAtTarget (Or.inr hModeShift))
     case shift_one =>
       rename_i hm hp hi
       obtain ⟨-, -, -, wv, hw, hv⟩ := hi.1
@@ -389,11 +397,15 @@ theorem chainPosInv2_tick {w : List (Fin 2)}
     (hbg : H_BackgroundLandingChainLedger centre place entry q first w) (hmatch : H_MatchLandingChainLedger centre place entry q first w)
     (hentry : H_ShiftEntryChainLedger centre place entry q first w)
     (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
-    {x y : State GalilVM} (hx : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
+    {x y : State GalilVM}
+    (hCanRightAtTarget : y.ctl.mode = Mode.scan ∨ y.ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight y.vm.right)
+    (hx : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y) :
     ChainPositionInvariantWithShiftPhase w y.ctl y.vm :=
   chainPosInv2_tick_of_landingObligationsAt centre place entry q first
-    (landingObligationsAt_of_globalHypotheses centre place entry q first hbg hmatch hentry hsd _ _) hx h
+    (landingObligationsAt_of_globalHypotheses centre place entry q first hbg hmatch hentry hsd _ _)
+    hCanRightAtTarget hx h
 
 #print axioms landingObligationsAt_of_globalHypotheses
 #print axioms chainPosInv2_tick_of_landingObligationsAt

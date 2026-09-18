@@ -165,6 +165,9 @@ theorem packRunR_MWP {w : List (Fin 2)}
     (hentry : H_ShiftEntryChainLedger centre place entry q first w)
     (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
     (hpk : ∀ (c : Control) (s : GalilVM), ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
+    (hCanRightEverywhere : ∀ z : State GalilVM,
+      z.ctl.mode = Mode.scan ∨ z.ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
     :
     PackRunRMW centre place entry q first w := by
   intro c r hIC M hm1 hmle j x hjx k y hx h hry hyb
@@ -182,7 +185,8 @@ theorem packRunR_MWP {w : List (Fin 2)}
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 n' ⟨c, r⟩ z →
       ChainPack q first w z.ctl z.vm := fun n' z hz =>
     hpk z.ctl z.vm
-      (chainPosInv2_steps centre place entry q first hbg hmatch hentry hsd hpos0 hz)
+      (chainPosInv2_steps centre place entry q first hbg hmatch hentry hsd
+        (fun _ z' _ => hCanRightEverywhere z') hpos0 hz)
   have hmx : MarksInv' first x.ctl x.vm := (hpi j x hjx).marks
   obtain ⟨g, hg0, hgk, htr⟩ := stepsAll_fn h
   have hreach : ∀ i, i ≤ k →

@@ -48,13 +48,20 @@ theorem chainPosInv2_steps {w : List (Fin 2)}
     (hbg : H_BackgroundLandingChainLedger centre place entry q first w) (hmatch : H_MatchLandingChainLedger centre place entry q first w)
     (hentry : H_ShiftEntryChainLedger centre place entry q first w)
     (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
-    {n : ℕ} {x y : State GalilVM} (hx : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
+    {n : ℕ} {x y : State GalilVM}
+    (hCanRightAlongRun : ∀ (j : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 j x z →
+      z.ctl.mode = Mode.scan ∨ z.ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
+    (hx : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y) :
     ChainPositionInvariantWithShiftPhase w y.ctl y.vm := by
   induction h with
   | zero x => exact hx
   | @succ n x z y ht _ ih =>
-    exact ih (chainPosInv2_tick centre place entry q first hbg hmatch hentry hsd hx ht)
+    exact ih (fun j z' hz' => hCanRightAlongRun (j+1) z' (Steps.succ ht hz'))
+      (chainPosInv2_tick centre place entry q first hbg hmatch hentry hsd
+        (hCanRightAlongRun 1 z (Steps.succ ht (Steps.zero z))) hx ht)
 
 /-- **`ShiftLocalS` from `ChainPositionInvariantWithShiftPhase`, with no `H_FourSemiperiodsLeDistance`.** -/
 theorem shiftLocalS_of_chainPosInv2 {w : List (Fin 2)} {x : State GalilVM}
@@ -70,12 +77,17 @@ theorem shiftLocalS_of_run2 {w : List (Fin 2)}
     (hbg : H_BackgroundLandingChainLedger centre place entry q first w) (hmatch : H_MatchLandingChainLedger centre place entry q first w)
     (hentry : H_ShiftEntryChainLedger centre place entry q first w)
     (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
-    {n : ℕ} {x y : State GalilVM} (hx : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
+    {n : ℕ} {x y : State GalilVM}
+    (hCanRightAlongRun : ∀ (j : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 j x z →
+      z.ctl.mode = Mode.scan ∨ z.ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
+    (hx : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y)
     (hav : ConsumeAvail y.vm.chain) :
     ShiftLocalS centre place entry q first w y :=
   shiftLocalS_of_chainPosInv2 centre place entry q first
-    (chainPosInv2_steps centre place entry q first hbg hmatch hentry hsd hx h) hav
+    (chainPosInv2_steps centre place entry q first hbg hmatch hentry hsd hCanRightAlongRun hx h) hav
 
 #print axioms chainPosInv2_steps
 #print axioms shiftLocalS_of_chainPosInv2
