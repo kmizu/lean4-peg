@@ -185,6 +185,7 @@ inductive で、**`Tick` の `scan_wait` / `scan_count` / `scan_match` と 1 対
 | `shiftOne_det` | 1 単位の shift は行き先を一意に決める |
 | `tick_shift_det` | shift 相の tick は一意（`Tick` の 24 構成子を両側で潰した） |
 | `steps_shift_det` | 中間が全部 shift 相なら同じ長さの 2 本の run は同じ状態に着く |
+| **`steps_shift_exit_unique`** | **shift 相の出口は状態も長さも一意（長さを仮定しなくてよい）** |
 
 **主定理との関係**: `round_next` はラウンド 1 周を**構成**して `Steps` と
 `CompareRounds h (toOnly s w0) 1 (toOnly (構成した着地) v)` を返す。`RoundSeg`

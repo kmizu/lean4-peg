@@ -166,4 +166,46 @@ theorem steps_shift_det {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ} :
 
 #print axioms steps_shift_det
 
+
+/-- **shift 相の出口は状態も長さも一意。**  途中がすべて shift 相で、着地が shift 相を
+出ているなら、2 本の run は同じ状態に同じ歩数で着く。
+
+これで `round_next` の**構成した着地**と run の**実際の着地**が同一視できる
+（`round_next` の shift 部分は `shift_steps_S` で `galilFrameS` の `Steps` になっている）。
+長さを仮定しなくてよいのがポイント: 出口の一意性が長さまで決める。 -/
+theorem steps_shift_exit_unique {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ} :
+    ∀ {k : ℕ} {x y : State GalilVM},
+      Steps (galilFrameS P q first) delay k x y →
+      (∀ (m : ℕ) (w : State GalilVM),
+        Steps (galilFrameS P q first) delay m x w → m < k → w.ctl.mode = Mode.shift) →
+      y.ctl.mode ≠ Mode.shift →
+      ∀ {k' : ℕ} {z : State GalilVM},
+        Steps (galilFrameS P q first) delay k' x z →
+        (∀ (m : ℕ) (w : State GalilVM),
+          Steps (galilFrameS P q first) delay m x w → m < k' → w.ctl.mode = Mode.shift) →
+        z.ctl.mode ≠ Mode.shift →
+        y = z ∧ k = k' := by
+  intro k x y h1
+  induction h1 with
+  | zero u =>
+    intro _ hExit1 k' z h2 hShiftBefore2 _
+    cases h2 with
+    | zero _ => exact ⟨rfl, rfl⟩
+    | succ hTick2 hRest2 =>
+      exact absurd (hShiftBefore2 0 u (.zero u) (by omega)) hExit1
+  | @succ n u w1 y hTick1 hRest1 ih =>
+    intro hShiftBefore1 hExit1 k' z h2 hShiftBefore2 hExit2
+    have hShiftU : u.ctl.mode = Mode.shift := hShiftBefore1 0 u (.zero u) (by omega)
+    cases h2 with
+    | zero _ => exact absurd hShiftU hExit2
+    | @succ n' _ w2 _ hTick2 hRest2 =>
+      have hSame : w1 = w2 := tick_shift_det hShiftU hTick1 hTick2
+      subst hSame
+      obtain ⟨hEq, hLen⟩ :=
+        ih (fun m w hw hm => hShiftBefore1 (m + 1) w (.succ hTick1 hw) (by omega)) hExit1
+          hRest2 (fun m w hw hm => hShiftBefore2 (m + 1) w (.succ hTick1 hw) (by omega)) hExit2
+      exact ⟨hEq, by omega⟩
+
+#print axioms steps_shift_exit_unique
+
 end PalPeg.ShiftPhaseDeterminism
