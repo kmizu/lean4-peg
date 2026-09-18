@@ -97,6 +97,65 @@ theorem windowInOrigin_tick {c c' : Control} {s t : GalilVM}
     · rw [hv]
     · rw [ht]
 
+/-- **`WindowInOrigin` が着地でそのまま出る（`Fair` なし）。**
+`M-fallbackPlace` の修正（2026-09-19）で `beginFallbackVM'` が
+`(stream p).length ≤ position s.right` を持つようになったので、
+`t.fpp.walker = p`（`beginFallbackAt_walker`）と `t.right = s.right` から直接:
+
+    (stream t.fpp.walker).length = (stream p).length ≤ position s.right = position t.right
+
+`WalkerInOrigin` も `Fair` も経由しない。 -/
+theorem windowInOrigin_of_beginFallback {s t : GalilVM}
+    (hb : GalilScaffoldChainInputSupply.beginFallbackVM' s t) : WindowInOrigin t := by
+  obtain ⟨p, he, hbnd⟩ := hb
+  have ht : t = GalilScaffoldChainInputSupply.beginFallbackAt p s := he
+  unfold WindowInOrigin
+  rw [ht, GalilScaffoldChainInputSupply.beginFallbackAt_walker]
+  show (GalilScaffoldPlace.stream p).length
+    ≤ position (GalilScaffoldChainInputSupply.beginFallbackAt p s).right
+  exact hbnd
+
+/-- **1 tick 搬送（`Fair` なし）。**  copy 相へ入るのは `scan_fallback` だけで、
+そこは `windowInOrigin_of_beginFallback` が直接出す。copy 相に留まるのは
+`copy_one` で、`windowInOrigin_left` が保つ。 -/
+theorem windowInOrigin_tick_free {x y : State GalilVM}
+    (h : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay x y)
+    (hx : x.ctl.mode = Mode.copy → WindowInOrigin x.vm)
+    (hm' : y.ctl.mode = Mode.copy) : WindowInOrigin y.vm := by
+  cases h
+  all_goals try (exfalso; revert hm'; simp [‹Control.mode _ = _›]; done)
+  case scan_fallback =>
+    rename_i c0 s0 s1 s2 hm0 hav hc hcmp hmt hg hr hb
+    exact windowInOrigin_of_beginFallback hb
+  case copy_one =>
+    rename_i c0 s0 s1 hm0 hp hi
+    obtain ⟨a, ha, hv⟩ : ∃ a : Fin 3, GalilScaffoldPlace.read s0.fpp.walker = some a ∧
+        s1.fpp = {s0.fpp with program := FppControl.tape s0.fpp 7 (fun t => GalilScaffoldTape.moveRight (GalilScaffoldTape.write t (GalilFppPreparation.symbol a))), work := GalilScaffoldCounter.dec s0.fpp.work, walker := GalilScaffoldPlace.left s0.fpp.walker} := hi.1
+    have ht : s1 = {s0 with fpp := s1.fpp} := hi.2
+    refine windowInOrigin_left ?_ ?_ (hx hm0)
+    · rw [hv]
+    · rw [ht]
+
+/-- **run 全域での搬送（`Fair` なし）。**  `MarksRun` の `WindowInOrigin` 半分が
+これで埋まる。origin が `init` 相なら前提は空虚。 -/
+theorem windowInOrigin_alongRun :
+    ∀ {n : ℕ} {x y : State GalilVM},
+      Steps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay n x y →
+      (x.ctl.mode = Mode.copy → WindowInOrigin x.vm) →
+      y.ctl.mode = Mode.copy → WindowInOrigin y.vm := by
+  intro n x y h
+  induction h with
+  | zero x => intro hx; exact hx
+  | @succ n x z y ht hr ih =>
+    intro hx hm
+    exact ih (fun hmz => windowInOrigin_tick_free onLetter leftFirst centre place entry q first
+      delay ht hx hmz) hm
+
+#print axioms windowInOrigin_alongRun
+
+#print axioms windowInOrigin_of_beginFallback
+#print axioms windowInOrigin_tick_free
+
 #print axioms windowInOrigin_tick
 
 /-! ## 3. `Fair` runs -/
