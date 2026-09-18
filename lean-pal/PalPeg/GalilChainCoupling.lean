@@ -235,7 +235,6 @@ theorem step_inv {x y : ChainVM} (h : ChainStep x y) {F : Prop} (hF : F) {O : �
   cases h with
   | idle => exact ⟨hs, hw⟩
   | brokenIdle => exact ⟨trivial, fun w hw => by cases hw⟩
-  | watchBreak => exact ⟨trivial, fun w hw => by cases hw⟩
   | copyBit => exact ⟨hs, fun w hw => by cases hw⟩
   | copyEnd => exact ⟨hs, fun w hw => by cases hw⟩
   | backStep => exact ⟨hs, fun w hw => by cases hw⟩
@@ -275,7 +274,6 @@ theorem matched_inv {y z : ChainVM} (h : ChainMatched y z) {F : Prop} {O : ℕ �
     SumRel z (R + 1) ∧ WatchOK z F O := by
   cases h with
   | idle => exact ⟨trivial, fun w hw => by cases hw⟩
-  | brokenMatched => exact ⟨trivial, fun w hw => by cases hw⟩
   | copy =>
     refine ⟨?_, fun w hw => by cases hw⟩
     show value (inc _) = R + 1

@@ -10,9 +10,10 @@ import PalPeg.CloseoutWatchShiftAudit
 import PalPeg.CloseoutBudgetFree
 import PalPeg.CloseoutRealize1
 import PalPeg.CloseoutMarksFree
+import PalPeg.CloseoutTickFalse
 import PalPeg.PackedRun
 import PalPeg.WatchOkRefute
-import PalPeg.ChainBackgroundBreak
+import PalPeg.ChainStepGap
 
 /-!
 # Canonical — 意味のある名前で正本部品を再輸出する
@@ -81,20 +82,14 @@ period と入力の一致を強制するが、`born` の仮説は両者を関係
 消すには `ChainOk` を `.copy`/`.back` で lag/margin を縛る形に再設計する必要がある。 -/
 alias refuted_watchOk := PalPeg.WatchOkRefute.watchOk_false
 
-/-- **モデル欠陥 `M-watchBreak` の修正**（`WatchOk` が偽だった根本原因）。
+/-- **モデル欠陥 `M-watchBreak`**（`WatchOk` が偽である根本原因）。
 Scala 正本の `ScaffoldChain.step()` は `Mode.Watch` かつ正 lag で `consume()` を呼び、
-不一致なら `Mode.Broken` に落とす。Lean の `ChainStep` にその遷移が無かったので、
-正 lag ＋ 不一致の watch に後続状態が存在せず、その穴を埋めるために
-`WatchOk.good`（予測は常に当たる）という偽の仮定が書かれていた。
-`ChainStep.watchBreak` と `ChainMatched.brokenMatched` を入れて修正した。 -/
-alias chain_breaks_on_background_mismatch :=
-  PalPeg.ChainBackgroundBreak.watchBreak_at_positive_lag_mismatch
-
-/-- **`Good` を仮定しない chain 遷移の全域性**（`M-watchBreak` 修正の成果）。
-`canRight` と period の焦点が記号を持つことだけで後続状態が存在する。
-`ChainTickable`／`hready` の解錠にあたる。 -/
-alias chainStep_total_without_good :=
-  PalPeg.GalilScaffoldChainInputSupply.chainStep_watch_total_of_symbol
+不一致なら `Mode.Broken` に落とす。Lean の `ChainStep` には `.watch → .broken` の
+構成子が無く（`ChainMatched.breaks` は `BreakStep` が `zero lag` を要求するので
+lag ゼロ経路のみ）、その結果**正 lag ＋ 不一致の watch に後続状態が存在しない**。
+だから正 lag の背景遷移は `Internal.take`（`Good` 必須）しかなく、`WatchOk.good` が
+「予測は常に当たる」と主張することになっていた。 -/
+alias model_gap_watchBreak := PalPeg.ChainStepGap.no_chainStep_at_positive_lag_mismatch
 
 /-! ## 3. run に沿って運ばれる左パック（偽の `ChainPack` の代替）
 
@@ -162,6 +157,9 @@ alias backgroundTick_keeps_watch := PalPeg.CloseoutMismatchCompare.watchClosedC_
 /-- **背景 tick は lag ゼロなら恒等**（`WatchOk` 不要）。 -/
 alias backgroundTick_is_identity_at_lagZero :=
   PalPeg.CloseoutMismatchCompare.chainTick_false_idle
+
+/-- **`ChainOk` な chain から `.broken` への `ChainStep` は無い。** -/
+alias step_never_breaks := PalPeg.CloseoutTickFalse.step_ne_broken
 
 /-! ## 6. `LandingReadyC`（`hland`） -/
 

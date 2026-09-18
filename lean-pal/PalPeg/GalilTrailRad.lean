@@ -200,7 +200,7 @@ variable (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM → Fin 3)
   (place : GalilVM → GalilScaffoldPlace.Place) (entry q : ℕ) (first : Fin 9) (delay : ℕ)
 
 theorem lagLe_tickF {c c' : Control} {s t : GalilVM}
-    (hL : LagLe s.chain (position s.right)) (hnb : NoBgBreak s.chain) (hS : LagStepF c s)
+    (hL : LagLe s.chain (position s.right)) (hS : LagStepF c s)
     (h : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay
       ⟨c, s⟩ ⟨c', t⟩) : LagLe t.chain (position t.right) := by
   cases h
@@ -213,13 +213,13 @@ theorem lagLe_tickF {c c' : Control} {s t : GalilVM}
     obtain ⟨-, hr, hch, -⟩ :=
       backgroundS_fields (sharedC onLetter leftFirst centre place entry) q first hb
     rw [hr]
-    exact lagLe_chainAt_false hch hL hnb hS.start
+    exact lagLe_chainAt_false hch hL hS.start
   case scan_count =>
     rename_i hm hc hav hb
     obtain ⟨-, hr, hch, -⟩ :=
       backgroundS_fields (sharedC onLetter leftFirst centre place entry) q first hb
     rw [hr]
-    exact lagLe_chainAt_false hch hL hnb hS.start
+    exact lagLe_chainAt_false hch hL hS.start
   case restart =>
     rename_i hm hb
     obtain ⟨w, -, -, -, -, ht⟩ : restartVM entry s t := hb
@@ -235,7 +235,7 @@ theorem lagLe_tickF {c c' : Control} {s t : GalilVM}
     have htc : t.chain = s'.chain := by rw [hpl']; cases c.replaying <;> rfl
     have htr : t.right = s'.right := by rw [hpl']; cases c.replaying <;> rfl
     rw [htc, htr, hr2, lagStepF_right hS hm hav]
-    exact lagLe_chainAt hch hL hnb hS.start
+    exact lagLe_chainAt hch hL hS.start
   case scan_shift =>
     rename_i s' hmt hg hm hc hr hcmp hav hb
     obtain ⟨a, found, ans, cc, wk, hch, ha⟩ :=
@@ -249,7 +249,7 @@ theorem lagLe_tickF {c c' : Control} {s t : GalilVM}
     rw [htc, htr, hr2, lagStepF_right hS hm hav]
     refine lagLe_right (x := ChainVM.watch w) rfl rfl ?_
     rw [← hs0]
-    exact lagLe_chainAt_false hch hL hnb hS.start
+    exact lagLe_chainAt_false hch hL hS.start
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
@@ -292,9 +292,7 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 
 theorem lagLe_traceF {raw : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ} {m : ℕ}
     (hP : PreTrace centre place entry q first raw st Tc) (hm : m < raw.length)
-    (hstep : ∀ i, i < Tc (m+1) → LagStepF (st i).ctl (st i).vm)
-    -- **`M-watchBreak` 修正で現れた run 全体の義務**（`GalilTrailAssembly.lagLe_trace` と同じ）。
-    (hnobg : ∀ i, i < Tc (m+1) → NoBgBreak (st i).vm.chain) :
+    (hstep : ∀ i, i < Tc (m+1) → LagStepF (st i).ctl (st i).vm) :
     ∀ i, i ≤ Tc (m+1) → LagLe (st i).vm.chain (position (st i).vm.right) := by
   have hle : Tc (m+1) ≤ Tc raw.length := hP.mono (m+1) raw.length (by omega) le_rfl
   intro i
@@ -304,7 +302,7 @@ theorem lagLe_traceF {raw : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ
     intro hi
     have hlt : i < Tc (m+1) := by omega
     exact lagLe_tickF (onLetterVM raw) leftFirstVM centre place entry q first 2048
-      (ih (by omega)) (hnobg i hlt) (hstep i hlt) (hP.trace.tick i (by omega))
+      (ih (by omega)) (hstep i hlt) (hP.trace.tick i (by omega))
 
 
 #print axioms lagLe_traceF
@@ -335,9 +333,6 @@ structure RadPack (c : Control) (s : GalilVM) : Prop where
   shiftCR : c.mode = Mode.shift → position s.center + 1 ≤ position s.right
   startLe : s.chain = ChainVM.idle → StartLe s.center s.radius (position s.right)
   verSane : ∀ p, verOf s.chain = some p → GalilFrontMono.Sane p
-  /-- **`M-watchBreak` 修正で現れた義務。** 背景 break（`ChainStep.watchBreak`）は
-  verifier を 1 進めながら lag を減らさないので lag 台帳が 1 だけ破れる。 -/
-  noBgBreak : PalPeg.GalilTrailAssembly.NoBgBreak s.chain
 
 /-- `RadPack` plus the frontier pack delivers `GalilTrailOrder.OrderBudget`: the
 `canRight` of a replayed comparison is the frontier budget. -/
@@ -369,8 +364,7 @@ theorem radPack_boot (w : List (Fin 2)) : RadPack (boot w).ctl (boot w).vm := by
   have hc : (boot w).vm.center = (boot w).vm.right := rfl
   have hch : (boot w).vm.chain = ChainVM.idle := rfl
   refine ⟨⟨fun hm _ => ?_, fun hm => ?_⟩, fun hm => ?_, fun hm => ?_, fun _ => ?_,
-    fun p hp => ?_,
-    PalPeg.GalilTrailAssembly.noBgBreak_of_ne_watch (fun w0 => by rw [hch]; intro h0; cases h0)⟩
+    fun p hp => ?_⟩
   · exact absurd (show Mode.init = Mode.scan from hm) (by decide)
   · exact absurd (show Mode.init = Mode.rewind from hm) (by decide)
   · exact absurd (show Mode.init = Mode.shift from hm) (by decide)
@@ -440,8 +434,7 @@ theorem chainBudget_of_radPack (h : H_radPack centre place entry q first)
       (frontPack_trace centre place entry q first w hw st Tc hP i (by omega))
       (hsane i (by omega)).2.2
   exact fun i hi =>
-    chainBudget_of_lagLe (lagLe_traceF centre place entry q first hP hm hstep
-        (fun j hj => (h w hw st Tc hP j (by omega)).noBgBreak) i hi)
+    chainBudget_of_lagLe (lagLe_traceF centre place entry q first hP hm hstep i hi)
       (lagAt_of_radPack (h w hw st Tc hP i (by omega)) (hplace i hi))
 
 theorem h_trailVer_of_radPack (h : H_radPack centre place entry q first) :

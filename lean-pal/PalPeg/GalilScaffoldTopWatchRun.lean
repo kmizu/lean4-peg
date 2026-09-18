@@ -16,13 +16,11 @@ set_option autoImplicit false
 namespace PalPeg.GalilScaffoldChainInputSupply
 open GalilScaffoldCounter
 
-/-- **壊れた chain は壊れたままである。**  以前は `z = .broken w`（状態まで同一）と
-書いていたが、`ChainMatched.brokenMatched`（Scala の `matched()` は mode に関係なく
-`margin.inc()` と `lag.inc()` をする）を入れた結果それは偽になった。カウンタは動く。 -/
+/-- A broken chain stays broken (and takes no credit). -/
 theorem broken_stays (es : List Bool) : ∀ {w : GalilScaffoldChainWatch.State} {z : ChainVM},
-    ChainTicks es (.broken w) z → ∃ w' : GalilScaffoldChainWatch.State, z = .broken w' := by
+    ChainTicks es (.broken w) z → z = .broken w := by
   induction es with
-  | nil => intro w z h; cases h; exact ⟨w, rfl⟩
+  | nil => intro w z h; cases h; rfl
   | cons a es ih =>
     intro w z h
     cases h with
@@ -32,9 +30,7 @@ theorem broken_stays (es : List Bool) : ∀ {w : GalilScaffoldChainWatch.State} 
       | brokenIdle =>
         cases a
         · simp at hm; subst hm; exact ih hr
-        · simp only [if_true] at hm
-          cases hm with
-          | brokenMatched _ => exact ih hr
+        · simp at hm; cases hm
 
 /-- Chain ticks on a watching chain that stays watching are a watch run. -/
 theorem chainTicks_watch_run (es : List Bool) : ∀ {w w' : GalilScaffoldChainWatch.State},
@@ -59,19 +55,8 @@ theorem chainTicks_watch_run (es : List Bool) : ∀ {w w' : GalilScaffoldChainWa
           cases hm with
           | watch _ w'' ho => exact .next (.step hi ho) (ih hr)
           | breaks _ _ _ =>
-            obtain ⟨v, hv⟩ := broken_stays es hr
-            cases hv
-      | watchBreak _ v hbr =>
-        cases a
-        · simp at hm
-          subst hm
-          obtain ⟨v', hv'⟩ := broken_stays es hr
-          cases hv'
-        · simp only [if_true] at hm
-          cases hm with
-          | brokenMatched _ =>
-            obtain ⟨v', hv'⟩ := broken_stays es hr
-            cases hv'
+            have := broken_stays es hr
+            cases this
 
 theorem verify_run_append {s u t : GalilScaffoldChainVerifier.State} {m n : ℕ}
     (h1 : GalilScaffoldChainVerifyRun.Run s m u) (h2 : GalilScaffoldChainVerifyRun.Run u n t) :

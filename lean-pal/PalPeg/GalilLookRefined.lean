@@ -74,9 +74,7 @@ theorem chainTick_used' (n : ℕ) {b : Bool} {x z : ChainVM} (ht : ChainTick b x
   | brokenIdle w =>
     cases b
     · simp only [Bool.false_eq_true, if_false] at hm; subst hm; exact le_rfl
-    · simp only [if_true] at hm
-      cases hm with
-      | brokenMatched _ => exact le_rfl
+    · simp only [if_true] at hm; cases hm
   | copyBit t hh p v lag margin ver a one legal present =>
     cases b
     · simp only [Bool.false_eq_true, if_false] at hm; subst hm; exact le_rfl
@@ -102,20 +100,6 @@ theorem chainTick_used' (n : ℕ) {b : Bool} {x z : ChainVM} (ht : ChainTick b x
         obtain ⟨-, -, -, -, -, ht⟩ := hb
         subst ht
         exact le_rfl
-  | watchBreak w w' hb =>
-    obtain ⟨hp, -, -, -, -, ht⟩ := hb
-    subst ht
-    have hl : lookChain' n (.watch w) =
-        usedPH n (GalilScaffoldChainVerifier.right
-          (GalilScaffoldChainVerifier.right w.machine.verifier)) := by
-      simp only [lookChain', hp, if_true]
-    rw [hl]
-    cases b
-    · simp only [Bool.false_eq_true, if_false] at hm; subst hm
-      exact usedPH_right_mono n _
-    · simp only [if_true] at hm
-      cases hm with
-      | brokenMatched _ => exact usedPH_right_mono n _
   | watchStep w w' hi =>
     cases hi with
     | idle hz =>

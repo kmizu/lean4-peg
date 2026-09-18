@@ -219,20 +219,6 @@ theorem breakStep_trunc (n j : ℕ) {w w' : WS} (hb : BreakStep w w')
     rw [consume_trunc n j w.machine h]
     rfl
 
-/-- **`BreakStepPos` も truncation を通る。** `breakStep_trunc` と同じ証明
-（lag は正、margin は据え置き）。 -/
-theorem breakStepPos_trunc (n j : ℕ) {w w' : WS} (hb : BreakStepPos w w')
-    (h : usedPH n w'.machine.verifier ≤ j) :
-    BreakStepPos (truncW (n - j) w) (truncW (n - j) w') := by
-  obtain ⟨hz, hc, b, hs, hr, ht⟩ := hb
-  subst ht
-  refine ⟨hz, canRight_truncPH n j _ hc h, b, hs, ?_, ?_⟩
-  · show GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right (truncPH (n - j) w.machine.verifier)) ≠ some b
-    rw [truncPH_right n j _ h, read_truncPH]; exact hr
-  · show truncW (n - j) ⟨_, _, _⟩ = ⟨GalilScaffoldChainVerifier.consume ⟨truncPH (n - j) w.machine.verifier, w.machine.control⟩, _, _⟩
-    rw [consume_trunc n j w.machine h]
-    rfl
-
 /-- The verifier of the target of a step is the source verifier or one move right. -/
 theorem verOf_step {x y : ChainVM} (hs : ChainStep x y) (p : PH) (hp : verOf y = some p) :
     ∃ p0, verOf x = some p0 ∧ (p = p0 ∨ p = GalilScaffoldChainVerifier.right p0) := by
@@ -248,11 +234,6 @@ theorem verOf_step {x y : ChainVM} (hs : ChainStep x y) (p : PH) (hp : verOf y =
     cases ht with
     | idle => exact ⟨_, rfl, Or.inl rfl⟩
     | take => exact ⟨_, rfl, Or.inr rfl⟩
-  | watchBreak w w' hb =>
-    obtain ⟨-, -, -, -, -, heq⟩ := hb
-    subst heq
-    cases hp
-    exact ⟨_, rfl, Or.inr rfl⟩
 
 theorem verOf_matched {x y : ChainVM} (hm : ChainMatched x y) (p : PH) (hp : verOf y = some p) :
     ∃ p0, verOf x = some p0 ∧ (p = p0 ∨ p = GalilScaffoldChainVerifier.right p0) := by
@@ -270,7 +251,6 @@ theorem verOf_matched {x y : ChainVM} (hm : ChainMatched x y) (p : PH) (hp : ver
     obtain ⟨-, -, -, -, -, ht⟩ := hb
     subst ht
     exact ⟨_, rfl, Or.inr rfl⟩
-  | brokenMatched w => cases hp; exact ⟨_, rfl, Or.inl rfl⟩
 
 theorem used_of_eq_or_right (n : ℕ) {p q : PH} (h : p = q ∨ p = GalilScaffoldChainVerifier.right q) :
     usedPH n q ≤ usedPH n p ∧ usedPH n p ≤ usedPH n (GalilScaffoldChainVerifier.right q) := by
@@ -308,7 +288,6 @@ theorem chainStep_trunc (n j : ℕ) {x y : ChainVM} (hs : ChainStep x y) (h : us
   | backStep v hh lag margin ver hf => exact .backStep v hh lag margin _ hf
   | backDone v hh lag margin ver hf => exact .backDone v hh lag margin _ hf
   | watchStep w w' ht => exact .watchStep _ _ (internal_trunc n j ht h)
-  | watchBreak w w' hb => exact .watchBreak _ _ (breakStepPos_trunc n j hb h)
 
 theorem chainMatched_trunc (n j : ℕ) {x y : ChainVM} (hm : ChainMatched x y) (h : usedChain n y ≤ j) :
     ChainMatched (truncChain (n - j) x) (truncChain (n - j) y) := by
@@ -318,7 +297,6 @@ theorem chainMatched_trunc (n j : ℕ) {x y : ChainVM} (hm : ChainMatched x y) (
   | back v hh lag margin ver => exact .back v hh lag margin _
   | watch w w' ho => exact .watch _ _ (outer_trunc n j ho h)
   | breaks w w' hb => exact .breaks _ _ (breakStep_trunc n j hb h)
-  | brokenMatched w => exact .brokenMatched _
 
 theorem chainTick_trunc (n j : ℕ) {b : Bool} {x z : ChainVM} (ht : ChainTick b x z) (h : usedChain n z ≤ j) :
     ChainTick b (truncChain (n - j) x) (truncChain (n - j) z) := by

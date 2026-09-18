@@ -53,13 +53,7 @@ theorem chainStep_unique {x y y' : ChainVM} (h1 : ChainStep x y) (h2 : ChainStep
   case watchStep.watchStep =>
     rename_i hi₁ _ hi₂
     rw [internal_unique hi₁ hi₂]
-  all_goals first
-    | rfl
-    | (rename_i h₁ _ h₂; rw [breakStepPos_unique h₁ h₂])
-    | (rename_i hi _ hbr; exact (internal_breakStepPos_false hi hbr).elim)
-    | (rename_i hbr _ hi; exact (internal_breakStepPos_false hi hbr).elim)
-    | (exfalso; simp_all; done)
-    | (simp_all; done)
+  all_goals first | rfl | (exfalso; simp_all; done) | (simp_all; done)
 
 theorem chainMatched_unique {x y y' : ChainVM} (h1 : ChainMatched x y) (h2 : ChainMatched x y') : y = y' := by
   cases h1 <;> cases h2

@@ -372,10 +372,6 @@ theorem foundRouteMC_noshift'' (centre : GalilVM → Fin 3)
     (hseg : WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
     (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
-    -- **`M-watchBreak` 修正で現れた義務**（`GalilNoShiftStage.foundRouteMC_noshift'` から素通し）。
-    -- 比較 tick は「背景 step → matched」の順なので、背景 step が `ChainStep.watchBreak`
-    -- （正 lag ＋ 不一致）で chain を壊しうる。その分岐が起きないことを要求する。
-    (hnobg : ∀ v, ¬ BreakStepPos w3 v)
     (vs3 : ScanVM) (vq3 : SearchVM)
     (hcmp3 : (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3))
     (hmt3 : (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3))
@@ -393,8 +389,8 @@ theorem foundRouteMC_noshift'' (centre : GalilVM → Fin 3)
   obtain ⟨cT, sT, k, L, hrun, hcr, hIT, h1, h2, h3⟩ :=
     GalilNoShiftStage.foundRouteMC_noshift' centre place entry qq first raw hex hI.1.1 hlive
       (fun _ _ => hI.2) hseg0 hmF hrF hcF havF hidle vq hq hfound hmt ch hch hchne oF hoF hprepSeg
-      cen ys b hwatch2 hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hav3 hnobg vs3 vq3 hcmp3 hmt3 hq3
-      o3 ho3 w3' hbroken hmargin
+      cen ys b hwatch2 hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3
+      w3' hbroken hmargin
   exact ⟨cT, sT, k, L, hrun, hcr,
     invLP2_of_stepsAll centre place entry qq first hI.1.2 hrun hIT, h1, h2, h3⟩
 
@@ -558,10 +554,6 @@ theorem foundRouteMC_noshift'_Inv (centre : GalilVM → Fin 3)
     (hseg : WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
     (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
-    -- **`M-watchBreak` 修正で現れた義務**（`GalilNoShiftStage.foundRouteMC_noshift'` から素通し）。
-    -- 比較 tick は「背景 step → matched」の順なので、背景 step が `ChainStep.watchBreak`
-    -- （正 lag ＋ 不一致）で chain を壊しうる。その分岐が起きないことを要求する。
-    (hnobg : ∀ v, ¬ BreakStepPos w3 v)
     (vs3 : ScanVM) (vq3 : SearchVM)
     (hcmp3 : (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3))
     (hmt3 : (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3))
@@ -616,7 +608,6 @@ theorem foundRouteMC_noshift'_Inv (centre : GalilVM → Fin 3)
   rw [hs3, hvs3] at htick
   obtain ⟨y, hy, hym⟩ := htick
   cases hy with
-  | watchBreak _ v hbp => exact absurd hbp (hnobg v)
   | watchStep _ m hint =>
   have hym' : ChainMatched (.watch m) (.broken w3') := by simpa using hym
   cases hym' with
@@ -687,10 +678,6 @@ theorem foundRouteMC_noshift''_Inv (centre : GalilVM → Fin 3)
     (hseg : WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
     (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
-    -- **`M-watchBreak` 修正で現れた義務**（`GalilNoShiftStage.foundRouteMC_noshift'` から素通し）。
-    -- 比較 tick は「背景 step → matched」の順なので、背景 step が `ChainStep.watchBreak`
-    -- （正 lag ＋ 不一致）で chain を壊しうる。その分岐が起きないことを要求する。
-    (hnobg : ∀ v, ¬ BreakStepPos w3 v)
     (vs3 : ScanVM) (vq3 : SearchVM)
     (hcmp3 : (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3))
     (hmt3 : (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3))
@@ -708,8 +695,8 @@ theorem foundRouteMC_noshift''_Inv (centre : GalilVM → Fin 3)
   obtain ⟨cT, sT, k, L, hrun, hcr, hIT, h1, h2, h3, hInv⟩ :=
     foundRouteMC_noshift'_Inv centre place entry qq first raw hex hI.1.1 hlive
       (fun _ _ => hI.2) hseg0 hmF hrF hcF havF hidle vq hq hfound hmt ch hch hchne oF hoF hprepSeg
-      cen ys b hwatch2 hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hav3 hnobg vs3 vq3 hcmp3 hmt3 hq3
-      o3 ho3 w3' hbroken hmargin
+      cen ys b hwatch2 hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3
+      w3' hbroken hmargin
   exact ⟨cT, sT, k, L, hrun, hcr,
     invLP2_of_stepsAll centre place entry qq first hI.1.2 hrun hIT, h1, h2, h3, hInv⟩
 

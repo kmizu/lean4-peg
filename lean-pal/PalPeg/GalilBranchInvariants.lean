@@ -271,7 +271,6 @@ theorem chainTick_watch_total (s : GalilScaffoldChainWatch.State) (a : Bool)
       obtain ⟨z, hz⟩ := chainMatched_watch_total w'
         (fun _ => ⟨hc _ hi, watchBlock_internal hi hb⟩)
       exact ⟨z, _, .watchStep _ _ hi, hz⟩
-    | watchBreak _ _ hbr => exact ⟨_, _, .watchBreak _ _ hbr, .brokenMatched _⟩
 
 /-! ## The copy and back phases: obligation (i) -/
 
@@ -439,9 +438,6 @@ theorem blockInv_step {x y : ChainVM} (h : ChainStep x y) (hb : BlockInv x) : Bl
   | backStep => exact onBlock_moveLeft hb
   | backDone _ _ _ _ _ hf => exact onBlock_moveRight hb (isFirst_isLast hf)
   | watchStep _ _ hi => exact watchBlock_internal hi hb
-  | watchBreak _ _ hbr =>
-    obtain ⟨-, -, -, -, -, heq⟩ := hbr
-    rw [heq]; exact onBlock_verifier_consume _ hb
 
 theorem blockInv_matched {x y : ChainVM} (h : ChainMatched x y) (hb : BlockInv x) :
     BlockInv y := by
@@ -451,7 +447,6 @@ theorem blockInv_matched {x y : ChainVM} (h : ChainMatched x y) (hb : BlockInv x
   | back => exact hb
   | watch _ _ ho => exact watchBlock_outer ho hb
   | breaks _ _ hbr => exact watchBlock_break hbr hb
-  | brokenMatched _ => exact hb
 
 theorem blockInv_tick {a : Bool} {x z : ChainVM} (h : ChainTick a x z) (hb : BlockInv x) :
     BlockInv z := by

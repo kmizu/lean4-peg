@@ -356,8 +356,6 @@ def NoShiftTailC (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffold
         WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3 ∧
         c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
         s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
-        -- **`M-watchBreak` 修正で現れた義務**: 比較 tick は「背景 step → matched」の順。
-        (∀ v, ¬ PalPeg.GalilScaffoldChainInputSupply.BreakStepPos w3 v) ∧
         (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
         (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
         searchEffect (PofC centre place entry raw) true s3 vq3 ∧
@@ -384,12 +382,12 @@ theorem breakRouteLPraw_of_tail (centre : GalilVM → Fin 3)
   subst hsPeq
   intro hh es c2 s2 hprepSeg hlen hw
   obtain ⟨cen, ys, b, c3, s3, w3, vs3, vq3, o3, w3', hwatch2, hes0, hpal1, hpal2, hseg, hm3, hr3,
-    hc3, hs3, hav3, hnobg, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hprepSeg
+    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hprepSeg
   obtain ⟨cT, sT, k, L, hst, hcr, hLP2, hc, hlt, hright⟩ :=
     PalPeg.GalilInvPlus2.foundRouteMC_noshift'' centre place entry qq first raw hex hE.invLPC
       (PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry qq first hE.invLPC)
       hseg0 hmF hrF hcF havF hidle vq hq hfound hmt ch hch hchne oF hoF hprepSeg cen ys b hwatch2
-      hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hav3 hnobg vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken
+      hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken
       hmargin
   refine ⟨cT, sT, k, L, hst, hcr, hLP2, hc, hlt, ?_⟩
   rw [hright]

@@ -230,13 +230,12 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 radius ledger and the shift-order budget of `CloseoutRadPack2` are gone. -/
 theorem h_trailF_of_named (hen : H_shiftEntry centre place entry q first)
     (hll : H_leftLive centre place entry q first)
-    (hv : H_verSane centre place entry q first)
-    (hnb : PalPeg.CloseoutRadPack2.H_noBgBreak centre place entry q first) :
+    (hv : H_verSane centre place entry q first) :
     H_trailF centre place entry q first :=
   h_trailF_of_parts' centre place entry q first
     (h_radLedger_of_leftLive centre place entry q first hll)
     (h_shiftOrd_of_entry centre place entry q first hen hll)
-    hll hv hnb
+    hll hv
 
 end Final
 
@@ -250,11 +249,9 @@ theorem h_trailF_C (entry q : ℕ) (first : Fin 9)
     (hll : H_leftLive PalPeg.GalilFinalAssembly2.centreC PalPeg.GalilFinalAssembly2.placeC
       entry q first)
     (hv : H_verSane PalPeg.GalilFinalAssembly2.centreC PalPeg.GalilFinalAssembly2.placeC
-      entry q first)
-    (hnb : PalPeg.CloseoutRadPack2.H_noBgBreak PalPeg.GalilFinalAssembly2.centreC
-      PalPeg.GalilFinalAssembly2.placeC entry q first) :
+      entry q first) :
     H_trailF PalPeg.GalilFinalAssembly2.centreC PalPeg.GalilFinalAssembly2.placeC entry q first :=
-  h_trailF_of_named _ _ entry q first hen hll hv hnb
+  h_trailF_of_named _ _ entry q first hen hll hv
 
 #print axioms h_trailF_C
 
