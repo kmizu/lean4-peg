@@ -32,6 +32,50 @@
 
 
 
+## 2026-09-19 n116: **ファイルの docstring が未実装の定理を完了として書いていた**（監査上の発見）
+
+**全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
+
+### 何を見つけたか
+
+`PalPeg/CloseoutRealize1.lean` の冒頭 docstring は §1〜§6 の 6 節を列挙しており、
+そのうち
+
+> §6 `pal_in_peg_of_progPal` — the *direct* `Prog` route, which bypasses the
+> latch (and therefore all of `CloseoutPackRun*`) entirely via
+> `PalPeg.pal_in_peg_of_structured`.
+
+は「latch を——したがって `CloseoutPackRun*` 全体を——迂回する直接経路」と読める。
+`hC`（`obligation_localRealization`）の壁を丸ごと回避できる話に見える。
+
+**実際にはこのファイルは 89 行・宣言 2 つしかない**（`H_realizeSMG2'` と
+`h_realizeSMG2'_of_LIMG2'`）。§3〜§6 は**存在しない**。書いた当時の計画を、
+完了したかのような文体で docstring に書いていた。
+
+docstring を実態に合わせて訂正した（§1/§2 は「実装済み」、§3〜§6 は「構想のみ、未実装」、
+特に §6 は「存在しない。迂回路があると思って探すと時間を失う」と明記）。
+
+### 位置づけ
+
+CLAUDE.md は「散文の論証・他ファイルのヘッダ・類推・過去の自分の記述は一次情報として
+扱わない」と定めている。今日それに違反した例が 3 つ出た:
+
+1. n114 — CLAUDE.md §3 の「found 経路は未着手」を信じた（実際は DP 側が無条件で証明済み）
+2. n115 — 同様に `PrepInputsG3` を葉だと思った（実際は producer が標準公理で存在）
+3. n116（これ）— **ファイル自身の docstring** が未実装の定理を完了として書いていた
+
+**3 番目が一番危険**で、「このファイルにこう書いてある」は普通なら信頼できるはずの情報源に
+見える。**宣言の存在は `grep "^theorem"` で確認する。docstring の節番号を数えない。**
+
+### `hC` の現状（実測）
+
+* `CloseoutRealize1.h_realizeSMG2'_of_LIMG2'` — 実装済み（標準 3 公理）。
+  `LocalStep` の証人は付随的で、任意の厳密実時間 `StructuredMachine` で足りる、を
+  `H_realizeLIMG2'` について示す。
+* ただし最上位が使うのは `H_realizeLIMW'` で、そこへの連結は**未確認**。
+* `Workbench` §4 の記録（`TextFeed*` 153 モジュールが正本に 1 本も届いていない）は有効。
+
+
 ## 2026-09-19 n115: found 経路の `hpack` 7 節のうち少なくとも 2 節は既に無条件で産出済み
 
 **全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**

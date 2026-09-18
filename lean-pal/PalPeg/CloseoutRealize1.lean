@@ -13,21 +13,23 @@ consumer of that witness, `CloseoutPackRun36.pal_in_peg_final5MG2`, feeds it to
 
 This file makes that observation a theorem.
 
+**実装されているのは §1 と §2 だけ**（2026-09-19 に実測して訂正した。以前の
+docstring は §3〜§6 まで完了したかのように書いてあったが、このファイルの宣言は
+`H_realizeSMG2'` と `h_realizeSMG2'_of_LIMG2'` の **2 つだけ**。散文を一次情報として
+扱うとここで騙される）。
+
 * §1 `H_realizeSMG2'` — the same hypothesis with `L.realize …` replaced by an
-  arbitrary `StructuredMachine (Fin 2) Q' Γ' t B` plus `M.SAccepts []`.
+  arbitrary `StructuredMachine (Fin 2) Q' Γ' t B` plus `M.SAccepts []`.  **実装済み。**
 * §2 `h_realizeSMG2'_of_LIMG2'` — the `LocalStep` route is a special case, so
   `H_realizeSMG2'` is *weaker*; the empty-word half is
-  `GalilEmptyWord.realize_accept'_nil`.
-* §3 `pal_in_peg_final5SM2` — `pal_in_peg_final5MG2` over `H_realizeSMG2'`, and
-  §4 `pal_in_peg_final24SM` — `CloseoutPackRun46.pal_in_peg_final24` with `hC`
-  generalised.  Both keep every other hypothesis verbatim.
-* §5 `h_realizeSMG2'_of_prog` — a `ProgLangPersist2.progMachinePMb` package
-  qualifies: the finite control `(CtrlS prog × Bool) × Fin B` carries `Fintype`
-  and `DecidableEq` for free from `DecidableEq A` / `DecidableEq C`, so the
-  `Prog` route needs no hand-built finite control at all.
-* §6 `pal_in_peg_of_progPal` — the *direct* `Prog` route, which bypasses the
-  latch (and therefore all of `CloseoutPackRun*`) entirely via
-  `PalPeg.pal_in_peg_of_structured`.
+  `GalilEmptyWord.realize_accept'_nil`.  **実装済み。**
+
+以下は**構想のみ（未実装）**。書いた当時の計画であって、定理ではない:
+
+* §3 `pal_in_peg_final5SM2` / §4 `pal_in_peg_final24SM` — `hC` を一般化した最上位。
+* §5 `h_realizeSMG2'_of_prog` — `ProgLangPersist2.progMachinePMb` が有資格だという主張。
+* §6 `pal_in_peg_of_progPal` — latch（したがって `CloseoutPackRun*` 全体）を迂回する
+  直接 `Prog` 経路。**これは存在しない。** 迂回路があると思って探すと時間を失う。
 
 **無条件 PAL ∈ PEG は未完.**  Nothing here builds a machine; it relocates the
 remaining obligation from "a `LocalStep` with window-locality" to "any strictly
