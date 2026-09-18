@@ -331,6 +331,47 @@ shift 末尾の射影の形は `toOnly_shiftEnd_eq`（**済 n157**）。
 
 ---
 
+## 第 2 の筋: `obligation_localRealization`（n166 で調査、未着手）
+
+コウタの指摘（2026-09-19）:
+> 「localRealizationとかも一見難しく見えてるだけ。producerがいないってことは
+>   モデル化を何か間違ってる」
+
+### 中身（一次情報 `CloseoutFinalW:96`）
+
+    H_realizeLIMW' centre place entry q first :=
+      ∃ Q' Γ' (Fintype Q') (DecidableEq Q') (Fintype Γ') (DecidableEq Γ')
+        (t K : ℕ) (L : Local.LocalStep (Fin 2) Q' Γ' t K) (blank initQ outQ n) …,
+        ∀ w, 0 < w.length → ∀ st Tc, PreTraceB … w st Tc →
+          ((L.realize …).SAccepts w ↔ LatchTrue (PofC …) q first w (stLG' τF w st (Tc w.length)) …)
+
+つまり「**Galil 機械を本当に局所（有限制御・有界窓）な機械で実現する**」。
+`∃ … L` は構成そのもの。
+
+### 障害は「抽象 `Tick` が非決定的」——そしてその対策は**完成している**
+
+CLAUDE.md §1: 「**scan/init/replayStart は抽象 tick の非決定性で閉じない**」。
+CLAUDE.md §2 の方針: モデルは編集せず、Scala の優先順位と固定値を表す `Fair` を
+定義して `Tick ∧ Fair` の一意性を証明する。
+
+**`PalPeg/GalilTickFair.lean` の `tick_fair_unique`（`:429`）は証明済み**で、
+docstring は「**with no reachability pack at all**: every remaining branch overlap is
+settled by the constructor guards」と書いている（宣言の存在は `grep "^theorem"` で確認済み）。
+
+### 次の一手（CLAUDE.md §4 の項目 1 そのもの）
+
+> `Fair` 一意性（`GalilTickFair`）→ **構成 witness/局所 step の `Fair` 監査** →
+> `Realizes` の scan/init/replayStart
+
+関係ファイル: `LocalSysConcrete`（tick/到着/stutter/出力 oracle は無仮定）/
+`LocalRealizesScan`（rewind/choose 閉）/ `LocalRealizesPhase`（shift/copy/home/markEnd 閉、
+fpp は局所 1 量子のみ残）/ `LocalWF` / `LocalTick1`。
+
+**`H_readsShift` の筋（第 1）は found 経路の配線待ちで、そこはプロジェクト最大の
+既知項目。こちらの方が安い可能性がある。**
+
+---
+
 ## この session で機械検査／一次情報で確定したこと
 
 ### (a) `H_readsShift` は「guard の差」ではない（ReadsRun 案は却下）
