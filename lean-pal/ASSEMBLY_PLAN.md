@@ -1,3 +1,49 @@
+## 2026-09-19 n138: 残る `ShiftPal` 2 本の中身を特定した（chain 台帳の 1 場）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。
+無条件 PAL は未完。§10.5 は未達。**
+
+### 一次情報で測ったこと
+
+| 定理 | 結論 | `ShiftPal` に使えるか |
+|---|---|---|
+| `CloseoutPackRun31.terminal_palindrome` | `PalAt (encoded w) (C + 2h) (R + 1)` | **使える**（`periodOnly = true` 側で実際に使われている） |
+| `GalilScaffoldTopFreshEntry.fresh_shift_entry` | `∃ o, Entry … ∧ …`（origin 台帳） | **使えない**——`PalAt` ではない |
+| `CloseoutWatchPhase3.palAt_pair_of_candidate` | `PalAt … (pos − h) h ∧ PalAt … (pos − 2h) (2h)` | 座標が中心の**左側**で、`ShiftPal` は `pos + h` を要求 |
+
+**訂正**: `shiftPal_of_readOrigin` の docstring は `periodOnly = false` 分岐の内容を
+「`GalilScaffoldTopFreshEntry`」と書いていたが、そのファイルの 2 定理
+（`fresh_shift_entry` / `found_shift_entry`）はどちらも `Entry`（origin 台帳）を結論とし、
+`PalAt` を出さない。**shift 入口の台帳の話で、`ShiftPal` ではなかった。**
+（過去の自分の docstring を一次情報にしない——今日 5 回目）
+
+### `terminal_palindrome` の構造から分かる、必要な材料
+
+`terminal_palindrome` は `RoundScan` の場から組み立てている:
+
+* `hI.caught.scan.palindrome` — **現在の回文** `PalAt (encoded w) (C + h) (R + h)`
+* 終端条件（`terminal_iff` ← `singlePositive s.cycle`）
+* 予測（`symbol period.focus = read (right s.right)`）
+
+このうち**現在の回文は `ShiftPal` 自身の仮説 `hScanInv : ScanInvariant w (position s.center) r₀
+s.left s.right` が持っている**。終端条件は `periodOnly = false` 側では
+`negative wch.margin = false` に置き換わる。
+
+### したがって残る内容は 1 場だけ
+
+**「run に沿って、watch している chain の周期テープ長 `periodLength wch` は
+その中心における入力の本物の周期である」**
+
+これは `Candidate`（DP の結論、`GalilDpCorrect` で無条件証明済み）＋
+「この watch の周期テープはその `Candidate` から作られた」という**履歴の事実**。
+`periodOnly = true` 側では `RoundScan` がその履歴を運んでいる。
+`periodOnly = false` 側（誕生後の最初の shift）にはそれを運ぶ場がまだない。
+
+**次の仕事**: `RoundScan` の `periodOnly = false` 版（margin 基準・準備直後）を
+chain 台帳の 1 場として立て、`GalilPrepLeast.prep_watch_start_least`
+（`watchStart ver c ys b credits` ＋ `Candidate w lower h` ＋ `ys.length + 1 = h`）から
+run に載せる。**新しい数学ではなく、履歴を運ぶ場を 1 つ足す仕事。**
+
 ## 2026-09-19 n137: run 形も watch 点に狭めた（同じ 1 定理で 2 本）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット更新済み・緑。公理は 6。
