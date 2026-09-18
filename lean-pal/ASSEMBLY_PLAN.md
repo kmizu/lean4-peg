@@ -2,6 +2,70 @@
 
 
 
+
+## 2026-09-19 n81: `M-watchBreak` 修正を 35 ファイルまで進めて revert — 義務の形を過剰量化で書き間違えた
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+### やったこと
+
+`ChainStep.watchBreak`（正 lag の背景 break）と `ChainMatched.brokenMatched` を入れて
+Scala 正本 `ScaffoldChain.step()` / `matched()` に忠実にし、構成子分岐を 35 ファイル分
+修理した。その過程で得られたもの：
+
+* `chainStep_watch_total_of_symbol` — **`Good` を仮定しない後続状態の存在**。
+  必要なのは「verifier が右に動ける」と「period の焦点が記号を持つ」だけ。
+  これが `ChainTickable` / `hready` の解錠にあたる。
+* `internal_breakStepPos_false`（`Internal` と `BreakStepPos` は排他）、
+  `breakStepPos_unique`（break の行き先は一点）。
+* 修正で**真に偽になった**もの: `broken_stays`（`brokenMatched` でカウンタが動く）、
+  `CloseoutTickFalse.step_ne_broken`、`WatchClosedC`、`distance_mono_false`。
+  いずれも「watch または broken」の選言へ弱めるのが正しい形。
+* lag 台帳 `LagLe`（`position verifier + lag ≤ r`）は背景 break で**ちょうど 1 だけ破れる**
+  （Scala の `consume()` は `verifier.right()` を済ませてから `mode = Broken` にし
+  `lag.dec()` を飛ばす）。`NoBgBreak` として義務化した。
+
+### なぜ revert したか（自分の誤り）
+
+ラウンド系の下流に撒いた義務を
+
+```
+(hnobg : ∀ (w' : GalilScaffoldChainWatch.State) v, ¬ BreakStepPos w' v)
+```
+
+と書いた。**`w'` を任意に量化している。** `BreakStepPos` は「正 lag ＋ 不一致」なので
+そういう `w'` は確実に存在し、**この前提は偽**。付けた定理は全部空虚になる。
+`CLAUDE.md` に自分で書いた過剰量化の欠陥の 7 例目。偽の前提を撒いたまま進めるのが
+最悪なので緑に戻した。`GalilTrailAssembly` の `NoBgBreak (st i).vm.chain`（状態局所）が
+正しい形で、ラウンド系も同じく状態局所にしなければならない。
+
+実作業は `bb11acb` に履歴として残っているので、そこから再開できる（revert は `616c6e5`）。
+
+### 8 前提の見立て
+
+| 前提 | 状態 |
+|---|---|
+| `hSP` | **`M-watchBreak` 修正で通る見込みが高い**（`chainStep_watch_total_of_symbol` が既にある） |
+| `hC`（局所実現） | 最大の未知。`TextFeed*` 153 ＋ `Prog*` 119 本が閉包外。`CloseoutRealize1` は証人が付随的と示すので層自体が不要な可能性もある。**未判定** |
+| `hor`（oracle） | 葉 11 本、found 経路が未着手 |
+| `hme` | 残差 `WindowInOrigin` 1 本 |
+| 4 供給（`hfour` `hbgP` `hmatchP` `hsdP`） | `*Res` 残差 4 本に落ちるが producer が無い |
+
+8 → 7 は `M-watchBreak` 修正（構成子分岐 48 箇所 ＋ 状態局所の threading）で見えている。
+その先の `hor` の found 経路と `hC` が本体。
+
+### 構造的な推奨: Scala を functional に直して Lean へ関数として写す
+
+**モデル欠陥が 2 日で 2 件出た**（`M-periodOnly`、`M-watchBreak`）。どちらも
+「Scala は全域関数、Lean は帰納的関係」という非対称から来ている。
+**関係は場合を落とせるが全域関数は落とせない。**
+
+`ScaffoldChain.step` / `consume` / `matched` を純関数として書き直し（Scala 側の
+functional 化は許可済み）、Lean 側もそこから関数として写して、遷移関係はその関数から
+導く形にすれば、この種の欠陥が構造的に起きなくなる。今の地図と欠陥 2 件を見た上で、
+**これが最も効く一手**。
+
 ## 2026-09-19 n80: モデル欠陥 `M-watchBreak` を特定・機械検査 — `WatchOk` が偽である根本原因
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
