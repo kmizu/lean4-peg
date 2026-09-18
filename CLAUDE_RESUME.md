@@ -31,6 +31,73 @@
 
 
 
+
+## 2026-09-19 n109: `SpanRep` の正しい guard は `scan ∨ shift`（一次情報で確定）
+
+**全体 build 成功（EXIT=0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 4 個の原子的義務を axiom として持つ。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**（このエントリは調査結果のみ。
+`sorry` を含む下書きは挿入していない。）
+
+### 一次情報で確認した `length` / `radius` の遷移
+
+    afterCompare_radius : (afterCompare s vs vq).radius = inc s.radius     （TopInvStep:20）
+    afterCompare_length : (afterCompare s vs vq).length = inc (inc s.length)（TopInvStep:21）
+    afterMismatch_radius : (afterMismatch s vs vq).radius = inc s.radius    （TopRoundS:93）
+    afterMismatch_length : (afterMismatch s vs vq).length = s.length        （TopRoundS:94）
+    beginShiftVM : length := inc (inc s.length)、radius 不変               （TopShiftCycle:24）
+    beginFallbackAt : length / radius ともに不変                            （SharedFunctional:76）
+    rewindFrame.choose : length := ofNat 1、radius := reset                （TopRewind:56）
+    replayStartVM : length := ofNat 1、radius := reset                      （TopReplay:29）
+
+したがって `SpanRep s := value length = 2 * value radius + 1` は:
+
+| 相 | 状態 |
+|---|---|
+| boot（`init`） | **偽**（両方 reset なので `0 = 1`） |
+| scan（一致比較） | 保存（`afterCompare` は length +2 / radius +1） |
+| scan → shift | **不一致で壊れ、`beginShift` の length +2 で回復**（`spanRep_shift` の入口形が `⟨…, inc radius, inc (inc length)⟩` なのはこれ） |
+| shift | 保存（`shiftTick` は length −2 / radius −1、`spanRepS_shiftTick`） |
+| scan → copy（fallback） | **壊れたまま**（`beginFallbackAt` は counters を触らない） |
+| copy / home / fpp / markEnd / choose | 壊れたまま（counters 不変） |
+| choose → rewind | `length := 1`、`radius := 0` で回復 |
+| rewind 奇数側 | 壊れる（`rewindOne` は length のみ inc） |
+| replayStart → scan | **前提なしで再確立**（`length := 1`、`radius := 0`） |
+
+**よって正しい guard は `c.mode = Mode.scan ∨ c.mode = Mode.shift`。**
+`RadiusExactOffRewindPhase` のような「除外リスト」ではなく「許可リスト」になる。
+`EntryCounters` が要るのは scan 状態だけなので、これで十分。
+
+    def SpanRepOnScanAndShift (c : Control) (s : GalilVM) : Prop :=
+      c.mode = Mode.scan ∨ c.mode = Mode.shift → PalPeg.GalilSpanCounter.SpanRep s
+
+guard が scan/shift だけなので、24 ケースのうち実際に仕事があるのは 7 つ:
+
+    init          spanRep_of_init（側入力: boot の radius = reset ∧ length = reset）
+    scan_wait     spanRep_background
+    scan_count    spanRep_background
+    scan_match    spanRep_afterCompare ＋ replayDec ＋ afterBirth_length/radius
+    scan_shift    afterMismatch ＋ beginShiftVM の合成（下記）
+    shift_one     spanRepS_shiftTick（`shiftLens_set_radius` / `_length` で持ち上げ）
+    shift_done    counters 不変
+    replayStart   spanRep_of_fallback（**前提なし**）
+
+残り 16 ケースは行き先の mode が scan / shift でないので guard で空虚、
+または `restart`（counters 不変）。
+
+### 実装上の 1 つの引っかかり（次のターンの最初の作業）
+
+`scan_match` で `a = true`（一致分岐）を取り出す必要がある。
+`compareFound` の第 6 成分は `(a = true ↔ (galilFrame …).matched (scanLens.set s vs))` で、
+tick が持っているのは `hmt : (galilFrameS …).matched s'`。
+`s'` の scan 射影が `vs` 由来なので一致するはずだが、**橋渡しの補題を先に探す**
+（`radiusExact_after_compare` は radius が両分岐で inc なので `a` を場合分けせずに
+済んでいた。`SpanRep` は length が分岐で違うので `a` が必要）。
+
+`scan_shift` 側は `a = false`（不一致）で、`afterMismatch` の length 不変 ＋
+`beginShiftVM` の length +2 ＋ radius の inc で `SpanRep` が回復する:
+`length = 2·radius + 1` → `length + 2 = 2·(radius + 1) + 1`。
+
 ## 2026-09-19 n108: `marksEntry` は `SpanRep`（mode guard 付き）1 点に帰着した
 
 **全体 build 成功（EXIT=0）。既存の旗艦定理は標準公理のみ。
