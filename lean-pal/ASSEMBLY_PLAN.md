@@ -1,3 +1,37 @@
+## 2026-09-19 n152: ラウンド境界の入力があと 1 個（`hlen`）になった
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器は動いていない。**
+
+`PalPeg/RoundHistory.lean` が 15 宣言に。追加 5 本:
+
+### `periodLength_onlyMatchedRun` — scan 相のラウンドは period テープの長さを変えない
+
+`periodLength_consume`（`GalilChainCoupling:210`）は**無条件ではなく** `OnBlock` を側条件に
+取るが、`OnBlock` は `consume` で保たれる（`GalilBranchInvariants.onBlock_verifier_consume`）
+ので**起点 1 点だけ**あればよい。起点の `WatchBlock` は
+`CloseoutRoundReads.blockInv_of_chainPosInv2` から出る。
+
+これで `RoundSeg` の第 1 節 `periodLength wch' = periodLength wch` の材料が全部そろった
+（shift 相は n149 の `chain_shift_periodLength`、公理ゼロ）。
+
+### `watch_eq_of_mismatch_lagZero` — `hpred` の橋
+
+`round_next` の `hpred` は**compare 前**の watch について言うのに、shift guard は
+`afterMismatch s1 vs vq` 上で評価されるので**compare 後**の watch を見る。
+この差は lag ゼロなら消える:
+
+* `Internal` の `take` は `positive lag = true` を要求 → lag ゼロなら `idle` のみ
+* 不一致比較の事象は `b = false`、`Outer s false t` は `idle` のみ
+  （`queued` と `immediate` はどちらも `b = true`）
+
+補助: `positive_false_of_zero` / `internal_eq_of_lagZero` / `outer_eq_of_false`。
+
+### 入力表の現状（`PROOF_STACK.md`）
+
+`GalilScaffoldTopRoundS.round_next` の入力 15 個のうち **14 個が確認済み**。
+**残る未確認は `hlen : Canonical s1.length` の 1 個だけ**（`LPackM2` / `RadLedger` 側）。
+
 ## 2026-09-19 n151: ラウンド境界に無かった `ChainShiftRun` の収集を作った
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

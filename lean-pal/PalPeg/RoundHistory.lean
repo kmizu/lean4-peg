@@ -151,6 +151,91 @@ theorem onlyMatchedRun_of_roundHistory {c : Control} {s : GalilVM}
 
 end
 
+/-! ## 不一致比較では watch が動かない（lag ゼロのとき）
+
+`round_next` の `hpred : read (right s1.right) = symbol w…period.focus` は
+**compare 前**の watch `w` について言う。一方 shift guard は
+`afterMismatch s1 vs vq` 上で評価されるので**compare 後**の watch を見る。
+この差が埋まるのは lag ゼロのときだけ:
+
+* `Internal` の `take` は `positive lag = true` を要求するので、lag ゼロなら `idle` のみ
+  （`GalilScaffoldChainWatch:25-26`）
+* 不一致比較の事象は `b = false` で、`Outer s false t` は `idle` のみ
+  （`queued` と `immediate` はどちらも `b = true`。`GalilScaffoldChainWatch:31-33`）
+
+よって watch は不変で、**`hpred` は guard からタダ**。 -/
+
+/-- `zero` なら `positive` ではない。 -/
+theorem positive_false_of_zero {c : Counter} (hZero : zero c = true) : positive c = false := by
+  have hEmpty : c.pos.isEmpty = true := by
+    simpa using (Bool.and_eq_true_iff.mp hZero).1
+  simp [positive, hEmpty]
+
+/-- **lag ゼロなら `Internal` は恒等。** -/
+theorem internal_eq_of_lagZero {a b : GalilScaffoldChainWatch.State}
+    (hLagZero : zero a.lag = true)
+    (hInternal : GalilScaffoldChainWatch.Internal a b) : b = a := by
+  cases hInternal with
+  | idle _ => rfl
+  | take hPos _ =>
+    rw [positive_false_of_zero hLagZero] at hPos
+    exact absurd hPos (by decide)
+
+/-- **不一致（`b = false`）なら `Outer` は恒等。** -/
+theorem outer_eq_of_false {a b : GalilScaffoldChainWatch.State}
+    (hOuter : GalilScaffoldChainWatch.Outer a false b) : b = a := by
+  cases hOuter with
+  | idle => rfl
+
+/-- **lag ゼロの不一致比較で watch は不変。**  `hpred` を guard から取るための橋。 -/
+theorem watch_eq_of_mismatch_lagZero {a b : GalilScaffoldChainWatch.State}
+    (hLagZero : zero a.lag = true)
+    (hTick : GalilScaffoldChainWatch.Tick a false b) : b = a := by
+  cases hTick with
+  | step hInternal hOuter =>
+    rename_i mid
+    have hMid : mid = a := internal_eq_of_lagZero hLagZero hInternal
+    subst hMid
+    exact outer_eq_of_false hOuter
+
+#print axioms positive_false_of_zero
+#print axioms internal_eq_of_lagZero
+#print axioms outer_eq_of_false
+#print axioms watch_eq_of_mismatch_lagZero
+
+/-! ## ラウンド内で period テープの長さが保たれる
+
+`RoundSeg` の第 1 節は `periodLength wch' = periodLength wch`。ラウンドは
+scan 相（`OnlyMatchedRun`）と shift 相（`ChainShiftRun`）でできているので、両方で要る。
+
+* shift 相 → `chain_shift_periodLength`（上、公理ゼロ）
+* scan 相 → 下の `periodLength_onlyMatchedRun`
+
+`onlyCompareNext`（`GalilScaffoldChainInputSupply:2426`）は watch に `immediate` を
+当てるだけだが、`periodLength_consume`（`GalilChainCoupling:210`）は**無条件ではなく**
+`OnBlock m.control.period` を側条件に取る。その `OnBlock` は `consume` で保たれる
+（`GalilBranchInvariants.onBlock_verifier_consume`）ので、**起点の 1 点だけ**あればよい。
+起点の `WatchBlock` は `ChainPositionInvariantWithShiftPhase.coupled.block`
+（`CloseoutRoundReads.blockInv_of_chainPosInv2`）から出る。 -/
+
+/-- **scan 相のラウンドは period テープの長さを変えない**（＋ `WatchBlock` も運ぶ）。 -/
+theorem periodLength_onlyMatchedRun {a b : OnlyCompareState} {n : ℕ}
+    (hMatchedRun : OnlyMatchedRun a n b)
+    (hBlock : PalPeg.GalilBranchInvariants.WatchBlock a.watch) :
+    periodLength b.watch = periodLength a.watch ∧
+      PalPeg.GalilBranchInvariants.WatchBlock b.watch := by
+  induction hMatchedRun with
+  | stop u => exact ⟨rfl, hBlock⟩
+  | next u _ _ _ _ ih =>
+    obtain ⟨hLength, hBlockEnd⟩ :=
+      ih (PalPeg.GalilBranchInvariants.onBlock_verifier_consume _ hBlock)
+    refine ⟨?_, hBlockEnd⟩
+    rw [hLength]
+    exact PalPeg.GalilChainCoupling.periodLength_consume u.watch.machine u.watch.lag
+      u.watch.margin u.watch.lag (inc u.watch.margin) hBlock
+
+#print axioms periodLength_onlyMatchedRun
+
 /-! ## shift 相を run から集める
 
 ラウンド境界の残りは `ChainShiftRun` 1 個（`PROOF_STACK.md` の入力表）。

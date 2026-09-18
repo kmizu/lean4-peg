@@ -161,7 +161,7 @@ RoundHistory P q first delay w (c : Control) (s : GalilVM) : Prop :=
 | `hav : canRight s1.right` | `Extra7.scanAvail`（`mode = scan ∧ ¬replaying`） | **○** |
 | `hcmp` / `hmis` / `hq` | `scan_shift` の `hcmp` / `hmt` ＋ `compare_mismatched_parts`（`MatchedRunSnoc:406`） | **○** |
 | `hend : singlePositive s1.cycle = true` | `shiftGuardVM` の `if periodOnly then singlePositive cycle = true` 節。`RoundHistory` が `periodOnly = true` を持つ | **○** |
-| `hpred : read (right s1.right) = symbol w…period.focus` | `shiftGuardVM` の最後の節。guard は `afterMismatch s1 vs vq` 上で評価されるのでその `right` は `right s1.right` | **△**（`afterMismatch` の right が `right s1.right` であることを一次情報で確認する） |
+| `hpred : read (right s1.right) = symbol w…period.focus` | `shiftGuardVM` の最後の節。**n152 で確認済み**: `afterMismatch s vs vq = {searchLens.set (scanLens.set s vs) vq with radius := radiusAfter s}` なので right は `vs.right = right s1.right`。compare 前/後の watch の差は lag ゼロなら消える（`RoundHistory.watch_eq_of_mismatch_lagZero`） | **○** |
 | `hlen : Canonical s1.length` | `LPackM2` / `RadLedger` 側（`hlc0` と同種） | **△** |
 | `hg : P.shiftGuard (afterMismatch s1 vs vq)` ＋ `s2` ＋ `hb : P.beginShift …` | `scan_shift` の `hg` / `hb` | **○** |
 | `hs2 : beginShiftVM h w (afterMismatch …) s2` | `beginShiftVM' s t := ∃ w, beginShiftVM (periodLength w) w s t`（`GalilScaffoldTopGuards:35`）。よって `h = periodLength w` | **○** |
@@ -170,7 +170,7 @@ RoundHistory P q first delay w (c : Control) (s : GalilVM) : Prop :=
 | `o` ＋ `ho : refresh …` | `shift_done` の `o` / `ho` | **○** |
 
 **~~つまりラウンド境界の残りは `ChainShiftRun` の収集 1 個。~~ → n151 で作った。**
-**いま未確認なのは `hpred` の `afterMismatch` の right と `hlen : Canonical s1.length` の 2 個だけ。**
+**n152 で `hpred` も確認済み。未確認は `hlen : Canonical s1.length` の 1 個だけ**（`LPackM2` / `RadLedger` 側から出る見込み）。
 found 経路の `CloseoutWatchRound33` / `37` も `ChainShiftRun` を**仮説として取っている**
 （`ShiftRoundInvCL` / `ShiftOriginRestCL` は open な `def`）ので、ここは共通の穴。
 
@@ -220,17 +220,22 @@ ShiftHistory P q first delay (c : Control) (s : GalilVM) : Prop :=
 21 個は mode guard、`shift_done` は行き先 mode で落ちる）＋ `chainShiftRun_of_steps`
 （run に沿って伸ばす）。側条件は区間の全点が shift mode ∧ `CopyIdle`。
 
-**次**: `round_next` を run から呼ぶ組み立て（`roundSeg_of_run`）。
-未確認 2 個（`hpred` / `hlen`）を一次情報で確認してから。
-さらに `RoundSeg` の第 1 節 `periodLength wch' = periodLength wch` には
-「ラウンド内で `periodLength` が保たれる」が要る:
+**済（n152）**: `RoundSeg` の第 1 節 `periodLength wch' = periodLength wch` の材料が全部そろった:
 
-* shift 相は `chain_shift_periodLength`（**済・公理ゼロ**）
-* scan 相（`OnlyMatchedRun` の `onlyCompareNext` ＝ `immediate` を当てる）は
-  `periodLength_consume` を使うが、**これは無条件ではなく block 側条件を取る**
-  （`CloseoutRoundUnique:221` の使い方を確認済み）。側条件は
-  `CloseoutRoundReads.blockInv_of_chainPosInv2` 経由で
-  `ChainPositionInvariantWithShiftPhase` から出る見込み（未検証）
+* shift 相 → `chain_shift_periodLength`（**公理ゼロ**）
+* scan 相 → `periodLength_onlyMatchedRun`。`periodLength_consume` は無条件ではなく
+  `OnBlock` を取るが、`OnBlock` は `consume` で保たれる
+  （`GalilBranchInvariants.onBlock_verifier_consume`）ので**起点 1 点だけ**でよく、
+  起点の `WatchBlock` は `CloseoutRoundReads.blockInv_of_chainPosInv2` から出る
+* `periodLength (immediate w) = periodLength w` → `periodLength_consume` そのもの
+
+**済（n152）**: `hpred` の橋（`watch_eq_of_mismatch_lagZero`）。
+lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true` を要求）、
+不一致（`b = false`）では `Outer` は `idle` のみ（`queued`/`immediate` は `b = true`）。
+よって不一致比較で watch は不変。
+
+**次**: `round_next` を run から呼ぶ組み立て（`roundSeg_of_run`）。
+残る未確認は `hlen : Canonical s1.length` の 1 個。
 
 ---
 
