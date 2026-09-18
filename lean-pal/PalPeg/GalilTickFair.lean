@@ -388,12 +388,8 @@ theorem tick_fair_init_unique {c : Control} {s : GalilVM} {y₁ y₂ : State Gal
   obtain ⟨t2, hi2, hy2⟩ := tick_init_cases hm h2
   have e1 : initVM entry s t1 := hi1
   have e2 : initVM entry s t2 := hi2
-  obtain ⟨r1, l1, cc1, len1, rad1, rem1, rep1, cyc1, fpp1, ch1, se1, lo1, dp1⟩ := e1
-  obtain ⟨r2, l2, cc2, len2, rad2, rem2, rep2, cyc2, fpp2, ch2, se2, lo2, dp2⟩ := e2
-  obtain ⟨hp1, hwk1⟩ := hf1.keepsSearchCursor (Or.inl hm)
-  obtain ⟨hp2, hwk2⟩ := hf2.keepsSearchCursor (Or.inl hm)
-  rw [hy1] at hp1 hwk1
-  rw [hy2] at hp2 hwk2
+  obtain ⟨r1, l1, cc1, len1, rad1, rem1, rep1, cyc1, fpp1, ch1, se1, lo1, dp1, hp1, hwk1⟩ := e1
+  obtain ⟨r2, l2, cc2, len2, rad2, rem2, rep2, cyc2, fpp2, ch2, se2, lo2, dp2, hp2, hwk2⟩ := e2
   rw [hy1, hy2, galilVM_ext (l1.trans l2.symm) (cc1.trans cc2.symm) (r1.trans r2.symm)
     (ch1.trans ch2.symm) (cyc1.trans cyc2.symm) (rem1.trans rem2.symm) (rad1.trans rad2.symm)
     (len1.trans len2.symm) (rep1.trans rep2.symm) (fpp1.trans fpp2.symm) (se1.trans se2.symm)
@@ -411,12 +407,8 @@ theorem tick_fair_replayStart_unique {c : Control} {s : GalilVM} {y₁ y₂ : St
   obtain ⟨t2, o2, hi2, hpos2, hneg2, hy2⟩ := tick_replayStart_cases hm h2
   have e1 : replayStartVM entry s t1 := hi1
   have e2 : replayStartVM entry s t2 := hi2
-  obtain ⟨rep1, r1, l1, cc1, rad1, len1, rem1, cyc1, fpp1, ch1, se1, lo1, dp1⟩ := e1
-  obtain ⟨rep2, r2, l2, cc2, rad2, len2, rem2, cyc2, fpp2, ch2, se2, lo2, dp2⟩ := e2
-  obtain ⟨hp1, hwk1⟩ := hf1.keepsSearchCursor (Or.inr hm)
-  obtain ⟨hp2, hwk2⟩ := hf2.keepsSearchCursor (Or.inr hm)
-  rw [hy1] at hp1 hwk1
-  rw [hy2] at hp2 hwk2
+  obtain ⟨rep1, r1, l1, cc1, rad1, len1, rem1, cyc1, fpp1, ch1, se1, lo1, dp1, hp1, hwk1⟩ := e1
+  obtain ⟨rep2, r2, l2, cc2, rad2, len2, rem2, cyc2, fpp2, ch2, se2, lo2, dp2, hp2, hwk2⟩ := e2
   have ht : t1 = t2 :=
     galilVM_ext (l1.trans l2.symm) (cc1.trans cc2.symm) (r1.trans r2.symm)
       (ch1.trans ch2.symm) (cyc1.trans cyc2.symm) (rem1.trans rem2.symm) (rad1.trans rad2.symm)
@@ -485,7 +477,7 @@ theorem initVM_keeps_cursor (entry : ℕ) (s : GalilVM) :
       GalilScaffoldCounter.inc s.length, s.replay, s.fpp,
       GalilScaffoldSearchFinish.begin GalilScaffoldCounter.reset s.radius,
       GalilScaffoldControl.reset entry s.dp, GalilScaffoldCounter.reset, s.periodOnly, s.walker⟩,
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, rfl⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, rfl⟩
 
 /-- The `replayStart` clause is met by the witness of
 `GalilScaffoldTopReplay.replayStart_tick` (hence of
@@ -496,7 +488,7 @@ theorem replayStartVM_keeps_cursor (entry : ℕ) (s : GalilVM) :
       GalilScaffoldCounter.ofNat 1, s.radius, s.fpp,
       GalilScaffoldSearchFinish.begin GalilScaffoldCounter.reset GalilScaffoldCounter.reset,
       GalilScaffoldControl.reset entry s.dp, GalilScaffoldCounter.reset, s.periodOnly, s.walker⟩,
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, rfl⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, rfl⟩
 
 #print axioms fair_restart
 #print axioms initVM_keeps_cursor

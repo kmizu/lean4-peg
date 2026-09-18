@@ -636,7 +636,7 @@ theorem replayStartVM_commitReplay (hinj : RolesInjective x)
     (hleft : (LocalState.abs x).left = (LocalState.abs x).center) :
     replayStartVM entry (LocalState.abs x) (LocalState.abs (commitReplay entry x)) := by
   rw [abs_commitReplay hinj hpl hpw hclean]
-  exact ⟨rfl, hright, hleft, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  exact ⟨rfl, hright, hleft, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 end ReplayAbs
 

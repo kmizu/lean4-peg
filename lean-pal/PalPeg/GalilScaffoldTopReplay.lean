@@ -22,15 +22,21 @@ def initVM (entry : ℕ) (s t : GalilVM) : Prop :=
   t.center = GalilScaffoldChainVerifier.right s.right ∧ t.length = GalilScaffoldCounter.inc s.length ∧
   t.radius = s.radius ∧ t.remaining = s.remaining ∧ t.replay = s.replay ∧ t.cycle = s.cycle ∧ t.fpp = s.fpp ∧
   t.chain = .idle ∧ t.search = GalilScaffoldSearchFinish.begin GalilScaffoldCounter.reset s.radius ∧
-  t.lower = GalilScaffoldCounter.reset ∧ t.dp = GalilScaffoldControl.reset entry s.dp
+  t.lower = GalilScaffoldCounter.reset ∧ t.dp = GalilScaffoldControl.reset entry s.dp ∧
+  t.periodOnly = s.periodOnly ∧ t.walker = s.walker
 
-/-- `stepReplayStart` on the VM (chain/search restart abstracted into `watch`). -/
+/-- `stepReplayStart` on the VM (chain/search restart abstracted into `watch`).
+
+**2026-09-19**: `periodOnly` と `walker` の保存を追加した。Scala 正本の
+`stepReplayStart` はどちらも触らないので、自由にしておくのはモデル欠陥だった
+（`Fair.keepsSearchCursor` がその分を仮定として抱えていた）。 -/
 def replayStartVM (entry : ℕ) (s t : GalilVM) : Prop :=
   t.replay = s.radius ∧ t.right = s.center ∧ t.left = s.center ∧ t.center = s.center ∧
   t.radius = GalilScaffoldCounter.reset ∧ t.length = GalilScaffoldCounter.ofNat 1 ∧
   t.remaining = s.remaining ∧ t.cycle = s.cycle ∧ t.fpp = s.fpp ∧
   t.chain = .idle ∧ t.search = GalilScaffoldSearchFinish.begin GalilScaffoldCounter.reset GalilScaffoldCounter.reset ∧
-  t.lower = GalilScaffoldCounter.reset ∧ t.dp = GalilScaffoldControl.reset entry s.dp
+  t.lower = GalilScaffoldCounter.reset ∧ t.dp = GalilScaffoldControl.reset entry s.dp ∧
+  t.periodOnly = s.periodOnly ∧ t.walker = s.walker
 
 def replayPosVM (s : GalilVM) : Bool := GalilScaffoldCounter.positive s.replay
 
@@ -63,7 +69,7 @@ theorem replayStart_tick (onLetter leftFirst guard : GalilVM → Prop) (bs bf rs
     GalilScaffoldCounter.ofNat 1, s.radius, s.fpp, GalilScaffoldSearchFinish.begin GalilScaffoldCounter.reset GalilScaffoldCounter.reset,
     GalilScaffoldControl.reset entry s.dp, GalilScaffoldCounter.reset, s.periodOnly, s.walker⟩
   have hrs : (galilFrame (galilShared onLetter leftFirst guard bs bf rs centre place entry) q first).replayStart s t :=
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   have hpos : (galilFrame (galilShared onLetter leftFirst guard bs bf rs centre place entry) q first).replayPos t =
       GalilScaffoldCounter.positive s.radius := rfl
   cases hp : GalilScaffoldCounter.positive s.radius

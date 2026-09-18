@@ -27,7 +27,7 @@ theorem init_tick (onLetter leftFirst guard : GalilVM → Prop) (bs bf rs : Gali
   let t : GalilVM := ⟨right s.right, right s.right, right s.right, .idle, s.cycle, s.remaining, s.radius,
     GalilScaffoldCounter.inc s.length, s.replay, s.fpp, GalilScaffoldSearchFinish.begin GalilScaffoldCounter.reset s.radius,
     GalilScaffoldControl.reset entry s.dp, GalilScaffoldCounter.reset, s.periodOnly, s.walker⟩
-  exact ⟨t, .init c s t hm ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  exact ⟨t, .init c s t hm ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Scan-frame ticks from scan mode stay in scan mode and keep
 `replaying = false`. -/

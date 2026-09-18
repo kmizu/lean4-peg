@@ -248,7 +248,7 @@ theorem initVM_exists (entry : ℕ) (s : GalilVM) : ∃ t, initVM entry s t :=
       length := inc s.length, chain := ChainVM.idle,
       search := GalilScaffoldSearchFinish.begin reset s.radius,
       lower := reset, dp := GalilScaffoldControl.reset entry s.dp},
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩⟩
 
 theorem replayStartVM_exists (entry : ℕ) (s : GalilVM) : ∃ t, replayStartVM entry s t :=
   ⟨{s with
@@ -256,7 +256,7 @@ theorem replayStartVM_exists (entry : ℕ) (s : GalilVM) : ∃ t, replayStartVM 
       replay := s.radius, radius := reset, length := ofNat 1, chain := ChainVM.idle,
       search := GalilScaffoldSearchFinish.begin reset reset,
       lower := reset, dp := GalilScaffoldControl.reset entry s.dp},
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩⟩
 
 #print axioms init_tick_gen
 #print axioms restart_tick_gen
