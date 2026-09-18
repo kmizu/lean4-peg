@@ -1,3 +1,48 @@
+## 2026-09-19 n132: トップダウンに切り替え — `obligation_shiftPalAlongTrace` を 3 原子に割った
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット更新済み・緑。
+公理は 4 → 6（1 本を 3 原子に割ったため）。無条件 PAL は未完。§10.5 は未達。**
+
+### コウタの指摘（受けた）
+
+* 「変によく考えず定理ふやすのやめよ」——今日だけで新規ファイル 6 本。
+  CLAUDE.md に自分で「これ以上増やす前に、既にあるものを探す」と書いていながら守れていなかった。
+  実際に効いたのは**削除・弱化**の方（`hwatch` の除去は「足した」のではなく依存を切った結果）。
+* 「今残ってる前提を証明するためにトップダウンで」「せっかく機械的に残り前提検査
+  できるようにしたんだから」——**found 経路の作業は `obligation_cycleOracle` の部分木の中**
+  なので `#print axioms` の針が動かない。計器を使う形に戻す。
+
+### やったこと
+
+`PalInPegUnconditional.lean` の `axiom obligation_shiftPalAlongTrace` を
+**`ShiftPalAlongTrace.shiftPal_alongTrace` の適用に置き換え**、足りない引数を
+その場で原子的な `axiom` に切り出した。
+
+| 新しい原子 | 中身 | producer 候補 |
+|---|---|---|
+| `obligation_readsShiftAlongTrace` | trace 各点で `H_readsShift` | `RoundSegFromRun.readsShift_at_actual` |
+| `obligation_freshShiftAtShiftEntryAlongTrace` | trace 各 tick で `H_freshShiftAtShiftEntry` | `GalilScaffoldTopFirstRound.first_round` |
+| `obligation_shiftPalAtFreshChainAlongTrace` | `periodOnly = false` 点での `ShiftPal` | 未特定 |
+
+**2 つの側条件は文脈から出た**（新しい公理にならなかった）:
+
+* `0 < w.length` — `w = []` なら `Tc 0 = 0`（`PreTrace.tc0`）で `1 ≤ j ≤ Tc w.length` が空虚
+* `1 ≤ Tc w.length` — `PreTraceB.tc1`（`Tc 1 = 1`）＋ `PreTrace.mono`
+
+### 現在の針（実測）
+
+    [propext, Classical.choice, Quot.sound,
+     obligation_cycleOracle,
+     obligation_freshShiftAtShiftEntryAlongTrace,
+     obligation_localRealization,
+     obligation_readsShiftAlongTrace,
+     obligation_shiftPalAlongRun,
+     obligation_shiftPalAtFreshChainAlongTrace]
+
+数は増えたが、これが CLAUDE.md の「公理は 1 場ずつの原子に分解する
+（束ねると『1 個外す』が測れない）」。次は `obligation_shiftPalAlongRun` にも
+同じ手（`CloseoutBundleRun.shiftPal_of_run_B`）を当て、そのあと原子を 1 本ずつ潰す。
+
 ## 2026-09-19 n131: `WatchMismatchNoShiftC` のガードを「tick できる相」に広げた
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。

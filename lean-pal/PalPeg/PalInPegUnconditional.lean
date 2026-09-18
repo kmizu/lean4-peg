@@ -1,5 +1,6 @@
 import PalPeg.PalInPeg
 import PalPeg.BranchSupply
+import PalPeg.ShiftPalAlongTrace
 
 /-!
 # `PalInPeg.unconditional` — 目標そのもの。穴は `axiom` で明示する
@@ -105,16 +106,64 @@ axiom obligation_shiftPalAlongRun (entry q : ℕ) (first : Fin 9) :
         Steps (galilFrameS (PofC centreC placeC entry w) q first) 2048 m ⟨c, r⟩ z →
         ScanNR z → ShiftPal centreC placeC entry q first w z.vm
 
-/-- **(OBLIGATION)** trace の scan 点で `ShiftPal`（trace 形）。
+/-! ### trace 形 `ShiftPal` の 3 原子（n132 で `obligation_shiftPalAlongTrace` を割った）
 
 `PreTraceIMW` を仮説に入れるのは必須。入れないと `st` が無制約関数になって
 `∀ z, … → ShiftPal z.vm` と同値に潰れる（`hav` が偽になったのと同じ形）。 -/
-axiom obligation_shiftPalAlongTrace (entry q : ℕ) (first : Fin 9) :
+
+/-- **(OBLIGATION)** trace の各点で `H_readsShift`（shift 相のラウンド読み出し）。
+`obligation_shiftPalAlongTrace` を原子に割った 1 本目。
+producer の候補は `RoundSegFromRun.readsShift_at_actual`。 -/
+axiom obligation_readsShiftAlongTrace (entry q : ℕ) (first : Fin 9) :
+    ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      ∀ j, 1 ≤ j → j ≤ Tc w.length →
+        PalPeg.CloseoutRoundUnique.H_readsShift w (st j).ctl (st j).vm
+
+/-- **(OBLIGATION)** trace の各 tick で `H_freshShiftAtShiftEntry`（shift 入口の最初のラウンド）。
+原子 2 本目。producer の候補は `GalilScaffoldTopFirstRound.first_round`。 -/
+axiom obligation_freshShiftAtShiftEntryAlongTrace (entry q : ℕ) (first : Fin 9) :
+    ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      ∀ j, 1 ≤ j → j < Tc w.length →
+        PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centreC placeC entry q first w
+          (st j).ctl (st j).vm (st (j+1)).vm
+
+/-- **(OBLIGATION)** `periodOnly = false`（＝chain 誕生後まだ shift していない）点での
+`ShiftPal`。原子 3 本目。`periodOnly = true` 側は `shiftPal_of_chainRound` が閉じている
+ので、残るのはこの分岐だけ。 -/
+axiom obligation_shiftPalAtFreshChainAlongTrace (entry q : ℕ) (first : Fin 9) :
+    ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
+        ShiftPal centreC placeC entry q first w (st j).vm
+
+/-- **もう公理ではない。**  `ShiftPalAlongTrace.shiftPal_alongTrace` の適用で、
+上の 3 原子に割れた。2 つの側条件（`0 < w.length` と `1 ≤ Tc w.length`）は文脈から出る:
+`w = []` なら `Tc 0 = 0`（`PreTrace.tc0`）で結論が空虚、
+`1 ≤ Tc w.length` は `PreTraceB.tc1`（`Tc 1 = 1`）＋ `PreTrace.mono`。 -/
+theorem obligation_shiftPalAlongTrace (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
       ∀ j, 1 ≤ j → j ≤ Tc w.length →
         (st j).ctl.mode = GalilScaffoldController.Mode.scan → (st j).ctl.replaying = false →
-        ShiftPal centreC placeC entry q first w (st j).vm
+        ShiftPal centreC placeC entry q first w (st j).vm := by
+  intro w st Tc hPre j hj1 hjle hm hr
+  have hw : 0 < w.length := by
+    rcases Nat.eq_zero_or_pos w.length with h0 | hpos
+    · exfalso; rw [h0, hPre.base.pre.tc0] at hjle; omega
+    · exact hpos
+  have hTcPos : 1 ≤ Tc w.length := by
+    have hmono := hPre.base.pre.mono 1 w.length hw (le_refl _)
+    rw [hPre.base.tc1] at hmono
+    exact hmono
+  exact PalPeg.ShiftPalAlongTrace.shiftPal_alongTrace centreC placeC entry q first hw hPre hTcPos
+    (fun j' h1 h2 => obligation_readsShiftAlongTrace entry q first w st Tc hPre j' h1 h2)
+    (fun j' h1 h2 =>
+      obligation_freshShiftAtShiftEntryAlongTrace entry q first w st Tc hPre j' h1 h2)
+    (fun j' h1 h2 h3 =>
+      obligation_shiftPalAtFreshChainAlongTrace entry q first w st Tc hPre j' h1 h2 h3)
+    j hj1 hjle hm hr
 
 /-- **(OBLIGATION)** `CycleOracleMC3`。 -/
 axiom obligation_cycleOracle (entry q : ℕ) (first : Fin 9) :
