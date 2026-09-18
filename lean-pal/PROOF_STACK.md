@@ -76,6 +76,17 @@
 3. 供給: `dpEvents (m+1) ≤ as.length` を段境界で再供給する
    ——ここだけが本当の算術（`CloseoutPreload35` §3 の `8 ≤ mw < 32`）
 
+### n190: 算術の穴 3 つのうち 1 つを閉じた
+
+`CloseoutPreload7.depth_exceeds_prepLen`（機械検査済みの否定的結果）は
+`runEntriesS_of_namedG` の `D ≤ prepLen k` が満たせないことを言っていた。
+`D ≤ prepLen k` の唯一の使い道 `budget_adv` の `2048*adv ≤ prepLen k` を
+**実際の深さ `prepLen k + max k 1 + 1` ちょうど**に緩めて再証明した
+（`StageBudgetShift.budget_adv_nat_shift` / `budget_adv_shift`、標準 3 公理）。
+`k ≤ 8` は 9 ケース手計算（`k=1,2,3,5,6` で余裕 0）、`k ≥ 9` は緩い上界で足りる。
+
+残りの算術 2 つ: `CloseoutPreload35` §3 の 4 窓、段境界のイベント供給。
+
 ### n176: 残り 3 本のうち 2 本が同じ底を共有している（実測）
 
 `obligation_shiftPalResiduesAlongRun` の 3 残差の producer を辿ると全部

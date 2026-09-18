@@ -1,3 +1,44 @@
+## 2026-09-19 n190: 記録済みの否定的結果（`depth_exceeds_prepLen`）を予算の緩和で閉じた
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+`PalPeg/StageBudgetShift.lean`（新規、3 定理、標準 3 公理のみ）:
+
+    budget_adv_nat_shift {k Rad adv m} (hstage : 3 * Rad ≤ 5 * k)
+      (hadv : 2048 * adv ≤ prepLen k + max k 1 + 1)      -- ← 緩めた
+      (hm   : 2048 * m ≤ prepLen k + dpEvents (stageWindow1 k) + 2048) :
+      adv + m + Rad ≤ 2 * max k 1
+    budget_adv_shift      -- ℤ 版（結論は stageDebt Rad k）
+    budget_adv_of_shift   -- 旧 budget_adv を含むことの確認
+
+### 何が閉じたか
+
+`CloseoutPreload7.depth_exceeds_prepLen`（機械検査済み）は
+**`CloseoutPreload6.runEntriesS_of_namedG` の側条件 `D ≤ prepLen k` が
+満たせない**ことを言っていた: 実際の入口深さは
+`max k 1 + 2 + (prepLen k - 1) = prepLen k + max k 1 + 1`
+（`depth_le_prepLen_shifted`）で、`prepLen k` より真に大きい。
+grow 相の `max k 1` ティックと `prepare` dispatch を数え落としていた。
+
+`D ≤ prepLen k` の唯一の使い道は `budget_adv` の `2048 * adv ≤ prepLen k` なので、
+そこを**実際の深さちょうど**に緩めた。結論は不変。
+
+### 両側とも tight
+
+* `k ≥ 9`: 緩い上界（`prepLen_le` / `dpEvents_stage_le`）で足りる——
+  `3·2048·(adv+m+Rad) ≤ 11548k + 6429 ≤ 12288k` は `k ≥ 9` と同値
+* `k ≤ 8`: 9 個の具体ケース。`k = 1, 2, 3, 5, 6` では**余裕がちょうど 0**
+
+（数値確認: `k = 0..5000` と `10^5, 10^6, 10^7` で成立。余裕は `k=9,10` で 1、
+`k=20` で 2、`k=100` で 13、`k=10^6` で 120809。）
+
+### 読み方
+
+これは readiness 連鎖の**算術の穴 3 つのうち 1 つ**。残り 2 つ:
+`CloseoutPreload35` §3（`8 ≤ mw < 32` の 4 窓、slack 2047 で 2 単位吸収できない）と、
+段境界でのイベント供給。**公理は減っていない**（穴は公理の下にある）。
+
 ## 2026-09-19 n189: 準備相を「歩き」から切り離した——段境界を越える状態局所の背骨
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
