@@ -25,6 +25,87 @@
 
 
 
+
+## 2026-09-19 n103: `headsRepresent` を `MarksInv'` 基底へ（内容の訂正）＋ `CentreMargin` に偽の疑い
+
+**全体 build 成功（EXIT=0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 5 個の原子的義務を axiom として持つ（数は不変）。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
+
+### 内容の訂正（数は減らない）
+
+n96 で「`rewindMargin` を `CentreMargin` 1 葉に縮めた」と書いたのは**強化**だった。
+`RCouple` は `position center ≤ position left + r + pairOff` の向きしか持たないので、
+`2 ≤ position left` から `CentreMargin`（`r + pairOff + 2 ≤ position center`）は出ない。
+**数だけ見て「縮めた」と書いてはいけない。**
+
+`headsRepresent_tick` の側入力を `CentreMargin` 由来の `hCentreTwoLe` から
+`MarksInv'` ＋ `RCouple` に差し替えた（どちらも真に弱い）:
+
+* `Tick.rewind_pair` は `hf : ¬ atFirst s` を**構成子として持つ**（`GalilScaffoldTop:164`）
+* `CloseoutPackRun16.two_le_left_of_marksInv'` がその `hf` から `2 ≤ position left`
+* `RCouple`（`rcouple_alongTrace`、葉なし）で `2 ≤ position center`
+
+追加: `BranchSupply.marksInv_alongTrace`（`H_marksEntry'` から trace 全域へ、
+`marksInv'_of_run` ＋ `steps_of_trace`、boot は `init` 相）。
+
+これで **`CentreMargin` の消費者は `Extra'.rewindMargin` 系 1 本だけ**になった。
+
+### 決定的な発見: `MarksInv'` は `RCouple` の**逆向き**を持っている
+
+`CloseoutPackRun16:191` の `MarksInv'` は 2 成分:
+
+    MarksInv' first c s := c.mode = Mode.rewind →
+      (∃ f, 1 ≤ f ∧ f ≤ mh s ∧ denote (marksTape s.fpp) f = first ∧
+        mh s + 1 ≤ position s.left + f) ∧
+      (∃ r, s.radius = ofNat r ∧ position s.left + r + pairOff c ≤ position s.center)
+
+**第 2 成分が `position left + r + pairOff ≤ position center`** ——`RCouple` が持って
+いない向きそのもの。だから `2 ≤ position left`（第 1 成分 ＋ `¬atFirst`）と
+合わせると
+
+    r + pairOff + 2 ≤ position left + r + pairOff ≤ position center
+
+で **`CentreMargin` が丸ごと出る**。つまり
+
+* **`¬atFirst` で guard した `CentreMargin` は `MarksInv'` から無償**
+  （＝既存の公理 `obligation_marksEntry` に完全に吸収される）
+* guard なしでは第 1 成分から `1 ≤ position left` しか出ない
+  （`one_le_left_of_marksInv'`）ので `r + pairOff + 1 ≤ position center` まで。
+  **現行の（guard なしの）`CentreMargin` は `+1` 分だけ強すぎる**
+
+### `obligation_centreMargin_alongTrace` に偽の疑い（未検査・要確認）
+
+`rewindMarginAt_alongTrace` は `CentreMargin` から**guard なしの**
+`RewindMarginAt c s := c.mode = Mode.rewind → 2 ≤ position s.left` を出す。
+ところが `CloseoutPackRun16` は 2 本を区別している:
+
+    one_le_left_of_marksInv' : MarksInv' → mode = rewind → 1 ≤ position left
+    two_le_left_of_marksInv' : MarksInv' → mode = rewind →
+                               (marksTape s.fpp).focus ≠ first → 2 ≤ position left
+
+**`2` は `¬atFirst` の下でしか主張されていない。** `atFirst`（＝ rewind の歩きが
+FIRST に到達した最後の状態、次の tick は `rewind_done`）では `position left = 1`
+でありうる。もしそれが到達可能なら `RewindMarginAt` は偽で、したがって
+`CentreMargin`（それより強い）も偽。
+
+**これは `canRNext` と同型（「着地/端の状態まで量化した」）。** 確認手順:
+`rewind_done` の直前状態で `position left = 1` を作れるかを `MarksInv'` の定義
+（`CloseoutPackRun16:191`）から検査する。作れれば機械検査済みの反証を書き、
+`RewindMarginAt` を `¬atFirst` で再 guard する。
+
+### 再 guard の影響範囲（実測）
+
+    rewindMargin : … → 2 ≤ position left        8 箇所
+      CloseoutLPack4:207 / PackRun11:368 / PackRun43:82 / PackRun3:117 /
+      PackRun45:85 / PackRun46:68 / BranchSupply:2200,2519
+    rewindLeft : … → 0 < position (left s.left)  2 箇所（CloseoutLPack3:279 / PackRun11:107）
+    producer `rewindLeft := fun hm => left_pos_of_two (… .rewindMargin hm)`  4 箇所
+      CloseoutLPack4:259 / PackRun11:460 / PackRun43:175 / PackRun8:439
+
+消費点は `lpackM3_tick` の `rewind_one` / `rewind_pair` ケースで、そこには
+tick 自身の `hf : ¬atFirst` が来ている。よって再 guard は機械的だが 14 箇所以上。
+
 ## 2026-09-19 n102: `centreMargin` の放電経路が確定（部品は全部既にある）
 
 **全体 build 成功（EXIT=0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
