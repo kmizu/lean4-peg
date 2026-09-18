@@ -1,6 +1,7 @@
 import PalPeg.CloseoutRoundSeg
 import PalPeg.ShiftPhaseDeterminism
 import PalPeg.MatchedRunSnoc
+import PalPeg.CloseoutReadsOrigin
 
 /-!
 # `RoundSeg` を run の実際の状態で
@@ -130,5 +131,46 @@ theorem originAt_at_actual {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
 #print axioms compareRounds_at_actual
 #print axioms roundSeg_at_actual
 #print axioms originAt_at_actual
+
+
+/-- **`H_readsShift` を run の実際の状態で。**
+
+`shiftPal_of_run_B` の 2 残差のうち 1 つがこれ。鎖は
+
+    OriginAt（前ラウンド起点）
+      → roundSeg_at_actual（このファイル、shift 相の決定性で実状態へ）
+      → CloseoutReadsOrigin.originShift_of_roundSeg
+      → CloseoutReadsOrigin.h_readsShift_of_originShift
+      → H_readsShift
+
+で、新しい名前付きの葉はゼロ。残るのは「`OriginAt` を前ラウンド起点で持つ run 不変量」
+に仕立てる部分（tick 搬送）と `round_next` の入力の配線。 -/
+theorem readsShift_at_actual {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {w : List (Fin 2)} {s : GalilVM} {w0 v : GalilScaffoldChainWatch.State} {h : ℕ}
+    {x yc ya : State GalilVM} {Kc Ka : ℕ} {cOut : Control}
+    (hOriginStart : PalPeg.CloseoutOriginAt.OriginAt w s)
+    (hCompareRounds : CompareRounds h (toOnly s w0) 1 (toOnly yc.vm v))
+    (hChainStart : s.chain = ChainVM.watch w0) (hPeriodStart : periodLength w0 = h)
+    (hChainEnd : ya.vm.chain = ChainVM.watch v) (hPeriodEnd : periodLength v = h)
+    (hShiftEntry : x.ctl.mode = Mode.shift)
+    (hConstructed : Steps (galilFrameS P q first) delay Kc x yc)
+    (hExitConstructed : yc.ctl.mode ≠ Mode.shift)
+    (hRemainingConstructed : ∀ (j : ℕ) (z : State GalilVM),
+      Steps (galilFrameS P q first) delay j x z → j < Kc →
+      (galilFrameS P q first).remainingPos z.vm)
+    (hActual : Steps (galilFrameS P q first) delay Ka x ya)
+    (hExitActual : ya.ctl.mode ≠ Mode.shift)
+    (hRemainingActual : ∀ (j : ℕ) (z : State GalilVM),
+      Steps (galilFrameS P q first) delay j x z → j < Ka →
+      (galilFrameS P q first).remainingPos z.vm) :
+    PalPeg.CloseoutRoundUnique.H_readsShift w cOut ya.vm :=
+  PalPeg.CloseoutReadsOrigin.h_readsShift_of_originShift
+    (PalPeg.CloseoutReadsOrigin.originShift_of_roundSeg hOriginStart
+      (roundSeg_at_actual hCompareRounds hChainStart hPeriodStart hChainEnd hPeriodEnd
+        hShiftEntry hConstructed hExitConstructed hRemainingConstructed hActual hExitActual
+        hRemainingActual)
+      (fun _ _ => ⟨w0, hChainStart⟩))
+
+#print axioms readsShift_at_actual
 
 end PalPeg.RoundSegFromRun

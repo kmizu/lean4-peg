@@ -110,7 +110,7 @@ theorem roundBundle_tick_O {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s 
     (hB : PalPeg.CloseoutRoundBundle.RoundBundle w c s)
     (hinv : ChainPositionInvariantWithShiftPhase w c s) (hci : c.mode = Mode.shift → CopyIdle s)
     (hOS : OriginShift w c s)
-    (hF : H_freshShift w s t)
+    (hF : PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centre place entry q first w c s t)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) delay ⟨c, s⟩ ⟨c', t⟩) :
     PalPeg.CloseoutRoundBundle.RoundBundle w c' t :=
   PalPeg.CloseoutRoundBundle.roundBundle_tick centre place entry q first hB hinv hci

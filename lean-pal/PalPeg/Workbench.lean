@@ -206,6 +206,7 @@ inductive で、**`Tick` の `scan_wait` / `scan_count` / `scan_match` と 1 対
 | `compareRounds_at_actual` | 構成した着地での `CompareRounds` を run の実際の着地へ移す |
 | `roundSeg_at_actual` | 上の合成 |
 | **`originAt_at_actual`** | **`OriginAt` がラウンドを 1 つ越える（run の実際の状態で）** |
+| **`readsShift_at_actual`** | **`H_readsShift` を run の実際の状態で（新しい名前付きの葉ゼロ）** |
 
 **主定理との関係**: `H_readsShift` の唯一の供給元は
 `CloseoutReadsOrigin.h_readsShift_of_originAt`（`OriginAt w s → H_readsShift w c s`）で、
@@ -216,9 +217,36 @@ inductive で、**`Tick` の `scan_wait` / `scan_count` / `scan_match` と 1 対
 段差は shift 相だけで（scan 側は `onlyMatchedRun_of_steps` が最初から実際の状態で出す）、
 `ShiftPhaseDeterminism.shift_landing_eq` が `Fair` なしで埋める。
 
+`readsShift_at_actual` の鎖（新しい名前付きの葉はゼロ）:
+
+    OriginAt（前ラウンド起点）
+      → roundSeg_at_actual（shift 相の決定性で実状態へ）
+      → CloseoutReadsOrigin.originShift_of_roundSeg
+      → CloseoutReadsOrigin.h_readsShift_of_originShift
+      → H_readsShift
+
 **残り**: (a) `OriginAt` を「いまのラウンド起点で」持つ run 不変量に仕立てる
 （ラウンド境界で `originAt_at_actual` を使う）、(b) `round_next` の入力の配線、
-(c) `H_freshShift` / `H_fresh`（新鮮な chain の第 1 ラウンド、`first_round`）。
+(c) `H_freshShiftAtShiftEntry`（新鮮な chain の第 1 ラウンド、`first_round`）。
+
+## `H_freshShift` を消費者の scope に狭めた（2026-09-19）
+
+`CloseoutPackRun37.H_freshShift` は「`periodOnly = false` の状態からの**任意の** tick」に
+`ShiftInv` を課していたが、唯一の消費者 `shiftRound_tick` はそれを `scan_shift` 分岐の
+`periodOnly = false` 側でしか使わない。広い版は fresh chain が `.watch` になった直後
+（`chainStart` が `cycle` を reset した点）で `ShiftInv.count : value cycle = 2k` を
+満たせないので**偽の疑いが濃い**（機械検査した反証はまだ無いので `REFUTED` とは書かない）。
+**過剰量化の 12 例目。**
+
+`CloseoutPackRun37.H_freshShiftAtShiftEntry` が狭めた版で、shift 入口——比較が不一致で
+shift guard が立ち `beginShift` が着く——でだけ主張する。これは
+`CloseoutReadsOrigin:140` の既存の測定（「fresh chain の第 1 shift は `used = 2h-1`、
+`WatchSeg` の掃引の後で起きる」）と一致し、`GalilScaffoldTopFirstRound.first_round` の
+結論が出る場所とも一致する。
+
+差し替えたのは `shiftRound_tick`（`CloseoutPackRun37`）と `shiftRound_tick_A`
+（`CloseoutAdvanceT`）、および供給側の `CloseoutBundleRun` / `CloseoutRoundBundle` /
+`CloseoutReadsOrigin`。全体 build 成功。
 
 **`scanSeg_snoc_tick` で tick 補題は済んだ**（標準 3 公理）。残るのは、これを run 不変量
 （「いまの状態はあるラウンド起点から `n` 手の一致比較で到達した」）に仕立てて、

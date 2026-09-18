@@ -62,7 +62,7 @@ theorem roundBundle_tick {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s t 
     (hinv : ChainPositionInvariantWithShiftPhase w c s)
     (hci : c.mode = Mode.shift → CopyIdle s)
     (hSh : H_readsShift w c s)
-    (hF : H_freshShift w s t)
+    (hF : PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centre place entry q first w c s t)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) delay ⟨c, s⟩ ⟨c', t⟩) :
     RoundBundle w c' t where
   chainRound :=
@@ -94,7 +94,7 @@ theorem roundBundle_steps {w : List (Fin 2)} {delay n : ℕ} {x y : State GalilV
     (hinv : ∀ z : State GalilVM, ChainPositionInvariantWithShiftPhase w z.ctl z.vm)
     (hci : ∀ z : State GalilVM, z.ctl.mode = Mode.shift → CopyIdle z.vm)
     (hSh : ∀ z : State GalilVM, H_readsShift w z.ctl z.vm)
-    (hF : ∀ z z' : State GalilVM, H_freshShift w z.vm z'.vm)
+    (hF : ∀ z z' : State GalilVM, PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centre place entry q first w z.ctl z.vm z'.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) delay n x y) :
     RoundBundle w y.ctl y.vm := by
   induction h with

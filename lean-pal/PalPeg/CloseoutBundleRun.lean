@@ -74,7 +74,7 @@ theorem roundBundle_steps_run {w : List (Fin 2)} {delay : ℕ} :
       (∀ (m : ℕ) (z z' : State GalilVM),
         Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
         Tick (galilFrameS (PofC centre place entry w) q first) delay z z' →
-        H_freshShift w z.vm z'.vm) →
+        PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centre place entry q first w z.ctl z.vm z'.vm) →
       RoundBundle w y.ctl y.vm := by
   intro n x y h
   induction h with
@@ -103,7 +103,7 @@ theorem shiftPal_of_run {w : List (Fin 2)} {delay n : ℕ} {x y : State GalilVM}
     (hF : ∀ (m : ℕ) (z z' : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
       Tick (galilFrameS (PofC centre place entry w) q first) delay z z' →
-      H_freshShift w z.vm z'.vm)
+      PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centre place entry q first w z.ctl z.vm z'.vm)
     (hm : y.ctl.mode = Mode.scan) (hr : y.ctl.replaying = false)
     (hcan : canRight y.vm.right)
     (hfresh : y.vm.periodOnly = false →
@@ -146,7 +146,7 @@ theorem shiftPal_of_run_aux {w : List (Fin 2)} {delay n : ℕ} {x y : State Gali
     (hF : ∀ (m : ℕ) (z z' : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
       Tick (galilFrameS (PofC centre place entry w) q first) delay z z' →
-      H_freshShift w z.vm z'.vm)
+      PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centre place entry q first w z.ctl z.vm z'.vm)
     (hm : y.ctl.mode = Mode.scan) (hr : y.ctl.replaying = false)
     (hcan : canRight y.vm.right)
     (hfresh : y.vm.periodOnly = false →
@@ -183,7 +183,7 @@ theorem roundBundle_tick_B {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s 
     (hblk : BlockInv s.chain)
     (hci : c.mode = Mode.shift → CopyIdle s)
     (hSh : H_readsShift w c s)
-    (hF : H_freshShift w s t)
+    (hF : PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centre place entry q first w c s t)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) delay ⟨c, s⟩ ⟨c', t⟩) :
     RoundBundle w c' t where
   chainRound :=
@@ -213,7 +213,7 @@ theorem roundBundle_steps_B {w : List (Fin 2)} {delay : ℕ} :
       (∀ (m : ℕ) (z z' : State GalilVM),
         Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
         Tick (galilFrameS (PofC centre place entry w) q first) delay z z' →
-        H_freshShift w z.vm z'.vm) →
+        PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centre place entry q first w z.ctl z.vm z'.vm) →
       RoundBundle w y.ctl y.vm := by
   intro n x y h
   induction h with
@@ -245,7 +245,7 @@ theorem shiftPal_of_run_B {w : List (Fin 2)} {delay n : ℕ} {x y : State GalilV
     (hF : ∀ (m : ℕ) (z z' : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
       Tick (galilFrameS (PofC centre place entry w) q first) delay z z' →
-      H_freshShift w z.vm z'.vm)
+      PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centre place entry q first w z.ctl z.vm z'.vm)
     (hm : y.ctl.mode = Mode.scan) (hr : y.ctl.replaying = false)
     (hcan : canRight y.vm.right)
     (hfresh : y.vm.periodOnly = false →
