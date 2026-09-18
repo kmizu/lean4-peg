@@ -276,6 +276,9 @@ producer は `CloseoutWatchRound10.prepLandingWatchC_of_short`）。**束ねる�
 | `watchSegE_match_needs_only_nonIdle` | `WatchSegE` の `match` は `chain ≠ .idle` しか要求しない（copy/back 相も区間に載る） |
 | `BreakLandingAtReachedWatch`（def） | 節 7（`BreakLandingC`）の `∃` 版 |
 | **`reachesWatchPhase_of_breakLandingAtReachedWatch`** | **節 7 の正しい形は節 4 の正しい形を含意する**（供給は 1 本で足りる） |
+| `not_shiftGuardVM_of_not_watch` | watch でなければ shift guard は立たない |
+| `guardNeedsWatch_PofC` | 具体枠では `shiftGuard = shiftGuardVM` で watch を要求 |
+| **`no_shift_from_copyChain`** | **誕生直後（`.copy` 相）の scan 状態からは shift に行けない**（不一致が来ても `scan_fallback`） |
 
 **壊れていたのは結論の量化子だった。** `PrepLandingWatchC` は
 

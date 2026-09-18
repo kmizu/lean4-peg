@@ -123,4 +123,92 @@ theorem reachesWatchPhase_of_breakLandingAtReachedWatch (centre : GalilVM → Fi
 
 #print axioms reachesWatchPhase_of_breakLandingAtReachedWatch
 
+
+/-! ## run 側の選言のうち「shift には行けない」半分
+
+`ReachesWatchPhase` を run から出すには「誕生後 `2h+1` tick 走って watch になる」か
+「その前に不一致で fallback に落ちる」かの選言が要る（n119）。そのうち
+**「shift には行けない」**部分は構造だけで出る:
+
+`shiftGuardVM s` は `∃ w, s.chain = .watch w` を含む。誕生直後の chain は `.copy` で、
+`ChainTick` 1 手では `.watch` に届かない（`FoundPackRefute.chainTick_copy_not_watch`）。
+よって比較の行き先で guard は立たず、`Tick.scan_shift` は使えない。
+
+これは「誕生した chain が、周期を写し終える前に shift に使われることはない」という
+モデルの忠実性の帰結でもある（Scala の `canShift` は watch 相でしか true にならない）。 -/
+
+/-- **copy 相の chain では shift guard は立たない。** -/
+theorem not_shiftGuardVM_of_not_watch {s : GalilVM}
+    (hNotWatch : ∀ wv : GalilScaffoldChainWatch.State, s.chain ≠ ChainVM.watch wv) :
+    ¬ shiftGuardVM s := by
+  rintro ⟨wv, hw, -⟩
+  exact hNotWatch wv hw
+
+
+/-- 具体枠 `PofC` では `shiftGuard = shiftGuardVM` で、watch を要求する。 -/
+theorem guardNeedsWatch_PofC (centre : GalilVM → Fin 3)
+    (place : GalilVM → GalilScaffoldPlace.Place) (entry : ℕ) (raw : List (Fin 2)) :
+    ∀ u : GalilVM, (PofC centre place entry raw).shiftGuard u →
+      ∃ wv : GalilScaffoldChainWatch.State, u.chain = ChainVM.watch wv := by
+  intro u hGuard
+  obtain ⟨wv, hw, -⟩ : shiftGuardVM u := hGuard
+  exact ⟨wv, hw⟩
+
+/-- **誕生直後（`.copy` 相）の scan 状態からは shift に行けない。**
+`Tick.scan_shift` の `shiftGuard` が立たないので、不一致が来ても行き先は
+`scan_fallback` になる。 -/
+theorem no_shift_from_copyChain {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {x y : State GalilVM}
+    {t : GalilScaffoldTape.Tape} {hh : Counter} {pl : GalilScaffoldPlace.Place}
+    {v : GalilScaffoldChainPeriod.Tape} {lag margin : Counter} {ver : PlaceHead}
+    (hGuardNeedsWatch : ∀ u : GalilVM, P.shiftGuard u →
+      ∃ wv : GalilScaffoldChainWatch.State, u.chain = ChainVM.watch wv)
+    (hScan : x.ctl.mode = Mode.scan)
+    (hCopy : x.vm.chain = ChainVM.copy t hh pl v lag margin ver)
+    (hTick : Tick (galilFrameS P q first) delay x y) :
+    y.ctl.mode ≠ Mode.shift := by
+  cases hTick with
+  | scan_shift c0 s0 s0' s0'' hm hav hClock hCompare hNotMatched hr hGuard hBegin =>
+    exfalso
+    obtain ⟨vs, vq, a, hvl, hvr, hiff, hsearch, hchain, hteq⟩ :
+      compareFound P q first s0 s0' := hCompare
+    have hNotIdle : s0.chain ≠ ChainVM.idle := by rw [hCopy]; intro h0; cases h0
+    have hChainTick : ChainTick a s0.chain vs.chain := by
+      rcases hchain with ⟨-, hct⟩ | ⟨hidle, -, -⟩ | ⟨hidle, -, -⟩
+      · exact hct
+      · exact absurd hidle hNotIdle
+      · exact absurd hidle hNotIdle
+    rw [hCopy] at hChainTick
+    obtain ⟨wv, hw⟩ := hGuardNeedsWatch s0' hGuard
+    have hChainEq : s0'.chain = vs.chain := by
+      rw [hteq, afterBirth_chain]; split <;> rfl
+    rw [hChainEq] at hw
+    exact PalPeg.FoundPackRefute.chainTick_copy_not_watch hChainTick wv hw
+  | shift_one c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hScan) (by decide)
+  | init c0 s0 s0' hm _ => intro hEq; exact Mode.noConfusion hEq
+  | scan_wait c0 s0 s0' hm _ _ => rw [hm]; intro hEq; exact Mode.noConfusion hEq
+  | scan_count c0 s0 s0' hm _ _ _ => rw [hm]; intro hEq; exact Mode.noConfusion hEq
+  | scan_match c0 s0 s0' s0'' o hm _ _ _ _ _ _ => rw [hm]; intro hEq; exact Mode.noConfusion hEq
+  | scan_fallback c0 s0 s0' s0'' hm _ _ _ _ _ _ _ => intro hEq; exact Mode.noConfusion hEq
+  | shift_done c0 s0 o hm _ _ => intro hEq; exact Mode.noConfusion hEq
+  | replayStart c0 s0 s0' o hm _ _ _ => intro hEq; exact Mode.noConfusion hEq
+  | restart c0 s0 s0' hm _ => rw [hm]; intro hEq; exact Mode.noConfusion hEq
+  | copy_one c0 s0 s0' hm _ _ => rw [hm]; intro hEq; exact Mode.noConfusion hEq
+  | copy_done c0 s0 s0' hm _ _ => intro hEq; exact Mode.noConfusion hEq
+  | home_start c0 s0 s0' hm _ _ => intro hEq; exact Mode.noConfusion hEq
+  | home_step c0 s0 s0' hm _ _ => rw [hm]; intro hEq; exact Mode.noConfusion hEq
+  | fpp_slice c0 s0 s0' hm _ => rw [hm]; intro hEq; exact Mode.noConfusion hEq
+  | fpp_done c0 s0 s0' hm _ => intro hEq; exact Mode.noConfusion hEq
+  | markEnd_step c0 s0 s0' hm _ _ => rw [hm]; intro hEq; exact Mode.noConfusion hEq
+  | markEnd_found c0 s0 s0' hm _ _ => intro hEq; exact Mode.noConfusion hEq
+  | choose_select c0 s0 s0' hm _ _ _ => intro hEq; exact Mode.noConfusion hEq
+  | choose_step c0 s0 s0' hm _ _ => rw [hm]; intro hEq; exact Mode.noConfusion hEq
+  | rewind_done c0 s0 s0' hm _ _ => intro hEq; exact Mode.noConfusion hEq
+  | rewind_one c0 s0 s0' hm _ _ _ => rw [hm]; intro hEq; exact Mode.noConfusion hEq
+  | rewind_pair c0 s0 s0' hm _ _ _ => rw [hm]; intro hEq; exact Mode.noConfusion hEq
+
+#print axioms not_shiftGuardVM_of_not_watch
+#print axioms guardNeedsWatch_PofC
+#print axioms no_shift_from_copyChain
+
 end PalPeg.FoundPackCorrected
