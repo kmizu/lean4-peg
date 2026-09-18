@@ -74,6 +74,7 @@ import PalPeg.GalilSourceCost
 import PalPeg.CloseoutFinalVer
 import PalPeg.CloseoutFinalBranch
 import PalPeg.RoundHistory
+import PalPeg.ReadyFuelRefute
 import PalPeg.MatchedRunSnoc
 import PalPeg.ShiftPhaseDeterminism
 import PalPeg.RoundSegFromRun

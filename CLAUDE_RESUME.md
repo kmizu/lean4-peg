@@ -1,3 +1,50 @@
+## 2026-09-19 n181: **`ReadyFuel` を機械検査で反証した** — `StageEntryC` は切り直しが要る
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+`PalPeg/ReadyFuelRefute.lean`（新規、1 定理、標準 3 公理のみ）:
+
+    not_readyFuel_v0 (n : ℕ) (hn : n ≤ paced.length) :
+      ¬ GalilSegmentConstructB.ReadyFuel v0 n (paced.count true)
+
+`v0` は restart 直後の探索（`search = begin reset reset`、`Canonical`・`0 ≤ value`・
+`StageEntry 0 reset` がすべて成立）。`paced` は `CloseoutRunEntriesPaced` の
+`advances 2048 2048 (av.map (·, true))`。
+
+**証人は 1 つも新規に作っていない。** `CloseoutRunEntriesPaced` の
+`v0` / `paced_shape` / `step1`〜`step8` / `p7_not_run` / `p8_run` / `p8_debt` / `rest_count` を
+そのまま使った。`K` を `paced` 自身のマッチ数に取ったので数え上げも不要（`le_rfl`）。
+
+### 帰結: `StageEntryC.fuel` は偽（もう「疑い」ではない）
+
+    StageEntryC.fuel : ReadyFuel (searchLens.get r) (headRank r.right * 2048 + c.clock)
+                                 (headRank r.right)
+
+`readyFuel_mono` は `K' ≤ K` で弱くなる向きなので、`paced.count true`（= 3）以上の `K` では
+**すべて偽**。`headRank p = 2 * (p.head.right.length + p.head.incoming.length) + …`
+（`GalilLeafEnds:66`）は入力長に比例するので、数文字の入力で 3 を超える。
+
+**`StageEntryC` を要求する found 経路の入口
+（`CloseoutPrepInputs3.prepInputs3_of_found_or_later`）は、この契約では閉じない。**
+
+### 切り直しの形（一次情報が指している先）
+
+正しい通貨は `CloseoutReadyStage.RunEntriesS`（`RunEntryS` が `DpSafeRem` ではなく
+**`DpSafeStage`**——stage の終わりで切った版を使う、`:318`）。
+`CloseoutPreload11.runEntriesS_of_restartS2:327` が既にそれを出している
+（`Restarted` ＋ `StageEntry` ＋ `CentreLongAt` ＋ `DepthAt` ＋ `PostRun` から、
+条件は `D + dpEvents(…) ≤ as.length` ＋ `PacedL 2048 0 as`）。
+
+### 今日の「形式化のミスを疑う」の 4 件目
+
+| # | 場所 | 中身 |
+|---|---|---|
+| 1 | `localRealization` | `Trace`/`Steps`/`StepsAll` が fairness を捨てている（n174） |
+| 2 | `PackRunRMW` | `ReplayStage` を `hI.1` で捨てていた（n177、**直した**） |
+| 3 | `ReadyFuel` の素朴形 | 2 つとも既に反証済みだった（n178） |
+| 4 | `StageEntryC.fuel` | **反証した**（n181） |
+
 ## 2026-09-19 n180: **`StageEntryC.fuel` は偽の疑いが濃い**（`REFUTED` とは書かない）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。

@@ -150,7 +150,7 @@ CLAUDE.md の記述では `CycleOracleMC3` は origin/着地とも `InvLPS` な�
 (2) `PostRun` と `RestartS2` の中身を読んで producer が本当に無いか確かめる。
 **どちらも「書く」前に「読む」作業。**
 
-### n180: **`StageEntryC.fuel` は偽の疑いが濃い**（`REFUTED` とは書かない）
+### n180 → n181: **`StageEntryC.fuel` は偽**（`PalPeg/ReadyFuelRefute.not_readyFuel_v0` で機械検査済み。以下は n180 時点の推論、結論は確定した）
 
 n179 の地図に従って `ReadyFuel` を展開した（一次情報）:
 
@@ -174,8 +174,10 @@ n179 の地図に従って `ReadyFuel` を展開した（一次情報）:
 はず。** これは `RunEntriesAtBegin` / `RunEntriesPaced 2048` が偽である理由と**同型**で、
 どちらも機械検査済み（`CloseoutReadinessAudit` / `CloseoutRunEntriesPaced`）。
 
-**`REFUTED` とは書かない**——`StageEntryC.fuel` そのものについて `False` を導く
-機械検査済みの定理はまだ無い。書けるのは「**偽の疑いが濃い**」まで。
+**n181 で確定した**: `PalPeg/ReadyFuelRefute.not_readyFuel_v0` が
+`¬ ReadyFuel v0 n (paced.count true)` を機械検査で示した（標準 3 公理のみ、
+証人は `CloseoutRunEntriesPaced` のものをそのまま使用、新規証人ゼロ）。
+`readyFuel_mono` より、`paced.count true`（= 3）以上の `K` ではすべて偽。
 
 ### 帰結（`PROOF_STACK` の見立ての訂正）
 
@@ -186,8 +188,7 @@ found 経路の入口 `prepInputs3_of_found_or_later` が `StageEntryC` を取�
 
 ### 次にやること（優先順）
 
-1. **反証を試みる**: `CloseoutReadinessAudit` の有限トレースを `ReadyFuel v n K`
-   （`K = 3`）に合わせて作り直す。成功すれば `StageEntryC` の切り直しが確定する
+1. ~~**反証を試みる**~~ → **済（n181）**: `PalPeg/ReadyFuelRefute.lean`
 2. 切り直しの形: `RunEntriesS`（`CloseoutReadyStage:444`、`DpSafeStage` で**stage で切った**版）が
    正しい通貨。`CloseoutPreload11.runEntriesS_of_restartS2` が既にそれを出している
 3. `StageEntryC.fuel` を `RunEntriesS` 系に差し替えた `StageEntryS` を作り、
