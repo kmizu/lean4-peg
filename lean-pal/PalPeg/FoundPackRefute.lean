@@ -65,6 +65,29 @@ theorem chainStart_is_copy (answer : GalilScaffoldTape.Tape) (c : Fin 3)
       = ChainVM.copy answer reset walker (GalilScaffoldChainPeriod.start c) radius radius
         verifier := rfl
 
+
+/-! ## 同じ欠陥は `PrepLandingWatchC` だけではない
+
+`CloseoutWatchRun.LiveScanWatch c s` は
+
+    c.mode = .scan ∧ c.replaying = false ∧ 1 ≤ c.clock ∧ ∃ w, s.chain = .watch w
+
+で、最後の節がまた **watch を要求する**。よって
+`CloseoutWatchRound5.PrepLandingLiveC cP sP`（`∀ es c2 s2, WatchSegE … → LiveScanWatch c2 s2`）
+も `es = []` 実例で `sP.chain` が watch であることを強制し、found 比較直後の `sP`
+（chain は生まれたばかりの `.copy`）では偽。
+
+**これが found 経路が閉じなかった根本原因**と見られる: 設計が「chain は誕生直後から
+watch している」を前提にしているが、モデルは Scala 正本どおり `chain.start()` が
+`.copy` 相を作り、周期を写して、巻き戻して、それから `.watch` になる。 -/
+
+/-- `PrepLandingLiveC` も watch 始点を強制する（`es = []` 実例）。 -/
+theorem prepLandingLiveC_watch_start (P : Shared) (q : ℕ) (first : Fin 9)
+    {cP : Control} {sP : GalilVM}
+    (hLive : PalPeg.CloseoutWatchRound5.PrepLandingLiveC P q first cP sP) :
+    ∃ w : GalilScaffoldChainWatch.State, sP.chain = ChainVM.watch w :=
+  (hLive [] cP sP (.stop cP sP)).2.2.2
+
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
@@ -79,6 +102,22 @@ theorem hpack_false_of_foundCompareCtx {w : List (Fin 2)} {c cP : Control} {r sP
     hcen, hqe, hf, hmtF, hch, hchne, hoF, hcPe, hsPe⟩ := hCtx
   obtain ⟨wv, hWatch⟩ :=
     PalPeg.CloseoutWatchRound8.prepLandingWatchC_watch_start _ _ _ hPrepLandingWatch
+  have hChainEq : sP.chain = ch := by rw [hsPe, afterBirth_chain]; rfl
+  obtain ⟨lag', margin', hCopy⟩ := chainMatched_copy_stays_copy hch
+  rw [hChainEq, hCopy] at hWatch
+  exact ChainVM.noConfusion hWatch
+
+
+/-- **REFUTED（条件付き）その 2**: `PrepLandingLiveC` も found 比較直後で偽。 -/
+theorem prepLandingLiveC_false_of_foundCompareCtx {w : List (Fin 2)} {c cP : Control}
+    {r sP : GalilVM}
+    (hCtx : FoundCompareCtxC centre place entry q first w c r cP sP)
+    (hLive : PalPeg.CloseoutWatchRound5.PrepLandingLiveC (PofC centre place entry w) q first
+      cP sP) :
+    False := by
+  obtain ⟨es0, cF, sF, vq, ch, oF, a, ls, rs, qw, gap, hraw, hseg, hmF, hrF, hcF, havF, hidle,
+    hcen, hqe, hf, hmtF, hch, hchne, hoF, hcPe, hsPe⟩ := hCtx
+  obtain ⟨wv, hWatch⟩ := prepLandingLiveC_watch_start _ _ _ hLive
   have hChainEq : sP.chain = ch := by rw [hsPe, afterBirth_chain]; rfl
   obtain ⟨lag', margin', hCopy⟩ := chainMatched_copy_stays_copy hch
   rw [hChainEq, hCopy] at hWatch
@@ -108,6 +147,8 @@ theorem hpack_false_of_foundReachable {raw : List (Fin 2)} {c c' : Control} {r t
   exact hpack_false_of_foundCompareCtx centre place entry q first hCtx
     (hPrepLandingWatchAtAnyFoundCtx cP sP hCtx)
 
+#print axioms prepLandingLiveC_watch_start
+#print axioms prepLandingLiveC_false_of_foundCompareCtx
 #print axioms hpack_false_of_foundReachable
 
 end

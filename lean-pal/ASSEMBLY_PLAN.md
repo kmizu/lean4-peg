@@ -32,6 +32,55 @@
 
 
 
+## 2026-09-19 n118: **found 経路が閉じなかった根本原因**（`PrepLanding*` 一族が誕生直後に watch を要求）
+
+**全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
+
+### 機械検査した事実（`PalPeg/FoundPackRefute.lean`、標準公理のみ）
+
+| 定理 | 内容 |
+|---|---|
+| `chainMatched_copy_stays_copy` | `ChainMatched` は `.copy` から `.copy` にしか行かない |
+| `chainStart_is_copy` | `chainStart` は `.copy`（`rfl`、公理ゼロ） |
+| `prepLandingLiveC_watch_start` | `PrepLandingLiveC cP sP` → `∃ w, sP.chain = .watch w` |
+| `hpack_false_of_foundCompareCtx` | `FoundCompareCtxC` ＋ `PrepLandingWatchC` → `False` |
+| `prepLandingLiveC_false_of_foundCompareCtx` | `FoundCompareCtxC` ＋ `PrepLandingLiveC` → `False` |
+| **`hpack_false_of_foundReachable`** | **`InvLPC` ＋ `SegReachedW` ＋ found 比較 → `False`** |
+
+### 根本原因
+
+`CloseoutWatchRun.LiveScanWatch c s` の最終節は `∃ w, s.chain = .watch w`。
+`PrepLandingLiveC` / `PrepLandingWatchC` はどちらも
+`∀ es c2 s2, WatchSegE … cP sP c2 s2 → …` の形で、`WatchSegE.stop cP sP` が
+無条件に存在するため `es = []` 実例で **`sP` 自身が watch であること**を強制する。
+
+ところが found 比較直後の `sP` の chain は `chainStart …`（`.copy`）から
+`ChainMatched` で 1 歩進んだもので、**`ChainMatched` は構成子の形を保つ**
+（`.copy → .copy` / `.back → .back` / `.watch → .watch` / `.watch → .broken`、
+`GalilScaffoldTopChainVM:69`）から、必ず `.copy`。
+
+**つまり found 経路の設計は「chain は誕生直後から watch している」を前提にしている。**
+モデルは Scala 正本どおり `chain.start()` が `.copy` 相を作り、周期を写し、巻き戻し、
+それから `.watch` になる。1 tick では届かない。
+
+**これが found 経路が閉じなかった根本原因**と見られる。`hpack`（7 節の束）を
+証明しようとしていた作業は、偽の命題を証明しようとしていた。
+
+### 直し方の方向（未実施）
+
+`PrepLanding*` を `sP`（found 比較直後）ではなく、**chain が `.watch` になった後の
+landing** で主張する。`CloseoutWatchRound10.prepLandingWatchC_of_short` は
+watch 始点 ＋ clock 上界から `PrepLandingWatchC` を出すので、正しい場所では真。
+`FoundCompareCtxC` から watch 相までを繋ぐ区間（copy → back → watch）を
+別に持つ必要がある。
+
+### 副次的な修理
+
+`CloseoutFoundRoute1` はビルド不能だった（`:238` の `StepsAll.zero` 型不整合、
+モデル修正 `M-periodOnly` の取り残し）。直した（`afterBirth` はヘッドを触らないので
+`OutputRel` / `ScanInvariant` / `chain` は congruence で移る）。
+これで `foundCompareCtxC_of_found` が使えるようになり、到達可能性込みの反証が書けた。
+
 ## 2026-09-19 n117': **`hpack` は REFUTED（条件付き）** — 機械検査済み
 
 `PalPeg/FoundPackRefute.hpack_false_of_foundCompareCtx`（標準公理 `propext`/`Quot.sound` のみ）:
