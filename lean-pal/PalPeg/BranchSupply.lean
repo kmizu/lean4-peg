@@ -766,6 +766,81 @@ theorem radiusExact_after_background {w : List (Fin 2)} {s t : GalilVM}
     backgroundS_fields (PofC centre place entry w) q first hb
   rw [hcen, hr, hrad]; exact h
 
+/-- **`compare` は `radiusExact` を保つ**（一致・不一致とも）。
+`compareFound` は `vs.right = right s.right` を無条件に与え、`afterCompare` /
+`afterMismatch` は `center` 不変・`radius = inc s.radius`、`afterBirth` は 3 つとも不変。
+右ヘッドが 1 進み半径が 1 増えるので等式が保たれる。 -/
+theorem radiusExact_after_compare {w : List (Fin 2)} {s t : GalilVM}
+    (hCompare : (galilFrameS (PofC centre place entry w) q first).compare s t)
+    (hCanRight : GalilScaffoldChainVerifier.canRight s.right)
+    (hLeftNonempty : 0 < s.right.head.left.length)
+    (hRadiusExact : (position s.center : ℤ) + value s.radius = position s.right) :
+    (position t.center : ℤ) + value t.radius = position t.right := by
+  obtain ⟨vs, vq, a, -, hvr, -, -, -, hteq⟩ :
+    compareFound (PofC centre place entry w) q first s t := hCompare
+  have hstep : position (GalilScaffoldChainVerifier.right s.right) = position s.right + 1 :=
+    right_position s.right hCanRight hLeftNonempty
+  have hc : t.center = s.center := by
+    rw [hteq]; cases a <;>
+      simp [afterBirth_center, afterCompare_center, afterMismatch_center]
+  have hr : t.right = GalilScaffoldChainVerifier.right s.right := by
+    rw [hteq]; cases a <;>
+      simp [afterBirth_right, afterCompare_right, afterMismatch_right, hvr]
+  have hrad : t.radius = inc s.radius := by
+    rw [hteq]; cases a <;>
+      simp [afterBirth_radius, afterCompare_radius, afterMismatch_radius]
+  rw [hc, hr, hrad, inc_value, hstep]
+  push_cast
+  omega
+
+/-- **`matchedPlace` は `center` / `radius` / `right` を触らない**
+（`t = if b then {s with replay := dec s.replay} else s`）。 -/
+theorem radiusExact_after_matchedPlace {w : List (Fin 2)} {b : Bool} {s t : GalilVM}
+    (hPlace : (galilFrameS (PofC centre place entry w) q first).matchedPlace b s t)
+    (hRadiusExact : (position s.center : ℤ) + value s.radius = position s.right) :
+    (position t.center : ℤ) + value t.radius = position t.right := by
+  have h : t = (if b then {s with replay := dec s.replay} else s) := hPlace
+  rw [h]; cases b <;> simpa using hRadiusExact
+
+/-- **fpp 相の遷移は `center` / `radius` / `right` を触らない。**
+`fppLens.get s = s.fpp` だけを見るので `t = fppLens.set s (fppLens.get t) = {s with fpp := t.fpp}`。
+`copyOne` / `copyEnd` / `fppStart` / `homeStep` / `fppSlice` / `fppDone` / `atEnd` /
+`markForward` の 8 遷移が該当する。 -/
+theorem radiusExact_after_fppLensStep {s t : GalilVM}
+    (hSet : t = fppLens.set s (fppLens.get t))
+    (hRadiusExact : (position s.center : ℤ) + value s.radius = position s.right) :
+    (position t.center : ℤ) + value t.radius = position t.right := by
+  rw [hSet]; exact hRadiusExact
+
+/-- **`shiftOne` は `radiusExact` を保つ。**  `shiftLens` は `right` を見ないので
+右ヘッドは不変、`shiftTick` は `center := right s.center`（位置 +1）と
+`radius := dec s.radius`（値 −1）。側条件は中心ヘッドが右へ進めること
+（`canRight` ＋ 左スタック非空）と半径が正であること。 -/
+theorem radiusExact_after_shiftOne {w : List (Fin 2)} {s t : GalilVM}
+    (hShiftOne : (galilFrameS (PofC centre place entry w) q first).shiftOne s t)
+    (hCanRightCentre : GalilScaffoldChainVerifier.canRight s.center)
+    (hCentreLeftNonempty : 0 < s.center.head.left.length)
+    (hRadiusPos : 1 ≤ value s.radius)
+    (hRadiusExact : (position s.center : ℤ) + value s.radius = position s.right) :
+    (position t.center : ℤ) + value t.radius = position t.right := by
+  obtain ⟨-, -, -, wv, -, hGet⟩ := hShiftOne.1
+  have hSet := hShiftOne.2
+  rw [hGet] at hSet
+  subst hSet
+  have hstep : position (GalilScaffoldChainVerifier.right s.center) = position s.center + 1 :=
+    right_position s.center hCanRightCentre hCentreLeftNonempty
+  show (position (GalilScaffoldChainVerifier.right s.center) : ℤ) + value (dec s.radius)
+    = position s.right
+  rw [dec_value, hstep]
+  push_cast
+  omega
+
+#print axioms radiusExact_after_shiftOne
+
+#print axioms radiusExact_after_compare
+#print axioms radiusExact_after_matchedPlace
+#print axioms radiusExact_after_fppLensStep
+
 #print axioms radiusExact_after_background
 #print axioms radiusExact_of_centreAtRightAndRadiusZero
 #print axioms radiusExact_at_boot
