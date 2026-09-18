@@ -18,7 +18,7 @@ import PalPeg.CloseoutFinalW
   `H_shiftDoneP` の **3 本だけで `final30` と同一**、
 * boot は `coupled'_of_idle`（`Run40:87`）で無条件。
 
-`ShiftLocalRun` がこれを run に載せて `needIMW'_le_W'` を作る。
+`ShiftLocalRun` がこれを run に載せて `needBound_without_fourOther` を作る。
 
 ## 組み立ての括り出し
 
@@ -109,11 +109,11 @@ theorem pal_in_peg_of_needLe (entry q : ℕ) (first : Fin 9)
     · obtain ⟨st, Tc, h⟩ := preTraceIMW_exists centreC placeC entry q first hboot hA w hw
       exact ⟨st, Tc, fun _ => h⟩
     · exact ⟨fun _ => boot w, fun _ => 0, fun h => absurd h hw⟩
-  choose stP TcP hpreTrace using preTrace_exists
+  choose stP TcP hPreTraceIMW using preTrace_exists
   let M := L.realize blank initQ (GalilEmptyWord.accept' initQ outQ) n htape hn
-  have hpreload : ∀ w : List (Fin 2), 0 < w.length → PreloadL' w (stP w) (TcP w) := by
+  have hPreloadL : ∀ w : List (Fin 2), 0 < w.length → PreloadL' w (stP w) (TcP w) := by
     intro w hw
-    have h := hpreTrace w hw
+    have h := hPreTraceIMW w hw
     exact ⟨h.base.pre.tc0, fun m hm => h.base.pre.mono m (m+1) (by omega) hm,
       needL'_boot w (stP w) h.base.pre.start,
       needLe_of_pointwise' w (stP w) (TcP w) (hneed w (stP w) (TcP w) hw h)⟩
@@ -125,7 +125,7 @@ theorem pal_in_peg_of_needLe (entry q : ℕ) (first : Fin 9)
     (fun w => arrLG' τF w (stP w) (TcP w w.length))
     (fun w => (w.length + 1) * τF) ?_ ?_ ?_ ?_
   · intro w hw
-    have h := hpreTrace w hw
+    have h := hPreTraceIMW w hw
     exact abstractRun_throttledL'_2p18 w (stP w) (TcP w w.length)
       (PofC centreC placeC entry w) q first 2048
       (fun j => sharedC_trunc_vm w j centreC placeC entry (fun s => (centrePlaceC w j s).1)
@@ -134,11 +134,11 @@ theorem pal_in_peg_of_needLe (entry q : ℕ) (first : Fin 9)
       (by rw [h.base.pre.start]; rfl) (needL'_boot w (stP w) h.base.pre.start)
       (by rw [h.base.pre.start]; exact sufVM_boot w) h.base.pre.trace.tick
   · intro w hw
-    exact hreal w hw _ _ (hpreTrace w hw).base
+    exact hreal w hw _ _ (hPreTraceIMW w hw).base
   · exact ledger_throttledL'_2p18 (PofC centreC placeC entry) (fun _ => q) (fun _ => first)
-      stP TcP hpreload (fun w hw => (hpreTrace w hw).base.pre.report w.length (by omega) le_rfl)
-      (fun w hw => base_of_preTraceB (hpreTrace w hw).base)
-      (fun w hw => (hpreTrace w hw).base.pre.cost)
+      stP TcP hPreloadL (fun w hw => (hPreTraceIMW w hw).base.pre.report w.length (by omega) le_rfl)
+      (fun w hw => base_of_preTraceB (hPreTraceIMW w hw).base)
+      (fun w hw => (hPreTraceIMW w hw).base.pre.cost)
   · exact GalilEmptyWord.realize_accept'_nil L blank initQ outQ n htape hn
 
 /-- **`pal_in_peg_final5MW` から `hfour` が消えた版。** -/
@@ -151,9 +151,9 @@ theorem pal_in_peg_final5MW' (entry q : ℕ) (first : Fin 9)
     (hsdP : ∀ w : List (Fin 2), H_shiftDoneP centreC placeC entry q first w) :
     RecognizedByTotalPEG PAL :=
   pal_in_peg_of_needLe entry q first hboot hA hC
-    (fun w st _ hw h => needIMW'_le_W' centreC placeC entry q first hw h
+    (fun w st _ hw h => needBound_without_fourOther centreC placeC entry q first hw h
       (hbgP w) (hmatchP w) (hsdP w)
-      (by rw [h.base.pre.start]; exact chainPosInv'_of_idle (boot_chain_idle w)))
+      (by rw [h.base.pre.start]; exact chainPosInvCoupled'_at_idle (boot_chain_idle w)))
 
 /-- **`pal_in_peg_final30` から `H_fourOther` が消えた最上位。7 前提・反証済みゼロ。** -/
 theorem pal_in_peg_final39 (entry q : ℕ) (first : Fin 9)

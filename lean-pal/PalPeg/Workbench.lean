@@ -139,7 +139,7 @@ import PalPeg.CloseoutFinalBranch
 | **`CloseoutFinalFour.pal_in_peg_final39`** | **7** | **なし**（正本、`Canonical` 参照） | — |
 | `CloseoutFinalBranch.pal_in_peg_final41` | 6（Prop 引数） | なし。ただし `hB` は**4 義務の束**なので義務の実数は 9。前進は「global → run 形」の弱化であって本数の削減ではない | — |
 | `CloseoutFinalBranch.pal_in_peg_final42` | 6（Prop 引数） | なし。`final41` の `hB` から**半径台帳を放電**した版（`RadLedger` は `radLedger_pt` で trace 全点にタダ）。残る `shiftCan` は `canRight s.right` のみ | — |
-| `CloseoutFinalBranch.pal_in_peg_final43` | 6（Prop 引数） | なし。**`shiftDone` 義務を完全に放電**（半径台帳 ＋ `canRight` の両方が新規入力ゼロ）。残差は `BranchRes3` の 3 場（`bg`/`matchLand`/`entryLand`）＋ `hver`。義務の実数 8 | — |
+| `CloseoutFinalBranch.pal_in_peg_final43` | 6（Prop 引数） | なし。**`shiftDone` 義務を完全に放電**（半径台帳 ＋ `canRight` の両方が新規入力ゼロ）。残差は `ScanLandingObligationsAt` の 3 場（`bg`/`matchLand`/`entryLand`）＋ `hver`。義務の実数 8 | — |
 | `CloseoutFinalW.pal_in_peg_final30` | 8 | なし（一代前、`hfour` を含む） | — |
 | `CloseoutFinalVer.pal_in_peg_final38` | 9 | なし | — |
 | `CloseoutFinalS2.pal_in_peg_final31` | 9 | `hav` | `ConsumeAvailRefute.hav_false` |

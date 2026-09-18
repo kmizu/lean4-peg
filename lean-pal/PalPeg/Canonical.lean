@@ -79,58 +79,58 @@ alias pal_in_peg_of_eight_leaves := PalPeg.CloseoutFinalW.pal_in_peg_final30
 alias top_assembly_from_need_bound := PalPeg.CloseoutFinalFour.pal_in_peg_of_needLe
 
 /-- **`needL'` の上界は run 沿いの `ShiftLocalS` だけから出る**
-（旧名 `needIMW'_le_of_shiftLocal`）。`RadPack` → `TrailF` → `needL'` の 3 段を
+（旧名 `needBound_of_shiftLocalS_alongTrace`）。`RadPack` → `TrailF` → `needL'` の 3 段を
 4 回書いていたコピペ（S / S3 / S4）の共通部分。 -/
-alias need_bound_from_shiftLocal_run := PalPeg.ShiftLocalRun.needIMW'_le_of_shiftLocal
+alias need_bound_from_shiftLocal_run := PalPeg.ShiftLocalRun.needBound_of_shiftLocalS_alongTrace
 
-/-- **`hfour` 抜きで run 沿いに `ShiftLocalS`**（旧名 `shiftLocalS_of_run'`）。
+/-- **`hfour` 抜きで run 沿いに `ShiftLocalS`**（旧名 `shiftLocalS_alongRun_of_chainPosInvCoupled'`）。
 分岐前提は `H_bgP` / `H_matchP` / `H_shiftDoneP` の 3 本のみ。 -/
-alias shiftLocal_along_run_without_four := PalPeg.ShiftLocalRun.shiftLocalS_of_run'
+alias shiftLocal_along_run_without_four := PalPeg.ShiftLocalRun.shiftLocalS_alongRun_of_chainPosInvCoupled'
 
-/-- **4 分岐義務の状態局所版**（旧名 `CloseoutPackRun41.chainPosInv2_tick_at`）。
+/-- **4 分岐義務の状態局所版**（旧名 `CloseoutPackRun41.chainPosInv2_tick_of_landingObligationsAt`）。
 `H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2` は
-`chainPosInv2_tick` の中で**その `(c, s)` でしか使われない**ので、束 `BranchAt` に
+`chainPosInv2_tick` の中で**その `(c, s)` でしか使われない**ので、束 `LandingObligationsAt` に
 局所化できる。これが run 形化の入り口。 -/
-alias chainPosInv2_tick_local := PalPeg.CloseoutPackRun41.chainPosInv2_tick_at
+alias chainPosInv2_tick_local := PalPeg.CloseoutPackRun41.chainPosInv2_tick_of_landingObligationsAt
 
-/-- **4 分岐義務の run 形**（旧名 `BranchSupply.chainPosInv2_steps_run`）。
+/-- **4 分岐義務の run 形**（旧名 `BranchSupply.chainPosInv2_alongRun`）。
 `∀ c s` の形では放電できない（材料の `LPackM2.shiftGeom`・chain 側台帳 `ChainPos`・
 入力供給はいずれも run に沿ってしか存在しない）。global → run 形は一方向
-（`BranchSupply.branchRun_of_global`）。 -/
-alias chainPosInv2_along_run := PalPeg.BranchSupply.chainPosInv2_steps_run
+（`BranchSupply.landingObligationsAlongRun_of_globalHypotheses`）。 -/
+alias chainPosInv2_along_run := PalPeg.BranchSupply.chainPosInv2_alongRun
 
-/-- **`needL'` の上界を run 形の義務から**（旧名 `BranchSupply.needIMW'_le_B`）。 -/
-alias need_bound_from_branch_run := PalPeg.BranchSupply.needIMW'_le_B
+/-- **`needL'` の上界を run 形の義務から**（旧名 `BranchSupply.needBound_of_landingObligationsAlongRun`）。 -/
+alias need_bound_from_branch_run := PalPeg.BranchSupply.needBound_of_landingObligationsAlongRun
 
-/-- **`shiftDone` 義務の半径台帳はタダ**（旧名 `BranchSupply.radLe_of_radLedger`）。
+/-- **`shiftDone` 義務の半径台帳はタダ**（旧名 `BranchSupply.radiusLe_of_radLedger`）。
 `RadLedger.le`（`position center + value radius ≤ position right`）と
 `ScanInvariant.rightPos` だけ。`RadLedger` は `CloseoutLPack6.radLedger_pt` が
 `PreTrace` ＋ `LeftLive` だけで trace の全点に与える。 -/
-alias radius_ledger_is_free := PalPeg.BranchSupply.radLe_of_radLedger
+alias radius_ledger_is_free := PalPeg.BranchSupply.radiusLe_of_radLedger
 
-/-- **`init` へ戻る `Tick` 構成子は無い**（旧名 `BranchSupply.tick_mode_ne_init`）。
+/-- **`init` へ戻る `Tick` 構成子は無い**（旧名 `BranchSupply.tick_target_mode_ne_init`）。
 `Tick`（`GalilScaffoldTop:109`）の全構成子の行き先 mode は scan/shift/copy/home/fpp/
 markEnd/choose/rewind/replayStart か「変えない」。だから trace は 1 手目以降 `init` に
 戻らず、`GalilTrailRad.frontPack_trace` が trace の各点で使える。 -/
-alias tick_never_enters_init := PalPeg.BranchSupply.tick_mode_ne_init
+alias tick_never_enters_init := PalPeg.BranchSupply.tick_target_mode_ne_init
 
-/-- **右ヘッドは trace 全域で `2|w| − 1` 以下**（旧名 `BranchSupply.rightPos_le_trace`）。
+/-- **右ヘッドは trace 全域で `2|w| − 1` 以下**（旧名 `BranchSupply.rightHeadPos_le_alongTrace`）。
 終端の報告点（`ReportPointAt.atPrefix`）から front ポテンシャルの単調性で後ろ向きに
 伝播する。これが `canRight` の源。 -/
-alias right_head_bounded_along_trace := PalPeg.BranchSupply.rightPos_le_trace
+alias right_head_bounded_along_trace := PalPeg.BranchSupply.rightHeadPos_le_alongTrace
 
-/-- **shift 相の `canRight` はタダ**（旧名 `BranchSupply.shiftCan_of_trace`）。
+/-- **shift 相の `canRight` はタダ**（旧名 `BranchSupply.shiftRightHeadCanRight_alongTrace`）。
 trace 予算 ＋ `LPackM2.shiftGeom` の `RRep`。新規入力ゼロ。 -/
-alias shift_canRight_is_free := PalPeg.BranchSupply.shiftCan_of_trace
+alias shift_canRight_is_free := PalPeg.BranchSupply.shiftRightHeadCanRight_alongTrace
 
-/-- **`canRight` は trace の 1 手目以降タダ**（旧名 `BranchSupply.canRight_at_trace`）。
-右ヘッドが入力を表現していればよい。scan 相版は `scanCanRight_of_trace` で、
+/-- **`canRight` は trace の 1 手目以降タダ**（旧名 `BranchSupply.rightHeadCanRight_alongTrace`）。
+右ヘッドが入力を表現していればよい。scan 相版は `scanRightHeadCanRight_alongTrace` で、
 これは `CloseoutPackRun46.Extra7.scanAvail`（＝ `hee` / `het` の中身）そのもの。 -/
-alias canRight_is_free_along_trace := PalPeg.BranchSupply.canRight_at_trace
+alias canRight_is_free_along_trace := PalPeg.BranchSupply.rightHeadCanRight_alongTrace
 
 /-- **scan 相の `canRight`（`Extra7.scanAvail`）はタダ**
-（旧名 `BranchSupply.scanCanRight_of_trace`）。 -/
-alias scan_canRight_is_free := PalPeg.BranchSupply.scanCanRight_of_trace
+（旧名 `BranchSupply.scanRightHeadCanRight_alongTrace`）。 -/
+alias scan_canRight_is_free := PalPeg.BranchSupply.scanRightHeadCanRight_alongTrace
 
 /-! ## 2. 反証済み — 使ってはいけない
 

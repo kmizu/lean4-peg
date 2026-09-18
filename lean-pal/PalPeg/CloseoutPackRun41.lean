@@ -278,7 +278,7 @@ exist **along the run**, not at an arbitrary state, so an obligation written
 `∀ c s, …` cannot be met. Compare `CloseoutVerSide.VerRun` and
 `CloseoutMarksFree.MarksRun`, and the refutation
 `ConsumeAvailRefute.hav_false` of the same mistake made with `∀ st`. -/
-structure BranchAt (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+structure LandingObligationsAt (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   bg : ∀ t : GalilVM, c.mode = Mode.scan → ChainPosInv2 w c s →
     (galilFrameS (PofC centre place entry w) q first).background s t →
     ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → PosPayload2 w t
@@ -300,18 +300,18 @@ structure BranchAt (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
         value s.radius ≤ (rad : ℤ)
 
 /-- The global hypotheses restrict to any state. -/
-theorem branchAt_of_global {w : List (Fin 2)}
+theorem landingObligationsAt_of_globalHypotheses {w : List (Fin 2)}
     (hbg : H_bgP2 centre place entry q first w) (hmatch : H_matchP2 centre place entry q first w)
     (hentry : H_shiftEntry2 centre place entry q first w)
     (hsd : H_shiftDoneRad2 centre place entry q first w) (c : Control) (s : GalilVM) :
-    BranchAt centre place entry q first w c s :=
+    LandingObligationsAt centre place entry q first w c s :=
   ⟨fun t => hbg c s t, fun s' t o b => hmatch c s s' t o b,
     fun s' t => hentry c s s' t, hsd c s⟩
 
 /-- **One tick of `ChainPosInv2`, from the state-local bundle.**  `shift_one`
-closes outright; `BranchAt` covers the three scan landings and the shift entry. -/
-theorem chainPosInv2_tick_at {w : List (Fin 2)}
-    {x y : State GalilVM} (hB : BranchAt centre place entry q first w x.ctl x.vm)
+closes outright; `LandingObligationsAt` covers the three scan landings and the shift entry. -/
+theorem chainPosInv2_tick_of_landingObligationsAt {w : List (Fin 2)}
+    {x y : State GalilVM} (hB : LandingObligationsAt centre place entry q first w x.ctl x.vm)
     (hx : ChainPosInv2 w x.ctl x.vm)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y) :
     ChainPosInv2 w y.ctl y.vm := by
@@ -384,7 +384,7 @@ theorem chainPosInv2_tick_at {w : List (Fin 2)}
       exact fun h1 => by simp_all
 
 /-- **One tick of `ChainPosInv2`** (the global form, unchanged).  Kept so that
-every existing caller works; new code should use `chainPosInv2_tick_at`. -/
+every existing caller works; new code should use `chainPosInv2_tick_of_landingObligationsAt`. -/
 theorem chainPosInv2_tick {w : List (Fin 2)}
     (hbg : H_bgP2 centre place entry q first w) (hmatch : H_matchP2 centre place entry q first w)
     (hentry : H_shiftEntry2 centre place entry q first w)
@@ -392,11 +392,11 @@ theorem chainPosInv2_tick {w : List (Fin 2)}
     {x y : State GalilVM} (hx : ChainPosInv2 w x.ctl x.vm)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y) :
     ChainPosInv2 w y.ctl y.vm :=
-  chainPosInv2_tick_at centre place entry q first
-    (branchAt_of_global centre place entry q first hbg hmatch hentry hsd _ _) hx h
+  chainPosInv2_tick_of_landingObligationsAt centre place entry q first
+    (landingObligationsAt_of_globalHypotheses centre place entry q first hbg hmatch hentry hsd _ _) hx h
 
-#print axioms branchAt_of_global
-#print axioms chainPosInv2_tick_at
+#print axioms landingObligationsAt_of_globalHypotheses
+#print axioms chainPosInv2_tick_of_landingObligationsAt
 #print axioms chainPosInv2_tick
 
 /-! ## 5. `WatchShiftS` with neither `H_fourOther` nor a lookahead -/

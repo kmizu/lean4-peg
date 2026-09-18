@@ -9,22 +9,22 @@ import PalPeg.CloseoutFinalVer
 （`H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2`）は
 `∀ (c : Control) (s : GalilVM), …` で**任意の状態**を量化していた。
 `chainPosInv2_tick` はそれらを自分の `(c, s)` でしか使わないので
-（`CloseoutPackRun41` の `BranchAt` / `chainPosInv2_tick_at` に局所化した）、
-run 形の 1 本 `BranchSupply.BranchRun` に**まとめると同時に弱められる**。
+（`CloseoutPackRun41` の `LandingObligationsAt` / `chainPosInv2_tick_of_landingObligationsAt` に局所化した）、
+run 形の 1 本 `BranchSupply.LandingObligationsAlongRun` に**まとめると同時に弱められる**。
 
-* `branchRun_of_global` があるので global 4 本を持つ呼び出し側はそのまま乗る。
+* `landingObligationsAlongRun_of_globalHypotheses` があるので global 4 本を持つ呼び出し側はそのまま乗る。
 * **逆は無い**。run 形のほうが真に弱く、放電できるのはこちらだけ
   （`LPackM2.shiftGeom` も chain 側台帳 `ChainPos` も入力供給も、
   run に沿ってしか存在しない）。
 
 これは束ねただけの `hpack` とは違う: `hpack` は run の事実を**一状態述語**として
-書いたので偽になった（`CloseoutPackRefute.hpack_false`）。`BranchRun` は逆向きで、
+書いたので偽になった（`CloseoutPackRefute.hpack_false`）。`LandingObligationsAlongRun` は逆向きで、
 一状態述語の族を**run に沿って**量化し直したものなので、`chainPosInv2_of_idle` の
 反例に当たらない。
 
 ## 本数の誠実な読み方
 
-`pal_in_peg_final41` の Prop 引数は 6 本だが、**`hbranch` は 4 つの義務の束**である。
+`pal_in_peg_final41` の Prop 引数は 6 本だが、**`hLandingObligations` は 4 つの義務の束**である。
 義務の個数で数えれば `final39`（7 本すべて別々）より多い。
 **前進は本数ではなく「global → run 形」の弱化**で、放電できる形になったことである。
 正本の最上位は引き続き `pal_in_peg_final39`（7 本、束ねていない）とする。
@@ -103,7 +103,7 @@ open PalPeg.CloseoutFinalW PalPeg.CloseoutFinalFour PalPeg.CloseoutFinalVer
 open PalPeg.CloseoutVerSide PalPeg.BranchSupply PalPeg.CloseoutPackRun41
 
 /-- **`pal_in_peg_final38` の中 4 本を run 形 1 本にした最上位。**
-Prop 引数 6 本・反証済みゼロ。ただし `hbranch` は 4 義務の束なので、**本数の削減ではなく
+Prop 引数 6 本・反証済みゼロ。ただし `hLandingObligations` は 4 義務の束なので、**本数の削減ではなく
 「global → run 形」の弱化**である（正本は `pal_in_peg_final39`）。
 
 | 前提 | 内容 |
@@ -112,7 +112,7 @@ Prop 引数 6 本・反証済みゼロ。ただし `hbranch` は 4 義務の束�
 | `hme` | `H_marksEntry'`（残差は `WindowInOrigin`、`CloseoutMarksFree`） |
 | `hor` | `CycleOracleMC3`（11 葉） |
 | `hC` | `H_realizeLIMW'`（局所実現） |
-| `hbranch` | **`BranchRun`** — run の各点で `BranchAt`（4 分岐義務の run 形） |
+| `hLandingObligations` | **`LandingObligationsAlongRun`** — run の各点で `LandingObligationsAt`（4 分岐義務の run 形） |
 | `hver` | `VerRun` — chain の verifier が入力を表現し lag が正規（run 形） |
 -/
 theorem pal_in_peg_final41 (entry q : ℕ) (first : Fin 9)
@@ -123,8 +123,8 @@ theorem pal_in_peg_final41 (entry q : ℕ) (first : Fin 9)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hbranch : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
-      st 0 = boot w → BranchRun centreC placeC entry q first w (st 0))
+    (hLandingObligations : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
+      st 0 = boot w → LandingObligationsAlongRun centreC placeC entry q first w (st 0))
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
     RecognizedByTotalPEG PAL :=
@@ -139,19 +139,19 @@ theorem pal_in_peg_final41 (entry q : ℕ) (first : Fin 9)
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       hor)
     hC
-    (fun w st _ hw h => needIMW'_le_B centreC placeC entry q first hw h
+    (fun w st _ hw h => needBound_of_landingObligationsAlongRun centreC placeC entry q first hw h
       (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
-      (hbranch w st h.base.pre.start) (hver w st h.base.pre.start))
+      (hLandingObligations w st h.base.pre.start) (hver w st h.base.pre.start))
 
-/-- **`pal_in_peg_final41` の `hbranch` から半径台帳を落とした版。**
+/-- **`pal_in_peg_final41` の `hLandingObligations` から半径台帳を落とした版。**
 
-`BranchAt.shiftDone` は `canRight s.right` と半径台帳の連言だったが、後者は
+`LandingObligationsAt.shiftDone` は `canRight s.right` と半径台帳の連言だったが、後者は
 `CloseoutRadPack.RadLedger.le`（`position center + value radius ≤ position right`）と
-`ScanInvariant.rightPos` だけで出る（`BranchSupply.radLe_of_radLedger`）。
+`ScanInvariant.rightPos` だけで出る（`BranchSupply.radiusLe_of_radLedger`）。
 `RadLedger` は `CloseoutLPack6.radLedger_pt` が `PreTrace` ＋ `LeftLive` だけで
 trace の全点に与えるので、**新規入力ゼロで内部調達できる**。
 
-残る義務は `BranchRes` の 4 場（`bg` / `matchLand` / `entryLand` / **`shiftCan`**）で、
+残る義務は `LandingObligationsAtSansRadiusLedger` の 4 場（`bg` / `matchLand` / `entryLand` / **`shiftCan`**）で、
 `shiftCan` は `canRight s.right` のみ。`canRight` の経路は
 `CloseoutClockFront.canRight_of_run`（front ポテンシャル ＋ 長さ予算、mode 条件なし）で、
 右ヘッドの `Represents`/`focus ≠ none` は shift 相では `LPackM2.shiftGeom` の `RRep` が持つ。 -/
@@ -165,7 +165,7 @@ theorem pal_in_peg_final42 (entry q : ℕ) (first : Fin 9)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hres : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
-      BranchResTrace centreC placeC entry q first w st Tc)
+      LandingObligationsAlongTraceSansRadiusLedger centreC placeC entry q first w st Tc)
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
     RecognizedByTotalPEG PAL :=
@@ -180,13 +180,13 @@ theorem pal_in_peg_final42 (entry q : ℕ) (first : Fin 9)
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       hor)
     hC
-    (fun w st Tc hw h => needIMW'_le_R centreC placeC entry q first hw h
+    (fun w st Tc hw h => needBound_of_landingObligationsSansRadiusLedger centreC placeC entry q first hw h
       (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
       (hres w st Tc h) (hver w st h.base.pre.start))
 
 /-- **`shiftDone` 義務を完全に放電した最上位。**
 
-`BranchAt.shiftDone` の 2 節はどちらも新規入力ゼロで出る：
+`LandingObligationsAt.shiftDone` の 2 節はどちらも新規入力ゼロで出る：
 
 * 半径台帳 ← `CloseoutRadPack.RadLedger.le` ＋ `ScanInvariant.rightPos`
   （`RadLedger` は `CloseoutLPack6.radLedger_pt` が `PreTrace` ＋ `LeftLive` から trace 全点に）
@@ -194,10 +194,10 @@ theorem pal_in_peg_final42 (entry q : ℕ) (first : Fin 9)
   （`position right = 2|w| − 1`）から front ポテンシャルの単調性で**後ろ向き**に伝播し
   （`front_tick_mono`、`position right ≤ front`）、shift 相の右ヘッドの
   `Represents`/`focus ≠ none` は `LPackM2.shiftGeom` の `RRep` が持つ。
-  1 手目以降 `mode ≠ init` は定理（`tick_mode_ne_init`: `Tick` に `mode := .init` へ行く
+  1 手目以降 `mode ≠ init` は定理（`tick_target_mode_ne_init`: `Tick` に `mode := .init` へ行く
   構成子が無い）なので `frontPack_trace` が使える。
 
-残る義務は `BranchRes3` の **3 場**（`bg` / `matchLand` / `entryLand`）と `hver`。 -/
+残る義務は `ScanLandingObligationsAt` の **3 場**（`bg` / `matchLand` / `entryLand`）と `hver`。 -/
 theorem pal_in_peg_final43 (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
@@ -208,7 +208,7 @@ theorem pal_in_peg_final43 (entry q : ℕ) (first : Fin 9)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hres : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
-      BranchRes3Trace centreC placeC entry q first w st Tc)
+      ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc)
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
     RecognizedByTotalPEG PAL :=
@@ -223,7 +223,7 @@ theorem pal_in_peg_final43 (entry q : ℕ) (first : Fin 9)
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       hor)
     hC
-    (fun w st Tc hw h => needIMW'_le_R3 centreC placeC entry q first hw h
+    (fun w st Tc hw h => needBound_of_scanLandingObligations centreC placeC entry q first hw h
       (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
       (hres w st Tc h) (hver w st h.base.pre.start))
 

@@ -238,6 +238,21 @@ sed -i "/^import PalPeg.GalilSegmentConstruct$/a import PalPeg.X" PalPeg.lean   
     使うと衝突する。`hpreTrace` / `hpreload` に分ける）。
   - **過剰量化した仮定には、その過剰量化が名前に出る名前を付ける**
     （`…Everywhere` / `…AtAnyState`）。そうすれば書いた瞬間に気づける。
+  - **略すのは `h`（hypothesis）だけ。** 人間には長い識別子のコストがあるが AI には
+    ほぼ無いので、多少長くても意味が分かる名前を選ぶ。略す場合は規則性を持たせる
+    （コウタ 2026-09-19）。
+  - **記号だけの接尾辞を新しく作らない。** 既存の `IPackM` / `IPackMG` / `IPackMG2` /
+    `IPackMW` 系がその失敗例で、docstring から辿れるのは 2 つだけ:
+    | 記号 | 意味 | 出典 |
+    |---|---|---|
+    | `G` | **G**uarded（shift 半分を mode guard で守った） | `CloseoutPackRun30:81` |
+    | `2` | `LPackM2` を併せて運ぶ世代 | `CloseoutPackRun36:73` |
+    | `W` | `shift` 場を**落とした**系統（偽の `WatchShiftG` を運んでいた場） | `CloseoutPackW:63` |
+    | `I` / `M` | **出典なし**（誰も書いていない） | — |
+
+    `PreTraceIMW` の実体は「各点で `LPackM` と `LPackM2` を持つ pre-trace」。
+    `IMW` は「いつ書いたか」の痕跡であって「何であるか」を表していない。
+    **新しく書くものは `LandingObligationsAlongTrace` のように、読んで分かる名前にする。**
 
 ### 3. コピペ証明を残さない
 
