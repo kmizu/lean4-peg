@@ -32,6 +32,50 @@
 
 
 
+## 2026-09-19 n121: `ReachesWatchPhase` の最後の 1 ピースは「live chain 版の区間構成」
+
+**全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
+
+### 測ったこと
+
+区間構成の既存定理は 2 本:
+
+* `CloseoutReadyStage.watchSegE_constructS`（`:544`）
+* `GalilSegmentConstructB.watchSegE_constructB`（`:124`）
+
+どちらも
+
+    s.chain = ChainVM.idle → … →
+    ∃ es c' t r', WatchSegE P q first delay es c s c' t ∧ … ∧ t.chain = ChainVM.idle ∧ …
+      ∧ (es.length = n ∨ SegEnd P c' t)
+
+**`chain = idle` を要求し、かつ保存する**——つまり**誕生前の相専用**。
+
+**誕生後（`.copy` 相）の live chain 版は存在しない。** これが `ReachesWatchPhase` に
+残る唯一のピース。
+
+### 良い知らせ
+
+* 結論の形 `(es.length = n ∨ SegEnd P c' t)` は**まさに必要な選言**
+  （「`n` 手走る」か「区間が終わる」）。設計はそのまま使える。
+* `GalilLiveCentreReplay.MInv` は **chain に触れない**（replay と中心の事実だけ）。
+  `ScanInvariant` も同様。したがって live chain 版は構造的に並行で、
+  `matchIdle` / `countR` / `matchIdleR` の代わりに `match` / `count` / `wait` を使うだけ。
+* `WatchSegE.match` が要求するのは `s.chain ≠ .idle` だけ（`GalilScaffoldTopWatchSegE:34`）で、
+  `.copy` 相はそれを満たす。chain は誕生後 idle に戻らない。
+
+### `ReachesWatchPhase` の残り（これで全部）
+
+    live chain 版 watchSegE_construct（未実装、~150 行、既存 constructB の並行版）
+      → 長さ 2h+2 の区間
+      → reachesWatchPhase_of_chainTicks（今日実装、標準公理）
+      → ReachesWatchPhase
+      → prepLandingWatchC_at_reachedWatch / BreakLandingAtReachedWatch（今日実装）
+      → hpack の壊れていた 2 節の正しい形
+
+chain の中身（`found_to_watchStart_least`）も、shift に行けないこと
+（`no_shift_from_copyChain`）も、橋（`reachesWatchPhase_of_chainTicks`）も済んでいる。
+
 ## 2026-09-19 n120: `hpack` 7 節の監査完了 — **壊れているのはちょうど 2 節、同じ欠陥**
 
 **全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
