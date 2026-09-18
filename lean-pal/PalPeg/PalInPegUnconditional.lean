@@ -129,41 +129,31 @@ theorem obligation_shiftPalAlongRun (entry q : ℕ) (first : Fin 9) :
 `PreTraceIMW` を仮説に入れるのは必須。入れないと `st` が無制約関数になって
 `∀ z, … → ShiftPal z.vm` と同値に潰れる（`hav` が偽になったのと同じ形）。 -/
 
-/-- **(OBLIGATION)** trace の各点で `H_readsShift`（shift 相のラウンド読み出し）。
-`obligation_shiftPalAlongTrace` を原子に割った 1 本目。
-producer の候補は `RoundSegFromRun.readsShift_at_actual`。 -/
-axiom obligation_readsShiftAlongTrace (entry q : ℕ) (first : Fin 9) :
-    ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
-      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
-      ∀ j, 1 ≤ j → j ≤ Tc w.length →
-        PalPeg.CloseoutRoundUnique.H_readsShift w (st j).ctl (st j).vm
+/-- **(OBLIGATION)** trace 形 `ShiftPal` の残差 3 つ。
 
-/-- **(OBLIGATION)** trace の各 tick で `H_freshShiftAtShiftEntry`（shift 入口の最初のラウンド）。
-原子 2 本目。producer の候補は `GalilScaffoldTopFirstRound.first_round`。 -/
-axiom obligation_freshShiftAtShiftEntryAlongTrace (entry q : ℕ) (first : Fin 9) :
+**束ねてある理由**: 計器は `#print axioms` の**本数**なので、原子に割って本数を
+増やすのは後退（n132 で 4 → 6 にしてしまった。コウタの指摘で戻した）。
+1 つ放電できた時点で割る。
+
+中身は 3 つで、どれも元の `obligation_shiftPalAlongTrace`（`ShiftPal` 丸ごと）より**弱い**:
+
+1. `H_readsShift`（shift 相のラウンド読み出し）——producer 候補
+   `RoundSegFromRun.readsShift_at_actual`（前ラウンド起点の `OriginAt` ＋ 構成 run / 実 run の対が要る）
+2. `H_freshShiftAtShiftEntry`（shift 入口の最初のラウンド）——`first_round` は `Entry` 形しか
+   出さないので橋が要る（n133）
+3. `FreshShiftLedger`（準備直後の watch の台帳）——`periodOnly = false` ＋ watch の
+   `ShiftPal` をここまで還元した（n141〜n144）。中身は period テープの**中身**（DP の
+   `Candidate`）／半径と周期の**大小**／period テープの**位相**の 3 種類 -/
+axiom obligation_shiftPalResiduesAlongTrace (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
-      ∀ j, 1 ≤ j → j < Tc w.length →
+      (∀ j, 1 ≤ j → j ≤ Tc w.length →
+        PalPeg.CloseoutRoundUnique.H_readsShift w (st j).ctl (st j).vm) ∧
+      (∀ j, 1 ≤ j → j < Tc w.length →
         PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centreC placeC entry q first w
-          (st j).ctl (st j).vm (st (j+1)).vm
-
-/-- **(OBLIGATION)** 準備直後の watch の台帳（`ShiftPalAlongTrace.FreshShiftLedger`）。
-
-n141〜n144 で `periodOnly = false` ＋ watch の `ShiftPal` を**この 1 場に還元**した。
-中身は 3 種類しかない:
-
-* period テープの**中身**（DP の `Candidate` 由来の 2 回文）
-* 半径と周期の**大小**（`0 < h` / `2h ≤ r₀` / `r₀ ≤ 4h` / 入力長）
-* period テープの**位相**（`RoundScan.pred` の `periodOnly = false` 版。`cycle` は
-  誕生時に reset され `periodOnly = false` の間凍結するので `RoundScan` は使えない——n143）
-
-`FreshShiftLedger` は watch 相だけを語るので、非 watch の空虚性
-（`shiftPal_of_chainNotWatch`）は自動的に含まれる。 -/
-axiom obligation_freshShiftLedgerAlongTrace (entry q : ℕ) (first : Fin 9) :
-    ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
-      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
-      ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
-      ∀ s' : GalilVM, PalPeg.ShiftPalAlongTrace.FreshShiftLedger w (st j).vm s'
+          (st j).ctl (st j).vm (st (j+1)).vm) ∧
+      (∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
+        ∀ s' : GalilVM, PalPeg.ShiftPalAlongTrace.FreshShiftLedger w (st j).vm s')
 
 /-- **もう公理ではない。**  `ShiftPalAlongTrace.shiftPal_alongTrace` の適用で、
 上の 3 原子に割れた。2 つの側条件（`0 < w.length` と `1 ≤ Tc w.length`）は文脈から出る:
@@ -185,11 +175,9 @@ theorem obligation_shiftPalAlongTrace (entry q : ℕ) (first : Fin 9) :
     rw [hPre.base.tc1] at hmono
     exact hmono
   exact PalPeg.ShiftPalAlongTrace.shiftPal_alongTrace centreC placeC entry q first hw hPre hTcPos
-    (fun j' h1 h2 => obligation_readsShiftAlongTrace entry q first w st Tc hPre j' h1 h2)
-    (fun j' h1 h2 =>
-      obligation_freshShiftAtShiftEntryAlongTrace entry q first w st Tc hPre j' h1 h2)
-    (fun j' h1 h2 h3 s' =>
-      obligation_freshShiftLedgerAlongTrace entry q first w st Tc hPre j' h1 h2 h3 s')
+    (obligation_shiftPalResiduesAlongTrace entry q first w st Tc hPre).1
+    (obligation_shiftPalResiduesAlongTrace entry q first w st Tc hPre).2.1
+    (obligation_shiftPalResiduesAlongTrace entry q first w st Tc hPre).2.2
     j hj1 hjle hm hr
 
 /-- **(OBLIGATION)** `CycleOracleMC3`。 -/

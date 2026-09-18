@@ -392,10 +392,8 @@ run 形／trace 形の 2 つに割った——旧版は偽の疑いが濃かっ�
  Classical.choice,
  Quot.sound,
  PalPeg.PalInPeg.obligation_cycleOracle,
- PalPeg.PalInPeg.obligation_freshShiftAtShiftEntryAlongTrace,
- PalPeg.PalInPeg.obligation_freshShiftLedgerAlongTrace,
  PalPeg.PalInPeg.obligation_localRealization,
- PalPeg.PalInPeg.obligation_readsShiftAlongTrace,
- PalPeg.PalInPeg.obligation_shiftPalAtWatchAlongRun] -/
+ PalPeg.PalInPeg.obligation_shiftPalAtWatchAlongRun,
+ PalPeg.PalInPeg.obligation_shiftPalResiduesAlongTrace] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.PalInPeg.unconditional

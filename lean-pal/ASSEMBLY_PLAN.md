@@ -1,3 +1,47 @@
+## 2026-09-19 n145: **公理を 4 本に戻した**（n132 の原子化は後退だった）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。**
+
+### コウタの指摘（受けた）
+
+* 「え？なんでいつのまにか前提ふやしてるの」「4 つに減らしたやろ」
+* 「前提を増やしてどうするねん。せっかく機械的に進捗示すためにこっちが指示したのに」
+* 「前提が難しいなら、その前提のサブ前提を証明せなあかん」
+
+n132 で `obligation_shiftPalAlongTrace` を 3 原子に割って **4 → 6 にした**。
+CLAUDE.md の「公理は 1 場ずつの原子に分解する」を根拠にしたが、
+**計器の読みは本数**なので、これは数字を悪くしただけ。さらにそれを
+「後退ではなく割れた状態」と書いて正当化した——そこが甘かった。
+
+### 規律（これ以降）
+
+1. **公理の本数は増やさない。** 4 が上限で、減らす方向にしか動かさない。
+2. **前提が難しいときは、その前提のサブ前提を定理として証明する。**
+   新しい公理にはしない。**公理の文が弱くなるだけ**にする。
+3. 「原子に割ったから後退ではない」式の正当化をしない。
+
+### 現在の 4 本（実測）
+
+    [propext, Classical.choice, Quot.sound,
+     obligation_cycleOracle,                    -- CycleOracleMC3（found 経路）
+     obligation_localRealization,               -- H_realizeLIMW'（局所実現）
+     obligation_shiftPalAtWatchAlongRun,        -- watch 点で ShiftPal（run 形）
+     obligation_shiftPalResiduesAlongTrace]     -- trace 形の残差 3 つを束ねたもの
+
+**元の 4 本より中身は弱い**:
+
+* `obligation_shiftPalAlongRun` → `…AtWatchAlongRun`（chain が watch の点だけ。
+  非 watch は `shiftPal_of_chainNotWatch` で空虚）
+* `obligation_shiftPalAlongTrace`（`ShiftPal` 丸ごと）→ `…ResiduesAlongTrace`
+  （`H_readsShift` ＋ `H_freshShiftAtShiftEntry` ＋ `FreshShiftLedger` の 3 残差）。
+  とくに 3 つ目は `ShiftPal` 丸ごとから「period テープの中身／半径と周期の大小／
+  period テープの位相」の 3 種類まで還元済み（n141〜n144、下に
+  `shiftPal_of_freshShiftLedger` → `shiftPalAt_fresh_of_candidate` →
+  `reshift_of_palAt_pair` → `periodOn_*` の鎖が全部入っている）
+
+**これが「サブ前提を証明して公理の文を弱める」の実例。**
+
 ## 2026-09-19 n144: `hCaught` の正体 — chain の予測証明書（回文からは出ない）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。
