@@ -1,3 +1,50 @@
+## n230 — 公理進捗: 実質の残りは `pred` 1 場（`kle`/`room` はインライン）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 残り 3 場のうち **2 場（`kle` / `room`）は定理にする必要がない**と確定。実質の残りは `pred` 1 場 |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### `kle` と `room` はインラインで済む（定理を積まない）
+
+* `kle : 0 ≤ h` — `Nat.zero_le`（`k = 0`）
+* `room : R + 2 ≤ C` — `C = centre − h`、`R = r₀ − h − 1`、走査の位置境界
+  `r₀ + 1 ≤ centre`（`ScanInvariant.leftPos` ＋ `represented_position` の `0 < left.length`）から
+  `omega` 一発。実際 `R + 2 = r₀ − h + 1` と `C = centre − h ≥ r₀ + 1 − h` で等号ぎりぎり。
+
+CLAUDE.md の「定理を無駄に積み上げるな」に従って、この 2 つは組み立て本体に直書きする。
+
+### 残る 1 場 `pred` の形
+
+`ShiftInv.pred : symbol (immediate w).machine.control.period.focus = (encoded raw)[C + R + 2]?`
+
+`CloseoutAdvanceT.origin_prediction_wrap` / `GalilGoodLag.origin_prediction_index` は
+どちらも `ReadOrigin` 経由（＝第 1 連言の結論 `ReadsInv` 由来）なので、
+**`periodOnly = false` の最初の shift には使えへん**。
+
+代わりの経路は `GalilReplaySpan.CoreX` の
+`m.control = GalilScaffoldChainSweep.run (GalilScaffoldChainConsume.ready cc xs b) pre`
+と `BlockOn raw cc b xs (C+1) E` の組み合わせ:
+
+* `BlockOn` は `enc[anchor + j]? = (bounce cc b xs)[j % (2*(xs.length+1))]?`
+* 必要なのは「`run (ready cc xs b) pre` の `period.focus` の記号」＝「ブロックの
+  `pre.length % 2h` 番目」という対応
+
+**次の一手はこの対応補題（`GalilScaffoldChainSweep.run` と `bounce` の関係）を探すこと。**
+既存にあれば `pred` は即出る。無ければ書く。
+
+### `ShiftInv`（23 場）の最終状況
+
+| 状態 | 場数 |
+|---|---|
+| 証明済み | 20 |
+| インラインで済む | 2（`kle` / `room`） |
+| **残り** | **1（`pred`）** |
 ## n229 — 公理進捗: `ShiftInv` 23 場中 20 場（`size_of_margin`）
 
 **公理への進捗**
