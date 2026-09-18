@@ -1,3 +1,50 @@
+## 2026-09-19 n175: **計器が動いた。公理 4 → 3。**
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット更新。
+公理は 3。無条件 PAL は未完、§10.5 は未達。**
+
+    'PalPeg.PalInPeg.unconditional' depends on axioms: [propext,
+     Classical.choice,
+     Quot.sound,
+     PalPeg.PalInPeg.obligation_cycleOracle,
+     PalPeg.PalInPeg.obligation_localRealization,
+     PalPeg.PalInPeg.obligation_shiftPalResiduesAlongRun]
+
+### 何をしたか: **trace 形を run 形から導いた**
+
+`obligation_shiftPalResiduesAlongRun`（`InvLPC` 起点の `Steps` 上）と
+`obligation_shiftPalResiduesAlongTrace`（`PreTraceIMW` の trace 上、`1 ≤ j ≤ Tc`）は
+**中身が同じ 3 残差**だった。trace は `st 0 = boot w` から始まるので、
+**`st 1` で `InvLPC` が立てば trace 形は run 形の特殊化**になる。
+
+`st 1` の `InvLPC` は**既存部品だけ**で組めた（`BranchSupply.cpack_alongTrace` と同じ recipe）:
+
+| 部品 | 役割 |
+|---|---|
+| `GalilTrailFront.inv_of_boot_tick` | **与えられた** boot tick の着地で `Inv` ＋ `SpanRep`（存在形の `invLPC_init` ではなく、trace 自身の `st 1` について言う） |
+| `PreTrace.trace.good 1` | `OutputRel` |
+| `GalilOracleDischarge.invS_of_inv` ＋ 上 | `InvL` |
+| `GalilGlueBLeaves.entryCounters_of_inv` | `EntryCounters` |
+| `GalilOracleMC2.invLPC_of_boot` | `InvLP2` ＋ `CentreRep` → `InvLPC` |
+| `Inv.rest` ＋ `GalilInvPlus2.centreRep_of_restarted` | `CentreRep` |
+| `GalilTrailFront.steps_between` | `st 1` から `st j` への `Steps`（`1 ≤ j ≤ Tc`） |
+
+`w = []` のときは `Tc 0 = 0`（`PreTrace.tc0`）なので 3 つとも空虚。
+
+### 新しい定理はゼロ
+
+**1 本も新規に書いていない。**`PalInPegUnconditional.lean` の中で既存部品を繋いだだけ
+（約 40 行）。コウタの「定理ふえすぎてへん？」の直後にこれが出たのは偶然ではなく、
+**既存部品を探す姿勢に切り替えたから**見つかった。
+
+### 残り 3 本
+
+| 公理 | 内容 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | `H_readsShift` ＋ `H_freshShiftAtShiftEntry` ＋ `FreshShiftLedger`（run 形。**trace 形はこれに吸収された**） |
+| `obligation_cycleOracle` | `CycleOracleMC3` |
+| `obligation_localRealization` | `H_realizeLIMW'`（局所実現。壁は n174 の「run 機構が fairness を捨てている」） |
+
 ## 2026-09-19 n174: **壁の正体 — run 機構が全階層で fairness を捨てている**
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

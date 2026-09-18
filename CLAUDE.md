@@ -99,9 +99,16 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 目標は閉じた項として存在し、足りない義務は `axiom` で明示されている。
 `PalPeg/Axioms.lean` の `#guard_msgs in #print axioms` がラチェットで、
 1 個外すと guard が壊れて更新を強制される。**標準 3 公理だけになったら §10.5 達成。**
-いまは **4 個**の原子的義務が残っている（`shiftPalAlongRun` / `shiftPalAlongTrace` /
-`cycleOracle` / `localRealization`。経路は `PalPeg/PalInPegUnconditional.lean` の
-docstring に表で記録）。
+いまは **3 個**の義務が残っている（2026-09-19, n175 で 4 → 3）:
+`obligation_shiftPalResiduesAlongRun` / `obligation_cycleOracle` /
+`obligation_localRealization`。経路は `PalPeg/PalInPegUnconditional.lean` の
+docstring に表で記録。
+
+**trace 形は run 形から導けた（n175）。** trace は `st 0 = boot w` から始まるので
+`st 1` で `InvLPC` が立ち（`GalilTrailFront.inv_of_boot_tick` ＋
+`GalilOracleMC2.invLPC_of_boot`、`BranchSupply.cpack_alongTrace` と同じ recipe）、
+`GalilTrailFront.steps_between` で `st j`（`1 ≤ j ≤ Tc`）に届く。
+**新しい定理は 1 本も書いていない。既存部品を繋いだだけ。**
 
 **2026-09-19（n112→n113）: 旧 `obligation_shiftPalAtScanStates` は偽の疑いが濃かったので
 run 形／trace 形の 2 つに割った（3 → 4）。**

@@ -169,7 +169,7 @@ theorem obligation_shiftPalAlongRun (entry q : ℕ) (first : Fin 9) :
 3. `FreshShiftLedger`（準備直後の watch の台帳）——`periodOnly = false` ＋ watch の
    `ShiftPal` をここまで還元した（n141〜n144）。中身は period テープの**中身**（DP の
    `Candidate`）／半径と周期の**大小**／period テープの**位相**の 3 種類 -/
-axiom obligation_shiftPalResiduesAlongTrace (entry q : ℕ) (first : Fin 9) :
+theorem obligation_shiftPalResiduesAlongTrace (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
       (∀ j, 1 ≤ j → j ≤ Tc w.length →
@@ -178,7 +178,49 @@ axiom obligation_shiftPalResiduesAlongTrace (entry q : ℕ) (first : Fin 9) :
         PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centreC placeC entry q first w
           (st j).ctl (st j).vm (st (j+1)).vm) ∧
       (∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
-        ∀ s' : GalilVM, PalPeg.ShiftPalAlongTrace.FreshShiftLedger w (st j).vm s')
+        ∀ s' : GalilVM, PalPeg.ShiftPalAlongTrace.FreshShiftLedger w (st j).vm s') := by
+  intro w st Tc hPreTraceIMW
+  rcases w with _ | ⟨a, rest⟩
+  · -- `w = []` では `Tc w.length = Tc 0 = 0`（`PreTrace.tc0`）なので 3 つとも空虚
+    have hTcZero : Tc ([] : List (Fin 2)).length = 0 := hPreTraceIMW.base.pre.tc0
+    exact ⟨fun j hj1 hjle => absurd (hTcZero ▸ hjle) (by omega),
+      fun j hj1 hjlt => absurd (hTcZero ▸ hjlt) (by omega),
+      fun j hj1 hjle => absurd (hTcZero ▸ hjle) (by omega)⟩
+  -- `st 1` で `InvLPC` を立てる（`BranchSupply.cpack_alongTrace` と同じ recipe）
+  have hPreTrace := hPreTraceIMW.base.pre
+  have hTcPos : 1 ≤ Tc (a :: rest).length := by
+    have hmono := hPreTrace.mono 1 (a :: rest).length (by simp) le_rfl
+    rw [hPreTraceIMW.base.tc1] at hmono
+    exact hmono
+  have hStep0 : Tick (galilFrameS (PofC centreC placeC entry (a :: rest)) q first) 2048
+      (boot (a :: rest)) (st 1) := by
+    have h := hPreTrace.trace.tick 0 (by omega)
+    rwa [hPreTrace.start] at h
+  obtain ⟨hInv, hSpan, -, -⟩ :=
+    PalPeg.GalilTrailFront.inv_of_boot_tick centreC placeC entry q first a rest hStep0
+  have hOut : PalPeg.GalilScaffoldChainInputSupply.OutputRel (a :: rest) (st 1).ctl (st 1).vm :=
+    hPreTrace.trace.good 1 hTcPos hInv.mode.1 hInv.mode.2.1
+  have hInvL : PalPeg.GalilOracleLocal.InvL (a :: rest) (st 1).ctl (st 1).vm :=
+    ⟨PalPeg.GalilOracleDischarge.invS_of_inv hInv, hOut⟩
+  have hEntryCounters : PalPeg.GalilGlueBLeaves.EntryCounters (a :: rest) (st 1).vm :=
+    PalPeg.GalilGlueBLeaves.entryCounters_of_inv hInv hSpan
+  have hSteps01 : Steps (galilFrameS (PofC centreC placeC entry (a :: rest)) q first) 2048 1
+      ⟨GalilScaffoldController.initial 2048, GalilBootVM.initVM0 (a :: rest)⟩
+      ⟨(st 1).ctl, (st 1).vm⟩ := .succ hStep0 (.zero _)
+  obtain ⟨Rad, last, hRestarted⟩ := hInv.rest
+  have hInvLPC : PalPeg.GalilInvPlus2.InvLPC (a :: rest) (st 1).ctl (st 1).vm :=
+    PalPeg.GalilOracleMC2.invLPC_of_boot centreC placeC entry q first 2048 hSteps01
+      ⟨hInvL, hEntryCounters⟩ (PalPeg.GalilInvPlus2.centreRep_of_restarted hRestarted)
+  obtain ⟨hReadsShift, hFreshShift, hFreshLedger⟩ :=
+    obligation_shiftPalResiduesAlongRun entry q first (a :: rest) (st 1).ctl (st 1).vm hInvLPC
+  refine ⟨fun j hj1 hjle => ?_, fun j hj1 hjlt => ?_, fun j hj1 hjle => ?_⟩
+  · exact hReadsShift (j - 1) (st j)
+      (PalPeg.GalilTrailFront.steps_between hPreTrace.trace hj1 hjle)
+  · exact hFreshShift (j - 1) (st j) (st (j+1))
+      (PalPeg.GalilTrailFront.steps_between hPreTrace.trace hj1 (by omega))
+      (hPreTrace.trace.tick j (by omega))
+  · exact hFreshLedger (j - 1) (st j)
+      (PalPeg.GalilTrailFront.steps_between hPreTrace.trace hj1 hjle)
 
 /-- **もう公理ではない。**  `ShiftPalAlongTrace.shiftPal_alongTrace` の適用で、
 上の 3 原子に割れた。2 つの側条件（`0 < w.length` と `1 ≤ Tc w.length`）は文脈から出る:
