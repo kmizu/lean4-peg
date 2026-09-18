@@ -1,3 +1,39 @@
+## 2026-09-19 n158: **ラウンド 1 周を run から組めた**（`compareRounds_one_of_run`）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器は動いていない。**
+
+`PROOF_STACK.md` 手順 7 が済んだ。`PalPeg/RoundHistory.lean` は 21 宣言。
+
+    compareRounds_one_of_run :
+      OnlyMatchedRun (toOnly s₀ w₀) n (toOnly s1 wch) →
+      singlePositive s1.cycle = true → canRight s1.right →
+      read (right s1.right) = symbol wch…period.focus →
+      Canonical s1.length →
+      vs.right = right s1.right → vs.left = left s1.left →
+      beginShiftVM (periodLength wch) wch (afterMismatch s1 vs vq) s2 →
+      ChainShiftRun (shiftLens.get s2).shift (immediate wch) (shiftLens.get s2).cycle k
+        (shiftLens.get sEnd).shift v (shiftLens.get sEnd).cycle →
+      positive (shiftLens.get sEnd).shift.remaining = false →
+      sEnd = shiftLens.set s2 (shiftLens.get sEnd) →
+      sEnd.chain = ChainVM.watch v →
+      CompareRounds (periodLength wch) (toOnly s₀ w₀) 1 (toOnly sEnd v)
+
+**フレーム（`P` / `q` / `first` / `delay`）に依らない。** run から取り出した材料だけで閉じる。
+`CompareRounds.next` の `lengthCounter` は `inc (inc s1.length)` に決まり、
+`hlen` は `inc_canonical` 2 回、`hrun : ShiftRun` は `shiftRun_of_chain` でタダ、
+手数 `k = periodLength wch` は `chainShiftRun_length_eq`、
+末尾の射影の形は `toOnly_shiftEnd_eq`。
+
+### 残り（`PROOF_STACK.md` 手順 8〜11）
+
+8. `RoundSeg w s₀ sEnd` にする（第 1 節 `periodLength v = periodLength w₀` は
+   `periodLength_onlyMatchedRun` ＋ `periodLength_consume` ＋ `chain_shift_periodLength` の合成）
+9. `CloseoutRoundSeg.originAt_of_roundSeg` → 次のラウンド起点の `OriginAt`
+10. `roundHistory_start` で次のラウンドの `RoundHistory`
+11. `CloseoutReadsOrigin.originShift_of_roundSeg` → `OriginShift`
+    → `h_readsShift_of_originShift` → **`H_readsShift`**
+
 ## 2026-09-19 n157: shift 末尾の射影の形も確定（`RoundHistory` 20 宣言）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

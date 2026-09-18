@@ -264,7 +264,9 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
    つまり「lens の場以外は変わらない」。`Lens.set_set` で `Steps` に沿って合成
 6. `shift_done` tick は VM を変えない（`Tick ⟨c, s⟩ ⟨{c with mode := .scan, output := o}, s⟩`、
    `GalilScaffoldTop:136`）
-7. `GalilScaffoldTopRoundS.round_next`（または `CompareRounds.next` を直接）を適用
+7. **済（n158）**: `RoundHistory.compareRounds_one_of_run`。`CompareRounds.next` を直接埋めた
+   （`round_next` は使わなかった——`Steps` は既に手元にあるので `CompareRounds` だけ要る）。
+   旧メモ: `GalilScaffoldTopRoundS.round_next`（または `CompareRounds.next` を直接）を適用
    → `CompareRounds h (toOnly s₀ w₀) 1 (toOnly post v)`。
    shift 相の手数が `h` であることは `chainShiftRun_length_eq`（**済 n156**）で、
    `ShiftRun` は `shiftRun_of_chain hchain` からタダ、

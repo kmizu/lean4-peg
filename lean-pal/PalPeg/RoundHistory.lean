@@ -553,6 +553,49 @@ theorem chainShiftRun_of_steps {P : Shared} {q : ℕ} {first : Fin 9} {delay : �
       (fun m' z' hz' => hShiftAll (m' + 1) z' (.succ hTick hz'))
     exact ⟨v'', hChainT, by rw [show n + (j + 1) = n + 1 + j from by omega]; exact hRunT⟩
 
+/-! ## 組み立て: ラウンド 1 周を run から
+
+`CompareRounds.next`（`GalilScaffoldChainReadOrigin:996`）を run の材料で埋める。
+`rest` は `.stop` なので index は `0+1 = 1`。`PROOF_STACK.md` 手順 7。
+**フレーム（`P` / `q` / `first` / `delay`）に依らない**——run から取り出した材料だけで閉じる。 -/
+
+/-- **ラウンド 1 周。**  `CompareRounds (periodLength wch) (toOnly s₀ w₀) 1 (toOnly sEnd v)`。 -/
+theorem compareRounds_one_of_run {s₀ s1 s2 sEnd : GalilVM}
+    {w₀ wch v : GalilScaffoldChainWatch.State} {n k : ℕ}
+    {vs : ScanVM} {vq : SearchVM}
+    (hMatchedRun : OnlyMatchedRun (toOnly s₀ w₀) n (toOnly s1 wch))
+    (hTerminal : singlePositive s1.cycle = true)
+    (hCanRight : canRight s1.right)
+    (hPredict : GalilScaffoldInputHead.read (right s1.right) =
+      GalilScaffoldChainConsume.symbol wch.machine.control.period.focus)
+    (hLengthCanonical : Canonical s1.length)
+    (hRight : vs.right = right s1.right)
+    (hLeft : vs.left = GalilScaffoldInputHead.left s1.left)
+    (hBeginShift : beginShiftVM (periodLength wch) wch (afterMismatch s1 vs vq) s2)
+    (hShiftRun : ChainShiftRun (shiftLens.get s2).shift
+      (GalilScaffoldChainWatch.immediate wch) (shiftLens.get s2).cycle k
+      (shiftLens.get sEnd).shift v (shiftLens.get sEnd).cycle)
+    (hExhausted : positive (shiftLens.get sEnd).shift.remaining = false)
+    (hFrame : sEnd = shiftLens.set s2 (shiftLens.get sEnd))
+    (hChainEnd : sEnd.chain = ChainVM.watch v) :
+    CompareRounds (periodLength wch) (toOnly s₀ w₀) 1 (toOnly sEnd v) := by
+  obtain ⟨hShape, -, hCycleEntry⟩ := shiftEntry_shape hLeft hBeginShift
+  have hStartRemaining : (shiftLens.get s2).shift.remaining = ofNat (periodLength wch) := by
+    rw [hShape]
+  have hLenEq : k = periodLength wch :=
+    chainShiftRun_length_eq hStartRemaining hShiftRun hExhausted
+  subst hLenEq
+  rw [hShape, hCycleEntry] at hShiftRun
+  have hGet : shiftLens.get sEnd
+      = ⟨(shiftLens.get sEnd).shift, ChainVM.watch v, (shiftLens.get sEnd).cycle⟩ := by
+    rw [← hChainEnd]; rfl
+  rw [toOnly_shiftEnd_eq hRight hBeginShift hFrame hGet]
+  exact CompareRounds.next (toOnly s₀ w₀) hMatchedRun hTerminal hCanRight hPredict
+    (inc_canonical _ (inc_canonical _ hLengthCanonical))
+    (shiftRun_of_chain hShiftRun) hShiftRun (.stop _)
+
+#print axioms compareRounds_one_of_run
+
 #print axioms chainShiftRun_tick
 #print axioms chainShiftRun_of_steps
 #print axioms chainShiftRun_snoc
