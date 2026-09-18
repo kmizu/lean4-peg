@@ -4,6 +4,99 @@
 
 
 
+
+## 2026-09-19 n83: `hfour` 放電 — 正本の最上位は 7 前提（`pal_in_peg_final39`）
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+### 結果
+
+| 定理 | 前提数 | 偽の前提 |
+|---|---|---|
+| **`CloseoutFinalFour.pal_in_peg_final39`（新・正本）** | **7** | **なし** |
+| `CloseoutFinalW.pal_in_peg_final30`（一代前） | 8 | なし |
+| `CloseoutFinalVer.pal_in_peg_final38`（新・別系統） | 9 | なし |
+| `CloseoutFinalS2.pal_in_peg_final31` | 9 | **`hav`** |
+| `CloseoutFinalW3.pal_in_peg_final36` | 5 | **`hpack`** |
+| `CloseoutFinalW4.pal_in_peg_final37` | 4 | **`hpack`** |
+
+`final39` の 7 前提（`#check` で型を実見して確認、余計な隠れ前提なし）:
+`hSP` `hme` `hor` `hC` `hbgP` `hmatchP` `hsdP`。`final30` から `hfour` だけが消えた形。
+
+### `hfour` はなぜ消えたか — 何も足していない
+
+`CloseoutPackRun40.ChainPosInv'` は `CloseoutPackRun34.ChainPosInv` の `coupled` 場を
+`Coupled`（`Other`、2h）から `Coupled'`（`Other'`、5h ＋ 正半周期）に強めただけの構造。
+
+* `watchShiftS_of_chainPosInv'`（`Run40:407`）は `H_fourOther` を**取らない**。
+  `Other'` は `Coupled'.watch` の場から `compare'_inv` 経由で出てくるので
+  `four_of_other'`（`Run40:368`）が直接効く。
+* `chainPosInv'_tick`（`Run40:435`）が要求する分岐前提は `H_bgP` / `H_matchP` /
+  `H_shiftDoneP` の **3 本だけで `final30` と同一**。
+* boot は `coupled'_of_idle`（`Run40:87`）で無条件。
+
+新規 `PalPeg/ShiftLocalRun.lean` がこれを run に載せる（`chainPosInv'_of_idle`、
+`chainPosInv'_steps`、`shiftLocalS_of_chainPosInv'`、`shiftLocalS_of_run'`、
+`needIMW'_le_W'`）。
+
+### 偽の前提の発見（`hav`、過剰量化の 8 例目）
+
+`final31` は `hfour` を落とすかわりに
+
+```
+(hav : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (i : ℕ), ConsumeAvail (st i).vm.chain)
+```
+
+を取っていた。`st` は**無制約な関数**なので `∀ z : ChainVM, ConsumeAvail z` と同値。
+`ConsumeAvail z := ∀ wch, z = .watch wch → canRight (right wch.machine.verifier)` で、
+`right p` は gap を反転するから、`gap = false` かつ右も incoming も空な verifier では
+`canRight (right p) = (true = false) ∨ ([] ≠ []) ∨ ([] ≠ [])` が偽。
+証人は既存の `GalilWatchOkInst.bornVer`。反証は `PalPeg.ConsumeAvailRefute.hav_false`
+（標準公理のみ、`sorryAx` なし）。**`final31` は無価値。**
+
+`bornVer_can : canRight bornVer` は成り立つ（`gap = false` なので第 1 選言）。
+偽になるのは**一歩進めた後**の `canRight (right bornVer)` である。
+
+### コピペの括り出し（コウタの指示どおり、計測から始めない）
+
+* `RadPack` → `TrailF` → `needL'` の 3 段は **4 回**書かれていた
+  （S＝`CloseoutShiftS`、S3＝`CloseoutWatchSupply`、S4＝`CloseoutVerSide`、＋今回）。
+  本体は `hsh : ∀ i ≤ Tc w.length, ShiftLocalS … (st i)` しか使っていないので、
+  `ShiftLocalRun.radPack_pt_of_shiftLocal` / `trailF_pt_of_shiftLocal` /
+  `needIMW'_le_of_shiftLocal` として **1 度だけ**書いた。
+* `pal_in_peg_final5MW` / `5MW2` / `5MW3` / `5MW4` は `needL'` の上界を作る 1 行を除いて
+  **同一の 45 行**。`CloseoutFinalFour.pal_in_peg_of_needLe` がその 45 行で、上界自体を
+  `hneed` として取る。以後の版は 4 行の instantiation。
+  **既存 4 版の載せ替えは未実施**（別コミットにする。今やると 600 モジュールの再ビルドと
+  同時に 4 ファイルを触ることになる）。
+
+### `final38`（9 前提）を残す理由
+
+前提数では `final39` に劣るが、分岐前提が Run41 系（`H_bgP2` / `H_matchP2` /
+`H_shiftEntry2` / `H_shiftDoneRad2`）で、`CloseoutPackRun48` の 4 放電器
+（`h_bgP2_of_supply` / `h_matchP2_of_target` / `h_shiftEntry2_of_target` /
+`h_shiftDoneRad2_of_supply`）が効く**唯一の**経路。`final39` の 3 本を落とすには
+こちらを詰める。`hpack` は `CloseoutVerSide` が run 形の `VerRun` に置き換えてあり、
+`CloseoutFinalW5.pal_in_peg_final5MW4` がそれを受けていたが**最上位が張られていなかった**
+（それを張ったのが `CloseoutFinalVer`）。
+
+### 次の一手
+
+Run48 の 4 放電器の入力はまだ「任意の scan 状態 ＋ `ChainPosInv2`」形で、
+`hrepV`（verifier が入力を表現）はその形では**偽の疑いが強い**（`ChainPosInv2` は
+verifier の内容を縛らない）。`VerRun` と同じ **run 形**に直してから使う。
+それができれば `final38` の 4 分岐前提が `hver` 1 本に落ち、
+`hSP` `hme` `hor` `hC` `hver` の **5 前提**になる。
+
+### 教訓
+
+* 「`hfour` が壁」と 1 日以上数えていたが、証明は `CloseoutPackRun40` にあり、
+  `CloseoutPackRun41:213` の docstring が「so `H_fourOther` is a theorem」と書いていた。
+  **地図が無いと既存の部品を取り落とす**（`Canonical.lean` / `Workbench.lean` に登録済み）。
+* `hfour` を落とした既存の 3 版はどれも偽の前提を代わりに取っていた。
+  **前提数だけ比べてはならない。型を見て、各前提に反証が無いかを確かめる。**
+
 ## 2026-09-19 n82: `hfour` は既存の部品で消える — `four_of_other'` が `H_fourOther` そのもの
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。

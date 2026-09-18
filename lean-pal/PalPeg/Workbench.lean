@@ -71,6 +71,7 @@ import PalPeg.GalilLeafStartShape
 import PalPeg.GalilScaffoldPrepareClock
 import PalPeg.GalilScaffoldStructured
 import PalPeg.GalilSourceCost
+import PalPeg.CloseoutFinalVer
 
 /-!
 # `Workbench` — 作ったが正本の鎖に配線されていない部品
@@ -126,9 +127,28 @@ import PalPeg.GalilSourceCost
 
 ## 2. 最上位の別系列
 
-`pal_in_peg_final*` は 47 本あり、番号は「いつ書いたか」でしかない。反証済みの前提を
+`pal_in_peg_final*` は 48 本あり、番号は「いつ書いたか」でしかない。反証済みの前提を
 含まない中で前提が最少なのがどれかは、**型を実際に見て**判断する
 （Prop 引数の本数＝前提の本数ではない）。ここはその比較対象。
+
+型を確認済みの比較表（2026-09-19）:
+
+| 定理 | 前提数 | 偽の前提 | 機械検査 |
+|---|---|---|---|
+| **`CloseoutFinalFour.pal_in_peg_final39`** | **7** | **なし**（正本、`Canonical` 参照） | — |
+| `CloseoutFinalW.pal_in_peg_final30` | 8 | なし（一代前、`hfour` を含む） | — |
+| `CloseoutFinalVer.pal_in_peg_final38` | 9 | なし | — |
+| `CloseoutFinalS2.pal_in_peg_final31` | 9 | `hav` | `ConsumeAvailRefute.hav_false` |
+| `CloseoutFinalW3.pal_in_peg_final36` | 5 | `hpack` | `CloseoutPackRefute.hpack_false` |
+| `CloseoutFinalW4.pal_in_peg_final37` | 4 | `hpack` | 同上 |
+
+`CloseoutFinalVer.pal_in_peg_final38` は前提数では `final39` に劣るが、**残す**:
+分岐前提が Run41 系（`H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2`）で、
+`CloseoutPackRun48` の 4 放電器（`h_bgP2_of_supply` / `h_matchP2_of_target` /
+`h_shiftEntry2_of_target` / `h_shiftDoneRad2_of_supply`）が効く**唯一の**経路。
+`final39` の 3 本を落とすにはこちらを詰めることになる。ただし Run48 の放電器の入力は
+まだ「任意の scan 状態 ＋ `ChainPosInv2`」形なので、run 形（`VerRun` と同じ形）に
+直す必要がある。
 
 ## 3. 記録
 

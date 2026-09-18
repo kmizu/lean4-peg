@@ -14,6 +14,8 @@ import PalPeg.CloseoutTickFalse
 import PalPeg.PackedRun
 import PalPeg.WatchOkRefute
 import PalPeg.ChainStepGap
+import PalPeg.CloseoutFinalFour
+import PalPeg.ConsumeAvailRefute
 
 /-!
 # Canonical — 意味のある名前で正本部品を再輸出する
@@ -47,9 +49,15 @@ namespace PalPeg.Canonical
 
 /-! ## 1. 最上位
 
-`pal_in_peg_final30` は Prop 引数 8 本（`hSP` `hme` `hor` `hC` `hfour` `hbgP`
-`hmatchP` `hsdP`）で、そのどれも反証されていない（確認したのは `final30` `final31`
-`final33` `final36` `final37` の 5 本）。
+**正本の最上位は `pal_in_peg_final39`（`CloseoutFinalFour`）で Prop 引数 7 本**
+（`hSP` `hme` `hor` `hC` `hbgP` `hmatchP` `hsdP`）。`final30` の 8 本から
+`hfour : ∀ w, H_fourOther …` が**何も足さずに**落ちたもの（`CloseoutPackRun40.ChainPosInv'`
+＝ `Coupled` を `Coupled'` に強めた構造が `four_of_other'` を直接使えるため。
+`ShiftLocalRun` が run に載せている）。反証済みの前提は含まない。
+
+`hfour` を落とした既存の 3 版はどれも代わりに**偽の前提**を取っていた:
+`final31` は `hav`（`ConsumeAvailRefute.hav_false`）、`final36`/`final37` は `hpack`
+（`CloseoutPackRefute.hpack_false`）。型を見ずに前提数だけ比べてはならない。
 
 **「8 が最小」とは主張しない。** `pal_in_peg_final*` は 47 本あり、全部の型を見ていない。
 また Prop 引数の本数は前提の本数ではない（`∀ w, H_x w` は 1 本に見えて族、instance は
@@ -57,9 +65,26 @@ namespace PalPeg.Canonical
 
 計画書 §10.5（前提ゼロ）は未達。 -/
 
-/-- **現時点の正本の最上位定理**（旧名 `pal_in_peg_final30`）。
-Prop 引数 8 本、反証済みの前提を含まない。最小性は未検証。 -/
+/-- **現時点の正本の最上位定理**（旧名 `pal_in_peg_final39`）。
+Prop 引数 7 本（`hSP` `hme` `hor` `hC` `hbgP` `hmatchP` `hsdP`）、反証済みの前提を
+含まない。最小性は未検証。 -/
+alias pal_in_peg_of_seven_leaves := PalPeg.CloseoutFinalFour.pal_in_peg_final39
+
+/-- 一代前の最上位（旧名 `pal_in_peg_final30`）。`hfour` を含む 8 本。 -/
 alias pal_in_peg_of_eight_leaves := PalPeg.CloseoutFinalW.pal_in_peg_final30
+
+/-- **最上位の組み立ての共通部分**（旧名 `pal_in_peg_of_needLe`）。`needL'` の上界を
+外から取る 45 行で、`final5MW` / `5MW2` / `5MW3` / `5MW4` はこれの instantiation。 -/
+alias top_assembly_from_need_bound := PalPeg.CloseoutFinalFour.pal_in_peg_of_needLe
+
+/-- **`needL'` の上界は run 沿いの `ShiftLocalS` だけから出る**
+（旧名 `needIMW'_le_of_shiftLocal`）。`RadPack` → `TrailF` → `needL'` の 3 段を
+4 回書いていたコピペ（S / S3 / S4）の共通部分。 -/
+alias need_bound_from_shiftLocal_run := PalPeg.ShiftLocalRun.needIMW'_le_of_shiftLocal
+
+/-- **`hfour` 抜きで run 沿いに `ShiftLocalS`**（旧名 `shiftLocalS_of_run'`）。
+分岐前提は `H_bgP` / `H_matchP` / `H_shiftDoneP` の 3 本のみ。 -/
+alias shiftLocal_along_run_without_four := PalPeg.ShiftLocalRun.shiftLocalS_of_run'
 
 /-! ## 2. 反証済み — 使ってはいけない
 
@@ -81,6 +106,13 @@ period と入力の一致を強制するが、`born` の仮説は両者を関係
 **帰結**: `ChainTickable` を `ChainOk`＋`WatchOk` 上に載せ替える道は閉じた。`hready` を
 消すには `ChainOk` を `.copy`/`.back` で lag/margin を縛る形に再設計する必要がある。 -/
 alias refuted_watchOk := PalPeg.WatchOkRefute.watchOk_false
+
+/-- **`ConsumeAvail` を全状態に量化した前提は偽**（`final31` の `hav`）。
+`hav : ∀ w st i, ConsumeAvail (st i).vm.chain` は `st` が無制約関数なので
+`∀ z : ChainVM, ConsumeAvail z` と同値で、`gap = false` かつ右も incoming も空な
+verifier を持つ watch 状態で破れる。**帰結**: `pal_in_peg_final31` は無価値。
+正しい形は `CloseoutVerSide.VerRun`（run 形）。 -/
+alias refuted_consumeAvail_universal := PalPeg.ConsumeAvailRefute.hav_false
 
 /-- **モデル欠陥 `M-watchBreak`**（`WatchOk` が偽である根本原因）。
 Scala 正本の `ScaffoldChain.step()` は `Mode.Watch` かつ正 lag で `consume()` を呼び、

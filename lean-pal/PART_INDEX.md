@@ -97,7 +97,7 @@ threading が必要で、それが残っている本体。**
 | 背景 tick の恒等性 | `CloseoutMismatchCompare.chainTick_false_idle`, `chainStep_watch_of_lagZero` | **証明済み**（lag ゼロなら `WatchOk` 不要） |
 | `ShiftRun` の存在 | `CloseoutShiftRun.shiftRun_exists` / `_entry` / `_round` | **証明済み** |
 
-## 2b. `hfour`（`H_fourOther`）— **既存の部品で消える**（2026-09-19 判明）
+## 2b. `hfour`（`H_fourOther`）— **放電済み**（2026-09-19、`pal_in_peg_final39`）
 
 | 部品 | 在り処 | 状態 |
 |---|---|---|
@@ -110,6 +110,26 @@ threading が必要で、それが残っている本体。**
 
 **議論**: `5h ≤ R + C`（`Other'`）＋ `C ≤ 1`（shift guard の `singlePositive cycle`）
 ＋ `distance = R`（`SumRel` ＋ lag ゼロ）＋ `1 ≤ h` ⟹ `4h ≤ distance`。
+
+**放電の実物**（新規モジュール、全体 build 緑）:
+
+| 定理 | 場所 |
+|---|---|
+| `chainPosInv'_of_idle` / `chainPosInv'_steps` | `PalPeg/ShiftLocalRun.lean` |
+| `shiftLocalS_of_chainPosInv'` / `shiftLocalS_of_run'`（`hfour` なし） | 同上 |
+| `needIMW'_le_W'`（`needIMW'_le_W` の `hfour` 抜き） | 同上 |
+| **`pal_in_peg_final39`（7 前提・反証済みゼロ）** | **`PalPeg/CloseoutFinalFour.lean`** |
+| 索引の別名 `pal_in_peg_of_seven_leaves` | `PalPeg/Canonical.lean` |
+
+**注意**: `hfour` を落とした既存 3 版はどれも代わりに偽の前提を取っていた —
+`final31` は `hav`（`PalPeg.ConsumeAvailRefute.hav_false`）、`final36`/`final37` は
+`hpack`（`CloseoutPackRefute.hpack_false`）。
+
+**共通部分の括り出し**: `RadPack` → `TrailF` → `needL'` の 3 段は S / S3 / S4 で
+3 重コピペだったので、`hsh : ∀ i ≤ Tc, ShiftLocalS (st i)` を引数に取る形
+（`ShiftLocalRun.needIMW'_le_of_shiftLocal` ほか）に括り出した。`final5MW*` 4 版の
+共通 45 行も `CloseoutFinalFour.pal_in_peg_of_needLe` に括り出した（既存 4 版の
+載せ替えは未実施）。
 
 ## 3. `hpack` の代替（run 搬送パック）
 

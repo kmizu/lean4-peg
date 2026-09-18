@@ -95,7 +95,7 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 
 ## lean-pal 無条件 PAL ∈ PEG の進捗（2026-09-19 時点、最上位 4 前提）
 
-**状態: 全体 build 成功・標準公理のみ・無条件 PAL は未完。正本の最上位は `pal_in_peg_final30`（`CloseoutFinalW`、**8 前提・反証済みゼロ**: `hSP` `hme` `hor` `hC` `hfour` `hbgP` `hmatchP` `hsdP`）。`pal_in_peg_final37`（`CloseoutFinalW4`）は 4 前提だが `hpack` が**偽**（`CloseoutPackRefute`、2026-09-19 反証）——`ChainPack` は run 沿いの束を一状態述語として書いており `ChainPosInv2` からは出ない。よって 8 → 4 の削減は偽の前提を通っており、前進として数えない。計画書 §10.5（前提ゼロ）は未達。** 全モジュール sorry なし。新モジュールは `PalPeg.lean` の `import PalPeg.GalilSegmentConstruct` の直後に登録。
+**状態: 全体 build 成功・標準公理のみ・無条件 PAL は未完。正本の最上位は `pal_in_peg_final39`（`CloseoutFinalFour`、**7 前提・反証済みゼロ**: `hSP` `hme` `hor` `hC` `hbgP` `hmatchP` `hsdP`。2026-09-19 に `hfour` を**何も足さずに**放電——`CloseoutPackRun40.ChainPosInv'`＝`Coupled` を `Coupled'` に強めた構造が `four_of_other'` を直接使えるため、`ShiftLocalRun` が run に載せた。索引の別名は `Canonical.pal_in_peg_of_seven_leaves`）。一代前は `pal_in_peg_final30`（`CloseoutFinalW`、8 前提、`hfour` を含む）。`hfour` を落とした既存 3 版はどれも代わりに**偽の前提**を取っていた: `final31` は `hav`（`ConsumeAvailRefute.hav_false`、過剰量化の 8 例目）、`final36`/`final37` は `hpack`（`CloseoutPackRefute.hpack_false`）。`pal_in_peg_final37`（`CloseoutFinalW4`）は 4 前提だが `hpack` が**偽**（`CloseoutPackRefute`、2026-09-19 反証）——`ChainPack` は run 沿いの束を一状態述語として書いており `ChainPosInv2` からは出ない。よって 8 → 4 の削減は偽の前提を通っており、前進として数えない。計画書 §10.5（前提ゼロ）は未達。** 全モジュール sorry なし。新モジュールは `PalPeg.lean` の `import PalPeg.GalilSegmentConstruct` の直後に登録。
 
 ### 1. 最上位の定理と残りの仮定
 
@@ -123,6 +123,12 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 
 - **`Fair` 完成（`GalilTickFair`）: `Tick ∧ Fair` は全状態で一意、残差なし。** 抽象 `Tick` 単体は一意でない（`GalilTickDet`）: (a) broken chain で `restart` と `scan_wait` stutter が競合（Scala は restart 優先）、(b) 探索量子は `ReadFun GalilDpCode.code` + `PrepareControl.Tick` 決定性を仮定すれば関数的、(c) chain は関数的、(e) `beginFallbackVM'`（着地場所）、`initVM`/`replayStartVM`（`periodOnly`, `walker` 自由）が非関数的。`tickFun`（`GalilTickFun`）は choice で 1 つ選ぶだけ。**方針**: モデルは編集せず（使用箇所 300 超）、Scala の優先順位と固定値を表す `Fair` を定義して `Tick ∧ Fair` の一意性を証明（`GalilTickFair`、進行中）。構成側の witness と局所 step が `Fair` を満たすことを別途確認。
 - **偽だった葉（同じ型: 任意状態への量化）**: `hquiet`（`SearchQuiet` は「found に到達しない」と同値、`GalilLeafQuiet`）、`houtReplay`（`InvScan` に出力なし → `InvScanO := InvScan ∧ OutputRel`、`GalilLeafOutReplay`）、`hpres`（`SearchReady` は負債 1 単位分保存されない → `SearchReadyB := ReadyRem ∧ RunEntriesAll`、`GalilLeafPres`；`watchSegE_construct` は再証明要、`GalilSegmentConstructB` 進行中）、`hpos`（区間終端の右ヘッド位置、`GalilLeafPos`: 区間予算 `position r.right + count true ≤ 2m−2` から出す）。
+- **過剰量化の 8 例目（2026-09-19）**: `pal_in_peg_final31` の
+  `(hav : ∀ w (st : ℕ → State GalilVM) (i : ℕ), ConsumeAvail (st i).vm.chain)`。
+  `st` が無制約関数なので `∀ z : ChainVM, ConsumeAvail z` と同値で、
+  `gap = false` かつ右も incoming も空な verifier を持つ watch で破れる
+  （`ConsumeAvailRefute.hav_false`）。正しい形は run 形の `CloseoutVerSide.VerRun`。
+  **run に沿う事実を `∀ st` で書くと、常に状態全体への全称に潰れる。**
 - **過剰量化の 7 例目（2026-09-19、自分で撒いた）**: `M-watchBreak` 修正の下流で
   `(hnobg : ∀ w' v, ¬ BreakStepPos w' v)` と書いたが、`BreakStepPos` は「正 lag ＋ 不一致」
   なのでそういう `w'` は存在し、**この前提は偽**。義務は必ず**状態局所**に書く
