@@ -20,6 +20,75 @@
 
 
 
+
+## 2026-09-19 n98: `matchLanding` と `shiftEntryLanding` は `MatchRest` 1 つに合流する
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 9 個の原子的義務を axiom として持つ。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
+
+### 合流の発見
+
+`CloseoutPackRun48` を読んだら:
+
+```
+H_shiftRes2 w := ∀ c s s' t, mode = scan → ChainPositionInvariantWithShiftPhase w c s →
+    compare s s' → ¬ matched s' → shiftGuardVM s' → beginShiftVM' s' t → MatchRes2 w c s
+h_shiftEntry2_of_target (hres : H_shiftRes2 …) : H_ShiftEntryChainLedger …   (:374)
+h_matchP2_of_target     (hres : H_matchRes2 …) : H_MatchLandingChainLedger … (:243)
+```
+
+**両方の入力が同じ `MatchRes2 w c s`。** そして
+`CloseoutPackRun49.matchRes2_of_lpackM3`（:448）が
+`LPackM3`（§5e で運べる）＋ `LTickLeavesN`（タダ）＋ `LTickLeaves3`（`shiftExitLedger`
+以外タダ）＋ **`MatchRest`** から `MatchRes2` を出す。
+
+つまり `obligation_matchLanding_alongTrace` と
+`obligation_shiftEntryLanding_alongTrace` の **2 公理が `MatchRest` 1 つに合流する**
+（9 → 8）。
+
+### `MatchRest` の 4 場と現状
+
+| 場 | 内容 | 状態 |
+|---|---|---|
+| `repV` | chain の verifier が入力を表現 | **`VerRun`（axiom で保持）** |
+| `repVmid` | verifier を 1 `ChainStep` 進めた先でも表現 | `right_word` / `right_present` で出るはず |
+| `replayPay` | `replaying = true` のときの source の payload | `ChainPositionInvariantWithShiftPhase.payload` は `ScanNR`（＝非 replaying）で守られているので別途 |
+| `canRNext` | `canRight (right s.right)` | **最終位置で偽の疑い**（下記） |
+
+### 要確認 — `canRNext` の切り方
+
+`canRight_next_of_bound` は `m < w.length`（**厳密**）と `position p ≤ 2m − 1` を要する。
+いま持っている予算は `position right ≤ 2|w| − 1`（`rightHeadPos_le_alongTrace`）なので
+`position (right right) ≤ 2|w|` となり、**最終位置（`m = |w|`）では `canRight` が偽**。
+
+`MatchRest.canRNext` は無条件なので、**最終位置で本当に要るのかを確かめる**。
+要らないなら `m < w.length` で守るべき＝切り方の間違い。
+（`Run48:439` は shift 入口の `chainPos_immediate` に `R.canRNext` を渡している。
+shift 入口は不一致 ＋ shift guard で起きるので、最終位置で起きうるかを Scala 正本
+`ScaffoldGalil.canShift` で確認すること。）
+
+### 次の一手（順番）
+
+1. `h_matchP2_of_target` / `h_shiftEntry2_of_target` を**状態局所化**する
+   （どちらも `hres` を `(c, s)` でだけ使う。`bg_at_of_supply` と同じ形）。
+2. `MatchRest` を trace 形の 1 公理にまとめ、`matchLanding` / `shiftEntryLanding` の
+   2 公理を消す（**9 → 8**）。
+3. `canRNext` の切り方を Scala 正本で確認し、必要なら `m < w.length` で守る。
+4. `shiftExitLedger` は `CentreRep` を shift 相へ運ぶ仕事。
+   `CloseoutPackRun21` 自身が「`FrontPack.rewind` の `Sane s.center` を
+   `CentreRep w s` に強化すべき」と書いている（`Run21:52` 付近）。これも「狭く切った」パターン。
+
+### 今日のパターン集（全部「難解」ではなかった）
+
+| 症状 | 正体 |
+|---|---|
+| producer が無い | 不変量を**狭く切っていた**（`LagCan` は `.watch` 相だけ） |
+| 同じ導出が各所にある | **分類器に対する補題が無い**（`chainAt` を手開きしていた） |
+| 「幾何が要る」と感じる | **リストの長さの算術**だった（`position p = 2·|left| ± 1`） |
+| 前提が 1 単位足りない | **義務の切り方**が間違っている（guard が抜けている） |
+| 束ねた前提数が少ない | 偽の前提を隠している（`hpack` / `hav`） |
+
 ## 2026-09-19 n97: 公理を 1 個放電（10 → 9）＋ 「狭く切った不変量」が詰まりの正体
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
