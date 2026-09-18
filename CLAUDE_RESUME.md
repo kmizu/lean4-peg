@@ -8,6 +8,69 @@
 
 
 
+
+## 2026-09-19 n86: `shiftDone` 義務の半径台帳は**タダ** — `RadLedger` から出る
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。正本の最上位は引き続き `pal_in_peg_final39`（7 前提）。**
+
+### 放電できたもの
+
+`BranchAt.shiftDone`（＝旧 `H_shiftDoneRad2`）は
+
+```
+canRight s.right ∧ ∀ rad, ScanInvariant w (position s.center) rad s.left s.right →
+  value s.radius ≤ (rad : ℤ)
+```
+
+の連言だが、**後者は新規入力ゼロで出る**：
+
+* `CloseoutRadPack.RadLedger.le : position s.center + value s.radius ≤ position s.right`
+* `ScanInvariant.rightPos : position s.right = position s.center + rad`
+* 差をとって `value s.radius ≤ rad`（`BranchSupply.radLe_of_radLedger`）
+
+そして `RadLedger` は **`CloseoutLPack6.radLedger_pt` が `PreTrace` ＋ `LeftLive` だけで
+trace の全点に与える**（`radLedger_boot` は定理、`LeftLive` は `leftLive_of_lpackM`）。
+つまり `needIMW'_le_R` の中で内部調達でき、前提として現れない。
+
+### 追加した部品（`PalPeg/BranchSupply.lean` §3–§4）
+
+* `radLe_of_radLedger` / `shiftDone_of_radLedger`
+* `BranchRes` — 4 場のうち `shiftDone` を **`shiftCan`（`canRight s.right` のみ）** に縮めた構造
+* `branchAt_of_res` — `BranchRes` ＋ `RadLedger` → `BranchAt`
+* `chainPosInv2_trace` — `ChainPosInv2` を **trace 指標**で運ぶ（`lpackM3_steps` と同形の帰納）
+* `BranchResTrace` / `needIMW'_le_R` — `RadLedger` を内部調達する `needL'` 上界
+
+**なぜ trace 指標にしたか**: `BranchRun` は `Steps` で到達する**すべての**状態を量化するが、
+`Tick` は関係なので trace 外の状態も含む。一方、放電の材料（`RadLedger`、`LPackM2`）は
+`radLedger_pt` / `PreTraceIMW.packs` が **trace の点 `st i`** でしか与えない。
+`chainPosInv2_steps_run` を使う経路は `steps_of_trace` で trace の鎖しか渡さないので、
+trace 指標で十分かつ供給と噛み合う。
+
+### 最上位
+
+`PalPeg/CloseoutFinalBranch.pal_in_peg_final42` — Prop 引数 6 本
+（`hSP` `hme` `hor` `hC` `hres` `hver`）。`final41` との違いは `hres` が
+`BranchResTrace`（`shiftDone` の半径台帳を落とした 4 場）であること。
+
+**正直な読み方**: Prop 引数は 6 のままで、減ったのは `shiftDone` 場の**半分**。
+義務の実数は 9 → 8.5 相当。正本は引き続き `pal_in_peg_final39`（7 本、束ねていない）。
+
+### 次の一手 — `shiftCan`（`canRight s.right` at shift_done）
+
+経路は見えている：
+
+* `CloseoutClockFront.canRight_of_run`（:152）は **mode 条件なしで** `canRight y.vm.right`
+  を出す。必要なのは
+  - `hg : ∀ m z, Steps … m x z → FrontPack z.ctl z.vm` — `GalilTrailRad.frontPack_trace`
+    が trace から与える（`CloseoutLPack6:290` が既に使っている）
+  - `hx0 : front x.vm = 0`, `hxc : x.ctl.clock = delay` — boot の値
+  - `hrep`/`hpres`（右ヘッドの `Represents` と `focus ≠ none`）— shift 相では
+    **`LPackM2.shiftGeom` の `RRep`** が持つ
+  - `hn : n < delay * (2 * w.length)` — run 長の予算。**ここが唯一の未確認**。
+    `PreTrace.cost` / `Tc` の上界と突き合わせること。
+* これが通れば `shiftCan` も消え、`BranchRes` は `bg` / `matchLand` / `entryLand` の 3 場になる。
+
 ## 2026-09-19 n85: 4 分岐義務を run 形に弱めた — `∀ c s` では原理的に放電できない
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。

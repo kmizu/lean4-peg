@@ -102,6 +102,12 @@ alias chainPosInv2_along_run := PalPeg.BranchSupply.chainPosInv2_steps_run
 /-- **`needL'` の上界を run 形の義務から**（旧名 `BranchSupply.needIMW'_le_B`）。 -/
 alias need_bound_from_branch_run := PalPeg.BranchSupply.needIMW'_le_B
 
+/-- **`shiftDone` 義務の半径台帳はタダ**（旧名 `BranchSupply.radLe_of_radLedger`）。
+`RadLedger.le`（`position center + value radius ≤ position right`）と
+`ScanInvariant.rightPos` だけ。`RadLedger` は `CloseoutLPack6.radLedger_pt` が
+`PreTrace` ＋ `LeftLive` だけで trace の全点に与える。 -/
+alias radius_ledger_is_free := PalPeg.BranchSupply.radLe_of_radLedger
+
 /-! ## 2. 反証済み — 使ってはいけない
 
 `hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack q first w c s` は**偽**。

@@ -137,6 +137,138 @@ theorem needIMW'_le_B {w : List (Fin 2)} (hw : 0 < w.length)
     (fun i hi => shiftLocalS_of_branchRun centre place entry q first hpos0
       (PalPeg.CloseoutPackRun2.steps_of_trace hP.base.pre.trace i hi) hB hV (hP.packs i hi).m2)
 
+/-! ## 3. `shiftDone` 場の半径台帳はタダ
+
+`BranchAt.shiftDone` は `canRight s.right` と半径台帳の連言。後者は
+**`CloseoutRadPack.RadLedger.le`（`position center + value radius ≤ position right`）と
+`ScanInvariant.rightPos`（`position right = position center + rad`）だけで出る**。
+`RadLedger` は `CloseoutLPack6.radLedger_pt` が `PreTrace` ＋ `LeftLive` だけから
+run の全点に与える（新規入力ゼロ）。 -/
+
+/-- **半径台帳は `RadLedger` から出る。** -/
+theorem radLe_of_radLedger {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hR : PalPeg.CloseoutRadPack.RadLedger c s) :
+    ∀ rad : ℕ, ScanInvariant w (position s.center) rad s.left s.right →
+      value s.radius ≤ (rad : ℤ) := by
+  intro rad hsi
+  have h1 : (position s.center : ℤ) + value s.radius ≤ (position s.right : ℤ) := hR.le
+  have h2 : position s.right = position s.center + rad := hsi.rightPos
+  rw [h2] at h1
+  push_cast at h1
+  omega
+
+/-- **`shiftDone` 場は `canRight` 1 つに落ちる。** -/
+theorem shiftDone_of_radLedger {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hR : PalPeg.CloseoutRadPack.RadLedger c s)
+    (hcan : c.mode = Mode.shift →
+      ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s →
+      GalilScaffoldChainVerifier.canRight s.right) :
+    c.mode = Mode.shift →
+      ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s →
+      ChainPosInv2 w c s → s.chain ≠ ChainVM.idle →
+      GalilScaffoldChainVerifier.canRight s.right ∧
+        ∀ rad : ℕ, ScanInvariant w (position s.center) rad s.left s.right →
+          value s.radius ≤ (rad : ℤ) :=
+  fun hm hp _ _ => ⟨hcan hm hp, radLe_of_radLedger (w := w) hR⟩
+
+#print axioms radLe_of_radLedger
+#print axioms shiftDone_of_radLedger
+
+/-! ## 4. trace 指標版 — 供給の形に合わせる
+
+`BranchRun` は `Steps` で到達する**すべての**状態を量化するが、`Tick` は関係なので
+trace の外の状態も含む。一方、放電の材料（`RadLedger`、`LPackM2`）は
+`radLedger_pt` / `PreTraceIMW.packs` が **trace の点 `st i`** で与える。
+そこで trace 指標の版を置く。`chainPosInv2_steps_run` を使う経路は `steps_of_trace` で
+trace の鎖しか渡さないので、これで十分。 -/
+
+/-- **(NAMED, trace 形) 4 分岐義務の残り**: `shiftDone` の半径台帳は `RadLedger` から
+出るので（§3）、残るのは `canRight` だけ。 -/
+structure BranchRes (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+  bg : ∀ t : GalilVM, c.mode = Mode.scan → ChainPosInv2 w c s →
+    (galilFrameS (PofC centre place entry w) q first).background s t →
+    ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → PosPayload2 w t
+  matchLand : ∀ (s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPosInv2 w c s →
+    (galilFrameS (PofC centre place entry w) q first).compare s s' →
+    (galilFrameS (PofC centre place entry w) q first).matched s' →
+    (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
+    ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
+    t.chain ≠ ChainVM.idle → PosPayload2 w t
+  entryLand : ∀ s' t : GalilVM, c.mode = Mode.scan → ChainPosInv2 w c s →
+    (galilFrameS (PofC centre place entry w) q first).compare s s' →
+    ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
+    shiftGuardVM s' → beginShiftVM' s' t → ShiftPos2 t
+  shiftCan : c.mode = Mode.shift →
+    ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s →
+    GalilScaffoldChainVerifier.canRight s.right
+
+/-- **`BranchAt` from `BranchRes` plus the free radius ledger.** -/
+theorem branchAt_of_res {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hR : PalPeg.CloseoutRadPack.RadLedger c s)
+    (hres : BranchRes centre place entry q first w c s) :
+    BranchAt centre place entry q first w c s :=
+  ⟨hres.bg, hres.matchLand, hres.entryLand,
+    shiftDone_of_radLedger centre place entry q first hR hres.shiftCan⟩
+
+/-- **`ChainPosInv2` along the trace** (induction on the index, the shape
+`CloseoutPackRun49.lpackM3_steps` uses). -/
+theorem chainPosInv2_trace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PreTrace centre place entry q first w st Tc)
+    (hB : ∀ i, i ≤ Tc w.length → BranchAt centre place entry q first w (st i).ctl (st i).vm)
+    (hx : ChainPosInv2 w (st 0).ctl (st 0).vm) :
+    ∀ i, i ≤ Tc w.length → ChainPosInv2 w (st i).ctl (st i).vm := by
+  intro i
+  induction i with
+  | zero => intro _; exact hx
+  | succ n ih =>
+    intro hi
+    exact chainPosInv2_tick_at centre place entry q first (hB n (by omega)) (ih (by omega))
+      (hP.trace.tick n (by omega))
+
+/-- **(NAMED, trace 形) 残りの 3 場 ＋ `canRight`**, at every point of the trace. -/
+def BranchResTrace (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ) : Prop :=
+  ∀ i, i ≤ Tc w.length → BranchRes centre place entry q first w (st i).ctl (st i).vm
+
+/-- **`needL'` の上界を trace 形の残差から。**  半径台帳（`RadLedger`）は
+`CloseoutLPack6.radLedger_pt` が `PreTrace` ＋ `LeftLive` だけで与えるので
+**新規入力ゼロ**で内部調達する。 -/
+theorem needIMW'_le_R {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hpos0 : ChainPosInv2 w (st 0).ctl (st 0).vm)
+    (hres : BranchResTrace centre place entry q first w st Tc)
+    (hV : VerRun centre place entry q first w (st 0)) :
+    ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
+      PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 := by
+  have hLP : ∀ i, i ≤ Tc w.length →
+      PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm :=
+    fun i hi => (hP.packs i hi).pack
+  have hll : ∀ i, i ≤ Tc w.length →
+      PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm :=
+    fun i hi => leftLive_of_lpackM (hLP i hi)
+  have hR := radLedger_pt centre place entry q first hw hP.base.pre hll
+  have hB : ∀ i, i ≤ Tc w.length →
+      BranchAt centre place entry q first w (st i).ctl (st i).vm :=
+    fun i hi => branchAt_of_res centre place entry q first (hR i hi) (hres i hi)
+  have hinv := chainPosInv2_trace centre place entry q first hP.base.pre hB hpos0
+  refine needIMW'_le_of_shiftLocal centre place entry q first hw hP (fun i hi => ?_)
+  refine shiftLocalS_of_parts centre place entry q first (hinv i hi) (fun hm => ?_)
+    (fun hm => (hV i (st i)
+      (PalPeg.CloseoutPackRun2.steps_of_trace hP.base.pre.trace i hi) hm).1)
+    (fun hm => (hV i (st i)
+      (PalPeg.CloseoutPackRun2.steps_of_trace hP.base.pre.trace i hi) hm).2)
+  cases hr : (st i).ctl.replaying with
+  | false =>
+    obtain ⟨rad, hi'⟩ := (hP.packs i hi).m2.packM.scanGeom hm hr
+    exact ⟨hi'.rightRep, hi'.rightPresent⟩
+  | true =>
+    obtain ⟨rad, hi'⟩ := (hP.packs i hi).m2.scanGeomR hm hr
+    exact ⟨hi'.rightRep, hi'.rightPresent⟩
+
+#print axioms branchAt_of_res
+#print axioms chainPosInv2_trace
+#print axioms needIMW'_le_R
+
 #print axioms branchRun_of_global
 #print axioms chainPosInv2_steps_run
 #print axioms shiftLocalS_of_branchRun
