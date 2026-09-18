@@ -1,3 +1,41 @@
+## 2026-09-19 n141: fresh 側 `ShiftPal` の**数学的な芯が完成**（4 段、全部標準公理）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。
+無条件 PAL は未完。§10.5 は未達。**
+
+### 完成した芯
+
+    PalPeg.reshift_of_palAt_pair (word : List (Fin 3)) (C h r : ℕ)
+      (hin   : Manacher.PalAt word (C − h) h)          -- DP の Candidate（内側）
+      (hout  : Manacher.PalAt word (C − 2h) (2h))      -- DP の Candidate（外側）
+      (hcur  : Manacher.PalAt word C r)                -- ShiftPal の hScanInv.palindrome
+      (hstep : 0 < h) (hsmall : 2h ≤ r) (hle : r ≤ 4h)
+      (hend  : C + r + 1 < word.length)
+      (hpred : word[C+r+1]? = word[C+r+1−2h]?)         -- shiftGuardVM の予測節
+      : Manacher.PalAt word (C + h) (r + 1 − h)        -- ShiftPal の結論の第 3 節そのもの
+
+### 4 段（今日の作業、すべて `PalPeg.GalilPeriodUnion` / `GalilScaffoldChainInputSupply`）
+
+| 段 | 定理 | 効いた気づき |
+|---|---|---|
+| 0 | `reshift_from_right` の弱化（n139） | `hold` は半径 `radius` ではなく `step` 分で足りた（本体での使用は 2 行だけ） |
+| 1 | `periodOn_mirror'` | 既存 `periodOn_mirror` は右→左。要るのは左→右で、証明は対称 |
+| 2 | `periodOn_of_palAt_pair` | 中心が `d` ずれた 2 回文の鏡映が `2C − 4d − i` で一致 |
+| 3 | `periodOn_right_of_palAt_pair` | `PeriodOn.mono`（`r ≤ 4d`）＋ 段 1 |
+| 4 | `reshift_of_palAt_pair` | 末尾 1 添字（`j + 2h = C+r+1`）を予測で埋めて `reshift_from_right` へ |
+
+**新しい数学はもう無い。** 残るのは配線 3 本:
+
+1. `hin` / `hout` — この watch の周期テープが DP の `Candidate` から来たという**履歴**。
+   材料は `GalilPrepLeast.prep_watch_start_least`（`watchStart ver c ys b credits` ＋
+   `Candidate w lower h` ＋ `ys.length + 1 = h`）と
+   `CloseoutWatchPhase3.palAt_pair_of_candidate`。
+2. `hpred` — `shiftGuardVM` の最終節 `symbol w.machine.control.period.focus = read s.right`
+   を添字形 `word[C+r+1]? = word[C+r+1−2h]?` へ。
+   `periodOnly = true` 側は `hI.pred` がこの形を持っている（`CloseoutPackRun31:190` 付近）。
+3. `2h ≤ r ≤ 4h` — found 時の `found_radius_le_two_period`（`radius ≤ 2h`）＋
+   その後の一致比較ぶんの伸びを run に沿って運ぶ台帳。
+
 ## 2026-09-19 n140: fresh 側 `hright` の材料を全部特定した（`periodOn_*` と `found_radius_le_two_period`）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。

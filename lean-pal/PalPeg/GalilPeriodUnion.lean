@@ -205,6 +205,45 @@ theorem periodOn_right_of_palAt_pair {x : List α} {C d r : ℕ}
 
 #print axioms periodOn_right_of_palAt_pair
 
+/-- **fresh 側のシフト回文**（n140 の段 4）。
+
+中心が `h` ずれた 2 回文（DP の `Candidate` から）＋現在の回文＋末尾の予測から、
+シフト後の回文 `PalAt word (C + h) (r + 1 − h)` を出す。
+これが `ShiftPal` の結論の第 3 節そのもの。
+
+`hright` は `periodOn_right_of_palAt_pair` が `[C, C + r]` で出し、
+最後の 1 添字（`j + 2h = C + r + 1`）だけ `hpred`（`shiftGuardVM` の予測節）で埋める。
+
+`hold` が半径 `h` 分で足りるのは n139 で `reshift_from_right` を弱めたため。 -/
+theorem reshift_of_palAt_pair (word : List (Fin 3)) (C h r : ℕ)
+    (hin : Manacher.PalAt word (C - h) h)
+    (hout : Manacher.PalAt word (C - 2 * h) (2 * h))
+    (hcur : Manacher.PalAt word C r)
+    (hstep : 0 < h) (hsmall : 2 * h ≤ r) (hle : r ≤ 4 * h)
+    (hend : C + r + 1 < word.length)
+    (hpred : word[C + r + 1]? = word[C + r + 1 - 2 * h]?) :
+    Manacher.PalAt word (C + h) (r + 1 - h) := by
+  have hhC : h ≤ C := by have := hin.1; omega
+  have hCh : C - h + h = C := by omega
+  have hrh : r - h + h = r := by omega
+  have hper : PeriodOn word (2 * h) C (C + r) :=
+    periodOn_right_of_palAt_pair hin hout hcur hle hsmall
+  have hres := PalPeg.GalilScaffoldChainInputSupply.reshift_from_right word (C - h) (r - h) h
+    hin (by rw [hCh, hrh]; exact hcur) hstep (by omega) (by rw [hCh, hrh]; omega) ?_
+  · rw [show C - h + 2 * h = C + h from by omega, show r - h + 1 = r + 1 - h from by omega] at hres
+    exact hres
+  · intro j hj hj2
+    rw [hCh] at hj
+    rw [hCh, hrh] at hj2
+    by_cases hlast : j + 2 * h ≤ C + r
+    · exact hper j (by omega) hlast
+    · have hje : j = C + r + 1 - 2 * h := by omega
+      subst hje
+      rw [show C + r + 1 - 2 * h + 2 * h = C + r + 1 from by omega]
+      exact hpred.symm
+
+#print axioms reshift_of_palAt_pair
+
 #print axioms periodOn_union
 #print axioms hasPeriod_slice_iff
 #print axioms encoded_periodOn_even
