@@ -13,6 +13,70 @@
 
 
 
+
+## 2026-09-19 n91: `LTickLeaves3` は 4 場 → 2 場（`initLedger` もタダ）＋ 古い記憶の訂正
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+### 訂正: `radiusAfter` は無条件に `inc`
+
+CLAUDE.md / 記憶に「`compareVM`/`compareFound` に `radiusAfter`（**search 活性 ∧ chain
+idle なら不変**、さもなくば inc）を追加」と書いてあったので、
+`CentreLedger`（`position center + value radius = position right`）が全 scan 状態では
+偽ではないかと疑った。**一次情報を見たら違った**:
+
+```
+-- PalPeg/GalilScaffoldTopSearch.lean:37
+def radiusAfter (s : GalilVM) : Counter := GalilScaffoldCounter.inc s.radius
+```
+
+**無条件の `inc`。** `backgroundS` は右ヘッドも radius も変えない
+（`backgroundS_fields` の `hr : t.right = s.right`、`hrad : t.radius = s.radius`）ので、
+等式は background で自明に保存され、matched compare では右ヘッドと radius が同時に +1。
+よって `CentreLedger` が全 scan 状態で成り立つ設計は整合している。
+
+**教訓**: 過去の自分の記述（CLAUDE.md・メモリ）を一次情報として使わない。疑ったら定義を開く。
+
+### `LTickLeaves3.initLedger` はタダ
+
+`initVM entry s t`（`GalilScaffoldTopReplay:20`）は `t.right = right s.right`、
+`t.center = right s.right`、`t.radius = s.radius` を固定する。つまり
+**`t.center = t.right`** なので等式は `value t.radius = 0` に落ち、それは
+`RadLedger.initZero`。`canRight t.center` / `Sane t.center` は `t.center = t.right` と
+**次状態が scan 相**（`Tick.init` の行き先）から §5 の無料補題で出る
+（`initLedger_of_trace`）。
+
+`t` は `initVM` で全成分が決まるわけではない（`periodOnly` などは自由）が、
+`CentreLedger` が読むのは `center`/`radius`/`right` の 3 つだけで `initVM` が固定するので
+trace 上の `st (i+1)` から移せる。
+
+実装上の注意: `cases ht` は `ht : Tick F 2048 (st 0) (st 1)` のように**非変数**の
+状態に対しては dependent elimination に失敗する。状態を変数に一般化した補助補題
+（`key : ∀ x y, Tick … x y → x.ctl.mode = Mode.init → …`）にしてから `cases` する。
+残りの 23 構成子は `| _ => simp_all` で落ちる（各構成子が mode を固定しているため）。
+
+### `LTickLeaves3` の現状
+
+| 場 | 状態 |
+|---|---|
+| `replayLedger` | **タダ**（n89） |
+| `initLedger` | **タダ**（今回） |
+| `backLag`（`.back` 相の lag 形状） | 残る |
+| `shiftDoneLedger`（shift_done での `CentreLedger`） | 残る。等式 `value radius = r` が本体 |
+
+`shiftDoneLedger` の等式について: `ShiftGeom`（rem = 0）は
+`position right = position center + r` を与え、`RadLedger.le` は
+`value radius ≤ r` の向きしか出ない。逆向き（`r ≤ value radius`）が要る。
+`LPackM2` の場に radius を縛るものがあるか未確認。
+
+### 次の一手
+
+1. `LPackM2` の全場を列挙して、shift 相で radius を縛る場があるか確認する。
+2. なければ `shiftDoneLedger` は真の残差。`backLag` と合わせて 2 場。
+3. 2 場が埋まれば `LPackM3` が trace に載り、`CentreLedger` → `BgStartP2` → `bg` 場が
+   `hver` に合流する（`hme` の `EntryCounters` 半分も同時に落ちる可能性が高い）。
+
 ## 2026-09-19 n90: `CentreLedger` の等式の出処は `EntryCounters` の `RadiusRep`
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。

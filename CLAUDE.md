@@ -121,6 +121,12 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 
 ### 2. 設計上の重要事実（2026-09-17 深夜〜朝に判明）
 
+- **訂正（2026-09-19）**: 下の「`radiusAfter`（search 活性∧chain idle なら不変）」は
+  **古い**。一次情報 `PalPeg/GalilScaffoldTopSearch.lean:37` は
+  `def radiusAfter (s : GalilVM) : Counter := GalilScaffoldCounter.inc s.radius` で
+  **無条件の `inc`**。`backgroundS` は右ヘッドも radius も変えないので
+  `position center + value radius = position right` は background で保存され、
+  matched compare では両方 +1。**過去の自分の記述を一次情報として使わない。**
 - **`Fair` 完成（`GalilTickFair`）: `Tick ∧ Fair` は全状態で一意、残差なし。** 抽象 `Tick` 単体は一意でない（`GalilTickDet`）: (a) broken chain で `restart` と `scan_wait` stutter が競合（Scala は restart 優先）、(b) 探索量子は `ReadFun GalilDpCode.code` + `PrepareControl.Tick` 決定性を仮定すれば関数的、(c) chain は関数的、(e) `beginFallbackVM'`（着地場所）、`initVM`/`replayStartVM`（`periodOnly`, `walker` 自由）が非関数的。`tickFun`（`GalilTickFun`）は choice で 1 つ選ぶだけ。**方針**: モデルは編集せず（使用箇所 300 超）、Scala の優先順位と固定値を表す `Fair` を定義して `Tick ∧ Fair` の一意性を証明（`GalilTickFair`、進行中）。構成側の witness と局所 step が `Fair` を満たすことを別途確認。
 - **偽だった葉（同じ型: 任意状態への量化）**: `hquiet`（`SearchQuiet` は「found に到達しない」と同値、`GalilLeafQuiet`）、`houtReplay`（`InvScan` に出力なし → `InvScanO := InvScan ∧ OutputRel`、`GalilLeafOutReplay`）、`hpres`（`SearchReady` は負債 1 単位分保存されない → `SearchReadyB := ReadyRem ∧ RunEntriesAll`、`GalilLeafPres`；`watchSegE_construct` は再証明要、`GalilSegmentConstructB` 進行中）、`hpos`（区間終端の右ヘッド位置、`GalilLeafPos`: 区間予算 `position r.right + count true ≤ 2m−2` から出す）。
 - **過剰量化の 8 例目（2026-09-19）**: `pal_in_peg_final31` の

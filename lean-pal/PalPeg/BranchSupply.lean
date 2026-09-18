@@ -547,6 +547,72 @@ theorem centreLedger_of_entryCounters {w : List (Fin 2)} (hw : 0 < w.length)
 #print axioms centreLedger_of_entryCounters
 #print axioms centreLedger_of_eq
 
+/-! ## 5c. `LTickLeaves3.initLedger` はタダ
+
+`initVM entry s t`（`GalilScaffoldTopReplay:20`）は
+`t.right = right s.right`、`t.center = right s.right`、`t.radius = s.radius` を固定する。
+つまり **`t.center = t.right`** なので等式は `value t.radius = 0` に落ち、それは
+`RadLedger.initZero`（init 相で `value radius = 0`）。
+`canRight t.center = canRight t.right` と `Sane t.center = Sane t.right` は
+**次状態が scan 相**（`Tick.init` の行き先）なので §5 の無料補題で出る。
+
+`t` は `initVM` で全成分が決まるわけではない（`periodOnly` などは自由）が、
+`CentreLedger` が読むのは `center` / `radius` / `right` の 3 つだけで、
+それらは `initVM` が固定するので trace 上の `st (i+1)` から移せる。 -/
+
+/-- **`LTickLeaves3.initLedger` は trace 上でタダ。** -/
+theorem initLedger_of_trace {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PreTrace centre place entry q first w st Tc)
+    (hm2 : ∀ j, j ≤ Tc w.length →
+      PalPeg.CloseoutPackRun23.LPackM2 w (st j).ctl (st j).vm)
+    (hsane : ∀ j, j ≤ Tc w.length → PalPeg.GalilTrailSane.SanePack (st j).ctl (st j).vm)
+    (hR : ∀ j, j ≤ Tc w.length → PalPeg.CloseoutRadPack.RadLedger (st j).ctl (st j).vm)
+    (htc : 1 ≤ Tc w.length) :
+    ∀ i, i ≤ Tc w.length → (st i).ctl.mode = Mode.init →
+      ∀ t : GalilVM, (galilFrameS (PofC centre place entry w) q first).init (st i).vm t →
+        PalPeg.CloseoutPackRun47.CentreLedger t := by
+  intro i hi hmo t hit
+  -- `init` 相は 0 手目だけ（`tick_mode_ne_init`）
+  have h0 : i = 0 := by
+    rcases Nat.eq_zero_or_pos i with h | h
+    · exact h
+    · exfalso
+      obtain ⟨n, rfl⟩ : ∃ n, i = n + 1 := ⟨i - 1, by omega⟩
+      exact tick_mode_ne_init (hP.trace.tick n (by omega)) hmo
+  subst h0
+  have hi1 : 1 ≤ Tc w.length := htc
+  -- trace の 1 手目は同じ `init` 遷移
+  have key : ∀ x y : State GalilVM,
+      Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y →
+      x.ctl.mode = Mode.init →
+      (galilFrameS (PofC centre place entry w) q first).init x.vm y.vm ∧
+        y.ctl.mode = Mode.scan := by
+    intro x y h hm
+    cases h with
+    | init c s s' hm' hinit => exact ⟨hinit, rfl⟩
+    | _ => simp_all
+  obtain ⟨hinit1, hmode1⟩ := key (st 0) (st 1) (hP.trace.tick 0 (by omega)) hmo
+  obtain ⟨hr1, -, hc1, -, hrad1, -, -, -, -, -, -, -, -⟩ :
+    initVM entry (st 0).vm (st 1).vm := hinit1
+  obtain ⟨hrt, -, hct, -, hradt, -, -, -, -, -, -, -, -⟩ :
+    initVM entry (st 0).vm t := hit
+  -- `t` の 3 成分は `st 1` と一致
+  have hcc : t.center = (st 1).vm.center := by rw [hct, hc1]
+  have hrr : t.right = (st 1).vm.right := by rw [hrt, hr1]
+  have hcr1 : (st 1).vm.center = (st 1).vm.right := by rw [hc1, hr1]
+  refine ⟨?_, ?_, ?_⟩
+  · rw [hcc, hcr1]
+    exact scanCanRight_of_trace centre place entry q first hw hP hm2 htc 1 hi1 hmode1
+  · rw [hcc, hcr1]
+    exact (hsane 1 hi1).saneR
+  · have hz : value (st 0).vm.radius = 0 := (hR 0 (by omega)).initZero (by rw [hP.start]; rfl)
+    have hvt : value t.radius = 0 := by rw [hradt]; exact hz
+    rw [hcc, hrr, hcr1, hvt]
+    omega
+
+#print axioms initLedger_of_trace
+
 /-! ## 6. 残差は 3 場 — `shiftDone` は完全に放電された
 
 §3 で半径台帳（`RadLedger`）、§5 で `canRight`（trace 予算 ＋ `LPackM2.shiftGeom`）が
