@@ -134,8 +134,8 @@ theorem shiftPalAt_fresh_of_candidate {w : List (Fin 2)} {s s' : GalilVM}
     (hScanInv : ScanInvariant w (position s.center) r₀ s.left s.right)
     (hPeriod : periodLength wch = h)
     (hIn : Manacher.PalAt (encoded w) (position s.center - h) h)
-    (hOut : Manacher.PalAt (encoded w) (position s.center - 2 * h) (2 * h))
-    (hPos : 0 < h) (hLo : 2 * h ≤ r₀) (hHi : r₀ ≤ 4 * h)
+    (hLeft : PeriodOn (encoded w) (2 * h) (position s.center - r₀) (position s.center))
+    (hPos : 0 < h) (hLo : 2 * h ≤ r₀)
     (hEnd : position s.center + r₀ + 1 < (encoded w).length)
     (hCaught : (encoded w)[position s.center + r₀ + 1 - 2 * h]? =
       GalilScaffoldChainConsume.symbol wch.machine.control.period.focus) :
@@ -157,8 +157,8 @@ theorem shiftPalAt_fresh_of_candidate {w : List (Fin 2)} {s s' : GalilVM}
     rw [← hsym']; exact hCaught.symm
   refine ⟨by omega, by omega, ?_⟩
   rw [hPeriod]
-  exact PalPeg.reshift_of_palAt_pair (encoded w) (position s.center) h r₀
-    hIn hOut hScanInv.palindrome hPos hLo hHi hEnd hpredIdx
+  exact PalPeg.reshift_of_palAt_period (encoded w) (position s.center) h r₀
+    hIn hScanInv.palindrome hPos hLo hEnd hLeft hpredIdx
 
 #print axioms shiftPalAt_fresh_of_candidate
 
@@ -174,10 +174,10 @@ def FreshShiftLedger (w : List (Fin 2)) (s s' : GalilVM) : Prop :=
   ∀ wch : GalilScaffoldChainWatch.State, s'.chain = ChainVM.watch wch →
     ∀ r₀ : ℕ, ScanInvariant w (position s.center) r₀ s.left s.right →
       Manacher.PalAt (encoded w) (position s.center - periodLength wch) (periodLength wch) ∧
-      Manacher.PalAt (encoded w) (position s.center - 2 * periodLength wch)
-        (2 * periodLength wch) ∧
+      PeriodOn (encoded w) (2 * periodLength wch)
+        (position s.center - r₀) (position s.center) ∧
       0 < periodLength wch ∧
-      2 * periodLength wch ≤ r₀ ∧ r₀ ≤ 4 * periodLength wch ∧
+      2 * periodLength wch ≤ r₀ ∧
       (encoded w)[position s.center + r₀ + 1 - 2 * periodLength wch]? =
         (encoded w)[position s.center + r₀ + 1]?
 
@@ -197,7 +197,7 @@ theorem shiftPal_of_freshShiftLedger {w : List (Fin 2)} {s : GalilVM}
     cases a with
     | false => rw [if_neg (by simp)]; exact hvr
     | true => rw [if_pos rfl]; exact hvr
-  obtain ⟨hIn, hOut, hPos, hLo, hHi, hCaught'⟩ :=
+  obtain ⟨hIn, hLeft, hPos, hLo, hCaught'⟩ :=
     hLedger s' hCompare hGuard wch hChain r₀ hScanInv
   -- the frontier is inside the encoded word: the right head can still move.
   have hrp : position (right s.right) = position s.right + 1 :=
@@ -226,7 +226,7 @@ theorem shiftPal_of_freshShiftLedger {w : List (Fin 2)} {s : GalilVM}
       GalilScaffoldChainConsume.symbol wch.machine.control.period.focus := by
     rw [hCaught', hsym', hRight, hread, hScanInv.rightPos]
   exact shiftPalAt_fresh_of_candidate hChain hGuard hRight hCan hScanInv rfl
-    hIn hOut hPos hLo hHi hEnd hCaught
+    hIn hLeft hPos hLo hEnd hCaught
 
 #print axioms shiftPal_of_freshShiftLedger
 

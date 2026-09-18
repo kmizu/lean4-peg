@@ -215,19 +215,18 @@ theorem periodOn_right_of_palAt_pair {x : List α} {C d r : ℕ}
 最後の 1 添字（`j + 2h = C + r + 1`）だけ `hpred`（`shiftGuardVM` の予測節）で埋める。
 
 `hold` が半径 `h` 分で足りるのは n139 で `reshift_from_right` を弱めたため。 -/
-theorem reshift_of_palAt_pair (word : List (Fin 3)) (C h r : ℕ)
+theorem reshift_of_palAt_period (word : List (Fin 3)) (C h r : ℕ)
     (hin : Manacher.PalAt word (C - h) h)
-    (hout : Manacher.PalAt word (C - 2 * h) (2 * h))
     (hcur : Manacher.PalAt word C r)
-    (hstep : 0 < h) (hsmall : 2 * h ≤ r) (hle : r ≤ 4 * h)
+    (hstep : 0 < h) (hsmall : 2 * h ≤ r)
     (hend : C + r + 1 < word.length)
+    (hleft : PeriodOn word (2 * h) (C - r) C)
     (hpred : word[C + r + 1]? = word[C + r + 1 - 2 * h]?) :
     Manacher.PalAt word (C + h) (r + 1 - h) := by
   have hhC : h ≤ C := by have := hin.1; omega
   have hCh : C - h + h = C := by omega
   have hrh : r - h + h = r := by omega
-  have hper : PeriodOn word (2 * h) C (C + r) :=
-    periodOn_right_of_palAt_pair hin hout hcur hle hsmall
+  have hper : PeriodOn word (2 * h) C (C + r) := periodOn_mirror' hcur hsmall hleft
   have hres := PalPeg.GalilScaffoldChainInputSupply.reshift_from_right word (C - h) (r - h) h
     hin (by rw [hCh, hrh]; exact hcur) hstep (by omega) (by rw [hCh, hrh]; omega) ?_
   · rw [show C - h + 2 * h = C + h from by omega, show r - h + 1 = r + 1 - h from by omega] at hres
@@ -241,6 +240,22 @@ theorem reshift_of_palAt_pair (word : List (Fin 3)) (C h r : ℕ)
       subst hje
       rw [show C + r + 1 - 2 * h + 2 * h = C + r + 1 from by omega]
       exact hpred.symm
+
+#print axioms reshift_of_palAt_period
+
+/-- **`phase = 4` への特化.**  四つの検証済み半周期は `r ≤ 4 * h` のときだけ
+左区間 `[C − r, C]` の周期を与える。Scala の `ScaffoldChain.canShift` は
+`r ≤ 4 * h` を検査せえへんので、機械側が使うのは `reshift_of_palAt_period` の方。 -/
+theorem reshift_of_palAt_pair (word : List (Fin 3)) (C h r : ℕ)
+    (hin : Manacher.PalAt word (C - h) h)
+    (hout : Manacher.PalAt word (C - 2 * h) (2 * h))
+    (hcur : Manacher.PalAt word C r)
+    (hstep : 0 < h) (hsmall : 2 * h ≤ r) (hle : r ≤ 4 * h)
+    (hend : C + r + 1 < word.length)
+    (hpred : word[C + r + 1]? = word[C + r + 1 - 2 * h]?) :
+    Manacher.PalAt word (C + h) (r + 1 - h) :=
+  reshift_of_palAt_period word C h r hin hcur hstep hsmall hend
+    ((periodOn_of_palAt_pair hin hout).mono (by omega) (le_refl _)) hpred
 
 #print axioms reshift_of_palAt_pair
 

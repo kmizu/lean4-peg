@@ -1,3 +1,77 @@
+## n217 — 公理進捗: 仕様に無い前提 `hHi` を除去（第 3 連言 6 → 5 成分）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 3 連言から **`hHi : r₀ ≤ 4h` を除去**。成分 6 → 5。しかも `hHi` は `RoundScan` の場の算術だけで矛盾する（下記） |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+### 何を替えたか
+
+| 旧 | 新 |
+|---|---|
+| `hOut : PalAt (encoded w) (c−2h) (2h)` | `hLeft : PeriodOn (encoded w) (2h) (c−r₀) c` |
+| `hHi : r₀ ≤ 4h` | **削除** |
+
+語の補題側は `GalilPeriodUnion.reshift_of_palAt_period` として切り出した。
+`periodOn_mirror' hcur hLo hLeft` が直接 `PeriodOn (2h) c (c+r₀)` を出すので `hHi` が要らん。
+旧 `reshift_of_palAt_pair` は `phase = 4` 特化の系として残した（`r ≤ 4h` 付き）。
+
+### 根拠（Scala 正本）
+
+`ScaffoldChain.consume()` は**マッチ 1 箇所ごと**に呼ばれ、`distance.inc()` し、
+周期境界で `phase = math.min(4, phase + 1)`。つまり検証済み周期区間は固定の `4h` やのうて
+**走査半径と一緒に伸びる**。`canShift` は `r₀ ≤ 4h` をどこにも検査してへん。
+
+### `hHi` が偽である算術（`RoundScan` の場から）
+
+`GalilRoundPeriod.RoundScan raw C R h used v w` は
+`caught : CaughtScan raw (C + h) (R + 1 - h + used) …` を持つので、
+`FreshShiftLedger` の `c = C + h`、`r₀ = R + 1 - h + used`。
+
+* `hLo : 2h ≤ r₀` ⟺ `3h ≤ R + 1 + used` ← `phase = 4`（`4h ≤ R`）から出る
+* `hHi : r₀ ≤ 4h` ⟺ `R ≤ 5h − 1 − used`。`fresh : used < 2h` で `used` は `2h` 近くまで伸びるので、
+  `R ≥ 4h` と**両立せえへん**
+
+機械検査した反証はまだ書いてへんので `REFUTED` とは書かへん。
+
+### 残り 5 成分と `RoundScan` の場の対応
+
+| 成分 | `RoundScan` 側 |
+|---|---|
+| `hPos : 0 < h` | **`posH` そのもの** |
+| `hCaught` | **`pred` の内容そのもの** |
+| `hLo : 2h ≤ r₀` | `size` ＋ `phase = 4` |
+| `hIn` / `hLeft` | `pal : PalAt (encoded raw) C R` ＋ `ReadsInv → ReadOrigin → origin_periodOn` |
+
+`RoundScan` は**同じ公理の第 1 連言 `H_readsShift` のガード**や。
+つまり第 3 連言の残差は新しい数学やのうて、第 1 連言が既に持ってる情報の再配線。
+**第 1 と第 3 は同じ材料の上に載ってる。**
+
+### 3 連言は独立やない（本ノート最大の発見）
+
+`CloseoutPackRun37.roundScan_of_shiftInv:96`（「at exhaustion (`k = h`) the datum *is* the `RoundScan`」）が
+`ShiftInv → RoundScan` を与える。そして `ShiftInv` は**第 2 連言 `H_freshShiftAtShiftEntry` の結論**。
+
+```
+第 2 連言 (H_freshShiftAtShiftEntry) → ShiftInv
+  → roundScan_of_shiftInv → RoundScan
+       ├→ 第 1 連言 (H_readsShift) のガードそのもの
+       └→ 第 3 連言 (FreshShiftLedger) の 5 成分に対応する場
+             posH = hPos / pred = hCaught / size + phase = hLo /
+             pal + (ReadsInv → ReadOrigin → origin_periodOn) = hIn, hLeft
+```
+
+**`obligation_shiftPalResiduesAlongRun` の 3 連言は 1 本の鎖に載ってる。**
+第 2 連言が、他の 2 つが消費するデータ（`RoundScan`）を作る側や。
+よって梃子は第 2 連言 `H_freshShiftAtShiftEntry`（`∃ C R k, ShiftInv w C R (periodLength wch) k t wch`）で、
+そのガードは `mode = scan ∧ replaying = false ∧ clock = 1 ∧ periodOnly = false ∧ shift 遷移の存在` と十分狭い。
+
+相の対応:
+* 第 3 連言 = `periodOnly = false` = **最初の** shift（`canShift` の `margin.sign >= 0` 枝）
+* 第 1 連言 = `periodOnly = true` = **2 回目以降**（`cycleEnd` 枝）
 ## n216 — 公理進捗: `hHi` は仕様に無い前提（形式化のミスを確定）
 
 **公理への進捗**
