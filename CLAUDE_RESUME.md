@@ -1,3 +1,52 @@
+## 2026-09-19 n170: **コウタの「定理ふえすぎてへん？」に答えて 44 → 35 に削った**
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。**
+
+### 答え: 増えすぎていた。9 本は要らなかった
+
+44 宣言足して**計器は 1 本も動いていない**。プロジェクトの基準ではこれは足場を積んだだけ。
+使用箇所を実測して 9 本削った。
+
+**参照ゼロ（5 本）**:
+
+| 消したもの | 理由 |
+|---|---|
+| `watch_eq_of_mismatch_lagZero` | `ChainStep` 版に置き換わったのに両方残していた |
+| `outer_eq_of_false` | 上の唯一の消費者が死んで連鎖 |
+| `chain_shift_period_focus` | 「`hprediction` に要るかも」で**推測で**足したが要らなかった |
+| `h_readsShift_of_run` | `shiftPhaseHistory_readsShift` に置き換わった |
+| `chainShiftRun_of_steps` | carrier が tick ごとに運ぶ方式にしたので不要 |
+
+**既存の再発明（4 本）**——これが一番痛い:
+
+| 消した自作 | 既にあったもの |
+|---|---|
+| `positive_false_of_zero` | `GalilMismatchCaught.positive_false_of_zero:67`（**文言まで同一**） |
+| `internal_eq_of_lagZero` | `CloseoutWatchRound4.internal_eq_of_zero:240` |
+| `chainStep_watch_eq_of_lagZero` | `CloseoutMismatchCompare.chainStep_watch_of_lagZero:91` |
+| `chainTick_false_watch_eq_of_lagZero` | `CloseoutMismatchCompare.chainTick_false_idle:46` |
+
+### さらに: `CloseoutMismatchCompare` を先に読むべきだった
+
+あのファイルは**不一致比較の構成を全部持っている**:
+
+    chainTick_false_idle / compare_mismatch_of_lagZero / compare_mismatch_of_round
+    chainStep_watch_of_lagZero / compare_chain_of_mismatch / beginShift_of_guard
+    shiftAtMismatchM_of_round
+
+とくに `compare_chain_of_mismatch:99` は「lag ゼロの不一致比較で
+`vs.chain = .watch w` ∧ `vs.left = left s.left` ∧ `vs.right = right s.right`」を
+**まとめて**出す——ウチが `shiftPhaseHistory_of_scanShift` で苦労して導いた 3 事実そのもの。
+**CLAUDE.md の「既にあるものを探す」を守れていなかった。**
+
+### 教訓（`PROOF_STACK.md` に追記）
+
+新しい補題を書く前に、**扱う概念の名前で `grep -n "^theorem"` を関連ファイルに掛ける**。
+とくに `Closeout*` は同じ問題を既に扱っている可能性が高い。
+今回は `CloseoutMismatchCompare` / `CloseoutWatchRound4` / `GalilMismatchCaught` の 3 本を
+先に読めば 4 本書かずに済んだ。
+
 ## 2026-09-19 n169: `Fair` が閉じるのは「決定性の半分」——残るのは局所側の構成
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

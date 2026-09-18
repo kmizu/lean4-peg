@@ -2,6 +2,7 @@ import PalPeg.MatchedRunSnoc
 import PalPeg.CloseoutRoundSeg
 import PalPeg.CloseoutReadsOrigin
 import PalPeg.CloseoutWatchRound45
+import PalPeg.CloseoutMismatchCompare
 
 /-!
 # `RoundHistory` — ラウンドの履歴を状態と一緒に運ぶ
@@ -138,15 +139,6 @@ theorem chain_shift_periodLength {s t : ShiftState} {w v : GalilScaffoldChainWat
     (hShiftRun : ChainShiftRun s w cycle n t v finish) :
     periodLength v = periodLength w := by
   unfold periodLength
-  rw [chain_shift_period hShiftRun]
-
-/-- **period テープの焦点記号も shift を通って不変。**  `CompareRounds.next` の
-`hprediction` をラウンド境界で読み替えるのに使う。 -/
-theorem chain_shift_period_focus {s t : ShiftState} {w v : GalilScaffoldChainWatch.State}
-    {cycle finish : Counter} {n : ℕ}
-    (hShiftRun : ChainShiftRun s w cycle n t v finish) :
-    GalilScaffoldChainConsume.symbol v.machine.control.period.focus =
-      GalilScaffoldChainConsume.symbol w.machine.control.period.focus := by
   rw [chain_shift_period hShiftRun]
 
 /-- **履歴から下層の射影を取り出す。**  `CompareRounds.next` の第 1 引数。 -/
@@ -342,76 +334,20 @@ theorem shiftLens_frame_steps {P : Shared} {q : ℕ} {first : Fin 9} {delay : �
 
 /-! ## 不一致比較では watch が動かない（lag ゼロのとき）
 
-`round_next` の `hpred : read (right s1.right) = symbol w…period.focus` は
-**compare 前**の watch `w` について言う。一方 shift guard は
-`afterMismatch s1 vs vq` 上で評価されるので**compare 後**の watch を見る。
-この差が埋まるのは lag ゼロのときだけ:
+**ここに 4 本書いたが、全部既存の再発明だったので消した**（コウタの指摘 2026-09-19
+「定理ふえすぎてへん？ほんとうに必要？」）:
 
-* `Internal` の `take` は `positive lag = true` を要求するので、lag ゼロなら `idle` のみ
-  （`GalilScaffoldChainWatch:25-26`）
-* 不一致比較の事象は `b = false` で、`Outer s false t` は `idle` のみ
-  （`queued` と `immediate` はどちらも `b = true`。`GalilScaffoldChainWatch:31-33`）
+| 消した自作 | 既にあったもの |
+|---|---|
+| `positive_false_of_zero` | `GalilMismatchCaught.positive_false_of_zero:67`（文言まで同一） |
+| `internal_eq_of_lagZero` | `CloseoutWatchRound4.internal_eq_of_zero:240` |
+| `chainStep_watch_eq_of_lagZero` | `CloseoutMismatchCompare.chainStep_watch_of_lagZero:91` |
+| `chainTick_false_watch_eq_of_lagZero` | `CloseoutMismatchCompare.chainTick_false_idle:46` |
 
-よって watch は不変で、**`hpred` は guard からタダ**。 -/
+さらに `CloseoutMismatchCompare.compare_chain_of_mismatch:99` は
+「lag ゼロの不一致比較で `vs.chain = .watch w` ∧ `vs.left = left s.left` ∧
+`vs.right = right s.right`」を**まとめて**出す。以後はそれを使う。 -/
 
-/-- `zero` なら `positive` ではない。 -/
-theorem positive_false_of_zero {c : Counter} (hZero : zero c = true) : positive c = false := by
-  have hEmpty : c.pos.isEmpty = true := by
-    simpa using (Bool.and_eq_true_iff.mp hZero).1
-  simp [positive, hEmpty]
-
-/-- **lag ゼロなら `Internal` は恒等。** -/
-theorem internal_eq_of_lagZero {a b : GalilScaffoldChainWatch.State}
-    (hLagZero : zero a.lag = true)
-    (hInternal : GalilScaffoldChainWatch.Internal a b) : b = a := by
-  cases hInternal with
-  | idle _ => rfl
-  | take hPos _ =>
-    rw [positive_false_of_zero hLagZero] at hPos
-    exact absurd hPos (by decide)
-
-/-- **不一致（`b = false`）なら `Outer` は恒等。** -/
-theorem outer_eq_of_false {a b : GalilScaffoldChainWatch.State}
-    (hOuter : GalilScaffoldChainWatch.Outer a false b) : b = a := by
-  cases hOuter with
-  | idle => rfl
-
-/-- **lag ゼロの不一致比較で watch は不変。**  `hpred` を guard から取るための橋。 -/
-theorem watch_eq_of_mismatch_lagZero {a b : GalilScaffoldChainWatch.State}
-    (hLagZero : zero a.lag = true)
-    (hTick : GalilScaffoldChainWatch.Tick a false b) : b = a := by
-  cases hTick with
-  | step hInternal hOuter =>
-    rename_i mid
-    have hMid : mid = a := internal_eq_of_lagZero hLagZero hInternal
-    subst hMid
-    exact outer_eq_of_false hOuter
-
-#print axioms positive_false_of_zero
-#print axioms internal_eq_of_lagZero
-#print axioms outer_eq_of_false
-#print axioms watch_eq_of_mismatch_lagZero
-
-/-- **lag ゼロの不一致比較では chain がそのまま。**  `ChainTick false x z` は
-`ChainStep x z`（`GalilScaffoldTopChainVM:92`）で、`.watch` から出る構成子は
-`watchStep` だけ（`:66`、`Internal` を 1 手）。lag ゼロなら `Internal` は恒等。 -/
-theorem chainStep_watch_eq_of_lagZero {wch : GalilScaffoldChainWatch.State} {z : ChainVM}
-    (hLagZero : zero wch.lag = true) (hStep : ChainStep (ChainVM.watch wch) z) :
-    z = ChainVM.watch wch := by
-  cases hStep with
-  | watchStep _ _ hInternal => rw [internal_eq_of_lagZero hLagZero hInternal]
-
-/-- 同じことを `ChainTick false` の形で。 -/
-theorem chainTick_false_watch_eq_of_lagZero {wch : GalilScaffoldChainWatch.State} {z : ChainVM}
-    (hLagZero : zero wch.lag = true) (hTick : ChainTick false (ChainVM.watch wch) z) :
-    z = ChainVM.watch wch := by
-  obtain ⟨y, hStep, hEq⟩ := hTick
-  rw [if_neg (by simp)] at hEq
-  rw [hEq]
-  exact chainStep_watch_eq_of_lagZero hLagZero hStep
-
-#print axioms chainStep_watch_eq_of_lagZero
-#print axioms chainTick_false_watch_eq_of_lagZero
 
 /-! ## ラウンド内で period テープの長さが保たれる
 
@@ -553,32 +489,6 @@ theorem chainShiftRun_tick {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
   | replayStart c0 s0 s0' o0 hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
   | restart c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
 
-/-- **run に沿って `ChainShiftRun` が伸びる。**  側条件は区間の全点が shift mode ∧
-`CopyIdle`（`roundHistory_of_steps` と同じ形）。 -/
-theorem chainShiftRun_of_steps {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
-    {s : ShiftState} {w : GalilScaffoldChainWatch.State} {cycle : Counter} {n k : ℕ}
-    {x y : State GalilVM} {v : GalilScaffoldChainWatch.State}
-    (hSteps : Steps (galilFrameS P q first) delay k x y)
-    (hShiftRun : ChainShiftRun s w cycle n (shiftLens.get x.vm).shift v
-      (shiftLens.get x.vm).cycle)
-    (hChain : x.vm.chain = ChainVM.watch v)
-    (hShiftAll : ∀ (m : ℕ) (z : State GalilVM),
-      Steps (galilFrameS P q first) delay m x z →
-      z.ctl.mode = Mode.shift ∧ CopyIdle z.vm) :
-    ∃ v' : GalilScaffoldChainWatch.State, y.vm.chain = ChainVM.watch v' ∧
-      ChainShiftRun s w cycle (n + k) (shiftLens.get y.vm).shift v'
-        (shiftLens.get y.vm).cycle := by
-  induction hSteps generalizing n v with
-  | zero u => exact ⟨v, hChain, hShiftRun⟩
-  | @succ j u z t hTick hRest ih =>
-    obtain ⟨hShift, hCopyIdle⟩ := hShiftAll 0 u (.zero u)
-    obtain ⟨hShiftZ, -⟩ := hShiftAll 1 z (.succ hTick (.zero z))
-    obtain ⟨v', hChainZ, hRunZ⟩ :=
-      chainShiftRun_tick hShiftRun hChain hShift hCopyIdle hTick hShiftZ
-    obtain ⟨v'', hChainT, hRunT⟩ := ih hRunZ hChainZ
-      (fun m' z' hz' => hShiftAll (m' + 1) z' (.succ hTick hz'))
-    exact ⟨v'', hChainT, by rw [show n + (j + 1) = n + 1 + j from by omega]; exact hRunT⟩
-
 /-! ## 組み立て: ラウンド 1 周を run から
 
 `CompareRounds.next`（`GalilScaffoldChainReadOrigin:996`）を run の材料で埋める。
@@ -686,16 +596,6 @@ theorem originAt_next_of_run
     (hRoundSeg : RoundSeg w s₀ sEnd) :
     OriginAt w sEnd :=
   originAt_of_roundSeg hOrigin hRoundSeg (fun _ _ => ⟨w₀, hChainStart⟩)
-
-/-- **手順 11: `H_readsShift`。**  `OriginShift` 経由。 -/
-theorem h_readsShift_of_run {c : Control}
-    (hOrigin : OriginAt w s₀)
-    (hChainStart : s₀.chain = ChainVM.watch w₀)
-    (hRoundSeg : RoundSeg w s₀ sEnd) :
-    PalPeg.CloseoutRoundUnique.H_readsShift w c sEnd :=
-  PalPeg.CloseoutReadsOrigin.h_readsShift_of_originShift
-    (PalPeg.CloseoutReadsOrigin.originShift_of_roundSeg hOrigin hRoundSeg
-      (fun _ _ => ⟨w₀, hChainStart⟩))
 
 end Handoff
 
@@ -881,7 +781,11 @@ theorem shiftPhaseHistory_of_scanShift {P : Shared} {q : ℕ} {first : Fin 9} {d
   have hChainTickWatch : ChainTick false (ChainVM.watch wch) vs.chain := by
     rw [← hChainTerm]; exact hChainTick
   have hChainMid : vs.chain = ChainVM.watch wch :=
-    chainTick_false_watch_eq_of_lagZero hLagTerm hChainTickWatch
+    by
+      obtain ⟨y, hStep, hEq⟩ := hChainTickWatch
+      rw [if_neg (by simp)] at hEq
+      rw [hEq]
+      exact PalPeg.CloseoutMismatchCompare.chainStep_watch_of_lagZero hLagTerm hStep
   -- `s'` の場を `s1` / `vs` の場で書き換える
   have hMidChain : s'.chain = ChainVM.watch wch := by
     rw [hTargetEq]
@@ -1198,10 +1102,8 @@ theorem originAt_of_firstShiftEntry {w : List (Fin 2)} {o : ReadOrigin w} {h : �
 
 #print axioms periodLength_after_shift
 #print axioms originAt_of_firstShiftEntry
-#print axioms h_readsShift_of_run
 
 #print axioms chainShiftRun_tick
-#print axioms chainShiftRun_of_steps
 #print axioms chainShiftRun_snoc
 #print axioms chainShiftRun_snoc_shiftOne
 
@@ -1212,6 +1114,5 @@ theorem originAt_of_firstShiftEntry {w : List (Fin 2)} {o : ReadOrigin w} {h : �
 #print axioms onlyMatchedRun_of_roundHistory
 #print axioms chain_shift_period
 #print axioms chain_shift_periodLength
-#print axioms chain_shift_period_focus
 
 end PalPeg.RoundHistory
