@@ -243,8 +243,12 @@ theorem sharedC_arrive' (raw : List (Fin 2)) (centre : GalilVM → Fin 3)
     rw [immediate_arrive a w (hready w hw)]
     rfl
   beginFallback := by
-    rintro s t ⟨p, ht⟩
-    exact ⟨p, by rw [ht]; rfl⟩
+    rintro s t ⟨p, ht, hb⟩
+    refine ⟨p, by rw [ht]; rfl, ?_⟩
+    show (GalilScaffoldPlace.stream p).length
+      ≤ position (PalPeg.GalilTickArrive.arrivePH a s.right)
+    rw [PalPeg.GalilTickArrive.position_arrive]
+    exact hb
   restart := by
     rintro s t ⟨w, hw, h1, h2, h3, ht⟩
     exact ⟨arriveW a w, by show arriveChain a s.chain = _; rw [hw]; rfl, h1, h2, h3, by subst ht; rfl⟩

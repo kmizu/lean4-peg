@@ -816,7 +816,7 @@ theorem radiusExact_after_beginShift {s t : GalilVM} (hb : beginShiftVM' s t)
 theorem radiusExact_after_beginFallback {s t : GalilVM} (hb : beginFallbackVM' s t)
     (h : (position s.center : ℤ) + value s.radius = position s.right) :
     (position t.center : ℤ) + value t.radius = position t.right := by
-  obtain ⟨p, ht⟩ := hb
+  obtain ⟨p, ht, -⟩ := hb
   rw [ht]; exact h
 
 /-- `restartVM` も触らない。 -/
@@ -1141,7 +1141,7 @@ theorem headsRepresent_tick {w : List (Fin 2)} (hw : 0 < w.length) {x y : State 
          exact headsRepresent_rightMove hw hRight.1 hRight.2 hRightBound⟩
   | scan_fallback c s s' s'' hm _ _ hCompare _ _ _ hBegin =>
     obtain ⟨hcr, hcc⟩ := compare_heads centre place entry q first hCompare
-    obtain ⟨pl, hv⟩ := hBegin
+    obtain ⟨pl, hv, -⟩ := hBegin
     have hts : s''.center = s'.center ∧ s''.right = s'.right := by rw [hv]; exact ⟨rfl, rfl⟩
     exact ⟨by rw [hts.1, hcc]; exact hCentre,
       by rw [hts.2, hcr]
@@ -1659,7 +1659,7 @@ theorem chainLagCanonical_tick {w : List (Fin 2)} {x y : State GalilVM}
     rw [show ChainVM.watch v = s'.chain from hv.1.symm]
     exact chainLagCanonical_compare centre place entry q first hCompare hInv hCanonical hNonneg
   | scan_fallback c s s' s'' hm _ _ hCompare _ _ _ hBegin =>
-    obtain ⟨pl, hv⟩ := hBegin
+    obtain ⟨pl, hv, -⟩ := hBegin
     rw [show s''.chain = ChainVM.idle from by rw [hv]]
     exact chainLagCanonical_idle
   | shift_one c s s' hm _ hOne =>
@@ -2032,7 +2032,7 @@ theorem chainVerifierRepresents_tick {w : List (Fin 2)} {x y : State GalilVM}
     exact chainVerifierRepresents_compare centre place entry q first hCompare hInv
       hCentreRep hCentreFocus
   | scan_fallback c s s' s'' hm _ _ hCompare _ _ _ hBegin =>
-    obtain ⟨pl, hv⟩ := hBegin
+    obtain ⟨pl, hv, -⟩ := hBegin
     rw [show s''.chain = ChainVM.idle from by rw [hv]]
     exact chainVerifierRepresents_idle
   | shift_one c s s' hm _ hOne =>

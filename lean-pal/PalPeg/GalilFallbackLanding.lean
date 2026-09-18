@@ -80,7 +80,14 @@ theorem fallback_landing (onLetter leftFirst : GalilVM → Prop) (rs : GalilVM �
   obtain ⟨n, o, t, hst, hl', hR, hC, hrep', hrad, hlen, hw, hprog, hi', ho, ho0, hsearch, hlower⟩ :=
     scan_fallback_cycle_All onLetter leftFirst rs centre place entry q hq0 first h7 h8 delay c hm hr hc s hi hav
       vs vq hl hrr hmis hq hch hg ⟨a :: xs,(right s.right).gap⟩ hcan ℓ hv (stream_ne_nil _ _ _)
-      (heven a xs rs' q' hdec)
+      (by
+        have hpos : position (right s.right)
+            = (GalilScaffoldPlace.stream ⟨a :: xs, (right s.right).gap⟩).length := by
+          have h0 : (right s.right)
+              = represent ⟨a :: xs, (right s.right).gap⟩ (rs'.map some) q' := hdec
+          conv_lhs => rw [h0]
+          exact position_represent a xs (right s.right).gap (rs'.map some) q'
+        omega) (heven a xs rs' q' hdec)
   have hh : GalilScaffoldInputHead.left^[chosenRadius ((GalilScaffoldPlace.stream ⟨a :: xs,(right s.right).gap⟩).take (ℓ+1))]
       (right s.right) = h := (leftMoves_eq hmoves).symm
   -- the landing head positions, kept in their rewind form before `hh` is used

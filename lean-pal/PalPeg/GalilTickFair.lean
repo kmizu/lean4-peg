@@ -209,7 +209,7 @@ theorem restartGuard_of_restartVM {entry : ℕ} {s t : GalilVM} (h : restartVM e
 
 /-- The fallback entry leaves the search's walker where it was. -/
 theorem beginFallback_walker {s t : GalilVM} (h : beginFallbackVM' s t) : t.walker = s.walker := by
-  obtain ⟨p, he⟩ := h
+  obtain ⟨p, he, -⟩ := h
   rw [(beginFallbackVM_iff p s t).1 he]
   rfl
 
@@ -463,10 +463,11 @@ theorem fair_restart {c : Control} {s : GalilVM} (hm : c.mode = Mode.scan)
 
 /-- The fallback place clause is met by the entry that copies from the search's
 own walker. -/
-theorem fallbackAt_walker_self (s : GalilVM) :
+theorem fallbackAt_walker_self (s : GalilVM)
+    (hplaceBound : (GalilScaffoldPlace.stream s.walker).length ≤ position s.right) :
     beginFallbackVM' s (beginFallbackAt s.walker s) ∧
       (beginFallbackAt s.walker s).fpp.walker = (beginFallbackAt s.walker s).walker :=
-  ⟨⟨s.walker, rfl⟩, rfl⟩
+  ⟨⟨s.walker, rfl, hplaceBound⟩, rfl⟩
 
 /-- The `init` clause is met by the witness of
 `GalilScaffoldTopScanRun.init_tick` (hence of `init_restarted`). -/

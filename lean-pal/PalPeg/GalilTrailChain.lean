@@ -363,7 +363,7 @@ theorem trailChain_scanTick {raw : List (Fin 2)} {m : ℕ} {c c' : Control} {s t
       GalilScaffoldChainVerifier.right w.machine.verifier, hp, rfl, verMove_snoc hv⟩) hx hB
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     subst ht
     exact fun _ => verF_idle raw m
   case shift_one =>

@@ -462,8 +462,11 @@ theorem sharedC_trunc (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM 
     rw [immediate_trunc raw.length j w hu']
     rfl
   beginFallback := by
-    rintro s t ⟨p, ht⟩
-    exact ⟨p, by rw [ht]; rfl⟩
+    rintro s t ⟨p, ht, hb⟩
+    refine ⟨p, by rw [ht]; rfl, ?_⟩
+    show (GalilScaffoldPlace.stream p).length ≤ position (truncPH (raw.length - j) s.right)
+    rw [position_trunc]
+    exact hb
   restart := by
     rintro s t ⟨w, hw, h1, h2, h3, ht⟩
     exact ⟨truncW (raw.length - j) w, by show truncChain _ s.chain = _; rw [hw]; rfl, h1, h2, h3,
@@ -776,7 +779,7 @@ theorem sharedC_suf (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM �
     cases hp
     exact sufPH_right (hs.2.2.2 _ (by show verOf s.chain = _; rw [hw]; rfl))
   beginFallback := by
-    rintro s t hs ⟨p, ht⟩
+    rintro s t hs ⟨p, ht, -⟩
     subst ht
     exact ⟨hs.1, hs.2.1, hs.2.2.1, sufChain_idle raw⟩
   restart := by

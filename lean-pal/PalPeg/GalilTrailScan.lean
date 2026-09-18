@@ -158,7 +158,7 @@ theorem scanT_tick {c c' : Control} {s t : GalilVM} {raw : List (Fin 2)} {m : �
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨hl, hrr, hce⟩ :=
       compare_heads onLetter leftFirst centre place entry q first hcmp
-    obtain ⟨p, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨p, ht, -⟩ : beginFallbackVM' s' t := hb
     refine ⟨?_, ?_, ?_⟩
     · have h1 : t.left = GalilScaffoldInputHead.left s.left := by rw [ht]; exact hl
       rw [h1]; exact trails_leftPos hL (hB.cmpL hm hc)

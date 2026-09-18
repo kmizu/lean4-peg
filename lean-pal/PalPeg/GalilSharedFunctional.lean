@@ -94,7 +94,8 @@ theorem beginFallbackAt_walker (p : GalilScaffoldPlace.Place) (s : GalilVM) :
 theorem beginFallbackVM'_not_unique (s : GalilVM) :
     ∃ t₁ t₂ : GalilVM, beginFallbackVM' s t₁ ∧ beginFallbackVM' s t₂ ∧ t₁ ≠ t₂ := by
   refine ⟨beginFallbackAt ⟨[], false⟩ s, beginFallbackAt ⟨[], true⟩ s,
-    ⟨⟨[], false⟩, rfl⟩, ⟨⟨[], true⟩, rfl⟩, ?_⟩
+    ⟨⟨[], false⟩, rfl, by simp [GalilScaffoldPlace.stream]⟩,
+    ⟨⟨[], true⟩, rfl, by simp [GalilScaffoldPlace.stream]⟩, ?_⟩
   intro hEq
   have h1 : (beginFallbackAt (⟨[], false⟩ : GalilScaffoldPlace.Place) s).fpp.walker
       = (beginFallbackAt (⟨[], true⟩ : GalilScaffoldPlace.Place) s).fpp.walker := by rw [hEq]
@@ -106,8 +107,8 @@ place: any two successors that agree on the copy cursor are equal. -/
 theorem beginFallbackVM'_unique_of_walker {s t₁ t₂ : GalilVM}
     (h₁ : beginFallbackVM' s t₁) (h₂ : beginFallbackVM' s t₂)
     (hw : t₁.fpp.walker = t₂.fpp.walker) : t₁ = t₂ := by
-  obtain ⟨p₁, he₁⟩ := h₁
-  obtain ⟨p₂, he₂⟩ := h₂
+  obtain ⟨p₁, he₁, -⟩ := h₁
+  obtain ⟨p₂, he₂, -⟩ := h₂
   have e₁ : t₁ = beginFallbackAt p₁ s := he₁
   have e₂ : t₂ = beginFallbackAt p₂ s := he₂
   rw [e₁, e₂, beginFallbackAt_walker, beginFallbackAt_walker] at hw
@@ -119,8 +120,9 @@ shared's own `place` component. -/
 def beginFallbackFun (place : GalilVM → GalilScaffoldPlace.Place) (s : GalilVM) : GalilVM :=
   beginFallbackAt (place s) s
 
-theorem beginFallbackFun_spec (place : GalilVM → GalilScaffoldPlace.Place) (s : GalilVM) :
-    beginFallbackVM' s (beginFallbackFun place s) := ⟨place s, rfl⟩
+theorem beginFallbackFun_spec (place : GalilVM → GalilScaffoldPlace.Place) (s : GalilVM)
+    (hplace : (GalilScaffoldPlace.stream (place s)).length ≤ position s.right) :
+    beginFallbackVM' s (beginFallbackFun place s) := ⟨place s, rfl, hplace⟩
 
 /-- Every successor for the place read off the state equals `beginFallbackFun`;
 this is exactly the extra determinism hypothesis needed for

@@ -275,7 +275,7 @@ theorem lpackM3_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
       rw [htc]; exact lagCan_immediate hLv
   case scan_fallback =>
     rename_i s' hmt hm hcl hg hr hcmp hav hb
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     refine ⟨hM2, ?_, ?_⟩
     · vac hm
     · have htc : t.chain = ChainVM.idle := by rw [ht]

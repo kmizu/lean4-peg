@@ -379,7 +379,7 @@ theorem lagLe_tick {c c' : Control} {s t : GalilVM}
     exact lagLe_chainAt_false hch hL hS.start
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     exact lagLe_of_idle (by rw [ht])
   case shift_one =>
     rename_i hm hp hi

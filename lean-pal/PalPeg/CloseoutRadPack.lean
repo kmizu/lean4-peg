@@ -201,7 +201,7 @@ theorem radLedger_tick {c c' : Control} {s t : GalilVM} (hL : RadLedger c s)
       compare_heads onLetter leftFirst centre place entry q first hcmp
     have hrad' := compare_radius onLetter leftFirst centre place entry q first hcmp
     have hrem' := compare_remaining onLetter leftFirst centre place entry q first hcmp
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     have hstep := rightStep hm (hpack (by rw [hm]; decide)) hsaneR hav
     have hce2 : t.center = s.center := by rw [ht]; exact hce
     have hr3 : t.right = GalilScaffoldChainVerifier.right s.right := by rw [ht]; exact hr2

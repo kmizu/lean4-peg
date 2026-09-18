@@ -317,7 +317,7 @@ theorem cpack_tick {c c' : Control} {s t : GalilVM} (hP : CPack q c s)
     obtain ⟨hs'r, hs'rem, -, -, hs'len⟩ :=
       compare_len onLetter leftFirst centre place entry q first hcmp
     have hl := hs'len hmt
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     have hcan : GalilScaffoldChainVerifier.canRight s.right := by
       rcases hav with h | h
       · rw [hr] at h; cases h

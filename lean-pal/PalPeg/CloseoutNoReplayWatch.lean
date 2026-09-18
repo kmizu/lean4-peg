@@ -147,7 +147,7 @@ theorem noReplayWatch_tick {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s 
     assumption
   case scan_fallback =>
     rename_i s' hm hav hcl hcmp hmt hg hr hb
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     rw [ht] at hw; cases hw
   case shift_one =>
     rename_i hm hp hi
@@ -303,7 +303,7 @@ theorem replay_false_of_tick {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {
     assumption
   case scan_fallback =>
     rename_i s' hm hav hcl hcmp hmt hg hr hb
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     rw [ht] at hw; cases hw
   case shift_one =>
     rename_i hm hp hi

@@ -120,8 +120,11 @@ theorem sharedC_arrive (raw : List (Fin 2)) (centre : GalilVM → Fin 3)
     rintro s t ⟨w, hw, ht⟩
     exact ⟨w, hw, by subst ht; rfl⟩
   beginFallback := by
-    rintro s t ⟨p, ht⟩
-    exact ⟨p, by rw [ht]; rfl⟩
+    rintro s t ⟨p, ht, hb⟩
+    refine ⟨p, by rw [ht]; rfl, ?_⟩
+    show (GalilScaffoldPlace.stream p).length ≤ position (arrivePH a s.right)
+    rw [position_arrive]
+    exact hb
   restart := by
     rintro s t ⟨w, hw, h1, h2, h3, ht⟩
     exact ⟨w, hw, h1, h2, h3, by subst ht; rfl⟩

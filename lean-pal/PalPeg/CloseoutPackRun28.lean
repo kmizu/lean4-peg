@@ -399,7 +399,7 @@ theorem walkerInv_tick
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨hs'r, a, hse⟩ := compareFound_fields onLetter leftFirst centre place entry q first hcmp
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     unfold GalilScaffoldChainInputSupply.beginFallbackVM at ht
     have htw : t.walker = s'.walker := by rw [ht]
     have htr : t.right = s'.right := by rw [ht]

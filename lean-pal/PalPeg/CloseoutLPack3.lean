@@ -403,14 +403,14 @@ theorem lpack_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
       compare_mismatch_form centre place entry q first hcmp hmt
     have hni : c.mode ≠ Mode.init := by rw [hm]; decide
-    obtain ⟨pl, ht⟩ :
+    obtain ⟨pl, ht, hbnd⟩ :
       beginFallbackVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
     obtain ⟨hrepr, hpres⟩ := hP.lrep hni
     refine ⟨fun _ => ?_, fun hm' _ => Mode.noConfusion hm', fun _ => ?_⟩
     · have htl : t.left = GalilScaffoldInputHead.left s.left := by
         rw [ht, afterBirth_left, afterMismatch_left]; exact hvl
       rw [htl]; exact lrep_left hrepr hpres (hL.scanLeft hm)
-    · exact hL.fallbackMinv hm _ _ hcmp ⟨pl, ht⟩
+    · exact hL.fallbackMinv hm _ _ hcmp ⟨pl, ht, hbnd⟩
   case shift_one =>
     rename_i hm hp hi
     have hni : c.mode ≠ Mode.init := by rw [hm]; decide

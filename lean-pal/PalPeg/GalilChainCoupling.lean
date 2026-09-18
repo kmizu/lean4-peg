@@ -619,7 +619,7 @@ theorem coupled_tick {c c' : Control} {s t : GalilVM} (hC : Coupled c s)
       linarith
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
-    obtain ⟨p, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨p, ht, -⟩ : beginFallbackVM' s' t := hb
     subst ht
     exact coupled_of_idle rfl
   case shift_one =>

@@ -237,7 +237,7 @@ theorem front_clock_tick {c c' : Control} {s t : GalilVM} (hP : FrontPack c s)
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨hs'r, hs'p⟩ := compare_fields onLetter leftFirst centre place entry q first hcmp
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     have hcan : GalilScaffoldChainVerifier.canRight s.right := by
       rcases hav with h | h
       · rw [hr] at h; cases h
@@ -378,7 +378,7 @@ theorem front_tick_mono {c c' : Control} {s t : GalilVM} (hP : FrontPack c s)
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨hs'r, hs'p⟩ := compare_fields onLetter leftFirst centre place entry q first hcmp
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     have hcan : GalilScaffoldChainVerifier.canRight s.right := by
       rcases hav with h | h
       · rw [hr] at h; cases h
@@ -643,7 +643,7 @@ theorem sane_tick {c c' : Control} {s t : GalilVM} (hP : FrontPack c s)
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨hs'r, -⟩ := compare_fields onLetter leftFirst centre place entry q first hcmp
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     have hcan : GalilScaffoldChainVerifier.canRight s.right := by
       rcases hav with h | h
       · rw [hr] at h; cases h
