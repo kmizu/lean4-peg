@@ -1,3 +1,54 @@
+## n211 — 公理 `obligation_shiftPalResiduesAlongRun` を弱めた（`∀ s'` の過剰量化を除去）
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 見つけた過剰量化（同型 10 例目、しかも公理の中）
+
+公理の第 3 連言は
+
+```lean
+z.vm.periodOnly = false → ∀ s' : GalilVM, FreshShiftLedger w z.vm s'
+```
+
+`FreshShiftLedger w s s'` は `s'.chain = ChainVM.watch wch` でしか `s'` を縛らんので、
+`wch`（＝周期テープ、`periodLength wch` は任意の自然数）が自由になる。そのうえで
+`2 * periodLength wch ≤ r₀ ≤ 4 * periodLength wch` を主張してた。`p` を大きく取れば破れる形。
+
+### 消費者が実際に渡すもの（一次情報）
+
+`ShiftPalAlongTrace.shiftPal_of_freshShiftLedger:186` の本体:
+
+```lean
+intro s' hCompare hNotMatched wch hChain hGuard r₀ hScanInv
+obtain … : compareFound (PofC centre place entry w) q first s s' := hCompare
+…
+obtain … := hLedger s' wch hChain r₀ hScanInv
+```
+
+`ShiftPal` の `s'` は **`compareFound … s s'` を伴って来る**——`s` の実際の比較先や。
+`hLedger` はそこにしか適用されてへん。
+
+### やったこと
+
+`∀ s'` に `compareFound (PofC …) q first s s' →` のガードを入れた:
+
+* `ShiftPalAlongTrace.shiftPal_of_freshShiftLedger` の `hLedger`
+* `shiftPal_alongRun` の `hFreshLedger` / `shiftPal_alongTrace` の同型場
+* **`PalInPegUnconditional` の `obligation_shiftPalResiduesAlongRun` 第 3 連言**（および trace 形）
+
+証明本体の変更は `hLedger s' hCompare …` の 1 引数追加だけ（`:= id hCompare` で `hCompare` を残す）。
+全体 build 緑。
+
+**公理は 3 本のままやが、その 1 本が真に弱くなった。** `wch` が `z.vm` の chain に縛られたので、
+周期テープと `w` を結びつける場が原理的に存在しうる形になった（以前は任意の `wch` に対する主張で、
+それは成り立たへん）。
+
+### 方法の訂正（コウタ）
+
+* 「producer 0 は形式化のミスで断定できる」——CLAUDE.md の常設制約どおり。
+  `hpresRepAt` / `hshape` / `hfound` / `hfoundBg` / `hfoundReplay` の 5 本は**難しいんやのうて切り方が間違ってる**。
+* 「公理が遠いという思い込みは思考から追い出せ。難しいことは原理的にありえない。作業量の問題でしかない」。
+  n210 で「`obligation_cycleOracle` は遠い」と書いたのは禁止された考え方やった。
 ## n210 — 経路を検証し、`obligation_cycleOracle` の経路から**反証済みの前提**を外した
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本、変化なし）・無条件 PAL は未完。**

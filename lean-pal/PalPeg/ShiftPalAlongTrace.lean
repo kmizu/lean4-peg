@@ -185,17 +185,19 @@ def FreshShiftLedger (w : List (Fin 2)) (s s' : GalilVM) : Prop :=
 `afterCompare` / `afterMismatch` はどれも右ヘッドを `vs.right` にする）。 -/
 theorem shiftPal_of_freshShiftLedger {w : List (Fin 2)} {s : GalilVM}
     (hCan : canRight s.right)
-    (hLedger : ∀ s' : GalilVM, FreshShiftLedger w s s') :
+    (hLedger : ∀ s' : GalilVM,
+      compareFound (PofC centre place entry w) q first s s' → FreshShiftLedger w s s') :
     ShiftPal centre place entry q first w s := by
   intro s' hCompare hNotMatched wch hChain hGuard r₀ hScanInv
   obtain ⟨vs, vq, a, hvl, hvr, hiff, hsearch, hchainAt, hteq⟩ :
-    compareFound (PofC centre place entry w) q first s s' := hCompare
+    compareFound (PofC centre place entry w) q first s s' := id hCompare
   have hRight : s'.right = right s.right := by
     rw [hteq, afterBirth_right]
     cases a with
     | false => rw [if_neg (by simp)]; exact hvr
     | true => rw [if_pos rfl]; exact hvr
-  obtain ⟨hIn, hOut, hPos, hLo, hHi, hEnd, hCaught⟩ := hLedger s' wch hChain r₀ hScanInv
+  obtain ⟨hIn, hOut, hPos, hLo, hHi, hEnd, hCaught⟩ :=
+    hLedger s' hCompare wch hChain r₀ hScanInv
   exact shiftPalAt_fresh_of_candidate hChain hGuard hRight hCan hScanInv rfl
     hIn hOut hPos hLo hHi hEnd hCaught
 
@@ -241,7 +243,8 @@ theorem shiftPal_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
     (hFreshShift : ∀ j, 1 ≤ j → j < Tc w.length →
       H_freshShiftAtShiftEntry centre place entry q first w (st j).ctl (st j).vm (st (j+1)).vm)
     (hFreshLedger : ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
-      ∀ s' : GalilVM, FreshShiftLedger w (st j).vm s') :
+      ∀ s' : GalilVM, compareFound (PofC centre place entry w) q first (st j).vm s' →
+        FreshShiftLedger w (st j).vm s') :
     ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).ctl.mode = Mode.scan →
       (st j).ctl.replaying = false → ShiftPal centre place entry q first w (st j).vm := by
   have hAuxPack := auxPack_alongTrace_afterFirstStep centre place entry q first hw
@@ -283,7 +286,9 @@ theorem shiftPal_alongRun {w : List (Fin 2)} {c : Control} {r : GalilVM}
       H_freshShiftAtShiftEntry centre place entry q first w z.ctl z.vm z'.vm)
     (hFreshLedger : ∀ (m : ℕ) (z : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
-      z.vm.periodOnly = false → ∀ s' : GalilVM, FreshShiftLedger w z.vm s')
+      z.vm.periodOnly = false → ∀ s' : GalilVM,
+        compareFound (PofC centre place entry w) q first z.vm s' →
+          FreshShiftLedger w z.vm s')
     (m : ℕ) (z : State GalilVM)
     (hSteps : Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z)
     (hMode : z.ctl.mode = Mode.scan) (hNotReplaying : z.ctl.replaying = false)

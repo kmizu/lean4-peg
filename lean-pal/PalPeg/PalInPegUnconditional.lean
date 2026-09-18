@@ -128,7 +128,8 @@ axiom obligation_shiftPalResiduesAlongRun (entry q : ℕ) (first : Fin 9) :
       (∀ (m : ℕ) (z : GalilScaffoldTop.State GalilVM),
         Steps (galilFrameS (PofC centreC placeC entry w) q first) 2048 m ⟨c, r⟩ z →
         z.vm.periodOnly = false →
-        ∀ s' : GalilVM, PalPeg.ShiftPalAlongTrace.FreshShiftLedger w z.vm s')
+        ∀ s' : GalilVM, compareFound (PofC centreC placeC entry w) q first z.vm s' →
+          PalPeg.ShiftPalAlongTrace.FreshShiftLedger w z.vm s')
 
 /-- **もう公理ではない。**  `ShiftPalAlongTrace.shiftPal_alongRun` の適用。
 
@@ -179,7 +180,8 @@ theorem obligation_shiftPalResiduesAlongTrace (entry q : ℕ) (first : Fin 9) :
         PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centreC placeC entry q first w
           (st j).ctl (st j).vm (st (j+1)).vm) ∧
       (∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
-        ∀ s' : GalilVM, PalPeg.ShiftPalAlongTrace.FreshShiftLedger w (st j).vm s') := by
+        ∀ s' : GalilVM, compareFound (PofC centreC placeC entry w) q first (st j).vm s' →
+          PalPeg.ShiftPalAlongTrace.FreshShiftLedger w (st j).vm s') := by
   intro w st Tc hPreTraceIMW
   rcases w with _ | ⟨a, rest⟩
   · -- `w = []` では `Tc w.length = Tc 0 = 0`（`PreTrace.tc0`）なので 3 つとも空虚
