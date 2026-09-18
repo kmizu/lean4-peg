@@ -3,6 +3,60 @@
 
 
 
+
+## 2026-09-19 n82: `hfour` は既存の部品で消える — `four_of_other'` が `H_fourOther` そのもの
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+`final30` の 8 前提の 1 つ `hfour : ∀ w, H_fourOther centreC placeC entry q first w` を
+実際に追ったら、**既に証明済みの定理があった**。
+
+### 在り処
+
+* `PalPeg/CloseoutPackRun40.lean:368` — `four_of_other'`
+  ```
+  theorem four_of_other' (hx : Coupled' x.ctl x.vm) (hs : ScanNR x)
+      (hcmp : compare x.vm s'') (hmt : ¬ matched s'') (hg : shiftGuardVM s'')
+      (hch : s''.chain = .watch wch)
+      (hO : Other' x.vm.periodOnly x.ctl.mode (value x.vm.radius) (value x.vm.cycle)
+        (value x.vm.remaining) (periodLength wch)) :
+      4 * (periodLength wch : ℤ) ≤ value wch.machine.control.distance
+  ```
+  これは `H_fourOther`（`CloseoutPackRun34:342`）の結論そのもの。
+
+* 違いは結合の強さだけ:
+  - `Other`（`GalilChainCoupling:353`）= `po ∧ (shift → 2h ≤ R+C+Rem) ∧ (¬shift → 2h ≤ R+C)`
+  - **`Other'`**（`CloseoutPackRun40:56`）= `po ∧ 1 ≤ h ∧ (shift → 5h ≤ R+C+Rem) ∧ (¬shift → 5h ≤ R+C)`
+
+  議論（docstring より）: `5h ≤ R + C`、`C ≤ 1`（shift guard の `singlePositive cycle` から
+  `value_le_one_of_single`）、`distance = R`（`SumRel` ＋ lag ゼロ）、`1 ≤ h` で `4h ≤ distance`。
+  `other_of_other'` で `Other' → Other` も既にある。
+
+* **`ChainPosInv2` は既に `Coupled'` を含む。** `PalPeg/CloseoutPackRun41.lean:213` の
+  docstring が明記している: 「`ChainPosInv2`: `Coupled'`（Run40、**so `H_fourOther` is a
+  theorem**）」。
+
+* `Coupled'` は run を運ばれる: `coupled'_of_idle`（`Run40:87`）で boot、
+  `coupled'_tick`（`Run40:149`）で tick 保存、`coupled'_toCoupled`（`Run40:84`）で弱化。
+
+### 次の一手（即実行できる）
+
+`final30` の `hfour` を落とす。`hfour` の消費者は `CloseoutPackRun34.watchShiftS_of_chainPosInv`
+で、そこは既に `ChainPosInv` を取っている。`ChainPosInv2`（`Coupled'` を含む）版に載せ替えれば
+`four_of_other'` がそのまま効き、`hfour` は消える。**8 → 7。**
+
+注意: `ChainPosInv2` からの `ChainPack` は**偽**（`CloseoutPackRefute.hpack_false`）なので、
+`ChainPosInv2` を使うこと自体は問題ないが、そこから `ChainPack` を取る経路には乗らない。
+必要なのは `Coupled'` の場だけ。
+
+### 教訓（コウタの指摘どおり）
+
+「最上位の 8 前提も既存の部品で書けるかもしれんやろ」「そこを疑えよ」。実際そうだった。
+`hfour` は 1 日以上「壁」として数えられていたが、証明は `CloseoutPackRun40` にあり、
+しかも `CloseoutPackRun41` の docstring が「so `H_fourOther` is a theorem」と書いていた。
+**地図（`PalPeg/Canonical.lean` / `Workbench.lean`）に残り 7 前提の在り処も入れること。**
+
 ## 2026-09-19 n81: `M-watchBreak` 修正を 35 ファイルまで進めて revert — 義務の形を過剰量化で書き間違えた
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。

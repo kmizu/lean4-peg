@@ -97,6 +97,20 @@ threading が必要で、それが残っている本体。**
 | 背景 tick の恒等性 | `CloseoutMismatchCompare.chainTick_false_idle`, `chainStep_watch_of_lagZero` | **証明済み**（lag ゼロなら `WatchOk` 不要） |
 | `ShiftRun` の存在 | `CloseoutShiftRun.shiftRun_exists` / `_entry` / `_round` | **証明済み** |
 
+## 2b. `hfour`（`H_fourOther`）— **既存の部品で消える**（2026-09-19 判明）
+
+| 部品 | 在り処 | 状態 |
+|---|---|---|
+| `H_fourOther` の定義 | `CloseoutPackRun34:342` | 前提として数えられていた |
+| **`four_of_other'`** | **`CloseoutPackRun40:368`** | **証明済み。`H_fourOther` の結論そのもの** |
+| `Other'`（5h 版） | `CloseoutPackRun40:56` | `other_of_other'` で `Other` へ弱化できる |
+| `Coupled'` | `CloseoutPackRun40:77` | `coupled'_of_idle` / `coupled'_tick` で run を運ばれる |
+| `ChainPosInv2` が `Coupled'` を含む | `CloseoutPackRun41:213` の docstring が明記 | — |
+| 消費者 | `CloseoutPackRun34.watchShiftS_of_chainPosInv` | `ChainPosInv` → `ChainPosInv2` に載せ替える |
+
+**議論**: `5h ≤ R + C`（`Other'`）＋ `C ≤ 1`（shift guard の `singlePositive cycle`）
+＋ `distance = R`（`SumRel` ＋ lag ゼロ）＋ `1 ≤ h` ⟹ `4h ≤ distance`。
+
 ## 3. `hpack` の代替（run 搬送パック）
 
 | 部品 | 在り処 | 状態 |
