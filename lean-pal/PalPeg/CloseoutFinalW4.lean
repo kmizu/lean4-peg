@@ -2,7 +2,7 @@ import PalPeg.CloseoutFinalW3
 import PalPeg.CloseoutMarksPack
 
 /-!
-# `pal_in_peg_final37` — `hme` gone: four hypotheses
+# `given_chainPackAtAnyState_FALSE_HYP` — `hme` gone: four hypotheses
 
 `CloseoutMarksPack` showed that `hme` was never independent of `hpack`.  Its two
 uses inside `packRunR_MW` both produce `MarksInv'`, which is a **field** of the
@@ -12,7 +12,7 @@ along the run on the four supplies `H_bgP2` / `H_matchP2` / `H_shiftEntry2` /
 `H_shiftDoneRad2`, which `final36` already derives from `hpack` itself.
 
 So nothing replaces `hme`: the four supplies are computed once here and used
-both for `packRunR_MWP` and for `pal_in_peg_final5MW3`.
+both for `packRunR_MWP` and for `given_bootOracleRealize_and_chainPackAtAnyState`.
 
 Remaining: `hSP` (the `ShiftPal` move lemma), `hor` (`CycleOracleMC3`), `hC`
 (local realization), `hpack` (the `ChainSide` residue).
@@ -97,8 +97,8 @@ open PalPeg.CloseoutFinalPack
 open PalPeg.CloseoutFinalW3 PalPeg.CloseoutMarksPack PalPeg.CloseoutPackRun41
 open PalPeg.CloseoutShiftS2 PalPeg.CloseoutShiftLocalFree
 
-/-- **`pal_in_peg_final36` with `hme` gone: four hypotheses.** -/
-theorem pal_in_peg_final37 (entry q : ℕ) (first : Fin 9)
+/-- **`given_chainPackAtAnyState_andMore_FALSE_HYP` with `hme` gone: four hypotheses.** -/
+theorem given_chainPackAtAnyState_FALSE_HYP (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
@@ -123,7 +123,7 @@ theorem pal_in_peg_final37 (entry q : ℕ) (first : Fin 9)
         (scanBudget_of_chainPack centreC placeC entry q first (hpack w)))
   have hsdP : ∀ w : List (Fin 2), H_shiftDoneRad2 centreC placeC entry q first w := fun w =>
     h_shiftDoneRad2_of_chainPack centreC placeC entry q first (hpack w)
-  exact pal_in_peg_final5MW3 entry q first
+  exact given_bootOracleRealize_and_chainPackAtAnyState entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       (bootIPack_of_parts centreC placeC entry q first h_lrepC
@@ -138,6 +138,6 @@ theorem pal_in_peg_final37 (entry q : ℕ) (first : Fin 9)
     (fun w st hst => by rw [hst]; exact chainPosInv2_of_idle (boot_chain_idle w))
     (fun w => hpack w)
 
-#print axioms pal_in_peg_final37
+#print axioms given_chainPackAtAnyState_FALSE_HYP
 
 end PalPeg.CloseoutFinalW4

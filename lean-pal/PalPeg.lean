@@ -1,3 +1,4 @@
+import PalPeg.PalInPeg
 import PalPeg.Canonical
 import PalPeg.Workbench
 import PalPeg.Axioms
@@ -5,9 +6,16 @@ import PalPeg.Axioms
 /-!
 # `PalPeg` — ルート
 
-根は 3 本だけ。**どこに何があるかはこの 3 本が示す。**
+根は 4 本だけ。**どこに何があるかはこの 4 本が示す。**
 
-* `PalPeg.Canonical` — 正本の鎖（`pal_in_peg_final30` の閉包 526 本）＋意味のある別名。
+* `PalPeg.PalInPeg` — **目標定理と、そこへ至る部分結果**。無条件の
+  `PalInPeg.unconditional` はまだ存在せず、その名前は予約。前提を取るものは
+  `PalInPeg.given_<残差>` で、名前だけで「何を仮定すれば到達するか」が読める。
+* `PalPeg.Canonical` — 主線の部品のカーネル検査済み索引（意味のある別名）。
+* `PalPeg.Workbench` — ビルドは通るが未配線の部品を、主定理との関係で分類したもの。
+* `PalPeg.Axioms` — 公理監査（標準 3 公理のみであることの guard）。
+
+* `PalPeg.Canonical` — 正本の鎖（`given_globalScanLandings_and_fourOther` の閉包 526 本）＋意味のある別名。
   `lake build PalPeg.Canonical` で正本だけを速くビルドできる。
 * `PalPeg.Workbench` — 作ったが未配線の部品。主定理との関係を層ごとに明記。
 * `PalPeg.Axioms` — 公理監査（`#guard_msgs in #print axioms`）。

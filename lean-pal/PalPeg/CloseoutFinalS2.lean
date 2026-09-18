@@ -2,9 +2,9 @@ import PalPeg.CloseoutTrailS2
 import PalPeg.CloseoutFinalW
 
 /-!
-# `pal_in_peg_final31` — `H_fourOther` gone
+# `given_consumeAvailEverywhere_FALSE_HYP` — `H_fourOther` gone
 
-`pal_in_peg_final30` runs the trail bridge on `CloseoutPackRun34.ChainPosInv`,
+`given_globalScanLandings_and_fourOther` runs the trail bridge on `CloseoutPackRun34.ChainPosInv`,
 which forces `H_fourOther`.  `CloseoutPackRun41.ChainPosInv2` closes the chain
 half under `ChainStep`/`ChainMatched` on its own, so
 `watchShiftS_of_chainPosInv2` produces `WatchShiftS` with **no `H_fourOther`**,
@@ -83,7 +83,7 @@ open PalPeg.CloseoutFinalW PalPeg.CloseoutShiftLocalFree
 open PalPeg.CloseoutPackRun41 PalPeg.CloseoutPackRun44 PalPeg.CloseoutPackRun47
 open PalPeg.CloseoutPackRun48 PalPeg.CloseoutShiftS2 PalPeg.CloseoutTrailS2
 
-theorem pal_in_peg_final5MW2 (entry q : ℕ) (first : Fin 9)
+theorem given_bootOracleRealize_and_consumeAvailEverywhere (entry q : ℕ) (first : Fin 9)
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)
     (hC : H_realizeLIMW' centreC placeC entry q first)
@@ -143,19 +143,19 @@ theorem pal_in_peg_final5MW2 (entry q : ℕ) (first : Fin 9)
 
 
 
-#print axioms pal_in_peg_final5MW2
+#print axioms given_bootOracleRealize_and_consumeAvailEverywhere
 
 /-- `ConsumeAvail` holds at an idle chain (the clause is vacuous). -/
 theorem consumeAvail_idle : ConsumeAvail ChainVM.idle := fun _ h => by cases h
 
-/-- **`pal_in_peg_final30` with `H_fourOther` gone: eight hypotheses, none
+/-- **`given_globalScanLandings_and_fourOther` with `H_fourOther` gone: eight hypotheses, none
 refuted.**
 
 `hfour` is replaced by nothing — `ChainPosInv2` closes the chain half on its
 own — while Run34's `hbgP`/`hmatchP`/`hsdP` become Run41's `H_bgP2`/`H_matchP2`/
 `H_shiftEntry2`/`H_shiftDoneRad2`, all four of which `CloseoutPackRun48`
 discharges modulo `ConsumeAvail` (`hav`). -/
-theorem pal_in_peg_final31 (entry q : ℕ) (first : Fin 9)
+theorem given_consumeAvailEverywhere_FALSE_HYP (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
@@ -170,7 +170,7 @@ theorem pal_in_peg_final31 (entry q : ℕ) (first : Fin 9)
     (hav : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (i : ℕ),
       ConsumeAvail (st i).vm.chain) :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_final5MW2 entry q first
+  given_bootOracleRealize_and_consumeAvailEverywhere entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       (bootIPack_of_parts centreC placeC entry q first h_lrepC
@@ -185,7 +185,7 @@ theorem pal_in_peg_final31 (entry q : ℕ) (first : Fin 9)
     hav
 
 #print axioms consumeAvail_idle
-#print axioms pal_in_peg_final31
+#print axioms given_consumeAvailEverywhere_FALSE_HYP
 
 
 end PalPeg.CloseoutFinalS2

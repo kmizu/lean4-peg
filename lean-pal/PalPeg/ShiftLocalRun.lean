@@ -212,7 +212,7 @@ theorem shiftLocalS_alongRun_of_chainPosInvCoupled' {w : List (Fin 2)}
     (chainPosInvCoupled'_alongRun centre place entry q first hbg hmatch hsd hx h)
 
 /-- **`needIMW'_le_W` with `H_fourOther` gone.**  Same three branch hypotheses
-as `pal_in_peg_final30`, and the boot obligation is a theorem. -/
+as `given_globalScanLandings_and_fourOther`, and the boot obligation is a theorem. -/
 theorem needBound_without_fourOther {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hPreTrace : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)

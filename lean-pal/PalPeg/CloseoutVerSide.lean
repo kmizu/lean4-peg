@@ -4,7 +4,7 @@ import PalPeg.CloseoutChainSideR
 /-!
 # `hpack`'s use in the top theorem is two chain-side facts, not a bundle
 
-`CloseoutFinalW3.pal_in_peg_final5MW3` takes `hpk` (the refuted
+`CloseoutFinalW3.given_bootOracleRealize_and_chainPackAtAnyState` takes `hpk` (the refuted
 `∀ w c s, ChainPosInv2 w c s → ChainPack q first w c s`) and uses it in exactly
 one place: `CloseoutWatchSupply.needIMW'_le_W3` → `radPack_ptS3` →
 `shiftLocalS_of_run3` → `shiftLocalS_of_chainPack`.  And that last lemma reads

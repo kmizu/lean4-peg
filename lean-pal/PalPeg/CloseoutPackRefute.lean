@@ -4,7 +4,7 @@ import PalPeg.GalilFinalAssembly
 /-!
 # `hpack` is false as stated — `ChainPack.scanBound` is a run property
 
-`CloseoutFinalW4.pal_in_peg_final37`'s fourth hypothesis is
+`CloseoutFinalW4.given_chainPackAtAnyState_FALSE_HYP`'s fourth hypothesis is
 
 ```
 hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack q first w c s
@@ -41,7 +41,7 @@ ChainPackAt (m : ℕ) … with  scanBoundAt : c.mode = Mode.scan → position s.
 
 premised by `1 ≤ m` and `m ≤ w.length`, which is what every consumer already has
 in scope.  Until that is done, the leaf stays **OPEN**, and the four-hypothesis
-form of `pal_in_peg_final37` cannot be driven to zero through this route.
+form of `given_chainPackAtAnyState_FALSE_HYP` cannot be driven to zero through this route.
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完.**
 -/
@@ -106,7 +106,7 @@ not premised on a one-state invariant.  At the boot state the heads are at the
 input origin, so every `canRight` holds, and each tick either keeps the head or
 advances it by one under the run's own budget.
 
-Until then `hpack` is **REFUTED**, and `pal_in_peg_final37`'s four-hypothesis
+Until then `hpack` is **REFUTED**, and `given_chainPackAtAnyState_FALSE_HYP`'s four-hypothesis
 form is not a four-*provable*-hypothesis form.  The count was reached in part by
 folding the earlier separate leaf `ScanBudget` (`CloseoutFinalPack`'s `hbudget`)
 into the bundle as `scanBound`, which the ledger's own rule marks as no

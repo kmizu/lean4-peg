@@ -3,7 +3,7 @@ import PalPeg.CloseoutAdvanceT
 /-!
 # `RoundBundle`: the five carried fields that produce `hSP`
 
-`CloseoutPackRun29.ShiftPal` — the `hSP` of `pal_in_peg_final37` — now follows
+`CloseoutPackRun29.ShiftPal` — the `hSP` of `given_chainPackAtAnyState_FALSE_HYP` — now follows
 from `CloseoutPackRun31.shiftPal_of_readOrigin`, whose inputs are
 `ChainRound`, `canRight s.right` and `H_fresh`.  Keeping `ChainRound` along a
 run needs four more single-state fields, each of which is itself a tick

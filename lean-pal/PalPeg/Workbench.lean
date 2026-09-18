@@ -80,7 +80,7 @@ import PalPeg.CloseoutFinalBranch
 ## このファイルの役割
 
 `PalPeg/` は 1143 モジュール・331,884 行・定理 12,613 本ある。そのうち**正本
-`PalPeg.Canonical`（→ `pal_in_peg_final30`）の推移 import 閉包は 526 本**で、
+`PalPeg.Canonical`（→ `given_globalScanLandings_and_fourOther`）の推移 import 閉包は 526 本**で、
 残り 617 本は正本に効いていない。しかし**「効いていない」と「無関係」は違う**。
 実際、未登録・未参照のまま健全だった部品を回収した（`CloseoutPackRun49` の
 `LPackM3`、`CloseoutWatchRound53`、`CloseoutRealize1`）。
@@ -136,17 +136,17 @@ import PalPeg.CloseoutFinalBranch
 
 | 定理 | 前提数 | 偽の前提 | 機械検査 |
 |---|---|---|---|
-| **`CloseoutFinalFour.pal_in_peg_final39`** | **7** | **なし**（正本、`Canonical` 参照） | — |
-| `CloseoutFinalBranch.pal_in_peg_final41` | 6（Prop 引数） | なし。ただし `hB` は**4 義務の束**なので義務の実数は 9。前進は「global → run 形」の弱化であって本数の削減ではない | — |
-| `CloseoutFinalBranch.pal_in_peg_final42` | 6（Prop 引数） | なし。`final41` の `hB` から**半径台帳を放電**した版（`RadLedger` は `radLedger_pt` で trace 全点にタダ）。残る `shiftCan` は `canRight s.right` のみ | — |
-| `CloseoutFinalBranch.pal_in_peg_final43` | 6（Prop 引数） | なし。**`shiftDone` 義務を完全に放電**（半径台帳 ＋ `canRight` の両方が新規入力ゼロ）。残差は `ScanLandingObligationsAt` の 3 場（`bg`/`matchLand`/`entryLand`）＋ `hver`。義務の実数 8 | — |
-| `CloseoutFinalW.pal_in_peg_final30` | 8 | なし（一代前、`hfour` を含む） | — |
-| `CloseoutFinalVer.pal_in_peg_final38` | 9 | なし | — |
-| `CloseoutFinalS2.pal_in_peg_final31` | 9 | `hav` | `ConsumeAvailRefute.hav_false` |
-| `CloseoutFinalW3.pal_in_peg_final36` | 5 | `hpack` | `CloseoutPackRefute.hpack_false` |
-| `CloseoutFinalW4.pal_in_peg_final37` | 4 | `hpack` | 同上 |
+| **`CloseoutFinalFour.given_globalScanLandings`** | **7** | **なし**（正本、`Canonical` 参照） | — |
+| `CloseoutFinalBranch.given_landingObligationsAlongRun` | 6（Prop 引数） | なし。ただし `hB` は**4 義務の束**なので義務の実数は 9。前進は「global → run 形」の弱化であって本数の削減ではない | — |
+| `CloseoutFinalBranch.given_landingObligationsSansRadiusLedger` | 6（Prop 引数） | なし。`final41` の `hB` から**半径台帳を放電**した版（`RadLedger` は `radLedger_pt` で trace 全点にタダ）。残る `shiftCan` は `canRight s.right` のみ | — |
+| `CloseoutFinalBranch.given_scanLandingObligations` | 6（Prop 引数） | なし。**`shiftDone` 義務を完全に放電**（半径台帳 ＋ `canRight` の両方が新規入力ゼロ）。残差は `ScanLandingObligationsAt` の 3 場（`bg`/`matchLand`/`entryLand`）＋ `hver`。義務の実数 8 | — |
+| `CloseoutFinalW.given_globalScanLandings_and_fourOther` | 8 | なし（一代前、`hfour` を含む） | — |
+| `CloseoutFinalVer.given_globalRun41Landings_and_verifierRun` | 9 | なし | — |
+| `CloseoutFinalS2.given_consumeAvailEverywhere_FALSE_HYP` | 9 | `hav` | `ConsumeAvailRefute.hav_false` |
+| `CloseoutFinalW3.given_chainPackAtAnyState_andMore_FALSE_HYP` | 5 | `hpack` | `CloseoutPackRefute.hpack_false` |
+| `CloseoutFinalW4.given_chainPackAtAnyState_FALSE_HYP` | 4 | `hpack` | 同上 |
 
-`CloseoutFinalVer.pal_in_peg_final38` は前提数では `final39` に劣るが、**残す**:
+`CloseoutFinalVer.given_globalRun41Landings_and_verifierRun` は前提数では `final39` に劣るが、**残す**:
 分岐前提が Run41 系（`H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2`）で、
 `CloseoutPackRun48` の 4 放電器（`h_bgP2_of_supply` / `h_matchP2_of_target` /
 `h_shiftEntry2_of_target` / `h_shiftDoneRad2_of_supply`）が効く**唯一の**経路。

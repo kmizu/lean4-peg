@@ -50,7 +50,7 @@ namespace PalPeg.Canonical
 
 /-! ## 1. 最上位
 
-**正本の最上位は `pal_in_peg_final39`（`CloseoutFinalFour`）で Prop 引数 7 本**
+**正本の最上位は `given_globalScanLandings`（`CloseoutFinalFour`）で Prop 引数 7 本**
 （`hSP` `hme` `hor` `hC` `hbgP` `hmatchP` `hsdP`）。`final30` の 8 本から
 `hfour : ∀ w, H_fourOther …` が**何も足さずに**落ちたもの（`CloseoutPackRun40.ChainPosInv'`
 ＝ `Coupled` を `Coupled'` に強めた構造が `four_of_other'` を直接使えるため。
@@ -66,17 +66,21 @@ namespace PalPeg.Canonical
 
 計画書 §10.5（前提ゼロ）は未達。 -/
 
-/-- **現時点の正本の最上位定理**（旧名 `pal_in_peg_final39`）。
-Prop 引数 7 本（`hSP` `hme` `hor` `hC` `hbgP` `hmatchP` `hsdP`）、反証済みの前提を
-含まない。最小性は未検証。 -/
-alias pal_in_peg_of_seven_leaves := PalPeg.CloseoutFinalFour.pal_in_peg_final39
+/-! **無条件の最終定理 `pal_in_peg : RecognizedByTotalPEG PAL` はまだ存在しない。**
+`pal_in_peg` という名前はそれ専用に予約する。前提を取るものは
+`given_<残差>` と名付け、名前だけで「何を仮定すれば到達するか」が読めるように
+する（コウタ 2026-09-19:「本来の定理は pal_in_peg やん。その到達のための partial な
+ものなら適切な名前がある」）。
 
-/-- 一代前の最上位（旧名 `pal_in_peg_final30`）。`hfour` を含む 8 本。 -/
-alias pal_in_peg_of_eight_leaves := PalPeg.CloseoutFinalW.pal_in_peg_final30
+現時点で前提が最少かつ反証済みを含まないのは
+`PalPeg.CloseoutFinalFour.given_globalScanLandings`
+（`hSP` `hme` `hor` `hC` ＋ global な `H_bgP` / `H_matchP` / `H_shiftDoneP`）。
+一代前は `PalPeg.CloseoutFinalW.given_globalScanLandings_and_fourOther`。
+本数で別名を付けるのはやめた（「7」「8」は名前から意味が引けない）。 -/
 
-/-- **最上位の組み立ての共通部分**（旧名 `pal_in_peg_of_needLe`）。`needL'` の上界を
+/-- **最上位の組み立ての共通部分**（旧名 `given_needBound`）。`needL'` の上界を
 外から取る 45 行で、`final5MW` / `5MW2` / `5MW3` / `5MW4` はこれの instantiation。 -/
-alias top_assembly_from_need_bound := PalPeg.CloseoutFinalFour.pal_in_peg_of_needLe
+alias top_assembly_from_need_bound := PalPeg.CloseoutFinalFour.given_needBound
 
 /-- **`needL'` の上界は run 沿いの `ShiftLocalS` だけから出る**
 （旧名 `needBound_of_shiftLocalS_alongTrace`）。`RadPack` → `TrailF` → `needL'` の 3 段を
@@ -156,7 +160,7 @@ alias refuted_watchOk := PalPeg.WatchOkRefute.watchOk_false
 /-- **`ConsumeAvail` を全状態に量化した前提は偽**（`final31` の `hav`）。
 `hav : ∀ w st i, ConsumeAvail (st i).vm.chain` は `st` が無制約関数なので
 `∀ z : ChainVM, ConsumeAvail z` と同値で、`gap = false` かつ右も incoming も空な
-verifier を持つ watch 状態で破れる。**帰結**: `pal_in_peg_final31` は無価値。
+verifier を持つ watch 状態で破れる。**帰結**: `given_consumeAvailEverywhere_FALSE_HYP` は無価値。
 正しい形は `CloseoutVerSide.VerRun`（run 形）。 -/
 alias refuted_consumeAvail_universal := PalPeg.ConsumeAvailRefute.hav_false
 

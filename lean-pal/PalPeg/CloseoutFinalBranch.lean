@@ -3,9 +3,9 @@ import PalPeg.CloseoutFinalFour
 import PalPeg.CloseoutFinalVer
 
 /-!
-# `pal_in_peg_final41` — 4 分岐義務を run 形に弱めた最上位
+# `given_landingObligationsAlongRun` — 4 分岐義務を run 形に弱めた最上位
 
-`pal_in_peg_final38`（`CloseoutFinalVer`、9 前提）の中 4 本
+`given_globalRun41Landings_and_verifierRun`（`CloseoutFinalVer`、9 前提）の中 4 本
 （`H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2`）は
 `∀ (c : Control) (s : GalilVM), …` で**任意の状態**を量化していた。
 `chainPosInv2_tick` はそれらを自分の `(c, s)` でしか使わないので
@@ -24,18 +24,18 @@ run 形の 1 本 `BranchSupply.LandingObligationsAlongRun` に**まとめると�
 
 ## 本数の誠実な読み方
 
-`pal_in_peg_final41` の Prop 引数は 6 本だが、**`hLandingObligations` は 4 つの義務の束**である。
+`given_landingObligationsAlongRun` の Prop 引数は 6 本だが、**`hLandingObligations` は 4 つの義務の束**である。
 義務の個数で数えれば `final39`（7 本すべて別々）より多い。
 **前進は本数ではなく「global → run 形」の弱化**で、放電できる形になったことである。
-正本の最上位は引き続き `pal_in_peg_final39`（7 本、束ねていない）とする。
+正本の最上位は引き続き `given_globalScanLandings`（7 本、束ねていない）とする。
 
 | 定理 | Prop 引数 | 義務の実数 | 偽の前提 |
 |---|---|---|---|
-| `pal_in_peg_final39`（`CloseoutFinalFour`、**正本**） | 7 | 7（global 3 ＋ 他 4） | なし |
-| `pal_in_peg_final41`（本ファイル、**放電の作業場**） | 6 | 9（run 形 4 ＋ `hver` ＋ 他 4） | なし |
-| `pal_in_peg_final38`（`CloseoutFinalVer`） | 9 | 9 | なし |
-| `pal_in_peg_final31` | 9 | — | `hav`（`ConsumeAvailRefute.hav_false`） |
-| `pal_in_peg_final36` / `final37` | 5 / 4 | — | `hpack`（`CloseoutPackRefute.hpack_false`） |
+| `given_globalScanLandings`（`CloseoutFinalFour`、**正本**） | 7 | 7（global 3 ＋ 他 4） | なし |
+| `given_landingObligationsAlongRun`（本ファイル、**放電の作業場**） | 6 | 9（run 形 4 ＋ `hver` ＋ 他 4） | なし |
+| `given_globalRun41Landings_and_verifierRun`（`CloseoutFinalVer`） | 9 | 9 | なし |
+| `given_consumeAvailEverywhere_FALSE_HYP` | 9 | — | `hav`（`ConsumeAvailRefute.hav_false`） |
+| `given_chainPackAtAnyState_andMore_FALSE_HYP` / `final37` | 5 / 4 | — | `hpack`（`CloseoutPackRefute.hpack_false`） |
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
 -/
@@ -102,9 +102,9 @@ open PalPeg.CloseoutFinalW5 PalPeg.CloseoutWatchSupply
 open PalPeg.CloseoutFinalW PalPeg.CloseoutFinalFour PalPeg.CloseoutFinalVer
 open PalPeg.CloseoutVerSide PalPeg.BranchSupply PalPeg.CloseoutPackRun41
 
-/-- **`pal_in_peg_final38` の中 4 本を run 形 1 本にした最上位。**
+/-- **`given_globalRun41Landings_and_verifierRun` の中 4 本を run 形 1 本にした最上位。**
 Prop 引数 6 本・反証済みゼロ。ただし `hLandingObligations` は 4 義務の束なので、**本数の削減ではなく
-「global → run 形」の弱化**である（正本は `pal_in_peg_final39`）。
+「global → run 形」の弱化**である（正本は `given_globalScanLandings`）。
 
 | 前提 | 内容 |
 |---|---|
@@ -115,7 +115,7 @@ Prop 引数 6 本・反証済みゼロ。ただし `hLandingObligations` は 4 �
 | `hLandingObligations` | **`LandingObligationsAlongRun`** — run の各点で `LandingObligationsAt`（4 分岐義務の run 形） |
 | `hver` | `VerRun` — chain の verifier が入力を表現し lag が正規（run 形） |
 -/
-theorem pal_in_peg_final41 (entry q : ℕ) (first : Fin 9)
+theorem given_landingObligationsAlongRun (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
@@ -128,7 +128,7 @@ theorem pal_in_peg_final41 (entry q : ℕ) (first : Fin 9)
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_of_needLe entry q first
+  given_needBound entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       (bootIPack_of_parts centreC placeC entry q first h_lrepC
@@ -143,7 +143,7 @@ theorem pal_in_peg_final41 (entry q : ℕ) (first : Fin 9)
       (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
       (hLandingObligations w st h.base.pre.start) (hver w st h.base.pre.start))
 
-/-- **`pal_in_peg_final41` の `hLandingObligations` から半径台帳を落とした版。**
+/-- **`given_landingObligationsAlongRun` の `hLandingObligations` から半径台帳を落とした版。**
 
 `LandingObligationsAt.shiftDone` は `canRight s.right` と半径台帳の連言だったが、後者は
 `CloseoutRadPack.RadLedger.le`（`position center + value radius ≤ position right`）と
@@ -155,7 +155,7 @@ trace の全点に与えるので、**新規入力ゼロで内部調達できる
 `shiftCan` は `canRight s.right` のみ。`canRight` の経路は
 `CloseoutClockFront.canRight_of_run`（front ポテンシャル ＋ 長さ予算、mode 条件なし）で、
 右ヘッドの `Represents`/`focus ≠ none` は shift 相では `LPackM2.shiftGeom` の `RRep` が持つ。 -/
-theorem pal_in_peg_final42 (entry q : ℕ) (first : Fin 9)
+theorem given_landingObligationsSansRadiusLedger (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
@@ -169,7 +169,7 @@ theorem pal_in_peg_final42 (entry q : ℕ) (first : Fin 9)
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_of_needLe entry q first
+  given_needBound entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       (bootIPack_of_parts centreC placeC entry q first h_lrepC
@@ -198,7 +198,7 @@ theorem pal_in_peg_final42 (entry q : ℕ) (first : Fin 9)
   構成子が無い）なので `frontPack_trace` が使える。
 
 残る義務は `ScanLandingObligationsAt` の **3 場**（`bg` / `matchLand` / `entryLand`）と `hver`。 -/
-theorem pal_in_peg_final43 (entry q : ℕ) (first : Fin 9)
+theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
@@ -212,7 +212,7 @@ theorem pal_in_peg_final43 (entry q : ℕ) (first : Fin 9)
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_of_needLe entry q first
+  given_needBound entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       (bootIPack_of_parts centreC placeC entry q first h_lrepC
@@ -227,10 +227,10 @@ theorem pal_in_peg_final43 (entry q : ℕ) (first : Fin 9)
       (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
       (hres w st Tc h) (hver w st h.base.pre.start))
 
-#print axioms pal_in_peg_final43
+#print axioms given_scanLandingObligations
 
-#print axioms pal_in_peg_final42
+#print axioms given_landingObligationsSansRadiusLedger
 
-#print axioms pal_in_peg_final41
+#print axioms given_landingObligationsAlongRun
 
 end PalPeg.CloseoutFinalBranch

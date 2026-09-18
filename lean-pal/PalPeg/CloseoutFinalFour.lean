@@ -2,11 +2,11 @@ import PalPeg.ShiftLocalRun
 import PalPeg.CloseoutFinalW
 
 /-!
-# `pal_in_peg_final39` — `H_fourOther` が消えた最上位（7 前提・反証済みゼロ）
+# `given_globalScanLandings` — `H_fourOther` が消えた最上位（7 前提・反証済みゼロ）
 
 ## 何が変わったか
 
-`pal_in_peg_final30`（`CloseoutFinalW`）の 8 前提のうち
+`given_globalScanLandings_and_fourOther`（`CloseoutFinalW`）の 8 前提のうち
 `hfour : ∀ w, H_fourOther …` を落とした。**何も代わりに取らない。**
 
 `CloseoutPackRun40.ChainPosInv'` は `CloseoutPackRun34.ChainPosInv` の `coupled` 場を
@@ -22,8 +22,8 @@ import PalPeg.CloseoutFinalW
 
 ## 組み立ての括り出し
 
-`pal_in_peg_final5MW` / `5MW2` / `5MW3` / `5MW4` は、`needL'` の上界を作る 1 行を除いて
-**同一の 45 行**である。本ファイルの `pal_in_peg_of_needLe` がその 45 行で、
+`given_bootOracleRealize_and_globalScanLandings` / `5MW2` / `5MW3` / `5MW4` は、`needL'` の上界を作る 1 行を除いて
+**同一の 45 行**である。本ファイルの `given_needBound` がその 45 行で、
 上界そのものを `hneed` として取る。以後の版は 4 行の instantiation で済む
 （既存 4 版の載せ替えは別コミット）。
 
@@ -91,7 +91,7 @@ open PalPeg.CloseoutFinalW PalPeg.ShiftLocalRun
 
 /-- **最上位の組み立て（`final5MW*` 4 版の共通部分）。**  `needL'` の上界を
 `hneed` として外から取る。 -/
-theorem pal_in_peg_of_needLe (entry q : ℕ) (first : Fin 9)
+theorem given_needBound (entry q : ℕ) (first : Fin 9)
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)
     (hC : H_realizeLIMW' centreC placeC entry q first)
@@ -141,8 +141,8 @@ theorem pal_in_peg_of_needLe (entry q : ℕ) (first : Fin 9)
       (fun w hw => (hPreTraceIMW w hw).base.pre.cost)
   · exact GalilEmptyWord.realize_accept'_nil L blank initQ outQ n htape hn
 
-/-- **`pal_in_peg_final5MW` から `hfour` が消えた版。** -/
-theorem pal_in_peg_final5MW' (entry q : ℕ) (first : Fin 9)
+/-- **`given_bootOracleRealize_and_globalScanLandings` から `hfour` が消えた版。** -/
+theorem given_bootOracleRealize_sansFourOther (entry q : ℕ) (first : Fin 9)
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)
     (hC : H_realizeLIMW' centreC placeC entry q first)
@@ -150,13 +150,13 @@ theorem pal_in_peg_final5MW' (entry q : ℕ) (first : Fin 9)
     (hmatchP : ∀ w : List (Fin 2), H_matchP centreC placeC entry q first w)
     (hsdP : ∀ w : List (Fin 2), H_shiftDoneP centreC placeC entry q first w) :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_of_needLe entry q first hboot hA hC
+  given_needBound entry q first hboot hA hC
     (fun w st _ hw h => needBound_without_fourOther centreC placeC entry q first hw h
       (hbgP w) (hmatchP w) (hsdP w)
       (by rw [h.base.pre.start]; exact chainPosInvCoupled'_at_idle (boot_chain_idle w)))
 
-/-- **`pal_in_peg_final30` から `H_fourOther` が消えた最上位。7 前提・反証済みゼロ。** -/
-theorem pal_in_peg_final39 (entry q : ℕ) (first : Fin 9)
+/-- **`given_globalScanLandings_and_fourOther` から `H_fourOther` が消えた最上位。7 前提・反証済みゼロ。** -/
+theorem given_globalScanLandings (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
@@ -168,7 +168,7 @@ theorem pal_in_peg_final39 (entry q : ℕ) (first : Fin 9)
     (hmatchP : ∀ w : List (Fin 2), H_matchP centreC placeC entry q first w)
     (hsdP : ∀ w : List (Fin 2), H_shiftDoneP centreC placeC entry q first w) :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_final5MW' entry q first
+  given_bootOracleRealize_sansFourOther entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       (bootIPack_of_parts centreC placeC entry q first h_lrepC
@@ -180,8 +180,8 @@ theorem pal_in_peg_final39 (entry q : ℕ) (first : Fin 9)
       hor)
     hC hbgP hmatchP hsdP
 
-#print axioms pal_in_peg_of_needLe
-#print axioms pal_in_peg_final5MW'
-#print axioms pal_in_peg_final39
+#print axioms given_needBound
+#print axioms given_bootOracleRealize_sansFourOther
+#print axioms given_globalScanLandings
 
 end PalPeg.CloseoutFinalFour

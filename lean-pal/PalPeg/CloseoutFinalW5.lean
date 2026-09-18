@@ -2,11 +2,11 @@ import PalPeg.CloseoutFinalW4
 import PalPeg.CloseoutVerSide
 
 /-!
-# `pal_in_peg_final38` — the refuted `hpack` replaced by the run-level `VerRun`
+# `given_globalRun41Landings_and_verifierRun` — the refuted `hpack` replaced by the run-level `VerRun`
 
 `CloseoutPackRefute` showed `hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack …`
 is **false**.  `CloseoutVerSide` then measured what the top theorem actually
-uses it for: `pal_in_peg_final5MW3` calls it in exactly one place, and the
+uses it for: `given_bootOracleRealize_and_chainPackAtAnyState` calls it in exactly one place, and the
 lemma at the bottom of that call (`shiftLocalS_of_chainPack`) reads four fields,
 three of which (`inv`, `repR`) the caller already has — `ChainPosInv2` is a
 hypothesis and `LPackM`/`LPackM2` come off the pre-trace's own packs.
@@ -16,8 +16,8 @@ states, and `CloseoutVerSide.VerRun` states exactly those **along the run**.
 That is not free at an arbitrary idle-chain state, so `chainPosInv2_of_idle`
 gives no counterexample — the refutation does not apply to it.
 
-`pal_in_peg_final5MW4` is `final5MW3` with `needIMW'_le_W4` in place of
-`needIMW'_le_W3`, and `pal_in_peg_final38` is `final37` with `hpack` replaced by
+`given_bootOracleRealize_and_verifierRun` is `final5MW3` with `needIMW'_le_W4` in place of
+`needIMW'_le_W3`, and `given_globalRun41Landings_and_verifierRun` is `final37` with `hpack` replaced by
 `hver`.  Four hypotheses still, but **none of them refuted**:
 
 * `hSP` — the `ShiftPal` move lemma (guard premised, geometric conclusion);
@@ -108,7 +108,7 @@ open PalPeg.CloseoutVerSide
 open PalPeg.CloseoutFinalW3
 open PalPeg.CloseoutFinalW4
 
-theorem pal_in_peg_final5MW4 (entry q : ℕ) (first : Fin 9)
+theorem given_bootOracleRealize_and_verifierRun (entry q : ℕ) (first : Fin 9)
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)
     (hC : H_realizeLIMW' centreC placeC entry q first)
@@ -167,6 +167,6 @@ theorem pal_in_peg_final5MW4 (entry q : ℕ) (first : Fin 9)
       (fun w hw => (hP w hw).base.pre.cost)
   · exact GalilEmptyWord.realize_accept'_nil L blank initQ outQ n htape hn
 
-#print axioms pal_in_peg_final5MW4
+#print axioms given_bootOracleRealize_and_verifierRun
 
 end PalPeg.CloseoutFinalW5

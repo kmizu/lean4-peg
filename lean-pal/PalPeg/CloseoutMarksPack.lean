@@ -6,7 +6,7 @@ import PalPeg.CloseoutShiftLocalFree
 /-!
 # `hme` is inside `hpack`: `MarksInv'` off the `ChainPack` bundle
 
-`pal_in_peg_final36` carries both
+`given_chainPackAtAnyState_andMore_FALSE_HYP` carries both
 
 ```
 hme   : ∀ w, H_marksEntry' (PofC centreC placeC entry w) q first

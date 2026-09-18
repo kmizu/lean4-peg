@@ -6,7 +6,7 @@ import PalPeg.WatchOkRefute
 
 ## 経緯
 
-`CloseoutFinalS2.pal_in_peg_final31` は `H_fourOther` を落とすかわりに
+`CloseoutFinalS2.given_consumeAvailEverywhere_FALSE_HYP` は `H_fourOther` を落とすかわりに
 
 ```
 (hav : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (i : ℕ),
@@ -30,9 +30,9 @@ import PalPeg.WatchOkRefute
 
 ## 帰結
 
-* `pal_in_peg_final31` は偽の前提を取る。**8 → 9 でも 8 → 8 でもなく、無価値。**
+* `given_consumeAvailEverywhere_FALSE_HYP` は偽の前提を取る。**8 → 9 でも 8 → 8 でもなく、無価値。**
   `final36` / `final37` の `hpack` も偽（`CloseoutPackRefute.hpack_false`）なので、
-  正直な最上位は依然 `pal_in_peg_final30`（8 前提・反証済みゼロ）。
+  正直な最上位は依然 `given_globalScanLandings_and_fourOther`（8 前提・反証済みゼロ）。
 * 正しい経路は `CloseoutWatchSupply.watchShiftS_of_supply`（`ConsumeAvail` を 4 つの
   局所供給事実に分解）→ `CloseoutVerSide.VerRun`（**run 形**）。
 
@@ -67,7 +67,7 @@ theorem not_consumeAvail_stuckWatch : ¬ ConsumeAvail (ChainVM.watch stuckWatch)
 theorem consumeAvail_not_universal : ¬ ∀ z : ChainVM, ConsumeAvail z :=
   fun h => not_consumeAvail_stuckWatch (h _)
 
-/-- **`pal_in_peg_final31` の `hav` は偽**（`st` が無制約なので状態への全称と同値）。 -/
+/-- **`given_consumeAvailEverywhere_FALSE_HYP` の `hav` は偽**（`st` が無制約なので状態への全称と同値）。 -/
 theorem hav_false :
     ¬ ∀ (_w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (i : ℕ),
       ConsumeAvail (st i).vm.chain := by

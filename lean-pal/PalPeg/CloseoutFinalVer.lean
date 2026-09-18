@@ -1,9 +1,9 @@
 import PalPeg.CloseoutFinalW5
 
 /-!
-# `pal_in_peg_final38` — `hfour` / `hav` / `hpack` がすべて消えた最上位
+# `given_globalRun41Landings_and_verifierRun` — `hfour` / `hav` / `hpack` がすべて消えた最上位
 
-`pal_in_peg_final30`（`CloseoutFinalW`、8 前提・反証済みゼロ）が正直な最上位だったが、
+`given_globalScanLandings_and_fourOther`（`CloseoutFinalW`、8 前提・反証済みゼロ）が正直な最上位だったが、
 その `hfour : H_fourOther` は**既存の部品で消える**：`CloseoutPackRun41.ChainPosInv2` は
 `Coupled'`（Run40）を場に持ち、`four_of_other'`（`CloseoutPackRun40:368`）が
 `H_fourOther` の結論そのものを与えるので、`watchShiftS_of_chainPosInv2` は `hfour` を
@@ -20,7 +20,7 @@ import PalPeg.CloseoutFinalW5
 `CloseoutWatchSupply` が `ConsumeAvail` を 4 つの局所供給事実に分解し、
 `CloseoutVerSide` がそのうち残る 2 つを**run 形**の `VerRun` にまとめ
 （`chainPosInv2_of_idle` の反例に当たらない形）、`needIMW'_le_W4` で `hpack` を外した。
-`CloseoutFinalW5.pal_in_peg_final5MW4` はそれを受けているが、**最上位が張られていなかった。**
+`CloseoutFinalW5.given_bootOracleRealize_and_verifierRun` はそれを受けているが、**最上位が張られていなかった。**
 
 本ファイルがそれを張る。残り 9 前提は**すべて run 形または状態局所**で、反証済みは無い。
 
@@ -100,12 +100,12 @@ open PalPeg.CloseoutFinalW4
 open PalPeg.CloseoutVerSide PalPeg.CloseoutFinalW3 PalPeg.CloseoutFinalW4
 open PalPeg.CloseoutFinalW5 PalPeg.CloseoutWatchSupply
 
-/-- **`pal_in_peg_final30` から `H_fourOther` が消えた最上位。9 前提・反証済みゼロ。**
+/-- **`given_globalScanLandings_and_fourOther` から `H_fourOther` が消えた最上位。9 前提・反証済みゼロ。**
 
 `hfour` は `ChainPosInv2` が自前で閉じるので不要。`final31` の `hav` と
 `final36`/`final37` の `hpack` はどちらも偽なので、その代わりに `CloseoutVerSide` の
 **run 形** `VerRun` を取る。 -/
-theorem pal_in_peg_final38 (entry q : ℕ) (first : Fin 9)
+theorem given_globalRun41Landings_and_verifierRun (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
@@ -120,7 +120,7 @@ theorem pal_in_peg_final38 (entry q : ℕ) (first : Fin 9)
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_final5MW4 entry q first
+  given_bootOracleRealize_and_verifierRun entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       (bootIPack_of_parts centreC placeC entry q first h_lrepC
@@ -134,6 +134,6 @@ theorem pal_in_peg_final38 (entry q : ℕ) (first : Fin 9)
     (fun w st hst => by rw [hst]; exact chainPosInv2_of_idle (boot_chain_idle w))
     hver
 
-#print axioms pal_in_peg_final38
+#print axioms given_globalRun41Landings_and_verifierRun
 
 end PalPeg.CloseoutFinalVer

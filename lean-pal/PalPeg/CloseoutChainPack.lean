@@ -6,7 +6,7 @@ import PalPeg.CloseoutWinOrigin
 /-!
 # `ChainPack`: `ChainPosInv2` with the three supply clauses folded in
 
-Working top-down from `pal_in_peg_final31`, the four branch hypotheses of
+Working top-down from `given_consumeAvailEverywhere_FALSE_HYP`, the four branch hypotheses of
 `chainPosInv2_tick` all have producers in `CloseoutPackRun48`, and three of
 `h_bgP2_of_supply`'s four inputs have the *same shape*:
 

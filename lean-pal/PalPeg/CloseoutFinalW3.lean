@@ -89,7 +89,7 @@ open PalPeg.CloseoutPackRun48 PalPeg.CloseoutShiftS2 PalPeg.CloseoutTrailS2
 open PalPeg.CloseoutChainPack PalPeg.CloseoutWatchSupply PalPeg.CloseoutFinalS2
 open PalPeg.CloseoutFinalPack
 
-theorem pal_in_peg_final5MW3 (entry q : ℕ) (first : Fin 9)
+theorem given_bootOracleRealize_and_chainPackAtAnyState (entry q : ℕ) (first : Fin 9)
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)
     (hC : H_realizeLIMW' centreC placeC entry q first)
@@ -149,11 +149,11 @@ theorem pal_in_peg_final5MW3 (entry q : ℕ) (first : Fin 9)
 
 
 
-#print axioms pal_in_peg_final5MW2
+#print axioms given_bootOracleRealize_and_consumeAvailEverywhere
 
-#print axioms pal_in_peg_final5MW3
+#print axioms given_bootOracleRealize_and_chainPackAtAnyState
 
-/-- **`pal_in_peg_final33` with `hav`, `hstart` and `hbudget` gone: five
+/-- **`given_chainPackAtAnyState_scanBudget_bgStart_and_consumeAvailEverywhere_FALSE_HYP` with `hav`, `hstart` and `hbudget` gone: five
 hypotheses.**
 
 `hbudget` is a `ChainPack` field too (`scanBound`): the position bound is a
@@ -172,7 +172,7 @@ over the four local facts that are already `ChainPack` fields.  Nothing replaces
 it: `shiftLocalS_of_chainPack` needs no mode hypothesis either, because every
 field of `ShiftLocalS` is premised on `ScanNR x`, so the mode is available from
 inside the field. -/
-theorem pal_in_peg_final36 (entry q : ℕ) (first : Fin 9)
+theorem given_chainPackAtAnyState_andMore_FALSE_HYP (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
@@ -184,7 +184,7 @@ theorem pal_in_peg_final36 (entry q : ℕ) (first : Fin 9)
       ChainPosInv2 w c s → ChainPack q first w c s)
     :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_final5MW3 entry q first
+  given_bootOracleRealize_and_chainPackAtAnyState entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       (bootIPack_of_parts centreC placeC entry q first h_lrepC
@@ -206,7 +206,7 @@ theorem pal_in_peg_final36 (entry q : ℕ) (first : Fin 9)
     (fun w st hst => by rw [hst]; exact chainPosInv2_of_idle (boot_chain_idle w))
     (fun w => hpack w)
 
-#print axioms pal_in_peg_final36
+#print axioms given_chainPackAtAnyState_andMore_FALSE_HYP
 
 
 end PalPeg.CloseoutFinalW3
