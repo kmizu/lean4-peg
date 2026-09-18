@@ -38,7 +38,11 @@ open GalilScaffoldTop
 open PalPeg.GalilScaffoldCounter (Canonical value)
 open PalPeg.GalilScaffoldSearchRun (SafeQuanta)
 open PalPeg.CloseoutDebtAudit (dpEvents)
-open PalPeg.GalilBranchInvariants2 (DpReached DpSafeHere dpReached_step)
+open PalPeg.GalilBranchInvariants2 (DpReached DpSafeHere dpReached_step PrepInv
+  prepInv_prepare prepInv_tick)
+open PalPeg.GalilSearchReadyInv (prepInv_of_notPrep prepInv_afterAdvance advance_mode
+  waitStep_mode doubleStep_mode growStep_mode)
+open PalPeg.CloseoutPreload13 (run_step_quanta)
 open PalPeg.CloseoutReadyStage (dpSafeStage_pre_ne_nil)
 open PalPeg.DpBudgetBalance (DpBudget dpBudget_spent dpBudget_mono dpBudget_background
   dpBudget_comparison)
@@ -152,7 +156,7 @@ theorem dpBudgetAt_entry {v : SearchVM} {w : List (Fin 3)} {lower : ℕ}
 `GalilBranchInvariants2.SearchReady` is vacuous, so only the preparation
 invariant is asked for; inside `.run` the budget of §1 is asked for as well. -/
 def ReadyAt (v : SearchVM) (k : ℕ) : Prop :=
-  PalPeg.GalilBranchInvariants2.PrepInv v.toPrep ∧
+  PrepInv v.toPrep ∧
     (v.search.mode = GalilScaffoldSearchFinish.Mode.run → DpBudgetAt v k)
 
 /-- **The `ready` field of `CloseoutReadyStage.ReadyIface`, for `ReadyAt`.** -/
@@ -175,5 +179,117 @@ theorem readyAt_mono {v : SearchVM} {k k' : ℕ} (hk : k' ≤ k) (h : ReadyAt v 
 #print axioms dpBudgetAt_background
 #print axioms dpBudgetAt_comparison
 #print axioms dpBudgetAt_mono
+
+/-! ## 3. Transport along one search quantum -/
+
+/-- **`PrepInv` survives one search quantum.**  This is the first component of
+`CloseoutReadyStage.readyRemS_step` on its own: every branch of `searchStep`
+either lands outside the four preparation modes (`prepInv_of_notPrep`), runs a
+preparation tick (`prepInv_tick`) or dispatches `prepare` (`prepInv_prepare`). -/
+theorem prepInv_searchStep {center : GalilScaffoldPlace.Place} {a : Bool} {v v' : SearchVM}
+    (hprep : PrepInv v.toPrep) (hstep : searchStep center a v v') : PrepInv v'.toPrep := by
+  classical
+  unfold searchStep at hstep
+  cases hm : v.search.mode with
+  | idle => rw [hm] at hstep; subst hstep; exact hprep
+  | found => rw [hm] at hstep; subst hstep; exact hprep
+  | missed => rw [hm] at hstep; subst hstep; exact hprep
+  | grow =>
+    rw [hm] at hstep
+    by_cases hp : GalilScaffoldCounter.positive v.search.work = true
+    · simp only [hp, if_true] at hstep
+      rw [hstep]
+      show PrepInv (GalilScaffoldPreparePaced.afterAdvance a
+        (GalilScaffoldStagePrepare.growStep v.toPrep))
+      exact prepInv_afterAdvance a
+        (prepInv_of_notPrep (Or.inr (Or.inl (by rw [growStep_mode]; exact hm))))
+    · simp only [hp, Bool.false_eq_true, if_false] at hstep
+      rw [hstep]
+      show PrepInv (GalilScaffoldPreparePaced.afterAdvance a _)
+      exact prepInv_afterAdvance a (prepInv_prepare _ _ _)
+  | lower =>
+    rw [hm] at hstep; obtain ⟨y, hy, hv'⟩ := hstep
+    rw [hv']; show PrepInv (GalilScaffoldPreparePaced.afterAdvance a y)
+    exact prepInv_afterAdvance a (prepInv_tick hy hprep)
+  | lowerHome =>
+    rw [hm] at hstep; obtain ⟨y, hy, hv'⟩ := hstep
+    rw [hv']; show PrepInv (GalilScaffoldPreparePaced.afterAdvance a y)
+    exact prepInv_afterAdvance a (prepInv_tick hy hprep)
+  | copy =>
+    rw [hm] at hstep; obtain ⟨y, hy, hv'⟩ := hstep
+    rw [hv']; show PrepInv (GalilScaffoldPreparePaced.afterAdvance a y)
+    exact prepInv_afterAdvance a (prepInv_tick hy hprep)
+  | home =>
+    rw [hm] at hstep; obtain ⟨y, hy, hv'⟩ := hstep
+    rw [hv']; show PrepInv (GalilScaffoldPreparePaced.afterAdvance a y)
+    exact prepInv_afterAdvance a (prepInv_tick hy hprep)
+  | run =>
+    rw [hm] at hstep
+    obtain ⟨hq, -, -⟩ := hstep
+    by_cases hrun : v'.search.mode = GalilScaffoldSearchFinish.Mode.run
+    · exact prepInv_of_notPrep (Or.inr (Or.inr (Or.inl hrun)))
+    · rcases GalilScaffoldSearchRun.quanta_exit_mode hq hm hrun with hf | hmi | hw | hd
+      · exact prepInv_of_notPrep (Or.inr (Or.inr (Or.inr (Or.inl hf))))
+      · exact prepInv_of_notPrep (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl hmi)))))
+      · exact prepInv_of_notPrep (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl hw))))))
+      · exact prepInv_of_notPrep (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr hd))))))
+  | wait =>
+    rw [hm] at hstep
+    have hmode : v'.search.mode = GalilScaffoldSearchFinish.Mode.double ∨
+        v'.search.mode = GalilScaffoldSearchFinish.Mode.wait := by
+      rw [hstep]
+      show (GalilScaffoldSearchRun.advance a (GalilScaffoldDouble.waitStep true v.search)).mode = _ ∨
+        (GalilScaffoldSearchRun.advance a (GalilScaffoldDouble.waitStep true v.search)).mode = _
+      rw [advance_mode]
+      rcases waitStep_mode v.search with h1 | h1
+      · exact Or.inl h1
+      · exact Or.inr (h1.trans hm)
+    rcases hmode with h1 | h1
+    · exact prepInv_of_notPrep (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr h1))))))
+    · exact prepInv_of_notPrep (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl h1))))))
+  | double =>
+    rw [hm] at hstep
+    by_cases hp : GalilScaffoldCounter.positive v.search.work = true
+    · simp only [hp, if_true] at hstep
+      have hmode : v'.search.mode = GalilScaffoldSearchFinish.Mode.double := by
+        rw [hstep]
+        show (GalilScaffoldSearchRun.advance a (GalilScaffoldDouble.step v.search)).mode = _
+        rw [advance_mode, doubleStep_mode]
+        exact hm
+      exact prepInv_of_notPrep (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr hmode))))))
+    · simp only [hp, Bool.false_eq_true, if_false] at hstep
+      rw [hstep]
+      show PrepInv (GalilScaffoldPreparePaced.afterAdvance a _)
+      exact prepInv_afterAdvance a (prepInv_prepare _ _ _)
+
+/-- **The `background` field, modulo the entry.**  A background tick inside the
+`.run` phase is `dpBudgetAt_background`; a tick that *enters* `.run` is the one
+place where the stage debt has to be re-funded, and that is the named
+hypothesis. -/
+theorem readyAt_background {center : GalilScaffoldPlace.Place} {v v' : SearchVM} {k k' : ℕ}
+    (hk : k' ≤ k + 1) (h : ReadyAt v k) (hstep : searchStep center false v v')
+    (hentry : v.search.mode ≠ GalilScaffoldSearchFinish.Mode.run →
+      v'.search.mode = GalilScaffoldSearchFinish.Mode.run → DpBudgetAt v' k') :
+    ReadyAt v' k' := by
+  refine ⟨prepInv_searchStep h.1 hstep, fun hrun' => ?_⟩
+  by_cases hrun : v.search.mode = GalilScaffoldSearchFinish.Mode.run
+  · exact dpBudgetAt_background hrun hk (h.2 hrun) (run_step_quanta hrun hstep).1
+  · exact hentry hrun hrun'
+
+/-- **The `comparison` field, modulo the entry.**  The guard `2048 ≤ k + 1` is
+what `dpBudgetAt_comparison` spends on the unit of debt. -/
+theorem readyAt_comparison {center : GalilScaffoldPlace.Place} {v v' : SearchVM} {k : ℕ}
+    (hk : 2048 ≤ k + 1) (h : ReadyAt v k) (hstep : searchStep center true v v')
+    (hentry : v.search.mode ≠ GalilScaffoldSearchFinish.Mode.run →
+      v'.search.mode = GalilScaffoldSearchFinish.Mode.run → DpBudgetAt v' 0) :
+    ReadyAt v' 0 := by
+  refine ⟨prepInv_searchStep h.1 hstep, fun hrun' => ?_⟩
+  by_cases hrun : v.search.mode = GalilScaffoldSearchFinish.Mode.run
+  · exact dpBudgetAt_comparison hrun hk (h.2 hrun) (run_step_quanta hrun hstep).1
+  · exact hentry hrun hrun'
+
+#print axioms prepInv_searchStep
+#print axioms readyAt_background
+#print axioms readyAt_comparison
 
 end PalPeg.DpBudgetState

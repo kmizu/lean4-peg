@@ -1,3 +1,59 @@
+## n204 — 輸送 2 場も立った。残差は `.run` 新規入口 1 点に凝縮
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+`PalPeg/DpBudgetState.lean` に 3 定理を追加（全 12 定理、標準 3 公理、全体 build 緑）。
+
+### `PrepInv` の保存
+
+```lean
+theorem prepInv_searchStep (hprep : PrepInv v.toPrep) (hstep : searchStep center a v v') :
+    PrepInv v'.toPrep
+```
+
+`CloseoutReadyStage.readyRemS_step` の第 1 成分を単体で取り出したもの。`searchStep` の
+どの分岐も、4 つの準備モードの外に着地する（`prepInv_of_notPrep`）か、準備 tick を回す
+（`prepInv_tick`）か、`prepare` を発行する（`prepInv_prepare`）かのいずれかや。
+既存の部品だけで、新しい数学はゼロ。
+
+### 輸送 2 場
+
+```lean
+theorem readyAt_background (hk : k' ≤ k + 1) (h : ReadyAt v k)
+    (hstep : searchStep center false v v')
+    (hentry : v.search.mode ≠ .run → v'.search.mode = .run → DpBudgetAt v' k') :
+    ReadyAt v' k'
+theorem readyAt_comparison (hk : 2048 ≤ k + 1) (h : ReadyAt v k)
+    (hstep : searchStep center true v v')
+    (hentry : v.search.mode ≠ .run → v'.search.mode = .run → DpBudgetAt v' 0) :
+    ReadyAt v' 0
+```
+
+run 相の中の刻みは `run_step_quanta` ＋ n202 の `dpBudgetAt_background` / `dpBudgetAt_comparison`
+でそのまま通り、非 run のままの刻みは節が空虚。**残るのは「非 `.run` → `.run` の新規入口」1 点だけ**で、
+それを名前付き仮説 `hentry` に出した。
+
+### いま立ってる絵
+
+`Φ = ReadyAt` に対して `ReadyIface` の 4 場のうち
+
+* `ready` — 済（n203）
+* `mono` — 済（n203）
+* `background` / `comparison` — **`hentry` を除いて済**
+
+`hentry` の中身は n203 の `dpBudgetAt_entry` により
+
+```
+(dpEvents w.length + 2047) / 2048 ≤ (value v'.search.debt).toNat
+```
+
+の 1 本（preload `w` は `run_entry_preload` が与える）。つまり**「ステージ債務が
+DP の必要イベント 2048 ごとに比較 1 回を賄う」だけが残差**や。これは
+`bal_of_paced_slack_S` / `dpDemandS` が言うてる内容そのもので、
+`StageLocalPrep`（n189）と `StageDoubleLeg`（n198）がその供給側の部品になる。
+
+**今回も何も落としてへん**（公理 3 本のまま）。`hentry` を閉じて初めて
+`StageEntryC.fuel` が埋まり、`NoReturn` / `EntryDepthG` 経路が不要になる。
 ## n203 — `.run` 入口と `ReadyAt`：`ReadyIface` の `ready`/`mono` が周期全体で立った
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
