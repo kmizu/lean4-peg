@@ -1,3 +1,50 @@
+## 2026-09-19 n147: **訂正** — 「中身は strictly weaker」は嘘やった
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。**
+
+### 何を間違えたか
+
+n145 と n146 で「公理の本数は 4 のまま、**中身は元より弱い**」と書いた。
+`ShiftPal` 公理については**これは嘘**。
+
+* 旧: `obligation_shiftPalAlongTrace` — 結論 `ShiftPal` そのもの
+* 新: `obligation_shiftPalResiduesAlongTrace` — 残差 3 つ
+* 定理は `残差 3 つ → ShiftPal`。**つまり残差は `ShiftPal` を含意する = 論理的には強い。**
+  逆向き（`ShiftPal → 残差`）は無い。
+
+「結論を前提に置き換えたら弱くなる」は成り立たない。**弱くなるのは guard を
+狭めたときだけ。** 自分の言葉を検査せずに 2 回書いた。
+
+### 弱くなった部分（こっちは本物）
+
+| 変更 | 弱くなったか | 理由 |
+|---|---|---|
+| `obligation_shiftPalAlongRun` → `…AtWatchAlongRun` | **○ 本物** | chain が watch の点だけに guard を狭めた。非 watch は `shiftPal_of_chainNotWatch` で定理 |
+| `…AtWatchAlongRun` に `canRight z.vm.right` を追加 | **○ 本物** | 消費者が持っている場を仮説に入れた（過剰量化の解消） |
+| `ShiftPal` → 残差 3 つ（run 形・trace 形とも） | **× 逆に強い** | 残差が `ShiftPal` を含意する |
+
+### では残差化は前進なのか
+
+**前進ではあるが、「弱くなった」という理由ではない。** 正しい理由は 3 つ:
+
+1. **`ShiftPal` は global 形では偽の疑いが濃く producer が無かった**（n112）。
+   残差 3 つはどれも **producer が特定済み**（`readsShift_at_actual` /
+   `first_round` / `candidate_palAt`）
+2. 残差は**機械レベルの事実**で、入力語についての回文の主張を含まない方向に動いている
+   （n147 で `FreshShiftLedger` の 2 回文は `candidate_palAt` で消える見込み）
+3. **本数は増えていない**（4 のまま）
+
+### 公理の操作で許される 3 種類（以後これで判定する）
+
+| 操作 | 弱くなるか | 本数 |
+|---|---|---|
+| (A) guard を消費者が供給する場まで狭める | **弱くなる** | 変わらず |
+| (B) 結論を「十分な primary な前提」に置き換える | **弱くならない**（強い） | 変わらず。前進は「証明可能性」 |
+| (C) サブ前提を定理として証明して公理から外す | **弱くなる** | **減る**（これが本命） |
+
+n145/n146 は (A) と (B) を混ぜて (B) も「弱い」と書いた。これが誤り。
+
 ## 2026-09-19 n146: run 形 `ShiftPal` も残差 3 つに（公理は 4 本のまま、中身はさらに弱い）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
@@ -7,6 +54,9 @@
 
 `obligation_shiftPalAtWatchAlongRun`（watch 点での `ShiftPal` そのもの）を
 `obligation_shiftPalResiduesAlongRun`（残差 3 つ）に置き換えた。**本数は増えていない。**
+
+**n147 訂正**: この置き換えは**弱化ではない**（残差は `ShiftPal` を含意する）。
+弱くなったのは `canRight` を仮説に入れた部分だけ。
 
     [propext, Classical.choice, Quot.sound,
      obligation_cycleOracle,
@@ -86,7 +136,7 @@ CLAUDE.md の「公理は 1 場ずつの原子に分解する」を根拠にし�
      obligation_shiftPalAtWatchAlongRun,        -- watch 点で ShiftPal（run 形）
      obligation_shiftPalResiduesAlongTrace]     -- trace 形の残差 3 つを束ねたもの
 
-**元の 4 本より中身は弱い**:
+**元の 4 本と中身が違う**（n147 で訂正: 下の 2 つ目は**弱くなっていない**）:
 
 * `obligation_shiftPalAlongRun` → `…AtWatchAlongRun`（chain が watch の点だけ。
   非 watch は `shiftPal_of_chainNotWatch` で空虚）
