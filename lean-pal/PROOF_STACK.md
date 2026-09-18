@@ -90,6 +90,38 @@ CLAUDE.md の記述では `CycleOracleMC3` は origin/着地とも `InvLPS` な�
 **残る差は `ReadyFuel` 1 つ**（`StageEntryC = InvLPS ＋ ReadyFuel`）。
 `SegReachedW` は `GalilInvPlus.segment_of_invLP` ＋ 既に閉じている `hlive`/`hends`。
 
+### n178: `ReadyFuel` は素朴な形が 2 つとも**機械検査で偽**（書く前に探して助かった）
+
+`StageEntryC = InvLPS ＋ ReadyFuel` の残る差 `ReadyFuel` を攻めようとして、
+先に producer を探した。結果:
+
+| 候補 | 状態 |
+|---|---|
+| `GalilReplaySpan.RunEntriesAtBegin` | **偽**（`CloseoutReadinessAudit.not_runEntriesAtBegin`、機械検査済み） |
+| `GalilReplaySpan.RunEntriesPaced 2048` | **偽**（`CloseoutRunEntriesPaced`、機械検査済み） |
+
+`readyFuel_of_stage`（`GalilReplaySpan:3764`）は `ReplayStage` ＋ `RunEntriesAtBegin` から
+任意の `n K` で `ReadyFuelD` を出すが、**その第 2 入力が偽**なので使えない。
+
+理由（`CloseoutRunEntriesPaced` の冒頭、一次情報）:
+`RunEntriesAllD` は `.run` 入口で残り全部に `DpSafeRem` を要求し、
+`DpSafeRem v as → as.count true ≤ value v.debt`。つまり**固定の債務で
+いくらでも長い tail を払え**と言っている。pacing は比較の**頻度**を縛るが**回数**は縛らない。
+
+**正しい形**（同ファイルが明記）:
+
+    RunEntriesPacedS delay : … → StageEntry Rad last →
+      ∀ av, (advances delay delay (av.map (·, true))).count true ≤ stageDebt Rad →
+        RunEntriesAllD (advances delay delay (av.map (·, true))) v
+
+`stageDebt Rad k = 2 * max k 1 - Rad`（`CloseoutPreload11:109`）。
+つまり **stage 債務の会計**が要る。`CloseoutPreload11` が `stageDebt` ＋ `stageCredit` で
+それを展開している。
+
+**教訓**: `ReadyFuel` を「証明しにいく」前に探したので、偽の命題を証明しようとして
+無駄にする事故を避けられた。CLAUDE.md の「まず証明を書こうとする」は
+「先に既存の反証を探す」と両立する。
+
 ### n175 の教訓（これが一番大事）
 
 **44 本書いて計器は 1 本も動かなかった。0 本書いて 1 本外れた。**

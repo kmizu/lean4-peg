@@ -1,3 +1,39 @@
+## 2026-09-19 n178: `ReadyFuel` の素朴な形は 2 つとも機械検査で偽（探して助かった）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+n177 で `StageEntryC = InvLPS ＋ ReadyFuel` の `InvLPS` 側を無償にしたので、
+残る `ReadyFuel` を攻めようとした。**書く前に producer を探したら、両方偽だった。**
+
+| 候補 | 状態 |
+|---|---|
+| `GalilReplaySpan.RunEntriesAtBegin` | **偽**（`CloseoutReadinessAudit.not_runEntriesAtBegin`） |
+| `GalilReplaySpan.RunEntriesPaced 2048` | **偽**（`CloseoutRunEntriesPaced`） |
+
+`readyFuel_of_stage`（`GalilReplaySpan:3764`）は `ReplayStage` ＋ `RunEntriesAtBegin` から
+任意の `n K` で `ReadyFuelD` を出すが、第 2 入力が偽なので使えない。
+
+理由（一次情報）: `RunEntriesAllD` は `.run` 入口で残り全部に `DpSafeRem` を要求し、
+`DpSafeRem v as → as.count true ≤ value v.debt`。**固定の債務でいくらでも長い tail を
+払え**と言っている。pacing は比較の頻度を縛るが回数は縛らない。
+
+**正しい形**は同ファイルが明記している `RunEntriesPacedS`——
+イベント列を stage の終わりで切り、`count true ≤ stageDebt Rad` を側条件に足す。
+`stageDebt Rad k = 2 * max k 1 - Rad`（`CloseoutPreload11:109`）で、
+`CloseoutPreload11` が `stageDebt` ＋ `stageCredit` の会計を展開している。
+
+**これが `hpres` の正体で、残り 3 本のうち 2 本が共有する底の最後の 1 つ。**
+
+### この session の (C)/(A) の記録
+
+| n | 操作 | 効果 |
+|---|---|---|
+| n145 | 6 → 4 に戻した | 本数 |
+| n175 | trace 形を run 形から導出 | **4 → 3**（新規定理ゼロ） |
+| n177 | `PackRunRMW` を `InvLPS` に上げた | 公理の文が弱くなった（`ReplayStage` は捨てられていた） |
+| n178 | `ReadyFuel` の偽の形 2 つを確認 | **無駄な証明を回避** |
+
 ## 2026-09-19 n177: `obligation_shiftPalResiduesAlongRun` の仮説を `InvLPC` → `InvLPS` に強めた（公理は弱くなる）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
