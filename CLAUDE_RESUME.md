@@ -1,3 +1,79 @@
+## n196 — n195 の診断は間違いやった。`NoReturn` が producer の壁（一次情報で確定）
+
+**状態: 全体 build 成功（このターンは編集なし）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### n195 の訂正
+
+n195 で「`ReadyPacedS` の `∀ as` が過剰量化で、それが `StageEntryC.fuel` の壁」と書いた。
+**過剰量化の測定自体は正しい（消費者は 4 補題しか通らず、任意リストに具体化しない）が、
+それは producer の壁やない。**
+
+一次情報 `CloseoutPreload37.readyField2_entry_of_datum:199`:
+
+```lean
+have hp : ReadyPacedS (searchLens.get r) (dpEntryG (value last).toNat D) 0 :=
+  readyPacedS_restarted hR _ 0
+    (fun as hlen hpaced => runEntriesS_of_namedG hR hSE hcl hnr hdep hD as hlen hpaced)
+```
+
+`∀ as` は `runEntriesS_of_namedG` が既に捌いてる。詰まってるのは仮説 `hnr : NoReturn u` や。
+**`ReadyIface` による `Φ` 抽象化は consumer 側の記録としては有効やが、producer を 1mm も助けへん。**
+15 ファイル超の改修に入る前に測って助かった。
+
+### `NoReturn` の正体（`CloseoutPreload6.runEntriesS_of_namedG:231`）
+
+`hnr` の使用は 3 箇所、全部同じ形 `(hnr bs v hreach hne) : ReachL … bs v → ReachP … bs v`。
+渡し先は 2 本だけ:
+
+* `CloseoutPreload5.entry_shape:498` — `ReachP` → prep 形（`PrepTrace v0 n v` ＋ 窓の較正）
+* `CloseoutPreload5.entry_debt:529` — `ReachP` → 入口債務 `stageDebt Rad k − (bs++[a]).count true`
+
+どちらも `ReachP` を `phase_reach hR hcl hp` に食わせてるだけ。
+`NoReturn` は **「restart 起点 `u` からの `ReachL` を `ReachP` に変える変換器」以外の仕事をしてへん。**
+偽になる理由も同じで、`.run` を一度通ったら `u` 起点の `ReachP` は破れる。
+
+### `PrepAt` 基底版は既にある
+
+`CloseoutPreload35.dpSafe_of_stagePrepD_slack:145` の中身が一次情報:
+
+```lean
+obtain ⟨W, lower, hW, hpreload⟩ := entry_preload_at_prep hp hreach hs hrun
+obtain ⟨hcan, hdv⟩          := entry_debt_at_prep   hp hreach hs hrun
+```
+
+`entry_preload_at_prep` / `entry_debt_at_prep` が `entry_shape` / `entry_debt` の `PrepAt` 基底版で、
+**`NoReturn` を取らへん**。2 つの到達述語は同じ形で基底だけ違う:
+
+| | 到達関係 | 基底 | 追加仮説 |
+|---|---|---|---|
+| `QG u k D`（Preload6） | `ReachL` | restart `u` | **`NoReturn`**（偽） |
+| `StagePrepS k m D slack w`（Preload35:127） | `ReachP` | `PrepAt` 状態 `w` | なし |
+
+### それでも単純な差し替えは効かへん（ここが本当の壁）
+
+`StagePrepS` は `ReachP` やから `.run` を通れへん。`stagePrepS_next` は `hne : v'.mode ≠ run` を要求する。
+よって **1 つの `PrepAt` から伸びるのは 1 ステージ分だけ**。
+`RunEntriesS as v` は `as` 全体に沿った**すべての** run 入口で `DpSafeStage` を要求するので、
+ステージを跨ぐには基底を置き直さなあかん。その置き直しが `CloseoutPreload10.prepAt_of_double_exit`
+（`.double` 出口で `PrepAt k (2m)` を再確立）であり、それを鎖にしたのが
+`CloseoutPreload36.StageChain` や。
+
+つまり n194 で「2 本の線が食い違う」と書いたものの正体は、抽象化の不足やなくて
+**「任意の paced リストに対してステージ鎖が張れるか」という全域性**やった。
+
+### 次（この順）
+
+1. **全域性補題**: `PrepAt k m v` と十分長い paced `as` から `StageChain k m mw' evs tail` を構成する。
+   材料は `CloseoutPreload35.postRunF_next_entry:429`（run 入口から次の入口）と
+   `doubleTrace_det:489`（double 相の決定性）。`RunEntriesS` の `∀ center v', searchStep …` に
+   応えるには決定性が要るので、まず `doubleTrace_det` の届く範囲を測る。
+2. 1 が出れば `postRunC_galil_of_boot` で `RunEntriesS` が出て、`runEntriesS_of_namedG` から
+   `NoReturn` が落ちる。**公理の下の偽の前提が 1 本減る**（操作 (C)）。
+3. `readyField2_entry_of_datum` → `StageEntryC.fuel` は配線済みなのでそのまま通る。
+4. 残る boot 段（`k ≤ 1`、窓 8、slack 0）は `CloseoutPreload28` 経路で別途。
+
+`ReadyInterface.lean` は消さへん。consumer 側の過剰量化の測定は事実として正しく、
+`StageEntryC.fuel` を将来切り直すときの記録として残す。ただし **今のところ何も落としてへん**。
 ## 2026-09-19 n195: `ReadyPacedS` は過剰量化だった（測定済み）——インターフェイスを切り出した
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
