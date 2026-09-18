@@ -74,6 +74,7 @@ import PalPeg.GalilSourceCost
 import PalPeg.CloseoutFinalVer
 import PalPeg.CloseoutFinalBranch
 import PalPeg.MatchedRunSnoc
+import PalPeg.ShiftPhaseDeterminism
 
 /-!
 # `Workbench` — 作ったが正本の鎖に配線されていない部品
@@ -171,6 +172,26 @@ import PalPeg.MatchedRunSnoc
 inductive で、**`Tick` の `scan_wait` / `scan_count` / `scan_match` と 1 対 1 に対応する**。
 ただし前からしか積めないので、run を歩きながら積むには末尾伸長が要る。それがこの 5 本。
 これがあれば `CompareRounds.next` の `OnlyMatchedRun` 引数は区間抽出なしで手に入る。
+
+| `scanSeg_of_steps` | scan ＋ watch の区間に沿って `ScanSeg` が伸びる |
+| `onlyMatchedRun_of_steps` | その末尾で下層の `OnlyMatchedRun`（`CompareRounds.next` の第 1 引数） |
+| `compare_mismatched_parts` | 不一致比較 tick の分解（ラウンド境界用） |
+
+## `ShiftPhaseDeterminism` — shift 相は `Fair` なしで決定的（未配線）
+
+| 定理 | 内容 |
+|---|---|
+| `refresh_det` | 出力の更新は一意 |
+| `shiftOne_det` | 1 単位の shift は行き先を一意に決める |
+| `tick_shift_det` | shift 相の tick は一意（`Tick` の 24 構成子を両側で潰した） |
+| `steps_shift_det` | 中間が全部 shift 相なら同じ長さの 2 本の run は同じ状態に着く |
+
+**主定理との関係**: `round_next` はラウンド 1 周を**構成**して `Steps` と
+`CompareRounds h (toOnly s w0) 1 (toOnly (構成した着地) v)` を返す。`RoundSeg`
+（したがって `OriginAt` の搬送）に使うには構成した着地と run の実際の着地を
+同一視する必要があり、その差は **shift 相だけ**（scan 側は
+`onlyMatchedRun_of_steps` が実際の状態で直接出す）。shift 相は無条件に決定的なので、
+`Fair` を持ち出さずに同一視できる。
 
 **`scanSeg_snoc_tick` で tick 補題は済んだ**（標準 3 公理）。残るのは、これを run 不変量
 （「いまの状態はあるラウンド起点から `n` 手の一致比較で到達した」）に仕立てて、
