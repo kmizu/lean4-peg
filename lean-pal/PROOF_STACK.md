@@ -271,15 +271,25 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
    shift 相の手数が `h` であることは `chainShiftRun_length_eq`（**済 n156**）で、
    `ShiftRun` は `shiftRun_of_chain hchain` からタダ、
    `hlen : Canonical (inc (inc s1.length))` は `inc_canonical` 2 回
-8. `RoundSeg w s₀ post` を作る。第 1 節 `periodLength v = periodLength w₀` は
+8. **済（n159）**: `RoundHistory.roundSeg_of_run`。第 1 節 `periodLength v = periodLength w₀` は
    `periodLength_onlyMatchedRun`（scan 相、**済**）＋ `periodLength_consume`（`immediate`）＋
    `chain_shift_periodLength`（shift 相、**済**）の合成
-9. `CloseoutRoundSeg.originAt_of_roundSeg` → 次のラウンド起点の `OriginAt`
+9. **済（n159）**: `RoundHistory.originAt_next_of_run`（`originAt_of_roundSeg` の上に 1 行）
 10. `roundHistory_start` で次のラウンドの `RoundHistory`
-11. `CloseoutReadsOrigin.originShift_of_roundSeg` → `OriginShift` → `h_readsShift_of_originShift`
+11. **済（n159）**: `RoundHistory.h_readsShift_of_run`（`originShift_of_roundSeg` ＋ `h_readsShift_of_originShift`）
     → **`H_readsShift`**
 
-**部品はもう全部ある（n156）。あとは 1〜11 を繋ぐ組み立てだけ。**
+**手順 7〜9・11 は済（n158/n159）。残るは基底と境界検出（下）。**
+
+### 最後の壁: `RoundHistory` を run に沿って引き継ぐ帰納
+
+* **基底**: chain 誕生時の `OriginAt` ← `GalilScaffoldTopFirstRound.first_round`（無条件）
+* **帰納**: `originAt_next_of_run`（済）でラウンドごとに引き継ぐ
+* **境界検出**: run のどこが `scan_shift` かを特定して、`roundHistory_of_steps` の
+  `hScanWatchAll` と `chainShiftRun_of_steps` の `hShiftAll` を供給する
+
+これができたら `H_readsShift` が trace / run の全点で出て、
+`obligation_shiftPalResidues*` の第 1 残差が**公理から外れる**（(C) の操作）。
 `PalPeg/RoundHistory.lean` は 20 宣言、全部標準 3 公理以内（3 本は公理ゼロ）。
 shift 末尾の射影の形は `toOnly_shiftEnd_eq`（**済 n157**）。
 
