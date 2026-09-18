@@ -85,4 +85,53 @@ theorem prepLandingWatchC_or_segEnd (P : Shared) (q : ℕ) (first : Fin 9) (h : 
 #print axioms reachesWatchPhase_or_segEnd
 #print axioms prepLandingWatchC_or_segEnd
 
+
+/-! ## found 誕生点での組み立て
+
+`FoundCompareCtxC`（`CloseoutWatchRound2:270`）は誕生を
+
+    ChainMatched (chainStart (vq.dp.config.tapes 11) (P.centre sF) (P.place sF)
+      sF.center sF.radius) ch  ∧  sP = afterBirth true (afterCompare sF ⟨…, ch⟩ vq)
+
+の形で持っている。そこから `reachesWatchPhase_or_segEnd` の 3 入力が全部出る:
+
+| 入力 | 出どころ |
+|---|---|
+| `CopyOrBack sP.chain` | `CopyPhaseTick.copyOrBack_of_chainMatched_chainStart` ＋ `AnswerAheadDecode.copyInv_of_found` |
+| `LagPos sP.chain` | `CopyPhaseTickMatched.lagPos_of_chainMatched_chainStart` |
+| `hChainReachesWatch` | `ChainReachesWatchFromFound.chainReachesWatch_of_found` |
+
+`cP.mode` / `cP.replaying` / `1 ≤ cP.clock` も `FoundCompareCtxC` が持っている
+（`cP = {cF with clock := 2048, output := oF, replaying := false}`）。
+
+**残る側条件は誕生時の半径が `ofNat (r0+1)` 形であること**——`found_to_watchStart_least` が
+その形を要求し、`LagPos` も lag の正値を要求する。`CloseoutWatchRound7.FoundRadiusCanonC`
+（`Canonical sF.radius`）＋ 「found 時の半径は正」（`ASSEMBLY_PLAN` が既存の仮定として
+挙げているもの）＋ `CloseoutPreload5.canonical_eq_ofNat` で出るはず。 -/
+
+/-- **found 誕生点で `ReachesWatchPhase ∨ SegEnd`。**  chain 側の入力はすべて
+誕生の `ChainMatched` と `CopyInv` から出る。 -/
+theorem reachesWatchPhase_or_segEnd_at_foundBirth (P : Shared) (q : ℕ) (first : Fin 9)
+    {cP : Control} {sP : GalilVM}
+    {answer : GalilScaffoldTape.Tape} {cen : Fin 3}
+    {walker : GalilScaffoldPlace.Place} {ver : GalilScaffoldInputHead.PlaceHead}
+    {r0 h : ℕ}
+    (hScan : cP.mode = Mode.scan) (hNotReplaying : cP.replaying = false)
+    (hClock : 1 ≤ cP.clock)
+    (hBirth : ChainMatched (chainStart answer cen walker ver (ofNat (r0 + 1))) sP.chain)
+    (hCopyInv : PalPeg.GalilBranchInvariants.CopyInv answer reset walker
+      (GalilScaffoldChainPeriod.start cen) h)
+    (hChainReachesWatch : ∀ es : List Bool, es.length = 2 * h + 2 →
+      ∃ w : GalilScaffoldChainWatch.State, ChainTicks es sP.chain (ChainVM.watch w)) :
+    ReachesWatchPhase P q first cP sP ∨
+      ∃ (es : List Bool) (c' : Control) (s' : GalilVM),
+        WatchSegE P q first 2048 es cP sP c' s' ∧ SegEnd P c' s' ∧
+        c'.mode = Mode.scan ∧ c'.replaying = false ∧ CopyOrBack s'.chain :=
+  reachesWatchPhase_or_segEnd P q first h hScan hNotReplaying hClock
+    (copyOrBack_of_chainMatched_chainStart hBirth hCopyInv)
+    (lagPos_of_chainMatched_chainStart hBirth)
+    hChainReachesWatch
+
+#print axioms reachesWatchPhase_or_segEnd_at_foundBirth
+
 end PalPeg.ReachesWatchFromRun
