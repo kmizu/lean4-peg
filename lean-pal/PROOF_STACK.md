@@ -36,17 +36,43 @@
             ② 半径と周期の大小      : 0 < h ／ 2h ≤ r₀ ／ r₀ ≤ 4h ／ pos+r₀+1 < length
             ③ period テープの位相   : (encoded w)[pos+r₀+1−2h]? = symbol wch…period.focus
 
-[3] ① の橋（← いまここ）
-          DP の GalilDpCorrect.Candidate は **stream の take/reverse 形**:
-            Candidate v lower h := lower < h ∧ 4h+1 ≤ v.length ∧
-              (v.take (2h+1)).reverse = v.take (2h+1) ∧ (v.take (4h+1)).reverse = v.take (4h+1)
-          欲しいのは Manacher.PalAt (encoded raw) 形。**同型の前例がある**:
-            GalilFallbackLanding:63 / GalilInvPlus:159 / GalilLeafFb:353 …
-            は chosenRadius について
-              Manacher.PalAt (encoded raw) (position (right s.right) − chosenRadius (…take (ℓ+1)))
-                             (chosenRadius (…take (ℓ+1)))
-            を実際に出している（producer は GalilScaffoldChainFallback.fallback_replay）。
-          → **同じ道具で Candidate の 2 回文も PalAt に写せるはず。** 次の一手はここ。
+[3] ① の橋 — **済（pop）**
+          `GalilScaffoldChainInputSupply.candidate_palAt`（`PalPeg/GalilCandidatePeriod.lean:45`）が
+          **もう証明している**（標準 3 公理のみ）:
+
+            (hc : GalilDpCorrect.Candidate ((stream ⟨a::ls,gap⟩).take (span+1)) lower h) :
+              let C := position (represent ⟨a::ls,gap⟩ (rs.map some) q)
+              PalAt (encoded ((a::ls).reverse ++ rs ++ q)) (C − h) h ∧
+              PalAt (encoded ((a::ls).reverse ++ rs ++ q)) (C − 2h) (2h)
+
+          ついでに `candidate_periodOn` が `PeriodOn (encoded …) (2h) (C−4h) C` も出す。
+          **`first_round` の文脈で全部そろう**（`hcand` / `hcen0 : v0.center = cen` /
+          `hcen : cen = represent …` / `hys : ys.length+1 = h`）。
+          → CLAUDE.md「既にあるものを探す」の通りやった。新しい数学は要らんかった。
+
+[4] `FreshShiftLedger` を **1 個の named fact に絞る**（← いまここ）
+          ① が定理になったので、残差は「この状態の watch の周期が、この中心での
+          DP の `Candidate` 由来である」という 1 場に絞れる。仮に `PeriodFromCandidate`:
+
+            ∀ wch, s'.chain = .watch wch →
+              ∃ a ls rs q gap span lower,
+                w = (a::ls).reverse ++ rs ++ q ∧
+                position s.center = position (represent ⟨a::ls,gap⟩ (rs.map some) q) ∧
+                GalilDpCorrect.Candidate ((stream ⟨a::ls,gap⟩).take (span+1)) lower (periodLength wch)
+
+          これがあれば ① は `candidate_palAt` で無償、② の `0 < h` は `Candidate` の
+          `lower < h`（`lower` が 0 のときは別途）、`r₀ ≤ 4h` は Galil の move 不等式
+          （`GalilMoveLemma.galil_move_of_contract`、CLAUDE.md 記載）、
+          `2h ≤ r₀` は shift guard、`pos+r₀+1 < length` は `ScanInvariant` 側。
+          残るのは ③（period テープの位相）。
+
+          **既存の担い手候補**（未検証、次に読む）:
+          * `CloseoutPackRun42.Extra4.cand` — `mode = shift` guard 付きで
+            `∃ n lower h, Candidate ((stream (P.place x.vm)).take n) lower h`。
+            ただし `h` を `periodLength wch` に縛っていない
+          * `CloseoutFoundCompare:86,96` / `CloseoutFoundBackground:77,164` —
+            found 経路で `Candidate` を出している。`periodLength` との結びつきを確認する
+          * `CloseoutWatchRound5:452` / `CloseoutWatchRound10:333`
 ```
 
 ---
