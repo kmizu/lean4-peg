@@ -140,6 +140,71 @@ theorem periodOn_mirror {x : List α} {C k p : ℕ} (hpal : PalAt x C k) (hp : p
   rw [hm1, hm2]
   exact hstep.symm
 
+set_option linter.unusedVariables false in
+/-- **左→右の鏡映**（`periodOn_mirror` の逆向き）。回文の左半分 `[C − k, C]` での
+周期 `p` が右半分 `[C, C + k]` に移る。証明は `periodOn_mirror` と対称。
+
+fresh 側 `ShiftPal` で要るのはこちら向き——`Candidate` は中心の**左**（place stream の
+接頭辞）の回文性を保証するので、そこから現在の回文の右半分へ運ぶ。 -/
+theorem periodOn_mirror' {x : List α} {C k p : ℕ} (hpal : PalAt x C k) (hp : p ≤ k)
+    (h : PeriodOn x p (C - k) C) : PeriodOn x p C (C + k) := by
+  have hkC : k ≤ C := hpal.1
+  intro i hi hip
+  have hm1 : x[i]? = x[2 * C - i]? := Manacher.mirror_getElem? hpal (by omega) (by omega)
+  have hm2 : x[i + p]? = x[2 * C - (i + p)]? :=
+    Manacher.mirror_getElem? hpal (by omega) (by omega)
+  have hstep : x[2 * C - (i + p)]? = x[2 * C - (i + p) + p]? := h _ (by omega) (by omega)
+  rw [show 2 * C - (i + p) + p = 2 * C - i from by omega] at hstep
+  rw [hm1, hm2]
+  exact hstep.symm
+
+#print axioms periodOn_mirror'
+
+/-- **中心が `d` ずれた 2 つの回文から周期 `2d`。**
+
+`PalAt x (C − d) d`（内側）と `PalAt x (C − 2d) (2d)`（外側）から
+`PeriodOn x (2d) (C − 4d) C`。
+
+`i ∈ [C − 4d, C − 2d]` について、外側の鏡映が `x[i] = x[2(C−2d) − i]`、
+内側の鏡映が `x[i + 2d] = x[2(C−d) − (i+2d)]` を与え、
+`2(C−2d) − i = 2(C−d) − (i+2d) = 2C − 4d − i` で一致する。
+
+これが `GalilDpCorrect.Candidate` の 2 節
+（`(w.take (2h+1)).reverse = w.take (2h+1)` と `(w.take (4h+1)).reverse = w.take (4h+1)`、
+`CloseoutWatchPhase3.palAt_pair_of_candidate` 経由）から周期を出す段。 -/
+theorem periodOn_of_palAt_pair {x : List α} {C d : ℕ}
+    (hin : PalAt x (C - d) d) (hout : PalAt x (C - 2 * d) (2 * d)) :
+    PeriodOn x (2 * d) (C - 4 * d) C := by
+  have hin1 : d ≤ C - d := hin.1
+  have hout1 : 2 * d ≤ C - 2 * d := hout.1
+  intro i hi hip
+  have h1 : x[i]? = x[2 * (C - 2 * d) - i]? :=
+    Manacher.mirror_getElem? hout (by omega) (by omega)
+  have h2 : x[i + 2 * d]? = x[2 * (C - d) - (i + 2 * d)]? :=
+    Manacher.mirror_getElem? hin (by omega) (by omega)
+  rw [h1, h2]
+  congr 1
+  omega
+
+#print axioms periodOn_of_palAt_pair
+
+/-- **`reshift_from_right` の `hright` を 2 回文と現在の回文から出す。**
+
+`periodOn_of_palAt_pair` が中心の左 `[C − 4d, C]` で周期 `2d` を出し、
+`PeriodOn.mono` で現在の回文の左半分 `[C − r, C]` に絞り（`r ≤ 4d` が要る）、
+`periodOn_mirror'` で右半分 `[C, C + r]` へ移す。
+
+`r ≤ 4d` は found 時の `GalilReplayBudgetProof.found_radius_le_two_period`
+（`value sF.radius ≤ 2 * h`）から。`2d ≤ r` は `reshift_from_right` の `hsmall` と同じ。 -/
+theorem periodOn_right_of_palAt_pair {x : List α} {C d r : ℕ}
+    (hin : PalAt x (C - d) d) (hout : PalAt x (C - 2 * d) (2 * d))
+    (hcur : PalAt x C r) (hle : r ≤ 4 * d) (hp : 2 * d ≤ r) :
+    PeriodOn x (2 * d) C (C + r) :=
+  periodOn_mirror' hcur hp
+    ((periodOn_of_palAt_pair hin hout).mono (by omega) (le_refl _))
+
+#print axioms periodOn_right_of_palAt_pair
+
 #print axioms periodOn_union
 #print axioms hasPeriod_slice_iff
 #print axioms encoded_periodOn_even
