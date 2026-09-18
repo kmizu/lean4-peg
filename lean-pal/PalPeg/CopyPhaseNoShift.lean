@@ -80,6 +80,48 @@ theorem watchMismatchNoShift_parts_of_copyOrBack {s1 : GalilVM}
 #print axioms watchMismatchNoShift_parts_of_copyOrBack
 
 
+
+/-! ## 一致事象でも同じ（`ShiftPal` の `periodOnly = false` 分岐に効く） -/
+
+/-- **copy/back の 1 手の行き先は、watch でないか、lag が正の watch**——事象によらず。
+
+`a = true` の枝: `.back` から `backDone` で生まれた watch に `ChainMatched` を当てると
+`Outer.queued`（lag を `inc`、正値を保つ）か `ChainMatched.breaks`（`BreakStep` が
+`zero w.lag = true` を要求するので lag 正では不可能）。 -/
+theorem tick_not_watch_or_posLag {a : Bool} {x z : ChainVM}
+    (hPhase : CopyOrBack x) (hLag : LagPos x) (hTick : ChainTick a x z) :
+    (∀ w : GalilScaffoldChainWatch.State, z ≠ ChainVM.watch w) ∨
+      (∃ w : GalilScaffoldChainWatch.State, z = ChainVM.watch w ∧ zero w.lag = false) := by
+  obtain ⟨y, hStep, hAfter⟩ := hTick
+  cases a with
+  | false => exact tick_false_not_watch_or_posLag hPhase hLag ⟨y, hStep, hAfter⟩
+  | true =>
+    have hMatched : ChainMatched y z := hAfter
+    rcases hPhase with ⟨t, h, p, v, lag, margin, ver, m, rfl, hCopyInv⟩ |
+      ⟨v, h, lag, margin, ver, rfl⟩
+    · rcases chainStep_copy_shape hStep with ⟨t', h', p', v', margin', rfl⟩ |
+        ⟨v', h', margin', rfl⟩
+      · cases hMatched with
+        | copy _ _ _ _ _ _ _ => exact Or.inl (fun w hEq => ChainVM.noConfusion hEq)
+      · cases hMatched with
+        | back _ _ _ _ _ => exact Or.inl (fun w hEq => ChainVM.noConfusion hEq)
+    · rcases chainStep_back_shape' hStep with ⟨v', rfl⟩ | ⟨wv, rfl, hWatchLag⟩
+      · cases hMatched with
+        | back _ _ _ _ _ => exact Or.inl (fun w hEq => ChainVM.noConfusion hEq)
+      · have hPosWv : positive wv.lag = true := by rw [hWatchLag]; exact hLag
+        have hZeroFalse : zero wv.lag = false := zero_false_of_positive hPosWv
+        cases hMatched with
+        | watch w w' hOuter =>
+          cases hOuter with
+          | queued hz => exact Or.inr ⟨_, rfl, zero_false_of_positive (positive_inc hPosWv)⟩
+          | immediate hz hg =>
+            rw [hZeroFalse] at hz; exact absurd hz (by decide)
+        | breaks w w' hBreak =>
+          have hz := hBreak.1
+          rw [hZeroFalse] at hz; exact absurd hz (by decide)
+
+#print axioms tick_not_watch_or_posLag
+
 /-! ## 「tick できる相」 -/
 
 /-- **tick できる相**: lag が正の `CopyOrBack` か、watch。

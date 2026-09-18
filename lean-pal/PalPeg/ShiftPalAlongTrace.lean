@@ -1,5 +1,6 @@
 import PalPeg.BranchSupply
 import PalPeg.CloseoutBundleRun
+import PalPeg.CopyPhaseNoShift
 
 /-!
 # `ShiftPal` を trace 形で（`hSP` の正しい形）
@@ -110,6 +111,49 @@ theorem shiftPal_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
     (hBundle j hIndexPos hIndexLeTc)
     (hCanRight j hIndexLeTc (Or.inl hMode))
     (hFreshBranch j hIndexPos hIndexLeTc)
+
+
+/-! ## `periodOnly = false` 分岐の**空虚な半分**
+
+`obligation_shiftPalAtFreshChainAlongTrace`（n132 の原子 3 本目）は
+`periodOnly = false` の点で `ShiftPal` を要求する。そこで chain の相で場合分けすると:
+
+* **`CopyOrBack`（lag 正）** — 比較の行き先に `shiftGuardVM` が立たないので **空虚**（下の定理）
+* `.watch`（準備完了、まだ shift していない） — 本体。DP 正当性の帰結のはず
+
+`shiftGuardVM` は `zero w.lag = true` を要求するが、copy/back から 1 手で生まれる watch は
+lag をそのまま受け継ぐ（`backDone`）か `inc` する（`Outer.queued`）ので、誕生 chain の
+正 lag が保たれて guard が落ちる（`CopyPhaseNoShift.tick_not_watch_or_posLag`）。 -/
+
+/-- **`CopyOrBack`（lag 正）の点では `ShiftPal` は空虚に成り立つ。** -/
+theorem shiftPal_of_copyOrBack {w : List (Fin 2)} {s : GalilVM}
+    (hPhase : PalPeg.CopyPhaseTick.CopyOrBack s.chain)
+    (hLag : PalPeg.CopyPhaseTickMatched.LagPos s.chain) :
+    ShiftPal centre place entry q first w s := by
+  intro s' hCompare hNotMatched wch hChain hGuard r₀ hScanInv
+  exfalso
+  obtain ⟨vs, vq, a, hvl, hvr, hiff, hsearch, hchainAt, hteq⟩ :
+    compareFound (PofC centre place entry w) q first s s' := hCompare
+  have hNotIdle : s.chain ≠ ChainVM.idle := PalPeg.CopyPhaseTick.copyOrBack_not_idle hPhase
+  have hTick : ChainTick a s.chain vs.chain := by
+    rcases hchainAt with ⟨-, hct⟩ | ⟨hidle, -, -⟩ | ⟨hidle, -, -⟩
+    · exact hct
+    · exact absurd hidle hNotIdle
+    · exact absurd hidle hNotIdle
+  have hChainEq : s'.chain = vs.chain := by
+    rw [hteq, afterBirth_chain]
+    split <;> rfl
+  rw [hChainEq] at hChain
+  obtain ⟨wg, hwg, hZeroLag, -, -, -, -⟩ := hGuard
+  rw [hChainEq] at hwg
+  rcases PalPeg.CopyPhaseNoShift.tick_not_watch_or_posLag hPhase hLag hTick with hNot | ⟨wv, hEq, hZeroFalse⟩
+  · exact hNot wch hChain
+  · rw [hwg] at hEq
+    cases hEq
+    rw [hZeroFalse] at hZeroLag
+    exact absurd hZeroLag (by decide)
+
+#print axioms shiftPal_of_copyOrBack
 
 end
 

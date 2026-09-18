@@ -1,3 +1,40 @@
+## 2026-09-19 n134: `periodOnly = false` 分岐の空虚な半分を落とした
+
+**`PalPeg.ShiftPalAlongTrace.shiftPal_of_copyOrBack` — 標準公理、`sorry` ゼロ、単体 build EXIT=0。**
+（全体 build は未実行。公理は 6 のまま。無条件 PAL は未完、§10.5 は未達。）
+
+### 証明したもの
+
+    theorem shiftPal_of_copyOrBack (hPhase : CopyOrBack s.chain) (hLag : LagPos s.chain) :
+        ShiftPal centre place entry q first w s
+
+**`CopyOrBack`（lag 正）の点では `ShiftPal` は空虚に成り立つ。** 理由:
+`ShiftPal` は比較の行き先 `s'` に `shiftGuardVM s'` を要求し、それは
+`zero w.lag = true` を含む。しかし copy/back から 1 手で生まれる watch は lag を
+そのまま受け継ぐ（`backDone`）か `inc` する（`Outer.queued`）ので、誕生 chain の正 lag が
+保たれて guard が落ちる。`Outer.immediate` と `ChainMatched.breaks` は
+どちらも `zero lag = true` を要求するので正 lag では使えない。
+
+支えは `CopyPhaseNoShift.tick_not_watch_or_posLag`（事象によらない版、今回追加）。
+
+### 効く範囲（`periodOnly = false` 分岐の場合分け）
+
+| `(st j).vm.chain` | `ShiftPal` |
+|---|---|
+| `.idle` | **空虚** — 誕生しても `.copy`、しなければ `.idle`。どちらも watch ではない |
+| `.copy` / `.back`（lag 正） | **空虚** — `shiftPal_of_copyOrBack`（今回） |
+| `.broken` | **空虚** — `ChainStep.brokenIdle` で `.broken` のまま |
+| `.watch` | **本体** — 準備した周期が入力の本物の周期であること（DP 正当性の帰結のはず） |
+
+つまり `obligation_shiftPalAtFreshChainAlongTrace` は
+**`.watch` 相だけに狭められる**。
+
+### 残る側条件
+
+狭めるには trace の各点で `LagPos (st j).vm.chain`（copy/back 相の lag が正）が要る。
+`PreTraceIMW` が各点で運ぶ `IPackMW` に lag の場があるかは**未確認**。
+無ければ新しい義務になるので、その場合は差し引きゼロ——**先に `IPackMW` を確認すること。**
+
 ## 2026-09-19 n133: 3 原子の producer を一次情報で測った（CLAUDE.md の記述は楽観的だった）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6（n132 の分解後）。
