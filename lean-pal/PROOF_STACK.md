@@ -234,8 +234,44 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
 不一致（`b = false`）では `Outer` は `idle` のみ（`queued`/`immediate` は `b = true`）。
 よって不一致比較で watch は不変。
 
-**次**: `round_next` を run から呼ぶ組み立て（`roundSeg_of_run`）。
-残る未確認は `hlen : Canonical s1.length` の 1 個。
+**済（n153）**: `hlen` も出どころ確定（`GalilScaffoldTopSegmentHeads.scanSeg_counters`）。
+`RoundHistory` に `Canonical s₀.radius ∧ Canonical s₀.length` を足して運ぶようにし、
+`onlyMatchedRun_of_roundHistory` が末尾の `Canonical s.radius ∧ Canonical s.length` も返す。
+
+**`round_next` の入力 15 個すべての出どころが確定した。**
+
+### 次にやること: `roundSeg_of_run`（組み立て、手順を全部書く）
+
+1. `RoundHistory P q first delay w c1 s1` を持つ（ラウンド終端）
+   → `onlyMatchedRun_of_roundHistory` で
+   `⟨n, s₀, w₀, wch, OriginAt w s₀, …, OnlyMatchedRun (toOnly s₀ w₀) n (toOnly s1 wch),
+     Canonical s1.radius, Canonical s1.length⟩`
+2. `scan_shift` tick（`Tick … ⟨c1, s1⟩ ⟨{c1 with mode := .shift, clock := delay}, s2⟩`）から
+   `hm1`/`hr1`/`hc1`/`hcmp`/`hmis`/`hg`/`hb` を取る。
+   `hs2 : beginShiftVM (periodLength wch') wch' (afterMismatch s1 vs vq) s2` は
+   `beginShiftVM'` の定義（`GalilScaffoldTopGuards:35`）から。
+   `wch' = wch` は `watch_eq_of_mismatch_lagZero`（**済**）
+3. `hpred` は `shiftGuardVM (afterMismatch s1 vs vq)` の最後の節から
+   （`afterMismatch` の right は `right s1.right`。**済**）
+4. shift 相を `chainShiftRun_of_steps`（**済**）で通す。基底は `beginShiftVM` が
+   `chain := .watch (immediate wch)` / `remaining := ofNat h` / `cycle := reset` を
+   置くので `.stop`
+5. shift 末尾の状態 `y` について **`y.vm = shiftLens.set s2 (shiftLens.get y.vm)`** が要る
+   （`round_next` の結論の形に合わせるため）。**まだ作っていない小補題**:
+   `shiftOne` は `Lens.rel` なので第 2 成分が `t = L.set s (L.get t)`、
+   つまり「lens の場以外は変わらない」。これを `Steps` に沿って合成する
+6. `shift_done` tick は VM を変えない（`Tick ⟨c, s⟩ ⟨{c with mode := .scan, output := o}, s⟩`、
+   `GalilScaffoldTop:136`）
+7. `GalilScaffoldTopRoundS.round_next` を適用 → `CompareRounds h (toOnly s₀ w₀) 1 (toOnly post v)`
+8. `RoundSeg w s₀ post` を作る。第 1 節 `periodLength v = periodLength w₀` は
+   `periodLength_onlyMatchedRun`（scan 相、**済**）＋ `periodLength_consume`（`immediate`）＋
+   `chain_shift_periodLength`（shift 相、**済**）の合成
+9. `CloseoutRoundSeg.originAt_of_roundSeg` → 次のラウンド起点の `OriginAt`
+10. `roundHistory_start` で次のラウンドの `RoundHistory`
+11. `CloseoutReadsOrigin.originShift_of_roundSeg` → `OriginShift` → `h_readsShift_of_originShift`
+    → **`H_readsShift`**
+
+**足りない小補題は 5 の 1 個だけ**（`shiftLens` の外は shift 相で不変）。
 
 ---
 

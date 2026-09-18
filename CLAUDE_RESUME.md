@@ -1,3 +1,22 @@
+## 2026-09-19 n153: `round_next` の入力 15 個すべての出どころが確定した
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器は動いていない。**
+
+最後に残っていた `hlen : Canonical s1.length` の出どころは
+`GalilScaffoldTopSegmentHeads.scanSeg_counters`
+（`ScanSeg → (Canonical s.radius → Canonical t.radius) ∧ (Canonical s.length → Canonical t.length)`）。
+`RoundHistory` に `Canonical s₀.radius ∧ Canonical s₀.length` を足して起点で持たせ、
+`onlyMatchedRun_of_roundHistory` が末尾の `Canonical` も返すようにした。
+
+**`PROOF_STACK.md` に `roundSeg_of_run` の組み立て手順を 11 段すべて書いた。**
+足りない小補題は **1 個だけ**:
+
+> shift 末尾の状態 `y` について `y.vm = shiftLens.set s2 (shiftLens.get y.vm)`
+> （`round_next` の結論の形に合わせるため）。`shiftOne` は `Lens.rel` なので
+> 第 2 成分が `t = L.set s (L.get t)`＝「lens の場以外は変わらない」。
+> これを `Steps` に沿って合成するだけ。
+
 ## 2026-09-19 n152: ラウンド境界の入力があと 1 個（`hlen`）になった
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

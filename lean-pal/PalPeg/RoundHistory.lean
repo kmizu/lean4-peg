@@ -40,15 +40,19 @@ open PalPeg.CloseoutOriginAt PalPeg.CloseoutRoundSeg PalPeg.MatchedRunSnoc
 /-- **(NAMED) ラウンドの履歴。**  いまの状態 `⟨c, s⟩` は、read origin が立っている
 ラウンド起点 `⟨c₀, s₀⟩` から scan 相の区間で到達した。
 
-起点側の 4 つ（`OriginAt` / `periodOnly = true` / watch / lag ゼロ）は
-`GalilScaffoldTopRoundS.round_next` と `CloseoutOriginRounds.originAt_of_rounds` が
-要求するものとちょうど同じ。 -/
+起点側の 6 つ（`OriginAt` / `periodOnly = true` / watch / lag ゼロ /
+`Canonical radius` / `Canonical length`）は `GalilScaffoldTopRoundS.round_next` と
+`CloseoutOriginRounds.originAt_of_rounds` が要求するものとちょうど同じ。
+`Canonical` を起点で持つのは、区間の末尾へは
+`GalilScaffoldTopSegmentHeads.scanSeg_counters` が運んでくれるから
+（`round_next` の `hlen : Canonical s1.length` がこれ）。 -/
 def RoundHistory (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ)
     (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
   ∃ (n : ℕ) (c₀ : Control) (s₀ : GalilVM) (w₀ : GalilScaffoldChainWatch.State),
     ScanSeg P q first delay n c₀ s₀ c s ∧
     OriginAt w s₀ ∧ s₀.periodOnly = true ∧
-    s₀.chain = ChainVM.watch w₀ ∧ zero w₀.lag = true
+    s₀.chain = ChainVM.watch w₀ ∧ zero w₀.lag = true ∧
+    Canonical s₀.radius ∧ Canonical s₀.length
 
 section
 variable {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ} {w : List (Fin 2)}
@@ -57,9 +61,11 @@ variable {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ} {w : List (Fin 2)}
 theorem roundHistory_start {c₀ : Control} {s₀ : GalilVM}
     {w₀ : GalilScaffoldChainWatch.State}
     (hOrigin : OriginAt w s₀) (hPeriodOnly : s₀.periodOnly = true)
-    (hChain : s₀.chain = ChainVM.watch w₀) (hLagZero : zero w₀.lag = true) :
+    (hChain : s₀.chain = ChainVM.watch w₀) (hLagZero : zero w₀.lag = true)
+    (hRadiusCanonical : Canonical s₀.radius) (hLengthCanonical : Canonical s₀.length) :
     RoundHistory P q first delay w c₀ s₀ :=
-  ⟨0, c₀, s₀, w₀, ScanSeg.stop c₀ s₀, hOrigin, hPeriodOnly, hChain, hLagZero⟩
+  ⟨0, c₀, s₀, w₀, ScanSeg.stop c₀ s₀, hOrigin, hPeriodOnly, hChain, hLagZero,
+    hRadiusCanonical, hLengthCanonical⟩
 
 /-- **scan 相の 1 tick で伸びる。**  `scanSeg_snoc_tick` の出口 2・3 は
 「行き先も scan かつ watch」という呼び手の知識と矛盾するので落ちる。 -/
@@ -73,10 +79,12 @@ theorem roundHistory_tick {x y : State GalilVM}
     (hStayScan : y.ctl.mode = Mode.scan)
     (hStayWatching : ∃ wch, y.vm.chain = ChainVM.watch wch) :
     RoundHistory P q first delay w y.ctl y.vm := by
-  obtain ⟨n, c₀, s₀, w₀, hSeg, hOrigin, hPeriodOnly, hChain, hLagZero⟩ := hHistory
+  obtain ⟨n, c₀, s₀, w₀, hSeg, hOrigin, hPeriodOnly, hChain, hLagZero,
+    hRadiusCanonical, hLengthCanonical⟩ := hHistory
   rcases scanSeg_snoc_tick hRestartNeedsBroken hSeg hScan hNotReplaying hWatching
       hContinuing hTick with ⟨m, hNext⟩ | hLeft | hBroke
-  · exact ⟨m, c₀, s₀, w₀, hNext, hOrigin, hPeriodOnly, hChain, hLagZero⟩
+  · exact ⟨m, c₀, s₀, w₀, hNext, hOrigin, hPeriodOnly, hChain, hLagZero,
+      hRadiusCanonical, hLengthCanonical⟩
   · exact absurd hStayScan hLeft
   · obtain ⟨wch, hwch⟩ := hStayWatching
     exact absurd hwch (hBroke wch)
@@ -143,11 +151,15 @@ theorem onlyMatchedRun_of_roundHistory {c : Control} {s : GalilVM}
     ∃ (n : ℕ) (s₀ : GalilVM) (w₀ wch : GalilScaffoldChainWatch.State),
       OriginAt w s₀ ∧ s₀.periodOnly = true ∧ s₀.chain = ChainVM.watch w₀ ∧
       zero w₀.lag = true ∧ s.chain = ChainVM.watch wch ∧ zero wch.lag = true ∧
-      s.periodOnly = true ∧ OnlyMatchedRun (toOnly s₀ w₀) n (toOnly s wch) := by
-  obtain ⟨n, c₀, s₀, w₀, hSeg, hOrigin, hPeriodOnly, hChain, hLagZero⟩ := hHistory
+      s.periodOnly = true ∧ OnlyMatchedRun (toOnly s₀ w₀) n (toOnly s wch) ∧
+      Canonical s.radius ∧ Canonical s.length := by
+  obtain ⟨n, c₀, s₀, w₀, hSeg, hOrigin, hPeriodOnly, hChain, hLagZero,
+    hRadiusCanonical, hLengthCanonical⟩ := hHistory
   obtain ⟨wch, hwch, hzch, hpoch, hrun⟩ :=
     scanSeg_only P q first delay hSeg w₀ hPeriodOnly hChain hLagZero
-  exact ⟨n, s₀, w₀, wch, hOrigin, hPeriodOnly, hChain, hLagZero, hwch, hzch, hpoch, hrun⟩
+  obtain ⟨hRadiusNow, hLengthNow⟩ := scanSeg_counters P q first delay hSeg
+  exact ⟨n, s₀, w₀, wch, hOrigin, hPeriodOnly, hChain, hLagZero, hwch, hzch, hpoch, hrun,
+    hRadiusNow hRadiusCanonical, hLengthNow hLengthCanonical⟩
 
 end
 
