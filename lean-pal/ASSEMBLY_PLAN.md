@@ -1,3 +1,50 @@
+## 2026-09-19 n143: **訂正** — `RoundScan` は `periodOnly = false` では偽。`ChainRound` のガードは必要だった
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。
+無条件 PAL は未完。§10.5 は未達。**
+
+### n142 の推測は間違いだった（一次情報で潰した）
+
+n142 で「`RoundScan` に `periodOnly` の場が無いので `ChainRound` の
+`periodOnly = true` ガードは**定義上の選択**」と書いた。**これは誤り。**
+
+一次情報:
+
+* `GalilScaffoldTopSearch:77` — `afterBirth true s = {s with periodOnly := false, cycle := reset}`
+  （誕生で `cycle` が 0 になる）
+* `GalilScaffoldTopSearch:41` — `cycleAfter s = if s.periodOnly then dec s.cycle else s.cycle`
+  （**cycle は `periodOnly = true` のときだけ減る**）
+
+したがって **`periodOnly = false` の間、`value cycle` は誕生時の `0` に凍結**される。
+`RoundScan.count : value v.cycle = (2h : ℤ) − used` に `0` を入れると `used = 2h` で、
+`RoundScan.fresh : used < 2 * h` と**矛盾**する。
+
+**`RoundScan` は `periodOnly = false` の状態では常に偽。**
+`ChainRound` の `s.periodOnly = true →` ガードは**必要**だった。
+
+### 帰結: `periodOnly = false` 側には別の進行カウンタが要る
+
+`cycle` が凍結しているので、最初の shift における「周期境界にいること」は
+**watch 自身の `distance` / `boundary` / `last` / `phase`** で追う必要がある。
+これが n138 で言った「`RoundScan` の `periodOnly = false` 版」の実体。
+
+**`shiftPalAt_fresh_of_candidate`（n141）の 5 残差が正しいインタフェースである根拠**:
+`hIn` / `hOut` / `hLo` / `hHi` / `hCaught` は **`cycle` に一切触れていない**。
+`hCaught` は `symbol period.focus = (encoded w)[…]?` という watch 側の事実だけ。
+だから `cycle` が凍結していても成立し得る。
+
+### 次に測るべきこと
+
+`GalilScaffoldChainConsume.consume` の
+`phase := if boundaryEvent then advancePhase s.phase else s.phase` と
+`boundary := if boundaryEvent then distance else s.boundary` /
+`last := if boundaryEvent then s.boundary else s.last` の更新から、
+`phase = 4` が「period テープを 4 回の境界イベント分たどった」ことを言う。
+そこから `hCaught`（焦点が入力の `2h` 手前を指す）が出るか。
+
+**`cycle` を使う道は閉じた**（凍結しているので情報を持たない）。
+`distance`/`boundary`/`last`/`phase` の 4 つが唯一の進行情報。
+
 ## 2026-09-19 n142: `hCaught` は終端での `RoundScan.pred` と同じ添字（`RoundScan` に `periodOnly` の場は無い）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。
