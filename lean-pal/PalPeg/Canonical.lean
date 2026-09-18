@@ -123,6 +123,15 @@ alias right_head_bounded_along_trace := PalPeg.BranchSupply.rightPos_le_trace
 trace 予算 ＋ `LPackM2.shiftGeom` の `RRep`。新規入力ゼロ。 -/
 alias shift_canRight_is_free := PalPeg.BranchSupply.shiftCan_of_trace
 
+/-- **`canRight` は trace の 1 手目以降タダ**（旧名 `BranchSupply.canRight_at_trace`）。
+右ヘッドが入力を表現していればよい。scan 相版は `scanCanRight_of_trace` で、
+これは `CloseoutPackRun46.Extra7.scanAvail`（＝ `hee` / `het` の中身）そのもの。 -/
+alias canRight_is_free_along_trace := PalPeg.BranchSupply.canRight_at_trace
+
+/-- **scan 相の `canRight`（`Extra7.scanAvail`）はタダ**
+（旧名 `BranchSupply.scanCanRight_of_trace`）。 -/
+alias scan_canRight_is_free := PalPeg.BranchSupply.scanCanRight_of_trace
+
 /-! ## 2. 反証済み — 使ってはいけない
 
 `hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack q first w c s` は**偽**。

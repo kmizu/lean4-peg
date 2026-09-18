@@ -10,6 +10,56 @@
 
 
 
+
+## 2026-09-19 n88: `canRight` は trace 全域でタダ — `Extra7`（`hee`/`het`）も同時に落ちる
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+n87 の `shiftCan_of_trace` は shift 相専用に書いていたが、論法は mode に依存しない。
+一般化した結果、**`canRight` は「右ヘッドが入力を表現している trace 点」でタダ**になった。
+
+| 新しい定理（`PalPeg/BranchSupply.lean` §5） | 内容 |
+|---|---|
+| `canRight_at_trace` | `Represents` ＋ `focus ≠ none` があれば `canRight (st i).vm.right`（`1 ≤ i`） |
+| `frontPack_of_trace` | `FrontPack` は trace の 1 手目以降タダ（`tick_mode_ne_init` ＋ `frontPack_trace`） |
+| `scanCanRight_of_trace` | **scan 相の `canRight` ＝ `CloseoutPackRun46.Extra7.scanAvail`。つまり `hee` / `het` の中身がタダ** |
+
+`Extra7.scanAvail := mode = scan → ¬replaying → canRight right` なので、
+`scanCanRight_of_trace` はそれより強い（replaying でも成立）。
+CLAUDE.md §3 が「`hee`/`het` の残差（scan 状態で `canRight`）は**偽の疑いが強い**」と
+書いていたのは、`Inv.input` が右ヘッドの位置を縛らないことを根拠にしていた。
+**位置を縛るのは `Inv` ではなく front ポテンシャルと終端の報告点だった。**
+
+側条件 `htc : 1 ≤ Tc w.length` は `PreTraceB.tc1 : Tc 1 = 1` と `PreTrace.mono` から出る
+（`1 = Tc 1 ≤ Tc w.length`）。
+
+### `bg` 場の分解（§7）
+
+`CloseoutPackRun48.h_bgP2_of_supply` は 4 入力すべてを源状態でだけ使う（`Run48:186–192`）。
+状態局所版 `bg_at_of_supply` を置いた。入力の現状：
+
+| 入力 | 状態 |
+|---|---|
+| `hrepR`（右ヘッドが入力を表現） | **タダ**（`LPackM2.packM.scanGeom` / `scanGeomR`） |
+| `hrepV`（verifier が入力を表現） | `hver`（`VerRun`）の第 1 成分 |
+| `hL`（`LagCan`） | `hver` の第 2 成分 |
+| `hstart`（`BgStartP2`、chain 誕生の形） | **残る**。`CloseoutPackRun47.bgStartP2_of_centre` が `canRight s.right`（**タダになった**）＋ 半径台帳（**タダ**）＋ `CentreLedger` から出す |
+
+**残る唯一の穴は `CentreLedger`**（`LPackM3.centreLedger`）。`LPackM3` を trace に載せる
+には 4 葉パックのうち `LTickLeaves3`（`backLag` ＋ init/shift_done/replayStart の 3 台帳）
+だけが要る（他 3 つは `auxPack_steps` / `CloseoutPackW.lticksN_of_lpackM2_W` /
+`lTickLeaves2_of_shiftPalG` でタダ）。
+
+### 次の一手
+
+1. `LTickLeaves3` の 4 場を埋める（`backLag` は `LagCan` から、3 台帳は各 landing の幾何）。
+2. `LPackM3` を trace に載せる → `CentreLedger` → `BgStartP2` → `bg` 場が `hver` に合流。
+3. 同様に `matchLand` を `MatchRes2`（`matchRes2_of_lpackM3` ＋ `MatchRest`）から。
+   `MatchRest.repV`/`repVmid` は `hver` と同型、`canRNext` は `canRight (right s.right)`
+   なので `CloseoutCanRightBound` の 2 歩版（`:76`）で出るはず。
+4. 残れば `entryLand` だけ。
+
 ## 2026-09-19 n87: `shiftDone` 義務を**完全に放電** — 新規入力ゼロ
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
