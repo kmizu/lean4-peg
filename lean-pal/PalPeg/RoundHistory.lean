@@ -1,6 +1,7 @@
 import PalPeg.MatchedRunSnoc
 import PalPeg.CloseoutRoundSeg
 import PalPeg.CloseoutReadsOrigin
+import PalPeg.CloseoutWatchRound45
 
 /-!
 # `RoundHistory` — ラウンドの履歴を状態と一緒に運ぶ
@@ -1142,6 +1143,48 @@ theorem h_readsShift_alongSteps {P : Shared} {q : ℕ} {first : Fin 9} {delay : 
 
 #print axioms roundCarrier_of_steps
 #print axioms h_readsShift_alongSteps
+
+/-! ## 基底の橋: 最初の shift 後の `OriginAt`
+
+`GalilScaffoldTopFirstRound.first_round`（**無条件**）は最初の shift の行き先で
+`∃ o, Entry raw o (toOnly e v) ∧ o.interior.length+1 = h ∧ …` を出す。
+これを `OriginAt` にするには `periodLength v = h` が要る。3 段で出る:
+
+* `chain_shift_periodLength`（shift 相、公理ゼロ）
+* `GalilChainCoupling.periodLength_consume`（`immediate` 1 手、側条件 `WatchBlock`）
+* `CloseoutWatchRound45.period_of_beginShift`（`beginShiftVM h w` と
+  `beginShiftVM'` の `h` が一致する） -/
+
+/-- **shift 後の watch の周期は shift の歩数。** -/
+theorem periodLength_after_shift (centre : GalilVM → Fin 3)
+    (place : GalilVM → GalilScaffoldPlace.Place) (entry : ℕ) (raw : List (Fin 2))
+    {h n : ℕ} {wch v : GalilScaffoldChainWatch.State} {s t : GalilVM}
+    {shiftStart shiftEnd : ShiftState} {cyc fin : Counter}
+    (hBegin : (PofC centre place entry raw).beginShift s t)
+    (hBeginVM : beginShiftVM h wch s t)
+    (hBlock : PalPeg.GalilBranchInvariants.WatchBlock wch)
+    (hShiftRun : ChainShiftRun shiftStart (GalilScaffoldChainWatch.immediate wch) cyc n
+      shiftEnd v fin) :
+    periodLength v = h := by
+  refine (chain_shift_periodLength hShiftRun).trans ?_
+  refine (PalPeg.GalilChainCoupling.periodLength_consume wch.machine wch.lag wch.margin
+    wch.lag (inc wch.margin) hBlock).trans ?_
+  exact PalPeg.CloseoutWatchRound45.period_of_beginShift centre place entry raw hBegin hBeginVM
+
+/-- **最初の shift 後の `OriginAt`**（`first_round` の `Entry` から）。 -/
+theorem originAt_of_firstShiftEntry {w : List (Fin 2)} {o : ReadOrigin w} {h : ℕ}
+    {v : GalilScaffoldChainWatch.State} {e : GalilVM}
+    (hChain : e.chain = ChainVM.watch v)
+    (hEntry : Entry w o (toOnly e v))
+    (hInterior : o.interior.length + 1 = h)
+    (hRoom : o.radius + 2 ≤ o.center)
+    (hPeriod : periodLength v = h) :
+    OriginAt w e :=
+  PalPeg.CloseoutOriginRounds.originAt_of_entry hChain hEntry
+    (hInterior.trans hPeriod.symm) hRoom
+
+#print axioms periodLength_after_shift
+#print axioms originAt_of_firstShiftEntry
 #print axioms h_readsShift_of_run
 
 #print axioms chainShiftRun_tick

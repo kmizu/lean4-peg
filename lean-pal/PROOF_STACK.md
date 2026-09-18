@@ -306,8 +306,11 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
 
 ### 残り 2 つ（これで第 1 残差が公理から外れる）
 
-1. **起点の `RoundCarrier`（基底）** — chain 誕生直後は `OriginAt` がまだ無い。
-   最初の shift で `GalilScaffoldTopFirstRound.first_round`（**無条件**）が `Entry` を出す
+1. **起点の `RoundCarrier`（基底）** — 橋は**済（n165）**:
+   `periodLength_after_shift` ＋ `originAt_of_firstShiftEntry`。
+   残るのは `first_round` の 30 個以上の仮説を run から供給すること
+   （＝ CLAUDE.md §3 の `hfound` / `hfoundBg` / `hfoundReplay`、
+   自分で「未着手、最大の残り」と書いた項目）
 2. **側条件** — 区間の全点が scan / shift 相 ∧ 非 replay ∧ `CopyIdle`、
    scan 点では周期が終端でない・右ヘッドが読める・chain が watch。
    既存の pack（`Extra7` / `AuxPack` / `LPackM`）から出る見込み（**未検証**）

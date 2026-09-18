@@ -1,3 +1,30 @@
+## 2026-09-19 n165: 基底の橋（`first_round` の `Entry` → `OriginAt`）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器はまだ動いていない。**
+
+`PalPeg/RoundHistory.lean` は **44 宣言**（全部標準 3 公理以内、3 本は公理ゼロ）。
+
+* `periodLength_after_shift` — shift 後の watch の周期は shift の歩数。3 段:
+  `chain_shift_periodLength`（公理ゼロ）→ `GalilChainCoupling.periodLength_consume`
+  （`immediate` 1 手、側条件 `WatchBlock`）→
+  **`CloseoutWatchRound45.period_of_beginShift`**（既存。`beginShiftVM h w` と
+  `beginShiftVM'` の `h` が一致する）
+* `originAt_of_firstShiftEntry` — `first_round` の `Entry` を `OriginAt` にする
+  （`CloseoutOriginRounds.originAt_of_entry` ＋ 上の周期一致）
+
+**これで `H_readsShift` の鎖は基底から run 全点まで部品が揃った。**
+
+### 計器を動かすために残っていること（正直に）
+
+`first_round` は仮説が 30 個以上ある（found 経路の全部）。それを run から供給するのが
+CLAUDE.md §3 の `hfound` / `hfoundBg` / `hfoundReplay`——「**未着手、最大の残り**」と
+自分で書いていた項目そのもの。`h_readsShift_alongSteps` の側条件も既存 pack から
+出る見込みだが**未検証**。
+
+**つまり `H_readsShift` は「部品は全部ある・配線が残っている」状態。**
+公理はまだ 4 本。
+
 ## 2026-09-19 n164: **`H_readsShift` を run の全点で組めた**（`RoundHistory` 42 宣言）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
