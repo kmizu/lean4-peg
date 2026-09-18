@@ -5,6 +5,87 @@
 
 
 
+
+
+## 2026-09-19 n84: 3 分岐前提は同じ 1 つの run 形事実に合流する — 9 → 5 の筋
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+n83 で正本を 7 前提（`pal_in_peg_final39`）にしたあと、7 本それぞれの producer を
+実見した（表は `lean-pal/PART_INDEX.md` §2a）。**残差は producer が 1:1 で化けるだけで
+本数は減らない。** 減らすには残差を共有させるしかない。残差を並べて分かったこと:
+
+### 発見 1: `ShiftGeom` は run 上でタダ
+
+`hsdP`（`H_shiftDoneP`）は `CloseoutPackRun38:316` では**恒等**（`H_shiftDoneRes` は
+`H_shiftDoneP` そのもの）だが、`CloseoutShiftDoneP.posPayload_of_shiftGeom`（:70）が
+実質の分割を与える:
+
+* `canR` ← `canR_of_shiftGeom`（`ShiftGeom` ＋ 区間予算 `position right ≤ 2m−1`）
+* `radLe` ← `hrad`
+* `pos` / `verNext` ← **`ChainSideAt`**（:61）
+
+そして **`ShiftGeom` は `LPackM2` の場**（`CloseoutPackRun23:103`
+`shiftGeom : c.mode = Mode.shift → ShiftGeom w s`）。`LPackM2` は
+`IPackMW.m2`（`CloseoutPackW:67`）として run の各点にある。**つまりタダ。**
+
+### 発見 2: 3 本の残差は同一の chain 側 verifier 台帳に合流する
+
+| 前提 | 残差の chain 側の中身 |
+|---|---|
+| `hbgP` → `H_bgRes` | `SrcPos`（`saneVer` ＋ `backPos`）＋ `start`（idle 起点）＋ `verNext` |
+| `hmatchP` → `H_matchRes` | `SrcPos` ＋ 起点の payload ＋ 同型の節 |
+| `hsdP` → `ChainSideAt` | `pos`（`position verifier + lag = position right`）＋ `verNext` |
+
+`ChainSideAt` の 2 節は `PosPayload` の `pos` / `verNext` と同一。そして
+`CloseoutPackRun41:17` が明記している: **「`ChainPos` replaces Run38's `SrcPos`
+(its `saneVer`/`backPos` are two of the clauses)」**、`:201`「which also absorbs
+Run38's `SrcPos`」。
+
+`ChainPos` は run を運ばれる: `chainPos_step`（Run41:101）/ `chainPos_matched`。
+その唯一の側入力が `ConsumeAvail` で、
+**全状態への量化版は偽**（n83、`ConsumeAvailRefute.hav_false`）だが
+`CloseoutWatchSupply.chainPos_step_of_supply` が 4 つの局所供給事実に分解し、
+`CloseoutVerSide.VerRun`（**run 形**）がそれを束ねている。
+
+### 結論: 目標は `final38`（`CloseoutFinalVer`）の 9 → 5
+
+`pal_in_peg_final38` の 9 前提は
+`hSP` `hme` `hor` `hC` `hbgP2` `hmatchP2` `hentry2` `hsdP2` `hver`。
+中 4 本（Run41 版の分岐前提）は `CloseoutPackRun48` に放電器があり、
+その入力は上記の chain 側台帳＋`LPackM2`/`LPackM3` の場なので、
+**run 形（`VerRun` と同じ形）に直せば `hver` 1 本に合流する** → `hSP` `hme` `hor` `hC`
+`hver` の **5 前提**。
+
+`final39`（7、Run34 版）はこの合流に乗らない（`ChainPosInv'` に shift 相の場が無く、
+`ChainPosInv.payload` は `ScanNR` で守られていて shift 相をまたげない ——
+`CloseoutPackRun38:290` の `chainPosInv_payload_vacuous_shift` がそれを記録している）。
+**だから正本は当面 `final39`（7）だが、本数を下げる作業は `final38` 側で行う。**
+
+### 具体的な手順（次のセッションの最初の一手）
+
+1. `LPackM3` を run に載せる。4 葉パックのうち 3 つは既にタダ:
+   * `AuxPack` ← `CloseoutPackRun2.auxPack_steps`（`CentreLive` ＋ 起点の `AuxPack`）
+   * `LTickLeavesN` ← **`CloseoutPackW.lticksN_of_lpackM2_W`**（`BigPack2MG7W` ＋ `LPackM2`）
+   * `LTickLeaves2` ← **`CloseoutPackW.lTickLeaves2_of_shiftPalG`**（同 ＋ `hSP`）
+   （`CloseoutPackRun36.lticksN_of_lpackM2_pt` は `BigPack2MG`＝`IPackMG`＋`Extra'` を
+   要るので W 経路では使えない。**W 版を使うこと。**）
+   残るのは `LTickLeaves3`（`backLag` ＋ `initLedger` / `shiftDoneLedger` / `replayLedger`）。
+2. `CloseoutPackRun49.matchRes2_of_lpackM3` で `MatchRes2` を出す（残差 `MatchRest`）。
+3. `MatchRest.repV` / `repVmid` は `VerRun` の中身と同一なので `hver` に合流させる。
+   `replayPay` / `canRNext` は `PosPayload2` と右ヘッド供給なので `LPackM2` から出るか確認。
+4. Run48 の 4 放電器の入力を run 形に書き換える（**現状の「任意の scan 状態 ＋
+   `ChainPosInv2`」形の `hrepV` は偽の疑いが強い**。`ChainPosInv2` は verifier の
+   内容を縛らない）。
+5. `CloseoutFinalVer.pal_in_peg_final38` の中 4 本を放電して `final41`（5 前提）を張る。
+
+### 併せて記録した警告
+
+`CloseoutBranchRes.shiftLocalS_of_run_res` はまだ `hfour` を取る（n83 より前の版）。
+`hfour` は不要になったので、残差経路を使うときは
+`ShiftLocalRun.shiftLocalS_of_run'` 側に載せ替えること。
+
 ## 2026-09-19 n83: `hfour` 放電 — 正本の最上位は 7 前提（`pal_in_peg_final39`）
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
