@@ -1,3 +1,44 @@
+## 2026-09-19 n162: **ラウンドの 4 つの相遷移が全部揃った**（`RoundHistory` 34 宣言）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器はまだ動いていない。**
+
+| 遷移 | 定理 |
+|---|---|
+| scan → scan | `roundHistory_tick` |
+| scan → shift（`scan_shift`） | **`shiftPhaseHistory_of_scanShift`（n162）** |
+| shift → shift（`shift_one`） | `shiftPhaseHistory_tick` |
+| shift → scan（`shift_done`） | `roundHistory_of_shiftDone` |
+
+`scan_shift` 遷移の内訳（全部一次情報から）:
+
+* `s'.chain = .watch wch` ← `ChainTick false x z` は `ChainStep x z`
+  （`GalilScaffoldTopChainVM:92`）で `.watch` から出る構成子は `watchStep` だけ（`:66`）。
+  lag ゼロなら `Internal` は恒等（`chainTick_false_watch_eq_of_lagZero`、n162）
+* `singlePositive s1.cycle = true` ← guard の `if periodOnly then singlePositive cycle = true`
+  節。`afterMismatch` は `cycle` / `periodOnly` を触らない（`afterMismatch_cycle` /
+  `afterMismatch_periodOnly` はどちらも `rfl`）
+* `hPredict` ← guard の `symbol …period.focus = read s'.right` ＋ `afterMismatch_right`
+* `beginShiftVM (periodLength wch) wch …` ← `beginShiftVM'` の定義から（`w = wch` は chain で一意）
+* 基底の `ChainShiftRun … 0 …` は `.stop`、frame は `(shiftLens.set_get s2).symm`
+
+ついでに `MatchedRunSnoc.compare_mismatched_parts` の結論に
+`vs.left` / `vs.right` / `ChainTick false t.chain vs.chain` を足した
+（消費者がいなかったので破壊的変更なし）。
+
+### 残り: 結合 carrier と run 沿いの帰納
+
+    RoundCarrier P q first delay w c s :=
+      (c.mode = Mode.scan  → RoundHistory P q first delay w c s) ∧
+      (c.mode = Mode.shift → ShiftPhaseHistory w s)
+
+* tick 保存は上の 4 遷移を `Tick` の構成子で振り分けるだけ
+* **`H_readsShift` は scan 相では空虚**（guard が `mode = shift`）、
+  shift 相で `remaining` が尽きた点は `shiftPhaseHistory_readsShift`
+* **基底が残る**: `scan_fallback` で copy 相に落ちると chain が作り直されるので
+  carrier は保たれない。そこは `GalilScaffoldTopFirstRound.first_round`（無条件）が
+  新しい `OriginAt` を出す点。**ここが最後**
+
 ## 2026-09-19 n161: `shift_done` 遷移（`ShiftPhaseHistory` → `RoundHistory`）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

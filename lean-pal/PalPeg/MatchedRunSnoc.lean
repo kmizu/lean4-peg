@@ -409,6 +409,9 @@ theorem compare_mismatched_parts {P : Shared} {q : ℕ} {first : Fin 9} {t u : G
     {wch : GalilScaffoldChainWatch.State} (hWatch : t.chain = ChainVM.watch wch) :
     ∃ (vs : ScanVM) (vq : SearchVM),
       u = afterMismatch t vs vq ∧ vs.chain = u.chain ∧
+      vs.left = GalilScaffoldInputHead.left t.left ∧
+      vs.right = GalilScaffoldChainVerifier.right t.right ∧
+      ChainTick false t.chain vs.chain ∧
       searchEffect P false t vq ∧
       (galilFrame P q first).compare t (scanLens.set t vs) ∧
       ¬ (galilFrame P q first).matched (scanLens.set t vs) := by
@@ -441,7 +444,7 @@ theorem compare_mismatched_parts {P : Shared} {q : ℕ} {first : Fin 9} {t u : G
     · exact hct
     · exact absurd hidle hNotIdle
     · exact absurd hidle hNotIdle
-  refine ⟨vs, vq, hteq, by rw [hteq]; rfl, hsearch, ?_, hNotMatchedSet⟩
+  refine ⟨vs, vq, hteq, by rw [hteq]; rfl, hvl, hvr, hChainTick, hsearch, ?_, hNotMatchedSet⟩
   refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
   · show (scanLens.get (scanLens.set t vs)).left = GalilScaffoldInputHead.left t.left
     rw [scanLens.get_set]; exact hvl

@@ -391,6 +391,27 @@ theorem watch_eq_of_mismatch_lagZero {a b : GalilScaffoldChainWatch.State}
 #print axioms outer_eq_of_false
 #print axioms watch_eq_of_mismatch_lagZero
 
+/-- **lag ゼロの不一致比較では chain がそのまま。**  `ChainTick false x z` は
+`ChainStep x z`（`GalilScaffoldTopChainVM:92`）で、`.watch` から出る構成子は
+`watchStep` だけ（`:66`、`Internal` を 1 手）。lag ゼロなら `Internal` は恒等。 -/
+theorem chainStep_watch_eq_of_lagZero {wch : GalilScaffoldChainWatch.State} {z : ChainVM}
+    (hLagZero : zero wch.lag = true) (hStep : ChainStep (ChainVM.watch wch) z) :
+    z = ChainVM.watch wch := by
+  cases hStep with
+  | watchStep _ _ hInternal => rw [internal_eq_of_lagZero hLagZero hInternal]
+
+/-- 同じことを `ChainTick false` の形で。 -/
+theorem chainTick_false_watch_eq_of_lagZero {wch : GalilScaffoldChainWatch.State} {z : ChainVM}
+    (hLagZero : zero wch.lag = true) (hTick : ChainTick false (ChainVM.watch wch) z) :
+    z = ChainVM.watch wch := by
+  obtain ⟨y, hStep, hEq⟩ := hTick
+  rw [if_neg (by simp)] at hEq
+  rw [hEq]
+  exact chainStep_watch_eq_of_lagZero hLagZero hStep
+
+#print axioms chainStep_watch_eq_of_lagZero
+#print axioms chainTick_false_watch_eq_of_lagZero
+
 /-! ## ラウンド内で period テープの長さが保たれる
 
 `RoundSeg` の第 1 節は `periodLength wch' = periodLength wch`。ラウンドは
@@ -837,6 +858,68 @@ theorem roundHistory_of_shiftDone {P : Shared} {q : ℕ} {first : Fin 9} {delay 
     hCanonicalNext.2.1 hCanonicalNext.2.2
 
 #print axioms roundHistory_of_shiftDone
+
+/-- **`scan_shift` の遷移**（`RoundHistory` → `ShiftPhaseHistory`、`k = 0`）。
+
+guard（`shiftGuardVM`）と `beginShiftVM'` の中身を `PofC` の形で取る。
+`P.shiftGuard = shiftGuardVM` / `P.beginShift = beginShiftVM'` は `PofC` では定義通り。 -/
+theorem shiftPhaseHistory_of_scanShift {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {w : List (Fin 2)} {c1 : Control} {s1 s' s2 : GalilVM}
+    (hHistory : RoundHistory P q first delay w c1 s1)
+    (hCompare : (galilFrameS P q first).compare s1 s')
+    (hNotMatched : ¬ (galilFrameS P q first).matched s')
+    (hGuard : shiftGuardVM s')
+    (hBegin : beginShiftVM' s' s2)
+    (hCanRight : canRight s1.right) :
+    ShiftPhaseHistory w s2 := by
+  obtain ⟨n, s₀, w₀, wch, hOrigin, hPeriodOnlyStart, hChainStart, hLagStart, hBlockStart,
+    hChainTerm, hLagTerm, hPeriodOnlyTerm, hMatchedRun, hRadiusTerm, hLengthTerm⟩ :=
+    onlyMatchedRun_of_roundHistory hHistory
+  obtain ⟨vs, vq, hTargetEq, -, hLeft, hRight, hChainTick, -, -, -⟩ :=
+    compare_mismatched_parts hCompare hNotMatched hChainTerm
+  have hChainTickWatch : ChainTick false (ChainVM.watch wch) vs.chain := by
+    rw [← hChainTerm]; exact hChainTick
+  have hChainMid : vs.chain = ChainVM.watch wch :=
+    chainTick_false_watch_eq_of_lagZero hLagTerm hChainTickWatch
+  -- `s'` の場を `s1` / `vs` の場で書き換える
+  have hMidChain : s'.chain = ChainVM.watch wch := by
+    rw [hTargetEq]
+    show vs.chain = ChainVM.watch wch
+    exact hChainMid
+  have hMidRight : s'.right = right s1.right := by
+    rw [hTargetEq]
+    show vs.right = right s1.right
+    exact hRight
+  have hMidCycle : s'.cycle = s1.cycle := by rw [hTargetEq]; rfl
+  have hMidPeriodOnly : s'.periodOnly = true := by rw [hTargetEq]; exact hPeriodOnlyTerm
+  -- guard の中身
+  obtain ⟨wG, hChainG, -, -, -, hCycleG, hSymG⟩ := hGuard
+  have hEqG : wG = wch := by rw [hMidChain] at hChainG; cases hChainG; rfl
+  subst hEqG
+  have hTerminal : singlePositive s1.cycle = true := by
+    rw [hMidPeriodOnly, if_pos rfl] at hCycleG
+    rw [← hMidCycle]; exact hCycleG
+  have hPredict : GalilScaffoldInputHead.read (right s1.right) =
+      GalilScaffoldChainConsume.symbol wG.machine.control.period.focus := by
+    rw [← hMidRight, ← hSymG]
+  -- `beginShiftVM'` の中身
+  obtain ⟨wB, hBeginVM⟩ := hBegin
+  have hEqB : wB = wG := by
+    have := hBeginVM.1
+    rw [hMidChain] at this; cases this; rfl
+  subst hEqB
+  have hBeginShift : beginShiftVM (periodLength wB) wB (afterMismatch s1 vs vq) s2 := by
+    rw [← hTargetEq]; exact hBeginVM
+  obtain ⟨-, hChainEntry, hCycleEntry⟩ := shiftEntry_shape hLeft hBeginShift
+  have hChainTarget : s2.chain = ChainVM.watch (GalilScaffoldChainWatch.immediate wB) :=
+    hChainEntry
+  have hPeriodOnlyEntry : s2.periodOnly = true := by rw [hBeginVM.2]
+  exact ⟨s₀, s1, s2, w₀, wB, GalilScaffoldChainWatch.immediate wB, n, 0, vs, vq,
+    hOrigin, hChainStart, hBlockStart, hMatchedRun, hLagTerm, hPeriodOnlyEntry,
+    hTerminal, hCanRight, hPredict, hRadiusTerm, hLengthTerm, hRight, hLeft,
+    hBeginShift, .stop _ _ _, (shiftLens.set_get s2).symm, hChainTarget⟩
+
+#print axioms shiftPhaseHistory_of_scanShift
 #print axioms h_readsShift_of_run
 
 #print axioms chainShiftRun_tick

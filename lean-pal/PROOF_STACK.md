@@ -288,11 +288,23 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
 * **境界検出**: 2 つの carrier の**選言**を run に沿って運ぶ
   （`RoundHistory` = scan 相、`ShiftPhaseHistory` = shift 相。どちらも tick 保存は済 n160）。
   残るのは相の遷移 2 つ:
-  * `scan_shift`（`RoundHistory` → `ShiftPhaseHistory`）——
-    `hTerminal` / `hCanRight` / `hPredict` / `hRight` / `hLeft` / `hBeginShift` を
-    tick と guard から取る。**`WatchBlock w₀` を `RoundHistory` に足す必要がある**
+  * `scan_shift`（`RoundHistory` → `ShiftPhaseHistory`）——**済（n162）**:
+    `shiftPhaseHistory_of_scanShift`
   * `shift_done`（`ShiftPhaseHistory` → `RoundHistory`）——**済（n161）**:
     `roundHistory_of_shiftDone`
+
+### 4 遷移は全部済（n160〜n162）。残るのは結合 carrier と基底
+
+    RoundCarrier P q first delay w c s :=
+      (c.mode = Mode.scan  → RoundHistory P q first delay w c s) ∧
+      (c.mode = Mode.shift → ShiftPhaseHistory w s)
+
+* tick 保存 → 4 遷移を `Tick` の構成子で振り分けるだけ
+* `H_readsShift` → scan 相は空虚（guard が `mode = shift`）、
+  shift 相で `remaining` が尽きた点は `shiftPhaseHistory_readsShift`（済）
+* **基底が最後の壁**: `scan_fallback` で copy 相に落ちると chain が作り直されるので
+  carrier は保たれない。そこは `GalilScaffoldTopFirstRound.first_round`（無条件）が
+  新しい `OriginAt` を出す点
 
 これができたら `H_readsShift` が trace / run の全点で出て、
 `obligation_shiftPalResidues*` の第 1 残差が**公理から外れる**（(C) の操作）。
