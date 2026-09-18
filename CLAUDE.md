@@ -99,9 +99,11 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 目標は閉じた項として存在し、足りない義務は `axiom` で明示されている。
 `PalPeg/Axioms.lean` の `#guard_msgs in #print axioms` がラチェットで、
 1 個外すと guard が壊れて更新を強制される。**標準 3 公理だけになったら §10.5 達成。**
-いまは **5 個**の原子的義務が残っている（`centreMargin` / `cycleOracle` /
-`localRealization` / `marksEntry` / `shiftPalAtScanStates`。経路は
+いまは **4 個**の原子的義務が残っている（`cycleOracle` / `localRealization` /
+`marksEntry` / `shiftPalAtScanStates`。経路は
 `PalPeg/PalInPegUnconditional.lean` の docstring に表で記録）。
+難易度順は `marksEntry`（残差は `WindowInOrigin` 1 つ、障害は `Fair`）→
+`shiftPalAtScanStates` → `cycleOracle` → `localRealization`。
 
 **guard を狭く切ると義務が増える。** 2026-09-19 に `ChainPositionInvariantWithShiftPhase.payload`
 の guard が `ScanNR`（`mode = scan ∧ replaying = false`）だったせいで replay 中の

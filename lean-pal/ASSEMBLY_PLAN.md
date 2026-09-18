@@ -26,6 +26,82 @@
 
 
 
+
+## 2026-09-19 n104: 公理 5 → 4（`centreMargin` 吸収）＋ 残り 4 個の難易度順と `marksEntry` の実体
+
+**全体 build 成功（EXIT=0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 4 個の原子的義務を axiom として持つ
+（`cycleOracle` / `localRealization` / `marksEntry` / `shiftPalAtScanStates`）。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
+
+### 公理の推移（今日）
+
+```
+11 相当 → 10 → 9 → 8 → 7 → 5 → 4
+  bg / chainBackLag / shiftExitLedger / matchRest / verifierRunAlongRun / centreMargin
+```
+
+### `centreMargin` は新規証明ゼロで `marksEntry` に吸収された
+
+`CloseoutPackRun16.MarksInv'` の第 2 成分が
+`position left + r + pairOff c ≤ position center` ——`RCouple` が持っていない向き。
+第 1 成分 ＋ `¬ atFirst` から `two_le_left_of_marksInv'` が `2 ≤ position left`。
+`Tick.rewind_one` / `rewind_pair` は `hf : ¬ atFirst s` を**構成子として持つ**。
+
+`¬ atFirst` guard を 3 層に入れた:
+
+    LTickLeaves.rewindLeft / LTickLeavesN.rewindLeft   CloseoutLPack3 / PackRun11
+    Extra8.rewindMargin                                CloseoutPackRun46（first を引数に）
+    RewindMarginAt / ChainBackLagAndShiftExitLedgerAt.rewindMargin   BranchSupply
+
+`LTickLeavesG` / `LTickLeavesO` 系は未 guard のまま（触る必要なし）。
+`rewindMarginAt_alongTrace` は `two_le_left_of_marksInv'` 1 行になった。
+
+**訂正**: n96 の「`rewindMargin` を `CentreMargin` 1 葉に縮めた」は数だけの削減で
+内容は強化だった（guard なしでは `1 ≤ position left` しか出ないので `+1` 分強すぎ）。
+**過剰量化の 11 例目・自分で撒いた 4 例目。**
+
+### 残り 4 個の難易度順（簡単なものから）
+
+| 順 | 公理 | 残差 | 障害 |
+|---|---|---|---|
+| 1 | `marksEntry` | `WindowInOrigin`（copy 状態）1 つ | **`FairSteps`**（下記） |
+| 2 | `shiftPalAtScanStates` | `ShiftPal` | `ChainOk` の再設計（`WatchOk` は反証済み） |
+| 3 | `cycleOracle` | `CycleOracleMC3` | found 経路の葉（§3） |
+| 4 | `localRealization` | `H_realizeLIMW'` | producer なし |
+
+### `marksEntry` の実体は `Fair` である（今日確定）
+
+`CloseoutMarksFree.marks_steps_free` は `H_marksEntry'` なしで
+`CPack` / `WPack` / `MarksInv'` を run に沿って運ぶ。必要なのは `first ≠ 4` と
+`MarksRun`（2 半分）で、`marksRun_of_window` により
+
+| 半分 | 状態 |
+|---|---|
+| `EntryCounters`（scan 状態） | **タダ**（`entryCounters_of_invLPC`） |
+| `WindowInOrigin`（copy 状態） | producer は `CloseoutPackRun28.walkerInOrigin_of_run` |
+
+`WalkerInOrigin s := (stream s.walker).length ≤ position s.right`（`PackRun25:53`）、
+`WindowInOrigin s := (stream s.fpp.walker).length ≤ position s.right`（`PackRun17:62`）、
+橋は `windowInOrigin_of_fair`（`PackRun25:57`）。
+
+`walkerInOrigin_of_run` の入力:
+
+    hplace : ∀ u, (stream (place u)).length ≤ position u.right   -- placeC は具体関数
+    hdelay : 2 ≤ delay                                           -- 2048
+    hcan   : … replaying = true → canRight z.vm.right            -- CloseoutReplayCanRight でタダ
+    hx     : WalkerInv x.ctl x.vm                                 -- boot 形（walker 空）
+    hz     : FairSteps …                                          -- ★ここだけが穴
+
+**`PreTrace.trace` は素の `Trace`（`Steps`）で `Fair` を持たない。**
+`Tick` 単体は非決定的（`beginFallbackVM'` の着地場所、`initVM`/`replayStartVM` の
+`periodOnly`/`walker` が自由）なので、`Fair` なしでは walker が任意に置かれうる。
+だから `WindowInOrigin` は原理的に `Fair` を要する。
+
+**次の一手**: `PreTrace` / `PreTraceIMW` に `Fair` を持たせる（oracle 側の証人が
+`Fair` を満たすことを確認する）。`GalilTickFair` は `Tick ∧ Fair` の一意性まで
+証明済みなので、材料は揃っている。これは `marksEntry` を落とす唯一の道。
+
 ## 2026-09-19 n103: `headsRepresent` を `MarksInv'` 基底へ（内容の訂正）＋ `CentreMargin` に偽の疑い
 
 **全体 build 成功（EXIT=0）。既存の旗艦定理は標準公理のみ。
