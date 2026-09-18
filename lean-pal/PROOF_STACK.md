@@ -344,6 +344,55 @@ n182 の置換表を一次情報で確認したら、**`CloseoutReadyStage` に�
 
 **これが `shiftPalResiduesAlongRun` と `cycleOracle` の共通の底の最後。**
 
+### n187: **`PostRun` に producer が無い理由が割れた**（コウタ「producer がないときは確実に形式化ミス」）
+
+    PostRun := ∀ v as, v.search.mode = .run → DpSafeStage v as → RunEntriesS as v
+                                                              (`CloseoutPreload8:253`)
+
+**`∀ v as` が run にも供給条件にも縛られていない。** 落としているものが 2 つある:
+
+| 消費者が持っているもの | `PostRun` の文 |
+|---|---|
+| `PacedL 2048 0 (bs ++ as)`（`StagePrep2`） | **無い** |
+| `D + dpEvents (m+1) ≤ bs.length + as.length`（供給＝列が十分長い） | **無い** |
+
+そして**短さで落ちることは既に機械検査済み**:
+
+    CloseoutPreload3.not_runEntriesS_eight : ¬ RunEntriesS (List.replicate 8 false) v0
+
+節タイトルが「**`RestartEntryS` is false: the paced list may be too short**」。
+8 番目のイベントで `.run` に入ると残りが `[]` になり、`DpSafeStage (w p8) []` の
+課金プレフィックスが空になって `dpSafeStage_pre_ne_nil` に当たる。
+
+**同じ証人が `PostRun` も落とす**（`v := w p8` 相当の `.run` 入口で残りを空にすればよい）。
+→ **`PostRun` は偽の疑いが濃い**（まだ `False` を導く定理は書いていないので `REFUTED` とは書かない）。
+
+### なぜ帰納が止まっていたか（構造）
+
+    StageInv2 k m D w v as := StagePrep2 k m D w v as ∨ RunEntriesS as v
+    runEntriesS_of_stageInv2 … (hpost : PostRun) : ∀ as v, StageInv2 … as → RunEntriesS as v
+
+`as` に帰納しているが、`.run` 入口の枝で `hpost v' as hr hsafe` を使うので
+**`as` が縮まない**。そこを global 仮説で埋めてある。
+`.run` 相でもイベントは消費されるので、本来は `as.length` の整礎帰納で閉じられるはず——
+**ただし各 stage 入口で「残りが十分長い」が要る**。それが上の落とした供給条件。
+
+### 正しい形（切り直しの方向）
+
+* 供給条件は**per-stage** でないといけない（global な `as.length` の下界では
+  後段の stage を保証できない）
+* 「各 stage 入口で残りが十分長い」は **run に沿ってしか言えない**
+  （入力が続く限りイベントが来る、という run の性質）
+* → **`PostRun` は trace/run 形の義務に切り直す**。CLAUDE.md の
+  「global 形は原理的に落ちない」がそのまま当てはまる
+
+### 次にやること
+
+1. `PostRun` の反証を書く（`not_runEntriesS_eight` の証人を `.run` 入口に合わせる）
+2. run 形 `PostRunAlongRun`（trace の各 `.run` 入口で、残りイベント数が
+   `dpEvents (m+1)` 以上）に切り直す
+3. `runEntriesS_of_stageInv2` を整礎帰納で書き直し、`hpost` を外す
+
 ### n175 の教訓（これが一番大事）
 
 **44 本書いて計器は 1 本も動かなかった。0 本書いて 1 本外れた。**

@@ -1,3 +1,44 @@
+## 2026-09-19 n187: **`PostRun` に producer が無い理由が割れた**（落とした供給条件）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+コウタの指摘「**producer がないときは確実に形式化ミス**」を当てはめた。
+
+    PostRun := ∀ v as, v.search.mode = .run → DpSafeStage v as → RunEntriesS as v
+
+**`∀ v as` が run にも供給条件にも縛られていない。** 消費者が持っているのに
+文が落としているものが 2 つ:
+
+| 消費者（`StagePrep2` / `runEntriesS_of_restartS2`） | `PostRun` |
+|---|---|
+| `PacedL 2048 0 (bs ++ as)` | **無い** |
+| `D + dpEvents (m+1) ≤ bs.length + as.length`（列が十分長い） | **無い** |
+
+**短さで落ちることは既に機械検査済み**: `CloseoutPreload3.not_runEntriesS_eight`
+（節タイトル「`RestartEntryS` is false: **the paced list may be too short**」）。
+8 番目のイベントで `.run` に入ると残りが `[]` になり `DpSafeStage (w p8) []` の
+課金プレフィックスが空 → `dpSafeStage_pre_ne_nil`。
+**同じ証人が `PostRun` も落とす。**（`REFUTED` とはまだ書かない）
+
+### なぜ帰納が止まっていたか
+
+    StageInv2 k m D w v as := StagePrep2 k m D w v as ∨ RunEntriesS as v
+
+`runEntriesS_of_stageInv2` は `as` に帰納するが、`.run` 入口で `hpost v' as hr hsafe` を
+使うので **`as` が縮まない**。`.run` 相でもイベントは消費されるので本来は
+`as.length` の整礎帰納で閉じられるはずだが、**各 stage 入口で「残りが十分長い」が要る**。
+それが落とした供給条件で、**run に沿ってしか言えない**。
+
+→ **`PostRun` は trace/run 形に切り直す。** CLAUDE.md の「global 形は原理的に落ちない」
+がそのまま当てはまる（`hav` / `hpack` / `hpres` / `RunEntriesAtBegin` に続く 5 例目）。
+
+### 次
+
+1. `PostRun` の反証を書く（`not_runEntriesS_eight` の証人を流用）
+2. run 形 `PostRunAlongRun` に切り直す
+3. `runEntriesS_of_stageInv2` を整礎帰納で書き直し `hpost` を外す
+
 ## 2026-09-19 n186: `PostRunF` 帰納の**具体的な穴**が出た（`8 ≤ mw < 32` の窓）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
