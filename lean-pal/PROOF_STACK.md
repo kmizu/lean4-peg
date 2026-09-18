@@ -143,9 +143,52 @@ RoundHistory P q first delay w (c : Control) (s : GalilVM) : Prop :=
   `chain_shift_phase`（`GalilScaffoldChainReadOrigin:451`）が同じ帰納法なので同型に通る。
   `ChainShiftRun.next` の 1 手は `chainShiftOne w`、これが period テープの
   `left.length + right.length` を変えないことを示す
-* その次: `scan_shift` tick から `CompareRounds h … 1 …` を組む
-  （`GalilScaffoldTopRoundS.round_next` の入力をそろえる）→ `RoundSeg` →
-  `originAt_of_roundSeg` で起点を貼り替え → `originShift_of_roundSeg` → `H_readsShift`
+* **済（n149）**: `chain_shift_period` / `chain_shift_periodLength` /
+  `chain_shift_period_focus`（`RoundHistory.lean` 内）。
+  `chainShiftOne`（`GalilScaffoldChainInputSupply:1478`）が変えるのは
+  `distance`/`boundary`/`last`/`margin` **だけ**なので period テープは shift を通して不変。
+  前 2 本は **公理ゼロ**
+* **次（大物）**: ラウンド境界。`GalilScaffoldTopRoundS.round_next` の入力を run からそろえる
+
+### `round_next` の入力と出どころ（○=確認済み / △=未確認 / ✗=無い）
+
+| 入力 | 出どころ | 状態 |
+|---|---|---|
+| `hseg : ScanSeg P q first delay n c s c1 s1` | `RoundHistory` の第 1 場 | **○** |
+| `w0` ＋ `hp0 : s.periodOnly = true` ＋ `hs0 : s.chain = .watch w0` ＋ `hz0 : zero w0.lag = true` | `RoundHistory` の残りの場 | **○** |
+| `hm1 : c1.mode = .scan` / `hr1 : replaying = false` / `hc1 : c1.clock = 1` | `scan_shift` tick 構成子（`GalilScaffoldTop:123`：`hm` / `hr` / `hc`） | **○** |
+| `w` ＋ `hs1 : s1.chain = .watch w` | 呼び手（run の scan∧watch 区間） | **○** |
+| `hav : canRight s1.right` | `Extra7.scanAvail`（`mode = scan ∧ ¬replaying`） | **○** |
+| `hcmp` / `hmis` / `hq` | `scan_shift` の `hcmp` / `hmt` ＋ `compare_mismatched_parts`（`MatchedRunSnoc:406`） | **○** |
+| `hend : singlePositive s1.cycle = true` | `shiftGuardVM` の `if periodOnly then singlePositive cycle = true` 節。`RoundHistory` が `periodOnly = true` を持つ | **○** |
+| `hpred : read (right s1.right) = symbol w…period.focus` | `shiftGuardVM` の最後の節。guard は `afterMismatch s1 vs vq` 上で評価されるのでその `right` は `right s1.right` | **△**（`afterMismatch` の right が `right s1.right` であることを一次情報で確認する） |
+| `hlen : Canonical s1.length` | `LPackM2` / `RadLedger` 側（`hlc0` と同種） | **△** |
+| `hg : P.shiftGuard (afterMismatch s1 vs vq)` ＋ `s2` ＋ `hb : P.beginShift …` | `scan_shift` の `hg` / `hb` | **○** |
+| `hs2 : beginShiftVM h w (afterMismatch …) s2` | `beginShiftVM' s t := ∃ w, beginShiftVM (periodLength w) w s t`（`GalilScaffoldTopGuards:35`）。よって `h = periodLength w` | **○** |
+| `hi2 : CopyIdle s2` | `AuxPack`（`roundBundle_tick` の `hci : mode = shift → CopyIdle`） | **○** |
+| `hchain : ChainShiftRun ⟨s1.center, left s1.left, ofNat h, inc s1.radius, inc (inc s1.length)⟩ (immediate w) reset h t' v cycle` | **✗ 無い。これが本当の残り。** shift 相（`shift_one` × h ＋ `shift_done`）を run から集める carrier が必要 | **✗** |
+| `o` ＋ `ho : refresh …` | `shift_done` の `o` / `ho` | **○** |
+
+**つまりラウンド境界の残りは `ChainShiftRun` の収集 1 個。**
+found 経路の `CloseoutWatchRound33` / `37` も `ChainShiftRun` を**仮説として取っている**
+（`ShiftRoundInvCL` / `ShiftOriginRestCL` は open な `def`）ので、ここは共通の穴。
+
+設計（次に作る）:
+
+```
+ShiftHistory P q first delay (c : Control) (s : GalilVM) : Prop :=
+  ∃ (k : ℕ) (c1 : Control) (s1 : GalilVM) (vs : ScanVM) (vq : SearchVM)
+    (w : GalilScaffoldChainWatch.State) (s2 : GalilVM) (t' : ShiftState)
+    (v : GalilScaffoldChainWatch.State) (cycle : Counter),
+    -- ラウンド終端の比較と shift 入口
+    … ∧ beginShiftVM (periodLength w) w (afterMismatch s1 vs vq) s2 ∧
+    -- ここまでに済んだ shift の k 手
+    ChainShiftRun (shiftLens.get s2) (immediate w) reset k t' v cycle ∧
+    s = shiftLens.set s2 ⟨t', .watch v, cycle⟩
+```
+
+`shift_one` tick で `k` を 1 増やし（`ChainShiftRun.next`）、`shift_done`
+（`¬ remainingPos`）で `k = periodLength w` が確定して `round_next` に流す。
 
 ---
 

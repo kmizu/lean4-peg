@@ -101,6 +101,42 @@ theorem roundHistory_of_steps {k : ℕ} {x y : State GalilVM}
       hContinuing hTick hScanZ hWatchingZ)
       (fun m' z' hz' => hScanWatchAll (m' + 1) z' (.succ hTick hz'))
 
+/-! ## shift 相は period テープに触らない
+
+`CompareRounds.next` の残り入力（`hprediction` / ラウンド末の `periodLength`）は
+どちらも period テープを見る。shift の 1 手 `chainShiftOne`
+（`GalilScaffoldChainInputSupply:1478`）が変えるのは `distance` / `boundary` /
+`last` / `margin` **だけ**なので、period テープはラウンドを通して不変。
+
+`chain_shift_lag`（`GalilScaffoldTopRounds:19`）と `chain_shift_phase`
+（`GalilScaffoldChainReadOrigin:451`）と同じ帰納法。 -/
+
+/-- **shift 相は period テープを変えない。** -/
+theorem chain_shift_period {s t : ShiftState} {w v : GalilScaffoldChainWatch.State}
+    {cycle finish : Counter} {n : ℕ}
+    (hShiftRun : ChainShiftRun s w cycle n t v finish) :
+    v.machine.control.period = w.machine.control.period := by
+  induction hShiftRun with
+  | stop s w cycle => rfl
+  | next s w cycle _ _ _ _ _ ih => exact ih
+
+/-- **`periodLength` は shift を通って保存される。** -/
+theorem chain_shift_periodLength {s t : ShiftState} {w v : GalilScaffoldChainWatch.State}
+    {cycle finish : Counter} {n : ℕ}
+    (hShiftRun : ChainShiftRun s w cycle n t v finish) :
+    periodLength v = periodLength w := by
+  unfold periodLength
+  rw [chain_shift_period hShiftRun]
+
+/-- **period テープの焦点記号も shift を通って不変。**  `CompareRounds.next` の
+`hprediction` をラウンド境界で読み替えるのに使う。 -/
+theorem chain_shift_period_focus {s t : ShiftState} {w v : GalilScaffoldChainWatch.State}
+    {cycle finish : Counter} {n : ℕ}
+    (hShiftRun : ChainShiftRun s w cycle n t v finish) :
+    GalilScaffoldChainConsume.symbol v.machine.control.period.focus =
+      GalilScaffoldChainConsume.symbol w.machine.control.period.focus := by
+  rw [chain_shift_period hShiftRun]
+
 /-- **履歴から下層の射影を取り出す。**  `CompareRounds.next` の第 1 引数。 -/
 theorem onlyMatchedRun_of_roundHistory {c : Control} {s : GalilVM}
     (hHistory : RoundHistory P q first delay w c s) :
@@ -120,5 +156,8 @@ end
 #print axioms roundHistory_tick
 #print axioms roundHistory_of_steps
 #print axioms onlyMatchedRun_of_roundHistory
+#print axioms chain_shift_period
+#print axioms chain_shift_periodLength
+#print axioms chain_shift_period_focus
 
 end PalPeg.RoundHistory

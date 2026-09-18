@@ -1,3 +1,34 @@
+## 2026-09-19 n149: period テープは shift を通して不変（＋ラウンド境界の残りは 1 個に特定）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器は動いていない。**
+
+### 新規 3 本（`PalPeg/RoundHistory.lean` 内）
+
+* `chain_shift_period : ChainShiftRun s w cycle n t v finish → v.machine.control.period = w.machine.control.period` — **公理ゼロ**
+* `chain_shift_periodLength : … → periodLength v = periodLength w` — **公理ゼロ**
+* `chain_shift_period_focus : … → symbol v…period.focus = symbol w…period.focus`
+
+理由は一次情報で確認: `chainShiftOne`（`GalilScaffoldChainInputSupply:1478`）が変えるのは
+`distance` / `boundary` / `last` / `margin` **だけ**で period テープに触らない。
+`chain_shift_lag`（`GalilScaffoldTopRounds:19`）と同じ帰納法。
+
+### ラウンド境界の残りは `ChainShiftRun` の収集 1 個（入力表は `PROOF_STACK.md`）
+
+`GalilScaffoldTopRoundS.round_next` の入力を run からそろえる作業を 1 つずつ照合した。
+15 個のうち **13 個は出どころが確認済み**（`RoundHistory` / `scan_shift` tick 構成子 /
+`shiftGuardVM` / `Extra7.scanAvail` / `AuxPack` / `shift_done`）、
+2 個が未確認（`hpred` の `afterMismatch` の right、`hlen : Canonical s1.length`）、
+**1 個が存在しない**:
+
+    hchain : ChainShiftRun ⟨s1.center, left s1.left, ofNat h, inc s1.radius,
+                            inc (inc s1.length)⟩ (immediate w) reset h t' v cycle
+
+これは shift 相（`shift_one` × h ＋ `shift_done`）を run から集める carrier が要る。
+**found 経路の `CloseoutWatchRound33` / `37` も `ChainShiftRun` を仮説として取っている**
+（`ShiftRoundInvCL` / `ShiftOriginRestCL` は open な `def`）ので、ここは共通の穴。
+設計 `ShiftHistory` を `PROOF_STACK.md` に記録した。
+
 ## 2026-09-19 n148: `RoundHistory` — ラウンドの履歴を運ぶ不変量（公理は 4 本のまま）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
