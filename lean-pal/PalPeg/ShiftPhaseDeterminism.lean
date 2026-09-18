@@ -208,4 +208,101 @@ theorem steps_shift_exit_unique {P : Shared} {q : ℕ} {first : Fin 9} {delay : 
 
 #print axioms steps_shift_exit_unique
 
+
+/-! ## guard を `remainingPos` から出す
+
+`steps_shift_det` / `steps_shift_exit_unique` が要る guard「途中が全部 shift 相」は、
+**`shift_one` が制御を変えない**という一点から出る。残り歩数が正である限り
+`shift_done` は使えないので、run は `shift_one` だけになり制御が凍る。
+
+これで guard の出どころがラウンド不変量（`beginShiftVM` が `remaining := ofNat h` を
+置き、`shiftTick` が 1 ずつ減らす）に落ちる。 -/
+
+/-- **残り歩数が正な shift 相の tick は制御を変えない。** -/
+theorem tick_shift_keeps_ctl {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {x y : State GalilVM} (hShift : x.ctl.mode = Mode.shift)
+    (hRemaining : (galilFrameS P q first).remainingPos x.vm)
+    (hTick : Tick (galilFrameS P q first) delay x y) : y.ctl = x.ctl := by
+  cases hTick with
+  | shift_one c s s1 hm hp hOne => rfl
+  | shift_done c s o hm hp ho => exact absurd hRemaining hp
+    | init c2 s2 s2' hm2 _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | scan_wait c2 s2 s2' hm2 _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | scan_count c2 s2 s2' hm2 _ _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | scan_match c2 s2 s2' s2'' o2 hm2 _ _ _ _ _ _ =>
+      exact absurd (hm2.symm.trans hShift) (by decide)
+    | scan_shift c2 s2 s2' s2'' hm2 _ _ _ _ _ _ _ =>
+      exact absurd (hm2.symm.trans hShift) (by decide)
+    | scan_fallback c2 s2 s2' s2'' hm2 _ _ _ _ _ _ _ =>
+      exact absurd (hm2.symm.trans hShift) (by decide)
+    | replayStart c2 s2 s2' o2 hm2 _ _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | restart c2 s2 s2' hm2 _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | copy_one c2 s2 s2' hm2 _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | copy_done c2 s2 s2' hm2 _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | home_start c2 s2 s2' hm2 _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | home_step c2 s2 s2' hm2 _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | fpp_slice c2 s2 s2' hm2 _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | fpp_done c2 s2 s2' hm2 _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | markEnd_step c2 s2 s2' hm2 _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | markEnd_found c2 s2 s2' hm2 _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | choose_select c2 s2 s2' hm2 _ _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | choose_step c2 s2 s2' hm2 _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | rewind_done c2 s2 s2' hm2 _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | rewind_one c2 s2 s2' hm2 _ _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+    | rewind_pair c2 s2 s2' hm2 _ _ _ => exact absurd (hm2.symm.trans hShift) (by decide)
+
+/-- **残り歩数が正な限り mode は shift のまま。**  `steps_shift_det` /
+`steps_shift_exit_unique` の guard はこれで作れる。 -/
+theorem steps_shift_mode_of_remaining {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ} :
+    ∀ {m : ℕ} {x w : State GalilVM}, Steps (galilFrameS P q first) delay m x w →
+      x.ctl.mode = Mode.shift →
+      (∀ (j : ℕ) (z : State GalilVM),
+        Steps (galilFrameS P q first) delay j x z → j < m →
+        (galilFrameS P q first).remainingPos z.vm) →
+      w.ctl.mode = Mode.shift := by
+  intro m x w hSteps
+  induction hSteps with
+  | zero u => intro hShift _; exact hShift
+  | @succ n u z1 v hTick hRest ih =>
+    intro hShift hRemainingBefore
+    have hRemU : (galilFrameS P q first).remainingPos u.vm :=
+      hRemainingBefore 0 u (.zero u) (by omega)
+    have hCtl : z1.ctl = u.ctl := tick_shift_keeps_ctl hShift hRemU hTick
+    exact ih (by rw [hCtl]; exact hShift)
+      (fun j z hz hj => hRemainingBefore (j + 1) z (.succ hTick hz) (by omega))
+
+#print axioms tick_shift_keeps_ctl
+#print axioms steps_shift_mode_of_remaining
+
+
+/-- **shift 相の着地は一意（`remainingPos` だけを仮定）。**
+
+`round_next` / `terminal_shift_steps` が構成した着地と、run の実際の着地が同じことを
+`Fair` なしで言うための最終形。仮定は「残り歩数が正である間は shift 相を出ない」だけで、
+これはラウンド不変量（`beginShiftVM` が `remaining := ofNat h` を置き `shiftTick` が
+1 ずつ減らす）から出る。 -/
+theorem shift_landing_eq {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {x ya yc : State GalilVM} {Ka Kc : ℕ}
+    (hShiftX : x.ctl.mode = Mode.shift)
+    (hActual : Steps (galilFrameS P q first) delay Ka x ya)
+    (hExitActual : ya.ctl.mode ≠ Mode.shift)
+    (hRemainingActual : ∀ (j : ℕ) (z : State GalilVM),
+      Steps (galilFrameS P q first) delay j x z → j < Ka →
+      (galilFrameS P q first).remainingPos z.vm)
+    (hConstructed : Steps (galilFrameS P q first) delay Kc x yc)
+    (hExitConstructed : yc.ctl.mode ≠ Mode.shift)
+    (hRemainingConstructed : ∀ (j : ℕ) (z : State GalilVM),
+      Steps (galilFrameS P q first) delay j x z → j < Kc →
+      (galilFrameS P q first).remainingPos z.vm) :
+    ya = yc ∧ Ka = Kc :=
+  steps_shift_exit_unique hActual
+    (fun m w hw hm => steps_shift_mode_of_remaining hw hShiftX
+      (fun j z hz hj => hRemainingActual j z hz (by omega)))
+    hExitActual hConstructed
+    (fun m w hw hm => steps_shift_mode_of_remaining hw hShiftX
+      (fun j z hz hj => hRemainingConstructed j z hz (by omega)))
+    hExitConstructed
+
+#print axioms shift_landing_eq
+
 end PalPeg.ShiftPhaseDeterminism

@@ -186,6 +186,9 @@ inductive で、**`Tick` の `scan_wait` / `scan_count` / `scan_match` と 1 対
 | `tick_shift_det` | shift 相の tick は一意（`Tick` の 24 構成子を両側で潰した） |
 | `steps_shift_det` | 中間が全部 shift 相なら同じ長さの 2 本の run は同じ状態に着く |
 | **`steps_shift_exit_unique`** | **shift 相の出口は状態も長さも一意（長さを仮定しなくてよい）** |
+| `tick_shift_keeps_ctl` | 残り歩数が正な shift tick は制御を変えない（`shift_done` が使えないから） |
+| `steps_shift_mode_of_remaining` | 残り歩数が正な限り mode は shift のまま（guard の出どころ） |
+| **`shift_landing_eq`** | **構成した着地と run の実際の着地は一致（仮定は `remainingPos` だけ、`Fair` 不要）** |
 
 **主定理との関係**: `round_next` はラウンド 1 周を**構成**して `Steps` と
 `CompareRounds h (toOnly s w0) 1 (toOnly (構成した着地) v)` を返す。`RoundSeg`
