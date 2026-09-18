@@ -236,7 +236,9 @@ guard を `mode = scan` に広げたら**義務ごと消えた**。同型の例�
 ```sh
 cd lean-pal && . ~/.elan/env && lake build --quiet PalPeg > /tmp/b.log 2>&1; echo $?   # 全体（20 分）
 cd lean-pal && lake env lean PalPeg/X.lean                                          # 単一ファイル
-sed -i "/^import PalPeg.GalilSegmentConstruct$/a import PalPeg.X" PalPeg.lean        # 登録（build 中は登録しない）
+sed -i "/^import PalPeg.CloseoutFinalBranch$/a import PalPeg.X" PalPeg/Workbench.lean  # 未配線の新モジュール
+# 正本の鎖に入るなら PalPeg/Canonical.lean に別名を置く。ルート PalPeg.lean は 4 本だけ
+# （PalInPeg / Canonical / Workbench / Axioms）で、直接は足さない。
 ```
 - サブエージェント規約: 定理 1 つ・ファイル:行番号・使う補題名を指定、新規ファイル 1 本、既存編集禁止（例外は明示）、sorry 禁止、`lake build` 禁止、`#print axioms`。中心部の設計は自分で書く。
 - 詳細は `CLAUDE_RESUME.md` / `lean-pal/ASSEMBLY_PLAN.md` 先頭。

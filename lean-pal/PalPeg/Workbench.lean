@@ -73,6 +73,7 @@ import PalPeg.GalilScaffoldStructured
 import PalPeg.GalilSourceCost
 import PalPeg.CloseoutFinalVer
 import PalPeg.CloseoutFinalBranch
+import PalPeg.MatchedRunSnoc
 
 /-!
 # `Workbench` — 作ったが正本の鎖に配線されていない部品
@@ -139,12 +140,37 @@ import PalPeg.CloseoutFinalBranch
 | **`CloseoutFinalFour.given_globalScanLandings`** | **7** | **なし**（正本、`Canonical` 参照） | — |
 | `CloseoutFinalBranch.given_landingObligationsAlongRun` | 6（Prop 引数） | なし。ただし `hB` は**4 義務の束**なので義務の実数は 9。前進は「global → run 形」の弱化であって本数の削減ではない | — |
 | `CloseoutFinalBranch.given_landingObligationsSansRadiusLedger` | 6（Prop 引数） | なし。`final41` の `hB` から**半径台帳を放電**した版（`RadLedger` は `radLedger_pt` で trace 全点にタダ）。残る `shiftCan` は `canRight s.right` のみ | — |
-| `CloseoutFinalBranch.given_scanLandingObligations` | 6（Prop 引数） | なし。**`shiftDone` 義務を完全に放電**（半径台帳 ＋ `canRight` の両方が新規入力ゼロ）。残差は `ScanLandingObligationsAt` の 3 場（`bg`/`matchLand`/`entryLand`）＋ `hver`。義務の実数 8 | — |
+| `CloseoutFinalBranch.given_scanLandingObligations` | 6（Prop 引数、うち `h4 : first ≠ 4` は `by decide`） | なし。**`shiftDone` 義務を完全に放電**（半径台帳 ＋ `canRight` の両方が新規入力ゼロ）。2026-09-19 に **`hme` も放電**（`CloseoutMarksPack.packRunR_MW_marksFree`）。残差は `ScanLandingObligationsAt` の 3 場（`bg`/`matchLand`/`entryLand`）＋ `hver` | — |
 | `CloseoutFinalW.given_globalScanLandings_and_fourOther` | 8 | なし（一代前、`hfour` を含む） | — |
 | `CloseoutFinalVer.given_globalRun41Landings_and_verifierRun` | 9 | なし | — |
 | `CloseoutFinalS2.given_consumeAvailEverywhere_FALSE_HYP` | 9 | `hav` | `ConsumeAvailRefute.hav_false` |
 | `CloseoutFinalW3.given_chainPackAtAnyState_andMore_FALSE_HYP` | 5 | `hpack` | `CloseoutPackRefute.hpack_false` |
 | `CloseoutFinalW4.given_chainPackAtAnyState_FALSE_HYP` | 4 | `hpack` | 同上 |
+
+## `MatchedRunSnoc` — run を tick ごとに積むための部品（未配線）
+
+| 定理 | 内容 |
+|---|---|
+| `onlyMatchedRun_snoc` | `OnlyMatchedRun` に一致比較 1 手を**末尾**から足す |
+| `onlyMatchedRun_head` | 先頭 1 手を剥がす |
+| `onlyMatchedRun_trans` | 2 本を連結 |
+| `matchedSeq_snoc_background` | `MatchedSeq` に background 量子を末尾から足す（カウント不変） |
+| `matchedSeq_snoc_compare` | `MatchedSeq` に一致比較を末尾から足す（カウント +1） |
+
+**主定理との関係**: `obligation_shiftPalAtScanStates` の残差は
+`CloseoutRoundSeg` によれば `RoundSeg`（＝`CompareRounds h _ 1 _`）と `H_fresh` の
+2 つで、どちらも `GalilScaffoldTopRoundS.round_next` /
+`GalilScaffoldTopFirstRound.first_round` が要求する **`ScanSeg`（run の区間）** を
+作れるかに帰着する。区間を run から抽出するのが CLAUDE.md §1 の壁 (1)（`ScanToScan`）。
+
+`MatchedSeq` は `count`（background）と `compare`（一致比較）から成る run 上の
+inductive で、**`Tick` の `scan_wait` / `scan_count` / `scan_match` と 1 対 1 に対応する**。
+ただし前からしか積めないので、run を歩きながら積むには末尾伸長が要る。それがこの 5 本。
+これがあれば `CompareRounds.next` の `OnlyMatchedRun` 引数は区間抽出なしで手に入る。
+
+**まだ配線していない**: 次に要るのは `Tick` の scan 分岐から `background` /
+`compare`+`matched` を取り出して snoc につなぐ tick 補題と、それを run 不変量
+（「いまの状態はあるラウンド起点から `n` 手の一致比較で到達した」）に仕立てる部分。
 
 `CloseoutFinalVer.given_globalRun41Landings_and_verifierRun` は前提数では `final39` に劣るが、**残す**:
 分岐前提が Run41 系（`H_BackgroundLandingChainLedger` / `H_MatchLandingChainLedger` / `H_ShiftEntryChainLedger` / `H_ShiftExitRadiusLedger`）で、
