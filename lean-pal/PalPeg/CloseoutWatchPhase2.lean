@@ -346,6 +346,7 @@ def NoShiftTailC (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffold
     sP = afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) ∧
     (∀ (es : List Bool) (c2 : Control) (s2 : GalilVM),
       WatchSegE (PofC centre place entry raw) qq first 2048 es cP sP c2 s2 →
+      (∃ wLive : GalilScaffoldChainWatch.State, s2.chain = ChainVM.watch wLive) →
       ∃ (cen : Fin 3) (ys : List (Fin 3)) (b : Fin 3) (c3 : Control) (s3 : GalilVM)
         (w3 : GalilScaffoldChainWatch.State) (vs3 : ScanVM) (vq3 : SearchVM) (o3 : Bool)
         (w3' : GalilScaffoldChainWatch.State),
@@ -383,7 +384,7 @@ theorem breakRouteLPraw_of_tail (centre : GalilVM → Fin 3)
   subst hsPeq
   intro hh es c2 s2 hprepSeg hlen hw
   obtain ⟨cen, ys, b, c3, s3, w3, vs3, vq3, o3, w3', hwatch2, hes0, hpal1, hpal2, hseg, hm3, hr3,
-    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hprepSeg
+    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hprepSeg hw
   obtain ⟨cT, sT, k, L, hst, hcr, hLP2, hc, hlt, hright⟩ :=
     PalPeg.GalilInvPlus2.foundRouteMC_noshift'' centre place entry qq first raw hex hE.invLPC
       (PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry qq first hE.invLPC)

@@ -149,6 +149,7 @@ def NoShiftTailC0 (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffol
     sP = afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) ∧
     (∀ (es : List Bool) (c2 : Control) (s2 : GalilVM),
       WatchSegE (PofC centre place entry raw) qq first 2048 es cP sP c2 s2 →
+      (∃ wLive : GalilScaffoldChainWatch.State, s2.chain = ChainVM.watch wLive) →
       ∃ (cen : Fin 3) (ys : List (Fin 3)) (b : Fin 3) (c3 : Control) (s3 : GalilVM)
         (w3 : GalilScaffoldChainWatch.State) (vs3 : ScanVM) (vq3 : SearchVM) (o3 : Bool)
         (w3' : GalilScaffoldChainWatch.State),
@@ -179,9 +180,10 @@ theorem noShiftTailC_of_0 (centre : GalilVM → Fin 3)
     hseg0, hmF, hrF, hcF, havF, hidle, hq, hfound, hmt, hch, hchne, hoF, hcPeq, hsPeq, htl⟩ := h0
   refine ⟨es0, cF, sF, vq, ch, oF, hseg0, hmF, hrF, hcF, havF, hidle, hq, hfound, hmt, hch,
     hchne, hoF, hcPeq, hsPeq, ?_⟩
-  intro es c2 s2 hprepSeg
+  intro es c2 s2 hprepSeg hwLanding
   obtain ⟨cen, ys, b, c3, s3, w3, vs3, vq3, o3, w3', hys, hwatch2, hes0, hseg, hm3, hr3,
-    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hprepSeg
+    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ :=
+    htl es c2 s2 hprepSeg hwLanding
   obtain ⟨hpal1, hpal2⟩ :=
     palAt_pair_of_candidate a ls rs qw gap span lower ys raw r sF hraw hcenF hpr
       (by rw [hys]; exact hcand)
@@ -381,6 +383,7 @@ def NoShiftTailC0L (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffo
     sP = afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq) ∧
     (∀ (es : List Bool) (c2 : Control) (s2 : GalilVM),
       WatchSegE (PofC centre place entry raw) qq first 2048 es cP sP c2 s2 →
+      (∃ wLive : GalilScaffoldChainWatch.State, s2.chain = ChainVM.watch wLive) →
       ∃ (cen : Fin 3) (ys : List (Fin 3)) (b : Fin 3)
         (w2 : GalilScaffoldChainWatch.State) (es' : List Bool)
         (c3 : Control) (s3 : GalilVM)
@@ -414,9 +417,10 @@ theorem noShiftTailC0L_of_0 (centre : GalilVM → Fin 3)
     hseg0, hmF, hrF, hcF, havF, hidle, hq, hfound, hmt, hch, hchne, hoF, hcPeq, hsPeq, htl⟩ := h0
   refine ⟨es0, cF, sF, vq, ch, oF, a, ls, rs, qw, gap, span, lower, h, hraw, hcenF, hpr, hcand,
     hseg0, hmF, hrF, hcF, havF, hidle, hq, hfound, hmt, hch, hchne, hoF, hcPeq, hsPeq, ?_⟩
-  intro es c2 s2 hseg
+  intro es c2 s2 hseg hwLanding
   obtain ⟨cen, ys, b, c3, s3, w3, vs3, vq3, o3, w3', hys, hwatch2, hes0, hseg3, hm3, hr3,
-    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hseg
+    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ :=
+    htl es c2 s2 hseg hwLanding
   exact ⟨cen, ys, b, _, [], c3, s3, w3, vs3, vq3, o3, w3', hys, hwatch2, .stop _, by simp, hes0,
     hseg3, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩
 
@@ -439,7 +443,7 @@ theorem breakRouteLPraw_of_tail0L (centre : GalilVM → Fin 3)
   intro hh es c2 s2 hprepSeg hlen hw
   obtain ⟨cen, ys, b, w2, es', c3, s3, w3, vs3, vq3, o3, w3', hys, hwatch2, hrun0, hes', hes0,
     hseg, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ :=
-    htl es c2 s2 hprepSeg
+    htl es c2 s2 hprepSeg hw
   obtain ⟨hpal1, hpal2⟩ :=
     palAt_pair_of_candidate a ls rs qw gap span lower ys raw r sF hraw hcenF hpr
       (by rw [hys]; exact hcand)

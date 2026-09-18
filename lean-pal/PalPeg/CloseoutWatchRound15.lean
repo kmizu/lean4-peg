@@ -163,7 +163,8 @@ theorem breakRouteLP_of_tail (centre : GalilVM → Fin 3)
   subst hsPeq
   intro hh es c2 s2 hprepSeg hlen hw
   obtain ⟨cen, ys, b, c3, s3, w3, vs3, vq3, o3, w3', hwatch2, hes0, hpal1, hpal2, hseg, hm3, hr3,
-    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hprepSeg
+    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ :=
+    htl es c2 s2 hprepSeg hw
   obtain ⟨cT, sT, k, L, hst, hcr, hLP2, hc, hlt, hright, hInv⟩ :=
     PalPeg.GalilInvPlus2.foundRouteMC_noshift''_Inv centre place entry qq first raw hex hE.invLPC
       (PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry qq first hE.invLPC)

@@ -161,11 +161,25 @@ theorem prepLandingLiveC_false_of_foundCompareCtx {w : List (Fin 2)} {c cP : Con
   exact ChainVM.noConfusion hWatch
 
 
-/-- `BreakLandingC` も `es = []` 実例で watch 始点を強制する。 -/
+/-- **旧・着地ガード無しの `BreakLandingC`**（n128 で `CloseoutWatchRound5.BreakLandingC`
+に `(∃ w, s2.chain = .watch w) →` を足す前の形）。
+
+**現行の `BreakLandingC` はガード付きなので、下の反証は当たらない。**
+ここに残すのは「なぜガードが要るか」の記録。 -/
+def refuted_BreakLandingUnguardedC (raw : List (Fin 2)) (h : ℕ) (sF : GalilVM)
+    (cP : Control) (sP : GalilVM) : Prop :=
+  ∀ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+    WatchSegE (PofC centre place entry raw) q first 2048 es cP sP c2 s2 →
+      ∃ (cen : Fin 3) (ys : List (Fin 3)) (b : Fin 3),
+        ys.length + 1 = h ∧
+        s2.chain = ChainVM.watch
+          (PalPeg.GalilNoShiftStage.freshWatch sF.center cen ys b sF.radius) ∧
+        es.count true = 0
+
+/-- ガード無し版は `es = []` 実例で watch 始点を強制する。 -/
 theorem breakLandingC_watch_start {raw : List (Fin 2)} {h : ℕ} {sF : GalilVM}
     {cP : Control} {sP : GalilVM}
-    (hBreak : PalPeg.CloseoutWatchRound5.BreakLandingC centre place entry q first raw h sF
-      cP sP) :
+    (hBreak : refuted_BreakLandingUnguardedC centre place entry q first raw h sF cP sP) :
     ∃ wv : GalilScaffoldChainWatch.State, sP.chain = ChainVM.watch wv := by
   obtain ⟨cen, ys, b, -, hChain, -⟩ := hBreak [] cP sP (.stop cP sP)
   exact ⟨_, hChain⟩
@@ -175,8 +189,7 @@ theorem breakLandingC_watch_start {raw : List (Fin 2)} {h : ℕ} {sF : GalilVM}
 theorem breakLandingC_false_of_foundCompareCtx {w : List (Fin 2)} {c cP : Control}
     {r sP sF : GalilVM} {h : ℕ}
     (hCtx : FoundCompareCtxC centre place entry q first w c r cP sP)
-    (hBreak : PalPeg.CloseoutWatchRound5.BreakLandingC centre place entry q first w h sF
-      cP sP) :
+    (hBreak : refuted_BreakLandingUnguardedC centre place entry q first w h sF cP sP) :
     False := by
   obtain ⟨es0, cF, sF0, vq, ch, oF, a, ls, rs, qw, gap, hraw, hseg, hmF, hrF, hcF, havF, hidle,
     hcen, hqe, hf, hmtF, hch, hchne, hoF, hcPe, hsPe⟩ := hCtx

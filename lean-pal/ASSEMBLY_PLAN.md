@@ -1,3 +1,44 @@
+## 2026-09-19 n128: `hpack` の**両方の偽の節**（4 と 7）を found 経路から消した
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。
+無条件 PAL は未完。§10.5 は未達。**
+
+n127 で節 4（`PrepLandingWatchC`）を消した。n128 で節 7（`BreakLandingC`）も同じ手で消えた。
+**`FoundPackRefute` が反証した 2 つは、どちらも同じ 1 つの欠陥だった**——
+`∀ es c2 s2, WatchSegE … cP sP c2 s2 → …` が `es = []`（＝`WatchSegE.stop`）を含むので、
+誕生状態 `sP` 自身について主張してしまう。誕生直後の chain は `.copy` なので偽。
+
+### 直し方（節 4 と節 7 で同一）
+
+**着地に `(∃ w, s2.chain = ChainVM.watch w) →` のガードを足す。** それだけ。
+消費者はそのガードを既に持っているか（`RoundsRouteLPraw` / `BreakRouteLPraw` は
+`es.length = 2*hh+2` と `∃ ww, s2.chain = .watch ww` を渡す）、`hland` の出力から取れる。
+
+ガードを足した定義（すべて trailing `∀`）:
+
+| 定義 | ファイル |
+|---|---|
+| `ShiftTailC` | `CloseoutWatchPhase2:247` |
+| `NoShiftTailC` | `CloseoutWatchPhase2:347` |
+| `NoShiftTailC0` / `NoShiftTailC0L` | `CloseoutWatchPhase3:150` / `:382` |
+| `BreakLandingC` | `CloseoutWatchRound5:409` |
+| `BreakLandingLedgerC` | `CloseoutWatchRound10:208` |
+
+### 反証の扱い
+
+`FoundPackRefute.breakLandingC_false_of_foundCompareCtx` は**ガード無しの旧形**についての
+定理として残した（`refuted_BreakLandingUnguardedC` を新設して、それを取る形に変更）。
+現行のガード付き `BreakLandingC` には当たらない。**削除せず、なぜガードが要るかの記録として残す。**
+
+### 帰結
+
+`CloseoutFoundRoute1` の `hpack` 7 節のうち、**反証済みだった 2 節（4 と 7）が両方とも
+真の形になった**。節 4 は `∃ es c2 s2, WatchSegE ∧ LiveScanWatch c2 s2`
+（＝`ReachesWatchPhase` ＋ 制御 3 節）、節 7 はガード付き `BreakLandingC`。
+
+公理の本数は変わらない（`hpack` は公理ではなく `obligation_cycleOracle` の部分木内部の
+仮定）。**変わったのは、その部分木が偽の仮定を 1 つも通らなくなったこと。**
+
 ## 2026-09-19 n127: 反証済み `PrepLandingWatchC`（`hpack` 節 4）を found 経路から**消した**
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。
