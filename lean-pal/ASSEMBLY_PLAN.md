@@ -32,6 +32,33 @@
 
 
 
+## 2026-09-19 n122: live chain 版区間構成の材料も既にある（`copy_step_exists`）
+
+**全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
+
+n121 で「live chain 版 `watchSegE_construct` が唯一の残り」と測った。その構成に要る
+**chain 側の全域性**も既存だった:
+
+* `GalilBranchInvariants.copy_step_exists`（`:350`）— `CopyInv t h p v n` から
+  `∃ y, ChainStep (.copy t h p v lag margin ver) y`（**copy tick の全域性**）
+* `GalilBranchInvariants.onPrefix_start` / `onPrefix_put` — `OnPrefix` の維持
+* `GalilChainTickable`（`:186`, `:201`）にも `.copy` からの `ChainStep` 構成がある
+
+したがって live chain 版の帰納は
+
+| 必要なもの | 出どころ |
+|---|---|
+| chain の 1 手（`.copy` 相） | `copy_step_exists`（`CopyInv` から） |
+| `WatchSegE.match` の側条件 | `s.chain ≠ .idle` のみ（`GalilScaffoldTopWatchSegE:34`） |
+| `MInv` / `ScanInvariant` の維持 | chain に触れないので `constructB` と同じ扱い |
+| 結論の選言 | `(es.length = n ∨ SegEnd P c' t)` をそのまま踏襲 |
+
+で組める。**残っているのは `CopyInv` を誕生から区間に沿って運ぶ部分と、
+`constructB` の並行版を書く作業（~150 行の帰納法）。**
+
+`WatchOk` 経由の `chainOk_tick_false` は使えない（`WatchOk` は反証済み、
+`WatchOkRefute.watchOk_false`）。`CopyInv` 経由で行くこと。
+
 ## 2026-09-19 n121: `ReachesWatchPhase` の最後の 1 ピースは「live chain 版の区間構成」
 
 **全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
