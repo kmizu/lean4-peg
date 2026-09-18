@@ -198,7 +198,7 @@ theorem fallbackReachS_of_context' (centre : GalilVM → Fin 3)
   obtain ⟨hsi, hM, hK, hout⟩ :=
     tickPack_of_landing centre place entry q first raw hex hseg hav hsiP hMP hEP houtP
   have hT : FallbackTick centre place entry raw s1 :=
-    fallbackTick_of_watchTick centre place entry raw hw hz
+    fallbackTick_of_watchTick centre place entry raw (by rw [hw]; exact ChainVM.noConfusion) hz
       (hg ⟨left s1.left, right s1.right, z⟩ (searchLens.get s1) hz)
   obtain ⟨n, R, cT, sT, hL⟩ :=
     fallbackLanding_of_pack centre place entry q hq0 first h7 h8 raw ⟨hlive.1, hlive.2.1⟩ hclk

@@ -91,11 +91,10 @@ search witness is `searchLens.get s1` (the chain is not idle), and the chain
 clause is the first disjunct of `chainAt`. -/
 theorem fallbackTick_of_watchTick (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry : ℕ) (raw : List (Fin 2))
-    {s1 : GalilVM} {w : GalilScaffoldChainWatch.State} (hw : s1.chain = ChainVM.watch w)
+    {s1 : GalilVM} (hne : s1.chain ≠ ChainVM.idle)
     {z : ChainVM} (htick : ChainTick false s1.chain z)
     (hg : ¬ shiftGuardVM (afterMismatch s1 ⟨left s1.left, right s1.right, z⟩ (searchLens.get s1))) :
     FallbackTick centre place entry raw s1 := by
-  have hne : s1.chain ≠ ChainVM.idle := by rw [hw]; exact ChainVM.noConfusion
   refine ⟨⟨⟨left s1.left, right s1.right, z⟩, searchLens.get s1, rfl, rfl, Or.inr ⟨hne, rfl⟩,
     Or.inl ⟨hne, htick⟩, hg⟩⟩
 
@@ -178,11 +177,13 @@ theorem watchFallbackC_of_context (centre : GalilVM → Fin 3)
   intro es c1 s1 hseg hlive hclk hav hne
   obtain ⟨hns, hcost⟩ := hres
   obtain ⟨⟨z, hz⟩, hg⟩ := hns es c1 s1 hseg hlive hclk hav hne
-  obtain ⟨w, hw⟩ := hlive.2.2.2
+  have hneChain : s1.chain ≠ ChainVM.idle := by
+    obtain ⟨w, hw⟩ := hlive.2.2.2
+    rw [hw]; exact ChainVM.noConfusion
   obtain ⟨hsi, hM, hK, hout⟩ :=
     tickPack_of_landing centre place entry q first raw hex hseg hav hsiP hMP hEP houtP
   refine ⟨⟨hsi, hM, hK, ?_, hout⟩, hcost es c1 s1 hseg hlive hclk hav hne⟩
-  exact fallbackTick_of_watchTick centre place entry raw hw hz
+  exact fallbackTick_of_watchTick centre place entry raw hneChain hz
     (hg ⟨left s1.left, right s1.right, z⟩ (searchLens.get s1) hz)
 
 end PalPeg.CloseoutWatchRound22

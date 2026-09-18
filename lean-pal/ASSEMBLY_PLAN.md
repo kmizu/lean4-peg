@@ -1,3 +1,53 @@
+## 2026-09-19 n130: `LiveScanWatch` ガードの線引きが確定した（`CopyOrBack ∨ watch` が正しい弱化先）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。
+無条件 PAL は未完。§10.5 は未達。**
+
+### 放電できたもの（検証済み）
+
+| 定理 | 元の仮定 | 実際に使っていたもの |
+|---|---|---|
+| `CloseoutWatchRound21.fallbackLanding_of_pack` | `LiveScanWatch c1 s1` | `mode = scan ∧ replaying = false`（clock と watch を `obtain ⟨hm, hr, -, -⟩` で捨てていた） |
+| `CloseoutWatchRound22.fallbackTick_of_watchTick` | `s1.chain = .watch w` | `s1.chain ≠ .idle`（watch は `≠ idle` を出すためだけ） |
+
+`CloseoutWatchRun.LiveScanNonIdle`（`mode ∧ ¬replaying ∧ 1 ≤ clock ∧ chain ≠ idle`）と
+`liveScanNonIdle_of_liveScanWatch` を追加。
+
+### 弱化を試して**戻した**もの（正直な記録）
+
+`WatchFallbackC` / `WatchMismatchNoShiftC` / `WatchFallbackCostC` / `LandingRestartReachF` /
+`FallbackReachS` の guard を `LiveScanNonIdle` に弱める sweep を当てたが、
+`CloseoutWatchRound23.watchMismatchNoShiftC_of_split` が
+`TerminalRunFallbackGC`（`LiveScanWatch` guard を持つ watch ラウンドの機械）から
+`WatchMismatchNoShiftC` を作っているので通らない。**これは形式化のミスではなく本物のギャップ。**
+
+さらに **`≠ idle` だけでは足りない**ことも分かった:
+`WatchMismatchNoShiftC` の第 1 節「`∃ z, ChainTick false s1.chain z`」は、
+`ChainStep` が `.copy` から出るのに `CopyInv`（`t.focus = 8`、`t.left ≠ []`、
+`read (left p) = some a`）を要求するので、任意の非 idle chain では出ない。
+
+### 正しい弱化先（次に書くもの）
+
+    CopyOrBack s1.chain ∨ (∃ w, s1.chain = ChainVM.watch w)      -- 「tick できる相」
+
+この guard なら両節とも出る。材料は全部ある:
+
+| 節 | copy/back 側の材料 |
+|---|---|
+| `∃ z, ChainTick false s1.chain z` | `CopyPhaseTick.copyOrBack_tick_false_exists` |
+| `∀ vs vq, ChainTick false … → ¬ shiftGuardVM (afterMismatch …)` | `.copy` なら `FoundPackRefute.chainTick_copy_not_watch`；`.back` から `backDone` で生まれた watch は lag が正なので `shiftGuardVM` の `zero w.lag = true` が落ちる（`CopyPhaseTickMatched` の `LagPos` 系） |
+
+つまり `watchMismatchNoShiftC_of_split`（watch 経路）の**兄弟**として
+copy 相版の producer を書けばよい。`TerminalRunFallbackGC` を経由しない。
+
+### 診断の定着（今日 4 件目）
+
+**`LiveScanWatch` を取る定理は、まず本体での使われ方を数える。**
+`obtain ⟨…, -, -⟩` で捨てているなら過剰。今日これで 4 件落ちた
+（`split4_of_prefix` / `split3_of_prefix` / `fallbackLanding_of_pack` /
+`fallbackTick_of_watchTick`）。**ただし「使っている」場合は本物**——
+`TerminalRunC` / `TerminalRunFallbackC` / `watchMismatchNoShiftC_of_split` は弱められない。
+
 ## 2026-09-19 n129: 節 4 の供給 — `SegEnd` 枝は fallback へ。`LiveScanWatch` ガードの棚卸し
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4 義務のまま。
