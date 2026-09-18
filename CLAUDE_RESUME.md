@@ -28,6 +28,68 @@
 
 
 
+
+## 2026-09-19 n106: モデル欠陥 `M-initCursor` を修正（`Fair` の 3 場のうち 1 つが定理に）
+
+**全体 build 成功（EXIT=0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 4 個の原子的義務を axiom として持つ（数は不変）。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
+
+### `M-initCursor`（修正済み・全体 build 緑）
+
+Scala 正本の `stepInit` / `stepReplayStart` は `walker`（search の copy cursor）も
+`periodOnly` も触らない。ところが Lean の `initVM` / `replayStartVM`
+（`GalilScaffoldTopReplay:20,28`）は `GalilVM` の 15 場のうち 13 場しか縛らず、
+この 2 つを**自由**にしていた。その分を `Fair.keepsSearchCursor` が仮定として抱え、
+`marksEntry` の残差 `WindowInOrigin` が `FairSteps` を要求する原因になっていた。
+
+末尾に `t.periodOnly = s.periodOnly ∧ t.walker = s.walker` を追加。
+
+**消費者は 1 箇所も壊れなかった。** Lean の anonymous constructor は右結合の `∧` の
+末尾を `-` 1 個で吸収するので、`obtain ⟨-, …, hch, -⟩ : initVM entry s s'` のような
+既存パターンは 13 → 15 連言でもそのまま通る。直したのは producer 9 箇所だけ
+（`GalilScaffoldTopReplay` / `TopScanRun` / `GalilTickFun` / `GalilTickDet` /
+`GalilTickFair` / `CloseoutFairWitness` / `LocalTick2` / `LocalReplaySwap` /
+`LocalReplayParked`）。
+
+**モデル欠陥を記録していた定理が、修正で偽になった**ので差し替えた:
+
+    initVM_not_unique / replayStartVM_not_unique / tick_init_not_det /
+    tick_replayStart_not_det   （GalilTickDet、削除）
+      → initVM_keepsSearchCursor / replayStartVM_keepsSearchCursor（正しい向き）
+
+`GalilTickFair.tick_fair_init_unique` / `tick_fair_replayStart_unique` は
+`Fair.keepsSearchCursor` を**読まなくなった**（`initVM` の射影で足りる）。
+`GalilTickDet` の非決定性 (e) の init / replayStart 側は閉じた。
+
+### `Fair.fallbackPlace` は着手して巻き戻した（記録）
+
+`beginFallbackVM' s t := ∃ p, beginFallbackVM p s t`（`TopGuards:38`）の `p` を
+Scala どおり `s.walker` に固定する試み:
+
+    def beginFallbackVM' (s t) := ∃ p, beginFallbackVM p s t ∧ p = s.walker
+
+分解パターン 27 箇所は機械的に直る（`⟨pl, ht⟩ : beginFallbackVM'` →
+`⟨pl, ht, -⟩`、23 ファイルを自動置換で処理できた）。**しかし producer 側が重い**:
+`GalilScaffoldTopFallbackCycleS` の `chosenRadius` 系の大きい定理が `p` を
+自由な引数として取り、結論全体を `p` で書いているので、`hp : p = … .walker` を
+足すと呼び出し側まで波及する。緑を壊さないため巻き戻した。
+
+**次の一手**: `beginFallbackVM p s t` 自体に `t.walker = p` を足す案もある
+（`beginFallbackVM'` の型は変わらないので 27 箇所は無傷）。ただし
+`GalilTickFair.beginFallback_walker`（`t.walker = s.walker`）が偽になるので、
+`WalkerInv` の走り方を確認してから入れる。
+
+### 残る `Fair` の 2 場
+
+| 場 | Scala 正本 | 入れ方 |
+|---|---|---|
+| `fallbackPlace` | `beginFallback` は search の walker place からコピー | 上記（`beginFallbackVM` 側に寄せる） |
+| `restartFirst` | `transition` の前置きで broken chain の restart が mode step より先 | `Tick` の scan 構成子に `¬ restartGuardVM s` を足す |
+
+3 場が全部定理になれば `FairSteps` が `Steps` から出て、`WindowInOrigin` が落ちて
+`marksEntry` が消える（4 → 3）。
+
 ## 2026-09-19 n105: `marksEntry` はモデルの忠実性に帰着する（`Fair` を公理に隠さない）
 
 **全体 build 成功（EXIT=0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
