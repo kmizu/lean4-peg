@@ -1,3 +1,40 @@
+## n198 — `StageDoubleLeg`：ステージ周期 4 相のうち double 相をステップ局所にした
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+`EntryInv Q` は不変量に `searchStep` を 1 手ずつ渡し、**任意の**イベント列に量化するので、
+`Q` は「いま自分がいる脚」を丸ごと名指しでけへん。既存の
+`CloseoutPreload17.double_spends` と `CloseoutPreload35.postRunF_round_trip_S` は
+どちらも `.double` 脚を `bs.length = mw` ごと仮説に取る。そこをステップ局所に切り直した。
+
+`PalPeg/StageDoubleLeg.lean`（5 定理、標準 3 公理、全体 build 緑）:
+
+* `doubleTrace_snoc` — `DoubleTrace` は前方 cons なので、末尾で伸ばすには別の帰納法が要る
+* `doubleTrace_frame` — `ds` 手後に work は `ds.length` 減り span は `2*ds.length` 増える。
+  **`ds.length ≤ mw` はここから出る**（仮定せんでええ）
+* `pacedL_prefix_slack` — 既存 `pacedL_prefix_of_append` は slack 0 固定。`.double` 脚は
+  クロック位相が任意の所で始まるので slack 版が要った
+* `DoubleLeg k mw slack u v as` — 不変量。pacing を**脚の先頭 `u` から**測るのが要点で、
+  `bal_of_paced_slack_S` が脚全体の比較回数を読むため、現在時刻の状態述語では間に合わへん
+* `doubleLeg_step` / `doubleLeg_exit` — 1 手の 2 分岐。work が残れば不変量が続き、
+  使い切れば `PrepAt k (2*mw)` ＋ `StageInvS k (2*mw)` に落ちる
+
+### 残り
+
+ステージ周期は 4 相（`.run` / `.wait` / `.double` / preparation）。**double 相だけ**が
+ステップ局所になった。残り 3 相と、それらを `EntryInv` の `Q` に組み上げるところは未着手。
+**今回も何も落としてへん**（公理 3 本のまま、`NoReturn` も残ったまま）。
+
+### 次
+
+1. prep 相は `StagePrepS` がそのままステップ局所（`stagePrepS_next` ＋
+   `dpSafe_of_stagePrepD_slack`）。4 相のうちこれで 2 相。
+2. `.wait` 相：`wait_step_cases` が後続を `.wait ∨ .double` に限定し、`.double` へ出るときに
+   `wait_exit_double` が `DoubleLeg` の先頭データ（`work = ofNat mw` / `span = reset` /
+   `quarter = 0` / `debt = 0`）を与える。`WaitTrace` の snoc/frame を `DoubleTrace` と
+   同じ形で作ればよい。
+3. `.run` 相：`RunTrace` と `run_exit_frame`。`run_exit_wait_match` が出口の event を縛る。
+4. 4 相の選言を `Q` にして `EntryInv Q`。入口節は `run_entry_startRun` により prep 相以外は空虚。
 ## n197 — `StageCycleSearch`：一周を制御層から切り離した。全域性が残りの全部
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**

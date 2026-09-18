@@ -80,6 +80,7 @@ import PalPeg.StageLocalPrep
 import PalPeg.StageBudgetShift
 import PalPeg.ReadyInterface
 import PalPeg.StageCycleSearch
+import PalPeg.StageDoubleLeg
 import PalPeg.MatchedRunSnoc
 import PalPeg.ShiftPhaseDeterminism
 import PalPeg.RoundSegFromRun
