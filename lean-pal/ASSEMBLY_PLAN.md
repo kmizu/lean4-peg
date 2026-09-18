@@ -1,3 +1,43 @@
+## 2026-09-19 n182: 切り直しの設計が確定（`ReadyFuel` → `ReadyClosure`、置換は 1:1）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+n181 で `StageEntryC.fuel`（＝`ReadyFuel`）を反証したので、消費者が**実際に何を使って
+いるか**を読んだ（`CloseoutReportCase:380-390`）:
+
+    readyFuel_mono → readyFuel_watchSegE → readyFuel_ready → SearchReady (searchLens.get s1)
+
+**取り出しているのは `SearchReady` だけ。** `ReadyFuel` は「区間に沿って `SearchReady` を
+運ぶ乗り物」で、その乗り物が偽だった。**正しい乗り物は既にある**——
+`GalilReplaySpan.ReadyClosure:5621`:
+
+    ready   : ∀ c s, Rd c s → SearchReady (searchLens.get s)
+    seg     : ∀ es c c' s t, WatchSegE … → t.chain = .idle → Rd c s → Rd c' t
+    restart : ∀ c u Rad last, … → Restarted … → StageEntry … → Rd c u
+
+`readyFuel_watchSegE`（`CloseoutReportCase:87`）と `ReadyClosure.seg` は**仮説の形が
+そのまま同じ**（`WatchSegE` ＋ `t.chain = idle`）。置換は 1:1 で、`ReadyClosure` 側は
+燃料の算術が無いぶん**簡単**。
+
+| 旧（偽） | 新 |
+|---|---|
+| `ReadyFuel … (headRank …)` | `Rd c r` |
+| `readyFuel_watchSegE` / `_ready` / `_restarted` | `hcl.seg` / `hcl.ready` / `hcl.restart` |
+| `readyFuel_mono` | **不要** |
+
+### 手順（`PROOF_STACK.md` に記録）
+
+1. `StageEntryC` → `StageEntryS := InvLPS ∧ Rd c r`
+2. `CloseoutReportCase` の 2 定理を新通貨で再証明
+3. `reachAtC3_of_crossF_C` を追従
+4. found 経路の入口の `StageEntryC` を差し替え
+5. `Rd := RdPaced` なら `CloseoutPreload11.readyClosure_S2` が producer。
+   その底は `PostRun` ＋ `RestartS2`（次の的）
+
+**これは (A)（弱化）ではなく偽の契約の修理。** `StageEntryC` を要求していた定理は
+全部「空虚に真」なだけで使えない状態だった。
+
 ## 2026-09-19 n181: **`ReadyFuel` を機械検査で反証した** — `StageEntryC` は切り直しが要る
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。

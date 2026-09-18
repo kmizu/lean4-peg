@@ -199,6 +199,51 @@ found 経路の入口 `prepInputs3_of_found_or_later` が `StageEntryC` を取�
 `ReadyFuelD` の docstring も「`GalilSegmentConstructB.ReadyFuel`, restated」と書いている。
 通貨は実質 2 つ（`…All` 系と `…S` 系）。
 
+### n182: 切り直しの設計が確定（`ReadyFuel` → `ReadyClosure`、置換は 1:1）
+
+**消費者が `hready` から取り出しているのは最終的に `SearchReady` だけ**（実測、
+`CloseoutReportCase:380-390`）:
+
+    readyFuel_mono → readyFuel_watchSegE → readyFuel_ready → SearchReady (searchLens.get s1)
+
+つまり `ReadyFuel` は「区間に沿って `SearchReady` を運ぶ乗り物」で、
+その乗り物が偽だった（n181）。**正しい乗り物は既にある**:
+
+    structure ReadyClosure raw P q first delay (Rd : Control → GalilVM → Prop) : Prop where
+      ready   : ∀ c s, Rd c s → SearchReady (searchLens.get s)
+      seg     : ∀ es c c' s t, WatchSegE … es c s c' t → t.chain = .idle → Rd c s → Rd c' t
+      restart : ∀ c u Rad last, c.mode = .scan → c.clock = delay →
+                  Restarted raw u Rad last → StageEntry Rad last → Rd c u
+                                                        (`GalilReplaySpan:5621`)
+
+### 置換表（1:1、しかも `ReadyClosure` 側は燃料の算術が無いぶん簡単）
+
+| 旧（偽） | 新 |
+|---|---|
+| `ReadyFuel (searchLens.get r) (headRank … * 2048 + c.clock) (headRank …)` | `Rd c r` |
+| `readyFuel_watchSegE h ht n K` | `hcl.seg es c c' s t h ht` |
+| `readyFuel_ready` | `hcl.ready` |
+| `readyFuel_restarted` | `hcl.restart` |
+| `readyFuel_mono` | **不要**（`Rd` に燃料の指標が無い） |
+
+`readyFuel_watchSegE`（`CloseoutReportCase:87`）と `ReadyClosure.seg` は
+**仮説の形がそのまま同じ**（`WatchSegE` ＋ `t.chain = idle`）。
+
+### 手順
+
+1. `CloseoutContracts.StageEntryC` を `StageEntryS := InvLPS ∧ Rd c r` に切り直す
+   （`Rd` はパラメータ、`ReadyClosure` を別に持ち回る）
+2. `CloseoutReportCase.reachAtC3_of_crossF` と `reachAtC3_of_target_matchF` を
+   新通貨で再証明（上の置換表どおり）
+3. `CloseoutContracts.reachAtC3_of_crossF_C` を追従
+4. found 経路の入口（`CloseoutPrepInputs3.prepInputs3_of_found_or_later`）の
+   `StageEntryC` を `StageEntryS` に
+5. `Rd := RdPaced` を選べば `CloseoutPreload11.readyClosure_S2` が producer。
+   その底は `PostRun` ＋ `RestartS2`（**どちらも producer 無し、次の的**）
+
+**注意**: これは (A)（弱化）ではなく**偽の契約の修理**。`StageEntryC` を要求している
+定理は全部「空虚に真」なだけで使えない状態だった。
+
 ### n175 の教訓（これが一番大事）
 
 **44 本書いて計器は 1 本も動かなかった。0 本書いて 1 本外れた。**

@@ -254,7 +254,15 @@ guard を `mode = scan` に広げたら**義務ごと消えた**。同型の例�
 `CloseoutPrepInputs3.PrepInputsG3` が `Result` を仮説として束ねているのは
 **ステージ層とそこの間が繋がっていないだけ**で、found 経路の残りは新しい数学ではなく層の配線。
 
-残: `hpres`→`SearchReadyB` 版区間構成（進行中）; `hstage`（`ReplayStage` を `GalilReplaySpan` 内で持ち回り、進行中、mid-replay restart の `3·radius ≤ 5·last` が新義務）; `hshape`（`StartShape`）; `hlastMismatch` の最終文字分岐（`LastMismatchReport`）と `EntryRefreshed`; `hmismatch` ← `GalilLeafMismatch` の残差 `hdp`（DP pack、進行中）/`hfb`（fallback tick 数、進行中）/`hpos`（区間予算前提を pieces に追加、進行中）; `hfound`/`hfoundBg` ← 着地不変量に `Restarted`/`StageEntry` を追加（`GalilInvPlus3`、進行中）+ found tick からの経路構成（未着手、最大の残り）; `hfoundReplay`（replay 中 found の経路、未着手）。
+**訂正（2026-09-19, n181/n182）: `hpres` の後継 `ReadyFuel` は反証済み**
+（`PalPeg/ReadyFuelRefute.not_readyFuel_v0`）。`.run` 入口の債務（= 2）が
+`K = headRank`（入力長に比例）回のマッチを払えと要求していた。
+**正しい乗り物は `GalilReplaySpan.ReadyClosure`**（`ready`/`seg`/`restart` の 3 場）で、
+`CloseoutPreload11.readyClosure_S2` が `PostRun` ＋ `RestartS2` から出す。
+消費者（`CloseoutReportCase`）が `ReadyFuel` から取り出しているのは `SearchReady` だけなので
+置換は 1:1。`CloseoutContracts.StageEntryC` も `fuel` 場が偽なので切り直しが要る。
+
+残: `hpres`→`ReadyClosure` 版への切り直し（上）; `hstage`（`ReplayStage` を `GalilReplaySpan` 内で持ち回り、進行中、mid-replay restart の `3·radius ≤ 5·last` が新義務）; `hshape`（`StartShape`）; `hlastMismatch` の最終文字分岐（`LastMismatchReport`）と `EntryRefreshed`; `hmismatch` ← `GalilLeafMismatch` の残差 `hdp`（DP pack、進行中）/`hfb`（fallback tick 数、進行中）/`hpos`（区間予算前提を pieces に追加、進行中）; `hfound`/`hfoundBg` ← 着地不変量に `Restarted`/`StageEntry` を追加（`GalilInvPlus3`、進行中）+ found tick からの経路構成（未着手、最大の残り）; `hfoundReplay`（replay 中 found の経路、未着手）。
 
 ### 3c. 2026-09-19 の追加（`M-periodOnly` とモデルの忠実性）
 
