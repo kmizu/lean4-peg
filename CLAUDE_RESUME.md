@@ -1,3 +1,40 @@
+## 2026-09-19 n188: `.run` 相で `RunEntriesS` が縮む原子を作った（`PostRun` 整礎化の第一歩）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+`PalPeg/PostRunInduction.lean`（新規、1 定理、標準 3 公理のみ）:
+
+    runEntriesS_cons_of_run (hm : v.search.mode = Mode.run)
+      (hnext : ∀ center v', searchStep center a v v' → RunEntriesS as v') :
+      RunEntriesS (a :: as) v
+
+`RunEntryS center a v v' as` の第 2 仮説が**源の mode が `.run` でない**ことを要求するので、
+源が `.run` なら空虚。残るのは行き先の `RunEntriesS as v'` だけ。
+
+**これが `PostRun` を整礎帰納に置き換えるための原子。** `runEntriesS_of_stageInv2`
+（`CloseoutPreload11:296`）が `PostRun` を必要とするのは `as` への帰納が `.run` 入口で
+**縮まない**からで（`hpost v' as hr hsafe` を同じ `as` に使っている）、
+`.run` 相でもイベントは消費されるのでこの補題で縮む。
+
+### 既にある材料（n187/n188 で確認）
+
+| 部品 | 場所 |
+|---|---|
+| `.run` 相のトレース | `CloseoutPreload13.RunTrace:79` |
+| `.run` 相の 1 手の中身 | `CloseoutPreload13.run_step_quanta:85` |
+| `.run` 出口のデータ（債務・`ExitMode`・次相の span/work） | `CloseoutPreload13.run_exit_frame:146` |
+| 次の `.run` 入口の datum | `CloseoutPreload35.postRunF_next_entry`（§5） |
+| 1 入口 → 次入口 | `CloseoutPreload35.postRunF_step`（§6） |
+| **`.run` 相で `as` が縮む** | **`PostRunInduction.runEntriesS_cons_of_run`（n188）** |
+
+### 残り
+
+* 整礎帰納の組み立て（`as.length` で測る）
+* **per-stage の供給条件**（各 stage 入口で残りイベントが `dpEvents (m+1)` 以上）——
+  これは run に沿ってしか言えないので、`PostRun` を trace/run 形に切り直す必要がある（n187）
+* `8 ≤ mw < 32` の 4 窓の算術（n186）
+
 ## 2026-09-19 n187: **`PostRun` に producer が無い理由が割れた**（落とした供給条件）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。

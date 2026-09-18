@@ -392,6 +392,10 @@ n182 の置換表を一次情報で確認したら、**`CloseoutReadyStage` に�
 2. run 形 `PostRunAlongRun`（trace の各 `.run` 入口で、残りイベント数が
    `dpEvents (m+1)` 以上）に切り直す
 3. `runEntriesS_of_stageInv2` を整礎帰納で書き直し、`hpost` を外す
+   * **原子は済（n188）**: `PostRunInduction.runEntriesS_cons_of_run`——
+     `.run` 相の 1 手で `RunEntriesS` が縮む（`RunEntryS` は源が `.run` なら空虚）
+   * 材料: `CloseoutPreload13.RunTrace` / `run_step_quanta` / `run_exit_frame`、
+     `CloseoutPreload35.postRunF_next_entry` / `postRunF_step`
 
 ### n175 の教訓（これが一番大事）
 
