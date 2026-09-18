@@ -1,3 +1,46 @@
+## n223 — 公理進捗: `ShiftInv` の実質 3 場すべてが機械側データから出るようになった
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 2 連言 `ShiftInv` の**実質 3 場（`pal` / `palNext` / `origin`）すべて**が run の運ぶデータから出る。**数学の部分は完了**、残るは枠 15 場と区間の合わせ込み |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 書いたもの
+
+```lean
+theorem origin_of_blockOn
+    (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs anchor E)
+    (hmis : (encoded raw)[C - R - 1]? ≠ (encoded raw)[C + R + 1]?)
+    (hanchor : anchor ≤ C + R + 1)
+    (hend : C + R + 2 * (xs.length + 1) + 1 ≤ E) :
+    (encoded raw)[C - R - 1]? ≠ (encoded raw)[C + R + 2 * (xs.length + 1) + 1]?
+```
+
+走査が伸びへんかった事実（shift 遷移の `¬ matched`）が不一致を与え、`BlockOn` の周期が
+右添字 `C+R+1` と `C+R+2h+1` を同一視するので、不一致がそのまま移る。
+
+### `ShiftInv`（19 場）の到達状況
+
+| 場 | 供給 | 状態 |
+|---|---|---|
+| `pal : PalAt (C+h) (R+h)` | `ScanInvariant.palindrome` そのもの | 済 |
+| `palNext : PalAt (C+2h) (R+1)` | `palNext_of_blockOn`（n222） | 済 |
+| `origin` | `origin_of_blockOn`（本ノート） | 済 |
+| 枠 15 場 | `beginShiftVM` の等式 `t = {s with …}` から `s` の不変量を書き写す | 未 |
+
+**数学は全部片付いた。** 残るのは機械的な書き写しと、区間の合わせ込み
+（`anchor ≤ …` / `… ≤ E`、`ChainW` の `anchor = position t.center + 1`、
+`E = position sT.right + R_land`）だけ。
+
+このセッションで `obligation_shiftPalResiduesAlongRun` に入れた変更:
+ガード追加 2（n211/n212）・成分の語化 1（n213）・**成分削除 2**（n214 `hEnd`、n217 `hHi`）・
+**橋/producer 新設 4**（n219 `periodOn_of_blockOn`、n221 `palAt_next_of_period`、
+n222 `palNext_of_blockOn`、n223 `origin_of_blockOn`）。
 ## n222 — 公理進捗: `ShiftInv.palNext` を機械側データから出す橋（`palNext_of_blockOn`）
 
 **公理への進捗**

@@ -201,6 +201,27 @@ theorem palNext_of_blockOn {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3
 
 #print axioms palNext_of_blockOn
 
+/-- **`ShiftInv.origin` を機械の側から。**  走査が伸びへんかった事実
+（shift 遷移の `¬ matched`）は不一致 `enc[C−R−1]? ≠ enc[C+R+1]?` を与える。
+`ShiftInv` が要求するのは右添字が `2h` 進んだ形やが、`BlockOn` の周期がその
+2 添字を同一視するので、不一致はそのまま移る。 -/
+theorem origin_of_blockOn {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
+    {C R anchor E : ℕ}
+    (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs anchor E)
+    (hmis : (encoded raw)[C - R - 1]? ≠ (encoded raw)[C + R + 1]?)
+    (hanchor : anchor ≤ C + R + 1)
+    (hend : C + R + 2 * (xs.length + 1) + 1 ≤ E) :
+    (encoded raw)[C - R - 1]? ≠ (encoded raw)[C + R + 2 * (xs.length + 1) + 1]? := by
+  have hstep : (encoded raw)[C + R + 1]?
+      = (encoded raw)[C + R + 2 * (xs.length + 1) + 1]? := by
+    have h := periodOn_of_blockOn hblk (C + R + 1) hanchor (by omega)
+    rwa [show C + R + 1 + 2 * (xs.length + 1)
+        = C + R + 2 * (xs.length + 1) + 1 from by omega] at h
+  intro hc
+  exact hmis (hc.trans hstep.symm)
+
+#print axioms origin_of_blockOn
+
 /-- **(NAMED) 準備直後の watch の台帳。**  `shiftPalAt_fresh_of_candidate` の 5 残差を
 1 つの場にまとめたもの。`ShiftPal` の `periodOnly = false` 分岐に必要な全部で、
 3 種類しかない（n144）:
