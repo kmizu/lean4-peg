@@ -402,6 +402,36 @@ CLAUDE.md §2 は「構成側の witness と局所 step が `Fair` を満たす�
 **注意**: `Realizes` が `Fair` なしでは証明不可能だと**機械検査した反証はまだ無い**。
 上は「`Fair` が未使用」「`Tick` が非決定的」「対策は証明済み」の 3 事実からの推論。
 
+### 影響範囲の実測（n167）
+
+`PreTrace` の構造（`GalilFinalAssembly:81`）:
+
+    start : st 0 = boot w
+    tc0   : Tc 0 = 0
+    trace : Trace (galilFrameS (PofC …) q first) 2048 (SoundScanNR w) st (Tc w.length)
+    mono / report / cost
+
+`Fair` を足す先は **`PreTraceB`**（`PreTrace` ＋ `tc1 : Tc 1 = 1`）が blast radius 最小。
+`PreTrace` 自体は消費専用（`CloseoutLPack6:21`「is a chain of `∀ w st Tc, PreTrace → …`
+implications」）で、**構成しているのは次の 3 箇所だけ**（実測）:
+
+| 場所 | 形 |
+|---|---|
+| `GalilFinalBaseNeed:196` | `∃ st Tc, PreTraceB centre place entry q first w st Tc` |
+| `GalilFinalBaseNeed:310` | `0 < w.length → PreTraceB centre place entry q first w st Tc` |
+| `GalilFinalAssembly4:258` / `:285` | 同型 |
+| `GalilFinalAssembly3:81` | 同型 |
+
+**段取り**:
+
+1. `PreTraceB` に `fair : ∀ i, i < Tc w.length → Fair entry 2048 (st i) (st (i+1))` を足す
+2. 上の構成側 3〜4 箇所で `Fair` を供給する。run をどう作っているかを一次情報で読む
+   （`tickFun` を使っているなら `Fair` な witness の存在が要る）
+3. `Realizes` の scan / init / replayStart を `tick_fair_unique` で閉じる
+4. `H_realizeLIMW'` の `∃ … L` を構成する（`LocalSysConcrete.sysC` が候補）
+
+**1 で義務は弱くなる（(A)）が、2 が本体。**
+
 ---
 
 ## この session で機械検査／一次情報で確定したこと
