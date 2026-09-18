@@ -1,3 +1,45 @@
+## n225 — 公理進捗: `ShiftInv` 23 場すべてに出所が確定（残りは組み立てのみ）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 2 連言 `ShiftInv` の **23 場すべてに具体的な出所が確定**。13 場は証明済み、残り 10 場も既存部品か `ChainW` の成分から出る |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### `GalilReplaySpan.ChainW` の `.watch` 枝（一次情報、:318）
+
+```lean
+| .watch w => LagAt w.lag w.machine.verifier R ∧ BlockOn raw cc b xs (C+1) E ∧
+    CoreX raw cc b xs (C+1) w.machine ∧ Canonical w.margin ∧
+    value w.margin + 4 * ((xs.length + 1 : ℕ) : ℤ) = (R : ℤ) - C ∧
+    (lim = true → w.lag.pos.length ≤ bud)
+```
+
+### `ShiftInv`（23 場）の対応表
+
+| 場 | 出所 | 状態 |
+|---|---|---|
+| `chain` `remaining` `canon` `count` `leftRep` `leftPresent` `rightRep` `rightPresent` `leftPos` `rightPos` | `shiftInv_frame_of_beginShift`（n224） | **済** |
+| `pal` | `ScanInvariant.palindrome` | **済** |
+| `palNext` | `palNext_of_blockOn`（n222） | **済** |
+| `origin` | `origin_of_blockOn`（n223） | **済** |
+| `kle : 0 ≤ h` | 自明（`k = 0`） | 部品済 |
+| `lagZero` | `shiftGuardVM` の `zero w.lag = true`（`immediate` は lag を触らん） | 部品済 |
+| `unbroken` | `shiftGuardVM` の `broken = false` ＋ `GalilGoodLag.consume_keeps_unbroken` | 部品済 |
+| `verifierRep` `verifierPresent` | `BranchSupply.chainVerifierRepresents_immediate` | 部品済 |
+| `posH : 0 < h` | `h = xs.length + 1 ≥ 1`（自明） | 部品済 |
+| `size : 2h ≤ R` | `ChainW` の margin 等式 ＋ ガードの `negative margin = false` ⇒ `4h ≤ R − C` | 部品済 |
+| `aligned` | `ChainW` の `LagAt w.lag w.machine.verifier R` | 部品済 |
+| `pred` | `ChainW` の `CoreX`（周期テープの中身） | 部品済 |
+| `room : R + 2 ≤ C` | 走査の位置境界（`position s.left ≥ 1`）＋ `C = position s.center − h`, `R = r₀ − h − 1` | 部品済 |
+
+**未知の箱ゼロ・未知の数学ゼロ・producer 不明の場ゼロ。** 残るのは 23 場を 1 本の定理に
+組み上げる作業だけ。組み上がれば `roundScan_of_shiftInv` 経由で第 1・第 3 連言も落ちて、
+**`obligation_shiftPalResiduesAlongRun` が公理でなくなる**。
 ## n224 — 公理進捗: `ShiftInv` の枠 10 場も出た（残り 10 場）
 
 **公理への進捗**
