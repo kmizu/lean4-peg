@@ -14,6 +14,68 @@
 
 
 
+
+## 2026-09-19 n92: `CentreEq` 不変量の tick ごとの分析 — 次のセッションはこれを書く
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+`LTickLeaves3` の残り 2 場のうち `shiftDoneLedger` の本体は等式
+
+```
+CentreEq s := (position s.center : ℤ) + value s.radius = position s.right
+```
+
+を shift 相でも持つこと。**`LPackM2` に radius を縛る場は無い**（場は `packM`
+（`lrepM`/`scanGeom`）・`scanGeomR`・`shiftGeom`・`rrep`・`centreRep`・`centreOrder` の
+6 つだけ）ので、`RadLedger.le`（`≤`）からは出ない。
+
+### 一次情報で確認した遷移ごとの効果
+
+| tick 形 | center | radius | right | `CentreEq` |
+|---|---|---|---|---|
+| boot（`initVM0`） | `= right` | `reset`（0） | — | **成立** |
+| `init`（`initVM`、`TopReplay:20`） | `= right s.right` | `= s.radius`（init 相で 0） | `= right s.right` | **保存**（n91 で機械検査済み） |
+| `scan_wait` / `scan_count`（`backgroundS`） | 不変 | 不変 | 不変 | **自明に保存** |
+| `scan_match`（`afterCompare` ＋ `matchedPlace`） | 不変 | **`radiusAfter = inc`（無条件）** | +1 | **保存** |
+| `shift_one`（`shiftTick`、`ChainInputSupply:1445`） | `right s.center`（+1） | **`dec s.radius`（−1）** | 不変 | **保存** |
+| `shift_done` | VM 不変 | VM 不変 | VM 不変 | **自明に保存** |
+| `replayStart`（`replayStartVM`、`TopReplay:28`） | `= s.center` | `reset`（0） | `= s.center` | **成立**（center = right） |
+| `scan_shift`（`beginShiftVM'`） | ? | ? | ? | **未確認** |
+| fallback / rewind 系（`beginFallbackVM'`、`markBack`、`rewindOne`、`rewindPair`） | 中心を動かす | ? | ? | **未確認（ここが本体）** |
+| copy / home / fpp / markEnd / choose | fpp walker と period テープのみのはず | — | — | **未確認（不変なら自明）** |
+
+```
+-- PalPeg/GalilScaffoldChainInputSupply.lean:1445
+def shiftTick (s : ShiftState) : ShiftState :=
+  ⟨right s.center, right (right s.left), dec s.remaining, dec s.radius, …⟩
+```
+
+### 次のセッションの手順（明確）
+
+1. `CentreEq` を定義し、`centreEq_boot` を `rfl` 級で示す。
+2. 上の表の「保存」行を機械検査する（`backgroundS_fields` / `afterCompare_radius` /
+   `shiftTick` / `initVM` / `replayStartVM` の射影補題は既にある）。
+3. 「未確認」行を一次情報で埋める。**`beginFallbackVM'` と rewind 系が本体**
+   （中心を動かすので、radius と右ヘッドの関係を再確立する必要がある）。
+   ここは `Manacher`/`PalAt` 層の材料（`GalilLiveCentre*`、`GalilPeriodUnion`）が効く可能性。
+4. `centreEq_trace` が出れば:
+   * `shiftDoneLedger` が落ちる（`CentreEq` ＋ n89 の無料 2 節）
+   * `CentreLedger` が全 scan 状態で出る（`LPackM3` を経由せず）
+   * → `BgStartP2` → `bg` 場が `hver` に合流
+   * `hme` の `EntryCounters` 半分も `RadiusRep`（＝`Canonical radius` ＋
+     `value radius = rad`、後者は `CentreEq` ＋ `ScanInvariant.rightPos`）で落ちる
+
+**つまり `CentreEq` 1 本で `bg` と `hme` の両方が進む。** これが今の最短経路。
+
+### 残っているもう 1 場
+
+`backLag : ∀ v h lag margin ver, s.chain = .back v h lag margin ver →
+Canonical lag ∧ 0 ≤ value lag`。`LagCan` は `.watch` 相なので別物。
+chain の `.back` 相の lag 形状で、`ChainStep.copyEnd` が `.copy` の lag を
+`.back` に持ち込むところで確立される。`CloseoutChainPack` / `CloseoutChainSideR` に
+同名の場があるので、そこの証明を見ること。
+
 ## 2026-09-19 n91: `LTickLeaves3` は 4 場 → 2 場（`initLedger` もタダ）＋ 古い記憶の訂正
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
