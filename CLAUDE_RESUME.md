@@ -1,3 +1,38 @@
+## n222 — 公理進捗: `ShiftInv.palNext` を機械側データから出す橋（`palNext_of_blockOn`）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 2 連言 `ShiftInv` の `palNext` が、run が運ぶ `ChainW` の `BlockOn` と走査不変量の回文から**直接出る**ようになった。数学の残りはゼロ、残るは区間の合わせ込み |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+```lean
+theorem palNext_of_blockOn
+    (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs anchor E)
+    (hpal : Manacher.PalAt (encoded raw) (C + (xs.length + 1)) (R + (xs.length + 1)))
+    (hanchor : anchor ≤ C + 1)
+    (hend : C + 2 * (xs.length + 1) + R + 1 ≤ E)
+    (hlen : C + 2 * (xs.length + 1) + (R + 1) < (encoded raw).length) :
+    Manacher.PalAt (encoded raw) (C + 2 * (xs.length + 1)) (R + 1)
+```
+
+`periodOn_of_blockOn`（n219）で周期にし、`palAt_next_of_period`（n221）で回文を伸ばすだけ。
+**残る仮説は区間の合わせ込み 2 本（`anchor ≤ C+1` / `C+2h+R+1 ≤ E`）と長さ 1 本。**
+
+### `ShiftInv`（19 場）の到達状況
+
+| 場 | 状態 |
+|---|---|
+| `pal` | `ScanInvariant.palindrome` そのもの |
+| `palNext` | **`palNext_of_blockOn`（本ノート）で機械側から出る** |
+| `origin` | `¬ matched` ＋ 周期で添字を戻す（未着手） |
+| 枠 15 場 | `beginShiftVM` が `t` を完全決定（`k = 0`、`wch = immediate w`）。未着手 |
+
+証人は計算済み: `C = position s.center − h`、`R = r₀ − h − 1`、`k = 0`。
 ## n221 — 公理進捗: `ShiftInv.palNext` の producer を書いた（実質 3 場すべてに producer）
 
 **公理への進捗**

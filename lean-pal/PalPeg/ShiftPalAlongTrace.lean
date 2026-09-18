@@ -181,6 +181,26 @@ theorem periodOn_of_blockOn {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 
 
 #print axioms periodOn_of_blockOn
 
+/-- **`ShiftInv.palNext` を機械の側から。**  `GalilReplaySpan.ChainW` の `.watch`
+枝が運ぶ `BlockOn`（周期テープと入力の対応）と、走査不変量が与えるシフト後の回文
+`PalAt (encoded raw) (C+h) (R+h)` から、次の中心 `C+2h` の回文を半径 `R+1` で出す。
+
+残る仮説は区間の合わせ込み 2 本（`anchor ≤ C+1` と `C+2h+R+1 ≤ E`）と長さ 1 本だけ。
+周期そのものは `periodOn_of_blockOn`、回文の伸長は
+`GalilPeriodUnion.palAt_next_of_period` が担う。 -/
+theorem palNext_of_blockOn {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
+    {C R anchor E : ℕ}
+    (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs anchor E)
+    (hpal : Manacher.PalAt (encoded raw) (C + (xs.length + 1)) (R + (xs.length + 1)))
+    (hanchor : anchor ≤ C + 1)
+    (hend : C + 2 * (xs.length + 1) + R + 1 ≤ E)
+    (hlen : C + 2 * (xs.length + 1) + (R + 1) < (encoded raw).length) :
+    Manacher.PalAt (encoded raw) (C + 2 * (xs.length + 1)) (R + 1) :=
+  PalPeg.palAt_next_of_period hpal (by omega) hlen
+    ((periodOn_of_blockOn hblk).mono hanchor hend)
+
+#print axioms palNext_of_blockOn
+
 /-- **(NAMED) 準備直後の watch の台帳。**  `shiftPalAt_fresh_of_candidate` の 5 残差を
 1 つの場にまとめたもの。`ShiftPal` の `periodOnly = false` 分岐に必要な全部で、
 3 種類しかない（n144）:
