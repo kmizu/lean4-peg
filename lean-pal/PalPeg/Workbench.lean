@@ -77,6 +77,7 @@ import PalPeg.MatchedRunSnoc
 import PalPeg.ShiftPhaseDeterminism
 import PalPeg.RoundSegFromRun
 import PalPeg.ShiftPalAlongTrace
+import PalPeg.FoundPackRefute
 
 /-!
 # `Workbench` — 作ったが正本の鎖に配線されていない部品
@@ -229,6 +230,34 @@ inductive で、**`Tick` の `scan_wait` / `scan_count` / `scan_match` と 1 対
 **残り**: (a) `OriginAt` を「いまのラウンド起点で」持つ run 不変量に仕立てる
 （ラウンド境界で `originAt_at_actual` を使う）、(b) `round_next` の入力の配線、
 (c) `H_freshShiftAtShiftEntry`（新鮮な chain の第 1 ラウンド、`first_round`）。
+
+## `FoundPackRefute` — `foundExit_compare_final20` の `hpack` は **REFUTED（条件付き）**
+
+| 定理 | 内容 |
+|---|---|
+| `chainMatched_copy_stays_copy` | `ChainMatched` は `.copy` から `.copy` にしか行かない |
+| `chainStart_is_copy` | `chainStart` は `.copy`（`rfl`、公理ゼロ） |
+| **`hpack_false_of_foundCompareCtx`** | **`FoundCompareCtxC` の証人 ＋ `PrepLandingWatchC` から `False`** |
+
+`hpack` の 4 番目の節 `PrepLandingWatchC` は `WatchSegE.stop` の `es = []` 実例で
+`∃ w, sP.chain = .watch w` を強制する（`CloseoutWatchRound8.prepLandingWatchC_watch_start`）。
+一方 guard の `FoundCompareCtxC` は `sP.chain = ch` で `ChainMatched (chainStart …) ch`。
+`chainStart` は `.copy` で、`ChainMatched` の構成子は形を保つ 1 歩の関係
+（`.copy → .copy` / `.back → .back` / `.watch → .watch` / `.watch → .broken`）なので
+`ch` は必ず `.copy`。**両立しない。**
+
+**`REFUTED（条件付き）`**——未構成の証人は `FoundCompareCtxC`
+（`WatchSegE` / `searchEffect` / `refresh` の証人が要る）。
+
+`PrepLandingWatchC` 自身は偽ではない（chain が watch になった後の landing では真、
+producer は `CloseoutWatchRound10.prepLandingWatchC_of_short`）。**束ねる場所が間違っている。**
+`hpack` という名前は `CloseoutPackRefute.hpack_false` で既に一度偽になっており、
+`LandingFreshC` も Round 44 で反証されて `LandingFreshC'` に割られている——
+**同じ場所で同じ種類の誤りが 3 回**。
+
+なお `CloseoutFoundRoute1` 自体は**ビルドが壊れている**（`:238` で `StepsAll.zero` の
+型不整合）。未登録なので全体 build には影響しないが、found 経路を触るときは
+まずここを直す必要がある。
 
 ## `ShiftPalAlongTrace` — `hSP` の正しい形（trace 形、未配線）
 

@@ -32,6 +32,20 @@
 
 
 
+## 2026-09-19 n117': **`hpack` は REFUTED（条件付き）** — 機械検査済み
+
+`PalPeg/FoundPackRefute.hpack_false_of_foundCompareCtx`（標準公理 `propext`/`Quot.sound` のみ）:
+`FoundCompareCtxC` の証人 ＋ `PrepLandingWatchC` から `False`。決め手は
+**`ChainMatched` が構成子の形を保つ 1 歩の関係**であること
+（`.copy → .copy` / `.back → .back` / `.watch → .watch` / `.watch → .broken`、
+`GalilScaffoldTopChainVM:69`）で、`chainStart` は `.copy`（`:41`）だから
+`ch` は `.watch` になれない。
+
+**未構成の証人は `FoundCompareCtxC`** なので `REFUTED（条件付き）`。
+また `CloseoutFoundRoute1` 自体はビルドが壊れている（`:238`、`StepsAll.zero` の型不整合）。
+
+下は反証前の記録。
+
 ## 2026-09-19 n117: found 経路の `hpack` は**偽の疑いが濃い**（節どうしが衝突している）
 
 **全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
