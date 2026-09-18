@@ -32,6 +32,81 @@
 
 
 
+## 2026-09-19 n112: **`obligation_shiftPalAtScanStates` は偽の疑いが濃い**（進捗計器の訂正）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` なし）。ラチェット緑。公理は 3 義務。
+無条件 PAL は未完。計画書 §10.5 は未達。
+そして下に書くとおり、その 3 個のうち 1 個は偽の疑いが濃い。**
+
+### 何を測ったか
+
+`obligation_shiftPalAtScanStates` の文はこう:
+
+    ∀ w x, BigPack2MG7W centreC placeC entry q first w x → ScanNR x →
+      ShiftPal centreC placeC entry q first w x.vm
+
+`ShiftPal w s` の結論は
+
+    Manacher.PalAt (encoded w) (position s.center + periodLength wch) (r₀ + 1 - periodLength wch)
+
+で、`periodLength wch` は chain の**周期テープの長さ**。つまり
+「chain が持っている周期が、入力語 `w` の本物の周期である」という**履歴の事実**を
+主張している。
+
+そこで guard `BigPack2MG7W` の場を一次情報で全部展開した:
+
+| 場 | 中身 | 入力語 `w` に触れるか | chain に触れるか |
+|---|---|---|---|
+| `IPackMW.pack = LPackM` | `lrepM`（左ヘッドが `w` を表現）／`scanGeom`（`ScanInvariant w …`） | ○ | **×** |
+| `IPackMW.m2 = LPackM2` | `scanGeomR` / `shiftGeom` / `rrep` / `centreRep` / `centreOrder` | ○ | **×** |
+| `AuxPack.coupled = Coupled` | `idleOut` / `block : BlockInv s.chain` / `sum : SumRel s.chain (value s.radius)` / `watch : WatchOK s.chain …` | **×** | ○（ただし**カウンタだけ**） |
+| `AuxPack.front = FrontPack` | front ポテンシャル | × | × |
+| `AuxPack.copyP = CopyPack` | `mode ≠ copy → CopyIdle s` | × | × |
+| `CentreLive` | `mode = rewind → pair → 0 < position s.center` | × | × |
+| `Extra8` | `rewindMargin`（marksTape/left）／`scanAvail`（`canRight right`） | × | × |
+
+一次情報:
+`CloseoutPackRun10:140`（`LPackM`）、`CloseoutPackRun23:99`（`LPackM2`）、
+`CloseoutPackRun2:105`（`AuxPack`）、`GalilChainCoupling:359`（`Coupled`）、
+`GalilBranchInvariants:425`（`BlockInv`）、`GalilChainCoupling:190`（`SumRel`）、
+`GalilChainCoupling:199`（`WatchOK`）、`GalilRewindSafe:50`（`CentreLive`）、
+`CloseoutPackRun46:67`（`Extra8`）。
+
+**`w` に触れる場はどれもヘッド（`Represents` / `ScanInvariant` / `RRep` / `CentreRep` /
+`ShiftGeom`）の話で、chain に触れる場はどれもカウンタ（`distance` / `lag` /
+`periodLength` と `radius` / `cycle` / `remaining` の数値関係）の話。
+chain の周期テープの中身と入力語 `w` を結びつける場が 1 つも無い。**
+
+`shiftGuardVM` が足すのも `symbol (period.focus) = read s.right` の **1 記号**だけで、
+窓全体が周期を持つことは言わない。よって周期テープが出鱈目でも guard は通り、
+結論の `PalAt` は一般に成り立たない。
+
+### 位置づけ
+
+これは `hpack` が偽だったのと**同じ欠陥**（`CloseoutPackRefute.hpack_false`:
+「run 沿いの束を一状態述語として書いており `ChainPosInv2` からは出ない」）。
+CLAUDE.md 自身が `ShiftPal` を過剰量化の 5 例のうちの **1 番目**として挙げていた。
+`BigPack2MG7W` という guard を付けたのは是正のつもりだったはずだが、
+上のとおりその guard は chain と `w` を一切結びつけていない。
+
+**`REFUTED` とは書かない**（`False` を導く機械検査済みの定理がまだ無い）。
+反証のレシピ: `BigPack2MG7W` の証人を 1 つ作り、chain だけを
+`periodLength = 1` の watch に差し替える（どの場も chain の周期テープの中身を
+縛らないので pack は保たれる）。そのうえで `PalAt (encoded w) (C+1) r₀` が破れる
+`w` を選ぶ。手間は `compare` の証人（`searchEffect` を含む）の構成。
+
+### 正しい経路は run 形（既に作ってある）
+
+`CloseoutBundleRun.shiftPal_of_run_B` が run 形の `ShiftPal` 産出器で、
+`InvLPC` の起点が idle chain なので `packRunR_MW_marksFree` の中でそのまま使える。
+残差は `H_readsShift`（→ n111 の `readsShift_at_actual` で実状態で出る）と
+`H_freshShiftAtShiftEntry`（狭めた版、`first_round` から）。
+
+**したがって「公理 3 個」という数字は、そのうち 1 個が偽の疑いが濃い以上、
+このままでは進捗の指標として信用できない。** 次にやるべきは数を減らすことではなく、
+`hSP` を run 形に差し替えること（数は一時的に増える）。
+
+
 ## 2026-09-19 n111: `ScanToScan`（区間抽出）を迂回できる — `scanSeg_snoc_tick`
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` なし）。公理は 3 義務のまま変化なし

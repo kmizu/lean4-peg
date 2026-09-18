@@ -59,6 +59,28 @@ open PalPeg.GalilFinalAssembly (boot)
 
 /-! ## 未証明の義務（外すべき `axiom`）-/
 
+/-! **警告（2026-09-19, n112）: 下の `obligation_shiftPalAtScanStates` は
+偽の疑いが濃い。**
+
+`ShiftPal` の結論 `PalAt (encoded w) (position s.center + periodLength wch) …` は
+「chain が持つ周期が入力語 `w` の本物の周期である」という**履歴の事実**だが、
+guard の `BigPack2MG7W` の場を一次情報で全部展開したところ、
+chain の周期テープの中身と `w` を結びつける場が **1 つも無い**:
+
+* `w` に触れる場（`LPackM.lrepM` / `scanGeom`、`LPackM2.scanGeomR` / `shiftGeom` /
+  `rrep` / `centreRep`）はどれもヘッドの話
+* chain に触れる場（`Coupled.block` / `sum` / `watch`）はどれもカウンタの数値関係
+
+`shiftGuardVM` が足すのも `symbol (period.focus) = read s.right` の 1 記号だけ。
+これは `hpack` が偽だったのと同じ欠陥（一状態述語で run 沿いの事実を書いた）で、
+CLAUDE.md 自身が `ShiftPal` を過剰量化の 5 例の 1 番目に挙げていた。
+
+**`REFUTED` とは書かない**（`False` を導く機械検査済みの定理がまだ無い）。
+正しい経路は run 形の `CloseoutBundleRun.shiftPal_of_run_B` で、
+`InvLPC` の起点が idle chain なので `packRunR_MW_marksFree` の中で使える。
+残差は `H_readsShift`（`RoundSegFromRun.readsShift_at_actual`）と
+`H_freshShiftAtShiftEntry`。詳細は `CLAUDE_RESUME.md` の n112。 -/
+
 /-- **(OBLIGATION)** scan 状態で `ShiftPal`。 -/
 axiom obligation_shiftPalAtScanStates (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (x : State GalilVM),
