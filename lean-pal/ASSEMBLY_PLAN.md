@@ -1,3 +1,63 @@
+## 2026-09-19 n195: `ReadyPacedS` は過剰量化だった（測定済み）——インターフェイスを切り出した
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+### 測定（n194 の宿題）
+
+`CloseoutReadyStage` 全域で `ReadyPacedS` の使い方を数えた。
+`watchSegE_constructS` / `segment_of_invLPCS` / `readyPacedS_watchSegE` /
+`reachAtC3_of_crossS` / `reachAtC3_of_target_matchS` ——**全部**が次の 4 本だけを通る:
+
+| 補題 | 何をする |
+|---|---|
+| `readyPacedS_ready` | `SearchReady` を取り出す（証人は `List.replicate n false` 1 本） |
+| `readyPacedS_mono` | 添字を弱める |
+| `readyPacedS_effect_false` | **背景量子 1 手**に沿って運ぶ |
+| `readyPacedS_effect_true` | **比較量子 1 手**に沿って運ぶ |
+
+**任意のリストに具体化している箇所は 1 つも無い。**
+`ready` は固定の証人 1 本、`effect_*` は 1 要素の前置だけ。よって
+
+    ReadyPacedS v n k := ∀ as, n ≤ as.length → PacedL 2048 k as → SearchReadyS v as
+
+の `∀ as` は**消費者に対して過剰量化**（CLAUDE.md の 8 例と同じ型）。
+これが効くのは `ReadyPacedS` が `CloseoutContracts.StageEntryC.fuel` だからで、
+run 基底の readiness 線（`CloseoutPreload28/35/36`）は
+**機械が取らないリストへの量化を原理的に出せない**（`CloseoutPreload36` の
+「What this is and is not」）。
+
+### 切り出したもの
+
+`PalPeg/ReadyInterface.lean`（新規、1 構造体 ＋ 1 定理、標準 3 公理）:
+
+    structure ReadyIface (P : Shared) (Φ : SearchVM → ℕ → ℕ → Prop) : Prop where
+      ready      : Φ v n k → SearchReady v
+      mono       : n ≤ n' → k' ≤ k → Φ v n k → Φ v n' k'
+      background : k' ≤ k+1 → s.chain = idle → Φ (get s) (n+1) k →
+                     searchEffect P false s v → Φ v n k'
+      comparison : 2048 ≤ k+1 → s.chain = idle → Φ (get s) (n+1) k →
+                     searchEffect P true s v → Φ v n 0
+
+    theorem readyIface_readyPacedS (P) : ReadyIface P ReadyPacedS
+
+4 場は既存 4 補題そのまま。**これが測定の形式的な記録**——
+インターフェイスは `CloseoutReadyStage` が証明する内容より弱くなく、
+`CloseoutReadyStage` が使う内容より強くない。
+
+### まだ何も外れていない（正直な状態）
+
+`watchSegE_constructS` とその 4 消費者を抽象 `Φ` に対して**再証明していない**。
+機械的（4 つの補題呼び出しを 4 つの場に置き換えるだけ）だが長い。
+それが済むまでこのファイルは何も落とさない。
+
+### 次
+
+1. `watchSegE_constructS` を `Φ` ＋ `ReadyIface P Φ` で再証明
+2. `segment_of_invLPCS` / `readyPacedS_watchSegE` / `reachAtC3_of_crossS` を追従
+3. `StageEntryC.fuel` を `∃ Φ, ReadyIface P Φ ∧ Φ …` に切り直す
+4. run 線（`Preload28/35/36`）が run 添字の `Φ` を供給する
+
 ## 2026-09-19 n194: **n189 の書き方を訂正**＋2 本の線の食い違いが本当の壁
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。

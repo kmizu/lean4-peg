@@ -52,6 +52,17 @@
 [3] obligation_localRealization — H_realizeLIMW'。壁は n174（run 機構が fairness を捨てている）
 ```
 
+### n195: 測定完了——`ReadyPacedS` は過剰量化。インターフェイスに切った
+
+`CloseoutReadyStage` の全消費者が通るのは 4 補題だけ（`ready` / `mono` /
+`effect_false` / `effect_true`）。**任意リストへの具体化はゼロ。**
+`PalPeg/ReadyInterface.lean` に `ReadyIface P Φ`（4 場）を切り出し、
+`readyIface_readyPacedS` で `ReadyPacedS` が満たすことを確認（標準 3 公理）。
+
+**まだ何も外れていない。** `watchSegE_constructS` とその 4 消費者を抽象 `Φ` で
+再証明するのが次（機械的だが長い）。そのあと `StageEntryC.fuel` を
+`∃ Φ, ReadyIface P Φ ∧ Φ …` に切り直せば、run 線が直接埋められる。
+
 ### n194（訂正）: n189 の「背骨を作った」は誇張。線は 2 本あって噛み合っていない
 
 `CloseoutPreload28/35/36` の線は**もともと状態局所**だった
