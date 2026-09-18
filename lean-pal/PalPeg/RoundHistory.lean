@@ -41,7 +41,7 @@ open PalPeg.CloseoutOriginAt PalPeg.CloseoutRoundSeg PalPeg.MatchedRunSnoc
 /-- **(NAMED) ラウンドの履歴。**  いまの状態 `⟨c, s⟩` は、read origin が立っている
 ラウンド起点 `⟨c₀, s₀⟩` から scan 相の区間で到達した。
 
-起点側の 6 つ（`OriginAt` / `periodOnly = true` / watch / lag ゼロ /
+起点側の 7 つ（`OriginAt` / `periodOnly = true` / watch / lag ゼロ / `WatchBlock` /
 `Canonical radius` / `Canonical length`）は `GalilScaffoldTopRoundS.round_next` と
 `CloseoutOriginRounds.originAt_of_rounds` が要求するものとちょうど同じ。
 `Canonical` を起点で持つのは、区間の末尾へは
@@ -53,6 +53,7 @@ def RoundHistory (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ)
     ScanSeg P q first delay n c₀ s₀ c s ∧
     OriginAt w s₀ ∧ s₀.periodOnly = true ∧
     s₀.chain = ChainVM.watch w₀ ∧ zero w₀.lag = true ∧
+    PalPeg.GalilBranchInvariants.WatchBlock w₀ ∧
     Canonical s₀.radius ∧ Canonical s₀.length
 
 section
@@ -63,9 +64,10 @@ theorem roundHistory_start {c₀ : Control} {s₀ : GalilVM}
     {w₀ : GalilScaffoldChainWatch.State}
     (hOrigin : OriginAt w s₀) (hPeriodOnly : s₀.periodOnly = true)
     (hChain : s₀.chain = ChainVM.watch w₀) (hLagZero : zero w₀.lag = true)
+    (hBlock : PalPeg.GalilBranchInvariants.WatchBlock w₀)
     (hRadiusCanonical : Canonical s₀.radius) (hLengthCanonical : Canonical s₀.length) :
     RoundHistory P q first delay w c₀ s₀ :=
-  ⟨0, c₀, s₀, w₀, ScanSeg.stop c₀ s₀, hOrigin, hPeriodOnly, hChain, hLagZero,
+  ⟨0, c₀, s₀, w₀, ScanSeg.stop c₀ s₀, hOrigin, hPeriodOnly, hChain, hLagZero, hBlock,
     hRadiusCanonical, hLengthCanonical⟩
 
 /-- **scan 相の 1 tick で伸びる。**  `scanSeg_snoc_tick` の出口 2・3 は
@@ -80,11 +82,11 @@ theorem roundHistory_tick {x y : State GalilVM}
     (hStayScan : y.ctl.mode = Mode.scan)
     (hStayWatching : ∃ wch, y.vm.chain = ChainVM.watch wch) :
     RoundHistory P q first delay w y.ctl y.vm := by
-  obtain ⟨n, c₀, s₀, w₀, hSeg, hOrigin, hPeriodOnly, hChain, hLagZero,
+  obtain ⟨n, c₀, s₀, w₀, hSeg, hOrigin, hPeriodOnly, hChain, hLagZero, hBlock,
     hRadiusCanonical, hLengthCanonical⟩ := hHistory
   rcases scanSeg_snoc_tick hRestartNeedsBroken hSeg hScan hNotReplaying hWatching
       hContinuing hTick with ⟨m, hNext⟩ | hLeft | hBroke
-  · exact ⟨m, c₀, s₀, w₀, hNext, hOrigin, hPeriodOnly, hChain, hLagZero,
+  · exact ⟨m, c₀, s₀, w₀, hNext, hOrigin, hPeriodOnly, hChain, hLagZero, hBlock,
       hRadiusCanonical, hLengthCanonical⟩
   · exact absurd hStayScan hLeft
   · obtain ⟨wch, hwch⟩ := hStayWatching
@@ -151,16 +153,17 @@ theorem onlyMatchedRun_of_roundHistory {c : Control} {s : GalilVM}
     (hHistory : RoundHistory P q first delay w c s) :
     ∃ (n : ℕ) (s₀ : GalilVM) (w₀ wch : GalilScaffoldChainWatch.State),
       OriginAt w s₀ ∧ s₀.periodOnly = true ∧ s₀.chain = ChainVM.watch w₀ ∧
-      zero w₀.lag = true ∧ s.chain = ChainVM.watch wch ∧ zero wch.lag = true ∧
+      zero w₀.lag = true ∧ PalPeg.GalilBranchInvariants.WatchBlock w₀ ∧
+      s.chain = ChainVM.watch wch ∧ zero wch.lag = true ∧
       s.periodOnly = true ∧ OnlyMatchedRun (toOnly s₀ w₀) n (toOnly s wch) ∧
       Canonical s.radius ∧ Canonical s.length := by
-  obtain ⟨n, c₀, s₀, w₀, hSeg, hOrigin, hPeriodOnly, hChain, hLagZero,
+  obtain ⟨n, c₀, s₀, w₀, hSeg, hOrigin, hPeriodOnly, hChain, hLagZero, hBlock,
     hRadiusCanonical, hLengthCanonical⟩ := hHistory
   obtain ⟨wch, hwch, hzch, hpoch, hrun⟩ :=
     scanSeg_only P q first delay hSeg w₀ hPeriodOnly hChain hLagZero
   obtain ⟨hRadiusNow, hLengthNow⟩ := scanSeg_counters P q first delay hSeg
-  exact ⟨n, s₀, w₀, wch, hOrigin, hPeriodOnly, hChain, hLagZero, hwch, hzch, hpoch, hrun,
-    hRadiusNow hRadiusCanonical, hLengthNow hLengthCanonical⟩
+  exact ⟨n, s₀, w₀, wch, hOrigin, hPeriodOnly, hChain, hLagZero, hBlock,
+    hwch, hzch, hpoch, hrun, hRadiusNow hRadiusCanonical, hLengthNow hLengthCanonical⟩
 
 end
 
@@ -692,10 +695,11 @@ def ShiftPhaseHistory (w : List (Fin 2)) (s : GalilVM) : Prop :=
     OriginAt w s₀ ∧ s₀.chain = ChainVM.watch w₀ ∧
     PalPeg.GalilBranchInvariants.WatchBlock w₀ ∧
     OnlyMatchedRun (toOnly s₀ w₀) n (toOnly s1 wch) ∧
+    zero wch.lag = true ∧ s2.periodOnly = true ∧
     singlePositive s1.cycle = true ∧ canRight s1.right ∧
     GalilScaffoldInputHead.read (right s1.right) =
       GalilScaffoldChainConsume.symbol wch.machine.control.period.focus ∧
-    Canonical s1.length ∧
+    Canonical s1.radius ∧ Canonical s1.length ∧
     vs.right = right s1.right ∧ vs.left = GalilScaffoldInputHead.left s1.left ∧
     beginShiftVM (periodLength wch) wch (afterMismatch s1 vs vq) s2 ∧
     ChainShiftRun (shiftLens.get s2).shift
@@ -710,8 +714,9 @@ theorem shiftPhaseHistory_originAt {w : List (Fin 2)} {s : GalilVM}
     (hExhausted : positive (shiftLens.get s).shift.remaining = false) :
     OriginAt w s := by
   obtain ⟨s₀, s1, s2, w₀, wch, v, n, k, vs, vq, hOrigin, hChainStart, hBlockStart,
-    hMatchedRun, hTerminal, hCanRight, hPredict, hLengthCanonical, hRight, hLeft,
-    hBeginShift, hShiftRun, hFrame, hChainEnd⟩ := hHistory
+    hMatchedRun, hLagTerminal, hPeriodOnlyEntry, hTerminal, hCanRight, hPredict,
+    hRadiusCanonical, hLengthCanonical, hRight, hLeft, hBeginShift, hShiftRun, hFrame,
+    hChainEnd⟩ := hHistory
   exact originAt_next_of_run hOrigin hChainStart
     (roundSeg_of_run hChainStart hBlockStart hMatchedRun hTerminal hCanRight hPredict
       hLengthCanonical hRight hLeft hBeginShift hShiftRun hExhausted hFrame hChainEnd)
@@ -738,8 +743,9 @@ theorem shiftPhaseHistory_tick {P : Shared} {q : ℕ} {first : Fin 9} {delay : �
     (hStayShift : y.ctl.mode = Mode.shift) :
     ShiftPhaseHistory w y.vm := by
   obtain ⟨s₀, s1, s2, w₀, wch, v, n, k, vs, vq, hOrigin, hChainStart, hBlockStart,
-    hMatchedRun, hTerminal, hCanRight, hPredict, hLengthCanonical, hRight, hLeft,
-    hBeginShift, hShiftRun, hFrame, hChainEnd⟩ := hHistory
+    hMatchedRun, hLagTerminal, hPeriodOnlyEntry, hTerminal, hCanRight, hPredict,
+    hRadiusCanonical, hLengthCanonical, hRight, hLeft, hBeginShift, hShiftRun, hFrame,
+    hChainEnd⟩ := hHistory
   cases hTick with
   | shift_one c0 s0 s0' hm hRemainingPos hShiftOne =>
     have hRemaining : positive (shiftLens.get s0).shift.remaining = true := by
@@ -755,8 +761,9 @@ theorem shiftPhaseHistory_tick {P : Shared} {q : ℕ} {first : Fin 9} {delay : �
       conv_lhs => rw [hFrameHere]
       exact shiftLens.set_set _ _ _
     exact ⟨s₀, s1, s2, w₀, wch, chainShiftOne v, n, k + 1, vs, vq,
-      hOrigin, hChainStart, hBlockStart, hMatchedRun, hTerminal, hCanRight, hPredict,
-      hLengthCanonical, hRight, hLeft, hBeginShift, hRunTarget, hFrameTarget, hChainTarget⟩
+      hOrigin, hChainStart, hBlockStart, hMatchedRun, hLagTerminal, hPeriodOnlyEntry,
+      hTerminal, hCanRight, hPredict, hRadiusCanonical, hLengthCanonical, hRight, hLeft,
+      hBeginShift, hRunTarget, hFrameTarget, hChainTarget⟩
   | shift_done c0 s0 o0 hm _ _ => simp at hStayShift
   | init c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
   | scan_wait c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
@@ -781,6 +788,55 @@ theorem shiftPhaseHistory_tick {P : Shared} {q : ℕ} {first : Fin 9} {delay : �
   | restart c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
 
 #print axioms shiftPhaseHistory_tick
+
+/-- **`shift_done` の遷移**: shift 相が終わると次のラウンドの `RoundHistory` が立つ。
+
+VM は `shift_done` では変わらない（`GalilScaffoldTop:136`）ので、この状態がそのまま
+次のラウンドの起点。7 つの場の出どころ:
+
+| 場 | 出どころ |
+|---|---|
+| `OriginAt w s` | `shiftPhaseHistory_originAt` |
+| `s.periodOnly = true` | `beginShiftVM` が置いた値。`shiftLens` の外なので shift 相で不変 |
+| `s.chain = .watch v` | `ShiftPhaseHistory` |
+| `zero v.lag = true` | `chain_shift_lag`（`immediate` は lag を変えない） |
+| `WatchBlock v` | `chain_shift_period` ＋ `onBlock_verifier_consume` |
+| `Canonical s.radius` / `Canonical s.length` | `shift_run_canonical` |
+ -/
+theorem roundHistory_of_shiftDone {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hHistory : ShiftPhaseHistory w s)
+    (hExhausted : positive (shiftLens.get s).shift.remaining = false) :
+    RoundHistory P q first delay w c s := by
+  have hOriginNext : OriginAt w s := shiftPhaseHistory_originAt hHistory hExhausted
+  obtain ⟨s₀, s1, s2, w₀, wch, v, n, k, vs, vq, hOrigin, hChainStart, hBlockStart,
+    hMatchedRun, hLagTerminal, hPeriodOnlyEntry, hTerminal, hCanRight, hPredict,
+    hRadiusCanonical, hLengthCanonical, hRight, hLeft, hBeginShift, hShiftRun, hFrame,
+    hChainEnd⟩ := hHistory
+  obtain ⟨hShape, -, -⟩ := shiftEntry_shape hLeft hBeginShift
+  obtain ⟨-, hBlockEnd⟩ := periodLength_onlyMatchedRun hMatchedRun hBlockStart
+  simp only [toOnly] at hBlockEnd
+  -- periodOnly は shiftLens の外
+  have hPeriodOnly : s.periodOnly = true := by
+    rw [hFrame]; exact hPeriodOnlyEntry
+  -- lag
+  have hLagZero : zero v.lag = true := by
+    rw [chain_shift_lag hShiftRun]; exact hLagTerminal
+  -- WatchBlock
+  have hBlockNext : PalPeg.GalilBranchInvariants.WatchBlock v := by
+    show PalPeg.GalilBranchInvariants.OnBlock v.machine.control.period
+    rw [chain_shift_period hShiftRun]
+    exact PalPeg.GalilBranchInvariants.onBlock_verifier_consume _ hBlockEnd
+  -- Canonical
+  have hCanonicalNext : ShiftCanonical (shiftLens.get s).shift :=
+    shift_run_canonical (shiftRun_of_chain hShiftRun)
+      (by rw [hShape]
+          exact ⟨ofNat_canonical _, inc_canonical _ hRadiusCanonical,
+            inc_canonical _ (inc_canonical _ hLengthCanonical)⟩)
+  exact roundHistory_start hOriginNext hPeriodOnly hChainEnd hLagZero hBlockNext
+    hCanonicalNext.2.1 hCanonicalNext.2.2
+
+#print axioms roundHistory_of_shiftDone
 #print axioms h_readsShift_of_run
 
 #print axioms chainShiftRun_tick

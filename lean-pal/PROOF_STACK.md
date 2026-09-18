@@ -291,8 +291,8 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
   * `scan_shift`（`RoundHistory` → `ShiftPhaseHistory`）——
     `hTerminal` / `hCanRight` / `hPredict` / `hRight` / `hLeft` / `hBeginShift` を
     tick と guard から取る。**`WatchBlock w₀` を `RoundHistory` に足す必要がある**
-  * `shift_done`（`ShiftPhaseHistory` → `RoundHistory`）——
-    `shiftPhaseHistory_originAt`（済）＋ `roundHistory_start`
+  * `shift_done`（`ShiftPhaseHistory` → `RoundHistory`）——**済（n161）**:
+    `roundHistory_of_shiftDone`
 
 これができたら `H_readsShift` が trace / run の全点で出て、
 `obligation_shiftPalResidues*` の第 1 残差が**公理から外れる**（(C) の操作）。

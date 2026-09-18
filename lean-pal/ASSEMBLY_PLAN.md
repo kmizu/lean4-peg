@@ -1,3 +1,37 @@
+## 2026-09-19 n161: `shift_done` 遷移（`ShiftPhaseHistory` → `RoundHistory`）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器はまだ動いていない。**
+
+`PalPeg/RoundHistory.lean` は **31 宣言**。
+
+`roundHistory_of_shiftDone`: shift 相が終わると次のラウンドの `RoundHistory` が立つ。
+`shift_done` は VM を変えない（`GalilScaffoldTop:136`）のでこの状態がそのまま次の起点。
+7 つの場の出どころ:
+
+| 場 | 出どころ |
+|---|---|
+| `OriginAt w s` | `shiftPhaseHistory_originAt` |
+| `s.periodOnly = true` | `beginShiftVM` が置いた値。`shiftLens` の外なので shift 相で不変 |
+| `s.chain = .watch v` | `ShiftPhaseHistory` |
+| `zero v.lag = true` | `chain_shift_lag`（`immediate` は lag を変えない） |
+| `WatchBlock v` | `chain_shift_period` ＋ `onBlock_verifier_consume` |
+| `Canonical s.radius` / `Canonical s.length` | `shift_run_canonical` |
+
+そのために `RoundHistory` に `WatchBlock w₀` を、`ShiftPhaseHistory` に
+`zero wch.lag = true` / `s2.periodOnly = true` / `Canonical s1.radius` を足した。
+
+### 残り 1 個: `scan_shift` 遷移（`RoundHistory` → `ShiftPhaseHistory`）
+
+tick が与えるもの（`GalilScaffoldTop:123`）: `hm` / `h`（available）/ `hc : clock = 1` /
+`hcmp` / `hmt`（不一致）/ `hr : replaying = false` / `hg : P.shiftGuard s'` /
+`hb : P.beginShift s' s''`。
+
+`PofC` では `P.shiftGuard = shiftGuardVM`、`P.beginShift = beginShiftVM'`。
+比較の分解は `MatchedRunSnoc.compare_mismatched_parts`。
+必要な場はすべて `RoundHistory` の射影（`onlyMatchedRun_of_roundHistory`）と
+guard から出る見込み。**これが繋がれば `H_readsShift` が run 全点で出る。**
+
 ## 2026-09-19 n160: shift 相の carrier（`ShiftPhaseHistory`）とその tick 保存
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
