@@ -1,4 +1,5 @@
 import PalPeg.CloseoutVerSide
+import PalPeg.CloseoutPackRun49
 import PalPeg.ShiftLocalRun
 
 /-!
@@ -64,6 +65,9 @@ open PalPeg.CloseoutPackRun41 PalPeg.CloseoutShiftS2
 open PalPeg.CloseoutVerSide PalPeg.CloseoutVerRep PalPeg.ShiftLocalRun
 open PalPeg.GalilRunTrace PalPeg.CloseoutFrontExtra PalPeg.CloseoutCanRightBound
 open PalPeg.CloseoutPackRun23 PalPeg.GalilLedgerAssembly
+open PalPeg.CloseoutPackRun49 PalPeg.CloseoutPackW PalPeg.CloseoutPackRun36
+open PalPeg.CloseoutPackRun47 PalPeg.CloseoutPackRun29 PalPeg.CloseoutPackRun46
+open PalPeg.GalilScaffoldChainPeriod (Tape)
 
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
@@ -616,6 +620,18 @@ theorem centreLedger_of_entryCounters {w : List (Fin 2)} (hw : 0 < w.length)
 `CentreLedger` が読むのは `center` / `radius` / `right` の 3 つだけで、
 それらは `initVM` が固定するので trace 上の `st (i+1)` から移せる。 -/
 
+/-- **`init` 相の tick は `initVM` で、行き先は `scan` 相。**  `Tick` の 24 構成子のうち
+源の mode が `init` なのは `Tick.init` だけ。状態を変数に一般化してから `cases` する
+必要がある（非変数の `st 0` / `st 1` に対しては dependent elimination が失敗する）。 -/
+theorem init_tick_target_is_scan {w : List (Fin 2)} (x y : State GalilVM)
+    (hTick : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y)
+    (hMode : x.ctl.mode = Mode.init) :
+    (galilFrameS (PofC centre place entry w) q first).init x.vm y.vm ∧
+      y.ctl.mode = Mode.scan := by
+  cases hTick with
+  | init c s s' hm' hinit => exact ⟨hinit, rfl⟩
+  | _ => simp_all
+
 /-- **`LTickLeaves3.initLedger` は trace 上でタダ。** -/
 theorem initLedger_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
@@ -639,16 +655,9 @@ theorem initLedger_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
   subst h0
   have hi1 : 1 ≤ Tc w.length := hTcPos
   -- trace の 1 手目は同じ `init` 遷移
-  have init_tick_target_is_scan : ∀ x y : State GalilVM,
-      Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y →
-      x.ctl.mode = Mode.init →
-      (galilFrameS (PofC centre place entry w) q first).init x.vm y.vm ∧
-        y.ctl.mode = Mode.scan := by
-    intro x y h hm
-    cases h with
-    | init c s s' hm' hinit => exact ⟨hinit, rfl⟩
-    | _ => simp_all
-  obtain ⟨hinit1, hmode1⟩ := init_tick_target_is_scan (st 0) (st 1) (hPreTrace.trace.tick 0 (by omega)) hMode
+  obtain ⟨hinit1, hmode1⟩ :=
+    init_tick_target_is_scan centre place entry q first (st 0) (st 1)
+      (hPreTrace.trace.tick 0 (by omega)) hMode
   obtain ⟨hr1, -, hc1, -, hrad1, -, -, -, -, -, -, -, -⟩ :
     initVM entry (st 0).vm (st 1).vm := hinit1
   obtain ⟨hrt, -, hct, -, hradt, -, -, -, -, -, -, -, -⟩ :
@@ -667,6 +676,7 @@ theorem initLedger_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
     rw [hcc, hrr, hcr1, hvt]
     omega
 
+#print axioms init_tick_target_is_scan
 #print axioms initLedger_alongTrace
 
 /-! ## 5d. `CentreEq` — 半径カウンタが中心から右ヘッドまでの距離を正確に測る
@@ -764,6 +774,116 @@ theorem radiusExact_after_background {w : List (Fin 2)} {s t : GalilVM}
 #print axioms radiusExact_after_restart
 #print axioms radiusExact_after_replayStart
 #print axioms radiusExact_after_initVM
+
+/-! ## 5e. `LPackM3` を trace に運ぶ（1 手目から）
+
+`LTickLeaves3` の 4 場のうち `initLedger`（§5c）と `replayLedger`（§5b）はタダになった。
+残るのは `backLag`（`.back` 相の lag 形状）と `shiftExitLedger`（`shift_done` での
+`CentreLedger`）の 2 場だけ。それを名前付きの残差として取り、`LPackM3` を trace に運ぶ。
+
+`i = 0` から始められないのは `AuxPack` が boot で偽だから
+（`AuxPackNotAtBoot.not_auxPack_at_boot`、機械検査済み）。`1 ≤ i` から始める。
+`LPackM3 (st 1)` は `initLedger_alongTrace`（§5c）で作る。 -/
+
+/-- **(NAMED, trace 形) まだ残っている 3 場。**
+
+* `backLag` — chain の `.back` 相の lag 形状（`LTickLeaves3`）
+* `shiftExitLedger` — `shift_done` での `CentreLedger`（`LTickLeaves3`）
+* `rewindMargin` — rewind 相での左ヘッドの余裕（`Extra8`）
+
+`LTickLeaves3` の他の 2 場（`initLedger` / `replayLedger`）と `Extra8.scanAvail` と
+`CentreLive` はすべてタダになった。 -/
+structure ChainBackLagAndShiftExitLedgerAt (w : List (Fin 2)) (c : Control) (s : GalilVM) :
+    Prop where
+  backLag : ∀ (v : Tape) (h lag margin : Counter) (ver : PlaceHead),
+    s.chain = .back v h lag margin ver → Canonical lag ∧ 0 ≤ value lag
+  shiftExitLedger : c.mode = Mode.shift →
+    ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s → CentreLedger s
+  rewindMargin : c.mode = Mode.rewind → 2 ≤ position s.left
+
+/-- **`LTickLeaves3` は残り 2 場だけから trace 全域で出る。** -/
+theorem lTickLeaves3_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTrace : PreTrace centre place entry q first w st Tc)
+    (hRadLedger : ∀ j, j ≤ Tc w.length →
+      PalPeg.CloseoutRadPack.RadLedger (st j).ctl (st j).vm)
+    (hLPackM2 : ∀ j, j ≤ Tc w.length → LPackM2 w (st j).ctl (st j).vm)
+    (hSanePack : ∀ j, j ≤ Tc w.length → PalPeg.GalilTrailSane.SanePack (st j).ctl (st j).vm)
+    (hTcPos : 1 ≤ Tc w.length)
+    (hRes : ∀ j, j ≤ Tc w.length →
+      ChainBackLagAndShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm) :
+    ∀ i, i ≤ Tc w.length → LTickLeaves3 centre place entry q first w (st i).ctl (st i).vm :=
+  fun i hIndexLeTc =>
+    { backLag := (hRes i hIndexLeTc).backLag
+      initLedger := initLedger_alongTrace centre place entry q first hw hPreTrace hLPackM2
+        hSanePack hRadLedger hTcPos i hIndexLeTc
+      shiftDoneLedger := (hRes i hIndexLeTc).shiftExitLedger
+      replayLedger := replayStartLedger_alongTrace centre place entry q first hw hPreTrace
+        hRadLedger hLPackM2 hSanePack hTcPos i hIndexLeTc }
+
+/-- **`LPackM3` を trace に運ぶ（1 手目から）。**  新規入力は `hSP`（`ShiftPal`）と
+残り 2 場 `hRes` だけ。 -/
+theorem lpackM3_alongTrace_afterFirstStep {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hTcPos : 1 ≤ Tc w.length)
+    (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
+      ScanNR x → ShiftPal centre place entry q first w x.vm)
+    (hRes : ∀ j, j ≤ Tc w.length →
+      ChainBackLagAndShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm) :
+    ∀ i, 1 ≤ i → i ≤ Tc w.length → LPackM3 w (st i).ctl (st i).vm := by
+  have hPreTrace := hPreTraceIMW.base.pre
+  have hLPackM2 : ∀ j, j ≤ Tc w.length → LPackM2 w (st j).ctl (st j).vm :=
+    fun j hj => (hPreTraceIMW.packs j hj).m2
+  have hSanePack : ∀ j, j ≤ Tc w.length →
+      PalPeg.GalilTrailSane.SanePack (st j).ctl (st j).vm :=
+    PalPeg.CloseoutLPack6.sanePack_pt centre place entry q first hw hPreTrace
+      (fun j hj => leftLive_of_lpackM (hPreTraceIMW.packs j hj).pack)
+  have hRadLedger := radLedger_pt centre place entry q first hw hPreTrace
+    (fun j hj => leftLive_of_lpackM (hPreTraceIMW.packs j hj).pack)
+  have hAuxPack := auxPack_alongTrace_afterFirstStep centre place entry q first hw hPreTrace
+  have hL3 := lTickLeaves3_alongTrace centre place entry q first hw hPreTrace hRadLedger
+    hLPackM2 hSanePack hTcPos hRes
+  -- 1 手目
+  obtain ⟨hinit1, hMode1⟩ :=
+    init_tick_target_is_scan centre place entry q first (st 0) (st 1)
+      (hPreTrace.trace.tick 0 (by omega))
+      (by rw [hPreTrace.start]; rfl)
+  have hbase : LPackM3 w (st 1).ctl (st 1).vm := by
+    refine ⟨hLPackM2 1 hTcPos, fun _ => ?_, ?_⟩
+    · exact initLedger_alongTrace centre place entry q first hw hPreTrace hLPackM2 hSanePack
+        hRadLedger hTcPos 0 (by omega) (by rw [hPreTrace.start]; rfl) (st 1).vm hinit1
+    · obtain ⟨-, -, -, -, -, -, -, -, -, hch, -⟩ :
+        initVM entry (st 0).vm (st 1).vm := hinit1
+      rw [hch]; exact lagCan_idle
+  intro i
+  induction i with
+  | zero => intro hIndexPos; exact absurd hIndexPos (by omega)
+  | succ n ih =>
+    intro _ hIndexLeTc
+    rcases Nat.eq_or_lt_of_le (Nat.one_le_iff_ne_zero.mpr (Nat.succ_ne_zero n)) with h1 | h1
+    · -- n + 1 = 1
+      have : n = 0 := by omega
+      subst this; exact hbase
+    · have hn1 : 1 ≤ n := by omega
+      have hPrev := ih hn1 (by omega)
+      have hBig : BigPack2MG7W centre place entry q first w (st n) :=
+        ⟨hPreTraceIMW.packs n (by omega), hAuxPack n hn1 (by omega),
+         PalPeg.GalilTrailRad.centreLive_trace centre place entry q first w hw st Tc
+           hPreTrace n (by omega),
+         ⟨(hRes n (by omega)).rewindMargin,
+          fun hm _ => scanRightHeadCanRight_alongTrace centre place entry q first hw
+            hPreTrace hLPackM2 hTcPos n (by omega) hm⟩⟩
+      have hLN := lticksN_of_lpackM2_W centre place entry q first hBig
+        (hLPackM2 n (by omega))
+      exact lpackM3_tick' centre place entry q first hPrev hLN
+        (hAuxPack n hn1 (by omega))
+        (lTickLeaves2_of_shiftPalG centre place entry q first (hLPackM2 n (by omega)) hLN
+          (fun hs => hSP (st n) hBig hs))
+        (hL3 n (by omega)) (hPreTrace.trace.tick n (by omega))
+
+#print axioms lTickLeaves3_alongTrace
+#print axioms lpackM3_alongTrace_afterFirstStep
 
 /-! ## 6. 残差は 3 場 — `shiftDone` は完全に放電された
 
