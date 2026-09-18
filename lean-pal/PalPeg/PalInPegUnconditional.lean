@@ -147,13 +147,18 @@ theorem unconditional : RecognizedByTotalPEG PAL :=
         hPreTraceIMW
         (fun x hBig hScanNR => obligation_shiftPalAtScanStates 0 0 0 w x hBig hScanNR)
         (PalPeg.BranchSupply.shiftExitLedgerAt_alongTrace centreC placeC 0 0 0
-          hPreTraceIMW (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW))
+          hPreTraceIMW (PalPeg.BranchSupply.marksInv_alongTrace centreC placeC 0 0 0
+            hPreTraceIMW.base.pre (obligation_marksEntry 0 0 0 w)))
+        (PalPeg.BranchSupply.marksInv_alongTrace centreC placeC 0 0 0 hPreTraceIMW.base.pre
+          (obligation_marksEntry 0 0 0 w))
         (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW)
         (PalPeg.BranchSupply.matchRest_alongTrace centreC placeC 0 0 0 hPreTraceIMW
-          (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW)))
+          (PalPeg.BranchSupply.marksInv_alongTrace centreC placeC 0 0 0 hPreTraceIMW.base.pre
+            (obligation_marksEntry 0 0 0 w))))
     (fun w st Tc hw hPreTraceIMW =>
       PalPeg.BranchSupply.chainVerifierSupply_alongTrace centreC placeC 0 0 0 hw hPreTraceIMW
-        (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW)
+        (PalPeg.BranchSupply.marksInv_alongTrace centreC placeC 0 0 0 hPreTraceIMW.base.pre
+          (obligation_marksEntry 0 0 0 w))
         (hPreTraceIMW.base.tc1 ▸ hPreTraceIMW.base.pre.mono 1 w.length hw le_rfl))
 
 #print axioms unconditional
