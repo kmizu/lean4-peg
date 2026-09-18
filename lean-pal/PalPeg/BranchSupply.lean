@@ -821,7 +821,6 @@ theorem radiusExact_after_shiftOne {w : List (Fin 2)} {s t : GalilVM}
     (hShiftOne : (galilFrameS (PofC centre place entry w) q first).shiftOne s t)
     (hCanRightCentre : GalilScaffoldChainVerifier.canRight s.center)
     (hCentreLeftNonempty : 0 < s.center.head.left.length)
-    (hRadiusPos : 1 ≤ value s.radius)
     (hRadiusExact : (position s.center : ℤ) + value s.radius = position s.right) :
     (position t.center : ℤ) + value t.radius = position t.right := by
   obtain ⟨-, -, -, wv, -, hGet⟩ := hShiftOne.1
@@ -849,16 +848,15 @@ def RadiusExactOffRewindPhase (c : Control) (s : GalilVM) : Prop :=
     (position s.center : ℤ) + value s.radius = position s.right
 
 /-- **1 tick 保存。**  側入力は init 相の `radius = 0`、scan 相の右ヘッド供給、
-shift 相の中心ヘッド供給だけ。 -/
+shift 相の中心ヘッド供給（どちらも `canRight` と `0 < |left|` の 2 つ）だけ。 -/
 theorem radiusExactOffRewindPhase_tick {w : List (Fin 2)} {x y : State GalilVM}
     (hTick : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y)
     (hRadiusZeroAtInit : x.ctl.mode = Mode.init → value x.vm.radius = 0)
     (hScanSupply : x.ctl.mode = Mode.scan →
       GalilScaffoldChainVerifier.canRight x.vm.right ∧ 0 < x.vm.right.head.left.length)
     (hShiftSupply : x.ctl.mode = Mode.shift →
-      (galilFrameS (PofC centre place entry w) q first).remainingPos x.vm →
       GalilScaffoldChainVerifier.canRight x.vm.center ∧
-        0 < x.vm.center.head.left.length ∧ 1 ≤ value x.vm.radius)
+        0 < x.vm.center.head.left.length)
     (hPrev : RadiusExactOffRewindPhase x.ctl x.vm) :
     RadiusExactOffRewindPhase y.ctl y.vm := by
   cases hTick with
@@ -893,9 +891,9 @@ theorem radiusExactOffRewindPhase_tick {w : List (Fin 2)} {x y : State GalilVM}
         (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide)))
   | shift_one c s s' hm hRemPos hOne =>
     intro _ _ _
-    obtain ⟨hCanRightCentre, hCentreLeftNonempty, hRadiusPos⟩ := hShiftSupply hm hRemPos
+    obtain ⟨hCanRightCentre, hCentreLeftNonempty⟩ := hShiftSupply hm
     exact radiusExact_after_shiftOne centre place entry q first hOne hCanRightCentre
-      hCentreLeftNonempty hRadiusPos
+      hCentreLeftNonempty
       (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
   | shift_done c s o hm _ _ =>
     intro _ _ _
@@ -1144,6 +1142,152 @@ theorem eq_ofNat_of_canonical_nonneg {c : Counter} (hCanonical : Canonical c)
 
 #print axioms listUnit_eq_replicate
 #print axioms eq_ofNat_of_canonical_nonneg
+
+/-! ### 中心ヘッドの表現を trace 全域に広げる
+
+`LPackM2.centreRep` の guard は `rewind ∨ replayStart` だけ（`Run23:105`）。
+`headsRepresent_tick` が 24 構成子すべてで保存を示したので、あとは 1 手目の基底と
+4 つの側入力を trace から供給すればよい。側入力の出どころ:
+
+| 側入力 | 出どころ | 新規入力 |
+|---|---|---|
+| `mode ≠ init` | `mode_ne_init_alongTrace_afterFirstStep` | なし |
+| `position right ≤ 2·|w| − 1` | `rightHeadPos_le_alongTrace` | なし |
+| `position center ≤ 2·|w| − 1` | `RadLedger.le` ＋ `.nonneg` ＋ 上の行 | なし |
+| `mode = rewind → 2 ≤ position center` | `CentreMargin` ＋ `eq_ofNat_of_canonical_nonneg` | **`CentreMargin`**（既存の公理） |
+
+基底は `i = 1`。`initVM` が `center := right s.right` と `right := right s.right` を
+同時に置くので（`initLedger_alongTrace` と同じ `hcr1`）、中心の表現は右の表現と同一で、
+それは scan 幾何がくれる。 -/
+
+/-- scan 相の右ヘッドは入力を表現する（`LPackM2` の scan 幾何、replaying の両分岐）。 -/
+theorem scanRightRepresent {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hLPackM2 : LPackM2 w c s) (hMode : c.mode = Mode.scan) :
+    GalilScaffoldInputTrace.Represents s.right.head w ∧ s.right.head.focus ≠ none := by
+  cases hr : c.replaying with
+  | false =>
+    obtain ⟨rad, hi⟩ := hLPackM2.packM.scanGeom hMode hr
+    exact ⟨hi.rightRep, hi.rightPresent⟩
+  | true =>
+    obtain ⟨rad, hi⟩ := hLPackM2.scanGeomR hMode hr
+    exact ⟨hi.rightRep, hi.rightPresent⟩
+
+/-- **中心ヘッドの位置上界。**  `RadLedger.le`（`position C + radius ≤ position R`）と
+`.nonneg` を右ヘッドの上界に足すだけ。新規入力ゼロ。 -/
+theorem centreHeadPos_le_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTrace : PreTrace centre place entry q first w st Tc)
+    (hRadLedger : ∀ j, j ≤ Tc w.length →
+      PalPeg.CloseoutRadPack.RadLedger (st j).ctl (st j).vm)
+    (hTcPos : 1 ≤ Tc w.length) :
+    ∀ i, 1 ≤ i → i ≤ Tc w.length → position (st i).vm.center ≤ 2 * w.length - 1 := by
+  intro i hIndexPos hIndexLeTc
+  have hRightBound := rightHeadPos_le_alongTrace centre place entry q first hw hPreTrace
+    (frontPack_alongTrace centre place entry q first hw hPreTrace) hTcPos i hIndexPos hIndexLeTc
+  have hLedger := hRadLedger i hIndexLeTc
+  have hLe := hLedger.le
+  have hNonneg := hLedger.nonneg
+  omega
+
+/-- **中心と右の入力表現を trace 全域で（1 手目から）。**  新規入力は `CentreMargin`
+だけ（それも rewind 相の `2 ≤ position center` を出すためだけに使う）。 -/
+theorem headsRepresent_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hCentreMargin : ∀ j, j ≤ Tc w.length →
+      PalPeg.CloseoutPackRun13.CentreMargin (st j).ctl (st j).vm)
+    (hTcPos : 1 ≤ Tc w.length) :
+    ∀ i, 1 ≤ i → i ≤ Tc w.length → HeadsRepresent w (st i).vm := by
+  have hPreTrace := hPreTraceIMW.base.pre
+  have hLPackM2 : ∀ j, j ≤ Tc w.length → LPackM2 w (st j).ctl (st j).vm :=
+    fun j hj => (hPreTraceIMW.packs j hj).m2
+  have hRadLedger := radLedger_pt centre place entry q first hw hPreTrace
+    (fun j hj => leftLive_of_lpackM (hPreTraceIMW.packs j hj).pack)
+  have hCentreBound := centreHeadPos_le_alongTrace centre place entry q first hw hPreTrace
+    hRadLedger hTcPos
+  have hRightBound := rightHeadPos_le_alongTrace centre place entry q first hw hPreTrace
+    (frontPack_alongTrace centre place entry q first hw hPreTrace) hTcPos
+  have hCentreTwoLe : ∀ j, j ≤ Tc w.length →
+      (st j).ctl.mode = Mode.rewind → 2 ≤ position (st j).vm.center := by
+    intro j hj hMode
+    have hLedger := hRadLedger j hj
+    have hRadiusOfNat := eq_ofNat_of_canonical_nonneg hLedger.canon hLedger.nonneg
+    have hMargin := hCentreMargin j hj hMode _ hRadiusOfNat
+    omega
+  intro i
+  induction i with
+  | zero => intro hIndexPos _; exact absurd hIndexPos (by omega)
+  | succ n ih =>
+    intro _ hIndexLeTc
+    rcases Nat.eq_zero_or_pos n with rfl | hnPos
+    · -- 基底: `i = 1`。`initVM` が中心と右を同じ場所に置く
+      obtain ⟨hInit, hMode1⟩ :=
+        init_tick_target_is_scan centre place entry q first (st 0) (st 1)
+          (hPreTrace.trace.tick 0 (by omega)) (by rw [hPreTrace.start]; rfl)
+      obtain ⟨hr1, -, hc1, -, -, -, -, -, -, -, -, -, -⟩ :
+        initVM entry (st 0).vm (st 1).vm := hInit
+      have hCentreEqRight : (st 1).vm.center = (st 1).vm.right := by rw [hc1, hr1]
+      have hRep := scanRightRepresent (hLPackM2 1 hIndexLeTc) hMode1
+      exact ⟨by rw [hCentreEqRight]; exact hRep, hRep⟩
+    · exact headsRepresent_tick centre place entry q first hw
+        (hPreTrace.trace.tick n (by omega))
+        (mode_ne_init_alongTrace_afterFirstStep centre place entry q first hPreTrace n hnPos
+          (by omega))
+        (hRightBound n hnPos (by omega)) (hCentreBound n hnPos (by omega))
+        (hCentreTwoLe n (by omega)) (ih hnPos (by omega))
+
+/-- **`radiusExact`（rewind 相を除く）を trace 全域で。**  scan 供給は
+`scanRightHeadCanRight_alongTrace` ＋ `represented_position`、shift 供給は
+`HeadsRepresent` ＋ 中心の位置上界。init 相の `radius = 0` は `RadLedger.initZero`。 -/
+theorem radiusExactOffRewindPhase_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hHeadsRepresent : ∀ i, 1 ≤ i → i ≤ Tc w.length → HeadsRepresent w (st i).vm)
+    (hTcPos : 1 ≤ Tc w.length) :
+    ∀ i, i ≤ Tc w.length → RadiusExactOffRewindPhase (st i).ctl (st i).vm := by
+  have hPreTrace := hPreTraceIMW.base.pre
+  have hLPackM2 : ∀ j, j ≤ Tc w.length → LPackM2 w (st j).ctl (st j).vm :=
+    fun j hj => (hPreTraceIMW.packs j hj).m2
+  have hRadLedger := radLedger_pt centre place entry q first hw hPreTrace
+    (fun j hj => leftLive_of_lpackM (hPreTraceIMW.packs j hj).pack)
+  have hCentreBound := centreHeadPos_le_alongTrace centre place entry q first hw hPreTrace
+    hRadLedger hTcPos
+  have hScanSupply : ∀ j, j ≤ Tc w.length → (st j).ctl.mode = Mode.scan →
+      GalilScaffoldChainVerifier.canRight (st j).vm.right ∧
+        0 < (st j).vm.right.head.left.length := by
+    intro j hj hMode
+    obtain ⟨hRep, hFocus⟩ := scanRightRepresent (hLPackM2 j hj) hMode
+    exact ⟨scanRightHeadCanRight_alongTrace centre place entry q first hw hPreTrace hLPackM2
+      hTcPos j hj hMode, (represented_position _ w hRep hFocus).1⟩
+  have hShiftSupply : ∀ j, j ≤ Tc w.length → (st j).ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight (st j).vm.center ∧
+        0 < (st j).vm.center.head.left.length := by
+    intro j hj hMode
+    have hIndexPos : 1 ≤ j := by
+      rcases Nat.eq_zero_or_pos j with rfl | h; swap; · exact h
+      exfalso; rw [hPreTrace.start] at hMode; exact Mode.noConfusion hMode
+    obtain ⟨hRep, hFocus⟩ := (hHeadsRepresent j hIndexPos hj).centre
+    exact ⟨canRight_of_bound hw hRep hFocus (hCentreBound j hIndexPos hj),
+      (represented_position _ w hRep hFocus).1⟩
+  intro i
+  induction i with
+  | zero =>
+    intro _
+    rw [hPreTrace.start]
+    intro _ _ _
+    exact radiusExact_at_boot w
+  | succ n ih =>
+    intro hIndexLeTc
+    exact radiusExactOffRewindPhase_tick centre place entry q first
+      (hPreTrace.trace.tick n (by omega))
+      ((hRadLedger n (by omega)).initZero)
+      (hScanSupply n (by omega)) (hShiftSupply n (by omega))
+      (ih (by omega))
+
+#print axioms scanRightRepresent
+#print axioms centreHeadPos_le_alongTrace
+#print axioms headsRepresent_alongTrace
+#print axioms radiusExactOffRewindPhase_alongTrace
 
 /-! ### chain の lag は構成から正規 — `ChainBackLagAt` は人工的な残差だった
 
@@ -1905,6 +2049,53 @@ theorem chainBackLagAt_alongTrace {w : List (Fin 2)}
       hIndexLeTc).backLagField⟩
 
 #print axioms chainBackLagAt_alongTrace
+
+/-- **`ShiftExitLedgerAt` を trace 全域で — 新規入力は `CentreMargin` だけ。**
+`CentreLedger` の 3 節の出どころ:
+
+* `canRight center` — `HeadsRepresent` ＋ 中心の位置上界
+* `Sane center` — `LPackM2.shiftGeom`（`ShiftGeom` が直接持っている）
+* `position center + radius = position right` — `RadiusExactOffRewindPhase`
+  （shift 相は rewind 相 guard の外）
+
+`¬ remainingPos` は**使わない**（出口に限らず shift 相全域で成り立つ）。 -/
+theorem shiftExitLedgerAt_alongTrace {w : List (Fin 2)}
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hCentreMargin : ∀ j, j ≤ Tc w.length →
+      PalPeg.CloseoutPackRun13.CentreMargin (st j).ctl (st j).vm) :
+    ∀ i, i ≤ Tc w.length →
+      ShiftExitLedgerAt centre place entry q first w (st i).ctl (st i).vm := by
+  have hPreTrace := hPreTraceIMW.base.pre
+  intro i hIndexLeTc
+  refine ⟨fun hMode _ => ?_⟩
+  have hIndexPos : 1 ≤ i := by
+    rcases Nat.eq_zero_or_pos i with rfl | h; swap; · exact h
+    exfalso; rw [hPreTrace.start] at hMode; exact Mode.noConfusion hMode
+  have hw : 0 < w.length := by
+    rcases Nat.eq_zero_or_pos w.length with hlen | h; swap; · exact h
+    exfalso; rw [hlen, hPreTrace.tc0] at hIndexLeTc; omega
+  have hTcPos : 1 ≤ Tc w.length := by omega
+  have hLPackM2 : ∀ j, j ≤ Tc w.length → LPackM2 w (st j).ctl (st j).vm :=
+    fun j hj => (hPreTraceIMW.packs j hj).m2
+  have hRadLedger := radLedger_pt centre place entry q first hw hPreTrace
+    (fun j hj => leftLive_of_lpackM (hPreTraceIMW.packs j hj).pack)
+  have hHeads := headsRepresent_alongTrace centre place entry q first hw hPreTraceIMW
+    hCentreMargin hTcPos
+  obtain ⟨hRep, hFocus⟩ := (hHeads i hIndexPos hIndexLeTc).centre
+  obtain ⟨rem, r, -, -, -, -, hSaneCentre, -, -, -, -⟩ :=
+    (hLPackM2 i hIndexLeTc).shiftGeom hMode
+  refine ⟨?_, hSaneCentre, ?_⟩
+  · exact canRight_of_bound hw hRep hFocus
+      (centreHeadPos_le_alongTrace centre place entry q first hw hPreTrace hRadLedger hTcPos
+        i hIndexPos hIndexLeTc)
+  · exact radiusExactOffRewindPhase_alongTrace centre place entry q first hw hPreTraceIMW
+      hHeads hTcPos i hIndexLeTc
+      (by rw [hMode]; intro hEq; exact Mode.noConfusion hEq)
+      (by rw [hMode]; intro hEq; exact Mode.noConfusion hEq)
+      (by rw [hMode]; intro hEq; exact Mode.noConfusion hEq)
+
+#print axioms shiftExitLedgerAt_alongTrace
 
 /-! ## 5i. `RewindMarginAt` は `CentreMargin` 1 葉に縮む — `RCouple` はタダ
 

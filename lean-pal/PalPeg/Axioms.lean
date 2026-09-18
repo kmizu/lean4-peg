@@ -379,7 +379,7 @@ import PalPeg.PalInPegUnconditional
 /-! ## 目標定理のラチェット
 
 `PalPeg.PalInPeg.unconditional : RecognizedByTotalPEG PAL` は**閉じた項**だが、
-いま 8 個の未証明義務を `axiom` として持っている（1 場ずつの原子に分解済み）。下の guard がその一覧を固定するので、
+いま 7 個の未証明義務を `axiom` として持っている（1 場ずつの原子に分解済み）。下の guard がその一覧を固定するので、
 
 * 義務を 1 個証明して `axiom` を外すと guard が壊れる → 更新を強制される（前進の記録）
 * うっかり新しい穴を開けても guard が壊れる → 気づける
@@ -395,7 +395,6 @@ import PalPeg.PalInPegUnconditional
  PalPeg.PalInPeg.obligation_localRealization,
  PalPeg.PalInPeg.obligation_marksEntry,
  PalPeg.PalInPeg.obligation_matchRest_alongTrace,
- PalPeg.PalInPeg.obligation_shiftExitLedger_alongTrace,
  PalPeg.PalInPeg.obligation_shiftPalAtScanStates,
  PalPeg.PalInPeg.obligation_verifierRunAlongRun] -/
 #guard_msgs (whitespace := lax) in

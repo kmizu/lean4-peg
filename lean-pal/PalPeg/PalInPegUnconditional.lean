@@ -36,7 +36,7 @@ import PalPeg.BranchSupply
 | `obligation_rewindMargin_alongTrace` | rewind 相の `2 ≤ position left` | **producer なし**。`LPackM2.centreOrder` は `position left ≤ position center`（上界）なので別物。CLAUDE.md は「`CentreMargin` 1 葉に集約」と記録 |
 | `obligation_marksEntry` | `H_marksEntry'` | `CloseoutMarksFree.marksInv'_of_marksRun`（origin）＋ `CloseoutMarksPack.bigPack2MG7W''_tick_M`（tick）。残差は `WindowInOrigin`（run 形、copy 状態）＋ `EntryCounters`（scan 状態）＋ 側条件 `first ≠ 4`。**`EntryCounters` は `RadiusRep`（＝`radiusExact` と同内容）を含むので `shiftExitLedger` と材料を共有する** |
 | `obligation_cycleOracle` | `CycleOracleMC3` | `CloseoutOracleBridge.hor_of_H_oracle` ＋ `CloseoutOracle8.h_oracle_of_leaves7`。11 葉（CLAUDE.md §3） |
-| `obligation_localRealization` | `H_realizeLIMW'`（局所実現） | **producer なし。最大の未知**（5 機械の鎖の 2→3 段） |
+| `obligation_localRealization` | `H_realizeLIMW'`（局所実現） | **producer なし**（5 機械の鎖の 2→3 段）。難易度は宣言しない——`LagCan` / `CentreRep` と同じ「切り方の誤り」の可能性が高い |
 
 ### 放電済み（この近傍のタダ飯）
 
@@ -75,7 +75,7 @@ axiom obligation_cycleOracle (entry q : ℕ) (first : Fin 9) :
     ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleMC3 (PofC centreC placeC entry w) q first w
 
-/-- **(OBLIGATION)** 局所実現 `H_realizeLIMW'`。最大の未知。 -/
+/-- **(OBLIGATION)** 局所実現 `H_realizeLIMW'`。producer が無い。 -/
 axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
     H_realizeLIMW' centreC placeC entry q first
 
@@ -115,13 +115,18 @@ axiom obligation_matchRest_alongTrace (entry q : ℕ) (first : Fin 9) :
 `Canonical` と非負は構成から自明。`LagCan` が `.watch` 相だけに切られていたために
 残差に見えていた。 -/
 
-/-- **(OBLIGATION)** `shift_done` での `CentreLedger`（trace 形）。 -/
-axiom obligation_shiftExitLedger_alongTrace (entry q : ℕ) (first : Fin 9) :
-    ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
-      ∀ j, j ≤ Tc w.length →
-        PalPeg.BranchSupply.ShiftExitLedgerAt centreC placeC entry q first w
-          (st j).ctl (st j).vm
+/-! `shift_done` での `CentreLedger`（`ShiftExitLedgerAt`）は**放電済み**
+（`BranchSupply.shiftExitLedgerAt_alongTrace`、新規入力は `CentreMargin` だけ）。
+`CentreLedger` の 3 節の出どころ:
+
+* `canRight center` — `HeadsRepresent`（中心＋右の入力表現、`headsRepresent_tick` が
+  `Tick` の 24 構成子すべてで保存）＋ 中心の位置上界（`RadLedger.le` から）
+* `Sane center` — `LPackM2.shiftGeom` が直接持っている
+* `position center + radius = position right` — `RadiusExactOffRewindPhase`
+  （shift 相は rewind 相 guard の外）
+
+`LPackM2.centreRep` の guard が `rewind ∨ replayStart` だけに切られていたために
+残差に見えていた（`LagCan` と同じパターンで、これが 6 例目）。 -/
 
 /-- **(OBLIGATION)** rewind 相での中心の余裕
 `r + pairOff c + 2 ≤ position s.center`（trace 形）。
@@ -160,7 +165,8 @@ theorem unconditional : RecognizedByTotalPEG PAL :=
         hPreTraceIMW
         (fun x hBig hScanNR => obligation_shiftPalAtScanStates 0 0 0 w x hBig hScanNR)
         (obligation_verifierRunAlongRun 0 0 0 w st hPreTraceIMW.base.pre.start)
-        (obligation_shiftExitLedger_alongTrace 0 0 0 w st Tc hPreTraceIMW)
+        (PalPeg.BranchSupply.shiftExitLedgerAt_alongTrace centreC placeC 0 0 0
+          hPreTraceIMW (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW))
         (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW)
         (obligation_matchRest_alongTrace 0 0 0 w st Tc hPreTraceIMW))
     (obligation_verifierRunAlongRun 0 0 0)
