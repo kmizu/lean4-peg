@@ -201,7 +201,8 @@ theorem fallbackReachS_of_context' (centre : GalilVM → Fin 3)
     fallbackTick_of_watchTick centre place entry raw hw hz
       (hg ⟨left s1.left, right s1.right, z⟩ (searchLens.get s1) hz)
   obtain ⟨n, R, cT, sT, hL⟩ :=
-    fallbackLanding_of_pack centre place entry q hq0 first h7 h8 raw hlive hclk hav hne hsi hM hK
+    fallbackLanding_of_pack centre place entry q hq0 first h7 h8 raw ⟨hlive.1, hlive.2.1⟩ hclk
+      hav hne hsi hM hK
       hT hout
   obtain ⟨k0, L0, hrun, hcost0⟩ := hentry
   have hr1 : position r.center ≤ position s1.center := by

@@ -286,7 +286,8 @@ theorem fallbackReachS_of_context (centre : GalilVM → Fin 3)
       hEP houtP hentry hpiece hreplay⟩
   obtain ⟨⟨hsi, hM, hK, hT, hout⟩, -⟩ := hW es c1 s1 hseg hlive hclk hav hne
   obtain ⟨n, R, cT, sT, hL⟩ :=
-    fallbackLanding_of_pack centre place entry q hq0 first h7 h8 raw hlive hclk hav hne hsi hM hK
+    fallbackLanding_of_pack centre place entry q hq0 first h7 h8 raw ⟨hlive.1, hlive.2.1⟩ hclk
+      hav hne hsi hM hK
       hT hout
   obtain ⟨k0, L0, hrun, hcost0⟩ := hentry
   have hr1 : position r.center ≤ position s1.center := by

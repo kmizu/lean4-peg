@@ -107,13 +107,14 @@ lands: `fallback_pack_span` needs no idle chain. -/
 theorem fallbackLanding_of_pack (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry q : ℕ) (hq0 : 0 < q) (first : Fin 9)
     (h7 : first ≠ 7) (h8 : first ≠ 8) (raw : List (Fin 2))
-    {c1 : Control} {s1 : GalilVM} (hlive : LiveScanWatch c1 s1) (hclk : c1.clock = 1)
+    {c1 : Control} {s1 : GalilVM}
+    (hlive : c1.mode = Mode.scan ∧ c1.replaying = false) (hclk : c1.clock = 1)
     (hav : canRight s1.right) (hne : read (left s1.left) ≠ read (right s1.right))
     (hsi : ShiftIdle s1) (hM : MInv raw c1 s1) (hK : FallbackCounters raw s1)
     (hT : FallbackTick centre place entry raw s1) (hout : OutputRel raw c1 s1) :
     ∃ (n R : ℕ) (cT : Control) (sT : GalilVM),
       FallbackLanding (PofC centre place entry raw) q first raw c1 s1 n R cT sT := by
-  obtain ⟨hm, hr, -, -⟩ := hlive
+  obtain ⟨hm, hr⟩ := hlive
   obtain ⟨n, R, cT, sT, hst, hprog, hz, hp, hS⟩ :=
     fallback_pack_span centre place entry q hq0 first h7 h8 raw c1 s1 hm hr hclk hsi hav hne hM hK
       hT hout
@@ -138,7 +139,8 @@ theorem fallbackRouteW_of_tick (centre : GalilVM → Fin 3)
   intro es c1 s1 hseg hlive hclk hav hne
   obtain ⟨⟨hsi, hM, hK, hT, hout⟩, hclose⟩ := hW es c1 s1 hseg hlive hclk hav hne
   obtain ⟨n, R, cT, sT, hL⟩ :=
-    fallbackLanding_of_pack centre place entry q hq0 first h7 h8 raw hlive hclk hav hne hsi hM hK
+    fallbackLanding_of_pack centre place entry q hq0 first h7 h8 raw ⟨hlive.1, hlive.2.1⟩ hclk
+      hav hne hsi hM hK
       hT hout
   obtain ⟨cT', sT', k, L, hst, hcr, hLP, hle, hr1, hpos⟩ := hclose n R cT sT hL
   refine ⟨cT', sT', k, L, hst, hcr, hLP, ?_, hpos⟩
