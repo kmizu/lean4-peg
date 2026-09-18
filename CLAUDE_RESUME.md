@@ -18,6 +18,50 @@
 
 
 
+
+## 2026-09-19 n96: 目標を固定し公理を原子化（10 個）— `bg` 場を放電、経路を全原子に記録
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 10 個の原子的義務を `axiom` として持つ。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
+
+### 進捗の計器が変わった
+
+コウタの提案で `PalInPeg.unconditional : RecognizedByTotalPEG PAL` を**閉じた項**として
+置き、足りない義務を `axiom` にした。`PalPeg/Axioms.lean` の
+`#guard_msgs in #print axioms` がラチェットになっている。
+
+**公理は 1 場ずつの原子に分解した。** 束ねると「1 個外す」が測れないため。
+数は 6（束）→ 10（原子）に増えたが、束を分解した等価な数は 11 で、
+`bg` 場の放電で 1 つ減っている。
+
+### 今回放電したもの（すべて新規入力ゼロ or 既存 axiom のみ）
+
+| 放電 | 鍵 |
+|---|---|
+| `bg` 場（scan landing 3 つのうち 1 つ） | `CentreLedger` ← `LPackM3`、`canRight`・半径上界はタダ |
+| `LPackM3` の trace 搬送（1 手目以降） | 4 葉パックのうち 3 つがタダ |
+| `AuxPack`（1 手目以降） | `Coupled`/`CopyPack` は boot からタダ（tick が側条件なし）、`FrontPack` は 1 手目以降 |
+| `LTickLeaves3.initLedger` / `.replayLedger` | `initVM` の `center = right`、`LPackM2.centreRep` |
+| `CentreLedger` の `canRight center` / `Sane center` | `RadLedger.le` ＋ `rightHeadPos_le_alongTrace` ＋ `SanePack.saneC` |
+| `shift_done` の `canRight` と半径上界 | 終端報告点から front ポテンシャルで後ろ向き伝播 |
+| `Extra7.scanAvail`（＝`hee`/`het`） | 同上（CLAUDE.md の「偽の疑い」は誤りだった） |
+
+### 10 原子の経路は `PalPeg/PalInPegUnconditional.lean` の docstring に表で埋め込んだ
+
+要約: producer が無いのは `chainBackLag` / `rewindMargin` / `localRealization` の 3 つ。
+`shiftExitLedger` は `radiusExact` を shift 相へ運ぶ仕事（材料は §5d に揃っている）。
+`matchLanding` は `MatchRest` の 4 場に割れ、`repV` は `VerRun`、残り 3 つが新残差。
+`marksEntry` の `EntryCounters` は `RadiusRep`（＝`radiusExact` と同内容）を含むので
+**`shiftExitLedger` と材料を共有する**。
+
+### この近傍のタダ飯は尽きた
+
+残り 10 原子はどれも実作業。ただし足場は揃った:
+* 目標が閉じた項 1 個に固定され、ラチェットが後退を検出する
+* 義務はすべて **trace 形**（global 形は原理的に落ちないと判明済み）
+* 名前が中身を表すので同じ部品を二度探さない
+
 ## 2026-09-19 n95: `AuxPack` は boot で偽 — `lpackM3_steps` は boot 根では使えない（機械検査）
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）。既存の旗艦定理は標準公理のみ。

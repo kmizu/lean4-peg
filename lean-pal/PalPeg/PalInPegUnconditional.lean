@@ -23,17 +23,27 @@ import PalPeg.BranchSupply
 * 「トップダウンにまずそれを書いておいてビルド通すために前提をいったん axiom に
   しておく。で、検証したい前提ごとに axiom をはずして全部外せたら証明完了」
 
-## 7 個の義務と現状（詳細は `CLAUDE_RESUME.md` / `PART_INDEX.md` §2a）
+## 10 個の原子的義務と、それぞれの経路（2026-09-19 実測）
 
-| axiom | 内容 | 現状 |
+| axiom | 内容 | 経路と残り |
 |---|---|---|
-| `obligation_shiftPalAtScanStates` | scan 状態で `ShiftPal` | `CloseoutBundleRun.shiftPal_of_run` が経路。残差は `ChainPositionInvariantWithShiftPhase`(run) ＋ `H_readsShift` ＋ `H_freshShift` ＋ `periodOnly = false` 分岐 |
-| `obligation_marksEntry` | `H_marksEntry'` | `CloseoutMarksFree.marksInv'_of_marksRun` が経路。残差は `WindowInOrigin`（run 形、copy 状態）＋ `EntryCounters`（scan 状態） |
-| `obligation_cycleOracle` | `CycleOracleMC3` | `CloseoutOracleBridge` ＋ `CloseoutOracle8`。11 葉 |
+| `obligation_shiftPalAtScanStates` | scan 状態で `ShiftPal` | `CloseoutBundleRun.shiftPal_of_run`。残差は `ChainPositionInvariantWithShiftPhase`(run) ＋ `H_readsShift` ＋ `H_freshShift` ＋ `periodOnly = false` 分岐。**global 形なので run 形に書き換えてから使う** |
+| `obligation_verifierRunAlongRun` | `VerRun`（verifier が入力を表現、lag 正規） | `chainPos_step_of_supply` が要求する 4 局所事実の残り 2 つ。`ConsumeAvail` の全状態版は偽（`ConsumeAvailRefute.hav_false`） |
+| `obligation_matchLanding_alongTrace` | `scan_match` 着地 | `CloseoutPackRun49.matchRes2_of_lpackM3`（`LPackM3` は §5e で運べる）＋ `h_matchP2_of_target`。残差は `MatchRest` の 4 場: `repV`（←`VerRun`）/ `repVmid`（verifier 1 歩先、`right_word` で出るはず）/ `replayPay`（replaying 時の payload）/ `canRNext`（`canRight (right right)`、`canRight_next_of_bound` に `m < w.length` の**厳密**予算が要る） |
+| `obligation_shiftEntryLanding_alongTrace` | `scan_shift` 入口 | `beginShiftVM'` は `immediate`（1 consume）を当てる。`ShiftPhaseChainLedger` の確立 |
+| `obligation_chainBackLag_alongTrace` | chain `.back` 相の lag 形状 | **producer なし**。`LagCan` は `.watch` 相のみ。`.back` は `ChainStep.copyEnd` が `.copy` の lag を持ち込むところで確立される。`CloseoutChainPack` / `CloseoutChainSideR` に同名の場があるのでその証明を参照 |
+| `obligation_shiftExitLedger_alongTrace` | `shift_done` での `CentreLedger` | 3 節のうち `canRight center` / `Sane center` は §5b でタダ。残るは等式 `radiusExact`。scan 状態では `LPackM3` からタダなので、**shift 相へ運ぶ**のが仕事: `beginShiftVM` は center/radius/right を触らず（§5d）、`shiftTick` は center +1・radius −1・right 不変で保存する。side condition は `canRight s.center`（shift 相では `CentreRep` が無いので要調達）と `0 < value s.radius`（`RadLedger.shiftBud` ＋ `remainingPos` から出る） |
+| `obligation_rewindMargin_alongTrace` | rewind 相の `2 ≤ position left` | **producer なし**。`LPackM2.centreOrder` は `position left ≤ position center`（上界）なので別物。CLAUDE.md は「`CentreMargin` 1 葉に集約」と記録 |
+| `obligation_marksEntry` | `H_marksEntry'` | `CloseoutMarksFree.marksInv'_of_marksRun`（origin）＋ `CloseoutMarksPack.bigPack2MG7W''_tick_M`（tick）。残差は `WindowInOrigin`（run 形、copy 状態）＋ `EntryCounters`（scan 状態）＋ 側条件 `first ≠ 4`。**`EntryCounters` は `RadiusRep`（＝`radiusExact` と同内容）を含むので `shiftExitLedger` と材料を共有する** |
+| `obligation_cycleOracle` | `CycleOracleMC3` | `CloseoutOracleBridge.hor_of_H_oracle` ＋ `CloseoutOracle8.h_oracle_of_leaves7`。11 葉（CLAUDE.md §3） |
 | `obligation_localRealization` | `H_realizeLIMW'`（局所実現） | **producer なし。最大の未知**（5 機械の鎖の 2→3 段） |
-| `obligation_backgroundLandingPayload` | `H_BackgroundLandingPayload` | `CloseoutPackRun38.posPayload_background` → `H_bgRes`。trace 形なら `BranchSupply.backgroundLanding_of_supply` で 4 供給に分解し、`hRightHeadRep` はタダ、`hVerifierRep`/`hLagCan` は `VerRun`、残るは `BgStartP2`（→ `CentreLedger` → `radiusExact`） |
-| `obligation_matchLandingPayload` | `H_MatchLandingPayload` | `CloseoutPackRun38` (:221) → `H_matchRes` |
-| `obligation_shiftExitPayload` | `H_ShiftExitPayload` | `CloseoutPackRun38` (:316、恒等) → `CloseoutShiftDoneP.posPayload_of_shiftGeom` で `ShiftGeom`（`LPackM2` にありタダ）＋ `ChainSideAt` に分割 |
+
+### 放電済み（この近傍のタダ飯）
+
+`bg` 場（`scan_wait`/`scan_count` 着地）、`shift_done` の半径上界と `canRight`、
+`Extra7.scanAvail`（＝`hee`/`het`）、`AuxPack`（1 手目以降）、`LPackM3` の運搬、
+`LTickLeaves3.initLedger` / `.replayLedger`、`CentreLedger` の `canRight`/`Sane` 2 節、
+`CentreLive`、`FrontPack`、`Coupled`、`CopyPack`。
 
 **無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
 -/

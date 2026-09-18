@@ -93,7 +93,22 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 - 設計・現状の正本は `lean-pal/ASSEMBLY_PLAN.md`（組み立て方針、新しい順に追記）と `lean-pal/DESIGN_SCA_PAL.md`、`ALGORITHM_SPEC.md`。
 - 旧制御層は `lean-pal/archive/single-prog/` に退避済みでビルド対象外。
 
-## lean-pal 無条件 PAL ∈ PEG の進捗（2026-09-19 時点、最上位 4 前提）
+## lean-pal 無条件 PAL ∈ PEG の進捗（2026-09-19 時点）
+
+**進捗の計器は `PalPeg.PalInPeg.unconditional : RecognizedByTotalPEG PAL` の公理リスト。**
+目標は閉じた項として存在し、足りない義務は `axiom` で明示されている。
+`PalPeg/Axioms.lean` の `#guard_msgs in #print axioms` がラチェットで、
+1 個外すと guard が壊れて更新を強制される。**標準 3 公理だけになったら §10.5 達成。**
+いまは 10 個の原子的義務が残っている（経路は `PalPeg/PalInPegUnconditional.lean` の
+docstring に表で記録）。
+
+* 公理は**1 場ずつの原子**に分解する（束ねると「1 個外す」が測れない）
+* 義務は**trace 形**で書く。global 形（`∀ c s`）は放電の材料が run に沿ってしか
+  存在しないので**原理的に落ちない**（`hpack` / `hav` が偽だったのと同じ病）
+* `pal_in_peg` という名前は無条件の最終定理のために予約。部分結果は
+  `PalInPeg.given_<残差>`
+
+### 旧記述（前提を数えていた時期のもの。上の計器に置き換わった）
 
 **状態: 全体 build 成功・標準公理のみ・無条件 PAL は未完。正本の最上位は `pal_in_peg_final39`（`CloseoutFinalFour`、**7 前提・反証済みゼロ**: `hSP` `hme` `hor` `hC` `hbgP` `hmatchP` `hsdP`。2026-09-19 に `hfour` を**何も足さずに**放電——`CloseoutPackRun40.ChainPosInv'`＝`Coupled` を `Coupled'` に強めた構造が `four_of_other'` を直接使えるため、`ShiftLocalRun` が run に載せた。索引の別名は `Canonical.pal_in_peg_of_seven_leaves`）。一代前は `pal_in_peg_final30`（`CloseoutFinalW`、8 前提、`hfour` を含む）。`hfour` を落とした既存 3 版はどれも代わりに**偽の前提**を取っていた: `final31` は `hav`（`ConsumeAvailRefute.hav_false`、過剰量化の 8 例目）、`final36`/`final37` は `hpack`（`CloseoutPackRefute.hpack_false`）。`pal_in_peg_final37`（`CloseoutFinalW4`）は 4 前提だが `hpack` が**偽**（`CloseoutPackRefute`、2026-09-19 反証）——`ChainPack` は run 沿いの束を一状態述語として書いており `ChainPosInv2` からは出ない。よって 8 → 4 の削減は偽の前提を通っており、前進として数えない。計画書 §10.5（前提ゼロ）は未達。** 全モジュール sorry なし。新モジュールは `PalPeg.lean` の `import PalPeg.GalilSegmentConstruct` の直後に登録。
 
