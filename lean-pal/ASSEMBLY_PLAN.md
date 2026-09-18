@@ -1,3 +1,32 @@
+## 2026-09-19 n154: 組み立てに足りない部品がゼロになった
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器は動いていない。**
+
+`shiftLens_frame_tick` / `shiftLens_frame_steps` を追加。
+`shiftOne` は `Lens.rel`（`GalilScaffoldTopLens:28`：
+`R (L.get s) (L.get t) ∧ t = L.set s (L.get t)`）なので、第 2 成分がちょうど
+「lens の場以外は変わらない」。これを `Lens.set_set` で `Steps` に沿って合成した。
+これが `round_next` の結論の形（`shiftLens.set s2 ⟨t', .watch v, cycle⟩`）に
+run の状態を合わせるのに要る最後の部品だった。
+
+**`PalPeg/RoundHistory.lean` は 17 宣言。全部標準 3 公理以内（3 本は公理ゼロ）。
+`PROOF_STACK.md` の `roundSeg_of_run` 手順 11 段のうち、部品が無いものはもう無い。**
+
+### この session でここまでに積んだ足場（全部標準公理のみ、全体 build 緑）
+
+| 部品 | 役割 |
+|---|---|
+| `RoundHistory` ＋ `roundHistory_start` / `_tick` / `_of_steps` | ラウンドの履歴（`ScanSeg` ＋ 起点の `OriginAt` ＋ `Canonical`）を run に沿って運ぶ |
+| `onlyMatchedRun_of_roundHistory` | 履歴から `CompareRounds.next` の第 1 引数と末尾の `Canonical` を取り出す |
+| `chainShiftRun_snoc` / `_snoc_shiftOne` / `_tick` / `_of_steps` | shift 相を run から集める（`round_next` の `hchain`） |
+| `chain_shift_period` / `_periodLength` / `_period_focus` | period テープは shift を通して不変 |
+| `periodLength_onlyMatchedRun` | period テープの長さは scan 相のラウンドで不変 |
+| `positive_false_of_zero` / `internal_eq_of_lagZero` / `outer_eq_of_false` / `watch_eq_of_mismatch_lagZero` | lag ゼロの不一致比較で watch は不変（`hpred` の橋） |
+| `shiftLens_frame_tick` / `_steps` | shift 相では `shiftLens` の外は不変 |
+
+**計器（`#print axioms`）はまだ 4 本のまま。** 上は全部 (C)（公理を減らす操作）の前段。
+
 ## 2026-09-19 n153: `round_next` の入力 15 個すべての出どころが確定した
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

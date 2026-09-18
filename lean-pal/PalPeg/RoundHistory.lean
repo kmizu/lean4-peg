@@ -163,6 +163,70 @@ theorem onlyMatchedRun_of_roundHistory {c : Control} {s : GalilVM}
 
 end
 
+/-! ## shift 相では `shiftLens` の外は変わらない
+
+`round_next` の結論は状態を `shiftLens.set s2 ⟨t', .watch v, cycle⟩` の形で書く。
+run から呼ぶときはその形に合わせないといけない。`shiftOne` は `Lens.rel`
+（`GalilScaffoldTopLens:28`：`R (L.get s) (L.get t) ∧ t = L.set s (L.get t)`）なので、
+第 2 成分がちょうど「lens の場以外は変わらない」。これを `Steps` に沿って
+`Lens.set_set` で合成する。 -/
+
+/-- **1 tick 分。** -/
+theorem shiftLens_frame_tick {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {x y : State GalilVM}
+    (hShift : x.ctl.mode = Mode.shift)
+    (hTick : Tick (galilFrameS P q first) delay x y)
+    (hStayShift : y.ctl.mode = Mode.shift) :
+    y.vm = shiftLens.set x.vm (shiftLens.get y.vm) := by
+  cases hTick with
+  | shift_one c0 s0 s0' hm _ hShiftOne => exact hShiftOne.2
+  | shift_done c0 s0 o0 hm _ _ => simp at hStayShift
+  | init c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_wait c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_count c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_match c0 s0 s0' s0'' o0 hm _ _ _ _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_shift c0 s0 s0' s0'' hm _ _ _ _ _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_fallback c0 s0 s0' s0'' hm _ _ _ _ _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | copy_one c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | copy_done c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | home_start c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | home_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | fpp_slice c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | fpp_done c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | markEnd_found c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | markEnd_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | choose_select c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | choose_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | rewind_done c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | rewind_one c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | rewind_pair c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | replayStart c0 s0 s0' o0 hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | restart c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
+
+/-- **run 全体。** -/
+theorem shiftLens_frame_steps {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {k : ℕ} {x y : State GalilVM}
+    (hSteps : Steps (galilFrameS P q first) delay k x y)
+    (hShiftAll : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS P q first) delay m x z → z.ctl.mode = Mode.shift) :
+    y.vm = shiftLens.set x.vm (shiftLens.get y.vm) := by
+  induction hSteps with
+  | zero u => exact (shiftLens.set_get u.vm).symm
+  | @succ j u z t hTick hRest ih =>
+    have hStep : z.vm = shiftLens.set u.vm (shiftLens.get z.vm) :=
+      shiftLens_frame_tick (hShiftAll 0 u (.zero u)) hTick
+        (hShiftAll 1 z (.succ hTick (.zero z)))
+    have hRestEq : t.vm = shiftLens.set z.vm (shiftLens.get t.vm) :=
+      ih (fun m' z' hz' => hShiftAll (m' + 1) z' (.succ hTick hz'))
+    have hCompose : shiftLens.set z.vm (shiftLens.get t.vm)
+        = shiftLens.set u.vm (shiftLens.get t.vm) := by
+      conv_lhs => rw [hStep]
+      exact shiftLens.set_set _ _ _
+    exact hRestEq.trans hCompose
+
+#print axioms shiftLens_frame_tick
+#print axioms shiftLens_frame_steps
+
 /-! ## 不一致比較では watch が動かない（lag ゼロのとき）
 
 `round_next` の `hpred : read (right s1.right) = symbol w…period.focus` は

@@ -256,10 +256,10 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
 4. shift 相を `chainShiftRun_of_steps`（**済**）で通す。基底は `beginShiftVM` が
    `chain := .watch (immediate wch)` / `remaining := ofNat h` / `cycle := reset` を
    置くので `.stop`
-5. shift 末尾の状態 `y` について **`y.vm = shiftLens.set s2 (shiftLens.get y.vm)`** が要る
-   （`round_next` の結論の形に合わせるため）。**まだ作っていない小補題**:
+5. shift 末尾の状態 `y` について `y.vm = shiftLens.set s2 (shiftLens.get y.vm)`
+   → **済（n154）**: `shiftLens_frame_tick` ／ `shiftLens_frame_steps`。
    `shiftOne` は `Lens.rel` なので第 2 成分が `t = L.set s (L.get t)`、
-   つまり「lens の場以外は変わらない」。これを `Steps` に沿って合成する
+   つまり「lens の場以外は変わらない」。`Lens.set_set` で `Steps` に沿って合成
 6. `shift_done` tick は VM を変えない（`Tick ⟨c, s⟩ ⟨{c with mode := .scan, output := o}, s⟩`、
    `GalilScaffoldTop:136`）
 7. `GalilScaffoldTopRoundS.round_next` を適用 → `CompareRounds h (toOnly s₀ w₀) 1 (toOnly post v)`
@@ -271,7 +271,8 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
 11. `CloseoutReadsOrigin.originShift_of_roundSeg` → `OriginShift` → `h_readsShift_of_originShift`
     → **`H_readsShift`**
 
-**足りない小補題は 5 の 1 個だけ**（`shiftLens` の外は shift 相で不変）。
+**部品はもう全部ある（n154）。あとは 1〜11 を繋ぐ組み立てだけ。**
+`PalPeg/RoundHistory.lean` は 17 宣言、全部標準 3 公理以内（3 本は公理ゼロ）。
 
 ---
 
