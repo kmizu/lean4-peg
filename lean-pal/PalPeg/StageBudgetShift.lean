@@ -34,8 +34,14 @@ asked for `32 ≤ mw`, but the bounds it already uses give the balance from
 `interval_cases` for the four windows `16 ≤ mw < 20`, where `omega` is
 incomplete on the two `/2048` quotients).  §2 below records where that leaves
 the residue: `CloseoutPreload35.postRunF_step` carries `8 * max k 1 ≤ mw`, so
-**only `k ≤ 1` is left**, not the `k < 4` of `CloseoutPreload35` §7.  The third
-gap — the event supply at a stage boundary — is untouched.
+**only `k ≤ 1` is left**, not the `k < 4` of `CloseoutPreload35` §7.  From the
+boot (`lower = 0`) the windows are `8, 16, 32, …` (`boot_windows_covered`), so
+the residue is the **boot stage alone** — and there the stream is paced from
+phase `0`, because `GalilScaffoldController.initial delay` sets `clock = delay`
+(slack `2048 - clock = 0`), which is the regime of `CloseoutPreload28`'s
+slack-`0` demand `dpDemand`, whose balance `bal_of_paced_slack` needs only
+`8 ≤ mw`.  The third gap — the event supply at a stage boundary
+(`StageLegs`'s `hlen`) — is untouched.
 
 **無条件 PAL ∈ PEG は未完.**
 -/
@@ -115,7 +121,16 @@ theorem window_residual {k mw : ℕ} (hcal : 8 * max k 1 ≤ mw) (hmw : mw < 16)
   have h4 : 1 ≤ max k 1 := le_max_right _ _
   omega
 
+/-- **Only the boot stage is below the threshold.**  From the boot the search
+enters `grow` with `lower = 0`, so the first window is `mw₀ = 8 * max 0 1 = 8`
+and the windows double: `8, 16, 32, …`.  Every stage but the first is at or
+past `16`, so `CloseoutPreload35.postRunF_step` applies to all of them. -/
+theorem boot_windows_covered {j : ℕ} (hj : 1 ≤ j) : 16 ≤ 8 * 2 ^ j := by
+  have h : (2 : ℕ) ^ 1 ≤ 2 ^ j := Nat.pow_le_pow_right (by norm_num) hj
+  simpa using Nat.mul_le_mul_left 8 h
+
 #print axioms window_covered_of_k
 #print axioms window_residual
+#print axioms boot_windows_covered
 
 end PalPeg.StageBudgetShift

@@ -100,10 +100,15 @@
 残差は `k ≤ 1`。さらに窓は倍々（`mw0 = 8 * max k 1`）なので
 **残るのは第 1 段（窓 8）だけ**。
 
-残りの算術: 段境界のイベント供給（`dpEvents (m+1) ≤ as.length` の再供給）と、
-第 1 段（slack 2047 で 2 単位足りない。実機の clock 位相を読めば消える見込み
-——未検証）。それと `CloseoutPreload36` の **boot datum**（第 1 `.run` 入口の
-`EntryDatum`、未証明）。
+### n193: 穴 2 は boot 段だけ。しかも boot は slack 0
+
+boot は `lower = 0` → 窓 `8`、以降倍々。しきい値 16 で第 2 段以降は全部覆われる
+（`boot_windows_covered`）。boot 段は `initial delay` の `clock = delay` で
+**slack 0** なので、`CloseoutPreload28`（`dpDemand`、`8 ≤ mw`）が使える。
+→ 算術としては両側に材料がある。**残るのは配線と boot datum。**
+
+残り: (3) 段境界のイベント供給（`StageLegs` の `hlen`）、
+`CloseoutPreload36` の boot datum、boot 段を Preload28 経路で通す配線。
 
 ### n176: 残り 3 本のうち 2 本が同じ底を共有している（実測）
 

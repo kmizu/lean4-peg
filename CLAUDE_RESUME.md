@@ -1,3 +1,41 @@
+## 2026-09-19 n193: 算術の穴 2 は「boot 段だけ」に落ちた——しかも boot は slack 0
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+`PalPeg/StageBudgetShift.lean` §2 に 1 本追加（標準 3 公理）:
+
+    boot_windows_covered (hj : 1 ≤ j) : 16 ≤ 8 * 2 ^ j
+
+### 筋が通った
+
+boot では `lower = 0` で `grow` に入るので第 1 段の窓は `mw₀ = 8 * max 0 1 = 8`、
+以降は倍々（`8, 16, 32, …`）。n192 のしきい値 `16` で
+**第 2 段以降は全部覆われる**。残るのは boot 段 1 つだけ。
+
+そしてその boot 段は **slack 0**——一次情報
+`GalilScaffoldController.initial delay = ⟨.init, delay, false, false, false, false⟩`
+（`GalilScaffoldController.lean:109`）で `clock = 2048`、slack `= 2048 - clock = 0`。
+slack 0 の需要は `CloseoutPreload28.dpDemand`（`+2047` が無い方）で、その balance
+`bal_of_paced_slack` が要るのは **`8 ≤ mw` だけ**。`mw₀ = 8` はちょうど満たす。
+
+| 段 | 窓 | slack | 使う balance | しきい値 | 状態 |
+|---|---|---|---|---|---|
+| 第 1（boot） | 8 | **0** | `CloseoutPreload28.bal_of_paced_slack` | `8 ≤ mw` | 材料あり |
+| 第 2 以降 | 16, 32, … | 任意 | `CloseoutPreload35.bal_of_paced_slack_S` | `16 ≤ mw`（n192） | **覆われた** |
+
+**まだ組んでいない**: boot 段を `CloseoutPreload28` 経路で通し、第 2 段で
+`CloseoutPreload36.postRunC_galil_of_boot` に接続する配線。
+`CloseoutPreload36` §4 の **boot datum**（第 1 `.run` 入口の `EntryDatum`）も未証明。
+
+### 算術の穴の現況（更新）
+
+| # | 穴 | 状態 |
+|---|---|---|
+| 1 | `depth_exceeds_prepLen` | **閉（n190）** |
+| 2 | slack 2047 の 2 単位 | **boot 段のみ、かつ boot は slack 0 で経路あり（n191〜n193）** |
+| 3 | 段境界のイベント供給（`StageLegs` の `hlen`） | 未着手 |
+
 ## 2026-09-19 n192: しきい値 `32 → 16` を本線に入れた——`postRunF_step` の残差は `k ≤ 1` の**第 1 段だけ**
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
