@@ -1,6 +1,7 @@
 import PalPeg.BranchSupply
 import PalPeg.CloseoutBundleRun
 import PalPeg.CopyPhaseNoShift
+import PalPeg.GalilPeriodUnion
 
 /-!
 # `ShiftPal` を trace 形で（`hSP` の正しい形）
@@ -159,6 +160,60 @@ theorem shiftPal_of_chainNotWatch {w : List (Fin 2)} {s : GalilVM}
       cases hbirth
 
 #print axioms shiftPal_of_chainNotWatch
+
+/-! ## `periodOnly = false` ＋ watch の本体（残差を名前付きに絞った形）
+
+n141 で数学の芯（`PalPeg.reshift_of_palAt_pair`）が完成したので、`ShiftPalAt` の
+結論をその適用として書き、**残差を名前付き仮説として上に出す**。
+
+残差は 5 つで、どれも「chain の履歴」か「台帳」:
+
+| 残差 | 何か | 材料 |
+|---|---|---|
+| `hIn` / `hOut` | この watch の周期テープが DP の `Candidate` から来たという履歴 | `GalilPrepLeast.prep_watch_start_least` ＋ `CloseoutWatchPhase3.palAt_pair_of_candidate` |
+| `hLo` (`2h ≤ r₀`) / `hHi` (`r₀ ≤ 4h`) | 半径と周期の台帳 | `GalilReplayBudgetProof.found_radius_le_two_period`（found 時 `radius ≤ 2h`）＋ 一致比較ぶんの伸び |
+| `hCaught` | chain が周期 `2h` 分遅れて入力に追随している | `periodOnly = true` 側では `RoundScan.pred` が同じ形を持つ |
+
+**入力側の添字化はここで済ませている**（`GalilRoundPeriod.right_read_index` ＋
+`ScanInvariant.rightPos`）ので、`hCaught` は純粋に chain 側の事実。 -/
+
+/-- **`periodOnly = false` ＋ watch での `ShiftPal` の結論。**  残差は上表の 5 つだけ。 -/
+theorem shiftPalAt_fresh_of_candidate {w : List (Fin 2)} {s s' : GalilVM}
+    {wch : GalilScaffoldChainWatch.State} {h r₀ : ℕ}
+    (hChain : s'.chain = ChainVM.watch wch)
+    (hGuard : shiftGuardVM s')
+    (hRight : s'.right = right s.right)
+    (hCan : canRight s.right)
+    (hScanInv : ScanInvariant w (position s.center) r₀ s.left s.right)
+    (hPeriod : periodLength wch = h)
+    (hIn : Manacher.PalAt (encoded w) (position s.center - h) h)
+    (hOut : Manacher.PalAt (encoded w) (position s.center - 2 * h) (2 * h))
+    (hPos : 0 < h) (hLo : 2 * h ≤ r₀) (hHi : r₀ ≤ 4 * h)
+    (hEnd : position s.center + r₀ + 1 < (encoded w).length)
+    (hCaught : (encoded w)[position s.center + r₀ + 1 - 2 * h]? =
+      GalilScaffoldChainConsume.symbol wch.machine.control.period.focus) :
+    1 ≤ periodLength wch ∧ periodLength wch ≤ r₀ + 1 ∧
+      Manacher.PalAt (encoded w) (position s.center + periodLength wch)
+        (r₀ + 1 - periodLength wch) := by
+  obtain ⟨wg, hwg, -, -, -, -, hsym⟩ := hGuard
+  have hwe : wg = wch := by rw [hChain] at hwg; cases hwg; rfl
+  rw [hwe] at hsym
+  have hread : GalilScaffoldInputHead.read (right s.right) =
+      (encoded w)[position s.center + r₀ + 1]? := by
+    rw [PalPeg.GalilRoundPeriod.right_read_index s.right w hScanInv.rightRep
+      hScanInv.rightPresent hCan, hScanInv.rightPos]
+  have hsym' : GalilScaffoldChainConsume.symbol wch.machine.control.period.focus =
+      (encoded w)[position s.center + r₀ + 1]? := by
+    rw [← hread, ← hRight]; exact hsym
+  have hpredIdx : (encoded w)[position s.center + r₀ + 1]? =
+      (encoded w)[position s.center + r₀ + 1 - 2 * h]? := by
+    rw [← hsym']; exact hCaught.symm
+  refine ⟨by omega, by omega, ?_⟩
+  rw [hPeriod]
+  exact PalPeg.reshift_of_palAt_pair (encoded w) (position s.center) h r₀
+    hIn hOut hScanInv.palindrome hPos hLo hHi hEnd hpredIdx
+
+#print axioms shiftPalAt_fresh_of_candidate
 
 end
 
