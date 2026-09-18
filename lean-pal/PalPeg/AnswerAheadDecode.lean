@@ -1,5 +1,6 @@
 import PalPeg.GalilBranchInvariants
 import PalPeg.GalilDpCounters
+import PalPeg.GalilDpCorrect
 
 /-!
 # DP 出力テープの復号: `denote = output h` から `AnswerAhead`
@@ -103,5 +104,42 @@ theorem answerAhead_of_denote {t : GalilScaffoldTape.Tape} {h : ℕ} (hPos : 0 <
 #print axioms read_getElem
 #print axioms read_append_lt
 #print axioms answerAhead_of_denote
+
+
+/-! ## `PlaceAhead` も `Candidate` からタダ
+
+`GalilDpCorrect.Candidate w lower h` の第 2 節は `4*h+1 ≤ w.length`
+（`GalilDpCorrect:8`）。found 経路では `w = (GalilScaffoldPlace.stream p).take (span+1)` で、
+`take` の長さは元の長さ以下なので
+
+    h + 1 ≤ 4*h + 1 ≤ w.length ≤ (stream p).length
+
+すなわち `PlaceAhead p h`。これで `CopyInv` の 4 節がすべて found 文脈から出る。 -/
+
+/-- **`PlaceAhead` は `Candidate` からタダ。** -/
+theorem placeAhead_of_candidate {p : GalilScaffoldPlace.Place} {lower span h : ℕ}
+    (hCand : GalilDpCorrect.Candidate ((GalilScaffoldPlace.stream p).take (span + 1)) lower h) :
+    PlaceAhead p h := by
+  have hLong : 4 * h + 1 ≤ ((GalilScaffoldPlace.stream p).take (span + 1)).length := hCand.2.1
+  have hTake : ((GalilScaffoldPlace.stream p).take (span + 1)).length
+      ≤ (GalilScaffoldPlace.stream p).length := by simp
+  show h + 1 ≤ (GalilScaffoldPlace.stream p).length
+  omega
+
+/-- **`CopyInv` が found 文脈から丸ごと出る。**  4 節の内訳:
+`AnswerAhead`（`answerAhead_of_denote`）／`PlaceAhead`（`placeAhead_of_candidate`）／
+`OnPrefix`（`onPrefix_start`）／`reset.neg = []`（計算）。 -/
+theorem copyInv_of_found {answer : GalilScaffoldTape.Tape} {cen : Fin 3}
+    {p : GalilScaffoldPlace.Place} {lower span h : ℕ} (hPos : 0 < h)
+    (hDenote : GalilScaffoldTape.denote answer = GalilDpCounters.output h)
+    (hHead : GalilScaffoldTape.head answer = h)
+    (hFocus : answer.focus = 8)
+    (hCand : GalilDpCorrect.Candidate ((GalilScaffoldPlace.stream p).take (span + 1)) lower h) :
+    CopyInv answer GalilScaffoldCounter.reset p (GalilScaffoldChainPeriod.start cen) h :=
+  ⟨answerAhead_of_denote hPos hDenote hHead hFocus, placeAhead_of_candidate hCand,
+    onPrefix_start cen, rfl, fun hz => absurd hz (by omega)⟩
+
+#print axioms placeAhead_of_candidate
+#print axioms copyInv_of_found
 
 end PalPeg.AnswerAheadDecode
