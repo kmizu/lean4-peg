@@ -80,6 +80,7 @@ import PalPeg.ShiftPalAlongTrace
 import PalPeg.FoundPackRefute
 import PalPeg.FoundPackCorrected
 import PalPeg.CopyPhaseTick
+import PalPeg.AnswerAheadDecode
 
 /-!
 # `Workbench` — 作ったが正本の鎖に配線されていない部品
