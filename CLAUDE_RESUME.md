@@ -1,3 +1,52 @@
+## 2026-09-19 n140: fresh 側 `hright` の材料を全部特定した（`periodOn_*` と `found_radius_le_two_period`）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。
+無条件 PAL は未完。§10.5 は未達。**
+
+### `hright` の正体
+
+`reshift_from_right` の `hright` は、`GalilPeriodUnion.PeriodOn` と**同じ形**:
+
+    PeriodOn x p a b := ∀ i, a ≤ i → i + p ≤ b → x[i]? = x[i + p]?
+
+fresh 側で要るのは `PeriodOn (encoded w) (2h) (position s.center) (position s.center + r₀ + 1)`
+——**現在の中心より右**で周期 `2h`。
+
+### 既にある部品（一次情報で確認）
+
+| 定理 | 内容 |
+|---|---|
+| `GalilPeriodUnion.periodOn_mirror (hpal : PalAt x C k) (hp : p ≤ k) (h : PeriodOn x p C (C+k)) : PeriodOn x p (C−k) C` | **右→左**。要るのは逆向き（左→右）だが証明は対称 |
+| `GalilPeriodUnion.periodOn_union` | 重なる 2 区間の周期を合併 |
+| `GalilPeriodUnion.encoded_periodOn_even` | `encoded` 上の偶数周期 |
+| `CloseoutWatchPhase3.palAt_pair_of_candidate` | `Candidate` → `PalAt (pos−h) h` ∧ `PalAt (pos−2h) (2h)` |
+| **`GalilReplayBudgetProof.found_radius_le_two_period`** | **found 時に `value sF.radius ≤ 2*h`**（＋`Candidate`＋最小性＋`1 ≤ h`）を**無条件で**出す |
+
+### 効くこと
+
+`found_radius_le_two_period` の `r₀ ≤ 2h` が、**「周期が回文全体を覆う」ための境界**。
+`Candidate` が保証するのは place stream の接頭辞 `take (4h+1)` の回文性で、
+`r₀ ≤ 2h` ならその範囲が現在の回文を覆う。つまり n139 で「未特定」とした
+`hsmall : 2h ≤ r₀` と合わせると **found 時点では `r₀ = 2h`**。
+
+ただし `ShiftPal` が評価されるのは found より**後**（誕生した chain の最初の shift）で、
+そこまでに一致比較のぶん `r₀` が伸びている。したがって必要なのは
+
+    found 時の r₀ = 2h  ＋  その後の一致比較ぶんの伸び
+
+を run に沿って運ぶ台帳。これが fresh 側 `ShiftPal` の最後の芯。
+
+### 次の具体手順
+
+1. `periodOn_mirror` の左→右版（証明は対称、`Manacher.mirror_getElem?` を使う）
+2. `palAt_pair_of_candidate` の 2 回文 → `PeriodOn (encoded w) (2h) (pos−2h) pos`
+   （`periodOn_union` ＋ `encoded_periodOn_even`）
+3. 1 を当てて `PeriodOn (encoded w) (2h) pos (pos+r₀)`、末尾 +1 は予測（`shiftGuardVM` の
+   最終節 `symbol period.focus = read s.right`）
+4. `reshift_from_right` に流して `PalAt (encoded w) (pos + h) (r₀ + 1 − h)`
+
+**新しい数学はない。既存の `periodOn_*` 層と `found_radius_le_two_period` の配線。**
+
 ## 2026-09-19 n139: `reshift_from_right` の `hold` は半径 `step` 分で足りた（fresh 側の origin が DP から出る）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。
