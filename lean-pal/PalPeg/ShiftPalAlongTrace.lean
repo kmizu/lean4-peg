@@ -2,6 +2,7 @@ import PalPeg.BranchSupply
 import PalPeg.CloseoutBundleRun
 import PalPeg.CopyPhaseNoShift
 import PalPeg.GalilPeriodUnion
+import PalPeg.CloseoutShiftLocalFree
 
 /-!
 # `ShiftPal` を trace 形で（`hSP` の正しい形）
@@ -257,9 +258,51 @@ theorem shiftPal_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
       (hFreshLedger j hIndexPos hIndexLeTc hpo))
 
 
+/-! ## run 形（`InvLPC` 起点から到達する scan 状態）
+
+trace 形とまったく同じ 3 残差に落ちる。**起点の違いだけ**:
+
+| 入力 | trace 形の出どころ | run 形の出どころ |
+|---|---|---|
+| chain が idle | `chainIdle_after_init`（boot の 1 手目） | `CloseoutShiftLocalFree.chainIdle_of_invS`（`InvLPC` の `InvS`） |
+| `AuxPack` | `auxPack_alongTrace_afterFirstStep` | `CloseoutPackRun2.auxPack_steps` ＋ `InvLPC` の 3 場 |
+| `canRight right` | `canRightAtScanOrShift_alongTrace`（trace 予算） | **消費者が持っている**（`BigPack2MG7W''.extra : Extra7` の `scanAvail`） |
+
+`canRight` を仮説に取るのは過剰量化の解消。唯一の消費者
+`CloseoutMarksPack.packRunR_MW_marksFree` は帰納段で `BigPack2MG7W''` を持っており、
+その `Extra7.scanAvail` が scan・非 replay 点でちょうど `canRight` を与える。
+以前の形はそれを捨てていた。 -/
+theorem shiftPal_alongRun {w : List (Fin 2)} {c : Control} {r : GalilVM}
+    (hInvLPC : PalPeg.GalilInvPlus2.InvLPC w c r)
+    (hReadsShift : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
+      H_readsShift w z.ctl z.vm)
+    (hFreshShift : ∀ (m : ℕ) (z z' : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
+      Tick (galilFrameS (PofC centre place entry w) q first) 2048 z z' →
+      H_freshShiftAtShiftEntry centre place entry q first w z.ctl z.vm z'.vm)
+    (hFreshLedger : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
+      z.vm.periodOnly = false → ∀ s' : GalilVM, FreshShiftLedger w z.vm s')
+    (m : ℕ) (z : State GalilVM)
+    (hSteps : Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z)
+    (hMode : z.ctl.mode = Mode.scan) (hNotReplaying : z.ctl.replaying = false)
+    (hCanRight : canRight z.vm.right) :
+    ShiftPal centre place entry q first w z.vm :=
+  shiftPal_of_run_B centre place entry q first
+    (PalPeg.CloseoutShiftLocalFree.chainIdle_of_invS hInvLPC.1.1.1.1) hSteps
+    (fun _ _ hz' => PalPeg.CloseoutPackRun2.auxPack_steps centre place entry q first
+      (PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry q first hInvLPC)
+      ⟨PalPeg.CloseoutPackRun.coupled_of_invLPC hInvLPC,
+        PalPeg.CloseoutPackRun.front_of_invLPC hInvLPC,
+        PalPeg.CloseoutPackRun.copyPack_of_invLPC hInvLPC⟩ hz')
+    hReadsShift hFreshShift hMode hNotReplaying hCanRight
+    (fun hpo => shiftPal_of_freshShiftLedger centre place entry q first hCanRight
+      (hFreshLedger m z hSteps hpo))
 
 end
 
+#print axioms shiftPal_alongRun
 #print axioms chainIdle_after_init
 #print axioms roundBundle_alongTrace
 #print axioms shiftPal_alongTrace

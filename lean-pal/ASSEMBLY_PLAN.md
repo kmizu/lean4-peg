@@ -1,3 +1,60 @@
+## 2026-09-19 n146: run 形 `ShiftPal` も残差 3 つに（公理は 4 本のまま、中身はさらに弱い）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。**
+
+### やったこと
+
+`obligation_shiftPalAtWatchAlongRun`（watch 点での `ShiftPal` そのもの）を
+`obligation_shiftPalResiduesAlongRun`（残差 3 つ）に置き換えた。**本数は増えていない。**
+
+    [propext, Classical.choice, Quot.sound,
+     obligation_cycleOracle,
+     obligation_localRealization,
+     obligation_shiftPalResiduesAlongRun,     -- ← 今回弱めた
+     obligation_shiftPalResiduesAlongTrace]
+
+**これで 2 本の `ShiftPal` 公理は完全に同内容**（量化の形だけが run / trace で違う）:
+
+| 残差 | 中身 | producer 候補 |
+|---|---|---|
+| `H_readsShift` | shift 相のラウンド読み出し | `RoundSegFromRun.readsShift_at_actual`（構成 run / 実 run の対 ＋ `OriginAt` が要る） |
+| `H_freshShiftAtShiftEntry` | shift 入口の最初のラウンド | `GalilScaffoldTopFirstRound.first_round`（`Entry` 形なので橋が要る） |
+| `FreshShiftLedger` | 準備直後の watch の台帳 | n141〜n144 で 3 種類まで還元済み |
+
+### 新しい定理 `ShiftPalAlongTrace.shiftPal_alongRun`
+
+`CloseoutBundleRun.shiftPal_of_run_B` の適用。**run 形で新たに要る入力はゼロ**だった:
+
+| 入力 | 出どころ |
+|---|---|
+| chain が idle | `CloseoutShiftLocalFree.chainIdle_of_invS`（`InvLPC` の `InvS`） |
+| `AuxPack` | `CloseoutPackRun2.auxPack_steps` ＋ `InvLPC` の 3 場（`coupled`/`front`/`copyPack_of_invLPC`）＋ `GalilOracleLeaves2.hlive_of_invLPC` |
+| `canRight right` | **消費者が持っていた**（下記） |
+
+### `canRight` は過剰量化だった（CLAUDE.md の兆候そのもの）
+
+`hShiftPalAlongRun` の唯一の消費者 `CloseoutMarksPack.packRunR_MW_marksFree` は
+帰納段で `hn : BigPack2MG7W'' … (g n)` を持っており、その
+`extra : Extra7` の `scanAvail` が scan・非 replay 点でちょうど
+`canRight (g n).vm.right` を与える。**前の形はそれを捨てていた。**
+`packRunR_MW_marksFree` と `CloseoutFinalBranch.given_scanLandingObligations` の
+`hShiftPalAlongRun` 仮説に `canRight z.vm.right →` を足しただけで、
+call site は `(hn.extra.scanAvail hs.1 hs.2)` で無償。
+
+### 次の当たり（未検証）
+
+`H_readsShift` と `CloseoutRoundReads.ReadsRound` は**mode guard だけが違う**:
+
+    ReadsRound    : mode = scan  → replaying = false → periodOnly = true → …
+    H_readsShift  : mode = shift → replaying = false → periodOnly = true →
+                    positive remaining = false → …（結論は同一の `ReadsInv`）
+
+しかも `CloseoutRoundReads.ReadsRun`（mode guard なしの形）が既にあって
+`readsRound_of_readsRun` で `ReadsRound` を無償で出す。**`ReadsRun` を
+`RoundBundle` の場にできれば `H_readsShift` も無償になる**——CLAUDE.md の
+「guard を狭く切ると義務が増える」の同型 9 例目の可能性。次はこれを検査する。
+
 ## 2026-09-19 n145: **公理を 4 本に戻した**（n132 の原子化は後退だった）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

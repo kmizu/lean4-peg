@@ -253,7 +253,8 @@ theorem packRunR_MW_marksFree {w : List (Fin 2)} (h4 : first ≠ 4)
     (hShiftPalAlongRun : ∀ (c : Control) (r : GalilVM), InvLPC w c r →
       ∀ (m : ℕ) (z : State GalilVM),
         Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
-        ScanNR z → ShiftPal centre place entry q first w z.vm) :
+        ScanNR z → GalilScaffoldChainVerifier.canRight z.vm.right →
+        ShiftPal centre place entry q first w z.vm) :
     PackRunRMW centre place entry q first w := by
   intro c r hIC M hm1 hmle j x hjx k y hx h hry hyb
   have hlv0 : ∀ (m : ℕ) (z : State GalilVM),
@@ -316,7 +317,8 @@ theorem packRunR_MW_marksFree {w : List (Fin 2)} (h4 : first ≠ 4)
       have hn := ih (by omega)
       exact bigPack2MG7W''_tick_M centre place entry q first hn (hmg (n+1) hi)
         (fun hip => hextra (n+1) hi hip)
-        (fun hs => hShiftPalAlongRun c r hIC (j + n) (g n) (hreach n (by omega)) hs)
+        (fun hs => hShiftPalAlongRun c r hIC (j + n) (g n) (hreach n (by omega)) hs
+          (hn.extra.scanAvail hs.1 hs.2))
         (htr.tick n (by omega)) (htr.good (n+1) hi)
         (hlv0 (j + (n+1)) (g (n+1)) (hreach (n+1) hi))
   exact ⟨g, hg0, hgk, htr, fun i hi => (hbig i hi).ipackM⟩

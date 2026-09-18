@@ -6,7 +6,7 @@ import PalPeg.ShiftPalAlongTrace
 # `PalInPeg.unconditional` — 目標そのもの。穴は `axiom` で明示する
 
 **これが目標の形**: `RecognizedByTotalPEG PAL` を**前提ゼロ**で（＝閉じた項として）持つ。
-いま足りない 8 個の原子的な義務を `axiom` として明示し、`#print axioms unconditional` を
+いま足りない 4 個の義務を `axiom` として明示し、`#print axioms unconditional` を
 そのまま TODO リストにする。
 
 ```
@@ -26,7 +26,7 @@ import PalPeg.ShiftPalAlongTrace
 
 ## 4 個の原子的義務と、それぞれの経路
 
-**この表は `axiom` 宣言（`:85` / `:96` / `:104` / `:109`）と一致していなければならない。**
+**この表は `grep "^axiom " PalPeg/PalInPegUnconditional.lean` の 4 本と一致していなければならない。**
 2026-09-19（n126）に**この docstring が腐っていた**のを直した——表は 9 行あったが
 `axiom` 宣言は 4 本で、`obligation_verifierRunAlongRun` / `matchLanding_alongTrace` /
 `shiftEntryLanding_alongTrace` / `chainBackLag_alongTrace` / `shiftExitLedger_alongTrace` /
@@ -37,7 +37,7 @@ CLAUDE.md の「ファイル自身の docstring も一次情報ではない」�
 
 | axiom | 内容 | 経路と残り |
 |---|---|---|
-| `obligation_shiftPalAlongRun` / `obligation_shiftPalAlongTrace` | scan 状態で `ShiftPal`（run 形／trace 形） | `ShiftPalAlongTrace.shiftPal_alongTrace` と `CloseoutBundleRun.shiftPal_of_run_B`。残差はどちらも `H_readsShift`（←`RoundSegFromRun.readsShift_at_actual`）＋ `H_freshShiftAtShiftEntry`（←`first_round`）＋ `periodOnly = false` 分岐 |
+| `obligation_shiftPalResiduesAlongRun` / `obligation_shiftPalResiduesAlongTrace` | `ShiftPal` の残差 3 つ（run 形／trace 形）。**両者は同内容** | `ShiftPalAlongTrace.shiftPal_alongRun` / `…_alongTrace` が `ShiftPal` 自体は放電済み。残るのは `H_readsShift`（←`RoundSegFromRun.readsShift_at_actual`）＋ `H_freshShiftAtShiftEntry`（←`first_round`、橋が要る）＋ `FreshShiftLedger`（n141〜n144 で period テープの中身／半径と周期の大小／period テープの位相の 3 種類まで還元済み） |
 | `obligation_cycleOracle` | `CycleOracleMC3` | `CloseoutOracleBridge.hor_of_H_oracle` ＋ `CloseoutOracle8.h_oracle_of_leaves7`。11 葉（CLAUDE.md §3） |
 | `obligation_localRealization` | `H_realizeLIMW'`（局所実現） | **producer なし**（5 機械の鎖の 2→3 段）。難易度は宣言しない——`LagCan` / `CentreRep` と同じ「切り方の誤り」の可能性が高い |
 
@@ -98,31 +98,56 @@ open PalPeg.GalilFinalAssembly (boot)
 **数は 1 → 2 に増えた。偽の疑いが濃い前提を 1 個持つより、真であろう前提を 2 個持つ方を
 採った**（CLAUDE.md「偽の前提で数字を作らない」）。 -/
 
-/-- **(OBLIGATION)** `InvLPC` 起点から到達する scan 状態で `ShiftPal`（run 形）。 -/
-axiom obligation_shiftPalAtWatchAlongRun (entry q : ℕ) (first : Fin 9) :
+/-- **(OBLIGATION)** run 形 `ShiftPal` の残差 3 つ。**trace 形と同じ中身**（n146）。
+
+`obligation_shiftPalAtWatchAlongRun`（watch 点での `ShiftPal` そのもの）から
+ここまで弱めた。残差は `obligation_shiftPalResiduesAlongTrace` と 1 対 1 で、
+違いは量化の形だけ（run 形は `Steps` 起点、trace 形は `PreTraceIMW` の添字）:
+
+| 残差 | 中身 |
+|---|---|
+| `H_readsShift` | shift 相のラウンド読み出し（←`RoundSegFromRun.readsShift_at_actual`） |
+| `H_freshShiftAtShiftEntry` | shift 入口の最初のラウンド（←`first_round`、橋が要る） |
+| `FreshShiftLedger` | 準備直後の watch の台帳（n141〜n144 で 3 種類まで還元済み） |
+
+**run 形で新たに要る入力はゼロ**: chain idle は `CloseoutShiftLocalFree.chainIdle_of_invS`、
+`AuxPack` は `CloseoutPackRun2.auxPack_steps` ＋ `InvLPC` の 3 場、`canRight` は
+消費者が持っている（下の定理の仮説）。 -/
+axiom obligation_shiftPalResiduesAlongRun (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (c : GalilScaffoldController.Control) (r : GalilVM),
       PalPeg.GalilInvPlus2.InvLPC w c r →
-      ∀ (m : ℕ) (z : GalilScaffoldTop.State GalilVM),
+      (∀ (m : ℕ) (z : GalilScaffoldTop.State GalilVM),
         Steps (galilFrameS (PofC centreC placeC entry w) q first) 2048 m ⟨c, r⟩ z →
-        ScanNR z →
-        ∀ wv : GalilScaffoldChainWatch.State, z.vm.chain = ChainVM.watch wv →
-          ShiftPal centreC placeC entry q first w z.vm
+        PalPeg.CloseoutRoundUnique.H_readsShift w z.ctl z.vm) ∧
+      (∀ (m : ℕ) (z z' : GalilScaffoldTop.State GalilVM),
+        Steps (galilFrameS (PofC centreC placeC entry w) q first) 2048 m ⟨c, r⟩ z →
+        Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 z z' →
+        PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centreC placeC entry q first w
+          z.ctl z.vm z'.vm) ∧
+      (∀ (m : ℕ) (z : GalilScaffoldTop.State GalilVM),
+        Steps (galilFrameS (PofC centreC placeC entry w) q first) 2048 m ⟨c, r⟩ z →
+        z.vm.periodOnly = false →
+        ∀ s' : GalilVM, PalPeg.ShiftPalAlongTrace.FreshShiftLedger w z.vm s')
 
-/-- **もう公理ではない。**  run 形も trace 形と同じく、chain が watch でない点では
-`ShiftPal` は空虚（`ShiftPalAlongTrace.shiftPal_of_chainNotWatch`）。 -/
+/-- **もう公理ではない。**  `ShiftPalAlongTrace.shiftPal_alongRun` の適用。
+
+`canRight z.vm.right` を仮説に取るのは**過剰量化の解消**。唯一の消費者
+`CloseoutMarksPack.packRunR_MW_marksFree` は帰納段で `BigPack2MG7W''` を持っており、
+その `Extra7.scanAvail` が scan・非 replay 点でちょうどこれを与える。以前の形は
+それを捨てていた（`obtain` して使わない、という CLAUDE.md の過剰量化の兆候そのもの）。 -/
 theorem obligation_shiftPalAlongRun (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (c : GalilScaffoldController.Control) (r : GalilVM),
       PalPeg.GalilInvPlus2.InvLPC w c r →
       ∀ (m : ℕ) (z : GalilScaffoldTop.State GalilVM),
         Steps (galilFrameS (PofC centreC placeC entry w) q first) 2048 m ⟨c, r⟩ z →
-        ScanNR z → ShiftPal centreC placeC entry q first w z.vm := by
-  classical
-  intro w c r hInv m z hSteps hScan
-  by_cases hW : ∃ wv : GalilScaffoldChainWatch.State, z.vm.chain = ChainVM.watch wv
-  · obtain ⟨wv, hwv⟩ := hW
-    exact obligation_shiftPalAtWatchAlongRun entry q first w c r hInv m z hSteps hScan wv hwv
-  · exact PalPeg.ShiftPalAlongTrace.shiftPal_of_chainNotWatch centreC placeC entry q first
-      (fun wv hEq => hW ⟨wv, hEq⟩)
+        ScanNR z → GalilScaffoldChainVerifier.canRight z.vm.right →
+        ShiftPal centreC placeC entry q first w z.vm := by
+  intro w c r hInvLPC m z hSteps hScan hCanRight
+  exact PalPeg.ShiftPalAlongTrace.shiftPal_alongRun centreC placeC entry q first hInvLPC
+    (obligation_shiftPalResiduesAlongRun entry q first w c r hInvLPC).1
+    (obligation_shiftPalResiduesAlongRun entry q first w c r hInvLPC).2.1
+    (obligation_shiftPalResiduesAlongRun entry q first w c r hInvLPC).2.2
+    m z hSteps hScan.1 hScan.2 hCanRight
 
 /-! ### trace 形 `ShiftPal` の 3 原子（n132 で `obligation_shiftPalAlongTrace` を割った）
 

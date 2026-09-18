@@ -213,7 +213,8 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
       PalPeg.GalilInvPlus2.InvLPC w c r →
       ∀ (m : ℕ) (z : GalilScaffoldTop.State GalilVM),
         Steps (galilFrameS (PofC centreC placeC entry w) q first) 2048 m ⟨c, r⟩ z →
-        ScanNR z → ShiftPal centreC placeC entry q first w z.vm)
+        ScanNR z → GalilScaffoldChainVerifier.canRight z.vm.right →
+        ShiftPal centreC placeC entry q first w z.vm)
     (h4 : first ≠ 4)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
