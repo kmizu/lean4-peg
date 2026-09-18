@@ -76,6 +76,7 @@ import PalPeg.CloseoutFinalBranch
 import PalPeg.RoundHistory
 import PalPeg.ReadyFuelRefute
 import PalPeg.PostRunInduction
+import PalPeg.StageLocalPrep
 import PalPeg.MatchedRunSnoc
 import PalPeg.ShiftPhaseDeterminism
 import PalPeg.RoundSegFromRun

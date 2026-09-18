@@ -1,3 +1,53 @@
+## 2026-09-19 n189: 準備相を「歩き」から切り離した——段境界を越える状態局所の背骨
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+`PalPeg/StageLocalPrep.lean`（新規、4 定理、**全部 `[propext, Quot.sound]` のみ**）:
+
+| 定理 | 内容 |
+|---|---|
+| `prepPhase_start` | `PrepAt k m v → PrepPhase k m 0 v` |
+| `prepPhase_step` | `.run` に入らない 1 手で保存（`k`/`m` 不変、`n` だけ増える） |
+| **`prepPhase_of_double_exit`** | **段境界で再成立**（`.double` 出口だけから） |
+| `preloadAt_of_prepPhase` | dispatch で DP の preload、窓は `w.length ≤ m + 1` |
+
+    def PrepPhase (k m n : ℕ) (v : SearchVM) : Prop :=
+      (∃ e, PrepAt k m e ∧ PrepTrace e n v) ∧ v.search.mode ≠ Mode.run
+
+### なぜこれが要るか（n187〜n189 の診断の決着）
+
+`PostRun`（`CloseoutPreload8:253`）と `NoReturn`（`CloseoutPreload5:599`）は
+**同じ欠陥**で、どちらも producer が無い:
+
+* `NoReturn u := ∀ bs v, ReachL u bs v → v.mode ≠ .run → ReachP u bs v`
+  ——`run → wait → double → prepare` の往復を通った歩きは `ReachP` ではないので**偽**
+* `PostRun := ∀ v as, v.mode = .run → DpSafeStage v as → RunEntriesS as v`
+  ——`.run` 入口で台帳を丸ごと作り直せと言っている
+
+両方の根は `StagePrep2`（`CloseoutPreload11:293`）の第 1 節
+`ReachP w bs v`——**その段の `begin` からの歩き**。機械は最初の `.run` 入口で
+そこを永久に離れるので、次の段では再成立しない。
+
+**しかし消費者が実際に使うのは状態局所の事実だけ**（`CloseoutPreload2.preloadAt_of_prepRun`
+が要るのは「新鮮な `.lower` 入口 `e`」と「`PrepTrace e n v`」の 2 つ）。
+`CloseoutPreload10.PrepAt k m` がその新鮮な入口で、
+`prepAt_of_double_exit` が**段境界でそれを再成立させる**（歩き不要）。
+だから `PrepPhase` は往復を越えられる。
+
+### 副産物: 較正仮説が 1 つ消えた
+
+`preloadAtEntry_of_trace` は
+`((stream s.walker).take (span+1)).length = stageWindow1 k` を要求していたが、
+消費者 `CloseoutPreload11.dpSafe_entry_km` が読むのは `W.length ≤ m + 1` だけ。
+これは `List.length_take` でタダ。`preloadAt_of_prepPhase` は較正を取らない。
+
+### 残り（ここには入れていない）
+
+段境界での**リスト側の帳簿**——ペーシング、イベント供給
+（`dpEvents (m+1) ≤ as.length`）、負債。これが `CloseoutPreload35` §3 の
+`8 ≤ mw < 32` の 4 窓の算術と同じ場所。
+
 ## 2026-09-19 n188: `.run` 相で `RunEntriesS` が縮む原子を作った（`PostRun` 整礎化の第一歩）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。

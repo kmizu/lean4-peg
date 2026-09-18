@@ -52,6 +52,30 @@
 [3] obligation_localRealization — H_realizeLIMW'。壁は n174（run 機構が fairness を捨てている）
 ```
 
+### n189: `PostRun` と `NoReturn` は同じ欠陥だった（producer 不在の理由が確定）
+
+`StageEntryC.fuel = ReadyPacedS` の producer を辿ると
+`CloseoutPreload37.readyField2_entry_of_datum` → `CloseoutPreload6.runEntriesS_of_namedG`
+で、そこが `NoReturn` を取る。`NoReturn` は `ReachL` の着地が `ReachP` だと言うが、
+`run → wait → double → prepare` の往復を通った歩きは `ReachP` ではない。
+`PostRun` も `StagePrep2` の `ReachP w bs v` が段境界で切れることの言い換え。
+
+**つまり形式化ミスは「歩きで書いたこと」**（コウタの
+「producerがないときは確実に形式化ミス」がそのまま当たった）。
+状態局所に書き直すと段境界を越える: `StageLocalPrep.PrepPhase`（n189、4 定理、標準公理）。
+
+    prepPhase_of_double_exit : .double 出口 → PrepPhase k m 0 t'
+
+### 次にやること（n189 時点）
+
+1. 状態局所の `Q` を作って `CloseoutPreload6.runEntriesS_of_preloadInvG`
+   （`EntryPreloadG Q k` → `RunEntriesS`）に食わせる。`Q` の中身:
+   `PrepPhase k m n v`（済） ＋ **負債の下界** ＋ **供給・ペーシングの帳簿**（未）
+2. 負債: `∃ adv, 2048*adv ≤ prepLen k ∧ stageDebt Rad k + stageCredit k m - adv ≤ value v.search.debt`
+   ——状態局所に書ける。保存は 1 手で debt が最大 1 減ることから
+3. 供給: `dpEvents (m+1) ≤ as.length` を段境界で再供給する
+   ——ここだけが本当の算術（`CloseoutPreload35` §3 の `8 ≤ mw < 32`）
+
 ### n176: 残り 3 本のうち 2 本が同じ底を共有している（実測）
 
 `obligation_shiftPalResiduesAlongRun` の 3 残差の producer を辿ると全部
