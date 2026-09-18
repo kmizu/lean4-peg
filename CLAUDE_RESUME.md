@@ -1,3 +1,33 @@
+## 2026-09-19 n183: `ReadyFuel` の API 全体に `ReadyPacedS` の双子がある（切り直しは機械的）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+n182 の置換表を一次情報で確認したら、`CloseoutReadyStage` に対応物が**全部**そろっていた
+（`_ready` `_mono` `_effect_false` `_effect_true` `_restarted` `_watchSegE`）。
+
+### なぜ `ReadyPacedS` は反証されないか（本質）
+
+    ReadyFuel   v n K := ∀ as, n ≤ as.length → as.count true ≤ K → SearchReadyB v as
+    ReadyPacedS v n k := ∀ as, n ≤ as.length → PacedL 2048 k as  → SearchReadyS v as
+
+* 第 2 指標が **マッチ予算 `K`（`headRank`＝入力長に比例）** から
+  **クロック由来の slack `k`（`2048 ≤ c.clock + k`）** に変わった
+* 結論が `SearchReadyB`（`DpSafeRem`＝残り全部）から
+  `SearchReadyS`（`DpSafeStage`＝**stage で切った**）に変わった
+
+**「債務 2 で入力長ぶんのマッチを払え」という要求が消えている。**
+これが n181 の反証を受け付けない理由であり、
+`CloseoutPreload11.readyClosure_S2` が実際に producer を出せている理由。
+
+### 切り直しの残り作業（完全に特定済み、`PROOF_STACK.md` に手順）
+
+1. `StageEntryC.fuel` → `RdPaced c r`（`StageEntryS`）
+2. `CloseoutReportCase` の 2 定理を置換表で再証明
+   （`readyPacedS_watchSegE` の結論は `∃ k'` で 1 段包んであるので `obtain` を 1 つ挟む）
+3. `reachAtC3_of_crossF_C` と found 経路の入口を追従
+4. producer は `readyClosure_S2`（底は `PostRun` ＋ `RestartS2`）
+
 ## 2026-09-19 n182: 切り直しの設計が確定（`ReadyFuel` → `ReadyClosure`、置換は 1:1）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。

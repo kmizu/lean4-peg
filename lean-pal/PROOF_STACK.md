@@ -244,6 +244,43 @@ found 経路の入口 `prepInputs3_of_found_or_later` が `StageEntryC` を取�
 **注意**: これは (A)（弱化）ではなく**偽の契約の修理**。`StageEntryC` を要求している
 定理は全部「空虚に真」なだけで使えない状態だった。
 
+### n183: **`ReadyFuel` の API 全体に `ReadyPacedS` の双子がある**（切り直しは機械的）
+
+n182 の置換表を一次情報で確認したら、**`CloseoutReadyStage` に対応物が全部そろっていた**:
+
+| 旧（`ReadyFuel`、偽） | 新（`ReadyPacedS`） |
+|---|---|
+| `readyFuel_ready` | `readyPacedS_ready`（`CloseoutReadyStage:496`） |
+| `readyFuel_mono` | `readyPacedS_mono`（`:499`） |
+| `readyFuel_effect_false` | `readyPacedS_effect_false`（`:504`） |
+| `readyFuel_effect_true` | `readyPacedS_effect_true`（`:513`） |
+| `readyFuel_restarted` | `readyPacedS_restarted`（`:523`） |
+| `readyFuel_watchSegE` | `readyPacedS_watchSegE`（`:778`） |
+
+### なぜ `ReadyPacedS` は反証されないか（本質）
+
+    ReadyFuel   v n K := ∀ as, n ≤ as.length → as.count true ≤ K       → SearchReadyB v as
+    ReadyPacedS v n k := ∀ as, n ≤ as.length → PacedL 2048 k as        → SearchReadyS v as
+
+* 第 2 指標が **`K` = マッチ予算（`headRank`＝入力長に比例）** から
+  **`k` = クロック由来の slack（`2048 ≤ c.clock + k`）** に変わった
+* 結論が `SearchReadyB`（`DpSafeRem`＝残り全部）から
+  `SearchReadyS`（`DpSafeStage`＝**stage で切った**）に変わった
+
+**債務 2 で入力長ぶんのマッチを払え、という要求が消えている。** これが n181 の反証を
+受け付けない理由で、`CloseoutPreload11.readyClosure_S2` が実際に producer を出せている理由。
+
+### 切り直しの残り作業（完全に特定済み）
+
+1. `CloseoutContracts.StageEntryC.fuel` を `RdPaced c r` に差し替え（`StageEntryS`）
+2. `CloseoutReportCase.reachAtC3_of_crossF`（`:316`〜）と
+   `reachAtC3_of_target_matchF`（`:196`〜）を上の置換表で再証明。
+   **注意**: `readyPacedS_watchSegE` の結論は `∃ k', 2048 ≤ c'.clock + k' ∧ …` で
+   `readyFuel_watchSegE` より 1 段包んである（`RdPaced` の `∃ n0` がそれを吸収する）ので、
+   純粋なテキスト置換ではなく `obtain` を 1 つ挟む
+3. `CloseoutContracts.reachAtC3_of_crossF_C` と found 経路の入口を追従
+4. producer は `CloseoutPreload11.readyClosure_S2`（底は `PostRun` ＋ `RestartS2`）
+
 ### n175 の教訓（これが一番大事）
 
 **44 本書いて計器は 1 本も動かなかった。0 本書いて 1 本外れた。**
