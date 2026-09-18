@@ -21,6 +21,80 @@
 
 
 
+
+## 2026-09-19 n99: 公理 9 → 8、そして中心ヘッドの遷移表（`CentreRep` 広げ用）
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 8 個の原子的義務を axiom として持つ。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
+
+### 9 → 8: インターフェースを広げただけ（コピー 0 行）
+
+`CloseoutPackRun48` の `h_matchP2_of_target` / `h_shiftEntry2_of_target` は
+`hres`（global な `H_matchRes2` / `H_shiftRes2`）を**源状態 `(c, s)` でだけ**使う。
+署名を `MatchRes2 w c s` に変えて本体は `intro` と `have R` の 2 行だけ直した
+（70 行の本体はそのまま）。global 版は 5 行のラッパー。
+
+両方の入力が同じ `MatchRes2` と確定したので、`obligation_matchLanding_alongTrace` と
+`obligation_shiftEntryLanding_alongTrace` を `obligation_matchRest_alongTrace` 1 つに
+統合した（`BranchSupply.matchRes2_alongTrace` /
+`scanLandingObligations_alongTrace_of_matchRest`）。
+
+### 公理の推移
+
+```
+11 相当（束を分解した換算） → 10 → 9 → 8
+  bg 場              放電（CentreLedger ← LPackM3）
+  chainBackLag       放電（不変量を全構成子に広げた）
+  rewindMargin       → centreMargin に縮小（RCouple はタダ）
+  matchLanding + shiftEntryLanding → matchRest 1 つに合流
+```
+
+### 次: `CentreRep` を広げて `shiftExitLedger` を落とす
+
+`shiftExitLedger` の `CentreLedger` は `canRight center ∧ Sane center ∧ radiusExact`。
+`Sane` は `SanePack.saneC` でタダ、`radiusExact` は tick 全 24 ケース済み（n96）。
+残るのは `canRight s.center` で、それには `Represents s.center.head w` が要る。
+`LPackM2.centreRep` の guard は `rewind ∨ replayStart` だけ（`Run23:105`）——
+また「狭く切った」パターン。
+
+**中心ヘッドの遷移表（一次情報で確認、これが探すのに手間な部分）**
+
+| tick | center |
+|---|---|
+| `init`（`initVM`、`TopReplay:20`） | `= right s.right` |
+| `shift_one`（`shiftTick`、`ChainInputSupply:1445`） | `= right s.center` |
+| `choose_select`（`rewindFrame.choose`、`TopRewind:56`） | `= x.right` |
+| `rewind_pair`（`rewindFrame.rewindPair`、`TopRewind:62`） | `= left x.center` |
+| `replayStart`（`replayStartVM`） | `= s.center`（不変） |
+| `markBack` / `markForward` / `rewindOne` / `fppReset` | **不変**（`fpp` だけ） |
+| fpp 相 8 遷移（`fppLens`） | **不変** |
+| `backgroundS` / `compare`（`afterCompare_center`）/ `beginShift` / `beginFallback` / `restart` / `shift_done` | **不変** |
+
+必要な移動補題は既にある: `right_word` / `right_present`（`canRight` を要する）、
+`left_word`（`focus ≠ none` だけ）。
+
+側入力もタダ: `position center ≤ position right`（`RadLedger.le` ＋ `.nonneg`）
+＋ `position right ≤ 2|w| − 1`（`rightHeadPos_le_alongTrace`）
+→ `canRight_of_position_bound`。
+
+**注意 2 点**
+1. `initialHead raw = ⟨⟨none, [], [], raw⟩, true⟩` で focus が `none` なので
+   **boot では `CentreRep` は偽**（`AuxPack` と同じ）。`1 ≤ i` から始める。
+2. `choose_select` は `center := x.right` なので**右ヘッドの表現も同時に要る**。
+   `LPackM2.rrep` の guard は `OffScan c.mode`、scan では `scanGeom` が与える。
+   中心と右の 2 つを同時に運ぶ帰納になる。
+
+### 要確認（切り方の疑い）
+
+`MatchRest.canRNext : canRight (right s.right)` は無条件だが、Scala 正本
+`ScaffoldGalil.scala:255` の `available = replaying || right.canRight` が比較自体を
+守っているので、入力が尽きた時点では比較が起きない。**最終位置で `canRNext` が
+本当に要るのかを確かめる**（要らないなら `m < w.length` で守るべき）。
+
+また `MatchRest.repV` は `VerRun` の第 1 成分と同内容なので、
+`obligation_verifierRunAlongRun` から供給できる（`MatchRest` が 4 場 → 3 場に縮む）。
+
 ## 2026-09-19 n98: `matchLanding` と `shiftEntryLanding` は `MatchRest` 1 つに合流する
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
