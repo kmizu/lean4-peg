@@ -11,6 +11,55 @@
 
 
 
+
+## 2026-09-19 n89: 中心ヘッドも動ける — `CentreLedger` は**等式 1 本**に縮んだ
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+`CloseoutPackRun47.CentreLedger s := canRight s.center ∧ Sane s.center ∧
+(position s.center : ℤ) + value s.radius = position s.right` の 3 節のうち **2 節が落ちた**
+（`PalPeg/BranchSupply.lean` §5b）。
+
+| 節 | 出処 | 状態 |
+|---|---|---|
+| `Sane s.center` | `GalilTrailSane.SanePack.saneC`（`CloseoutLPack6.sanePack_pt` が `PreTrace` ＋ `LeftLive` だけで trace 全点に） | **タダ** |
+| `canRight s.center` | `position center ≤ position right`（`RadLedger.le` ＋ `.nonneg`）＋ `rightPos_le_trace`（n87）＋ `CentreRep`（`LPackM2.centreRep`） | **タダ**（`centreCanRight_of_trace`） |
+| `position center + value radius = position right` | — | **残る（等式）** |
+
+### `LTickLeaves3.replayLedger` もタダ
+
+`replayLedger : c.mode = Mode.replayStart → canRight s.center ∧ Sane s.center` は
+上の 2 節そのもの。`LPackM2.centreRep` の guard は `rewind ∨ replayStart` なので
+replayStart で使える（`replayLedger_of_trace`）。
+
+### 等式について（なぜ独立なのか）
+
+`RadLedger.le` は `≤` しか与えず、`ScanInvariant.rightPos`（`position right =
+position center + rad`）と合わせても `value radius ≤ rad` の向きしか出ない
+（`PosPayload2.radLe` も同じ向き）。**逆向き（半径カウンタが正確に距離を測る）は
+独立した不変量**で、それが `LPackM3.centreLedger` の中身。boot で成立
+（`position center = position right`、`radius = 0`）し、background で保存され、
+3 つの landing（init / shift_done / replayStart）で再確立される。
+
+### `LTickLeaves3` の現状（`LPackM3` を trace に載せるための唯一の残り）
+
+| 場 | 状態 |
+|---|---|
+| `backLag`（`.back` 相の lag 形状） | 残る。`LagCan` は `.watch` 相なので別物 |
+| `initLedger`（init 遷移先の `CentreLedger`） | 残る。boot 直後なので計算で出るはず |
+| `shiftDoneLedger`（shift_done での `CentreLedger`） | 残る。**等式の再確立が本体** |
+| `replayLedger` | **タダになった**（今回） |
+
+### 次の一手
+
+1. `initVM` の定義を読んで `initLedger` を計算で落とす（boot 直後、`center = right`、
+   `radius = 0` から等式は自明のはず）。
+2. `backLag` を `.back` 相の構成から出す。
+3. `shiftDoneLedger` の等式を `ShiftGeom`（rem = 0）から出す。
+4. 揃えば `LPackM3` が trace に載り、`CentreLedger` → `BgStartP2` → `bg` 場が
+   `hver` に合流する。
+
 ## 2026-09-19 n88: `canRight` は trace 全域でタダ — `Extra7`（`hee`/`het`）も同時に落ちる
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。

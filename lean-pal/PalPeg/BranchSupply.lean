@@ -441,6 +441,79 @@ theorem shiftCan_of_trace {w : List (Fin 2)} (hw : 0 < w.length)
 #print axioms chainPosInv2_trace
 #print axioms needIMW'_le_R
 
+/-! ## 5b. 中心ヘッドも動ける — `CentreLedger` の 2/3 はタダ
+
+`CloseoutPackRun47.CentreLedger s := canRight s.center ∧ Sane s.center ∧
+(position s.center : ℤ) + value s.radius = position s.right`。
+
+* `Sane s.center` ← `GalilTrailSane.SanePack.saneC`（`CloseoutLPack6.sanePack_pt` が
+  `PreTrace` ＋ `LeftLive` だけで trace 全点に与える）— **タダ**
+* `canRight s.center` ← `position s.center ≤ position s.right`（`RadLedger.le` ＋ `.nonneg`）
+  ＋ `rightPos_le_trace` ＋ `CentreRep`（`LPackM2.centreRep`）— **タダ**
+* 残るのは**等式** `position center + value radius = position right` のみ。 -/
+
+/-- **中心ヘッドの `canRight` はタダ。** -/
+theorem centreCanRight_of_trace {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PreTrace centre place entry q first w st Tc)
+    (hR : ∀ j, j ≤ Tc w.length → PalPeg.CloseoutRadPack.RadLedger (st j).ctl (st j).vm)
+    (htc : 1 ≤ Tc w.length)
+    {i : ℕ} (h1 : 1 ≤ i) (hi : i ≤ Tc w.length)
+    (hcr : PalPeg.GalilInvPlus2.CentreRep w (st i).vm) :
+    GalilScaffoldChainVerifier.canRight (st i).vm.center := by
+  have hle : (position (st i).vm.center : ℤ) ≤ (position (st i).vm.right : ℤ) := by
+    have h := (hR i hi).le
+    have hn := (hR i hi).nonneg
+    omega
+  have hrb := rightPos_le_trace centre place entry q first hw hP
+    (frontPack_of_trace centre place entry q first hw hP) htc i h1 hi
+  refine canRight_of_position_bound hcr.1 hcr.2 (m := w.length) hw le_rfl ?_
+  have : (position (st i).vm.center : ℤ) ≤ ((2 * w.length - 1 : ℕ) : ℤ) := by
+    have : ((position (st i).vm.right : ℕ) : ℤ) ≤ ((2 * w.length - 1 : ℕ) : ℤ) := by
+      exact_mod_cast hrb
+    omega
+  exact_mod_cast this
+
+/-- **`LTickLeaves3.replayLedger` はタダ。**  `replayStart` 相では `LPackM2.centreRep` が
+`CentreRep` を持ち、`Sane s.center` は `SanePack.saneC`。 -/
+theorem replayLedger_of_trace {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PreTrace centre place entry q first w st Tc)
+    (hR : ∀ j, j ≤ Tc w.length → PalPeg.CloseoutRadPack.RadLedger (st j).ctl (st j).vm)
+    (hm2 : ∀ j, j ≤ Tc w.length →
+      PalPeg.CloseoutPackRun23.LPackM2 w (st j).ctl (st j).vm)
+    (hsane : ∀ j, j ≤ Tc w.length → PalPeg.GalilTrailSane.SanePack (st j).ctl (st j).vm)
+    (htc : 1 ≤ Tc w.length) :
+    ∀ i, i ≤ Tc w.length → (st i).ctl.mode = Mode.replayStart →
+      GalilScaffoldChainVerifier.canRight (st i).vm.center ∧ Sane (st i).vm.center := by
+  intro i hi hmo
+  have h1 : 1 ≤ i := by
+    rcases Nat.eq_zero_or_pos i with rfl | h; swap; · exact h
+    exfalso
+    rw [hP.start] at hmo
+    exact Mode.noConfusion hmo
+  exact ⟨centreCanRight_of_trace centre place entry q first hw hP hR htc h1 hi
+    ((hm2 i hi).centreRep (Or.inr hmo)), (hsane i hi).saneC⟩
+
+/-- **`CentreLedger` は等式だけに落ちる。** -/
+theorem centreLedger_of_eq {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hP : PreTrace centre place entry q first w st Tc)
+    (hR : ∀ j, j ≤ Tc w.length → PalPeg.CloseoutRadPack.RadLedger (st j).ctl (st j).vm)
+    (hsane : ∀ j, j ≤ Tc w.length → PalPeg.GalilTrailSane.SanePack (st j).ctl (st j).vm)
+    (htc : 1 ≤ Tc w.length)
+    {i : ℕ} (h1 : 1 ≤ i) (hi : i ≤ Tc w.length)
+    (hcr : PalPeg.GalilInvPlus2.CentreRep w (st i).vm)
+    (heq : (position (st i).vm.center : ℤ) + value (st i).vm.radius
+      = position (st i).vm.right) :
+    PalPeg.CloseoutPackRun47.CentreLedger (st i).vm :=
+  ⟨centreCanRight_of_trace centre place entry q first hw hP hR htc h1 hi hcr,
+    (hsane i hi).saneC, heq⟩
+
+#print axioms centreCanRight_of_trace
+#print axioms replayLedger_of_trace
+#print axioms centreLedger_of_eq
+
 /-! ## 6. 残差は 3 場 — `shiftDone` は完全に放電された
 
 §3 で半径台帳（`RadLedger`）、§5 で `canRight`（trace 予算 ＋ `LPackM2.shiftGeom`）が
