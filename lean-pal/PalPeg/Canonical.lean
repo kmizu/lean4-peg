@@ -52,7 +52,7 @@ namespace PalPeg.Canonical
 
 **正本の最上位は `given_globalScanLandings`（`CloseoutFinalFour`）で Prop 引数 7 本**
 （`hSP` `hme` `hor` `hC` `hbgP` `hmatchP` `hsdP`）。`final30` の 8 本から
-`hfour : ∀ w, H_fourOther …` が**何も足さずに**落ちたもの（`CloseoutPackRun40.ChainPosInv'`
+`hfour : ∀ w, H_FourSemiperiodsLeDistance …` が**何も足さずに**落ちたもの（`CloseoutPackRun40.ChainPositionInvariantExactCoupling`
 ＝ `Coupled` を `Coupled'` に強めた構造が `four_of_other'` を直接使えるため。
 `ShiftLocalRun` が run に載せている）。反証済みの前提は含まない。
 
@@ -74,7 +74,7 @@ namespace PalPeg.Canonical
 
 現時点で前提が最少かつ反証済みを含まないのは
 `PalPeg.CloseoutFinalFour.given_globalScanLandings`
-（`hSP` `hme` `hor` `hC` ＋ global な `H_bgP` / `H_matchP` / `H_shiftDoneP`）。
+（`hSP` `hme` `hor` `hC` ＋ global な `H_BackgroundLandingPayload` / `H_MatchLandingPayload` / `H_ShiftExitPayload`）。
 一代前は `PalPeg.CloseoutFinalW.given_globalScanLandings_and_fourOther`。
 本数で別名を付けるのはやめた（「7」「8」は名前から意味が引けない）。 -/
 
@@ -88,17 +88,17 @@ alias top_assembly_from_need_bound := PalPeg.CloseoutFinalFour.given_needBound
 alias need_bound_from_shiftLocal_run := PalPeg.ShiftLocalRun.needBound_of_shiftLocalS_alongTrace
 
 /-- **`hfour` 抜きで run 沿いに `ShiftLocalS`**（旧名 `shiftLocalS_alongRun_of_chainPosInvCoupled'`）。
-分岐前提は `H_bgP` / `H_matchP` / `H_shiftDoneP` の 3 本のみ。 -/
+分岐前提は `H_BackgroundLandingPayload` / `H_MatchLandingPayload` / `H_ShiftExitPayload` の 3 本のみ。 -/
 alias shiftLocal_along_run_without_four := PalPeg.ShiftLocalRun.shiftLocalS_alongRun_of_chainPosInvCoupled'
 
 /-- **4 分岐義務の状態局所版**（旧名 `CloseoutPackRun41.chainPosInv2_tick_of_landingObligationsAt`）。
-`H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2` は
+`H_BackgroundLandingChainLedger` / `H_MatchLandingChainLedger` / `H_ShiftEntryChainLedger` / `H_ShiftExitRadiusLedger` は
 `chainPosInv2_tick` の中で**その `(c, s)` でしか使われない**ので、束 `LandingObligationsAt` に
 局所化できる。これが run 形化の入り口。 -/
 alias chainPosInv2_tick_local := PalPeg.CloseoutPackRun41.chainPosInv2_tick_of_landingObligationsAt
 
 /-- **4 分岐義務の run 形**（旧名 `BranchSupply.chainPosInv2_alongRun`）。
-`∀ c s` の形では放電できない（材料の `LPackM2.shiftGeom`・chain 側台帳 `ChainPos`・
+`∀ c s` の形では放電できない（材料の `LPackM2.shiftGeom`・chain 側台帳 `ChainPositionLedger`・
 入力供給はいずれも run に沿ってしか存在しない）。global → run 形は一方向
 （`BranchSupply.landingObligationsAlongRun_of_globalHypotheses`）。 -/
 alias chainPosInv2_along_run := PalPeg.BranchSupply.chainPosInv2_alongRun
@@ -138,9 +138,9 @@ alias scan_canRight_is_free := PalPeg.BranchSupply.scanRightHeadCanRight_alongTr
 
 /-! ## 2. 反証済み — 使ってはいけない
 
-`hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack q first w c s` は**偽**。
+`hpack : ∀ w c s, ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s` は**偽**。
 `ChainPack` は run に沿って確立される束を一状態述語として書いており、3 場しかない
-`ChainPosInv2` からは出ない。詳細は `REFUTATION_AUDIT.md`。 -/
+`ChainPositionInvariantWithShiftPhase` からは出ない。詳細は `REFUTATION_AUDIT.md`。 -/
 
 /-- **`hpack` は偽**（無条件、証人構成込み）。 -/
 alias refuted_chainPack_from_chainPosInv2 := PalPeg.CloseoutPackRefute.hpack_false
@@ -198,7 +198,7 @@ alias matchRes2_from_leftPack := PalPeg.CloseoutPackRun49.matchRes2_of_lpackM3
 /-- **ラウンド束は idle chain で成立する**（cycle の `InvLPC` 起点）。 -/
 alias roundBundle_holds_at_idle := PalPeg.CloseoutBundleRun.roundBundle_of_idle
 
-/-- **ラウンド束は run に沿って運ばれる**（`ChainPosInv2` は不要、`AuxPack` で足りる）。 -/
+/-- **ラウンド束は run に沿って運ばれる**（`ChainPositionInvariantWithShiftPhase` は不要、`AuxPack` で足りる）。 -/
 alias roundBundle_along_run := PalPeg.CloseoutBundleRun.roundBundle_steps_B
 
 /-- **`ShiftPal` を run から出す**（残差は `H_readsShift` / `H_freshShift` / fresh 分岐）。 -/

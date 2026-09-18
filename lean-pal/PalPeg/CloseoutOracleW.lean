@@ -246,10 +246,10 @@ theorem h_bootIMW_of_bootIPack
 theorem needIMW'_le_W {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hP : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hfour : H_fourOther centre place entry q first w)
-    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
-    (hsd : H_shiftDoneP centre place entry q first w)
-    (hpos0 : ChainPosInv w (st 0).ctl (st 0).vm) :
+    (hfour : H_FourSemiperiodsLeDistance centre place entry q first w)
+    (hbg : H_BackgroundLandingPayload centre place entry q first w) (hmatch : H_MatchLandingPayload centre place entry q first w)
+    (hsd : H_ShiftExitPayload centre place entry q first w)
+    (hpos0 : ChainPositionInvariant w (st 0).ctl (st 0).vm) :
     ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
       PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 := by
   have hbase := hP.base.pre

@@ -13,7 +13,7 @@ false for the same reason `WatchShiftG` is: its fields are premised on
 `4 * periodLength ≤ distance`.
 
 The field is not weakened here, it is **gone**.  After `CloseoutShiftS` moved the
-trail bridge onto `ChainPosInv`, nothing reads `IPackMG.shift`, so `CloseoutPackW`
+trail bridge onto `ChainPositionInvariant`, nothing reads `IPackMG.shift`, so `CloseoutPackW`
 carries a copy of the pack without it (`IPackMW`), `CloseoutCheckW` runs the
 checkpoint recursion over that copy, and `CloseoutOracleW` supplies boot, oracle
 and `needL'`.  Dropping the field from `CloseoutPackRun30` itself was measured to
@@ -108,10 +108,10 @@ theorem given_bootOracleRealize_and_globalScanLandings (entry q : ℕ) (first : 
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hfour : ∀ w : List (Fin 2), H_fourOther centreC placeC entry q first w)
-    (hbgP : ∀ w : List (Fin 2), H_bgP centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneP centreC placeC entry q first w)
+    (hfour : ∀ w : List (Fin 2), H_FourSemiperiodsLeDistance centreC placeC entry q first w)
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingPayload centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingPayload centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitPayload centreC placeC entry q first w)
     :
     RecognizedByTotalPEG PAL := by
   classical
@@ -168,10 +168,10 @@ theorem given_globalScanLandings_and_fourOther (entry q : ℕ) (first : Fin 9)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hfour : ∀ w : List (Fin 2), H_fourOther centreC placeC entry q first w)
-    (hbgP : ∀ w : List (Fin 2), H_bgP centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneP centreC placeC entry q first w) :
+    (hfour : ∀ w : List (Fin 2), H_FourSemiperiodsLeDistance centreC placeC entry q first w)
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingPayload centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingPayload centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitPayload centreC placeC entry q first w) :
     RecognizedByTotalPEG PAL :=
   given_bootOracleRealize_and_globalScanLandings entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first

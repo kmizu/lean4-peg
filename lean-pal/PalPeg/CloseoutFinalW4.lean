@@ -7,9 +7,9 @@ import PalPeg.CloseoutMarksPack
 `CloseoutMarksPack` showed that `hme` was never independent of `hpack`.  Its two
 uses inside `packRunR_MW` both produce `MarksInv'`, which is a **field** of the
 `ChainPack` bundle `hpack` already hands out; the bundle's premise
-`ChainPosInv2` is available at the `InvLPC` origin (idle chain) and travels
-along the run on the four supplies `H_bgP2` / `H_matchP2` / `H_shiftEntry2` /
-`H_shiftDoneRad2`, which `final36` already derives from `hpack` itself.
+`ChainPositionInvariantWithShiftPhase` is available at the `InvLPC` origin (idle chain) and travels
+along the run on the four supplies `H_BackgroundLandingChainLedger` / `H_MatchLandingChainLedger` / `H_ShiftEntryChainLedger` /
+`H_ShiftExitRadiusLedger`, which `final36` already derives from `hpack` itself.
 
 So nothing replaces `hme`: the four supplies are computed once here and used
 both for `packRunR_MWP` and for `given_bootOracleRealize_and_chainPackAtAnyState`.
@@ -106,22 +106,22 @@ theorem given_chainPackAtAnyState_FALSE_HYP (entry q : ℕ) (first : Fin 9)
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hpack : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack q first w c s)
+      ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
     :
     RecognizedByTotalPEG PAL := by
-  have hbgP : ∀ w : List (Fin 2), H_bgP2 centreC placeC entry q first w := fun w =>
+  have hbgP : ∀ w : List (Fin 2), H_BackgroundLandingChainLedger centreC placeC entry q first w := fun w =>
     h_bgP2_of_chainPack centreC placeC entry q first (hpack w)
       (bgStartP2_of_chainPack centreC placeC entry q first (hpack w)
         (scanBudget_of_chainPack centreC placeC entry q first (hpack w)))
-  have hmatchP : ∀ w : List (Fin 2), H_matchP2 centreC placeC entry q first w := fun w =>
+  have hmatchP : ∀ w : List (Fin 2), H_MatchLandingChainLedger centreC placeC entry q first w := fun w =>
     h_matchP2_of_target centreC placeC entry q first
       (h_matchRes2_of_chainPack centreC placeC entry q first (hpack w)
         (scanBudget_of_chainPack centreC placeC entry q first (hpack w)))
-  have hentry : ∀ w : List (Fin 2), H_shiftEntry2 centreC placeC entry q first w := fun w =>
+  have hentry : ∀ w : List (Fin 2), H_ShiftEntryChainLedger centreC placeC entry q first w := fun w =>
     h_shiftEntry2_of_target centreC placeC entry q first
       (h_shiftRes2_of_chainPack centreC placeC entry q first (hpack w)
         (scanBudget_of_chainPack centreC placeC entry q first (hpack w)))
-  have hsdP : ∀ w : List (Fin 2), H_shiftDoneRad2 centreC placeC entry q first w := fun w =>
+  have hsdP : ∀ w : List (Fin 2), H_ShiftExitRadiusLedger centreC placeC entry q first w := fun w =>
     h_shiftDoneRad2_of_chainPack centreC placeC entry q first (hpack w)
   exact given_bootOracleRealize_and_chainPackAtAnyState entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first

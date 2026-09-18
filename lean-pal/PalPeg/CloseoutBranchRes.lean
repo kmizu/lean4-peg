@@ -5,21 +5,21 @@ import PalPeg.CloseoutShiftDoneP
 /-!
 # The three branch hypotheses, re-cut through `CloseoutPackRun38`
 
-`CloseoutShiftS.chainPosInv_steps` runs `ChainPosInv` along a run modulo
+`CloseoutShiftS.chainPosInv_steps` runs `ChainPositionInvariant` along a run modulo
 `CloseoutPackRun34`'s three named branch hypotheses.  `CloseoutPackRun38` already
 decomposes all three:
 
 | Run34 hypothesis | Run38 producer | residue |
 |---|---|---|
-| `H_bgP` | `posPayload_background` (:157) | `H_bgRes` |
-| `H_matchP` | `posPayload_match` (:220) | `H_matchRes` |
-| `H_shiftDoneP` | `posPayload_shiftDone` (:314) | `H_shiftDoneRes` (identity) |
+| `H_BackgroundLandingPayload` | `posPayload_background` (:157) | `H_bgRes` |
+| `H_MatchLandingPayload` | `posPayload_match` (:220) | `H_matchRes` |
+| `H_ShiftExitPayload` | `posPayload_shiftDone` (:314) | `H_shiftDoneRes` (identity) |
 
 `H_bgRes` and `H_matchRes` are genuine progress: they split the payload into
 `SrcPos` (the chain-side ledger, which `step_pos` (:76) transports across one
 `ChainStep`), a `start` clause for the idle case, and `verNext`.
-`H_shiftDoneRes` is `H_shiftDoneP` itself — Run38 records that nothing in
-`ChainPosInv` reaches across `shift` mode — and `CloseoutShiftDoneP` gives its
+`H_shiftDoneRes` is `H_ShiftExitPayload` itself — Run38 records that nothing in
+`ChainPositionInvariant` reaches across `shift` mode — and `CloseoutShiftDoneP` gives its
 real split (`canR`/`radLe` free from `ShiftGeom`, `ChainSideAt` named).
 
 This file wires the three producers to the run, so `shiftLocalS_of_run` and
@@ -44,14 +44,14 @@ section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
 
-/-- **`ChainPosInv` along a run from the three residues.** -/
+/-- **`ChainPositionInvariant` along a run from the three residues.** -/
 theorem chainPosInv_steps_res {w : List (Fin 2)}
     (hbg : H_bgRes centre place entry q first w)
     (hmatch : H_matchRes centre place entry q first w)
     (hsd : H_shiftDoneRes centre place entry q first w)
-    {n : ℕ} {x y : State GalilVM} (hx : ChainPosInv w x.ctl x.vm)
+    {n : ℕ} {x y : State GalilVM} (hx : ChainPositionInvariant w x.ctl x.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y) :
-    ChainPosInv w y.ctl y.vm :=
+    ChainPositionInvariant w y.ctl y.vm :=
   chainPosInv_steps centre place entry q first
     (posPayload_background centre place entry q first hbg)
     (posPayload_match centre place entry q first hmatch)
@@ -59,11 +59,11 @@ theorem chainPosInv_steps_res {w : List (Fin 2)}
 
 /-- **`ShiftLocalS` at every state of a run, from the residues.** -/
 theorem shiftLocalS_of_run_res {w : List (Fin 2)}
-    (hfour : H_fourOther centre place entry q first w)
+    (hfour : H_FourSemiperiodsLeDistance centre place entry q first w)
     (hbg : H_bgRes centre place entry q first w)
     (hmatch : H_matchRes centre place entry q first w)
     (hsd : H_shiftDoneRes centre place entry q first w)
-    {n : ℕ} {x y : State GalilVM} (hx : ChainPosInv w x.ctl x.vm)
+    {n : ℕ} {x y : State GalilVM} (hx : ChainPositionInvariant w x.ctl x.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y) :
     ShiftLocalS centre place entry q first w y :=
   shiftLocalS_of_chainPosInv centre place entry q first hfour

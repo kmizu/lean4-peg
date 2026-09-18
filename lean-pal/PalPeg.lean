@@ -13,7 +13,11 @@ import PalPeg.Axioms
   `PalInPeg.given_<残差>` で、名前だけで「何を仮定すれば到達するか」が読める。
 * `PalPeg.Canonical` — 主線の部品のカーネル検査済み索引（意味のある別名）。
 * `PalPeg.Workbench` — ビルドは通るが未配線の部品を、主定理との関係で分類したもの。
-* `PalPeg.Axioms` — 公理監査（標準 3 公理のみであることの guard）。
+* `PalPeg.Axioms` — 公理監査。既存の旗艦定理が標準 3 公理のみであることの guard に加えて、
+  **目標定理のラチェット**を持つ: `PalPeg.PalInPeg.unconditional : RecognizedByTotalPEG PAL`
+  は閉じた項だが、未証明の義務を `axiom` として明示しており、その一覧を guard が固定する。
+  義務を 1 個証明して `axiom` を外すと guard が壊れて更新を強制される。
+  **guard が標準 3 公理だけになったとき §10.5（前提ゼロ）が達成される。**
 
 * `PalPeg.Canonical` — 正本の鎖（`given_globalScanLandings_and_fourOther` の閉包 526 本）＋意味のある別名。
   `lake build PalPeg.Canonical` で正本だけを速くビルドできる。

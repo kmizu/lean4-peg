@@ -275,13 +275,13 @@ end
 
 `chainRound_tick`'s fifth input is `GalilBranchInvariants.BlockInv x.vm.chain`.
 That is a field of `CloseoutPackRun40.Coupled'` (`:79`), which is in turn the
-`coupled` field of `CloseoutPackRun41.ChainPosInv2` — the invariant the main
+`coupled` field of `CloseoutPackRun41.ChainPositionInvariantWithShiftPhase` — the invariant the main
 path already carries.  So it is not an obligation either.
 -/
 
-/-- `BlockInv` read off `ChainPosInv2`. -/
+/-- `BlockInv` read off `ChainPositionInvariantWithShiftPhase`. -/
 theorem blockInv_of_chainPosInv2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
-    (h : ChainPosInv2 w c s) : GalilBranchInvariants.BlockInv s.chain :=
+    (h : ChainPositionInvariantWithShiftPhase w c s) : GalilBranchInvariants.BlockInv s.chain :=
   h.coupled.block
 
 section
@@ -290,12 +290,12 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 
 /-- **`ChainRound` along a tick with neither `H_advance` nor `BlockInv`.**
 `H_advance` comes from the carried `ReadsRound`, `BlockInv` from the carried
-`ChainPosInv2`.  Only `H_shiftDone` (→ `CloseoutPackRun37.ShiftRound`) and
+`ChainPositionInvariantWithShiftPhase`.  Only `H_shiftDone` (→ `CloseoutPackRun37.ShiftRound`) and
 `H_birth` are left. -/
 theorem chainRound_tick_free {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
     (hCR : ChainRound w x.ctl x.vm)
     (hRR : ReadsRound w x.ctl x.vm)
-    (hinv : ChainPosInv2 w x.ctl x.vm)
+    (hinv : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
     (hS : H_shiftDone centre place entry q first w x.ctl x.vm)
     (hB : H_birth w x.ctl x.vm y.vm)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) delay x y) :

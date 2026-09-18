@@ -3,7 +3,7 @@ import PalPeg.CloseoutPackRun41
 /-!
 # `CloseoutPackRun44`: discharging `ConsumeAvail`, and the background landing
 
-`CloseoutPackRun41` cut the chain-local positional ledger `ChainPosInv2` and
+`CloseoutPackRun41` cut the chain-local positional ledger `ChainPositionInvariantWithShiftPhase` and
 left five input-supply–shaped leaves.  This file attacks the first two.
 
 * §1 `position_le_of_represents`: a represented head never sits past the last
@@ -19,7 +19,7 @@ left five input-supply–shaped leaves.  This file attacks the first two.
   The positive-lag side condition is named `LagPos` — at `lag = 0` the verifier
   *is* the right head and `canRight (right ver)` is supply **one cell ahead**,
   which no fact at the source state can give.
-* §3 `h_bgP2_of_start` **reduces `H_bgP2` to the chain-start shape alone**
+* §3 `h_bgP2_of_start` **reduces `H_BackgroundLandingChainLedger` to the chain-start shape alone**
   (`BgStartP2`): when the source chain is live the background tick keeps
   `left`/`right`/`center`/`radius` (`backgroundS_fields`) and moves the chain by
   a plain `ChainStep` (`backgroundS_chainTick`), so `canR`/`radLe` transport by
@@ -62,7 +62,7 @@ theorem position_le_of_represents {w : List (Fin 2)} {p : PlaceHead}
 This is the *only* residue of `ConsumeAvail`: at `lag = 0` the verifier sits on
 the right head itself, so `canRight (right ver)` is availability one cell past
 the scan front — supply at the *next* state, which no fact at the source can
-give.  The natural home is the `watch` clause of `ChainPos`, strengthened to
+give.  The natural home is the `watch` clause of `ChainPositionLedger`, strengthened to
 carry `0 < value wch.lag`. -/
 def LagPos (z : ChainVM) : Prop :=
   ∀ wch : GalilScaffoldChainWatch.State, z = .watch wch → 0 < value wch.lag
@@ -77,7 +77,7 @@ theorem consumeAvail_of_supply {w : List (Fin 2)} {z : ChainVM} {R : PlaceHead}
     (hrepV : ∀ wch : GalilScaffoldChainWatch.State, z = .watch wch →
       GalilScaffoldInputTrace.Represents wch.machine.verifier.head w ∧
         wch.machine.verifier.head.focus ≠ none)
-    (hlag : LagPos z) (hP : ChainPos z (position R)) : ConsumeAvail z := by
+    (hlag : LagPos z) (hP : ChainPositionLedger z (position R)) : ConsumeAvail z := by
   intro wch hw
   obtain ⟨hcv, hsv, hpv⟩ := hP.watch wch hw
   obtain ⟨hrv, hfv⟩ := hrepV wch hw
@@ -99,13 +99,13 @@ theorem consumeAvail_of_supply {w : List (Fin 2)} {z : ChainVM} {R : PlaceHead}
 
 #print axioms consumeAvail_of_supply
 
-/-! ## 3. `H_bgP2` reduced to the chain-start shape -/
+/-! ## 3. `H_BackgroundLandingChainLedger` reduced to the chain-start shape -/
 
 section Bg
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
 
-/-- **(NAMED) `BgStartP2`.**  `H_bgP2` restricted to the one shape Run41 could
+/-- **(NAMED) `BgStartP2`.**  `H_BackgroundLandingChainLedger` restricted to the one shape Run41 could
 not reach: the source chain is *idle*, so there is no source payload and the
 target chain is `chainStart` — whose verifier is the centre head and whose lag
 is `s.radius`, i.e. the obligation is the scan geometry
@@ -113,25 +113,25 @@ is `s.radius`, i.e. the obligation is the scan geometry
 `Sane center`) together with the scan-mode supply and the radius ledger.  The
 natural home is an `LPackM2.scanGeomR`-shaped pack field. -/
 def BgStartP2 (w : List (Fin 2)) : Prop :=
-  ∀ (c : Control) (s t : GalilVM), c.mode = Mode.scan → ChainPosInv2 w c s →
+  ∀ (c : Control) (s t : GalilVM), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
     s.chain = ChainVM.idle →
     (galilFrameS (PofC centre place entry w) q first).background s t →
-    ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → PosPayload2 w t
+    ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t
 
-/-- **`H_bgP2` from the chain-start shape plus `ConsumeAvail`.**  With a live
+/-- **`H_BackgroundLandingChainLedger` from the chain-start shape plus `ConsumeAvail`.**  With a live
 source chain every component transports: `backgroundS_fields` keeps
 `left`/`right`/`center`/`radius`, so `canR` and `radLe` are literally the
 source's, and `backgroundS_chainTick` makes the chain effect a plain
 `ChainStep`, which `chainPos_step` pushes through. -/
 theorem h_bgP2_of_start {w : List (Fin 2)}
-    (hav : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPosInv2 w c s →
+    (hav : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
       ConsumeAvail s.chain)
     (hstart : BgStartP2 centre place entry q first w) :
-    H_bgP2 centre place entry q first w := by
+    H_BackgroundLandingChainLedger centre place entry q first w := by
   intro c s t hm hx hb hs hni
   by_cases hi : s.chain = ChainVM.idle
   · exact hstart c s t hm hx hi hb hs hni
-  · have P : PosPayload2 w s := hx.payload hs hi
+  · have P : ScanPositionPayloadWithChainLedger w s := hx.payload hs hi
     obtain ⟨hl, hr, -, hcen, -, hrad, -⟩ :=
       backgroundS_fields (PofC centre place entry w) q first hb
     have hstep : ChainStep s.chain t.chain := by

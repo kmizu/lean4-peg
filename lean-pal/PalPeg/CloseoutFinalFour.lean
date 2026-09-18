@@ -2,20 +2,20 @@ import PalPeg.ShiftLocalRun
 import PalPeg.CloseoutFinalW
 
 /-!
-# `given_globalScanLandings` — `H_fourOther` が消えた最上位（7 前提・反証済みゼロ）
+# `given_globalScanLandings` — `H_FourSemiperiodsLeDistance` が消えた最上位（7 前提・反証済みゼロ）
 
 ## 何が変わったか
 
 `given_globalScanLandings_and_fourOther`（`CloseoutFinalW`）の 8 前提のうち
-`hfour : ∀ w, H_fourOther …` を落とした。**何も代わりに取らない。**
+`hfour : ∀ w, H_FourSemiperiodsLeDistance …` を落とした。**何も代わりに取らない。**
 
-`CloseoutPackRun40.ChainPosInv'` は `CloseoutPackRun34.ChainPosInv` の `coupled` 場を
+`CloseoutPackRun40.ChainPositionInvariantExactCoupling` は `CloseoutPackRun34.ChainPositionInvariant` の `coupled` 場を
 `Coupled`（`Other`、2h）から `Coupled'`（`Other'`、5h ＋ 正半周期）に強めただけの構造で、
 
-* `watchShiftS_of_chainPosInv'`（`Run40:407`）は `H_fourOther` を**取らない**
+* `watchShiftS_of_chainPosInv'`（`Run40:407`）は `H_FourSemiperiodsLeDistance` を**取らない**
   （`four_of_other'` が `Coupled'.watch` の場から直接効く）、
-* `chainPosInv'_tick`（`Run40:435`）が要求する分岐前提は `H_bgP` / `H_matchP` /
-  `H_shiftDoneP` の **3 本だけで `final30` と同一**、
+* `chainPosInv'_tick`（`Run40:435`）が要求する分岐前提は `H_BackgroundLandingPayload` / `H_MatchLandingPayload` /
+  `H_ShiftExitPayload` の **3 本だけで `final30` と同一**、
 * boot は `coupled'_of_idle`（`Run40:87`）で無条件。
 
 `ShiftLocalRun` がこれを run に載せて `needBound_without_fourOther` を作る。
@@ -32,7 +32,7 @@ import PalPeg.CloseoutFinalW
 | 定理 | 前提数 | 偽の前提 | 機械検査 |
 |---|---|---|---|
 | `final31`（`CloseoutFinalS2`） | 9 | `hav`（`ConsumeAvail` を全状態に量化） | `ConsumeAvailRefute.hav_false` |
-| `final36`（`CloseoutFinalW3`） | 5 | `hpack`（`ChainPosInv2 → ChainPack`） | `CloseoutPackRefute.hpack_false` |
+| `final36`（`CloseoutFinalW3`） | 5 | `hpack`（`ChainPositionInvariantWithShiftPhase → ChainPack`） | `CloseoutPackRefute.hpack_false` |
 | `final37`（`CloseoutFinalW4`） | 4 | 同上 | 同上 |
 | **`final39`（本ファイル）** | **7** | **なし** | — |
 
@@ -146,16 +146,16 @@ theorem given_bootOracleRealize_sansFourOther (entry q : ℕ) (first : Fin 9)
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hbgP : ∀ w : List (Fin 2), H_bgP centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneP centreC placeC entry q first w) :
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingPayload centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingPayload centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitPayload centreC placeC entry q first w) :
     RecognizedByTotalPEG PAL :=
   given_needBound entry q first hboot hA hC
     (fun w st _ hw h => needBound_without_fourOther centreC placeC entry q first hw h
       (hbgP w) (hmatchP w) (hsdP w)
       (by rw [h.base.pre.start]; exact chainPosInvCoupled'_at_idle (boot_chain_idle w)))
 
-/-- **`given_globalScanLandings_and_fourOther` から `H_fourOther` が消えた最上位。7 前提・反証済みゼロ。** -/
+/-- **`given_globalScanLandings_and_fourOther` から `H_FourSemiperiodsLeDistance` が消えた最上位。7 前提・反証済みゼロ。** -/
 theorem given_globalScanLandings (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
@@ -164,9 +164,9 @@ theorem given_globalScanLandings (entry q : ℕ) (first : Fin 9)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hbgP : ∀ w : List (Fin 2), H_bgP centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneP centreC placeC entry q first w) :
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingPayload centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingPayload centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitPayload centreC placeC entry q first w) :
     RecognizedByTotalPEG PAL :=
   given_bootOracleRealize_sansFourOther entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first

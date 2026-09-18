@@ -10,10 +10,10 @@ import PalPeg.CloseoutPackRun40
 
 | 版 | 場所 | `ShiftLocalS` の作り方 |
 |---|---|---|
-| S | `CloseoutShiftS.radPack_ptS` / `trailF_ptS` | `ChainPosInv` ＋ `hfour` |
-| S3 | `CloseoutWatchSupply.radPack_ptS3` / `trailF_ptS3` | `ChainPosInv2` ＋ `ChainPack`（`hpack` は偽） |
-| S4 | `CloseoutVerSide.radPack_ptS4` / `trailF_ptS4` | `ChainPosInv2` ＋ `VerRun` |
-| （本ファイル） | — | `ChainPosInv'`（前提追加なし） |
+| S | `CloseoutShiftS.radPack_ptS` / `trailF_ptS` | `ChainPositionInvariant` ＋ `hfour` |
+| S3 | `CloseoutWatchSupply.radPack_ptS3` / `trailF_ptS3` | `ChainPositionInvariantWithShiftPhase` ＋ `ChainPack`（`hpack` は偽） |
+| S4 | `CloseoutVerSide.radPack_ptS4` / `trailF_ptS4` | `ChainPositionInvariantWithShiftPhase` ＋ `VerRun` |
+| （本ファイル） | — | `ChainPositionInvariantExactCoupling`（前提追加なし） |
 
 3 段の本体は `hShiftLocalS : ∀ i ≤ Tc w.length, ShiftLocalS … (st i)` しか使っていない
 （`radPack_ptS` の最初の `have` がそれで、以降 `hfour`/`hbg`/`hmatch`/`hsd`/`hChainPosInv2AtOrigin`/`hreach`
@@ -23,12 +23,12 @@ import PalPeg.CloseoutPackRun40
 
 ## 2. `hfour` は前提追加なしで消える
 
-`CloseoutPackRun40` は `ChainPosInv'`（`ChainPosInv` の `Coupled` を `Coupled'` に
+`CloseoutPackRun40` は `ChainPositionInvariantExactCoupling`（`ChainPositionInvariant` の `Coupled` を `Coupled'` に
 差し替えただけ）と
 
-* `watchShiftS_of_chainPosInv'`（:407）— **`H_fourOther` を取らない**。
+* `watchShiftS_of_chainPosInv'`（:407）— **`H_FourSemiperiodsLeDistance` を取らない**。
   `Other'`（5h 版）は `Coupled'.watch` の場から出てくるので `four_of_other'` が直接効く。
-* `chainPosInv'_tick`（:435）— 必要な分岐前提は **`H_bgP` / `H_matchP` / `H_shiftDoneP` の
+* `chainPosInv'_tick`（:435）— 必要な分岐前提は **`H_BackgroundLandingPayload` / `H_MatchLandingPayload` / `H_ShiftExitPayload` の
   3 本だけ**。`final30` が既に取っている 3 本と同一。
 * `coupled'_of_idle`（:87）— boot は無条件。
 
@@ -173,29 +173,29 @@ theorem needBound_of_shiftLocalS_alongTrace {w : List (Fin 2)} (hw : 0 < w.lengt
   exact needL'_le_of_trailF w st m i
     (trailF_alongTrace_of_shiftLocalS centre place entry q first hw hbase hShiftLocalS hLPackM2AtTarget hll hm i hIndexLeTc)
 
-/-! ## 3. `ChainPosInv'` を run 沿いに運ぶ（`hfour` なし） -/
+/-! ## 3. `ChainPositionInvariantExactCoupling` を run 沿いに運ぶ（`hfour` なし） -/
 
-/-- `ChainPosInv'` は idle chain で無条件。 -/
+/-- `ChainPositionInvariantExactCoupling` は idle chain で無条件。 -/
 theorem chainPosInvCoupled'_at_idle {w : List (Fin 2)} {c : Control} {s : GalilVM}
-    (hIndexLeTc : s.chain = ChainVM.idle) : ChainPosInv' w c s :=
+    (hIndexLeTc : s.chain = ChainVM.idle) : ChainPositionInvariantExactCoupling w c s :=
   ⟨coupled'_of_idle hIndexLeTc, fun _ hni => absurd hIndexLeTc hni⟩
 
-/-- **`ChainPosInv'` along a run.**  `final30` の 3 分岐前提だけで閉じる。 -/
+/-- **`ChainPositionInvariantExactCoupling` along a run.**  `final30` の 3 分岐前提だけで閉じる。 -/
 theorem chainPosInvCoupled'_alongRun {w : List (Fin 2)}
-    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
-    (hsd : H_shiftDoneP centre place entry q first w)
-    {n : ℕ} {x y : State GalilVM} (hx : ChainPosInv' w x.ctl x.vm)
+    (hbg : H_BackgroundLandingPayload centre place entry q first w) (hmatch : H_MatchLandingPayload centre place entry q first w)
+    (hsd : H_ShiftExitPayload centre place entry q first w)
+    {n : ℕ} {x y : State GalilVM} (hx : ChainPositionInvariantExactCoupling w x.ctl x.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y) :
-    ChainPosInv' w y.ctl y.vm := by
+    ChainPositionInvariantExactCoupling w y.ctl y.vm := by
   induction h with
   | zero x => exact hx
   | @succ n x z y ht _ ih =>
     exact ih (chainPosInv'_tick centre place entry q first hbg hmatch hsd hx ht)
 
-/-- **`ShiftLocalS` from `ChainPosInv'`** — `CloseoutShiftS.shiftLocalS_of_chainPosInv`
+/-- **`ShiftLocalS` from `ChainPositionInvariantExactCoupling`** — `CloseoutShiftS.shiftLocalS_of_chainPosInv`
 with `hfour` gone. -/
 theorem shiftLocalS_of_chainPosInvCoupled' {w : List (Fin 2)} {x : State GalilVM}
-    (h : ChainPosInv' w x.ctl x.vm) : ShiftLocalS centre place entry q first w x := by
+    (h : ChainPositionInvariantExactCoupling w x.ctl x.vm) : ShiftLocalS centre place entry q first w x := by
   by_cases hIndexLeTc : x.vm.chain = ChainVM.idle
   · exact shiftLocalS_of_chainIdle centre place entry q first hIndexLeTc
   · exact shiftLocalS_of_watchShiftS centre place entry q first hIndexLeTc
@@ -203,22 +203,22 @@ theorem shiftLocalS_of_chainPosInvCoupled' {w : List (Fin 2)} {x : State GalilVM
 
 /-- **`ShiftLocalS` at every state of a run, with no `hfour`.** -/
 theorem shiftLocalS_alongRun_of_chainPosInvCoupled' {w : List (Fin 2)}
-    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
-    (hsd : H_shiftDoneP centre place entry q first w)
-    {n : ℕ} {x y : State GalilVM} (hx : ChainPosInv' w x.ctl x.vm)
+    (hbg : H_BackgroundLandingPayload centre place entry q first w) (hmatch : H_MatchLandingPayload centre place entry q first w)
+    (hsd : H_ShiftExitPayload centre place entry q first w)
+    {n : ℕ} {x y : State GalilVM} (hx : ChainPositionInvariantExactCoupling w x.ctl x.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y) :
     ShiftLocalS centre place entry q first w y :=
   shiftLocalS_of_chainPosInvCoupled' centre place entry q first
     (chainPosInvCoupled'_alongRun centre place entry q first hbg hmatch hsd hx h)
 
-/-- **`needIMW'_le_W` with `H_fourOther` gone.**  Same three branch hypotheses
+/-- **`needIMW'_le_W` with `H_FourSemiperiodsLeDistance` gone.**  Same three branch hypotheses
 as `given_globalScanLandings_and_fourOther`, and the boot obligation is a theorem. -/
 theorem needBound_without_fourOther {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hPreTrace : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
-    (hsd : H_shiftDoneP centre place entry q first w)
-    (hChainPosInv2AtOrigin : ChainPosInv' w (st 0).ctl (st 0).vm) :
+    (hbg : H_BackgroundLandingPayload centre place entry q first w) (hmatch : H_MatchLandingPayload centre place entry q first w)
+    (hsd : H_ShiftExitPayload centre place entry q first w)
+    (hChainPosInv2AtOrigin : ChainPositionInvariantExactCoupling w (st 0).ctl (st 0).vm) :
     ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
       PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 :=
   needBound_of_shiftLocalS_alongTrace centre place entry q first hw hPreTrace

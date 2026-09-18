@@ -11,7 +11,7 @@ just born at `ChainStep.backDone`, with `distance = reset`, satisfies the premis
 while breaking `4 * periodLength ≤ distance`.
 
 The field has to go, not be weakened.  It can: after `CloseoutShiftS` moved the
-trail bridge onto `ChainPosInv`, **nothing reads `IPackMG.shift`** — the only
+trail bridge onto `ChainPositionInvariant`, **nothing reads `IPackMG.shift`** — the only
 readers were `halfBound_of_ipackMG` and `shiftVerSane_ptMG`, both replaced.
 
 Dropping the field from `CloseoutPackRun30.IPackMG` directly breaks the older

@@ -103,8 +103,8 @@ theorem chainPos_step_of_supply {w : List (Fin 2)} {x z : ChainVM} {R : PlaceHea
     (hrepV : ∀ wch : GalilScaffoldChainWatch.State, x = .watch wch →
       GalilScaffoldInputTrace.Represents wch.machine.verifier.head w ∧
         wch.machine.verifier.head.focus ≠ none)
-    (hL : LagCan x) (hP : ChainPos x (position R)) (hst : ChainStep x z) :
-    ChainPos z (position R) := by
+    (hL : LagCan x) (hP : ChainPositionLedger x (position R)) (hst : ChainStep x z) :
+    ChainPositionLedger z (position R) := by
   cases hst with
   | idle => exact chainPos_step hP (fun _ h => by cases h) .idle
   | brokenIdle v => exact chainPos_broken v _
@@ -133,48 +133,48 @@ theorem chainPos_step_of_supply {w : List (Fin 2)} {x z : ChainVM} {R : PlaceHea
 has.**  The only consuming `ChainMatched` transition is `Outer.immediate`,
 guarded by `zero lag`; there the verifier *is* at the scan front, so the moved
 verifier lands on the landing's right head `R'`, whose `canRight` is the
-target payload's `PosPayload2.canR`. -/
+target payload's `ScanPositionPayloadWithChainLedger.canR`. -/
 theorem chainPos_matched_of_target {w : List (Fin 2)} {y z : ChainVM} {R R' : PlaceHead}
     (hrepR' : GalilScaffoldInputTrace.Represents R'.head w) (hfocR' : R'.head.focus ≠ none)
     (hcR' : canRight R') (hstep : position R' = position R + 1)
     (hrepV : ∀ wch : GalilScaffoldChainWatch.State, y = .watch wch →
       GalilScaffoldInputTrace.Represents wch.machine.verifier.head w ∧
         wch.machine.verifier.head.focus ≠ none)
-    (hL : LagCan y) (hP : ChainPos y (position R)) (hm : ChainMatched y z) :
-    ChainPos z (position R + 1) :=
+    (hL : LagCan y) (hP : ChainPositionLedger y (position R)) (hm : ChainMatched y z) :
+    ChainPositionLedger z (position R + 1) :=
   chainPos_matched hP
     (consumeAvail_of_next_supply hrepR' hfocR' hcR' hstep hrepV (lagCan_lagNonneg hL) hP) hm
 
 #print axioms chainPos_matched_of_target
 
 
-/-! ## 3. `H_bgP2` with the supply leaf removed -/
+/-! ## 3. `H_BackgroundLandingChainLedger` with the supply leaf removed -/
 
 section Bg
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
 
-/-- **`H_bgP2` from the chain-start shape and the *source* supply only.**
+/-- **`H_BackgroundLandingChainLedger` from the chain-start shape and the *source* supply only.**
 `CloseoutPackRun44.h_bgP2_of_start` had to assume `ConsumeAvail s.chain`, whose
 `lag = 0` instance is the one-cell-ahead fact no source state provides.  With
 `chainPos_step_of_supply` that assumption disappears: the background landing
 needs only the `lrep` pairs of the right head and the verifier, `LagCan`, and
 `BgStartP2`. -/
 theorem h_bgP2_of_supply {w : List (Fin 2)}
-    (hrepR : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPosInv2 w c s →
+    (hrepR : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
       GalilScaffoldInputTrace.Represents s.right.head w ∧ s.right.head.focus ≠ none)
-    (hrepV : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPosInv2 w c s →
+    (hrepV : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
       ∀ wch : GalilScaffoldChainWatch.State, s.chain = .watch wch →
         GalilScaffoldInputTrace.Represents wch.machine.verifier.head w ∧
           wch.machine.verifier.head.focus ≠ none)
-    (hL : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPosInv2 w c s →
+    (hL : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
       LagCan s.chain)
     (hstart : BgStartP2 centre place entry q first w) :
-    H_bgP2 centre place entry q first w := by
+    H_BackgroundLandingChainLedger centre place entry q first w := by
   intro c s t hm hx hb hs hni
   by_cases hi : s.chain = ChainVM.idle
   · exact hstart c s t hm hx hi hb hs hni
-  · have P : PosPayload2 w s := hx.payload hs hi
+  · have P : ScanPositionPayloadWithChainLedger w s := hx.payload hs hi
     obtain ⟨hl, hr, -, hcen, -, hrad, -⟩ :=
       backgroundS_fields (PofC centre place entry w) q first hb
     have hstep : ChainStep s.chain t.chain := by
@@ -195,16 +195,16 @@ end Bg
 #print axioms h_bgP2_of_supply
 
 
-/-! ## 4. `H_matchP2` discharged at the target -/
+/-! ## 4. `H_MatchLandingChainLedger` discharged at the target -/
 
 section Match
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
 
-/-- **(NAMED residue of `H_matchP2`.)**  Everything the `scan_match` landing
-needs beyond `ChainPosInv2` at the source.  Note that the supply obligation is
+/-- **(NAMED residue of `H_MatchLandingChainLedger`.)**  Everything the `scan_match` landing
+needs beyond `ChainPositionInvariantWithShiftPhase` at the source.  Note that the supply obligation is
 stated at the **target**: `canRNext`/`repNext` are the moved right head's, i.e.
-the target payload's own `PosPayload2.canR` together with its `lrep` pair. -/
+the target payload's own `ScanPositionPayloadWithChainLedger.canR` together with its `lrep` pair. -/
 structure MatchRes2 (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   repR : GalilScaffoldInputTrace.Represents s.right.head w ∧ s.right.head.focus ≠ none
   repV : ∀ wch : GalilScaffoldChainWatch.State, s.chain = .watch wch →
@@ -217,7 +217,7 @@ structure MatchRes2 (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   lagCan : LagCan s.chain
   backLag : ∀ (v : GalilScaffoldChainPeriod.Tape) (h lag margin : Counter) (ver : PlaceHead),
     s.chain = .back v h lag margin ver → Canonical lag ∧ 0 ≤ value lag
-  replayPay : c.replaying = true → s.chain ≠ ChainVM.idle → PosPayload2 w s
+  replayPay : c.replaying = true → s.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w s
   saneR : Sane s.right
   canR : canRight s.right
   repNext : GalilScaffoldInputTrace.Represents (right s.right).head w ∧
@@ -229,19 +229,19 @@ structure MatchRes2 (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   startLedger : s.chain = ChainVM.idle → CentreLedger s
 
 def H_matchRes2 (w : List (Fin 2)) : Prop :=
-  ∀ (c : Control) (s s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPosInv2 w c s →
+  ∀ (c : Control) (s s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
     (galilFrameS (PofC centre place entry w) q first).compare s s' →
     (galilFrameS (PofC centre place entry w) q first).matched s' →
     (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
     ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
     t.chain ≠ ChainVM.idle → MatchRes2 w c s
 
-/-- **`H_matchP2` modulo `MatchRes2`.**  The consuming half of the landing
+/-- **`H_MatchLandingChainLedger` modulo `MatchRes2`.**  The consuming half of the landing
 (`Outer.immediate`, at zero lag) is fed by the *target's* supply
 `canRNext`; the background half (`Internal.take`, at positive lag) by the
 source's own `canR`.  So `ConsumeAvail` never appears. -/
 theorem h_matchP2_of_target {w : List (Fin 2)} (hres : H_matchRes2 centre place entry q first w) :
-    H_matchP2 centre place entry q first w := by
+    H_MatchLandingChainLedger centre place entry q first w := by
   intro c s s' t o b hm hx hcmp hmt hpl hs hni
   have R := hres c s s' t o b hm hx hcmp hmt hpl hs hni
   have hpl' : t = (if c.replaying then {s' with replay := dec s'.replay} else s') := hpl
@@ -277,7 +277,7 @@ theorem h_matchP2_of_target {w : List (Fin 2)} (hres : H_matchRes2 centre place 
   rw [hsc] at htc
   rw [hscen] at htcen
   rw [hsrad] at htrad
-  have hP : s.chain ≠ ChainVM.idle → PosPayload2 w s := by
+  have hP : s.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w s := by
     intro hne
     cases hrep : c.replaying with
     | false => exact hx.payload ⟨hm, hrep⟩ hne
@@ -295,7 +295,7 @@ theorem h_matchP2_of_target {w : List (Fin 2)} (hres : H_matchRes2 centre place 
     rcases hch with ⟨hne, y, hst, hmy⟩ | ⟨-, -, hz⟩ | ⟨hidle, -, hz⟩
     · rw [if_pos rfl] at hmy
       have Ps := hP hne
-      have hy : ChainPos y (position s.right) :=
+      have hy : ChainPositionLedger y (position s.right) :=
         chainPos_step_of_supply R.repR.1 R.repR.2 Ps.canR R.repV R.lagCan Ps.chainPos hst
       have hLy : LagCan y := lagCan_step R.lagCan R.backLag hst
       have := chainPos_matched_of_target (R := s.right) (R' := right s.right)
@@ -307,7 +307,7 @@ theorem h_matchP2_of_target {w : List (Fin 2)} (hres : H_matchRes2 centre place 
       obtain ⟨hc1, hc2, hc3⟩ := R.startLedger hidle
       have hstart : ∀ (ans : GalilScaffoldTape.Tape) (cc : Fin 3)
           (wk : GalilScaffoldPlace.Place),
-          ChainPos (chainStart ans cc wk s.center s.radius) (position s.right) := by
+          ChainPositionLedger (chainStart ans cc wk s.center s.radius) (position s.right) := by
         intro ans cc wk
         refine ⟨(fun _ hw => by cases hw), (fun _ _ _ _ _ hbk => by cases hbk),
           fun _ _ _ _ _ _ _ hcp => ?_⟩
@@ -336,8 +336,8 @@ theorem chainPos_immediate {w : List (Fin 2)} {v : GalilScaffoldChainWatch.State
     (hcR' : canRight R') (hstep : position R' = position R + 1)
     (hrepV : GalilScaffoldInputTrace.Represents v.machine.verifier.head w ∧
       v.machine.verifier.head.focus ≠ none)
-    (hL : LagCan (ChainVM.watch v)) (hP : ChainPos (.watch v) (position R)) :
-    ChainPos (.watch (GalilScaffoldChainWatch.immediate v)) (position R') := by
+    (hL : LagCan (ChainVM.watch v)) (hP : ChainPositionLedger (.watch v) (position R)) :
+    ChainPositionLedger (.watch (GalilScaffoldChainWatch.immediate v)) (position R') := by
   obtain ⟨hcv, hsv, hpv⟩ := hP.watch v rfl
   have hav : ConsumeAvail (ChainVM.watch v) :=
     consumeAvail_of_next_supply hrepR' hfocR' hcR' hstep
@@ -362,18 +362,18 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 /-- The residue of the `scan_shift` entry: the *same* `MatchRes2` pack, taken
 at the source of a mismatching comparison. -/
 def H_shiftRes2 (w : List (Fin 2)) : Prop :=
-  ∀ (c : Control) (s s' t : GalilVM), c.mode = Mode.scan → ChainPosInv2 w c s →
+  ∀ (c : Control) (s s' t : GalilVM), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
     (galilFrameS (PofC centre place entry w) q first).compare s s' →
     ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
     shiftGuardVM s' → beginShiftVM' s' t → MatchRes2 w c s
 
-/-- **`H_shiftEntry2` modulo `MatchRes2`.**  The mismatching comparison moves
+/-- **`H_ShiftEntryChainLedger` modulo `MatchRes2`.**  The mismatching comparison moves
 the right head and takes one plain `ChainStep` (source supply); `beginShiftVM`
 then performs one `immediate` consume, whose supply is the *moved* right head
 `right s.right` — the target-side route again. -/
 theorem h_shiftEntry2_of_target {w : List (Fin 2)}
     (hres : H_shiftRes2 centre place entry q first w) :
-    H_shiftEntry2 centre place entry q first w := by
+    H_ShiftEntryChainLedger centre place entry q first w := by
   intro c s s' t hm hx hcmp hmt hg hb
   have R := hres c s s' t hm hx hcmp hmt hg hb
   obtain ⟨vs, vq, a, hvl, hvr, hiff, -, hch, hteq⟩ :
@@ -394,7 +394,7 @@ theorem h_shiftEntry2_of_target {w : List (Fin 2)}
   subst hteq
   have hsr : (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)).right = vs.right := afterBirth_right _ _
   have hsc : (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)).chain = vs.chain := afterBirth_chain _ _
-  have hPs : s.chain ≠ ChainVM.idle → PosPayload2 w s := by
+  have hPs : s.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w s := by
     intro hne
     cases hrep : c.replaying with
     | false => exact hx.payload ⟨hm, hrep⟩ hne
@@ -427,31 +427,31 @@ theorem h_shiftEntry2_of_target {w : List (Fin 2)}
       exact absurd hcw' (by simp)
   have Ps := hPs hne
   have hyw : y = ChainVM.watch v := by rw [← hy]; exact hcw'
-  have hPy : ChainPos (ChainVM.watch v) (position s.right) := by
+  have hPy : ChainPositionLedger (ChainVM.watch v) (position s.right) := by
     rw [← hyw]
     exact chainPos_step_of_supply R.repR.1 R.repR.2 R.canR R.repV R.lagCan Ps.chainPos hst
   have hLy : LagCan (ChainVM.watch v) := by
     rw [← hyw]; exact lagCan_step R.lagCan R.backLag hst
-  show ChainPos t.chain (position t.right)
+  show ChainPositionLedger t.chain (position t.right)
   have htc : t.chain = ChainVM.watch (GalilScaffoldChainWatch.immediate v) := by rw [hteq2]
   have htr : t.right = right s.right := by rw [hteq2]; rw [hsr, hvr]
   rw [htc, htr]
   exact chainPos_immediate R.repNext.1 R.repNext.2 R.canRNext hposR
     (R.repVmid y v hst hyw) hLy hPy
 
-/-- **(NAMED) `ShiftDoneSupply`.**  `H_shiftDoneRad2` has *no* chain content at
+/-- **(NAMED) `ShiftDoneSupply`.**  `H_ShiftExitRadiusLedger` has *no* chain content at
 all: its conclusion is the scan-mode supply of the right head plus the radius
 ledger at the `shift_done` exit.  So it is not a target-supply obligation but
 two ordinary pack fields. -/
 theorem h_shiftDoneRad2_of_supply {w : List (Fin 2)}
     (hav : ∀ (c : Control) (s : GalilVM), c.mode = Mode.shift →
       ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s →
-      ChainPosInv2 w c s → canRight s.right)
+      ChainPositionInvariantWithShiftPhase w c s → canRight s.right)
     (hrad : ∀ (c : Control) (s : GalilVM), c.mode = Mode.shift →
       ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s →
-      ChainPosInv2 w c s → ∀ rad : ℕ,
+      ChainPositionInvariantWithShiftPhase w c s → ∀ rad : ℕ,
         ScanInvariant w (position s.center) rad s.left s.right → value s.radius ≤ (rad : ℤ)) :
-    H_shiftDoneRad2 centre place entry q first w :=
+    H_ShiftExitRadiusLedger centre place entry q first w :=
   fun c s hm hp hx _ => ⟨hav c s hm hp hx, hrad c s hm hp hx⟩
 
 end ShiftEntry

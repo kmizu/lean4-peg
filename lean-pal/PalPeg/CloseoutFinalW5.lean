@@ -4,11 +4,11 @@ import PalPeg.CloseoutVerSide
 /-!
 # `given_globalRun41Landings_and_verifierRun` — the refuted `hpack` replaced by the run-level `VerRun`
 
-`CloseoutPackRefute` showed `hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack …`
+`CloseoutPackRefute` showed `hpack : ∀ w c s, ChainPositionInvariantWithShiftPhase w c s → ChainPack …`
 is **false**.  `CloseoutVerSide` then measured what the top theorem actually
 uses it for: `given_bootOracleRealize_and_chainPackAtAnyState` calls it in exactly one place, and the
 lemma at the bottom of that call (`shiftLocalS_of_chainPack`) reads four fields,
-three of which (`inv`, `repR`) the caller already has — `ChainPosInv2` is a
+three of which (`inv`, `repR`) the caller already has — `ChainPositionInvariantWithShiftPhase` is a
 hypothesis and `LPackM`/`LPackM2` come off the pre-trace's own packs.
 
 So the whole contribution of `hpack` is `repV` and `lagCan` at the run's `scan`
@@ -112,12 +112,12 @@ theorem given_bootOracleRealize_and_verifierRun (entry q : ℕ) (first : Fin 9)
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hbgP : ∀ w : List (Fin 2), H_bgP2 centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP2 centreC placeC entry q first w)
-    (hentry : ∀ w : List (Fin 2), H_shiftEntry2 centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneRad2 centreC placeC entry q first w)
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingChainLedger centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingChainLedger centreC placeC entry q first w)
+    (hentry : ∀ w : List (Fin 2), H_ShiftEntryChainLedger centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitRadiusLedger centreC placeC entry q first w)
     (hpos2 : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
-      st 0 = boot w → ChainPosInv2 w (st 0).ctl (st 0).vm)
+      st 0 = boot w → ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → VerRun centreC placeC entry q first w (st 0))
     :

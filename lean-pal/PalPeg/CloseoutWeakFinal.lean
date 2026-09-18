@@ -9,7 +9,7 @@ import PalPeg.CloseoutShiftFinal
 reset`).  Two independent weakenings land here:
 
 * the trail bridge no longer touches it at all — `pal_in_peg_final5MG2T`
-  (`CloseoutShiftFinal`) runs on `ChainPosInv`;
+  (`CloseoutShiftFinal`) runs on `ChainPositionInvariant`;
 * the run pack only ever needed `ShiftLocalG`, which `WatchShiftG` merely
   *implies* (`shiftLocalG_of_watchShiftG`) — `packRunR_MG27L`
   (`CloseoutShiftWeak`).
@@ -75,10 +75,10 @@ theorem pal_in_peg_final29 (entry q : ℕ) (first : Fin 9)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMG2' centreC placeC entry q first)
-    (hfour : ∀ w : List (Fin 2), H_fourOther centreC placeC entry q first w)
-    (hbgP : ∀ w : List (Fin 2), H_bgP centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneP centreC placeC entry q first w) :
+    (hfour : ∀ w : List (Fin 2), H_FourSemiperiodsLeDistance centreC placeC entry q first w)
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingPayload centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingPayload centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitPayload centreC placeC entry q first w) :
     RecognizedByTotalPEG PAL :=
   pal_in_peg_final5MG2T entry q first
     (h_bootIMG2S_of_bootIPack centreC placeC entry q first

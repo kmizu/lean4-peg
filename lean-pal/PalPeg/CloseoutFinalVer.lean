@@ -4,9 +4,9 @@ import PalPeg.CloseoutFinalW5
 # `given_globalRun41Landings_and_verifierRun` — `hfour` / `hav` / `hpack` がすべて消えた最上位
 
 `given_globalScanLandings_and_fourOther`（`CloseoutFinalW`、8 前提・反証済みゼロ）が正直な最上位だったが、
-その `hfour : H_fourOther` は**既存の部品で消える**：`CloseoutPackRun41.ChainPosInv2` は
+その `hfour : H_FourSemiperiodsLeDistance` は**既存の部品で消える**：`CloseoutPackRun41.ChainPositionInvariantWithShiftPhase` は
 `Coupled'`（Run40）を場に持ち、`four_of_other'`（`CloseoutPackRun40:368`）が
-`H_fourOther` の結論そのものを与えるので、`watchShiftS_of_chainPosInv2` は `hfour` を
+`H_FourSemiperiodsLeDistance` の結論そのものを与えるので、`watchShiftS_of_chainPosInv2` は `hfour` を
 取らない。
 
 ところが `hfour` を落とした既存の 2 経路はどちらも**偽の前提**を代わりに取っていた：
@@ -14,7 +14,7 @@ import PalPeg.CloseoutFinalW5
 | 定理 | 前提数 | 偽の前提 | 機械検査 |
 |---|---|---|---|
 | `final31`（`CloseoutFinalS2`） | 9 | `hav`（`ConsumeAvail` を全状態に量化） | `ConsumeAvailRefute.hav_false` |
-| `final36`（`CloseoutFinalW3`） | 5 | `hpack`（`ChainPosInv2 → ChainPack`） | `CloseoutPackRefute.hpack_false` |
+| `final36`（`CloseoutFinalW3`） | 5 | `hpack`（`ChainPositionInvariantWithShiftPhase → ChainPack`） | `CloseoutPackRefute.hpack_false` |
 | `final37`（`CloseoutFinalW4`） | 4 | 同上 | 同上 |
 
 `CloseoutWatchSupply` が `ConsumeAvail` を 4 つの局所供給事実に分解し、
@@ -100,9 +100,9 @@ open PalPeg.CloseoutFinalW4
 open PalPeg.CloseoutVerSide PalPeg.CloseoutFinalW3 PalPeg.CloseoutFinalW4
 open PalPeg.CloseoutFinalW5 PalPeg.CloseoutWatchSupply
 
-/-- **`given_globalScanLandings_and_fourOther` から `H_fourOther` が消えた最上位。9 前提・反証済みゼロ。**
+/-- **`given_globalScanLandings_and_fourOther` から `H_FourSemiperiodsLeDistance` が消えた最上位。9 前提・反証済みゼロ。**
 
-`hfour` は `ChainPosInv2` が自前で閉じるので不要。`final31` の `hav` と
+`hfour` は `ChainPositionInvariantWithShiftPhase` が自前で閉じるので不要。`final31` の `hav` と
 `final36`/`final37` の `hpack` はどちらも偽なので、その代わりに `CloseoutVerSide` の
 **run 形** `VerRun` を取る。 -/
 theorem given_globalRun41Landings_and_verifierRun (entry q : ℕ) (first : Fin 9)
@@ -113,10 +113,10 @@ theorem given_globalRun41Landings_and_verifierRun (entry q : ℕ) (first : Fin 9
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hbgP : ∀ w : List (Fin 2), H_bgP2 centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP2 centreC placeC entry q first w)
-    (hentry : ∀ w : List (Fin 2), H_shiftEntry2 centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneRad2 centreC placeC entry q first w)
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingChainLedger centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingChainLedger centreC placeC entry q first w)
+    (hentry : ∀ w : List (Fin 2), H_ShiftEntryChainLedger centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitRadiusLedger centreC placeC entry q first w)
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
     RecognizedByTotalPEG PAL :=

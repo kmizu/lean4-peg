@@ -7,10 +7,10 @@ import PalPeg.GalilFinalAssembly
 `CloseoutFinalW4.given_chainPackAtAnyState_FALSE_HYP`'s fourth hypothesis is
 
 ```
-hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack q first w c s
+hpack : ∀ w c s, ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s
 ```
 
-and it does not hold.  `ChainPosInv2` has exactly three fields
+and it does not hold.  `ChainPositionInvariantWithShiftPhase` has exactly three fields
 (`CloseoutPackRun41:215`) — `Coupled'`, the payload at a non-idle chain, and the
 shift-mode ledger — and `chainPosInv2_of_idle` gives it for **every** `w`, `c`
 and `s` whose chain is idle.  But `ChainPack` carries
@@ -57,11 +57,11 @@ open GalilScaffoldCounter GalilScaffoldInputHead GalilScaffoldChainVerifier
 open PalPeg.GalilRunSkeleton PalPeg.CloseoutPackRun41 PalPeg.CloseoutChainPack
 
 /-- **`hpack` contradicts a short word.**  At a scan-mode state with an idle
-chain — the landing of `Tick.init` — `ChainPosInv2` holds for every `w`, while
+chain — the landing of `Tick.init` — `ChainPositionInvariantWithShiftPhase` holds for every `w`, while
 `ChainPack.scanBound` needs `1 ≤ m < w.length`. -/
 theorem hpack_false_at_short_word {q : ℕ} {first : Fin 9}
     (hp : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack q first w c s)
+      ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
     (w : List (Fin 2)) (hw : w.length ≤ 1) (c : Control) (s : GalilVM)
     (hm : c.mode = Mode.scan) (hi : s.chain = ChainVM.idle) : False := by
   obtain ⟨m, hm1, hmlt, -⟩ := (hp w c s (chainPosInv2_of_idle hi)).scanBound hm
@@ -77,12 +77,12 @@ theorem chainPack_false_at_short_word {q : ℕ} {first : Fin 9}
 
 /-- **The simpler witness: `centreCanR` has no mode premise at all.**
 `ChainPack.centreCanR : canRight s.center` is asserted unconditionally, while
-`ChainPosInv2` holds of every idle-chain state — including one whose centre head
+`ChainPositionInvariantWithShiftPhase` holds of every idle-chain state — including one whose centre head
 has reached the end of the input, which is where every completed scan leaves
 it. -/
 theorem hpack_false_at_exhausted_centre {q : ℕ} {first : Fin 9}
     (hp : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack q first w c s)
+      ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
     (w : List (Fin 2)) (c : Control) (s : GalilVM)
     (hi : s.chain = ChainVM.idle)
     (hc : ¬ GalilScaffoldChainVerifier.canRight s.center) : False :=
@@ -94,7 +94,7 @@ theorem hpack_false_at_exhausted_centre {q : ℕ} {first : Fin 9}
 besides `scanBound` it asserts `shiftCanR` (`canRight s.right` in shift mode),
 `centreCanR` (`canRight s.center`, unconditionally), `saneR`, `centreSane`,
 `scanCentre`, `lenNonneg` … — every one of which fails at some state a
-`ChainPosInv2` allows, because `ChainPosInv2` has only three fields
+`ChainPositionInvariantWithShiftPhase` allows, because `ChainPositionInvariantWithShiftPhase` has only three fields
 (`Coupled'`, the non-idle payload, the shift ledger) and `chainPosInv2_of_idle`
 makes it free at an idle chain.
 
@@ -122,7 +122,7 @@ its mode set to `scan` is a `Control`.  With `w := [0]` (length `1 ≤ 1`) the
 refutation needs no hypotheses at all. -/
 theorem hpack_false {q : ℕ} {first : Fin 9}
     (hp : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack q first w c s) : False :=
+      ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s) : False :=
   hpack_false_at_short_word hp [(0 : Fin 2)] (by simp)
     { GalilScaffoldController.initial 2048 with mode := Mode.scan }
     (GalilBootVM.initVM0 [(0 : Fin 2)]) rfl rfl
@@ -130,7 +130,7 @@ theorem hpack_false {q : ℕ} {first : Fin 9}
 /-- **`ScanBudget` is false too, with the same witness.**  `CloseoutFinalPack`'s
 `hbudget` was a separate leaf before it was folded into `ChainPack.scanBound`,
 and it has the identical defect: `∃ m, 1 ≤ m ∧ m < w.length` is unsatisfiable at
-`w.length ≤ 1`, while `ChainPosInv2` is free at an idle chain. -/
+`w.length ≤ 1`, while `ChainPositionInvariantWithShiftPhase` is free at an idle chain. -/
 theorem scanBudget_false {centre : GalilVM → Fin 3}
     {place : GalilVM → GalilScaffoldPlace.Place} {entry q : ℕ} {first : Fin 9}
     (hb : ∀ w : List (Fin 2),

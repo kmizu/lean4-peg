@@ -2,12 +2,12 @@ import PalPeg.CloseoutTrailS2
 import PalPeg.CloseoutFinalW
 
 /-!
-# `given_consumeAvailEverywhere_FALSE_HYP` — `H_fourOther` gone
+# `given_consumeAvailEverywhere_FALSE_HYP` — `H_FourSemiperiodsLeDistance` gone
 
-`given_globalScanLandings_and_fourOther` runs the trail bridge on `CloseoutPackRun34.ChainPosInv`,
-which forces `H_fourOther`.  `CloseoutPackRun41.ChainPosInv2` closes the chain
+`given_globalScanLandings_and_fourOther` runs the trail bridge on `CloseoutPackRun34.ChainPositionInvariant`,
+which forces `H_FourSemiperiodsLeDistance`.  `CloseoutPackRun41.ChainPositionInvariantWithShiftPhase` closes the chain
 half under `ChainStep`/`ChainMatched` on its own, so
-`watchShiftS_of_chainPosInv2` produces `WatchShiftS` with **no `H_fourOther`**,
+`watchShiftS_of_chainPosInv2` produces `WatchShiftS` with **no `H_FourSemiperiodsLeDistance`**,
 and `CloseoutPackRun48` discharges all four of `chainPosInv2_tick`'s branch
 hypotheses modulo `ConsumeAvail`.
 
@@ -87,12 +87,12 @@ theorem given_bootOracleRealize_and_consumeAvailEverywhere (entry q : ℕ) (firs
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hbgP : ∀ w : List (Fin 2), H_bgP2 centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP2 centreC placeC entry q first w)
-    (hentry : ∀ w : List (Fin 2), H_shiftEntry2 centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneRad2 centreC placeC entry q first w)
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingChainLedger centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingChainLedger centreC placeC entry q first w)
+    (hentry : ∀ w : List (Fin 2), H_ShiftEntryChainLedger centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitRadiusLedger centreC placeC entry q first w)
     (hpos2 : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
-      st 0 = boot w → ChainPosInv2 w (st 0).ctl (st 0).vm)
+      st 0 = boot w → ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hav : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (i : ℕ),
       ConsumeAvail (st i).vm.chain)
     :
@@ -148,12 +148,12 @@ theorem given_bootOracleRealize_and_consumeAvailEverywhere (entry q : ℕ) (firs
 /-- `ConsumeAvail` holds at an idle chain (the clause is vacuous). -/
 theorem consumeAvail_idle : ConsumeAvail ChainVM.idle := fun _ h => by cases h
 
-/-- **`given_globalScanLandings_and_fourOther` with `H_fourOther` gone: eight hypotheses, none
+/-- **`given_globalScanLandings_and_fourOther` with `H_FourSemiperiodsLeDistance` gone: eight hypotheses, none
 refuted.**
 
-`hfour` is replaced by nothing — `ChainPosInv2` closes the chain half on its
-own — while Run34's `hbgP`/`hmatchP`/`hsdP` become Run41's `H_bgP2`/`H_matchP2`/
-`H_shiftEntry2`/`H_shiftDoneRad2`, all four of which `CloseoutPackRun48`
+`hfour` is replaced by nothing — `ChainPositionInvariantWithShiftPhase` closes the chain half on its
+own — while Run34's `hbgP`/`hmatchP`/`hsdP` become Run41's `H_BackgroundLandingChainLedger`/`H_MatchLandingChainLedger`/
+`H_ShiftEntryChainLedger`/`H_ShiftExitRadiusLedger`, all four of which `CloseoutPackRun48`
 discharges modulo `ConsumeAvail` (`hav`). -/
 theorem given_consumeAvailEverywhere_FALSE_HYP (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
@@ -163,10 +163,10 @@ theorem given_consumeAvailEverywhere_FALSE_HYP (entry q : ℕ) (first : Fin 9)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hbgP : ∀ w : List (Fin 2), H_bgP2 centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP2 centreC placeC entry q first w)
-    (hentry : ∀ w : List (Fin 2), H_shiftEntry2 centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneRad2 centreC placeC entry q first w)
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingChainLedger centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingChainLedger centreC placeC entry q first w)
+    (hentry : ∀ w : List (Fin 2), H_ShiftEntryChainLedger centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitRadiusLedger centreC placeC entry q first w)
     (hav : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (i : ℕ),
       ConsumeAvail (st i).vm.chain) :
     RecognizedByTotalPEG PAL :=

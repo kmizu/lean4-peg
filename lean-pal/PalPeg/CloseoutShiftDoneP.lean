@@ -3,13 +3,13 @@ import PalPeg.CloseoutFrontExtra
 import PalPeg.CloseoutPackRun23
 
 /-!
-# `H_shiftDoneP`: the `shift_done` landing
+# `H_ShiftExitPayload`: the `shift_done` landing
 
 `CloseoutPackRun34.chainPosInv_tick` closes 20 of the 23 tick shapes and names
-three: `H_bgP` (`scan_wait`/`scan_count`), `H_matchP` (`scan_match`) and
-`H_shiftDoneP` (`shift_done`).  The last is the mildest — the VM is *unchanged*
+three: `H_BackgroundLandingPayload` (`scan_wait`/`scan_count`), `H_MatchLandingPayload` (`scan_match`) and
+`H_ShiftExitPayload` (`shift_done`).  The last is the mildest — the VM is *unchanged*
 across the tick, only the control moves `shift → scan` — so what is needed is
-`PosPayload w s` at a state the `shift` phase has just finished.
+`ScanPositionPayload w s` at a state the `shift` phase has just finished.
 
 `CloseoutPackRun23.ShiftGeom` is the running geometry of a shift round and holds
 `RRep w s` (the right head is represented and present) together with
@@ -54,10 +54,10 @@ theorem radEq_of_shiftGeom_done {w : List (Fin 2)} {s : GalilVM}
     {rad : ℕ} (hsi : ScanInvariant w (position s.center) rad s.left s.right) :
     position s.right = position s.center + rad := hsi.rightPos
 
-/-- **What `ShiftGeom` alone does not give.**  `PosPayload` also needs the
+/-- **What `ShiftGeom` alone does not give.**  `ScanPositionPayload` also needs the
 verifier ledger (`pos`) and the verifier's sanity one chain tick out
 (`verNext`); neither is a statement about the scan heads, so `ShiftGeom` is
-silent on them.  Naming them here keeps `H_shiftDoneP` honest. -/
+silent on them.  Naming them here keeps `H_ShiftExitPayload` honest. -/
 def ChainSideAt (w : List (Fin 2)) (s : GalilVM) : Prop :=
   (∀ wch : GalilScaffoldChainWatch.State, s.chain = .watch wch →
       (position wch.machine.verifier : ℤ) + value wch.lag = position s.right) ∧
@@ -65,14 +65,14 @@ def ChainSideAt (w : List (Fin 2)) (s : GalilVM) : Prop :=
       ChainTick a s.chain z → z = .watch wch →
         canRight wch.machine.verifier ∧ Sane wch.machine.verifier)
 
-/-- **`PosPayload` at a finished shift round**, from the scan geometry plus the
+/-- **`ScanPositionPayload` at a finished shift round**, from the scan geometry plus the
 chain-side ledger. -/
 theorem posPayload_of_shiftGeom {w : List (Fin 2)} {s : GalilVM} {m : ℕ}
     (hg : ShiftGeom w s) (hcs : ChainSideAt w s)
     (hm1 : 1 ≤ m) (hmle : m ≤ w.length) (hpos : position s.right ≤ 2 * m - 1)
     (hrad : ∀ rad : ℕ, ScanInvariant w (position s.center) rad s.left s.right →
       value s.radius ≤ (rad : ℤ)) :
-    PosPayload w s :=
+    ScanPositionPayload w s :=
   { canR := canR_of_shiftGeom hg hm1 hmle hpos
     radLe := hrad
     pos := hcs.1

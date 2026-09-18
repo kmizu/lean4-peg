@@ -93,14 +93,14 @@ theorem given_bootOracleRealize_and_chainPackAtAnyState (entry q : ℕ) (first :
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hbgP : ∀ w : List (Fin 2), H_bgP2 centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP2 centreC placeC entry q first w)
-    (hentry : ∀ w : List (Fin 2), H_shiftEntry2 centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneRad2 centreC placeC entry q first w)
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingChainLedger centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingChainLedger centreC placeC entry q first w)
+    (hentry : ∀ w : List (Fin 2), H_ShiftEntryChainLedger centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitRadiusLedger centreC placeC entry q first w)
     (hpos2 : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
-      st 0 = boot w → ChainPosInv2 w (st 0).ctl (st 0).vm)
+      st 0 = boot w → ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hpk : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack q first w c s)
+      ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
     :
     RecognizedByTotalPEG PAL := by
   classical
@@ -181,7 +181,7 @@ theorem given_chainPackAtAnyState_andMore_FALSE_HYP (entry q : ℕ) (first : Fin
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hpack : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack q first w c s)
+      ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
     :
     RecognizedByTotalPEG PAL :=
   given_bootOracleRealize_and_chainPackAtAnyState entry q first

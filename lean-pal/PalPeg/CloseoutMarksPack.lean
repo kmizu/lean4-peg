@@ -10,7 +10,7 @@ import PalPeg.CloseoutShiftLocalFree
 
 ```
 hme   : ∀ w, H_marksEntry' (PofC centreC placeC entry w) q first
-hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack q first w c s
+hpack : ∀ w c s, ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s
 ```
 
 and `hme` is used at exactly two places, both inside
@@ -23,13 +23,13 @@ and `hme` is used at exactly two places, both inside
 
 But `MarksInv' first c s` is already a **field** of `ChainPack`
 (`CloseoutChainPack:281`, `marks`), which `hpack` hands out at every state
-satisfying `ChainPosInv2`.  And `ChainPosInv2` is available along the whole run:
+satisfying `ChainPositionInvariantWithShiftPhase`.  And `ChainPositionInvariantWithShiftPhase` is available along the whole run:
 
 * at the origin, `InvLPC` forces an idle chain
   (`CloseoutShiftLocalFree.chainIdle_of_invS`) and
-  `CloseoutPackRun41.chainPosInv2_of_idle` turns that into `ChainPosInv2`;
+  `CloseoutPackRun41.chainPosInv2_of_idle` turns that into `ChainPositionInvariantWithShiftPhase`;
 * along the run, `CloseoutShiftS2.chainPosInv2_steps` transports it, on the
-  four supplies `H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2`
+  four supplies `H_BackgroundLandingChainLedger` / `H_MatchLandingChainLedger` / `H_ShiftEntryChainLedger` / `H_ShiftExitRadiusLedger`
   which `final36` **already derives from `hpack`** (`h_bgP2_of_chainPack`,
   `h_matchP2_of_target`, `h_shiftEntry2_of_target`,
   `h_shiftDoneRad2_of_chainPack`).
@@ -154,17 +154,17 @@ theorem bigPack2MG7W''_tick_M {w : List (Fin 2)}
 
 
 /-- **`PackRunRMW` with no `H_marksEntry'` either.**  Every `MarksInv'` the
-proof needs is `ChainPack.marks` at the state in question, and `ChainPosInv2` —
+proof needs is `ChainPack.marks` at the state in question, and `ChainPositionInvariantWithShiftPhase` —
 the premise of `hpk` — travels from the `InvLPC` origin (idle chain) along the
 run by `chainPosInv2_steps`. -/
 theorem packRunR_MWP {w : List (Fin 2)}
     (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
       ScanNR x → ShiftPal centre place entry q first w x.vm)
-    (hbg : H_bgP2 centre place entry q first w)
-    (hmatch : H_matchP2 centre place entry q first w)
-    (hentry : H_shiftEntry2 centre place entry q first w)
-    (hsd : H_shiftDoneRad2 centre place entry q first w)
-    (hpk : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack q first w c s)
+    (hbg : H_BackgroundLandingChainLedger centre place entry q first w)
+    (hmatch : H_MatchLandingChainLedger centre place entry q first w)
+    (hentry : H_ShiftEntryChainLedger centre place entry q first w)
+    (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
+    (hpk : ∀ (c : Control) (s : GalilVM), ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
     :
     PackRunRMW centre place entry q first w := by
   intro c r hIC M hm1 hmle j x hjx k y hx h hry hyb
@@ -176,7 +176,7 @@ theorem packRunR_MWP {w : List (Fin 2)}
     ⟨coupled_of_invLPC hIC, front_of_invLPC hIC, copyPack_of_invLPC hIC⟩
   have hauxx : AuxPack x.ctl x.vm :=
     auxPack_steps centre place entry q first (x := ⟨c, r⟩) hlv0 haux0 hjx
-  have hpos0 : ChainPosInv2 w c r :=
+  have hpos0 : ChainPositionInvariantWithShiftPhase w c r :=
     chainPosInv2_of_idle (chainIdle_of_invS hIC.1.1.1.1)
   have hpi : ∀ (n' : ℕ) (z : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 n' ⟨c, r⟩ z →

@@ -108,7 +108,7 @@ origin: `OriginShift` (the post-shift round start) and `H_freshShift` (the
 first round). -/
 theorem roundBundle_tick_O {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s t : GalilVM}
     (hB : PalPeg.CloseoutRoundBundle.RoundBundle w c s)
-    (hinv : ChainPosInv2 w c s) (hci : c.mode = Mode.shift → CopyIdle s)
+    (hinv : ChainPositionInvariantWithShiftPhase w c s) (hci : c.mode = Mode.shift → CopyIdle s)
     (hOS : OriginShift w c s)
     (hF : H_freshShift w s t)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) delay ⟨c, s⟩ ⟨c', t⟩) :

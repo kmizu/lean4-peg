@@ -16,6 +16,65 @@
 
 
 
+
+## 2026-09-19 n94: 目標 `PalInPeg.unconditional` を作り、残り 7 義務を `axiom` として明示
+
+**全体 build 成功（EXIT=0・エラー 0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 7 義務を `axiom` として持つ。無条件 PAL は未完。
+計画書 §10.5（前提ゼロ）は未達。**
+
+### コウタの提案（そのまま採用）
+
+* 「unconditional はつくっておいて、前提の and でうめりゃいいのでは。その前提を
+  いったん axiom にしといて外していく」
+* 「トップダウンにまずそれを書いておいてビルド通すために前提をいったん axiom に
+  しておく。で、検証したい前提ごとに axiom をはずして全部外せたら証明完了」
+
+### 実装
+
+`PalPeg/PalInPegUnconditional.lean`:
+
+```
+theorem unconditional : RecognizedByTotalPEG PAL :=
+  given_globalScanLandings 0 0 0
+    (obligation_shiftPalAtScanStates 0 0 0) (obligation_marksEntry 0 0 0)
+    (obligation_cycleOracle 0 0 0) (obligation_localRealization 0 0 0)
+    (obligation_backgroundLandingPayload 0 0 0) (obligation_matchLandingPayload 0 0 0)
+    (obligation_shiftExitPayload 0 0 0)
+```
+
+`#print axioms unconditional` がそのまま TODO リストになる:
+
+```
+[propext, Classical.choice, Quot.sound,
+ obligation_backgroundLandingPayload, obligation_cycleOracle,
+ obligation_localRealization, obligation_marksEntry,
+ obligation_matchLandingPayload, obligation_shiftExitPayload,
+ obligation_shiftPalAtScanStates]
+```
+
+### ラチェット（`PalPeg/Axioms.lean`）
+
+`#guard_msgs in #print axioms PalPeg.PalInPeg.unconditional` を置いた。
+
+* 義務を 1 個証明して `axiom` を外すと **guard が壊れて更新を強制される**（前進の記録）
+* うっかり新しい穴を開けても guard が壊れる（気づける）
+* **guard が標準 3 公理だけになったとき §10.5 達成**が機械検査される
+
+これで「前提が何本か」を数える曖昧さが消えた。**進捗は `unconditional` の公理リストの
+長さ**という 1 つの機械検査可能な数になった。
+
+### 報告の仕方を変える
+
+これまでの「標準公理のみ」は既存の旗艦定理についての主張として維持するが、
+目標定理については **「残り N 義務を axiom として明示」** と書く。
+`unconditional` があることを「無条件 PAL 完成」と誤読させないこと。
+
+### ルートは 4 本
+
+`PalPeg.PalInPeg`（目標と部分結果）/ `PalPeg.Canonical`（主線の索引）/
+`PalPeg.Workbench`（未配線の部品）/ `PalPeg.Axioms`（監査とラチェット）。
+
 ## 2026-09-19 n93: `CentreEq` の遷移保存を 8 本 landing — rewind 相だけが heads を動かす
 
 **全体 build 成功（EXIT=0・エラー 0・sorryAx 0）・標準公理のみ・無条件 PAL は未完。

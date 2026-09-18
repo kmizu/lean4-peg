@@ -2,18 +2,18 @@ import PalPeg.CloseoutVerSide
 import PalPeg.ShiftLocalRun
 
 /-!
-# `LandingObligationsAlongRun` — `ChainPosInv2` の 4 分岐義務を run 形にする
+# `LandingObligationsAlongRun` — `ChainPositionInvariantWithShiftPhase` の 4 分岐義務を run 形にする
 
 ## なぜ run 形でなければならないか
 
-`H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2` は
+`H_BackgroundLandingChainLedger` / `H_MatchLandingChainLedger` / `H_ShiftEntryChainLedger` / `H_ShiftExitRadiusLedger` は
 `∀ (c : Control) (s : GalilVM), …` で**任意の状態**を量化している。ところが
 それらを放電する材料は run に沿ってしか存在しない：
 
-* `LPackM2.shiftGeom`（`CloseoutPackRun23:103`）— `H_shiftDoneRad2` の `canRight`/
+* `LPackM2.shiftGeom`（`CloseoutPackRun23:103`）— `H_ShiftExitRadiusLedger` の `canRight`/
   半径上界はここから出る（`CloseoutShiftDoneP.canR_of_shiftGeom` /
   `radEq_of_shiftGeom_done`）。`LPackM2` は run の各点に `IPackMW.m2` としてある。
-* chain 側台帳 `ChainPos`（Run41、Run38 の `SrcPos` を吸収）— `chainPos_step` /
+* chain 側台帳 `ChainPositionLedger`（Run41、Run38 の `SrcPos` を吸収）— `chainPos_step` /
   `chainPos_matched` で run を運ばれる。
 * 入力供給（verifier が入力を表現する）— `CloseoutVerSide.VerRun` が run 形で束ねている。
 
@@ -24,7 +24,7 @@ import PalPeg.ShiftLocalRun
 ## このファイル
 
 `CloseoutPackRun41.LandingObligationsAt`（状態局所の束、`chainPosInv2_tick_of_landingObligationsAt` が消費する）を
-run に沿って量化した `LandingObligationsAlongRun` を定義し、`ChainPosInv2` を run に沿って運ぶ。
+run に沿って量化した `LandingObligationsAlongRun` を定義し、`ChainPositionInvariantWithShiftPhase` を run に沿って運ぶ。
 `landingObligationsAlongRun_of_globalHypotheses` があるので、global 4 本を持っている呼び出し側はそのまま乗る
 （**逆は無い** — run 形のほうが真に弱い）。
 
@@ -79,20 +79,20 @@ def LandingObligationsAlongRun (w : List (Fin 2)) (x : State GalilVM) : Prop :=
 
 /-- global 4 本は run 形を含意する（**逆は無い** — run 形のほうが真に弱い）。 -/
 theorem landingObligationsAlongRun_of_globalHypotheses {w : List (Fin 2)}
-    (hbg : H_bgP2 centre place entry q first w) (hmatch : H_matchP2 centre place entry q first w)
-    (hentry : H_shiftEntry2 centre place entry q first w)
-    (hsd : H_shiftDoneRad2 centre place entry q first w) (x : State GalilVM) :
+    (hbg : H_BackgroundLandingChainLedger centre place entry q first w) (hmatch : H_MatchLandingChainLedger centre place entry q first w)
+    (hentry : H_ShiftEntryChainLedger centre place entry q first w)
+    (hsd : H_ShiftExitRadiusLedger centre place entry q first w) (x : State GalilVM) :
     LandingObligationsAlongRun centre place entry q first w x :=
   fun _ z _ => landingObligationsAt_of_globalHypotheses centre place entry q first hbg hmatch hentry hsd z.ctl z.vm
 
-/-- **`ChainPosInv2` を run に沿って運ぶ（run 形の義務で）。**  再指標化は
+/-- **`ChainPositionInvariantWithShiftPhase` を run に沿って運ぶ（run 形の義務で）。**  再指標化は
 `Steps.succ ht`（`CloseoutBundleRun.roundBundle_steps_run` と同じ形）。 -/
 theorem chainPosInv2_alongRun {w : List (Fin 2)} :
     ∀ {n : ℕ} {x y : State GalilVM},
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y →
-      ChainPosInv2 w x.ctl x.vm →
+      ChainPositionInvariantWithShiftPhase w x.ctl x.vm →
       LandingObligationsAlongRun centre place entry q first w x →
-      ChainPosInv2 w y.ctl y.vm := by
+      ChainPositionInvariantWithShiftPhase w y.ctl y.vm := by
   intro n x y h
   induction h with
   | zero x => intro hx _; exact hx
@@ -107,7 +107,7 @@ theorem chainPosInv2_alongRun {w : List (Fin 2)} :
 /-- **`ShiftLocalS` along the run**: `CloseoutVerSide.shiftLocalS_of_verRun` の
 4 つの global 義務を `LandingObligationsAlongRun` に置き換えたもの。 -/
 theorem shiftLocalS_of_landingObligationsAlongRun {w : List (Fin 2)}
-    {n : ℕ} {x y : State GalilVM} (hx : ChainPosInv2 w x.ctl x.vm)
+    {n : ℕ} {x y : State GalilVM} (hx : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y)
     (hLandingObligations : LandingObligationsAlongRun centre place entry q first w x)
     (hVerRun : VerRun centre place entry q first w x)
@@ -130,7 +130,7 @@ global 4 本を `LandingObligationsAlongRun` に置き換え、3 段の本体は
 theorem needBound_of_landingObligationsAlongRun {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hPreTrace : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hChainPosInv2AtOrigin : ChainPosInv2 w (st 0).ctl (st 0).vm)
+    (hChainPosInv2AtOrigin : ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hLandingObligations : LandingObligationsAlongRun centre place entry q first w (st 0))
     (hVerRun : VerRun centre place entry q first w (st 0)) :
     ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
@@ -167,7 +167,7 @@ theorem shiftExitObligation_of_radLedger {w : List (Fin 2)} {c : Control} {s : G
       GalilScaffoldChainVerifier.canRight s.right) :
     c.mode = Mode.shift →
       ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s →
-      ChainPosInv2 w c s → s.chain ≠ ChainVM.idle →
+      ChainPositionInvariantWithShiftPhase w c s → s.chain ≠ ChainVM.idle →
       GalilScaffoldChainVerifier.canRight s.right ∧
         ∀ rad : ℕ, ScanInvariant w (position s.center) rad s.left s.right →
           value s.radius ≤ (rad : ℤ) :=
@@ -187,19 +187,19 @@ trace の鎖しか渡さないので、これで十分。 -/
 /-- **(NAMED, trace 形) 4 分岐義務の残り**: `shiftDone` の半径台帳は `RadLedger` から
 出るので（§3）、残るのは `canRight` だけ。 -/
 structure LandingObligationsAtSansRadiusLedger (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
-  bg : ∀ t : GalilVM, c.mode = Mode.scan → ChainPosInv2 w c s →
+  bg : ∀ t : GalilVM, c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
     (galilFrameS (PofC centre place entry w) q first).background s t →
-    ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → PosPayload2 w t
-  matchLand : ∀ (s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPosInv2 w c s →
+    ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t
+  matchLand : ∀ (s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
     (galilFrameS (PofC centre place entry w) q first).compare s s' →
     (galilFrameS (PofC centre place entry w) q first).matched s' →
     (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
     ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
-    t.chain ≠ ChainVM.idle → PosPayload2 w t
-  entryLand : ∀ s' t : GalilVM, c.mode = Mode.scan → ChainPosInv2 w c s →
+    t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t
+  entryLand : ∀ s' t : GalilVM, c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
     (galilFrameS (PofC centre place entry w) q first).compare s s' →
     ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
-    shiftGuardVM s' → beginShiftVM' s' t → ShiftPos2 t
+    shiftGuardVM s' → beginShiftVM' s' t → ShiftPhaseChainLedger t
   shiftCan : c.mode = Mode.shift →
     ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s →
     GalilScaffoldChainVerifier.canRight s.right
@@ -212,13 +212,13 @@ theorem landingObligationsAt_of_sansRadiusLedger {w : List (Fin 2)} {c : Control
   ⟨hres.bg, hres.matchLand, hres.entryLand,
     shiftExitObligation_of_radLedger centre place entry q first hRadLedger hres.shiftCan⟩
 
-/-- **`ChainPosInv2` along the trace** (induction on the index, the shape
+/-- **`ChainPositionInvariantWithShiftPhase` along the trace** (induction on the index, the shape
 `CloseoutPackRun49.lpackM3_steps` uses). -/
 theorem chainPosInv2_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hPreTrace : PreTrace centre place entry q first w st Tc)
     (hLandingObligations : ∀ i, i ≤ Tc w.length → LandingObligationsAt centre place entry q first w (st i).ctl (st i).vm)
-    (hx : ChainPosInv2 w (st 0).ctl (st 0).vm) :
-    ∀ i, i ≤ Tc w.length → ChainPosInv2 w (st i).ctl (st i).vm := by
+    (hx : ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm) :
+    ∀ i, i ≤ Tc w.length → ChainPositionInvariantWithShiftPhase w (st i).ctl (st i).vm := by
   intro i
   induction i with
   | zero => intro _; exact hx
@@ -237,7 +237,7 @@ def LandingObligationsAlongTraceSansRadiusLedger (w : List (Fin 2)) (st : ℕ �
 theorem needBound_of_landingObligationsSansRadiusLedger {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hPreTrace : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hChainPosInv2AtOrigin : ChainPosInv2 w (st 0).ctl (st 0).vm)
+    (hChainPosInv2AtOrigin : ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hres : LandingObligationsAlongTraceSansRadiusLedger centre place entry q first w st Tc)
     (hVerRun : VerRun centre place entry q first w (st 0)) :
     ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
@@ -717,19 +717,19 @@ theorem radiusExact_after_background {w : List (Fin 2)} {s t : GalilVM}
 
 /-- **(NAMED, trace 形) 残り 3 場。** -/
 structure ScanLandingObligationsAt (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
-  bg : ∀ t : GalilVM, c.mode = Mode.scan → ChainPosInv2 w c s →
+  bg : ∀ t : GalilVM, c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
     (galilFrameS (PofC centre place entry w) q first).background s t →
-    ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → PosPayload2 w t
-  matchLand : ∀ (s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPosInv2 w c s →
+    ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t
+  matchLand : ∀ (s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
     (galilFrameS (PofC centre place entry w) q first).compare s s' →
     (galilFrameS (PofC centre place entry w) q first).matched s' →
     (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
     ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
-    t.chain ≠ ChainVM.idle → PosPayload2 w t
-  entryLand : ∀ s' t : GalilVM, c.mode = Mode.scan → ChainPosInv2 w c s →
+    t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t
+  entryLand : ∀ s' t : GalilVM, c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
     (galilFrameS (PofC centre place entry w) q first).compare s s' →
     ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
-    shiftGuardVM s' → beginShiftVM' s' t → ShiftPos2 t
+    shiftGuardVM s' → beginShiftVM' s' t → ShiftPhaseChainLedger t
 
 /-- **(NAMED, trace 形) 残り 3 場を trace の各点で。** -/
 def ScanLandingObligationsAlongTrace (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ) : Prop :=
@@ -740,7 +740,7 @@ def ScanLandingObligationsAlongTrace (w : List (Fin 2)) (st : ℕ → State Gali
 theorem needBound_of_scanLandingObligations {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hPreTrace : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hChainPosInv2AtOrigin : ChainPosInv2 w (st 0).ctl (st 0).vm)
+    (hChainPosInv2AtOrigin : ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hres : ScanLandingObligationsAlongTrace centre place entry q first w st Tc)
     (hVerRun : VerRun centre place entry q first w (st 0)) :
     ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
@@ -765,26 +765,26 @@ theorem needBound_of_scanLandingObligations {w : List (Fin 2)} (hw : 0 < w.lengt
 `hVerifierRep` が任意の scan 状態で verifier の入力表現を要求するので偽の疑いが強い。
 そこで状態局所版を置く。本体は Run48 の 18 行と同じ論法（`backgroundS_fields` で
 `left`/`right`/`center`/`radius` が保存、`backgroundS_chainTick` で chain 効果が
-素の `ChainStep`、`chainPos_step_of_supply` で `ChainPos` が運ばれる）。 -/
+素の `ChainStep`、`chainPos_step_of_supply` で `ChainPositionLedger` が運ばれる）。 -/
 
 /-- **`ScanLandingObligationsAt.bg` を 4 つの局所供給に分解する。** -/
 theorem backgroundLanding_of_supply {w : List (Fin 2)} {c : Control} {s : GalilVM}
-    (hRightHeadRep : c.mode = Mode.scan → ChainPosInv2 w c s →
+    (hRightHeadRep : c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
       GalilScaffoldInputTrace.Represents s.right.head w ∧ s.right.head.focus ≠ none)
-    (hVerifierRep : c.mode = Mode.scan → ChainPosInv2 w c s → VerRep w s.chain)
-    (hLagCan : c.mode = Mode.scan → ChainPosInv2 w c s →
+    (hVerifierRep : c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s → VerRep w s.chain)
+    (hLagCan : c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
       PalPeg.CloseoutPackRun48.LagCan s.chain)
-    (hstart : ∀ t : GalilVM, c.mode = Mode.scan → ChainPosInv2 w c s →
+    (hstart : ∀ t : GalilVM, c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
       s.chain = ChainVM.idle →
       (galilFrameS (PofC centre place entry w) q first).background s t →
-      ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → PosPayload2 w t) :
-    ∀ t : GalilVM, c.mode = Mode.scan → ChainPosInv2 w c s →
+      ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t) :
+    ∀ t : GalilVM, c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
       (galilFrameS (PofC centre place entry w) q first).background s t →
-      ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → PosPayload2 w t := by
+      ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t := by
   intro t hm hx hb hs hni
   by_cases hIndexLeTc : s.chain = ChainVM.idle
   · exact hstart t hm hx hIndexLeTc hb hs hni
-  · have P : PosPayload2 w s := hx.payload hs hIndexLeTc
+  · have P : ScanPositionPayloadWithChainLedger w s := hx.payload hs hIndexLeTc
     obtain ⟨hl, hr, -, hcen, -, hrad, -⟩ :=
       backgroundS_fields (PofC centre place entry w) q first hb
     have hstep : ChainStep s.chain t.chain := by

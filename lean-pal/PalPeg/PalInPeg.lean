@@ -26,7 +26,7 @@ import PalPeg.CloseoutFinalPack
 ## 前提が最少で、反証済みの前提を含まないもの
 
 **`PalInPeg.given_globalScanLandings`**（`hSP` `hme` `hor` `hC` ＋ global な
-`H_bgP` / `H_matchP` / `H_shiftDoneP`）。
+`H_BackgroundLandingPayload` / `H_MatchLandingPayload` / `H_ShiftExitPayload`）。
 
 ## 偽の前提を取っているもの（`_FALSE_HYP`）
 
@@ -50,8 +50,8 @@ global 形の landing 義務は原理的に放電できない（材料が run �
 alias given_globalScanLandings :=
   PalPeg.CloseoutFinalFour.given_globalScanLandings
 
-/-- 一代前。`H_fourOther` を余分に取る。`H_fourOther` は
-`CloseoutPackRun40.four_of_other'` で消えた（`ChainPosInv'` に載せ替えるだけ）。 -/
+/-- 一代前。`H_FourSemiperiodsLeDistance` を余分に取る。`H_FourSemiperiodsLeDistance` は
+`CloseoutPackRun40.four_of_other'` で消えた（`ChainPositionInvariantExactCoupling` に載せ替えるだけ）。 -/
 alias given_globalScanLandings_and_fourOther :=
   PalPeg.CloseoutFinalW.given_globalScanLandings_and_fourOther
 
@@ -85,7 +85,7 @@ alias given_needBound := PalPeg.CloseoutFinalFour.given_needBound
 alias given_consumeAvailEverywhere_FALSE_HYP :=
   PalPeg.CloseoutFinalS2.given_consumeAvailEverywhere_FALSE_HYP
 
-/-- **偽**: `chainPackAtAnyState`（`ChainPosInv2 → ChainPack` を任意状態で）。 -/
+/-- **偽**: `chainPackAtAnyState`（`ChainPositionInvariantWithShiftPhase → ChainPack` を任意状態で）。 -/
 alias given_chainPackAtAnyState_FALSE_HYP :=
   PalPeg.CloseoutFinalW4.given_chainPackAtAnyState_FALSE_HYP
 

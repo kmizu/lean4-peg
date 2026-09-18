@@ -16,7 +16,7 @@ belonged — `ChainPack`'s own docstring says the bundle "is established along t
 run (where the bound comes from)".
 
 **What this fixes and what it does not.**  It removes the one *demonstrated*
-contradiction: `∀ w c s, ChainPosInv2 w c s → ChainSideR q first w c s` has no
+contradiction: `∀ w c s, ChainPositionInvariantWithShiftPhase w c s → ChainSideR q first w c s` has no
 one-line counterexample, whereas the `ChainSide` version had one for every word
 of length ≤ 1.  It does **not** make the hypothesis true: `ChainSideR` still
 asserts run facts (`centreCanR`, `marks`, `cpack`, `wpack`, the centre ledger)
@@ -56,7 +56,7 @@ structure ChainSideR (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   lagCan : c.mode = Mode.scan → LagCan s.chain
   backLag : ∀ (v : GalilScaffoldChainPeriod.Tape) (h lag margin : Counter) (ver : PlaceHead),
     s.chain = .back v h lag margin ver → Canonical lag ∧ 0 ≤ value lag
-  replayPay : c.replaying = true → s.chain ≠ ChainVM.idle → PosPayload2 w s
+  replayPay : c.replaying = true → s.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w s
   radNext : ∀ rad : ℕ,
     ScanInvariant w (position s.center) rad (GalilScaffoldInputHead.left s.left) (right s.right) →
       value s.radius + 1 ≤ (rad : ℤ)
@@ -108,7 +108,7 @@ theorem chainSide_of_chainSideR {w : List (Fin 2)} {c : Control} {s : GalilVM}
 budget.**  `CloseoutChainPack.chainPack_of_lpackM2` with `scanBound` no longer
 an assertion of the residue. -/
 theorem chainPack_of_chainSideR {w : List (Fin 2)} {c : Control} {s : GalilVM}
-    (hinv : ChainPosInv2 w c s) (hP : PalPeg.CloseoutPackRun23.LPackM2 w c s)
+    (hinv : ChainPositionInvariantWithShiftPhase w c s) (hP : PalPeg.CloseoutPackRun23.LPackM2 w c s)
     (hSP : PalPeg.GalilTrailSane.SanePack c s)
     (hR : ChainSideR q first w c s)
     (hbud : c.mode = Mode.scan →

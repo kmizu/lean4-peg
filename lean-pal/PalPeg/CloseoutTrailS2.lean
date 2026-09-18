@@ -2,16 +2,16 @@ import PalPeg.CloseoutShiftS2
 import PalPeg.CloseoutOracleW
 
 /-!
-# The trail bridge over `ChainPosInv2`: `H_fourOther` gone
+# The trail bridge over `ChainPositionInvariantWithShiftPhase`: `H_FourSemiperiodsLeDistance` gone
 
 `CloseoutShiftS`'s chain (`radPack_ptS` → `trailF_ptS`) runs on
-`CloseoutPackRun34.ChainPosInv` and therefore carries `H_fourOther`.
+`CloseoutPackRun34.ChainPositionInvariant` and therefore carries `H_FourSemiperiodsLeDistance`.
 `CloseoutShiftS2.shiftLocalS_of_run2` produces the same `ShiftLocalS` from
-`CloseoutPackRun41.ChainPosInv2`, whose `watchShiftS_of_chainPosInv2` needs
-**no** `H_fourOther` — the target's verifier pair comes from `chainPos_step`.
+`CloseoutPackRun41.ChainPositionInvariantWithShiftPhase`, whose `watchShiftS_of_chainPosInv2` needs
+**no** `H_FourSemiperiodsLeDistance` — the target's verifier pair comes from `chainPos_step`.
 
-Its branch hypotheses (`H_bgP2`, `H_matchP2`, `H_shiftEntry2`,
-`H_shiftDoneRad2`) are all discharged in `CloseoutPackRun48`, modulo
+Its branch hypotheses (`H_BackgroundLandingChainLedger`, `H_MatchLandingChainLedger`, `H_ShiftEntryChainLedger`,
+`H_ShiftExitRadiusLedger`) are all discharged in `CloseoutPackRun48`, modulo
 `ConsumeAvail` — a `take`/`immediate` consume moves the verifier, and `canRight`
 of the *moved* verifier is an input-supply fact, not a consequence of the source
 (`CloseoutPackRun41` §2).
@@ -50,10 +50,10 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 
 theorem radPack_ptS2 {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM}
     {Tc : ℕ → ℕ} (hP : PreTrace centre place entry q first w st Tc)
-    (hbg : H_bgP2 centre place entry q first w) (hmatch : H_matchP2 centre place entry q first w)
-    (hentry : H_shiftEntry2 centre place entry q first w)
-    (hsd : H_shiftDoneRad2 centre place entry q first w)
-    (hpos0 : ChainPosInv2 w (st 0).ctl (st 0).vm)
+    (hbg : H_BackgroundLandingChainLedger centre place entry q first w) (hmatch : H_MatchLandingChainLedger centre place entry q first w)
+    (hentry : H_ShiftEntryChainLedger centre place entry q first w)
+    (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
+    (hpos0 : ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hreach : ∀ i, i ≤ Tc w.length →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 i (st 0) (st i))
     (hLP : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
@@ -84,10 +84,10 @@ theorem radPack_ptS2 {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State 
 
 theorem trailF_ptS2 {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM}
     {Tc : ℕ → ℕ} (hP : PreTrace centre place entry q first w st Tc)
-    (hbg : H_bgP2 centre place entry q first w) (hmatch : H_matchP2 centre place entry q first w)
-    (hentry : H_shiftEntry2 centre place entry q first w)
-    (hsd : H_shiftDoneRad2 centre place entry q first w)
-    (hpos0 : ChainPosInv2 w (st 0).ctl (st 0).vm)
+    (hbg : H_BackgroundLandingChainLedger centre place entry q first w) (hmatch : H_MatchLandingChainLedger centre place entry q first w)
+    (hentry : H_ShiftEntryChainLedger centre place entry q first w)
+    (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
+    (hpos0 : ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hreach : ∀ i, i ≤ Tc w.length →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 i (st 0) (st i))
     (hLP : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
@@ -107,10 +107,10 @@ theorem trailF_ptS2 {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State G
 theorem needIMW'_le_W2 {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hP : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hbg : H_bgP2 centre place entry q first w) (hmatch : H_matchP2 centre place entry q first w)
-    (hentry : H_shiftEntry2 centre place entry q first w)
-    (hsd : H_shiftDoneRad2 centre place entry q first w)
-    (hpos0 : ChainPosInv2 w (st 0).ctl (st 0).vm)
+    (hbg : H_BackgroundLandingChainLedger centre place entry q first w) (hmatch : H_MatchLandingChainLedger centre place entry q first w)
+    (hentry : H_ShiftEntryChainLedger centre place entry q first w)
+    (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
+    (hpos0 : ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hav : ∀ i, i ≤ Tc w.length → ConsumeAvail (st i).vm.chain) :
     ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
       PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 := by

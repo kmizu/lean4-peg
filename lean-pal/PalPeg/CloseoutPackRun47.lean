@@ -6,7 +6,7 @@ import PalPeg.CloseoutPackRun44
 
 `CloseoutPackRun44` closed `ConsumeAvail` modulo the named side condition
 `LagPos` (`0 < value wch.lag` for a watching chain) and proposed to *home* it by
-strengthening the `watch` clause of `CloseoutPackRun41.ChainPos`.  **That fix
+strengthening the `watch` clause of `CloseoutPackRun41.ChainPositionLedger`.  **That fix
 cannot work.**  This file shows why, with two structural obstructions, and then
 gives the repair.
 
@@ -24,7 +24,7 @@ gives the repair.
 * §3 **The repair.**  `LagPos` is replaced by the *true* fact
   `LagNonneg` (`0 ≤ value lag`) plus supply **one cell ahead of the scan
   front** — which is not a fact of the source state but *is* available at the
-  landing: `H_matchP2`'s target is measured at `right s.right`, whose
+  landing: `H_MatchLandingChainLedger`'s target is measured at `right s.right`, whose
   `canR` field is exactly `position (right s.right) ≠ 2·|w|`.
   `consumeAvail_of_next_supply` proves `ConsumeAvail` from it.
 * §4 `bgStartP2_of_centre` reduces `CloseoutPackRun44.BgStartP2` to a single
@@ -58,7 +58,7 @@ theorem caught_lag (w : GalilScaffoldChainWatch.State) :
 
 /-- **Obstruction A.**  A `take` is enabled at `value lag = 1` (its guard is
 `positive lag`), it produces a `.watch` target, and that target's lag is `0`.
-So no `0 < value lag` strengthening of `ChainPos`'s `watch` clause survives
+So no `0 < value lag` strengthening of `ChainPositionLedger`'s `watch` clause survives
 `chainPos_step`. -/
 theorem take_lag_vanishes {w : GalilScaffoldChainWatch.State}
     (hcan : Canonical w.lag) (h1 : value w.lag = 1) (hg : GalilScaffoldChainWatch.Good w) :
@@ -85,7 +85,7 @@ theorem immediate_needs_zero_lag {w w' : GalilScaffoldChainWatch.State}
   | queued hz => exact absurd rfl hne
   | immediate hz hg => exact (zero_iff w.lag hcan).1 hz
 
-/-- The contrapositive form actually used: a strengthened `ChainPos` (one
+/-- The contrapositive form actually used: a strengthened `ChainPositionLedger` (one
 carrying `0 < value lag` in its `watch` clause) is inconsistent with the
 enabledness of an `immediate` consume. -/
 theorem lagPos_contradicts_immediate {w w' : GalilScaffoldChainWatch.State}
@@ -108,7 +108,7 @@ def LagNonneg (z : ChainVM) : Prop :=
 /-- **`ConsumeAvail` from supply one cell past the scan front.**  `R` is the
 source right head, `R'` any represented, present head with
 `position R' = position R + 1` and `canRight R'` — at a matched landing this is
-the *target's* right head and its `PosPayload2.canR`.  With the Run41 ledger
+the *target's* right head and its `ScanPositionPayloadWithChainLedger.canR`.  With the Run41 ledger
 `position ver + lag = position R` and `0 ≤ lag`, the moved verifier sits at
 `position ver + 1 ≤ position R + 1 = position R' < 2·|w|`. -/
 theorem consumeAvail_of_next_supply {w : List (Fin 2)} {z : ChainVM} {R R' : PlaceHead}
@@ -117,7 +117,7 @@ theorem consumeAvail_of_next_supply {w : List (Fin 2)} {z : ChainVM} {R R' : Pla
     (hrepV : ∀ wch : GalilScaffoldChainWatch.State, z = .watch wch →
       GalilScaffoldInputTrace.Represents wch.machine.verifier.head w ∧
         wch.machine.verifier.head.focus ≠ none)
-    (hlag : LagNonneg z) (hP : ChainPos z (position R)) : ConsumeAvail z := by
+    (hlag : LagNonneg z) (hP : ChainPositionLedger z (position R)) : ConsumeAvail z := by
   intro wch hw
   obtain ⟨hcv, hsv, hpv⟩ := hP.watch wch hw
   obtain ⟨hrv, hfv⟩ := hrepV wch hw
@@ -145,7 +145,7 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
   (entry q : ℕ) (first : Fin 9)
 
 /-- **(NAMED) `CentreLedger`.**  The chain-start shape puts the *centre* head in
-the verifier slot and `radius` in the lag slot, so `ChainPos` at the new `copy`
+the verifier slot and `radius` in the lag slot, so `ChainPositionLedger` at the new `copy`
 chain is exactly this.  `LPackM2.scanGeomR` does **not** supply it: its
 `ScanInvariant` knows `position right = position center + rad` for some `rad`
 with only `value radius ≤ rad`, and nothing at all about `canRight`/`Sane` of
@@ -161,12 +161,12 @@ the target chain is either idle (excluded by `hni`) or
 `chainStart answer (P.centre s) (P.place s) s.center s.radius`, a `copy` chain
 whose verifier is `s.center` and whose lag is `s.radius`. -/
 theorem bgStartP2_of_centre {w : List (Fin 2)}
-    (hav : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPosInv2 w c s →
+    (hav : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
       canRight s.right)
-    (hrad : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPosInv2 w c s →
+    (hrad : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
       ∀ rad : ℕ, ScanInvariant w (position s.center) rad s.left s.right →
         value s.radius ≤ (rad : ℤ))
-    (hcen : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPosInv2 w c s →
+    (hcen : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
       CentreLedger s) :
     BgStartP2 centre place entry q first w := by
   intro c s t hm hx hi hb hs hni

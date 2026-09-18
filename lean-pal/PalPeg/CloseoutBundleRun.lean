@@ -7,12 +7,12 @@ import PalPeg.CloseoutReadsOrigin
 its side inputs are quantified over **every** state:
 
 ```
-(hinv : ∀ z : State GalilVM, ChainPosInv2 w z.ctl z.vm)
+(hinv : ∀ z : State GalilVM, ChainPositionInvariantWithShiftPhase w z.ctl z.vm)
 (hci  : ∀ z : State GalilVM, CopyIdle z.vm)
 ```
 
 Those are the same defect `CloseoutPackRefute` found in `hpack`: `CopyIdle` and
-`ChainPosInv2` are properties of the states a run reaches, not of all states, so
+`ChainPositionInvariantWithShiftPhase` are properties of the states a run reaches, not of all states, so
 as written the hypotheses are unusable (and, for `CopyIdle`, false — a state
 mid-copy has `remainingPos`).
 
@@ -69,7 +69,7 @@ theorem roundBundle_steps_run {w : List (Fin 2)} {delay : ℕ} :
       RoundBundle w x.ctl x.vm →
       (∀ (m : ℕ) (z : State GalilVM),
         Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
-        ChainPosInv2 w z.ctl z.vm ∧ (z.ctl.mode = Mode.shift → CopyIdle z.vm) ∧
+        ChainPositionInvariantWithShiftPhase w z.ctl z.vm ∧ (z.ctl.mode = Mode.shift → CopyIdle z.vm) ∧
           H_readsShift w z.ctl z.vm) →
       (∀ (m : ℕ) (z z' : State GalilVM),
         Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
@@ -98,7 +98,7 @@ theorem shiftPal_of_run {w : List (Fin 2)} {delay n : ℕ} {x y : State GalilVM}
     (h : Steps (galilFrameS (PofC centre place entry w) q first) delay n x y)
     (hsup : ∀ (m : ℕ) (z : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
-      ChainPosInv2 w z.ctl z.vm ∧ (z.ctl.mode = Mode.shift → CopyIdle z.vm) ∧
+      ChainPositionInvariantWithShiftPhase w z.ctl z.vm ∧ (z.ctl.mode = Mode.shift → CopyIdle z.vm) ∧
           H_readsShift w z.ctl z.vm)
     (hF : ∀ (m : ℕ) (z z' : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
@@ -128,7 +128,7 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
   (entry q : ℕ) (first : Fin 9)
 
 /-- **`ShiftPal` from the run, with the `CopyIdle` residue discharged.**  Three
-run-form inputs are left: `ChainPosInv2` (which the four branch supplies carry),
+run-form inputs are left: `ChainPositionInvariantWithShiftPhase` (which the four branch supplies carry),
 `H_readsShift` (`CloseoutReadsOrigin.h_readsShift_of_originShift`) and
 `H_freshShift` (`GalilScaffoldTopFirstRound.first_round`). -/
 theorem shiftPal_of_run_aux {w : List (Fin 2)} {delay n : ℕ} {x y : State GalilVM}
@@ -139,7 +139,7 @@ theorem shiftPal_of_run_aux {w : List (Fin 2)} {delay n : ℕ} {x y : State Gali
       PalPeg.CloseoutPackRun2.AuxPack z.ctl z.vm)
     (hpos : ∀ (m : ℕ) (z : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
-      ChainPosInv2 w z.ctl z.vm)
+      ChainPositionInvariantWithShiftPhase w z.ctl z.vm)
     (hSh : ∀ (m : ℕ) (z : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) delay m x z →
       H_readsShift w z.ctl z.vm)
@@ -159,9 +159,9 @@ theorem shiftPal_of_run_aux {w : List (Fin 2)} {delay n : ℕ} {x y : State Gali
 
 end
 
-/-! ## `ChainPosInv2` is not needed either — only `BlockInv`
+/-! ## `ChainPositionInvariantWithShiftPhase` is not needed either — only `BlockInv`
 
-`roundBundle_tick` passes its `hinv : ChainPosInv2 w c s` to three places, and
+`roundBundle_tick` passes its `hinv : ChainPositionInvariantWithShiftPhase w c s` to three places, and
 every one of them uses it **only** through
 `CloseoutRoundReads.blockInv_of_chainPosInv2` — i.e. only `BlockInv s.chain`:
 
@@ -171,13 +171,13 @@ every one of them uses it **only** through
 
 And `BlockInv s.chain` is `Coupled.block` (`GalilChainCoupling:361`), a field of
 `AuxPack.coupled` — the same run-carried pack that gave `CopyIdle`.  So the
-bundle's tick needs **no** `ChainPosInv2` at all. -/
+bundle's tick needs **no** `ChainPositionInvariantWithShiftPhase` at all. -/
 
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
 
-/-- **`roundBundle_tick` with `ChainPosInv2` replaced by `BlockInv`.** -/
+/-- **`roundBundle_tick` with `ChainPositionInvariantWithShiftPhase` replaced by `BlockInv`.** -/
 theorem roundBundle_tick_B {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s t : GalilVM}
     (hB : RoundBundle w c s)
     (hblk : BlockInv s.chain)
@@ -202,7 +202,7 @@ theorem roundBundle_tick_B {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s 
   periodShape := periodShape_tick centre place entry q first hB.periodShape h
   noReplay := noReplayWatch_tick centre place entry q first hB.noReplay hB.periodShape h
 
-/-- **The bundle along a run, with `AuxPack` doing the work of `ChainPosInv2`.** -/
+/-- **The bundle along a run, with `AuxPack` doing the work of `ChainPositionInvariantWithShiftPhase`.** -/
 theorem roundBundle_steps_B {w : List (Fin 2)} {delay : ℕ} :
     ∀ {n : ℕ} {x y : State GalilVM},
       Steps (galilFrameS (PofC centre place entry w) q first) delay n x y →

@@ -4,7 +4,7 @@ import PalPeg.CloseoutPackRun23
 /-!
 # `CloseoutPackRun49`: `LPackM3` — the left pack carries the centre ledger and `LagCan`
 
-`CloseoutPackRun48` leaves `H_matchP2` / `H_shiftEntry2` standing on one
+`CloseoutPackRun48` leaves `H_MatchLandingChainLedger` / `H_ShiftEntryChainLedger` standing on one
 residue pack `MatchRes2`, and `CloseoutPackRun47` leaves `BgStartP2` standing
 on `CentreLedger`.  Both are *state* predicates, so they belong in the
 inductive left pack rather than in a per-landing leaf.  This file adds them to
@@ -438,7 +438,7 @@ structure MatchRest (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
     ChainStep s.chain y → y = .watch wch →
       GalilScaffoldInputTrace.Represents wch.machine.verifier.head w ∧
         wch.machine.verifier.head.focus ≠ none
-  replayPay : c.replaying = true → s.chain ≠ ChainVM.idle → PosPayload2 w s
+  replayPay : c.replaying = true → s.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w s
   canRNext : canRight (right s.right)
 
 /-- **`MatchRes2` from `LPackM3` plus `MatchRest`.**  Closed here: `repR`,

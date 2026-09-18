@@ -5,13 +5,13 @@ import PalPeg.CloseoutChainSideR
 # `hpack`'s use in the top theorem is two chain-side facts, not a bundle
 
 `CloseoutFinalW3.given_bootOracleRealize_and_chainPackAtAnyState` takes `hpk` (the refuted
-`∀ w c s, ChainPosInv2 w c s → ChainPack q first w c s`) and uses it in exactly
+`∀ w c s, ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s`) and uses it in exactly
 one place: `CloseoutWatchSupply.needIMW'_le_W3` → `radPack_ptS3` →
 `shiftLocalS_of_run3` → `shiftLocalS_of_chainPack`.  And that last lemma reads
 **four** fields of the bundle:
 
 ```
-hp.inv          -- ChainPosInv2, already a hypothesis of the caller
+hp.inv          -- ChainPositionInvariantWithShiftPhase, already a hypothesis of the caller
 hp.repR  hs.1   -- the right head represents `w`
 hp.repV  hs.1   -- the chain's verifier represents `w`
 hp.lagCan hs.1  -- the chain's lag counters are canonical
@@ -64,7 +64,7 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 /-- **`ShiftLocalS` from the four facts `shiftLocalS_of_chainPack` reads.**
 Verbatim that proof, with the bundle replaced by its four projections. -/
 theorem shiftLocalS_of_parts {w : List (Fin 2)} {x : State GalilVM}
-    (hinv : ChainPosInv2 w x.ctl x.vm)
+    (hinv : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
     (hrep : x.ctl.mode = Mode.scan →
       GalilScaffoldInputTrace.Represents x.vm.right.head w ∧ x.vm.right.head.focus ≠ none)
     (hver : x.ctl.mode = Mode.scan → VerRep w x.vm.chain)
@@ -92,13 +92,13 @@ def VerRun (w : List (Fin 2)) (x : State GalilVM) : Prop :=
     z.ctl.mode = Mode.scan → VerRep w z.vm.chain ∧ LagCan z.vm.chain
 
 /-- **`ShiftLocalS` along the run from `VerRun`.**  `shiftLocalS_of_run3` with
-the bundle replaced: `ChainPosInv2` still travels on the four supplies, `repR`
+the bundle replaced: `ChainPositionInvariantWithShiftPhase` still travels on the four supplies, `repR`
 comes from the run's own `LPackM`, and only `VerRun` is assumed. -/
 theorem shiftLocalS_of_verRun {w : List (Fin 2)}
-    (hbg : H_bgP2 centre place entry q first w) (hmatch : H_matchP2 centre place entry q first w)
-    (hentry : H_shiftEntry2 centre place entry q first w)
-    (hsd : H_shiftDoneRad2 centre place entry q first w)
-    {n : ℕ} {x y : State GalilVM} (hx : ChainPosInv2 w x.ctl x.vm)
+    (hbg : H_BackgroundLandingChainLedger centre place entry q first w) (hmatch : H_MatchLandingChainLedger centre place entry q first w)
+    (hentry : H_ShiftEntryChainLedger centre place entry q first w)
+    (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
+    {n : ℕ} {x y : State GalilVM} (hx : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y)
     (hV : VerRun centre place entry q first w x)
     (hLP : PalPeg.CloseoutPackRun23.LPackM2 w y.ctl y.vm) :
@@ -118,11 +118,11 @@ theorem shiftLocalS_of_verRun {w : List (Fin 2)}
 `VerRun` loses nothing and drops the contradiction. -/
 theorem verRun_of_hpack {w : List (Fin 2)} {x : State GalilVM}
     (hp : ∀ (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → PalPeg.CloseoutChainPack.ChainPack q first w c s)
-    (hbg : H_bgP2 centre place entry q first w) (hmatch : H_matchP2 centre place entry q first w)
-    (hentry : H_shiftEntry2 centre place entry q first w)
-    (hsd : H_shiftDoneRad2 centre place entry q first w)
-    (hx : ChainPosInv2 w x.ctl x.vm) :
+      ChainPositionInvariantWithShiftPhase w c s → PalPeg.CloseoutChainPack.ChainPack q first w c s)
+    (hbg : H_BackgroundLandingChainLedger centre place entry q first w) (hmatch : H_MatchLandingChainLedger centre place entry q first w)
+    (hentry : H_ShiftEntryChainLedger centre place entry q first w)
+    (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
+    (hx : ChainPositionInvariantWithShiftPhase w x.ctl x.vm) :
     VerRun centre place entry q first w x := by
   intro m z hz hm
   have hP := hp z.ctl z.vm
@@ -134,10 +134,10 @@ theorem verRun_of_hpack {w : List (Fin 2)} {x : State GalilVM}
 /-- `radPack_ptS3` with `hpk` replaced by `VerRun` and the run's own `LPackM2`. -/
 theorem radPack_ptS4 {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM}
     {Tc : ℕ → ℕ} (hP : PreTrace centre place entry q first w st Tc)
-    (hbg : H_bgP2 centre place entry q first w) (hmatch : H_matchP2 centre place entry q first w)
-    (hentry : H_shiftEntry2 centre place entry q first w)
-    (hsd : H_shiftDoneRad2 centre place entry q first w)
-    (hpos0 : ChainPosInv2 w (st 0).ctl (st 0).vm)
+    (hbg : H_BackgroundLandingChainLedger centre place entry q first w) (hmatch : H_MatchLandingChainLedger centre place entry q first w)
+    (hentry : H_ShiftEntryChainLedger centre place entry q first w)
+    (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
+    (hpos0 : ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hreach : ∀ i, i ≤ Tc w.length →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 i (st 0) (st i))
     (hLP : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
@@ -170,10 +170,10 @@ theorem radPack_ptS4 {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State 
 /-- `trailF_ptS3` over `radPack_ptS4`. -/
 theorem trailF_ptS4 {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM}
     {Tc : ℕ → ℕ} (hP : PreTrace centre place entry q first w st Tc)
-    (hbg : H_bgP2 centre place entry q first w) (hmatch : H_matchP2 centre place entry q first w)
-    (hentry : H_shiftEntry2 centre place entry q first w)
-    (hsd : H_shiftDoneRad2 centre place entry q first w)
-    (hpos0 : ChainPosInv2 w (st 0).ctl (st 0).vm)
+    (hbg : H_BackgroundLandingChainLedger centre place entry q first w) (hmatch : H_MatchLandingChainLedger centre place entry q first w)
+    (hentry : H_ShiftEntryChainLedger centre place entry q first w)
+    (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
+    (hpos0 : ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hreach : ∀ i, i ≤ Tc w.length →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 i (st 0) (st i))
     (hLP : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
@@ -195,10 +195,10 @@ the pre-trace's own packs, so the only new input is `VerRun`. -/
 theorem needIMW'_le_W4 {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hP : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hbg : H_bgP2 centre place entry q first w) (hmatch : H_matchP2 centre place entry q first w)
-    (hentry : H_shiftEntry2 centre place entry q first w)
-    (hsd : H_shiftDoneRad2 centre place entry q first w)
-    (hpos0 : ChainPosInv2 w (st 0).ctl (st 0).vm)
+    (hbg : H_BackgroundLandingChainLedger centre place entry q first w) (hmatch : H_MatchLandingChainLedger centre place entry q first w)
+    (hentry : H_ShiftEntryChainLedger centre place entry q first w)
+    (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
+    (hpos0 : ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hV : VerRun centre place entry q first w (st 0)) :
     ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
       PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 := by

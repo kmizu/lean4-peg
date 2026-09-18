@@ -6,7 +6,7 @@ import PalPeg.WatchOkRefute
 
 ## 経緯
 
-`CloseoutFinalS2.given_consumeAvailEverywhere_FALSE_HYP` は `H_fourOther` を落とすかわりに
+`CloseoutFinalS2.given_consumeAvailEverywhere_FALSE_HYP` は `H_FourSemiperiodsLeDistance` を落とすかわりに
 
 ```
 (hav : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (i : ℕ),

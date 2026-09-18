@@ -117,7 +117,7 @@ import PalPeg.CloseoutFinalBranch
 * `CloseoutSegment` — `ScanToScan`（run の区間分解）。`hSP` のラウンド境界と
   `hor` の found 葉がここに帰着する、と台帳が指している壁。
 * `CloseoutBranchRes` — `chainPosInv_steps_res` / `shiftLocalS_of_run_res`。
-  `H_fourOther` の消費者 `watchShiftS_of_chainPosInv` が要求する `ChainPosInv` の run 搬送。
+  `H_FourSemiperiodsLeDistance` の消費者 `watchShiftS_of_chainPosInv` が要求する `ChainPositionInvariant` の run 搬送。
 * `CloseoutRightBounds` — 右ヘッドの上界（`rightInBounds`）。`canRight` 系の義務。
 * `CloseoutWalkerSupply` / `CloseoutWalkerTick` — `hme` の `walkerInOrigin_of_run` の
   側義務 `hcan` と walker 不変量の tick 保存。
@@ -147,11 +147,11 @@ import PalPeg.CloseoutFinalBranch
 | `CloseoutFinalW4.given_chainPackAtAnyState_FALSE_HYP` | 4 | `hpack` | 同上 |
 
 `CloseoutFinalVer.given_globalRun41Landings_and_verifierRun` は前提数では `final39` に劣るが、**残す**:
-分岐前提が Run41 系（`H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2`）で、
+分岐前提が Run41 系（`H_BackgroundLandingChainLedger` / `H_MatchLandingChainLedger` / `H_ShiftEntryChainLedger` / `H_ShiftExitRadiusLedger`）で、
 `CloseoutPackRun48` の 4 放電器（`h_bgP2_of_supply` / `h_matchP2_of_target` /
 `h_shiftEntry2_of_target` / `h_shiftDoneRad2_of_supply`）が効く**唯一の**経路。
 `final39` の 3 本を落とすにはこちらを詰めることになる。ただし Run48 の放電器の入力は
-まだ「任意の scan 状態 ＋ `ChainPosInv2`」形なので、run 形（`VerRun` と同じ形）に
+まだ「任意の scan 状態 ＋ `ChainPositionInvariantWithShiftPhase`」形なので、run 形（`VerRun` と同じ形）に
 直す必要がある。
 
 ## 3. 記録

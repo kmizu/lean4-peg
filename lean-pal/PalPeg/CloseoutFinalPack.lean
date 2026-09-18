@@ -18,7 +18,7 @@ about a scan state: the right head's `Represents` pair, the verifier head's
 pair, `LagCan`, and — for the shift landing — `canRight s.right` with the radius
 ledger.
 
-`CloseoutChainPack.ChainPack` bundles exactly those into `ChainPosInv2`, and
+`CloseoutChainPack.ChainPack` bundles exactly those into `ChainPositionInvariantWithShiftPhase`, and
 `h_bgP2_of_chainPack` / `h_matchRes2_of_chainPack` / `h_shiftRes2_of_chainPack`
 / `h_shiftDoneRad2_of_chainPack` read them back.  `H_matchRes2` and
 `H_shiftRes2` ask for the *identical* `MatchRes2` pack, so one theorem covers
@@ -107,7 +107,7 @@ theorem given_chainPackAtAnyState_scanBudget_bgStart_and_consumeAvailEverywhere_
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hpack : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack q first w c s)
+      ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
     (hbudget : ∀ w : List (Fin 2), ScanBudget centreC placeC entry q first w)
     (hstart : ∀ w : List (Fin 2), BgStartP2 centreC placeC entry q first w)
     (hav : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (i : ℕ),

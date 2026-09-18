@@ -6,7 +6,7 @@ import PalPeg.CloseoutFinalVer
 # `given_landingObligationsAlongRun` — 4 分岐義務を run 形に弱めた最上位
 
 `given_globalRun41Landings_and_verifierRun`（`CloseoutFinalVer`、9 前提）の中 4 本
-（`H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2`）は
+（`H_BackgroundLandingChainLedger` / `H_MatchLandingChainLedger` / `H_ShiftEntryChainLedger` / `H_ShiftExitRadiusLedger`）は
 `∀ (c : Control) (s : GalilVM), …` で**任意の状態**を量化していた。
 `chainPosInv2_tick` はそれらを自分の `(c, s)` でしか使わないので
 （`CloseoutPackRun41` の `LandingObligationsAt` / `chainPosInv2_tick_of_landingObligationsAt` に局所化した）、
@@ -14,7 +14,7 @@ run 形の 1 本 `BranchSupply.LandingObligationsAlongRun` に**まとめると�
 
 * `landingObligationsAlongRun_of_globalHypotheses` があるので global 4 本を持つ呼び出し側はそのまま乗る。
 * **逆は無い**。run 形のほうが真に弱く、放電できるのはこちらだけ
-  （`LPackM2.shiftGeom` も chain 側台帳 `ChainPos` も入力供給も、
+  （`LPackM2.shiftGeom` も chain 側台帳 `ChainPositionLedger` も入力供給も、
   run に沿ってしか存在しない）。
 
 これは束ねただけの `hpack` とは違う: `hpack` は run の事実を**一状態述語**として

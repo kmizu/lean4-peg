@@ -19,7 +19,7 @@ invariant modulo at most one named leaf:
 
 `RoundBundle` is the conjunction and `roundBundle_tick` the assembled step, so
 the compiler checks the residue claim: **`H_readsShift` and `H_freshShift`**,
-plus the two side inputs the main path already carries (`ChainPosInv2`, and
+plus the two side inputs the main path already carries (`ChainPositionInvariantWithShiftPhase`, and
 `CopyIdle`, which the `LPackM` tick family already threads as
 `c.mode = Mode.shift → CopyIdle s`).
 
@@ -59,7 +59,7 @@ structure RoundBundle (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop wher
 from the bundle's own `ShiftRound` through `h_shiftDone_of_shiftRound`. -/
 theorem roundBundle_tick {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s t : GalilVM}
     (hB : RoundBundle w c s)
-    (hinv : ChainPosInv2 w c s)
+    (hinv : ChainPositionInvariantWithShiftPhase w c s)
     (hci : c.mode = Mode.shift → CopyIdle s)
     (hSh : H_readsShift w c s)
     (hF : H_freshShift w s t)
@@ -91,7 +91,7 @@ theorem shiftPal_of_roundBundle {w : List (Fin 2)} {c : Control} {s : GalilVM}
 /-- **The bundle along a run**, on the run-level forms of its two leaves. -/
 theorem roundBundle_steps {w : List (Fin 2)} {delay n : ℕ} {x y : State GalilVM}
     (hx : RoundBundle w x.ctl x.vm)
-    (hinv : ∀ z : State GalilVM, ChainPosInv2 w z.ctl z.vm)
+    (hinv : ∀ z : State GalilVM, ChainPositionInvariantWithShiftPhase w z.ctl z.vm)
     (hci : ∀ z : State GalilVM, z.ctl.mode = Mode.shift → CopyIdle z.vm)
     (hSh : ∀ z : State GalilVM, H_readsShift w z.ctl z.vm)
     (hF : ∀ z z' : State GalilVM, H_freshShift w z.vm z'.vm)

@@ -1,16 +1,16 @@
 import PalPeg.CloseoutPackRun34
 
 /-!
-# `CloseoutPackRun38`: the three `PosPayload` landings of `ChainPosInv` and
+# `CloseoutPackRun38`: the three `ScanPositionPayload` landings of `ChainPositionInvariant` and
 the `Other`-half guard bound
 
-`CloseoutPackRun34.chainPosInv_tick` names `H_bgP` (`scan_wait`/`scan_count`),
-`H_matchP` (`scan_match`) and `H_shiftDoneP` (`shift_done`), and
-`watchShiftS_of_chainPosInv` names `H_fourOther`.  This file discharges each
+`CloseoutPackRun34.chainPosInv_tick` names `H_BackgroundLandingPayload` (`scan_wait`/`scan_count`),
+`H_MatchLandingPayload` (`scan_match`) and `H_ShiftExitPayload` (`shift_done`), and
+`watchShiftS_of_chainPosInv` names `H_FourSemiperiodsLeDistance`.  This file discharges each
 of the first three **modulo one named residual** and pins the fourth down to
 the bound `Other` actually carries.
 
-The residuals are exactly what `PosPayload` (Run34:313) does not carry at its
+The residuals are exactly what `ScanPositionPayload` (Run34:313) does not carry at its
 source, so that it is *not* inductive on its own:
 
 * the verifier of a live watch is not known `Sane` (needed for `take`,
@@ -29,18 +29,18 @@ source, so that it is *not* inductive on its own:
 
 §1 `SrcPos` + `step_pos`/`matched_pos`: the chain-side position bookkeeping
 through one `ChainStep` and one `ChainMatched`.
-§2 `posPayload_background`: `H_bgP` from `H_bgRes` (closes `canR`, `radLe`,
+§2 `posPayload_background`: `H_BackgroundLandingPayload` from `H_bgRes` (closes `canR`, `radLe`,
 `pos` — the `idle`/`take`/`backDone` shapes — leaving `SrcPos`, the chain-start
 head facts and `verNext`).
-§3 `posPayload_match`: `H_matchP` from `H_matchRes` (closes `pos` through
+§3 `posPayload_match`: `H_MatchLandingPayload` from `H_matchRes` (closes `pos` through
 `ChainTick true` — `idle`/`take` then `queued`/`immediate`, the chain start
 being a `copy`).
-§4 `posPayload_shiftDone`: `H_shiftDoneP` from `H_shiftDoneRes`, which *is*
-the payload at the shift-mode state: `ChainPosInv.payload` is vacuous there
+§4 `posPayload_shiftDone`: `H_ShiftExitPayload` from `H_shiftDoneRes`, which *is*
+the payload at the shift-mode state: `ChainPositionInvariant.payload` is vacuous there
 (`chainPosInv_payload_vacuous_shift`).
 §5 `other_guard_lower`: at a guarded unmatched target in the `Other` half,
 `2h − 1 ≤ distance` — this is all `Other` gives (`2h ≤ R + C`, `C ≤ 1`,
-`distance = R`), so `H_fourOther` is **not** a consequence of `WatchOK`.
+`distance = R`), so `H_FourSemiperiodsLeDistance` is **not** a consequence of `WatchOK`.
 
 Standard axioms only; unconditional `PAL ∈ PEG` remains open.
 -/
@@ -61,7 +61,7 @@ open PalPeg.CloseoutPackRun34
 
 /-! ## 1. Chain-side position bookkeeping -/
 
-/-- The chain-side facts `PosPayload` lacks at its source: the live watch's
+/-- The chain-side facts `ScanPositionPayload` lacks at its source: the live watch's
 verifier is `Sane`, and a `back`-phase chain already sits `lag` cells behind
 the right head with a sane verifier. -/
 structure SrcPos (s : GalilVM) : Prop where
@@ -133,8 +133,8 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 
 /-! ## 2. `scan_wait` / `scan_count` -/
 
-/-- **(NAMED residual of `H_bgP`.)**  What a `backgroundS` landing needs beyond
-`ChainPosInv` at its source: `SrcPos`, the head facts at a chain start
+/-- **(NAMED residual of `H_BackgroundLandingPayload`.)**  What a `backgroundS` landing needs beyond
+`ChainPositionInvariant` at its source: `SrcPos`, the head facts at a chain start
 (`s.chain = idle`, the source payload being empty), and the one-tick lookahead
 `verNext` at the target. -/
 structure BgRes (w : List (Fin 2)) (s t : GalilVM) : Prop where
@@ -149,13 +149,13 @@ structure BgRes (w : List (Fin 2)) (s t : GalilVM) : Prop where
         Sane wch.machine.verifier
 
 def H_bgRes (w : List (Fin 2)) : Prop :=
-  ∀ (c : Control) (s t : GalilVM), c.mode = Mode.scan → ChainPosInv w c s →
+  ∀ (c : Control) (s t : GalilVM), c.mode = Mode.scan → ChainPositionInvariant w c s →
     (galilFrameS (PofC centre place entry w) q first).background s t →
     ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → BgRes w s t
 
-/-- **`H_bgP` modulo `H_bgRes`.** -/
+/-- **`H_BackgroundLandingPayload` modulo `H_bgRes`.** -/
 theorem posPayload_background {w : List (Fin 2)} (hres : H_bgRes centre place entry q first w) :
-    H_bgP centre place entry q first w := by
+    H_BackgroundLandingPayload centre place entry q first w := by
   intro c s t hm hx hb hs hni
   have R := hres c s t hm hx hb hs hni
   obtain ⟨hl, hr, -, hcen, -, hrad, -, -, -, -, -, -⟩ :=
@@ -190,14 +190,14 @@ theorem posPayload_background {w : List (Fin 2)} (hres : H_bgRes centre place en
 
 /-! ## 3. `scan_match` -/
 
-/-- **(NAMED residual of `H_matchP`.)**  Beyond `ChainPosInv` at the source:
-`SrcPos`; the source payload when the source is replaying (`ChainPosInv.payload`
+/-- **(NAMED residual of `H_MatchLandingPayload`.)**  Beyond `ChainPositionInvariant` at the source:
+`SrcPos`; the source payload when the source is replaying (`ChainPositionInvariant.payload`
 is guarded by `ScanNR`, and the landing's `replaying && b = false` may come from
 `b`); `Sane` of the source right head; `canRight` of the moved right head; the
 radius ledger at the moved heads; and `verNext` at the target. -/
 structure MatchRes (w : List (Fin 2)) (c : Control) (s t : GalilVM) : Prop where
   src : SrcPos s
-  replayPay : c.replaying = true → s.chain ≠ ChainVM.idle → PosPayload w s
+  replayPay : c.replaying = true → s.chain ≠ ChainVM.idle → ScanPositionPayload w s
   saneR : Sane s.right
   canRNext : GalilScaffoldChainVerifier.canRight (right s.right)
   radNext : ∀ rad : ℕ,
@@ -209,16 +209,16 @@ structure MatchRes (w : List (Fin 2)) (c : Control) (s t : GalilVM) : Prop where
         Sane wch.machine.verifier
 
 def H_matchRes (w : List (Fin 2)) : Prop :=
-  ∀ (c : Control) (s s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPosInv w c s →
+  ∀ (c : Control) (s s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPositionInvariant w c s →
     (galilFrameS (PofC centre place entry w) q first).compare s s' →
     (galilFrameS (PofC centre place entry w) q first).matched s' →
     (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
     ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
     t.chain ≠ ChainVM.idle → MatchRes w c s t
 
-/-- **`H_matchP` modulo `H_matchRes`.** -/
+/-- **`H_MatchLandingPayload` modulo `H_matchRes`.** -/
 theorem posPayload_match {w : List (Fin 2)} (hres : H_matchRes centre place entry q first w) :
-    H_matchP centre place entry q first w := by
+    H_MatchLandingPayload centre place entry q first w := by
   intro c s s' t o b hm hx hcmp hmt hpl hs hni
   have R := hres c s s' t o b hm hx hcmp hmt hpl hs hni
   have hpl' : t = (if c.replaying then {s' with replay := dec s'.replay} else s') := hpl
@@ -255,7 +255,7 @@ theorem posPayload_match {w : List (Fin 2)} (hres : H_matchRes centre place entr
   rw [hscen] at htcen
   rw [hsrad] at htrad
   -- the source payload, replaying or not
-  have hP : s.chain ≠ ChainVM.idle → PosPayload w s := by
+  have hP : s.chain ≠ ChainVM.idle → ScanPositionPayload w s := by
     intro hne
     cases hrep : c.replaying with
     | false => exact hx.payload ⟨hm, hrep⟩ hne
@@ -288,7 +288,7 @@ theorem posPayload_match {w : List (Fin 2)} (hres : H_matchRes centre place entr
 
 /-! ## 4. `shift_done` -/
 
-/-- `ChainPosInv.payload` says nothing at a `shift`-mode state. -/
+/-- `ChainPositionInvariant.payload` says nothing at a `shift`-mode state. -/
 theorem chainPosInv_payload_vacuous_shift {c : Control} {s : GalilVM}
     (hm : c.mode = Mode.shift) : ¬ ScanNR ⟨c, s⟩ := by
   intro hs
@@ -296,8 +296,8 @@ theorem chainPosInv_payload_vacuous_shift {c : Control} {s : GalilVM}
   rw [hm] at this
   cases this
 
-/-- **(NAMED residual of `H_shiftDoneP`.)**  The positional payload at the
-shift-mode state itself.  Since `ChainPosInv.payload` is empty in `shift`
+/-- **(NAMED residual of `H_ShiftExitPayload`.)**  The positional payload at the
+shift-mode state itself.  Since `ChainPositionInvariant.payload` is empty in `shift`
 mode, this is the whole obligation: a shift-mode payload must be carried
 through `shift_one` (`shiftTick` leaves the right head alone and moves
 centre/left, `chainShiftOne` leaves the verifier and lag alone, so `pos` and
@@ -305,15 +305,15 @@ centre/left, `chainShiftOne` leaves the verifier and lag alone, so `pos` and
 def H_shiftDoneRes (w : List (Fin 2)) : Prop :=
   ∀ (c : Control) (s : GalilVM) (o : Bool), c.mode = Mode.shift →
     ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s →
-    ChainPosInv w c s →
+    ChainPositionInvariant w c s →
     ScanNR ⟨{c with mode := Mode.scan, output := o}, s⟩ → s.chain ≠ ChainVM.idle →
-    PosPayload w s
+    ScanPositionPayload w s
 
-/-- **`H_shiftDoneP` modulo `H_shiftDoneRes`** (which is `H_shiftDoneP` itself:
-nothing in `ChainPosInv` reaches across `shift` mode). -/
+/-- **`H_ShiftExitPayload` modulo `H_shiftDoneRes`** (which is `H_ShiftExitPayload` itself:
+nothing in `ChainPositionInvariant` reaches across `shift` mode). -/
 theorem posPayload_shiftDone {w : List (Fin 2)}
     (hres : H_shiftDoneRes centre place entry q first w) :
-    H_shiftDoneP centre place entry q first w := hres
+    H_ShiftExitPayload centre place entry q first w := hres
 
 /-! ## 5. The `Other` half at a guarded target -/
 
@@ -321,7 +321,7 @@ theorem posPayload_shiftDone {w : List (Fin 2)}
 (`distance = R` from `SumRel` at lag `0`; `2h ≤ R + C` from `Other` in a
 non-shift mode; `C ≤ 1` from the guard's `singlePositive cycle`).  This is
 sharp for the *state* predicates: `R = 2h − 1`, `C = 1` satisfy `Other` and
-the guard, so `H_fourOther` is not a consequence of `WatchOK`. -/
+the guard, so `H_FourSemiperiodsLeDistance` is not a consequence of `WatchOK`. -/
 theorem other_guard_lower {w : List (Fin 2)} {x : State GalilVM} {s'' : GalilVM}
     {wch : GalilScaffoldChainWatch.State} (hx : Coupled x.ctl x.vm) (hs : ScanNR x)
     (hcmp : (galilFrameS (PofC centre place entry w) q first).compare x.vm s'')

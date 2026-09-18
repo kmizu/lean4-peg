@@ -395,7 +395,7 @@ theorem chainRound_tick_S {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s t
     (hRR : PalPeg.CloseoutRoundReads.ReadsRound w c s)
     (hps : PeriodShape s)
     (hn : NoReplayWatch c s)
-    (hinv : PalPeg.CloseoutPackRun41.ChainPosInv2 w c s)
+    (hinv : PalPeg.CloseoutPackRun41.ChainPositionInvariantWithShiftPhase w c s)
     (hS : H_shiftDone centre place entry q first w c s)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) delay ⟨c, s⟩ ⟨c', t⟩) :
     ChainRound w c' t :=
@@ -408,7 +408,7 @@ theorem readsRound_tick_S {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s t
     (hRR : PalPeg.CloseoutRoundReads.ReadsRound w c s)
     (hps : PeriodShape s)
     (hn : NoReplayWatch c s)
-    (hinv : PalPeg.CloseoutPackRun41.ChainPosInv2 w c s)
+    (hinv : PalPeg.CloseoutPackRun41.ChainPositionInvariantWithShiftPhase w c s)
     (hSh : PalPeg.CloseoutRoundUnique.H_readsShift w c s)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) delay ⟨c, s⟩ ⟨c', t⟩) :
     PalPeg.CloseoutRoundReads.ReadsRound w c' t :=

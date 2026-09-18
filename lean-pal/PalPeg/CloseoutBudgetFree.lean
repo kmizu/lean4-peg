@@ -8,7 +8,7 @@ import PalPeg.CloseoutPackW
 
 `CloseoutPackRefute` refuted `hpack` and diagnosed the cause: `ChainPack` is a
 bundle of **run** facts written as a one-state predicate, premised on the
-three-field one-state invariant `ChainPosInv2`.  Its worst field is
+three-field one-state invariant `ChainPositionInvariantWithShiftPhase`.  Its worst field is
 
 ```
 scanBound : c.mode = Mode.scan → ∃ m, 1 ≤ m ∧ m < w.length ∧ position s.right ≤ 2 * m - 1
@@ -32,7 +32,7 @@ extra thing `ScanBudget` wants is to keep `m` and its two side conditions, and
 So `scanBudget_of_front_run` below is the missing producer, and the two
 consumers of the bound — `canRight s.right` and `canRight (right s.right)` —
 come out with it (`avail2_of_front_run`).  What is *not* repaired here is
-`hpack`'s premise: `ChainPosInv2` cannot yield `repR`, `centreCanR`, `saneR`, …
+`hpack`'s premise: `ChainPositionInvariantWithShiftPhase` cannot yield `repR`, `centreCanR`, `saneR`, …
 either, so the bundle has to be read off the run-carried
 `CloseoutPackW.BigPack2MG7W''` instead.  This file closes the one field that was
 outright contradictory.
@@ -101,8 +101,8 @@ theorem avail2_of_front_run {onLetter leftFirst : GalilVM → Prop}
 /-! ## The reformulated hypothesis
 
 With the budget produced from the run, the remaining defect in
-`hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack q first w c s` is its
-**premise**.  `ChainPosInv2` has three fields; `ChainPack` also asserts
+`hpack : ∀ w c s, ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s` is its
+**premise**.  `ChainPositionInvariantWithShiftPhase` has three fields; `ChainPack` also asserts
 `repR` (the right head represents `w`), `centreCanR` (the centre head can move),
 `saneR`, `centreSane`, `scanCentre`, `lenNonneg`, `cpack`, `wpack`, `marks` …
 none of which a three-field chain-position invariant can give.
@@ -118,7 +118,7 @@ Every one of them *is* in the run-carried pack `CloseoutPackW.BigPack2MG7W''`
 | `scanBound` | this file |
 | `canR` at scan | `Extra7.scanAvail` |
 | `Canonical s.length`, `CentreLedger`, `centreSane`, `centreCanR` | `CentreLive` |
-| `replayPay` | `ChainPosInv2.payload` |
+| `replayPay` | `ChainPositionInvariantWithShiftPhase.payload` |
 | `walkerPin`, `walkerOrigin` | **model defect (e)** — still open |
 
 `ChainSideW` names the repaired shape.  It is *not* proved here; what is
@@ -128,7 +128,7 @@ def ChainSideW (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPl
     (entry q : ℕ) (first : Fin 9) (w : List (Fin 2)) : Prop :=
   ∀ x : State GalilVM,
     BigPack2MG7W'' centre place entry q first w x →
-    PalPeg.CloseoutPackRun41.ChainPosInv2 w x.ctl x.vm →
+    PalPeg.CloseoutPackRun41.ChainPositionInvariantWithShiftPhase w x.ctl x.vm →
     (∃ m : ℕ, 1 ≤ m ∧ m < w.length ∧ position x.vm.right ≤ 2 * m - 1) →
     PalPeg.CloseoutChainPack.ChainPack q first w x.ctl x.vm
 
@@ -139,7 +139,7 @@ theorem chainSideW_of_hpack {centre : GalilVM → Fin 3}
     {place : GalilVM → GalilScaffoldPlace.Place} {entry q : ℕ} {first : Fin 9}
     {w : List (Fin 2)}
     (hp : ∀ (c : Control) (s : GalilVM),
-      PalPeg.CloseoutPackRun41.ChainPosInv2 w c s →
+      PalPeg.CloseoutPackRun41.ChainPositionInvariantWithShiftPhase w c s →
       PalPeg.CloseoutChainPack.ChainPack q first w c s) :
     ChainSideW centre place entry q first w :=
   fun x _ hx _ => hp x.ctl x.vm hx
