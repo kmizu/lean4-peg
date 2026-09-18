@@ -1,5 +1,6 @@
 import PalPeg.FoundPackRefute
 import PalPeg.CloseoutWatchRound10
+import PalPeg.CopyPhaseTick
 
 /-!
 # `PrepLanding*` の正しい形（`∀` ではなく `∃`）
@@ -240,5 +241,60 @@ theorem reachesWatchPhase_of_chainTicks {P : Shared} {q : ℕ} {first : Fin 9}
   exact ⟨es, c2, s2, hSeg, wv, chainTicks_unique hSegTicks hTicks⟩
 
 #print axioms reachesWatchPhase_of_chainTicks
+
+
+/-! ## 最終組み立て: `ReachesWatchPhase` を run から出す
+
+`CopyPhaseTick.watchSegE_backgroundRun_live` が長さ `n` の background 区間を作り、
+結論は「watch に着いた」か「`n` 手走り切ってまだ copy/back」の選言。
+後者の場合も、**chain の trace が `n` 手で watch に着くことが分かっていれば**
+`watchSegE_events` ＋ `chainTicks_unique` で区間の終端が watch だと分かる。
+
+その「`n` 手で watch に着く」は `GalilPrepLeast.found_to_watchStart_least` が
+**イベント列の中身を問わず**与える（`bs` の長さ `h`、`cs` の長さ `h+1`、
+合わせて `2h+2` 手）。したがって仮説 `hChainReachesWatch` はその適用形。 -/
+
+/-- **`ReachesWatchPhase` を run から。**  clock の余裕と「chain が `n` 手で watch に
+着く」だけで出る。後者は `found_to_watchStart_least` の適用形。 -/
+theorem reachesWatchPhase_of_backgroundRun {P : Shared} {q : ℕ} {first : Fin 9}
+    (n : ℕ) {cP : Control} {sP : GalilVM}
+    (hScan : cP.mode = Mode.scan) (hNotReplaying : cP.replaying = false)
+    (hClock : n < cP.clock)
+    (hPhase : PalPeg.CopyPhaseTick.CopyOrBack sP.chain)
+    (hChainReachesWatch : ∀ es : List Bool, es.length = n → es.count true = 0 →
+      ∃ w : GalilScaffoldChainWatch.State, ChainTicks es sP.chain (ChainVM.watch w)) :
+    ReachesWatchPhase P q first cP sP := by
+  obtain ⟨es, c', s', hSeg, hCount, hEnd⟩ :=
+    PalPeg.CopyPhaseTick.watchSegE_backgroundRun_live P q first 2048 n cP sP hScan
+      hNotReplaying hClock hPhase
+  rcases hEnd with hWatch | ⟨hLen, -⟩
+  · exact ⟨es, c', s', hSeg, hWatch⟩
+  · obtain ⟨w, hTicks⟩ := hChainReachesWatch es hLen hCount
+    obtain ⟨hSegTicks, -⟩ :=
+      watchSegE_events P q first 2048 hSeg (PalPeg.CopyPhaseTick.copyOrBack_not_idle hPhase)
+    exact ⟨es, c', s', hSeg, w, chainTicks_unique hSegTicks hTicks⟩
+
+/-- **節 4 の正しい形まで一気に。**  `ReachesWatchPhase` の到達先で
+`PrepLandingWatchC` が成り立つ（`prepLandingWatchC_of_short` を当てる）。 -/
+theorem prepLandingWatchC_of_backgroundRun {P : Shared} {q : ℕ} {first : Fin 9}
+    (n : ℕ) {cP : Control} {sP : GalilVM}
+    (hScan : cP.mode = Mode.scan) (hNotReplaying : cP.replaying = false)
+    (hClock : n < cP.clock)
+    (hPhase : PalPeg.CopyPhaseTick.CopyOrBack sP.chain)
+    (hChainReachesWatch : ∀ es : List Bool, es.length = n → es.count true = 0 →
+      ∃ w : GalilScaffoldChainWatch.State, ChainTicks es sP.chain (ChainVM.watch w))
+    (hShort : ∀ (c2 : Control) (s2 : GalilVM),
+      (∃ es : List Bool, WatchSegE P q first 2048 es cP sP c2 s2) →
+      ∀ (es' : List Bool) (c3 : Control) (s3 : GalilVM),
+        WatchSegE P q first 2048 es' c2 s2 c3 s3 → es'.length < c2.clock) :
+    ∃ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+      WatchSegE P q first 2048 es cP sP c2 s2 ∧
+      PalPeg.CloseoutWatchRound7.PrepLandingWatchC P q first c2 s2 :=
+  prepLandingWatchC_at_reachedWatch P q first
+    (reachesWatchPhase_of_backgroundRun n hScan hNotReplaying hClock hPhase hChainReachesWatch)
+    hShort
+
+#print axioms reachesWatchPhase_of_backgroundRun
+#print axioms prepLandingWatchC_of_backgroundRun
 
 end PalPeg.FoundPackCorrected
