@@ -1,3 +1,41 @@
+## 2026-09-19 n192: しきい値 `32 → 16` を本線に入れた——`postRunF_step` の残差は `k ≤ 1` の**第 1 段だけ**
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。
+無条件 PAL は未完、§10.5 は未達。**
+
+n191 の `16 ≤ mw` を複製で持つのをやめ、`CloseoutPreload35.bal_of_paced_slack_S`
+**そのもの**のしきい値を下げた（証明は同じ＋`16 ≤ mw < 20` の 4 窓を
+`interval_cases`。`omega` は 2 つの `/2048` を含む tight な系で不完全）。
+下流の `postRunF_round_trip_S` / `postRunF_round_trip_galil_S` / `postRunF_step` と
+`CloseoutPreload36`（10 箇所）も `16 ≤ mw` に緩めた。
+
+### 効き方
+
+`CloseoutPreload35` §7 は `hmw : 32 ≤ mw` を
+**「機械の run とモード註釈の外にある唯一の仮説」**と書いていた。
+`postRunF_step` は較正 `8 * max k 1 ≤ mw` を持つので:
+
+| しきい値 | 覆われる段 | 残差 |
+|---|---|---|
+| `32`（旧） | `k ≥ 4` | `k ≤ 3` |
+| **`16`（新）** | **`k ≥ 2`** | **`k ≤ 1`** |
+
+さらに `mw0 = 8 * max k 1` で窓は倍々になるので、`k ≤ 1` でも
+**第 1 段（窓 8）だけ**が残る——第 2 段は窓 16 で覆われる。
+
+`PalPeg/StageBudgetShift.lean` §2 は複製を消して、この残差の記録だけにした:
+
+    window_covered_of_k (hcal : 8 * max k 1 ≤ mw) (hk : 2 ≤ k) : 16 ≤ mw
+    window_residual    (hcal : 8 * max k 1 ≤ mw) (hmw : mw < 16) : k ≤ 1 ∧ 8 ≤ mw
+
+### `D ≤ prepLen k` は 2 箇所で意味が違う（n190 の補足）
+
+* `CloseoutPreload6.runEntriesS_of_namedG` の `D`: **restart から**測るので
+  grow 相の `max k 1` ティックと `prepare` dispatch を含む → `prepLen k` を超える
+  （`depth_exceeds_prepLen`）。n190 の `budget_adv_shift` がここを直す
+* `CloseoutPreload35.dpSafe_of_stagePrepD_slack` の `D`: **`PrepAt` 入口から**
+  測るので準備相のティックだけ → `prepLen k` で正しい。**ここは直す必要がない**
+
 ## 2026-09-19 n191: 2 つめの算術の穴を `32 ≤ mw` → `16 ≤ mw` に縮めた（残りは `k ≤ 3`）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 3。

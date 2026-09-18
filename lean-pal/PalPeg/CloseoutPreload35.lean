@@ -16,9 +16,9 @@ there; and the next entry needs the `PostRunF` datum again.
   preparation stream paced at any slack `≤ 2047`.  The demand grows by at most
   two units (`dpDemandS k m := (prepLen k + 2047)/2048 +
   (prepLen k + 2047 + dpEvents (m+1))/2048 + 1`, invariant `StageInvS`).
-* §3 the `.double` exit satisfies `StageInvS` when `32 ≤ mw`
-  (`bal_of_paced_slack_S`, `stageInvS_of_double_exit`); the four windows
-  `8 ≤ mw < 32` do not absorb the two extra units at slack `2047`.
+* §3 the `.double` exit satisfies `StageInvS` when `16 ≤ mw`
+  (`bal_of_paced_slack_S`, `stageInvS_of_double_exit`); the windows
+  `4 ≤ mw ≤ 15` do not absorb the two extra units at slack `2047`.
 * §4 `postRunF_round_trip_S` / `postRunF_round_trip_galil_S` — the round trip
   of `CloseoutPreload31`/`34` with `StageInvS` at the dispatch.
 * §5 **`postRunF_next_entry`** — from the dispatch state, through an idle
@@ -179,13 +179,17 @@ theorem dpSafe_of_stagePrepD_slack {k m D slack : ℕ} {v : SearchVM}
 
 #print axioms dpSafe_of_stagePrepD_slack
 
-/-! ## 3. The `.double` exit satisfies `StageInvS` (for `32 ≤ mw`) -/
+/-! ## 3. The `.double` exit satisfies `StageInvS` (for `16 ≤ mw`) -/
 
 /-- **NAMED — the balance for the slack-`2047` demand.**  The two extra units
-of `dpDemandS` cost `8` in the balance; the windows `8 ≤ mw < 32` do not
-absorb them at an arbitrary clock phase. -/
+of `dpDemandS` cost `8` in the balance; the windows `4 ≤ mw ≤ 15` do not
+absorb them at an arbitrary clock phase.  `16` is sharp for these inputs
+(`prepLen_le`, `dpEvents_win_le`, the pacing at the full window): at `mw = 15`
+the worst admissible triple gives a balance of `16 > 15`, and the margin is
+`0` at `mw = 16` and `mw = 20`.  `mw ≤ 3` is vacuous, since `hcal` forces
+`4 ≤ mw`. -/
 theorem bal_of_paced_slack_S {k mw slack : ℕ} {bs : List Bool} {a : Bool}
-    (hcal : 8 * max k 1 ≤ 2 * mw) (hblen : bs.length = mw) (hmw : 32 ≤ mw)
+    (hcal : 8 * max k 1 ≤ 2 * mw) (hblen : bs.length = mw) (hmw : 16 ≤ mw)
     (hslack : slack ≤ 2047) (hp : PacedL 2048 slack (bs ++ [a])) :
     4 * dpDemandS k (2 * mw) + 4 * (bs ++ [a]).count true ≤ mw := by
   have hc : 2048 * (bs ++ [a]).count true ≤ (bs ++ [a]).length + slack := by
@@ -197,8 +201,14 @@ theorem bal_of_paced_slack_S {k mw slack : ℕ} {bs : List Bool} {a : Bool}
   have h2 := dpEvents_win_le (2 * mw)
   have h3 : k ≤ max k 1 := le_max_left _ _
   have h4 : 1 ≤ max k 1 := le_max_right _ _
+  have hM : 4 * max k 1 ≤ mw := by omega
   unfold dpDemandS
-  omega
+  -- `omega` is incomplete on the tight system with two `/2048` quotients at
+  -- `16 ≤ mw`; the four windows `16 ≤ mw < 20` are closed by `interval_cases`.
+  rcases Nat.lt_or_ge mw 20 with hlt | hge
+  · have hk : max k 1 ≤ 4 := by omega
+    interval_cases mw <;> omega
+  · omega
 
 #print axioms bal_of_paced_slack_S
 
@@ -245,7 +255,7 @@ section RoundTrip
 variable {σ : Type} {F : Frame σ} {I : State σ → Prop}
 
 /-- `CloseoutPreload31.postRunF_round_trip` with `StageInvS` at the dispatch;
-the one extra premise is `32 ≤ mw`. -/
+the one extra premise is `16 ≤ mw`. -/
 theorem postRunF_round_trip_S {k mw : ℕ} {ts pre rs ws bs : List Bool} {a1 a3 : Bool}
     {cr cw : GalilScaffoldPlace.Place} {v t0 w0 w1 u0 : SearchVM} {p q0 : State σ}
     (hsup : ScanSupplyInv F 2048 I)
@@ -259,7 +269,7 @@ theorem postRunF_round_trip_S {k mw : ℕ} {ts pre rs ws bs : List Bool} {a1 a3 
     (hcan0 : Canonical u0.search.debt)
     (hsc : ScanTrace F 2048 ts (pre ++ (rs ++ a1 :: (ws ++ [false]))) p q0)
     (hp : I p) (hclk : ClockInv 2048 p.ctl)
-    (hblen : bs.length = mw) (hmw : 32 ≤ mw)
+    (hblen : bs.length = mw) (hmw : 16 ≤ mw)
     (hpaced : PacedL 2048 0 ((pre ++ (rs ++ a1 :: (ws ++ [false]))) ++ (bs ++ [a3]))) :
     ∃ t1 : SearchVM, DoubleTrace bs u0 t1 ∧ t1.search.mode = Mode.double ∧
       positive t1.search.work = false ∧ t1.search.span = ofNat (2 * mw) ∧
@@ -297,7 +307,7 @@ end RoundTrip
 variable (P : Shared) (q : ℕ) (first : Fin 9)
 
 /-- `CloseoutPreload34.postRunF_round_trip_galil'` with `StageInvS` at the
-dispatch; the one extra premise is `32 ≤ mw`. -/
+dispatch; the one extra premise is `16 ≤ mw`. -/
 theorem postRunF_round_trip_galil_S {I : State GalilVM → Prop} {k mw : ℕ}
     {ts0 pre rs ws bs : List Bool} {t1 t2 a1 a2 a3 : Bool}
     {p p0 p1 p2 p3 p4 : State GalilVM}
@@ -316,7 +326,7 @@ theorem postRunF_round_trip_galil_S {I : State GalilVM → Prop} {k mw : ℕ}
     (hex2 : ScanTrace (galilFrameS P q first) 2048 [t2] [a2] p3 p4)
     (hne : p4.vm.search.mode ≠ Mode.wait)
     (hp : I p) (hclk : ClockInv 2048 p.ctl)
-    (hblen : bs.length = mw) (hmw : 32 ≤ mw)
+    (hblen : bs.length = mw) (hmw : 16 ≤ mw)
     (hpaced : PacedL 2048 0 ((pre ++ (rs ++ a1 :: (ws ++ [false]))) ++ (bs ++ [a3]))) :
     ∃ t1 : SearchVM, DoubleTrace bs (searchLens.get p4.vm) t1 ∧ t1.search.mode = Mode.double ∧
       positive t1.search.work = false ∧ t1.search.span = ofNat (2 * mw) ∧
@@ -498,7 +508,7 @@ under `I p ∧ ClockInv`), the machine legs `.run` (`rs`) / exit `a1` / `.wait`
 entry `a`, each an `IdleLeg` with its mode annotation and the chain idle at the
 exit ticks, the pacing of the whole stream from `p`, the input-length clause
 for the next stage, the depth `D ≤ prepLen k` of the preparation, and
-`32 ≤ mw`.  Output: the datum at `p8` with `span = ofNat (2mw)`. -/
+`16 ≤ mw`.  Output: the datum at `p8` with `span = ofNat (2mw)`. -/
 theorem postRunF_step (hres : RestartOnBroken P) {I : State GalilVM → Prop} {k mw D : ℕ}
     {ts0 pre rs ws bs ps as : List Bool} {t1 t2 t3 t4 a1 a2 a3 a4 : Bool}
     {p p0 p1 p2 p3 p4 p5 p6 p7 p8 : State GalilVM}
@@ -525,7 +535,7 @@ theorem postRunF_step (hres : RestartOnBroken P) {I : State GalilVM → Prop} {k
     (hne7 : p7.vm.search.mode ≠ Mode.run) (hidle7 : p7.vm.chain = ChainVM.idle)
     (hex4 : ScanTrace (galilFrameS P q first) 2048 [t4] [a4] p7 p8)
     (hrun8 : p8.vm.search.mode = Mode.run)
-    (hblen : bs.length = mw) (hmw : 32 ≤ mw)
+    (hblen : bs.length = mw) (hmw : 16 ≤ mw)
     (hlen : D + dpEvents (2 * mw + 1) ≤ ps.length + (as.length + 1))
     (hpaced : PacedL 2048 0
       (pre ++ (rs ++ a1 :: (ws ++ [false])) ++ (bs ++ a3 :: (ps ++ a4 :: as)))) :
@@ -582,12 +592,13 @@ entry from the dispatch state, every machine fact read off the run; and
 `postRunF_step` (§6) — the datum at one `.run` entry gives it at the next.
 
 **The one hypothesis** outside the machine run and the mode/idle annotations:
-`hmw : 32 ≤ mw` — the slack-`2047` demand `dpDemandS` costs two more units than
-`dpDemand`, and `bal_of_paced_slack_S` needs `mw ≥ 32` to absorb them at an
+`hmw : 16 ≤ mw` — the slack-`2047` demand `dpDemandS` costs two more units than
+`dpDemand`, and `bal_of_paced_slack_S` needs `mw ≥ 16` to absorb them at an
 arbitrary clock phase (`CloseoutPreload28.bal_of_paced_slack` needs only
-`mw ≥ 8`).  A stage with `8 * max k 1 = mw ≥ 32`, i.e. `k ≥ 4`, is covered
-unconditionally; for `k < 4` the phase of the `.double` leg or a sharper demand
-is needed.  `DepthAt _ D` / `D ≤ prepLen k` and the input-length clause remain
+`mw ≥ 8`).  Since `postRunF_step` carries `hcal : 8 * max k 1 ≤ mw`, a stage
+with `2 ≤ k` has `mw ≥ 16` and is covered unconditionally; **the residue is
+`k ≤ 1`**, i.e. `8 ≤ mw ≤ 15`, where the phase of the `.double` leg or a
+sharper demand is needed.  `DepthAt _ D` / `D ≤ prepLen k` and the input-length clause remain
 the supply-side premises they were in `CloseoutPreload28`.
 
 **Not assembled here:** `RunEntriesS` through the `.wait` / `.double` /

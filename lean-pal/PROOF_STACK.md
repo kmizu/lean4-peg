@@ -92,9 +92,18 @@
 `mw ≤ 3` は較正が空虚にする。**真の残差は `4 ≤ mw ≤ 15` ＝ `k ≤ 3`**
 （`window_covered_of_k` / `window_residual`）。
 
-残りの算術 1 つ: 段境界のイベント供給（`dpEvents (m+1) ≤ as.length` の再供給）。
-それと `k ≤ 3` の小段（slack 2047 で 2 単位足りない。実機の clock 位相を
-読めば消える見込み——未検証）。
+### n192: 本線に入れた。残差は `k ≤ 1` の第 1 段だけ
+
+`CloseoutPreload35.bal_of_paced_slack_S` 自体を `16 ≤ mw` に下げ、下流
+（`postRunF_*`、`CloseoutPreload36` の 10 箇所）も緩めた。
+`postRunF_step` は較正 `8 * max k 1 ≤ mw` を持つので覆われるのは `k ≥ 2`、
+残差は `k ≤ 1`。さらに窓は倍々（`mw0 = 8 * max k 1`）なので
+**残るのは第 1 段（窓 8）だけ**。
+
+残りの算術: 段境界のイベント供給（`dpEvents (m+1) ≤ as.length` の再供給）と、
+第 1 段（slack 2047 で 2 単位足りない。実機の clock 位相を読めば消える見込み
+——未検証）。それと `CloseoutPreload36` の **boot datum**（第 1 `.run` 入口の
+`EntryDatum`、未証明）。
 
 ### n176: 残り 3 本のうち 2 本が同じ底を共有している（実測）
 
