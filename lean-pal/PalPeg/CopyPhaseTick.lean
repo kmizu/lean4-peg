@@ -215,4 +215,70 @@ theorem watchSegE_oneStep_live (P : Shared) (q : ℕ) (first : Fin 9) (delay : �
 #print axioms watchSegE_count_live
 #print axioms watchSegE_oneStep_live
 
+
+/-! ## `.back` 相も 1 手が必ずある（background 事象なら無条件）
+
+`ChainStep` の `.back` からの構成子は 2 つで、`isFirst v.focus` の真偽で**排他かつ網羅**:
+
+    backStep : isFirst v.focus = false → .back → .back
+    backDone : isFirst v.focus = true  → .back → .watch
+
+したがって `.back` 相では前提なしに `ChainStep` がある。行き先は `.back` か `.watch`。
+
+**一致事象（`a = true`）で `.watch` に入る手は無条件ではない**——`ChainMatched` の
+`.watch` 構成子は `GalilScaffoldChainWatch.Outer w true w'` を要求する。
+だが**そこが到達点**（`ReachesWatchPhase`）なので、構成はそこで止まればよい。
+`found_to_watchStart_least` はイベント列の中身を問わないので、
+**background だけの区間（全部 `false`）で watch まで届く**。 -/
+
+/-- **`.back` からは前提なしに `ChainStep` がある。** -/
+theorem chainStep_back_exists (v : GalilScaffoldChainPeriod.Tape) (h lag margin : Counter)
+    (ver : GalilScaffoldInputHead.PlaceHead) :
+    ∃ y : ChainVM, ChainStep (ChainVM.back v h lag margin ver) y := by
+  cases hf : GalilScaffoldChainPeriod.isFirst v.focus with
+  | false => exact ⟨_, .backStep _ _ _ _ _ hf⟩
+  | true => exact ⟨_, .backDone _ _ _ _ _ hf⟩
+
+/-- **`.back` から出る `ChainStep` の行き先は `.back` か `.watch`。** -/
+theorem chainStep_back_shape {v : GalilScaffoldChainPeriod.Tape} {h lag margin : Counter}
+    {ver : GalilScaffoldInputHead.PlaceHead} {y : ChainVM}
+    (hStep : ChainStep (ChainVM.back v h lag margin ver) y) :
+    (∃ v', y = ChainVM.back v' h lag margin ver) ∨
+      (∃ w : GalilScaffoldChainWatch.State, y = ChainVM.watch w) := by
+  cases hStep with
+  | backStep _ _ _ _ _ _ => exact Or.inl ⟨_, rfl⟩
+  | backDone _ _ _ _ _ _ => exact Or.inr ⟨_, rfl⟩
+
+/-- **background 事象なら `.back` 相の `ChainTick` は無条件に存在する。** -/
+theorem backChain_tick_false_exists (v : GalilScaffoldChainPeriod.Tape) (h lag margin : Counter)
+    (ver : GalilScaffoldInputHead.PlaceHead) :
+    ∃ z : ChainVM, ChainTick false (ChainVM.back v h lag margin ver) z := by
+  obtain ⟨y, hStep⟩ := chainStep_back_exists v h lag margin ver
+  exact ⟨y, y, hStep, rfl⟩
+
+/-- **その行き先は idle にならない。** -/
+theorem backChain_tick_false_not_idle {v : GalilScaffoldChainPeriod.Tape}
+    {h lag margin : Counter} {ver : GalilScaffoldInputHead.PlaceHead} {z : ChainVM}
+    (hTick : ChainTick false (ChainVM.back v h lag margin ver) z) : z ≠ ChainVM.idle := by
+  obtain ⟨y, hStep, hAfter⟩ := hTick
+  rw [show z = y from hAfter]
+  rcases chainStep_back_shape hStep with ⟨v', rfl⟩ | ⟨w, rfl⟩
+  · intro hEq; exact ChainVM.noConfusion hEq
+  · intro hEq; exact ChainVM.noConfusion hEq
+
+/-- **background 事象では copy 相でも `ChainTick` は無条件**（`CopyInv` は要る）。
+`copyChain_tick_exists` の `a = false` 版を名前で置いておく。 -/
+theorem copyChain_tick_false_exists {t : GalilScaffoldTape.Tape} {h : Counter}
+    {p : GalilScaffoldPlace.Place} {v : GalilScaffoldChainPeriod.Tape} {n : ℕ}
+    (hCopyInv : CopyInv t h p v n) (lag margin : Counter)
+    (ver : GalilScaffoldInputHead.PlaceHead) :
+    ∃ z : ChainVM, ChainTick false (ChainVM.copy t h p v lag margin ver) z :=
+  copyChain_tick_exists hCopyInv lag margin ver false
+
+#print axioms chainStep_back_exists
+#print axioms chainStep_back_shape
+#print axioms backChain_tick_false_exists
+#print axioms backChain_tick_false_not_idle
+#print axioms copyChain_tick_false_exists
+
 end PalPeg.CopyPhaseTick
