@@ -24,6 +24,69 @@
 
 
 
+
+## 2026-09-19 n102: `centreMargin` の放電経路が確定（部品は全部既にある）
+
+**全体 build 成功（EXIT=0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 5 個の原子的義務を axiom として持つ。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**（このエントリは調査結果のみ。）
+
+### 一次情報で確定したこと
+
+1. **`rewindOne` / `rewindPair` はどちらも `x.marks.left ≠ []` を構成子として持つ**
+   （`GalilScaffoldTopRewind:59,61`）。「rewind の歩きが原点前で止まる」側条件は
+   **tick が既に持っている**（「側条件は構成子が持っている」4 例目）。
+2. **`Tick.rewind_one` / `rewind_pair` は `hf : ¬ F.atFirst s` を持つ**
+   （`GalilScaffoldTop:162,164`）。`galilFrameS` の `atFirst` は
+   `(marksTape s.fpp).focus = first`（`rewindFrame.atFirst`）。
+3. **`CloseoutPackRun16.two_le_left_of_marksInv'` が既に存在する**:
+
+       MarksInv' first c s → c.mode = Mode.rewind →
+         (marksTape s.fpp).focus ≠ first → 2 ≤ position s.left
+
+   つまり **(2) の `hf` と合わせて `2 ≤ position left` がそのまま出る。**
+4. `RCouple`（`rcouple_alongTrace` で**葉なし**）が `position left ≤ position center`
+   を持つので、`2 ≤ position center` も同時に出る。
+5. `MarksInv'` は trace の各点で `CloseoutPackRun16.marksInv'_of_run`
+   ＋ `steps_of_trace` から出る（boot は `init` 相なので `h1 : m ≠ rewind` が満たされる）。
+   入力は `H_marksEntry'`＝**既存の公理 `obligation_marksEntry`**。
+
+### 帰結: `CentreMargin` は消せる（`marksEntry` に吸収）
+
+`CentreMargin`（`r + pairOff c + 2 ≤ position center`）の消費者は 2 つだけ:
+
+| 消費者 | 本当に要るもの |
+|---|---|
+| `rewindMargin_of_centreMargin` → `LTickLeavesN.rewindLeft` | `2 ≤ position left` |
+| `headsRepresent_tick` の `hCentreTwoLe`（`rewind_pair` ケースのみ） | `2 ≤ position center` |
+
+**`CentreMargin` は両方より真に強い**（`RCouple` は `position center ≤ position left +
+r + pairOff` の向きしか持たないので、`2 ≤ position left` から `CentreMargin` は出ない）。
+n96 の「`rewindMargin` を `CentreMargin` 1 葉に縮めた」は**数は減ったが内容は強くなっていた**。
+
+必要な改修は 2 点で、どちらも `¬atFirst` guard を入れるだけ:
+
+* `headsRepresent_tick` の側入力を `hCentreTwoLe` から
+  `MarksInv' first x.ctl x.vm` ＋ `RCouple x.ctl x.vm` に差し替える
+  （`rewind_pair` ケースには `hf : ¬atFirst` が来ている）
+* `RewindMarginAt` を `c.mode = Mode.rewind → ¬ atFirst s → 2 ≤ position s.left` に
+  再 guard する（消費者は `rewind_one` / `rewind_pair` の tick なので `hf` がある）
+
+これで `obligation_centreMargin_alongTrace` は落ちて **5 → 4**。
+
+### `marksEntry` 自身の残差（`CloseoutMarksFree`）
+
+`marks_steps_free` は `H_marksEntry'` なしで `CPack` / `WPack` / `MarksInv'` を run に
+沿って運ぶ。必要なのは `first ≠ 4` と `MarksRun`（2 半分）:
+
+| 半分 | 状態 |
+|---|---|
+| `EntryCounters`（scan 状態） | **タダ**（`entryCounters_of_invLPC`、`InvLP := InvL ∧ EntryCounters`） |
+| `WindowInOrigin`（copy 状態） | **真の入力**（これが `marksEntry` の実体） |
+
+つまり残り 5 個のうち `centreMargin` と `marksEntry` は**1 つの残差
+`WindowInOrigin`（copy 状態、run 形）に統合される**見込み。
+
 ## 2026-09-19 n101: 公理 7 → 5（`matchRest` ＋ `verifierRunAlongRun`）
 
 **全体 build 成功（EXIT=0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
