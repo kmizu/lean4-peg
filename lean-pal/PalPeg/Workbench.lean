@@ -274,6 +274,8 @@ producer は `CloseoutWatchRound10.prepLandingWatchC_of_short`）。**束ねる�
 | `ReachesWatchPhase`（def） | **誕生から watch 相に到達する区間が「ある」**（存在形） |
 | **`prepLandingWatchC_at_reachedWatch`** | **到達先では `PrepLandingWatchC` が正しく成り立つ**（`prepLandingWatchC_of_short` を当てる） |
 | `watchSegE_match_needs_only_nonIdle` | `WatchSegE` の `match` は `chain ≠ .idle` しか要求しない（copy/back 相も区間に載る） |
+| `BreakLandingAtReachedWatch`（def） | 節 7（`BreakLandingC`）の `∃` 版 |
+| **`reachesWatchPhase_of_breakLandingAtReachedWatch`** | **節 7 の正しい形は節 4 の正しい形を含意する**（供給は 1 本で足りる） |
 
 **壊れていたのは結論の量化子だった。** `PrepLandingWatchC` は
 

@@ -87,4 +87,40 @@ theorem watchSegE_match_needs_only_nonIdle (P : Shared) (q : ℕ) (first : Fin 9
 #print axioms prepLandingWatchC_at_reachedWatch
 #print axioms watchSegE_match_needs_only_nonIdle
 
+
+/-! ## 節 7（`BreakLandingC`）も同型に直す
+
+`CloseoutWatchRound5.BreakLandingC` は
+
+    ∀ es c2 s2, WatchSegE … cP sP c2 s2 →
+      ∃ cen ys b, ys.length + 1 = h ∧ s2.chain = .watch (freshWatch …) ∧ es.count true = 0
+
+で、節 4 とまったく同じ形（`∀` ＋ `WatchSegE.stop` で誕生状態 `sP` に当たる）。
+`FoundPackRefute.breakLandingC_false_of_foundCompareCtx` が反証したとおり偽。
+正しいのは `∃` 版。 -/
+
+/-- **(NAMED, 正しい形)** `BreakLandingC` の `∃` 版。 -/
+def BreakLandingAtReachedWatch (centre : GalilVM → Fin 3)
+    (place : GalilVM → GalilScaffoldPlace.Place) (entry qq : ℕ) (first : Fin 9)
+    (raw : List (Fin 2)) (h : ℕ) (sF : GalilVM) (cP : Control) (sP : GalilVM) : Prop :=
+  ∃ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+    WatchSegE (PofC centre place entry raw) qq first 2048 es cP sP c2 s2 ∧
+      ∃ (cen : Fin 3) (ys : List (Fin 3)) (b : Fin 3),
+        ys.length + 1 = h ∧
+        s2.chain = ChainVM.watch
+          (PalPeg.GalilNoShiftStage.freshWatch sF.center cen ys b sF.radius) ∧
+        es.count true = 0
+
+/-- **節 7 の正しい形は節 4 の正しい形を含意する。**  つまり `ReachesWatchPhase` を
+1 本供給すれば両方に効く——束ね直すときに 2 本要らない。 -/
+theorem reachesWatchPhase_of_breakLandingAtReachedWatch (centre : GalilVM → Fin 3)
+    (place : GalilVM → GalilScaffoldPlace.Place) (entry qq : ℕ) (first : Fin 9)
+    {raw : List (Fin 2)} {h : ℕ} {sF : GalilVM} {cP : Control} {sP : GalilVM}
+    (hBreak : BreakLandingAtReachedWatch centre place entry qq first raw h sF cP sP) :
+    ReachesWatchPhase (PofC centre place entry raw) qq first cP sP := by
+  obtain ⟨es, c2, s2, hSeg, cen, ys, b, -, hChain, -⟩ := hBreak
+  exact ⟨es, c2, s2, hSeg, _, hChain⟩
+
+#print axioms reachesWatchPhase_of_breakLandingAtReachedWatch
+
 end PalPeg.FoundPackCorrected
