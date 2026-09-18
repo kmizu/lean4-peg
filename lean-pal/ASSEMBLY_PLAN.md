@@ -32,6 +32,56 @@
 
 
 
+## 2026-09-19 n119: `ReachesWatchPhase` の chain 側は既に証明済み — 残りは「誕生後 `2h+1` tick を scan で走れるか」
+
+**全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
+
+### chain 側（既存、無条件）
+
+`GalilPrepLeast.found_to_watchStart_least`（および `GalilScaffoldTopChainEntry.found_to_watchStart`）は、
+`SafeQuanta` ＋ `GalilDpCorrect.Result` から
+
+    ∃ h c ys b, Candidate w lower h ∧ read p = some c ∧ ys.length + 1 = h ∧
+      (denote y.config).pc = 346 ∧ (denote y.config).pos 11 = h ∧
+      ∀ bs cs, bs.length = h → cs.length = h+1 →
+        ∃ x1, （x1 は chainStart …（または ChainMatched 1 歩））∧
+          ChainTicks (bs ++ dm :: cs) x1 (.watch (watchStart ver c ys b …))
+
+を与える。**イベント列 `bs` / `cs` の中身には条件が無い**（長さだけ）。
+そして `SafeQuanta` ＋ `Result` は `GalilScaffoldSearchRun.calibrated_quanta_safe` が
+無条件に出す（n114）。
+
+**つまり「誕生した chain は `2h+1` tick で watch になる」は既に証明済み。**
+
+### 残りは run 側の条件（そしてそれは無条件ではない）
+
+`ReachesWatchPhase` に必要なのは、その `2h+1` tick が**実際に走ること**＝
+`WatchSegE` が誕生から `2h+1` 手続くこと。`WatchSegE` の構成子はすべて
+`c.mode = .scan` を要求するので、途中で scan を離れたら区間が切れる。
+
+**そして途中で scan を離れる経路が実在する。** copy/back 相の chain は `.watch` では
+ないので `shiftGuardVM`（`s.chain = .watch w` を要求）が立たず、不一致が来たら
+`Tick.scan_shift` は使えず `scan_fallback` になる
+（既存の定理 `not_shiftGuard_afterMismatchB`、CLAUDE.md §3c に記録あり）。
+
+したがって正しい形は**選言**:
+
+    「誕生後 `2h+1` tick 走って chain が watch になる」
+      ∨ 「その前に不一致が来て fallback に落ちる（chain は捨てられる）」
+
+found 経路のラウンド機構は**前者の枝でだけ**適用できる。
+`FoundPackCorrected.ReachesWatchPhase` は前者を名指したもので、
+`prepLandingWatchC_at_reachedWatch` がその到達先で既存 producer を当てる。
+
+### 次にやること
+
+1. 選言の後者（fallback 枝）を `foundExit_compare_final20` の結論側で吸収する形に切り直す。
+2. `hpack` の残り 6 節（`MismatchExitG` / `FallbackReachS` / `PrepBirthLagC'` /
+   `LandingFreshC'` / `BreakLandingC` / `PrepInputsG3`）を**同じ目で**洗う——
+   誕生直後の状態に watch 相の性質を要求していないか。
+   （`PrepInputsG3` は `ChainMatched (chainStart …) sP.chain` を言うので整合的。
+   `LandingFreshC` は Round 44 で既に反証済み。）
+
 ## 2026-09-19 n118: **found 経路が閉じなかった根本原因**（`PrepLanding*` 一族が誕生直後に watch を要求）
 
 **全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
