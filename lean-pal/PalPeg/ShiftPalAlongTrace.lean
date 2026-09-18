@@ -2,6 +2,7 @@ import PalPeg.BranchSupply
 import PalPeg.CloseoutBundleRun
 import PalPeg.CopyPhaseNoShift
 import PalPeg.GalilPeriodUnion
+import PalPeg.GalilRoundPeriod
 import PalPeg.CloseoutShiftLocalFree
 
 /-!
@@ -179,7 +180,7 @@ def FreshShiftLedger (w : List (Fin 2)) (s s' : GalilVM) : Prop :=
       2 * periodLength wch ≤ r₀ ∧ r₀ ≤ 4 * periodLength wch ∧
       position s.center + r₀ + 1 < (encoded w).length ∧
       (encoded w)[position s.center + r₀ + 1 - 2 * periodLength wch]? =
-        GalilScaffoldChainConsume.symbol wch.machine.control.period.focus
+        (encoded w)[position s.center + r₀ + 1]?
 
 /-- **`ShiftPal` を `FreshShiftLedger` 1 つから。**  比較の行き先の右ヘッドが
 `right s.right` であることは `compareFound` の `hvr` から出る（`afterBirth` /
@@ -197,8 +198,21 @@ theorem shiftPal_of_freshShiftLedger {w : List (Fin 2)} {s : GalilVM}
     cases a with
     | false => rw [if_neg (by simp)]; exact hvr
     | true => rw [if_pos rfl]; exact hvr
-  obtain ⟨hIn, hOut, hPos, hLo, hHi, hEnd, hCaught⟩ :=
+  obtain ⟨hIn, hOut, hPos, hLo, hHi, hEnd, hCaught'⟩ :=
     hLedger s' hCompare hGuard wch hChain r₀ hScanInv
+  -- the frontier symbol: the shift guard reads it off the right head, and the
+  -- scan invariant places that head at `centre + r₀ + 1`.
+  obtain ⟨wg, hwg, -, -, -, -, hsym⟩ := id hGuard
+  have hwe : wg = wch := by rw [hChain] at hwg; cases hwg; rfl
+  have hsym' : GalilScaffoldChainConsume.symbol wch.machine.control.period.focus
+      = GalilScaffoldInputHead.read s'.right := by rw [← hwe]; exact hsym
+  have hread : GalilScaffoldInputHead.read (right s.right)
+      = (encoded w)[position s.right + 1]? :=
+    PalPeg.GalilRoundPeriod.right_read_index s.right w hScanInv.rightRep
+      hScanInv.rightPresent hCan
+  have hCaught : (encoded w)[position s.center + r₀ + 1 - 2 * periodLength wch]? =
+      GalilScaffoldChainConsume.symbol wch.machine.control.period.focus := by
+    rw [hCaught', hsym', hRight, hread, hScanInv.rightPos]
   exact shiftPalAt_fresh_of_candidate hChain hGuard hRight hCan hScanInv rfl
     hIn hOut hPos hLo hHi hEnd hCaught
 

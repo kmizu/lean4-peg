@@ -1,3 +1,53 @@
+## n213 — 公理進捗: `FreshShiftLedger` の `hCaught` から機械の状態を消した
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 3 連言 `FreshShiftLedger` の 7 成分目 `hCaught` が**純粋な語の言明**になった |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 書く前に止めた誤り
+
+`hCaught` を `hIn`/`hOut` から導けると見込んだが、`span_hasPeriod_of_two_palAt` の結論は
+span `[c−4h, c]` 上の周期で、`hCaught` が触る `c+r₀+1`（`r₀ ≥ 2h`）は**その外**やった。
+補題を書く前に定義を読んで気づいた。
+
+### 代わりにやったこと（機械 → 語）
+
+旧:
+```lean
+(encoded w)[c + r₀ + 1 - 2h]? = GalilScaffoldChainConsume.symbol wch.machine.control.period.focus
+```
+新:
+```lean
+(encoded w)[c + r₀ + 1 - 2h]? = (encoded w)[c + r₀ + 1]?
+```
+
+導出（`shiftPal_of_freshShiftLedger` 内、新規補題ゼロ）:
+* `shiftGuardVM s'` の `hsym` : `symbol wch…focus = read s'.right`
+* `hRight` : `s'.right = right s.right`
+* `GalilRoundPeriod.right_read_index` : `read (right q) = (encoded w)[position q + 1]?`
+* `hScanInv.rightPos` : `position s.right = c + r₀`
+
+**帰結: 残差から機械の周期テープが消え、`encoded w` の周期性という語だけの言明になった。**
+これで `Manacher` / `GalilPeriodUnion` / `Words` 層が直接攻められる。
+n212 で入れた `shiftGuardVM` ガードが無ければこの書き換えはできひんかった。
+
+### 残り 7 成分の現状
+
+| 成分 | 形 |
+|---|---|
+| `hIn` / `hOut` | `PalAt` 2 本（語のみ） |
+| `hPos` | `0 < periodLength wch`（機械） |
+| `hLo` / `hHi` | `2h ≤ r₀ ≤ 4h`（機械と語の橋） |
+| `hEnd` | `c + r₀ + 1 < (encoded w).length`（語のみ。`hScanInv.palindrome` が `c + r₀ < length` を与えるので **1 つ違い**） |
+| `hCaught` | **語のみになった（本ノート）** |
+
+7 成分中 4 つが語だけの言明になった。
 ## n212 — 公理進捗: `obligation_shiftPalResiduesAlongRun` 第 3 連言を 2 段階弱めた
 
 **公理への進捗（これを毎回書く）**
