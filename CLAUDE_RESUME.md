@@ -1,3 +1,38 @@
+## 2026-09-19 n172: `Fair` は 3 場すべて witness がある——公理を強める根拠が立った
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。**
+
+`GalilTickFair` に 3 場ぶんの witness が**既に揃っている**（一次情報で確認）:
+
+| `Fair` の場 | witness | 側条件 |
+|---|---|---|
+| `keepsSearchCursor` | `initVM_keeps_cursor:474` / `replayStartVM_keeps_cursor:486`。**さらに定義自体に入っている**ので `Tick` からタダ | なし |
+| `fallbackPlace` | **`fallbackAt_walker_self:466`**——search 自身の walker に着地する fallback が満たす（`FppControl.beginFallback` の `walker := p`、`GalilScaffoldChainFallback:410`） | `(stream s.walker).length ≤ position s.right` |
+| `restartFirst` | `fair_restart:454` | なし（guard 下で restart が存在する） |
+
+**帰結: fair な run は存在し、`tick_fair_unique` でそれは一意。**
+だから `obligation_cycleOracle` の文に「run は `Fair`」を入れるのは
+**モデルの忠実性の要求**であって、無根拠な強化ではない。
+
+### ただし 4 → 3 にはまだ足りない（正直に）
+
+`Fair` が閉じるのは `Realizes` の**決定性の半分**（`H_scanDet` / `H_initFun` / `H_rsFun`）。
+**局所側の構成**（`H_scanLoc` / `H_initLoc` / `H_replayStartLoc` ＋ `H_rewindWF` /
+`H_chooseWF` ＋ fpp の 1 量子）は残る。`LocalRealizesScan` の冒頭が
+「`LocalReplayParked.commitReplayParked` が `H_replayStartLoc` の意図された witness だが
+`LocalTick2.commitReplay` に `LocalTick1.Inv` 保存の補題がまだ無い」と書いている。
+
+**つまり `localRealization` を外すには局所 step の構成作業が必要で、
+それは `Fair` とは別の仕事。** 公理は 4 本のまま。
+
+### 2 本の筋の残りを並べる（両方とも「配線／構成」で、新しい数学ではない）
+
+| 筋 | 残り | 規模の手がかり |
+|---|---|---|
+| `H_readsShift`（第 1 残差） | `first_round` の 30+ 仮説を run から供給 | CLAUDE.md §3 の found 経路（`hfound`/`hfoundBg`/`hfoundReplay`、「未着手、最大の残り」） |
+| `obligation_localRealization` | `Fair` を trace に通す ＋ 局所 step 3 本の構成 | `LocalTick2.commitReplay` の `Inv` 保存補題が起点 |
+
 ## 2026-09-19 n171: **`Fair` の 3 場の内訳を割った——1 場はタダ、1 場は形式化のミス**
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

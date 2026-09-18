@@ -458,6 +458,22 @@ implications」）で、**構成しているのは次の 3 箇所だけ**（実�
 オラクルの仕事は run を提示することなので、提示する run が fair であることは
 モデルの忠実性の要求そのもの。
 
+### `Fair` の 3 場は witness が揃っている（n172、一次情報）
+
+| 場 | witness | 側条件 |
+|---|---|---|
+| `keepsSearchCursor` | 定義自体に入っている（`GalilScaffoldTopReplay:26,39`）。`Tick` からタダ | なし |
+| `fallbackPlace` | `GalilTickFair.fallbackAt_walker_self:466` | `(stream s.walker).length ≤ position s.right` |
+| `restartFirst` | `GalilTickFair.fair_restart:454` | なし |
+
+**fair な run は存在する。** だから `cycleOracle` の文に `Fair` を入れるのは
+モデルの忠実性の要求で、無根拠な強化ではない。
+
+**ただし `Fair` が閉じるのは決定性の半分だけ。** 局所 step の構成
+（`H_scanLoc` / `H_initLoc` / `H_replayStartLoc`）は残る。
+起点は `LocalTick2.commitReplay` の `LocalTick1.Inv` 保存補題
+（`LocalRealizesScan` の冒頭が「まだ無い」と書いている）。
+
 ### 段取り（改訂）
 
 1. `Fair` の定義を確認し、`PreTraceB` に `fair` 場を足す
