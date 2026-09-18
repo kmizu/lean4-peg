@@ -238,6 +238,7 @@ inductive で、**`Tick` の `scan_wait` / `scan_count` / `scan_match` と 1 対
 | `chainMatched_copy_stays_copy` | `ChainMatched` は `.copy` から `.copy` にしか行かない |
 | `chainStart_is_copy` | `chainStart` は `.copy`（`rfl`、公理ゼロ） |
 | **`hpack_false_of_foundCompareCtx`** | **`FoundCompareCtxC` の証人 ＋ `PrepLandingWatchC` から `False`** |
+| **`hpack_false_of_foundReachable`** | **`InvLPC` ＋ `SegReachedW` ＋ found 比較から `False`（証人は `foundCompareCtxC_of_found` が作る）** |
 
 `hpack` の 4 番目の節 `PrepLandingWatchC` は `WatchSegE.stop` の `es = []` 実例で
 `∃ w, sP.chain = .watch w` を強制する（`CloseoutWatchRound8.prepLandingWatchC_watch_start`）。
@@ -255,9 +256,12 @@ producer は `CloseoutWatchRound10.prepLandingWatchC_of_short`）。**束ねる�
 `LandingFreshC` も Round 44 で反証されて `LandingFreshC'` に割られている——
 **同じ場所で同じ種類の誤りが 3 回**。
 
-なお `CloseoutFoundRoute1` 自体は**ビルドが壊れている**（`:238` で `StepsAll.zero` の
-型不整合）。未登録なので全体 build には影響しないが、found 経路を触るときは
-まずここを直す必要がある。
+`CloseoutFoundRoute1` は**壊れていたので直した**（2026-09-19）。`:238` の `StepsAll.zero`
+型不整合は、モデル修正 `M-periodOnly` で比較の行き先が `afterBirth true (…)` になったのに
+着地状態が `afterCompare …` のままだったため。`afterBirth` はヘッドを触らないので
+`OutputRel` / `ScanInvariant` / `chain` はすべて congruence で移る。
+これで `foundCompareCtxC_of_found`（`FoundCompareCtxC` の producer）が使えるようになり、
+上の到達可能性込みの反証が書けた。
 
 ## `ShiftPalAlongTrace` — `hSP` の正しい形（trace 形、未配線）
 

@@ -1,5 +1,6 @@
 import PalPeg.CloseoutWatchRound2
 import PalPeg.CloseoutWatchRound8
+import PalPeg.CloseoutFoundRoute1
 
 /-!
 # `foundExit_compare_final20` の `hpack` は **REFUTED（条件付き）**
@@ -83,10 +84,37 @@ theorem hpack_false_of_foundCompareCtx {w : List (Fin 2)} {c cP : Control} {r sP
   rw [hChainEq, hCopy] at hWatch
   exact ChainVM.noConfusion hWatch
 
+/-- **到達可能性まで込めた反証。**  `CloseoutFoundRoute1.foundCompareCtxC_of_found` が
+`InvLPC` ＋ `SegReachedW` ＋ found 比較のデータから `FoundCompareCtxC` の証人を出すので、
+`hpack` の 4 番目の節（`PrepLandingWatchC`）だけを弱く取り出した形が**そこで偽**になる。
+
+仮説名 `hPrepLandingWatchAtAnyFoundCtx` は過剰量化を名前に出したもの
+（CLAUDE.md「過剰量化した仮定には、その過剰量化が名前に出る名前を付ける」）。
+`hpack` はこれを含意するので、**`hpack` は found 比較が到達可能な限り偽**。 -/
+theorem hpack_false_of_foundReachable {raw : List (Fin 2)} {c c' : Control} {r t : GalilVM}
+    (hIC : PalPeg.GalilInvPlus2.InvLPC raw c r)
+    (hsW : PalPeg.GalilInvPlus.SegReachedW centre place entry q first raw c r c' t)
+    (hClock : c'.clock = 1) (hAvailable : canRight t.right)
+    (hMatched : read (left t.left) = read (right t.right))
+    (hFound : ∃ vq : SearchVM, searchEffect (PofC centre place entry raw) true t vq ∧
+      vq.search.mode = GalilScaffoldSearchFinish.Mode.found)
+    (hPrepLandingWatchAtAnyFoundCtx : ∀ (cP : Control) (sP : GalilVM),
+      FoundCompareCtxC centre place entry q first raw c r cP sP →
+      PrepLandingWatchC (PofC centre place entry raw) q first cP sP) :
+    False := by
+  obtain ⟨cP, sP, hCtx⟩ :=
+    PalPeg.CloseoutFoundRoute1.foundCompareCtxC_of_found centre place entry q first raw
+      hIC hsW hClock hAvailable hMatched hFound
+  exact hpack_false_of_foundCompareCtx centre place entry q first hCtx
+    (hPrepLandingWatchAtAnyFoundCtx cP sP hCtx)
+
+#print axioms hpack_false_of_foundReachable
+
 end
 
 #print axioms chainMatched_copy_stays_copy
 #print axioms chainStart_is_copy
 #print axioms hpack_false_of_foundCompareCtx
+
 
 end PalPeg.FoundPackRefute

@@ -230,14 +230,26 @@ theorem found_first_tick (centre : GalilVM → Fin 3)
     outputRel_matched_refresh' raw (PofC centre place entry raw) rfl rfl q first vq
       (vs := ⟨left t.left, right t.right, ch⟩) rfl rfl hmt hav hscanT' c'.output oF hoF
       {c' with clock := 2048, output := oF, replaying := false} rfl
+  -- **2026-09-19**: モデル修正 `M-periodOnly` で比較の行き先が `afterBirth true (…)` に
+  -- なったので、着地状態もそれに合わせる。`afterBirth` はヘッドを触らないので
+  -- `OutputRel` / `ScanInvariant` / `chain` はすべて congruence で移る。
+  have hout1' : OutputRel raw {c' with clock := 2048, output := oF, replaying := false}
+      (afterBirth true (afterCompare t ⟨left t.left, right t.right, ch⟩ vq)) := by
+    intro hoTrue k hkPos hkLe hPos
+    rw [afterBirth_right] at hPos
+    exact hout1 hoTrue k hkPos hkLe hPos
+  have hinv1' : ScanInvariant raw (position r.center) (R0 + es0.count true + 1)
+      (afterBirth true (afterCompare t ⟨left t.left, right t.right, ch⟩ vq)).left
+      (afterBirth true (afterCompare t ⟨left t.left, right t.right, ch⟩ vq)).right := by
+    rw [afterBirth_left, afterBirth_right]; exact hinv1
   refine ⟨{c' with clock := 2048, output := oF, replaying := false},
-    afterCompare t ⟨left t.left, right t.right, ch⟩ vq, es0.length,
+    afterBirth true (afterCompare t ⟨left t.left, right t.right, ch⟩ vq), es0.length,
     R0 + es0.count true + 1,
     ⟨es0, c', t, vq, ch, oF, a, ls, rs, qw, gap, hraw, hseg0, hsW.1.mode, hnr, hc1, hav,
       hsW.1.idle, by rw [hsW.1.center]; exact hcenR, hqe, hfound, hmt, hch, hchne, hoF, rfl, rfl⟩,
-    stepsAll_trans hrun (.succ houtF htick (.zero _ hout1)),
-    hsW.1.mode, rfl, rfl, hout1, hinv1, ?_⟩
-  rw [afterCompare_chain]; exact hchne
+    stepsAll_trans hrun (.succ houtF htick (.zero _ hout1')),
+    hsW.1.mode, rfl, rfl, hout1', hinv1', ?_⟩
+  rw [afterBirth_chain, afterCompare_chain]; exact hchne
 
 /-! ## 6. The found-route consumer with the context discharged -/
 
