@@ -1,3 +1,57 @@
+## n218 — 公理進捗: `obligation_shiftPalResiduesAlongRun` の供給鎖が全部繋がった
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 3 連言すべての**供給元が名前付きで確定**。未知の箱ゼロ。残るは配線作業 |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 供給鎖（すべて一次情報で確認）
+
+```
+CloseoutWatchRound43.ChainWRun（run に沿って ChainW を運ぶ。:140/:202 で
+  ChainW raw (position t.center) (position sT.right + R) (position t.right) … を確立）
+  ↓
+GalilReplaySpan.ChainW … (.watch w) :318
+  = LagAt ∧ BlockOn raw cc b xs (C+1) E ∧ CoreX raw cc b xs (C+1) w.machine
+    ∧ Canonical w.margin ∧ value w.margin + 4*(xs.length+1) = R − C
+  ↓
+第 2 連言 H_freshShiftAtShiftEntry → ShiftInv（CloseoutPackRun37:59、19 場）
+  実質は pal : PalAt (C+h) (R+h) / palNext : PalAt (C+2h) (R+1) /
+  origin : enc[C−R−1]? ≠ enc[C+R+2h+1]? の 3 場。残り 15 場は beginShiftVM が決める枠
+  ↓
+CloseoutPackRun37.roundScan_of_shiftInv:96 → RoundScan
+  ├→ 第 1 連言 H_readsShift のガードそのもの（periodOnly = true 相）
+  └→ 第 3 連言 FreshShiftLedger の 5 成分（periodOnly = false 相）
+        posH = hPos / pred = hCaught / size + phase = hLo /
+        pal + (ReadsInv → ReadOrigin → GalilOriginPeriod.origin_periodOn) = hIn, hLeft
+```
+
+### 相の対応（Scala 正本）
+
+`ScaffoldChain.beginShift()` が `periodOnly = true` にするので
+
+* 第 3 連言 = `periodOnly = false` = **最初の** shift（`canShift` の `margin.sign >= 0` 枝）
+* 第 1 連言 = `periodOnly = true` = **2 回目以降**（`cycleEnd` 枝）
+* `ChainRound`（`periodOnly = true` ガード）は最初の shift には使えへん。
+  だから第 2 連言が独立した名前付き残差になってる
+
+### `hLo` の源も確定
+
+`ChainW` の margin 等式 `value w.margin + 4*(xs.length+1) = R − C` に
+`shiftGuardVM` の `negative w.margin = false` を合わせると `4h ≤ R − C`。
+`RoundScan` 側の `size : 2h ≤ R` と `phase = 4` と整合する。
+
+### 残り
+
+配線 3 本:
+1. `ChainWRun` → shift 入口の `ChainW`（`periodOnly = false`）
+2. `ChainW` の `BlockOn`/`CoreX`/margin 等式 → `ShiftInv` の `pal`/`palNext`/`origin`
+3. `ShiftInv` の枠 15 場 → `beginShiftVM` の遷移から計算
 ## n217 — 公理進捗: 仕様に無い前提 `hHi` を除去（第 3 連言 6 → 5 成分）
 
 **公理への進捗**
