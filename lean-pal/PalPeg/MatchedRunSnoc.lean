@@ -341,4 +341,128 @@ theorem restartNeedsBroken_of_restartVM (entry : ℕ) :
 
 #print axioms restartNeedsBroken_of_restartVM
 
+
+/-! ## run 全体への搬送
+
+`scanSeg_snoc_tick` の出口 2 / 3（mode が scan を離れる・chain が watch でなくなる）は、
+run のその区間が scan ＋ watch であることを知っている呼び手には矛盾なので、
+出口 1 だけが残る。 -/
+
+/-- **`ScanSeg` は scan ＋ watch の区間に沿って伸びる。**  区間抽出（`ScanToScan`）を
+使わず、tick ごとの吸収（`scanSeg_snoc_tick`）を `Steps` に沿って繰り返すだけ。 -/
+theorem scanSeg_of_steps {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    (hRestartNeedsBroken : ∀ u v : GalilVM, P.restart u v → ∃ wb, u.chain = ChainVM.broken wb)
+    {k : ℕ} {x y : State GalilVM}
+    (hSteps : Steps (galilFrameS P q first) delay k x y)
+    {c₀ : Control} {s₀ : GalilVM} {n : ℕ}
+    (hSeg : ScanSeg P q first delay n c₀ s₀ x.ctl x.vm)
+    (hScanWatchAll : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS P q first) delay m x z →
+      z.ctl.mode = Mode.scan ∧ z.ctl.replaying = false ∧
+        (∃ wch, z.vm.chain = ChainVM.watch wch) ∧ singlePositive z.vm.cycle = false) :
+    ∃ m, ScanSeg P q first delay m c₀ s₀ y.ctl y.vm := by
+  induction hSteps generalizing n with
+  | zero u => exact ⟨n, hSeg⟩
+  | @succ j u z v hTick hRest ih =>
+    obtain ⟨hScan, hNotReplaying, hWatching, hContinuing⟩ := hScanWatchAll 0 u (.zero u)
+    obtain ⟨hScanZ, -, hWatchingZ, -⟩ := hScanWatchAll 1 z (.succ hTick (.zero z))
+    rcases scanSeg_snoc_tick hRestartNeedsBroken hSeg hScan hNotReplaying hWatching
+        hContinuing hTick with ⟨m, hNext⟩ | hLeft | hBroke
+    · exact ih hNext (fun m' z' hz' => hScanWatchAll (m' + 1) z' (.succ hTick hz'))
+    · exact absurd hScanZ hLeft
+    · obtain ⟨wch, hw⟩ := hWatchingZ
+      exact absurd hw (hBroke wch)
+
+/-- **射影まで一気に。**  ラウンド起点が `periodOnly` かつ lag ゼロの watch なら、
+区間の末尾で下層の `OnlyMatchedRun` が手に入る。`CompareRounds.next` の
+第 1 引数はこれ。 -/
+theorem onlyMatchedRun_of_steps {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    (hRestartNeedsBroken : ∀ u v : GalilVM, P.restart u v → ∃ wb, u.chain = ChainVM.broken wb)
+    {k : ℕ} {x y : State GalilVM}
+    (hSteps : Steps (galilFrameS P q first) delay k x y)
+    {w0 : GalilScaffoldChainWatch.State}
+    (hPeriodOnly : x.vm.periodOnly = true) (hChain : x.vm.chain = ChainVM.watch w0)
+    (hLagZero : zero w0.lag = true)
+    (hScanWatchAll : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS P q first) delay m x z →
+      z.ctl.mode = Mode.scan ∧ z.ctl.replaying = false ∧
+        (∃ wch, z.vm.chain = ChainVM.watch wch) ∧ singlePositive z.vm.cycle = false) :
+    ∃ (m : ℕ) (w' : GalilScaffoldChainWatch.State), y.vm.chain = ChainVM.watch w' ∧
+      zero w'.lag = true ∧ y.vm.periodOnly = true ∧
+      OnlyMatchedRun (toOnly x.vm w0) m (toOnly y.vm w') := by
+  obtain ⟨m, hSeg⟩ := scanSeg_of_steps hRestartNeedsBroken hSteps
+    (ScanSeg.stop x.ctl x.vm) hScanWatchAll
+  obtain ⟨w', hw', hz', hp', hrun⟩ :=
+    scanSeg_only P q first delay hSeg w0 hPeriodOnly hChain hLagZero
+  exact ⟨m, w', hw', hz', hp', hrun⟩
+
+#print axioms scanSeg_of_steps
+#print axioms onlyMatchedRun_of_steps
+
+
+/-- **不一致比較 tick の分解**（`compare_matched_parts` の鏡像）。
+ラウンド境界（`scan_shift`）で `round_next` に渡す `vs` / `vq` / `hcmp` / `hmis` / `hq` を
+`compareFound` から取り出す。 -/
+theorem compare_mismatched_parts {P : Shared} {q : ℕ} {first : Fin 9} {t u : GalilVM}
+    (hCompare : (galilFrameS P q first).compare t u)
+    (hNotMatched : ¬ (galilFrameS P q first).matched u)
+    {wch : GalilScaffoldChainWatch.State} (hWatch : t.chain = ChainVM.watch wch) :
+    ∃ (vs : ScanVM) (vq : SearchVM),
+      u = afterMismatch t vs vq ∧ vs.chain = u.chain ∧
+      searchEffect P false t vq ∧
+      (galilFrame P q first).compare t (scanLens.set t vs) ∧
+      ¬ (galilFrame P q first).matched (scanLens.set t vs) := by
+  obtain ⟨vs, vq, a, hvl, hvr, hiff, hsearch, hchain, hteq⟩ := hCompare
+  have hNotIdle : t.chain ≠ ChainVM.idle := by rw [hWatch]; intro h0; cases h0
+  have hAFalse : a = false := by
+    cases a with
+    | false => rfl
+    | true =>
+      exfalso
+      rw [if_pos rfl] at hteq
+      subst hteq
+      refine hNotMatched ?_
+      have h0 := hiff.1 rfl
+      show GalilScaffoldInputHead.read
+          (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found))
+            t.chain) (afterCompare t vs vq)).left
+        = GalilScaffoldInputHead.read
+          (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found))
+            t.chain) (afterCompare t vs vq)).right
+      rw [afterBirth_left, afterBirth_right]
+      exact h0
+  subst hAFalse
+  rw [if_neg (by simp), afterBirth_of_ne_idle hNotIdle] at hteq
+  have hNotMatchedSet : ¬ (galilFrame P q first).matched (scanLens.set t vs) := by
+    intro hc
+    exact absurd (hiff.2 hc) (by simp)
+  have hChainTick : ChainTick false t.chain vs.chain := by
+    rcases hchain with ⟨-, hct⟩ | ⟨hidle, -, -⟩ | ⟨hidle, -, -⟩
+    · exact hct
+    · exact absurd hidle hNotIdle
+    · exact absurd hidle hNotIdle
+  refine ⟨vs, vq, hteq, by rw [hteq]; rfl, hsearch, ?_, hNotMatchedSet⟩
+  refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+  · show (scanLens.get (scanLens.set t vs)).left = GalilScaffoldInputHead.left t.left
+    rw [scanLens.get_set]; exact hvl
+  · show (scanLens.get (scanLens.set t vs)).right = GalilScaffoldChainVerifier.right t.right
+    rw [scanLens.get_set]; exact hvr
+  · show ChainTick (decide (GalilScaffoldInputHead.read (GalilScaffoldInputHead.left t.left)
+      = GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right t.right))) t.chain
+      (scanLens.get (scanLens.set t vs)).chain
+    rw [scanLens.get_set]
+    have hread : ¬ (GalilScaffoldInputHead.read (GalilScaffoldInputHead.left t.left)
+        = GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right t.right)) := by
+      intro hc
+      refine hNotMatchedSet ?_
+      show GalilScaffoldInputHead.read (scanLens.get (scanLens.set t vs)).left
+        = GalilScaffoldInputHead.read (scanLens.get (scanLens.set t vs)).right
+      rw [scanLens.get_set, hvl, hvr]
+      exact hc
+    rw [decide_eq_false hread]
+    exact hChainTick
+  · rw [scanLens.get_set]
+
+#print axioms compare_mismatched_parts
+
 end PalPeg.MatchedRunSnoc
