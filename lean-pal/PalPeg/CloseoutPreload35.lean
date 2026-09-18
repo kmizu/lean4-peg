@@ -188,15 +188,10 @@ absorb them at an arbitrary clock phase.  `16` is sharp for these inputs
 the worst admissible triple gives a balance of `16 > 15`, and the margin is
 `0` at `mw = 16` and `mw = 20`.  `mw ≤ 3` is vacuous, since `hcal` forces
 `4 ≤ mw`. -/
-theorem bal_of_paced_slack_S {k mw slack : ℕ} {bs : List Bool} {a : Bool}
-    (hcal : 8 * max k 1 ≤ 2 * mw) (hblen : bs.length = mw) (hmw : 16 ≤ mw)
-    (hslack : slack ≤ 2047) (hp : PacedL 2048 slack (bs ++ [a])) :
-    4 * dpDemandS k (2 * mw) + 4 * (bs ++ [a]).count true ≤ mw := by
-  have hc : 2048 * (bs ++ [a]).count true ≤ (bs ++ [a]).length + slack := by
-    have h := hp (bs ++ [a]).length
-    rwa [List.take_length] at h
-  have hl : (bs ++ [a]).length = mw + 1 := by simp [hblen]
-  rw [hl] at hc
+theorem bal_of_count {k mw slack cnt : ℕ}
+    (hcal : 8 * max k 1 ≤ 2 * mw) (hmw : 16 ≤ mw) (hslack : slack ≤ 2047)
+    (hc : 2048 * cnt ≤ mw + 1 + slack) :
+    4 * dpDemandS k (2 * mw) + 4 * cnt ≤ mw := by
   have h1 := prepLen_le k
   have h2 := dpEvents_win_le (2 * mw)
   have h3 : k ≤ max k 1 := le_max_left _ _
@@ -210,6 +205,19 @@ theorem bal_of_paced_slack_S {k mw slack : ℕ} {bs : List Bool} {a : Bool}
     interval_cases mw <;> omega
   · omega
 
+/-- The pacing form.  `hp` is read exactly once, for the comparison count of the
+whole prefix, so `bal_of_count` is the statement with no list in it. -/
+theorem bal_of_paced_slack_S {k mw slack : ℕ} {bs : List Bool} {a : Bool}
+    (hcal : 8 * max k 1 ≤ 2 * mw) (hblen : bs.length = mw) (hmw : 16 ≤ mw)
+    (hslack : slack ≤ 2047) (hp : PacedL 2048 slack (bs ++ [a])) :
+    4 * dpDemandS k (2 * mw) + 4 * (bs ++ [a]).count true ≤ mw := by
+  refine bal_of_count hcal hmw hslack ?_
+  have h := hp (bs ++ [a]).length
+  rw [List.take_length] at h
+  have hl : (bs ++ [a]).length = mw + 1 := by simp [hblen]
+  omega
+
+#print axioms bal_of_count
 #print axioms bal_of_paced_slack_S
 
 /-- `CloseoutPreload28.stageInvD_of_double_exit` on `StageInvS`. -/

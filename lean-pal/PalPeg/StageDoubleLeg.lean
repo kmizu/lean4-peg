@@ -1,4 +1,5 @@
 import PalPeg.StageCycleSearch
+import PalPeg.DpBudgetBalance
 
 /-!
 # The `.double` leg, step-locally
@@ -15,14 +16,16 @@ that survives one tick at a time.
   its own induction.
 * `doubleTrace_frame` — after `ds` ticks the work has fallen by `ds.length`
   (hence `ds.length ≤ mw`) and the span has risen by `2 * ds.length`.
-* `DoubleLeg` — the invariant: the ticks consumed so far, the pacing of the
-  whole remaining stream measured from the leg's start, and the frame data at
-  that start.  The pacing has to be measured from the start because
-  `bal_of_paced_slack_S` reads the comparison count of the *whole* leg, which a
-  state predicate at the current tick has already forgotten.
-* `doubleLeg_step` / `doubleLeg_exit` — the two branches of a tick: work still
-  positive keeps the invariant, work spent dispatches into `PrepAt k (2 * mw)`
-  with `StageInvS k (2 * mw)`.
+* `DoubleLeg` — the invariant: the ticks consumed so far, the leg's comparison
+  count against its length (`DpBudgetBalance.PrepPaced`), and the frame data at
+  the leg's start.  The count has to be carried because
+  `CloseoutPreload35.bal_of_count` reads the comparison count of the *whole*
+  leg, which a state predicate at the current tick has already forgotten.  No
+  continuation is quantified over.
+* `doubleLeg_background` / `doubleLeg_comparison` / `doubleLeg_exit` — the three
+  branches of a tick: work still positive keeps the invariant (with the slack
+  moving exactly as `ReadyIface` moves it), work spent dispatches into
+  `PrepAt k (2 * mw)` with `StageInvS k (2 * mw)`.
 
 **Not done here.**  This is one of the four phases of the stage cycle
 (`.run` / `.wait` / `.double` / preparation).  The other three, and the
@@ -43,8 +46,8 @@ open PalPeg.GalilScaffoldCounter (Canonical value ofNat positive reset
 open PalPeg.CloseoutReadyStage (PacedL)
 open PalPeg.CloseoutPreload10 (PrepAt)
 open PalPeg.CloseoutPreload17 (DoubleTrace double_step_pos)
-open PalPeg.CloseoutPreload35 (StageInvS stageInvS_of_double_exit bal_of_paced_slack_S
-  pacedL_prefix_count_slack)
+open PalPeg.CloseoutPreload35 (StageInvS stageInvS_of_double_exit bal_of_count)
+open PalPeg.DpBudgetBalance (PrepPaced prepPaced_background prepPaced_comparison)
 
 /-! ## 1. Growing and reading a `DoubleTrace` -/
 
@@ -105,56 +108,58 @@ theorem doubleTrace_frame {ds : List Bool} {u v : SearchVM} (hr : DoubleTrace ds
 #print axioms doubleTrace_snoc
 #print axioms doubleTrace_frame
 
-/-! ## 2. The pacing of a prefix, at an arbitrary slack -/
-
-/-- `CloseoutPreload35.pacedL_prefix_of_append` at an arbitrary slack: its
-statement is fixed at slack `0`, and the `.double` leg is entered at whatever
-phase the clock is in. -/
-theorem pacedL_prefix_slack {d slack : ℕ} {xs ys : List Bool}
-    (h : PacedL d slack (xs ++ ys)) : PacedL d slack xs := by
-  intro n
-  by_cases hn : n ≤ xs.length
-  · have h2 := h n
-    rw [List.take_append_of_le_length hn] at h2
-    exact h2
-  · have h2 := pacedL_prefix_count_slack h
-    rw [List.take_of_length_le (by omega : xs.length ≤ n)]
-    omega
-
-#print axioms pacedL_prefix_slack
-
 /-! ## 3. The leg as a step-local invariant -/
 
-/-- **The `.double` leg in progress.**  `ds` are the ticks already spent, the
-pacing is measured from the leg's start `u` (so the comparison count of the
-whole leg is still readable at the exit), and the rest is the frame `u` was
-left in by `CloseoutPreload14.wait_exit_double`. -/
-def DoubleLeg (k mw slack : ℕ) (u v : SearchVM) (as : List Bool) : Prop :=
+/-- **The `.double` leg in progress.**  `ds` are the ticks already spent and
+`kcur` is the current clock slack; the comparison count of the leg is kept
+against its length, which is all `bal_of_count` reads at the exit.  Nothing here
+mentions a continuation. -/
+def DoubleLeg (k mw slack : ℕ) (u v : SearchVM) (kcur : ℕ) : Prop :=
   ∃ ds : List Bool,
-    DoubleTrace ds u v ∧ PacedL 2048 slack (ds ++ as) ∧
+    DoubleTrace ds u v ∧ PrepPaced (ds.count true) ds.length slack kcur ∧
       u.search.mode = Mode.double ∧ u.search.work = ofNat mw ∧
       u.search.span = reset ∧ u.search.quarter = 0 ∧
       value u.search.debt = 0 ∧ Canonical u.search.debt ∧ u.lower = ofNat k
 
-/-- **A tick with work left keeps the leg.** -/
-theorem doubleLeg_step {k mw slack : ℕ} {u v v' : SearchVM} {as : List Bool}
-    {c : GalilScaffoldPlace.Place} {a : Bool}
-    (h : DoubleLeg k mw slack u v (a :: as)) (hpos : positive v.search.work = true)
-    (hs : searchStep c a v v') :
-    DoubleLeg k mw slack u v' as := by
+/-- **A background tick with work left keeps the leg and buys a unit of slack.** -/
+theorem doubleLeg_background {k mw slack kcur kcur' : ℕ} {u v v' : SearchVM}
+    {c : GalilScaffoldPlace.Place} (hk : kcur' ≤ kcur + 1)
+    (h : DoubleLeg k mw slack u v kcur) (hpos : positive v.search.work = true)
+    (hs : searchStep c false v v') :
+    DoubleLeg k mw slack u v' kcur' := by
   obtain ⟨ds, hr, hpaced, hm, hw, hsp, hq, hd, hcan, hlow⟩ := h
   obtain ⟨-, hvm, -, -, -⟩ := doubleTrace_frame hr mw 0 hm hw (by rw [hsp]; rfl)
-  refine ⟨ds ++ [a], doubleTrace_snoc hr hvm hpos hs, ?_, hm, hw, hsp, hq, hd, hcan, hlow⟩
-  simpa [List.append_assoc] using hpaced
+  refine ⟨ds ++ [false], doubleTrace_snoc hr hvm hpos hs, ?_, hm, hw, hsp, hq, hd, hcan, hlow⟩
+  have hcnt : (ds ++ [false]).count true = ds.count true := by
+    simp [List.count_append]
+  have hlen : (ds ++ [false]).length = ds.length + 1 := by simp
+  rw [hcnt, hlen]
+  exact prepPaced_background hk hpaced
 
-/-- **A tick with the work spent dispatches into the next stage.**  This is
-`CloseoutPreload35.stageInvS_of_double_exit` reached from the invariant instead
-of from a leg given whole: the length `ds.length = mw` is read off
-`doubleTrace_frame` rather than assumed. -/
-theorem doubleLeg_exit {k mw slack : ℕ} {u v v' : SearchVM} {as : List Bool}
+/-- **A comparison tick with work left keeps the leg; its guard is what pays for
+the comparison the leg has to account for.** -/
+theorem doubleLeg_comparison {k mw slack kcur : ℕ} {u v v' : SearchVM}
+    {c : GalilScaffoldPlace.Place} (hk : 2048 ≤ kcur + 1)
+    (h : DoubleLeg k mw slack u v kcur) (hpos : positive v.search.work = true)
+    (hs : searchStep c true v v') :
+    DoubleLeg k mw slack u v' 0 := by
+  obtain ⟨ds, hr, hpaced, hm, hw, hsp, hq, hd, hcan, hlow⟩ := h
+  obtain ⟨-, hvm, -, -, -⟩ := doubleTrace_frame hr mw 0 hm hw (by rw [hsp]; rfl)
+  refine ⟨ds ++ [true], doubleTrace_snoc hr hvm hpos hs, ?_, hm, hw, hsp, hq, hd, hcan, hlow⟩
+  have hcnt : (ds ++ [true]).count true = ds.count true + 1 := by
+    simp [List.count_append]
+  have hlen : (ds ++ [true]).length = ds.length + 1 := by simp
+  rw [hcnt, hlen]
+  exact prepPaced_comparison hk hpaced
+
+/-- **A tick with the work spent dispatches into the next stage.**  The length
+`ds.length = mw` is read off `doubleTrace_frame` rather than assumed, and the
+balance comes from `CloseoutPreload35.bal_of_count` — the list-free form of
+`bal_of_paced_slack_S`. -/
+theorem doubleLeg_exit {k mw slack kcur : ℕ} {u v v' : SearchVM}
     {c : GalilScaffoldPlace.Place} {a : Bool}
-    (h : DoubleLeg k mw slack u v (a :: as)) (hpos : positive v.search.work = false)
-    (hs : searchStep c a v v')
+    (h : DoubleLeg k mw slack u v kcur) (hpos : positive v.search.work = false)
+    (hcmp : a = true → 2048 ≤ kcur + 1) (hs : searchStep c a v v')
     (hcal : 8 * max k 1 ≤ 2 * mw) (hmw : 16 ≤ mw) (hslack : slack ≤ 2047) :
     PrepAt k (2 * mw) v' ∧ StageInvS k (2 * mw) v' := by
   obtain ⟨ds, hr, hpaced, hm, hw, hsp, hq, hd, hcan, hlow⟩ := h
@@ -162,18 +167,26 @@ theorem doubleLeg_exit {k mw slack : ℕ} {u v v' : SearchVM} {as : List Bool}
   have hlen : ds.length = mw := by
     rcases Nat.lt_or_ge ds.length mw with hlt | hge
     · exfalso
-      have : positive v.search.work = true := by
+      have hp1 : positive v.search.work = true := by
         rw [hvw]; exact (positive_ofNat_iff _).2 (by omega)
-      rw [hpos] at this; exact Bool.noConfusion this
+      rw [hpos] at hp1; exact Bool.noConfusion hp1
     · omega
   have hts : v.search.span = ofNat (2 * mw) := by rw [hvs, hlen]; simp
   have htl : v.lower = ofNat k := by rw [hvl, hlow]
-  have hpa : PacedL 2048 slack (ds ++ [a]) :=
-    pacedL_prefix_slack (ys := as) (by simpa [List.append_assoc] using hpaced)
+  have hcnt : 2048 * ((ds ++ [a]).count true) ≤ mw + 1 + slack := by
+    unfold PrepPaced at hpaced
+    rw [hlen] at hpaced
+    cases a
+    · have : (ds ++ [false]).count true = ds.count true := by simp [List.count_append]
+      rw [this]; omega
+    · have hfull := hcmp rfl
+      have : (ds ++ [true]).count true = ds.count true + 1 := by simp [List.count_append]
+      rw [this]; omega
   exact stageInvS_of_double_exit hr hd hq hcan hvm hpos hts htl hlen
-    (bal_of_paced_slack_S hcal hlen hmw hslack hpa) hs
+    (bal_of_count hcal hmw hslack hcnt) hs
 
-#print axioms doubleLeg_step
+#print axioms doubleLeg_background
+#print axioms doubleLeg_comparison
 #print axioms doubleLeg_exit
 
 end PalPeg.StageDoubleLeg

@@ -1,3 +1,57 @@
+## n209 — 未来リスト依存を全部外した。4 相の不変量が完全に継続フリーになった
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 1. `bal_of_count`（`CloseoutPreload35` を in-place で分割）
+
+`bal_of_paced_slack_S` は仮説 `hp : PacedL 2048 slack (bs ++ [a])` を**1 回しか読んでへん**
+（`hp (bs++[a]).length` で比較回数の上界を取るだけ）。そこで算術の核を切り出した:
+
+```lean
+theorem bal_of_count {k mw slack cnt : ℕ}
+    (hcal : 8 * max k 1 ≤ 2 * mw) (hmw : 16 ≤ mw) (hslack : slack ≤ 2047)
+    (hc : 2048 * cnt ≤ mw + 1 + slack) :
+    4 * dpDemandS k (2 * mw) + 4 * cnt ≤ mw
+```
+
+`bal_of_paced_slack_S` は**その 4 行の系**になった（証明の重複ゼロ、既存消費者はそのまま）。
+
+### 2. `DoubleLeg` を継続フリーに切り直した（`StageDoubleLeg`）
+
+旧: `DoubleLeg k mw slack u v as := ∃ ds, DoubleTrace ds u v ∧ PacedL 2048 slack (ds ++ as) ∧ …`
+— **未来リスト `as` に依存してた**。
+
+新: `DoubleLeg k mw slack u v kcur := ∃ ds, DoubleTrace ds u v ∧ PrepPaced (ds.count true) ds.length slack kcur ∧ …`
+
+`PrepPaced`（n206）は `2048 * spent + k ≤ len + slack₀` で、`ReadyIface` の添字 `k` と
+同じ動き方をする。ステップも `ReadyIface` に合わせて 2 本に割った:
+
+* `doubleLeg_background`（`kcur' ≤ kcur + 1`）
+* `doubleLeg_comparison`（`2048 ≤ kcur + 1` → `kcur' = 0`）
+* `doubleLeg_exit`（比較で出るときだけ `hcmp : a = true → 2048 ≤ kcur + 1`）
+
+使わんくなった `pacedL_prefix_slack` は削除（参照ゼロを残さんため）。
+
+### いま立ってる絵
+
+**4 相すべての不変量が、未来のイベント列に一切量化してへん。**
+
+| 相 | 不変量 | 継続依存 |
+|---|---|---|
+| run | `DpBudgetAt v k` | 無し |
+| prep | `PrepAt` ＋ `ReachP` ＋ `PrepPaced` | 無し（n206 で除去） |
+| wait | `WaitPhase k mw v` | 無し |
+| double | `DoubleLeg k mw slack u v kcur` | **無し（本ノートで除去）** |
+
+これで `Φ` を組んでも `ReadyPacedS` の `∀ as` は一切戻ってこーへん。
+
+### 残り
+
+1. `.run` → 直接 `.double` の未決分岐（n208）
+2. 4 相の選言を 1 つの `Φ` にして `ReadyIface P Φ` のインスタンス
+3. wait 出口の `a = false`
+
+**今回も何も落としてへん**（公理 3 本のまま）。
 ## n208 — `StageRunPhase`：4 相の枠と相間の受け渡しが全部つながった
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
