@@ -1,3 +1,49 @@
+## 2026-09-19 n135: `LagPos` を trace に載せる道の測定（`IPackMW` に lag 場は無い）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 6。
+無条件 PAL は未完。§10.5 は未達。**
+
+### 測定 1: `PreTraceIMW` は lag を運んでいない
+
+`IPackMW`（`CloseoutPackW:64`）＝ `LPackM` ＋ `LPackM2`。
+`LPackM`（`CloseoutPackRun10:140`）の場は `lrepM`（左ヘッドの表現）と
+`scanGeom`（`ScanInvariant`）の 2 つだけで、**chain の lag に触れる場は無い**。
+
+したがって `obligation_shiftPalAtFreshChainAlongTrace` を `.watch` 相に狭めるには
+`LagPos (st j).vm.chain` を別途調達する必要があり、**いま狭めても差し引きゼロ**。
+
+### 測定 2: lag が要るのは `.back` 相だけ（線引きが細かくなった）
+
+| `s.chain` | `ShiftPal` の空虚性 | lag 仮定 |
+|---|---|---|
+| `.idle` | 空虚（誕生しても `.copy`、しなければ `.idle`） | **不要** |
+| `.copy` | 空虚（`FoundPackRefute.chainTick_copy_not_watch`） | **不要** |
+| `.broken` | 空虚（`ChainStep.brokenIdle`） | **不要** |
+| `.back` | 空虚（`backDone` の watch は lag を継承） | **要る** |
+| `.watch` | 本体 | — |
+
+`shiftPal_of_copyOrBack`（n134）は `.copy` と `.back` を束ねて lag を要求しているが、
+**`.copy` 側だけなら lag 無しで済む**。必要なら分けられる。
+
+### 測定 3: 「found 時の半径が正」は**導出されていない**（アセンブリ全体の仮定）
+
+`GalilScaffoldTopFoundLife`（`:28`）は `hRpos : 0 < R` を**明示の仮定として取っている**
+（`R` は `ScanInvariant` の半径）。`GalilScaffoldTopFirstRound.first_round` も
+`hrp : 0 < value radius` を仮定で取る。CLAUDE.md の記憶欄「仮定：Decodes、delay=2048、
+3·Rad≤5·k、**found 半径正**、窓長偶数」と一致する。
+
+**この 1 つの側条件が今日 3 箇所で出た**:
+
+1. `ReachesWatchFromRun.reachesWatchPhase_or_segEnd_at_foundBirth_canonical` の
+   `hRadiusPos : 0 < value radius`（n125）
+2. `LagPos` を誕生点で立てるため（n134/n135、`.back` 相の空虚性）
+3. `first_round` / `chain_life` の既存仮定
+
+つまり**これを 1 本潰すと 3 箇所に効く**。逆に言えば、いまはどこにも producer が無い。
+真偽の見立て: `Candidate w lower h` は `4h+1 ≤ w.length` かつ `h ≥ 1` を要求するので
+place stream に 5 記号以上が要り、walker は scan と共に進むから半径も進んでいるはず——
+**だが `radius` と `place stream` の長さを結ぶ場は未確認**。次に見るならそこ。
+
 ## 2026-09-19 n134: `periodOnly = false` 分岐の空虚な半分を落とした
 
 **`PalPeg.ShiftPalAlongTrace.shiftPal_of_copyOrBack` — 標準公理、`sorry` ゼロ、単体 build EXIT=0。**
