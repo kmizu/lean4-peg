@@ -82,6 +82,58 @@
 
 ---
 
+## 構造的な発見（n147、これが本筋）
+
+**残差 3 つは全部「chain の誕生時に立つ事実を run に沿って運ぶ」に帰着する。
+1 個の部品で 3 つ同時に落ちる。**
+
+| 残差 | 誕生時の producer | 運ぶ機構 |
+|---|---|---|
+| `H_readsShift` | `first_round` → `Entry`/`OriginAt`（無条件） | `CloseoutOriginRounds.originAt_of_rounds` / `CloseoutRoundSeg.originAt_of_roundSeg` |
+| `H_freshShiftAtShiftEntry` | `first_round` 自身 | 同じ（最初のラウンドだけ） |
+| `FreshShiftLedger` ① | `CloseoutFoundBackground` → `Candidate` ＋ `1 ≤ h` ＋ `value radius ≤ 2h` | 同じ |
+
+さらに **CLAUDE.md §1 の壁 (1) `ScanToScan` は要らない**（`Workbench.lean:425` の
+見立てが正しい）。`PalPeg/MatchedRunSnoc.lean` が区間抽出なしで run から
+`ScanSeg` を作る道具を揃えている:
+
+* `scanSeg_snoc_tick` — scan 相の `Tick` 1 手を `ScanSeg` に吸収（出口 3 つ:
+  伸びる / mode が scan を離れる / chain が壊れる）
+* `scanSeg_of_steps` — それを `Steps` に沿って反復。側条件は `hScanWatchAll`
+  （その区間の全点が scan ∧ 非 replay ∧ watch ∧ `singlePositive cycle = false`）
+* **`onlyMatchedRun_of_steps`** — 射影まで一気に。`CompareRounds.next` の第 1 引数
+
+そしてラウンドの閉じ方は `GalilScaffoldTopRoundS.round_next`（無条件）が
+`ScanSeg` ＋ 終端比較 ＋ shift から `CompareRounds h (toOnly s w0) 1 (toOnly · v)`
+を出す。`CloseoutRoundSeg.RoundSeg` はまさにこれ。
+
+### なぜ「状態局所な不変量」では駄目か（測定済み）
+
+ラウンド境界（`scan_shift`）で origin を貼り替えるには
+`CompareRounds h (toOnly s w0) 1 (toOnly s' v)`——**ラウンド 1 周ぶんの履歴**が要る。
+1 手の `Tick` からは作れない。だから不変量は**履歴を持ち歩く**形でないと閉じない。
+
+### 次に作る部品（設計）
+
+```
+RoundHistory P q first delay w (c : Control) (s : GalilVM) : Prop :=
+  ∃ (n : ℕ) (c₀ : Control) (s₀ : GalilVM),
+    ScanSeg P q first delay n c₀ s₀ c s ∧          -- ラウンド内の履歴
+    OriginAt w s₀ ∧                                -- ラウンド起点の origin
+    s₀.periodOnly = true ∧
+    (∃ w₀, s₀.chain = ChainVM.watch w₀ ∧ zero w₀.lag = true)
+```
+
+* **tick 保存**: `scan_wait`/`scan_count`/`scan_match` は `scanSeg_snoc_tick` で
+  `ScanSeg` を伸ばすだけ（起点は不変）。`scan_shift` は `round_next` で
+  `CompareRounds` を作り、`originAt_of_roundSeg` で**起点を貼り替える**
+* **`H_readsShift`**: `originShift_of_roundSeg` に流す
+* **基底**: chain 誕生（found 経路）で `first_round` が `Entry` を出す
+
+**これが `hSP` 2 本（run 形・trace 形）の残り全部。**
+
+---
+
 ## この session で機械検査／一次情報で確定したこと
 
 ### (a) `H_readsShift` は「guard の差」ではない（ReadsRun 案は却下）
