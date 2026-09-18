@@ -27,6 +27,81 @@
 
 
 
+
+## 2026-09-19 n105: `marksEntry` はモデルの忠実性に帰着する（`Fair` を公理に隠さない）
+
+**全体 build 成功（EXIT=0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 4 個の原子的義務を axiom として持つ。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**（このエントリは調査結果のみ。）
+
+### `Fair` の 3 場（`GalilTickFair:195`）
+
+    restartFirst      : mode = scan → restartGuardVM x.vm →
+                        y.ctl = {x.ctl with clock := delay} ∧ restartVM entry x.vm y.vm
+    fallbackPlace     : mode = scan → y.ctl.mode = copy → y.vm.fpp.walker = y.vm.walker
+    keepsSearchCursor : mode = init ∨ mode = replayStart →
+                        y.vm.periodOnly = x.vm.periodOnly ∧ y.vm.walker = x.vm.walker
+
+`WindowInOrigin`（`marksEntry` の唯一の残差）の producer
+`CloseoutPackRun28.walkerInOrigin_of_run` は `FairSteps` を要求し、
+`walkerInv_tick` が各 tick で `Fair` を読む。
+
+### 2 つの道があり、片方は不正直
+
+**(A) oracle を強めて `PreTrace` に `Fair` を持たせる。**
+trace は `preTraceIMW_exists` が `H_bootIMW` ＋ `H_oracleIMW` から作る。
+`H_oracleIMW` は `obligation_cycleOracle`（`CycleOracleMC3`）から来ているので、
+`Fair` を要求すると**`cycleOracle` の内容が強くなる**。
+公理の数は 4 → 3 になるが、それは n96 で自分がやった誤りと同型
+（数だけ減らして内容を強化）。**採らない。**
+
+**(B) モデルを Scala に忠実にして `Fair` を定理にする。**
+`Fair` の 3 場はすべて「Scala がやっていることを Lean の非決定性が落としている」分:
+
+| 場 | Scala 正本 | Lean の現状 |
+|---|---|---|
+| `keepsSearchCursor` | `stepInit` / `stepReplayStart` は `walker` も `periodOnly` も触らない | `initVM` / `replayStartVM` が両方**自由** |
+| `fallbackPlace` | `beginFallback` は search 自身の walker place からコピー | `beginFallbackVM'` は着地場所が**自由** |
+| `restartFirst` | `transition` の前置きで broken chain の restart が mode step より**先** | `Tick` に優先順位が**無い**（`restart` と `scan_wait` が競合） |
+
+つまり `Fair` は**モデル欠陥 3 件の集合**であり、`M-periodOnly` / `M-watchBreak` と
+同じ種類。CLAUDE.md §2 の当時の方針は「モデルは編集せず（使用箇所 300 超）`Fair` を
+定義して一意性を証明」だったが、その `Fair` がいま `marksEntry` を塞いでいる。
+**`marksEntry` を正直に落とすには (B) しかない。**
+
+### (B) の具体形（次の一手）
+
+1. `initVM` に `s'.walker = s.walker ∧ s'.periodOnly = s.periodOnly` を追加
+   （`GalilScaffoldTopReplay:20` 付近、`replayStartVM` も同様）。
+   → `Fair.keepsSearchCursor` が定理になる。
+2. `beginFallbackVM'` の `∃ p` を search の walker に固定
+   （`beginFallbackVM (P.place s')` 相当）。→ `Fair.fallbackPlace` が定理。
+3. `Tick` の scan 構成子に `¬ restartGuardVM s` を足す。
+   → `Fair.restartFirst` が定理（`GalilTickDet` の (a) も閉じる）。
+
+影響は `initVM` / `replayStartVM` / `beginFallbackVM'` / `Tick` の使用箇所で、
+`M-periodOnly`（誕生時の `periodOnly` リセット）と同規模の見込み。
+`M-periodOnly` は実際に入って全体 build 緑になっているので、手順は確立している。
+
+### (1) のコストを下げる実装上の観察（今日確認）
+
+`initVM`（`GalilScaffoldTopReplay:20`）は 13 連言で、**`t.fpp = s.fpp` を既に持つ**
+（fpp walker は保存されている）。足りないのは `periodOnly` と `walker` の 2 つ。
+
+Lean の anonymous constructor は右結合の `∧` を途中で `-` 1 個で吸収できるので、
+**新しい連言を末尾に足せば既存の分解パターンは壊れない**。実例:
+
+    obtain ⟨-, -, -, -, -, -, -, -, -, hch, -⟩ : initVM entry s s' := hInit
+
+は 11 項で 13 連言を分解している（11 番目の `-` が 11〜13 を吸収）。
+15 連言にしても同じパターンが通る。**壊れるのは producer 側だけ**（新しい 2 つを
+供給する必要がある）。だから (1) は「消費者 300 箇所」ではなく
+「producer 数箇所」の作業。
+
+`t.search = GalilScaffoldSearchFinish.begin reset s.radius` が search をリセットする
+ので、`walker` が `search` の射影なら (1) の `walker` 側は既に決まっている可能性がある
+（未確認。`GalilVM` の場一覧を見て `walker` が独立場かを先に確かめる）。
+
 ## 2026-09-19 n104: 公理 5 → 4（`centreMargin` 吸収）＋ 残り 4 個の難易度順と `marksEntry` の実体
 
 **全体 build 成功（EXIT=0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
