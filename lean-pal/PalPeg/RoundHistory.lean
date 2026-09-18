@@ -151,6 +151,63 @@ theorem onlyMatchedRun_of_roundHistory {c : Control} {s : GalilVM}
 
 end
 
+/-! ## shift 相を run から集める
+
+ラウンド境界の残りは `ChainShiftRun` 1 個（`PROOF_STACK.md` の入力表）。
+`GalilScaffoldChainInputSupply.shift_round` は**順方向**（`ChainShiftRun` から `Steps`）で、
+要るのは**逆**（run の shift 相から `ChainShiftRun`）。
+
+`ChainShiftRun` は `next` で前から積む inductive なので、run を歩きながら積むには
+後ろから伸ばせないといけない——`OnlyMatchedRun` と同じ問題で、
+同じ形（`MatchedRunSnoc.onlyMatchedRun_snoc`）で解く。 -/
+
+/-- **`ChainShiftRun` を後ろから 1 手伸ばす。** -/
+theorem chainShiftRun_snoc {s t : ShiftState} {w v : GalilScaffoldChainWatch.State}
+    {cycle finish : Counter} {n : ℕ}
+    (hShiftRun : ChainShiftRun s w cycle n t v finish)
+    (hEnabled : positive t.remaining = true)
+    (hCenter : canRight t.center) (hLeft : canRight t.left)
+    (hLeftNext : canRight (right t.left)) :
+    ChainShiftRun s w cycle (n + 1) (shiftTick t) (chainShiftOne v) (inc (inc finish)) := by
+  induction hShiftRun with
+  | stop u w0 cyc => exact .next u w0 cyc hEnabled hCenter hLeft hLeftNext (.stop _ _ _)
+  | next u w0 cyc he hc hl hl' _ ih =>
+    exact .next u w0 cyc he hc hl hl' (ih hEnabled hCenter hLeft hLeftNext)
+
+/-- **`shiftOne` 1 手を `ChainShiftRun` に吸収する。**
+
+`Tick` の 23 構成子を場合分けしないのは、消費者側でどうせ場合分けするから
+（`ShiftPhaseDeterminism.tick_shift_det` がその形）。ここは shift 1 手の中身だけを扱う。
+
+`shiftOne` の中身（`GalilScaffoldTopShift:42`）は
+`canRight center ∧ canRight left ∧ canRight (right left) ∧
+ ∃ w, chain = .watch w ∧ t = ⟨shiftTick shift, .watch (chainShiftOne w), inc (inc cycle)⟩`
+で、これは `ChainShiftRun.next` の 1 手そのもの。 -/
+theorem chainShiftRun_snoc_shiftOne {P : Shared} {q : ℕ} {first : Fin 9}
+    {s : ShiftState} {w : GalilScaffoldChainWatch.State} {cycle : Counter} {n : ℕ}
+    {u t : GalilVM} {v : GalilScaffoldChainWatch.State}
+    (hShiftRun : ChainShiftRun s w cycle n (shiftLens.get u).shift v (shiftLens.get u).cycle)
+    (hChain : u.chain = ChainVM.watch v)
+    (hRemaining : positive (shiftLens.get u).shift.remaining = true)
+    (hShiftOne : (galilFrameS P q first).shiftOne u t) :
+    t.chain = ChainVM.watch (chainShiftOne v) ∧
+      ChainShiftRun s w cycle (n + 1) (shiftLens.get t).shift (chainShiftOne v)
+        (shiftLens.get t).cycle := by
+  obtain ⟨⟨hCenter, hLeft, hLeftNext, w1, hw1, hTarget⟩, -⟩ := hShiftOne
+  have hw1v : w1 = v := by
+    have hw1' : u.chain = ChainVM.watch w1 := hw1
+    rw [hChain] at hw1'; cases hw1'; rfl
+  subst hw1v
+  refine ⟨congrArg (fun z : ShiftVM => z.chain) hTarget, ?_⟩
+  rw [show (shiftLens.get t).shift = shiftTick (shiftLens.get u).shift from
+        congrArg (fun z : ShiftVM => z.shift) hTarget,
+      show (shiftLens.get t).cycle = inc (inc (shiftLens.get u).cycle) from
+        congrArg (fun z : ShiftVM => z.cycle) hTarget]
+  exact chainShiftRun_snoc hShiftRun hRemaining hCenter hLeft hLeftNext
+
+#print axioms chainShiftRun_snoc
+#print axioms chainShiftRun_snoc_shiftOne
+
 #print axioms RoundHistory
 #print axioms roundHistory_start
 #print axioms roundHistory_tick

@@ -1,3 +1,40 @@
+## 2026-09-19 n150: `ChainShiftRun` を後ろから伸ばす（ラウンド境界の残り 1 個の半分）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器は動いていない。**
+
+### 新規 2 本（`PalPeg/RoundHistory.lean`）
+
+* `chainShiftRun_snoc` — `ChainShiftRun s w cycle n t v finish` ＋ 1 手の許可条件 →
+  `ChainShiftRun s w cycle (n+1) (shiftTick t) (chainShiftOne v) (inc (inc finish))`。**公理ゼロ**
+* `chainShiftRun_snoc_shiftOne` — `(galilFrameS P q first).shiftOne u t` 1 手を吸収
+
+`ChainShiftRun` は `next` で前から積む inductive なので run を歩きながら積むには
+後ろから伸ばせないといけない——`OnlyMatchedRun` と同じ問題で、
+`MatchedRunSnoc.onlyMatchedRun_snoc` と同じ形で解いた。
+
+### 一次情報で確認した形（`PROOF_STACK.md` に転記）
+
+* `shiftOne`（`GalilScaffoldTopShift:42`）は **`ChainShiftRun.next` の 1 手そのもの**
+* `beginShiftVM h w s t`（`GalilScaffoldTopShiftCycle:23`）は
+  `chain := .watch (immediate w)` / `remaining := ofNat h` / `cycle := reset` を置くので、
+  **shift 入口の `ChainShiftRun … 0 …` は `.stop` でタダ**
+* 合併フレームの `remainingPos` は `H ∨ B`（`GalilScaffoldTopMerge:65`）なので
+  copy 側を殺すのに `CopyIdle` が要る
+* 終端判定は `chain_shift_exhausts`（`GalilScaffoldTopInvariant:46`）
+
+### 設計判断
+
+`Tick` の 23 構成子の場合分けを**この補題では書かなかった**。消費者側でどうせ
+場合分けするから（`ShiftPhaseDeterminism.tick_shift_det:54` がその形で全部書いている）。
+CLAUDE.md「変によく考えず定理ふやすのやめよ」に従って、shift 1 手の中身だけを扱う。
+
+### 残り
+
+`ShiftHistory` の tick 保存（shift mode の `Tick` 23 構成子の場合分け。21 個は
+mode guard で落ち、`shift_done` は行き先 mode で落ちる）。それができたら
+`round_next` の入力 15 個が全部そろって `RoundSeg` が run から出る。
+
 ## 2026-09-19 n149: period テープは shift を通して不変（＋ラウンド境界の残りは 1 個に特定）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

@@ -190,6 +190,35 @@ ShiftHistory P q first delay (c : Control) (s : GalilVM) : Prop :=
 `shift_one` tick で `k` を 1 増やし（`ChainShiftRun.next`）、`shift_done`
 （`¬ remainingPos`）で `k = periodLength w` が確定して `round_next` に流す。
 
+### `ShiftHistory` の部品の状況（n150）
+
+**済**（`PalPeg/RoundHistory.lean`、全体 build 緑）:
+
+* `chainShiftRun_snoc` — `ChainShiftRun` を後ろから 1 手伸ばす。**公理ゼロ**
+* `chainShiftRun_snoc_shiftOne` — `shiftOne` 関係 1 手を吸収。
+  `Tick` の 23 構成子は場合分けしない（消費者側でやる）
+
+**一次情報で確認した形**:
+
+* `shiftOne`（`GalilScaffoldTopShift:42`）＝
+  `canRight center ∧ canRight left ∧ canRight (right left) ∧
+   ∃ w, chain = .watch w ∧ t = ⟨shiftTick shift, .watch (chainShiftOne w), inc (inc cycle)⟩`
+  ——**`ChainShiftRun.next` の 1 手そのもの**
+* `beginShiftVM h w s t`（`GalilScaffoldTopShiftCycle:23`）＝
+  `s.chain = .watch w ∧ t = {s with remaining := ofNat h, length := inc (inc s.length),
+   chain := .watch (immediate w), cycle := reset, periodOnly := true}`
+  ——だから shift 入口では `ChainShiftRun … 0 …` が `.stop` で立つ（基底はタダ）
+* 合併フレームの `remainingPos`（`GalilScaffoldTopMerge:65`）＝
+  `H.remainingPos s ∨ B.remainingPos s`。copy 側を殺すのに `CopyIdle`
+  （`GalilScaffoldTopSteps:17` ＝ `¬ (fppLens に pull した fallbackFrame).remainingPos`）が要る
+* `chain_shift_exhausts`（`GalilScaffoldTopInvariant:46`）＝
+  `s.remaining = ofNat h → ChainShiftRun s w cycle h t v finish → positive t.remaining = false`
+  ——終端判定はこれ
+
+**残り**: `ShiftHistory` の tick 保存（shift mode の `Tick` 23 構成子の場合分け。
+21 個は mode guard で落ち、`shift_done` は行き先 mode で落ちる。
+`ShiftPhaseDeterminism.tick_shift_det:54` が同じ場合分けを全部書いているので写せる）。
+
 ---
 
 ## この session で機械検査／一次情報で確定したこと
