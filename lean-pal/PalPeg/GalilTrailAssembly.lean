@@ -199,11 +199,27 @@ theorem lagLe_catch {x z : ChainVM} {r : ℕ} {p : PH} {lag : Ctr}
 
 /-! ## 4. The ledger along the chain -/
 
+/-- **背景 break が起きないこと。**  `ChainStep.watchBreak` は Scala の `consume()` が
+`verifier.right()` を済ませてから `mode = Broken` にし `lag.dec()` を飛ばす経路で、
+verifier が 1 進むのに lag が減らないので lag 台帳 `position verifier + lag ≤ r` が
+**ちょうど 1 だけ**破れる（`BreakStepPos` は `positive lag = true` を要求するので
+`value lag ≥ 1`）。台帳を使う経路はこの分岐を排除する。
+
+これは `M-watchBreak` 修正（モデルを Scala に忠実にしたこと）で現れた本物の義務であり、
+以前は `ChainStep` にこの遷移が無かったために隠れていた。 -/
+def NoBgBreak (x : ChainVM) : Prop :=
+  ∀ w v, x = ChainVM.watch w → ¬ BreakStepPos w v
+
+theorem noBgBreak_of_ne_watch {x : ChainVM} (h : ∀ w, x ≠ ChainVM.watch w) : NoBgBreak x :=
+  fun w _ hw => absurd hw (h w)
+
 /-- **One background chain step keeps the ledger.**  The copy and back phases do not
 move the verifier at all; the watch's `take` moves it one place right against a
-decrement of its (positive) lag, so the sum is unchanged. -/
-theorem lagLe_step {x y : ChainVM} {r : ℕ} (h : ChainStep x y) (hx : LagLe x r) :
-    LagLe y r := by
+decrement of its (positive) lag, so the sum is unchanged.  The background break
+(`ChainStep.watchBreak`) moves the verifier without the decrement, so it is excluded
+by `hnb`. -/
+theorem lagLe_step {x y : ChainVM} {r : ℕ} (h : ChainStep x y) (hx : LagLe x r)
+    (hnb : NoBgBreak x) : LagLe y r := by
   cases h with
   | idle => exact hx
   | brokenIdle w => exact hx
@@ -215,6 +231,7 @@ theorem lagLe_step {x y : ChainVM} {r : ℕ} (h : ChainStep x y) (hx : LagLe x r
     cases hi with
     | idle hz => exact hx
     | take hp hg => exact lagLe_catch (x := .watch w) rfl rfl hp hx
+  | watchBreak w w' hb => exact absurd hb (hnb w w' rfl)
 
 /-- **The match credit advances the trailed place by one.**  `copy`/`back` and the
 queued watch increment the lag; the immediate watch and the break move the verifier
@@ -232,25 +249,26 @@ theorem lagLe_matched {y z : ChainVM} {r : ℕ} (h : ChainMatched y z) (hy : Lag
   | breaks w w' hb =>
     obtain ⟨-, -, -, -, -, rfl⟩ := hb
     exact lagLe_right (x := .watch w) rfl rfl hy
+  | brokenMatched w => exact lagLe_inc rfl rfl hy
 
 theorem lagLe_chainTick_false {x z : ChainVM} {r : ℕ} (ht : ChainTick false x z)
-    (hx : LagLe x r) : LagLe z r := by
+    (hx : LagLe x r) (hnb : NoBgBreak x) : LagLe z r := by
   obtain ⟨y, hs, hm⟩ := ht
   simp only [Bool.false_eq_true, if_false] at hm
   subst hm
-  exact lagLe_step hs hx
+  exact lagLe_step hs hx hnb
 
 theorem lagLe_chainTick {b : Bool} {x z : ChainVM} {r : ℕ} (ht : ChainTick b x z)
-    (hx : LagLe x r) : LagLe z (r + 1) := by
+    (hx : LagLe x r) (hnb : NoBgBreak x) : LagLe z (r + 1) := by
   obtain ⟨y, hs, hm⟩ := ht
   cases b with
   | false =>
     simp only [Bool.false_eq_true, if_false] at hm
     subst hm
-    exact lagLe_mono (lagLe_step hs hx) (by omega)
+    exact lagLe_mono (lagLe_step hs hx hnb) (by omega)
   | true =>
     simp only [if_true] at hm
-    exact lagLe_matched hm (lagLe_step hs hx)
+    exact lagLe_matched hm (lagLe_step hs hx hnb)
 
 /-- **The start data of a fresh chain.**  `chain.start()` copies the centre head into
 the verifier and the radius into the lag, so the ledger at the start is exactly
@@ -269,9 +287,10 @@ theorem lagLe_chainStart {r : ℕ} (ans : GalilScaffoldTape.Tape) (c : Fin 3)
 theorem lagLe_chainAt_false {found : Bool} {ans : GalilScaffoldTape.Tape} {c : Fin 3}
     {wk : GalilScaffoldPlace.Place} {ver : PH} {rad : Ctr} {x z : ChainVM} {r : ℕ}
     (h : chainAt false found ans c wk ver rad x z) (hx : LagLe x r)
+    (hnb : NoBgBreak x)
     (hs : x = .idle → StartLe ver rad r) : LagLe z r := by
   rcases h with ⟨-, ht⟩ | ⟨-, -, rfl⟩ | ⟨hi, -, hz⟩
-  · exact lagLe_chainTick_false ht hx
+  · exact lagLe_chainTick_false ht hx hnb
   · exact lagLe_idle _
   · simp only [Bool.false_eq_true, if_false] at hz
     subst hz
@@ -283,9 +302,10 @@ only needs the weaker bound, because `R` moves right in both cases. -/
 theorem lagLe_chainAt {b found : Bool} {ans : GalilScaffoldTape.Tape} {c : Fin 3}
     {wk : GalilScaffoldPlace.Place} {ver : PH} {rad : Ctr} {x z : ChainVM} {r : ℕ}
     (h : chainAt b found ans c wk ver rad x z) (hx : LagLe x r)
+    (hnb : NoBgBreak x)
     (hs : x = .idle → StartLe ver rad r) : LagLe z (r + 1) := by
   rcases h with ⟨-, ht⟩ | ⟨-, -, rfl⟩ | ⟨hi, -, hz⟩
-  · exact lagLe_chainTick ht hx
+  · exact lagLe_chainTick ht hx hnb
   · exact lagLe_idle _
   · cases b with
     | false =>
@@ -327,7 +347,7 @@ background acts through `chainAt false` with `R` fixed; a comparison acts throug
 after the comparison; a shift unit keeps verifier, lag and `R`; and every other mode
 leaves both the chain and `R` alone. -/
 theorem lagLe_tick {c c' : Control} {s t : GalilVM}
-    (hL : LagLe s.chain (position s.right)) (hS : LagStep s)
+    (hL : LagLe s.chain (position s.right)) (hnb : NoBgBreak s.chain) (hS : LagStep s)
     (h : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay
       ⟨c, s⟩ ⟨c', t⟩) : LagLe t.chain (position t.right) := by
   cases h
@@ -340,13 +360,13 @@ theorem lagLe_tick {c c' : Control} {s t : GalilVM}
     obtain ⟨-, hr, hch, -⟩ :=
       backgroundS_fields (sharedC onLetter leftFirst centre place entry) q first hb
     rw [hr]
-    exact lagLe_chainAt_false hch hL hS.start
+    exact lagLe_chainAt_false hch hL hnb hS.start
   case scan_count =>
     rename_i hm hc hav hb
     obtain ⟨-, hr, hch, -⟩ :=
       backgroundS_fields (sharedC onLetter leftFirst centre place entry) q first hb
     rw [hr]
-    exact lagLe_chainAt_false hch hL hS.start
+    exact lagLe_chainAt_false hch hL hnb hS.start
   case restart =>
     rename_i hm hb
     obtain ⟨w, -, -, -, -, ht⟩ : restartVM entry s t := hb
@@ -362,7 +382,7 @@ theorem lagLe_tick {c c' : Control} {s t : GalilVM}
     have htc : t.chain = s'.chain := by rw [hpl']; cases c.replaying <;> rfl
     have htr : t.right = s'.right := by rw [hpl']; cases c.replaying <;> rfl
     rw [htc, htr, hr2, lagStep_right hS]
-    exact lagLe_chainAt hch hL hS.start
+    exact lagLe_chainAt hch hL hnb hS.start
   case scan_shift =>
     rename_i s' hmt hg hm hc hr hcmp hav hb
     obtain ⟨a, found, ans, cc, wk, hch, ha⟩ :=
@@ -376,7 +396,7 @@ theorem lagLe_tick {c c' : Control} {s t : GalilVM}
     rw [htc, htr, hr2, lagStep_right hS]
     refine lagLe_right (x := ChainVM.watch w) rfl rfl ?_
     rw [← hs0]
-    exact lagLe_chainAt_false hch hL hS.start
+    exact lagLe_chainAt_false hch hL hnb hS.start
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
@@ -455,7 +475,10 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 so the base case is vacuous. -/
 theorem lagLe_trace {raw : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ} {m : ℕ}
     (hP : PreTrace centre place entry q first raw st Tc) (hm : m < raw.length)
-    (hstep : ∀ i, i < Tc (m+1) → LagStep (st i).vm) :
+    (hstep : ∀ i, i < Tc (m+1) → LagStep (st i).vm)
+    -- **`M-watchBreak` 修正で現れた run 全体の義務。** 背景 break は verifier を進めながら
+    -- lag を減らさないので lag 台帳が 1 だけ破れる。
+    (hnobg : ∀ i, i < Tc (m+1) → NoBgBreak (st i).vm.chain) :
     ∀ i, i ≤ Tc (m+1) → LagLe (st i).vm.chain (position (st i).vm.right) := by
   have hle : Tc (m+1) ≤ Tc raw.length := hP.mono (m+1) raw.length (by omega) le_rfl
   intro i
@@ -465,16 +488,17 @@ theorem lagLe_trace {raw : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ 
     intro hi
     have hlt : i < Tc (m+1) := by omega
     exact lagLe_tick (onLetterVM raw) leftFirstVM centre place entry q first 2048
-      (ih (by omega)) (hstep i hlt) (hP.trace.tick i (by omega))
+      (ih (by omega)) (hnobg i hlt) (hstep i hlt) (hP.trace.tick i (by omega))
 
 /-- **`ChainBudget` at every state up to the checkpoint.** -/
 theorem chainBudget_trace {raw : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ} {m : ℕ}
     (hP : PreTrace centre place entry q first raw st Tc) (hm : m < raw.length)
     (hstep : ∀ i, i < Tc (m+1) → LagStep (st i).vm)
-    (hat : ∀ i, i ≤ Tc (m+1) → LagAt m (st i).vm) :
+    (hat : ∀ i, i ≤ Tc (m+1) → LagAt m (st i).vm)
+    (hnobg : ∀ i, i < Tc (m+1) → NoBgBreak (st i).vm.chain) :
     ∀ i, i ≤ Tc (m+1) → ChainBudget m (st i).vm.chain :=
   fun i hi =>
-    chainBudget_of_lagLe (lagLe_trace centre place entry q first hP hm hstep i hi) (hat i hi)
+    chainBudget_of_lagLe (lagLe_trace centre place entry q first hP hm hstep hnobg i hi) (hat i hi)
 
 /-- **The two chain clauses of `TrailF` up to the checkpoint**, by
 `GalilTrailChain.trailChain_scanTick` against the target budget. -/
@@ -514,7 +538,10 @@ place, and the chain verifier is sane. -/
 def H_lagSide : Prop :=
   ∀ w : List (Fin 2), 0 < w.length → ∀ st Tc, PreTrace centre place entry q first w st Tc →
     ∀ m, m < w.length →
-      (∀ i, i < Tc (m+1) → LagStep (st i).vm) ∧ (∀ i, i ≤ Tc (m+1) → LagAt m (st i).vm)
+      (∀ i, i < Tc (m+1) → LagStep (st i).vm) ∧ (∀ i, i ≤ Tc (m+1) → LagAt m (st i).vm) ∧
+      -- **`M-watchBreak` 修正で現れた義務。** 背景 break（`ChainStep.watchBreak`）は
+      -- verifier を 1 進めながら lag を減らさないので lag 台帳が 1 だけ破れる。
+      (∀ i, i < Tc (m+1) → NoBgBreak (st i).vm.chain)
 
 /-- **The verifier half of `H_trailF`, from the two named hypotheses.** -/
 theorem h_trailVer_of_lagSide (hbud : H_tickBudget centre place entry q first)
@@ -525,10 +552,10 @@ theorem h_trailVer_of_lagSide (hbud : H_tickBudget centre place entry q first)
         (∀ v, (st i).vm.chain = .watch v → GalilScaffoldCounter.positive v.lag = true →
           Trails w m 1 v.machine.verifier) := by
   intro w hw st Tc hP m hm i hi
-  obtain ⟨hstep, hat⟩ := hside w hw st Tc hP m hm
+  obtain ⟨hstep, hat, hnobg⟩ := hside w hw st Tc hP m hm
   have hscan := scanT_trace centre place entry q first hP hm
     (fun j hj => hbud w hw st Tc hP m hm j hj)
-  have hB := chainBudget_trace centre place entry q first hP hm hstep hat
+  have hB := chainBudget_trace centre place entry q first hP hm hstep hat hnobg
   have hV := verF_trace centre place entry q first hP hm hscan hB i hi
   exact ⟨hV.ver, hV.lagPos⟩
 

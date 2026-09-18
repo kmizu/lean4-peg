@@ -830,6 +830,8 @@ theorem foundRouteMC_noshift_dC (centre : GalilVM → Fin 3)
         WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3 ∧
         c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
         s3.chain = .watch w3 ∧ canRight s3.right ∧
+        -- **`M-watchBreak` 修正で現れた義務**: 比較 tick は「背景 step → matched」の順。
+        (∀ v, ¬ BreakStepPos w3 v) ∧
         (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
         (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
         searchEffect (PofC centre place entry raw) true s3 vq3 ∧
@@ -854,7 +856,7 @@ theorem foundRouteMC_noshift_dC (centre : GalilVM → Fin 3)
       (afterBirth true (afterCompare sF ⟨left sF.left, right sF.right, ch⟩ vq)) hmF rfl rfl hchain hh
   have hwatch2 : s2.chain = .watch (GalilNoShiftStage.freshWatch sF.center cen ys b sF.radius) := by
     rw [hchz, GalilNoShiftStage.freshWatch_eq _ _ _ _ _ h hlen]
-  obtain ⟨c3, s3, w3, vs3, vq3, o3, w3', hseg, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3,
+  obtain ⟨c3, s3, w3, vs3, vq3, o3, w3', hseg, hm3, hr3, hc3, hs3, hav3, hnobg, hcmp3, hmt3, hq3, ho3,
       hbroken, hmargin⟩ :=
     hcont c2 s2 hseg2 hwatch2 hm2 hr2 ho2 hlo hhi hl2 hr2' hc2 hrad2
   have hpal := pal_of_candidate a ls rs q gap span lower h hraw hc hCen
@@ -864,7 +866,8 @@ theorem foundRouteMC_noshift_dC (centre : GalilVM → Fin 3)
     foundRouteMC_noshift'' centre place entry qq first raw hex hI hlive hseg0 hmF hrF hcF
       havF hidle vq hq hfound hmt ch hch' hchne oF hoF hseg2 cen ys b hwatch2
       (List.count_eq_zero.2 (by simp))
-      hpal.1 hpal.2 hseg hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken hmargin
+      hpal.1 hpal.2 hseg hm3 hr3 hc3 w3 hs3 hav3 hnobg vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken
+      hmargin
   exact ⟨cT, sT, k, L, hst, hcr, hIT, hcenT, hlt, s3, vs3, vq3, hright⟩
 
 #print axioms reachAtC_of_2

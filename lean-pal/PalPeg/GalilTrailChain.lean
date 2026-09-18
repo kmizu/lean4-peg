@@ -155,6 +155,10 @@ theorem chainStep_ver {x y : ChainVM} (h : ChainStep x y) :
     cases hi with
     | idle hz => exact Or.inr ⟨_, _, rfl, rfl, Or.inl rfl⟩
     | take hp hg => exact Or.inr ⟨_, _, rfl, rfl, Or.inr rfl⟩
+  | watchBreak w w' hb =>
+    obtain ⟨-, -, -, -, -, ht⟩ := hb
+    subst ht
+    exact Or.inr ⟨_, _, rfl, rfl, Or.inr rfl⟩
 
 /-- The verifier after the match credit. -/
 theorem chainMatched_ver {y z : ChainVM} (h : ChainMatched y z) :
@@ -163,6 +167,7 @@ theorem chainMatched_ver {y z : ChainVM} (h : ChainMatched y z) :
   | idle => exact Or.inl rfl
   | copy t hh p v lag margin ver => exact Or.inr ⟨_, _, rfl, rfl, Or.inl rfl⟩
   | back v hh lag margin ver => exact Or.inr ⟨_, _, rfl, rfl, Or.inl rfl⟩
+  | brokenMatched w => exact Or.inr ⟨_, _, rfl, rfl, Or.inl rfl⟩
   | watch w w' ho =>
     cases ho with
     | queued hz => exact Or.inr ⟨_, _, rfl, rfl, Or.inl rfl⟩

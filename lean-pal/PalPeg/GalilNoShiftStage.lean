@@ -294,6 +294,14 @@ theorem foundRouteMC_noshift' (centre : GalilVM → Fin 3)
     (hseg : WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
     (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
+    -- **モデル欠陥 `M-watchBreak` 修正で現れた義務。** 比較 tick は「背景 step → matched」
+    -- の順なので、背景 step が `ChainStep.watchBreak`（正 lag ＋ 不一致）で chain を壊す
+    -- 可能性がある。その場合 `fresh_break_ledger` の lag ゼロ前提が崩れ、台帳の算術が
+    -- 変わる（`freshWatch` の lag は `inc radius` なので実際に到達しうる）。
+    -- ここではその分岐が起きないことを要求する。解消には `BreakStepPos` 版の
+    -- `fresh_break_ledger` / `_places` / `_stage` を作るか、走査側の不変量から
+    -- この点で予測が当たっていることを出す必要がある。
+    (hnobg : ∀ v, ¬ BreakStepPos w3 v)
     (vs3 : ScanVM) (vq3 : SearchVM)
     (hcmp3 : (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3))
     (hmt3 : (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3))
@@ -348,6 +356,7 @@ theorem foundRouteMC_noshift' (centre : GalilVM → Fin 3)
   rw [hs3, hvs3] at htick
   obtain ⟨y, hy, hym⟩ := htick
   cases hy with
+  | watchBreak _ v hbp => exact absurd hbp (hnobg v)
   | watchStep _ m hint =>
   have hym' : ChainMatched (.watch m) (.broken w3') := by simpa using hym
   cases hym' with

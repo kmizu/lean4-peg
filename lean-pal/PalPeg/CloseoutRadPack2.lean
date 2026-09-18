@@ -216,9 +216,11 @@ plus the two genuinely non-arithmetic residuals give `GalilTrailRad.RadPack`. -/
 theorem radPack_of_parts {c : Control} {s : GalilVM}
     (hL : RadLedger c s) (hS : ShiftOrd c s)
     (hll : PalPeg.GalilTrailSane.LeftLive c s)
-    (hv : ∀ p, verOf s.chain = some p → GalilFrontMono.Sane p) :
+    (hv : ∀ p, verOf s.chain = some p → GalilFrontMono.Sane p)
+    -- **`M-watchBreak` 修正で現れた義務**（`RadPack.noBgBreak`）。
+    (hnb : PalPeg.GalilTrailAssembly.NoBgBreak s.chain) :
     RadPack c s :=
-  ⟨hll, shiftLC_of_shiftOrd hS, shiftCR_of_shiftOrd hS, startLe_of_radLedger hL, hv⟩
+  ⟨hll, shiftLC_of_shiftOrd hS, shiftCR_of_shiftOrd hS, startLe_of_radLedger hL, hv, hnb⟩
 
 #print axioms radPack_of_parts
 
@@ -248,23 +250,32 @@ def H_verSane : Prop :=
   ∀ w : List (Fin 2), 0 < w.length → ∀ st Tc, PreTrace centre place entry q first w st Tc →
     ∀ i, i ≤ Tc w.length → ∀ p, verOf (st i).vm.chain = some p → GalilFrontMono.Sane p
 
+/-- **`M-watchBreak` 修正で現れた trace 水準の義務。** 背景 break は verifier を 1 進め
+ながら lag を減らさないので lag 台帳が 1 だけ破れる。 -/
+def H_noBgBreak : Prop :=
+  ∀ w : List (Fin 2), 0 < w.length → ∀ st Tc,
+    PreTrace centre place entry q first w st Tc → ∀ i, i ≤ Tc w.length →
+      PalPeg.GalilTrailAssembly.NoBgBreak (st i).vm.chain
+
 theorem h_radPack_of_parts (hL : H_radLedger centre place entry q first)
     (hS : H_shiftOrd centre place entry q first)
     (hll : H_leftLive centre place entry q first)
-    (hv : H_verSane centre place entry q first) :
+    (hv : H_verSane centre place entry q first)
+    (hnb : H_noBgBreak centre place entry q first) :
     H_radPack centre place entry q first :=
   fun w hw st Tc hP i hi =>
     radPack_of_parts (hL w hw st Tc hP i hi) (hS w hw st Tc hP i hi)
-      (hll w hw st Tc hP i hi) (hv w hw st Tc hP i hi)
+      (hll w hw st Tc hP i hi) (hv w hw st Tc hP i hi) (hnb w hw st Tc hP i hi)
 
 /-- **`H_trailF` from the four trace-level parts.** -/
 theorem h_trailF_of_parts' (hL : H_radLedger centre place entry q first)
     (hS : H_shiftOrd centre place entry q first)
     (hll : H_leftLive centre place entry q first)
-    (hv : H_verSane centre place entry q first) :
+    (hv : H_verSane centre place entry q first)
+    (hnb : H_noBgBreak centre place entry q first) :
     H_trailF centre place entry q first :=
   h_trailF_of_radPack centre place entry q first
-    (h_radPack_of_parts centre place entry q first hL hS hll hv)
+    (h_radPack_of_parts centre place entry q first hL hS hll hv hnb)
 
 end Hyps
 

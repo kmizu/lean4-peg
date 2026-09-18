@@ -29,6 +29,25 @@ def BreakStep (w w' : GalilScaffoldChainWatch.State) : Prop :=
     GalilScaffoldInputHead.read (right w.machine.verifier) ≠ some a ∧
     w' = ⟨consume w.machine, w.lag, GalilScaffoldCounter.inc w.margin⟩
 
+/-- The chain break during the **background** consume (`ScaffoldChain.step()`'s
+`case Mode.Watch if lag.sign > 0 => if (consume()) { lag.dec() }`): the lag is
+**positive**, the verifier can advance, the period symbol is `a` but the input
+under the verifier is not `a`.  The verifier still consumes, but — unlike
+`BreakStep`, which sits on the `matched()` path — neither the lag is decremented
+(`consume()` returned `false`) nor the margin incremented (`margin.inc()` lives
+in `matched()`).
+
+Without this the model has **no successor at all** for a positive-lag watch whose
+prediction fails, while the Scala source drops to `Mode.Broken`; that gap is what
+forced the false `WatchOk.good` (see `PalPeg.ChainStepGap` and
+`PalPeg.WatchOkRefute`). -/
+def BreakStepPos (w w' : GalilScaffoldChainWatch.State) : Prop :=
+  GalilScaffoldCounter.positive w.lag = true ∧
+  GalilScaffoldChainVerifier.canRight w.machine.verifier ∧
+  ∃ a : Fin 3, GalilScaffoldChainConsume.symbol w.machine.control.period.focus = some a ∧
+    GalilScaffoldInputHead.read (right w.machine.verifier) ≠ some a ∧
+    w' = ⟨consume w.machine, w.lag, w.margin⟩
+
 inductive ChainVM
   | idle
   | copy (answer : GalilScaffoldTape.Tape) (h : Counter) (walker : GalilScaffoldPlace.Place)
@@ -64,6 +83,7 @@ inductive ChainStep : ChainVM → ChainVM → Prop
   | backDone (v) (h lag margin) (ver) (hf : GalilScaffoldChainPeriod.isFirst v.focus = true) :
       ChainStep (.back v h lag margin ver) (.watch ⟨⟨ver, watchControl v⟩, lag, margin⟩)
   | watchStep (w w') (ht : GalilScaffoldChainWatch.Internal w w') : ChainStep (.watch w) (.watch w')
+  | watchBreak (w w') (hb : BreakStepPos w w') : ChainStep (.watch w) (.broken w')
 
 /-- `chain.matched()` at a matched scan comparison. -/
 inductive ChainMatched : ChainVM → ChainVM → Prop
@@ -73,6 +93,9 @@ inductive ChainMatched : ChainVM → ChainVM → Prop
   | back (v h lag margin ver) : ChainMatched (.back v h lag margin ver) (.back v h (inc lag) (inc margin) ver)
   | watch (w w') (ho : GalilScaffoldChainWatch.Outer w true w') : ChainMatched (.watch w) (.watch w')
   | breaks (w w') (hb : BreakStep w w') : ChainMatched (.watch w) (.broken w')
+  | brokenMatched (w) :
+      ChainMatched (.broken w)
+        (.broken ⟨w.machine, GalilScaffoldCounter.inc w.lag, GalilScaffoldCounter.inc w.margin⟩)
 
 inductive ChainSteps : ℕ → ChainVM → ChainVM → Prop
   | zero (x) : ChainSteps 0 x x
@@ -119,5 +142,51 @@ theorem chainTick_of_break {w w' : GalilScaffoldChainWatch.State} (h : BreakStep
 
 #print axioms chainTick_of_watch_true
 #print axioms chainTick_of_break
+
+end PalPeg.GalilScaffoldChainInputSupply
+
+namespace PalPeg.GalilScaffoldChainInputSupply
+
+open GalilScaffoldCounter GalilScaffoldInputHead GalilScaffoldChainVerifier
+
+/-- **`Internal` と `BreakStepPos` は排他。** 前者は lag ゼロか一致（`Good`）を要求し、
+後者は正 lag と不一致を要求する。`ChainStep` の一意性がこれで保たれる。 -/
+theorem internal_breakStepPos_false {w w' w'' : GalilScaffoldChainWatch.State}
+    (hi : GalilScaffoldChainWatch.Internal w w') (hb : BreakStepPos w w'') : False := by
+  obtain ⟨hp, -, a, hsym, hne, -⟩ := hb
+  cases hi with
+  | idle hz => rw [hz] at hp; cases hp
+  | take _ hg =>
+    obtain ⟨-, a', hsym', heq⟩ := hg
+    rw [hsym] at hsym'
+    cases hsym'
+    exact hne heq
+
+/-- **`BreakStepPos` は関数的。** 行き先は `⟨consume machine, lag, margin⟩` の一点。 -/
+theorem breakStepPos_unique {w w' w'' : GalilScaffoldChainWatch.State}
+    (h1 : BreakStepPos w w') (h2 : BreakStepPos w w'') : w' = w'' := by
+  obtain ⟨-, -, -, -, -, he1⟩ := h1
+  obtain ⟨-, -, -, -, -, he2⟩ := h2
+  rw [he1, he2]
+
+/-- **`Good` を仮定しない全域性。** 正の lag では、period と入力が一致すれば
+`Internal.take`、食い違えば `watchBreak` に落ちる。どちらでも後続状態が存在する。
+必要なのは「verifier が右に動ける」と「period の焦点が記号を持つ」だけで、
+**予測が当たること（`Good`）は要らない**。 -/
+theorem chainStep_watch_total_of_symbol (s : GalilScaffoldChainWatch.State)
+    (hcan : GalilScaffoldChainVerifier.canRight s.machine.verifier)
+    (hsym : ∃ a : Fin 3,
+      GalilScaffoldChainConsume.symbol s.machine.control.period.focus = some a) :
+    ∃ y, ChainStep (ChainVM.watch s) y := by
+  by_cases hp : positive s.lag = true
+  · obtain ⟨a, ha⟩ := hsym
+    by_cases hg : GalilScaffoldInputHead.read (right s.machine.verifier) = some a
+    · exact ⟨_, .watchStep _ _ (.take s hp ⟨hcan, a, ha, hg⟩)⟩
+    · exact ⟨_, .watchBreak _ _ ⟨hp, hcan, a, ha, hg, rfl⟩⟩
+  · exact ⟨_, .watchStep _ _ (.idle s (Bool.eq_false_iff.mpr hp))⟩
+
+#print axioms internal_breakStepPos_false
+#print axioms breakStepPos_unique
+#print axioms chainStep_watch_total_of_symbol
 
 end PalPeg.GalilScaffoldChainInputSupply

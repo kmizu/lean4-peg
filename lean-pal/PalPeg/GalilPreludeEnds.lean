@@ -445,7 +445,8 @@ theorem prelude_done_before_extent' (P : Shared) (q : ℕ) (first : Fin 9)
     have hev2 := watchSegE_events P q first 2048 seg2 (by rw [hw]; intro h0; cases h0)
     have hticks : ChainTicks (es.drop (2 * h + 2)) (.broken w) v1.chain := by
       rw [← hw]; exact hev2.1
-    exact absurd (broken_stays _ hticks) (hnb w)
+    obtain ⟨w'', hw''⟩ := broken_stays _ hticks
+    exact absurd hw'' (hnb w'')
 
 #print axioms copy_ticks_inv
 #print axioms copyEnd_tick_inv

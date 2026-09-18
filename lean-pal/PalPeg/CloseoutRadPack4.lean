@@ -89,6 +89,14 @@ theorem chainStep_sane {x y : ChainVM} (h : ChainStep x y) (hx : SaneVer x) : Sa
       obtain rfl : (GalilScaffoldChainVerifier.right w.machine.verifier) = r :=
         Option.some.inj hr
       exact sane_right (hx _ rfl) hg.1
+  | watchBreak w w' hb =>
+    have hcan := hb.2.1
+    obtain ⟨-, -, -, -, -, ht⟩ := hb
+    subst ht
+    intro r hr
+    obtain rfl : (GalilScaffoldChainVerifier.right w.machine.verifier) = r :=
+      Option.some.inj hr
+    exact sane_right (hx _ rfl) hcan
   | _ => exact fun r hr => hx r hr
 
 theorem chainMatched_sane {y z : ChainVM} (h : ChainMatched y z) (hy : SaneVer y) : SaneVer z := by
@@ -266,10 +274,11 @@ theorem h_verSane_of_shift (hll : H_leftLive centre place entry q first)
 /-- **`H_trailF` from `H_shiftEntry`, `H_leftLive` and `H_shiftVerSane`.** -/
 theorem h_trailF_of_named' (hen : H_shiftEntry centre place entry q first)
     (hll : H_leftLive centre place entry q first)
-    (hsv : H_shiftVerSane centre place entry q first) :
+    (hsv : H_shiftVerSane centre place entry q first)
+    (hnb : PalPeg.CloseoutRadPack2.H_noBgBreak centre place entry q first) :
     H_trailF centre place entry q first :=
   h_trailF_of_named centre place entry q first hen hll
-    (h_verSane_of_shift centre place entry q first hll hsv)
+    (h_verSane_of_shift centre place entry q first hll hsv) hnb
 
 end Trace
 
@@ -283,9 +292,11 @@ theorem h_trailF_C' (entry q : ℕ) (first : Fin 9)
     (hll : H_leftLive PalPeg.GalilFinalAssembly2.centreC PalPeg.GalilFinalAssembly2.placeC
       entry q first)
     (hsv : H_shiftVerSane PalPeg.GalilFinalAssembly2.centreC PalPeg.GalilFinalAssembly2.placeC
-      entry q first) :
+      entry q first)
+    (hnb : PalPeg.CloseoutRadPack2.H_noBgBreak PalPeg.GalilFinalAssembly2.centreC
+      PalPeg.GalilFinalAssembly2.placeC entry q first) :
     H_trailF PalPeg.GalilFinalAssembly2.centreC PalPeg.GalilFinalAssembly2.placeC entry q first :=
-  h_trailF_of_named' _ _ entry q first hen hll hsv
+  h_trailF_of_named' _ _ entry q first hen hll hsv hnb
 
 #print axioms h_trailF_C'
 

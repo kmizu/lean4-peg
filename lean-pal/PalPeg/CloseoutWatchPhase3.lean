@@ -159,6 +159,8 @@ def NoShiftTailC0 (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffol
         WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3 ∧
         c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
         s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
+        -- **`M-watchBreak` 修正で現れた義務**: 比較 tick は「背景 step → matched」の順。
+        (∀ v, ¬ PalPeg.GalilScaffoldChainInputSupply.BreakStepPos w3 v) ∧
         (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
         (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
         searchEffect (PofC centre place entry raw) true s3 vq3 ∧
@@ -181,12 +183,12 @@ theorem noShiftTailC_of_0 (centre : GalilVM → Fin 3)
     hchne, hoF, hcPeq, hsPeq, ?_⟩
   intro es c2 s2 hprepSeg
   obtain ⟨cen, ys, b, c3, s3, w3, vs3, vq3, o3, w3', hys, hwatch2, hes0, hseg, hm3, hr3,
-    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hprepSeg
+    hc3, hs3, hav3, hnobg, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hprepSeg
   obtain ⟨hpal1, hpal2⟩ :=
     palAt_pair_of_candidate a ls rs qw gap span lower ys raw r sF hraw hcenF hpr
       (by rw [hys]; exact hcand)
   exact ⟨cen, ys, b, c3, s3, w3, vs3, vq3, o3, w3', hwatch2, hes0, hpal1, hpal2, hseg, hm3, hr3,
-    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩
+    hc3, hs3, hav3, hnobg, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩
 
 /-- **Derived.**  The raw break route from the reduced tail. -/
 theorem breakRouteLPraw_of_tail0 (centre : GalilVM → Fin 3)
@@ -260,6 +262,8 @@ theorem foundRouteMC_noshift_L (centre : GalilVM → Fin 3)
     (hseg : WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
     (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
+    -- **`M-watchBreak` 修正で現れた義務**（比較 tick は「背景 step → matched」の順）。
+    (hnobg : ∀ v, ¬ PalPeg.GalilScaffoldChainInputSupply.BreakStepPos w3 v)
     (vs3 : ScanVM) (vq3 : SearchVM)
     (hcmp3 : (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3))
     (hmt3 : (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3))
@@ -310,6 +314,7 @@ theorem foundRouteMC_noshift_L (centre : GalilVM → Fin 3)
   rw [hs3, hvs3] at htick
   obtain ⟨y, hy, hym⟩ := htick
   cases hy with
+  | watchBreak _ v hbp => exact absurd hbp (hnobg v)
   | watchStep _ m hint =>
   have hym' : ChainMatched (.watch m) (.broken w3') := by simpa using hym
   cases hym' with
@@ -395,6 +400,8 @@ def NoShiftTailC0L (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffo
         WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3 ∧
         c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
         s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
+        -- **`M-watchBreak` 修正で現れた義務**: 比較 tick は「背景 step → matched」の順。
+        (∀ v, ¬ PalPeg.GalilScaffoldChainInputSupply.BreakStepPos w3 v) ∧
         (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
         (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
         searchEffect (PofC centre place entry raw) true s3 vq3 ∧
@@ -416,9 +423,9 @@ theorem noShiftTailC0L_of_0 (centre : GalilVM → Fin 3)
     hseg0, hmF, hrF, hcF, havF, hidle, hq, hfound, hmt, hch, hchne, hoF, hcPeq, hsPeq, ?_⟩
   intro es c2 s2 hseg
   obtain ⟨cen, ys, b, c3, s3, w3, vs3, vq3, o3, w3', hys, hwatch2, hes0, hseg3, hm3, hr3,
-    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hseg
+    hc3, hs3, hav3, hnobg, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hseg
   exact ⟨cen, ys, b, _, [], c3, s3, w3, vs3, vq3, o3, w3', hys, hwatch2, .stop _, by simp, hes0,
-    hseg3, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩
+    hseg3, hm3, hr3, hc3, hs3, hav3, hnobg, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩
 
 /-- **Derived.**  The raw break route from the *ledger* tail, through
 `foundRouteMC_noshift_L`.  This is the point of the weakening: no step of the
@@ -438,7 +445,7 @@ theorem breakRouteLPraw_of_tail0L (centre : GalilVM → Fin 3)
   subst hsPeq
   intro hh es c2 s2 hprepSeg hlen hw
   obtain ⟨cen, ys, b, w2, es', c3, s3, w3, vs3, vq3, o3, w3', hys, hwatch2, hrun0, hes', hes0,
-    hseg, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ :=
+    hseg, hm3, hr3, hc3, hs3, hav3, hnobg, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ :=
     htl es c2 s2 hprepSeg
   obtain ⟨hpal1, hpal2⟩ :=
     palAt_pair_of_candidate a ls rs qw gap span lower ys raw r sF hraw hcenF hpr
@@ -448,7 +455,7 @@ theorem breakRouteLPraw_of_tail0L (centre : GalilVM → Fin 3)
       (PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry qq first hE.invLPC)
       (fun _ _ => hE.invLPC.2) hseg0 hmF hrF hcF havF hidle vq hq hfound hmt ch hch hchne oF hoF
       hprepSeg cen ys b w2 es' hwatch2 hrun0 hes' hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hav3
-      vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken hmargin
+      hnobg vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken hmargin
   refine ⟨cT, sT, k, L, hst, hcr,
     PalPeg.GalilInvPlus2.invLP2_of_stepsAll centre place entry qq first hE.invLPC.1.2 hst hIT,
     hc, hlt, ?_⟩

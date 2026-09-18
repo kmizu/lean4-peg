@@ -37,6 +37,9 @@ theorem chainTick_true_immediate {w w' : GalilScaffoldChainWatch.State} (hz : ze
         | immediate _ _ => rfl
     | take hp _ =>
       rw [positive_of_zero hz] at hp; cases hp
+  | watchBreak _ _ hbr =>
+    obtain ⟨hp, -⟩ := hbr
+    rw [positive_of_zero hz] at hp; cases hp
 
 /-- At lag zero the disabled chain tick is idle. -/
 theorem chainTick_false_idle {w : GalilScaffoldChainWatch.State} {z : ChainVM} (hz : zero w.lag = true)
@@ -49,6 +52,9 @@ theorem chainTick_false_idle {w : GalilScaffoldChainWatch.State} {z : ChainVM} (
     cases hi with
     | idle _ => rfl
     | take hp _ => rw [positive_of_zero hz] at hp; cases hp
+  | watchBreak _ _ hbr =>
+    obtain ⟨hp, -⟩ := hbr
+    rw [positive_of_zero hz] at hp; cases hp
 
 /-- The matched comparison in `periodOnly` at lag zero is `onlyCompareNext`
 on the projection. -/

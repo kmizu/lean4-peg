@@ -139,6 +139,16 @@ theorem cells_outer {s t : GalilScaffoldChainWatch.State} {b : Bool}
   | queued => rfl
   | immediate => exact cells_verifier_consume _ hb
 
+/-- **`BreakStepPos` でもセル数は変わらない。** `BreakStep` と同じく行き先の machine は
+`consume s.machine` なので、`cells_verifier_consume` がそのまま効く（lag/margin は
+`cells` に効かない）。 -/
+theorem cells_breakPos {s t : GalilScaffoldChainWatch.State} (h : BreakStepPos s t)
+    (hb : WatchBlock s) :
+    cells t.machine.control.period = cells s.machine.control.period := by
+  obtain ⟨_, _, _, _, _, ht⟩ := h
+  rw [ht]
+  exact cells_verifier_consume _ hb
+
 theorem cells_break {s t : GalilScaffoldChainWatch.State} (h : BreakStep s t)
     (hb : WatchBlock s) :
     cells t.machine.control.period = cells s.machine.control.period := by
@@ -173,6 +183,7 @@ theorem settled_step {x y : ChainVM} (h : ChainStep x y) (hs : Settled x) (hb : 
   | backDone v h lag margin ver hf =>
       exact ⟨trivial, cells_moveRight v (onBlock_right_ne hb (isFirst_isLast hf))⟩
   | watchStep w w' hi => exact ⟨trivial, cells_internal hi hb⟩
+  | watchBreak w w' hbr => exact ⟨trivial, cells_breakPos hbr hb⟩
 
 theorem settled_matched {x y : ChainVM} (h : ChainMatched x y) (hs : Settled x)
     (hb : BlockInv x) : Settled y ∧ cellsOf y = cellsOf x := by
@@ -182,6 +193,7 @@ theorem settled_matched {x y : ChainVM} (h : ChainMatched x y) (hs : Settled x)
   | back => exact ⟨trivial, rfl⟩
   | watch w w' ho => exact ⟨trivial, cells_outer ho hb⟩
   | breaks w w' hbr => exact ⟨trivial, cells_break hbr hb⟩
+  | brokenMatched _ => exact ⟨trivial, rfl⟩
 
 theorem settled_tick {a : Bool} {x z : ChainVM} (h : ChainTick a x z) (hs : Settled x)
     (hb : BlockInv x) : Settled z ∧ cellsOf z = cellsOf x := by

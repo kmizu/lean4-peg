@@ -35,6 +35,9 @@ theorem chainTick_true_broken {w w' : GalilScaffoldChainWatch.State} (hz : zero 
       exact ⟨he, hb⟩
     | take hp _ =>
       rw [positive_of_zero hz] at hp; cases hp
+  | watchBreak _ _ hbr =>
+    obtain ⟨hp, -⟩ := hbr
+    rw [positive_of_zero hz] at hp; cases hp
 
 /-- The projection of a matched comparison, for any recorded watch equal to
 the consumed one (watching or broken). -/
