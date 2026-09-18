@@ -441,6 +441,62 @@ theorem shiftRightHeadCanRight_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
 #print axioms chainPosInv2_alongTrace
 #print axioms needBound_of_landingObligationsSansRadiusLedger
 
+/-! ## 5a. `AuxPack` は 1 手目以降タダ
+
+`AuxPack = ⟨Coupled, FrontPack, CopyPack⟩`（`CloseoutPackRun2:103`）。
+
+* `Coupled` — boot で `coupled_of_idle`（chain は idle）、tick で `coupled_tick`
+  （**側条件なし**）→ trace 全域でタダ
+* `CopyPack` — boot で `copyPack_boot`、tick で `copyPack_tick`（**側条件なし**）
+  → trace 全域でタダ
+* `FrontPack` — boot では**偽**（`FrontPack.notInit : mode ≠ init`）。1 手目以降は
+  `frontPack_alongTrace` でタダ
+
+よって **`AuxPack` は `1 ≤ i` でタダ**。`AuxPackNotAtBoot.not_auxPack_at_boot` が
+示す通り `i = 0` では偽なので、`1 ≤ i` の制限は落とせない。 -/
+
+/-- `Coupled` は trace 全域でタダ（boot は idle chain、tick は側条件なし）。 -/
+theorem coupled_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTrace : PreTrace centre place entry q first w st Tc) :
+    ∀ i, i ≤ Tc w.length → Coupled (st i).ctl (st i).vm := by
+  intro i
+  induction i with
+  | zero =>
+    intro _
+    rw [hPreTrace.start]
+    exact coupled_of_idle (by rfl)
+  | succ n ih =>
+    intro hIndexLeTc
+    exact coupled_tick (onLetterVM w) leftFirstVM centre place entry q first 2048
+      (ih (by omega)) (hPreTrace.trace.tick n (by omega))
+
+/-- `CopyPack` は trace 全域でタダ（`copyPack_boot` ＋ 側条件なしの tick）。 -/
+theorem copyPack_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTrace : PreTrace centre place entry q first w st Tc) :
+    ∀ i, i ≤ Tc w.length → CopyPack (st i).ctl (st i).vm := by
+  intro i
+  induction i with
+  | zero => intro _; rw [hPreTrace.start]; exact copyPack_boot 2048 w
+  | succ n ih =>
+    intro hIndexLeTc
+    exact copyPack_tick (onLetterVM w) leftFirstVM centre place entry q first 2048
+      (ih (by omega)) (hPreTrace.trace.tick n (by omega))
+
+/-- **`AuxPack` は 1 手目以降タダ。** -/
+theorem auxPack_alongTrace_afterFirstStep {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTrace : PreTrace centre place entry q first w st Tc) :
+    ∀ i, 1 ≤ i → i ≤ Tc w.length →
+      PalPeg.CloseoutPackRun2.AuxPack (st i).ctl (st i).vm :=
+  fun i hIndexPos hIndexLeTc =>
+    ⟨coupled_alongTrace centre place entry q first hPreTrace i hIndexLeTc,
+     frontPack_alongTrace centre place entry q first hw hPreTrace i hIndexPos hIndexLeTc,
+     copyPack_alongTrace centre place entry q first hPreTrace i hIndexLeTc⟩
+
+#print axioms coupled_alongTrace
+#print axioms copyPack_alongTrace
+#print axioms auxPack_alongTrace_afterFirstStep
+
 /-! ## 5b. 中心ヘッドも動ける — `CentreLedger` の 2/3 はタダ
 
 `CloseoutPackRun47.CentreLedger s := canRight s.center ∧ Sane s.center ∧
