@@ -1,3 +1,43 @@
+## n228 — 公理進捗: `ShiftInv` 23 場中 19 場（`periodLength_immediate_pos`）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 2 連言 `ShiftInv` の `posH` が出た。**23 場中 19 場が証明済み**、残り 4 場 |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+```lean
+theorem periodLength_immediate_pos {w : GalilScaffoldChainWatch.State}
+    (hb : GalilBranchInvariants.OnBlock w.machine.control.period)
+    (hp : 0 < periodLength w) :
+    0 < periodLength (GalilScaffoldChainWatch.immediate w)
+```
+
+`GalilChainCoupling.periodLength_consume` が「`OnBlock` の下で周期長は `consume` で不変」を
+言うてて、その `OnBlock` は `GalilReplaySpan.CoreX` の第 1 成分やから
+run が運ぶ `ChainW` からタダで出る。
+
+### `ShiftInv`（23 場）の到達状況
+
+| 状態 | 場 |
+|---|---|
+| **証明済み 19** | 枠 10（n224）＋ `pal`/`palNext`/`origin`（n222/n223）＋ `verifierRep`/`verifierPresent`/`aligned`（n226）＋ `lagZero`/`unbroken`（n227）＋ `posH`（本ノート） |
+| 残り 4 | `kle : 0 ≤ h`（`Nat.zero_le`）`pred`（`CoreX` の `OnBlock` の展開）`size : 2h ≤ R`（margin 等式の算術）`room : R+2 ≤ C`（位置境界の算術） |
+
+**数学は一つも残ってへん。**
+
+### このセッションでこの公理に入れた変更（累計）
+
+| 種類 | 件数 |
+|---|---|
+| ガード追加（過剰量化除去） | 2（`compareFound` / `shiftGuardVM`） |
+| 成分の語化 | 1（`hCaught`） |
+| **成分削除** | 2（`hEnd` / `hHi`） |
+| **橋・producer 新設** | 9（`bal_of_count` / `periodOn_of_blockOn` / `palAt_next_of_period` / `palNext_of_blockOn` / `origin_of_blockOn` / `shiftInv_frame_of_beginShift` / `coreX_immediate` / `immediate_lag_unbroken` / `periodLength_immediate_pos`） |
 ## n227 — 公理進捗: `ShiftInv` 23 場中 18 場が証明済み（`immediate_lag_unbroken`）
 
 **公理への進捗**

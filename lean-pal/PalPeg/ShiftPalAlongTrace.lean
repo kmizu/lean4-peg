@@ -291,6 +291,20 @@ theorem immediate_lag_unbroken {w : GalilScaffoldChainWatch.State} {a : Fin 3}
 
 #print axioms immediate_lag_unbroken
 
+/-- **`ShiftInv` の `posH` を `immediate` に運ぶ。**  `GalilChainCoupling.periodLength_consume`
+は `OnBlock` の下で周期長が `consume` で不変やと言う。`OnBlock` は
+`GalilReplaySpan.CoreX` の第 1 成分なので、run が運ぶ `ChainW` からタダで出る。 -/
+theorem periodLength_immediate_pos {w : GalilScaffoldChainWatch.State}
+    (hb : GalilBranchInvariants.OnBlock w.machine.control.period)
+    (hp : 0 < periodLength w) :
+    0 < periodLength (GalilScaffoldChainWatch.immediate w) := by
+  rw [show periodLength (GalilScaffoldChainWatch.immediate w) = periodLength w from
+    PalPeg.GalilChainCoupling.periodLength_consume w.machine w.lag w.margin w.lag
+      (GalilScaffoldCounter.inc w.margin) hb]
+  exact hp
+
+#print axioms periodLength_immediate_pos
+
 /-- **(NAMED) 準備直後の watch の台帳。**  `shiftPalAt_fresh_of_candidate` の 5 残差を
 1 つの場にまとめたもの。`ShiftPal` の `periodOnly = false` 分岐に必要な全部で、
 3 種類しかない（n144）:
