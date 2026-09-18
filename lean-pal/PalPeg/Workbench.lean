@@ -79,6 +79,7 @@ import PalPeg.PostRunInduction
 import PalPeg.StageLocalPrep
 import PalPeg.StageBudgetShift
 import PalPeg.ReadyInterface
+import PalPeg.StageCycleSearch
 import PalPeg.MatchedRunSnoc
 import PalPeg.ShiftPhaseDeterminism
 import PalPeg.RoundSegFromRun

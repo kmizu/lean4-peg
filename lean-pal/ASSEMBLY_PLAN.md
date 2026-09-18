@@ -1,3 +1,59 @@
+## n197 — `StageCycleSearch`：一周を制御層から切り離した。全域性が残りの全部
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 既にあったもの（書く前に見つけた）
+
+`PalPeg/CloseoutRunEntriesS.lean` に汎用ドライバが既にあった:
+
+* `run_entry_startRun:87` — `.run` に入る直前のモードは **`.home` に限る**。
+  よって run/wait/double/lower/lowerHome/copy の全相で `RunEntryS` は空虚。
+* `EntryInv Q:212` / `runEntriesS_of_inv:220` — `searchStep` で保存され各 `.run` 入口で
+  `DpSafeStage` を出す `Q` があれば、**`as` の長さにも比較回数にも条件なしで**
+  `RunEntriesS as v`。`EntryInv` の実体化はまだ無い（ドライバはある、`Q` が無い）。
+
+空虚性補題を自分で書きかけてたが、`run_entry_startRun` がそれやった。**書かんで済んだ。**
+
+### このターンで書いたもの
+
+`PalPeg/StageCycleSearch.lean`（1 定理、標準 3 公理、全体 build 緑）。
+
+`CloseoutPreload35.postRunF_round_trip_S` は frame 仮説を 5 本（`hsup` / `hsc` / `hp` /
+`hclk` / 全ストリームの pacing）取るが、その全部が
+
+```lean
+have hph := prefixPhase_of_scan_inv hsup hsc hp hclk.1 hclk.2
+have hpa : PacedL 2048 2047 (bs ++ [a3]) := pacedL_suffix_2047 hpaced hph
+```
+
+の 1 事実を出すためだけに使われてる。そこで 5 本を `PacedL 2048 2047 (bs ++ [a3])`
+1 本に差し替えた `stageCycle_of_runEntry` を切った。**仮説は真に弱い**（操作 (A)）。
+結果、一周（`.run` 入口 → run/wait/double 脚 → `PrepAt k (2*mw)` ＋ `StageInvS k (2*mw)`）が
+frame・control・`GalilVM` を一切含まん純 `SearchVM` の定理になった。
+
+これが必要な理由: `EntryInv Q` は**任意の**イベント列と**任意の** `searchStep` 後続に量化するので、
+`Q` が実機の `ScanTrace` を持つことはできひん。
+
+### 残り（これが全部）
+
+**全域性**: 任意の paced なイベント列を脚（`RunTrace rs` / `WaitTrace ws` / `bs.length = mw`）に
+分解すること。`stageCycle_of_runEntry` は脚をまだ仮説として取る。これが出れば
+
+```
+Q（ステージ周期不変量）→ EntryInv Q → runEntriesS_of_inv → RunEntriesS（∀ as）
+  → readyField2_entry_of_datum から NoReturn が落ちる → StageEntryC.fuel
+```
+
+が通る。**今回は何も落としてへん**（公理 3 本のまま、`NoReturn` も残ったまま）。
+
+### 次
+
+1. ステージ周期不変量 `Q` を定義する。2 つの選言（prep 相 = `StagePrepS`、
+   run/wait/double 相 = 脚の途中）で、後者は `run_entry_startRun` により入口節が空虚。
+2. `EntryInv Q` の prep 半分は `dpSafe_of_stagePrepD_slack` ＋ `stagePrepS_next` で出る。
+3. run/wait/double 半分が本体。`searchStep` は各相で関数（`double_step_pos` /
+   `wait_step_cases` / `run_step_quanta` はどれも `subst hs` で進む）なので、
+   脚の分解は決定的に取れるはず。まずそこを測る。
 ## n196 — n195 の診断は間違いやった。`NoReturn` が producer の壁（一次情報で確定）
 
 **状態: 全体 build 成功（このターンは編集なし）・標準公理のみ（3 本）・無条件 PAL は未完。**
