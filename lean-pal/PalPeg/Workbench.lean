@@ -279,6 +279,12 @@ producer は `CloseoutWatchRound10.prepLandingWatchC_of_short`）。**束ねる�
 | `not_shiftGuardVM_of_not_watch` | watch でなければ shift guard は立たない |
 | `guardNeedsWatch_PofC` | 具体枠では `shiftGuard = shiftGuardVM` で watch を要求 |
 | **`no_shift_from_copyChain`** | **誕生直後（`.copy` 相）の scan 状態からは shift に行けない**（不一致が来ても `scan_fallback`） |
+| **`reachesWatchPhase_of_chainTicks`** | **橋: 区間の chain trace が watch に着くなら `ReachesWatchPhase`**（`watchSegE_events` ＋ `chainTicks_unique`） |
+
+**`ReachesWatchPhase` に残るのは区間の長さだけ。** `found_to_watchStart_least` が
+任意の長さ `h` / `h+1` のイベント列について `ChainTicks (bs ++ dm :: cs) x1 (.watch …)` を
+与えるので、run が誕生からその長さの `WatchSegE` を走れば終端は watch。
+**chain の中身はもう一切残っていない**——純粋な予算・スケジュールの問題になった。
 
 **壊れていたのは結論の量化子だった。** `PrepLandingWatchC` は
 

@@ -211,4 +211,34 @@ theorem no_shift_from_copyChain {P : Shared} {q : ℕ} {first : Fin 9} {delay : 
 #print axioms guardNeedsWatch_PofC
 #print axioms no_shift_from_copyChain
 
+
+/-! ## `ReachesWatchPhase` の橋: 区間の長さだけが残る
+
+部品はすべて既存で、標準公理のみ:
+
+* `GalilScaffoldChainInputSupply.watchSegE_events` —
+  `WatchSegE … es c s c' t` ＋ `s.chain ≠ .idle` から `ChainTicks es s.chain t.chain`
+* `GalilScaffoldChainInputSupply.chainTicks_unique` — `ChainTicks` は行き先を一意に決める
+* `GalilPrepLeast.found_to_watchStart_least` — `SafeQuanta` ＋ `GalilDpCorrect.Result` から
+  「任意の長さ `h` / `h+1` のイベント列 `bs` / `cs` について
+  `ChainTicks (bs ++ dm :: cs) x1 (.watch (watchStart …))`」
+
+したがって **run が誕生から `bs ++ dm :: cs` と同じ長さの `WatchSegE` を走れば、
+その終端の chain は watch**。`reachesWatchPhase_of_chainTicks` がその橋で、
+残るのは「その長さの区間が実際に走る」という**純粋な予算・スケジュールの問題**だけ。
+chain の中身はもう一切残っていない。 -/
+
+/-- **橋**: 区間の chain trace が watch に着くなら `ReachesWatchPhase`。 -/
+theorem reachesWatchPhase_of_chainTicks {P : Shared} {q : ℕ} {first : Fin 9}
+    {es : List Bool} {cP c2 : Control} {sP s2 : GalilVM}
+    {wv : GalilScaffoldChainWatch.State}
+    (hSeg : WatchSegE P q first 2048 es cP sP c2 s2)
+    (hNotIdle : sP.chain ≠ ChainVM.idle)
+    (hTicks : ChainTicks es sP.chain (ChainVM.watch wv)) :
+    ReachesWatchPhase P q first cP sP := by
+  obtain ⟨hSegTicks, -⟩ := watchSegE_events P q first 2048 hSeg hNotIdle
+  exact ⟨es, c2, s2, hSeg, wv, chainTicks_unique hSegTicks hTicks⟩
+
+#print axioms reachesWatchPhase_of_chainTicks
+
 end PalPeg.FoundPackCorrected
