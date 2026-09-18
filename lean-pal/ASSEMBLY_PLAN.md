@@ -1,3 +1,46 @@
+## n207 — `StageWaitPhase`：4 相のうち 3 相がステップ局所になった
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+`PalPeg/StageWaitPhase.lean`（2 定理、標準 3 公理、全体 build 緑、一発で通った）:
+
+```lean
+def WaitPhase (k mw : ℕ) (v : SearchVM) : Prop :=
+  v.search.mode = Mode.wait ∧ v.search.span = ofNat mw ∧ v.lower = ofNat k ∧
+    Canonical v.search.debt
+```
+
+* `waitPhase_step` — `.wait` に留まる刻みは枠を保つ（窓・下界・正準性は不変、債務だけ減る）
+* `doubleLeg_head_of_waitExit` — 背景イベントで `.wait` を出ると、着地は
+  `StageDoubleLeg.DoubleLeg` が要求する先頭データそのもの
+  （`work = ofNat mw` / `span = reset` / `quarter = 0` / 債務 0 / `lower = ofNat k`）
+
+### 出口イベントが背景である理由（翻訳できることを確認した）
+
+`CloseoutPreload34.exitNotFire_of_wait` は機械レベルで `p3.ctl.clock ≠ 1` を出す。
+その論証は「wait 脚が空なら run→wait の出口イベントが比較（`run_exit_wait_match`）で、
+比較直後はクロックが 2048 に戻る。よって次の刻みは比較でけへん」。
+
+**`ReadyIface` の会計ではこれがそのまま出る**——`comparison` の結論が `Φ v n 0`（slack が 0 に戻る）で、
+比較には `2048 ≤ k + 1` が要るから。つまり制御層の事実やのうて、`Φ` の添字だけで言える。
+ただし本ファイルではその論証は運んでへん（出口は `a = false` を仮説に取ってる）。
+
+### 4 相の現状
+
+| 相 | ステップ局所の不変量 | 出口 |
+|---|---|---|
+| run | `DpBudgetAt`（n202/n203） | 非 run へ（節が空虚になる） |
+| prep | `PrepPaced` ＋ `ReachP`（n206） | `dpBudgetAt_of_prepEntry`（n206） |
+| **wait** | **`WaitPhase`（本ファイル）** | **`doubleLeg_head_of_waitExit`** |
+| double | `DoubleLeg`（n198） | `doubleLeg_exit` → `PrepAt k (2mw)` ＋ `StageInvS` |
+
+**4 相すべてにステップ局所の不変量と出口が揃った。** 残るのは
+
+1. run → wait の出口（`run_exit_frame` / `run_exit_wait_match` が材料）
+2. 4 相の選言を 1 つの `Φ` にして `ReadyIface P Φ` のインスタンスを作る
+3. wait 出口の `a = false` を `Φ` の slack 添字から出す
+
+**今回も何も落としてへん**（公理 3 本のまま）。
 ## n206 — 入口定理から未来リスト依存を外し、prep 脚の pacing 算術も揃えた
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
