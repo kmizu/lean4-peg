@@ -97,6 +97,56 @@ threading が必要で、それが残っている本体。**
 | 背景 tick の恒等性 | `CloseoutMismatchCompare.chainTick_false_idle`, `chainStep_watch_of_lagZero` | **証明済み**（lag ゼロなら `WatchOk` 不要） |
 | `ShiftRun` の存在 | `CloseoutShiftRun.shiftRun_exists` / `_entry` / `_round` | **証明済み** |
 
+## 2a. 正本 `pal_in_peg_final39` の 7 前提 — producer と残差（2026-09-19 実見）
+
+`#check @PalPeg.CloseoutFinalFour.pal_in_peg_final39` で型を実見して確認した 7 本。
+各行の producer は**実際にそのファイルを開いて**確認した（型名の一致だけで判断していない）。
+
+| # | 前提 | producer | 残差（＝本当の義務） |
+|---|---|---|---|
+| 1 | `hSP`（scan 状態の `ShiftPal`） | `CloseoutBundleRun.shiftPal_of_run`（:96） | `ChainPosInv2`(run 形) ＋ `H_readsShift`(run 形) ＋ `H_freshShift`(tick 形) ＋ `hfresh`（`periodOnly = false` 分岐） |
+| 2 | `hme`（`H_marksEntry'`） | `CloseoutMarksFree.marksInv'_of_marksRun`（origin）＋ `CloseoutMarksPack.bigPack2MG7W''_tick_M`（tick） | `WindowInOrigin`（run 形、copy 状態）＋ `0 ≤ value length`（run 形、scan 状態。`CloseoutLenNonneg.lenNonneg_of_entryCounters` が `EntryCounters` から出す）＋ 側条件 `first ≠ 4` |
+| 3 | `hor`（`CycleOracleMC3`） | `CloseoutOracleBridge.hor_of_H_oracle` ＋ `CloseoutOracle8.h_oracle_of_leaves7` | 11 葉（CLAUDE.md §3 参照。`hpres`→`SearchReadyB` 再切り出し、`hstage`、`hshape`、`hlastMismatch`、`hmismatch`、`hfound`/`hfoundBg`/`hfoundReplay`） |
+| 4 | `hC`（`H_realizeLIMW'`） | **なし** | 局所実現そのもの。**最大の未知**（5 機械の鎖の 2→3 段） |
+| 5 | `hbgP`（`H_bgP`） | `CloseoutPackRun38.posPayload_background`（:158） | `H_bgRes`（`BgRes` = `SrcPos` ＋ idle 起点の `canRight`/半径上界 ＋ `verNext`） |
+| 6 | `hmatchP`（`H_matchP`） | `CloseoutPackRun38`（:221） | `H_matchRes`（`MatchRes`、:198） |
+| 7 | `hsdP`（`H_shiftDoneP`） | `CloseoutPackRun38`（:316、**恒等**） | `H_shiftDoneRes`（:305） |
+
+**本数は 5〜7 を残差に置き換えても 7 のまま**（producer が 1:1 で残差に化けるだけ）。
+数を下げるには**残差を共有させる**必要がある。
+
+### 構造的観察 — 次の一手はここ
+
+残差を並べると、**同じ run 形の事実を何度も要求している**：
+
+* `ChainPosInv2`（run 形）— `hSP` の残差、かつ `CloseoutPackRun48` の 4 放電器
+  （`final38` 経路で 5〜7 を落とす道）の前提でもある。
+* 「chain の verifier が入力を表現し、ヘッドが所定の位置にある」—
+  `CloseoutVerSide.VerRun`、`CloseoutPackRun49.MatchRest.repV`、`BgRes.verNext`、
+  `MarksRun` の各所が同じ内容を別の名前で要求している。
+* 「run の各点で `LagCan`」— `CloseoutPackRun49.LPackM3.lagCan`（boot は定理、tick も閉、
+  残差は `LTickLeaves3.backLag` 1 つ）。
+
+したがって **run 形の供給束を 1 つ作って boot ＋ tick で運び、5〜7 と `hSP` を
+そこから同時に放電する**のが本数を下げる唯一の筋。既に部品はある：
+
+| 部品 | 場所 | 状態 |
+|---|---|---|
+| `LPackM3`（`LPackM2` ＋ scan で `CentreLedger` ＋ `LagCan`） | `CloseoutPackRun49` | boot は定理、tick は 4 葉パック（`LTickLeavesN`/`AuxPack`/`LTickLeaves2`/`LTickLeaves3`）modulo で閉 |
+| `MatchRes2` ← `LPackM3` | `CloseoutPackRun49.matchRes2_of_lpackM3`（:448） | 残差は `MatchRest`（`repV`/`repVmid`/`replayPay`/`canRNext`） |
+| `VerRun`（run 形の `VerRep` ＋ `LagCan`） | `CloseoutVerSide`（:89） | `hpack` の正しい代替 |
+| `MarksRun`（run 形の `WindowInOrigin` ＋ `EntryCounters`） | `CloseoutMarksFree`（:47） | 同型 |
+| `roundBundle_steps_run` | `CloseoutBundleRun`（:66） | 同型 |
+
+**障害**: `PreTraceIMW.packs` は各点で `IPackMW`（= `LPackM` ＋ `LPackM2`）しか渡さない
+（`CloseoutPackW:64`）。`LPackM3` を run に載せるには 4 葉パックを各点で供給する必要があり、
+そこがまだ配線されていない。
+
+**やってはいけないこと**: `CloseoutPackRun48` の 4 放電器の入力
+（`hrepR`/`hrepV`/`hL`）は「**任意の** scan 状態 ＋ `ChainPosInv2`」形で、
+`ChainPosInv2` は verifier の内容を縛らないので `hrepV` はその形では偽の疑いが強い。
+使う前に `VerRun` と同じ run 形に直すこと（[[over-quantified-named-leaves]] の 8 例目と同じ罠）。
+
 ## 2b. `hfour`（`H_fourOther`）— **放電済み**（2026-09-19、`pal_in_peg_final39`）
 
 | 部品 | 在り処 | 状態 |
