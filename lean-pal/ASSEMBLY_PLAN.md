@@ -1,3 +1,47 @@
+## n224 — 公理進捗: `ShiftInv` の枠 10 場も出た（残り 10 場）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 2 連言 `ShiftInv`（23 場）のうち **13 場が出た**（実質 3 場 ＋ 枠 10 場）。残り 10 場 |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+```lean
+theorem shiftInv_frame_of_beginShift
+    (hb : beginShiftVM h w s t)
+    (hi : ScanInvariant raw (position s.center) r₀ s.left s.right) :
+    t.chain = ChainVM.watch (GalilScaffoldChainWatch.immediate w) ∧
+      t.remaining = ofNat h ∧ Canonical t.cycle ∧ value t.cycle = 0 ∧
+      Represents t.left.head raw ∧ t.left.head.focus ≠ none ∧
+      Represents t.right.head raw ∧ t.right.head.focus ≠ none ∧
+      position t.left = position s.center - r₀ ∧ position t.right = position s.center + r₀
+```
+
+証明は `rw [hb.2]` の後ぜんぶ `rfl` か `hi` の場。`beginShiftVM` が着地状態を等式
+`t = {s with remaining := ofNat h, chain := .watch (immediate w), cycle := reset, …}` で
+与えるので、**`k = 0` での `remaining = ofNat (h−0)` と `count = 2*0` がちょうど合う**。
+
+### `ShiftInv`（23 場）の到達状況
+
+| 群 | 場 | 状態 |
+|---|---|---|
+| 実質 | `pal` / `palNext` / `origin` | **済**（n222/n223） |
+| 枠（chain/counter/head） | `chain` `remaining` `canon` `count` `leftRep` `leftPresent` `rightRep` `rightPresent` `leftPos` `rightPos` | **済**（本ノート） |
+| 残り 10 | `kle` `posH` `size` `room` `verifierRep` `verifierPresent` `aligned` `lagZero` `unbroken` `pred` | 未 |
+
+残り 10 場の見通し（すべて出所は特定済み）:
+
+* `kle : 0 ≤ h` — 自明
+* `lagZero` — `shiftGuardVM` の `zero w.lag = true`（`immediate` は lag を触らん）
+* `pred` — `shiftGuardVM` の symbol 場
+* `unbroken` — `shiftGuardVM` の `broken = false` ＋ `consume_keeps_unbroken`
+* `verifierRep` — `BranchSupply.chainVerifierRepresents_immediate` が実在
+* `posH` / `size` / `room` — `ChainW` の margin 等式と `phase = 4`、走査の `room`
+* `aligned` — `immediate` が verifier を 1 進めることと lag 0 の整合
 ## n223 — 公理進捗: `ShiftInv` の実質 3 場すべてが機械側データから出るようになった
 
 **公理への進捗**

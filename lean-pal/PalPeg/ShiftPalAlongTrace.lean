@@ -222,6 +222,29 @@ theorem origin_of_blockOn {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)
 
 #print axioms origin_of_blockOn
 
+/-- **`ShiftInv` の枠のうち `beginShiftVM` の等式だけで出る分。**
+`beginShiftVM h w s t` は `t = {s with remaining := ofNat h, length := …,
+chain := .watch (immediate w), cycle := reset, periodOnly := true}` と
+着地状態を等式で与えるので、ヘッド（`left`/`right`/`center`/`radius`）は `s` から
+不変、カウンタは `reset`、chain は `immediate w`。`k = 0` での
+`remaining : t.remaining = ofNat (h - 0)` と `count : value t.cycle = 2 * 0` が
+これでちょうど合う。 -/
+theorem shiftInv_frame_of_beginShift {raw : List (Fin 2)} {h r₀ : ℕ} {s t : GalilVM}
+    {w : GalilScaffoldChainWatch.State}
+    (hb : beginShiftVM h w s t)
+    (hi : ScanInvariant raw (position s.center) r₀ s.left s.right) :
+    t.chain = ChainVM.watch (GalilScaffoldChainWatch.immediate w) ∧
+      t.remaining = ofNat h ∧ Canonical t.cycle ∧ value t.cycle = 0 ∧
+      GalilScaffoldInputTrace.Represents t.left.head raw ∧ t.left.head.focus ≠ none ∧
+      GalilScaffoldInputTrace.Represents t.right.head raw ∧ t.right.head.focus ≠ none ∧
+      position t.left = position s.center - r₀ ∧
+      position t.right = position s.center + r₀ := by
+  rw [hb.2]
+  exact ⟨rfl, rfl, Or.inl rfl, rfl,
+    hi.leftRep, hi.leftPresent, hi.rightRep, hi.rightPresent, hi.leftPos, hi.rightPos⟩
+
+#print axioms shiftInv_frame_of_beginShift
+
 /-- **(NAMED) 準備直後の watch の台帳。**  `shiftPalAt_fresh_of_candidate` の 5 残差を
 1 つの場にまとめたもの。`ShiftPal` の `periodOnly = false` 分岐に必要な全部で、
 3 種類しかない（n144）:
