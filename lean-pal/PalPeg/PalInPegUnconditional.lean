@@ -5,7 +5,7 @@ import PalPeg.BranchSupply
 # `PalInPeg.unconditional` — 目標そのもの。穴は `axiom` で明示する
 
 **これが目標の形**: `RecognizedByTotalPEG PAL` を**前提ゼロ**で（＝閉じた項として）持つ。
-いま足りない 10 個の原子的な義務を `axiom` として明示し、`#print axioms unconditional` を
+いま足りない 9 個の原子的な義務を `axiom` として明示し、`#print axioms unconditional` を
 そのまま TODO リストにする。
 
 ```
@@ -104,11 +104,11 @@ axiom obligation_shiftEntryLanding_alongTrace (entry q : ℕ) (first : Fin 9) :
         PalPeg.BranchSupply.ShiftEntryLandingAt centreC placeC entry q first w
           (st j).ctl (st j).vm
 
-/-- **(OBLIGATION)** chain の `.back` 相の lag 形状（trace 形）。 -/
-axiom obligation_chainBackLag_alongTrace (entry q : ℕ) (first : Fin 9) :
-    ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
-      ∀ j, j ≤ Tc w.length → PalPeg.BranchSupply.ChainBackLagAt (st j).vm
+/-! `chain` の `.back` 相の lag 形状は**放電済み**
+（`BranchSupply.chainBackLagAt_alongTrace`、新規入力ゼロ）。
+実機の lag は `chain.start()` で `radius` から作られ `inc` / `dec` でしか動かないので
+`Canonical` と非負は構成から自明。`LagCan` が `.watch` 相だけに切られていたために
+残差に見えていた。 -/
 
 /-- **(OBLIGATION)** `shift_done` での `CentreLedger`（trace 形）。 -/
 axiom obligation_shiftExitLedger_alongTrace (entry q : ℕ) (first : Fin 9) :
@@ -144,7 +144,7 @@ theorem unconditional : RecognizedByTotalPEG PAL :=
         hPreTraceIMW
         (fun x hBig hScanNR => obligation_shiftPalAtScanStates 0 0 0 w x hBig hScanNR)
         (obligation_verifierRunAlongRun 0 0 0 w st hPreTraceIMW.base.pre.start)
-        (obligation_chainBackLag_alongTrace 0 0 0 w st Tc hPreTraceIMW)
+        (PalPeg.BranchSupply.chainBackLagAt_alongTrace centreC placeC 0 0 0 hPreTraceIMW)
         (obligation_shiftExitLedger_alongTrace 0 0 0 w st Tc hPreTraceIMW)
         (obligation_rewindMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW)
         (obligation_matchLanding_alongTrace 0 0 0 w st Tc hPreTraceIMW)

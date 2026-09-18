@@ -1126,6 +1126,160 @@ theorem chainLagCanonical_background {w : List (Fin 2)} {s t : GalilVM}
 #print axioms chainLagCanonical_of_chainEq
 #print axioms chainLagCanonical_shiftOne
 #print axioms chainLagCanonical_immediate
+/-! ### `chainAt` — tick の chain 効果の分類器（既にあった）
+
+`compareFound` の 8 番目の成分は
+`chainAt a found answer c walker ver radius s.chain vs.chain` で、これが
+**tick の chain 効果の分類器そのもの**（`GalilScaffoldTopSearch:130`）:
+
+```
+chainAt a found … x z :=
+  (x ≠ .idle ∧ ChainTick a x z) ∨
+  (x = .idle ∧ found = false ∧ z = .idle) ∨
+  (x = .idle ∧ found = true ∧ (if a then ChainMatched (chainStart …) z else z = chainStart …))
+ChainTick a x z := ∃ y, ChainStep x y ∧ (if a then ChainMatched y z else z = y)
+```
+
+`lpackM3_tick` は `scan_match` / `scan_shift` の各ケースでこれを手で開いていた
+（`Run49:162–290` の約 60 行）。**分類器に対する補題を 1 本書けば、chain の不変量は
+すべてそれに乗る**（`LagCan` / `ChainPositionLedger` / `ChainLagCanonical` …）。 -/
+
+/-- **`ChainTick` を通した搬送。** -/
+theorem chainLagCanonical_chainTick {a : Bool} {x z : ChainVM}
+    (hInv : ChainLagCanonical x) (hTick : ChainTick a x z) : ChainLagCanonical z := by
+  obtain ⟨y, hStep, hAfter⟩ := hTick
+  have hy := chainLagCanonical_step hInv hStep
+  cases a with
+  | true =>
+    rw [if_pos rfl] at hAfter
+    exact chainLagCanonical_matched hy hAfter
+  | false =>
+    rw [if_neg (by decide)] at hAfter
+    rw [hAfter]
+    exact hy
+
+/-- **`chainAt` を通した搬送。**  誕生の場合の `chainStart` は `lag = radius` なので
+`RadLedger` の 2 場でタダ。**これが tick の chain 効果に対する唯一の窓口。** -/
+theorem chainLagCanonical_chainAt {a found : Bool} {ans : GalilScaffoldTape.Tape} {c : Fin 3}
+    {wk : GalilScaffoldPlace.Place} {ver : PlaceHead} {rad : Counter} {x z : ChainVM}
+    (hInv : ChainLagCanonical x) (hCanonical : Canonical rad) (hNonneg : 0 ≤ value rad)
+    (hAt : chainAt a found ans c wk ver rad x z) : ChainLagCanonical z := by
+  rcases hAt with ⟨-, hTick⟩ | ⟨-, -, hz⟩ | ⟨-, -, hStart⟩
+  · exact chainLagCanonical_chainTick hInv hTick
+  · rw [hz]; exact chainLagCanonical_idle
+  · cases a with
+    | true =>
+      rw [if_pos rfl] at hStart
+      exact chainLagCanonical_matched
+        (chainLagCanonical_chainStart ans c wk ver rad hCanonical hNonneg) hStart
+    | false =>
+      rw [if_neg (by decide)] at hStart
+      rw [hStart]
+      exact chainLagCanonical_chainStart ans c wk ver rad hCanonical hNonneg
+
+/-- **`compare` を通した搬送。**  `compareFound` の chain 成分は `chainAt`、
+そして `afterBirth` は chain を `afterBirth_chain` で書き換えるだけ。 -/
+theorem chainLagCanonical_compare {w : List (Fin 2)} {s t : GalilVM}
+    (hCompare : (galilFrameS (PofC centre place entry w) q first).compare s t)
+    (hInv : ChainLagCanonical s.chain)
+    (hCanonical : Canonical s.radius) (hNonneg : 0 ≤ value s.radius) :
+    ChainLagCanonical t.chain := by
+  obtain ⟨vs, vq, a, -, -, -, -, hAt, hteq⟩ :
+    compareFound (PofC centre place entry w) q first s t := hCompare
+  have hchain : t.chain = vs.chain := by
+    rw [hteq, afterBirth_chain]
+    cases a <;> rfl
+  rw [hchain]
+  exact chainLagCanonical_chainAt hInv hCanonical hNonneg hAt
+
+#print axioms chainLagCanonical_chainTick
+#print axioms chainLagCanonical_chainAt
+/-- **1 tick 搬送。**  側入力は `RadLedger` の 2 場（`Canonical radius` と非負）だけ。
+chain が変わる遷移はすべて §上の分類器経由の補題で処理する。 -/
+theorem chainLagCanonical_tick {w : List (Fin 2)} {x y : State GalilVM}
+    (hTick : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y)
+    (hCanonical : Canonical x.vm.radius) (hNonneg : 0 ≤ value x.vm.radius)
+    (hInv : ChainLagCanonical x.vm.chain) : ChainLagCanonical y.vm.chain := by
+  cases hTick with
+  | init c s s' hm hInit =>
+    obtain ⟨-, -, -, -, -, -, -, -, -, hch, -⟩ : initVM entry s s' := hInit
+    rw [show s'.chain = ChainVM.idle from hch]; exact chainLagCanonical_idle
+  | scan_wait c s s' hm _ hBg =>
+    exact chainLagCanonical_background centre place entry q first hBg hInv hCanonical hNonneg
+  | scan_count c s s' hm _ _ hBg =>
+    exact chainLagCanonical_background centre place entry q first hBg hInv hCanonical hNonneg
+  | scan_match c s s' s'' o hm _ _ hCompare _ hPlace _ =>
+    have hEq : s''.chain = s'.chain := by
+      have h : s'' = (if c.replaying then {s' with replay := dec s'.replay} else s') := hPlace
+      rw [h]; split <;> rfl
+    rw [hEq]
+    exact chainLagCanonical_compare centre place entry q first hCompare hInv hCanonical hNonneg
+  | scan_shift c s s' s'' hm _ _ hCompare _ _ _ hBegin =>
+    obtain ⟨v, hv⟩ := hBegin
+    rw [show s''.chain = ChainVM.watch (GalilScaffoldChainWatch.immediate v) from by
+      rw [hv.2]]
+    refine chainLagCanonical_immediate ?_
+    rw [show ChainVM.watch v = s'.chain from hv.1.symm]
+    exact chainLagCanonical_compare centre place entry q first hCompare hInv hCanonical hNonneg
+  | scan_fallback c s s' s'' hm _ _ hCompare _ _ _ hBegin =>
+    obtain ⟨pl, hv⟩ := hBegin
+    rw [show s''.chain = ChainVM.idle from by rw [hv]]
+    exact chainLagCanonical_idle
+  | shift_one c s s' hm _ hOne =>
+    obtain ⟨-, -, -, wv, hw, hGet⟩ := hOne.1
+    have hSet := hOne.2
+    rw [hGet] at hSet
+    subst hSet
+    refine chainLagCanonical_shiftOne ?_
+    rw [show ChainVM.watch wv = s.chain from hw.symm]
+    exact hInv
+  | shift_done c s o hm _ _ => exact hInv
+  | replayStart c s s' o hm hRS _ _ =>
+    obtain ⟨-, -, -, -, -, -, -, -, -, hch, -, -, -⟩ : replayStartVM entry s s' := hRS
+    rw [show s'.chain = ChainVM.idle from hch]; exact chainLagCanonical_idle
+  | restart c s s' hm hRestart =>
+    obtain ⟨v, -, -, -, -, ht⟩ : restartVM entry s s' := hRestart
+    rw [show s'.chain = ChainVM.idle from by rw [ht]]; exact chainLagCanonical_idle
+  | copy_one c s s' hm _ h => exact chainLagCanonical_of_chainEq (by rw [h.2]; rfl) hInv
+  | copy_done c s s' hm _ h => exact chainLagCanonical_of_chainEq (by rw [h.2]; rfl) hInv
+  | home_start c s s' hm _ h => exact chainLagCanonical_of_chainEq (by rw [h.2]; rfl) hInv
+  | home_step c s s' hm _ h => exact chainLagCanonical_of_chainEq (by rw [h.2]; rfl) hInv
+  | fpp_slice c s s' hm h => exact chainLagCanonical_of_chainEq (by rw [h.2]; rfl) hInv
+  | fpp_done c s s' hm h => exact chainLagCanonical_of_chainEq (by rw [h.2]; rfl) hInv
+  | markEnd_step c s s' hm _ h => exact chainLagCanonical_of_chainEq (by rw [h.2]; rfl) hInv
+  | markEnd_found c s s' hm _ h => exact chainLagCanonical_of_chainEq (by rw [h.2]; rfl) hInv
+  | choose_select c s s' hm _ _ h => exact chainLagCanonical_of_chainEq (by rw [h.2]; rfl) hInv
+  | choose_step c s s' hm _ h => exact chainLagCanonical_of_chainEq (by rw [h.2]; rfl) hInv
+  | rewind_done c s s' hm _ h => exact chainLagCanonical_of_chainEq (by rw [h.2]; rfl) hInv
+  | rewind_one c s s' hm _ _ h => exact chainLagCanonical_of_chainEq (by rw [h.2]; rfl) hInv
+  | rewind_pair c s s' hm _ _ h => exact chainLagCanonical_of_chainEq (by rw [h.2]; rfl) hInv
+
+/-- **trace 全域での搬送。**  新規入力ゼロ（`RadLedger` は `radLedger_pt` でタダ）。 -/
+theorem chainLagCanonical_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc) :
+    ∀ i, i ≤ Tc w.length → ChainLagCanonical (st i).vm.chain := by
+  have hPreTrace := hPreTraceIMW.base.pre
+  have hRadLedger := radLedger_pt centre place entry q first hw hPreTrace
+    (fun j hj => leftLive_of_lpackM (hPreTraceIMW.packs j hj).pack)
+  intro i
+  induction i with
+  | zero =>
+    intro _
+    rw [hPreTrace.start]
+    exact chainLagCanonical_idle
+  | succ n ih =>
+    intro hIndexLeTc
+    exact chainLagCanonical_tick centre place entry q first
+      (hPreTrace.trace.tick n (by omega))
+      (hRadLedger n (by omega)).canon (hRadLedger n (by omega)).nonneg
+      (ih (by omega))
+
+#print axioms chainLagCanonical_tick
+#print axioms chainLagCanonical_alongTrace
+
+#print axioms chainLagCanonical_compare
+
 #print axioms chainLagCanonical_background
 
 
@@ -1523,6 +1677,31 @@ theorem scanLandingObligations_alongTrace_of_atoms {w : List (Fin 2)}
       i hIndexLeTc
 
 #print axioms scanLandingObligations_alongTrace_of_atoms
+
+/-! ## 5h. `ChainBackLagAt` は放電済み — 新規入力ゼロ
+
+`ChainLagCanonical` は §5d の分類器補題（`chainLagCanonical_chainAt` ほか）で
+trace 全域を運べる（`chainLagCanonical_alongTrace`、側入力は `RadLedger` だけで
+それは `radLedger_pt` でタダ）。その `.back` 節が `ChainBackLagAt` そのもの。
+
+`w = []` のときは `Tc 0 = 0` で `j = 0`（boot、chain は idle）しか無いので自由。 -/
+
+/-- **`ChainBackLagAt` は trace 全域でタダ。** -/
+theorem chainBackLagAt_alongTrace {w : List (Fin 2)}
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc) :
+    ∀ j, j ≤ Tc w.length → ChainBackLagAt (st j).vm := by
+  intro j hIndexLeTc
+  rcases Nat.eq_zero_or_pos w.length with hlen | hw
+  · rw [hlen, hPreTraceIMW.base.pre.tc0] at hIndexLeTc
+    have hzero : j = 0 := by omega
+    subst hzero
+    rw [hPreTraceIMW.base.pre.start]
+    exact ⟨(chainLagCanonical_idle).backLagField⟩
+  · exact ⟨(chainLagCanonical_alongTrace centre place entry q first hw hPreTraceIMW j
+      hIndexLeTc).backLagField⟩
+
+#print axioms chainBackLagAt_alongTrace
 
 
 #print axioms landingObligationsAlongRun_of_globalHypotheses
