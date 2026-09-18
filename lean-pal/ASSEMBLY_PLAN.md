@@ -29,6 +29,77 @@
 
 
 
+
+## 2026-09-19 n107: `M-fallbackPlace` を修正し `WindowInOrigin` を `Fair` なしに（`marksEntry` の実体が確定）
+
+**全体 build 成功（EXIT=0）。既存の旗艦定理は標準公理のみ。
+`PalInPeg.unconditional` は残り 4 個の原子的義務を axiom として持つ（数は不変）。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
+
+### `M-fallbackPlace`（修正済み・全体 build 緑）
+
+Scala 正本の `beginFallback` は search の walker place からコピーし、その walker は
+到着済みの入力しか見ていない。Lean の `beginFallbackVM'` は `p` を無制限にしていた。
+
+    def beginFallbackVM' (s t) := ∃ p, beginFallbackVM p s t ∧
+      (GalilScaffoldPlace.stream p).length ≤ position s.right
+
+**`p = s.walker` ではなく境界にしたのが要点。** `p = s.walker` は DP の walker との
+結合が必要で `FallbackRestart` 系（`chosenRadius` を `p` で書く大きい定理群）に
+波及する。境界なら `position_represent`（`GalilScaffoldChainFallback:110`、
+**等式で既存**）からそのまま出て、しかも `WindowInOrigin` に必要なのは境界だけ。
+
+配線: 分解 29 箇所（自動置換）、producer 3 定理、`FallbackRestart` 系 5 箇所、
+`arrive` / `trunc` の保存義務 4 箇所（`position_arrive` / `position_trunc` は `rfl`）、
+`GalilSharedFunctional` / `GalilTickFair` の 4 箇所。
+
+### `WindowInOrigin` は `Fair` なしで run 全域に出る
+
+    windowInOrigin_of_beginFallback   着地でそのまま（境界 ＋ beginFallbackAt_walker）
+    windowInOrigin_tick_free          1 tick（copy へ入るのは scan_fallback だけ）
+    windowInOrigin_alongRun           run 全域
+
+`(stream t.fpp.walker).length = (stream p).length ≤ position s.right = position t.right`。
+**`WalkerInOrigin` も `Fair` も経由しない。** n104 で「`FairSteps` が穴」と書いた所は
+`Fair` を定理にするのではなく**迂回できた**。
+
+（`M-initCursor` の副産物として `walkerInOrigin_of_run` も `Steps` 形になっているが、
+`WindowInOrigin` はそれさえ要らなくなった。）
+
+### `marksEntry` の実体が確定: marks テープの幾何 1 点
+
+`CloseoutMarksFree.marks_steps_free` は `H_marksEntry'` なしで `MarksInv'` を運ぶ。
+必要なのは `first ≠ 4` と `MarksRun`（2 半分）で、
+
+| 半分 | 状態 |
+|---|---|
+| `WindowInOrigin`（copy 状態） | **タダ**（`windowInOrigin_alongRun`、今回） |
+| `EntryCounters`（scan 状態） | `entryCounters_of_invLPC` 経由。ただし `InvLPC` は**cycle 起点**の不変量で、run の各 scan 状態には無い |
+
+側入力もほぼ揃っている:
+
+    CPack q (st 1).ctl (st 1).vm  ← cpack_of_entry q (invS_of_inv hInv) hEC
+                                     （`GalilTrailRad.live_pack_trace` の証明が
+                                       `st 1` で `hInv` / `hEC` を実際に作っている）
+    (st 1).ctl.mode = Mode.scan   ← init_tick_target_is_scan
+
+**残るのは `H_marksEntry'` そのもの**（`CloseoutPackRun16:165`）:
+
+    H_marksEntry' P q first := ∀ c s, c.mode = Mode.choose → c.odd = true →
+      (galilFrameS P q first).markSet s → MarksEntry' first s
+
+    MarksEntry' first s := ∃ f, 1 ≤ f ∧ f ≤ mh s ∧
+      denote (marksTape s.fpp) f = first ∧ mh s + 1 ≤ position s.left + f
+
+つまり「`choose` 相で marks ヘッドがマーク上にあるとき、FIRST マークが
+`f ≤ mh s` にあって `mh s + 1 ≤ position left + f`」——**marks テープの版面の幾何**。
+`CPack.choose`（`mh s ≤ 2 * position s.right`）と marks テープの内容
+（`GalilFppMarkedLayout.marks`）から出るはずで、`GalilCentreLive.layout_end`
+（`:123`）が同種の補題。
+
+**注意: `∀ c s` の形（過剰量化）。** 到達しない状態まで量化しているので、
+まず trace 形に切り直してから測る（`CLAUDE.md` の規律）。
+
 ## 2026-09-19 n106: モデル欠陥 `M-initCursor` を修正（`Fair` の 3 場のうち 1 つが定理に）
 
 **全体 build 成功（EXIT=0・sorryAx 0）。既存の旗艦定理は標準公理のみ。
