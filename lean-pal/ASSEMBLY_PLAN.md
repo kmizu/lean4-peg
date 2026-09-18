@@ -1,3 +1,23 @@
+## 2026-09-19 n157: shift 末尾の射影の形も確定（`RoundHistory` 20 宣言）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器は動いていない。**
+
+`toOnly_shiftEnd_eq`（一発で通った）。`CompareRounds.next` の `rest` の始点は
+`⟨t'.center, t'.left, right t.right, v, cycle, t'.radius⟩` という明示の組
+（`GalilScaffoldChainReadOrigin:1008`）で、run から作るには `toOnly sEnd v` が
+これに一致しないといけない。
+
+一致の根拠（一次情報）:
+
+* `toOnly s w = ⟨s.center, s.left, s.right, w, s.cycle, s.radius⟩`（`GalilScaffoldTopOnly:20`）
+* `shiftLens.get` は `⟨⟨center, left, remaining, radius, length⟩, chain, cycle⟩` なので
+  center / left / radius / cycle は `shiftLens` の中、**`right` は外**
+* `right` は shift 相で不変（`shiftLens_frame_steps`）、shift 入口の値は
+  比較の `vs.right = right s1.right`
+
+**これで `PROOF_STACK.md` 手順 11 段の部品はすべて揃った（20 宣言）。**
+
 ## 2026-09-19 n156: `shift` の手数が初期値で決まることを証明（`RoundHistory` 19 宣言）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

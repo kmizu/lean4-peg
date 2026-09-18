@@ -278,7 +278,8 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
     → **`H_readsShift`**
 
 **部品はもう全部ある（n156）。あとは 1〜11 を繋ぐ組み立てだけ。**
-`PalPeg/RoundHistory.lean` は 19 宣言、全部標準 3 公理以内（3 本は公理ゼロ）。
+`PalPeg/RoundHistory.lean` は 20 宣言、全部標準 3 公理以内（3 本は公理ゼロ）。
+shift 末尾の射影の形は `toOnly_shiftEnd_eq`（**済 n157**）。
 
 ---
 

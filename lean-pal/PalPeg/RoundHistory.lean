@@ -163,6 +163,42 @@ theorem onlyMatchedRun_of_roundHistory {c : Control} {s : GalilVM}
 
 end
 
+/-! ## shift 末尾の射影の形
+
+`CompareRounds.next` の `rest` の始点は
+`⟨t'.center, t'.left, right t.right, v, cycle, t'.radius⟩` という明示の組
+（`GalilScaffoldChainReadOrigin:1008`）。run から `CompareRounds h a 1 b` を作るには
+`b = toOnly sEnd v` がこの組と一致しないといけない。
+
+`toOnly s w = ⟨s.center, s.left, s.right, w, s.cycle, s.radius⟩`
+（`GalilScaffoldTopOnly:20`）。`shiftLens.get` は
+`⟨⟨center, left, remaining, radius, length⟩, chain, cycle⟩` なので
+center / left / radius / cycle は `shiftLens` の中、**`right` は外**。
+`right` は shift 相では変わらず（`shiftLens_frame_steps`）、
+shift 入口の値は比較の `vs.right = right s1.right`。 -/
+
+/-- **shift 末尾の射影は `CompareRounds.next` が期待する組そのもの。** -/
+theorem toOnly_shiftEnd_eq {s1 s2 sEnd : GalilVM} {vs : ScanVM} {vq : SearchVM}
+    {h : ℕ} {wch v : GalilScaffoldChainWatch.State} {t' : ShiftState} {cyc : Counter}
+    (hRight : vs.right = right s1.right)
+    (hBeginShift : beginShiftVM h wch (afterMismatch s1 vs vq) s2)
+    (hFrame : sEnd = shiftLens.set s2 (shiftLens.get sEnd))
+    (hGet : shiftLens.get sEnd = ⟨t', ChainVM.watch v, cyc⟩) :
+    toOnly sEnd v = ⟨t'.center, t'.left, right s1.right, v, cyc, t'.radius⟩ := by
+  obtain ⟨-, hTarget⟩ := hBeginShift
+  have hRightEnd : sEnd.right = right s1.right := by
+    rw [hFrame]
+    show s2.right = right s1.right
+    rw [hTarget]
+    simp [afterMismatch, scanLens, searchLens, hRight]
+  have hCenter : sEnd.center = t'.center := congrArg (fun z : ShiftVM => z.shift.center) hGet
+  have hLeft : sEnd.left = t'.left := congrArg (fun z : ShiftVM => z.shift.left) hGet
+  have hRadius : sEnd.radius = t'.radius := congrArg (fun z : ShiftVM => z.shift.radius) hGet
+  have hCycle : sEnd.cycle = cyc := congrArg (fun z : ShiftVM => z.cycle) hGet
+  simp only [toOnly, hCenter, hLeft, hRightEnd, hRadius, hCycle]
+
+#print axioms toOnly_shiftEnd_eq
+
 /-! ## shift の手数は `remaining` の初期値で決まる
 
 `CompareRounds.next` は shift 相をちょうど `h` 手として要求する。run から呼ぶときは
