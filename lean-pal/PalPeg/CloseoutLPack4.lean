@@ -256,7 +256,7 @@ theorem lticks4 {w : List (Fin 2)} {c : Control} {s : GalilVM}
   shiftOneMinv := h.shiftOneMinv
   shiftDoneScan := h.shiftDoneScan
   choosePack := h.choosePack
-  rewindLeft := fun hm => left_pos_of_two (h.rewindMargin hm)
+  rewindLeft := fun hm _ => left_pos_of_two (h.rewindMargin hm)
   rewindPairMinv := h.rewindPairMinv
   replayPack := h.replayPack
 

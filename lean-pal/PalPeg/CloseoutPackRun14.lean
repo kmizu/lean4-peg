@@ -97,7 +97,7 @@ theorem LTickLeavesN'.toN {w : List (Fin 2)} {c : Control} {s : GalilVM}
   scanCanR := h.scanCanR
   shiftDoneScan := h.shiftDoneScan
   choosePackL := h.choosePackL
-  rewindLeft := fun hm => rewindLeft_of_centreMargin hco h.centreMargin hm
+  rewindLeft := fun hm _ => rewindLeft_of_centreMargin hco h.centreMargin hm
   replayPackN := h.replayPackN
 
 /-- **(KEY) `LPackM` survives one tick over `LTickLeavesN'`.**  Composition of

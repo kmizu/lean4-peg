@@ -393,7 +393,7 @@ theorem lpackM2_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     have htc : t.center = GalilScaffoldInputHead.left s.center := by rw [hset, heq]; rfl
     have htl : t.left = GalilScaffoldInputHead.left s.left := by rw [hset, heq]; rfl
     have hord := hP.centreOrder hm
-    have hlpos := hL.rewindLeft hm
+    have hlpos := hL.rewindLeft hm (by assumption)
     have hcpos : 0 < position (GalilScaffoldInputHead.left s.center) := by
       rw [CloseoutPackRun13.position_left] at hlpos ⊢; omega
     obtain ⟨hcr, hcp⟩ := hP.centreRep (Or.inl hm)

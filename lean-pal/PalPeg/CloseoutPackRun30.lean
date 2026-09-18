@@ -153,7 +153,7 @@ theorem lticksN_of_big6G {w : List (Fin 2)} (hr : BigResid6G centre place entry 
   scanCanR := fun hm => canR_of_partsM centre place entry hx.aux.front hx.extra hm
   shiftDoneScan := hr.rShiftDoneScan x hx
   choosePackL := hr.rChoosePackL x hx
-  rewindLeft := fun hm => left_pos_of_two (hx.extra.rewindMargin hm)
+  rewindLeft := fun hm _ => left_pos_of_two (hx.extra.rewindMargin hm)
   replayPackN := hr.rReplayPackM x hx
 
 /-- **`lpackN_tick` plus the guarded shift step**: `CloseoutPackRun11.bigPack2M_tick`
