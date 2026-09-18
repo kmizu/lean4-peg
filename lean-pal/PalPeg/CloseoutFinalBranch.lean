@@ -209,9 +209,11 @@ theorem given_landingObligationsSansRadiusLedger (entry q : ℕ) (first : Fin 9)
 
 残る義務は `ScanLandingObligationsAt` の **3 場**（`bg` / `matchLand` / `entryLand`）と `hver`。 -/
 theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
-    (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
-      BigPack2MG7W centreC placeC entry q first w x →
-      ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
+    (hShiftPalAlongRun : ∀ (w : List (Fin 2)) (c : Control) (r : GalilVM),
+      PalPeg.GalilInvPlus2.InvLPC w c r →
+      ∀ (m : ℕ) (z : GalilScaffoldTop.State GalilVM),
+        Steps (galilFrameS (PofC centreC placeC entry w) q first) 2048 m ⟨c, r⟩ z →
+        ScanNR z → ShiftPal centreC placeC entry q first w z.vm)
     (h4 : first ≠ 4)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
@@ -232,7 +234,7 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
         (CloseoutPackRun6.h_landShift centreC placeC entry q first)))
     (h_oracleIMW_of_MC3_W centreC placeC entry q first
       (fun w => PalPeg.CloseoutMarksPack.packRunR_MW_marksFree centreC placeC entry q first
-        h4 (hSP w))
+        h4 (hShiftPalAlongRun w))
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       hor)
     hC

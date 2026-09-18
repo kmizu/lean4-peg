@@ -2592,14 +2592,15 @@ theorem lTickLeaves3_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
       replayLedger := replayStartLedger_alongTrace centre place entry q first hw hPreTrace
         hRadLedger hLPackM2 hSanePack hTcPos i hIndexLeTc }
 
-/-- **`LPackM3` を trace に運ぶ（1 手目から）。**  新規入力は `hSP`（`ShiftPal`）と
+/-- **`LPackM3` を trace に運ぶ（1 手目から）。**  新規入力は `hShiftPalAlongTrace`（trace 形の `ShiftPal`）と
 残り 2 場 `hRes` だけ。 -/
 theorem lpackM3_alongTrace_afterFirstStep {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
     (hTcPos : 1 ≤ Tc w.length)
-    (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
-      ScanNR x → ShiftPal centre place entry q first w x.vm)
+    (hShiftPalAlongTrace : ∀ j, 1 ≤ j → j ≤ Tc w.length →
+      (st j).ctl.mode = Mode.scan → (st j).ctl.replaying = false →
+      ShiftPal centre place entry q first w (st j).vm)
     (hRes : ∀ j, j ≤ Tc w.length →
       ChainBackLagAndShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm) :
     ∀ i, 1 ≤ i → i ≤ Tc w.length → LPackM3 w (st i).ctl (st i).vm := by
@@ -2650,7 +2651,7 @@ theorem lpackM3_alongTrace_afterFirstStep {w : List (Fin 2)} (hw : 0 < w.length)
       exact lpackM3_tick' centre place entry q first hPrev hLN
         (hAuxPack n hn1 (by omega))
         (lTickLeaves2_of_shiftPalG centre place entry q first (hLPackM2 n (by omega)) hLN
-          (fun hs => hSP (st n) hBig hs))
+          (fun hs => hShiftPalAlongTrace n hn1 (by omega) hs.1 hs.2))
         (hL3 n (by omega)) (hPreTrace.trace.tick n (by omega))
 
 #print axioms lTickLeaves3_alongTrace
@@ -2788,14 +2789,15 @@ theorem bgStart_at_of_centreLedger {w : List (Fin 2)} {c : Control} {s : GalilVM
       subst h5; subst h7
       exact ⟨hc1, hc2, hc3⟩
 
-/-- **`bg` 場は trace 全域で放電できる。**  新規入力は `hSP`（axiom）、`VerRun`（axiom）、
+/-- **`bg` 場は trace 全域で放電できる。**  新規入力は `hShiftPalAlongTrace`（axiom、trace 形）、`VerRun`（axiom）、
 残り 3 場 `hRes` だけ。 -/
 theorem backgroundLanding_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
     (hTcPos : 1 ≤ Tc w.length)
-    (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
-      ScanNR x → ShiftPal centre place entry q first w x.vm)
+    (hShiftPalAlongTrace : ∀ j, 1 ≤ j → j ≤ Tc w.length →
+      (st j).ctl.mode = Mode.scan → (st j).ctl.replaying = false →
+      ShiftPal centre place entry q first w (st j).vm)
     (hChainVerifierSupply : ChainVerifierSupplyAlongTrace w st Tc)
     (hRes : ∀ j, j ≤ Tc w.length →
       ChainBackLagAndShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm) :
@@ -2811,7 +2813,7 @@ theorem backgroundLanding_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
   have hRadLedger := radLedger_pt centre place entry q first hw hPreTrace
     (fun j hj => leftLive_of_lpackM (hPreTraceIMW.packs j hj).pack)
   have hPack3 := lpackM3_alongTrace_afterFirstStep centre place entry q first hw
-    hPreTraceIMW hTcPos hSP hRes
+    hPreTraceIMW hTcPos hShiftPalAlongTrace hRes
   intro i hIndexLeTc t hMode hChainPosInv hBg hNotIdle
   -- `i = 0` は boot（mode = init）なので scan guard で空虚
   have hIndexPos : 1 ≤ i := by
@@ -2854,7 +2856,7 @@ theorem backgroundLanding_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
 | `ShiftExitLedgerAt` | `shift_done` での `CentreLedger` |
 | `RewindMarginAt` | rewind 相での `2 ≤ position left` |
 
-これに `hSP`（`ShiftPal`）と chain 側供給（`ChainVerifierSupplyAlongTrace`、`CentreMargin` からタダ）を加えたものが全入力。
+これに `hShiftPalAlongTrace`（trace 形の `ShiftPal`）と chain 側供給（`ChainVerifierSupplyAlongTrace`、`CentreMargin` からタダ）を加えたものが全入力。
 `w = []` のときは `Tc 0 = 0` で `i = 0`（boot、mode = init）しか無く 3 場とも
 scan guard で空虚なので自由。 -/
 
@@ -2896,8 +2898,9 @@ structure RewindMarginAt (c : Control) (s : GalilVM) : Prop where
 theorem scanLandingObligations_alongTrace_of_atoms {w : List (Fin 2)}
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
-      ScanNR x → ShiftPal centre place entry q first w x.vm)
+    (hShiftPalAlongTrace : ∀ j, 1 ≤ j → j ≤ Tc w.length →
+      (st j).ctl.mode = Mode.scan → (st j).ctl.replaying = false →
+      ShiftPal centre place entry q first w (st j).vm)
     (hChainVerifierSupply : ChainVerifierSupplyAlongTrace w st Tc)
     (hChainBackLag : ∀ j, j ≤ Tc w.length → ChainBackLagAt (st j).vm)
     (hShiftExitLedger : ∀ j, j ≤ Tc w.length →
@@ -2921,7 +2924,7 @@ theorem scanLandingObligations_alongTrace_of_atoms {w : List (Fin 2)}
     exact Mode.noConfusion hMode
   · have hTcPos : 1 ≤ Tc w.length :=
       hPreTraceIMW.base.tc1 ▸ hPreTraceIMW.base.pre.mono 1 w.length hw le_rfl
-    exact backgroundLanding_alongTrace centre place entry q first hw hPreTraceIMW hTcPos hSP
+    exact backgroundLanding_alongTrace centre place entry q first hw hPreTraceIMW hTcPos hShiftPalAlongTrace
       hChainVerifierSupply
       (fun j hj => ⟨(hChainBackLag j hj).backLag,
         (hShiftExitLedger j hj).shiftExitLedger, (hRewindMargin j hj).rewindMargin⟩)
@@ -3035,8 +3038,9 @@ theorem rewindMarginAt_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM
 `LTickLeaves3` ＋ `MatchRest` から（`matchRes2_of_lpackM3`）。 -/
 theorem matchRes2_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
-      ScanNR x → ShiftPal centre place entry q first w x.vm)
+    (hShiftPalAlongTrace : ∀ j, 1 ≤ j → j ≤ Tc w.length →
+      (st j).ctl.mode = Mode.scan → (st j).ctl.replaying = false →
+      ShiftPal centre place entry q first w (st j).vm)
     (hChainVerifierSupply : ChainVerifierSupplyAlongTrace w st Tc)
     (hShiftExitLedger : ∀ j, j ≤ Tc w.length →
       ShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm)
@@ -3069,7 +3073,7 @@ theorem matchRes2_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc
       (hRewindMargin j hj).rewindMargin⟩
   have hAuxPack := auxPack_alongTrace_afterFirstStep centre place entry q first hw hPreTrace
   have hPack3 := lpackM3_alongTrace_afterFirstStep centre place entry q first hw
-    hPreTraceIMW hTcPos hSP hRes
+    hPreTraceIMW hTcPos hShiftPalAlongTrace hRes
   have hBig : BigPack2MG7W centre place entry q first w (st j) :=
     ⟨hPreTraceIMW.packs j hIndexLeTc, hAuxPack j hIndexPos hIndexLeTc,
      PalPeg.GalilTrailRad.centreLive_trace centre place entry q first w hw st Tc
@@ -3109,8 +3113,9 @@ theorem matchRes2_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc
 theorem scanLandingObligations_alongTrace_of_matchRest {w : List (Fin 2)}
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
-      ScanNR x → ShiftPal centre place entry q first w x.vm)
+    (hShiftPalAlongTrace : ∀ j, 1 ≤ j → j ≤ Tc w.length →
+      (st j).ctl.mode = Mode.scan → (st j).ctl.replaying = false →
+      ShiftPal centre place entry q first w (st j).vm)
     (hShiftExitLedger : ∀ j, j ≤ Tc w.length →
       ShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm)
     (hMarksInv : ∀ j, j ≤ Tc w.length →
@@ -3125,18 +3130,18 @@ theorem scanLandingObligations_alongTrace_of_matchRest {w : List (Fin 2)}
     hMarksInv
   have hChainBackLag := chainBackLagAt_alongTrace centre place entry q first hPreTraceIMW
   refine scanLandingObligations_alongTrace_of_atoms centre place entry q first hPreTraceIMW
-    hSP hChainVerifierSupply hChainBackLag hShiftExitLedger hRewindMargin ?_ ?_
+    hShiftPalAlongTrace hChainVerifierSupply hChainBackLag hShiftExitLedger hRewindMargin ?_ ?_
   · -- `matchLand`
     intro j hIndexLeTc
     refine ⟨fun s' t hMode hInv => ?_⟩
     refine PalPeg.CloseoutPackRun48.matchLanding_of_matchRes2 centre place entry q first
-      (matchRes2_alongTrace centre place entry q first hPreTraceIMW hSP hChainVerifierSupply hShiftExitLedger
+      (matchRes2_alongTrace centre place entry q first hPreTraceIMW hShiftPalAlongTrace hChainVerifierSupply hShiftExitLedger
         hMarksInv hMatchRest j hIndexLeTc hMode) s' t hMode hInv
   · -- `entryLand`
     intro j hIndexLeTc
     refine ⟨fun s' t hMode hInv => ?_⟩
     refine PalPeg.CloseoutPackRun48.shiftEntryLanding_of_matchRes2 centre place entry q first
-      (matchRes2_alongTrace centre place entry q first hPreTraceIMW hSP hChainVerifierSupply hShiftExitLedger
+      (matchRes2_alongTrace centre place entry q first hPreTraceIMW hShiftPalAlongTrace hChainVerifierSupply hShiftExitLedger
         hMarksInv hMatchRest j hIndexLeTc hMode) s' t hMode hInv
 
 #print axioms scanLandingObligations_alongTrace_of_matchRest

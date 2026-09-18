@@ -32,6 +32,56 @@
 
 
 
+## 2026-09-19 n113: 偽の疑いが濃い公理を run 形／trace 形に差し替えた（3 → 4）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` なし）。ラチェット緑（4 義務に更新）。
+無条件 PAL は未完。計画書 §10.5 は未達。**
+
+    'PalPeg.PalInPeg.unconditional' depends on axioms: [propext,
+     Classical.choice, Quot.sound,
+     obligation_cycleOracle, obligation_localRealization,
+     obligation_shiftPalAlongRun, obligation_shiftPalAlongTrace]
+
+### なぜ増やしたか
+
+n112 で `obligation_shiftPalAtScanStates`（一状態述語 `BigPack2MG7W` の形）が
+**偽の疑いが濃い**と分かった。放置すると「公理 3 個」という数字が進捗の指標として
+機能しない。CLAUDE.md「偽の前提で数字を作らない」に従い、**数が増えても真であろう
+形に割った**。
+
+| 新しい公理 | 形 | 消費者 |
+|---|---|---|
+| `obligation_shiftPalAlongRun` | `InvLPC w c r` 起点から `Steps` で到達する scan 状態 | `packRunR_MW_marksFree`（`h_oracleIMW_of_MC3_W` 経由） |
+| `obligation_shiftPalAlongTrace` | `PreTraceIMW` の trace の scan 点（`1 ≤ j ≤ Tc`） | `BranchSupply` の 5 定理（`scanLandingObligations_alongTrace_of_matchRest` ほか） |
+
+どちらも**履歴が run で固定される**ので、旧版の欠陥（状態述語から履歴の事実を要求する）は無い。
+
+### 危うくもう 1 個過剰量化を撒くところだった
+
+trace 形の公理を最初 `PreTraceIMW` の仮説**なし**で書きかけた。そうすると
+`st` が無制約関数になって `∀ z, … → ShiftPal z.vm` と同値に潰れる——
+`hav` が偽になったのとまったく同じ形（過剰量化 13 例目、自分で撒く 5 例目になるところ）。
+書いた直後に気づいて `PreTraceIMW` を仮説に入れた。**trace 形を書くときは
+`PreTrace*` を仮説に入れたか必ず確認する。**
+
+### 放電器は用意してある
+
+| 公理 | 放電器 | 残差 |
+|---|---|---|
+| `shiftPalAlongTrace` | `ShiftPalAlongTrace.shiftPal_alongTrace` | `H_readsShift`（trace 形）＋ `H_freshShiftAtShiftEntry`（tick 形）＋ `periodOnly = false` 分岐 |
+| `shiftPalAlongRun` | `CloseoutBundleRun.shiftPal_of_run_B` | 同じ 3 つ（run 形） |
+
+`AuxPack` と `canRight` はどちらも既存の trace 補題で放電済み。
+`H_readsShift` は `RoundSegFromRun.readsShift_at_actual` が実状態で出す
+（`OriginAt` → `roundSeg_at_actual` → `originShift_of_roundSeg` → `h_readsShift_of_originShift`）。
+
+### 触ったファイル
+
+`BranchSupply`（5 署名を trace 形に、適用 1 箇所）、`CloseoutMarksPack`
+（`packRunR_MW_marksFree` を run 形に）、`CloseoutFinalBranch`
+（`given_scanLandingObligations`）、`PalInPegUnconditional`（公理 2 本）、`Axioms`（ラチェット）。
+
+
 ## 2026-09-19 n112: **`obligation_shiftPalAtScanStates` は偽の疑いが濃い**（進捗計器の訂正）
 
 **全体 build 成功（EXIT=0、エラー 0、`sorry` なし）。ラチェット緑。公理は 3 義務。

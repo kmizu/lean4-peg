@@ -99,18 +99,24 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 目標は閉じた項として存在し、足りない義務は `axiom` で明示されている。
 `PalPeg/Axioms.lean` の `#guard_msgs in #print axioms` がラチェットで、
 1 個外すと guard が壊れて更新を強制される。**標準 3 公理だけになったら §10.5 達成。**
-いまは **3 個**の原子的義務が残っている（`shiftPalAtScanStates` / `cycleOracle` /
-`localRealization`。経路は `PalPeg/PalInPegUnconditional.lean` の docstring に表で記録）。
+いまは **4 個**の原子的義務が残っている（`shiftPalAlongRun` / `shiftPalAlongTrace` /
+`cycleOracle` / `localRealization`。経路は `PalPeg/PalInPegUnconditional.lean` の
+docstring に表で記録）。
 
-**⚠ そのうち `obligation_shiftPalAtScanStates` は偽の疑いが濃い（2026-09-19, n112）。**
+**2026-09-19（n112→n113）: 旧 `obligation_shiftPalAtScanStates` は偽の疑いが濃かったので
+run 形／trace 形の 2 つに割った（3 → 4）。**
 `ShiftPal` の結論は「chain の周期が入力語 `w` の本物の周期である」という履歴の事実だが、
 guard の `BigPack2MG7W` の場を一次情報で全部展開したところ、chain の周期テープの中身と
 `w` を結びつける場が 1 つも無かった（`w` に触れる場はヘッド、chain に触れる場はカウンタ）。
 `hpack` が偽だったのと同じ欠陥で、CLAUDE.md 自身が `ShiftPal` を過剰量化の 5 例の
-1 番目に挙げていた。**したがって「公理 3 個」は現状そのままでは進捗の指標にならない。**
-次にやるべきは数を減らすことではなく、`hSP` を run 形
-（`CloseoutBundleRun.shiftPal_of_run_B`）に差し替えること（数は一時的に増える）。
-機械検査した反証はまだ無いので `REFUTED` とは書いていない。詳細は `CLAUDE_RESUME.md` n112。
+1 番目に挙げていた。機械検査した反証はまだ無いので `REFUTED` とは書いていない。
+
+**差し替え済み**（n113）: `obligation_shiftPalAlongRun`（`InvLPC` 起点から到達する
+scan 状態）と `obligation_shiftPalAlongTrace`（`PreTraceIMW` の trace の scan 点）。
+どちらも履歴が run で固定されるのでこの欠陥は無く、放電器も用意してある
+（`ShiftPalAlongTrace.shiftPal_alongTrace` / `CloseoutBundleRun.shiftPal_of_run_B`、
+残差はどちらも `H_readsShift` ＋ `H_freshShiftAtShiftEntry` ＋ `periodOnly = false` 分岐）。
+**偽の疑いが濃い前提 1 個より、真であろう前提 2 個を採った。** 詳細は `CLAUDE_RESUME.md` n112/n113。
 `marksEntry` は 2026-09-19 に放電（`CloseoutMarksPack.packRunR_MW_marksFree`、n110）:
 唯一の消費者だった `packRunR_MW` の 2 箇所は `MarksInv'` を作るためだけにあり、
 `CloseoutPackRun17.marksInv'_of_run'` が `H_marksEntry'` なしで run 全点に
