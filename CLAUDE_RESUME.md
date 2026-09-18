@@ -32,6 +32,60 @@
 
 
 
+## 2026-09-19 n117: found 経路の `hpack` は**偽の疑いが濃い**（節どうしが衝突している）
+
+**全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
+
+### 一次情報で見たこと
+
+`CloseoutFoundRoute1.foundExit_compare_final20` の `hpack` は
+
+    ∀ cP sP a ls rs qw gap,
+      FoundCompareCtxC centre place entry q first w c r cP sP → w = … →
+      PrepInputsG3 … cP sP ∧ MismatchExitG … ∧ FallbackReachS … ∧
+      PrepLandingWatchC … cP sP ∧ PrepBirthLagC' … ∧ LandingFreshC' … ∧
+      (∀ sF, BreakLandingC … sF cP sP)
+
+**節 4 `PrepLandingWatchC` は `sP.chain` が watch であることを強制する。**
+定義（`CloseoutWatchRound7:123`）は
+
+    ∀ es c2 s2, WatchSegE P q first 2048 es cP sP c2 s2 → ∃ w, s2.chain = .watch w
+
+で、`WatchSegE.stop cP sP` は無条件に存在するから `es = []` 実例で `s2 = sP` となり
+`∃ w, sP.chain = .watch w` が出る（これは既存の定理
+`CloseoutWatchRound8.prepLandingWatchC_watch_start` そのもの）。
+同ファイル `:341` には `not_prepLandingWatchC_of_idle`
+（「無制限の `PrepLandingWatchC` は idle 始点で偽。**この述語は書かれていない前提を
+持っている**」）という反証まで既にある。
+
+**ところが guard の `FoundCompareCtxC`（`CloseoutWatchRound2:270`）は
+`sP = afterBirth true (afterCompare sF ⟨…⟩ vq)`、すなわち `sP.chain = ch` で、
+`ch` は `ChainMatched (chainStart …) ch ∧ ch ≠ .idle` を満たす**任意**の chain。
+`chainStart` は `.copy` なので `ch` は `.copy` でありうる。** つまり
+found 比較の**直後**（chain が生まれたばかり）に `sP.chain` が watch であることを
+要求している。chain は 1 tick に 1 歩しか進まないので、これは成り立たないはず。
+
+### 位置づけ
+
+* `hpack` は 7 節の**束**。CLAUDE.md「葉を束に畳み込むと偽になりうる」の典型。
+  しかも `hpack` という名前は**前にも偽になっている**（`CloseoutPackRefute.hpack_false`）。
+* `PrepLandingWatchC` 自身は偽ではない。正しい場所（chain が watch になった後の
+  landing）で使えば真で、producer もある（`CloseoutWatchRound10.prepLandingWatchC_of_short`、
+  watch 始点 ＋ clock 上界から）。**束ねる場所が間違っている。**
+
+**`REFUTED` とは書かない**（`False` を導く機械検査済みの定理がまだ無い）。
+反証のレシピ: `FoundCompareCtxC` の証人を 1 つ作り（`WatchSegE` / `searchEffect` /
+`refresh` の証人が要る、ここが手間）、`ch` を `chainStart …` の直後の `.copy` に取る。
+そのうえで `prepLandingWatchC_watch_start` を当てれば `.copy = .watch w` で矛盾。
+
+### 次に触るときの指示
+
+**`hpack` を束のまま証明しようとしない。** 7 節を個別に、それぞれ正しい guard の下で測る。
+特に `PrepLandingWatchC` / `PrepBirthLagC'` / `LandingFreshC'` は
+「chain が watch になった後」の述語なので、found 比較直後の `sP` で要求するのは誤り。
+（`LandingFreshC` は Round 44 で既に反証され `LandingFreshC'` に割られている——
+同じ場所で同じ種類の誤りが繰り返されている。）
+
 ## 2026-09-19 n116: **ファイルの docstring が未実装の定理を完了として書いていた**（監査上の発見）
 
 **全体 build 成功（EXIT=0）。公理は 4 義務のまま。無条件 PAL は未完。§10.5 は未達。**
