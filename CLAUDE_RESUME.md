@@ -1,3 +1,53 @@
+## 2026-09-19 n174: **壁の正体 — run 機構が全階層で fairness を捨てている**
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。**
+
+コウタの「壁にあたったら、形式化のミスを疑う」に従って `localRealization` の壁を掘った。
+
+### 壁
+
+    structure Trace (F) (delay) (Q) (st) (e) : Prop where     -- GalilCheckpoints:46
+      tick : ∀ i, i < e → Tick F delay (st i) (st (i+1))
+      good : ∀ i, i ≤ e → Q (st i)
+
+**`Tick` しか記録しない。`Fair` は 1 場もない。** `Steps` / `StepsAll` も同じ。
+`PreTrace.trace` はこの `Trace` なので、trace は非決定的な tick の列でしかない。
+
+一方 `LocalSysConcrete.Realizes` は「局所 step **関数** `f` が trace の次状態に着地する」
+を要求する。**決定的な関数に、非決定的な trace と一致せよと言っている。**
+だから producer が原理的に作れない。コウタの見立て通り、これは形式化のミス。
+
+### 直すのに要るもの（3 択、blast radius 付き）
+
+| 案 | 内容 | 影響 |
+|---|---|---|
+| **(1) run 機構を装飾** | `Trace` / `Steps` / `StepsAll` に fair 版を足し、`checkpoints_cost_upto1` を fair 版にする | `Trace` 220 箇所・`Steps` は更に多い。**最大** |
+| **(2) 公理を上げる** | `obligation_cycleOracle` を「fair な pre-trace が存在する」形に差し替える | `CycleOracleMC3` は `h_oracleIMW_of_MC3_W` でも使うので、そちらが別に必要になり**本数が増える恐れ** |
+| **(3) `PreTraceB` に `fair` 場を足し、`preTraceB_exists` と `checkpoints_cost_upto1` だけを fair 化** | 中間。`stepsAll_fn`（`GalilCheckpoints:51`）の fair 版が要る | `PreTraceB` の producer は 3〜4 箇所（実測済み）。**最小** |
+
+**推奨は (3)。** 理由: `Trace` は 2 場の単純な構造体で、fair 版は
+`∀ i, i < e → Fair entry delay (st i) (st (i+1))` を並べるだけ。
+`stepsAll_fn` は `StepsAll → ∃ g, Trace` なので、fair 版 `StepsAll` から fair 版 `Trace` へ
+同じ帰納法で通る。`checkpoints_cost_upto1` は区間を貼り合わせるだけなので
+fairness は連言で運べる。
+
+### ただし (3) でも 4 → 3 にはならない（正直に）
+
+`Fair` が閉じるのは `Realizes` の**決定性の半分**。
+**局所 step の構成**（`H_scanLoc` / `H_initLoc` / `H_replayStartLoc`）は別の仕事で、
+`LocalTick2.commitReplay` の `LocalTick1.Inv` 保存補題が起点
+（`LocalTick2.lean` には `Inv` に関する補題が**1 本もない**——実測）。
+
+### この session でやったこと（計器は 4 のまま）
+
+* 公理 6 → 4 に戻した（n145）。以後増やしていない
+* `PalPeg/RoundHistory.lean` 35 宣言で `H_readsShift` を run 全点で出す機械を完成
+  （44 まで増やして 9 本削った——うち 4 本は既存の再発明）
+* `Fair` の 3 場の内訳を割り、第 3 場が `Tick` からタダであることを**定理で**証明（n173）
+* CLAUDE.md の古い記述を 1 箇所訂正（`initVM`/`replayStartVM` の `periodOnly`/`walker`）
+* 自分の嘘 2 件を訂正、`sorry` を書きかけて止めたのを記録
+
 ## 2026-09-19 n173: `Fair` の第 3 場が `Tick` からタダであることを**定理で**示した
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
