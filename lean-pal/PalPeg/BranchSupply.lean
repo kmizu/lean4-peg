@@ -856,6 +856,7 @@ theorem radiusExactOffRewindPhase_tick {w : List (Fin 2)} {x y : State GalilVM}
     (hScanSupply : x.ctl.mode = Mode.scan →
       GalilScaffoldChainVerifier.canRight x.vm.right ∧ 0 < x.vm.right.head.left.length)
     (hShiftSupply : x.ctl.mode = Mode.shift →
+      (galilFrameS (PofC centre place entry w) q first).remainingPos x.vm →
       GalilScaffoldChainVerifier.canRight x.vm.center ∧
         0 < x.vm.center.head.left.length ∧ 1 ≤ value x.vm.radius)
     (hPrev : RadiusExactOffRewindPhase x.ctl x.vm) :
@@ -890,9 +891,9 @@ theorem radiusExactOffRewindPhase_tick {w : List (Fin 2)} {x y : State GalilVM}
     exact radiusExact_after_beginFallback hBegin
       (radiusExact_after_compare centre place entry q first hCompare hCanRight hLeftNonempty
         (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide)))
-  | shift_one c s s' hm _ hOne =>
+  | shift_one c s s' hm hRemPos hOne =>
     intro _ _ _
-    obtain ⟨hCanRightCentre, hCentreLeftNonempty, hRadiusPos⟩ := hShiftSupply hm
+    obtain ⟨hCanRightCentre, hCentreLeftNonempty, hRadiusPos⟩ := hShiftSupply hm hRemPos
     exact radiusExact_after_shiftOne centre place entry q first hOne hCanRightCentre
       hCentreLeftNonempty hRadiusPos
       (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
@@ -1014,6 +1015,135 @@ theorem headsRepresent_leftMove {w : List (Fin 2)} {p : PlaceHead}
 #print axioms canRight_of_bound
 #print axioms headsRepresent_rightMove
 #print axioms headsRepresent_leftMove
+
+/-- **1 tick 保存。**  側入力は位置上界 2 つ（どちらもタダ）と、rewind 相での
+`2 ≤ position center`（`CentreMargin` から）と `mode ≠ init`（1 手目以降は定理）。 -/
+theorem headsRepresent_tick {w : List (Fin 2)} (hw : 0 < w.length) {x y : State GalilVM}
+    (hTick : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y)
+    (hModeNotInit : x.ctl.mode ≠ Mode.init)
+    (hRightBound : position x.vm.right ≤ 2 * w.length - 1)
+    (hCentreBound : position x.vm.center ≤ 2 * w.length - 1)
+    (hCentreTwoLe : x.ctl.mode = Mode.rewind → 2 ≤ position x.vm.center)
+    (hInv : HeadsRepresent w x.vm) : HeadsRepresent w y.vm := by
+  obtain ⟨hCentre, hRight⟩ := hInv
+  cases hTick with
+  | init c s s' hm _ => exact absurd hm hModeNotInit
+  | scan_wait c s s' hm _ hBg =>
+    obtain ⟨-, hr, -, hcen, -, -, -⟩ :=
+      backgroundS_fields (PofC centre place entry w) q first hBg
+    exact ⟨by rw [hcen]; exact hCentre, by rw [hr]; exact hRight⟩
+  | scan_count c s s' hm _ _ hBg =>
+    obtain ⟨-, hr, -, hcen, -, -, -⟩ :=
+      backgroundS_fields (PofC centre place entry w) q first hBg
+    exact ⟨by rw [hcen]; exact hCentre, by rw [hr]; exact hRight⟩
+  | scan_match c s s' s'' o hm _ _ hCompare _ hPlace _ =>
+    obtain ⟨hcr, hcc⟩ := compare_heads centre place entry q first hCompare
+    have hpl : s'' = (if c.replaying then {s' with replay := dec s'.replay} else s') := hPlace
+    have hts : s''.center = s'.center ∧ s''.right = s'.right := by
+      rw [hpl]; split <;> exact ⟨rfl, rfl⟩
+    exact ⟨by rw [hts.1, hcc]; exact hCentre,
+      by rw [hts.2, hcr]
+         exact headsRepresent_rightMove hw hRight.1 hRight.2 hRightBound⟩
+  | scan_shift c s s' s'' hm _ _ hCompare _ _ _ hBegin =>
+    obtain ⟨hcr, hcc⟩ := compare_heads centre place entry q first hCompare
+    obtain ⟨v, hv⟩ := hBegin
+    have hts : s''.center = s'.center ∧ s''.right = s'.right := by rw [hv.2]; exact ⟨rfl, rfl⟩
+    exact ⟨by rw [hts.1, hcc]; exact hCentre,
+      by rw [hts.2, hcr]
+         exact headsRepresent_rightMove hw hRight.1 hRight.2 hRightBound⟩
+  | scan_fallback c s s' s'' hm _ _ hCompare _ _ _ hBegin =>
+    obtain ⟨hcr, hcc⟩ := compare_heads centre place entry q first hCompare
+    obtain ⟨pl, hv⟩ := hBegin
+    have hts : s''.center = s'.center ∧ s''.right = s'.right := by rw [hv]; exact ⟨rfl, rfl⟩
+    exact ⟨by rw [hts.1, hcc]; exact hCentre,
+      by rw [hts.2, hcr]
+         exact headsRepresent_rightMove hw hRight.1 hRight.2 hRightBound⟩
+  | shift_one c s s' hm _ hOne =>
+    obtain ⟨-, -, -, wv, -, hGet⟩ := hOne.1
+    have hSet := hOne.2
+    rw [hGet] at hSet
+    subst hSet
+    exact ⟨headsRepresent_rightMove hw hCentre.1 hCentre.2 hCentreBound, hRight⟩
+  | shift_done c s o hm _ _ => exact ⟨hCentre, hRight⟩
+  | replayStart c s s' o hm hRS _ _ =>
+    obtain ⟨-, hr, -, hc, -, -, -, -, -, -, -, -, -⟩ : replayStartVM entry s s' := hRS
+    exact ⟨by rw [hc]; exact hCentre, by rw [hr]; exact hCentre⟩
+  | restart c s s' hm hRestart =>
+    obtain ⟨v, -, -, -, -, ht⟩ : restartVM entry s s' := hRestart
+    exact ⟨by rw [ht]; exact hCentre, by rw [ht]; exact hRight⟩
+  | copy_one c s s' hm _ h => exact ⟨by rw [h.2]; exact hCentre, by rw [h.2]; exact hRight⟩
+  | copy_done c s s' hm _ h => exact ⟨by rw [h.2]; exact hCentre, by rw [h.2]; exact hRight⟩
+  | home_start c s s' hm _ h => exact ⟨by rw [h.2]; exact hCentre, by rw [h.2]; exact hRight⟩
+  | home_step c s s' hm _ h => exact ⟨by rw [h.2]; exact hCentre, by rw [h.2]; exact hRight⟩
+  | fpp_slice c s s' hm h => exact ⟨by rw [h.2]; exact hCentre, by rw [h.2]; exact hRight⟩
+  | fpp_done c s s' hm h => exact ⟨by rw [h.2]; exact hCentre, by rw [h.2]; exact hRight⟩
+  | markEnd_found c s s' hm _ h =>
+    refine ⟨?_, ?_⟩
+    · rw [h.2, h.1.2]; exact hCentre
+    · rw [h.2, h.1.2]; exact hRight
+  | markEnd_step c s s' hm _ h =>
+    refine ⟨?_, ?_⟩
+    · rw [h.2, h.1]; exact hCentre
+    · rw [h.2, h.1]; exact hRight
+  | choose_select c s s' hm _ _ h =>
+    refine ⟨?_, ?_⟩
+    · rw [h.2, h.1]; exact hRight
+    · rw [h.2, h.1]; exact hRight
+  | choose_step c s s' hm _ h =>
+    refine ⟨?_, ?_⟩
+    · rw [h.2, h.1.2]; exact hCentre
+    · rw [h.2, h.1.2]; exact hRight
+  | rewind_done c s s' hm _ h =>
+    refine ⟨?_, ?_⟩
+    · rw [h.2, h.1]; exact hCentre
+    · rw [h.2, h.1]; exact hRight
+  | rewind_one c s s' hm _ _ h =>
+    refine ⟨?_, ?_⟩
+    · rw [h.2, h.1.2]; exact hCentre
+    · rw [h.2, h.1.2]; exact hRight
+  | rewind_pair c s s' hm _ _ h =>
+    refine ⟨?_, ?_⟩
+    · rw [h.2, h.1.2]
+      exact headsRepresent_leftMove hCentre.1 hCentre.2 (hCentreTwoLe hm)
+    · rw [h.2, h.1.2]; exact hRight
+
+#print axioms headsRepresent_tick
+
+/-! ### `Canonical` ＋ 非負なら `ofNat` の形 — `CentreMargin` を使うための証人
+
+`Counter` は `pos neg : List Unit`（`GalilScaffoldCounter:7`）で
+`ofNat n = ⟨List.replicate n (), []⟩`、`Canonical c := c.pos = [] ∨ c.neg = []`。
+`List Unit` は長さで決まるので、非負かつ canonical なら `c = ofNat c.pos.length`。
+`CloseoutPackRun13.CentreMargin` が `∀ r, s.radius = ofNat r → …` の形なので、
+その証人を作るために要る。 -/
+
+/-- `List Unit` は長さで決まる。 -/
+theorem listUnit_eq_replicate : ∀ l : List Unit, l = List.replicate l.length () := by
+  intro l
+  induction l with
+  | nil => rfl
+  | cons a t ih => cases a; rw [List.length_cons, List.replicate_succ, ← ih]
+
+/-- **canonical かつ非負なら `ofNat` の形。** -/
+theorem eq_ofNat_of_canonical_nonneg {c : Counter} (hCanonical : Canonical c)
+    (hNonneg : 0 ≤ value c) : c = ofNat c.pos.length := by
+  have hneg : c.neg = [] := by
+    rcases hCanonical with hp | hn
+    · have hv : value c = -(c.neg.length : ℤ) := by
+        unfold value; rw [hp]; simp
+      have : (c.neg.length : ℤ) ≤ 0 := by rw [hv] at hNonneg; omega
+      have : c.neg.length = 0 := by omega
+      exact List.eq_nil_of_length_eq_zero this
+    · exact hn
+  obtain ⟨pos, neg⟩ := c
+  simp only at hneg
+  subst hneg
+  show (⟨pos, []⟩ : Counter) = ofNat pos.length
+  unfold ofNat
+  rw [← listUnit_eq_replicate pos]
+
+#print axioms listUnit_eq_replicate
+#print axioms eq_ofNat_of_canonical_nonneg
 
 /-! ### chain の lag は構成から正規 — `ChainBackLagAt` は人工的な残差だった
 
