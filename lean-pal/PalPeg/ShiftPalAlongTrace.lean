@@ -305,6 +305,24 @@ theorem periodLength_immediate_pos {w : GalilScaffoldChainWatch.State}
 
 #print axioms periodLength_immediate_pos
 
+/-- **`ShiftInv` の `size : 2h ≤ R` を margin 等式から。**  `GalilReplaySpan.ChainW` の
+`.watch` 枝は `value w.margin + 4 * h = R_chain − C_chain`（走査半径 `r₀`）を持ち、
+`shiftGuardVM` の非 `periodOnly` 枝は `negative w.margin = false` を与える。
+`GalilScaffoldCounter.negative_iff` で `0 ≤ value margin`、よって `4h ≤ r₀`。
+`ShiftInv` の `R` は `r₀ − h − 1` なので `2h ≤ R` が出る。 -/
+theorem size_of_margin {h r₀ R : ℕ} {margin : GalilScaffoldCounter.Counter}
+    (hcan : Canonical margin) (hneg : GalilScaffoldCounter.negative margin = false)
+    (heq : value margin + 4 * (h : ℤ) = (r₀ : ℤ))
+    (hR : R = r₀ - h - 1) (hp : 0 < h) : 2 * h ≤ R := by
+  have h0 : (0 : ℤ) ≤ value margin := by
+    by_cases hlt : value margin < 0
+    · rw [(GalilScaffoldCounter.negative_iff margin hcan).2 hlt] at hneg
+      exact absurd hneg (by decide)
+    · omega
+  omega
+
+#print axioms size_of_margin
+
 /-- **(NAMED) 準備直後の watch の台帳。**  `shiftPalAt_fresh_of_candidate` の 5 残差を
 1 つの場にまとめたもの。`ShiftPal` の `periodOnly = false` 分岐に必要な全部で、
 3 種類しかない（n144）:

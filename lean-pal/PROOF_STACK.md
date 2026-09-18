@@ -1,3 +1,41 @@
+## n229 — 公理進捗: `ShiftInv` 23 場中 20 場（`size_of_margin`）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 2 連言 `ShiftInv` の `size : 2h ≤ R` が出た。**23 場中 20 場が証明済み**、残り 3 場 |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+```lean
+theorem size_of_margin {h r₀ R : ℕ} {margin : GalilScaffoldCounter.Counter}
+    (hcan : Canonical margin) (hneg : GalilScaffoldCounter.negative margin = false)
+    (heq : value margin + 4 * (h : ℤ) = (r₀ : ℤ))
+    (hR : R = r₀ - h - 1) (hp : 0 < h) : 2 * h ≤ R
+```
+
+`GalilReplaySpan.ChainW` の margin 等式 ＋ `shiftGuardVM` の非 `periodOnly` 枝
+（`negative w.margin = false`）から `GalilScaffoldCounter.negative_iff` で
+`0 ≤ value margin`、よって `4h ≤ r₀`。`ShiftInv` の `R = r₀ − h − 1` なので `2h ≤ R`。
+
+**Scala の `canShift` の `margin.sign >= 0` 枝がここで効いてる。**
+
+### `ShiftInv`（23 場）の到達状況
+
+| 状態 | 場 |
+|---|---|
+| **証明済み 20** | 枠 10 ＋ `pal`/`palNext`/`origin` ＋ `verifierRep`/`verifierPresent`/`aligned` ＋ `lagZero`/`unbroken` ＋ `posH` ＋ `size` |
+| 残り 3 | `kle : 0 ≤ h`（`Nat.zero_le`）`pred`（`CoreX` の `OnBlock` の展開）`room : R+2 ≤ C`（位置境界の算術） |
+
+### セッション累計（この公理）
+
+ガード追加 2・成分の語化 1・**成分削除 2**（`hEnd` / `hHi`）・**橋/producer 新設 10**
+（`bal_of_count` / `periodOn_of_blockOn` / `palAt_next_of_period` / `palNext_of_blockOn` /
+`origin_of_blockOn` / `shiftInv_frame_of_beginShift` / `coreX_immediate` /
+`immediate_lag_unbroken` / `periodLength_immediate_pos` / `size_of_margin`）。
 ## n228 — 公理進捗: `ShiftInv` 23 場中 19 場（`periodLength_immediate_pos`）
 
 **公理への進捗**
