@@ -27,8 +27,8 @@ set_option autoImplicit false
 
 namespace PalPeg.CopyPhaseTick
 
-open PalPeg PalPeg.GalilScaffoldChainInputSupply
-open GalilScaffoldCounter
+open PalPeg PalPeg.GalilScaffoldChainInputSupply PalPeg.GalilScaffoldController
+open GalilScaffoldCounter GalilScaffoldChainVerifier GalilScaffoldInputHead
 open PalPeg.GalilBranchInvariants
 
 /-- **`.copy` から出る `ChainStep` の行き先は `.copy` か `.back`。** -/
@@ -138,5 +138,81 @@ theorem live_background_exists (P : Shared) (q : ℕ) (first : Fin 9) (s : Galil
   · rw [searchLens.get_set]
 
 #print axioms live_background_exists
+
+
+/-! ## live chain 版区間の 1 手（`wait` / `count`）
+
+`live_background_exists` ＋ `WatchSegE` の構成子 ＋ `.stop` で、長さ 1 の区間が直接出る。
+帰納の本体はこれを繋ぐだけになる。 -/
+
+/-- **`wait` 段の 1 手**（右ヘッドが進めない）。 -/
+theorem watchSegE_wait_live (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ)
+    (c : Control) (s : GalilVM)
+    (hScan : c.mode = Mode.scan) (hNotReplaying : c.replaying = false)
+    (hUnavailable : ¬ canRight s.right)
+    {z : ChainVM} (hNotIdle : s.chain ≠ ChainVM.idle)
+    (hTick : ChainTick false s.chain z) :
+    ∃ s', WatchSegE P q first delay [false] c s c s' ∧ s'.chain = z ∧
+      s'.left = s.left ∧ s'.right = s.right ∧ s'.center = s.center ∧ s'.replay = s.replay ∧
+      searchLens.get s' = searchLens.get s := by
+  obtain ⟨s', hBg, hChain, hL, hR, hC, hRep, hGet⟩ :=
+    live_background_exists P q first s hNotIdle hTick
+  exact ⟨s', .wait c s s' hScan hNotReplaying hUnavailable hBg (.stop _ _),
+    hChain, hL, hR, hC, hRep, hGet⟩
+
+/-- **`count` 段の 1 手**（右ヘッドが進めて clock が 2 以上）。 -/
+theorem watchSegE_count_live (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ)
+    (c : Control) (s : GalilVM)
+    (hScan : c.mode = Mode.scan) (hNotReplaying : c.replaying = false)
+    (hAvailable : canRight s.right) (hClock : 1 < c.clock)
+    {z : ChainVM} (hNotIdle : s.chain ≠ ChainVM.idle)
+    (hTick : ChainTick false s.chain z) :
+    ∃ s', WatchSegE P q first delay [false] c s { c with clock := c.clock - 1 } s' ∧
+      s'.chain = z ∧
+      s'.left = s.left ∧ s'.right = s.right ∧ s'.center = s.center ∧ s'.replay = s.replay ∧
+      searchLens.get s' = searchLens.get s := by
+  obtain ⟨s', hBg, hChain, hL, hR, hC, hRep, hGet⟩ :=
+    live_background_exists P q first s hNotIdle hTick
+  exact ⟨s', .count c s s' hScan hNotReplaying hAvailable hClock hBg (.stop _ _),
+    hChain, hL, hR, hC, hRep, hGet⟩
+
+/-- **copy 相の chain なら、`wait` / `count` のどちらかの 1 手が必ずある。**
+`copyChain_tick_exists` が chain の 1 手を、`live_background_exists` が VM の 1 手を出す。
+残差は clock の条件だけ。 -/
+theorem watchSegE_oneStep_live (P : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ)
+    (c : Control) (s : GalilVM)
+    {t : GalilScaffoldTape.Tape} {h : Counter} {pl : GalilScaffoldPlace.Place}
+    {v : GalilScaffoldChainPeriod.Tape} {lag margin : Counter}
+    {ver : GalilScaffoldInputHead.PlaceHead} {m : ℕ}
+    (hCopy : s.chain = ChainVM.copy t h pl v lag margin ver)
+    (hCopyInv : CopyInv t h pl v m)
+    (hScan : c.mode = Mode.scan) (hNotReplaying : c.replaying = false)
+    (hClockOrUnavailable : ¬ canRight s.right ∨ 1 < c.clock) :
+    ∃ (c' : Control) (s' : GalilVM),
+      WatchSegE P q first delay [false] c s c' s' ∧ s'.chain ≠ ChainVM.idle ∧
+      s'.left = s.left ∧ s'.right = s.right ∧ s'.center = s.center ∧ s'.replay = s.replay ∧
+      searchLens.get s' = searchLens.get s ∧ c'.mode = Mode.scan ∧ c'.replaying = false := by
+  obtain ⟨z, hTick⟩ := copyChain_tick_exists hCopyInv lag margin ver false
+  have hTick' : ChainTick false s.chain z := by rw [hCopy]; exact hTick
+  have hNotIdle : s.chain ≠ ChainVM.idle := by rw [hCopy]; intro h0; cases h0
+  have hzNotIdle : z ≠ ChainVM.idle := copyChain_tick_not_idle hTick
+  rcases hClockOrUnavailable with hUn | hClk
+  · obtain ⟨s', hSeg, hChain, hL, hR, hC, hRep, hGet⟩ :=
+      watchSegE_wait_live P q first delay c s hScan hNotReplaying hUn hNotIdle hTick'
+    exact ⟨c, s', hSeg, by rw [hChain]; exact hzNotIdle, hL, hR, hC, hRep, hGet, hScan,
+      hNotReplaying⟩
+  · by_cases hAv : canRight s.right
+    · obtain ⟨s', hSeg, hChain, hL, hR, hC, hRep, hGet⟩ :=
+        watchSegE_count_live P q first delay c s hScan hNotReplaying hAv hClk hNotIdle hTick'
+      exact ⟨_, s', hSeg, by rw [hChain]; exact hzNotIdle, hL, hR, hC, hRep, hGet, hScan,
+        hNotReplaying⟩
+    · obtain ⟨s', hSeg, hChain, hL, hR, hC, hRep, hGet⟩ :=
+        watchSegE_wait_live P q first delay c s hScan hNotReplaying hAv hNotIdle hTick'
+      exact ⟨c, s', hSeg, by rw [hChain]; exact hzNotIdle, hL, hR, hC, hRep, hGet, hScan,
+        hNotReplaying⟩
+
+#print axioms watchSegE_wait_live
+#print axioms watchSegE_count_live
+#print axioms watchSegE_oneStep_live
 
 end PalPeg.CopyPhaseTick
