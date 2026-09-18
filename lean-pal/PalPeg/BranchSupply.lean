@@ -1699,6 +1699,245 @@ theorem chainLagCanonical_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
 #print axioms radiusExact_after_replayStart
 #print axioms radiusExact_after_initVM
 
+/-! ### chain の verifier は 3 相すべてで入力を表現する
+
+`CloseoutVerRep.VerRep` は `.watch` 相だけに切られている（`VerRep:35`）。
+`LagCan` / `CentreRep` と**同じ「狭く切った」パターン**で、これが
+`MatchRest.repVmid`（1 `ChainStep` 先の verifier）と
+`obligation_verifierRunAlongRun` が残差に見えていた理由。
+
+`ChainPositionLedger`（`Run41:62`）は既に 3 相すべてを覆っているので、それに合わせる。
+
+一次情報で確認した verifier の遷移（`ChainStep` は **7 構成子**）:
+
+| 遷移 | verifier |
+|---|---|
+| `idle` / `brokenIdle` | 空虚 |
+| `copyBit`（`.copy → .copy`） | 不変 |
+| `copyEnd`（`.copy → .back`） | 不変 |
+| `backStep`（`.back → .back`） | 不変 |
+| `backDone`（`.back → .watch`） | `.back` の `ver` がそのまま watch の verifier |
+| `watchStep` ＋ `Internal.idle` | 不変 |
+| `watchStep` ＋ `Internal.take` | `right`（`caught`／`consume`）—— **`Good` が `canRight` を持つ** |
+| `ChainMatched.copy` / `.back` / `Outer.idle` / `Outer.queued` | 不変 |
+| `ChainMatched` ＋ `Outer.immediate` | `right` —— **`Good` が `canRight` を持つ** |
+| `chainShiftOne` | 不変（`distance`/`boundary`/`last`/`margin` だけ） |
+| `chainStart`（誕生） | `= s.center`（`chainAt` の `ver` 引数は `s.center`、`TopSearch:210`） |
+
+**側条件はすべて構成子が持っている**（`Good.1 = canRight verifier`）。
+誕生だけが外部入力で、それは `HeadsRepresent.centre`（証明済み）。 -/
+
+/-- **(不変量)** chain の verifier ヘッドはどの相でも入力語を表現し focus が立っている。 -/
+structure ChainVerifierRepresents (w : List (Fin 2)) (z : ChainVM) : Prop where
+  copyVer : ∀ (t : GalilScaffoldTape.Tape) (h : Counter) (p : GalilScaffoldPlace.Place)
+      (v : Tape) (lag margin : Counter) (ver : PlaceHead),
+      z = .copy t h p v lag margin ver ->
+      GalilScaffoldInputTrace.Represents ver.head w ∧ ver.head.focus ≠ none
+  backVer : ∀ (v : Tape) (h lag margin : Counter) (ver : PlaceHead),
+      z = .back v h lag margin ver ->
+      GalilScaffoldInputTrace.Represents ver.head w ∧ ver.head.focus ≠ none
+  watchVer : ∀ wch : GalilScaffoldChainWatch.State, z = .watch wch ->
+      GalilScaffoldInputTrace.Represents wch.machine.verifier.head w /\
+        wch.machine.verifier.head.focus ≠ none
+
+theorem chainVerifierRepresents_idle {w : List (Fin 2)} :
+    ChainVerifierRepresents w .idle :=
+  ⟨(fun _ _ _ _ _ _ _ h => by cases h), (fun _ _ _ _ _ h => by cases h),
+    (fun _ h => by cases h)⟩
+
+theorem chainVerifierRepresents_broken {w : List (Fin 2)}
+    (wch : GalilScaffoldChainWatch.State) : ChainVerifierRepresents w (.broken wch) :=
+  ⟨(fun _ _ _ _ _ _ _ h => by cases h), (fun _ _ _ _ _ h => by cases h),
+    (fun _ h => by cases h)⟩
+
+/-- **誕生時**: `chainStart` の verifier は渡されたヘッドそのもの。 -/
+theorem chainVerifierRepresents_chainStart {w : List (Fin 2)}
+    (answer : GalilScaffoldTape.Tape) (c : Fin 3) (walker : GalilScaffoldPlace.Place)
+    (verifier : PlaceHead) (radius : Counter)
+    (hRep : GalilScaffoldInputTrace.Represents verifier.head w)
+    (hFocus : verifier.head.focus ≠ none) :
+    ChainVerifierRepresents w (chainStart answer c walker verifier radius) := by
+  refine ⟨fun t h p v lag margin ver heq => ?_, (fun _ _ _ _ _ h => by cases h),
+    (fun _ h => by cases h)⟩
+  unfold chainStart at heq
+  injection heq with _ _ _ _ _ _ h7
+  subst h7
+  exact ⟨hRep, hFocus⟩
+
+/-- **`ChainStep` は verifier の表現を保つ。**  `Internal.take` の `canRight` は
+`Good` の第 1 成分として構成子が持っている。 -/
+theorem chainVerifierRepresents_step {w : List (Fin 2)} {x z : ChainVM}
+    (hInv : ChainVerifierRepresents w x) (hStep : ChainStep x z) :
+    ChainVerifierRepresents w z := by
+  obtain ⟨hCopy, hBack, hWatch⟩ := hInv
+  cases hStep with
+  | idle => exact chainVerifierRepresents_idle
+  | brokenIdle wch => exact chainVerifierRepresents_broken wch
+  | copyBit t h p v lag margin ver a _ _ _ =>
+    refine ⟨fun t' h' p' v' lag' margin' ver' heq => ?_,
+      (fun _ _ _ _ _ heq => by cases heq), (fun _ heq => by cases heq)⟩
+    injection heq with _ _ _ _ _ _ h7
+    subst h7
+    exact hCopy t h p v lag margin ver rfl
+  | copyEnd t h p v lag margin ver b _ _ _ =>
+    refine ⟨(fun _ _ _ _ _ _ _ heq => by cases heq), fun v' h' lag' margin' ver' heq => ?_,
+      (fun _ heq => by cases heq)⟩
+    injection heq with _ _ _ _ h5
+    subst h5
+    exact hCopy t h p v lag margin ver rfl
+  | backStep v h lag margin ver _ =>
+    refine ⟨(fun _ _ _ _ _ _ _ heq => by cases heq), fun v' h' lag' margin' ver' heq => ?_,
+      (fun _ heq => by cases heq)⟩
+    injection heq with _ _ _ _ h5
+    subst h5
+    exact hBack v h lag margin ver rfl
+  | backDone v h lag margin ver _ =>
+    refine ⟨(fun _ _ _ _ _ _ _ heq => by cases heq), (fun _ _ _ _ _ heq => by cases heq),
+      fun wch heq => ?_⟩
+    injection heq with hw
+    subst hw
+    exact hBack v h lag margin ver rfl
+  | watchStep wch wch' hInternal =>
+    refine ⟨(fun _ _ _ _ _ _ _ heq => by cases heq), (fun _ _ _ _ _ heq => by cases heq),
+      fun wch'' heq => ?_⟩
+    injection heq with hw
+    subst hw
+    obtain ⟨hRep, hFocus⟩ := hWatch wch rfl
+    cases hInternal with
+    | idle _ => exact ⟨hRep, hFocus⟩
+    | take _ hGood =>
+      exact PalPeg.CloseoutVerRep.verRep_next hRep hFocus hGood.1
+
+/-- **`ChainMatched` は verifier の表現を保つ。**  `Outer.immediate` の `canRight` も
+`Good` の第 1 成分。 -/
+theorem chainVerifierRepresents_matched {w : List (Fin 2)} {x z : ChainVM}
+    (hInv : ChainVerifierRepresents w x) (hMatched : ChainMatched x z) :
+    ChainVerifierRepresents w z := by
+  obtain ⟨hCopy, hBack, hWatch⟩ := hInv
+  cases hMatched with
+  | idle => exact chainVerifierRepresents_idle
+  | copy t h p v lag margin ver =>
+    refine ⟨fun _ _ _ _ _ _ _ heq => ?_, (fun _ _ _ _ _ heq => by cases heq),
+      (fun _ heq => by cases heq)⟩
+    injection heq with _ _ _ _ _ _ h7
+    subst h7
+    exact hCopy t h p v lag margin ver rfl
+  | back v h lag margin ver =>
+    refine ⟨(fun _ _ _ _ _ _ _ heq => by cases heq), fun _ _ _ _ _ heq => ?_,
+      (fun _ heq => by cases heq)⟩
+    injection heq with _ _ _ _ h5
+    subst h5
+    exact hBack v h lag margin ver rfl
+  | watch wch wch' hOuter =>
+    refine ⟨(fun _ _ _ _ _ _ _ heq => by cases heq), (fun _ _ _ _ _ heq => by cases heq),
+      fun wch'' heq => ?_⟩
+    injection heq with hw
+    subst hw
+    obtain ⟨hRep, hFocus⟩ := hWatch wch rfl
+    cases hOuter with
+    | queued _ => exact ⟨hRep, hFocus⟩
+    | immediate _ hGood =>
+      exact PalPeg.CloseoutVerRep.verRep_next hRep hFocus hGood.1
+  | breaks wch wch' _ => exact chainVerifierRepresents_broken wch'
+
+theorem chainVerifierRepresents_of_chainEq {w : List (Fin 2)} {s t : GalilVM}
+    (hEq : t.chain = s.chain) (hInv : ChainVerifierRepresents w s.chain) :
+    ChainVerifierRepresents w t.chain := by
+  rw [hEq]; exact hInv
+
+/-- `chainShiftOne` は verifier を触らない。 -/
+theorem chainVerifierRepresents_shiftOne {w : List (Fin 2)}
+    {v : GalilScaffoldChainWatch.State}
+    (hInv : ChainVerifierRepresents w (ChainVM.watch v)) :
+    ChainVerifierRepresents w (ChainVM.watch (chainShiftOne v)) := by
+  obtain ⟨hRep, hFocus⟩ := hInv.watchVer v rfl
+  refine ⟨(fun _ _ _ _ _ _ _ h => by cases h), (fun _ _ _ _ _ h => by cases h),
+    fun wch h => ?_⟩
+  injection h with hw
+  subst hw
+  exact ⟨hRep, hFocus⟩
+
+/-- `immediate` は verifier を `right` で動かす。`canRight` は `Good` から。 -/
+theorem chainVerifierRepresents_immediate {w : List (Fin 2)}
+    {v : GalilScaffoldChainWatch.State}
+    (hInv : ChainVerifierRepresents w (ChainVM.watch v))
+    (hCanRight : GalilScaffoldChainVerifier.canRight v.machine.verifier) :
+    ChainVerifierRepresents w (ChainVM.watch (GalilScaffoldChainWatch.immediate v)) := by
+  obtain ⟨hRep, hFocus⟩ := hInv.watchVer v rfl
+  refine ⟨(fun _ _ _ _ _ _ _ h => by cases h), (fun _ _ _ _ _ h => by cases h),
+    fun wch h => ?_⟩
+  injection h with hw
+  subst hw
+  exact PalPeg.CloseoutVerRep.verRep_next hRep hFocus hCanRight
+
+/-- **`ChainTick` を通した搬送。** -/
+theorem chainVerifierRepresents_chainTick {w : List (Fin 2)} {a : Bool} {x z : ChainVM}
+    (hInv : ChainVerifierRepresents w x) (hTick : ChainTick a x z) :
+    ChainVerifierRepresents w z := by
+  obtain ⟨y, hStep, hAfter⟩ := hTick
+  have hy := chainVerifierRepresents_step hInv hStep
+  cases a with
+  | true =>
+    rw [if_pos rfl] at hAfter
+    exact chainVerifierRepresents_matched hy hAfter
+  | false =>
+    rw [if_neg (by decide)] at hAfter
+    rw [hAfter]
+    exact hy
+
+/-- **`chainAt` を通した搬送。**  誕生の `ver` 引数は `s.center`（`TopSearch:210`）なので
+側入力は中心ヘッドの表現 1 つだけ。 -/
+theorem chainVerifierRepresents_chainAt {w : List (Fin 2)} {a found : Bool}
+    {ans : GalilScaffoldTape.Tape} {c : Fin 3} {wk : GalilScaffoldPlace.Place}
+    {ver : PlaceHead} {rad : Counter} {x z : ChainVM}
+    (hInv : ChainVerifierRepresents w x)
+    (hRep : GalilScaffoldInputTrace.Represents ver.head w) (hFocus : ver.head.focus ≠ none)
+    (hAt : chainAt a found ans c wk ver rad x z) : ChainVerifierRepresents w z := by
+  rcases hAt with ⟨-, hTick⟩ | ⟨-, -, hz⟩ | ⟨-, -, hStart⟩
+  · exact chainVerifierRepresents_chainTick hInv hTick
+  · rw [hz]; exact chainVerifierRepresents_idle
+  · cases a with
+    | true =>
+      rw [if_pos rfl] at hStart
+      exact chainVerifierRepresents_matched
+        (chainVerifierRepresents_chainStart ans c wk ver rad hRep hFocus) hStart
+    | false =>
+      rw [if_neg (by decide)] at hStart
+      rw [hStart]
+      exact chainVerifierRepresents_chainStart ans c wk ver rad hRep hFocus
+
+/-- **scan background を通した搬送。** -/
+theorem chainVerifierRepresents_background {w : List (Fin 2)} {s t : GalilVM}
+    (hBg : (galilFrameS (PofC centre place entry w) q first).background s t)
+    (hInv : ChainVerifierRepresents w s.chain)
+    (hRep : GalilScaffoldInputTrace.Represents s.center.head w)
+    (hFocus : s.center.head.focus ≠ none) :
+    ChainVerifierRepresents w t.chain := by
+  obtain ⟨-, -, hAt, -⟩ :=
+    backgroundS_fields (PofC centre place entry w) q first hBg
+  exact chainVerifierRepresents_chainAt hInv hRep hFocus hAt
+
+/-- **`compare` を通した搬送。** -/
+theorem chainVerifierRepresents_compare {w : List (Fin 2)} {s t : GalilVM}
+    (hCompare : (galilFrameS (PofC centre place entry w) q first).compare s t)
+    (hInv : ChainVerifierRepresents w s.chain)
+    (hRep : GalilScaffoldInputTrace.Represents s.center.head w)
+    (hFocus : s.center.head.focus ≠ none) :
+    ChainVerifierRepresents w t.chain := by
+  obtain ⟨vs, vq, a, -, -, -, -, hAt, hteq⟩ :
+    compareFound (PofC centre place entry w) q first s t := hCompare
+  have hchain : t.chain = vs.chain := by
+    rw [hteq, afterBirth_chain]
+    cases a <;> rfl
+  rw [hchain]
+  exact chainVerifierRepresents_chainAt hInv hRep hFocus hAt
+
+#print axioms chainVerifierRepresents_step
+#print axioms chainVerifierRepresents_matched
+#print axioms chainVerifierRepresents_chainAt
+#print axioms chainVerifierRepresents_background
+#print axioms chainVerifierRepresents_compare
+
 /-! ## 5e. `LPackM3` を trace に運ぶ（1 手目から）
 
 `LTickLeaves3` の 4 場のうち `initLedger`（§5c）と `replayLedger`（§5b）はタダになった。
