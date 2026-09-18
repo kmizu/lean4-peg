@@ -1077,6 +1077,57 @@ theorem chainLagCanonical_matched {x z : ChainVM} (hInv : ChainLagCanonical x)
 #print axioms chainLagCanonical_step
 #print axioms chainLagCanonical_matched
 
+/-- chain が変わらない遷移では不変量はそのまま。 -/
+theorem chainLagCanonical_of_chainEq {s t : GalilVM} (hEq : t.chain = s.chain)
+    (hInv : ChainLagCanonical s.chain) : ChainLagCanonical t.chain := by
+  rw [hEq]; exact hInv
+
+/-- `chainShiftOne` は lag を触らない。 -/
+theorem chainLagCanonical_shiftOne {v : GalilScaffoldChainWatch.State}
+    (hInv : ChainLagCanonical (ChainVM.watch v)) :
+    ChainLagCanonical (ChainVM.watch (chainShiftOne v)) := by
+  obtain ⟨hCan, hNonneg⟩ := hInv.watchLag v rfl
+  refine ⟨(fun _ _ _ _ _ _ _ h => by cases h), (fun _ _ _ _ _ h => by cases h),
+    fun w h => ?_⟩
+  injection h with hw
+  subst hw
+  exact ⟨hCan, hNonneg⟩
+
+/-- `immediate` は lag を触らない。 -/
+theorem chainLagCanonical_immediate {v : GalilScaffoldChainWatch.State}
+    (hInv : ChainLagCanonical (ChainVM.watch v)) :
+    ChainLagCanonical (ChainVM.watch (GalilScaffoldChainWatch.immediate v)) := by
+  obtain ⟨hCan, hNonneg⟩ := hInv.watchLag v rfl
+  refine ⟨(fun _ _ _ _ _ _ _ h => by cases h), (fun _ _ _ _ _ h => by cases h),
+    fun w h => ?_⟩
+  injection h with hw
+  subst hw
+  exact ⟨hCan, hNonneg⟩
+
+/-- **scan background を通した搬送。**  chain が誕生する場合は `chainStart` なので
+`RadLedger` の 2 場でタダ、さもなくば `ChainStep`。 -/
+theorem chainLagCanonical_background {w : List (Fin 2)} {s t : GalilVM}
+    (hBg : (galilFrameS (PofC centre place entry w) q first).background s t)
+    (hInv : ChainLagCanonical s.chain)
+    (hRadiusCanonical : Canonical s.radius) (hRadiusNonneg : 0 ≤ value s.radius) :
+    ChainLagCanonical t.chain := by
+  by_cases hIdle : s.chain = ChainVM.idle
+  · rcases backgroundS_idle (PofC centre place entry w) q first hBg hIdle with
+      ⟨-, hz⟩ | ⟨-, hz⟩
+    · rw [hz]; exact chainLagCanonical_idle
+    · rw [hz]
+      exact chainLagCanonical_chainStart _ _ _ _ _ hRadiusCanonical hRadiusNonneg
+  · obtain ⟨y, hStep, hy⟩ :=
+      backgroundS_chainTick (PofC centre place entry w) q first hBg hIdle
+    simp only [Bool.false_eq_true, reduceIte] at hy
+    rw [hy]
+    exact chainLagCanonical_step hInv hStep
+
+#print axioms chainLagCanonical_of_chainEq
+#print axioms chainLagCanonical_shiftOne
+#print axioms chainLagCanonical_immediate
+#print axioms chainLagCanonical_background
+
 
 #print axioms radiusExact_after_shiftOne
 
