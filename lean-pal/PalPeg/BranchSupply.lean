@@ -942,6 +942,142 @@ theorem radiusExactOffRewindPhase_tick {w : List (Fin 2)} {x y : State GalilVM}
 
 #print axioms radiusExactOffRewindPhase_tick
 
+/-! ### chain の lag は構成から正規 — `ChainBackLagAt` は人工的な残差だった
+
+実機（`ScaffoldChain`）の lag は `chain.start()` で `radius` から作られ `inc` / `dec` で
+しか動かない。だから `Canonical` と非負は**構成から自明**。
+`CloseoutPackRun48.LagCan` が `.watch` 相だけに切られていたので `.back` 相が残差に
+見えていた。全構成子に広げれば `ChainBackLagAt` は落ちる。
+
+`ChainStep` は lag を**一切変更しない**（`backDone` が `.back` の lag を watch へ
+持ち込むだけ）。`ChainMatched` は `inc` のみ。`Internal.take` は `dec` だが
+`positive s.lag = true` を要求するので非負が保たれる。`Outer` は `idle`（不変）/
+`queued`（`inc`）/`immediate`（不変）。`.broken` は誰も読まない。 -/
+
+/-- **(chain 全体の lag 不変量)** `.copy` / `.back` / `.watch` の lag が正規かつ非負。 -/
+structure ChainLagCanonical (z : ChainVM) : Prop where
+  copyLag : ∀ (t : GalilScaffoldTape.Tape) (h : Counter) (p : GalilScaffoldPlace.Place)
+      (v : Tape) (lag margin : Counter) (ver : PlaceHead),
+      z = .copy t h p v lag margin ver → Canonical lag ∧ 0 ≤ value lag
+  backLagField : ∀ (v : Tape) (h lag margin : Counter) (ver : PlaceHead),
+      z = .back v h lag margin ver → Canonical lag ∧ 0 ≤ value lag
+  watchLag : ∀ w : GalilScaffoldChainWatch.State,
+      z = .watch w → Canonical w.lag ∧ 0 ≤ value w.lag
+
+theorem chainLagCanonical_idle : ChainLagCanonical .idle :=
+  ⟨(fun _ _ _ _ _ _ _ h => by cases h), (fun _ _ _ _ _ h => by cases h),
+    (fun _ h => by cases h)⟩
+
+theorem chainLagCanonical_broken (w : GalilScaffoldChainWatch.State) :
+    ChainLagCanonical (.broken w) :=
+  ⟨(fun _ _ _ _ _ _ _ h => by cases h), (fun _ _ _ _ _ h => by cases h),
+    (fun _ h => by cases h)⟩
+
+/-- **誕生時**: `chainStart` は `lag = radius` なので `RadLedger` の 2 場でタダ。 -/
+theorem chainLagCanonical_chainStart (answer : GalilScaffoldTape.Tape) (c : Fin 3)
+    (walker : GalilScaffoldPlace.Place) (verifier : PlaceHead) (radius : Counter)
+    (hCanonical : Canonical radius) (hNonneg : 0 ≤ value radius) :
+    ChainLagCanonical (chainStart answer c walker verifier radius) := by
+  refine ⟨fun t h p v lag margin ver heq => ?_, (fun _ _ _ _ _ h => by cases h),
+    (fun _ h => by cases h)⟩
+  unfold chainStart at heq
+  injection heq with _ _ _ _ h5 _ _
+  subst h5
+  exact ⟨hCanonical, hNonneg⟩
+
+/-- **`ChainStep` は lag 不変量を保つ。** -/
+theorem chainLagCanonical_step {x z : ChainVM} (hInv : ChainLagCanonical x)
+    (hStep : ChainStep x z) : ChainLagCanonical z := by
+  obtain ⟨hCopy, hBack, hWatch⟩ := hInv
+  cases hStep with
+  | idle => exact chainLagCanonical_idle
+  | brokenIdle w => exact chainLagCanonical_broken w
+  | copyBit t h p v lag margin ver a _ _ _ =>
+    refine ⟨fun t' h' p' v' lag' margin' ver' heq => ?_,
+      (fun _ _ _ _ _ heq => by cases heq), (fun _ heq => by cases heq)⟩
+    injection heq with _ _ _ _ h5 _ _
+    subst h5
+    exact hCopy t h p v lag margin ver rfl
+  | copyEnd t h p v lag margin ver b _ _ _ =>
+    refine ⟨(fun _ _ _ _ _ _ _ heq => by cases heq), fun v' h' lag' margin' ver' heq => ?_,
+      (fun _ heq => by cases heq)⟩
+    injection heq with _ _ h3 _ _
+    subst h3
+    exact hCopy t h p v lag margin ver rfl
+  | backStep v h lag margin ver _ =>
+    refine ⟨(fun _ _ _ _ _ _ _ heq => by cases heq), fun v' h' lag' margin' ver' heq => ?_,
+      (fun _ heq => by cases heq)⟩
+    injection heq with _ _ h3 _ _
+    subst h3
+    exact hBack v h lag margin ver rfl
+  | backDone v h lag margin ver _ =>
+    refine ⟨(fun _ _ _ _ _ _ _ heq => by cases heq), (fun _ _ _ _ _ heq => by cases heq),
+      fun w heq => ?_⟩
+    injection heq with hw
+    subst hw
+    exact hBack v h lag margin ver rfl
+  | watchStep w w' hInternal =>
+    refine ⟨(fun _ _ _ _ _ _ _ heq => by cases heq), (fun _ _ _ _ _ heq => by cases heq),
+      fun w'' heq => ?_⟩
+    injection heq with hw
+    subst hw
+    obtain ⟨hCan, hNonneg⟩ := hWatch w rfl
+    cases hInternal with
+    | idle _ => exact ⟨hCan, hNonneg⟩
+    | take hPositive _ =>
+      have hpos : 0 < value w.lag := (positive_iff w.lag hCan).1 hPositive
+      refine ⟨dec_canonical _ hCan, ?_⟩
+      show (0 : ℤ) ≤ value (dec w.lag)
+      rw [dec_value]
+      omega
+
+/-- **`ChainMatched` は lag 不変量を保つ。** -/
+theorem chainLagCanonical_matched {x z : ChainVM} (hInv : ChainLagCanonical x)
+    (hMatched : ChainMatched x z) : ChainLagCanonical z := by
+  obtain ⟨hCopy, hBack, hWatch⟩ := hInv
+  cases hMatched with
+  | idle => exact chainLagCanonical_idle
+  | copy t h p v lag margin ver =>
+    refine ⟨fun _ _ _ _ _ _ _ heq => ?_, (fun _ _ _ _ _ heq => by cases heq),
+      (fun _ heq => by cases heq)⟩
+    injection heq with _ _ _ _ h5 _ _
+    subst h5
+    obtain ⟨hCan, hNonneg⟩ := hCopy t h p v lag margin ver rfl
+    refine ⟨inc_canonical _ hCan, ?_⟩
+    show (0 : ℤ) ≤ value (inc lag)
+    rw [inc_value]
+    omega
+  | back v h lag margin ver =>
+    refine ⟨(fun _ _ _ _ _ _ _ heq => by cases heq), fun _ _ _ _ _ heq => ?_,
+      (fun _ heq => by cases heq)⟩
+    injection heq with _ _ h3 _ _
+    subst h3
+    obtain ⟨hCan, hNonneg⟩ := hBack v h lag margin ver rfl
+    refine ⟨inc_canonical _ hCan, ?_⟩
+    show (0 : ℤ) ≤ value (inc lag)
+    rw [inc_value]
+    omega
+  | watch w w' hOuter =>
+    refine ⟨(fun _ _ _ _ _ _ _ heq => by cases heq), (fun _ _ _ _ _ heq => by cases heq),
+      fun w'' heq => ?_⟩
+    injection heq with hw
+    subst hw
+    obtain ⟨hCan, hNonneg⟩ := hWatch w rfl
+    cases hOuter with
+    | queued _ =>
+      refine ⟨inc_canonical _ hCan, ?_⟩
+      show (0 : ℤ) ≤ value (inc w.lag)
+      rw [inc_value]
+      omega
+    | immediate _ _ => exact ⟨hCan, hNonneg⟩
+  | breaks w w' _ => exact chainLagCanonical_broken w'
+
+#print axioms chainLagCanonical_idle
+#print axioms chainLagCanonical_chainStart
+#print axioms chainLagCanonical_step
+#print axioms chainLagCanonical_matched
+
+
 #print axioms radiusExact_after_shiftOne
 
 #print axioms radiusExact_after_compare
