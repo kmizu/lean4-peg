@@ -205,6 +205,87 @@ theorem chainShiftRun_snoc_shiftOne {P : Shared} {q : ℕ} {first : Fin 9}
         congrArg (fun z : ShiftVM => z.cycle) hTarget]
   exact chainShiftRun_snoc hShiftRun hRemaining hCenter hLeft hLeftNext
 
+/-- **shift 相の 1 tick で `ChainShiftRun` が伸びる。**
+
+shift mode で起きうる `Tick` は `shift_one` と `shift_done` の 2 つだけ
+（残り 21 個は mode guard で落ちる）。行き先も shift mode なら `shift_done` も落ちる
+（`shift_done` は mode を `.scan` に戻す。`GalilScaffoldTop:136`）。
+
+`hCopyIdle` が要るのは、合併フレームの `remainingPos` が `H ∨ B`
+（`GalilScaffoldTopMerge:65`）なので copy 側の選択肢を殺さないといけないから。 -/
+theorem chainShiftRun_tick {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {s : ShiftState} {w : GalilScaffoldChainWatch.State} {cycle : Counter} {n : ℕ}
+    {x y : State GalilVM} {v : GalilScaffoldChainWatch.State}
+    (hShiftRun : ChainShiftRun s w cycle n (shiftLens.get x.vm).shift v
+      (shiftLens.get x.vm).cycle)
+    (hChain : x.vm.chain = ChainVM.watch v)
+    (hShift : x.ctl.mode = Mode.shift)
+    (hCopyIdle : CopyIdle x.vm)
+    (hTick : Tick (galilFrameS P q first) delay x y)
+    (hStayShift : y.ctl.mode = Mode.shift) :
+    ∃ v' : GalilScaffoldChainWatch.State, y.vm.chain = ChainVM.watch v' ∧
+      ChainShiftRun s w cycle (n + 1) (shiftLens.get y.vm).shift v'
+        (shiftLens.get y.vm).cycle := by
+  cases hTick with
+  | shift_one c0 s0 s0' hm hRemainingPos hShiftOne =>
+    have hRemaining : positive (shiftLens.get s0).shift.remaining = true := by
+      rcases hRemainingPos with hp | hp
+      · exact hp
+      · exact absurd hp hCopyIdle
+    obtain ⟨hChainTarget, hRunTarget⟩ :=
+      chainShiftRun_snoc_shiftOne hShiftRun hChain hRemaining hShiftOne
+    exact ⟨chainShiftOne v, hChainTarget, hRunTarget⟩
+  | shift_done c0 s0 o0 hm _ _ => simp at hStayShift
+  | init c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_wait c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_count c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_match c0 s0 s0' s0'' o0 hm _ _ _ _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_shift c0 s0 s0' s0'' hm _ _ _ _ _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | scan_fallback c0 s0 s0' s0'' hm _ _ _ _ _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | copy_one c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | copy_done c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | home_start c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | home_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | fpp_slice c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | fpp_done c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | markEnd_found c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | markEnd_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | choose_select c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | choose_step c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | rewind_done c0 s0 s0' hm _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | rewind_one c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | rewind_pair c0 s0 s0' hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | replayStart c0 s0 s0' o0 hm _ _ _ => exact absurd (hm.symm.trans hShift) (by decide)
+  | restart c0 s0 s0' hm _ => exact absurd (hm.symm.trans hShift) (by decide)
+
+/-- **run に沿って `ChainShiftRun` が伸びる。**  側条件は区間の全点が shift mode ∧
+`CopyIdle`（`roundHistory_of_steps` と同じ形）。 -/
+theorem chainShiftRun_of_steps {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {s : ShiftState} {w : GalilScaffoldChainWatch.State} {cycle : Counter} {n k : ℕ}
+    {x y : State GalilVM} {v : GalilScaffoldChainWatch.State}
+    (hSteps : Steps (galilFrameS P q first) delay k x y)
+    (hShiftRun : ChainShiftRun s w cycle n (shiftLens.get x.vm).shift v
+      (shiftLens.get x.vm).cycle)
+    (hChain : x.vm.chain = ChainVM.watch v)
+    (hShiftAll : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS P q first) delay m x z →
+      z.ctl.mode = Mode.shift ∧ CopyIdle z.vm) :
+    ∃ v' : GalilScaffoldChainWatch.State, y.vm.chain = ChainVM.watch v' ∧
+      ChainShiftRun s w cycle (n + k) (shiftLens.get y.vm).shift v'
+        (shiftLens.get y.vm).cycle := by
+  induction hSteps generalizing n v with
+  | zero u => exact ⟨v, hChain, hShiftRun⟩
+  | @succ j u z t hTick hRest ih =>
+    obtain ⟨hShift, hCopyIdle⟩ := hShiftAll 0 u (.zero u)
+    obtain ⟨hShiftZ, -⟩ := hShiftAll 1 z (.succ hTick (.zero z))
+    obtain ⟨v', hChainZ, hRunZ⟩ :=
+      chainShiftRun_tick hShiftRun hChain hShift hCopyIdle hTick hShiftZ
+    obtain ⟨v'', hChainT, hRunT⟩ := ih hRunZ hChainZ
+      (fun m' z' hz' => hShiftAll (m' + 1) z' (.succ hTick hz'))
+    exact ⟨v'', hChainT, by rw [show n + (j + 1) = n + 1 + j from by omega]; exact hRunT⟩
+
+#print axioms chainShiftRun_tick
+#print axioms chainShiftRun_of_steps
 #print axioms chainShiftRun_snoc
 #print axioms chainShiftRun_snoc_shiftOne
 

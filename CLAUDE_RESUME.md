@@ -1,3 +1,32 @@
+## 2026-09-19 n151: ラウンド境界に無かった `ChainShiftRun` の収集を作った
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器は動いていない。**
+
+### 新規 2 本（`PalPeg/RoundHistory.lean`、これで同ファイル 10 宣言）
+
+* `chainShiftRun_tick` — shift 相の 1 tick で `ChainShiftRun` が伸びる。
+  shift mode の `Tick` は `shift_one` と `shift_done` だけで、残り 21 構成子は
+  mode guard で落ちる。行き先も shift mode なら `shift_done` も落ちる
+  （`GalilScaffoldTop:136` が mode を `.scan` に戻す）。
+  `CopyIdle` が要るのは合併フレームの `remainingPos` が `H ∨ B` だから
+* `chainShiftRun_of_steps` — run に沿って伸ばす（`roundHistory_of_steps` と同じ形）
+
+**これで n149 の入力表の `✗`（存在しない）が埋まった。**
+`GalilScaffoldTopRoundS.round_next` の入力 15 個のうち **14 個が出どころ確認済み**、
+未確認は 2 個（`hpred` の `afterMismatch` の right、`hlen : Canonical s1.length`）。
+
+### 次にやること（`PROOF_STACK.md` に記録）
+
+`round_next` を run から呼ぶ組み立て（`roundSeg_of_run`）。
+その第 1 節 `periodLength wch' = periodLength wch` には「ラウンド内で `periodLength` が
+保たれる」が要る:
+
+* shift 相は `chain_shift_periodLength`（**済・公理ゼロ**）
+* scan 相は `periodLength_consume` を使うが、**これは無条件ではなく block 側条件を取る**
+  （`CloseoutRoundUnique:221` の使い方で確認）。側条件は
+  `CloseoutRoundReads.blockInv_of_chainPosInv2` 経由で出る見込み（**未検証**）
+
 ## 2026-09-19 n150: `ChainShiftRun` を後ろから伸ばす（ラウンド境界の残り 1 個の半分）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

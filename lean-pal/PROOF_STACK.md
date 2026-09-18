@@ -166,10 +166,11 @@ RoundHistory P q first delay w (c : Control) (s : GalilVM) : Prop :=
 | `hg : P.shiftGuard (afterMismatch s1 vs vq)` ＋ `s2` ＋ `hb : P.beginShift …` | `scan_shift` の `hg` / `hb` | **○** |
 | `hs2 : beginShiftVM h w (afterMismatch …) s2` | `beginShiftVM' s t := ∃ w, beginShiftVM (periodLength w) w s t`（`GalilScaffoldTopGuards:35`）。よって `h = periodLength w` | **○** |
 | `hi2 : CopyIdle s2` | `AuxPack`（`roundBundle_tick` の `hci : mode = shift → CopyIdle`） | **○** |
-| `hchain : ChainShiftRun ⟨s1.center, left s1.left, ofNat h, inc s1.radius, inc (inc s1.length)⟩ (immediate w) reset h t' v cycle` | **✗ 無い。これが本当の残り。** shift 相（`shift_one` × h ＋ `shift_done`）を run から集める carrier が必要 | **✗** |
+| `hchain : ChainShiftRun ⟨s1.center, left s1.left, ofNat h, inc s1.radius, inc (inc s1.length)⟩ (immediate w) reset h t' v cycle` | **`RoundHistory.chainShiftRun_of_steps`（n151 で作った）**。基底は `beginShiftVM` が `chain := .watch (immediate w)` / `remaining := ofNat h` / `cycle := reset` を置くので `.stop` でタダ | **○** |
 | `o` ＋ `ho : refresh …` | `shift_done` の `o` / `ho` | **○** |
 
-**つまりラウンド境界の残りは `ChainShiftRun` の収集 1 個。**
+**~~つまりラウンド境界の残りは `ChainShiftRun` の収集 1 個。~~ → n151 で作った。**
+**いま未確認なのは `hpred` の `afterMismatch` の right と `hlen : Canonical s1.length` の 2 個だけ。**
 found 経路の `CloseoutWatchRound33` / `37` も `ChainShiftRun` を**仮説として取っている**
 （`ShiftRoundInvCL` / `ShiftOriginRestCL` は open な `def`）ので、ここは共通の穴。
 
@@ -215,9 +216,21 @@ ShiftHistory P q first delay (c : Control) (s : GalilVM) : Prop :=
   `s.remaining = ofNat h → ChainShiftRun s w cycle h t v finish → positive t.remaining = false`
   ——終端判定はこれ
 
-**残り**: `ShiftHistory` の tick 保存（shift mode の `Tick` 23 構成子の場合分け。
-21 個は mode guard で落ち、`shift_done` は行き先 mode で落ちる。
-`ShiftPhaseDeterminism.tick_shift_det:54` が同じ場合分けを全部書いているので写せる）。
+**済（n151）**: `chainShiftRun_tick`（shift mode の `Tick` 23 構成子の場合分け。
+21 個は mode guard、`shift_done` は行き先 mode で落ちる）＋ `chainShiftRun_of_steps`
+（run に沿って伸ばす）。側条件は区間の全点が shift mode ∧ `CopyIdle`。
+
+**次**: `round_next` を run から呼ぶ組み立て（`roundSeg_of_run`）。
+未確認 2 個（`hpred` / `hlen`）を一次情報で確認してから。
+さらに `RoundSeg` の第 1 節 `periodLength wch' = periodLength wch` には
+「ラウンド内で `periodLength` が保たれる」が要る:
+
+* shift 相は `chain_shift_periodLength`（**済・公理ゼロ**）
+* scan 相（`OnlyMatchedRun` の `onlyCompareNext` ＝ `immediate` を当てる）は
+  `periodLength_consume` を使うが、**これは無条件ではなく block 側条件を取る**
+  （`CloseoutRoundUnique:221` の使い方を確認済み）。側条件は
+  `CloseoutRoundReads.blockInv_of_chainPosInv2` 経由で
+  `ChainPositionInvariantWithShiftPhase` から出る見込み（未検証）
 
 ---
 
