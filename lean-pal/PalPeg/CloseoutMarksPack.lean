@@ -233,6 +233,95 @@ theorem packRunR_MWP {w : List (Fin 2)}
 
 
 
+/-- **`PackRunRMW` with no `H_marksEntry'` and no `ChainPack` either.**
+
+`CloseoutPackRun17.marksInv'_of_run'` already produces `MarksInv'` at **every**
+state of a run started in `scan`, and all four of its inputs are free at an
+`InvLPC` origin:
+
+| 入力 | 出どころ |
+|---|---|
+| `first ≠ 4` | 側条件（`first = 0` なら `by decide`） |
+| `hfl`（scan 状態で `0 ≤ value length`） | `GalilInvPlus2.hfloor_of_invLP2` — `InvLPC.1` がそのまま `InvLP2` |
+| `hwin`（copy 状態で `WindowInOrigin`） | `CloseoutPackRun25.windowInOrigin_alongRun`（origin は scan なので origin 側の前提が空虚） |
+| `CPack q c r` | `GalilCentreLive.cpack_of_entry` ＋ `CloseoutMarksFree.entryCounters_of_invLPC` |
+
+本体は `packRunR_MWP` と同じで、`hpk`／`hpi`（`ChainPack.marks`）の代わりに
+`hmarksAlongRun` を使う。したがって `MarksInv'` は `hme` でも `hpack` でもなく、
+**run から無償に出る**。 -/
+theorem packRunR_MW_marksFree {w : List (Fin 2)} (h4 : first ≠ 4)
+    (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
+      ScanNR x → ShiftPal centre place entry q first w x.vm) :
+    PackRunRMW centre place entry q first w := by
+  intro c r hIC M hm1 hmle j x hjx k y hx h hry hyb
+  have hlv0 : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
+      CentreLive z.ctl z.vm :=
+    PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry q first hIC
+  have haux0 : AuxPack c r :=
+    ⟨coupled_of_invLPC hIC, front_of_invLPC hIC, copyPack_of_invLPC hIC⟩
+  have hauxx : AuxPack x.ctl x.vm :=
+    auxPack_steps centre place entry q first (x := ⟨c, r⟩) hlv0 haux0 hjx
+  have hOriginScan : c.mode = Mode.scan := (invS_mode hIC.1.1.1.1).1
+  have hmarksAlongRun : ∀ (n' : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 n' ⟨c, r⟩ z →
+      MarksInv' first z.ctl z.vm := by
+    intro n' z hz
+    exact PalPeg.CloseoutPackRun17.marksInv'_of_run' (onLetterVM w) leftFirstVM centre place
+      entry q first 2048 h4 hz
+      (PalPeg.GalilInvPlus2.hfloor_of_invLP2 centre place entry q first hIC.1)
+      (fun m z' hz' hmz => PalPeg.CloseoutPackRun25.windowInOrigin_alongRun (onLetterVM w)
+        leftFirstVM centre place entry q first 2048 hz'
+        (fun hc => absurd (hOriginScan.symm.trans hc) (by decide)) hmz)
+      (PalPeg.GalilCentreLive.cpack_of_entry q hIC.1.1.1.1
+        (PalPeg.CloseoutMarksFree.entryCounters_of_invLPC hIC))
+      hOriginScan
+  have hmx : MarksInv' first x.ctl x.vm := hmarksAlongRun j x hjx
+  obtain ⟨g, hg0, hgk, htr⟩ := stepsAll_fn h
+  have hreach : ∀ i, i ≤ k →
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 (j + i) ⟨c, r⟩ (g i) := by
+    intro i hi
+    have := steps_of_trace htr i hi
+    rw [hg0] at this
+    exact steps_trans hjx this
+  have hauxi : ∀ i, i ≤ k → AuxPack (g i).ctl (g i).vm := fun i hi =>
+    auxPack_steps centre place entry q first (x := ⟨c, r⟩) hlv0 haux0 (hreach i hi)
+  have hmg : ∀ i, i ≤ k → MarksInv' first (g i).ctl (g i).vm := fun i hi =>
+    hmarksAlongRun (j + i) (g i) (hreach i hi)
+  have hgy : g k = y := hgk
+  subst hgy
+  have hextra : ∀ i, i ≤ k → IPackMW centre place entry q first w (g i) → Extra7 (g i) := by
+    intro i hi hip
+    refine extra7_of_front_steps_pack (m := M) (w := w)
+      (steps_to_end_of_trace htr (k - i) i (by omega)) ?_ (hauxi i hi).front ?_ ?_ ?_ hm1 hmle ?_
+    · intro d z hz
+      exact hlv0 (j + i + d) z (steps_trans (hreach i hi) hz)
+    · exact (hauxi k le_rfl).front
+    · exact hry
+    · exact hip.pack
+    · exact hyb
+  have hexx : Extra7 x := by
+    have := hextra 0 (Nat.zero_le _) (by rw [hg0]; exact hx)
+    rw [hg0] at this; exact this
+  have hbx : BigPack2MG7W'' centre place entry q first w x :=
+    ⟨hx, hauxx, hlv0 j x hjx, hmx, hexx⟩
+  have hbig : ∀ i, i ≤ k → BigPack2MG7W'' centre place entry q first w (g i) := by
+    intro i
+    induction i with
+    | zero => intro _; rw [hg0]; exact hbx
+    | succ n ih =>
+      intro hi
+      have hn := ih (by omega)
+      exact bigPack2MG7W''_tick_M centre place entry q first hn (hmg (n+1) hi)
+        (fun hip => hextra (n+1) hi hip)
+        (fun hs => hSP (g n) (bigPack2MG7W_of_W'' centre place entry q first hn
+          (fun hm => absurd (hs.1.symm.trans hm) (by decide))) hs)
+        (htr.tick n (by omega)) (htr.good (n+1) hi)
+        (hlv0 (j + (n+1)) (g (n+1)) (hreach (n+1) hi))
+  exact ⟨g, hg0, hgk, htr, fun i hi => (hbig i hi).ipackM⟩
+
+#print axioms packRunR_MW_marksFree
+
 #print axioms bigPack2MG7W''_tick_M
 #print axioms packRunR_MWP
 

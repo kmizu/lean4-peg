@@ -99,11 +99,17 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 目標は閉じた項として存在し、足りない義務は `axiom` で明示されている。
 `PalPeg/Axioms.lean` の `#guard_msgs in #print axioms` がラチェットで、
 1 個外すと guard が壊れて更新を強制される。**標準 3 公理だけになったら §10.5 達成。**
-いまは **4 個**の原子的義務が残っている（`cycleOracle` / `localRealization` /
-`marksEntry` / `shiftPalAtScanStates`。経路は
-`PalPeg/PalInPegUnconditional.lean` の docstring に表で記録）。
-難易度順は `marksEntry`（残差は `WindowInOrigin` 1 つ、障害は `Fair`）→
-`shiftPalAtScanStates` → `cycleOracle` → `localRealization`。
+いまは **3 個**の原子的義務が残っている（`shiftPalAtScanStates` / `cycleOracle` /
+`localRealization`。経路は `PalPeg/PalInPegUnconditional.lean` の docstring に表で記録）。
+`marksEntry` は 2026-09-19 に放電（`CloseoutMarksPack.packRunR_MW_marksFree`、n110）:
+唯一の消費者だった `packRunR_MW` の 2 箇所は `MarksInv'` を作るためだけにあり、
+`CloseoutPackRun17.marksInv'_of_run'` が `H_marksEntry'` なしで run 全点に
+それを与えていた。4 入力（`first ≠ 4` / `hfloor_of_invLP2` /
+`windowInOrigin_alongRun` / `cpack_of_entry`）は `InvLPC` の origin で全部無償。
+`WindowInOrigin` の障害だった `Fair` は、モデル欠陥 `M-fallbackPlace` を直した
+時点（n107）で消えていた。
+**「`hme` の producer は `hpack` だけ」という過去の自分の記述を一次情報として
+扱っていたせいで 1 日以上見落とした。**
 
 **guard を狭く切ると義務が増える。** 2026-09-19 に `ChainPositionInvariantWithShiftPhase.payload`
 の guard が `ScanNR`（`mode = scan ∧ replaying = false`）だったせいで replay 中の

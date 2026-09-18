@@ -34,7 +34,6 @@ import PalPeg.BranchSupply
 | `obligation_chainBackLag_alongTrace` | chain `.back` 相の lag 形状 | **producer なし**。`LagCan` は `.watch` 相のみ。`.back` は `ChainStep.copyEnd` が `.copy` の lag を持ち込むところで確立される。`CloseoutChainPack` / `CloseoutChainSideR` に同名の場があるのでその証明を参照 |
 | `obligation_shiftExitLedger_alongTrace` | `shift_done` での `CentreLedger` | 3 節のうち `canRight center` / `Sane center` は §5b でタダ。残るは等式 `radiusExact`。scan 状態では `LPackM3` からタダなので、**shift 相へ運ぶ**のが仕事: `beginShiftVM` は center/radius/right を触らず（§5d）、`shiftTick` は center +1・radius −1・right 不変で保存する。side condition は `canRight s.center`（shift 相では `CentreRep` が無いので要調達）と `0 < value s.radius`（`RadLedger.shiftBud` ＋ `remainingPos` から出る） |
 | `obligation_rewindMargin_alongTrace` | rewind 相の `2 ≤ position left` | **producer なし**。`LPackM2.centreOrder` は `position left ≤ position center`（上界）なので別物。CLAUDE.md は「`CentreMargin` 1 葉に集約」と記録 |
-| `obligation_marksEntry` | `H_marksEntry'` | `CloseoutMarksFree.marksInv'_of_marksRun`（origin）＋ `CloseoutMarksPack.bigPack2MG7W''_tick_M`（tick）。残差は `WindowInOrigin`（run 形、copy 状態）＋ `EntryCounters`（scan 状態）＋ 側条件 `first ≠ 4`。**`EntryCounters` は `RadiusRep`（＝`radiusExact` と同内容）を含むので `shiftExitLedger` と材料を共有する** |
 | `obligation_cycleOracle` | `CycleOracleMC3` | `CloseoutOracleBridge.hor_of_H_oracle` ＋ `CloseoutOracle8.h_oracle_of_leaves7`。11 葉（CLAUDE.md §3） |
 | `obligation_localRealization` | `H_realizeLIMW'`（局所実現） | **producer なし**（5 機械の鎖の 2→3 段）。難易度は宣言しない——`LagCan` / `CentreRep` と同じ「切り方の誤り」の可能性が高い |
 
@@ -65,10 +64,6 @@ axiom obligation_shiftPalAtScanStates (entry q : ℕ) (first : Fin 9) :
     ∀ (w : List (Fin 2)) (x : State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm
-
-/-- **(OBLIGATION)** `H_marksEntry'`。 -/
-axiom obligation_marksEntry (entry q : ℕ) (first : Fin 9) :
-    ∀ w : List (Fin 2), H_marksEntry' (PofC centreC placeC entry w) q first
 
 /-- **(OBLIGATION)** `CycleOracleMC3`。 -/
 axiom obligation_cycleOracle (entry q : ℕ) (first : Fin 9) :
@@ -113,7 +108,7 @@ run に沿ってしか存在しないので**原理的に落ちない**。`hpack
 第 1 成分 ＋ `¬ atFirst` から `2 ≤ position left`（`two_le_left_of_marksInv'`）。
 `Tick.rewind_one` / `rewind_pair` は `¬ atFirst` を**構成子として持つ**ので、
 `rewindLeft` / `Extra8.rewindMargin` / `RewindMarginAt` をその guard で再定式化すれば
-`MarksInv'`（＝既存の公理 `obligation_marksEntry`）だけで閉じる。
+`MarksInv'`（`BranchSupply.marksInv_alongTrace_ofPreTrace`、無償）だけで閉じる。
 
 **`CentreMargin` は `+1` 分だけ強すぎた**（guard なしでは
 `one_le_left_of_marksInv'` の `1 ≤ position left` しか出ない）。
@@ -130,14 +125,37 @@ n96 の「`rewindMargin` を `CentreMargin` 1 葉に縮めた」は数だけの�
 
 **過剰量化の 10 例目。run 形と trace 形は別物で、trace 形のほうが真に弱い。** -/
 
+/-! `H_marksEntry'`（旧 `obligation_marksEntry`）は**放電済み**
+（`CloseoutMarksPack.packRunR_MW_marksFree`、新規入力は側条件 `first ≠ 4` だけ）。
+
+`hme` の消費者は `CloseoutOracleW.packRunR_MW` の 2 箇所だけで、どちらも
+`MarksInv'` を作るためだけにあった。`CloseoutPackRun17.marksInv'_of_run'` は
+**`H_marksEntry'` なしで** run の全点に `MarksInv'` を与えるもので、その 4 入力が
+`InvLPC` の origin ではすべて無償だった:
+
+| 入力 | 出どころ |
+|---|---|
+| `first ≠ 4` | 側条件（`first = 0` なので `by decide`） |
+| `hfl`（scan 状態で `0 ≤ value length`） | `GalilInvPlus2.hfloor_of_invLP2`（`InvLPC.1` がそのまま `InvLP2`） |
+| `hwin`（copy 状態で `WindowInOrigin`） | `CloseoutPackRun25.windowInOrigin_alongRun`。origin は scan なので origin 側の前提が空虚 |
+| `CPack q c r` | `GalilCentreLive.cpack_of_entry` ＋ `CloseoutMarksFree.entryCounters_of_invLPC` |
+
+`windowInOrigin_alongRun` が `Fair` なしで通るようになったのは、モデル欠陥
+`M-fallbackPlace` を直して `beginFallbackVM'` が fallback 先の窓長を
+`position right` で抑えるようにしたから（n107）。
+
+**つまり `hme` は最初から独立した義務ではなかった。** `CloseoutMarksPack` の
+冒頭は「`hme` は `hpack` の中にある」と書いていたが、正しくは
+**`hme` は run の中にある**。 -/
+
 /-! ## 目標 -/
 
-/-- **目標**: `PAL ∈ PEG` を前提ゼロで。いまは上の 4 個の `axiom` に依存している。
+/-- **目標**: `PAL ∈ PEG` を前提ゼロで。いまは上の 3 個の `axiom` に依存している。
 `#print axioms unconditional` が標準 3 公理だけになったら証明完了。 -/
 theorem unconditional : RecognizedByTotalPEG PAL :=
   given_scanLandingObligations 0 0 0
     (obligation_shiftPalAtScanStates 0 0 0)
-    (obligation_marksEntry 0 0 0)
+    (by decide)
     (obligation_cycleOracle 0 0 0)
     (obligation_localRealization 0 0 0)
     (fun w st Tc hPreTraceIMW =>
@@ -145,17 +163,17 @@ theorem unconditional : RecognizedByTotalPEG PAL :=
         hPreTraceIMW
         (fun x hBig hScanNR => obligation_shiftPalAtScanStates 0 0 0 w x hBig hScanNR)
         (PalPeg.BranchSupply.shiftExitLedgerAt_alongTrace centreC placeC 0 0 0
-          hPreTraceIMW (PalPeg.BranchSupply.marksInv_alongTrace centreC placeC 0 0 0
-            hPreTraceIMW.base.pre (obligation_marksEntry 0 0 0 w)))
-        (PalPeg.BranchSupply.marksInv_alongTrace centreC placeC 0 0 0 hPreTraceIMW.base.pre
-          (obligation_marksEntry 0 0 0 w))
+          hPreTraceIMW (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 0 0 (by decide)
+            hPreTraceIMW.base.pre))
+        (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 0 0 (by decide)
+          hPreTraceIMW.base.pre)
         (PalPeg.BranchSupply.matchRest_alongTrace centreC placeC 0 0 0 hPreTraceIMW
-          (PalPeg.BranchSupply.marksInv_alongTrace centreC placeC 0 0 0 hPreTraceIMW.base.pre
-            (obligation_marksEntry 0 0 0 w))))
+          (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 0 0 (by decide)
+            hPreTraceIMW.base.pre)))
     (fun w st Tc hw hPreTraceIMW =>
       PalPeg.BranchSupply.chainVerifierSupply_alongTrace centreC placeC 0 0 0 hw hPreTraceIMW
-        (PalPeg.BranchSupply.marksInv_alongTrace centreC placeC 0 0 0 hPreTraceIMW.base.pre
-          (obligation_marksEntry 0 0 0 w))
+        (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 0 0 (by decide)
+          hPreTraceIMW.base.pre)
         (hPreTraceIMW.base.tc1 ▸ hPreTraceIMW.base.pre.mono 1 w.length hw le_rfl))
 
 #print axioms unconditional

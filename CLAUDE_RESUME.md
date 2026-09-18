@@ -32,6 +32,66 @@
 
 
 
+## 2026-09-19 n110: `obligation_marksEntry` を放電（公理 4 → 3）
+
+**全体 build 成功（EXIT=0、エラー 0、`sorry` なし）。`PalPeg/Axioms.lean` のラチェット緑。
+`PalInPeg.unconditional` の公理は
+`[propext, Classical.choice, Quot.sound, obligation_cycleOracle,
+obligation_localRealization, obligation_shiftPalAtScanStates]` の 3 義務。
+無条件 PAL は未完。計画書 §10.5（前提ゼロ）は未達。**
+
+### 何が起きたか
+
+`hme : ∀ w, H_marksEntry' (PofC centreC placeC entry w) q first` の消費者は
+`CloseoutOracleW.packRunR_MW` の **2 箇所だけ**で、どちらも `MarksInv'` を作るため
+だけにあった（`CloseoutMarksPack` の冒頭が既にそう書いていた）。
+
+ところが `CloseoutPackRun17.marksInv'_of_run'` は **`H_marksEntry'` なしで**
+run の全点に `MarksInv'` を与える定理で、その 4 入力が `InvLPC` の origin では
+すべて無償だった:
+
+| 入力 | 出どころ |
+|---|---|
+| `first ≠ 4` | 側条件。`first = 0` なので `by decide` |
+| `hfl`（scan 状態で `0 ≤ value length`） | `GalilInvPlus2.hfloor_of_invLP2`。`InvLPC.1` がそのまま `InvLP2` |
+| `hwin`（copy 状態で `WindowInOrigin`） | `CloseoutPackRun25.windowInOrigin_alongRun`。origin は scan なので origin 側の前提が空虚 |
+| `CPack q c r` | `GalilCentreLive.cpack_of_entry` ＋ `CloseoutMarksFree.entryCounters_of_invLPC` |
+
+`windowInOrigin_alongRun` が `Fair` なしで通るようになったのは n107 のモデル修正
+`M-fallbackPlace`（`beginFallbackVM'` が fallback 先の窓長を `position right` で抑える）
+のおかげ。つまり **n107 のモデル忠実性の修正がそのまま義務 1 個を消した。**
+
+### 追加/変更したもの
+
+* `CloseoutMarksPack.packRunR_MW_marksFree`（新規、標準 3 公理）—
+  `packRunR_MWP` と本体は同じで、`hpk`（反証済みの `ChainPack`）の代わりに
+  `marksInv'_of_run'` を使う。前提は `h4 : first ≠ 4` と `hSP` だけ。
+* `CloseoutFinalBranch.given_scanLandingObligations` — `hme` パラメータを削除し
+  `h4 : first ≠ 4` に置換（`packRunR_MW` → `packRunR_MW_marksFree`）。
+  兄弟の `given_landingObligationsAlongRun` /
+  `given_landingObligationsSansRadiusLedger` は歴史的経路なので触っていない。
+* `PalPeg/PalInPegUnconditional.lean` — `axiom obligation_marksEntry` を削除、
+  呼び出しを `(by decide)` に。
+* `PalPeg/Axioms.lean` — ラチェットを 3 義務に更新。
+
+### 教訓
+
+**`hme` は最初から独立した義務ではなかった。** `CloseoutMarksPack` の冒頭は
+「`hme` は `hpack` の中にある」と書いていたが、正しくは **`hme` は run の中にある**。
+`hpack`（反証済み）を経由する必要すらなかった。
+`marksInv'_of_run'` は `hme` を落とすために作られた定理として既に存在していたのに、
+「`hme` の producer は `hpack` だけ」という**過去の自分の記述**を一次情報として
+扱っていたせいで 1 日以上見落としていた。
+
+### 残り 3 義務（難易度は宣言しない）
+
+| 公理 | 内容 | 既知の経路 |
+|---|---|---|
+| `obligation_shiftPalAtScanStates` | scan 状態で `ShiftPal` | `CloseoutBundleRun.shiftPal_of_run_aux`。残差は run 形の `ChainPositionInvariantWithShiftPhase` ＋ `H_readsShift` ＋ `H_freshShift` ＋ `periodOnly = false` 分岐（`H_fresh`）。`hcan` は `BranchSupply.canRightAtScanOrShift_alongTrace` で**放電済み** |
+| `obligation_cycleOracle` | `CycleOracleMC3` | `CloseoutOracleBridge.hor_of_H_oracle` ＋ `CloseoutOracle8.h_oracle_of_leaves7`（11 葉、CLAUDE.md §3） |
+| `obligation_localRealization` | `H_realizeLIMW'` | producer なし（5 機械の鎖の 2→3 段） |
+
+
 ## 2026-09-19 n109: `SpanRep` の正しい guard は `scan ∨ shift`（一次情報で確定）
 
 **全体 build 成功（EXIT=0）。既存の旗艦定理は標準公理のみ。

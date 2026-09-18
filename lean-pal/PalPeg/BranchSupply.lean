@@ -475,7 +475,7 @@ theorem rcouple_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc :
       (by decide : Mode.init ≠ Mode.rewind)
       (by rw [hPreTrace.start]; rfl)
 
-/-- **`MarksInv'` は `H_marksEntry'`（既存の公理 `obligation_marksEntry`）から
+/-- **`MarksInv'` は `H_marksEntry'`（放電済み: `marksInv_alongTrace_free`）から
 trace 全域に運ばれる。**  boot は `init` 相なので `marksInv'_of_run` の
 `m ≠ Mode.rewind` が満たされる。 -/
 theorem marksInv_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
@@ -1274,6 +1274,80 @@ theorem cpack_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
   intro i hi1 hi
   exact PalPeg.GalilCentreLive.cpack_steps (onLetterVM (a :: rest)) leftFirstVM centre place
     entry q first 2048 (PalPeg.GalilTrailFront.steps_between hPreTrace.trace hi1 hi) hfloor hCP1
+
+/-- **`MarksInv'` を trace 全域に、`H_marksEntry'` なしで。**
+`CloseoutPackRun17.marksInv'_of_run'` の 4 入力はすべて無償だった:
+
+| 入力 | 出どころ |
+|---|---|
+| `first ≠ 4` | 側条件（`first = 0` なら `by decide`） |
+| `hfl`（scan 状態で `0 ≤ value length`） | `GalilInvPlus2.hfloor_of_invLP2`（`live_pack_trace` と同じ経路） |
+| `hwin`（copy 状態で `WindowInOrigin`） | `CloseoutPackRun25.windowInOrigin_alongRun`（`M-fallbackPlace` の境界から） |
+| `CPack` ＋ origin が scan | `cpack_of_entry` ＋ `init_tick_target_is_scan`（`st 1`） |
+
+**`MarksRun` の `EntryCounters` 半分は `lenNonneg_of_entryCounters` 経由で
+`0 ≤ value length` にしか使われていない**ので、`hfloor` で足りる。 -/
+theorem marksInv_alongTrace_free {w : List (Fin 2)} (hw : 0 < w.length) (h4 : first ≠ 4)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTrace : PreTrace centre place entry q first w st Tc)
+    (hTcPos : 1 ≤ Tc w.length) :
+    ∀ i, 1 ≤ i → i ≤ Tc w.length →
+      PalPeg.CloseoutPackRun16.MarksInv' first (st i).ctl (st i).vm := by
+  rcases w with _ | ⟨a, rest⟩
+  · exact absurd hw (by simp)
+  have hb : st 0 = boot (a :: rest) := hPreTrace.start
+  have hstep0 : Tick (galilFrameS (PofC centre place entry (a :: rest)) q first) 2048
+      (boot (a :: rest)) (st 1) := by
+    have h := hPreTrace.trace.tick 0 (by omega)
+    rwa [hb] at h
+  obtain ⟨hInv, hSpan, hR1, hrep1⟩ :=
+    PalPeg.GalilTrailFront.inv_of_boot_tick centre place entry q first a rest hstep0
+  have hOut : OutputRel (a :: rest) (st 1).ctl (st 1).vm :=
+    hPreTrace.trace.good 1 hTcPos hInv.mode.1 hInv.mode.2.1
+  have hInvL : PalPeg.GalilOracleLocal.InvL (a :: rest) (st 1).ctl (st 1).vm :=
+    ⟨PalPeg.GalilOracleDischarge.invS_of_inv hInv, hOut⟩
+  have hEC : PalPeg.GalilGlueBLeaves.EntryCounters (a :: rest) (st 1).vm :=
+    PalPeg.GalilGlueBLeaves.entryCounters_of_inv hInv hSpan
+  have hsteps01 : Steps (galilFrameS (PofC centre place entry (a :: rest)) q first) 2048 1
+      ⟨GalilScaffoldController.initial 2048, GalilBootVM.initVM0 (a :: rest)⟩
+      ⟨(st 1).ctl, (st 1).vm⟩ := .succ hstep0 (.zero _)
+  have hInvLP2 :=
+    PalPeg.GalilInvPlus2.invLP2_of_boot centre place entry q first 2048 hsteps01 ⟨hInvL, hEC⟩
+  have hfloor := PalPeg.GalilInvPlus2.hfloor_of_invLP2 centre place entry q first hInvLP2
+  have hCP1 := PalPeg.GalilCentreLive.cpack_of_entry q
+    (PalPeg.GalilOracleDischarge.invS_of_inv hInv) hEC
+  have hMode1 : (st 1).ctl.mode = Mode.scan := hInv.mode.1
+  intro i hIndexPos hIndexLeTc
+  exact PalPeg.CloseoutPackRun17.marksInv'_of_run' (onLetterVM (a :: rest)) leftFirstVM
+    centre place entry q first 2048 h4
+    (PalPeg.GalilTrailFront.steps_between hPreTrace.trace hIndexPos hIndexLeTc)
+    hfloor
+    (fun m z hz hm => PalPeg.CloseoutPackRun25.windowInOrigin_alongRun (onLetterVM (a :: rest))
+      leftFirstVM centre place entry q first 2048 hz
+      (fun hc => absurd (hMode1.symm.trans hc) (by decide)) hm)
+    hCP1 hMode1
+
+/-- **`marksInv_alongTrace_free` の使いやすい形。**  `MarksInv'` は
+`mode = rewind` で guard されているので、`0 < |w|` と `1 ≤ Tc |w|` は
+guard から内部調達できる（boot は `init` 相なので空虚）。 -/
+theorem marksInv_alongTrace_ofPreTrace {w : List (Fin 2)} (h4 : first ≠ 4)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTrace : PreTrace centre place entry q first w st Tc) :
+    ∀ i, i ≤ Tc w.length →
+      PalPeg.CloseoutPackRun16.MarksInv' first (st i).ctl (st i).vm := by
+  intro i hIndexLeTc hMode
+  have hIndexPos : 1 ≤ i := by
+    rcases Nat.eq_zero_or_pos i with rfl | h; swap; · exact h
+    exfalso; rw [hPreTrace.start] at hMode; exact Mode.noConfusion hMode
+  have hw : 0 < w.length := by
+    rcases Nat.eq_zero_or_pos w.length with hlen | h; swap; · exact h
+    exfalso; rw [hlen, hPreTrace.tc0] at hIndexLeTc; omega
+  exact marksInv_alongTrace_free centre place entry q first hw h4 hPreTrace (by omega)
+    i hIndexPos hIndexLeTc hMode
+
+#print axioms marksInv_alongTrace_ofPreTrace
+
+#print axioms marksInv_alongTrace_free
 
 #print axioms cpack_alongTrace
 
@@ -2942,7 +3016,7 @@ r + pairOff c + 2 ≤ position s.center`（`Run13:227`）。
 `position p = if p.gap then 2·|left| else 2·|left| − 1`（`ChainInputSupply:496`）なので
 これは**リストの長さの算術**であって幾何ではない。 -/
 
-/-- **`RewindMarginAt` は `MarksInv'`（＝既存の公理 `obligation_marksEntry`）から出る。**
+/-- **`RewindMarginAt` は `MarksInv'`（放電済み: `marksInv_alongTrace_free`）から出る。**
 `rewind_one` / `rewind_pair` は `¬ atFirst` を構成子として持つので、`two_le_left_of_marksInv'`
 がそのまま効く。`CentreMargin` は**要らない**（それは `+1` 分だけ強すぎた）。 -/
 theorem rewindMarginAt_alongTrace {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}

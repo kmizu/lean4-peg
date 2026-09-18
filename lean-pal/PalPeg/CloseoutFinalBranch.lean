@@ -1,3 +1,4 @@
+import PalPeg.CloseoutMarksPack
 import PalPeg.BranchSupply
 import PalPeg.CloseoutFinalFour
 import PalPeg.CloseoutFinalVer
@@ -211,7 +212,7 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
-    (hme : ∀ w : List (Fin 2), H_marksEntry' (PofC centreC placeC entry w) q first)
+    (h4 : first ≠ 4)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
@@ -230,7 +231,8 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
         (CloseoutPackRun6.h_bootShift centreC placeC entry q first)
         (CloseoutPackRun6.h_landShift centreC placeC entry q first)))
     (h_oracleIMW_of_MC3_W centreC placeC entry q first
-      (fun w => packRunR_MW centreC placeC entry q first (hSP w) (hme w))
+      (fun w => PalPeg.CloseoutMarksPack.packRunR_MW_marksFree centreC placeC entry q first
+        h4 (hSP w))
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       hor)
     hC
