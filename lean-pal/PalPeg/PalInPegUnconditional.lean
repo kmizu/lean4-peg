@@ -89,49 +89,21 @@ run に沿ってしか存在しないので**原理的に落ちない**。`hpack
 
 `bg` 場（`scan_wait` / `scan_count` 着地）は放電済みなのでここに無い。 -/
 
-/-- **(OBLIGATION)** `MatchRes2` の残差 `MatchRest`（trace 形）。
+/-! `MatchRes2` の残差 `MatchRest` は**放電済み**
+（`BranchSupply.matchRest_alongTrace`、新規入力は `CentreMargin` だけ）。
 
-`scan_match` 着地と `scan_shift` 入口の 2 義務は**同じ `MatchRes2 w c s`** を入力に
-取るので（`CloseoutPackRun48.matchLanding_of_matchRes2` /
-`shiftEntryLanding_of_matchRes2`）、この 1 つに合流した。
-`MatchRes2` 自体は `CloseoutPackRun49.matchRes2_of_lpackM3` が `LPackM3`（運べる）
-＋ `LTickLeavesN`（タダ）＋ `LTickLeaves3`（`backLag` は放電済み）＋ `MatchRest` から出す。
+4 場すべてが消えた経緯:
 
-`MatchRest` の 3 場: `repV`（verifier の入力表現、`VerRun` と同内容）/
-`repVmid`（1 `ChainStep` 先でも表現、`right_word` で出るはず）/
-`replayPay`（replaying 時の source の payload）。
+| 場 | 決着 |
+|---|---|
+| `canRNext` | **偽**（`MatchRestRefute.matchRest_alongTrace_false`）。着地側の 1 歩分に切り直し |
+| `repV` | `CloseoutVerSide.VerRun` の第 1 成分そのもの |
+| `replayPay` | `ChainPositionInvariantWithShiftPhase.payload` の guard を `ScanNR` から `mode = scan` へ広げたら源で両 replay 分岐が出た |
+| `repVmid` | `ChainVerifierRepresents`（chain の verifier が 3 相すべてで入力を表現）を 1 手進めるだけ |
 
-**2026-09-19: 4 番目の場 `canRNext`（`canRight (right s.right)`）は削除した。**
-`MatchRestRefute.matchRest_alongTrace_false` が機械検査済みで `False` を導く——
-`ReportPointAt.atPrefix` は報告点で `position right = 2|w| − 1` を**等式**で与えるので、
-右ヘッドに 2 歩分の余裕は原理的に無い。**主張が強すぎた**のであって、
-未証明の難所ではなかった。消費者が要るのは**着地状態の 1 歩分**
-（`canRight t.right`）で、それは `BranchSupply.canRightAtScanOrShift_alongTrace` が
-trace から無償で出す。義務は `matchLand` / `entryLand` の仮説に移した。 -/
-axiom obligation_matchRest_alongTrace (entry q : ℕ) (first : Fin 9) :
-    ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
-      ∀ j, j ≤ Tc w.length →
-        PalPeg.CloseoutPackRun49.MatchRest w (st j).ctl (st j).vm
-
-/-! `chain` の `.back` 相の lag 形状は**放電済み**
-（`BranchSupply.chainBackLagAt_alongTrace`、新規入力ゼロ）。
-実機の lag は `chain.start()` で `radius` から作られ `inc` / `dec` でしか動かないので
-`Canonical` と非負は構成から自明。`LagCan` が `.watch` 相だけに切られていたために
-残差に見えていた。 -/
-
-/-! `shift_done` での `CentreLedger`（`ShiftExitLedgerAt`）は**放電済み**
-（`BranchSupply.shiftExitLedgerAt_alongTrace`、新規入力は `CentreMargin` だけ）。
-`CentreLedger` の 3 節の出どころ:
-
-* `canRight center` — `HeadsRepresent`（中心＋右の入力表現、`headsRepresent_tick` が
-  `Tick` の 24 構成子すべてで保存）＋ 中心の位置上界（`RadLedger.le` から）
-* `Sane center` — `LPackM2.shiftGeom` が直接持っている
-* `position center + radius = position right` — `RadiusExactOffRewindPhase`
-  （shift 相は rewind 相 guard の外）
-
-`LPackM2.centreRep` の guard が `rewind ∨ replayStart` だけに切られていたために
-残差に見えていた（`LagCan` と同じパターンで、これが 6 例目）。 -/
+`ChainVerifierRepresents` の側条件はゼロ。`right` は入力端で no-op なので
+（`representsAfterRight_free`）`canRight` の供給が一切要らず、誕生の
+`Represents s.center.head w` だけが外部入力で、それは `HeadsRepresent.centre`。 -/
 
 /-- **(OBLIGATION)** rewind 相での中心の余裕
 `r + pairOff c + 2 ≤ position s.center`（trace 形）。
@@ -150,14 +122,19 @@ axiom obligation_centreMargin_alongTrace (entry q : ℕ) (first : Fin 9) :
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
       ∀ j, j ≤ Tc w.length → PalPeg.CloseoutPackRun13.CentreMargin (st j).ctl (st j).vm
 
-/-- **(OBLIGATION)** chain の verifier が入力を表現し lag が正規（run 形）。 -/
-axiom obligation_verifierRunAlongRun (entry q : ℕ) (first : Fin 9) :
-    ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM),
-      st 0 = boot w → PalPeg.CloseoutVerSide.VerRun centreC placeC entry q first w (st 0)
+/-! chain の verifier 側供給（旧 `obligation_verifierRunAlongRun`）は**放電済み**
+（`BranchSupply.chainVerifierSupply_alongTrace`、新規入力は `CentreMargin` だけ）。
+
+`VerRun` は `Steps` で到達可能な**任意の**状態に量化していたので trace からは出なかった
+（`Tick` は決定的でない）。trace の点で述べた `ChainVerifierSupplyAlongTrace` に
+切り直すと、`VerRep` は `ChainVerifierRepresents` の `.watch` 場、
+`LagCan` は `ChainLagCanonical` の `.watch` 場で、どちらも搬送済み。
+
+**過剰量化の 10 例目。run 形と trace 形は別物で、trace 形のほうが真に弱い。** -/
 
 /-! ## 目標 -/
 
-/-- **目標**: `PAL ∈ PEG` を前提ゼロで。いまは上の 7 個の `axiom` に依存している。
+/-- **目標**: `PAL ∈ PEG` を前提ゼロで。いまは上の 5 個の `axiom` に依存している。
 `#print axioms unconditional` が標準 3 公理だけになったら証明完了。 -/
 theorem unconditional : RecognizedByTotalPEG PAL :=
   given_scanLandingObligations 0 0 0
@@ -169,12 +146,15 @@ theorem unconditional : RecognizedByTotalPEG PAL :=
       PalPeg.BranchSupply.scanLandingObligations_alongTrace_of_matchRest centreC placeC 0 0 0
         hPreTraceIMW
         (fun x hBig hScanNR => obligation_shiftPalAtScanStates 0 0 0 w x hBig hScanNR)
-        (obligation_verifierRunAlongRun 0 0 0 w st hPreTraceIMW.base.pre.start)
         (PalPeg.BranchSupply.shiftExitLedgerAt_alongTrace centreC placeC 0 0 0
           hPreTraceIMW (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW))
         (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW)
-        (obligation_matchRest_alongTrace 0 0 0 w st Tc hPreTraceIMW))
-    (obligation_verifierRunAlongRun 0 0 0)
+        (PalPeg.BranchSupply.matchRest_alongTrace centreC placeC 0 0 0 hPreTraceIMW
+          (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW)))
+    (fun w st Tc hw hPreTraceIMW =>
+      PalPeg.BranchSupply.chainVerifierSupply_alongTrace centreC placeC 0 0 0 hw hPreTraceIMW
+        (obligation_centreMargin_alongTrace 0 0 0 w st Tc hPreTraceIMW)
+        (hPreTraceIMW.base.tc1 ▸ hPreTraceIMW.base.pre.mono 1 w.length hw le_rfl))
 
 #print axioms unconditional
 

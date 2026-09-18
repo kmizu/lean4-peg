@@ -171,10 +171,10 @@ theorem h_bgP2_of_supply {w : List (Fin 2)}
       LagCan s.chain)
     (hstart : BgStartP2 centre place entry q first w) :
     H_BackgroundLandingChainLedger centre place entry q first w := by
-  intro c s t hm hx hb hs hni
+  intro c s t hm hx hb hni
   by_cases hi : s.chain = ChainVM.idle
-  · exact hstart c s t hm hx hi hb hs hni
-  · have P : ScanPositionPayloadWithChainLedger w s := hx.payload hs hi
+  · exact hstart c s t hm hx hi hb hni
+  · have P : ScanPositionPayloadWithChainLedger w s := hx.payload hm hi
     obtain ⟨hl, hr, -, hcen, -, hrad, -⟩ :=
       backgroundS_fields (PofC centre place entry w) q first hb
     have hstep : ChainStep s.chain t.chain := by
@@ -217,7 +217,6 @@ structure MatchRes2 (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   lagCan : LagCan s.chain
   backLag : ∀ (v : GalilScaffoldChainPeriod.Tape) (h lag margin : Counter) (ver : PlaceHead),
     s.chain = .back v h lag margin ver → Canonical lag ∧ 0 ≤ value lag
-  replayPay : c.replaying = true → s.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w s
   saneR : Sane s.right
   canR : canRight s.right
   repNext : GalilScaffoldInputTrace.Represents (right s.right).head w ∧
@@ -228,11 +227,10 @@ structure MatchRes2 (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   startLedger : s.chain = ChainVM.idle → CentreLedger s
 
 def H_matchRes2 (w : List (Fin 2)) : Prop :=
-  ∀ (c : Control) (s s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
+  ∀ (c : Control) (s s' t : GalilVM), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
     (galilFrameS (PofC centre place entry w) q first).compare s s' →
     (galilFrameS (PofC centre place entry w) q first).matched s' →
     (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
-    ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
     t.chain ≠ ChainVM.idle → MatchRes2 w c s
 
 /-- **`scan_match` 着地の位置台帳、状態局所版。**  着地の消費側
@@ -245,15 +243,14 @@ trace 形の義務を放電するにはこの形が必要（global 形は放電�
 存在しないので原理的に満たせない）。 -/
 theorem matchLanding_of_matchRes2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
     (hres : MatchRes2 w c s) :
-    ∀ (s' t : GalilVM) (o b : Bool), c.mode = Mode.scan →
+    ∀ s' t : GalilVM, c.mode = Mode.scan →
       ChainPositionInvariantWithShiftPhase w c s →
       (galilFrameS (PofC centre place entry w) q first).compare s s' →
       (galilFrameS (PofC centre place entry w) q first).matched s' →
       (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
-      ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
       t.chain ≠ ChainVM.idle → GalilScaffoldChainVerifier.canRight t.right →
       ScanPositionPayloadWithChainLedger w t := by
-  intro s' t o b hm hx hcmp hmt hpl hs hni hCanRightAtTarget
+  intro s' t hm hx hcmp hmt hpl hni hCanRightAtTarget
   have R := hres
   have hpl' : t = (if c.replaying then {s' with replay := dec s'.replay} else s') := hpl
   have hts : t.left = s'.left ∧ t.right = s'.right ∧ t.chain = s'.chain ∧
@@ -288,11 +285,8 @@ theorem matchLanding_of_matchRes2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
   rw [hsc] at htc
   rw [hscen] at htcen
   rw [hsrad] at htrad
-  have hP : s.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w s := by
-    intro hne
-    cases hrep : c.replaying with
-    | false => exact hx.payload ⟨hm, hrep⟩ hne
-    | true => exact R.replayPay hrep hne
+  have hP : s.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w s :=
+    fun hne => hx.payload hm hne
   have hlv : 0 < s.right.head.left.length :=
     (PalPeg.CloseoutLPack3.present_iff_left R.repR.1).1 R.repR.2
   have hposR : position (right s.right) = position s.right + 1 :=
@@ -333,9 +327,9 @@ theorem matchLanding_of_matchRes2 {w : List (Fin 2)} {c : Control} {s : GalilVM}
 /-- **global 版**（旧 `h_matchP2_of_target` の型そのまま）。既存の呼び出し側のために残す。 -/
 theorem h_matchP2_of_target {w : List (Fin 2)} (hres : H_matchRes2 centre place entry q first w) :
     H_MatchLandingChainLedger centre place entry q first w :=
-  fun c s s' t o b hm hx hcmp hmt hpl hs hni hCanRightAtTarget =>
+  fun c s s' t hm hx hcmp hmt hpl hni hCanRightAtTarget =>
     matchLanding_of_matchRes2 centre place entry q first
-      (hres c s s' t o b hm hx hcmp hmt hpl hs hni) s' t o b hm hx hcmp hmt hpl hs hni
+      (hres c s s' t hm hx hcmp hmt hpl hni) s' t hm hx hcmp hmt hpl hni
       hCanRightAtTarget
 
 end Match
@@ -421,11 +415,8 @@ theorem shiftEntryLanding_of_matchRes2 {w : List (Fin 2)} {c : Control} {s : Gal
   subst hteq
   have hsr : (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)).right = vs.right := afterBirth_right _ _
   have hsc : (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)).chain = vs.chain := afterBirth_chain _ _
-  have hPs : s.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w s := by
-    intro hne
-    cases hrep : c.replaying with
-    | false => exact hx.payload ⟨hm, hrep⟩ hne
-    | true => exact R.replayPay hrep hne
+  have hPs : s.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w s :=
+    fun hne => hx.payload hm hne
   have hlv : 0 < s.right.head.left.length :=
     (PalPeg.CloseoutLPack3.present_iff_left R.repR.1).1 R.repR.2
   have hposR : position (right s.right) = position s.right + 1 :=

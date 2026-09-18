@@ -147,7 +147,6 @@ theorem matchRes2_of_chainPack {w : List (Fin 2)} {c : Control} {s : GalilVM} {m
       repVmid := hp.repVmid
       lagCan := hp.lagCan hm
       backLag := hp.backLag
-      replayPay := hp.replayPay
       saneR := hp.saneR
       canR := hcan
       repNext := ⟨right_word _ w hrr hcan, PalPeg.CloseoutScanMargin4.right_present hrr hfr hcan⟩
@@ -200,7 +199,7 @@ theorem h_matchRes2_of_chainPack {w : List (Fin 2)}
     (hp : ∀ (c : Control) (s : GalilVM), ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
     (hb : ScanBudget centre place entry q first w)
     :
-    H_matchRes2 centre place entry q first w := fun c s s' t o b hm hx _ _ _ _ _ =>
+    H_matchRes2 centre place entry q first w := fun c s s' t hm hx _ _ _ _ =>
   matchRes2_of_budget centre place entry q first (hp c s hx) hm hb
 
 /-- **`H_shiftRes2` from the same bundle** — it asks for the identical

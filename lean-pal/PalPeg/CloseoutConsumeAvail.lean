@@ -52,7 +52,7 @@ theorem consumeAvail_of_bound {w : List (Fin 2)} {c : Control} {s : GalilVM} {m 
     (hlv : 0 < s.right.head.left.length)
     (hm1 : 1 ≤ m) (hmlt : m < w.length) (hpos : position s.right ≤ 2 * m - 1) :
     ConsumeAvail s.chain := by
-  have P := hx.payload hs hni
+  have P := hx.payload hs.1 hni
   exact consumeAvail_of_next_supply hrepN hfocN
     (canRight_next_of_bound hrepN hfocN P.canR hlv hm1 hmlt hpos) hstep
     hrepV hlag P.chainPos

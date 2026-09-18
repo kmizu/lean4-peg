@@ -66,7 +66,7 @@ theorem watchShiftS_of_supply {w : List (Fin 2)} {x : State GalilVM}
     WatchShiftS centre place entry q first w x := by
   intro hs hni s'' hcmp hmt hg wch hch
   have hs' : ScanNR ⟨x.ctl, x.vm⟩ := hs
-  have P := h.payload hs' hni
+  have P := h.payload hs'.1 hni
   -- the chain of the (unmatched) target is one plain `ChainStep` away
   have hstep : ChainStep x.vm.chain s''.chain := by
     obtain ⟨vs, vq, a, -, -, hiff, -, hchn, hteq⟩ :

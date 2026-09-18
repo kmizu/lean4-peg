@@ -447,7 +447,6 @@ structure MatchRest (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
     ChainStep s.chain y → y = .watch wch →
       GalilScaffoldInputTrace.Represents wch.machine.verifier.head w ∧
         wch.machine.verifier.head.focus ≠ none
-  replayPay : c.replaying = true → s.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w s
 
 /-- **`MatchRes2` from `LPackM3` plus `MatchRest`.**  Closed here: `repR`,
 `saneR`, `canR`, `repNext` (scan geometry plus `scanCanR`), `radNext` (the
@@ -470,7 +469,7 @@ theorem matchRes2_of_lpackM3 {w : List (Fin 2)} {c : Control} {s : GalilVM}
     right_position s.right hcan hlv
   obtain ⟨hc1, hc2, hc3⟩ := hP.centreLedger hm
   refine ⟨⟨hi.rightRep, hi.rightPresent⟩, hVerRep, hR.repVmid, hP.lagCan, hL3.backLag,
-    hR.replayPay, Or.inr hlv, hcan,
+    Or.inr hlv, hcan,
     ⟨right_word _ w hi.rightRep hcan, right_present _ w hi.rightRep hi.rightPresent hcan⟩,
     ?_, fun _ => ⟨hc1, hc2, hc3⟩⟩
   intro rad hsc

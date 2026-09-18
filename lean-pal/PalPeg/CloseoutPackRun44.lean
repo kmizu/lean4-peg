@@ -116,7 +116,7 @@ def BgStartP2 (w : List (Fin 2)) : Prop :=
   ∀ (c : Control) (s t : GalilVM), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
     s.chain = ChainVM.idle →
     (galilFrameS (PofC centre place entry w) q first).background s t →
-    ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t
+    t.chain ≠ ChainVM.idle → ScanPositionPayloadWithChainLedger w t
 
 /-- **`H_BackgroundLandingChainLedger` from the chain-start shape plus `ConsumeAvail`.**  With a live
 source chain every component transports: `backgroundS_fields` keeps
@@ -128,10 +128,10 @@ theorem h_bgP2_of_start {w : List (Fin 2)}
       ConsumeAvail s.chain)
     (hstart : BgStartP2 centre place entry q first w) :
     H_BackgroundLandingChainLedger centre place entry q first w := by
-  intro c s t hm hx hb hs hni
+  intro c s t hm hx hb hni
   by_cases hi : s.chain = ChainVM.idle
-  · exact hstart c s t hm hx hi hb hs hni
-  · have P : ScanPositionPayloadWithChainLedger w s := hx.payload hs hi
+  · exact hstart c s t hm hx hi hb hni
+  · have P : ScanPositionPayloadWithChainLedger w s := hx.payload hm hi
     obtain ⟨hl, hr, -, hcen, -, hrad, -⟩ :=
       backgroundS_fields (PofC centre place entry w) q first hb
     have hstep : ChainStep s.chain t.chain := by

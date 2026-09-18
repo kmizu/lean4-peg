@@ -169,7 +169,7 @@ theorem bgStartP2_of_centre {w : List (Fin 2)}
     (hcen : ∀ (c : Control) (s : GalilVM), c.mode = Mode.scan → ChainPositionInvariantWithShiftPhase w c s →
       CentreLedger s) :
     BgStartP2 centre place entry q first w := by
-  intro c s t hm hx hi hb hs hni
+  intro c s t hm hx hi hb hni
   obtain ⟨hl, hr, -, hcenf, -, hradf, -⟩ :=
     backgroundS_fields (PofC centre place entry w) q first hb
   obtain ⟨hc1, hc2, hc3⟩ := hcen c s hm hx

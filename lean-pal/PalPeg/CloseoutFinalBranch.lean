@@ -172,8 +172,10 @@ theorem given_landingObligationsSansRadiusLedger (entry q : ℕ) (first : Fin 9)
     (hres : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
       LandingObligationsAlongTraceSansRadiusLedger centreC placeC entry q first w st Tc)
-    (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
-      st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
+    (hChainVerifierSupply : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM)
+      (Tc : ℕ → ℕ), 0 < w.length →
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc) :
     RecognizedByTotalPEG PAL :=
   given_needBound entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
@@ -188,7 +190,7 @@ theorem given_landingObligationsSansRadiusLedger (entry q : ℕ) (first : Fin 9)
     hC
     (fun w st Tc hw h => needBound_of_landingObligationsSansRadiusLedger centreC placeC entry q first hw h
       (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
-      (hres w st Tc h) (hver w st h.base.pre.start)
+      (hres w st Tc h) (hChainVerifierSupply w st Tc hw h)
       (canRightAtScanOrShift_alongTrace centreC placeC entry q first hw h))
 
 /-- **`shiftDone` 義務を完全に放電した最上位。**
@@ -216,8 +218,10 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
     (hres : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
       ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc)
-    (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
-      st 0 = boot w → VerRun centreC placeC entry q first w (st 0)) :
+    (hChainVerifierSupply : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM)
+      (Tc : ℕ → ℕ), 0 < w.length →
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc) :
     RecognizedByTotalPEG PAL :=
   given_needBound entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
@@ -232,7 +236,7 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
     hC
     (fun w st Tc hw h => needBound_of_scanLandingObligations centreC placeC entry q first hw h
       (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
-      (hres w st Tc h) (hver w st h.base.pre.start))
+      (hres w st Tc h) (hChainVerifierSupply w st Tc hw h))
 
 #print axioms given_scanLandingObligations
 
