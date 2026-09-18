@@ -1,4 +1,4 @@
-import PalPeg.GalilScaffoldTopMatchedSeq
+import PalPeg.GalilScaffoldTopScanSeg
 
 /-!
 # `OnlyMatchedRun` を**後ろから**伸ばす
@@ -119,5 +119,77 @@ theorem matchedSeq_snoc_compare {P : Shared} {q : ℕ} {first : Fin 9} {n : ℕ}
 
 #print axioms matchedSeq_snoc_background
 #print axioms matchedSeq_snoc_compare
+
+
+/-! ## 制御つき: `ScanSeg` を後ろから伸ばす
+
+`MatchedSeq` は VM だけを見るが、run を歩くには制御（`clock` / `output` /
+`replaying`）も要る。`ScanSeg` はそれを持っていて、しかも 3 つの構成子が
+`Tick` の `scan_wait` / `scan_count` / `scan_match` と 1 対 1（`scanSeg_steps` が
+その対応を作っている）。ここではその逆向き——run を 1 tick 進めるたびに
+`ScanSeg` を末尾から伸ばす——を用意する。
+
+**注意**: `ScanSeg.match` は `hwatch : ∃ w', vs.chain = .watch w'` を要求するので、
+chain が watch している間しか伸ばせない。これは `hSP` が要る領域
+（`ChainRound` は `s.chain = .watch wch` で guard されている）と一致する。 -/
+
+/-- **wait 量子を末尾に足す。**  `ScanSeg.wait` は制御を変えない。 -/
+theorem scanSeg_snoc_wait {P : Shared} {q : ℕ} {first : Fin 9} {delay n : ℕ}
+    {c c' : Control} {s t t' : GalilVM}
+    (hSeg : ScanSeg P q first delay n c s c' t)
+    (hScan : c'.mode = Mode.scan) (hNotReplaying : c'.replaying = false)
+    (hUnavailable : ¬ canRight t.right)
+    (hBackground : (galilFrameS P q first).background t t') :
+    ScanSeg P q first delay n c s c' t' := by
+  induction hSeg with
+  | stop u v => exact .wait u v t' hScan hNotReplaying hUnavailable hBackground (.stop _ _)
+  | wait u v v' hm hr hn hb _ ih => exact .wait u v v' hm hr hn hb (ih hScan hNotReplaying hUnavailable hBackground)
+  | count u v v' hm hr ha hc hb _ ih => exact .count u v v' hm hr ha hc hb (ih hScan hNotReplaying hUnavailable hBackground)
+  | «match» u v vs vq o hm hr ha hc hcont hcmp hmt hwatch hq ho _ ih =>
+    exact .match u v vs vq o hm hr ha hc hcont hcmp hmt hwatch hq ho (ih hScan hNotReplaying hUnavailable hBackground)
+
+/-- **count 量子を末尾に足す。**  `clock` が 1 減る。 -/
+theorem scanSeg_snoc_count {P : Shared} {q : ℕ} {first : Fin 9} {delay n : ℕ}
+    {c c' : Control} {s t t' : GalilVM}
+    (hSeg : ScanSeg P q first delay n c s c' t)
+    (hScan : c'.mode = Mode.scan) (hNotReplaying : c'.replaying = false)
+    (hAvailable : canRight t.right) (hClock : 1 < c'.clock)
+    (hBackground : (galilFrameS P q first).background t t') :
+    ScanSeg P q first delay n c s { c' with clock := c'.clock - 1 } t' := by
+  induction hSeg with
+  | stop u v =>
+    exact .count u v t' hScan hNotReplaying hAvailable hClock hBackground (.stop _ _)
+  | wait u v v' hm hr hn hb _ ih => exact .wait u v v' hm hr hn hb (ih hScan hNotReplaying hAvailable hClock hBackground)
+  | count u v v' hm hr ha hc hb _ ih => exact .count u v v' hm hr ha hc hb (ih hScan hNotReplaying hAvailable hClock hBackground)
+  | «match» u v vs vq o hm hr ha hc hcont hcmp hmt hwatch hq ho _ ih =>
+    exact .match u v vs vq o hm hr ha hc hcont hcmp hmt hwatch hq ho (ih hScan hNotReplaying hAvailable hClock hBackground)
+
+/-- **一致比較を末尾に足す。**  比較数が 1 増え、制御は `clock := delay` /
+`output := o` / `replaying := false` に更新される。 -/
+theorem scanSeg_snoc_match {P : Shared} {q : ℕ} {first : Fin 9} {delay n : ℕ}
+    {c c' : Control} {s t : GalilVM} {vs : ScanVM} {vq : SearchVM} {o : Bool}
+    (hSeg : ScanSeg P q first delay n c s c' t)
+    (hScan : c'.mode = Mode.scan) (hNotReplaying : c'.replaying = false)
+    (hAvailable : canRight t.right) (hClock : c'.clock = 1)
+    (hContinuing : singlePositive t.cycle = false)
+    (hCompare : (galilFrame P q first).compare t (scanLens.set t vs))
+    (hMatched : (galilFrame P q first).matched (scanLens.set t vs))
+    (hWatch : ∃ w', vs.chain = .watch w')
+    (hSearch : searchEffect P true t vq)
+    (hRefresh : refresh (galilFrame P q first) (afterCompare t vs vq) c'.output o) :
+    ScanSeg P q first delay (n + 1) c s
+      { c' with clock := delay, output := o, replaying := false } (afterCompare t vs vq) := by
+  induction hSeg with
+  | stop u v =>
+    exact .match u v vs vq o hScan hNotReplaying hAvailable hClock hContinuing hCompare hMatched
+      hWatch hSearch hRefresh (.stop _ _)
+  | wait u v v' hm hr hn hb _ ih => exact .wait u v v' hm hr hn hb (ih hScan hNotReplaying hAvailable hClock hContinuing hCompare hMatched hSearch hRefresh)
+  | count u v v' hm hr ha hc hb _ ih => exact .count u v v' hm hr ha hc hb (ih hScan hNotReplaying hAvailable hClock hContinuing hCompare hMatched hSearch hRefresh)
+  | «match» u v vs' vq' o' hm hr ha hc hcont hcmp hmt hwatch hq ho _ ih =>
+    exact .match u v vs' vq' o' hm hr ha hc hcont hcmp hmt hwatch hq ho (ih hScan hNotReplaying hAvailable hClock hContinuing hCompare hMatched hSearch hRefresh)
+
+#print axioms scanSeg_snoc_wait
+#print axioms scanSeg_snoc_count
+#print axioms scanSeg_snoc_match
 
 end PalPeg.MatchedRunSnoc
