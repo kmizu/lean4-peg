@@ -977,6 +977,99 @@ theorem backgroundLanding_of_supply {w : List (Fin 2)} {c : Control} {s : GalilV
 
 #print axioms backgroundLanding_of_supply
 
+/-! ## 5f. `bg` 場を放電する
+
+`CloseoutPackRun47.bgStartP2_of_centre` は 3 入力（`canRight s.right` / 半径上界 /
+`CentreLedger`）を**すべて源状態 `(c, s)` でだけ**使う。局所版を置き、
+`CentreLedger` は §5e の `LPackM3` から、他 2 つは §5 の無料補題から供給する。
+
+`i = 0`（boot、mode = init）では 3 場とも `c.mode = Mode.scan` で守られているので**空虚**。
+よって `1 ≤ i` を埋めれば trace 全域が埋まる。 -/
+
+/-- **`BgStartP2` の状態局所版**（`bgStartP2_of_centre` の本体をそのまま局所化）。 -/
+theorem bgStart_at_of_centreLedger {w : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hCanRight : GalilScaffoldChainVerifier.canRight s.right)
+    (hRadBound : ∀ rad : ℕ, ScanInvariant w (position s.center) rad s.left s.right →
+      value s.radius ≤ (rad : ℤ))
+    (hCentreLedger : CentreLedger s) :
+    ∀ t : GalilVM, c.mode = Mode.scan →
+      ChainPositionInvariantWithShiftPhase w c s → s.chain = ChainVM.idle →
+      (galilFrameS (PofC centre place entry w) q first).background s t →
+      ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle →
+      ScanPositionPayloadWithChainLedger w t := by
+  intro t hMode hChainPosInv hIdle hBg hScanNR hNotIdle
+  obtain ⟨hl, hr, -, hcenf, -, hradf, -⟩ :=
+    backgroundS_fields (PofC centre place entry w) q first hBg
+  obtain ⟨hc1, hc2, hc3⟩ := hCentreLedger
+  refine ⟨?_, ?_, ?_⟩
+  · rw [hr]; exact hCanRight
+  · rw [hcenf, hl, hr, hradf]; exact hRadBound
+  · rcases backgroundS_idle (PofC centre place entry w) q first hBg hIdle with ⟨-, hz⟩ | ⟨-, hz⟩
+    · exact absurd hz hNotIdle
+    · rw [hz, hr]
+      refine ⟨(fun _ hwch => by cases hwch), (fun _ _ _ _ _ hbk => by cases hbk),
+        fun _ _ _ _ _ _ _ hcp => ?_⟩
+      unfold chainStart at hcp
+      injection hcp with _ _ _ _ h5 _ h7
+      subst h5; subst h7
+      exact ⟨hc1, hc2, hc3⟩
+
+/-- **`bg` 場は trace 全域で放電できる。**  新規入力は `hSP`（axiom）、`VerRun`（axiom）、
+残り 3 場 `hRes` だけ。 -/
+theorem backgroundLanding_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
+    (hTcPos : 1 ≤ Tc w.length)
+    (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
+      ScanNR x → ShiftPal centre place entry q first w x.vm)
+    (hVerRun : VerRun centre place entry q first w (st 0))
+    (hRes : ∀ j, j ≤ Tc w.length →
+      ChainBackLagAndShiftExitLedgerAt centre place entry q first w (st j).ctl (st j).vm) :
+    ∀ i, i ≤ Tc w.length → ∀ t : GalilVM,
+      (st i).ctl.mode = Mode.scan →
+      ChainPositionInvariantWithShiftPhase w (st i).ctl (st i).vm →
+      (galilFrameS (PofC centre place entry w) q first).background (st i).vm t →
+      ScanNR ⟨(st i).ctl, t⟩ → t.chain ≠ ChainVM.idle →
+      ScanPositionPayloadWithChainLedger w t := by
+  have hPreTrace := hPreTraceIMW.base.pre
+  have hLPackM2 : ∀ j, j ≤ Tc w.length → LPackM2 w (st j).ctl (st j).vm :=
+    fun j hj => (hPreTraceIMW.packs j hj).m2
+  have hRadLedger := radLedger_pt centre place entry q first hw hPreTrace
+    (fun j hj => leftLive_of_lpackM (hPreTraceIMW.packs j hj).pack)
+  have hPack3 := lpackM3_alongTrace_afterFirstStep centre place entry q first hw
+    hPreTraceIMW hTcPos hSP hRes
+  intro i hIndexLeTc t hMode hChainPosInv hBg hScanNR hNotIdle
+  -- `i = 0` は boot（mode = init）なので scan guard で空虚
+  have hIndexPos : 1 ≤ i := by
+    rcases Nat.eq_zero_or_pos i with rfl | h; swap; · exact h
+    exfalso; rw [hPreTrace.start] at hMode; exact Mode.noConfusion hMode
+  by_cases hIdle : (st i).vm.chain = ChainVM.idle
+  · exact bgStart_at_of_centreLedger centre place entry q first
+      (scanRightHeadCanRight_alongTrace centre place entry q first hw hPreTrace hLPackM2
+        hTcPos i hIndexLeTc hMode)
+      (radiusLe_of_radLedger (w := w) (hRadLedger i hIndexLeTc))
+      (centreLedger_of_lpackM3 (hPack3 i hIndexPos hIndexLeTc) hMode)
+      t hMode hChainPosInv hIdle hBg hScanNR hNotIdle
+  · exact backgroundLanding_of_supply centre place entry q first
+      (fun hm hx => by
+        cases hr : (st i).ctl.replaying with
+        | false =>
+          obtain ⟨rad, hsi⟩ := (hLPackM2 i hIndexLeTc).packM.scanGeom hm hr
+          exact ⟨hsi.rightRep, hsi.rightPresent⟩
+        | true =>
+          obtain ⟨rad, hsi⟩ := (hLPackM2 i hIndexLeTc).scanGeomR hm hr
+          exact ⟨hsi.rightRep, hsi.rightPresent⟩)
+      (fun hm _ => (hVerRun i (st i)
+        (PalPeg.CloseoutPackRun2.steps_of_trace hPreTrace.trace i hIndexLeTc) hm).1)
+      (fun hm _ => (hVerRun i (st i)
+        (PalPeg.CloseoutPackRun2.steps_of_trace hPreTrace.trace i hIndexLeTc) hm).2)
+      (fun t' hm hx hidle hb hs hni => absurd hidle hIdle)
+      t hMode hChainPosInv hBg hScanNR hNotIdle
+
+#print axioms bgStart_at_of_centreLedger
+#print axioms backgroundLanding_alongTrace
+
+
 #print axioms landingObligationsAlongRun_of_globalHypotheses
 #print axioms chainPosInv2_alongRun
 #print axioms shiftLocalS_of_landingObligationsAlongRun
