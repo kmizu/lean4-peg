@@ -1,3 +1,52 @@
+## n205 — `StageEntryBudget`：入口の残差も埋まった。`ReadyIface` の中身が全部揃った
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+n204 で `readyAt_background` / `readyAt_comparison` が残した唯一の残差 `hentry`
+（非 `.run` → `.run` の新規入口で DP を融資する）を供給した。
+
+`PalPeg/StageEntryBudget.lean`（1 定理、標準 3 公理、全体 build 緑、**一発で通った**）:
+
+```lean
+theorem dpBudgetAt_of_stagePrepS
+    (hp : PrepAt k m v) (hE : StageInvS k m v)
+    (hdep : DepthAt v D) (hD : D ≤ prepLen k) (hslack : slack ≤ 2047)
+    (hq : StagePrepS k m D slack v x (a :: as)) (hs : searchStep c a x x')
+    (hrun : x'.search.mode = Mode.run) :
+    DpBudgetAt x' 0
+```
+
+入力は `CloseoutPreload35.dpSafe_of_stagePrepD_slack` と**まったく同じ**で、
+結論だけリスト課金の `DpSafeStage` から状態局所の `DpBudgetAt` に替えた。
+
+### 余裕の内訳
+
+`StageInvS` が与える債務は
+`dpDemandS k m = (prepLen k + 2047)/2048 + (prepLen k + 2047 + dpEvents (m+1))/2048 + 1`。
+準備脚が使えるのは第 1 項まで（pacing）、DP 自身の需要 `⌈dpEvents (m+1)/2048⌉` は第 2 項以下。
+よって **`+1` は手つかずのまま余る**。算術に無理はない。
+
+### いま立ってる絵（`Φ = ReadyAt`）
+
+| `ReadyIface` の場 | 状態 |
+|---|---|
+| `ready` | 済（n203） |
+| `mono` | 済（n203） |
+| `background` | 済（n204）＋ 入口は本ファイル |
+| `comparison` | 済（n204）＋ 入口は本ファイル |
+
+**4 場すべての中身が揃った。** まだ `ReadyIface P Φ` の**インスタンスは作ってへん**——
+`Φ` が単なる `ReadyAt v k` では入口の `hentry` を自前で出せへん（`PrepAt` 起点の
+ステージデータを持ってへんから）。最終形は
+
+```
+Φ v n k := ReadyAt v k ∧ <現在のステージの PrepAt 起点と StagePrepS の持ち回り>
+```
+
+で、ステージ境界での起点の張り替えが `prepAt_of_double_exit`（n189 `StageLocalPrep`）と
+`StageDoubleLeg`（n198）の仕事になる。
+
+**今回も何も落としてへん**（公理 3 本のまま）。
 ## n204 — 輸送 2 場も立った。残差は `.run` 新規入口 1 点に凝縮
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
