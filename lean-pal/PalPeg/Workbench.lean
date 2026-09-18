@@ -75,6 +75,7 @@ import PalPeg.CloseoutFinalVer
 import PalPeg.CloseoutFinalBranch
 import PalPeg.MatchedRunSnoc
 import PalPeg.ShiftPhaseDeterminism
+import PalPeg.RoundSegFromRun
 
 /-!
 # `Workbench` — 作ったが正本の鎖に配線されていない部品
@@ -196,6 +197,28 @@ inductive で、**`Tick` の `scan_wait` / `scan_count` / `scan_match` と 1 対
 同一視する必要があり、その差は **shift 相だけ**（scan 側は
 `onlyMatchedRun_of_steps` が実際の状態で直接出す）。shift 相は無条件に決定的なので、
 `Fair` を持ち出さずに同一視できる。
+
+## `RoundSegFromRun` — `RoundSeg` / `OriginAt` を run の実際の状態で（未配線）
+
+| 定理 | 内容 |
+|---|---|
+| `roundSeg_of_compareRounds` | `RoundSeg` は `CompareRounds` の包み（周期長の一致だけが中身） |
+| `compareRounds_at_actual` | 構成した着地での `CompareRounds` を run の実際の着地へ移す |
+| `roundSeg_at_actual` | 上の合成 |
+| **`originAt_at_actual`** | **`OriginAt` がラウンドを 1 つ越える（run の実際の状態で）** |
+
+**主定理との関係**: `H_readsShift` の唯一の供給元は
+`CloseoutReadsOrigin.h_readsShift_of_originAt`（`OriginAt w s → H_readsShift w c s`）で、
+`H_readsShift` は `CloseoutBundleRun.shiftPal_of_run_B` の 2 つの残差のうちの 1 つ
+（もう 1 つは `H_freshShift`）。`shiftPal_of_run_B` は `hSP`
+（＝ `obligation_shiftPalAtScanStates`）そのもの。
+
+段差は shift 相だけで（scan 側は `onlyMatchedRun_of_steps` が最初から実際の状態で出す）、
+`ShiftPhaseDeterminism.shift_landing_eq` が `Fair` なしで埋める。
+
+**残り**: (a) `OriginAt` を「いまのラウンド起点で」持つ run 不変量に仕立てる
+（ラウンド境界で `originAt_at_actual` を使う）、(b) `round_next` の入力の配線、
+(c) `H_freshShift` / `H_fresh`（新鮮な chain の第 1 ラウンド、`first_round`）。
 
 **`scanSeg_snoc_tick` で tick 補題は済んだ**（標準 3 公理）。残るのは、これを run 不変量
 （「いまの状態はあるラウンド起点から `n` 手の一致比較で到達した」）に仕立てて、
