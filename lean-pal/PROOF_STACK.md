@@ -311,8 +311,12 @@ lag ゼロでは `Internal` は `idle` のみ（`take` は `positive lag = true`
    残るのは `first_round` の 30 個以上の仮説を run から供給すること
    （＝ CLAUDE.md §3 の `hfound` / `hfoundBg` / `hfoundReplay`、
    自分で「未着手、最大の残り」と書いた項目）
-2. **側条件** — 区間の全点が scan / shift 相 ∧ 非 replay ∧ `CopyIdle`、
-   scan 点では周期が終端でない・右ヘッドが読める・chain が watch。
+2. **側条件** — n166 で**使う分岐だけに絞った**（旧版は過剰量化で、
+   「全 scan 点で周期が終端でない」はラウンド境界で偽だった）。いまの形:
+   * 区間の全点が scan / shift 相
+   * scan 点で `replaying = false`、shift 点で `CopyIdle`
+   * scan → scan の遷移で周期が終端でない・行き先の chain が watch
+   * scan → shift の遷移で右ヘッドが読める
    既存の pack（`Extra7` / `AuxPack` / `LPackM`）から出る見込み（**未検証**）
 * `H_readsShift` → scan 相は空虚（guard が `mode = shift`）、
   shift 相で `remaining` が尽きた点は `shiftPhaseHistory_readsShift`（済）

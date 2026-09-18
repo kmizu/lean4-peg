@@ -1,3 +1,29 @@
+## 2026-09-19 n166: **自分が撒いた過剰量化を直した**（`roundCarrier_tick` の側条件）
+
+**全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。
+無条件 PAL は未完。§10.5 は未達。計器はまだ動いていない。**
+
+n164 で書いた `roundCarrier_tick` の側条件が**過剰量化していた**。
+CLAUDE.md の「消費者がその分岐で何を要求しているかを読む」を自分のコードで破っていた。
+
+| 側条件 | 旧（過剰） | 新（使う分岐だけ） |
+|---|---|---|
+| `singlePositive cycle = false` | 全 scan 点 | scan → **scan** の枝だけ |
+| `canRight right` | 全 scan 点 | scan → **shift** の枝だけ |
+| chain が watch | 全 target scan 点 | scan → **scan** の枝だけ |
+| `replaying = false` | 全点 | **scan** 点だけ |
+| `CopyIdle` | 全点 | **shift** 点だけ |
+
+とくに 1 行目は**ラウンド終端で偽**になる: `shiftGuardVM` は `periodOnly` のとき
+`singlePositive cycle = true` を要求するので、shift に入る点では周期が終端。
+旧の形は「全 scan 点で周期が終端でない」と言っていたので、
+**ラウンド境界を含む区間には適用できなかった**。
+
+run 沿いの `hSide` も `∀ m z z', Steps … m x z → Tick … z z' → …` の形にして、
+遷移先の mode で場合分けできるようにした。
+
+**これは (A)（guard を狭める）の操作で、本物の弱化。** 公理はまだ 4 本。
+
 ## 2026-09-19 n165: 基底の橋（`first_round` の `Entry` → `OriginAt`）
 
 **全体 build 成功（`BUILD=0`、エラー 0、`sorry` ゼロ）。ラチェット緑。公理は 4。

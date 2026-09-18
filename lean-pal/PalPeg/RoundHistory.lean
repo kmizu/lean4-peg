@@ -1063,20 +1063,23 @@ theorem roundCarrier_tick {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
       (galilFrameS P q first).beginShift u t → beginShiftVM' u t)
     (hCarrier : RoundCarrier P q first delay w x.ctl x.vm)
     (hSourceMode : x.ctl.mode = Mode.scan ∨ x.ctl.mode = Mode.shift)
-    (hNotReplaying : x.ctl.replaying = false)
-    (hCopyIdle : CopyIdle x.vm)
-    (hContinuing : x.ctl.mode = Mode.scan → singlePositive x.vm.cycle = false)
-    (hCanRightSource : x.ctl.mode = Mode.scan → canRight x.vm.right)
-    (hWatchingTarget : y.ctl.mode = Mode.scan → ∃ wch, y.vm.chain = ChainVM.watch wch)
+    (hNotReplaying : x.ctl.mode = Mode.scan → x.ctl.replaying = false)
+    (hCopyIdle : x.ctl.mode = Mode.shift → CopyIdle x.vm)
+    (hContinuing : x.ctl.mode = Mode.scan → y.ctl.mode = Mode.scan →
+      singlePositive x.vm.cycle = false)
+    (hCanRightSource : x.ctl.mode = Mode.scan → y.ctl.mode = Mode.shift →
+      canRight x.vm.right)
+    (hWatchingTarget : x.ctl.mode = Mode.scan → y.ctl.mode = Mode.scan →
+      ∃ wch, y.vm.chain = ChainVM.watch wch)
     (hTick : Tick (galilFrameS P q first) delay x y) :
     RoundCarrier P q first delay w y.ctl y.vm := by
   refine ⟨fun hTargetScan => ?_, fun hTargetShift => ?_⟩
   · rcases hSourceMode with hSource | hSource
     · obtain ⟨n, s₀, w₀, wch, -, -, -, -, -, hChainTerm, -, -, -, -, -⟩ :=
         onlyMatchedRun_of_roundHistory (hCarrier.1 hSource)
-      exact roundHistory_tick hRestartNeedsBroken (hCarrier.1 hSource) hSource hNotReplaying
-        ⟨wch, hChainTerm⟩ (hContinuing hSource) hTick hTargetScan
-        (hWatchingTarget hTargetScan)
+      exact roundHistory_tick hRestartNeedsBroken (hCarrier.1 hSource) hSource
+        (hNotReplaying hSource) ⟨wch, hChainTerm⟩ (hContinuing hSource hTargetScan) hTick
+        hTargetScan (hWatchingTarget hSource hTargetScan)
     · obtain ⟨hNotRemaining, hVmEq⟩ := shiftDone_parts hTick hSource hTargetScan
       have hExhausted : positive (shiftLens.get x.vm).shift.remaining = false := by
         by_contra hContra
@@ -1088,8 +1091,10 @@ theorem roundCarrier_tick {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
     · obtain ⟨u, hCompare, hNotMatched, hGuard, hBegin⟩ :=
         scanShift_parts hTick hSource hTargetShift
       exact shiftPhaseHistory_of_scanShift (hCarrier.1 hSource) hCompare hNotMatched
-        (hShiftGuardVM u hGuard) (hBeginShiftVM u y.vm hBegin) (hCanRightSource hSource)
-    · exact shiftPhaseHistory_tick (hCarrier.2 hSource) hSource hCopyIdle hTick hTargetShift
+        (hShiftGuardVM u hGuard) (hBeginShiftVM u y.vm hBegin)
+        (hCanRightSource hSource hTargetShift)
+    · exact shiftPhaseHistory_tick (hCarrier.2 hSource) hSource (hCopyIdle hSource) hTick
+        hTargetShift
 
 #print axioms roundCarrier_tick
 
@@ -1104,22 +1109,26 @@ theorem roundCarrier_of_steps {P : Shared} {q : ℕ} {first : Fin 9} {delay : �
       (galilFrameS P q first).beginShift u t → beginShiftVM' u t)
     (hSteps : Steps (galilFrameS P q first) delay k x y)
     (hCarrier : RoundCarrier P q first delay w x.ctl x.vm)
-    (hSide : ∀ (m : ℕ) (z : State GalilVM),
+    (hSide : ∀ (m : ℕ) (z z' : State GalilVM),
       Steps (galilFrameS P q first) delay m x z →
+      Tick (galilFrameS P q first) delay z z' →
       (z.ctl.mode = Mode.scan ∨ z.ctl.mode = Mode.shift) ∧
-      z.ctl.replaying = false ∧ CopyIdle z.vm ∧
-      (z.ctl.mode = Mode.scan → singlePositive z.vm.cycle = false) ∧
-      (z.ctl.mode = Mode.scan → canRight z.vm.right) ∧
-      (z.ctl.mode = Mode.scan → ∃ wch, z.vm.chain = ChainVM.watch wch)) :
+      (z.ctl.mode = Mode.scan → z.ctl.replaying = false) ∧
+      (z.ctl.mode = Mode.shift → CopyIdle z.vm) ∧
+      (z.ctl.mode = Mode.scan → z'.ctl.mode = Mode.scan →
+        singlePositive z.vm.cycle = false) ∧
+      (z.ctl.mode = Mode.scan → z'.ctl.mode = Mode.shift → canRight z.vm.right) ∧
+      (z.ctl.mode = Mode.scan → z'.ctl.mode = Mode.scan →
+        ∃ wch, z'.vm.chain = ChainVM.watch wch)) :
     RoundCarrier P q first delay w y.ctl y.vm := by
   induction hSteps with
   | zero u => exact hCarrier
   | @succ j u z t hTick hRest ih =>
-    obtain ⟨hMode, hNotReplaying, hCopyIdle, hContinuing, hCanRight, -⟩ := hSide 0 u (.zero u)
-    obtain ⟨-, -, -, -, -, hWatchingTarget⟩ := hSide 1 z (.succ hTick (.zero z))
+    obtain ⟨hMode, hNotReplaying, hCopyIdle, hContinuing, hCanRight, hWatchingTarget⟩ :=
+      hSide 0 u z (.zero u) hTick
     exact ih (roundCarrier_tick hRestartNeedsBroken hShiftGuardVM hBeginShiftVM hCarrier
         hMode hNotReplaying hCopyIdle hContinuing hCanRight hWatchingTarget hTick)
-      (fun m' z' hz' => hSide (m' + 1) z' (.succ hTick hz'))
+      (fun m' z' z'' hz' hz'' => hSide (m' + 1) z' z'' (.succ hTick hz') hz'')
 
 /-- **`H_readsShift` を run の全点で**（`PROOF_STACK.md` 手順 1〜11 の結論）。 -/
 theorem h_readsShift_alongSteps {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
@@ -1130,13 +1139,17 @@ theorem h_readsShift_alongSteps {P : Shared} {q : ℕ} {first : Fin 9} {delay : 
       (galilFrameS P q first).beginShift u t → beginShiftVM' u t)
     (hSteps : Steps (galilFrameS P q first) delay k x y)
     (hCarrier : RoundCarrier P q first delay w x.ctl x.vm)
-    (hSide : ∀ (m : ℕ) (z : State GalilVM),
+    (hSide : ∀ (m : ℕ) (z z' : State GalilVM),
       Steps (galilFrameS P q first) delay m x z →
+      Tick (galilFrameS P q first) delay z z' →
       (z.ctl.mode = Mode.scan ∨ z.ctl.mode = Mode.shift) ∧
-      z.ctl.replaying = false ∧ CopyIdle z.vm ∧
-      (z.ctl.mode = Mode.scan → singlePositive z.vm.cycle = false) ∧
-      (z.ctl.mode = Mode.scan → canRight z.vm.right) ∧
-      (z.ctl.mode = Mode.scan → ∃ wch, z.vm.chain = ChainVM.watch wch)) :
+      (z.ctl.mode = Mode.scan → z.ctl.replaying = false) ∧
+      (z.ctl.mode = Mode.shift → CopyIdle z.vm) ∧
+      (z.ctl.mode = Mode.scan → z'.ctl.mode = Mode.scan →
+        singlePositive z.vm.cycle = false) ∧
+      (z.ctl.mode = Mode.scan → z'.ctl.mode = Mode.shift → canRight z.vm.right) ∧
+      (z.ctl.mode = Mode.scan → z'.ctl.mode = Mode.scan →
+        ∃ wch, z'.vm.chain = ChainVM.watch wch)) :
     PalPeg.CloseoutRoundUnique.H_readsShift w y.ctl y.vm :=
   h_readsShift_of_roundCarrier
     (roundCarrier_of_steps hRestartNeedsBroken hShiftGuardVM hBeginShiftVM hSteps hCarrier hSide)
