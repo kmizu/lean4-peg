@@ -1,3 +1,53 @@
+## n203 — `.run` 入口と `ReadyAt`：`ReadyIface` の `ready`/`mono` が周期全体で立った
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+`PalPeg/DpBudgetState.lean` に 3 定理を追加（全 9 定理、標準 3 公理、全体 build 緑）。
+
+### `.run` 入口
+
+```lean
+theorem dpBudgetAt_entry
+    (hdp : v.dp = ⟨GalilScaffoldPreload.initial w lower, false⟩)
+    (hm : v.search.mode = .run) (hc : Canonical v.search.debt)
+    (hd0 : 0 ≤ value v.search.debt)
+    (hfunded : (dpEvents w.length + 2047) / 2048 ≤ (value v.search.debt).toNat) :
+    DpBudgetAt v 0
+```
+
+`hdp` は `CloseoutRunEntriesS.run_entry_preload` が与え、到達は `dpReached_start`（空接頭辞）。
+**残差は `hfunded` 1 本だけ**——「債務が DP の必要イベント数 `2048` ごとに比較 1 回を賄う」。
+これが `bal_of_paced_slack_S` / `dpDemandS` が言うてる内容そのものや。
+
+### 周期全体の可読性述語
+
+```lean
+def ReadyAt (v : SearchVM) (k : ℕ) : Prop :=
+  PrepInv v.toPrep ∧ (v.search.mode = Mode.run → DpBudgetAt v k)
+```
+
+非 run 相では `SearchReady` の DP 節が空虚なので `PrepInv` だけで済む。これで
+
+* `searchReady_of_readyAt` — **`ReadyIface.ready`**（周期全体で成立）
+* `readyAt_mono` — **`ReadyIface.mono`**（周期全体で成立）
+
+が立った。**4 場のうち 2 場が `Φ = ReadyAt` で揃った。**
+
+### 残り（輸送 2 場）
+
+`background` / `comparison` は `ReadyAt (searchLens.get s) k → searchEffect P a s v → ReadyAt v k'`。
+中身は 3 つ:
+
+1. `PrepInv` が探索量子で保存されること
+2. 源も着地も `.run` のとき → `dpBudgetAt_background` / `dpBudgetAt_comparison`（済）
+3. **源が非 `.run` で着地が `.run`（新規入口）** → `dpBudgetAt_entry` の `hfunded` を作らなあかん。
+   ここだけがステージ債務の話で、`ReadyAt` にステージデータ（窓 `mw`、下界 `k`、
+   `PrepAt`/`StagePrepS`）を持たせる必要がある。
+
+つまり **`Φ` の最終形は `ReadyAt` ＋ ステージデータ**になる。`StageDoubleLeg`（n198）と
+`StageLocalPrep`（n189）がそのステージデータ側の部品や。
+
+**今回も何も落としてへん**（公理 3 本のまま）。
 ## n202 — `DpBudgetState`：会計を `SearchVM` の上に載せた（run 相の 4 場が出た）
 
 **状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**

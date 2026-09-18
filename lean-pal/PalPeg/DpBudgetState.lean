@@ -128,6 +128,47 @@ theorem dpBudgetAt_mono {v : SearchVM} {k k' : ℕ} (hk : k' ≤ k) (h : DpBudge
   obtain ⟨w, lower, s0, bs, hs0, hc, hd0, hreach, hbud⟩ := h
   exact ⟨w, lower, s0, bs, hs0, hc, hd0, hreach, dpBudget_mono hk hbud⟩
 
+/-! ## 2. The `.run` entry, and the combined readiness predicate -/
+
+/-- **The budget at a fresh `.run` entry.**  `CloseoutRunEntriesS.run_entry_preload`
+identifies the handed-over DP machine with the calibrated preload, and
+`dpReached_start` is the empty-prefix reach; what is left is exactly the stage
+condition: the debt has to cover one comparison per `2048` of the DP's event
+need. -/
+theorem dpBudgetAt_entry {v : SearchVM} {w : List (Fin 3)} {lower : ℕ}
+    (hdp : v.dp = ⟨GalilScaffoldPreload.initial w lower, false⟩)
+    (hm : v.search.mode = GalilScaffoldSearchFinish.Mode.run)
+    (hc : Canonical v.search.debt) (hd0 : 0 ≤ value v.search.debt)
+    (hfunded : (dpEvents w.length + 2047) / 2048 ≤ (value v.search.debt).toNat) :
+    DpBudgetAt v 0 := by
+  refine ⟨w, lower, v.search, [], hm, hc, hd0, ?_, ?_⟩
+  · show DpReached w lower v.search [] v.search v.dp
+    rw [hdp]; exact PalPeg.GalilBranchInvariants2.dpReached_start w lower v.search
+  · show DpBudget (dpEvents w.length - [].length) ([].count true) _ 0
+    unfold DpBudget
+    simpa using hfunded
+
+/-- **Readiness on the whole cycle.**  Outside `.run` the DP clause of
+`GalilBranchInvariants2.SearchReady` is vacuous, so only the preparation
+invariant is asked for; inside `.run` the budget of §1 is asked for as well. -/
+def ReadyAt (v : SearchVM) (k : ℕ) : Prop :=
+  PalPeg.GalilBranchInvariants2.PrepInv v.toPrep ∧
+    (v.search.mode = GalilScaffoldSearchFinish.Mode.run → DpBudgetAt v k)
+
+/-- **The `ready` field of `CloseoutReadyStage.ReadyIface`, for `ReadyAt`.** -/
+theorem searchReady_of_readyAt {v : SearchVM} {k : ℕ} (h : ReadyAt v k) :
+    PalPeg.GalilBranchInvariants2.SearchReady v :=
+  ⟨h.1, fun hm => dpSafeHere_of_dpBudgetAt (h.2 hm)⟩
+
+/-- **The `mono` field of `CloseoutReadyStage.ReadyIface`, for `ReadyAt`.** -/
+theorem readyAt_mono {v : SearchVM} {k k' : ℕ} (hk : k' ≤ k) (h : ReadyAt v k) :
+    ReadyAt v k' :=
+  ⟨h.1, fun hm => dpBudgetAt_mono hk (h.2 hm)⟩
+
+#print axioms dpBudgetAt_entry
+#print axioms searchReady_of_readyAt
+#print axioms readyAt_mono
+
 #print axioms dpEvents_covers
 #print axioms dpSafeHere_of_dpBudgetAt
 #print axioms dpBudgetAt_need_pos
