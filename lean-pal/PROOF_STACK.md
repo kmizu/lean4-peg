@@ -1,3 +1,62 @@
+## n216 — 公理進捗: `hHi` は仕様に無い前提（形式化のミスを確定）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 3 連言の 5 残差のうち **`hHi : r₀ ≤ 4h` が仕様に存在しない前提**だと確定。切り直しの対象が名指しされた |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 一次情報（Scala 正本）
+
+`scala/pal/src/main/scala/pal/ScaffoldChain.scala`:
+
+```scala
+/** Whether four verified semiperiods permit a chain shift now. */
+def canShift: Boolean = {
+  val ready = mode == Mode.Watch && lag.sign == 0 && phase == 4
+  ready && (if (periodOnly) { cycleEnd } else { margin.sign >= 0 })
+}
+```
+
+`ScaffoldGalil.scala:270` は `!replaying && chain.canShift && chain.prediction() == right.read()` で shift する。
+
+* `phase == 4`（four verified semiperiods）＝ `hIn`/`hOut`（`[C−4h, C]` 上の周期）**そのもの**
+* `lag.sign == 0` ＝ `shiftGuardVM` の `zero lag = true`
+* `margin.sign >= 0` ＝ `4h ≤ radius + count`（`GalilScaffoldChainReady:26` の
+  `value final.margin = value radius − 4h + count`）——**`hHi` と逆向き**
+* `cycleEnd` ＝ `singlePositive cycle`
+
+**`canShift` は `r₀ ≤ 4h` をどこにも検査してへん。** Lean 側でも `r ≤ 4 * …` は
+`ShiftPalAlongTrace`（本件）と `GalilSourceCost.move_cost` の **2 箇所で仮定されるだけ**で、
+producer はゼロ。常設制約「producerがないときは確実に形式化ミス」で確定。
+
+### どこを切り直すか
+
+`hHi` は `GalilPeriodUnion.periodOn_right_of_palAt_pair` の
+`PeriodOn word (2h) C (C + r)` を出すためだけに要る。中身は
+「`hIn`/`hOut` が与える `[C−4h, C]` の周期を、`hcur`（中心 `C` 半径 `r`）で鏡映して右へ移す」で、
+鏡映が届くのに `r ≤ 4h` が要る。`r > 4h` のときは `[C, C+4h]` までしか出えへん。
+
+よって切り直しの候補は 2 つ:
+
+1. `periodOn_right_of_palAt_pair` の結論を `PeriodOn word (2h) C (C + min r (4h))` に弱め、
+   `reshift_of_palAt_pair` 側で `j + 2h ≤ C + r` の場合分けを `min` に合わせる
+2. `r ≤ 4h` を機械が本当に保証する形（`margin`／`phase` から出る形）に置き換える
+
+**次のティックで 1 を試す**（語の補題側の作業で、機械側の新しい不変量を要求せえへん）。
+
+### 残差の現状（第 3 連言）
+
+| 成分 | 状態 |
+|---|---|
+| `hIn` / `hOut` | `phase == 4` に対応。周期テープの中身（DP の `Candidate`） |
+| `hPos` | `periodLength_watchControl_pos` が実在 |
+| `hLo` | `CloseoutLPack` 系が場として運ぶ |
+| `hHi` | **仕様に無い。切り直し対象（本ノート）** |
 ## n215 — 公理進捗: 第 3 連言が「証明済みの語の補題の 5 仮説」に一致した
 
 **公理への進捗**
