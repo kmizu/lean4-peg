@@ -1,3 +1,23 @@
+## n273 — 葉 `hmove` の chain idle 分岐を全部証明して接続（葉は 1 本のまま、前提は `s.chain ≠ .idle` に狭まった）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` は「chain が idle でない不一致状態」だけを負う形になった。chain idle の分岐（探索が段の途中の場合も、最終段で `missed` の場合も）は `RestartLowerRun.move_of_idle` が証明して内部で供給する |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。`cycleOracleOn_of_readyLeaves`／`move_of_idle` は標準 3 本のみ。
+
+**何を証明したか**（Python 実測で fallback の約 9 割を占める分岐）
+
+* `PalPeg/SearchStageHistory.lean`（新規）: `StageHistory p lower R v` = 債務バランス `4·(debt + R) (+ quarter) = span (+ work)`（`double` のときだけ補正項）、`wait` での `0 ≤ debt`、候補無し窓 `∃ H, NoCandidate p lower H ∧ WindowBound v.search H`（`wait`: `span ≤ H`、`double`: `span + 2·work ≤ 2H`、`grow`: `span + 8·work ≤ 4H`、それ以外: `span ≤ 4H`）、`started`（`idle` モードに戻らない）。`stageHistory_begin`（第 1 段の窓は `H = 4·lower+3`: `Candidate` は `4h+1 ≤ 長さ` を要るので空虚）、`stageHistory_step`（`searchStep` の全モード。`run` が `wait`／`double` に抜ける瞬間に、失敗した段の窓 `take (span+1)` を `noCandidate_of_failed` で採用する）、`radius_le_window`（`BudgetInv` の credit から `debt` の下界 → 半径 `R ≤ H`。`grow`／`double` の算術は `omega`）。
+* `PalPeg/SearchStageRun.lean`（新規）: `BudgetInv` を**中心の実 place** に固定して同梱した `StageAt`（既存の `Field` は place を忘れた `BudgetSome` しか運ばないので、DP 窓と `span` の対応が取れなかった）。`stageAt_tick`／`stageAt_shaped`／`stageAt_invLPS`（origin は `InvLPS` の `ReplayStage` が持つ `Restarted` から）／`stageAt_packed`。`dpPack_of_stage`: 段の途中でも `DpPack`（探索契約）が出る。`DpPack` の DP config は存在量化なので、`pc := 347` の config と `NoCandidate` から `Result` を作る。
+* `CanonicalSearchBudget.budgetInv_restarted`: restart 着地の budget を呼び手が指定した place で返す（`budgetSome_restarted` はその系）。
+* `RestartLowerRun.move_of_idle`: `lower` 以下は `LowerAt`（現在の半径）、`lower` より上は探索（段の途中は窓、最終段は DP 結果）。
+
+**未完の部分**: `hmove` の chain 非 idle 分岐（copy／back、稼働中 watch、guard 不成立の broken）。調査で分かったこと（証明は未着手）: 既存の `move_of_preShift_packed`／`move_of_live_sem_packed` は `hquarter : Rad ≤ 4h` を**仮説として**取っており、その producer は無い。`Rad ≤ 4h` は「chain の誕生時 `R₀ ≤ 2h`（`found_radius_le_two_period`）＋ copy／back／追い付きの間に進む一致は高々数回」という**時間の台帳**から出る事実で、`RestartStageLedger.WatchLedger` の `balance = 4h` は lag／margin の関係だけで clock を持っていない。watch が追い付いた後（`lag = 0`）で guard が立たないのは予測が外れた場合で、そこは `CanonicalFallbackInput.move_of_activePeriodBreak`（`Rad ≤ 4h` 不要）が受け口になる。その入力（周期・最小性・break）の接続は未着手。`obligation_localRealization` は未着手。
+
 ## n272 — 葉 `hmove` の idle＋`missed` 分岐を証明して接続（葉の本数は 1 のまま、前提が 1 つ狭まった）
 
 **公理への進捗**
