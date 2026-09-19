@@ -1,3 +1,29 @@
+## n241 — 公理進捗（訂正 2）: `WatchWindow` の窓を「verifier が消費した接頭辞」に
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 残差の文面は不変（guard 点は lag ゼロなので verifier ＝ 右ヘッド）。`WatchWindow` の定義を `BlockOn … (cen₀+1) (position ver)`（消費接頭辞）に直した——n240 の形（`BlockOn … R`、右ヘッドまで）は **lag > 0 の間の run 不変量としては過剰**（`chainW_matched` は窓の終端 `E` を変えずに右ヘッド `R` だけ進める）。この形なら chain 自身の歩みだけで維持できる: `take`／`immediate` は持参する `Good`（予測 ＝ 次の読み）で窓が 1 つ伸び（`blockOn_succ_of_symbol`）、`queued` は不変、shift（`chainShiftOne`）も不変 |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### producer の設計（一次情報で確認したもの）
+
+* 誕生: `chainAt` の第 3 選言で chain は `chainStart answer (P.centre s) walker s.center s.radius`（`.copy`）。
+  `backDone` で `.watch ⟨ver, watchControl v⟩` になり、`CoreX` は `coreX_born`（DP の形の葉は不要:
+  `Represents ver.head`・存在・`position ver + 1 = anchor` だけ）、`LagAt` は `lagAt_radius`、
+  窓 `BlockOn … (cen₀+1) cen₀` は空虚。中心記号は `Decodes`＋`read_represent`＋`represented_read`
+  （`InvLPC` の `CentreRep`）から `(encoded raw)[position s.center]? = some (P.centre s)`。
+* 一致比較: `ChainMatched.watch (ho : Outer w true w')`——`queued`（lag +1、`lagAt_inc`）か
+  `immediate`（`Good` 持参で窓 +1）。background: `ChainStep.watchStep (Internal)`（`watchWindow_step`）。
+* shift: `beginShiftVM` の `immediate`（窓 +1、guard の予測一致）と `shift_one` の `chainShiftOne`
+  （sweep カウンタと margin だけ、窓と lag は不変）。
+* `2h ≤ R`: 新鮮な shift は guard の margin（`4h ≤ R`）、継続 round は cycle 算術
+  （shift 直後 `R + 1 − h ≥ 3h + 1`、round 中は増えるだけ）。
+
 ## n240 — 公理進捗（訂正）: 残差の chain データを `ChainW` から 3 場の `WatchWindow` に絞った
 
 **公理への進捗**
