@@ -76,24 +76,36 @@ def MoveMinimal (raw : List (Fin 2)) (C h : ℕ) : Prop :=
     ∀ g, 0 < g → g < h → 4*g ≤ k →
       ¬ HasPeriod (Span raw C k) (2*g)
 
-theorem moveMinimal_of_candidate (a : Fin 2) (ls rs q : List (Fin 2)) (gap : Bool)
+/-- What the DP itself excludes when it runs above a lower bound: the semiperiods strictly
+between `lower` and the least candidate `h`.  (Those up to `lower` are the history of the lower
+bound, `LowerExcludedFrom`.) -/
+def MoveAbove (raw : List (Fin 2)) (C lower h : ℕ) : Prop :=
+  ∀ k, k < C → Manacher.PalAt (encoded raw) C k →
+    ∀ g, lower < g → g < h → 4*g ≤ k →
+      ¬ HasPeriod (Span raw C k) (2*g)
+
+theorem MoveAbove.toMoveMinimal {raw : List (Fin 2)} {C h : ℕ} (hmove : MoveAbove raw C 0 h) :
+    MoveMinimal raw C h :=
+  fun k hkC hpal g hg0 hgh hfour => hmove k hkC hpal g hg0 hgh hfour
+
+theorem moveAbove_of_candidate (a : Fin 2) (ls rs q : List (Fin 2)) (gap : Bool)
     {C lower span h : ℕ}
     (hC : C = position (represent ⟨a :: ls,gap⟩ (rs.map some) q))
     (hcand : GalilDpCorrect.Candidate
       ((GalilScaffoldPlace.stream ⟨a :: ls,gap⟩).take (span+1)) lower h)
     (hmin : ∀ g, g < h → ¬ GalilDpCorrect.Candidate
-      ((GalilScaffoldPlace.stream ⟨a :: ls,gap⟩).take (span+1)) lower g)
-    (hlower : lower = 0) :
-    MoveMinimal ((a :: ls).reverse ++ rs ++ q) C h := by
-  subst lower
+      ((GalilScaffoldPlace.stream ⟨a :: ls,gap⟩).take (span+1)) lower g) :
+    MoveAbove ((a :: ls).reverse ++ rs ++ q) C lower h := by
   have hstream : C = (GalilScaffoldPlace.stream ⟨a :: ls,gap⟩).length := by
     rw [hC,position_represent]
-  intro k hkC hpal g hg0 hgh hfour hper
+  intro k hkC hpal g hlower hgh hfour hper
   apply hmin g hgh
-  apply candidate_of_span_period a ls rs q gap hstream hkC hpal hg0 hfour hper
-  have hlen := hcand.2.1
-  simp only [List.length_take] at hlen
-  omega
+  have hzero := candidate_of_span_period a ls rs q gap (span := span) hstream hkC hpal
+    (by omega) hfour hper (by
+      have hlen := hcand.2.1
+      simp only [List.length_take] at hlen
+      omega)
+  exact ⟨hlower, hzero.2⟩
 
 /-- The reusable semantic meaning of a least found candidate at one centre. -/
 def FutureMinimal (raw : List (Fin 2)) (C h : ℕ) : Prop :=

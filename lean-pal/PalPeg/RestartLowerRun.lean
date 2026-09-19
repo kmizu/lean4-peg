@@ -208,27 +208,71 @@ theorem no_lower_period_at_scan {raw : List (Fin 2)} {c : Control} {s : GalilVM}
   rw [hradius.2] at hbaseRadius
   exact hexcluded Rad (by simpa using hbaseRadius) (scan_radius_lt hscan) hscan.palindrome δ hδ0 hδ
 
-/-- The birth payload without the move inequality, from the excluded lower bound. -/
+/-- The move payload of a chain born while the search runs above the lower bound of `s`: the DP
+excludes the semiperiods strictly between that bound and the least candidate. -/
+def MovePayload (raw : List (Fin 2)) (s : GalilVM) : ℕ → ℕ → Prop :=
+  fun C H => MoveAbove raw C (value s.lower).toNat H
+
+/-- The birth payload from the excluded lower bound. -/
 theorem birthMinimal_of_lowerAt {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
     (hP : Decodes (PofC centre place entry raw))
     (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
     {k : ℕ} {y : State GalilVM}
     (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y)
     (hm : y.ctl.mode = .scan) (hlowerAt : LowerAt raw y.ctl y.vm) :
-    BirthMinimal centre place entry (fun _ _ => True) raw y.vm := by
+    BirthMinimal centre place entry (MovePayload raw y.vm) raw y.vm := by
   intro a vq hidle he hf
-  obtain ⟨H, hcopy, hfuture, -⟩ :=
+  obtain ⟨H, hcopy, hfuture, hmove⟩ :=
     PalPeg.CanonicalSearchHistory.birthMinimals_packed centre place entry q first hP hI hrun hm
       hidle he hf (fun lower hlowerEq => by
         obtain ⟨base, -, hbaseLower, hexcluded⟩ := hlowerAt hm hidle lower (by
           rw [← searchEffect_lower_eq he, hlowerEq, ofNat_value])
         exact hexcluded.toLowerExcluded hbaseLower)
-  exact ⟨H, hcopy, hfuture, trivial⟩
+  rw [searchEffect_lower_eq he] at hmove
+  exact ⟨H, hcopy, hfuture, hmove⟩
+
+/-- One tick keeps the minimal-period payload.  The payload reads the lower bound of the state;
+the three ticks that change the lower bound (`init`, `replayStart`, `restart`) start from a state
+whose payload is empty and land on an idle chain. -/
+theorem modeMinimal_tick_lower {raw : List (Fin 2)} {x y : State GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (ht : Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y)
+    (hsource : ModeMinimal (MovePayload raw x.vm) raw x.ctl x.vm)
+    (hpackX : PalPeg.CloseoutPackW.IPackMW centre place entry q first raw x)
+    (hpackY : PalPeg.CloseoutPackW.IPackMW centre place entry q first raw y)
+    (haux : PalPeg.CloseoutPackRun2.AuxPack x.ctl x.vm)
+    (hbirth : x.ctl.mode = .scan →
+      BirthMinimal centre place entry (MovePayload raw x.vm) raw x.vm) :
+    ModeMinimal (MovePayload raw y.vm) raw y.ctl y.vm := by
+  by_cases hkeep : y.vm.lower = x.vm.lower
+  · have hpayload : MovePayload raw y.vm = MovePayload raw x.vm := by
+      unfold MovePayload
+      rw [hkeep]
+    rw [hpayload]
+    exact modeMinimal_tick_packed centre place entry q first hP ht hsource hpackX hpackY haux
+      hbirth
+  · have hchanged : x.ctl.mode = .init ∨ x.ctl.mode = .replayStart ∨
+        (x.ctl.mode = .scan ∧ restartVM entry x.vm y.vm) := by
+      by_contra hnone
+      push_neg at hnone
+      exact hkeep (lower_eq_of_regular_tick centre place entry q first ht hnone.1 hnone.2.1
+        (fun hm hr => hnone.2.2 hm hr))
+    have hsource' : ModeMinimal (MovePayload raw y.vm) raw x.ctl x.vm := by
+      rcases hchanged with h | h | ⟨hm, w, hw, -⟩
+      · simp [ModeMinimal, h]
+      · simp [ModeMinimal, h]
+      · simp [ModeMinimal, hm, ScanMinimal, hw]
+    exact modeMinimal_tick_packed centre place entry q first hP ht hsource' hpackX hpackY haux
+      (fun hm a vq hidle => by
+        rcases hchanged with h | h | ⟨-, w, hw, -⟩
+        · rw [h] at hm; cases hm
+        · rw [h] at hm; cases hm
+        · rw [hw] at hidle; cases hidle)
 
 /-- The run invariant: the minimal-period payload, the excluded lower bound of the running
 search, and the excluded `last` of a broken chain at a restart-guard state. -/
 structure MinimalAcrossRestart (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
-  minimal : ModeMinimal (fun _ _ => True) raw c s
+  minimal : ModeMinimal (MovePayload raw s) raw c s
   lowerAt : LowerAt raw c s
   broken : BrokenStage (LastExcluded raw) c s
 
@@ -279,7 +323,7 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
       have htick := htr.tick i (by omega)
       have hwinX := (hpk i (by omega)).win hP
       refine ⟨?_, lowerAt_tick centre place entry q first htick hsource.lowerAt hsource.broken, ?_⟩
-      · exact modeMinimal_tick_packed centre place entry q first hP htick hsource.minimal
+      · exact modeMinimal_tick_lower centre place entry q first hP htick hsource.minimal
           (hpk i (by omega)) (hpk (i+1) (by omega)) (haux i (by omega))
           (fun hm => birthMinimal_of_lowerAt centre place entry q first hP hI
             (hprefix i (by omega)) hm hsource.lowerAt)
@@ -305,7 +349,7 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
         have hledger := ledgerAt_packed centre place entry q first hP hI hrunSource (Or.inl hm)
         simp only [shiftDebt, hm, show (Mode.scan = Mode.shift) = False from by simp,
           if_false] at hledger
-        have hminimal : ScanMinimal (fun _ _ => True) raw s := by
+        have hminimal : ScanMinimal (MovePayload raw s) raw s := by
           have hmode := hsource.minimal
           rw [hx] at hmode
           simpa [ModeMinimal, hm] using hmode
@@ -378,8 +422,8 @@ theorem scanMinimal_packed {a : Fin 2} {rest : List (Fin 2)} {c₀ : Control} {r
     {k : ℕ} {c : Control} {s : GalilVM}
     (hrun : CloseoutCheckW.StepsIMWC centre place entry q first (a :: rest) k ⟨c₀,r₀⟩ ⟨c, s⟩)
     (hm : c.mode = .scan) :
-    ScanMinimal (fun _ _ => True) (a :: rest) s ∧
-      BirthMinimal centre place entry (fun _ _ => True) (a :: rest) s := by
+    ScanMinimal (MovePayload (a :: rest) s) (a :: rest) s ∧
+      BirthMinimal centre place entry (MovePayload (a :: rest) s) (a :: rest) s := by
   have hinvariant := minimalAcrossRestart_packed centre place entry q first hP hI
     (lowerAt_of_packedFromBoot centre place entry q first hP hI hboot) hrun
   exact ⟨by simpa [ModeMinimal, hm] using hinvariant.minimal,
@@ -592,7 +636,7 @@ theorem move_of_watch_mispredict {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ 
   obtain ⟨a, rest, rfl⟩ := List.exists_cons_of_ne_nil hraw
   have hinvariant := minimalAcrossRestart_packed centre place entry q first hP hI
     (lowerAt_of_packedFromBoot centre place entry q first hP hI hboot) hrun
-  have hminimal : ScanMinimal (fun _ _ => True) (a :: rest) s := by
+  have hminimal : ScanMinimal (MovePayload (a :: rest) s) (a :: rest) s := by
     simpa [ModeMinimal, hm] using hinvariant.minimal
   have hwin : WindowRunPack (a :: rest) c s :=
     (PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun).win hP

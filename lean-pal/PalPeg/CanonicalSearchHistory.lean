@@ -350,7 +350,7 @@ theorem birthMinimals_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
         ((PofC centre place entry raw).place y.vm)
         (GalilScaffoldChainPeriod.start ((PofC centre place entry raw).centre y.vm)) h ∧
       FutureMinimal raw (position y.vm.center) h ∧
-      (vq.lower = reset → MoveMinimal raw (position y.vm.center) h) := by
+      MoveAbove raw (position y.vm.center) (value vq.lower).toNat h := by
   obtain ⟨lower,span,h,hlower,hres,hcand,hmin,hcopy⟩ :=
     birthMinimal_packed centre place entry q first hP hI hr hm hidle he hf
   have hexcludedLower := hexcluded lower hlower
@@ -359,7 +359,7 @@ theorem birthMinimals_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
   obtain ⟨a,ls,rs,suffix,hdec,hraw⟩ :=
     represents_decompose y.vm.center raw hcen.1 hcen.2
   obtain ⟨_,hplace⟩ := hP.1 y.vm a ls rs suffix y.vm.center.gap hdec
-  refine ⟨h,hcopy,?_,fun hz => ?_⟩
+  refine ⟨h,hcopy,?_,?_⟩
   rw [hraw]
   apply futureMinimal_of_candidate a ls rs suffix y.vm.center.gap
     (congrArg position hdec)
@@ -370,19 +370,16 @@ theorem birthMinimals_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
     exact hmin g hg
   · rw [← hraw]
     exact hexcludedLower
-  · have hlower0 : lower = 0 := by
-      apply (PalPeg.GalilScaffoldChainInputSupply.zero_ofNat_iff lower).mp
-      rw [← hlower,hz]
-      rfl
-    rw [hraw]
-    apply moveMinimal_of_candidate a ls rs suffix y.vm.center.gap
+  · have hlowerNat : (value vq.lower).toNat = lower := by
+      rw [hlower,ofNat_value,Int.toNat_natCast]
+    rw [hraw,hlowerNat]
+    apply moveAbove_of_candidate a ls rs suffix y.vm.center.gap
       (congrArg position hdec)
     · rw [← hplace]
       exact hcand
     · intro g hg
       rw [← hplace]
       exact hmin g hg
-    · exact hlower0
 
 #print axioms birthCopy_packed
 end PalPeg.CanonicalSearchHistory

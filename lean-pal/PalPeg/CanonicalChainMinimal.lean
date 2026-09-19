@@ -1150,7 +1150,9 @@ theorem birthMinimal_of_lower_reset {raw : List (Fin 2)} {c₀ : Control} {r₀ 
             (by rw [← hlowerEq,hvq]; rfl)
         rw [hlower0]
         exact PalPeg.CanonicalSearchProgram.lowerExcluded_zero _ _)
-  exact ⟨H,hcopy,hfuture,hmove hvq⟩
+  have hzero : (value vq.lower).toNat = 0 := by rw [hvq]; rfl
+  rw [hzero] at hmove
+  exact ⟨H,hcopy,hfuture,hmove.toMoveMinimal⟩
 
 /-- The zero-lower minimal-period budget along an arbitrary canonical packed
 prefix out of an `InvLPS` origin. -/
