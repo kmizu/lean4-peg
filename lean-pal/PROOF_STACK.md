@@ -1,3 +1,14 @@
+## n254 — shift 相の葉を放電（`OracleRun.shiftLeaf`）、新 oracle は run 形の葉 4 本に
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | `OracleRun.cycleOracleOn_of_fourLeaves (hP) (h4) (hready) (hchain) (hminv) (hfallback)`（標準公理のみ）。shift 相の葉は `shiftLeaf` で定理化: 比較状態の pack から `four_of_guard`（4h ≤ 半径）、入口状態の pack の窓（`periodLength_of_coreP`＋`periodLength_consume`、`Coupled'.block`）から `0 < h`、`GalilShiftPack.shiftHeads_of_scan`＋`shift_heads_counters`＋`shift_run_chain` で chain shift run、`shiftUnits_S`（`shift_run_lift` を 1 単位ずつ `tick_pull`／`shift_transfer`／`tick_S_of_tick` で `galilFrameS` へ、`StepsAll (SoundScanNR)`）、出口は `shiftExit_S`（`shift_done` を直接構成、`refresh` を露出）、着地の `SoundScanNR` は remaining 尽きた shift 状態の pack の `LPackM2.shiftGeom` → `shiftGeom_exit` → `outputRel_of_refresh`。葉 `hshift`／`hfallback` は「比較データ形」（`searchEffect`／`chainAt`／guard／entry／tick を明示、prefix は `StepsIMW`）に切り直し（tick の `cases` を避ける）。残る葉: `hready`（chain idle での `SearchReady`）／`hchain`（`ChainReady`）／`hminv`（`MInv`）／`hfallback`（fallback＋replay） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
 ## n253 — 新 oracle の一致分岐を証明（`OracleRun.scanCycle_of_leaves`、run 形の葉 3 本のみ）
 
 **公理への進捗**

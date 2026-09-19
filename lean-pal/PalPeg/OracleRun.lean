@@ -529,27 +529,52 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ y →
       MInv w y.ctl y.vm)
-    (hshift : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM)
-      (y : State GalilVM),
+    (hshift : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
+      (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ ⟨c, s⟩ →
-      c.mode = .scan → c.replaying = false → c.clock = 1 →
-      Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩ y → y.ctl.mode = .shift →
+      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
+      c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
+      read (left s.left) ≠ read (right s.right) →
+      searchEffect (PofC centre place entry w) false s vq →
+      chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
+        ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
+        s.center s.radius s.chain z →
+      (PofC centre place entry w).shiftGuard
+        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) →
+      (PofC centre place entry w).beginShift
+        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) u →
+      Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
+        ⟨{c with clock := 2048, mode := .shift}, u⟩ →
       ∃ (c' : Control) (s' : GalilVM) (n : ℕ),
-        StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) n y ⟨c', s'⟩ ∧
+        StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) n
+          ⟨{c with clock := 2048, mode := .shift}, u⟩ ⟨c', s'⟩ ∧
         c'.mode = .scan ∧ c'.replaying = false ∧
         Refreshed (PofC centre place entry w) q first ⟨c', s'⟩ ∧
         position s'.right = position s.right + 1 ∧ position s.center < position s'.center ∧
         n ≤ position s'.center - position s.center + 1)
-    (hfallback : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM)
-      (y : State GalilVM),
+    (hfallback : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
+      (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ ⟨c, s⟩ →
-      c.mode = .scan → c.replaying = false → c.clock = 1 →
-      Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩ y → y.ctl.mode = .copy →
+      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
+      c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
+      read (left s.left) ≠ read (right s.right) →
+      searchEffect (PofC centre place entry w) false s vq →
+      chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
+        ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
+        s.center s.radius s.chain z →
+      ¬ (PofC centre place entry w).shiftGuard
+        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) →
+      (PofC centre place entry w).beginFallback
+        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) u →
+      Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
+        ⟨{c with clock := 2048, mode := .copy}, u⟩ →
       ∃ (c' : Control) (s' : GalilVM) (kk r fb replay : ℕ),
         StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
-          (fb + replay) y ⟨c', s'⟩ ∧
+          (fb + replay) ⟨{c with clock := 2048, mode := .copy}, u⟩ ⟨c', s'⟩ ∧
         c'.mode = .scan ∧ c'.replaying = false ∧
         Refreshed (PofC centre place entry w) q first ⟨c', s'⟩ ∧
         position s'.right = position s.right + 1 ∧ r ≤ kk ∧
@@ -595,8 +620,16 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
   have hQt : SoundScanNR w ⟨{c with clock := 1}, t⟩ :=
     fun _ _ => outputRel_transfer w htr' rfl hout
   rcases scanCompare_cases centre place entry q first {c with clock := 1} t hm rfl hr hav' hsearch
-      hchainT with ⟨hmt, -⟩ | ⟨-, vq, z, u, -, -, hcase⟩
+      hchainT with ⟨hmt, -⟩ | ⟨-, vq, z, u, hq, hz, hcase⟩
   · exact absurd hmt hmis
+  -- the packed prefix up to the comparison state
+  have hrunT : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w (j + (c.clock - 1))
+      ⟨c₀, r₀⟩ ⟨{c with clock := 1}, t⟩ :=
+    PalPeg.CloseoutCheckW.stepsIMW_trans centre place entry q first hrun
+      (PalPeg.CloseoutMarksPack.packRunR_MW_marksFree centre place entry q first h4 hP c₀ r₀ hI₀
+        m hm1 hmle j ⟨c, s⟩ hjx _ ⟨{c with clock := 1}, t⟩ hpack hbg hr
+        (by show position t.right ≤ 2 * m - 1; rw [htr']; omega))
+  have hpT : position t.right + 1 ≤ 2 * m - 1 := by rw [htr']; omega
   -- the landing of either phase is a state of the run one place further right
   have hland : ∀ (y : State GalilVM) (c' : Control) (s' : GalilVM) (n : ℕ),
       Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨{c with clock := 1}, t⟩ y →
@@ -661,10 +694,10 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
         have hrp' : position s'.right = position s'.center + rad' := hsi'.rightPos
         omega
       exact lex_lt (2 * w.length) _ _ _ _ (by omega) (by omega)
-  rcases hcase with ⟨-, -, htick⟩ | ⟨-, -, htick⟩
+  rcases hcase with ⟨hg, hb, htick⟩ | ⟨hng, hb, htick⟩
   · -- the shift phase
     obtain ⟨c', s', n, hphase, hm', hr', hf', hpos', hcen', hn⟩ :=
-      hshift c₀ r₀ _ {c with clock := 1} t _ hI₀ hjt hm hr rfl htick rfl
+      hshift c₀ r₀ _ {c with clock := 1} t vq z u m hm1 hmle hI₀ hrunT hm hr rfl hpT hmis hq hz hg hb htick
     rw [htr'] at hpos'
     rw [htc] at hcen' hn
     obtain ⟨hall, hstI, hI'⟩ := hland _ c' s' n htick (by simp) hphase hm' hr' hf' hpos'
@@ -678,7 +711,7 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
     · simp
   · -- the fallback and its replay
     obtain ⟨c', s', kk, r, fb, replay, hphase, hm', hr', hf', hpos', hrk, hcen', hfb, hre⟩ :=
-      hfallback c₀ r₀ _ {c with clock := 1} t _ hI₀ hjt hm hr rfl htick rfl
+      hfallback c₀ r₀ _ {c with clock := 1} t vq z u m hm1 hmle hI₀ hrunT hm hr rfl hpT hmis hq hz hng hb htick
     rw [htr'] at hpos'
     rw [htc] at hcen'
     obtain ⟨hall, hstI, hI'⟩ := hland _ c' s' _ htick (by simp) hphase hm' hr' hf' hpos'
@@ -961,6 +994,56 @@ theorem shiftLeaf {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w)) 
   · omega
 
 #print axioms shiftLeaf
+
+/-- **The run-shaped cycle oracle from four leaves**: the shift leaf is `shiftLeaf`. -/
+theorem cycleOracleOn_of_fourLeaves {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w))
+    (h4 : first ≠ 4)
+    (hready : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
+      InvLPS (PofC centre place entry w) q first w c₀ r₀ →
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ y →
+      y.vm.chain = .idle → PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm))
+    (hchain : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
+      InvLPS (PofC centre place entry w) q first w c₀ r₀ →
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ y →
+      ChainReady y.vm.chain)
+    (hminv : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
+      InvLPS (PofC centre place entry w) q first w c₀ r₀ →
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ y →
+      MInv w y.ctl y.vm)
+    (hfallback : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
+      (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
+      InvLPS (PofC centre place entry w) q first w c₀ r₀ →
+      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
+      c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
+      read (left s.left) ≠ read (right s.right) →
+      searchEffect (PofC centre place entry w) false s vq →
+      chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
+        ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
+        s.center s.radius s.chain z →
+      ¬ (PofC centre place entry w).shiftGuard
+        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) →
+      (PofC centre place entry w).beginFallback
+        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) u →
+      Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
+        ⟨{c with clock := 2048, mode := .copy}, u⟩ →
+      ∃ (c' : Control) (s' : GalilVM) (kk r fb replay : ℕ),
+        StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+          (fb + replay) ⟨{c with clock := 2048, mode := .copy}, u⟩ ⟨c', s'⟩ ∧
+        c'.mode = .scan ∧ c'.replaying = false ∧
+        Refreshed (PofC centre place entry w) q first ⟨c', s'⟩ ∧
+        position s'.right = position s.right + 1 ∧ r ≤ kk ∧
+        position s'.center = position s.center + (kk + 1 - r) ∧
+        fb ≤ 12704 * (kk + 1 - r) + 4012 ∧ replay ≤ 8 * 2048 * (kk + 1 - r)) :
+    PalPeg.CloseoutCheckW.CycleOracleOn centre place entry q first
+      (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) w :=
+  cycleOracleOn_of_leaves centre place entry q first hP h4 hready hchain hminv
+    (fun c₀ r₀ k c s vq z u m hm1 hmle hI₀ hrun hm hr hc hp hmis hq hz hg hb htick =>
+      shiftLeaf centre place entry q first hP h4 hm1 hmle hI₀ hrun hm hr hc hp hmis hq hz hg hb htick)
+    hfallback
+
+#print axioms cycleOracleOn_of_fourLeaves
 
 #print axioms chainReady_watch_of_watchWindow
 
