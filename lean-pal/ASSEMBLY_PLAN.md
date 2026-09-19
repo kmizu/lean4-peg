@@ -1,3 +1,22 @@
+## n274 — 葉 `hmove`: 追い付いた第 1 ラウンドの watch（`lag = 0`・`phase = 4`）の場合を閉じた（葉は 1 本のまま、前提がもう 1 つ狭まった）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` は、chain が idle でなく、かつ chain tick の結果が「`periodOnly = false`・`lag = 0`・`phase = 4` の watch」**でない**不一致状態だけを負う |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。
+
+**何を証明したか**
+
+* 予測が外れた場合: `RestartLower.move_of_prediction_break` → `CanonicalFallbackInput.move_of_activePeriodBreak`（`Rad ≤ 4h` 不要）。入力は scan span の周期 `2h`（`spanPeriod_of_window`）、その最小性（run 不変量の `ScanMinimal`＋`scanMinimal_watch_no_short`）、fallback 窓の先頭がその周期を壊すこと。最後の点は `RestartBoundary.prediction_eq_text`（予測記号 ＝ `text[P+1−2h]`、`not_breakStep_of_text` から切り出して共有）と、窓の先頭 ＝ 直前に読んだ場所 `text[P+1]`（`stream_index`）と、span の回文性から。
+* 予測が当たった場合: `RestartLowerRun.shiftGuard_of_caughtUp`。`phase = 4` から `4h ≤ distance`（`four_of_freshC`、`periodOnly = false` なので `Other'` 側は矛盾）、`WatchLedger.balance` から `margin = distance − 4h ≥ 0`、よって shift guard が立ち、葉の前提 `¬ shiftGuard` と矛盾する。このために chain の台帳（`WatchLedger`／`ChainLedger`）に **margin の canonical 性**を足した（`not_negative_of_nonneg`）。
+* 共通部分は `RestartLowerRun.caughtUp_facts`、比較の構成は `CanonicalChainMinimal.compare_of_mismatch`（`shiftPeriodMinimal_packed` と共有）。
+
+**未完の部分**: `hmove` の残りは chain 非 idle で、chain tick の結果が (a) copy／back、(b) `lag ≠ 0` の watch、(c) `phase ≠ 4` の watch、(d) `periodOnly = true` の watch、(e) broken（restart guard 不成立）の場合。調査で分かっていること（証明は未着手）: (a)(b)(c) は「`Rad < 4h`」の側で、`ChainLedger` の `lag − margin = 4·(copy 済み)`／`balance = 4h` は lag／margin の関係だけを持ち、`Rad < 4h` を出すには chain の**時間の台帳**（1 tick に chain 1 歩・2048 tick に一致 1 回、誕生時 `R₀ ≤ 2h`）が要る。その上で `move_of_activeBound` に渡す `MoveMinimal` は restart 後は `lower` を知っている形に弱める必要がある（`g ≤ lower` は `LowerAt` を chain 非 idle の第 1 ラウンドに延長して排除、`lower < g < h` は DP の最小性）。(d) は Scala の `checkPair`（2 半周期の継続不変量: 非終端では左の読み ＝ 予測）に当たる不変量が run 上に無い。`obligation_localRealization` は未着手。
+
 ## n273 — 葉 `hmove` の chain idle 分岐を全部証明して接続（葉は 1 本のまま、前提は `s.chain ≠ .idle` に狭まった）
 
 **公理への進捗**
