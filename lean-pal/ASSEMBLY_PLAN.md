@@ -9,6 +9,8 @@
 
 **状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
 
+**残り 6 葉の帰着先（n255 追記）**: `hchain` の copy 相は誕生時の `∃ n, CopyInv answer reset walker (start cc) h`（`AnswerAheadDecode.copyInv_of_found`: `denote answer = output h`／`head answer = h`／`focus = 8`／`Candidate (stream p take (span+1)) lower h`）を要り、`hminv` の shift 相は `leftmost_shift` の周期最小性（`∀ g < h, ¬Candidate`）を要る。どちらも **found 時の DP 出力の decode**で、既存: `GalilSearchResult.search_result_at_tick (hP : Decodes P) … (hR : Restarted raw r Rad last) (hstage : 3·Rad ≤ 5·k) (hseg : WatchSegE … c0 r cF sF) (hsF : chain idle) (hcF : clock 1) (hq : searchEffect P true sF vq) (hfound) : (∃ k h, Result (stream take (8·max k 1+1)) k 0 (denote vq.dp.config) ∧ pc = 346 ∧ pos 11 = h ∧ Candidate … h ∧ (∀ g < h, ¬Candidate …) ∧ sF.search.mode = run) ∨ (第 1 段で run を抜けた)`（第 1 段）、後段は `search_later_stage'`／`later_stage_found_result`／`laterStage_dpEntry`。つまり `hchain`／`hminv` は「fresh restart からの chain idle 区間の found」＝`hfresh` と同じ起点データ（`Restarted ∧ StageEntry`＋`ReplayStage` の履歴）で決まる。運び方: `WindowInv.copy` に `∃ n, CopyInv` を足し、`windowInv_start`（誕生）で `copyInv_of_found` を使う——その入力（`Result`）を `windowRunPack_tick` 経由で `packRunR_MW_marksFree` に thread する（found 比較の decode は run 形で供給）。`hfallback` の replay 区間は `hready` と同じ datum で背景 tick が出る。
+
 ## n254 — shift 相の葉を放電（`OracleRun.shiftLeaf`）、新 oracle は run 形の葉 4 本に
 
 **公理への進捗**
