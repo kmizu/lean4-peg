@@ -175,17 +175,20 @@ theorem lowerExcluded_at_break {Move : ℕ → ℕ → Prop} {raw : List (Fin 2)
       lowerExcluded_of_break hpal hperiod hnoShort hmismatch (by omega) (by omega) hlowN⟩
 
 /-- **The fallback move inequality when a caught-up watch mispredicts.**  The scan span has the
-chain's period `2h` (verified window), that period is minimal there (`ScanMinimal`), and the
-place the fallback window adds breaks it, because the prediction is the text two semiperiods
-back and differs from the place just read. -/
-theorem move_of_prediction_break {Move : ℕ → ℕ → Prop} {raw : List (Fin 2)} {c : Control}
+chain's period `2h` (verified window), that period is minimal there (`hnoShortOf`: the birth
+payload in the first round, the thresholded minimality after a shift), and the place the
+fallback window adds breaks it, because the prediction is the text two semiperiods back and
+differs from the place just read. -/
+theorem move_of_prediction_break {raw : List (Fin 2)} {c : Control}
     {s : GalilVM} {w0 w1 : GalilScaffoldChainWatch.State} {R : ℕ} {vq : SearchVM} {z : ChainVM}
     (hwin : WindowRunPack raw c s) (hm : c.mode = Mode.scan)
     (hscan : ScanInvariant raw (position s.center) R s.left s.right)
     (hcan : canRight s.right) (hlen : value s.length = (2*R+1 : ℕ))
-    (hminimal : ScanMinimal Move raw s)
     (hchain : s.chain = .watch w0) (hinternal : GalilScaffoldChainWatch.Internal w0 w1)
-    (hzero : zero w1.lag = true) (hfour : 4 * periodLength w1 ≤ R)
+    (hzero : zero w1.lag = true) (htwo : 2 * periodLength w1 ≤ R)
+    (hnoShortOf : periodLength w0 = periodLength w1 →
+      HasPeriod (Span raw (position s.center) R) (2 * periodLength w0) →
+      ∀ p, 0 < p → p < 2 * periodLength w0 → ¬ HasPeriod (Span raw (position s.center) R) p)
     (hprediction : GalilScaffoldChainConsume.symbol w1.machine.control.period.focus
       ≠ read (right s.right)) :
     let s1 := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
@@ -202,7 +205,7 @@ theorem move_of_prediction_break {Move : ℕ → ℕ → Prop} {raw : List (Fin 
   have hlength1 : periodLength w1 = xs.length + 1 := periodLength_of_coreP hW1.2.2
   obtain ⟨m, hk⟩ := (hk w0 hchain).2 (by rw [hm]; decide)
   rw [hlength0] at hk
-  rw [hlength1] at hfour
+  rw [hlength1] at htwo
   have hRC := scan_radius_lt hscan
   have hpal := hscan.palindrome
   have hright : position s.right = position s.center + R := hscan.rightPos
@@ -215,8 +218,8 @@ theorem move_of_prediction_break {Move : ℕ → ℕ → Prop} {raw : List (Fin 
     rw [show 2*R+1 = (position s.center + R) + 1 - (position s.center - R) from by omega]
     exact (hasPeriod_slice_iff (x := encoded raw) (p := 2 * (xs.length + 1)) hpal.2.1
       (by omega)).mpr hperiod
-  have hnoShort := scanMinimal_watch_no_short hminimal hchain hright hRC hpal
-    (by rw [hlength0]; exact hfour) (by rw [hlength0]; exact hperiodSpan)
+  have hnoShort := hnoShortOf (hlength0.trans hlength1.symm)
+    (by rw [hlength0]; exact hperiodSpan)
   rw [hlength0] at hnoShort
   obtain ⟨-, hpredictionText⟩ := prediction_eq_text hW1 hzero hsize
   have hleft0 : 0 < s.right.head.left.length :=

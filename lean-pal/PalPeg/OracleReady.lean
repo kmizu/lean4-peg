@@ -81,6 +81,10 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
       searchEffect (PofC centre place entry w) false s vq →
       s.chain ≠ .idle →
       s.periodOnly = true →
+      (∀ w1 : GalilScaffoldChainWatch.State, z = .watch w1 → zero w1.lag = true →
+        w1.machine.control.phase = 4 →
+        GalilScaffoldChainConsume.symbol w1.machine.control.period.focus
+          = GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right)) →
       chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
         ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
         s.center s.radius s.chain z →
@@ -178,8 +182,20 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
                 hphase hprediction
           · exact PalPeg.RestartLowerRun.move_of_watch_short centre place entry q first
               hnonempty hP hI hBoot hRun hm hr hCan hChain hfirstRound hzero hphase
-      · exact hmove c₀ r₀ k c s vq z m hm1 hmle hI hBoot hRun hNoGuardS hm hr hc hPos hM hMis
-          hSearch hidle (by simpa using hfirstRound) hChain hGuard
+      · have honly : s.periodOnly = true := by simpa using hfirstRound
+        by_cases hmispredict : ∃ w1 : GalilScaffoldChainWatch.State, z = .watch w1 ∧
+            zero w1.lag = true ∧ w1.machine.control.phase = 4 ∧
+            GalilScaffoldChainConsume.symbol w1.machine.control.period.focus
+              ≠ GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right)
+        · obtain ⟨w1, hz, hzero, hphase, hprediction⟩ := hmispredict
+          subst hz
+          exact PalPeg.RestartLowerRun.move_of_tail_mispredict centre place entry q first
+            hnonempty hP hI hBoot hRun hm hr hCan hMis hSearch hChain honly hzero hphase
+            hprediction
+        · exact hmove c₀ r₀ k c s vq z m hm1 hmle hI hBoot hRun hNoGuardS hm hr hc hPos hM hMis
+            hSearch hidle honly (fun w1 hz hzero hphase => by
+              by_contra hne
+              exact hmispredict ⟨w1, hz, hzero, hphase, hne⟩) hChain hGuard
   change ℓ / 2 ≤ 4*(ℓ / 2 + 1-radius) at hMove
   have hk : ℓ / 2 = rad := by rw [hLengthNat]; omega
   rw [hk] at hMove

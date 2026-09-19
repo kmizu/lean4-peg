@@ -1,3 +1,23 @@
+## n279 — 葉 `hmove`: shift 後のラウンドで、追い付いた watch（phase 4）が予測を外す不一致を閉じた
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` に前提が 1 つ増えた（＝葉が狭くなった）: `s.periodOnly = true` に加えて「chain tick の結果が lag ゼロ・phase 4 の watch なら、その予測は右で読んだ文字に等しい」。予測を外す場合は葉から消えた |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。`OracleReady.cycleOracleOn_of_readyLeaves` と `RestartLowerRun.move_of_tail_mispredict` は標準 3 公理のみ。
+
+**何を証明したか**: `RestartLowerRun.move_of_tail_mispredict` → `RestartLower.move_of_prediction_break`（一般化した）→ `move_of_activePeriodBreak`。run 不変量 `MinimalAcrossRestart` に場を 2 つ足した。どちらもこの定理が消費する。
+
+* `TailRound raw c s := scan → periodOnly = true → ScanMinimal (fun _ _ => False) raw s`。payload を `False` にすると `WatchMinimal` の `Sem` 側は `watch_moveMinimal` で `False` になるので、「shift 後は `TailMinimal` 側（`base ≤ R`）」と同値。copy／back も同じ理由で排除される。`tailRound_tick`: source の chain が idle でなければ `Move` 汎用の `modeMinimal_tick_packed`（`BirthMinimal` は `s.chain = .idle` が偽で空虚）、idle なら誕生が無い（誕生すれば target の `periodOnly = false`）ので target も idle、`shift_done` は `ShiftMinimal`。
+* `CycleBound c s`: watch について、scan かつ `periodOnly = true` なら `cycle ≤ 2h`、shift なら `cycle + 2·remaining ≤ 2h`。`cycleBound_tick` は `beginShiftVM'`（`cycle := reset`, `remaining := ofNat h`）、`shift_one`（`cycle += 2`, `remaining −= 1`）、matched（`compare'_inv` の `cycleAfter`）、`shift_done`（`radiusShift` の `remaining = ofNat rem` と `positive = false` から `rem = 0`）。**run 上に `cycle` の上界はこれまで無かった**（`Other'` は `5h ≤ R + cycle`、`OnlyCredit` は `0 ≤ margin + cycle` でどちらも下界）。
+* `2h ≤ R` の出所: `caughtUp_watch`（`caughtUp_facts` から `hfirstRound` を外した一般形。第 1 ラウンド版はそこから導く）が `4h ≤ distance ∨ Other'` を返す。前者は `4h ≤ R`、後者は `5h ≤ R + cycle` と `cycle ≤ 2h` で `3h ≤ R`。
+* `move_of_prediction_break` は `4h ≤ R` と `ScanMinimal` を取っていたが、`4h` は `Sem` 側の最小性のためだけだった。`2h ≤ R` と最小性の供給関数 `hnoShortOf` を取る形にして、第 1 ラウンド（`scanMinimal_watch_no_short`）と shift 後（`TailMinimal`）の両方が同じ定理を使う。
+
+**未完の部分**: 葉 `hmove` の `periodOnly = true` の残り。(c2) 追い付いた watch（phase 4）が予測を当て、shift guard が立たない（＝`cycleEnd` でない）不一致。Scala `checkPair` は到達不能と主張（lag ゼロなら `left == prediction ⇔ ¬ cycleEnd`）、Lean では継続不変量が要る（未着手）。(c3) phase ≠ 4 の追い付いた watch、遅れている watch、既に broken の chain（未調査）。`obligation_localRealization` は未着手。
+
 ## n278 — 葉 `hmove`: 第 1 ラウンドで「不一致状態の chain が既に broken」は到達不能。第 1 ラウンドは全部閉じ、葉に残るのは `periodOnly = true` だけ
 
 **公理への進捗**
