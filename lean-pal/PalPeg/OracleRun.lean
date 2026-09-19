@@ -147,6 +147,124 @@ theorem scanBackground_run {w : List (Fin 2)} :
 
 #print axioms scanBackground_run
 
+/-- **The comparison of one scan cycle, classified.**  At clock `1` in a non-replaying scan
+state whose right head can move, with a ready search co-process and chain, the tick is one of:
+a match (`scan_match`: the heads move out, the clock refills, the flag is refreshed), a
+mismatch confirmed by the chain (`scan_shift`), or a mismatch without the shift guard
+(`scan_fallback`).  `compare_progress_gen` with the outcome and the entry data exposed. -/
+theorem scanCompare_cases {w : List (Fin 2)} (c : Control) (s : GalilVM) (hm : c.mode = .scan)
+    (hc : c.clock = 1) (hr : c.replaying = false) (hav : canRight s.right)
+    (hsearch : ∀ a : Bool, ∃ v, searchEffect (PofC centre place entry w) a s v)
+    (hchain : ChainReady s.chain) :
+    (read (left s.left) = read (right s.right) ∧
+      ∃ (vq : SearchVM) (z : ChainVM) (o : Bool),
+        searchEffect (PofC centre place entry w) true s vq ∧
+        chainAt true (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
+          ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
+          s.center s.radius s.chain z ∧
+        refresh (galilFrameS (PofC centre place entry w) q first)
+          (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+            (afterCompare s ⟨left s.left, right s.right, z⟩ vq)) c.output o ∧
+        Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
+          ⟨{c with clock := 2048, output := o, replaying := false},
+            afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+              (afterCompare s ⟨left s.left, right s.right, z⟩ vq)⟩) ∨
+    (read (left s.left) ≠ read (right s.right) ∧
+      ∃ (vq : SearchVM) (z : ChainVM) (t : GalilVM),
+        searchEffect (PofC centre place entry w) false s vq ∧
+        chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
+          ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
+          s.center s.radius s.chain z ∧
+        (((PofC centre place entry w).shiftGuard
+            (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+              (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) ∧
+          (PofC centre place entry w).beginShift
+            (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+              (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) t ∧
+          Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
+            ⟨{c with clock := 2048, mode := .shift}, t⟩) ∨
+         (¬ (PofC centre place entry w).shiftGuard
+            (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+              (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) ∧
+          (PofC centre place entry w).beginFallback
+            (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+              (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) t ∧
+          Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
+            ⟨{c with clock := 2048, mode := .copy}, t⟩))) := by
+  classical
+  have hav' : (galilFrameS (PofC centre place entry w) q first).available s := hav
+  have hchainAt : ∀ (a : Bool) (v : SearchVM), ∃ z, chainAt a (decide (v.search.mode = .found))
+      (v.dp.config.tapes 11) ((PofC centre place entry w).centre s)
+      ((PofC centre place entry w).place s) s.center s.radius s.chain z :=
+    fun a v => chainAt_exists a _ _ _ _ _ _ s.chain hchain
+  by_cases hmt : read (left s.left) = read (right s.right)
+  · obtain ⟨vq, hq⟩ := hsearch true
+    obtain ⟨z, hz⟩ := hchainAt true vq
+    let vs : ScanVM := ⟨left s.left, right s.right, z⟩
+    have hmt0 : (galilFrame (PofC centre place entry w) q first).matched (scanLens.set s vs) := hmt
+    let born := chainBorn (decide (vq.search.mode = .found)) s.chain
+    have hcmp : (galilFrameS (PofC centre place entry w) q first).compare s
+        (afterBirth born (afterCompare s vs vq)) :=
+      ⟨vs, vq, true, rfl, rfl, ⟨fun _ => hmt0, fun _ => rfl⟩, hq, hz, rfl⟩
+    have hmt1 : (galilFrameS (PofC centre place entry w) q first).matched
+        (afterBirth born (afterCompare s vs vq)) := by
+      show read (afterBirth born (afterCompare s vs vq)).left
+        = read (afterBirth born (afterCompare s vs vq)).right
+      rw [afterBirth_left, afterBirth_right]
+      exact hmt
+    let s'' : GalilVM := replayDec c.replaying (afterBirth born (afterCompare s vs vq))
+    let o : Bool := if (PofC centre place entry w).onLetter s''
+      then decide ((PofC centre place entry w).leftFirst s'') else c.output
+    have ho : refresh (galilFrameS (PofC centre place entry w) q first) s'' c.output o := by
+      refine ⟨fun hl => ?_, fun hl => ?_⟩
+      · have hl' : (PofC centre place entry w).onLetter s'' := hl
+        show (if (PofC centre place entry w).onLetter s''
+          then decide ((PofC centre place entry w).leftFirst s'') else c.output) = true ↔
+          (PofC centre place entry w).leftFirst s''
+        rw [if_pos hl']
+        exact decide_eq_true_iff
+      · have hl' : ¬ (PofC centre place entry w).onLetter s'' := hl
+        show (if (PofC centre place entry w).onLetter s''
+          then decide ((PofC centre place entry w).leftFirst s'') else c.output) = c.output
+        rw [if_neg hl']
+    have htick := Tick.scan_match (F := galilFrameS (PofC centre place entry w) q first)
+      (delay := 2048) c s _ s'' o hm (Or.inr hav') hc hcmp hmt1
+      (matchedPlace_replayDec (PofC centre place entry w) q first c.replaying _) ho
+    have hs'' : s'' = afterBirth born (afterCompare s vs vq) := by
+      show replayDec c.replaying _ = _
+      rw [hr]; rfl
+    rw [hs''] at ho htick
+    rw [hr] at htick
+    exact Or.inl ⟨hmt, vq, z, o, hq, hz, ho, htick⟩
+  · obtain ⟨vq, hq⟩ := hsearch false
+    obtain ⟨z, hz⟩ := hchainAt false vq
+    let vs : ScanVM := ⟨left s.left, right s.right, z⟩
+    have hmt0 : ¬ (galilFrame (PofC centre place entry w) q first).matched (scanLens.set s vs) := hmt
+    let born := chainBorn (decide (vq.search.mode = .found)) s.chain
+    have hcmp : (galilFrameS (PofC centre place entry w) q first).compare s
+        (afterBirth born (afterMismatch s vs vq)) :=
+      ⟨vs, vq, false, rfl, rfl, Iff.intro (fun h0 => by cases h0) (fun h0 => absurd h0 hmt0),
+        hq, hz, rfl⟩
+    have hmt1 : ¬ (galilFrameS (PofC centre place entry w) q first).matched
+        (afterBirth born (afterMismatch s vs vq)) := by
+      intro h0
+      apply hmt
+      have h1 : read (afterBirth born (afterMismatch s vs vq)).left
+        = read (afterBirth born (afterMismatch s vs vq)).right := h0
+      rw [afterBirth_left, afterBirth_right] at h1
+      exact h1
+    by_cases hg : (PofC centre place entry w).shiftGuard (afterBirth born (afterMismatch s vs vq))
+    · obtain ⟨t, hb⟩ := beginShift_exists (afterBirth born (afterMismatch s vs vq)) hg
+      exact Or.inr ⟨hmt, vq, z, t, hq, hz, Or.inl ⟨hg, hb,
+        Tick.scan_shift (F := galilFrameS (PofC centre place entry w) q first) (delay := 2048)
+          c s _ t hm (Or.inr hav') hc hcmp hmt1 hr hg hb⟩⟩
+    · obtain ⟨t, hb⟩ := beginFallback_exists (afterBirth born (afterMismatch s vs vq))
+      exact Or.inr ⟨hmt, vq, z, t, hq, hz, Or.inr ⟨hg, hb,
+        Tick.scan_fallback (F := galilFrameS (PofC centre place entry w) q first) (delay := 2048)
+          c s _ t hm (Or.inr hav') hc hcmp hmt1 (Or.inr hg) hr hb⟩⟩
+
+#print axioms scanCompare_cases
+
 #print axioms chainReady_watch_of_watchWindow
 
 #print axioms scan_tick_exists_PofC
