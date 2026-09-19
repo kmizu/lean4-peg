@@ -16,6 +16,8 @@
 * `2h ≤ R` の出所: `caughtUp_watch`（`caughtUp_facts` から `hfirstRound` を外した一般形。第 1 ラウンド版はそこから導く）が `4h ≤ distance ∨ Other'` を返す。前者は `4h ≤ R`、後者は `5h ≤ R + cycle` と `cycle ≤ 2h` で `3h ≤ R`。
 * `move_of_prediction_break` は `4h ≤ R` と `ScanMinimal` を取っていたが、`4h` は `Sem` 側の最小性のためだけだった。`2h ≤ R` と最小性の供給関数 `hnoShortOf` を取る形にして、第 1 ラウンド（`scanMinimal_watch_no_short`）と shift 後（`TailMinimal`）の両方が同じ定理を使う。
 
+**(c2) の設計（n279 の後、証明は未完。`Continuation` は検査済み・周期の場は未消費）**: `CycleBound` を `RestartLowerRun.Continuation` に拡張した。ラウンド中 `Lb = C − R − cycle + 1` は動かず（matched で `R+1, cycle−1`、`shiftOne` で `C+1, R−1, cycle+2`）、`[Lb, C]`（shift 中は `[Lb, C + rem]`）は周期 `2h`。shift 開始時の周期は `continuation_start`（`spanPeriod_of_window`、`Lb = C₀ − R₀`）。(c2) は shift guard の不成立が `singlePositive cycle` の一点（`shiftGuardVM` の定義で確認）なので `cycle = 1` を示せばよい。`cycle ≥ 2` なら `e[C−R−1] = e[C−R−1+2h] =`（回文の鏡像）`e[C+R+1−2h] =` 予測 `=` 右の文字、で不一致と矛盾。`cycle ≤ 0` なら `Lb − 1` が span `[C−R, C+R]` の中に入り span は周期 `2h`（`spanPeriod_of_window`）。**これと矛盾させるには不変量に「`Lb − 1` で周期が破れる」（前ラウンドの不一致＋ guard の予測一致＋鏡像から `e[Lb−1] ≠ e[Lb−1+2h]`）と `1 ≤ Lb` を足す必要がある。** 左の読みは `signedRead`（place 0 は `none`）なので、破れは `signedRead raw (Lb − 1) ≠ e[Lb−1+2h]?` の形で持つ。`matched_text` の不一致版（`¬ matched` から左右の文字が違う）も要る。
+
 **未完の部分**: 葉 `hmove` の `periodOnly = true` の残り。(c2) 追い付いた watch（phase 4）が予測を当て、shift guard が立たない（＝`cycleEnd` でない）不一致。Scala `checkPair` は到達不能と主張（lag ゼロなら `left == prediction ⇔ ¬ cycleEnd`）、Lean では継続不変量が要る（未着手）。(c3) phase ≠ 4 の追い付いた watch、遅れている watch、既に broken の chain（未調査）。`obligation_localRealization` は未着手。
 
 ## n278 — 葉 `hmove`: 第 1 ラウンドで「不一致状態の chain が既に broken」は到達不能。第 1 ラウンドは全部閉じ、葉に残るのは `periodOnly = true` だけ
