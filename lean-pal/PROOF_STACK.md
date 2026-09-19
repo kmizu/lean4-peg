@@ -28,6 +28,13 @@ found tick（`CloseoutFoundRoute1.found_first_tick` の形）→ 決定的 run�
 `PalPeg/OracleRun.lean`（登録済み・標準公理のみ）: `scan_tick_exists_PofC (c s) (hm : scan) (hclk : 1 ≤ clock) (hr : replaying = false) (hsearch : SearchReady (searchLens.get s)) (hready : ChainReady s.chain) : ∃ st', Tick (galilFrameS (PofC …) q first) 2048 ⟨c, s⟩ st'`（`scan_tick_gen` ＋ `beginShift_exists`／`beginFallback_exists`／`searchEffect_exists`／`chainAt_exists`）と `phase_tick_exists_PofC (hx : PhaseEnabled q first x)`。copy 相の `ChainReady.copy`（`∃ n, CopyInv t h p v n`＝DP 答えテープの残り `n` と place の残り `n`）は誕生時に `startShape'_of_decodes`（`AnswerAhead`／`PlaceAhead`）から。
 `OracleRun.chainReady_watch_of_watchWindow (hW : WatchWindow raw cen₀ (position r) cc b xs (.watch w)) (hrep) (hpres) (hcan : canRight r) : ChainReady (.watch w)`: `LagAt` で verifier は右ヘッドの手前、`CoreP` で表現＋`OnBlock`、`symbol_of_coreP`＋`bounce_length` で焦点記号は常に `some`。これで `WindowRunPack` の watch 状態は右ヘッドが動ける限り `scan_tick_exists_PofC` の `hready` を満たす。
 
+### found 経路の run 構成（設計、n251 確定版）
+
+found tick 後の chain の一生を `PofC` frame で構成する。各 tick の存在は `scan_tick_exists_PofC`（scan）／`phase_tick_exists_PofC`（phase）。
+1. **watch 相**（copy／back は `GalilPrepConstruct.prep_segment_construct` が明示的に構成する）: 不変量は `WindowRunPack`（`windowRunPack_tick`、源に `LPackM`／`LPackM2`／`AuxPack`）＋ `SearchReady`（chain 生存中は `searchEffect` が探索を進めないので不変、`readyPacedS_effect_*` の `hidle` 参照）。`ChainReady` は `chainReady_watch_of_watchWindow`（右ヘッドの `canRight` が要る＝報告点 `2m−1` の手前）。
+2. **終端の分類**（比較 tick、clock 1）: 一致 → 続行（右ヘッド +1、`position right ≤ 2m−1` で停止性）；不一致＋guard → `scan_shift`（`ShiftEnabled` は `LPackM2.shiftGeom` から、shift 後は scan に戻り `WindowRunPack` 継続）；不一致＋¬guard → `fallback_restarted_All`（`hg : ¬ shiftGuardVM (afterMismatch …)`、`heven`＝DP 窓長の偶数性、`hi : ShiftIdle`）が restart 直後の `Restarted raw t 0 reset` まで run を作る；break（`brokenMatched`／`breaks`）→ lag ゼロなら `restart` tick で `Restarted`、正 lag なら chain は死んだまま次の不一致で fallback。
+3. **着地**: `Restarted` ＋ `SpanRep` ＋ `CopyPack` → `invLPC_of_landed` → `InvLPS`（`replayStage_of_inv`）→ `cycleOutMC3_of_centre`（`mu` は辞書式: 中心前進 or 同中心で右ヘッド前進）。報告点 `2m−1` に達したら `ReachAtC3`。
+
 ## n250 — モデル欠陥 `M-watchBreak` を修正（`ChainStep.watchBreak`／`ChainMatched.brokenMatched`）、全体 build 緑
 
 **公理への進捗**
