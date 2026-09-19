@@ -297,12 +297,122 @@ theorem modeMinimal_tick_lower {raw : List (Fin 2)} {x y : State GalilVM}
         · rw [h] at hm; cases hm
         · rw [hw] at hidle; cases hidle)
 
+/-- While the centre has not moved since the chain was born (first round), the chain carries its
+birth payload itself, not only the thresholded form that survives a shift. -/
+def FirstRoundSem (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
+  c.mode = .scan → (s.chain = .idle ∨ s.periodOnly = false) →
+    Sem (MovePayload raw s) raw (position s.center) s.chain
+
+theorem firstRoundSem_of_idle {raw : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hidle : s.chain = .idle) : FirstRoundSem raw c s := by
+  intro _ _
+  rw [hidle]
+  trivial
+
+/-- One tick keeps `FirstRoundSem`: a scan tick is one chain tick at a fixed centre and a fixed
+lower bound (`semWith_chainAt`, the birth hook is `BirthMinimal`), every other way into scan mode
+lands on an idle chain or after a shift. -/
+theorem firstRoundSem_tick {Extra : ℕ → ℕ → GalilScaffoldChainWatch.State → Prop}
+    {raw : List (Fin 2)} {x y : State GalilVM}
+    (ht : Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y)
+    (hsource : FirstRoundSem raw x.ctl x.vm)
+    (hstage : BrokenStage Extra x.ctl x.vm)
+    (hbirth : x.ctl.mode = .scan →
+      BirthMinimal centre place entry (MovePayload raw x.vm) raw x.vm) :
+    FirstRoundSem raw y.ctl y.vm := by
+  have hbackground : ∀ {c c' : Control} {s t : GalilVM}, x = ⟨c, s⟩ → y = ⟨c', t⟩ →
+      c.mode = .scan → (galilFrameS (PofC centre place entry raw) q first).background s t →
+      FirstRoundSem raw c' t := by
+    intro c c' s t hx hy hm hb
+    subst hx
+    subst hy
+    obtain ⟨-, -, hch, hcenter, honly, -, -, -, -, -, -, hse⟩ :=
+      backgroundS_fields (PofC centre place entry raw) q first hb
+    intro _ hguard
+    have hsourceGuard := lowerGuard_source hch honly hguard
+    have hpayload : MovePayload raw t = MovePayload raw s := by
+      unfold MovePayload
+      rw [show t.lower = s.lower from searchEffect_lower_eq hse]
+    show Sem (MovePayload raw t) raw (position t.center) t.chain
+    rw [hpayload, hcenter]
+    exact sem_chainAt (hsource hm hsourceGuard)
+      (fun hi hf => hbirth hm false _ hi hse (by simpa using hf)) hch
+  cases ht with
+  | init c s t hm hi =>
+    obtain ⟨_,_,_,_,_,_,_,_,_,hch,_⟩ := hi
+    exact firstRoundSem_of_idle hch
+  | scan_wait c s t hm hav hb => exact hbackground rfl rfl hm hb
+  | scan_count c s t hm hav hc hb => exact hbackground rfl rfl hm hb
+  | scan_match c s s' t o hm hav hc hcmp hmt hpl ho =>
+    have hcmp' : compareFound (PofC centre place entry raw) q first s s' := hcmp
+    obtain ⟨vs, vq, a, -, -, -, hse, hch, heq⟩ := hcmp'
+    obtain ⟨-, -, hchain', hcenter', -⟩ := PalPeg.WindowTick.compare_target_heads heq
+    have hchain : t.chain = s'.chain := by rw [hpl]; split <;> rfl
+    have hcenter : t.center = s'.center := by rw [hpl]; split <;> rfl
+    have honly : t.periodOnly
+        = if chainBorn (decide (vq.search.mode = .found)) s.chain then false
+          else s.periodOnly := by
+      have htarget : t.periodOnly = s'.periodOnly := by rw [hpl]; split <;> rfl
+      rw [htarget, heq, afterBirth_periodOnly]
+      cases a <;> rfl
+    have hlowerEq : t.lower = s.lower := by
+      have htarget : t.lower = s'.lower := by rw [hpl]; split <;> rfl
+      rw [htarget, heq, afterBirth_lower]
+      cases a <;> exact searchEffect_lower_eq hse
+    intro _ hguard
+    have hsourceGuard := lowerGuard_source (z := t.chain) (by rw [hchain, hchain']; exact hch)
+      honly hguard
+    have hpayload : MovePayload raw t = MovePayload raw s := by
+      unfold MovePayload
+      rw [hlowerEq]
+    show Sem (MovePayload raw t) raw (position t.center) t.chain
+    rw [hpayload, hcenter, hcenter', hchain, hchain']
+    exact sem_chainAt (hsource hm hsourceGuard)
+      (fun hi hf => hbirth hm a vq hi hse (by simpa using hf)) hch
+  | scan_shift c s s' t hm hav hc hcmp hmt hr hg hb =>
+    intro hmode
+    simp at hmode
+  | scan_fallback c s s' t hm hav hc hcmp hmt hg hr hb =>
+    intro hmode
+    simp at hmode
+  | shift_one c s t hm hp hso =>
+    intro hmode
+    simp [hm] at hmode
+  | shift_done c s o hm hp ho =>
+    obtain ⟨⟨w, hw⟩, honly⟩ := hstage.1 hm
+    intro _ hguard
+    rcases hguard with hidle | hfalse
+    · have hsourceIdle : s.chain = .idle := hidle
+      rw [hw] at hsourceIdle
+      cases hsourceIdle
+    · have hsourceFalse : s.periodOnly = false := hfalse
+      rw [honly] at hsourceFalse
+      cases hsourceFalse
+  | replayStart c s t o hm hr ho ho' =>
+    obtain ⟨_,_,_,_,_,_,_,_,_,hch,_,_,_⟩ := hr
+    exact firstRoundSem_of_idle hch
+  | restart c s t hm hr =>
+    obtain ⟨_,_,_,_,_,rfl⟩ := hr
+    exact firstRoundSem_of_idle rfl
+  | copy_one _ _ _ hm _ _ | copy_done _ _ _ hm _ _
+  | home_start _ _ _ hm _ _ | home_step _ _ _ hm _ _
+  | fpp_slice _ _ _ hm _ | fpp_done _ _ _ hm _
+  | markEnd_found _ _ _ hm _ _ | markEnd_step _ _ _ hm _ _
+  | choose_select _ _ _ hm _ _ _ | choose_step _ _ _ hm _ _
+  | rewind_done _ _ _ hm _ _ | rewind_one _ _ _ hm _ _ _
+  | rewind_pair _ _ _ hm _ _ _ =>
+    intro hmode
+    first
+      | (simp [hm] at hmode)
+      | (simp at hmode)
+
 /-- The run invariant: the minimal-period payload, the excluded lower bound of the running
 search, and the excluded `last` of a broken chain at a restart-guard state. -/
 structure MinimalAcrossRestart (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   minimal : ModeMinimal (MovePayload raw s) raw c s
   lowerAt : LowerAt raw c s
   broken : BrokenStage (LastExcluded raw) c s
+  firstRound : FirstRoundSem raw c s
 
 /-- `MinimalAcrossRestart` at every point of a packed run out of an `InvLPS` origin whose own
 lower bound is excluded. -/
@@ -344,17 +454,22 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
       rw [hg0]
       exact ⟨by simp [ModeMinimal, hiMode, ScanMinimal, hiChain], horigin,
         brokenStage_of_not_broken (by rw [hiMode]; decide)
-          (fun w hw => by rw [hiChain] at hw; cases hw)⟩
+          (fun w hw => by rw [hiChain] at hw; cases hw),
+        firstRoundSem_of_idle hiChain⟩
     | succ i ih =>
       intro hik
       have hsource := ih (by omega)
       have htick := htr.tick i (by omega)
       have hwinX := (hpk i (by omega)).win hP
-      refine ⟨?_, lowerAt_tick centre place entry q first htick hsource.lowerAt hsource.broken, ?_⟩
+      have hbirthSource : (g i).ctl.mode = .scan →
+          BirthMinimal centre place entry (MovePayload raw (g i).vm) raw (g i).vm :=
+        fun hm => birthMinimal_of_lowerAt centre place entry q first hP hI
+          (hprefix i (by omega)) hm hsource.lowerAt
+      refine ⟨?_, lowerAt_tick centre place entry q first htick hsource.lowerAt hsource.broken,
+        ?_, firstRoundSem_tick centre place entry q first htick hsource.firstRound
+          hsource.broken hbirthSource⟩
       · exact modeMinimal_tick_lower centre place entry q first hP htick hsource.minimal
-          (hpk i (by omega)) (hpk (i+1) (by omega)) (haux i (by omega))
-          (fun hm => birthMinimal_of_lowerAt centre place entry q first hP hI
-            (hprefix i (by omega)) hm hsource.lowerAt)
+          (hpk i (by omega)) (hpk (i+1) (by omega)) (haux i (by omega)) hbirthSource
       · refine brokenStage_tick centre place entry q first htick (hcan i (by omega)).canonical
           hsource.broken
           (ledgerAt_packed centre place entry q first hP hI (hprefix i (by omega)))
