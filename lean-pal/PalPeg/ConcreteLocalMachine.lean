@@ -22,10 +22,11 @@ open PalPeg
 open PalPeg.CloseoutCoreEnc20 (Delta)
 open PalPeg.CloseoutCoreEnc21 (SRole SRoles SInj sinj_iff toAddr toAddr_eq pushRearD tailD revD
   appStartD appD invalDoneD sRoleList finish rotPerm donePerm rotRolesS doneRolesS)
-open PalPeg.CloseoutCoreEnc20 (rotStart)
+open PalPeg.CloseoutCoreEnc20 (rotStart dApply)
 open PalPeg.CloseoutCoreStep (Γc blankc)
 open PalPeg.CloseoutCoreEnc (cellSym)
-open PalPeg.CloseoutCoreEnc12 (Act actList)
+open PalPeg.CloseoutCoreEnc12 (Act actList ActRule compStep)
+open PalPeg.Local (Window idx)
 open PalPeg.CloseoutCoreEnc18 (dTape topSym popActs pushActs pop_dTape push_dTape)
 open PalPeg.CloseoutCoreEnc25 (SOp RTag rotTag doneTag roleOf roleOf_rotTag roleOf_doneTag
   sinj_roleOf isIdle isDone isIdle_eq isDone_eq sApply deltaOf tagStep invalDelta execDelta
@@ -655,5 +656,248 @@ theorem dTape_cellApply (u : Delta) (sealing : Bool) (stack : List (Option (Fin 
     | push a => exact (push_dTape stack debris (some a)).symm
 
 #print axioms dTape_cellApply
+
+/-! ## The control of the queue sub-step: phase and valid counter -/
+
+def phaseOfView : RotationView → RotationPhase
+  | .idle => .idle
+  | .done => .done
+  | .reversing _ _ _ => .reversing
+  | .appending _ _ _ => .appending
+
+/-- The rotation phase after a sub-step, selected from the finite observation. -/
+def nextPhaseOfView : SOp → RotationView → RotationPhase
+  | .inval, .appending true _ true => .done
+  | .rotStart, .idle => .reversing
+  | .exec, .reversing none (some _) true => .appending
+  | .exec, .appending true _ _ => .done
+  | .install, .done => .idle
+  | _, view => phaseOfView view
+
+theorem rotationPhase_eq_view (s : RotationState (Fin 2)) :
+    rotationPhase s = phaseOfView (rotationView s) := by
+  cases s <;> rfl
+
+/-- **The next phase is a function of the observation.** -/
+theorem rotationPhase_sApply (op : SOp) (q : Queue (Fin 2)) :
+    rotationPhase (sApply op q).state = nextPhaseOfView op (rotationView q.state) := by
+  cases op with
+  | snocPush a =>
+    show rotationPhase q.state = _
+    rw [rotationPhase_eq_view]
+    cases rotationView q.state <;> rfl
+  | tailPop =>
+    have hstate : (sApply .tailPop q).state = q.state := by
+      show (if q.front = [] then q else _).state = q.state
+      split <;> rfl
+    rw [hstate, rotationPhase_eq_view]
+    cases rotationView q.state <;> rfl
+  | inval =>
+    show rotationPhase (RTQueue.invalidate q.state) = _
+    cases q.state with
+    | idle => rfl
+    | done f => rfl
+    | reversing ok f f' r r' => rfl
+    | appending ok f' r' =>
+      cases ok with
+      | zero => cases r' <;> rfl
+      | succ n => rfl
+  | rotStart =>
+    cases hstate : q.state <;>
+      simp [sApply, isIdle, rotStart, hstate, rotationPhase, nextPhaseOfView, rotationView,
+        phaseOfView]
+  | exec =>
+    show rotationPhase (RTQueue.exec q.state) = _
+    cases q.state with
+    | idle => rfl
+    | done f => rfl
+    | reversing ok f f' r r' =>
+      cases f with
+      | nil =>
+        cases r with
+        | nil => rfl
+        | cons y r => cases r <;> rfl
+      | cons x f => cases r <;> rfl
+    | appending ok f' r' =>
+      cases ok with
+      | zero => rfl
+      | succ n => cases f' <;> rfl
+  | install =>
+    cases hstate : q.state <;>
+      simp [sApply, finish, hstate, rotationPhase, nextPhaseOfView, rotationView, phaseOfView]
+
+/-- The valid count of a rotation (`0` outside a rotation: a rotation starts and ends at `0`). -/
+def validCount : RotationState (Fin 2) → ℕ
+  | .reversing ok _ _ _ _ => ok
+  | .appending ok _ _ => ok
+  | _ => 0
+
+/-- The valid counter as a stack of marks. -/
+def validStack (s : RotationState (Fin 2)) : List (Fin 2) := List.replicate (validCount s) 0
+
+/-- The operation on the valid counter, selected from the finite observation. -/
+def validDeltaOfView : SOp → RotationView → Delta
+  | .inval, .reversing _ _ _ => .pop
+  | .inval, .appending false _ _ => .pop
+  | .exec, .reversing (some _) (some _) _ => .push 0
+  | .exec, .appending false (some _) _ => .pop
+  | _, _ => .keep
+
+/-- **The valid counter moves by an operation selected from the observation.** -/
+theorem validStack_sApply (op : SOp) (q : Queue (Fin 2)) :
+    validStack (sApply op q).state
+      = dApply (validDeltaOfView op (rotationView q.state)) (validStack q.state) := by
+  cases op with
+  | snocPush a =>
+    show validStack q.state = _
+    cases q.state <;> rfl
+  | tailPop =>
+    have hstate : (sApply .tailPop q).state = q.state := by
+      show (if q.front = [] then q else _).state = q.state
+      split <;> rfl
+    rw [hstate]
+    cases q.state <;> rfl
+  | inval =>
+    show validStack (RTQueue.invalidate q.state) = _
+    cases q.state with
+    | idle => rfl
+    | done f => rfl
+    | reversing ok f f' r r' =>
+      cases ok <;> simp [validStack, validCount, RTQueue.invalidate, validDeltaOfView,
+        rotationView, dApply, List.replicate_succ]
+    | appending ok f' r' =>
+      cases ok with
+      | zero => cases r' <;> rfl
+      | succ n =>
+        simp [validStack, validCount, RTQueue.invalidate, validDeltaOfView, rotationView,
+          dApply, List.replicate_succ]
+  | rotStart =>
+    cases hstate : q.state <;>
+      simp [sApply, isIdle, rotStart, hstate, validStack, validCount, validDeltaOfView,
+        rotationView, dApply]
+  | exec =>
+    show validStack (RTQueue.exec q.state) = _
+    cases q.state with
+    | idle => rfl
+    | done f => rfl
+    | reversing ok f f' r r' =>
+      cases f with
+      | nil =>
+        cases r with
+        | nil => rfl
+        | cons y r => cases r <;> rfl
+      | cons x f =>
+        cases r with
+        | nil => rfl
+        | cons y r =>
+          simp [validStack, validCount, RTQueue.exec, validDeltaOfView, rotationView, dApply,
+            List.replicate_succ]
+    | appending ok f' r' =>
+      cases ok with
+      | zero => rfl
+      | succ n =>
+        cases f' with
+        | nil => rfl
+        | cons x f' =>
+          simp [validStack, validCount, RTQueue.exec, validDeltaOfView, rotationView, dApply,
+            List.replicate_succ]
+  | install =>
+    cases hstate : q.state <;>
+      simp [sApply, finish, hstate, validStack, validCount, validDeltaOfView, rotationView,
+        dApply]
+
+theorem validIsZero_eq_top (s : RotationState (Fin 2)) (hphase : rotationPhase s = .appending) :
+    validIsZero s = (topLetter ((validStack s).map some)).isNone := by
+  cases s with
+  | idle => cases hphase
+  | done f => cases hphase
+  | reversing ok f f' r r' => cases hphase
+  | appending ok f' r' => cases ok <;> rfl
+
+#print axioms rotationPhase_sApply
+#print axioms validStack_sApply
+
+/-! ## The queue sub-step as an `ActRule`
+
+Eight tapes: `0`–`6` are the role stacks (`roleOf tag ro < 7`), tape `7` is the valid counter.
+The control keeps the operation to run, the role tag and the rotation phase.  The rule reads, on
+each tape, the cell under the head and the cell below it (the left neighbour of a debris tape). -/
+
+/-- The control of the queue sub-step. -/
+abbrev QueueControl : Type := SOp × RTag × RotationPhase
+
+section Rule
+
+variable {K : ℕ}
+
+/-- The cell under the head. -/
+def centreSym (window : Window Γc K) : Γc := window (idx K K)
+
+/-- The cell below the top of a stack: the left neighbour of the head. -/
+def belowSym (window : Window Γc K) : Γc := window (idx K (K - 1))
+
+def rotationViewOfSyms (phase : RotationPhase) (validZero : Bool) (top below : SRole → Γc) :
+    RotationView :=
+  match phase with
+  | .idle => .idle
+  | .done => .done
+  | .reversing =>
+      .reversing (symLetter (top .fwd)) (symLetter (top .rev))
+        ((symLetter (top .rev)).isSome && (symLetter (below .rev)).isNone)
+  | .appending =>
+      .appending validZero (symLetter (top .fwd')) (symLetter (top .rev')).isSome
+
+/-- The observation from tape symbols. -/
+def queueViewOfSyms (phase : RotationPhase) (validZero : Bool) (top below : SRole → Γc) :
+    QueueView :=
+  ⟨(symLetter (top .front)).isNone, rotationViewOfSyms phase validZero top below⟩
+
+theorem queueViewOfTops_eq_syms (phase : RotationPhase) (validZero : Bool)
+    (stackOf : SRole → List (Option (Fin 2))) :
+    queueViewOfTops phase validZero stackOf
+      = queueViewOfSyms phase validZero (fun ro => topSym (stackOf ro))
+          (fun ro => topSym (stackOf ro).tail) := by
+  unfold queueViewOfTops queueViewOfSyms rotationViewOfTops rotationViewOfSyms topIsSingle
+  simp only [topLetter_eq_sym]
+
+/-- The tape of a role: its address, clamped into the eight tapes. -/
+def roleTape (tag : RTag) (ro : SRole) : Fin 8 := ⟨min (roleOf tag ro) 6, by omega⟩
+
+/-- The valid counter tape. -/
+def validTape : Fin 8 := 7
+
+/-- The observation the rule makes: the phase from the control, the symbols from the windows. -/
+def queueViewOfWindows (control : QueueControl) (windows : Fin 8 → Window Γc K) : QueueView :=
+  queueViewOfSyms control.2.2 (symLetter (centreSym (windows validTape))).isNone
+    (fun ro => centreSym (windows (roleTape control.2.1 ro)))
+    (fun ro => belowSym (windows (roleTape control.2.1 ro)))
+
+/-- **The queue sub-step as a rule of the local machine**: the next control and the tape actions
+are functions of the control and the windows. -/
+def queueRule (Terminal : Type) (hK : 2 ≤ K) : ActRule Terminal QueueControl Γc 8 K where
+  nq := fun control _ windows =>
+    let view := queueViewOfWindows control windows
+    (control.1, tagStepOfView control.1 view control.2.1,
+      nextPhaseOfView control.1 view.rotation)
+  acts := fun control _ windows tape =>
+    let view := queueViewOfWindows control windows
+    if tape.val < 7 then
+      cellActsOfTop (deltaOfView control.1 view (roleOf control.2.1) tape.val)
+        (decide ((sealRoleOfView control.1 view).map (roleOf control.2.1) = some tape.val))
+        (centreSym (windows tape))
+    else
+      cellActsOfTop (validDeltaOfView control.1 view.rotation) false (centreSym (windows tape))
+  len_le := fun control _ windows tape => by
+    dsimp only
+    split
+    · exact le_trans (cellActsOfTop_length _ _ _) hK
+    · exact le_trans (cellActsOfTop_length _ _ _) hK
+
+/-- The local step of the queue sub-step: a concrete term of `LocalStep`. -/
+def queueLocalStep (Terminal : Type) (hK : 2 ≤ K) :
+    PalPeg.Local.LocalStep Terminal QueueControl Γc 8 K :=
+  compStep (queueRule Terminal hK)
+
+end Rule
 
 end PalPeg.ConcreteLocalMachine
