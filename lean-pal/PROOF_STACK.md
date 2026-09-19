@@ -1,3 +1,20 @@
+## n277 — 葉 `hmove`: 追い付く前に壊れる watch（この tick の正 lag の break）を閉じた。第 1 ラウンドで残るのは「source の chain が既に broken」だけ
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` は、chain が idle でなく、かつ「`periodOnly = false` なら **不一致状態の chain が既に broken**」である場合だけを負う（`periodOnly = true` の場合は従来どおり全部） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。
+
+**何を証明したか**: 量化範囲を見直した。chain tick の結果が broken になる経路のうち `watchBreak`（正 lag）は、**source 状態**の chain に仕事が残っている場合なので、source の時計 `ClockAt` から直接 `Rad < 4H` が出る（chain tick の結果は関係ない）。`RestartLowerRun.move_of_working_source`。共通部分は `move_of_bounded_chain`（`Sem` payload ＋ `Rad < 4·chainPeriod` → `move_of_activeBound`）に切り出し、`move_of_working_chain` もそれを使う形に直した。`chainTick_cases` は「source が既に broken ／ source に仕事あり ／ 結果に仕事あり ／ 追い付いた watch」の 4 分岐。
+
+**run 不変量への追加（まだ消費者なし）**: `PalPeg/BlockText.lean`（新規、namespace `PalPeg.ChainBlockText`）と `RestartLowerRun.BlockTextAt`: 第 1 ラウンドの間、period block の文字列は中心の place の stream の 2 番目以降（＝中心の左のテキスト）。`WindowInv` は block の中身とテキストを結ぶ場を持っていなかった。
+
+**未完の部分**: (c) `periodOnly = true`（Scala `checkPair` に当たる継続不変量が run 上に無い、未調査）。(d) 第 1 ラウンドで不一致状態の chain が既に broken（restart guard 不成立）。Scala 正本は `AssertionError` で到達不能と主張しており、Lean では到達不能性の証明が要る: 正 lag の break が起きないこと（追い付き中は予測が外れない）と、lag ゼロの break が `Rad + 1 ≤ 4H` では起きないこと（`distance_ne_boundary` は `distance = 4h − 1` の 1 点だけ）。どちらも `BlockTextAt`＋`Candidate` の回文＋chain の時計から出す見立てで、証明は未着手。`obligation_localRealization` は未着手。
+
 ## n276 — 葉 `hmove`: 仕事が残っている第 1 ラウンドの chain（copy／back／追い付き中の watch）を閉じた。第 1 ラウンドで残るのは broken だけ
 
 **公理への進捗**
