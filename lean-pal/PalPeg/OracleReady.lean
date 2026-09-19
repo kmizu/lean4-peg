@@ -54,8 +54,8 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
       ∃ n, ReadyFieldP3 n ⟨c, r⟩)
     (hchain : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      ShapedSteps centre place entry q first w k ⟨c₀, r₀⟩ y →
-      PalPeg.GalilTickFun.ChainReady y.vm.chain)
+      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ y →
+      y.ctl.mode = .scan → PalPeg.GalilTickFun.ChainReady y.vm.chain)
     (hshiftPeriodMinimal : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM)
       (vq : SearchVM) (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →

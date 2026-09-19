@@ -1,3 +1,14 @@
+## n259 — `hchain` を「packed run の scan 状態で `ChainReady`」（`StepsIMW` 形）に切り直し
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 葉 `hchain` の切り直し。旧形は `InvLPS` 起点からの shaped run **全点**（copy／fallback 相の中も含む）で `ChainReady` を要求していた。新形は `InvLPS … c₀ r₀ → StepsIMW … k ⟨c₀,r₀⟩ y → y.ctl.mode = .scan → ChainReady y.vm.chain`——`BranchSupply.ChainVerifierSupplyAlongTrace`（trace の scan 点で `VerRep ∧ LagCan`、producer 済み）と同じ形。`scanBackground_run` は背景 tick の中間状態を `packRunR_MW_marksFree` で packed run に載せて葉に渡す（右ヘッド不動なので位置条件は自明）。葉は 4 のまま（`hfresh`／`hchain`／`hshiftPeriodMinimal`／`hfallback`） |
+| `obligation_localRealization` | 変化なし（次: `∀ PreTraceB` を canonical trace に限定する切り直し） |
+
+**状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
 ## n258 — `hfallback` の量化子を直し（着地 `u` は葉が選ぶ `∃`）、最終 witness の `q` を 1 に
 
 **公理への進捗**
