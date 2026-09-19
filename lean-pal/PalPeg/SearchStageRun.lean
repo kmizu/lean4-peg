@@ -286,4 +286,34 @@ theorem stageAt_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
         PalPeg.BranchSupply.tick_target_mode_ne_init htick⟩
   simpa only [hk] using (hall k le_rfl).1
 
+/-- **The search contract in the middle of a stage.**  While the search is active the DP tapes
+of the current stage say nothing, but the scan radius is inside a candidate-free window of the
+centre's stream, which is all the contract reads. -/
+theorem dpPack_of_stage {raw : List (Fin 2)} {clock : ℕ} {s : GalilVM} {Rad : ℕ}
+    (hP : Decodes (PofC centre place entry raw))
+    (hdata : StageData centre place entry raw clock s)
+    (hactive : Active (searchLens.get s).search.mode)
+    (hradius : value s.radius = (Rad : ℤ))
+    (hcen : PalPeg.GalilInvPlus2.CentreRep raw s)
+    (hlow : ∀ δ, 0 < δ → δ ≤ (value s.lower).toNat →
+      ¬ HasPeriod (Span raw (position s.center) Rad) (2*δ)) :
+    PalPeg.GalilLeafMismatch.DpPack raw s Rad := by
+  obtain ⟨lower, hbudget, hhistory, -⟩ := hdata
+  obtain ⟨H, hnone, hinside⟩ := radius_le_window hbudget hhistory hactive
+  obtain ⟨a₀, ls₀, rs₀, q₀, hdec, hraw⟩ :=
+    represents_decompose s.center raw hcen.1 hcen.2
+  obtain ⟨-, hplace⟩ := hP.1 s a₀ ls₀ rs₀ q₀ s.center.gap hdec
+  have hlower : value s.lower = (lower : ℤ) := by
+    have hlowerEq : s.lower = ofNat lower := hbudget.lower_eq
+    rw [hlowerEq, ofNat_value]
+  refine ⟨a₀, ls₀, rs₀, q₀, s.center.gap, lower, H,
+    {GalilScaffoldProgram.denote (searchLens.get s).dp.config with pc := 347},
+    hraw, congrArg position hdec, ?_, Or.inr ⟨rfl, fun k _ => ?_⟩, rfl, ?_⟩
+  · rw [hradius] at hinside
+    exact_mod_cast hinside
+  · rw [← hplace]
+    exact hnone k
+  · intro δ hδ0 hδ
+    exact hlow δ hδ0 (by omega)
+
 end PalPeg.SearchStageRun

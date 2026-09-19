@@ -29,8 +29,9 @@ The canonical schedule restarts a broken chain first (`GalilTickFair.Canonical`,
   `RestartLowerRun.scanMinimal_packed` carries the minimal period across broken restarts, using
   that the origin is reached from boot);
 * `hmove` — the Galil move inequality that pays for a fallback, at a comparison state below
-  the restart guard, **except** when the chain is idle and the search has parked in `missed`
-  (`RestartLowerRun.move_of_idle_missed` proves that branch).
+  the restart guard, **only while the chain is not idle** (`RestartLowerRun.move_of_idle`
+  proves the idle branch: the stage history of the search in the middle of a stage, the DP
+  result after the final stage).
 
 Fallback copy, fresh restart, and the entire replay segment are constructed here.
 -/
@@ -70,7 +71,7 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
       GalilScaffoldInputHead.read (GalilScaffoldInputHead.left s.left) ≠
         GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right) →
       searchEffect (PofC centre place entry w) false s vq →
-      ¬ (s.chain = .idle ∧ vq.search.mode = .missed) →
+      s.chain ≠ .idle →
       chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
         ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
         s.center s.radius s.chain z →
@@ -139,12 +140,12 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
       let radius := chosenRadius
         ((GalilScaffoldPlace.stream (PalPeg.GalilTickFair.rightPlace s1)).take (ℓ+1))
       ℓ / 2 ≤ 4 * (ℓ / 2 + 1 - radius) := by
-    by_cases hmissed : s.chain = .idle ∧ vq.search.mode = .missed
-    · exact PalPeg.RestartLowerRun.move_of_idle_missed centre place entry q first
+    by_cases hidle : s.chain = .idle
+    · exact PalPeg.RestartLowerRun.move_of_idle centre place entry q first
         (by intro hnil; rw [hnil] at hmle; simp at hmle; omega) hP hI hBoot hRun hm hr hCan
-        hmissed.1 hSearch hmissed.2
+        hidle hSearch
     · exact hmove c₀ r₀ k c s vq z m hm1 hmle hI hBoot hRun hNoGuardS hm hr hc hPos hM hMis hSearch
-        hmissed hChain hGuard
+        hidle hChain hGuard
   change ℓ / 2 ≤ 4*(ℓ / 2 + 1-radius) at hMove
   have hk : ℓ / 2 = rad := by rw [hLengthNat]; omega
   rw [hk] at hMove

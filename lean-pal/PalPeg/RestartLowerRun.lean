@@ -1,5 +1,6 @@
 import PalPeg.RestartLower
 import PalPeg.CloseoutStageBoot
+import PalPeg.SearchStageRun
 
 /-!
 # Minimal periods across a broken restart
@@ -386,10 +387,11 @@ theorem scanMinimal_packed {a : Fin 2} {rest : List (Fin 2)} {c₀ : Control} {r
 
 #print axioms scanMinimal_packed
 
-/-- **The fallback move inequality when the search has parked in `missed`**, on a packed run
-whose origin is reached from boot: the DP result excludes the semiperiods above the lower bound,
-`LowerAt` those below it. -/
-theorem move_of_idle_missed {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : Control} {r₀ : GalilVM}
+/-- **The fallback move inequality while the chain is idle**, on a packed run whose origin is
+reached from boot.  Below the lower bound `LowerAt` excludes the semiperiods at the current
+radius; above it the search does: in the middle of a stage through the candidate-free window of
+its history (`SearchStageRun.dpPack_of_stage`), after the final stage through the DP result. -/
+theorem move_of_idle {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : Control} {r₀ : GalilVM}
     (hP : Decodes (PofC centre place entry raw))
     (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
     (hboot : CloseoutCheckW.PackedFromBoot centre place entry q first raw ⟨c₀, r₀⟩)
@@ -397,8 +399,7 @@ theorem move_of_idle_missed {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : Con
     (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ ⟨c, s⟩)
     (hm : c.mode = .scan) (hr : c.replaying = false) (hcan : canRight s.right)
     (hidle : s.chain = .idle)
-    (hsearch : searchEffect (PofC centre place entry raw) false s vq)
-    (hmiss : vq.search.mode = .missed) :
+    (hsearch : searchEffect (PofC centre place entry raw) false s vq) :
     let s1 := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
       (afterMismatch s ⟨left s.left,right s.right,z⟩ vq)
     let ℓ := (value s.length).toNat
@@ -410,17 +411,39 @@ theorem move_of_idle_missed {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : Con
     (lowerAt_of_packedFromBoot centre place entry q first hP hI hboot) hrun
   have hwin : WindowRunPack (a :: rest) c s :=
     (PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun).win hP
-  exact move_of_idle_missed_packed centre place entry q first hP hI hrun
-    (fun Rad hscan => by
-      obtain ⟨R, hR, hright⟩ := hwin.radiusScan hm
-      have hrad : Rad = R := by
-        have h1 : position s.right = position s.center + Rad := hscan.rightPos
-        have h2 : position s.right = position s.center + R := hright
-        omega
-      subst hrad
-      exact no_lower_period_at_scan hinvariant.lowerAt hm hidle hscan hR)
-    hm hr hcan hidle hsearch hmiss
+  have hlow : ∀ Rad, ScanInvariant (a :: rest) (position s.center) Rad s.left s.right →
+      (value s.radius = (Rad : ℤ)) ∧ ∀ δ, 0 < δ → δ ≤ (value s.lower).toNat →
+        ¬ HasPeriod (Span (a :: rest) (position s.center) Rad) (2*δ) := by
+    intro Rad hscan
+    obtain ⟨R, hR, hright⟩ := hwin.radiusScan hm
+    have hrad : Rad = R := by
+      have h1 : position s.right = position s.center + Rad := hscan.rightPos
+      have h2 : position s.right = position s.center + R := hright
+      omega
+    subst hrad
+    exact ⟨hR.2, no_lower_period_at_scan hinvariant.lowerAt hm hidle hscan hR⟩
+  have hstage := (PalPeg.SearchStageRun.stageAt_packed centre place entry q first hP hI
+    hrun).scan hm hidle
+  by_cases hactive : PalPeg.SearchStageHistory.Active (searchLens.get s).search.mode
+  · obtain ⟨-, -, rad, hscan, hlen⟩ :=
+      PalPeg.CanonicalFallbackInput.counters centre place entry q first hI hrun hm hr
+    obtain ⟨hradius, hlowRad⟩ := hlow rad hscan
+    have hdp := PalPeg.SearchStageRun.dpPack_of_stage centre place entry hP hstage hactive
+      hradius (hwin.centreRep (Or.inl hm)) hlowRad
+    exact PalPeg.CanonicalFallbackInput.move_of_dpPack
+      (centre := centre) (place := place) (entry := entry) (c := c)
+      hP hscan hcan hlen (scan_radius_lt hscan) hdp rfl
+  · obtain ⟨lower, -, hhistory, hnotFound⟩ := hstage
+    have hmissed : (searchLens.get s).search.mode = .missed := by
+      by_contra hne
+      exact hactive ⟨hhistory.started, hnotFound, hne⟩
+    have hvq : vq = searchLens.get s := by
+      rcases hsearch with ⟨-, hstep⟩ | ⟨hne, -⟩
+      · simpa [searchStep, hmissed] using hstep
+      · exact absurd hidle hne
+    exact move_of_idle_missed_packed centre place entry q first hP hI hrun
+      (fun Rad hscan => (hlow Rad hscan).2) hm hr hcan hidle hsearch (by rw [hvq]; exact hmissed)
 
-#print axioms move_of_idle_missed
+#print axioms move_of_idle
 
 end PalPeg.RestartLowerRun
