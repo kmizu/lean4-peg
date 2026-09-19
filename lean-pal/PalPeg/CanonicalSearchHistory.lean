@@ -342,25 +342,24 @@ theorem birthMinimals_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
     (hm : y.ctl.mode = .scan) {a : Bool} {vq : SearchVM}
     (hidle : y.vm.chain = .idle)
     (he : searchEffect (PofC centre place entry raw) a y.vm vq)
-    (hf : vq.search.mode = .found) (hz : vq.lower = reset) :
+    (hf : vq.search.mode = .found)
+    (hexcluded : ∀ lower, vq.lower = ofNat lower →
+      LowerExcluded raw (position y.vm.center) lower) :
     ∃ h,
       GalilBranchInvariants.CopyInv (vq.dp.config.tapes 11) reset
         ((PofC centre place entry raw).place y.vm)
         (GalilScaffoldChainPeriod.start ((PofC centre place entry raw).centre y.vm)) h ∧
       FutureMinimal raw (position y.vm.center) h ∧
-      MoveMinimal raw (position y.vm.center) h := by
+      (vq.lower = reset → MoveMinimal raw (position y.vm.center) h) := by
   obtain ⟨lower,span,h,hlower,hres,hcand,hmin,hcopy⟩ :=
     birthMinimal_packed centre place entry q first hP hI hr hm hidle he hf
-  have hlower0 : lower = 0 := by
-    apply (PalPeg.GalilScaffoldChainInputSupply.zero_ofNat_iff lower).mp
-    rw [← hlower,hz]
-    rfl
+  have hexcludedLower := hexcluded lower hlower
   have hp := PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hr
   have hcen := (hp.win hP).centreRep (Or.inl hm)
   obtain ⟨a,ls,rs,suffix,hdec,hraw⟩ :=
     represents_decompose y.vm.center raw hcen.1 hcen.2
   obtain ⟨_,hplace⟩ := hP.1 y.vm a ls rs suffix y.vm.center.gap hdec
-  refine ⟨h,hcopy,?_,?_⟩
+  refine ⟨h,hcopy,?_,fun hz => ?_⟩
   rw [hraw]
   apply futureMinimal_of_candidate a ls rs suffix y.vm.center.gap
     (congrArg position hdec)
@@ -369,9 +368,13 @@ theorem birthMinimals_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
   · intro g hg
     rw [← hplace]
     exact hmin g hg
-  · rw [hlower0]
-    exact lowerExcluded_zero _ _
-  · rw [hraw]
+  · rw [← hraw]
+    exact hexcludedLower
+  · have hlower0 : lower = 0 := by
+      apply (PalPeg.GalilScaffoldChainInputSupply.zero_ofNat_iff lower).mp
+      rw [← hlower,hz]
+      rfl
+    rw [hraw]
     apply moveMinimal_of_candidate a ls rs suffix y.vm.center.gap
       (congrArg position hdec)
     · rw [← hplace]
@@ -380,24 +383,6 @@ theorem birthMinimals_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
       rw [← hplace]
       exact hmin g hg
     · exact hlower0
-
-theorem birthFutureMinimal_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
-    (hP : Decodes (PofC centre place entry raw))
-    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
-    {k : ℕ} {y : State GalilVM}
-    (hr : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y)
-    (hm : y.ctl.mode = .scan) {a : Bool} {vq : SearchVM}
-    (hidle : y.vm.chain = .idle)
-    (he : searchEffect (PofC centre place entry raw) a y.vm vq)
-    (hf : vq.search.mode = .found) (hz : vq.lower = reset) :
-    ∃ h,
-      GalilBranchInvariants.CopyInv (vq.dp.config.tapes 11) reset
-        ((PofC centre place entry raw).place y.vm)
-        (GalilScaffoldChainPeriod.start ((PofC centre place entry raw).centre y.vm)) h ∧
-      FutureMinimal raw (position y.vm.center) h := by
-  obtain ⟨h,hcopy,hfuture,_⟩ := birthMinimals_packed centre place entry q first
-    hP hI hr hm hidle he hf hz
-  exact ⟨h,hcopy,hfuture⟩
 
 #print axioms birthCopy_packed
 end PalPeg.CanonicalSearchHistory

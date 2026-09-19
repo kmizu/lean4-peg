@@ -188,16 +188,20 @@ theorem ledgerAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
 /-! ## The broken chain before its restart -/
 
 /-- What a broken chain in scan mode carries for the restart that follows: a canonical
-nonnegative lag, and at a restart-guard state the stage bound of the radius against `last`. -/
-def BrokenStage (c : Control) (s : GalilVM) : Prop :=
+nonnegative lag, and at a restart-guard state the stage bound of the radius against `last`
+together with whatever else (`Extra`) the lag-zero break established there. -/
+def BrokenStage (Extra : ℕ → GalilScaffoldChainWatch.State → Prop) (c : Control)
+    (s : GalilVM) : Prop :=
   (c.mode = Mode.shift → ∃ w, s.chain = .watch w) ∧
   (c.mode = Mode.scan → ∀ w, s.chain = .broken w →
     (Canonical w.lag ∧ 0 ≤ value w.lag) ∧
-    (restartGuardVM s → ∃ Rad : ℕ, RadiusRep s.radius Rad ∧
-      StageEntry Rad w.machine.control.last ∧ Canonical w.machine.control.last))
+    (restartGuardVM s → (∃ Rad : ℕ, RadiusRep s.radius Rad ∧
+      StageEntry Rad w.machine.control.last ∧ Canonical w.machine.control.last) ∧
+        Extra (position s.center) w))
 
-theorem brokenStage_of_not_broken {c : Control} {s : GalilVM}
-    (hmode : c.mode ≠ Mode.shift) (hnot : ∀ w, s.chain ≠ .broken w) : BrokenStage c s :=
+theorem brokenStage_of_not_broken {Extra : ℕ → GalilScaffoldChainWatch.State → Prop}
+    {c : Control} {s : GalilVM}
+    (hmode : c.mode ≠ Mode.shift) (hnot : ∀ w, s.chain ≠ .broken w) : BrokenStage Extra c s :=
   ⟨fun h => absurd h hmode, fun _ w hw => absurd hw (hnot w)⟩
 
 theorem unbroken_of_step {x : ChainVM} {w1 : GalilScaffoldChainWatch.State}
@@ -256,19 +260,26 @@ theorem not_zero_inc {x : Counter} (hx : Canonical x ∧ 0 ≤ value x) : zero (
     omega
 
 /-- One tick of the canonical schedule keeps `BrokenStage`.  `hinterior` excludes the one
-boundary case of a lag-zero break (`distance = 4h − 1`). -/
-theorem brokenStage_tick {raw : List (Fin 2)} {x y : State GalilVM}
+boundary case of a lag-zero break (`distance = 4h − 1`); `hextra` establishes the extra payload
+at the one place a guard state is born, the lag-zero break of a matched comparison. -/
+theorem brokenStage_tick {Extra : ℕ → GalilScaffoldChainWatch.State → Prop}
+    {raw : List (Fin 2)} {x y : State GalilVM}
     (ht : Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y)
     (hcanon : PalPeg.GalilTickFair.Canonical entry 2048 x y)
-    (hstage : BrokenStage x.ctl x.vm) (hledger : LedgerAt x.ctl x.vm)
+    (hstage : BrokenStage Extra x.ctl x.vm) (hledger : LedgerAt x.ctl x.vm)
     (hwinX : WindowRunPack raw x.ctl x.vm) (hwinY : WindowRunPack raw y.ctl y.vm)
     (hunbroken : ∀ w, x.vm.chain = .watch w → w.machine.control.broken = false)
     (hinterior : ∀ (c : Control) (s s' : GalilVM) w1 w', x = ⟨c, s⟩ → c.mode = Mode.scan →
       (galilFrameS (PofC centre place entry raw) q first).compare s s' →
       (galilFrameS (PofC centre place entry raw) q first).matched s' →
       ChainStep s.chain (.watch w1) → BreakStep w1 w' →
-      value w1.machine.control.distance ≠ 4 * (periodLength w1 : ℤ) - 1) :
-    BrokenStage y.ctl y.vm := by
+      value w1.machine.control.distance ≠ 4 * (periodLength w1 : ℤ) - 1)
+    (hextra : ∀ (c : Control) (s s' : GalilVM) w1 w', x = ⟨c, s⟩ → c.mode = Mode.scan →
+      (galilFrameS (PofC centre place entry raw) q first).compare s s' →
+      (galilFrameS (PofC centre place entry raw) q first).matched s' →
+      ChainStep s.chain (.watch w1) → BreakStep w1 w' → negative w'.margin = false →
+      Extra (position s.center) w') :
+    BrokenStage Extra y.ctl y.vm := by
   by_cases hguard : x.ctl.mode = Mode.scan ∧ restartGuardVM x.vm
   · obtain ⟨hctl, hrestart⟩ := hcanon.restartFirst hguard.1 hguard.2
     obtain ⟨w0, -, -, -, -, hteq⟩ := hrestart
@@ -285,7 +296,7 @@ theorem brokenStage_tick {raw : List (Fin 2)} {x y : State GalilVM}
   have hbackground : ∀ {c c' : Control} {s t : GalilVM}, x = ⟨c, s⟩ → y = ⟨c', t⟩ →
       c.mode = Mode.scan → c'.mode ≠ Mode.shift →
       (galilFrameS (PofC centre place entry raw) q first).background s t →
-      BrokenStage c' t := by
+      BrokenStage Extra c' t := by
     intro c c' s t hx hy hm hmode' hb
     subst hx
     subst hy
@@ -368,7 +379,14 @@ theorem brokenStage_tick {raw : List (Fin 2)} {x y : State GalilVM}
             rw [← hR2, hradius, hradius', inc_value, hd]
           obtain ⟨hentry, hcanonicalLast, -⟩ := hledger1.stageEntry_of_break hbreak hmargin
             (hinterior c s s' w1 w rfl hm hcmp hmt hstep hbreak) hRadValue
-          exact ⟨Rad, hRad, hentry, hcanonicalLast⟩
+          have hcenter : t.center = s.center := by
+            have htarget : t.center = s'.center := by rw [hpl]; split <;> rfl
+            rw [htarget]
+            exact (PalPeg.WindowTick.compare_target_heads heq).2.2.2.1
+          refine ⟨⟨Rad, hRad, hentry, hcanonicalLast⟩, ?_⟩
+          show Extra (position t.center) w
+          rw [hcenter]
+          exact hextra c s s' w1 w rfl hm hcmp hmt hstep hbreak hmargin
       | brokenMatched w0 =>
         cases hyz
         obtain ⟨hlag, -⟩ := brokenLag_of_step hstep h0 hunbroken
@@ -475,7 +493,7 @@ theorem brokenStage_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM
     (hboundary : NoBoundaryBreak centre place entry q first raw c₀ r₀)
     {k : ℕ} {y : State GalilVM}
     (hrun : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y) :
-    BrokenStage y.ctl y.vm := by
+    BrokenStage (fun _ _ => True) y.ctl y.vm := by
   obtain ⟨g, hg0, hgk, htr, hcan, hpk⟩ := hrun
   have hprefix : ∀ i, i ≤ k →
       PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw i ⟨c₀,r₀⟩ (g i) := by
@@ -488,7 +506,7 @@ theorem brokenStage_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM
     rcases hI.1.1.1.1.1 with h | ⟨_, h⟩
     · obtain ⟨_, _, h⟩ := h.rest; exact h.1
     · exact h.chainIdle
-  have hall : ∀ i, i ≤ k → BrokenStage (g i).ctl (g i).vm := by
+  have hall : ∀ i, i ≤ k → BrokenStage (fun _ _ => True) (g i).ctl (g i).vm := by
     intro i
     induction i with
     | zero =>
@@ -505,6 +523,7 @@ theorem brokenStage_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM
         hwinX ((hpk (i+1) (by omega)).win hP) (watch_unbroken_of_window hwinX)
         (fun c s s' w1 w' hx hm hcmp hmt hstep hbreak =>
           hboundary i c s s' (hx ▸ hprefix i (by omega)) hm hcmp hmt w1 w' hstep hbreak)
+        (fun _ _ _ _ _ _ _ _ _ _ _ _ => trivial)
   rw [← hgk]
   exact hall k le_rfl
 
@@ -526,7 +545,7 @@ theorem restartStage_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilV
   have hwin := hp.win hP
   obtain ⟨w, hw, hmargin, hlast, hlag, hteq⟩ := hrestart
   obtain ⟨-, hguarded⟩ := hstage.2 hmode w hw
-  obtain ⟨Rad, hRad, hentry, hcanonicalLast⟩ := hguarded hguard
+  obtain ⟨⟨Rad, hRad, hentry, hcanonicalLast⟩, -⟩ := hguarded hguard
   obtain ⟨Rad', hRad', hright⟩ := hwin.radiusScan hmode
   have hRadEq : Rad' = Rad := by
     have h1 : (Rad' : ℤ) = (Rad : ℤ) := by rw [← hRad'.2, ← hRad.2]
