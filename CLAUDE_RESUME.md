@@ -26,6 +26,7 @@ found tick（`CloseoutFoundRoute1.found_first_tick` の形）→ 決定的 run�
 ### 実装（n251 の続き）
 
 `PalPeg/OracleRun.lean`（登録済み・標準公理のみ）: `scan_tick_exists_PofC (c s) (hm : scan) (hclk : 1 ≤ clock) (hr : replaying = false) (hsearch : SearchReady (searchLens.get s)) (hready : ChainReady s.chain) : ∃ st', Tick (galilFrameS (PofC …) q first) 2048 ⟨c, s⟩ st'`（`scan_tick_gen` ＋ `beginShift_exists`／`beginFallback_exists`／`searchEffect_exists`／`chainAt_exists`）と `phase_tick_exists_PofC (hx : PhaseEnabled q first x)`。copy 相の `ChainReady.copy`（`∃ n, CopyInv t h p v n`＝DP 答えテープの残り `n` と place の残り `n`）は誕生時に `startShape'_of_decodes`（`AnswerAhead`／`PlaceAhead`）から。
+`OracleRun.chainReady_watch_of_watchWindow (hW : WatchWindow raw cen₀ (position r) cc b xs (.watch w)) (hrep) (hpres) (hcan : canRight r) : ChainReady (.watch w)`: `LagAt` で verifier は右ヘッドの手前、`CoreP` で表現＋`OnBlock`、`symbol_of_coreP`＋`bounce_length` で焦点記号は常に `some`。これで `WindowRunPack` の watch 状態は右ヘッドが動ける限り `scan_tick_exists_PofC` の `hready` を満たす。
 
 ## n250 — モデル欠陥 `M-watchBreak` を修正（`ChainStep.watchBreak`／`ChainMatched.brokenMatched`）、全体 build 緑
 
