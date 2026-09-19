@@ -9,6 +9,8 @@
 
 **状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
 
+**次（n254 の見立て）**: 残り 4 葉のうち `hready`（chain idle での `SearchReady`）と `hchain` の copy 相（`∃ n, CopyInv`、誕生時の `copyInv_of_found` は found 時の DP 出力の decode 事実 `hDenote`／`hHead`／`hFocus`／`Candidate` を要る）は**同じ探索側の run 不変量**に帰着する: `InvLPS` 起点（`search = begin last radius`、`searchReady_of_begin`）から compare 1 回ごとに debt が 1 減り（`searchReady_run_true_iff`）、DP は予算内に終わる（`dp_quanta_safe`／`calibrated_quanta_safe`、`StageEntry : 3·Rad ≤ 5·last`）——これを run に沿って持ち回る `RdPaced` の producer `PostRun`／`RestartS2` を書くのが本丸。`hminv` の shift 相は `leftmost_shift`（`¬Live`／`Live (C+h)`／周期の最小性 `GalilMinimalPeriod.result_least`）、`hfallback` は `fallback_restarted_soundNR`（側条件 `ShiftIdle`／`Canonical length`／`heven`／`first ≠ 7,8`／`0 < q`）＋ replay 区間の新構成（既存の replay 構成子は偽の `hpres`／`hquiet` を取る）。
+
 ## n253 — 新 oracle の一致分岐を証明（`OracleRun.scanCycle_of_leaves`、run 形の葉 3 本のみ）
 
 **公理への進捗**
