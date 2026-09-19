@@ -1,3 +1,65 @@
+## n232 — 公理進捗: `ShiftInv` 23 場が 1 本の定理で出た（`shiftInv_of_watch_entry`）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 残差 `H_freshShiftAtShiftEntry` の中身 `∃ C R k, ShiftInv …` が、run 層の**一次事実だけ**から 1 本の定理で出るようになった（`ShiftPalAlongTrace.shiftInv_of_watch_entry`、標準公理のみ）。残るのはその一次事実を run 層から届ける配線（下の残差表） |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 何を証明したか
+
+`shiftInv_of_watch_entry` の入力（= `H_freshShiftAtShiftEntry` の producer が run 層に要求する残差）:
+
+| 入力 | 内容 | 供給元（一次情報で確認したもの） |
+|---|---|---|
+| `hCW` | `GalilReplaySpan.ChainW raw cen (cen+R) (cen+R) bud lim cc b xs (.watch w)` | `CloseoutWatchRound42.LandingData` の第 2 成分（`E = R_chain = position t.right`） |
+| `hpal` | `PalAt (encoded raw) cen R` | `LandingData` の `ScanInvariant.palindrome` |
+| ヘッド 6 事実 | 比較後 `u.left`/`u.right` の `Represents`・存在・位置 `cen ∓ (R+1)` | `ScanInvariant` ＋ `scanFrame.compare`（`u.left = left s.left ∧ u.right = right s.right`）＋ `left_word`/`right_word`/`left_present`/`right_present` |
+| `hmis` | `read u.left ≠ read u.right` | `Tick.scan_shift` の `¬ matched`（`Frame.pull scanLens` で `matched u = (read u.left = read u.right)`） |
+| `hguard` `hpo` | `shiftGuardVM u`、`u.periodOnly = false` | `Tick.scan_shift` の `hg`／`H_freshShiftAtShiftEntry` の前提 |
+| `hb` | `beginShiftVM (periodLength w) w u t` | `Tick.scan_shift` の `hb`（`beginShiftVM'`） |
+| **`hcentre`** | **`(encoded raw)[cen]? = some cc`** | **窓に無い**。DP の `Candidate`（`GalilDpCorrect.lean:7`、`(w.take (2h+1)).reverse = w.take (2h+1)`）が誕生時に持つ静的事実。`LandingData` には**未記録** |
+
+### 設計上の発見 3 つ（一次情報）
+
+1. **窓は右ヘッドまでしか届かない。** `LandingData` の `ChainW` は `BlockOn … (cen+1) E` で
+   `E = position t.right`。shift 判定はその右端で起きるので `coreX_next`/`coreX_good`
+   （右に 1 歩の余裕を要求）は使えない。予測記号は `symbol_of_coreX`（境界自由版）で取り、
+   `Good` は `shiftGuardVM` の最後の連言 `symbol focus = read s.right` から作る。
+2. **`ScanInvariant` は不一致直後には成り立たない**（`palindrome` 場を持つ）。n214 の
+   `shiftInv_frame_of_beginShift` は `beginShift` の源で `ScanInvariant` を取っていたので
+   **使えない形だった**——削除し、ヘッドの 6 事実をばらして受け取る形にした。
+3. **`palNext` の `i = h` は窓の外。** `PalAt (cen+h) (R+1−h)` の添字 `i = h` は
+   `x[cen] = x[cen+2h]`、右辺は `bounce[2h−1] = cc` だが `x[cen]` は窓 `[cen+1, E]` に無い。
+   n213 の `palNext_of_blockOn`（`anchor ≤ C + 1` を仮定）は**この窓では適用不能だった**
+   ——削除し、`hcentre` を明示の入力にした `palNext_of_centre` に置き換えた。
+
+### 削除した宣言（参照ゼロ・この窓では使えない形）
+
+`palNext_of_blockOn`／`origin_of_blockOn`／`shiftInv_frame_of_beginShift`／
+`periodLength_immediate_pos`／`size_of_margin`（n213〜n219）。いずれも真だが、
+`LandingData` の窓（`cen+1` から）と不一致直後の状態には合わない仮定を置いていた。
+代わりに `bounce_getElem?_symm`／`palNext_of_centre`／`blockOn_succ_of_symbol`／
+`cells_run`／`periodLength_of_coreX` を入れた（全部 `shiftInv_of_watch_entry` が使う）。
+
+### 次の一手（wrapper と、run 層の 2 残差）
+
+`H_freshShiftAtShiftEntry centre place entry q first raw c s t` を
+`LandingData raw R sT cc b xs c s` ＋ `ChainStep s.chain y → ChainW … y`（compare 量子の中で
+chain は 1 歩進む: `ChainTick false x z := ∃ y, ChainStep x y ∧ z = y`）から出す wrapper を書く。
+その wrapper が run 層に要求する新しい残差は 2 つだけ:
+
+* **中心記号** `(encoded raw)[cen]? = some cc`（誕生時の `Candidate` から運ぶ）
+* **左の余裕** `R + 2 ≤ cen`（左ヘッドが番兵に当たった不一致では `ShiftInv.room`/`leftPresent`
+  が成り立たない。`CloseoutPackRun13.CentreMargin`（`r + pairOff c + 2 ≤ position s.center`）
+  が意図された供給元）
+
+通れば `roundScan_of_shiftInv` 経由で公理の第 1・第 3 連言が落ちる。
+
 ## n231 — 公理進捗: `ShiftInv` 23 場すべてに producer が揃った（`pred` 陥落）
 
 **公理への進捗**
