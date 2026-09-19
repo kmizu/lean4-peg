@@ -240,4 +240,96 @@ theorem certAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
     have hchain := (congrArg GalilVM.chain hi.2).trans hidle
     exact certAt_of_idle (by intro hshift; simp [hm] at hshift) hchain
 
+/-- The certificate at every point of a packed run out of an `InvLPS` origin. -/
+theorem certAt_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    {k : ℕ} {y : State GalilVM}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y) :
+    CertAt raw y.ctl y.vm := by
+  obtain ⟨g, hg0, hgk, htr, hcan, hpk⟩ := hrun
+  have hprefix : ∀ i, i ≤ k →
+      CloseoutCheckW.StepsIMWC centre place entry q first raw i ⟨c₀,r₀⟩ (g i) := by
+    intro i hi
+    exact ⟨g, hg0, rfl,
+      ⟨fun j hj => htr.tick j (by omega), fun j hj => htr.good j (by omega)⟩,
+      fun j hj => hcan j (by omega), fun j hj => hpk j (by omega)⟩
+  have hiMode : c₀.mode = .scan := (PalPeg.GalilOracleLocal.invS_mode hI.1.1.1.1.1).1
+  have hiChain : r₀.chain = .idle := by
+    rcases hI.1.1.1.1.1 with h | ⟨_, h⟩
+    · obtain ⟨_, _, h⟩ := h.rest; exact h.1
+    · exact h.chainIdle
+  have hlv0 := PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry q first hI.1
+  have haux0 : PalPeg.CloseoutPackRun2.AuxPack c₀ r₀ :=
+    ⟨PalPeg.CloseoutPackRun.coupled_of_invLPC hI.1,
+      PalPeg.CloseoutPackRun.front_of_invLPC hI.1,
+      PalPeg.CloseoutPackRun.copyPack_of_invLPC hI.1⟩
+  have haux : ∀ i, i ≤ k → PalPeg.CloseoutPackRun2.AuxPack (g i).ctl (g i).vm := by
+    intro i hi
+    have hs := PalPeg.CloseoutPackRun2.steps_of_trace htr i hi
+    rw [hg0] at hs
+    exact PalPeg.CloseoutPackRun2.auxPack_steps centre place entry q first hlv0 haux0 hs
+  have hall : ∀ i, i ≤ k → CertAt raw (g i).ctl (g i).vm := by
+    intro i
+    induction i with
+    | zero =>
+      intro _
+      rw [hg0]
+      exact certAt_of_idle (by rw [hiMode]; decide) hiChain
+    | succ i ih =>
+      intro hik
+      exact certAt_tick centre place entry q first (htr.tick i (by omega)) (ih (by omega))
+        (hpk i (by omega)).pack ((hpk i (by omega)).win hP)
+        (fun hm => birthCertificate_packed centre place entry q first hP hI
+          (hprefix i (by omega)) hm)
+        (fun hm => (haux i (by omega)).copyP (by rw [hm]; decide))
+  rw [← hgk]
+  exact hall k le_rfl
+
+/-- The scan geometry at every scan state of a packed run, replaying or not. -/
+theorem scanInvariant_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
+    {k : ℕ} {y : State GalilVM}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y)
+    (hm : y.ctl.mode = .scan) :
+    ∃ rad, ScanInvariant raw (position y.vm.center) rad y.vm.left y.vm.right := by
+  have hp := PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun
+  cases hr : y.ctl.replaying with
+  | false => exact hp.pack.scanGeom hm hr
+  | true => exact hp.m2.scanGeomR hm hr
+
+/-- **`NoBoundaryBreak` holds on every packed run.** -/
+theorem noBoundaryBreak_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀) :
+    NoBoundaryBreak centre place entry q first raw c₀ r₀ := by
+  intro j c s s' hrun hm hcmp hmt w1 w' hstep hbreak
+  have hp := PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun
+  have hwin : WindowRunPack raw c s := hp.win hP
+  obtain ⟨rad, hscan⟩ := scanInvariant_packed centre place entry q first hrun hm
+  obtain ⟨R, hR, hright⟩ := hwin.radiusScan hm
+  have hrad : rad = R := by
+    have h1 : position s.right = position s.center + rad := hscan.rightPos
+    have h2 : position s.right = position s.center + R := hright
+    omega
+  subst hrad
+  exact distance_ne_boundary centre place entry q first hwin hm hscan hR
+    (leftCertificate_of_certAt (certAt_packed centre place entry q first hP hI hrun) hm)
+    hcmp hmt hstep hbreak
+
+/-- **The producer of the leaf `hrestartStage`.**  At a restart-guard state of a packed run the
+restart lands in a stage-entry restart. -/
+theorem restartStage {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    {k : ℕ} {y : State GalilVM}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y)
+    (hmode : y.ctl.mode = .scan) (hguard : restartGuardVM y.vm)
+    (hlength : Canonical y.vm.length)
+    {t : GalilVM} (hrestart : restartVM entry y.vm t) :
+    ∃ (Rad : ℕ) (last : Counter), Restarted raw t Rad last ∧ StageEntry Rad last := by
+  obtain ⟨rad, hscan⟩ := scanInvariant_packed centre place entry q first hrun hmode
+  exact restartStage_packed centre place entry q first hP hI
+    (noBoundaryBreak_packed centre place entry q first hP hI) hrun hmode hguard hscan hlength
+    hrestart
+
 end PalPeg.RestartCertificate
