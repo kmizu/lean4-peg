@@ -200,19 +200,19 @@ theorem bounce_eq_left {e : List (Fin 3)} {C : ℕ} {cc b : Fin 3} {xs : List (F
       simpa using hcc.symm
 
 /-- **The predictions of a first-round chain are the text**, up to four semiperiods to the right
-of the centre and inside the scan palindrome: the first round trip by `bounce_eq_left` and the
-scan palindrome, the second by the left certificate (period `2h` on `[C - 4h, C]`). -/
-theorem bounce_eq_text {e : List (Fin 3)} {C R : ℕ} {cc b : Fin 3} {xs : List (Fin 3)}
+of the centre, at a place whose mirror image in the centre carries the same letter: the first
+round trip by `bounce_eq_left`, the second by the left certificate (period `2h` on
+`[C - 4h, C]`). -/
+theorem bounce_eq_text {e : List (Fin 3)} {C : ℕ} {cc b : Fin 3} {xs : List (Fin 3)}
     (hcc : e[C]? = some cc)
     (hletters : ∀ i, i < xs.length + 1 → (xs ++ [b])[i]? = e[C - 1 - i]?)
     (hblockPal : Manacher.PalAt e (C - (xs.length + 1)) (xs.length + 1))
     (hCh : xs.length + 1 ≤ C)
     (hleft : PeriodOn e (2 * (xs.length + 1)) (C - 4 * (xs.length + 1)) C)
-    (hpal : Manacher.PalAt e C R)
-    {t : ℕ} (ht1 : 1 ≤ t) (htR : t ≤ R) (ht4 : t + 1 ≤ 4 * (xs.length + 1)) :
+    {t : ℕ} (ht1 : 1 ≤ t) (htC : t ≤ C) (hmirror : e[C - t]? = e[C + t]?)
+    (ht4 : t + 1 ≤ 4 * (xs.length + 1)) :
     e[C + t]? = (GalilScaffoldChainSweep.bounce cc b xs)[(t - 1) % (2 * (xs.length + 1))]? := by
-  have htC : t ≤ C := le_trans htR hpal.1
-  rw [← hpal.2.2 t htR]
+  rw [← hmirror]
   rcases Nat.lt_or_ge (2 * (xs.length + 1)) t with hsecond | hfirst
   · have hmod : (t - 1) % (2 * (xs.length + 1)) = t - 2 * (xs.length + 1) - 1 := by
       rw [show t - 1 = (t - 2 * (xs.length + 1) - 1) + 2 * (xs.length + 1) from by omega,
@@ -225,5 +225,87 @@ theorem bounce_eq_text {e : List (Fin 3)} {C R : ℕ} {cc b : Fin 3} {xs : List 
     omega
   · rw [Nat.mod_eq_of_lt (by omega), bounce_eq_left hcc hletters hblockPal hCh ht1 hfirst]
 
-end PalPeg.ChainBlockText
+/-! ## The block of the window is the block of the tape -/
 
+theorem flat_run {s : GalilScaffoldChainConsume.State} (pre : List (Fin 3))
+    (hblock : OnBlock s.period) :
+    flat (GalilScaffoldChainSweep.run s pre).period = flat s.period := by
+  induction pre generalizing s with
+  | nil => rfl
+  | cons a pre ih =>
+    exact (ih (onBlock_consume s (some a) hblock)).trans (flat_consume s (some a) hblock)
+
+/-- The period tape of a watch whose window speaks about the block `cc b xs` is that block. -/
+theorem flat_of_coreP {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)} {anchor : ℕ}
+    {m : GalilScaffoldChainVerifier.State}
+    (hcore : PalPeg.ShiftPalAlongTrace.CoreP raw cc b xs anchor m) :
+    flat m.control.period = blockTokens cc b xs := by
+  obtain ⟨-, -, -, -, pre, hsame, -, -⟩ := hcore
+  rw [hsame.1, flat_run pre (onBlock_ready cc b xs)]
+  show flat (GalilScaffoldChainPeriod.moveRight
+    ⟨[], GalilScaffoldChainPeriod.Token.first cc,
+      xs.map GalilScaffoldChainPeriod.Token.plain ++ [GalilScaffoldChainPeriod.Token.last b]⟩) = _
+  rw [flat_moveRight _ (by simp)]
+  rfl
+
+theorem blockTokens_inj {c c' b b' : Fin 3} {xs xs' : List (Fin 3)}
+    (h : blockTokens c b xs = blockTokens c' b' xs') : b = b' ∧ xs = xs' := by
+  unfold blockTokens at h
+  have htail := (List.cons.inj h).2
+  have hlength : (xs.map GalilScaffoldChainPeriod.Token.plain).length
+      = (xs'.map GalilScaffoldChainPeriod.Token.plain).length := by
+    have := congrArg List.length htail
+    simp only [List.length_append, List.length_map, List.length_singleton] at this ⊢
+    omega
+  obtain ⟨hmap, hlast⟩ := List.append_inj htail hlength
+  refine ⟨?_, ?_⟩
+  · have := (List.cons.inj hlast).1
+    exact GalilScaffoldChainPeriod.Token.last.inj this
+  · exact List.map_injective_iff.mpr (fun _ _ hab => GalilScaffoldChainPeriod.Token.plain.inj hab)
+      hmap
+
+/-- **The prediction of a first-round watch is the next place of the text**, as long as that
+place carries the letter of its mirror image in the centre and lies within four semiperiods of
+the centre.  `L` is the stream of the centre's place (`L[i] = e[C - i]`), the window is anchored
+at the centre `C`. -/
+theorem prediction_eq_text_of_window {raw : List (Fin 2)} {C P : ℕ} {cc cc' : Fin 3}
+    {w : GalilScaffoldChainWatch.State} {L : List (Fin 3)}
+    (hwindow : PalPeg.WindowInv.WindowInv raw C P cc (.watch w))
+    (htext : BlockText L cc' (.watch w))
+    (hcc : (encoded raw)[C]? = some cc)
+    (hL : ∀ i, i < L.length → L[i]? = (encoded raw)[C - i]?) (hLlength : L.length = C)
+    (hblockPal : Manacher.PalAt (encoded raw) (C - periodLength w) (periodLength w))
+    (hleft : PeriodOn (encoded raw) (2 * periodLength w) (C - 4 * periodLength w) C)
+    (hroom : position w.machine.verifier + 1 ≤ 2 * C)
+    (hmirror : (encoded raw)[C - (position w.machine.verifier + 1 - C)]?
+      = (encoded raw)[position w.machine.verifier + 1]?)
+    (hfour : position w.machine.verifier + 2 ≤ C + 4 * periodLength w) :
+    GalilScaffoldChainConsume.symbol w.machine.control.period.focus
+      = (encoded raw)[position w.machine.verifier + 1]? := by
+  obtain ⟨b, xs, -, -, hcore⟩ := hwindow
+  obtain ⟨b', xs', hflat', hletters'⟩ := htext
+  have hflat := flat_of_coreP hcore
+  obtain ⟨hb, hxs⟩ := blockTokens_inj (hflat.symm.trans hflat')
+  subst hb
+  subst hxs
+  have hlength := PalPeg.ShiftPalAlongTrace.periodLength_of_coreP hcore
+  rw [hlength] at hblockPal hleft hfour
+  have hsymbol := PalPeg.ShiftPalAlongTrace.symbol_of_coreP hcore
+  obtain ⟨-, -, -, -, pre, -, -, hindex⟩ := hcore
+  have hhalf : xs.length + 1 ≤ C - (xs.length + 1) := hblockPal.1
+  have hletters : ∀ i, i < xs.length + 1 → (xs ++ [b])[i]? = (encoded raw)[C - 1 - i]? := by
+    intro i hi
+    unfold BlockLetters at hletters'
+    rw [hletters', List.getElem?_take, if_pos hi, List.getElem?_drop, hL (1 + i) (by omega)]
+    congr 1
+    omega
+  have htext := bounce_eq_text (t := position w.machine.verifier + 1 - C)
+    hcc hletters hblockPal (by omega) hleft (by omega) (by omega)
+    (by rw [hmirror]; congr 1; omega) (by omega)
+  rw [hsymbol,
+    show position w.machine.verifier + 1 - (C + 1)
+      = position w.machine.verifier + 1 - C - 1 from by omega, ← htext]
+  congr 1
+  omega
+
+end PalPeg.ChainBlockText

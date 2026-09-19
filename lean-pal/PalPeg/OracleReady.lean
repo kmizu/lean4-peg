@@ -80,7 +80,7 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
         GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right) →
       searchEffect (PofC centre place entry w) false s vq →
       s.chain ≠ .idle →
-      (s.periodOnly = false → ∃ wb : GalilScaffoldChainWatch.State, s.chain = .broken wb) →
+      s.periodOnly = true →
       chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
         ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
         s.center s.radius s.chain z →
@@ -158,8 +158,8 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
       by_cases hfirstRound : s.periodOnly = false
       · rcases PalPeg.RestartLowerRun.chainTick_cases centre place entry q first hP hI hRun hm
             hChain hidle with ⟨wb, hbroken⟩ | hsourceWork | hwork | ⟨w1, hz, hzero⟩
-        · exact hmove c₀ r₀ k c s vq z m hm1 hmle hI hBoot hRun hNoGuardS hm hr hc hPos hM hMis
-            hSearch hidle (fun _ => ⟨wb, hbroken⟩) hChain hGuard
+        · exact absurd hbroken (PalPeg.RestartLowerRun.not_broken_firstRound centre place
+            entry q first hnonempty hP hI hBoot hRun hm hfirstRound hNoGuardS wb)
         · exact PalPeg.RestartLowerRun.move_of_working_source centre place entry q first
             hnonempty hP hI hBoot hRun hm hr hCan hfirstRound hsourceWork
         · exact PalPeg.RestartLowerRun.move_of_working_chain centre place entry q first
@@ -179,7 +179,7 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
           · exact PalPeg.RestartLowerRun.move_of_watch_short centre place entry q first
               hnonempty hP hI hBoot hRun hm hr hCan hChain hfirstRound hzero hphase
       · exact hmove c₀ r₀ k c s vq z m hm1 hmle hI hBoot hRun hNoGuardS hm hr hc hPos hM hMis
-          hSearch hidle (fun hfalse => absurd hfalse hfirstRound) hChain hGuard
+          hSearch hidle (by simpa using hfirstRound) hChain hGuard
   change ℓ / 2 ≤ 4*(ℓ / 2 + 1-radius) at hMove
   have hk : ℓ / 2 = rad := by rw [hLengthNat]; omega
   rw [hk] at hMove

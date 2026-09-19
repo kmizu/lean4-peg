@@ -1,3 +1,25 @@
+## n278 — 葉 `hmove`: 第 1 ラウンドで「不一致状態の chain が既に broken」は到達不能。第 1 ラウンドは全部閉じ、葉に残るのは `periodOnly = true` だけ
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` は、chain が idle でなく **`s.periodOnly = true`** である不一致状態だけを負う（前提 `(s.periodOnly = false → ∃ wb, s.chain = .broken wb)` を `s.periodOnly = true` に置き換えた。第 1 ラウンドの場合は葉から消えた） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件、`Axioms.olean` が `OracleReady.olean` より後に作り直されたことを確認）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。`OracleReady.cycleOracleOn_of_readyLeaves` と `RestartLowerRun.not_broken_firstRound` は標準 3 公理のみ。
+
+**何を証明したか**: Scala 正本 `ScaffoldGalil.background()` が `AssertionError("chain restart violates the confirmed-period invariant")` で主張している到達不能性を、run 不変量として証明した。`RestartLowerRun.FirstRoundGuard c s := c.mode = .scan → s.periodOnly = false → ∀ w, s.chain = .broken w → restartGuardVM s` を `MinimalAcrossRestart` の場 `guard` に追加（`firstRoundGuard_tick`）。消費者は `not_broken_firstRound` → `OracleReady` の `hMove` の第 1 ラウンド・broken 分岐（`¬ restartGuardVM s` と矛盾）。
+
+* 一次情報で確認した事実: `ChainStep.brokenIdle` と `ChainMatched.brokenMatched` は broken を**保つ**。guard の立たない broken は永久に残るので、不変量で排除する以外に無い。broken の生まれ口は 2 つだけ（`not_step_to_broken`）。
+* 正 lag の `WatchBreak`（background）: `no_watchBreak_firstRound`。chain の時計 `ClockAt` から `R < 4h`、verifier は右ヘッドより手前なので検査する place は scan 回文の内側かつ `C + 4h` 未満 → 予測＝テキスト。
+* lag ゼロの `BreakStep`（matched 比較）: `lateBreak_firstRound`。`distance ≤ 4h − 2` なら予測＝テキスト（matched 比較が与える `R+1` の鏡像等式 `RestartBoundary.matched_text` を使う）、`distance = 4h − 1` は既存の `distance_ne_boundary`。よって `4h ≤ distance`、そこから `restartGuard_of_lateBreak`（`WatchLedger.balance` で margin ≥ 0、`WatchLedger.last_bounds` で `last > 0`、lag は 0）。
+* 予測＝テキストの核: `RestartLowerRun.firstRound_watch_predicts` → `ChainBlockText.prediction_eq_text_of_window` → `bounce_eq_text`。材料は `FirstRoundWindow`（窓が現在の中心に固定）、`BlockTextAt`（block の文字＝中心の左のテキスト）、`MovePayload` の block 回文 `PalAt (C − H) H`、`CertAt` の `LeftPeriod`。n277 の時点で消費者の無かった `BlockTextAt`／`FirstRoundWindow`／`bounce_eq_text` はこれで全部消費された。
+* `bounce_eq_text`／`prediction_eq_text_of_window` は「scan 回文全体」でなく「その 1 点の鏡像等式」を取る形にした（matched 比較の break では `R + 1` の鏡像しか手元に無い）。
+* コピペを避けるため `distance_ne_boundary` の中身から `RestartBoundary.matched_text` を補題として切り出した（両方が使う）。
+
+**未完の部分**: 葉 `hmove` の `periodOnly = true`（shift 後のラウンド。Scala `checkPair` に当たる継続不変量が run 上に無い、未調査）。`obligation_localRealization` は未着手。
+
 ## n277 — 葉 `hmove`: 追い付く前に壊れる watch（この tick の正 lag の break）を閉じた。第 1 ラウンドで残るのは「source の chain が既に broken」だけ
 
 **公理への進捗**

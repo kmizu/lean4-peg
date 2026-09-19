@@ -898,6 +898,405 @@ theorem firstRoundWindow_tick {Extra : ℕ → ℕ → GalilScaffoldChainWatch.S
       | (simp [hm] at hmode)
       | (simp at hmode)
 
+/-! ## The first round ends at the restart guard -/
+
+/-- In the first round of a chain, a broken chain of a scan state is at the restart guard. -/
+def FirstRoundGuard (c : Control) (s : GalilVM) : Prop :=
+  c.mode = .scan → s.periodOnly = false → ∀ w, s.chain = .broken w → restartGuardVM s
+
+/-- A lag-zero break after four verified semiperiods lands at the restart guard. -/
+theorem restartGuard_of_lateBreak {w1 w' : GalilScaffoldChainWatch.State}
+    (hledger : WatchLedger 0 w1) (hbreak : BreakStep w1 w')
+    (hfour : 4 * (periodLength w1 : ℤ) ≤ value w1.machine.control.distance) :
+    negative w'.margin = false ∧ positive w'.machine.control.last = true ∧
+      zero w'.lag = true := by
+  obtain ⟨hzero, -, a, hsymbol, hread, rfl⟩ := hbreak
+  have hcontrol : (GalilScaffoldChainVerifier.consume w1.machine).control
+      = {w1.machine.control with broken := true} :=
+    GalilScaffoldChainConsume.mismatch w1.machine.control a _ hsymbol hread
+  have hbalance := hledger.balance
+  simp only [GalilScaffoldChainWatch.balance] at hbalance
+  have hlagZero := PalPeg.GalilChainCoupling.value_zero_of_zero hzero
+  obtain ⟨-, hlastHigh⟩ := hledger.last_bounds hfour
+  have hperiod : 1 ≤ periodLength w1 := by
+    obtain ⟨hsize, hforward, hbackward, -⟩ := hledger.marks
+    cases hfw : w1.machine.control.forward with
+    | true => have := (hforward hfw).1; omega
+    | false => have := (hbackward hfw).1; omega
+  have hperiodInt : (1 : ℤ) ≤ (periodLength w1 : ℤ) := by exact_mod_cast hperiod
+  refine ⟨not_negative_of_nonneg (inc_canonical _ hledger.margin) ?_, ?_, hzero⟩
+  · show 0 ≤ value (inc w1.margin)
+    rw [inc_value]
+    linarith
+  · show positive (GalilScaffoldChainVerifier.consume w1.machine).control.last = true
+    rw [hcontrol]
+    exact (positive_iff _ hledger.marks.canonical.2.2).mpr (by linarith)
+
+/-- A chain that is not broken and whose watch does not break at a positive lag does not step
+into a broken chain. -/
+theorem not_step_to_broken {x : ChainVM} {w : GalilScaffoldChainWatch.State}
+    (hstep : ChainStep x (.broken w)) (hnotBroken : ∀ w0, x ≠ .broken w0)
+    (hnoWatchBreak : ∀ w0, x = .watch w0 → ¬ WatchBreak w0) : False := by
+  generalize hy : ChainVM.broken w = y at hstep
+  cases hstep with
+  | brokenIdle w0 => exact hnotBroken w0 rfl
+  | watchBreak w0 hb => exact hnoWatchBreak w0 rfl hb
+  | idle => cases hy
+  | copyBit => cases hy
+  | copyEnd => cases hy
+  | backStep => cases hy
+  | backDone => cases hy
+  | watchStep => cases hy
+
+/-- **A first-round watch predicts the text.**  The watch of a first-round scan state, before or
+after its chain step, predicts the letter right of its verifier, as long as that place carries
+the letter of its mirror image in the centre and lies within four semiperiods of the centre. -/
+theorem firstRound_watch_predicts {raw : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hwin : WindowRunPack raw c s) (hm : c.mode = .scan) (hfirstRound : s.periodOnly = false)
+    (hwindowAt : FirstRoundWindow raw c s)
+    (htextAt : BlockTextAt centre place entry raw c s)
+    (hsemAt : FirstRoundSem raw c s) (hcertAt : CertAt raw c s)
+    {w : GalilScaffoldChainWatch.State}
+    (hreach : s.chain = .watch w ∨ ChainStep s.chain (.watch w))
+    (hcanRight : canRight w.machine.verifier)
+    (hroom : position w.machine.verifier + 1 ≤ 2 * position s.center)
+    (hmirror : (encoded raw)[position s.center
+        - (position w.machine.verifier + 1 - position s.center)]?
+      = (encoded raw)[position w.machine.verifier + 1]?)
+    (hfour : position w.machine.verifier + 2 ≤ position s.center + 4 * periodLength w) :
+    read (right w.machine.verifier)
+      = GalilScaffoldChainConsume.symbol w.machine.control.period.focus := by
+  have hne : s.chain ≠ .idle := by
+    intro hidle
+    rcases hreach with h | h
+    · rw [hidle] at h; cases h
+    · rw [hidle] at h; cases h
+  obtain ⟨cc, hcc, hwindow0⟩ := hwindowAt hm hfirstRound hne
+  obtain ⟨cc', htext0⟩ := htextAt hm hfirstRound
+  have hsem0 := hsemAt hm (Or.inr hfirstRound)
+  have hcert0 := hcertAt.1 hm
+  have hall : WindowInv raw (position s.center) (position s.right) cc (.watch w) ∧
+      PalPeg.ChainBlockText.BlockText
+        (GalilScaffoldPlace.stream ((PofC centre place entry raw).place s)) cc' (.watch w) ∧
+      Sem (MovePayload raw s) raw (position s.center) (.watch w) ∧
+      SemWith (LeftPeriod raw (position s.center)) (.watch w) := by
+    rcases hreach with heq | hstep
+    · rw [heq] at hwindow0 htext0 hsem0 hcert0
+      exact ⟨hwindow0, htext0, hsem0, hcert0⟩
+    · exact ⟨windowInv_step hwindow0 hstep,
+        PalPeg.ChainBlockText.blockText_step htext0 hwin.coupled.block hstep,
+        sem_step hsem0 hstep, sem_step hcert0 hstep⟩
+  obtain ⟨hwindowW, htextW, hsemW, hcertW⟩ := hall
+  have hpayload : MovePayload raw s (position s.center) (periodLength w) :=
+    watch_moveMinimal hsemW
+  obtain ⟨H, hH, hleftH⟩ := PalPeg.ChainClock.period_of_semWith hcertW (by simp)
+  have hcells := PalPeg.GalilShiftH.periodLength_succ_eq_cells w
+  change periodLength w + 1 = PalPeg.GalilShiftH.cellsOf (.watch w) at hcells
+  have hHeq : H = periodLength w := by
+    have hHvalue : (H : ℤ) = (PalPeg.GalilShiftH.cellsOf (.watch w) : ℤ) - 1 := hH
+    omega
+  rw [hHeq] at hleftH
+  have hcen := hwin.centreRep (Or.inl hm)
+  obtain ⟨a, ys, rs, q', hdec, hraw⟩ := represents_decompose s.center raw hcen.1 hcen.2
+  have hplace : (PofC centre place entry raw).place s = ⟨a :: ys, s.center.gap⟩ :=
+    (hP.1 s a ys rs q' s.center.gap hdec).2
+  have hstreamLength := stream_length_of_place a ys rs q' hdec
+  rw [hplace] at htextW
+  have hprediction := PalPeg.ChainBlockText.prediction_eq_text_of_window hwindowW htextW hcc
+    (fun i hi => by
+      have hindex := stream_index a ys rs q' s.center.gap i hi
+      rw [hstreamLength, ← hraw] at hindex
+      exact hindex)
+    hstreamLength hpayload.2 hleftH hroom hmirror hfour
+  obtain ⟨b, xs, -, -, hcore⟩ := hwindowW
+  have hrep := hcore.2.1
+  have hpresent := hcore.2.2.1
+  have hleft0 : 0 < w.machine.verifier.head.left.length :=
+    (represented_position _ raw hrep hpresent).1
+  rw [represented_read _ raw (right_word _ raw hrep hcanRight)
+    (right_present _ raw hrep hpresent hcanRight), right_position _ hcanRight hleft0]
+  exact hprediction.symm
+
+#print axioms firstRound_watch_predicts
+
+open PalPeg.ChainClock in
+/-- **No first-round watch breaks at a positive lag**: the chain clock keeps the scan radius
+below four semiperiods while the watch is behind, so the place it verifies is predicted. -/
+theorem no_watchBreak_firstRound {raw : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hwin : WindowRunPack raw c s) (hm : c.mode = .scan) (hfirstRound : s.periodOnly = false)
+    (hwindowAt : FirstRoundWindow raw c s)
+    (htextAt : BlockTextAt centre place entry raw c s)
+    (hsemAt : FirstRoundSem raw c s) (hcertAt : CertAt raw c s)
+    (hclockAt : ClockAt c s) (hclockLe : c.clock ≤ 2048)
+    {R : ℕ} (hscan : ScanInvariant raw (position s.center) R s.left s.right)
+    (hradius : RadiusRep s.radius R)
+    {w0 : GalilScaffoldChainWatch.State} (hchain : s.chain = .watch w0) :
+    ¬ WatchBreak w0 := by
+  rintro ⟨hpositive, hcanRight, a, hsymbol, hread⟩
+  have hne : s.chain ≠ .idle := by rw [hchain]; simp
+  obtain ⟨cc, -, hwindow0⟩ := hwindowAt hm hfirstRound hne
+  rw [hchain] at hwindow0
+  obtain ⟨b, xs, ⟨hlagNeg, hlagPosition⟩, -, hcore⟩ := hwindow0
+  obtain ⟨-, -, -, -, pre, -, -, hindex⟩ := hcore
+  have hlagLength : 1 ≤ w0.lag.pos.length := by
+    rcases hw : w0.lag with ⟨pos, neg⟩
+    rw [hw] at hpositive
+    cases pos with
+    | nil => simp [positive] at hpositive
+    | cons _ _ => simp
+  have hlagValue : value w0.lag = (w0.lag.pos.length : ℤ) := by
+    unfold value
+    rw [hlagNeg]
+    simp
+  have hwork : 0 < chainWork (.watch w0) := by
+    show 0 < value w0.lag
+    rw [hlagValue]
+    exact_mod_cast hlagLength
+  have hclock := hclockAt hm hfirstRound (by rw [hchain]; exact hwork)
+  rw [hchain] at hclock
+  have hperiodValue : chainPeriod (.watch w0) = (periodLength w0 : ℤ) := by
+    have hcells := PalPeg.GalilShiftH.periodLength_succ_eq_cells w0
+    change periodLength w0 + 1 = PalPeg.GalilShiftH.cellsOf (.watch w0) at hcells
+    show (PalPeg.GalilShiftH.cellsOf (.watch w0) : ℤ) - 1 = _
+    omega
+  have hradiusValue : value s.radius = (R : ℤ) := hradius.2
+  have hclockLeInt : (c.clock : ℤ) ≤ 2048 := by exact_mod_cast hclockLe
+  have hRlt : R < 4 * periodLength w0 := by
+    rw [hperiodValue, hradiusValue] at hclock
+    have hgap : (0 : ℤ) < 4 * (periodLength w0 : ℤ) - (R : ℤ) := by linarith
+    omega
+  have hrightPos := hscan.rightPos
+  have hpal := hscan.palindrome
+  have hmirror := hpal.2.2 (position w0.machine.verifier + 1 - position s.center) (by omega)
+  have hprediction := firstRound_watch_predicts centre place entry hP hwin hm hfirstRound
+    hwindowAt htextAt hsemAt hcertAt (Or.inl hchain) hcanRight (by have := hpal.1; omega)
+    (by rw [hmirror]; congr 1; omega) (by omega)
+  exact hread (hprediction.trans hsymbol)
+
+#print axioms no_watchBreak_firstRound
+
+/-- **A first-round lag-zero break comes after four verified semiperiods**: before that the
+matched letter is predicted (`firstRound_watch_predicts`), and the boundary `4h − 1` is the
+left certificate's (`distance_ne_boundary`). -/
+theorem lateBreak_firstRound {raw : List (Fin 2)} {c : Control} {s s' : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hwin : WindowRunPack raw c s) (hm : c.mode = .scan) (hfirstRound : s.periodOnly = false)
+    (hwindowAt : FirstRoundWindow raw c s)
+    (htextAt : BlockTextAt centre place entry raw c s)
+    (hsemAt : FirstRoundSem raw c s) (hcertAt : CertAt raw c s)
+    {R : ℕ} (hscan : ScanInvariant raw (position s.center) R s.left s.right)
+    (hradius : RadiusRep s.radius R) (hrightCan : canRight s.right)
+    (hcmp : (galilFrameS (PofC centre place entry raw) q first).compare s s')
+    (hmt : (galilFrameS (PofC centre place entry raw) q first).matched s')
+    {w1 w' : GalilScaffoldChainWatch.State}
+    (hstep : ChainStep s.chain (.watch w1)) (hbreak : BreakStep w1 w')
+    (hboundary : value w1.machine.control.distance ≠ 4 * (periodLength w1 : ℤ) - 1) :
+    4 * (periodLength w1 : ℤ) ≤ value w1.machine.control.distance := by
+  by_contra hshort
+  have hne : s.chain ≠ .idle := by
+    intro hidle
+    rw [hidle] at hstep
+    cases hstep
+  have hunbroken1 := unbroken_of_step hstep (watch_unbroken_of_window hwin)
+  have hsum1 : PalPeg.GalilChainCoupling.SumRel (.watch w1) (value s.radius) :=
+    (PalPeg.GalilChainCoupling.step_inv hstep (F := True) trivial (O := fun _ => True)
+      hwin.coupled.block hwin.coupled.sum (fun _ _ _ => Or.inr trivial)).1
+  have hdistance := hsum1 hunbroken1
+  rw [PalPeg.GalilChainCoupling.value_zero_of_zero hbreak.1, add_zero, hradius.2] at hdistance
+  obtain ⟨cc, -, hwindow0⟩ := hwindowAt hm hfirstRound hne
+  obtain ⟨b, xs, ⟨-, hlagPosition⟩, -, -⟩ := windowInv_step hwindow0 hstep
+  have hlagEmpty : w1.lag.pos = [] := by
+    have hz := hbreak.1
+    rcases hw : w1.lag with ⟨pos, neg⟩
+    rw [hw] at hz
+    simp only [zero, Bool.and_eq_true, List.isEmpty_iff] at hz
+    exact hz.1
+  rw [hlagEmpty] at hlagPosition
+  have hverifier : position w1.machine.verifier = position s.right := by
+    simpa using hlagPosition
+  have hRC := scan_radius_lt hscan
+  have hrightPos := hscan.rightPos
+  have hmatched := PalPeg.RestartBoundary.matched_text centre place entry q first hscan hcmp hmt
+    hrightCan
+  obtain ⟨-, hcanRight, a, hsymbol, hread, -⟩ := hbreak
+  have hprediction := firstRound_watch_predicts centre place entry hP hwin hm hfirstRound
+    hwindowAt htextAt hsemAt hcertAt (Or.inr hstep) hcanRight (by omega)
+    (by rw [hverifier, ← hmatched]; congr 1; omega) (by omega)
+  exact hread (hprediction.trans hsymbol)
+
+#print axioms lateBreak_firstRound
+
+/-- One tick of the canonical schedule keeps `FirstRoundGuard`.  A broken chain is born by a
+positive-lag break of a background step (`hnoWatchBreak` excludes it in the first round) or by a
+lag-zero break of a matched comparison (`hlateBreak` puts it after four semiperiods, where the
+ledger gives the restart guard); a broken chain without the guard does not exist at the source. -/
+theorem firstRoundGuard_tick {Extra : ℕ → ℕ → GalilScaffoldChainWatch.State → Prop}
+    {raw : List (Fin 2)} {x y : State GalilVM}
+    (ht : Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y)
+    (hcanon : PalPeg.GalilTickFair.Canonical entry 2048 x y)
+    (hsource : FirstRoundGuard x.ctl x.vm)
+    (hstage : BrokenStage Extra x.ctl x.vm) (hledger : LedgerAt x.ctl x.vm)
+    (hwinX : WindowRunPack raw x.ctl x.vm)
+    (hfront : PalPeg.GalilFrontMono.FrontPack x.ctl x.vm)
+    (hnoWatchBreak : ∀ (c : Control) (s : GalilVM) w0, x = ⟨c, s⟩ → c.mode = Mode.scan →
+      s.periodOnly = false → s.chain = .watch w0 → ¬ WatchBreak w0)
+    (hlateBreak : ∀ (c : Control) (s s' : GalilVM) w1 w', x = ⟨c, s⟩ → c.mode = Mode.scan →
+      s.periodOnly = false → canRight s.right →
+      (galilFrameS (PofC centre place entry raw) q first).compare s s' →
+      (galilFrameS (PofC centre place entry raw) q first).matched s' →
+      ChainStep s.chain (.watch w1) → BreakStep w1 w' →
+      4 * (periodLength w1 : ℤ) ≤ value w1.machine.control.distance) :
+    FirstRoundGuard y.ctl y.vm := by
+  by_cases hguard : x.ctl.mode = Mode.scan ∧ restartGuardVM x.vm
+  · obtain ⟨hctl, hrestart⟩ := hcanon.restartFirst hguard.1 hguard.2
+    obtain ⟨w0, -, -, -, -, hteq⟩ := hrestart
+    intro _ _ w hw
+    rw [hteq] at hw
+    cases hw
+  have hsourceOnly : ∀ {s t : GalilVM} {found : Bool},
+      t.periodOnly = (if chainBorn found s.chain then false else s.periodOnly) →
+      t.periodOnly = false → s.chain ≠ .idle → s.periodOnly = false := by
+    intro s t found honly htargetFalse hne
+    unfold chainBorn at honly
+    rw [isIdle_false_of_ne hne] at honly
+    rw [honly] at htargetFalse
+    simpa using htargetFalse
+  have hstepBroken : ∀ {c : Control} {s : GalilVM} {w : GalilScaffoldChainWatch.State},
+      x = ⟨c, s⟩ → c.mode = .scan → (s.chain ≠ .idle → s.periodOnly = false) →
+      ChainStep s.chain (.broken w) → False := by
+    intro c s w hx hm honlySource hstep
+    subst hx
+    exact not_step_to_broken hstep
+      (fun w0 hw0 => hguard ⟨hm, hsource hm (honlySource (by rw [hw0]; simp)) w0 hw0⟩)
+      (fun w0 hw0 => hnoWatchBreak c s w0 rfl hm (honlySource (by rw [hw0]; simp)) hw0)
+  have hbackground : ∀ {c : Control} {s t : GalilVM} {w : GalilScaffoldChainWatch.State},
+      x = ⟨c, s⟩ → c.mode = .scan →
+      (galilFrameS (PofC centre place entry raw) q first).background s t →
+      t.periodOnly = false → t.chain = .broken w → False := by
+    intro c s t w hx hm hb hfalse hw
+    obtain ⟨-, -, hch, -, honly, -⟩ :=
+      backgroundS_fields (PofC centre place entry raw) q first hb
+    rcases hch with ⟨-, y0, hstep, hzy⟩ | ⟨-, -, hz⟩ | ⟨-, -, hz⟩
+    · rw [if_neg (by simp)] at hzy
+      rw [hzy] at hw
+      subst hw
+      exact hstepBroken hx hm (hsourceOnly honly hfalse) hstep
+    · rw [hz] at hw; cases hw
+    · rw [if_neg (by simp)] at hz
+      rw [hz] at hw
+      cases hw
+  cases ht with
+  | init c s t hm hi =>
+    obtain ⟨_,_,_,_,_,_,_,_,_,hch,_⟩ := hi
+    intro _ _ w hw
+    rw [hch] at hw
+    cases hw
+  | scan_wait c s t hm hav hb =>
+    intro _ hfalse w hw
+    exact (hbackground rfl hm hb hfalse hw).elim
+  | scan_count c s t hm hav hc hb =>
+    intro _ hfalse w hw
+    exact (hbackground rfl hm hb hfalse hw).elim
+  | scan_match c s s' t o hm hav hc hcmp hmt hpl ho =>
+    have hcmp' : compareFound (PofC centre place entry raw) q first s s' := hcmp
+    obtain ⟨vs, vq, a, -, -, hiff, -, hch, heq⟩ := hcmp'
+    have ha : a = true := by
+      cases a with
+      | true => rfl
+      | false =>
+        exfalso
+        have hm' : read s'.left = read s'.right := hmt
+        rw [heq, afterBirth_left, afterBirth_right] at hm'
+        exact absurd (hiff.2 hm') (by simp)
+    subst ha
+    have hchain' : s'.chain = vs.chain := by
+      rw [heq, afterBirth_chain]; rfl
+    have hchain : t.chain = s'.chain := by rw [hpl]; split <;> rfl
+    have honly : t.periodOnly
+        = if chainBorn (decide (vq.search.mode = .found)) s.chain then false
+          else s.periodOnly := by
+      have htarget : t.periodOnly = s'.periodOnly := by rw [hpl]; split <;> rfl
+      rw [htarget, heq, afterBirth_periodOnly]
+      rfl
+    have hrightCan : canRight s.right := by
+      rcases hav with hrp | hcan
+      · exact PalPeg.CloseoutReplayCanRight.canRight_of_frontPack hfront hrp
+      · exact hcan
+    intro _ hfalse w hw
+    have htchain : t.chain = .broken w := hw
+    rw [hchain, hchain'] at hw
+    rcases hch with ⟨-, y0, hstep, hzy⟩ | ⟨-, -, hz⟩ | ⟨-, -, hz⟩
+    · rw [if_pos rfl] at hzy
+      rw [hw] at hzy
+      generalize hyz : ChainVM.broken w = z at hzy
+      cases hzy with
+      | breaks w1 w' hbreak =>
+        cases hyz
+        have hne : s.chain ≠ .idle := by
+          intro hidle
+          rw [hidle] at hstep
+          cases hstep
+        have hledger0 := hledger (Or.inl hm)
+        simp only [shiftDebt, hm, show (Mode.scan = Mode.shift) = False from by simp,
+          if_false] at hledger0
+        have hledger1 : WatchLedger 0 w1 :=
+          chainLedger_step hstep hwinX.coupled.block hledger0
+            (unbroken_of_step hstep (watch_unbroken_of_window hwinX))
+        exact ⟨w, htchain, restartGuard_of_lateBreak hledger1 hbreak
+          (hlateBreak c s s' w1 w rfl hm (hsourceOnly honly hfalse hne) hrightCan hcmp hmt
+            hstep hbreak)⟩
+      | brokenMatched w0 =>
+        cases hyz
+        exact (hstepBroken rfl hm (hsourceOnly honly hfalse) hstep).elim
+      | idle => cases hyz
+      | copy => cases hyz
+      | back => cases hyz
+      | watch => cases hyz
+    · rw [hz] at hw; cases hw
+    · rw [if_pos rfl] at hz
+      rw [hw] at hz
+      unfold chainStart at hz
+      cases hz
+  | scan_shift c s s' t hm hav hc hcmp hmt hr hg hb =>
+    intro hmode
+    simp at hmode
+  | scan_fallback c s s' t hm hav hc hcmp hmt hg hr hb =>
+    intro hmode
+    simp at hmode
+  | shift_one c s t hm hp hso =>
+    intro hmode
+    simp [hm] at hmode
+  | shift_done c s o hm hp ho =>
+    obtain ⟨-, honly⟩ := hstage.1 hm
+    intro _ hfalse _ _
+    have hsourceFalse : s.periodOnly = false := hfalse
+    rw [honly] at hsourceFalse
+    cases hsourceFalse
+  | replayStart c s t o hm hr ho ho' =>
+    obtain ⟨_,_,_,_,_,_,_,_,_,hch,_,_,_⟩ := hr
+    intro _ _ w hw
+    rw [hch] at hw
+    cases hw
+  | restart c s t hm hr =>
+    obtain ⟨_,_,_,_,_,rfl⟩ := hr
+    intro _ _ w hw
+    cases hw
+  | copy_one _ _ _ hm _ _ | copy_done _ _ _ hm _ _
+  | home_start _ _ _ hm _ _ | home_step _ _ _ hm _ _
+  | fpp_slice _ _ _ hm _ | fpp_done _ _ _ hm _
+  | markEnd_found _ _ _ hm _ _ | markEnd_step _ _ _ hm _ _
+  | choose_select _ _ _ hm _ _ _ | choose_step _ _ _ hm _ _
+  | rewind_done _ _ _ hm _ _ | rewind_one _ _ _ hm _ _ _
+  | rewind_pair _ _ _ hm _ _ _ =>
+    intro hmode
+    first
+      | (simp [hm] at hmode)
+      | (simp at hmode)
+
+#print axioms firstRoundGuard_tick
+
 /-- The run invariant: the minimal-period payload, the excluded lower bound of the running
 search, and the excluded `last` of a broken chain at a restart-guard state. -/
 structure MinimalAcrossRestart (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
@@ -908,6 +1307,7 @@ structure MinimalAcrossRestart (raw : List (Fin 2)) (c : Control) (s : GalilVM) 
   clock : ClockAt c s
   blockText : BlockTextAt centre place entry raw c s
   window : FirstRoundWindow raw c s
+  guard : FirstRoundGuard c s
 
 /-- `MinimalAcrossRestart` at every point of a packed run out of an `InvLPS` origin whose own
 lower bound is excluded. -/
@@ -955,7 +1355,8 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
           rw [hiChain] at hwork
           simp [PalPeg.ChainClock.chainWork] at hwork,
         fun _ _ => by rw [hiChain]; exact ⟨0, trivial⟩,
-        fun _ _ hne => absurd hiChain hne⟩
+        fun _ _ hne => absurd hiChain hne,
+        fun _ _ w hw => by rw [hiChain] at hw; cases hw⟩
     | succ i ih =>
       intro hik
       have hsource := ih (by omega)
@@ -968,6 +1369,28 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
       obtain ⟨hstageSource, hfieldSource⟩ :=
         PalPeg.SearchStageRun.stageAt_field_packed centre place entry q first hP hI
           (hprefix i (by omega))
+      have hsourceAt : ∀ (c : Control) (s : GalilVM), g i = ⟨c, s⟩ →
+          MinimalAcrossRestart centre place entry raw c s ∧ WindowRunPack raw c s ∧
+            CertAt raw c s ∧ c.clock ≤ 2048 ∧
+            (c.mode = .scan → ∃ R, ScanInvariant raw (position s.center) R s.left s.right ∧
+              RadiusRep s.radius R) := by
+        intro c s hx
+        have hrunSource : CloseoutCheckW.StepsIMWC centre place entry q first raw i ⟨c₀,r₀⟩
+            ⟨c, s⟩ := hx ▸ hprefix i (by omega)
+        have hwin : WindowRunPack raw c s :=
+          (PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first
+            hrunSource).win hP
+        refine ⟨by rw [hx] at hsource; exact hsource, hwin,
+          certAt_packed centre place entry q first hP hI hrunSource,
+          by have hle := hfieldSource.clock_le; rw [hx] at hle; exact hle, fun hm => ?_⟩
+        obtain ⟨rad, hscan⟩ := scanInvariant_packed centre place entry q first hrunSource hm
+        obtain ⟨R, hR, hright⟩ := hwin.radiusScan hm
+        have hrad : rad = R := by
+          have h1 : position s.right = position s.center + rad := hscan.rightPos
+          have h2 : position s.right = position s.center + R := hright
+          omega
+        subst hrad
+        exact ⟨rad, hscan, hR⟩
       refine ⟨?_, lowerAt_tick centre place entry q first htick hsource.lowerAt hsource.broken,
         ?_, firstRoundSem_tick centre place entry q first htick hsource.firstRound
           hsource.broken hbirthSource,
@@ -982,7 +1405,23 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
           (fun hm => (scanInvariant_packed centre place entry q first
             (hprefix i (by omega)) hm).choose_spec.rightRep)
           (fun hm => (scanInvariant_packed centre place entry q first
-            (hprefix i (by omega)) hm).choose_spec.rightPresent)⟩
+            (hprefix i (by omega)) hm).choose_spec.rightPresent),
+        firstRoundGuard_tick centre place entry q first htick (hcan i (by omega)).canonical
+          hsource.guard hsource.broken
+          (ledgerAt_packed centre place entry q first hP hI (hprefix i (by omega)))
+          hwinX (haux i (by omega)).front
+          (fun c s w0 hx hm honly hchain => by
+            obtain ⟨hinv, hwin, hcert, hclockLe, hgeom⟩ := hsourceAt c s hx
+            obtain ⟨R, hscan, hR⟩ := hgeom hm
+            exact no_watchBreak_firstRound centre place entry hP hwin hm honly hinv.window
+              hinv.blockText hinv.firstRound hcert hinv.clock hclockLe hscan hR hchain)
+          (fun c s s' w1 w' hx hm honly hrightCan hcmp hmt hstep hbreak => by
+            obtain ⟨hinv, hwin, hcert, -, hgeom⟩ := hsourceAt c s hx
+            obtain ⟨R, hscan, hR⟩ := hgeom hm
+            exact lateBreak_firstRound centre place entry q first hP hwin hm honly hinv.window
+              hinv.blockText hinv.firstRound hcert hscan hR hrightCan hcmp hmt hstep hbreak
+              (hboundary i c s s' (hx ▸ hprefix i (by omega)) hm hcmp hmt w1 w' hstep
+                hbreak))⟩
       · exact modeMinimal_tick_lower centre place entry q first hP htick hsource.minimal
           (hpk i (by omega)) (hpk (i+1) (by omega)) (haux i (by omega)) hbirthSource
       · refine brokenStage_tick centre place entry q first htick (hcan i (by omega)).canonical
@@ -1627,5 +2066,24 @@ theorem chainTick_cases {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
         cases this
       simp only [chainWork]
       omega
+
+/-- **A first-round scan state of a packed run from boot has no broken chain off the restart
+guard** (Scala: `chain restart violates the confirmed-period invariant` is unreachable). -/
+theorem not_broken_firstRound {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : Control}
+    {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    (hboot : CloseoutCheckW.PackedFromBoot centre place entry q first raw ⟨c₀, r₀⟩)
+    {k : ℕ} {c : Control} {s : GalilVM}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ ⟨c, s⟩)
+    (hm : c.mode = .scan) (hfirstRound : s.periodOnly = false)
+    (hnoGuard : ¬ restartGuardVM s) (wb : GalilScaffoldChainWatch.State) :
+    s.chain ≠ .broken wb := by
+  obtain ⟨a, rest, rfl⟩ := List.exists_cons_of_ne_nil hraw
+  have hinvariant := minimalAcrossRestart_packed centre place entry q first hP hI
+    (lowerAt_of_packedFromBoot centre place entry q first hP hI hboot) hrun
+  exact fun hbroken => hnoGuard (hinvariant.guard hm hfirstRound wb hbroken)
+
+#print axioms not_broken_firstRound
 
 end PalPeg.RestartLowerRun

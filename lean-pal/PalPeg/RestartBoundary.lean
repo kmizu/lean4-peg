@@ -87,6 +87,50 @@ def LeftCertificate (raw : List (Fin 2)) (s : GalilVM) : Prop :=
     PeriodOn (encoded raw) (2 * periodLength w)
       (position s.center - 4 * periodLength w) (position s.center)
 
+/-- A matched comparison reads, one place right of the right head, the letter one place left of
+the scan palindrome. -/
+theorem matched_text {raw : List (Fin 2)} {s s' : GalilVM} {R : ℕ}
+    (hscan : ScanInvariant raw (position s.center) R s.left s.right)
+    (hcmp : (galilFrameS (PofC centre place entry raw) q first).compare s s')
+    (hmt : (galilFrameS (PofC centre place entry raw) q first).matched s')
+    (hrightCan : canRight s.right) :
+    (encoded raw)[position s.center - (R + 1)]? = (encoded raw)[position s.right + 1]? := by
+  have hRC := scan_radius_lt hscan
+  have hcmp' : compareFound (PofC centre place entry raw) q first s s' := hcmp
+  obtain ⟨vs, vq, a, hvl, hvr, -, -, -, heq⟩ := hcmp'
+  obtain ⟨hl', hr', -⟩ := PalPeg.WindowTick.compare_target_heads heq
+  have hreads : read (left s.left) = read (right s.right) := by
+    have h0 : read s'.left = read s'.right := hmt
+    rwa [hl', hr', hvl, hvr] at h0
+  have hrightRead : read (right s.right) = (encoded raw)[position s.right + 1]? := by
+    rw [represented_read _ raw (right_word _ raw hscan.rightRep hrightCan)
+      (right_present _ raw hscan.rightRep hscan.rightPresent hrightCan),
+      right_position _ hrightCan
+        (represented_position _ raw hscan.rightRep hscan.rightPresent).1]
+  have hrightSome : ∃ z, (encoded raw)[position s.right + 1]? = some z := by
+    have hbound := position_bound _ raw (right_word _ raw hscan.rightRep hrightCan)
+      (right_present _ raw hscan.rightRep hscan.rightPresent hrightCan)
+    rw [right_position _ hrightCan
+      (represented_position _ raw hscan.rightRep hscan.rightPresent).1] at hbound
+    exact ⟨_, List.getElem?_eq_getElem hbound⟩
+  have hleftRead := left_signed_read s.left raw hscan.leftRep hscan.leftPresent
+  rw [hscan.leftPos] at hleftRead
+  have hmatched : (encoded raw)[position s.center - (R + 1)]?
+      = (encoded raw)[position s.right + 1]? := by
+    rw [← hrightRead, ← hreads, hleftRead]
+    unfold signedRead
+    have hcast : ((position s.center - R : ℕ) : ℤ) - 1 = ((position s.center - (R + 1) : ℕ) : ℤ) := by
+      omega
+    split_ifs with hle
+    · exfalso
+      obtain ⟨z, hz⟩ := hrightSome
+      rw [hleftRead] at hreads
+      unfold signedRead at hreads
+      rw [if_pos hle, hrightRead, hz] at hreads
+      cases hreads
+    · rw [hcast, Int.toNat_natCast]
+  exact hmatched
+
 /-- **The boundary case is unreachable.**  At a matched comparison of a window-packed scan state
 with its scan geometry and the left certificate, a lag-zero break does not happen at
 `distance = 4h − 1`. -/
@@ -158,13 +202,6 @@ theorem distance_ne_boundary {raw : List (Fin 2)} {c : Control} {s s' : GalilVM}
       have h1 := hcert w0 hchain
       rw [hlength0] at h1
       exact h1 (position s.center - (R + 1)) (by omega) (by omega)
-    -- the matched comparison
-    have hcmp' : compareFound (PofC centre place entry raw) q first s s' := hcmp
-    obtain ⟨vs, vq, a, hvl, hvr, -, -, -, heq⟩ := hcmp'
-    obtain ⟨hl', hr', -⟩ := PalPeg.WindowTick.compare_target_heads heq
-    have hreads : read (left s.left) = read (right s.right) := by
-      have h0 : read s'.left = read s'.right := hmt
-      rwa [hl', hr', hvl, hvr] at h0
     have hverCan := hbreak.2.1
     have hverifier : position w1.machine.verifier = position s.right := by
       obtain ⟨⟨-, hposition⟩, -, -⟩ := hW1
@@ -184,33 +221,7 @@ theorem distance_ne_boundary {raw : List (Fin 2)} {c : Control} {s s' : GalilVM}
       rw [right_position _ hverCan (represented_position _ raw hrep hpresent).1, hverifier]
         at hbound
       exact canRight_of_bound _ raw hscan.rightRep hscan.rightPresent hbound
-    have hrightRead : read (right s.right) = (encoded raw)[position s.right + 1]? := by
-      rw [represented_read _ raw (right_word _ raw hscan.rightRep hrightCan)
-        (right_present _ raw hscan.rightRep hscan.rightPresent hrightCan),
-        right_position _ hrightCan
-          (represented_position _ raw hscan.rightRep hscan.rightPresent).1]
-    have hrightSome : ∃ z, (encoded raw)[position s.right + 1]? = some z := by
-      have hbound := position_bound _ raw (right_word _ raw hscan.rightRep hrightCan)
-        (right_present _ raw hscan.rightRep hscan.rightPresent hrightCan)
-      rw [right_position _ hrightCan
-        (represented_position _ raw hscan.rightRep hscan.rightPresent).1] at hbound
-      exact ⟨_, List.getElem?_eq_getElem hbound⟩
-    have hleftRead := left_signed_read s.left raw hscan.leftRep hscan.leftPresent
-    rw [hscan.leftPos] at hleftRead
-    have hmatched : (encoded raw)[position s.center - (R + 1)]?
-        = (encoded raw)[position s.right + 1]? := by
-      rw [← hrightRead, ← hreads, hleftRead]
-      unfold signedRead
-      have hcast : ((position s.center - R : ℕ) : ℤ) - 1 = ((position s.center - (R + 1) : ℕ) : ℤ) := by
-        omega
-      split_ifs with hle
-      · exfalso
-        obtain ⟨z, hz⟩ := hrightSome
-        rw [hleftRead] at hreads
-        unfold signedRead at hreads
-        rw [if_pos hle, hrightRead, hz] at hreads
-        cases hreads
-      · rw [hcast, Int.toNat_natCast]
+    have hmatched := matched_text centre place entry q first hscan hcmp hmt hrightCan
     exact not_breakStep_of_text (w' := w') hW1 (by rw [hscan.rightPos, hk]; nlinarith [hR])
       hmirror hcertificate hmatched hbreak
 
