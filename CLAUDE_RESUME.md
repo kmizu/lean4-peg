@@ -1,3 +1,12 @@
+## (c3) の計画（n280 の後、2026-09-20。**証明は未着手・以下は設計**）
+
+葉 `hmove` の残り（`periodOnly = true` で lag ゼロ・phase 4 の watch が出ない場合）は、次の 2 本の run 不変量で**場合ごと消える**見立て。
+
+1. **shift 後のラウンドでは watch の lag は常に 0、phase は 4。** `beginShiftVM'` は guard（lag ゼロ・phase 4）の下でしか起きず、`immediate`（consume）は lag を変えない。`shiftOne` は counter しか触らない。lag ゼロの watch の `ChainStep` は `Internal.idle`、`ChainMatched` は即 consume（lag は 0 のまま）か `breaks`。phase 4 は consume で吸収的（`consume_phase_four`）。`Continuation` の 2 節に `zero w.lag = true ∧ phase = 4` を足す（tick の骨格は同じ）。これで「遅れている watch」「phase ≠ 4」が消える（Scala: `matched()` は lag ゼロなら即 `consume()`）。
+2. **shift 後のラウンドでも broken なら restart guard。** lag ゼロの `BreakStep` しか起きない（1. より）。`cycle ≥ 2` なら左の place が `[Lb, C]` の中なので、matched 比較の文字＝左の文字＝周期・鏡像・窓＝予測、で break しない（n280 と同じ鎖、`matched_text` を使う）。`cycle ≤ 1` なら `Other'`（`5h ≤ R + cycle`）から `4h ≤ R`（`h ≥ 1`）なので `restartGuard_of_lateBreak`（`distance = 4h − 1` は既存の `hboundary`）。`FirstRoundGuard` を `periodOnly` の両方に広げて `not_broken_firstRound` を全ラウンド版にする。
+
+両方入れば、不一致状態の chain は「idle／第 1 ラウンド（n272〜n278）／lag ゼロ・phase 4 の watch（n279, n280）」で尽き、葉 `hmove` が無くなる。その時点で `OracleReady.cycleOracleOn_of_readyLeaves` の残り前提（`hP`, `first ≠ 4`, `0 < q`, `first ≠ 7`, `first ≠ 8`）が公理の使用箇所で手に入るかを確認して、公理を定理に置き換える。
+
 ## n280 — 葉 `hmove`: shift 後のラウンドで、追い付いた watch（lag ゼロ・phase 4）が出てくる不一致は全部閉じた
 
 **公理への進捗**
