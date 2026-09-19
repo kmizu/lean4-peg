@@ -1,6 +1,7 @@
 import PalPeg.CanonicalSearchProgram
 import PalPeg.ShapedRun
 import PalPeg.GalilLeafDp
+import PalPeg.GalilCandidatePeriod
 
 /-! # The actual search program along a finite canonical run
 
@@ -350,7 +351,8 @@ theorem birthMinimals_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
         ((PofC centre place entry raw).place y.vm)
         (GalilScaffoldChainPeriod.start ((PofC centre place entry raw).centre y.vm)) h ∧
       FutureMinimal raw (position y.vm.center) h ∧
-      MoveAbove raw (position y.vm.center) (value vq.lower).toNat h := by
+      MoveAbove raw (position y.vm.center) (value vq.lower).toNat h ∧
+      Manacher.PalAt (encoded raw) (position y.vm.center - h) h := by
   obtain ⟨lower,span,h,hlower,hres,hcand,hmin,hcopy⟩ :=
     birthMinimal_packed centre place entry q first hP hI hr hm hidle he hf
   have hexcludedLower := hexcluded lower hlower
@@ -359,7 +361,7 @@ theorem birthMinimals_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
   obtain ⟨a,ls,rs,suffix,hdec,hraw⟩ :=
     represents_decompose y.vm.center raw hcen.1 hcen.2
   obtain ⟨_,hplace⟩ := hP.1 y.vm a ls rs suffix y.vm.center.gap hdec
-  refine ⟨h,hcopy,?_,?_⟩
+  refine ⟨h,hcopy,?_,?_,?_⟩
   rw [hraw]
   apply futureMinimal_of_candidate a ls rs suffix y.vm.center.gap
     (congrArg position hdec)
@@ -380,6 +382,11 @@ theorem birthMinimals_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
     · intro g hg
       rw [← hplace]
       exact hmin g hg
+  · have hblockPal := (PalPeg.GalilScaffoldChainInputSupply.candidate_palAt a ls rs suffix y.vm.center.gap span lower h (by
+      rw [← hplace]
+      exact hcand)).1
+    rw [hraw, congrArg position hdec]
+    exact hblockPal
 
 #print axioms birthCopy_packed
 end PalPeg.CanonicalSearchHistory

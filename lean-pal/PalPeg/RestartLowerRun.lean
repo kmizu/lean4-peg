@@ -238,10 +238,12 @@ theorem no_lower_period_at_scan {raw : List (Fin 2)} {c : Control} {s : GalilVM}
   rw [hradius.2] at hbaseRadius
   exact hexcluded Rad (by simpa using hbaseRadius) (scan_radius_lt hscan) hscan.palindrome δ hδ0 hδ
 
-/-- The move payload of a chain born while the search runs above the lower bound of `s`: the DP
-excludes the semiperiods strictly between that bound and the least candidate. -/
+/-- The payload of a chain born while the search runs above the lower bound of `s`: the DP
+excludes the semiperiods strictly between that bound and the least candidate, and the candidate's
+first palindrome is the block palindrome one semiperiod left of the centre. -/
 def MovePayload (raw : List (Fin 2)) (s : GalilVM) : ℕ → ℕ → Prop :=
-  fun C H => MoveAbove raw C (value s.lower).toNat H
+  fun C H => MoveAbove raw C (value s.lower).toNat H ∧
+    Manacher.PalAt (encoded raw) (C - H) H
 
 /-- The birth payload from the excluded lower bound. -/
 theorem birthMinimal_of_lowerAt {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
@@ -252,14 +254,14 @@ theorem birthMinimal_of_lowerAt {raw : List (Fin 2)} {c₀ : Control} {r₀ : Ga
     (hm : y.ctl.mode = .scan) (hlowerAt : LowerAt raw y.ctl y.vm) :
     BirthMinimal centre place entry (MovePayload raw y.vm) raw y.vm := by
   intro a vq hidle he hf
-  obtain ⟨H, hcopy, hfuture, hmove⟩ :=
+  obtain ⟨H, hcopy, hfuture, hmove, hblockPal⟩ :=
     PalPeg.CanonicalSearchHistory.birthMinimals_packed centre place entry q first hP hI hrun hm
       hidle he hf (fun lower hlowerEq => by
         obtain ⟨base, -, hbaseLower, hexcluded⟩ := hlowerAt hm (Or.inl hidle) lower (by
           rw [← searchEffect_lower_eq he, hlowerEq, ofNat_value])
         exact hexcluded.toLowerExcluded hbaseLower)
   rw [searchEffect_lower_eq he] at hmove
-  exact ⟨H, hcopy, hfuture, hmove⟩
+  exact ⟨H, hcopy, hfuture, hmove, hblockPal⟩
 
 /-- One tick keeps the minimal-period payload.  The payload reads the lower bound of the state;
 the three ticks that change the lower bound (`init`, `replayStart`, `restart`) start from a state
@@ -1246,7 +1248,7 @@ theorem move_of_watch_short {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : Con
   have hpayload : MovePayload (a :: rest) s (position s.center) (periodLength w1) :=
     watch_moveMinimal hsem
   have hmove : MoveAbove (a :: rest) (position s.center) (value s.lower).toNat
-      (periodLength w1) := hpayload
+      (periodLength w1) := hpayload.1
   have hlow := no_lower_period_at_scan hinvariant.lowerAt hm (Or.inr hfirstRound) hscan hR
   exact PalPeg.CanonicalFallbackInput.move_of_activeBound (c := c) (vq := vq)
     (z := ChainVM.watch w1) hscan hcan hlen (scan_radius_lt hscan)
@@ -1445,7 +1447,7 @@ theorem move_of_bounded_chain {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : C
     omega
   subst hrad
   obtain ⟨H, hperiod, -, hpayload⟩ := period_of_semWith hsem hx
-  have hmove : MoveAbove (a :: rest) (position s.center) (value s.lower).toNat H := hpayload
+  have hmove : MoveAbove (a :: rest) (position s.center) (value s.lower).toNat H := hpayload.1
   have hbound : rad ≤ 4 * H := by
     rw [← hperiod, hR.2] at hshort
     omega

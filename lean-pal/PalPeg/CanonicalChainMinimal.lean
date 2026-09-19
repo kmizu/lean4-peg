@@ -1142,7 +1142,7 @@ theorem birthMinimal_of_lower_reset {raw : List (Fin 2)} {c₀ : Control} {r₀ 
     BirthMinimal centre place entry (MoveMinimal raw) raw y.vm := by
   intro a vq hidle he hf
   have hvq : vq.lower = reset := by rw [searchEffect_lower_eq he,hlower]
-  obtain ⟨H,hcopy,hfuture,hmove⟩ :=
+  obtain ⟨H,hcopy,hfuture,hmove,-⟩ :=
     PalPeg.CanonicalSearchHistory.birthMinimals_packed centre place entry q first
       hP hI hrun hm hidle he hf (fun lower hlowerEq => by
         have hlower0 : lower = 0 :=
