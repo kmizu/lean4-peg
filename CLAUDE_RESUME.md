@@ -1,3 +1,30 @@
+## n248 — `obligation_cycleOracle`: found 経路の既存入口は死んでいる（修理しない）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracle` | 変化なし（地図の続き）。`hfound` の既存入口 `CloseoutFoundRoute1.foundExit_compare_final20` は **約 25 個の名前付き前提**（`ChainTickable`＝`WatchOk` 経由で反証済み、`StageEntryC`＝`fuel` 場が偽（n181）、`ShiftBreakOracleC`／`ShiftRoundAtC`／… の round 機構）を取る。round 機構は n233 で左端の番兵に壊れることも分かっている。**この塔は修理せず、found 経路を一から `WindowRunPack` の上に組む** |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、n246 の木）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
+### `FoundRouteMC2`（`GalilOracleMC2:374`、inductive）が要求するもの
+
+found tick の着地 `⟨c', t⟩`（segment の終端、`SegReachedW`）から:
+* `report`（`ReachAtC2`: 報告点 m に着く）、または
+* `shift`／`noShift`: `FoundCost`（`StepsAll (SoundScanNR) k ⟨c',t⟩ ⟨cT,sT⟩ ∧ CostedRun`）＋ `MInv`（最左 live 中心）＋ `Restarted`＋`FoundResidual`（mode scan・clock 2048・`StageEntry`・`Frontier`・`ReplayRest`・`ShiftIdle`）＋`SpanRep`＋中心前進＋`position sT.right ≤ 2m−1`、または
+* `broke`: run＋`CostedRun`＋`InvLP2`＋`CentreRep`＋中心同じ＋右ヘッド前進。
+
+一次部品 `GalilScaffoldTopLifeRestart.life_restarted`／`FoundLoop.found_to_found` は run の**形**（segment `bs ++ dm :: cs`、rounds、最後の segment、壊れる比較）を仮説に取る「形が与えられれば台帳が出る」定理。**欠けているのは形の存在**＝決定的な機械を found tick から回して、最初の不一致（shift／fallback）か break（restart）に着くまでの run を構成すること。
+
+### 組み方（次のセッションの一手目）
+
+1. run の存在: `GalilTickFun.tickFun`（choice で 1 つ選ぶ）の反復で `Steps k x (iterate tickFun k x)`。`SoundScanNR` の注釈は `OutputRel` の tick 保存から。
+2. found tick 後の chain は `WindowRunPack.window`（`ChainWindowRun`）が run に依らず記述する（n238–n246）。copy → back → watch の相は `WindowInv` の分岐そのもの。
+3. 着地の分類は `Tick` の構成子で機械的: `scan_shift`（guard 成立→`ShiftPal` は `shiftPal_of_windowRunPack` で既にある）／`scan_fallback`／`restart`（broken）。`life_restarted` の後半（restart tick → `Restarted`）を流用。
+4. `MInv`（`Leftmost`）は `GalilLiveCentre*`（2026-09-16、scan segment・fallback・replay の保存）にある。
+
 ## n247 — `obligation_cycleOracle` の地図（葉の塔は `hpres`（偽）の上に建っている）
 
 **公理への進捗**
