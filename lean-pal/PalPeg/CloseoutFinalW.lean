@@ -104,6 +104,24 @@ def H_realizeLIMW' (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffo
         LatchTrue (PofC centre place entry w) q first w (stLG' τF w st (Tc w.length))
           ((w.length + 1) * τF))
 
+/-- Realization restricted to canonical traces.  This asks only for equality of
+acceptance with the latch, not equality of internal states.  Nondeterminism of
+`Tick` alone therefore does not refute the unrestricted acceptance obligation:
+`CloseoutFinalFour.latch_iff_pal_of_preTrace` identifies the latch with `PAL`
+under the consumer's trace and lookahead hypotheses, without canonicality.
+Canonicality remains useful if one chooses to prove exact state tracking. -/
+def H_realizeCanonical (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
+    (entry q : ℕ) (first : Fin 9) : Prop :=
+  ∃ (Q' Γ' : Type) (_ : Fintype Q') (_ : DecidableEq Q') (_ : Fintype Γ') (_ : DecidableEq Γ')
+    (t K : ℕ) (L : PalPeg.Local.LocalStep (Fin 2) Q' Γ' t K) (blank : Γ') (initQ : Q')
+    (outQ : Q' → Bool) (n : ℕ) (htape : 0 < t) (hn : 0 < n),
+    ∀ w : List (Fin 2), 0 < w.length → ∀ st Tc,
+      PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc →
+      PalPeg.CloseoutCheckW.CanonTrace entry w st Tc →
+      ((L.realize blank initQ (GalilEmptyWord.accept' initQ outQ) n htape hn).SAccepts w ↔
+        LatchTrue (PofC centre place entry w) q first w (stLG' τF w st (Tc w.length))
+          ((w.length + 1) * τF))
+
 theorem given_bootOracleRealize_and_globalScanLandings (entry q : ℕ) (first : Fin 9)
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)

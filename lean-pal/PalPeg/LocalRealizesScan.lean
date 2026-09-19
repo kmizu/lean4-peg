@@ -77,6 +77,35 @@ variable {P : ℕ}
 
 /-! ## 1. The bridge: a local tick plus determinism of the abstract tick -/
 
+/-- Identify successors using a deterministic refinement of the abstract tick. -/
+theorem realizes_of_refined_tick_det {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
+    {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : ℕ}
+    {f : Mirrored1 P → Mirrored1 P} {md : Mode}
+    (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
+    (H_trace : ∀ k, Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
+    (Refinement : State GalilVM → State GalilVM → Prop)
+    (hTraceRefinement : ∀ k j, needT' raw stOf k ≤ j →
+      Refinement (truncS (raw.length - j) (stOf k))
+        (truncS (raw.length - j) (stOf (k+1))))
+    (Hloc : ∀ (m : Mirrored1 P) (t : State GalilVM), InvC raw stOf m → m.vm.ctl.mode = md →
+      ¬ Starved m.vm → Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) t →
+      Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) (absState'' (f m).vm) ∧
+        Refinement (absState'' m.vm) (absState'' (f m).vm) ∧ PhysWF (f m).vm ∧ MirInv1 (f m))
+    (Hdet : ∀ {s t₁ t₂ : State GalilVM}, s.ctl.mode = md →
+      Tick (galilFrameS Pw qq firstT) delay s t₁ → Refinement s t₁ →
+      Tick (galilFrameS Pw qq firstT) delay s t₂ → Refinement s t₂ → t₁ = t₂) :
+    Realizes raw stOf f md := by
+  intro m k j hinv hmd hns hn hneed
+  have h2 := tick_of_need (Pw := Pw) (qq := qq) (first := firstT) (delay := delay)
+    (H_shared j) (H_trace k) hneed
+  rw [← hn.2] at h2
+  obtain ⟨ht, hRefinement, hph, hmir⟩ := Hloc m _ hinv hmd hns h2
+  refine ⟨⟨hn.1, ?_⟩, hph, hmir⟩
+  rw [hn.2] at ht h2 hRefinement
+  have hm0 : (truncS (raw.length - j) (stOf k)).ctl.mode = md := by
+    rw [← hn.2]; exact hmd
+  exact Hdet hm0 ht hRefinement h2 (hTraceRefinement k j hneed)
+
 theorem realizes_of_tick_det {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : ℕ}
     {f : Mirrored1 P → Mirrored1 P} {md : Mode}
@@ -90,16 +119,13 @@ theorem realizes_of_tick_det {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
       Tick (galilFrameS Pw qq firstT) delay s t₁ →
       Tick (galilFrameS Pw qq firstT) delay s t₂ → t₁ = t₂) :
     Realizes raw stOf f md := by
-  intro m k j hinv hmd hns hn hneed
-  have h2 := tick_of_need (Pw := Pw) (qq := qq) (first := firstT) (delay := delay)
-    (H_shared j) (H_trace k) hneed
-  rw [← hn.2] at h2
-  obtain ⟨ht, hph, hmir⟩ := Hloc m _ hinv hmd hns h2
-  refine ⟨⟨hn.1, ?_⟩, hph, hmir⟩
-  rw [hn.2] at ht h2
-  have hm0 : (truncS (raw.length - j) (stOf k)).ctl.mode = md := by
-    rw [← hn.2]; exact hmd
-  exact Hdet hm0 ht h2
+  apply realizes_of_refined_tick_det H_shared H_trace (fun _ _ => True)
+    (fun _ _ _ => True.intro)
+  · intro m t hInvariant hMode hNotStarved hTick
+    obtain ⟨hLocalTick, hPhysical, hMirror⟩ := Hloc m t hInvariant hMode hNotStarved hTick
+    exact ⟨hLocalTick, True.intro, hPhysical, hMirror⟩
+  · intro s t₁ t₂ hMode hTick₁ _ hTick₂ _
+    exact Hdet hMode hTick₁ hTick₂
 
 #print axioms realizes_of_tick_det
 

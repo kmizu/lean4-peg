@@ -77,6 +77,7 @@ structure ShiftInv (raw : List (Fin 2)) (C R h k : ℕ) (v : GalilVM)
   aligned : position w.machine.verifier = position v.right
   lagZero : zero w.lag = true
   unbroken : w.machine.control.broken = false
+  phase : w.machine.control.phase = 4
   pal : Manacher.PalAt (encoded raw) (C + h) (R + h)
   palNext : Manacher.PalAt (encoded raw) (C + 2 * h) (R + 1)
   origin : (encoded raw)[C - R - 1]? ≠ (encoded raw)[C + R + 2 * h + 1]?
@@ -109,7 +110,7 @@ theorem roundScan_of_shiftInv {raw : List (Fin 2)} {C R h k : ℕ} {v : GalilVM}
   have hr := hI.room
   refine ⟨hI.chain, ⟨⟨hI.leftRep, hI.rightRep, hI.leftPresent, hI.rightPresent, ?_, ?_, ?_⟩,
       hI.verifierRep, hI.verifierPresent, hI.aligned, hI.lagZero, hI.unbroken⟩,
-    hI.canon, ?_, by omega, by omega, hp, hI.pal, by omega, ?_, ?_⟩
+    hI.canon, ?_, by omega, hI.phase, by omega, hp, hI.pal, by omega, ?_, ?_⟩
   · rw [hI.leftPos]; omega
   · rw [hI.rightPos]; omega
   · have e1 : C + k + k = C + 2 * k := by omega
@@ -268,6 +269,7 @@ theorem shiftInv_entry {raw : List (Fin 2)} {C R h used : ℕ} {s : GalilVM}
         rw [hright, hvstep, hrstep, hc.aligned]
       lagZero := hc.lagZero
       unbroken := ?_
+      phase := GalilScaffoldChainCatch.phase4_consume _ _ hI.phase
       pal := ?_
       palNext := terminal_palindrome hI hend hcan hpred
       origin := ?_
@@ -326,6 +328,7 @@ theorem shiftInv_step {raw : List (Fin 2)} {C R h k : ℕ} {s t : GalilVM}
       aligned := by rw [hright]; exact hI.aligned
       lagZero := hI.lagZero
       unbroken := hI.unbroken
+      phase := by simp [chainShiftOne,hI.phase]
       pal := hI.pal
       palNext := hI.palNext
       origin := hI.origin

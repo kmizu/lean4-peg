@@ -158,7 +158,7 @@ theorem readyField3_shift {w : List (Fin 2)} {n n' : ℕ} {c : Control} {s s' t 
 re-entry residues (`restart`, `replayStart`) are left, and both are discharged
 pointwise by `readyField3_entry_of_datum`. -/
 theorem readyField3_tick {w : List (Fin 2)} {n n' : ℕ} {x y : State GalilVM}
-    (hx : BigPack2M'' centre place entry q first w x) (hf : ReadyFieldP3 n x)
+    (hnotInit : x.ctl.mode ≠ Mode.init) (hf : ReadyFieldP3 n x)
     (hn : n ≤ n')
     (h : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y)
     (hentry : x.ctl.mode = Mode.scan → restartVM entry x.vm y.vm → ReadyFieldP3 n' y)
@@ -167,7 +167,7 @@ theorem readyField3_tick {w : List (Fin 2)} {n n' : ℕ} {x y : State GalilVM}
   obtain ⟨c, s⟩ := x
   obtain ⟨c', t⟩ := y
   cases h
-  case init => rename_i hm0 h0; exact absurd hm0 hx.aux.front.notInit
+  case init => rename_i hm0 h0; exact absurd hm0 hnotInit
   case scan_wait =>
     rename_i hm0 h0 hb
     obtain ⟨hr, hp, hp0⟩ := readyField3_background centre place entry q first hm0 hf hb
@@ -243,7 +243,7 @@ theorem readyField3_tick {w : List (Fin 2)} {n n' : ℕ} {x y : State GalilVM}
     rename_i hm0 hb
     exact hentry hm0 hb
   all_goals
-    (clear hx hentry hentry' hf
+    (clear hnotInit hentry hentry' hf
      refine ⟨fun hm => ?_, fun hm => ?_, fun hm _ => ?_, fun hm => ?_, fun hm => ?_⟩ <;>
        exfalso <;> simp_all)
 
@@ -251,9 +251,9 @@ theorem readyField3_tick {w : List (Fin 2)} {n n' : ℕ} {x y : State GalilVM}
 
 /-- **The datum along a run**, with no `hact`. -/
 theorem readyField3_along_run {w : List (Fin 2)} {n m : ℕ} {x y : State GalilVM}
+    {Q : State GalilVM → Prop} (hQ : ∀ z, Q z → z.ctl.mode ≠ Mode.init)
     (hr : GalilScaffoldChainInputSupply.StepsAll
-      (galilFrameS (PofC centre place entry w) q first) 2048
-      (BigPack2M'' centre place entry q first w) m x y)
+      (galilFrameS (PofC centre place entry w) q first) 2048 Q m x y)
     (hf : ReadyFieldP3 n x)
     (hentry : ∀ z z' : State GalilVM,
       Tick (galilFrameS (PofC centre place entry w) q first) 2048 z z' →
@@ -265,7 +265,7 @@ theorem readyField3_along_run {w : List (Fin 2)} {n m : ℕ} {x y : State GalilV
   induction hr with
   | zero z hz => exact hf
   | succ hz h hrest ih =>
-    exact ih (readyField3_tick centre place entry q first hz hf le_rfl h
+    exact ih (readyField3_tick centre place entry q first (hQ _ hz) hf le_rfl h
       (hentry _ _ h) (hentry' _ _ h))
 
 #print axioms readyField3_along_run

@@ -250,11 +250,38 @@ state of a run started in `scan`, and all four of its inputs are free at an
 
 本体は `packRunR_MWP` と同じで、`hpk`／`hpi`（`ChainPack.marks`）の代わりに
 `hmarksAlongRun` を使う。したがって `MarksInv'` は `hme` でも `hpack` でもなく、
-**run から無償に出る**。 -/
-theorem packRunR_MW_marksFree {w : List (Fin 2)} (h4 : first ≠ 4)
-    (hP : Decodes (PofC centre place entry w)) :
-    PackRunRMW centre place entry q first w := by
-  intro c r hInvLPS M hm1 hmle j x hjx k y hx h hry hyb
+**run から無償に出る**。
+
+`PackRunRMWR` は `CloseoutOracleW.PackRunRMW` に tick 述語 `R` を運ばせたもの
+（`R := True` が元の形、oracle の run では `GalilTickFair.Canonical`）。 -/
+def PackRunRMWR (R : State GalilVM → State GalilVM → Prop) (w : List (Fin 2)) : Prop :=
+  ∀ (c : Control) (r : GalilVM),
+    PalPeg.GalilInvPlus3.InvLPS (PofC centre place entry w) q first w c r →
+    ∀ (M : ℕ), 1 ≤ M → M ≤ w.length →
+    ∀ (j : ℕ) (x : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 j ⟨c, r⟩ x →
+      ∀ (k : ℕ) (y : State GalilVM), IPackMW centre place entry q first w x →
+        StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) R k x y →
+        y.ctl.replaying = false → position y.vm.right ≤ 2 * M - 1 →
+        PalPeg.PackedRunR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+          (IPackMW centre place entry q first w) R k x y
+
+def PackRunFrontRMWR (R : State GalilVM → State GalilVM → Prop) (w : List (Fin 2)) : Prop :=
+  ∀ (c : Control) (r : GalilVM),
+    PalPeg.GalilInvPlus3.InvLPS (PofC centre place entry w) q first w c r →
+    ∀ (M : ℕ), 1 ≤ M → M ≤ w.length →
+    ∀ (j : ℕ) (x : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 j ⟨c, r⟩ x →
+      ∀ (k : ℕ) (y : State GalilVM), IPackMW centre place entry q first w x →
+        StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) R k x y →
+        PalPeg.GalilRunTrace.front y.vm ≤ (2 * M - 1 : ℕ) →
+        PalPeg.PackedRunR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+          (IPackMW centre place entry q first w) R k x y
+
+theorem packRunR_MWR_front {w : List (Fin 2)} (h4 : first ≠ 4)
+    (hP : Decodes (PofC centre place entry w)) (R : State GalilVM → State GalilVM → Prop) :
+    PackRunFrontRMWR centre place entry q first R w := by
+  intro c r hInvLPS M hm1 hmle j x hjx k y hx h hyb
   have hIC : InvLPC w c r := hInvLPS.1
   have hlv0 : ∀ (m : ℕ) (z : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
@@ -279,7 +306,7 @@ theorem packRunR_MW_marksFree {w : List (Fin 2)} (h4 : first ≠ 4)
         (PalPeg.CloseoutMarksFree.entryCounters_of_invLPC hIC))
       hOriginScan
   have hmx : MarksInv' first x.ctl x.vm := hmarksAlongRun j x hjx
-  obtain ⟨g, hg0, hgk, htr⟩ := stepsAll_fn h
+  obtain ⟨g, hg0, hgk, htr, hR⟩ := stepsAllR_fn h
   have hreach : ∀ i, i ≤ k →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 (j + i) ⟨c, r⟩ (g i) := by
     intro i hi
@@ -294,14 +321,10 @@ theorem packRunR_MW_marksFree {w : List (Fin 2)} (h4 : first ≠ 4)
   subst hgy
   have hextra : ∀ i, i ≤ k → IPackMW centre place entry q first w (g i) → Extra7 (g i) := by
     intro i hi hip
-    refine extra7_of_front_steps_pack (m := M) (w := w)
-      (steps_to_end_of_trace htr (k - i) i (by omega)) ?_ (hauxi i hi).front ?_ ?_ ?_ hm1 hmle ?_
+    refine extra7_of_front_steps_bound (m := M) (w := w)
+      (steps_to_end_of_trace htr (k - i) i (by omega)) ?_ (hauxi i hi).front hip.pack hm1 hmle hyb
     · intro d z hz
       exact hlv0 (j + i + d) z (steps_trans (hreach i hi) hz)
-    · exact (hauxi k le_rfl).front
-    · exact hry
-    · exact hip.pack
-    · exact hyb
   have hexx : Extra7 x := by
     have := hextra 0 (Nat.zero_le _) (by rw [hg0]; exact hx)
     rw [hg0] at this; exact this
@@ -320,8 +343,29 @@ theorem packRunR_MW_marksFree {w : List (Fin 2)} (h4 : first ≠ 4)
           hn.ipackM.pack (hn.ipackM.win hP) (hn.extra.scanAvail hs.1 hs.2) hs)
         (htr.tick n (by omega)) (htr.good (n+1) hi)
         (hlv0 (j + (n+1)) (g (n+1)) (hreach (n+1) hi))
-  exact ⟨g, hg0, hgk, htr, fun i hi => (hbig i hi).ipackM⟩
+  exact ⟨g, hg0, hgk, htr, hR, fun i hi => (hbig i hi).ipackM⟩
 
+theorem packRunR_MWR_marksFree {w : List (Fin 2)} (h4 : first ≠ 4)
+    (hP : Decodes (PofC centre place entry w)) (R : State GalilVM → State GalilVM → Prop) :
+    PackRunRMWR centre place entry q first R w := by
+  intro c r hI M hm1 hmle j x hjx k y hx h hry hyb
+  apply packRunR_MWR_front centre place entry q first h4 hP R c r hI M hm1 hmle j x hjx k y hx h
+  have hCP := PalPeg.GalilCentreLive.cpack_steps (onLetterVM w) leftFirstVM centre place entry q first 2048
+    (steps_trans hjx (stepsAllR_steps h))
+    (PalPeg.GalilInvPlus2.hfloor_of_invLP2 centre place entry q first hI.1.1)
+    (PalPeg.GalilCentreLive.cpack_of_entry q hI.1.1.1.1.1 hI.1.1.1.2)
+  rw [front_eq_position hCP.front hry]
+  exact_mod_cast hyb
+
+/-- `PackRunRMW` (no tick predicate) is the instance at `R := True`. -/
+theorem packRunR_MW_marksFree {w : List (Fin 2)} (h4 : first ≠ 4)
+    (hP : Decodes (PofC centre place entry w)) :
+    PackRunRMW centre place entry q first w :=
+  fun c r hI M hm1 hmle j x hjx k y hx h hry hyb =>
+    PalPeg.PackedRunR.toPacked (packRunR_MWR_marksFree centre place entry q first h4 hP
+      (fun _ _ => True) c r hI M hm1 hmle j x hjx k y hx (stepsAllR_of_stepsAll h) hry hyb)
+
+#print axioms packRunR_MWR_marksFree
 #print axioms packRunR_MW_marksFree
 
 #print axioms bigPack2MG7W''_tick_M

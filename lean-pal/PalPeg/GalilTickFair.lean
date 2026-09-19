@@ -16,9 +16,9 @@ functional, with four genuine sources:
   (`readFun_code` by `decide` through the decidable surrogate `ReadFunB`, and
   `prepTick_true_unique` by case analysis: the enabled preparation ticks are
   pairwise disjoint), so (b) leaves *no* residual hypothesis.
-* **(e)** `beginFallbackVM'` leaves the copy place free; Scala copies from the
-  search's own walker (`prepareWindow`'s cursor), and `beginFallbackAt` keeps
-  that field, so the pin is `y.vm.fpp.walker = y.vm.walker`.
+* **(e)** `beginFallbackVM'` leaves the copy place free. Scala copies the right
+  head (`walker.copyFrom(right)`), as the final `Canonical` policy now records.
+  The historical `Fair` pin to the search cursor is retained only for old lemmas.
 * **(e)** `initVM`/`replayStartVM` constrain 13 of the 15 `GalilVM` fields;
   the witnesses actually built by `GalilScaffoldTopScanRun.init_tick` (used by
   `GalilScaffoldTopInitRestart.init_restarted`) and by
@@ -180,14 +180,14 @@ theorem compareFound_unique {P : Shared} {q : ℕ} {first : Fin 9} {s t₁ t₂ 
 
 /-! ## 4. `Fair` -/
 
-/-- **The Scala refinement of `Tick`.**  Three clauses, one per open source
-of `GalilTickDet`; source (b) needs none (it is closed above).
+/-- **Legacy deterministic refinement of `Tick`.**  Its fallback pin selects
+the search cursor, which is not Scala's `walker.copyFrom(right)`.  The final
+canonical run uses `rightPlace` instead.  Source (b) needs no refinement.
 
 * `restartFirst` — `transition`'s prelude restarts a broken chain *before* the
   mode step, so no scan constructor may fire while `restartGuardVM` holds.
-* `fallbackPlace` — `beginFallback` copies from the search's own walker place;
-  `beginFallbackAt` leaves `walker` alone, so the DP-chosen place is exactly
-  the successor's `walker`.
+* `fallbackPlace` — the legacy policy selects the search cursor; retained
+  for old conditional lemmas, not a claim about the Scala fallback origin.
 * `keepsSearchCursor` — `stepInit` and `stepReplayStart` touch neither
   `periodOnly` nor `walker`, as the witnesses of `init_tick` /
   `replayStart_tick` (hence of `init_restarted` /
@@ -206,12 +206,113 @@ theorem restartGuard_of_restartVM {entry : ℕ} {s t : GalilVM} (h : restartVM e
   obtain ⟨w, hw, hm, hl, hz, -⟩ := h
   exact ⟨w, hw, hm, hl, hz⟩
 
+/-- Decode the copy origin of Scala `beginFallback`: `walker.copyFrom(right)`.
+The search cursor is a distinct logical field in the abstract VM. -/
+def rightPlace (s : GalilVM) : GalilScaffoldPlace.Place :=
+  ⟨PalPeg.GalilFinalAssembly2.lettersOf s.right.head, s.right.gap⟩
+
+/-- **The canonical schedule of the oracle's own runs.**  `Fair` with `restartFirst` replaced by
+"no restart at all": the constructed runs keep a broken chain broken until the next fallback
+(`ShapedRun`), which is a legitimate execution of the machine.  The fallback origin is the right head, as in Scala `beginFallback`; `Fair` retains
+its historical search-cursor pin for the older lemmas.  The init/replay cursor
+clause is shared. -/
+structure Canonical (entry delay : ℕ) (x y : State GalilVM) : Prop where
+  noRestart : x.ctl.mode = Mode.scan → ¬ restartVM entry x.vm y.vm
+  fallbackPlace : x.ctl.mode = Mode.scan → y.ctl.mode = Mode.copy →
+    y.vm.fpp.walker = rightPlace y.vm
+  keepsSearchCursor : x.ctl.mode = Mode.init ∨ x.ctl.mode = Mode.replayStart →
+    y.vm.periodOnly = x.vm.periodOnly ∧ y.vm.walker = x.vm.walker
+
+theorem canonical_of_scan_nonCopy {entry delay : ℕ} {x y : State GalilVM}
+    (hm : x.ctl.mode = Mode.scan) (hy : y.ctl.mode ≠ Mode.copy)
+    (hnr : ¬ restartVM entry x.vm y.vm) : Canonical entry delay x y :=
+  ⟨fun _ => hnr, fun _ h => absurd h hy,
+    fun h => by rcases h with h | h <;> exact absurd (hm.symm.trans h) (by decide)⟩
+
+theorem canonical_of_scan_copy {entry delay : ℕ} {x y : State GalilVM}
+    (hm : x.ctl.mode = Mode.scan) (hnr : ¬ restartVM entry x.vm y.vm)
+    (hw : y.vm.fpp.walker = rightPlace y.vm) : Canonical entry delay x y :=
+  ⟨fun _ => hnr, fun _ _ => hw,
+    fun h => by rcases h with h | h <;> exact absurd (hm.symm.trans h) (by decide)⟩
+
+theorem canonical_of_offScan {entry delay : ℕ} {x y : State GalilVM}
+    (hm : x.ctl.mode ≠ Mode.scan) (hi : x.ctl.mode ≠ Mode.init)
+    (hr : x.ctl.mode ≠ Mode.replayStart) : Canonical entry delay x y :=
+  ⟨fun h => absurd h hm, fun h => absurd h hm,
+    fun h => by rcases h with h | h; exact absurd h hi; exact absurd h hr⟩
+
+
 
 /-- The fallback entry leaves the search's walker where it was. -/
 theorem beginFallback_walker {s t : GalilVM} (h : beginFallbackVM' s t) : t.walker = s.walker := by
   obtain ⟨p, he, -⟩ := h
   rw [(beginFallbackVM_iff p s t).1 he]
   rfl
+
+theorem beginFallback_rightPlace {s t : GalilVM} (h : beginFallbackVM' s t) :
+    rightPlace t = rightPlace s := by
+  obtain ⟨p, he, _⟩ := h
+  rw [(beginFallbackVM_iff p s t).1 he]
+  rfl
+
+/-- The actual fallback copy origin satisfies the canonical pin. -/
+theorem fallbackAt_rightPlace (s : GalilVM)
+    (hBound : (GalilScaffoldPlace.stream (rightPlace s)).length ≤ position s.right) :
+    beginFallbackVM' s (beginFallbackAt (rightPlace s) s) ∧
+      (beginFallbackAt (rightPlace s) s).fpp.walker = rightPlace (beginFallbackAt (rightPlace s) s) :=
+  ⟨⟨rightPlace s, rfl, hBound⟩, rfl⟩
+
+/-- Decoding a represented right head returns its logical place. -/
+theorem rightPlace_of_represent {s : GalilVM} (p : GalilScaffoldPlace.Place)
+    (rs : List (Option (Fin 2))) (queue : List (Fin 2))
+    (h : s.right = GalilScaffoldInputHead.represent p rs queue) : rightPlace s = p := by
+  rcases p with ⟨letters, gap⟩
+  cases letters <;>
+    simp [rightPlace, h, PalPeg.GalilFinalAssembly2.lettersOf,
+      GalilScaffoldInputHead.represent, GalilScaffoldInputHead.layout,
+      List.filterMap_append, List.filterMap_map]
+
+/-- The ordinary input-representation invariant supplies the fallback's window
+bound; no assumption about the old search cursor is needed. -/
+theorem rightPlace_length {s : GalilVM} {raw : List (Fin 2)}
+    (hRep : GalilScaffoldInputTrace.Represents s.right.head raw) :
+    (GalilScaffoldPlace.stream (rightPlace s)).length = position s.right := by
+  obtain ⟨letters, rs, queue, hHead, _⟩ := right_place s.right hRep
+  rw [rightPlace_of_represent (s := s) _ _ _ hHead]
+  cases letters with
+  | nil =>
+    conv_rhs => rw [hHead]
+    simp [GalilScaffoldPlace.stream, position,
+      GalilScaffoldInputHead.represent, GalilScaffoldInputHead.layout]
+  | cons a letters =>
+    conv_rhs => rw [hHead]
+    exact (position_represent a letters s.right.gap (rs.map some) queue).symm
+
+theorem fallbackAt_rightPlace_of_represented {s : GalilVM} {raw : List (Fin 2)}
+    (hRep : GalilScaffoldInputTrace.Represents s.right.head raw) :
+    beginFallbackVM' s (beginFallbackAt (rightPlace s) s) ∧
+      (beginFallbackAt (rightPlace s) s).fpp.walker = rightPlace (beginFallbackAt (rightPlace s) s) :=
+  fallbackAt_rightPlace s (rightPlace_length hRep).le
+
+/-- The right-head pin and the old search-cursor pin are different even on a
+legal bounded fallback entry.  This is a policy mismatch, not a refutation of
+PAL recognition or a claim that this source is boot-reachable. -/
+theorem fallback_right_not_searchPin :
+    ∃ s t : GalilVM, beginFallbackVM' s t ∧
+      t.fpp.walker = rightPlace t ∧ t.fpp.walker ≠ t.walker := by
+  let s : GalilVM := {PalPeg.GalilBootVM.initVM0 [] with
+    right := GalilScaffoldInputHead.represent ⟨[0], false⟩ [] [],
+    walker := ⟨[], false⟩}
+  have hRep : GalilScaffoldInputTrace.Represents s.right.head [0] :=
+    ⟨[0], [], [], rfl, rfl⟩
+  obtain ⟨hEntry, hPin⟩ := fallbackAt_rightPlace_of_represented hRep
+  refine ⟨s, beginFallbackAt (rightPlace s) s, hEntry, hPin, ?_⟩
+  intro hEqual
+  have hLetters := congrArg GalilScaffoldPlace.Place.letters hEqual
+  change ([0] : List (Fin 2)) = [] at hLetters
+  cases hLetters
+
+#print axioms fallback_right_not_searchPin
 
 theorem matchedPlace_unique {P : Shared} {q : ℕ} {first : Fin 9} {b : Bool} {s t₁ t₂ : GalilVM}
     (h1 : (galilFrameS P q first).matchedPlace b s t₁)
@@ -292,6 +393,19 @@ theorem tick_init_cases {P : Shared} {c : Control} {s : GalilVM} {y : State Gali
       y = ⟨{c with mode := Mode.scan, output := true}, t⟩ := by
   cases h <;> first | (exact ⟨_, ‹_›, rfl⟩) | (exfalso; simp_all)
 
+
+/-- An `init` tick is canonical: `initVM` keeps the search cursor. -/
+theorem canonical_of_init {c : Control} {s : GalilVM} {y : State GalilVM}
+    (hm : c.mode = Mode.init)
+    (h : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay ⟨c, s⟩ y) :
+    Canonical entry delay ⟨c, s⟩ y := by
+  obtain ⟨t, hi, hy⟩ := tick_init_cases hm h
+  have e : initVM entry s t := hi
+  obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, hp, hwk⟩ := e
+  refine ⟨fun h0 => absurd (hm.symm.trans h0) (by decide),
+    fun h0 => absurd (hm.symm.trans h0) (by decide), fun _ => ?_⟩
+  rw [hy]; exact ⟨hp, hwk⟩
+
 theorem tick_replayStart_cases {P : Shared} {c : Control} {s : GalilVM} {y : State GalilVM}
     (hm : c.mode = Mode.replayStart) (h : Tick (galilFrameS P q first) delay ⟨c, s⟩ y) :
     ∃ (t : GalilVM) (o : Bool), (galilFrameS P q first).replayStart s t ∧
@@ -300,7 +414,76 @@ theorem tick_replayStart_cases {P : Shared} {c : Control} {s : GalilVM} {y : Sta
       y = ⟨{c with mode := Mode.scan, clock := delay, output := o, replaying := (galilFrameS P q first).replayPos t}, t⟩ := by
   cases h <;> first | (exact ⟨_, _, ‹_›, ‹_›, ‹_›, rfl⟩) | (exfalso; simp_all)
 
+
 /-! ## 6. `Tick` refined by `Fair` is a function -/
+
+/-- Scan determinism with restart excluded at each actual successor. -/
+theorem tick_scan_noRestart_unique
+    (select : GalilVM → GalilScaffoldPlace.Place)
+    (hSelect : ∀ {s t}, beginFallbackVM' s t → select t = select s) {c : Control} {s : GalilVM} {y₁ y₂ : State GalilVM}
+    (hm : c.mode = Mode.scan)
+    (h1 : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay ⟨c, s⟩ y₁)
+    (hnr1 : ¬ restartVM entry s y₁.vm)
+    (hp1 : y₁.ctl.mode = Mode.copy → y₁.vm.fpp.walker = select y₁.vm)
+    (h2 : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay ⟨c, s⟩ y₂)
+    (hnr2 : ¬ restartVM entry s y₂.vm)
+    (hp2 : y₂.ctl.mode = Mode.copy → y₂.vm.fpp.walker = select y₂.vm) : y₁ = y₂ := by
+  rcases tick_scan_cases hm h1 with
+      ⟨a1, ar1, aav1, abg1, ay1⟩ | ⟨b1, ben1, bck1, bbg1, by1⟩ |
+      ⟨u1, cen1, cck1, ccmp1, hin1⟩ | ⟨f1, frs1, fy1⟩ <;>
+    rcases tick_scan_cases hm h2 with
+      ⟨a2, ar2, aav2, abg2, ay2⟩ | ⟨b2, ben2, bck2, bbg2, by2⟩ |
+      ⟨u2, cen2, cck2, ccmp2, hin2⟩ | ⟨f2, frs2, fy2⟩
+  -- restart is impossible below the guard
+  all_goals try exact (hnr1 (by rw [fy1]; exact frs1)).elim
+  all_goals try exact (hnr2 (by rw [fy2]; exact frs2)).elim
+  -- wait against the enabled constructors
+  all_goals try exact (wait_enabled_absurd ar1 aav1 ben2).elim
+  all_goals try exact (wait_enabled_absurd ar1 aav1 cen2).elim
+  all_goals try exact (wait_enabled_absurd ar2 aav2 ben1).elim
+  all_goals try exact (wait_enabled_absurd ar2 aav2 cen1).elim
+  -- counting against comparing
+  all_goals try exact absurd bck1 (by omega)
+  all_goals try exact absurd bck2 (by omega)
+  -- the two background branches
+  all_goals try exact (by rw [ay1, ay2, backgroundS_unique abg1 abg2])
+  all_goals try exact (by rw [by1, by2, backgroundS_unique bbg1 bbg2])
+  -- the three comparison exits, on the state pinned by `compareFound_unique`
+  have hu : u1 = u2 := compareFound_unique ccmp1 ccmp2
+  subst hu
+  rcases hin1 with ⟨t1, o1, cmt1, cpl1, cho1, cy1⟩ | ⟨t1, dmt1, dr1, dsg1, dbs1, dy1⟩ |
+      ⟨t1, emt1, er1, esg1, ebf1, ey1⟩ <;>
+    rcases hin2 with ⟨t2, o2, cmt2, cpl2, cho2, cy2⟩ | ⟨t2, dmt2, dr2, dsg2, dbs2, dy2⟩ |
+      ⟨t2, emt2, er2, esg2, ebf2, ey2⟩
+  -- matched against mismatched
+  all_goals try exact absurd cmt1 dmt2
+  all_goals try exact absurd cmt1 emt2
+  all_goals try exact absurd cmt2 dmt1
+  all_goals try exact absurd cmt2 emt1
+  -- shift against fallback
+  all_goals try exact absurd dsg1 esg2
+  all_goals try exact absurd dsg2 esg1
+  -- match / match
+  · have ht : t1 = t2 := matchedPlace_unique cpl1 cpl2
+    subst ht
+    rw [cy1, cy2, LocalRealizesPhase.refresh_unique cho1 cho2]
+  -- shift / shift
+  · have hbs1 : beginShiftVM' u1 t1 := dbs1
+    have hbs2 : beginShiftVM' u1 t2 := dbs2
+    rw [dy1, dy2, beginShiftVM'_unique hbs1 hbs2]
+  -- fallback / fallback: both copy places use the same preserved selector
+  · have hbf1 : beginFallbackVM' u1 t1 := ebf1
+    have hbf2 : beginFallbackVM' u1 t2 := ebf2
+    have hw1 : t1.fpp.walker = select t1 := by
+      have h0 := hp1 (by rw [ey1])
+      rw [ey1] at h0; exact h0
+    have hw2 : t2.fpp.walker = select t2 := by
+      have h0 := hp2 (by rw [ey2])
+      rw [ey2] at h0; exact h0
+    have hv1 : select t1 = select u1 := hSelect hbf1
+    have hv2 : select t2 = select u1 := hSelect hbf2
+    rw [ey1, ey2, beginFallbackVM'_unique_of_walker hbf1 hbf2
+      ((hw1.trans hv1).trans (hw2.trans hv2).symm)]
 
 /-- **The `scan` mode, refined.**  The restart guard decides the branch; below
 it the five scan constructors are pairwise separated by their own guards and
@@ -319,62 +502,8 @@ theorem tick_fair_scan_unique {c : Control} {s : GalilVM} {y₁ y₂ : State Gal
         ¬ (galilFrameS (sharedC onLetter leftFirst centre place entry) q first).restart s t := by
       intro t ht
       exact hg (restartGuard_of_restartVM (entry := entry) ht)
-    rcases tick_scan_cases hm h1 with
-        ⟨a1, ar1, aav1, abg1, ay1⟩ | ⟨b1, ben1, bck1, bbg1, by1⟩ |
-        ⟨u1, cen1, cck1, ccmp1, hin1⟩ | ⟨f1, frs1, fy1⟩ <;>
-      rcases tick_scan_cases hm h2 with
-        ⟨a2, ar2, aav2, abg2, ay2⟩ | ⟨b2, ben2, bck2, bbg2, by2⟩ |
-        ⟨u2, cen2, cck2, ccmp2, hin2⟩ | ⟨f2, frs2, fy2⟩
-    -- restart is impossible below the guard
-    all_goals try exact (hnr _ frs1).elim
-    all_goals try exact (hnr _ frs2).elim
-    -- wait against the enabled constructors
-    all_goals try exact (wait_enabled_absurd ar1 aav1 ben2).elim
-    all_goals try exact (wait_enabled_absurd ar1 aav1 cen2).elim
-    all_goals try exact (wait_enabled_absurd ar2 aav2 ben1).elim
-    all_goals try exact (wait_enabled_absurd ar2 aav2 cen1).elim
-    -- counting against comparing
-    all_goals try exact absurd bck1 (by omega)
-    all_goals try exact absurd bck2 (by omega)
-    -- the two background branches
-    all_goals try exact (by rw [ay1, ay2, backgroundS_unique abg1 abg2])
-    all_goals try exact (by rw [by1, by2, backgroundS_unique bbg1 bbg2])
-    -- the three comparison exits, on the state pinned by `compareFound_unique`
-    have hu : u1 = u2 := compareFound_unique ccmp1 ccmp2
-    subst hu
-    rcases hin1 with ⟨t1, o1, cmt1, cpl1, cho1, cy1⟩ | ⟨t1, dmt1, dr1, dsg1, dbs1, dy1⟩ |
-        ⟨t1, emt1, er1, esg1, ebf1, ey1⟩ <;>
-      rcases hin2 with ⟨t2, o2, cmt2, cpl2, cho2, cy2⟩ | ⟨t2, dmt2, dr2, dsg2, dbs2, dy2⟩ |
-        ⟨t2, emt2, er2, esg2, ebf2, ey2⟩
-    -- matched against mismatched
-    all_goals try exact absurd cmt1 dmt2
-    all_goals try exact absurd cmt1 emt2
-    all_goals try exact absurd cmt2 dmt1
-    all_goals try exact absurd cmt2 emt1
-    -- shift against fallback
-    all_goals try exact absurd dsg1 esg2
-    all_goals try exact absurd dsg2 esg1
-    -- match / match
-    · have ht : t1 = t2 := matchedPlace_unique cpl1 cpl2
-      subst ht
-      rw [cy1, cy2, LocalRealizesPhase.refresh_unique cho1 cho2]
-    -- shift / shift
-    · have hbs1 : beginShiftVM' u1 t1 := dbs1
-      have hbs2 : beginShiftVM' u1 t2 := dbs2
-      rw [dy1, dy2, beginShiftVM'_unique hbs1 hbs2]
-    -- fallback / fallback: the copy place is the search's own walker
-    · have hbf1 : beginFallbackVM' u1 t1 := ebf1
-      have hbf2 : beginFallbackVM' u1 t2 := ebf2
-      have hw1 : t1.fpp.walker = t1.walker := by
-        have h0 := hf1.fallbackPlace hm (by rw [ey1])
-        rw [ey1] at h0; exact h0
-      have hw2 : t2.fpp.walker = t2.walker := by
-        have h0 := hf2.fallbackPlace hm (by rw [ey2])
-        rw [ey2] at h0; exact h0
-      have hv1 : t1.walker = u1.walker := beginFallback_walker hbf1
-      have hv2 : t2.walker = u1.walker := beginFallback_walker hbf2
-      rw [ey1, ey2, beginFallbackVM'_unique_of_walker hbf1 hbf2
-        ((hw1.trans hv1).trans (hw2.trans hv2).symm)]
+    exact tick_scan_noRestart_unique (fun s => s.walker) beginFallback_walker hm h1 (hnr _) (hf1.fallbackPlace hm)
+      h2 (hnr _) (hf2.fallbackPlace hm)
 
 /-- **The `init` mode, refined**: `initVM` pins 13 of the 15 `GalilVM` fields
 and `Fair` pins the remaining two. -/
@@ -443,6 +572,25 @@ theorem tick_fair_unique {x y₁ y₂ : State GalilVM}
   | choose => exact LocalRealizesScan.tick_det_choose _ q first delay hm h1 h2
   | rewind => exact LocalRealizesScan.tick_det_rewind _ q first delay hm h1 h2
   | replayStart => exact tick_fair_replayStart_unique hm h1 hf1 h2 hf2
+
+/-- Away from scan, the two scheduling refinements agree. -/
+theorem Canonical.toFair_offScan {x y : State GalilVM}
+    (h : Canonical entry delay x y) (hm : x.ctl.mode ≠ Mode.scan) :
+    Fair entry delay x y :=
+  ⟨fun hs => (hm hs).elim, fun hs _ => (hm hs).elim, h.keepsSearchCursor⟩
+
+/-- The oracle's canonical tick is functional, without a reachability hypothesis. -/
+theorem tick_canonical_unique {x y₁ y₂ : State GalilVM}
+    (h1 : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay x y₁)
+    (hc1 : Canonical entry delay x y₁)
+    (h2 : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay x y₂)
+    (hc2 : Canonical entry delay x y₂) : y₁ = y₂ := by
+  by_cases hm : x.ctl.mode = Mode.scan
+  · exact tick_scan_noRestart_unique rightPlace beginFallback_rightPlace hm h1 (hc1.noRestart hm) (hc1.fallbackPlace hm)
+      h2 (hc2.noRestart hm) (hc2.fallbackPlace hm)
+  · exact tick_fair_unique h1 (hc1.toFair_offScan hm) h2 (hc2.toFair_offScan hm)
+
+#print axioms tick_canonical_unique
 
 /-! ## 7. `Fair` is not vacuous
 

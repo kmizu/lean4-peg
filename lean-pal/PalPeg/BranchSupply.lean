@@ -937,11 +937,13 @@ def RadiusExactOffRewindPhase (c : Control) (s : GalilVM) : Prop :=
 /-- **1 tick 保存。**  側入力は init 相の `radius = 0`、scan 相の右ヘッド供給、
 shift 相の `0 < |center.left|` だけ。**`canRight center` は
 `shiftFrame.shiftOne` の第 1 連言として構成子が持っている**ので供給不要。 -/
-theorem radiusExactOffRewindPhase_tick {w : List (Fin 2)} {x y : State GalilVM}
+theorem radiusExactOffRewindPhase_tick_of_replay {w : List (Fin 2)} {x y : State GalilVM}
     (hTick : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y)
     (hRadiusZeroAtInit : x.ctl.mode = Mode.init → value x.vm.radius = 0)
     (hScanSupply : x.ctl.mode = Mode.scan →
-      GalilScaffoldChainVerifier.canRight x.vm.right ∧ 0 < x.vm.right.head.left.length)
+      0 < x.vm.right.head.left.length)
+    (hReplaySupply : x.ctl.mode = Mode.scan → x.ctl.replaying = true →
+      GalilScaffoldChainVerifier.canRight x.vm.right)
     (hShiftSupply : x.ctl.mode = Mode.shift → 0 < x.vm.center.head.left.length)
     (hPrev : RadiusExactOffRewindPhase x.ctl x.vm) :
     RadiusExactOffRewindPhase y.ctl y.vm := by
@@ -957,21 +959,24 @@ theorem radiusExactOffRewindPhase_tick {w : List (Fin 2)} {x y : State GalilVM}
     intro _ _ _
     exact radiusExact_after_background centre place entry q first hBg
       (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide))
-  | scan_match c s s' s'' o hm _ _ hCompare _ hPlace _ =>
+  | scan_match c s s' s'' o hm hav _ hCompare _ hPlace _ =>
     intro _ _ _
-    obtain ⟨hCanRight, hLeftNonempty⟩ := hScanSupply hm
+    have hCanRight := hav.elim (hReplaySupply hm) id
+    have hLeftNonempty := hScanSupply hm
     exact radiusExact_after_matchedPlace centre place entry q first hPlace
       (radiusExact_after_compare centre place entry q first hCompare hCanRight hLeftNonempty
         (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide)))
-  | scan_shift c s s' s'' hm _ _ hCompare _ _ _ hBegin =>
+  | scan_shift c s s' s'' hm hav _ hCompare _ _ _ hBegin =>
     intro _ _ _
-    obtain ⟨hCanRight, hLeftNonempty⟩ := hScanSupply hm
+    have hCanRight := hav.elim (hReplaySupply hm) id
+    have hLeftNonempty := hScanSupply hm
     exact radiusExact_after_beginShift hBegin
       (radiusExact_after_compare centre place entry q first hCompare hCanRight hLeftNonempty
         (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide)))
-  | scan_fallback c s s' s'' hm _ _ hCompare _ _ _ hBegin =>
+  | scan_fallback c s s' s'' hm hav _ hCompare _ _ _ hBegin =>
     intro _ _ _
-    obtain ⟨hCanRight, hLeftNonempty⟩ := hScanSupply hm
+    have hCanRight := hav.elim (hReplaySupply hm) id
+    have hLeftNonempty := hScanSupply hm
     exact radiusExact_after_beginFallback hBegin
       (radiusExact_after_compare centre place entry q first hCompare hCanRight hLeftNonempty
         (hPrev (by rw [hm]; decide) (by rw [hm]; decide) (by rw [hm]; decide)))
@@ -1026,6 +1031,17 @@ theorem radiusExactOffRewindPhase_tick {w : List (Fin 2)} {x y : State GalilVM}
   | rewind_done c s s' hm _ h => intro _ _ hne; exact absurd rfl hne
   | rewind_one c s s' hm _ _ h => intro _ hne _; exact absurd hm hne
   | rewind_pair c s s' hm _ _ h => intro _ hne _; exact absurd hm hne
+
+theorem radiusExactOffRewindPhase_tick {w : List (Fin 2)} {x y : State GalilVM}
+    (hTick : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y)
+    (hRadiusZeroAtInit : x.ctl.mode = Mode.init → value x.vm.radius = 0)
+    (hScanSupply : x.ctl.mode = Mode.scan →
+      GalilScaffoldChainVerifier.canRight x.vm.right ∧ 0 < x.vm.right.head.left.length)
+    (hShiftSupply : x.ctl.mode = Mode.shift → 0 < x.vm.center.head.left.length)
+    (hPrev : RadiusExactOffRewindPhase x.ctl x.vm) :
+    RadiusExactOffRewindPhase y.ctl y.vm :=
+  radiusExactOffRewindPhase_tick_of_replay centre place entry q first hTick hRadiusZeroAtInit
+    (fun hm => (hScanSupply hm).2) (fun hm _ => (hScanSupply hm).1) hShiftSupply hPrev
 
 #print axioms radiusExactOffRewindPhase_tick
 

@@ -8,7 +8,7 @@ import PalPeg.CloseoutFoundRoutes
 # `PalInPeg.unconditional` — 目標そのもの。穴は `axiom` で明示する
 
 **これが目標の形**: `RecognizedByTotalPEG PAL` を**前提ゼロ**で（＝閉じた項として）持つ。
-いま足りない 4 個の義務を `axiom` として明示し、`#print axioms unconditional` を
+いま足りない 2 個の義務を `axiom` として明示し、`#print axioms unconditional` を
 そのまま TODO リストにする。
 
 ```
@@ -26,22 +26,16 @@ import PalPeg.CloseoutFoundRoutes
 * 「トップダウンにまずそれを書いておいてビルド通すために前提をいったん axiom に
   しておく。で、検証したい前提ごとに axiom をはずして全部外せたら証明完了」
 
-## 4 個の原子的義務と、それぞれの経路
+## 残る2公理と、それぞれの経路
 
-**この表は `grep "^axiom " PalPeg/PalInPegUnconditional.lean` の 4 本と一致していなければならない。**
-2026-09-19（n126）に**この docstring が腐っていた**のを直した——表は 9 行あったが
-`axiom` 宣言は 4 本で、`obligation_verifierRunAlongRun` / `matchLanding_alongTrace` /
-`shiftEntryLanding_alongTrace` / `chainBackLag_alongTrace` / `shiftExitLedger_alongTrace` /
-`rewindMargin_alongTrace` の 6 行は既に存在しない公理を載せたままだった。
-CLAUDE.md（`4 個`）と `#print axioms` は一致していたので、**ズレていたのはここだけ**。
-CLAUDE.md の「ファイル自身の docstring も一次情報ではない」に自分で引っかかった。
-**数えるときは `grep "^axiom " PalPeg/PalInPegUnconditional.lean` か `#print axioms`。**
+現在の `axiom` 宣言は下表の2本。oracle producer の補題前提は、
+追加の公理宣言ではない。公理数は `#print axioms PalPeg.PalInPeg.unconditional`
+で確認する。
 
 | axiom | 内容 | 経路と残り |
 |---|---|---|
-| `obligation_shiftPalResiduesAlongRun` / `obligation_shiftPalResiduesAlongTrace` | `ShiftPal` の残差 = **不一致比較直前の誕生 anchor 窓**（run 形／trace 形、後者は前者の派生） | n238。`ShiftEntryFromLanding.freshShiftLedger_of_chainW_scan` → `shiftPal_of_freshShiftLedger` で `ShiftPal` 自体は放電済み。残るのは run 層が不一致比較の直前で窓（`WatchWindow`、誕生中心 anchor）・`ScanInvariant`・`canRight`・誕生中心の記号・`2h ≤ R` を持つこと |
-| `obligation_cycleOracleOnPackedRun` | `CycleOracleOn (ScanOnPackedRunFromInvLPS)`（run 形の cycle oracle） | n252 で `CycleOracleMC3` から切り直し。producer は `OracleRun.cycleOracleOn_of_fourLeaves`（n254）。残る葉は run 形の 4 本: `hready`（chain idle での `SearchReady`）／`hchain`（`ChainReady`）／`hminv`（`MInv`）／`hfallback`（fallback＋replay）。shift 相は `shiftLeaf` で定理化済み |
-| `obligation_localRealization` | `H_realizeLIMW'`（局所実現） | **producer なし**（5 機械の鎖の 2→3 段）。難易度は宣言しない——`LagCan` / `CentreRep` と同じ「切り方の誤り」の可能性が高い |
+| `obligation_cycleOracleOnPackedRun` | `CycleOracleOn (ScanOnPackedRunFromInvLPS) (Canonical entry 2048)` | `OracleReady.cycleOracleOn_of_readyLeaves` の readiness・chain readiness・fallback/replay は構成済み。`CanonicalChainMinimal.shiftPeriodMinimal_packed` も証明済み。残る移動量 `hmove` は未証明。`Canonical.noRestart` と Scala の broken restart の相違は HANDOFF の最新追記を参照。 |
+| `obligation_localRealization` | `H_realizeCanonical`（canonical trace に対する局所実現） | `CanonicalLocalRealizes` の条件付き接続・canonical tick の一意性は証明済み。具体的な局所機械と符号化の構成は未完。 |
 
 ### 公理としては消えた 6 本（経路メモは残す）
 
@@ -130,11 +124,16 @@ scan 状態（`CloseoutCheckW.ScanOnPackedRunFromInvLPS`）から、報告点 `2
 axiom obligation_cycleOracleOnPackedRun (entry q : ℕ) (first : Fin 9) (h4 : first ≠ 4) :
     ∀ w : List (Fin 2), 0 < w.length →
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
-        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first) w
+        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
+        (PalPeg.GalilTickFair.Canonical entry 2048) w
 
-/-- **(OBLIGATION)** 局所実現 `H_realizeLIMW'`。producer が無い。 -/
+/-- **(OBLIGATION)** 局所実現。n260 で canonical trace に限定した形。
+受理結果と latch の一致を要求しており、trace の全状態の一致は要求していない。
+非決定性だけを理由に旧 `H_realizeLIMW'` を不可能とした以前の説明は誤り。
+`latch_iff_pal_of_preTrace` は適切な trace・lookahead 条件下で canonical 性なしに
+受理結果を `PAL` と同定する。具体的な機械の存在はなお未証明。 -/
 axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
-    H_realizeLIMW' centreC placeC entry q first
+    H_realizeCanonical centreC placeC entry q first
 
 /-! ### scan landing 義務 — 原子に分解した 5 つ（すべて trace 形）
 
@@ -215,24 +214,24 @@ n96 の「`rewindMargin` を `CentreMargin` 1 葉に縮めた」は数だけの�
 /-- **目標**: `PAL ∈ PEG` を前提ゼロで。いまは上の 2 個の `axiom` に依存している。
 `#print axioms unconditional` が標準 3 公理だけになったら証明完了。 -/
 theorem unconditional : RecognizedByTotalPEG PAL :=
-  given_scanLandingObligations 0 0 0
-    (obligation_cycleOracleOnPackedRun 0 0 0 (by decide))
-    (obligation_localRealization 0 0 0)
+  given_scanLandingObligations 0 1 0
+    (obligation_cycleOracleOnPackedRun 0 1 0 (by decide))
+    (obligation_localRealization 0 1 0)
     (fun w st Tc hPreTraceIMW =>
-      PalPeg.BranchSupply.scanLandingObligations_alongTrace_of_matchRest centreC placeC 0 0 0
+      PalPeg.BranchSupply.scanLandingObligations_alongTrace_of_matchRest centreC placeC 0 1 0
         hPreTraceIMW
-        (obligation_shiftPalAlongTrace 0 0 0 w st Tc hPreTraceIMW)
-        (PalPeg.BranchSupply.shiftExitLedgerAt_alongTrace centreC placeC 0 0 0
-          hPreTraceIMW (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 0 0 (by decide)
+        (obligation_shiftPalAlongTrace 0 1 0 w st Tc hPreTraceIMW)
+        (PalPeg.BranchSupply.shiftExitLedgerAt_alongTrace centreC placeC 0 1 0
+          hPreTraceIMW (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 1 0 (by decide)
             hPreTraceIMW.base.pre))
-        (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 0 0 (by decide)
+        (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 1 0 (by decide)
           hPreTraceIMW.base.pre)
-        (PalPeg.BranchSupply.matchRest_alongTrace centreC placeC 0 0 0 hPreTraceIMW
-          (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 0 0 (by decide)
+        (PalPeg.BranchSupply.matchRest_alongTrace centreC placeC 0 1 0 hPreTraceIMW
+          (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 1 0 (by decide)
             hPreTraceIMW.base.pre)))
     (fun w st Tc hw hPreTraceIMW =>
-      PalPeg.BranchSupply.chainVerifierSupply_alongTrace centreC placeC 0 0 0 hw hPreTraceIMW
-        (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 0 0 (by decide)
+      PalPeg.BranchSupply.chainVerifierSupply_alongTrace centreC placeC 0 1 0 hw hPreTraceIMW
+        (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 1 0 (by decide)
           hPreTraceIMW.base.pre)
         (hPreTraceIMW.base.tc1 ▸ hPreTraceIMW.base.pre.mono 1 w.length hw le_rfl))
 

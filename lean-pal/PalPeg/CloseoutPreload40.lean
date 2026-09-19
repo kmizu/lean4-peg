@@ -108,7 +108,7 @@ theorem hpresAt_along_run {w : List (Fin 2)} {n m : ℕ} {x y : State GalilVM}
     (hm : y.ctl.mode = Mode.scan) :
     HpresAt (PofC centre place entry w) y.ctl y.vm := by
   have hy : ReadyFieldP3 (n + 1) y :=
-    readyField3_along_run centre place entry q first hr hf hentry hentry'
+    readyField3_along_run centre place entry q first (fun _ hz => hz.aux.front.notInit) hr hf hentry hentry'
   obtain ⟨c, s⟩ := y
   exact searchReadyB_of_readyField3 _ hy hm
 
