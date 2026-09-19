@@ -249,13 +249,14 @@ theorem stageAt_invLPS {raw : List (Fin 2)} {c : Control} {s : GalilVM}
     (by rw [hm₀]; decide) hshape
 
 open PalPeg.CanonicalSearchReady in
-/-- The stage data at every point of a packed run out of an `InvLPS` origin. -/
-theorem stageAt_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
+/-- The stage data and the readiness field at every point of a packed run out of an `InvLPS`
+origin. -/
+theorem stageAt_field_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
     (hP : Decodes (PofC centre place entry raw))
     (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
     {k : ℕ} {y : State GalilVM}
     (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y) :
-    StageAt centre place entry raw y := by
+    StageAt centre place entry raw y ∧ Field y := by
   obtain ⟨g, h0, hk, ht, hcan, -⟩ := hrun
   have hm₀ : c₀.mode = .scan := (PalPeg.GalilOracleLocal.invS_mode hI.1.1.1.1.1).1
   have hall : ∀ i, i ≤ k →
@@ -284,7 +285,18 @@ theorem stageAt_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
             exact field_restarted ((PofC centre place entry raw).place (g (i+1)).vm) hR
               (stageEntry_zero _) hmode hclock),
         PalPeg.BranchSupply.tick_target_mode_ne_init htick⟩
-  simpa only [hk] using (hall k le_rfl).1
+  have hlast := hall k le_rfl
+  rw [hk] at hlast
+  exact ⟨hlast.1, hlast.2.1⟩
+
+/-- The stage data at every point of a packed run out of an `InvLPS` origin. -/
+theorem stageAt_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    {k : ℕ} {y : State GalilVM}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y) :
+    StageAt centre place entry raw y :=
+  (stageAt_field_packed centre place entry q first hP hI hrun).1
 
 /-- **The search contract in the middle of a stage.**  While the search is active the DP tapes
 of the current stage say nothing, but the scan radius is inside a candidate-free window of the

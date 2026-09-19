@@ -596,6 +596,7 @@ structure MinimalAcrossRestart (raw : List (Fin 2)) (c : Control) (s : GalilVM) 
   lowerAt : LowerAt raw c s
   broken : BrokenStage (LastExcluded raw) c s
   firstRound : FirstRoundSem raw c s
+  clock : ClockAt c s
 
 /-- `MinimalAcrossRestart` at every point of a packed run out of an `InvLPS` origin whose own
 lower bound is excluded. -/
@@ -638,7 +639,10 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
       exact ⟨by simp [ModeMinimal, hiMode, ScanMinimal, hiChain], horigin,
         brokenStage_of_not_broken (by rw [hiMode]; decide)
           (fun w hw => by rw [hiChain] at hw; cases hw),
-        firstRoundSem_of_idle hiChain⟩
+        firstRoundSem_of_idle hiChain,
+        fun _ _ hwork => by
+          rw [hiChain] at hwork
+          simp [PalPeg.ChainClock.chainWork] at hwork⟩
     | succ i ih =>
       intro hik
       have hsource := ih (by omega)
@@ -648,9 +652,16 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
           BirthMinimal centre place entry (MovePayload raw (g i).vm) raw (g i).vm :=
         fun hm => birthMinimal_of_lowerAt centre place entry q first hP hI
           (hprefix i (by omega)) hm hsource.lowerAt
+      obtain ⟨hstageSource, hfieldSource⟩ :=
+        PalPeg.SearchStageRun.stageAt_field_packed centre place entry q first hP hI
+          (hprefix i (by omega))
       refine ⟨?_, lowerAt_tick centre place entry q first htick hsource.lowerAt hsource.broken,
         ?_, firstRoundSem_tick centre place entry q first htick hsource.firstRound
-          hsource.broken hbirthSource⟩
+          hsource.broken hbirthSource,
+        clockAt_tick centre place entry q first htick hsource.clock
+          ⟨hfieldSource.clock_pos, hfieldSource.clock_le⟩ hwinX
+          (ledgerAt_packed centre place entry q first hP hI (hprefix i (by omega)))
+          hsource.broken hstageSource.scan⟩
       · exact modeMinimal_tick_lower centre place entry q first hP htick hsource.minimal
           (hpk i (by omega)) (hpk (i+1) (by omega)) (haux i (by omega)) hbirthSource
       · refine brokenStage_tick centre place entry q first htick (hcan i (by omega)).canonical
