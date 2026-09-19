@@ -27,16 +27,28 @@
 
 が出る（`ShiftPalAlongTrace.pred_of_coreX`、6 行）。
 
-### `C + R + 2h + 2` から `C + R + 2` へ戻すのは `periodOn_of_blockOn`
+### 窓の右端で判定が起きるので、`bounce` 添字のまま `2h` 戻す（訂正）
 
-`ShiftInv` の `w` は `immediate w₀` なので、`coreX_consume`（`Good` が要る ← `coreX_good`）で
-`CoreX` を 1 手進め、`right_position` で verifier を 1 つ右へ送る。予測する添字は
-`position w₀.machine.verifier + 2 = C + R + 2h + 2`。これを n212 で書いた
-`periodOn_of_blockOn` で `2h` 戻すと `C + R + 2`（`ShiftPalAlongTrace.pred_immediate`）。
-必要な側条件は `C + R + 2h + 2 ≤ E`（窓が 1 周期分先まで届く）と `E < |encoded raw|` だけ。
+最初に書いた「`immediate` で予測を `C + R + 2h + 2` まで前へ伸ばし、`periodOn_of_blockOn` で
+`2h` 戻す」経路は**使えない**。`LandingData`（`CloseoutWatchRound42.lean:128`）の窓は
+`BlockOn … (C_chain+1) E` で `E = position t.right`——走査の右ヘッドちょうどまでしか届かず、
+shift 判定はまさにその右端で起きる。`coreX_next` は `canRight` のために
+`position ver + 1 < |encoded raw|` を要求するのでこれも使えない。
 
-**`pred_immediate` は結論に `aligned` 場（`position (immediate w₀).machine.verifier = C+R+2h+1`）も
-含む**。これは `pred` を出す途中で `right_position` を通るので無料。
+正しい経路（`ShiftPalAlongTrace.symbol_of_coreX` / `pred_immediate`、typecheck 済み・標準公理のみ）:
+
+1. `symbol_of_coreX`: 予測記号は `CoreX` の `m.control = run (ready cc xs b) pre` と
+   `successful_prediction` **だけ**で `bounce[(position ver + 1 − anchor) % 2h]?` と決まる
+   （右端の余裕は不要）。
+2. `Good w` は窓からではなく **`shiftGuardVM` の最後の連言**
+   `symbol w.machine.control.period.focus = read s.right` から来る（窓が届かない場所で
+   `Good` を供給するのが guard の役目という形）。`coreX_consume` で `CoreX (immediate w)`。
+3. `bounce` の添字のまま 1 周期 `2h` 戻す: `BlockOn` は添字 `target − anchor` でも成立し、
+   `(target − anchor + 2h) % 2h = (target − anchor) % 2h`（`Nat.add_mod_right`）。
+   `target = C + R + 2 = position ver + 2 − 2h ≤ E` なので窓の内側。
+
+**`pred_immediate` は結論に `aligned` 場（`position (immediate w).machine.verifier =
+position w.machine.verifier + 1`、`right_position` ＋ `Good.1` の `canRight`）も含む。**
 
 ### 結果: `ShiftInv` 23 場の内訳
 
