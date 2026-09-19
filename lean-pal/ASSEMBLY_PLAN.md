@@ -1,3 +1,43 @@
+## n240 — 公理進捗（訂正）: 残差の chain データを `ChainW` から 3 場の `WatchWindow` に絞った
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | n238 の残差は `ChainW … cen₀ …`（margin 等式込み）を要求していたが、**これは最初の shift 以降は偽**（下記）。producer が使う 3 場（`LagAt`／`BlockOn`／`CoreX`、誕生中心 anchor）だけを要求する `ShiftPalAlongTrace.WatchWindow` に置き換えた。**公理は弱くなり、`periodOnly = true` の shift 入口でも真たりうる形になった** |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### なぜ `ChainW` では偽だったか（一次情報）
+
+`GalilScaffoldChainInputSupply.chainShiftOne`（`:1478`）は shift 1 歩ごとに `margin` を `dec` し、
+`beginShiftVM` の `immediate` は `inc margin` と verifier +1。`ChainW` の `.watch` 枝の等式
+`value margin + 4h = R − C` は `C` を**現在の中心**（shift ごとに `+h`）に取れば保たれるが、
+`BlockOn`／`CoreX` の anchor は**誕生中心**（`bounce cc b xs` の位相）。1 つの `C` で両方は
+満たせないので、誕生中心を `C` にした `ChainW` は最初の shift 以降は成り立たない。
+自分で書いた残差の過剰な主張——`chainShiftOne` を読んで気づいた（機械検査した反証は無い）。
+
+### 何を証明したか
+
+| 定理 | 内容 |
+|---|---|
+| `ShiftPalAlongTrace.WatchWindow` | `.watch w ↦ LagAt w.lag ver R ∧ BlockOn … (cen₀+1) R ∧ CoreX … (cen₀+1) w.machine`、他は `False` |
+| `ShiftPalAlongTrace.watchWindow_of_chainW` | `ChainW … cen₀ R R …` の `.watch` 枝から（誕生直後、shift 前） |
+| `ShiftPalAlongTrace.watchWindow_step` | `Internal` 1 歩（`idle` は不変、`take` は verifier +1・lag −1、`Good` は `take` が持参） |
+| `freshShiftLedger_of_chainW`／`_scan` | 仮説を `WatchWindow` に差し替え。`_scan` は `chainW_step`／`chainStep_unique`／`LandingData` が不要になった（`ChainStep` の `.watch` 構成子は `watchStep` だけ） |
+
+### 残差（run 層に要求するもの）の現在形
+
+不一致比較の直前 `z` で shift guard が立つなら
+`∃ cc b xs cen₀ k R, position z.vm.center = cen₀ + k·h ∧ WatchWindow w cen₀ (cen + R) cc b xs z.vm.chain ∧
+ScanInvariant w cen R … ∧ canRight z.vm.right ∧ x[cen₀] = cc ∧ 2h ≤ R`。
+producer は `WatchWindow` を run に沿って運ぶ: 誕生（`chainW_start`＋`blockOn_of_candidate` →
+`watchWindow_of_chainW`）、background（`watchWindow_step`）、一致比較（窓 +1: `coreX_consume`＋
+`blockOn_succ_of_symbol` 形）、shift 相（`immediate`＋`chainShiftOne`: `LagAt` は verifier +1、
+`BlockOn`／`CoreX` は不変——`chainShiftOne` は sweep カウンタと margin しか触らない）。
+
 ## n239 — 後始末: 参照ゼロになった `ShiftInv` 入口の組み立て群を削除、docstring を現状に
 
 **公理への進捗**

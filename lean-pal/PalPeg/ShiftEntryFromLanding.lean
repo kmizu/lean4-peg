@@ -1,20 +1,19 @@
 import PalPeg.ShiftPalAlongTrace
-import PalPeg.CloseoutWatchRound48
-import PalPeg.GalilScaffoldTopChainUnique
 
 /-!
 # `FreshShiftLedger` を、不一致比較の直前の窓から（どの shift 入口でも）
 
 `obligation_shiftPalResiduesAlongRun` は、run の各点 `z` とその不一致比較の着地 `s'` で
-shift guard が立つとき、**誕生中心 `cen₀` に anchor した窓**（`ChainW … z.vm.chain`）と
+shift guard が立つとき、**誕生中心 `cen₀` に anchor した窓**
+（`ShiftPalAlongTrace.WatchWindow … z.vm.chain`: `LagAt`／`BlockOn`／`CoreX` の 3 場）と
 `ScanInvariant`・`canRight`・誕生中心の記号・`2h ≤ R` を要求する。
 `ShiftPalAlongTrace.freshShiftLedger_of_chainW` はそれらから `FreshShiftLedger`（の 5 成分）を
 出し、`shiftPal_of_freshShiftLedger` が `ShiftPal` にする。ここではその入力を**比較前**の
 状態 `s` の持ち物から作る:
 
-* 窓: `ChainW … s.chain` を、比較量子の中の chain の 1 歩（`compareFound` の `chainAt false`
-  ＝ `ChainStep` 1 歩）越しに `GalilReplaySpan.chainW_step` ＋ `chainStep_unique` で
-  `s'.chain` へ運ぶ
+* 窓: `WatchWindow … s.chain` を、比較量子の中の chain の 1 歩（`compareFound` の
+  `chainAt false` ＝ `ChainStep` 1 歩 ＝ watch では `Internal` 1 歩）越しに
+  `watchWindow_step` で `s'.chain` へ運ぶ
 * 右ヘッド: `s'.right = right s.right`（`afterMismatch`）と `ScanInvariant` の右ヘッド事実
 
 不一致側（`¬ matched s'`）に限る——`ShiftPal` の前提に `¬ matched` があるので消費者は
@@ -40,10 +39,9 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 /-- **`FreshShiftLedger` at a mismatched comparison, from the window before it.**
 The window is anchored at the birth centre `cen₀`, the scan centre is `cen₀ + k·h`, and the
 window reaches the right head `position s.right = position s.center + R`. -/
-theorem freshShiftLedger_of_chainW_scan {raw : List (Fin 2)} {cen₀ k R bud : ℕ}
+theorem freshShiftLedger_of_chainW_scan {raw : List (Fin 2)} {cen₀ k R : ℕ}
     {cc b : Fin 3} {xs : List (Fin 3)} {s s' : GalilVM}
-    (hCW : PalPeg.GalilReplaySpan.ChainW raw cen₀ (position s.center + R)
-      (position s.center + R) bud false cc b xs s.chain)
+    (hW : WatchWindow raw cen₀ (position s.center + R) cc b xs s.chain)
     (hk : position s.center = cen₀ + k * (xs.length + 1))
     (hscan : ScanInvariant raw (position s.center) R s.left s.right)
     (hcan : canRight s.right)
@@ -53,7 +51,16 @@ theorem freshShiftLedger_of_chainW_scan {raw : List (Fin 2)} {cen₀ k R bud : �
     (hmis : ¬ (galilFrameS (PofC centre place entry raw) q first).matched s') :
     FreshShiftLedger raw s s' := by
   obtain ⟨vs, vq, matchedBit, hvl, hvr, hmatch, -, hchainAt, hs'⟩ := hcmp
-  have hnotIdle : s.chain ≠ ChainVM.idle := PalPeg.GalilReplaySpan.chainW_ne_idle hCW
+  -- the chain is watching
+  obtain ⟨w, hwatch⟩ : ∃ w, s.chain = ChainVM.watch w := by
+    cases hx : s.chain with
+    | watch w => exact ⟨w, rfl⟩
+    | idle => rw [hx] at hW; exact hW.elim
+    | copy => rw [hx] at hW; exact hW.elim
+    | back => rw [hx] at hW; exact hW.elim
+    | broken => rw [hx] at hW; exact hW.elim
+  rw [hwatch] at hW
+  have hnotIdle : s.chain ≠ ChainVM.idle := fun h => by rw [hwatch] at h; cases h
   -- the comparison mismatched
   have hbit : matchedBit = false := by
     cases matchedBit with
@@ -68,35 +75,29 @@ theorem freshShiftLedger_of_chainW_scan {raw : List (Fin 2)} {cen₀ k R bud : �
   subst hbit
   -- the chain was alive, so this is no birth: `s' = afterMismatch s vs vq`
   have hborn : chainBorn (decide (vq.search.mode = .found)) s.chain = false := by
-    cases hx : s.chain with
-    | idle => exact absurd hx hnotIdle
-    | copy => rfl
-    | back => rfl
-    | watch => rfl
-    | broken => rfl
+    rw [hwatch]; rfl
   have hs'' : s' = afterMismatch s vs vq := by
     rw [hs', hborn, afterBirth_false, if_neg (by simp)]
   subst hs''
-  -- the chain stepped once, by `ChainStep`
+  -- the chain stepped once: on a watch that is one `Internal` step
   rcases hchainAt with ⟨-, y, hstep, hy⟩ | ⟨hidle, -⟩ | ⟨hidle, -⟩
   · simp only [Bool.false_eq_true, ↓reduceIte] at hy
-    have hlen : position s.center + R < (encoded raw).length := hscan.palindrome.2.1
-    obtain ⟨y', hstep', hCW'⟩ := PalPeg.GalilReplaySpan.chainW_step
-      (PalPeg.GalilReplaySpan.chainW_mono hCW (Nat.le_succ _)) hlen le_rfl
-    have hyy : y = y' := chainStep_unique hstep hstep'
-    subst hyy
-    rw [← hy] at hCW'
-    -- the right head moved one place right
-    have hl0 : 0 < s.right.head.left.length :=
-      (represented_position _ raw hscan.rightRep hscan.rightPresent).1
-    have hrRep : GalilScaffoldInputTrace.Represents vs.right.head raw := by
-      rw [hvr]; exact right_word _ raw hscan.rightRep hcan
-    have hrPres : vs.right.head.focus ≠ none := by
-      rw [hvr]; exact right_present _ raw hscan.rightRep hscan.rightPresent hcan
-    have hrPos : position vs.right = position s.center + R + 1 := by
-      rw [hvr, right_position _ hcan hl0, hscan.rightPos]
-    exact freshShiftLedger_of_chainW (cen := position s.center) rfl hk hCW' hscan.rightPos
-      hrRep hrPres hrPos hcentre hsize
+    rw [hwatch] at hstep
+    cases hstep with
+    | watchStep _ _ hint =>
+      have hW' := watchWindow_step hW hint
+      rw [← hy] at hW'
+      -- the right head moved one place right
+      have hl0 : 0 < s.right.head.left.length :=
+        (represented_position _ raw hscan.rightRep hscan.rightPresent).1
+      have hrRep : GalilScaffoldInputTrace.Represents vs.right.head raw := by
+        rw [hvr]; exact right_word _ raw hscan.rightRep hcan
+      have hrPres : vs.right.head.focus ≠ none := by
+        rw [hvr]; exact right_present _ raw hscan.rightRep hscan.rightPresent hcan
+      have hrPos : position vs.right = position s.center + R + 1 := by
+        rw [hvr, right_position _ hcan hl0, hscan.rightPos]
+      exact freshShiftLedger_of_chainW (cen := position s.center) rfl hk hW' hscan.rightPos
+        hrRep hrPres hrPos hcentre hsize
   · exact absurd hidle hnotIdle
   · exact absurd hidle hnotIdle
 

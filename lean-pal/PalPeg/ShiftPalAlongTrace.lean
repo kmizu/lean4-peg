@@ -396,11 +396,64 @@ theorem palAt_block_periodic {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin
 
 #print axioms palAt_block_periodic
 
+/-- **shift を越えて生き残る watch chain の窓データ。**  verifier ＋ lag が右ヘッド `R`、
+ブロックと制御は誕生中心 `cen₀` に anchor。`GalilReplaySpan.ChainW` の `.watch` 枝の最初の
+3 場そのもので、margin 等式と予算は持たない——`chainShiftOne` が `margin` を `dec` するので、
+margin 等式は**現在の中心**に対して成り立ち、誕生中心を `C` にした `ChainW` は最初の shift
+以降は偽になる（n240）。producer が使うのはこの 3 場だけ。 -/
+def WatchWindow (raw : List (Fin 2)) (cen₀ R : ℕ) (cc b : Fin 3) (xs : List (Fin 3)) :
+    ChainVM → Prop
+  | ChainVM.watch w =>
+      PalPeg.GalilReplayGeneral2.LagAt w.lag w.machine.verifier R ∧
+      PalPeg.GalilReplaySpan.BlockOn raw cc b xs (cen₀ + 1) R ∧
+      PalPeg.GalilReplaySpan.CoreX raw cc b xs (cen₀ + 1) w.machine
+  | _ => False
+
+/-- `ChainW` の `.watch` 枝から（誕生中心が `C`、窓が右ヘッド `R` まで届くとき）。 -/
+theorem watchWindow_of_chainW {raw : List (Fin 2)} {cen₀ R bud : ℕ} {lim : Bool}
+    {cc b : Fin 3} {xs : List (Fin 3)} {w : GalilScaffoldChainWatch.State}
+    (h : PalPeg.GalilReplaySpan.ChainW raw cen₀ R R bud lim cc b xs (ChainVM.watch w)) :
+    WatchWindow raw cen₀ R cc b xs (ChainVM.watch w) := by
+  obtain ⟨hlag, hblk, hcore, -, -, -⟩ := h
+  exact ⟨hlag, hblk, hcore⟩
+
+#print axioms watchWindow_of_chainW
+
+/-- **1 background 歩（`Internal`）越しの窓。**  `idle` は不変、`take` は verifier が 1 つ右へ、
+lag が 1 つ減る（`GalilReplaySpan.chainW_step` の `.watch` 場合と同じ計算、`Good` は `take` が持参）。 -/
+theorem watchWindow_step {raw : List (Fin 2)} {cen₀ R : ℕ} {cc b : Fin 3} {xs : List (Fin 3)}
+    {w w' : GalilScaffoldChainWatch.State}
+    (hw : WatchWindow raw cen₀ R cc b xs (ChainVM.watch w))
+    (hi : GalilScaffoldChainWatch.Internal w w') :
+    WatchWindow raw cen₀ R cc b xs (ChainVM.watch w') := by
+  obtain ⟨hlag, hblk, hcore⟩ := hw
+  rcases w with ⟨mach, ⟨ps, ns⟩, margin⟩
+  obtain ⟨hneg, hpos⟩ := hlag
+  simp only at hneg hpos hcore
+  subst hneg
+  cases hi with
+  | idle _ => exact ⟨⟨rfl, hpos⟩, hblk, hcore⟩
+  | take hp hg =>
+    cases ps with
+    | nil => simp [GalilScaffoldCounter.positive] at hp
+    | cons u ps =>
+      refine ⟨⟨rfl, ?_⟩, hblk, PalPeg.GalilReplaySpan.coreX_consume hcore hg⟩
+      show position (GalilScaffoldChainVerifier.consume mach).verifier
+        + (GalilScaffoldCounter.dec ⟨u :: ps, []⟩).pos.length = R
+      have hpc : position (GalilScaffoldChainVerifier.consume mach).verifier
+          = position mach.verifier + 1 :=
+        right_position _ hg.1 (represented_position _ raw hcore.2.1 hcore.2.2.1).1
+      rw [hpc]
+      simp [GalilScaffoldCounter.dec] at hpos ⊢
+      omega
+
+#print axioms watchWindow_step
+
 /-- **`FreshShiftLedger` の producer——誕生中心に anchor した窓から、どの shift 入口でも。**
 
 入力は run 層が不一致比較の直前に持つ一次事実の、右ヘッド側だけ:
 
-* `hCW` — `ChainW` の `.watch` 枝、誕生中心 `cen₀` に anchor（比較後の chain `s'.chain`、窓は
+* `hW` — 誕生中心 `cen₀` に anchor した窓 `WatchWindow`（比較後の chain `s'.chain`、窓は
   現在の右ヘッド `cen + R` まで）
 * `hk` — 現在の中心 `cen = cen₀ + k·h`（shift は中心を `h` ずつ右へ動かす）
 * `hR` — 直前の右ヘッド `position s.right = cen + R`（`ScanInvariant` の `r₀` を `R` に固定）
@@ -410,10 +463,10 @@ theorem palAt_block_periodic {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin
 
 左端の不一致でも成り立つ（5 成分とも語レベルで左端に触れない）。 -/
 theorem freshShiftLedger_of_chainW {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
-    {cen₀ k cen R bud : ℕ} {lim : Bool} {s s' : GalilVM}
+    {cen₀ k cen R : ℕ} {s s' : GalilVM}
     (hcen : position s.center = cen)
     (hk : cen = cen₀ + k * (xs.length + 1))
-    (hCW : PalPeg.GalilReplaySpan.ChainW raw cen₀ (cen + R) (cen + R) bud lim cc b xs s'.chain)
+    (hW : WatchWindow raw cen₀ (cen + R) cc b xs s'.chain)
     (hR : position s.right = cen + R)
     (hrightRep : GalilScaffoldInputTrace.Represents s'.right.head raw)
     (hrightPresent : s'.right.head.focus ≠ none)
@@ -425,8 +478,8 @@ theorem freshShiftLedger_of_chainW {raw : List (Fin 2)} {cc b : Fin 3} {xs : Lis
   have hr₀ : r₀ = R := by have := hscan.rightPos; omega
   rw [hr₀] at hscan ⊢
   have hpal : Manacher.PalAt (encoded raw) cen R := by rw [← hcen]; exact hscan.palindrome
-  rw [hchain] at hCW
-  obtain ⟨hlag, hblk, hcore, -, -, -⟩ := hCW
+  rw [hchain] at hW
+  obtain ⟨hlag, hblk, hcore⟩ := hW
   obtain ⟨w', hw', hlagZ, -, -, -, hsym⟩ := hguard
   rw [hchain] at hw'
   have hww : wch = w' := ChainVM.watch.inj hw'
