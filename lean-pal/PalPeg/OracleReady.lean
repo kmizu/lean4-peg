@@ -56,15 +56,37 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       ShapedSteps centre place entry q first w k ⟨c₀, r₀⟩ y →
       PalPeg.GalilTickFun.ChainReady y.vm.chain)
-    (hminv : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
+    (hshiftPeriodMinimal : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM)
+      (vq : SearchVM) (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      ShapedSteps centre place entry q first w k ⟨c₀, r₀⟩ y →
-      MInv w y.ctl y.vm)
+      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
+      c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
+      MInv w c s →
+      GalilScaffoldInputHead.read (GalilScaffoldInputHead.left s.left) ≠
+        GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right) →
+      searchEffect (PofC centre place entry w) false s vq →
+      chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
+        ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
+        s.center s.radius s.chain z →
+      (PofC centre place entry w).shiftGuard
+        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+          (afterMismatch s ⟨GalilScaffoldInputHead.left s.left,
+            GalilScaffoldChainVerifier.right s.right, z⟩ vq)) →
+      (PofC centre place entry w).beginShift
+        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+          (afterMismatch s ⟨GalilScaffoldInputHead.left s.left,
+            GalilScaffoldChainVerifier.right s.right, z⟩ vq)) u →
+      Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
+        ⟨{c with clock := 2048, mode := .shift}, u⟩ →
+      ∀ wg : GalilScaffoldChainWatch.State, z = .watch wg →
+        ∀ p : ℕ, 0 < p → p < 2 * periodLength wg →
+          ¬ PalPeg.HasPeriod (Span w (position s.center) (position s.right - position s.center)) p)
     (hfallback : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
       (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
       c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
+      MInv w c s →
       GalilScaffoldInputHead.read (GalilScaffoldInputHead.left s.left) ≠
         GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right) →
       searchEffect (PofC centre place entry w) false s vq →
@@ -87,7 +109,7 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
         ShapedSteps centre place entry q first w (fb + replay)
           ⟨{c with clock := 2048, mode := .copy}, u⟩ ⟨c', s'⟩ ∧
         c'.mode = .scan ∧ c'.replaying = false ∧
-        Refreshed (PofC centre place entry w) q first ⟨c', s'⟩ ∧
+        Refreshed (PofC centre place entry w) q first ⟨c', s'⟩ ∧ MInv w c' s' ∧
         position s'.right = position s.right + 1 ∧ r ≤ kk ∧
         position s'.center = position s.center + (kk + 1 - r) ∧
         fb ≤ 12704 * (kk + 1 - r) + 4012 ∧ replay ≤ 8 * 2048 * (kk + 1 - r)) :
@@ -96,7 +118,7 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
   PalPeg.OracleRun.cycleOracleOn_of_fourLeaves centre place entry q first hP h4
     (fun c₀ r₀ k y hI₀ hsh hm _ =>
       searchReady_of_invLPS_shaped centre place entry q first hfresh hI₀ hsh hm)
-    hchain hminv hfallback
+    hchain hshiftPeriodMinimal hfallback
 
 #print axioms cycleOracleOn_of_readyLeaves
 #print axioms searchReady_of_invLPS_shaped

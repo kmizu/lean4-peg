@@ -1,3 +1,23 @@
+## n257 — `hminv`（run 全点の `MInv`）を運ぶ述語の場に移し、残差を shift 入口の周期最小性 1 点（`hshiftPeriodMinimal`）に局所化
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉は 4 のまま（`hfresh`／`hchain`／**`hshiftPeriodMinimal`**／`hfallback`）だが、`hminv`（`InvLPS` 起点からの shaped run **全点**で `MInv`）が消え、**この `hminv` は偽だった**（n253 でウチが書いた葉。run 全点には fallback 入口（copy 相）の着地も含まれ、そこでは中心が死んでいるので `MInv` は立たない。核は `CloseoutPackRun4.minv_false_at_mismatch`、しかも `CloseoutLPack5.MInvG` で一度直した穴の再発。葉自体を `False` に落とす定理は未構成なので「偽の疑いが濃い」と記録。GPT-6 の指摘（コウタ経由、2026-09-19）で確認した。同じ指摘の残り——`hfallback` の `u` が `∀`（`scanCompare_cases` が空 place を選ぶ）、最終 witness の `q = 0` vs fallback 構成の `0 < q`、`hchain` の run 全点量化——は n258 で直す）、代わりの葉は **状態局所**: shift 入口（guard 立ち・比較不一致の状態）で watch chain の周期 `periodLength wg` が span `Span w C (n − C)` の最小周期であること（`∀ p, 0 < p → p < 2·periodLength wg → ¬ HasPeriod … p`）。`MInv` 自体は `CloseoutCheckW.ScanOnPackedRunFromInvLPS` の場として運ぶ（boot は `InvLPS` の `Inv.minv`／`InvK.minv`、一致比較は `minv_match`＋`minv_afterBirth`（既存）、shift 出口は `leftmost_shift`（`GalilLiveCentreShift`）で `hdead`＝`not_live_of_mismatch`、`hlive`＝出口の `ScanInvariant`、`hmin`＝新しい葉、fallback は `hfallback` の結論に `MInv w c' s'` を足した） |
+| `obligation_localRealization` | 変化なし（GPT-6 の指摘＝過剰量化の疑いを受けて、消費側からの逆算を並列で調査中。n174 の診断と同型） |
+
+**状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
+**何をしたか**
+
+* `CloseoutCheckW.ScanOnPackedRunFromInvLPS` に `MInv w c r` を追加（`Refreshed` の直後）。`scanOnPackedRunFromInvLPS_of_invLPS` は `hI.1.1.1.1.1`（`Inv ∨ ∃ k, InvK`）の両分岐の `.minv` で埋める。
+* `OracleRun`: `scanCycle_of_leaves`／`cycleOracleOn_of_leaves`／`cycleOracleOn_of_fourLeaves` から `hminv` を削除。比較状態の `MInv` は `minv_same`（`scanCycle_of_leaves` の不一致分岐の結論に `t.replay = s.replay` を追加）で作り、`hshift`／`hfallback` の前提に `MInv w c s`、結論に `MInv w c' s'` を追加。`hland` は着地の `MInv` を受け取り運ぶ述語に詰める。`shiftLeaf` は `hminvS`（入口の `MInv`）と `hperiodMin` を取り、出口で `leftmost_shift` により `MInv` を返す。
+* `OracleReady.cycleOracleOn_of_readyLeaves`: `hminv` → `hshiftPeriodMinimal`（統一した葉文）。
+* 並列化を解禁（コウタ 2026-09-19「サブエージェント解禁していいけど、コミュニケーションコストがでかそうなのは任せない」）: 読み取り専用の地図作り 4 本（`hfresh`／`hchain`／`hfallback`／`localRealization`+`Fair`）を workflow で同時実行。lean プロセスは同時 2 本まで、`lake build` は 1 本。
+
+**`hshiftPeriodMinimal` の帰着先**: 周期最小性は found 時の DP decode（`GalilMinimalPeriod.result_least`／`GalilSearchResult.search_result_at_tick`）が chain 誕生時に与える情報で、watch 相を通じて period テープに保存される。`hchain` の copy 相（誕生時の `∃ n, CopyInv`）と同じ起点データなので、両者は「誕生時の decode を chain の一生で運ぶ不変量」1 本にまとめるのが筋。
+
 ## n256 — 運ぶ述語に restart 無しの run（`ShapedRun.ShapedSteps`）を足し、`hrestart`／`hreplayStart` の 2 葉を消した
 
 **公理への進捗**
