@@ -1,3 +1,70 @@
+## n231 — 公理進捗: `ShiftInv` 23 場すべてに producer が揃った（`pred` 陥落）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 最後に残っていた `pred` 場が落ちた。`pred_immediate` は `aligned` 場も同時に出すので、**`ShiftInv` 23 場すべてに producer が存在する**状態になった（証明済み 21 / インライン 2） |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### `pred` の producer は既にあった
+
+`pred : symbol w.machine.control.period.focus = (encoded raw)[C + R + 2]?` の攻略は、
+**新しい数学ではなく既存部品 2 つの合成**だった。探し当てた一次情報は 2 つ:
+
+| 部品 | 場所 | 内容 |
+|---|---|---|
+| `GalilScaffoldChainPrediction.successful_prediction` | `GalilScaffoldChainPrediction.lean:181` | `symbol (run (ready cc xs b) actual).period.focus = (bounce cc b xs)[actual.length % 2h]?`。探していた `run`/`bounce` 対応そのもの |
+| `GalilReplaySpan.coreX_next` | `GalilReplaySpan.lean:166` | 上を `CoreX` の `pre` に適用済み。`symbol m.control.period.focus = bounce[(position m.verifier + 1 − anchor) % 2h]?` |
+
+`BlockOn raw cc b xs anchor E` は**まさにその `bounce` 添字を encoded 語に戻す辞書**
+（`∀ j, anchor + j ≤ E → (encoded raw)[anchor+j]? = bounce[j % 2h]?`）なので、窓の内側では
+
+    symbol m.control.period.focus = (encoded raw)[position m.verifier + 1]?
+
+が出る（`ShiftPalAlongTrace.pred_of_coreX`、6 行）。
+
+### `C + R + 2h + 2` から `C + R + 2` へ戻すのは `periodOn_of_blockOn`
+
+`ShiftInv` の `w` は `immediate w₀` なので、`coreX_consume`（`Good` が要る ← `coreX_good`）で
+`CoreX` を 1 手進め、`right_position` で verifier を 1 つ右へ送る。予測する添字は
+`position w₀.machine.verifier + 2 = C + R + 2h + 2`。これを n212 で書いた
+`periodOn_of_blockOn` で `2h` 戻すと `C + R + 2`（`ShiftPalAlongTrace.pred_immediate`）。
+必要な側条件は `C + R + 2h + 2 ≤ E`（窓が 1 周期分先まで届く）と `E < |encoded raw|` だけ。
+
+**`pred_immediate` は結論に `aligned` 場（`position (immediate w₀).machine.verifier = C+R+2h+1`）も
+含む**。これは `pred` を出す途中で `right_position` を通るので無料。
+
+### 結果: `ShiftInv` 23 場の内訳
+
+| 場 | producer |
+|---|---|
+| `chain` `remaining` `canon` `count` `leftRep` `leftPresent` `rightRep` `rightPresent` `leftPos` `rightPos` | `shiftInv_frame_of_beginShift`（n214） |
+| `verifierRep` `verifierPresent` | `coreX_immediate`（n215） |
+| `lagZero` `unbroken` | `immediate_lag_unbroken`（n216） |
+| `posH` | `periodLength_immediate_pos`（n218） |
+| `size` | `size_of_margin`（n219） |
+| `pal` `palNext` `origin` | `palNext_of_blockOn` / `origin_of_blockOn`（n213） |
+| **`aligned` `pred`** | **`pred_immediate`（このノート）** |
+| `kle` `room` | 組み立て本体に直書き（n230） |
+
+### 次の一手（組み立て）
+
+残るのは 23 場を 1 本の `H_freshShiftAtShiftEntry` に束ねること。数値対応は確定している:
+
+* `LagAt lag ver R := lag.neg = [] ∧ position ver + lag.pos.length = R`
+  （`GalilReplayGeneral2.lean:179`）なので、lag ゼロなら `position w₀.machine.verifier = R_chain`。
+  これが `pred_immediate` の `halign` 仮説に直接入る。
+* `ChainW … (.watch w₀)` の 5 成分（`LagAt` / `BlockOn` / `CoreX` / `Canonical margin` /
+  `value margin + 4·(|xs|+1) = R_chain − C_chain`）が、上の表の producer の入力を全部供給する。
+* `ShiftInv` 側の `C = position u.center − h`、`R = r₀ − h − 1`、`h = |xs| + 1`、`k = 0`。
+
+通れば `roundScan_of_shiftInv`（`CloseoutPackRun37.lean:95`）経由で
+`obligation_shiftPalResiduesAlongRun` の第 1・第 3 連言が落ち、**公理が 3 → 2 本**になる。
+
 ## n230 — 公理進捗: 実質の残りは `pred` 1 場（`kle`/`room` はインライン）
 
 **公理への進捗**

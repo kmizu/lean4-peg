@@ -323,6 +323,61 @@ theorem size_of_margin {h r₀ R : ℕ} {margin : GalilScaffoldCounter.Counter}
 
 #print axioms size_of_margin
 
+/-- **予測記号を encoded 語の添字に戻す。**  `GalilReplaySpan.coreX_next` は period
+テープの焦点記号を `bounce` の添字で名指すが、`BlockOn` はまさにその添字を encoded 語に
+戻す辞書。よって窓の内側では「焦点記号 ＝ 次に読む入力記号」。 -/
+theorem pred_of_coreX {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
+    {anchor E : ℕ} {m : GalilScaffoldChainVerifier.State}
+    (hcore : PalPeg.GalilReplaySpan.CoreX raw cc b xs anchor m)
+    (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs anchor E)
+    (hE : E < (encoded raw).length)
+    (hinside : position m.verifier + 1 ≤ E) :
+    GalilScaffoldChainConsume.symbol m.control.period.focus
+      = (encoded raw)[position m.verifier + 1]? := by
+  obtain ⟨pre, -, -, hidx⟩ := hcore.2.2.2
+  obtain ⟨-, hsym, -, -⟩ := PalPeg.GalilReplaySpan.coreX_next hcore (by omega)
+  have hwin := hblk (position m.verifier + 1 - anchor) (by omega)
+  rw [show anchor + (position m.verifier + 1 - anchor) = position m.verifier + 1 from by omega]
+    at hwin
+  rw [hsym, ← hwin]
+
+#print axioms pred_of_coreX
+
+/-- **`ShiftInv` の `pred` 場、shift 入口で。**  即時 consume が verifier を 1 つ右へ
+送るので、新しい焦点が予測するのは `C + R + 2h + 2`。`BlockOn` の周期性
+（`periodOn_of_blockOn`）がその予測を `C + R + 2` へ戻す。`aligned` 場も同時に出る。 -/
+theorem pred_immediate {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
+    {C R E : ℕ} {w : GalilScaffoldChainWatch.State}
+    (hcore : PalPeg.GalilReplaySpan.CoreX raw cc b xs (C + 1) w.machine)
+    (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs (C + 1) E)
+    (hE : E < (encoded raw).length)
+    (halign : position w.machine.verifier = C + R + 2 * (xs.length + 1))
+    (hreach : C + R + 2 * (xs.length + 1) + 2 ≤ E) :
+    position (GalilScaffoldChainWatch.immediate w).machine.verifier
+        = C + R + 2 * (xs.length + 1) + 1 ∧
+      GalilScaffoldChainConsume.symbol
+          (GalilScaffoldChainWatch.immediate w).machine.control.period.focus
+        = (encoded raw)[C + R + 2]? := by
+  obtain ⟨hcan, -, -, -⟩ := PalPeg.GalilReplaySpan.coreX_next hcore (by omega)
+  have hleft := (represented_position _ raw hcore.2.1 hcore.2.2.1).1
+  have hnext : position (GalilScaffoldChainWatch.immediate w).machine.verifier
+      = position w.machine.verifier + 1 := right_position _ hcan hleft
+  have hgood : GalilScaffoldChainWatch.Good w :=
+    PalPeg.GalilReplaySpan.coreX_good hcore hblk hE (by omega)
+  have hc2 : PalPeg.GalilReplaySpan.CoreX raw cc b xs (C + 1)
+      (GalilScaffoldChainWatch.immediate w).machine :=
+    PalPeg.GalilReplaySpan.coreX_consume hcore hgood
+  have hp : GalilScaffoldChainConsume.symbol
+        (GalilScaffoldChainWatch.immediate w).machine.control.period.focus
+      = (encoded raw)[position (GalilScaffoldChainWatch.immediate w).machine.verifier + 1]? :=
+    pred_of_coreX hc2 hblk hE (by rw [hnext, halign]; omega)
+  refine ⟨by rw [hnext, halign], ?_⟩
+  rw [hp, hnext, halign,
+    (periodOn_of_blockOn hblk) (C + R + 2) (by omega) (by omega),
+    show C + R + 2 + 2 * (xs.length + 1) = C + R + 2 * (xs.length + 1) + 1 + 1 from by omega]
+
+#print axioms pred_immediate
+
 /-- **(NAMED) 準備直後の watch の台帳。**  `shiftPalAt_fresh_of_candidate` の 5 残差を
 1 つの場にまとめたもの。`ShiftPal` の `periodOnly = false` 分岐に必要な全部で、
 3 種類しかない（n144）:
