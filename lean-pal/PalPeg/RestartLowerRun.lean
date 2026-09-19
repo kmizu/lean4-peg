@@ -407,6 +407,188 @@ theorem firstRoundSem_tick {Extra : ℕ → ℕ → GalilScaffoldChainWatch.Stat
       | (simp [hm] at hmode)
       | (simp at hmode)
 
+/-! ## The clock of a first-round chain along the run -/
+
+open PalPeg.ChainClock PalPeg.SearchStageHistory in
+/-- The radius at a birth: within two semiperiods, and the answer tape holds the semiperiod. -/
+theorem birth_radius {raw : List (Fin 2)} {clock : ℕ} {s : GalilVM} {a : Bool} {vq : SearchVM}
+    (hdata : PalPeg.SearchStageRun.StageData centre place entry raw clock s)
+    (hstep : searchStep ((PofC centre place entry raw).place s) a (searchLens.get s) vq)
+    (hfound : vq.search.mode = .found) :
+    1 ≤ remainingBits (vq.dp.config.tapes 11) ∧
+      value s.radius ≤ 2 * (remainingBits (vq.dp.config.tapes 11) : ℤ) := by
+  obtain ⟨lower, hbudget, hhistory, hnotFound⟩ := hdata
+  have hrun := run_of_found hstep hfound hnotFound
+  have hquanta := hstep
+  simp only [searchStep, hrun] at hquanta
+  obtain ⟨H, hcopy, hpositive, hradius⟩ :=
+    found_radius_le hbudget hhistory hrun hquanta.1 hfound ((PofC centre place entry raw).centre s)
+  rw [remainingBits_of_answerAhead hcopy.1]
+  exact ⟨hpositive, hradius⟩
+
+open PalPeg.ChainClock in
+/-- While a first-round chain has work left, the time since the last match and that work fit
+into the distance of the radius from four semiperiods. -/
+def ClockAt (c : Control) (s : GalilVM) : Prop :=
+  c.mode = .scan → s.periodOnly = false → 0 < chainWork s.chain →
+    chainWork s.chain + (2048 - (c.clock : ℤ))
+      ≤ 2047 * (4 * chainPeriod s.chain - value s.radius)
+
+open PalPeg.ChainClock in
+/-- One tick keeps `ClockAt`. -/
+theorem clockAt_tick {Extra : ℕ → ℕ → GalilScaffoldChainWatch.State → Prop}
+    {raw : List (Fin 2)} {x y : State GalilVM}
+    (ht : Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y)
+    (hsource : ClockAt x.ctl x.vm)
+    (hclock : 1 ≤ x.ctl.clock ∧ x.ctl.clock ≤ 2048)
+    (hwinX : WindowRunPack raw x.ctl x.vm)
+    (hledger : LedgerAt x.ctl x.vm)
+    (hstage : BrokenStage Extra x.ctl x.vm)
+    (hdata : x.ctl.mode = .scan → x.vm.chain = .idle →
+      PalPeg.SearchStageRun.StageData centre place entry raw x.ctl.clock x.vm) :
+    ClockAt y.ctl y.vm := by
+  have hchainTick : ∀ {c : Control} {s : GalilVM} {a found : Bool} {vq : SearchVM} {z : ChainVM}
+      {E' R' : ℤ} {targetOnly : Bool}, x = ⟨c, s⟩ → c.mode = .scan →
+      searchEffect (PofC centre place entry raw) a s vq → found = decide (vq.search.mode = .found) →
+      chainAt a found (vq.dp.config.tapes 11) ((PofC centre place entry raw).centre s)
+        ((PofC centre place entry raw).place s) s.center s.radius s.chain z →
+      targetOnly = (if chainBorn found s.chain then false else s.periodOnly) →
+      (if a then E' + 2047 ≤ 2048 - (c.clock : ℤ) else E' ≤ 2048 - (c.clock : ℤ) + 1) →
+      0 ≤ E' ∧ E' ≤ 2047 →
+      R' = value s.radius + (if a then 1 else 0) →
+      targetOnly = false → 0 < chainWork z → chainWork z + E' ≤ 2047 * (4 * chainPeriod z - R') := by
+    intro c s a found vq z E' R' targetOnly hx hm hse hfoundEq hch honly htime hbounds hradius
+      htargetFalse
+    subst hx
+    have hledgerScan := hledger (Or.inl hm)
+    simp only [shiftDebt, hm, show (Mode.scan = Mode.shift) = False from by simp,
+      if_false] at hledgerScan
+    have hclockZ : (1 : ℤ) ≤ (c.clock : ℤ) := by exact_mod_cast hclock.1
+    refine clock_chainAt hch hwinX.coupled.block hledgerScan (watch_unbroken_of_window hwinX) rfl
+      (fun hwork => ?_) (fun hidle hfound => ?_) htime ⟨hbounds.1, hbounds.2, by omega⟩ hradius
+    · have hnotIdle : s.chain ≠ .idle := by
+        intro hidle
+        rw [hidle] at hwork
+        simp [chainWork] at hwork
+      have hsourceOnly : s.periodOnly = false := by
+        unfold chainBorn at honly
+        rw [isIdle_false_of_ne hnotIdle] at honly
+        rw [honly] at htargetFalse
+        simpa using htargetFalse
+      exact hsource hm hsourceOnly hwork
+    · have hstep : searchStep ((PofC centre place entry raw).place s) a (searchLens.get s) vq := by
+        rcases hse with ⟨-, hh⟩ | ⟨hne, -⟩
+        · exact hh
+        · exact absurd hidle hne
+      have hfoundMode : vq.search.mode = .found := by
+        rw [hfoundEq] at hfound
+        exact of_decide_eq_true hfound
+      exact birth_radius centre place entry (hdata hm hidle) hstep hfoundMode
+  have hbackground : ∀ {c c' : Control} {s t : GalilVM}, x = ⟨c, s⟩ → y = ⟨c', t⟩ →
+      c.mode = .scan → (galilFrameS (PofC centre place entry raw) q first).background s t →
+      ((2048 : ℤ) - (c'.clock : ℤ) ≤ 2048 - (c.clock : ℤ) + 1) →
+      (1 ≤ c'.clock ∧ c'.clock ≤ 2048) → ClockAt c' t := by
+    intro c c' s t hx hy hm hb htime hbounds
+    subst hy
+    obtain ⟨-, -, hch, -, honly, hradius, -, -, -, -, -, hse⟩ :=
+      backgroundS_fields (PofC centre place entry raw) q first hb
+    intro _ htargetFalse hwork
+    have hclockZ : (1 : ℤ) ≤ (c'.clock : ℤ) := by exact_mod_cast hbounds.1
+    have hclockLe : (c'.clock : ℤ) ≤ 2048 := by exact_mod_cast hbounds.2
+    have := hchainTick (a := false) (E' := 2048 - (c'.clock : ℤ)) (R' := value t.radius) hx hm hse
+      rfl hch honly (by simpa using htime) ⟨by omega, by omega⟩ (by rw [hradius]; simp)
+      htargetFalse hwork
+    exact this
+  cases ht with
+  | init c s t hm hi =>
+    obtain ⟨_,_,_,_,_,_,_,_,_,hch,_⟩ := hi
+    intro _ _ hwork
+    rw [hch] at hwork
+    simp [chainWork] at hwork
+  | scan_wait c s t hm hav hb =>
+    exact hbackground rfl rfl hm hb
+      (by show (2048 : ℤ) - (c.clock : ℤ) ≤ 2048 - (c.clock : ℤ) + 1; omega) hclock
+  | scan_count c s t hm hav hc hb =>
+    have h1 : 1 ≤ c.clock := hclock.1
+    have h2 : c.clock ≤ 2048 := hclock.2
+    refine hbackground rfl rfl hm hb ?_ ⟨by show 1 ≤ c.clock - 1; omega, by show c.clock - 1 ≤ 2048; omega⟩
+    show (2048 : ℤ) - ((c.clock - 1 : ℕ) : ℤ) ≤ 2048 - (c.clock : ℤ) + 1
+    omega
+  | scan_match c s s' t o hm hav hc hcmp hmt hpl ho =>
+    have hcmp' : compareFound (PofC centre place entry raw) q first s s' := hcmp
+    obtain ⟨vs, vq, a, -, -, hiff, hse, hch, heq⟩ := hcmp'
+    have ha : a = true := by
+      cases a with
+      | true => rfl
+      | false =>
+        exfalso
+        have hm' : read s'.left = read s'.right := hmt
+        rw [heq, afterBirth_left, afterBirth_right] at hm'
+        exact absurd (hiff.2 hm') (by simp)
+    subst ha
+    obtain ⟨-, -, hchain', -, -⟩ := PalPeg.WindowTick.compare_target_heads heq
+    have hchain : t.chain = s'.chain := by rw [hpl]; split <;> rfl
+    have honly : t.periodOnly
+        = if chainBorn (decide (vq.search.mode = .found)) s.chain then false
+          else s.periodOnly := by
+      have htarget : t.periodOnly = s'.periodOnly := by rw [hpl]; split <;> rfl
+      rw [htarget, heq, afterBirth_periodOnly]
+      rfl
+    have hradius : t.radius = inc s.radius := by
+      have htarget : t.radius = s'.radius := by rw [hpl]; split <;> rfl
+      rw [htarget, heq, afterBirth_radius]
+      rfl
+    intro _ htargetFalse hwork
+    have hworkChain : 0 < chainWork vs.chain := by
+      have : t.chain = vs.chain := hchain.trans hchain'
+      rw [← this]
+      exact hwork
+    have hresult := hchainTick (a := true) (E' := 0) (R' := value t.radius) rfl hm hse rfl hch
+      honly (by
+        have : (c.clock : ℤ) = 1 := by exact_mod_cast hc
+        simp only [if_true]
+        omega) ⟨le_refl _, by norm_num⟩ (by rw [hradius, inc_value]; simp) htargetFalse hworkChain
+    have htargetChain : t.chain = vs.chain := hchain.trans hchain'
+    show chainWork t.chain + (2048 - ((2048 : ℕ) : ℤ)) ≤ 2047 * (4 * chainPeriod t.chain - value t.radius)
+    rw [htargetChain]
+    push_cast
+    simpa using hresult
+  | scan_shift c s s' t hm hav hc hcmp hmt hr hg hb =>
+    intro hmode
+    simp at hmode
+  | scan_fallback c s s' t hm hav hc hcmp hmt hg hr hb =>
+    intro hmode
+    simp at hmode
+  | shift_one c s t hm hp hso =>
+    intro hmode
+    simp [hm] at hmode
+  | shift_done c s o hm hp ho =>
+    obtain ⟨-, honly⟩ := hstage.1 hm
+    intro _ hfalse
+    have hsourceFalse : s.periodOnly = false := hfalse
+    rw [honly] at hsourceFalse
+    cases hsourceFalse
+  | replayStart c s t o hm hr ho ho' =>
+    obtain ⟨_,_,_,_,_,_,_,_,_,hch,_,_,_⟩ := hr
+    intro _ _ hwork
+    rw [hch] at hwork
+    simp [chainWork] at hwork
+  | restart c s t hm hr =>
+    obtain ⟨_,_,_,_,_,rfl⟩ := hr
+    intro _ _ hwork
+    simp [chainWork] at hwork
+  | copy_one _ _ _ hm _ _ | copy_done _ _ _ hm _ _
+  | home_start _ _ _ hm _ _ | home_step _ _ _ hm _ _
+  | fpp_slice _ _ _ hm _ | fpp_done _ _ _ hm _
+  | markEnd_found _ _ _ hm _ _ | markEnd_step _ _ _ hm _ _
+  | choose_select _ _ _ hm _ _ _ | choose_step _ _ _ hm _ _
+  | rewind_done _ _ _ hm _ _ | rewind_one _ _ _ hm _ _ _
+  | rewind_pair _ _ _ hm _ _ _ =>
+    intro hmode
+    first
+      | (simp [hm] at hmode)
+      | (simp at hmode)
+
 /-- The run invariant: the minimal-period payload, the excluded lower bound of the running
 search, and the excluded `last` of a broken chain at a restart-guard state. -/
 structure MinimalAcrossRestart (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
