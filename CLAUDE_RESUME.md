@@ -24,6 +24,13 @@
 | `PalPeg/RestartBoundary.lean` | `not_breakStep_of_text`、`LeftCertificate`、`distance_ne_boundary` |
 | `PalPeg/RestartCertificate.lean` | `CertAt`／`certAt_packed`、`scanInvariant_packed`、`noBoundaryBreak_packed`、`canonicalLength_packed`、**`restartStage`** |
 
+**次の goal `hshiftPeriodMinimal` の設計（調査のみ・未実装。定義と型は読んだ、証明は 1 行も書いていない）**
+
+* 葉と既存 `CanonicalChainMinimal.shiftPeriodMinimal_packed` の差は前提 1 個だけ: 既存は `s.lower = reset`、葉は `¬ restartGuardVM s`。`lower = reset` が効いているのは (a) `BudgetMinimal` の guard（`intro hy : y.vm.lower = reset`）と (b) 誕生点の `birthMinimals_packed`（`futureMinimal_of_candidate`／`moveMinimal_of_candidate` の `hlower : lower = 0`）。
+* 既存部品: `GalilMinimalPeriod.no_short_period_of_minimal` は **`hlow : ∀ δ, 0 < δ → δ ≤ lower → ¬ HasPeriod (Span …) (2δ)` を仮説に取る一般形が既にある**（`lower = 0` 版はその特殊化）。`GalilPeriodNext.periodOn_fineWilf`、`GalilBreakNoBelow.noBelow_after_break_of_mismatch`（`q ≤ p` の排除）もある。
+* 要る新しい run 不変量: `LowerExcluded raw C lower`（chain idle の scan 状態で、探索の `lower` 以下の半周期 `δ` は中心 `C` の十分大きい span の周期 `2δ` でない）。`lower = 0`（init／fallback／replayStart 後）では自明。broken restart では `lower = last`: 旧 chain の最小性証明書（`SemWith`/`TailMinimal`）＋ break の 1 点不一致 ＋ Fine–Wilf ＋ **n270 の `MarkLedger`（`last ≤ distance − h`、`boundary = last + h`）** から出す。span が break 点を含むこと: `k ≥ 4H > 4·last ≥ 4(d − 2h + 1) ≥ d + 1`（`d ≥ 4h`）。restart は中心を動かさず、idle の間は shift が無く、mismatch は fallback で `lower` を reset するので、不変量は restart から次の誕生まで中心固定で運べる。
+* 手順: (P1) `futureMinimal_of_candidate`／`moveMinimal_of_candidate` の `hlower` を `hlow` 形に一般化 → (P2) `LowerExcluded` を packed run に沿って運ぶ（restart tick が本体）→ (P3) `BudgetMinimal` の guard を差し替え、`shiftPeriodMinimal_packed` の前提を葉の形にして `OracleReady` に接続。
+
 **未完の部分**: producer の残り葉 `hshiftPeriodMinimal`（restart 後は `lower = last ≠ reset`。`CanonicalChainMinimal.shiftPeriodMinimal_packed` は `lower = reset` 前提で未接続、`≤ last` の周期の排除が要る）と `hmove`（Galil の移動不等式）。`obligation_localRealization` は未着手。
 
 ## n269 — `hrestartStage` を 1 仮説 `NoBoundaryBreak` まで還元（未接続）
