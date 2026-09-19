@@ -153,6 +153,25 @@ theorem position_le_of_front_steps {onLetter leftFirst : GalilVM → Prop}
   omega
 
 /-- `extra7_of_front_run_pack` over a bare `Steps`. -/
+theorem extra7_of_front_steps_bound {onLetter leftFirst : GalilVM → Prop}
+    {centre : GalilVM → Fin 3} {place : GalilVM → GalilScaffoldPlace.Place} {entry q : ℕ}
+    {first : Fin 9} {delay : ℕ} {n : ℕ} {x y : State GalilVM}
+    {w : List (Fin 2)} {m : ℕ}
+    (h : Steps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay n x y)
+    (hg : ∀ (j : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay j x z →
+      CentreLive z.ctl z.vm)
+    (hPx : FrontPack x.ctl x.vm)
+    (hpack : PalPeg.CloseoutPackRun10.LPackM w x.ctl x.vm)
+    (hm1 : 1 ≤ m) (hmle : m ≤ w.length)
+    (hy : front y.vm ≤ (2 * m - 1 : ℕ)) :
+    CloseoutPackRun46.Extra7 x := by
+  refine ⟨fun hmo hrx => ?_⟩
+  obtain ⟨hrep,hpres⟩ := rrep_of_lpackM hpack hmo hrx
+  have hmono := (front_steps_mono onLetter leftFirst centre place entry q first delay h hg hPx).2
+  rw [front_eq_position hPx hrx] at hmono
+  exact extra7_of_bound hrep hpres hm1 hmle (by omega) hmo hrx
+
 theorem extra7_of_front_steps_pack {onLetter leftFirst : GalilVM → Prop}
     {centre : GalilVM → Fin 3} {place : GalilVM → GalilScaffoldPlace.Place} {entry q : ℕ}
     {first : Fin 9} {delay : ℕ} {n : ℕ} {x y : State GalilVM}
@@ -167,10 +186,9 @@ theorem extra7_of_front_steps_pack {onLetter leftFirst : GalilVM → Prop}
     (hm1 : 1 ≤ m) (hmle : m ≤ w.length)
     (hy : position y.vm.right ≤ 2 * m - 1) :
     CloseoutPackRun46.Extra7 x := by
-  refine ⟨fun hmo hrx => ?_⟩
-  obtain ⟨hrep, hpres⟩ := rrep_of_lpackM hpack hmo hrx
-  exact extra7_of_bound hrep hpres hm1 hmle
-    (position_le_of_front_steps h hg hPx hPy hrx hry hy) hmo hrx
+  apply extra7_of_front_steps_bound h hg hPx hpack hm1 hmle
+  rw [front_eq_position hPy hry]
+  exact_mod_cast hy
 
 #print axioms position_le_of_front_steps
 #print axioms extra7_of_front_steps_pack

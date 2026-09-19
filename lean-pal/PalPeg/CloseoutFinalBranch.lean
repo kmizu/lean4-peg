@@ -211,8 +211,9 @@ theorem given_landingObligationsSansRadiusLedger (entry q : ℕ) (first : Fin 9)
 theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
-        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first) w)
-    (hC : H_realizeLIMW' centreC placeC entry q first)
+        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
+        (PalPeg.GalilTickFair.Canonical entry 2048) w)
+    (hC : H_realizeCanonical centreC placeC entry q first)
     (hres : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
       ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc)
@@ -221,7 +222,7 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc) :
     RecognizedByTotalPEG PAL :=
-  given_preTraceIMW entry q first
+  given_preTraceIMW_on entry q first (PalPeg.CloseoutCheckW.CanonTrace entry)
     (fun w hw => PalPeg.CloseoutCheckW.preTraceOnPackedRun_exists centreC placeC entry q first
       (h_bootRefreshedIMW_of_bootIPack centreC placeC entry q first
         (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))

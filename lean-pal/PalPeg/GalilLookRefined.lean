@@ -482,6 +482,28 @@ theorem stLG'_at_end (hτ : 2 ≤ τ) {Tc : ℕ → ℕ} (hp : PreloadL' raw st 
 
 end Run
 
+/-- A single nonempty palindrome reaches its report point by the deadline.
+This statement needs one finite preloaded trace, not a chosen family of traces. -/
+theorem reported_throttledLG' (τ : ℕ) (hτ2 : 2 ≤ τ) (α β : ℕ)
+    (hτ : 2 * (α + β) ≤ τ) (w : List (Fin 2)) (hw : 0 < w.length)
+    (P : Shared) (q : ℕ) (first : Fin 9) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ)
+    (hPreload : PreloadL' w st Tc)
+    (hReport : GalilLedgerAssembly.ReportPointAt P q first w w.length (st (Tc w.length)))
+    (hCost : ∀ m, m < w.length → dwT Tc (m+1) ≤ α * (Cw w (m+1) - Cw w m) + β)
+    (hpal : w ∈ PAL) :
+    Reported P q first w (stLG' τ w st (Tc w.length)) ((w.length + 1) * τ) := by
+  have hz := GalilLedgerThrottled.backlog_zero_trunc' α β τ hτ w hw hpal (dwT Tc)
+    hCost
+  have ht := GalilLedgerThrottled.on_time_trunc' α β τ hτ w (dwT Tc)
+    (TcLG' τ w st (Tc w.length) Tc) (TcLG'_zero τ w st hτ2 hPreload)
+    (O_step_throttledLG' τ w st hτ2 hPreload) hz
+  obtain ⟨hrp, hfr⟩ := GalilLedgerAssembly.reportPoint_of_at_length hw hReport
+  refine ⟨TcLG' τ w st (Tc w.length) Tc w.length, ht, ?_, ?_⟩
+  · show ReportPoint w (stLG' τ w st (Tc w.length) _)
+    rw [stLG'_at_end τ w st hτ2 hPreload hw hReport]; exact hrp
+  · show Refreshed _ _ _ (stLG' τ w st (Tc w.length) _)
+    rw [stLG'_at_end τ w st hτ2 hPreload hw hReport]; exact hfr
+
 /-- Ledger obligation for the τ-spaced lookahead-throttled runs. -/
 theorem ledger_throttledLG' (τ : ℕ) (hτ2 : 2 ≤ τ) (α β : ℕ) (hτ : 2 * (α + β) ≤ τ)
     (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ)
@@ -497,18 +519,8 @@ theorem ledger_throttledLG' (τ : ℕ) (hτ2 : 2 ≤ τ) (α β : ℕ) (hτ : 2 
       (fun w => stLG' τ w (stOf w) (TcOf w w.length))
       (fun w => (w.length + 1) * τ) := by
   intro w hw hpal
-  have hp := hpre w hw
-  have hz := GalilLedgerThrottled.backlog_zero_trunc' α β τ hτ w hw hpal (dwT (TcOf w))
-    (O_cost w hw)
-  have ht := GalilLedgerThrottled.on_time_trunc' α β τ hτ w (dwT (TcOf w))
-    (TcLG' τ w (stOf w) (TcOf w w.length) (TcOf w)) (TcLG'_zero τ w (stOf w) hτ2 hp)
-    (O_step_throttledLG' τ w (stOf w) hτ2 hp) hz
-  obtain ⟨hrp, hfr⟩ := GalilLedgerAssembly.reportPoint_of_at_length hw (hrep w hw)
-  refine ⟨TcLG' τ w (stOf w) (TcOf w w.length) (TcOf w) w.length, ht, ?_, ?_⟩
-  · show ReportPoint w (stLG' τ w (stOf w) (TcOf w w.length) _)
-    rw [stLG'_at_end τ w (stOf w) hτ2 hp hw (hrep w hw)]; exact hrp
-  · show Refreshed _ _ _ (stLG' τ w (stOf w) (TcOf w w.length) _)
-    rw [stLG'_at_end τ w (stOf w) hτ2 hp hw (hrep w hw)]; exact hfr
+  exact reported_throttledLG' τ hτ2 α β hτ w hw (Pof w) (qof w) (firstOf w)
+    (stOf w) (TcOf w) (hpre w hw) (hrep w hw) (O_cost w hw) hpal
 
 /-- **`AbstractRun'` for the lookahead-throttled run with arrivals `2^18` apart.** -/
 theorem abstractRun_throttledL'_2p18 (raw : List (Fin 2)) (st : ℕ → State GalilVM) (e : ℕ)

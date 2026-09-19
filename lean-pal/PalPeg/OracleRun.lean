@@ -1,3 +1,4 @@
+import PalPeg.CanonicalPeriod
 import PalPeg.GalilTickFun3
 import PalPeg.GalilBranchInvariants2
 import PalPeg.GalilRunSkeleton
@@ -39,6 +40,8 @@ open GalilScaffoldCounter GalilScaffoldInputHead GalilScaffoldChainVerifier
 open PalPeg.GalilTraceCost PalPeg.GalilLexMeasure PalPeg.GalilInvPlus3 PalPeg.CloseoutPackW
   PalPeg.GalilStructuredSkeleton PalPeg.GalilCheckpoints PalPeg.GalilIntervalCost
   PalPeg.CloseoutPackRun2 PalPeg.GalilInvPlus2
+open PalPeg.GalilTickFair (Canonical canonical_of_scan_nonCopy canonical_of_scan_copy
+  canonical_of_offScan)
 
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
@@ -109,19 +112,19 @@ theorem chainReady_watch_of_watchWindow {raw : List (Fin 2)} {cen₀ : ℕ} {cc 
 `n + 1` and whose right head can move, `n` background ticks (`scan_count`) reach the same heads,
 centre and counters with the clock at `1`.  Readiness of the search (needed only while the chain
 is idle) and of the chain are taken as run-form inputs over the run out of `⟨c, s⟩`. -/
-theorem scanBackground_run {w : List (Fin 2)} :
-    ∀ (n : ℕ) (c : Control) (s : GalilVM), c.mode = .scan → c.replaying = false →
-      c.clock = n + 1 → canRight s.right → OutputRel w c s →
+theorem scanBackground_run_all {w : List (Fin 2)} :
+    ∀ (n : ℕ) (c : Control) (s : GalilVM), c.mode = .scan →
+      c.clock = n + 1 → canRight s.right → SoundScanNR w ⟨c,s⟩ →
       (∀ (k : ℕ) (y : State GalilVM),
         PalPeg.ShapedRun.ShapedSteps centre place entry q first w k ⟨c, s⟩ y →
         y.ctl.mode = .scan → y.vm.chain = .idle →
         PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm)) →
       (∀ (k : ℕ) (y : State GalilVM),
-        StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) k ⟨c, s⟩ y →
-        y.ctl.mode = .scan → y.ctl.replaying = false → y.vm.right = s.right →
+        StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048) k ⟨c, s⟩ y →
+        y.ctl.mode = .scan → y.ctl.replaying = c.replaying → y.vm.right = s.right → y.vm.replay = s.replay →
         ChainReady y.vm.chain) →
       ∃ t : GalilVM,
-        StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) n ⟨c, s⟩
+        StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048) n ⟨c, s⟩
           ⟨{c with clock := 1}, t⟩ ∧
         t.left = s.left ∧ t.right = s.right ∧ t.center = s.center ∧ t.replay = s.replay ∧
         t.remaining = s.remaining ∧ t.radius = s.radius ∧ t.length = s.length ∧ t.fpp = s.fpp ∧
@@ -129,16 +132,15 @@ theorem scanBackground_run {w : List (Fin 2)} :
   intro n
   induction n with
   | zero =>
-    intro c s hm hr hclk hav hout _ _
+    intro c s hm hclk hav hQ _ _
     have hceq : ({c with clock := 1} : Control) = c := by cases c; simp_all
     refine ⟨s, ?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_⟩
     · rw [hceq]
-      exact .zero _ (fun _ _ => hout)
+      exact .zero _ hQ
     · rw [hceq]
       exact .zero _
   | succ n ih =>
-    intro c s hm hr hclk hav hout hready hchain
-    have hQ : SoundScanNR w ⟨c, s⟩ := fun _ _ => hout
+    intro c s hm hclk hav hQ hready hchain
     have hsearch : ∃ v, searchEffect (PofC centre place entry w) false s v := by
       by_cases hidle : s.chain = .idle
       · exact PalPeg.GalilBranchInvariants2.searchEffect_exists _ false s
@@ -147,7 +149,7 @@ theorem scanBackground_run {w : List (Fin 2)} :
     have hchainAt : ∀ v : SearchVM, ∃ z, chainAt false (decide (v.search.mode = .found))
         (v.dp.config.tapes 11) ((PofC centre place entry w).centre s)
         ((PofC centre place entry w).place s) s.center s.radius s.chain z :=
-      fun v => chainAt_exists false _ _ _ _ _ _ s.chain (hchain 0 ⟨c, s⟩ (.zero _ hQ) hm hr rfl)
+      fun v => chainAt_exists false _ _ _ _ _ _ s.chain (hchain 0 ⟨c, s⟩ (.zero _ hQ) hm rfl rfl rfl)
     obtain ⟨s', hb⟩ := backgroundS_exists (PofC centre place entry w) q first s hsearch hchainAt
     have hav' : (galilFrameS (PofC centre place entry w) q first).available s := hav
     have htick : Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
@@ -155,8 +157,8 @@ theorem scanBackground_run {w : List (Fin 2)} :
       Tick.scan_count c s s' hm (Or.inr hav') (by omega) hb
     obtain ⟨hl', hr', -, hc', -, hrad', hlen', -, hrem', hrep', hfpp', -⟩ :=
       backgroundS_fields (PofC centre place entry w) q first hb
-    have hout' : OutputRel w {c with clock := c.clock - 1} s' :=
-      outputRel_background w (PofC centre place entry w) q first hb rfl hout
+    have hQ' : SoundScanNR w ⟨{c with clock := c.clock - 1},s'⟩ := fun _ hr0 =>
+      outputRel_background w (PofC centre place entry w) q first hb rfl (hQ hm hr0)
     have hnr : ¬ restartVM entry s s' :=
       PalPeg.ShapedRun.not_restartVM_background centre place entry q first hb
     have hrs : (⟨c, s⟩ : State GalilVM).ctl.mode = .replayStart →
@@ -166,15 +168,92 @@ theorem scanBackground_run {w : List (Fin 2)} :
       have h' : c.mode = .replayStart := h
       rw [hm] at h'
       cases h'
+    have hcanBg : Canonical entry 2048 ⟨c, s⟩ ⟨{c with clock := c.clock - 1}, s'⟩ :=
+      canonical_of_scan_nonCopy hm (by show c.mode ≠ Mode.copy; rw [hm]; decide) hnr
     obtain ⟨t, hrun, htl, htr, htc, htrep, htrem, htrad, htlen, htfpp, hrunS⟩ :=
-      ih {c with clock := c.clock - 1} s' hm hr (by simp; omega) (hr' ▸ hav) hout'
+      ih {c with clock := c.clock - 1} s' hm (by simp; omega) (hr' ▸ hav) hQ'
         (fun k y hst hmy hidle => hready (k + 1) y (.succ htick (fun _ => hnr) hrs hst) hmy hidle)
-        (fun k y hst hmy hry hyr => hchain (k + 1) y (.succ hQ htick hst) hmy hry (hyr.trans hr'))
-    refine ⟨t, .succ hQ htick hrun, htl.trans hl', htr.trans hr', htc.trans hc', htrep.trans hrep',
+        (fun k y hst hmy hry hyr hyrep => hchain (k + 1) y (.succ hQ htick hcanBg hst) hmy hry (hyr.trans hr') (hyrep.trans hrep'))
+    refine ⟨t, .succ hQ htick hcanBg hrun, htl.trans hl', htr.trans hr', htc.trans hc', htrep.trans hrep',
       htrem.trans hrem', htrad.trans hrad', htlen.trans hlen', htfpp.trans hfpp',
       .succ htick (fun _ => hnr) hrs hrunS⟩
 
+theorem scanBackground_run {w : List (Fin 2)} :
+    ∀ (n : ℕ) (c : Control) (s : GalilVM), c.mode = .scan → c.replaying = false →
+      c.clock = n + 1 → canRight s.right → OutputRel w c s →
+      (∀ (k : ℕ) (y : State GalilVM),
+        PalPeg.ShapedRun.ShapedSteps centre place entry q first w k ⟨c, s⟩ y →
+        y.ctl.mode = .scan → y.vm.chain = .idle →
+        PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm)) →
+      (∀ (k : ℕ) (y : State GalilVM),
+        StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048) k ⟨c, s⟩ y →
+        y.ctl.mode = .scan → y.ctl.replaying = false → y.vm.right = s.right →
+        ChainReady y.vm.chain) →
+      ∃ t : GalilVM,
+        StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048) n ⟨c, s⟩
+          ⟨{c with clock := 1}, t⟩ ∧
+        t.left = s.left ∧ t.right = s.right ∧ t.center = s.center ∧ t.replay = s.replay ∧
+        t.remaining = s.remaining ∧ t.radius = s.radius ∧ t.length = s.length ∧ t.fpp = s.fpp ∧
+        PalPeg.ShapedRun.ShapedSteps centre place entry q first w n ⟨c, s⟩ ⟨{c with clock := 1}, t⟩ := by
+  intro n c s hm hr hc hav hout hready hchain
+  exact scanBackground_run_all centre place entry q first n c s hm hc hav
+    (fun _ _ => hout) hready
+    (fun k y hRun hy hry hyr _ => hchain k y hRun hy (hry.trans hr) hyr)
+
 #print axioms scanBackground_run
+
+/-- A matching comparison, including replay and chain birth. -/
+theorem matched_tick {w : List (Fin 2)} (c : Control) (s : GalilVM)
+    (hm : c.mode = .scan) (hc : c.clock = 1) (hav : canRight s.right)
+    (hmt : read (left s.left) = read (right s.right))
+    (hsearch : ∃ v, searchEffect (PofC centre place entry w) true s v)
+    (hchain : ChainReady s.chain) :
+    ∃ (vq : SearchVM) (z : ChainVM) (o : Bool),
+      searchEffect (PofC centre place entry w) true s vq ∧
+      chainAt true (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
+        ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
+        s.center s.radius s.chain z ∧
+      let t := replayDec c.replaying
+        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+          (afterCompare s ⟨left s.left,right s.right,z⟩ vq))
+      refresh (galilFrameS (PofC centre place entry w) q first) t c.output o ∧
+      Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c,s⟩
+        ⟨{c with clock := 2048,output := o, replaying := c.replaying && !(PofC centre place entry w).replayExhausted t},t⟩ := by
+  classical
+  have hav' : (galilFrameS (PofC centre place entry w) q first).available s := hav
+  obtain ⟨vq, hq⟩ := hsearch
+  obtain ⟨z,hz⟩ := chainAt_exists true _ _ _ _ _ _ s.chain hchain
+  let vs : ScanVM := ⟨left s.left, right s.right, z⟩
+  have hmt0 : (galilFrame (PofC centre place entry w) q first).matched (scanLens.set s vs) := hmt
+  let born := chainBorn (decide (vq.search.mode = .found)) s.chain
+  have hcmp : (galilFrameS (PofC centre place entry w) q first).compare s
+      (afterBirth born (afterCompare s vs vq)) :=
+    ⟨vs, vq, true, rfl, rfl, ⟨fun _ => hmt0, fun _ => rfl⟩, hq, hz, rfl⟩
+  have hmt1 : (galilFrameS (PofC centre place entry w) q first).matched
+      (afterBirth born (afterCompare s vs vq)) := by
+    show read (afterBirth born (afterCompare s vs vq)).left
+      = read (afterBirth born (afterCompare s vs vq)).right
+    rw [afterBirth_left, afterBirth_right]
+    exact hmt
+  let s'' : GalilVM := replayDec c.replaying (afterBirth born (afterCompare s vs vq))
+  let o : Bool := if (PofC centre place entry w).onLetter s''
+    then decide ((PofC centre place entry w).leftFirst s'') else c.output
+  have ho : refresh (galilFrameS (PofC centre place entry w) q first) s'' c.output o := by
+    refine ⟨fun hl => ?_, fun hl => ?_⟩
+    · have hl' : (PofC centre place entry w).onLetter s'' := hl
+      show (if (PofC centre place entry w).onLetter s''
+        then decide ((PofC centre place entry w).leftFirst s'') else c.output) = true ↔
+        (PofC centre place entry w).leftFirst s''
+      rw [if_pos hl']
+      exact decide_eq_true_iff
+    · have hl' : ¬ (PofC centre place entry w).onLetter s'' := hl
+      show (if (PofC centre place entry w).onLetter s''
+        then decide ((PofC centre place entry w).leftFirst s'') else c.output) = c.output
+      rw [if_neg hl']
+  have htick := Tick.scan_match (F := galilFrameS (PofC centre place entry w) q first)
+    (delay := 2048) c s _ s'' o hm (Or.inr hav') hc hcmp hmt1
+    (matchedPlace_replayDec (PofC centre place entry w) q first c.replaying _) ho
+  exact ⟨vq,z,o,hq,hz,ho,htick⟩
 
 /-- **The comparison of one scan cycle, classified.**  At clock `1` in a non-replaying scan
 state whose right head can move, with a ready search co-process and chain, the tick is one of:
@@ -227,44 +306,11 @@ theorem scanCompare_cases {w : List (Fin 2)} (c : Control) (s : GalilVM) (hm : c
       ((PofC centre place entry w).place s) s.center s.radius s.chain z :=
     fun a v => chainAt_exists a _ _ _ _ _ _ s.chain hchain
   by_cases hmt : read (left s.left) = read (right s.right)
-  · obtain ⟨vq, hq⟩ := hsearch true
-    obtain ⟨z, hz⟩ := hchainAt true vq
-    let vs : ScanVM := ⟨left s.left, right s.right, z⟩
-    have hmt0 : (galilFrame (PofC centre place entry w) q first).matched (scanLens.set s vs) := hmt
-    let born := chainBorn (decide (vq.search.mode = .found)) s.chain
-    have hcmp : (galilFrameS (PofC centre place entry w) q first).compare s
-        (afterBirth born (afterCompare s vs vq)) :=
-      ⟨vs, vq, true, rfl, rfl, ⟨fun _ => hmt0, fun _ => rfl⟩, hq, hz, rfl⟩
-    have hmt1 : (galilFrameS (PofC centre place entry w) q first).matched
-        (afterBirth born (afterCompare s vs vq)) := by
-      show read (afterBirth born (afterCompare s vs vq)).left
-        = read (afterBirth born (afterCompare s vs vq)).right
-      rw [afterBirth_left, afterBirth_right]
-      exact hmt
-    let s'' : GalilVM := replayDec c.replaying (afterBirth born (afterCompare s vs vq))
-    let o : Bool := if (PofC centre place entry w).onLetter s''
-      then decide ((PofC centre place entry w).leftFirst s'') else c.output
-    have ho : refresh (galilFrameS (PofC centre place entry w) q first) s'' c.output o := by
-      refine ⟨fun hl => ?_, fun hl => ?_⟩
-      · have hl' : (PofC centre place entry w).onLetter s'' := hl
-        show (if (PofC centre place entry w).onLetter s''
-          then decide ((PofC centre place entry w).leftFirst s'') else c.output) = true ↔
-          (PofC centre place entry w).leftFirst s''
-        rw [if_pos hl']
-        exact decide_eq_true_iff
-      · have hl' : ¬ (PofC centre place entry w).onLetter s'' := hl
-        show (if (PofC centre place entry w).onLetter s''
-          then decide ((PofC centre place entry w).leftFirst s'') else c.output) = c.output
-        rw [if_neg hl']
-    have htick := Tick.scan_match (F := galilFrameS (PofC centre place entry w) q first)
-      (delay := 2048) c s _ s'' o hm (Or.inr hav') hc hcmp hmt1
-      (matchedPlace_replayDec (PofC centre place entry w) q first c.replaying _) ho
-    have hs'' : s'' = afterBirth born (afterCompare s vs vq) := by
-      show replayDec c.replaying _ = _
-      rw [hr]; rfl
-    rw [hs''] at ho htick
-    rw [hr] at htick
-    exact Or.inl ⟨hmt, vq, z, o, hq, hz, ho, htick⟩
+  · obtain ⟨vq,z,o,hq,hz,ho,htick⟩ := matched_tick centre place entry q first c s hm hc hav hmt
+      (hsearch true) hchain
+    refine Or.inl ⟨hmt,vq,z,o,hq,hz,?_,?_⟩
+    · simpa only [hr,replayDec,Bool.false_eq_true,↓reduceIte] using ho
+    · simpa only [hr,replayDec,Bool.false_eq_true,↓reduceIte,Bool.false_and] using htick
   · obtain ⟨vq, hq⟩ := hsearch false
     obtain ⟨z, hz⟩ := hchainAt false vq
     let vs : ScanVM := ⟨left s.left, right s.right, z⟩
@@ -352,21 +398,21 @@ theorem scanCycle_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre place 
       PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm))
     (hchain : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ y →
-      y.ctl.mode = .scan → ChainReady y.vm.chain) :
+      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ y →
+      y.ctl.mode = .scan → position y.vm.right + 1 < (encoded w).length → ChainReady y.vm.chain) :
     PalPeg.CloseoutCheckW.CycleOutOn centre place entry q first
-      (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) w m c s ∨
+      (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) (Canonical entry 2048) w m c s ∨
     (position s.right < 2 * m - 1 ∧ ∃ t : GalilVM,
-      StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+      StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048)
         (c.clock - 1) ⟨c, s⟩ ⟨{c with clock := 1}, t⟩ ∧
       PalPeg.ShapedRun.ShapedSteps centre place entry q first w (c.clock - 1) ⟨c, s⟩ ⟨{c with clock := 1}, t⟩ ∧
       t.left = s.left ∧ t.right = s.right ∧ t.center = s.center ∧ t.replay = s.replay ∧
       read (left t.left) ≠ read (right t.right)) := by
   classical
-  obtain ⟨⟨hm, hr⟩, hf, hminvS, c₀, r₀, j, hI₀, hrun, jS, hsh⟩ := hI
+  obtain ⟨⟨hm, hr⟩, hf, hminvS, c₀, r₀, j, hI₀, hBoot, hrun, jS, hsh⟩ := hI
   have hpack : IPackMW centre place entry q first w ⟨c, s⟩ :=
-    PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMW centre place entry q first hrun
-  obtain ⟨g, hg0, hgj, htr, -⟩ := id hrun
+    PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun
+  obtain ⟨g, hg0, hgj, htr, -, -⟩ := id hrun
   have hjx : Steps (galilFrameS (PofC centre place entry w) q first) 2048 j ⟨c₀, r₀⟩ ⟨c, s⟩ := by
     have := PalPeg.CloseoutPackRun2.steps_of_trace htr j le_rfl
     rwa [hg0, hgj] at this
@@ -385,13 +431,13 @@ theorem scanCycle_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre place 
   -- the report place: the state is the report
   by_cases hat : position s.right = 2 * m - 1
   · left; left
-    have hstI0 : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w 0 ⟨c, s⟩ ⟨c, s⟩ :=
+    have hstI0 : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w 0 ⟨c, s⟩ ⟨c, s⟩ :=
       ⟨fun _ => ⟨c, s⟩, rfl, rfl, ⟨fun i hi => absurd hi (Nat.not_lt_zero _), fun _ _ _ _ => hout⟩,
-        fun _ _ => hpack⟩
+        fun i hi => absurd hi (Nat.not_lt_zero _), fun _ _ => hpack⟩
     have hrp : PalPeg.GalilReportPrefix.ReportPointAt w m ⟨c, s⟩ :=
       ⟨hr, ⟨rad, hsi⟩, hminvS, hat, hm1, hmle⟩
     refine ⟨⟨c, s⟩, 0, [], hstI0, costedRun_nil s, hrp, hf, fun _ => ⟨c, s, 0, [], hstI0,
-      costedRun_nil s, ⟨⟨hm, hr⟩, hf, hminvS, c₀, r₀, j, hI₀, hrun, jS, hsh⟩, by omega⟩⟩
+      costedRun_nil s, ⟨⟨hm, hr⟩, hf, hminvS, c₀, r₀, j, hI₀, hBoot, hrun, jS, hsh⟩, by omega⟩⟩
   have hlt : position s.right < 2 * m - 1 := lt_of_le_of_ne hp hat
   -- the background ticks
   obtain ⟨t, hbg, htl, htr', htc, htrep, htrem, htrad, htlen, htfpp, hbgS⟩ :=
@@ -399,14 +445,15 @@ theorem scanCycle_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre place 
       (fun k y hst hmy hidle => hready c₀ r₀ (jS + k) y hI₀
         (PalPeg.ShapedRun.shapedSteps_trans centre place entry q first hsh hst) hmy hidle)
       (fun k y hst hmy hry hyr => hchain c₀ r₀ _ y hI₀
-        (PalPeg.CloseoutCheckW.stepsIMW_trans centre place entry q first hrun
-          (PalPeg.CloseoutMarksPack.packRunR_MW_marksFree centre place entry q first h4 hP c₀ r₀ hI₀
+        (PalPeg.CloseoutCheckW.stepsIMWC_trans centre place entry q first hrun
+          (PalPeg.CloseoutMarksPack.packRunR_MWR_marksFree centre place entry q first h4 hP (Canonical entry 2048) c₀ r₀ hI₀
             m hm1 hmle j ⟨c, s⟩ hjx k y hpack hst hry
-            (by show position y.vm.right ≤ 2 * m - 1; rw [hyr]; omega))) hmy)
-  have hrunT : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w (j + (c.clock - 1))
+            (by show position y.vm.right ≤ 2 * m - 1; rw [hyr]; omega))) hmy
+          (by rw [hyr]; omega))
+  have hrunT : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w (j + (c.clock - 1))
       ⟨c₀, r₀⟩ ⟨{c with clock := 1}, t⟩ :=
-    PalPeg.CloseoutCheckW.stepsIMW_trans centre place entry q first hrun
-      (PalPeg.CloseoutMarksPack.packRunR_MW_marksFree centre place entry q first h4 hP c₀ r₀ hI₀
+    PalPeg.CloseoutCheckW.stepsIMWC_trans centre place entry q first hrun
+      (PalPeg.CloseoutMarksPack.packRunR_MWR_marksFree centre place entry q first h4 hP (Canonical entry 2048) c₀ r₀ hI₀
         m hm1 hmle j ⟨c, s⟩ hjx _ ⟨{c with clock := 1}, t⟩ hpack hbg hr
         (by show position t.right ≤ 2 * m - 1; rw [htr']; omega))
   have hjtS : PalPeg.ShapedRun.ShapedSteps centre place entry q first w (jS + (c.clock - 1)) ⟨c₀, r₀⟩ ⟨{c with clock := 1}, t⟩ :=
@@ -423,7 +470,7 @@ theorem scanCycle_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre place 
     · exact PalPeg.GalilBranchInvariants2.searchEffect_exists _ a t
         (hready c₀ r₀ _ _ hI₀ hjtS hm hidle)
     · exact ⟨searchLens.get t, Or.inr ⟨hidle, rfl⟩⟩
-  have hchainT : ChainReady t.chain := hchain c₀ r₀ _ _ hI₀ hrunT hm
+  have hchainT : ChainReady t.chain := hchain c₀ r₀ _ _ hI₀ hrunT hm (by rw [htr']; omega)
   have hsiT : ScanInvariant w (position t.center) rad t.left t.right := by
     rw [htl, htr', htc]; exact hsi
   rcases scanCompare_cases centre place entry q first {c with clock := 1} t hm rfl hr hav' hsearch
@@ -452,14 +499,19 @@ theorem scanCycle_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre place 
     have hQ' : SoundScanNR w ⟨c', s'⟩ := fun _ _ => hout'
     have htick' : Tick (galilFrameS (PofC centre place entry w) q first) 2048
         ⟨{c with clock := 1}, t⟩ ⟨c', s'⟩ := htick
-    have hall : StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+    have hnr' : ¬ restartVM entry t s' :=
+      PalPeg.ShapedRun.not_restartVM_of_chainAt_target entry hz
+        (by rw [hs', afterBirth_chain, afterCompare_chain])
+    have hcanM : Canonical entry 2048 ⟨{c with clock := 1}, t⟩ ⟨c', s'⟩ :=
+      canonical_of_scan_nonCopy hm (by rw [hc']; show c.mode ≠ Mode.copy; rw [hm]; decide) hnr'
+    have hall : StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048)
         (c.clock - 1 + 1) ⟨c, s⟩ ⟨c', s'⟩ :=
-      stepsAll_trans hbg (.succ (fun _ _ => by
+      stepsAllR_trans hbg (.succ (fun _ _ => by
         have : OutputRel w {c with clock := 1} t := outputRel_transfer w htr' rfl hout
-        exact this) htick' (.zero _ hQ'))
-    have hstI : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w (c.clock - 1 + 1)
+        exact this) htick' hcanM (.zero _ hQ'))
+    have hstI : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w (c.clock - 1 + 1)
         ⟨c, s⟩ ⟨c', s'⟩ :=
-      PalPeg.CloseoutMarksPack.packRunR_MW_marksFree centre place entry q first h4 hP c₀ r₀ hI₀
+      PalPeg.CloseoutMarksPack.packRunR_MWR_marksFree centre place entry q first h4 hP (Canonical entry 2048) c₀ r₀ hI₀
         m hm1 hmle j ⟨c, s⟩ hjx _ ⟨c', s'⟩ hpack hall rfl (by show position s'.right ≤ 2 * m - 1; omega)
     have hminv' : MInv w c' s' := by
       have h1 : MInv w {c with clock := 1} t := minv_same rfl htr' htc htrep hminvS
@@ -467,12 +519,9 @@ theorem scanCycle_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre place 
         (vq := vq) o 2048 hr rfl rfl hav' hmt hsiT h1
       exact minv_afterBirth born h2
     have hf' : Refreshed (PofC centre place entry w) q first ⟨c', s'⟩ := ⟨c.output, ho⟩
-    have hnr' : ¬ restartVM entry t s' :=
-      PalPeg.ShapedRun.not_restartVM_of_chainAt_target entry hz
-        (by rw [hs', afterBirth_chain, afterCompare_chain])
     have hI' : PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first w c' s' :=
-      ⟨⟨hm, rfl⟩, hf', hminv', c₀, r₀, _, hI₀,
-        PalPeg.CloseoutCheckW.stepsIMW_trans centre place entry q first hrun hstI, _,
+      ⟨⟨hm, rfl⟩, hf', hminv', c₀, r₀, _, hI₀, hBoot,
+        PalPeg.CloseoutCheckW.stepsIMWC_trans centre place entry q first hrun hstI, _,
         PalPeg.ShapedRun.shapedSteps_trans centre place entry q first hjtS
           (.succ htick' (fun _ => hnr') (fun h => absurd h hrsT) (.zero _))⟩
     have hcr : CostedRun s s' (c.clock - 1 + 1) [matchPiece (position s'.right) (c.clock - 1) (by omega)] := by
@@ -485,10 +534,10 @@ theorem scanCycle_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre place 
     by_cases hat' : position s'.right = 2 * m - 1
     · left
       have hpack' : IPackMW centre place entry q first w ⟨c', s'⟩ :=
-        PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMW centre place entry q first hstI
-      have hstI0 : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w 0 ⟨c', s'⟩ ⟨c', s'⟩ :=
+        PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hstI
+      have hstI0 : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w 0 ⟨c', s'⟩ ⟨c', s'⟩ :=
         ⟨fun _ => ⟨c', s'⟩, rfl, rfl, ⟨fun i hi => absurd hi (Nat.not_lt_zero _), fun _ _ => hQ'⟩,
-          fun _ _ => hpack'⟩
+          fun i hi => absurd hi (Nat.not_lt_zero _), fun _ _ => hpack'⟩
       have hrp : PalPeg.GalilReportPrefix.ReportPointAt w m ⟨c', s'⟩ :=
         ⟨rfl, ⟨rad + 1, hsi'⟩, hminv', hat', hm1, hmle⟩
       exact ⟨⟨c', s'⟩, _, _, hstI, hcr, hrp, hf', fun _ => ⟨c', s', 0, [], hstI0,
@@ -557,12 +606,13 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
       PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm))
     (hchain : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ y →
-      y.ctl.mode = .scan → ChainReady y.vm.chain)
+      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ y →
+      y.ctl.mode = .scan → position y.vm.right + 1 < (encoded w).length → ChainReady y.vm.chain)
     (hshift : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
       (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
+      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
+      s.lower = GalilScaffoldCounter.reset →
       c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
       MInv w c s →
       read (left s.left) ≠ read (right s.right) →
@@ -579,7 +629,7 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
       Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
         ⟨{c with clock := 2048, mode := .shift}, u⟩ →
       ∃ (c' : Control) (s' : GalilVM) (n : ℕ),
-        StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) n
+        StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048) n
           ⟨{c with clock := 2048, mode := .shift}, u⟩ ⟨c', s'⟩ ∧
         PalPeg.ShapedRun.ShapedSteps centre place entry q first w n ⟨{c with clock := 2048, mode := .shift}, u⟩ ⟨c', s'⟩ ∧
         c'.mode = .scan ∧ c'.replaying = false ∧
@@ -589,7 +639,8 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
     (hfallback : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
       (z : ChainVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
+      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
+      s.lower = GalilScaffoldCounter.reset →
       c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
       MInv w c s →
       read (left s.left) ≠ read (right s.right) →
@@ -602,9 +653,9 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
           (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) →
       ∃ u : GalilVM, (PofC centre place entry w).beginFallback
         (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
-          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) u ∧
+          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) u ∧ u.fpp.walker = PalPeg.GalilTickFair.rightPlace u ∧
       ∃ (c' : Control) (s' : GalilVM) (kk r fb replay : ℕ),
-        StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+        StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048)
           (fb + replay) ⟨{c with clock := 2048, mode := .copy}, u⟩ ⟨c', s'⟩ ∧
         PalPeg.ShapedRun.ShapedSteps centre place entry q first w (fb + replay) ⟨{c with clock := 2048, mode := .copy}, u⟩ ⟨c', s'⟩ ∧
         c'.mode = .scan ∧ c'.replaying = false ∧
@@ -613,17 +664,17 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
         position s'.center = position s.center + (kk + 1 - r) ∧
         fb ≤ 12704 * (kk + 1 - r) + 4012 ∧ replay ≤ 8 * 2048 * (kk + 1 - r)) :
     PalPeg.CloseoutCheckW.CycleOracleOn centre place entry q first
-      (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) w := by
+      (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) (Canonical entry 2048) w := by
   classical
   intro m c s hm1 hmle hI hp
   rcases scanCycle_of_leaves centre place entry q first hP h4 hm1 hmle hI hp hready hchain
     with hdone | ⟨hlt, t, hbg, hbgS, htl, htr', htc, htrep, hmis⟩
   · exact hdone
   -- the comparison state after the background ticks
-  obtain ⟨⟨hm, hr⟩, hf, hminvS, c₀, r₀, j, hI₀, hrun, jS, hsh⟩ := hI
+  obtain ⟨⟨hm, hr⟩, hf, hminvS, c₀, r₀, j, hI₀, hBoot, hrun, jS, hsh⟩ := hI
   have hpack : IPackMW centre place entry q first w ⟨c, s⟩ :=
-    PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMW centre place entry q first hrun
-  obtain ⟨g, hg0, hgj, htr, -⟩ := id hrun
+    PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun
+  obtain ⟨g, hg0, hgj, htr, -, -⟩ := id hrun
   have hjx : Steps (galilFrameS (PofC centre place entry w) q first) 2048 j ⟨c₀, r₀⟩ ⟨c, s⟩ := by
     have := PalPeg.CloseoutPackRun2.steps_of_trace htr j le_rfl
     rwa [hg0, hgj] at this
@@ -654,13 +705,13 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
         (hready c₀ r₀ _ _ hI₀ hjtS hm hidle)
     · exact ⟨searchLens.get t, Or.inr ⟨hidle, rfl⟩⟩
   -- the packed prefix up to the comparison state
-  have hrunT : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w (j + (c.clock - 1))
+  have hrunT : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w (j + (c.clock - 1))
       ⟨c₀, r₀⟩ ⟨{c with clock := 1}, t⟩ :=
-    PalPeg.CloseoutCheckW.stepsIMW_trans centre place entry q first hrun
-      (PalPeg.CloseoutMarksPack.packRunR_MW_marksFree centre place entry q first h4 hP c₀ r₀ hI₀
+    PalPeg.CloseoutCheckW.stepsIMWC_trans centre place entry q first hrun
+      (PalPeg.CloseoutMarksPack.packRunR_MWR_marksFree centre place entry q first h4 hP (Canonical entry 2048) c₀ r₀ hI₀
         m hm1 hmle j ⟨c, s⟩ hjx _ ⟨{c with clock := 1}, t⟩ hpack hbg hr
         (by show position t.right ≤ 2 * m - 1; rw [htr']; omega))
-  have hchainT : ChainReady t.chain := hchain c₀ r₀ _ _ hI₀ hrunT hm
+  have hchainT : ChainReady t.chain := hchain c₀ r₀ _ _ hI₀ hrunT hm (by rw [htr']; omega)
   have hminvT : MInv w {c with clock := 1} t := minv_same rfl htr' htc htrep hminvS
   have hQt : SoundScanNR w ⟨{c with clock := 1}, t⟩ :=
     fun _ _ => outputRel_transfer w htr' rfl hout
@@ -672,44 +723,45 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
   have hland : ∀ (y : State GalilVM) (c' : Control) (s' : GalilVM) (n : ℕ),
       Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨{c with clock := 1}, t⟩ y →
       ¬ restartVM entry t y.vm →
+      Canonical entry 2048 ⟨{c with clock := 1}, t⟩ y →
       y.ctl.mode ≠ .scan →
-      StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) n y ⟨c', s'⟩ →
+      StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048) n y ⟨c', s'⟩ →
       PalPeg.ShapedRun.ShapedSteps centre place entry q first w n y ⟨c', s'⟩ →
       c'.mode = .scan → c'.replaying = false →
       Refreshed (PofC centre place entry w) q first ⟨c', s'⟩ →
       MInv w c' s' →
       position s'.right = position s.right + 1 →
-      StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+      StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048)
         (c.clock - 1 + 1 + n) ⟨c, s⟩ ⟨c', s'⟩ ∧
-      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w (c.clock - 1 + 1 + n)
+      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w (c.clock - 1 + 1 + n)
         ⟨c, s⟩ ⟨c', s'⟩ ∧
       PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first w c' s' := by
-    intro y c' s' n hty hnr hym hphase hphaseS hm' hr' hf' hminvL hpos'
+    intro y c' s' n hty hnr hcanE hym hphase hphaseS hm' hr' hf' hminvL hpos'
     have hQy : SoundScanNR w y := fun h => absurd h hym
-    have hall : StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+    have hall : StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048)
         (c.clock - 1 + 1 + n) ⟨c, s⟩ ⟨c', s'⟩ :=
-      stepsAll_trans (stepsAll_trans hbg (.succ hQt hty (.zero _ hQy))) hphase
-    have hstI : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w (c.clock - 1 + 1 + n)
+      stepsAllR_trans (stepsAllR_trans hbg (.succ hQt hty hcanE (.zero _ hQy))) hphase
+    have hstI : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w (c.clock - 1 + 1 + n)
         ⟨c, s⟩ ⟨c', s'⟩ :=
-      PalPeg.CloseoutMarksPack.packRunR_MW_marksFree centre place entry q first h4 hP c₀ r₀ hI₀
+      PalPeg.CloseoutMarksPack.packRunR_MWR_marksFree centre place entry q first h4 hP (Canonical entry 2048) c₀ r₀ hI₀
         m hm1 hmle j ⟨c, s⟩ hjx _ ⟨c', s'⟩ hpack hall hr'
         (by show position s'.right ≤ 2 * m - 1; omega)
-    exact ⟨hall, hstI, ⟨⟨hm', hr'⟩, hf', hminvL, c₀, r₀, _, hI₀,
-      PalPeg.CloseoutCheckW.stepsIMW_trans centre place entry q first hrun hstI, _,
+    exact ⟨hall, hstI, ⟨⟨hm', hr'⟩, hf', hminvL, c₀, r₀, _, hI₀, hBoot,
+      PalPeg.CloseoutCheckW.stepsIMWC_trans centre place entry q first hrun hstI, _,
       PalPeg.ShapedRun.shapedSteps_trans centre place entry q first hjtS
         (.succ hty (fun _ => hnr) (fun h => absurd h hrsT) hphaseS)⟩⟩
   -- the report or the progress out of a landing
   have hfinish : ∀ (c' : Control) (s' : GalilVM) (K : ℕ) (L : List Piece),
-      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w K ⟨c, s⟩ ⟨c', s'⟩ →
+      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w K ⟨c, s⟩ ⟨c', s'⟩ →
       CostedRun s s' K L →
       PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first w c' s' →
       position s'.right = position s.right + 1 → position s.center < position s'.center →
       PalPeg.CloseoutCheckW.CycleOutOn centre place entry q first
-        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) w m c s := by
+        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) (Canonical entry 2048) w m c s := by
     intro c' s' K L hstI hcr hI' hpos' hcen'
-    obtain ⟨⟨hm', hr'⟩, hf', hminv', c₀', r₀', j', hI₀', hrun', jS', hsh'⟩ := id hI'
+    obtain ⟨⟨hm', hr'⟩, hf', hminv', c₀', r₀', j', hI₀', hBoot', hrun', jS', hsh'⟩ := id hI'
     have hpack' : IPackMW centre place entry q first w ⟨c', s'⟩ :=
-      PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMW centre place entry q first hstI
+      PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hstI
     have hQ' : SoundScanNR w ⟨c', s'⟩ := by
       obtain ⟨g', -, hgj', htr'', -⟩ := hrun'
       have := htr''.good j' le_rfl
@@ -718,9 +770,9 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
     obtain ⟨rad', hsi'⟩ := hpack'.pack.scanGeom hm' hr'
     by_cases hat' : position s'.right = 2 * m - 1
     · left
-      have hstI0 : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w 0 ⟨c', s'⟩ ⟨c', s'⟩ :=
+      have hstI0 : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w 0 ⟨c', s'⟩ ⟨c', s'⟩ :=
         ⟨fun _ => ⟨c', s'⟩, rfl, rfl, ⟨fun i hi => absurd hi (Nat.not_lt_zero _), fun _ _ => hQ'⟩,
-          fun _ _ => hpack'⟩
+          fun i hi => absurd hi (Nat.not_lt_zero _), fun _ _ => hpack'⟩
       have hrp : PalPeg.GalilReportPrefix.ReportPointAt w m ⟨c', s'⟩ :=
         ⟨hr', ⟨rad', hsi'⟩, hminv', hat', hm1, hmle⟩
       exact ⟨⟨c', s'⟩, K, L, hstI, hcr, hrp, hf', fun _ => ⟨c', s', 0, [], hstI0,
@@ -735,8 +787,11 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
   rcases hcase with ⟨hg, hb, htick⟩ | ⟨hng, htickOf⟩
   · -- the shift phase
     obtain ⟨c', s', n, hphase, hphaseS, hm', hr', hf', hminvL, hpos', hcen', hn⟩ :=
-      hshift c₀ r₀ _ {c with clock := 1} t vq z u m hm1 hmle hI₀ hrunT hm hr rfl hpT hminvT hmis hq hz hg hb
-        htick
+      hshift c₀ r₀ _ {c with clock := 1} t vq z u m hm1 hmle hI₀ hrunT (by
+        obtain ⟨kBoot, hBootRun⟩ := hBoot
+        exact PalPeg.CanonicalPeriod.packed_lower_zero
+          (PalPeg.CloseoutCheckW.stepsIMWC_trans centre place entry q first hBootRun hrunT))
+        hm hr rfl hpT hminvT hmis hq hz hg hb htick
     rw [htr'] at hpos'
     rw [htc] at hcen' hn
     have hnr : ¬ restartVM entry t u := by
@@ -745,7 +800,9 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
       have hzw : z = .watch wg := hwg
       exact PalPeg.ShapedRun.not_restartVM_of_chainAt entry hz
         (fun w' hw' => by rw [hzw] at hw'; cases hw')
-    obtain ⟨hall, hstI, hI'⟩ := hland _ c' s' n htick hnr (by simp) hphase hphaseS hm' hr' hf' hminvL hpos'
+    obtain ⟨hall, hstI, hI'⟩ := hland _ c' s' n htick hnr
+      (canonical_of_scan_nonCopy hm (by show Mode.shift ≠ Mode.copy; decide) hnr) (by simp)
+      hphase hphaseS hm' hr' hf' hminvL hpos'
     refine hfinish c' s' _ [shiftPiece (position s'.right) (c.clock - 1) n
       (position s'.center - position s.center) (by omega) (by omega) hn] hstI ?_ hI' hpos' hcen'
     refine ⟨?_, ?_, ?_, ?_, ?_⟩
@@ -755,9 +812,13 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
     · intro p hp; simp at hp; subst hp; simp [shiftPiece]; omega
     · simp
   · -- the fallback and its replay
-    obtain ⟨u, hb, c', s', kk, r, fb, replay, hphase, hphaseS, hm', hr', hf', hminvL, hpos', hrk, hcen',
+    obtain ⟨u, hb, hbw, c', s', kk, r, fb, replay, hphase, hphaseS, hm', hr', hf', hminvL, hpos', hrk, hcen',
         hfb, hre⟩ :=
-      hfallback c₀ r₀ _ {c with clock := 1} t vq z m hm1 hmle hI₀ hrunT hm hr rfl hpT hminvT hmis hq hz hng
+      hfallback c₀ r₀ _ {c with clock := 1} t vq z m hm1 hmle hI₀ hrunT (by
+        obtain ⟨kBoot, hBootRun⟩ := hBoot
+        exact PalPeg.CanonicalPeriod.packed_lower_zero
+          (PalPeg.CloseoutCheckW.stepsIMWC_trans centre place entry q first hBootRun hrunT))
+        hm hr rfl hpT hminvT hmis hq hz hng
     have htick := htickOf u hb
     rw [htr'] at hpos'
     rw [htc] at hcen'
@@ -768,7 +829,8 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
       show value (afterBirth _ (afterMismatch t _ vq)).radius ≠ value t.radius
       rw [afterBirth_radius, afterMismatch_radius, inc_value]
       omega
-    obtain ⟨hall, hstI, hI'⟩ := hland _ c' s' _ htick hnr (by simp) hphase hphaseS hm' hr' hf' hminvL hpos'
+    obtain ⟨hall, hstI, hI'⟩ := hland _ c' s' _ htick hnr (canonical_of_scan_copy hm hnr hbw) (by simp)
+      hphase hphaseS hm' hr' hf' hminvL hpos'
     refine hfinish c' s' _ [fallbackPiece (position s'.right) (c.clock - 1) kk r fb replay
       (by omega) hrk hfb hre] hstI ?_ hI' hpos' (by omega)
     refine ⟨?_, ?_, ?_, ?_, ?_⟩
@@ -791,7 +853,7 @@ theorem shiftUnits_S {w : List (Fin 2)} (c : Control) (hm : c.mode = .shift) :
       (v : GalilScaffoldChainWatch.State) (finish : Counter),
       s.chain = .watch wch → CopyIdle s →
       ChainShiftRun ⟨s.center, s.left, s.remaining, s.radius, s.length⟩ wch s.cycle n t v finish →
-      StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) n ⟨c, s⟩
+      StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048) n ⟨c, s⟩
         ⟨c, shiftLens.set s ⟨t, .watch v, finish⟩⟩ ∧
       PalPeg.ShapedRun.ShapedSteps centre place entry q first w n ⟨c, s⟩ ⟨c, shiftLens.set s ⟨t, .watch v, finish⟩⟩ ∧
       CopyIdle (shiftLens.set s ⟨t, .watch v, finish⟩) := by
@@ -847,7 +909,13 @@ theorem shiftUnits_S {w : List (Fin 2)} (c : Control) (hm : c.mode = .shift) :
         have h' : c.mode = .replayStart := h
         rw [hm] at h'
         cases h'
-      exact ⟨.succ (hQ s) htickS hrun,
+      have hcanU : Canonical entry 2048 ⟨c, s⟩ ⟨c, shiftLens.set s ⟨shiftTick ⟨s.center, s.left, s.remaining, s.radius, s.length⟩,
+          .watch (chainShiftOne wch), inc (inc s.cycle)⟩⟩ :=
+        canonical_of_offScan (fun h => hnotScan h) (fun h => by
+            have h' : c.mode = .init := h
+            rw [hm] at h'; cases h')
+          (fun h => hnotReplayStart h)
+      exact ⟨.succ (hQ s) htickS hcanU hrun,
         .succ htickS (fun h => absurd h hnotScan) (fun h => absurd h hnotReplayStart) hrunS, hi''⟩
 
 /-- **The exit of a shift phase.**  With `remaining` exhausted and the copy walker idle,
@@ -892,7 +960,7 @@ theorem shiftLeaf {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w)) 
     {c₀ : Control} {r₀ : GalilVM} {k : ℕ} {c : Control} {s : GalilVM} {vq : SearchVM}
     {z : ChainVM} {u : GalilVM}
     (hI₀ : InvLPS (PofC centre place entry w) q first w c₀ r₀)
-    (hrun : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩)
+    (hrun : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩)
     (hm : c.mode = .scan) (hr : c.replaying = false) (hc : c.clock = 1)
     (hp : position s.right + 1 ≤ 2 * m - 1) (hminvS : MInv w c s)
     (hmis : read (left s.left) ≠ read (right s.right))
@@ -912,7 +980,7 @@ theorem shiftLeaf {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w)) 
     (htick : Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
       ⟨{c with clock := 2048, mode := .shift}, u⟩) :
     ∃ (c' : Control) (s' : GalilVM) (n : ℕ),
-      StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) n
+      StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048) n
         ⟨{c with clock := 2048, mode := .shift}, u⟩ ⟨c', s'⟩ ∧
       PalPeg.ShapedRun.ShapedSteps centre place entry q first w n ⟨{c with clock := 2048, mode := .shift}, u⟩ ⟨c', s'⟩ ∧
       c'.mode = .scan ∧ c'.replaying = false ∧
@@ -926,8 +994,8 @@ theorem shiftLeaf {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w)) 
   set cE : Control := {c with clock := 2048, mode := .shift} with hcE
   -- the packed prefix and its facts at `⟨c, s⟩`
   have hpack : IPackMW centre place entry q first w ⟨c, s⟩ :=
-    PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMW centre place entry q first hrun
-  obtain ⟨g, hg0, hgk, htr, -⟩ := id hrun
+    PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun
+  obtain ⟨g, hg0, hgk, htr, -, -⟩ := id hrun
   have hjx : Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ ⟨c, s⟩ := by
     have := PalPeg.CloseoutPackRun2.steps_of_trace htr k le_rfl
     rwa [hg0, hgk] at this
@@ -965,18 +1033,27 @@ theorem shiftLeaf {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w)) 
     have h1 := hRR.2
     rw [hRrad] at h1
     omega
+  -- the entry tick is not a restart (the guard is up: the chain is a watch), so it is canonical
+  have hzwE : z = .watch wch := by
+    have h1 : s1.chain = z := by rw [hs1, afterBirth_chain, afterMismatch_chain]
+    rw [← h1]; exact hs1c
+  have hnrE : ¬ restartVM entry s u :=
+    PalPeg.ShapedRun.not_restartVM_of_chainAt entry hz
+      (fun w' hw' => by rw [hzwE] at hw'; cases hw')
+  have hcanE : Canonical entry 2048 ⟨c, s⟩ ⟨cE, u⟩ :=
+    canonical_of_scan_nonCopy hm (by rw [hcE]; show Mode.shift ≠ Mode.copy; decide) hnrE
   -- the entry state is on the packed run: its pack gives the period length and the block
-  have hstE : StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) 1
-      ⟨c, s⟩ ⟨cE, u⟩ := .succ hQ htick (.zero _ hQE)
+  have hstE : StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048) 1
+      ⟨c, s⟩ ⟨cE, u⟩ := .succ hQ htick hcanE (.zero _ hQE)
   have hurt : u.right = right s.right := by
     rw [hu]
     show s1.right = right s.right
     rw [hs1, afterBirth_right, afterMismatch_right]
-  have hstIE : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w 1 ⟨c, s⟩ ⟨cE, u⟩ :=
-    PalPeg.CloseoutMarksPack.packRunR_MW_marksFree centre place entry q first h4 hP c₀ r₀ hI₀
+  have hstIE : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w 1 ⟨c, s⟩ ⟨cE, u⟩ :=
+    PalPeg.CloseoutMarksPack.packRunR_MWR_marksFree centre place entry q first h4 hP (Canonical entry 2048) c₀ r₀ hI₀
       m hm1 hmle k ⟨c, s⟩ hjx 1 ⟨cE, u⟩ hpack hstE hr (by show position u.right ≤ 2 * m - 1; rw [hurt]; omega)
   have hpackE : IPackMW centre place entry q first w ⟨cE, u⟩ :=
-    PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMW centre place entry q first hstIE
+    PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hstIE
   have hwinE := hpackE.win hP
   have huch : u.chain = .watch (GalilScaffoldChainWatch.immediate wch) := by rw [hu]
   have hpos : 0 < h := by
@@ -1027,7 +1104,7 @@ theorem shiftLeaf {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w)) 
       ⟨PalPeg.CloseoutPackRun.coupled_of_invLPC hI₀.1, PalPeg.CloseoutPackRun.front_of_invLPC hI₀.1,
         PalPeg.CloseoutPackRun.copyPack_of_invLPC hI₀.1⟩
     have hauxE := PalPeg.CloseoutPackRun2.auxPack_steps centre place entry q first (x := ⟨c₀, r₀⟩)
-      hlv0 haux0 (steps_trans hjx (stepsAll_steps hstE))
+      hlv0 haux0 (steps_trans hjx (stepsAllR_steps hstE))
     exact hauxE.copyP (by show Mode.shift ≠ Mode.copy; decide)
   obtain ⟨hunits, hunitsS, hiD⟩ := shiftUnits_S centre place entry q first cE rfl h u _ t' v finish huch hiU hcsr'
   set uD := shiftLens.set u ⟨t', .watch v, finish⟩ with huD
@@ -1036,24 +1113,28 @@ theorem shiftLeaf {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w)) 
     rw [htrem]; rfl
   obtain ⟨o, ho, htickD⟩ := shiftExit_S centre place entry q first cE rfl uD hzD hiD
   -- the landing is sound: the pack at the exhausted shift state gives the scan invariant
-  have hstD : StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
-      (1 + h) ⟨c, s⟩ ⟨cE, uD⟩ := stepsAll_trans hstE hunits
+  have hstD : StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048)
+      (1 + h) ⟨c, s⟩ ⟨cE, uD⟩ := stepsAllR_trans hstE hunits
   have huDr : uD.right = u.right := rfl
-  have hstID : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w (1 + h) ⟨c, s⟩ ⟨cE, uD⟩ :=
-    PalPeg.CloseoutMarksPack.packRunR_MW_marksFree centre place entry q first h4 hP c₀ r₀ hI₀
+  have hstID : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w (1 + h) ⟨c, s⟩ ⟨cE, uD⟩ :=
+    PalPeg.CloseoutMarksPack.packRunR_MWR_marksFree centre place entry q first h4 hP (Canonical entry 2048) c₀ r₀ hI₀
       m hm1 hmle k ⟨c, s⟩ hjx _ ⟨cE, uD⟩ hpack hstD hr
       (by show position uD.right ≤ 2 * m - 1; rw [huDr, hurt]; omega)
   have hpackD : IPackMW centre place entry q first w ⟨cE, uD⟩ :=
-    PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMW centre place entry q first hstID
+    PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hstID
   obtain ⟨rD, hsiD⟩ := PalPeg.CloseoutPackRun23.shiftGeom_exit (hpackD.m2.shiftGeom rfl) hzD
   set cL : Control := {cE with mode := .scan, output := o} with hcL
   have houtL : OutputRel w cL uD := by
     have h1 := outputRel_of_refresh w (PofC centre place entry w) rfl rfl q first cE uD o hsiD ho
     exact outputRel_transfer w rfl rfl h1
   have hQD : SoundScanNR w ⟨cE, uD⟩ := fun h => by rw [hcE] at h; cases h
-  have hall : StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+  have hall : StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048)
       (h + 1) ⟨cE, u⟩ ⟨cL, uD⟩ :=
-    stepsAll_trans hunits (.succ hQD htickD (.zero _ (fun _ _ => houtL)))
+    stepsAllR_trans hunits (.succ hQD htickD
+      (canonical_of_offScan (by rw [hcE]; show Mode.shift ≠ Mode.scan; decide)
+        (by rw [hcE]; show Mode.shift ≠ Mode.init; decide)
+        (by rw [hcE]; show Mode.shift ≠ Mode.replayStart; decide))
+      (.zero _ (fun _ _ => houtL)))
   have hallS : PalPeg.ShapedRun.ShapedSteps centre place entry q first w (h + 1) ⟨cE, u⟩ ⟨cL, uD⟩ :=
     PalPeg.ShapedRun.shapedSteps_trans centre place entry q first hunitsS
       (.succ htickD (fun h => by rw [hcE] at h; cases h) (fun h => by rw [hcE] at h; cases h)
@@ -1064,9 +1145,6 @@ theorem shiftLeaf {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w)) 
     exact this
   -- the landing keeps the leftmost live centre: the old centre died at the mismatch, the new
   -- one is live by the exit geometry, and nothing between them is live by period minimality
-  have hzw : z = .watch wch := by
-    have h1 : s1.chain = z := by rw [hs1, afterBirth_chain, afterMismatch_chain]
-    rw [← h1]; exact hs1c
   have hLs : Leftmost w (position s.right) (position s.center) := hminvS.2 hr
   have hdead : ¬ Live w (position s.right + 1) (position s.center) :=
     not_live_of_mismatch hsi hav hmis
@@ -1075,7 +1153,7 @@ theorem shiftLeaf {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w)) 
     rw [huDr, hurt, hpos1, hcenD] at h1
     exact h1
   have hLD : Leftmost w (position s.right + 1) (position s.center + h) :=
-    leftmost_shift hLs hdead hliveD (hperiodMin wch hzw)
+    leftmost_shift hLs hdead hliveD (hperiodMin wch hzwE)
   have hminvD : MInv w cL uD := by
     refine ⟨fun h1 => ?_, fun _ => ?_⟩
     · have h2 : c.replaying = true := h1
@@ -1100,12 +1178,13 @@ theorem cycleOracleOn_of_fourLeaves {w : List (Fin 2)} (hP : Decodes (PofC centr
       PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm))
     (hchain : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ y →
-      y.ctl.mode = .scan → ChainReady y.vm.chain)
+      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ y →
+      y.ctl.mode = .scan → position y.vm.right + 1 < (encoded w).length → ChainReady y.vm.chain)
     (hshiftPeriodMinimal : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM)
       (vq : SearchVM) (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
+      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
+      s.lower = GalilScaffoldCounter.reset →
       c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
       MInv w c s →
       GalilScaffoldInputHead.read (GalilScaffoldInputHead.left s.left) ≠
@@ -1130,7 +1209,8 @@ theorem cycleOracleOn_of_fourLeaves {w : List (Fin 2)} (hP : Decodes (PofC centr
     (hfallback : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
       (z : ChainVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
+      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
+      s.lower = GalilScaffoldCounter.reset →
       c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
       MInv w c s →
       read (left s.left) ≠ read (right s.right) →
@@ -1143,9 +1223,9 @@ theorem cycleOracleOn_of_fourLeaves {w : List (Fin 2)} (hP : Decodes (PofC centr
           (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) →
       ∃ u : GalilVM, (PofC centre place entry w).beginFallback
         (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
-          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) u ∧
+          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) u ∧ u.fpp.walker = PalPeg.GalilTickFair.rightPlace u ∧
       ∃ (c' : Control) (s' : GalilVM) (kk r fb replay : ℕ),
-        StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+        StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (Canonical entry 2048)
           (fb + replay) ⟨{c with clock := 2048, mode := .copy}, u⟩ ⟨c', s'⟩ ∧
         PalPeg.ShapedRun.ShapedSteps centre place entry q first w (fb + replay) ⟨{c with clock := 2048, mode := .copy}, u⟩ ⟨c', s'⟩ ∧
         c'.mode = .scan ∧ c'.replaying = false ∧
@@ -1154,11 +1234,11 @@ theorem cycleOracleOn_of_fourLeaves {w : List (Fin 2)} (hP : Decodes (PofC centr
         position s'.center = position s.center + (kk + 1 - r) ∧
         fb ≤ 12704 * (kk + 1 - r) + 4012 ∧ replay ≤ 8 * 2048 * (kk + 1 - r)) :
     PalPeg.CloseoutCheckW.CycleOracleOn centre place entry q first
-      (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) w :=
+      (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) (Canonical entry 2048) w :=
   cycleOracleOn_of_leaves centre place entry q first hP h4 hready hchain
-    (fun c₀ r₀ k c s vq z u m hm1 hmle hI₀ hrun hm hr hc hp hminvS hmis hq hz hg hb htick =>
+    (fun c₀ r₀ k c s vq z u m hm1 hmle hI₀ hrun hLower hm hr hc hp hminvS hmis hq hz hg hb htick =>
       shiftLeaf centre place entry q first hP h4 hm1 hmle hI₀ hrun hm hr hc hp hminvS hmis hq hz hg hb
-        (hshiftPeriodMinimal c₀ r₀ k c s vq z u m hm1 hmle hI₀ hrun hm hr hc hp hminvS hmis hq hz hg hb
+        (hshiftPeriodMinimal c₀ r₀ k c s vq z u m hm1 hmle hI₀ hrun hLower hm hr hc hp hminvS hmis hq hz hg hb
           htick)
         htick)
     hfallback

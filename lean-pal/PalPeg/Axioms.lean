@@ -1,3 +1,6 @@
+import PalPeg.OracleReady
+import PalPeg.CanonicalPeriod
+import PalPeg.CanonicalLocalRealizes
 import PalPeg.Basic
 import PalPeg.Existence
 import PalPeg.EvenLength
@@ -379,8 +382,7 @@ import PalPeg.PalInPegUnconditional
 /-! ## 目標定理のラチェット
 
 `PalPeg.PalInPeg.unconditional : RecognizedByTotalPEG PAL` は**閉じた項**だが、
-いま 4 個の未証明義務を `axiom` として持っている（2026-09-19 に `shiftPalAtScanStates` を
-run 形／trace 形の 2 つに割った——旧版は偽の疑いが濃かった、n112）（1 場ずつの原子に分解済み）。下の guard がその一覧を固定するので、
+いま 2 個の未証明義務を `axiom` として持っている（cycle oracle と局所実現）。下の guard がその一覧を固定するので、
 
 * 義務を 1 個証明して `axiom` を外すと guard が壊れる → 更新を強制される（前進の記録）
 * うっかり新しい穴を開けても guard が壊れる → 気づける
@@ -395,3 +397,43 @@ run 形／trace 形の 2 つに割った——旧版は偽の疑いが濃かっ�
  PalPeg.PalInPeg.obligation_localRealization] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.PalInPeg.unconditional
+
+/-- info: 'PalPeg.GalilTickFair.tick_canonical_unique' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.GalilTickFair.tick_canonical_unique
+
+/-- info: 'PalPeg.CanonicalLocalRealizes.canonical_trunc' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.CanonicalLocalRealizes.canonical_trunc
+
+/-- info: 'PalPeg.CanonicalLocalRealizes.realizes_canonical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.CanonicalLocalRealizes.realizes_canonical
+
+/-- info: 'PalPeg.CloseoutFinalFour.latch_iff_pal_of_preTrace' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.CloseoutFinalFour.latch_iff_pal_of_preTrace
+
+/-- info: 'PalPeg.CanonicalPeriod.preTrace_lower_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms PalPeg.CanonicalPeriod.preTrace_lower_zero
+
+/-- info: 'PalPeg.CanonicalPeriod.noBelow_first_canonical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms PalPeg.CanonicalPeriod.noBelow_first_canonical
+
+/-- info: 'PalPeg.GalilTickFair.fallback_right_not_searchPin' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms PalPeg.GalilTickFair.fallback_right_not_searchPin
+
+/-- info: 'PalPeg.CanonicalFallbackInput.begin_at_mismatch' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.CanonicalFallbackInput.begin_at_mismatch
+
+/-- info: 'PalPeg.CanonicalReplay.segment' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.CanonicalReplay.segment
+
+/-- info: 'PalPeg.OracleReady.cycleOracleOn_of_readyLeaves' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.OracleReady.cycleOracleOn_of_readyLeaves

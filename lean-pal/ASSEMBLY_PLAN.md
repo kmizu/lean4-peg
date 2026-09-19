@@ -1,3 +1,94 @@
+## 2026-09-19: inline draft reverted; checkpoint
+
+ユーザー指示で未完成・未検証の cycle inline proof を撤去し、既存の2公理による
+最終定理へ戻した。`CanonicalChainMinimal` の shift 最小性、search/chain readiness、
+fallback/replay、および周期境界の証明は保持。cycle と local realization は未解消。
+
+**次の作業で要確認:** Scala/Python は broken chain で search を restart するが、
+Lean の `GalilTickFair.Canonical.noRestart` は禁止する。Python 正本の broken-restart
+分岐だけを省いた実行で、入力 prefix `abaaaaababaaabaaaaabaaaaabaaaaabaaaa`、
+centre=45、radius=25、fallback move=6、chain=broken を観測した。
+従って、この実行では `radius ≤ 4*move` は不成立。これは Python 診断であって
+Lean の packed-run 到達可能性の証明ではなく、cycle 公理そのものの反証とも断定しない。
+この条件の相違を解決せず、残差を単なる接続作業と扱わないこと。
+
+検証: checkpoint build / 公理監査は実行中。
+
+## n264 — canonical fallback のコピー元を Scala の右ヘッドへ修正
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 未解消。canonical policy と fallback 葉のpinを修正したため義務の意味は変わる。これは以前の公理を証明したことではない。 |
+| `obligation_localRealization` | 未解消。参照する canonical policy が同様に変わる。 |
+
+- Scala正本 `scala/pal/src/main/scala/pal/ScaffoldGalil.scala:309` の `beginFallback()` は line 314 で **`walker.copyFrom(right)`** を実行する。旧canonical条件 `u.fpp.walker = u.walker` は、Leanでは保存される旧search cursorを選んでおり、このコピー元と違っていた。`prepareWindow()` の `walker.copyFrom(center)` との混同を訂正した。
+- `GalilTickFair.rightPlace` は右ヘッドのfocus・left stack・gapを既存 `lettersOf` でdecodeする。`Canonical.fallbackPlace`、`canonical_of_scan_copy`、`OracleRun` と `OracleReady` のfallback葉を `u.fpp.walker = rightPlace u` に変更。
+- `tick_scan_noRestart_unique` を「fallbackで保存されるselector」で一般化して証明の重複を回避。旧 `Fair` は過去の条件付き定理のためsearch cursorのpinを維持し、**Scalaそのものだという説明を撤回**。新canonical一意性はright-head selectorで証明済み。
+- `fallbackAt_rightPlace` が新しいpinを満たす入口を構成する。`fallback_right_not_searchPin` は、コピー長の境界を満たす入口で新旧pinが一致しないことをLeanで証明する（標準公理のみ）。この反例をbootからの到達可能性やPAL公理全体の反証と取り違えない。
+- `beginFallbackVM'` のコピー長境界は変更していない。抽象VMではsearchとFPPのwalkerを別フィールドで持つため、その全体モデルをScalaとの状態同一性だとは主張しない。
+
+**検証状態: 修正後の一意性・新旧pinの不一致は単体Lean検査成功。全体buildと最終公理監査を再実行中。無条件PALは未完、残り2公理。**
+
+## n263 — boot 起点の canonical prefix は探索下限ゼロ、oracle の周期葉へ接続
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 未解消。ただし運ぶ述語の起点を boot 到達済み `InvLPS` に限定したため、義務は以前より弱い。公理を証明した／減らしたわけではない。周期葉へは `lower = reset` を構成して渡す。 |
+| `obligation_localRealization` | 未解消、変更なし。 |
+
+- `CanonicalPeriod.tick_lower_zero` は restart を除く各 tick で下限ゼロを保存する。search/phase は保存、init/replayStart は reset。`trace_lower_zero` と `packed_lower_zero` で任意長の有限 prefix に持ち上げた。`preTrace_lower_zero` はその系。
+- `noBelow_first_canonical` は **有限の boot 起点 packed prefix** と既存の幾何学的 `Entry`・DP `Result` から最初のshiftに必要な最小周期性を示す。`hlow` は下限ゼロから消える。完成済み `PreTrace` を前提にすると oracle の構成へ循環するので、prefix だけで証明した。
+- `CloseoutCheckW.PackedFromBoot` を追加し、`ScanOnPackedRunFromInvLPS` の origin にその証拠を保持。boot constructor は既存の1 tickを使い、oracle の各着地は同じ起点を引き継ぐ。最終消費者の結論は変わらない。
+- `OracleRun.cycleOracleOn_of_leaves` は originまでのprefixと比較点までのprefixを連結し、`packed_lower_zero` を **実際に使用**。`OracleReady` の `hshiftPeriodMinimal` は `s.lower = reset` を受け取れるようになった。
+- 未解決: 現在の watch の周期と DP Result・ReadOrigin を結ぶ構成、繰り返しshiftへの最小性の運搬。さらに readiness、ChainReady、fallback/replay、具体的局所機械。下限ゼロだけでこれらが閉じるとは主張しない。
+
+**検証状態: n263 のmodule build成功（`/tmp/pal-boot-oracle.log`, `BUILD=0`）、全体build成功（`/tmp/pal-full-boot-20260919.log`, `BUILD=0`）。無条件PALは未完、残り2公理。**
+
+## n262 — 受理結果と状態一致を区別し、最終消費者を短縮
+
+先輩の「fable のアプローチがミスっている可能性、2前提を難しく考えすぎているふし」
+との指摘を受け、前提の内容から再確認した。
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 宣言・型とも変更なし、未解消。 |
+| `obligation_localRealization` | 宣言・型とも変更なし、未解消。ただし「非決定的な全 trace との一致は不可能」という n260 の根拠は誤りだった。型が要求しているのは受理結果の一致で、状態列の一致ではない。 |
+
+- `GalilLookRefined.reported_throttledLG'` は従来の ledger 証明を1入力・1 trace に切り出したもの。既存 `ledger_throttledLG'` はその系に置換し、証明を重複させていない。
+- `CloseoutFinalFour.latch_iff_pal_of_preTrace` は `PreTraceB` と消費者が既に持つ `hNeed` から、**canonical 性なしに** `LatchTrue … ↔ w ∈ PAL` を証明する。旧 `PreTraceB` だけの全称前提が真だと主張するものではない。
+- `given_preTraceIMW_on` はこの iff を実際に使い、入力ごとに1本の trace を取り出して `pal_in_peg_of_structured` へ直接接続する。全入力にわたる trace の `choose` と、消費されない `_H_run` のための `AbstractRun'` 構成を除去。最終定理の型と witness は維持。
+- canonical な exact tracking は局所実現を証明する **一つの十分な方法** であり、受理結果だけの義務から必要性は導けない。n261 で指摘した無限 trace / finite prefix の差も、その exact-tracking 経路の接続課題であり、目標定理そのものの必須前提ではない。
+- `CloseoutFinalW` と `PalInPegUnconditional` の「producer は原理的に無い」という説明を訂正。引き継ぎ文にも訂正を明記。
+
+- 周期葉の監査: `result_least` は `lower` より大きい候補の最小性しか返さない。既存 `GalilNoBelowFirst.noBelow_first_of_result` は別途 `hlow`（`0 < δ ≤ lower` の周期排除）を要求する。引き継ぎの「DP result を運ぶだけ」はこの条件を省略している。canonical policy では restart が無いので boot から `lower = reset` を運ぶ簡略化の余地があるが、現行 oracle の起点は任意 `InvLPS` であり、そのままゼロと仮定してはならない。未証明の残差として記録する。
+
+**検証状態: n262 の全体 build 成功（`/tmp/pal-full-latch-20260919.log`, `BUILD=0`）。独立した公理監査も成功（`/tmp/pal-axioms-20260919.log`, `BUILD=0`）。新規補題は標準公理のみ、`unconditional` には従来の2独自公理が残る。無条件 PAL は未完。**
+
+## n261 — canonical tick の一意性と、切り詰められた局所 trace への接続
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 未解消。既存の4葉は変更していない。 |
+| `obligation_localRealization` | 未解消。`tick_canonical_unique`、`canonical_trunc`、`realizes_canonical` を構成し、canonical な局所 successor と trace の successor の一致を証明した。具体的な局所 step、その物理不変量、word-independent な有限テープ符号化はこの定理の結論には含まれない。 |
+
+- `GalilTickFair.tick_scan_noRestart_unique` に既存 scan 証明を共通化。`tick_fair_scan_unique` と新しい `tick_canonical_unique` が同じ核を使う。
+- `CanonicalLocalRealizes.canonical_trunc` は実際の tick について任意の `truncS d` で canonical 性を保存する。単に canonical 性があると仮定し直してはいない。背景・一致比較では broken chain の保存、shift では watch/broken の矛盾、fallback では search の idle/grow の矛盾で restart を除く。
+- `LocalRealizesScan.realizes_of_refined_tick_det` に既存の successor 同定証明を共通化。旧 `realizes_of_tick_det` は `Refinement := True` の系。新しい `realizes_canonical` は canonical truncation と一意性を使う系であり、未証明の `H_scanDet` を要求しない。ただし canonical な局所 tick を実際に作る `hLocal` は依然として必要。
+- `Axioms.lean` に上記3定理の標準公理のみの guard を追加。`unconditional` の残り2公理の guard は維持。
+- 引き継ぎ §3 の「一意性で閉じる」は successor の同定についてのみ確認できた。`LocalLatchRealize.pal_in_peg_of_local_core` は `L0` / `enc_tick` / `enc_feed` 等を引数としており、今回の証明から具体的 `LocalStep` が得られたわけではない。
+- 接続時の量化範囲にも注意: `realizes_canonical` は既存 `Realizes` と同じく全 `k` の trace tick を受け取る。一方 `CanonTrace` / `PreTraceIMW` は最終報告点までの有限 prefix である。この差を埋める bounded tracking または適切な延長も、最終公理から本定理を利用する際に必要。
+- oracle の `hfresh` については、`ReadyPacedS` の量化対象が全 `PacedL` リストであり、実機の比較間隔より広いことに注意（`CloseoutReadyStage.ReadyIface` の説明と `StageRunPhase` / `StageEntryBudget`）。**現行の `hfresh` の反証はしていない。**
+
+**検証状態: n261 の全体 build 成功（`/tmp/pal-full-20260919-fixed.log`, `BUILD=0`）。新規3定理の標準公理 guard 成功。無条件 PAL は未完（残り2公理）。**
+
 ## n259 — `hchain` を「packed run の scan 状態で `ChainReady`」（`StepsIMW` 形）に切り直し
 
 **公理への進捗**

@@ -1,3 +1,5 @@
+import PalPeg.CanonicalSearchHistory
+import PalPeg.CanonicalChainReady
 -- 1. 正本の残り壁に直接効きそうな部品（最優先で配線を試す）
 import PalPeg.CloseoutBirthFrame
 import PalPeg.CloseoutBranchRes
@@ -93,6 +95,10 @@ import PalPeg.OracleRun
 import PalPeg.ShapedRun
 import PalPeg.ReadyTransport
 import PalPeg.OracleReady
+import PalPeg.CanonicalSearchReady
+import PalPeg.CanonicalChainMinimal
+import PalPeg.CanonicalLocalRealizes
+import PalPeg.CanonicalPeriod
 import PalPeg.CopyPhaseTick
 import PalPeg.CopyPhaseTickMatched
 import PalPeg.AnswerAheadDecode
@@ -468,3 +474,7 @@ idle chain の一致比較も合法な tick である以上、**偽の疑いが�
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完.**
 -/
+
+import PalPeg.CanonicalFallback
+import PalPeg.CanonicalFallbackInput
+import PalPeg.CanonicalReplay

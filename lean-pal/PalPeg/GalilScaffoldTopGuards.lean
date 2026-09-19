@@ -35,13 +35,10 @@ def periodLength (w : GalilScaffoldChainWatch.State) : ℕ :=
 def beginShiftVM' (s t : GalilVM) : Prop :=
   ∃ w : GalilScaffoldChainWatch.State, beginShiftVM (periodLength w) w s t
 
-/-- **2026-09-19（モデル欠陥 `M-fallbackPlace`）**: 着地場所を search 自身の
-walker の材料の中に収めた。Scala 正本の `beginFallback` は search の walker place
-からコピーし、その walker は到着済みの入力しか見ていないので、
-`stream p` が無制限なのはモデル欠陥だった（`Fair.fallbackPlace` がその分を
-仮定として抱えており、`marksEntry` の残差 `WindowInOrigin` が塞がれていた）。
-この形にすると **`WindowInOrigin` が着地でそのまま出る**
-（`t.fpp.walker = p`、`t.right = s.right`）。 -/
+/-- Bound the copied window by the arrived right-head position.  This relation
+still permits several copy origins.  Scala first copies the right head into its
+walker (`ScaffoldGalil.beginFallback`); it does not reuse the old search cursor.
+The final `GalilTickFair.Canonical` policy fixes that origin separately. -/
 def beginFallbackVM' (s t : GalilVM) : Prop :=
   ∃ p : GalilScaffoldPlace.Place, beginFallbackVM p s t ∧
     (GalilScaffoldPlace.stream p).length ≤ position s.right

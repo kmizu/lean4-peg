@@ -117,12 +117,13 @@ theorem reachAtIMW_of_reachAtC3R_W {w : List (Fin 2)}
   have hstI : StepsIMW centre place entry q first w k ⟨c, r⟩ y :=
     hpr c r hIC m hrp.pos hrp.le 0 ⟨c, r⟩ (.zero _) k y hx hst
       hrp.notReplaying (le_of_eq hrp.atPlace)
-  refine ⟨y, k, L, hstI, hcr, hrp, hfr, fun hlt => ?_⟩
+  refine ⟨y, k, L, stepsIMWR_true_of_stepsIMW centre place entry q first hstI, hcr, hrp, hfr,
+    fun hlt => ?_⟩
   obtain ⟨c', r', k', L', hst', hcr', hIS, hp⟩ := hcont hlt
-  exact ⟨c', r', k', L',
-    hpr c r hIC (m + 1) (by omega) (by omega) k y (stepsAll_steps hst) k' ⟨c', r'⟩
+  exact ⟨c', r', k', L', stepsIMWR_true_of_stepsIMW centre place entry q first
+    (hpr c r hIC (m + 1) (by omega) (by omega) k y (stepsAll_steps hst) k' ⟨c', r'⟩
       (ipackMW_last_of_stepsIMW centre place entry q first hstI) hst'
-      (invS_mode hIS.1.1.1.1.1).2 hp,
+      (invS_mode hIS.1.1.1.1.1).2 hp),
     hcr', hIS, hp⟩
 
 /-- `CloseoutStageOracle.cycleOutIMG2S_of_cycleOutMC3R` over `PackRunRMW`. -/
@@ -136,9 +137,9 @@ theorem cycleOutIMW_of_cycleOutMC3R_W {w : List (Fin 2)}
     CycleOutIMW centre place entry q first w m c r := by
   rcases h with hdone | ⟨cT, sT, k, L, hst, hcr, hIT, hlt, hpos⟩
   · exact Or.inl (reachAtIMW_of_reachAtC3R_W centre place entry q first hpr hIC hx hdone)
-  · exact Or.inr ⟨cT, sT, k, L,
-      hpr c r hIC m hm1 hmle 0 ⟨c, r⟩ (.zero _) k ⟨cT, sT⟩ hx hst
-        (invS_mode hIT.1.1.1.1.1).2 hpos,
+  · exact Or.inr ⟨cT, sT, k, L, stepsIMWR_true_of_stepsIMW centre place entry q first
+      (hpr c r hIC m hm1 hmle 0 ⟨c, r⟩ (.zero _) k ⟨cT, sT⟩ hx hst
+        (invS_mode hIT.1.1.1.1.1).2 hpos),
       hcr, hIT, hlt, hpos⟩
 
 /-- **`H_oracleIMW` with no `Extra7` input.** -/
@@ -236,7 +237,13 @@ theorem h_bootRefreshedIMW_of_bootIPack
     (stepsIM_of_stepsIO centre place entry q first
       (stepsIO_of_stepsI centre place entry q first hstI))
   obtain ⟨g2, hg20, hg21, htr2, hp2⟩ := hstG
-  refine ⟨c1, t, ⟨g2, hg20, hg21, htr2, fun i hi => ⟨(hp2 i hi).pack, ?_, ?_⟩⟩, ⟨hI, hf⟩, hpos⟩
+  refine ⟨c1, t, ⟨g2, hg20, hg21, htr2, ?_, fun i hi => ⟨(hp2 i hi).pack, ?_, ?_⟩⟩, ⟨hI, hf⟩, hpos⟩
+  · intro i hi
+    have hi0 : i = 0 := by omega
+    subst hi0
+    have ht := htr2.tick 0 (by omega)
+    rw [hg20] at ht ⊢
+    exact PalPeg.GalilTickFair.canonical_of_init rfl ht
   · cases i with
     | zero => rw [hg20]; exact lpackM2_boot (a :: rest)
     | succ n =>
@@ -259,7 +266,7 @@ theorem h_bootIMW_of_bootIPack
     H_bootIMW centre place entry q first := by
   intro a rest
   obtain ⟨c1, t, hst, ⟨hI, -⟩, hpos⟩ := h_bootRefreshedIMW_of_bootIPack centre place entry q first hsl hb a rest
-  exact ⟨c1, t, hst, hI, hpos⟩
+  exact ⟨c1, t, stepsIMWR_true_of_stepsIMWR centre place entry q first _ hst, hI, hpos⟩
 
 /-- **`needL'` over `PreTraceIMW`.** -/
 theorem needIMW'_le_W {w : List (Fin 2)} (hw : 0 < w.length)

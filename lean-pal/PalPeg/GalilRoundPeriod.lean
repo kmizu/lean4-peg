@@ -179,6 +179,7 @@ structure RoundScan (raw : List (Fin 2)) (C R h used : ℕ)
   canon : Canonical v.cycle
   count : value v.cycle = (2 * h : ℤ) - used
   fresh : used < 2 * h
+  phase : w.machine.control.phase = 4
   size : 2 * h ≤ R
   posH : 0 < h
   pal : PalAt (encoded raw) C R
@@ -240,6 +241,100 @@ theorem prediction_left (hI : RoundScan raw C R h used v w)
   have := hI.size; have := hI.posH; have := hI.room; have := hI.fresh
   rw [hI.left_read, hI.pred]
   exact mirror_match_of_period hI.pal (by omega) (by omega) (by omega)
+
+/-- The palindrome currently scanned in a re-shift round has period `2h`.
+Reflect an index first in the origin palindrome about `C`, then in the current
+palindrome about `C+h`; the composite reflection is translation by `2h`.
+The bound `used < 2h` is exactly what keeps the first reflection inside both
+palindromes. -/
+theorem current_hasPeriod (hI : RoundScan raw C R h used v w) :
+    HasPeriod (Span raw (C+h) (R+1-h+used)) (2*h) := by
+  have hcur := hI.caught.scan.palindrome
+  have hsize := hI.size
+  have hpos := hI.posH
+  have hfresh := hI.fresh
+  have hlen : C+h+(R+1-h+used) < (encoded raw).length := hcur.2.1
+  have hleft : R+1-h+used ≤ C+h := hcur.1
+  unfold Span
+  rw [show 2*(R+1-h+used)+1 =
+    (C+h+(R+1-h+used))+1-(C+h-(R+1-h+used)) by omega]
+  apply (hasPeriod_slice_iff (x := encoded raw) (p := 2*h)
+    (a := C+h-(R+1-h+used)) hlen (by omega)).mpr
+  intro j hj hjb
+  have hjOriginL : C-R ≤ j := by omega
+  have hjOriginR : j ≤ C+R := by omega
+  have hm0 := Manacher.mirror_getElem? hI.pal hjOriginL hjOriginR
+  have hmirrorL : C+h-(R+1-h+used) ≤ 2*C-j := by omega
+  have hmirrorR : 2*C-j ≤ C+h+(R+1-h+used) := by omega
+  have hm1 := Manacher.mirror_getElem? hcur hmirrorL hmirrorR
+  rw [show 2*(C+h)-(2*C-j) = j+2*h by omega] at hm1
+  exact hm0.trans hm1
+
+/-- If the actual fallback window extended the retained period one symbol to
+the left, that new boundary symbol would equal the chain's current
+prediction.  This is the exact bridge from `HasPeriod (x :: Span) (2*h)` to
+the mismatch/guard test performed by the VM. -/
+theorem cons_period_predicts (hI : RoundScan raw C R h used v w) (x : Fin 3)
+    (hper : HasPeriod (x :: Span raw (C+h) (R+1-h+used)) (2*h)) :
+    some x = GalilScaffoldChainConsume.symbol w.machine.control.period.focus := by
+  let K := R + 1 - h + used
+  have hK : K = R + 1 - h + used := rfl
+  have hhR : h ≤ R + 1 := by
+    have := hI.size; omega
+  have hKadd : K + h = R + 1 + used := by
+    dsimp [K]
+    omega
+  have hlen : (Span raw (C+h) K).length = 2*K+1 :=
+    length_span_of_palAt hI.caught.scan.palindrome
+  have hb := hper 0 (by
+    rw [List.length_cons, hlen]
+    have := hI.posH; have := hI.size
+    omega)
+  simp only [Nat.zero_add, List.getElem?_cons_zero] at hb
+  have hp0 : 0 < 2*h := by have := hI.posH; omega
+  rw [show 2*h = (2*h-1)+1 by omega, List.getElem?_cons_succ] at hb
+  have hi : 2*h-1 < 2*K+1 := by
+    have := hI.size; have := hI.posH; have := hI.fresh
+    omega
+  rw [Span, getElem?_take_drop hi] at hb
+  have hm := Manacher.mirror_getElem? hI.caught.scan.palindrome
+    (show C+h-K ≤ C+h-K+(2*h-1) by omega)
+    (show C+h-K+(2*h-1) ≤ C+h+K by
+      have := hI.posH; have := hI.fresh; omega)
+  rw [show 2*(C+h)-(C+h-K+(2*h-1)) = C+R+2+used-2*h by
+    dsimp [K]
+    have := hI.size; have := hI.posH; have := hI.fresh; have := hI.room
+    omega] at hm
+  exact hb.trans (hm.trans hI.pred.symm)
+
+/-- At an actual mismatching comparison whose post-comparison shift guard is
+false, the new fallback boundary cannot extend the round's retained period. -/
+theorem not_cons_period_of_mismatch_guard_false
+    (hI : RoundScan raw C R h used v w) (hpo : v.periodOnly = true)
+    (hmis : GalilScaffoldInputHead.read (GalilScaffoldInputHead.left v.left) ≠
+      GalilScaffoldInputHead.read (right v.right))
+    (vq : SearchVM)
+    (hg : ¬ shiftGuardVM
+      (afterMismatch v
+        ⟨GalilScaffoldInputHead.left v.left, right v.right,
+          ChainVM.watch w⟩ vq))
+    (x : Fin 3)
+    (hx : GalilScaffoldInputHead.read (right v.right) = some x) :
+    ¬ HasPeriod (x :: Span raw (C+h) (R+1-h+used)) (2*h) := by
+  intro hper
+  have hp := hI.cons_period_predicts x hper
+  cases hend : singlePositive v.cycle with
+  | false =>
+      apply hmis
+      exact (hI.prediction_left hend).trans (hp.symm.trans hx.symm)
+  | true =>
+      apply hg
+      refine ⟨w, rfl, hI.caught.lagZero, hI.phase, hI.caught.unbroken, ?_, ?_⟩
+      · change (if v.periodOnly then singlePositive v.cycle = true else _)
+        rw [hpo, if_pos rfl, hend]
+      · change GalilScaffoldChainConsume.symbol w.machine.control.period.focus =
+          GalilScaffoldInputHead.read (right v.right)
+        exact hp.symm.trans hx.symm
 
 /-- **At the terminal the chain's prediction is already known to be wrong.**
 There `used = 2h - 1`, so the compared left symbol is `x[C-R-1]` and the
@@ -344,11 +439,13 @@ theorem roundScan_entry {raw : List (Fin 2)} (o : ReadOrigin raw) (h : ℕ)
   have hpred := origin_prediction_index o h hint [] (by simp only [List.length_nil]; omega) hb0
   simp only [List.length_nil, Nat.add_zero] at hpred
   rw [← hmach] at hpred
-  refine ⟨hchain, hcaught, he.scan.canonical, ?_, by omega, hsize, hh,
+  refine ⟨hchain, hcaught, he.scan.canonical, ?_, by omega, ?_, hsize, hh,
     o.scan.palindrome, hroom, origin_mismatch_index o hroom, ?_⟩
   · have hc : value vm.cycle
         = ((2 * (o.interior.length + 1) : ℕ) : ℤ) - ((0 : ℕ) : ℤ) := he.scan.count
     rw [hc, ← hint]; push_cast; ring
+  · rw [hmach]
+    exact o.shifted_phase
   · show GalilScaffoldChainConsume.symbol
       (GalilScaffoldChainSweep.run w.machine.control []).period.focus = _
     rw [hpred]
@@ -379,13 +476,14 @@ theorem roundScan_step {raw : List (Fin 2)} {C R h used : ℕ} {vm vm' : GalilVM
     rw [hI.terminal_iff.mpr heq] at hend
     cases hend
   have hcaught := (hI.good_of_match hav hend hmatch).2
-  refine ⟨hchain, ?_, ?_, ?_, by have := hI.fresh; omega, hI.size, hI.posH,
+  refine ⟨hchain, ?_, ?_, ?_, by have := hI.fresh; omega, ?_, hI.size, hI.posH,
     hI.pal, hI.room, hI.origin, hadvance⟩
   · rw [hleft, hright]
     have e : R + 1 - h + (used + 1) = R + 1 - h + used + 1 := by omega
     rw [e]; exact hcaught
   · rw [hcycle]; exact dec_canonical _ hI.canon
   · rw [hcycle, dec_value, hI.count]; push_cast; ring
+  · exact GalilScaffoldChainCatch.phase4_consume _ _ hI.phase
 
 /-! ## 6. The two hypotheses of `round_scan_construct` -/
 

@@ -145,7 +145,8 @@ theorem roundScan_transport {w : List (Fin 2)} {C R h used : ℕ} {s t : GalilVM
     (hch : t.chain = .watch wch) (hl : t.left = s.left) (hr : t.right = s.right)
     (hc : t.cycle = s.cycle) : RoundScan w C R h used t wch :=
   ⟨hch, by rw [hl, hr]; exact hI.caught, by rw [hc]; exact hI.canon,
-    by rw [hc]; exact hI.count, hI.fresh, hI.size, hI.posH, hI.pal, hI.room, hI.origin, hI.pred⟩
+    by rw [hc]; exact hI.count, hI.fresh, hI.phase, hI.size, hI.posH,
+    hI.pal, hI.room, hI.origin, hI.pred⟩
 
 /-! ## 1. The palindrome at the terminal of a round -/
 

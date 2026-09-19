@@ -89,8 +89,66 @@ open PalPeg.CloseoutOracleW PalPeg.CloseoutCheckW PalPeg.CloseoutPackW
 open PalPeg.CloseoutShiftFinal PalPeg.CloseoutShiftLocalFree
 open PalPeg.CloseoutFinalW PalPeg.ShiftLocalRun
 
+/-- The consumer observes only the latch.  Once the deadline and lookahead
+bounds hold, every such trace gives the same language, without any canonical
+schedule or equality between its internal states and a concrete machine. -/
+theorem latch_iff_pal_of_preTrace (entry q : ℕ) (first : Fin 9)
+    {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hNonempty : 0 < w.length)
+    (hPreTrace : PreTraceB centreC placeC entry q first w st Tc)
+    (hNeed : ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) → needL' w st i ≤ m + 1) :
+    LatchTrue (PofC centreC placeC entry w) q first w
+      (stLG' τF w st (Tc w.length)) ((w.length + 1) * τF) ↔ w ∈ PAL := by
+  have hPreload : PreloadL' w st Tc :=
+    ⟨hPreTrace.pre.tc0, fun m hm => hPreTrace.pre.mono m (m+1) (by omega) hm,
+      needL'_boot w st hPreTrace.pre.start, needLe_of_pointwise' w st Tc hNeed⟩
+  apply latch_iff_pal w _ (PofC_onLetter centreC placeC entry w)
+    (PofC_leftFirst centreC placeC entry w) q first
+  have hRate : 2 * (2 * alpha' 2048 + (2 * beta' 2048 + 1)) ≤ τF := by
+    have h := GalilLedgerThrottled.two_c2_le_τ'
+    unfold GalilLedgerThrottled.c2 at h
+    exact h.trans_eq' (by ring)
+  exact reported_throttledLG' τF PalPeg.GalilThrottledRunGen.two_le_ticksPerSymbol _ _ hRate w hNonempty _ q first st Tc
+    hPreload (hPreTrace.pre.report w.length (by omega) le_rfl)
+    (fun m hm => GalilLedgerThrottled.dwT_cost w Tc hPreload.tc0
+      (base_of_preTraceB hPreTrace) (hPreTrace.pre.cost) m hm)
+
 /-- **The final theorem from a pre-loaded trace for every non-empty word.**  The trace
 producer is abstracted away so that oracles of different shapes can feed it. -/
+theorem given_preTraceIMW_on (entry q : ℕ) (first : Fin 9)
+    (P : List (Fin 2) → (ℕ → State GalilVM) → (ℕ → ℕ) → Prop)
+    (hpre : ∀ w : List (Fin 2), 0 < w.length →
+      ∃ (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+        PreTraceIMW centreC placeC entry q first w st Tc ∧ P w st Tc)
+    (hC : ∃ (Q' Γ' : Type) (_ : Fintype Q') (_ : DecidableEq Q') (_ : Fintype Γ')
+      (_ : DecidableEq Γ') (t K : ℕ) (L : PalPeg.Local.LocalStep (Fin 2) Q' Γ' t K) (blank : Γ')
+      (initQ : Q') (outQ : Q' → Bool) (n : ℕ) (htape : 0 < t) (hn : 0 < n),
+      ∀ w : List (Fin 2), 0 < w.length → ∀ st Tc,
+        PreTraceIMW centreC placeC entry q first w st Tc → P w st Tc →
+        ((L.realize blank initQ (GalilEmptyWord.accept' initQ outQ) n htape hn).SAccepts w ↔
+          LatchTrue (PofC centreC placeC entry w) q first w (stLG' τF w st (Tc w.length))
+            ((w.length + 1) * τF)))
+    (hneed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ), 0 < w.length →
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
+        PalPeg.GalilLookRefined.needL' w st i ≤ m + 1) :
+    RecognizedByTotalPEG PAL := by
+  classical
+  obtain ⟨Q', Γ', iQ, dQ, iΓ, dΓ, t, K, L, blank, initQ, outQ, n, htape, hn, hreal⟩ := hC
+  let M := L.realize blank initQ (GalilEmptyWord.accept' initQ outQ) n htape hn
+  apply pal_in_peg_of_structured (Nat.mul_pos hn (PalPeg.Local.cnt_pos K)) M
+  intro w
+  cases w with
+  | nil =>
+    exact iff_of_true (GalilEmptyWord.realize_accept'_nil L blank initQ outQ n htape hn) rfl
+  | cons a rest =>
+    have hNonempty : 0 < (a :: rest).length := by simp
+    obtain ⟨st, Tc, hPreTrace, hPredicate⟩ := hpre (a :: rest) hNonempty
+    exact (hreal _ hNonempty st Tc hPreTrace hPredicate).trans
+      (latch_iff_pal_of_preTrace entry q first hNonempty hPreTrace.base
+        (hneed _ st Tc hNonempty hPreTrace))
+
+/-- The original consumer: any trace, the realization over every `PreTraceB` trace. -/
 theorem given_preTraceIMW (entry q : ℕ) (first : Fin 9)
     (hpre : ∀ w : List (Fin 2), 0 < w.length →
       ∃ (st : ℕ → State GalilVM) (Tc : ℕ → ℕ), PreTraceIMW centreC placeC entry q first w st Tc)
@@ -99,47 +157,14 @@ theorem given_preTraceIMW (entry q : ℕ) (first : Fin 9)
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
       ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
         PalPeg.GalilLookRefined.needL' w st i ≤ m + 1) :
-    RecognizedByTotalPEG PAL := by
-  classical
-  obtain ⟨Q', Γ', iQ, dQ, iΓ, dΓ, t, K, L, blank, initQ, outQ, n, htape, hn, hreal⟩ := hC
-  have preTrace_exists : ∀ w : List (Fin 2), ∃ (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc := by
-    intro w
-    by_cases hw : 0 < w.length
-    · obtain ⟨st, Tc, h⟩ := hpre w hw
-      exact ⟨st, Tc, fun _ => h⟩
-    · exact ⟨fun _ => boot w, fun _ => 0, fun h => absurd h hw⟩
-  choose stP TcP hPreTraceIMW using preTrace_exists
-  let M := L.realize blank initQ (GalilEmptyWord.accept' initQ outQ) n htape hn
-  have hPreloadL : ∀ w : List (Fin 2), 0 < w.length → PreloadL' w (stP w) (TcP w) := by
-    intro w hw
-    have h := hPreTraceIMW w hw
-    exact ⟨h.base.pre.tc0, fun m hm => h.base.pre.mono m (m+1) (by omega) hm,
-      needL'_boot w (stP w) h.base.pre.start,
-      needLe_of_pointwise' w (stP w) (TcP w) (hneed w (stP w) (TcP w) hw h)⟩
-  refine pal_in_peg_of_latch' (Nat.mul_pos hn (PalPeg.Local.cnt_pos K)) M
-    (PofC centreC placeC entry) (fun _ => q) (fun _ => first) 2048
-    (fun w => PofC_onLetter centreC placeC entry w)
-    (fun w => PofC_leftFirst centreC placeC entry w)
-    (fun w => stLG' τF w (stP w) (TcP w w.length))
-    (fun w => arrLG' τF w (stP w) (TcP w w.length))
-    (fun w => (w.length + 1) * τF) ?_ ?_ ?_ ?_
-  · intro w hw
-    have h := hPreTraceIMW w hw
-    exact abstractRun_throttledL'_2p18 w (stP w) (TcP w w.length)
-      (PofC centreC placeC entry w) q first 2048
-      (fun j => sharedC_trunc_vm w j centreC placeC entry (fun s => (centrePlaceC w j s).1)
-        (fun s => (centrePlaceC w j s).2))
-      (sharedC_suf w _ _ centreC placeC entry)
-      (by rw [h.base.pre.start]; rfl) (needL'_boot w (stP w) h.base.pre.start)
-      (by rw [h.base.pre.start]; exact sufVM_boot w) h.base.pre.trace.tick
-  · intro w hw
-    exact hreal w hw _ _ (hPreTraceIMW w hw).base
-  · exact ledger_throttledL'_2p18 (PofC centreC placeC entry) (fun _ => q) (fun _ => first)
-      stP TcP hPreloadL (fun w hw => (hPreTraceIMW w hw).base.pre.report w.length (by omega) le_rfl)
-      (fun w hw => base_of_preTraceB (hPreTraceIMW w hw).base)
-      (fun w hw => (hPreTraceIMW w hw).base.pre.cost)
-  · exact GalilEmptyWord.realize_accept'_nil L blank initQ outQ n htape hn
+    RecognizedByTotalPEG PAL :=
+  given_preTraceIMW_on entry q first (fun _ _ _ => True)
+    (fun w hw => by obtain ⟨st, Tc, h⟩ := hpre w hw; exact ⟨st, Tc, h, trivial⟩)
+    (by
+      obtain ⟨Q', Γ', iQ, dQ, iΓ, dΓ, t, K, L, blank, initQ, outQ, n, htape, hn, hreal⟩ := hC
+      exact ⟨Q', Γ', iQ, dQ, iΓ, dΓ, t, K, L, blank, initQ, outQ, n, htape, hn,
+        fun w hw st Tc h _ => hreal w hw st Tc h.base⟩)
+    hneed
 
 /-- **最上位の組み立て（`final5MW*` 4 版の共通部分）。**  `needL'` の上界を
 `hneed` として外から取る。 -/

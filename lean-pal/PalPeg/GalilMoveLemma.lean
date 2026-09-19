@@ -100,6 +100,32 @@ theorem fallback_window_period (x : Fin 3) (P : List (Fin 3)) (hP : IsPal P) :
     rw [e2] at h
     exact h
 
+/-- The newly read symbol is the boundary symbol selected by the fallback
+period.  This is the one-place fact which turns divisibility by an old period
+into an impossible extension across the mismatching comparison. -/
+theorem fallback_window_boundary (x : Fin 3) (P : List (Fin 3)) (hP : IsPal P)
+    (hr : 0 < GalilScaffoldChainInputSupply.chosenRadius (x :: P)) :
+    some x = P[P.length + 1 -
+      2*GalilScaffoldChainInputSupply.chosenRadius (x :: P) - 1]? := by
+  let r := GalilScaffoldChainInputSupply.chosenRadius (x :: P)
+  obtain ⟨hle,hpal⟩ := GalilScaffoldChainInputSupply.chosen_spec
+    (x :: P) (List.cons_ne_nil x P)
+  have htlen : ((x :: P).take (2*r+1)).length = 2*r+1 := by
+    rw [List.length_take]
+    omega
+  have hmirror := (isPal_iff_getElem?.mp hpal) 0 (by rw [htlen]; omega)
+  rw [htlen, show 2*r+1-1-0 = 2*r by omega] at hmirror
+  have hx : some x = P[2*r-1]? := by
+    change some x = ((x :: P).take (2*r+1))[2*r]? at hmirror
+    rw [List.getElem?_take_of_lt (by omega)] at hmirror
+    rw [show 2*r = (2*r-1)+1 by omega] at hmirror
+    simpa only [List.getElem?_cons_zero,List.getElem?_cons_succ] using hmirror
+  have hpidx := (isPal_iff_getElem?.mp hP) (2*r-1) (by
+    change 2*r+1 ≤ P.length+1 at hle
+    omega)
+  rw [show P.length - 1 - (2*r-1) = P.length+1-2*r-1 by omega] at hpidx
+  exact hx.trans hpidx
+
 /-- Galil's move inequality under the search contract: if the matched
 palindrome `P` (radius `k`) has no period at most `k/2`, the fallback
 advances the centre by `δ = k+1-r` with `k ≤ 4δ`. The contract — every
@@ -115,8 +141,145 @@ theorem galil_move_of_contract (x : Fin 3) (P : List (Fin 3)) (hP : IsPal P) (k 
   have hp := contract _ (by omega) hper
   omega
 
+/-- The move inequality only needs a non-strict half-period contract.  The
+extra `+1` in the centre advance covers the equality case `k = 2*p`. -/
+theorem galil_move_of_weakContract (x : Fin 3) (P : List (Fin 3)) (hP : IsPal P) (k : ℕ)
+    (hlen : P.length = 2*k+1)
+    (contract : ∀ p, 0 < p → HasPeriod P p → k ≤ 2*p) :
+    k ≤ 4*(k + 1 - GalilScaffoldChainInputSupply.chosenRadius (x :: P)) := by
+  have hper := fallback_window_period x P hP
+  obtain ⟨hle, _⟩ := GalilScaffoldChainInputSupply.chosen_spec (x :: P) (List.cons_ne_nil x P)
+  rw [List.length_cons, hlen] at hle
+  rw [hlen] at hper
+  have hp := contract _ (by omega) hper
+  omega
+
+/-- The coefficient-parametric form used by the packed-run fallback proof.
+The fallback period is twice the centre advance, so a contract
+`2*k ≤ B*p` yields `k ≤ B*advance`. -/
+theorem galil_move_of_scaledContract (B : ℕ) (x : Fin 3) (P : List (Fin 3))
+    (hP : IsPal P) (k : ℕ) (hlen : P.length = 2*k+1)
+    (contract : ∀ p, 0 < p → HasPeriod P p → 2*k ≤ B*p) :
+    k ≤ B*(k + 1 - GalilScaffoldChainInputSupply.chosenRadius (x :: P)) := by
+  have hper := fallback_window_period x P hP
+  obtain ⟨hle, _⟩ := GalilScaffoldChainInputSupply.chosen_spec (x :: P) (List.cons_ne_nil x P)
+  rw [List.length_cons, hlen] at hle
+  rw [hlen] at hper
+  have hp := contract _ (by omega) hper
+  have he : 2*k+1+1-2*GalilScaffoldChainInputSupply.chosenRadius (x :: P) =
+      2*(k+1-GalilScaffoldChainInputSupply.chosenRadius (x :: P)) := by omega
+  rw [he] at hp
+  have hmul : B * (2*(k+1-GalilScaffoldChainInputSupply.chosenRadius (x :: P))) =
+      2*(B*(k+1-GalilScaffoldChainInputSupply.chosenRadius (x :: P))) := by ring
+  rw [hmul] at hp
+  omega
+
+/-- Extending a `p`-periodic word one place to the left preserves period `p`
+when the new symbol agrees at a later boundary whose offset is a multiple of
+`p`.  This is the boundary step used by the long-radius fallback case. -/
+theorem hasPeriod_cons_of_boundary {α : Type} (x : α) (P : List α) {p q : ℕ}
+    (hp0 : 0 < p) (hp : HasPeriod P p) (hpq : p ∣ q)
+    (hq0 : 0 < q) (hq : q ≤ P.length)
+    (hboundary : some x = P[q-1]?) : HasPeriod (x :: P) p := by
+  intro i hi
+  rcases i with _ | i
+  · have hp1 : 1 ≤ p := hp0
+    have htarget : (x :: P)[p]? = P[p-1]? := by
+      rw [show p = (p-1)+1 by omega,List.getElem?_cons_succ]
+      congr 2
+      omega
+    have hqmod : (q - 1) % p = p - 1 := by
+      obtain ⟨m, hqm⟩ := hpq
+      cases m with
+      | zero => simp at hqm; omega
+      | succ m =>
+        rw [hqm,Nat.mul_succ]
+        have he : p*m+p-1 = p*m+(p-1) := by omega
+        rw [he,Nat.add_mod]
+        simp [Nat.mod_eq_of_lt (by omega)]
+    have hread := hasPeriod_getElem?_mod hp (i := q-1) (by omega)
+    rw [hqmod] at hread
+    rw [Nat.zero_add,List.getElem?_cons_zero,htarget]
+    exact hboundary.trans hread.symm
+  · simp only [List.length_cons] at hi
+    rw [List.getElem?_cons_succ,
+      show i+1+p = (i+p)+1 by omega,List.getElem?_cons_succ]
+    exact hp i (by omega)
+
+/-- The long-radius half of Galil's move argument.  `2*h` is the retained
+least period, while `2*d` is the fallback period.  If the move were shorter
+than a quarter-radius, Fine--Wilf would force `2*h ∣ 2*d`; the boundary symbol
+would then extend period `2*h` across the mismatch, a contradiction. -/
+theorem galil_move_of_minimal_period_boundary (x : Fin 3) (P : List (Fin 3))
+    (k h d : ℕ) (hlen : P.length = 2*k+1)
+    (hh0 : 0 < h) (hhk : 2*h ≤ k)
+    (hperiod : HasPeriod P (2*h))
+    (hminimal : ∀ p, 0 < p → p < 2*h → ¬ HasPeriod P p)
+    (hd0 : 0 < d) (hdlen : 2*d ≤ P.length)
+    (hdperiod : HasPeriod P (2*d))
+    (hboundary : some x = P[2*d-1]?)
+    (hbreak : ¬ HasPeriod (x :: P) (2*h)) :
+    k ≤ 4*d := by
+  by_contra hmove
+  have hlong : 4*d < k := by omega
+  let g := Nat.gcd (2*d) (2*h)
+  have hg0 : 0 < g := Nat.gcd_pos_of_pos_left _ (by omega)
+  have hfw : HasPeriod P g := by
+    apply fineWilf hdperiod hperiod (by omega) (by omega)
+    rw [hlen]
+    have hg_le : g ≤ 2*d := Nat.gcd_le_left _ (by omega)
+    omega
+  have hgh : 2*h ≤ g := by
+    by_contra hn
+    exact hminimal g hg0 (by omega) hfw
+  have hgle : g ≤ 2*h := Nat.gcd_le_right _ (by omega)
+  have hgeq : g = 2*h := by omega
+  have hdiv : 2*h ∣ 2*d := by
+    have := Nat.gcd_dvd_left (2*d) (2*h)
+    rwa [← hgeq]
+  apply hbreak
+  exact hasPeriod_cons_of_boundary x P (by omega) hperiod hdiv (by omega)
+    hdlen hboundary
+
+/-- Packaged long-radius move lemma for the actual fallback choice.  The
+chosen prefix supplies both period `2*d` and its boundary symbol; callers only
+have to show that the retained period does not extend across the mismatch. -/
+theorem galil_move_of_minimal_period_break (x : Fin 3) (P : List (Fin 3))
+    (hP : IsPal P) (k h : ℕ) (hlen : P.length = 2*k+1)
+    (hh0 : 0 < h) (hhk : 2*h ≤ k)
+    (hperiod : HasPeriod P (2*h))
+    (hminimal : ∀ p, 0 < p → p < 2*h → ¬ HasPeriod P p)
+    (hbreak : ¬ HasPeriod (x :: P) (2*h)) :
+    k ≤ 4*(k+1-GalilScaffoldChainInputSupply.chosenRadius (x :: P)) := by
+  let r := GalilScaffoldChainInputSupply.chosenRadius (x :: P)
+  let d := k+1-r
+  by_cases hr0 : r = 0
+  · simp only [r] at hr0
+    rw [hr0]
+    omega
+  obtain ⟨hle,-⟩ := GalilScaffoldChainInputSupply.chosen_spec
+    (x :: P) (List.cons_ne_nil x P)
+  have hrk : r ≤ k := by
+    rw [List.length_cons,hlen] at hle
+    omega
+  have hd0 : 0 < d := by simp only [d]; omega
+  have hdlen : 2*d ≤ P.length := by simp only [d]; rw [hlen]; omega
+  have hdperiod : HasPeriod P (2*d) := by
+    simpa only [d,r,hlen,show 2*k+1+1-2*r = 2*(k+1-r) by omega] using
+      fallback_window_period x P hP
+  have hboundary : some x = P[2*d-1]? := by
+    simpa only [d,r,hlen,show 2*k+1+1-2*r-1 = 2*(k+1-r)-1 by omega] using
+      fallback_window_boundary x P hP (by simpa only [r] using
+        (show 0 < r from Nat.pos_of_ne_zero hr0))
+  have hm := galil_move_of_minimal_period_boundary x P k h d hlen hh0 hhk
+    hperiod hminimal hd0 hdlen hdperiod hboundary hbreak
+  simpa only [d,r] using hm
+
+#print axioms galil_move_of_scaledContract
+
 #print axioms fallback_window_period
 #print axioms galil_move_of_contract
+#print axioms galil_move_of_weakContract
 
 #print axioms hasPeriod_of_isPal_take
 #print axioms window_hasPeriod_of_chosen
