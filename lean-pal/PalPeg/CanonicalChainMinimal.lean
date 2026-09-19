@@ -1381,19 +1381,15 @@ theorem shiftPeriodMinimal_at {raw : List (Fin 2)} {c₀ : Control} {r₀ : Gali
   simpa [hscan.rightPos] using
     watchMinimal_no_short htwatch (scan_radius_lt hscan) hscan.palindrome hfour hperiod
 
-/-- The exact leaf consumed by `OracleReady`, from the minimal-period data of the scan states of
-a packed run (`hminimal`; its producer is `RestartLowerRun.scanMinimal_packed`). -/
+/-- The leaf consumed by `OracleReady`, from the minimal-period data of the scan state (its
+producer is `RestartLowerRun.scanMinimal_packed`). -/
 theorem shiftPeriodMinimal_packed {raw : List (Fin 2)}
-    (hP : Decodes (PofC centre place entry raw))
-    (hminimal : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM),
-      InvLPS (PofC centre place entry raw) q first raw c₀ r₀ →
-      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ ⟨c,s⟩ →
-      c.mode = .scan →
-      ScanMinimal Move raw s ∧ BirthMinimal centre place entry Move raw s) :
+    (hP : Decodes (PofC centre place entry raw)) :
     ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM)
       (vq : SearchVM) (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ raw.length →
       InvLPS (PofC centre place entry raw) q first raw c₀ r₀ →
       PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ ⟨c,s⟩ →
+      (ScanMinimal Move raw s ∧ BirthMinimal centre place entry Move raw s) →
       ¬ restartGuardVM s → c.mode = .scan → c.replaying = false → c.clock = 1 →
       position s.right + 1 ≤ 2*m-1 → MInv raw c s →
       read (left s.left) ≠ read (right s.right) →
@@ -1412,7 +1408,7 @@ theorem shiftPeriodMinimal_packed {raw : List (Fin 2)}
       ∀ wg : GalilScaffoldChainWatch.State, z = .watch wg →
         ∀ p, 0 < p → p < 2*periodLength wg →
           ¬ HasPeriod (Span raw (position s.center) (position s.right-position s.center)) p := by
-  intro c₀ r₀ k c s vq z u m hm1 hmle hI hrun _ hm hr hc hbound hM
+  intro c₀ r₀ k c s vq z u m hm1 hmle hI hrun hminimal _ hm hr hc hbound hM
     hmis hsearch hchain hg hb htick wg hwg
   let vs : ScanVM := ⟨left s.left,right s.right,z⟩
   let s' := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
@@ -1436,7 +1432,7 @@ theorem shiftPeriodMinimal_packed {raw : List (Fin 2)}
   have hcan : canRight s.right := canRight_of_bound _ raw hscan.rightRep hscan.rightPresent (by
     simp only [encoded,pairs_length,List.length_append,List.length_singleton]
     omega)
-  obtain ⟨hscanMin,hbirth⟩ := hminimal c₀ r₀ k c s hI hrun hm
+  obtain ⟨hscanMin,hbirth⟩ := hminimal
   exact shiftPeriodMinimal_at centre place entry q first hP hrun hscanMin hbirth hm hr hcan
     hsearch hcmp hmt (by simpa [vs] using hchain)
       (by simpa [s',vs,PofC,sharedC,galilShared] using hg) hwg

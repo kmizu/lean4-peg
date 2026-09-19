@@ -1,4 +1,5 @@
 import PalPeg.RestartLower
+import PalPeg.CloseoutStageBoot
 
 /-!
 # Minimal periods across a broken restart
@@ -262,5 +263,78 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
           (hboundary i c s s' hrunSource hm hcmp hmt w1 w' hstep hbreak) hL
   rw [← hgk]
   exact hall k le_rfl
+
+/-- **The origin's lower bound is excluded.**  An `InvLPS` origin that the packed run reaches
+from boot inherits `LowerAt` from the first tick, where the `init` entry resets the lower bound. -/
+theorem lowerAt_of_packedFromBoot {a : Fin 2} {rest : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry (a :: rest)))
+    (hI : InvLPS (PofC centre place entry (a :: rest)) q first (a :: rest) c₀ r₀)
+    (hboot : CloseoutCheckW.PackedFromBoot centre place entry q first (a :: rest) ⟨c₀, r₀⟩) :
+    LowerAt (a :: rest) c₀ r₀ := by
+  obtain ⟨k, g, hg0, hgk, htr, hcan, hpk⟩ := hboot
+  have hiMode : c₀.mode = .scan := (PalPeg.GalilOracleLocal.invS_mode hI.1.1.1.1.1).1
+  cases k with
+  | zero =>
+    exfalso
+    rw [hg0] at hgk
+    have hmode : (PalPeg.GalilFinalAssembly.boot (a :: rest)).ctl.mode = c₀.mode := by rw [hgk]
+    rw [hiMode] at hmode
+    have hinit : Mode.init = Mode.scan := hmode
+    cases hinit
+  | succ k =>
+    obtain ⟨c1, t, hsteps, hI1, -, -⟩ :=
+      PalPeg.CloseoutStageBoot.invLPS_init centre place entry q first a rest
+    obtain ⟨g', hg'0, hg'1, htr'⟩ := PalPeg.GalilCheckpoints.stepsAll_fn hsteps
+    have htickBoot := htr'.tick 0 (by omega)
+    rw [hg'0, hg'1] at htickBoot
+    have htickRun := htr.tick 0 (by omega)
+    rw [hg0] at htickRun
+    have hcanonRun := (hcan 0 (by omega)).canonical
+    rw [hg0] at hcanonRun
+    have hfirst : g (0+1) = ⟨c1, t⟩ :=
+      PalPeg.GalilTickFair.tick_canonical_unique htickRun hcanonRun htickBoot
+        (PalPeg.GalilTickFair.canonical_of_init rfl htickBoot)
+    have hlowerFirst : LowerAt (a :: rest) c1 t := by
+      have hbootLower : LowerAt (a :: rest) (PalPeg.GalilFinalAssembly.boot (a :: rest)).ctl
+          (PalPeg.GalilFinalAssembly.boot (a :: rest)).vm := fun hmode => by
+        have hinit : Mode.init = Mode.scan := hmode
+        cases hinit
+      have hbootStage : BrokenStage (LastExcluded (a :: rest))
+          (PalPeg.GalilFinalAssembly.boot (a :: rest)).ctl
+          (PalPeg.GalilFinalAssembly.boot (a :: rest)).vm :=
+        ⟨fun hmode => (by
+            have hinit : Mode.init = Mode.shift := hmode
+            cases hinit),
+          fun hmode => (by
+            have hinit : Mode.init = Mode.scan := hmode
+            cases hinit)⟩
+      exact lowerAt_tick centre place entry q first
+        (x := PalPeg.GalilFinalAssembly.boot (a :: rest)) (y := ⟨c1, t⟩) htickBoot hbootLower
+        hbootStage
+    have hsuffix : CloseoutCheckW.StepsIMWC centre place entry q first (a :: rest) k ⟨c1, t⟩
+        ⟨c₀, r₀⟩ :=
+      ⟨fun i => g (i+1), hfirst, hgk,
+        ⟨fun i hi => htr.tick (i+1) (by omega), fun i hi => htr.good (i+1) (by omega)⟩,
+        fun i hi => hcan (i+1) (by omega), fun i hi => hpk (i+1) (by omega)⟩
+    exact (minimalAcrossRestart_packed centre place entry q first hP hI1 hlowerFirst
+      hsuffix).lowerAt
+
+/-- **The minimal-period data of a scan state of a packed run whose origin is reached from
+boot** — the input of `CanonicalChainMinimal.shiftPeriodMinimal_packed`. -/
+theorem scanMinimal_packed {a : Fin 2} {rest : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry (a :: rest)))
+    (hI : InvLPS (PofC centre place entry (a :: rest)) q first (a :: rest) c₀ r₀)
+    (hboot : CloseoutCheckW.PackedFromBoot centre place entry q first (a :: rest) ⟨c₀, r₀⟩)
+    {k : ℕ} {c : Control} {s : GalilVM}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first (a :: rest) k ⟨c₀,r₀⟩ ⟨c, s⟩)
+    (hm : c.mode = .scan) :
+    ScanMinimal (fun _ _ => True) (a :: rest) s ∧
+      BirthMinimal centre place entry (fun _ _ => True) (a :: rest) s := by
+  have hinvariant := minimalAcrossRestart_packed centre place entry q first hP hI
+    (lowerAt_of_packedFromBoot centre place entry q first hP hI hboot) hrun
+  exact ⟨by simpa [ModeMinimal, hm] using hinvariant.minimal,
+    birthMinimal_of_lowerAt centre place entry q first hP hI hrun hm hinvariant.lowerAt⟩
+
+#print axioms scanMinimal_packed
 
 end PalPeg.RestartLowerRun

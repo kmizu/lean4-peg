@@ -8,7 +8,7 @@ import PalPeg.CanonicalReplay
 import PalPeg.CanonicalChainReady
 import PalPeg.CanonicalSearchHistory
 import PalPeg.CanonicalSearchReady
-import PalPeg.RestartCertificate
+import PalPeg.RestartLowerRun
 
 set_option autoImplicit false
 
@@ -25,7 +25,9 @@ The canonical schedule restarts a broken chain first (`GalilTickFair.Canonical`,
 
 * (`hrestartStage` — at a guard state of the packed run the restart lands in a stage-entry
   restart — is no longer a leaf: `RestartCertificate.restartStage` proves it);
-* `hshiftPeriodMinimal` — period minimality of the shifting chain;
+* (`hshiftPeriodMinimal` — period minimality of the shifting chain — is no longer a leaf:
+  `RestartLowerRun.scanMinimal_packed` carries the minimal period across broken restarts, using
+  that the origin is reached from boot);
 * `hmove` — the Galil move inequality that pays for a fallback, at a comparison state below
   the restart guard.
 
@@ -56,32 +58,6 @@ theorem searchReady_of_invLPS_shaped {w : List (Fin 2)}
 `OracleRun.cycleOracleOn_of_fourLeaves` is `searchReady_of_invLPS_shaped`. -/
 theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w))
     (h4 : first ≠ 4) (hq : 0 < q) (h7 : first ≠ 7) (h8 : first ≠ 8)
-    (hshiftPeriodMinimal : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM)
-      (vq : SearchVM) (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
-      InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
-      ¬ restartGuardVM s →
-      c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
-      MInv w c s →
-      GalilScaffoldInputHead.read (GalilScaffoldInputHead.left s.left) ≠
-        GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right) →
-      searchEffect (PofC centre place entry w) false s vq →
-      chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
-        ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
-        s.center s.radius s.chain z →
-      (PofC centre place entry w).shiftGuard
-        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
-          (afterMismatch s ⟨GalilScaffoldInputHead.left s.left,
-            GalilScaffoldChainVerifier.right s.right, z⟩ vq)) →
-      (PofC centre place entry w).beginShift
-        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
-          (afterMismatch s ⟨GalilScaffoldInputHead.left s.left,
-            GalilScaffoldChainVerifier.right s.right, z⟩ vq)) u →
-      Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
-        ⟨{c with clock := 2048, mode := .shift}, u⟩ →
-      ∀ wg : GalilScaffoldChainWatch.State, z = .watch wg →
-        ∀ p : ℕ, 0 < p → p < 2 * periodLength wg →
-          ¬ PalPeg.HasPeriod (Span w (position s.center) (position s.right - position s.center)) p)
     (hmove : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
       (z : ChainVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
@@ -128,7 +104,15 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
   apply PalPeg.OracleRun.cycleOracleOn_of_fourLeaves centre place entry q first hP h4
     (fun c₀ r₀ k y hI₀ hsh hm _ =>
       searchReady_of_invLPS_shaped centre place entry q first hI₀ hsh hm)
-    hchain hrestartStage hshiftPeriodMinimal
+    hchain hrestartStage
+    (fun c₀ r₀ k c s vq z u m hm1 hmle hI₀ hBoot hrun hnoGuard hm => by
+      cases w with
+      | nil => exact absurd hmle (by simp; omega)
+      | cons a rest =>
+        exact PalPeg.CanonicalChainMinimal.shiftPeriodMinimal_packed centre place entry q first hP
+          c₀ r₀ k c s vq z u m hm1 hmle hI₀ hrun
+          (PalPeg.RestartLowerRun.scanMinimal_packed centre place entry q first hP hI₀ hBoot hrun
+            hm) hnoGuard hm)
   intro c₀ r₀ k c s vq z m hm1 hmle hI hRun hNoGuardS hm hr hc hPos hM hMis hSearch hChain hGuard
   have hPack := PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hRun
   obtain ⟨_,_,rad,hScan,hLength⟩ :=
