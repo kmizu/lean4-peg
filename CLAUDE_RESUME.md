@@ -1,3 +1,36 @@
+## n243 — 公理進捗: chain の一生の不変量 `WindowInv` と 5 つの transport（DP の形の葉なし）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 残差の窓 `WatchWindow` を chain の一生（誕生 `chainStart` → copy → back → watch）を通して運ぶ chain 側の不変量 `WindowInv.WindowInv` と、全遷移の transport が揃った（`windowInv_start`／`_step`（`ChainStep`）／`_matched`（`ChainMatched`）／`_immediate`（shift 入口）／`_shiftOne`、標準公理のみ）。**`AnswerAhead`／`PlaceAhead`／`StartShape` などの DP の形の葉は使わない**——ブロックの中身 `b xs` は `copyEnd` で決まり、`backDone` で `coreX_born` が制御を作る。残るのは run 層（`Tick` ごと）への持ち上げと、中心のずれ `cen = cen₀ + k·h`・`2h ≤ R`・`ScanInvariant`／`canRight` の供給 |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### `WindowInv raw cen₀ R cc : ChainVM → Prop`
+
+| 枝 | 中身 |
+|---|---|
+| `idle`／`broken` | `True` |
+| `copy … v lag _ ver` | `VerAt raw cen₀ ver ∧ LagAt lag ver R ∧ ∃ ys, v = fill (start cc) ys` |
+| `back v _ lag _ ver` | `VerAt raw cen₀ ver ∧ LagAt lag ver R ∧ ∃ b xs, flat v = blockTokens cc b xs` |
+| `watch w` | `∃ b xs, WatchWindow raw cen₀ R cc b xs (.watch w)` |
+
+誕生: verifier ＝ 中心ヘッド（`VerAt`）、lag ＝ 半径カウンタ（`lagAt_radius`）。
+`copyBit` は `fill_append`、`copyEnd` は `fill_last_focus`＋`flat_block`、`backStep` は
+`flat_moveLeft`、`backDone` は `rewound_of_flat`＋`coreX_born`（窓は空虚）、watch は n242 の補題。
+
+### 次の一手（run 層）
+
+`Tick` ごとの持ち上げ: `scan_wait`／`scan_count`（`backgroundS` の `chainAt false` ＝ `ChainStep`）、
+`scan_match`（`compareFound` の `chainAt true` ＝ `ChainStep` → `ChainMatched`、誕生は第 3 選言）、
+`scan_shift`（`ChainStep` → `beginShiftVM` の `immediate`）、`scan_fallback`（chain idle）、
+`shift_one`（`chainShiftOne`）、他のモードは chain idle。中心のずれは scan で `cen₀ + k·h`、
+shift 中は `center + remaining = cen₀ + (k+1)·h`。
+
 ## n242 — 公理進捗（訂正 3）: `WatchWindow` の制御を `SamePrediction` 版 `CoreP` に
 
 **公理への進捗**
