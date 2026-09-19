@@ -20,7 +20,8 @@ namespace PalPeg.ConcreteLocalMachine
 
 open PalPeg
 open PalPeg.CloseoutCoreEnc20 (Delta)
-open PalPeg.CloseoutCoreEnc21 (SRole SRoles toAddr pushRearD tailD revD appStartD appD invalDoneD)
+open PalPeg.CloseoutCoreEnc21 (SRole SRoles toAddr pushRearD tailD revD appStartD appD invalDoneD
+  sRoleList)
 open PalPeg.CloseoutCoreEnc25 (SOp RTag rotTag doneTag isIdle isDone deltaOf tagStep invalDelta
   execDelta)
 open PalPeg.RTQueue (Queue RotationState)
@@ -145,5 +146,122 @@ theorem tagStep_eq_view (op : SOp) (q : Queue (Fin 2)) (t : RTag) :
 
 #print axioms deltaOf_eq_view
 #print axioms tagStep_eq_view
+
+/-! ## Reading the observation from the stack tops
+
+`CloseoutCoreEnc21.LaysS` stores a role's list on top of a junk list, so the top cell of a stack
+does not tell whether the role is empty (an empty role shows the junk).  The cells of a queue
+stack are `Option (Fin 2)` (`CloseoutCoreEnc20.viewTapesQ` writes `some`), and `none` is unused:
+it is the **seal**.  A sealed junk list is empty or starts with `none`; then the two top cells of
+a stack determine the head of the role and whether the role has exactly one element. -/
+
+/-- A junk list is sealed: it does not start with a letter. -/
+def Sealed (junk : List (Option (Fin 2))) : Prop :=
+  ∀ a : Fin 2, junk.head? ≠ some (some a)
+
+/-- The roles are laid on sealed junk. -/
+def LaysSealed (q : Queue (Fin 2)) (ρ : SRoles) (stack junk : ℕ → List (Option (Fin 2))) : Prop :=
+  (∀ ro, stack (ρ ro) = (sRoleList q ro).map some ++ junk (ρ ro)) ∧ ∀ i, Sealed (junk i)
+
+/-- The letter under the top cell of a stack, if the top cell holds a letter. -/
+def topLetter (stack : List (Option (Fin 2))) : Option (Fin 2) :=
+  stack.head?.bind id
+
+theorem topLetter_sealed {role : List (Fin 2)} {junk : List (Option (Fin 2))}
+    (hsealed : Sealed junk) : topLetter (role.map some ++ junk) = role.head? := by
+  cases role with
+  | cons a rest => rfl
+  | nil =>
+    cases junk with
+    | nil => rfl
+    | cons cell rest =>
+      cases cell with
+      | none => rfl
+      | some a => exact absurd rfl (hsealed a)
+
+/-- Exactly one letter on top of the seal: the top cell is a letter and the second is not. -/
+def topIsSingle (stack : List (Option (Fin 2))) : Bool :=
+  (topLetter stack).isSome && (topLetter stack.tail).isNone
+
+theorem topIsSingle_sealed {role : List (Fin 2)} {junk : List (Option (Fin 2))}
+    (hsealed : Sealed junk) : topIsSingle (role.map some ++ junk) = decide (role.length = 1) := by
+  cases role with
+  | nil =>
+    have htop : topLetter (([] : List (Fin 2)).map some ++ junk) = none :=
+      topLetter_sealed hsealed
+    unfold topIsSingle
+    rw [htop]
+    rfl
+  | cons a rest =>
+    have htop : topLetter ((a :: rest).map some ++ junk) = some a := rfl
+    have htail : topLetter ((a :: rest).map some ++ junk).tail = rest.head? := by
+      show topLetter (rest.map some ++ junk) = rest.head?
+      exact topLetter_sealed hsealed
+    unfold topIsSingle
+    rw [htop, htail]
+    cases rest <;> simp
+
+/-- The constructor of a rotation state: what the finite control keeps of it. -/
+inductive RotationPhase where
+  | idle | reversing | appending | done
+  deriving DecidableEq, Fintype
+
+def rotationPhase : RotationState (Fin 2) → RotationPhase
+  | .idle => .idle
+  | .reversing _ _ _ _ _ => .reversing
+  | .appending _ _ _ => .appending
+  | .done _ => .done
+
+/-- The valid count of an appending rotation is `0` (any other state: `true`, unused). -/
+def validIsZero : RotationState (Fin 2) → Bool
+  | .appending ok _ _ => decide (ok = 0)
+  | _ => true
+
+/-- The observation from the phase in the control, the zero test of the valid counter, and the
+two top cells of the role stacks. -/
+def rotationViewOfTops (phase : RotationPhase) (validZero : Bool)
+    (stackOf : SRole → List (Option (Fin 2))) : RotationView :=
+  match phase with
+  | .idle => .idle
+  | .done => .done
+  | .reversing =>
+      .reversing (topLetter (stackOf .fwd)) (topLetter (stackOf .rev)) (topIsSingle (stackOf .rev))
+  | .appending =>
+      .appending validZero (topLetter (stackOf .fwd')) (topLetter (stackOf .rev')).isSome
+
+def queueViewOfTops (phase : RotationPhase) (validZero : Bool)
+    (stackOf : SRole → List (Option (Fin 2))) : QueueView :=
+  ⟨(topLetter (stackOf .front)).isNone, rotationViewOfTops phase validZero stackOf⟩
+
+/-- **The observation is read from the stack tops**: on sealed junk, the phase, the zero test of
+the valid counter and the two top cells of five role stacks give `queueView`. -/
+theorem queueView_eq_tops {q : Queue (Fin 2)} {ρ : SRoles}
+    {stack junk : ℕ → List (Option (Fin 2))} (hlays : LaysSealed q ρ stack junk) :
+    queueView q = queueViewOfTops (rotationPhase q.state) (validIsZero q.state)
+      (fun ro => stack (ρ ro)) := by
+  obtain ⟨hstack, hsealed⟩ := hlays
+  have htop : ∀ ro, topLetter (stack (ρ ro)) = (sRoleList q ro).head? := fun ro => by
+    rw [hstack ro]; exact topLetter_sealed (hsealed _)
+  have hsingle : ∀ ro, topIsSingle (stack (ρ ro)) = decide ((sRoleList q ro).length = 1) :=
+    fun ro => by rw [hstack ro]; exact topIsSingle_sealed (hsealed _)
+  have hfront : q.front.isEmpty = (topLetter (stack (ρ .front))).isNone := by
+    rw [htop .front]
+    show q.front.isEmpty = q.front.head?.isNone
+    cases q.front <;> rfl
+  unfold queueView queueViewOfTops
+  rw [hfront]
+  congr 1
+  cases hstate : q.state with
+  | idle => rfl
+  | done f => rfl
+  | reversing ok f f' r r' =>
+    show RotationView.reversing f.head? r.head? (decide (r.length = 1)) = _
+    simp only [rotationPhase, rotationViewOfTops, htop, hsingle, sRoleList, hstate]
+  | appending ok f' r' =>
+    show RotationView.appending (decide (ok = 0)) f'.head? (!r'.isEmpty) = _
+    simp only [rotationPhase, rotationViewOfTops, validIsZero, htop, sRoleList, hstate]
+    cases r' <;> rfl
+
+#print axioms queueView_eq_tops
 
 end PalPeg.ConcreteLocalMachine

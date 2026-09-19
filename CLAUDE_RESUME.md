@@ -18,6 +18,10 @@
 
 **未完の部分（次の具体 goal）**: 観測の各 bit を**物理テープから読めるようにする表現**が無い。`LaysS q ρ L J` は `L (ρ ro) = sRoleList q ro ++ J (ρ ro)`（役割の中身の後ろに不要領域 `J` が続く）なので、stack の先頭を見ても「空かどうか」「先頭記号が本物か」は分からない（空なら先頭は junk）。必要なのは、`frontEmpty`／`forwardHead = none`／`reverseIsSingle`／`validIsZero`／`rebuiltNonempty` のそれぞれに対する局所的な担い手（sentinel か、更新とともに保つ counter の符号・ゼロ判定）と、それを含む `Rep` の場。これを決めてから `ActRule` の `nq`／`acts` を書く（handoff L2 の 3〜4）。`CloseoutCoreEnc22` の 9 本配置（`tViewQ = 9`）が何を持っているかの確認が先。
 
+**n283 の続き（2026-09-20、未接続・検査済み）— 読み取り側を決めた**: 物理 stack は `dTape ((L n).map some) debris`（`CloseoutCoreEnc20.viewTapesQ`）でセルは `Option (Fin 2)`、`none` は未使用。そこで **junk の先頭を必ず `none`（番兵）にする**: `ConcreteLocalMachine.Sealed`／`LaysSealed q ρ stack junk`（`stack (ρ ro) = (sRoleList q ro).map some ++ junk (ρ ro)`、junk は空か `none` で始まる）。`topLetter`／`topIsSingle`（先頭 2 セル）と、制御が持つ `RotationPhase`、valid counter のゼロ判定から `queueViewOfTops` を作り、`queueView_eq_tops : queueView q = queueViewOfTops …` を証明した。
+
+**次の具体 goal（書き込み側、未着手）**: `LaysSealed` が sub-step で保たれること（`laysS_sApply` の番兵版）。junk が生まれるのは `junkOf` の 3 箇所だけ（`inval` の `appending 0 _ (_ :: _)` と `exec` の `appending 0` で `ρ .fwd'`、`install` の `done` で `ρ .front`）で、そこで元の delta は `keep` なので、その stack に `none` を 1 回 push する（新しい junk ＝ `none :: 旧 stack`）。物理操作は「`Delta`（`Fin 2` の push／pop／keep）＋そのアドレスを封じるかの 1 bit」で表せば `toAddr_eq` を再利用できる。pop は常に空でない役割に対してだけ起きる（`tailD` は `front ≠ []`、`revD`／`appStartD`／`appD`／`invalDoneD` は pattern が非空を保証）ので junk を pop しない。valid counter `ok` と `lenf − lenr` の符号は別の unary counter テープで持つ（未設計）。
+
 ## n282 — 公理 `obligation_cycleOracleOnPackedRun` を証明して外した（2 → 1）。残る義務は `obligation_localRealization` だけ
 
 **公理への進捗**
