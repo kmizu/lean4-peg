@@ -162,7 +162,7 @@ theorem lticksN_of_lpackM2_pt6S {w : List (Fin 2)} {x : State GalilVM}
   choosePackL := fun hm _ t ht => by
     rw [choose_left_eq_right (PofC centre place entry w) q first ht]
     exact hP.rrep (by rw [hm]; decide)
-  rewindLeft := fun hm => left_pos_of_two (hx.extra.rewindMargin hm)
+  rewindLeft := fun hm _ => left_pos_of_two (hx.extra.rewindMargin hm)
   replayPackN := fun hm _ _ h =>
     lpackM_replayStart_of_centreRep centre place entry q first (hP.centreRep (Or.inr hm)) h
 

@@ -175,7 +175,7 @@ theorem sane3_tick {c c' : Control} {s t : GalilVM}
     rename_i s' hmt hm hc hg' hr hcmp hav hb
     obtain ⟨hl, hrr, hce⟩ :=
       compare_heads onLetter leftFirst centre place entry q first hcmp
-    obtain ⟨p, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨p, ht, -⟩ : beginFallbackVM' s' t := hb
     exact ⟨sane_leftE (by rw [ht]; exact hl) (hll.1 hm hc), sane_copyE (by rw [ht]; exact hce) bC,
       sane_rightE (by rw [ht]; exact hrr) (canRight_compare (hpk (by rw [hm]; decide)) hav) bR⟩
   case shift_one =>

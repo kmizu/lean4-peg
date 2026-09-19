@@ -54,6 +54,7 @@ import PalPeg.ClearAny
 import PalPeg.ProgLang
 import PalPeg.ProgLangLib
 import PalPeg.GSScanProg
+import PalPeg.PalInPegUnconditional
 
 /-!
 # 公理 guard
@@ -374,3 +375,23 @@ import PalPeg.GSScanProg
 /-- info: 'PalPeg.GSProg.scanProg_trace' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.GSProg.scanProg_trace
+
+/-! ## 目標定理のラチェット
+
+`PalPeg.PalInPeg.unconditional : RecognizedByTotalPEG PAL` は**閉じた項**だが、
+いま 4 個の未証明義務を `axiom` として持っている（2026-09-19 に `shiftPalAtScanStates` を
+run 形／trace 形の 2 つに割った——旧版は偽の疑いが濃かった、n112）（1 場ずつの原子に分解済み）。下の guard がその一覧を固定するので、
+
+* 義務を 1 個証明して `axiom` を外すと guard が壊れる → 更新を強制される（前進の記録）
+* うっかり新しい穴を開けても guard が壊れる → 気づける
+
+**この guard が標準 3 公理（`propext` / `Classical.choice` / `Quot.sound`）だけに
+なったとき、計画書 §10.5（前提ゼロ）が達成される。** いまは未達。 -/
+
+/-- info: 'PalPeg.PalInPeg.unconditional' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound,
+ PalPeg.PalInPeg.obligation_cycleOracleOnPackedRun,
+ PalPeg.PalInPeg.obligation_localRealization] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.PalInPeg.unconditional

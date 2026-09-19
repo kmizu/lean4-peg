@@ -18,7 +18,7 @@ entry `p0` (window `mw`) to the next `.run` entry `p8` (window `2mw`) along a
   supply premises (`DepthAt`, `D ≤ prepLen k`, the input-length clause) and
   `bs.length = mw`.  `StageChain` — a sequence of stages, window doubling.
 * §3 **`postRunC_galil_of_boot`** — from the datum at the first `.run` entry
-  with `32 ≤ mw0`, every later `.run` entry of the chain carries the datum,
+  with `16 ≤ mw0` (i.e. `k ≥ 2`), every later `.run` entry carries the datum,
   `32 ≤` its window, and `DpSafeStage` over the remaining stream.
   `postRunC_galil_of_initial` reads `ClockInv 2048` off `Control.initial`.
 
@@ -117,7 +117,7 @@ theorem entryDatum_step (hres : RestartOnBroken P) {I : State GalilVM → Prop}
     {k mw : ℕ} {pre ev as : List Bool} {p p0 p8 : State GalilVM}
     (hsup : ScanSupplyInv (galilFrameS P q first) 2048 I)
     (hp : I p) (hclk : ClockInv 2048 p.ctl)
-    (hd : EntryDatum P q first k mw pre p p0) (hmw : 32 ≤ mw)
+    (hd : EntryDatum P q first k mw pre p p0) (hmw : 16 ≤ mw)
     (hst : StageLegs P q first k mw ev as p0 p8)
     (hpaced : PacedL 2048 0 (pre ++ ev ++ as)) :
     EntryDatum P q first k (2 * mw) (pre ++ ev) p p8 ∧
@@ -147,20 +147,20 @@ theorem entryDatum_step (hres : RestartOnBroken P) {I : State GalilVM → Prop}
 #print axioms entryDatum_step
 
 /-- **NAMED — the induction over all later `.run` entries.**  From the datum at
-the first `.run` entry `p0` (window `mw`, `32 ≤ mw`) and a chain of stages to
-`pn`, the datum holds at `pn` with window `mw'`, `32 ≤ mw'`, and — unless the
+the first `.run` entry `p0` (window `mw`, `16 ≤ mw`) and a chain of stages to
+`pn`, the datum holds at `pn` with window `mw'`, `16 ≤ mw'`, and — unless the
 chain is empty — `DpSafeStage` at `pn` over the remaining stream `tail`.
 Hypotheses outside the run and its annotations: `hres`, `hsup`, `I p`,
-`ClockInv 2048 p.ctl`, the boot datum, `32 ≤ mw`, and the pacing of the whole
+`ClockInv 2048 p.ctl`, the boot datum, `16 ≤ mw`, and the pacing of the whole
 stream from `p`. -/
 theorem postRunC_galil_of_boot (hres : RestartOnBroken P) {I : State GalilVM → Prop}
     {k mw mw' : ℕ} {pre evs tail : List Bool} {p p0 pn : State GalilVM}
     (hsup : ScanSupplyInv (galilFrameS P q first) 2048 I)
     (hp : I p) (hclk : ClockInv 2048 p.ctl)
-    (hboot : EntryDatum P q first k mw pre p p0) (hmw : 32 ≤ mw)
+    (hboot : EntryDatum P q first k mw pre p p0) (hmw : 16 ≤ mw)
     (hch : StageChain P q first k mw mw' evs tail p0 pn)
     (hpaced : PacedL 2048 0 (pre ++ evs ++ tail)) :
-    EntryDatum P q first k mw' (pre ++ evs) p pn ∧ 32 ≤ mw' ∧
+    EntryDatum P q first k mw' (pre ++ evs) p pn ∧ 16 ≤ mw' ∧
       ((evs = [] ∧ mw = mw' ∧ p0 = pn) ∨ DpSafeStage (searchLens.get pn.vm) tail) := by
   induction hch generalizing pre with
   | nil mw tail p0 =>
@@ -186,10 +186,10 @@ theorem postRunC_galil_of_initial (hres : RestartOnBroken P) {I : State GalilVM 
     {k mw mw' : ℕ} {pre evs tail : List Bool} {s : GalilVM} {p0 pn : State GalilVM}
     (hsup : ScanSupplyInv (galilFrameS P q first) 2048 I)
     (hp : I ⟨initial 2048, s⟩)
-    (hboot : EntryDatum P q first k mw pre ⟨initial 2048, s⟩ p0) (hmw : 32 ≤ mw)
+    (hboot : EntryDatum P q first k mw pre ⟨initial 2048, s⟩ p0) (hmw : 16 ≤ mw)
     (hch : StageChain P q first k mw mw' evs tail p0 pn)
     (hpaced : PacedL 2048 0 (pre ++ evs ++ tail)) :
-    EntryDatum P q first k mw' (pre ++ evs) ⟨initial 2048, s⟩ pn ∧ 32 ≤ mw' ∧
+    EntryDatum P q first k mw' (pre ++ evs) ⟨initial 2048, s⟩ pn ∧ 16 ≤ mw' ∧
       ((evs = [] ∧ mw = mw' ∧ p0 = pn) ∨ DpSafeStage (searchLens.get pn.vm) tail) :=
   postRunC_galil_of_boot P q first hres hsup hp (clockInv_initial 2048 (by omega)) hboot hmw hch
     hpaced
@@ -206,13 +206,14 @@ theorem postRunC_galil_of_initial (hres : RestartOnBroken P) {I : State GalilVM 
   the calibration is an equality, and `Canonical` debt / the scan leg `pre`
   from the initial control are the entry facts (`entry_debt_at_prep` shape).
   Not proved here.
-* **`32 ≤ mw0`**, i.e. `k ≥ 4`.  Once true it is preserved (the window
-  doubles), so no per-entry hypothesis remains.  For `k ≤ 3` the first one
-  (`k = 2, 3`: windows `16`, `24`) or two (`k = 0, 1`: windows `8`, `16`)
-  stages have `mw < 32`, and `postRunF_step` does not apply to them
-  (`bal_of_paced_slack_S` needs `mw ≥ 32` to absorb the two slack units of
-  `dpDemandS`); those stages need the phase of the `.double` leg or a sharper
-  demand — a separate argument.
+* **`16 ≤ mw0`**, i.e. `k ≥ 2`.  Once true it is preserved (the window
+  doubles), so no per-entry hypothesis remains.  With `mw0 = 8 * max k 1`
+  every `k ≥ 2` is covered from its first entry; the whole residue is
+  **`k ≤ 1`, and there only the first stage** (window `8` — the second already
+  has window `16`).  `bal_of_paced_slack_S` needs `mw ≥ 16` to absorb the two
+  slack units of `dpDemandS`, and that is sharp for the bounds it uses
+  (`PalPeg.StageBudgetShift.window_residual`); the one remaining stage needs
+  the phase of the `.double` leg or a sharper demand — a separate argument.
 * **`RunEntriesS`** along the chain, and `PostRunPh` / `PostRunC` themselves:
   see the module docstring — not machine-run statements.  The `.found` /
   `.missed` exits (`CloseoutPreload30` §3) and the scan exit

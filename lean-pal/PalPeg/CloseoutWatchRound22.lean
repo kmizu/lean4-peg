@@ -1,3 +1,4 @@
+import PalPeg.CopyPhaseNoShift
 import PalPeg.CloseoutWatchRound21
 
 /-!
@@ -91,11 +92,10 @@ search witness is `searchLens.get s1` (the chain is not idle), and the chain
 clause is the first disjunct of `chainAt`. -/
 theorem fallbackTick_of_watchTick (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry : ℕ) (raw : List (Fin 2))
-    {s1 : GalilVM} {w : GalilScaffoldChainWatch.State} (hw : s1.chain = ChainVM.watch w)
+    {s1 : GalilVM} (hne : s1.chain ≠ ChainVM.idle)
     {z : ChainVM} (htick : ChainTick false s1.chain z)
     (hg : ¬ shiftGuardVM (afterMismatch s1 ⟨left s1.left, right s1.right, z⟩ (searchLens.get s1))) :
     FallbackTick centre place entry raw s1 := by
-  have hne : s1.chain ≠ ChainVM.idle := by rw [hw]; exact ChainVM.noConfusion
   refine ⟨⟨⟨left s1.left, right s1.right, z⟩, searchLens.get s1, rfl, rfl, Or.inr ⟨hne, rfl⟩,
     Or.inl ⟨hne, htick⟩, hg⟩⟩
 
@@ -125,13 +125,18 @@ theorem tickPack_of_landing (centre : GalilVM → Fin 3)
 
 /-! ## 3. The one hypothesis -/
 
-/-- **(a)-residual.**  At every clock-`1` available watching mismatch reached
-from `⟨cP, sP⟩`: a disabled chain tick exists, and every disabled chain tick
-fails the shift guard after the mismatch (the `MismatchExitG` shape). -/
+/-- **(a)-residual.**  At every clock-`1` available mismatch reached from `⟨cP, sP⟩`
+whose chain is in a **tickable phase**: a disabled chain tick exists, and every
+disabled chain tick fails the shift guard after the mismatch.
+
+**n130/n131**: guard を `LiveScanWatch` から `LiveScanTickable` に広げた。
+copy/back 相でも成り立ち（`CopyPhaseNoShift.watchMismatchNoShift_parts_of_copyOrBack`）、
+found 誕生直後の不一致 fallback がこの契約に載る。 -/
 def WatchMismatchNoShiftC (P : Shared) (q : ℕ) (first : Fin 9)
     (cP : Control) (sP : GalilVM) : Prop :=
   ∀ (es : List Bool) (c1 : Control) (s1 : GalilVM),
-    WatchSegE P q first 2048 es cP sP c1 s1 → LiveScanWatch c1 s1 →
+    WatchSegE P q first 2048 es cP sP c1 s1 →
+    PalPeg.CopyPhaseNoShift.LiveScanTickable c1 s1 →
     c1.clock = 1 → canRight s1.right →
     read (left s1.left) ≠ read (right s1.right) →
     (∃ z, ChainTick false s1.chain z) ∧
@@ -144,7 +149,8 @@ def WatchFallbackCostC (centre : GalilVM → Fin 3) (place : GalilVM → GalilSc
     (entry q : ℕ) (first : Fin 9) (raw : List (Fin 2)) (m : ℕ)
     (c : Control) (r : GalilVM) (cP : Control) (sP : GalilVM) : Prop :=
   ∀ (es : List Bool) (c1 : Control) (s1 : GalilVM),
-    WatchSegE (PofC centre place entry raw) q first 2048 es cP sP c1 s1 → LiveScanWatch c1 s1 →
+    WatchSegE (PofC centre place entry raw) q first 2048 es cP sP c1 s1 →
+    PalPeg.CopyPhaseNoShift.LiveScanTickable c1 s1 →
     c1.clock = 1 → canRight s1.right →
     read (left s1.left) ≠ read (right s1.right) →
     ∀ (n R : ℕ) (cT : Control) (sT : GalilVM),
@@ -178,11 +184,12 @@ theorem watchFallbackC_of_context (centre : GalilVM → Fin 3)
   intro es c1 s1 hseg hlive hclk hav hne
   obtain ⟨hns, hcost⟩ := hres
   obtain ⟨⟨z, hz⟩, hg⟩ := hns es c1 s1 hseg hlive hclk hav hne
-  obtain ⟨w, hw⟩ := hlive.2.2.2
+  have hneChain : s1.chain ≠ ChainVM.idle :=
+    PalPeg.CopyPhaseNoShift.liveScanTickable_ne_idle hlive
   obtain ⟨hsi, hM, hK, hout⟩ :=
     tickPack_of_landing centre place entry q first raw hex hseg hav hsiP hMP hEP houtP
   refine ⟨⟨hsi, hM, hK, ?_, hout⟩, hcost es c1 s1 hseg hlive hclk hav hne⟩
-  exact fallbackTick_of_watchTick centre place entry raw hw hz
+  exact fallbackTick_of_watchTick centre place entry raw hneChain hz
     (hg ⟨left s1.left, right s1.right, z⟩ (searchLens.get s1) hz)
 
 end PalPeg.CloseoutWatchRound22

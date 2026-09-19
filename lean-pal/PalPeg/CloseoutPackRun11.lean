@@ -1,3 +1,4 @@
+import PalPeg.PackedRun
 import PalPeg.CloseoutScanMargin4
 
 /-!
@@ -103,7 +104,9 @@ structure LTickLeavesN (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop whe
     (galilFrameS (PofC centre place entry w) q first).choose s t →
     GalilScaffoldInputTrace.Represents t.left.head w ∧ t.left.head.focus ≠ none
   /-- **The surviving corner**: `rewind` has no comparison to lean on. -/
-  rewindLeft : c.mode = Mode.rewind → 0 < position (GalilScaffoldInputHead.left s.left)
+  rewindLeft : c.mode = Mode.rewind →
+    ¬ (galilFrameS (PofC centre place entry w) q first).atFirst s →
+    0 < position (GalilScaffoldInputHead.left s.left)
   replayPackN : c.mode = Mode.replayStart → ∀ (t : GalilVM) (o : Bool),
     (galilFrameS (PofC centre place entry w) q first).replayStart s t →
     LPackM w {c with mode := Mode.scan, clock := 2048, output := o, replaying := (galilFrameS (PofC centre place entry w) q first).replayPos t} t
@@ -117,7 +120,7 @@ theorem lticksN_of_lticksM {w : List (Fin 2)} {c : Control} {s : GalilVM}
   scanCanR := h.scanCanR
   shiftDoneScan := h.shiftDoneScan
   choosePackL := h.choosePackL
-  rewindLeft := h.rewindLeft
+  rewindLeft := fun hm _ => h.rewindLeft hm
   replayPackN := h.replayPackM
 
 /-! ## 2. `lpackN_tick` -/
@@ -198,7 +201,7 @@ theorem lpackN_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
       compare_mismatch_form centre place entry q first hcmp hmt
     have hni : c.mode ≠ Mode.init := by rw [hm]; decide
-    obtain ⟨pl, ht⟩ :
+    obtain ⟨pl, ht, hbnd⟩ :
       beginFallbackVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
     obtain ⟨hrepr, hpres0⟩ := hP.lrepM hni
     have hpres := hpres0 (by rw [hm]; exact strictAt_scan)
@@ -299,7 +302,7 @@ theorem lpackN_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     have htl : t.left = GalilScaffoldInputHead.left s.left := by rw [hset, heq]; rfl
     obtain ⟨hrepr, hpres0⟩ := hP.lrepM hni
     have hpres := hpres0 (by rw [hm]; exact strictAt_rewind)
-    obtain ⟨hr1, hr2⟩ := lrep_left hrepr hpres (hL.rewindLeft hm)
+    obtain ⟨hr1, hr2⟩ := lrep_left hrepr hpres (hL.rewindLeft hm (by assumption))
     refine ⟨fun _ => ⟨by rw [htl]; exact hr1, fun _ => by rw [htl]; exact hr2⟩,
       fun hm' _ => Mode.noConfusion (hm.symm.trans hm')⟩
   case rewind_pair =>
@@ -310,7 +313,7 @@ theorem lpackN_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     have htl : t.left = GalilScaffoldInputHead.left s.left := by rw [hset, heq]; rfl
     obtain ⟨hrepr, hpres0⟩ := hP.lrepM hni
     have hpres := hpres0 (by rw [hm]; exact strictAt_rewind)
-    obtain ⟨hr1, hr2⟩ := lrep_left hrepr hpres (hL.rewindLeft hm)
+    obtain ⟨hr1, hr2⟩ := lrep_left hrepr hpres (hL.rewindLeft hm (by assumption))
     refine ⟨fun _ => ⟨by rw [htl]; exact hr1, fun _ => by rw [htl]; exact hr2⟩,
       fun hm' _ => Mode.noConfusion (hm.symm.trans hm')⟩
   case replayStart =>
@@ -332,14 +335,10 @@ theorem lpackN_steps {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ �
     (hP : PreTrace centre place entry q first w st Tc)
     (hLv : ∀ i, i ≤ Tc w.length →
       LTickLeavesN centre place entry q first w (st i).ctl (st i).vm) :
-    ∀ i, i ≤ Tc w.length → LPackM w (st i).ctl (st i).vm := by
-  intro i
-  induction i with
-  | zero => intro _; rw [hP.start]; exact lpackM_boot w
-  | succ n ih =>
-    intro hi
-    exact lpackN_tick' centre place entry q first (ih (by omega)) (hLv n (by omega))
-      (hP.trace.tick n (by omega))
+    ∀ i, i ≤ Tc w.length → LPackM w (st i).ctl (st i).vm :=
+  hP.trace.carried (Pk := fun z => LPackM w z.ctl z.vm)
+    (by rw [hP.start]; exact lpackM_boot w)
+    (fun n hn ht hp => lpackN_tick' centre place entry q first hp (hLv n (by omega)) ht)
 
 end LeavesN
 
@@ -460,7 +459,7 @@ theorem lticksN_of_big6 {w : List (Fin 2)} (hr : BigResid6 centre place entry q 
   scanCanR := fun hm => canR_of_partsM centre place entry hx.aux.front hx.extra hm
   shiftDoneScan := hr.rShiftDoneScan x hx
   choosePackL := hr.rChoosePackL x hx
-  rewindLeft := fun hm => left_pos_of_two (hx.extra.rewindMargin hm)
+  rewindLeft := fun hm _ => left_pos_of_two (hx.extra.rewindMargin hm)
   replayPackN := hr.rReplayPackM x hx
 
 /-- **One tick of the guarded enlarged pack.**

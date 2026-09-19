@@ -351,7 +351,8 @@ theorem foundRouteMC_noshift (centre : GalilVM → Fin 3)
     {c3 : Control} {s3 : GalilVM}
     (hseg : WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
-    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
+    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true) (hav3 : canRight s3.right)
     (vs3 : ScanVM) (vq3 : SearchVM)
     (hcmp3 : (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3))
     (hmt3 : (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3))
@@ -378,7 +379,7 @@ theorem foundRouteMC_noshift (centre : GalilVM → Fin 3)
       (by rw [hclk0]) havF
   obtain ⟨k1, L1, hst1, hcr1, hcenE⟩ :=
     costedRun_found_noshift raw (PofC centre place entry raw) rfl rfl qq first 2048 le_rfl hmF hrF hcF
-      havF hidle hiF houtF vq hq hfound hmt ch hch hchne oF hoF hprepSeg hseg hm3 hr3 hc3 w3 hs3 hav3
+      havF hidle hiF houtF vq hq hfound hmt ch hch hchne oF hoF hprepSeg hseg hm3 hr3 hc3 w3 hs3 hz3 hav3
       vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken hmargin hlast hlag entry (fun _ _ h => h) w1
       (by rw [hcF]; omega)
   have hst := stepsAll_trans hst0 hst1
@@ -454,7 +455,8 @@ theorem foundRouteMC_noshift_Inv (centre : GalilVM → Fin 3)
     {c3 : Control} {s3 : GalilVM}
     (hseg : WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
-    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
+    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true) (hav3 : canRight s3.right)
     (vs3 : ScanVM) (vq3 : SearchVM)
     (hcmp3 : (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3))
     (hmt3 : (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3))
@@ -481,7 +483,7 @@ theorem foundRouteMC_noshift_Inv (centre : GalilVM → Fin 3)
       (by rw [hclk0]) havF
   obtain ⟨k1, L1, hst1, hcr1, hcenE⟩ :=
     costedRun_found_noshift raw (PofC centre place entry raw) rfl rfl qq first 2048 le_rfl hmF hrF hcF
-      havF hidle hiF houtF vq hq hfound hmt ch hch hchne oF hoF hprepSeg hseg hm3 hr3 hc3 w3 hs3 hav3
+      havF hidle hiF houtF vq hq hfound hmt ch hch hchne oF hoF hprepSeg hseg hm3 hr3 hc3 w3 hs3 hz3 hav3
       vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken hmargin hlast hlag entry (fun _ _ h => h) w1
       (by rw [hcF]; omega)
   have hst := stepsAll_trans hst0 hst1
@@ -599,7 +601,8 @@ theorem foundRouteMC_shift (centre : GalilVM → Fin 3)
     {n : ℕ} {c3 : Control} {s3 : GalilVM}
     (hseg3 : ScanSeg (PofC centre place entry raw) qq first 2048 n c' s' c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
-    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
+    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true) (hav3 : canRight s3.right)
     (vs3 : ScanVM) (vq3 : SearchVM)
     (hcmp3 : (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3))
     (hmt3 : (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3))
@@ -625,7 +628,7 @@ theorem foundRouteMC_shift (centre : GalilVM → Fin 3)
     costedRun_found_shift raw (PofC centre place entry raw) rfl rfl qq first 2048 le_rfl hmF hrF hcF
       havF hidle hiF houtF vq hq hfound hmt ch hch hchne oF hoF hprepSeg hseg h hm1 hr1 hc1 w hs1 hz
       hav vs vq' hcmp hmis hq' hg s2' hb hs2' hi2 hchain o ho org hint he hoc hrounds hseg3 hm3 hr3
-      hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken hmargin hlast hlag entry
+      hc3 w3 hs3 hz3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken hmargin hlast hlag entry
       (fun _ _ h => h) w1 (by rw [hcF]; omega)
   have hst := stepsAll_trans hst0 hst1
   have hcr := costedRun_trans hcr0 hcr1
@@ -637,14 +640,14 @@ theorem foundRouteMC_shift (centre : GalilVM → Fin 3)
     life_minv raw _ hex qq first 2048 a ls rs q gap hraw hmF hrF hcF havF hidle hiF hMF hCen vq hq
       hfound hmt ch hch hchne oF hoF hprepSeg hseg h hm1 hr1 hc1 w hs1 hz hav vs vq' hcmp hmis hq' hg
       s2' hb hs2' hi2 hchain o ho org hint he hoc hdp hpc hpos11 hlow hrounds hseg3 hm3 hr3 hc3 w3
-      hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken entry
+      hs3 hz3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken entry
   -- the break data
   have hpo : (shiftLens.set s2' ⟨t', .watch v, cycle⟩).periodOnly = true := by
     show s2'.periodOnly = true; rw [hs2'.2]
   have hzv : zero v.lag = true := by rw [chain_shift_lag hchain]; exact hz
   have hbr3 : vs3.chain = .broken w3' := by rw [← afterCompare_chain s3 vs3 vq3]; exact hbroken
   have hend3 := PalPeg.GalilBreakTerminal.hend3_of_matched_break _ qq first 2048 h org hint hpo hzv
-    he hrounds hseg3 w3 hs3 hav3 vs3 hcmp3 hmt3 w3' hbr3
+    he hrounds hseg3 w3 hs3 hz3 hav3 vs3 hcmp3 hmt3 w3' hbr3
   obtain ⟨hrep, hfoc, hposS⟩ := rounds_centerRep _ qq first 2048 h hrounds v hpo rfl hzv org hint he
   have hcenterS : read s'.center ≠ none := by
     intro h0; apply hfoc; unfold GalilScaffoldInputHead.read at h0; simpa using h0
@@ -684,7 +687,7 @@ theorem foundRouteMC_shift (centre : GalilVM → Fin 3)
   -- the stage budget
   have hstage : StageEntry (foundRestartRadius org.radius h m n) w3'.machine.control.last :=
     PalPeg.GalilBreakTerminal.stageEntry_after_found_closed _ qq first 2048 h org hint hpo hzv he
-      hrounds hseg3 w3 hs3 w3' hw3' ha hbrk hav3 vs3 hcmp3 hmt3 hbr3
+      hrounds hseg3 w3 hs3 hz3 w3' hw3' ha hbrk hav3 vs3 hcmp3 hmt3 hbr3
   -- the frontier and the shift counter
   have hfr := front_of_run centre place entry qq first raw hI hlive hst
   have hsi : ShiftIdle (foundLandingVM (afterCompare s3 vs3 vq3) w3' entry) := by
@@ -781,7 +784,8 @@ theorem foundRouteMC_shift_Inv (centre : GalilVM → Fin 3)
     {n : ℕ} {c3 : Control} {s3 : GalilVM}
     (hseg3 : ScanSeg (PofC centre place entry raw) qq first 2048 n c' s' c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
-    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
+    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true) (hav3 : canRight s3.right)
     (vs3 : ScanVM) (vq3 : SearchVM)
     (hcmp3 : (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3))
     (hmt3 : (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3))
@@ -807,7 +811,7 @@ theorem foundRouteMC_shift_Inv (centre : GalilVM → Fin 3)
     costedRun_found_shift raw (PofC centre place entry raw) rfl rfl qq first 2048 le_rfl hmF hrF hcF
       havF hidle hiF houtF vq hq hfound hmt ch hch hchne oF hoF hprepSeg hseg h hm1 hr1 hc1 w hs1 hz
       hav vs vq' hcmp hmis hq' hg s2' hb hs2' hi2 hchain o ho org hint he hoc hrounds hseg3 hm3 hr3
-      hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken hmargin hlast hlag entry
+      hc3 w3 hs3 hz3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken hmargin hlast hlag entry
       (fun _ _ h => h) w1 (by rw [hcF]; omega)
   have hst := stepsAll_trans hst0 hst1
   have hcr := costedRun_trans hcr0 hcr1
@@ -819,14 +823,14 @@ theorem foundRouteMC_shift_Inv (centre : GalilVM → Fin 3)
     life_minv raw _ hex qq first 2048 a ls rs q gap hraw hmF hrF hcF havF hidle hiF hMF hCen vq hq
       hfound hmt ch hch hchne oF hoF hprepSeg hseg h hm1 hr1 hc1 w hs1 hz hav vs vq' hcmp hmis hq' hg
       s2' hb hs2' hi2 hchain o ho org hint he hoc hdp hpc hpos11 hlow hrounds hseg3 hm3 hr3 hc3 w3
-      hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken entry
+      hs3 hz3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken entry
   -- the break data
   have hpo : (shiftLens.set s2' ⟨t', .watch v, cycle⟩).periodOnly = true := by
     show s2'.periodOnly = true; rw [hs2'.2]
   have hzv : zero v.lag = true := by rw [chain_shift_lag hchain]; exact hz
   have hbr3 : vs3.chain = .broken w3' := by rw [← afterCompare_chain s3 vs3 vq3]; exact hbroken
   have hend3 := PalPeg.GalilBreakTerminal.hend3_of_matched_break _ qq first 2048 h org hint hpo hzv
-    he hrounds hseg3 w3 hs3 hav3 vs3 hcmp3 hmt3 w3' hbr3
+    he hrounds hseg3 w3 hs3 hz3 hav3 vs3 hcmp3 hmt3 w3' hbr3
   obtain ⟨hrep, hfoc, hposS⟩ := rounds_centerRep _ qq first 2048 h hrounds v hpo rfl hzv org hint he
   have hcenterS : read s'.center ≠ none := by
     intro h0; apply hfoc; unfold GalilScaffoldInputHead.read at h0; simpa using h0
@@ -866,7 +870,7 @@ theorem foundRouteMC_shift_Inv (centre : GalilVM → Fin 3)
   -- the stage budget
   have hstage : StageEntry (foundRestartRadius org.radius h m n) w3'.machine.control.last :=
     PalPeg.GalilBreakTerminal.stageEntry_after_found_closed _ qq first 2048 h org hint hpo hzv he
-      hrounds hseg3 w3 hs3 w3' hw3' ha hbrk hav3 vs3 hcmp3 hmt3 hbr3
+      hrounds hseg3 w3 hs3 hz3 w3' hw3' ha hbrk hav3 vs3 hcmp3 hmt3 hbr3
   -- the frontier and the shift counter
   have hfr := front_of_run centre place entry qq first raw hI hlive hst
   have hsi : ShiftIdle (foundLandingVM (afterCompare s3 vs3 vq3) w3' entry) := by

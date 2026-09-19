@@ -335,6 +335,26 @@ section Tick
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
 
+/-- **(NAMED, 狭めた版) 新鮮な chain の最初の shift。**
+
+`H_freshShift` は「`periodOnly = false` の状態からの**任意の** tick」に課していたが、
+唯一の消費者はこの下の `shiftRound_tick` の `scan_shift` 分岐（しかも `periodOnly = false`
+の側）だけ。広い版は fresh chain が `.watch` になった直後（`chainStart` が `cycle` を
+reset した点）で `ShiftInv.count : value cycle = 2k` を満たせないので**偽の疑いが濃い**
+（機械検査した反証はまだ無いので `REFUTED` とは書かない）。
+
+消費者の scope をそのまま文に入れたのがこれ: shift 入口——比較が不一致で、shift guard が
+立ち、`beginShift` が `t` に着く——でだけ主張する。 -/
+def H_freshShiftAtShiftEntry (w : List (Fin 2)) (c : Control) (s t : GalilVM) : Prop :=
+  c.mode = Mode.scan → c.replaying = false → c.clock = 1 → s.periodOnly = false →
+  (∃ u : GalilVM,
+    (galilFrameS (PofC centre place entry w) q first).compare s u ∧
+    ¬ (galilFrameS (PofC centre place entry w) q first).matched u ∧
+    (galilFrameS (PofC centre place entry w) q first).shiftGuard u ∧
+    (galilFrameS (PofC centre place entry w) q first).beginShift u t) →
+  ∀ wch : GalilScaffoldChainWatch.State, t.chain = ChainVM.watch wch →
+    ∃ C R k : ℕ, ShiftInv w C R (periodLength wch) k t wch
+
 /-- **`ShiftRound` along one tick of `galilFrameS`.**  Entry at `scan_shift`
 from `ChainRound` (the chain was watching in a round; a chain born *in* the
 comparison has phase `0` and fails the guard), step at `shift_one`, every
@@ -343,7 +363,7 @@ theorem shiftRound_tick {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
     (hCR : ChainRound w x.ctl x.vm)
     (hSR : ShiftRound w x.ctl x.vm)
     (hT : H_advanceT w x.ctl x.vm)
-    (hF : H_freshShift w x.vm y.vm)
+    (hF : H_freshShiftAtShiftEntry centre place entry q first w x.ctl x.vm y.vm)
     (hblk : GalilBranchInvariants.BlockInv x.vm.chain)
     (hci : x.ctl.mode = Mode.shift → CopyIdle x.vm)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) delay x y) :
@@ -419,7 +439,7 @@ theorem shiftRound_tick {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
       subst hwch
       rcases chainAt_false_watch hch hw1' with ⟨w0, hw0, hint⟩ | hnot
       · cases hpo : s.periodOnly with
-        | false => exact hF hpo _ hchain
+        | false => exact hF hm hr hc hpo ⟨_, hcmp, hmt, hg, hb⟩ _ hchain
         | true =>
           obtain ⟨C, R, used, hI⟩ := hCR hm hr hpo w0 hw0
           have hwe := internal_of_zero hI.caught.lagZero hint

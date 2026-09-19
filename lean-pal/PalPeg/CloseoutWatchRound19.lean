@@ -153,14 +153,11 @@ preparation landing at all; comparability is consulted only in the first two
 branches. -/
 theorem split3_of_prefix (P : Shared) (q : ℕ) (first : Fin 9) (h : ℕ)
     (cP : Control) (sP : GalilVM)
-    (hliveP : LiveScanWatch cP sP) (hpre : WatchPrefixC P q first cP sP)
+    (hneP : sP.chain ≠ ChainVM.idle) (hpre : WatchPrefixC P q first cP sP)
     (hrun : TerminalRunC P q first h cP sP) :
     TerminalRunShiftC P q first h cP sP ∨ TerminalRunBreak0C P q first h cP sP ∨
       TerminalRunFallbackC P q first h cP sP := by
   classical
-  have hneP : sP.chain ≠ ChainVM.idle := by
-    obtain ⟨-, -, -, w, hw⟩ := hliveP
-    rw [hw]; intro h0; cases h0
   have toSeg : ∀ {es : List Bool} {c2 : Control} {s2 : GalilVM},
       WatchSegE P q first 2048 es cP sP c2 s2 → WatchSeg P q first 2048 cP sP c2 s2 :=
     fun hE => watchSeg_of_watchSegE' hE hneP
@@ -207,10 +204,10 @@ preparation landing being live, which `PrepLandingLiveC` supplies). -/
 theorem exitSplit3C_of_tick (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry qq : ℕ) (first : Fin 9)
     (raw : List (Fin 2)) (h : ℕ) (cP : Control) (sP : GalilVM)
-    (hliveP : LiveScanWatch cP sP)
+    (hneP : sP.chain ≠ ChainVM.idle)
     (hpre : WatchPrefixC (PofC centre place entry raw) qq first cP sP) :
     ExitSplit3C centre place entry qq first raw h cP sP :=
-  fun hrun => split3_of_prefix (PofC centre place entry raw) qq first h cP sP hliveP hpre hrun
+  fun hrun => split3_of_prefix (PofC centre place entry raw) qq first h cP sP hneP hpre hrun
 
 /-! ## 4. The consumer -/
 
@@ -237,7 +234,9 @@ theorem foundExit_compare_final10 (centre : GalilVM → Fin 3)
     (hLR : LandingRestartReach (PofC centre place entry w) q first w c r)
     (hstage : ReplayStage w (PofC centre place entry w) q first c r)
     (hmP : cP.mode = .scan) (hrP : cP.replaying = false) (hcP : 1 ≤ cP.clock)
-    (hwatch : PrepLandingWatchC (PofC centre place entry w) q first cP sP)
+    (hreachWatch : ∃ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+      WatchSegE (PofC centre place entry w) q first 2048 es cP sP c2 s2 ∧
+        PalPeg.CloseoutWatchRun.LiveScanWatch c2 s2)
     (hat : FoundDpAtC centre place entry q first w lower span h c r)
     (hreach : ShiftReachC centre place entry q first w h)
     (hround : ShiftRoundAtC centre place entry q first w m h lower)
@@ -247,14 +246,12 @@ theorem foundExit_compare_final10 (centre : GalilVM → Fin 3)
       PalPeg.CloseoutWatchRun.RoundStepC (PofC centre place entry w) q first (roundFuel h)
         (BreakTermData centre place entry q first w m h) c0 s0) :
     FoundExit (PofC centre place entry w) q first w m c r := by
-  have hlive : PrepLandingLiveC (PofC centre place entry w) q first cP sP :=
-    PalPeg.CloseoutWatchRound7.prepLandingLiveC_of_watch (PofC centre place entry w) q first
-      hmP hrP hcP hwatch
   have hsplit3 : ExitSplit3C centre place entry q first w h cP sP :=
-    exitSplit3C_of_tick centre place entry q first w h cP sP (hlive [] cP sP (.stop _ _)) hpre
+    exitSplit3C_of_tick centre place entry q first w h cP sP
+      (PalPeg.CloseoutWatchRound2.chain_ne_idle_of_foundCompareCtx hctx) hpre
   exact PalPeg.CloseoutWatchRound18.foundExit_compare_final9 centre place entry q first w m h
     lower span hP hex hready hcan hsane hstart hor hzl hnn hpm hE hsW a ls rs qw gap hprep hmis
-    hctx hsplit3 hfb hLR hstage hmP hrP hcP hwatch hat hreach hround hland hstepBreak
+    hctx hsplit3 hfb hLR hstage hmP hrP hcP hreachWatch hat hreach hround hland hstepBreak
 
 end PalPeg.CloseoutWatchRound19
 

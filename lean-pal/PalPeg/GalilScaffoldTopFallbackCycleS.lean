@@ -28,6 +28,14 @@ def afterMismatchB (s : GalilVM) (vs : ScanVM) (vq : SearchVM) : GalilVM :=
   afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain)
     (afterMismatch s vs vq)
 
+/-- 不一致（と chain 誕生）の後の walker は search 量子のもの
+（`searchLens` が `walker` を運ぶ）。 -/
+theorem afterMismatchB_walker (s : GalilVM) (vs : ScanVM) (vq : SearchVM) :
+    (afterMismatchB s vs vq).walker = vq.walker := by
+  unfold afterMismatchB
+  rw [afterBirth_walker]
+  rfl
+
 theorem afterMismatchB_left (s : GalilVM) (vs : ScanVM) (vq : SearchVM) :
     (afterMismatchB s vs vq).left = (afterMismatch s vs vq).left := afterBirth_left _ _
 theorem afterMismatchB_right (s : GalilVM) (vs : ScanVM) (vq : SearchVM) :
@@ -77,7 +85,7 @@ theorem scan_fallback_cycle_S (onLetter leftFirst : GalilVM → Prop) (rs : Gali
     (hg : ¬ shiftGuardVM (afterMismatch s vs vq))
     (p : GalilScaffoldPlace.Place)
     (hcan : Canonical s.length) (ℓ : ℕ) (hv : value s.length = ℓ)
-    (hne : (GalilScaffoldPlace.stream p) ≠ [])
+    (hne : (GalilScaffoldPlace.stream p) ≠ []) (hpw : (GalilScaffoldPlace.stream p).length ≤ position (right s.right))
     (heven : ((GalilScaffoldPlace.stream p).take (ℓ+1)).length % 2 = 0) :
     ∃ (n : ℕ) (o : Bool) (t : GalilVM),
       Steps (galilFrameS (galilShared onLetter leftFirst shiftGuardVM beginShiftVM' beginFallbackVM' rs centre place entry) q first)
@@ -116,7 +124,7 @@ theorem scan_fallback_cycle_S (onLetter leftFirst : GalilVM → Prop) (rs : Gali
       ⟨{c with clock := delay, mode := .copy},
         {afterMismatchB s vs vq with fpp := FppControl.beginFallback (afterMismatchB s vs vq).fpp.program p (afterMismatchB s vs vq).length, chain := .idle, search := {(afterMismatchB s vs vq).search with mode := .idle}}⟩ :=
     .scan_fallback c s _ _ hm (Or.inr hav') hc hcmpS hmisS
-      (Or.inr (not_shiftGuard_afterMismatchB _ _ _ _ _ hch hg)) hr ⟨p, rfl⟩
+      (Or.inr (not_shiftGuard_afterMismatchB _ _ _ _ _ hch hg)) hr ⟨p, rfl, by rw [afterMismatchB_right, afterMismatch_right, hrr]; exact hpw⟩
   have hm2 : ({c with clock := delay, mode := .copy} : Control).mode = .copy := rfl
   have hi2 : ShiftIdle {afterMismatchB s vs vq with fpp := FppControl.beginFallback (afterMismatchB s vs vq).fpp.program p (afterMismatchB s vs vq).length, chain := .idle, search := {(afterMismatchB s vs vq).search with mode := .idle}} := by
     rw [shiftIdle_iff] at hi ⊢

@@ -137,7 +137,11 @@ theorem watchMismatchNoShiftC_of_split {P : Shared} {q : ℕ} {first : Fin 9} {h
     (hf : TerminalRunFallbackGC P q first h cP sP) :
     WatchMismatchNoShiftC P q first cP sP := by
   intro es c1 s1 hseg hlive hclk hav hne
-  obtain ⟨cT, sT, hrun, -, hbe⟩ := hf es c1 s1 hseg hlive
+  rcases hlive.2.2.2 with ⟨hPhase, hLag⟩ | ⟨wLive, hwLive⟩
+  · -- copy/back 相: watch ラウンドの機械を経由せず直接出る
+    exact PalPeg.CopyPhaseNoShift.watchMismatchNoShift_parts_of_copyOrBack hPhase hLag
+  obtain ⟨cT, sT, hrun, -, hbe⟩ :=
+    hf es c1 s1 hseg ⟨hlive.1, hlive.2.1, hlive.2.2.1, wLive, hwLive⟩
   obtain ⟨hcT, hsT⟩ := watchSeg_stuck_of_mismatch hrun hclk hav hne
   subst hcT; subst hsT
   obtain ⟨c1', s1', hseg', -, -, -, -, hG⟩ := hbe
@@ -152,14 +156,11 @@ classifier.**  Same case analysis; the mismatch case is tried first with the
 classifier, then without. -/
 theorem split4_of_prefix (P : Shared) (q : ℕ) (first : Fin 9) (h : ℕ)
     (cP : Control) (sP : GalilVM)
-    (hliveP : LiveScanWatch cP sP) (hpre : WatchPrefixC P q first cP sP)
+    (hneP : sP.chain ≠ ChainVM.idle) (hpre : WatchPrefixC P q first cP sP)
     (hrun : TerminalRunC P q first h cP sP) :
     TerminalRunShiftC P q first h cP sP ∨ TerminalRunBreak0C P q first h cP sP ∨
       TerminalRunFallbackGC P q first h cP sP ∨ TerminalRunMismatchShiftC P q first h cP sP := by
   classical
-  have hneP : sP.chain ≠ ChainVM.idle := by
-    obtain ⟨-, -, -, w, hw⟩ := hliveP
-    rw [hw]; intro h0; cases h0
   have toSeg : ∀ {es : List Bool} {c2 : Control} {s2 : GalilVM},
       WatchSegE P q first 2048 es cP sP c2 s2 → WatchSeg P q first 2048 cP sP c2 s2 :=
     fun hE => watchSeg_of_watchSegE' hE hneP
@@ -217,10 +218,10 @@ landing. -/
 theorem exitSplit4C_of_tick (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry qq : ℕ) (first : Fin 9)
     (raw : List (Fin 2)) (h : ℕ) (cP : Control) (sP : GalilVM)
-    (hliveP : LiveScanWatch cP sP)
+    (hneP : sP.chain ≠ ChainVM.idle)
     (hpre : WatchPrefixC (PofC centre place entry raw) qq first cP sP) :
     ExitSplit4C centre place entry qq first raw h cP sP :=
-  fun hrun => split4_of_prefix (PofC centre place entry raw) qq first h cP sP hliveP hpre hrun
+  fun hrun => split4_of_prefix (PofC centre place entry raw) qq first h cP sP hneP hpre hrun
 
 /-- **Derived.**  The four-way split folds back to Round 18's three-way split
 (the fourth family lands in `TerminalRunFallbackC` too, forgetting the guard). -/

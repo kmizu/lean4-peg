@@ -160,7 +160,8 @@ def ShiftRoundDataL (centre : GalilVM → Fin 3)
         (shiftLens.set s2' ⟨t', .watch v, cycle⟩) c' s' ∧
       ScanSeg (PofC centre place entry raw) qq first 2048 n c' s' c3 s3 ∧
       c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
-      s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
+      s3.chain = ChainVM.watch w3 ∧ GalilScaffoldCounter.zero w3.lag = true ∧
+      canRight s3.right ∧
       (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
       (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
       searchEffect (PofC centre place entry raw) true s3 vq3 ∧
@@ -268,7 +269,8 @@ def ShiftBreakRunCL (centre : GalilVM → Fin 3)
         (shiftLens.set s2' ⟨t', .watch v, cycle⟩) c' s' ∧
       ScanSeg (PofC centre place entry raw) qq first 2048 n c' s' c3 s3 ∧
       c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
-      s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
+      s3.chain = ChainVM.watch w3 ∧ GalilScaffoldCounter.zero w3.lag = true ∧
+      canRight s3.right ∧
       (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
       (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
       searchEffect (PofC centre place entry raw) true s3 vq3 ∧

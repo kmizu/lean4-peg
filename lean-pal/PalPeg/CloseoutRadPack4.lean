@@ -89,10 +89,16 @@ theorem chainStep_sane {x y : ChainVM} (h : ChainStep x y) (hx : SaneVer x) : Sa
       obtain rfl : (GalilScaffoldChainVerifier.right w.machine.verifier) = r :=
         Option.some.inj hr
       exact sane_right (hx _ rfl) hg.1
+  | watchBreak w hb =>
+    intro r hr
+    obtain rfl : (GalilScaffoldChainVerifier.right w.machine.verifier) = r :=
+      Option.some.inj hr
+    exact sane_right (hx _ rfl) hb.2.1
   | _ => exact fun r hr => hx r hr
 
 theorem chainMatched_sane {y z : ChainVM} (h : ChainMatched y z) (hy : SaneVer y) : SaneVer z := by
   cases h with
+  | brokenMatched w => exact fun r hr => hy r hr
   | watch w w' ho =>
     cases ho with
     | queued hz => exact fun r hr => hy r hr
@@ -194,7 +200,7 @@ theorem saneTick {c c' : Control} {s t : GalilVM}
     exact hen s' t hcmp hb
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     subst ht
     exact saneVer_idle
   case shift_one =>

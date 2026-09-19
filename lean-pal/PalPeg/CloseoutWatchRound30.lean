@@ -161,7 +161,8 @@ def ShiftBreakRunC (centre : GalilVM → Fin 3)
         (shiftLens.set s2' ⟨t', .watch v, cycle⟩) c' s' ∧
       ScanSeg (PofC centre place entry raw) qq first 2048 n c' s' c3 s3 ∧
       c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
-      s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
+      s3.chain = ChainVM.watch w3 ∧ GalilScaffoldCounter.zero w3.lag = true ∧
+      canRight s3.right ∧
       (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
       (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
       searchEffect (PofC centre place entry raw) true s3 vq3 ∧
@@ -303,7 +304,9 @@ theorem foundExit_compare_final13' (centre : GalilVM → Fin 3)
     (hLR : LandingRestartReach (PofC centre place entry w) q first w c r)
     (hstage : ReplayStage w (PofC centre place entry w) q first c r)
     (hmP : cP.mode = .scan) (hrP : cP.replaying = false) (hcP : 1 ≤ cP.clock)
-    (hwatch : PrepLandingWatchC (PofC centre place entry w) q first cP sP)
+    (hreachWatch : ∃ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+      WatchSegE (PofC centre place entry w) q first 2048 es cP sP c2 s2 ∧
+        PalPeg.CloseoutWatchRun.LiveScanWatch c2 s2)
     (hat : FoundDpAtC centre place entry q first w lower span h c r)
     (hreach : ShiftReachC centre place entry q first w h)
     (hround : ShiftRoundAtC centre place entry q first w m h lower)
@@ -317,7 +320,7 @@ theorem foundExit_compare_final13' (centre : GalilVM → Fin 3)
     FoundExit (PofC centre place entry w) q first w m c r :=
   PalPeg.CloseoutWatchRound25.foundExit_compare_final12 centre place entry q first w m h lower
     span hP hex hready hcan hsane hstart hor hzl hnn hpm hE hsW a ls rs qw gap hprep hmis hctx
-    hfb hLR hstage hmP hrP hcP hwatch hat hreach hround
+    hfb hLR hstage hmP hrP hcP hreachWatch hat hreach hround
     (mismatchShiftRouteC'_of_shiftRoundAtC' centre place entry q first w m h lower hround' htie)
     hland hstepBreak
 

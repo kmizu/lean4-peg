@@ -258,7 +258,7 @@ theorem scan_fallback_cycle_All_le (onLetter leftFirst : GalilVM → Prop) (rs :
     (hg : ¬ shiftGuardVM (afterMismatch s vs vq))
     (p : GalilScaffoldPlace.Place)
     (hcan : Canonical s.length) (ℓ : ℕ) (hv : value s.length = ℓ)
-    (hne : (GalilScaffoldPlace.stream p) ≠ [])
+    (hne : (GalilScaffoldPlace.stream p) ≠ []) (hpw : (GalilScaffoldPlace.stream p).length ≤ position (right s.right))
     (heven : ((GalilScaffoldPlace.stream p).take (ℓ+1)).length % 2 = 0) :
     ∃ (n : ℕ) (o : Bool) (t : GalilVM),
       (∀ Q : State GalilVM → Prop, (∀ st : State GalilVM, st.ctl.mode ≠ .scan → Q st) → Q ⟨c, s⟩ →
@@ -299,7 +299,7 @@ theorem scan_fallback_cycle_All_le (onLetter leftFirst : GalilVM → Prop) (rs :
   have ht1 : Tick (galilFrameS (galilShared onLetter leftFirst shiftGuardVM beginShiftVM' beginFallbackVM' rs centre place entry) q first) delay ⟨c, s⟩
       ⟨{c with clock := delay, mode := .copy},
         {afterMismatchB s vs vq with fpp := FppControl.beginFallback (afterMismatchB s vs vq).fpp.program p (afterMismatchB s vs vq).length, chain := .idle, search := {(afterMismatchB s vs vq).search with mode := .idle}}⟩ :=
-    .scan_fallback c s _ _ hm (Or.inr hav') hc hcmpS hmisS (Or.inr (not_shiftGuard_afterMismatchB _ _ _ _ _ hch hg)) hr ⟨p, rfl⟩
+    .scan_fallback c s _ _ hm (Or.inr hav') hc hcmpS hmisS (Or.inr (not_shiftGuard_afterMismatchB _ _ _ _ _ hch hg)) hr ⟨p, rfl, by rw [afterMismatchB_right, afterMismatch_right, hrr]; exact hpw⟩
   have hm2 : ({c with clock := delay, mode := .copy} : Control).mode = .copy := rfl
   have hi2 : ShiftIdle {afterMismatchB s vs vq with fpp := FppControl.beginFallback (afterMismatchB s vs vq).fpp.program p (afterMismatchB s vs vq).length, chain := .idle, search := {(afterMismatchB s vs vq).search with mode := .idle}} := by
     rw [shiftIdle_iff] at hi ⊢
@@ -368,7 +368,14 @@ theorem fallback_landing_len_le (onLetter leftFirst : GalilVM → Prop) (rs : Ga
   obtain ⟨n, o, t, hst, hb, hl', hR, hC, hrep', hrad, hlen, hw, hprog, hi', ho, ho0, hsearch, hlower⟩ :=
     scan_fallback_cycle_All_le onLetter leftFirst rs centre place entry q hq0 first h7 h8 delay c hm hr hc s hi hav
       vs vq hl hrr hmis hq hch hg ⟨a :: xs,(right s.right).gap⟩ hcan ℓ hv (stream_ne_nil _ _ _)
-      (heven a xs rs' q' hdec)
+      (by
+        have hpos : position (right s.right)
+            = (GalilScaffoldPlace.stream ⟨a :: xs, (right s.right).gap⟩).length := by
+          have h0 : (right s.right)
+              = represent ⟨a :: xs, (right s.right).gap⟩ (rs'.map some) q' := hdec
+          conv_lhs => rw [h0]
+          exact position_represent a xs (right s.right).gap (rs'.map some) q'
+        omega) (heven a xs rs' q' hdec)
   have hh : GalilScaffoldInputHead.left^[chosenRadius ((GalilScaffoldPlace.stream ⟨a :: xs,(right s.right).gap⟩).take (ℓ+1))]
       (right s.right) = h := (leftMoves_eq hmoves).symm
   have hRit : t.right = GalilScaffoldInputHead.left^[chosenRadius ((GalilScaffoldPlace.stream ⟨a :: xs,(right s.right).gap⟩).take (ℓ+1))] (right s.right) := hR

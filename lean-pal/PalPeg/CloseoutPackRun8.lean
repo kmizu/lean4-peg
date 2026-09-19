@@ -1,3 +1,4 @@
+import PalPeg.PackedRun
 import PalPeg.CloseoutPackRun7
 
 /-!
@@ -232,7 +233,7 @@ theorem lpackO_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
       compare_mismatch_form centre place entry q first hcmp hmt
     have hni : c.mode ≠ Mode.init := by rw [hm]; decide
-    obtain ⟨pl, ht⟩ :
+    obtain ⟨pl, ht, hbnd⟩ :
       beginFallbackVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
     obtain ⟨hrepr, hpres⟩ := hP.lrep hni
     refine ⟨fun _ => ?_, fun hm' _ => Mode.noConfusion hm'⟩
@@ -489,16 +490,15 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 
 /-- `CloseoutLPack5.StepsI` carrying `IPackO` instead of `IPack`. -/
 def StepsIO (w : List (Fin 2)) (k : ℕ) (x y : State GalilVM) : Prop :=
-  ∃ g : ℕ → State GalilVM, g 0 = x ∧ g k = y ∧
-    Trace (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) g k ∧
-    ∀ i, i ≤ k → IPackO centre place entry q first w (g i)
+  PackedRun (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+    (IPackO centre place entry q first w) k x y
 
 /-- A packed run is an `MInv`-free packed run. -/
 theorem stepsIO_of_stepsI {w : List (Fin 2)} {k : ℕ} {x y : State GalilVM}
     (h : StepsI centre place entry q first w k x y) :
-    StepsIO centre place entry q first w k x y := by
-  obtain ⟨g, h0, hk, htr, hp⟩ := h
-  exact ⟨g, h0, hk, htr, fun i hi => ipackO_of_ipack centre place entry q first (hp i hi)⟩
+    StepsIO centre place entry q first w k x y :=
+  PalPeg.PackedRun.mono
+    (fun _ hs => ipackO_of_ipack centre place entry q first hs) h
 
 /-- `CloseoutPackRun2.PackRunR` over `StepsIO`. -/
 def PackRunRO (w : List (Fin 2)) : Prop :=

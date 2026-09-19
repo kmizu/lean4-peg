@@ -98,11 +98,11 @@ theorem init_tick_witness (entry q : ℕ) (first : Fin 9) (delay : ℕ) (c : Con
     Tick (galilFrame (galilShared onLetter leftFirst guard bs bf rs centre place entry) q first)
       delay ⟨c, s⟩ ⟨{c with mode := .scan, output := true}, initWitness entry s⟩ :=
   .init c s (initWitness entry s) hm
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 theorem replayStartVM_witness (entry : ℕ) (s : GalilVM) :
     replayStartVM entry s (replayStartWitness entry s) :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 theorem replayStart_tick_witness (entry q : ℕ) (first : Fin 9) (delay : ℕ) (c : Control)
     (hm : c.mode = .replayStart) (s : GalilVM) :

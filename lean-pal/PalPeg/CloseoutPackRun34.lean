@@ -24,20 +24,20 @@ reader — the `scan_shift` tick — actually sees: unmatched (`hmt`) and
   `halfBound_of_shiftLocalS` (the Run30:523 reader) and `shiftOrd_tickS`
   (Run26:334 with a guarded `hentry`: the `scan_shift` branch owns `hmt`/`hg`,
   every other branch is vacuous or has `c.mode ≠ scan`).
-* §3 `ChainPosInv`: `Coupled` (whose `sum` is exactly `distance + lag =
+* §3 `ChainPositionInvariant`: `Coupled` (whose `sum` is exactly `distance + lag =
   radius`, `GalilChainCoupling.SumRel`) plus, under `ScanNR ∧ chain ≠ idle`,
-  the positional payload `PosPayload`: `canRight right`, the radius ledger
+  the positional payload `ScanPositionPayload`: `canRight right`, the radius ledger
   `value radius ≤ rad` against `ScanInvariant`, the verifier position
   `position verifier + lag = position right`, and `canRight ∧ Sane` of the
   verifier one `ChainTick` away.  `watchShiftS_of_chainPosInv` closes
   `canRight`, `distance ≤ 2·rad` (guard's `lag = 0` + `SumRel` + ledger) and
   the verifier pair; `4·h ≤ distance` is closed in the fresh (`FreshC`) half
-  of `WatchOK` (`four_of_freshC`) and named `H_fourOther` in the post-shift
+  of `WatchOK` (`four_of_freshC`) and named `H_FourSemiperiodsLeDistance` in the post-shift
   (`Other`) half, where `guard_budget` only yields `h ≤ R + 1`.
   `chainPosInv_tick`: `Coupled` by `coupled_tick`, 20/23 shapes closed;
-  `H_bgP` (`scan_wait`/`scan_count`), `H_matchP` (`scan_match`),
-  `H_shiftDoneP` (`shift_done`) are the three named branch hypotheses, each
-  restricted to `PosPayload` (the `Coupled` half needs nothing).
+  `H_BackgroundLandingPayload` (`scan_wait`/`scan_count`), `H_MatchLandingPayload` (`scan_match`),
+  `H_ShiftExitPayload` (`shift_done`) are the three named branch hypotheses, each
+  restricted to `ScanPositionPayload` (the `Coupled` half needs nothing).
 
 Standard axioms only; unconditional `PAL ∈ PEG` remains open.
 -/
@@ -302,7 +302,7 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
   (entry q : ℕ) (first : Fin 9)
 
 /-- **The positional payload** at a scanning state with a live chain. -/
-structure PosPayload (w : List (Fin 2)) (s : GalilVM) : Prop where
+structure ScanPositionPayload (w : List (Fin 2)) (s : GalilVM) : Prop where
   /-- The right head can move. -/
   canR : GalilScaffoldChainVerifier.canRight s.right
   /-- The radius ledger against the scan geometry. -/
@@ -317,14 +317,14 @@ structure PosPayload (w : List (Fin 2)) (s : GalilVM) : Prop where
       GalilScaffoldChainVerifier.canRight wch.machine.verifier ∧
         GalilFrontMono.Sane wch.machine.verifier
 
-/-- **`ChainPosInv`**: `Coupled` (its `sum` is `distance + lag = radius`) and,
+/-- **`ChainPositionInvariant`**: `Coupled` (its `sum` is `distance + lag = radius`) and,
 under `ScanNR ∧ chain ≠ idle`, the positional payload. -/
-structure ChainPosInv (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+structure ChainPositionInvariant (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   coupled : Coupled c s
-  payload : ScanNR ⟨c, s⟩ → s.chain ≠ ChainVM.idle → PosPayload w s
+  payload : ScanNR ⟨c, s⟩ → s.chain ≠ ChainVM.idle → ScanPositionPayload w s
 
-/-- `distance + lag = radius` read off `ChainPosInv`. -/
-theorem chainPosInv_sum {w : List (Fin 2)} {c : Control} {s : GalilVM} (h : ChainPosInv w c s)
+/-- `distance + lag = radius` read off `ChainPositionInvariant`. -/
+theorem chainPosInv_sum {w : List (Fin 2)} {c : Control} {s : GalilVM} (h : ChainPositionInvariant w c s)
     {wch : GalilScaffoldChainWatch.State} (hw : s.chain = .watch wch)
     (hbr : wch.machine.control.broken = false) :
     value wch.machine.control.distance + value wch.lag = value s.radius := by
@@ -333,13 +333,13 @@ theorem chainPosInv_sum {w : List (Fin 2)} {c : Control} {s : GalilVM} (h : Chai
   exact hs hbr
 
 theorem chainPosInv_of_idle {w : List (Fin 2)} {c : Control} {s : GalilVM}
-    (hi : s.chain = ChainVM.idle) : ChainPosInv w c s :=
+    (hi : s.chain = ChainVM.idle) : ChainPositionInvariant w c s :=
   ⟨coupled_of_idle hi, fun _ hni => absurd hi hni⟩
 
-/-- **(NAMED) `H_fourOther`.**  At an unmatched guarded target whose watch is in
+/-- **(NAMED) `H_FourSemiperiodsLeDistance`.**  At an unmatched guarded target whose watch is in
 the post-shift (`Other`) half of `WatchOK`, `4·h ≤ distance`.  (`guard_budget`
 gives only `h ≤ R + 1` there.) -/
-def H_fourOther (w : List (Fin 2)) : Prop :=
+def H_FourSemiperiodsLeDistance (w : List (Fin 2)) : Prop :=
   ∀ (x : State GalilVM) (s'' : GalilVM) (wch : GalilScaffoldChainWatch.State),
     ScanNR x → x.vm.chain ≠ ChainVM.idle →
     (galilFrameS (PofC centre place entry w) q first).compare x.vm s'' →
@@ -349,10 +349,10 @@ def H_fourOther (w : List (Fin 2)) : Prop :=
       (value x.vm.remaining) (periodLength wch) →
     4 * (periodLength wch : ℤ) ≤ value wch.machine.control.distance
 
-/-- **`WatchShiftS` from `ChainPosInv`**, modulo `H_fourOther`. -/
+/-- **`WatchShiftS` from `ChainPositionInvariant`**, modulo `H_FourSemiperiodsLeDistance`. -/
 theorem watchShiftS_of_chainPosInv {w : List (Fin 2)}
-    (hfour : H_fourOther centre place entry q first w) {x : State GalilVM}
-    (h : ChainPosInv w x.ctl x.vm) : WatchShiftS centre place entry q first w x := by
+    (hfour : H_FourSemiperiodsLeDistance centre place entry q first w) {x : State GalilVM}
+    (h : ChainPositionInvariant w x.ctl x.vm) : WatchShiftS centre place entry q first w x := by
   intro hs hni s'' hcmp hmt hg wch hch
   have hs' : ScanNR ⟨x.ctl, x.vm⟩ := hs
   have P := h.payload hs' hni
@@ -380,40 +380,40 @@ theorem watchShiftS_of_chainPosInv {w : List (Fin 2)}
 
 /-! ### Preservation along ticks -/
 
-/-- **(NAMED) `H_bgP`.**  A `backgroundS` step from a scanning source
+/-- **(NAMED) `H_BackgroundLandingPayload`.**  A `backgroundS` step from a scanning source
 (`scan_wait` / `scan_count`) preserves the positional payload. -/
-def H_bgP (w : List (Fin 2)) : Prop :=
-  ∀ (c : Control) (s t : GalilVM), c.mode = Mode.scan → ChainPosInv w c s →
+def H_BackgroundLandingPayload (w : List (Fin 2)) : Prop :=
+  ∀ (c : Control) (s t : GalilVM), c.mode = Mode.scan → ChainPositionInvariant w c s →
     (galilFrameS (PofC centre place entry w) q first).background s t →
-    ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → PosPayload w t
+    ScanNR ⟨c, t⟩ → t.chain ≠ ChainVM.idle → ScanPositionPayload w t
 
-/-- **(NAMED) `H_matchP`.**  The `scan_match` landing preserves the positional
+/-- **(NAMED) `H_MatchLandingPayload`.**  The `scan_match` landing preserves the positional
 payload. -/
-def H_matchP (w : List (Fin 2)) : Prop :=
-  ∀ (c : Control) (s s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPosInv w c s →
+def H_MatchLandingPayload (w : List (Fin 2)) : Prop :=
+  ∀ (c : Control) (s s' t : GalilVM) (o b : Bool), c.mode = Mode.scan → ChainPositionInvariant w c s →
     (galilFrameS (PofC centre place entry w) q first).compare s s' →
     (galilFrameS (PofC centre place entry w) q first).matched s' →
     (galilFrameS (PofC centre place entry w) q first).matchedPlace c.replaying s' t →
     ScanNR ⟨{c with clock := 2048, output := o, replaying := c.replaying && b}, t⟩ →
-    t.chain ≠ ChainVM.idle → PosPayload w t
+    t.chain ≠ ChainVM.idle → ScanPositionPayload w t
 
-/-- **(NAMED) `H_shiftDoneP`.**  The `shift_done` landing (VM unchanged, the
+/-- **(NAMED) `H_ShiftExitPayload`.**  The `shift_done` landing (VM unchanged, the
 chain is the post-shift watch) establishes the positional payload. -/
-def H_shiftDoneP (w : List (Fin 2)) : Prop :=
+def H_ShiftExitPayload (w : List (Fin 2)) : Prop :=
   ∀ (c : Control) (s : GalilVM) (o : Bool), c.mode = Mode.shift →
     ¬ (galilFrameS (PofC centre place entry w) q first).remainingPos s →
-    ChainPosInv w c s →
+    ChainPositionInvariant w c s →
     ScanNR ⟨{c with mode := Mode.scan, output := o}, s⟩ → s.chain ≠ ChainVM.idle →
-    PosPayload w s
+    ScanPositionPayload w s
 
-/-- **One tick of `ChainPosInv`**: `Coupled` by `coupled_tick`; the payload
+/-- **One tick of `ChainPositionInvariant`**: `Coupled` by `coupled_tick`; the payload
 by the three named hypotheses at the scan landings, vacuity elsewhere. -/
 theorem chainPosInv_tick {w : List (Fin 2)}
-    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
-    (hsd : H_shiftDoneP centre place entry q first w)
-    {x y : State GalilVM} (hx : ChainPosInv w x.ctl x.vm)
+    (hbg : H_BackgroundLandingPayload centre place entry q first w) (hmatch : H_MatchLandingPayload centre place entry q first w)
+    (hsd : H_ShiftExitPayload centre place entry q first w)
+    {x y : State GalilVM} (hx : ChainPositionInvariant w x.ctl x.vm)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y) :
-    ChainPosInv w y.ctl y.vm := by
+    ChainPositionInvariant w y.ctl y.vm := by
   obtain ⟨c, s⟩ := x
   obtain ⟨c', t⟩ := y
   refine ⟨coupled_tick (onLetterVM w) leftFirstVM centre place entry q first 2048 hx.coupled h, ?_⟩

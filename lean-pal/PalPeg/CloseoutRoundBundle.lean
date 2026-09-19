@@ -3,7 +3,7 @@ import PalPeg.CloseoutAdvanceT
 /-!
 # `RoundBundle`: the five carried fields that produce `hSP`
 
-`CloseoutPackRun29.ShiftPal` — the `hSP` of `pal_in_peg_final37` — now follows
+`CloseoutPackRun29.ShiftPal` — the `hSP` of `given_chainPackAtAnyState_FALSE_HYP` — now follows
 from `CloseoutPackRun31.shiftPal_of_readOrigin`, whose inputs are
 `ChainRound`, `canRight s.right` and `H_fresh`.  Keeping `ChainRound` along a
 run needs four more single-state fields, each of which is itself a tick
@@ -19,7 +19,7 @@ invariant modulo at most one named leaf:
 
 `RoundBundle` is the conjunction and `roundBundle_tick` the assembled step, so
 the compiler checks the residue claim: **`H_readsShift` and `H_freshShift`**,
-plus the two side inputs the main path already carries (`ChainPosInv2`, and
+plus the two side inputs the main path already carries (`ChainPositionInvariantWithShiftPhase`, and
 `CopyIdle`, which the `LPackM` tick family already threads as
 `c.mode = Mode.shift → CopyIdle s`).
 
@@ -59,10 +59,10 @@ structure RoundBundle (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop wher
 from the bundle's own `ShiftRound` through `h_shiftDone_of_shiftRound`. -/
 theorem roundBundle_tick {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s t : GalilVM}
     (hB : RoundBundle w c s)
-    (hinv : ChainPosInv2 w c s)
+    (hinv : ChainPositionInvariantWithShiftPhase w c s)
     (hci : c.mode = Mode.shift → CopyIdle s)
     (hSh : H_readsShift w c s)
-    (hF : H_freshShift w s t)
+    (hF : PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centre place entry q first w c s t)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) delay ⟨c, s⟩ ⟨c', t⟩) :
     RoundBundle w c' t where
   chainRound :=
@@ -91,10 +91,10 @@ theorem shiftPal_of_roundBundle {w : List (Fin 2)} {c : Control} {s : GalilVM}
 /-- **The bundle along a run**, on the run-level forms of its two leaves. -/
 theorem roundBundle_steps {w : List (Fin 2)} {delay n : ℕ} {x y : State GalilVM}
     (hx : RoundBundle w x.ctl x.vm)
-    (hinv : ∀ z : State GalilVM, ChainPosInv2 w z.ctl z.vm)
+    (hinv : ∀ z : State GalilVM, ChainPositionInvariantWithShiftPhase w z.ctl z.vm)
     (hci : ∀ z : State GalilVM, z.ctl.mode = Mode.shift → CopyIdle z.vm)
     (hSh : ∀ z : State GalilVM, H_readsShift w z.ctl z.vm)
-    (hF : ∀ z z' : State GalilVM, H_freshShift w z.vm z'.vm)
+    (hF : ∀ z z' : State GalilVM, PalPeg.CloseoutPackRun37.H_freshShiftAtShiftEntry centre place entry q first w z.ctl z.vm z'.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) delay n x y) :
     RoundBundle w y.ctl y.vm := by
   induction h with

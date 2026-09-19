@@ -1,4 +1,5 @@
 import PalPeg.CloseoutShiftWeak
+import PalPeg.WindowPack
 
 /-!
 # `IPackMW`: the run pack without the `ShiftLocalG` field
@@ -11,7 +12,7 @@ just born at `ChainStep.backDone`, with `distance = reset`, satisfies the premis
 while breaking `4 * periodLength ≤ distance`.
 
 The field has to go, not be weakened.  It can: after `CloseoutShiftS` moved the
-trail bridge onto `ChainPosInv`, **nothing reads `IPackMG.shift`** — the only
+trail bridge onto `ChainPositionInvariant`, **nothing reads `IPackMG.shift`** — the only
 readers were `halfBound_of_ipackMG` and `shiftVerSane_ptMG`, both replaced.
 
 Dropping the field from `CloseoutPackRun30.IPackMG` directly breaks the older
@@ -65,11 +66,15 @@ structure IPackMW (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffol
     (entry q : ℕ) (first : Fin 9) (w : List (Fin 2)) (x : State GalilVM) : Prop where
   pack : PalPeg.CloseoutPackRun10.LPackM w x.ctl x.vm
   m2 : LPackM2 w x.ctl x.vm
+  /-- the birth-anchored window pack (`WindowPack`), which discharges `ShiftPal` -/
+  win : Decodes (PofC centre place entry w) → PalPeg.WindowPack.WindowRunPack w x.ctl x.vm
 
-/-- Forgetting the `shift` field. -/
+/-- Forgetting the `shift` field, with the window pack supplied. -/
 theorem ipackMW_of_ipackMG2 {w : List (Fin 2)} {x : State GalilVM}
-    (h : IPackMG2 centre place entry q first w x) : IPackMW centre place entry q first w x :=
-  ⟨h.base.pack, h.m2⟩
+    (h : IPackMG2 centre place entry q first w x)
+    (hwin : Decodes (PofC centre place entry w) → PalPeg.WindowPack.WindowRunPack w x.ctl x.vm) :
+    IPackMW centre place entry q first w x :=
+  ⟨h.base.pack, h.m2, hwin⟩
 
 /-- `CloseoutPackRun46.BigPack2MG7` over `IPackMW`. -/
 structure BigPack2MG7W (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
@@ -77,7 +82,7 @@ structure BigPack2MG7W (centre : GalilVM → Fin 3) (place : GalilVM → GalilSc
   ipackM : IPackMW centre place entry q first w x
   aux : AuxPack x.ctl x.vm
   live : CentreLive x.ctl x.vm
-  extra : Extra8 x
+  extra : Extra8 first x
 
 /-- `CloseoutPackRun46.BigPack2MG7''` over `IPackMW`. -/
 structure BigPack2MG7W'' (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
@@ -94,14 +99,9 @@ theorem bigPack2MG7W_of_W'' {w : List (Fin 2)} {x : State GalilVM}
       ¬ (galilFrameS (PofC centre place entry w) q first).atFirst x.vm) :
     BigPack2MG7W centre place entry q first w x :=
   ⟨hx.ipackM, hx.aux, hx.live,
-    extra8_of_extra7 hx.extra (fun hm => two_le_left_of_marksInv' hx.marks hm (hnf hm))⟩
+    extra8_of_extra7 hx.extra (fun hm => two_le_left_of_marksInv' hx.marks hm)⟩
 
 /-- Forgetting the `shift` field of the big pack. -/
-theorem bigPack2MG7W_of_bigPack2MG7 {w : List (Fin 2)} {x : State GalilVM}
-    (h : BigPack2MG7 centre place entry q first w x) :
-    BigPack2MG7W centre place entry q first w x :=
-  ⟨ipackMW_of_ipackMG2 centre place entry q first h.ipackM, h.aux, h.live, h.extra⟩
-
 theorem lticksN_of_lpackM2_W {w : List (Fin 2)} {x : State GalilVM}
     (hx : BigPack2MG7W centre place entry q first w x) (hP : LPackM2 w x.ctl x.vm) :
     LTickLeavesN centre place entry q first w x.ctl x.vm where
@@ -123,7 +123,7 @@ theorem lticksN_of_lpackM2_W {w : List (Fin 2)} {x : State GalilVM}
   choosePackL := fun hm _ t ht => by
     rw [choose_left_eq_right (PofC centre place entry w) q first ht]
     exact hP.rrep (by rw [hm]; decide)
-  rewindLeft := fun hm => left_pos_of_two (hx.extra.rewindMargin hm)
+  rewindLeft := fun hm hnf => left_pos_of_two (hx.extra.rewindMargin hm hnf)
   replayPackN := fun hm _ _ h =>
     lpackM_replayStart_of_centreRep centre place entry q first (hP.centreRep (Or.inr hm)) h
 
@@ -136,7 +136,9 @@ theorem ipackMW_tick {w : List (Fin 2)}
     (hg : SoundScanNR w y) : IPackMW centre place entry q first w y := by
   have hL := lticksN_of_lpackM2_W centre place entry q first hx hx.ipackM.m2
   refine ⟨?_, lpackM2_tick' centre place entry q first hx.ipackM.m2 hL hx.aux
-    (lTickLeaves2_of_shiftPalG centre place entry q first hx.ipackM.m2 hL hSP) h⟩
+    (lTickLeaves2_of_shiftPalG centre place entry q first hx.ipackM.m2 hL hSP) h,
+    fun hP => PalPeg.WindowPack.windowRunPack_tick centre place entry q first hP
+        hx.ipackM.pack hx.ipackM.m2 hx.aux (hx.ipackM.win hP) h⟩
   obtain ⟨c, s⟩ := x
   obtain ⟨c', t⟩ := y
   exact lpackN_tick centre place entry q first hx.ipackM.pack hL h
@@ -164,7 +166,8 @@ theorem bigPack2MG7W''_tick {w : List (Fin 2)}
     obtain ⟨hc', hfr⟩ := tick_rewind_atFirst hm hf h
     have hM : LPackM w c' t :=
       lpackM_rewind_done centre place entry q first hx.ipackM.pack hm hc' hfr
-    refine ⟨hM, ?_⟩
+    refine ⟨hM, ?_, fun hP => PalPeg.WindowPack.windowRunPack_tick centre place entry q first hP
+        hx.ipackM.pack hx.ipackM.m2 hx.aux (hx.ipackM.win hP) h⟩
     obtain ⟨heq, hset⟩ := hfr
     have htc : t.center = s.center := by rw [hset, heq]; rfl
     have hCR : CentreRep w t := centreRep_congr htc (hx.ipackM.m2.centreRep (Or.inl hm))

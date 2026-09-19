@@ -247,17 +247,31 @@ theorem chainMatched_watch_total (s : GalilScaffoldChainWatch.State)
     · exact ⟨_, .breaks _ _ ⟨hz, (h hz).1, a, ha, hne, rfl⟩⟩
   · exact ⟨_, .watch _ _ (.queued s (Bool.eq_false_iff.mpr hz))⟩
 
-/-- Totality of the background step on a watching chain.  `Internal` has no
-mismatch constructor, so a positive lag still needs the full `Good`. -/
-theorem chainStep_watch_total (s : GalilScaffoldChainWatch.State)
+/-- The watch clause of the tick's enabling condition: at positive lag the verifier can
+move and the period tape reads a symbol.  `Good` gives it (the read matches). -/
+theorem readyWatch_of_good {s : GalilScaffoldChainWatch.State}
     (h : positive s.lag = true → GalilScaffoldChainWatch.Good s) :
+    positive s.lag = true → GalilScaffoldChainVerifier.canRight s.machine.verifier ∧
+      ∃ a : Fin 3, GalilScaffoldChainConsume.symbol s.machine.control.period.focus = some a :=
+  fun hp => ⟨(h hp).1, (h hp).2.imp fun _ ha => ha.1⟩
+
+/-- The background step out of a watch is total: at positive lag the read either matches
+(`Internal.take`) or breaks the chain (`watchBreak`). -/
+theorem chainStep_watch_total (s : GalilScaffoldChainWatch.State)
+    (h : positive s.lag = true → GalilScaffoldChainVerifier.canRight s.machine.verifier ∧
+      ∃ a : Fin 3, GalilScaffoldChainConsume.symbol s.machine.control.period.focus = some a) :
     ∃ y, ChainStep (.watch s) y := by
   by_cases hp : positive s.lag = true
-  · exact ⟨_, .watchStep _ _ (.take s hp (h hp))⟩
+  · obtain ⟨hc, a, hs⟩ := h hp
+    by_cases hr : GalilScaffoldInputHead.read
+        (GalilScaffoldChainVerifier.right s.machine.verifier) = some a
+    · exact ⟨_, .watchStep _ _ (.take s hp ⟨hc, a, hs, hr⟩)⟩
+    · exact ⟨_, .watchBreak s ⟨hp, hc, a, hs, hr⟩⟩
   · exact ⟨_, .watchStep _ _ (.idle s (Bool.eq_false_iff.mpr hp))⟩
 
 theorem chainTick_watch_total (s : GalilScaffoldChainWatch.State) (a : Bool)
-    (h : positive s.lag = true → GalilScaffoldChainWatch.Good s)
+    (h : positive s.lag = true → GalilScaffoldChainVerifier.canRight s.machine.verifier ∧
+      ∃ a : Fin 3, GalilScaffoldChainConsume.symbol s.machine.control.period.focus = some a)
     (hb : WatchBlock s)
     (hc : ∀ m, GalilScaffoldChainWatch.Internal s m →
       GalilScaffoldChainVerifier.canRight m.machine.verifier) :
@@ -271,6 +285,7 @@ theorem chainTick_watch_total (s : GalilScaffoldChainWatch.State) (a : Bool)
       obtain ⟨z, hz⟩ := chainMatched_watch_total w'
         (fun _ => ⟨hc _ hi, watchBlock_internal hi hb⟩)
       exact ⟨z, _, .watchStep _ _ hi, hz⟩
+    | watchBreak _ hb => exact ⟨_, _, .watchBreak _ hb, .brokenMatched _⟩
 
 /-! ## The copy and back phases: obligation (i) -/
 
@@ -438,6 +453,7 @@ theorem blockInv_step {x y : ChainVM} (h : ChainStep x y) (hb : BlockInv x) : Bl
   | backStep => exact onBlock_moveLeft hb
   | backDone _ _ _ _ _ hf => exact onBlock_moveRight hb (isFirst_isLast hf)
   | watchStep _ _ hi => exact watchBlock_internal hi hb
+  | watchBreak _ _ => exact hb
 
 theorem blockInv_matched {x y : ChainVM} (h : ChainMatched x y) (hb : BlockInv x) :
     BlockInv y := by
@@ -447,6 +463,7 @@ theorem blockInv_matched {x y : ChainVM} (h : ChainMatched x y) (hb : BlockInv x
   | back => exact hb
   | watch _ _ ho => exact watchBlock_outer ho hb
   | breaks _ _ hbr => exact watchBlock_break hbr hb
+  | brokenMatched _ => exact hb
 
 theorem blockInv_tick {a : Bool} {x z : ChainVM} (h : ChainTick a x z) (hb : BlockInv x) :
     BlockInv z := by

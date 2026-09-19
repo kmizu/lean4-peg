@@ -372,10 +372,11 @@ the start.** -/
 theorem breakLandingC_start (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry qq : ℕ) (first : Fin 9)
     (raw : List (Fin 2)) (h : ℕ) (sF : GalilVM) {cP : Control} {sP : GalilVM}
-    (hB : BreakLandingC centre place entry qq first raw h sF cP sP) :
+    (hB : BreakLandingC centre place entry qq first raw h sF cP sP)
+    (hwP : ∃ wLive : GalilScaffoldChainWatch.State, sP.chain = ChainVM.watch wLive) :
     ∃ (cen : Fin 3) (ys : List (Fin 3)) (b : Fin 3),
       ys.length + 1 = h ∧ sP.chain = ChainVM.watch (freshWatch sF.center cen ys b sF.radius) := by
-  obtain ⟨cen, ys, b, hlen, hch, -⟩ := hB [] cP sP (.stop cP sP)
+  obtain ⟨cen, ys, b, hlen, hch, -⟩ := hB [] cP sP (.stop cP sP) hwP
   exact ⟨cen, ys, b, hlen, hch⟩
 
 /-- **`BreakLandingC` asserts that no landing contains a matched comparison.**
@@ -386,9 +387,11 @@ theorem breakLandingC_noMatch (centre : GalilVM → Fin 3)
     (raw : List (Fin 2)) (h : ℕ) (sF : GalilVM) {cP : Control} {sP : GalilVM}
     (hB : BreakLandingC centre place entry qq first raw h sF cP sP) :
     ∀ (es : List Bool) (c2 : Control) (s2 : GalilVM),
-      WatchSegE (PofC centre place entry raw) qq first 2048 es cP sP c2 s2 → es.count true = 0 :=
-  fun es c2 s2 hseg => by
-    obtain ⟨cen, ys, b, -, -, hz⟩ := hB es c2 s2 hseg
+      WatchSegE (PofC centre place entry raw) qq first 2048 es cP sP c2 s2 →
+      (∃ wLive : GalilScaffoldChainWatch.State, s2.chain = ChainVM.watch wLive) →
+      es.count true = 0 :=
+  fun es c2 s2 hseg hwLanding => by
+    obtain ⟨cen, ys, b, -, -, hz⟩ := hB es c2 s2 hseg hwLanding
     exact hz
 
 /-- **The residual half of `BreakLandingC` is a stutter claim.**  Beyond the
@@ -403,11 +406,12 @@ theorem breakLandingC_watch_fixed (centre : GalilVM → Fin 3)
     (raw : List (Fin 2)) (h : ℕ) (sF : GalilVM) {cP : Control} {sP : GalilVM}
     (hB : BreakLandingC centre place entry qq first raw h sF cP sP)
     {es : List Bool} {c2 : Control} {s2 : GalilVM}
-    (hseg : WatchSegE (PofC centre place entry raw) qq first 2048 es cP sP c2 s2) :
+    (hseg : WatchSegE (PofC centre place entry raw) qq first 2048 es cP sP c2 s2)
+    (hwLanding : ∃ wLive : GalilScaffoldChainWatch.State, s2.chain = ChainVM.watch wLive) :
     ∃ (cen : Fin 3) (ys : List (Fin 3)) (b : Fin 3),
       ys.length + 1 = h ∧
       s2.chain = ChainVM.watch (freshWatch sF.center cen ys b sF.radius) := by
-  obtain ⟨cen, ys, b, hlen, hch, -⟩ := hB es c2 s2 hseg
+  obtain ⟨cen, ys, b, hlen, hch, -⟩ := hB es c2 s2 hseg hwLanding
   exact ⟨cen, ys, b, hlen, hch⟩
 
 #print axioms breakLandingC_start

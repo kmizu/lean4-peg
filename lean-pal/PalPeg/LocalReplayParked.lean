@@ -381,7 +381,7 @@ theorem replayStartVM_commitReplayParked
   have ha := LocalTick2.abs_commitReplay (entry := entry) hinj hpl hpw hclean
   rw [abs''_eq_abs' hpre]
   have hL : absHead' mm.mirL mm.vm.pending = (abs' mm.vm).center := hm.1.absHead' _
-  refine ⟨?_, hR, hL, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, hR, hL, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · show (LocalState.abs (LocalTick2.commitReplay entry mm.vm)).replay = (LocalState.abs mm.vm).radius
     rw [ha]
   · show (LocalState.abs (LocalTick2.commitReplay entry mm.vm)).radius = _
@@ -403,6 +403,12 @@ theorem replayStartVM_commitReplayParked
     rw [ha]
   · show (LocalState.abs (LocalTick2.commitReplay entry mm.vm)).dp
       = GalilScaffoldControl.reset entry (LocalState.abs mm.vm).dp
+    rw [ha]
+  · show (LocalState.abs (LocalTick2.commitReplay entry mm.vm)).periodOnly
+      = (LocalState.abs mm.vm).periodOnly
+    rw [ha]
+  · show (LocalState.abs (LocalTick2.commitReplay entry mm.vm)).walker
+      = (LocalState.abs mm.vm).walker
     rw [ha]
 
 /-- commit 直後の `ParkedOK`：`R ≤ position (駐車 view)` から。 -/

@@ -140,6 +140,157 @@ theorem periodOn_mirror {x : List α} {C k p : ℕ} (hpal : PalAt x C k) (hp : p
   rw [hm1, hm2]
   exact hstep.symm
 
+set_option linter.unusedVariables false in
+/-- **左→右の鏡映**（`periodOn_mirror` の逆向き）。回文の左半分 `[C − k, C]` での
+周期 `p` が右半分 `[C, C + k]` に移る。証明は `periodOn_mirror` と対称。
+
+fresh 側 `ShiftPal` で要るのはこちら向き——`Candidate` は中心の**左**（place stream の
+接頭辞）の回文性を保証するので、そこから現在の回文の右半分へ運ぶ。 -/
+theorem periodOn_mirror' {x : List α} {C k p : ℕ} (hpal : PalAt x C k) (hp : p ≤ k)
+    (h : PeriodOn x p (C - k) C) : PeriodOn x p C (C + k) := by
+  have hkC : k ≤ C := hpal.1
+  intro i hi hip
+  have hm1 : x[i]? = x[2 * C - i]? := Manacher.mirror_getElem? hpal (by omega) (by omega)
+  have hm2 : x[i + p]? = x[2 * C - (i + p)]? :=
+    Manacher.mirror_getElem? hpal (by omega) (by omega)
+  have hstep : x[2 * C - (i + p)]? = x[2 * C - (i + p) + p]? := h _ (by omega) (by omega)
+  rw [show 2 * C - (i + p) + p = 2 * C - i from by omega] at hstep
+  rw [hm1, hm2]
+  exact hstep.symm
+
+#print axioms periodOn_mirror'
+
+/-- **中心が `d` ずれた 2 つの回文から周期 `2d`。**
+
+`PalAt x (C − d) d`（内側）と `PalAt x (C − 2d) (2d)`（外側）から
+`PeriodOn x (2d) (C − 4d) C`。
+
+`i ∈ [C − 4d, C − 2d]` について、外側の鏡映が `x[i] = x[2(C−2d) − i]`、
+内側の鏡映が `x[i + 2d] = x[2(C−d) − (i+2d)]` を与え、
+`2(C−2d) − i = 2(C−d) − (i+2d) = 2C − 4d − i` で一致する。
+
+これが `GalilDpCorrect.Candidate` の 2 節
+（`(w.take (2h+1)).reverse = w.take (2h+1)` と `(w.take (4h+1)).reverse = w.take (4h+1)`、
+`CloseoutWatchPhase3.palAt_pair_of_candidate` 経由）から周期を出す段。 -/
+theorem periodOn_of_palAt_pair {x : List α} {C d : ℕ}
+    (hin : PalAt x (C - d) d) (hout : PalAt x (C - 2 * d) (2 * d)) :
+    PeriodOn x (2 * d) (C - 4 * d) C := by
+  have hin1 : d ≤ C - d := hin.1
+  have hout1 : 2 * d ≤ C - 2 * d := hout.1
+  intro i hi hip
+  have h1 : x[i]? = x[2 * (C - 2 * d) - i]? :=
+    Manacher.mirror_getElem? hout (by omega) (by omega)
+  have h2 : x[i + 2 * d]? = x[2 * (C - d) - (i + 2 * d)]? :=
+    Manacher.mirror_getElem? hin (by omega) (by omega)
+  rw [h1, h2]
+  congr 1
+  omega
+
+#print axioms periodOn_of_palAt_pair
+
+/-- **`reshift_from_right` の `hright` を 2 回文と現在の回文から出す。**
+
+`periodOn_of_palAt_pair` が中心の左 `[C − 4d, C]` で周期 `2d` を出し、
+`PeriodOn.mono` で現在の回文の左半分 `[C − r, C]` に絞り（`r ≤ 4d` が要る）、
+`periodOn_mirror'` で右半分 `[C, C + r]` へ移す。
+
+`r ≤ 4d` は found 時の `GalilReplayBudgetProof.found_radius_le_two_period`
+（`value sF.radius ≤ 2 * h`）から。`2d ≤ r` は `reshift_from_right` の `hsmall` と同じ。 -/
+theorem periodOn_right_of_palAt_pair {x : List α} {C d r : ℕ}
+    (hin : PalAt x (C - d) d) (hout : PalAt x (C - 2 * d) (2 * d))
+    (hcur : PalAt x C r) (hle : r ≤ 4 * d) (hp : 2 * d ≤ r) :
+    PeriodOn x (2 * d) C (C + r) :=
+  periodOn_mirror' hcur hp
+    ((periodOn_of_palAt_pair hin hout).mono (by omega) (le_refl _))
+
+#print axioms periodOn_right_of_palAt_pair
+
+/-- **fresh 側のシフト回文**（n140 の段 4）。
+
+中心が `h` ずれた 2 回文（DP の `Candidate` から）＋現在の回文＋末尾の予測から、
+シフト後の回文 `PalAt word (C + h) (r + 1 − h)` を出す。
+これが `ShiftPal` の結論の第 3 節そのもの。
+
+`hright` は `periodOn_right_of_palAt_pair` が `[C, C + r]` で出し、
+最後の 1 添字（`j + 2h = C + r + 1`）だけ `hpred`（`shiftGuardVM` の予測節）で埋める。
+
+`hold` が半径 `h` 分で足りるのは n139 で `reshift_from_right` を弱めたため。 -/
+theorem reshift_of_palAt_period (word : List (Fin 3)) (C h r : ℕ)
+    (hin : Manacher.PalAt word (C - h) h)
+    (hcur : Manacher.PalAt word C r)
+    (hstep : 0 < h) (hsmall : 2 * h ≤ r)
+    (hend : C + r + 1 < word.length)
+    (hleft : PeriodOn word (2 * h) (C - r) C)
+    (hpred : word[C + r + 1]? = word[C + r + 1 - 2 * h]?) :
+    Manacher.PalAt word (C + h) (r + 1 - h) := by
+  have hhC : h ≤ C := by have := hin.1; omega
+  have hCh : C - h + h = C := by omega
+  have hrh : r - h + h = r := by omega
+  have hper : PeriodOn word (2 * h) C (C + r) := periodOn_mirror' hcur hsmall hleft
+  have hres := PalPeg.GalilScaffoldChainInputSupply.reshift_from_right word (C - h) (r - h) h
+    hin (by rw [hCh, hrh]; exact hcur) hstep (by omega) (by rw [hCh, hrh]; omega) ?_
+  · rw [show C - h + 2 * h = C + h from by omega, show r - h + 1 = r + 1 - h from by omega] at hres
+    exact hres
+  · intro j hj hj2
+    rw [hCh] at hj
+    rw [hCh, hrh] at hj2
+    by_cases hlast : j + 2 * h ≤ C + r
+    · exact hper j (by omega) hlast
+    · have hje : j = C + r + 1 - 2 * h := by omega
+      subst hje
+      rw [show C + r + 1 - 2 * h + 2 * h = C + r + 1 from by omega]
+      exact hpred.symm
+
+/-- **`ShiftInv.palNext` の producer。**  シフト後の回文
+`PalAt x (C+h) (R+h)`（＝ `ShiftInv.pal`、走査不変量の `palindrome` そのもの）と
+周期 `2h` から、次の中心 `C+2h` の回文が半径 `R+1` で出る。
+
+各添字 `i ≤ R+1` について、左側は `C+h` を軸にした鏡映で `x[C+2h-i]? = x[C+i]?`
+（`i ≤ h` と `i > h` の両方で同じ結論）、右側は周期 1 歩で `x[C+i]? = x[C+i+2h]?`。
+`Manacher.palAt_succ_iff` は要らん——半径 `R+1` を直接構成する。 -/
+theorem palAt_next_of_period {x : List α} {C R h : ℕ}
+    (hpal : Manacher.PalAt x (C + h) (R + h)) (hp : 0 < h)
+    (hlen : C + 2 * h + (R + 1) < x.length)
+    (hper : PeriodOn x (2 * h) (C + 1) (C + 2 * h + R + 1)) :
+    Manacher.PalAt x (C + 2 * h) (R + 1) := by
+  have hrc : R + h ≤ C + h := hpal.1
+  refine ⟨by omega, by omega, ?_⟩
+  intro i hi
+  rcases Nat.eq_zero_or_pos i with rfl | hipos
+  · simp
+  have hm : x[C + 2 * h - i]? = x[C + i]? := by
+    rcases Nat.lt_or_ge h i with hih | hih
+    · have hmir := hpal.2.2 (i - h) (by omega)
+      rw [show C + h - (i - h) = C + 2 * h - i from by omega,
+          show C + h + (i - h) = C + i from by omega] at hmir
+      exact hmir
+    · have hmir := hpal.2.2 (h - i) (by omega)
+      rw [show C + h - (h - i) = C + i from by omega,
+          show C + h + (h - i) = C + 2 * h - i from by omega] at hmir
+      exact hmir.symm
+  have hpe : x[C + i]? = x[C + i + 2 * h]? := hper (C + i) (by omega) (by omega)
+  rw [hm, hpe, show C + i + 2 * h = C + 2 * h + i from by omega]
+
+#print axioms palAt_next_of_period
+
+#print axioms reshift_of_palAt_period
+
+/-- **`phase = 4` への特化.**  四つの検証済み半周期は `r ≤ 4 * h` のときだけ
+左区間 `[C − r, C]` の周期を与える。Scala の `ScaffoldChain.canShift` は
+`r ≤ 4 * h` を検査せえへんので、機械側が使うのは `reshift_of_palAt_period` の方。 -/
+theorem reshift_of_palAt_pair (word : List (Fin 3)) (C h r : ℕ)
+    (hin : Manacher.PalAt word (C - h) h)
+    (hout : Manacher.PalAt word (C - 2 * h) (2 * h))
+    (hcur : Manacher.PalAt word C r)
+    (hstep : 0 < h) (hsmall : 2 * h ≤ r) (hle : r ≤ 4 * h)
+    (hend : C + r + 1 < word.length)
+    (hpred : word[C + r + 1]? = word[C + r + 1 - 2 * h]?) :
+    Manacher.PalAt word (C + h) (r + 1 - h) :=
+  reshift_of_palAt_period word C h r hin hcur hstep hsmall hend
+    ((periodOn_of_palAt_pair hin hout).mono (by omega) (le_refl _)) hpred
+
+#print axioms reshift_of_palAt_pair
+
 #print axioms periodOn_union
 #print axioms hasPeriod_slice_iff
 #print axioms encoded_periodOn_even

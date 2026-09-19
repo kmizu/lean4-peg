@@ -148,7 +148,8 @@ theorem life_stepsAll (raw : List (Fin 2)) (P : Shared) (hP : P.onLetter = onLet
     -- the final segment and the breaking comparison
     {n : ℕ} {c3 : Control} {s3 : GalilVM} (hseg3 : ScanSeg P qq first delay n c' s' c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
-    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
+    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true) (hav3 : canRight s3.right)
     (vs3 : ScanVM) (vq3 : SearchVM)
     (hcmp3 : (galilFrame P qq first).compare s3 (scanLens.set s3 vs3))
     (hmt3 : (galilFrame P qq first).matched (scanLens.set s3 vs3))

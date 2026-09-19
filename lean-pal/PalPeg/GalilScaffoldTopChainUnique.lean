@@ -53,6 +53,16 @@ theorem chainStep_unique {x y y' : ChainVM} (h1 : ChainStep x y) (h2 : ChainStep
   case watchStep.watchStep =>
     rename_i hi₁ _ hi₂
     rw [internal_unique hi₁ hi₂]
+  case watchStep.watchBreak =>
+    rename_i hi hb
+    cases hi with
+    | idle hz => have hp := hb.1; rw [hz] at hp; cases hp
+    | take _ hg => exact (not_good_of_watchBreak hb hg).elim
+  case watchBreak.watchStep =>
+    rename_i hb _ hi
+    cases hi with
+    | idle hz => have hp := hb.1; rw [hz] at hp; cases hp
+    | take _ hg => exact (not_good_of_watchBreak hb hg).elim
   all_goals first | rfl | (exfalso; simp_all; done) | (simp_all; done)
 
 theorem chainMatched_unique {x y y' : ChainVM} (h1 : ChainMatched x y) (h2 : ChainMatched x y') : y = y' := by

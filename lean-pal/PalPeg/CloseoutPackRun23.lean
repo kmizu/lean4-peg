@@ -249,7 +249,7 @@ theorem lpackM2_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
       compare_mismatch_form centre place entry q first hcmp hmt
-    obtain ⟨pl, ht⟩ :
+    obtain ⟨pl, ht, hbnd⟩ :
       beginFallbackVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
     have htr : t.right = GalilScaffoldChainVerifier.right s.right := by
       rw [ht, afterBirth_right, afterMismatch_right]; exact hvr
@@ -393,7 +393,7 @@ theorem lpackM2_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     have htc : t.center = GalilScaffoldInputHead.left s.center := by rw [hset, heq]; rfl
     have htl : t.left = GalilScaffoldInputHead.left s.left := by rw [hset, heq]; rfl
     have hord := hP.centreOrder hm
-    have hlpos := hL.rewindLeft hm
+    have hlpos := hL.rewindLeft hm (by assumption)
     have hcpos : 0 < position (GalilScaffoldInputHead.left s.center) := by
       rw [CloseoutPackRun13.position_left] at hlpos ⊢; omega
     obtain ⟨hcr, hcp⟩ := hP.centreRep (Or.inl hm)

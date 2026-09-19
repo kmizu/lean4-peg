@@ -655,7 +655,10 @@ theorem reshift_palindrome (o : ReadOrigin raw)
   rw [hrpos,hi.caught.scan.rightPos] at hbound
   have hstart := o.startBefore
   apply reshift_from_right (encoded raw) o.center o.radius (o.interior.length+1)
-    o.scan.palindrome hi.caught.scan.palindrome (by omega) (by have := o.size; omega) hbound
+    ⟨by have := o.scan.palindrome.1; have := o.size; omega,
+      by have := o.scan.palindrome.2.1; have := o.size; omega,
+      fun i hi => o.scan.palindrome.2.2 i (by have := o.size; omega)⟩
+      hi.caught.scan.palindrome (by omega) (by have := o.size; omega) hbound
   intro j hj hj'
   apply hperiod j (by omega)
   rw [hpos]

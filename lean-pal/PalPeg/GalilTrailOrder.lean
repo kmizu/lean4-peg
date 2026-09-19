@@ -241,7 +241,7 @@ theorem order_tick {c c' : Control} {s t : GalilVM}
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨hl, hrr, hce⟩ :=
       compare_heads onLetter leftFirst centre place entry q first hcmp
-    obtain ⟨p, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨p, ht, -⟩ : beginFallbackVM' s' t := hb
     refine order_of_compare hO ?_ (by rw [ht]; exact hl) (by rw [ht]; exact hce)
       (by rw [ht]; exact hrr)
     rcases hav with hrep | hcan

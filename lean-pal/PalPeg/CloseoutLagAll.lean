@@ -67,6 +67,7 @@ theorem lagAll_step {x z : ChainVM} (h : LagAll x) (hst : ChainStep x z) : LagAl
   cases hst with
   | idle => exact h
   | brokenIdle w => exact h
+  | watchBreak w hb => exact lagAll_broken _
   | copyBit t hh p v lag margin ver a one legal present =>
     refine ⟨by intros; simp_all, by intros; simp_all, ?_⟩
     intro t' h' p' v' lag' margin' ver' hc
@@ -100,6 +101,7 @@ theorem lagAll_step {x z : ChainVM} (h : LagAll x) (hst : ChainStep x z) : LagAl
 (`GalilScaffoldCounter.inc_canonical`, `CloseoutLenNonneg.nonneg_inc`). -/
 theorem lagAll_matched {y z : ChainVM} (h : LagAll y) (hm : ChainMatched y z) : LagAll z := by
   cases hm with
+  | brokenMatched w => exact lagAll_broken _
   | idle => exact h
   | copy t hh p v lag margin ver =>
     refine ⟨by intros; simp_all, by intros; simp_all, ?_⟩

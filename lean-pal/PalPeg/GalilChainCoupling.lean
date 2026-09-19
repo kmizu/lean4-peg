@@ -235,6 +235,7 @@ theorem step_inv {x y : ChainVM} (h : ChainStep x y) {F : Prop} (hF : F) {O : �
   cases h with
   | idle => exact ⟨hs, hw⟩
   | brokenIdle => exact ⟨trivial, fun w hw => by cases hw⟩
+  | watchBreak => exact ⟨trivial, fun w hw => by cases hw⟩
   | copyBit => exact ⟨hs, fun w hw => by cases hw⟩
   | copyEnd => exact ⟨hs, fun w hw => by cases hw⟩
   | backStep => exact ⟨hs, fun w hw => by cases hw⟩
@@ -283,6 +284,7 @@ theorem matched_inv {y z : ChainVM} (h : ChainMatched y z) {F : Prop} {O : ℕ �
     show value (inc _) = R + 1
     rw [inc_value]; exact congrArg (· + 1) hs
   | breaks => exact ⟨trivial, fun w hw => by cases hw⟩
+  | brokenMatched => exact ⟨trivial, fun w hw => by cases hw⟩
   | watch w w' ho =>
     cases ho with
     | queued hz =>
@@ -619,7 +621,7 @@ theorem coupled_tick {c c' : Control} {s t : GalilVM} (hC : Coupled c s)
       linarith
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
-    obtain ⟨p, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨p, ht, -⟩ : beginFallbackVM' s' t := hb
     subst ht
     exact coupled_of_idle rfl
   case shift_one =>

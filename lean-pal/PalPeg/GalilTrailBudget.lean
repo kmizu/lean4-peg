@@ -125,7 +125,7 @@ theorem scanT_tick' {c c' : Control} {s t : GalilVM} {raw : List (Fin 2)} {m : �
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨hl, hrr, hce⟩ :=
       compare_heads onLetter leftFirst centre place entry q first hcmp
-    obtain ⟨p, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨p, ht, -⟩ : beginFallbackVM' s' t := hb
     exact ⟨trails_leftE hL (by rw [ht]; exact hl) bL, trails_copyE hC (by rw [ht]; exact hce),
       trails_rightE hR (by rw [ht]; exact hrr) bR pR⟩
   case shift_one =>

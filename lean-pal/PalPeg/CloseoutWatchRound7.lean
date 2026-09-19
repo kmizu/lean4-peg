@@ -87,32 +87,6 @@ open PalPeg.CloseoutWatchRound5 (PrepLandingLiveC BreakTerminalC)
 
 /-! ## 1. The control half of `PrepLandingLiveC` is unconditional -/
 
-/-- **Derived.**  A `WatchSegE` out of a live scan control lands on a live scan
-control: `wait` keeps the control, `count` only decrements a clock it knows is
-`> 1`, the two matching constructors reset the clock to `delay` and clear
-`replaying`, and the two replay constructors (`countR`, `matchIdleR`, the only
-ones that could set `replaying := true`) are unreachable from
-`c.replaying = false`. -/
-theorem watchSegE_live_control {P : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
-    (hdelay : 1 ≤ delay) {es : List Bool} {c c' : Control} {s t : GalilVM}
-    (h : WatchSegE P q first delay es c s c' t) :
-    c.mode = .scan → c.replaying = false → 1 ≤ c.clock →
-      c'.mode = .scan ∧ c'.replaying = false ∧ 1 ≤ c'.clock := by
-  induction h with
-  | stop c s => intro h1 h2 h3; exact ⟨h1, h2, h3⟩
-  | wait c s s' hm hr hn hb rest ih => intro h1 h2 h3; exact ih h1 h2 h3
-  | count c s s' hm hr ha hc hb rest ih =>
-      intro h1 h2 h3; exact ih h1 h2 (by simp; omega)
-  | «match» c s vs vq o hm hr ha hc hne hcmp hmt hq ho rest ih =>
-      intro h1 h2 h3; exact ih h1 (by simp) (by simpa using hdelay)
-  | matchIdle c s vs vq o hm hr ha hc hidle hl hrr hvs hmt hq hnf ho rest ih =>
-      intro h1 h2 h3; exact ih h1 (by simp) (by simpa using hdelay)
-  | countR c s s' hm hr hc hidle hb rest ih =>
-      intro h1 h2 h3; rw [hr] at h2; exact absurd h2 (by simp)
-  | matchIdleR c s vs vq o hm hr hc ha hidle hl hrr hvs hmt hq hnf ho rest ih =>
-      intro h1 h2 h3; rw [hr] at h2; exact absurd h2 (by simp)
-
-
 /-- **NAMED (open) — the chain half of `PrepLandingLiveC`.**  Every landing of
 the preparation segment carries a watching chain.  This is all that is left of
 `PrepLandingLiveC`: the three control conjuncts are `watchSegE_live_control`.
@@ -281,7 +255,8 @@ def BreakTermData (centre : GalilVM → Fin 3)
   ∃ (w3 : GalilScaffoldChainWatch.State) (vs3 : ScanVM) (vq3 : SearchVM) (o3 : Bool)
     (w3' : GalilScaffoldChainWatch.State),
     c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
-    s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
+    s3.chain = ChainVM.watch w3 ∧ GalilScaffoldCounter.zero w3.lag = true ∧
+    canRight s3.right ∧
     (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
     (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
     searchEffect (PofC centre place entry raw) true s3 vq3 ∧
@@ -356,7 +331,8 @@ def ShiftRoundData (centre : GalilVM → Fin 3)
         (shiftLens.set s2' ⟨t', .watch v, cycle⟩) c' s' ∧
       ScanSeg (PofC centre place entry raw) qq first 2048 n c' s' c3 s3 ∧
       c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
-      s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
+      s3.chain = ChainVM.watch w3 ∧ GalilScaffoldCounter.zero w3.lag = true ∧
+      canRight s3.right ∧
       (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
       (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
       searchEffect (PofC centre place entry raw) true s3 vq3 ∧

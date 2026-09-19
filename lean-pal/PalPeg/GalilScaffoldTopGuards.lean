@@ -35,15 +35,23 @@ def periodLength (w : GalilScaffoldChainWatch.State) : ℕ :=
 def beginShiftVM' (s t : GalilVM) : Prop :=
   ∃ w : GalilScaffoldChainWatch.State, beginShiftVM (periodLength w) w s t
 
+/-- **2026-09-19（モデル欠陥 `M-fallbackPlace`）**: 着地場所を search 自身の
+walker の材料の中に収めた。Scala 正本の `beginFallback` は search の walker place
+からコピーし、その walker は到着済みの入力しか見ていないので、
+`stream p` が無制限なのはモデル欠陥だった（`Fair.fallbackPlace` がその分を
+仮定として抱えており、`marksEntry` の残差 `WindowInOrigin` が塞がれていた）。
+この形にすると **`WindowInOrigin` が着地でそのまま出る**
+（`t.fpp.walker = p`、`t.right = s.right`）。 -/
 def beginFallbackVM' (s t : GalilVM) : Prop :=
-  ∃ p : GalilScaffoldPlace.Place, beginFallbackVM p s t
+  ∃ p : GalilScaffoldPlace.Place, beginFallbackVM p s t ∧
+    (GalilScaffoldPlace.stream p).length ≤ position s.right
 
 theorem beginShift_exists (s : GalilVM) (hg : shiftGuardVM s) : ∃ t, beginShiftVM' s t := by
   obtain ⟨w, hw, _, _⟩ := hg
   exact ⟨_, w, hw, rfl⟩
 
 theorem beginFallback_exists (s : GalilVM) : ∃ t, beginFallbackVM' s t :=
-  ⟨_, ⟨[], false⟩, rfl⟩
+  ⟨_, ⟨[], false⟩, rfl, by simp [GalilScaffoldPlace.stream]⟩
 
 /-- With the concrete entries, a comparison in scan mode always has a tick. -/
 theorem compare_progress_concrete (onLetter leftFirst : GalilVM → Prop) (rs : GalilVM → GalilVM → Prop) (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place) (entry : ℕ)

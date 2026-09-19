@@ -1,10 +1,11 @@
 import PalPeg.CloseoutPackRun48
 import PalPeg.CloseoutPackRun23
+import PalPeg.CloseoutVerRep
 
 /-!
 # `CloseoutPackRun49`: `LPackM3` — the left pack carries the centre ledger and `LagCan`
 
-`CloseoutPackRun48` leaves `H_matchP2` / `H_shiftEntry2` standing on one
+`CloseoutPackRun48` leaves `H_MatchLandingChainLedger` / `H_ShiftEntryChainLedger` standing on one
 residue pack `MatchRes2`, and `CloseoutPackRun47` leaves `BgStartP2` standing
 on `CentreLedger`.  Both are *state* predicates, so they belong in the
 inductive left pack rather than in a per-landing leaf.  This file adds them to
@@ -274,7 +275,7 @@ theorem lpackM3_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
       rw [htc]; exact lagCan_immediate hLv
   case scan_fallback =>
     rename_i s' hmt hm hcl hg hr hcmp hav hb
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     refine ⟨hM2, ?_, ?_⟩
     · vac hm
     · have htc : t.chain = ChainVM.idle := by rw [ht]
@@ -429,17 +430,23 @@ theorem lagCan_of_lpackM3 {w : List (Fin 2)} {c : Control} {s : GalilVM}
 
 /-- **(NAMED residue of `MatchRes2` after `LPackM3`.)**  Everything the landing
 pack still needs: the verifier's `lrep` pair now and one step on, the payload
-under `replaying`, and the supply of the *moved* right head. -/
+under `replaying`.
+
+**`repV`（verifier の入力表現）も 2026-09-19 に削除した** ——
+`CloseoutVerSide.VerRun`（既存の公理 `obligation_verifierRunAlongRun`）の第 1 成分が
+`VerRep w z.vm.chain` そのものなので、trace の scan 状態でそのまま出る。新規入力ゼロ。
+
+**`canRNext`（`canRight (right s.right)`）は 2026-09-19 に削除した。**
+報告点では `position right = 2|w| − 1` ちょうどなので 2 歩分の余裕は原理的に無く、
+trace 全域に量化したこの場は偽だった（`MatchRestRefute.matchRest_alongTrace_false`）。
+消費者が要るのは**着地状態の** `canRight t.right` 1 歩分で、それは
+`scanRightHeadCanRight_alongTrace` / `shiftRightHeadCanRight_alongTrace` が
+trace の `j+1` で無償に与える。義務ではなく供給だった。 -/
 structure MatchRest (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
-  repV : ∀ wch : GalilScaffoldChainWatch.State, s.chain = .watch wch →
-    GalilScaffoldInputTrace.Represents wch.machine.verifier.head w ∧
-      wch.machine.verifier.head.focus ≠ none
   repVmid : ∀ (y : ChainVM) (wch : GalilScaffoldChainWatch.State),
     ChainStep s.chain y → y = .watch wch →
       GalilScaffoldInputTrace.Represents wch.machine.verifier.head w ∧
         wch.machine.verifier.head.focus ≠ none
-  replayPay : c.replaying = true → s.chain ≠ ChainVM.idle → PosPayload2 w s
-  canRNext : canRight (right s.right)
 
 /-- **`MatchRes2` from `LPackM3` plus `MatchRest`.**  Closed here: `repR`,
 `saneR`, `canR`, `repNext` (scan geometry plus `scanCanR`), `radNext` (the
@@ -448,7 +455,8 @@ centre ledger pins the radius exactly), `startLedger` (the centre ledger),
 theorem matchRes2_of_lpackM3 {w : List (Fin 2)} {c : Control} {s : GalilVM}
     (hP : LPackM3 w c s) (hL : LTickLeavesN centre place entry q first w c s)
     (hL3 : LTickLeaves3 centre place entry q first w c s)
-    (hm : c.mode = Mode.scan) (hR : MatchRest w c s) :
+    (hm : c.mode = Mode.scan) (hR : MatchRest w c s)
+    (hVerRep : PalPeg.CloseoutVerRep.VerRep w s.chain) :
     MatchRes2 w c s := by
   have hcan := hL.scanCanR hm
   obtain ⟨r0, hi⟩ : ∃ r, ScanInvariant w (position s.center) r s.left s.right := by
@@ -460,10 +468,10 @@ theorem matchRes2_of_lpackM3 {w : List (Fin 2)} {c : Control} {s : GalilVM}
   have hposR : position (right s.right) = position s.right + 1 :=
     right_position s.right hcan hlv
   obtain ⟨hc1, hc2, hc3⟩ := hP.centreLedger hm
-  refine ⟨⟨hi.rightRep, hi.rightPresent⟩, hR.repV, hR.repVmid, hP.lagCan, hL3.backLag,
-    hR.replayPay, Or.inr hlv, hcan,
+  refine ⟨⟨hi.rightRep, hi.rightPresent⟩, hVerRep, hR.repVmid, hP.lagCan, hL3.backLag,
+    Or.inr hlv, hcan,
     ⟨right_word _ w hi.rightRep hcan, right_present _ w hi.rightRep hi.rightPresent hcan⟩,
-    hR.canRNext, ?_, fun _ => ⟨hc1, hc2, hc3⟩⟩
+    ?_, fun _ => ⟨hc1, hc2, hc3⟩⟩
   intro rad hsc
   have hrp := hsc.rightPos
   rw [hposR] at hrp

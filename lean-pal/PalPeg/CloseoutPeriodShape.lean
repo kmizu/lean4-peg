@@ -186,7 +186,7 @@ theorem periodShape_tick {w : List (Fin 2)} {delay : ℕ} {c c' : Control} {s t 
     rw [ht]; trivial
   case scan_fallback =>
     rename_i s' hm hav hc hcmp hmt hg hr hb
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     rw [ht]; trivial
   case shift_one =>
     rename_i hm hp hi

@@ -10,7 +10,7 @@ remaining input: the chain's verifier head represents the word
 registered in `PalPeg.lean` and does not currently build — 5 errors on its own —
 so nothing here depends on it; the shape is quoted from its source only.)
 
-It travels.  `CloseoutPackRun41.ChainPos` already carries `canRight ver` at
+It travels.  `CloseoutPackRun41.ChainPositionLedger` already carries `canRight ver` at
 every live chain shape, and `GalilScaffoldChainInputSupply.right_word` /
 `CloseoutScanMargin4.right_present` push `Represents` and presence through one
 `right`.  So the pair is preserved by exactly the step that moves the verifier.
@@ -42,7 +42,7 @@ theorem verRep_idle (w : List (Fin 2)) : VerRep w ChainVM.idle := fun _ h => by 
 
 /-- **One `right` on the verifier preserves the pair.**  This is what
 `MatchRest.repVmid` asks for at a `take`/`immediate` consume: the moved head
-still represents the word, because `ChainPos` gives `canRight` of the head
+still represents the word, because `ChainPositionLedger` gives `canRight` of the head
 before the move. -/
 theorem verRep_next {w : List (Fin 2)} {wch : GalilScaffoldChainWatch.State}
     (hv : GalilScaffoldInputTrace.Represents wch.machine.verifier.head w)
@@ -52,9 +52,9 @@ theorem verRep_next {w : List (Fin 2)} {wch : GalilScaffoldChainWatch.State}
       (right wch.machine.verifier).head.focus ≠ none :=
   ⟨right_word _ w hv hc, right_present _ w hv hf hc⟩
 
-/-- **`VerRep` plus `ChainPos` transports across a verifier move.** -/
+/-- **`VerRep` plus `ChainPositionLedger` transports across a verifier move.** -/
 theorem verRep_of_chainPos {w : List (Fin 2)} {z : ChainVM} {R : ℕ}
-    (hV : VerRep w z) (hP : ChainPos z R)
+    (hV : VerRep w z) (hP : ChainPositionLedger z R)
     {wch : GalilScaffoldChainWatch.State} (hz : z = .watch wch) :
     GalilScaffoldInputTrace.Represents (right wch.machine.verifier).head w ∧
       (right wch.machine.verifier).head.focus ≠ none := by
@@ -78,7 +78,7 @@ open PalPeg.CloseoutConsumeAvail PalPeg.CloseoutPackRun26
 /-- **`ConsumeAvail` at a scan state from `VerRep` and the bound.** -/
 theorem consumeAvail_of_verRep
     {w : List (Fin 2)} {c : Control} {s : GalilVM} {m : ℕ}
-    (hx : ChainPosInv2 w c s) (hs : ScanNR ⟨c, s⟩) (hni : s.chain ≠ ChainVM.idle)
+    (hx : ChainPositionInvariantWithShiftPhase w c s) (hs : ScanNR ⟨c, s⟩) (hni : s.chain ≠ ChainVM.idle)
     (hV : VerRep w s.chain)
     (hrepN : GalilScaffoldInputTrace.Represents (right s.right).head w)
     (hfocN : (right s.right).head.focus ≠ none)

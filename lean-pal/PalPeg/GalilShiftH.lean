@@ -173,6 +173,7 @@ theorem settled_step {x y : ChainVM} (h : ChainStep x y) (hs : Settled x) (hb : 
   | backDone v h lag margin ver hf =>
       exact ⟨trivial, cells_moveRight v (onBlock_right_ne hb (isFirst_isLast hf))⟩
   | watchStep w w' hi => exact ⟨trivial, cells_internal hi hb⟩
+  | watchBreak => exact ⟨trivial, rfl⟩
 
 theorem settled_matched {x y : ChainVM} (h : ChainMatched x y) (hs : Settled x)
     (hb : BlockInv x) : Settled y ∧ cellsOf y = cellsOf x := by
@@ -182,6 +183,7 @@ theorem settled_matched {x y : ChainVM} (h : ChainMatched x y) (hs : Settled x)
   | back => exact ⟨trivial, rfl⟩
   | watch w w' ho => exact ⟨trivial, cells_outer ho hb⟩
   | breaks w w' hbr => exact ⟨trivial, cells_break hbr hb⟩
+  | brokenMatched => exact ⟨trivial, rfl⟩
 
 theorem settled_tick {a : Bool} {x z : ChainVM} (h : ChainTick a x z) (hs : Settled x)
     (hb : BlockInv x) : Settled z ∧ cellsOf z = cellsOf x := by

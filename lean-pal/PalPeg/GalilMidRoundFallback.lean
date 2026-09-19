@@ -294,7 +294,7 @@ theorem roundEnd_midFallback (P : Shared) (q : ℕ) (first : Fin 9) (delay h : �
   · by_cases hmatch : read (left s1.left) = read (right s1.right)
     · obtain ⟨w', hbr⟩ := hbreak s1 w hsw hav hend hmatch
       have htick : ChainTick true (ChainVM.watch w) (ChainVM.broken w') := chainTick_of_break hbr
-      refine Or.inl (Or.inl (Or.inl ⟨n, c1, s1, hseg, hI1.mode, hI1.repl, hc1, w, hsw, hav,
+      refine Or.inl (Or.inl (Or.inl ⟨n, c1, s1, hseg, hI1.mode, hI1.repl, hc1, w, hsw, hzw, hav,
         ⟨left s1.left, right s1.right, ChainVM.broken w'⟩, searchLens.get s1, ?_, ?_, ?_, hend,
         w', rfl⟩))
       · refine Lens.rel_set scanLens _ s1 _ ⟨rfl, rfl, ?_⟩

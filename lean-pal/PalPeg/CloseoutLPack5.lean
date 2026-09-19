@@ -1,3 +1,4 @@
+import PalPeg.PackedRun
 import PalPeg.CloseoutLPack4
 import PalPeg.GalilFinalAssembly4
 
@@ -200,9 +201,8 @@ state of which satisfies `IPack`.  This is `StepsAll` in function form with the
 pack added; `GalilCheckpoints.stepsAll_fn` is the reason the function form costs
 nothing. -/
 def StepsI (w : List (Fin 2)) (k : ℕ) (x y : State GalilVM) : Prop :=
-  ∃ g : ℕ → State GalilVM, g 0 = x ∧ g k = y ∧
-    Trace (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) g k ∧
-    ∀ i, i ≤ k → IPack centre place entry q first w (g i)
+  PackedRun (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+    (IPack centre place entry q first w) k x y
 
 end Runs
 
@@ -225,14 +225,8 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 theorem stepsI_trans {w : List (Fin 2)} {k1 k2 : ℕ} {x y z : State GalilVM}
     (h1 : StepsI centre place entry q first w k1 x y)
     (h2 : StepsI centre place entry q first w k2 y z) :
-    StepsI centre place entry q first w (k1 + k2) x z := by
-  obtain ⟨g1, hg10, hg1k, htr1, hp1⟩ := h1
-  obtain ⟨g2, hg20, hg2k, htr2, hp2⟩ := h2
-  have hj : g1 k1 = g2 0 := by rw [hg1k, hg20]
-  refine ⟨concat g1 g2 k1, ?_, ?_, trace_concat htr1 htr2 hj,
-    pack_concat hj hp1 hp2⟩
-  · rw [concat_le g1 g2 (Nat.zero_le _)]; exact hg10
-  · rw [concat_end g1 g2 hj]; exact hg2k
+    StepsI centre place entry q first w (k1 + k2) x z :=
+  PalPeg.PackedRun.trans h1 h2
 
 end Trans
 
@@ -770,7 +764,7 @@ theorem lpackG_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
       compare_mismatch_form centre place entry q first hcmp hmt
     have hni : c.mode ≠ Mode.init := by rw [hm]; decide
-    obtain ⟨pl, ht⟩ :
+    obtain ⟨pl, ht, hbnd⟩ :
       beginFallbackVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
     obtain ⟨hrepr, hpres⟩ := hP.lrep hni
     refine ⟨fun _ => ?_, fun hm' _ => Mode.noConfusion hm',
@@ -906,14 +900,10 @@ theorem lpackG_tick' {w : List (Fin 2)} {x y : State GalilVM}
 theorem lpackG_steps {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hP : PreTrace centre place entry q first w st Tc)
     (hLv : ∀ i, i ≤ Tc w.length → LTickLeavesG centre place entry q first w (st i).ctl (st i).vm) :
-    ∀ i, i ≤ Tc w.length → LPackG w (st i).ctl (st i).vm := by
-  intro i
-  induction i with
-  | zero => intro _; rw [hP.start]; exact lpackG_boot w
-  | succ n ih =>
-    intro hi
-    exact lpackG_tick' centre place entry q first (ih (by omega)) (hLv n (by omega))
-      (hP.trace.tick n (by omega))
+    ∀ i, i ≤ Tc w.length → LPackG w (st i).ctl (st i).vm :=
+  hP.trace.carried (Pk := fun z => LPackG w z.ctl z.vm)
+    (by rw [hP.start]; exact lpackG_boot w)
+    (fun n hn ht hp => lpackG_tick' centre place entry q first hp (hLv n (by omega)) ht)
 
 end LeavesG
 

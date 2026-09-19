@@ -240,7 +240,7 @@ theorem foundRoute_of_pieces
       negative w3'.margin = false ∧ positive w3'.machine.control.last = true ∧
       zero w3'.lag = true ∧ Canonical w3'.machine.control.last)
     (hwatchAtBreak : ∀ s1 : GalilVM, ∃ w3 : GalilScaffoldChainWatch.State,
-      s1.chain = ChainVM.watch w3)
+      s1.chain = ChainVM.watch w3 ∧ GalilScaffoldCounter.zero w3.lag = true)
     (hresNoShift : ∀ (cT : Control) (sT : GalilVM), FoundResidual raw cT sT)
     (hprogNoShift : ∀ sT : GalilVM, position r.center < position sT.center)
     -- the first shift
@@ -324,7 +324,7 @@ theorem foundRoute_of_pieces
         (PofC centre place entry raw) q first (afterCompare s1 vs3 vq3) c1.output
       obtain ⟨Rad0, last0, hR0'⟩ := hR0
       obtain ⟨hmargin, hlast, hlag, hcanon⟩ := hterm w3'
-      obtain ⟨w3, hs3⟩ := hwatchAtBreak s1
+      obtain ⟨w3, hs3, hz3⟩ := hwatchAtBreak s1
       refine .noShift (foundLandingControl c1 2048 o3)
         (foundLandingVM (afterCompare s1 vs3 vq3) w3' entry) ?_ ?_ ?_
         (hresNoShift (foundLandingControl c1 2048 o3)
@@ -332,11 +332,11 @@ theorem foundRoute_of_pieces
         (hprogNoShift (foundLandingVM (afterCompare s1 vs3 vq3) w3' entry))
       · exact cycle_found_noshift_stepsAll raw (PofC centre place entry raw) rfl rfl q first 2048
           hR0' hout0 hsegE hsg.mode hrF hclk hav hsg.idle vq hq hfnd hmt ch hchm hchne oF hoF
-          hprepSeg hwseg hmm hrr hcc w3 hs3 haa vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken
+          hprepSeg hwseg hmm hrr hcc w3 hs3 hz3 haa vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken
           hmargin hlast hlag entry (fun _ _ hx => hx)
       · exact cycle_found_noshift_minv raw (PofC centre place entry raw) (fun _ => rfl) q first
           2048 hR0' hM0 hsegE hsg.mode hrF hclk hav hsg.idle vq hq hfnd hmt ch hchm hchne oF hoF
-          hprepSeg hwseg hmm hrr hcc w3 hs3 haa vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken entry
+          hprepSeg hwseg hmm hrr hcc w3 hs3 hz3 haa vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken entry
       · exact ⟨_, _, (cycle_found_noshift_restarted raw (PofC centre place entry raw) q first 2048
           hR0' hsegE hav hmt vq ch hchne oF hprepSeg hwseg haa vs3 vq3 hcmp3 hmt3 w3' hcanon
           hlast entry).choose_spec⟩

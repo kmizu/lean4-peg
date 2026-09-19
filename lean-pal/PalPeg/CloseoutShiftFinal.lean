@@ -14,16 +14,16 @@ go, not be counted.
 them to a run:
 
 ```
-ChainPosInv → shiftLocalS_of_run → radPack_ptS → trailF_ptS → needIMG2'_le_S
+ChainPositionInvariant → shiftLocalS_of_run → radPack_ptS → trailF_ptS → needIMG2'_le_S
 ```
 
 `needIMG2'_le` is the only consumer of `IPackMG.shift` on the main path (through
 `h_trailI_MG2` → `trailF_ptMG` → `radPack_ptMG`), so over the `S` chain no
-`WatchShiftG` appears.  The boot's `ChainPosInv` is free: `boot w` has an idle
+`WatchShiftG` appears.  The boot's `ChainPositionInvariant` is free: `boot w` has an idle
 chain and `chainPosInv_of_idle` (`Run34:335`) closes it.
 
 On this route `hws` is replaced by `CloseoutPackRun34`'s four **guarded** branch
-hypotheses — `H_fourOther`, `H_bgP`, `H_matchP`, `H_shiftDoneP` — each restricted
+hypotheses — `H_FourSemiperiodsLeDistance`, `H_BackgroundLandingPayload`, `H_MatchLandingPayload`, `H_ShiftExitPayload` — each restricted
 to `shiftGuardVM`-guarded, unmatched targets, so none of them meets Run32's
 counterexample.
 
@@ -75,10 +75,10 @@ theorem pal_in_peg_final5MG2T (entry q : ℕ) (first : Fin 9)
     (hboot : H_bootIMG2S centreC placeC entry q first)
     (hA : H_oracleIMG2S centreC placeC entry q first)
     (hC : H_realizeLIMG2' centreC placeC entry q first)
-    (hfour : ∀ w : List (Fin 2), H_fourOther centreC placeC entry q first w)
-    (hbgP : ∀ w : List (Fin 2), H_bgP centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneP centreC placeC entry q first w)
+    (hfour : ∀ w : List (Fin 2), H_FourSemiperiodsLeDistance centreC placeC entry q first w)
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingPayload centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingPayload centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitPayload centreC placeC entry q first w)
     :
     RecognizedByTotalPEG PAL := by
   classical
@@ -130,7 +130,7 @@ theorem pal_in_peg_final5MG2T (entry q : ℕ) (first : Fin 9)
 /-! ## What is still missing
 
 `pal_in_peg_final5MG2T` above takes **no** `WatchShiftG`: the whole trail bridge
-(`radPack` → `trailF` → `needL'`) now runs on `ChainPosInv`.
+(`radPack` → `trailF` → `needL'`) now runs on `ChainPositionInvariant`.
 
 The remaining use of `hws` on the main path is the *other* direction — filling
 `IPackMG.shift` (`CloseoutPackRun30:83`) inside `packRunR_MG27P`, through

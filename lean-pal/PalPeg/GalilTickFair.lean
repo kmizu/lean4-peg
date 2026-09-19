@@ -209,7 +209,7 @@ theorem restartGuard_of_restartVM {entry : ℕ} {s t : GalilVM} (h : restartVM e
 
 /-- The fallback entry leaves the search's walker where it was. -/
 theorem beginFallback_walker {s t : GalilVM} (h : beginFallbackVM' s t) : t.walker = s.walker := by
-  obtain ⟨p, he⟩ := h
+  obtain ⟨p, he, -⟩ := h
   rw [(beginFallbackVM_iff p s t).1 he]
   rfl
 
@@ -388,12 +388,8 @@ theorem tick_fair_init_unique {c : Control} {s : GalilVM} {y₁ y₂ : State Gal
   obtain ⟨t2, hi2, hy2⟩ := tick_init_cases hm h2
   have e1 : initVM entry s t1 := hi1
   have e2 : initVM entry s t2 := hi2
-  obtain ⟨r1, l1, cc1, len1, rad1, rem1, rep1, cyc1, fpp1, ch1, se1, lo1, dp1⟩ := e1
-  obtain ⟨r2, l2, cc2, len2, rad2, rem2, rep2, cyc2, fpp2, ch2, se2, lo2, dp2⟩ := e2
-  obtain ⟨hp1, hwk1⟩ := hf1.keepsSearchCursor (Or.inl hm)
-  obtain ⟨hp2, hwk2⟩ := hf2.keepsSearchCursor (Or.inl hm)
-  rw [hy1] at hp1 hwk1
-  rw [hy2] at hp2 hwk2
+  obtain ⟨r1, l1, cc1, len1, rad1, rem1, rep1, cyc1, fpp1, ch1, se1, lo1, dp1, hp1, hwk1⟩ := e1
+  obtain ⟨r2, l2, cc2, len2, rad2, rem2, rep2, cyc2, fpp2, ch2, se2, lo2, dp2, hp2, hwk2⟩ := e2
   rw [hy1, hy2, galilVM_ext (l1.trans l2.symm) (cc1.trans cc2.symm) (r1.trans r2.symm)
     (ch1.trans ch2.symm) (cyc1.trans cyc2.symm) (rem1.trans rem2.symm) (rad1.trans rad2.symm)
     (len1.trans len2.symm) (rep1.trans rep2.symm) (fpp1.trans fpp2.symm) (se1.trans se2.symm)
@@ -411,12 +407,8 @@ theorem tick_fair_replayStart_unique {c : Control} {s : GalilVM} {y₁ y₂ : St
   obtain ⟨t2, o2, hi2, hpos2, hneg2, hy2⟩ := tick_replayStart_cases hm h2
   have e1 : replayStartVM entry s t1 := hi1
   have e2 : replayStartVM entry s t2 := hi2
-  obtain ⟨rep1, r1, l1, cc1, rad1, len1, rem1, cyc1, fpp1, ch1, se1, lo1, dp1⟩ := e1
-  obtain ⟨rep2, r2, l2, cc2, rad2, len2, rem2, cyc2, fpp2, ch2, se2, lo2, dp2⟩ := e2
-  obtain ⟨hp1, hwk1⟩ := hf1.keepsSearchCursor (Or.inr hm)
-  obtain ⟨hp2, hwk2⟩ := hf2.keepsSearchCursor (Or.inr hm)
-  rw [hy1] at hp1 hwk1
-  rw [hy2] at hp2 hwk2
+  obtain ⟨rep1, r1, l1, cc1, rad1, len1, rem1, cyc1, fpp1, ch1, se1, lo1, dp1, hp1, hwk1⟩ := e1
+  obtain ⟨rep2, r2, l2, cc2, rad2, len2, rem2, cyc2, fpp2, ch2, se2, lo2, dp2, hp2, hwk2⟩ := e2
   have ht : t1 = t2 :=
     galilVM_ext (l1.trans l2.symm) (cc1.trans cc2.symm) (r1.trans r2.symm)
       (ch1.trans ch2.symm) (cyc1.trans cyc2.symm) (rem1.trans rem2.symm) (rad1.trans rad2.symm)
@@ -471,10 +463,11 @@ theorem fair_restart {c : Control} {s : GalilVM} (hm : c.mode = Mode.scan)
 
 /-- The fallback place clause is met by the entry that copies from the search's
 own walker. -/
-theorem fallbackAt_walker_self (s : GalilVM) :
+theorem fallbackAt_walker_self (s : GalilVM)
+    (hplaceBound : (GalilScaffoldPlace.stream s.walker).length ≤ position s.right) :
     beginFallbackVM' s (beginFallbackAt s.walker s) ∧
       (beginFallbackAt s.walker s).fpp.walker = (beginFallbackAt s.walker s).walker :=
-  ⟨⟨s.walker, rfl⟩, rfl⟩
+  ⟨⟨s.walker, rfl, hplaceBound⟩, rfl⟩
 
 /-- The `init` clause is met by the witness of
 `GalilScaffoldTopScanRun.init_tick` (hence of `init_restarted`). -/
@@ -485,7 +478,7 @@ theorem initVM_keeps_cursor (entry : ℕ) (s : GalilVM) :
       GalilScaffoldCounter.inc s.length, s.replay, s.fpp,
       GalilScaffoldSearchFinish.begin GalilScaffoldCounter.reset s.radius,
       GalilScaffoldControl.reset entry s.dp, GalilScaffoldCounter.reset, s.periodOnly, s.walker⟩,
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, rfl⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, rfl⟩
 
 /-- The `replayStart` clause is met by the witness of
 `GalilScaffoldTopReplay.replayStart_tick` (hence of
@@ -496,8 +489,30 @@ theorem replayStartVM_keeps_cursor (entry : ℕ) (s : GalilVM) :
       GalilScaffoldCounter.ofNat 1, s.radius, s.fpp,
       GalilScaffoldSearchFinish.begin GalilScaffoldCounter.reset GalilScaffoldCounter.reset,
       GalilScaffoldControl.reset entry s.dp, GalilScaffoldCounter.reset, s.periodOnly, s.walker⟩,
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, rfl⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl, rfl⟩
 
+/-- **`Fair` の第 3 場は `Tick` からタダ。**
+
+`initVM`（`GalilScaffoldTopReplay:20`）と `replayStartVM`（`:33`）の定義そのものの
+15 連言の最後 2 つが `t.periodOnly = s.periodOnly ∧ t.walker = s.walker`。
+だから `keepsSearchCursor` は供給する必要がない。
+
+**CLAUDE.md §2 の「(e) …`initVM`/`replayStartVM`（`periodOnly`, `walker` 自由）が
+非関数的」は古い記述だった**（2026-09-19, n173 で訂正）。`Fair` の実質は 2 場:
+`restartFirst`（`fair_restart`）と `fallbackPlace`（`fallbackAt_walker_self`）。 -/
+theorem keepsSearchCursor_of_tick {c : Control} {s : GalilVM} {y : State GalilVM}
+    (h : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay ⟨c, s⟩ y)
+    (hm : c.mode = Mode.init ∨ c.mode = Mode.replayStart) :
+    y.vm.periodOnly = s.periodOnly ∧ y.vm.walker = s.walker := by
+  rcases hm with hm | hm
+  · obtain ⟨t, hi, hy⟩ := tick_init_cases hm h
+    obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, hpo, hw⟩ : initVM entry s t := hi
+    rw [hy]; exact ⟨hpo, hw⟩
+  · obtain ⟨t, o, hi, -, -, hy⟩ := tick_replayStart_cases hm h
+    obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, hpo, hw⟩ : replayStartVM entry s t := hi
+    rw [hy]; exact ⟨hpo, hw⟩
+
+#print axioms keepsSearchCursor_of_tick
 #print axioms fair_restart
 #print axioms initVM_keeps_cursor
 #print axioms replayStartVM_keeps_cursor

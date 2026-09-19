@@ -194,14 +194,15 @@ theorem fallbackReachS_of_context' (centre : GalilVM → Fin 3)
   intro es c1 s1 hseg hlive hclk hav hne
   -- the tick pack at the mismatch (Round 22's `watchFallbackC_of_context`, (a) part)
   obtain ⟨⟨z, hz⟩, hg⟩ := hns es c1 s1 hseg hlive hclk hav hne
-  obtain ⟨w, hw⟩ := hlive.2.2.2
   obtain ⟨hsi, hM, hK, hout⟩ :=
     tickPack_of_landing centre place entry q first raw hex hseg hav hsiP hMP hEP houtP
   have hT : FallbackTick centre place entry raw s1 :=
-    fallbackTick_of_watchTick centre place entry raw hw hz
+    fallbackTick_of_watchTick centre place entry raw
+      (PalPeg.CopyPhaseNoShift.liveScanTickable_ne_idle hlive) hz
       (hg ⟨left s1.left, right s1.right, z⟩ (searchLens.get s1) hz)
   obtain ⟨n, R, cT, sT, hL⟩ :=
-    fallbackLanding_of_pack centre place entry q hq0 first h7 h8 raw hlive hclk hav hne hsi hM hK
+    fallbackLanding_of_pack centre place entry q hq0 first h7 h8 raw ⟨hlive.1, hlive.2.1⟩ hclk
+      hav hne hsi hM hK
       hT hout
   obtain ⟨k0, L0, hrun, hcost0⟩ := hentry
   have hr1 : position r.center ≤ position s1.center := by
@@ -292,7 +293,9 @@ theorem foundExit_compare_final15 (centre : GalilVM → Fin 3)
     (hbr : RestartLandingC (PofC centre place entry w) q first w m cP sP)
     (hstage : ReplayStage w (PofC centre place entry w) q first c r)
     (hmP : cP.mode = .scan) (hrP : cP.replaying = false) (hcP : 1 ≤ cP.clock)
-    (hwatch : PrepLandingWatchC (PofC centre place entry w) q first cP sP)
+    (hreachWatch : ∃ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+      WatchSegE (PofC centre place entry w) q first 2048 es cP sP c2 s2 ∧
+        PalPeg.CloseoutWatchRun.LiveScanWatch c2 s2)
     (hat : FoundDpAtC centre place entry q first w lower span h c r)
     (hreach : ShiftReachC centre place entry q first w h)
     (hround : ShiftRoundAtC centre place entry q first w m h lower)
@@ -307,7 +310,7 @@ theorem foundExit_compare_final15 (centre : GalilVM → Fin 3)
     hstart hor hzl hnn hpm hE hsW a ls rs qw gap hprep hmis hctx
     (fallbackReachS_of_context' centre place entry q hq0 first h7 h8 w m c r cP sP hE.inv.1.1.2
       hex hsiP hMP hEP houtP hns hentry hpiece hreplay hce hbr)
-    hstage hmP hrP hcP hwatch hat hreach hround hmsr hland hstepBreak
+    hstage hmP hrP hcP hreachWatch hat hreach hround hmsr hland hstepBreak
 
 #print axioms foundExit_compare_final15
 

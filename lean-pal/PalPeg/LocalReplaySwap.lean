@@ -346,7 +346,7 @@ theorem replayStartVM_commitReplaySwap {m : Mirrored2 P} {entry : ℕ}
   unfold commitReplaySwap
   rw [hs]
   have hc : (abs' (LocalTick2.commitReplay entry m.vm)).center = (abs' m.vm).center := rfl
-  refine ⟨?_, hc, hc, hc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, hc, hc, hc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · show (LocalState.abs (LocalTick2.commitReplay entry m.vm)).replay = (LocalState.abs m.vm).radius
     rw [ha]
   · show (LocalState.abs (LocalTick2.commitReplay entry m.vm)).radius = _
@@ -369,6 +369,13 @@ theorem replayStartVM_commitReplaySwap {m : Mirrored2 P} {entry : ℕ}
   · show (LocalState.abs (LocalTick2.commitReplay entry m.vm)).dp
       = GalilScaffoldControl.reset entry (LocalState.abs m.vm).dp
     rw [ha]
+  · show (LocalState.abs (LocalTick2.commitReplay entry m.vm)).periodOnly
+      = (LocalState.abs m.vm).periodOnly
+    rw [ha]
+  · show (LocalState.abs (LocalTick2.commitReplay entry m.vm)).walker
+      = (LocalState.abs m.vm).walker
+    rw [ha]
+
 
 /-- 張り替え直後、`right` と `left` は `center` の `Twin`（次の走査はここから）。 -/
 theorem commitReplaySwap_twins {m : Mirrored2 P} (entry : ℕ) (hm : MirInv m) :

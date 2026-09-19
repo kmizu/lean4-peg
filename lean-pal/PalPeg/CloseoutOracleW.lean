@@ -84,7 +84,8 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 
 /-- `CloseoutExtraFree.PackRunRMG2P` over `IPackMW`. -/
 def PackRunRMW (w : List (Fin 2)) : Prop :=
-  ∀ (c : Control) (r : GalilVM), InvLPC w c r →
+  ∀ (c : Control) (r : GalilVM),
+    PalPeg.GalilInvPlus3.InvLPS (PofC centre place entry w) q first w c r →
     ∀ (M : ℕ), 1 ≤ M → M ≤ w.length →
     ∀ (j : ℕ) (x : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 j ⟨c, r⟩ x →
@@ -101,12 +102,14 @@ theorem ipackMW_of_invLPC {w : List (Fin 2)}
     IPackMW centre place entry q first w ⟨c, r⟩ :=
   ipackMW_of_ipackMG2 centre place entry q first
     (PalPeg.CloseoutPackRun36.ipackMG2_of_invLPC centre place entry q first hsl hIC)
+    (fun _ => PalPeg.WindowPack.windowRunPack_of_invLPC hIC)
 
 /-- `CloseoutStageOracle.reachAtIMG2S_of_reachAtC3R` over `PackRunRMW`.  The
 bounds the pack now asks for are read off `ReportPointAt` and `InvLPS`. -/
 theorem reachAtIMW_of_reachAtC3R_W {w : List (Fin 2)}
     (hpr : PackRunRMW centre place entry q first w)
-    {m : ℕ} {c : Control} {r : GalilVM} (hIC : InvLPC w c r)
+    {m : ℕ} {c : Control} {r : GalilVM}
+    (hIC : PalPeg.GalilInvPlus3.InvLPS (PofC centre place entry w) q first w c r)
     (hx : IPackMW centre place entry q first w ⟨c, r⟩)
     (h : ReachAtC3 (PofC centre place entry w) q first w m c r) :
     ReachAtIMW centre place entry q first w m c r := by
@@ -126,7 +129,8 @@ theorem reachAtIMW_of_reachAtC3R_W {w : List (Fin 2)}
 theorem cycleOutIMW_of_cycleOutMC3R_W {w : List (Fin 2)}
     (hpr : PackRunRMW centre place entry q first w)
     {m : ℕ} (hm1 : 1 ≤ m) (hmle : m ≤ w.length)
-    {c : Control} {r : GalilVM} (hIC : InvLPC w c r)
+    {c : Control} {r : GalilVM}
+    (hIC : PalPeg.GalilInvPlus3.InvLPS (PofC centre place entry w) q first w c r)
     (hx : IPackMW centre place entry q first w ⟨c, r⟩)
     (h : CycleOutMC3 (PofC centre place entry w) q first w m c r) :
     CycleOutIMW centre place entry q first w m c r := by
@@ -145,7 +149,7 @@ theorem h_oracleIMW_of_MC3_W
       CycleOracleMC3 (PofC centre place entry w) q first w) :
     H_oracleIMW centre place entry q first := by
   intro w hw m c r hm1 hmle hI hp
-  exact cycleOutIMW_of_cycleOutMC3R_W centre place entry q first (hpr w) hm1 hmle hI.1
+  exact cycleOutIMW_of_cycleOutMC3R_W centre place entry q first (hpr w) hm1 hmle hI
     (ipackMW_of_invLPC centre place entry q first (hsl w) hI.1)
     (hor w hw m c r hm1 hmle hI hp)
 
@@ -157,7 +161,8 @@ theorem packRunR_MW {w : List (Fin 2)}
     (hme : H_marksEntry' (PofC centre place entry w) q first)
     :
     PackRunRMW centre place entry q first w := by
-  intro c r hIC M hm1 hmle j x hjx k y hx h hry hyb
+  intro c r hInvLPS M hm1 hmle j x hjx k y hx h hry hyb
+  have hIC : InvLPC w c r := hInvLPS.1
   have hlv0 : ∀ (m : ℕ) (z : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
       CentreLive z.ctl z.vm :=
@@ -212,12 +217,12 @@ theorem packRunR_MW {w : List (Fin 2)}
 
 
 /-- **`H_bootIMW` from `BootIPack`.** -/
-theorem h_bootIMW_of_bootIPack
+theorem h_bootRefreshedIMW_of_bootIPack
     (hsl : ∀ w : List (Fin 2), H_shiftLocalG centre place entry q first w)
     (hb : BootIPack centre place entry q first) :
-    H_bootIMW centre place entry q first := by
+    PalPeg.CloseoutCheckW.H_bootRefreshedIMW centre place entry q first := by
   intro a rest
-  obtain ⟨c1, t, hsteps, hI, hpos⟩ := invLPS_init centre place entry q first a rest
+  obtain ⟨c1, t, hsteps, hI, hpos, hf⟩ := invLPS_init centre place entry q first a rest
   obtain ⟨hp0, hp1⟩ := hb a rest
   obtain ⟨g, hg0, hg1, htr⟩ := stepsAll_fn hsteps
   have hstI : StepsI centre place entry q first (a :: rest) 1
@@ -231,25 +236,39 @@ theorem h_bootIMW_of_bootIPack
     (stepsIM_of_stepsIO centre place entry q first
       (stepsIO_of_stepsI centre place entry q first hstI))
   obtain ⟨g2, hg20, hg21, htr2, hp2⟩ := hstG
-  refine ⟨c1, t, ⟨g2, hg20, hg21, htr2, fun i hi => ⟨(hp2 i hi).pack, ?_⟩⟩, hI, hpos⟩
-  cases i with
-  | zero => rw [hg20]; exact lpackM2_boot (a :: rest)
-  | succ n =>
-    cases n with
-    | zero =>
-      rw [hg21]
-      exact lpackM2_of_invLPC centre place entry q first (hsl _) hI.1
-    | succ n => omega
+  refine ⟨c1, t, ⟨g2, hg20, hg21, htr2, fun i hi => ⟨(hp2 i hi).pack, ?_, ?_⟩⟩, ⟨hI, hf⟩, hpos⟩
+  · cases i with
+    | zero => rw [hg20]; exact lpackM2_boot (a :: rest)
+    | succ n =>
+      cases n with
+      | zero =>
+        rw [hg21]
+        exact lpackM2_of_invLPC centre place entry q first (hsl _) hI.1
+      | succ n => omega
+  · cases i with
+    | zero => rw [hg20]; exact fun _ => PalPeg.WindowPack.windowRunPack_boot (a :: rest)
+    | succ n =>
+      cases n with
+      | zero => rw [hg21]; exact fun _ => PalPeg.WindowPack.windowRunPack_of_invLPC hI.1
+      | succ n => omega
 
+
+theorem h_bootIMW_of_bootIPack
+    (hsl : ∀ w : List (Fin 2), H_shiftLocalG centre place entry q first w)
+    (hb : BootIPack centre place entry q first) :
+    H_bootIMW centre place entry q first := by
+  intro a rest
+  obtain ⟨c1, t, hst, ⟨hI, -⟩, hpos⟩ := h_bootRefreshedIMW_of_bootIPack centre place entry q first hsl hb a rest
+  exact ⟨c1, t, hst, hI, hpos⟩
 
 /-- **`needL'` over `PreTraceIMW`.** -/
 theorem needIMW'_le_W {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hP : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hfour : H_fourOther centre place entry q first w)
-    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
-    (hsd : H_shiftDoneP centre place entry q first w)
-    (hpos0 : ChainPosInv w (st 0).ctl (st 0).vm) :
+    (hfour : H_FourSemiperiodsLeDistance centre place entry q first w)
+    (hbg : H_BackgroundLandingPayload centre place entry q first w) (hmatch : H_MatchLandingPayload centre place entry q first w)
+    (hsd : H_ShiftExitPayload centre place entry q first w)
+    (hpos0 : ChainPositionInvariant w (st 0).ctl (st 0).vm) :
     ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
       PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 := by
   have hbase := hP.base.pre

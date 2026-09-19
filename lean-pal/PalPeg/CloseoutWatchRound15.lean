@@ -132,14 +132,14 @@ theorem roundsRouteLP_of_tail (centre : GalilVM → Fin 3)
   obtain ⟨c1, s1, h, w, vs, vq', s2', t', v, cycle, o, org, mm, c', s', n, c3, s3, w3, vs3, vq3,
     o3, w3', hseg, hm1, hr1, hc1, hs1, hz, hav, hcmp, hmis, hq', hg, hb, hs2', hi2, hchain, ho,
     hint, he, hoc, ha, hpos11, hlow, hrounds, hseg3, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3,
-    ho3, hbroken, hmargin, hlast, hlag, hbound⟩ := htl es c2 s2 hprepSeg
+    ho3, hbroken, hmargin, hlast, hlag, hbound⟩ := htl es c2 s2 hprepSeg hw
   obtain ⟨cT, sT, k, L, hst, hcr, hLP, hprog, hright, hInv⟩ :=
     PalPeg.GalilFoundLandingL.foundRouteMC_shift_Inv centre place entry qq first raw hex
       (PalPeg.GalilOracleMC2.invLPC_invLP hE.invLPC)
       (PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry qq first hE.invLPC)
       a ls rs qw gap hraw hseg0 hmF hrF hcF havF hidle hCen vq hq hfound hmt ch hch hchne oF hoF
       hprepSeg hseg h hm1 hr1 hc1 w hs1 hz hav vs vq' hcmp hmis hq' hg s2' hb hs2' hi2 hchain o ho
-      org hint he hoc ha hdp hpc hpos11 hlow hrounds hseg3 hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3
+      org hint he hoc ha hdp hpc hpos11 hlow hrounds hseg3 hm3 hr3 hc3 w3 hs3 hz3 hav3 vs3 vq3 hcmp3
       hmt3 hq3 o3 ho3 w3' hbroken hmargin hlast hlag
   refine ⟨cT, sT, k, L, hst, hcr, hLP, landingRestart_of_inv hInv, hprog, ?_⟩
   rw [hright]
@@ -163,12 +163,13 @@ theorem breakRouteLP_of_tail (centre : GalilVM → Fin 3)
   subst hsPeq
   intro hh es c2 s2 hprepSeg hlen hw
   obtain ⟨cen, ys, b, c3, s3, w3, vs3, vq3, o3, w3', hwatch2, hes0, hpal1, hpal2, hseg, hm3, hr3,
-    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hprepSeg
+    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ :=
+    htl es c2 s2 hprepSeg hw
   obtain ⟨cT, sT, k, L, hst, hcr, hLP2, hc, hlt, hright, hInv⟩ :=
     PalPeg.GalilInvPlus2.foundRouteMC_noshift''_Inv centre place entry qq first raw hex hE.invLPC
       (PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry qq first hE.invLPC)
       hseg0 hmF hrF hcF havF hidle vq hq hfound hmt ch hch hchne oF hoF hprepSeg cen ys b hwatch2
-      hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken
+      hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hz3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken
       hmargin
   refine ⟨cT, sT, k, L, hst, hcr, hLP2, landingRestart_of_inv hInv, hc, hlt, ?_⟩
   rw [hright]
@@ -222,7 +223,6 @@ theorem foundExit_compare_final8 (centre : GalilVM → Fin 3)
     (hsplit : ExitSplitC centre place entry q first w h cP sP)
     (hstage : ReplayStage w (PofC centre place entry w) q first c r)
     (hmP : cP.mode = .scan) (hrP : cP.replaying = false) (hcP : 1 ≤ cP.clock)
-    (hwatch : PrepLandingWatchC (PofC centre place entry w) q first cP sP)
     (hat : FoundDpAtC centre place entry q first w lower span h c r)
     (hreach : ShiftReachC centre place entry q first w h)
     (hround : ShiftRoundAtC centre place entry q first w m h lower)
@@ -244,18 +244,15 @@ theorem foundExit_compare_final8 (centre : GalilVM → Fin 3)
   have hkeep : CompareKeepsWatchC (PofC centre place entry w) q first :=
     PalPeg.CloseoutWatchRound6.compareKeepsWatchC_of_reach (PofC centre place entry w) q first
       hstp hre hled hcaught hpred
-  have hlive : PrepLandingLiveC (PofC centre place entry w) q first cP sP :=
-    PalPeg.CloseoutWatchRound7.prepLandingLiveC_of_watch (PofC centre place entry w) q first
-      hmP hrP hcP hwatch
   -- the two tails, from the per-landing pieces (Round 14, §2–3)
   have hshift := PalPeg.CloseoutWatchRound5.shiftExitTailC_of_parts centre place entry q first w m h
-    lower span hlive
+    lower span (cP := cP) (sP := sP)
     (PalPeg.CloseoutWatchRound10.foundDpShiftC_of_at centre place entry q first w hP
       lower span h hstage hat)
     (PalPeg.CloseoutWatchRound7.shiftRoundC_of_parts centre place entry q first w m h lower
       hreach hround)
   have hbreak := PalPeg.CloseoutWatchRound5.breakExitTailC_of_parts centre place entry q first w m h
-    lower span hkeep hnn hlive
+    lower span hkeep hnn (cP := cP) (sP := sP)
     (PalPeg.CloseoutWatchRound10.foundDpBreakC_of_at centre place entry q first w hP
       lower span h hstage hat)
     hland

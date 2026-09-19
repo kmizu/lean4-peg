@@ -254,7 +254,7 @@ theorem frontier_tick (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM 
       compareFound (sharedC onLetter leftFirst centre place entry) q first s s' := hcmp
     have hs'p : s'.replay = s.replay := by
       rw [hteq, GalilScaffoldChainInputSupply.afterBirth_replay]; cases a <;> rfl
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     exact frontier_of_reset (by rw [ht]; show s'.replay = _; rw [hs'p]; exact hrest (Or.inl hr))
   case shift_one =>
     rename_i hm hp hi

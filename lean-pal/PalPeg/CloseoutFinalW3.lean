@@ -89,18 +89,22 @@ open PalPeg.CloseoutPackRun48 PalPeg.CloseoutShiftS2 PalPeg.CloseoutTrailS2
 open PalPeg.CloseoutChainPack PalPeg.CloseoutWatchSupply PalPeg.CloseoutFinalS2
 open PalPeg.CloseoutFinalPack
 
-theorem pal_in_peg_final5MW3 (entry q : ℕ) (first : Fin 9)
+theorem given_bootOracleRealize_and_chainPackAtAnyState (entry q : ℕ) (first : Fin 9)
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hbgP : ∀ w : List (Fin 2), H_bgP2 centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP2 centreC placeC entry q first w)
-    (hentry : ∀ w : List (Fin 2), H_shiftEntry2 centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneRad2 centreC placeC entry q first w)
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingChainLedger centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingChainLedger centreC placeC entry q first w)
+    (hentry : ∀ w : List (Fin 2), H_ShiftEntryChainLedger centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitRadiusLedger centreC placeC entry q first w)
     (hpos2 : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
-      st 0 = boot w → ChainPosInv2 w (st 0).ctl (st 0).vm)
+      st 0 = boot w → ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hpk : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack q first w c s)
+      ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
     :
     RecognizedByTotalPEG PAL := by
   classical
@@ -122,7 +126,7 @@ theorem pal_in_peg_final5MW3 (entry q : ℕ) (first : Fin 9)
       needLe_of_pointwise' w (stP w) (TcP w)
         (PalPeg.CloseoutWatchSupply.needIMW'_le_W3 centreC placeC entry q first hw h
           (hbgP w) (hmatchP w) (hentry w) (hsdP w)
-          (hpos2 w (stP w) h.base.pre.start) (hpk w))⟩
+          (hpos2 w (stP w) h.base.pre.start) (hpk w) hCanRightAtAnyScanOrShiftState)⟩
   refine pal_in_peg_of_latch' (Nat.mul_pos hn (PalPeg.Local.cnt_pos K)) M
     (PofC centreC placeC entry) (fun _ => q) (fun _ => first) 2048
     (fun w => PofC_onLetter centreC placeC entry w)
@@ -149,11 +153,11 @@ theorem pal_in_peg_final5MW3 (entry q : ℕ) (first : Fin 9)
 
 
 
-#print axioms pal_in_peg_final5MW2
+#print axioms given_bootOracleRealize_and_consumeAvailEverywhere
 
-#print axioms pal_in_peg_final5MW3
+#print axioms given_bootOracleRealize_and_chainPackAtAnyState
 
-/-- **`pal_in_peg_final33` with `hav`, `hstart` and `hbudget` gone: five
+/-- **`given_chainPackAtAnyState_scanBudget_bgStart_and_consumeAvailEverywhere_FALSE_HYP` with `hav`, `hstart` and `hbudget` gone: five
 hypotheses.**
 
 `hbudget` is a `ChainPack` field too (`scanBound`): the position bound is a
@@ -172,7 +176,7 @@ over the four local facts that are already `ChainPack` fields.  Nothing replaces
 it: `shiftLocalS_of_chainPack` needs no mode hypothesis either, because every
 field of `ShiftLocalS` is premised on `ScanNR x`, so the mode is available from
 inside the field. -/
-theorem pal_in_peg_final36 (entry q : ℕ) (first : Fin 9)
+theorem given_chainPackAtAnyState_andMore_FALSE_HYP (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
@@ -181,10 +185,14 @@ theorem pal_in_peg_final36 (entry q : ℕ) (first : Fin 9)
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hpack : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack q first w c s)
+      ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
     :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_final5MW3 entry q first
+  given_bootOracleRealize_and_chainPackAtAnyState entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       (bootIPack_of_parts centreC placeC entry q first h_lrepC
@@ -204,9 +212,9 @@ theorem pal_in_peg_final36 (entry q : ℕ) (first : Fin 9)
       (h_shiftRes2_of_chainPack centreC placeC entry q first (hpack w) (scanBudget_of_chainPack centreC placeC entry q first (hpack w))))
     (fun w => h_shiftDoneRad2_of_chainPack centreC placeC entry q first (hpack w))
     (fun w st hst => by rw [hst]; exact chainPosInv2_of_idle (boot_chain_idle w))
-    (fun w => hpack w)
+    (fun w => hpack w) hCanRightAtAnyScanOrShiftState
 
-#print axioms pal_in_peg_final36
+#print axioms given_chainPackAtAnyState_andMore_FALSE_HYP
 
 
 end PalPeg.CloseoutFinalW3

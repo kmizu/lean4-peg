@@ -1,5 +1,18 @@
 # PART_INDEX — どこにどの部品があるか
 
+> **2026-09-19 更新: 地図の正本は Lean 側に移した。**
+> `markdown の索引は黙って腐る`（今日それで 3 回失敗した）ので、在り処の正本は
+> **カーネルが検査する 2 本**にした。名前が動けば build が壊れる。
+>
+> * **`PalPeg/Canonical.lean`** — 正本の鎖（`pal_in_peg_final30` の閉包 526 本）の
+>   意味のある別名。番号名（`final30` / `PackRun49` / `Oracle8`）はここで引ける。
+> * **`PalPeg/Workbench.lean`** — 作ったが未配線の 64 本の根（閉包 583 本）。
+>   **主定理との関係を層ごとに明記**してある。
+>
+> このファイルに残すのは、markdown でしか書けないもの（検索コマンド、反証の在り処、
+> 数え直しの記録）だけ。**部品を探すときはまず上の 2 本を読む。**
+
+
 **作成日**: 2026-09-19。**作成理由**: `PalPeg/` は 1142 ファイルあり、名前を思い出して
 `grep` で歩く運用では**既にある部品を見落とす**。実際に見落とした：
 
@@ -84,6 +97,90 @@ threading が必要で、それが残っている本体。**
 | 背景 tick の恒等性 | `CloseoutMismatchCompare.chainTick_false_idle`, `chainStep_watch_of_lagZero` | **証明済み**（lag ゼロなら `WatchOk` 不要） |
 | `ShiftRun` の存在 | `CloseoutShiftRun.shiftRun_exists` / `_entry` / `_round` | **証明済み** |
 
+## 2a. 正本 `pal_in_peg_final39` の 7 前提 — producer と残差（2026-09-19 実見）
+
+`#check @PalPeg.CloseoutFinalFour.pal_in_peg_final39` で型を実見して確認した 7 本。
+各行の producer は**実際にそのファイルを開いて**確認した（型名の一致だけで判断していない）。
+
+| # | 前提 | producer | 残差（＝本当の義務） |
+|---|---|---|---|
+| 1 | `hSP`（scan 状態の `ShiftPal`） | `CloseoutBundleRun.shiftPal_of_run`（:96） | `ChainPosInv2`(run 形) ＋ `H_readsShift`(run 形) ＋ `H_freshShift`(tick 形) ＋ `hfresh`（`periodOnly = false` 分岐） |
+| 2 | `hme`（`H_marksEntry'`） | `CloseoutMarksFree.marksInv'_of_marksRun`（origin）＋ `CloseoutMarksPack.bigPack2MG7W''_tick_M`（tick） | `WindowInOrigin`（run 形、copy 状態）＋ `0 ≤ value length`（run 形、scan 状態。`CloseoutLenNonneg.lenNonneg_of_entryCounters` が `EntryCounters` から出す）＋ 側条件 `first ≠ 4` |
+| 3 | `hor`（`CycleOracleMC3`） | `CloseoutOracleBridge.hor_of_H_oracle` ＋ `CloseoutOracle8.h_oracle_of_leaves7` | 11 葉（CLAUDE.md §3 参照。`hpres`→`SearchReadyB` 再切り出し、`hstage`、`hshape`、`hlastMismatch`、`hmismatch`、`hfound`/`hfoundBg`/`hfoundReplay`） |
+| 4 | `hC`（`H_realizeLIMW'`） | **なし** | 局所実現そのもの。**最大の未知**（5 機械の鎖の 2→3 段） |
+| 5 | `hbgP`（`H_bgP`） | `CloseoutPackRun38.posPayload_background`（:158） | `H_bgRes`（`BgRes` = `SrcPos` ＋ idle 起点の `canRight`/半径上界 ＋ `verNext`） |
+| 6 | `hmatchP`（`H_matchP`） | `CloseoutPackRun38`（:221） | `H_matchRes`（`MatchRes`、:198） |
+| 7 | `hsdP`（`H_shiftDoneP`） | `CloseoutPackRun38`（:316、**恒等**） | `H_shiftDoneRes`（:305） |
+
+**本数は 5〜7 を残差に置き換えても 7 のまま**（producer が 1:1 で残差に化けるだけ）。
+数を下げるには**残差を共有させる**必要がある。
+
+### 構造的観察 — 次の一手はここ
+
+残差を並べると、**同じ run 形の事実を何度も要求している**：
+
+* `ChainPosInv2`（run 形）— `hSP` の残差、かつ `CloseoutPackRun48` の 4 放電器
+  （`final38` 経路で 5〜7 を落とす道）の前提でもある。
+* 「chain の verifier が入力を表現し、ヘッドが所定の位置にある」—
+  `CloseoutVerSide.VerRun`、`CloseoutPackRun49.MatchRest.repV`、`BgRes.verNext`、
+  `MarksRun` の各所が同じ内容を別の名前で要求している。
+* 「run の各点で `LagCan`」— `CloseoutPackRun49.LPackM3.lagCan`（boot は定理、tick も閉、
+  残差は `LTickLeaves3.backLag` 1 つ）。
+
+したがって **run 形の供給束を 1 つ作って boot ＋ tick で運び、5〜7 と `hSP` を
+そこから同時に放電する**のが本数を下げる唯一の筋。既に部品はある：
+
+| 部品 | 場所 | 状態 |
+|---|---|---|
+| `LPackM3`（`LPackM2` ＋ scan で `CentreLedger` ＋ `LagCan`） | `CloseoutPackRun49` | boot は定理、tick は 4 葉パック（`LTickLeavesN`/`AuxPack`/`LTickLeaves2`/`LTickLeaves3`）modulo で閉 |
+| `MatchRes2` ← `LPackM3` | `CloseoutPackRun49.matchRes2_of_lpackM3`（:448） | 残差は `MatchRest`（`repV`/`repVmid`/`replayPay`/`canRNext`） |
+| `VerRun`（run 形の `VerRep` ＋ `LagCan`） | `CloseoutVerSide`（:89） | `hpack` の正しい代替 |
+| `MarksRun`（run 形の `WindowInOrigin` ＋ `EntryCounters`） | `CloseoutMarksFree`（:47） | 同型 |
+| `roundBundle_steps_run` | `CloseoutBundleRun`（:66） | 同型 |
+
+**障害**: `PreTraceIMW.packs` は各点で `IPackMW`（= `LPackM` ＋ `LPackM2`）しか渡さない
+（`CloseoutPackW:64`）。`LPackM3` を run に載せるには 4 葉パックを各点で供給する必要があり、
+そこがまだ配線されていない。
+
+**やってはいけないこと**: `CloseoutPackRun48` の 4 放電器の入力
+（`hrepR`/`hrepV`/`hL`）は「**任意の** scan 状態 ＋ `ChainPosInv2`」形で、
+`ChainPosInv2` は verifier の内容を縛らないので `hrepV` はその形では偽の疑いが強い。
+使う前に `VerRun` と同じ run 形に直すこと（[[over-quantified-named-leaves]] の 8 例目と同じ罠）。
+
+## 2b. `hfour`（`H_fourOther`）— **放電済み**（2026-09-19、`pal_in_peg_final39`）
+
+| 部品 | 在り処 | 状態 |
+|---|---|---|
+| `H_fourOther` の定義 | `CloseoutPackRun34:342` | 前提として数えられていた |
+| **`four_of_other'`** | **`CloseoutPackRun40:368`** | **証明済み。`H_fourOther` の結論そのもの** |
+| `Other'`（5h 版） | `CloseoutPackRun40:56` | `other_of_other'` で `Other` へ弱化できる |
+| `Coupled'` | `CloseoutPackRun40:77` | `coupled'_of_idle` / `coupled'_tick` で run を運ばれる |
+| `ChainPosInv2` が `Coupled'` を含む | `CloseoutPackRun41:213` の docstring が明記 | — |
+| 消費者 | `CloseoutPackRun34.watchShiftS_of_chainPosInv` | `ChainPosInv` → `ChainPosInv2` に載せ替える |
+
+**議論**: `5h ≤ R + C`（`Other'`）＋ `C ≤ 1`（shift guard の `singlePositive cycle`）
+＋ `distance = R`（`SumRel` ＋ lag ゼロ）＋ `1 ≤ h` ⟹ `4h ≤ distance`。
+
+**放電の実物**（新規モジュール、全体 build 緑）:
+
+| 定理 | 場所 |
+|---|---|
+| `chainPosInv'_of_idle` / `chainPosInv'_steps` | `PalPeg/ShiftLocalRun.lean` |
+| `shiftLocalS_of_chainPosInv'` / `shiftLocalS_of_run'`（`hfour` なし） | 同上 |
+| `needIMW'_le_W'`（`needIMW'_le_W` の `hfour` 抜き） | 同上 |
+| **`pal_in_peg_final39`（7 前提・反証済みゼロ）** | **`PalPeg/CloseoutFinalFour.lean`** |
+| 索引の別名 `pal_in_peg_of_seven_leaves` | `PalPeg/Canonical.lean` |
+
+**注意**: `hfour` を落とした既存 3 版はどれも代わりに偽の前提を取っていた —
+`final31` は `hav`（`PalPeg.ConsumeAvailRefute.hav_false`）、`final36`/`final37` は
+`hpack`（`CloseoutPackRefute.hpack_false`）。
+
+**共通部分の括り出し**: `RadPack` → `TrailF` → `needL'` の 3 段は S / S3 / S4 で
+3 重コピペだったので、`hsh : ∀ i ≤ Tc, ShiftLocalS (st i)` を引数に取る形
+（`ShiftLocalRun.needIMW'_le_of_shiftLocal` ほか）に括り出した。`final5MW*` 4 版の
+共通 45 行も `CloseoutFinalFour.pal_in_peg_of_needLe` に括り出した（既存 4 版の
+載せ替えは未実施）。
+
 ## 3. `hpack` の代替（run 搬送パック）
 
 | 部品 | 在り処 | 状態 |
@@ -119,7 +216,8 @@ threading が必要で、それが残っている本体。**
 | `hpack` | `CloseoutPackRefute.hpack_false`（**無条件**） |
 | `ScanBudget` | `CloseoutPackRefute.scanBudget_false`（無条件） |
 | `SearchQuiet` | `GalilLeafQuiet.not_searchQuiet` |
-| `WatchOk` ＋無条件 `Good` | `GalilWatchOkInst.no_watchOk_instance` |
+| **`WatchOk`（単体）** | **`WatchOkRefute.watchOk_false`（無条件、2026-09-19）** |
+| `WatchOk` ＋無条件 `Good` | `GalilWatchOkInst.no_watchOk_instance`（lag = reset 版） |
 | `Trail` | `GalilTrailProof.not_trail_cx`（反例語） |
 | `ReplaySpan` | `GalilReplaySpan.cx_*`（`aaaaabaaaab`） |
 | `hpos` | `GalilLeafPos.not_hpos_of_report_place` / `not_hpos_of_tight_entry` |

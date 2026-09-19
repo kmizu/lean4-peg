@@ -2,17 +2,17 @@ import PalPeg.CloseoutFinalW3
 import PalPeg.CloseoutMarksPack
 
 /-!
-# `pal_in_peg_final37` — `hme` gone: four hypotheses
+# `given_chainPackAtAnyState_FALSE_HYP` — `hme` gone: four hypotheses
 
 `CloseoutMarksPack` showed that `hme` was never independent of `hpack`.  Its two
 uses inside `packRunR_MW` both produce `MarksInv'`, which is a **field** of the
 `ChainPack` bundle `hpack` already hands out; the bundle's premise
-`ChainPosInv2` is available at the `InvLPC` origin (idle chain) and travels
-along the run on the four supplies `H_bgP2` / `H_matchP2` / `H_shiftEntry2` /
-`H_shiftDoneRad2`, which `final36` already derives from `hpack` itself.
+`ChainPositionInvariantWithShiftPhase` is available at the `InvLPC` origin (idle chain) and travels
+along the run on the four supplies `H_BackgroundLandingChainLedger` / `H_MatchLandingChainLedger` / `H_ShiftEntryChainLedger` /
+`H_ShiftExitRadiusLedger`, which `final36` already derives from `hpack` itself.
 
 So nothing replaces `hme`: the four supplies are computed once here and used
-both for `packRunR_MWP` and for `pal_in_peg_final5MW3`.
+both for `packRunR_MWP` and for `given_bootOracleRealize_and_chainPackAtAnyState`.
 
 Remaining: `hSP` (the `ShiftPal` move lemma), `hor` (`CycleOracleMC3`), `hC`
 (local realization), `hpack` (the `ChainSide` residue).
@@ -97,8 +97,8 @@ open PalPeg.CloseoutFinalPack
 open PalPeg.CloseoutFinalW3 PalPeg.CloseoutMarksPack PalPeg.CloseoutPackRun41
 open PalPeg.CloseoutShiftS2 PalPeg.CloseoutShiftLocalFree
 
-/-- **`pal_in_peg_final36` with `hme` gone: four hypotheses.** -/
-theorem pal_in_peg_final37 (entry q : ℕ) (first : Fin 9)
+/-- **`given_chainPackAtAnyState_andMore_FALSE_HYP` with `hme` gone: four hypotheses.** -/
+theorem given_chainPackAtAnyState_FALSE_HYP (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
@@ -106,24 +106,28 @@ theorem pal_in_peg_final37 (entry q : ℕ) (first : Fin 9)
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hpack : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack q first w c s)
+      ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
     :
     RecognizedByTotalPEG PAL := by
-  have hbgP : ∀ w : List (Fin 2), H_bgP2 centreC placeC entry q first w := fun w =>
+  have hbgP : ∀ w : List (Fin 2), H_BackgroundLandingChainLedger centreC placeC entry q first w := fun w =>
     h_bgP2_of_chainPack centreC placeC entry q first (hpack w)
       (bgStartP2_of_chainPack centreC placeC entry q first (hpack w)
         (scanBudget_of_chainPack centreC placeC entry q first (hpack w)))
-  have hmatchP : ∀ w : List (Fin 2), H_matchP2 centreC placeC entry q first w := fun w =>
+  have hmatchP : ∀ w : List (Fin 2), H_MatchLandingChainLedger centreC placeC entry q first w := fun w =>
     h_matchP2_of_target centreC placeC entry q first
       (h_matchRes2_of_chainPack centreC placeC entry q first (hpack w)
         (scanBudget_of_chainPack centreC placeC entry q first (hpack w)))
-  have hentry : ∀ w : List (Fin 2), H_shiftEntry2 centreC placeC entry q first w := fun w =>
+  have hentry : ∀ w : List (Fin 2), H_ShiftEntryChainLedger centreC placeC entry q first w := fun w =>
     h_shiftEntry2_of_target centreC placeC entry q first
       (h_shiftRes2_of_chainPack centreC placeC entry q first (hpack w)
         (scanBudget_of_chainPack centreC placeC entry q first (hpack w)))
-  have hsdP : ∀ w : List (Fin 2), H_shiftDoneRad2 centreC placeC entry q first w := fun w =>
+  have hsdP : ∀ w : List (Fin 2), H_ShiftExitRadiusLedger centreC placeC entry q first w := fun w =>
     h_shiftDoneRad2_of_chainPack centreC placeC entry q first (hpack w)
-  exact pal_in_peg_final5MW3 entry q first
+  exact given_bootOracleRealize_and_chainPackAtAnyState entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       (bootIPack_of_parts centreC placeC entry q first h_lrepC
@@ -131,13 +135,13 @@ theorem pal_in_peg_final37 (entry q : ℕ) (first : Fin 9)
         (CloseoutPackRun6.h_landShift centreC placeC entry q first)))
     (h_oracleIMW_of_MC3_W centreC placeC entry q first
       (fun w => packRunR_MWP centreC placeC entry q first (hSP w)
-        (hbgP w) (hmatchP w) (hentry w) (hsdP w) (hpack w))
+        (hbgP w) (hmatchP w) (hentry w) (hsdP w) (hpack w) hCanRightAtAnyScanOrShiftState)
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       hor)
     hC hbgP hmatchP hentry hsdP
     (fun w st hst => by rw [hst]; exact chainPosInv2_of_idle (boot_chain_idle w))
-    (fun w => hpack w)
+    (fun w => hpack w) hCanRightAtAnyScanOrShiftState
 
-#print axioms pal_in_peg_final37
+#print axioms given_chainPackAtAnyState_FALSE_HYP
 
 end PalPeg.CloseoutFinalW4

@@ -180,7 +180,8 @@ out of the watch state the segment reached. -/
 theorem breakStep_at_terminal (P : Shared) (q : ℕ) (first : Fin 9)
     {s3 : GalilVM} {vs3 : ScanVM} {vq3 : SearchVM}
     {w3 w3' : GalilScaffoldChainWatch.State}
-    (hs3 : s3.chain = ChainVM.watch w3) (hz : zero w3.lag = true)
+    (hs3 : s3.chain = ChainVM.watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true) (hz : zero w3.lag = true)
     (hcmp : (galilFrame P q first).compare s3 (scanLens.set s3 vs3))
     (hmt : (galilFrame P q first).matched (scanLens.set s3 vs3))
     (hbroken : (afterCompare s3 vs3 vq3).chain = ChainVM.broken w3') :
@@ -255,6 +256,7 @@ theorem margin_false_of_fuel (P : Shared) (q : ℕ) (first : Fin 9)
     (hlanding : s2.chain = ChainVM.watch (freshWatch ver cen ys b radius))
     (hseg : WatchSeg P q first 2048 c2 s2 c3 s3)
     (hs3 : s3.chain = ChainVM.watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true)
     (hcmp : (galilFrame P q first).compare s3 (scanLens.set s3 vs3))
     (hmt : (galilFrame P q first).matched (scanLens.set s3 vs3))
     (hbroken : (afterCompare s3 vs3 vq3).chain = ChainVM.broken w3')
@@ -360,7 +362,8 @@ def ShiftRoundC (centre : GalilVM → Fin 3)
         (shiftLens.set s2' ⟨t', .watch v, cycle⟩) c' s' ∧
       ScanSeg (PofC centre place entry raw) qq first 2048 n c' s' c3 s3 ∧
       c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
-      s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
+      s3.chain = ChainVM.watch w3 ∧ GalilScaffoldCounter.zero w3.lag = true ∧
+      canRight s3.right ∧
       (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
       (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
       searchEffect (PofC centre place entry raw) true s3 vq3 ∧
@@ -376,7 +379,6 @@ the round's compose by `CloseoutWatchRun.watchSeg_append`. -/
 theorem shiftExitTailC_of_parts (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry qq : ℕ) (first : Fin 9)
     (raw : List (Fin 2)) (m h lower span : ℕ) {c0 cP : Control} {r sP : GalilVM}
-    (hlive : PrepLandingLiveC (PofC centre place entry raw) qq first cP sP)
     (hdp : FoundDpShiftC centre place entry qq first raw lower span c0 r)
     (hround : ShiftRoundC centre place entry qq first raw m h lower) :
     ShiftExitTailC centre place entry qq first raw m h c0 r cP sP := by
@@ -386,8 +388,10 @@ theorem shiftExitTailC_of_parts (centre : GalilVM → Fin 3)
   obtain ⟨hres, hpc⟩ := hdp a ls rs qw gap es0 cF sF vq hseg0 hCen hq hfound
   refine ⟨a, ls, rs, qw, gap, es0, cF, sF, vq, ch, oF, lower, span, hraw, hseg0, hmF, hrF, hcF,
     havF, hidle, hCen, hq, hfound, hmt, hch, hchne, hoF, hcPeq, hsPeq, hres, hpc, ?_⟩
-  intro es c2 s2 hseg
-  obtain ⟨cT, sT, hsegT, hLT, hexit⟩ := hrun es c2 s2 hseg (hlive es c2 s2 hseg)
+  intro es c2 s2 hseg hwLanding
+  obtain ⟨hmL, hrL, hcL⟩ := watchSegE_live_control (delay := 2048) (by omega) hseg
+    (by rw [hcPeq]; exact hmF) (by rw [hcPeq]) (by simp [hcPeq])
+  obtain ⟨cT, sT, hsegT, hLT, hexit⟩ := hrun es c2 s2 hseg ⟨hmL, hrL, hcL, hwLanding⟩
   obtain ⟨c1, s1, w, vs, vq', s2', t', v, cycle, o, org, mm, c', s', n, c3, s3, w3, vs3, vq3,
     o3, w3', hsegR, hm1, hr1, hc1, hs1, hz, hav, hcmp, hmis, hq', hg, hb, hs2', hi2, hchain,
     ho, hint, he, hoc, ha, hpos11, hlow, hrounds, hseg3, hm3, hr3, hc3, hs3, hav3, hcmp3,
@@ -407,6 +411,7 @@ def BreakLandingC (centre : GalilVM → Fin 3)
     (raw : List (Fin 2)) (h : ℕ) (sF : GalilVM) (cP : Control) (sP : GalilVM) : Prop :=
   ∀ (es : List Bool) (c2 : Control) (s2 : GalilVM),
     WatchSegE (PofC centre place entry raw) qq first 2048 es cP sP c2 s2 →
+    (∃ wLive : GalilScaffoldChainWatch.State, s2.chain = ChainVM.watch wLive) →
       ∃ (cen : Fin 3) (ys : List (Fin 3)) (b : Fin 3),
         ys.length + 1 = h ∧
         s2.chain = ChainVM.watch (freshWatch sF.center cen ys b sF.radius) ∧
@@ -426,7 +431,8 @@ def BreakTerminalC (centre : GalilVM → Fin 3)
         (vq3 : SearchVM) (o3 : Bool) (w3' : GalilScaffoldChainWatch.State),
         WatchSeg (PofC centre place entry raw) qq first 2048 cT sT c3 s3 ∧
         c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
-        s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
+        s3.chain = ChainVM.watch w3 ∧ GalilScaffoldCounter.zero w3.lag = true ∧
+        canRight s3.right ∧
         (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
         (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
         searchEffect (PofC centre place entry raw) true s3 vq3 ∧
@@ -459,7 +465,6 @@ theorem breakExitTailC_of_parts (centre : GalilVM → Fin 3)
     (raw : List (Fin 2)) (m h lower span : ℕ) {c0 cP : Control} {r sP : GalilVM}
     (hkeep : CompareKeepsWatchC (PofC centre place entry raw) qq first)
     (hnn : DistanceNonnegC)
-    (hlive : PrepLandingLiveC (PofC centre place entry raw) qq first cP sP)
     (hdp : FoundDpBreakC centre place entry qq first raw lower span h c0 r)
     (hland : ∀ sF : GalilVM, BreakLandingC centre place entry qq first raw h sF cP sP)
     (hterm : BreakTerminalC centre place entry qq first raw m h) :
@@ -470,9 +475,12 @@ theorem breakExitTailC_of_parts (centre : GalilVM → Fin 3)
   obtain ⟨hcand, hpr, hrc⟩ := hdp a ls rs qw gap es0 cF sF vq hseg0 hCen hq hfound
   refine ⟨es0, cF, sF, vq, ch, oF, a, ls, rs, qw, gap, span, lower, h, hraw, hCen, hpr, hcand,
     hseg0, hmF, hrF, hcF, havF, hidle, hq, hfound, hmt, hch, hchne, hoF, hcPeq, hsPeq, ?_⟩
-  intro es c2 s2 hseg
-  obtain ⟨cen, ys, b, hys, hwatch2, hes0⟩ := hland sF es c2 s2 hseg
-  obtain ⟨cT, sT, hsegT, hLT, hexit⟩ := hrun es c2 s2 hseg (hlive es c2 s2 hseg)
+  intro es c2 s2 hseg hwLanding
+  obtain ⟨cen, ys, b, hys, hwatch2, hes0⟩ := hland sF es c2 s2 hseg hwLanding
+  obtain ⟨hmL, hrL, hcL⟩ := watchSegE_live_control (delay := 2048) (by omega) hseg
+    (by rw [hcPeq]; exact hmF) (by rw [hcPeq]) (by simp [hcPeq])
+  obtain ⟨cT, sT, hsegT, hLT, hexit⟩ :=
+    hrun es c2 s2 hseg ⟨hmL, hrL, hcL, hwLanding⟩
   obtain ⟨c3, s3, w3, vs3, vq3, o3, w3', hsegR, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3,
     ho3, hbroken, hz3, hfuel, hbound⟩ := hterm cT sT hLT hexit
   have hmargin : negative w3'.margin = false :=

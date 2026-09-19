@@ -295,13 +295,13 @@ theorem chainRound_tick_B {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
 
 
 /-- **`ChainRound` along a tick with only `H_shiftDone` and `H_birthR` left.**
-`H_advance` comes from `ReadsRound`, `BlockInv` from `ChainPosInv2`, and the
+`H_advance` comes from `ReadsRound`, `BlockInv` from `ChainPositionInvariantWithShiftPhase`, and the
 "born" half of `H_birth` from `PeriodShape`. -/
 theorem chainRound_tick_BF {w : List (Fin 2)} {delay : ℕ} {x y : State GalilVM}
     (hCR : ChainRound w x.ctl x.vm)
     (hRR : ReadsRound w x.ctl x.vm)
     (hps : PeriodShape x.vm)
-    (hinv : ChainPosInv2 w x.ctl x.vm)
+    (hinv : ChainPositionInvariantWithShiftPhase w x.ctl x.vm)
     (hS : H_shiftDone centre place entry q first w x.ctl x.vm)
     (hB : H_birthR w x.ctl x.vm y.vm)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) delay x y) :

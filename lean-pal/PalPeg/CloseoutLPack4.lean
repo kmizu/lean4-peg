@@ -166,7 +166,7 @@ theorem beginShift_heads {s t : GalilVM} (hb : beginShiftVM' s t) :
 /-- `beginFallbackVM'` touches only `fpp`, `chain` and `search`. -/
 theorem beginFallback_heads {s t : GalilVM} (hb : beginFallbackVM' s t) :
     t.left = s.left ∧ t.center = s.center ∧ t.right = s.right ∧ t.replay = s.replay := by
-  obtain ⟨pl, ht⟩ := hb
+  obtain ⟨pl, ht, -⟩ := hb
   refine ⟨by rw [ht], by rw [ht], by rw [ht], by rw [ht]⟩
 
 /-- **`MInv` at either entry is `MInv` at the comparison's target.**  The
@@ -256,7 +256,7 @@ theorem lticks4 {w : List (Fin 2)} {c : Control} {s : GalilVM}
   shiftOneMinv := h.shiftOneMinv
   shiftDoneScan := h.shiftDoneScan
   choosePack := h.choosePack
-  rewindLeft := fun hm => left_pos_of_two (h.rewindMargin hm)
+  rewindLeft := fun hm _ => left_pos_of_two (h.rewindMargin hm)
   rewindPairMinv := h.rewindPairMinv
   replayPack := h.replayPack
 

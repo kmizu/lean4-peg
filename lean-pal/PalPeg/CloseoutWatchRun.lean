@@ -106,6 +106,23 @@ def LiveScanWatch (c : Control) (s : GalilVM) : Prop :=
   c.mode = .scan ∧ c.replaying = false ∧ 1 ≤ c.clock ∧
     ∃ w : GalilScaffoldChainWatch.State, s.chain = ChainVM.watch w
 
+/-- **`LiveScanWatch` の chain 条件を「非 idle」に弱めた版。**
+
+不一致からの fallback に chain の watch は要らない——`.copy` 相でも
+`shiftGuardVM` が立たず `scan_fallback` へ行く
+（`FoundPackCorrected.no_shift_from_copyChain`）。fallback 系の契約
+（`WatchFallbackC` / `WatchMismatchNoShiftC` / `FallbackReachS` …）はこちらで足りる。
+
+**`TerminalRunC` / `TerminalRunFallbackC` の `LiveScanWatch` は弱めてはいけない**
+（watch 無しではラウンドが回らない）。 -/
+def LiveScanNonIdle (c : Control) (s : GalilVM) : Prop :=
+  c.mode = .scan ∧ c.replaying = false ∧ 1 ≤ c.clock ∧ s.chain ≠ ChainVM.idle
+
+theorem liveScanNonIdle_of_liveScanWatch {c : Control} {s : GalilVM}
+    (h : LiveScanWatch c s) : LiveScanNonIdle c s := by
+  obtain ⟨hm, hr, hc, w, hw⟩ := h
+  exact ⟨hm, hr, hc, by rw [hw]; exact ChainVM.noConfusion⟩
+
 /-- **NAMED (open), per instance.**  One watch round: at a live scan landing,
 either the landing is terminal, or the machine performs a `WatchSeg` reaching
 the next live scan landing with a strictly smaller measure. -/

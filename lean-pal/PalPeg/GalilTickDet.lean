@@ -69,6 +69,19 @@ theorem chainStep_unique {x z₁ z₂ : ChainVM} (h1 : ChainStep x z₁) (h2 : C
   | watchStep w w' ht =>
       cases h2 with
       | watchStep _ w'' ht' => rw [internal_unique ht ht']
+      | watchBreak _ hb =>
+          exfalso
+          cases ht with
+          | idle hz => have hp := hb.1; rw [hz] at hp; cases hp
+          | take _ hg => exact not_good_of_watchBreak hb hg
+  | watchBreak w hb =>
+      cases h2 with
+      | watchStep _ w' ht =>
+          exfalso
+          cases ht with
+          | idle hz => have hp := hb.1; rw [hz] at hp; cases hp
+          | take _ hg => exact not_good_of_watchBreak hb hg
+      | watchBreak _ _ => rfl
 
 /-- `Good` and `BreakStep` read the same period symbol with opposite verdicts. -/
 theorem not_good_of_break {w w' : GalilScaffoldChainWatch.State}
@@ -103,6 +116,7 @@ theorem chainMatched_unique {x z₁ z₂ : ChainVM} (h1 : ChainMatched x z₁)
           obtain ⟨-, -, a, -, -, he⟩ := hb
           obtain ⟨-, -, a', -, -, he'⟩ := hb'
           rw [he, he']
+  | brokenMatched w => cases h2 with | brokenMatched _ => rfl
 
 theorem chainTick_unique {a : Bool} {x z₁ z₂ : ChainVM} (h1 : ChainTick a x z₁)
     (h2 : ChainTick a x z₂) : z₁ = z₂ := by
@@ -143,42 +157,27 @@ theorem chainAt_unique {a found : Bool} {ans : GalilScaffoldTape.Tape} {cc : Fin
 #print axioms chainMatched_unique
 #print axioms chainAt_unique
 
-/-! ## (e) `Pw.init` and `Pw.replayStart` are **not** functional at `sharedC`
+/-! ## (e) `Pw.init` and `Pw.replayStart` **are** functional since 2026-09-19
 
-`initVM`/`replayStartVM` constrain 13 of the 15 `GalilVM` fields; `periodOnly`
-and `walker` are left free, so both relations have two successors from every
-source. -/
+以前は `initVM` / `replayStartVM` が 15 場のうち 13 場しか縛らず、`periodOnly` と
+`walker` を自由にしていたので、どちらの関係も各源から 2 つの後続を持っていた
+（`Fair.keepsSearchCursor` がその分を仮定として抱えていた）。
 
-theorem initVM_not_unique (entry : ℕ) {s t : GalilVM} (h : initVM entry s t) :
-    initVM entry s { t with periodOnly := !t.periodOnly } ∧
-      t ≠ { t with periodOnly := !t.periodOnly } := by
-  refine ⟨h, ?_⟩
-  intro he
-  have hb : t.periodOnly = !t.periodOnly := congrArg GalilVM.periodOnly he
-  cases hp : t.periodOnly <;> rw [hp] at hb <;> exact absurd hb (by decide)
+Scala 正本の `stepInit` / `stepReplayStart` はどちらのフィールドも触らないので、
+これはモデル欠陥だった。保存を追加したので、いまは 15 場すべてが決まる。 -/
 
-theorem replayStartVM_not_unique (entry : ℕ) {s t : GalilVM} (h : replayStartVM entry s t) :
-    replayStartVM entry s { t with periodOnly := !t.periodOnly } ∧
-      t ≠ { t with periodOnly := !t.periodOnly } := by
-  refine ⟨h, ?_⟩
-  intro he
-  have hb : t.periodOnly = !t.periodOnly := congrArg GalilVM.periodOnly he
-  cases hp : t.periodOnly <;> rw [hp] at hb <;> exact absurd hb (by decide)
+/-- **`initVM` は `periodOnly` と `walker` を保存する**（モデル修正後）。 -/
+theorem initVM_keepsSearchCursor {entry : ℕ} {s t : GalilVM} (h : initVM entry s t) :
+    t.periodOnly = s.periodOnly ∧ t.walker = s.walker :=
+  ⟨h.2.2.2.2.2.2.2.2.2.2.2.2.2.1, h.2.2.2.2.2.2.2.2.2.2.2.2.2.2⟩
 
-/-- **`init` mode is nondeterministic at the concrete shared record.** -/
-theorem tick_init_not_det (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM → Fin 3)
-    (place : GalilVM → GalilScaffoldPlace.Place) (entry q : ℕ) (first : Fin 9) (delay : ℕ)
-    (c : Control) (hm : c.mode = .init) {s t : GalilVM} (h : initVM entry s t) :
-    Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay ⟨c, s⟩
-        ⟨{ c with mode := .scan, output := true }, t⟩ ∧
-      Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay ⟨c, s⟩
-        ⟨{ c with mode := .scan, output := true }, { t with periodOnly := !t.periodOnly }⟩ ∧
-      (⟨{ c with mode := .scan, output := true }, t⟩ : State GalilVM) ≠
-        ⟨{ c with mode := .scan, output := true }, { t with periodOnly := !t.periodOnly }⟩ := by
-  obtain ⟨h2, hne⟩ := initVM_not_unique entry h
-  refine ⟨.init c s t hm h, .init c s _ hm h2, ?_⟩
-  intro he
-  exact hne (congrArg State.vm he)
+/-- **`replayStartVM` も同じ。** -/
+theorem replayStartVM_keepsSearchCursor {entry : ℕ} {s t : GalilVM}
+    (h : replayStartVM entry s t) : t.periodOnly = s.periodOnly ∧ t.walker = s.walker :=
+  ⟨h.2.2.2.2.2.2.2.2.2.2.2.2.2.1, h.2.2.2.2.2.2.2.2.2.2.2.2.2.2⟩
+
+#print axioms initVM_keepsSearchCursor
+#print axioms replayStartVM_keepsSearchCursor
 
 /-- Every abstract `replayStart` effect really is taken by a tick. -/
 theorem replayStart_tick_of (Pw : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) (c : Control)
@@ -200,22 +199,6 @@ theorem replayStart_tick_of (Pw : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ
     · have hl' : ¬ Pw.onLetter t := hl
       show (if Pw.onLetter t then decide (Pw.leftFirst t) else c.output) = c.output
       rw [if_neg hl']
-
-/-- **`replayStart` mode is nondeterministic at the concrete shared record.** -/
-theorem tick_replayStart_not_det (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM → Fin 3)
-    (place : GalilVM → GalilScaffoldPlace.Place) (entry q : ℕ) (first : Fin 9) (delay : ℕ)
-    (c : Control) (hm : c.mode = .replayStart) {s t : GalilVM} (h : replayStartVM entry s t) :
-    ∃ y₁ y₂ : State GalilVM,
-      Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay
-          ⟨c, s⟩ y₁ ∧
-        Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay
-          ⟨c, s⟩ y₂ ∧ y₁ ≠ y₂ := by
-  obtain ⟨h2, hne⟩ := replayStartVM_not_unique entry h
-  obtain ⟨o₁, ht₁⟩ := replayStart_tick_of (sharedC onLetter leftFirst centre place entry) q first
-    delay c hm h
-  obtain ⟨o₂, ht₂⟩ := replayStart_tick_of (sharedC onLetter leftFirst centre place entry) q first
-    delay c hm h2
-  exact ⟨_, _, ht₁, ht₂, fun he => hne (congrArg State.vm he)⟩
 
 /-! ## (a) `Tick.restart` overlaps the scan constructors
 
@@ -434,18 +417,16 @@ end Fallback
   (`GalilSharedFunctional`); `beginFallbackVM'` is *not*
   (`beginFallbackVM'_not_unique`, lifted here to `scan_fallback_not_det`); and
   `initVM`/`replayStartVM` are *not* — they constrain 13 of the 15 `GalilVM`
-  fields, leaving `periodOnly` and `walker` free (`initVM_not_unique`,
-  `replayStartVM_not_unique`, `tick_init_not_det`, `tick_replayStart_not_det`).
+  fields, leaving `periodOnly` and `walker` free — **2026-09-19 に修正済み**
+  （`initVM_keepsSearchCursor` / `replayStartVM_keepsSearchCursor`）。
+  Scala の `stepInit` / `stepReplayStart` がどちらも触らないので、自由にしていたのが
+  モデル欠陥だった。これで (e) の init / replayStart 側は閉じた。
 
 So the abstract model is under-specified in `init`, `replayStart`, `scan`
 (restart priority) and `scan_fallback` (the place).  The trace must be
 **defined from the local run** rather than assumed deterministic. -/
 
-#print axioms initVM_not_unique
-#print axioms replayStartVM_not_unique
-#print axioms tick_init_not_det
 #print axioms replayStart_tick_of
-#print axioms tick_replayStart_not_det
 #print axioms backgroundS_stutter
 #print axioms scan_restart_not_det
 #print axioms scan_restart_not_det_sharedC

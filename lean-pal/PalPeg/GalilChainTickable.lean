@@ -121,7 +121,9 @@ theorem chainReady_of_chainOk {Ok : WState → Prop} (hOk : WatchOk Ok) {x : Cha
   | back v h lag margin ver =>
     intro hf _
     exact watchReady_backDone hx.1 hf ver hx.2 lag margin
-  | watch w => exact ⟨hOk.good w hx, hOk.block w hx, fun m hm => hOk.can w m hx hm⟩
+  | watch w =>
+    exact ⟨PalPeg.GalilBranchInvariants.readyWatch_of_good (hOk.good w hx), hOk.block w hx,
+      fun m hm => hOk.can w m hx hm⟩
   | broken w => exact hx.elim
 
 /-- A `ChainOk` chain is never broken. -/

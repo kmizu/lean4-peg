@@ -2,13 +2,13 @@ import PalPeg.CloseoutFinalW4
 import PalPeg.CloseoutVerSide
 
 /-!
-# `pal_in_peg_final38` — the refuted `hpack` replaced by the run-level `VerRun`
+# `given_globalRun41Landings_and_verifierRun` — the refuted `hpack` replaced by the run-level `VerRun`
 
-`CloseoutPackRefute` showed `hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack …`
+`CloseoutPackRefute` showed `hpack : ∀ w c s, ChainPositionInvariantWithShiftPhase w c s → ChainPack …`
 is **false**.  `CloseoutVerSide` then measured what the top theorem actually
-uses it for: `pal_in_peg_final5MW3` calls it in exactly one place, and the
+uses it for: `given_bootOracleRealize_and_chainPackAtAnyState` calls it in exactly one place, and the
 lemma at the bottom of that call (`shiftLocalS_of_chainPack`) reads four fields,
-three of which (`inv`, `repR`) the caller already has — `ChainPosInv2` is a
+three of which (`inv`, `repR`) the caller already has — `ChainPositionInvariantWithShiftPhase` is a
 hypothesis and `LPackM`/`LPackM2` come off the pre-trace's own packs.
 
 So the whole contribution of `hpack` is `repV` and `lagCan` at the run's `scan`
@@ -16,8 +16,8 @@ states, and `CloseoutVerSide.VerRun` states exactly those **along the run**.
 That is not free at an arbitrary idle-chain state, so `chainPosInv2_of_idle`
 gives no counterexample — the refutation does not apply to it.
 
-`pal_in_peg_final5MW4` is `final5MW3` with `needIMW'_le_W4` in place of
-`needIMW'_le_W3`, and `pal_in_peg_final38` is `final37` with `hpack` replaced by
+`given_bootOracleRealize_and_verifierRun` is `final5MW3` with `needIMW'_le_W4` in place of
+`needIMW'_le_W3`, and `given_globalRun41Landings_and_verifierRun` is `final37` with `hpack` replaced by
 `hver`.  Four hypotheses still, but **none of them refuted**:
 
 * `hSP` — the `ShiftPal` move lemma (guard premised, geometric conclusion);
@@ -108,18 +108,22 @@ open PalPeg.CloseoutVerSide
 open PalPeg.CloseoutFinalW3
 open PalPeg.CloseoutFinalW4
 
-theorem pal_in_peg_final5MW4 (entry q : ℕ) (first : Fin 9)
+theorem given_bootOracleRealize_and_verifierRun (entry q : ℕ) (first : Fin 9)
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hbgP : ∀ w : List (Fin 2), H_bgP2 centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP2 centreC placeC entry q first w)
-    (hentry : ∀ w : List (Fin 2), H_shiftEntry2 centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneRad2 centreC placeC entry q first w)
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingChainLedger centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingChainLedger centreC placeC entry q first w)
+    (hentry : ∀ w : List (Fin 2), H_ShiftEntryChainLedger centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitRadiusLedger centreC placeC entry q first w)
     (hpos2 : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
-      st 0 = boot w → ChainPosInv2 w (st 0).ctl (st 0).vm)
+      st 0 = boot w → ChainPositionInvariantWithShiftPhase w (st 0).ctl (st 0).vm)
     (hver : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM),
       st 0 = boot w → VerRun centreC placeC entry q first w (st 0))
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
     :
     RecognizedByTotalPEG PAL := by
   classical
@@ -142,7 +146,7 @@ theorem pal_in_peg_final5MW4 (entry q : ℕ) (first : Fin 9)
         (PalPeg.CloseoutVerSide.needIMW'_le_W4 centreC placeC entry q first hw h
           (hbgP w) (hmatchP w) (hentry w) (hsdP w)
           (hpos2 w (stP w) h.base.pre.start)
-          (hver w (stP w) h.base.pre.start))⟩
+          (hver w (stP w) h.base.pre.start) hCanRightAtAnyScanOrShiftState)⟩
   refine pal_in_peg_of_latch' (Nat.mul_pos hn (PalPeg.Local.cnt_pos K)) M
     (PofC centreC placeC entry) (fun _ => q) (fun _ => first) 2048
     (fun w => PofC_onLetter centreC placeC entry w)
@@ -167,6 +171,6 @@ theorem pal_in_peg_final5MW4 (entry q : ℕ) (first : Fin 9)
       (fun w hw => (hP w hw).base.pre.cost)
   · exact GalilEmptyWord.realize_accept'_nil L blank initQ outQ n htape hn
 
-#print axioms pal_in_peg_final5MW4
+#print axioms given_bootOracleRealize_and_verifierRun
 
 end PalPeg.CloseoutFinalW5

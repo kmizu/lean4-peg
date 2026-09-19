@@ -6,11 +6,11 @@ import PalPeg.CloseoutShiftLocalFree
 /-!
 # `hme` is inside `hpack`: `MarksInv'` off the `ChainPack` bundle
 
-`pal_in_peg_final36` carries both
+`given_chainPackAtAnyState_andMore_FALSE_HYP` carries both
 
 ```
 hme   : ∀ w, H_marksEntry' (PofC centreC placeC entry w) q first
-hpack : ∀ w c s, ChainPosInv2 w c s → ChainPack q first w c s
+hpack : ∀ w c s, ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s
 ```
 
 and `hme` is used at exactly two places, both inside
@@ -23,13 +23,13 @@ and `hme` is used at exactly two places, both inside
 
 But `MarksInv' first c s` is already a **field** of `ChainPack`
 (`CloseoutChainPack:281`, `marks`), which `hpack` hands out at every state
-satisfying `ChainPosInv2`.  And `ChainPosInv2` is available along the whole run:
+satisfying `ChainPositionInvariantWithShiftPhase`.  And `ChainPositionInvariantWithShiftPhase` is available along the whole run:
 
 * at the origin, `InvLPC` forces an idle chain
   (`CloseoutShiftLocalFree.chainIdle_of_invS`) and
-  `CloseoutPackRun41.chainPosInv2_of_idle` turns that into `ChainPosInv2`;
+  `CloseoutPackRun41.chainPosInv2_of_idle` turns that into `ChainPositionInvariantWithShiftPhase`;
 * along the run, `CloseoutShiftS2.chainPosInv2_steps` transports it, on the
-  four supplies `H_bgP2` / `H_matchP2` / `H_shiftEntry2` / `H_shiftDoneRad2`
+  four supplies `H_BackgroundLandingChainLedger` / `H_MatchLandingChainLedger` / `H_ShiftEntryChainLedger` / `H_ShiftExitRadiusLedger`
   which `final36` **already derives from `hpack`** (`h_bgP2_of_chainPack`,
   `h_matchP2_of_target`, `h_shiftEntry2_of_target`,
   `h_shiftDoneRad2_of_chainPack`).
@@ -137,7 +137,8 @@ theorem bigPack2MG7W''_tick_M {w : List (Fin 2)}
     obtain ⟨hc', hfr⟩ := tick_rewind_atFirst hm hf h
     have hM : LPackM w c' t :=
       lpackM_rewind_done centre place entry q first hx.ipackM.pack hm hc' hfr
-    refine ⟨hM, ?_⟩
+    refine ⟨hM, ?_, fun hP => PalPeg.WindowPack.windowRunPack_tick centre place entry q first hP
+        hx.ipackM.pack hx.ipackM.m2 hx.aux (hx.ipackM.win hP) h⟩
     obtain ⟨heq, hset⟩ := hfr
     have htc : t.center = s.center := by rw [hset, heq]; rfl
     have hCR : CentreRep w t := centreRep_congr htc (hx.ipackM.m2.centreRep (Or.inl hm))
@@ -154,20 +155,24 @@ theorem bigPack2MG7W''_tick_M {w : List (Fin 2)}
 
 
 /-- **`PackRunRMW` with no `H_marksEntry'` either.**  Every `MarksInv'` the
-proof needs is `ChainPack.marks` at the state in question, and `ChainPosInv2` —
+proof needs is `ChainPack.marks` at the state in question, and `ChainPositionInvariantWithShiftPhase` —
 the premise of `hpk` — travels from the `InvLPC` origin (idle chain) along the
 run by `chainPosInv2_steps`. -/
 theorem packRunR_MWP {w : List (Fin 2)}
     (hSP : ∀ x : State GalilVM, BigPack2MG7W centre place entry q first w x →
       ScanNR x → ShiftPal centre place entry q first w x.vm)
-    (hbg : H_bgP2 centre place entry q first w)
-    (hmatch : H_matchP2 centre place entry q first w)
-    (hentry : H_shiftEntry2 centre place entry q first w)
-    (hsd : H_shiftDoneRad2 centre place entry q first w)
-    (hpk : ∀ (c : Control) (s : GalilVM), ChainPosInv2 w c s → ChainPack q first w c s)
+    (hbg : H_BackgroundLandingChainLedger centre place entry q first w)
+    (hmatch : H_MatchLandingChainLedger centre place entry q first w)
+    (hentry : H_ShiftEntryChainLedger centre place entry q first w)
+    (hsd : H_ShiftExitRadiusLedger centre place entry q first w)
+    (hpk : ∀ (c : Control) (s : GalilVM), ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
+    (hCanRightEverywhere : ∀ z : State GalilVM,
+      z.ctl.mode = Mode.scan ∨ z.ctl.mode = Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right)
     :
     PackRunRMW centre place entry q first w := by
-  intro c r hIC M hm1 hmle j x hjx k y hx h hry hyb
+  intro c r hInvLPS M hm1 hmle j x hjx k y hx h hry hyb
+  have hIC : InvLPC w c r := hInvLPS.1
   have hlv0 : ∀ (m : ℕ) (z : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
       CentreLive z.ctl z.vm :=
@@ -176,13 +181,14 @@ theorem packRunR_MWP {w : List (Fin 2)}
     ⟨coupled_of_invLPC hIC, front_of_invLPC hIC, copyPack_of_invLPC hIC⟩
   have hauxx : AuxPack x.ctl x.vm :=
     auxPack_steps centre place entry q first (x := ⟨c, r⟩) hlv0 haux0 hjx
-  have hpos0 : ChainPosInv2 w c r :=
+  have hpos0 : ChainPositionInvariantWithShiftPhase w c r :=
     chainPosInv2_of_idle (chainIdle_of_invS hIC.1.1.1.1)
   have hpi : ∀ (n' : ℕ) (z : State GalilVM),
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 n' ⟨c, r⟩ z →
       ChainPack q first w z.ctl z.vm := fun n' z hz =>
     hpk z.ctl z.vm
-      (chainPosInv2_steps centre place entry q first hbg hmatch hentry hsd hpos0 hz)
+      (chainPosInv2_steps centre place entry q first hbg hmatch hentry hsd
+        (fun _ z' _ => hCanRightEverywhere z') hpos0 hz)
   have hmx : MarksInv' first x.ctl x.vm := (hpi j x hjx).marks
   obtain ⟨g, hg0, hgk, htr⟩ := stepsAll_fn h
   have hreach : ∀ i, i ≤ k →
@@ -228,6 +234,95 @@ theorem packRunR_MWP {w : List (Fin 2)}
   exact ⟨g, hg0, hgk, htr, fun i hi => (hbig i hi).ipackM⟩
 
 
+
+/-- **`PackRunRMW` with no `H_marksEntry'` and no `ChainPack` either.**
+
+`CloseoutPackRun17.marksInv'_of_run'` already produces `MarksInv'` at **every**
+state of a run started in `scan`, and all four of its inputs are free at an
+`InvLPC` origin:
+
+| 入力 | 出どころ |
+|---|---|
+| `first ≠ 4` | 側条件（`first = 0` なら `by decide`） |
+| `hfl`（scan 状態で `0 ≤ value length`） | `GalilInvPlus2.hfloor_of_invLP2` — `InvLPC.1` がそのまま `InvLP2` |
+| `hwin`（copy 状態で `WindowInOrigin`） | `CloseoutPackRun25.windowInOrigin_alongRun`（origin は scan なので origin 側の前提が空虚） |
+| `CPack q c r` | `GalilCentreLive.cpack_of_entry` ＋ `CloseoutMarksFree.entryCounters_of_invLPC` |
+
+本体は `packRunR_MWP` と同じで、`hpk`／`hpi`（`ChainPack.marks`）の代わりに
+`hmarksAlongRun` を使う。したがって `MarksInv'` は `hme` でも `hpack` でもなく、
+**run から無償に出る**。 -/
+theorem packRunR_MW_marksFree {w : List (Fin 2)} (h4 : first ≠ 4)
+    (hP : Decodes (PofC centre place entry w)) :
+    PackRunRMW centre place entry q first w := by
+  intro c r hInvLPS M hm1 hmle j x hjx k y hx h hry hyb
+  have hIC : InvLPC w c r := hInvLPS.1
+  have hlv0 : ∀ (m : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
+      CentreLive z.ctl z.vm :=
+    PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry q first hIC
+  have haux0 : AuxPack c r :=
+    ⟨coupled_of_invLPC hIC, front_of_invLPC hIC, copyPack_of_invLPC hIC⟩
+  have hauxx : AuxPack x.ctl x.vm :=
+    auxPack_steps centre place entry q first (x := ⟨c, r⟩) hlv0 haux0 hjx
+  have hOriginScan : c.mode = Mode.scan := (invS_mode hIC.1.1.1.1).1
+  have hmarksAlongRun : ∀ (n' : ℕ) (z : State GalilVM),
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 n' ⟨c, r⟩ z →
+      MarksInv' first z.ctl z.vm := by
+    intro n' z hz
+    exact PalPeg.CloseoutPackRun17.marksInv'_of_run' (onLetterVM w) leftFirstVM centre place
+      entry q first 2048 h4 hz
+      (PalPeg.GalilInvPlus2.hfloor_of_invLP2 centre place entry q first hIC.1)
+      (fun m z' hz' hmz => PalPeg.CloseoutPackRun25.windowInOrigin_alongRun (onLetterVM w)
+        leftFirstVM centre place entry q first 2048 hz'
+        (fun hc => absurd (hOriginScan.symm.trans hc) (by decide)) hmz)
+      (PalPeg.GalilCentreLive.cpack_of_entry q hIC.1.1.1.1
+        (PalPeg.CloseoutMarksFree.entryCounters_of_invLPC hIC))
+      hOriginScan
+  have hmx : MarksInv' first x.ctl x.vm := hmarksAlongRun j x hjx
+  obtain ⟨g, hg0, hgk, htr⟩ := stepsAll_fn h
+  have hreach : ∀ i, i ≤ k →
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 (j + i) ⟨c, r⟩ (g i) := by
+    intro i hi
+    have := steps_of_trace htr i hi
+    rw [hg0] at this
+    exact steps_trans hjx this
+  have hauxi : ∀ i, i ≤ k → AuxPack (g i).ctl (g i).vm := fun i hi =>
+    auxPack_steps centre place entry q first (x := ⟨c, r⟩) hlv0 haux0 (hreach i hi)
+  have hmg : ∀ i, i ≤ k → MarksInv' first (g i).ctl (g i).vm := fun i hi =>
+    hmarksAlongRun (j + i) (g i) (hreach i hi)
+  have hgy : g k = y := hgk
+  subst hgy
+  have hextra : ∀ i, i ≤ k → IPackMW centre place entry q first w (g i) → Extra7 (g i) := by
+    intro i hi hip
+    refine extra7_of_front_steps_pack (m := M) (w := w)
+      (steps_to_end_of_trace htr (k - i) i (by omega)) ?_ (hauxi i hi).front ?_ ?_ ?_ hm1 hmle ?_
+    · intro d z hz
+      exact hlv0 (j + i + d) z (steps_trans (hreach i hi) hz)
+    · exact (hauxi k le_rfl).front
+    · exact hry
+    · exact hip.pack
+    · exact hyb
+  have hexx : Extra7 x := by
+    have := hextra 0 (Nat.zero_le _) (by rw [hg0]; exact hx)
+    rw [hg0] at this; exact this
+  have hbx : BigPack2MG7W'' centre place entry q first w x :=
+    ⟨hx, hauxx, hlv0 j x hjx, hmx, hexx⟩
+  have hbig : ∀ i, i ≤ k → BigPack2MG7W'' centre place entry q first w (g i) := by
+    intro i
+    induction i with
+    | zero => intro _; rw [hg0]; exact hbx
+    | succ n ih =>
+      intro hi
+      have hn := ih (by omega)
+      exact bigPack2MG7W''_tick_M centre place entry q first hn (hmg (n+1) hi)
+        (fun hip => hextra (n+1) hi hip)
+        (fun hs => PalPeg.WindowPack.shiftPal_of_windowRunPack centre place entry q first
+          hn.ipackM.pack (hn.ipackM.win hP) (hn.extra.scanAvail hs.1 hs.2) hs)
+        (htr.tick n (by omega)) (htr.good (n+1) hi)
+        (hlv0 (j + (n+1)) (g (n+1)) (hreach (n+1) hi))
+  exact ⟨g, hg0, hgk, htr, fun i hi => (hbig i hi).ipackM⟩
+
+#print axioms packRunR_MW_marksFree
 
 #print axioms bigPack2MG7W''_tick_M
 #print axioms packRunR_MWP

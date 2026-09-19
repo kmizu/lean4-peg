@@ -189,19 +189,19 @@ theorem foundCycle_step_progress (P : Shared) (qq : ℕ) (first : Fin 9) (delay 
     t', v, cycle, o, org, lower, span, m, c', s', n, c3, s3, w3, vs3, vq3, o3, cen3, r3, w3', entry,
     hP, hP', hex, hraw, hout0, hseg0, hmF, hrF, hcF, havF, hidle, hCen, hq, hfound, hmt, hch, hchne,
     hoF, hprepSeg, hseg, hm1, hr1, hc1, hs1, hz, hav, hcmp, hmis, hq', hg, hb, hs2', hi2, hchain,
-    ho, hint, he, hoc, hdp, hpc, hposout, hlow, hrounds, hseg3, hm3, hr3, hc3, hs3, hav3, hcmp3,
+    ho, hint, he, hoc, hdp, hpc, hposout, hlow, hrounds, hseg3, hm3, hr3, hc3, hs3, hz3, hav3, hcmp3,
     hmt3, hq3, ho3, hinv3, hbroken, hmargin, hlast, hlag, hrestart, Rad', hRnext⟩ := hC
   have hcen : sF.center = r.center := watchSegE_center P qq first delay hseg0
   have hprog := found_cycle_center_progress raw P qq first delay h w hz vs vq' s2' hs2' hchain
     org hint he hoc hrounds hseg3 vs3 vq3
   refine ⟨_, _, cycle_found_stepsAll raw P hP hP' qq first delay hR hout0 hseg0 hmF hrF hcF havF
     hidle vq hq hfound hmt ch hch hchne oF hoF hprepSeg hseg h hm1 hr1 hc1 w hs1 hz hav vs vq'
-    hcmp hmis hq' hg s2' hb hs2' hi2 hchain o ho org hint he hrounds hseg3 hm3 hr3 hc3 w3 hs3 hav3
+    hcmp hmis hq' hg s2' hb hs2' hi2 hchain o ho org hint he hrounds hseg3 hm3 hr3 hc3 w3 hs3 hz3 hav3
     vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 hinv3 w3' hbroken hmargin hlast hlag entry hrestart,
     cycle_found_minv raw P hex qq first delay a ls rs q gap hraw hR hM0 hseg0 hmF hrF hcF havF
       hidle hCen vq hq hfound hmt ch hch hchne oF hoF hprepSeg hseg h hm1 hr1 hc1 w hs1 hz hav vs
       vq' hcmp hmis hq' hg s2' hb hs2' hi2 hchain o ho org hint he hoc hdp hpc hposout hlow hrounds
-      hseg3 hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken entry,
+      hseg3 hm3 hr3 hc3 w3 hs3 hz3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken entry,
     ⟨Rad', _, hRnext⟩, ?_⟩
   show position r.center < position (afterCompare s3 vs3 vq3).center
   rw [hcen] at hprog

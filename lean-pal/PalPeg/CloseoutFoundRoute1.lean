@@ -230,14 +230,26 @@ theorem found_first_tick (centre : GalilVM → Fin 3)
     outputRel_matched_refresh' raw (PofC centre place entry raw) rfl rfl q first vq
       (vs := ⟨left t.left, right t.right, ch⟩) rfl rfl hmt hav hscanT' c'.output oF hoF
       {c' with clock := 2048, output := oF, replaying := false} rfl
+  -- **2026-09-19**: モデル修正 `M-periodOnly` で比較の行き先が `afterBirth true (…)` に
+  -- なったので、着地状態もそれに合わせる。`afterBirth` はヘッドを触らないので
+  -- `OutputRel` / `ScanInvariant` / `chain` はすべて congruence で移る。
+  have hout1' : OutputRel raw {c' with clock := 2048, output := oF, replaying := false}
+      (afterBirth true (afterCompare t ⟨left t.left, right t.right, ch⟩ vq)) := by
+    intro hoTrue k hkPos hkLe hPos
+    rw [afterBirth_right] at hPos
+    exact hout1 hoTrue k hkPos hkLe hPos
+  have hinv1' : ScanInvariant raw (position r.center) (R0 + es0.count true + 1)
+      (afterBirth true (afterCompare t ⟨left t.left, right t.right, ch⟩ vq)).left
+      (afterBirth true (afterCompare t ⟨left t.left, right t.right, ch⟩ vq)).right := by
+    rw [afterBirth_left, afterBirth_right]; exact hinv1
   refine ⟨{c' with clock := 2048, output := oF, replaying := false},
-    afterCompare t ⟨left t.left, right t.right, ch⟩ vq, es0.length,
+    afterBirth true (afterCompare t ⟨left t.left, right t.right, ch⟩ vq), es0.length,
     R0 + es0.count true + 1,
     ⟨es0, c', t, vq, ch, oF, a, ls, rs, qw, gap, hraw, hseg0, hsW.1.mode, hnr, hc1, hav,
       hsW.1.idle, by rw [hsW.1.center]; exact hcenR, hqe, hfound, hmt, hch, hchne, hoF, rfl, rfl⟩,
-    stepsAll_trans hrun (.succ houtF htick (.zero _ hout1)),
-    hsW.1.mode, rfl, rfl, hout1, hinv1, ?_⟩
-  rw [afterCompare_chain]; exact hchne
+    stepsAll_trans hrun (.succ houtF htick (.zero _ hout1')),
+    hsW.1.mode, rfl, rfl, hout1', hinv1', ?_⟩
+  rw [afterBirth_chain, afterCompare_chain]; exact hchne
 
 /-! ## 6. The found-route consumer with the context discharged -/
 
@@ -297,7 +309,9 @@ theorem foundExit_compare_final20 (centre : GalilVM → Fin 3)
       PrepInputsG3 (PofC centre place entry w) q first ⟨a :: ls, gap⟩ lower span cP sP ∧
       MismatchExitG (PofC centre place entry w) q first w m c r cP sP ∧
       FallbackReachS (PofC centre place entry w) q first w m c r cP sP ∧
-      PrepLandingWatchC (PofC centre place entry w) q first cP sP ∧
+      (∃ (esW : List Bool) (c2 : Control) (s2 : GalilVM),
+        WatchSegE (PofC centre place entry w) q first 2048 esW cP sP c2 s2 ∧
+          PalPeg.CloseoutWatchRun.LiveScanWatch c2 s2) ∧
       PrepBirthLagC' (PofC centre place entry w) q first c r cP sP ∧
       LandingFreshC' (PofC centre place entry w) q first cP sP ∧
       (∀ sF : GalilVM,
@@ -307,12 +321,12 @@ theorem foundExit_compare_final20 (centre : GalilVM → Fin 3)
     foundCompareCtxC_of_found centre place entry q first w hE.invLPC hsW hc1 hav hmt hq
   obtain ⟨es0, cF, sF, vq, ch, oF, a, ls, rs, qw, gap, hraw, hseg, hmF, hrF, hcF, havF, hidle,
     hcen, hqe, hf, hmtF, hch, hchne, hoF, hcPe, hsPe⟩ := id hctx
-  obtain ⟨hprep, hmis, hfbS, hwatch, hbirth, hfresh, hland⟩ :=
+  obtain ⟨hprep, hmis, hfbS, hreachWatch, hbirth, hfresh, hland⟩ :=
     hpack cP sP a ls rs qw gap hctx hraw
   obtain ⟨hmP, hrP, hcP⟩ := foundCompareCtxC_control hctx
   exact foundExit_compare_final19 centre place entry q first w m h lower span μ hP hex hready
     hcan hsane hstart hor hzl hnn hpm hE hsW a ls rs qw gap hprep hmis hctx hfbS hE.stage
-    hmP hrP (by rw [hcP]; omega) hwatch hat hreach hround h3 h4 hinv horacle hfit hrest htie
+    hmP hrP (by rw [hcP]; omega) hreachWatch hat hreach hround h3 h4 hinv horacle hfit hrest htie
     hbirth hfreshClk hfresh hland hstepBreak
 
 

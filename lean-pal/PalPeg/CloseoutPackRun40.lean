@@ -2,11 +2,11 @@ import PalPeg.CloseoutPackRun38
 
 /-!
 # `CloseoutPackRun40`: the strengthened post-shift half `Other'` (bound `5h`)
-and `H_fourOther` discharged for `Coupled'`
+and `H_FourSemiperiodsLeDistance` discharged for `Coupled'`
 
 `CloseoutPackRun38.other_guard_lower` shows that `GalilChainCoupling.Other`
 (`2h ≤ R + C`) cannot give the `4h ≤ distance` that
-`CloseoutPackRun34.watchShiftS_of_chainPosInv` names as `H_fourOther`.  This
+`CloseoutPackRun34.watchShiftS_of_chainPosInv` names as `H_FourSemiperiodsLeDistance`.  This
 file strengthens the post-shift half of `WatchOK` to the bound the machine
 actually maintains and re-runs the coupling on it.
 
@@ -26,9 +26,9 @@ actually maintains and re-runs the coupling on it.
   (`−1 + 2 − 1`); `shift_done` drops `Rem ≤ 0`; `scan_match` keeps `R + C`
   (`+1`, `cycleAfter` `−1`).  No hypothesis is left open.
 * §4 `four_of_other'`: `4h ≤ distance` at a guarded unmatched target in the
-  `Other'` half — the content of `H_fourOther`, now a theorem.
-* §5 `ChainPosInv'` (= `ChainPosInv` over `Coupled'`),
-  `watchShiftS_of_chainPosInv'` (no `H_fourOther`), `chainPosInv'_tick`
+  `Other'` half — the content of `H_FourSemiperiodsLeDistance`, now a theorem.
+* §5 `ChainPositionInvariantExactCoupling` (= `ChainPositionInvariant` over `Coupled'`),
+  `watchShiftS_of_chainPosInv'` (no `H_FourSemiperiodsLeDistance`), `chainPosInv'_tick`
   (same three payload hypotheses as `chainPosInv_tick`).
 
 Standard axioms only; unconditional `PAL ∈ PEG` remains open.
@@ -283,7 +283,7 @@ theorem coupled'_tick {c c' : Control} {s t : GalilVM} (hC : Coupled' c s)
         linarith
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
-    obtain ⟨p, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨p, ht, -⟩ : beginFallbackVM' s' t := hb
     subst ht
     exact coupled'_of_idle rfl
   case shift_one =>
@@ -350,7 +350,7 @@ theorem coupled'_steps {n : ℕ} {x y : State GalilVM}
 
 end Tick
 
-/-! ## 4. `H_fourOther` for `Other'` -/
+/-! ## 4. `H_FourSemiperiodsLeDistance` for `Other'` -/
 
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
@@ -393,20 +393,20 @@ theorem four_of_other' {w : List (Fin 2)} {x : State GalilVM} {s'' : GalilVM}
   have h1 := value_le_one_of_single hif
   linarith
 
-/-! ## 5. `ChainPosInv'` -/
+/-! ## 5. `ChainPositionInvariantExactCoupling` -/
 
-/-- **`ChainPosInv'`**: `CloseoutPackRun34.ChainPosInv` over `Coupled'`. -/
-structure ChainPosInv' (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
+/-- **`ChainPositionInvariantExactCoupling`**: `CloseoutPackRun34.ChainPositionInvariant` over `Coupled'`. -/
+structure ChainPositionInvariantExactCoupling (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
   coupled : Coupled' c s
-  payload : ScanNR ⟨c, s⟩ → s.chain ≠ ChainVM.idle → PosPayload w s
+  payload : ScanNR ⟨c, s⟩ → s.chain ≠ ChainVM.idle → ScanPositionPayload w s
 
 theorem chainPosInv'_toChainPosInv {w : List (Fin 2)} {c : Control} {s : GalilVM}
-    (h : ChainPosInv' w c s) : ChainPosInv w c s :=
+    (h : ChainPositionInvariantExactCoupling w c s) : ChainPositionInvariant w c s :=
   ⟨coupled'_toCoupled h.coupled, h.payload⟩
 
-/-- **`WatchShiftS` from `ChainPosInv'`** — `H_fourOther` is no longer needed. -/
+/-- **`WatchShiftS` from `ChainPositionInvariantExactCoupling`** — `H_FourSemiperiodsLeDistance` is no longer needed. -/
 theorem watchShiftS_of_chainPosInv' {w : List (Fin 2)} {x : State GalilVM}
-    (h : ChainPosInv' w x.ctl x.vm) : WatchShiftS centre place entry q first w x := by
+    (h : ChainPositionInvariantExactCoupling w x.ctl x.vm) : WatchShiftS centre place entry q first w x := by
   intro hs hni s'' hcmp hmt hg wch hch
   have hs' : ScanNR ⟨x.ctl, x.vm⟩ := hs
   have P := h.payload hs' hni
@@ -432,14 +432,14 @@ theorem watchShiftS_of_chainPosInv' {w : List (Fin 2)} {x : State GalilVM}
     have := P.radLe rad hsc
     omega
 
-/-- **One tick of `ChainPosInv'`**: `Coupled'` by `coupled'_tick`, the payload
+/-- **One tick of `ChainPositionInvariantExactCoupling`**: `Coupled'` by `coupled'_tick`, the payload
 by `chainPosInv_tick` through `chainPosInv'_toChainPosInv`. -/
 theorem chainPosInv'_tick {w : List (Fin 2)}
-    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
-    (hsd : H_shiftDoneP centre place entry q first w)
-    {x y : State GalilVM} (hx : ChainPosInv' w x.ctl x.vm)
+    (hbg : H_BackgroundLandingPayload centre place entry q first w) (hmatch : H_MatchLandingPayload centre place entry q first w)
+    (hsd : H_ShiftExitPayload centre place entry q first w)
+    {x y : State GalilVM} (hx : ChainPositionInvariantExactCoupling w x.ctl x.vm)
     (h : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y) :
-    ChainPosInv' w y.ctl y.vm := by
+    ChainPositionInvariantExactCoupling w y.ctl y.vm := by
   obtain ⟨c, s⟩ := x
   obtain ⟨c', t⟩ := y
   exact ⟨coupled'_tick (onLetterVM w) leftFirstVM centre place entry q first 2048 hx.coupled h,

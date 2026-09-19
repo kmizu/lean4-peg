@@ -10,8 +10,8 @@ and `canRight` of the *moved* verifier is an input-supply fact.
 
 `CloseoutPackRun47.consumeAvail_of_next_supply` turns it into four local facts
 about the **next right-head cell**: `Represents`, `focus ≠ none`, `canRight` and
-`position R' = position R + 1`, plus `LagNonneg` and `ChainPos`.  The last two
-are inside `ChainPosInv2`; the first four are exactly what
+`position R' = position R + 1`, plus `LagNonneg` and `ChainPositionLedger`.  The last two
+are inside `ChainPositionInvariantWithShiftPhase`; the first four are exactly what
 `CloseoutCanRightBound.canRight_next_of_bound` (wave 5) produces from a position
 bound.
 
@@ -39,9 +39,9 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 
 /-- **`ConsumeAvail` at a scan state, from the position budget.**  The four
 head facts about the next cell come from `Represents` on the current one plus
-the bound; `LagNonneg` and `ChainPos` come from `ChainPosInv2`. -/
+the bound; `LagNonneg` and `ChainPositionLedger` come from `ChainPositionInvariantWithShiftPhase`. -/
 theorem consumeAvail_of_bound {w : List (Fin 2)} {c : Control} {s : GalilVM} {m : ℕ}
-    (hx : ChainPosInv2 w c s) (hs : ScanNR ⟨c, s⟩) (hni : s.chain ≠ ChainVM.idle)
+    (hx : ChainPositionInvariantWithShiftPhase w c s) (hs : ScanNR ⟨c, s⟩) (hni : s.chain ≠ ChainVM.idle)
     (hrepV : ∀ wch : GalilScaffoldChainWatch.State, s.chain = .watch wch →
       GalilScaffoldInputTrace.Represents wch.machine.verifier.head w ∧
         wch.machine.verifier.head.focus ≠ none)
@@ -52,7 +52,7 @@ theorem consumeAvail_of_bound {w : List (Fin 2)} {c : Control} {s : GalilVM} {m 
     (hlv : 0 < s.right.head.left.length)
     (hm1 : 1 ≤ m) (hmlt : m < w.length) (hpos : position s.right ≤ 2 * m - 1) :
     ConsumeAvail s.chain := by
-  have P := hx.payload hs hni
+  have P := hx.payload hs.1 hni
   exact consumeAvail_of_next_supply hrepN hfocN
     (canRight_next_of_bound hrepN hfocN P.canR hlv hm1 hmlt hpos) hstep
     hrepV hlag P.chainPos

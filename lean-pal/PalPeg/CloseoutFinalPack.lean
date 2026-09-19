@@ -2,7 +2,7 @@ import PalPeg.CloseoutChainPack
 import PalPeg.CloseoutFinalS2
 
 /-!
-# `pal_in_peg_final33` — the four chain-branch hypotheses become one bundle
+# `given_chainPackAtAnyState_scanBudget_bgStart_and_consumeAvailEverywhere_FALSE_HYP` — the four chain-branch hypotheses become one bundle
 
 **`hni` (a `scan` state has a non-idle chain) is FALSE**: `initVM` sets
 `t.chain = .idle` (`GalilScaffoldTopReplay:24`) and `invLPC_init`
@@ -11,14 +11,14 @@ never needs it — `repV` is guarded by `.watch` and `startLedger` by `.idle` �
 and `canR` comes from the position bound instead
 (`canRight_of_position_bound`), so it is gone here.
 
-`pal_in_peg_final31` carries `chainPosInv2_tick`'s four branch hypotheses
+`given_consumeAvailEverywhere_FALSE_HYP` carries `chainPosInv2_tick`'s four branch hypotheses
 separately (`hbgP`, `hmatchP`, `hentry`, `hsdP`) plus `hav`.  All four have
 producers in `CloseoutPackRun48`, and their inputs are the *same* local facts
 about a scan state: the right head's `Represents` pair, the verifier head's
 pair, `LagCan`, and — for the shift landing — `canRight s.right` with the radius
 ledger.
 
-`CloseoutChainPack.ChainPack` bundles exactly those into `ChainPosInv2`, and
+`CloseoutChainPack.ChainPack` bundles exactly those into `ChainPositionInvariantWithShiftPhase`, and
 `h_bgP2_of_chainPack` / `h_matchRes2_of_chainPack` / `h_shiftRes2_of_chainPack`
 / `h_shiftDoneRad2_of_chainPack` read them back.  `H_matchRes2` and
 `H_shiftRes2` ask for the *identical* `MatchRes2` pack, so one theorem covers
@@ -96,9 +96,9 @@ open PalPeg.CloseoutPackRun48 PalPeg.CloseoutShiftS2 PalPeg.CloseoutTrailS2
 open PalPeg.CloseoutPackRun44 PalPeg.CloseoutPackRun47 PalPeg.CloseoutPackRun48
 open PalPeg.CloseoutChainPack PalPeg.CloseoutFinalS2 PalPeg.CloseoutVerRep
 
-/-- **`pal_in_peg_final31` with the four chain-branch hypotheses replaced by one
+/-- **`given_consumeAvailEverywhere_FALSE_HYP` with the four chain-branch hypotheses replaced by one
 `ChainPack` bundle.** -/
-theorem pal_in_peg_final33 (entry q : ℕ) (first : Fin 9)
+theorem given_chainPackAtAnyState_scanBudget_bgStart_and_consumeAvailEverywhere_FALSE_HYP (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
@@ -107,21 +107,25 @@ theorem pal_in_peg_final33 (entry q : ℕ) (first : Fin 9)
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hpack : ∀ (w : List (Fin 2)) (c : Control) (s : GalilVM),
-      ChainPosInv2 w c s → ChainPack q first w c s)
+      ChainPositionInvariantWithShiftPhase w c s → ChainPack q first w c s)
     (hbudget : ∀ w : List (Fin 2), ScanBudget centreC placeC entry q first w)
     (hstart : ∀ w : List (Fin 2), BgStartP2 centreC placeC entry q first w)
     (hav : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (i : ℕ),
-      ConsumeAvail (st i).vm.chain) :
+      ConsumeAvail (st i).vm.chain)
+    (hCanRightAtAnyScanOrShiftState : ∀ z : GalilScaffoldTop.State GalilVM,
+      z.ctl.mode = GalilScaffoldController.Mode.scan ∨
+        z.ctl.mode = GalilScaffoldController.Mode.shift →
+      GalilScaffoldChainVerifier.canRight z.vm.right) :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_final31 entry q first hSP hme hor hC
+  given_consumeAvailEverywhere_FALSE_HYP entry q first hSP hme hor hC
     (fun w => h_bgP2_of_chainPack centreC placeC entry q first (hpack w) (hstart w))
     (fun w => h_matchP2_of_target centreC placeC entry q first
       (h_matchRes2_of_chainPack centreC placeC entry q first (hpack w) (hbudget w)))
     (fun w => h_shiftEntry2_of_target centreC placeC entry q first
       (h_shiftRes2_of_chainPack centreC placeC entry q first (hpack w) (hbudget w)))
     (fun w => h_shiftDoneRad2_of_chainPack centreC placeC entry q first (hpack w))
-    hav
+    hav hCanRightAtAnyScanOrShiftState
 
-#print axioms pal_in_peg_final33
+#print axioms given_chainPackAtAnyState_scanBudget_bgStart_and_consumeAvailEverywhere_FALSE_HYP
 
 end PalPeg.CloseoutFinalPack

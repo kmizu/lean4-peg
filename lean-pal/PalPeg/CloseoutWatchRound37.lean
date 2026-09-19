@@ -150,7 +150,6 @@ legitimate by `shiftRoundData_of_dataL`. -/
 theorem shiftTailC_of_dataL (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry qq : ℕ) (first : Fin 9)
     (raw : List (Fin 2)) (m h lower span : ℕ) {c0 cP : Control} {r sP : GalilVM}
-    (hlive : PrepLandingLiveC (PofC centre place entry raw) qq first cP sP)
     (hdp : PalPeg.CloseoutWatchRound5.FoundDpShiftC centre place entry qq first raw lower span
       c0 r)
     (hroute : MismatchShiftRouteL centre place entry qq first raw m lower)
@@ -163,9 +162,11 @@ theorem shiftTailC_of_dataL (centre : GalilVM → Fin 3)
   obtain ⟨hres, hpc⟩ := hdp a ls rs qw gap es0 cF sF vq hseg0 hCen hq hfound
   refine ⟨a, ls, rs, qw, gap, es0, cF, sF, vq, ch, oF, lower, span, hraw, hseg0, hmF, hrF, hcF,
     havF, hidle, hCen, hq, hfound, hmt, hch, hchne, hoF, hcPeq, hsPeq, hres, hpc, ?_⟩
-  intro es c2 s2 hseg
+  intro es c2 s2 hseg hwLanding
+  obtain ⟨hmL, hrL, hcL⟩ := watchSegE_live_control (delay := 2048) (by omega) hseg
+    (by rw [hcPeq]; exact hmF) (by rw [hcPeq]) (by simp [hcPeq])
   obtain ⟨cT, sT, hsegT, hLT, c1, s1, hseg1, hclk, hlive1, hav1, hne1, hnG⟩ :=
-    hrun es c2 s2 hseg (hlive es c2 s2 hseg)
+    hrun es c2 s2 hseg ⟨hmL, hrL, hcL, hwLanding⟩
   obtain ⟨h1, hdL⟩ := hroute sF vq c1 s1 hlive1 hclk hav1 hne1 hnG
   have hd := shiftRoundData_of_dataL centre place entry qq first raw m h1 lower sF vq c1 s1
     (fun w hw => hlag0 c1 s1 w hlive1 hclk hav1 hne1 hnG hw) hdL
@@ -319,7 +320,9 @@ theorem foundExit_compare_final15 (centre : GalilVM → Fin 3)
     (hfbS : FallbackReachS (PofC centre place entry w) q first w m c r cP sP)
     (hstage : ReplayStage w (PofC centre place entry w) q first c r)
     (hmP : cP.mode = .scan) (hrP : cP.replaying = false) (hcP : 1 ≤ cP.clock)
-    (hwatch : PrepLandingWatchC (PofC centre place entry w) q first cP sP)
+    (hreachWatch : ∃ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+      WatchSegE (PofC centre place entry w) q first 2048 es cP sP c2 s2 ∧
+        PalPeg.CloseoutWatchRun.LiveScanWatch c2 s2)
     (hat : FoundDpAtC centre place entry q first w lower span h c r)
     (hreach : ShiftReachC centre place entry q first w h)
     (hround : ShiftRoundAtC centre place entry q first w m h lower)
@@ -337,13 +340,11 @@ theorem foundExit_compare_final15 (centre : GalilVM → Fin 3)
         (BreakTermData centre place entry q first w m h) c0 s0) :
     FoundExitLPS (PofC centre place entry w) q first w m c r := by
   classical
-  have hlive : PrepLandingLiveC (PofC centre place entry w) q first cP sP :=
-    PalPeg.CloseoutWatchRound7.prepLandingLiveC_of_watch (PofC centre place entry w) q first
-      hmP hrP hcP hwatch
   have hrouteL := mismatchShiftRouteL_of_tick centre place entry q first w m lower μ h3 h4 hinv
     horacle hfit hrest htie
   have hsplit4 : ExitSplit4C centre place entry q first w h cP sP :=
-    exitSplit4C_of_tick centre place entry q first w h cP sP (hlive [] cP sP (.stop _ _))
+    exitSplit4C_of_tick centre place entry q first w h cP sP
+      (PalPeg.CloseoutWatchRound2.chain_ne_idle_of_foundCompareCtx hctx)
       (watchPrefixC_of_unique _ _ _ _ _)
   have hstp := PalPeg.CloseoutWatchRound6.lagStepC_of_parts hcan hsane hstart
   have hre := PalPeg.CloseoutWatchRound6.ledgerReachC_of_origin centre place entry q first 2048 w
@@ -361,14 +362,15 @@ theorem foundExit_compare_final15 (centre : GalilVM → Fin 3)
     foundExit_compare_final9S' (h := h) (fun hsplit =>
       PalPeg.CloseoutWatchRound15.foundExit_compare_final8 centre place entry q first w m h
         lower span hP hex hready hcan hsane hstart hor hzl hnn hpm hE hsW a ls rs qw gap hprep
-        hmis hctx hsplit hstage hmP hrP hcP hwatch hat hreach hround hland hstepBreak)
-      hT.2 hs3 hfbS hlive
+        hmis hctx hsplit hstage hmP hrP hcP hat hreach hround hland hstepBreak)
+      hT.2 hs3 hfbS (PalPeg.CloseoutWatchRound2.chain_ne_idle_of_foundCompareCtx hctx)
+      hreachWatch
   rcases hsplit4 hT.2 with hs | hb | hf | hm
   · exact via3 (fun _ => Or.inl hs)
   · exact via3 (fun _ => Or.inr (Or.inl hb))
   · exact via3 (fun _ => Or.inr (Or.inr (terminalRunFallbackC_of_G hf)))
   · have htail : ShiftTailC centre place entry q first w m c r cP sP :=
-      shiftTailC_of_dataL centre place entry q first w m h lower span hlive
+      shiftTailC_of_dataL centre place entry q first w m h lower span
         (PalPeg.CloseoutWatchRound10.foundDpShiftC_of_at centre place entry q first w hP
           lower span h hstage hat)
         hrouteL hlag0 hctx hm

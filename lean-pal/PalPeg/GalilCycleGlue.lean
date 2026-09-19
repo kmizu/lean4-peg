@@ -295,7 +295,7 @@ theorem foundCycle_of_constructions
     rounds_construct_inv P qq first delay h raw mu hround
       {cM with mode := .scan, clock := delay, output := o}
       (shiftLens.set s2' ⟨t', ChainVM.watch v, cyc⟩) (hRI cM s2' t' v cyc o)
-  obtain ⟨n, c3, s3, hseg3, hm3, hr3, hc3, w3, hs3, hav3, vs3, vq3, hcmp3, hmt3, hq3, _hend3,
+  obtain ⟨n, c3, s3, hseg3, hm3, hr3, hc3, w3, hs3, hz3, hav3, vs3, vq3, hcmp3, hmt3, hq3, _hend3,
     w3', hbr3⟩ := hbreak _ _ hend
   obtain ⟨o3, ho3⟩ := refresh_frame_exists P qq first (afterCompare s3 vs3 vq3) c3.output
   obtain ⟨⟨cen3, r3, hinv3⟩, hmargin, hlast, hlag⟩ := hterm s3 vs3 vq3 w3' hbr3
@@ -306,7 +306,7 @@ theorem foundCycle_of_constructions
     hP, hP', hex, hraw, hout0, hseg0, hmF, hrF, hcF, havF, hidleF, hcenF, hq, hfnd, hmt, hchm,
     hchne, hoF, hprepSeg, hseg, hmM, hrM, hcM, hsM, hz, havM, hcmp, hmis, hq', hg, hb, hs2', hi2,
     hchain, ho, hint, hEntry, hocen, hres, hpc, (by rw [hpos11] : _), hlow org lower, hrounds,
-    hseg3, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hinv3, hbr3, hmargin, hlast, hlag,
+    hseg3, hm3, hr3, hc3, hs3, hz3, hav3, hcmp3, hmt3, hq3, ho3, hinv3, hbr3, hmargin, hlast, hlag,
     hrestart, hland s3 vs3 vq3 w3'⟩
 
 #print axioms refresh_frame_exists

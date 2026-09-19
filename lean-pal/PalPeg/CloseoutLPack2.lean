@@ -1,3 +1,4 @@
+import PalPeg.PackedRun
 import PalPeg.CloseoutLPack
 
 /-!
@@ -88,16 +89,10 @@ the base case, `PreTrace.trace.tick` the step. -/
 theorem lpack_steps (h : LPackTick centre place entry q first)
     (w : List (Fin 2)) (hw : 0 < w.length) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ)
     (hP : PreTrace centre place entry q first w st Tc) :
-    ∀ i, i ≤ Tc w.length → LPack w (st i).ctl (st i).vm := by
-  intro i
-  induction i with
-  | zero =>
-    intro _
-    rw [hP.start]
-    exact lpack_boot w
-  | succ i ih =>
-    intro hi
-    exact h w hw (st i) (st (i+1)) (hP.trace.tick i (by omega)) (ih (by omega))
+    ∀ i, i ≤ Tc w.length → LPack w (st i).ctl (st i).vm :=
+  hP.trace.carried (Pk := fun z => LPack w z.ctl z.vm)
+    (by rw [hP.start]; exact lpack_boot w)
+    (fun i _ ht hp => h w hw (st i) (st (i + 1)) ht hp)
 
 /-- **`H_lpack` from `LPackTick`.** -/
 theorem h_lpack_of_tick (h : LPackTick centre place entry q first) :

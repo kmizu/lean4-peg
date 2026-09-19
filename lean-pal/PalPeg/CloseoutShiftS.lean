@@ -4,22 +4,22 @@ import PalPeg.CloseoutPackRun30
 import PalPeg.CloseoutPackRun36
 
 /-!
-# `ShiftLocalS` along a run, from `ChainPosInv`
+# `ShiftLocalS` along a run, from `ChainPositionInvariant`
 
 `CloseoutPackRun32` found `WatchShiftG` false at unguarded comparison targets
 (a watch born at `ChainStep.backDone` has `distance = reset`), and
 `CloseoutPackRun34` built the guarded replacements — `WatchShiftS`,
-`ShiftLocalS`, `ChainPosInv`, `watchShiftS_of_chainPosInv`, `chainPosInv_tick`
+`ShiftLocalS`, `ChainPositionInvariant`, `watchShiftS_of_chainPosInv`, `chainPosInv_tick`
 (20 of 23 tick shapes closed) — but never wired them to a run.
 
-This file does the wiring: `ChainPosInv` travels along a run by
+This file does the wiring: `ChainPositionInvariant` travels along a run by
 `chainPosInv_tick`, and at each state it yields `ShiftLocalS` through
 `watchShiftS_of_chainPosInv` and `shiftLocalS_of_watchShiftS`, with the idle
 branch free (`shiftLocalS_of_chainIdle`).
 
 The residue is exactly `CloseoutPackRun34`'s four named branch hypotheses
-(`H_fourOther`, `H_bgP`, `H_matchP`, `H_shiftDoneP`) plus the entry
-`ChainPosInv`, in place of the **false** `∀ y, WatchShiftG … y`.
+(`H_FourSemiperiodsLeDistance`, `H_BackgroundLandingPayload`, `H_MatchLandingPayload`, `H_ShiftExitPayload`) plus the entry
+`ChainPositionInvariant`, in place of the **false** `∀ y, WatchShiftG … y`.
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完.**
 -/
@@ -50,23 +50,23 @@ section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
 
-/-- **`ShiftLocalS` from `ChainPosInv`.**  The idle branch is free; the watching
+/-- **`ShiftLocalS` from `ChainPositionInvariant`.**  The idle branch is free; the watching
 branch goes through the guarded `WatchShiftS`. -/
 theorem shiftLocalS_of_chainPosInv {w : List (Fin 2)}
-    (hfour : H_fourOther centre place entry q first w) {x : State GalilVM}
-    (h : ChainPosInv w x.ctl x.vm) : ShiftLocalS centre place entry q first w x := by
+    (hfour : H_FourSemiperiodsLeDistance centre place entry q first w) {x : State GalilVM}
+    (h : ChainPositionInvariant w x.ctl x.vm) : ShiftLocalS centre place entry q first w x := by
   by_cases hi : x.vm.chain = ChainVM.idle
   · exact shiftLocalS_of_chainIdle centre place entry q first hi
   · exact shiftLocalS_of_watchShiftS centre place entry q first hi
       (watchShiftS_of_chainPosInv centre place entry q first hfour h)
 
-/-- **`ChainPosInv` along a run.** -/
+/-- **`ChainPositionInvariant` along a run.** -/
 theorem chainPosInv_steps {w : List (Fin 2)}
-    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
-    (hsd : H_shiftDoneP centre place entry q first w)
-    {n : ℕ} {x y : State GalilVM} (hx : ChainPosInv w x.ctl x.vm)
+    (hbg : H_BackgroundLandingPayload centre place entry q first w) (hmatch : H_MatchLandingPayload centre place entry q first w)
+    (hsd : H_ShiftExitPayload centre place entry q first w)
+    {n : ℕ} {x y : State GalilVM} (hx : ChainPositionInvariant w x.ctl x.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y) :
-    ChainPosInv w y.ctl y.vm := by
+    ChainPositionInvariant w y.ctl y.vm := by
   induction h with
   | zero x => exact hx
   | @succ n x z y ht _ ih =>
@@ -75,10 +75,10 @@ theorem chainPosInv_steps {w : List (Fin 2)}
 /-- **`ShiftLocalS` at every state of a run.**  This is what replaces the false
 `∀ y, WatchShiftG … y` on the main path. -/
 theorem shiftLocalS_of_run {w : List (Fin 2)}
-    (hfour : H_fourOther centre place entry q first w)
-    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
-    (hsd : H_shiftDoneP centre place entry q first w)
-    {n : ℕ} {x y : State GalilVM} (hx : ChainPosInv w x.ctl x.vm)
+    (hfour : H_FourSemiperiodsLeDistance centre place entry q first w)
+    (hbg : H_BackgroundLandingPayload centre place entry q first w) (hmatch : H_MatchLandingPayload centre place entry q first w)
+    (hsd : H_ShiftExitPayload centre place entry q first w)
+    {n : ℕ} {x y : State GalilVM} (hx : ChainPositionInvariant w x.ctl x.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y) :
     ShiftLocalS centre place entry q first w y :=
   shiftLocalS_of_chainPosInv centre place entry q first hfour
@@ -105,14 +105,14 @@ theorem saneVer_of_shiftLocalS {w : List (Fin 2)} {x : State GalilVM}
     SaneVer t''.chain :=
   saneVer_beginShift hb (hsh.ver hs s'' t'' hcmp hmt hg hb)
 
-/-- **Both readers along a run, from `ChainPosInv` alone.**  This is the pair
+/-- **Both readers along a run, from `ChainPositionInvariant` alone.**  This is the pair
 `shiftEntry_ptMG` / `shiftVerSane_ptMG` needs, with the false
 `∀ y, WatchShiftG … y` replaced by the four guarded branch hypotheses. -/
 theorem shiftReaders_of_run {w : List (Fin 2)}
-    (hfour : H_fourOther centre place entry q first w)
-    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
-    (hsd : H_shiftDoneP centre place entry q first w)
-    {n : ℕ} {x y : State GalilVM} (hx : ChainPosInv w x.ctl x.vm)
+    (hfour : H_FourSemiperiodsLeDistance centre place entry q first w)
+    (hbg : H_BackgroundLandingPayload centre place entry q first w) (hmatch : H_MatchLandingPayload centre place entry q first w)
+    (hsd : H_ShiftExitPayload centre place entry q first w)
+    {n : ℕ} {x y : State GalilVM} (hx : ChainPositionInvariant w x.ctl x.vm)
     (h : Steps (galilFrameS (PofC centre place entry w) q first) 2048 n x y)
     (hp : PalPeg.CloseoutPackRun10.LPackM w y.ctl y.vm) (hs : ScanNR y)
     {s'' t'' : GalilVM}
@@ -181,7 +181,7 @@ theorem saneTickS (onLetter leftFirst : GalilVM → Prop)
     exact hen hm hr s' t hcmp hmt hg hb
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     subst ht
     exact saneVer_idle
   case shift_one =>
@@ -267,15 +267,15 @@ theorem shiftOrd_ptS {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State 
 
 `CloseoutPackRun30.radPack_ptMG` (:612) reads `IPackMG.shift` through the two
 readers, which is where the false `∀ y, WatchShiftG … y` enters.  Here the same
-`RadPack` comes from `ChainPosInv` travelling along the trace, with
+`RadPack` comes from `ChainPositionInvariant` travelling along the trace, with
 `CloseoutPackRun34`'s four guarded branch hypotheses in its place. -/
 
 theorem radPack_ptS {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM}
     {Tc : ℕ → ℕ} (hP : PreTrace centre place entry q first w st Tc)
-    (hfour : H_fourOther centre place entry q first w)
-    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
-    (hsd : H_shiftDoneP centre place entry q first w)
-    (hpos0 : ChainPosInv w (st 0).ctl (st 0).vm)
+    (hfour : H_FourSemiperiodsLeDistance centre place entry q first w)
+    (hbg : H_BackgroundLandingPayload centre place entry q first w) (hmatch : H_MatchLandingPayload centre place entry q first w)
+    (hsd : H_ShiftExitPayload centre place entry q first w)
+    (hpos0 : ChainPositionInvariant w (st 0).ctl (st 0).vm)
     (hreach : ∀ i, i ≤ Tc w.length →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 i (st 0) (st i))
     (hLP : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
@@ -310,10 +310,10 @@ it, and every other ingredient (`LeftLive`, `SanePack`, `ScanT`, `ChainBudget`,
 `VerF`) is untouched. -/
 theorem trailF_ptS {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM}
     {Tc : ℕ → ℕ} (hP : PreTrace centre place entry q first w st Tc)
-    (hfour : H_fourOther centre place entry q first w)
-    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
-    (hsd : H_shiftDoneP centre place entry q first w)
-    (hpos0 : ChainPosInv w (st 0).ctl (st 0).vm)
+    (hfour : H_FourSemiperiodsLeDistance centre place entry q first w)
+    (hbg : H_BackgroundLandingPayload centre place entry q first w) (hmatch : H_MatchLandingPayload centre place entry q first w)
+    (hsd : H_ShiftExitPayload centre place entry q first w)
+    (hpos0 : ChainPositionInvariant w (st 0).ctl (st 0).vm)
     (hreach : ∀ i, i ≤ Tc w.length →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 i (st 0) (st i))
     (hLP : ∀ i, i ≤ Tc w.length → PalPeg.CloseoutPackRun10.LPackM w (st i).ctl (st i).vm)
@@ -339,10 +339,10 @@ theorem trailF_ptS {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State Ga
 theorem needIMG2'_le_S {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hP : PalPeg.CloseoutPackRun36.PreTraceIMG2 centre place entry q first w st Tc)
-    (hfour : H_fourOther centre place entry q first w)
-    (hbg : H_bgP centre place entry q first w) (hmatch : H_matchP centre place entry q first w)
-    (hsd : H_shiftDoneP centre place entry q first w)
-    (hpos0 : ChainPosInv w (st 0).ctl (st 0).vm) :
+    (hfour : H_FourSemiperiodsLeDistance centre place entry q first w)
+    (hbg : H_BackgroundLandingPayload centre place entry q first w) (hmatch : H_MatchLandingPayload centre place entry q first w)
+    (hsd : H_ShiftExitPayload centre place entry q first w)
+    (hpos0 : ChainPositionInvariant w (st 0).ctl (st 0).vm) :
     ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
       PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 := by
   have hbase := hP.base.pre

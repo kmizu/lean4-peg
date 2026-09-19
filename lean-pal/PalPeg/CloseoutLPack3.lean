@@ -276,7 +276,9 @@ structure LTickLeaves (w : List (Fin 2)) (c : Control) (s : GalilVM) : Prop wher
     (GalilScaffoldInputTrace.Represents t.left.head w ∧ t.left.head.focus ≠ none) ∧
       MInv w {c with mode := Mode.rewind, pair := false} t
   /-- A rewind unit walks `L` (and, paired, `C`) one place left. -/
-  rewindLeft : c.mode = Mode.rewind → 0 < position (GalilScaffoldInputHead.left s.left)
+  rewindLeft : c.mode = Mode.rewind →
+    ¬ (galilFrameS (PofC centre place entry w) q first).atFirst s →
+    0 < position (GalilScaffoldInputHead.left s.left)
   /-- The centre invariant along a paired rewind unit. -/
   rewindPairMinv : c.mode = Mode.rewind → ∀ t : GalilVM,
     (galilFrameS (PofC centre place entry w) q first).rewindPair s t →
@@ -401,14 +403,14 @@ theorem lpack_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     obtain ⟨vs, vq, hvl, hvr, rfl⟩ :=
       compare_mismatch_form centre place entry q first hcmp hmt
     have hni : c.mode ≠ Mode.init := by rw [hm]; decide
-    obtain ⟨pl, ht⟩ :
+    obtain ⟨pl, ht, hbnd⟩ :
       beginFallbackVM' (afterBirth (chainBorn (decide (vq.search.mode = GalilScaffoldSearchFinish.Mode.found)) s.chain) (afterMismatch s vs vq)) t := hb
     obtain ⟨hrepr, hpres⟩ := hP.lrep hni
     refine ⟨fun _ => ?_, fun hm' _ => Mode.noConfusion hm', fun _ => ?_⟩
     · have htl : t.left = GalilScaffoldInputHead.left s.left := by
         rw [ht, afterBirth_left, afterMismatch_left]; exact hvl
       rw [htl]; exact lrep_left hrepr hpres (hL.scanLeft hm)
-    · exact hL.fallbackMinv hm _ _ hcmp ⟨pl, ht⟩
+    · exact hL.fallbackMinv hm _ _ hcmp ⟨pl, ht, hbnd⟩
   case shift_one =>
     rename_i hm hp hi
     have hni : c.mode ≠ Mode.init := by rw [hm]; decide
@@ -490,7 +492,7 @@ theorem lpack_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     have htr : t.right = s.right := by rw [hset, heq]; rfl
     obtain ⟨hrepr, hpres⟩ := hP.lrep hni
     refine ⟨fun _ => ?_, fun hm' _ => Mode.noConfusion (hm.symm.trans hm'), fun _ => ?_⟩
-    · rw [htl]; exact lrep_left hrepr hpres (hL.rewindLeft hm)
+    · rw [htl]; exact lrep_left hrepr hpres (hL.rewindLeft hm (by assumption))
     · exact minv_same rfl htr htc (by rw [hset]; rfl) (hP.minv hni)
   case rewind_pair =>
     rename_i hm hfi hpr hi
@@ -500,7 +502,7 @@ theorem lpack_tick {w : List (Fin 2)} {c c' : Control} {s t : GalilVM}
     have htl : t.left = GalilScaffoldInputHead.left s.left := by rw [hset, heq]; rfl
     obtain ⟨hrepr, hpres⟩ := hP.lrep hni
     refine ⟨fun _ => ?_, fun hm' _ => Mode.noConfusion (hm.symm.trans hm'), fun _ => ?_⟩
-    · rw [htl]; exact lrep_left hrepr hpres (hL.rewindLeft hm)
+    · rw [htl]; exact lrep_left hrepr hpres (hL.rewindLeft hm (by assumption))
     · exact hL.rewindPairMinv hm _ hi
   case replayStart =>
     rename_i o hm ho ho' hi

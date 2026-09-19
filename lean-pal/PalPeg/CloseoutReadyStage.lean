@@ -532,6 +532,40 @@ theorem readyPacedS_restarted {raw : List (Fin 2)} {r : GalilVM} {Rad : ℕ}
 #print axioms readyPacedS_effect_true
 #print axioms readyPacedS_restarted
 
+/-! ### The transport interface used by §5 and §6
+
+The five theorems below use `ReadyPacedS` through exactly four gates —
+`readyPacedS_ready`, `readyPacedS_mono`, `readyPacedS_effect_false` and
+`readyPacedS_effect_true` — and never instantiate its `∀ as : List Bool` at a
+list.  `ReadyIface` is those four gates as a record, so the scan loop can be
+driven by any predicate that offers them.
+
+This matters because `ReadyPacedS` quantifies over *every* `PacedL 2048 k` list,
+and `PacedL` is a **cumulative** bound: it admits a schedule that saves its
+comparison budget over a long background stretch and then spends it in a burst.
+The machine cannot emit such a schedule — a comparison needs `clock = 1` and
+resets the clock to `2048` — and `ReadyIface.comparison` records exactly that in
+its `2048 ≤ k + 1`.  So the interface asks only for the schedules the machine
+produces, while `ReadyPacedS` asks for more. -/
+structure ReadyIface (P : Shared) (Φ : SearchVM → ℕ → ℕ → Prop) : Prop where
+  ready : ∀ {v : SearchVM} {n k : ℕ}, Φ v n k → SearchReady v
+  mono : ∀ {v : SearchVM} {n n' k k' : ℕ}, n ≤ n' → k' ≤ k → Φ v n k → Φ v n' k'
+  background : ∀ {s : GalilVM} {v : SearchVM} {n k k' : ℕ}, k' ≤ k + 1 →
+    s.chain = ChainVM.idle → Φ (searchLens.get s) (n + 1) k →
+    searchEffect P false s v → Φ v n k'
+  comparison : ∀ {s : GalilVM} {v : SearchVM} {n k : ℕ}, 2048 ≤ k + 1 →
+    s.chain = ChainVM.idle → Φ (searchLens.get s) (n + 1) k →
+    searchEffect P true s v → Φ v n 0
+
+/-- `ReadyPacedS` is one such predicate, by the four lemmas of §4. -/
+theorem readyIface_readyPacedS (P : Shared) : ReadyIface P ReadyPacedS where
+  ready := readyPacedS_ready
+  mono := fun hn hk h => readyPacedS_mono hn hk h
+  background := fun hk hidle h he => readyPacedS_effect_false P hk hidle h he
+  comparison := fun hk hidle h he => readyPacedS_effect_true P hk hidle h he
+
+#print axioms readyIface_readyPacedS
+
 /-! ## 5. The segment construction on the paced closure -/
 
 /-- **`GalilSegmentConstructB.watchSegE_constructB` on `ReadyPacedS`.**  Same
@@ -545,10 +579,11 @@ theorem watchSegE_constructS (raw : List (Fin 2)) (P : Shared)
     (hex : ∀ s, P.replayExhausted s = zero s.replay)
     (q : ℕ) (first : Fin 9)
     (hsearch : ∀ s' : GalilVM, SearchReady (searchLens.get s') → ∀ a : Bool,
-      ∃ v, searchEffect P a s' v) :
+      ∃ v, searchEffect P a s' v)
+    {Φ : SearchVM → ℕ → ℕ → Prop} (hiface : ReadyIface P Φ) :
     ∀ (n : ℕ) (c : Control) (s : GalilVM) (r k : ℕ), c.mode = .scan → 1 ≤ c.clock →
       2048 ≤ c.clock + k → s.chain = ChainVM.idle →
-      ReadyPacedS (searchLens.get s) n k →
+      Φ (searchLens.get s) n k →
       MInv raw c s → ScanInvariant raw (position s.center) r s.left s.right →
       ∃ (es : List Bool) (c' : Control) (t : GalilVM) (r' : ℕ),
         WatchSegE P q first 2048 es c s c' t ∧
@@ -561,10 +596,10 @@ theorem watchSegE_constructS (raw : List (Fin 2)) (P : Shared)
   induction n with
   | zero =>
     intro c s r k hm hclk hk hidle hsr hM hi
-    exact ⟨[], c, s, r, .stop _ _, hm, hclk, hidle, readyPacedS_ready hsr, hM, hi, Or.inl rfl⟩
+    exact ⟨[], c, s, r, .stop _ _, hm, hclk, hidle, hiface.ready hsr, hM, hi, Or.inl rfl⟩
   | succ n ih =>
     intro c s r k hm hclk hk hidle hsr hM hi
-    have hrdy : SearchReady (searchLens.get s) := readyPacedS_ready hsr
+    have hrdy : SearchReady (searchLens.get s) := hiface.ready hsr
     by_cases hav : canRight s.right
     · by_cases hrp : c.replaying = true
       · rcases Nat.lt_or_ge 1 c.clock with hlt | hle
@@ -575,8 +610,8 @@ theorem watchSegE_constructS (raw : List (Fin 2)) (P : Shared)
               Or.inr (.foundBackground hclk ⟨v, hv, hfb⟩)⟩
           obtain ⟨s', hb, hch', hl', hr', hC', hrep', hget'⟩ :=
             idle_background_exists P q first s hidle hv hfb
-          have hsr' : ReadyPacedS (searchLens.get s') n (k + 1) := by
-            rw [hget']; exact readyPacedS_effect_false P (le_refl _) hidle hsr hv
+          have hsr' : Φ (searchLens.get s') n (k + 1) := by
+            rw [hget']; exact hiface.background (le_refl _) hidle hsr hv
           have hM' : MInv raw {c with clock := c.clock - 1} s' := minv_same rfl hr' hC' hrep' hM
           have hi' : ScanInvariant raw (position s'.center) r s'.left s'.right := by
             rw [hl', hr', hC']; exact hi
@@ -614,9 +649,9 @@ theorem watchSegE_constructS (raw : List (Fin 2)) (P : Shared)
             have hidleU : u.chain = ChainVM.idle := by
               rw [hudef, replayDec_chain, afterCompare_chain]
             have hgetU : searchLens.get u = vq := by rw [hudef, replayDec_search]; rfl
-            have hsrU : ReadyPacedS (searchLens.get u) n 0 := by
+            have hsrU : Φ (searchLens.get u) n 0 := by
               rw [hgetU]
-              exact readyPacedS_effect_true P (by omega) hidle hsr hq
+              exact hiface.comparison (by omega) hidle hsr hq
             have hMU : MInv raw {c with clock := 2048, output := o, replaying := !(P.replayExhausted u)} u :=
               minv_matchR P hex o 2048 hrp rfl hav hi hM
             have hiU : ScanInvariant raw (position u.center) (r+1) u.left u.right := by
@@ -644,8 +679,8 @@ theorem watchSegE_constructS (raw : List (Fin 2)) (P : Shared)
               Or.inr (.foundBackground hclk ⟨v, hv, hfb⟩)⟩
           obtain ⟨s', hb, hch', hl', hr', hC', hrep', hget'⟩ :=
             idle_background_exists P q first s hidle hv hfb
-          have hsr' : ReadyPacedS (searchLens.get s') n (k + 1) := by
-            rw [hget']; exact readyPacedS_effect_false P (le_refl _) hidle hsr hv
+          have hsr' : Φ (searchLens.get s') n (k + 1) := by
+            rw [hget']; exact hiface.background (le_refl _) hidle hsr hv
           have hM' : MInv raw {c with clock := c.clock - 1} s' := minv_same rfl hr' hC' hrep' hM
           have hi' : ScanInvariant raw (position s'.center) r s'.left s'.right := by
             rw [hl', hr', hC']; exact hi
@@ -681,9 +716,9 @@ theorem watchSegE_constructS (raw : List (Fin 2)) (P : Shared)
                   rw [if_neg hl']
               have hidleU : u.chain = ChainVM.idle := by rw [hudef, afterCompare_chain]
               have hgetU : searchLens.get u = vq := rfl
-              have hsrU : ReadyPacedS (searchLens.get u) n 0 := by
+              have hsrU : Φ (searchLens.get u) n 0 := by
                 rw [hgetU]
-                exact readyPacedS_effect_true P (by omega) hidle hsr hq
+                exact hiface.comparison (by omega) hidle hsr hq
               have hMU : MInv raw {c with clock := 2048, output := o, replaying := false} u :=
                 minv_match o 2048 hrp' rfl rfl hav hmatch hi hM
               have hiU : ScanInvariant raw (position u.center) (r+1) u.left u.right := by
@@ -716,8 +751,10 @@ theorem segment_of_invLPCS (centre : GalilVM → Fin 3)
     (hex : ∀ s, (PofC centre place entry raw).replayExhausted s = zero s.replay)
     (hsearch : ∀ s : GalilVM, SearchReady (searchLens.get s) →
       ∀ a : Bool, ∃ v, searchEffect (PofC centre place entry raw) a s v)
+    {Φ : SearchVM → ℕ → ℕ → Prop}
+    (hiface : ReadyIface (PofC centre place entry raw) Φ)
     (c : Control) (r : GalilVM) (hIC : InvLPC raw c r)
-    (hready : ReadyPacedS (searchLens.get r) (headRank r.right * 2048 + c.clock)
+    (hready : Φ (searchLens.get r) (headRank r.right * 2048 + c.clock)
       (2048 - c.clock)) :
     ∃ (c' : Control) (t : GalilVM),
       SegReachedW centre place entry q first raw c r c' t ∧
@@ -736,7 +773,7 @@ theorem segment_of_invLPCS (centre : GalilVM → Fin 3)
         h.scan, h.frontier, h.rest_replay, h.shiftIdle⟩
   obtain ⟨es, c', t, r', hseg, hm', hclk', hidle', hsrt, hMt, hit, hlen⟩ :=
     watchSegE_constructS raw (PofC centre place entry raw) hex q first
-      hsearch (headRank r.right * 2048 + c.clock) c r R (2048 - c.clock) hm hclk
+      hsearch hiface (headRank r.right * 2048 + c.clock) c r R (2048 - c.clock) hm hclk
       (by omega) hidle hready hM hi
   have hEnd : SegEnd (PofC centre place entry raw) c' t := by
     rcases hlen with h0 | h0
@@ -775,12 +812,13 @@ theorem segment_of_invLPCS (centre : GalilVM → Fin 3)
 /-- **`CloseoutReportCase.readyFuel_watchSegE` on `ReadyPacedS`.**  The clock
 slack at the far end is whatever the segment's last tick left; the invariant
 `2048 ≤ clock + slack` is transported with it. -/
-theorem readyPacedS_watchSegE (P : Shared) (q : ℕ) (first : Fin 9)
+theorem readyIface_watchSegE (P : Shared) (q : ℕ) (first : Fin 9)
     {es : List Bool} {c c' : Control} {s t : GalilVM}
-    (h : WatchSegE P q first 2048 es c s c' t) (ht : t.chain = ChainVM.idle) :
+    (h : WatchSegE P q first 2048 es c s c' t) (ht : t.chain = ChainVM.idle)
+    {Φ : SearchVM → ℕ → ℕ → Prop} (hiface : ReadyIface P Φ) :
     ∀ n k : ℕ, 2048 ≤ c.clock + k →
-      ReadyPacedS (searchLens.get s) (n + es.length) k →
-      ∃ k', 2048 ≤ c'.clock + k' ∧ ReadyPacedS (searchLens.get t) n k' := by
+      Φ (searchLens.get s) (n + es.length) k →
+      ∃ k', 2048 ≤ c'.clock + k' ∧ Φ (searchLens.get t) n k' := by
   induction h with
   | stop c s => intro n k hk h0; exact ⟨k, hk, by simpa using h0⟩
   | wait c s s' hm hr hn hb rest ih =>
@@ -791,8 +829,8 @@ theorem readyPacedS_watchSegE (P : Shared) (q : ℕ) (first : Fin 9)
         by_contra hne
         exact chainTick_ne_idle (backgroundS_chainTick P q first hb hne) hne hs'
       exact ih ht n (k + 1) (by omega)
-        (readyPacedS_effect_false P (le_refl _) hs
-          (readyPacedS_mono (by simp; omega) (le_refl _) h0) hse)
+        (hiface.background (le_refl _) hs
+          (hiface.mono (by simp; omega) (le_refl _) h0) hse)
   | count c s s' hm hr ha hc hb rest ih =>
       intro n k hk h0
       obtain ⟨-, -, -, -, -, -, -, -, -, -, -, hse⟩ := backgroundS_fields P q first hb
@@ -801,14 +839,14 @@ theorem readyPacedS_watchSegE (P : Shared) (q : ℕ) (first : Fin 9)
         by_contra hne
         exact chainTick_ne_idle (backgroundS_chainTick P q first hb hne) hne hs'
       exact ih ht n (k + 1) (by simp; omega)
-        (readyPacedS_effect_false P (le_refl _) hs
-          (readyPacedS_mono (by simp; omega) (le_refl _) h0) hse)
+        (hiface.background (le_refl _) hs
+          (hiface.mono (by simp; omega) (le_refl _) h0) hse)
   | countR c s s' hm hr hc hidle hb rest ih =>
       intro n k hk h0
       obtain ⟨-, -, -, -, -, -, -, -, -, -, -, hse⟩ := backgroundS_fields P q first hb
       exact ih ht n (k + 1) (by simp; omega)
-        (readyPacedS_effect_false P (le_refl _) hidle
-          (readyPacedS_mono (by simp; omega) (le_refl _) h0) hse)
+        (hiface.background (le_refl _) hidle
+          (hiface.mono (by simp; omega) (le_refl _) h0) hse)
   | «match» c s vs vq o hm hr ha hc hne hcmp hmt hq ho rest ih =>
       intro n k hk h0
       have hs' : (afterCompare s vs vq).chain = ChainVM.idle :=
@@ -827,23 +865,25 @@ theorem readyPacedS_watchSegE (P : Shared) (q : ℕ) (first : Fin 9)
   | matchIdle c s vs vq o hm hr ha hc hidle hl hrr hvs hmt hq hnf ho rest ih =>
       intro n k hk h0
       exact ih ht n 0 (by simp)
-        (readyPacedS_effect_true P (by omega) hidle
-          (readyPacedS_mono (by simp; omega) (le_refl _) h0) hq)
+        (hiface.comparison (by omega) hidle
+          (hiface.mono (by simp; omega) (le_refl _) h0) hq)
   | matchIdleR c s vs vq o hm hr hc ha hidle hl hrr hvs hmt hq hnf ho rest ih =>
       intro n k hk h0
       exact ih ht n 0 (by simp)
-        (readyPacedS_effect_true P (by omega) hidle
-          (readyPacedS_mono (by simp; omega) (le_refl _) h0) hq)
+        (hiface.comparison (by omega) hidle
+          (hiface.mono (by simp; omega) (le_refl _) h0) hq)
 
 #print axioms segment_of_invLPCS
-#print axioms readyPacedS_watchSegE
+#print axioms readyIface_watchSegE
 
 theorem reachAtC3_of_target_matchS (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry q : ℕ) (first : Fin 9)
     (raw : List (Fin 2)) (m : ℕ) (hm1 : 1 ≤ m) (hmle : m ≤ raw.length)
     (c : Control) (r : GalilVM) (c' : Control) (t : GalilVM)
     (hIN : InvLPS (PofC centre place entry raw) q first raw c r)
-    (n k : ℕ) (hk : 2048 ≤ k + 1) (hready : ReadyPacedS (searchLens.get t) (n + 1) k)
+    {Φ : SearchVM → ℕ → ℕ → Prop}
+    (hiface : ReadyIface (PofC centre place entry raw) Φ)
+    (n k : ℕ) (hk : 2048 ≤ k + 1) (hready : Φ (searchLens.get t) (n + 1) k)
     (hsW : SegReachedW centre place entry q first raw c r c' t)
     (hT : AtTarget m c' t)
     (hmt : read (left t.left) = read (right t.right))
@@ -929,7 +969,7 @@ theorem reachAtC3_of_target_matchS (centre : GalilVM → Fin 3)
       refine PalPeg.GalilReplaySegment.inv_after_replay 2048 raw _ u (R + 1) hs.mode rfl rfl
         (by rw [hu, afterCompare_chain]) ?_ hrp.centre ?_ ?_ ?_
       · exact matched_invariant' raw vq (vs := vs) rfl rfl hmt hav hi
-      · exact readyPacedS_ready (readyPacedS_effect_true P hk hs.idle hready hq)
+      · exact hiface.ready (hiface.comparison hk hs.idle hready hq)
       · rw [hu, afterCompare_replay]; exact hrep
       · exact PalPeg.GalilReplaySegment.shiftIdle_congr
           (PalPeg.GalilReplaySegment.afterCompare_remaining t vs vq) hs.shiftIdle
@@ -947,7 +987,9 @@ theorem reachAtC3_of_crossS (centre : GalilVM → Fin 3)
     (raw : List (Fin 2)) (m : ℕ) (hm1 : 1 ≤ m) (hmle : m ≤ raw.length)
     {c c' : Control} {r t : GalilVM}
     (hIN : InvLPS (PofC centre place entry raw) q first raw c r)
-    (hready : ReadyPacedS (searchLens.get r) (headRank r.right * 2048 + c.clock)
+    {Φ : SearchVM → ℕ → ℕ → Prop}
+    (hiface : ReadyIface (PofC centre place entry raw) Φ)
+    (hready : Φ (searchLens.get r) (headRank r.right * 2048 + c.clock)
       (2048 - c.clock))
     (hsW : SegReachedW centre place entry q first raw c r c' t)
     (hlt : position r.right < 2 * m - 1) (hge : 2 * m - 1 ≤ position t.right) :
@@ -1010,10 +1052,10 @@ theorem reachAtC3_of_crossS (centre : GalilVM → Fin 3)
         exact (exhausted_of_long (PofC centre place entry raw) q first 2048 (by norm_num)
           hw1 hclkC (by omega)) ha2
       obtain ⟨k1, hk1, hfuel1⟩ :=
-        readyPacedS_watchSegE (PofC centre place entry raw) q first hw1 hidle1
+        readyIface_watchSegE (PofC centre place entry raw) q first hw1 hidle1 hiface
           ((headRank r.right * 2048 + c.clock - es1.length - 1) + 1) (2048 - c.clock)
-          (by omega) (readyPacedS_mono (by omega) (le_refl _) hready)
-      have hsr1 : SearchReady (searchLens.get s1) := readyPacedS_ready hfuel1
+          (by omega) (hiface.mono (by omega) (le_refl _) hready)
+      have hsr1 : SearchReady (searchLens.get s1) := hiface.ready hfuel1
       have hsW1 : SegReachedW centre place entry q first raw c r c1 s1 :=
         ⟨{ run := hrun1
            center := hcen1
@@ -1027,7 +1069,7 @@ theorem reachAtC3_of_crossS (centre : GalilVM → Fin 3)
            shiftIdle := hsi1
            scan := ⟨R0 + es1.count true, by rw [hcen1]; exact hi1⟩ }, es1, hw1⟩
       exact reachAtC3_of_target_matchS centre place entry q first raw m hm1 hmle
-        c r c1 s1 hIN _ k1 (by omega) hfuel1 hsW1 ⟨hnr1, hc2, ha2, hpos1', hrep1⟩ hmtread vq hq2 hnf2
+        c r c1 s1 hIN hiface _ k1 (by omega) hfuel1 hsW1 ⟨hnr1, hc2, ha2, hpos1', hrep1⟩ hmtread vq hq2 hnf2
 
 #print axioms reachAtC3_of_crossS
 

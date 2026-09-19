@@ -125,7 +125,6 @@ from `MismatchShiftRouteC` at the mismatch landing. -/
 theorem mismatchShift_to_shiftRoute (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry qq : ℕ) (first : Fin 9)
     (raw : List (Fin 2)) (m h lower span : ℕ) {c0 cP : Control} {r sP : GalilVM}
-    (hlive : PrepLandingLiveC (PofC centre place entry raw) qq first cP sP)
     (hdp : PalPeg.CloseoutWatchRound5.FoundDpShiftC centre place entry qq first raw lower span
       c0 r)
     (hroute : MismatchShiftRouteC centre place entry qq first raw m h lower)
@@ -137,9 +136,11 @@ theorem mismatchShift_to_shiftRoute (centre : GalilVM → Fin 3)
   obtain ⟨hres, hpc⟩ := hdp a ls rs qw gap es0 cF sF vq hseg0 hCen hq hfound
   refine ⟨a, ls, rs, qw, gap, es0, cF, sF, vq, ch, oF, lower, span, hraw, hseg0, hmF, hrF, hcF,
     havF, hidle, hCen, hq, hfound, hmt, hch, hchne, hoF, hcPeq, hsPeq, hres, hpc, ?_⟩
-  intro es c2 s2 hseg
+  intro es c2 s2 hseg hwLanding
+  obtain ⟨hmL, hrL, hcL⟩ := watchSegE_live_control (delay := 2048) (by omega) hseg
+    (by rw [hcPeq]; exact hmF) (by rw [hcPeq]) (by simp [hcPeq])
   obtain ⟨cT, sT, hsegT, hLT, c1, s1, hseg1, hclk, hlive1, hav1, hne1, hnG⟩ :=
-    hrun es c2 s2 hseg (hlive es c2 s2 hseg)
+    hrun es c2 s2 hseg ⟨hmL, hrL, hcL, hwLanding⟩
   obtain ⟨w, vs, vq', s2', t', v, cycle, o, org, mm, c', s', n, c3, s3, w3, vs3, vq3, o3, w3',
     hm1, hr1, hc1, hs1, hz, hav, hcmp, hmis, hq', hg, hb, hs2', hi2, hchain, ho, hint, he,
     hoc, ha, hpos11, hlow, hrounds, hseg3, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3,
@@ -175,7 +176,9 @@ theorem foundExit_compare_final12 (centre : GalilVM → Fin 3)
     (hLR : LandingRestartReach (PofC centre place entry w) q first w c r)
     (hstage : ReplayStage w (PofC centre place entry w) q first c r)
     (hmP : cP.mode = .scan) (hrP : cP.replaying = false) (hcP : 1 ≤ cP.clock)
-    (hwatch : PrepLandingWatchC (PofC centre place entry w) q first cP sP)
+    (hreachWatch : ∃ (es : List Bool) (c2 : Control) (s2 : GalilVM),
+      WatchSegE (PofC centre place entry w) q first 2048 es cP sP c2 s2 ∧
+        PalPeg.CloseoutWatchRun.LiveScanWatch c2 s2)
     (hat : FoundDpAtC centre place entry q first w lower span h c r)
     (hreach : ShiftReachC centre place entry q first w h)
     (hround : ShiftRoundAtC centre place entry q first w m h lower)
@@ -187,11 +190,9 @@ theorem foundExit_compare_final12 (centre : GalilVM → Fin 3)
         (BreakTermData centre place entry q first w m h) c0 s0) :
     FoundExit (PofC centre place entry w) q first w m c r := by
   classical
-  have hlive : PrepLandingLiveC (PofC centre place entry w) q first cP sP :=
-    PalPeg.CloseoutWatchRound7.prepLandingLiveC_of_watch (PofC centre place entry w) q first
-      hmP hrP hcP hwatch
   have hsplit4 : ExitSplit4C centre place entry q first w h cP sP :=
-    exitSplit4C_of_tick centre place entry q first w h cP sP (hlive [] cP sP (.stop _ _))
+    exitSplit4C_of_tick centre place entry q first w h cP sP
+      (PalPeg.CloseoutWatchRound2.chain_ne_idle_of_foundCompareCtx hctx)
       (watchPrefixC_of_unique _ _ _ _ _)
   -- the terminal record, exactly as in Round 18
   have hstp := PalPeg.CloseoutWatchRound6.lagStepC_of_parts hcan hsane hstart
@@ -210,14 +211,14 @@ theorem foundExit_compare_final12 (centre : GalilVM → Fin 3)
       FoundExit (PofC centre place entry w) q first w m c r := fun hs3 =>
     PalPeg.CloseoutWatchRound18.foundExit_compare_final9 centre place entry q first w m h
       lower span hP hex hready hcan hsane hstart hor hzl hnn hpm hE hsW a ls rs qw gap hprep hmis
-      hctx hs3 hfb hLR hstage hmP hrP hcP hwatch hat hreach hround hland hstepBreak
+      hctx hs3 hfb hLR hstage hmP hrP hcP hreachWatch hat hreach hround hland hstepBreak
   rcases hsplit4 hT.2 with hs | hb | hf | hm
   · exact via3 (fun _ => Or.inl hs)
   · exact via3 (fun _ => Or.inr (Or.inl hb))
   · exact via3 (fun _ => Or.inr (Or.inr (terminalRunFallbackC_of_G hf)))
   · -- family 4: the mismatch-shift landing, through the shift route
     have htail : ShiftTailC centre place entry q first w m c r cP sP :=
-      mismatchShift_to_shiftRoute centre place entry q first w m h lower span hlive
+      mismatchShift_to_shiftRoute centre place entry q first w m h lower span
         (PalPeg.CloseoutWatchRound10.foundDpShiftC_of_at centre place entry q first w hP
           lower span h hstage hat)
         hmsr hctx hm

@@ -52,10 +52,12 @@ def ChainReady : ChainVM → Prop
       GalilScaffoldChainPeriod.isFirst v.focus = true →
         (zero lag = true → WatchReady ⟨⟨ver, watchControl v⟩, lag, margin⟩)
   | .watch w =>
-      (positive w.lag = true → GalilScaffoldChainWatch.Good w) ∧ WatchBlock w ∧
+      (positive w.lag = true → GalilScaffoldChainVerifier.canRight w.machine.verifier ∧
+        ∃ a : Fin 3, GalilScaffoldChainConsume.symbol w.machine.control.period.focus = some a) ∧
+      WatchBlock w ∧
         (∀ m, GalilScaffoldChainWatch.Internal w m →
           GalilScaffoldChainVerifier.canRight m.machine.verifier)
-  | .broken _ => False
+  | .broken _ => True
 
 theorem chainAt_exists (a found : Bool) (answer : GalilScaffoldTape.Tape) (c : Fin 3)
     (walker : GalilScaffoldPlace.Place) (ver : GalilScaffoldInputHead.PlaceHead)
@@ -105,7 +107,12 @@ theorem chainAt_exists (a found : Bool) (answer : GalilScaffoldTape.Tape) (c : F
     obtain ⟨h1, h2, h3⟩ := hx
     obtain ⟨z, hz⟩ := chainTick_watch_total w a h1 h2 h3
     exact ⟨z, Or.inl ⟨by simp, hz⟩⟩
-  | broken w => exact absurd hx (by simp [ChainReady])
+  | broken w =>
+    cases a with
+    | false => exact ⟨.broken w, Or.inl ⟨by simp, .broken w, .brokenIdle w, by simp⟩⟩
+    | true =>
+      exact ⟨_, Or.inl ⟨by simp, .broken w, .brokenIdle w,
+        by simpa using ChainMatched.brokenMatched w⟩⟩
 
 #print axioms chainAt_exists
 
@@ -248,7 +255,7 @@ theorem initVM_exists (entry : ℕ) (s : GalilVM) : ∃ t, initVM entry s t :=
       length := inc s.length, chain := ChainVM.idle,
       search := GalilScaffoldSearchFinish.begin reset s.radius,
       lower := reset, dp := GalilScaffoldControl.reset entry s.dp},
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩⟩
 
 theorem replayStartVM_exists (entry : ℕ) (s : GalilVM) : ∃ t, replayStartVM entry s t :=
   ⟨{s with
@@ -256,7 +263,7 @@ theorem replayStartVM_exists (entry : ℕ) (s : GalilVM) : ∃ t, replayStartVM 
       replay := s.radius, radius := reset, length := ofNat 1, chain := ChainVM.idle,
       search := GalilScaffoldSearchFinish.begin reset reset,
       lower := reset, dp := GalilScaffoldControl.reset entry s.dp},
-    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩⟩
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩⟩
 
 #print axioms init_tick_gen
 #print axioms restart_tick_gen

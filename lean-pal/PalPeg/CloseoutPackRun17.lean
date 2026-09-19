@@ -155,7 +155,7 @@ theorem wpack_tick {c c' : Control} {s t : GalilVM} (hP : CPack q c s)
     obtain ⟨-, -, -, -, hs'len⟩ :=
       compare_len onLetter leftFirst centre place entry q first hcmp
     have hl := hs'len hmt
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     have h0 := hfl hm
     obtain ⟨ℓ, hℓ⟩ : ∃ ℓ : ℕ, value s.length = ℓ := ⟨(value s.length).toNat, by omega⟩
     have hwin' := hwin rfl

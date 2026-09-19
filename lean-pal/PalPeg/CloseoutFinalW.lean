@@ -3,7 +3,7 @@ import PalPeg.CloseoutShiftFinal
 import PalPeg.CloseoutShiftLocalFree
 
 /-!
-# `pal_in_peg_final30` — **no `WatchShiftG`, no `ShiftLocalG`**
+# `given_globalScanLandings_and_fourOther` — **no `WatchShiftG`, no `ShiftLocalG`**
 
 `pal_in_peg_final29` still carried `hsl : ∀ w y, ShiftLocalG … w y`, and that is
 false for the same reason `WatchShiftG` is: its fields are premised on
@@ -13,7 +13,7 @@ false for the same reason `WatchShiftG` is: its fields are premised on
 `4 * periodLength ≤ distance`.
 
 The field is not weakened here, it is **gone**.  After `CloseoutShiftS` moved the
-trail bridge onto `ChainPosInv`, nothing reads `IPackMG.shift`, so `CloseoutPackW`
+trail bridge onto `ChainPositionInvariant`, nothing reads `IPackMG.shift`, so `CloseoutPackW`
 carries a copy of the pack without it (`IPackMW`), `CloseoutCheckW` runs the
 checkpoint recursion over that copy, and `CloseoutOracleW` supplies boot, oracle
 and `needL'`.  Dropping the field from `CloseoutPackRun30` itself was measured to
@@ -104,14 +104,14 @@ def H_realizeLIMW' (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffo
         LatchTrue (PofC centre place entry w) q first w (stLG' τF w st (Tc w.length))
           ((w.length + 1) * τF))
 
-theorem pal_in_peg_final5MW (entry q : ℕ) (first : Fin 9)
+theorem given_bootOracleRealize_and_globalScanLandings (entry q : ℕ) (first : Fin 9)
     (hboot : H_bootIMW centreC placeC entry q first)
     (hA : H_oracleIMW centreC placeC entry q first)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hfour : ∀ w : List (Fin 2), H_fourOther centreC placeC entry q first w)
-    (hbgP : ∀ w : List (Fin 2), H_bgP centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneP centreC placeC entry q first w)
+    (hfour : ∀ w : List (Fin 2), H_FourSemiperiodsLeDistance centreC placeC entry q first w)
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingPayload centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingPayload centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitPayload centreC placeC entry q first w)
     :
     RecognizedByTotalPEG PAL := by
   classical
@@ -160,7 +160,7 @@ theorem pal_in_peg_final5MW (entry q : ℕ) (first : Fin 9)
 
 /-- **`pal_in_peg_final29` with the false `hsl` gone: eight hypotheses, none
 refuted.** -/
-theorem pal_in_peg_final30 (entry q : ℕ) (first : Fin 9)
+theorem given_globalScanLandings_and_fourOther (entry q : ℕ) (first : Fin 9)
     (hSP : ∀ (w : List (Fin 2)) (x : GalilScaffoldTop.State GalilVM),
       BigPack2MG7W centreC placeC entry q first w x →
       ScanNR x → ShiftPal centreC placeC entry q first w x.vm)
@@ -168,12 +168,12 @@ theorem pal_in_peg_final30 (entry q : ℕ) (first : Fin 9)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleMC3 (PofC centreC placeC entry w) q first w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
-    (hfour : ∀ w : List (Fin 2), H_fourOther centreC placeC entry q first w)
-    (hbgP : ∀ w : List (Fin 2), H_bgP centreC placeC entry q first w)
-    (hmatchP : ∀ w : List (Fin 2), H_matchP centreC placeC entry q first w)
-    (hsdP : ∀ w : List (Fin 2), H_shiftDoneP centreC placeC entry q first w) :
+    (hfour : ∀ w : List (Fin 2), H_FourSemiperiodsLeDistance centreC placeC entry q first w)
+    (hbgP : ∀ w : List (Fin 2), H_BackgroundLandingPayload centreC placeC entry q first w)
+    (hmatchP : ∀ w : List (Fin 2), H_MatchLandingPayload centreC placeC entry q first w)
+    (hsdP : ∀ w : List (Fin 2), H_ShiftExitPayload centreC placeC entry q first w) :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_final5MW entry q first
+  given_bootOracleRealize_and_globalScanLandings entry q first
     (h_bootIMW_of_bootIPack centreC placeC entry q first
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
       (bootIPack_of_parts centreC placeC entry q first h_lrepC
@@ -185,7 +185,7 @@ theorem pal_in_peg_final30 (entry q : ℕ) (first : Fin 9)
       hor)
     hC hfour hbgP hmatchP hsdP
 
-#print axioms pal_in_peg_final5MW
-#print axioms pal_in_peg_final30
+#print axioms given_bootOracleRealize_and_globalScanLandings
+#print axioms given_globalScanLandings_and_fourOther
 
 end PalPeg.CloseoutFinalW

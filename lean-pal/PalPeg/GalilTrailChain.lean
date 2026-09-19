@@ -155,6 +155,7 @@ theorem chainStep_ver {x y : ChainVM} (h : ChainStep x y) :
     cases hi with
     | idle hz => exact Or.inr ⟨_, _, rfl, rfl, Or.inl rfl⟩
     | take hp hg => exact Or.inr ⟨_, _, rfl, rfl, Or.inr rfl⟩
+  | watchBreak w hb => exact Or.inr ⟨_, _, rfl, rfl, Or.inr rfl⟩
 
 /-- The verifier after the match credit. -/
 theorem chainMatched_ver {y z : ChainVM} (h : ChainMatched y z) :
@@ -171,6 +172,7 @@ theorem chainMatched_ver {y z : ChainVM} (h : ChainMatched y z) :
     obtain ⟨-, -, -, -, -, ht⟩ := hb
     subst ht
     exact Or.inr ⟨_, _, rfl, rfl, Or.inr rfl⟩
+  | brokenMatched w => exact Or.inr ⟨_, _, rfl, rfl, Or.inl rfl⟩
 
 /-- A disabled chain tick is a bare background step: one move at most. -/
 theorem chainTick_false_ver {x z : ChainVM} (ht : ChainTick false x z) :
@@ -363,7 +365,7 @@ theorem trailChain_scanTick {raw : List (Fin 2)} {m : ℕ} {c c' : Control} {s t
       GalilScaffoldChainVerifier.right w.machine.verifier, hp, rfl, verMove_snoc hv⟩) hx hB
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
-    obtain ⟨pl, ht⟩ : beginFallbackVM' s' t := hb
+    obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
     subst ht
     exact fun _ => verF_idle raw m
   case shift_one =>

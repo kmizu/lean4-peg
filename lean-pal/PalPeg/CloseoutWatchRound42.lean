@@ -104,9 +104,9 @@ data enters `exitSplit4C_of_tick`. -/
 theorem exitSplit4C_of_liveScanWatch (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry qq : ℕ) (first : Fin 9)
     (raw : List (Fin 2)) (h : ℕ) (cP : Control) (sP : GalilVM)
-    (hlive : LiveScanWatch cP sP) :
+    (hneP : sP.chain ≠ ChainVM.idle) :
     ExitSplit4C centre place entry qq first raw h cP sP :=
-  exitSplit4C_of_tick centre place entry qq first raw h cP sP hlive
+  exitSplit4C_of_tick centre place entry qq first raw h cP sP hneP
     (watchPrefixC_of_unique (PofC centre place entry raw) qq first cP sP)
 
 /-- **Closed.**  The same, at the `.watch` phase of a `ChainW` landing. -/
@@ -117,7 +117,7 @@ theorem exitSplit4C_of_liveScanChain (centre : GalilVM → Fin 3)
     (hw : sP.chain = ChainVM.watch w) :
     ExitSplit4C centre place entry qq first raw h cP sP :=
   exitSplit4C_of_liveScanWatch centre place entry qq first raw h cP sP
-    (liveScanWatch_of_liveScanChain hlive hw)
+    (by rw [hw]; intro hIdle; cases hIdle)
 
 /-! ## 3. The landing bundle -/
 
