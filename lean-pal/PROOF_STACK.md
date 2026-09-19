@@ -23,6 +23,10 @@
 `FoundExitLPS`（`CloseoutWatchRound31.cycleOutMC3_of_foundExitLPS` の入力）を `WindowRunPack` の上で構成する:
 found tick（`CloseoutFoundRoute1.found_first_tick` の形）→ 決定的 run（上の API）→ 着地の分類（`scan_shift`：`shiftPal_of_windowRunPack`／`scan_fallback`／`restart`）→ `Inv`（`restarted`／`fallback_restarted_All`）。停止性は右ヘッド位置（各比較で +1、上限 `2m−1`）と clock。
 
+### 実装（n251 の続き）
+
+`PalPeg/OracleRun.lean`（登録済み・標準公理のみ）: `scan_tick_exists_PofC (c s) (hm : scan) (hclk : 1 ≤ clock) (hr : replaying = false) (hsearch : SearchReady (searchLens.get s)) (hready : ChainReady s.chain) : ∃ st', Tick (galilFrameS (PofC …) q first) 2048 ⟨c, s⟩ st'`（`scan_tick_gen` ＋ `beginShift_exists`／`beginFallback_exists`／`searchEffect_exists`／`chainAt_exists`）と `phase_tick_exists_PofC (hx : PhaseEnabled q first x)`。copy 相の `ChainReady.copy`（`∃ n, CopyInv t h p v n`＝DP 答えテープの残り `n` と place の残り `n`）は誕生時に `startShape'_of_decodes`（`AnswerAhead`／`PlaceAhead`）から。
+
 ## n250 — モデル欠陥 `M-watchBreak` を修正（`ChainStep.watchBreak`／`ChainMatched.brokenMatched`）、全体 build 緑
 
 **公理への進捗**

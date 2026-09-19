@@ -89,6 +89,7 @@ import PalPeg.WindowInv
 import PalPeg.WindowRun
 import PalPeg.WindowTick
 import PalPeg.WindowPack
+import PalPeg.OracleRun
 import PalPeg.CopyPhaseTick
 import PalPeg.CopyPhaseTickMatched
 import PalPeg.AnswerAheadDecode
