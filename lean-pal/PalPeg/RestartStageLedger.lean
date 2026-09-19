@@ -272,6 +272,19 @@ theorem value_nonneg_of_not_negative {x : Counter} (hnegative : negative x = fal
   simp only [negative, Bool.not_eq_false', List.isEmpty_iff] at hnegative
   simp [value, hnegative]
 
+/-- At a lag-zero watch whose margin becomes nonnegative with one more credit, four semiperiods
+are consumed — off the boundary case `distance = 4h − 1`. -/
+theorem WatchLedger.four_of_break {shiftDebt : ℤ} {w : GalilScaffoldChainWatch.State}
+    (hledger : WatchLedger shiftDebt w) (hzero : zero w.lag = true)
+    (hmargin : 0 ≤ value w.margin + 1)
+    (hinterior : value w.machine.control.distance ≠ 4 * (periodLength w : ℤ) - 1) :
+    4 * (periodLength w : ℤ) ≤ value w.machine.control.distance := by
+  have hbalance := hledger.balance
+  simp only [GalilScaffoldChainWatch.balance] at hbalance
+  have hlagZero := value_zero_of_zero hzero
+  have h1 : 4 * (periodLength w : ℤ) - 1 ≤ value w.machine.control.distance := by linarith
+  omega
+
 /-- **The stage bound at a lag-zero break.**  The failing consume leaves `distance` and `last`
 untouched and raises `margin` by one, so a nonnegative margin after the break gives
 `4h − 1 ≤ distance`.  Off the boundary case `distance = 4h − 1` the aligned marks give
@@ -316,9 +329,7 @@ theorem WatchLedger.stageEntry_of_break {w w' : GalilScaffoldChainWatch.State}
       obtain ⟨h1, h2⟩ := hbackward hfw
       have : (0 : ℤ) ≤ (w.machine.control.period.left.length : ℤ) := by positivity
       linarith
-  have hfour : 4 * (periodLength w : ℤ) ≤ value w.machine.control.distance := by
-    have h1 : 4 * (periodLength w : ℤ) - 1 ≤ value w.machine.control.distance := by linarith
-    omega
+  have hfour := hledger.four_of_break hzero hmarginValue hinterior
   have haligned : 4 * (periodLength w : ℤ) ≤ value w.machine.control.boundary := by
     rw [sub_zero] at hn
     by_contra hnot
