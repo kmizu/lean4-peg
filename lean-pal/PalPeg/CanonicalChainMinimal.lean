@@ -18,13 +18,15 @@ open PalPeg.CloseoutPackRun26
 /-- The least-candidate meaning carried through one chain lifetime while its
 logical centre is fixed.  Copy states retain the remaining unary answer;
 settled states retain the completed block and its exact semiperiod length. -/
-def Sem (raw : List (Fin 2)) (C : ℕ) : ChainVM → Prop
+def SemWith (Cert : ℕ → Prop) : ChainVM → Prop
   | .idle => True
   | x@(.copy t h p v lag margin ver) =>
-      ∃ H n, CopyInv t h p v n ∧ cells v + n = H + 1 ∧
-        FutureMinimal raw C H ∧ MoveMinimal raw C H
-  | x => Settled x ∧ ∃ H, BlockInv x ∧ cellsOf x = H + 1 ∧
-      FutureMinimal raw C H ∧ MoveMinimal raw C H
+      ∃ H n, CopyInv t h p v n ∧ cells v + n = H + 1 ∧ Cert H
+  | x => Settled x ∧ ∃ H, BlockInv x ∧ cellsOf x = H + 1 ∧ Cert H
+
+/-- The least-candidate instance of `SemWith`. -/
+def Sem (raw : List (Fin 2)) (C : ℕ) : ChainVM → Prop :=
+  SemWith (fun H => FutureMinimal raw C H ∧ MoveMinimal raw C H)
 
 theorem sem_start {raw : List (Fin 2)} {C H : ℕ}
     {answer : GalilScaffoldTape.Tape} {cc : Fin 3} {walker : GalilScaffoldPlace.Place}
@@ -37,8 +39,8 @@ theorem sem_start {raw : List (Fin 2)} {C H : ℕ}
   omega
 
 /-- One background chain step preserves the fixed-centre semantic datum. -/
-theorem sem_step {raw : List (Fin 2)} {C : ℕ} {x y : ChainVM}
-    (hx : Sem raw C x) (ht : ChainStep x y) : Sem raw C y := by
+theorem sem_step {Cert : ℕ → Prop} {x y : ChainVM}
+    (hx : SemWith Cert x) (ht : ChainStep x y) : SemWith Cert y := by
   cases ht with
   | idle => trivial
   | brokenIdle w => exact hx
@@ -88,8 +90,8 @@ theorem sem_step {raw : List (Fin 2)} {C : ℕ} {x y : ChainVM}
       hh.2.trans hcells,hmin⟩
 
 /-- The match-credit half of a chain tick preserves the same datum. -/
-theorem sem_matched {raw : List (Fin 2)} {C : ℕ} {x y : ChainVM}
-    (hx : Sem raw C x) (ht : ChainMatched x y) : Sem raw C y := by
+theorem sem_matched {Cert : ℕ → Prop} {x y : ChainVM}
+    (hx : SemWith Cert x) (ht : ChainMatched x y) : SemWith Cert y := by
   cases ht with
   | idle => exact hx
   | copy => exact hx
@@ -106,8 +108,8 @@ theorem sem_matched {raw : List (Fin 2)} {C : ℕ} {x y : ChainVM}
       hh.2.trans hcells,hmin⟩
   | brokenMatched => exact hx
 
-theorem sem_tick {raw : List (Fin 2)} {C : ℕ} {a : Bool} {x y : ChainVM}
-    (hx : Sem raw C x) (ht : ChainTick a x y) : Sem raw C y := by
+theorem sem_tick {Cert : ℕ → Prop} {a : Bool} {x y : ChainVM}
+    (hx : SemWith Cert x) (ht : ChainTick a x y) : SemWith Cert y := by
   obtain ⟨z,hz,ha⟩ := ht
   have hs := sem_step hx hz
   cases a with
@@ -634,7 +636,7 @@ theorem scanMinimal_chainAt_true {raw : List (Fin 2)} {s t : GalilVM}
   · simp [ScanMinimal,hy]
   · obtain ⟨H,hcopy,hmin,hmove⟩ := hbirth hi hf
     have hs := sem_start (ver := ver) (radius := rad) hcopy hmin hmove
-    have hs' := sem_matched hs hy
+    have hs' : Sem raw (position s.center) t.chain := sem_matched hs hy
     generalize ht : t.chain = y at hy hs' ⊢
     unfold chainStart at hy
     cases hy
