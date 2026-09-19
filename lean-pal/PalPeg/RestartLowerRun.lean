@@ -727,6 +727,175 @@ theorem blockTextAt_tick {Extra : ℕ → ℕ → GalilScaffoldChainWatch.State 
       | (simp [hm] at hmode)
       | (simp at hmode)
 
+/-! ## The window of a first-round chain, anchored at the current centre -/
+
+/-- One chain tick keeps the birth-anchored window; a birth anchors it at the verifier handed to
+`chainStart`, the centre head. -/
+theorem windowInv_chainAt {raw : List (Fin 2)} {a found : Bool} {answer : GalilScaffoldTape.Tape}
+    {cc : Fin 3} {walker : GalilScaffoldPlace.Place} {ver : PlaceHead} {radius : Counter}
+    {x z : ChainVM} {C R' : ℕ}
+    (hchainAt : chainAt a found answer cc walker ver radius x z)
+    (hver : PalPeg.GalilReplayGeneral2.VerAt raw C ver) (hradius : RadiusRep radius R')
+    (hsource : x ≠ .idle → WindowInv raw C (C + R') cc x) :
+    WindowInv raw C (C + R' + if a then 1 else 0) cc z := by
+  rcases hchainAt with ⟨hne, y, hstep, hzy⟩ | ⟨-, -, hz⟩ | ⟨-, -, hz⟩
+  · have hy := windowInv_step (hsource hne) hstep
+    cases a with
+    | false =>
+      rw [if_neg (by simp)] at hzy
+      subst hzy
+      simpa using hy
+    | true =>
+      rw [if_pos rfl] at hzy
+      simpa using windowInv_matched hy hzy
+  · rw [hz]
+    trivial
+  · have hstart : WindowInv raw C (C + R') cc (chainStart answer cc walker ver radius) :=
+      windowInv_start answer walker hver hradius
+    cases a with
+    | false =>
+      rw [if_neg (by simp)] at hz
+      rw [hz]
+      simpa using hstart
+    | true =>
+      rw [if_pos rfl] at hz
+      simpa using windowInv_matched hstart hz
+
+/-- In the first round of a chain its window is anchored at the current centre. -/
+def FirstRoundWindow (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
+  c.mode = .scan → s.periodOnly = false → s.chain ≠ .idle →
+    ∃ cc, (encoded raw)[position s.center]? = some cc ∧
+      WindowInv raw (position s.center) (position s.right) cc s.chain
+
+/-- One tick keeps `FirstRoundWindow`. -/
+theorem firstRoundWindow_tick {Extra : ℕ → ℕ → GalilScaffoldChainWatch.State → Prop}
+    {raw : List (Fin 2)} {x y : State GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (ht : Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y)
+    (hsource : FirstRoundWindow raw x.ctl x.vm)
+    (hwinX : WindowRunPack raw x.ctl x.vm)
+    (hstage : BrokenStage Extra x.ctl x.vm)
+    (hfront : PalPeg.GalilFrontMono.FrontPack x.ctl x.vm)
+    (hrightRep : x.ctl.mode = .scan → GalilScaffoldInputTrace.Represents x.vm.right.head raw)
+    (hrightPresent : x.ctl.mode = .scan → x.vm.right.head.focus ≠ none) :
+    FirstRoundWindow raw y.ctl y.vm := by
+  have hchainTick : ∀ {c : Control} {s t : GalilVM} {a found : Bool} {vq : SearchVM},
+      x = ⟨c, s⟩ → c.mode = .scan →
+      chainAt a found (vq.dp.config.tapes 11) ((PofC centre place entry raw).centre s)
+        ((PofC centre place entry raw).place s) s.center s.radius s.chain t.chain →
+      t.center = s.center →
+      position t.right = position s.right + (if a then 1 else 0) →
+      t.periodOnly = (if chainBorn found s.chain then false else s.periodOnly) →
+      t.periodOnly = false →
+      ∃ cc, (encoded raw)[position t.center]? = some cc ∧
+        WindowInv raw (position t.center) (position t.right) cc t.chain := by
+    intro c s t a found vq hx hm hch hcenter hright honly htargetFalse
+    subst hx
+    have hcen := hwinX.centreRep (Or.inl hm)
+    have hsymbol := PalPeg.WindowTick.centreSymbol_of_decodes hP hcen
+    obtain ⟨R', hR', hrightPos⟩ := hwinX.radiusScan hm
+    have hwindow := windowInv_chainAt (raw := raw) (C := position s.center) hch
+      ⟨hcen.1, hcen.2, rfl⟩ hR' (fun hne => by
+        have hsourceOnly : s.periodOnly = false := by
+          unfold chainBorn at honly
+          rw [isIdle_false_of_ne hne] at honly
+          rw [honly] at htargetFalse
+          simpa using htargetFalse
+        obtain ⟨cc', hcc', hinv⟩ := hsource hm hsourceOnly hne
+        have hccEq : cc' = (PofC centre place entry raw).centre s := by
+          rw [hsymbol] at hcc'
+          exact (Option.some.inj hcc').symm
+        rw [← hccEq]
+        have hright' : position s.right = position s.center + R' := hrightPos
+        rw [← hright']
+        exact hinv)
+    refine ⟨(PofC centre place entry raw).centre s, by rw [hcenter]; exact hsymbol, ?_⟩
+    have hright' : position s.right = position s.center + R' := hrightPos
+    rw [hcenter, hright, hright']
+    exact hwindow
+  cases ht with
+  | init c s t hm hi =>
+    obtain ⟨_,_,_,_,_,_,_,_,_,hch,_⟩ := hi
+    intro _ _ hne
+    exact absurd hch hne
+  | scan_wait c s t hm hav hb =>
+    obtain ⟨-, hright, hch, hcenter, honly, -⟩ :=
+      backgroundS_fields (PofC centre place entry raw) q first hb
+    intro _ hfalse _
+    exact hchainTick (a := false) rfl hm hch hcenter (by rw [hright]; simp) honly hfalse
+  | scan_count c s t hm hav hc hb =>
+    obtain ⟨-, hright, hch, hcenter, honly, -⟩ :=
+      backgroundS_fields (PofC centre place entry raw) q first hb
+    intro _ hfalse _
+    exact hchainTick (a := false) rfl hm hch hcenter (by rw [hright]; simp) honly hfalse
+  | scan_match c s s' t o hm hav hc hcmp hmt hpl ho =>
+    have hcmp' : compareFound (PofC centre place entry raw) q first s s' := hcmp
+    obtain ⟨vs, vq, a, -, hvr, hiff, -, hch, heq⟩ := hcmp'
+    have ha : a = true := by
+      cases a with
+      | true => rfl
+      | false =>
+        exfalso
+        have hm' : read s'.left = read s'.right := hmt
+        rw [heq, afterBirth_left, afterBirth_right] at hm'
+        exact absurd (hiff.2 hm') (by simp)
+    subst ha
+    obtain ⟨-, hr', hchain', hcenter', -⟩ := PalPeg.WindowTick.compare_target_heads heq
+    have hchain : t.chain = s'.chain := by rw [hpl]; split <;> rfl
+    have hcenter : t.center = s'.center := by rw [hpl]; split <;> rfl
+    have htright : t.right = s'.right := by rw [hpl]; split <;> rfl
+    have honly : t.periodOnly
+        = if chainBorn (decide (vq.search.mode = .found)) s.chain then false
+          else s.periodOnly := by
+      have htarget : t.periodOnly = s'.periodOnly := by rw [hpl]; split <;> rfl
+      rw [htarget, heq, afterBirth_periodOnly]
+      rfl
+    have hcan : canRight s.right := by
+      rcases hav with hrp | ha
+      · exact PalPeg.CloseoutReplayCanRight.canRight_of_frontPack hfront hrp
+      · exact ha
+    have hl0 : 0 < s.right.head.left.length :=
+      (represented_position _ raw (hrightRep hm) (hrightPresent hm)).1
+    have hright : position t.right = position s.right + 1 := by
+      rw [htright, hr', hvr, right_position _ hcan hl0]
+    intro _ hfalse _
+    exact hchainTick (a := true) (vq := vq) rfl hm (by rw [hchain, hchain']; exact hch)
+      (hcenter.trans hcenter') (by rw [hright]; simp) honly hfalse
+  | scan_shift c s s' t hm hav hc hcmp hmt hr hg hb =>
+    intro hmode
+    simp at hmode
+  | scan_fallback c s s' t hm hav hc hcmp hmt hg hr hb =>
+    intro hmode
+    simp at hmode
+  | shift_one c s t hm hp hso =>
+    intro hmode
+    simp [hm] at hmode
+  | shift_done c s o hm hp ho =>
+    obtain ⟨-, honly⟩ := hstage.1 hm
+    intro _ hfalse _
+    have hsourceFalse : s.periodOnly = false := hfalse
+    rw [honly] at hsourceFalse
+    cases hsourceFalse
+  | replayStart c s t o hm hr ho ho' =>
+    obtain ⟨_,_,_,_,_,_,_,_,_,hch,_,_,_⟩ := hr
+    intro _ _ hne
+    exact absurd hch hne
+  | restart c s t hm hr =>
+    obtain ⟨_,_,_,_,_,rfl⟩ := hr
+    intro _ _ hne
+    exact absurd rfl hne
+  | copy_one _ _ _ hm _ _ | copy_done _ _ _ hm _ _
+  | home_start _ _ _ hm _ _ | home_step _ _ _ hm _ _
+  | fpp_slice _ _ _ hm _ | fpp_done _ _ _ hm _
+  | markEnd_found _ _ _ hm _ _ | markEnd_step _ _ _ hm _ _
+  | choose_select _ _ _ hm _ _ _ | choose_step _ _ _ hm _ _
+  | rewind_done _ _ _ hm _ _ | rewind_one _ _ _ hm _ _ _
+  | rewind_pair _ _ _ hm _ _ _ =>
+    intro hmode
+    first
+      | (simp [hm] at hmode)
+      | (simp at hmode)
+
 /-- The run invariant: the minimal-period payload, the excluded lower bound of the running
 search, and the excluded `last` of a broken chain at a restart-guard state. -/
 structure MinimalAcrossRestart (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
@@ -736,6 +905,7 @@ structure MinimalAcrossRestart (raw : List (Fin 2)) (c : Control) (s : GalilVM) 
   firstRound : FirstRoundSem raw c s
   clock : ClockAt c s
   blockText : BlockTextAt centre place entry raw c s
+  window : FirstRoundWindow raw c s
 
 /-- `MinimalAcrossRestart` at every point of a packed run out of an `InvLPS` origin whose own
 lower bound is excluded. -/
@@ -782,7 +952,8 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
         fun _ _ hwork => by
           rw [hiChain] at hwork
           simp [PalPeg.ChainClock.chainWork] at hwork,
-        fun _ _ => by rw [hiChain]; exact ⟨0, trivial⟩⟩
+        fun _ _ => by rw [hiChain]; exact ⟨0, trivial⟩,
+        fun _ _ hne => absurd hiChain hne⟩
     | succ i ih =>
       intro hik
       have hsource := ih (by omega)
@@ -803,7 +974,13 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
           (ledgerAt_packed centre place entry q first hP hI (hprefix i (by omega)))
           hsource.broken hstageSource.scan,
         blockTextAt_tick centre place entry q first hP htick hsource.blockText hwinX
-          hsource.broken⟩
+          hsource.broken,
+        firstRoundWindow_tick centre place entry q first hP htick hsource.window hwinX
+          hsource.broken (haux i (by omega)).front
+          (fun hm => (scanInvariant_packed centre place entry q first
+            (hprefix i (by omega)) hm).choose_spec.rightRep)
+          (fun hm => (scanInvariant_packed centre place entry q first
+            (hprefix i (by omega)) hm).choose_spec.rightPresent)⟩
       · exact modeMinimal_tick_lower centre place entry q first hP htick hsource.minimal
           (hpk i (by omega)) (hpk (i+1) (by omega)) (haux i (by omega)) hbirthSource
       · refine brokenStage_tick centre place entry q first htick (hcan i (by omega)).canonical
