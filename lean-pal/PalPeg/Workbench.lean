@@ -1,3 +1,6 @@
+import PalPeg.CanonicalFallback
+import PalPeg.CanonicalFallbackInput
+import PalPeg.CanonicalReplay
 import PalPeg.CanonicalSearchHistory
 import PalPeg.CanonicalChainReady
 -- 1. 正本の残り壁に直接効きそうな部品（最優先で配線を試す）
@@ -474,7 +477,3 @@ idle chain の一致比較も合法な tick である以上、**偽の疑いが�
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完.**
 -/
-
-import PalPeg.CanonicalFallback
-import PalPeg.CanonicalFallbackInput
-import PalPeg.CanonicalReplay

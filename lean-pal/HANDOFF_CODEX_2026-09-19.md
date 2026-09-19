@@ -36,7 +36,11 @@ Fable 5 への最初の確認事項:
 `MoveMinimal … 0` は空虚に真なので、この全称仮定は `rad = 0` を強制する。
 必要なのは実際に保持された周期の証人に結びついた bound / boundary-break の証明。
 
-検証: checkpoint build / 公理監査は実行中。
+検証: `cd lean-pal && lake build` 成功（9705 jobs）。
+`#print axioms PalPeg.PalInPeg.unconditional` は標準3公理＋上記2公理。
+`shiftPeriodMinimal_packed` は標準3公理のみ。`sorryAx` なし。
+新規 import の位置エラーを `Workbench.lean` で修正してから全体 build を再実行した。
+Python 診断もコミット対象のスクリプトで再現済み。
 
 > 追記（Codex、n264）: fallbackのコピー元の記述にも誤りがあった。
 > Scalaは `walker.copyFrom(right)`。canonical条件とfallback葉は現在
