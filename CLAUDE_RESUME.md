@@ -1,3 +1,32 @@
+## n269 — `hrestartStage` を 1 仮説 `NoBoundaryBreak` まで還元（未接続）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 変化なし。葉 `hrestartStage` の producer `RestartStageRun.restartStage_packed` を書いたが、仮説 `NoBoundaryBreak` が残っており `OracleReady` へは**未接続** |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、3e6e411 時点。新 2 モジュールはルート未 import なので全体 build は再実行していない。モジュール build `PalPeg.RestartStageRun` は `BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
+**一次情報で確かめたこと（定義を読んだ）**
+
+* `chainStart` は `lag := radius, margin := radius`。`copyBit` は `decFour margin`、matched は `inc lag`／`inc margin`、`BreakStep` は失敗 consume ＋ `inc margin`、`chainShiftOne` は `distance／boundary／last／margin` を一斉に `dec`。よって watch では **`distance + lag − margin = 4h`**（既存の `GalilScaffoldChainWatch.balance`）。
+* found 時の半径は `≤ 2h`（`found_radius_le_two_period`）。だから **「誕生時に `4h ≤ R`」は偽**で、margin は負から始まる（過去の自分の計画メモの F1 は誤り）。
+* guard の `margin ≥ 0` から出るのは `4h − 1 ≤ distance` まで。**境界 `distance = 4h − 1` では `R = 4h`・`last = 2h` で `StageEntry`（`3R ≤ 5·last`）は偽**。この状態が到達不能であること（周期領域内の matched 比較は break しない）を別に示す必要がある。これは Scala の `AssertionError("chain restart violates …")` が主張している内容と同じ。
+* Python 参照実装の実測（`stage_probe`, `lagbreak2`）: restart 60 回超で `3R ≤ 5·last` 違反 0、正 lag の break 0、margin の最小観測値 1。有限テストであり証明ではない。
+
+**書いたもの（すべて `lake env lean`／モジュール build で検査、sorry なし、標準 3 公理）**
+
+* `PalPeg/RestartStageLedger.lean`: `MarkLedger h shiftDebt k`（forward: `d = boundary + p − 1`／backward: `d = boundary + h − 1 − p`、`boundary = last ∨ boundary = last + h`、`boundary − shiftDebt = n·h`、3 カウンタ canonical）と `MarkLedger.consume`／`shiftOne`／`beginShift`。`WatchLedger`（marks ＋ `balance = 4h` ＋ lag canonical・非負）。`ChainLedger` と `chainLedger_step`／`_matched`／`_chainAt`。**`WatchLedger.stageEntry_of_break`**: lag ゼロの break で、break 後 `margin ≥ 0` かつ `distance ≠ 4h − 1` なら `StageEntry Rad last ∧ Canonical last`。
+* `PalPeg/RestartStageRun.lean`: `LedgerAt`／`ledgerAt_tick`／`ledgerAt_packed`（packed run の全点で台帳）。`BrokenStage`／`brokenStage_tick`（restart-first の `Canonical` の下で保存。guard 状態は次 tick で restart されるので broken の guard 状態は break 直後の 1 状態だけ）。`brokenStage_packed`、**`restartStage_packed`**（packed run の guard 状態の restart は `Restarted ∧ StageEntry` に着地。入力: `NoBoundaryBreak`、`ScanInvariant`、`Canonical length`）。
+
+**未完の部分（区別して書く）**
+
+* 仮説 `NoBoundaryBreak`（未証明）: packed run 上の matched 比較で `ChainStep s.chain (.watch w1) ∧ BreakStep w1 w'` なら `distance w1 ≠ 4h − 1`。証明の筋: 予測記号 `= bounce[(P+1−anchor) % 2h]`（`symbol_of_coreP`）`= text[P+1−2h]`（`BlockOn`）`= text[C−R−1+2h]`（`ScanInvariant` の回文）`= text[C−R−1]`（**左証明書** `PeriodOn (2h) (C−4h) C`）`= text[C+R+1]`（matched）。左証明書は誕生点で `GalilCandidatePeriod.candidate_periodOn`（`birthMinimal_packed` 経由、`lower` 不問）、shift 入口で全区間周期（`periodOn_span_of_next`、`R ≥ 4h` は `four_of_guard`）から作り、中心に沿って運ぶ新しい run 不変量が要る。
+* replay 中（`replaying = true`）は `LPackM.scanGeom` が `ScanInvariant` を出さない。`restartStage_packed` は `ScanInvariant` を入力に取る形にした。`NoBoundaryBreak` の証明でも同じ問題が出る（replay 中の `ScanInvariant` は `OracleTick.replayStage` の `Restarted … 0 reset` から replay 区間に沿って運ぶ必要がある）。
+* 葉 `hrestartStage` の形（`OracleRun.settle`／`CanonicalReplay.comparison` の呼び出し側）に `ScanInvariant`／`Canonical length` を渡す変更は未着手。
+
 ## n268 — canonical 方針を restart-first に戻した（no-restart は `hmove` と両立しない）
 
 **公理への進捗**
