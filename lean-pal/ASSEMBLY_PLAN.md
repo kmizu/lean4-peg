@@ -1,3 +1,35 @@
+## n234 — 公理進捗: 第 3 連言 `FreshShiftLedger` の producer（左端でも真）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 3 連言の中身 `FreshShiftLedger w s s'` が、`ChainW` 形の窓（比較後の chain）＋中心記号 `x[cen] = cc`＋比較後の右ヘッド 3 事実から 1 本の定理で出る（`ShiftPalAlongTrace.freshShiftLedger_of_chainW`、標準公理のみ）。**左端の不一致でも成り立つ**（n233 で偽と分かった第 2 連言と違い、5 成分とも語レベルで左端に触れない）。残るのは `LandingData` からの wrapper（次） |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 部品（全部 `shiftInv_of_watch_entry` と共用）
+
+| 定理 | 内容 |
+|---|---|
+| `block_last_of_blockOn` | `x[cen + 2h]? = some cc`（`bounce` の末尾は `cc`） |
+| `palAt_block_of_centre` | `PalAt x (cen + h) h`（ブロック回文。`palNext_of_centre` から切り出し） |
+| `palAt_mirror` | `PalAt x C R → PalAt x (C+d) r → d + r ≤ R → PalAt x (C−d) r` |
+| `periodOn_extend_left` | 周期区間を左へ 1 つ伸ばす |
+| `freshShiftLedger_of_chainW` | 5 成分: `palAt_mirror`（`hIn`）／`periodOn_mirror`＋`periodOn_extend_left`（`hLeft`）／`periodLength_of_coreX`／margin／`blockOn_succ_of_symbol`（`hCaught`） |
+
+### 供給側（一次情報で確認）
+
+* `BlockOn` の producer は `CloseoutWatchRound48/50/53`（`LandingData` の transport）と
+  `GalilReplaySpan.blockOn_of_candidate`（誕生時、DP の `Candidate` から）、
+  `chainW_start`（誕生時の `ChainW`、`hwin : BlockOn` を入力に取る）。
+* `CloseoutWatchRound42` ヘッダ: found 起点の経路（`ShiftTailC`／`foundRouteMC_shift_Inv`）は
+  `InvLPC` ＋ DP レコードに根ざし `ChainW` を運ばない。replay 生まれの経路は `ChainW` を運ぶ。
+  **両経路とも誕生時に `Candidate`（`x[cen] = cc` を含む）を持つ**ので、found 起点でも
+  `blockOn_of_candidate`＋`chainW_start` で `LandingData` を立てれば同じ transport が使える。
+
 ## n233 — 公理進捗: 第 2 連言 `H_freshShiftAtShiftEntry` は左端の不一致で偽（REFUTED・条件付き）
 
 **公理への進捗**

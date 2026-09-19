@@ -210,13 +210,50 @@ theorem bounce_getElem?_symm (cc b : Fin 3) (xs : List (Fin 3)) (i : ℕ) (hi : 
 
 #print axioms bounce_getElem?_symm
 
-/-- **`ShiftInv` の `palNext`（shift 先の中心 `cen + h` の回文）。**  窓は `cen + 1` から
-始まるので中心の左 `h` 個の周期性は窓に無い。添字 `i` で場合分け:
+/-- **ブロックの末尾 `cc` は窓の中。**  `bounce cc b xs` の最後の記号は `cc` なので、
+窓が 1 周期ぶん届いていれば `x[cen + 2h] = cc`。 -/
+theorem block_last_of_blockOn {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
+    {cen E : ℕ} (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs (cen + 1) E)
+    (hE : cen + 2 * (xs.length + 1) ≤ E) :
+    (encoded raw)[cen + 2 * (xs.length + 1)]? = some cc := by
+  have h2 := hblk (2 * (xs.length + 1) - 1) (by omega)
+  rw [show cen + 1 + (2 * (xs.length + 1) - 1) = cen + 2 * (xs.length + 1) from by omega,
+    Nat.mod_eq_of_lt (by omega)] at h2
+  rw [h2]
+  unfold GalilScaffoldChainSweep.bounce
+  rw [show 2 * (xs.length + 1) - 1 = ((xs ++ [b]) ++ xs.reverse).length from by
+      simp only [List.length_append, List.length_singleton, List.length_reverse]; omega,
+    ← List.append_assoc, List.getElem?_concat_length]
 
-* `i < h`: 両添字とも 1 ブロック `[cen+1, cen+2h−1]` の内側——`bounce` の `b` を中心とした
-  対称性（`bounce_getElem?_symm`）
-* `i = h`: `x[cen] = cc`（`hcentre`）と `x[cen+2h] = bounce[2h−1] = cc`
-* `h < i`: 左の添字を `pal` で中心の右へ鏡映し、窓の周期性で `2h` 進める -/
+#print axioms block_last_of_blockOn
+
+/-- **ブロックは `cen + h` を中心に半径 `h` の回文。**  `i < h` は 1 ブロックの内側で
+`bounce` の対称性（`bounce_getElem?_symm`）、`i = h` は `x[cen] = cc = x[cen + 2h]`。 -/
+theorem palAt_block_of_centre {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
+    {cen E : ℕ} (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs (cen + 1) E)
+    (hcentre : (encoded raw)[cen]? = some cc)
+    (hE : cen + 2 * (xs.length + 1) ≤ E) (hlen : E < (encoded raw).length) :
+    Manacher.PalAt (encoded raw) (cen + (xs.length + 1)) (xs.length + 1) := by
+  refine ⟨by omega, by omega, ?_⟩
+  intro i hi
+  rcases Nat.lt_or_ge i (xs.length + 1) with hlt | hge
+  · have h1 := hblk (xs.length - i) (by omega)
+    have h2 := hblk (xs.length + i) (by omega)
+    rw [show cen + 1 + (xs.length - i) = cen + (xs.length + 1) - i from by omega] at h1
+    rw [show cen + 1 + (xs.length + i) = cen + (xs.length + 1) + i from by omega] at h2
+    rw [h1, h2, Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
+    exact bounce_getElem?_symm cc b xs i (by omega)
+  · have hi' : i = xs.length + 1 := by omega
+    subst hi'
+    rw [show cen + (xs.length + 1) - (xs.length + 1) = cen from by omega,
+      show cen + (xs.length + 1) + (xs.length + 1) = cen + 2 * (xs.length + 1) from by omega,
+      hcentre, block_last_of_blockOn hblk hE]
+
+#print axioms palAt_block_of_centre
+
+/-- **`ShiftInv` の `palNext`（shift 先の中心 `cen + h` の回文、半径 `R + 1 − h`）。**
+`i ≤ h` はブロック回文（`palAt_block_of_centre`）、`h < i` は左の添字を `pal` で中心の右へ
+鏡映してから窓の周期性で `2h` 進める。 -/
 theorem palNext_of_centre {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)} {cen R : ℕ}
     (hpal : Manacher.PalAt (encoded raw) cen R)
     (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs (cen + 1) (cen + R + 1))
@@ -225,31 +262,47 @@ theorem palNext_of_centre {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)
     (hlen : cen + R + 1 < (encoded raw).length) :
     Manacher.PalAt (encoded raw) (cen + (xs.length + 1)) (R + 1 - (xs.length + 1)) := by
   have hRc : R ≤ cen := hpal.1
+  have hblock := palAt_block_of_centre hblk hcentre (by omega) hlen
   refine ⟨by omega, by omega, ?_⟩
   intro i hi
-  rcases lt_trichotomy i (xs.length + 1) with hlt | heq | hgt
-  · have h1 := hblk (xs.length - i) (by omega)
-    have h2 := hblk (xs.length + i) (by omega)
-    rw [show cen + 1 + (xs.length - i) = cen + (xs.length + 1) - i from by omega] at h1
-    rw [show cen + 1 + (xs.length + i) = cen + (xs.length + 1) + i from by omega] at h2
-    rw [h1, h2, Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
-    exact bounce_getElem?_symm cc b xs i (by omega)
-  · subst heq
-    have h2 := hblk (2 * (xs.length + 1) - 1) (by omega)
-    rw [show cen + 1 + (2 * (xs.length + 1) - 1) = cen + (xs.length + 1) + (xs.length + 1)
-        from by omega, Nat.mod_eq_of_lt (by omega)] at h2
-    rw [show cen + (xs.length + 1) - (xs.length + 1) = cen from by omega, h2, hcentre]
-    unfold GalilScaffoldChainSweep.bounce
-    rw [show 2 * (xs.length + 1) - 1 = ((xs ++ [b]) ++ xs.reverse).length from by
-        simp only [List.length_append, List.length_singleton, List.length_reverse]; omega,
-      ← List.append_assoc, List.getElem?_concat_length]
+  rcases Nat.lt_or_ge (xs.length + 1) i with hgt | hle
   · have hm := hpal.2.2 (i - (xs.length + 1)) (by omega)
     rw [show cen - (i - (xs.length + 1)) = cen + (xs.length + 1) - i from by omega] at hm
     have hp := periodOn_of_blockOn hblk (cen + (i - (xs.length + 1))) (by omega) (by omega)
     rw [hm, hp, show cen + (i - (xs.length + 1)) + 2 * (xs.length + 1)
         = cen + (xs.length + 1) + i from by omega]
+  · exact hblock.2.2 i hle
 
 #print axioms palNext_of_centre
+
+/-- **回文の鏡映。**  `C` を中心とする半径 `R` の回文の内側で、`C + d` を中心とする半径 `r` の
+回文は `C − d` を中心とする半径 `r` の回文に写る。 -/
+theorem palAt_mirror {α : Type} {x : List α} {C R d r : ℕ}
+    (hpal : Manacher.PalAt x C R) (hin : Manacher.PalAt x (C + d) r) (hd : d + r ≤ R) :
+    Manacher.PalAt x (C - d) r := by
+  have hRC : R ≤ C := hpal.1
+  have hlen : C + R < x.length := hpal.2.1
+  refine ⟨by omega, by omega, ?_⟩
+  intro i hi
+  have h1 : x[C - d - i]? = x[C + d + i]? := by
+    have := Manacher.mirror_getElem? hpal (p := C - d - i) (by omega) (by omega)
+    rwa [show 2 * C - (C - d - i) = C + d + i from by omega] at this
+  have h2 : x[C - d + i]? = x[C + d - i]? := by
+    have := Manacher.mirror_getElem? hpal (p := C - d + i) (by omega) (by omega)
+    rwa [show 2 * C - (C - d + i) = C + d - i from by omega] at this
+  rw [h1, h2, hin.2.2 i hi]
+
+#print axioms palAt_mirror
+
+/-- **周期区間を左へ 1 つ伸ばす。** -/
+theorem periodOn_extend_left {α : Type} {x : List α} {p a b : ℕ}
+    (h : PeriodOn x p (a + 1) b) (ha : x[a]? = x[a + p]?) : PeriodOn x p a b := by
+  intro i hi hb
+  rcases Nat.eq_or_lt_of_le hi with rfl | hlt
+  · exact ha
+  · exact h i hlt hb
+
+#print axioms periodOn_extend_left
 
 /-- **`CoreX` の予測記号、窓の右端でも。**  `GalilReplaySpan.coreX_next` は `canRight` を
 出すために右に 1 歩の余裕（`position ver + 1 < |encoded raw|`）を要求するが、**予測記号
@@ -549,6 +602,80 @@ def FreshShiftLedger (w : List (Fin 2)) (s s' : GalilVM) : Prop :=
       2 * periodLength wch ≤ r₀ ∧
       (encoded w)[position s.center + r₀ + 1 - 2 * periodLength wch]? =
         (encoded w)[position s.center + r₀ + 1]?
+
+/-- **第 3 連言 `FreshShiftLedger` の producer。**  左端の不一致でも成り立つ（5 成分とも
+語レベルで左端に触れない）。入力は `shiftInv_of_watch_entry` と同じ一次事実のうち
+右ヘッド側だけ:
+
+* `hCW` — `ChainW` の `.watch` 枝（比較後の chain `s'.chain`、窓は `cen + R` まで）
+* `hR` — 直前の右ヘッド `position s.right = cen + R`（`ScanInvariant` の `r₀` を `R` に固定する）
+* 比較後の右ヘッド 3 事実（`s'.right = right s.right`）
+* `hcentre` — 中心の記号 `x[cen] = cc`
+* `hpo` — `s'.periodOnly = false`（guard の `margin ≥ 0` 枝を選ぶ） -/
+theorem freshShiftLedger_of_chainW {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
+    {cen R bud : ℕ} {lim : Bool} {s s' : GalilVM}
+    (hcen : position s.center = cen)
+    (hCW : PalPeg.GalilReplaySpan.ChainW raw cen (cen + R) (cen + R) bud lim cc b xs s'.chain)
+    (hR : position s.right = cen + R)
+    (hrightRep : GalilScaffoldInputTrace.Represents s'.right.head raw)
+    (hrightPresent : s'.right.head.focus ≠ none)
+    (hrightPos : position s'.right = cen + R + 1)
+    (hcentre : (encoded raw)[cen]? = some cc)
+    (hpo : s'.periodOnly = false) :
+    FreshShiftLedger raw s s' := by
+  intro hguard wch hchain r₀ hscan
+  have hr₀ : r₀ = R := by have := hscan.rightPos; omega
+  rw [hr₀] at hscan ⊢
+  have hpal : Manacher.PalAt (encoded raw) cen R := by rw [← hcen]; exact hscan.palindrome
+  rw [hchain] at hCW
+  obtain ⟨hlag, hblk, hcore, hcanM, hmargin, -⟩ := hCW
+  obtain ⟨w', hw', hlagZ, -, -, hsign, hsym⟩ := hguard
+  rw [hchain] at hw'
+  have hww : wch = w' := ChainVM.watch.inj hw'
+  subst hww
+  simp only [hpo, Bool.false_eq_true, ↓reduceIte] at hsign
+  have hpl : periodLength wch = xs.length + 1 := periodLength_of_coreX hcore
+  rw [hpl, hcen]
+  -- the verifier sits on the previous right head
+  have hposNil : wch.lag.pos = [] := by
+    have hz : (wch.lag.pos.isEmpty && wch.lag.neg.isEmpty) = true := hlagZ
+    cases hp : wch.lag.pos with
+    | nil => rfl
+    | cons _ _ => simp [hp] at hz
+  have hver : position wch.machine.verifier = cen + R := by
+    have hl := hlag.2
+    rw [hposNil, List.length_nil, Nat.add_zero] at hl
+    exact hl
+  -- the read at the new right head extends the window by one
+  have hreadR : read s'.right = (encoded raw)[cen + R + 1]? := by
+    rw [represented_read s'.right raw hrightRep hrightPresent, hrightPos]
+  have hreadRne : read s'.right ≠ none := fun hnone =>
+    hrightPresent (Option.map_eq_none_iff.1 hnone)
+  have hrightLt : cen + R + 1 < (encoded raw).length := by
+    rcases Nat.lt_or_ge (cen + R + 1) (encoded raw).length with hlt | hge
+    · exact hlt
+    · exact absurd (hreadR.trans (List.getElem?_eq_none_iff.2 hge)) hreadRne
+  have hblk' := blockOn_succ_of_symbol hblk hcore hver (hsym.trans hreadR)
+  -- sizes
+  have hmNonneg : (0 : ℤ) ≤ value wch.margin := by
+    by_cases hlt : value wch.margin < 0
+    · rw [(GalilScaffoldCounter.negative_iff wch.margin hcanM).2 hlt] at hsign
+      exact absurd hsign (by decide)
+    · omega
+  have hsize : 4 * (xs.length + 1) ≤ R := by omega
+  have hcen2 : (encoded raw)[cen]? = (encoded raw)[cen + 2 * (xs.length + 1)]? := by
+    rw [hcentre, block_last_of_blockOn hblk (by omega)]
+  refine ⟨?_, ?_, by omega, by omega, ?_⟩
+  · exact palAt_mirror hpal (palAt_block_of_centre hblk hcentre (by omega) (by omega))
+      (by omega)
+  · exact PalPeg.periodOn_mirror hpal (by omega)
+      (periodOn_extend_left (periodOn_of_blockOn hblk) hcen2)
+  · have hp := periodOn_of_blockOn hblk' (cen + R + 1 - 2 * (xs.length + 1)) (by omega)
+      (by omega)
+    rwa [show cen + R + 1 - 2 * (xs.length + 1) + 2 * (xs.length + 1) = cen + R + 1
+      from by omega] at hp
+
+#print axioms freshShiftLedger_of_chainW
 
 /-- **`ShiftPal` を `FreshShiftLedger` 1 つから。**  比較の行き先の右ヘッドが
 `right s.right` であることは `compareFound` の `hvr` から出る（`afterBirth` /
