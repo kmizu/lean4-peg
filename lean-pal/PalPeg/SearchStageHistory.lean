@@ -33,8 +33,8 @@ def WindowBound (s : GalilScaffoldSearchFinish.State) (H : ℕ) : Prop :=
   match s.mode with
   | .wait => value s.span ≤ (H : ℤ)
   | .double => value s.span + 2 * value s.work ≤ 2 * (H : ℤ)
-  | .grow => value s.span + 8 * value s.work ≤ 4 * (H : ℤ)
-  | _ => value s.span ≤ 4 * (H : ℤ)
+  | .grow => value s.span + 8 * value s.work ≤ 2 * (H : ℤ) + 2
+  | _ => value s.span ≤ 2 * (H : ℤ) + 2
 
 /-- The debt balance against the scan radius `R`, and the candidate-free window. -/
 structure StageHistory (p : GalilScaffoldPlace.Place) (lower : ℕ) (R : ℤ) (v : SearchVM) :
@@ -96,7 +96,7 @@ def Steady (m : GalilScaffoldSearchFinish.Mode) : Prop :=
 theorem stageHistory_of_steady {p : GalilScaffoldPlace.Place} {lower : ℕ} {R : ℤ} {v : SearchVM}
     (hsteady : Steady v.search.mode)
     (hbalance : 4 * (value v.search.debt + R) = value v.search.span)
-    (hwindow : ∃ H : ℕ, NoCandidate p lower H ∧ value v.search.span ≤ 4 * (H : ℤ)) :
+    (hwindow : ∃ H : ℕ, NoCandidate p lower H ∧ value v.search.span ≤ 2 * (H : ℤ) + 2) :
     StageHistory p lower R v := by
   obtain ⟨H, hnone, hbound⟩ := hwindow
   refine ⟨fun _ => ?_, fun hwait => ?_, fun _ => ⟨H, hnone, ?_⟩,
@@ -109,7 +109,7 @@ theorem stageHistory_of_grow {p : GalilScaffoldPlace.Place} {lower : ℕ} {R : �
     (hmode : v.search.mode = .grow)
     (hbalance : 4 * (value v.search.debt + R) = value v.search.span)
     (hwindow : ∃ H : ℕ, NoCandidate p lower H ∧
-      value v.search.span + 8 * value v.search.work ≤ 4 * (H : ℤ)) :
+      value v.search.span + 8 * value v.search.work ≤ 2 * (H : ℤ) + 2) :
     StageHistory p lower R v := by
   obtain ⟨H, hnone, hbound⟩ := hwindow
   refine ⟨fun _ => ?_, fun hwait => ?_, fun _ => ⟨H, hnone, ?_⟩, by simp [hmode]⟩
@@ -572,5 +572,56 @@ theorem radius_le_window {p : GalilScaffoldPlace.Place} {lower clock : ℕ} {R :
     rw [hspanValue, hworkValue] at hfund hbound hbalance hsize
     have hmax : 1 ≤ max lower 1 := le_max_right _ _
     omega
+
+/-! ## The radius at a find -/
+
+/-- **A find happens within two semiperiods of the centre.**  The stage that finds the least
+candidate `H` has span at most `8H` (the previous window, at least half of it, holds no
+candidate, and a candidate only reads its first `4H + 1` places), and the radius is at most a
+quarter of the span. -/
+theorem found_radius_le {p : GalilScaffoldPlace.Place} {lower clock : ℕ} {R : ℤ} {a : Bool}
+    {v v' : SearchVM}
+    (hbudget : BudgetInv p lower clock v) (hhistory : StageHistory p lower R v)
+    (hrun : v.search.mode = .run)
+    (hquanta : SafeQuanta v.search v.dp [a] v'.search v'.dp)
+    (hfound : v'.search.mode = .found) (cc : Fin 3) :
+    ∃ H : ℕ, GalilBranchInvariants.CopyInv (v'.dp.config.tapes 11) reset p
+        (GalilScaffoldChainPeriod.start cc) H ∧ 1 ≤ H ∧ R ≤ 2 * (H : ℤ) := by
+  have hactive : Active v.search.mode := by simp [Active, hrun]
+  have hbalance := hhistory.balance hactive
+  simp only [hrun, reduceCtorEq, if_false] at hbalance
+  obtain ⟨Hprev, hnone, hbound⟩ := hhistory.window hactive
+  simp only [WindowBound, hrun] at hbound
+  obtain ⟨span, s0, bs, hspan, hs0, -, hreached, hfund⟩ := hbudget.running hrun
+  have hspanValue : value v.search.span = (span : ℤ) := by rw [hspan, ofNat_value]
+  have hdebtNonneg : 0 ≤ value v.search.debt := by
+    have hlength := running_length_lt hs0 hreached hrun
+    have hclock := hbudget.clock_le
+    unfold credit at hfund
+    omega
+  have hreached' := dpReached_step hreached hquanta
+  have hresult := result_of_reached hs0 hreached' hfound
+  obtain ⟨H, hcandidate, -, hdenote, hhead, hfocus, -⟩ :=
+    GalilScaffoldChainAnswer.found_output hreached' hs0 hfound hresult
+  have hpositive : 0 < H := by have := hcandidate.1; omega
+  refine ⟨H, AnswerAheadDecode.copyInv_of_found hpositive hdenote hhead hfocus hcandidate,
+    hpositive, ?_⟩
+  -- the candidate does not fit the previous window
+  have hwindowLength : 4 * H + 1 ≤ span + 1 := by
+    have hlen := hcandidate.2.1
+    rw [List.length_take] at hlen
+    omega
+  have hnotPrevious : Hprev < 4 * H := by
+    by_contra hfits
+    have hstreamLength : span + 1 ≤ (GalilScaffoldPlace.stream p).length ∨
+        (GalilScaffoldPlace.stream p).length < span + 1 := le_or_gt _ _
+    apply hnone H
+    apply candidate_rewindow hcandidate
+    have hlen := hcandidate.2.1
+    rw [List.length_take] at hlen ⊢
+    omega
+  rw [hspanValue] at hbalance hbound
+  have hprevZ : (Hprev : ℤ) < 4 * (H : ℤ) := by exact_mod_cast hnotPrevious
+  omega
 
 end PalPeg.SearchStageHistory
