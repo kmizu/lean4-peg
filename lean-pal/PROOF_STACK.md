@@ -1,3 +1,23 @@
+## n272 — 葉 `hmove` の idle＋`missed` 分岐を証明して接続（葉の本数は 1 のまま、前提が 1 つ狭まった）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉は `hmove` の 1 本のまま。ただし `hmove` は前提 `¬ (s.chain = .idle ∧ vq.search.mode = .missed)` と `PackedFromBoot ⟨c₀,r₀⟩` を受け取る形になり、idle＋`missed` 分岐は `RestartLowerRun.move_of_idle_missed` が証明して内部で供給する |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。
+
+**何をしたか**
+
+* `CanonicalSearchProgram.LowerExcludedFrom raw C lower base`: `base` 以上の半径の span すべてで `δ ≤ lower` の周期 `2δ` が無い。`LowerExcludedAtBreak.lowerExcluded_of_break` はこの形（`base = d+1`、break を含む span）を出すようになり、前提 `d+1 ≤ 4(last+1)` は不要になった（`toLowerExcluded` が旧形に落とすときだけ使う）。
+* run 不変量の載せ替え: `LowerAt` は「`∃ base ≤ 現在の半径`, `base ≤ 4(L+1)`, `LowerExcludedFrom … base`」、`LastExcluded raw C Rad w` は restart が見る半径 `Rad` を base にする。`BrokenStage` の payload は `Extra : ℕ → ℕ → Watch.State → Prop`（centre、半径）。
+* `RestartLowerRun.no_lower_period_at_scan`: chain idle の scan 状態で、**現在の半径**の span に `δ ≤ lower` の周期が無い（fallback 移動不等式の `hlow`）。
+* `CanonicalChainMinimal.move_of_idle_missed_packed` は `lower = reset` の代わりに `hlow` を取る。`OracleRun` の fallback 葉に `PackedFromBoot` を通した。
+
+**未完の部分**: `hmove` の残り分岐（設計表は n271 直下の「`hmove` の設計」）。idle で探索が段の途中（`grow`／`lower`…`run`／`wait`／`double`）の分岐は既存部品が無く、新しい run 不変量 `StageHistory`（失敗した段の窓に `Candidate` が無い ∧ `Rad ≤ その窓`）と `value debt + Rad` の台帳が要る。`GalilSearchContractStage.no_span_period_of_stage` の核は「窓に `Candidate` が無い」だけを使っている（`hnone`）ので、帰着先はそこ。copy／back、稼働中 watch、guard 不成立の broken の各分岐も未着手。`obligation_localRealization` は未着手。
+
 ## n271 — 葉 `hshiftPeriodMinimal` を証明して `OracleReady` に接続（producer の葉は 2 → 1）
 
 **公理への進捗**
