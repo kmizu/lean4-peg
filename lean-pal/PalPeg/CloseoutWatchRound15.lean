@@ -139,7 +139,7 @@ theorem roundsRouteLP_of_tail (centre : GalilVM → Fin 3)
       (PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry qq first hE.invLPC)
       a ls rs qw gap hraw hseg0 hmF hrF hcF havF hidle hCen vq hq hfound hmt ch hch hchne oF hoF
       hprepSeg hseg h hm1 hr1 hc1 w hs1 hz hav vs vq' hcmp hmis hq' hg s2' hb hs2' hi2 hchain o ho
-      org hint he hoc ha hdp hpc hpos11 hlow hrounds hseg3 hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3
+      org hint he hoc ha hdp hpc hpos11 hlow hrounds hseg3 hm3 hr3 hc3 w3 hs3 hz3 hav3 vs3 vq3 hcmp3
       hmt3 hq3 o3 ho3 w3' hbroken hmargin hlast hlag
   refine ⟨cT, sT, k, L, hst, hcr, hLP, landingRestart_of_inv hInv, hprog, ?_⟩
   rw [hright]
@@ -169,7 +169,7 @@ theorem breakRouteLP_of_tail (centre : GalilVM → Fin 3)
     PalPeg.GalilInvPlus2.foundRouteMC_noshift''_Inv centre place entry qq first raw hex hE.invLPC
       (PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry qq first hE.invLPC)
       hseg0 hmF hrF hcF havF hidle vq hq hfound hmt ch hch hchne oF hoF hprepSeg cen ys b hwatch2
-      hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken
+      hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hz3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken
       hmargin
   refine ⟨cT, sT, k, L, hst, hcr, hLP2, landingRestart_of_inv hInv, hc, hlt, ?_⟩
   rw [hright]

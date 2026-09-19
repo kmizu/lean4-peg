@@ -29,6 +29,14 @@ def BreakStep (w w' : GalilScaffoldChainWatch.State) : Prop :=
     GalilScaffoldInputHead.read (right w.machine.verifier) ≠ some a ∧
     w' = ⟨consume w.machine, w.lag, GalilScaffoldCounter.inc w.margin⟩
 
+/-- Scala `step()` at positive lag: `consume()` moves the verifier, reads the period
+symbol, and breaks the chain when the input disagrees (`M-watchBreak`).  The shape of
+`BreakStep` without the lag-zero clause and without the target equation. -/
+def WatchBreak (w : GalilScaffoldChainWatch.State) : Prop :=
+  GalilScaffoldCounter.positive w.lag = true ∧ GalilScaffoldChainVerifier.canRight w.machine.verifier ∧
+  ∃ a : Fin 3, GalilScaffoldChainConsume.symbol w.machine.control.period.focus = some a ∧
+    GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right w.machine.verifier) ≠ some a
+
 inductive ChainVM
   | idle
   | copy (answer : GalilScaffoldTape.Tape) (h : Counter) (walker : GalilScaffoldPlace.Place)
@@ -64,6 +72,12 @@ inductive ChainStep : ChainVM → ChainVM → Prop
   | backDone (v) (h lag margin) (ver) (hf : GalilScaffoldChainPeriod.isFirst v.focus = true) :
       ChainStep (.back v h lag margin ver) (.watch ⟨⟨ver, watchControl v⟩, lag, margin⟩)
   | watchStep (w w') (ht : GalilScaffoldChainWatch.Internal w w') : ChainStep (.watch w) (.watch w')
+  /-- Scala `step()` at positive lag: `consume()` moves the verifier and, on a mismatch, breaks
+  the chain (`Mode.Broken`) without touching `lag`／`margin`／`distance`（`M-watchBreak`）. -/
+  | watchBreak (w) (hb : WatchBreak w) :
+      ChainStep (.watch w)
+        (.broken ⟨⟨GalilScaffoldChainVerifier.right w.machine.verifier, w.machine.control⟩,
+          w.lag, w.margin⟩)
 
 /-- `chain.matched()` at a matched scan comparison. -/
 inductive ChainMatched : ChainVM → ChainVM → Prop
@@ -73,6 +87,18 @@ inductive ChainMatched : ChainVM → ChainVM → Prop
   | back (v h lag margin ver) : ChainMatched (.back v h lag margin ver) (.back v h (inc lag) (inc margin) ver)
   | watch (w w') (ho : GalilScaffoldChainWatch.Outer w true w') : ChainMatched (.watch w) (.watch w')
   | breaks (w w') (hb : BreakStep w w') : ChainMatched (.watch w) (.broken w')
+  /-- Scala `matched()` on a broken chain: `margin.inc()`, then `lag.inc()`. -/
+  | brokenMatched (w) : ChainMatched (.broken w) (.broken ⟨w.machine, inc w.lag, inc w.margin⟩)
+
+/-- `WatchBreak` and `Good` read the same period symbol with opposite verdicts. -/
+theorem not_good_of_watchBreak {w : GalilScaffoldChainWatch.State} (hb : WatchBreak w) :
+    ¬ GalilScaffoldChainWatch.Good w := by
+  rintro ⟨-, a, hsym, hread⟩
+  obtain ⟨-, -, b, hsym', hread'⟩ := hb
+  have hab : some b = some a := hsym'.symm.trans hsym
+  rw [Option.some.injEq] at hab
+  subst hab
+  exact hread' hread
 
 inductive ChainSteps : ℕ → ChainVM → ChainVM → Prop
   | zero (x) : ChainSteps 0 x x

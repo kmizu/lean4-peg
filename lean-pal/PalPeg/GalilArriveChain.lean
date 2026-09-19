@@ -126,6 +126,13 @@ theorem breakStep_arrive (a : Fin 2) {w w' : GalilScaffoldChainWatch.State} (h :
     rw [consume_arrive a w.machine hc]
     rfl
 
+theorem watchBreak_arrive (a : Fin 2) {w : GalilScaffoldChainWatch.State} (h : WatchBreak w) :
+    WatchBreak (arriveW a w) := by
+  obtain ⟨hp, hc, b, hs, hr⟩ := h
+  refine ⟨hp, canRight_arrive a _, b, hs, ?_⟩
+  show GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right (arrivePH a w.machine.verifier)) ≠ some b
+  rw [right_arrive a _ hc, read_arrive]; exact hr
+
 theorem chainStep_arrive (a : Fin 2) {x y : ChainVM} (h : ChainStep x y) :
     ChainStep (arriveChain a x) (arriveChain a y) := by
   cases h with
@@ -137,6 +144,11 @@ theorem chainStep_arrive (a : Fin 2) {x y : ChainVM} (h : ChainStep x y) :
   | backStep v h lag margin ver hf => exact .backStep v h lag margin _ hf
   | backDone v h lag margin ver hf => exact .backDone v h lag margin _ hf
   | watchStep w w' ht => exact .watchStep _ _ (internal_arrive a ht)
+  | watchBreak w hb =>
+    have := ChainStep.watchBreak (arriveW a w) (watchBreak_arrive a hb)
+    have h' : (arriveW a w).machine.verifier = arrivePH a w.machine.verifier := rfl
+    rw [h', right_arrive a _ hb.2.1] at this
+    exact this
 
 theorem chainMatched_arrive (a : Fin 2) {x y : ChainVM} (h : ChainMatched x y) :
     ChainMatched (arriveChain a x) (arriveChain a y) := by
@@ -146,6 +158,7 @@ theorem chainMatched_arrive (a : Fin 2) {x y : ChainVM} (h : ChainMatched x y) :
   | back v h lag margin ver => exact .back v h lag margin _
   | watch w w' ho => exact .watch _ _ (outer_arrive a ho)
   | breaks w w' hb => exact .breaks _ _ (breakStep_arrive a hb)
+  | brokenMatched w => exact .brokenMatched _
 
 theorem chainTick_arrive (a : Fin 2) {b : Bool} {x z : ChainVM} (h : ChainTick b x z) :
     ChainTick b (arriveChain a x) (arriveChain a z) := by

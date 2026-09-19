@@ -155,6 +155,7 @@ theorem chainStep_ver {x y : ChainVM} (h : ChainStep x y) :
     cases hi with
     | idle hz => exact Or.inr ⟨_, _, rfl, rfl, Or.inl rfl⟩
     | take hp hg => exact Or.inr ⟨_, _, rfl, rfl, Or.inr rfl⟩
+  | watchBreak w hb => exact Or.inr ⟨_, _, rfl, rfl, Or.inr rfl⟩
 
 /-- The verifier after the match credit. -/
 theorem chainMatched_ver {y z : ChainVM} (h : ChainMatched y z) :
@@ -171,6 +172,7 @@ theorem chainMatched_ver {y z : ChainVM} (h : ChainMatched y z) :
     obtain ⟨-, -, -, -, -, ht⟩ := hb
     subst ht
     exact Or.inr ⟨_, _, rfl, rfl, Or.inr rfl⟩
+  | brokenMatched w => exact Or.inr ⟨_, _, rfl, rfl, Or.inl rfl⟩
 
 /-- A disabled chain tick is a bare background step: one move at most. -/
 theorem chainTick_false_ver {x z : ChainVM} (ht : ChainTick false x z) :

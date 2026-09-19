@@ -235,7 +235,8 @@ theorem tick_watch_phase_ne_four_of_notWatch {a : Bool} {x z : ChainVM}
   | brokenIdle wb =>
     cases a
     · exact absurd ((hAfter : z = ChainVM.broken wb).symm.trans hEq) (by simp)
-    · exact (by cases (hAfter : ChainMatched (ChainVM.broken wb) z))
+    · cases (hAfter : ChainMatched (ChainVM.broken wb) z) with
+      | brokenMatched _ => exact absurd hEq (by simp)
   | copyBit _ _ _ _ _ _ _ _ _ _ _ =>
     cases a
     · exact absurd ((hAfter : z = _).symm.trans hEq) (by simp)
@@ -279,6 +280,7 @@ theorem tick_watch_phase_ne_four_of_notWatch {a : Bool} {x z : ChainVM}
           exact consume_phase_ne_four _ _ hPhase0
       | breaks w0 w1 hBreak => exact absurd hEq (by simp)
   | watchStep w0 w1 hi => exact absurd rfl (hNotWatch w0)
+  | watchBreak w0 hb => exact absurd rfl (hNotWatch w0)
 
 #print axioms tick_watch_phase_ne_four_of_notWatch
 

@@ -141,7 +141,8 @@ whose chain prediction fails, i.e. exactly the premises `hseg3`, `hmt3`,
 def BreakEnd (c : Control) (s : GalilVM) : Prop :=
   ∃ (n : ℕ) (c3 : Control) (s3 : GalilVM), ScanSeg P q first delay n c s c3 s3 ∧
     c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
-    ∃ w3 : GalilScaffoldChainWatch.State, s3.chain = .watch w3 ∧ canRight s3.right ∧
+    ∃ w3 : GalilScaffoldChainWatch.State, s3.chain = .watch w3 ∧
+      GalilScaffoldCounter.zero w3.lag = true ∧ canRight s3.right ∧
       ∃ (vs3 : ScanVM) (vq3 : SearchVM),
         (galilFrame P q first).compare s3 (scanLens.set s3 vs3) ∧
         (galilFrame P q first).matched (scanLens.set s3 vs3) ∧

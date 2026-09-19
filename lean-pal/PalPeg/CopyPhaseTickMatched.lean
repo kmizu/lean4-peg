@@ -76,6 +76,7 @@ theorem lagPos_chainStep {x y : ChainVM} (hLag : LagPos x) (hStep : ChainStep x 
   | backStep _ _ _ _ _ _ => exact hLag
   | backDone _ _ _ _ _ _ => trivial
   | watchStep _ _ _ => trivial
+  | watchBreak _ _ => trivial
 
 /-- `ChainMatched` は lag を `inc` するだけ。 -/
 theorem lagPos_chainMatched {x y : ChainVM} (hLag : LagPos x) (hMatched : ChainMatched x y) :
@@ -86,6 +87,7 @@ theorem lagPos_chainMatched {x y : ChainVM} (hLag : LagPos x) (hMatched : ChainM
   | back _ _ _ _ _ => exact positive_inc hLag
   | watch _ _ _ => trivial
   | breaks _ _ _ => trivial
+  | brokenMatched _ => trivial
 
 /-- **`LagPos` は 1 tick で保たれる**（事象によらず）。 -/
 theorem lagPos_tick {a : Bool} {x z : ChainVM} (hLag : LagPos x) (hTick : ChainTick a x z) :

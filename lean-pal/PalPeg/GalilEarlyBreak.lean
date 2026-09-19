@@ -94,13 +94,14 @@ theorem stageEntry_after_found_final (P : Shared) (qq : ℕ) (first : Fin 9) (de
       (shiftLens.set s2' ⟨t', .watch v, cycle⟩) c' s')
     {n : ℕ} {c3 : Control} {s3 : GalilVM} (hseg3 : ScanSeg P qq first delay n c' s' c3 s3)
     (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true)
     (w3' : GalilScaffoldChainWatch.State) (hw3' : w3' = GalilScaffoldChainWatch.immediate w3)
     (ha : PalPeg.GalilRadiusConsumed.Aligned org)
     (hbroken : w3'.machine.control.broken = true)
     (hend3 : singlePositive s3.cycle = true) :
     StageEntry (foundRestartRadius org.radius h m n) w3'.machine.control.last :=
   PalPeg.GalilCatchUpDistance.stageEntry_after_found_of_rounds P qq first delay h org hint
-    hpo hzv hee hrounds hseg3 w3 hs3 w3' hw3' ha hbroken
+    hpo hzv hee hrounds hseg3 w3 hs3 hz3 w3' hw3' ha hbroken
     (hmore_of_break P qq first delay h org hint hpo hzv hee hrounds hseg3 hend3)
 
 #print axioms n_of_terminal

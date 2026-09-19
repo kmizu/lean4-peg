@@ -18,9 +18,9 @@ open GalilScaffoldCounter
 
 /-- A broken chain stays broken (and takes no credit). -/
 theorem broken_stays (es : List Bool) : ∀ {w : GalilScaffoldChainWatch.State} {z : ChainVM},
-    ChainTicks es (.broken w) z → z = .broken w := by
+    ChainTicks es (.broken w) z → ∃ w', z = .broken w' := by
   induction es with
-  | nil => intro w z h; cases h; rfl
+  | nil => intro w z h; cases h; exact ⟨w, rfl⟩
   | cons a es ih =>
     intro w z h
     cases h with
@@ -30,7 +30,9 @@ theorem broken_stays (es : List Bool) : ∀ {w : GalilScaffoldChainWatch.State} 
       | brokenIdle =>
         cases a
         · simp at hm; subst hm; exact ih hr
-        · simp at hm; cases hm
+        · simp at hm
+          cases hm with
+          | brokenMatched _ => exact ih hr
 
 /-- Chain ticks on a watching chain that stays watching are a watch run. -/
 theorem chainTicks_watch_run (es : List Bool) : ∀ {w w' : GalilScaffoldChainWatch.State},
@@ -55,7 +57,18 @@ theorem chainTicks_watch_run (es : List Bool) : ∀ {w w' : GalilScaffoldChainWa
           cases hm with
           | watch _ w'' ho => exact .next (.step hi ho) (ih hr)
           | breaks _ _ _ =>
-            have := broken_stays es hr
+            obtain ⟨_, this⟩ := broken_stays es hr
+            cases this
+      | watchBreak _ hb =>
+        cases a
+        · simp at hm
+          subst hm
+          obtain ⟨_, this⟩ := broken_stays es hr
+          cases this
+        · simp at hm
+          cases hm with
+          | brokenMatched _ =>
+            obtain ⟨_, this⟩ := broken_stays es hr
             cases this
 
 theorem verify_run_append {s u t : GalilScaffoldChainVerifier.State} {m n : ℕ}

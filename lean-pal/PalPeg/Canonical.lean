@@ -1,16 +1,12 @@
 import PalPeg.CloseoutFinalW
 import PalPeg.CloseoutPackRun49
 import PalPeg.CloseoutBundleRun
-import PalPeg.CloseoutMismatchCompare
-import PalPeg.CloseoutShiftRun
-import PalPeg.CloseoutLandingRound
 import PalPeg.CloseoutReadsOrigin
 import PalPeg.CloseoutPackRefute
 import PalPeg.CloseoutWatchShiftAudit
 import PalPeg.CloseoutBudgetFree
 import PalPeg.CloseoutRealize1
 import PalPeg.CloseoutMarksFree
-import PalPeg.CloseoutTickFalse
 import PalPeg.PackedRun
 import PalPeg.WatchOkRefute
 import PalPeg.ChainStepGap
@@ -179,7 +175,7 @@ Scala 正本の `ScaffoldChain.step()` は `Mode.Watch` かつ正 lag で `consu
 lag ゼロ経路のみ）、その結果**正 lag ＋ 不一致の watch に後続状態が存在しない**。
 だから正 lag の背景遷移は `Internal.take`（`Good` 必須）しかなく、`WatchOk.good` が
 「予測は常に当たる」と主張することになっていた。 -/
-alias model_gap_watchBreak := PalPeg.ChainStepGap.no_chainStep_at_positive_lag_mismatch
+alias model_gap_watchBreak_closed := PalPeg.ChainStepGap.chainStep_exists_at_positive_lag_mismatch
 
 /-! ## 3. run に沿って運ばれる左パック（偽の `ChainPack` の代替）
 
@@ -221,49 +217,12 @@ alias readsShift_from_readOrigin := PalPeg.CloseoutReadsOrigin.h_readsShift_of_o
 /-- **`H_readsShift` の供給経路**（controller `Rounds` ＋ 第 1 ラウンドの `Entry`）。 -/
 alias readsShift_from_rounds := PalPeg.CloseoutReadsOrigin.h_readsShift_of_rounds
 
-/-! ## 5. ラウンド 1 周の部品（Round 30 の piece 1〜4） -/
+/-! ## 5. ラウンド 1 周の部品（Round 30 の piece 1〜4）
 
-/-- **piece 1**: 不一致比較は watch を保つ（終端では lag ゼロ）。 -/
-alias mismatchCompare_keeps_watch := PalPeg.CloseoutMismatchCompare.compare_chain_of_mismatch
+n250 で削除。round 塔（`CloseoutWatchRound*`／`CloseoutMismatchCompare`／`CloseoutTickFalse`／
+`CloseoutLandingRound`）はモデル欠陥 `M-watchBreak` の上でだけ真だった補題（`WatchClosedC` 等）を
+含み、`unconditional` の閉包外なので build から外した。 -/
 
-/-- **piece 1'**: その不一致比較を構成する。 -/
-alias mismatchCompare_exists := PalPeg.CloseoutMismatchCompare.compare_mismatch_of_round
-
-/-- **piece 2**: shift 入口を構成する。 -/
-alias shiftEntry_exists := PalPeg.CloseoutMismatchCompare.beginShift_of_guard
-
-/-- **piece 3**: `CopyIdle` は FPP 成分だけを読む。 -/
-alias copyIdle_congr := PalPeg.CloseoutMismatchCompare.copyIdle_congr
-
-/-- **piece 4**: `h` 単位の `ShiftRun` はラウンドから存在する。 -/
-alias shiftRun_exists_from_round := PalPeg.CloseoutShiftRun.shiftRun_exists_round
-
-/-- **`ShiftAtMismatchM` を運ばれる不変量だけから証明**。 -/
-alias shiftAtMismatch_from_round := PalPeg.CloseoutMismatchCompare.shiftAtMismatchM_of_round
-
-/-- **`WatchClosedC`**: 背景 tick は watch を watch に保つ。 -/
-alias backgroundTick_keeps_watch := PalPeg.CloseoutMismatchCompare.watchClosedC_proved
-
-/-- **背景 tick は lag ゼロなら恒等**（`WatchOk` 不要）。 -/
-alias backgroundTick_is_identity_at_lagZero :=
-  PalPeg.CloseoutMismatchCompare.chainTick_false_idle
-
-/-- **`ChainOk` な chain から `.broken` への `ChainStep` は無い。** -/
-alias step_never_breaks := PalPeg.CloseoutTickFalse.step_ne_broken
-
-/-! ## 6. `LandingReadyC`（`hland`） -/
-
-/-- **`LandingReadyC` を運ばれる事実から出す。** -/
-alias landingReady_from_parts := PalPeg.CloseoutLandingRound.landingReadyC_of_parts
-
-/-- **`ChainReady` はラウンドから出る。** -/
-alias chainReady_from_round := PalPeg.CloseoutLandingRound.chainReady_of_round
-
-/-- **`distance = radius`**（`SumRel` ＋ lag ゼロ ＋ unbroken）。 -/
-alias distance_eq_radius := PalPeg.CloseoutLandingRound.distance_eq_radius_of_round
-
-/-- **半径の非負性**は中心台帳 ＋ 走査不変量から。 -/
-alias radius_nonneg := PalPeg.CloseoutLandingRound.radius_nonneg_of_ledger
 
 /-! ## 7. `ScanBudget` の producer（偽だった場に本物の供給元） -/
 

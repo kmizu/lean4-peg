@@ -316,13 +316,14 @@ theorem stageEntry_after_found_of_rounds (P : Shared) (qq : ℕ) (first : Fin 9)
       (shiftLens.set s2' ⟨t', .watch v, cycle⟩) c' s')
     {n : ℕ} {c3 : Control} {s3 : GalilVM} (hseg3 : ScanSeg P qq first delay n c' s' c3 s3)
     (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true)
     (w3' : GalilScaffoldChainWatch.State) (hw3' : w3' = GalilScaffoldChainWatch.immediate w3)
     (ha : PalPeg.GalilRadiusConsumed.Aligned org)
     (hbroken : w3'.machine.control.broken = true)
     (hmore : h ≤ (org.shifts + m) * h + n) :
     StageEntry (foundRestartRadius org.radius h m n) w3'.machine.control.last := by
   refine PalPeg.GalilLastLowerBreak.stageEntry_after_found_of_places P qq first delay h org hint
-    hpo hzv hee hrounds hseg3 w3 hs3 w3' hw3' ha hbroken ?_
+    hpo hzv hee hrounds hseg3 w3 hs3 hz3 w3' hw3' ha hbroken ?_
   obtain ⟨-, w', hw', hz', hp', hcr⟩ := rounds_lift P qq first delay h hrounds v hpo rfl hzv
   obtain ⟨w'', hw'', -, -, hrun⟩ := scanSeg_only P qq first delay hseg3 w' hp' hw' hz'
   have hww : w'' = w3 := by rw [hs3] at hw''; injection hw'' with e; exact e.symm

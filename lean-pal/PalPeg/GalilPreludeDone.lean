@@ -133,7 +133,17 @@ theorem chainTicks_from_watch (es : List Bool) :
           simp only [if_true] at hm
           cases hm with
           | watch _ w'' ho => exact ih hr
-          | breaks _ w'' hb => exact Or.inr ⟨_, broken_stays es hr⟩
+          | breaks _ w'' hb => exact Or.inr (broken_stays es hr)
+      | watchBreak _ hb =>
+        cases a with
+        | false =>
+          simp only [Bool.false_eq_true, if_false] at hm
+          subst hm
+          exact Or.inr (broken_stays es hr)
+        | true =>
+          simp only [if_true] at hm
+          cases hm with
+          | brokenMatched _ => exact Or.inr (broken_stays es hr)
 
 /-! ## 3. The one assumed chain-tick-count fact -/
 

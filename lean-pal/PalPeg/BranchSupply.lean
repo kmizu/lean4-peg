@@ -1839,6 +1839,7 @@ theorem chainLagCanonical_step {x z : ChainVM} (hInv : ChainLagCanonical x)
       show (0 : ℤ) ≤ value (dec w.lag)
       rw [dec_value]
       omega
+  | watchBreak w hb => exact chainLagCanonical_broken _
 
 /-- **`ChainMatched` は lag 不変量を保つ。** -/
 theorem chainLagCanonical_matched {x z : ChainVM} (hInv : ChainLagCanonical x)
@@ -1880,6 +1881,7 @@ theorem chainLagCanonical_matched {x z : ChainVM} (hInv : ChainLagCanonical x)
       omega
     | immediate _ _ => exact ⟨hCan, hNonneg⟩
   | breaks w w' _ => exact chainLagCanonical_broken w'
+  | brokenMatched w => exact chainLagCanonical_broken _
 
 #print axioms chainLagCanonical_idle
 #print axioms chainLagCanonical_chainStart
@@ -2246,6 +2248,7 @@ theorem chainVerifierRepresents_step {w : List (Fin 2)} {x z : ChainVM}
     | idle _ => exact ⟨hRep, hFocus⟩
     | take _ hGood =>
       exact representsAfterRight_free _ hRep hFocus
+  | watchBreak wch hb => exact chainVerifierRepresents_broken _
 
 /-- **`ChainMatched` は verifier の表現を保つ。**  `Outer.immediate` の `canRight` も
 `Good` の第 1 成分。 -/
@@ -2278,6 +2281,7 @@ theorem chainVerifierRepresents_matched {w : List (Fin 2)} {x z : ChainVM}
     | immediate _ hGood =>
       exact representsAfterRight_free _ hRep hFocus
   | breaks wch wch' _ => exact chainVerifierRepresents_broken wch'
+  | brokenMatched wch => exact chainVerifierRepresents_broken _
 
 theorem chainVerifierRepresents_of_chainEq {w : List (Fin 2)} {s t : GalilVM}
     (hEq : t.chain = s.chain) (hInv : ChainVerifierRepresents w s.chain) :

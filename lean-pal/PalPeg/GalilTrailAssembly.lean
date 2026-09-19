@@ -52,7 +52,7 @@ def lagOf : ChainVM → Option (PH × Ctr)
   | .copy _ _ _ _ lag _ ver => some (ver, lag)
   | .back _ _ lag _ ver => some (ver, lag)
   | .watch w => some (w.machine.verifier, w.lag)
-  | .broken w => some (w.machine.verifier, w.lag)
+  | .broken w => some (w.machine.verifier, GalilScaffoldCounter.reset)
 
 theorem exists_lag {x : ChainVM} {p : PH} (h : verOf x = some p) :
     ∃ lag, lagOf x = some (p, lag) := by
@@ -69,7 +69,7 @@ theorem exists_lag {x : ChainVM} {p : PH} (h : verOf x = some p) :
     exact ⟨w.lag, rfl⟩
   | broken w =>
     obtain rfl : w.machine.verifier = p := Option.some.inj h
-    exact ⟨w.lag, rfl⟩
+    exact ⟨GalilScaffoldCounter.reset, rfl⟩
 
 /-! ## 2. A right move gains at most one place -/
 
@@ -150,6 +150,43 @@ theorem lagLe_idle (r : ℕ) : LagLe .idle r :=
   ⟨fun p lag h => absurd h (by simp [lagOf]), fun p lag h => absurd h (by simp [lagOf]),
     fun p lag h => absurd h (by simp [lagOf])⟩
 
+/-- **A break keeps the ledger.**  The verifier moved one place right and the lag was
+positive, so `position (right ver) ≤ position ver + 1 ≤ position ver + lag ≤ r`; the
+broken chain's ledger reads its lag as `reset`. -/
+theorem lagLe_break {w : GalilScaffoldChainWatch.State} {r : ℕ} (hx : LagLe (.watch w) r)
+    (hp : GalilScaffoldCounter.positive w.lag = true) :
+    LagLe (.broken ⟨⟨GalilScaffoldChainVerifier.right w.machine.verifier, w.machine.control⟩,
+      w.lag, w.margin⟩) r := by
+  obtain ⟨hc, hn, hl⟩ := lagLe_get hx (p := w.machine.verifier) (lag := w.lag) rfl
+  have h1 : 0 < GalilScaffoldCounter.value w.lag :=
+    (GalilScaffoldCounter.positive_iff w.lag hc).mp hp
+  have hr := position_right_le w.machine.verifier
+  refine ⟨?_, ?_, ?_⟩
+  · intro p lag h; injection h with h; injection h with hp' hl'; subst hl'; exact Or.inl rfl
+  · intro p lag h; injection h with h; injection h with hp' hl'; subst hl'; exact le_rfl
+  · intro p lag h; injection h with h; injection h with hp' hl'; subst hp'; subst hl'
+    have h0 : GalilScaffoldCounter.value GalilScaffoldCounter.reset = 0 := rfl
+    show (position (GalilScaffoldChainVerifier.right w.machine.verifier) : ℤ) +
+      GalilScaffoldCounter.value GalilScaffoldCounter.reset ≤ r
+    rw [h0]
+    omega
+
+/-- **The lag-zero break keeps the ledger one place further** (the verifier consumed). -/
+theorem lagLe_breaks {w w' : GalilScaffoldChainWatch.State} {r : ℕ} (hx : LagLe (.watch w) r)
+    (hb : BreakStep w w') : LagLe (.broken w') (r + 1) := by
+  obtain ⟨-, -, -, -, -, rfl⟩ := hb
+  obtain ⟨hc, hn, hl⟩ := lagLe_get hx (p := w.machine.verifier) (lag := w.lag) rfl
+  have hr := position_right_le w.machine.verifier
+  refine ⟨?_, ?_, ?_⟩
+  · intro p lag h; injection h with h; injection h with hp' hl'; subst hl'; exact Or.inl rfl
+  · intro p lag h; injection h with h; injection h with hp' hl'; subst hl'; exact le_rfl
+  · intro p lag h; injection h with h; injection h with hp' hl'; subst hp'; subst hl'
+    have h0 : GalilScaffoldCounter.value GalilScaffoldCounter.reset = 0 := rfl
+    show (position (GalilScaffoldChainVerifier.right w.machine.verifier) : ℤ) +
+      GalilScaffoldCounter.value GalilScaffoldCounter.reset ≤ r + 1
+    rw [h0]
+    omega
+
 theorem lagLe_of_idle {x : ChainVM} {r : ℕ} (h : x = .idle) : LagLe x r := by
   rw [h]; exact lagLe_idle r
 
@@ -215,6 +252,7 @@ theorem lagLe_step {x y : ChainVM} {r : ℕ} (h : ChainStep x y) (hx : LagLe x r
     cases hi with
     | idle hz => exact hx
     | take hp hg => exact lagLe_catch (x := .watch w) rfl rfl hp hx
+  | watchBreak w hb => exact lagLe_break hx hb.1
 
 /-- **The match credit advances the trailed place by one.**  `copy`/`back` and the
 queued watch increment the lag; the immediate watch and the break move the verifier
@@ -229,9 +267,8 @@ theorem lagLe_matched {y z : ChainVM} {r : ℕ} (h : ChainMatched y z) (hy : Lag
     cases ho with
     | queued hz => exact lagLe_inc (x := .watch w) rfl rfl hy
     | immediate hz hg => exact lagLe_right (x := .watch w) rfl rfl hy
-  | breaks w w' hb =>
-    obtain ⟨-, -, -, -, -, rfl⟩ := hb
-    exact lagLe_right (x := .watch w) rfl rfl hy
+  | breaks w w' hb => exact lagLe_breaks hy hb
+  | brokenMatched w => exact lagLe_mono (lagLe_congr hy rfl) (Nat.le_succ _)
 
 theorem lagLe_chainTick_false {x z : ChainVM} {r : ℕ} (ht : ChainTick false x z)
     (hx : LagLe x r) : LagLe z r := by

@@ -77,7 +77,8 @@ theorem found_life (P : Shared) (qq : ℕ) (first : Fin 9) (delay : ℕ)
         -- the final segment and the breaking comparison
         {n : ℕ} {c3 : Control} {s3 : GalilVM} (hseg3 : ScanSeg P qq first delay n c' s' c3 s3)
         (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
-        (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
+        (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true) (hav3 : canRight s3.right)
         (vs3 : ScanVM) (vq3 : SearchVM)
         (hcmp3 : (galilFrame P qq first).compare s3 (scanLens.set s3 vs3))
         (hmt3 : (galilFrame P qq first).matched (scanLens.set s3 vs3))
@@ -116,7 +117,7 @@ theorem found_life (P : Shared) (qq : ℕ) (first : Fin 9) (delay : ℕ)
   refine ⟨h, ys, b, hcand, hys, ?_⟩
   intro bs cs hbs hcs c2 s2 hprepSeg c1 s1 hseg hm1 hr1 hc1 w hs1 hphase hz hav vs vq' hcmp hmis hq'
     predicted hpred hread hg s2' hb hs2' hi2 t' v cycle hchain o ho m c' s' hrounds hcenter n c3 s3
-    hseg3 hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 hend3 w3' hbr3 o3 ho3
+    hseg3 hm3 hr3 hc3 w3 hs3 hz3 hav3 vs3 vq3 hcmp3 hmt3 hq3 hend3 w3' hbr3 o3 ho3
   -- the found tick
   have htickF := found_start_match P qq first delay cF sF hmF hrF hcF havF hidle vq hq hfound hmt ch hchF oF hoF
   -- the chain after the preparation
@@ -154,7 +155,7 @@ theorem found_life (P : Shared) (qq : ℕ) (first : Fin 9) (delay : ℕ)
     chain_life P qq first delay a ls rs q gap sF.center hcen (P.centre sF) hreadc span lower (searchEffect_run P hq hidle hrun).1 hrun hfound hv
       sF.radius hrc hrp true dm h ys b hcand hys bs cs hbs hcs _ hlag hseg hchain0' hcenP hrad0 hrc0 hlc0 hi0
       hm1 hr1 hc1 w hs1 hphase hz hav vs vq' hcmp hmis hq' predicted hpred hread hg s2' hb hs2' hi2 hchain o ho
-      hrounds hcenter hseg3 hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 hend3 w3' hbr3 o3 ho3
+      hrounds hcenter hseg3 hm3 hr3 hc3 w3 hs3 hz3 hav3 vs3 vq3 hcmp3 hmt3 hq3 hend3 w3' hbr3 o3 ho3
   obtain ⟨k1, hst1⟩ := watchSeg_steps P qq first delay (watchSeg_of_E P qq first delay hprepSeg (by rw [afterBirth_chain, afterCompare_chain]; show ch ≠ .idle; intro h0; rw [h0] at hchF; cases hchF))
   refine ⟨⟨_, steps_trans (.succ htickF hst1) hst2⟩, hw3, hbroken, org, hint, hocen, hshifts, he, hres⟩
 

@@ -180,7 +180,8 @@ out of the watch state the segment reached. -/
 theorem breakStep_at_terminal (P : Shared) (q : ℕ) (first : Fin 9)
     {s3 : GalilVM} {vs3 : ScanVM} {vq3 : SearchVM}
     {w3 w3' : GalilScaffoldChainWatch.State}
-    (hs3 : s3.chain = ChainVM.watch w3) (hz : zero w3.lag = true)
+    (hs3 : s3.chain = ChainVM.watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true) (hz : zero w3.lag = true)
     (hcmp : (galilFrame P q first).compare s3 (scanLens.set s3 vs3))
     (hmt : (galilFrame P q first).matched (scanLens.set s3 vs3))
     (hbroken : (afterCompare s3 vs3 vq3).chain = ChainVM.broken w3') :
@@ -255,6 +256,7 @@ theorem margin_false_of_fuel (P : Shared) (q : ℕ) (first : Fin 9)
     (hlanding : s2.chain = ChainVM.watch (freshWatch ver cen ys b radius))
     (hseg : WatchSeg P q first 2048 c2 s2 c3 s3)
     (hs3 : s3.chain = ChainVM.watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true)
     (hcmp : (galilFrame P q first).compare s3 (scanLens.set s3 vs3))
     (hmt : (galilFrame P q first).matched (scanLens.set s3 vs3))
     (hbroken : (afterCompare s3 vs3 vq3).chain = ChainVM.broken w3')
@@ -360,7 +362,8 @@ def ShiftRoundC (centre : GalilVM → Fin 3)
         (shiftLens.set s2' ⟨t', .watch v, cycle⟩) c' s' ∧
       ScanSeg (PofC centre place entry raw) qq first 2048 n c' s' c3 s3 ∧
       c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
-      s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
+      s3.chain = ChainVM.watch w3 ∧ GalilScaffoldCounter.zero w3.lag = true ∧
+      canRight s3.right ∧
       (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
       (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
       searchEffect (PofC centre place entry raw) true s3 vq3 ∧
@@ -428,7 +431,8 @@ def BreakTerminalC (centre : GalilVM → Fin 3)
         (vq3 : SearchVM) (o3 : Bool) (w3' : GalilScaffoldChainWatch.State),
         WatchSeg (PofC centre place entry raw) qq first 2048 cT sT c3 s3 ∧
         c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
-        s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
+        s3.chain = ChainVM.watch w3 ∧ GalilScaffoldCounter.zero w3.lag = true ∧
+        canRight s3.right ∧
         (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
         (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
         searchEffect (PofC centre place entry raw) true s3 vq3 ∧

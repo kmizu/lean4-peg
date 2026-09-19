@@ -65,7 +65,8 @@ theorem cycle_found_stepsAll (raw : List (Fin 2)) (P : Shared) (hP : P.onLetter 
     -- the final segment and the breaking comparison
     {n : ℕ} {c3 : Control} {s3 : GalilVM} (hseg3 : ScanSeg P qq first delay n c' s' c3 s3)
     (hm3 : c3.mode = .scan) (hr3 : c3.replaying = false) (hc3 : c3.clock = 1)
-    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
+    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true) (hav3 : canRight s3.right)
     (vs3 : ScanVM) (vq3 : SearchVM)
     (hcmp3 : (galilFrame P qq first).compare s3 (scanLens.set s3 vs3))
     (hmt3 : (galilFrame P qq first).matched (scanLens.set s3 vs3))
@@ -85,7 +86,7 @@ theorem cycle_found_stepsAll (raw : List (Fin 2)) (P : Shared) (hP : P.onLetter 
     scan_events_invariant ((watchSegE_heads P qq first delay hseg0).1 raw (position r.center) Rad) hscanR
   have houtF : OutputRel raw cF sF := stepsAll_last h1
   obtain ⟨k2, h2⟩ := life_stepsAll raw P hP hP' qq first delay hmF hrF hcF havF hidle hinvF houtF vq hq hfound
-    hmt ch hch hchne oF hoF hprepSeg hseg h hm1 hr1 hc1 w hs1 hz hav vs vq' hcmp hmis hq' hg s2' hb hs2' hi2 hchain o ho org hint he hrounds hseg3 hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 hinv3
+    hmt ch hch hchne oF hoF hprepSeg hseg h hm1 hr1 hc1 w hs1 hz hav vs vq' hcmp hmis hq' hg s2' hb hs2' hi2 hchain o ho org hint he hrounds hseg3 hm3 hr3 hc3 w3 hs3 hz3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 hinv3
   have htick : Tick (galilFrameS P qq first) delay
       ⟨{c3 with clock := delay, output := o3, replaying := false}, afterCompare s3 vs3 vq3⟩
       ⟨{c3 with clock := delay, output := o3, replaying := false}, {(afterCompare s3 vs3 vq3) with chain := .idle, lower := w3'.machine.control.last, search := GalilScaffoldSearchFinish.begin w3'.machine.control.last (afterCompare s3 vs3 vq3).radius, dp := GalilScaffoldControl.reset entry (afterCompare s3 vs3 vq3).dp}⟩ :=

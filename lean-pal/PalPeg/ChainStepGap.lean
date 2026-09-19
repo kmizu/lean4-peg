@@ -96,27 +96,12 @@ namespace PalPeg.ChainStepGap
 open PalPeg PalPeg.GalilScaffoldChainInputSupply PalPeg.GalilChainTickable
 open GalilScaffoldCounter
 
-/-- **欠陥の形式的な記述。** 正の lag を持ち、period と入力が食い違っている watch は、
-現行の `ChainStep` では**行き先が無い**。Scala 正本ではそこで `Broken` に落ちる。 -/
-theorem no_chainStep_at_positive_lag_mismatch {w : GalilScaffoldChainWatch.State}
-    (hp : positive w.lag = true) (hng : ¬ GalilScaffoldChainWatch.Good w) :
-    ¬ ∃ z, ChainStep (ChainVM.watch w) z := by
-  rintro ⟨z, hz⟩
-  cases hz with
-  | watchStep w w' ht =>
-    cases ht with
-    | idle hzero => rw [hzero] at hp; cases hp
-    | take _ hg => exact hng hg
+/-- **欠陥は閉じた（n250）。** 正の lag を持ち予測が外れた watch は
+`ChainStep.watchBreak` で `.broken` に落ちる（Scala `ScaffoldChain.step()` の `Mode.Broken`）。 -/
+theorem chainStep_exists_at_positive_lag_mismatch {w : GalilScaffoldChainWatch.State}
+    (hb : WatchBreak w) : ∃ z, ChainStep (ChainVM.watch w) z :=
+  ⟨_, ChainStep.watchBreak w hb⟩
 
-/-- **同じことを `ChainTick` の背景側（`a = false`）で。** `ChainTick false x z` は
-`ChainStep x z` に等しいので、背景量子でも行き先が無い。 -/
-theorem no_chainTick_false_at_positive_lag_mismatch {w : GalilScaffoldChainWatch.State}
-    (hp : positive w.lag = true) (hng : ¬ GalilScaffoldChainWatch.Good w) :
-    ¬ ∃ z, ChainTick false (ChainVM.watch w) z := by
-  rintro ⟨z, y, hstep, hzy⟩
-  exact no_chainStep_at_positive_lag_mismatch hp hng ⟨y, hstep⟩
-
-#print axioms no_chainStep_at_positive_lag_mismatch
-#print axioms no_chainTick_false_at_positive_lag_mismatch
+#print axioms chainStep_exists_at_positive_lag_mismatch
 
 end PalPeg.ChainStepGap

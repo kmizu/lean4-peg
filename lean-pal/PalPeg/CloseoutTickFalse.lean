@@ -56,12 +56,14 @@ open PalPeg PalPeg.GalilScaffoldTop PalPeg.GalilScaffoldChainInputSupply
 open PalPeg.GalilTickFun PalPeg.GalilChainTickable
 
 /-- **No `ChainStep` out of a `ChainOk` chain lands in `.broken`.** -/
-theorem step_ne_broken {Ok : WState → Prop} {x y : ChainVM} (hx : ChainOk Ok x)
+theorem step_ne_broken {Ok : WState → Prop} (hOk : WatchOk Ok) {x y : ChainVM} (hx : ChainOk Ok x)
     (h : ChainStep x y) (w : GalilScaffoldChainWatch.State) : y ≠ ChainVM.broken w := by
   intro hy
   rw [hy] at h
   cases h with
   | brokenIdle w0 => exact hx.elim
+  | watchBreak w0 hb =>
+    exact PalPeg.GalilScaffoldChainInputSupply.not_good_of_watchBreak hb (hOk.good w0 hx hb.1)
 
 /-- **The background tick, with no `Good` and no break case.** -/
 theorem chainOk_tick_false {Ok : WState → Prop} (hOk : WatchOk Ok) {x : ChainVM}
@@ -74,7 +76,7 @@ theorem chainOk_tick_false {Ok : WState → Prop} (hOk : WatchOk Ok) {x : ChainV
     obtain ⟨y, hstep, hzy⟩ := hz
     have hy : y = ChainVM.broken w' := by
       rw [← show z = y from hzy]; exact hbr
-    exact step_ne_broken hx hstep w' hy
+    exact step_ne_broken hOk hx hstep w' hy
 
 #print axioms step_ne_broken
 #print axioms chainOk_tick_false

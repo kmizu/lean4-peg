@@ -189,6 +189,14 @@ theorem good_trunc (n j : ℕ) {w : WS} (hg : GalilScaffoldChainWatch.Good w)
   show GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right (truncPH (n - j) w.machine.verifier)) = some b
   rw [truncPH_right n j _ h, read_truncPH]; exact hr
 
+theorem watchBreak_trunc (n j : ℕ) {w : WS} (hb : WatchBreak w)
+    (h : usedPH n (GalilScaffoldChainVerifier.right w.machine.verifier) ≤ j) :
+    WatchBreak (truncW (n - j) w) := by
+  obtain ⟨hp, hc, b, hs, hr⟩ := hb
+  refine ⟨hp, canRight_truncPH n j _ hc h, b, hs, ?_⟩
+  show GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right (truncPH (n - j) w.machine.verifier)) ≠ some b
+  rw [truncPH_right n j _ h, read_truncPH]; exact hr
+
 theorem internal_trunc (n j : ℕ) {w w' : WS} (hi : GalilScaffoldChainWatch.Internal w w')
     (h : usedPH n w'.machine.verifier ≤ j) :
     GalilScaffoldChainWatch.Internal (truncW (n - j) w) (truncW (n - j) w') := by
@@ -234,6 +242,7 @@ theorem verOf_step {x y : ChainVM} (hs : ChainStep x y) (p : PH) (hp : verOf y =
     cases ht with
     | idle => exact ⟨_, rfl, Or.inl rfl⟩
     | take => exact ⟨_, rfl, Or.inr rfl⟩
+  | watchBreak w hb => cases hp; exact ⟨_, rfl, Or.inr rfl⟩
 
 theorem verOf_matched {x y : ChainVM} (hm : ChainMatched x y) (p : PH) (hp : verOf y = some p) :
     ∃ p0, verOf x = some p0 ∧ (p = p0 ∨ p = GalilScaffoldChainVerifier.right p0) := by
@@ -246,6 +255,7 @@ theorem verOf_matched {x y : ChainVM} (hm : ChainMatched x y) (p : PH) (hp : ver
     cases ho with
     | queued => exact ⟨_, rfl, Or.inl rfl⟩
     | immediate => exact ⟨_, rfl, Or.inr rfl⟩
+  | brokenMatched w => cases hp; exact ⟨_, rfl, Or.inl rfl⟩
   | breaks w w' hb =>
     cases hp
     obtain ⟨-, -, -, -, -, ht⟩ := hb
@@ -288,6 +298,11 @@ theorem chainStep_trunc (n j : ℕ) {x y : ChainVM} (hs : ChainStep x y) (h : us
   | backStep v hh lag margin ver hf => exact .backStep v hh lag margin _ hf
   | backDone v hh lag margin ver hf => exact .backDone v hh lag margin _ hf
   | watchStep w w' ht => exact .watchStep _ _ (internal_trunc n j ht h)
+  | watchBreak w hb =>
+    have := ChainStep.watchBreak (truncW (n - j) w) (watchBreak_trunc n j hb h)
+    have h' : (truncW (n - j) w).machine.verifier = truncPH (n - j) w.machine.verifier := rfl
+    rw [h', truncPH_right n j _ h] at this
+    exact this
 
 theorem chainMatched_trunc (n j : ℕ) {x y : ChainVM} (hm : ChainMatched x y) (h : usedChain n y ≤ j) :
     ChainMatched (truncChain (n - j) x) (truncChain (n - j) y) := by
@@ -297,6 +312,7 @@ theorem chainMatched_trunc (n j : ℕ) {x y : ChainVM} (hm : ChainMatched x y) (
   | back v hh lag margin ver => exact .back v hh lag margin _
   | watch w w' ho => exact .watch _ _ (outer_trunc n j ho h)
   | breaks w w' hb => exact .breaks _ _ (breakStep_trunc n j hb h)
+  | brokenMatched w => exact .brokenMatched _
 
 theorem chainTick_trunc (n j : ℕ) {b : Bool} {x z : ChainVM} (ht : ChainTick b x z) (h : usedChain n z ≤ j) :
     ChainTick b (truncChain (n - j) x) (truncChain (n - j) z) := by

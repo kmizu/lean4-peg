@@ -74,7 +74,8 @@ theorem hend3_of_matched_break (P : Shared) (qq : ℕ) (first : Fin 9) (delay h 
     (hrounds : Rounds P qq first delay h m {c1 with mode := .scan, clock := delay, output := o}
       (shiftLens.set s2' ⟨t', .watch v, cycle⟩) c' s')
     {n : ℕ} {c3 : Control} {s3 : GalilVM} (hseg3 : ScanSeg P qq first delay n c' s' c3 s3)
-    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3) (hav3 : canRight s3.right)
+    (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true) (hav3 : canRight s3.right)
     (vs3 : ScanVM)
     (hcmp3 : (galilFrame P qq first).compare s3 (scanLens.set s3 vs3))
     (hmt3 : (galilFrame P qq first).matched (scanLens.set s3 vs3))
@@ -114,6 +115,7 @@ theorem stageEntry_after_found_closed (P : Shared) (qq : ℕ) (first : Fin 9) (d
       (shiftLens.set s2' ⟨t', .watch v, cycle⟩) c' s')
     {n : ℕ} {c3 : Control} {s3 : GalilVM} (hseg3 : ScanSeg P qq first delay n c' s' c3 s3)
     (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = .watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true)
     (w3' : GalilScaffoldChainWatch.State) (hw3' : w3' = GalilScaffoldChainWatch.immediate w3)
     (ha : PalPeg.GalilRadiusConsumed.Aligned org)
     (hbroken : w3'.machine.control.broken = true)
@@ -123,8 +125,8 @@ theorem stageEntry_after_found_closed (P : Shared) (qq : ℕ) (first : Fin 9) (d
     (hbr3 : vs3.chain = .broken w3') :
     StageEntry (foundRestartRadius org.radius h m n) w3'.machine.control.last :=
   PalPeg.GalilEarlyBreak.stageEntry_after_found_final P qq first delay h org hint hpo hzv hee
-    hrounds hseg3 w3 hs3 w3' hw3' ha hbroken
-    (hend3_of_matched_break P qq first delay h org hint hpo hzv hee hrounds hseg3 w3 hs3 hav3
+    hrounds hseg3 w3 hs3 hz3 w3' hw3' ha hbroken
+    (hend3_of_matched_break P qq first delay h org hint hpo hzv hee hrounds hseg3 w3 hs3 hz3 hav3
       vs3 hcmp3 hmt3 w3' hbr3)
 
 #print axioms caught_verifier_read

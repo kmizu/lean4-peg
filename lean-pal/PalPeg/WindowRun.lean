@@ -90,6 +90,7 @@ theorem chainWindowRun_chainStep {raw : List (Fin 2)} {c c' : Control} {s s' : G
     cases hstep with
     | idle => cases hw
     | brokenIdle _ => cases hw
+    | watchBreak _ _ => cases hw
     | copyBit _ _ _ _ _ _ _ _ _ _ _ => cases hw
     | copyEnd _ _ _ _ _ _ _ _ _ _ _ => cases hw
     | backStep _ _ _ _ _ _ => cases hw
@@ -182,7 +183,8 @@ theorem chainWindowRun_matched {raw : List (Fin 2)} {c c' : Control} {s s' : Gal
     generalize hx' : s.chain = x at hstep hinv hwatch hcopy hback
     cases hstep with
     | idle => cases hm; cases hw
-    | brokenIdle _ => cases hm
+    | brokenIdle _ => cases hm; cases hw
+    | watchBreak _ _ => cases hm; cases hw
     | copyBit _ _ _ _ _ _ _ _ _ _ _ => cases hm <;> cases hw
     | copyEnd _ _ _ _ _ _ _ _ _ _ _ => cases hm <;> cases hw
     | backStep _ _ _ _ _ _ => cases hm <;> cases hw
@@ -207,7 +209,8 @@ theorem chainWindowRun_matched {raw : List (Fin 2)} {c c' : Control} {s s' : Gal
     generalize hx' : s.chain = x at hstep hinv hwatch hcopy hback
     cases hstep with
     | idle => cases hm; cases hw
-    | brokenIdle _ => cases hm
+    | brokenIdle _ => cases hm; cases hw
+    | watchBreak _ _ => cases hm; cases hw
     | copyBit _ _ _ _ _ _ _ _ _ _ _ =>
       cases hm with
       | copy _ _ _ _ _ _ _ => exact hcopy _ _ _ _ _ _ _ rfl
@@ -221,7 +224,8 @@ theorem chainWindowRun_matched {raw : List (Fin 2)} {c c' : Control} {s s' : Gal
     generalize hx' : s.chain = x at hstep hinv hwatch hcopy hback
     cases hstep with
     | idle => cases hm; cases hw
-    | brokenIdle _ => cases hm
+    | brokenIdle _ => cases hm; cases hw
+    | watchBreak _ _ => cases hm; cases hw
     | copyBit _ _ _ _ _ _ _ _ _ _ _ => cases hm <;> cases hw
     | copyEnd _ _ _ _ _ _ _ _ _ _ _ =>
       cases hm with

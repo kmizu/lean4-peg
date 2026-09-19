@@ -51,6 +51,7 @@ theorem lagCan_step {x z : ChainVM} (hL : LagCan x)
   cases hst with
   | idle => exact hL
   | brokenIdle w => exact lagCan_broken w
+  | watchBreak w hb => exact lagCan_broken _
   | copyBit => exact fun _ h => by cases h
   | copyEnd => exact fun _ h => by cases h
   | backStep v h lag margin ver _ => exact fun _ hw => by cases hw
@@ -74,6 +75,7 @@ theorem lagCan_matched {y z : ChainVM} (hL : LagCan y) (hm : ChainMatched y z) :
   | copy => exact fun _ h => by cases h
   | back => exact fun _ h => by cases h
   | breaks w w' hb => exact lagCan_broken w'
+  | brokenMatched w => exact lagCan_broken _
   | watch w w' ho =>
     obtain ⟨hc, hn⟩ := hL w rfl
     cases ho with
@@ -108,6 +110,7 @@ theorem chainPos_step_of_supply {w : List (Fin 2)} {x z : ChainVM} {R : PlaceHea
   cases hst with
   | idle => exact chainPos_step hP (fun _ h => by cases h) .idle
   | brokenIdle v => exact chainPos_broken v _
+  | watchBreak v hb => exact chainPos_broken _ _
   | copyBit t h p v lag margin ver a h1 h2 h3 =>
     exact chainPos_step hP (fun _ hq => by cases hq) (.copyBit t h p v lag margin ver a h1 h2 h3)
   | copyEnd t h p v lag margin ver b h1 h2 h3 =>

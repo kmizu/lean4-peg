@@ -69,6 +69,19 @@ theorem chainStep_unique {x z₁ z₂ : ChainVM} (h1 : ChainStep x z₁) (h2 : C
   | watchStep w w' ht =>
       cases h2 with
       | watchStep _ w'' ht' => rw [internal_unique ht ht']
+      | watchBreak _ hb =>
+          exfalso
+          cases ht with
+          | idle hz => have hp := hb.1; rw [hz] at hp; cases hp
+          | take _ hg => exact not_good_of_watchBreak hb hg
+  | watchBreak w hb =>
+      cases h2 with
+      | watchStep _ w' ht =>
+          exfalso
+          cases ht with
+          | idle hz => have hp := hb.1; rw [hz] at hp; cases hp
+          | take _ hg => exact not_good_of_watchBreak hb hg
+      | watchBreak _ _ => rfl
 
 /-- `Good` and `BreakStep` read the same period symbol with opposite verdicts. -/
 theorem not_good_of_break {w w' : GalilScaffoldChainWatch.State}
@@ -103,6 +116,7 @@ theorem chainMatched_unique {x z₁ z₂ : ChainVM} (h1 : ChainMatched x z₁)
           obtain ⟨-, -, a, -, -, he⟩ := hb
           obtain ⟨-, -, a', -, -, he'⟩ := hb'
           rw [he, he']
+  | brokenMatched w => cases h2 with | brokenMatched _ => rfl
 
 theorem chainTick_unique {a : Bool} {x z₁ z₂ : ChainVM} (h1 : ChainTick a x z₁)
     (h2 : ChainTick a x z₂) : z₁ = z₂ := by

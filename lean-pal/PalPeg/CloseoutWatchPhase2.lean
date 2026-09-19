@@ -139,6 +139,7 @@ theorem landingRestart_of_break (P : Shared) (qq : ℕ) (first : Fin 9) (delay h
       (shiftLens.set s2' ⟨t', .watch v, cycle⟩) c' s')
     {n : ℕ} {c3 : Control} {s3 : GalilVM} (hseg3 : ScanSeg P qq first delay n c' s' c3 s3)
     (w3 : GalilScaffoldChainWatch.State) (hs3 : s3.chain = ChainVM.watch w3)
+    (hz3 : GalilScaffoldCounter.zero w3.lag = true)
     (w3' : GalilScaffoldChainWatch.State) (hw3' : w3' = GalilScaffoldChainWatch.immediate w3)
     (ha : PalPeg.GalilRadiusConsumed.Aligned org)
     (hbroken : w3'.machine.control.broken = true)
@@ -152,7 +153,7 @@ theorem landingRestart_of_break (P : Shared) (qq : ℕ) (first : Fin 9) (delay h
     LandingRestart raw cT sT :=
   landingRestart_of_foundCycle hR
     (PalPeg.GalilBreakTerminal.stageEntry_after_found_closed P qq first delay h org hint hpo hzv
-      hee hrounds hseg3 w3 hs3 w3' hw3' ha hbroken hav3 vs3 hcmp3 hmt3 hbr3)
+      hee hrounds hseg3 w3 hs3 hz3 w3' hw3' ha hbroken hav3 vs3 hcmp3 hmt3 hbr3)
 
 /-! ## 2. The reach form of the sharpening -/
 
@@ -278,7 +279,8 @@ def ShiftTailC (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPl
           (shiftLens.set s2' ⟨t', .watch v, cycle⟩) c' s' ∧
         ScanSeg (PofC centre place entry raw) qq first 2048 n c' s' c3 s3 ∧
         c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
-        s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
+        s3.chain = ChainVM.watch w3 ∧ GalilScaffoldCounter.zero w3.lag = true ∧
+        canRight s3.right ∧
         (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
         (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
         searchEffect (PofC centre place entry raw) true s3 vq3 ∧
@@ -308,7 +310,7 @@ theorem roundsRouteLPraw_of_tail (centre : GalilVM → Fin 3)
   intro hh es c2 s2 hprepSeg hlen hw
   obtain ⟨c1, s1, h, w, vs, vq', s2', t', v, cycle, o, org, mm, c', s', n, c3, s3, w3, vs3, vq3,
     o3, w3', hseg, hm1, hr1, hc1, hs1, hz, hav, hcmp, hmis, hq', hg, hb, hs2', hi2, hchain, ho,
-    hint, he, hoc, ha, hpos11, hlow, hrounds, hseg3, hm3, hr3, hc3, hs3, hav3, hcmp3, hmt3, hq3,
+    hint, he, hoc, ha, hpos11, hlow, hrounds, hseg3, hm3, hr3, hc3, hs3, hz3, hav3, hcmp3, hmt3, hq3,
     ho3, hbroken, hmargin, hlast, hlag, hbound⟩ := htl es c2 s2 hprepSeg hw
   obtain ⟨cT, sT, k, L, hst, hcr, hLP, hprog, hright⟩ :=
     PalPeg.GalilFoundLandingL.foundRouteMC_shift centre place entry qq first raw hex
@@ -316,7 +318,7 @@ theorem roundsRouteLPraw_of_tail (centre : GalilVM → Fin 3)
       (PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry qq first hE.invLPC)
       a ls rs qw gap hraw hseg0 hmF hrF hcF havF hidle hCen vq hq hfound hmt ch hch hchne oF hoF
       hprepSeg hseg h hm1 hr1 hc1 w hs1 hz hav vs vq' hcmp hmis hq' hg s2' hb hs2' hi2 hchain o ho
-      org hint he hoc ha hdp hpc hpos11 hlow hrounds hseg3 hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3
+      org hint he hoc ha hdp hpc hpos11 hlow hrounds hseg3 hm3 hr3 hc3 w3 hs3 hz3 hav3 vs3 vq3 hcmp3
       hmt3 hq3 o3 ho3 w3' hbroken hmargin hlast hlag
   refine ⟨cT, sT, k, L, hst, hcr, hLP, hprog, ?_⟩
   rw [hright]
@@ -357,7 +359,8 @@ def NoShiftTailC (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffold
         Manacher.PalAt (encoded raw) (position r.center - 2 * (ys.length + 1)) (2 * (ys.length + 1)) ∧
         WatchSeg (PofC centre place entry raw) qq first 2048 c2 s2 c3 s3 ∧
         c3.mode = .scan ∧ c3.replaying = false ∧ c3.clock = 1 ∧
-        s3.chain = ChainVM.watch w3 ∧ canRight s3.right ∧
+        s3.chain = ChainVM.watch w3 ∧ GalilScaffoldCounter.zero w3.lag = true ∧
+        canRight s3.right ∧
         (galilFrame (PofC centre place entry raw) qq first).compare s3 (scanLens.set s3 vs3) ∧
         (galilFrame (PofC centre place entry raw) qq first).matched (scanLens.set s3 vs3) ∧
         searchEffect (PofC centre place entry raw) true s3 vq3 ∧
@@ -384,12 +387,12 @@ theorem breakRouteLPraw_of_tail (centre : GalilVM → Fin 3)
   subst hsPeq
   intro hh es c2 s2 hprepSeg hlen hw
   obtain ⟨cen, ys, b, c3, s3, w3, vs3, vq3, o3, w3', hwatch2, hes0, hpal1, hpal2, hseg, hm3, hr3,
-    hc3, hs3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hprepSeg hw
+    hc3, hs3, hz3, hav3, hcmp3, hmt3, hq3, ho3, hbroken, hmargin, hbound⟩ := htl es c2 s2 hprepSeg hw
   obtain ⟨cT, sT, k, L, hst, hcr, hLP2, hc, hlt, hright⟩ :=
     PalPeg.GalilInvPlus2.foundRouteMC_noshift'' centre place entry qq first raw hex hE.invLPC
       (PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry qq first hE.invLPC)
       hseg0 hmF hrF hcF havF hidle vq hq hfound hmt ch hch hchne oF hoF hprepSeg cen ys b hwatch2
-      hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken
+      hes0 hpal1 hpal2 hseg hm3 hr3 hc3 w3 hs3 hz3 hav3 vs3 vq3 hcmp3 hmt3 hq3 o3 ho3 w3' hbroken
       hmargin
   refine ⟨cT, sT, k, L, hst, hcr, hLP2, hc, hlt, ?_⟩
   rw [hright]

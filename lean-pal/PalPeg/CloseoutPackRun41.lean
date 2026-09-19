@@ -103,6 +103,7 @@ theorem chainPos_step {x z : ChainVM} {R : ℕ} (hP : ChainPositionLedger x R) (
   cases hst with
   | idle => exact hP
   | brokenIdle w => exact chainPos_broken w R
+  | watchBreak w hb => exact chainPos_broken _ R
   | copyBit t h p v lag margin ver a _ _ _ =>
     obtain ⟨hc, hs, hp⟩ := hP.copy t h p v lag margin ver rfl
     exact ⟨(fun _ hw => by cases hw), (fun _ _ _ _ _ hb => by cases hb),
@@ -163,6 +164,7 @@ theorem chainPos_matched {y z : ChainVM} {R : ℕ} (hP : ChainPositionLedger y R
     show (position ver : ℤ) + value (inc lag) = R + 1
     rw [inc_value]; omega
   | breaks w w' hb => exact chainPos_broken w' _
+  | brokenMatched w => exact chainPos_broken _ _
   | watch w w' ho =>
     obtain ⟨hc, hs, hp⟩ := hP.watch w rfl
     cases ho with

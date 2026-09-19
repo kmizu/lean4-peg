@@ -84,6 +84,11 @@ theorem freshShiftLedger_of_chainW_scan {raw : List (Fin 2)} {cen₀ k R : ℕ}
   · simp only [Bool.false_eq_true, ↓reduceIte] at hy
     rw [hwatch] at hstep
     cases hstep with
+    | watchBreak _ _ =>
+      intro _ wch hwch
+      have h2 : vs.chain = ChainVM.watch wch := hwch
+      rw [hy] at h2
+      cases h2
     | watchStep _ _ hint =>
       have hW' := watchWindow_step hW hint
       rw [← hy] at hW'

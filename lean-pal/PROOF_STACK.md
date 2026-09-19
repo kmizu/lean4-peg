@@ -1,3 +1,28 @@
+## n250 — モデル欠陥 `M-watchBreak` を修正（`ChainStep.watchBreak`／`ChainMatched.brokenMatched`）、全体 build 緑
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracle` | **証明可能になった**（証明はこれから）。n249 のとおり `CycleOutMC3` は run の存在を主張し、正 lag の watch が予測を外す状態に Lean の `ChainStep` は後続を持たなかった（`ChainStepGap`、機械検査済み）。`GalilScaffoldTopChainVM` に `WatchBreak w := positive lag ∧ canRight ver ∧ ∃ a, symbol focus = some a ∧ read (right ver) ≠ some a` と `ChainStep.watchBreak (w) (hb : WatchBreak w) : ChainStep (.watch w) (.broken ⟨⟨right ver, control⟩, lag, margin⟩)`、`ChainMatched.brokenMatched (w) : ChainMatched (.broken w) (.broken ⟨machine, inc lag, inc margin⟩)` を足した（Scala `consume()`／`matched()` 通り）。`ChainStepGap.chainStep_exists_at_positive_lag_mismatch` が gap の閉鎖を記録（`Canonical.model_gap_watchBreak_closed`）。`#print axioms unconditional` は変わらず標準 3 ＋ `obligation_cycleOracle`／`obligation_localRealization` |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
+### 何を変えたか（71 ファイル、定理は 5 本だけ新規: `not_good_of_watchBreak`／`watchBreak_arrive`／`watchBreak_trunc`／`lagLe_break`／`lagLe_breaks`——全部既存の `cases` を通すための対）
+
+- `ChainStep`／`ChainMatched` の `cases` に alternative を追加（`.broken` 行きは不変量が `True`／空虚）。`chainStep_unique`／`chainMatched_unique`（2 ファイル）は `Internal.idle`（`positive lag = false`）／`take`（`Good`）と `WatchBreak` の排他。
+- 終端比較を扱う定理群（`foundRouteMC_noshift'(_Inv)`／`life_restarted`／`found_life`／`found_to_found`／`chain_life` …、`FoundCycle`／`BreakEnd`／`ShiftTailC`／`NoShiftTailC(0/L)`／`hcont` 型）は、正 lag の break だと結論（restart）が偽になるので、終端 watch に `zero w3.lag = true` を仮説／成分として一括追加（regex、`hz3`）。producer 側（`GalilRoundConstruct`／`GalilMidRoundFallback`）は `RoundInv.wit` の `hzw` を渡すだけ。`rounds_break` は `scanSeg_only` で自前に導くので不要。
+- `GalilTrailAssembly.LagLe`: broken chain の lag を `reset` と読む（`lagOf`）。break 前 `ver + lag ≤ r`・`lag ≥ 1` ⇒ break 後 `right ver ≤ r`（`lagLe_break`）。`ChainBudget.pos`（先読み予算）が broken の verifier にも要るため空虚化はしない。
+- `GalilArriveChain`／`GalilTruncTick`: 到着・切り詰めとの可換（`watchBreak_arrive`／`watchBreak_trunc`、`breakStep_*` の対）。verifier を動かす Scala 通りの break 先だと切り詰め補題が自然に通る（`usedChain` が読んだ cell を数える）。
+- dead 塔の切り離し: `unconditional` の閉包外で、構成子追加により**偽になった**補題（`CloseoutWatchRound2.watchClosed : WatchClosedC`「背景 tick は watch を watch に保つ」／`distance_mono_false`／`CloseoutTickFalse.step_ne_broken`）を含む round 塔（`CloseoutWatchRound*`／`WatchPhase*`／`TerminalN`／`MismatchCompare`／`TickFalse`／`LagAll`）を build から外した: Workbench 登録 9 本を削除、`Canonical.lean` の alias 11 本（`mismatchCompare_*`／`shiftEntry_exists`／`copyIdle_congr`／`shiftRun_exists_from_round`／`shiftAtMismatch_from_round`／`backgroundTick_keeps_watch`／`backgroundTick_is_identity_at_lagZero`／`step_never_breaks`／`landingReady_from_parts`／`chainReady_from_round`／`distance_eq_radius`／`radius_nonneg`）と import 4 本を削除。ファイルは未削除（build 対象外、後で削除）。
+- `ChainReady`（`GalilTickFun`）の `positive lag → Good` 場はまだ残っている（run の存在に不要になったので次に緩める）。
+
+### 次
+
+`obligation_cycleOracle`: n248 の計画どおり `WindowRunPack` の上で found 経路（`FoundExitLPS`）を構成する。
+run の存在は `GalilTickFun.tick_exists`（`Enabled`）で、`ChainReady.watch` の `positive lag → Good` を `watchBreak` で外す。
+
 ## n249 — `obligation_cycleOracle` の前に `M-watchBreak` を直す（run の存在が欠陥に当たる）
 
 **公理への進捗**
@@ -40,6 +65,21 @@
 (C) `chainStep_unique`／`chainMatched_unique` は `Internal` の `idle`（`positive lag = false`）／`take`（`Good`）
 と `hp`／`hng` で排他、(D) `ChainStepGap.no_chainStep_at_positive_lag_mismatch`（＋`Canonical.model_gap_watchBreak`）
 は**偽になる**ので削除して「gap は閉じた」に書き換える。作業リストは `lake build --quiet PalPeg` の error 一覧。
+- 進捗（作業中）: 低層 11 モジュール＋中層（TrailChain／TrailAssembly／CopyPhase*／BranchSupply／
+  TickFalse／PreludeDone／PreludeEnds）を修正済み。break 終端の定理群（`foundRouteMC_noshift'(_Inv)`／
+  `rounds_break`／`life_restarted`／`found_life`／`found_to_found` …）は正 lag の break で結論（restart）が
+  偽になるので、終端比較の仮説に `(hz3 : zero w3.lag = true)` を全ファイル一括で足した（regex、29 ファイル）。
+  `CloseoutTickFalse.step_ne_broken` は `hOk : WatchOk Ok` を取るように（`WatchOk` は反証済みの死路）。
+- dead 塔の切り離し: `unconditional` の import 閉包（598 モジュール）の外にある Workbench 登録 9 本
+  （`CloseoutLagAll`／`CloseoutSegCheckpoint`／`CloseoutWatchRound26`／`51`／`53`／`FoundPackCorrected`／
+  `FoundPackRefute`／`ReachesWatchFromRun`／`RoundHistory`）は、構成子追加で**偽になった**補題
+  （`CloseoutWatchRound2.watchClosed : WatchClosedC`「watch は背景 tick で watch のまま」、
+  `distance_mono_false`）を含む round 塔（`CloseoutWatchRound*`／`WatchPhase*`／`TerminalN`／
+  `MismatchCompare`／`TickFalse`）を引き込んでいたので登録を外した（ファイルは未削除、build 対象外）。
+  `WatchClosedC` はモデル欠陥 `M-watchBreak` の上でだけ真だった。
+- 台帳 `GalilTrailAssembly.LagLe` は broken chain の lag を `reset` と読む（`lagOf (.broken w) = some (verifier, reset)`）:
+  break 前 `ver + lag ≤ r`・`lag ≥ 1` から break 後 `right ver ≤ r`（`lagLe_break`）。`ChainBudget.pos`（先読み予算）は
+  broken の verifier にも要るので空虚化はしない。
 
 ## n248 — `obligation_cycleOracle`: found 経路の既存入口は死んでいる（修理しない）
 

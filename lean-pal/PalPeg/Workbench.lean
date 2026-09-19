@@ -3,23 +3,18 @@ import PalPeg.CloseoutBirthFrame
 import PalPeg.CloseoutBranchRes
 import PalPeg.CloseoutCandOrient
 import PalPeg.CloseoutClockFront
-import PalPeg.CloseoutLagAll
 import PalPeg.CloseoutLaterEntry
 import PalPeg.CloseoutRestartShape
 import PalPeg.CloseoutRightBounds
-import PalPeg.CloseoutSegCheckpoint
 import PalPeg.CloseoutSegment
 import PalPeg.CloseoutStageFree
 import PalPeg.CloseoutStageLanding
 import PalPeg.CloseoutWalkerSupply
 import PalPeg.CloseoutWalkerTick
-import PalPeg.CloseoutWatchRound26
-import PalPeg.CloseoutWatchRound53
 
 -- 2. 最上位の別系列（前提の数え直しに使う）
 import PalPeg.CloseoutCoreEnc24
 import PalPeg.CloseoutFinalW5
-import PalPeg.CloseoutWatchRound51
 import PalPeg.CloseoutWeakFinal
 
 -- 3. 記録（回帰テストと反証の記録）
@@ -73,7 +68,6 @@ import PalPeg.GalilScaffoldStructured
 import PalPeg.GalilSourceCost
 import PalPeg.CloseoutFinalVer
 import PalPeg.CloseoutFinalBranch
-import PalPeg.RoundHistory
 import PalPeg.ReadyFuelRefute
 import PalPeg.PostRunInduction
 import PalPeg.StageLocalPrep
@@ -95,14 +89,11 @@ import PalPeg.WindowInv
 import PalPeg.WindowRun
 import PalPeg.WindowTick
 import PalPeg.WindowPack
-import PalPeg.FoundPackRefute
-import PalPeg.FoundPackCorrected
 import PalPeg.CopyPhaseTick
 import PalPeg.CopyPhaseTickMatched
 import PalPeg.AnswerAheadDecode
 import PalPeg.ChainReachesWatchFromFound
 import PalPeg.LiveSegmentConstruct
-import PalPeg.ReachesWatchFromRun
 import PalPeg.CopyPhaseNoShift
 
 /-!

@@ -92,6 +92,7 @@ theorem windowInv_step {raw : List (Fin 2)} {cen₀ R : ℕ} {cc : Fin 3} {x y :
   | watchStep w w' hi =>
     obtain ⟨b, xs, hw⟩ := hx
     exact ⟨b, xs, watchWindow_step hw hi⟩
+  | watchBreak _ _ => trivial
 
 #print axioms windowInv_step
 
@@ -111,6 +112,7 @@ theorem windowInv_matched {raw : List (Fin 2)} {cen₀ R : ℕ} {cc : Fin 3} {x 
     obtain ⟨b, xs, hw⟩ := hx
     exact ⟨b, xs, watchWindow_outer hw ho⟩
   | breaks w w' hb => trivial
+  | brokenMatched _ => trivial
 
 #print axioms windowInv_matched
 
