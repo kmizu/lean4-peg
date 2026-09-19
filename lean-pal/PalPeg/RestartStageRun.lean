@@ -446,4 +446,97 @@ theorem ledgerAt_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
   rw [← hgk]
   exact hall k le_rfl
 
+/-- An unbroken control at every watch of a window-packed state. -/
+theorem watch_unbroken_of_window {raw : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hwin : WindowRunPack raw c s) :
+    ∀ w, s.chain = .watch w → w.machine.control.broken = false := by
+  intro w hw
+  obtain ⟨cen₀, cc, -, hinv, -⟩ := hwin.window
+  rw [hw] at hinv
+  obtain ⟨b, xs, hW⟩ := hinv
+  exact hW.2.2.2.2.2.1
+
+/-- The boundary case of a lag-zero break, as a statement about the ticks of a packed run:
+no matched comparison breaks the chain at `distance = 4h − 1`. -/
+def NoBoundaryBreak (raw : List (Fin 2)) (c₀ : Control) (r₀ : GalilVM) : Prop :=
+  ∀ (j : ℕ) (x y : State GalilVM),
+    PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw j ⟨c₀,r₀⟩ x →
+    Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y →
+    ∀ w1 w', x.ctl.mode = Mode.scan → ChainStep x.vm.chain (.watch w1) →
+      BreakStep w1 w' → y.vm.chain = .broken w' →
+      value w1.machine.control.distance ≠ 4 * (periodLength w1 : ℤ) - 1
+
+theorem brokenStage_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    (hboundary : NoBoundaryBreak centre place entry q first raw c₀ r₀)
+    {k : ℕ} {y : State GalilVM}
+    (hrun : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y) :
+    BrokenStage y.ctl y.vm := by
+  obtain ⟨g, hg0, hgk, htr, hcan, hpk⟩ := hrun
+  have hprefix : ∀ i, i ≤ k →
+      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw i ⟨c₀,r₀⟩ (g i) := by
+    intro i hi
+    exact ⟨g, hg0, rfl,
+      ⟨fun j hj => htr.tick j (by omega), fun j hj => htr.good j (by omega)⟩,
+      fun j hj => hcan j (by omega), fun j hj => hpk j (by omega)⟩
+  have hiMode : c₀.mode = Mode.scan := (PalPeg.GalilOracleLocal.invS_mode hI.1.1.1.1.1).1
+  have hiChain : r₀.chain = .idle := by
+    rcases hI.1.1.1.1.1 with h | ⟨_, h⟩
+    · obtain ⟨_, _, h⟩ := h.rest; exact h.1
+    · exact h.chainIdle
+  have hall : ∀ i, i ≤ k → BrokenStage (g i).ctl (g i).vm := by
+    intro i
+    induction i with
+    | zero =>
+      intro _
+      rw [hg0]
+      exact brokenStage_of_not_broken (by rw [hiMode]; decide)
+        (fun w hw => by rw [hiChain] at hw; cases hw)
+    | succ i ih =>
+      intro hik
+      have hwinX := (hpk i (by omega)).win hP
+      exact brokenStage_tick centre place entry q first (htr.tick i (by omega))
+        (hcan i (by omega)).canonical (ih (by omega))
+        (ledgerAt_packed centre place entry q first hP hI (hprefix i (by omega)))
+        hwinX ((hpk (i+1) (by omega)).win hP) (watch_unbroken_of_window hwinX)
+        (hboundary i (g i) (g (i+1)) (hprefix i (by omega)) (htr.tick i (by omega)))
+  rw [← hgk]
+  exact hall k le_rfl
+
+/-- **The restart at a guard state of a packed run lands in a stage-entry restart.**  The scan
+geometry is an input because a replaying state keeps it outside the pack. -/
+theorem restartStage_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    (hboundary : NoBoundaryBreak centre place entry q first raw c₀ r₀)
+    {k : ℕ} {y : State GalilVM}
+    (hrun : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y)
+    (hmode : y.ctl.mode = Mode.scan) (hguard : restartGuardVM y.vm)
+    {rad : ℕ} (hscanGeom : ScanInvariant raw (position y.vm.center) rad y.vm.left y.vm.right)
+    (hlength : Canonical y.vm.length)
+    {t : GalilVM} (hrestart : restartVM entry y.vm t) :
+    ∃ (Rad : ℕ) (last : Counter), Restarted raw t Rad last ∧ StageEntry Rad last := by
+  have hstage := brokenStage_packed centre place entry q first hP hI hboundary hrun
+  have hp := PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun
+  have hwin := hp.win hP
+  obtain ⟨w, hw, hmargin, hlast, hlag, hteq⟩ := hrestart
+  obtain ⟨-, hguarded⟩ := hstage.2 hmode w hw
+  obtain ⟨Rad, hRad, hentry, hcanonicalLast⟩ := hguarded hguard
+  obtain ⟨Rad', hRad', hright⟩ := hwin.radiusScan hmode
+  have hRadEq : Rad' = Rad := by
+    have h1 : (Rad' : ℤ) = (Rad : ℤ) := by rw [← hRad'.2, ← hRad.2]
+    exact_mod_cast h1
+  have hrad : rad = Rad := by
+    have h1 := hscanGeom.rightPos
+    rw [hRadEq] at hright
+    omega
+  have hcen := hwin.centreRep (Or.inl hmode)
+  refine ⟨Rad, w.machine.control.last, ?_, hentry⟩
+  subst hteq
+  refine ⟨rfl, hcen.1, hcen.2, by rw [← hrad]; exact hscanGeom, hRad, hlength, rfl, rfl,
+    hcanonicalLast, ?_⟩
+  have := (positive_iff _ hcanonicalLast).mp hlast
+  omega
+
 end PalPeg.RestartStageRun
