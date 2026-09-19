@@ -10,6 +10,9 @@ import PalPeg.GalilTraceCost
 import PalPeg.GalilLexMeasure
 import PalPeg.GalilScaffoldTopMerge
 import PalPeg.GalilScaffoldTopSteps
+import PalPeg.GalilShiftPack
+import PalPeg.GalilChainCoupling
+import PalPeg.GalilOracleLeaves2
 
 set_option autoImplicit false
 
@@ -34,6 +37,7 @@ open PalPeg PalPeg.GalilScaffoldTop PalPeg.GalilScaffoldController
 open GalilScaffoldCounter GalilScaffoldInputHead GalilScaffoldChainVerifier
 open PalPeg.GalilTraceCost PalPeg.GalilLexMeasure PalPeg.GalilInvPlus3 PalPeg.CloseoutPackW
   PalPeg.GalilStructuredSkeleton PalPeg.GalilCheckpoints PalPeg.GalilIntervalCost
+  PalPeg.CloseoutPackRun2 PalPeg.GalilInvPlus2
 
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
@@ -700,9 +704,10 @@ theorem shiftUnits_S {w : List (Fin 2)} (c : Control) (hm : c.mode = .shift) :
       (v : GalilScaffoldChainWatch.State) (finish : Counter),
       s.chain = .watch wch → CopyIdle s →
       ChainShiftRun ⟨s.center, s.left, s.remaining, s.radius, s.length⟩ wch s.cycle n t v finish →
-      Steps (galilFrameS (PofC centre place entry w) q first) 2048 n ⟨c, s⟩
+      StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) n ⟨c, s⟩
         ⟨c, shiftLens.set s ⟨t, .watch v, finish⟩⟩ ∧
       CopyIdle (shiftLens.set s ⟨t, .watch v, finish⟩) := by
+  have hQ : ∀ x : GalilVM, SoundScanNR w ⟨c, x⟩ := fun x h => by rw [hm] at h; cases h
   intro n
   induction n with
   | zero =>
@@ -712,7 +717,7 @@ theorem shiftUnits_S {w : List (Fin 2)} (c : Control) (hm : c.mode = .shift) :
         .watch wch, s.cycle⟩ = s := by
       rw [← hs]; exact shiftLens.set_get s
     rw [hset]
-    exact ⟨.zero _, hi⟩
+    exact ⟨.zero _ (hQ s), hi⟩
   | succ n ih =>
     intro s wch t v finish hs hi hr
     cases hr with
@@ -744,7 +749,7 @@ theorem shiftUnits_S {w : List (Fin 2)} (c : Control) (hm : c.mode = .shift) :
       obtain ⟨hrun, hi''⟩ := ih (shiftLens.set s ⟨shiftTick ⟨s.center, s.left, s.remaining, s.radius, s.length⟩,
           .watch (chainShiftOne wch), inc (inc s.cycle)⟩) (chainShiftOne wch) t v finish rfl hi' rest
       rw [shiftLens.set_set] at hrun hi''
-      exact ⟨.succ htickS hrun, hi''⟩
+      exact ⟨.succ (hQ s) htickS hrun, hi''⟩
 
 /-- **The exit of a shift phase.**  With `remaining` exhausted and the copy walker idle,
 `shift_done` fires with a refreshed flag. -/
@@ -778,6 +783,184 @@ theorem shiftExit_S {w : List (Fin 2)} (c : Control) (hm : c.mode = .shift) (s :
 
 #print axioms shiftUnits_S
 #print axioms shiftExit_S
+
+/-- **The shift leaf.**  From a clock-one, non-replaying scan state of the packed run whose
+comparison mismatches with the shift guard up, the shift phase entered by `scan_shift` runs
+`periodLength` unit moves and exits with a refreshed flag: a sound run to a scan landing one
+place further right, the centre advanced by the period (`≥ 1`), in `period + 1` ticks. -/
+theorem shiftLeaf {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w)) (h4 : first ≠ 4)
+    {m : ℕ} (hm1 : 1 ≤ m) (hmle : m ≤ w.length)
+    {c₀ : Control} {r₀ : GalilVM} {k : ℕ} {c : Control} {s : GalilVM} {vq : SearchVM}
+    {z : ChainVM} {u : GalilVM}
+    (hI₀ : InvLPS (PofC centre place entry w) q first w c₀ r₀)
+    (hrun : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩)
+    (hm : c.mode = .scan) (hr : c.replaying = false) (hc : c.clock = 1)
+    (hp : position s.right + 1 ≤ 2 * m - 1)
+    (hmis : read (left s.left) ≠ read (right s.right))
+    (hq : searchEffect (PofC centre place entry w) false s vq)
+    (hz : chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
+      ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
+      s.center s.radius s.chain z)
+    (hg : (PofC centre place entry w).shiftGuard
+      (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+        (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)))
+    (hb : (PofC centre place entry w).beginShift
+      (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+        (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) u)
+    (htick : Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
+      ⟨{c with clock := 2048, mode := .shift}, u⟩) :
+    ∃ (c' : Control) (s' : GalilVM) (n : ℕ),
+      StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) n
+        ⟨{c with clock := 2048, mode := .shift}, u⟩ ⟨c', s'⟩ ∧
+      c'.mode = .scan ∧ c'.replaying = false ∧
+      Refreshed (PofC centre place entry w) q first ⟨c', s'⟩ ∧
+      position s'.right = position s.right + 1 ∧ position s.center < position s'.center ∧
+      n ≤ position s'.center - position s.center + 1 := by
+  classical
+  set born := chainBorn (decide (vq.search.mode = .found)) s.chain with hborn
+  set vs : ScanVM := ⟨left s.left, right s.right, z⟩ with hvs
+  set s1 := afterBirth born (afterMismatch s vs vq) with hs1
+  set cE : Control := {c with clock := 2048, mode := .shift} with hcE
+  -- the packed prefix and its facts at `⟨c, s⟩`
+  have hpack : IPackMW centre place entry q first w ⟨c, s⟩ :=
+    PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMW centre place entry q first hrun
+  obtain ⟨g, hg0, hgk, htr, -⟩ := id hrun
+  have hjx : Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ ⟨c, s⟩ := by
+    have := PalPeg.CloseoutPackRun2.steps_of_trace htr k le_rfl
+    rwa [hg0, hgk] at this
+  have hout : OutputRel w c s := by
+    have := htr.good k le_rfl
+    rw [hgk] at this
+    exact this hm hr
+  have hQ : SoundScanNR w ⟨c, s⟩ := fun _ _ => hout
+  have hQE : SoundScanNR w ⟨cE, u⟩ := fun h => by rw [hcE] at h; cases h
+  obtain ⟨hrep, hpres⟩ := PalPeg.WindowPack.rightHead_of_packs hpack.pack hpack.m2 hm
+  have hlength : (encoded w).length = 2 * w.length + 1 := by simp [encoded, pairs_length]
+  have hav : canRight s.right := canRight_of_bound _ w hrep hpres (by omega)
+  have hpos1 : position (right s.right) = position s.right + 1 :=
+    right_position _ hav (represented_position _ w hrep hpres).1
+  obtain ⟨rad, hsi⟩ := hpack.pack.scanGeom hm hr
+  have hwin := hpack.win hP
+  have hcr : CentreRep w s := hwin.centreRep (Or.inl hm)
+  -- the shift entry data
+  obtain ⟨wch, hs1c, hu⟩ := hb
+  set h := periodLength wch with hh
+  have hcmp : (galilFrameS (PofC centre place entry w) q first).compare s s1 :=
+    ⟨vs, vq, false, rfl, rfl, Iff.intro (fun h0 => by cases h0) (fun h0 => absurd h0 hmis),
+      hq, hz, rfl⟩
+  have hmt : ¬ (galilFrameS (PofC centre place entry w) q first).matched s1 := by
+    intro h0
+    apply hmis
+    have h1 : read s1.left = read s1.right := h0
+    rw [hs1, afterBirth_left, afterBirth_right] at h1
+    exact h1
+  have hfour := PalPeg.WindowPack.four_of_guard centre place entry q first (x := ⟨c, s⟩)
+    hwin.coupled ⟨hm, hr⟩ hcmp hmt hg hs1c
+  obtain ⟨R, hRR, hRpos⟩ := hwin.radiusScan hm
+  have hRrad : R = rad := by have := hsi.rightPos; omega
+  have hle : h ≤ rad := by
+    have h1 := hRR.2
+    rw [hRrad] at h1
+    omega
+  -- the entry state is on the packed run: its pack gives the period length and the block
+  have hstE : StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) 1
+      ⟨c, s⟩ ⟨cE, u⟩ := .succ hQ htick (.zero _ hQE)
+  have hurt : u.right = right s.right := by
+    rw [hu]
+    show s1.right = right s.right
+    rw [hs1, afterBirth_right, afterMismatch_right]
+  have hstIE : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w 1 ⟨c, s⟩ ⟨cE, u⟩ :=
+    PalPeg.CloseoutMarksPack.packRunR_MW_marksFree centre place entry q first h4 hP c₀ r₀ hI₀
+      m hm1 hmle k ⟨c, s⟩ hjx 1 ⟨cE, u⟩ hpack hstE hr (by show position u.right ≤ 2 * m - 1; rw [hurt]; omega)
+  have hpackE : IPackMW centre place entry q first w ⟨cE, u⟩ :=
+    PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMW centre place entry q first hstIE
+  have hwinE := hpackE.win hP
+  have huch : u.chain = .watch (GalilScaffoldChainWatch.immediate wch) := by rw [hu]
+  have hpos : 0 < h := by
+    obtain ⟨cen₀, cc, -, hWI, -, -, -⟩ := hwinE.window
+    rw [huch] at hWI
+    obtain ⟨b, xs, hWW⟩ := hWI
+    obtain ⟨-, -, hcore⟩ := hWW
+    have h1 := PalPeg.ShiftPalAlongTrace.periodLength_of_coreP hcore
+    have hblock : GalilBranchInvariants.WatchBlock wch := by
+      have := hwin.coupled.block
+      rcases hz with ⟨-, ht⟩ | ⟨-, -, hzi⟩ | ⟨-, -, hzs⟩
+      · have hb1 := PalPeg.GalilBranchInvariants.blockInv_tick ht this
+        have hzc : z = .watch wch := by
+          have := hs1c; rw [hs1, afterBirth_chain, afterMismatch_chain] at this; exact this
+        rw [hzc] at hb1; exact hb1
+      · exfalso
+        have h1 : z = ChainVM.watch wch := by
+          have := hs1c; rw [hs1, afterBirth_chain, afterMismatch_chain] at this; exact this
+        rw [hzi] at h1; cases h1
+      · exfalso
+        have h1 : z = ChainVM.watch wch := by
+          have := hs1c; rw [hs1, afterBirth_chain, afterMismatch_chain] at this; exact this
+        rw [hzs] at h1; cases h1
+    have h2 := PalPeg.GalilChainCoupling.periodLength_consume wch.machine wch.lag wch.margin
+      wch.lag (inc wch.margin) hblock
+    rw [hh]
+    have h3 : periodLength (GalilScaffoldChainWatch.immediate wch) = periodLength wch := h2
+    omega
+  -- the shift run of the heads
+  obtain ⟨ce, le, hsh⟩ := PalPeg.GalilShiftPack.shiftHeads_of_scan w s.center s.left s.right rad h
+    hcr.1 hcr.2 hsi hpos hle
+  obtain ⟨t', hsr, htc, -, htrem, -, -⟩ :=
+    shift_heads_counters hsh (inc s.radius) (inc (inc s.length))
+  have htuple : (⟨s1.center, s1.left, ofNat h, s1.radius, inc (inc s1.length)⟩ : ShiftState) =
+      ⟨s.center, left s.left, ofNat h, inc s.radius, inc (inc s.length)⟩ := by
+    simp only [hs1, afterBirth_center, afterBirth_left, afterBirth_radius, afterBirth_length,
+      afterMismatch_center, afterMismatch_left, afterMismatch_radius, afterMismatch_length]
+    try rfl
+  obtain ⟨v, finish, hcsr⟩ := shift_run_chain hsr (GalilScaffoldChainWatch.immediate wch) reset
+  rw [← htuple] at hcsr
+  have hcsr' : ChainShiftRun ⟨u.center, u.left, u.remaining, u.radius, u.length⟩
+      (GalilScaffoldChainWatch.immediate wch) u.cycle h t' v finish := by
+    rw [hu]; exact hcsr
+  -- the copy walker is idle in the shift phase
+  have hiU : CopyIdle u := by
+    have hlv0 := PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry q first hI₀.1
+    have haux0 : AuxPack c₀ r₀ :=
+      ⟨PalPeg.CloseoutPackRun.coupled_of_invLPC hI₀.1, PalPeg.CloseoutPackRun.front_of_invLPC hI₀.1,
+        PalPeg.CloseoutPackRun.copyPack_of_invLPC hI₀.1⟩
+    have hauxE := PalPeg.CloseoutPackRun2.auxPack_steps centre place entry q first (x := ⟨c₀, r₀⟩)
+      hlv0 haux0 (steps_trans hjx (stepsAll_steps hstE))
+    exact hauxE.copyP (by show Mode.shift ≠ Mode.copy; decide)
+  obtain ⟨hunits, hiD⟩ := shiftUnits_S centre place entry q first cE rfl h u _ t' v finish huch hiU hcsr'
+  set uD := shiftLens.set u ⟨t', .watch v, finish⟩ with huD
+  have hzD : positive uD.remaining = false := by
+    show positive t'.remaining = false
+    rw [htrem]; rfl
+  obtain ⟨o, ho, htickD⟩ := shiftExit_S centre place entry q first cE rfl uD hzD hiD
+  -- the landing is sound: the pack at the exhausted shift state gives the scan invariant
+  have hstD : StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+      (1 + h) ⟨c, s⟩ ⟨cE, uD⟩ := stepsAll_trans hstE hunits
+  have huDr : uD.right = u.right := rfl
+  have hstID : PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w (1 + h) ⟨c, s⟩ ⟨cE, uD⟩ :=
+    PalPeg.CloseoutMarksPack.packRunR_MW_marksFree centre place entry q first h4 hP c₀ r₀ hI₀
+      m hm1 hmle k ⟨c, s⟩ hjx _ ⟨cE, uD⟩ hpack hstD hr
+      (by show position uD.right ≤ 2 * m - 1; rw [huDr, hurt]; omega)
+  have hpackD : IPackMW centre place entry q first w ⟨cE, uD⟩ :=
+    PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMW centre place entry q first hstID
+  obtain ⟨rD, hsiD⟩ := PalPeg.CloseoutPackRun23.shiftGeom_exit (hpackD.m2.shiftGeom rfl) hzD
+  set cL : Control := {cE with mode := .scan, output := o} with hcL
+  have houtL : OutputRel w cL uD := by
+    have h1 := outputRel_of_refresh w (PofC centre place entry w) rfl rfl q first cE uD o hsiD ho
+    exact outputRel_transfer w rfl rfl h1
+  have hQD : SoundScanNR w ⟨cE, uD⟩ := fun h => by rw [hcE] at h; cases h
+  have hall : StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
+      (h + 1) ⟨cE, u⟩ ⟨cL, uD⟩ :=
+    stepsAll_trans hunits (.succ hQD htickD (.zero _ (fun _ _ => houtL)))
+  have hcenD : position uD.center = position s.center + h := by
+    show position t'.center = position s.center + h
+    have := (shift_run_center hsr w hcr.1 hcr.2).2.2
+    exact this
+  refine ⟨cL, uD, h + 1, hall, rfl, hr, ⟨cE.output, ho⟩, ?_, ?_, ?_⟩
+  · rw [huDr, hurt, hpos1]
+  · omega
+  · omega
+
+#print axioms shiftLeaf
 
 #print axioms chainReady_watch_of_watchWindow
 
