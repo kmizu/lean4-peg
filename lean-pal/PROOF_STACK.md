@@ -35,6 +35,29 @@ found tick 後の chain の一生を `PofC` frame で構成する。各 tick の
 2. **終端の分類**（比較 tick、clock 1）: 一致 → 続行（右ヘッド +1、`position right ≤ 2m−1` で停止性）；不一致＋guard → `scan_shift`（`ShiftEnabled` は `LPackM2.shiftGeom` から、shift 後は scan に戻り `WindowRunPack` 継続）；不一致＋¬guard → `fallback_restarted_All`（`hg : ¬ shiftGuardVM (afterMismatch …)`、`heven`＝DP 窓長の偶数性、`hi : ShiftIdle`）が restart 直後の `Restarted raw t 0 reset` まで run を作る；break（`brokenMatched`／`breaks`）→ lag ゼロなら `restart` tick で `Restarted`、正 lag なら chain は死んだまま次の不一致で fallback。
 3. **着地**: `Restarted` ＋ `SpanRep` ＋ `CopyPack` → `invLPC_of_landed` → `InvLPS`（`replayStage_of_inv`）→ `cycleOutMC3_of_centre`（`mu` は辞書式: 中心前進 or 同中心で右ヘッド前進）。報告点 `2m−1` に達したら `ReachAtC3`。
 
+### 次に書く定理（正確な文、n251）
+
+`GalilRoundConstruct.scan_half` は継続 round 用（`SInv`: lag ゼロ、`hmid` で round 内の一致が予測される）。
+found 直後の**新鮮 watch**（`prep_segment_construct` の出口: lag = `inc radius`、追いつき中）には使えないので、
+`OracleRun` に新鮮 watch の segment 構成子を書く:
+```
+theorem freshWatch_segment (centre place entry q first) (raw) :
+  ∀ (fuel : ℕ) (c : Control) (s : GalilVM),
+    FreshInv raw c s →                       -- scan ∧ ¬replaying ∧ 1 ≤ clock ≤ 2048 ∧ BigPack2MG7W'' ⟨c,s⟩
+                                             --   （IPackMW.win で WindowRunPack、chain は watch か broken）∧ SearchReady (searchLens.get s)
+    (2 * raw.length - position s.right) * 2049 + c.clock ≤ fuel →
+    ∃ (n : ℕ) (c1 : Control) (s1 : GalilVM),
+      ScanSeg (PofC centre place entry raw) q first 2048 n c s c1 s1 ∧ FreshInv raw c1 s1 ∧
+      s1.center = s.center ∧
+      (¬ canRight s1.right ∨ LastLetterEnd c1 s1 ∨
+        (c1.clock = 1 ∧ canRight s1.right ∧ read (left s1.left) ≠ read (right s1.right)))
+```
+中身: 背景 tick は `scan_tick_exists_PofC`（`hready` は `chainReady_watch_of_watchWindow`、broken は `True`）で存在し
+`FreshInv` は `bigPack2MG7W''_tick_M`＋`windowRunPack_tick`（`hSP` は `shiftPal_of_windowRunPack`）で保存、
+`SearchReady` は chain 生存中は不変。一致比較は segment に含めて続行（右ヘッド +1 で fuel 減少）。
+終端 3 択のあと: 不一致∧`shiftGuardVM (afterMismatch …)` → `scan_shift`（`ShiftEnabled` は `LPackM2.shiftGeom`）、
+不一致∧¬guard → `fallback_restarted_All`、`¬canRight` → 報告点。
+
 ## n250 — モデル欠陥 `M-watchBreak` を修正（`ChainStep.watchBreak`／`ChainMatched.brokenMatched`）、全体 build 緑
 
 **公理への進捗**
