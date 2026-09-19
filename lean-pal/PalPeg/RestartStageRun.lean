@@ -193,7 +193,7 @@ nonnegative lag, and at a restart-guard state the stage bound of the radius agai
 together with whatever else (`Extra`) the lag-zero break established there. -/
 def BrokenStage (Extra : ℕ → ℕ → GalilScaffoldChainWatch.State → Prop) (c : Control)
     (s : GalilVM) : Prop :=
-  (c.mode = Mode.shift → ∃ w, s.chain = .watch w) ∧
+  (c.mode = Mode.shift → (∃ w, s.chain = .watch w) ∧ s.periodOnly = true) ∧
   (c.mode = Mode.scan → ∀ w, s.chain = .broken w →
     (Canonical w.lag ∧ 0 ≤ value w.lag) ∧
     (restartGuardVM s → ∃ Rad : ℕ, RadiusRep s.radius Rad ∧
@@ -413,15 +413,16 @@ theorem brokenStage_tick {Extra : ℕ → ℕ → GalilScaffoldChainWatch.State 
       cases hz
   | scan_shift c s s' t hm hav hc hcmp hmt hr hg hb =>
     obtain ⟨w, -, hteq⟩ := hb
-    exact ⟨fun _ => ⟨_, by rw [hteq]⟩, fun h => by simp at h⟩
+    exact ⟨fun _ => ⟨⟨_, by rw [hteq]⟩, by rw [hteq]⟩, fun h => by simp at h⟩
   | scan_fallback c s s' t hm hav hc hcmp hmt hg hr hb =>
     obtain ⟨p, hteq, -⟩ := hb
     exact brokenStage_of_not_broken (by simp) (fun w0 hw0 => by rw [hteq] at hw0; cases hw0)
   | shift_one c s t hm hp hso =>
     obtain ⟨⟨-, -, -, w, hw, hget⟩, hset⟩ := hso
-    exact ⟨fun _ => ⟨chainShiftOne w, by rw [hset, hget]; rfl⟩, fun h => by simp [hm] at h⟩
+    exact ⟨fun _ => ⟨⟨chainShiftOne w, by rw [hset, hget]; rfl⟩,
+      by rw [hset, hget]; exact (hstage.1 hm).2⟩, fun h => by simp [hm] at h⟩
   | shift_done c s o hm hp ho =>
-    obtain ⟨w, hw⟩ := hstage.1 hm
+    obtain ⟨⟨w, hw⟩, -⟩ := hstage.1 hm
     exact brokenStage_of_not_broken (by simp) (fun w0 hw0 => by rw [hw] at hw0; cases hw0)
   | replayStart c s t o hm hr ho ho' =>
     obtain ⟨_,_,_,_,_,_,_,_,_,hch,_,_,_⟩ := hr

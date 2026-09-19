@@ -1265,7 +1265,8 @@ theorem move_of_live_sem_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Ga
     rw [hscan.rightPos]
     omega
   apply PalPeg.CanonicalFallbackInput.move_of_activeBound
-    (c := c) hscan hcan hlen (scan_radius_lt hscan) hminimal
+    (c := c) hscan hcan hlen (scan_radius_lt hscan)
+    (fun g hg0 hgh hfour => hminimal rad (scan_radius_lt hscan) hscan.palindrome g hg0 hgh hfour)
   · rw [hrad]
     exact hquarter h hminimal
   · rfl

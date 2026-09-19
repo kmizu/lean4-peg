@@ -32,10 +32,12 @@ def LastExcluded (raw : List (Fin 2)) (C Rad : ℕ) (w : GalilScaffoldChainWatch
   ∀ L : ℕ, value w.machine.control.last = (L : ℤ) →
     Rad ≤ 4 * (L + 1) ∧ LowerExcludedFrom raw C L Rad
 
-/-- While the search runs with an idle chain, its lower bound is excluded at the centre on every
-span from some radius `base` on, which the scan radius has reached. -/
+/-- While the centre has not moved since the lower bound was installed — the chain is idle, or
+it is in its first round (`periodOnly = false`: a birth resets the flag, a shift sets it) — the
+lower bound is excluded at the centre on every span from some radius `base` on, which the scan
+radius has reached. -/
 def LowerAt (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
-  c.mode = .scan → s.chain = .idle →
+  c.mode = .scan → (s.chain = .idle ∨ s.periodOnly = false) →
     ∀ L : ℕ, value s.lower = (L : ℤ) → ∃ base : ℕ, base ≤ (value s.radius).toNat ∧
       base ≤ 4 * (L + 1) ∧ LowerExcludedFrom raw (position s.center) L base
 
@@ -79,6 +81,28 @@ theorem idle_of_chainAt {a found : Bool} {answer : GalilScaffoldTape.Tape} {cc :
       unfold chainStart at hz
       cases hz
 
+theorem isIdle_false_of_ne {x : ChainVM} (hne : x ≠ .idle) : x.isIdle = false := by
+  cases x <;> simp_all [ChainVM.isIdle]
+
+/-- The guard of `LowerAt` goes back over a chain tick: a chain that ends idle was idle, and a
+non-idle chain is not born, so its `periodOnly` flag is the source's. -/
+theorem lowerGuard_source {a found : Bool} {answer : GalilScaffoldTape.Tape} {cc : Fin 3}
+    {walker : GalilScaffoldPlace.Place} {ver : PlaceHead} {radius : Counter} {x z : ChainVM}
+    {sourceOnly targetOnly : Bool}
+    (hchain : chainAt a found answer cc walker ver radius x z)
+    (honly : targetOnly = if chainBorn found x then false else sourceOnly)
+    (hguard : z = .idle ∨ targetOnly = false) : x = .idle ∨ sourceOnly = false := by
+  by_cases hidle : x = .idle
+  · exact Or.inl hidle
+  · right
+    rcases hguard with hz | hfalse
+    · rw [hz] at hchain
+      exact absurd (idle_of_chainAt hchain) hidle
+    · unfold chainBorn at honly
+      rw [isIdle_false_of_ne hidle] at honly
+      rw [honly] at hfalse
+      simpa using hfalse
+
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
 
@@ -90,27 +114,19 @@ theorem lowerAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
     (hlowerAt : LowerAt raw x.ctl x.vm)
     (hstage : BrokenStage (LastExcluded raw) x.ctl x.vm) :
     LowerAt raw y.ctl y.vm := by
-  have hkeep : x.ctl.mode = .scan → x.vm.chain = .idle → y.vm.lower = x.vm.lower :=
-    fun hm hidle => lower_eq_of_regular_tick centre place entry q first ht
-      (by rw [hm]; decide) (by rw [hm]; decide)
-      (fun _ hrestart => by
-        obtain ⟨w0, hw0, -⟩ := hrestart
-        rw [hidle] at hw0
-        cases hw0)
   have hbackground : ∀ {c c' : Control} {s t : GalilVM}, x = ⟨c, s⟩ → y = ⟨c', t⟩ →
       c.mode = .scan → (galilFrameS (PofC centre place entry raw) q first).background s t →
       LowerAt raw c' t := by
     intro c c' s t hx hy hm hb
     subst hx
     subst hy
-    obtain ⟨-, -, hch, hcenter, -, hradius, -⟩ :=
+    obtain ⟨-, -, hch, hcenter, honly, hradius, -, -, -, -, -, hse⟩ :=
       backgroundS_fields (PofC centre place entry raw) q first hb
-    intro _ hidle L hL
-    rw [hidle] at hch
-    have hsourceIdle : s.chain = .idle := idle_of_chainAt hch
-    have hlowerEq : t.lower = s.lower := hkeep hm hsourceIdle
+    intro _ hguard L hL
+    have hsourceGuard := lowerGuard_source hch honly hguard
+    have hlowerEq : t.lower = s.lower := searchEffect_lower_eq hse
     obtain ⟨base, hbaseRadius, hbaseLower, hexcluded⟩ :=
-      hlowerAt hm hsourceIdle L (by rw [← hlowerEq]; exact hL)
+      hlowerAt hm hsourceGuard L (by rw [← hlowerEq]; exact hL)
     refine ⟨base, ?_, hbaseLower, ?_⟩
     · show base ≤ (value t.radius).toNat
       rw [hradius]
@@ -126,22 +142,29 @@ theorem lowerAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
   | scan_count c s t hm hav hc hb => exact hbackground rfl rfl hm hb
   | scan_match c s s' t o hm hav hc hcmp hmt hpl ho =>
     have hcmp' : compareFound (PofC centre place entry raw) q first s s' := hcmp
-    obtain ⟨vs, vq, a, -, -, -, -, hch, heq⟩ := hcmp'
+    obtain ⟨vs, vq, a, -, -, -, hse, hch, heq⟩ := hcmp'
     obtain ⟨-, -, hchain', hcenter', -⟩ := PalPeg.WindowTick.compare_target_heads heq
     have hchain : t.chain = s'.chain := by rw [hpl]; split <;> rfl
     have hcenter : t.center = s'.center := by rw [hpl]; split <;> rfl
-    intro _ hidle L hL
-    have htargetIdle : t.chain = .idle := hidle
-    rw [hchain, hchain'] at htargetIdle
-    rw [htargetIdle] at hch
-    have hsourceIdle : s.chain = .idle := idle_of_chainAt hch
-    have hlowerEq : t.lower = s.lower := hkeep hm hsourceIdle
+    have honly : t.periodOnly
+        = if chainBorn (decide (vq.search.mode = .found)) s.chain then false
+          else s.periodOnly := by
+      have htarget : t.periodOnly = s'.periodOnly := by rw [hpl]; split <;> rfl
+      rw [htarget, heq, afterBirth_periodOnly]
+      cases a <;> rfl
+    have hlowerEq : t.lower = s.lower := by
+      have htarget : t.lower = s'.lower := by rw [hpl]; split <;> rfl
+      rw [htarget, heq, afterBirth_lower]
+      cases a <;> exact searchEffect_lower_eq hse
     have hradius : t.radius = inc s.radius := by
       have htarget : t.radius = s'.radius := by rw [hpl]; split <;> rfl
       rw [htarget, heq, afterBirth_radius]
       cases a <;> rfl
+    intro _ hguard L hL
+    have hsourceGuard := lowerGuard_source (z := t.chain) (by rw [hchain, hchain']; exact hch)
+      honly hguard
     obtain ⟨base, hbaseRadius, hbaseLower, hexcluded⟩ :=
-      hlowerAt hm hsourceIdle L (by rw [← hlowerEq]; exact hL)
+      hlowerAt hm hsourceGuard L (by rw [← hlowerEq]; exact hL)
     refine ⟨base, ?_, hbaseLower, ?_⟩
     · show base ≤ (value t.radius).toNat
       rw [hradius, inc_value]
@@ -160,11 +183,15 @@ theorem lowerAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
     intro hmode
     simp [hm] at hmode
   | shift_done c s o hm hp ho =>
-    obtain ⟨w, hw⟩ := hstage.1 hm
-    intro _ hidle
-    have hsourceIdle : s.chain = .idle := hidle
-    rw [hw] at hsourceIdle
-    cases hsourceIdle
+    obtain ⟨⟨w, hw⟩, honly⟩ := hstage.1 hm
+    intro _ hguard
+    rcases hguard with hidle | hfalse
+    · have hsourceIdle : s.chain = .idle := hidle
+      rw [hw] at hsourceIdle
+      cases hsourceIdle
+    · have hsourceFalse : s.periodOnly = false := hfalse
+      rw [honly] at hsourceFalse
+      cases hsourceFalse
   | replayStart c s t o hm hr ho ho' =>
     obtain ⟨_,_,_,_,_,_,_,_,_,_,_,hlower,_⟩ := hr
     exact lowerAt_of_reset hlower
@@ -193,7 +220,8 @@ theorem lowerAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
 /-- At a chain-idle scan state no semiperiod up to the lower bound is a period of the scan
 span: the `hlow` input of the fallback move inequality. -/
 theorem no_lower_period_at_scan {raw : List (Fin 2)} {c : Control} {s : GalilVM} {Rad : ℕ}
-    (hlowerAt : LowerAt raw c s) (hm : c.mode = .scan) (hidle : s.chain = .idle)
+    (hlowerAt : LowerAt raw c s) (hm : c.mode = .scan)
+    (hguard : s.chain = .idle ∨ s.periodOnly = false)
     (hscan : ScanInvariant raw (position s.center) Rad s.left s.right)
     (hradius : RadiusRep s.radius Rad) :
     ∀ δ, 0 < δ → δ ≤ (value s.lower).toNat →
@@ -204,7 +232,7 @@ theorem no_lower_period_at_scan {raw : List (Fin 2)} {c : Control} {s : GalilVM}
     have : (value s.lower).toNat = 0 := by omega
     omega
   obtain ⟨base, hbaseRadius, -, hexcluded⟩ :=
-    hlowerAt hm hidle (value s.lower).toNat (by omega)
+    hlowerAt hm hguard (value s.lower).toNat (by omega)
   rw [hradius.2] at hbaseRadius
   exact hexcluded Rad (by simpa using hbaseRadius) (scan_radius_lt hscan) hscan.palindrome δ hδ0 hδ
 
@@ -225,7 +253,7 @@ theorem birthMinimal_of_lowerAt {raw : List (Fin 2)} {c₀ : Control} {r₀ : Ga
   obtain ⟨H, hcopy, hfuture, hmove⟩ :=
     PalPeg.CanonicalSearchHistory.birthMinimals_packed centre place entry q first hP hI hrun hm
       hidle he hf (fun lower hlowerEq => by
-        obtain ⟨base, -, hbaseLower, hexcluded⟩ := hlowerAt hm hidle lower (by
+        obtain ⟨base, -, hbaseLower, hexcluded⟩ := hlowerAt hm (Or.inl hidle) lower (by
           rw [← searchEffect_lower_eq he, hlowerEq, ofNat_value])
         exact hexcluded.toLowerExcluded hbaseLower)
   rw [searchEffect_lower_eq he] at hmove
@@ -465,7 +493,7 @@ theorem move_of_idle {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : Control} {
       have h2 : position s.right = position s.center + R := hright
       omega
     subst hrad
-    exact ⟨hR.2, no_lower_period_at_scan hinvariant.lowerAt hm hidle hscan hR⟩
+    exact ⟨hR.2, no_lower_period_at_scan hinvariant.lowerAt hm (Or.inl hidle) hscan hR⟩
   have hstage := (PalPeg.SearchStageRun.stageAt_packed centre place entry q first hP hI
     hrun).scan hm hidle
   by_cases hactive : PalPeg.SearchStageHistory.Active (searchLens.get s).search.mode
