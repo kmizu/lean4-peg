@@ -17,6 +17,32 @@ namespace PalPeg.LowerExcludedAtBreak
 
 open PalPeg PalPeg.CanonicalSearchProgram GalilScaffoldChainInputSupply
 
+/-- The whole scan span has period `2h`: the right half by the verified block, the left half by
+the scan palindrome, and the places straddling the centre by the block palindrome at `C + h`. -/
+theorem periodOn_span_of_halves {α : Type} {x : List α} {C d h : ℕ}
+    (hpal : Manacher.PalAt x C d) (hhd : 2*h ≤ d)
+    (hright : PeriodOn x (2*h) C (C + d))
+    (hblock : Manacher.PalAt x (C + h) h) : PeriodOn x (2*h) (C - d) (C + d) := by
+  have hleft : PeriodOn x (2*h) (C - d) C := periodOn_mirror hpal hhd hright
+  have hdC : d ≤ C := hpal.1
+  intro i hi hib
+  rcases Nat.lt_or_ge i C with hiC | hiC
+  · rcases Nat.lt_or_ge C (i + 2*h) with hcross | hnot
+    · obtain ⟨t, ht⟩ : ∃ t, C = i + t := ⟨C - i, by omega⟩
+      have h1 := hpal.2.2 t (by omega)
+      rw [show C - t = i from by omega] at h1
+      rcases le_total t h with hth | hth
+      · have h2 := hblock.2.2 (h - t) (by omega)
+        rw [show C + h - (h - t) = C + t from by omega,
+          show C + h + (h - t) = i + 2*h from by omega] at h2
+        exact h1.trans h2
+      · have h2 := hblock.2.2 (t - h) (by omega)
+        rw [show C + h - (t - h) = i + 2*h from by omega,
+          show C + h + (t - h) = C + t from by omega] at h2
+        exact h1.trans h2.symm
+    · exact hleft i hi hnot
+  · exact hright i hiC hib
+
 theorem lowerExcluded_of_break {raw : List (Fin 2)} {C d h last : ℕ}
     (hpalOld : Manacher.PalAt (encoded raw) C d)
     (hperiodOld : PeriodOn (encoded raw) (2*h) (C - d) (C + d))
