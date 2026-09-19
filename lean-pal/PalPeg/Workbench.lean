@@ -389,29 +389,19 @@ copy/back の `ChainStep` は lag を触らず `ChainMatched` は `inc` する�
 （`CloseoutWatchRound2:270`）が材料を持っている。**残る側条件は `sF.radius = ofNat (r0+1)`**
 （`found_to_watchStart_least` が `ofNat (r0+1)` 形を、`LagPos` が `positive sF.radius` を要求）。
 
-## `ShiftPalAlongTrace` — `hSP` の正しい形（trace 形、未配線）
+## `ShiftPalAlongTrace` / `ShiftEntryFromLanding` / `ShiftEntryBoundary`（2026-09-19, n238）
 
 | 定理 | 内容 |
 |---|---|
-| `chainIdle_after_init` | `init` の行き先は chain が idle（`initVM` が置く） |
-| `roundBundle_alongTrace` | `RoundBundle` を trace に沿って（`st 1` から） |
-| **`shiftPal_alongTrace`** | **`ShiftPal` を trace の scan 点で** |
+| `ShiftPalAlongTrace.freshShiftLedger_of_chainW` | 誕生中心 anchor の `ChainW` 窓＋`cen = cen₀ + k·h`＋`2h ≤ R` から `FreshShiftLedger`（窓の周期構造: `palAt_block_periodic`／`palAt_mirror`／`periodOn_mirror`） |
+| `ShiftPalAlongTrace.shiftPal_of_freshShiftLedger` | `FreshShiftLedger` → `ShiftPal` |
+| `ShiftEntryFromLanding.freshShiftLedger_of_chainW_scan` | 比較前の窓から（比較量子の chain 1 歩を `chainW_step`＋`chainStep_unique` で渡す） |
+| `ShiftEntryBoundary.refuted_freshShiftAtShiftEntry_at_left_end` | `H_freshShiftAtShiftEntry` は左端の不一致で `False`（REFUTED・条件付き） |
 
-**主定理との関係**: 公理 `obligation_shiftPalAtScanStates` は一状態述語
-`BigPack2MG7W` の下で `ShiftPal` を要求していたが、その guard は chain の周期テープと
-入力語 `w` を一切結びつけていない（n112、**偽の疑いが濃い**）。`shiftPal_alongTrace` が
-正しい形で、残差は 3 つだけ:
-
-| 残差 | 形 | 出どころ |
-|---|---|---|
-| `H_readsShift` | trace 形 | `RoundSegFromRun.readsShift_at_actual`（実状態で出る） |
-| `H_freshShiftAtShiftEntry` | tick 形 | 狭めた版、`GalilScaffoldTopFirstRound.first_round` |
-| `hFreshBranch`（`periodOnly = false`） | 状態ごと | 同上 |
-
-`AuxPack`（`auxPack_alongTrace_afterFirstStep`）と `canRight`
-（`canRightAtScanOrShift_alongTrace`）は中で放電済み。起点が `st 1` なのは
-`AuxPack` が boot では偽だから（`AuxPackNotAtBoot`）で、`st 1` の chain が idle なのは
-`initVM` が `t.chain = .idle` を置くから。
+**主定理との関係**: 公理 `obligation_shiftPalResiduesAlongRun` は不一致比較直前の窓 1 本
+（`PalInPegUnconditional`）。`obligation_shiftPalAlongRun`／`…AlongTrace` はそこから
+`shiftPal_of_freshShiftLedger` で `ShiftPal` を出す。round 機構（`RoundScan`／`ShiftInv`）は
+`room : R + 2 ≤ C` で左端を除外しており、この経路からは外れた。
 
 ## `H_freshShift` を消費者の scope に狭めた（2026-09-19）
 

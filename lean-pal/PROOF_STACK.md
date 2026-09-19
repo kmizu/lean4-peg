@@ -1,3 +1,32 @@
+## n239 — 後始末: 参照ゼロになった `ShiftInv` 入口の組み立て群を削除、docstring を現状に
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 変化なし（n238 の窓 1 本のまま）。次は run 層の producer |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+削除（参照ゼロ・round 機構経由の旧経路。n232 の git 履歴に残る）:
+`shiftInv_of_watch_entry`／`pred_immediate`／`immediate_lag_unbroken`／`coreX_immediate`／
+`palNext_of_centre`／`shiftPal_of_chainNotWatch`。残した部品は全部 `freshShiftLedger_of_chainW`
+が使う（`symbol_of_coreX`／`blockOn_succ_of_symbol`／`cells_run`／`periodLength_of_coreX`／
+`block_last_of_blockOn`／`palAt_block_of_centre`／`bounce_getElem?_symm`／`periodOn_of_blockOn`／
+`palAt_mirror`／`periodOn_extend_left`／`palAt_shift_half`／`palAt_block_periodic`）。
+`ShiftPalAlongTrace` の冒頭と `Workbench` の該当節を n238 の形に書き換えた。
+
+### 次の一手（run 層の producer）
+
+窓の残差を run に沿って運ぶ pack 場を足す:
+`ChainWindowAt raw s := ∃ cc b xs cen₀ k R bud, position s.center = cen₀ + k·h ∧
+ChainW raw cen₀ (cen+R) (cen+R) bud false cc b xs s.chain ∧ x[cen₀] = cc ∧ 2h ≤ R`
+（chain が watching のとき）。維持: 一致比較 `chainW_matched`、background `chainW_step`、
+shift 相（右ヘッド不動・chain は lag 0 で idle）、誕生 `chainW_start`＋`blockOn_of_candidate`
+（found／replay 両経路とも `Candidate` を持つ）。
+
 ## n238 — 公理進捗: `obligation_shiftPalResiduesAlongRun` を窓 1 本に置換（偽の第 2 連言と `H_readsShift` が消えた）
 
 **公理への進捗**

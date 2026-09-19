@@ -8,6 +8,13 @@ import PalPeg.CloseoutShiftLocalFree
 /-!
 # `ShiftPal` を trace 形で（`hSP` の正しい形）
 
+**2026-09-19（n238）**: 公理 `obligation_shiftPalResiduesAlongRun` は**不一致比較直前の
+誕生 anchor 窓 1 本**になった。`ShiftPal` は `freshShiftLedger_of_chainW`（このファイル、窓の
+周期構造）→ `shiftPal_of_freshShiftLedger` で出る。下の「残差 3 つ」の表と run/trace 形の
+記述は n237 までの歴史。round 機構経由の `shiftPal_alongRun`／`shiftPal_alongTrace`／
+`roundBundle_alongTrace` と `ShiftInv` 入口の組み立て（`shiftInv_of_watch_entry` 系）は
+参照ゼロになり削除した（`ShiftEntryBoundary` の条件付き反証を参照）。
+
 **2026-09-19（n112）**: 公理 `obligation_shiftPalAtScanStates` は
 
     ∀ w x, BigPack2MG7W … w x → ScanNR x → ShiftPal … w x.vm
@@ -73,40 +80,6 @@ theorem chainIdle_after_init {w : List (Fin 2)} (x y : State GalilVM)
 lag をそのまま受け継ぐ（`backDone`）か `inc` する（`Outer.queued`）ので、誕生 chain の
 正 lag が保たれて guard が落ちる（`CopyPhaseNoShift.tick_not_watch_or_posLag`）。 -/
 
-/-- **chain が watch でない点では `ShiftPal` は空虚に成り立つ**——`CopyOrBack` も
-`CopyInv` も lag も要らない。純粋に構成子の形だけ。
-
-`shiftGuardVM` は `w.machine.control.phase = 4` を要求するが、copy/back から 1 手で
-生まれる watch の control は `watchControl v` で `phase = 0`、`Outer` を通しても
-`phase ≤ 1`（`CopyPhaseNoShift.tick_watch_phase_ne_four`）。
-**これで「found 時の半径が正」への依存がこの経路から消えた**（n134 の版は `LagPos` を
-取っていたが不要だった）。 -/
-theorem shiftPal_of_chainNotWatch {w : List (Fin 2)} {s : GalilVM}
-    (hNotWatch : ∀ wv : GalilScaffoldChainWatch.State, s.chain ≠ ChainVM.watch wv) :
-    ShiftPal centre place entry q first w s := by
-  intro s' hCompare hNotMatched wch hChain hGuard r₀ hScanInv
-  exfalso
-  obtain ⟨vs, vq, a, hvl, hvr, hiff, hsearch, hchainAt, hteq⟩ :
-    compareFound (PofC centre place entry w) q first s s' := hCompare
-  have hChainEq : s'.chain = vs.chain := by
-    rw [hteq, afterBirth_chain]
-    split <;> rfl
-  obtain ⟨wg, hwg, -, hPhase4, -, -, -⟩ := hGuard
-  rw [hChainEq] at hwg
-  rcases hchainAt with ⟨-, hct⟩ | ⟨-, -, hzidle⟩ | ⟨-, -, hbirth⟩
-  · exact PalPeg.CopyPhaseNoShift.tick_watch_phase_ne_four_of_notWatch hNotWatch hct wg hwg hPhase4
-  · rw [hzidle] at hwg; exact ChainVM.noConfusion hwg
-  · cases a with
-    | false =>
-      simp only [Bool.false_eq_true, if_false] at hbirth
-      rw [hbirth] at hwg
-      exact ChainVM.noConfusion hwg
-    | true =>
-      simp only [if_true, chainStart] at hbirth
-      rw [hwg] at hbirth
-      cases hbirth
-
-#print axioms shiftPal_of_chainNotWatch
 
 /-! ## `periodOnly = false` ＋ watch の本体（残差を名前付きに絞った形）
 
@@ -251,29 +224,6 @@ theorem palAt_block_of_centre {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fi
 
 #print axioms palAt_block_of_centre
 
-/-- **`ShiftInv` の `palNext`（shift 先の中心 `cen + h` の回文、半径 `R + 1 − h`）。**
-`i ≤ h` はブロック回文（`palAt_block_of_centre`）、`h < i` は左の添字を `pal` で中心の右へ
-鏡映してから窓の周期性で `2h` 進める。 -/
-theorem palNext_of_centre {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)} {cen R : ℕ}
-    (hpal : Manacher.PalAt (encoded raw) cen R)
-    (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs (cen + 1) (cen + R + 1))
-    (hcentre : (encoded raw)[cen]? = some cc)
-    (hsize : 3 * (xs.length + 1) ≤ R)
-    (hlen : cen + R + 1 < (encoded raw).length) :
-    Manacher.PalAt (encoded raw) (cen + (xs.length + 1)) (R + 1 - (xs.length + 1)) := by
-  have hRc : R ≤ cen := hpal.1
-  have hblock := palAt_block_of_centre hblk hcentre (by omega) hlen
-  refine ⟨by omega, by omega, ?_⟩
-  intro i hi
-  rcases Nat.lt_or_ge (xs.length + 1) i with hgt | hle
-  · have hm := hpal.2.2 (i - (xs.length + 1)) (by omega)
-    rw [show cen - (i - (xs.length + 1)) = cen + (xs.length + 1) - i from by omega] at hm
-    have hp := periodOn_of_blockOn hblk (cen + (i - (xs.length + 1))) (by omega) (by omega)
-    rw [hm, hp, show cen + (i - (xs.length + 1)) + 2 * (xs.length + 1)
-        = cen + (xs.length + 1) + i from by omega]
-  · exact hblock.2.2 i hle
-
-#print axioms palNext_of_centre
 
 /-- **回文の鏡映。**  `C` を中心とする半径 `R` の回文の内側で、`C + d` を中心とする半径 `r` の
 回文は `C − d` を中心とする半径 `r` の回文に写る。 -/
@@ -376,213 +326,9 @@ theorem periodLength_of_coreX {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fi
 
 #print axioms periodLength_of_coreX
 
-/-- **`immediate` 直後の verifier ヘッド。**  `right` 1 手ぶんの `Represents` と存在。 -/
-theorem coreX_immediate {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
-    {anchor : ℕ} {w : GalilScaffoldChainWatch.State}
-    (h : PalPeg.GalilReplaySpan.CoreX raw cc b xs anchor w.machine) :
-    GalilScaffoldInputTrace.Represents
-        (GalilScaffoldChainWatch.immediate w).machine.verifier.head raw ∧
-      (GalilScaffoldChainWatch.immediate w).machine.verifier.head.focus ≠ none :=
-  PalPeg.BranchSupply.representsAfterRight_free w.machine.verifier h.2.1 h.2.2.1
 
-#print axioms coreX_immediate
 
-/-- **`immediate` は lag ゼロと非破壊を保つ**（一致する consume なので）。 -/
-theorem immediate_lag_unbroken {w : GalilScaffoldChainWatch.State} {a : Fin 3}
-    (hlag : zero w.lag = true) (hbroken : w.machine.control.broken = false)
-    (hsym : GalilScaffoldChainConsume.symbol w.machine.control.period.focus = some a)
-    (hread : GalilScaffoldInputHead.read
-      (GalilScaffoldChainVerifier.right w.machine.verifier) = some a) :
-    zero (GalilScaffoldChainWatch.immediate w).lag = true ∧
-      (GalilScaffoldChainWatch.immediate w).machine.control.broken = false := by
-  refine ⟨hlag, ?_⟩
-  show (GalilScaffoldChainConsume.consume w.machine.control
-    (GalilScaffoldInputHead.read
-      (GalilScaffoldChainVerifier.right w.machine.verifier))).broken = false
-  rw [hread]
-  exact consume_keeps_unbroken w.machine.control a hsym hbroken
 
-#print axioms immediate_lag_unbroken
-
-/-- **`ShiftInv` の `aligned` 場と `pred` 場、shift 入口で。**
-
-窓は走査の右ヘッドまでしか届かず、shift 判定はまさにその右端で起きる。だから予測を
-**前へ**伸ばして周期で戻す道は無い。代わりに `bounce` の添字のまま 1 周期 `2h` **戻す**:
-`BlockOn` は添字 `target − anchor` でも成立し、
-`(target − anchor + 2h) % 2h = (target − anchor) % 2h` なので同じ `bounce` 記号を指す。
-`Good w` は窓からではなく guard から来る。 -/
-theorem pred_immediate {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
-    {anchor E target : ℕ} {w : GalilScaffoldChainWatch.State}
-    (hcore : PalPeg.GalilReplaySpan.CoreX raw cc b xs anchor w.machine)
-    (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs anchor E)
-    (hgood : GalilScaffoldChainWatch.Good w)
-    (hwrap : target + 2 * (xs.length + 1) = position w.machine.verifier + 2)
-    (hanchor : anchor ≤ target) (hinside : target ≤ E) :
-    position (GalilScaffoldChainWatch.immediate w).machine.verifier
-        = position w.machine.verifier + 1 ∧
-      GalilScaffoldChainConsume.symbol
-          (GalilScaffoldChainWatch.immediate w).machine.control.period.focus
-        = (encoded raw)[target]? := by
-  have hnext : position (GalilScaffoldChainWatch.immediate w).machine.verifier
-      = position w.machine.verifier + 1 :=
-    right_position _ hgood.1 (represented_position _ raw hcore.2.1 hcore.2.2.1).1
-  have hsym : GalilScaffoldChainConsume.symbol
-        (GalilScaffoldChainWatch.immediate w).machine.control.period.focus
-      = (GalilScaffoldChainSweep.bounce cc b xs)[
-          (position (GalilScaffoldChainWatch.immediate w).machine.verifier + 1 - anchor) %
-            (2 * (xs.length + 1))]? :=
-    symbol_of_coreX (PalPeg.GalilReplaySpan.coreX_consume hcore hgood)
-  have hwin := hblk (target - anchor) (by omega)
-  rw [show anchor + (target - anchor) = target from by omega] at hwin
-  refine ⟨hnext, ?_⟩
-  rw [hsym, hnext,
-    show position w.machine.verifier + 1 + 1 - anchor
-      = (target - anchor) + 2 * (xs.length + 1) from by omega,
-    Nat.add_mod_right, hwin]
-
-#print axioms pred_immediate
-
-/-- **`H_freshShiftAtShiftEntry` の中身: shift 入口の `ShiftInv`、23 場すべて。**
-
-入力は run 層が shift 入口で手にしている一次事実だけ:
-
-* `hCW` — `GalilReplaySpan.ChainW` の `.watch` 枝（`LandingData` の形: 窓は右ヘッド
-  `cen + R` まで、lag は右ヘッドに対して）
-* `hpal` — 直前の走査不変量の回文（`ScanInvariant.palindrome`、半径 `R`）
-* 比較後のヘッド 6 事実と不一致 `hmis`（compare は両ヘッドを 1 つ外へ動かす。不一致直後は
-  `ScanInvariant` 自体は成り立たないので、その回文以外の場をばらして受け取る）
-* `hguard` / `hpo` — `shiftGuardVM` の `periodOnly = false` 枝
-* `hb` — `beginShiftVM`
-* `hcentre` — **中心の記号 `x[cen] = cc`**（窓に無い唯一の静的事実、DP の `Candidate` 由来）
-
-`ShiftInv` の座標: `C = cen − h`、`R = R − h`、`k = 0`、`h = |xs| + 1`。 -/
-theorem shiftInv_of_watch_entry {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
-    {cen R bud : ℕ} {lim : Bool} {w : GalilScaffoldChainWatch.State} {u t : GalilVM}
-    (hCW : PalPeg.GalilReplaySpan.ChainW raw cen (cen + R) (cen + R) bud lim cc b xs
-      (ChainVM.watch w))
-    (hpal : Manacher.PalAt (encoded raw) cen R)
-    (hleftRep : GalilScaffoldInputTrace.Represents u.left.head raw)
-    (hleftPresent : u.left.head.focus ≠ none)
-    (hleftPos : position u.left = cen - (R + 1))
-    (hrightRep : GalilScaffoldInputTrace.Represents u.right.head raw)
-    (hrightPresent : u.right.head.focus ≠ none)
-    (hrightPos : position u.right = cen + R + 1)
-    (hmis : read u.left ≠ read u.right)
-    (hguard : shiftGuardVM u) (hpo : u.periodOnly = false)
-    (hb : beginShiftVM (periodLength w) w u t)
-    (hcentre : (encoded raw)[cen]? = some cc) :
-    ShiftInv raw (cen - (xs.length + 1)) (R - (xs.length + 1))
-      (periodLength (GalilScaffoldChainWatch.immediate w)) 0 t
-      (GalilScaffoldChainWatch.immediate w) := by
-  obtain ⟨hlag, hblk, hcore, hcanM, hmargin, -⟩ := hCW
-  obtain ⟨hchainU, ht⟩ := hb
-  -- the guard speaks about this very chain
-  obtain ⟨w', hw', hlagZ, -, hbroken, hsign, hsym⟩ := hguard
-  have hww : w = w' := ChainVM.watch.inj (hchainU.symm.trans hw')
-  subst hww
-  simp only [hpo, Bool.false_eq_true, ↓reduceIte] at hsign
-  -- period length
-  have hpl : periodLength w = xs.length + 1 := periodLength_of_coreX hcore
-  have hplI : periodLength (GalilScaffoldChainWatch.immediate w) = periodLength w :=
-    PalPeg.GalilChainCoupling.periodLength_consume w.machine w.lag w.margin w.lag
-      (GalilScaffoldCounter.inc w.margin) hcore.1
-  -- the verifier sits on the right head of the round
-  have hposNil : w.lag.pos = [] := by
-    have hz : (w.lag.pos.isEmpty && w.lag.neg.isEmpty) = true := hlagZ
-    cases hp : w.lag.pos with
-    | nil => rfl
-    | cons _ _ => simp [hp] at hz
-  have hver : position w.machine.verifier = cen + R := by
-    have hl := hlag.2
-    rw [hposNil, List.length_nil, Nat.add_zero] at hl
-    exact hl
-  -- reads at the right head
-  have hreadR : read u.right = (encoded raw)[cen + R + 1]? := by
-    rw [represented_read u.right raw hrightRep hrightPresent, hrightPos]
-  have hreadRne : read u.right ≠ none := fun hnone =>
-    hrightPresent (Option.map_eq_none_iff.1 hnone)
-  have hrightLt : cen + R + 1 < (encoded raw).length := by
-    rcases Nat.lt_or_ge (cen + R + 1) (encoded raw).length with hlt | hge
-    · exact hlt
-    · exact absurd (hreadR.trans (List.getElem?_eq_none_iff.2 hge)) hreadRne
-  have hcan : GalilScaffoldChainVerifier.canRight w.machine.verifier :=
-    canRight_of_bound _ raw hcore.2.1 hcore.2.2.1 (by omega)
-  have hreadVer : read (GalilScaffoldChainVerifier.right w.machine.verifier)
-      = (encoded raw)[cen + R + 1]? := by
-    rw [represented_read _ raw (right_word _ raw hcore.2.1 hcan)
-        (right_present _ raw hcore.2.1 hcore.2.2.1 hcan),
-      right_position _ hcan (represented_position _ raw hcore.2.1 hcore.2.2.1).1, hver]
-  obtain ⟨a, ha⟩ := Option.ne_none_iff_exists'.mp hreadRne
-  have hsymA : GalilScaffoldChainConsume.symbol w.machine.control.period.focus = some a :=
-    hsym.trans ha
-  have hreadVerA : read (GalilScaffoldChainVerifier.right w.machine.verifier) = some a := by
-    rw [hreadVer, ← hreadR, ha]
-  have hgood : GalilScaffoldChainWatch.Good w := ⟨hcan, a, hsymA, hreadVerA⟩
-  obtain ⟨hlagI, hbrokenI⟩ := immediate_lag_unbroken hlagZ hbroken hsymA hreadVerA
-  obtain ⟨hverRepI, hverPresI⟩ := coreX_immediate hcore
-  have hblk' := blockOn_succ_of_symbol hblk hcore hver (hsym.trans hreadR)
-  -- sizes
-  have hmNonneg : (0 : ℤ) ≤ value w.margin := by
-    by_cases hlt : value w.margin < 0
-    · rw [(GalilScaffoldCounter.negative_iff w.margin hcanM).2 hlt] at hsign
-      exact absurd hsign (by decide)
-    · omega
-  have hsize : 4 * (xs.length + 1) ≤ R := by omega
-  have hleftGe : 1 ≤ position u.left := by
-    have := (represented_position _ raw hleftRep hleftPresent).1
-    unfold position; split <;> omega
-  have hroom : R + 2 ≤ cen := by omega
-  have hpredI := pred_immediate (target := cen - (xs.length + 1) + (R - (xs.length + 1)) + 2)
-    hcore hblk hgood (by omega) (by omega) (by omega)
-  subst ht
-  exact {
-    chain := rfl
-    kle := Nat.zero_le _
-    posH := by omega
-    size := by omega
-    room := by omega
-    remaining := by
-      show GalilScaffoldCounter.ofNat (periodLength w) = _
-      rw [hplI, Nat.sub_zero]
-    canon := Or.inl rfl
-    count := by
-      show value GalilScaffoldCounter.reset = ((2 * 0 : ℕ) : ℤ)
-      rfl
-    leftRep := hleftRep
-    leftPresent := hleftPresent
-    leftPos := by show position u.left = _; omega
-    rightRep := hrightRep
-    rightPresent := hrightPresent
-    rightPos := by show position u.right = _; omega
-    verifierRep := hverRepI
-    verifierPresent := hverPresI
-    aligned := by show _ = position u.right; rw [hpredI.1, hver, hrightPos]
-    lagZero := hlagI
-    unbroken := hbrokenI
-    pal := by
-      rw [show cen - (xs.length + 1) + periodLength (GalilScaffoldChainWatch.immediate w) = cen
-          from by omega,
-        show R - (xs.length + 1) + periodLength (GalilScaffoldChainWatch.immediate w) = R
-          from by omega]
-      exact hpal
-    palNext := by
-      rw [show cen - (xs.length + 1) + 2 * periodLength (GalilScaffoldChainWatch.immediate w)
-          = cen + (xs.length + 1) from by omega,
-        show R - (xs.length + 1) + 1 = R + 1 - (xs.length + 1) from by omega]
-      exact palNext_of_centre hpal hblk' hcentre (by omega) hrightLt
-    origin := by
-      rw [show cen - (xs.length + 1) - (R - (xs.length + 1)) - 1 = cen - (R + 1) from by omega,
-        show cen - (xs.length + 1) + (R - (xs.length + 1))
-          + 2 * periodLength (GalilScaffoldChainWatch.immediate w) + 1 = cen + R + 1
-          from by omega]
-      intro heq
-      apply hmis
-      rw [represented_read _ raw hleftRep hleftPresent,
-        represented_read _ raw hrightRep hrightPresent, hleftPos, hrightPos]
-      exact heq
-    pred := hpredI.2 }
-
-#print axioms shiftInv_of_watch_entry
 
 /-- **(NAMED) 準備直後の watch の台帳。**  `shiftPalAt_fresh_of_candidate` の 5 残差を
 1 つの場にまとめたもの。`ShiftPal` の `periodOnly = false` 分岐に必要な全部で、
