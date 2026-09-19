@@ -1,3 +1,25 @@
+## n284 — `obligation_localRealization`: queue sub-step の具体的な局所機械とその正しさ（`queueRep_step`）。公理への接続はまだ無い
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | **変化なし。** 下の定理は queue 1 本の sub-step についての具体機械で、`H_realizeCanonical` を与える全体機械からはまだ使われていない（全体機械が存在しない）。進捗として数えない |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 1 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization`（n282 から変化なし）。`ConcreteLocalMachine.queueRep_step` は標準 3 公理のみ、`sorry` 0。
+
+**何を証明したか**（`PalPeg/ConcreteLocalMachine.lean`、handoff §4 L2 の「第一成果」）: `queueRep_step : QueueRep K q control tapes → QueueRep K (sApply control.1 q) (step.1) (step.2)`、`step = (queueLocalStep Terminal hK).apply blankc (control, tapes) input`、`2 ≤ K`。具体的な局所機械の 1 ステップが、抽象 queue の 1 sub-step（`CloseoutCoreEnc25.sApply`、6 操作）に等しい。
+
+* **機械**: `queueRule : ActRule Terminal QueueControl Γc 8 K`、`queueLocalStep := compStep queueRule`。テープ 8 本（`0`–`6` が役割 stack、`7` が valid counter）、制御 `QueueControl = SOp × RTag × RotationPhase`。`nq`／`acts` は制御と窓（各テープの中央セル `centreSym` と左隣 `belowSym`）だけの関数。`len_le` は `cellActsOfTop_length ≤ 2 ≤ K`。
+* **有限観測**: `QueueView`（`Fintype`）。`deltaOf_eq_view`／`tagStep_eq_view`／`sealRoleOf_eq_view`／`rotationPhase_sApply`／`validCells_sApply`: stack 操作・role tag・封じるアドレス・次の phase・valid counter の操作は全部観測の関数。
+* **物理表現**: `LaysS` は役割の中身の後ろに junk が続くので先頭セルから空判定ができない → **junk の先頭を `none`（番兵）にする** `LaysSealed`。`GalilVMEncode.blank = sOpt none` なので番兵は物理的には空白セル 1 個。junk が生まれる 3 箇所（`inval`／`exec` の `appending 0`、`install` の `done`）で 1 回 push（そこでは元の delta は `keep`）。`laysSealed_sApply`。読み取りは `queueView_eq_tops`（先頭 2 セル）。
+* **tape**: `StackTape tape stack := ∃ debris, TEqG blankc tape (dTape stack debris)`（`compStep` の sweep は `STape` の項を文字どおりには返さないので `TEqG` まで）。既存に無かった `teqG_actOnG`／`teqG_actList`／`readWin_teqG` を追加。`dTape_cellApply`（セル操作 1 回＝先頭記号で選んだ 2 個以下の action）。
+* **`QueueRep`**: 制御の phase ＝ `rotationPhase q.state`、`LaysSealed`、**junk の高さ ≥ K**（`compStep_apply` の margin `K ≤ pos`。`pos (dTape stack _) = stack.length` なので空の stack では破れる。junk は増えるだけで pop は junk に届かない）、7 本の `StackTape`、counter ＝ `validStack` を高さ ≥ K の sealed な底の上に。役割でないアドレスは `roleOf_surjective`（`decide`）で存在しない。
+* **点検で直した不具合**: `inval` の `reversing` は `ok − 1`（`ok = 0` で 0 のまま）。抽象の `dApply pop [] = []` では無害だが、物理では counter の底を pop する。`validDeltaOfView` が counter のゼロ判定を読んで `keep` にする。
+* **一次情報**: handoff が既存部品として挙げた `CloseoutCoreEnc25` は root から import されておらず build error 20 件だった（n283 で修理）。
+
+**未完の部分**: (1) `lenf − lenr` の符号 counter と、それで sub-step の**操作 `SOp` を選ぶ**スケジュール（`RTQueue.check`／`exec2`／`snoc`／`tail` を sub-step 列に分解した `CloseoutCoreEnc21.SStep` との対応。いまの制御は `op` を外から与えられている）。(2) `QueueRep` の初期化（高さ K の底を敷く prologue）。(3) queue 以外（chain `LocalChain`、入力配布、7 モード、`init = scan = replayStart = id` の仮実装の置き換え）。(4) `LocalStep.realize`／`realize_SAccepts` への接続と `H_realizeCanonical`。
+
 ## n283 — `obligation_localRealization` に着手: queue sub-step の分岐は有限観測 `QueueView` だけで選べる（未接続）。`CloseoutCoreEnc25` は build が通っていなかったので修理した
 
 **公理への進捗**

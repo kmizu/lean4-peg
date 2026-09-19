@@ -25,13 +25,13 @@ open PalPeg.CloseoutCoreEnc21 (SRole SRoles SInj sinj_iff toAddr toAddr_eq pushR
 open PalPeg.CloseoutCoreEnc20 (rotStart dApply)
 open PalPeg.CloseoutCoreStep (Γc blankc)
 open PalPeg.CloseoutCoreEnc (cellSym)
-open PalPeg.CloseoutCoreEnc12 (Act actList actOnG ActRule compStep TEqG)
+open PalPeg.CloseoutCoreEnc12 (Act actList actOnG ActRule compStep compStep_apply TEqG)
 open PalPeg.Local (Window idx idx_val pos rd rd_pos rd_eq readWin readWin_eq pos_applyAction
   rd_applyAction)
 open PalPeg.Program (STape)
 open PalPeg.CloseoutCoreEnc18 (dTape topSym popActs pushActs pop_dTape push_dTape)
 open PalPeg.CloseoutCoreEnc25 (SOp RTag rotTag doneTag roleOf roleOf_rotTag roleOf_doneTag
-  sinj_roleOf isIdle isDone isIdle_eq isDone_eq sApply deltaOf tagStep invalDelta execDelta
+  sinj_roleOf sbound_roleOf isIdle isDone isIdle_eq isDone_eq sApply deltaOf tagStep invalDelta execDelta
   toAddr_keep)
 open PalPeg.RTQueue (Queue RotationState)
 
@@ -221,10 +221,14 @@ def rotationPhase : RotationState (Fin 2) → RotationPhase
   | .appending _ _ _ => .appending
   | .done _ => .done
 
-/-- The valid count of an appending rotation is `0` (any other state: `true`, unused). -/
-def validIsZero : RotationState (Fin 2) → Bool
-  | .appending ok _ _ => decide (ok = 0)
-  | _ => true
+/-- The valid count of a rotation (`0` outside a rotation: a rotation starts and ends at `0`). -/
+def validCount : RotationState (Fin 2) → ℕ
+  | .reversing ok _ _ _ _ => ok
+  | .appending ok _ _ => ok
+  | _ => 0
+
+/-- The zero test of the valid counter. -/
+def validIsZero (s : RotationState (Fin 2)) : Bool := decide (validCount s = 0)
 
 /-- The observation from the phase in the control, the zero test of the valid counter, and the
 two top cells of the role stacks. -/
@@ -268,7 +272,8 @@ theorem queueView_eq_tops {q : Queue (Fin 2)} {ρ : SRoles}
     simp only [rotationPhase, rotationViewOfTops, htop, hsingle, sRoleList, hstate]
   | appending ok f' r' =>
     show RotationView.appending (decide (ok = 0)) f'.head? (!r'.isEmpty) = _
-    simp only [rotationPhase, rotationViewOfTops, validIsZero, htop, sRoleList, hstate]
+    simp only [rotationPhase, rotationViewOfTops, validIsZero, validCount, htop, sRoleList,
+      hstate]
     cases r' <;> rfl
 
 #print axioms queueView_eq_tops
@@ -728,30 +733,34 @@ theorem rotationPhase_sApply (op : SOp) (q : Queue (Fin 2)) :
     cases hstate : q.state <;>
       simp [sApply, finish, hstate, rotationPhase, nextPhaseOfView, rotationView, phaseOfView]
 
-/-- The valid count of a rotation (`0` outside a rotation: a rotation starts and ends at `0`). -/
-def validCount : RotationState (Fin 2) → ℕ
-  | .reversing ok _ _ _ _ => ok
-  | .appending ok _ _ => ok
-  | _ => 0
-
 /-- The valid counter as a stack of marks. -/
 def validStack (s : RotationState (Fin 2)) : List (Fin 2) := List.replicate (validCount s) 0
 
-/-- The operation on the valid counter, selected from the finite observation. -/
-def validDeltaOfView : SOp → RotationView → Delta
-  | .inval, .reversing _ _ _ => .pop
-  | .inval, .appending false _ _ => .pop
-  | .exec, .reversing (some _) (some _) _ => .push 0
-  | .exec, .appending false (some _) _ => .pop
-  | _, _ => .keep
+/-- The operation on the valid counter, selected from the finite observation and the zero test of
+the counter (an `inval` of a reversing rotation at count `0` keeps it: `0 - 1 = 0`, and a pop
+would take a cell of the bottom). -/
+def validDeltaOfView : SOp → RotationView → Bool → Delta
+  | .inval, .reversing _ _ _, false => .pop
+  | .inval, .appending false _ _, _ => .pop
+  | .exec, .reversing (some _) (some _) _, _ => .push 0
+  | .exec, .appending false (some _) _, _ => .pop
+  | _, _, _ => .keep
 
-/-- **The valid counter moves by an operation selected from the observation.** -/
-theorem validStack_sApply (op : SOp) (q : Queue (Fin 2)) :
-    validStack (sApply op q).state
-      = dApply (validDeltaOfView op (rotationView q.state)) (validStack q.state) := by
+theorem validIsZero_eq_top (s : RotationState (Fin 2)) {bottom : List (Option (Fin 2))}
+    (hsealed : Sealed bottom) :
+    validIsZero s = (topLetter ((validStack s).map some ++ bottom)).isNone := by
+  rw [topLetter_sealed hsealed]
+  unfold validIsZero validStack
+  cases validCount s <;> rfl
+
+/-- **The valid counter, as cells over a sealed bottom, moves by the selected operation.** -/
+theorem validCells_sApply (op : SOp) (q : Queue (Fin 2)) (bottom : List (Option (Fin 2))) :
+    cellApply (validDeltaOfView op (rotationView q.state) (validIsZero q.state)) false
+        ((validStack q.state).map some ++ bottom)
+      = (validStack (sApply op q).state).map some ++ bottom := by
   cases op with
   | snocPush a =>
-    show validStack q.state = _
+    show _ = (validStack q.state).map some ++ bottom
     cases q.state <;> rfl
   | tailPop =>
     have hstate : (sApply .tailPop q).state = q.state := by
@@ -760,25 +769,25 @@ theorem validStack_sApply (op : SOp) (q : Queue (Fin 2)) :
     rw [hstate]
     cases q.state <;> rfl
   | inval =>
-    show validStack (RTQueue.invalidate q.state) = _
+    show _ = (validStack (RTQueue.invalidate q.state)).map some ++ bottom
     cases q.state with
     | idle => rfl
     | done f => rfl
     | reversing ok f f' r r' =>
-      cases ok <;> simp [validStack, validCount, RTQueue.invalidate, validDeltaOfView,
-        rotationView, dApply, List.replicate_succ]
+      cases ok <;> simp [validStack, validCount, validIsZero, RTQueue.invalidate,
+        validDeltaOfView, rotationView, cellApply, List.replicate_succ]
     | appending ok f' r' =>
       cases ok with
       | zero => cases r' <;> rfl
       | succ n =>
-        simp [validStack, validCount, RTQueue.invalidate, validDeltaOfView, rotationView,
-          dApply, List.replicate_succ]
+        simp [validStack, validCount, validIsZero, RTQueue.invalidate, validDeltaOfView,
+          rotationView, cellApply, List.replicate_succ]
   | rotStart =>
     cases hstate : q.state <;>
       simp [sApply, isIdle, rotStart, hstate, validStack, validCount, validDeltaOfView,
-        rotationView, dApply]
+        rotationView, cellApply]
   | exec =>
-    show validStack (RTQueue.exec q.state) = _
+    show _ = (validStack (RTQueue.exec q.state)).map some ++ bottom
     cases q.state with
     | idle => rfl
     | done f => rfl
@@ -792,8 +801,8 @@ theorem validStack_sApply (op : SOp) (q : Queue (Fin 2)) :
         cases r with
         | nil => rfl
         | cons y r =>
-          simp [validStack, validCount, RTQueue.exec, validDeltaOfView, rotationView, dApply,
-            List.replicate_succ]
+          simp [validStack, validCount, RTQueue.exec, validDeltaOfView, rotationView,
+            cellApply, List.replicate_succ]
     | appending ok f' r' =>
       cases ok with
       | zero => rfl
@@ -801,23 +810,15 @@ theorem validStack_sApply (op : SOp) (q : Queue (Fin 2)) :
         cases f' with
         | nil => rfl
         | cons x f' =>
-          simp [validStack, validCount, RTQueue.exec, validDeltaOfView, rotationView, dApply,
-            List.replicate_succ]
+          simp [validStack, validCount, validIsZero, RTQueue.exec, validDeltaOfView,
+            rotationView, cellApply, List.replicate_succ]
   | install =>
     cases hstate : q.state <;>
       simp [sApply, finish, hstate, validStack, validCount, validDeltaOfView, rotationView,
-        dApply]
-
-theorem validIsZero_eq_top (s : RotationState (Fin 2)) (hphase : rotationPhase s = .appending) :
-    validIsZero s = (topLetter ((validStack s).map some)).isNone := by
-  cases s with
-  | idle => cases hphase
-  | done f => cases hphase
-  | reversing ok f f' r r' => cases hphase
-  | appending ok f' r' => cases ok <;> rfl
+        cellApply]
 
 #print axioms rotationPhase_sApply
-#print axioms validStack_sApply
+#print axioms validCells_sApply
 
 /-! ## The queue sub-step as an `ActRule`
 
@@ -888,7 +889,10 @@ def queueRule (Terminal : Type) (hK : 2 ≤ K) : ActRule Terminal QueueControl �
         (decide ((sealRoleOfView control.1 view).map (roleOf control.2.1) = some tape.val))
         (centreSym (windows tape))
     else
-      cellActsOfTop (validDeltaOfView control.1 view.rotation) false (centreSym (windows tape))
+      cellActsOfTop
+        (validDeltaOfView control.1 view.rotation
+          (symLetter (centreSym (windows validTape))).isNone)
+        false (centreSym (windows tape))
   len_le := fun control _ windows tape => by
     dsimp only
     split
@@ -990,5 +994,216 @@ theorem StackTape.cellApply {tape : STape Γc} {stack : List (Option (Fin 2))}
 
 #print axioms StackTape.belowSym_eq
 #print axioms StackTape.cellApply
+
+/-! ## The representation of a queue by the local machine, and one step -/
+
+deriving instance Fintype for SRole
+
+/-- Every one of the seven stack tapes carries a role. -/
+theorem roleOf_surjective :
+    ∀ (tag : RTag) (i : Fin 7), ∃ ro : SRole, roleOf tag ro = i.val := by decide
+
+theorem roleTape_val (tag : RTag) (ro : SRole) : (roleTape tag ro).val = roleOf tag ro := by
+  have hbound := sbound_roleOf tag ro
+  show min (roleOf tag ro) 6 = roleOf tag ro
+  omega
+
+theorem StackTape.of_teqG {tape tape' : STape Γc} {stack : List (Option (Fin 2))}
+    (h : StackTape tape stack) (hteq : TEqG blankc tape tape') : StackTape tape' stack := by
+  obtain ⟨debris, hdebris⟩ := h
+  exact ⟨debris, hteq.1.symm.trans hdebris.1, fun p => (hteq.2 p).symm.trans (hdebris.2 p)⟩
+
+/-- **The local machine represents the queue**: the control keeps the rotation phase, the seven
+stack tapes carry the sealed layout under the role tag, every junk list is at least `K` high (the
+margin of `compStep_apply`; junk only grows), and tape `7` carries the valid counter over a
+sealed bottom of height at least `K`. -/
+def QueueRep (K : ℕ) (q : Queue (Fin 2)) (control : QueueControl)
+    (tapes : Fin 8 → STape Γc) : Prop :=
+  ∃ (stack junk : ℕ → List (Option (Fin 2))) (bottom : List (Option (Fin 2))),
+    control.2.2 = rotationPhase q.state ∧
+    LaysSealed q (roleOf control.2.1) stack junk ∧
+    (∀ i, K ≤ (junk i).length) ∧
+    (∀ tape : Fin 8, tape.val < 7 → StackTape (tapes tape) (stack tape.val)) ∧
+    Sealed bottom ∧ K ≤ bottom.length ∧
+    StackTape (tapes validTape) ((validStack q.state).map some ++ bottom)
+
+theorem sealedJunkOf_height {K : ℕ} (op : SOp) (q : Queue (Fin 2)) (ρ : SRoles)
+    {junk : ℕ → List (Option (Fin 2))} (hheight : ∀ i, K ≤ (junk i).length) :
+    ∀ i, K ≤ (sealedJunkOf op q ρ junk i).length := by
+  have hovr : ∀ (address : ℕ) (role : List (Fin 2)) (i : ℕ),
+      K ≤ (ovrCell address (none :: (role.map some ++ junk address)) junk i).length := by
+    intro address role i
+    unfold ovrCell
+    split
+    · have := hheight address
+      simp only [List.length_cons, List.length_append, List.length_map]
+      omega
+    · exact hheight i
+  intro i
+  cases op with
+  | snocPush a => exact hheight i
+  | tailPop => exact hheight i
+  | rotStart => exact hheight i
+  | inval =>
+    show K ≤ (invalSealedJunk ρ junk q.state i).length
+    cases q.state with
+    | idle => exact hheight i
+    | done f => exact hheight i
+    | reversing ok f f' r r' => exact hheight i
+    | appending ok f' r' =>
+      cases ok with
+      | succ n => exact hheight i
+      | zero =>
+        cases r' with
+        | nil => exact hheight i
+        | cons x r' => exact hovr _ _ i
+  | exec =>
+    show K ≤ (execSealedJunk ρ junk q.state i).length
+    cases q.state with
+    | idle => exact hheight i
+    | done f => exact hheight i
+    | reversing ok f f' r r' => exact hheight i
+    | appending ok f' r' =>
+      cases ok with
+      | succ n => exact hheight i
+      | zero => exact hovr _ _ i
+  | install =>
+    simp only [sealedJunkOf]
+    split
+    · exact hovr _ _ i
+    · exact hheight i
+
+section Step
+
+variable {K : ℕ} {Terminal : Type}
+
+/-- The rule observes the queue: on a representation, the observation made from the windows is
+`queueView`, and the counter top gives the zero test. -/
+theorem queueViewOfWindows_eq (hK : 1 ≤ K) {q : Queue (Fin 2)} {control : QueueControl}
+    {tapes : Fin 8 → STape Γc} {stack junk : ℕ → List (Option (Fin 2))}
+    {bottom : List (Option (Fin 2))}
+    (hphase : control.2.2 = rotationPhase q.state)
+    (hlays : LaysSealed q (roleOf control.2.1) stack junk)
+    (hheight : ∀ i, K ≤ (junk i).length)
+    (htapes : ∀ tape : Fin 8, tape.val < 7 → StackTape (tapes tape) (stack tape.val))
+    (hsealed : Sealed bottom) (hbottom : K ≤ bottom.length)
+    (hcounter : StackTape (tapes validTape) ((validStack q.state).map some ++ bottom)) :
+    (symLetter (centreSym (readWin blankc K (tapes validTape)))).isNone = validIsZero q.state ∧
+      queueViewOfWindows control (fun tape => readWin blankc K (tapes tape)) = queueView q := by
+  have hzero : (symLetter (centreSym (readWin blankc K (tapes validTape)))).isNone
+      = validIsZero q.state := by
+    rw [hcounter.centreSym_eq (by simp only [List.length_append]; omega), ← topLetter_eq_sym,
+      validIsZero_eq_top _ hsealed]
+  refine ⟨hzero, ?_⟩
+  have hroleHeight : ∀ ro, K ≤ (stack (roleOf control.2.1 ro)).length := fun ro => by
+    rw [hlays.1 ro]
+    have := hheight (roleOf control.2.1 ro)
+    simp only [List.length_append]
+    omega
+  have hroleTape : ∀ ro, StackTape (tapes (roleTape control.2.1 ro))
+      (stack (roleOf control.2.1 ro)) := fun ro => by
+    have h := htapes (roleTape control.2.1 ro) (by
+      rw [roleTape_val]; exact sbound_roleOf control.2.1 ro)
+    rwa [roleTape_val] at h
+  have htop : (fun ro => centreSym (readWin blankc K (tapes (roleTape control.2.1 ro))))
+      = fun ro => topSym (stack (roleOf control.2.1 ro)) :=
+    funext fun ro => (hroleTape ro).centreSym_eq (hroleHeight ro)
+  have hbelow : (fun ro => belowSym (readWin blankc K (tapes (roleTape control.2.1 ro))))
+      = fun ro => topSym (stack (roleOf control.2.1 ro)).tail :=
+    funext fun ro => (hroleTape ro).belowSym_eq hK (hroleHeight ro)
+  rw [queueView_eq_tops hlays, queueViewOfTops_eq_syms]
+  show queueViewOfSyms control.2.2
+      (symLetter (centreSym (readWin blankc K (tapes validTape)))).isNone
+      (fun ro => centreSym (readWin blankc K (tapes (roleTape control.2.1 ro))))
+      (fun ro => belowSym (readWin blankc K (tapes (roleTape control.2.1 ro)))) = _
+  rw [hzero, htop, hbelow, hphase]
+
+/-- **One step of the local machine is one sub-step of the queue.** -/
+theorem queueRep_step (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : QueueControl}
+    {tapes : Fin 8 → STape Γc} (hrep : QueueRep K q control tapes) (input : Option Terminal) :
+    QueueRep K (sApply control.1 q)
+      ((queueLocalStep Terminal hK).apply blankc (control, tapes) input).1
+      ((queueLocalStep Terminal hK).apply blankc (control, tapes) input).2 := by
+  obtain ⟨stack, junk, bottom, hphase, hlays, hheight, htapes, hsealed, hbottom, hcounter⟩ := hrep
+  obtain ⟨hzero, hview⟩ := queueViewOfWindows_eq (by omega) hphase hlays hheight htapes hsealed
+    hbottom hcounter
+  -- the margin of every tape
+  have hstackHeight : ∀ tape : Fin 8, tape.val < 7 → K ≤ (stack tape.val).length := by
+    intro tape htape
+    obtain ⟨ro, hro⟩ := roleOf_surjective control.2.1 ⟨tape.val, htape⟩
+    have hrole : roleOf control.2.1 ro = tape.val := hro
+    rw [← hrole, hlays.1 ro]
+    have := hheight (roleOf control.2.1 ro)
+    simp only [List.length_append]
+    omega
+  have hmargin : ∀ tape : Fin 8, K ≤ pos (tapes tape) := by
+    intro tape
+    by_cases htape : tape.val < 7
+    · rw [(htapes tape htape).pos_eq]
+      exact hstackHeight tape htape
+    · have hlast : tape = validTape := by
+        apply Fin.ext
+        show tape.val = 7
+        omega
+      rw [hlast, hcounter.pos_eq]
+      simp only [List.length_append]
+      omega
+  obtain ⟨hcontrol, hacts⟩ := compStep_apply (queueRule Terminal hK) blankc (control, tapes) input
+    hmargin
+  have hcontrol' : ((queueLocalStep Terminal hK).apply blankc (control, tapes) input).1
+      = (control.1, tagStep control.1 q control.2.1,
+        rotationPhase (sApply control.1 q).state) := by
+    rw [show (queueLocalStep Terminal hK) = compStep (queueRule Terminal hK) from rfl, hcontrol]
+    show (control.1,
+      tagStepOfView control.1
+        (queueViewOfWindows control (fun tape => readWin blankc K (tapes tape))) control.2.1,
+      nextPhaseOfView control.1
+        (queueViewOfWindows control (fun tape => readWin blankc K (tapes tape))).rotation) = _
+    rw [hview, ← tagStep_eq_view, rotationPhase_sApply]
+    rfl
+  refine ⟨fun i => cellApply (deltaOf control.1 q (roleOf control.2.1) i)
+      (decide ((sealRoleOf control.1 q).map (roleOf control.2.1) = some i)) (stack i),
+    sealedJunkOf control.1 q (roleOf control.2.1) junk, bottom, ?_, ?_,
+    sealedJunkOf_height _ _ _ hheight, ?_, hsealed, hbottom, ?_⟩
+  · rw [hcontrol']
+  · rw [hcontrol']
+    exact laysSealed_sApply control.1 q control.2.1 stack junk hlays
+  · intro tape htape
+    refine StackTape.of_teqG ?_ (hacts tape)
+    show StackTape (actList blankc (tapes tape)
+      ((queueRule Terminal hK).acts control input
+        (fun tape => readWin blankc K (tapes tape)) tape)) _
+    have hactsEq : (queueRule Terminal hK).acts control input
+        (fun tape => readWin blankc K (tapes tape)) tape
+        = cellActsOfTop (deltaOf control.1 q (roleOf control.2.1) tape.val)
+          (decide ((sealRoleOf control.1 q).map (roleOf control.2.1) = some tape.val))
+          (topSym (stack tape.val)) := by
+      show (if tape.val < 7 then _ else _) = _
+      rw [if_pos htape, hview, ← deltaOf_eq_view, ← sealRoleOf_eq_view,
+        (htapes tape htape).centreSym_eq (hstackHeight tape htape)]
+    rw [hactsEq]
+    exact (htapes tape htape).cellApply _ _
+  · refine StackTape.of_teqG ?_ (hacts validTape)
+    show StackTape (actList blankc (tapes validTape)
+      ((queueRule Terminal hK).acts control input
+        (fun tape => readWin blankc K (tapes tape)) validTape)) _
+    have hactsEq : (queueRule Terminal hK).acts control input
+        (fun tape => readWin blankc K (tapes tape)) validTape
+        = cellActsOfTop (validDeltaOfView control.1 (rotationView q.state)
+            (validIsZero q.state)) false
+          (topSym ((validStack q.state).map some ++ bottom)) := by
+      show cellActsOfTop
+          (validDeltaOfView control.1
+            (queueViewOfWindows control (fun tape => readWin blankc K (tapes tape))).rotation
+            (symLetter (centreSym (readWin blankc K (tapes validTape)))).isNone)
+          false (centreSym (readWin blankc K (tapes validTape))) = _
+      rw [hview, hzero, hcounter.centreSym_eq (by simp only [List.length_append]; omega)]
+      rfl
+    rw [hactsEq, ← validCells_sApply]
+    exact hcounter.cellApply _ _
+
+#print axioms queueRep_step
+
+end Step
 
 end PalPeg.ConcreteLocalMachine
