@@ -18,17 +18,15 @@ open PalPeg GalilScaffoldCounter GalilScaffoldInputHead GalilScaffoldChainVerifi
 open GalilScaffoldChainInputSupply GalilBranchInvariants
 open PalPeg.ShiftPalAlongTrace PalPeg.GalilReplaySpan PalPeg.GalilReplayGeneral2
 
-/-- The chain-level core: three index equalities of the text exclude `BreakStep`. -/
-theorem not_breakStep_of_text {raw : List (Fin 2)} {cen₀ P : ℕ} {cc b : Fin 3}
-    {xs : List (Fin 3)} {w w' : GalilScaffoldChainWatch.State} {leftPlace : ℕ}
-    (hwindow : WatchWindow raw cen₀ P cc b xs (.watch w))
-    (hsize : cen₀ + 1 + 2 * (xs.length + 1) ≤ P + 1)
-    (hmirror : (encoded raw)[P + 1 - 2 * (xs.length + 1)]?
-      = (encoded raw)[leftPlace + 2 * (xs.length + 1)]?)
-    (hcertificate : (encoded raw)[leftPlace]? = (encoded raw)[leftPlace + 2 * (xs.length + 1)]?)
-    (hmatched : (encoded raw)[leftPlace]? = (encoded raw)[P + 1]?) :
-    ¬ BreakStep w w' := by
-  rintro ⟨hzero, hcanRight, a, hsymbol, hread, -⟩
+/-- The verifier of a lag-zero watch stands on the right scan head, and its prediction is the
+text two semiperiods back. -/
+theorem prediction_eq_text {raw : List (Fin 2)} {cen₀ P : ℕ} {cc b : Fin 3}
+    {xs : List (Fin 3)} {w : GalilScaffoldChainWatch.State}
+    (hwindow : WatchWindow raw cen₀ P cc b xs (.watch w)) (hzero : zero w.lag = true)
+    (hsize : cen₀ + 1 + 2 * (xs.length + 1) ≤ P + 1) :
+    position w.machine.verifier = P ∧
+      GalilScaffoldChainConsume.symbol w.machine.control.period.focus
+        = (encoded raw)[P + 1 - 2 * (xs.length + 1)]? := by
   obtain ⟨⟨hneg, hposition⟩, hblock, hcore⟩ := hwindow
   have hlagEmpty : w.lag.pos = [] := by
     rcases hw : w.lag with ⟨pos, neg⟩
@@ -38,14 +36,6 @@ theorem not_breakStep_of_text {raw : List (Fin 2)} {cen₀ P : ℕ} {cc b : Fin 
   have hverifier : position w.machine.verifier = P := by
     rw [hlagEmpty] at hposition
     simpa using hposition
-  have hrep := hcore.2.1
-  have hpresent := hcore.2.2.1
-  have hleft0 : 0 < w.machine.verifier.head.left.length :=
-    (represented_position _ raw hrep hpresent).1
-  have hnextRead : read (right w.machine.verifier) = (encoded raw)[P + 1]? := by
-    rw [represented_read _ raw (right_word _ raw hrep hcanRight)
-      (right_present _ raw hrep hpresent hcanRight),
-      right_position _ hcanRight hleft0, hverifier]
   have hprediction := symbol_of_coreP hcore
   rw [hverifier] at hprediction
   have hback := hblock (P + 1 - 2 * (xs.length + 1) - (cen₀ + 1)) (by omega)
@@ -57,8 +47,31 @@ theorem not_breakStep_of_text {raw : List (Fin 2)} {cen₀ P : ℕ} {cc b : Fin 
         = (P + 1 - 2 * (xs.length + 1) - (cen₀ + 1)) + 2 * (xs.length + 1) := by omega
     rw [this, Nat.add_mod_right]
   rw [hindex] at hback
+  exact ⟨hverifier, by rw [hprediction, hmod, ← hback]⟩
+
+/-- The chain-level core: three index equalities of the text exclude `BreakStep`. -/
+theorem not_breakStep_of_text {raw : List (Fin 2)} {cen₀ P : ℕ} {cc b : Fin 3}
+    {xs : List (Fin 3)} {w w' : GalilScaffoldChainWatch.State} {leftPlace : ℕ}
+    (hwindow : WatchWindow raw cen₀ P cc b xs (.watch w))
+    (hsize : cen₀ + 1 + 2 * (xs.length + 1) ≤ P + 1)
+    (hmirror : (encoded raw)[P + 1 - 2 * (xs.length + 1)]?
+      = (encoded raw)[leftPlace + 2 * (xs.length + 1)]?)
+    (hcertificate : (encoded raw)[leftPlace]? = (encoded raw)[leftPlace + 2 * (xs.length + 1)]?)
+    (hmatched : (encoded raw)[leftPlace]? = (encoded raw)[P + 1]?) :
+    ¬ BreakStep w w' := by
+  rintro ⟨hzero, hcanRight, a, hsymbol, hread, -⟩
+  obtain ⟨hverifier, hprediction⟩ := prediction_eq_text hwindow hzero hsize
+  obtain ⟨-, -, hcore⟩ := hwindow
+  have hrep := hcore.2.1
+  have hpresent := hcore.2.2.1
+  have hleft0 : 0 < w.machine.verifier.head.left.length :=
+    (represented_position _ raw hrep hpresent).1
+  have hnextRead : read (right w.machine.verifier) = (encoded raw)[P + 1]? := by
+    rw [represented_read _ raw (right_word _ raw hrep hcanRight)
+      (right_present _ raw hrep hpresent hcanRight),
+      right_position _ hcanRight hleft0, hverifier]
   apply hread
-  rw [hnextRead, ← hmatched, hcertificate, ← hmirror, hback, ← hmod, ← hprediction, hsymbol]
+  rw [hnextRead, ← hmatched, hcertificate, ← hmirror, ← hprediction, hsymbol]
 
 open GalilScaffoldTop GalilScaffoldController GalilRunSkeleton GalilInvPlus3
 open PalPeg.WindowPack PalPeg.WindowRun PalPeg.WindowInv PalPeg.GalilChainCoupling

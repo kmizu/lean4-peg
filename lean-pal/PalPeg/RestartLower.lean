@@ -174,4 +174,99 @@ theorem lowerExcluded_at_break {Move : ℕ → ℕ → Prop} {raw : List (Fin 2)
     exact ⟨hhighN,
       lowerExcluded_of_break hpal hperiod hnoShort hmismatch (by omega) (by omega) hlowN⟩
 
+/-- **The fallback move inequality when a caught-up watch mispredicts.**  The scan span has the
+chain's period `2h` (verified window), that period is minimal there (`ScanMinimal`), and the
+place the fallback window adds breaks it, because the prediction is the text two semiperiods
+back and differs from the place just read. -/
+theorem move_of_prediction_break {Move : ℕ → ℕ → Prop} {raw : List (Fin 2)} {c : Control}
+    {s : GalilVM} {w0 w1 : GalilScaffoldChainWatch.State} {R : ℕ} {vq : SearchVM} {z : ChainVM}
+    (hwin : WindowRunPack raw c s) (hm : c.mode = Mode.scan)
+    (hscan : ScanInvariant raw (position s.center) R s.left s.right)
+    (hcan : canRight s.right) (hlen : value s.length = (2*R+1 : ℕ))
+    (hminimal : ScanMinimal Move raw s)
+    (hchain : s.chain = .watch w0) (hinternal : GalilScaffoldChainWatch.Internal w0 w1)
+    (hzero : zero w1.lag = true) (hfour : 4 * periodLength w0 ≤ R)
+    (hprediction : GalilScaffoldChainConsume.symbol w1.machine.control.period.focus
+      ≠ read (right s.right)) :
+    let s1 := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+      (afterMismatch s ⟨left s.left,right s.right,z⟩ vq)
+    let ℓ := (value s.length).toNat
+    let radius := chosenRadius
+      ((GalilScaffoldPlace.stream (PalPeg.GalilTickFair.rightPlace s1)).take (ℓ+1))
+    ℓ / 2 ≤ 4 * (ℓ / 2 + 1 - radius) := by
+  obtain ⟨cen₀, cc, hcentre, hinv, hk, -, -⟩ := hwin.window
+  rw [hchain] at hinv
+  obtain ⟨b, xs, hW0⟩ := hinv
+  have hW1 := watchWindow_step hW0 hinternal
+  have hlength0 : periodLength w0 = xs.length + 1 := periodLength_of_coreP hW0.2.2
+  obtain ⟨m, hk⟩ := (hk w0 hchain).2 (by rw [hm]; decide)
+  rw [hlength0] at hk hfour
+  have hRC := scan_radius_lt hscan
+  have hpal := hscan.palindrome
+  have hright : position s.right = position s.center + R := hscan.rightPos
+  rw [hright] at hW1
+  have hsize : cen₀ + 1 + 2 * (xs.length + 1) ≤ position s.center + R + 1 := by
+    rw [hk]; nlinarith
+  have hperiod := spanPeriod_of_window hW1 hzero hcentre hk hpal (by omega)
+  have hperiodSpan : HasPeriod (Span raw (position s.center) R) (2 * (xs.length + 1)) := by
+    unfold Span
+    rw [show 2*R+1 = (position s.center + R) + 1 - (position s.center - R) from by omega]
+    exact (hasPeriod_slice_iff (x := encoded raw) (p := 2 * (xs.length + 1)) hpal.2.1
+      (by omega)).mpr hperiod
+  have hnoShort := scanMinimal_watch_no_short hminimal hchain hright hRC hpal
+    (by rw [hlength0]; exact hfour) (by rw [hlength0]; exact hperiodSpan)
+  rw [hlength0] at hnoShort
+  obtain ⟨-, hpredictionText⟩ := prediction_eq_text hW1 hzero hsize
+  have hleft0 : 0 < s.right.head.left.length :=
+    (represented_position _ raw hscan.rightRep hscan.rightPresent).1
+  have hnextRead : read (right s.right) = (encoded raw)[position s.center + R + 1]? := by
+    rw [represented_read _ raw (right_word _ raw hscan.rightRep hcan)
+      (right_present _ raw hscan.rightRep hscan.rightPresent hcan),
+      right_position _ hcan hleft0, hright]
+  refine PalPeg.CanonicalFallbackInput.move_of_activePeriodBreak (c := c) hscan hcan hlen hRC
+    (by omega) (by omega) hperiodSpan hnoShort ?_ rfl
+  intro x hx hper
+  apply hprediction
+  rw [hpredictionText, hnextRead]
+  -- the head of the fallback window is the place just read
+  have hrrep : GalilScaffoldInputTrace.Represents (right s.right).head raw :=
+    right_word _ raw hscan.rightRep hcan
+  have hrpres : (right s.right).head.focus ≠ none :=
+    right_present _ raw hscan.rightRep hscan.rightPresent hcan
+  obtain ⟨a, ys, rs, q', hdec, hraw⟩ := represents_decompose (right s.right) raw hrrep hrpres
+  have hstream : (GalilScaffoldPlace.stream ⟨a :: ys,(right s.right).gap⟩).length
+      = position s.center + R + 1 := by
+    rw [stream_length_of_place a ys rs q' hdec, right_position s.right hcan hleft0, hright]
+  have hplace : PalPeg.GalilTickFair.rightPlace
+      (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+        (afterMismatch s ⟨left s.left,right s.right,z⟩ vq)) = ⟨a :: ys,(right s.right).gap⟩ := by
+    apply PalPeg.GalilTickFair.rightPlace_of_represent _ (rs.map some) q'
+    rw [show (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+      (afterMismatch s ⟨left s.left,right s.right,z⟩ vq)).right = right s.right from by
+        simp [afterBirth_right, afterMismatch_right]]
+    exact hdec
+  rw [hplace] at hx
+  have hhead : (GalilScaffoldPlace.stream ⟨a :: ys,(right s.right).gap⟩)[0]? = some x := by
+    have := congrArg (fun l => l[0]?) hx
+    simpa [List.getElem?_take] using this
+  have hindex := stream_index a ys rs q' (right s.right).gap 0 (by rw [hstream]; omega)
+  rw [hstream, ← hraw, hhead] at hindex
+  -- period `2h` of `x :: span` reads `x` again inside the span, at the mirror of `P + 1 − 2h`
+  have hspanLength : (Span raw (position s.center) R).length = 2*R+1 :=
+    length_span_of_palAt hpal
+  have hperiodHead := hper 0 (by rw [List.length_cons, hspanLength]; omega)
+  have hinside : (x :: Span raw (position s.center) R)[0 + 2 * (xs.length + 1)]?
+      = (encoded raw)[position s.center - R + (2 * (xs.length + 1) - 1)]? := by
+    rw [show 0 + 2 * (xs.length + 1) = (2 * (xs.length + 1) - 1) + 1 from by omega,
+      List.getElem?_cons_succ]
+    unfold Span
+    rw [List.getElem?_take, if_pos (by omega), List.getElem?_drop]
+  have hmirror := hpal.2.2 (R + 1 - 2 * (xs.length + 1)) (by omega)
+  rw [show position s.center - (R + 1 - 2 * (xs.length + 1))
+      = position s.center - R + (2 * (xs.length + 1) - 1) from by omega,
+    show position s.center + (R + 1 - 2 * (xs.length + 1))
+      = position s.center + R + 1 - 2 * (xs.length + 1) from by omega] at hmirror
+  rw [← hmirror, ← hinside, ← hperiodHead]
+  simpa using hindex
+
 end PalPeg.RestartLower
