@@ -18,6 +18,18 @@
 
 **未完の部分**: `hmove` の残りは (c) `periodOnly = true`（shift 後のラウンド。Scala `checkPair` に当たる継続不変量が run 上に無い）と (d) 第 1 ラウンドで chain tick の結果が broken（restart guard は source 状態について不成立。正 lag の break か、source が既に broken）。どちらも未調査で、証明は未着手。`obligation_localRealization` は未着手。
 
+### `hmove` の第 1 ラウンド broken の調査（2026-09-20、調査のみ・証明は未着手）
+
+**何が残っているか**: 不一致状態 `s`（scan、`periodOnly = false`、`¬ restartGuardVM s`）で chain tick（一致なし）の結果が `.broken`。経路は 2 つだけ: `brokenIdle`（`s.chain` が既に broken で guard 不成立）と `watchBreak`（この tick で正 lag の break）。lag ゼロの break（`ChainMatched.breaks`）は一致比較でしか起きない。
+
+**Scala 正本の主張**: `ScaffoldGalil.background()` は chain が Broken なら `margin ≥ 0 ∧ last > 0 ∧ lag = 0` でなければ `AssertionError("chain restart violates the confirmed-period invariant")`。つまり「broken かつ guard 不成立」は到達不能と主張している。理由（紙の上）: (1) 追い付き中（lag > 0）は chain の時計で `Rad < 4H`、verifier が読む場所は走査済み span の中で、span は回文、左は `LeftPeriod`（`[C−4H, C]` で周期 `2H`）なので右側 `[C, C+Rad]` も周期 `2H` → 予測は外れない。(2) lag ゼロの break は `Rad + 1 ≤ 4H` では起きない（同じ理由。既存の `RestartBoundary.distance_ne_boundary` は `distance = 4h − 1` の 1 点だけを示していて、証明は `R + 1 = 4h` に特化している）ので、break の時点で `distance ≥ 4H`、よって `margin ≥ 0`・`last > 0`。
+
+**足りない不変量（一次情報で確認）**: 予測記号は `bounce cc b xs` の添字で決まる。`P + 1 − 2h ≥ cen₀ + 1` なら `BlockOn` で `text[P+1−2h]` に直せる（`prediction_eq_text`）が、誕生直後（`P + 1 < cen₀ + 1 + 2h`）は **block の中身そのもの**とテキストの関係が要る。`WindowInv` の copy 節は `∃ ys, v = fill (start cc) ys` で `ys` は任意、back／watch 節も `blockTokens cc b xs` の `xs` とテキストを結ぶ場が無い。copy の各 bit は `present : read (left p) = some a`（walker の左）を書くので、「period テープの文字列 ＝ 中心の左のテキスト（`stream` の接頭辞）」を運ぶ不変量を `WindowInv` に足す必要がある。walker の位置（`chainStart` の `walker = P.place s`、`stream_index`）も要る。
+
+**次の一手の候補**: (i) 上の block–text 不変量を `WindowInv`（copy／back／watch）に足す、(ii) `distance_ne_boundary` を `2h ≤ R + 1 ≤ 4h` に一般化（`hmirror` の添字計算を一般化するだけで、証明書と回文はそのまま使える）し、`R + 1 < 2h` は (i) で、(iii) 正 lag の `WatchBreak` が起きないこと（`not_good_of_watchBreak` の逆向き、(i)＋chain の時計）。3 つ揃えば `BrokenStage` を「scan で broken なら restart guard が立つ」に強められ、`hmove` の broken の場合は `¬ restartGuardVM s` と矛盾して消える。
+
+`periodOnly = true`（shift 後のラウンド）は別件で未調査のまま。
+
 ## n275 — 葉 `hmove`: 第 1 ラウンドで追い付いた watch（`lag = 0`）を `phase` によらず全部閉じた（葉は 1 本のまま、前提がもう 1 つ狭まった）
 
 **公理への進捗**
