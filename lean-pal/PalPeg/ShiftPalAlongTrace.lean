@@ -254,28 +254,55 @@ theorem periodOn_extend_left {α : Type} {x : List α} {p a b : ℕ}
 
 #print axioms periodOn_extend_left
 
-/-- **`CoreX` の予測記号、窓の右端でも。**  `GalilReplaySpan.coreX_next` は `canRight` を
+/-- **`CoreX` の shift 越え版。**  `GalilReplaySpan.CoreX` は制御全体を `run (ready cc xs b) pre`
+に等置するが、`chainShiftOne` は sweep カウンタ（distance/boundary/last）を `dec` するので
+shift 以降は成り立たない。予測記号に要るのは period テープと進行方向だけ
+（`GalilScaffoldChainPrediction.SamePrediction`——「カウンタを調整した継続は元の予測器の
+位相を保つ」）。`broken = false` は watch している chain の不変量（`take`/`immediate` は
+`Good` を持参、不一致は `.broken` へ）。 -/
+def CoreP (raw : List (Fin 2)) (cc b : Fin 3) (xs : List (Fin 3)) (anchor : ℕ)
+    (m : GalilScaffoldChainVerifier.State) : Prop :=
+  GalilBranchInvariants.OnBlock m.control.period ∧
+    GalilScaffoldInputTrace.Represents m.verifier.head raw ∧ m.verifier.head.focus ≠ none ∧
+    m.control.broken = false ∧
+    ∃ pre : List (Fin 3),
+      GalilScaffoldChainPrediction.SamePrediction m.control
+        (GalilScaffoldChainSweep.run (GalilScaffoldChainConsume.ready cc xs b) pre) ∧
+      (GalilScaffoldChainSweep.run (GalilScaffoldChainConsume.ready cc xs b) pre).broken = false ∧
+      position m.verifier + 1 = anchor + pre.length
+
+theorem coreP_of_coreX {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)} {anchor : ℕ}
+    {m : GalilScaffoldChainVerifier.State}
+    (h : PalPeg.GalilReplaySpan.CoreX raw cc b xs anchor m) : CoreP raw cc b xs anchor m := by
+  obtain ⟨hblk, hrep, hpres, pre, hctl, hbr0, hidx⟩ := h
+  exact ⟨hblk, hrep, hpres, by rw [hctl]; exact hbr0, pre, by rw [hctl]; exact ⟨rfl, rfl⟩,
+    hbr0, hidx⟩
+
+#print axioms coreP_of_coreX
+
+/-- **`CoreP` の予測記号、窓の右端でも。**  `GalilReplaySpan.coreX_next` は `canRight` を
 出すために右に 1 歩の余裕（`position ver + 1 < |encoded raw|`）を要求するが、**予測記号
-そのもの**は `CoreX` の `m.control = run (ready cc xs b) pre` と
-`GalilScaffoldChainPrediction.successful_prediction` だけで決まる。 -/
-theorem symbol_of_coreX {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
+そのもの**は `SamePrediction` と `GalilScaffoldChainPrediction.continued_prediction` だけで決まる。 -/
+theorem symbol_of_coreP {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
     {anchor : ℕ} {m : GalilScaffoldChainVerifier.State}
-    (hcore : PalPeg.GalilReplaySpan.CoreX raw cc b xs anchor m) :
+    (hcore : CoreP raw cc b xs anchor m) :
     GalilScaffoldChainConsume.symbol m.control.period.focus
       = (GalilScaffoldChainSweep.bounce cc b xs)[(position m.verifier + 1 - anchor) %
           (2 * (xs.length + 1))]? := by
-  obtain ⟨-, -, -, pre, hctl, hbr0, hidx⟩ := hcore
-  rw [hctl, GalilScaffoldChainPrediction.successful_prediction cc b xs pre hbr0,
-    show position m.verifier + 1 - anchor = pre.length from by omega]
+  obtain ⟨-, -, -, hbr, pre, hsame, hbr0, hidx⟩ := hcore
+  have hpred := GalilScaffoldChainPrediction.continued_prediction cc b xs pre [] m.control hsame
+    (by rw [hbr, hbr0]) (by simpa [GalilScaffoldChainSweep.run] using hbr)
+  simp only [List.length_nil, Nat.add_zero, GalilScaffoldChainSweep.run] at hpred
+  rw [hpred, show position m.verifier + 1 - anchor = pre.length from by omega]
 
-#print axioms symbol_of_coreX
+#print axioms symbol_of_coreP
 
-/-- **窓を右ヘッドの 1 つ先まで伸ばす。**  `symbol_of_coreX` が焦点記号を `bounce` の添字で
-名指し、guard がそれを右ヘッドの読みと一致させるので `BlockOn` が 1 つ伸びる。 -/
+/-- **窓を verifier の 1 つ先まで伸ばす。**  `symbol_of_coreP` が焦点記号を `bounce` の添字で
+名指し、guard（または `Good`）がそれを次の読みと一致させるので `BlockOn` が 1 つ伸びる。 -/
 theorem blockOn_succ_of_symbol {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
     {anchor E : ℕ} {w : GalilScaffoldChainWatch.State}
     (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs anchor E)
-    (hcore : PalPeg.GalilReplaySpan.CoreX raw cc b xs anchor w.machine)
+    (hcore : CoreP raw cc b xs anchor w.machine)
     (hver : position w.machine.verifier = E)
     (hsym : GalilScaffoldChainConsume.symbol w.machine.control.period.focus
       = (encoded raw)[E + 1]?) :
@@ -284,7 +311,7 @@ theorem blockOn_succ_of_symbol {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (F
   rcases Nat.lt_or_ge (anchor + j) (E + 1) with hlt | hge
   · exact hblk j (by omega)
   · have hj' : anchor + j = E + 1 := by omega
-    rw [hj', ← hsym, symbol_of_coreX hcore, hver, show E + 1 - anchor = j from by omega]
+    rw [hj', ← hsym, symbol_of_coreP hcore, hver, show E + 1 - anchor = j from by omega]
 
 #print axioms blockOn_succ_of_symbol
 
@@ -302,13 +329,13 @@ theorem cells_run {s : GalilScaffoldChainConsume.State} (pre : List (Fin 3))
 
 #print axioms cells_run
 
-/-- **`CoreX` の chain の半周期は `|xs| + 1`。**  `ready cc xs b` のテープは `|xs| + 2` セルで、
-`run` はセル数を変えない。 -/
-theorem periodLength_of_coreX {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
+/-- **`CoreP` の chain の半周期は `|xs| + 1`。**  `ready cc xs b` のテープは `|xs| + 2` セルで、
+`run` はセル数を変えず、`SamePrediction` は period テープを等置する。 -/
+theorem periodLength_of_coreP {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
     {anchor : ℕ} {w : GalilScaffoldChainWatch.State}
-    (hcore : PalPeg.GalilReplaySpan.CoreX raw cc b xs anchor w.machine) :
+    (hcore : CoreP raw cc b xs anchor w.machine) :
     periodLength w = xs.length + 1 := by
-  obtain ⟨-, -, -, pre, hctl, -, -⟩ := hcore
+  obtain ⟨-, -, -, -, pre, hsame, -, -⟩ := hcore
   have hrun := (cells_run pre (GalilBranchInvariants.onBlock_ready cc b xs)).1
   have hready : PalPeg.GalilShiftH.cells (GalilScaffoldChainConsume.ready cc xs b).period
       = xs.length + 2 := by
@@ -321,10 +348,45 @@ theorem periodLength_of_coreX {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fi
       List.length_singleton]
     omega
   have hcells := PalPeg.GalilShiftH.periodLength_succ_eq_cells w
-  rw [hctl, hrun, hready] at hcells
+  rw [hsame.1, hrun, hready] at hcells
   omega
 
-#print axioms periodLength_of_coreX
+#print axioms periodLength_of_coreP
+
+/-- **一致する consume は `CoreP` を保つ**（`GalilReplaySpan.coreX_consume` の `SamePrediction` 版）。 -/
+theorem coreP_consume {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)} {anchor : ℕ}
+    {w : GalilScaffoldChainWatch.State}
+    (hc : CoreP raw cc b xs anchor w.machine) (hg : GalilScaffoldChainWatch.Good w) :
+    CoreP raw cc b xs anchor (GalilScaffoldChainVerifier.consume w.machine) := by
+  obtain ⟨hblk, hrep, hpres, hbr, pre, hsame, hbr0, hidx⟩ := hc
+  obtain ⟨hcan, a, hsym, hread⟩ := hg
+  have hleft := (represented_position _ raw hrep hpres).1
+  have hctl' : (GalilScaffoldChainVerifier.consume w.machine).control =
+      GalilScaffoldChainConsume.consume w.machine.control (some a) := by
+    show GalilScaffoldChainConsume.consume w.machine.control
+      (read (GalilScaffoldChainVerifier.right w.machine.verifier)) = _
+    rw [hread]
+  refine ⟨GalilBranchInvariants.onBlock_verifier_consume _ hblk, right_word _ raw hrep hcan,
+    right_present _ raw hrep hpres hcan, ?_, pre ++ [a], ?_, ?_, ?_⟩
+  · rw [hctl']; exact consume_keeps_unbroken _ a hsym hbr
+  · rw [hctl', GalilScaffoldChainSweep.run_append]
+    exact GalilScaffoldChainPrediction.consume_same_prediction hsame (some a)
+  · rw [GalilScaffoldChainSweep.run_append]
+    show (GalilScaffoldChainConsume.consume _ (some a)).broken = false
+    exact consume_keeps_unbroken _ a (by rw [← hsame.1]; exact hsym) hbr0
+  · show position (GalilScaffoldChainVerifier.right w.machine.verifier) + 1 = _
+    rw [right_position _ hcan hleft, List.length_append, List.length_singleton]
+    omega
+
+#print axioms coreP_consume
+
+/-- **shift の 1 歩は `CoreP` を保つ**——`chainShiftOne` は sweep カウンタと margin しか触らない。 -/
+theorem coreP_chainShiftOne {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)} {anchor : ℕ}
+    {w : GalilScaffoldChainWatch.State}
+    (hc : CoreP raw cc b xs anchor w.machine) :
+    CoreP raw cc b xs anchor (chainShiftOne w).machine := hc
+
+#print axioms coreP_chainShiftOne
 
 
 
@@ -398,17 +460,17 @@ theorem palAt_block_periodic {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin
 
 /-- **shift を越えて生き残る watch chain の窓データ。**  verifier ＋ lag が右ヘッド `R`、
 窓は **verifier が消費した接頭辞**（`BlockOn … (cen₀+1) (position ver)`）、制御は誕生中心
-`cen₀` に anchor。`GalilReplaySpan.ChainW` の `.watch` 枝の最初の 3 場と同型だが、margin 等式と
-予算は持たず（`chainShiftOne` が `margin` を `dec` するので誕生中心を `C` にした `ChainW` は
-最初の shift 以降は偽、n240）、窓の終端を verifier の位置に固定する（lag > 0 の間は窓が
-右ヘッドに追いつかない: `chainW_matched` は `E` を変えずに `R` を進める）。
-guard 点（lag ゼロ）では verifier ＝ 右ヘッドなので窓は右ヘッドまで届く。 -/
+`cen₀` に anchor した `CoreP`。`GalilReplaySpan.ChainW` の `.watch` 枝の最初の 3 場と同型だが、
+margin 等式と予算は持たず（`chainShiftOne` が `margin` を `dec` するので誕生中心を `C` にした
+`ChainW` は最初の shift 以降は偽、n240）、窓の終端を verifier の位置に固定し（lag > 0 の間は
+窓が右ヘッドに追いつかない、n241）、制御の等式を `SamePrediction` に弱める（`chainShiftOne` が
+sweep カウンタを `dec` する、n242）。guard 点（lag ゼロ）では verifier ＝ 右ヘッド。 -/
 def WatchWindow (raw : List (Fin 2)) (cen₀ R : ℕ) (cc b : Fin 3) (xs : List (Fin 3)) :
     ChainVM → Prop
   | ChainVM.watch w =>
       PalPeg.GalilReplayGeneral2.LagAt w.lag w.machine.verifier R ∧
       PalPeg.GalilReplaySpan.BlockOn raw cc b xs (cen₀ + 1) (position w.machine.verifier) ∧
-      PalPeg.GalilReplaySpan.CoreX raw cc b xs (cen₀ + 1) w.machine
+      CoreP raw cc b xs (cen₀ + 1) w.machine
   | _ => False
 
 /-- `ChainW` の `.watch` 枝から（誕生中心が `C`、窓が verifier まで届くとき）。 -/
@@ -418,13 +480,43 @@ theorem watchWindow_of_chainW {raw : List (Fin 2)} {cen₀ E R bud : ℕ} {lim :
     (hE : position w.machine.verifier ≤ E) :
     WatchWindow raw cen₀ R cc b xs (ChainVM.watch w) := by
   obtain ⟨hlag, hblk, hcore, -, -, -⟩ := h
-  exact ⟨hlag, fun j hj => hblk j (le_trans hj hE), hcore⟩
+  exact ⟨hlag, fun j hj => hblk j (le_trans hj hE), coreP_of_coreX hcore⟩
 
 #print axioms watchWindow_of_chainW
 
+/-- **`Good` を持つ consume は窓を 1 つ伸ばし `CoreP` を保つ。**  `take`（background）と
+`immediate`（一致比較・shift 入口）の共通部分。 -/
+theorem window_consume_of_good {raw : List (Fin 2)} {cen₀ : ℕ} {cc b : Fin 3}
+    {xs : List (Fin 3)} {w : GalilScaffoldChainWatch.State}
+    (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs (cen₀ + 1) (position w.machine.verifier))
+    (hcore : CoreP raw cc b xs (cen₀ + 1) w.machine) (hg : GalilScaffoldChainWatch.Good w) :
+    position (GalilScaffoldChainVerifier.consume w.machine).verifier
+        = position w.machine.verifier + 1 ∧
+      PalPeg.GalilReplaySpan.BlockOn raw cc b xs (cen₀ + 1)
+        (position (GalilScaffoldChainVerifier.consume w.machine).verifier) ∧
+      CoreP raw cc b xs (cen₀ + 1) (GalilScaffoldChainVerifier.consume w.machine) := by
+  have hcan : GalilScaffoldChainVerifier.canRight w.machine.verifier := hg.1
+  obtain ⟨a, hsa, hra⟩ := hg.2
+  have hl0 : 0 < w.machine.verifier.head.left.length :=
+    (represented_position _ raw hcore.2.1 hcore.2.2.1).1
+  have hpc : position (GalilScaffoldChainVerifier.consume w.machine).verifier
+      = position w.machine.verifier + 1 :=
+    right_position _ hcan hl0
+  have hread : read (GalilScaffoldChainVerifier.right w.machine.verifier)
+      = (encoded raw)[position w.machine.verifier + 1]? := by
+    rw [represented_read _ raw (right_word _ raw hcore.2.1 hcan)
+      (right_present _ raw hcore.2.1 hcore.2.2.1 hcan), right_position _ hcan hl0]
+  have hsym : GalilScaffoldChainConsume.symbol w.machine.control.period.focus
+      = (encoded raw)[position w.machine.verifier + 1]? := by
+    rw [← hread]; exact hsa.trans hra.symm
+  refine ⟨hpc, ?_, coreP_consume hcore hg⟩
+  rw [hpc]
+  exact blockOn_succ_of_symbol hblk hcore rfl hsym
+
+#print axioms window_consume_of_good
+
 /-- **1 background 歩（`Internal`）越しの窓。**  `idle` は不変、`take` は verifier が 1 つ右へ、
-lag が 1 つ減り、窓は `take` が持参する `Good`（予測 ＝ 次の読み）で 1 つ伸びる
-（`blockOn_succ_of_symbol`）。 -/
+lag が 1 つ減り、窓は `take` が持参する `Good` で 1 つ伸びる。 -/
 theorem watchWindow_step {raw : List (Fin 2)} {cen₀ R : ℕ} {cc b : Fin 3} {xs : List (Fin 3)}
     {w w' : GalilScaffoldChainWatch.State}
     (hw : WatchWindow raw cen₀ R cc b xs (ChainVM.watch w))
@@ -441,33 +533,46 @@ theorem watchWindow_step {raw : List (Fin 2)} {cen₀ R : ℕ} {cc b : Fin 3} {x
     cases ps with
     | nil => simp [GalilScaffoldCounter.positive] at hp
     | cons u ps =>
-      have hcan : GalilScaffoldChainVerifier.canRight mach.verifier := hg.1
-      obtain ⟨a, hsa, hra⟩ := hg.2
-      have hl0 : 0 < mach.verifier.head.left.length :=
-        (represented_position _ raw hcore.2.1 hcore.2.2.1).1
-      have hpc : position (GalilScaffoldChainVerifier.consume mach).verifier
-          = position mach.verifier + 1 :=
-        right_position _ hcan hl0
-      have hread : read (GalilScaffoldChainVerifier.right mach.verifier)
-          = (encoded raw)[position mach.verifier + 1]? := by
-        rw [represented_read _ raw (right_word _ raw hcore.2.1 hcan)
-          (right_present _ raw hcore.2.1 hcore.2.2.1 hcan), right_position _ hcan hl0]
-      have hsym : GalilScaffoldChainConsume.symbol mach.control.period.focus
-          = (encoded raw)[position mach.verifier + 1]? := by
-        rw [← hread]; exact hsa.trans hra.symm
-      have hblk' := blockOn_succ_of_symbol (w := ⟨mach, ⟨u :: ps, []⟩, margin⟩) hblk hcore rfl hsym
-      refine ⟨⟨rfl, ?_⟩, ?_, PalPeg.GalilReplaySpan.coreX_consume hcore hg⟩
-      · show position (GalilScaffoldChainVerifier.consume mach).verifier
-          + (GalilScaffoldCounter.dec ⟨u :: ps, []⟩).pos.length = R
-        rw [hpc]
-        simp [GalilScaffoldCounter.dec] at hpos ⊢
-        omega
-      · show PalPeg.GalilReplaySpan.BlockOn raw cc b xs (cen₀ + 1)
-          (position (GalilScaffoldChainVerifier.consume mach).verifier)
-        rw [hpc]
-        exact hblk'
+      obtain ⟨hpc, hblk', hcore'⟩ :=
+        window_consume_of_good (w := ⟨mach, ⟨u :: ps, []⟩, margin⟩) hblk hcore hg
+      refine ⟨⟨rfl, ?_⟩, hblk', hcore'⟩
+      show position (GalilScaffoldChainVerifier.consume mach).verifier
+        + (GalilScaffoldCounter.dec ⟨u :: ps, []⟩).pos.length = R
+      rw [hpc]
+      simp [GalilScaffoldCounter.dec] at hpos ⊢
+      omega
 
 #print axioms watchWindow_step
+
+/-- **一致比較（`ChainMatched.watch`、`Outer … true`）越しの窓。**  右ヘッドが 1 つ進む:
+`queued` は lag +1（`lagAt_inc`）、`immediate` は `Good` 持参で consume。 -/
+theorem watchWindow_outer {raw : List (Fin 2)} {cen₀ R : ℕ} {cc b : Fin 3} {xs : List (Fin 3)}
+    {w w' : GalilScaffoldChainWatch.State}
+    (hw : WatchWindow raw cen₀ R cc b xs (ChainVM.watch w))
+    (ho : GalilScaffoldChainWatch.Outer w true w') :
+    WatchWindow raw cen₀ (R + 1) cc b xs (ChainVM.watch w') := by
+  obtain ⟨hlag, hblk, hcore⟩ := hw
+  cases ho with
+  | queued _ => exact ⟨PalPeg.GalilReplayGeneral2.lagAt_inc hlag, hblk, hcore⟩
+  | immediate _ hg =>
+    obtain ⟨hpc, hblk', hcore'⟩ := window_consume_of_good hblk hcore hg
+    refine ⟨⟨hlag.1, ?_⟩, hblk', hcore'⟩
+    show position (GalilScaffoldChainVerifier.consume w.machine).verifier + w.lag.pos.length = R + 1
+    rw [hpc]
+    have := hlag.2
+    omega
+
+#print axioms watchWindow_outer
+
+/-- **shift の 1 歩（`chainShiftOne`）は窓を変えない。** -/
+theorem watchWindow_shiftOne {raw : List (Fin 2)} {cen₀ R : ℕ} {cc b : Fin 3}
+    {xs : List (Fin 3)} {w : GalilScaffoldChainWatch.State}
+    (hw : WatchWindow raw cen₀ R cc b xs (ChainVM.watch w)) :
+    WatchWindow raw cen₀ R cc b xs (ChainVM.watch (chainShiftOne w)) := by
+  obtain ⟨hlag, hblk, hcore⟩ := hw
+  exact ⟨hlag, hblk, coreP_chainShiftOne hcore⟩
+
+#print axioms watchWindow_shiftOne
 
 /-- **`FreshShiftLedger` の producer——誕生中心に anchor した窓から、どの shift 入口でも。**
 
@@ -504,7 +609,7 @@ theorem freshShiftLedger_of_chainW {raw : List (Fin 2)} {cc b : Fin 3} {xs : Lis
   rw [hchain] at hw'
   have hww : wch = w' := ChainVM.watch.inj hw'
   subst hww
-  have hpl : periodLength wch = xs.length + 1 := periodLength_of_coreX hcore
+  have hpl : periodLength wch = xs.length + 1 := periodLength_of_coreP hcore
   rw [hpl, hcen]
   -- the verifier sits on the previous right head
   have hposNil : wch.lag.pos = [] := by

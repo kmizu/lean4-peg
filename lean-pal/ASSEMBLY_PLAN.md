@@ -1,3 +1,34 @@
+## n242 — 公理進捗（訂正 3）: `WatchWindow` の制御を `SamePrediction` 版 `CoreP` に
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 残差の文面は不変（`WatchWindow` の名前で参照）。中身の `CoreX`（制御 ＝ `run (ready …) pre` そのもの）は `chainShiftOne` が sweep カウンタ（distance/boundary/last）を `dec` するので shift 以降は偽——`SamePrediction m.control (run … pre)`（period テープと進行方向だけ）＋`broken = false` の `CoreP` に置き換えた。予測記号は `GalilScaffoldChainPrediction.continued_prediction`（「カウンタを調整した継続は元の予測器の位相を保つ」）で従来どおり出る。**これで `WatchWindow` は chain の全遷移で保たれる形になった** |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 何を証明したか（`ShiftPalAlongTrace`、全部標準公理のみ）
+
+| 定理 | 内容 |
+|---|---|
+| `CoreP` / `coreP_of_coreX` | `CoreX` の弱化と、誕生時（`coreX_born`）からの変換 |
+| `symbol_of_coreP` | 予測記号（`continued_prediction` 経由、右端の余裕不要） |
+| `coreP_consume` | `Good` 付き consume で保存（`coreX_consume` の `SamePrediction` 版） |
+| `coreP_chainShiftOne` | `chainShiftOne` で保存（defeq） |
+| `window_consume_of_good` | `Good` 付き consume: verifier +1・窓 +1・`CoreP` |
+| `watchWindow_step` / `watchWindow_outer` / `watchWindow_shiftOne` | background（`Internal`）／一致比較（`Outer … true`: `queued` は `lagAt_inc`、`immediate` は consume）／shift 1 歩 |
+
+### 次の一手
+
+chain の一生の不変量 `WindowInv raw cen₀ R cc : ChainVM → Prop`（idle: True／copy: `VerAt`＋`LagAt`＋
+`∃ ys, v = fill (start cc) ys`／back: `VerAt`＋`LagAt`＋`∃ b xs, flat v = blockTokens cc b xs`／watch:
+`∃ b xs, WatchWindow`／broken: True）と、`ChainStep`／`ChainMatched`／誕生（`chainStart`）／
+`immediate`（shift 入口）／`chainShiftOne` の transport。**DP の形の葉（`AnswerAhead`／`PlaceAhead`／
+`hshape`）は不要**——ブロックの中身 `b xs` は `copyEnd` で決まる。その後 run 層（`Tick` ごと）へ。
+
 ## n241 — 公理進捗（訂正 2）: `WatchWindow` の窓を「verifier が消費した接頭辞」に
 
 **公理への進捗**
