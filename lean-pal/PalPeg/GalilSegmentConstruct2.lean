@@ -83,10 +83,9 @@ theorem chainReady_of_vm (s : GalilVM) (hb : BlockInv s.chain)
     (hgood : ∀ w : GalilScaffoldChainWatch.State, s.chain = .watch w →
       positive w.lag = true → GalilScaffoldChainWatch.Good w)
     (hcan : ∀ w : GalilScaffoldChainWatch.State, s.chain = .watch w →
-      ∀ m, GalilScaffoldChainWatch.Internal w m → canRight m.machine.verifier)
-    (hnb : ∀ w : GalilScaffoldChainWatch.State, s.chain ≠ .broken w) :
+      ∀ m, GalilScaffoldChainWatch.Internal w m → canRight m.machine.verifier) :
     ChainReady s.chain :=
-  PalPeg.GalilChainReadyProgress.chainReady_of_blockInv s.chain hb hcopy hback hgood hcan hnb
+  PalPeg.GalilChainReadyProgress.chainReady_of_blockInv s.chain hb hcopy hback hgood hcan
 
 /-! ## The hypothesis pack -/
 

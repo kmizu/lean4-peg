@@ -66,8 +66,7 @@ theorem chainReady_of_blockInv (c : ChainVM) (hb : BlockInv c)
     (hgood : ∀ w : GalilScaffoldChainWatch.State, c = .watch w →
       positive w.lag = true → GalilScaffoldChainWatch.Good w)
     (hcan : ∀ w : GalilScaffoldChainWatch.State, c = .watch w →
-      ∀ m, GalilScaffoldChainWatch.Internal w m → canRight m.machine.verifier)
-    (hnb : ∀ w : GalilScaffoldChainWatch.State, c ≠ .broken w) :
+      ∀ m, GalilScaffoldChainWatch.Internal w m → canRight m.machine.verifier) :
     ChainReady c := by
   cases c with
   | idle => exact trivial
@@ -75,8 +74,8 @@ theorem chainReady_of_blockInv (c : ChainVM) (hb : BlockInv c)
   | back v hh lag margin ver =>
     intro hf _
     exact watchReady_backDone hb hf ver (hback v hh lag margin ver rfl) lag margin
-  | watch w => exact ⟨hgood w rfl, hb, hcan w rfl⟩
-  | broken w => exact absurd rfl (hnb w)
+  | watch w => exact ⟨PalPeg.GalilBranchInvariants.readyWatch_of_good (hgood w rfl), hb, hcan w rfl⟩
+  | broken w => exact trivial
 
 #print axioms watchReady_backDone
 #print axioms chainReady_of_blockInv

@@ -247,17 +247,31 @@ theorem chainMatched_watch_total (s : GalilScaffoldChainWatch.State)
     · exact ⟨_, .breaks _ _ ⟨hz, (h hz).1, a, ha, hne, rfl⟩⟩
   · exact ⟨_, .watch _ _ (.queued s (Bool.eq_false_iff.mpr hz))⟩
 
-/-- Totality of the background step on a watching chain.  `Internal` has no
-mismatch constructor, so a positive lag still needs the full `Good`. -/
-theorem chainStep_watch_total (s : GalilScaffoldChainWatch.State)
+/-- The watch clause of the tick's enabling condition: at positive lag the verifier can
+move and the period tape reads a symbol.  `Good` gives it (the read matches). -/
+theorem readyWatch_of_good {s : GalilScaffoldChainWatch.State}
     (h : positive s.lag = true → GalilScaffoldChainWatch.Good s) :
+    positive s.lag = true → GalilScaffoldChainVerifier.canRight s.machine.verifier ∧
+      ∃ a : Fin 3, GalilScaffoldChainConsume.symbol s.machine.control.period.focus = some a :=
+  fun hp => ⟨(h hp).1, (h hp).2.imp fun _ ha => ha.1⟩
+
+/-- The background step out of a watch is total: at positive lag the read either matches
+(`Internal.take`) or breaks the chain (`watchBreak`). -/
+theorem chainStep_watch_total (s : GalilScaffoldChainWatch.State)
+    (h : positive s.lag = true → GalilScaffoldChainVerifier.canRight s.machine.verifier ∧
+      ∃ a : Fin 3, GalilScaffoldChainConsume.symbol s.machine.control.period.focus = some a) :
     ∃ y, ChainStep (.watch s) y := by
   by_cases hp : positive s.lag = true
-  · exact ⟨_, .watchStep _ _ (.take s hp (h hp))⟩
+  · obtain ⟨hc, a, hs⟩ := h hp
+    by_cases hr : GalilScaffoldInputHead.read
+        (GalilScaffoldChainVerifier.right s.machine.verifier) = some a
+    · exact ⟨_, .watchStep _ _ (.take s hp ⟨hc, a, hs, hr⟩)⟩
+    · exact ⟨_, .watchBreak s ⟨hp, hc, a, hs, hr⟩⟩
   · exact ⟨_, .watchStep _ _ (.idle s (Bool.eq_false_iff.mpr hp))⟩
 
 theorem chainTick_watch_total (s : GalilScaffoldChainWatch.State) (a : Bool)
-    (h : positive s.lag = true → GalilScaffoldChainWatch.Good s)
+    (h : positive s.lag = true → GalilScaffoldChainVerifier.canRight s.machine.verifier ∧
+      ∃ a : Fin 3, GalilScaffoldChainConsume.symbol s.machine.control.period.focus = some a)
     (hb : WatchBlock s)
     (hc : ∀ m, GalilScaffoldChainWatch.Internal s m →
       GalilScaffoldChainVerifier.canRight m.machine.verifier) :

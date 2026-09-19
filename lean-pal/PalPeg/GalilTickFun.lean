@@ -52,10 +52,12 @@ def ChainReady : ChainVM → Prop
       GalilScaffoldChainPeriod.isFirst v.focus = true →
         (zero lag = true → WatchReady ⟨⟨ver, watchControl v⟩, lag, margin⟩)
   | .watch w =>
-      (positive w.lag = true → GalilScaffoldChainWatch.Good w) ∧ WatchBlock w ∧
+      (positive w.lag = true → GalilScaffoldChainVerifier.canRight w.machine.verifier ∧
+        ∃ a : Fin 3, GalilScaffoldChainConsume.symbol w.machine.control.period.focus = some a) ∧
+      WatchBlock w ∧
         (∀ m, GalilScaffoldChainWatch.Internal w m →
           GalilScaffoldChainVerifier.canRight m.machine.verifier)
-  | .broken _ => False
+  | .broken _ => True
 
 theorem chainAt_exists (a found : Bool) (answer : GalilScaffoldTape.Tape) (c : Fin 3)
     (walker : GalilScaffoldPlace.Place) (ver : GalilScaffoldInputHead.PlaceHead)
@@ -105,7 +107,12 @@ theorem chainAt_exists (a found : Bool) (answer : GalilScaffoldTape.Tape) (c : F
     obtain ⟨h1, h2, h3⟩ := hx
     obtain ⟨z, hz⟩ := chainTick_watch_total w a h1 h2 h3
     exact ⟨z, Or.inl ⟨by simp, hz⟩⟩
-  | broken w => exact absurd hx (by simp [ChainReady])
+  | broken w =>
+    cases a with
+    | false => exact ⟨.broken w, Or.inl ⟨by simp, .broken w, .brokenIdle w, by simp⟩⟩
+    | true =>
+      exact ⟨_, Or.inl ⟨by simp, .broken w, .brokenIdle w,
+        by simpa using ChainMatched.brokenMatched w⟩⟩
 
 #print axioms chainAt_exists
 

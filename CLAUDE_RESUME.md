@@ -1,3 +1,28 @@
+## n251 — `ChainReady` から `Good` を外した（正 lag の watch は必ず tick できる）／run 構成の API 確定
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracle` | run の存在が chain 側で無条件になった: `GalilTickFun.ChainReady (.watch w)` の場を `positive lag → canRight verifier ∧ ∃ a, symbol focus = some a`（読みが当たれば `Internal.take`、外れれば `watchBreak`）に緩め、`.broken` は `True`（`brokenIdle`／`brokenMatched` で常に進む）。`GalilBranchInvariants.chainStep_watch_total`／`chainTick_watch_total` も同じ仮説に。`Good` を持つ producer は `readyWatch_of_good` で変換（`chainReady_of_blockInv`／`chainReady_of_chainOk`）。**run 構成の API**: scan は `GalilTickFun.scan_tick_gen (P) … hshift hfall hsearch hchain`（frame 汎用）、init／restart／replayStart は `*_tick_gen`、phase モード（shift／copy／fpp／home／markEnd／choose／rewind）は `GalilTickFun3.phase_tick_gen (P) (hx : PhaseEnabled q first x)`——全部 `P := PofC …` で使える。`tick_exists`／`tick_exists_R`／`tick_exists_P`／`runFun_steps` は `sharedFun`（fallback 先を `place s` に固定した frame）用なので `CycleOracleMC3`（frame `PofC`＝`sharedC`、fallback は `beginFallbackVM'`）には直接使えない。`PofC` 側の `hfall` は証人 `place s` と `(stream (place s)).length ≤ position right`（`Decodes`＋`CentreRep` から）で出す |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
+### `Enabled`（scan）の各場の供給元
+
+| 場 | 供給元 |
+|---|---|
+| `1 ≤ clock` | `Bounded`／tick の構成子（clock は `delay` から減る） |
+| `replaying = false` | `ScanNR`（replay 中は `tick_exists_R` の `ReplayEnabled`: 左右の読みが一致） |
+| `∀ a, ∃ v, searchEffect P a s v` | `GalilBranchInvariants2.searchEffect_exists`（`SearchReady`）／`GalilOracleLeaves2.hsearch_C` |
+| `ChainReady s.chain` | `WindowRunPack.window`（`WindowInv`）: copy は `CopyInv`、back は `OnBlock`＋`canRight ver`、watch は `LagAt`（正 lag ⇒ `position ver < position right` ⇒ `canRight ver`、`canRight_of_bound`）＋`symbol_of_coreP`（bounce の添字は常に `some`）＋`WatchBlock`＝`OnBlock` |
+
+### 次
+
+`FoundExitLPS`（`CloseoutWatchRound31.cycleOutMC3_of_foundExitLPS` の入力）を `WindowRunPack` の上で構成する:
+found tick（`CloseoutFoundRoute1.found_first_tick` の形）→ 決定的 run（上の API）→ 着地の分類（`scan_shift`：`shiftPal_of_windowRunPack`／`scan_fallback`／`restart`）→ `Inv`（`restarted`／`fallback_restarted_All`）。停止性は右ヘッド位置（各比較で +1、上限 `2m−1`）と clock。
+
 ## n250 — モデル欠陥 `M-watchBreak` を修正（`ChainStep.watchBreak`／`ChainMatched.brokenMatched`）、全体 build 緑
 
 **公理への進捗**
