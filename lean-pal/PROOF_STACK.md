@@ -1,3 +1,18 @@
+## n281 — 葉 `hmove`: shift 後のラウンドの watch は常に lag ゼロ・phase 4。葉に残るのは「shift 後のラウンドで不一致状態の chain が既に broken」だけ
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` の前提が「`periodOnly = true` かつ `∃ wb, s.chain = .broken wb`」になった（遅れている watch、phase ≠ 4 の watch は葉から消えた） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。`OracleReady.cycleOracleOn_of_readyLeaves` と `RestartLowerRun.tailTick_cases` は標準 3 公理のみ。
+
+**何を証明したか**: `Continuation` の 2 節に `zero w.lag = true ∧ w.machine.control.phase = 4` を足した。`beginShiftVM'` は guard（lag ゼロ・phase 4）の下でしか起きず、`immediate` は lag を変えない、`shiftOne` は counter だけ。chain tick での保存は `caughtUp_watch_tick`: lag ゼロの `Internal` は `idle`、matched は `Outer.immediate`（即 consume、Scala `matched()`）、phase 4 は `consume_phase_four` で吸収的。消費者は `tailTick_cases`（shift 後の不一致状態の live chain は、既に broken か、chain tick が lag ゼロ・phase 4 の watch を出すかのどちらか。copy／back は `TailRound` が排除）→ `OracleReady` の `hMove`。watch が出る側は n279（予測外れ）／n280（予測一致）が閉じる。
+
+**未完の部分**: 葉 `hmove` の最後の場合 = shift 後のラウンドで不一致状態の chain が既に broken（restart guard 不成立）。計画（`CLAUDE_RESUME.md` 冒頭の「(c3) の計画」2.）: `FirstRoundGuard` を全ラウンドに広げる。shift 後は lag ゼロなので break は matched 比較の `BreakStep` だけ。`cycle ≥ 2` なら左の place が `[Lb, C]` の中で、`matched_text`＋周期＋鏡像＋窓から予測＝読んだ文字となり break しない。`cycle ≤ 1` なら `Other'`（`5h ≤ R + cycle`）から `4h ≤ R` で `restartGuard_of_lateBreak`。fresh 側（`FreshC`・phase 4）は `four_of_freshC` で直接 `4h ≤ R`。`obligation_localRealization` は未着手。
+
 ## n280 — 葉 `hmove`: shift 後のラウンドで、追い付いた watch（lag ゼロ・phase 4）が出てくる不一致は全部閉じた
 
 **公理への進捗**

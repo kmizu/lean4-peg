@@ -1467,6 +1467,65 @@ theorem watch_source_of_tailRound {raw : List (Fin 2)} {s : GalilVM} {a : Bool}
       at hcells
     omega
 
+/-- A caught-up watch in phase `4` stays caught up and in phase `4` under a chain tick that ends
+in a watch: at lag zero the background step is idle and a matched place is consumed at once
+(Scala `matched()`), and phase `4` is absorbing. -/
+theorem caughtUp_watch_tick {a : Bool} {w0 w' : GalilScaffoldChainWatch.State}
+    (htick : ChainTick a (.watch w0) (.watch w')) (hzero : zero w0.lag = true)
+    (hphase : w0.machine.control.phase = 4) :
+    zero w'.lag = true ∧ w'.machine.control.phase = 4 := by
+  obtain ⟨y, hstep, hya⟩ := htick
+  generalize hx : ChainVM.watch w0 = x at hstep
+  cases hstep with
+  | watchStep w w1 hinternal =>
+    cases hx
+    have hw1 : w1 = w0 := by
+      cases hinternal with
+      | idle _ => rfl
+      | take hp _ =>
+        rw [not_zero_of_positive hp] at hzero
+        cases hzero
+    subst hw1
+    cases a with
+    | false =>
+      rw [if_neg (by simp)] at hya
+      cases hya
+      exact ⟨hzero, hphase⟩
+    | true =>
+      rw [if_pos rfl] at hya
+      generalize hsourceChain : ChainVM.watch w1 = u at hya
+      generalize htargetChain : ChainVM.watch w' = v at hya
+      cases hya with
+      | watch w2 w3 houter =>
+        cases hsourceChain
+        cases htargetChain
+        cases houter with
+        | queued hnonzero =>
+          rw [hzero] at hnonzero
+          cases hnonzero
+        | immediate _ _ =>
+          exact ⟨hzero, consume_phase_four _ _ hphase⟩
+      | idle => cases hsourceChain
+      | copy => cases hsourceChain
+      | back => cases hsourceChain
+      | breaks => cases htargetChain
+      | brokenMatched => cases hsourceChain
+  | watchBreak w hb =>
+    cases hx
+    cases a with
+    | false =>
+      rw [if_neg (by simp)] at hya
+      cases hya
+    | true =>
+      rw [if_pos rfl] at hya
+      cases hya
+  | idle => cases hx
+  | brokenIdle => cases hx
+  | copyBit => cases hx
+  | copyEnd => cases hx
+  | backStep => cases hx
+  | backDone => cases hx
+
 /-- The left end `Lb` of the periodic stretch a shift started from: the text has period `2h` from
 `Lb` to `E`, and the period breaks one place further left (what the left head reads there, `none`
 on the sentinel, is not the letter two semiperiods to its right). -/
@@ -1483,10 +1542,12 @@ palindrome the shift started from. -/
 def Continuation (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
   ∀ w, s.chain = .watch w →
     (c.mode = .scan → s.periodOnly = true →
+      (zero w.lag = true ∧ w.machine.control.phase = 4) ∧
       Canonical s.cycle ∧ value s.cycle ≤ 2 * (periodLength w : ℤ) ∧
       ∃ Lb : ℕ, (Lb : ℤ) + value s.radius + value s.cycle = (position s.center : ℤ) + 1 ∧
         LeftEnd raw (periodLength w) Lb (position s.center)) ∧
     (c.mode = .shift →
+      (zero w.lag = true ∧ w.machine.control.phase = 4) ∧
       Canonical s.cycle ∧ value s.cycle + 2 * value s.remaining ≤ 2 * (periodLength w : ℤ) ∧
       ∃ Lb rem : ℕ, s.remaining = ofNat rem ∧
         (Lb : ℤ) + value s.radius + value s.cycle = (position s.center : ℤ) + 1 ∧
@@ -1517,6 +1578,7 @@ theorem continuation_tick {raw : List (Fin 2)} {x y : State GalilVM}
       (s.chain ≠ .idle → s.periodOnly = true → Canonical s.cycle →
         Canonical t.cycle ∧ value t.cycle ≤ value s.cycle ∧
         value t.radius + value t.cycle = value s.radius + value s.cycle) →
+      (zero w'.lag = true ∧ w'.machine.control.phase = 4) ∧
       Canonical t.cycle ∧ value t.cycle ≤ 2 * (periodLength w' : ℤ) ∧
       ∃ Lb : ℕ, (Lb : ℤ) + value t.radius + value t.cycle = (position t.center : ℤ) + 1 ∧
         LeftEnd raw (periodLength w') Lb (position t.center) := by
@@ -1530,10 +1592,12 @@ theorem continuation_tick {raw : List (Fin 2)} {x y : State GalilVM}
         simpa using htrue
       obtain ⟨w0, hw0, hlength⟩ :=
         watch_source_of_tailRound (htail hm hsourceOnly) hblock htick
-      obtain ⟨hcanonical, hsourceBound, Lb, hLb, hperiod⟩ := (hbound w0 hw0).1 hm hsourceOnly
+      obtain ⟨⟨hzero, hphase⟩, hcanonical, hsourceBound, Lb, hLb, hperiod⟩ :=
+        (hbound w0 hw0).1 hm hsourceOnly
       obtain ⟨hcanonical', hstep, hsum⟩ := hcycle hne hsourceOnly hcanonical
+      have hcaught := caughtUp_watch_tick (by rw [hw0] at htick; exact htick) hzero hphase
       rw [hlength, hcenter]
-      exact ⟨hcanonical', by linarith, Lb, by linarith, hperiod⟩
+      exact ⟨hcaught, hcanonical', by linarith, Lb, by linarith, hperiod⟩
     · cases hz
     · rw [hidle, hfound] at honly
       rw [honly] at htrue
@@ -1615,6 +1679,11 @@ theorem continuation_tick {raw : List (Fin 2)} {x y : State GalilVM}
     have hscenter : s'.center = s.center := (PalPeg.WindowTick.compare_target_heads heq).2.2.2.1
     obtain ⟨w, hs0, hteq⟩ : beginShiftVM' s' t := hb
     obtain ⟨Lb, hLb, hperiod⟩ := hstart c s s' w rfl hm hcmp hmt hg hs0
+    have hguardWatch : zero w.lag = true ∧ w.machine.control.phase = 4 := by
+      obtain ⟨wg, hwg, hzeroG, hphaseG, -⟩ := hg
+      rw [hs0] at hwg
+      cases hwg
+      exact ⟨hzeroG, hphaseG⟩
     subst hteq
     rw [hs0] at hblock'
     intro w' hw
@@ -1624,7 +1693,9 @@ theorem continuation_tick {raw : List (Fin 2)} {x y : State GalilVM}
       w.lag (inc w.margin) hblock'
     have heta : periodLength ⟨w.machine, w.lag, w.margin⟩ = periodLength w := rfl
     have hreset : value reset = 0 := rfl
-    show Canonical reset ∧ (value reset + 2 * value (ofNat (periodLength w))
+    show (zero w.lag = true ∧
+        (GalilScaffoldChainVerifier.consume w.machine).control.phase = 4) ∧
+      Canonical reset ∧ (value reset + 2 * value (ofNat (periodLength w))
         ≤ 2 * ((periodLength ⟨GalilScaffoldChainVerifier.consume w.machine, w.lag,
           inc w.margin⟩ : ℕ) : ℤ)) ∧
       ∃ Lb rem : ℕ, ofNat (periodLength w) = ofNat rem ∧
@@ -1632,7 +1703,8 @@ theorem continuation_tick {raw : List (Fin 2)} {x y : State GalilVM}
         LeftEnd raw (periodLength ⟨GalilScaffoldChainVerifier.consume w.machine, w.lag,
             inc w.margin⟩) Lb (position s'.center + rem)
     rw [hlength, heta, ofNat_value, hreset, hradius', inc_value, hscenter]
-    exact ⟨Or.inl rfl, by omega, Lb, periodLength w, rfl, by linarith, hperiod⟩
+    exact ⟨⟨hguardWatch.1, consume_phase_four _ _ hguardWatch.2⟩, Or.inl rfl, by omega, Lb,
+      periodLength w, rfl, by linarith, hperiod⟩
   | scan_fallback c s s' t hm hav hc hcmp hmt hg hr hb =>
     obtain ⟨p, hteq, -⟩ : beginFallbackVM' s' t := hb
     subst hteq
@@ -1653,14 +1725,16 @@ theorem continuation_tick {raw : List (Fin 2)} {x y : State GalilVM}
     have hcenterPos : position (right s.center) = position s.center + 1 :=
       right_position s.center hcanC hl0
     subst hteq
-    obtain ⟨hcanonical, hsourceBound, Lb, rem, hrem, hLb, hperiod⟩ := (hsource w hw).2 hm
+    obtain ⟨hcaught, hcanonical, hsourceBound, Lb, rem, hrem, hLb, hperiod⟩ :=
+      (hsource w hw).2 hm
     intro w' hw'
     cases hw'
     refine ⟨fun hmode => by simp [hm] at hmode, fun _ => ?_⟩
     cases rem with
     | zero => rw [hrem] at hpos; exact absurd hpos (by decide)
     | succ rem =>
-      show Canonical (inc (inc s.cycle)) ∧
+      show (zero w.lag = true ∧ w.machine.control.phase = 4) ∧
+        Canonical (inc (inc s.cycle)) ∧
         (value (inc (inc s.cycle)) + 2 * value (dec s.remaining)
           ≤ 2 * ((periodLength w : ℕ) : ℤ)) ∧
         ∃ Lb rem' : ℕ, dec s.remaining = ofNat rem' ∧
@@ -1668,14 +1742,15 @@ theorem continuation_tick {raw : List (Fin 2)} {x y : State GalilVM}
             = (position (right s.center) : ℤ) + 1 ∧
           LeftEnd raw (periodLength w) Lb (position (right s.center) + rem')
       rw [inc_value, inc_value, dec_value, dec_value, hcenterPos]
-      refine ⟨inc_canonical _ (inc_canonical _ hcanonical), by linarith, Lb, rem,
+      refine ⟨hcaught, inc_canonical _ (inc_canonical _ hcanonical), by linarith, Lb, rem,
         by rw [hrem, dec_ofNat_succ], by push_cast; linarith, ?_⟩
       rw [show position s.center + 1 + rem = position s.center + (rem + 1) from by omega]
       exact hperiod
   | shift_done c s o hm hp ho =>
     intro w hw
     refine ⟨fun _ _ => ?_, fun hmode => by simp at hmode⟩
-    obtain ⟨hcanonical, hsourceBound, Lb, rem, hrem, hLb, hperiod⟩ := (hsource w hw).2 hm
+    obtain ⟨hcaught, hcanonical, hsourceBound, Lb, rem, hrem, hLb, hperiod⟩ :=
+      (hsource w hw).2 hm
     have hpos : positive s.remaining = false := by
       cases h1 : positive s.remaining
       · rfl
@@ -1687,7 +1762,7 @@ theorem continuation_tick {raw : List (Fin 2)} {x y : State GalilVM}
     subst hzero
     rw [hrem, ofNat_value] at hsourceBound
     have hcast : ((0 : ℕ) : ℤ) = 0 := rfl
-    exact ⟨hcanonical, by linarith, Lb, hLb, by simpa using hperiod⟩
+    exact ⟨hcaught, hcanonical, by linarith, Lb, hLb, by simpa using hperiod⟩
   | replayStart c s t o hm hr ho ho' =>
     obtain ⟨_,_,_,_,_,_,_,_,_,hch,_,_,_⟩ := hr
     intro w hw
@@ -1789,7 +1864,7 @@ theorem continuation_start {raw : List (Fin 2)} {c : Control} {s s' : GalilVM}
       omega
     · obtain ⟨honly, -, -, hscanBound⟩ := hother
       have hfive := hscanBound (by rw [hm]; decide)
-      obtain ⟨-, hcycle, -⟩ := (hbound w0 hsource).1 hm honly
+      obtain ⟨-, -, hcycle, -⟩ := (hbound w0 hsource).1 hm honly
       rw [hradius.2, hlength1] at hfive
       rw [hlength0] at hcycle
       have hthree : 3 * ((xs.length + 1 : ℕ) : ℤ) ≤ (R : ℤ) := by push_cast at hfive hcycle ⊢; linarith
@@ -2468,7 +2543,7 @@ theorem move_of_tail_mispredict {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ :
     exact (ChainVM.watch.inj hsource').symm
   subst hsame
   have htwo : 2 * periodLength w1 ≤ rad := by
-    obtain ⟨-, hcycle, -⟩ := (hinvariant.continuation w0' hsource).1 hm honly
+    obtain ⟨-, -, hcycle, -⟩ := (hinvariant.continuation w0' hsource).1 hm honly
     rw [← hlength] at hcycle
     exact two_semiperiods_le hfourOr hdistance hR.2 (by rw [hm]; decide) hcycle
   exact move_of_prediction_break (vq := vq) (z := ChainVM.watch w1) hwin hm hscan hcan hlen
@@ -2537,7 +2612,8 @@ theorem shiftGuard_of_tail_caughtUp {raw : List (Fin 2)} (hraw : raw ≠ []) {c�
   obtain ⟨m, hk⟩ := (hk w0 hsource).2 (by rw [hm]; decide)
   rw [hlength0] at hk
   have hcontinuation : Continuation (a :: rest) c s := hinvariant.continuation
-  obtain ⟨hcanonical, hcycleLe, Lb, hLbPacked, hLbPos, hLbLePacked, hperiodLeftPacked, hbreak⟩ :=
+  obtain ⟨-, hcanonical, hcycleLe, Lb, hLbPacked, hLbPos, hLbLePacked, hperiodLeftPacked,
+      hbreak⟩ :=
     (hcontinuation w0 hsource).1 hm honly
   have hLb : (Lb : ℤ) + value s.radius + value s.cycle = (position s.center : ℤ) + 1 :=
     hLbPacked
@@ -2811,6 +2887,68 @@ theorem chainTick_cases {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
         cases this
       simp only [chainWork]
       omega
+
+/-- What the chain tick of a mismatching comparison does to a live chain in a round after a
+shift: the chain was already broken, or it ends as a caught-up watch in phase `4` (the chain has
+no birth payload, and its watch is caught up and in phase `4` throughout the round). -/
+theorem tailTick_cases {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : Control} {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    (hboot : CloseoutCheckW.PackedFromBoot centre place entry q first raw ⟨c₀, r₀⟩)
+    {k : ℕ} {c : Control} {s : GalilVM} {vq : SearchVM} {z : ChainVM}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ ⟨c, s⟩)
+    (hm : c.mode = .scan) (honly : s.periodOnly = true) (hidle : s.chain ≠ .idle)
+    (hchainAt : chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
+      ((PofC centre place entry raw).centre s) ((PofC centre place entry raw).place s)
+      s.center s.radius s.chain z) :
+    (∃ wb, s.chain = .broken wb) ∨
+      ∃ w1, z = .watch w1 ∧ zero w1.lag = true ∧ w1.machine.control.phase = 4 := by
+  obtain ⟨a, rest, rfl⟩ := List.exists_cons_of_ne_nil hraw
+  have hinvariant := minimalAcrossRestart_packed centre place entry q first hP hI
+    (lowerAt_of_packedFromBoot centre place entry q first hP hI hboot) hrun
+  have htail : ScanMinimal (fun _ _ => False) (a :: rest) s := hinvariant.tailRound hm honly
+  have hcontinuation : Continuation (a :: rest) c s := hinvariant.continuation
+  cases hs : s.chain with
+  | idle => exact absurd hs hidle
+  | broken wb => exact Or.inl ⟨wb, rfl⟩
+  | copy t h p v lag margin ver =>
+    simp only [ScanMinimal, hs] at htail
+    obtain ⟨H, n, -, -, -, hfalse⟩ := htail
+    exact hfalse.elim
+  | back v h lag margin ver =>
+    simp only [ScanMinimal, hs] at htail
+    obtain ⟨-, H, -, -, -, hfalse⟩ := htail
+    exact hfalse.elim
+  | watch w0 =>
+    right
+    obtain ⟨⟨hzero, hphase⟩, -⟩ := (hcontinuation w0 hs).1 hm honly
+    rw [hs] at hchainAt
+    rcases hchainAt with ⟨-, htick⟩ | ⟨hidle', -, -⟩ | ⟨hidle', -, -⟩
+    · obtain ⟨y, hstep, hzy⟩ := htick
+      rw [if_neg (by simp)] at hzy
+      subst hzy
+      generalize hx : ChainVM.watch w0 = x at hstep
+      cases hstep with
+      | watchStep w w1 hinternal =>
+        cases hx
+        have htickWatch : ChainTick false (.watch w0) (.watch w1) :=
+          ⟨.watch w1, .watchStep w0 w1 hinternal, by simp⟩
+        have hcaught := caughtUp_watch_tick htickWatch hzero hphase
+        exact ⟨w1, rfl, hcaught⟩
+      | watchBreak w hb =>
+        cases hx
+        rw [not_zero_of_positive hb.1] at hzero
+        cases hzero
+      | idle => cases hx
+      | brokenIdle => cases hx
+      | copyBit => cases hx
+      | copyEnd => cases hx
+      | backStep => cases hx
+      | backDone => cases hx
+    · cases hidle'
+    · cases hidle'
+
+#print axioms tailTick_cases
 
 /-- **A first-round scan state of a packed run from boot has no broken chain off the restart
 guard** (Scala: `chain restart violates the confirmed-period invariant` is unreachable). -/

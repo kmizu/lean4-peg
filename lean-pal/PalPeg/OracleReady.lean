@@ -81,8 +81,7 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
       searchEffect (PofC centre place entry w) false s vq →
       s.chain ≠ .idle →
       s.periodOnly = true →
-      (∀ w1 : GalilScaffoldChainWatch.State, z = .watch w1 → zero w1.lag = true →
-        w1.machine.control.phase ≠ 4) →
+      (∃ wb : GalilScaffoldChainWatch.State, s.chain = .broken wb) →
       chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
         ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
         s.center s.radius s.chain z →
@@ -181,10 +180,11 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
           · exact PalPeg.RestartLowerRun.move_of_watch_short centre place entry q first
               hnonempty hP hI hBoot hRun hm hr hCan hChain hfirstRound hzero hphase
       · have honly : s.periodOnly = true := by simpa using hfirstRound
-        by_cases hcaughtUp : ∃ w1 : GalilScaffoldChainWatch.State, z = .watch w1 ∧
-            zero w1.lag = true ∧ w1.machine.control.phase = 4
-        · obtain ⟨w1, hz, hzero, hphase⟩ := hcaughtUp
-          subst hz
+        rcases PalPeg.RestartLowerRun.tailTick_cases centre place entry q first hnonempty hP
+            hI hBoot hRun hm honly hidle hChain with hbroken | ⟨w1, hz, hzero, hphase⟩
+        · exact hmove c₀ r₀ k c s vq z m hm1 hmle hI hBoot hRun hNoGuardS hm hr hc hPos hM hMis
+            hSearch hidle honly hbroken hChain hGuard
+        · subst hz
           by_cases hprediction :
               GalilScaffoldChainConsume.symbol w1.machine.control.period.focus
                 = GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right)
@@ -196,9 +196,6 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
           · exact PalPeg.RestartLowerRun.move_of_tail_mispredict centre place entry q first
               hnonempty hP hI hBoot hRun hm hr hCan hMis hSearch hChain honly hzero hphase
               hprediction
-        · exact hmove c₀ r₀ k c s vq z m hm1 hmle hI hBoot hRun hNoGuardS hm hr hc hPos hM hMis
-            hSearch hidle honly (fun w1 hz hzero hphase =>
-              hcaughtUp ⟨w1, hz, hzero, hphase⟩) hChain hGuard
   change ℓ / 2 ≤ 4*(ℓ / 2 + 1-radius) at hMove
   have hk : ℓ / 2 = rad := by rw [hLengthNat]; omega
   rw [hk] at hMove
