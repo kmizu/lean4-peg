@@ -1,3 +1,26 @@
+## n244 — 公理進捗: run 層の窓不変量 `ChainWindowRun` と VM 遷移ごとの transport 8 本
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 残差の窓を run に沿って運ぶ `State GalilVM` 上の不変量 `WindowRun.ChainWindowRun`（`WindowInv`＋右ヘッド `R = position s.right`＋中心のずれ: scan で `center = cen₀ + k·h`、shift 中は `center + remaining = cen₀ + (k+1)·h`）と、VM 遷移ごとの transport が揃った（全部標準公理のみ）: `chainWindowRun_of_idle`／`_of_broken`／`_chainStep`（background の chain 1 歩）／`_birth`／`_birth_matched`（誕生）／`_matched`（一致比較: `ChainStep` → `ChainMatched`、右ヘッド +1）／`_shift`（不一致 → `immediate`、phase 0 の新鮮 watch は guard の phase 4 と矛盾）／`_shiftOne`／`_shiftDone`。残るのは `Tick` ごとの組み立て（`backgroundS`／`compareFound`／`beginShiftVM'`／`shiftOne` の展開と周辺事実）と `Steps` 帰納、そして残差の取り出し |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### `Tick` 組み立てに要る周辺事実（run 層が供給するもの）
+
+| 事実 | 使う遷移 | 供給元候補 |
+|---|---|---|
+| `Coupled.idleOut`（非 scan/shift/init で chain idle） | rewind 等 | `AuxPack.coupled`（`auxPack_steps`） |
+| `CopyPack`（`mode ≠ copy → CopyIdle`） | `shift_one`/`shift_done` の `remainingPos` | `AuxPack.copyP` |
+| `CentreRep raw s` | 誕生・shift 1 歩 | `InvLPC` 起点＋`centreRep_congr` |
+| `Represents s.right.head ∧ focus ≠ none`、`canRight s.right` | 比較 | `Inv.input`／`Extra7.scanAvail`／replay は `Frontier` |
+| `RadiusRep s.radius R' ∧ position s.right = center + R'` | 誕生 | `Restarted`＋`radius_rep_inc`（scan 区間の不変量、要確認） |
+| 中心記号 `x[center]? = some (P.centre s)` | 誕生 | `decodesC`＋`CentreRep`（`read_represent`・`represented_read`） |
+
 ## n243 — 公理進捗: chain の一生の不変量 `WindowInv` と 5 つの transport（DP の形の葉なし）
 
 **公理への進捗**
