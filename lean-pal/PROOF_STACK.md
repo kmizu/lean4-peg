@@ -1,3 +1,14 @@
+## n255 — `hready` を原子の葉 3 本に分解（`OracleReady.searchReady_of_invLPS_steps`）、PR #72 を main に merge
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 葉 `hready`（`InvLPS` 起点からの run の chain idle な scan 状態で `SearchReady`）を定理化: `OracleReady.searchReady_of_invLPS_steps (hfresh) (hrestart) (hreplayStart)`。乗り物は `CloseoutPreload39.ReadyFieldP3 n`（今の readiness ＋ paced な未来全部の readiness）で、`readyField3_tick` が restart／replayStart の着地以外の全 tick で運ぶ（`BigPack2M''` 仮説は証明が `aux.front.notInit` しか使っていなかったので `mode ≠ init` に一般化）。起点の datum は `InvLPS.2 : ReplayStage`（fresh restart からの `WatchSegE` 履歴）で `hfresh` を transport。残る原子: `hfresh`（`Restarted w r Rad last ∧ StageEntry Rad last ∧ mode scan ∧ clock 2048 → ∃ n, ReadyFieldP3 n ⟨c, r⟩`＝具体 DP の stage 予算に対する較正）、`hrestart`／`hreplayStart`（fresh 起点から到達する restart／replayStart tick の着地の datum ＝ 着地が `Restarted ∧ StageEntry` であること ＋ `hfresh`）。`OracleReady.cycleOracleOn_of_readyLeaves (hP) (h4) (hfresh) (hrestart) (hreplayStart) (hchain) (hminv) (hfallback)` が oracle の producer（標準公理のみ）。`OracleRun` の `hready` は `y.ctl.mode = scan` に限定（使う場所は全部 scan 状態）。既存塔の判定: `readyField3_entry_of_datum` は `NoReturn`（一般には偽）を取るので使えず、`postRunC_galil_of_boot`（Preload36）の `StageChain` 経路は boot datum と `16 ≤ mw` が残差。PR #72（n245〜n254）を main に merge（`433ec7e`） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
 ## n254 — shift 相の葉を放電（`OracleRun.shiftLeaf`）、新 oracle は run 形の葉 4 本に
 
 **公理への進捗**

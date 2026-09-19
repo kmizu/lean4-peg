@@ -40,7 +40,7 @@ CLAUDE.md の「ファイル自身の docstring も一次情報ではない」�
 | axiom | 内容 | 経路と残り |
 |---|---|---|
 | `obligation_shiftPalResiduesAlongRun` / `obligation_shiftPalResiduesAlongTrace` | `ShiftPal` の残差 = **不一致比較直前の誕生 anchor 窓**（run 形／trace 形、後者は前者の派生） | n238。`ShiftEntryFromLanding.freshShiftLedger_of_chainW_scan` → `shiftPal_of_freshShiftLedger` で `ShiftPal` 自体は放電済み。残るのは run 層が不一致比較の直前で窓（`WatchWindow`、誕生中心 anchor）・`ScanInvariant`・`canRight`・誕生中心の記号・`2h ≤ R` を持つこと |
-| `obligation_cycleOracleOnPackedRun` | `CycleOracleOn (ScanOnPackedRunFromInvLPS)`（run 形の cycle oracle） | n252 で `CycleOracleMC3` から切り直し。producer は `OracleRun.cycleOracleOn_of_fourLeaves`（n254）。残る葉は run 形の 4 本: `hready`（chain idle での `SearchReady`）／`hchain`（`ChainReady`）／`hminv`（`MInv`）／`hfallback`（fallback＋replay）。shift 相は `shiftLeaf` で定理化済み |
+| `obligation_cycleOracleOnPackedRun` | `CycleOracleOn (ScanOnPackedRunFromInvLPS)`（run 形の cycle oracle） | n252 で `CycleOracleMC3` から切り直し。producer は `OracleReady.cycleOracleOn_of_readyLeaves`（n255）。残る葉: `hfresh`（fresh restart での readiness datum ＝ DP の較正）／`hrestart`／`hreplayStart`（restart／replayStart 着地の datum）／`hchain`（`ChainReady`）／`hminv`（`MInv`）／`hfallback`（fallback＋replay）。`hready` は `OracleReady.searchReady_of_invLPS_steps` で定理化、shift 相は `shiftLeaf` |
 | `obligation_localRealization` | `H_realizeLIMW'`（局所実現） | **producer なし**（5 機械の鎖の 2→3 段）。難易度は宣言しない——`LagCan` / `CentreRep` と同じ「切り方の誤り」の可能性が高い |
 
 ### 公理としては消えた 6 本（経路メモは残す）

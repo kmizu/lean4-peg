@@ -113,7 +113,8 @@ theorem scanBackground_run {w : List (Fin 2)} :
       c.clock = n + 1 → canRight s.right → OutputRel w c s →
       (∀ (k : ℕ) (y : State GalilVM),
         StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) k ⟨c, s⟩ y →
-        y.vm.chain = .idle → PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm)) →
+        y.ctl.mode = .scan → y.vm.chain = .idle →
+        PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm)) →
       (∀ (k : ℕ) (y : State GalilVM),
         StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) k ⟨c, s⟩ y →
         ChainReady y.vm.chain) →
@@ -136,7 +137,7 @@ theorem scanBackground_run {w : List (Fin 2)} :
     have hsearch : ∃ v, searchEffect (PofC centre place entry w) false s v := by
       by_cases hidle : s.chain = .idle
       · exact PalPeg.GalilBranchInvariants2.searchEffect_exists _ false s
-          (hready 0 ⟨c, s⟩ (.zero _ hQ) hidle)
+          (hready 0 ⟨c, s⟩ (.zero _ hQ) hm hidle)
       · exact ⟨searchLens.get s, Or.inr ⟨hidle, rfl⟩⟩
     have hchainAt : ∀ v : SearchVM, ∃ z, chainAt false (decide (v.search.mode = .found))
         (v.dp.config.tapes 11) ((PofC centre place entry w).centre s)
@@ -153,7 +154,7 @@ theorem scanBackground_run {w : List (Fin 2)} :
       outputRel_background w (PofC centre place entry w) q first hb rfl hout
     obtain ⟨t, hrun, htl, htr, htc, htrep, htrem, htrad, htlen, htfpp⟩ :=
       ih {c with clock := c.clock - 1} s' hm hr (by simp; omega) (hr' ▸ hav) hout'
-        (fun k y hst hidle => hready (k + 1) y (.succ hQ htick hst) hidle)
+        (fun k y hst hmy hidle => hready (k + 1) y (.succ hQ htick hst) hmy hidle)
         (fun k y hst => hchain (k + 1) y (.succ hQ htick hst))
     refine ⟨t, .succ hQ htick hrun, htl.trans hl', htr.trans hr', htc.trans hc', htrep.trans hrep',
       htrem.trans hrem', htrad.trans hrad', htlen.trans hlen', htfpp.trans hfpp'⟩
@@ -333,7 +334,8 @@ theorem scanCycle_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre place 
     (hready : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ y →
-      y.vm.chain = .idle → PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm))
+      y.ctl.mode = .scan → y.vm.chain = .idle →
+      PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm))
     (hchain : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ y →
@@ -384,7 +386,7 @@ theorem scanCycle_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre place 
   -- the background ticks
   obtain ⟨t, hbg, htl, htr', htc, htrep, htrem, htrad, htlen, htfpp⟩ :=
     scanBackground_run centre place entry q first (c.clock - 1) c s hm hr (by omega) hav hout
-      (fun k y hst hidle => hready c₀ r₀ (j + k) y hI₀ (steps_trans hjx (stepsAll_steps hst)) hidle)
+      (fun k y hst hmy hidle => hready c₀ r₀ (j + k) y hI₀ (steps_trans hjx (stepsAll_steps hst)) hmy hidle)
       (fun k y hst => hchain c₀ r₀ (j + k) y hI₀ (steps_trans hjx (stepsAll_steps hst)))
   have hjt : Steps (galilFrameS (PofC centre place entry w) q first) 2048 (j + (c.clock - 1))
       ⟨c₀, r₀⟩ ⟨{c with clock := 1}, t⟩ := steps_trans hjx (stepsAll_steps hbg)
@@ -393,7 +395,7 @@ theorem scanCycle_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre place 
     intro a
     by_cases hidle : t.chain = .idle
     · exact PalPeg.GalilBranchInvariants2.searchEffect_exists _ a t
-        (hready c₀ r₀ _ _ hI₀ hjt hidle)
+        (hready c₀ r₀ _ _ hI₀ hjt hm hidle)
     · exact ⟨searchLens.get t, Or.inr ⟨hidle, rfl⟩⟩
   have hchainT : ChainReady t.chain := hchain c₀ r₀ _ _ hI₀ hjt
   have hsiT : ScanInvariant w (position t.center) rad t.left t.right := by
@@ -520,7 +522,8 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
     (hready : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ y →
-      y.vm.chain = .idle → PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm))
+      y.ctl.mode = .scan → y.vm.chain = .idle →
+      PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm))
     (hchain : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ y →
@@ -614,7 +617,7 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
     intro a
     by_cases hidle : t.chain = .idle
     · exact PalPeg.GalilBranchInvariants2.searchEffect_exists _ a t
-        (hready c₀ r₀ _ _ hI₀ hjt hidle)
+        (hready c₀ r₀ _ _ hI₀ hjt hm hidle)
     · exact ⟨searchLens.get t, Or.inr ⟨hidle, rfl⟩⟩
   have hchainT : ChainReady t.chain := hchain c₀ r₀ _ _ hI₀ hjt
   have hQt : SoundScanNR w ⟨{c with clock := 1}, t⟩ :=
@@ -1001,7 +1004,8 @@ theorem cycleOracleOn_of_fourLeaves {w : List (Fin 2)} (hP : Decodes (PofC centr
     (hready : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ y →
-      y.vm.chain = .idle → PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm))
+      y.ctl.mode = .scan → y.vm.chain = .idle →
+      PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm))
     (hchain : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 k ⟨c₀, r₀⟩ y →
