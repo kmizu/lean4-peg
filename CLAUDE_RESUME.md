@@ -23,6 +23,22 @@
 
 **未完の部分**: producer の残り葉は `hmove`（Galil の移動不等式、restart guard の下の比較不一致状態）。一次情報で分かったこと: idle＋`missed` 分岐の消費者 `CanonicalSearchHistory.dpPack_of_idle_missed_packed` は「**現在の半径 `Rad`** の span で `δ ≤ lower` の周期が無い」を要る。今の `LowerExcluded` は `k ≥ 4(lower+1)` の span しか言わないので足りない。break を含む span すべて（`k ≥ 再始動時の半径`）に強めた形が要る（`no_period_across_break` の前提 `δ + h ≤ d` は `last_bounds` が既に出している。強めた形の証明と run への載せ替えは未着手）。active chain 分岐は `CanonicalFallbackInput.move_of_activePeriodBreak`（`Rad ≤ 4h` 不要、周期＋最小性＋break）が既にあり、入力は `RestartLower.spanPeriod_of_window`／`scanMinimal_watch_no_short` と同じ材料。`hmove` も任意 origin に量化されているので `PackedFromBoot` を通す必要がある。`obligation_localRealization` は未着手。
 
+### `hmove` の設計（2026-09-20、調査のみ・証明は未着手）
+
+**帰着先はテキストの事実**: `GalilLeafDp.contract_of_dpPack` により、`hmove` の結論は「`Span raw C Rad` の周期 `p` は全部 `Rad < 2p`」から出る（`CanonicalFallbackInput.move_of_dpPack`）。`GalilSearchContract.search_contract_of_stage` の入力は (i) `Rad ≤ span'`、(ii) 窓 `(stream p).take (span'+1)` に `lower` より上の `Candidate` が無い、(iii) `hlow`: **現在の `Rad`** の span で `δ ≤ lower` の周期 `2δ` が無い。
+
+**不一致時の chain `z` による分岐**（Python 実測: fallback 123 回のうち idle 115／watch 8）:
+
+| 分岐 | 既存部品 | 足りないもの |
+|---|---|---|
+| idle＋`missed`（最終段） | `dpPack_of_idle_missed_packed` | (iii) を `lower > 0` で（`LowerExcluded` を「break を含む全 span」= `k ≥ 再始動時半径` に強める。`no_period_across_break` の `δ + h ≤ d` は `last_bounds` が出している） |
+| idle＋段の途中（`grow`／`lower`…`run`／`wait`／`double`） | **無い**。`StageFailed` は「現在の DP が完了して失敗」を要るが、段の途中では DP テープは reset 済み | 新しい run 不変量 `StageHistory`: `∃ H, (∀ h, ¬Candidate ((stream p).take (H+1)) lower h) ∧ Rad ≤ H`。第 1 段は `H = 4·lower+3`（`Candidate` は `4h+1 ≤ 長さ` を要るので空虚に真）、段が失敗するたび `H := その段の span`。維持には `value debt + Rad = span/4`（`start` で `debt = −r₀`、grow は span+8／debt+2、match は radius+1／debt−1）と `debt ≥ 0`（`BudgetInv` の credit から。grow 中は `BudgetInv.grow` と `StageEntry 3r₀ ≤ 5·lower` から `Rad ≤ 1.75·max(lower,1)+1 ≤ 4·lower+3`）が要る。`BudgetInv` は `debt` と半径の関係を持っていない |
+| copy／back（誕生直後） | `move_of_preShift_packed`（`lower = reset` と `MoveMinimal` 前提） | `lower` を知っている `MoveMinimal` の弱化（`g ≤ lower` は (iii) で、`lower < g < H` は DP で排除） |
+| 稼働中の watch で shift guard 不成立 | `move_of_activePeriodBreak`（`Rad ≤ 4h` 不要）／`move_of_activeBound` | 周期・最小性・break の入力（`RestartLower.spanPeriod_of_window`／`scanMinimal_watch_no_short` と同じ材料） |
+| broken で restart guard 不成立 | 未調査 | 未調査 |
+
+`hmove` も任意の `InvLPS` origin に量化されているので `PackedFromBoot` を通す（`hshiftPeriodMinimal` と同じ）。Scala 正本は stage deadline を `IllegalStateException` で守っているだけで、`SCA_GALIL.md` は仕事量台帳を未検証と明記している。Lean 側の `CanonicalSearchBudget.BudgetInv` がその台帳で、`ready_of_invLPS_shaped` まで証明済み。
+
 ## n270 — 葉 `hrestartStage` を証明して `OracleReady` に接続（producer の葉は 3 → 2）
 
 **公理への進捗**
