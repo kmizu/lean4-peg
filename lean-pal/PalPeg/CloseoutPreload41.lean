@@ -176,7 +176,7 @@ theorem hpresAt_along_soundScanNR {w : List (Fin 2)} {n : ℕ}
   have hbig := stepsAll_bigPack2M''_of_soundScanNR centre place entry q first hr het hme hIC
     k j x y hjx hbx hst
   have hy : ReadyFieldP3 (n + 1) y :=
-    readyField3_along_run centre place entry q first hbig hf hentry hentry'
+    readyField3_along_run centre place entry q first (fun _ hz => hz.aux.front.notInit) hbig hf hentry hentry'
   obtain ⟨cy, sy⟩ := y
   exact searchReadyB_of_readyField3 _ hy hm
 
