@@ -1,3 +1,23 @@
+## n275 — 葉 `hmove`: 第 1 ラウンドで追い付いた watch（`lag = 0`）を `phase` によらず全部閉じた（葉は 1 本のまま、前提がもう 1 つ狭まった）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` は、chain が idle でなく、かつ chain tick の結果が「`periodOnly = false`・`lag = 0` の watch」**でない**不一致状態だけを負う |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。
+
+**何を証明したか**（`phase ≠ 4` の場合。`phase = 4` は n274）
+
+* `RestartLowerRun.move_of_watch_short` → `CanonicalFallbackInput.move_of_activeBound`（最小性の仮説は現在半径の形に一般化済み）。入力:
+  * `Rad ≤ 4h`: mark 台帳に `phase < 4 → boundary − shiftDebt = phase·h` を足し（`MarkLedger.phase`、`advancePhase_val`、`consume_phase_four`、shift 入口は guard の `phase = 4` を渡す）、`WatchLedger.distance_lt_four` で `distance < 4h`。`lag = 0` なので `distance = Rad`。
+  * `g ≤ lower` の排除: `LowerAt`（guard を `chain = idle ∨ periodOnly = false` に延長、`lowerGuard_source`。`BrokenStage` は shift mode の間 `periodOnly = true` を運ぶ）。
+  * `lower < g < h` の排除: chain の payload `CanonicalSearchProgram.MoveAbove`（DP が自分で示す範囲。旧 `MoveMinimal` は `lower = 0` の場合）。run 上では `MovePayload raw s`／`modeMinimal_tick_lower`、そして第 1 ラウンドの chain が payload そのもの（shift 後の閾値つきの形でなく）を持つことを運ぶ新しい場 `FirstRoundSem`（`firstRoundSem_tick`、`semWith_chainAt` を再利用）。
+
+**未完の部分**: `hmove` の残りは chain 非 idle で、chain tick の結果が (a) copy／back、(b) `lag ≠ 0` の watch、(c) `periodOnly = true` の watch、(d) broken（restart guard 不成立）の場合。(a)(b) は `Rad ≤ 4H` を出す chain の**時間の台帳**が要る（設計は n274 の下の「`Rad < 4h` 側の設計」の 2。`FirstRoundSem`／`LowerAt`／`MoveAbove` は (a)(b) でもそのまま使える形になっている）。(c) は Scala `checkPair` に当たる継続不変量が run 上に無い。(d) は未調査。`obligation_localRealization` は未着手。
+
 ## n274 — 葉 `hmove`: 追い付いた第 1 ラウンドの watch（`lag = 0`・`phase = 4`）の場合を閉じた（葉は 1 本のまま、前提がもう 1 つ狭まった）
 
 **公理への進捗**
