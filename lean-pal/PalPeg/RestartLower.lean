@@ -185,7 +185,7 @@ theorem move_of_prediction_break {Move : ℕ → ℕ → Prop} {raw : List (Fin 
     (hcan : canRight s.right) (hlen : value s.length = (2*R+1 : ℕ))
     (hminimal : ScanMinimal Move raw s)
     (hchain : s.chain = .watch w0) (hinternal : GalilScaffoldChainWatch.Internal w0 w1)
-    (hzero : zero w1.lag = true) (hfour : 4 * periodLength w0 ≤ R)
+    (hzero : zero w1.lag = true) (hfour : 4 * periodLength w1 ≤ R)
     (hprediction : GalilScaffoldChainConsume.symbol w1.machine.control.period.focus
       ≠ read (right s.right)) :
     let s1 := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
@@ -199,8 +199,10 @@ theorem move_of_prediction_break {Move : ℕ → ℕ → Prop} {raw : List (Fin 
   obtain ⟨b, xs, hW0⟩ := hinv
   have hW1 := watchWindow_step hW0 hinternal
   have hlength0 : periodLength w0 = xs.length + 1 := periodLength_of_coreP hW0.2.2
+  have hlength1 : periodLength w1 = xs.length + 1 := periodLength_of_coreP hW1.2.2
   obtain ⟨m, hk⟩ := (hk w0 hchain).2 (by rw [hm]; decide)
-  rw [hlength0] at hk hfour
+  rw [hlength0] at hk
+  rw [hlength1] at hfour
   have hRC := scan_radius_lt hscan
   have hpal := hscan.palindrome
   have hright : position s.right = position s.center + R := hscan.rightPos

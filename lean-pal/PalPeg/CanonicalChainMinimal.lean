@@ -1384,6 +1384,33 @@ theorem shiftPeriodMinimal_at {raw : List (Fin 2)} {c₀ : Control} {r₀ : Gali
   simpa [hscan.rightPos] using
     watchMinimal_no_short htwatch (scan_radius_lt hscan) hscan.palindrome hfour hperiod
 
+/-- The comparison a mismatching scan state performs, and the fact that it does not match. -/
+theorem compare_of_mismatch {raw : List (Fin 2)} {s : GalilVM} {vq : SearchVM} {z : ChainVM}
+    (hmis : read (left s.left) ≠ read (right s.right))
+    (hsearch : searchEffect (PofC centre place entry raw) false s vq)
+    (hchain : chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
+      ((PofC centre place entry raw).centre s) ((PofC centre place entry raw).place s)
+      s.center s.radius s.chain z) :
+    (galilFrameS (PofC centre place entry raw) q first).compare s
+        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+          (afterMismatch s ⟨left s.left,right s.right,z⟩ vq)) ∧
+      ¬ (galilFrameS (PofC centre place entry raw) q first).matched
+        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+          (afterMismatch s ⟨left s.left,right s.right,z⟩ vq)) := by
+  let vs : ScanVM := ⟨left s.left,right s.right,z⟩
+  refine ⟨⟨vs,vq,false,rfl,rfl,?_,hsearch,?_,rfl⟩,?_⟩
+  · constructor
+    · intro h; cases h
+    · intro hmatch
+      exfalso
+      apply hmis
+      exact hmatch
+  · simpa [vs] using hchain
+  · change read _ ≠ read _
+    intro he
+    apply hmis
+    simpa [vs,afterBirth_left,afterBirth_right,afterMismatch,searchLens,scanLens] using he
+
 /-- The leaf consumed by `OracleReady`, from the minimal-period data of the scan state (its
 producer is `RestartLowerRun.scanMinimal_packed`). -/
 theorem shiftPeriodMinimal_packed {raw : List (Fin 2)}
@@ -1416,20 +1443,9 @@ theorem shiftPeriodMinimal_packed {raw : List (Fin 2)}
   let vs : ScanVM := ⟨left s.left,right s.right,z⟩
   let s' := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
     (afterMismatch s vs vq)
-  have hcmp : (galilFrameS (PofC centre place entry raw) q first).compare s s' := by
-    refine ⟨vs,vq,false,rfl,rfl,?_,hsearch,?_,rfl⟩
-    · constructor
-      · intro h; cases h
-      · intro hmatch
-        exfalso
-        apply hmis
-        exact hmatch
-    · simpa [vs] using hchain
-  have hmt : ¬ (galilFrameS (PofC centre place entry raw) q first).matched s' := by
-    change read s'.left ≠ read s'.right
-    intro he
-    apply hmis
-    simpa [s',vs,afterBirth_left,afterBirth_right,afterMismatch,searchLens,scanLens] using he
+  obtain ⟨hcmp,hmt⟩ : (galilFrameS (PofC centre place entry raw) q first).compare s s' ∧
+      ¬ (galilFrameS (PofC centre place entry raw) q first).matched s' :=
+    compare_of_mismatch centre place entry q first hmis hsearch hchain
   have hp := PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun
   obtain ⟨rad,hscan⟩ := hp.pack.scanGeom hm hr
   have hcan : canRight s.right := canRight_of_bound _ raw hscan.rightRep hscan.rightPresent (by

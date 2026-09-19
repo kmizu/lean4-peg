@@ -446,4 +446,106 @@ theorem move_of_idle {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : Control} {
 
 #print axioms move_of_idle
 
+/-- A watch in phase `4` was a watch one internal step before (a watch born by `backDone` is in
+phase `0`). -/
+theorem watch_source_of_step {x : ChainVM} {w1 : GalilScaffoldChainWatch.State}
+    (hstep : ChainStep x (.watch w1)) (hphase : w1.machine.control.phase = 4) :
+    ∃ w0, x = .watch w0 ∧ GalilScaffoldChainWatch.Internal w0 w1 := by
+  generalize hy : ChainVM.watch w1 = y at hstep
+  cases hstep with
+  | idle => cases hy
+  | brokenIdle => cases hy
+  | copyBit => cases hy
+  | copyEnd => cases hy
+  | backStep => cases hy
+  | watchBreak => cases hy
+  | backDone v h lag margin ver hf =>
+    cases hy
+    exact absurd hphase (by simp [watchControl])
+  | watchStep w0 w1' hinternal =>
+    cases hy
+    exact ⟨w0, rfl, hinternal⟩
+
+/-- **The fallback move inequality when a caught-up first-round watch mispredicts**, on a packed
+run whose origin is reached from boot: `phase = 4` gives four verified semiperiods, the run
+invariant the minimal period, and `RestartLower.move_of_prediction_break` the inequality. -/
+theorem move_of_watch_mispredict {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : Control}
+    {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    (hboot : CloseoutCheckW.PackedFromBoot centre place entry q first raw ⟨c₀, r₀⟩)
+    {k : ℕ} {c : Control} {s : GalilVM} {vq : SearchVM} {z : ChainVM}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ ⟨c, s⟩)
+    (hm : c.mode = .scan) (hr : c.replaying = false) (hcan : canRight s.right)
+    (hmis : read (left s.left) ≠ read (right s.right))
+    (hsearch : searchEffect (PofC centre place entry raw) false s vq)
+    (hchainAt : chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
+      ((PofC centre place entry raw).centre s) ((PofC centre place entry raw).place s)
+      s.center s.radius s.chain z)
+    (hfirstRound : s.periodOnly = false)
+    {w1 : GalilScaffoldChainWatch.State} (hz : z = .watch w1) (hzero : zero w1.lag = true)
+    (hphase : w1.machine.control.phase = 4)
+    (hprediction : GalilScaffoldChainConsume.symbol w1.machine.control.period.focus
+      ≠ read (right s.right)) :
+    let s1 := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+      (afterMismatch s ⟨left s.left,right s.right,z⟩ vq)
+    let ℓ := (value s.length).toNat
+    let radius := chosenRadius
+      ((GalilScaffoldPlace.stream (PalPeg.GalilTickFair.rightPlace s1)).take (ℓ+1))
+    ℓ / 2 ≤ 4 * (ℓ / 2 + 1 - radius) := by
+  obtain ⟨a, rest, rfl⟩ := List.exists_cons_of_ne_nil hraw
+  have hinvariant := minimalAcrossRestart_packed centre place entry q first hP hI
+    (lowerAt_of_packedFromBoot centre place entry q first hP hI hboot) hrun
+  have hminimal : ScanMinimal (fun _ _ => True) (a :: rest) s := by
+    simpa [ModeMinimal, hm] using hinvariant.minimal
+  have hwin : WindowRunPack (a :: rest) c s :=
+    (PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun).win hP
+  obtain ⟨-, -, rad, hscan, hlen⟩ :=
+    PalPeg.CanonicalFallbackInput.counters centre place entry q first hI hrun hm hr
+  -- the chain tick was a watch step
+  subst hz
+  have hstep : ChainStep s.chain (.watch w1) := by
+    rcases hchainAt with ⟨-, y, hstep, hzy⟩ | ⟨-, -, hidle⟩ | ⟨-, -, hborn⟩
+    · rw [if_neg (by simp)] at hzy
+      rw [hzy]
+      exact hstep
+    · cases hidle
+    · rw [if_neg (by simp)] at hborn
+      unfold chainStart at hborn
+      cases hborn
+  have hunbroken1 := unbroken_of_step hstep (watch_unbroken_of_window hwin)
+  -- four verified semiperiods from `phase = 4`
+  obtain ⟨hcmp, hmt⟩ := compare_of_mismatch centre place entry q first hmis hsearch hchainAt
+  obtain ⟨-, -, -, -, hmismatchInv⟩ :=
+    PalPeg.CloseoutPackRun40.compare'_inv (onLetterVM (a :: rest)) leftFirstVM centre place entry
+      q first hwin.coupled hm hcmp
+  obtain ⟨-, -, hsum, hwatchOk⟩ := hmismatchInv hmt
+  have htargetChain : (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+      (afterMismatch s ⟨left s.left,right s.right,ChainVM.watch w1⟩ vq)).chain
+        = .watch w1 := by
+    rw [afterBirth_chain]
+    simp [afterMismatch, searchLens, scanLens]
+  rw [htargetChain] at hsum
+  have hdistance := hsum hunbroken1
+  rw [PalPeg.GalilChainCoupling.value_zero_of_zero hzero, add_zero] at hdistance
+  obtain ⟨R, hR, hright⟩ := hwin.radiusScan hm
+  have hrad : rad = R := by
+    have h1 : position s.right = position s.center + rad := hscan.rightPos
+    have h2 : position s.right = position s.center + R := hright
+    omega
+  subst hrad
+  have hfour : 4 * periodLength w1 ≤ rad := by
+    rcases hwatchOk w1 htargetChain hunbroken1 with ⟨-, hfresh⟩ | hother
+    · have h4 := PalPeg.WindowPack.four_of_freshC hfresh hphase
+      rw [hdistance, hR.2] at h4
+      unfold periodLength
+      exact_mod_cast h4
+    · rw [hfirstRound] at hother
+      exact absurd hother.1 (by simp)
+  obtain ⟨w0, hsource, hinternal⟩ := watch_source_of_step hstep hphase
+  exact move_of_prediction_break (vq := vq) (z := ChainVM.watch w1) hwin hm hscan hcan hlen
+    hminimal hsource hinternal hzero hfour hprediction
+
+#print axioms move_of_watch_mispredict
+
 end PalPeg.RestartLowerRun
