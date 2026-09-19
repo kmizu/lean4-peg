@@ -1297,6 +1297,112 @@ theorem firstRoundGuard_tick {Extra : ℕ → ℕ → GalilScaffoldChainWatch.St
 
 #print axioms firstRoundGuard_tick
 
+/-! ## After a shift the minimality is the thresholded one -/
+
+/-- In a round after a shift (`periodOnly = true`) the chain carries no birth payload: its
+minimality is the thresholded `TailMinimal` (`ScanMinimal` with the empty payload, whose `Sem`
+side is `False` for a watch). -/
+def TailRound (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
+  c.mode = .scan → s.periodOnly = true → ScanMinimal (fun _ _ => False) raw s
+
+/-- One tick keeps `TailRound`.  A scan tick that keeps `periodOnly = true` has no birth, so an
+idle chain stays idle and a live chain ticks under the payload-free `modeMinimal_tick_packed`
+(its birth hook is vacuous); the end of a shift hands over `ShiftMinimal`. -/
+theorem tailRound_tick {Move : ℕ → ℕ → Prop} {raw : List (Fin 2)} {x y : State GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (ht : Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y)
+    (hsource : TailRound raw x.ctl x.vm)
+    (hminimal : ModeMinimal Move raw x.ctl x.vm)
+    (hpackX : PalPeg.CloseoutPackW.IPackMW centre place entry q first raw x)
+    (hpackY : PalPeg.CloseoutPackW.IPackMW centre place entry q first raw y)
+    (haux : PalPeg.CloseoutPackRun2.AuxPack x.ctl x.vm) :
+    TailRound raw y.ctl y.vm := by
+  intro hmodeY honlyY
+  have hgeneric : ModeMinimal (fun _ _ => False) raw x.ctl x.vm → x.vm.chain ≠ .idle →
+      ScanMinimal (fun _ _ => False) raw y.vm := by
+    intro hx hne
+    have hy := modeMinimal_tick_packed centre place entry q first hP ht hx hpackX hpackY haux
+      (fun _ a vq hidle => absurd hidle hne)
+    simpa [ModeMinimal, hmodeY] using hy
+  have hscanTick : ∀ {c : Control} {s t : GalilVM} {a found : Bool}
+      {answer : GalilScaffoldTape.Tape} {cc : Fin 3} {walker : GalilScaffoldPlace.Place}
+      {ver : PlaceHead} {radius : Counter} {z : ChainVM},
+      c.mode = .scan → TailRound raw c s →
+      chainAt a found answer cc walker ver radius s.chain z → t.chain = z →
+      t.periodOnly = (if chainBorn found s.chain then false else s.periodOnly) →
+      t.periodOnly = true →
+      (ModeMinimal (fun _ _ => False) raw c s → s.chain ≠ .idle →
+        ScanMinimal (fun _ _ => False) raw t) →
+      ScanMinimal (fun _ _ => False) raw t := by
+    intro c s t a found answer cc walker ver radius z hm hround hch htz honly htrue hgen
+    by_cases hidle : s.chain = .idle
+    · rcases hch with ⟨hne, -⟩ | ⟨-, -, hz⟩ | ⟨-, hfound, -⟩
+      · exact absurd hidle hne
+      · simp [ScanMinimal, htz, hz]
+      · rw [hidle, hfound] at honly
+        rw [honly] at htrue
+        simp [chainBorn, ChainVM.isIdle] at htrue
+    · have hsourceOnly : s.periodOnly = true := by
+        unfold chainBorn at honly
+        rw [isIdle_false_of_ne hidle] at honly
+        rw [honly] at htrue
+        simpa using htrue
+      exact hgen (by simpa [ModeMinimal, hm] using hround hm hsourceOnly) hidle
+  cases ht with
+  | init c s t hm hi =>
+    obtain ⟨_,_,_,_,_,_,_,_,_,hch,_⟩ := hi
+    simp [ScanMinimal, hch]
+  | scan_wait c s t hm hav hb =>
+    obtain ⟨-, -, hch, -, honly, -⟩ :=
+      backgroundS_fields (PofC centre place entry raw) q first hb
+    exact hscanTick hm hsource hch rfl honly honlyY hgeneric
+  | scan_count c s t hm hav hc hb =>
+    obtain ⟨-, -, hch, -, honly, -⟩ :=
+      backgroundS_fields (PofC centre place entry raw) q first hb
+    exact hscanTick hm hsource hch rfl honly honlyY hgeneric
+  | scan_match c s s' t o hm hav hc hcmp hmt hpl ho =>
+    have hcmp' : compareFound (PofC centre place entry raw) q first s s' := hcmp
+    obtain ⟨vs, vq, a, -, -, -, -, hch, heq⟩ := hcmp'
+    have hchain' : s'.chain = vs.chain := by
+      rw [heq, afterBirth_chain]; cases a <;> rfl
+    have hchain : t.chain = s'.chain := by rw [hpl]; split <;> rfl
+    have honly : t.periodOnly
+        = if chainBorn (decide (vq.search.mode = .found)) s.chain then false
+          else s.periodOnly := by
+      have htarget : t.periodOnly = s'.periodOnly := by rw [hpl]; split <;> rfl
+      rw [htarget, heq, afterBirth_periodOnly]
+      cases a <;> rfl
+    exact hscanTick hm hsource hch (hchain.trans hchain') honly honlyY hgeneric
+  | scan_shift c s s' t hm hav hc hcmp hmt hr hg hb =>
+    simp at hmodeY
+  | scan_fallback c s s' t hm hav hc hcmp hmt hg hr hb =>
+    simp at hmodeY
+  | shift_one c s t hm hp hso =>
+    simp [hm] at hmodeY
+  | shift_done c s o hm hp ho =>
+    have hshift : ShiftMinimal raw s := by simpa [ModeMinimal, hm] using hminimal
+    obtain ⟨w, _, _, hchainWatch, _⟩ := hshift
+    exact hgeneric (by simpa [ModeMinimal, hm] using hminimal)
+      (by rw [hchainWatch]; simp)
+  | replayStart c s t o hm hr ho ho' =>
+    obtain ⟨_,_,_,_,_,_,_,_,_,hch,_,_,_⟩ := hr
+    simp [ScanMinimal, hch]
+  | restart c s t hm hr =>
+    obtain ⟨_,_,_,_,_,rfl⟩ := hr
+    simp [ScanMinimal]
+  | copy_one _ _ _ hm _ _ | copy_done _ _ _ hm _ _
+  | home_start _ _ _ hm _ _ | home_step _ _ _ hm _ _
+  | fpp_slice _ _ _ hm _ | fpp_done _ _ _ hm _
+  | markEnd_found _ _ _ hm _ _ | markEnd_step _ _ _ hm _ _
+  | choose_select _ _ _ hm _ _ _ | choose_step _ _ _ hm _ _
+  | rewind_done _ _ _ hm _ _ | rewind_one _ _ _ hm _ _ _
+  | rewind_pair _ _ _ hm _ _ _ =>
+    first
+      | (simp [hm] at hmodeY)
+      | (simp at hmodeY)
+
+#print axioms tailRound_tick
+
 /-- The run invariant: the minimal-period payload, the excluded lower bound of the running
 search, and the excluded `last` of a broken chain at a restart-guard state. -/
 structure MinimalAcrossRestart (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop where
@@ -1308,6 +1414,7 @@ structure MinimalAcrossRestart (raw : List (Fin 2)) (c : Control) (s : GalilVM) 
   blockText : BlockTextAt centre place entry raw c s
   window : FirstRoundWindow raw c s
   guard : FirstRoundGuard c s
+  tailRound : TailRound raw c s
 
 /-- `MinimalAcrossRestart` at every point of a packed run out of an `InvLPS` origin whose own
 lower bound is excluded. -/
@@ -1356,7 +1463,8 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
           simp [PalPeg.ChainClock.chainWork] at hwork,
         fun _ _ => by rw [hiChain]; exact ⟨0, trivial⟩,
         fun _ _ hne => absurd hiChain hne,
-        fun _ _ w hw => by rw [hiChain] at hw; cases hw⟩
+        (fun _ _ w hw => by rw [hiChain] at hw; cases hw),
+        (fun _ _ => by simp [ScanMinimal, hiChain])⟩
     | succ i ih =>
       intro hik
       have hsource := ih (by omega)
@@ -1421,7 +1529,9 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
             exact lateBreak_firstRound centre place entry q first hP hwin hm honly hinv.window
               hinv.blockText hinv.firstRound hcert hscan hR hrightCan hcmp hmt hstep hbreak
               (hboundary i c s s' (hx ▸ hprefix i (by omega)) hm hcmp hmt w1 w' hstep
-                hbreak))⟩
+                hbreak)),
+        tailRound_tick centre place entry q first hP htick hsource.tailRound hsource.minimal
+          (hpk i (by omega)) (hpk (i+1) (by omega)) (haux i (by omega))⟩
       · exact modeMinimal_tick_lower centre place entry q first hP htick hsource.minimal
           (hpk i (by omega)) (hpk (i+1) (by omega)) (haux i (by omega)) hbirthSource
       · refine brokenStage_tick centre place entry q first htick (hcan i (by omega)).canonical
