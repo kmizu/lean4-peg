@@ -869,11 +869,13 @@ theorem budgetSome_step {lower clock clock' : ℕ} {v v' : SearchVM} {a : Bool}
         exact ht
       exact ⟨p₀,budget_step hi hc ht'⟩
 
-/-- The concrete budget calibration at every fresh restart. -/
-theorem budgetSome_restarted (p : GalilScaffoldPlace.Place)
+/-- The concrete budget calibration at every fresh restart, at the place the caller names,
+together with the shape of the restarted search. -/
+theorem budgetInv_restarted (p : GalilScaffoldPlace.Place)
     {raw : List (Fin 2)} {r : GalilVM} {Rad : ℕ}
     {last : Counter} (hR : Restarted raw r Rad last) (hSE : StageEntry Rad last) :
-    ∃ lower, BudgetSome lower 2048 (searchLens.get r) := by
+    ∃ lower, BudgetInv p lower 2048 (searchLens.get r) ∧
+      (searchLens.get r).search = GalilScaffoldSearchFinish.begin (ofNat lower) r.radius := by
   obtain ⟨_,_,_,_,⟨hRadCan,hRad⟩,_,hSearch,hLower,hLastCan,hLastNonneg⟩ := hR
   let lower := (value last).toNat
   have hLast : last = ofNat lower := canonical_eq_ofNat last hLastCan hLastNonneg
@@ -894,6 +896,14 @@ theorem budgetSome_restarted (p : GalilScaffoldPlace.Place)
     subst s; subst l
     rfl
   rw [he] at hb
+  exact ⟨lower,hb,by rw [hs,hRadCounter]⟩
+
+/-- The same calibration with the place forgotten. -/
+theorem budgetSome_restarted (p : GalilScaffoldPlace.Place)
+    {raw : List (Fin 2)} {r : GalilVM} {Rad : ℕ}
+    {last : Counter} (hR : Restarted raw r Rad last) (hSE : StageEntry Rad last) :
+    ∃ lower, BudgetSome lower 2048 (searchLens.get r) := by
+  obtain ⟨lower,hb,-⟩ := budgetInv_restarted p hR hSE
   exact ⟨lower,p,hb⟩
 
 theorem ready_restarted (p : GalilScaffoldPlace.Place)
