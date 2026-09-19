@@ -1,3 +1,23 @@
+## n280 — 葉 `hmove`: shift 後のラウンドで、追い付いた watch（lag ゼロ・phase 4）が出てくる不一致は全部閉じた
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` の前提が「`periodOnly = true`、かつ chain tick の結果が lag ゼロの watch なら **phase ≠ 4**」になった（n279 の「予測が当たる場合」も葉から消えた） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。`OracleReady.cycleOracleOn_of_readyLeaves` と `RestartLowerRun.shiftGuard_of_tail_caughtUp` は標準 3 公理のみ。
+
+**何を証明したか**: Scala `ScaffoldChain.checkPair` の主張（lag ゼロなら `left == prediction ⇔ ¬ cycleEnd`）のうち必要な向きを run 不変量から証明した。`RestartLowerRun.shiftGuard_of_tail_caughtUp`: shift 後のラウンドで、追い付いた watch（phase 4）が右の文字を当てた不一致では shift guard が立つ。`shiftGuardVM` の定義上、`periodOnly` で guard が落ちうるのは `singlePositive cycle` だけなので、示すのは `cycle = 1`。消費者は `OracleReady` の `hMove`（`¬ shiftGuard` と矛盾）。
+
+* n279 の `CycleBound` を `Continuation` に拡張した（全部消費済み）。scan かつ `periodOnly = true` の watch について: `Canonical cycle`、`cycle ≤ 2h`、`∃ Lb, Lb + R + cycle = C + 1 ∧ LeftEnd raw h Lb C`。shift 中は `cycle + 2·remaining ≤ 2h` と `LeftEnd raw h Lb (C + rem)`。**`Lb` はラウンド中動かない**（matched で `R+1, cycle−1`、`shiftOne` で `C+1, R−1, cycle+2`）。
+* `LeftEnd raw h Lb E := 1 ≤ Lb ∧ Lb ≤ E ∧ PeriodOn e (2h) Lb E ∧ signedRead e (Lb − 1) ≠ e[Lb − 1 + 2h]?`。`Lb` は shift が出発した scan 回文の左端 `C₀ − R₀`、破れはその不一致そのもの（左の文字 ≠ 右の文字＝予測＝鏡像 `e[C₀−R₀−1+2h]`）。左の読みは `signedRead`（place 0 は `none`）なので破れもその形で持つ（リスト等式で書くと place 0 で偽になりうる）。`continuation_start` が `spanPeriod_of_window` と `prediction_eq_text` から供給。
+* `cycle = 1` の証明: `cycle ≥ 2` なら不一致の左 place `C − R − 1` が `[Lb, C]` の中にあり、周期 → 回文の鏡像 → 検証済みの窓、で予測＝右の文字に等しくなって不一致と矛盾。`cycle ≤ 0` なら破れの place `Lb − 1` が scan 回文 `[C − R, C + R]` の中に入るが、そこは chain の周期を持つ（`spanPeriod_of_window`）ので `LeftEnd` の破れと矛盾。
+* `two_semiperiods_le`（`4h ≤ distance ∨ Other'` と `cycle ≤ 2h` から `2h ≤ R`）を切り出して n279 の `move_of_tail_mispredict` と共有。`caughtUp_watch` は不一致比較が countdown を保つこと（`compare'_inv`）も返す。
+
+**未完の部分**: 葉 `hmove` の `periodOnly = true` の残り（(c3)、未調査）: chain tick の結果が lag ゼロ・phase ≠ 4 の watch、遅れている watch（正 lag）、既に broken の chain。第 1 ラウンドでは順に `move_of_watch_short`／`move_of_working_*`（chain の時計）／`FirstRoundGuard` が対応した。`obligation_localRealization` は未着手。
+
 ## n279 — 葉 `hmove`: shift 後のラウンドで、追い付いた watch（phase 4）が予測を外す不一致を閉じた
 
 **公理への進捗**
