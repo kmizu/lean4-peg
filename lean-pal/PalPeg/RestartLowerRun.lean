@@ -25,14 +25,18 @@ open PalPeg.WindowInv PalPeg.WindowRun PalPeg.WindowPack
 open PalPeg.CanonicalChainMinimal PalPeg.RestartStageRun PalPeg.RestartStageLedger
 open PalPeg.RestartCertificate PalPeg.RestartLower
 
-/-- The lower bound a restart would install from this broken chain is excluded at `C`. -/
-def LastExcluded (raw : List (Fin 2)) (C : ℕ) (w : GalilScaffoldChainWatch.State) : Prop :=
-  ∀ L : ℕ, value w.machine.control.last = (L : ℤ) → LowerExcluded raw C L
+/-- The lower bound a restart would install from this broken chain is excluded at `C` on every
+span of radius at least `Rad`, the radius the restart sees. -/
+def LastExcluded (raw : List (Fin 2)) (C Rad : ℕ) (w : GalilScaffoldChainWatch.State) : Prop :=
+  ∀ L : ℕ, value w.machine.control.last = (L : ℤ) →
+    Rad ≤ 4 * (L + 1) ∧ LowerExcludedFrom raw C L Rad
 
-/-- While the search runs with an idle chain, its lower bound is excluded at the centre. -/
+/-- While the search runs with an idle chain, its lower bound is excluded at the centre on every
+span from some radius `base` on, which the scan radius has reached. -/
 def LowerAt (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
   c.mode = .scan → s.chain = .idle →
-    ∀ L : ℕ, value s.lower = (L : ℤ) → LowerExcluded raw (position s.center) L
+    ∀ L : ℕ, value s.lower = (L : ℤ) → ∃ base : ℕ, base ≤ (value s.radius).toNat ∧
+      base ≤ 4 * (L + 1) ∧ LowerExcludedFrom raw (position s.center) L base
 
 theorem lowerAt_of_reset {raw : List (Fin 2)} {c : Control} {s : GalilVM}
     (hlower : s.lower = reset) : LowerAt raw c s := by
@@ -43,7 +47,7 @@ theorem lowerAt_of_reset {raw : List (Fin 2)} {c : Control} {s : GalilVM}
     rw [hzero] at hL
     exact_mod_cast hL.symm
   rw [hL0]
-  exact lowerExcluded_zero _ _
+  exact ⟨0, Nat.zero_le _, Nat.zero_le _, lowerExcludedFrom_zero _ _ _⟩
 
 /-- A chain that is idle after a chain tick was idle before it. -/
 theorem idle_of_chainAt {a found : Bool} {answer : GalilScaffoldTape.Tape} {cc : Fin 3}
@@ -98,13 +102,21 @@ theorem lowerAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
     intro c c' s t hx hy hm hb
     subst hx
     subst hy
-    obtain ⟨-, -, hch, hcenter, -⟩ := backgroundS_fields (PofC centre place entry raw) q first hb
+    obtain ⟨-, -, hch, hcenter, -, hradius, -⟩ :=
+      backgroundS_fields (PofC centre place entry raw) q first hb
     intro _ hidle L hL
     rw [hidle] at hch
     have hsourceIdle : s.chain = .idle := idle_of_chainAt hch
     have hlowerEq : t.lower = s.lower := hkeep hm hsourceIdle
-    rw [hcenter]
-    exact hlowerAt hm hsourceIdle L (by rw [← hlowerEq]; exact hL)
+    obtain ⟨base, hbaseRadius, hbaseLower, hexcluded⟩ :=
+      hlowerAt hm hsourceIdle L (by rw [← hlowerEq]; exact hL)
+    refine ⟨base, ?_, hbaseLower, ?_⟩
+    · show base ≤ (value t.radius).toNat
+      rw [hradius]
+      exact hbaseRadius
+    · show LowerExcludedFrom raw (position t.center) L base
+      rw [hcenter]
+      exact hexcluded
   cases ht with
   | init c s t hm hi =>
     obtain ⟨_,_,_,_,_,_,_,_,_,_,_,hlower,_⟩ := hi
@@ -123,9 +135,20 @@ theorem lowerAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
     rw [htargetIdle] at hch
     have hsourceIdle : s.chain = .idle := idle_of_chainAt hch
     have hlowerEq : t.lower = s.lower := hkeep hm hsourceIdle
-    show LowerExcluded raw (position t.center) L
-    rw [hcenter, hcenter']
-    exact hlowerAt hm hsourceIdle L (by rw [← hlowerEq]; exact hL)
+    have hradius : t.radius = inc s.radius := by
+      have htarget : t.radius = s'.radius := by rw [hpl]; split <;> rfl
+      rw [htarget, heq, afterBirth_radius]
+      cases a <;> rfl
+    obtain ⟨base, hbaseRadius, hbaseLower, hexcluded⟩ :=
+      hlowerAt hm hsourceIdle L (by rw [← hlowerEq]; exact hL)
+    refine ⟨base, ?_, hbaseLower, ?_⟩
+    · show base ≤ (value t.radius).toNat
+      rw [hradius, inc_value]
+      have hsource : base ≤ (value s.radius).toNat := hbaseRadius
+      omega
+    · show LowerExcludedFrom raw (position t.center) L base
+      rw [hcenter, hcenter']
+      exact hexcluded
   | scan_shift c s s' t hm hav hc hcmp hmt hr hg hb =>
     intro hmode
     simp at hmode
@@ -147,7 +170,13 @@ theorem lowerAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
   | restart c s t hm hr =>
     obtain ⟨w, hw, hmargin, hlast, hlag, rfl⟩ := hr
     intro _ _ L hL
-    exact ((hstage.2 hm w hw).2 ⟨w, hw, hmargin, hlast, hlag⟩).2 L hL
+    obtain ⟨Rad, hRad, -, -, hlastExcluded⟩ :=
+      (hstage.2 hm w hw).2 ⟨w, hw, hmargin, hlast, hlag⟩
+    obtain ⟨hbaseLower, hexcluded⟩ := hlastExcluded L hL
+    refine ⟨Rad, ?_, hbaseLower, hexcluded⟩
+    show Rad ≤ (value s.radius).toNat
+    rw [hRad.2]
+    simp
   | copy_one _ _ _ hm _ _ | copy_done _ _ _ hm _ _
   | home_start _ _ _ hm _ _ | home_step _ _ _ hm _ _
   | fpp_slice _ _ _ hm _ | fpp_done _ _ _ hm _
@@ -171,8 +200,10 @@ theorem birthMinimal_of_lowerAt {raw : List (Fin 2)} {c₀ : Control} {r₀ : Ga
   intro a vq hidle he hf
   obtain ⟨H, hcopy, hfuture, -⟩ :=
     PalPeg.CanonicalSearchHistory.birthMinimals_packed centre place entry q first hP hI hrun hm
-      hidle he hf (fun lower hlowerEq => hlowerAt hm hidle lower (by
-        rw [← searchEffect_lower_eq he, hlowerEq, ofNat_value]))
+      hidle he hf (fun lower hlowerEq => by
+        obtain ⟨base, -, hbaseLower, hexcluded⟩ := hlowerAt hm hidle lower (by
+          rw [← searchEffect_lower_eq he, hlowerEq, ofNat_value])
+        exact hexcluded.toLowerExcluded hbaseLower)
   exact ⟨H, hcopy, hfuture, trivial⟩
 
 /-- The run invariant: the minimal-period payload, the excluded lower bound of the running
@@ -239,7 +270,7 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
           hwinX ((hpk (i+1) (by omega)).win hP) (watch_unbroken_of_window hwinX)
           (fun c s s' w1 w' hx hm hcmp hmt hstep hbreak =>
             hboundary i c s s' (hx ▸ hprefix i (by omega)) hm hcmp hmt w1 w' hstep hbreak) ?_
-        intro c s s' w1 w' hx hm hcmp hmt hstep hbreak hmargin L hL
+        intro c s s' w1 w' hx hm hcmp hmt hstep hbreak hmargin Rad hRadValue L hL
         have hrunSource : CloseoutCheckW.StepsIMWC centre place entry q first raw i ⟨c₀,r₀⟩
             ⟨c, s⟩ := hx ▸ hprefix i (by omega)
         have hwin : WindowRunPack raw c s :=
@@ -260,7 +291,7 @@ theorem minimalAcrossRestart_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ 
           rw [hx] at hmode
           simpa [ModeMinimal, hm] using hmode
         exact lowerExcluded_at_break hwin hm hscan hR hledger hminimal hstep hbreak hmargin
-          (hboundary i c s s' hrunSource hm hcmp hmt w1 w' hstep hbreak) hL
+          (hboundary i c s s' hrunSource hm hcmp hmt w1 w' hstep hbreak) hL hRadValue
   rw [← hgk]
   exact hall k le_rfl
 

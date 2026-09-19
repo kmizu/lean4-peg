@@ -109,6 +109,23 @@ def LowerExcluded (raw : List (Fin 2)) (C lower : ℕ) : Prop :=
     ∀ δ, 0 < δ → δ ≤ lower →
       ¬ HasPeriod (GalilScaffoldChainInputSupply.Span raw C k) (2*δ)
 
+/-- The same exclusion on every span of radius at least `base`: what a break inside the span
+gives, whatever the size of the span. -/
+def LowerExcludedFrom (raw : List (Fin 2)) (C lower base : ℕ) : Prop :=
+  ∀ k, base ≤ k → k < C → Manacher.PalAt (encoded raw) C k →
+    ∀ δ, 0 < δ → δ ≤ lower →
+      ¬ HasPeriod (GalilScaffoldChainInputSupply.Span raw C k) (2*δ)
+
+theorem lowerExcludedFrom_zero (raw : List (Fin 2)) (C base : ℕ) :
+    LowerExcludedFrom raw C 0 base := by
+  intro k _ _ _ δ hδ0 hδ
+  omega
+
+theorem LowerExcludedFrom.toLowerExcluded {raw : List (Fin 2)} {C lower base : ℕ}
+    (hexcluded : LowerExcludedFrom raw C lower base) (hbase : base ≤ 4*(lower+1)) :
+    LowerExcluded raw C lower :=
+  fun k hkC hpal hk => hexcluded k (by omega) hkC hpal
+
 theorem lowerExcluded_zero (raw : List (Fin 2)) (C : ℕ) : LowerExcluded raw C 0 := by
   intro k _ _ _ δ hδ0 hδ
   omega

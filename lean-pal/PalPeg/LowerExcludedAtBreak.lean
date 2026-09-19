@@ -6,9 +6,8 @@ import PalPeg.CanonicalSearchProgram
 
 At a lag-zero break the old chain has verified period `2h` on the scan span of radius `d`, that
 period is minimal there, and the place `C + d + 1` breaks it.  The restart installs
-`lower := last` with `last + h ≤ d`.  A span that can hold a candidate above `last` has radius
-`k ≥ 4 (last + 1) ≥ d + 1`, so it contains the break, and `no_period_across_break` excludes every
-period `2δ` with `δ ≤ last`.
+`lower := last` with `last + h ≤ d`.  A span of radius `k ≥ d + 1` contains the break, and
+`no_period_across_break` excludes every period `2δ` with `δ ≤ last` on it.
 -/
 
 set_option autoImplicit false
@@ -48,9 +47,9 @@ theorem lowerExcluded_of_break {raw : List (Fin 2)} {C d h last : ℕ}
     (hperiodOld : PeriodOn (encoded raw) (2*h) (C - d) (C + d))
     (hminimalOld : ∀ p, 0 < p → p < 2*h → ¬ HasPeriod (Span raw C d) p)
     (hbreak : (encoded raw)[C + d + 1 - 2*h]? ≠ (encoded raw)[C + d + 1]?)
-    (hh0 : 0 < h) (hhd : 2*h ≤ d) (hlast : last + h ≤ d) (hcover : d + 1 ≤ 4*(last+1)) :
-    LowerExcluded raw C last := by
-  intro k hkC hpal hk δ hδ0 hδ hper
+    (hh0 : 0 < h) (hhd : 2*h ≤ d) (hlast : last + h ≤ d) :
+    LowerExcludedFrom raw C last (d + 1) := by
+  intro k hk hkC hpal δ hδ0 hδ hper
   have hdC : d ≤ C := hpalOld.1
   have hkC' : k ≤ C := hpal.1
   have hlen : C + k < (encoded raw).length := hpal.2.1

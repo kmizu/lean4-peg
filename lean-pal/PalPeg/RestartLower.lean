@@ -67,7 +67,8 @@ open PalPeg.CanonicalSearchProgram
 
 /-- **The lower bound a broken restart installs is excluded.**  At a lag-zero break of a
 window-packed scan state whose margin is nonnegative afterwards: the old chain's minimal period,
-the verified span and the mark ledger give `LowerExcluded` for `last`. -/
+the verified span and the mark ledger exclude every semiperiod `δ ≤ last` on every span that
+contains the break (radius at least `Rad`, the radius the restart sees). -/
 theorem lowerExcluded_at_break {Move : ℕ → ℕ → Prop} {raw : List (Fin 2)} {c : Control}
     {s : GalilVM} {w1 w' : GalilScaffoldChainWatch.State} {R L : ℕ}
     (hwin : WindowRunPack raw c s) (hm : c.mode = Mode.scan)
@@ -77,8 +78,9 @@ theorem lowerExcluded_at_break {Move : ℕ → ℕ → Prop} {raw : List (Fin 2)
     (hstep : ChainStep s.chain (.watch w1)) (hbreak : BreakStep w1 w')
     (hmargin : negative w'.margin = false)
     (hinterior : value w1.machine.control.distance ≠ 4 * (periodLength w1 : ℤ) - 1)
-    (hlast : value w'.machine.control.last = (L : ℤ)) :
-    LowerExcluded raw (position s.center) L := by
+    (hlast : value w'.machine.control.last = (L : ℤ))
+    {Rad : ℕ} (hRad : (Rad : ℤ) = value w1.machine.control.distance + 1) :
+    Rad ≤ 4 * (L + 1) ∧ LowerExcludedFrom raw (position s.center) L Rad := by
   have hunbroken0 := watch_unbroken_of_window hwin
   have hunbroken1 := unbroken_of_step hstep hunbroken0
   have hledger1 : WatchLedger 0 w1 := chainLedger_step hstep hwin.coupled.block hledger hunbroken1
@@ -144,6 +146,10 @@ theorem lowerExcluded_at_break {Move : ℕ → ℕ → Prop} {raw : List (Fin 2)
         hsum0 (fun _ _ _ => Or.inr trivial)).1
     have hd := hsum1 hunbroken1
     rw [value_zero_of_zero hbreak.1, add_zero, hradius.2] at hd
+    have hRadEq : Rad = R + 1 := by
+      rw [hd] at hRad
+      exact_mod_cast hRad
+    subst hRadEq
     rw [hd, hlength1, hlast] at hlastLow
     rw [hd, hlast] at hlastHigh
     rw [hd, hlength1] at hfour
@@ -165,7 +171,7 @@ theorem lowerExcluded_at_break {Move : ℕ → ℕ → Prop} {raw : List (Fin 2)
     have hnoShort := scanMinimal_watch_no_short hminimal hchain hright hRC hpal
       (by rw [hlength0]; exact hfourN) hperiodSpan
     rw [hlength0] at hnoShort
-    exact lowerExcluded_of_break hpal hperiod hnoShort hmismatch (by omega) (by omega) hlowN
-      hhighN
+    exact ⟨hhighN,
+      lowerExcluded_of_break hpal hperiod hnoShort hmismatch (by omega) (by omega) hlowN⟩
 
 end PalPeg.RestartLower
