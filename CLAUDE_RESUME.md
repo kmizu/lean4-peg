@@ -21,7 +21,7 @@
 
 対象は chain tick の結果が copy／back、`lag ≠ 0` の watch、`phase ≠ 4` の watch（いずれも第 1 ラウンド `periodOnly = false`）。受け口は `CanonicalFallbackInput.move_of_activeBound`（`hmin` は `k = Rad` でしか使われていないので、現在半径の形 `∀ g, 0<g → g<h → 4g ≤ Rad → ¬HasPeriod (Span C Rad) (2g)` に一般化できる）。
 
-**準備済み（n274 の後、検査・接続済み）**: chain の payload を `CanonicalSearchProgram.MoveAbove raw C lower h`（`lower < g < h` だけ DP が排除）に替え、run 不変量は `ModeMinimal (RestartLowerRun.MovePayload raw s)` を運ぶ（`modeMinimal_tick_lower`）。`MoveMinimal` は `lower = 0` の場合。
+**準備済み（n274 の後。全体 build `BUILD=0`・error 0 件を 2026-09-20 に確認、公理は標準 3 本＋義務 2 本で不変、コミット `7fb43ad`／`2670fb6`）**: (i) chain の payload を `CanonicalSearchProgram.MoveAbove raw C lower h`（`lower < g < h` だけ DP が排除）に替え、run 不変量は `ModeMinimal (RestartLowerRun.MovePayload raw s)` を運ぶ（`modeMinimal_tick_lower`）。`MoveMinimal` は `lower = 0` の場合。(ii) 下の 1 は実施済み: `LowerAt` の guard は `chain = idle ∨ periodOnly = false`（`lowerGuard_source`）、`BrokenStage` は shift mode の間 `periodOnly = true` を運ぶ。(iii) `move_of_activeScaledBound`／`move_of_activeBound` の `hmin` は現在半径の形に一般化済み。**これらを使う `Rad < 4h` 側の消費者定理はまだ無い**（2 と 3 が未着手）。
 
 **足りないもの 3 つ**
 
