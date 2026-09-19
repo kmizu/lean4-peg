@@ -23,6 +23,10 @@ open PalPeg.CloseoutCoreEnc20 (Delta)
 open PalPeg.CloseoutCoreEnc21 (SRole SRoles SInj sinj_iff toAddr toAddr_eq pushRearD tailD revD
   appStartD appD invalDoneD sRoleList finish rotPerm donePerm rotRolesS doneRolesS)
 open PalPeg.CloseoutCoreEnc20 (rotStart)
+open PalPeg.CloseoutCoreStep (Γc blankc)
+open PalPeg.CloseoutCoreEnc (cellSym)
+open PalPeg.CloseoutCoreEnc12 (Act actList)
+open PalPeg.CloseoutCoreEnc18 (dTape topSym popActs pushActs pop_dTape push_dTape)
 open PalPeg.CloseoutCoreEnc25 (SOp RTag rotTag doneTag roleOf roleOf_rotTag roleOf_doneTag
   sinj_roleOf isIdle isDone isIdle_eq isDone_eq sApply deltaOf tagStep invalDelta execDelta
   toAddr_keep)
@@ -585,5 +589,71 @@ theorem laysSealed_localSubStep (op : SOp) (q : Queue (Fin 2)) (t : RTag)
   exact laysSealed_sApply op q t stack junk h
 
 #print axioms laysSealed_localSubStep
+
+/-! ## The sub-step as tape actions
+
+A stack is the debris tape `CloseoutCoreEnc18.dTape`: the head is on the top cell.  The sealing
+`none` is the blank symbol itself (`GalilVMEncode.blank = sOpt none`): sealing leaves one blank
+cell on top of the junk.  The actions of a cell operation read the stack only through its top
+symbol, the focus of the tape. -/
+
+/-- The letter a tape symbol stands for, if any. -/
+def symLetter : Γc → Option (Fin 2)
+  | Sum.inl cell => cell
+  | _ => none
+
+theorem topLetter_eq_sym (stack : List (Option (Fin 2))) :
+    topLetter stack = symLetter (topSym stack) := by
+  cases stack with
+  | nil => rfl
+  | cons cell rest => cases cell <;> rfl
+
+theorem dTape_focus (stack : List (Option (Fin 2))) (debris : List Γc) :
+    (dTape stack debris).focus = topSym stack := by
+  cases stack <;> rfl
+
+/-- A push, from the top symbol: rewrite the top cell, step right, write the new cell. -/
+def pushActsOfTop (top : Γc) (cell : Option (Fin 2)) : List (Act Γc) :=
+  [some (top, PegSeparation.RealTimeTM.Move.right),
+    some (cellSym cell, PegSeparation.RealTimeTM.Move.stay)]
+
+/-- The tape actions of one cell operation, a function of the top symbol. -/
+def cellActsOfTop : Delta → Bool → Γc → List (Act Γc)
+  | _, true, top => pushActsOfTop top none
+  | .keep, false, _ => []
+  | .pop, false, _ => popActs
+  | .push a, false, top => pushActsOfTop top (some a)
+
+/-- The debris after one cell operation. -/
+def cellDebris : Delta → Bool → List (Option (Fin 2)) → List Γc → List Γc
+  | _, true, _, debris => debris.tail
+  | .keep, false, _, debris => debris
+  | .pop, false, [], debris => debris
+  | .pop, false, _ :: _, debris => blankc :: debris
+  | .push _, false, _, debris => debris.tail
+
+theorem cellActsOfTop_length (u : Delta) (sealing : Bool) (top : Γc) :
+    (cellActsOfTop u sealing top).length ≤ 2 := by
+  cases u <;> cases sealing <;> simp [cellActsOfTop, pushActsOfTop, popActs]
+
+/-- **One cell operation is at most two tape actions, selected by the top symbol.** -/
+theorem dTape_cellApply (u : Delta) (sealing : Bool) (stack : List (Option (Fin 2)))
+    (debris : List Γc) :
+    dTape (cellApply u sealing stack) (cellDebris u sealing stack debris)
+      = actList blankc (dTape stack debris) (cellActsOfTop u sealing (topSym stack)) := by
+  cases sealing with
+  | true =>
+    have hpush := (push_dTape stack debris none).symm
+    cases u <;> exact hpush
+  | false =>
+    cases u with
+    | keep => rfl
+    | pop =>
+      cases stack with
+      | nil => rfl
+      | cons cell rest => exact (pop_dTape cell rest debris).symm
+    | push a => exact (push_dTape stack debris (some a)).symm
+
+#print axioms dTape_cellApply
 
 end PalPeg.ConcreteLocalMachine
