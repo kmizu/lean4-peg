@@ -25,7 +25,8 @@ structure MarkLedger (h : ℕ) (shiftDebt : ℤ) (k : GalilScaffoldChainConsume.
     value k.distance = value k.boundary + (k.period.left.length : ℤ) - 1
   backward : k.forward = false → k.period.left.length + 1 ≤ h ∧
     value k.distance = value k.boundary + (h : ℤ) - 1 - (k.period.left.length : ℤ)
-  marks : value k.boundary = value k.last ∨ value k.boundary = value k.last + (h : ℤ)
+  marks : (value k.boundary = value k.last ∧ value k.boundary ≤ 0) ∨
+    value k.boundary = value k.last + (h : ℤ)
   aligned : ∃ n : ℤ, value k.boundary - shiftDebt = n * (h : ℤ)
   canonical : Canonical k.distance ∧ Canonical k.boundary ∧ Canonical k.last
 
@@ -151,7 +152,7 @@ theorem MarkLedger.shiftOne {h : ℕ} {shiftDebt : ℤ} {k : GalilScaffoldChainC
     exact ⟨h1, by simp only [dec_value]; linarith⟩
   · simp only [dec_value]
     rcases hmarks with hm | hm
-    · exact Or.inl (by linarith)
+    · exact Or.inl ⟨by linarith [hm.1], by linarith [hm.2]⟩
     · exact Or.inr (by linarith)
   · simp only [dec_value]; linarith
 
@@ -254,7 +255,7 @@ theorem watchLedger_born {v : GalilScaffoldChainPeriod.Tape} {lag margin : Count
   obtain ⟨r0, rs', rfl⟩ := List.exists_cons_of_ne_nil hright
   have hreset : value reset = 0 := rfl
   refine ⟨⟨rfl, fun _ => ⟨by simp [watchControl, GalilScaffoldChainPeriod.moveRight], ?_⟩,
-    fun hc => absurd hc (by simp [watchControl]), Or.inl rfl, ⟨0, ?_⟩,
+    fun hc => absurd hc (by simp [watchControl]), Or.inl ⟨rfl, le_of_eq hreset⟩, ⟨0, ?_⟩,
     Or.inl rfl, Or.inl rfl, Or.inl rfl⟩, ?_, hlag⟩
   · simp [watchControl, GalilScaffoldChainPeriod.moveRight, hreset]
   · simp [watchControl, hreset]
@@ -334,8 +335,44 @@ theorem WatchLedger.stageEntry_of_break {w w' : GalilScaffoldChainWatch.State}
   refine ⟨?_, by rw [hlast]; exact hcanonicalLast, rfl⟩
   rw [hlast]
   apply PalPeg.GalilLastRadius.stageEntry_of_gap Rad (periodLength w)
-  · rcases hmarks with hm | hm <;> linarith
-  · rcases hmarks with hm | hm <;> linarith
+  · rcases hmarks with hm | hm
+    · linarith [hm.1]
+    · linarith
+  · rcases hmarks with hm | hm
+    · linarith [hm.1]
+    · linarith
+
+/-- Once four semiperiods are consumed, `last` trails `distance` by at least one and at most two
+semiperiods.  (The inputs of `LowerExcludedAtBreak.lowerExcluded_of_break`.) -/
+theorem WatchLedger.last_bounds {shiftDebt : ℤ} {w : GalilScaffoldChainWatch.State}
+    (hledger : WatchLedger shiftDebt w)
+    (hfour : 4 * (periodLength w : ℤ) ≤ value w.machine.control.distance) :
+    value w.machine.control.last + (periodLength w : ℤ) ≤ value w.machine.control.distance ∧
+      value w.machine.control.distance + 1 ≤ 4 * (value w.machine.control.last + 1) := by
+  obtain ⟨hsize, hforward, hbackward, hmarks, -, -⟩ := hledger.marks
+  have hleft : (w.machine.control.period.left.length : ℤ) ≤ (periodLength w : ℤ) := by
+    have : w.machine.control.period.left.length ≤ periodLength w := by omega
+    exact_mod_cast this
+  have hleft0 : (0 : ℤ) ≤ (w.machine.control.period.left.length : ℤ) := by positivity
+  have hbounds : value w.machine.control.boundary ≤ value w.machine.control.distance ∧
+      value w.machine.control.distance + 1
+        ≤ value w.machine.control.boundary + (periodLength w : ℤ) ∧
+      (1 : ℤ) ≤ (periodLength w : ℤ) := by
+    cases hfw : w.machine.control.forward with
+    | true =>
+      obtain ⟨h1, h2⟩ := hforward hfw
+      have h1' : (1 : ℤ) ≤ (w.machine.control.period.left.length : ℤ) := by exact_mod_cast h1
+      exact ⟨by linarith, by linarith, by linarith⟩
+    | false =>
+      obtain ⟨h1, h2⟩ := hbackward hfw
+      have h1' : (w.machine.control.period.left.length : ℤ) + 1 ≤ (periodLength w : ℤ) := by
+        exact_mod_cast h1
+      exact ⟨by linarith, by linarith, by linarith⟩
+  obtain ⟨hb1, hb2, hh1⟩ := hbounds
+  rcases hmarks with hm | hm
+  · exfalso
+    linarith [hm.2]
+  · exact ⟨by linarith, by linarith⟩
 
 /-! ## The chain -/
 
