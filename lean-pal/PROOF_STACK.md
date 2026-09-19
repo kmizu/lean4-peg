@@ -1,3 +1,25 @@
+## n246 — **公理 3 → 2**: `obligation_shiftPalResiduesAlongRun` を証明して削除
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | **消えた。** `#print axioms PalPeg.PalInPeg.unconditional` は `[propext, Classical.choice, Quot.sound, obligation_cycleOracle, obligation_localRealization]`（`Axioms.lean` の guard 更新済み、`lake env lean` で直接確認）。残差は run 上の pack `WindowPack.WindowRunPack`（`ChainWindowRun`／`Coupled'`／scan・shift での `CentreRep`／`RadiusRep` 台帳）から読み出せる: `WindowPack.shiftPal_of_windowRunPack (hpack : LPackM) (hx : WindowRunPack) (hcan : canRight right) (hs : ScanNR) : ShiftPal`。`2h ≤ R` は `Coupled'.watch` の両枝（fresh: `FreshC` ＋ phase 4 → `four_of_freshC`、post-shift: `CloseoutPackRun40.four_of_other'`）から `four_of_guard : 4h ≤ radius`。pack は `IPackMW` の新しい場 `win : Decodes (PofC …) → WindowRunPack` として oracle の鎖（`StepsIMW`／`CycleOutIMW`／`H_bootIMW`／`PreTraceIMW`）を自動で流れる。run 形の消費者 `packRunR_MW_marksFree` は `hShiftPalAlongRun` の代わりに `hP : Decodes` を取り（`given_scanLandingObligations` は `decodesC entry w`）、tick ごとに `hn.ipackM.win hP` から `ShiftPal` を出す。trace 形 `obligation_shiftPalAlongTrace` は `PreTraceIMW.packs j` の `win` から定理に |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
+### 何を足し、何を消したか
+
+- 新: `PalPeg/WindowPack.lean` — `WindowRunPack`（5 場）、`windowRunPack_boot`／`_of_invLPC`（起点）、`four_of_freshC`／`four_of_guard`（guard 点の `4h ≤ radius`）、`source_watch_of_guard`（guard が立つ着地の源 chain は watch、`backDone` の新鮮 watch は phase 0 で矛盾）、`shiftPal_of_windowRunPack`、`ledger_tick`（24 構成子）、`windowRunPack_tick`。全部標準公理のみ。
+- 変更: `IPackMW` に `win` 場（`CloseoutPackW`）。`ipackMW_tick`／`bigPack2MG7W''_tick`／`_tick_M` が `windowRunPack_tick` で運ぶ。`ipackMW_of_invLPC`（起点）と `h_bootIMW_of_bootIPack`（boot の i = 0, 1）が供給。`chainWindowRun_tick` の側仮説は mode guard 付きに弱め、`canRight` は tick 構成子の `available`（非 replay）と `FrontPack`（replay: `canRight_of_frontPack`）から。
+- 消した: 公理 `obligation_shiftPalResiduesAlongRun`、`obligation_shiftPalAlongRun`、`obligation_shiftPalResiduesAlongTrace`、`given_scanLandingObligations` の `hShiftPalAlongRun`、参照ゼロの `bigPack2MG7W_of_bigPack2MG7`、`ShiftPalAlongTrace.chainIdle_after_init`（`BranchSupply` の import を切るため。`ShiftPalAlongTrace` は `BranchSupply` → `CloseoutCheckW` → `CloseoutPackW` を経由していたので、`CloseoutPackW` が `WindowPack` を import すると循環した）。
+
+### 次
+
+残り 2: `obligation_cycleOracle`（`CycleOracleMC3`、found 経路の葉 `hshape`／`hfound`／`hfoundBg`／`hfoundReplay`／`hpresRepAt` は producer ゼロ ＝ 形式化のミスとして再切り出し）と `obligation_localRealization`（`H_realizeLIMW'`）。
+
 ## n245 — 公理進捗: `ChainWindowRun` の `Tick` 保存 `WindowTick.chainWindowRun_tick`（24 構成子）
 
 **公理への進捗**

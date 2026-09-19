@@ -99,9 +99,9 @@ Scala 3 は**ブレース構文で書く**（indentation syntax / `then` / `end`
 目標は閉じた項として存在し、足りない義務は `axiom` で明示されている。
 `PalPeg/Axioms.lean` の `#guard_msgs in #print axioms` がラチェットで、
 1 個外すと guard が壊れて更新を強制される。**標準 3 公理だけになったら §10.5 達成。**
-いまは **3 個**の義務が残っている（2026-09-19, n175 で 4 → 3）:
-`obligation_shiftPalResiduesAlongRun` / `obligation_cycleOracle` /
-`obligation_localRealization`。経路は `PalPeg/PalInPegUnconditional.lean` の
+いまは **2 個**の義務が残っている（2026-09-19, n175 で 4 → 3、n246 で 3 → 2:
+`obligation_shiftPalResiduesAlongRun` は `WindowPack.shiftPal_of_windowRunPack` で証明）:
+`obligation_cycleOracle` / `obligation_localRealization`。経路は `PalPeg/PalInPegUnconditional.lean` の
 docstring に表で記録。
 
 **trace 形は run 形から導けた（n175）。** trace は `st 0 = boot w` から始まるので

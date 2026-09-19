@@ -137,7 +137,8 @@ theorem bigPack2MG7W''_tick_M {w : List (Fin 2)}
     obtain ⟨hc', hfr⟩ := tick_rewind_atFirst hm hf h
     have hM : LPackM w c' t :=
       lpackM_rewind_done centre place entry q first hx.ipackM.pack hm hc' hfr
-    refine ⟨hM, ?_⟩
+    refine ⟨hM, ?_, fun hP => PalPeg.WindowPack.windowRunPack_tick centre place entry q first hP
+        hx.ipackM.pack hx.ipackM.m2 hx.aux (hx.ipackM.win hP) h⟩
     obtain ⟨heq, hset⟩ := hfr
     have htc : t.center = s.center := by rw [hset, heq]; rfl
     have hCR : CentreRep w t := centreRep_congr htc (hx.ipackM.m2.centreRep (Or.inl hm))
@@ -251,12 +252,7 @@ state of a run started in `scan`, and all four of its inputs are free at an
 `hmarksAlongRun` を使う。したがって `MarksInv'` は `hme` でも `hpack` でもなく、
 **run から無償に出る**。 -/
 theorem packRunR_MW_marksFree {w : List (Fin 2)} (h4 : first ≠ 4)
-    (hShiftPalAlongRun : ∀ (c : Control) (r : GalilVM),
-      PalPeg.GalilInvPlus3.InvLPS (PofC centre place entry w) q first w c r →
-      ∀ (m : ℕ) (z : State GalilVM),
-        Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
-        ScanNR z → GalilScaffoldChainVerifier.canRight z.vm.right →
-        ShiftPal centre place entry q first w z.vm) :
+    (hP : Decodes (PofC centre place entry w)) :
     PackRunRMW centre place entry q first w := by
   intro c r hInvLPS M hm1 hmle j x hjx k y hx h hry hyb
   have hIC : InvLPC w c r := hInvLPS.1
@@ -320,8 +316,8 @@ theorem packRunR_MW_marksFree {w : List (Fin 2)} (h4 : first ≠ 4)
       have hn := ih (by omega)
       exact bigPack2MG7W''_tick_M centre place entry q first hn (hmg (n+1) hi)
         (fun hip => hextra (n+1) hi hip)
-        (fun hs => hShiftPalAlongRun c r hInvLPS (j + n) (g n) (hreach n (by omega)) hs
-          (hn.extra.scanAvail hs.1 hs.2))
+        (fun hs => PalPeg.WindowPack.shiftPal_of_windowRunPack centre place entry q first
+          hn.ipackM.pack (hn.ipackM.win hP) (hn.extra.scanAvail hs.1 hs.2) hs)
         (htr.tick n (by omega)) (htr.good (n+1) hi)
         (hlv0 (j + (n+1)) (g (n+1)) (hreach (n+1) hi))
   exact ⟨g, hg0, hgk, htr, fun i hi => (hbig i hi).ipackM⟩

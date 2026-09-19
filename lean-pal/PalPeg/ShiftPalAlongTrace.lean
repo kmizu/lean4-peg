@@ -1,4 +1,3 @@
-import PalPeg.BranchSupply
 import PalPeg.CloseoutBundleRun
 import PalPeg.CopyPhaseNoShift
 import PalPeg.GalilPeriodUnion
@@ -54,19 +53,10 @@ open GalilScaffoldCounter GalilScaffoldInputHead GalilScaffoldChainVerifier
 open PalPeg.GalilRunSkeleton PalPeg.GalilFinalAssembly
 open PalPeg.CloseoutPackRun2 PalPeg.CloseoutPackRun29 PalPeg.CloseoutPackRun37
 open PalPeg.CloseoutRoundUnique PalPeg.CloseoutRoundBundle PalPeg.CloseoutBundleRun
-open PalPeg.BranchSupply
 
 section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
-
-/-- **`init` の行き先は chain が idle。**  `initVM` が `t.chain = .idle` を置く。 -/
-theorem chainIdle_after_init {w : List (Fin 2)} (x y : State GalilVM)
-    (hTick : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y)
-    (hMode : x.ctl.mode = Mode.init) : y.vm.chain = ChainVM.idle := by
-  obtain ⟨hInit, -⟩ := init_tick_target_is_scan centre place entry q first x y hTick hMode
-  obtain ⟨-, -, -, -, -, -, -, -, -, hChain, -, -, -, -, -⟩ : initVM entry x.vm y.vm := hInit
-  exact hChain
 
 /-! ## `periodOnly = false` 分岐の**空虚な半分**
 
@@ -703,6 +693,5 @@ theorem shiftPal_of_freshShiftLedger {w : List (Fin 2)} {s : GalilVM}
 
 end
 
-#print axioms chainIdle_after_init
 
 end PalPeg.ShiftPalAlongTrace

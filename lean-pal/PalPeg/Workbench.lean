@@ -94,6 +94,7 @@ import PalPeg.ShiftEntryFromLanding
 import PalPeg.WindowInv
 import PalPeg.WindowRun
 import PalPeg.WindowTick
+import PalPeg.WindowPack
 import PalPeg.FoundPackRefute
 import PalPeg.FoundPackCorrected
 import PalPeg.CopyPhaseTick
@@ -401,9 +402,9 @@ copy/back の `ChainStep` は lag を触らず `ChainMatched` は `inc` する�
 | `ShiftEntryFromLanding.freshShiftLedger_of_chainW_scan` | 比較前の窓から（比較量子の chain 1 歩を `chainW_step`＋`chainStep_unique` で渡す） |
 | `ShiftEntryBoundary.refuted_freshShiftAtShiftEntry_at_left_end` | `H_freshShiftAtShiftEntry` は左端の不一致で `False`（REFUTED・条件付き） |
 
-**主定理との関係**: 公理 `obligation_shiftPalResiduesAlongRun` は不一致比較直前の窓 1 本
-（`PalInPegUnconditional`）。`obligation_shiftPalAlongRun`／`…AlongTrace` はそこから
-`shiftPal_of_freshShiftLedger` で `ShiftPal` を出す。round 機構（`RoundScan`／`ShiftInv`）は
+**主定理との関係**: 旧公理 `obligation_shiftPalResiduesAlongRun`（不一致比較直前の窓）は
+`WindowPack.shiftPal_of_windowRunPack` が `IPackMW.win` の窓 pack から証明し、消えた。
+`obligation_shiftPalAlongTrace` はそこから `ShiftPal` を出す定理。round 機構（`RoundScan`／`ShiftInv`）は
 `room : R + 2 ≤ C` で左端を除外しており、この経路からは外れた。
 
 ## `H_freshShift` を消費者の scope に狭めた（2026-09-19）

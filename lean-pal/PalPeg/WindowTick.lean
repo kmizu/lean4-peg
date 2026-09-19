@@ -1,5 +1,6 @@
 import PalPeg.WindowRun
 import PalPeg.CloseoutPackRun2
+import PalPeg.CloseoutReplayCanRight
 
 /-!
 # `ChainWindowRun` の `Tick` ごとの transport
@@ -30,6 +31,7 @@ open PalPeg.WindowInv PalPeg.WindowRun PalPeg.GalilRunSkeleton
 open PalPeg.GalilInvPlus2 (CentreRep)
 open PalPeg.CloseoutPackRun2 (AuxPack)
 open PalPeg.GalilChainCoupling (CopyPack Coupled)
+open PalPeg.GalilFrontMono (FrontPack)
 
 /-! ## 1. 周辺の小補題 -/
 
@@ -294,10 +296,10 @@ theorem chainWindowRun_tick {raw : List (Fin 2)} {x y : State GalilVM}
     (h : Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y)
     (hx : ChainWindowRun raw x.ctl x.vm)
     (haux : AuxPack x.ctl x.vm)
-    (hcen : CentreRep raw x.vm)
-    (hrightRep : GalilScaffoldInputTrace.Represents x.vm.right.head raw)
-    (hrightPres : x.vm.right.head.focus ≠ none)
-    (hcanR : x.ctl.mode = Mode.scan → x.ctl.clock = 1 → canRight x.vm.right)
+    (hcen : x.ctl.mode = Mode.scan ∨ x.ctl.mode = Mode.shift → CentreRep raw x.vm)
+    (hrightRep : x.ctl.mode = Mode.scan → GalilScaffoldInputTrace.Represents x.vm.right.head raw)
+    (hrightPres : x.ctl.mode = Mode.scan → x.vm.right.head.focus ≠ none)
+    (hfront : FrontPack x.ctl x.vm)
     (hrad : x.ctl.mode = Mode.scan →
       ∃ R', RadiusRep x.vm.radius R' ∧ position x.vm.right = position x.vm.center + R') :
     ChainWindowRun raw y.ctl y.vm := by
@@ -305,34 +307,39 @@ theorem chainWindowRun_tick {raw : List (Fin 2)} {x y : State GalilVM}
   obtain ⟨c', t⟩ := y
   have hidle : c.mode ≠ Mode.scan → c.mode ≠ Mode.shift → c.mode ≠ Mode.init →
       s.chain = ChainVM.idle := haux.coupled.idleOut
-  have hcs : (encoded raw)[position s.center]? = some ((PofC centre place entry raw).centre s) :=
-    centreSymbol_of_decodes hP hcen
   cases h with
   | init c s t hm hi =>
     have hi' : initVM entry s t := hi
     obtain ⟨-, -, -, -, -, -, -, -, -, hChain, -, -, -, -, -⟩ := hi'
     exact chainWindowRun_of_idle hChain
   | scan_wait c s t hm hav hb =>
-    exact chainWindowRun_background_case centre place entry q first hm rfl hb hx hcen
-      (hrad hm) hcs
+    exact chainWindowRun_background_case centre place entry q first hm rfl hb hx
+      (hcen (Or.inl hm)) (hrad hm) (centreSymbol_of_decodes hP (hcen (Or.inl hm)))
   | scan_count c s t hm hav hc hb =>
-    exact chainWindowRun_background_case centre place entry q first hm rfl hb hx hcen
-      (hrad hm) hcs
+    exact chainWindowRun_background_case centre place entry q first hm rfl hb hx
+      (hcen (Or.inl hm)) (hrad hm) (centreSymbol_of_decodes hP (hcen (Or.inl hm)))
   | scan_match c s s' t o hm hav hc hcmp hmt hpl ho =>
-    have hcan : canRight s.right := hcanR hm hc
-    exact chainWindowRun_match_case centre place entry q first hm rfl hcmp hmt hpl hx hcen
-      hrightRep hrightPres hcan (hrad hm) hcs
+    have hcan : canRight s.right := by
+      rcases hav with hrp | hav
+      · exact PalPeg.CloseoutReplayCanRight.canRight_of_frontPack hfront hrp
+      · exact hav
+    exact chainWindowRun_match_case centre place entry q first hm rfl hcmp hmt hpl hx
+      (hcen (Or.inl hm)) (hrightRep hm) (hrightPres hm) hcan (hrad hm)
+      (centreSymbol_of_decodes hP (hcen (Or.inl hm)))
   | scan_shift c s s' t hm hav hc hcmp hmt hr hg hb =>
-    have hcan : canRight s.right := hcanR hm hc
+    have hcan : canRight s.right := by
+      rcases hav with hrp | hav
+      · exact PalPeg.CloseoutReplayCanRight.canRight_of_frontPack hfront hrp
+      · exact hav
     exact chainWindowRun_shift_case centre place entry q first hm rfl hcmp hmt hg hb hx
-      hrightRep hrightPres hcan
+      (hrightRep hm) (hrightPres hm) hcan
   | scan_fallback c s s' t hm hav hc hcmp hmt hg hr hb =>
     have hb' : beginFallbackVM' s' t := hb
     obtain ⟨p, ht, -⟩ := hb'
     unfold beginFallbackVM at ht
     exact chainWindowRun_of_idle (congrArg GalilVM.chain ht)
   | shift_one c s t hm hp hso =>
-    exact chainWindowRun_shiftOne_case centre place entry q first hm hp hso hx hcen
+    exact chainWindowRun_shiftOne_case centre place entry q first hm hp hso hx (hcen (Or.inr hm))
       (haux.copyP (by rw [hm]; decide))
   | shift_done c s o hm hp ho =>
     have hnp : positive s.remaining = false := by

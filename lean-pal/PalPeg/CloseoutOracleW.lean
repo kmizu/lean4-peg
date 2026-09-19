@@ -102,6 +102,7 @@ theorem ipackMW_of_invLPC {w : List (Fin 2)}
     IPackMW centre place entry q first w ⟨c, r⟩ :=
   ipackMW_of_ipackMG2 centre place entry q first
     (PalPeg.CloseoutPackRun36.ipackMG2_of_invLPC centre place entry q first hsl hIC)
+    (fun _ => PalPeg.WindowPack.windowRunPack_of_invLPC hIC)
 
 /-- `CloseoutStageOracle.reachAtIMG2S_of_reachAtC3R` over `PackRunRMW`.  The
 bounds the pack now asks for are read off `ReportPointAt` and `InvLPS`. -/
@@ -235,15 +236,21 @@ theorem h_bootIMW_of_bootIPack
     (stepsIM_of_stepsIO centre place entry q first
       (stepsIO_of_stepsI centre place entry q first hstI))
   obtain ⟨g2, hg20, hg21, htr2, hp2⟩ := hstG
-  refine ⟨c1, t, ⟨g2, hg20, hg21, htr2, fun i hi => ⟨(hp2 i hi).pack, ?_⟩⟩, hI, hpos⟩
-  cases i with
-  | zero => rw [hg20]; exact lpackM2_boot (a :: rest)
-  | succ n =>
-    cases n with
-    | zero =>
-      rw [hg21]
-      exact lpackM2_of_invLPC centre place entry q first (hsl _) hI.1
-    | succ n => omega
+  refine ⟨c1, t, ⟨g2, hg20, hg21, htr2, fun i hi => ⟨(hp2 i hi).pack, ?_, ?_⟩⟩, hI, hpos⟩
+  · cases i with
+    | zero => rw [hg20]; exact lpackM2_boot (a :: rest)
+    | succ n =>
+      cases n with
+      | zero =>
+        rw [hg21]
+        exact lpackM2_of_invLPC centre place entry q first (hsl _) hI.1
+      | succ n => omega
+  · cases i with
+    | zero => rw [hg20]; exact fun _ => PalPeg.WindowPack.windowRunPack_boot (a :: rest)
+    | succ n =>
+      cases n with
+      | zero => rw [hg21]; exact fun _ => PalPeg.WindowPack.windowRunPack_of_invLPC hI.1
+      | succ n => omega
 
 
 /-- **`needL'` over `PreTraceIMW`.** -/
