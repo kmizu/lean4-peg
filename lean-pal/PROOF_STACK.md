@@ -1,3 +1,16 @@
+## n258 — `hfallback` の量化子を直し（着地 `u` は葉が選ぶ `∃`）、最終 witness の `q` を 1 に
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 葉 `hfallback` の切り直し。旧形は `scanCompare_cases` が `beginFallback_exists`（**空の place** `⟨[], false⟩` を選ぶ）で作った任意の着地 `u` を葉に渡し「そこから完走せよ」と要求していた（量化子が逆、GPT-6 の指摘）。新形は不一致の源（`c s vq z`、guard 立たず）から `∃ u, beginFallback s1 u ∧ ∃ c' s' kk r fb replay, …` を葉が返し、tick は oracle 側が `Tick.scan_fallback` で作る（`scanCompare_cases` の fallback 枝は `∀ u, beginFallback s1 u → Tick …` を返す）。本物の構成（`scan_fallback_cycle_All`／`fallback_restarted_soundNR`）は右ヘッドから decode した非空 place を自分で選ぶので、この形なら繋がる。葉は 4 のまま（`hfresh`／`hchain`／`hshiftPeriodMinimal`／`hfallback`） |
+| `obligation_localRealization` | 変化なし |
+
+`PalInPegUnconditional.unconditional` の witness を `0 0 0` → `0 1 0`（`q = 1`）に変更: fallback 構成の定理群は `0 < q` を要求するので `q = 0` では葉が原理的に埋まらなかった。`first = 0` は変えず。
+
+**状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
 ## n257 — `hminv`（run 全点の `MInv`）を運ぶ述語の場に移し、残差を shift 入口の周期最小性 1 点（`hshiftPeriodMinimal`）に局所化
 
 **公理への進捗**

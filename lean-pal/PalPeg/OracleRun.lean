@@ -214,11 +214,11 @@ theorem scanCompare_cases {w : List (Fin 2)} (c : Control) (s : GalilVM) (hm : c
          (¬ (PofC centre place entry w).shiftGuard
             (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
               (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) ∧
-          (PofC centre place entry w).beginFallback
+          ∀ u : GalilVM, (PofC centre place entry w).beginFallback
             (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
-              (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) t ∧
+              (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) u →
           Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
-            ⟨{c with clock := 2048, mode := .copy}, t⟩))) := by
+            ⟨{c with clock := 2048, mode := .copy}, u⟩))) := by
   classical
   have hav' : (galilFrameS (PofC centre place entry w) q first).available s := hav
   have hchainAt : ∀ (a : Bool) (v : SearchVM), ∃ z, chainAt a (decide (v.search.mode = .found))
@@ -286,10 +286,9 @@ theorem scanCompare_cases {w : List (Fin 2)} (c : Control) (s : GalilVM) (hm : c
       exact Or.inr ⟨hmt, vq, z, t, hq, hz, Or.inl ⟨hg, hb,
         Tick.scan_shift (F := galilFrameS (PofC centre place entry w) q first) (delay := 2048)
           c s _ t hm (Or.inr hav') hc hcmp hmt1 hr hg hb⟩⟩
-    · obtain ⟨t, hb⟩ := beginFallback_exists (afterBirth born (afterMismatch s vs vq))
-      exact Or.inr ⟨hmt, vq, z, t, hq, hz, Or.inr ⟨hg, hb,
+    · exact Or.inr ⟨hmt, vq, z, s, hq, hz, Or.inr ⟨hg, fun u hb =>
         Tick.scan_fallback (F := galilFrameS (PofC centre place entry w) q first) (delay := 2048)
-          c s _ t hm (Or.inr hav') hc hcmp hmt1 (Or.inr hg) hr hb⟩⟩
+          c s _ u hm (Or.inr hav') hc hcmp hmt1 (Or.inr hg) hr hb⟩⟩
 
 #print axioms scanCompare_cases
 
@@ -578,7 +577,7 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
         position s'.right = position s.right + 1 ∧ position s.center < position s'.center ∧
         n ≤ position s'.center - position s.center + 1)
     (hfallback : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
-      (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
+      (z : ChainVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
       c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
@@ -591,11 +590,9 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
       ¬ (PofC centre place entry w).shiftGuard
         (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
           (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) →
-      (PofC centre place entry w).beginFallback
+      ∃ u : GalilVM, (PofC centre place entry w).beginFallback
         (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
-          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) u →
-      Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
-        ⟨{c with clock := 2048, mode := .copy}, u⟩ →
+          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) u ∧
       ∃ (c' : Control) (s' : GalilVM) (kk r fb replay : ℕ),
         StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
           (fb + replay) ⟨{c with clock := 2048, mode := .copy}, u⟩ ⟨c', s'⟩ ∧
@@ -725,7 +722,7 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
         have hrp' : position s'.right = position s'.center + rad' := hsi'.rightPos
         omega
       exact lex_lt (2 * w.length) _ _ _ _ (by omega) (by omega)
-  rcases hcase with ⟨hg, hb, htick⟩ | ⟨hng, hb, htick⟩
+  rcases hcase with ⟨hg, hb, htick⟩ | ⟨hng, htickOf⟩
   · -- the shift phase
     obtain ⟨c', s', n, hphase, hphaseS, hm', hr', hf', hminvL, hpos', hcen', hn⟩ :=
       hshift c₀ r₀ _ {c with clock := 1} t vq z u m hm1 hmle hI₀ hrunT hm hr rfl hpT hminvT hmis hq hz hg hb
@@ -748,9 +745,10 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
     · intro p hp; simp at hp; subst hp; simp [shiftPiece]; omega
     · simp
   · -- the fallback and its replay
-    obtain ⟨c', s', kk, r, fb, replay, hphase, hphaseS, hm', hr', hf', hminvL, hpos', hrk, hcen', hfb, hre⟩ :=
-      hfallback c₀ r₀ _ {c with clock := 1} t vq z u m hm1 hmle hI₀ hrunT hm hr rfl hpT hminvT hmis hq hz hng hb
-        htick
+    obtain ⟨u, hb, c', s', kk, r, fb, replay, hphase, hphaseS, hm', hr', hf', hminvL, hpos', hrk, hcen',
+        hfb, hre⟩ :=
+      hfallback c₀ r₀ _ {c with clock := 1} t vq z m hm1 hmle hI₀ hrunT hm hr rfl hpT hminvT hmis hq hz hng
+    have htick := htickOf u hb
     rw [htr'] at hpos'
     rw [htc] at hcen'
     have hnr : ¬ restartVM entry t u := by
@@ -1120,7 +1118,7 @@ theorem cycleOracleOn_of_fourLeaves {w : List (Fin 2)} (hP : Decodes (PofC centr
         ∀ p : ℕ, 0 < p → p < 2 * periodLength wg →
           ¬ PalPeg.HasPeriod (Span w (position s.center) (position s.right - position s.center)) p)
     (hfallback : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
-      (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
+      (z : ChainVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
       c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
@@ -1133,11 +1131,9 @@ theorem cycleOracleOn_of_fourLeaves {w : List (Fin 2)} (hP : Decodes (PofC centr
       ¬ (PofC centre place entry w).shiftGuard
         (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
           (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) →
-      (PofC centre place entry w).beginFallback
+      ∃ u : GalilVM, (PofC centre place entry w).beginFallback
         (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
-          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) u →
-      Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
-        ⟨{c with clock := 2048, mode := .copy}, u⟩ →
+          (afterMismatch s ⟨left s.left, right s.right, z⟩ vq)) u ∧
       ∃ (c' : Control) (s' : GalilVM) (kk r fb replay : ℕ),
         StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
           (fb + replay) ⟨{c with clock := 2048, mode := .copy}, u⟩ ⟨c', s'⟩ ∧

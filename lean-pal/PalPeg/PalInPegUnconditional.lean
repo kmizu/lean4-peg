@@ -215,24 +215,24 @@ n96 の「`rewindMargin` を `CentreMargin` 1 葉に縮めた」は数だけの�
 /-- **目標**: `PAL ∈ PEG` を前提ゼロで。いまは上の 2 個の `axiom` に依存している。
 `#print axioms unconditional` が標準 3 公理だけになったら証明完了。 -/
 theorem unconditional : RecognizedByTotalPEG PAL :=
-  given_scanLandingObligations 0 0 0
-    (obligation_cycleOracleOnPackedRun 0 0 0 (by decide))
-    (obligation_localRealization 0 0 0)
+  given_scanLandingObligations 0 1 0
+    (obligation_cycleOracleOnPackedRun 0 1 0 (by decide))
+    (obligation_localRealization 0 1 0)
     (fun w st Tc hPreTraceIMW =>
-      PalPeg.BranchSupply.scanLandingObligations_alongTrace_of_matchRest centreC placeC 0 0 0
+      PalPeg.BranchSupply.scanLandingObligations_alongTrace_of_matchRest centreC placeC 0 1 0
         hPreTraceIMW
-        (obligation_shiftPalAlongTrace 0 0 0 w st Tc hPreTraceIMW)
-        (PalPeg.BranchSupply.shiftExitLedgerAt_alongTrace centreC placeC 0 0 0
-          hPreTraceIMW (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 0 0 (by decide)
+        (obligation_shiftPalAlongTrace 0 1 0 w st Tc hPreTraceIMW)
+        (PalPeg.BranchSupply.shiftExitLedgerAt_alongTrace centreC placeC 0 1 0
+          hPreTraceIMW (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 1 0 (by decide)
             hPreTraceIMW.base.pre))
-        (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 0 0 (by decide)
+        (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 1 0 (by decide)
           hPreTraceIMW.base.pre)
-        (PalPeg.BranchSupply.matchRest_alongTrace centreC placeC 0 0 0 hPreTraceIMW
-          (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 0 0 (by decide)
+        (PalPeg.BranchSupply.matchRest_alongTrace centreC placeC 0 1 0 hPreTraceIMW
+          (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 1 0 (by decide)
             hPreTraceIMW.base.pre)))
     (fun w st Tc hw hPreTraceIMW =>
-      PalPeg.BranchSupply.chainVerifierSupply_alongTrace centreC placeC 0 0 0 hw hPreTraceIMW
-        (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 0 0 (by decide)
+      PalPeg.BranchSupply.chainVerifierSupply_alongTrace centreC placeC 0 1 0 hw hPreTraceIMW
+        (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC 0 1 0 (by decide)
           hPreTraceIMW.base.pre)
         (hPreTraceIMW.base.tc1 ▸ hPreTraceIMW.base.pre.mono 1 w.length hw le_rfl))
 

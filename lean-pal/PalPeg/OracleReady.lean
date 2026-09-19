@@ -82,7 +82,7 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
         ∀ p : ℕ, 0 < p → p < 2 * periodLength wg →
           ¬ PalPeg.HasPeriod (Span w (position s.center) (position s.right - position s.center)) p)
     (hfallback : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
-      (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
+      (z : ChainVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       PalPeg.CloseoutCheckW.StepsIMW centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
       c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
@@ -97,12 +97,10 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
         (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
           (afterMismatch s ⟨GalilScaffoldInputHead.left s.left,
             GalilScaffoldChainVerifier.right s.right, z⟩ vq)) →
-      (PofC centre place entry w).beginFallback
+      ∃ u : GalilVM, (PofC centre place entry w).beginFallback
         (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
           (afterMismatch s ⟨GalilScaffoldInputHead.left s.left,
-            GalilScaffoldChainVerifier.right s.right, z⟩ vq)) u →
-      Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
-        ⟨{c with clock := 2048, mode := .copy}, u⟩ →
+            GalilScaffoldChainVerifier.right s.right, z⟩ vq)) u ∧
       ∃ (c' : Control) (s' : GalilVM) (kk r fb replay : ℕ),
         StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
           (fb + replay) ⟨{c with clock := 2048, mode := .copy}, u⟩ ⟨c', s'⟩ ∧
