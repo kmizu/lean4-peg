@@ -32,9 +32,11 @@ The canonical schedule restarts a broken chain first (`GalilTickFair.Canonical`,
   the restart guard, **only while the chain is not idle** (`RestartLowerRun.move_of_idle`
   proves the idle branch: the stage history of the search in the middle of a stage, the DP
   result after the final stage) **and, in the first round of a chain (`periodOnly = false`),
-  only if the chain tick ends in a broken chain**.  The other first-round cases are proved:
-  a chain with work left (copying, walking back, catching up) is kept below four semiperiods
-  by the chain clock (`RestartLowerRun.move_of_working_chain`); a caught-up watch in phase `4`
+  only if the chain of the mismatching state is already broken**.  The other first-round cases
+  are proved: a chain with work left (copying, walking back, catching up — also a watch that
+  breaks before it has caught up) is kept below four semiperiods by the chain clock
+  (`RestartLowerRun.move_of_working_source`／`move_of_working_chain`); a caught-up watch in
+  phase `4`
   either mispredicts and pays the move (`move_of_watch_mispredict`) or passes the shift guard
   (`shiftGuard_of_caughtUp`); below phase `4` its radius is below four semiperiods
   (`move_of_watch_short`).
@@ -78,7 +80,7 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
         GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right) →
       searchEffect (PofC centre place entry w) false s vq →
       s.chain ≠ .idle →
-      (s.periodOnly = false → ∃ wb : GalilScaffoldChainWatch.State, z = .broken wb) →
+      (s.periodOnly = false → ∃ wb : GalilScaffoldChainWatch.State, s.chain = .broken wb) →
       chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
         ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
         s.center s.radius s.chain z →
@@ -155,9 +157,11 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
         intro hnil; rw [hnil] at hmle; simp at hmle; omega
       by_cases hfirstRound : s.periodOnly = false
       · rcases PalPeg.RestartLowerRun.chainTick_cases centre place entry q first hP hI hRun hm
-            hChain hidle with ⟨wb, hbroken⟩ | hwork | ⟨w1, hz, hzero⟩
+            hChain hidle with ⟨wb, hbroken⟩ | hsourceWork | hwork | ⟨w1, hz, hzero⟩
         · exact hmove c₀ r₀ k c s vq z m hm1 hmle hI hBoot hRun hNoGuardS hm hr hc hPos hM hMis
             hSearch hidle (fun _ => ⟨wb, hbroken⟩) hChain hGuard
+        · exact PalPeg.RestartLowerRun.move_of_working_source centre place entry q first
+            hnonempty hP hI hBoot hRun hm hr hCan hfirstRound hsourceWork
         · exact PalPeg.RestartLowerRun.move_of_working_chain centre place entry q first
             hnonempty hP hI hBoot hRun hm hr hCan hChain hidle hfirstRound hwork
         · subst hz
