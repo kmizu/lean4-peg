@@ -20,6 +20,12 @@
 
 **未完の部分**: 葉 `hmove` の `periodOnly = true`（shift 後のラウンド。Scala `checkPair` に当たる継続不変量が run 上に無い、未調査）。`obligation_localRealization` は未着手。
 
+**`periodOnly = true` の調査（一次情報、証明は未着手）**:
+
+* Scala 正本（`ScaffoldChain.scala:108-176`）: shift は中心を `h` 動かし `shiftOne` ごとに `cycle += 2`（計 `2h`）、`matched()` ごとに `cycle.dec()`、`cycleEnd ⇔ cycle = 1`、`canShift = watch ∧ lag = 0 ∧ phase = 4 ∧ cycleEnd`。`checkPair` の主張: lag ゼロなら `left == prediction ⇔ ¬ cycleEnd`。
+* Lean が run 上に持っているもの: `Coupled'.watch`（`CloseoutPackRun40:81`）の `Other'` ＝ `periodOnly = true ∧ 1 ≤ h ∧ 5h ≤ R + cycle`（scan）。**`cycle` の上界も「左の文字＝予測」も無い。**
+* 分岐の見立て: (c1) 追い付いた watch が予測を外す → `RestartLower.move_of_prediction_break` がそのまま使える形だが、`hfour : 4h ≤ R` を `scanMinimal_watch_no_short` の `Sem` 側のためだけに要求している。`periodOnly` ラウンドでは `R ≥ 3h` までしか言えない見込みなので、「`periodOnly = true` なら `WatchMinimal` は `TailMinimal` 側（`base ≤ R`）」を run に載せるか、`cycle ≤ 2h` を載せる必要がある。(c2) 追い付いていて予測＝右の文字、`cycleEnd` でない → Scala は到達不能と主張。Lean では継続不変量（shift 前の span が周期 `2h` を持つので、`cycle − 1` 個ぶん左は周期的）が要る。(c3) `periodOnly` ラウンドで遅れている watch／broken: 未調査。
+
 ## n277 — 葉 `hmove`: 追い付く前に壊れる watch（この tick の正 lag の break）を閉じた。第 1 ラウンドで残るのは「source の chain が既に broken」だけ
 
 **公理への進捗**
