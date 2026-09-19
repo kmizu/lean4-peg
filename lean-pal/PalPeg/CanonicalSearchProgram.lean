@@ -102,6 +102,17 @@ def FutureMinimal (raw : List (Fin 2)) (C h : ℕ) : Prop :=
     ∀ p, 0 < p → p < 2*h →
       ¬ HasPeriod (GalilScaffoldChainInputSupply.Span raw C k) p
 
+/-- The history a positive search lower bound stands for: no semiperiod `δ ≤ lower` is a period
+of a span of the centre that is large enough to hold a candidate above `lower`. -/
+def LowerExcluded (raw : List (Fin 2)) (C lower : ℕ) : Prop :=
+  ∀ k, k < C → Manacher.PalAt (encoded raw) C k → 4*(lower+1) ≤ k →
+    ∀ δ, 0 < δ → δ ≤ lower →
+      ¬ HasPeriod (GalilScaffoldChainInputSupply.Span raw C k) (2*δ)
+
+theorem lowerExcluded_zero (raw : List (Fin 2)) (C : ℕ) : LowerExcluded raw C 0 := by
+  intro k _ _ _ δ hδ0 hδ
+  omega
+
 /-- A least DP candidate on the centre's place stream yields the future
 minimal-period certificate needed when its chain has caught up. -/
 theorem futureMinimal_of_candidate (a : Fin 2) (ls rs q : List (Fin 2)) (gap : Bool)
@@ -111,8 +122,8 @@ theorem futureMinimal_of_candidate (a : Fin 2) (ls rs q : List (Fin 2)) (gap : B
       ((GalilScaffoldPlace.stream ⟨a :: ls,gap⟩).take (span+1)) lower h)
     (hmin : ∀ g, g < h → ¬ GalilDpCorrect.Candidate
       ((GalilScaffoldPlace.stream ⟨a :: ls,gap⟩).take (span+1)) lower g)
-    (hlower : lower = 0) : FutureMinimal ((a :: ls).reverse ++ rs ++ q) C h := by
-  subst lower
+    (hexcluded : LowerExcluded ((a :: ls).reverse ++ rs ++ q) C lower) :
+    FutureMinimal ((a :: ls).reverse ++ rs ++ q) C h := by
   intro k hkC hpal h4 hper p hp hp2
   apply GalilScaffoldChainInputSupply.no_short_period_of_minimal
     a ls rs q gap hC hkC hpal (by have := hcand.1; omega) (by omega) hper
@@ -121,8 +132,8 @@ theorem futureMinimal_of_candidate (a : Fin 2) (ls rs q : List (Fin 2)) (gap : B
     apply candidate_rewindow hcg
     have hlen := hcand.2.1
     omega
-  · intro δ _ hδ
-    omega
+  · intro δ hδ0 hδ
+    exact hexcluded k hkC hpal (by have := hcand.1; omega) δ hδ0 hδ
   · exact hp
   · exact hp2
 

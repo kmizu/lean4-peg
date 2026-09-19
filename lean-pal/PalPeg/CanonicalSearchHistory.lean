@@ -369,7 +369,8 @@ theorem birthMinimals_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
   · intro g hg
     rw [← hplace]
     exact hmin g hg
-  · exact hlower0
+  · rw [hlower0]
+    exact lowerExcluded_zero _ _
   · rw [hraw]
     apply moveMinimal_of_candidate a ls rs suffix y.vm.center.gap
       (congrArg position hdec)
