@@ -18,6 +18,10 @@
 * **点検で直した不具合**: `inval` の `reversing` は `ok − 1`（`ok = 0` で 0 のまま）。抽象の `dApply pop [] = []` では無害だが、物理では counter の底を pop する。`validDeltaOfView` が counter のゼロ判定を読んで `keep` にする。
 * **一次情報**: handoff が既存部品として挙げた `CloseoutCoreEnc25` は root から import されておらず build error 20 件だった（n283 で修理）。
 
+**n284 の続き（2026-09-20、検査済み・未接続）— スケジュールの関数版**: `ConcreteLocalMachine.check_eq_sApply`（`RTQueue.check q = install ∘ exec ∘ exec ∘ (lenr ≤ lenf なら恒等、そうでなければ rotStart)`、前提は既存の `hrot : lenf < lenr → state = idle`）、`snoc_eq_sApply`（`rfl`）、`tail_eq_sApply`。`snoc`／`tail` は `sApply` の固定列で、途中の判定は `lenr ≤ lenf` の 1 回だけ。
+
+**長さ counter の設計（未着手）**: `lenr ≤ lenf` は 2 本の stack の高さ比較で局所的でない。しかも `rotStart` は `lenf := lenf + lenr` で、単独の counter では O(1) に更新できない。そこで符号つき counter `c`（pos／neg の 2 stack、正規形、増減は先頭だけ読む）を**遅延更新**する: idle／appending／done では `c = lenf − lenr`、reversing `(ok f f' r r')` では `c + 2·|f| + 2 = lenf − lenr`。`rotStart` は `c` を触らない（開始時は必ず `lenr = lenf + 1` なので `c = −1`、`−1 + 2·lenf₀ + 2 = lenf₀ + lenr₀`）。reversing の `exec`（`revD` と `appStartD` の 2 分岐、観測で決まる）ごとに `c += 2`、`snocPush`／`tailPop` で `c −= 1`。判定は「phase = idle かつ `c < 0` なら `rotStart`」で足りる（idle でなければ `hrot` の対偶で `lenr ≤ lenf`）。要る不変量は `RTQueue.Inv`／`PInv`（idle で `lenf = |front|`、`lenf ≥ 1` when front 非空、操作前は `lenr ≤ lenf`）。
+
 **未完の部分**: (1) `lenf − lenr` の符号 counter と、それで sub-step の**操作 `SOp` を選ぶ**スケジュール（`RTQueue.check`／`exec2`／`snoc`／`tail` を sub-step 列に分解した `CloseoutCoreEnc21.SStep` との対応。いまの制御は `op` を外から与えられている）。(2) `QueueRep` の初期化（高さ K の底を敷く prologue）。(3) queue 以外（chain `LocalChain`、入力配布、7 モード、`init = scan = replayStart = id` の仮実装の置き換え）。(4) `LocalStep.realize`／`realize_SAccepts` への接続と `H_realizeCanonical`。
 
 ## n283 — `obligation_localRealization` に着手: queue sub-step の分岐は有限観測 `QueueView` だけで選べる（未接続）。`CloseoutCoreEnc25` は build が通っていなかったので修理した

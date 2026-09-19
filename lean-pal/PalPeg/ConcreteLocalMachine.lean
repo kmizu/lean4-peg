@@ -21,8 +21,9 @@ namespace PalPeg.ConcreteLocalMachine
 open PalPeg
 open PalPeg.CloseoutCoreEnc20 (Delta)
 open PalPeg.CloseoutCoreEnc21 (SRole SRoles SInj sinj_iff toAddr toAddr_eq pushRearD tailD revD
-  appStartD appD invalDoneD sRoleList finish rotPerm donePerm rotRolesS doneRolesS)
-open PalPeg.CloseoutCoreEnc20 (rotStart dApply)
+  appStartD appD invalDoneD sRoleList finish rotPerm donePerm rotRolesS doneRolesS
+  exec2_eq_finish)
+open PalPeg.CloseoutCoreEnc20 (rotStart dApply check_rot)
 open PalPeg.CloseoutCoreStep (Γc blankc)
 open PalPeg.CloseoutCoreEnc (cellSym)
 open PalPeg.CloseoutCoreEnc12 (Act actList actOnG ActRule compStep compStep_apply TEqG)
@@ -1205,5 +1206,47 @@ theorem queueRep_step (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : QueueControl
 #print axioms queueRep_step
 
 end Step
+
+/-! ## The schedule of sub-steps
+
+`RTQueue.snoc` and `RTQueue.tail` are fixed sequences of the sub-steps `sApply`; the only test
+between them is `lenr ≤ lenf`, made once, before the two rotation steps. -/
+
+/-- `RTQueue.check` as sub-steps: start a rotation if the rear is longer, two rotation steps,
+install.  (`hrot`: a rotation is only started on an idle queue, `RTQueue.PInv.rot`.) -/
+theorem check_eq_sApply (q : Queue (Fin 2)) (hrot : q.lenf < q.lenr → q.state = .idle) :
+    RTQueue.check q
+      = sApply .install (sApply .exec (sApply .exec
+          (if q.lenr ≤ q.lenf then q else sApply .rotStart q))) := by
+  by_cases hle : q.lenr ≤ q.lenf
+  · rw [if_pos hle, RTQueue.check, if_pos hle, exec2_eq_finish]
+    rfl
+  · have hidle : q.state = .idle := hrot (Nat.lt_of_not_le hle)
+    have hstart : sApply .rotStart q = rotStart q := by
+      show (if isIdle q.state then rotStart q else q) = rotStart q
+      rw [hidle]
+      rfl
+    rw [if_neg hle, hstart, check_rot q hle, exec2_eq_finish]
+    rfl
+
+theorem snoc_eq_sApply (q : Queue (Fin 2)) (a : Fin 2) :
+    RTQueue.snoc q a = RTQueue.check (sApply (.snocPush a) q) := rfl
+
+theorem tail_eq_sApply (q : Queue (Fin 2)) (hfront : q.front ≠ []) :
+    RTQueue.tail q = RTQueue.check (sApply .inval (sApply .tailPop q)) := by
+  obtain ⟨c, f, hcf⟩ : ∃ c f, q.front = c :: f := by
+    cases hq : q.front with
+    | nil => exact absurd hq hfront
+    | cons c f => exact ⟨c, f, rfl⟩
+  have hpop : sApply .tailPop q = { q with lenf := q.lenf - 1, front := q.front.tail } := by
+    show (if q.front = [] then q else _) = _
+    rw [if_neg hfront]
+  unfold RTQueue.tail
+  rw [hpop]
+  simp only [hcf]
+  rfl
+
+#print axioms check_eq_sApply
+#print axioms tail_eq_sApply
 
 end PalPeg.ConcreteLocalMachine
