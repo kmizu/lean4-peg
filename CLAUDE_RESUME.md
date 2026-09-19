@@ -12,7 +12,11 @@ centre=45、radius=25、fallback move=6、chain=broken を観測した。
 Lean の packed-run 到達可能性の証明ではなく、cycle 公理そのものの反証とも断定しない。
 この条件の相違を解決せず、残差を単なる接続作業と扱わないこと。
 
-検証: checkpoint build / 公理監査は実行中。
+検証: `cd lean-pal && lake build` 成功（9705 jobs）。
+`#print axioms PalPeg.PalInPeg.unconditional` は標準3公理＋上記2公理。
+`shiftPeriodMinimal_packed` は標準3公理のみ。`sorryAx` なし。
+新規 import の位置エラーを `Workbench.lean` で修正してから全体 build を再実行した。
+Python 診断もコミット対象のスクリプトで再現済み。
 
 ## n264 — canonical fallback のコピー元を Scala の右ヘッドへ修正
 
