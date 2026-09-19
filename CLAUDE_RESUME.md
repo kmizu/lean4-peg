@@ -17,6 +17,20 @@
 
 **未完の部分**: `hmove` の残りは chain 非 idle で、chain tick の結果が (a) copy／back、(b) `lag ≠ 0` の watch、(c) `phase ≠ 4` の watch、(d) `periodOnly = true` の watch、(e) broken（restart guard 不成立）の場合。調査で分かっていること（証明は未着手）: (a)(b)(c) は「`Rad < 4h`」の側で、`ChainLedger` の `lag − margin = 4·(copy 済み)`／`balance = 4h` は lag／margin の関係だけを持ち、`Rad < 4h` を出すには chain の**時間の台帳**（1 tick に chain 1 歩・2048 tick に一致 1 回、誕生時 `R₀ ≤ 2h`）が要る。その上で `move_of_activeBound` に渡す `MoveMinimal` は restart 後は `lower` を知っている形に弱める必要がある（`g ≤ lower` は `LowerAt` を chain 非 idle の第 1 ラウンドに延長して排除、`lower < g < h` は DP の最小性）。(d) は Scala の `checkPair`（2 半周期の継続不変量: 非終端では左の読み ＝ 予測）に当たる不変量が run 上に無い。`obligation_localRealization` は未着手。
 
+### `hmove` の `Rad < 4h` 側の設計（2026-09-20、調査と準備のみ・この側の証明は未着手）
+
+対象は chain tick の結果が copy／back、`lag ≠ 0` の watch、`phase ≠ 4` の watch（いずれも第 1 ラウンド `periodOnly = false`）。受け口は `CanonicalFallbackInput.move_of_activeBound`（`hmin` は `k = Rad` でしか使われていないので、現在半径の形 `∀ g, 0<g → g<h → 4g ≤ Rad → ¬HasPeriod (Span C Rad) (2g)` に一般化できる）。
+
+**準備済み（n274 の後、検査・接続済み）**: chain の payload を `CanonicalSearchProgram.MoveAbove raw C lower h`（`lower < g < h` だけ DP が排除）に替え、run 不変量は `ModeMinimal (RestartLowerRun.MovePayload raw s)` を運ぶ（`modeMinimal_tick_lower`）。`MoveMinimal` は `lower = 0` の場合。
+
+**足りないもの 3 つ**
+
+1. `g ≤ lower` の排除を chain 非 idle の状態で使うこと。`LowerAt` の guard は今 `chain = idle`。第 1 ラウンドの間は中心も `lower` も動かず半径は増えるだけなので、guard を `chain = idle ∨ periodOnly = false` に延ばせる（誕生で `afterBirth` が `periodOnly := false`、`beginShift` で `true`。restart／init／replayStart は chain idle）。
+2. `Rad ≤ 4h`（chain の時間の台帳）。候補の不変量: 仕事 `W`（copy: 残り bit ＋ 1 ＋ back の歩数 ＋ 1 ＋ lag、back: 左端までの歩数 ＋ 1 ＋ lag、watch: lag）に対して `0 < W → W ≤ 2047·(4H − Rad) − (2048 − clock)`。scan tick ごとに chain は 1 歩（`W−1`、右辺 `−1`）、一致 tick は `Rad+1`（`−2047`）と clock の巻き戻し（`+2047`）と `lag+1`（`W` は差し引き 0）。誕生時は `R₀ ≤ 2H`: 最小候補 `H` の窓 `S` について `StageHistory` の「前段の窓 `S/2` に候補無し」から `S < 8H`（`Candidate` は接頭辞 `4H+1` だけで決まる）、第 1 段は `S = 8·max(lower,1) ≤ 8H`、そして `Rad ≤ S/4`。copy 中の `H` は `SemWith` の `cells v + n = H + 1` から取れる。
+3. `phase ≠ 4`（`lag = 0`）で `distance < 4h`: `FreshC` は下界しか言わない。`MarkLedger.aligned`（`boundary − shiftDebt = n·h`）を「`phase < 4 → n = phase`」に強めれば `distance = boundary + p − 1 < 4h`。2 の不変量は `0 < W` の間しか効かないので、`lag = 0`（`W = 0`）のこの場合は 3 が別に要る。
+
+`periodOnly = true` の watch（Scala `checkPair` の継続不変量）と guard 不成立の broken は別件で未調査。
+
 ## n273 — 葉 `hmove` の chain idle 分岐を全部証明して接続（葉は 1 本のまま、前提は `s.chain ≠ .idle` に狭まった）
 
 **公理への進捗**
