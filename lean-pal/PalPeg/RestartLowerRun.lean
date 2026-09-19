@@ -1,6 +1,7 @@
 import PalPeg.RestartLower
 import PalPeg.CloseoutStageBoot
 import PalPeg.SearchStageRun
+import PalPeg.ChainClock
 
 /-!
 # Minimal periods across a broken restart

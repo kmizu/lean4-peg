@@ -1,4 +1,5 @@
 import PalPeg.RestartStageRun
+import PalPeg.CanonicalChainMinimal
 
 /-!
 # The clock of a chain before it has caught up
@@ -163,4 +164,102 @@ theorem chainWork_matched {y z : ChainVM} (hmatched : ChainMatched y z) :
     exact ⟨by omega, fun h => absurd h (lt_irrefl _)⟩
   | brokenMatched w => simp [chainWork]
 
+/-- A chain with no work left has none after a step either. -/
+theorem chainWork_step_done {x y : ChainVM} (hstep : ChainStep x y)
+    (hlag : ∀ w, x = .watch w → Canonical w.lag ∧ 0 ≤ value w.lag)
+    (hpre : ∀ t h p v lag margin ver, x = .copy t h p v lag margin ver → 0 ≤ value lag)
+    (hback : ∀ v h lag margin ver, x = .back v h lag margin ver → 0 ≤ value lag)
+    (hdone : chainWork x ≤ 0) : chainWork y ≤ 0 := by
+  cases hstep with
+  | idle => simp [chainWork]
+  | brokenIdle => simp [chainWork]
+  | copyBit t h p v lag margin ver a one legal present =>
+    exfalso
+    have := hpre _ _ _ _ _ _ _ rfl
+    simp only [chainWork] at hdone
+    have hcells : 1 ≤ cells v := by unfold cells; omega
+    omega
+  | copyEnd t h p v lag margin ver b hleft hp hv =>
+    exfalso
+    have := hpre _ _ _ _ _ _ _ rfl
+    simp only [chainWork] at hdone
+    have hcells : 1 ≤ cells v := by unfold cells; omega
+    omega
+  | backStep v h lag margin ver hf =>
+    exfalso
+    have := hback _ _ _ _ _ rfl
+    simp only [chainWork] at hdone
+    omega
+  | backDone v h lag margin ver hf =>
+    exfalso
+    have := hback _ _ _ _ _ rfl
+    simp only [chainWork] at hdone
+    omega
+  | watchStep w w' hinternal =>
+    obtain ⟨hcanonical, hnonneg⟩ := hlag w rfl
+    cases hinternal with
+    | idle hz => exact hdone
+    | take hp hg =>
+      exfalso
+      have hpos := (positive_iff _ hcanonical).mp hp
+      simp only [chainWork] at hdone
+      omega
+  | watchBreak w hb =>
+    simp [chainWork]
+
+/-- The unary answer ahead of the focus is the number of bits still to copy. -/
+theorem remainingBits_of_answerAhead {t : GalilScaffoldTape.Tape} {n : ℕ}
+    (hahead : AnswerAhead t n) : remainingBits t = n := by
+  obtain ⟨ls, hlist⟩ := hahead
+  unfold remainingBits
+  rw [hlist]
+  clear hlist
+  induction n with
+  | zero => simp [List.takeWhile]
+  | succ n ih => simpa [List.replicate_succ, List.takeWhile] using ih
+
+/-- A newborn chain: the whole answer is still to be copied, and the lag is the radius. -/
+theorem chainWork_chainStart (answer : GalilScaffoldTape.Tape) (c : Fin 3)
+    (walker : GalilScaffoldPlace.Place) (ver : PlaceHead) (radius : Counter) :
+    chainWork (chainStart answer c walker ver radius)
+        = 2 * (remainingBits answer : ℤ) + 2 + value radius ∧
+      chainPeriod (chainStart answer c walker ver radius) = (remainingBits answer : ℤ) := by
+  simp only [chainStart, chainWork, chainPeriod, cells_start]
+  push_cast
+  constructor <;> ring
+
+/-- The semiperiod the payload of a live chain speaks about is `chainPeriod`. -/
+theorem period_of_semWith {Cert : ℕ → Prop} {x : ChainVM}
+    (hsem : PalPeg.CanonicalChainMinimal.SemWith Cert x) (hne : x ≠ .idle) :
+    ∃ H : ℕ, (H : ℤ) = chainPeriod x ∧ Cert H := by
+  cases x with
+  | idle => exact absurd rfl hne
+  | copy t h p v lag margin ver =>
+    obtain ⟨H, n, hcopy, hcells, hcert⟩ := hsem
+    refine ⟨H, ?_, hcert⟩
+    have hbits := remainingBits_of_answerAhead hcopy.1
+    simp only [chainPeriod]
+    rw [hbits]
+    have : (cells v : ℤ) + (n : ℤ) = (H : ℤ) + 1 := by exact_mod_cast hcells
+    omega
+  | back v h lag margin ver =>
+    obtain ⟨-, H, -, hcells, hcert⟩ := hsem
+    refine ⟨H, ?_, hcert⟩
+    simp only [chainPeriod]
+    have : (cellsOf (.back v h lag margin ver) : ℤ) = (H : ℤ) + 1 := by exact_mod_cast hcells
+    omega
+  | watch w =>
+    obtain ⟨-, H, -, hcells, hcert⟩ := hsem
+    refine ⟨H, ?_, hcert⟩
+    simp only [chainPeriod]
+    have : (cellsOf (.watch w) : ℤ) = (H : ℤ) + 1 := by exact_mod_cast hcells
+    omega
+  | broken w =>
+    obtain ⟨-, H, -, hcells, hcert⟩ := hsem
+    refine ⟨H, ?_, hcert⟩
+    simp only [chainPeriod]
+    have : (cellsOf (.broken w) : ℤ) = (H : ℤ) + 1 := by exact_mod_cast hcells
+    omega
+
 end PalPeg.ChainClock
+
