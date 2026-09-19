@@ -316,6 +316,20 @@ theorem noBoundaryBreak_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Gal
     (leftCertificate_of_certAt (certAt_packed centre place entry q first hP hI hrun) hm)
     hcmp hmt hstep hbreak
 
+/-- The length counter is canonical along a packed run (`CPack.canon`). -/
+theorem canonicalLength_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    {k : ℕ} {y : State GalilVM}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y) :
+    Canonical y.vm.length := by
+  obtain ⟨g, hg0, hgk, htr, -, -⟩ := hrun
+  have hs := PalPeg.CloseoutPackRun2.steps_of_trace htr k le_rfl
+  rw [hg0, hgk] at hs
+  exact (PalPeg.GalilCentreLive.cpack_steps (onLetterVM raw) leftFirstVM centre place entry q
+    first 2048 hs
+    (PalPeg.GalilInvPlus2.hfloor_of_invLP2 centre place entry q first hI.1.1)
+    (PalPeg.GalilCentreLive.cpack_of_entry q hI.1.1.1.1.1 hI.1.1.1.2)).canon
+
 /-- **The producer of the leaf `hrestartStage`.**  At a restart-guard state of a packed run the
 restart lands in a stage-entry restart. -/
 theorem restartStage {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
@@ -324,12 +338,11 @@ theorem restartStage {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
     {k : ℕ} {y : State GalilVM}
     (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y)
     (hmode : y.ctl.mode = .scan) (hguard : restartGuardVM y.vm)
-    (hlength : Canonical y.vm.length)
     {t : GalilVM} (hrestart : restartVM entry y.vm t) :
     ∃ (Rad : ℕ) (last : Counter), Restarted raw t Rad last ∧ StageEntry Rad last := by
   obtain ⟨rad, hscan⟩ := scanInvariant_packed centre place entry q first hrun hmode
   exact restartStage_packed centre place entry q first hP hI
-    (noBoundaryBreak_packed centre place entry q first hP hI) hrun hmode hguard hscan hlength
-    hrestart
+    (noBoundaryBreak_packed centre place entry q first hP hI) hrun hmode hguard hscan
+    (canonicalLength_packed centre place entry q first hI hrun) hrestart
 
 end PalPeg.RestartCertificate

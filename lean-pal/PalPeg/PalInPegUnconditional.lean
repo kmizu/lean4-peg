@@ -34,7 +34,7 @@ import PalPeg.CloseoutFoundRoutes
 
 | axiom | 内容 | 経路と残り |
 |---|---|---|
-| `obligation_cycleOracleOnPackedRun` | `CycleOracleOn (ScanOnPackedRunFromInvLPS) (ShapedRun.OracleTick entry)` | n268 で canonical 方針を **restart-first**（Scala 正本 `ScaffoldGalil.scala:230`）に戻した。no-restart では broken chain の fallback で Galil の移動不等式 `R ≤ 4d` が破れる（Python 正本から restart 分岐だけ除いた実行で `R=25, d=6`；restart ありでは fallback 時に chain が broken のことが無い）。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉: `hrestartStage`（guard 状態での restart 着地が `Restarted ∧ StageEntry`）／`hshiftPeriodMinimal`／`hmove`（どちらも「restart guard の下」が前提）。`CanonicalChainMinimal.shiftPeriodMinimal_packed` は `lower = reset` 前提の部分結果で、restart 後の `lower = last` に対する履歴（`≤ last` の周期の排除）が未接続。 |
+| `obligation_cycleOracleOnPackedRun` | `CycleOracleOn (ScanOnPackedRunFromInvLPS) (ShapedRun.OracleTick entry)` | n268 で canonical 方針を **restart-first**（Scala 正本 `ScaffoldGalil.scala:230`）に戻した。no-restart では broken chain の fallback で Galil の移動不等式 `R ≤ 4d` が破れる（Python 正本から restart 分岐だけ除いた実行で `R=25, d=6`；restart ありでは fallback 時に chain が broken のことが無い）。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉: `hshiftPeriodMinimal`／`hmove`（どちらも「restart guard の下」が前提）。旧葉 `hrestartStage`（guard 状態での restart 着地が `Restarted ∧ StageEntry`）は n270 で `RestartCertificate.restartStage` が証明して `OracleReady` に接続済み。`CanonicalChainMinimal.shiftPeriodMinimal_packed` は `lower = reset` 前提の部分結果で、restart 後の `lower = last` に対する履歴（`≤ last` の周期の排除）が未接続。 |
 | `obligation_localRealization` | `H_realizeCanonical`（canonical trace に対する局所実現） | `CanonicalLocalRealizes` の条件付き接続・canonical tick の一意性は証明済み。具体的な局所機械と符号化の構成は未完。 |
 
 ### 公理としては消えた 6 本（経路メモは残す）

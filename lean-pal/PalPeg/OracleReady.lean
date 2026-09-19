@@ -8,6 +8,7 @@ import PalPeg.CanonicalReplay
 import PalPeg.CanonicalChainReady
 import PalPeg.CanonicalSearchHistory
 import PalPeg.CanonicalSearchReady
+import PalPeg.RestartCertificate
 
 set_option autoImplicit false
 
@@ -22,8 +23,8 @@ origin.  `CanonicalSearchReady.ready_of_invLPS_shaped` discharges it.
 The canonical schedule restarts a broken chain first (`GalilTickFair.Canonical`,
 `ScaffoldGalil.scala:230`).  The producer's leaves are:
 
-* `hrestartStage` — at a guard state of the packed run the restart lands in a stage-entry
-  restart (`Restarted ∧ StageEntry`: the chain's confirmed bound `last` against the radius);
+* (`hrestartStage` — at a guard state of the packed run the restart lands in a stage-entry
+  restart — is no longer a leaf: `RestartCertificate.restartStage` proves it);
 * `hshiftPeriodMinimal` — period minimality of the shifting chain;
 * `hmove` — the Galil move inequality that pays for a fallback, at a comparison state below
   the restart guard.
@@ -55,11 +56,6 @@ theorem searchReady_of_invLPS_shaped {w : List (Fin 2)}
 `OracleRun.cycleOracleOn_of_fourLeaves` is `searchReady_of_invLPS_shaped`. -/
 theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w))
     (h4 : first ≠ 4) (hq : 0 < q) (h7 : first ≠ 7) (h8 : first ≠ 8)
-    (hrestartStage : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
-      InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ y →
-      y.ctl.mode = .scan → restartGuardVM y.vm → ∀ t : GalilVM, restartVM entry y.vm t →
-      ∃ (Rad : ℕ) (last : Counter), Restarted w t Rad last ∧ StageEntry Rad last)
     (hshiftPeriodMinimal : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM)
       (vq : SearchVM) (z : ChainVM) (u : GalilVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
@@ -112,6 +108,14 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
     PalPeg.CloseoutCheckW.CycleOracleOn centre place entry q first
       (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first)
       (PalPeg.ShapedRun.OracleTick entry) w := by
+  have hrestartStage : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
+      InvLPS (PofC centre place entry w) q first w c₀ r₀ →
+      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ y →
+      y.ctl.mode = .scan → restartGuardVM y.vm → ∀ t : GalilVM, restartVM entry y.vm t →
+      ∃ (Rad : ℕ) (last : Counter), Restarted w t Rad last ∧ StageEntry Rad last :=
+    fun c₀ r₀ k y hI hrun hmode hguard t hrestart =>
+      PalPeg.RestartCertificate.restartStage centre place entry q first hP hI hrun hmode hguard
+        hrestart
   have hchain : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀,r₀⟩ y →

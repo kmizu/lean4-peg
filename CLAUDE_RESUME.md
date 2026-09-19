@@ -1,3 +1,31 @@
+## n270 — 葉 `hrestartStage` を証明して `OracleReady` に接続（producer の葉は 3 → 2）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉が `hrestartStage`／`hshiftPeriodMinimal`／`hmove` の 3 本から **`hshiftPeriodMinimal`／`hmove` の 2 本**になった（`hrestartStage` は `RestartCertificate.restartStage` が証明し、定理の仮説から外して内部で供給） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、`2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.OracleReady.cycleOracleOn_of_readyLeaves` は `propext`／`Classical.choice`／`Quot.sound`。
+
+**n269 の未完 3 点の決着**
+
+* `NoBoundaryBreak` → **証明済み**（`RestartCertificate.noBoundaryBreak_packed`）。核は `RestartBoundary.not_breakStep_of_text`: 予測記号 `= bounce[(P+1−anchor) % 2h]`（`symbol_of_coreP`）`= text[P+1−2h]`（`BlockOn`）`= text[C−R−1+2h]`（scan の回文）`= text[C−R−1]`（左証明書）`= text[P+1]`（matched）なので `BreakStep` の `read ≠ some a` と矛盾。`RestartBoundary.distance_ne_boundary` が 3 つの添字等式を `ScanInvariant`＋`LeftCertificate`＋matched 比較から出す。左端（`C−R−1 ≤ 0`）では `read left = none` で matched が成立しないので場合分けで消える。
+* 左証明書の運搬 → `RestartCertificate.CertAt`／`certAt_tick`／`certAt_packed`。誕生点は `candidate_periodOn`（`birthMinimal_packed` 経由、`lower` 不問）、中心が動かない間は chain の semantic datum に乗せる、shift 入口は全区間周期（`periodOn_right_succ`＋`periodOn_span_of_next`、`4h ≤ R` は `four_of_guard`）で着地中心に張り直す。**コピペを避けるため `CanonicalChainMinimal.Sem` を証明書について一般化**（`SemWith Cert`、`Sem raw C` はその instance、`sem_step`／`sem_matched`／`sem_tick`／`semWith_start`／`semWith_chainAt` は任意の `Cert`）。
+* replay 中の `ScanInvariant` → **既に pack にあった**（`IPackMW.m2.scanGeomR`）。n269 で「pack に無い」と書いたのはウチの見落とし（`budgetMinimal_tick` が使っていた）。`scanInvariant_packed` にまとめた。`Canonical length` は `CPack.canon`（`cpack_steps`＋`hfloor_of_invLP2`＋`cpack_of_entry`、`CloseoutMarksPack` と同じ recipe）。
+
+**新規モジュール（すべて `OracleReady` から推移的に import。sorry なし）**
+
+| ファイル | 中身 |
+|---|---|
+| `PalPeg/RestartStageLedger.lean` | `MarkLedger`／`WatchLedger`／`ChainLedger`、`WatchLedger.stageEntry_of_break` |
+| `PalPeg/RestartStageRun.lean` | `LedgerAt`／`ledgerAt_packed`、`BrokenStage`／`brokenStage_tick`／`brokenStage_packed`、`restartStage_packed` |
+| `PalPeg/RestartBoundary.lean` | `not_breakStep_of_text`、`LeftCertificate`、`distance_ne_boundary` |
+| `PalPeg/RestartCertificate.lean` | `CertAt`／`certAt_packed`、`scanInvariant_packed`、`noBoundaryBreak_packed`、`canonicalLength_packed`、**`restartStage`** |
+
+**未完の部分**: producer の残り葉 `hshiftPeriodMinimal`（restart 後は `lower = last ≠ reset`。`CanonicalChainMinimal.shiftPeriodMinimal_packed` は `lower = reset` 前提で未接続、`≤ last` の周期の排除が要る）と `hmove`（Galil の移動不等式）。`obligation_localRealization` は未着手。
+
 ## n269 — `hrestartStage` を 1 仮説 `NoBoundaryBreak` まで還元（未接続）
 
 **公理への進捗**
