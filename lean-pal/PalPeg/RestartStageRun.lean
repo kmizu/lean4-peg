@@ -263,8 +263,10 @@ theorem brokenStage_tick {raw : List (Fin 2)} {x y : State GalilVM}
     (hstage : BrokenStage x.ctl x.vm) (hledger : LedgerAt x.ctl x.vm)
     (hwinX : WindowRunPack raw x.ctl x.vm) (hwinY : WindowRunPack raw y.ctl y.vm)
     (hunbroken : ∀ w, x.vm.chain = .watch w → w.machine.control.broken = false)
-    (hinterior : ∀ w1 w', x.ctl.mode = Mode.scan → ChainStep x.vm.chain (.watch w1) →
-      BreakStep w1 w' → y.vm.chain = .broken w' →
+    (hinterior : ∀ (c : Control) (s s' : GalilVM) w1 w', x = ⟨c, s⟩ → c.mode = Mode.scan →
+      (galilFrameS (PofC centre place entry raw) q first).compare s s' →
+      (galilFrameS (PofC centre place entry raw) q first).matched s' →
+      ChainStep s.chain (.watch w1) → BreakStep w1 w' →
       value w1.machine.control.distance ≠ 4 * (periodLength w1 : ℤ) - 1) :
     BrokenStage y.ctl y.vm := by
   by_cases hguard : x.ctl.mode = Mode.scan ∧ restartGuardVM x.vm
@@ -365,7 +367,7 @@ theorem brokenStage_tick {raw : List (Fin 2)} {x y : State GalilVM}
             have hR2 : value t.radius = (Rad : ℤ) := hRad.2
             rw [← hR2, hradius, hradius', inc_value, hd]
           obtain ⟨hentry, hcanonicalLast, -⟩ := hledger1.stageEntry_of_break hbreak hmargin
-            (hinterior w1 w hm hstep hbreak htchain) hRadValue
+            (hinterior c s s' w1 w rfl hm hcmp hmt hstep hbreak) hRadValue
           exact ⟨Rad, hRad, hentry, hcanonicalLast⟩
       | brokenMatched w0 =>
         cases hyz
@@ -459,11 +461,12 @@ theorem watch_unbroken_of_window {raw : List (Fin 2)} {c : Control} {s : GalilVM
 /-- The boundary case of a lag-zero break, as a statement about the ticks of a packed run:
 no matched comparison breaks the chain at `distance = 4h − 1`. -/
 def NoBoundaryBreak (raw : List (Fin 2)) (c₀ : Control) (r₀ : GalilVM) : Prop :=
-  ∀ (j : ℕ) (x y : State GalilVM),
-    PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw j ⟨c₀,r₀⟩ x →
-    Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y →
-    ∀ w1 w', x.ctl.mode = Mode.scan → ChainStep x.vm.chain (.watch w1) →
-      BreakStep w1 w' → y.vm.chain = .broken w' →
+  ∀ (j : ℕ) (c : Control) (s s' : GalilVM),
+    PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw j ⟨c₀,r₀⟩ ⟨c, s⟩ →
+    c.mode = Mode.scan →
+    (galilFrameS (PofC centre place entry raw) q first).compare s s' →
+    (galilFrameS (PofC centre place entry raw) q first).matched s' →
+    ∀ w1 w', ChainStep s.chain (.watch w1) → BreakStep w1 w' →
       value w1.machine.control.distance ≠ 4 * (periodLength w1 : ℤ) - 1
 
 theorem brokenStage_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
@@ -500,7 +503,8 @@ theorem brokenStage_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM
         (hcan i (by omega)).canonical (ih (by omega))
         (ledgerAt_packed centre place entry q first hP hI (hprefix i (by omega)))
         hwinX ((hpk (i+1) (by omega)).win hP) (watch_unbroken_of_window hwinX)
-        (hboundary i (g i) (g (i+1)) (hprefix i (by omega)) (htr.tick i (by omega)))
+        (fun c s s' w1 w' hx hm hcmp hmt hstep hbreak =>
+          hboundary i c s s' (hx ▸ hprefix i (by omega)) hm hcmp hmt w1 w' hstep hbreak)
   rw [← hgk]
   exact hall k le_rfl
 
