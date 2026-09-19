@@ -25,8 +25,10 @@ open PalPeg.CloseoutCoreEnc21 (SRole SRoles SInj sinj_iff toAddr toAddr_eq pushR
 open PalPeg.CloseoutCoreEnc20 (rotStart dApply)
 open PalPeg.CloseoutCoreStep (Γc blankc)
 open PalPeg.CloseoutCoreEnc (cellSym)
-open PalPeg.CloseoutCoreEnc12 (Act actList ActRule compStep)
-open PalPeg.Local (Window idx)
+open PalPeg.CloseoutCoreEnc12 (Act actList actOnG ActRule compStep TEqG)
+open PalPeg.Local (Window idx idx_val pos rd rd_pos rd_eq readWin readWin_eq pos_applyAction
+  rd_applyAction)
+open PalPeg.Program (STape)
 open PalPeg.CloseoutCoreEnc18 (dTape topSym popActs pushActs pop_dTape push_dTape)
 open PalPeg.CloseoutCoreEnc25 (SOp RTag rotTag doneTag roleOf roleOf_rotTag roleOf_doneTag
   sinj_roleOf isIdle isDone isIdle_eq isDone_eq sApply deltaOf tagStep invalDelta execDelta
@@ -899,5 +901,94 @@ def queueLocalStep (Terminal : Type) (hK : 2 ≤ K) :
   compStep (queueRule Terminal hK)
 
 end Rule
+
+/-! ## A tape that represents a stack
+
+The local machine keeps its tapes only up to `TEqG` (same head position, same cells): the sweep of
+`compStep` does not return the literal `STape` term.  Reading a window and applying actions
+respect `TEqG`, so a stack is represented by any tape `TEqG`-equal to its debris tape. -/
+
+theorem teqG_actOnG {blank : Γc} {T T' : STape Γc} (h : TEqG blank T T') (a : Act Γc) :
+    TEqG blank (actOnG blank T a) (actOnG blank T' a) := by
+  cases a with
+  | none => exact h
+  | some action =>
+    obtain ⟨written, move⟩ := action
+    refine ⟨?_, fun p => ?_⟩
+    · show pos (T.applyAction blank (written, move)) = pos (T'.applyAction blank (written, move))
+      rw [pos_applyAction, pos_applyAction, h.1]
+    · show rd blank (T.applyAction blank (written, move)) p
+        = rd blank (T'.applyAction blank (written, move)) p
+      rw [rd_applyAction, rd_applyAction, h.1, h.2 p]
+
+theorem teqG_actList {blank : Γc} {T T' : STape Γc} (h : TEqG blank T T') (acts : List (Act Γc)) :
+    TEqG blank (actList blank T acts) (actList blank T' acts) := by
+  induction acts generalizing T T' with
+  | nil => exact h
+  | cons a rest ih => exact ih (teqG_actOnG h a)
+
+theorem readWin_teqG {blank : Γc} {K : ℕ} {T T' : STape Γc} (h : TEqG blank T T') :
+    readWin blank K T = readWin blank K T' := by
+  funext i
+  rw [readWin_eq, readWin_eq, h.1, h.2]
+
+/-- The tape represents the stack: it is the debris tape of the stack, up to `TEqG`. -/
+def StackTape (tape : STape Γc) (stack : List (Option (Fin 2))) : Prop :=
+  ∃ debris : List Γc, TEqG blankc tape (dTape stack debris)
+
+theorem pos_dTape (stack : List (Option (Fin 2))) (debris : List Γc) :
+    pos (dTape stack debris) = stack.length := by
+  cases stack with
+  | nil => rfl
+  | cons cell rest => simp [dTape, pos]
+
+theorem StackTape.pos_eq {tape : STape Γc} {stack : List (Option (Fin 2))}
+    (h : StackTape tape stack) : pos tape = stack.length := by
+  obtain ⟨debris, hteq⟩ := h
+  rw [hteq.1, pos_dTape]
+
+/-- The cell under the head of a tall enough stack tape is the top symbol. -/
+theorem StackTape.centreSym_eq {K : ℕ} {tape : STape Γc} {stack : List (Option (Fin 2))}
+    (h : StackTape tape stack) (hmargin : K ≤ stack.length) :
+    centreSym (readWin blankc K tape) = topSym stack := by
+  obtain ⟨debris, hteq⟩ := h
+  have hpos : K ≤ pos (dTape stack debris) := by rw [pos_dTape]; exact hmargin
+  rw [readWin_teqG hteq]
+  unfold centreSym
+  rw [readWin_eq, idx_val (by omega), Nat.sub_add_cancel hpos, rd_pos, dTape_focus]
+
+/-- The cell below the head of a tall enough stack tape is the top symbol of the tail. -/
+theorem StackTape.belowSym_eq {K : ℕ} {tape : STape Γc} {stack : List (Option (Fin 2))}
+    (h : StackTape tape stack) (hK : 1 ≤ K) (hmargin : K ≤ stack.length) :
+    belowSym (readWin blankc K tape) = topSym stack.tail := by
+  obtain ⟨debris, hteq⟩ := h
+  have hpos : K ≤ pos (dTape stack debris) := by rw [pos_dTape]; exact hmargin
+  rw [readWin_teqG hteq]
+  unfold belowSym
+  rw [readWin_eq, idx_val (by omega), pos_dTape,
+    show stack.length - K + (K - 1) = stack.length - 1 from by omega]
+  cases stack with
+  | nil => simp at hmargin; omega
+  | cons cell rest =>
+    show rd blankc ⟨rest.map cellSym ++ [blankc], cellSym cell, debris⟩ (rest.length + 1 - 1) = _
+    rw [rd_eq]
+    cases rest with
+    | nil => rfl
+    | cons below deeper =>
+      simp [topSym, List.getD_eq_getElem?_getD, List.getElem?_append_right]
+
+/-- **One cell operation on a stack tape**: the actions selected by the top symbol lead to a tape
+of the new stack. -/
+theorem StackTape.cellApply {tape : STape Γc} {stack : List (Option (Fin 2))}
+    (h : StackTape tape stack) (u : Delta) (sealing : Bool) :
+    StackTape (actList blankc tape (cellActsOfTop u sealing (topSym stack)))
+      (cellApply u sealing stack) := by
+  obtain ⟨debris, hteq⟩ := h
+  refine ⟨cellDebris u sealing stack debris, ?_⟩
+  rw [dTape_cellApply]
+  exact teqG_actList hteq _
+
+#print axioms StackTape.belowSym_eq
+#print axioms StackTape.cellApply
 
 end PalPeg.ConcreteLocalMachine
