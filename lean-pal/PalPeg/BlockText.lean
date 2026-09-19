@@ -156,4 +156,74 @@ theorem blockText_matched {L : List (Fin 3)} {cc : Fin 3} {y z : ChainVM}
   | breaks w w' hb => trivial
   | brokenMatched w => trivial
 
+/-! ## The predictions of a block copied from the text -/
+
+/-- The first round trip of the predictions is the text left of the centre, read leftwards:
+the block letters are that text, and the way back is its mirror image in the block palindrome
+at `C - h`. -/
+theorem bounce_eq_left {e : List (Fin 3)} {C : ℕ} {cc b : Fin 3} {xs : List (Fin 3)}
+    (hcc : e[C]? = some cc)
+    (hletters : ∀ i, i < xs.length + 1 → (xs ++ [b])[i]? = e[C - 1 - i]?)
+    (hblockPal : Manacher.PalAt e (C - (xs.length + 1)) (xs.length + 1))
+    (hCh : xs.length + 1 ≤ C)
+    {t : ℕ} (ht1 : 1 ≤ t) (ht2 : t ≤ 2 * (xs.length + 1)) :
+    (GalilScaffoldChainSweep.bounce cc b xs)[t - 1]? = e[C - t]? := by
+  have h2C : 2 * (xs.length + 1) ≤ C := by
+    have := hblockPal.1
+    omega
+  unfold GalilScaffoldChainSweep.bounce
+  rcases Nat.lt_or_ge (t - 1) (xs.length + 1) with hfirst | hsecond
+  · rw [List.getElem?_append_left (by simpa using hfirst), hletters (t - 1) hfirst]
+    congr 1
+    omega
+  · rw [List.getElem?_append_right (by simpa using hsecond)]
+    simp only [List.length_append, List.length_singleton]
+    have hmirror := hblockPal.2.2 (t - (xs.length + 1)) (by omega)
+    rw [show C - (xs.length + 1) - (t - (xs.length + 1)) = C - t from by omega,
+      show C - (xs.length + 1) + (t - (xs.length + 1)) = C - 2 * (xs.length + 1) + t from by
+        omega] at hmirror
+    rw [hmirror]
+    rcases Nat.lt_or_ge (t - 1 - (xs.length + 1)) xs.length with hinside | hlast
+    · rw [List.getElem?_append_left (by simpa using hinside), List.getElem?_reverse hinside]
+      have hletter := hletters (xs.length - 1 - (t - 1 - (xs.length + 1))) (by omega)
+      rw [List.getElem?_append_left (by omega)] at hletter
+      rw [hletter]
+      congr 1
+      omega
+    · rw [List.getElem?_append_right (by simpa using hlast)]
+      have hindex : t - 1 - (xs.length + 1) - xs.reverse.length = 0 := by
+        rw [List.length_reverse]
+        omega
+      rw [hindex]
+      have ht : t = 2 * (xs.length + 1) := by omega
+      rw [show C - 2 * (xs.length + 1) + t = C from by omega]
+      simpa using hcc.symm
+
+/-- **The predictions of a first-round chain are the text**, up to four semiperiods to the right
+of the centre and inside the scan palindrome: the first round trip by `bounce_eq_left` and the
+scan palindrome, the second by the left certificate (period `2h` on `[C - 4h, C]`). -/
+theorem bounce_eq_text {e : List (Fin 3)} {C R : ℕ} {cc b : Fin 3} {xs : List (Fin 3)}
+    (hcc : e[C]? = some cc)
+    (hletters : ∀ i, i < xs.length + 1 → (xs ++ [b])[i]? = e[C - 1 - i]?)
+    (hblockPal : Manacher.PalAt e (C - (xs.length + 1)) (xs.length + 1))
+    (hCh : xs.length + 1 ≤ C)
+    (hleft : PeriodOn e (2 * (xs.length + 1)) (C - 4 * (xs.length + 1)) C)
+    (hpal : Manacher.PalAt e C R)
+    {t : ℕ} (ht1 : 1 ≤ t) (htR : t ≤ R) (ht4 : t + 1 ≤ 4 * (xs.length + 1)) :
+    e[C + t]? = (GalilScaffoldChainSweep.bounce cc b xs)[(t - 1) % (2 * (xs.length + 1))]? := by
+  have htC : t ≤ C := le_trans htR hpal.1
+  rw [← hpal.2.2 t htR]
+  rcases Nat.lt_or_ge (2 * (xs.length + 1)) t with hsecond | hfirst
+  · have hmod : (t - 1) % (2 * (xs.length + 1)) = t - 2 * (xs.length + 1) - 1 := by
+      rw [show t - 1 = (t - 2 * (xs.length + 1) - 1) + 2 * (xs.length + 1) from by omega,
+        Nat.add_mod_right, Nat.mod_eq_of_lt (by omega)]
+    rw [hmod, bounce_eq_left hcc hletters hblockPal hCh (t := t - 2 * (xs.length + 1))
+      (by omega) (by omega)]
+    have hperiod := hleft (C - t) (by omega) (by omega)
+    rw [hperiod]
+    congr 1
+    omega
+  · rw [Nat.mod_eq_of_lt (by omega), bounce_eq_left hcc hletters hblockPal hCh ht1 hfirst]
+
 end PalPeg.ChainBlockText
+
