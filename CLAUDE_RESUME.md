@@ -9,6 +9,17 @@
 
 **状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
 
+### n253 addendum — oracle 全体が run 形の葉 5 本に還元された（`OracleRun.cycleOracleOn_of_leaves`）
+
+`cycleOracleOn_of_leaves (hP : Decodes) (h4 : first ≠ 4) (hready) (hchain) (hminv) (hshift) (hfallback) : CycleOracleOn … (ScanOnPackedRunFromInvLPS …) w`（標準公理のみ）。葉はすべて「`InvLPS` 起点 `⟨c₀,r₀⟩` から `Steps k` で到達する状態」で量化:
+1. `hready`: chain idle な状態で `SearchReady (searchLens.get vm)`（chain 生存中は不要）。
+2. `hchain`: `ChainReady chain`（idle／broken 自明、copy は `CopyInv`、back は `canRight ver`＋`OnBlock`、watch は `chainReady_watch_of_watchWindow`）。
+3. `hminv`: `MInv w ctl vm`（背景 `minv_same`、一致 `minv_match`＋`minv_afterBirth`、shift は `leftmost_shift`、fallback は `minv_after_fallback`）。
+4. `hshift`: clock 1 の ScanNR 状態からの shift 入口 tick の先から、`StepsAll (SoundScanNR) n` で refresh 済み ScanNR 着地へ。右ヘッドは比較後の位置（＝元 +1）、中心は真に右、`n ≤ adv + 1`（`ShiftEv.ticks_le`）。部品: `GalilScaffoldTopShiftCycle.scan_shift_cycle`（`ChainShiftRun` から shift 相全体を構成、`galilFrame` の Steps → `tick_S_of_tick` で `galilFrameS`）、`shift_run_chain`、着地の `SoundScanNR` は shift_done 直前の pack（`packRunR_MW_marksFree` を非 scan 終端に適用）の `LPackM2.shiftGeom` → `shiftGeom_exit` → `outputRel_of_refresh`。
+5. `hfallback`: copy 入口 tick の先から `fb + replay` tick で refresh 済み ScanNR 着地へ。右ヘッドは元 +1、中心は `+ (kk + 1 − r)`（`r ≤ kk`）、`fb ≤ 12704(kk+1−r)+4012`、`replay ≤ 8·2048·(kk+1−r)`（`FallbackEv`）。部品: `fallback_restarted_soundNR`（`Restarted 0 reset` まで `StepsAll (SoundScanNR)`）＋ replay 区間の新構成（既存 `replay_segment_construct`／`match_round` は偽の `hpres`／`hquiet` を取るので使えない。run 形の `hready` から書き直す）。
+
+背景 tick・比較・pack・`CostedRun`・`mu`・報告点は全部 `scanCycle_of_leaves`／`cycleOracleOn_of_leaves` の中で済んでいる。公理 `obligation_cycleOracleOnPackedRun` は 5 葉が定理になった時点で消える（葉を公理に割らない: 本数を増やさない）。
+
 ## n252 — `obligation_cycleOracle`（`CycleOracleMC3`）を run 形 `obligation_cycleOracleOnPackedRun` に切り直し（旧形は着地に chain idle を要求しており偽の疑いが濃い）
 
 **公理への進捗**
