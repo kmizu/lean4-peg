@@ -189,6 +189,24 @@ theorem lowerAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
       | (simp [hm] at hmode)
       | (simp at hmode)
 
+/-- At a chain-idle scan state no semiperiod up to the lower bound is a period of the scan
+span: the `hlow` input of the fallback move inequality. -/
+theorem no_lower_period_at_scan {raw : List (Fin 2)} {c : Control} {s : GalilVM} {Rad : ℕ}
+    (hlowerAt : LowerAt raw c s) (hm : c.mode = .scan) (hidle : s.chain = .idle)
+    (hscan : ScanInvariant raw (position s.center) Rad s.left s.right)
+    (hradius : RadiusRep s.radius Rad) :
+    ∀ δ, 0 < δ → δ ≤ (value s.lower).toNat →
+      ¬ HasPeriod (Span raw (position s.center) Rad) (2*δ) := by
+  intro δ hδ0 hδ
+  have hnonneg : 0 ≤ value s.lower := by
+    by_contra hneg
+    have : (value s.lower).toNat = 0 := by omega
+    omega
+  obtain ⟨base, hbaseRadius, -, hexcluded⟩ :=
+    hlowerAt hm hidle (value s.lower).toNat (by omega)
+  rw [hradius.2] at hbaseRadius
+  exact hexcluded Rad (by simpa using hbaseRadius) (scan_radius_lt hscan) hscan.palindrome δ hδ0 hδ
+
 /-- The birth payload without the move inequality, from the excluded lower bound. -/
 theorem birthMinimal_of_lowerAt {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
     (hP : Decodes (PofC centre place entry raw))
@@ -367,5 +385,42 @@ theorem scanMinimal_packed {a : Fin 2} {rest : List (Fin 2)} {c₀ : Control} {r
     birthMinimal_of_lowerAt centre place entry q first hP hI hrun hm hinvariant.lowerAt⟩
 
 #print axioms scanMinimal_packed
+
+/-- **The fallback move inequality when the search has parked in `missed`**, on a packed run
+whose origin is reached from boot: the DP result excludes the semiperiods above the lower bound,
+`LowerAt` those below it. -/
+theorem move_of_idle_missed {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : Control} {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    (hboot : CloseoutCheckW.PackedFromBoot centre place entry q first raw ⟨c₀, r₀⟩)
+    {k : ℕ} {c : Control} {s : GalilVM} {vq : SearchVM} {z : ChainVM}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ ⟨c, s⟩)
+    (hm : c.mode = .scan) (hr : c.replaying = false) (hcan : canRight s.right)
+    (hidle : s.chain = .idle)
+    (hsearch : searchEffect (PofC centre place entry raw) false s vq)
+    (hmiss : vq.search.mode = .missed) :
+    let s1 := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+      (afterMismatch s ⟨left s.left,right s.right,z⟩ vq)
+    let ℓ := (value s.length).toNat
+    let radius := chosenRadius
+      ((GalilScaffoldPlace.stream (PalPeg.GalilTickFair.rightPlace s1)).take (ℓ+1))
+    ℓ / 2 ≤ 4 * (ℓ / 2 + 1 - radius) := by
+  obtain ⟨a, rest, rfl⟩ := List.exists_cons_of_ne_nil hraw
+  have hinvariant := minimalAcrossRestart_packed centre place entry q first hP hI
+    (lowerAt_of_packedFromBoot centre place entry q first hP hI hboot) hrun
+  have hwin : WindowRunPack (a :: rest) c s :=
+    (PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun).win hP
+  exact move_of_idle_missed_packed centre place entry q first hP hI hrun
+    (fun Rad hscan => by
+      obtain ⟨R, hR, hright⟩ := hwin.radiusScan hm
+      have hrad : Rad = R := by
+        have h1 : position s.right = position s.center + Rad := hscan.rightPos
+        have h2 : position s.right = position s.center + R := hright
+        omega
+      subst hrad
+      exact no_lower_period_at_scan hinvariant.lowerAt hm hidle hscan hR)
+    hm hr hcan hidle hsearch hmiss
+
+#print axioms move_of_idle_missed
 
 end PalPeg.RestartLowerRun

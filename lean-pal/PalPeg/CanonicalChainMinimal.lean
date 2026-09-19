@@ -1203,15 +1203,19 @@ theorem budgetMinimal_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
   rw [← hgk]
   exact hbud k le_rfl
 
-/-- If the zero-lower search has parked in `missed`, its retained DP result
-is already the complete Galil contract for the concrete fallback window. -/
+/-- If the search has parked in `missed`, its retained DP result together with the exclusion
+below its lower bound (`hlow`, at the scan radius) is the complete Galil contract for the
+concrete fallback window. -/
 theorem move_of_idle_missed_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
     {k : ℕ} {c : Control} {s : GalilVM} {vq : SearchVM} {z : ChainVM}
     (hP : Decodes (PofC centre place entry raw))
     (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
     (hrun : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw k
       ⟨c₀,r₀⟩ ⟨c,s⟩)
-    (hlower : s.lower = reset) (hm : c.mode = .scan) (hr : c.replaying = false)
+    (hlow : ∀ Rad, ScanInvariant raw (position s.center) Rad s.left s.right →
+      ∀ δ, 0 < δ → δ ≤ (value s.lower).toNat →
+        ¬ HasPeriod (Span raw (position s.center) Rad) (2*δ))
+    (hm : c.mode = .scan) (hr : c.replaying = false)
     (hcan : canRight s.right) (hidle : s.chain = .idle)
     (hsearch : searchEffect (PofC centre place entry raw) false s vq)
     (hmiss : vq.search.mode = .missed) :
@@ -1225,12 +1229,11 @@ theorem move_of_idle_missed_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ :
     PalPeg.CanonicalFallbackInput.counters centre place entry q first hI hrun hm hr
   have hp := PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun
   have hcen := (hp.win hP).centreRep (Or.inl hm)
-  have hvq : vq.lower = reset := (searchEffect_lower_eq hsearch).trans hlower
   have hdp := PalPeg.CanonicalSearchHistory.dpPack_of_idle_missed_packed
     centre place entry q first hP hI hrun hm hscan hcen hidle hsearch hmiss
-    (fun δ hd hδ => by
-      have hz : δ ≤ 0 := by simpa [hvq,reset,value] using hδ
-      omega)
+    (fun δ hd hδ => hlow rad hscan δ hd (by
+      rw [searchEffect_lower_eq hsearch] at hδ
+      exact hδ))
   exact PalPeg.CanonicalFallbackInput.move_of_dpPack
     (centre := centre) (place := place) (entry := entry) (c := c)
     hP hscan hcan hlen (scan_radius_lt hscan) hdp rfl

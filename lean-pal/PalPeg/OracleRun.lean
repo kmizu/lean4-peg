@@ -738,6 +738,7 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
     (hfallback : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
       (z : ChainVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
+      PalPeg.CloseoutCheckW.PackedFromBoot centre place entry q first w ⟨c₀, r₀⟩ →
       PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
       ¬ restartGuardVM s →
       c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
@@ -914,7 +915,7 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
   · -- the fallback and its replay
     obtain ⟨u, hb, hbw, c', s', kk, r, fb, replay, hphase, hphaseS, hm', hr', hf', hminvL, hnoGuardL,
         hpos', hrk, hcen', hfb, hre⟩ :=
-      hfallback c₀ r₀ _ {c with clock := 1} t vq z m hm1 hmle hI₀ hrunT hnoGuardT
+      hfallback c₀ r₀ _ {c with clock := 1} t vq z m hm1 hmle hI₀ hBoot hrunT hnoGuardT
         hm hr rfl hpT hminvT hmis hq hz hng
     have htick := htickOf u hb
     rw [htr'] at hpos'
@@ -1326,6 +1327,7 @@ theorem cycleOracleOn_of_fourLeaves {w : List (Fin 2)} (hP : Decodes (PofC centr
     (hfallback : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
       (z : ChainVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
+      PalPeg.CloseoutCheckW.PackedFromBoot centre place entry q first w ⟨c₀, r₀⟩ →
       PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
       ¬ restartGuardVM s →
       c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →

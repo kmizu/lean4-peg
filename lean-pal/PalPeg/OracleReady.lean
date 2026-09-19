@@ -29,7 +29,8 @@ The canonical schedule restarts a broken chain first (`GalilTickFair.Canonical`,
   `RestartLowerRun.scanMinimal_packed` carries the minimal period across broken restarts, using
   that the origin is reached from boot);
 * `hmove` — the Galil move inequality that pays for a fallback, at a comparison state below
-  the restart guard.
+  the restart guard, **except** when the chain is idle and the search has parked in `missed`
+  (`RestartLowerRun.move_of_idle_missed` proves that branch).
 
 Fallback copy, fresh restart, and the entire replay segment are constructed here.
 -/
@@ -61,6 +62,7 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
     (hmove : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
       (z : ChainVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
+      PalPeg.CloseoutCheckW.PackedFromBoot centre place entry q first w ⟨c₀, r₀⟩ →
       PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
       ¬ restartGuardVM s →
       c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
@@ -68,6 +70,7 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
       GalilScaffoldInputHead.read (GalilScaffoldInputHead.left s.left) ≠
         GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right) →
       searchEffect (PofC centre place entry w) false s vq →
+      ¬ (s.chain = .idle ∧ vq.search.mode = .missed) →
       chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
         ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
         s.center s.radius s.chain z →
@@ -113,7 +116,8 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
           c₀ r₀ k c s vq z u m hm1 hmle hI₀ hrun
           (PalPeg.RestartLowerRun.scanMinimal_packed centre place entry q first hP hI₀ hBoot hrun
             hm) hnoGuard hm)
-  intro c₀ r₀ k c s vq z m hm1 hmle hI hRun hNoGuardS hm hr hc hPos hM hMis hSearch hChain hGuard
+  intro c₀ r₀ k c s vq z m hm1 hmle hI hBoot hRun hNoGuardS hm hr hc hPos hM hMis hSearch hChain
+    hGuard
   have hPack := PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hRun
   obtain ⟨_,_,rad,hScan,hLength⟩ :=
     PalPeg.CanonicalFallbackInput.counters centre place entry q first hI hRun hm hr
@@ -128,7 +132,19 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
   let ℓ := (value s.length).toNat
   let radius := chosenRadius ((GalilScaffoldPlace.stream (PalPeg.GalilTickFair.rightPlace s1)).take (ℓ+1))
   have hLengthNat : ℓ = 2*rad+1 := by simp only [ℓ,hLength,Int.toNat_natCast]
-  have hMove := hmove c₀ r₀ k c s vq z m hm1 hmle hI hRun hNoGuardS hm hr hc hPos hM hMis hSearch hChain hGuard
+  have hMove :
+      let s1 := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+        (afterMismatch s ⟨GalilScaffoldInputHead.left s.left,right s.right,z⟩ vq)
+      let ℓ := (value s.length).toNat
+      let radius := chosenRadius
+        ((GalilScaffoldPlace.stream (PalPeg.GalilTickFair.rightPlace s1)).take (ℓ+1))
+      ℓ / 2 ≤ 4 * (ℓ / 2 + 1 - radius) := by
+    by_cases hmissed : s.chain = .idle ∧ vq.search.mode = .missed
+    · exact PalPeg.RestartLowerRun.move_of_idle_missed centre place entry q first
+        (by intro hnil; rw [hnil] at hmle; simp at hmle; omega) hP hI hBoot hRun hm hr hCan
+        hmissed.1 hSearch hmissed.2
+    · exact hmove c₀ r₀ k c s vq z m hm1 hmle hI hBoot hRun hNoGuardS hm hr hc hPos hM hMis hSearch
+        hmissed hChain hGuard
   change ℓ / 2 ≤ 4*(ℓ / 2 + 1-radius) at hMove
   have hk : ℓ / 2 = rad := by rw [hLengthNat]; omega
   rw [hk] at hMove
