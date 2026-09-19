@@ -1,3 +1,45 @@
+## n247 — `obligation_cycleOracle` の地図（葉の塔は `hpres`（偽）の上に建っている）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracle` | 変化なし（地図のみ、定理は足していない）。下の表が一次情報（`grep "^theorem"` と署名の実読） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、n246 と同じ木）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
+### 消費者から見た形
+
+`obligation_cycleOracle entry q first : ∀ w, 0 < |w| → CycleOracleMC3 (PofC centreC placeC entry w) q first w`。
+`CycleOracleMC3 P q first raw := ∀ m c r, 1 ≤ m → m ≤ |raw| → InvLPS P q first raw c r → position r.right ≤ 2m−1 → CycleOutMC3 …`、
+`CycleOutMC3 := ReachAtC3（報告点 m に着く）∨ ∃ cT sT k L, StepsAll (SoundScanNR) k ⟨c,r⟩ ⟨cT,sT⟩ ∧ CostedRun ∧ InvLPS cT sT ∧ mu sT < mu r ∧ position sT.right ≤ 2m−1`。
+つまり「`InvLPS` から次の `InvLPS`（`mu` 減少）か報告点まで、機械の run を**構成**する」。
+
+### 既存の塔（`CloseoutOracleBridge.hor_of_H_oracle` ＋ `CloseoutOracle8.h_oracle_of_leaves7`）
+
+| 葉 | 現状の producer | 状態 |
+|---|---|---|
+| `hlift : InvL → InvLPS`（bridge） | `Inv` 枝は `replayStage_of_inv`、`InvScan` 枝は `hstage_of_scanBranch (hsc : H_stageScan)` | `H_stageScan` は**反証済み**（`InvScan` は radius に触れない）。再切り出し `InvScanS`（`CloseoutStageSupply`）／`InvSS`（`CloseoutInvScanS`） |
+| `hreadyB`（`ReadyIface` ＋ Φ at `InvLPC`） | `readyIface_readyPacedS` ＋ `readyPacedS_restarted`（`CloseoutReadyStage`） | 閉じそう（未接続） |
+| `hpresRepAt`（`HpresRepAt` at every `InvLPC`） | **なし**（`CloseoutOracle7` ヘッダが理由を明記） | producer ゼロ |
+| `hshape : StartShape` | `startShape'_of_decodes` は **`StartShape'`**（replay 中・`ReplayStageD` 付き） | `StartShape` は**偽**（CLAUDE.md §3b）。塔がこの形を要求する限り塔は使えない |
+| `hstage : ReplayStageInv` | **なし** | producer ゼロ |
+| `hended` / `hlastMatch` / `hlastMismatch` | `GalilLeafReport.hended_C`／`GalilOracleMC4.hlastMatch_C'`／`GalilLeafReport.hlastMismatch_C` | 全部 `hpres : SearchReady → searchEffect → SearchReady` を取る。**偽**（`CloseoutPresRefute.hpres_fails_at_zero_debt`: debt 0 で破れる）。`hlastMismatch_C` は加えて `LastMismatchReport`（producer なし） |
+| `hmismatch` | `GalilLeafDp.hmismatch_of_residues'` | 側入力 `hdp'`（`MismatchDp`）／`hbud`（`StageBudgetAt`）／`hfb`／`hpos`（producer 未確認） |
+| `hfound` / `hfoundBg` / `hfoundReplay`（`FoundRouteMC2`／`FoundInReplayRouteMC2`） | **なし** | producer ゼロ。found 経路そのもの |
+
+### 判断
+
+葉の塔は `hpres`（偽）の上に建っていて、`hshape` も偽の形。**塔を修理するより、`ReadyClosure`
+（`GalilReplaySpan.ReadyClosure`: `ready`／`seg`／`restart` の 3 場、`CloseoutPreload11.readyClosure_S2`
+が `PostRun` ＋ `RestartS2` から出す）の上で `InvLPS → 次の着地` を直接構成する。**
+一次部品: `restarted_next_found`（`GalilScaffoldTopReadyFound`）、`life_restarted`／`found_to_found`
+（`GalilScaffoldTopLifeRestart`／`FoundLoop`）、`fallback_restarted_All`
+（`GalilScaffoldTopFallbackRestartAll`）、`prep_segment_construct_of_found`、`SegReachedW`
+（`segment_of_invLP`）。次の一手は `hshape` の消費点（`CloseoutOracle5:249`、found-in-replay 経路）
+を読んで `StartShape'` で足りるかを機械で確認すること。
+
 ## n246 — **公理 3 → 2**: `obligation_shiftPalResiduesAlongRun` を証明して削除
 
 **公理への進捗**
