@@ -31,11 +31,13 @@ The canonical schedule restarts a broken chain first (`GalilTickFair.Canonical`,
 * `hmove` — the Galil move inequality that pays for a fallback, at a comparison state below
   the restart guard, **only while the chain is not idle** (`RestartLowerRun.move_of_idle`
   proves the idle branch: the stage history of the search in the middle of a stage, the DP
-  result after the final stage) **and the chain tick does not end in a caught-up first-round
-  watch** (in phase `4` a misprediction pays the move,
-  `RestartLowerRun.move_of_watch_mispredict`, and a correct prediction passes the shift guard,
-  `RestartLowerRun.shiftGuard_of_caughtUp`; below phase `4` the radius is below four
-  semiperiods, `RestartLowerRun.move_of_watch_short`).
+  result after the final stage) **and, in the first round of a chain (`periodOnly = false`),
+  only if the chain tick ends in a broken chain**.  The other first-round cases are proved:
+  a chain with work left (copying, walking back, catching up) is kept below four semiperiods
+  by the chain clock (`RestartLowerRun.move_of_working_chain`); a caught-up watch in phase `4`
+  either mispredicts and pays the move (`move_of_watch_mispredict`) or passes the shift guard
+  (`shiftGuard_of_caughtUp`); below phase `4` its radius is below four semiperiods
+  (`move_of_watch_short`).
 
 Fallback copy, fresh restart, and the entire replay segment are constructed here.
 -/
@@ -76,8 +78,7 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
         GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right) →
       searchEffect (PofC centre place entry w) false s vq →
       s.chain ≠ .idle →
-      (∀ w1 : GalilScaffoldChainWatch.State, z = .watch w1 → s.periodOnly = false →
-        zero w1.lag = false) →
+      (s.periodOnly = false → ∃ wb : GalilScaffoldChainWatch.State, z = .broken wb) →
       chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
         ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
         s.center s.radius s.chain z →
@@ -150,32 +151,31 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
     · exact PalPeg.RestartLowerRun.move_of_idle centre place entry q first
         (by intro hnil; rw [hnil] at hmle; simp at hmle; omega) hP hI hBoot hRun hm hr hCan
         hidle hSearch
-    · by_cases hcaughtUp : ∃ w1 : GalilScaffoldChainWatch.State, z = .watch w1 ∧
-          s.periodOnly = false ∧ zero w1.lag = true
-      · obtain ⟨w1, hz, hfirstRound, hzero⟩ := hcaughtUp
-        subst hz
-        have hnonempty : w ≠ [] := by
-          intro hnil; rw [hnil] at hmle; simp at hmle; omega
-        by_cases hphase : w1.machine.control.phase = 4
-        · by_cases hprediction :
-              GalilScaffoldChainConsume.symbol w1.machine.control.period.focus
-                = GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right)
-          · exact absurd (by
-              simpa [PofC, sharedC, galilShared] using
-                PalPeg.RestartLowerRun.shiftGuard_of_caughtUp centre place entry q first hP hI
-                  hRun hm hMis hSearch hChain hfirstRound hzero hphase hprediction) hGuard
-          · exact PalPeg.RestartLowerRun.move_of_watch_mispredict centre place entry q first
-              hnonempty hP hI hBoot hRun hm hr hCan hMis hSearch hChain hfirstRound hzero hphase
-              hprediction
-        · exact PalPeg.RestartLowerRun.move_of_watch_short centre place entry q first
-            hnonempty hP hI hBoot hRun hm hr hCan hChain hfirstRound hzero hphase
+    · have hnonempty : w ≠ [] := by
+        intro hnil; rw [hnil] at hmle; simp at hmle; omega
+      by_cases hfirstRound : s.periodOnly = false
+      · rcases PalPeg.RestartLowerRun.chainTick_cases centre place entry q first hP hI hRun hm
+            hChain hidle with ⟨wb, hbroken⟩ | hwork | ⟨w1, hz, hzero⟩
+        · exact hmove c₀ r₀ k c s vq z m hm1 hmle hI hBoot hRun hNoGuardS hm hr hc hPos hM hMis
+            hSearch hidle (fun _ => ⟨wb, hbroken⟩) hChain hGuard
+        · exact PalPeg.RestartLowerRun.move_of_working_chain centre place entry q first
+            hnonempty hP hI hBoot hRun hm hr hCan hChain hidle hfirstRound hwork
+        · subst hz
+          by_cases hphase : w1.machine.control.phase = 4
+          · by_cases hprediction :
+                GalilScaffoldChainConsume.symbol w1.machine.control.period.focus
+                  = GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right)
+            · exact absurd (by
+                simpa [PofC, sharedC, galilShared] using
+                  PalPeg.RestartLowerRun.shiftGuard_of_caughtUp centre place entry q first hP
+                    hI hRun hm hMis hSearch hChain hfirstRound hzero hphase hprediction) hGuard
+            · exact PalPeg.RestartLowerRun.move_of_watch_mispredict centre place entry q first
+                hnonempty hP hI hBoot hRun hm hr hCan hMis hSearch hChain hfirstRound hzero
+                hphase hprediction
+          · exact PalPeg.RestartLowerRun.move_of_watch_short centre place entry q first
+              hnonempty hP hI hBoot hRun hm hr hCan hChain hfirstRound hzero hphase
       · exact hmove c₀ r₀ k c s vq z m hm1 hmle hI hBoot hRun hNoGuardS hm hr hc hPos hM hMis
-          hSearch hidle
-          (fun w1 hz hfirstRound => by
-            cases hzero : zero w1.lag with
-            | false => rfl
-            | true => exact absurd ⟨w1, hz, hfirstRound, hzero⟩ hcaughtUp)
-          hChain hGuard
+          hSearch hidle (fun hfalse => absurd hfalse hfirstRound) hChain hGuard
   change ℓ / 2 ≤ 4*(ℓ / 2 + 1-radius) at hMove
   have hk : ℓ / 2 = rad := by rw [hLengthNat]; omega
   rw [hk] at hMove

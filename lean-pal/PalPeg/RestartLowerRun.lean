@@ -1090,4 +1090,131 @@ theorem move_of_watch_mispredict {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ 
 #print axioms move_of_watch_mispredict
 #print axioms shiftGuard_of_caughtUp
 
+open PalPeg.ChainClock in
+/-- **The fallback move inequality while a first-round chain still has work to do** (copying,
+walking back, or catching up), on a packed run whose origin is reached from boot.  The chain
+clock keeps the radius below four semiperiods, and the chain's payload together with `LowerAt`
+excludes every shorter semiperiod at the current radius. -/
+theorem move_of_working_chain {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : Control}
+    {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    (hboot : CloseoutCheckW.PackedFromBoot centre place entry q first raw ⟨c₀, r₀⟩)
+    {k : ℕ} {c : Control} {s : GalilVM} {vq : SearchVM} {z : ChainVM}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ ⟨c, s⟩)
+    (hm : c.mode = .scan) (hr : c.replaying = false) (hcan : canRight s.right)
+    (hchainAt : chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
+      ((PofC centre place entry raw).centre s) ((PofC centre place entry raw).place s)
+      s.center s.radius s.chain z)
+    (hnotIdle : s.chain ≠ .idle) (hfirstRound : s.periodOnly = false)
+    (hwork : 0 < chainWork z) :
+    let s1 := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+      (afterMismatch s ⟨left s.left,right s.right,z⟩ vq)
+    let ℓ := (value s.length).toNat
+    let radius := chosenRadius
+      ((GalilScaffoldPlace.stream (PalPeg.GalilTickFair.rightPlace s1)).take (ℓ+1))
+    ℓ / 2 ≤ 4 * (ℓ / 2 + 1 - radius) := by
+  obtain ⟨a, rest, rfl⟩ := List.exists_cons_of_ne_nil hraw
+  have hinvariant := minimalAcrossRestart_packed centre place entry q first hP hI
+    (lowerAt_of_packedFromBoot centre place entry q first hP hI hboot) hrun
+  have hwin : WindowRunPack (a :: rest) c s :=
+    (PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun).win hP
+  obtain ⟨-, hfield⟩ :=
+    PalPeg.SearchStageRun.stageAt_field_packed centre place entry q first hP hI hrun
+  obtain ⟨-, -, rad, hscan, hlen⟩ :=
+    PalPeg.CanonicalFallbackInput.counters centre place entry q first hI hrun hm hr
+  obtain ⟨R, hR, hright⟩ := hwin.radiusScan hm
+  have hrad : rad = R := by
+    have h1 : position s.right = position s.center + rad := hscan.rightPos
+    have h2 : position s.right = position s.center + R := hright
+    omega
+  subst hrad
+  -- the clock after the chain tick of the comparison
+  have hledgerSource := ledgerAt_packed centre place entry q first hP hI hrun (Or.inl hm)
+  simp only [shiftDebt, hm, show (Mode.scan = Mode.shift) = False from by simp,
+    if_false] at hledgerSource
+  have hclockPos : (1 : ℤ) ≤ (c.clock : ℤ) := by exact_mod_cast hfield.clock_pos
+  have hclockLe : (c.clock : ℤ) ≤ 2048 := by exact_mod_cast hfield.clock_le
+  have hclock := clock_chainAt (E := 2048 - (c.clock : ℤ)) (E' := 2048 - (c.clock : ℤ))
+    (R' := value s.radius) hchainAt hwin.coupled.block hledgerSource
+    (watch_unbroken_of_window hwin) rfl (fun hw => hinvariant.clock hm hfirstRound hw)
+    (fun hidle _ => absurd hidle hnotIdle) (by simp) ⟨by omega, by omega, by omega⟩ (by simp)
+    hwork
+  -- the payload of the chain after the tick
+  have hzNotIdle : z ≠ .idle := by
+    intro hz
+    rw [hz] at hwork
+    simp [chainWork] at hwork
+  have hsem : Sem (MovePayload (a :: rest) s) (a :: rest) (position s.center) z :=
+    sem_chainAt (hinvariant.firstRound hm (Or.inr hfirstRound))
+      (fun hidle _ => absurd hidle hnotIdle) hchainAt
+  obtain ⟨H, hperiod, -, hpayload⟩ := period_of_semWith hsem hzNotIdle
+  have hmove : MoveAbove (a :: rest) (position s.center) (value s.lower).toNat H := hpayload
+  have hbound : rad ≤ 4 * H := by
+    rw [← hperiod, hR.2] at hclock
+    omega
+  have hlow := no_lower_period_at_scan hinvariant.lowerAt hm (Or.inr hfirstRound) hscan hR
+  exact PalPeg.CanonicalFallbackInput.move_of_activeBound (c := c) (vq := vq) (z := z)
+    hscan hcan hlen (scan_radius_lt hscan)
+    (fun g hg0 hgh hfour => by
+      by_cases hle : g ≤ (value s.lower).toNat
+      · exact hlow g hg0 hle
+      · exact hmove rad (scan_radius_lt hscan) hscan.palindrome g (by omega) hgh hfour)
+    hbound rfl
+
+#print axioms move_of_working_chain
+
+open PalPeg.ChainClock in
+/-- What the chain tick of a mismatching comparison leaves behind a non-idle chain: a broken
+chain, a chain with work left, or a caught-up watch. -/
+theorem chainTick_cases {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    {k : ℕ} {c : Control} {s : GalilVM} {found : Bool} {answer : GalilScaffoldTape.Tape}
+    {z : ChainVM}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ ⟨c, s⟩)
+    (hm : c.mode = .scan)
+    (hchainAt : chainAt false found answer ((PofC centre place entry raw).centre s)
+      ((PofC centre place entry raw).place s) s.center s.radius s.chain z)
+    (hnotIdle : s.chain ≠ .idle) :
+    (∃ w, z = .broken w) ∨ 0 < chainWork z ∨
+      ∃ w1, z = .watch w1 ∧ zero w1.lag = true := by
+  have hwin : WindowRunPack raw c s :=
+    (PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun).win hP
+  obtain ⟨R, hR, -⟩ := hwin.radiusScan hm
+  have hledgerSource := ledgerAt_packed centre place entry q first hP hI hrun (Or.inl hm)
+  simp only [shiftDebt, hm, show (Mode.scan = Mode.shift) = False from by simp,
+    if_false] at hledgerSource
+  have hledger : ChainLedger 0 z :=
+    chainLedger_chainAt hchainAt ⟨hR.1, by rw [hR.2]; exact Int.natCast_nonneg _⟩
+      hwin.coupled.block hledgerSource
+  cases z with
+  | idle => exact absurd (idle_of_chainAt hchainAt) hnotIdle
+  | broken w => exact Or.inl ⟨w, rfl⟩
+  | copy t h p v lag margin ver =>
+    right; left
+    have hlag : 0 ≤ value lag := hledger.2.2.2
+    simp only [chainWork]
+    have hcells : 1 ≤ PalPeg.GalilShiftH.cells v := by unfold PalPeg.GalilShiftH.cells; omega
+    omega
+  | back v h lag margin ver =>
+    right; left
+    have hlag : 0 ≤ value lag := hledger.2.2.2
+    simp only [chainWork]
+    omega
+  | watch w1 =>
+    have hstep := chainStep_of_chainAt_watch hchainAt
+    have hunbroken1 := unbroken_of_step hstep (watch_unbroken_of_window hwin)
+    obtain ⟨hcanonical, hnonneg⟩ := (hledger hunbroken1).lag
+    cases hzero : zero w1.lag with
+    | true => exact Or.inr (Or.inr ⟨w1, rfl, hzero⟩)
+    | false =>
+      right; left
+      have hne : value w1.lag ≠ 0 := fun hvalue => by
+        have := (zero_iff _ hcanonical).mpr hvalue
+        rw [hzero] at this
+        cases this
+      simp only [chainWork]
+      omega
+
 end PalPeg.RestartLowerRun
