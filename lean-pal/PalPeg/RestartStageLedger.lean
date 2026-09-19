@@ -178,6 +178,7 @@ theorem canonical_dec_nonneg {x : Counter} (hcanonical : Canonical x)
 structure WatchLedger (shiftDebt : ℤ) (w : GalilScaffoldChainWatch.State) : Prop where
   marks : MarkLedger (periodLength w) shiftDebt w.machine.control
   balance : GalilScaffoldChainWatch.balance w = 4 * (periodLength w : ℤ)
+  margin : Canonical w.margin
   lag : Canonical w.lag ∧ 0 ≤ value w.lag
 
 theorem WatchLedger.consumed {shiftDebt : ℤ} {w : GalilScaffoldChainWatch.State}
@@ -186,11 +187,11 @@ theorem WatchLedger.consumed {shiftDebt : ℤ} {w : GalilScaffoldChainWatch.Stat
     (hbalance : GalilScaffoldChainWatch.balance
       ⟨GalilScaffoldChainVerifier.consume w.machine, lag', margin'⟩
         = GalilScaffoldChainWatch.balance w)
-    (hlag : Canonical lag' ∧ 0 ≤ value lag')
+    (hlag : Canonical lag' ∧ 0 ≤ value lag') (hmargin : Canonical margin')
     (hunbroken : (GalilScaffoldChainVerifier.consume w.machine).control.broken = false) :
     WatchLedger shiftDebt ⟨GalilScaffoldChainVerifier.consume w.machine, lag', margin'⟩ := by
   have hlength := periodLength_consume w.machine w.lag w.margin lag' margin' hblock
-  refine ⟨?_, ?_, hlag⟩
+  refine ⟨?_, ?_, hmargin, hlag⟩
   · rw [hlength]
     exact hledger.marks.consume _ hblock hunbroken
   · rw [hlength, hbalance]
@@ -205,7 +206,7 @@ theorem WatchLedger.internal {shiftDebt : ℤ} {w w' : GalilScaffoldChainWatch.S
   | take hp hg =>
     exact hledger.consumed hblock _ _
       (GalilScaffoldChainWatch.internal_balance (.take w hp hg))
-      (canonical_dec_nonneg hledger.lag.1 hp) hunbroken
+      (canonical_dec_nonneg hledger.lag.1 hp) hledger.margin hunbroken
 
 theorem WatchLedger.outer {shiftDebt : ℤ} {w w' : GalilScaffoldChainWatch.State}
     (hledger : WatchLedger shiftDebt w) (houter : GalilScaffoldChainWatch.Outer w true w')
@@ -215,18 +216,19 @@ theorem WatchLedger.outer {shiftDebt : ℤ} {w w' : GalilScaffoldChainWatch.Stat
   | queued hz =>
     refine ⟨hledger.marks,
       (GalilScaffoldChainWatch.outer_balance (.queued w hz)).trans hledger.balance,
-      inc_canonical _ hledger.lag.1, ?_⟩
+      inc_canonical _ hledger.margin, inc_canonical _ hledger.lag.1, ?_⟩
     show 0 ≤ value (inc w.lag)
     rw [inc_value]
     have := hledger.lag.2
     omega
   | immediate hz hg =>
     exact hledger.consumed hblock _ _
-      (GalilScaffoldChainWatch.outer_balance (.immediate w hz hg)) hledger.lag hunbroken
+      (GalilScaffoldChainWatch.outer_balance (.immediate w hz hg)) hledger.lag
+      (inc_canonical _ hledger.margin) hunbroken
 
 theorem WatchLedger.shiftOne {shiftDebt : ℤ} {w : GalilScaffoldChainWatch.State}
     (hledger : WatchLedger shiftDebt w) : WatchLedger (shiftDebt - 1) (chainShiftOne w) := by
-  refine ⟨hledger.marks.shiftOne, ?_, hledger.lag⟩
+  refine ⟨hledger.marks.shiftOne, ?_, dec_canonical _ hledger.margin, hledger.lag⟩
   have hbalance := hledger.balance
   simp only [GalilScaffoldChainWatch.balance] at hbalance
   show value (dec w.machine.control.distance) + value w.lag - value (dec w.margin)
@@ -239,7 +241,7 @@ theorem watchLedger_born {v : GalilScaffoldChainPeriod.Tape} {lag margin : Count
     {ver : GalilScaffoldInputHead.PlaceHead} (hblock : OnBlock v)
     (hfirst : GalilScaffoldChainPeriod.isFirst v.focus = true)
     (hbalance : value lag - value margin = 4 * ((GalilShiftH.cells v : ℤ) - 1))
-    (hlag : Canonical lag ∧ 0 ≤ value lag) :
+    (hmargin : Canonical margin) (hlag : Canonical lag ∧ 0 ≤ value lag) :
     WatchLedger 0 ⟨⟨ver, watchControl v⟩, lag, margin⟩ := by
   have hleft : v.left = [] := by
     cases hv : v.focus with
@@ -256,7 +258,7 @@ theorem watchLedger_born {v : GalilScaffoldChainPeriod.Tape} {lag margin : Count
   have hreset : value reset = 0 := rfl
   refine ⟨⟨rfl, fun _ => ⟨by simp [watchControl, GalilScaffoldChainPeriod.moveRight], ?_⟩,
     fun hc => absurd hc (by simp [watchControl]), Or.inl ⟨rfl, le_of_eq hreset⟩, ⟨0, ?_⟩,
-    Or.inl rfl, Or.inl rfl, Or.inl rfl⟩, ?_, hlag⟩
+    Or.inl rfl, Or.inl rfl, Or.inl rfl⟩, ?_, hmargin, hlag⟩
   · simp [watchControl, GalilScaffoldChainPeriod.moveRight, hreset]
   · simp [watchControl, hreset]
   · simp only [GalilScaffoldChainWatch.balance, watchControl, periodLength,
@@ -264,6 +266,20 @@ theorem watchLedger_born {v : GalilScaffoldChainPeriod.Tape} {lag margin : Count
       hreset] at hbalance ⊢
     push_cast at hbalance ⊢
     linarith
+
+/-- A canonical counter with a nonnegative value is not negative. -/
+theorem not_negative_of_nonneg {x : Counter} (hcanonical : Canonical x) (hnonneg : 0 ≤ value x) :
+    negative x = false := by
+  rcases x with ⟨pos, neg⟩
+  rcases hcanonical with hpos | hneg
+  · simp only at hpos
+    subst hpos
+    cases neg with
+    | nil => rfl
+    | cons a rest => simp [value] at hnonneg; omega
+  · simp only at hneg
+    subst hneg
+    rfl
 
 /-- `negative = false` means the negative stack is empty. -/
 theorem value_nonneg_of_not_negative {x : Counter} (hnegative : negative x = false) :
@@ -392,10 +408,10 @@ copied so far; an unbroken watch carries `WatchLedger`. -/
 def ChainLedger (shiftDebt : ℤ) : ChainVM → Prop
   | .copy _ _ _ v lag margin _ =>
       value lag - value margin = 4 * ((GalilShiftH.cells v : ℤ) - 1) ∧
-        Canonical lag ∧ 0 ≤ value lag
+        Canonical margin ∧ Canonical lag ∧ 0 ≤ value lag
   | .back v _ lag margin _ =>
       value lag - value margin = 4 * ((GalilShiftH.cells v : ℤ) - 1) ∧
-        Canonical lag ∧ 0 ≤ value lag
+        Canonical margin ∧ Canonical lag ∧ 0 ≤ value lag
   | .watch w => w.machine.control.broken = false → WatchLedger shiftDebt w
   | _ => True
 
@@ -406,19 +422,20 @@ theorem chainLedger_step {x y : ChainVM} (hstep : ChainStep x y) (hblock : Block
   | brokenIdle => trivial
   | watchBreak => trivial
   | copyBit t h p v lag margin ver a one legal present =>
-    obtain ⟨hbalance, hlag⟩ := hledger
-    refine ⟨?_, hlag⟩
+    obtain ⟨hbalance, hmargin, hlag⟩ := hledger
+    refine ⟨?_, dec_canonical _ (dec_canonical _ (dec_canonical _ (dec_canonical _ hmargin))),
+      hlag⟩
     rw [GalilShiftH.cells_put v a hblock.1]
     simp only [GalilScaffoldChainCredits.decFour, dec_value]
     push_cast
     linarith
   | copyEnd => exact hledger
   | backStep v h lag margin ver hf =>
-    obtain ⟨hbalance, hlag⟩ := hledger
-    exact ⟨by rw [GalilShiftH.cells_moveLeft]; exact hbalance, hlag⟩
+    obtain ⟨hbalance, hmargin, hlag⟩ := hledger
+    exact ⟨by rw [GalilShiftH.cells_moveLeft]; exact hbalance, hmargin, hlag⟩
   | backDone v h lag margin ver hf =>
-    obtain ⟨hbalance, hlag⟩ := hledger
-    exact fun _ => watchLedger_born hblock hf hbalance hlag
+    obtain ⟨hbalance, hmargin, hlag⟩ := hledger
+    exact fun _ => watchLedger_born hblock hf hbalance hmargin hlag
   | watchStep w w' hinternal =>
     intro hunbroken
     have hbw : OnBlock w.machine.control.period := hblock
@@ -433,13 +450,13 @@ theorem chainLedger_matched {y z : ChainVM} (hmatched : ChainMatched y z) (hbloc
   cases hmatched with
   | idle => trivial
   | copy =>
-    obtain ⟨hbalance, hcanonical, hnonneg⟩ := hledger
-    refine ⟨?_, inc_canonical _ hcanonical, ?_⟩
+    obtain ⟨hbalance, hmargin, hcanonical, hnonneg⟩ := hledger
+    refine ⟨?_, inc_canonical _ hmargin, inc_canonical _ hcanonical, ?_⟩
     · simp only [inc_value]; linarith
     · rw [inc_value]; omega
   | back =>
-    obtain ⟨hbalance, hcanonical, hnonneg⟩ := hledger
-    refine ⟨?_, inc_canonical _ hcanonical, ?_⟩
+    obtain ⟨hbalance, hmargin, hcanonical, hnonneg⟩ := hledger
+    refine ⟨?_, inc_canonical _ hmargin, inc_canonical _ hcanonical, ?_⟩
     · simp only [inc_value]; linarith
     · rw [inc_value]; omega
   | breaks => trivial
@@ -457,7 +474,7 @@ theorem chainLedger_chainStart (answer : GalilScaffoldTape.Tape) (c : Fin 3)
     (walker : GalilScaffoldPlace.Place) (ver : GalilScaffoldInputHead.PlaceHead)
     {radius : Counter} (hradius : Canonical radius ∧ 0 ≤ value radius) :
     ChainLedger 0 (chainStart answer c walker ver radius) := by
-  refine ⟨?_, hradius⟩
+  refine ⟨?_, hradius.1, hradius⟩
   rw [GalilShiftH.cells_start]
   simp
 

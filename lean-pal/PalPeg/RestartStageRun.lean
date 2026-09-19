@@ -51,9 +51,10 @@ theorem chainLedger_beginShift {w : GalilScaffoldChainWatch.State}
         = value w.machine.control.distance + 1 := hdistance
     rw [hd, inc_value]
     ring
-  have hconsumed := hw.consumed hblock w.lag (inc w.margin) hbalance hw.lag hunbroken
+  have hconsumed := hw.consumed hblock w.lag (inc w.margin) hbalance hw.lag
+    (inc_canonical _ hw.margin) hunbroken
   have hlength := periodLength_consume w.machine w.lag w.margin w.lag (inc w.margin) hblock
-  refine ⟨?_, hconsumed.balance, hconsumed.lag⟩
+  refine ⟨?_, hconsumed.balance, hconsumed.margin, hconsumed.lag⟩
   have hlength' : periodLength (GalilScaffoldChainWatch.immediate w) = periodLength w := hlength
   have hmarks : MarkLedger (periodLength (GalilScaffoldChainWatch.immediate w))
       ((periodLength (GalilScaffoldChainWatch.immediate w) : ℕ) : ℤ)
