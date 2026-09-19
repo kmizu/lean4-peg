@@ -380,4 +380,110 @@ theorem stageHistory_step_offRun {p : GalilScaffoldPlace.Place} {lower clock : �
         have hH : (0 : ℤ) ≤ (H : ℤ) := Int.natCast_nonneg H
         linarith
 
+/-! ## The run mode: a completed failed stage becomes the window -/
+
+/-- The DP calls leave `wait` only with a nonzero debt (a zero debt enters `double`). -/
+theorem calls_wait_nonzero {s t : GalilScaffoldSearchFinish.State}
+    {x y : GalilScaffoldControl.Machine 12} {bs : List Bool}
+    (hcalls : SafeCalls s x bs t y) (hsource : s.mode = .wait → zero s.debt = false) :
+    t.mode = .wait → zero t.debt = false := by
+  induction hcalls with
+  | nil => exact hsource
+  | cons s x y z b bs t ht hsafe hr ih =>
+    apply ih
+    by_cases hm : s.mode = .run
+    · cases b <;> cases hd : y.done <;> by_cases hp : y.config.pc = 346 <;>
+        cases hf : s.finalStage <;> cases hz : zero s.debt <;>
+        simp_all [GalilScaffoldSearchFinish.finish]
+    · simpa [GalilScaffoldSearchFinish.finish, hm] using hsource
+
+/-- A stage that has left `run` without a find has no candidate in its window. -/
+theorem noCandidate_of_failed {p : GalilScaffoldPlace.Place} {lower span : ℕ}
+    {s0 : GalilScaffoldSearchFinish.State} {bs : List Bool} {v : SearchVM}
+    (hs0 : s0.mode = .run)
+    (hreached : DpReached ((GalilScaffoldPlace.stream p).take (span+1)) lower s0 bs v.search v.dp)
+    (hnotRun : v.search.mode ≠ .run) (hnotFound : v.search.mode ≠ .found) :
+    NoCandidate p lower span := by
+  have hresult := result_of_reached_terminal hs0 hreached hnotRun
+  have hlink := (safe_quanta_terminal_link hreached (Or.inl hs0)).resolve_left hnotRun
+  rcases hresult with hfound | hfailed
+  · obtain ⟨_, _, _, _, h346, _, _⟩ := hfound
+    exact absurd (hlink.1.mpr h346) hnotFound
+  · exact fun h => hfailed.2 h (Nat.zero_le _)
+
+/-- One search event in `run`. -/
+theorem stageHistory_step_run {p : GalilScaffoldPlace.Place} {lower clock : ℕ} {R : ℤ}
+    {a : Bool} {v v' : SearchVM}
+    (hbudget : BudgetInv p lower clock v) (hhistory : StageHistory p lower R v)
+    (hm : v.search.mode = .run)
+    (hquanta : SafeQuanta v.search v.dp [a] v'.search v'.dp) :
+    StageHistory p lower (R + if a then 1 else 0) v' := by
+  have hactive : Active v.search.mode := by simp [Active, hm]
+  have hbalance := hhistory.balance hactive
+  simp only [hm, reduceCtorEq, if_false] at hbalance
+  obtain ⟨H, hnone, hbound⟩ := hhistory.window hactive
+  simp only [WindowBound, hm] at hbound
+  obtain ⟨span, s0, bs, hspan, hs0, -, hreached, hfund⟩ := hbudget.running hm
+  have hspanValue : value v.search.span = (span : ℤ) := by rw [hspan, ofNat_value]
+  obtain ⟨u, z, hcalls, htarget⟩ := PalPeg.CloseoutPreload34.safeQuanta_single hquanta
+  have hudebt : u.debt = v.search.debt := PalPeg.CloseoutPreload13.safe_calls_debt hcalls
+  have hdebt' : value v'.search.debt = value v.search.debt - (if a then 1 else 0) := by
+    rw [htarget, advance_debt, hudebt]
+  have hdebtNonneg : 0 ≤ value v.search.debt := by
+    have hlength := running_length_lt hs0 hreached hm
+    have hclock := hbudget.clock_le
+    unfold credit at hfund
+    omega
+  have hframe := (safe_quanta_frame hquanta).2
+  have hreached' := dpReached_step hreached hquanta
+  rcases safe_quanta_exit hquanta (Or.inl hm) with h | h | h | h | h
+  · have hspan' : v'.search.span = v.search.span := by
+      simpa [stageSpan, hm, h] using hframe
+    apply stageHistory_of_steady (Or.inr (Or.inr (Or.inr (Or.inr h))))
+    · rw [hdebt', hspan']; linarith
+    · exact ⟨H, hnone, by rw [hspan']; exact hbound⟩
+  · exact stageHistory_of_inactive (by simp [Active, h]) (by simp [h])
+  · exact stageHistory_of_inactive (by simp [Active, h]) (by simp [h])
+  · have hspan' : v'.search.span = v.search.span := by
+      simpa [stageSpan, hm, h] using hframe
+    have hfailed : NoCandidate p lower span :=
+      noCandidate_of_failed hs0 hreached' (by simp [h]) (by simp [h])
+    have huMode : u.mode = .wait := by rw [htarget, advance_mode] at h; exact h
+    have huZero : zero u.debt = false :=
+      calls_wait_nonzero hcalls (fun hw => by rw [hm] at hw; cases hw) huMode
+    have hdebtPos : 1 ≤ value v.search.debt := by
+      have hne : value v.search.debt ≠ 0 := fun hz => by
+        have := (zero_iff _ hbudget.debt_canonical).mpr hz
+        rw [← hudebt, huZero] at this
+        cases this
+      omega
+    apply stageHistory_of_wait h
+    · rw [hdebt', hspan']; linarith
+    · rw [hdebt']; cases a <;> simp <;> omega
+    · exact ⟨span, hfailed, by rw [hspan', hspanValue]⟩
+  · obtain ⟨hreset, hquarter⟩ := double_reset_of_quanta hquanta hm h
+    have hwork := double_work_of_quanta hquanta hm h
+    have hfailed : NoCandidate p lower span :=
+      noCandidate_of_failed hs0 hreached' (by simp [h]) (by simp [h])
+    have hresetValue : value v'.search.span = 0 := by rw [hreset]; rfl
+    have hquarterValue : ((v'.search.quarter.val : ℕ) : ℤ) = 0 := by rw [hquarter]; rfl
+    apply stageHistory_of_double h
+    · rw [hdebt', hresetValue, hwork, hquarterValue]
+      linarith
+    · refine ⟨span, hfailed, ?_⟩
+      rw [hresetValue, hwork, hspanValue]
+      linarith
+
+/-- **One search event keeps the stage history**, the radius growing by one at a match. -/
+theorem stageHistory_step {p : GalilScaffoldPlace.Place} {lower clock : ℕ} {R : ℤ}
+    {a : Bool} {v v' : SearchVM}
+    (hbudget : BudgetInv p lower clock v) (hhistory : StageHistory p lower R v)
+    (hstep : searchStep p a v v') :
+    StageHistory p lower (R + if a then 1 else 0) v' := by
+  by_cases hm : v.search.mode = .run
+  · have hquanta := hstep
+    simp only [searchStep, hm] at hquanta
+    exact stageHistory_step_run hbudget hhistory hm hquanta.1
+  · exact stageHistory_step_offRun hbudget hhistory hm hstep
+
 end PalPeg.SearchStageHistory
