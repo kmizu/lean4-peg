@@ -41,7 +41,7 @@ theorem invLPS_init (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaff
         (SoundScanNR (a :: rest)) 1
         ⟨initial 2048, GalilBootVM.initVM0 (a :: rest)⟩ ⟨c1, t⟩ ∧
       InvLPS (PofC centre place entry (a :: rest)) q first (a :: rest) c1 t ∧
-      position t.right = 1 := by
+      position t.right = 1 ∧ Refreshed (PofC centre place entry (a :: rest)) q first ⟨c1, t⟩ := by
   obtain ⟨t, ht, hR, hpos, hRt, hrem, hrp, hS⟩ :=
     init_restarted_span (onLetterVM (a :: rest)) leftFirstVM shiftGuardVM beginShiftVM'
       beginFallbackVM' (restartVM entry) centre place entry q first 2048 (initial 2048) rfl
@@ -66,11 +66,19 @@ theorem invLPS_init (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaff
           (GalilBootVM.initVM0_shiftIdle _))
   have hIP : InvLP (a :: rest) {(initial 2048) with mode := .scan, output := true} t :=
     ⟨invL_of_run hst (invS_of_inv hI), entryCounters_of_restarted hR hS⟩
+  -- the boot landing has radius `0`: the left head sits on the first letter, so the
+  -- `init` tick's `output := true` is a refreshed flag
+  have hf : Refreshed (PofC centre place entry (a :: rest)) q first
+      ⟨{(initial 2048) with mode := .scan, output := true}, t⟩ := by
+    refine ⟨true, fun _ => ?_, fun _ => rfl⟩
+    have hleft := hR.2.2.2.1.leftPos
+    show true = true ↔ position t.left = 1
+    exact ⟨fun _ => by omega, fun _ => rfl⟩
   exact ⟨_, t, hst,
     ⟨invLPC_of_boot centre place entry q first 2048 (stepsAll_steps hst) hIP
       (centreRep_of_restarted hR),
      replayStage_of_inv hI⟩,
-    by rw [hRt, hpos]⟩
+    by rw [hRt, hpos], hf⟩
 
 #print axioms invLPS_init
 

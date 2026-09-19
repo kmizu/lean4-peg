@@ -109,7 +109,7 @@ theorem h_bootIMG2S_of_bootIPack
     (hb : BootIPack centre place entry q first) :
     H_bootIMG2S centre place entry q first := by
   intro a rest
-  obtain ⟨c1, t, hsteps, hI, hpos⟩ := invLPS_init centre place entry q first a rest
+  obtain ⟨c1, t, hsteps, hI, hpos, -⟩ := invLPS_init centre place entry q first a rest
   obtain ⟨hp0, hp1⟩ := hb a rest
   obtain ⟨g, hg0, hg1, htr⟩ := stepsAll_fn hsteps
   have hstI : StepsI centre place entry q first (a :: rest) 1

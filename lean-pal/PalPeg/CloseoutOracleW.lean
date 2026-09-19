@@ -217,12 +217,12 @@ theorem packRunR_MW {w : List (Fin 2)}
 
 
 /-- **`H_bootIMW` from `BootIPack`.** -/
-theorem h_bootIMW_of_bootIPack
+theorem h_bootRefreshedIMW_of_bootIPack
     (hsl : ∀ w : List (Fin 2), H_shiftLocalG centre place entry q first w)
     (hb : BootIPack centre place entry q first) :
-    H_bootIMW centre place entry q first := by
+    PalPeg.CloseoutCheckW.H_bootRefreshedIMW centre place entry q first := by
   intro a rest
-  obtain ⟨c1, t, hsteps, hI, hpos⟩ := invLPS_init centre place entry q first a rest
+  obtain ⟨c1, t, hsteps, hI, hpos, hf⟩ := invLPS_init centre place entry q first a rest
   obtain ⟨hp0, hp1⟩ := hb a rest
   obtain ⟨g, hg0, hg1, htr⟩ := stepsAll_fn hsteps
   have hstI : StepsI centre place entry q first (a :: rest) 1
@@ -236,7 +236,7 @@ theorem h_bootIMW_of_bootIPack
     (stepsIM_of_stepsIO centre place entry q first
       (stepsIO_of_stepsI centre place entry q first hstI))
   obtain ⟨g2, hg20, hg21, htr2, hp2⟩ := hstG
-  refine ⟨c1, t, ⟨g2, hg20, hg21, htr2, fun i hi => ⟨(hp2 i hi).pack, ?_, ?_⟩⟩, hI, hpos⟩
+  refine ⟨c1, t, ⟨g2, hg20, hg21, htr2, fun i hi => ⟨(hp2 i hi).pack, ?_, ?_⟩⟩, ⟨hI, hf⟩, hpos⟩
   · cases i with
     | zero => rw [hg20]; exact lpackM2_boot (a :: rest)
     | succ n =>
@@ -252,6 +252,14 @@ theorem h_bootIMW_of_bootIPack
       | zero => rw [hg21]; exact fun _ => PalPeg.WindowPack.windowRunPack_of_invLPC hI.1
       | succ n => omega
 
+
+theorem h_bootIMW_of_bootIPack
+    (hsl : ∀ w : List (Fin 2), H_shiftLocalG centre place entry q first w)
+    (hb : BootIPack centre place entry q first) :
+    H_bootIMW centre place entry q first := by
+  intro a rest
+  obtain ⟨c1, t, hst, ⟨hI, -⟩, hpos⟩ := h_bootRefreshedIMW_of_bootIPack centre place entry q first hsl hb a rest
+  exact ⟨c1, t, hst, hI, hpos⟩
 
 /-- **`needL'` over `PreTraceIMW`.** -/
 theorem needIMW'_le_W {w : List (Fin 2)} (hw : 0 < w.length)

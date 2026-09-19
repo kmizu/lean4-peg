@@ -355,30 +355,38 @@ state of the packed run out of it. -/
 
 /-- A non-replaying scan state on a packed sound run out of an `InvLPS` origin. -/
 def ScanOnPackedRunFromInvLPS (w : List (Fin 2)) (c : Control) (r : GalilVM) : Prop :=
-  ScanNR ⟨c, r⟩ ∧ ∃ (c₀ : Control) (r₀ : GalilVM) (j : ℕ),
+  ScanNR ⟨c, r⟩ ∧ Refreshed (PofC centre place entry w) q first ⟨c, r⟩ ∧
+  ∃ (c₀ : Control) (r₀ : GalilVM) (j : ℕ),
     InvLPS (PofC centre place entry w) q first w c₀ r₀ ∧
     StepsIMW centre place entry q first w j ⟨c₀, r₀⟩ ⟨c, r⟩
 
 /-- An `InvLPS` state carrying its pack is on the packed run out of itself. -/
 theorem scanOnPackedRunFromInvLPS_of_invLPS {w : List (Fin 2)} {c : Control} {r : GalilVM}
     (hI : InvLPS (PofC centre place entry w) q first w c r)
+    (hf : Refreshed (PofC centre place entry w) q first ⟨c, r⟩)
     (hp : IPackMW centre place entry q first w ⟨c, r⟩) :
     ScanOnPackedRunFromInvLPS centre place entry q first w c r := by
   have hmode := invS_mode hI.1.1.1.1.1
-  refine ⟨⟨hmode.1, hmode.2⟩, c, r, 0, hI, fun _ => ⟨c, r⟩, rfl, rfl, ?_, fun _ _ => hp⟩
+  refine ⟨⟨hmode.1, hmode.2⟩, hf, c, r, 0, hI, fun _ => ⟨c, r⟩, rfl, rfl, ?_, fun _ _ => hp⟩
   exact ⟨fun i hi => absurd hi (Nat.not_lt_zero _), fun _ _ _ _ => hI.1.1.1.1.2⟩
 
-/-- **The pre-loaded trace from the run-shaped oracle**, with the boot landing supplied
-exactly as before (`H_bootIMW`). -/
-theorem preTraceOnPackedRun_exists (hboot : H_bootIMW centre place entry q first)
+/-- The boot landing as `CloseoutOracleW` produces it: an `InvLPS` state whose output was
+just refreshed by the `init` tick. -/
+def H_bootRefreshedIMW : Prop :=
+  H_bootOn centre place entry q first
+    (fun w c r => InvLPS (PofC centre place entry w) q first w c r ∧
+      Refreshed (PofC centre place entry w) q first ⟨c, r⟩)
+
+/-- **The pre-loaded trace from the run-shaped oracle.** -/
+theorem preTraceOnPackedRun_exists (hboot : H_bootRefreshedIMW centre place entry q first)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleOn centre place entry q first (ScanOnPackedRunFromInvLPS centre place entry q first) w)
     (w : List (Fin 2)) (hw : 0 < w.length) :
     ∃ st Tc, PreTraceIMW centre place entry q first w st Tc :=
   preTraceOn_exists centre place entry q first _
     (fun a rest => by
-      obtain ⟨c1, t, hst, hI, hpos⟩ := hboot a rest
-      exact ⟨c1, t, hst, scanOnPackedRunFromInvLPS_of_invLPS centre place entry q first hI
+      obtain ⟨c1, t, hst, ⟨hI, hf⟩, hpos⟩ := hboot a rest
+      exact ⟨c1, t, hst, scanOnPackedRunFromInvLPS_of_invLPS centre place entry q first hI hf
         (ipackMW_last_of_stepsIMW centre place entry q first hst), hpos⟩)
     hor w hw
 

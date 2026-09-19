@@ -223,7 +223,7 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
     RecognizedByTotalPEG PAL :=
   given_preTraceIMW entry q first
     (fun w hw => PalPeg.CloseoutCheckW.preTraceOnPackedRun_exists centreC placeC entry q first
-      (h_bootIMW_of_bootIPack centreC placeC entry q first
+      (h_bootRefreshedIMW_of_bootIPack centreC placeC entry q first
         (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
         (bootIPack_of_parts centreC placeC entry q first h_lrepC
           (CloseoutPackRun6.h_bootShift centreC placeC entry q first)
