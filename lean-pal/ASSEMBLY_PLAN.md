@@ -1,3 +1,28 @@
+## n271 — 葉 `hshiftPeriodMinimal` を証明して `OracleReady` に接続（producer の葉は 2 → 1）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉が `hshiftPeriodMinimal`／`hmove` の 2 本から **`hmove` の 1 本**になった（`hshiftPeriodMinimal` は `RestartLowerRun.scanMinimal_packed` → `CanonicalChainMinimal.shiftPeriodMinimal_packed` が証明し、定理の仮説から外して内部で供給） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。`cycleOracleOn_of_readyLeaves` と `scanMinimal_packed` は標準 3 本のみ。
+
+**葉の量化範囲を直した（過剰量化の疑い、9 例目）**: 葉 `hshiftPeriodMinimal` は任意の `InvLPS` origin に量化されていたが、`InvLPS` の `ReplayStage` は「`Restarted r Rad last` から来た」としか言わず、`lower = last > 0` の origin では `≤ last` の周期を排除する履歴が run の外にある。その形の葉は偽の疑いが濃い（機械検査した反証は無い）。公理の guard `ScanOnPackedRunFromInvLPS` は元から `PackedFromBoot ⟨c₀,r₀⟩` を持っているので、`OracleRun.cycleOracleOn_of_leaves`／`_of_fourLeaves` の shift 葉にそれを渡すだけで済んだ（公理の文は不変）。
+
+**証明の経路**
+
+* `CanonicalSearchProgram.LowerExcluded raw C lower`（n270 後に追加）: 再始動が入れる下界 `last` の意味。`RestartLower.lowerExcluded_at_break` が lag ゼロ break で出す（Fine–Wilf `no_period_across_break`＋旧 chain の最小周期＋break の 1 箇所不一致＋mark 台帳）。
+* `RestartStageRun.BrokenStage` に guard 状態の追加 payload `Extra : ℕ → Watch.State → Prop`（centre 位置キー）を持たせ、`brokenStage_tick` の場合分けを再利用（コピペなし）。`restartStage` 用は `Extra := fun _ _ => True`。
+* `RestartLowerRun.MinimalAcrossRestart`（run 不変量）: `ModeMinimal (fun _ _ => True)` ∧ `LowerAt`（scan・chain idle のとき `value lower = L → LowerExcluded raw C L`）∧ `BrokenStage (LastExcluded raw)`。3 つは相互依存（誕生は `LowerAt`、restart 時の `LowerAt` は `BrokenStage`、break 時の payload は `ScanMinimal`）なので 1 本の帰納 `minimalAcrossRestart_packed`。
+* origin: `lowerAt_of_packedFromBoot`。boot からの packed run の 1 tick 目を `CloseoutStageBoot.invLPS_init` の着地と `GalilTickFair.tick_canonical_unique` で同定し（`lower = reset`）、そこから origin まで `minimalAcrossRestart_packed` を走らせる。
+* 最小周期スタック（`Sem`／`WatchMinimal`／`ScanMinimal`／`ModeMinimal`／`BirthMinimal`）は payload `Move` でパラメータ化済み。`birthMinimals_packed` は `lower = reset` の代わりに `LowerExcluded` を取り、`MoveMinimal` は `lower = reset` のときだけ返す。`shiftPeriodMinimal_packed` は scan 状態の `ScanMinimal ∧ BirthMinimal` を入力に取る。`modeMinimal_tick_packed` を切り出して `budgetMinimal_tick` と共有。参照ゼロだった `birthFutureMinimal_packed` は削除。
+
+**新規モジュール**（`OracleReady` から import。sorry なし）: `PalPeg/PeriodAcrossBreak.lean`、`PalPeg/LowerExcludedAtBreak.lean`、`PalPeg/RestartLower.lean`、`PalPeg/RestartLowerRun.lean`。
+
+**未完の部分**: producer の残り葉は `hmove`（Galil の移動不等式、restart guard の下の比較不一致状態）。一次情報で分かったこと: idle＋`missed` 分岐の消費者 `CanonicalSearchHistory.dpPack_of_idle_missed_packed` は「**現在の半径 `Rad`** の span で `δ ≤ lower` の周期が無い」を要る。今の `LowerExcluded` は `k ≥ 4(lower+1)` の span しか言わないので足りない。break を含む span すべて（`k ≥ 再始動時の半径`）に強めた形が要る（`no_period_across_break` の前提 `δ + h ≤ d` は `last_bounds` が既に出している。強めた形の証明と run への載せ替えは未着手）。active chain 分岐は `CanonicalFallbackInput.move_of_activePeriodBreak`（`Rad ≤ 4h` 不要、周期＋最小性＋break）が既にあり、入力は `RestartLower.spanPeriod_of_window`／`scanMinimal_watch_no_short` と同じ材料。`hmove` も任意 origin に量化されているので `PackedFromBoot` を通す必要がある。`obligation_localRealization` は未着手。
+
 ## n270 — 葉 `hrestartStage` を証明して `OracleReady` に接続（producer の葉は 3 → 2）
 
 **公理への進捗**
