@@ -40,7 +40,7 @@ CLAUDE.md の「ファイル自身の docstring も一次情報ではない」�
 | axiom | 内容 | 経路と残り |
 |---|---|---|
 | `obligation_shiftPalResiduesAlongRun` / `obligation_shiftPalResiduesAlongTrace` | `ShiftPal` の残差 = **不一致比較直前の誕生 anchor 窓**（run 形／trace 形、後者は前者の派生） | n238。`ShiftEntryFromLanding.freshShiftLedger_of_chainW_scan` → `shiftPal_of_freshShiftLedger` で `ShiftPal` 自体は放電済み。残るのは run 層が不一致比較の直前で窓（`WatchWindow`、誕生中心 anchor）・`ScanInvariant`・`canRight`・誕生中心の記号・`2h ≤ R` を持つこと |
-| `obligation_cycleOracle` | `CycleOracleMC3` | `CloseoutOracleBridge.hor_of_H_oracle` ＋ `CloseoutOracle8.h_oracle_of_leaves7`。11 葉（CLAUDE.md §3） |
+| `obligation_cycleOracleOnPackedRun` | `CycleOracleOn (ScanOnPackedRunFromInvLPS)`（run 形の cycle oracle） | n252 で `CycleOracleMC3` から切り直し。producer はこれから: `OracleRun` の tick 存在 API（`scan_tick_exists_PofC`／`phase_tick_exists_PofC`）＋ `packRunR_MW_marksFree`（pack は run から無償）＋ 比較 1 回ごとの `mu` 減少 |
 | `obligation_localRealization` | `H_realizeLIMW'`（局所実現） | **producer なし**（5 機械の鎖の 2→3 段）。難易度は宣言しない——`LagCan` / `CentreRep` と同じ「切り方の誤り」の可能性が高い |
 
 ### 公理としては消えた 6 本（経路メモは残す）
@@ -121,10 +121,16 @@ theorem obligation_shiftPalAlongTrace (entry q : ℕ) (first : Fin 9) :
   exact PalPeg.WindowPack.shiftPal_of_windowRunPack centreC placeC entry q first hip.pack
     (hip.win (PalPeg.GalilFinalAssembly2.decodesC entry w)) hCanRight ⟨hm, hr⟩
 
-/-- **(OBLIGATION)** `CycleOracleMC3`。 -/
-axiom obligation_cycleOracle (entry q : ℕ) (first : Fin 9) :
+/-- **(OBLIGATION)** run 形の cycle oracle。`InvLPS` 起点からの packed run 上の非 replay な
+scan 状態（`CloseoutCheckW.ScanOnPackedRunFromInvLPS`）から、報告点 `2m−1` に達するか、`mu` を
+減らして同じ形の状態に着地する。旧 `obligation_cycleOracle`（`CycleOracleMC3`）は着地に
+`InvLPS`（chain が idle）を要求していたが、chain は fallback か broken からの restart でしか idle に
+戻らない（`ScaffoldGalil.scala:233,320`）ので、chain が生き続ける入力（`aaaa…`）では次の報告点までに
+満たせない（n252、機械検査済みの反証は無い）。 -/
+axiom obligation_cycleOracleOnPackedRun (entry q : ℕ) (first : Fin 9) (h4 : first ≠ 4) :
     ∀ w : List (Fin 2), 0 < w.length →
-      CycleOracleMC3 (PofC centreC placeC entry w) q first w
+      PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
+        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first) w
 
 /-- **(OBLIGATION)** 局所実現 `H_realizeLIMW'`。producer が無い。 -/
 axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
@@ -210,8 +216,7 @@ n96 の「`rewindMargin` を `CentreMargin` 1 葉に縮めた」は数だけの�
 `#print axioms unconditional` が標準 3 公理だけになったら証明完了。 -/
 theorem unconditional : RecognizedByTotalPEG PAL :=
   given_scanLandingObligations 0 0 0
-    (by decide)
-    (obligation_cycleOracle 0 0 0)
+    (obligation_cycleOracleOnPackedRun 0 0 0 (by decide))
     (obligation_localRealization 0 0 0)
     (fun w st Tc hPreTraceIMW =>
       PalPeg.BranchSupply.scanLandingObligations_alongTrace_of_matchRest centreC placeC 0 0 0

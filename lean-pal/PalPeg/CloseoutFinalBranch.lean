@@ -209,9 +209,9 @@ theorem given_landingObligationsSansRadiusLedger (entry q : ℕ) (first : Fin 9)
 
 残る義務は `ScanLandingObligationsAt` の **3 場**（`bg` / `matchLand` / `entryLand`）と `hver`。 -/
 theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
-    (h4 : first ≠ 4)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
-      CycleOracleMC3 (PofC centreC placeC entry w) q first w)
+      PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
+        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first) w)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hres : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
@@ -221,17 +221,14 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc) :
     RecognizedByTotalPEG PAL :=
-  given_needBound entry q first
-    (h_bootIMW_of_bootIPack centreC placeC entry q first
-      (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
-      (bootIPack_of_parts centreC placeC entry q first h_lrepC
-        (CloseoutPackRun6.h_bootShift centreC placeC entry q first)
-        (CloseoutPackRun6.h_landShift centreC placeC entry q first)))
-    (h_oracleIMW_of_MC3_W centreC placeC entry q first
-      (fun w => PalPeg.CloseoutMarksPack.packRunR_MW_marksFree centreC placeC entry q first
-        h4 (PalPeg.GalilFinalAssembly2.decodesC entry w))
-      (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
-      hor)
+  given_preTraceIMW entry q first
+    (fun w hw => PalPeg.CloseoutCheckW.preTraceOnPackedRun_exists centreC placeC entry q first
+      (h_bootIMW_of_bootIPack centreC placeC entry q first
+        (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
+        (bootIPack_of_parts centreC placeC entry q first h_lrepC
+          (CloseoutPackRun6.h_bootShift centreC placeC entry q first)
+          (CloseoutPackRun6.h_landShift centreC placeC entry q first)))
+      hor w hw)
     hC
     (fun w st Tc hw h => needBound_of_scanLandingObligations centreC placeC entry q first hw h
       (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))

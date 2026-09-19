@@ -1,3 +1,24 @@
+## n252 — `obligation_cycleOracle`（`CycleOracleMC3`）を run 形 `obligation_cycleOracleOnPackedRun` に切り直し（旧形は着地に chain idle を要求しており偽の疑いが濃い）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun`（新） | 旧 `obligation_cycleOracle`（`CycleOracleMC3`）と差し替え。`CycleOutMC3` の報告分岐は `m < |w| → 次の報告点 `2(m+1)−1` までに `InvLPS` に着地` を要求し、`InvLPS` は `Restarted`／`InvScan.chainIdle` により **chain が idle**。Scala 正本では chain は fallback（`ScaffoldGalil.scala:320`）か broken からの restart（`:233`）でしか idle に戻らず、`matched()` は Watch のまま `consume()` を続ける（`ScaffoldChain.scala:161`）。よって `aaaa…` のように chain が生き続ける入力では旧形は満たせない。**機械検査済みの反証は無い**（`REFUTED` とは書かない）。新形は `CloseoutCheckW.CycleOracleOn (ScanOnPackedRunFromInvLPS)`: 「`InvLPS` 起点からの packed run 上の非 replay な scan 状態（`ScanNR ∧ ∃ 起点 j, InvLPS 起点 ∧ StepsIMW j 起点 x`）から、報告点 `2m−1` に達するか、`mu` を減らして同じ形の状態に着地する」。消費側の checkpoint 再帰 `checkpoints_costIMW_upto1` は運ぶ述語を `hor` に渡して受け取るだけだったので、`CloseoutCheckW` を述語 `I` で一般化（`ReachAtOn`／`CycleOutOn`／`CycleOracleOn`／`reachOn_fuel`／`reachOn_from`／`checkpoints_costOn_upto1`／`H_bootOn`／`preTraceOn_exists`）し、旧名（`ReachAtIMW`…`preTraceIMW_exists`）は `InvLPS` instance として残した（下流の旧系統は無変更）。新 trace 生成は `preTraceOnPackedRun_exists (hboot : H_bootIMW) (hor)`（boot 側の義務は増えない: `scanOnPackedRunFromInvLPS_of_invLPS` が `j = 0` で出す）。`CloseoutFinalFour.given_preTraceIMW`（trace 生成を抽象化した最上位）を切り出し、`given_needBound` はその系。`given_scanLandingObligations` は `hor` を新形で取り `h4` を落とした（`packRunR_MW_marksFree` は oracle の証明側へ移る） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
+### 新 oracle の証明計画（必要な部品だけ）
+
+1 回の oracle 呼び出しは「clock 分の背景 tick ＋ 比較 1 回（＋ shift 相／fallback＋replay）」で `mu` を 1 以上減らす（比較で右ヘッド +1、shift／fallback で中心が右へ）。chain の死は不要。
+- run の存在: `OracleRun.scan_tick_exists_PofC`（`SearchReady` ＋ `ChainReady`）／`phase_tick_exists_PofC`（`PhaseEnabled`）。`ChainReady` は `IPackMW.win`（`WindowRunPack`）から（watch は `chainReady_watch_of_watchWindow`）。
+- pack: run が出来たら `packRunR_MW_marksFree` で `StepsIMW`（着地は非 replay かつ右ヘッド ≤ 2M−1 が条件）。
+- `SoundScanNR`: 背景は `outputRel_background`、比較は `outputRel_of_refresh`＋`scanInvariant_matched`、fallback は `fallback_restarted_soundNR`。
+- 報告点: `ReportPointAt` の `scanInv` は `LPackM.scanGeom`、`centre : MInv` は別途運ぶ（`minv_same`／`minv_match`／`minv_afterBirth`／`leftmost_shift`／`minv_after_fallback`）。`Refreshed` は比較 tick の `ho`。
+- `CostedRun`: 1 比較 = 1 `Piece`（`wait := clock−1`, `cmp := true`, `place := 着地の右ヘッド`）。
+- 未解決の入力: chain idle 区間での `SearchReady`（`RdPaced` の producer `PostRun`／`RestartS2` は未証明）。
+
 ## n251 — `ChainReady` から `Good` を外した（正 lag の watch は必ず tick できる）／run 構成の API 確定
 
 **公理への進捗**

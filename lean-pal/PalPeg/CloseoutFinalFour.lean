@@ -89,11 +89,11 @@ open PalPeg.CloseoutOracleW PalPeg.CloseoutCheckW PalPeg.CloseoutPackW
 open PalPeg.CloseoutShiftFinal PalPeg.CloseoutShiftLocalFree
 open PalPeg.CloseoutFinalW PalPeg.ShiftLocalRun
 
-/-- **最上位の組み立て（`final5MW*` 4 版の共通部分）。**  `needL'` の上界を
-`hneed` として外から取る。 -/
-theorem given_needBound (entry q : ℕ) (first : Fin 9)
-    (hboot : H_bootIMW centreC placeC entry q first)
-    (hA : H_oracleIMW centreC placeC entry q first)
+/-- **The final theorem from a pre-loaded trace for every non-empty word.**  The trace
+producer is abstracted away so that oracles of different shapes can feed it. -/
+theorem given_preTraceIMW (entry q : ℕ) (first : Fin 9)
+    (hpre : ∀ w : List (Fin 2), 0 < w.length →
+      ∃ (st : ℕ → State GalilVM) (Tc : ℕ → ℕ), PreTraceIMW centreC placeC entry q first w st Tc)
     (hC : H_realizeLIMW' centreC placeC entry q first)
     (hneed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ), 0 < w.length →
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
@@ -106,7 +106,7 @@ theorem given_needBound (entry q : ℕ) (first : Fin 9)
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc := by
     intro w
     by_cases hw : 0 < w.length
-    · obtain ⟨st, Tc, h⟩ := preTraceIMW_exists centreC placeC entry q first hboot hA w hw
+    · obtain ⟨st, Tc, h⟩ := hpre w hw
       exact ⟨st, Tc, fun _ => h⟩
     · exact ⟨fun _ => boot w, fun _ => 0, fun h => absurd h hw⟩
   choose stP TcP hPreTraceIMW using preTrace_exists
@@ -140,6 +140,20 @@ theorem given_needBound (entry q : ℕ) (first : Fin 9)
       (fun w hw => base_of_preTraceB (hPreTraceIMW w hw).base)
       (fun w hw => (hPreTraceIMW w hw).base.pre.cost)
   · exact GalilEmptyWord.realize_accept'_nil L blank initQ outQ n htape hn
+
+/-- **最上位の組み立て（`final5MW*` 4 版の共通部分）。**  `needL'` の上界を
+`hneed` として外から取る。 -/
+theorem given_needBound (entry q : ℕ) (first : Fin 9)
+    (hboot : H_bootIMW centreC placeC entry q first)
+    (hA : H_oracleIMW centreC placeC entry q first)
+    (hC : H_realizeLIMW' centreC placeC entry q first)
+    (hneed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ), 0 < w.length →
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) →
+        PalPeg.GalilLookRefined.needL' w st i ≤ m + 1) :
+    RecognizedByTotalPEG PAL :=
+  given_preTraceIMW entry q first
+    (fun w hw => preTraceIMW_exists centreC placeC entry q first hboot hA w hw) hC hneed
 
 /-- **`given_bootOracleRealize_and_globalScanLandings` から `hfour` が消えた版。** -/
 theorem given_bootOracleRealize_sansFourOther (entry q : ℕ) (first : Fin 9)
@@ -180,6 +194,7 @@ theorem given_globalScanLandings (entry q : ℕ) (first : Fin 9)
       hor)
     hC hbgP hmatchP hsdP
 
+#print axioms given_preTraceIMW
 #print axioms given_needBound
 #print axioms given_bootOracleRealize_sansFourOther
 #print axioms given_globalScanLandings
