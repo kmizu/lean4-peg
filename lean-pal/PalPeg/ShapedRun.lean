@@ -36,6 +36,11 @@ fallback.  The final theorem does not need the restart-first discipline of the S
 survive the two re-entries the oracle does use: none at `restart`, and the fallback's
 `replayStart`, whose landing is a fresh restart of radius `0`. -/
 
+/-- A `WatchSegE` segment starts in `scan` mode whenever it ends there. -/
+theorem watchSegE_first_mode {P : Shared} {es : List Bool} {c c' : Control} {s t : GalilVM}
+    (h : WatchSegE P q first 2048 es c s c' t) (hm' : c'.mode = .scan) : c.mode = .scan := by
+  cases h <;> first | exact hm' | assumption
+
 /-- A `restart` leaves a broken chain idle and keeps the radius. -/
 theorem restartVM_shape {s t : GalilVM} (h : restartVM entry s t) :
     (∃ w, s.chain = .broken w) ∧ t.chain = .idle ∧ t.radius = s.radius := by
@@ -93,6 +98,37 @@ theorem not_restartVM_compare {w : List (Fin 2)} {s s' : GalilVM} (b : Bool)
   rw [hs] at hch
   obtain ⟨w', hw'⟩ := chainAt_broken hch
   rw [replayDec_chain, hs', hw'] at hidle; cases hidle
+
+/-- A tick whose chain tick keeps the chain out of `broken` is not a `restart` (a restart needs a
+broken source chain, and chain ticks keep a broken chain broken). -/
+theorem not_restartVM_of_chainAt {a found : Bool} {answer : GalilScaffoldTape.Tape} {cc : Fin 3}
+    {walker : GalilScaffoldPlace.Place} {ver : PlaceHead} {radius : Counter} {s u : GalilVM}
+    {z : ChainVM} (hz : chainAt a found answer cc walker ver radius s.chain z)
+    (hnb : ∀ w', z ≠ .broken w') : ¬ restartVM entry s u := by
+  intro hr
+  obtain ⟨⟨wb, hs⟩, -, -⟩ := restartVM_shape entry hr
+  rw [hs] at hz
+  obtain ⟨w', hw'⟩ := chainAt_broken hz
+  exact hnb w' hw'
+
+/-- A tick whose target chain is the chain its chain tick produced is not a `restart`
+(the target would be idle, so the chain tick left `broken`). -/
+theorem not_restartVM_of_chainAt_target {a found : Bool} {answer : GalilScaffoldTape.Tape}
+    {cc : Fin 3} {walker : GalilScaffoldPlace.Place} {ver : PlaceHead} {radius : Counter}
+    {s u : GalilVM} {z : ChainVM} (hz : chainAt a found answer cc walker ver radius s.chain z)
+    (hu : u.chain = z) : ¬ restartVM entry s u := by
+  intro hr
+  obtain ⟨⟨wb, hs⟩, hidle, -⟩ := restartVM_shape entry hr
+  rw [hs] at hz
+  obtain ⟨w', hw'⟩ := chainAt_broken hz
+  rw [hu, hw'] at hidle
+  cases hidle
+
+/-- A tick that changes the radius is not a `restart`. -/
+theorem not_restartVM_of_radius {s u : GalilVM} (h : value u.radius ≠ value s.radius) :
+    ¬ restartVM entry s u := by
+  intro hr
+  exact h (by rw [(restartVM_shape entry hr).2.2])
 
 /-- **Runs whose scan-mode ticks are never `restart`s and whose `replayStart` ticks land in a
 fresh radius-`0` restart.**  The oracle's own runs have this shape. -/

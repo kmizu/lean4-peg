@@ -1,3 +1,24 @@
+## n256 — 運ぶ述語に restart 無しの run（`ShapedRun.ShapedSteps`）を足し、`hrestart`／`hreplayStart` の 2 葉を消した
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉が 6 → **4**（`hfresh`／`hchain`／`hminv`／`hfallback`）。`hrestart`（restart 着地の datum）と `hreplayStart`（replayStart 着地の datum）は**消えた**: oracle 自身の run は restart を出さず（broken chain は broken のまま tick する）、replayStart は fallback の着地 `Restarted raw t 0 reset` にしか無いので、運ぶ述語 `CloseoutCheckW.ScanOnPackedRunFromInvLPS` に「`InvLPS` 起点からの shaped run」を足し、readiness datum を `ReadyTransport.readyField3_of_invLPS_shaped`（`hfresh` だけから）で運ぶ |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
+**何をしたか**
+
+* `ShapedRun.lean`（新規 module、n255 の末尾で `OracleReady` から分離）: `ShapedSteps`（scan-mode tick は `restartVM` でない、`replayStart` tick は `Restarted w _ 0 reset ∧ scan ∧ clock = 2048` に着地する run）、`restartVM_shape`／`chainTick_broken`／`chainAt_broken`／`not_restartVM_background`／`not_restartVM_compare`／`watchSegE_shaped`、今回追加の `not_restartVM_of_chainAt`（chain tick が broken を残さないなら restart でない）／`not_restartVM_of_chainAt_target`（着地の chain が chain tick の結果なら restart でない）／`not_restartVM_of_radius`（radius が変われば restart でない）。
+* `ReadyTransport.lean`（新規）: `readyField3_alongShaped`（shaped run に沿った `ReadyFieldP3` の transport、`hfresh` だけ）と `readyField3_of_invLPS_shaped`（`InvLPS` 起点の `ReplayStage` が記録する fresh restart の datum を `WatchSegE` 区間（shaped）で起点まで運び、そこから shaped run 全点へ）。
+* `CloseoutCheckW.ScanOnPackedRunFromInvLPS` に `∃ j', ShapedSteps … j' ⟨c₀, r₀⟩ ⟨c, r⟩` を追加（boot の着地は長さ 0）。
+* `OracleRun`: `scanBackground_run` が背景 tick の shaped run も返す（`not_restartVM_background`）；`scanCycle_of_leaves`／`cycleOracleOn_of_leaves` の `hready`／`hchain`／`hminv` は **shaped run 上**の量化に弱めた；一致比較の着地は `not_restartVM_of_chainAt_target`、shift 入口は guard の `.watch` から `not_restartVM_of_chainAt`、fallback 入口は radius の `inc` から `not_restartVM_of_radius`；`shiftUnits_S`／`shiftLeaf`／`hshift`／`hfallback` の結論に相の shaped run を追加（shift 相は mode が shift なので条件は空虚）。
+* `OracleReady`: `searchReady_of_invLPS_shaped (hfresh) (hI₀) (hsh) (hm)` で `hready` を放電。`readyField3_alongRun`／`readyField3_of_invLPS_steps`／`searchReady_of_invLPS_steps` は参照ゼロになったので削除。
+
+**残り 4 葉の帰着先**（n255 の表から `hrestart`／`hreplayStart` を除いたもの）: `hfresh` は DP の較正（`stageDebt`／`dpDemandS`、最初の stage は slack 0 で `dpDemand 0 8 = 1 ≤ 2`）；`hchain` copy 相と `hminv` shift 相は found 時の decode（`GalilSearchResult.search_result_at_tick`／`later_stage_found_result`）；`hfallback` は `fallback_restarted_soundNR` の側条件（`ShiftIdle`／`Canonical length`／`heven`／`0 < q`／`first ≠ 7, 8`）＋ replay 区間の構成（既存 `replay_segment_construct` は偽の `hpres`／`hquiet` を取るので、`ReadyFieldP3` 版に切り直す）。着地に shaped run が要るのは replayStart tick 1 本だけで、その着地は `fallback_restarted_All` の `Restarted raw t 0 reset`。
+
 ## n255 — `hready` を原子の葉 3 本に分解（`OracleReady.searchReady_of_invLPS_steps`）、PR #72 を main に merge
 
 **公理への進捗**

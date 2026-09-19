@@ -1,6 +1,7 @@
 import PalPeg.PackedRun
 import PalPeg.CloseoutPackW
 import PalPeg.CloseoutStageCheck
+import PalPeg.ShapedRun
 
 /-!
 # The checkpoint layer over `IPackMW`: no `ShiftLocalG` anywhere
@@ -358,7 +359,8 @@ def ScanOnPackedRunFromInvLPS (w : List (Fin 2)) (c : Control) (r : GalilVM) : P
   ScanNR ⟨c, r⟩ ∧ Refreshed (PofC centre place entry w) q first ⟨c, r⟩ ∧
   ∃ (c₀ : Control) (r₀ : GalilVM) (j : ℕ),
     InvLPS (PofC centre place entry w) q first w c₀ r₀ ∧
-    StepsIMW centre place entry q first w j ⟨c₀, r₀⟩ ⟨c, r⟩
+    StepsIMW centre place entry q first w j ⟨c₀, r₀⟩ ⟨c, r⟩ ∧
+    ∃ j' : ℕ, PalPeg.ShapedRun.ShapedSteps centre place entry q first w j' ⟨c₀, r₀⟩ ⟨c, r⟩
 
 /-- An `InvLPS` state carrying its pack is on the packed run out of itself. -/
 theorem scanOnPackedRunFromInvLPS_of_invLPS {w : List (Fin 2)} {c : Control} {r : GalilVM}
@@ -367,7 +369,8 @@ theorem scanOnPackedRunFromInvLPS_of_invLPS {w : List (Fin 2)} {c : Control} {r 
     (hp : IPackMW centre place entry q first w ⟨c, r⟩) :
     ScanOnPackedRunFromInvLPS centre place entry q first w c r := by
   have hmode := invS_mode hI.1.1.1.1.1
-  refine ⟨⟨hmode.1, hmode.2⟩, hf, c, r, 0, hI, fun _ => ⟨c, r⟩, rfl, rfl, ?_, fun _ _ => hp⟩
+  refine ⟨⟨hmode.1, hmode.2⟩, hf, c, r, 0, hI, ⟨fun _ => ⟨c, r⟩, rfl, rfl, ?_, fun _ _ => hp⟩,
+    0, .zero _⟩
   exact ⟨fun i hi => absurd hi (Nat.not_lt_zero _), fun _ _ _ _ => hI.1.1.1.1.2⟩
 
 /-- The boot landing as `CloseoutOracleW` produces it: an `InvLPS` state whose output was
