@@ -23,6 +23,24 @@
 `ChainReady`（`GalilTickFun`）の `positive lag → Good` 場は消せる（run の存在に不要になる）。
 手順: 構成子を足して `lake build --quiet PalPeg` の error 一覧を作業リストにする。
 
+### 実装（n249 の続き、作業中・未コミット）
+
+`GalilScaffoldTopChainVM.lean` に 2 構成子を足した（core ファイル単体は `lake env lean` で `BUILD=0`）:
+```
+| watchBreak (w) (hp : positive w.lag = true) (hng : ¬ GalilScaffoldChainWatch.Good w) :
+    ChainStep (.watch w) (.broken ⟨⟨GalilScaffoldChainVerifier.right w.machine.verifier, w.machine.control⟩, w.lag, w.margin⟩)
+| brokenMatched (w) : ChainMatched (.broken w) (.broken ⟨w.machine, inc w.lag, inc w.margin⟩)
+```
+根拠（Scala 一次情報）: `consume()` は先に `verifier.right()`、不一致なら `mode = Broken` で `false`
+（`distance`／`period`／`lag` は触らない）；`matched()` は `margin.inc()` のあと Watch∧lag=0 以外は
+`lag.inc()`；restart guard は `Broken ∧ margin ≥ 0 ∧ last > 0 ∧ lag == 0`（`ScaffoldGalil.scala:230-231`）
+なので正 lag の broken chain は fallback まで生き続ける。
+壊れる箇所のパターン: (A) `ChainStep` の `cases` に `watchBreak` 行き `.broken` の alternative
+（不変量は `.broken` で `True`／空虚）、(B) `ChainMatched` の `cases` に `brokenMatched`、
+(C) `chainStep_unique`／`chainMatched_unique` は `Internal` の `idle`（`positive lag = false`）／`take`（`Good`）
+と `hp`／`hng` で排他、(D) `ChainStepGap.no_chainStep_at_positive_lag_mismatch`（＋`Canonical.model_gap_watchBreak`）
+は**偽になる**ので削除して「gap は閉じた」に書き換える。作業リストは `lake build --quiet PalPeg` の error 一覧。
+
 ## n248 — `obligation_cycleOracle`: found 経路の既存入口は死んでいる（修理しない）
 
 **公理への進捗**
