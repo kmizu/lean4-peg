@@ -1,3 +1,14 @@
+## n253 — 新 oracle の一致分岐を証明（`OracleRun.scanCycle_of_leaves`、run 形の葉 3 本のみ）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 一致分岐が閉じた: `scanCycle_of_leaves (hP : Decodes) (h4 : first ≠ 4) (hm1) (hmle) (hI : ScanOnPackedRunFromInvLPS w c s) (hp : right ≤ 2m−1) (hready) (hchain) (hminv) : CycleOutOn … w m c s ∨ (right < 2m−1 ∧ ∃ t, StepsAll (SoundScanNR) (clock−1) ⟨c,s⟩ ⟨{c with clock := 1}, t⟩ ∧ heads 不変 ∧ 不一致)`。報告点にいる状態はそれ自身が報告（`Refreshed` は運ぶ述語が持つ）、下にいれば `scanBackground_run`（背景 tick）→ `scanCompare_cases`（比較）で、一致なら右 +1 の同形状態（`packRunR_MW_marksFree` で pack、`minv_match`／`minv_afterBirth` で `MInv`、1 `Piece` の `CostedRun`、`mu` 減少）か報告。残る入力は run 形の葉 3 本: `hready`（chain idle での `SearchReady`）、`hchain`（`ChainReady`）、`hminv`（`MInv`）——いずれも「`InvLPS` 起点からの `Steps` の各点」で量化（状態全体への過剰量化はしていない）。不一致分岐（shift 相／fallback＋replay）は次 |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
 ## n252 — `obligation_cycleOracle`（`CycleOracleMC3`）を run 形 `obligation_cycleOracleOnPackedRun` に切り直し（旧形は着地に chain idle を要求しており偽の疑いが濃い）
 
 **公理への進捗**
