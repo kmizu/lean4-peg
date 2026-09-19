@@ -91,6 +91,62 @@ theorem chainReady_watch_of_watchWindow {raw : List (Fin 2)} {cen₀ : ℕ} {cc 
       exact canRight_of_bound _ raw (right_word _ raw hvrep hcanV)
         (right_present _ raw hvrep hvpres hcanV) (by omega)
 
+/-- **The background ticks of one scan cycle.**  From a non-replaying scan state whose clock is
+`n + 1` and whose right head can move, `n` background ticks (`scan_count`) reach the same heads,
+centre and counters with the clock at `1`.  Readiness of the search (needed only while the chain
+is idle) and of the chain are taken as run-form inputs over the run out of `⟨c, s⟩`. -/
+theorem scanBackground_run {w : List (Fin 2)} :
+    ∀ (n : ℕ) (c : Control) (s : GalilVM), c.mode = .scan → c.replaying = false →
+      c.clock = n + 1 → canRight s.right → OutputRel w c s →
+      (∀ (k : ℕ) (y : State GalilVM),
+        StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) k ⟨c, s⟩ y →
+        y.vm.chain = .idle → PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm)) →
+      (∀ (k : ℕ) (y : State GalilVM),
+        StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) k ⟨c, s⟩ y →
+        ChainReady y.vm.chain) →
+      ∃ t : GalilVM,
+        StepsAll (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) n ⟨c, s⟩
+          ⟨{c with clock := 1}, t⟩ ∧
+        t.left = s.left ∧ t.right = s.right ∧ t.center = s.center ∧ t.replay = s.replay ∧
+        t.remaining = s.remaining ∧ t.radius = s.radius ∧ t.length = s.length ∧ t.fpp = s.fpp := by
+  intro n
+  induction n with
+  | zero =>
+    intro c s hm hr hclk hav hout _ _
+    have hceq : ({c with clock := 1} : Control) = c := by cases c; simp_all
+    refine ⟨s, ?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    rw [hceq]
+    exact .zero _ (fun _ _ => hout)
+  | succ n ih =>
+    intro c s hm hr hclk hav hout hready hchain
+    have hQ : SoundScanNR w ⟨c, s⟩ := fun _ _ => hout
+    have hsearch : ∃ v, searchEffect (PofC centre place entry w) false s v := by
+      by_cases hidle : s.chain = .idle
+      · exact PalPeg.GalilBranchInvariants2.searchEffect_exists _ false s
+          (hready 0 ⟨c, s⟩ (.zero _ hQ) hidle)
+      · exact ⟨searchLens.get s, Or.inr ⟨hidle, rfl⟩⟩
+    have hchainAt : ∀ v : SearchVM, ∃ z, chainAt false (decide (v.search.mode = .found))
+        (v.dp.config.tapes 11) ((PofC centre place entry w).centre s)
+        ((PofC centre place entry w).place s) s.center s.radius s.chain z :=
+      fun v => chainAt_exists false _ _ _ _ _ _ s.chain (hchain 0 ⟨c, s⟩ (.zero _ hQ))
+    obtain ⟨s', hb⟩ := backgroundS_exists (PofC centre place entry w) q first s hsearch hchainAt
+    have hav' : (galilFrameS (PofC centre place entry w) q first).available s := hav
+    have htick : Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
+        ⟨{c with clock := c.clock - 1}, s'⟩ :=
+      Tick.scan_count c s s' hm (Or.inr hav') (by omega) hb
+    obtain ⟨hl', hr', -, hc', -, hrad', hlen', -, hrem', hrep', hfpp', -⟩ :=
+      backgroundS_fields (PofC centre place entry w) q first hb
+    have hout' : OutputRel w {c with clock := c.clock - 1} s' :=
+      outputRel_background w (PofC centre place entry w) q first hb rfl hout
+    obtain ⟨t, hrun, htl, htr, htc, htrep, htrem, htrad, htlen, htfpp⟩ :=
+      ih {c with clock := c.clock - 1} s' hm hr (by simp; omega) (hr' ▸ hav) hout'
+        (fun k y hst hidle => hready (k + 1) y (.succ hQ htick hst) hidle)
+        (fun k y hst => hchain (k + 1) y (.succ hQ htick hst))
+    refine ⟨t, .succ hQ htick hrun, htl.trans hl', htr.trans hr', htc.trans hc', htrep.trans hrep',
+      htrem.trans hrem', htrad.trans hrad', htlen.trans hlen', htfpp.trans hfpp'⟩
+
+#print axioms scanBackground_run
+
 #print axioms chainReady_watch_of_watchWindow
 
 #print axioms scan_tick_exists_PofC
