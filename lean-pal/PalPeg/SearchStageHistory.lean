@@ -486,4 +486,87 @@ theorem stageHistory_step {p : GalilScaffoldPlace.Place} {lower clock : ℕ} {R 
     exact stageHistory_step_run hbudget hhistory hm hquanta.1
   · exact stageHistory_step_offRun hbudget hhistory hm hstep
 
+/-! ## The radius is inside the window -/
+
+/-- **While the search is active the scan radius is inside a candidate-free window.**  The debt
+is bounded below by the clock credit of `BudgetInv`, the balance turns that into an upper bound
+of the radius, and `WindowBound` compares it with the window. -/
+theorem radius_le_window {p : GalilScaffoldPlace.Place} {lower clock : ℕ} {R : ℤ} {v : SearchVM}
+    (hbudget : BudgetInv p lower clock v) (hhistory : StageHistory p lower R v)
+    (hactive : Active v.search.mode) :
+    ∃ H : ℕ, NoCandidate p lower H ∧ R ≤ (H : ℤ) := by
+  have hbalance := hhistory.balance hactive
+  obtain ⟨H, hnone, hbound⟩ := hhistory.window hactive
+  refine ⟨H, hnone, ?_⟩
+  have hclock := hbudget.clock_le
+  obtain ⟨span, hspan⟩ := hbudget.span_nat
+  have hspanValue : value v.search.span = (span : ℤ) := by rw [hspan, ofNat_value]
+  have hprepared : Preparing v.search.mode → 0 ≤ value v.search.debt := by
+    intro hprep
+    obtain ⟨span', n, t, -, -, -, -, -, hcredit⟩ := hbudget.prep hprep
+    unfold credit at hcredit
+    have hpositive : (0 : ℤ) < ((dpBudget span' + n : ℕ) : ℤ) := by
+      unfold dpBudget; push_cast; omega
+    omega
+  cases hm : v.search.mode with
+  | idle => exact absurd hm hactive.1
+  | found => exact absurd hm hactive.2.1
+  | missed => exact absurd hm hactive.2.2
+  | lower =>
+    have hdebt := hprepared (by simp [Preparing, hm])
+    simp only [hm, reduceCtorEq, if_false] at hbalance
+    simp only [WindowBound, hm] at hbound
+    omega
+  | lowerHome =>
+    have hdebt := hprepared (by simp [Preparing, hm])
+    simp only [hm, reduceCtorEq, if_false] at hbalance
+    simp only [WindowBound, hm] at hbound
+    omega
+  | copy =>
+    have hdebt := hprepared (by simp [Preparing, hm])
+    simp only [hm, reduceCtorEq, if_false] at hbalance
+    simp only [WindowBound, hm] at hbound
+    omega
+  | home =>
+    have hdebt := hprepared (by simp [Preparing, hm])
+    simp only [hm, reduceCtorEq, if_false] at hbalance
+    simp only [WindowBound, hm] at hbound
+    omega
+  | run =>
+    obtain ⟨span', s0, bs, -, hs0, -, hreached, hfund⟩ := hbudget.running hm
+    have hlength := running_length_lt hs0 hreached hm
+    unfold credit at hfund
+    simp only [hm, reduceCtorEq, if_false] at hbalance
+    simp only [WindowBound, hm] at hbound
+    omega
+  | wait =>
+    have hdebt := hhistory.waitDebt hm
+    simp only [hm, reduceCtorEq, if_false] at hbalance
+    simp only [WindowBound, hm] at hbound
+    omega
+  | grow =>
+    obtain ⟨work, hwork⟩ := hbudget.work_nat (Or.inl hm)
+    have hworkValue : value v.search.work = (work : ℤ) := by rw [hwork, ofNat_value]
+    have hsize := hbudget.grow_size hm
+    have hfund := hbudget.grow hm
+    unfold credit at hfund
+    simp only [hm, reduceCtorEq, if_false] at hbalance
+    simp only [WindowBound, hm] at hbound
+    rw [hspanValue, hworkValue] at hsize hfund hbound
+    rw [hspanValue] at hbalance
+    have hmax : 1 ≤ max lower 1 := le_max_right _ _
+    omega
+  | double =>
+    obtain ⟨work, hwork⟩ := hbudget.work_nat (Or.inr hm)
+    have hworkValue : value v.search.work = (work : ℤ) := by rw [hwork, ofNat_value]
+    have hsize := (hbudget.double_size hm).1
+    have hfund := hbudget.doubling hm
+    have hquarter := v.search.quarter.isLt
+    unfold credit at hfund
+    simp only [hm, if_true] at hbalance
+    simp only [WindowBound, hm] at hbound
+    rw [hspanValue, hworkValue] at hfund hbound hbalance hsize
+    have hmax : 1 ≤ max lower 1 := le_max_right _ _
+    omega
+
 end PalPeg.SearchStageHistory
