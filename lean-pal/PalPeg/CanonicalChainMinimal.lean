@@ -28,15 +28,23 @@ def SemWith (Cert : ℕ → Prop) : ChainVM → Prop
 def Sem (raw : List (Fin 2)) (C : ℕ) : ChainVM → Prop :=
   SemWith (fun H => FutureMinimal raw C H ∧ MoveMinimal raw C H)
 
+theorem semWith_start {Cert : ℕ → Prop} {H : ℕ}
+    {answer : GalilScaffoldTape.Tape} {cc : Fin 3} {walker : GalilScaffoldPlace.Place}
+    {ver : PlaceHead} {radius : Counter}
+    (hcopy : CopyInv answer reset walker (GalilScaffoldChainPeriod.start cc) H)
+    (hcert : Cert H) :
+    SemWith Cert (chainStart answer cc walker ver radius) := by
+  refine ⟨H,H,hcopy,?_,hcert⟩
+  rw [cells_start]
+  omega
+
 theorem sem_start {raw : List (Fin 2)} {C H : ℕ}
     {answer : GalilScaffoldTape.Tape} {cc : Fin 3} {walker : GalilScaffoldPlace.Place}
     {ver : PlaceHead} {radius : Counter}
     (hcopy : CopyInv answer reset walker (GalilScaffoldChainPeriod.start cc) H)
     (hmin : FutureMinimal raw C H) (hmove : MoveMinimal raw C H) :
-    Sem raw C (chainStart answer cc walker ver radius) := by
-  refine ⟨H,H,hcopy,?_,hmin,hmove⟩
-  rw [cells_start]
-  omega
+    Sem raw C (chainStart answer cc walker ver radius) :=
+  semWith_start hcopy ⟨hmin,hmove⟩
 
 /-- One background chain step preserves the fixed-centre semantic datum. -/
 theorem sem_step {Cert : ℕ → Prop} {x y : ChainVM}
@@ -154,6 +162,22 @@ theorem sem_moveData {raw : List (Fin 2)} {C : ℕ} {x : ChainVM}
       obtain ⟨_,H,_,_,_,hm⟩ := hx
       exact ⟨H,hm⟩
 
+theorem semWith_chainAt {Cert : ℕ → Prop}
+    {a found : Bool} {ans : GalilScaffoldTape.Tape} {cc : Fin 3}
+    {wk : GalilScaffoldPlace.Place} {ver : PlaceHead} {rad : Counter} {x y : ChainVM}
+    (hx : SemWith Cert x)
+    (hbirth : x = .idle → found = true → ∃ H,
+      CopyInv ans reset wk (GalilScaffoldChainPeriod.start cc) H ∧ Cert H)
+    (ht : chainAt a found ans cc wk ver rad x y) : SemWith Cert y := by
+  rcases ht with ⟨_,ht⟩ | ⟨_,_,hy⟩ | ⟨hi,hf,hy⟩
+  · exact sem_tick hx ht
+  · rw [hy]; trivial
+  · obtain ⟨H,hcopy,hcert⟩ := hbirth hi hf
+    have hb : SemWith Cert (chainStart ans cc wk ver rad) := semWith_start hcopy hcert
+    cases a with
+    | false => simp only [Bool.false_eq_true,reduceIte] at hy; rw [hy]; exact hb
+    | true => exact sem_matched hb hy
+
 theorem sem_chainAt {raw : List (Fin 2)} {C : ℕ}
     {a found : Bool} {ans : GalilScaffoldTape.Tape} {cc : Fin 3}
     {wk : GalilScaffoldPlace.Place} {ver : PlaceHead} {rad : Counter} {x y : ChainVM}
@@ -161,15 +185,8 @@ theorem sem_chainAt {raw : List (Fin 2)} {C : ℕ}
     (hbirth : x = .idle → found = true → ∃ H,
       CopyInv ans reset wk (GalilScaffoldChainPeriod.start cc) H ∧ FutureMinimal raw C H ∧
       MoveMinimal raw C H)
-    (ht : chainAt a found ans cc wk ver rad x y) : Sem raw C y := by
-  rcases ht with ⟨_,ht⟩ | ⟨_,_,hy⟩ | ⟨hi,hf,hy⟩
-  · exact sem_tick hx ht
-  · rw [hy]; trivial
-  · obtain ⟨H,hcopy,hmin,hmove⟩ := hbirth hi hf
-    have hb := sem_start (ver := ver) (radius := rad) hcopy hmin hmove
-    cases a with
-    | false => simp only [Bool.false_eq_true,reduceIte] at hy; rw [hy]; exact hb
-    | true => exact sem_matched hb hy
+    (ht : chainAt a found ans cc wk ver rad x y) : Sem raw C y :=
+  semWith_chainAt hx hbirth ht
 
 /-- The exact short-period conclusion consumed by `OracleRun.shiftLeaf`, once
 the run invariant supplies the semantic datum for its target watch. -/
