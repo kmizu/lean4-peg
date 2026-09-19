@@ -81,12 +81,37 @@ private theorem compare_program {raw : List (Fin 2)} {s t : GalilVM}
   rw [hget,hP.2 t s hcenter]
   exact ⟨lower,programInv_step hinv hstep⟩
 
+private theorem atState_restart {raw : List (Fin 2)} {c : Control} {s : GalilVM}
+    {rad : ℕ} {last : Counter} (hm : c.mode = .scan) (hr : Restarted raw s rad last) :
+    AtState centre place entry raw ⟨c,s⟩ := by
+  obtain ⟨_,_,_,_,_,_,hs,hl,hcan,hn⟩ := hr
+  have he : last = ofNat (value last).toNat := by
+    apply PalPeg.CloseoutPreload5.canonical_eq_ofNat hcan
+    omega
+  refine ⟨fun _ _ => ⟨(value last).toNat,?_⟩,
+    fun h _ => by
+      have hc : c.mode = .shift := by simpa using h
+      rw [hm] at hc
+      cases hc⟩
+  have h := programInv_begin ((PofC centre place entry raw).place s) (searchLens.get s)
+    (value last).toNat s.radius
+  let w := searchLens.get s
+  let b := GalilScaffoldSearchFinish.begin (ofNat (value last).toNat) s.radius
+  have hv : ({w with search := b, lower := ofNat (value last).toNat}) = searchLens.get s := by
+    dsimp [w,b]
+    rw [← he]
+    simp only [searchLens]
+    rw [← hs, ← hl]
+  rwa [hv] at h
+
 /-- Every actual canonical tick transports the semantic search certificate. -/
 theorem atState_tick {raw : List (Fin 2)} {x y : State GalilVM}
     (hP : Decodes (PofC centre place entry raw))
     (hi : AtState centre place entry raw x)
     (ht : Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y)
-    (hnr : x.ctl.mode = .scan → ¬ restartVM entry x.vm y.vm) :
+    (hrestart : x.ctl.mode = .scan → restartVM entry x.vm y.vm →
+      ∃ (Rad : ℕ) (last : Counter), Restarted raw y.vm Rad last ∧ StageEntry Rad last ∧
+        y.ctl.mode = .scan ∧ y.ctl.clock = 2048) :
     AtState centre place entry raw y := by
   cases ht with
   | init c s t hm ht =>
@@ -118,7 +143,9 @@ theorem atState_tick {raw : List (Fin 2)} {x y : State GalilVM}
   | replayStart c s t o hm hr _ _ =>
     obtain ⟨_,_,_,_,_,_,_,_,_,_,hs,hl,_⟩ := hr
     exact ⟨fun _ _ => ⟨0,reset_program hl hs⟩,fun h => by cases h⟩
-  | restart c s t hm hr => exact (hnr hm hr).elim
+  | restart c s t hm hr =>
+    obtain ⟨Rad,last,hR,_,hmode,_⟩ := hrestart hm hr
+    exact atState_restart centre place entry hmode hR
   | scan_fallback | copy_one | copy_done | home_start | home_step | fpp_slice | fpp_done
   | markEnd_step | markEnd_found | choose_select | choose_step | rewind_done | rewind_one | rewind_pair =>
     constructor
@@ -134,29 +161,6 @@ theorem atState_shaped {raw : List (Fin 2)} {n : ℕ} {x y : State GalilVM}
   induction hr with
   | zero => exact hi
   | succ ht hnr _ _ ih => exact ih (atState_tick centre place entry q first hP hi ht hnr)
-
-private theorem atState_restart {raw : List (Fin 2)} {c : Control} {s : GalilVM}
-    {rad : ℕ} {last : Counter} (hm : c.mode = .scan) (hr : Restarted raw s rad last) :
-    AtState centre place entry raw ⟨c,s⟩ := by
-  obtain ⟨_,_,_,_,_,_,hs,hl,hcan,hn⟩ := hr
-  have he : last = ofNat (value last).toNat := by
-    apply PalPeg.CloseoutPreload5.canonical_eq_ofNat hcan
-    omega
-  refine ⟨fun _ _ => ⟨(value last).toNat,?_⟩,
-    fun h _ => by
-      have hc : c.mode = .shift := by simpa using h
-      rw [hm] at hc
-      cases hc⟩
-  have h := programInv_begin ((PofC centre place entry raw).place s) (searchLens.get s)
-    (value last).toNat s.radius
-  let w := searchLens.get s
-  let b := GalilScaffoldSearchFinish.begin (ofNat (value last).toNat) s.radius
-  have hv : ({w with search := b, lower := ofNat (value last).toNat}) = searchLens.get s := by
-    dsimp [w,b]
-    rw [← he]
-    simp only [searchLens]
-    rw [← hs, ← hl]
-  rwa [hv] at h
 
 /-- The origin already records the search segment from its last restart. -/
 theorem atState_invLPS {raw : List (Fin 2)} {c : Control} {s : GalilVM}
@@ -185,7 +189,7 @@ theorem atState_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
     | succ i ih =>
       intro hn
       exact atState_tick centre place entry q first hP (ih (by omega))
-        (ht.tick i (by omega)) (hcan i (by omega)).noRestart
+        (ht.tick i (by omega)) (hcan i (by omega)).restartStage
   simpa only [hk] using hall k le_rfl
 
 /-- BirthCopy, the final residue of chain readiness, now follows from its actual DP history. -/

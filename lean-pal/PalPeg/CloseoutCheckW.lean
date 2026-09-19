@@ -104,12 +104,12 @@ structure PreTraceIMW (centre : GalilVM → Fin 3) (place : GalilVM → GalilSca
 
 section
 variable (I : List (Fin 2) → Control → GalilVM → Prop)
-variable (R : State GalilVM → State GalilVM → Prop)
+variable (R : List (Fin 2) → State GalilVM → State GalilVM → Prop)
 
 /-- `StepsIMW` with a tick predicate `R` (`PackedRunR`). -/
 def StepsIMWR (w : List (Fin 2)) (k : ℕ) (x y : State GalilVM) : Prop :=
   PackedRunR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w)
-    (IPackMW centre place entry q first w) R k x y
+    (IPackMW centre place entry q first w) (R w) k x y
 
 theorem stepsIMWR_trans {w : List (Fin 2)} {k1 k2 : ℕ} {x y z : State GalilVM}
     (h1 : StepsIMWR centre place entry q first R w k1 x y)
@@ -125,12 +125,12 @@ theorem ipackMW_last_of_stepsIMWR {w : List (Fin 2)} {k : ℕ} {x y : State Gali
 /-- The instance at `R := True` is the old `StepsIMW`. -/
 theorem stepsIMWR_true_of_stepsIMW {w : List (Fin 2)} {k : ℕ} {x y : State GalilVM}
     (h : StepsIMW centre place entry q first w k x y) :
-    StepsIMWR centre place entry q first (fun _ _ => True) w k x y :=
+    StepsIMWR centre place entry q first (fun _ _ _ => True) w k x y :=
   PalPeg.PackedRunR.ofPacked h
 
 theorem stepsIMWR_true_of_stepsIMWR {w : List (Fin 2)} {k : ℕ} {x y : State GalilVM}
     (h : StepsIMWR centre place entry q first R w k x y) :
-    StepsIMWR centre place entry q first (fun _ _ => True) w k x y :=
+    StepsIMWR centre place entry q first (fun _ _ _ => True) w k x y :=
   PalPeg.PackedRunR.forget h
 
 def ReachAtOn (w : List (Fin 2)) (m : ℕ) (c : Control) (r : GalilVM) : Prop :=
@@ -195,7 +195,7 @@ theorem checkpoints_costOn_upto1 (w : List (Fin 2))
     ∃ (st : ℕ → State GalilVM) (Tc : ℕ → ℕ) (e : ℕ),
       st 0 = x0 ∧ Tc 0 = 0 ∧
       Trace (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) st e ∧
-      (∀ i, i < e → R (st i) (st (i+1))) ∧
+      (∀ i, i < e → R w (st i) (st (i+1))) ∧
       (∀ m, m < M → Tc m ≤ Tc (m+1)) ∧ Tc M ≤ e ∧
       (∀ m, 1 ≤ m → m ≤ M →
         PalPeg.GalilReportPrefix.ReportPointAt w m (st (Tc m)) ∧
@@ -241,13 +241,13 @@ theorem checkpoints_costOn_upto1 (w : List (Fin 2))
         (SoundScanNR w) st1 (e + k) :=
       trace_concat htr htr1 hj1
     have hst1y : st1 (e + k) = y := by rw [hst1, concat_end st g1 hj1, hg1k]
-    have hcan1 : ∀ i, i < e + k → R (st1 i) (st1 (i+1)) := canon_concat hj1 hcan hR1
+    have hcan1 : ∀ i, i < e + k → R w (st1 i) (st1 (i+1)) := canon_concat hj1 hcan hR1
     have hpk1 : ∀ i, i ≤ e + k → IPackMW centre place entry q first w (st1 i) :=
       pack_concat hj1 hpk hpg1
     obtain ⟨st2, e2, htr2, hcan2, hagree, hle2, hres2, hpk2⟩ :
         ∃ (st2 : ℕ → State GalilVM) (e2 : ℕ),
           Trace (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) st2 e2 ∧
-          (∀ i, i < e2 → R (st2 i) (st2 (i+1))) ∧
+          (∀ i, i < e2 → R w (st2 i) (st2 (i+1))) ∧
           (∀ i, i ≤ e + k → st2 i = st1 i) ∧ e + k ≤ e2 ∧
           (M + 1 < w.length → ∃ (c'' : Control) (r'' : GalilVM),
             st2 e2 = ⟨c'', r''⟩ ∧ I w c'' r'' ∧
@@ -333,7 +333,7 @@ def H_bootOn : Prop :=
 theorem preTraceOn_exists (hboot : H_bootOn centre place entry q first I R)
     (hor : ∀ w : List (Fin 2), 0 < w.length → CycleOracleOn centre place entry q first I R w) (w : List (Fin 2)) (hw : 0 < w.length) :
     ∃ st Tc, PreTraceIMW centre place entry q first w st Tc ∧
-      ∀ i, i < Tc w.length → R (st i) (st (i+1)) := by
+      ∀ i, i < Tc w.length → R w (st i) (st (i+1)) := by
   rcases w with _ | ⟨a, rest⟩
   · simp at hw
   · obtain ⟨c1, t, hst, hI, hpos⟩ := hboot a rest
@@ -354,20 +354,20 @@ end
 
 def ReachAtIMW (w : List (Fin 2)) (m : ℕ) (c : Control) (r : GalilVM) : Prop :=
   ReachAtOn centre place entry q first
-    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ => True) w m c r
+    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ _ => True) w m c r
 
 def CycleOutIMW (w : List (Fin 2)) (m : ℕ) (c : Control) (r : GalilVM) : Prop :=
   CycleOutOn centre place entry q first
-    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ => True) w m c r
+    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ _ => True) w m c r
 
 def CycleOracleIMW (w : List (Fin 2)) : Prop :=
   CycleOracleOn centre place entry q first
-    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ => True) w
+    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ _ => True) w
 
 /-- `CloseoutPackRun30.H_bootIMG` over `StepsIMW`. -/
 def H_bootIMW : Prop :=
   H_bootOn centre place entry q first
-    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ => True)
+    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ _ => True)
 
 /-- `CloseoutPackRun30.H_oracleIMG` over `StepsIMW`. -/
 def H_oracleIMW : Prop :=
@@ -377,7 +377,7 @@ theorem preTraceIMW_exists (hboot : H_bootIMW centre place entry q first)
     (hor : H_oracleIMW centre place entry q first) (w : List (Fin 2)) (hw : 0 < w.length) :
     ∃ st Tc, PreTraceIMW centre place entry q first w st Tc := by
   obtain ⟨st, Tc, h, -⟩ := preTraceOn_exists centre place entry q first
-    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ => True) hboot hor w hw
+    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ _ => True) hboot hor w hw
   exact ⟨st, Tc, h⟩
 
 /-! ## The run-shaped instance: scan states on a packed run out of an `InvLPS` origin
@@ -390,11 +390,13 @@ report point and no `InvLPS` state recurs.  An oracle whose report continuation 
 carried predicate below keeps the origin and lets the state itself be any non-replaying scan
 state of the packed run out of it. -/
 
-/-- **The oracle's runs are canonical** (`GalilTickFair.Canonical`): no restart, the fallback
-place is the search's walker, the cursor is kept at `init`／`replayStart`.  `Tick ∧ Canonical`
-is functional, so a canonical pre-loaded trace is *the* trace of the deterministic machine. -/
+/-- **The oracle's runs are canonical** (`GalilTickFair.Canonical`): a broken chain whose guard
+is up is restarted first, the fallback place is the right head, the cursor is kept at
+`init`／`replayStart`.  `Tick ∧ Canonical` is functional, so a canonical pre-loaded trace is
+*the* trace of the deterministic machine.  The packed path also records where a fresh search
+re-enters (`ShapedRun.OracleTick`). -/
 abbrev StepsIMWC (w : List (Fin 2)) (k : ℕ) (x y : State GalilVM) : Prop :=
-  StepsIMWR centre place entry q first (PalPeg.GalilTickFair.Canonical entry 2048) w k x y
+  StepsIMWR centre place entry q first (PalPeg.ShapedRun.OracleTick entry) w k x y
 
 theorem stepsIMWC_trans {w : List (Fin 2)} {k1 k2 : ℕ} {x y z : State GalilVM}
     (h1 : StepsIMWC centre place entry q first w k1 x y)
@@ -420,6 +422,7 @@ that is itself reached from boot.  The final consumer needs no arbitrary origin.
 def ScanOnPackedRunFromInvLPS (w : List (Fin 2)) (c : Control) (r : GalilVM) : Prop :=
   ScanNR ⟨c, r⟩ ∧ Refreshed (PofC centre place entry w) q first ⟨c, r⟩ ∧
   PalPeg.GalilScaffoldChainInputSupply.MInv w c r ∧
+  ¬ PalPeg.GalilScaffoldChainInputSupply.restartGuardVM r ∧
   ∃ (c₀ : Control) (r₀ : GalilVM) (j : ℕ),
     InvLPS (PofC centre place entry w) q first w c₀ r₀ ∧
     PackedFromBoot centre place entry q first w ⟨c₀, r₀⟩ ∧
@@ -436,7 +439,15 @@ theorem scanOnPackedRunFromInvLPS_of_invLPS {w : List (Fin 2)} {c : Control} {r 
   have hmode := invS_mode hI.1.1.1.1.1
   have hminv : PalPeg.GalilScaffoldChainInputSupply.MInv w c r := by
     rcases hI.1.1.1.1.1 with h | ⟨k, h⟩ <;> exact h.minv
-  refine ⟨⟨hmode.1, hmode.2⟩, hf, hminv, c, r, 0, hI, hBoot, ⟨fun _ => ⟨c, r⟩, rfl, rfl, ?_,
+  have hidle : r.chain = .idle := by
+    rcases hI.1.1.1.1.1 with h | ⟨k, h⟩
+    · obtain ⟨Rad', last, hR⟩ := h.rest
+      exact hR.1
+    · exact h.chainIdle
+  have hng : ¬ PalPeg.GalilScaffoldChainInputSupply.restartGuardVM r := by
+    rintro ⟨w', hw', -⟩
+    rw [hidle] at hw'; cases hw'
+  refine ⟨⟨hmode.1, hmode.2⟩, hf, hminv, hng, c, r, 0, hI, hBoot, ⟨fun _ => ⟨c, r⟩, rfl, rfl, ?_,
     fun i hi => absurd hi (Nat.not_lt_zero _), fun _ _ => hp⟩, 0, .zero _⟩
   exact ⟨fun i hi => absurd hi (Nat.not_lt_zero _), fun _ _ _ _ => hI.1.1.1.1.2⟩
 
@@ -446,21 +457,22 @@ def H_bootRefreshedIMW : Prop :=
   H_bootOn centre place entry q first
     (fun w c r => InvLPS (PofC centre place entry w) q first w c r ∧
       Refreshed (PofC centre place entry w) q first ⟨c, r⟩)
-    (PalPeg.GalilTickFair.Canonical entry 2048)
+    (PalPeg.ShapedRun.OracleTick entry)
 
 /-- **The pre-loaded trace from the run-shaped oracle.** -/
 theorem preTraceOnPackedRun_exists (hboot : H_bootRefreshedIMW centre place entry q first)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleOn centre place entry q first (ScanOnPackedRunFromInvLPS centre place entry q first)
-        (PalPeg.GalilTickFair.Canonical entry 2048) w)
+        (PalPeg.ShapedRun.OracleTick entry) w)
     (w : List (Fin 2)) (hw : 0 < w.length) :
-    ∃ st Tc, PreTraceIMW centre place entry q first w st Tc ∧ CanonTrace entry w st Tc :=
-  preTraceOn_exists centre place entry q first _ _
+    ∃ st Tc, PreTraceIMW centre place entry q first w st Tc ∧ CanonTrace entry w st Tc := by
+  obtain ⟨st, Tc, hpre, hticks⟩ := preTraceOn_exists centre place entry q first _ _
     (fun a rest => by
       obtain ⟨c1, t, hst, ⟨hI, hf⟩, hpos⟩ := hboot a rest
       exact ⟨c1, t, hst, scanOnPackedRunFromInvLPS_of_invLPS centre place entry q first hI hf
         (ipackMW_last_of_stepsIMWC centre place entry q first hst) ⟨1, hst⟩, hpos⟩)
     hor w hw
+  exact ⟨st, Tc, hpre, fun i hi => (hticks i hi).canonical⟩
 
 #print axioms checkpoints_costOn_upto1
 #print axioms preTraceOnPackedRun_exists

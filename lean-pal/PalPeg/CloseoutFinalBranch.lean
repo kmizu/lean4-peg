@@ -212,7 +212,7 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
         (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
-        (PalPeg.GalilTickFair.Canonical entry 2048) w)
+        (PalPeg.ShapedRun.OracleTick entry) w)
     (hC : H_realizeCanonical centreC placeC entry q first)
     (hres : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →

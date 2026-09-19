@@ -26,7 +26,7 @@ theorem exit_refine {centre : GalilVM → Fin 3}
     (hMode : last.ctl.mode = .scan) (hClock : last.ctl.clock = 2048)
     (hSound : SoundScanNR raw last) :
     StepsAllR (galilFrameS (PofC centre place entry raw) q first) 2048
-      (SoundScanNR raw) (Canonical entry 2048) n x y ∧
+      (SoundScanNR raw) (OracleTick entry raw) n x y ∧
     ShapedSteps centre place entry q first raw n x y := by
   have sound : ∀ z : State GalilVM, (z.ctl.mode ≠ .scan ∨ z = last) → SoundScanNR raw z := by
     intro z hz
@@ -49,8 +49,13 @@ theorem exit_refine {centre : GalilVM → Fin 3}
       have he : x = last := hx.resolve_left (by simpa using hm)
       have hc : x.ctl.clock = 2048 := he ▸ hClock
       cases ht <;> simp_all
+    have hng : x.ctl.mode = .scan → ¬ restartGuardVM x.vm := by
+      rintro hm ⟨w, hw, -⟩
+      have he : x = last := hx.resolve_left (by simpa using hm)
+      rw [he, hRest.1] at hw
+      cases hw
     have hcan : Canonical entry 2048 x y :=
-      ⟨hnr, hpin, keepsSearchCursor_of_tick ht⟩
+      ⟨fun hm hg => absurd hg (hng hm), hpin, keepsSearchCursor_of_tick ht⟩
     have hrs : x.ctl.mode = .replayStart →
         Restarted raw y.vm 0 GalilScaffoldCounter.reset ∧ y.ctl.mode = .scan ∧ y.ctl.clock = 2048 := by
       intro hm
@@ -59,7 +64,8 @@ theorem exit_refine {centre : GalilVM → Fin 3}
       have hylast : y = last := hy.resolve_left (by simpa using hscan)
       rw [hylast]
       exact ⟨hRest, hMode, hClock⟩
-    exact ⟨.succ (sound x hx) ht hcan ih.1, .succ ht hnr hrs ih.2⟩
+    exact ⟨.succ (sound x hx) ht ⟨hcan, fun hm hr => (hnr hm hr).elim, hrs⟩ ih.1,
+      .succ ht (fun hm hr => (hnr hm hr).elim) hrs ih.2⟩
 
 open GalilScaffoldCounter GalilScaffoldInputHead GalilScaffoldChainVerifier
 open PalPeg.GalilStructuredSkeleton
@@ -69,7 +75,7 @@ structure Landing (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffol
     (entry q : ℕ) (first : Fin 9) (raw : List (Fin 2)) (x y : State GalilVM)
     (ℓ radius ticks : ℕ) : Prop where
   run : StepsAllR (galilFrameS (PofC centre place entry raw) q first) 2048
-    (SoundScanNR raw) (GalilTickFair.Canonical entry 2048) ticks x y
+    (SoundScanNR raw) (OracleTick entry raw) ticks x y
   shaped : ShapedSteps centre place entry q first raw ticks x y
   cost : ticks ≤ 1588*(ℓ+1)+836
   mode : y.ctl.mode = .scan

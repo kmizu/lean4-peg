@@ -1,5 +1,4 @@
 import PalPeg.OracleReady
-import PalPeg.CanonicalPeriod
 import PalPeg.CanonicalLocalRealizes
 import PalPeg.Basic
 import PalPeg.Existence
@@ -413,14 +412,6 @@ import PalPeg.PalInPegUnconditional
 /-- info: 'PalPeg.CloseoutFinalFour.latch_iff_pal_of_preTrace' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.CloseoutFinalFour.latch_iff_pal_of_preTrace
-
-/-- info: 'PalPeg.CanonicalPeriod.preTrace_lower_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms PalPeg.CanonicalPeriod.preTrace_lower_zero
-
-/-- info: 'PalPeg.CanonicalPeriod.noBelow_first_canonical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms PalPeg.CanonicalPeriod.noBelow_first_canonical
 
 /-- info: 'PalPeg.GalilTickFair.fallback_right_not_searchPin' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in

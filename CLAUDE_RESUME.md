@@ -1,3 +1,34 @@
+## n268 — canonical 方針を restart-first に戻した（no-restart は `hmove` と両立しない）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 型の tick 述語が `GalilTickFair.Canonical`（no-restart）から `ShapedRun.OracleTick entry`（restart-first の `Canonical` ＋ fresh search の再入点）に。producer `OracleReady.cycleOracleOn_of_readyLeaves` は標準公理のみのまま、葉は `hrestartStage`（新）／`hshiftPeriodMinimal`／`hmove`。**公理は減っていない。** |
+| `obligation_localRealization` | `CanonTrace` が参照する `Canonical` が restart-first になった。`tick_canonical_unique`／`canonical_trunc` は新方針で再証明済み |
+
+**状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
+**なぜ変えたか**: n256 で葉 `hrestart`／`hreplayStart` を消すために「oracle の run は restart しない」としたのはウチの判断で、それが時間評価の根拠を壊していた。Lean でも Python でも break 後は `chain ≠ idle` で search が凍るので、broken のまま走ると次の fallback の半径 `R` が移動量 `d` に対して非有界になる。診断（`docs/palindromes-in-peg/diagnose_no_restart_fallback.py` と同じ計装、診断語の 40 文字 prefix＋周期語に欠陥を入れた 12 語）:
+
+| 方針 | fallback 数 | `R > 4d` | fallback 時の chain |
+|---|---|---|---|
+| restart あり（正本） | 123 | 0 | idle 115／watch 8、AssertionError 0 |
+| restart なし | 124 | 1（`R=25, d=6`、broken） | idle 108／broken 8／watch 8 |
+
+Lean の形式反証は無いので旧 `hmove`（no-restart）は「偽の疑いが濃い（Python 診断で再現）」と記録する。
+
+**何をしたか**
+
+* `GalilTickFair.Canonical`: `noRestart` → `restartFirst`（`Fair` と同じ節）。guard の下では `restartVM` は不可能（`not_restartVM_of_noGuard`）。`canonical_of_restart` 追加、`tick_canonical_unique` は guard で場合分け。`CanonicalLocalRealizes.canonical_trunc` は `restartGuard_of_trunc`／`restartVM_trunc` で再証明（`Tick` 前提が不要になった）。
+* `ShapedRun`: `ShapedSteps` の restart 節を「restart は `Restarted ∧ StageEntry ∧ scan ∧ clock = 2048` に着地」に。`restartGuard_background`（背景 tick は guard を立てない: 背景の break は正 lag だけ）。`OracleTick entry w`（canonical ＋ restart／replayStart の着地）を packed path の tick 述語に（`CloseoutCheckW` の `R` を語で添字づけ）。
+* `OracleRun`: 運ぶ述語 `I` に `¬ restartGuardVM` を追加。`settle`（full-clock の scan 着地で guard が立っていれば restart tick、heads／centre／replay は不変、`MInv`／`Refreshed` は移送）を一致比較の着地に挿入。cost は `matchPiece` の `wait` が 1 増えるだけ（`≤ 2048`）。shift 着地は watch、fallback／replay 着地は葉／`segment` が `¬ guard` を返す。
+* `CanonicalReplay.comparison`／`segment`: 比較ごとに `settle`。tick 数は `N ≤ rem·2049`（`R ≤ 4d` の下で `≤ 8·2048·d`）。
+* `CanonicalSearchReady.field_alongShaped`／`CanonicalSearchHistory.atState_tick`: restart 着地で `field_restarted`／`atState_restart`。chain readiness（`birthCopy_packed`）は新方針でも通る。
+* 削除: `CanonicalPeriod.lean`（「canonical trace 上で `lower = reset`」は restart-first では偽）、`ReadyTransport.lean`（参照ゼロ）。
+
+**次の goal**: `hrestartStage`。材料: `Restarted` の各場は pack から（`centreRep`／`scanGeom(R)`／`radiusScan`）、`Canonical last`／`0 ≤ last`／`3·Rad ≤ 5·last` は chain の ledger（`GalilScaffoldChainRestart.run_order`／`run_canonical`、`GalilScaffoldChainSweep.four_boundaries`）を packed run 上の watch の履歴（`WindowInv`）に接続して出す。その後 `lower = last` の履歴（`≤ last` の周期の排除、Fine–Wilf＋break）で `hshiftPeriodMinimal`／`hmove` の idle 分岐。
+
 ## 2026-09-19: inline draft reverted; checkpoint
 
 ユーザー指示で未完成・未検証の cycle inline proof を撤去し、既存の2公理による

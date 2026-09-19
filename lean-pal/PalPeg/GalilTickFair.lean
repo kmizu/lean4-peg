@@ -211,28 +211,46 @@ The search cursor is a distinct logical field in the abstract VM. -/
 def rightPlace (s : GalilVM) : GalilScaffoldPlace.Place :=
   ⟨PalPeg.GalilFinalAssembly2.lettersOf s.right.head, s.right.gap⟩
 
-/-- **The canonical schedule of the oracle's own runs.**  `Fair` with `restartFirst` replaced by
-"no restart at all": the constructed runs keep a broken chain broken until the next fallback
-(`ShapedRun`), which is a legitimate execution of the machine.  The fallback origin is the right head, as in Scala `beginFallback`; `Fair` retains
-its historical search-cursor pin for the older lemmas.  The init/replay cursor
-clause is shared. -/
+/-- **The canonical schedule of the oracle's own runs.**  The restart of the Scala source is
+kept: a broken chain whose guard is up is restarted first (`ScaffoldGalil.scala:230`,
+`search.start(chain.last)`).  A schedule that never restarts leaves the search frozen behind
+the broken chain, and the Galil move inequality `R ≤ 4·d` that pays for a fallback fails there
+(Python source with the restart branch removed: prefix
+`abaaaaababaaabaaaaabaaaaabaaaaabaaaa`, `R = 25`, `d = 6`, chain broken; with the restart kept
+no fallback ever sees a broken chain).  Below the guard `restartVM` is impossible
+(`restartGuard_of_restartVM`), so no separate "no restart" clause is needed.  The fallback
+origin is the right head, as in Scala `beginFallback`; `Fair` retains its historical
+search-cursor pin for the older lemmas.  The init/replay cursor clause is shared. -/
 structure Canonical (entry delay : ℕ) (x y : State GalilVM) : Prop where
-  noRestart : x.ctl.mode = Mode.scan → ¬ restartVM entry x.vm y.vm
+  restartFirst : x.ctl.mode = Mode.scan → restartGuardVM x.vm →
+    y.ctl = {x.ctl with clock := delay} ∧ restartVM entry x.vm y.vm
   fallbackPlace : x.ctl.mode = Mode.scan → y.ctl.mode = Mode.copy →
     y.vm.fpp.walker = rightPlace y.vm
   keepsSearchCursor : x.ctl.mode = Mode.init ∨ x.ctl.mode = Mode.replayStart →
     y.vm.periodOnly = x.vm.periodOnly ∧ y.vm.walker = x.vm.walker
 
+/-- Below the restart guard no tick is a restart. -/
+theorem not_restartVM_of_noGuard {entry : ℕ} {s t : GalilVM} (hng : ¬ restartGuardVM s) :
+    ¬ restartVM entry s t := fun h => hng (restartGuard_of_restartVM h)
+
 theorem canonical_of_scan_nonCopy {entry delay : ℕ} {x y : State GalilVM}
     (hm : x.ctl.mode = Mode.scan) (hy : y.ctl.mode ≠ Mode.copy)
-    (hnr : ¬ restartVM entry x.vm y.vm) : Canonical entry delay x y :=
-  ⟨fun _ => hnr, fun _ h => absurd h hy,
+    (hng : ¬ restartGuardVM x.vm) : Canonical entry delay x y :=
+  ⟨fun _ hg => absurd hg hng, fun _ h => absurd h hy,
     fun h => by rcases h with h | h <;> exact absurd (hm.symm.trans h) (by decide)⟩
 
 theorem canonical_of_scan_copy {entry delay : ℕ} {x y : State GalilVM}
-    (hm : x.ctl.mode = Mode.scan) (hnr : ¬ restartVM entry x.vm y.vm)
+    (hm : x.ctl.mode = Mode.scan) (hng : ¬ restartGuardVM x.vm)
     (hw : y.vm.fpp.walker = rightPlace y.vm) : Canonical entry delay x y :=
-  ⟨fun _ => hnr, fun _ _ => hw,
+  ⟨fun _ hg => absurd hg hng, fun _ _ => hw,
+    fun h => by rcases h with h | h <;> exact absurd (hm.symm.trans h) (by decide)⟩
+
+/-- The restart tick itself is canonical. -/
+theorem canonical_of_restart {entry delay : ℕ} {x y : State GalilVM}
+    (hm : x.ctl.mode = Mode.scan) (hc : y.ctl = {x.ctl with clock := delay})
+    (hr : restartVM entry x.vm y.vm) : Canonical entry delay x y :=
+  ⟨fun _ _ => ⟨hc, hr⟩,
+    fun _ h => by rw [hc] at h; exact absurd (hm.symm.trans h) (by decide),
     fun h => by rcases h with h | h <;> exact absurd (hm.symm.trans h) (by decide)⟩
 
 theorem canonical_of_offScan {entry delay : ℕ} {x y : State GalilVM}
@@ -586,8 +604,13 @@ theorem tick_canonical_unique {x y₁ y₂ : State GalilVM}
     (h2 : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay x y₂)
     (hc2 : Canonical entry delay x y₂) : y₁ = y₂ := by
   by_cases hm : x.ctl.mode = Mode.scan
-  · exact tick_scan_noRestart_unique rightPlace beginFallback_rightPlace hm h1 (hc1.noRestart hm) (hc1.fallbackPlace hm)
-      h2 (hc2.noRestart hm) (hc2.fallbackPlace hm)
+  · by_cases hg : restartGuardVM x.vm
+    · obtain ⟨hk1, hr1⟩ := hc1.restartFirst hm hg
+      obtain ⟨hk2, hr2⟩ := hc2.restartFirst hm hg
+      exact state_ext (hk1.trans hk2.symm) (restartVM_unique entry hr1 hr2)
+    · exact tick_scan_noRestart_unique rightPlace beginFallback_rightPlace hm h1
+        (not_restartVM_of_noGuard hg) (hc1.fallbackPlace hm)
+        h2 (not_restartVM_of_noGuard hg) (hc2.fallbackPlace hm)
   · exact tick_fair_unique h1 (hc1.toFair_offScan hm) h2 (hc2.toFair_offScan hm)
 
 #print axioms tick_canonical_unique

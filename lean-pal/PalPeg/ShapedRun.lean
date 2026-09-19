@@ -3,6 +3,8 @@ import PalPeg.GalilScaffoldTopRestart
 import PalPeg.GalilScaffoldTopReadyFound
 import PalPeg.GalilScaffoldTopSearch
 import PalPeg.GalilRunSkeleton
+import PalPeg.GalilRestartStage
+import PalPeg.GalilTickFair
 
 set_option autoImplicit false
 
@@ -130,13 +132,65 @@ theorem not_restartVM_of_radius {s u : GalilVM} (h : value u.radius ≠ value s.
   intro hr
   exact h (by rw [(restartVM_shape entry hr).2.2])
 
-/-- **Runs whose scan-mode ticks are never `restart`s and whose `replayStart` ticks land in a
-fresh radius-`0` restart.**  The oracle's own runs have this shape. -/
+/-- Below the restart guard a background step stays below it: a chain breaks in the
+background only at a positive lag (`WatchBreak`), and the guard asks for a zero lag. -/
+theorem restartGuard_background {w : List (Fin 2)} {s s' : GalilVM}
+    (hb : (galilFrameS (PofC centre place entry w) q first).background s s')
+    (hng : ¬ restartGuardVM s) : ¬ restartGuardVM s' := by
+  rintro ⟨w', hw', hmargin, hlast, hlag⟩
+  obtain ⟨-, -, hch, -⟩ := backgroundS_fields (PofC centre place entry w) q first hb
+  rw [hw'] at hch
+  rcases hch with ⟨-, y, hstep, hy⟩ | ⟨-, -, h0⟩ | ⟨-, -, h0⟩
+  · have hy' : ChainVM.broken w' = y := hy
+    subst hy'
+    generalize hx : s.chain = x at hstep
+    cases hstep with
+    | brokenIdle _ => exact hng ⟨w', hx, hmargin, hlast, hlag⟩
+    | watchBreak w0 hbreak =>
+      have hpos : positive w0.lag = true := hbreak.1
+      have hzero : zero w0.lag = true := hlag
+      unfold positive zero at *
+      simp_all
+  · cases h0
+  · simp [chainStart] at h0
+
+/-! ## The tick predicate of the oracle's packed runs -/
+
+/-- **One tick of the oracle's run**: the canonical schedule, with the two re-entries of a
+fresh search recorded where they happen — a `restart` lands in a stage-entry restart, a
+`replayStart` in a fresh radius-`0` restart.  Carried on the packed path itself
+(`CloseoutCheckW.StepsIMWC`), so that theorems about a packed run need no side run. -/
+structure OracleTick (entry : ℕ) (w : List (Fin 2)) (x y : State GalilVM) : Prop where
+  canonical : PalPeg.GalilTickFair.Canonical entry 2048 x y
+  restartStage : x.ctl.mode = .scan → restartVM entry x.vm y.vm →
+    ∃ (Rad : ℕ) (last : Counter), Restarted w y.vm Rad last ∧ StageEntry Rad last ∧
+      y.ctl.mode = .scan ∧ y.ctl.clock = 2048
+  replayStage : x.ctl.mode = .replayStart →
+    Restarted w y.vm 0 reset ∧ y.ctl.mode = .scan ∧ y.ctl.clock = 2048
+
+/-- A scan tick below the restart guard. -/
+theorem oracleTick_of_noGuard {entry : ℕ} {w : List (Fin 2)} {x y : State GalilVM}
+    (hcan : PalPeg.GalilTickFair.Canonical entry 2048 x y) (hm : x.ctl.mode = .scan)
+    (hng : ¬ restartGuardVM x.vm) : OracleTick entry w x y :=
+  ⟨hcan, fun _ hr => absurd (PalPeg.GalilTickFair.restartGuard_of_restartVM hr) hng,
+    fun h => absurd (hm.symm.trans h) (by decide)⟩
+
+/-- A tick out of a mode that is neither `scan` nor `replayStart`. -/
+theorem oracleTick_of_offScan {entry : ℕ} {w : List (Fin 2)} {x y : State GalilVM}
+    (hcan : PalPeg.GalilTickFair.Canonical entry 2048 x y) (hm : x.ctl.mode ≠ .scan)
+    (hrs : x.ctl.mode ≠ .replayStart) : OracleTick entry w x y :=
+  ⟨hcan, fun h => absurd h hm, fun h => absurd h hrs⟩
+
+/-- **Runs whose `restart` ticks land in a stage-entry restart and whose `replayStart` ticks
+land in a fresh radius-`0` restart.**  The oracle's own runs have this shape: these are the
+two re-entries of a fresh search, where the readiness datum is re-established. -/
 inductive ShapedSteps (w : List (Fin 2)) : ℕ → State GalilVM → State GalilVM → Prop
   | zero (x : State GalilVM) : ShapedSteps w 0 x x
   | succ {n : ℕ} {x y z : State GalilVM}
       (h : Tick (galilFrameS (PofC centre place entry w) q first) 2048 x y)
-      (hnr : x.ctl.mode = .scan → ¬ restartVM entry x.vm y.vm)
+      (hrestart : x.ctl.mode = .scan → restartVM entry x.vm y.vm →
+        ∃ (Rad : ℕ) (last : Counter), Restarted w y.vm Rad last ∧ StageEntry Rad last ∧
+          y.ctl.mode = .scan ∧ y.ctl.clock = 2048)
       (hrs : x.ctl.mode = .replayStart →
         Restarted w y.vm 0 reset ∧ y.ctl.mode = .scan ∧ y.ctl.clock = 2048)
       (hr : ShapedSteps w n y z) : ShapedSteps w (n+1) x z
@@ -166,12 +220,12 @@ theorem watchSegE_shaped {w : List (Fin 2)} {es : List Bool} {c c' : Control} {s
   | wait c s s' hm hr hn hb _ ih =>
     obtain ⟨k, hk⟩ := ih
     exact ⟨k + 1, .succ (Tick.scan_wait c s s' hm ⟨hr, hn⟩ hb)
-      (fun _ => not_restartVM_background centre place entry q first hb)
+      (fun _ hrs => (not_restartVM_background centre place entry q first hb hrs).elim)
       (fun h0 => absurd (hm.symm.trans h0) (by decide)) hk⟩
   | count c s s' hm hr ha hc hb _ ih =>
     obtain ⟨k, hk⟩ := ih
     exact ⟨k + 1, .succ (Tick.scan_count c s s' hm (Or.inr ha) hc hb)
-      (fun _ => not_restartVM_background centre place entry q first hb)
+      (fun _ hrs => (not_restartVM_background centre place entry q first hb hrs).elim)
       (fun h0 => absurd (hm.symm.trans h0) (by decide)) hk⟩
   | «match» c s vs vq o hm hr ha hc hne hcmp hmt hq ho _ ih =>
     obtain ⟨k, hk⟩ := ih

@@ -253,7 +253,7 @@ state of a run started in `scan`, and all four of its inputs are free at an
 **run から無償に出る**。
 
 `PackRunRMWR` は `CloseoutOracleW.PackRunRMW` に tick 述語 `R` を運ばせたもの
-（`R := True` が元の形、oracle の run では `GalilTickFair.Canonical`）。 -/
+（`R := True` が元の形、oracle の run では `ShapedRun.OracleTick`（`GalilTickFair.Canonical` ＋ fresh search の再入点））。 -/
 def PackRunRMWR (R : State GalilVM → State GalilVM → Prop) (w : List (Fin 2)) : Prop :=
   ∀ (c : Control) (r : GalilVM),
     PalPeg.GalilInvPlus3.InvLPS (PofC centre place entry w) q first w c r →

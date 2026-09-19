@@ -1,5 +1,7 @@
 import PalPeg.CanonicalSearchBudget
-import PalPeg.ReadyTransport
+import PalPeg.ShapedRun
+import PalPeg.BranchSupply
+import PalPeg.GalilInvPlus3
 
 set_option autoImplicit false
 set_option maxHeartbeats 3000000
@@ -181,10 +183,12 @@ theorem field_alongShaped {w : List (Fin 2)} {k : ℕ} {x y : State GalilVM}
     (hni : x.ctl.mode≠.init) (hx : Field x) : Field y := by
   induction h with
   | zero _ => exact hx
-  | @succ _ x y z ht hnr hrs _ ih =>
+  | @succ _ x y z ht hrestart hrs _ ih =>
       have hy : Field y := field_tick centre place entry q first
         hni hx ht
-        (fun hm hr => absurd hr (hnr hm))
+        (fun hm hr => by
+          obtain ⟨Rad,last,hR,hSE,hmode,hclock⟩ := hrestart hm hr
+          exact field_restarted ((PofC centre place entry w).place y.vm) hR hSE hmode hclock)
         (fun hm => by
           obtain ⟨hR,hmode,hclock⟩ := hrs hm
           exact field_restarted ((PofC centre place entry w).place y.vm)

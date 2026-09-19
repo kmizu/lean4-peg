@@ -1061,13 +1061,20 @@ theorem budgetMinimal_tick {raw : List (Fin 2)} {x y : State GalilVM}
       BirthMinimal centre place entry raw x.vm) :
     BudgetMinimal raw y.ctl y.vm := by
   intro hy
+  -- a restart installs a positive lower bound, so a tick into `lower = reset` is not one
+  have hnr : x.ctl.mode = .scan → ¬ restartVM entry x.vm y.vm := by
+    rintro - ⟨w0, -, -, hlast, -, ht0⟩
+    have hl : y.vm.lower = w0.machine.control.last := by rw [ht0]
+    rw [hl] at hy
+    rw [hy] at hlast
+    simp [positive, reset] at hlast
   have hxmin : ModeMinimal raw x.ctl x.vm := by
     by_cases hi : x.ctl.mode = .init
     · simp [ModeMinimal,hi]
     by_cases hp : x.ctl.mode = .replayStart
     · simp [ModeMinimal,hp]
     apply hmin
-    rw [← lower_eq_of_regular_tick centre place entry q first ht hi hp hcanon.noRestart]
+    rw [← lower_eq_of_regular_tick centre place entry q first ht hi hp hnr]
     exact hy
   have hscanInv : x.ctl.mode = .scan →
       ∃ k, ScanInvariant raw (position x.vm.center) k x.vm.left x.vm.right := by
@@ -1082,7 +1089,7 @@ theorem budgetMinimal_tick {raw : List (Fin 2)} {x y : State GalilVM}
   · intro hm
     exact hbirth (by
       rw [← lower_eq_of_regular_tick centre place entry q first ht
-        (by rw [hm]; decide) (by rw [hm]; decide) hcanon.noRestart]
+        (by rw [hm]; decide) (by rw [hm]; decide) hnr]
       exact hy) hm
   · intro hm
     exact haux.copyP (by rw [hm]; decide)
@@ -1135,7 +1142,7 @@ theorem budgetMinimal_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
     | succ i ih =>
       intro hik
       apply budgetMinimal_tick centre place entry q first hP (htr.tick i (by omega))
-        (hcan i (by omega)) (ih (by omega)) (hpk i (by omega)) (hpk (i+1) (by omega))
+        (hcan i (by omega)).canonical (ih (by omega)) (hpk i (by omega)) (hpk (i+1) (by omega))
         (haux i (by omega))
       intro hz hm a vq hidle he hf
       apply PalPeg.CanonicalSearchHistory.birthMinimals_packed centre place entry q first
