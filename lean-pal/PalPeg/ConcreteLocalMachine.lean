@@ -20,10 +20,12 @@ namespace PalPeg.ConcreteLocalMachine
 
 open PalPeg
 open PalPeg.CloseoutCoreEnc20 (Delta)
-open PalPeg.CloseoutCoreEnc21 (SRole SRoles toAddr pushRearD tailD revD appStartD appD invalDoneD
-  sRoleList)
-open PalPeg.CloseoutCoreEnc25 (SOp RTag rotTag doneTag isIdle isDone deltaOf tagStep invalDelta
-  execDelta)
+open PalPeg.CloseoutCoreEnc21 (SRole SRoles SInj sinj_iff toAddr toAddr_eq pushRearD tailD revD
+  appStartD appD invalDoneD sRoleList finish rotPerm donePerm rotRolesS doneRolesS)
+open PalPeg.CloseoutCoreEnc20 (rotStart)
+open PalPeg.CloseoutCoreEnc25 (SOp RTag rotTag doneTag roleOf roleOf_rotTag roleOf_doneTag
+  sinj_roleOf isIdle isDone isIdle_eq isDone_eq sApply deltaOf tagStep invalDelta execDelta
+  toAddr_keep)
 open PalPeg.RTQueue (Queue RotationState)
 
 /-- The finite observation of a rotation state. -/
@@ -263,5 +265,325 @@ theorem queueView_eq_tops {q : Queue (Fin 2)} {ρ : SRoles}
     cases r' <;> rfl
 
 #print axioms queueView_eq_tops
+
+/-! ## The sub-step on sealed stacks
+
+The stack operations are those of `deltaOf`, on cells; in the three places where a role's list
+becomes junk (`CloseoutCoreEnc25.junkOf`) that stack gets the seal `none` pushed instead of being
+kept.  A pop always meets a letter: every `pop` of `deltaOf` is on a role whose list the pattern
+shows to be non-empty. -/
+
+/-- One stack operation on cells: the seal, or the `Delta` on letters. -/
+def cellApply : Delta → Bool → List (Option (Fin 2)) → List (Option (Fin 2))
+  | _, true, stack => none :: stack
+  | .keep, false, stack => stack
+  | .pop, false, stack => stack.tail
+  | .push a, false, stack => some a :: stack
+
+def invalSealRole : RotationState (Fin 2) → Option SRole
+  | .appending 0 _ (_ :: _) => some .fwd'
+  | _ => none
+
+def execSealRole : RotationState (Fin 2) → Option SRole
+  | .appending 0 _ _ => some .fwd'
+  | _ => none
+
+/-- The role whose stack a sub-step seals: the one whose list becomes junk. -/
+def sealRoleOf : SOp → Queue (Fin 2) → Option SRole
+  | .inval, q => invalSealRole q.state
+  | .exec, q => execSealRole q.state
+  | .install, q => if isDone q.state then some .front else none
+  | _, _ => none
+
+def ovrCell (address : ℕ) (cells : List (Option (Fin 2))) (junk : ℕ → List (Option (Fin 2))) :
+    ℕ → List (Option (Fin 2)) :=
+  fun i => if i = address then cells else junk i
+
+def invalSealedJunk (ρ : SRoles) (junk : ℕ → List (Option (Fin 2))) :
+    RotationState (Fin 2) → (ℕ → List (Option (Fin 2)))
+  | .appending 0 f' (_ :: _) => ovrCell (ρ .fwd') (none :: (f'.map some ++ junk (ρ .fwd'))) junk
+  | _ => junk
+
+def execSealedJunk (ρ : SRoles) (junk : ℕ → List (Option (Fin 2))) :
+    RotationState (Fin 2) → (ℕ → List (Option (Fin 2)))
+  | .appending 0 f' _ => ovrCell (ρ .fwd') (none :: (f'.map some ++ junk (ρ .fwd'))) junk
+  | _ => junk
+
+/-- The junk after a sub-step: the sealed stack joins it. -/
+def sealedJunkOf : SOp → Queue (Fin 2) → SRoles → (ℕ → List (Option (Fin 2))) →
+    (ℕ → List (Option (Fin 2)))
+  | .inval, q, ρ, junk => invalSealedJunk ρ junk q.state
+  | .exec, q, ρ, junk => execSealedJunk ρ junk q.state
+  | .install, q, ρ, junk =>
+      if isDone q.state then
+        ovrCell (ρ .front) (none :: (q.front.map some ++ junk (ρ .front))) junk
+      else junk
+  | _, _, _, junk => junk
+
+theorem sealed_ovrCell {junk : ℕ → List (Option (Fin 2))} (hsealed : ∀ i, Sealed (junk i))
+    (address : ℕ) (cells : List (Option (Fin 2))) :
+    ∀ i, Sealed (ovrCell address (none :: cells) junk i) := by
+  intro i a
+  unfold ovrCell
+  split
+  · simp
+  · exact hsealed i a
+
+/-- The role-indexed form of one sub-step on sealed stacks. -/
+theorem laysSealed_delta {q q' : Queue (Fin 2)} {ρ : SRoles}
+    {stack junk junk' : ℕ → List (Option (Fin 2))}
+    (hinj : SInj ρ) (h : LaysSealed q ρ stack junk) (uR : SRole → Delta)
+    (sealRole : Option SRole)
+    (hro : ∀ ro, cellApply (uR ro) (decide (sealRole = some ro))
+      ((sRoleList q ro).map some ++ junk (ρ ro)) = (sRoleList q' ro).map some ++ junk' (ρ ro))
+    (hsealed' : ∀ i, Sealed (junk' i)) :
+    LaysSealed q' ρ
+      (fun i => cellApply (toAddr ρ uR i) (decide (sealRole.map ρ = some i)) (stack i)) junk' := by
+  refine ⟨fun ro => ?_, hsealed'⟩
+  show cellApply (toAddr ρ uR (ρ ro)) (decide (sealRole.map ρ = some (ρ ro))) (stack (ρ ro)) = _
+  have hseal : decide (sealRole.map ρ = some (ρ ro)) = decide (sealRole = some ro) := by
+    cases sealRole with
+    | none => simp
+    | some r => simp [sinj_iff hinj]
+  rw [toAddr_eq hinj, h.1 ro, hseal]
+  exact hro ro
+
+theorem cellApply_keep_fam (ρ : SRoles) (stack : ℕ → List (Option (Fin 2))) :
+    (fun i => cellApply (toAddr ρ (fun _ => Delta.keep) i)
+      (decide ((none : Option SRole).map ρ = some i)) (stack i)) = stack := by
+  funext i
+  rw [toAddr_keep]
+  simp [cellApply]
+
+/-- **One sub-step keeps the sealed layout.** -/
+theorem laysSealed_sApply (op : SOp) (q : Queue (Fin 2)) (t : RTag)
+    (stack junk : ℕ → List (Option (Fin 2)))
+    (h : LaysSealed q (roleOf t) stack junk) :
+    LaysSealed (sApply op q) (roleOf (tagStep op q t))
+      (fun i => cellApply (deltaOf op q (roleOf t) i)
+        (decide ((sealRoleOf op q).map (roleOf t) = some i)) (stack i))
+      (sealedJunkOf op q (roleOf t) junk) := by
+  have hinj : SInj (roleOf t) := sinj_roleOf t
+  have hstack : ∀ ro, stack (roleOf t ro) = (sRoleList q ro).map some ++ junk (roleOf t ro) := h.1
+  cases op with
+  | snocPush a =>
+      refine laysSealed_delta hinj h (pushRearD a) none ?_ h.2
+      intro ro; cases ro <;> simp [pushRearD, cellApply, sRoleList, sApply, sealedJunkOf]
+  | tailPop =>
+      show LaysSealed (if q.front = [] then _ else _) (roleOf t)
+        (fun i => cellApply ((if q.front = [] then _ else _ : ℕ → Delta) i)
+          (decide ((none : Option SRole).map (roleOf t) = some i)) (stack i)) junk
+      by_cases hf : q.front = []
+      · rw [if_pos hf, if_pos hf, cellApply_keep_fam]; exact h
+      · rw [if_neg hf, if_neg hf]
+        refine laysSealed_delta hinj h (tailD (isIdle q.state)) none ?_ h.2
+        obtain ⟨c, f, hcf⟩ : ∃ c f, q.front = c :: f := by
+          cases hq : q.front with
+          | nil => exact absurd hq hf
+          | cons c f => exact ⟨c, f, rfl⟩
+        intro ro
+        cases hst : q.state <;> cases ro <;>
+          simp [tailD, cellApply, sRoleList, hst, hcf, isIdle]
+  | inval =>
+      show LaysSealed { q with state := RTQueue.invalidate q.state } (roleOf t)
+        (fun i => cellApply (invalDelta (roleOf t) q.state i)
+          (decide ((invalSealRole q.state).map (roleOf t) = some i)) (stack i))
+        (invalSealedJunk (roleOf t) junk q.state)
+      match hst : q.state with
+      | .appending 0 f' (x :: r') =>
+          simp only [invalDelta, invalSealRole, invalSealedJunk]
+          refine laysSealed_delta hinj h invalDoneD (some .fwd') ?_ (sealed_ovrCell h.2 _ _)
+          intro ro; cases ro <;>
+            simp [invalDoneD, cellApply, sRoleList, hst, RTQueue.invalidate, ovrCell,
+              sinj_iff hinj]
+      | .appending 0 f' [] =>
+          simp only [invalDelta, invalSealRole, invalSealedJunk]
+          refine laysSealed_delta hinj h (fun _ => .keep) none ?_ h.2
+          intro ro; cases ro <;> simp [cellApply, sRoleList, hst, RTQueue.invalidate]
+      | .appending (n + 1) f' r' =>
+          simp only [invalDelta, invalSealRole, invalSealedJunk]
+          refine laysSealed_delta hinj h (fun _ => .keep) none ?_ h.2
+          intro ro; cases ro <;> simp [cellApply, sRoleList, hst, RTQueue.invalidate]
+      | .reversing ok f f' r r' =>
+          simp only [invalDelta, invalSealRole, invalSealedJunk]
+          refine laysSealed_delta hinj h (fun _ => .keep) none ?_ h.2
+          intro ro; cases ro <;> simp [cellApply, sRoleList, hst, RTQueue.invalidate]
+      | .idle =>
+          simp only [invalDelta, invalSealRole, invalSealedJunk]
+          refine laysSealed_delta hinj h (fun _ => .keep) none ?_ h.2
+          intro ro; cases ro <;> simp [cellApply, sRoleList, hst, RTQueue.invalidate]
+      | .done f0 =>
+          simp only [invalDelta, invalSealRole, invalSealedJunk]
+          refine laysSealed_delta hinj h (fun _ => .keep) none ?_ h.2
+          intro ro; cases ro <;> simp [cellApply, sRoleList, hst, RTQueue.invalidate]
+  | rotStart =>
+      show LaysSealed (if isIdle q.state then _ else _)
+        (roleOf (if isIdle q.state then rotTag t else t))
+        (fun i => cellApply (toAddr (roleOf t) (fun _ => Delta.keep) i)
+          (decide ((none : Option SRole).map (roleOf t) = some i)) (stack i)) junk
+      rw [cellApply_keep_fam]
+      by_cases hi : isIdle q.state = true
+      · rw [if_pos hi, if_pos hi, roleOf_rotTag]
+        have hidle : q.state = .idle := isIdle_eq hi
+        refine ⟨fun ro => ?_, h.2⟩
+        show stack (rotRolesS (roleOf t) ro) = _
+        cases ro <;> simp [rotRolesS, rotPerm, hstack, sRoleList, rotStart, hidle]
+      · rw [if_neg hi, if_neg hi]; exact h
+  | exec =>
+      show LaysSealed { q with state := RTQueue.exec q.state } (roleOf t)
+        (fun i => cellApply (execDelta (roleOf t) q.state i)
+          (decide ((execSealRole q.state).map (roleOf t) = some i)) (stack i))
+        (execSealedJunk (roleOf t) junk q.state)
+      match hst : q.state with
+      | .reversing ok (x :: f) f' (y :: r) r' =>
+          simp only [execDelta, execSealRole, execSealedJunk]
+          refine laysSealed_delta hinj h (revD x y) none ?_ h.2
+          intro ro; cases ro <;> simp [revD, cellApply, sRoleList, hst, RTQueue.exec]
+      | .reversing ok [] f' [y] r' =>
+          simp only [execDelta, execSealRole, execSealedJunk]
+          refine laysSealed_delta hinj h (appStartD y) none ?_ h.2
+          intro ro; cases ro <;> simp [appStartD, cellApply, sRoleList, hst, RTQueue.exec]
+      | .reversing ok [] f' [] r' =>
+          simp only [execDelta, execSealRole, execSealedJunk]
+          refine laysSealed_delta hinj h (fun _ => .keep) none ?_ h.2
+          intro ro; cases ro <;> simp [cellApply, sRoleList, hst, RTQueue.exec]
+      | .reversing ok [] f' (y :: z :: r) r' =>
+          simp only [execDelta, execSealRole, execSealedJunk]
+          refine laysSealed_delta hinj h (fun _ => .keep) none ?_ h.2
+          intro ro; cases ro <;> simp [cellApply, sRoleList, hst, RTQueue.exec]
+      | .reversing ok (x :: f) f' [] r' =>
+          simp only [execDelta, execSealRole, execSealedJunk]
+          refine laysSealed_delta hinj h (fun _ => .keep) none ?_ h.2
+          intro ro; cases ro <;> simp [cellApply, sRoleList, hst, RTQueue.exec]
+      | .appending 0 f' r' =>
+          simp only [execDelta, execSealRole, execSealedJunk]
+          refine laysSealed_delta hinj h (fun _ => .keep) (some .fwd') ?_
+            (sealed_ovrCell h.2 _ _)
+          intro ro; cases ro <;>
+            simp [cellApply, sRoleList, hst, RTQueue.exec, ovrCell, sinj_iff hinj]
+      | .appending (n + 1) (x :: f') r' =>
+          simp only [execDelta, execSealRole, execSealedJunk]
+          refine laysSealed_delta hinj h (appD x) none ?_ h.2
+          intro ro; cases ro <;> simp [appD, cellApply, sRoleList, hst, RTQueue.exec]
+      | .appending (n + 1) [] r' =>
+          simp only [execDelta, execSealRole, execSealedJunk]
+          refine laysSealed_delta hinj h (fun _ => .keep) none ?_ h.2
+          intro ro; cases ro <;> simp [cellApply, sRoleList, hst, RTQueue.exec]
+      | .idle =>
+          simp only [execDelta, execSealRole, execSealedJunk]
+          refine laysSealed_delta hinj h (fun _ => .keep) none ?_ h.2
+          intro ro; cases ro <;> simp [cellApply, sRoleList, hst, RTQueue.exec]
+      | .done f0 =>
+          simp only [execDelta, execSealRole, execSealedJunk]
+          refine laysSealed_delta hinj h (fun _ => .keep) none ?_ h.2
+          intro ro; cases ro <;> simp [cellApply, sRoleList, hst, RTQueue.exec]
+  | install =>
+      by_cases hd : isDone q.state = true
+      · obtain ⟨f0, hst⟩ := isDone_eq hd
+        have hseal : sealRoleOf .install q = some .front := by simp [sealRoleOf, hd]
+        have hjunk : sealedJunkOf .install q (roleOf t) junk
+            = ovrCell (roleOf t .front)
+              (none :: (q.front.map some ++ junk (roleOf t .front))) junk := by
+          simp [sealedJunkOf, hd]
+        have htag : tagStep .install q t = doneTag t := by simp [tagStep, hd]
+        rw [hseal, hjunk, htag, roleOf_doneTag]
+        refine ⟨fun ro => ?_, sealed_ovrCell h.2 _ _⟩
+        show cellApply (deltaOf .install q (roleOf t) (doneRolesS (roleOf t) ro))
+          (decide ((some SRole.front).map (roleOf t) = some (doneRolesS (roleOf t) ro)))
+          (stack (doneRolesS (roleOf t) ro)) = _
+        have hkeep : ∀ i, deltaOf .install q (roleOf t) i = Delta.keep := fun i => by
+          show toAddr (roleOf t) (fun _ => Delta.keep) i = Delta.keep
+          exact toAddr_keep _ i
+        rw [hkeep]
+        cases ro <;>
+          simp [doneRolesS, donePerm, hstack, sRoleList, sApply, finish, hst, ovrCell,
+            cellApply, sinj_iff hinj]
+      · have hseal : sealRoleOf .install q = none := by simp [sealRoleOf, hd]
+        have hjunk : sealedJunkOf .install q (roleOf t) junk = junk := by simp [sealedJunkOf, hd]
+        have htag : tagStep .install q t = t := by simp [tagStep, hd]
+        have hfinish : sApply .install q = q := by
+          show finish q = q
+          unfold finish
+          cases hq : q.state with
+          | done f0 => exact absurd (by simp [isDone, hq]) hd
+          | idle => simp [hq]
+          | reversing ok f f' r r' => simp [hq]
+          | appending ok f' r' => simp [hq]
+        rw [hseal, hjunk, htag, hfinish]
+        have hfamily : (fun i => cellApply (deltaOf .install q (roleOf t) i)
+            (decide ((none : Option SRole).map (roleOf t) = some i)) (stack i)) = stack :=
+          cellApply_keep_fam (roleOf t) stack
+        rw [hfamily]
+        exact h
+
+#print axioms laysSealed_sApply
+
+/-! ## The sub-step from finite data -/
+
+def invalSealRoleOfView : RotationView → Option SRole
+  | .appending true _ true => some .fwd'
+  | _ => none
+
+def execSealRoleOfView : RotationView → Option SRole
+  | .appending true _ _ => some .fwd'
+  | _ => none
+
+/-- The role a sub-step seals, selected from the finite observation. -/
+def sealRoleOfView : SOp → QueueView → Option SRole
+  | .inval, v => invalSealRoleOfView v.rotation
+  | .exec, v => execSealRoleOfView v.rotation
+  | .install, v => if v.rotation.isDone then some .front else none
+  | _, _ => none
+
+theorem sealRoleOf_eq_view (op : SOp) (q : Queue (Fin 2)) :
+    sealRoleOf op q = sealRoleOfView op (queueView q) := by
+  cases op with
+  | snocPush a => rfl
+  | tailPop => rfl
+  | rotStart => rfl
+  | inval =>
+    show invalSealRole q.state = invalSealRoleOfView (rotationView q.state)
+    cases q.state with
+    | idle => rfl
+    | done f => rfl
+    | reversing ok f f' r r' => rfl
+    | appending ok f' r' =>
+      cases ok with
+      | zero => cases r' <;> simp [invalSealRole, invalSealRoleOfView, rotationView]
+      | succ n => simp [invalSealRole, invalSealRoleOfView, rotationView]
+  | exec =>
+    show execSealRole q.state = execSealRoleOfView (rotationView q.state)
+    cases q.state with
+    | idle => rfl
+    | done f => rfl
+    | reversing ok f f' r r' => rfl
+    | appending ok f' r' =>
+      cases ok with
+      | zero => simp [execSealRole, execSealRoleOfView, rotationView]
+      | succ n => simp [execSealRole, execSealRoleOfView, rotationView]
+  | install =>
+    show (if isDone q.state then some SRole.front else none)
+      = if (rotationView q.state).isDone then some SRole.front else none
+    rw [isDone_eq_view]
+
+/-- **The queue sub-step of the local machine.**  The stack operations, the seal and the new role
+tag are functions of the operation, the role tag, the rotation phase kept in the control, the
+zero test of the valid counter, and the two top cells of the role stacks; they keep the sealed
+layout of the abstract sub-step `sApply`. -/
+theorem laysSealed_localSubStep (op : SOp) (q : Queue (Fin 2)) (t : RTag)
+    (stack junk : ℕ → List (Option (Fin 2)))
+    (h : LaysSealed q (roleOf t) stack junk) :
+    let view := queueViewOfTops (rotationPhase q.state) (validIsZero q.state)
+      (fun ro => stack (roleOf t ro))
+    LaysSealed (sApply op q) (roleOf (tagStepOfView op view t))
+      (fun i => cellApply (deltaOfView op view (roleOf t) i)
+        (decide ((sealRoleOfView op view).map (roleOf t) = some i)) (stack i))
+      (sealedJunkOf op q (roleOf t) junk) := by
+  intro view
+  have hview : queueView q = view := queueView_eq_tops h
+  rw [← hview, ← deltaOf_eq_view, ← tagStep_eq_view, ← sealRoleOf_eq_view]
+  exact laysSealed_sApply op q t stack junk h
+
+#print axioms laysSealed_localSubStep
 
 end PalPeg.ConcreteLocalMachine
