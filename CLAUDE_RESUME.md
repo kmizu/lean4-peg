@@ -25,6 +25,9 @@
 * Scala 正本（`ScaffoldChain.scala:108-176`）: shift は中心を `h` 動かし `shiftOne` ごとに `cycle += 2`（計 `2h`）、`matched()` ごとに `cycle.dec()`、`cycleEnd ⇔ cycle = 1`、`canShift = watch ∧ lag = 0 ∧ phase = 4 ∧ cycleEnd`。`checkPair` の主張: lag ゼロなら `left == prediction ⇔ ¬ cycleEnd`。
 * Lean が run 上に持っているもの: `Coupled'.watch`（`CloseoutPackRun40:81`）の `Other'` ＝ `periodOnly = true ∧ 1 ≤ h ∧ 5h ≤ R + cycle`（scan）。**`cycle` の上界も「左の文字＝予測」も無い。**
 * 分岐の見立て: (c1) 追い付いた watch が予測を外す → `RestartLower.move_of_prediction_break` がそのまま使える形だが、`hfour : 4h ≤ R` を `scanMinimal_watch_no_short` の `Sem` 側のためだけに要求している。`periodOnly` ラウンドでは `R ≥ 3h` までしか言えない見込みなので、「`periodOnly = true` なら `WatchMinimal` は `TailMinimal` 側（`base ≤ R`）」を run に載せるか、`cycle ≤ 2h` を載せる必要がある。(c2) 追い付いていて予測＝右の文字、`cycleEnd` でない → Scala は到達不能と主張。Lean では継続不変量（shift 前の span が周期 `2h` を持つので、`cycle − 1` 個ぶん左は周期的）が要る。(c3) `periodOnly` ラウンドで遅れている watch／broken: 未調査。
+* (c1) の設計（一次情報で確認済みの事実に基づく。**証明は未着手**）:
+  1. 「`periodOnly = true` なら `TailMinimal` 側」は `ScanMinimal (fun _ _ => False) raw s` と書ける（`Move := False` なら `Sem` 側は `watch_moveMinimal` で `False`、copy／back も `False`）。不変量は `scan → periodOnly = true → ScanMinimal (fun _ _ => False) raw s`。tick は source の chain が idle でなければ `modeMinimal_tick_packed`（`Move` 汎用、`BirthMinimal` は `s.chain = .idle` が偽で空虚）、idle なら誕生が無い（誕生すれば target の `periodOnly = false`）ので target も idle。`shift_done` は `ShiftMinimal`（`Move` に依らない）から `scanMinimal_shiftDone`。`BirthMinimal` は `∀ a vq` なので idle の source には使えない点に注意。
+  2. `move_of_prediction_break` は `2h ≤ R` も要る（`move_of_activePeriodBreak` の `hhk`）。run 上の `Other'` は `5h ≤ R + cycle` だけで **`cycle` の上界が無い**（`OnlyCredit` も下界 `0 ≤ margin + cycle`）。Scala では `beginShift` で `cycle = 0`、`shiftOne` ごとに `+2`（`rem` は `−1`）、`matched` ごとに `−1` なので、`cycle + 2·rem ≤ 2h`（shift）／`cycle ≤ 2h`（scan）が不変量の候補。これと `Other'` で `3h ≤ R`。
 
 ## n277 — 葉 `hmove`: 追い付く前に壊れる watch（この tick の正 lag の break）を閉じた。第 1 ラウンドで残るのは「source の chain が既に broken」だけ
 
