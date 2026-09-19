@@ -683,7 +683,9 @@ theorem freshShiftLedger_of_chainW {raw : List (Fin 2)} {cc b : Fin 3} {xs : Lis
 theorem shiftPal_of_freshShiftLedger {w : List (Fin 2)} {s : GalilVM}
     (hCan : canRight s.right)
     (hLedger : ∀ s' : GalilVM,
-      compareFound (PofC centre place entry w) q first s s' → FreshShiftLedger w s s') :
+      compareFound (PofC centre place entry w) q first s s' →
+      ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
+      FreshShiftLedger w s s') :
     ShiftPal centre place entry q first w s := by
   intro s' hCompare hNotMatched wch hChain hGuard r₀ hScanInv
   obtain ⟨vs, vq, a, hvl, hvr, hiff, hsearch, hchainAt, hteq⟩ :
@@ -694,7 +696,7 @@ theorem shiftPal_of_freshShiftLedger {w : List (Fin 2)} {s : GalilVM}
     | false => rw [if_neg (by simp)]; exact hvr
     | true => rw [if_pos rfl]; exact hvr
   obtain ⟨hIn, hLeft, hPos, hLo, hCaught'⟩ :=
-    hLedger s' hCompare hGuard wch hChain r₀ hScanInv
+    hLedger s' hCompare hNotMatched hGuard wch hChain r₀ hScanInv
   -- the frontier is inside the encoded word: the right head can still move.
   have hrp : position (right s.right) = position s.right + 1 :=
     right_position s.right hCan
@@ -767,6 +769,7 @@ theorem shiftPal_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
       H_freshShiftAtShiftEntry centre place entry q first w (st j).ctl (st j).vm (st (j+1)).vm)
     (hFreshLedger : ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
       ∀ s' : GalilVM, compareFound (PofC centre place entry w) q first (st j).vm s' →
+        ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
         FreshShiftLedger w (st j).vm s') :
     ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).ctl.mode = Mode.scan →
       (st j).ctl.replaying = false → ShiftPal centre place entry q first w (st j).vm := by
@@ -811,6 +814,7 @@ theorem shiftPal_alongRun {w : List (Fin 2)} {c : Control} {r : GalilVM}
       Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
       z.vm.periodOnly = false → ∀ s' : GalilVM,
         compareFound (PofC centre place entry w) q first z.vm s' →
+        ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
           FreshShiftLedger w z.vm s')
     (m : ℕ) (z : State GalilVM)
     (hSteps : Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z)

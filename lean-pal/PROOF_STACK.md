@@ -1,3 +1,18 @@
+## n236 — 公理進捗: 第 3 連言の guard を `¬ matched s'` に狭めた（操作 A・公理は弱化）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 3 連言が不一致比較（`¬ (galilFrameS …).matched s'`）でだけ `FreshShiftLedger` を要求する形になった。消費者 `shiftPal_of_freshShiftLedger` は `ShiftPal` の前提から `¬matched` を持っているので何も失わない。一致比較の着地（`afterCompare`、chain は `ChainMatched` 越し）を主張から外した |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+編集 5 箇所: `shiftPal_of_freshShiftLedger`／`shiftPal_alongTrace`／`shiftPal_alongRun`（`ShiftPalAlongTrace`）、
+run 形公理と trace 形定理（`PalInPegUnconditional`）。`Axioms.lean` の guard は変化なし（3 本）。
+
 ## n235 — 公理進捗: 第 3 連言の wrapper `freshShiftLedger_of_landing`（`LandingData` から）
 
 **公理への進捗**
