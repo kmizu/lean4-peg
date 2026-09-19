@@ -1,3 +1,45 @@
+## n238 — 公理進捗: `obligation_shiftPalResiduesAlongRun` を窓 1 本に置換（偽の第 2 連言と `H_readsShift` が消えた）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 3 連言（`H_readsShift`／`H_freshShiftAtShiftEntry`／窓）→ **1 連言**: 不一致比較の直前で shift guard が立つ点 `z` に、誕生中心 `cen₀` に anchor した `ChainW` の窓（現在の中心は `cen₀ + k·h`、窓は右ヘッドまで）＋`ScanInvariant`＋`canRight`＋`x[cen₀] = cc`＋`2h ≤ R`。`periodOnly` の区別なし。n233 で偽（条件付き）と分かった `H_freshShiftAtShiftEntry` と、round 機構の `H_readsShift` は**公理から消えた**。`ShiftPal` は round 機構（`shiftPal_of_run_B`／`RoundScan`）を経由せず、窓の周期構造から直接出る |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 何を証明したか
+
+| 定理 | 内容 |
+|---|---|
+| `ShiftPalAlongTrace.palAt_shift_half` | 半径 `h` の回文は周期 `2h` で `h` だけ右へ写る |
+| `ShiftPalAlongTrace.palAt_block_periodic` | 誕生中心から `h` 刻みの全中心 `cen₀ + (j+1)h` はブロック回文（`j = 0` は `palAt_block_of_centre`、以降は `palAt_shift_half`） |
+| `ShiftPalAlongTrace.freshShiftLedger_of_chainW`（一般化） | 誕生 anchor の窓＋`cen = cen₀ + k·h`＋`2h ≤ R` から `FreshShiftLedger` の 5 成分。margin には触れない |
+| `ShiftEntryFromLanding.freshShiftLedger_of_chainW_scan`（一般化） | 比較前の窓から（chain の 1 歩を `chainW_step`＋`chainStep_unique` で渡す） |
+| `obligation_shiftPalAlongRun` / `obligation_shiftPalAlongTrace` | 窓の残差 → `shiftPal_of_freshShiftLedger` で `ShiftPal`。trace 形は `canRightAtScanOrShift_alongTrace` で `canRight` を取る |
+
+削除（参照ゼロ）: `shiftPal_alongRun`／`shiftPal_alongTrace`／`roundBundle_alongTrace`
+（round 機構経由の旧経路）、`freshShiftLedger_of_landing`（`LandingData` 射影のデモ）。
+
+### なぜこれで正しいか（一次情報）
+
+* 窓 `ChainW … cen₀ …` は一致比較で 1 つ伸び（`GalilReplaySpan.chainW_matched`）、shift は右ヘッドを
+  動かさない（`beginShiftVM`／`shiftOne` は `center`・`left` だけ）。誕生 anchor は変わらない。
+* 現在の中心 `cen₀ + k·h` の右 `h` の回文は `palAt_block_periodic`、`h < i` は現在の回文で鏡映して
+  窓の周期で進める。左端の不一致は語レベルの主張に影響しない。
+* Scala `ScaffoldChain.checkPair` の assert（継続中は予測一致、`cycleEnd` でだけ不一致）とも整合。
+
+### 残差（run 層に要求するもの）と producer 候補
+
+| 残差 | producer 候補 |
+|---|---|
+| `ChainW`（誕生 anchor）を不一致比較の直前まで運ぶ | replay 生まれ: `CloseoutWatchRound48/50/53`（`LandingData` の transport、ただし `C := position t.center` で shift を越えると anchor がずれる → `cen₀` 固定に直す）。found 生まれ: `GalilReplaySpan.blockOn_of_candidate`＋`chainW_start`（誕生時）＋同じ transport |
+| `x[cen₀] = cc` | 誕生時の `Candidate`（`candidate_bounce` の `hc0 : w[0]? = some c`、`blockOn_of_candidate` の `hcen`） |
+| `2h ≤ R` | 新鮮な shift: guard の margin（`4h ≤ R`）。継続 round: 半径は `R + h` ずつ増える |
+| `ScanInvariant`／`canRight` | `LandingData`／`LiveScanChain`／`WatchSegE.match` の `ha` |
+
 ## n237 — 公理進捗: 第 3 連言を「不一致比較直前の窓＋中心記号」に置き換えた（操作 B）
 
 **公理への進捗**

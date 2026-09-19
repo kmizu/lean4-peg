@@ -603,37 +603,88 @@ def FreshShiftLedger (w : List (Fin 2)) (s s' : GalilVM) : Prop :=
       (encoded w)[position s.center + r₀ + 1 - 2 * periodLength wch]? =
         (encoded w)[position s.center + r₀ + 1]?
 
-/-- **第 3 連言 `FreshShiftLedger` の producer。**  左端の不一致でも成り立つ（5 成分とも
-語レベルで左端に触れない）。入力は `shiftInv_of_watch_entry` と同じ一次事実のうち
-右ヘッド側だけ:
+/-- **半径 `h` の回文は周期 `2h` で `h` だけ右へ写る。** -/
+theorem palAt_shift_half {α : Type} {x : List α} {c h : ℕ}
+    (hpal : Manacher.PalAt x c h) (hper : PeriodOn x (2 * h) (c - h) (c + h + h))
+    (hlen : c + h + h < x.length) : Manacher.PalAt x (c + h) h := by
+  have hhc : h ≤ c := hpal.1
+  refine ⟨by omega, hlen, ?_⟩
+  intro i hi
+  have h1 : x[c + h + i]? = x[c - h + i]? := by
+    have := hper (c - h + i) (by omega) (by omega)
+    rw [show c - h + i + 2 * h = c + h + i from by omega] at this
+    exact this.symm
+  have h2 : x[c - h + i]? = x[c + h - i]? := by
+    have := hpal.2.2 (h - i) (by omega)
+    rw [show c - (h - i) = c - h + i from by omega,
+      show c + (h - i) = c + h - i from by omega] at this
+    exact this
+  rw [h1, h2]
 
-* `hCW` — `ChainW` の `.watch` 枝（比較後の chain `s'.chain`、窓は `cen + R` まで）
-* `hR` — 直前の右ヘッド `position s.right = cen + R`（`ScanInvariant` の `r₀` を `R` に固定する）
+#print axioms palAt_shift_half
+
+/-- **誕生中心から `h` 刻みの全中心はブロック回文。**  `j = 0` は `palAt_block_of_centre`、
+以降は `palAt_shift_half`（周期は中心記号で `cen` まで左へ伸ばした窓 `periodOn_extend_left`）。 -/
+theorem palAt_block_periodic {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
+    {cen E : ℕ} (hblk : PalPeg.GalilReplaySpan.BlockOn raw cc b xs (cen + 1) E)
+    (hcentre : (encoded raw)[cen]? = some cc) (hlen : E < (encoded raw).length) :
+    ∀ j, cen + j * (xs.length + 1) + 2 * (xs.length + 1) ≤ E →
+      Manacher.PalAt (encoded raw) (cen + j * (xs.length + 1) + (xs.length + 1))
+        (xs.length + 1) := by
+  intro j
+  induction j with
+  | zero =>
+    intro hj
+    simp only [Nat.zero_mul, Nat.add_zero] at hj ⊢
+    exact palAt_block_of_centre hblk hcentre hj hlen
+  | succ j ih =>
+    intro hj
+    rw [add_one_mul] at hj ⊢
+    have hper : PeriodOn (encoded raw) (2 * (xs.length + 1)) cen E :=
+      periodOn_extend_left (periodOn_of_blockOn hblk)
+        (by rw [hcentre, block_last_of_blockOn hblk (by omega)])
+    have hprev := ih (by omega)
+    rw [show cen + (j * (xs.length + 1) + (xs.length + 1)) + (xs.length + 1)
+        = cen + j * (xs.length + 1) + (xs.length + 1) + (xs.length + 1) from by omega]
+    exact palAt_shift_half hprev (hper.mono (by omega) (by omega)) (by omega)
+
+#print axioms palAt_block_periodic
+
+/-- **`FreshShiftLedger` の producer——誕生中心に anchor した窓から、どの shift 入口でも。**
+
+入力は run 層が不一致比較の直前に持つ一次事実の、右ヘッド側だけ:
+
+* `hCW` — `ChainW` の `.watch` 枝、誕生中心 `cen₀` に anchor（比較後の chain `s'.chain`、窓は
+  現在の右ヘッド `cen + R` まで）
+* `hk` — 現在の中心 `cen = cen₀ + k·h`（shift は中心を `h` ずつ右へ動かす）
+* `hR` — 直前の右ヘッド `position s.right = cen + R`（`ScanInvariant` の `r₀` を `R` に固定）
 * 比較後の右ヘッド 3 事実（`s'.right = right s.right`）
-* `hcentre` — 中心の記号 `x[cen] = cc`
-* `hpo` — `s'.periodOnly = false`（guard の `margin ≥ 0` 枝を選ぶ） -/
+* `hcentre` — 誕生中心の記号 `x[cen₀] = cc`（窓に無い唯一の静的事実）
+* `hsize` — `2h ≤ R`（新鮮な shift では margin から `4h ≤ R`、以降は round の半径）
+
+左端の不一致でも成り立つ（5 成分とも語レベルで左端に触れない）。 -/
 theorem freshShiftLedger_of_chainW {raw : List (Fin 2)} {cc b : Fin 3} {xs : List (Fin 3)}
-    {cen R bud : ℕ} {lim : Bool} {s s' : GalilVM}
+    {cen₀ k cen R bud : ℕ} {lim : Bool} {s s' : GalilVM}
     (hcen : position s.center = cen)
-    (hCW : PalPeg.GalilReplaySpan.ChainW raw cen (cen + R) (cen + R) bud lim cc b xs s'.chain)
+    (hk : cen = cen₀ + k * (xs.length + 1))
+    (hCW : PalPeg.GalilReplaySpan.ChainW raw cen₀ (cen + R) (cen + R) bud lim cc b xs s'.chain)
     (hR : position s.right = cen + R)
     (hrightRep : GalilScaffoldInputTrace.Represents s'.right.head raw)
     (hrightPresent : s'.right.head.focus ≠ none)
     (hrightPos : position s'.right = cen + R + 1)
-    (hcentre : (encoded raw)[cen]? = some cc)
-    (hpo : s'.periodOnly = false) :
+    (hcentre : (encoded raw)[cen₀]? = some cc)
+    (hsize : 2 * (xs.length + 1) ≤ R) :
     FreshShiftLedger raw s s' := by
   intro hguard wch hchain r₀ hscan
   have hr₀ : r₀ = R := by have := hscan.rightPos; omega
   rw [hr₀] at hscan ⊢
   have hpal : Manacher.PalAt (encoded raw) cen R := by rw [← hcen]; exact hscan.palindrome
   rw [hchain] at hCW
-  obtain ⟨hlag, hblk, hcore, hcanM, hmargin, -⟩ := hCW
-  obtain ⟨w', hw', hlagZ, -, -, hsign, hsym⟩ := hguard
+  obtain ⟨hlag, hblk, hcore, -, -, -⟩ := hCW
+  obtain ⟨w', hw', hlagZ, -, -, -, hsym⟩ := hguard
   rw [hchain] at hw'
   have hww : wch = w' := ChainVM.watch.inj hw'
   subst hww
-  simp only [hpo, Bool.false_eq_true, ↓reduceIte] at hsign
   have hpl : periodLength wch = xs.length + 1 := periodLength_of_coreX hcore
   rw [hpl, hcen]
   -- the verifier sits on the previous right head
@@ -656,20 +707,16 @@ theorem freshShiftLedger_of_chainW {raw : List (Fin 2)} {cc b : Fin 3} {xs : Lis
     · exact hlt
     · exact absurd (hreadR.trans (List.getElem?_eq_none_iff.2 hge)) hreadRne
   have hblk' := blockOn_succ_of_symbol hblk hcore hver (hsym.trans hreadR)
-  -- sizes
-  have hmNonneg : (0 : ℤ) ≤ value wch.margin := by
-    by_cases hlt : value wch.margin < 0
-    · rw [(GalilScaffoldCounter.negative_iff wch.margin hcanM).2 hlt] at hsign
-      exact absurd hsign (by decide)
-    · omega
-  have hsize : 4 * (xs.length + 1) ≤ R := by omega
-  have hcen2 : (encoded raw)[cen]? = (encoded raw)[cen + 2 * (xs.length + 1)]? := by
-    rw [hcentre, block_last_of_blockOn hblk (by omega)]
+  -- the window, extended to the birth centre by its symbol
+  have hper : PeriodOn (encoded raw) (2 * (xs.length + 1)) cen₀ (cen + R + 1) :=
+    periodOn_extend_left (periodOn_of_blockOn hblk')
+      (by rw [hcentre, block_last_of_blockOn hblk' (by omega)])
+  have hblock : Manacher.PalAt (encoded raw) (cen + (xs.length + 1)) (xs.length + 1) := by
+    have := palAt_block_periodic hblk' hcentre hrightLt k (by omega)
+    rwa [← hk] at this
   refine ⟨?_, ?_, by omega, by omega, ?_⟩
-  · exact palAt_mirror hpal (palAt_block_of_centre hblk hcentre (by omega) (by omega))
-      (by omega)
-  · exact PalPeg.periodOn_mirror hpal (by omega)
-      (periodOn_extend_left (periodOn_of_blockOn hblk) hcen2)
+  · exact palAt_mirror hpal hblock (by omega)
+  · exact PalPeg.periodOn_mirror hpal (by omega) (hper.mono (by omega) (by omega))
   · have hp := periodOn_of_blockOn hblk' (cen + R + 1 - 2 * (xs.length + 1)) (by omega)
       (by omega)
     rwa [show cen + R + 1 - 2 * (xs.length + 1) + 2 * (xs.length + 1) = cen + R + 1
@@ -728,115 +775,9 @@ theorem shiftPal_of_freshShiftLedger {w : List (Fin 2)} {s : GalilVM}
 
 #print axioms shiftPal_of_freshShiftLedger
 
-/-- **`RoundBundle` を trace に沿って（`st 1` から）。** -/
-theorem roundBundle_alongTrace {w : List (Fin 2)}
-    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
-    (hPreTrace : PreTrace centre place entry q first w st Tc)
-    (hTcPos : 1 ≤ Tc w.length)
-    (hAuxPack : ∀ j, 1 ≤ j → j ≤ Tc w.length → AuxPack (st j).ctl (st j).vm)
-    (hReadsShift : ∀ j, 1 ≤ j → j ≤ Tc w.length → H_readsShift w (st j).ctl (st j).vm)
-    (hFreshShift : ∀ j, 1 ≤ j → j < Tc w.length →
-      H_freshShiftAtShiftEntry centre place entry q first w (st j).ctl (st j).vm (st (j+1)).vm) :
-    ∀ j, 1 ≤ j → j ≤ Tc w.length → RoundBundle w (st j).ctl (st j).vm := by
-  have hBase : RoundBundle w (st 1).ctl (st 1).vm := by
-    refine roundBundle_of_idle ?_
-    refine chainIdle_after_init centre place entry q first (st 0) (st 1)
-      (hPreTrace.trace.tick 0 (by omega)) ?_
-    rw [hPreTrace.start]; rfl
-  intro j
-  induction j with
-  | zero => intro hIndexPos; exact absurd hIndexPos (by omega)
-  | succ n ih =>
-    intro _ hIndexLeTc
-    rcases Nat.eq_zero_or_pos n with hn | hn
-    · subst hn; exact hBase
-    · exact roundBundle_tick_B centre place entry q first (c := (st n).ctl) (s := (st n).vm)
-        (c' := (st (n+1)).ctl) (t := (st (n+1)).vm)
-        (ih hn (by omega))
-        (hAuxPack n hn (by omega)).coupled.block
-        (fun hShift => copyIdle_shift_of_auxPack (hAuxPack n hn (by omega)) hShift)
-        (hReadsShift n hn (by omega))
-        (hFreshShift n hn (by omega))
-        (hPreTrace.trace.tick n (by omega))
-
-/-- **`ShiftPal` を trace の scan 点で**（`hSP` の正しい形）。 -/
-theorem shiftPal_alongTrace {w : List (Fin 2)} (hw : 0 < w.length)
-    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
-    (hPreTraceIMW : PalPeg.CloseoutCheckW.PreTraceIMW centre place entry q first w st Tc)
-    (hTcPos : 1 ≤ Tc w.length)
-    (hReadsShift : ∀ j, 1 ≤ j → j ≤ Tc w.length → H_readsShift w (st j).ctl (st j).vm)
-    (hFreshShift : ∀ j, 1 ≤ j → j < Tc w.length →
-      H_freshShiftAtShiftEntry centre place entry q first w (st j).ctl (st j).vm (st (j+1)).vm)
-    (hFreshLedger : ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
-      ∀ s' : GalilVM, compareFound (PofC centre place entry w) q first (st j).vm s' →
-        ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
-        FreshShiftLedger w (st j).vm s') :
-    ∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).ctl.mode = Mode.scan →
-      (st j).ctl.replaying = false → ShiftPal centre place entry q first w (st j).vm := by
-  have hAuxPack := auxPack_alongTrace_afterFirstStep centre place entry q first hw
-    hPreTraceIMW.base.pre
-  have hCanRight := canRightAtScanOrShift_alongTrace centre place entry q first hw hPreTraceIMW
-  have hBundle := roundBundle_alongTrace centre place entry q first hPreTraceIMW.base.pre hTcPos
-    hAuxPack hReadsShift hFreshShift
-  intro j hIndexPos hIndexLeTc hMode hNotReplaying
-  exact shiftPal_of_roundBundle centre place entry q first hMode hNotReplaying
-    (hBundle j hIndexPos hIndexLeTc)
-    (hCanRight j hIndexLeTc (Or.inl hMode))
-    (fun hpo => shiftPal_of_freshShiftLedger centre place entry q first
-      (hCanRight j hIndexLeTc (Or.inl hMode))
-      (hFreshLedger j hIndexPos hIndexLeTc hpo))
-
-
-/-! ## run 形（`InvLPC` 起点から到達する scan 状態）
-
-trace 形とまったく同じ 3 残差に落ちる。**起点の違いだけ**:
-
-| 入力 | trace 形の出どころ | run 形の出どころ |
-|---|---|---|
-| chain が idle | `chainIdle_after_init`（boot の 1 手目） | `CloseoutShiftLocalFree.chainIdle_of_invS`（`InvLPC` の `InvS`） |
-| `AuxPack` | `auxPack_alongTrace_afterFirstStep` | `CloseoutPackRun2.auxPack_steps` ＋ `InvLPC` の 3 場 |
-| `canRight right` | `canRightAtScanOrShift_alongTrace`（trace 予算） | **消費者が持っている**（`BigPack2MG7W''.extra : Extra7` の `scanAvail`） |
-
-`canRight` を仮説に取るのは過剰量化の解消。唯一の消費者
-`CloseoutMarksPack.packRunR_MW_marksFree` は帰納段で `BigPack2MG7W''` を持っており、
-その `Extra7.scanAvail` が scan・非 replay 点でちょうど `canRight` を与える。
-以前の形はそれを捨てていた。 -/
-theorem shiftPal_alongRun {w : List (Fin 2)} {c : Control} {r : GalilVM}
-    (hInvLPC : PalPeg.GalilInvPlus2.InvLPC w c r)
-    (hReadsShift : ∀ (m : ℕ) (z : State GalilVM),
-      Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
-      H_readsShift w z.ctl z.vm)
-    (hFreshShift : ∀ (m : ℕ) (z z' : State GalilVM),
-      Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
-      Tick (galilFrameS (PofC centre place entry w) q first) 2048 z z' →
-      H_freshShiftAtShiftEntry centre place entry q first w z.ctl z.vm z'.vm)
-    (hFreshLedger : ∀ (m : ℕ) (z : State GalilVM),
-      Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z →
-      z.vm.periodOnly = false → ∀ s' : GalilVM,
-        compareFound (PofC centre place entry w) q first z.vm s' →
-        ¬ (galilFrameS (PofC centre place entry w) q first).matched s' →
-          FreshShiftLedger w z.vm s')
-    (m : ℕ) (z : State GalilVM)
-    (hSteps : Steps (galilFrameS (PofC centre place entry w) q first) 2048 m ⟨c, r⟩ z)
-    (hMode : z.ctl.mode = Mode.scan) (hNotReplaying : z.ctl.replaying = false)
-    (hCanRight : canRight z.vm.right) :
-    ShiftPal centre place entry q first w z.vm :=
-  shiftPal_of_run_B centre place entry q first
-    (PalPeg.CloseoutShiftLocalFree.chainIdle_of_invS hInvLPC.1.1.1.1) hSteps
-    (fun _ _ hz' => PalPeg.CloseoutPackRun2.auxPack_steps centre place entry q first
-      (PalPeg.GalilOracleLeaves2.hlive_of_invLPC centre place entry q first hInvLPC)
-      ⟨PalPeg.CloseoutPackRun.coupled_of_invLPC hInvLPC,
-        PalPeg.CloseoutPackRun.front_of_invLPC hInvLPC,
-        PalPeg.CloseoutPackRun.copyPack_of_invLPC hInvLPC⟩ hz')
-    hReadsShift hFreshShift hMode hNotReplaying hCanRight
-    (fun hpo => shiftPal_of_freshShiftLedger centre place entry q first hCanRight
-      (hFreshLedger m z hSteps hpo))
 
 end
 
-#print axioms shiftPal_alongRun
 #print axioms chainIdle_after_init
-#print axioms roundBundle_alongTrace
-#print axioms shiftPal_alongTrace
 
 end PalPeg.ShiftPalAlongTrace
