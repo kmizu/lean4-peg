@@ -26,7 +26,9 @@ variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Pl
 the scan radius. -/
 def StageData (raw : List (Fin 2)) (clock : ℕ) (s : GalilVM) : Prop :=
   ∃ lower, BudgetInv ((PofC centre place entry raw).place s) lower clock (searchLens.get s) ∧
-    StageHistory ((PofC centre place entry raw).place s) lower (value s.radius) (searchLens.get s)
+    StageHistory ((PofC centre place entry raw).place s) lower (value s.radius)
+      (searchLens.get s) ∧
+    (searchLens.get s).search.mode ≠ .found
 
 structure StageAt (raw : List (Fin 2)) (x : State GalilVM) : Prop where
   scan : x.ctl.mode = .scan → x.vm.chain = .idle → StageData centre place entry raw x.ctl.clock x.vm
@@ -37,8 +39,8 @@ theorem stageAt_restarted {raw : List (Fin 2)} {c : Control} {r : GalilVM} {Rad 
     (hm : c.mode = .scan) (hclock : c.clock = 2048) : StageAt centre place entry raw ⟨c, r⟩ := by
   obtain ⟨lower, hbudget, hsearch⟩ :=
     budgetInv_restarted ((PofC centre place entry raw).place r) hR hSE
-  refine ⟨fun _ _ => ⟨lower, ?_, stageHistory_begin _ lower r.radius hsearch⟩,
-    fun h => by simp [hm] at h⟩
+  refine ⟨fun _ _ => ⟨lower, ?_, stageHistory_begin _ lower r.radius hsearch,
+    by rw [hsearch]; intro hfound; cases hfound⟩, fun h => by simp [hm] at h⟩
   show BudgetInv _ lower c.clock _
   rw [hclock]
   exact hbudget
@@ -51,6 +53,24 @@ private theorem idle_source {a found : Bool} {ans : GalilScaffoldTape.Tape} {cc 
   · exact hx
   · exact hx
 
+/-- An idle chain that stays idle saw no find. -/
+private theorem notFound_of_idle {a found : Bool} {ans : GalilScaffoldTape.Tape} {cc : Fin 3}
+    {wk : GalilScaffoldPlace.Place} {ver : GalilScaffoldInputHead.PlaceHead} {rad : Counter}
+    (h : chainAt a found ans cc wk ver rad .idle .idle) : found = false := by
+  rcases h with ⟨hx, _⟩ | ⟨_, hf, _⟩ | ⟨_, _, hz⟩
+  · exact absurd rfl hx
+  · exact hf
+  · exfalso
+    cases a with
+    | false =>
+      rw [if_neg (by simp)] at hz
+      unfold chainStart at hz
+      cases hz
+    | true =>
+      rw [if_pos rfl] at hz
+      unfold chainStart at hz
+      cases hz
+
 /-- A background tick is one search event without a match. -/
 theorem stageData_background {raw : List (Fin 2)} {clock clock' : ℕ} {s t : GalilVM}
     (hP : Decodes (PofC centre place entry raw))
@@ -62,14 +82,16 @@ theorem stageData_background {raw : List (Fin 2)} {clock clock' : ℕ} {s t : Ga
     backgroundS_fields (PofC centre place entry raw) q first hb
   rw [hidle] at hch
   have hsourceIdle := idle_source hch rfl
-  obtain ⟨lower, hbudget, hhistory⟩ := hsource hsourceIdle
+  obtain ⟨lower, hbudget, hhistory, -⟩ := hsource hsourceIdle
+  rw [hsourceIdle] at hch
+  have hnotFound := of_decide_eq_false (notFound_of_idle hch)
   have hstep : searchStep ((PofC centre place entry raw).place s) false
       (searchLens.get s) (searchLens.get t) := by
     rcases hse with ⟨_, hh⟩ | ⟨hn, _⟩
     · exact hh
     · exact (hn hsourceIdle).elim
   have hnext := stageHistory_step hbudget hhistory hstep
-  refine ⟨lower, ?_, ?_⟩
+  refine ⟨lower, ?_, ?_, hnotFound⟩
   · rw [hP.2 t s hcenter]
     exact budget_step hbudget hevent hstep
   · rw [hP.2 t s hcenter, hradius]
@@ -100,13 +122,15 @@ theorem stageData_matched {raw : List (Fin 2)} {clock clock' : ℕ} {s t : Galil
   have hget : searchLens.get t = vq := by rw [heq, afterBirth_searchGet]; rfl
   rw [hchain.symm.trans hidle] at hch
   have hsourceIdle := idle_source hch rfl
-  obtain ⟨lower, hbudget, hhistory⟩ := hsource hsourceIdle
+  obtain ⟨lower, hbudget, hhistory, -⟩ := hsource hsourceIdle
+  rw [hsourceIdle] at hch
+  have hnotFound := of_decide_eq_false (notFound_of_idle hch)
   have hstep : searchStep ((PofC centre place entry raw).place s) true (searchLens.get s) vq := by
     rcases hse with ⟨_, hh⟩ | ⟨hn, _⟩
     · exact hh
     · exact (hn hsourceIdle).elim
   have hnext := stageHistory_step hbudget hhistory hstep
-  refine ⟨lower, ?_, ?_⟩
+  refine ⟨lower, ?_, ?_, by rw [hget]; exact hnotFound⟩
   · rw [hP.2 t s hcenter, hget]
     exact budget_step hbudget (hevent true) hstep
   · rw [hP.2 t s hcenter, hget, hradius, inc_value]
@@ -147,11 +171,11 @@ theorem stageAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
     have hradius : u.radius = t.radius := by rw [hp]; split <;> rfl
     have hget : searchLens.get u = searchLens.get t := by rw [hp]; split <;> rfl
     refine ⟨fun _ hidle => ?_, fun h => by simp_all⟩
-    obtain ⟨lower, hbudget, hhistory⟩ :=
+    obtain ⟨lower, hbudget, hhistory, hnotFound⟩ :=
       stageData_matched centre place entry q first hP (hsource.scan hm)
         (clock' := 2048) (fun a => by cases a <;> simp [ClockEvent] <;> omega) hc hmt
         (hchain.symm.trans hidle)
-    refine ⟨lower, ?_, ?_⟩
+    refine ⟨lower, ?_, ?_, ?_⟩
     · show BudgetInv ((PofC centre place entry raw).place u) lower 2048 (searchLens.get u)
       rw [hget, hP.2 u t hcenter]
       exact hbudget
@@ -159,6 +183,9 @@ theorem stageAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
         (searchLens.get u)
       rw [hget, hP.2 u t hcenter, hradius]
       exact hhistory
+    · show (searchLens.get u).search.mode ≠ .found
+      rw [hget]
+      exact hnotFound
   | scan_shift c s t u hm _ _ _ _ _ _ hb =>
     obtain ⟨v, _, rfl⟩ := hb
     exact ⟨(fun hs _ => by simp_all), (fun _ h => by cases h)⟩
@@ -184,5 +211,79 @@ theorem stageAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
       simp_all
     · intro hs h
       simp_all
+
+open PalPeg.CanonicalSearchReady in
+/-- The stage data and the readiness field along a shaped run. -/
+theorem stageAt_shaped {raw : List (Fin 2)} {n : ℕ} {x y : State GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hx : StageAt centre place entry raw x) (hfield : Field x) (hnotInit : x.ctl.mode ≠ .init)
+    (hr : ShapedSteps centre place entry q first raw n x y) :
+    StageAt centre place entry raw y ∧ Field y := by
+  induction hr with
+  | zero => exact ⟨hx, hfield⟩
+  | @succ _ x y z ht hrestart hrs _ ih =>
+    have hy := stageAt_tick centre place entry q first hP hnotInit hx hfield ht hrestart hrs
+    have hfy : Field y := field_tick centre place entry q first hnotInit hfield ht
+      (fun hm hr => by
+        obtain ⟨Rad, last, hR, hSE, hmode, hclock⟩ := hrestart hm hr
+        exact field_restarted ((PofC centre place entry raw).place y.vm) hR hSE hmode hclock)
+      (fun hm => by
+        obtain ⟨hR, hmode, hclock⟩ := hrs hm
+        exact field_restarted ((PofC centre place entry raw).place y.vm) hR
+          (stageEntry_zero _) hmode hclock)
+    exact ih hy hfy (PalPeg.BranchSupply.tick_target_mode_ne_init ht)
+
+open PalPeg.CanonicalSearchReady in
+/-- The origin records the search segment from its last restart. -/
+theorem stageAt_invLPS {raw : List (Fin 2)} {c : Control} {s : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c s) :
+    StageAt centre place entry raw ⟨c, s⟩ ∧ Field ⟨c, s⟩ := by
+  obtain ⟨r, Rad, last, es, c₀, hR, hSE, hclock, hseg⟩ := hI.2
+  have hm : c.mode = .scan := (PalPeg.GalilOracleLocal.invS_mode hI.1.1.1.1.1).1
+  have hm₀ := watchSegE_first_mode q first hseg hm
+  obtain ⟨n, hshape⟩ := watchSegE_shaped centre place entry q first hseg
+  exact stageAt_shaped centre place entry q first hP
+    (stageAt_restarted centre place entry hR hSE hm₀ hclock)
+    (field_restarted ((PofC centre place entry raw).place r) hR hSE hm₀ hclock)
+    (by rw [hm₀]; decide) hshape
+
+open PalPeg.CanonicalSearchReady in
+/-- The stage data at every point of a packed run out of an `InvLPS` origin. -/
+theorem stageAt_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    {k : ℕ} {y : State GalilVM}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y) :
+    StageAt centre place entry raw y := by
+  obtain ⟨g, h0, hk, ht, hcan, -⟩ := hrun
+  have hm₀ : c₀.mode = .scan := (PalPeg.GalilOracleLocal.invS_mode hI.1.1.1.1.1).1
+  have hall : ∀ i, i ≤ k →
+      StageAt centre place entry raw (g i) ∧ Field (g i) ∧ (g i).ctl.mode ≠ .init := by
+    intro i
+    induction i with
+    | zero =>
+      intro _
+      rw [h0]
+      obtain ⟨hstage, hfield⟩ := stageAt_invLPS centre place entry q first hP hI
+      exact ⟨hstage, hfield, by show c₀.mode ≠ .init; rw [hm₀]; decide⟩
+    | succ i ih =>
+      intro hn
+      obtain ⟨hstage, hfield, hnotInit⟩ := ih (by omega)
+      have htick := ht.tick i (by omega)
+      have horacle := hcan i (by omega)
+      refine ⟨stageAt_tick centre place entry q first hP hnotInit hstage hfield htick
+          horacle.restartStage horacle.replayStage,
+        field_tick centre place entry q first hnotInit hfield htick
+          (fun hm hr => by
+            obtain ⟨Rad, last, hR, hSE, hmode, hclock⟩ := horacle.restartStage hm hr
+            exact field_restarted ((PofC centre place entry raw).place (g (i+1)).vm) hR hSE
+              hmode hclock)
+          (fun hm => by
+            obtain ⟨hR, hmode, hclock⟩ := horacle.replayStage hm
+            exact field_restarted ((PofC centre place entry raw).place (g (i+1)).vm) hR
+              (stageEntry_zero _) hmode hclock),
+        PalPeg.BranchSupply.tick_target_mode_ne_init htick⟩
+  simpa only [hk] using (hall k le_rfl).1
 
 end PalPeg.SearchStageRun

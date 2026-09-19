@@ -45,6 +45,7 @@ structure StageHistory (p : GalilScaffoldPlace.Place) (lower : ℕ) (R : ℤ) (v
       = value v.search.span + (if v.search.mode = .double then value v.search.work else 0)
   waitDebt : v.search.mode = .wait → 0 ≤ value v.search.debt
   window : Active v.search.mode → ∃ H, NoCandidate p lower H ∧ WindowBound v.search H
+  started : v.search.mode ≠ .idle
 
 /-- A window of `4·lower + 4` places is too short to hold a candidate above `lower`. -/
 theorem noCandidate_short (p : GalilScaffoldPlace.Place) (lower : ℕ) :
@@ -75,7 +76,8 @@ theorem stageHistory_begin (p : GalilScaffoldPlace.Place) (lower : ℕ) (radius 
       have hz : zero (ofNat (n+1)) = false := by simp [zero, ofNat, List.replicate_succ]
       rw [hz]
       simp [ofNat_value]
-  refine ⟨fun _ => ?_, fun hwait => (by rw [hmode] at hwait; cases hwait), fun _ => ?_⟩
+  refine ⟨fun _ => ?_, fun hwait => (by rw [hmode] at hwait; cases hwait), fun _ => ?_,
+    by rw [hmode]; simp⟩
   · simp only [hmode, reduceCtorEq, if_false]
     rw [hspan, hdebt]
     ring
@@ -97,7 +99,8 @@ theorem stageHistory_of_steady {p : GalilScaffoldPlace.Place} {lower : ℕ} {R :
     (hwindow : ∃ H : ℕ, NoCandidate p lower H ∧ value v.search.span ≤ 4 * (H : ℤ)) :
     StageHistory p lower R v := by
   obtain ⟨H, hnone, hbound⟩ := hwindow
-  refine ⟨fun _ => ?_, fun hwait => ?_, fun _ => ⟨H, hnone, ?_⟩⟩
+  refine ⟨fun _ => ?_, fun hwait => ?_, fun _ => ⟨H, hnone, ?_⟩,
+    by rcases hsteady with h | h | h | h | h <;> simp [h]⟩
   · rcases hsteady with h | h | h | h | h <;> simp only [h, reduceCtorEq, if_false] <;> linarith
   · rcases hsteady with h | h | h | h | h <;> rw [h] at hwait <;> cases hwait
   · rcases hsteady with h | h | h | h | h <;> simp only [WindowBound, h] <;> exact hbound
@@ -109,7 +112,7 @@ theorem stageHistory_of_grow {p : GalilScaffoldPlace.Place} {lower : ℕ} {R : �
       value v.search.span + 8 * value v.search.work ≤ 4 * (H : ℤ)) :
     StageHistory p lower R v := by
   obtain ⟨H, hnone, hbound⟩ := hwindow
-  refine ⟨fun _ => ?_, fun hwait => ?_, fun _ => ⟨H, hnone, ?_⟩⟩
+  refine ⟨fun _ => ?_, fun hwait => ?_, fun _ => ⟨H, hnone, ?_⟩, by simp [hmode]⟩
   · simp only [hmode, reduceCtorEq, if_false]; linarith
   · rw [hmode] at hwait; cases hwait
   · simp only [WindowBound, hmode]; exact hbound
@@ -122,7 +125,7 @@ theorem stageHistory_of_double {p : GalilScaffoldPlace.Place} {lower : ℕ} {R :
       value v.search.span + 2 * value v.search.work ≤ 2 * (H : ℤ)) :
     StageHistory p lower R v := by
   obtain ⟨H, hnone, hbound⟩ := hwindow
-  refine ⟨fun _ => ?_, fun hwait => ?_, fun _ => ⟨H, hnone, ?_⟩⟩
+  refine ⟨fun _ => ?_, fun hwait => ?_, fun _ => ⟨H, hnone, ?_⟩, by simp [hmode]⟩
   · simp only [hmode, if_true]; exact hbalance
   · rw [hmode] at hwait; cases hwait
   · simp only [WindowBound, hmode]; exact hbound
@@ -134,14 +137,15 @@ theorem stageHistory_of_wait {p : GalilScaffoldPlace.Place} {lower : ℕ} {R : �
     (hwindow : ∃ H : ℕ, NoCandidate p lower H ∧ value v.search.span ≤ (H : ℤ)) :
     StageHistory p lower R v := by
   obtain ⟨H, hnone, hbound⟩ := hwindow
-  refine ⟨fun _ => ?_, fun _ => hdebt, fun _ => ⟨H, hnone, ?_⟩⟩
+  refine ⟨fun _ => ?_, fun _ => hdebt, fun _ => ⟨H, hnone, ?_⟩, by simp [hmode]⟩
   · simp only [hmode, reduceCtorEq, if_false]; linarith
   · simp only [WindowBound, hmode]; exact hbound
 
 theorem stageHistory_of_inactive {p : GalilScaffoldPlace.Place} {lower : ℕ} {R : ℤ} {v : SearchVM}
-    (hinactive : ¬ Active v.search.mode) (hnotWait : v.search.mode ≠ .wait) :
+    (hinactive : ¬ Active v.search.mode) (hnotWait : v.search.mode ≠ .wait)
+    (hstarted : v.search.mode ≠ .idle) :
     StageHistory p lower R v :=
-  ⟨fun h => absurd h hinactive, fun h => absurd h hnotWait, fun h => absurd h hinactive⟩
+  ⟨fun h => absurd h hinactive, fun h => absurd h hnotWait, fun h => absurd h hinactive, hstarted⟩
 
 /-! ## The fields of the search after a prepare-side step -/
 
@@ -215,7 +219,7 @@ theorem stageHistory_step_offRun {p : GalilScaffoldPlace.Place} {lower clock : �
   | idle | found | missed =>
     simp only [searchStep, hm] at hstep
     subst v'
-    exact stageHistory_of_inactive (by simp [Active, hm]) (by simp [hm])
+    exact stageHistory_of_inactive (by simp [Active, hm]) (by simp [hm]) hhistory.started
   | lower | lowerHome | copy | home =>
     simp only [searchStep, hm] at hstep
     obtain ⟨y, htick, rfl⟩ := hstep
@@ -442,8 +446,8 @@ theorem stageHistory_step_run {p : GalilScaffoldPlace.Place} {lower clock : ℕ}
     apply stageHistory_of_steady (Or.inr (Or.inr (Or.inr (Or.inr h))))
     · rw [hdebt', hspan']; linarith
     · exact ⟨H, hnone, by rw [hspan']; exact hbound⟩
-  · exact stageHistory_of_inactive (by simp [Active, h]) (by simp [h])
-  · exact stageHistory_of_inactive (by simp [Active, h]) (by simp [h])
+  · exact stageHistory_of_inactive (by simp [Active, h]) (by simp [h]) (by simp [h])
+  · exact stageHistory_of_inactive (by simp [Active, h]) (by simp [h]) (by simp [h])
   · have hspan' : v'.search.span = v.search.span := by
       simpa [stageSpan, hm, h] using hframe
     have hfailed : NoCandidate p lower span :=
