@@ -1,3 +1,23 @@
+## n276 — 葉 `hmove`: 仕事が残っている第 1 ラウンドの chain（copy／back／追い付き中の watch）を閉じた。第 1 ラウンドで残るのは broken だけ
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` は、chain が idle でなく、かつ「`periodOnly = false` なら chain tick の結果が broken」である不一致状態だけを負う（`periodOnly = true` の場合は従来どおり全部） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。
+
+**何を証明したか**: `RestartLowerRun.move_of_working_chain` → `move_of_activeBound`。`Rad < 4H` は chain の時間の台帳から:
+
+* `PalPeg/ChainClock.lean`（新規）: chain 状態の関数 `chainWork`（copy: 残り bit×2 ＋ cells ＋ 1 ＋ lag、back: 左端までの歩数 ＋ 1 ＋ lag、watch: lag）と `chainPeriod`（copy 中は cells ＋ 残り bit − 1）。`chainWork_step`（1 歩で 1 減る・周期は不変）、`chainWork_matched`（一致で高々 1 増える）、`…_done`、`chainWork_chainStart`、`period_of_semWith`（payload の `H` ＝ `chainPeriod`。copy 中は `AnswerAhead` の一意性 `remainingBits_of_answerAhead`）、そして `clock_chainAt`: 不変量 `0 < W → W + E ≤ 2047·(4H − R)`（`E` は直前の一致からの時間）が chain tick 1 回で保たれる。一致 tick は `R+1`（`−2047`）と `E: 2047 → 0`（`+2047`）が相殺する。
+* 誕生時 `R ≤ 2H`: `SearchStageHistory.found_radius_le`。`WindowBound` を `span ≤ 2H_prev + 2` に強め、最小候補 `H` は前段の窓に入らない（`candidate_rewindow`）ので `span ≤ 8H`、`Rad ≤ span/4`。`run_of_found`（`found` に入るのは `run` からだけ）。
+* run 上: `ClockAt`／`clockAt_tick`／`birth_radius`、`MinimalAcrossRestart.clock`。時刻の上下界は `SearchStageRun.stageAt_field_packed` が返す `Field` から。
+* 分岐の網羅: `RestartLowerRun.chainTick_cases`（chain 非 idle の chain tick の結果は broken／仕事あり／追い付いた watch のどれか）。
+
+**未完の部分**: `hmove` の残りは (c) `periodOnly = true`（shift 後のラウンド。Scala `checkPair` に当たる継続不変量が run 上に無い）と (d) 第 1 ラウンドで chain tick の結果が broken（restart guard は source 状態について不成立。正 lag の break か、source が既に broken）。どちらも未調査で、証明は未着手。`obligation_localRealization` は未着手。
+
 ## n275 — 葉 `hmove`: 第 1 ラウンドで追い付いた watch（`lag = 0`）を `phase` によらず全部閉じた（葉は 1 本のまま、前提がもう 1 つ狭まった）
 
 **公理への進捗**
