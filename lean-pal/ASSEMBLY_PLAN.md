@@ -1,3 +1,26 @@
+## n282 — 公理 `obligation_cycleOracleOnPackedRun` を証明して外した（2 → 1）。残る義務は `obligation_localRealization` だけ
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | **証明して削除。** `PalInPeg.cycleOracleOnPackedRun`（定理、固定証人 `entry = 0, q = 1, first = 0`）＝ `OracleReady.cycleOracleOn_of_readyLeaves centreC placeC 0 1 0 (decodesC 0 w) …`。producer の最後の葉 `hmove` が無くなった |
+| `obligation_localRealization` | 変化なし（未着手） |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件、`Axioms.lean` の guard を 1 公理に更新した上で通過）・標準公理のみ（3 本）・無条件 PAL は未完（残り 1 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization`（**本数 5 → 4、義務 2 → 1**）。`PalInPeg.cycleOracleOnPackedRun` と `OracleReady.cycleOracleOn_of_readyLeaves` は標準 3 公理のみ。`PalInPegUnconditional.lean` に残る `axiom` 宣言は `obligation_localRealization` の 1 本。
+
+**何を証明したか**: 葉 `hmove` の最後の場合（shift 後のラウンドで不一致状態の chain が既に broken）。`FirstRoundGuard` を全ラウンド版 `BrokenGuard (b : Bool)`（`scan → periodOnly = b → broken なら restartGuardVM`）にし、`MinimalAcrossRestart.guard : ∀ b, BrokenGuard b c s` として run に載せた。tick（`brokenGuard_tick`）は `b` 汎用で、break の入口 2 つを callback で受ける。
+
+* shift 後（`b = true`）の正 lag `WatchBreak`: watch は常に lag ゼロ（n281 の `Continuation`）なので起きない。
+* shift 後の lag ゼロ `BreakStep`: `lateBreak_tailRound`。watch は追い付いていて背景 step で動かないので `distance = R`。fresh 側（`FreshC`・phase 4）は `four_of_freshC` で `4h ≤ R`。`Other'` 側（`5h ≤ R + cycle`）は、`cycle ≤ 1` なら `4h ≤ R`、`cycle ≥ 2` なら左の place が `[Lb, C]` の中にあるので、`matched_text`（matched 比較の文字＝左の文字）と `prediction_eq_left_of_period`（左の文字＝予測: 周期 → 回文の鏡像 → 検証済み窓）から「読んだ文字＝予測」となり break しない。`4h ≤ distance` からは n278 の `restartGuard_of_lateBreak`。
+* `prediction_eq_left_of_period` は n280 の `shiftGuard_of_tail_caughtUp` の中身から切り出して両方が使う。
+* 消費者: `not_broken_offGuard`（旧 `not_broken_firstRound` の全ラウンド版）→ `OracleReady` の `hMove` の broken 分岐 2 箇所。これで `hmove` を呼ぶ分岐が無くなり、仮説 `hmove` を `cycleOracleOn_of_readyLeaves` から削除した。前提は `Decodes`／`first ≠ 4`／`0 < q`／`first ≠ 7`／`first ≠ 8` だけで、固定証人では `decodesC` と `decide` で出る。
+* 公理は `(entry q first)` 一般＋`first ≠ 4` の形だったが、使用箇所は `unconditional` の 1 箇所（`0 1 0`）だけだったので、定理は固定証人で述べた（`0 < q`・`first ≠ 7/8` を一般には仮定できないため）。
+
+**`hmove` が消えるまでの経路（n272〜n282）**: idle（n272/n273）→ 第 1 ラウンド: 追い付いた watch（n274/n275）、仕事の残る chain（n276/n277、chain の時計）、既に broken（n278、`FirstRoundGuard`）→ shift 後: 予測外れ（n279、`TailRound`／`CycleBound`）、予測一致（n280、`Continuation`＝Scala `checkPair`）、lag ゼロ・phase 4（n281）、既に broken（n282、`BrokenGuard`）。
+
+**未完の部分**: `obligation_localRealization`（`H_realizeCanonical centreC placeC entry q first`、局所実現）。handoff の順序 (2): 具体的な永続物理有限局所機械（`ActRule → compStep → LocalStep.realize`、`CoreEnc12/22/25`、`LocalChain`、`TEqG`/`Rep`）、最初の成果物は queue sub-step の `ActRule` を有限観測から。**未着手。**
+
 ## n281 — 葉 `hmove`: shift 後のラウンドの watch は常に lag ゼロ・phase 4。葉に残るのは「shift 後のラウンドで不一致状態の chain が既に broken」だけ
 
 **公理への進捗**

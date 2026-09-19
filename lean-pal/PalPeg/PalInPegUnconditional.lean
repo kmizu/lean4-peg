@@ -3,12 +3,13 @@ import PalPeg.BranchSupply
 import PalPeg.ShiftPalAlongTrace
 import PalPeg.ShiftEntryFromLanding
 import PalPeg.CloseoutFoundRoutes
+import PalPeg.OracleReady
 
 /-!
 # `PalInPeg.unconditional` — 目標そのもの。穴は `axiom` で明示する
 
 **これが目標の形**: `RecognizedByTotalPEG PAL` を**前提ゼロ**で（＝閉じた項として）持つ。
-いま足りない 2 個の義務を `axiom` として明示し、`#print axioms unconditional` を
+いま足りない 1 個の義務（n282 で 2 → 1）を `axiom` として明示し、`#print axioms unconditional` を
 そのまま TODO リストにする。
 
 ```
@@ -34,7 +35,7 @@ import PalPeg.CloseoutFoundRoutes
 
 | axiom | 内容 | 経路と残り |
 |---|---|---|
-| `obligation_cycleOracleOnPackedRun` | `CycleOracleOn (ScanOnPackedRunFromInvLPS) (ShapedRun.OracleTick entry)` | n268 で canonical 方針を **restart-first**（Scala 正本 `ScaffoldGalil.scala:230`）に戻した。no-restart では broken chain の fallback で Galil の移動不等式 `R ≤ 4d` が破れる（Python 正本から restart 分岐だけ除いた実行で `R=25, d=6`；restart ありでは fallback 時に chain が broken のことが無い）。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉: `hmove`（「restart guard の下」で、chain が idle でなく、`periodOnly = true` で、不一致状態の chain が既に broken である場合）のみ。shift 後のラウンドの watch は常に lag ゼロ・phase 4（n281、`RestartLowerRun.tailTick_cases`；run 不変量 `Continuation`）。lag ゼロ・phase 4 の watch が出る場合は n279／n280 で閉じた（予測外れ: `RestartLowerRun.move_of_tail_mispredict`；予測一致: `shiftGuard_of_tail_caughtUp`＝Scala `checkPair`；run 不変量 `TailRound`／`Continuation`）。第 1 ラウンドは n274〜n278 で全部閉じた（n278: 第 1 ラウンドで broken なら restart guard、`RestartLowerRun.not_broken_firstRound`／`firstRoundGuard_tick`；`RestartLowerRun.move_of_working_source`／`move_of_working_chain`／`move_of_watch_mispredict`／`shiftGuard_of_caughtUp`／`move_of_watch_short`）。chain idle の分岐は n272／n273 で `RestartLowerRun.move_of_idle` が証明して接続済み（探索が段の途中の場合は `SearchStageRun.dpPack_of_stage`）。旧葉 `hshiftPeriodMinimal` は n271 で `RestartLowerRun.scanMinimal_packed` → `CanonicalChainMinimal.shiftPeriodMinimal_packed` が証明して接続済み（origin の `PackedFromBoot` を使う）。旧葉 `hrestartStage`（guard 状態での restart 着地が `Restarted ∧ StageEntry`）は n270 で `RestartCertificate.restartStage` が証明して `OracleReady` に接続済み。 |
+| ~~`obligation_cycleOracleOnPackedRun`~~ → 定理 `cycleOracleOnPackedRun`（n282 で証明、公理を削除） | `CycleOracleOn (ScanOnPackedRunFromInvLPS) (ShapedRun.OracleTick entry)` | **n282: producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉が全部無くなり、固定証人 `0 1 0` で定理になった。最後の葉 `hmove` の最後の場合（shift 後のラウンドで既に broken）は `RestartLowerRun.not_broken_offGuard`／`BrokenGuard`／`lateBreak_tailRound`。** 以下は経緯: n268 で canonical 方針を **restart-first**（Scala 正本 `ScaffoldGalil.scala:230`）に戻した。no-restart では broken chain の fallback で Galil の移動不等式 `R ≤ 4d` が破れる（Python 正本から restart 分岐だけ除いた実行で `R=25, d=6`；restart ありでは fallback 時に chain が broken のことが無い）。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉: `hmove`（「restart guard の下」で、chain が idle でなく、`periodOnly = true` で、不一致状態の chain が既に broken である場合）のみ。shift 後のラウンドの watch は常に lag ゼロ・phase 4（n281、`RestartLowerRun.tailTick_cases`；run 不変量 `Continuation`）。lag ゼロ・phase 4 の watch が出る場合は n279／n280 で閉じた（予測外れ: `RestartLowerRun.move_of_tail_mispredict`；予測一致: `shiftGuard_of_tail_caughtUp`＝Scala `checkPair`；run 不変量 `TailRound`／`Continuation`）。第 1 ラウンドは n274〜n278 で全部閉じた（n278: 第 1 ラウンドで broken なら restart guard、`RestartLowerRun.not_broken_firstRound`／`firstRoundGuard_tick`；`RestartLowerRun.move_of_working_source`／`move_of_working_chain`／`move_of_watch_mispredict`／`shiftGuard_of_caughtUp`／`move_of_watch_short`）。chain idle の分岐は n272／n273 で `RestartLowerRun.move_of_idle` が証明して接続済み（探索が段の途中の場合は `SearchStageRun.dpPack_of_stage`）。旧葉 `hshiftPeriodMinimal` は n271 で `RestartLowerRun.scanMinimal_packed` → `CanonicalChainMinimal.shiftPeriodMinimal_packed` が証明して接続済み（origin の `PackedFromBoot` を使う）。旧葉 `hrestartStage`（guard 状態での restart 着地が `Restarted ∧ StageEntry`）は n270 で `RestartCertificate.restartStage` が証明して `OracleReady` に接続済み。 |
 | `obligation_localRealization` | `H_realizeCanonical`（canonical trace に対する局所実現） | `CanonicalLocalRealizes` の条件付き接続・canonical tick の一意性は証明済み。具体的な局所機械と符号化の構成は未完。 |
 
 ### 公理としては消えた 6 本（経路メモは残す）
@@ -115,17 +116,24 @@ theorem obligation_shiftPalAlongTrace (entry q : ℕ) (first : Fin 9) :
   exact PalPeg.WindowPack.shiftPal_of_windowRunPack centreC placeC entry q first hip.pack
     (hip.win (PalPeg.GalilFinalAssembly2.decodesC entry w)) hCanRight ⟨hm, hr⟩
 
-/-- **(OBLIGATION)** run 形の cycle oracle。`InvLPS` 起点からの packed run 上の非 replay な
+/-- **（n282 で証明。以前は公理 `obligation_cycleOracleOnPackedRun` だった）** run 形の cycle
+oracle、固定証人 `entry = 0, q = 1, first = 0` で。producer
+`OracleReady.cycleOracleOn_of_readyLeaves` の葉が n270〜n282 で全部無くなり、残る前提
+（`Decodes`、`first ≠ 4`、`0 < q`、`first ≠ 7`、`first ≠ 8`）は固定証人で計算で出る。
+
+`InvLPS` 起点からの packed run 上の非 replay な
 scan 状態（`CloseoutCheckW.ScanOnPackedRunFromInvLPS`）から、報告点 `2m−1` に達するか、`mu` を
 減らして同じ形の状態に着地する。旧 `obligation_cycleOracle`（`CycleOracleMC3`）は着地に
 `InvLPS`（chain が idle）を要求していたが、chain は fallback か broken からの restart でしか idle に
 戻らない（`ScaffoldGalil.scala:233,320`）ので、chain が生き続ける入力（`aaaa…`）では次の報告点までに
 満たせない（n252、機械検査済みの反証は無い）。 -/
-axiom obligation_cycleOracleOnPackedRun (entry q : ℕ) (first : Fin 9) (h4 : first ≠ 4) :
+theorem cycleOracleOnPackedRun :
     ∀ w : List (Fin 2), 0 < w.length →
-      PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
-        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
-        (PalPeg.ShapedRun.OracleTick entry) w
+      PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC 0 1 0
+        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC 0 1 0)
+        (PalPeg.ShapedRun.OracleTick 0) w :=
+  fun w _ => PalPeg.OracleReady.cycleOracleOn_of_readyLeaves centreC placeC 0 1 0
+    (PalPeg.GalilFinalAssembly2.decodesC 0 w) (by decide) (by decide) (by decide) (by decide)
 
 /-- **(OBLIGATION)** 局所実現。n260 で canonical trace に限定した形。
 受理結果と latch の一致を要求しており、trace の全状態の一致は要求していない。
@@ -211,11 +219,12 @@ n96 の「`rewindMargin` を `CentreMargin` 1 葉に縮めた」は数だけの�
 
 /-! ## 目標 -/
 
-/-- **目標**: `PAL ∈ PEG` を前提ゼロで。いまは上の 2 個の `axiom` に依存している。
+/-- **目標**: `PAL ∈ PEG` を前提ゼロで。いまは上の 1 個の `axiom`（`obligation_localRealization`）に
+依存している。
 `#print axioms unconditional` が標準 3 公理だけになったら証明完了。 -/
 theorem unconditional : RecognizedByTotalPEG PAL :=
   given_scanLandingObligations 0 1 0
-    (obligation_cycleOracleOnPackedRun 0 1 0 (by decide))
+    cycleOracleOnPackedRun
     (obligation_localRealization 0 1 0)
     (fun w st Tc hPreTraceIMW =>
       PalPeg.BranchSupply.scanLandingObligations_alongTrace_of_matchRest centreC placeC 0 1 0

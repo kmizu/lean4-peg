@@ -28,6 +28,10 @@ The canonical schedule restarts a broken chain first (`GalilTickFair.Canonical`,
 * (`hshiftPeriodMinimal` — period minimality of the shifting chain — is no longer a leaf:
   `RestartLowerRun.scanMinimal_packed` carries the minimal period across broken restarts, using
   that the origin is reached from boot);
+* (`hmove` — **no longer a leaf either (n282): the theorem has no leaves left.**  The last case,
+  a chain already broken in a round after a shift, is `RestartLowerRun.not_broken_offGuard`; the
+  rounds after a shift are `tailTick_cases`, `move_of_tail_mispredict` and
+  `shiftGuard_of_tail_caughtUp`.  What follows is the history of the leaf.)
 * `hmove` — the Galil move inequality that pays for a fallback, at a comparison state below
   the restart guard, **only while the chain is not idle** (`RestartLowerRun.move_of_idle`
   proves the idle branch: the stage history of the search in the middle of a stage, the DP
@@ -67,34 +71,7 @@ theorem searchReady_of_invLPS_shaped {w : List (Fin 2)}
 /-- **The run-shaped cycle oracle from the atomic leaves**: `hready` of
 `OracleRun.cycleOracleOn_of_fourLeaves` is `searchReady_of_invLPS_shaped`. -/
 theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w))
-    (h4 : first ≠ 4) (hq : 0 < q) (h7 : first ≠ 7) (h8 : first ≠ 8)
-    (hmove : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (c : Control) (s : GalilVM) (vq : SearchVM)
-      (z : ChainVM) (m : ℕ), 1 ≤ m → m ≤ w.length →
-      InvLPS (PofC centre place entry w) q first w c₀ r₀ →
-      PalPeg.CloseoutCheckW.PackedFromBoot centre place entry q first w ⟨c₀, r₀⟩ →
-      PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ ⟨c, s⟩ →
-      ¬ restartGuardVM s →
-      c.mode = .scan → c.replaying = false → c.clock = 1 → position s.right + 1 ≤ 2 * m - 1 →
-      MInv w c s →
-      GalilScaffoldInputHead.read (GalilScaffoldInputHead.left s.left) ≠
-        GalilScaffoldInputHead.read (GalilScaffoldChainVerifier.right s.right) →
-      searchEffect (PofC centre place entry w) false s vq →
-      s.chain ≠ .idle →
-      s.periodOnly = true →
-      (∃ wb : GalilScaffoldChainWatch.State, s.chain = .broken wb) →
-      chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
-        ((PofC centre place entry w).centre s) ((PofC centre place entry w).place s)
-        s.center s.radius s.chain z →
-      ¬ (PofC centre place entry w).shiftGuard
-        (afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
-          (afterMismatch s ⟨GalilScaffoldInputHead.left s.left,
-            GalilScaffoldChainVerifier.right s.right, z⟩ vq)) →
-      let s1 := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
-        (afterMismatch s ⟨GalilScaffoldInputHead.left s.left,right s.right,z⟩ vq)
-      let ℓ := (value s.length).toNat
-      let radius := chosenRadius
-        ((GalilScaffoldPlace.stream (PalPeg.GalilTickFair.rightPlace s1)).take (ℓ+1))
-      ℓ / 2 ≤ 4 * (ℓ / 2 + 1 - radius)) :
+    (h4 : first ≠ 4) (hq : 0 < q) (h7 : first ≠ 7) (h8 : first ≠ 8) :
     PalPeg.CloseoutCheckW.CycleOracleOn centre place entry q first
       (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first)
       (PalPeg.ShapedRun.OracleTick entry) w := by
@@ -159,8 +136,8 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
       by_cases hfirstRound : s.periodOnly = false
       · rcases PalPeg.RestartLowerRun.chainTick_cases centre place entry q first hP hI hRun hm
             hChain hidle with ⟨wb, hbroken⟩ | hsourceWork | hwork | ⟨w1, hz, hzero⟩
-        · exact absurd hbroken (PalPeg.RestartLowerRun.not_broken_firstRound centre place
-            entry q first hnonempty hP hI hBoot hRun hm hfirstRound hNoGuardS wb)
+        · exact absurd hbroken (PalPeg.RestartLowerRun.not_broken_offGuard centre place
+            entry q first hnonempty hP hI hBoot hRun hm hNoGuardS wb)
         · exact PalPeg.RestartLowerRun.move_of_working_source centre place entry q first
             hnonempty hP hI hBoot hRun hm hr hCan hfirstRound hsourceWork
         · exact PalPeg.RestartLowerRun.move_of_working_chain centre place entry q first
@@ -182,8 +159,9 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
       · have honly : s.periodOnly = true := by simpa using hfirstRound
         rcases PalPeg.RestartLowerRun.tailTick_cases centre place entry q first hnonempty hP
             hI hBoot hRun hm honly hidle hChain with hbroken | ⟨w1, hz, hzero, hphase⟩
-        · exact hmove c₀ r₀ k c s vq z m hm1 hmle hI hBoot hRun hNoGuardS hm hr hc hPos hM hMis
-            hSearch hidle honly hbroken hChain hGuard
+        · obtain ⟨wb, hbroken⟩ := hbroken
+          exact absurd hbroken (PalPeg.RestartLowerRun.not_broken_offGuard centre place
+            entry q first hnonempty hP hI hBoot hRun hm hNoGuardS wb)
         · subst hz
           by_cases hprediction :
               GalilScaffoldChainConsume.symbol w1.machine.control.period.focus
