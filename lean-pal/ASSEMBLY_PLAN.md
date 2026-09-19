@@ -1,3 +1,23 @@
+## n283 — `obligation_localRealization` に着手: queue sub-step の分岐は有限観測 `QueueView` だけで選べる（未接続）。`CloseoutCoreEnc25` は build が通っていなかったので修理した
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | **変化なし。** このノートの定理はまだどの機械からも使われていない（具体的な局所機械が存在しないため）。進捗として数えない |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 1 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization`（n282 から変化なし）。
+
+**一次情報で分かったこと（重要）**: handoff が既存部品として挙げる `CloseoutCoreEnc25`（`RTag`／`sApply`／`deltaOf`／`laysS_sApply`）は **root から import されておらず、単体 build は error 20 件で失敗していた**（`CoreEnc24` までは通る）。原因は toolchain 由来の tactic のずれ 3 種: `match hst : q.state with` が goal の `q.state` を先に置換するので `rw [show invalDelta … q.state = …]` が当たらない（16 箇所 → `simp only [invalDelta, invalJunk]`／`[execDelta, execJunk]`）、`isDone_eq` の余分な `exact`、`snocPush` の `simp` に `junkOf` が不足。修理して error 0・`sorry` 0。**「ファイルがある」と「検査されている」は別**（CLAUDE.md の警告どおり）。
+
+**何を証明したか**（`PalPeg/ConcreteLocalMachine.lean`、新規、`Workbench` の先頭 import 群に登録して root の build 対象にした）: handoff L2 の 1〜2。`deltaOf`／`tagStep` は抽象 queue 全体を受け取るが、実際に読むのは有限個の判定だけ。
+
+* `RotationView`（`idle`／`done`／`reversing (forwardHead reverseHead) (reverseIsSingle)`／`appending (validIsZero) (forwardHead) (rebuiltNonempty)`）と `QueueView`（`frontEmpty`＋`rotation`）。どちらも `Fintype`・`DecidableEq`。
+* `deltaOfView`／`tagStepOfView`: 観測だけから stack 操作と role tag の更新を選ぶ関数。
+* `deltaOf_eq_view : deltaOf op q ρ = deltaOfView op (queueView q) ρ`、`tagStep_eq_view`。標準公理のみ。
+
+**未完の部分（次の具体 goal）**: 観測の各 bit を**物理テープから読めるようにする表現**が無い。`LaysS q ρ L J` は `L (ρ ro) = sRoleList q ro ++ J (ρ ro)`（役割の中身の後ろに不要領域 `J` が続く）なので、stack の先頭を見ても「空かどうか」「先頭記号が本物か」は分からない（空なら先頭は junk）。必要なのは、`frontEmpty`／`forwardHead = none`／`reverseIsSingle`／`validIsZero`／`rebuiltNonempty` のそれぞれに対する局所的な担い手（sentinel か、更新とともに保つ counter の符号・ゼロ判定）と、それを含む `Rep` の場。これを決めてから `ActRule` の `nq`／`acts` を書く（handoff L2 の 3〜4）。`CloseoutCoreEnc22` の 9 本配置（`tViewQ = 9`）が何を持っているかの確認が先。
+
 ## n282 — 公理 `obligation_cycleOracleOnPackedRun` を証明して外した（2 → 1）。残る義務は `obligation_localRealization` だけ
 
 **公理への進捗**

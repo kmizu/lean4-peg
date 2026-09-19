@@ -1,3 +1,4 @@
+import PalPeg.ConcreteLocalMachine
 import PalPeg.CanonicalFallback
 import PalPeg.CanonicalFallbackInput
 import PalPeg.CanonicalReplay

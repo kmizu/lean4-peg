@@ -121,7 +121,6 @@ theorem isIdle_eq {s : RotationState (Fin 2)} (h : isIdle s = true) : s = .idle 
 
 theorem isDone_eq {s : RotationState (Fin 2)} (h : isDone s = true) : ∃ f, s = .done f := by
   cases s <;> simp [isDone] at h ⊢
-  exact ⟨_, rfl⟩
 
 /-- The queue after the selected sub-step. -/
 def sApply : SOp → Queue (Fin 2) → Queue (Fin 2)
@@ -229,7 +228,7 @@ theorem laysS_sApply (op : SOp) (q : Queue (Fin 2)) (t : RTag) (L J : ℕ → Li
   cases op with
   | snocPush a =>
       refine laysS_delta hinj h (pushRearD a) ?_
-      intro ro; cases ro <;> simp [pushRearD, dApply, sRoleList, sApply]
+      intro ro; cases ro <;> simp [pushRearD, dApply, sRoleList, sApply, junkOf]
   | tailPop =>
       show LaysS (if q.front = [] then _ else _) (roleOf t)
         (fun i => dApply ((if q.front = [] then _ else _ : ℕ → Delta) i) (L i)) J
@@ -249,40 +248,28 @@ theorem laysS_sApply (op : SOp) (q : Queue (Fin 2)) (t : RTag) (L J : ℕ → Li
         (fun i => dApply (invalDelta (roleOf t) q.state i) (L i)) (invalJunk (roleOf t) J q.state)
       match hst : q.state with
       | .appending 0 f' (x :: r') =>
-          rw [show invalDelta (roleOf t) q.state = toAddr (roleOf t) invalDoneD by rw [hst]; rfl,
-            show invalJunk (roleOf t) J q.state
-              = ovrL (roleOf t .fwd') (f' ++ J (roleOf t .fwd')) J by rw [hst]; rfl]
+          simp only [invalDelta, invalJunk]
           refine laysS_delta hinj h invalDoneD ?_
           intro ro; cases ro <;>
             simp [invalDoneD, dApply, sRoleList, hst, RTQueue.invalidate, ovrL, sinj_iff hinj]
       | .appending 0 f' [] =>
-          rw [show invalDelta (roleOf t) q.state = toAddr (roleOf t) (fun _ => .keep) by
-              rw [hst]; rfl,
-            show invalJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [invalDelta, invalJunk]
           refine laysS_delta hinj h (fun _ => .keep) ?_
           intro ro; cases ro <;> simp [dApply, sRoleList, hst, RTQueue.invalidate]
       | .appending (n + 1) f' r' =>
-          rw [show invalDelta (roleOf t) q.state = toAddr (roleOf t) (fun _ => .keep) by
-              rw [hst]; rfl,
-            show invalJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [invalDelta, invalJunk]
           refine laysS_delta hinj h (fun _ => .keep) ?_
           intro ro; cases ro <;> simp [dApply, sRoleList, hst, RTQueue.invalidate]
       | .reversing ok f f' r r' =>
-          rw [show invalDelta (roleOf t) q.state = toAddr (roleOf t) (fun _ => .keep) by
-              rw [hst]; rfl,
-            show invalJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [invalDelta, invalJunk]
           refine laysS_delta hinj h (fun _ => .keep) ?_
           intro ro; cases ro <;> simp [dApply, sRoleList, hst, RTQueue.invalidate]
       | .idle =>
-          rw [show invalDelta (roleOf t) q.state = toAddr (roleOf t) (fun _ => .keep) by
-              rw [hst]; rfl,
-            show invalJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [invalDelta, invalJunk]
           refine laysS_delta hinj h (fun _ => .keep) ?_
           intro ro; cases ro <;> simp [dApply, sRoleList, hst, RTQueue.invalidate]
       | .done f0 =>
-          rw [show invalDelta (roleOf t) q.state = toAddr (roleOf t) (fun _ => .keep) by
-              rw [hst]; rfl,
-            show invalJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [invalDelta, invalJunk]
           refine laysS_delta hinj h (fun _ => .keep) ?_
           intro ro; cases ro <;> simp [dApply, sRoleList, hst, RTQueue.invalidate]
   | rotStart =>
@@ -302,56 +289,44 @@ theorem laysS_sApply (op : SOp) (q : Queue (Fin 2)) (t : RTag) (L J : ℕ → Li
         (fun i => dApply (execDelta (roleOf t) q.state i) (L i)) (execJunk (roleOf t) J q.state)
       match hst : q.state with
       | .reversing ok (x :: f) f' (y :: r) r' =>
-          rw [show execDelta (roleOf t) q.state = toAddr (roleOf t) (revD x y) by rw [hst]; rfl,
-            show execJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [execDelta, execJunk]
           refine laysS_delta hinj h (revD x y) ?_
           intro ro; cases ro <;> simp [revD, dApply, sRoleList, hst, RTQueue.exec]
       | .reversing ok [] f' [y] r' =>
-          rw [show execDelta (roleOf t) q.state = toAddr (roleOf t) (appStartD y) by rw [hst]; rfl,
-            show execJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [execDelta, execJunk]
           refine laysS_delta hinj h (appStartD y) ?_
           intro ro; cases ro <;> simp [appStartD, dApply, sRoleList, hst, RTQueue.exec]
       | .reversing ok [] f' [] r' =>
-          rw [show execDelta (roleOf t) q.state = toAddr (roleOf t) (fun _ => .keep) by
-              rw [hst]; rfl, show execJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [execDelta, execJunk]
           refine laysS_delta hinj h (fun _ => .keep) ?_
           intro ro; cases ro <;> simp [dApply, sRoleList, hst, RTQueue.exec]
       | .reversing ok [] f' (y :: z :: r) r' =>
-          rw [show execDelta (roleOf t) q.state = toAddr (roleOf t) (fun _ => .keep) by
-              rw [hst]; rfl, show execJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [execDelta, execJunk]
           refine laysS_delta hinj h (fun _ => .keep) ?_
           intro ro; cases ro <;> simp [dApply, sRoleList, hst, RTQueue.exec]
       | .reversing ok (x :: f) f' [] r' =>
-          rw [show execDelta (roleOf t) q.state = toAddr (roleOf t) (fun _ => .keep) by
-              rw [hst]; rfl, show execJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [execDelta, execJunk]
           refine laysS_delta hinj h (fun _ => .keep) ?_
           intro ro; cases ro <;> simp [dApply, sRoleList, hst, RTQueue.exec]
       | .appending 0 f' r' =>
-          rw [show execDelta (roleOf t) q.state = toAddr (roleOf t) (fun _ => .keep) by
-              rw [hst]; rfl,
-            show execJunk (roleOf t) J q.state
-              = ovrL (roleOf t .fwd') (f' ++ J (roleOf t .fwd')) J by rw [hst]; rfl]
+          simp only [execDelta, execJunk]
           refine laysS_delta hinj h (fun _ => .keep) ?_
           intro ro; cases ro <;>
             simp [dApply, sRoleList, hst, RTQueue.exec, ovrL, sinj_iff hinj]
       | .appending (n + 1) (x :: f') r' =>
-          rw [show execDelta (roleOf t) q.state = toAddr (roleOf t) (appD x) by rw [hst]; rfl,
-            show execJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [execDelta, execJunk]
           refine laysS_delta hinj h (appD x) ?_
           intro ro; cases ro <;> simp [appD, dApply, sRoleList, hst, RTQueue.exec]
       | .appending (n + 1) [] r' =>
-          rw [show execDelta (roleOf t) q.state = toAddr (roleOf t) (fun _ => .keep) by
-              rw [hst]; rfl, show execJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [execDelta, execJunk]
           refine laysS_delta hinj h (fun _ => .keep) ?_
           intro ro; cases ro <;> simp [dApply, sRoleList, hst, RTQueue.exec]
       | .idle =>
-          rw [show execDelta (roleOf t) q.state = toAddr (roleOf t) (fun _ => .keep) by
-              rw [hst]; rfl, show execJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [execDelta, execJunk]
           refine laysS_delta hinj h (fun _ => .keep) ?_
           intro ro; cases ro <;> simp [dApply, sRoleList, hst, RTQueue.exec]
       | .done f0 =>
-          rw [show execDelta (roleOf t) q.state = toAddr (roleOf t) (fun _ => .keep) by
-              rw [hst]; rfl, show execJunk (roleOf t) J q.state = J by rw [hst]; rfl]
+          simp only [execDelta, execJunk]
           refine laysS_delta hinj h (fun _ => .keep) ?_
           intro ro; cases ro <;> simp [dApply, sRoleList, hst, RTQueue.exec]
   | install =>
