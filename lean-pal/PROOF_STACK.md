@@ -1,3 +1,30 @@
+## n237 — 公理進捗: 第 3 連言を「不一致比較直前の窓＋中心記号」に置き換えた（操作 B）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 3 連言が `FreshShiftLedger` から、その**十分条件である一次事実**——不一致比較直前 `z.vm` の `ChainW … (position z.vm.center) (cen+R) (cen+R) bud false cc b xs z.vm.chain`＋`ScanInvariant … R`＋`canRight`＋中心記号 `(encoded w)[cen]? = some cc`（`shiftGuardVM s'` の下で）——に置き換わった。橋は `ShiftEntryFromLanding.freshShiftLedger_of_chainW_scan`（標準公理のみ）。trace 形定理も同形に。**本数は 3 のまま、中身は run 層に既にある形（`LandingData` の射影）になった** |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 次の一手（設計が確定した）
+
+`GalilRoundPeriod.ReadOrigin`／`roundScan_entry` は `hroom : radius + 2 ≤ center` を仮説に取る
+——round 機構は最初から左端を除外している（第 2 連言が偽だった理由）。一方、窓の議論は
+左端でも成り立ち、**`periodOnly = true` の shift 入口でも同じ**: 誕生中心 `cen₀` に anchor した
+`ChainW` の窓は一致比較で伸び（`chainW_matched`）、shift は右ヘッドを動かさないので保たれる。
+現在の中心 `cen' = cen₀ + k·h` について、shift 先 `cen' + h` の半径 `h` の回文はブロックの
+周期構造（`bounce` は `b` と `cc` の両方で対称）から出る。
+
+したがって **3 連言全部を「不一致比較直前の誕生 anchor 窓」1 本に置き換えられる**:
+`∃ cc b xs cen₀ k R bud, position z.vm.center = cen₀ + k·(|xs|+1) ∧ ChainW w cen₀ … ∧ ScanInvariant ∧ canRight ∧ x[cen₀] = cc ∧ 2(|xs|+1) ≤ R`。
+`FreshShiftLedger` の producer を `cen₀`/`k` で一般化し（margin の代わりに `2h ≤ R` を取る）、
+`shiftPal_of_freshShiftLedger` で `ShiftPal` を直接出す——`shiftPal_of_run_B`（round 機構）を
+経由しない。偽の第 2 連言と `H_readsShift` は公理から消える。
+
 ## n236 — 公理進捗: 第 3 連言の guard を `¬ matched s'` に狭めた（操作 A・公理は弱化）
 
 **公理への進捗**

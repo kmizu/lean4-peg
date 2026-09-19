@@ -1,6 +1,7 @@
 import PalPeg.PalInPeg
 import PalPeg.BranchSupply
 import PalPeg.ShiftPalAlongTrace
+import PalPeg.ShiftEntryFromLanding
 import PalPeg.CloseoutFoundRoutes
 
 /-!
@@ -109,7 +110,7 @@ open PalPeg.GalilFinalAssembly (boot)
 |---|---|
 | `H_readsShift` | shift 相のラウンド読み出し（←`RoundSegFromRun.readsShift_at_actual`） |
 | `H_freshShiftAtShiftEntry` | shift 入口の最初のラウンド（←`first_round`、橋が要る） |
-| `FreshShiftLedger` | 準備直後の watch の台帳（n141〜n144 で 3 種類まで還元済み） |
+| 不一致比較直前の窓 | `ChainW` 形の窓（走査中心に anchor、右ヘッドまで）＋`ScanInvariant`＋`canRight`＋中心記号 `x[cen] = cc`。n236 まではここが `FreshShiftLedger` で、n237 に `ShiftEntryFromLanding.freshShiftLedger_of_chainW_scan` で還元した |
 
 **run 形で新たに要る入力はゼロ**: chain idle は `CloseoutShiftLocalFree.chainIdle_of_invS`、
 `AuxPack` は `CloseoutPackRun2.auxPack_steps` ＋ `InvLPC` の 3 場、`canRight` は
@@ -130,7 +131,13 @@ axiom obligation_shiftPalResiduesAlongRun (entry q : ℕ) (first : Fin 9) :
         z.vm.periodOnly = false →
         ∀ s' : GalilVM, compareFound (PofC centreC placeC entry w) q first z.vm s' →
           ¬ (galilFrameS (PofC centreC placeC entry w) q first).matched s' →
-          PalPeg.ShiftPalAlongTrace.FreshShiftLedger w z.vm s')
+          shiftGuardVM s' →
+          ∃ (cc b : Fin 3) (xs : List (Fin 3)) (R bud : ℕ),
+            PalPeg.GalilReplaySpan.ChainW w (position z.vm.center) (position z.vm.center + R)
+              (position z.vm.center + R) bud false cc b xs z.vm.chain ∧
+            ScanInvariant w (position z.vm.center) R z.vm.left z.vm.right ∧
+            GalilScaffoldChainVerifier.canRight z.vm.right ∧
+            (encoded w)[position z.vm.center]? = some cc)
 
 /-- **もう公理ではない。**  `ShiftPalAlongTrace.shiftPal_alongRun` の適用。
 
@@ -149,7 +156,13 @@ theorem obligation_shiftPalAlongRun (entry q : ℕ) (first : Fin 9) :
   exact PalPeg.ShiftPalAlongTrace.shiftPal_alongRun centreC placeC entry q first hInvLPS.1
     (obligation_shiftPalResiduesAlongRun entry q first w c r hInvLPS).1
     (obligation_shiftPalResiduesAlongRun entry q first w c r hInvLPS).2.1
-    (obligation_shiftPalResiduesAlongRun entry q first w c r hInvLPS).2.2
+    (fun m z hSteps hpo s' hcmp hmis => by
+      intro hguard
+      obtain ⟨cc, b, xs, R, bud, hCW, hscan, hcan, hcentre⟩ :=
+        (obligation_shiftPalResiduesAlongRun entry q first w c r hInvLPS).2.2
+          m z hSteps hpo s' hcmp hmis hguard
+      exact PalPeg.ShiftEntryFromLanding.freshShiftLedger_of_chainW_scan centreC placeC entry q
+        first hCW hscan hcan hcentre hpo hcmp hmis hguard)
     m z hSteps hScan.1 hScan.2 hCanRight
 
 /-! ### trace 形 `ShiftPal` の 3 原子（n132 で `obligation_shiftPalAlongTrace` を割った）
@@ -169,7 +182,7 @@ theorem obligation_shiftPalAlongRun (entry q : ℕ) (first : Fin 9) :
    `RoundSegFromRun.readsShift_at_actual`（前ラウンド起点の `OriginAt` ＋ 構成 run / 実 run の対が要る）
 2. `H_freshShiftAtShiftEntry`（shift 入口の最初のラウンド）——`first_round` は `Entry` 形しか
    出さないので橋が要る（n133）
-3. `FreshShiftLedger`（準備直後の watch の台帳）——`periodOnly = false` ＋ watch の
+3. 不一致比較直前の窓（n237。それまでは `FreshShiftLedger`＝準備直後の watch の台帳）——`periodOnly = false` ＋ watch の
    `ShiftPal` をここまで還元した（n141〜n144）。中身は period テープの**中身**（DP の
    `Candidate`）／半径と周期の**大小**／period テープの**位相**の 3 種類 -/
 theorem obligation_shiftPalResiduesAlongTrace (entry q : ℕ) (first : Fin 9) :
@@ -183,7 +196,14 @@ theorem obligation_shiftPalResiduesAlongTrace (entry q : ℕ) (first : Fin 9) :
       (∀ j, 1 ≤ j → j ≤ Tc w.length → (st j).vm.periodOnly = false →
         ∀ s' : GalilVM, compareFound (PofC centreC placeC entry w) q first (st j).vm s' →
           ¬ (galilFrameS (PofC centreC placeC entry w) q first).matched s' →
-          PalPeg.ShiftPalAlongTrace.FreshShiftLedger w (st j).vm s') := by
+          shiftGuardVM s' →
+          ∃ (cc b : Fin 3) (xs : List (Fin 3)) (R bud : ℕ),
+            PalPeg.GalilReplaySpan.ChainW w (position (st j).vm.center)
+              (position (st j).vm.center + R) (position (st j).vm.center + R) bud false cc b xs
+              (st j).vm.chain ∧
+            ScanInvariant w (position (st j).vm.center) R (st j).vm.left (st j).vm.right ∧
+            GalilScaffoldChainVerifier.canRight (st j).vm.right ∧
+            (encoded w)[position (st j).vm.center]? = some cc) := by
   intro w st Tc hPreTraceIMW
   rcases w with _ | ⟨a, rest⟩
   · -- `w = []` では `Tc w.length = Tc 0 = 0`（`PreTrace.tc0`）なので 3 つとも空虚
@@ -253,7 +273,13 @@ theorem obligation_shiftPalAlongTrace (entry q : ℕ) (first : Fin 9) :
   exact PalPeg.ShiftPalAlongTrace.shiftPal_alongTrace centreC placeC entry q first hw hPre hTcPos
     (obligation_shiftPalResiduesAlongTrace entry q first w st Tc hPre).1
     (obligation_shiftPalResiduesAlongTrace entry q first w st Tc hPre).2.1
-    (obligation_shiftPalResiduesAlongTrace entry q first w st Tc hPre).2.2
+    (fun jj hjj1 hjjle hpo s' hcmp hmis => by
+      intro hguard
+      obtain ⟨cc, b, xs, R, bud, hCW, hscan, hcan, hcentre⟩ :=
+        (obligation_shiftPalResiduesAlongTrace entry q first w st Tc hPre).2.2
+          jj hjj1 hjjle hpo s' hcmp hmis hguard
+      exact PalPeg.ShiftEntryFromLanding.freshShiftLedger_of_chainW_scan centreC placeC entry q
+        first hCW hscan hcan hcentre hpo hcmp hmis hguard)
     j hj1 hjle hm hr
 
 /-- **(OBLIGATION)** `CycleOracleMC3`。 -/

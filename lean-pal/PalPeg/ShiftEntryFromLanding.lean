@@ -3,22 +3,24 @@ import PalPeg.CloseoutWatchRound48
 import PalPeg.GalilScaffoldTopChainUnique
 
 /-!
-# 第 3 連言 `FreshShiftLedger` を `LandingData` から
+# 第 3 連言 `FreshShiftLedger` を、不一致比較の直前の窓から
 
 `obligation_shiftPalResiduesAlongRun` の第 3 連言は、run の各点 `z`（`periodOnly = false`）と
-その比較の着地 `s'` について `FreshShiftLedger w z.vm s'` を要求する。
+その不一致比較の着地 `s'` について `FreshShiftLedger w z.vm s'` を要求する。
 `ShiftPalAlongTrace.freshShiftLedger_of_chainW` はそれを `ChainW` 形の窓（比較後の chain）＋
-中心記号＋右ヘッド 3 事実から出す。ここではその入力を run 層の持ち物
-`CloseoutWatchRound42.LandingData`（比較前・clock 1 の状態 `s`）から作る:
+中心記号＋右ヘッド 3 事実から出す。ここではその入力を**比較前**の状態 `s` の持ち物から作る:
 
-* 窓: `LandingData` の `ChainW … s.chain` を、比較量子の中の chain の 1 歩
-  （`compareFound` の `chainAt false` ＝ `ChainStep` 1 歩）越しに
+* 窓: `ChainW … s.chain`（`CloseoutWatchRound42.LandingData` の第 2 成分の形）を、
+  比較量子の中の chain の 1 歩（`compareFound` の `chainAt false` ＝ `ChainStep` 1 歩）越しに
   `GalilReplaySpan.chainW_step` ＋ `chainStep_unique` で `s'.chain` へ運ぶ
 * 右ヘッド: `s'.right = right s.right`（`afterMismatch`）と `ScanInvariant` の右ヘッド事実
-* 中心記号 `x[cen] = cc`: `LandingData` に**無い**ので外から取る（誕生時の `Candidate` 由来）
+* 中心記号 `x[cen] = cc`: 窓に**無い**ので外から取る（誕生時の `Candidate` 由来）
 
 不一致側（`¬ matched s'`）に限る——`ShiftPal` の前提に `¬ matched` があるので消費者は
-それしか要らない（公理の第 3 連言はその分だけ狭められる）。
+それしか要らない。
+
+`freshShiftLedger_of_chainW_scan` が核で、`LandingData` から使うのは 3 場だけ
+（`freshShiftLedger_of_landing` はその射影）。
 
 **無条件 PAL ∈ PEG は未完.**
 -/
@@ -37,17 +39,20 @@ section
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
 
-/-- **`FreshShiftLedger` at a mismatched comparison from a `LandingData` state.** -/
-theorem freshShiftLedger_of_landing {raw : List (Fin 2)} {R : ℕ} {sT : GalilVM}
-    {cc b : Fin 3} {xs : List (Fin 3)} {c : Control} {s s' : GalilVM}
-    (hland : LandingData raw R sT cc b xs c s)
+/-- **`FreshShiftLedger` at a mismatched comparison, from the window before it.**
+The window is anchored at the scan centre `position s.center` and reaches the right
+head `position s.right = position s.center + R`. -/
+theorem freshShiftLedger_of_chainW_scan {raw : List (Fin 2)} {R bud : ℕ}
+    {cc b : Fin 3} {xs : List (Fin 3)} {s s' : GalilVM}
+    (hCW : PalPeg.GalilReplaySpan.ChainW raw (position s.center) (position s.center + R)
+      (position s.center + R) bud false cc b xs s.chain)
+    (hscan : ScanInvariant raw (position s.center) R s.left s.right)
     (hcan : canRight s.right)
     (hcentre : (encoded raw)[position s.center]? = some cc)
     (hpo : s.periodOnly = false)
     (hcmp : compareFound (PofC centre place entry raw) q first s s')
     (hmis : ¬ (galilFrameS (PofC centre place entry raw) q first).matched s') :
     FreshShiftLedger raw s s' := by
-  obtain ⟨-, hCW, hR, -, -, hscan, -, -, -, -, -⟩ := hland
   obtain ⟨vs, vq, matchedBit, hvl, hvr, hmatch, -, hchainAt, hs'⟩ := hcmp
   have hnotIdle : s.chain ≠ ChainVM.idle := PalPeg.GalilReplaySpan.chainW_ne_idle hCW
   -- the comparison mismatched
@@ -76,13 +81,12 @@ theorem freshShiftLedger_of_landing {raw : List (Fin 2)} {R : ℕ} {sT : GalilVM
   -- the chain stepped once, by `ChainStep`
   rcases hchainAt with ⟨-, y, hstep, hy⟩ | ⟨hidle, -⟩ | ⟨hidle, -⟩
   · simp only [Bool.false_eq_true, ↓reduceIte] at hy
-    have hlen : position sT.right + R < (encoded raw).length := by
-      have := hscan.palindrome.2.1; have := hscan.rightPos; omega
+    have hlen : position s.center + R < (encoded raw).length := hscan.palindrome.2.1
     obtain ⟨y', hstep', hCW'⟩ := PalPeg.GalilReplaySpan.chainW_step
-      (PalPeg.GalilReplaySpan.chainW_mono hCW (Nat.le_succ _)) hlen (by omega)
+      (PalPeg.GalilReplaySpan.chainW_mono hCW (Nat.le_succ _)) hlen le_rfl
     have hyy : y = y' := chainStep_unique hstep hstep'
     subst hyy
-    rw [← hR, hscan.rightPos, ← hy] at hCW'
+    rw [← hy] at hCW'
     -- the right head moved one place right
     have hl0 : 0 < s.right.head.left.length :=
       (represented_position _ raw hscan.rightRep hscan.rightPresent).1
@@ -96,6 +100,24 @@ theorem freshShiftLedger_of_landing {raw : List (Fin 2)} {R : ℕ} {sT : GalilVM
       hrRep hrPres hrPos hcentre hpo
   · exact absurd hidle hnotIdle
   · exact absurd hidle hnotIdle
+
+#print axioms freshShiftLedger_of_chainW_scan
+
+/-- **The same from a `LandingData` state** (its window, right-head place and scan
+invariant are the three fields used). -/
+theorem freshShiftLedger_of_landing {raw : List (Fin 2)} {R : ℕ} {sT : GalilVM}
+    {cc b : Fin 3} {xs : List (Fin 3)} {c : Control} {s s' : GalilVM}
+    (hland : LandingData raw R sT cc b xs c s)
+    (hcan : canRight s.right)
+    (hcentre : (encoded raw)[position s.center]? = some cc)
+    (hpo : s.periodOnly = false)
+    (hcmp : compareFound (PofC centre place entry raw) q first s s')
+    (hmis : ¬ (galilFrameS (PofC centre place entry raw) q first).matched s') :
+    FreshShiftLedger raw s s' := by
+  obtain ⟨-, hCW, hR, -, -, hscan, -, -, -, -, -⟩ := hland
+  rw [← hR, hscan.rightPos] at hCW
+  exact freshShiftLedger_of_chainW_scan centre place entry q first hCW hscan hcan hcentre hpo
+    hcmp hmis
 
 #print axioms freshShiftLedger_of_landing
 
