@@ -8,6 +8,8 @@ import PalPeg.CloseoutMarksPack
 import PalPeg.WindowPack
 import PalPeg.GalilTraceCost
 import PalPeg.GalilLexMeasure
+import PalPeg.GalilScaffoldTopMerge
+import PalPeg.GalilScaffoldTopSteps
 
 set_option autoImplicit false
 
@@ -686,6 +688,96 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
     · simp
 
 #print axioms cycleOracleOn_of_leaves
+
+/-! ## The shift phase in the `PofC` frame -/
+
+/-- **The unit moves of a shift phase.**  With a copy-idle VM whose chain is the watch `wch`, a
+chain shift run of `n` units is `n` `shift_one` ticks of `galilFrameS` keeping the control
+(`shift_run_lift` per unit, pulled through `shiftLens`, transferred by `shift_transfer` and
+`tick_S_of_tick`). -/
+theorem shiftUnits_S {w : List (Fin 2)} (c : Control) (hm : c.mode = .shift) :
+    ∀ (n : ℕ) (s : GalilVM) (wch : GalilScaffoldChainWatch.State) (t : ShiftState)
+      (v : GalilScaffoldChainWatch.State) (finish : Counter),
+      s.chain = .watch wch → CopyIdle s →
+      ChainShiftRun ⟨s.center, s.left, s.remaining, s.radius, s.length⟩ wch s.cycle n t v finish →
+      Steps (galilFrameS (PofC centre place entry w) q first) 2048 n ⟨c, s⟩
+        ⟨c, shiftLens.set s ⟨t, .watch v, finish⟩⟩ ∧
+      CopyIdle (shiftLens.set s ⟨t, .watch v, finish⟩) := by
+  intro n
+  induction n with
+  | zero =>
+    intro s wch t v finish hs hi hr
+    cases hr
+    have hset : shiftLens.set s ⟨⟨s.center, s.left, s.remaining, s.radius, s.length⟩,
+        .watch wch, s.cycle⟩ = s := by
+      rw [← hs]; exact shiftLens.set_get s
+    rw [hset]
+    exact ⟨.zero _, hi⟩
+  | succ n ih =>
+    intro s wch t v finish hs hi hr
+    cases hr with
+    | next _ _ _ hen hc hl hl' rest =>
+      have hget : shiftLens.get s =
+          ⟨⟨s.center, s.left, s.remaining, s.radius, s.length⟩, .watch wch, s.cycle⟩ := by
+        show (⟨⟨s.center, s.left, s.remaining, s.radius, s.length⟩, s.chain, s.cycle⟩ : ShiftVM) = _
+        rw [hs]
+      -- one unit in the shift frame parametrised at `s`
+      have hr1 : ChainShiftRun ⟨s.center, s.left, s.remaining, s.radius, s.length⟩ wch s.cycle 1
+          (shiftTick ⟨s.center, s.left, s.remaining, s.radius, s.length⟩) (chainShiftOne wch)
+          (inc (inc s.cycle)) :=
+        .next _ _ _ hen hc hl hl' (.stop _ _ _)
+      have h1 := shift_run_lift (fun v => (PofC centre place entry w).onLetter (shiftLens.set s v))
+        (fun v => (PofC centre place entry w).leftFirst (shiftLens.set s v)) 2048 c hm 1 hr1
+      have htick0 : Tick (shiftFrame (fun v => (PofC centre place entry w).onLetter (shiftLens.set s v))
+          (fun v => (PofC centre place entry w).leftFirst (shiftLens.set s v))) 2048
+          ⟨c, shiftLens.get s⟩
+          ⟨c, ⟨shiftTick ⟨s.center, s.left, s.remaining, s.radius, s.length⟩,
+            .watch (chainShiftOne wch), inc (inc s.cycle)⟩⟩ := by
+        rw [hget]
+        cases h1 with
+        | succ ht hr => cases hr; exact ht
+      have htickP := tick_pull shiftLens _ 2048 c c s _ htick0
+      have htickG := shift_transfer (PofC centre place entry w) q first 2048 hm hi htickP
+      have htickS := tick_S_of_tick (PofC centre place entry w) q first 2048 htickG
+        (by rw [hm]; decide)
+      have hi' := copyIdle_shift 2048 _ htickP hi
+      obtain ⟨hrun, hi''⟩ := ih (shiftLens.set s ⟨shiftTick ⟨s.center, s.left, s.remaining, s.radius, s.length⟩,
+          .watch (chainShiftOne wch), inc (inc s.cycle)⟩) (chainShiftOne wch) t v finish rfl hi' rest
+      rw [shiftLens.set_set] at hrun hi''
+      exact ⟨.succ htickS hrun, hi''⟩
+
+/-- **The exit of a shift phase.**  With `remaining` exhausted and the copy walker idle,
+`shift_done` fires with a refreshed flag. -/
+theorem shiftExit_S {w : List (Fin 2)} (c : Control) (hm : c.mode = .shift) (s : GalilVM)
+    (hz : positive s.remaining = false) (hi : CopyIdle s) :
+    ∃ o : Bool, refresh (galilFrameS (PofC centre place entry w) q first) s c.output o ∧
+      Tick (galilFrameS (PofC centre place entry w) q first) 2048 ⟨c, s⟩
+        ⟨{c with mode := .scan, output := o}, s⟩ := by
+  classical
+  let o : Bool := if (PofC centre place entry w).onLetter s
+    then decide ((PofC centre place entry w).leftFirst s) else c.output
+  have ho : refresh (galilFrameS (PofC centre place entry w) q first) s c.output o := by
+    refine ⟨fun hl => ?_, fun hl => ?_⟩
+    · have hl' : (PofC centre place entry w).onLetter s := hl
+      show (if (PofC centre place entry w).onLetter s
+        then decide ((PofC centre place entry w).leftFirst s) else c.output) = true ↔
+        (PofC centre place entry w).leftFirst s
+      rw [if_pos hl']
+      exact decide_eq_true_iff
+    · have hl' : ¬ (PofC centre place entry w).onLetter s := hl
+      show (if (PofC centre place entry w).onLetter s
+        then decide ((PofC centre place entry w).leftFirst s) else c.output) = c.output
+      rw [if_neg hl']
+  refine ⟨o, ho, Tick.shift_done c s o hm ?_ ho⟩
+  intro h
+  rcases h with h1 | h1
+  · have h2 : positive s.remaining = true := h1
+    rw [hz] at h2
+    cases h2
+  · exact hi h1
+
+#print axioms shiftUnits_S
+#print axioms shiftExit_S
 
 #print axioms chainReady_watch_of_watchWindow
 
