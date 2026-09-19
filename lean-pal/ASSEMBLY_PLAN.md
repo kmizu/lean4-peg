@@ -19,6 +19,19 @@
 - `CostedRun`: 1 比較 = 1 `Piece`（`wait := clock−1`, `cmp := true`, `place := 着地の右ヘッド`）。
 - 未解決の入力: chain idle 区間での `SearchReady`（`RdPaced` の producer `PostRun`／`RestartS2` は未証明）。
 
+### 新 oracle の証明の分解（n252 addendum、必要な部品の所在）
+
+1 呼び出し = 「背景 tick × (clock−1) → 比較 1 回 → (shift 相 ｜ fallback＋replay)」。各部品:
+1. **chain 側の tick 存在** `ChainReady`: idle／broken は自明、copy は `∃ n, CopyInv`（誕生 `AnswerAheadDecode.copyInv_of_found`、1 歩 `GalilBranchInvariants.copyInv_step`）、back は `WindowInv.back`（`VerAt`／`LagAt` → `canRight ver`）＋ `OnBlock`（`BlockInv`、`blockInv_steps` で run 全点）、watch は `OracleRun.chainReady_watch_of_watchWindow`。
+2. **search 側の tick 存在** `SearchReady`（chain idle のときだけ必要、chain 生存中は `searchEffect` が恒等）: `RdPaced` の閉包 `readyClosure_S2 (hpost : PostRun) (hS : RestartS2)` の **producer が無い**（`hpres` の沼、DP のタイミング層の配線）。**これが oracle 証明の唯一の未証明入力**。構成子には run 形 `hready : ∀ k y, StepsAll … k x y → y.vm.chain = idle → SearchReady (searchLens.get y.vm)` として渡す。
+3. **run の組み立て**: 背景は `GalilScaffoldTopProgressS.backgroundS_exists` ＋ `Tick.scan_count`（`backgroundS_fields` で heads／center／replay 不変、`outputRel_background` で `SoundScanNR`）、比較は `compare_progress_gen` 相当を 3 択（match／`scan_shift`／`scan_fallback`）に開いて構成、phase は `OracleRun.phase_tick_exists_PofC`（`ShiftEnabled` は `LPackM2.shiftGeom`）。
+4. **pack**: 出来た `StepsAll (SoundScanNR)` に `packRunR_MW_marksFree`（終端は ScanNR かつ右 ≤ 2m−1）。
+5. **`MInv`**（`ReportPointAt.centre`）: 背景 `minv_same`、一致 `minv_match`、誕生 `minv_afterBirth`、shift `leftmost_shift`、fallback `minv_after_fallback`。
+6. **`CostedRun`**: 比較 1 回 = `Piece`（`wait := clock−1`, `cmp := true`, `place := 着地の右ヘッド`）; shift は `ShiftEv`、fallback は `FallbackEv`。
+7. **`mu` 減少**: 一致で右 +1、shift で中心 +h、fallback で中心が右へ（`leftmost_after_fallback`）。
+
+次に書く定理（`OracleRun`）: `scanBackground_run` — ScanNR 状態から `clock−1` 個の背景 tick の `StepsAll (SoundScanNR)` を構成し、heads／center／replay／remaining が不変で clock が 1 になることを返す（`hready`／`hchain` は run 形の仮説）。
+
 ## n251 — `ChainReady` から `Good` を外した（正 lag の watch は必ず tick できる）／run 構成の API 確定
 
 **公理への進捗**
