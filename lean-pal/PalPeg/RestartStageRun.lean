@@ -1,6 +1,7 @@
 import PalPeg.RestartStageLedger
 import PalPeg.WindowPack
 import PalPeg.CloseoutCheckW
+import PalPeg.GalilTickFair
 
 /-!
 # The chain ledger along the ticks of the machine
@@ -183,6 +184,241 @@ theorem ledgerAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
   | rewind_pair _ _ _ hm _ _ _ =>
     intro hmode
     simp [hm] at hmode
+
+/-! ## The broken chain before its restart -/
+
+/-- What a broken chain in scan mode carries for the restart that follows: a canonical
+nonnegative lag, and at a restart-guard state the stage bound of the radius against `last`. -/
+def BrokenStage (c : Control) (s : GalilVM) : Prop :=
+  (c.mode = Mode.shift → ∃ w, s.chain = .watch w) ∧
+  (c.mode = Mode.scan → ∀ w, s.chain = .broken w →
+    (Canonical w.lag ∧ 0 ≤ value w.lag) ∧
+    (restartGuardVM s → ∃ Rad : ℕ, RadiusRep s.radius Rad ∧
+      StageEntry Rad w.machine.control.last ∧ Canonical w.machine.control.last))
+
+theorem brokenStage_of_not_broken {c : Control} {s : GalilVM}
+    (hmode : c.mode ≠ Mode.shift) (hnot : ∀ w, s.chain ≠ .broken w) : BrokenStage c s :=
+  ⟨fun h => absurd h hmode, fun _ w hw => absurd hw (hnot w)⟩
+
+theorem unbroken_of_step {x : ChainVM} {w1 : GalilScaffoldChainWatch.State}
+    (hstep : ChainStep x (.watch w1))
+    (hunbroken : ∀ w, x = .watch w → w.machine.control.broken = false) :
+    w1.machine.control.broken = false := by
+  generalize hy : ChainVM.watch w1 = y at hstep
+  cases hstep with
+  | backDone v h lag margin ver hf => cases hy; rfl
+  | watchStep w w' hinternal =>
+    cases hy
+    cases hinternal with
+    | idle => exact hunbroken _ rfl
+    | take hp hg =>
+      obtain ⟨-, a, hsymbol, hread⟩ := hg
+      exact ((GalilScaffoldChainVerifier.consume_agrees w.machine a hsymbol hread).2).trans
+        (hunbroken _ rfl)
+  | idle => cases hy
+  | brokenIdle => cases hy
+  | copyBit => cases hy
+  | copyEnd => cases hy
+  | backStep => cases hy
+  | watchBreak => cases hy
+
+/-- A background chain step into a broken chain: either the chain was already broken, or a
+watch broke at a positive lag. -/
+theorem brokenLag_of_step {x : ChainVM} {w : GalilScaffoldChainWatch.State}
+    (hstep : ChainStep x (.broken w)) (hledger : ChainLedger 0 x)
+    (hunbroken : ∀ w0, x = .watch w0 → w0.machine.control.broken = false)
+    (hsource : ∀ w0, x = .broken w0 → Canonical w0.lag ∧ 0 ≤ value w0.lag) :
+    (Canonical w.lag ∧ 0 ≤ value w.lag) ∧ (x = .broken w ∨ positive w.lag = true) := by
+  generalize hy : ChainVM.broken w = y at hstep
+  cases hstep with
+  | brokenIdle w0 => cases hy; exact ⟨hsource _ rfl, Or.inl rfl⟩
+  | watchBreak w0 hb =>
+    cases hy
+    exact ⟨(hledger (hunbroken _ rfl)).lag, Or.inr hb.1⟩
+  | idle => cases hy
+  | copyBit => cases hy
+  | copyEnd => cases hy
+  | backStep => cases hy
+  | backDone => cases hy
+  | watchStep => cases hy
+
+theorem not_zero_of_positive {x : Counter} (hpositive : positive x = true) : zero x = false := by
+  rcases x with ⟨pos, neg⟩
+  cases pos <;> simp_all [positive, zero]
+
+theorem not_zero_inc {x : Counter} (hx : Canonical x ∧ 0 ≤ value x) : zero (inc x) = false := by
+  cases hz : zero (inc x) with
+  | false => rfl
+  | true =>
+    have := (zero_iff _ (inc_canonical _ hx.1)).mp hz
+    rw [inc_value] at this
+    have := hx.2
+    omega
+
+/-- One tick of the canonical schedule keeps `BrokenStage`.  `hinterior` excludes the one
+boundary case of a lag-zero break (`distance = 4h − 1`). -/
+theorem brokenStage_tick {raw : List (Fin 2)} {x y : State GalilVM}
+    (ht : Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y)
+    (hcanon : PalPeg.GalilTickFair.Canonical entry 2048 x y)
+    (hstage : BrokenStage x.ctl x.vm) (hledger : LedgerAt x.ctl x.vm)
+    (hwinX : WindowRunPack raw x.ctl x.vm) (hwinY : WindowRunPack raw y.ctl y.vm)
+    (hunbroken : ∀ w, x.vm.chain = .watch w → w.machine.control.broken = false)
+    (hinterior : ∀ w1 w', x.ctl.mode = Mode.scan → ChainStep x.vm.chain (.watch w1) →
+      BreakStep w1 w' → y.vm.chain = .broken w' →
+      value w1.machine.control.distance ≠ 4 * (periodLength w1 : ℤ) - 1) :
+    BrokenStage y.ctl y.vm := by
+  by_cases hguard : x.ctl.mode = Mode.scan ∧ restartGuardVM x.vm
+  · obtain ⟨hctl, hrestart⟩ := hcanon.restartFirst hguard.1 hguard.2
+    obtain ⟨w0, -, -, -, -, hteq⟩ := hrestart
+    exact brokenStage_of_not_broken (by rw [hctl]; simp [hguard.1])
+      (fun w hw => by rw [hteq] at hw; cases hw)
+  have hscan : ∀ {c : Control} {s : GalilVM}, x = ⟨c, s⟩ → c.mode = Mode.scan →
+      ChainLedger 0 s.chain ∧ BlockInv s.chain ∧ SumRel s.chain (value s.radius) ∧
+        ¬ restartGuardVM s := by
+    intro c s hx hm
+    subst hx
+    have h0 := hledger (Or.inl hm)
+    simp only [shiftDebt, hm, show (Mode.scan = Mode.shift) = False from by simp, if_false] at h0
+    exact ⟨h0, hwinX.coupled.block, hwinX.coupled.sum, fun hg => hguard ⟨hm, hg⟩⟩
+  have hbackground : ∀ {c c' : Control} {s t : GalilVM}, x = ⟨c, s⟩ → y = ⟨c', t⟩ →
+      c.mode = Mode.scan → c'.mode ≠ Mode.shift →
+      (galilFrameS (PofC centre place entry raw) q first).background s t →
+      BrokenStage c' t := by
+    intro c c' s t hx hy hm hmode' hb
+    subst hx
+    subst hy
+    obtain ⟨h0, hblock, -, hnoGuard⟩ := hscan rfl hm
+    obtain ⟨-, -, hch, -, -, hradius, -⟩ :=
+      backgroundS_fields (PofC centre place entry raw) q first hb
+    refine ⟨fun h => absurd h hmode', fun _ w hw => ?_⟩
+    rcases hch with ⟨-, y0, hstep, hzy⟩ | ⟨-, -, hz⟩ | ⟨-, -, hz⟩
+    · rw [if_neg (by simp)] at hzy
+      rw [hzy] at hw
+      subst hw
+      obtain ⟨hlag, hcase⟩ := brokenLag_of_step hstep h0 hunbroken
+        (fun w0 hw0 => (hstage.2 hm w0 hw0).1)
+      refine ⟨hlag, fun hg => ?_⟩
+      obtain ⟨w2, hw2, hrest⟩ := hg
+      rw [hzy] at hw2
+      cases hw2
+      rcases hcase with hsame | hpositive
+      · exact absurd ⟨w, hsame, hrest⟩ hnoGuard
+      · rw [not_zero_of_positive hpositive] at hrest
+        exact absurd hrest.2.2 (by simp)
+    · rw [hz] at hw; cases hw
+    · rw [if_neg (by simp)] at hz
+      rw [hz] at hw
+      cases hw
+  cases ht with
+  | init c s t hm hi =>
+    obtain ⟨_,_,_,_,_,_,_,_,_,hch,_⟩ := hi
+    exact brokenStage_of_not_broken (by simp) (fun w hw => by rw [hch] at hw; cases hw)
+  | scan_wait c s t hm hav hb => exact hbackground rfl rfl hm (by simp [hm]) hb
+  | scan_count c s t hm hav hc hb => exact hbackground rfl rfl hm (by simp [hm]) hb
+  | scan_match c s s' t o hm hav hc hcmp hmt hpl ho =>
+    obtain ⟨h0, hblock, hsum, hnoGuard⟩ := hscan rfl hm
+    have hcmp' : compareFound (PofC centre place entry raw) q first s s' := hcmp
+    obtain ⟨vs, vq, a, -, -, hiff, -, hch, heq⟩ := hcmp'
+    have hchain' : s'.chain = vs.chain := by
+      rw [heq, afterBirth_chain]; cases a <;> rfl
+    have hradius' : s'.radius = inc s.radius := by
+      rw [heq, afterBirth_radius]; cases a <;> rfl
+    have hchain : t.chain = s'.chain := by rw [hpl]; split <;> rfl
+    have hradius : t.radius = s'.radius := by rw [hpl]; split <;> rfl
+    refine ⟨fun h => by simp [hm] at h, fun hmode w hw => ?_⟩
+    have htchain : t.chain = .broken w := hw
+    rw [hchain, hchain'] at hw
+    have ha : a = true := by
+      cases a with
+      | true => rfl
+      | false =>
+        exfalso
+        have hm' : read s'.left = read s'.right := hmt
+        rw [heq, afterBirth_left, afterBirth_right] at hm'
+        exact absurd (hiff.2 hm') (by simp)
+    subst ha
+    rcases hch with ⟨-, y0, hstep, hzy⟩ | ⟨-, -, hz⟩ | ⟨-, -, hz⟩
+    · rw [if_pos rfl] at hzy
+      rw [hw] at hzy
+      generalize hyz : ChainVM.broken w = z at hzy
+      cases hzy with
+      | breaks w1 w' hbreak =>
+        cases hyz
+        have hunbroken1 := unbroken_of_step hstep hunbroken
+        have hledger1 : WatchLedger 0 w1 := chainLedger_step hstep hblock h0 hunbroken1
+        have hsum1 : SumRel (.watch w1) (value s.radius) :=
+          (step_inv hstep (F := True) trivial (O := fun _ => True) hblock hsum
+            (fun _ _ _ => Or.inr trivial)).1
+        have hd := hsum1 hunbroken1
+        rw [value_zero_of_zero hbreak.1, add_zero] at hd
+        refine ⟨?_, fun hg => ?_⟩
+        · have hlagEq : w.lag = w1.lag := by
+            obtain ⟨-, -, -, -, -, hweq⟩ := hbreak
+            rw [hweq]
+          rw [hlagEq]
+          exact hledger1.lag
+        · obtain ⟨w2, hw2, hmargin, -, -⟩ := hg
+          rw [htchain] at hw2
+          cases hw2
+          obtain ⟨Rad, hRad, -⟩ := hwinY.radiusScan hmode
+          have hRadValue : (Rad : ℤ) = value w1.machine.control.distance + 1 := by
+            have hR2 : value t.radius = (Rad : ℤ) := hRad.2
+            rw [← hR2, hradius, hradius', inc_value, hd]
+          obtain ⟨hentry, hcanonicalLast, -⟩ := hledger1.stageEntry_of_break hbreak hmargin
+            (hinterior w1 w hm hstep hbreak htchain) hRadValue
+          exact ⟨Rad, hRad, hentry, hcanonicalLast⟩
+      | brokenMatched w0 =>
+        cases hyz
+        obtain ⟨hlag, -⟩ := brokenLag_of_step hstep h0 hunbroken
+          (fun w3 hw3 => (hstage.2 hm w3 hw3).1)
+        refine ⟨⟨inc_canonical _ hlag.1, by
+          show 0 ≤ value (inc w0.lag)
+          rw [inc_value]; have := hlag.2; omega⟩, fun hg => ?_⟩
+        obtain ⟨w2, hw2, -, -, hzero⟩ := hg
+        rw [htchain] at hw2
+        cases hw2
+        have hnz : zero (inc w0.lag) = false := not_zero_inc hlag
+        rw [hnz] at hzero
+        cases hzero
+      | idle => cases hyz
+      | copy => cases hyz
+      | back => cases hyz
+      | watch => cases hyz
+    · rw [hz] at hw; cases hw
+    · rw [if_pos rfl] at hz
+      rw [hw] at hz
+      unfold chainStart at hz
+      cases hz
+  | scan_shift c s s' t hm hav hc hcmp hmt hr hg hb =>
+    obtain ⟨w, -, hteq⟩ := hb
+    exact ⟨fun _ => ⟨_, by rw [hteq]⟩, fun h => by simp at h⟩
+  | scan_fallback c s s' t hm hav hc hcmp hmt hg hr hb =>
+    obtain ⟨p, hteq, -⟩ := hb
+    exact brokenStage_of_not_broken (by simp) (fun w0 hw0 => by rw [hteq] at hw0; cases hw0)
+  | shift_one c s t hm hp hso =>
+    obtain ⟨⟨-, -, -, w, hw, hget⟩, hset⟩ := hso
+    exact ⟨fun _ => ⟨chainShiftOne w, by rw [hset, hget]; rfl⟩, fun h => by simp [hm] at h⟩
+  | shift_done c s o hm hp ho =>
+    obtain ⟨w, hw⟩ := hstage.1 hm
+    exact brokenStage_of_not_broken (by simp) (fun w0 hw0 => by rw [hw] at hw0; cases hw0)
+  | replayStart c s t o hm hr ho ho' =>
+    obtain ⟨_,_,_,_,_,_,_,_,_,hch,_,_,_⟩ := hr
+    exact brokenStage_of_not_broken (by simp) (fun w hw => by rw [hch] at hw; cases hw)
+  | restart c s t hm hr =>
+    obtain ⟨_,_,_,_,_,rfl⟩ := hr
+    exact brokenStage_of_not_broken (by simp [hm]) (fun w hw => by cases hw)
+  | copy_one _ _ _ hm _ hi | copy_done _ _ _ hm _ hi
+  | home_start _ _ _ hm _ hi | home_step _ _ _ hm _ hi
+  | fpp_slice _ _ _ hm hi | fpp_done _ _ _ hm hi
+  | markEnd_found _ _ _ hm _ hi | markEnd_step _ _ _ hm _ hi
+  | choose_select _ _ _ hm _ _ hi | choose_step _ _ _ hm _ hi
+  | rewind_done _ _ _ hm _ hi | rewind_one _ _ _ hm _ _ hi
+  | rewind_pair _ _ _ hm _ _ hi =>
+    have hidle := hwinX.coupled.idleOut (by rw [hm]; decide) (by rw [hm]; decide)
+      (by rw [hm]; decide)
+    have hchain := (congrArg GalilVM.chain hi.2).trans hidle
+    exact brokenStage_of_not_broken (by intro hshift; simp [hm] at hshift)
+      (fun w hw => by rw [hchain] at hw; cases hw)
 
 /-- The chain ledger at every point of a packed run out of an `InvLPS` origin. -/
 theorem ledgerAt_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}

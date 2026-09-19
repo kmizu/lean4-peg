@@ -264,6 +264,79 @@ theorem watchLedger_born {v : GalilScaffoldChainPeriod.Tape} {lag margin : Count
     push_cast at hbalance ⊢
     linarith
 
+/-- `negative = false` means the negative stack is empty. -/
+theorem value_nonneg_of_not_negative {x : Counter} (hnegative : negative x = false) :
+    0 ≤ value x := by
+  rcases x with ⟨pos, neg⟩
+  simp only [negative, Bool.not_eq_false', List.isEmpty_iff] at hnegative
+  simp [value, hnegative]
+
+/-- **The stage bound at a lag-zero break.**  The failing consume leaves `distance` and `last`
+untouched and raises `margin` by one, so a nonnegative margin after the break gives
+`4h − 1 ≤ distance`.  Off the boundary case `distance = 4h − 1` the aligned marks give
+`3h ≤ last` and `distance + 1 ≤ last + 2h`. -/
+theorem WatchLedger.stageEntry_of_break {w w' : GalilScaffoldChainWatch.State}
+    (hledger : WatchLedger 0 w) (hbreak : BreakStep w w')
+    (hmargin : negative w'.margin = false)
+    (hinterior : value w.machine.control.distance ≠ 4 * (periodLength w : ℤ) - 1)
+    {Rad : ℕ} (hRad : (Rad : ℤ) = value w.machine.control.distance + 1) :
+    PalPeg.GalilScaffoldChainInputSupply.StageEntry Rad w'.machine.control.last ∧
+      Canonical w'.machine.control.last ∧ w'.lag = w.lag := by
+  obtain ⟨hzero, -, a, hsymbol, hread, rfl⟩ := hbreak
+  have hcontrol : (GalilScaffoldChainVerifier.consume w.machine).control
+      = {w.machine.control with broken := true} :=
+    GalilScaffoldChainConsume.mismatch w.machine.control a _ hsymbol hread
+  have hlast : (GalilScaffoldChainVerifier.consume w.machine).control.last
+      = w.machine.control.last := by rw [hcontrol]
+  have hmarginValue := value_nonneg_of_not_negative hmargin
+  have hbalance := hledger.balance
+  simp only [GalilScaffoldChainWatch.balance] at hbalance
+  have hlagZero := value_zero_of_zero hzero
+  change 0 ≤ value (inc w.margin) at hmarginValue
+  rw [inc_value] at hmarginValue
+  obtain ⟨hsize, hforward, hbackward, hmarks, ⟨n, hn⟩, -, -, hcanonicalLast⟩ := hledger.marks
+  have hh0 : (0 : ℤ) ≤ (periodLength w : ℤ) := by positivity
+  have hleft : (w.machine.control.period.left.length : ℤ) ≤ (periodLength w : ℤ) := by
+    have : w.machine.control.period.left.length ≤ periodLength w := by omega
+    exact_mod_cast this
+  have hboundaryLow : value w.machine.control.distance - (periodLength w : ℤ) + 1
+      ≤ value w.machine.control.boundary := by
+    cases hfw : w.machine.control.forward with
+    | true => obtain ⟨-, h2⟩ := hforward hfw; linarith
+    | false =>
+      obtain ⟨-, h2⟩ := hbackward hfw
+      have : (0 : ℤ) ≤ (w.machine.control.period.left.length : ℤ) := by positivity
+      linarith
+  have hboundaryHigh : value w.machine.control.distance + 1
+      ≤ value w.machine.control.boundary + (periodLength w : ℤ) := by
+    cases hfw : w.machine.control.forward with
+    | true => obtain ⟨-, h2⟩ := hforward hfw; linarith
+    | false =>
+      obtain ⟨h1, h2⟩ := hbackward hfw
+      have : (0 : ℤ) ≤ (w.machine.control.period.left.length : ℤ) := by positivity
+      linarith
+  have hfour : 4 * (periodLength w : ℤ) ≤ value w.machine.control.distance := by
+    have h1 : 4 * (periodLength w : ℤ) - 1 ≤ value w.machine.control.distance := by linarith
+    omega
+  have haligned : 4 * (periodLength w : ℤ) ≤ value w.machine.control.boundary := by
+    rw [sub_zero] at hn
+    by_contra hnot
+    have hlt := not_le.mp hnot
+    have hn3 : n ≤ 3 := by
+      by_contra hnot4
+      have h4 := not_le.mp hnot4
+      have : 4 * (periodLength w : ℤ) ≤ n * (periodLength w : ℤ) :=
+        mul_le_mul_of_nonneg_right (by omega) hh0
+      linarith
+    have : n * (periodLength w : ℤ) ≤ 3 * (periodLength w : ℤ) :=
+      mul_le_mul_of_nonneg_right hn3 hh0
+    linarith
+  refine ⟨?_, by rw [hlast]; exact hcanonicalLast, rfl⟩
+  rw [hlast]
+  apply PalPeg.GalilLastRadius.stageEntry_of_gap Rad (periodLength w)
+  · rcases hmarks with hm | hm <;> linarith
+  · rcases hmarks with hm | hm <;> linarith
+
 /-! ## The chain -/
 
 /-- The ledger of a live chain.  Copy and back phases carry the credit balance against the cells
