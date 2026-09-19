@@ -93,6 +93,7 @@ import PalPeg.ShiftEntryBoundary
 import PalPeg.ShiftEntryFromLanding
 import PalPeg.WindowInv
 import PalPeg.WindowRun
+import PalPeg.WindowTick
 import PalPeg.FoundPackRefute
 import PalPeg.FoundPackCorrected
 import PalPeg.CopyPhaseTick

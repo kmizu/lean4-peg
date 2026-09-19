@@ -1,3 +1,21 @@
+## n245 — 公理進捗: `ChainWindowRun` の `Tick` 保存 `WindowTick.chainWindowRun_tick`（24 構成子）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 残差の窓を運ぶ run 不変量 `ChainWindowRun` が **`galilFrameS` の 1 tick（24 構成子全部）で保たれる**ことを証明（`WindowTick.chainWindowRun_tick`、標準公理のみ）。周辺事実は仮説で取る: `Decodes (PofC …)`（`decodesC` でタダ）、`AuxPack`（`idleOut` で非 scan/shift/init の chain idle、`copyP` で `shift_one` の `remainingPos` 選言を潰す）、`CentreRep`、右ヘッドの `Represents`/`focus ≠ none`、scan かつ `clock = 1` での `canRight right`、scan での `RadiusRep radius R' ∧ position right = center + R'`。scan 側 4 構成子は `chainWindowRun_background_case`（`backgroundS` 展開: chain 1 歩／idle／誕生）・`_match_case`（一致比較の `afterCompare`＋`matchedPlace`）・`_shift_case`（不一致 → `shiftGuardVM` → `beginShiftVM'`、`Good w` は guard の記号一致と `WindowInv` の lag 0 窓から `good_of_guard`）・`_shiftOne_case`（`shiftLens.rel` 越しの `shiftTick`）。残り: `Steps` 帰納で周辺事実を run に沿って供給する層（`auxPack_steps` は各到達点の `CentreLive` を要求、`RadiusRep` は `Restarted`＋`radius_rep_inc`）と、guard 点での残差取り出し（`2h ≤ R` の cycle 算術） |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 起きたこと（機械の出力）
+
+- `lake env lean PalPeg/WindowTick.lean` → `BUILD=0`、`sorryAx` なし、7 定理すべて `[propext, Classical.choice, Quot.sound]`。
+- `import PalPeg.WindowTick` を `Workbench.lean` の `WindowRun` 直後に登録、`lake build --quiet PalPeg` → `BUILD=0`。
+- 直したもの（前ノートの型検査エラー 7 件）: `open A (x) B (y)` は 1 行に書けない（分割）／`rewindLens_rel_chain` の `rw` 後の `rfl`／`compare_target_heads` の未使用 implicit 3 つ／`rw [← hy, …]` の向き／`shiftOne_case` の `htright` に `rfl`、`right_position s.center hcanC'`（`shiftLens.get` 越しの `canRight` は defeq）／`match_case`・`shift_case` 呼び出しの `hmode := rfl`／fpp・rewind 構成子の idle 分岐は `apply chainWindowRun_of_idle; rw [lens]; exact hidle …` の 3 行に展開。
+
 ## n244 — 公理進捗: run 層の窓不変量 `ChainWindowRun` と VM 遷移ごとの transport 8 本
 
 **公理への進捗**
