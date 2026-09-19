@@ -1,3 +1,69 @@
+## n233 — 公理進捗: 第 2 連言 `H_freshShiftAtShiftEntry` は左端の不一致で偽（REFUTED・条件付き）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 2 連言（run の各 tick で `H_freshShiftAtShiftEntry`）が**左端の不一致では `False` を導く**と機械検査した（`ShiftEntryBoundary.refuted_freshShiftAtShiftEntry_at_left_end`、公理 `propext`・`Quot.sound` のみ）。証人（その状態に `InvLPS` から到達する run）は未構成なので **REFUTED（条件付き）**。この連言は再切り出しが要る。第 1・第 3 連言は変化なし |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 反証の中身（一次情報）
+
+* ヘッドモデル `GalilScaffoldInputHead.layout`（`GalilScaffoldInputHead.lean:14`）: 左スタックの末尾は
+  `none` 番兵。最初の文字に居るヘッド `⟨layout [a] rs qs, false⟩`（位置 1）を `left` すると
+  `moveLeft` が番兵を焦点に持ってきて `focus = none`、`read = none`。
+* Scala 正本 `ScaffoldInput.read()`（`ScaffoldInput.scala:79`）も「`None` at the origin」と明記。
+  **番兵は忠実。** `ScaffoldGalil.scala:267-272` は `left.read() == right.read()` で不一致なら
+  `chain.canShift && chain.prediction() == right.read()` で `beginChainShift()`——左端に
+  条件は無い。
+* 到達可能性（未構成）: `a^n` では `GalilLiveCentre.Live` の `n < 2c` が右ヘッド `2c−1` で
+  中心 `c` を強制し、次の比較は必ず左端。chain は DP が `4h+1` セル見て生まれ `4h` セルで
+  phase 4、`margin = R − 4h ≥ 0` は `c ≥ 4h+1` で成立。
+* 反証定理は「左ヘッドが最初の文字に居る `s` から `scan_shift` 形の tick（compare・不一致・
+  `shiftGuardVM`・`beginShiftVM'`）が出る」ことだけを仮定し、`ShiftInv.leftPresent`
+  （`t.left = u.left = left s.left` の焦点が `none`）で `False`。
+
+### 何が壊れていて何が無事か
+
+| 述語 | 左端の不一致での状態 | 理由 |
+|---|---|---|
+| `ShiftInv`（`CloseoutPackRun37:59`） | **偽** | `leftPresent`（焦点 none）、`room : R + 2 ≤ C`（`C − R − 1 = 0`）、`origin`（`x[0]? = some 2 = x[2C]?`：語レベルの `≠` は偽） |
+| `RoundScan`（`GalilRoundPeriod:175`） | **偽** | 同じ `room`／`origin` |
+| `ShiftPal`（`CloseoutPackRun29:87`） | 真 | 結論は shift 先の回文 `PalAt (cen+h) (r₀+1−h)` だけ |
+| `FreshShiftLedger`（第 3 連言） | 真 | 5 成分とも語レベルで左端に触れない |
+| Scala `ScaffoldChain.checkPair` | 整合 | 継続 round の終端（`cycleEnd`）は再び左端に来るので assert は矛盾しない |
+
+**つまり round 機構（`ShiftInv`/`RoundScan`）は「不一致は本物の文字の不一致」を前提に
+語レベルで書かれており、機械レベルの不一致（`read = none`）を表せない。** 正しい形は
+
+* `room : R + 1 ≤ C`
+* `origin : C − R − 1 = 0 ∨ (encoded raw)[C−R−1]? ≠ (encoded raw)[C+R+1]?`
+* `leftPresent : 1 ≤ C − R − 1 + 2k → v.left.head.focus ≠ none`（`leftRep` は番兵でも成立）
+
+影響範囲（grep）: `.room` 18 箇所／6 ファイル、`.origin` の実消費は `GalilRoundPeriod:256` と
+`CloseoutAdvanceT.period_at_next`、`CloseoutRoundUnique:72`。`CloseoutPackRun31`／
+`CloseoutShiftRun`／`ShiftPalAlongTrace` は運ぶだけ。**作業量の問題。**
+
+### 供給側の所在（一次情報）
+
+* `BlockOn raw`（chain の窓）を produce するのは `CloseoutWatchRound48/50/53`・`GalilReplaySpan`
+  だけ——**replay 生まれの chain の層**。
+* 公理の起点 `InvLPS`（非 replay の found）側の landing は `CloseoutWatchPhase2.ShiftTailC`
+  （`:225`）で、chain データは `WatchSegE` ＋ **DP の `GalilDpCorrect.Result`**（誕生時の
+  `Candidate`、`x[cen] = cc` と `4h+1` の回文を含む）。走査に沿って伸びる窓は持っていない。
+
+### 次の一手
+
+1. **第 3 連言（`FreshShiftLedger`）を先に落とす**——左端でも真で、必要なのは
+   `ChainW` 形の窓＋`x[cen] = cc`＋直前の回文だけ（`palNext_of_centre` の `i ≤ h` 部分＋
+   `periodOn_mirror`＋`blockOn_succ_of_symbol`）。producer を書き、run 層の残差を
+   「shift 入口で `ChainW` 形の窓を持つ」1 つに絞る。
+2. 第 2 連言は `ShiftInv`/`RoundScan` の左端対応（上の 3 場の書き換え、7 ファイル）を
+   済ませてから、`shiftInv_of_watch_entry`（n232）の左端版で再切り出す。
+
 ## n232 — 公理進捗: `ShiftInv` 23 場が 1 本の定理で出た（`shiftInv_of_watch_entry`）
 
 **公理への進捗**

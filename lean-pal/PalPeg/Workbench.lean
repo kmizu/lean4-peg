@@ -89,6 +89,7 @@ import PalPeg.MatchedRunSnoc
 import PalPeg.ShiftPhaseDeterminism
 import PalPeg.RoundSegFromRun
 import PalPeg.ShiftPalAlongTrace
+import PalPeg.ShiftEntryBoundary
 import PalPeg.FoundPackRefute
 import PalPeg.FoundPackCorrected
 import PalPeg.CopyPhaseTick
