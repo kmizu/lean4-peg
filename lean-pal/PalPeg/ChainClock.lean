@@ -261,5 +261,134 @@ theorem period_of_semWith {Cert : ℕ → Prop} {x : ChainVM}
     have : (cellsOf (.broken w) : ℤ) = (H : ℤ) + 1 := by exact_mod_cast hcells
     omega
 
+/-- A chain with no work left has none after a matched event either. -/
+theorem chainWork_matched_done {y z : ChainVM} (hmatched : ChainMatched y z)
+    (hlag : ∀ w, y = .watch w → Canonical w.lag ∧ 0 ≤ value w.lag)
+    (hpre : ∀ t h p v lag margin ver, y = .copy t h p v lag margin ver → 0 ≤ value lag)
+    (hback : ∀ v h lag margin ver, y = .back v h lag margin ver → 0 ≤ value lag)
+    (hdone : chainWork y ≤ 0) : chainWork z ≤ 0 := by
+  cases hmatched with
+  | idle => simp [chainWork]
+  | copy t h p v lag margin ver =>
+    exfalso
+    have := hpre _ _ _ _ _ _ _ rfl
+    simp only [chainWork] at hdone
+    have hcells : 1 ≤ cells v := by unfold cells; omega
+    omega
+  | back v h lag margin ver =>
+    exfalso
+    have := hback _ _ _ _ _ rfl
+    simp only [chainWork] at hdone
+    omega
+  | watch w w' houter =>
+    obtain ⟨hcanonical, hnonneg⟩ := hlag w rfl
+    simp only [chainWork] at hdone
+    have hzeroValue : value w.lag = 0 := by omega
+    cases houter with
+    | queued hz =>
+      exfalso
+      have := (zero_iff _ hcanonical).mpr hzeroValue
+      rw [hz] at this
+      cases this
+    | immediate hz hg =>
+      simp only [chainWork, GalilScaffoldChainWatch.immediate]
+      omega
+  | breaks w w' hb => simp [chainWork]
+  | brokenMatched w => simp [chainWork]
+
+/-- The lag facts of a chain state, from its ledger. -/
+theorem lagFacts_of_ledger {x : ChainVM} (hledger : PalPeg.RestartStageLedger.ChainLedger 0 x)
+    (hunbroken : ∀ w, x = .watch w → w.machine.control.broken = false) :
+    (∀ w, x = .watch w → Canonical w.lag ∧ 0 ≤ value w.lag) ∧
+    (∀ t h p v lag margin ver, x = .copy t h p v lag margin ver → 0 ≤ value lag) ∧
+    (∀ v h lag margin ver, x = .back v h lag margin ver → 0 ≤ value lag) := by
+  refine ⟨fun w hw => ?_, fun t h p v lag margin ver hx => ?_, fun v h lag margin ver hx => ?_⟩
+  · subst hw
+    exact (hledger (hunbroken _ rfl)).lag
+  · subst hx
+    exact hledger.2.2.2
+  · subst hx
+    exact hledger.2.2.2
+
+/-- **One chain tick keeps the clock inequality.**  `E` is the time since the last match,
+`R` the radius; a tick without a match costs one unit of time and does one unit of work, a match
+resets the time and raises the radius by one, and a birth starts within two semiperiods. -/
+theorem clock_chainAt {a found : Bool} {answer : GalilScaffoldTape.Tape} {cc : Fin 3}
+    {walker : GalilScaffoldPlace.Place} {ver : PlaceHead} {radius : Counter} {x z : ChainVM}
+    {E E' R R' : ℤ}
+    (hchainAt : chainAt a found answer cc walker ver radius x z)
+    (hblock : BlockInv x) (hledger : PalPeg.RestartStageLedger.ChainLedger 0 x)
+    (hunbroken : ∀ w, x = .watch w → w.machine.control.broken = false)
+    (hradiusValue : value radius = R)
+    (hsource : 0 < chainWork x → chainWork x + E ≤ 2047 * (4 * chainPeriod x - R))
+    (hbirth : x = .idle → found = true →
+      1 ≤ remainingBits answer ∧ R ≤ 2 * (remainingBits answer : ℤ))
+    (htime : if a then E' + 2047 ≤ E else E' ≤ E + 1)
+    (htimeBounds : 0 ≤ E' ∧ E' ≤ 2047 ∧ E ≤ 2047)
+    (hradius : R' = R + if a then 1 else 0) :
+    0 < chainWork z → chainWork z + E' ≤ 2047 * (4 * chainPeriod z - R') := by
+  intro hworkZ
+  rcases hchainAt with ⟨-, y, hstep, hzy⟩ | ⟨-, -, hz⟩ | ⟨hidle, hfound, hz⟩
+  · obtain ⟨hlagX, hpreX, hbackX⟩ := lagFacts_of_ledger hledger hunbroken
+    have hledgerY := PalPeg.RestartStageLedger.chainLedger_step hstep hblock hledger
+    have hunbrokenY : ∀ w, y = .watch w → w.machine.control.broken = false := by
+      intro w hw
+      subst hw
+      exact PalPeg.RestartStageRun.unbroken_of_step hstep hunbroken
+    obtain ⟨hlagY, hpreY, hbackY⟩ := lagFacts_of_ledger hledgerY hunbrokenY
+    by_cases hworkX : 0 < chainWork x
+    · obtain ⟨hstepWork, hstepPeriod⟩ :=
+        chainWork_step hstep hblock (fun w hw => (hlagX w hw).1) hworkX
+      have hclock := hsource hworkX
+      cases a with
+      | false =>
+        rw [if_neg (by simp)] at hzy
+        subst hzy
+        simp only [Bool.false_eq_true, if_false] at htime hradius
+        rw [hstepPeriod hworkZ, hradius]
+        omega
+      | true =>
+        rw [if_pos rfl] at hzy
+        obtain ⟨hmatchedWork, hmatchedPeriod⟩ := chainWork_matched hzy
+        have hworkY : 0 < chainWork y := by
+          by_contra hdone
+          have := chainWork_matched_done hzy hlagY hpreY hbackY (by omega)
+          omega
+        simp only [if_true] at htime hradius
+        rw [hmatchedPeriod hworkZ, hstepPeriod hworkY, hradius]
+        omega
+    · have hdoneY := chainWork_step_done hstep hlagX hpreX hbackX (by omega)
+      exfalso
+      cases a with
+      | false =>
+        rw [if_neg (by simp)] at hzy
+        subst hzy
+        omega
+      | true =>
+        rw [if_pos rfl] at hzy
+        have := chainWork_matched_done hzy hlagY hpreY hbackY hdoneY
+        omega
+  · rw [hz] at hworkZ
+    simp [chainWork] at hworkZ
+  · obtain ⟨hbits, hradiusBound⟩ := hbirth hidle hfound
+    obtain ⟨hstartWork, hstartPeriod⟩ := chainWork_chainStart answer cc walker ver radius
+    rw [hradiusValue] at hstartWork
+    have hbitsZ : (1 : ℤ) ≤ (remainingBits answer : ℤ) := by exact_mod_cast hbits
+    cases a with
+    | false =>
+      rw [if_neg (by simp)] at hz
+      rw [hz] at hworkZ ⊢
+      simp only [Bool.false_eq_true, if_false] at htime hradius
+      rw [hstartWork, hstartPeriod, hradius]
+      omega
+    | true =>
+      rw [if_pos rfl] at hz
+      obtain ⟨hmatchedWork, hmatchedPeriod⟩ := chainWork_matched hz
+      simp only [if_true] at htime hradius
+      rw [hmatchedPeriod hworkZ, hstartPeriod, hradius]
+      rw [hstartWork] at hmatchedWork
+      omega
+
 end PalPeg.ChainClock
+
 

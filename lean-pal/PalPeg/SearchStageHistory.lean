@@ -624,4 +624,72 @@ theorem found_radius_le {p : GalilScaffoldPlace.Place} {lower clock : ℕ} {R : 
   have hprevZ : (Hprev : ℤ) < 4 * (H : ℤ) := by exact_mod_cast hnotPrevious
   omega
 
+/-- A search event that ends in `found` started in `run` (or was already `found`). -/
+theorem run_of_found {p : GalilScaffoldPlace.Place} {a : Bool} {v v' : SearchVM}
+    (hstep : searchStep p a v v') (hfound : v'.search.mode = .found)
+    (hsource : v.search.mode ≠ .found) : v.search.mode = .run := by
+  cases hm : v.search.mode with
+  | run => rfl
+  | found => exact absurd hm hsource
+  | idle =>
+    simp only [searchStep, hm] at hstep
+    subst v'
+    rw [hm] at hfound
+    cases hfound
+  | missed =>
+    simp only [searchStep, hm] at hstep
+    subst v'
+    rw [hm] at hfound
+    cases hfound
+  | lower | lowerHome | copy | home =>
+    exfalso
+    simp only [searchStep, hm] at hstep
+    obtain ⟨y, htick, rfl⟩ := hstep
+    rw [ofPrep_mode] at hfound
+    have hsteady := prepTick_steady htick (by simp [Preparing, SearchVM.toPrep, hm])
+    rcases hsteady with h | h | h | h | h <;> rw [h] at hfound <;> cases hfound
+  | grow =>
+    exfalso
+    simp only [searchStep, hm] at hstep
+    by_cases hpositive : positive v.search.work = true
+    · simp only [hpositive, if_true] at hstep
+      subst v'
+      rw [ofPrep_mode] at hfound
+      have hgrow : (GalilScaffoldStagePrepare.growStep v.toPrep).mode = .grow := hm
+      rw [hgrow] at hfound
+      cases hfound
+    · simp only [hpositive, Bool.false_eq_true, if_false] at hstep
+      subst v'
+      rw [ofPrep_mode] at hfound
+      cases hfound
+  | wait =>
+    exfalso
+    simp only [searchStep, hm] at hstep
+    subst v'
+    have hmode : (advance a (GalilScaffoldDouble.waitStep true v.search)).mode = .found := hfound
+    rw [advance_mode] at hmode
+    by_cases hzero : zero v.search.debt = true
+    · rw [GalilScaffoldDouble.wait_enter _ hm hzero] at hmode
+      cases hmode
+    · have hstays : GalilScaffoldDouble.waitStep true v.search = v.search := by
+        simp [GalilScaffoldDouble.waitStep, hm, hzero]
+      rw [hstays, hm] at hmode
+      cases hmode
+  | double =>
+    exfalso
+    simp only [searchStep, hm] at hstep
+    by_cases hpositive : positive v.search.work = true
+    · simp only [hpositive, if_true] at hstep
+      subst v'
+      have hmode : (advance a (GalilScaffoldDouble.step v.search)).mode = .found := hfound
+      rw [advance_mode] at hmode
+      have hdouble : (GalilScaffoldDouble.step v.search).mode = .double := hm
+      rw [hdouble] at hmode
+      cases hmode
+    · simp only [hpositive, Bool.false_eq_true, if_false] at hstep
+      subst v'
+      rw [ofPrep_mode] at hfound
+      cases hfound
+
 end PalPeg.SearchStageHistory
+
