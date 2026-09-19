@@ -25,8 +25,10 @@ def SemWith (Cert : ℕ → Prop) : ChainVM → Prop
   | x => Settled x ∧ ∃ H, BlockInv x ∧ cellsOf x = H + 1 ∧ Cert H
 
 /-- The least-candidate instance of `SemWith`. -/
-def Sem (raw : List (Fin 2)) (C : ℕ) : ChainVM → Prop :=
-  SemWith (fun H => FutureMinimal raw C H ∧ MoveMinimal raw C H)
+def Sem (Move : ℕ → ℕ → Prop) (raw : List (Fin 2)) (C : ℕ) : ChainVM → Prop :=
+  SemWith (fun H => FutureMinimal raw C H ∧ Move C H)
+
+variable {Move : ℕ → ℕ → Prop}
 
 theorem semWith_start {Cert : ℕ → Prop} {H : ℕ}
     {answer : GalilScaffoldTape.Tape} {cc : Fin 3} {walker : GalilScaffoldPlace.Place}
@@ -42,8 +44,8 @@ theorem sem_start {raw : List (Fin 2)} {C H : ℕ}
     {answer : GalilScaffoldTape.Tape} {cc : Fin 3} {walker : GalilScaffoldPlace.Place}
     {ver : PlaceHead} {radius : Counter}
     (hcopy : CopyInv answer reset walker (GalilScaffoldChainPeriod.start cc) H)
-    (hmin : FutureMinimal raw C H) (hmove : MoveMinimal raw C H) :
-    Sem raw C (chainStart answer cc walker ver radius) :=
+    (hmin : FutureMinimal raw C H) (hmove : Move C H) :
+    Sem Move raw C (chainStart answer cc walker ver radius) :=
   semWith_start hcopy ⟨hmin,hmove⟩
 
 /-- One background chain step preserves the fixed-centre semantic datum. -/
@@ -126,7 +128,7 @@ theorem sem_tick {Cert : ℕ → Prop} {a : Bool} {x y : ChainVM}
 
 /-- At watch, the stored candidate is exactly `periodLength`. -/
 theorem watch_minimal {raw : List (Fin 2)} {C : ℕ}
-    {w : GalilScaffoldChainWatch.State} (h : Sem raw C (.watch w)) :
+    {w : GalilScaffoldChainWatch.State} (h : Sem Move raw C (.watch w)) :
     FutureMinimal raw C (periodLength w) := by
   obtain ⟨_,H,_,hcells,hmin⟩ := h
   have hp := periodLength_succ_eq_cells w
@@ -138,8 +140,8 @@ theorem watch_minimal {raw : List (Fin 2)} {C : ℕ}
 
 /-- The same stored least candidate, in the form used by fallback moves. -/
 theorem watch_moveMinimal {raw : List (Fin 2)} {C : ℕ}
-    {w : GalilScaffoldChainWatch.State} (h : Sem raw C (.watch w)) :
-    MoveMinimal raw C (periodLength w) := by
+    {w : GalilScaffoldChainWatch.State} (h : Sem Move raw C (.watch w)) :
+    Move C (periodLength w) := by
   obtain ⟨_,H,_,hcells,hmin⟩ := h
   have hp := periodLength_succ_eq_cells w
   change cellsOf (.watch w) = H+1 at hcells
@@ -151,8 +153,8 @@ theorem watch_moveMinimal {raw : List (Fin 2)} {C : ℕ}
 /-- Every live chain state retains its birth semiperiod and the direct
 fallback minimality certificate. -/
 theorem sem_moveData {raw : List (Fin 2)} {C : ℕ} {x : ChainVM}
-    (hx : Sem raw C x) (hne : x ≠ .idle) :
-    ∃ h, MoveMinimal raw C h := by
+    (hx : Sem Move raw C x) (hne : x ≠ .idle) :
+    ∃ h, Move C h := by
   cases x with
   | idle => exact (hne rfl).elim
   | copy t h p v lag margin ver =>
@@ -181,18 +183,18 @@ theorem semWith_chainAt {Cert : ℕ → Prop}
 theorem sem_chainAt {raw : List (Fin 2)} {C : ℕ}
     {a found : Bool} {ans : GalilScaffoldTape.Tape} {cc : Fin 3}
     {wk : GalilScaffoldPlace.Place} {ver : PlaceHead} {rad : Counter} {x y : ChainVM}
-    (hx : Sem raw C x)
+    (hx : Sem Move raw C x)
     (hbirth : x = .idle → found = true → ∃ H,
       CopyInv ans reset wk (GalilScaffoldChainPeriod.start cc) H ∧ FutureMinimal raw C H ∧
-      MoveMinimal raw C H)
-    (ht : chainAt a found ans cc wk ver rad x y) : Sem raw C y :=
+      Move C H)
+    (ht : chainAt a found ans cc wk ver rad x y) : Sem Move raw C y :=
   semWith_chainAt hx hbirth ht
 
 /-- The exact short-period conclusion consumed by `OracleRun.shiftLeaf`, once
 the run invariant supplies the semantic datum for its target watch. -/
 theorem watch_no_short {raw : List (Fin 2)} {C k : ℕ}
     {w : GalilScaffoldChainWatch.State}
-    (hsem : Sem raw C (.watch w))
+    (hsem : Sem Move raw C (.watch w))
     (hleft : k < C)
     (hpal : Manacher.PalAt (encoded raw) C k)
     (hfour : 4 * periodLength w ≤ k)
@@ -205,7 +207,7 @@ This is the mathematical payload carried unchanged while the `h` unit shift
 ticks execute. -/
 theorem watch_no_short_next {raw : List (Fin 2)} {C k h : ℕ}
     {w : GalilScaffoldChainWatch.State}
-    (hsem : Sem raw C (.watch w))
+    (hsem : Sem Move raw C (.watch w))
     (hh : h = periodLength w)
     (hh0 : 0 < h)
     (hkC : k < C)
@@ -276,7 +278,7 @@ theorem tailMinimal_of_seed {raw : List (Fin 2)} {C h base : ℕ}
 
 theorem tailMinimal_next {raw : List (Fin 2)} {C k h : ℕ}
     {w : GalilScaffoldChainWatch.State}
-    (hsem : Sem raw C (.watch w))
+    (hsem : Sem Move raw C (.watch w))
     (hh : h = periodLength w) (hh0 : 0 < h) (hkC : k < C)
     (hpal0 : Manacher.PalAt (encoded raw) C k)
     (hpal1 : Manacher.PalAt (encoded raw) (C+h) (k+1-h))
@@ -289,14 +291,14 @@ theorem tailMinimal_next {raw : List (Fin 2)} {C k h : ℕ}
 /-- The two possible histories of a live watch at a scan state: before its
 first shift it still carries the DP certificate; afterwards it carries the
 thresholded certificate produced at the preceding shift entry. -/
-def WatchMinimal (raw : List (Fin 2)) (C k : ℕ)
+def WatchMinimal (Move : ℕ → ℕ → Prop) (raw : List (Fin 2)) (C k : ℕ)
     (w : GalilScaffoldChainWatch.State) : Prop :=
-  Sem raw C (.watch w) ∨
+  Sem Move raw C (.watch w) ∨
   ∃ base, base ≤ k ∧ TailMinimal raw C (periodLength w) base
 
 theorem watchMinimal_no_short {raw : List (Fin 2)} {C k : ℕ}
     {w : GalilScaffoldChainWatch.State}
-    (hm : WatchMinimal raw C k w) (hkC : k < C)
+    (hm : WatchMinimal Move raw C k w) (hkC : k < C)
     (hpal : Manacher.PalAt (encoded raw) C k)
     (hfour : 4 * periodLength w ≤ k)
     (hperiod : HasPeriod (Span raw C k) (2 * periodLength w)) :
@@ -360,7 +362,7 @@ theorem periodOn_right_succ {α : Type} {x : List α} {C k h : ℕ}
 
 theorem watchMinimal_next {raw : List (Fin 2)} {C k h : ℕ}
     {w : GalilScaffoldChainWatch.State}
-    (hm : WatchMinimal raw C k w) (hh : h = periodLength w)
+    (hm : WatchMinimal Move raw C k w) (hh : h = periodLength w)
     (hh0 : 0 < h) (hkC : k < C)
     (hpal0 : Manacher.PalAt (encoded raw) C k)
     (hpal1 : Manacher.PalAt (encoded raw) (C+h) (k+1-h))
@@ -377,15 +379,15 @@ theorem watchMinimal_next {raw : List (Fin 2)} {C k h : ℕ}
 /-- Minimality payload at a scan state.  Copy/back phases retain their birth
 certificate; a watch records the actual scan radius and either the birth or
 post-shift certificate. -/
-def ScanMinimal (raw : List (Fin 2)) (s : GalilVM) : Prop :=
+def ScanMinimal (Move : ℕ → ℕ → Prop) (raw : List (Fin 2)) (s : GalilVM) : Prop :=
   match s.chain with
   | .copy t h p v lag margin ver =>
-      Sem raw (position s.center) (.copy t h p v lag margin ver)
+      Sem Move raw (position s.center) (.copy t h p v lag margin ver)
   | .back v h lag margin ver =>
-      Sem raw (position s.center) (.back v h lag margin ver)
+      Sem Move raw (position s.center) (.back v h lag margin ver)
   | .watch w =>
       ∃ k, position s.right = position s.center + k ∧
-        WatchMinimal raw (position s.center) k w
+        WatchMinimal Move raw (position s.center) k w
   | _ => True
 
 /-- The active phases before the first watch is installed. -/
@@ -394,8 +396,8 @@ def PreShift : ChainVM → Prop
   | _ => False
 
 theorem scanMinimal_preShift_sem {raw : List (Fin 2)} {s : GalilVM}
-    (hm : ScanMinimal raw s) (hpre : PreShift s.chain) :
-    Sem raw (position s.center) s.chain := by
+    (hm : ScanMinimal Move raw s) (hpre : PreShift s.chain) :
+    Sem Move raw (position s.center) s.chain := by
   cases h : s.chain with
   | idle => simp [PreShift,h] at hpre
   | copy => simpa [ScanMinimal,h] using hm
@@ -412,7 +414,7 @@ def ShiftMinimal (raw : List (Fin 2)) (s : GalilVM) : Prop :=
     TailMinimal raw (position s.center + rem) (periodLength w) radius
 
 theorem scanMinimal_watch_no_short {raw : List (Fin 2)} {s : GalilVM}
-    {w : GalilScaffoldChainWatch.State} (hm : ScanMinimal raw s)
+    {w : GalilScaffoldChainWatch.State} (hm : ScanMinimal Move raw s)
     (hw : s.chain = .watch w) {k : ℕ}
     (hright : position s.right = position s.center + k)
     (hkC : k < position s.center)
@@ -452,7 +454,7 @@ theorem shiftMinimal_shiftOne {raw : List (Fin 2)} {s s' : GalilVM}
 
 theorem scanMinimal_shiftDone {raw : List (Fin 2)} {s : GalilVM}
     (hpos : positive s.remaining = false)
-    (hm : ShiftMinimal raw s) : ScanMinimal raw s := by
+    (hm : ShiftMinimal raw s) : ScanMinimal Move raw s := by
   obtain ⟨w,rem,radius,hchain,hrem,hright,htail⟩ := hm
   have hz : rem = 0 := by
     cases rem with
@@ -466,10 +468,10 @@ theorem scanMinimal_shiftDone {raw : List (Fin 2)} {s : GalilVM}
 
 theorem watchMinimal_tick {raw : List (Fin 2)} {C k k' : ℕ}
     {w w' : GalilScaffoldChainWatch.State} {a : Bool}
-    (hm : WatchMinimal raw C k w)
+    (hm : WatchMinimal Move raw C k w)
     (ht : ChainTick a (.watch w) (.watch w'))
     (hb : BlockInv (.watch w))
-    (hkk : k ≤ k') : WatchMinimal raw C k' w' := by
+    (hkk : k ≤ k') : WatchMinimal Move raw C k' w' := by
   rcases hm with hsem | ⟨base,hbase,htail⟩
   · exact Or.inl (sem_tick hsem ht)
   · right
@@ -485,9 +487,9 @@ theorem watchMinimal_tick {raw : List (Fin 2)} {C k k' : ℕ}
 
 theorem watchMinimal_matched {raw : List (Fin 2)} {C k k' : ℕ}
     {w w' : GalilScaffoldChainWatch.State}
-    (hm : WatchMinimal raw C k w)
+    (hm : WatchMinimal Move raw C k w)
     (ht : ChainMatched (.watch w) (.watch w'))
-    (hb : BlockInv (.watch w)) (hkk : k ≤ k') : WatchMinimal raw C k' w' := by
+    (hb : BlockInv (.watch w)) (hkk : k ≤ k') : WatchMinimal Move raw C k' w' := by
   rcases hm with hsem | ⟨base,hbase,htail⟩
   · exact Or.inl (sem_matched hsem ht)
   · right
@@ -503,11 +505,11 @@ theorem watchMinimal_matched {raw : List (Fin 2)} {C k k' : ℕ}
 
 theorem scanMinimal_chainTick_watch {raw : List (Fin 2)} {s : GalilVM}
     {w : GalilScaffoldChainWatch.State} {a : Bool} {k : ℕ}
-    (hm : ScanMinimal raw s)
+    (hm : ScanMinimal Move raw s)
     (ht : ChainTick a s.chain (.watch w))
     (hb : BlockInv s.chain)
     (hright : position s.right = position s.center + k) :
-    WatchMinimal raw (position s.center) k w := by
+    WatchMinimal Move raw (position s.center) k w := by
   cases hs : s.chain with
   | idle =>
     rw [hs] at ht
@@ -537,11 +539,11 @@ theorem scanMinimal_chainTick_watch {raw : List (Fin 2)} {s : GalilVM}
     exact watchMinimal_tick hmin (by simpa [hs] using ht) (by simpa [hs] using hb) le_rfl
 
 theorem scanMinimal_step {raw : List (Fin 2)} {s t : GalilVM}
-    (hm : ScanMinimal raw s) (hb : BlockInv s.chain)
+    (hm : ScanMinimal Move raw s) (hb : BlockInv s.chain)
     (hstep : ChainStep s.chain t.chain)
     (hcenter : t.center = s.center) (hright : t.right = s.right)
     (hpos : position s.center ≤ position s.right) :
-    ScanMinimal raw t := by
+    ScanMinimal Move raw t := by
   generalize hs : s.chain = x at hm hb hstep
   generalize ht : t.chain = y at hstep ⊢
   cases hstep with
@@ -576,12 +578,12 @@ theorem scanMinimal_step {raw : List (Fin 2)} {s t : GalilVM}
   | watchBreak => simp [ScanMinimal,ht]
 
 theorem scanMinimal_matched {raw : List (Fin 2)} {s t : GalilVM}
-    (hm : ScanMinimal raw s) (hb : BlockInv s.chain)
+    (hm : ScanMinimal Move raw s) (hb : BlockInv s.chain)
     (hmatched : ChainMatched s.chain t.chain)
     (hcenter : t.center = s.center)
     {k k' : ℕ} (hr : position s.right = position s.center+k)
     (hr' : position t.right = position t.center+k') (hkk : k ≤ k') :
-    ScanMinimal raw t := by
+    ScanMinimal Move raw t := by
   generalize hs : s.chain = x at hm hb hmatched
   generalize ht : t.chain = y at hmatched ⊢
   cases hmatched with
@@ -608,13 +610,13 @@ theorem scanMinimal_matched {raw : List (Fin 2)} {s t : GalilVM}
 theorem scanMinimal_chainAt_false {raw : List (Fin 2)} {s t : GalilVM}
     {found : Bool} {ans : GalilScaffoldTape.Tape} {cc : Fin 3}
     {wk : GalilScaffoldPlace.Place} {ver : PlaceHead} {rad : Counter}
-    (hm : ScanMinimal raw s) (hb : BlockInv s.chain)
+    (hm : ScanMinimal Move raw s) (hb : BlockInv s.chain)
     (hbirth : s.chain = .idle → found = true → ∃ H,
       CopyInv ans reset wk (GalilScaffoldChainPeriod.start cc) H ∧
-      FutureMinimal raw (position s.center) H ∧ MoveMinimal raw (position s.center) H)
+      FutureMinimal raw (position s.center) H ∧ Move (position s.center) H)
     (hat : chainAt false found ans cc wk ver rad s.chain t.chain)
     (hcenter : t.center = s.center) (hright : t.right = s.right)
-    (hpos : position s.center ≤ position s.right) : ScanMinimal raw t := by
+    (hpos : position s.center ≤ position s.right) : ScanMinimal Move raw t := by
   rcases hat with ⟨_,htick⟩ | ⟨_,_,hy⟩ | ⟨hi,hf,hy⟩
   · obtain ⟨z,hstep,hz⟩ := htick
     simp only [Bool.false_eq_true,reduceIte] at hz
@@ -632,19 +634,19 @@ theorem scanMinimal_chainAt_true {raw : List (Fin 2)} {s t : GalilVM}
     {found : Bool} {ans : GalilScaffoldTape.Tape} {cc : Fin 3}
     {wk : GalilScaffoldPlace.Place} {ver : PlaceHead} {rad : Counter}
     {k k' : ℕ}
-    (hm : ScanMinimal raw s) (hb : BlockInv s.chain)
+    (hm : ScanMinimal Move raw s) (hb : BlockInv s.chain)
     (hbirth : s.chain = .idle → found = true → ∃ H,
       CopyInv ans reset wk (GalilScaffoldChainPeriod.start cc) H ∧
-      FutureMinimal raw (position s.center) H ∧ MoveMinimal raw (position s.center) H)
+      FutureMinimal raw (position s.center) H ∧ Move (position s.center) H)
     (hat : chainAt true found ans cc wk ver rad s.chain t.chain)
     (hcenter : t.center = s.center)
     (hr : position s.right = position s.center+k)
     (hr' : position t.right = position t.center+k') (hkk : k ≤ k') :
-    ScanMinimal raw t := by
+    ScanMinimal Move raw t := by
   rcases hat with ⟨_,htick⟩ | ⟨_,_,hy⟩ | ⟨hi,hf,hy⟩
   · obtain ⟨z,hstep,hmatched⟩ := htick
     let u : GalilVM := {s with chain := z}
-    have hmu : ScanMinimal raw u :=
+    have hmu : ScanMinimal Move raw u :=
       scanMinimal_step hm hb (by simpa [u] using hstep) (by simp [u]) (by simp [u]) (by omega)
     have hbu : BlockInv u.chain := by
       simpa [u] using blockInv_step hstep hb
@@ -653,18 +655,18 @@ theorem scanMinimal_chainAt_true {raw : List (Fin 2)} {s t : GalilVM}
   · simp [ScanMinimal,hy]
   · obtain ⟨H,hcopy,hmin,hmove⟩ := hbirth hi hf
     have hs := sem_start (ver := ver) (radius := rad) hcopy hmin hmove
-    have hs' : Sem raw (position s.center) t.chain := sem_matched hs hy
+    have hs' : Sem Move raw (position s.center) t.chain := sem_matched hs hy
     generalize ht : t.chain = y at hy hs' ⊢
     unfold chainStart at hy
     cases hy
     simpa [ScanMinimal,ht,hcenter] using hs'
 
 theorem scanMinimal_resize {raw : List (Fin 2)} {s t : GalilVM} {k k' : ℕ}
-    (hm : ScanMinimal raw s) (hchain : t.chain = s.chain)
+    (hm : ScanMinimal Move raw s) (hchain : t.chain = s.chain)
     (hcenter : t.center = s.center)
     (hr : position s.right = position s.center+k)
     (hr' : position t.right = position t.center+k') (hkk : k ≤ k') :
-    ScanMinimal raw t := by
+    ScanMinimal Move raw t := by
   cases hs : s.chain with
   | idle => simp [ScanMinimal,hchain,hs]
   | broken w => simp [ScanMinimal,hchain,hs]
@@ -690,9 +692,9 @@ theorem scanMinimal_resize {raw : List (Fin 2)} {s t : GalilVM} {k k' : ℕ}
     · exact Or.inl hsem
     · exact Or.inr ⟨base,le_trans hbase hkk,htail⟩
 
-def ModeMinimal (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
+def ModeMinimal (Move : ℕ → ℕ → Prop) (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
   match c.mode with
-  | .scan => ScanMinimal raw s
+  | .scan => ScanMinimal Move raw s
   | .shift => ShiftMinimal raw s
   | _ => True
 
@@ -700,7 +702,7 @@ def ModeMinimal (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
 already exposed by `WindowRunPack`, `FreshShiftLedger`, and `beginShiftVM`. -/
 theorem shiftMinimal_start {raw : List (Fin 2)} {s t : GalilVM}
     {w : GalilScaffoldChainWatch.State} {k h : ℕ}
-    (hm : ScanMinimal raw s)
+    (hm : ScanMinimal Move raw s)
     (htick : ChainTick false s.chain (.watch w))
     (hb : BlockInv s.chain)
     (hradius : position s.right = position s.center + k)
@@ -728,12 +730,12 @@ theorem shiftMinimal_start {raw : List (Fin 2)} {s t : GalilVM}
 variable (centre : GalilVM → Fin 3) (place : GalilVM → GalilScaffoldPlace.Place)
   (entry q : ℕ) (first : Fin 9)
 
-def BirthMinimal (raw : List (Fin 2)) (s : GalilVM) : Prop :=
+def BirthMinimal (Move : ℕ → ℕ → Prop) (raw : List (Fin 2)) (s : GalilVM) : Prop :=
   ∀ a vq, s.chain = .idle → searchEffect (PofC centre place entry raw) a s vq →
     vq.search.mode = .found → ∃ H,
       CopyInv (vq.dp.config.tapes 11) reset ((PofC centre place entry raw).place s)
         (GalilScaffoldChainPeriod.start ((PofC centre place entry raw).centre s)) H ∧
-      FutureMinimal raw (position s.center) H ∧ MoveMinimal raw (position s.center) H
+      FutureMinimal raw (position s.center) H ∧ Move (position s.center) H
 
 /-- The ledger hidden inside `WindowPack.shiftPal_of_windowRunPack`, exposed
 for the minimal-period payload of the same `scan_shift` branch. -/
@@ -780,9 +782,9 @@ theorem freshLedger_of_windowRunPack {raw : List (Fin 2)} {c : Control} {s s' : 
 
 theorem scanMinimal_background {raw : List (Fin 2)} {s t : GalilVM}
     (hbg : (galilFrameS (PofC centre place entry raw) q first).background s t)
-    (hm : ScanMinimal raw s) (hb : BlockInv s.chain)
-    (hbirth : BirthMinimal centre place entry raw s)
-    (hpos : position s.center ≤ position s.right) : ScanMinimal raw t := by
+    (hm : ScanMinimal Move raw s) (hb : BlockInv s.chain)
+    (hbirth : BirthMinimal centre place entry Move raw s)
+    (hpos : position s.center ≤ position s.right) : ScanMinimal Move raw t := by
   obtain ⟨_,hr,hs,hch,heq⟩ := hbg
   have hc : t.center = s.center := by rw [heq,afterBirth_center]; rfl
   exact scanMinimal_chainAt_false hm hb
@@ -791,11 +793,11 @@ theorem scanMinimal_background {raw : List (Fin 2)} {s t : GalilVM}
 
 theorem scanMinimal_compare {raw : List (Fin 2)} {s t : GalilVM} {k k' : ℕ}
     (hcmp : (galilFrameS (PofC centre place entry raw) q first).compare s t)
-    (hm : ScanMinimal raw s) (hb : BlockInv s.chain)
-    (hbirth : BirthMinimal centre place entry raw s)
+    (hm : ScanMinimal Move raw s) (hb : BlockInv s.chain)
+    (hbirth : BirthMinimal centre place entry Move raw s)
     (hr : position s.right = position s.center+k)
     (hr' : position t.right = position t.center+k') (hkk : k ≤ k') :
-    ScanMinimal raw t := by
+    ScanMinimal Move raw t := by
   obtain ⟨vs,vq,a,_,_,_,hs,hch,heq⟩ := hcmp
   have hc : t.center = s.center := by
     rw [heq,afterBirth_center]
@@ -806,7 +808,7 @@ theorem scanMinimal_compare {raw : List (Fin 2)} {s t : GalilVM} {k k' : ℕ}
   cases a with
   | false =>
     let u : GalilVM := {s with chain := vs.chain}
-    have hmu : ScanMinimal raw u := scanMinimal_chainAt_false hm hb
+    have hmu : ScanMinimal Move raw u := scanMinimal_chainAt_false hm hb
       (fun hi hf => hbirth false vq hi hs (of_decide_eq_true hf))
       (by simpa [u] using hch) (by simp [u]) (by simp [u]) (by omega)
     exact scanMinimal_resize hmu (by simpa [u] using htc) hc
@@ -817,11 +819,11 @@ theorem scanMinimal_compare {raw : List (Fin 2)} {s t : GalilVM} {k k' : ℕ}
       (by simpa [htc] using hch) hc hr hr' hkk
 
 theorem modeMinimal_shiftOne {raw : List (Fin 2)} {c : Control} {s t : GalilVM}
-    (hm : c.mode = .shift) (hmin : ModeMinimal raw c s)
+    (hm : c.mode = .shift) (hmin : ModeMinimal Move raw c s)
     (hwin : WindowRunPack raw c s)
     (hpos : positive s.remaining = true)
     (hso : (galilFrameS (PofC centre place entry raw) q first).shiftOne s t) :
-    ModeMinimal raw c t := by
+    ModeMinimal Move raw c t := by
   have hshift : ShiftMinimal raw s := by simpa [ModeMinimal,hm] using hmin
   obtain ⟨⟨hcanC,_,_,w,hw,hget⟩,hset⟩ := hso
   change s.chain = .watch w at hw
@@ -838,25 +840,25 @@ theorem modeMinimal_shiftOne {raw : List (Fin 2)} {c : Control} {s t : GalilVM}
   simpa [ModeMinimal,hm] using hout
 
 theorem modeMinimal_shiftDone {raw : List (Fin 2)} {c : Control} {s : GalilVM}
-    (hm : c.mode = .shift) (hmin : ModeMinimal raw c s)
+    (hm : c.mode = .shift) (hmin : ModeMinimal Move raw c s)
     (hp : ¬ (galilFrameS (PofC centre place entry raw) q first).remainingPos s) :
-    ModeMinimal raw {c with mode := .scan} s := by
+    ModeMinimal Move raw {c with mode := .scan} s := by
   have hs : ShiftMinimal raw s := by simpa [ModeMinimal,hm] using hmin
   have hz : positive s.remaining = false := Bool.eq_false_iff.mpr (fun h => hp (Or.inl h))
-  have hout := scanMinimal_shiftDone hz hs
+  have hout := scanMinimal_shiftDone (Move := Move) hz hs
   simpa [ModeMinimal] using hout
 
 /-- The mathematical payload of the controller's `scan_shift` branch. -/
 theorem shiftMinimal_scanShift {raw : List (Fin 2)} {c : Control} {s s' t : GalilVM}
     (hm : c.mode = .scan) (hr : c.replaying = false)
-    (hmin : ModeMinimal raw c s)
+    (hmin : ModeMinimal Move raw c s)
     (hpack : PalPeg.CloseoutPackRun10.LPackM raw c s)
     (hwin : WindowRunPack raw c s)
     (hav : (galilFrameS (PofC centre place entry raw) q first).available s)
     (hcmp : (galilFrameS (PofC centre place entry raw) q first).compare s s')
     (hmt : ¬ (galilFrameS (PofC centre place entry raw) q first).matched s')
     (hg : shiftGuardVM s') (hb : beginShiftVM' s' t) : ShiftMinimal raw t := by
-  have hscanMin : ScanMinimal raw s := by simpa [ModeMinimal,hm] using hmin
+  have hscanMin : ScanMinimal Move raw s := by simpa [ModeMinimal,hm] using hmin
   have hcan : canRight s.right := hav
   obtain ⟨k,hscan⟩ := hpack.scanGeom hm hr
   have hpos : position s.right = position s.center+k := hscan.rightPos
@@ -911,13 +913,13 @@ theorem shiftMinimal_scanShift {raw : List (Fin 2)} {c : Control} {s s' t : Gali
 factored out.  Every other branch is structural transport of the payload. -/
 theorem modeMinimal_tick {raw : List (Fin 2)} {x y : State GalilVM}
     (ht : Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y)
-    (hmin : ModeMinimal raw x.ctl x.vm)
+    (hmin : ModeMinimal Move raw x.ctl x.vm)
     (hwinX : WindowRunPack raw x.ctl x.vm)
     (hwinY : WindowRunPack raw y.ctl y.vm)
     (hfront : PalPeg.GalilFrontMono.FrontPack x.ctl x.vm)
     (hrrep : x.ctl.mode = .scan → GalilScaffoldInputTrace.Represents x.vm.right.head raw)
     (hrpres : x.ctl.mode = .scan → x.vm.right.head.focus ≠ none)
-    (hbirth : x.ctl.mode = .scan → BirthMinimal centre place entry raw x.vm)
+    (hbirth : x.ctl.mode = .scan → BirthMinimal centre place entry Move raw x.vm)
     (hcopy : x.ctl.mode = .shift → CopyIdle x.vm)
     (hstart : ∀ c s s' t,
       x = ⟨c,s⟩ → y = ⟨{c with clock := 2048, mode := .shift},t⟩ →
@@ -926,27 +928,27 @@ theorem modeMinimal_tick {raw : List (Fin 2)} {x y : State GalilVM}
       ¬ (galilFrameS (PofC centre place entry raw) q first).matched s' →
       c.replaying = false → shiftGuardVM s' → beginShiftVM' s' t →
       ShiftMinimal raw t) :
-    ModeMinimal raw y.ctl y.vm := by
+    ModeMinimal Move raw y.ctl y.vm := by
   cases ht with
   | init c s t hm hi =>
     obtain ⟨_,_,_,_,_,_,_,_,_,hch,_⟩ := hi
     simp [ModeMinimal,ScanMinimal,hch]
   | scan_wait c s t hm hav hb =>
-    have hs : ScanMinimal raw s := by simpa [ModeMinimal,hm] using hmin
+    have hs : ScanMinimal Move raw s := by simpa [ModeMinimal,hm] using hmin
     obtain ⟨R,_,hR⟩ := hwinX.radiusScan hm
     change position s.right = position s.center + R at hR
     simpa [ModeMinimal,hm] using
       scanMinimal_background centre place entry q first hb hs hwinX.coupled.block
         (hbirth hm) (by rw [hR]; omega)
   | scan_count c s t hm hav hc hb =>
-    have hs : ScanMinimal raw s := by simpa [ModeMinimal,hm] using hmin
+    have hs : ScanMinimal Move raw s := by simpa [ModeMinimal,hm] using hmin
     obtain ⟨R,_,hR⟩ := hwinX.radiusScan hm
     change position s.right = position s.center + R at hR
     simpa [ModeMinimal,hm] using
       scanMinimal_background centre place entry q first hb hs hwinX.coupled.block
         (hbirth hm) (by rw [hR]; omega)
   | scan_match c s s' t o hm hav hc hcmp hmt hpl ho =>
-    have hs : ScanMinimal raw s := by simpa [ModeMinimal,hm] using hmin
+    have hs : ScanMinimal Move raw s := by simpa [ModeMinimal,hm] using hmin
     obtain ⟨R,_,hR⟩ := hwinX.radiusScan hm
     obtain ⟨R',_,hR'⟩ := hwinY.radiusScan (by simpa using hm)
     change position s.right = position s.center + R at hR
@@ -1010,8 +1012,8 @@ theorem modeMinimal_tick {raw : List (Fin 2)} {x y : State GalilVM}
   | rewind_pair _ _ _ hm _ _ _ => simp [ModeMinimal,hm]
 
 /-- Only the zero-lower stage needs the absolute least-period certificate. -/
-def BudgetMinimal (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
-  s.lower = reset → ModeMinimal raw c s
+def BudgetMinimal (Move : ℕ → ℕ → Prop) (raw : List (Fin 2)) (c : Control) (s : GalilVM) : Prop :=
+  s.lower = reset → ModeMinimal Move raw c s
 
 private theorem searchStep_lower_eq {center : GalilScaffoldPlace.Place} {a : Bool}
     {v v' : SearchVM} (h : searchStep center a v v') : v'.lower = v.lower := by
@@ -1072,13 +1074,13 @@ theorem budgetMinimal_tick {raw : List (Fin 2)} {x y : State GalilVM}
     (hP : Decodes (PofC centre place entry raw))
     (ht : Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y)
     (hcanon : PalPeg.GalilTickFair.Canonical entry 2048 x y)
-    (hmin : BudgetMinimal raw x.ctl x.vm)
+    (hmin : BudgetMinimal Move raw x.ctl x.vm)
     (hpackX : PalPeg.CloseoutPackW.IPackMW centre place entry q first raw x)
     (hpackY : PalPeg.CloseoutPackW.IPackMW centre place entry q first raw y)
     (haux : PalPeg.CloseoutPackRun2.AuxPack x.ctl x.vm)
     (hbirth : x.vm.lower = reset → x.ctl.mode = .scan →
-      BirthMinimal centre place entry raw x.vm) :
-    BudgetMinimal raw y.ctl y.vm := by
+      BirthMinimal centre place entry Move raw x.vm) :
+    BudgetMinimal Move raw y.ctl y.vm := by
   intro hy
   -- a restart installs a positive lower bound, so a tick into `lower = reset` is not one
   have hnr : x.ctl.mode = .scan → ¬ restartVM entry x.vm y.vm := by
@@ -1087,7 +1089,7 @@ theorem budgetMinimal_tick {raw : List (Fin 2)} {x y : State GalilVM}
     rw [hl] at hy
     rw [hy] at hlast
     simp [positive, reset] at hlast
-  have hxmin : ModeMinimal raw x.ctl x.vm := by
+  have hxmin : ModeMinimal Move raw x.ctl x.vm := by
     by_cases hi : x.ctl.mode = .init
     · simp [ModeMinimal,hi]
     by_cases hp : x.ctl.mode = .replayStart
@@ -1125,7 +1127,7 @@ theorem budgetMinimal_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
     (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
     {k : ℕ} {y : State GalilVM}
     (hrun : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw k
-      ⟨c₀,r₀⟩ y) : BudgetMinimal raw y.ctl y.vm := by
+      ⟨c₀,r₀⟩ y) : BudgetMinimal (MoveMinimal raw) raw y.ctl y.vm := by
   obtain ⟨g,hg0,hgk,htr,hcan,hpk⟩ := hrun
   have hprefix : ∀ i, i ≤ k →
       PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw i
@@ -1150,7 +1152,7 @@ theorem budgetMinimal_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
     have hs := PalPeg.CloseoutPackRun2.steps_of_trace htr i hi
     rw [hg0] at hs
     exact PalPeg.CloseoutPackRun2.auxPack_steps centre place entry q first hlv0 haux0 hs
-  have hbud : ∀ i, i ≤ k → BudgetMinimal raw (g i).ctl (g i).vm := by
+  have hbud : ∀ i, i ≤ k → BudgetMinimal (MoveMinimal raw) raw (g i).ctl (g i).vm := by
     intro i
     induction i with
     | zero =>
@@ -1211,7 +1213,7 @@ theorem move_of_live_sem_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Ga
     (hrun : PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first raw k
       ⟨c₀,r₀⟩ ⟨c,s⟩)
     (hm : c.mode = .scan) (hr : c.replaying = false) (hcan : canRight s.right)
-    (hsem : Sem raw (position s.center) z) (hz : z ≠ .idle)
+    (hsem : Sem (MoveMinimal raw) raw (position s.center) z) (hz : z ≠ .idle)
     (hquarter : ∀ h, MoveMinimal raw (position s.center) h →
       position s.right - position s.center ≤ 4*h) :
     let s1 := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
@@ -1258,16 +1260,16 @@ theorem move_of_preShift_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Ga
   have hright : position s.right = position s.center + rad := by
     simpa using hscan.rightPos
   have hminMode := budgetMinimal_packed centre place entry q first hP hI hrun hlower
-  have hscanMin : ScanMinimal raw s := by simpa [ModeMinimal,hm] using hminMode
+  have hscanMin : ScanMinimal (MoveMinimal raw) raw s := by simpa [ModeMinimal,hm] using hminMode
   let t : GalilVM := {s with chain := z}
-  have htmin : ScanMinimal raw t := scanMinimal_chainAt_false hscanMin
+  have htmin : ScanMinimal (MoveMinimal raw) raw t := scanMinimal_chainAt_false hscanMin
     (hp.win hP).coupled.block
     (fun hi hf => PalPeg.CanonicalSearchHistory.birthMinimals_packed centre place entry q first
       hP hI hrun hm hi hsearch (of_decide_eq_true hf)
         (by rw [searchEffect_lower_eq hsearch,hlower]))
     (by simpa [t] using hchain) (by simp [t]) (by simp [t])
       (by show position s.center ≤ position s.right; rw [hright]; omega)
-  have hsem : Sem raw (position s.center) z := by
+  have hsem : Sem (MoveMinimal raw) raw (position s.center) z := by
     have hs := scanMinimal_preShift_sem htmin (by simpa [t] using hpre)
     simpa [t] using hs
   exact move_of_live_sem_packed centre place entry q first hI hrun hm hr hcan
@@ -1294,16 +1296,16 @@ theorem shiftPeriodMinimal_at {raw : List (Fin 2)} {c₀ : Control} {r₀ : Gali
   obtain ⟨rad,hscan⟩ := hp.pack.scanGeom hm hr
   have hpos : position s.right = position s.center + rad := hscan.rightPos
   have hminMode := budgetMinimal_packed centre place entry q first hP hI hrun hlower
-  have hscanMin : ScanMinimal raw s := by simpa [ModeMinimal,hm] using hminMode
+  have hscanMin : ScanMinimal (MoveMinimal raw) raw s := by simpa [ModeMinimal,hm] using hminMode
   let t : GalilVM := {s with chain := z}
-  have htmin : ScanMinimal raw t := scanMinimal_chainAt_false hscanMin
+  have htmin : ScanMinimal (MoveMinimal raw) raw t := scanMinimal_chainAt_false hscanMin
     (hp.win hP).coupled.block
     (fun hi hf => PalPeg.CanonicalSearchHistory.birthMinimals_packed centre place entry q first
       hP hI hrun hm hi hsearch (of_decide_eq_true hf)
         (by rw [searchEffect_lower_eq hsearch,hlower]))
     (by simpa [t] using hchain) (by simp [t]) (by simp [t])
       (by rw [hpos]; omega)
-  have htwatch : WatchMinimal raw (position s.center) rad wg := by
+  have htwatch : WatchMinimal (MoveMinimal raw) raw (position s.center) rad wg := by
     simp only [t,hwg,ScanMinimal] at htmin
     obtain ⟨j,hj,hjmin⟩ := htmin
     have hj' : position s.right = position s.center + j := by simpa [t] using hj
