@@ -1,3 +1,28 @@
+## n249 — `obligation_cycleOracle` の前に `M-watchBreak` を直す（run の存在が欠陥に当たる）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracle` | 変化なし。ただし**順序が確定**: `CycleOutMC3` は「`InvLPS` から次の着地までの run が存在する」主張で、found 後の chain の一生（copy → back → watch、正 lag で追いつき）を通る。正 lag の watch で予測が外れると Lean の `ChainStep` には後続が無い（`PalPeg.ChainStepGap.no_chainStep_at_positive_lag_mismatch`、機械検査済み）。Scala `ScaffoldChain.step()` はそこで `consume()` → `Mode.Broken`（`ScaffoldChain.scala:136,178`）。DP が周期を決める窓は `stream.take (8·max k 1 + 1)` で、右腕がそれより長ければ外れうる（Scala に分岐がある理由）。**よって `M-watchBreak` を直すまで `CycleOutMC3` は証明不能**（run が止まる状態が到達可能） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、n246 の木）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
+### 直し方（一次情報: `GalilScaffoldTopChainVM.lean:26-75`）
+
+`ChainMatched.breaks (w w') (hb : BreakStep w w')` は lag ゼロ経路の break。`ChainStep` に
+正 lag 版を足す:
+```
+| watchBreak (w) (hp : positive w.lag = true) (hng : ¬ Good w) :
+    ChainStep (.watch w) (.broken ⟨consume w.machine, w.lag, w.margin⟩)   -- 目標状態は Scala に合わせて確認
+```
+影響: `ChainStep` に触れるファイル 80、`watchStep` の出現 109。ほとんどは `cases` に
+`.broken` 行きの alternative が 1 つ増えるだけ（`WindowInv .broken = True`、`SumRel .broken = True`、
+`WatchOK` は broken で空虚、`Coupled.idleOut` は mode guard、`chainStep_unique` は `Good`／`¬Good` で排他）。
+`ChainReady`（`GalilTickFun`）の `positive lag → Good` 場は消せる（run の存在に不要になる）。
+手順: 構成子を足して `lake build --quiet PalPeg` の error 一覧を作業リストにする。
+
 ## n248 — `obligation_cycleOracle`: found 経路の既存入口は死んでいる（修理しない）
 
 **公理への進捗**
