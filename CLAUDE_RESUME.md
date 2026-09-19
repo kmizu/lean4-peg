@@ -1,3 +1,23 @@
+## n235 — 公理進捗: 第 3 連言の wrapper `freshShiftLedger_of_landing`（`LandingData` から）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_shiftPalResiduesAlongRun` | 第 3 連言 `FreshShiftLedger w z.vm s'` が、比較前・clock 1 の状態の `CloseoutWatchRound42.LandingData`＋`canRight`＋中心記号 `x[cen] = cc`＋`compareFound`（不一致枝）から出る（`ShiftEntryFromLanding.freshShiftLedger_of_landing`、標準公理のみ）。比較量子の中の chain の 1 歩は `chainW_step`＋`chainStep_unique` で渡した。**第 3 連言に残る run 層の入力は「不一致比較の直前で `ChainW` 形の窓と中心記号を持つ」だけ** |
+| `obligation_cycleOracle` | 変化なし |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、エラー 0）・標準公理のみ（3 本）・無条件 PAL は未完。**
+
+### 次の一手
+
+1. 第 3 連言の guard を `¬ matched s'` に狭める（消費者 `shiftPal_of_freshShiftLedger` は
+   `ShiftPal` の前提から `¬matched` を持っている——操作 (A)、公理は弱くなる）。
+2. 第 3 連言を「不一致比較の直前で `ChainW` 形の窓（`z.vm.chain`）＋`position z.vm.right = cen + R`＋
+   `ScanInvariant`＋`canRight`＋`x[cen] = cc`」に置き換える（操作 (B)）。producer 候補は
+   replay 経路の `LandingData`（射影するだけ）と found 経路の `blockOn_of_candidate`＋`chainW_start`。
+
 ## n234 — 公理進捗: 第 3 連言 `FreshShiftLedger` の producer（左端でも真）
 
 **公理への進捗**
