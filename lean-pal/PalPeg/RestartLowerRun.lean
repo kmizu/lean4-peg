@@ -653,6 +653,98 @@ theorem watch_source_of_step {x : ChainVM} {w1 : GalilScaffoldChainWatch.State}
     cases hy
     exact ⟨w0, rfl, hinternal⟩
 
+/-- A chain tick without a match that ends in a watch is one chain step. -/
+theorem chainStep_of_chainAt_watch {found : Bool} {answer : GalilScaffoldTape.Tape} {cc : Fin 3}
+    {walker : GalilScaffoldPlace.Place} {ver : PlaceHead} {radius : Counter} {x : ChainVM}
+    {w1 : GalilScaffoldChainWatch.State}
+    (hchainAt : chainAt false found answer cc walker ver radius x (.watch w1)) :
+    ChainStep x (.watch w1) := by
+  rcases hchainAt with ⟨-, y, hstep, hzy⟩ | ⟨-, -, hidle⟩ | ⟨-, -, hborn⟩
+  · rw [if_neg (by simp)] at hzy
+    rw [hzy]
+    exact hstep
+  · cases hidle
+  · rw [if_neg (by simp)] at hborn
+    unfold chainStart at hborn
+    cases hborn
+
+/-- **The fallback move inequality when a caught-up first-round watch is below phase `4`**, on a
+packed run whose origin is reached from boot.  The distance is below four semiperiods (mark
+ledger), it is the scan radius (lag `0`), and no semiperiod below the chain's is a period of the
+span: up to the lower bound by `LowerAt`, above it by the birth payload `MoveAbove`. -/
+theorem move_of_watch_short {raw : List (Fin 2)} (hraw : raw ≠ []) {c₀ : Control}
+    {r₀ : GalilVM}
+    (hP : Decodes (PofC centre place entry raw))
+    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
+    (hboot : CloseoutCheckW.PackedFromBoot centre place entry q first raw ⟨c₀, r₀⟩)
+    {k : ℕ} {c : Control} {s : GalilVM} {vq : SearchVM} {w1 : GalilScaffoldChainWatch.State}
+    (hrun : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ ⟨c, s⟩)
+    (hm : c.mode = .scan) (hr : c.replaying = false) (hcan : canRight s.right)
+    (hchainAt : chainAt false (decide (vq.search.mode = .found)) (vq.dp.config.tapes 11)
+      ((PofC centre place entry raw).centre s) ((PofC centre place entry raw).place s)
+      s.center s.radius s.chain (.watch w1))
+    (hfirstRound : s.periodOnly = false) (hzero : zero w1.lag = true)
+    (hphase : w1.machine.control.phase ≠ 4) :
+    let s1 := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
+      (afterMismatch s ⟨left s.left,right s.right,ChainVM.watch w1⟩ vq)
+    let ℓ := (value s.length).toNat
+    let radius := chosenRadius
+      ((GalilScaffoldPlace.stream (PalPeg.GalilTickFair.rightPlace s1)).take (ℓ+1))
+    ℓ / 2 ≤ 4 * (ℓ / 2 + 1 - radius) := by
+  obtain ⟨a, rest, rfl⟩ := List.exists_cons_of_ne_nil hraw
+  have hinvariant := minimalAcrossRestart_packed centre place entry q first hP hI
+    (lowerAt_of_packedFromBoot centre place entry q first hP hI hboot) hrun
+  have hwin : WindowRunPack (a :: rest) c s :=
+    (PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hrun).win hP
+  obtain ⟨-, -, rad, hscan, hlen⟩ :=
+    PalPeg.CanonicalFallbackInput.counters centre place entry q first hI hrun hm hr
+  obtain ⟨R, hR, hright⟩ := hwin.radiusScan hm
+  have hrad : rad = R := by
+    have h1 : position s.right = position s.center + rad := hscan.rightPos
+    have h2 : position s.right = position s.center + R := hright
+    omega
+  subst hrad
+  have hstep := chainStep_of_chainAt_watch hchainAt
+  have hunbroken1 := unbroken_of_step hstep (watch_unbroken_of_window hwin)
+  have hnotIdle : s.chain ≠ .idle := by
+    intro hidle
+    rw [hidle] at hstep
+    cases hstep
+  -- the radius is the distance, below four semiperiods
+  have hsum1 : PalPeg.GalilChainCoupling.SumRel (.watch w1) (value s.radius) :=
+    (PalPeg.GalilChainCoupling.step_inv hstep (F := True) trivial (O := fun _ => True)
+      hwin.coupled.block hwin.coupled.sum (fun _ _ _ => Or.inr trivial)).1
+  have hdistance := hsum1 hunbroken1
+  rw [PalPeg.GalilChainCoupling.value_zero_of_zero hzero, add_zero, hR.2] at hdistance
+  have hledgerSource := ledgerAt_packed centre place entry q first hP hI hrun (Or.inl hm)
+  simp only [shiftDebt, hm, show (Mode.scan = Mode.shift) = False from by simp,
+    if_false] at hledgerSource
+  have hledger : WatchLedger 0 w1 :=
+    chainLedger_step hstep hwin.coupled.block hledgerSource hunbroken1
+  have hshort := hledger.distance_lt_four hphase
+  rw [hdistance] at hshort
+  have hbound : rad ≤ 4 * periodLength w1 := by
+    have : (rad : ℤ) < 4 * (periodLength w1 : ℤ) := hshort
+    omega
+  -- the payload of the stepped watch
+  have hsem : Sem (MovePayload (a :: rest) s) (a :: rest) (position s.center) (.watch w1) :=
+    sem_chainAt (hinvariant.firstRound hm (Or.inr hfirstRound))
+      (fun hidle _ => absurd hidle hnotIdle) hchainAt
+  have hpayload : MovePayload (a :: rest) s (position s.center) (periodLength w1) :=
+    watch_moveMinimal hsem
+  have hmove : MoveAbove (a :: rest) (position s.center) (value s.lower).toNat
+      (periodLength w1) := hpayload
+  have hlow := no_lower_period_at_scan hinvariant.lowerAt hm (Or.inr hfirstRound) hscan hR
+  exact PalPeg.CanonicalFallbackInput.move_of_activeBound (c := c) (vq := vq)
+    (z := ChainVM.watch w1) hscan hcan hlen (scan_radius_lt hscan)
+    (fun g hg0 hgh hfour => by
+      by_cases hle : g ≤ (value s.lower).toNat
+      · exact hlow g hg0 hle
+      · exact hmove rad (scan_radius_lt hscan) hscan.palindrome g (by omega) hgh hfour)
+    hbound rfl
+
+#print axioms move_of_watch_short
+
 include q first in
 /-- What a mismatching scan state knows about a first-round watch that comes out of its chain
 tick caught up and in phase `4`: it was a watch before, it is unbroken, it has verified four
