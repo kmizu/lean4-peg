@@ -38,7 +38,8 @@ theorem ledgerAt_of_idle {c : Control} {s : GalilVM} (hidle : s.chain = .idle) :
 
 /-- The shift entry: one immediate consume, then a debt of one semiperiod. -/
 theorem chainLedger_beginShift {w : GalilScaffoldChainWatch.State}
-    (hblock : OnBlock w.machine.control.period) (hledger : ChainLedger 0 (.watch w)) :
+    (hblock : OnBlock w.machine.control.period) (hledger : ChainLedger 0 (.watch w))
+    (hphase : w.machine.control.phase = 4) :
     ChainLedger ((periodLength w : ℕ) : ℤ) (.watch (GalilScaffoldChainWatch.immediate w)) := by
   intro hunbroken
   obtain ⟨hunbroken0, hdistance, -⟩ := consume_fresh w.machine.control _ hblock hunbroken
@@ -58,7 +59,8 @@ theorem chainLedger_beginShift {w : GalilScaffoldChainWatch.State}
   have hlength' : periodLength (GalilScaffoldChainWatch.immediate w) = periodLength w := hlength
   have hmarks : MarkLedger (periodLength (GalilScaffoldChainWatch.immediate w))
       ((periodLength (GalilScaffoldChainWatch.immediate w) : ℕ) : ℤ)
-      (GalilScaffoldChainWatch.immediate w).machine.control := hconsumed.marks.beginShift
+      (GalilScaffoldChainWatch.immediate w).machine.control := by
+    exact hconsumed.marks.beginShift (consume_phase_four _ _ hphase)
   rw [hlength'] at hmarks ⊢
   exact hmarks
 
@@ -130,6 +132,11 @@ theorem ledgerAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
           rw [hz]
           exact blockInv_chainStart _ _ _ _ _
     obtain ⟨w, hw, hteq⟩ := hb
+    have hphase : w.machine.control.phase = 4 := by
+      obtain ⟨wg, hwg, -, hphaseGuard, -⟩ := hg
+      rw [hw] at hwg
+      cases hwg
+      exact hphaseGuard
     rw [hw] at hs' hblock'
     intro _
     have hdebt : shiftDebt {c with clock := 2048, mode := Mode.shift} t
@@ -140,7 +147,7 @@ theorem ledgerAt_tick {raw : List (Fin 2)} {x y : State GalilVM}
     rw [hdebt]
     have htc : t.chain = .watch (GalilScaffoldChainWatch.immediate w) := by rw [hteq]
     rw [htc]
-    exact chainLedger_beginShift hblock' hs'
+    exact chainLedger_beginShift hblock' hs' hphase
   | scan_fallback c s s' t hm hav hc hcmp hmt hg hr hb =>
     obtain ⟨p, hteq, -⟩ := hb
     exact ledgerAt_of_idle (by rw [hteq])

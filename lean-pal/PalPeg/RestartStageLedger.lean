@@ -28,14 +28,33 @@ structure MarkLedger (h : ℕ) (shiftDebt : ℤ) (k : GalilScaffoldChainConsume.
   marks : (value k.boundary = value k.last ∧ value k.boundary ≤ 0) ∨
     value k.boundary = value k.last + (h : ℤ)
   aligned : ∃ n : ℤ, value k.boundary - shiftDebt = n * (h : ℤ)
+  phase : k.phase.val < 4 → value k.boundary - shiftDebt = (k.phase.val : ℤ) * (h : ℤ)
   canonical : Canonical k.distance ∧ Canonical k.boundary ∧ Canonical k.last
+
+/-- Below `4` the phase counter counts the marks exactly. -/
+theorem advancePhase_val {p : Fin 5}
+    (hlt : (GalilScaffoldChainConsume.advancePhase p).val < 4) :
+    (GalilScaffoldChainConsume.advancePhase p).val = p.val + 1 := by
+  unfold GalilScaffoldChainConsume.advancePhase at hlt ⊢
+  simp only at hlt ⊢
+  omega
+
+/-- Phase `4` is absorbing under a consume. -/
+theorem consume_phase_four (k : GalilScaffoldChainConsume.State) (seen : Option (Fin 3))
+    (hphase : k.phase = 4) : (GalilScaffoldChainConsume.consume k seen).phase = 4 := by
+  unfold GalilScaffoldChainConsume.consume
+  cases hsymbol : GalilScaffoldChainConsume.symbol k.period.focus with
+  | none => simpa using hphase
+  | some a =>
+    simp only
+    split_ifs <;> simp [hphase, GalilScaffoldChainConsume.advancePhase]
 
 /-- A successful consume keeps the mark ledger. -/
 theorem MarkLedger.consume {h : ℕ} {shiftDebt : ℤ} {k : GalilScaffoldChainConsume.State}
     (hledger : MarkLedger h shiftDebt k) (seen : Option (Fin 3)) (hblock : OnBlock k.period)
     (hunbroken : (GalilScaffoldChainConsume.consume k seen).broken = false) :
     MarkLedger h shiftDebt (GalilScaffoldChainConsume.consume k seen) := by
-  obtain ⟨hsize, hforward, hbackward, hmarks, ⟨n, hn⟩, hcd, hcb, hcl⟩ := hledger
+  obtain ⟨hsize, hforward, hbackward, hmarks, ⟨n, hn⟩, hphase, hcd, hcb, hcl⟩ := hledger
   cases hf : k.period.focus with
   | blank =>
     rw [GalilShiftH.consume_of_none k seen (by rw [hf]; rfl)] at hunbroken; cases hunbroken
@@ -48,12 +67,12 @@ theorem MarkLedger.consume {h : ℕ} {shiftDebt : ℤ} {k : GalilScaffoldChainCo
       have hr := onBlock_right_ne hblock (by rw [hf]; rfl)
       rw [GalilScaffoldChainConsume.plain k a hf]
       rcases k with ⟨⟨ls, f, rs⟩, d, bd, lst, ph, fw, br⟩
-      simp only at hsize hforward hbackward hmarks hn hcd hcb hcl hl hr ⊢
+      simp only at hsize hforward hbackward hmarks hn hphase hcd hcb hcl hl hr ⊢
       cases fw with
       | true =>
         obtain ⟨r0, rs', rfl⟩ := List.exists_cons_of_ne_nil hr
         obtain ⟨h1, h2⟩ := hforward rfl
-        refine ⟨?_, fun _ => ?_, fun hc => absurd hc (by simp), hmarks, ⟨n, hn⟩,
+        refine ⟨?_, fun _ => ?_, fun hc => absurd hc (by simp), hmarks, ⟨n, hn⟩, hphase,
           inc_canonical _ hcd, hcb, hcl⟩
         · simp only [GalilScaffoldChainPeriod.moveRight, ↓reduceIte, List.length_cons] at hsize ⊢
           omega
@@ -63,7 +82,7 @@ theorem MarkLedger.consume {h : ℕ} {shiftDebt : ℤ} {k : GalilScaffoldChainCo
       | false =>
         obtain ⟨l0, ls', rfl⟩ := List.exists_cons_of_ne_nil hl
         obtain ⟨h1, h2⟩ := hbackward rfl
-        refine ⟨?_, fun hc => absurd hc (by simp), fun _ => ?_, hmarks, ⟨n, hn⟩,
+        refine ⟨?_, fun hc => absurd hc (by simp), fun _ => ?_, hmarks, ⟨n, hn⟩, hphase,
           inc_canonical _ hcd, hcb, hcl⟩
         · simp only [GalilScaffoldChainPeriod.moveLeft, Bool.false_eq_true, ↓reduceIte,
             List.length_cons] at hsize ⊢
@@ -81,7 +100,7 @@ theorem MarkLedger.consume {h : ℕ} {shiftDebt : ℤ} {k : GalilScaffoldChainCo
       have hr := onBlock_right_ne hblock (by rw [hf]; rfl)
       rw [GalilScaffoldChainConsume.first k c hf]
       rcases k with ⟨⟨ls, f, rs⟩, d, bd, lst, ph, fw, br⟩
-      simp only at hsize hforward hbackward hmarks hn hcd hcb hcl hl hr ⊢
+      simp only at hsize hforward hbackward hmarks hn hphase hcd hcb hcl hl hr ⊢
       subst hl
       obtain ⟨r0, rs', rfl⟩ := List.exists_cons_of_ne_nil hr
       cases fw with
@@ -90,7 +109,7 @@ theorem MarkLedger.consume {h : ℕ} {shiftDebt : ℤ} {k : GalilScaffoldChainCo
         obtain ⟨-, h2⟩ := hbackward rfl
         simp only [List.length_nil, Nat.cast_zero, sub_zero] at h2
         refine ⟨?_, fun _ => ?_, fun hc => absurd hc (by simp), Or.inr ?_, ⟨n + 1, ?_⟩,
-          inc_canonical _ hcd, inc_canonical _ hcd, hcb⟩
+          fun hlt => ?_, inc_canonical _ hcd, inc_canonical _ hcd, hcb⟩
         · simp only [GalilScaffoldChainPeriod.moveRight, List.length_cons, List.length_nil]
             at hsize ⊢
           omega
@@ -100,6 +119,11 @@ theorem MarkLedger.consume {h : ℕ} {shiftDebt : ℤ} {k : GalilScaffoldChainCo
           exact ⟨trivial, by linarith⟩
         · rw [inc_value]; linarith
         · rw [inc_value]; linarith
+        · have hadvance := advancePhase_val hlt
+          have hsource := hphase (by omega)
+          rw [inc_value, hadvance]
+          push_cast
+          linarith
     · rw [GalilScaffoldChainConsume.mismatch k c seen (by rw [hf]; rfl) hs] at hunbroken
       cases hunbroken
   | last b =>
@@ -109,7 +133,7 @@ theorem MarkLedger.consume {h : ℕ} {shiftDebt : ℤ} {k : GalilScaffoldChainCo
       have hr := onBlock_last hblock hf
       rw [GalilScaffoldChainConsume.last k b hf]
       rcases k with ⟨⟨ls, f, rs⟩, d, bd, lst, ph, fw, br⟩
-      simp only at hsize hforward hbackward hmarks hn hcd hcb hcl hl hr ⊢
+      simp only at hsize hforward hbackward hmarks hn hphase hcd hcb hcl hl hr ⊢
       subst hr
       obtain ⟨l0, ls', rfl⟩ := List.exists_cons_of_ne_nil hl
       cases fw with
@@ -121,7 +145,7 @@ theorem MarkLedger.consume {h : ℕ} {shiftDebt : ℤ} {k : GalilScaffoldChainCo
         obtain ⟨-, h2⟩ := hforward rfl
         simp only [List.length_cons, List.length_nil, Nat.add_zero] at hsize h2
         refine ⟨?_, fun hc => absurd hc (by simp), fun _ => ?_, Or.inr ?_, ⟨n + 1, ?_⟩,
-          inc_canonical _ hcd, inc_canonical _ hcd, hcb⟩
+          fun hlt => ?_, inc_canonical _ hcd, inc_canonical _ hcd, hcb⟩
         · simp only [GalilScaffoldChainPeriod.moveLeft, List.length_cons, List.length_nil]
           omega
         · simp only [GalilScaffoldChainPeriod.moveLeft, inc_value]
@@ -135,6 +159,12 @@ theorem MarkLedger.consume {h : ℕ} {shiftDebt : ℤ} {k : GalilScaffoldChainCo
           have hh : (h : ℤ) = (ls'.length : ℤ) + 1 := by exact_mod_cast hsize.symm
           push_cast at h2
           linarith
+        · have hadvance := advancePhase_val hlt
+          have hsource := hphase (by omega)
+          have hh : (h : ℤ) = (ls'.length : ℤ) + 1 := by exact_mod_cast hsize.symm
+          rw [inc_value, hadvance]
+          push_cast at h2 ⊢
+          linarith
     · rw [GalilScaffoldChainConsume.mismatch k b seen (by rw [hf]; rfl) hs] at hunbroken
       cases hunbroken
 
@@ -143,8 +173,8 @@ theorem MarkLedger.shiftOne {h : ℕ} {shiftDebt : ℤ} {k : GalilScaffoldChainC
     (hledger : MarkLedger h shiftDebt k) :
     MarkLedger h (shiftDebt - 1)
       { k with distance := dec k.distance, boundary := dec k.boundary, last := dec k.last } := by
-  obtain ⟨hsize, hforward, hbackward, hmarks, ⟨n, hn⟩, hcd, hcb, hcl⟩ := hledger
-  refine ⟨hsize, fun hfw => ?_, fun hfw => ?_, ?_, ⟨n, ?_⟩,
+  obtain ⟨hsize, hforward, hbackward, hmarks, ⟨n, hn⟩, hphase, hcd, hcb, hcl⟩ := hledger
+  refine ⟨hsize, fun hfw => ?_, fun hfw => ?_, ?_, ⟨n, ?_⟩, fun hlt => ?_,
     dec_canonical _ hcd, dec_canonical _ hcb, dec_canonical _ hcl⟩
   · obtain ⟨h1, h2⟩ := hforward hfw
     exact ⟨h1, by simp only [dec_value]; linarith⟩
@@ -155,12 +185,16 @@ theorem MarkLedger.shiftOne {h : ℕ} {shiftDebt : ℤ} {k : GalilScaffoldChainC
     · exact Or.inl ⟨by linarith [hm.1], by linarith [hm.2]⟩
     · exact Or.inr (by linarith)
   · simp only [dec_value]; linarith
+  · have hsource := hphase hlt
+    simp only [dec_value]
+    linarith
 
 /-- Entering a shift round of `h` unit shifts keeps the alignment. -/
 theorem MarkLedger.beginShift {h : ℕ} {k : GalilScaffoldChainConsume.State}
-    (hledger : MarkLedger h 0 k) : MarkLedger h (h : ℤ) k := by
-  obtain ⟨hsize, hforward, hbackward, hmarks, ⟨n, hn⟩, hcanonical⟩ := hledger
-  exact ⟨hsize, hforward, hbackward, hmarks, ⟨n - 1, by linear_combination hn⟩, hcanonical⟩
+    (hledger : MarkLedger h 0 k) (hphase : k.phase = 4) : MarkLedger h (h : ℤ) k := by
+  obtain ⟨hsize, hforward, hbackward, hmarks, ⟨n, hn⟩, -, hcanonical⟩ := hledger
+  exact ⟨hsize, hforward, hbackward, hmarks, ⟨n - 1, by linear_combination hn⟩,
+    fun hlt => absurd hlt (by rw [hphase]; decide), hcanonical⟩
 
 /-! ## The watching chain -/
 
@@ -258,13 +292,44 @@ theorem watchLedger_born {v : GalilScaffoldChainPeriod.Tape} {lag margin : Count
   have hreset : value reset = 0 := rfl
   refine ⟨⟨rfl, fun _ => ⟨by simp [watchControl, GalilScaffoldChainPeriod.moveRight], ?_⟩,
     fun hc => absurd hc (by simp [watchControl]), Or.inl ⟨rfl, le_of_eq hreset⟩, ⟨0, ?_⟩,
-    Or.inl rfl, Or.inl rfl, Or.inl rfl⟩, ?_, hmargin, hlag⟩
+    fun _ => ?_, Or.inl rfl, Or.inl rfl, Or.inl rfl⟩, ?_, hmargin, hlag⟩
   · simp [watchControl, GalilScaffoldChainPeriod.moveRight, hreset]
+  · simp [watchControl, hreset]
   · simp [watchControl, hreset]
   · simp only [GalilScaffoldChainWatch.balance, watchControl, periodLength,
       GalilScaffoldChainPeriod.moveRight, GalilShiftH.cells, List.length_cons, List.length_nil,
       hreset] at hbalance ⊢
     push_cast at hbalance ⊢
+    linarith
+
+/-- **Below phase `4` the verified distance is below four semiperiods**: the boundary is the
+phase times `h`, and the distance is less than one semiperiod past the boundary. -/
+theorem WatchLedger.distance_lt_four {w : GalilScaffoldChainWatch.State}
+    (hledger : WatchLedger 0 w) (hphase : w.machine.control.phase ≠ 4) :
+    value w.machine.control.distance < 4 * (periodLength w : ℤ) := by
+  obtain ⟨hsize, hforward, hbackward, -, -, hcount, -⟩ := hledger.marks
+  have hlt : w.machine.control.phase.val < 4 := by
+    have hbound := w.machine.control.phase.isLt
+    have hne : w.machine.control.phase.val ≠ 4 := fun hval => hphase (Fin.ext hval)
+    omega
+  have hboundary := hcount hlt
+  rw [sub_zero] at hboundary
+  have hproduct : (w.machine.control.phase.val : ℤ) * (periodLength w : ℤ)
+      ≤ 3 * (periodLength w : ℤ) := by
+    have hnonneg : (0 : ℤ) ≤ (periodLength w : ℤ) := Int.natCast_nonneg _
+    have hle : (w.machine.control.phase.val : ℤ) ≤ 3 := by exact_mod_cast Nat.lt_succ_iff.mp hlt
+    exact mul_le_mul_of_nonneg_right hle hnonneg
+  have hsizeZ : ((w.machine.control.period.left.length : ℤ)
+      + (w.machine.control.period.right.length : ℤ)) = (periodLength w : ℤ) := by
+    exact_mod_cast hsize
+  cases hfw : w.machine.control.forward with
+  | true =>
+    obtain ⟨-, hdistance⟩ := hforward hfw
+    have hright : (0 : ℤ) ≤ (w.machine.control.period.right.length : ℤ) := Int.natCast_nonneg _
+    linarith
+  | false =>
+    obtain ⟨-, hdistance⟩ := hbackward hfw
+    have hleft : (0 : ℤ) ≤ (w.machine.control.period.left.length : ℤ) := Int.natCast_nonneg _
     linarith
 
 /-- A canonical counter with a nonnegative value is not negative. -/
@@ -324,7 +389,7 @@ theorem WatchLedger.stageEntry_of_break {w w' : GalilScaffoldChainWatch.State}
   have hlagZero := value_zero_of_zero hzero
   change 0 ≤ value (inc w.margin) at hmarginValue
   rw [inc_value] at hmarginValue
-  obtain ⟨hsize, hforward, hbackward, hmarks, ⟨n, hn⟩, -, -, hcanonicalLast⟩ := hledger.marks
+  obtain ⟨hsize, hforward, hbackward, hmarks, ⟨n, hn⟩, -, -, -, hcanonicalLast⟩ := hledger.marks
   have hh0 : (0 : ℤ) ≤ (periodLength w : ℤ) := by positivity
   have hleft : (w.machine.control.period.left.length : ℤ) ≤ (periodLength w : ℤ) := by
     have : w.machine.control.period.left.length ≤ periodLength w := by omega
