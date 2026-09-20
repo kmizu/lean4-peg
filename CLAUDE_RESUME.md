@@ -1,3 +1,19 @@
+## n291 — `obligation_localRealization`: 橋を前方模倣・語添字・choice step に作り替えた。残りは報告点の特徴づけと物理機械
+
+**状態（2026-09-20 夜）**: 全体 build の最新は `dd21451`（`BUILD=0`）。以後は module build と狙い build のみ（最後は `PalPeg.ShadowedLocalFinal` `BUILD=0`、commit `92437e0`）。**全体 build 成功（`dd21451` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。`unconditional` はまだ付け替えていない。
+
+**n290 以降に消費者鎖（`ShadowedLocalFinal.given_openModesAndPhysicalMachine`、`#print axioms` 標準 3 本）へ接続したもの**:
+* `31edaba` `LocalShadowConcrete.OnRun`: 物理機械の模倣は run 上の状態（追跡中 ∨ Post 相）だけで要求。
+* `e601b1e` `TickSucc`（飢餓なら不動、非飢餓なら `Tick ∧ Canon`）を run 上で導出して `hsimTick` に渡す。`hpostTick` の結論に `Canonical` を追加。
+* `042c19e` 物理機械の仮定を前方模倣に置換: `Enc`／`hencInit`／`hforwardTick`／`hforwardFeed`／`hencRep`／`hencOut`。糊は `tickSucc_unique`（`GalilTickFair.tick_canonical_unique`）と `starved_of_absSC_eq`。
+* `747d9af` 橋の抽象局所系を語で添字づけ（`pal_in_peg_of_local_latch`／`_local_core`／`_shadowed_core`／`H_ledger_of_local_oracles`／`_shadowed_sysC`／`given_shadowedLocalSystem`）。物理機械は語に依らないまま（`encC = snd`、等式は `rfl`）。
+* `d868190` `NextOK`／`chosenStep`／`chosenStep_spec`／`ghostSteps`: scan／replayStart の step は choice。`hscanLocal`／`hreplayStartLocal` → 存在命題 `hscanNext`／`hreplayStartNext`。
+* `92437e0` 報告テストを `repA : State GalilVM → Bool`（抽象を読む）に。旧 `repC : Control → Bool` は `Control` にヘッド情報が無く `rep_sound` を満たせない形だった。
+
+**残る仮定**: `Good` 系 4 本（`hgoodWF`／`hgoodInit`／`hgoodTick`／`hgoodFeed`）、`hscanNext`／`hreplayStartNext`、`hpostOfLastReport`／`hpostTick`、`rep_sound`／`rep_complete`、物理側 5 本。自由データ: `repA`・`Good`・`Post`・`Enc`・物理機械。
+
+**`repA` の調査（未実装）**: `PreTrace.trace.good` は `SoundScanNR`（scan ∧ ¬replaying で `OutputRel` = 出力の健全性だけ）。`ReportPoint` の `MInv` は trace 上ではチェックポイント `Tc m` の点でしか分かっていない（`MInv` を trace 全点で言う定理は無い）。`ScanInvariant` は `LPackM.scanGeom`（scan ∧ ¬replaying）から出る。よって局所テスト（scan ∧ ¬replaying ∧ `R` が最後の到着文字上）で `rep_sound` を出すには (A) 追跡相で「そのテストが真になる最初の添字が `Tc |w|`」という最初性、(B) Post 相の不変量「`R = 2|w|−1` ⇒ scan ∧ ¬replaying ∧ `ReportPoint ∧ Refreshed`」（背景 tick で保存、比較で `R` が離れたら戻らない）が要る。注意: 抽象の `R` は replayStart で左へ跳ぶので単調ではない。
+
 ## n290 — `obligation_localRealization`: 仮定 4 本を証明で消した。次は 1 段下ろして義務を書き出す（設計メモ）
 
 **状態（2026-09-20）**: 全体 build の最新は `dd21451`（`BUILD=0`）。以後は module build のみ（`PalPeg.ShadowedLocalFinal` と、`Starved` に触れる 27 モジュールの狙い build、どちらも `BUILD=0`）。**全体 build 成功（`dd21451` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。
