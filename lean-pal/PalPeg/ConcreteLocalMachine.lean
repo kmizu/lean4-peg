@@ -1455,4 +1455,101 @@ theorem check_eq_local (q : Queue (Fin 2)) {counter : ℤ}
 
 #print axioms check_eq_local
 
+/-! ## The signed counter as two stacks of marks
+
+A signed counter is a pair of mark stacks, positive and negative, one of them empty.  Increment
+and decrement are one cell operation on one of the stacks, selected by whether the opposite stack
+is empty: a bounded read. -/
+
+/-- The positive marks of a signed value. -/
+def positiveMarks (value : ℤ) : List (Fin 2) := List.replicate value.toNat 0
+
+/-- The negative marks of a signed value. -/
+def negativeMarks (value : ℤ) : List (Fin 2) := List.replicate (-value).toNat 0
+
+/-- The operations of an increment on the two stacks, from "the negative stack is empty". -/
+def incrementDeltas (negativeEmpty : Bool) : Delta × Delta :=
+  if negativeEmpty then (.push 0, .keep) else (.keep, .pop)
+
+/-- The operations of a decrement on the two stacks, from "the positive stack is empty". -/
+def decrementDeltas (positiveEmpty : Bool) : Delta × Delta :=
+  if positiveEmpty then (.keep, .push 0) else (.pop, .keep)
+
+theorem positiveMarks_isEmpty (value : ℤ) :
+    (positiveMarks value).isEmpty = decide (value ≤ 0) := by
+  unfold positiveMarks
+  rcases lt_or_ge 0 value with hpositive | hnonpositive
+  · obtain ⟨n, hn⟩ : ∃ n : ℕ, value.toNat = n + 1 := ⟨value.toNat - 1, by omega⟩
+    rw [hn]
+    simp [List.replicate_succ]
+    omega
+  · have hzero : value.toNat = 0 := by omega
+    rw [hzero]
+    simp
+    omega
+
+theorem negativeMarks_isEmpty (value : ℤ) :
+    (negativeMarks value).isEmpty = decide (0 ≤ value) := by
+  have h := positiveMarks_isEmpty (-value)
+  unfold negativeMarks
+  unfold positiveMarks at h
+  rw [h]
+  congr 1
+  apply propext
+  omega
+
+/-- **Increment is one cell operation per stack, selected by the emptiness of the negative
+stack.** -/
+theorem marks_increment (value : ℤ) :
+    dApply (incrementDeltas (negativeMarks value).isEmpty).1 (positiveMarks value)
+        = positiveMarks (value + 1) ∧
+      dApply (incrementDeltas (negativeMarks value).isEmpty).2 (negativeMarks value)
+        = negativeMarks (value + 1) := by
+  rw [negativeMarks_isEmpty]
+  unfold incrementDeltas positiveMarks negativeMarks
+  by_cases hnonnegative : 0 ≤ value
+  · rw [decide_eq_true hnonnegative, if_pos rfl]
+    have hpositive : (value + 1).toNat = value.toNat + 1 := by omega
+    have hnegative : (-(value + 1)).toNat = 0 := by omega
+    have hnegative' : (-value).toNat = 0 := by omega
+    rw [hpositive, hnegative, hnegative']
+    exact ⟨by simp [dApply, List.replicate_succ], rfl⟩
+  · rw [decide_eq_false hnonnegative, if_neg (by simp)]
+    have hpositive : (value + 1).toNat = 0 := by omega
+    have hpositive' : value.toNat = 0 := by omega
+    have hnegative : (-value).toNat = (-(value + 1)).toNat + 1 := by omega
+    rw [hpositive, hpositive', hnegative]
+    exact ⟨rfl, by simp [dApply, List.replicate_succ]⟩
+
+/-- **Decrement is one cell operation per stack, selected by the emptiness of the positive
+stack.** -/
+theorem marks_decrement (value : ℤ) :
+    dApply (decrementDeltas (positiveMarks value).isEmpty).1 (positiveMarks value)
+        = positiveMarks (value - 1) ∧
+      dApply (decrementDeltas (positiveMarks value).isEmpty).2 (negativeMarks value)
+        = negativeMarks (value - 1) := by
+  rw [positiveMarks_isEmpty]
+  unfold decrementDeltas positiveMarks negativeMarks
+  by_cases hnonpositive : value ≤ 0
+  · rw [decide_eq_true hnonpositive, if_pos rfl]
+    have hpositive : (value - 1).toNat = 0 := by omega
+    have hpositive' : value.toNat = 0 := by omega
+    have hnegative : (-(value - 1)).toNat = (-value).toNat + 1 := by omega
+    rw [hpositive, hpositive', hnegative]
+    exact ⟨rfl, by simp [dApply, List.replicate_succ]⟩
+  · rw [decide_eq_false hnonpositive, if_neg (by simp)]
+    have hpositive : value.toNat = (value - 1).toNat + 1 := by omega
+    have hnegative : (-(value - 1)).toNat = 0 := by omega
+    have hnegative' : (-value).toNat = 0 := by omega
+    rw [hpositive, hnegative, hnegative']
+    exact ⟨by simp [dApply, List.replicate_succ], rfl⟩
+
+/-- The sign test: the value is negative exactly when the negative stack is not empty. -/
+theorem negative_iff_marks (value : ℤ) : value < 0 ↔ (negativeMarks value).isEmpty = false := by
+  rw [negativeMarks_isEmpty]
+  simp
+
+#print axioms marks_increment
+#print axioms marks_decrement
+
 end PalPeg.ConcreteLocalMachine
