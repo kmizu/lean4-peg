@@ -1,3 +1,11 @@
+## n299 — 調査: 「報告点は scan モード」は証明鎖に実在する。足す場所の地図
+
+**一次情報（2026-09-21、Lean の変更なし）**: 着地の不変量 `CloseoutCheckW.ScanOnPackedRunFromInvLPS`（`CloseoutCheckW:422`）の第 1 場は `ScanNR ⟨c, r⟩`（= scan ∧ ¬replaying）。`ReachAtOn`（`CloseoutCheckW:136`）の報告点 `y` を作っているのは `OracleRun.lean` の 3 箇所だけ（`:509` 報告位置にいる着地状態そのもの、`:633` 一致 tick の後、`:878` shift／fallback 経路の後）で、どれも同じ状態について着地の不変量（`⟨⟨hm, hr⟩, …⟩`／`hI'`）を手にしている。つまり `y.ctl.mode = .scan` は 3 箇所とも無償で出る。
+
+**足す手順（未実装）**: (1) `ReachAtOn` の報告点の節に `y.ctl.mode = Mode.scan`（または `I w y.ctl y.vm`）を足す。(2) `OracleRun.lean:509／633／878` の 3 箇所でそれを供給する。(3) `CloseoutCheckW.checkpoints_costOn_upto1`（`:189`〜、大きな存在タプルの帰納）の報告節 `ReportPointAt … ∧ Refreshed …` に場を足し、タプルの分解箇所を直す。(4) `preTraceOnPackedRun_exists`（`:378`）／canonical 版（`:468`）と `PreTraceIMW`（または `PreTrace.report`）に `scanAtReport : ∀ m, 1 ≤ m → m ≤ |w| → (st (Tc m)).ctl.mode = .scan` を足す。`PreTraceIMW` に触れるファイルは 15 個（無名構成子 `⟨base, packs⟩` の箇所を grep で確認すること）。(5) 最終定理の経路なので全体 build で検証する。
+
+**使い道**: `ShadowedLocalFinal.postPhase` の台地の枝に `mode = scan` を足せる。背景 tick・restart はモードとヘッドと出力を保ち、比較は `R` を `2|w|` へ進めて凍結に入るので、`hplateauTick` は「台地の scan 状態に `NextOK` な局所後続が存在する」（`hscanNext` を台地へ広げた形）と Tick の場合分けの補題に落とせる見立て（未証明）。
+
 ## n298 — 凍結相・台地相を橋に入れた。残る仮定の一覧と、`hplateauTick` の障害（報告点にモードの場が無い）
 
 **状態（2026-09-21 未明）**: 最新の全体 build は `e0bb107`（`BUILD=0`）。以後は module build `PalPeg.ShadowedLocalFinal` `BUILD=0`（最後は commit `9299aac`、push 済み）。**全体 build 成功（`e0bb107` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。`unconditional` は未付け替え。
