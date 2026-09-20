@@ -12,6 +12,15 @@
 
 **残り**: (a) `RewindCentre` の trace 形（Tick 保存は n311 のスクラッチで検査済み）、(d) ghost の replayStart 後継で `NextOK`（鏡 3 本 `radiusMir`／`lowerMir`／`lengthMir` の更新込み、n313）。
 
+**(d) の `Inv` はスクラッチで機械検査済み（2026-09-21、リポジトリには未投入・`NextOK` の producer と一緒に入れる）**。error 0、標準 3 公理。
+* `mirrorOfTape t : Mirrored k := ⟨t, fun _ => t⟩`（テープそのものの複製。`attached` は `rfl`、`Shaped` は `⟨hv, fun _ => hv⟩`）。
+* `replayCommitVm entry c x := let y := LocalTick2.commitReplay entry x; { y with left := x.center, ctl := c, radiusMir := mirrorOfTape (y.phys (y.roles .radius)), lowerMir := …(.lower), lengthMir := …(.length) }`。
+* `CountersShaped (commitReplay entry x)`: `intro c`、`hshaped (LocalRoles.swapAt Ctr.radius Ctr.replay c)` を取り、`show` で `pushSlots _ (resetSlots _ x.phys) (x.roles (swapAt … c))` の形を出して `unfold pushSlots resetSlots`、`by_cases` 2 段で `segCtr_push`／`segCtr_reset`。
+* `Inv (replayCommitVm entry c x)`: `⟨LocalRoles.moveRoles_injective hinv.roles, ⟨rfl, rfl, rfl⟩, ⟨views.2.1, views.2.1, views.2.2.1, views.2.2.2.1, views.2.2.2.2⟩, 鏡 3 本の Shaped, hshaped⟩`。
+* スクラッチの場所（セッション限り）: `$S/ghost_check.lean`、`$S/rc_check.lean`（`RewindCentre` の Tick 保存）。
+
+**(d) でまだ示していないもの**: `abs'' (replayCommitVm …)` が `replayStartVM entry (abs'' m.vm) ·` を満たすこと（`abs'` は鏡を読まないので `replayStartVM_commitReplayParked` の証明を `left := center` 用に直す）、`ParkedOK`、`hreplayStartNext` の組み立て（`RewindCentre` の trace 形＋`truncPH_left`）。
+
 ## n313（2026-09-21）: `hreplayStartNext` の producer (d) の設計（調査のみ、コードは変えていない）
 
 **全体 build 成功（最新は n312 の `BUILD=0`）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。
