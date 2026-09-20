@@ -1,3 +1,9 @@
+## n300 — 試行の結果: `ReachAtOn` に場を直に足すと旧経路が壊れる。述語パラメータで入れる
+
+**試したこと（2026-09-21、未 commit・作業ツリーは元に戻した）**: n299 の手順どおり `ReachAtOn` の報告節に `y.ctl.mode = Mode.scan` を足し、`checkpoints_costOn_upto1`・`PreTraceIMW.scanAtReport`・`OracleRun.lean` の 3 箇所を直した。`CloseoutCheckW` 単体は error 0・module build `BUILD=0`。**全体 build は `BUILD=1`**（task の終了コードは 0 だった。ログの `BUILD=` 行で判定）: `CloseoutOracleW.lean:121` `reachAtIMW_of_reachAtC3R_W`。旧オラクル `GalilInvPlus3.ReachAtC3` の報告点にはモードの情報が無く、旧経路はこの場を供給できない。この補題は `h_oracleIMW_of_MC3_W` 経由で旧 final 8 本（`CloseoutFinalW`／`W3`／`W4`／`Ver`／`S2`／`Branch`×2／`Four`）が使うので、仮定を足して回るのは採らない。差分は scratchpad の `scanAtReport_direct.patch`（116 行）に退避し、2 ファイルは `git checkout --` で戻した。
+
+**正しい入れ方（未実装）**: `CloseoutCheckW` の section 変数に「報告点の状態についてオラクルが追加で言うこと」`Y : List (Fin 2) → State GalilVM → Prop` を足し、`ReachAtOn` の報告節を `… ∧ Refreshed … ∧ Y w y ∧ …` にする。旧経路（`ReachAtIMW` など）は `fun _ _ => True`、新経路（`OracleRun`）は `fun _ y => y.ctl.mode = Mode.scan` を渡す。`PreTraceIMW` は触らず、canonical の存在定理（`CloseoutCheckW:468`）の結論に `∀ m, 1 ≤ m → m ≤ |w| → Y w (st (Tc m))` を足して `CloseoutFinalBranch.canonicalPreTrace_exists` → `ShadowedLocalFinal` の `htraceOf` へ運ぶ。明示引数 `… I R w` の後ろに `Y` が入るので、使用箇所は `CloseoutCheckW`（内部 29）・`OracleRun` 5・`CloseoutFinalBranch` 3・`ShadowedLocalFinal` 2・`PalInPegUnconditional` 2・`CloseoutOracleW` 2・`OracleReady` 1。最終定理の経路なので全体 build で検証する。
+
 ## n299 — 調査: 「報告点は scan モード」は証明鎖に実在する。足す場所の地図
 
 **一次情報（2026-09-21、Lean の変更なし）**: 着地の不変量 `CloseoutCheckW.ScanOnPackedRunFromInvLPS`（`CloseoutCheckW:422`）の第 1 場は `ScanNR ⟨c, r⟩`（= scan ∧ ¬replaying）。`ReachAtOn`（`CloseoutCheckW:136`）の報告点 `y` を作っているのは `OracleRun.lean` の 3 箇所だけ（`:509` 報告位置にいる着地状態そのもの、`:633` 一致 tick の後、`:878` shift／fallback 経路の後）で、どれも同じ状態について着地の不変量（`⟨⟨hm, hr⟩, …⟩`／`hI'`）を手にしている。つまり `y.ctl.mode = .scan` は 3 箇所とも無償で出る。
