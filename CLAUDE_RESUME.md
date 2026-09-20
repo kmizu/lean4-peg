@@ -21,7 +21,9 @@
 
 **抽象の等式もスクラッチで機械検査済み（2026-09-21、同じ `$S/ghost_check.lean`）**: `replayStartVM entry (abs'' x) (abs'' (replayCommitVm entry c x))`。仮説は `hinj`／`hpl`／`hpw`／`hpre : x.ctl.replaying = false`／`hflag`／`hland` で、`replayStartVM_commitReplayParked` にあった `hm : MirInv1` は不要（`left := x.center` が `rfl`）。形: `rval (replayCommitVm …) = rval (commitReplay …)` は `rfl`、あとは `rval_commitReplay`、`absR_eq_iter`、`abs''_eq_abs' hpre`、`refine ⟨?_, hR, rfl, rfl, …⟩`、残り 11 場は `show (LocalState.abs (LocalTick2.commitReplay entry x)).場 = _; rw [ha]; try rfl`（`rw` が自分で閉じる場があるので `try`）。
 
-**(d) でまだ示していないもの**: `ParkedOK`（`parkedOK_commitReplayParked` の形を `replayCommitVm` 用に）、`RewindCentre` の trace 形、`hreplayStartNext` の組み立て（`htarget` を `cases`、`replayStartVM` の一意性、`truncPH_left` で `hland`、`hflag` は `target.ctl.replaying = replayPos` から）。
+**`ParkedOK (replayCommitVm entry c x)` もスクラッチで機械検査済み**（同じファイル、error 0、標準 3 公理）: 仮説は `hinj` と `hradiusLe : val (x.phys (x.roles .radius)) ≤ position (abs' x).right`。後者は trace の `CloseoutRadPack.RadLedger.le`（`position center + value radius ≤ position right`、`CloseoutLPack6.radLedger_pt`）から。これで ghost 側の部品 3 つ（`Inv`・抽象の等式・`ParkedOK`）は揃った。
+
+**(d) でまだ示していないもの**: `RewindCentre` の trace 形、`hreplayStartNext` の組み立て（`htarget` を `cases`、`replayStartVM` の一意性、`truncPH_left` で `hland`、`hflag` は `target.ctl.replaying = replayPos` から）。
 
 ## n313（2026-09-21）: `hreplayStartNext` の producer (d) の設計（調査のみ、コードは変えていない）
 
