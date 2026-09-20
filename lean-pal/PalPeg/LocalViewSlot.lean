@@ -19,9 +19,9 @@ open PalPeg.CloseoutCoreStep (Γc blankc)
 open PalPeg.Program (STape)
 open PalPeg.LocalInputView
 open PalPeg.LocalViewCells
-open PalPeg.CloseoutCoreEnc12 (Act actList TEqG)
+open PalPeg.CloseoutCoreEnc12 (Act actList TEqG ActRule compStep teq_sweep_actList)
 open PalPeg.CloseoutCoreEnc25 (RTag)
-open PalPeg.Local (Window readWin pos)
+open PalPeg.Local (Window readWin pos sweep)
 
 /-- The micro-operations of steps `1`–`10` of a slot. -/
 def slotTail : Option QueueJob → List MicroOp
@@ -385,6 +385,44 @@ theorem viewSlot_sound (Terminal : Type) (hK : 2 ≤ K) {v : InputView} (hwf : W
   exact hqueue.1
 
 #print axioms viewSlot_sound
+
+/-! ## A view inside a larger machine -/
+
+/-- `compStep_apply`, one tape at a time: a tape with the margin follows its actions, whatever
+the other tapes do. -/
+theorem compStep_apply_tape {Terminal Q : Type} {tapeCount : ℕ}
+    (R : ActRule Terminal Q Γc tapeCount K) (x : Q × (Fin tapeCount → STape Γc))
+    (input : Option Terminal) (tape : Fin tapeCount) (hmargin : K ≤ pos (x.2 tape)) :
+    TEqG blankc
+      (actList blankc (x.2 tape)
+        (R.acts x.1 input (fun tape => readWin blankc K (x.2 tape)) tape))
+      (((compStep R).apply blankc x input).2 tape) := by
+  show TEqG blankc _ (sweep blankc K (x.2 tape) _ _)
+  exact teq_sweep_actList blankc K (x.2 tape) _ (R.len_le _ _ _ _) hmargin
+
+/-- **A real step of a larger machine is a `ViewStep` of each view it contains**: twelve of its
+tapes (`embed`) and a part of its control (`project`) on which the rule agrees with
+`viewNext` / `viewActs`. -/
+theorem viewStep_of_apply {Terminal Q : Type} {tapeCount : ℕ} (ViewTerminal : Type)
+    (hK : 2 ≤ K) (R : ActRule Terminal Q Γc tapeCount K) (embed : Fin 12 → Fin tapeCount)
+    (project : Q → ViewControl) (slot : Fin 11) (command : ViewCommand)
+    (x : Q × (Fin tapeCount → STape Γc)) (input : Option Terminal)
+    (hnq : project (R.nq x.1 input (fun tape => readWin blankc K (x.2 tape)))
+      = viewNext ViewTerminal hK slot command (project x.1)
+          (fun tape => readWin blankc K (x.2 (embed tape))))
+    (hacts : ∀ tape, R.acts x.1 input (fun tape => readWin blankc K (x.2 tape)) (embed tape)
+      = viewActs ViewTerminal hK slot command (project x.1)
+          (fun tape => readWin blankc K (x.2 (embed tape))) tape) :
+    ViewStep ViewTerminal hK slot command (project x.1, fun tape => x.2 (embed tape))
+      (project ((compStep R).apply blankc x input).1,
+        fun tape => ((compStep R).apply blankc x input).2 (embed tape)) := by
+  refine ⟨?_, fun tape hmargin => ?_⟩
+  · exact hnq
+  · show TEqG blankc (actList blankc (x.2 (embed tape)) _) _
+    rw [← hacts tape]
+    exact compStep_apply_tape R x input (embed tape) hmargin
+
+#print axioms viewStep_of_apply
 
 end ViewRule
 
