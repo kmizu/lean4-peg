@@ -31,11 +31,14 @@ def blankView : InputView := { emptyView with gap := true }
 /-- The counter tape holding zero: an empty mark-run above a separator. -/
 def zeroTape : STape LocalCounter.Seg := ⟨[LocalCounter.sep], LocalCounter.sep, []⟩
 
-/-- The number of physical counter tapes: one per logical counter. -/
-abbrev tapeCount : ℕ := Fintype.card Ctr
+/-- The number of physical counter tapes: one per logical counter, and `spare` tapes without a
+role.  The commits of the local layer (`LocalTick2.RestartStaged` and its relatives) stage the
+next value of a counter on a tape without a role and swap roles, so the bank needs spares; how
+many is decided by the local steps, not here. -/
+abbrev tapeCount (spare : ℕ) : ℕ := Fintype.card Ctr + spare
 
 /-- **The blank local state.** -/
-noncomputable def blankVML : GalilVML tapeCount where
+noncomputable def blankVML (spare : ℕ) : GalilVML (tapeCount spare) where
   left := blankView
   center := blankView
   right := blankView
@@ -43,7 +46,7 @@ noncomputable def blankVML : GalilVML tapeCount where
   walkerView := emptyView
   fppWalker := emptyView
   phys := fun _ => zeroTape
-  roles := Fintype.equivFin Ctr
+  roles := fun counter => Fin.castAdd spare (Fintype.equivFin Ctr counter)
   pol := fun _ => true
   radiusMir := ⟨zeroTape, fun _ => zeroTape⟩
   lowerMir := ⟨zeroTape, fun _ => zeroTape⟩
@@ -73,17 +76,17 @@ theorem truncVM_initVM0 (w : List (Fin 2)) :
   simp only [GalilThrottledRun.truncPH, initialHead, hdrop, GalilThrottledRun.truncChain]
 
 /-- The abstraction of the blank state is the boot VM of the empty word. -/
-theorem abs''_blank :
-    LocalReplayParked.abs'' (x0C blankVML 2048).core.vm = GalilBootVM.initVM0 [] := by
+theorem abs''_blank (spare : ℕ) :
+    LocalReplayParked.abs'' (x0C (blankVML spare) 2048).core.vm = GalilBootVM.initVM0 [] := by
   rfl
 
 /-- **The abstraction of the blank state is the truncated boot state of every word.** -/
-theorem absState''_blank (w : List (Fin 2)) :
-    absState'' (x0C blankVML 2048).core.vm = truncS w.length (boot w) := by
+theorem absState''_blank (spare : ℕ) (w : List (Fin 2)) :
+    absState'' (x0C (blankVML spare) 2048).core.vm = truncS w.length (boot w) := by
   show (⟨_, _⟩ : State GalilVM) = ⟨_, _⟩
   congr 1
   show LocalReplayParked.abs'' _ = GalilThrottledRun.truncVM w.length (GalilBootVM.initVM0 w)
-  rw [truncVM_initVM0, abs''_blank]
+  rw [truncVM_initVM0, abs''_blank spare]
 
 #print axioms absState''_blank
 
@@ -92,8 +95,8 @@ theorem segCtr_zeroTape : LocalCounter.SegCtr zeroTape 0 := ⟨[], rfl⟩
 theorem wf_blankView : PalPeg.LocalInputView.WF blankView := WF_emptyView
 
 /-- **The blank state satisfies the invariant of the local layer.** -/
-theorem inv_blank : PalPeg.LocalTick1.Inv blankVML where
-  roles := (Fintype.equivFin Ctr).injective
+theorem inv_blank (spare : ℕ) : PalPeg.LocalTick1.Inv (blankVML spare) where
+  roles := fun _ _ h => (Fintype.equivFin Ctr).injective (Fin.castAdd_injective _ _ h)
   attached := ⟨rfl, rfl, rfl⟩
   views := ⟨wf_blankView, wf_blankView, wf_blankView, WF_emptyView, WF_emptyView⟩
   radiusShaped := ⟨0, segCtr_zeroTape, fun _ => segCtr_zeroTape⟩
@@ -101,7 +104,8 @@ theorem inv_blank : PalPeg.LocalTick1.Inv blankVML where
   lengthShaped := ⟨0, segCtr_zeroTape, fun _ => segCtr_zeroTape⟩
   shaped := fun _ => ⟨0, segCtr_zeroTape⟩
 
-theorem twin_blank : PalPeg.LocalReplaySwap.Twin blankVML.left blankVML.center :=
+theorem twin_blank (spare : ℕ) :
+    PalPeg.LocalReplaySwap.Twin (blankVML spare).left (blankVML spare).center :=
   PalPeg.LocalReplaySwap.Twin.refl _
 
 #print axioms inv_blank

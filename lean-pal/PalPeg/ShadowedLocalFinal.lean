@@ -21,6 +21,8 @@ set_option synthInstance.maxHeartbeats 400000
 
 namespace PalPeg.ShadowedLocalFinal
 
+variable {spare : ℕ}
+
 open PalPeg PalPeg.Program PalPeg.GalilScaffoldTop PalPeg.GalilScaffoldController
   PalPeg.GalilScaffoldChainInputSupply PegSeparation PalPeg.GalilStructuredSkeleton
 open PalPeg.GalilRunSkeleton (PofC PofC_onLetter PofC_leftFirst)
@@ -79,48 +81,48 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     -- the abstract local system
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (M : Steps tapeCount) (repC : Control → Bool)
+    (M : Steps (tapeCount spare)) (repC : Control → Bool)
     -- the invariants the abstract local system carries along the run
-    (Good : Mirrored1 tapeCount → Prop) (hgoodInit : Good (x0C blankVML 2048).core)
+    (Good : Mirrored1 (tapeCount spare) → Prop) (hgoodInit : Good (x0C (blankVML spare) 2048).core)
     (hgoodTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m : Mirrored1 tapeCount, InvC Good w (heldAfter (Tc w.length) st) m → Good (tickC M m))
+      ∀ m : Mirrored1 (tapeCount spare), InvC Good w (heldAfter (Tc w.length) st) m → Good (tickC M m))
     (hgoodFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (letter : Fin 2) (m : Mirrored1 tapeCount),
+      ∀ (letter : Fin 2) (m : Mirrored1 (tapeCount spare)),
         InvC Good w (heldAfter (Tc w.length) st) m → Good (feedC letter m))
     (hrealizes : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ mode : Mode, Realizes Good w (heldAfter (Tc w.length) st) (Tc w.length) (stepOf M mode) mode)
     (hneedOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 tapeCount) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m → ¬ Starved m.vm →
+      ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m → ¬ Starved m.vm →
         Needy w (heldAfter (Tc w.length) st) k j m.vm →
         needT' w (heldAfter (Tc w.length) st) k ≤ j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 tapeCount) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
+      ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
         needT' w (heldAfter (Tc w.length) st) k ≤ j → ¬ Starved m.vm)
     (hstarvedAtLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 tapeCount) (j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
+      ∀ (m : Mirrored1 (tapeCount spare)) (j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Starved m.vm)
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
-      repC (micro (sysC M repC) w (x0C blankVML 2048) s).core.vm.ctl = true →
-      ReportPoint w (stAbs (sysC M repC) absSC w (x0C blankVML 2048) s) ∧
+      repC (micro (sysC M repC) w (x0C (blankVML spare) 2048) s).core.vm.ctl = true →
+      ReportPoint w (stAbs (sysC M repC) absSC w (x0C (blankVML spare) 2048) s) ∧
         Refreshed (PofC centreC placeC entry w) q first
-          (stAbs (sysC M repC) absSC w (x0C blankVML 2048) s))
+          (stAbs (sysC M repC) absSC w (x0C (blankVML spare) 2048) s))
     (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
-      ReportPoint w (stAbs (sysC M repC) absSC w (x0C blankVML 2048) s) →
+      ReportPoint w (stAbs (sysC M repC) absSC w (x0C (blankVML spare) 2048) s) →
       Refreshed (PofC centreC placeC entry w) q first
-        (stAbs (sysC M repC) absSC w (x0C blankVML 2048) s) →
+        (stAbs (sysC M repC) absSC w (x0C (blankVML spare) 2048) s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧
-        repC (micro (sysC M repC) w (x0C blankVML 2048) s').core.vm.ctl = true)
+        repC (micro (sysC M repC) w (x0C (blankVML spare) 2048) s').core.vm.ctl = true)
     -- the physical machine and its specification
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
-    (htape : 0 < t) (Rep : Mirrored1 tapeCount → Q × (Fin t → STape Γ) → Prop)
-    (hrepInit : Rep (x0C blankVML 2048).core (q0, fun _ => STape.blankTape blankSymbol))
+    (htape : 0 < t) (Rep : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
+    (hrepInit : Rep (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
     (hsimTick : ∀ m p, PhysWF m.vm → MirInv1 m → Rep m p →
       Rep (tickC M m) (L0.apply blankSymbol p none))
     (hsimFeed : ∀ letter m p, PhysWF m.vm → MirInv1 m → Rep m p →
@@ -142,9 +144,9 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
     fun w hw => (htraceOf w hw).1.base.pre.start
   have hneedBound := fun w (hw : 0 < w.length) =>
     needBound_alongPreTrace entry q first hres hChainVerifierSupply hw (htraceOf w hw).1
-  exact pal_in_peg_of_shadowed_sysC M repC blankVML 2048 (PofC centreC placeC entry) (fun _ => q)
+  exact pal_in_peg_of_shadowed_sysC M repC (blankVML spare) 2048 (PofC centreC placeC entry) (fun _ => q)
     (fun _ => first) (fun w => PofC_onLetter centreC placeC entry w)
-    (fun w => PofC_leftFirst centreC placeC entry w) inv_blank twin_blank wf_blankView
+    (fun w => PofC_leftFirst centreC placeC entry w) (inv_blank spare) (twin_blank spare) wf_blankView
     (fun w => heldAfter (TcOf w w.length) (stOf w)) TcOf
     (fun w j => sharedC_trunc_vm w j centreC placeC entry (fun s => (centrePlaceC w j s).1)
       (fun s => (centrePlaceC w j s).2))
@@ -158,7 +160,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
         (htraceOf w hw).1.base.pre.trace.tick (by rw [hstart w hw]; exact sufVM_boot w) k hk)
     (fun w hw => by
       rw [heldAfter_of_le (stOf w) (Nat.zero_le _), hstart w hw]
-      exact absState''_blank w)
+      exact absState''_blank spare w)
     (fun w hw => by
       have hneed := needL'_boot w (stOf w) (hstart w hw)
       have hused : usedVM w (stOf w 0).vm ≤ needL' w (stOf w) 0 := le_max_left _ _
@@ -196,8 +198,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
 /-- The steps of the abstract local system: the seven phase modes of the word-free
 `CloseoutCoreAgree.SL`, and the three modes `SL` leaves open. -/
 noncomputable def localSteps (q : ℕ) (first : Fin 9)
-    (initStep scanStep replayStartStep : Mirrored1 tapeCount → Mirrored1 tapeCount) :
-    Steps tapeCount :=
+    (initStep scanStep replayStartStep : Mirrored1 (tapeCount spare) → Mirrored1 (tapeCount spare)) :
+    Steps (tapeCount spare) :=
   { PalPeg.CloseoutCoreAgree.SL q first with
     init := initStep, scan := scanStep, replayStart := replayStartStep }
 
@@ -236,22 +238,22 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc →
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (initStep scanStep replayStartStep : Mirrored1 tapeCount → Mirrored1 tapeCount)
+    (initStep scanStep replayStartStep : Mirrored1 (tapeCount spare) → Mirrored1 (tapeCount spare))
     (repC : Control → Bool)
-    (Good : Mirrored1 tapeCount → Prop)
-    (hgoodWF : ∀ m : Mirrored1 tapeCount, Good m → PalPeg.LocalWF.LocalWF m.vm)
-    (hgoodInit : Good (x0C blankVML 2048).core)
+    (Good : Mirrored1 (tapeCount spare) → Prop)
+    (hgoodWF : ∀ m : Mirrored1 (tapeCount spare), Good m → PalPeg.LocalWF.LocalWF m.vm)
+    (hgoodInit : Good (x0C (blankVML spare) 2048).core)
     (hgoodTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m : Mirrored1 tapeCount, InvC Good w (heldAfter (Tc w.length) st) m →
+      ∀ m : Mirrored1 (tapeCount spare), InvC Good w (heldAfter (Tc w.length) st) m →
         Good (tickC (localSteps q first initStep scanStep replayStartStep) m))
     (hgoodFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (letter : Fin 2) (m : Mirrored1 tapeCount),
+      ∀ (letter : Fin 2) (m : Mirrored1 (tapeCount spare)),
         InvC Good w (heldAfter (Tc w.length) st) m → Good (feedC letter m))
     (hinitLocal : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 tapeCount) (target : State GalilVM),
+      ∀ (m : Mirrored1 (tapeCount spare)) (target : State GalilVM),
         InvC Good w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .init → ¬ Starved m.vm →
         Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
         Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
@@ -261,7 +263,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
           PhysWF (initStep m).vm ∧ MirInv1 (initStep m))
     (hscanLocal : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 tapeCount) (target : State GalilVM),
+      ∀ (m : Mirrored1 (tapeCount spare)) (target : State GalilVM),
         InvC Good w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .scan → ¬ Starved m.vm →
         Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
         Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
@@ -271,7 +273,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
           PhysWF (scanStep m).vm ∧ MirInv1 (scanStep m))
     (hreplayStartLocal : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 tapeCount) (target : State GalilVM),
+      ∀ (m : Mirrored1 (tapeCount spare)) (target : State GalilVM),
         InvC Good w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .replayStart → ¬ Starved m.vm →
         Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
         Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
@@ -281,38 +283,38 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
           PhysWF (replayStartStep m).vm ∧ MirInv1 (replayStartStep m))
     (hneedOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 tapeCount) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
+      ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm →
         needT' w (heldAfter (Tc w.length) st) k ≤ j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 tapeCount) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
+      ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
         needT' w (heldAfter (Tc w.length) st) k ≤ j → ¬ Starved m.vm)
     (hstarvedAtLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 tapeCount) (j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
+      ∀ (m : Mirrored1 (tapeCount spare)) (j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Starved m.vm)
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
       repC (micro (sysC (localSteps q first initStep scanStep replayStartStep) repC) w
-        (x0C blankVML 2048) s).core.vm.ctl = true →
+        (x0C (blankVML spare) 2048) s).core.vm.ctl = true →
       ReportPoint w (stAbs (sysC (localSteps q first initStep scanStep replayStartStep) repC)
-          absSC w (x0C blankVML 2048) s) ∧
+          absSC w (x0C (blankVML spare) 2048) s) ∧
         Refreshed (PofC centreC placeC entry w) q first
           (stAbs (sysC (localSteps q first initStep scanStep replayStartStep) repC) absSC w
-            (x0C blankVML 2048) s))
+            (x0C (blankVML spare) 2048) s))
     (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
       ReportPoint w (stAbs (sysC (localSteps q first initStep scanStep replayStartStep) repC)
-        absSC w (x0C blankVML 2048) s) →
+        absSC w (x0C (blankVML spare) 2048) s) →
       Refreshed (PofC centreC placeC entry w) q first
         (stAbs (sysC (localSteps q first initStep scanStep replayStartStep) repC) absSC w
-          (x0C blankVML 2048) s) →
+          (x0C (blankVML spare) 2048) s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧
         repC (micro (sysC (localSteps q first initStep scanStep replayStartStep) repC) w
-          (x0C blankVML 2048) s').core.vm.ctl = true)
+          (x0C (blankVML spare) 2048) s').core.vm.ctl = true)
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
-    (htape : 0 < t) (Rep : Mirrored1 tapeCount → Q × (Fin t → STape Γ) → Prop)
-    (hrepInit : Rep (x0C blankVML 2048).core (q0, fun _ => STape.blankTape blankSymbol))
+    (htape : 0 < t) (Rep : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
+    (hrepInit : Rep (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
     (hsimTick : ∀ m p, PhysWF m.vm → MirInv1 m → Rep m p →
       Rep (tickC (localSteps q first initStep scanStep replayStartStep) m)
         (L0.apply blankSymbol p none))
@@ -342,7 +344,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
         (heldAfter (Tc w.length) st k) (heldAfter (Tc w.length) st (k+1)) := fun k hk => by
     rw [heldAfter_of_le st hk.le, heldAfter_of_le st (Nat.succ_le_of_lt hk)]
     exact hcanonical k hk
-  have hseven := PalPeg.CloseoutCoreAgree.realizes_seven_SL (P := tapeCount) (Good := Good)
+  have hseven := PalPeg.CloseoutCoreAgree.realizes_seven_SL (P := (tapeCount spare)) (Good := Good)
     (raw := w) (stOf := heldAfter (Tc w.length) st) (lastTick := Tc w.length)
     (Pw := PofC centreC placeC entry w) (qq := q) (first := first) (delay := 2048)
     (fun j => sharedC_trunc_vm w j centreC placeC entry (fun s => (centrePlaceC w j s).1)
