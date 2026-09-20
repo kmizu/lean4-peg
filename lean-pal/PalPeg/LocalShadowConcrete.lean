@@ -269,8 +269,8 @@ theorem pal_in_peg_of_shadowed_sysC
     exact feed_abs_core (hpackOf hinv).1.inv.views (hpackOf hinv).1.pend letter
   · exact H_ledger_of_local_oracles S absSC x0 Pof qof firstOf stOf TcOf hpreload
       (fun w hw s hbefore hstarved =>
-        hneedOfNotStarved w _ _ _ hw (hrun w hw s hbefore.le).invC hstarved
-          (hrun w hw s hbefore.le).needy)
+        (used_le_of_need (hneedOfNotStarved w _ _ _ hw (hrun w hw s hbefore.le).invC hstarved
+          (hrun w hw s hbefore.le).needy)).2.1)
       (fun w hw s hbefore hneed =>
         hnotStarvedOfNeed w _ _ _ hw (hrun w hw s hbefore.le).invC
           (hrun w hw s hbefore.le).needy hbefore hneed)
