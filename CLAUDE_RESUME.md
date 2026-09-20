@@ -34,7 +34,11 @@
 
 3. （控え `asm_stage3.keep.lean`）`rw [abs''_eq_abs' hnotReplaying] at hvm` のあと、`hradiusEq`／`hrightEq`／`hcentreEq`（`(congrArg GalilVM.場 hvm).trans rfl`）、`hradiusVal : val (radius のテープ) = r`（`LocalWF.value_absCtr_of_positivePolarity`＋`hinv.good.1.2.1`＋`simp [value, ofNat]`＋`omega`）、`hland`（補題 `scratch_truncPH_left_iterate`: `left^[r] (truncPH d p) = truncPH d (left^[r] p)`、`truncPH_left` の帰納）、`hradiusLe`（`hradLedger.le` を `rw [hradiusTrace]` して `omega`、`position (truncPH d p) = position p` は `show` で defeq）。
 
-**(d) でまだ示していないもの**（第 4 段）: `hreplayStartNext` の組み立て（`htarget` を `cases`、`replayStartVM` の一意性、`truncPH_left` で `hland`、`hflag` は `target.ctl.replaying = replayPos` から）。
+4. （控え `asm_done.keep.lean`、358 行）**第 4 段も通り、`scratch_replayStartNext` が最後まで証明できた**（`EXIT=0`、`sorry` の警告 0、`#print axioms` は標準 3 公理のみ）。`GalilTickFair.tick_replayStart_cases`（既存）で `htarget` を分解、`replayPos landing` を `landingReplaying` に名前で取って制御リテラルを 1 行に（**構造体リテラルを 2 行に割ると parse error**）、`hflag` は `cases r`、`scratch_replayStartVM_unique`（`unfold replayStartVM at h h'; cases t; cases t'; simp_all`）で `abs'' next.vm = landing`。`NextOK` の 6 場: Tick は `suffices ∀ landed, landed = target → Tick … landed` の形で `congrArg (State.mk _) hnextVm`、`Canonical` は mode で 2 場が空虚・`keepsSearchCursor` は `replayStartVM` の最後の 2 連言、`PhysWF` は `⟨inv, parkedOK, hinv.phys.pend, hinv.phys.walkerProper⟩`、`MirInv1` は `⟨Twin.refl _, views.2.1⟩`、`Good` は `radius`／`replay` の極性を入れ替えて `⟨⟨hremaining, hreplay, hlength, hcycle, hfppWork⟩, hwork, hradius⟩`、`Post` は左枝が mode で偽・右枝は `notFrozen_of_invC`。
+
+**次にやること**: スクラッチの宣言をリポジトリへ移し（`scratch_` を外して意味のある名前に。trace 側は `CloseoutRadPack3` の近く、ghost 側は `LocalReplayParked`、組み立ては `ShadowedLocalFinal`）、`given_openModesAndPhysicalMachine` の仮説 `hreplayStartNext` を外して呼び出し箇所（`:1190` 付近）を定理に差し替える。呼び出し箇所で `hw : 0 < w.length` が scope にあるかを確認する。
+
+**(d) の旧メモ**（第 4 段の計画、済）: `hreplayStartNext` の組み立て（`htarget` を `cases`、`replayStartVM` の一意性、`truncPH_left` で `hland`、`hflag` は `target.ctl.replaying = replayPos` から）。
 
 ## n313（2026-09-21）: `hreplayStartNext` の producer (d) の設計（調査のみ、コードは変えていない）
 
