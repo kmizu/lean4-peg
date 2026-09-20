@@ -1,3 +1,16 @@
+## n301 — 到達点の棚卸し: `given_openModesAndPhysicalMachine` に残る仮定は抽象層 5 本＋物理側 8 本
+
+**状態（2026-09-21 未明）**: 最新の全体 build は `ba6aeec`（`BUILD=0`・`error` 0・`sorry` 0）。以後は module build `PalPeg.ShadowedLocalFinal` `BUILD=0`（最後は commit `b9accbd`、push 済み）。**全体 build 成功（`ba6aeec` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。`unconditional` は未付け替え。
+
+**n300 以降**: `ba6aeec` オラクル述語に述語パラメータ `Y`（報告点の状態についての追加事実）。旧経路は `True`、新経路は scan モード。canonical な pre-trace の存在定理が「`Tc m` の状態は scan モード」を言う。`b495751` `postPhase` の台地に `mode = scan`、`hplateauTick` → `hplateauNext`（局所後続の存在）。`09a208c` `localGood m := LocalWF m.vm`（`hgoodWF`・`hgoodInit` が消えた）。`dd236e4` `good_chosenStep`、`hgoodTick` → `hgoodPhaseStep`（init と 7 相の関数 step だけ）。`b9accbd` `hgoodFeed` → `hgeomFeed`（極性は `polWF_feedC`）。
+
+**`ShadowedLocalFinal.given_openModesAndPhysicalMachine` の仮定（`#print axioms` 標準 3 本、`sorry` 0）**:
+* `unconditional` で供給できるもの: `hfirst : first ≠ 4`・`hq : q ≤ 64`・`hor`（`cycleOracleOnPackedRun`、述語 `Y` つき）・`hres`・`hChainVerifierSupply`。
+* 抽象局所層（具体データ `localGood`／`postPhase`／`frozenAt`／`ghostSteps`／`reportTest` の上）: `hgoodPhaseStep`、`hgeomFeed`、`hscanNext`、`hreplayStartNext`、`hplateauNext`。
+* 物理機械（自由データ `Q Γ t K L0 blankSymbol q0 repQ outQ Enc PhysFrozen`）: `htape`、`hencInit`、`hforwardTick`（非凍結の run 状態で前方模倣、`TickSucc`）、`hforwardFeed`（追跡状態で）、`hencRep`（run 上で `reportTest` と一致）、`hencOut`（報告点でだけ）、`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`。
+
+**公理として書き出す前の注意（未検証の懸念）**: `hgoodPhaseStep`／`hgeomFeed` は `LocalWF.Geom` の保存を含む。`LocalWF.lean` §8 は `Geom` を「単独の局所 step では保存されない、機械の不変量」と書いており、`InvC localGood` からだけでは帰納的でない可能性がある（特に shift モードで `RemPosL` が `CopyRemaining` だけで立つ場合の `shiftMag`）。偽の義務を公理にしないよう、書き出す前に `Geom` を追跡状態の抽象（trace の `ShiftGeom` など）から導けるかを 1 場ずつ確かめること。物理機械は未構成（`ActRule` 未実装）。
+
 ## n300 — 試行の結果: `ReachAtOn` に場を直に足すと旧経路が壊れる。述語パラメータで入れる
 
 **試したこと（2026-09-21、未 commit・作業ツリーは元に戻した）**: n299 の手順どおり `ReachAtOn` の報告節に `y.ctl.mode = Mode.scan` を足し、`checkpoints_costOn_upto1`・`PreTraceIMW.scanAtReport`・`OracleRun.lean` の 3 箇所を直した。`CloseoutCheckW` 単体は error 0・module build `BUILD=0`。**全体 build は `BUILD=1`**（task の終了コードは 0 だった。ログの `BUILD=` 行で判定）: `CloseoutOracleW.lean:121` `reachAtIMW_of_reachAtC3R_W`。旧オラクル `GalilInvPlus3.ReachAtC3` の報告点にはモードの情報が無く、旧経路はこの場を供給できない。この補題は `h_oracleIMW_of_MC3_W` 経由で旧 final 8 本（`CloseoutFinalW`／`W3`／`W4`／`Ver`／`S2`／`Branch`×2／`Four`）が使うので、仮定を足して回るのは採らない。差分は scratchpad の `scanAtReport_direct.patch`（116 行）に退避し、2 ファイルは `git checkout --` で戻した。
