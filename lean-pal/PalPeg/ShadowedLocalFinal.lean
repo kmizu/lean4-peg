@@ -436,6 +436,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
         ¬ frozen w m)
     (hpostOfLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      (∀ index, 1 ≤ index → index ≤ w.length → (st (Tc index)).ctl.mode = Mode.scan) →
       ∀ (m : Mirrored1 (tapeCount spare)), InvC Good w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) (Tc w.length) w.length m.vm → Post w m)
     (hpostTick : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
@@ -554,7 +555,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     Post frozen
     (fun w m hw hinv => hnotFrozenTracked w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2.1 m hinv)
     (fun w m hw hinv hneedy =>
-      hpostOfLastReport w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2.1 m hinv hneedy)
+      hpostOfLastReport w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2.1 (htraceOf w hw).2.2 m hinv
+        hneedy)
     hpostTick
     rep_sound rep_complete L0 blankSymbol q0 repQ outQ htape Rep hrepInit
     (fun w m p hw honRun honRunNext hsucc hrep =>
@@ -769,10 +771,12 @@ theorem frozenAt_of_absSC_eq {w : List (Fin 2)} {encoded m : Mirrored1 (tapeCoun
   rw [habs]
 
 /-- **The phase after the last report point**: the abstract state is still a refreshed report
-point of the word (the plateau: the right head stands on the last letter), or it is frozen. -/
+point of the word in scan mode (the plateau: the right head stands on the last letter), or it is
+frozen. -/
 def postPhase (entry q : ℕ) (first : Fin 9) (w : List (Fin 2))
     (m : Mirrored1 (tapeCount spare)) : Prop :=
-  (ReportPoint w (absSC m) ∧ Refreshed (PofC centreC placeC entry w) q first (absSC m)) ∨
+  (ReportPoint w (absSC m) ∧ Refreshed (PofC centreC placeC entry w) q first (absSC m) ∧
+      (absSC m).ctl.mode = Mode.scan) ∨
     frozenAt w m
 
 /-- The steps of the abstract local layer for the word `w`: `LocalInitStep.initStep`, the seven
@@ -858,14 +862,10 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
         Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
         ∃ next, NextOK entry q first Good (postPhase entry q first) w m next)
     -- on the plateau after the last report point the local ticks are still ticks
-    (hplateauTick : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
+    (hplateauNext : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
       ReportPoint w (absSC m) → Refreshed (PofC centreC placeC entry w) q first (absSC m) →
-      ¬ frozenAt w m → PhysWF m.vm → MirInv1 m → Good m → ¬ Starved m.vm →
-      TickSucc (PofC centreC placeC entry w) q first 2048
-          (PalPeg.GalilTickFair.Canonical entry 2048) (frozenAt w m) (absSC m)
-          (absSC (tickC (ghostSteps entry q first Good (postPhase entry q first) w) m)) ∧
-        (postPhase entry q first) w (tickC (ghostSteps entry q first Good (postPhase entry q first) w) m) ∧ PhysWF (tickC (ghostSteps entry q first Good (postPhase entry q first) w) m).vm ∧ MirInv1 (tickC (ghostSteps entry q first Good (postPhase entry q first) w) m) ∧
-        Good (tickC (ghostSteps entry q first Good (postPhase entry q first) w) m))
+      (absSC m).ctl.mode = Mode.scan → ¬ frozenAt w m → PhysWF m.vm → MirInv1 m → Good m →
+      ¬ Starved m.vm → ∃ next, NextOK entry q first Good (postPhase entry q first) w m next)
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Enc : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
     (hencInit : Enc (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
@@ -912,15 +912,17 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     Good hgoodInit hgoodTick hgoodFeed
     ?_ (postPhase entry q first) frozenAt
     (fun w st Tc hw hpreTrace _ m hinv => notFrozen_of_invC entry q first hw hpreTrace m hinv)
-    (fun w st Tc hw hpreTrace _ m _ hneedy => by
+    (fun w st Tc hw hpreTrace _ hscanAtReport m _ hneedy => by
       refine Or.inl ?_
       have hstate := hneedy.2
       rw [Nat.sub_self, PalPeg.GalilThrottledRun.truncS_zero, heldAfter_of_le st le_rfl]
         at hstate
-      show ReportPoint w (absState'' m.vm) ∧ Refreshed _ q first (absState'' m.vm)
+      show ReportPoint w (absState'' m.vm) ∧ Refreshed _ q first (absState'' m.vm) ∧
+        (absState'' m.vm).ctl.mode = Mode.scan
       rw [hstate]
-      exact PalPeg.GalilLedgerAssembly.reportPoint_of_at_length hw
-        (hpreTrace.base.pre.report w.length hw le_rfl))
+      have hreport := PalPeg.GalilLedgerAssembly.reportPoint_of_at_length hw
+        (hpreTrace.base.pre.report w.length hw le_rfl)
+      exact ⟨hreport.1, hreport.2, hscanAtReport w.length hw le_rfl⟩)
     (fun w m hw hpost hphys hmir hgood hnotStarved => by
       by_cases hfrozen : frozenAt w m
       · have hstay : tickC (ghostSteps entry q first Good (postPhase entry q first) w) m = m := by
@@ -929,8 +931,19 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
           rw [stepOf_freezeSteps, if_pos hfrozen]
         rw [hstay]
         exact ⟨Or.inl ⟨hfrozen, rfl⟩, Or.inr hfrozen, hphys, hmir, hgood⟩
-      · rcases hpost with ⟨hpoint, hrefreshed⟩ | hfrozen'
-        · exact hplateauTick w m hw hpoint hrefreshed hfrozen hphys hmir hgood hnotStarved
+      · rcases hpost with ⟨hpoint, hrefreshed, hscan⟩ | hfrozen'
+        · have hspec := chosenStep_spec
+            (hplateauNext w m hw hpoint hrefreshed hscan hfrozen hphys hmir hgood hnotStarved)
+          have hstep : tickC (ghostSteps entry q first Good (postPhase entry q first) w) m
+              = chosenStep entry q first Good (postPhase entry q first) w m := by
+            rw [PalPeg.LocalSysConcrete.tickC_step _ hnotStarved]
+            show stepOf (freezeSteps (frozenAt w) _) m.vm.ctl.mode m = _
+            rw [stepOf_freezeSteps, if_neg hfrozen, show m.vm.ctl.mode = Mode.scan from hscan]
+            rfl
+          rw [hstep]
+          exact ⟨Or.inr ⟨hfrozen, hspec.1, hspec.2.1⟩,
+            hspec.2.2.2.2.2 (Or.inl ⟨hpoint, hrefreshed, hscan⟩), hspec.2.2.1, hspec.2.2.2.1,
+            hspec.2.2.2.2.1⟩
         · exact absurd hfrozen' hfrozen)
     (fun w s _ _ hreport => (reportTest_iff entry q first w _).mp hreport)
     (fun w s _ hpoint hrefreshed => (reportTest_iff entry q first w _).mpr ⟨hpoint, hrefreshed⟩)
