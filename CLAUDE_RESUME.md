@@ -23,7 +23,12 @@
 
 **`ParkedOK (replayCommitVm entry c x)` もスクラッチで機械検査済み**（同じファイル、error 0、標準 3 公理）: 仮説は `hinj` と `hradiusLe : val (x.phys (x.roles .radius)) ≤ position (abs' x).right`。後者は trace の `CloseoutRadPack.RadLedger.le`（`position center + value radius ≤ position right`、`CloseoutLPack6.radLedger_pt`）から。これで ghost 側の部品 3 つ（`Inv`・抽象の等式・`ParkedOK`）は揃った。
 
-**(d) でまだ示していないもの**: `RewindCentre` の trace 形、`hreplayStartNext` の組み立て（`htarget` を `cases`、`replayStartVM` の一意性、`truncPH_left` で `hland`、`hflag` は `target.ctl.replaying = replayPos` から）。
+**trace 側の部品 2 つもスクラッチで機械検査済み（2026-09-21）**:
+* `$S/rc_check.lean`（控え `rc_check.keep.lean`）: `RewindCentre` の Tick 保存に加えて trace 形 `∀ i, i ≤ Tc w.length → RewindCentre (st i).ctl (st i).vm`（`PreTrace` に沿う帰納。boot は `hP.start` で mode = init なので `Mode.noConfusion`、step は `hP.trace.tick i hlt`）。error 0、標準 3 公理。
+* `$S/nr_check.lean`（控え `nr_check.keep.lean`）: `LocalWF.NoReplay x → Tick F delay x y → y.ctl.mode = .replayStart → y.ctl.replaying = false`。`LocalWF.PhaseMode` に replayStart が入っていないので既存の `NoReplay` からは直接出ない。`cases` で残るのは `rewind_done` だけ（制御は mode 以外不変）で、source の `NoReplay`（rewind は `PhaseMode`）から出る。公理は `propext` のみ。
+* 組み立てで使う既存補題: `GalilThrottledRun.position_trunc`（`position (truncPH d p) = position p := rfl`）、`GalilTruncTick.truncPH_left`、`ShadowedLocalFinal.notFrozen_of_invC`（`hw : 0 < w.length` を取る）。
+
+**(d) でまだ示していないもの**: `hreplayStartNext` の組み立て（`htarget` を `cases`、`replayStartVM` の一意性、`truncPH_left` で `hland`、`hflag` は `target.ctl.replaying = replayPos` から）。
 
 ## n313（2026-09-21）: `hreplayStartNext` の producer (d) の設計（調査のみ、コードは変えていない）
 
