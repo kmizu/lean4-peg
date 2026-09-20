@@ -1,3 +1,11 @@
+## n293 — 調査: 橋の抽象 run 仮定は最終定理で使われていない（`_H_run`）。Post 相の要求を見直す材料
+
+**一次情報（2026-09-20 夜、Lean の変更なし）**: `GalilArriveChain.pal_in_peg_of_latch'` の引数 `_H_run : ∀ w, 0 < |w| → AbstractRun' …` は**未使用**（名前が `_` 始まり、本体は `H_realize`（`M.SAccepts w ↔ LatchTrue …`）と `H_ledger` だけを使う）。`LocalTrackingLatch.pal_in_peg_of_local_latch` の `x0_ctl`／`stutter_of_starved`／`tick_of_not_starved`／`feed_abs` は `abstractRun_of_oracles`（= `_H_run` の供給）にしか流れない。つまり最終定理は「局所 run の抽象が毎歩 tick／stutter／到着である」ことを要求していない。要求しているのは (1) ラッチの同値（`rep_sound`／`rep_complete` と出力の一致、遅い全時点）、(2) 台帳（最終報告点まで）。
+
+**`hpostTick` の量化点検**: 今の `hpostTick` は Post 相の全モード・全時点で「抽象が canonical tick」を要求する。これは (a) 上の死んだ仮定 `tick_of_not_starved` と (b) 前方模倣の糊（`TickSucc` の一意性で ghost と物理を合わせる）の 2 箇所に流れている。(a) は橋から削れる。(b) は Post 相でも ghost と物理の抽象を合わせ続けるために要る。Post 相で本当に要るのは「w が回文でないとき、物理の `rep ∧ out` が最終報告点の後に真にならない」こと（ラッチは OR なので、報告点で出力が真なら後は何でもよい）。これは抽象機械の出力の健全性（`SoundScanNR`／`OutputRel`）を trace の外へ延ばす話で、未解決。
+
+**次の一手の候補**: (i) 橋 4 層から死んだ仮定 4 本（`x0_ctl`・`stutter_of_starved`・`tick_of_not_starved`・`feed_abs`）をその場で削る（旧経路 `CloseoutCoreAudit` の呼び出しも合わせる）。(ii) Post 相の `Rep` を「報告ビットが偽のまま」型の弱い関係に替えられるか検討する。
+
 ## n292 — `obligation_localRealization`: 報告テストを意味で定義し `rep_sound`／`rep_complete` を消した（compact 前の到達点）
 
 **状態（2026-09-20 夜）**: 全体 build の最新は `dd21451`（`BUILD=0`）。以後は module build のみ、最後は `PalPeg.ShadowedLocalFinal` `BUILD=0`（commit `7da6528`、push 済み）。**全体 build 成功（`dd21451` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。`unconditional` は未付け替え。
