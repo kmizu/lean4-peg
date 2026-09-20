@@ -98,12 +98,35 @@ theorem chainPosInv2_alongPreTrace (entry q : ℕ) (first : Fin 9) {w : List (Fi
 
 #print axioms chainPosInv2_alongPreTrace
 
+/-- **The verifier of a chain walking back represents the word, and its lag is not negative**,
+at every point of a pre-loaded trace: the `.back` fields of the verifier and lag invariants of
+`BranchSupply`, which hold along the trace without a guard on the mode. -/
+theorem backVerifier_alongPreTrace (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4)
+    {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc) :
+    ∀ i, i ≤ Tc w.length → (st i).ctl.mode = .scan →
+      ∀ (v : GalilScaffoldChainPeriod.Tape) (h lag margin : GalilScaffoldCounter.Counter)
+        (ver : GalilScaffoldInputHead.PlaceHead), (st i).vm.chain = .back v h lag margin ver →
+        GalilScaffoldInputTrace.Represents ver.head w ∧ 0 ≤ GalilScaffoldCounter.value lag := by
+  intro i hile _ v h lag margin ver hchain
+  have hverifier := PalPeg.BranchSupply.chainVerifierRepresents_alongTrace centreC placeC entry q
+    first hw hpreTrace
+    (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC entry q first hfirst
+      hpreTrace.base.pre)
+    (hpreTrace.base.tc1 ▸ hpreTrace.base.pre.mono 1 w.length hw le_rfl) i hile
+  have hlag := PalPeg.BranchSupply.chainLagCanonical_alongTrace centreC placeC entry q first hw
+    hpreTrace i hile
+  exact ⟨(hverifier.backVer v h lag margin ver hchain).1,
+    (hlag.backLagField v h lag margin ver hchain).2⟩
+
+#print axioms backVerifier_alongPreTrace
+
 /-- **The lookahead of the chain verifier of a tracked, non-starved scan state has arrived.**
 On the held canonical trace below the last report point: the verifier supply gives `VerRep` and
 `LagCan`, `chainPosInv2_alongPreTrace` the position ledger, the scan geometry of the pack the
 representation of the right head, the front pack its sanity, and the starvation test the
 lookahead of the right head.  For a chain walking back the representation of its verifier and the
-sign of its lag are not in these invariants and are asked for (`hbackRep`). -/
+sign of its lag are not in these invariants; `hbackRep` is `backVerifier_alongPreTrace`. -/
 theorem chainLook_heldAfter (entry q : ℕ) (first : Fin 9)
     {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
@@ -229,7 +252,7 @@ theorem nextUsed_heldAfter (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)} (h
 /-- **`PAL ∈ PEG` from the local system and a physical machine.**  The first three hypotheses
 are those of `CloseoutFinalBranch.given_scanLandingObligations` other than the realization; the
 rest replaces the realization. -/
-theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
+theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
         (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
@@ -265,12 +288,6 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
         (heldAfter (Tc w.length) st k).ctl.mode = .scan →
         (heldAfter (Tc w.length) st (k+1)).ctl.mode = .shift →
         usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j)
-    (hbackRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ i, i ≤ Tc w.length → (st i).ctl.mode = .scan →
-      ∀ (v : GalilScaffoldChainPeriod.Tape) (h lag margin : GalilScaffoldCounter.Counter)
-        (ver : GalilScaffoldInputHead.PlaceHead), (st i).vm.chain = .back v h lag margin ver →
-        GalilScaffoldInputTrace.Represents ver.head w ∧ 0 ≤ GalilScaffoldCounter.value lag)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
@@ -366,13 +383,15 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
     (fun w m k j hw hinv hstarved hneedy hbefore hused =>
       nextUsed_heldAfter entry q first hw (htraceOf w hw).1 (hres w _ _ (htraceOf w hw).1)
         (hChainVerifierSupply w _ _ hw (htraceOf w hw).1)
-        (hbackRep w _ _ (htraceOf w hw).1 (htraceOf w hw).2) m k j hstarved hneedy hbefore hused
+        (backVerifier_alongPreTrace entry q first hfirst hw (htraceOf w hw).1) m k j hstarved hneedy
+        hbefore hused
         (hnextUsedOfNotStarved w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved
           hneedy hbefore hused))
     (fun w m k j hw _ hstarved hneedy hbefore hused hscan =>
       chainLook_heldAfter entry q first hw (htraceOf w hw).1 (hres w _ _ (htraceOf w hw).1)
         (hChainVerifierSupply w _ _ hw (htraceOf w hw).1)
-        (hbackRep w _ _ (htraceOf w hw).1 (htraceOf w hw).2) m k j hstarved hneedy hbefore hused
+        (backVerifier_alongPreTrace entry q first hfirst hw (htraceOf w hw).1) m k j hstarved hneedy
+        hbefore hused
         hscan)
     (fun w m k j hw hinv hneedy hbefore hneed =>
       hnotStarvedOfNeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hneedy hbefore
@@ -469,7 +488,8 @@ theorem initLocal_heldAfter (entry q : ℕ) (first : Fin 9) {Good : Mirrored1 (t
 `LocalInitStep.initStep` (`initLocal_heldAfter`).  The seven phase modes of
 the abstract local system are `CloseoutCoreAgree.realizes_seven_SL`; its side conditions are
 facts about the held canonical trace. -/
-theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : q ≤ 64)
+theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4)
+    (hq : q ≤ 64)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
         (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
@@ -524,12 +544,6 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
         (heldAfter (Tc w.length) st k).ctl.mode = .scan →
         (heldAfter (Tc w.length) st (k+1)).ctl.mode = .shift →
         usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j)
-    (hbackRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ i, i ≤ Tc w.length → (st i).ctl.mode = .scan →
-      ∀ (v : GalilScaffoldChainPeriod.Tape) (h lag margin : GalilScaffoldCounter.Counter)
-        (ver : GalilScaffoldInputHead.PlaceHead), (st i).vm.chain = .back v h lag margin ver →
-        GalilScaffoldInputTrace.Represents ver.head w ∧ 0 ≤ GalilScaffoldCounter.value lag)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
@@ -575,9 +589,9 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
     (hreadRep : ∀ m p, Rep m p → repC m.vm.ctl = repQ p.1)
     (hreadOut : ∀ m p, Rep m p → m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
-  refine given_shadowedLocalSystem entry q first hor hres hChainVerifierSupply
+  refine given_shadowedLocalSystem entry q first hfirst hor hres hChainVerifierSupply
     (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC Good hgoodInit hgoodTick hgoodFeed
-    ?_ hnextUsedOfNotStarved hbackRep hnotStarvedOfNeed Post hpostOfLastReport hpostTick rep_sound rep_complete L0
+    ?_ hnextUsedOfNotStarved hnotStarvedOfNeed Post hpostOfLastReport hpostTick rep_sound rep_complete L0
     blankSymbol q0 repQ outQ htape Rep hrepInit hsimTick hsimFeed hreadRep hreadOut
   intro w st Tc hpreTrace hcanonical mode
   rcases Nat.eq_zero_or_pos w.length with hempty | hw
