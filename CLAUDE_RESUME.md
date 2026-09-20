@@ -1,3 +1,13 @@
+## n292 — `obligation_localRealization`: 報告テストを意味で定義し `rep_sound`／`rep_complete` を消した（compact 前の到達点）
+
+**状態（2026-09-20 夜）**: 全体 build の最新は `dd21451`（`BUILD=0`）。以後は module build のみ、最後は `PalPeg.ShadowedLocalFinal` `BUILD=0`（commit `7da6528`、push 済み）。**全体 build 成功（`dd21451` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。`unconditional` は未付け替え。
+
+**n291 以降**: `2c13ac3` 物理機械の読み出し（`hreadRep`／`hreadOut`、`hencRep`／`hencOut`）を run 上の状態だけに限定、報告テストを語添字に。`7da6528` `ShadowedLocalFinal.reportTest`（`decide (ReportPoint w x ∧ Refreshed … x)`、`reportTest_iff`）、`pal_in_peg_of_shadowed_sysC` 内部の `hlate`（報告点の遅さ）、`usedOfLastLetter_heldAfter`（trace 側仮定 `hreportUsed` の放電）。`given_openModesAndPhysicalMachine` から `repA`・`rep_sound`・`rep_complete` が消えた。
+
+**`given_openModesAndPhysicalMachine` に残る仮定**: `hfirst : first ≠ 4`、`hq : q ≤ 64`、`hor`／`hres`／`hChainVerifierSupply`（`unconditional` で既存定理が供給）、`Good` 系 4 本（`hgoodWF`／`hgoodInit`／`hgoodTick`／`hgoodFeed`）、`hscanNext`／`hreplayStartNext`（追跡・非飢餓状態に `NextOK` な局所後続が存在）、`hpostOfLastReport`／`hpostTick`（`Canonical` 込み）、物理側 `hencInit`／`hforwardTick`／`hforwardFeed`／`hencRep`（run 上で `reportTest` と一致）／`hencOut`。自由データ: `Good`・`Post`・`Enc`・物理機械（`Q Γ t K L0 blankSymbol q0 repQ outQ`）。
+
+**次の一手**: `Post` を具体化（候補: 最終報告点以降、抽象状態から canonical tick で到達した状態）して `hpostOfLastReport` を試す。`hpostTick` の量化を先に点検する。その後 `Good` を具体化し、残りを原子的な義務として書き出して `unconditional` を付け替える（コウタのヒント: 1 段下ろして公理を書き出して潰す）。偽の義務を公理にしないよう、書き出す前に 1 本ずつ証明を試す。
+
 ## n291 — `obligation_localRealization`: 橋を前方模倣・語添字・choice step に作り替えた。残りは報告点の特徴づけと物理機械
 
 **状態（2026-09-20 夜）**: 全体 build の最新は `dd21451`（`BUILD=0`）。以後は module build と狙い build のみ（最後は `PalPeg.ShadowedLocalFinal` `BUILD=0`、commit `92437e0`）。**全体 build 成功（`dd21451` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。`unconditional` はまだ付け替えていない。
