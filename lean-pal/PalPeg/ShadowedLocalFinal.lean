@@ -784,6 +784,18 @@ def postPhase (entry q : ℕ) (first : Fin 9) (w : List (Fin 2))
       (absSC m).ctl.mode = Mode.scan) ∨
     frozenAt w m
 
+/-- The step by choice keeps the run invariant: a local successor has it (`NextOK`), and without
+a local successor the step does nothing. -/
+theorem good_chosenStep {entry q : ℕ} {first : Fin 9} {Good : Mirrored1 (tapeCount spare) → Prop}
+    {Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop} {w : List (Fin 2)}
+    {m : Mirrored1 (tapeCount spare)} (hgood : Good m) :
+    Good (chosenStep entry q first Good Post w m) := by
+  by_cases hnext : ∃ next, NextOK entry q first Good Post w m next
+  · exact (chosenStep_spec hnext).2.2.2.2.1
+  · unfold chosenStep
+    rw [dif_neg hnext]
+    exact hgood
+
 /-- The steps of the abstract local layer for the word `w`: `LocalInitStep.initStep`, the seven
 phase steps of `CloseoutCoreAgree.SL`, and `chosenStep` for `scan` and `replayStart`. -/
 noncomputable def ghostSteps (entry q : ℕ) (first : Fin 9)
@@ -841,10 +853,17 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc →
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (hgoodTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+    -- the run invariant under the steps that are functions (`init` and the seven phases); the
+    -- steps by choice keep it by construction (`good_chosenStep`)
+    (hgoodPhaseStep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m : Mirrored1 (tapeCount spare), InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m →
-        (localGood (spare := spare)) (tickC (ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w) m))
+      ∀ m : Mirrored1 (tapeCount spare),
+        InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m →
+        m.vm.ctl.mode ≠ .scan → m.vm.ctl.mode ≠ .replayStart → ¬ Starved m.vm →
+        (localGood (spare := spare)) (stepOf (localSteps q first (PalPeg.LocalInitStep.initStep entry)
+          (chosenStep entry q first (localGood (spare := spare)) (postPhase entry q first) w)
+          (chosenStep entry q first (localGood (spare := spare)) (postPhase entry q first) w))
+          m.vm.ctl.mode m))
     (hgoodFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (letter : Fin 2) (m : Mirrored1 (tapeCount spare)),
@@ -911,7 +930,25 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
   refine given_shadowedLocalSystem entry q first hfirst hor hres hChainVerifierSupply
     (fun w => ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w)
     (fun w m => reportTest entry q first w (absSC m))
-    (localGood (spare := spare)) (PalPeg.LocalWF.localWF_x0C ⟨rfl, rfl, rfl, rfl, rfl⟩ 2048) hgoodTick hgoodFeed
+    (localGood (spare := spare)) (PalPeg.LocalWF.localWF_x0C ⟨rfl, rfl, rfl, rfl, rfl⟩ 2048)
+    (fun w st Tc hpreTrace hcanonical m hinv => by
+      by_cases hstarved : Starved m.vm
+      · rw [PalPeg.LocalSysConcrete.tickC_starved _ hstarved]
+        exact hinv.good
+      · rw [PalPeg.LocalSysConcrete.tickC_step _ hstarved]
+        show localGood (stepOf (freezeSteps (frozenAt w) _) m.vm.ctl.mode m)
+        rw [stepOf_freezeSteps]
+        split
+        · exact hinv.good
+        · by_cases hscan : m.vm.ctl.mode = .scan
+          · rw [hscan]
+            exact good_chosenStep hinv.good
+          · by_cases hreplayStart : m.vm.ctl.mode = .replayStart
+            · rw [hreplayStart]
+              exact good_chosenStep hinv.good
+            · exact hgoodPhaseStep w st Tc hpreTrace hcanonical m hinv hscan hreplayStart
+                hstarved)
+    hgoodFeed
     ?_ (postPhase entry q first) frozenAt
     (fun w st Tc hw hpreTrace _ m hinv => notFrozen_of_invC entry q first hw hpreTrace m hinv)
     (fun w st Tc hw hpreTrace _ hscanAtReport m _ hneedy => by
