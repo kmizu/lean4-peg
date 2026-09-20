@@ -95,4 +95,32 @@ theorem canRight_trunc_of_behind (raw : List (Fin 2)) (j : ℕ)
 
 #print axioms canRight_trunc_of_behind
 
+/-- **The converse of `canRight_truncPH`.**  A head that has used at most `j` letters and can
+still move right after truncation to the `j` arrived letters uses at most `j` letters after the
+move: on its front, the truncated pending list is not empty, so the letter it consumes has
+arrived. -/
+theorem usedPH_right_le_of_canRight_trunc (n j : ℕ) (p : GalilScaffoldInputHead.PlaceHead)
+    (hpending : p.head.incoming.length ≤ n) (hused : usedPH n p ≤ j)
+    (hcanRight : GalilScaffoldChainVerifier.canRight (truncPH (n - j) p)) :
+    usedPH n (GalilScaffoldChainVerifier.right p) ≤ j := by
+  by_cases hfront : p.gap = true ∧ p.head.right = []
+  · rw [usedPH_right_of_front n p hfront.1 hfront.2]
+    rcases p with ⟨⟨f, ls, rs, q⟩, g⟩
+    simp only at hfront hpending
+    obtain ⟨hg, hrs⟩ := hfront
+    subst hg; subst hrs
+    have hnonempty : dropN (n - j) q ≠ [] := by
+      rcases hcanRight with h | h | h
+      · exact absurd h (by simp [truncPH])
+      · exact absurd h (by simp [truncPH])
+      · simpa [truncPH] using h
+    have hlength : 0 < (dropN (n - j) q).length := List.length_pos_of_ne_nil hnonempty
+    simp only [dropN, List.length_take] at hlength
+    show n - (q.length - 1) ≤ j
+    omega
+  · rw [usedPH_right_of_not_front n p hfront]
+    exact hused
+
+#print axioms usedPH_right_le_of_canRight_trunc
+
 end PalPeg.HeadBehindRight
