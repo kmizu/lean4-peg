@@ -467,8 +467,7 @@ def ChooseBr (first : Fin 9) (m : Mirrored1 P) : Prop :=
   m.vm.ctl.odd = true ∧ MarkSetL first (PalPeg.LocalArrival.abs' m.vm)
 
 theorem chooseStepW_pos (m : Mirrored1 P) (h : ChooseBr first m) :
-    chooseStepW first m = mirrorTick1 .stay (PalPeg.LocalTick3.chooseVm
-      { m.vm.ctl with mode := .rewind, pair := false } m.vm) m := by
+    chooseStepW first m = (PalPeg.LocalRealizesScan.chooseSelectM m) := by
   classical
   rw [chooseStepW,
     if_pos (show m.vm.ctl.odd = true ∧ MarkSetL first (PalPeg.LocalArrival.abs' m.vm) from h)]

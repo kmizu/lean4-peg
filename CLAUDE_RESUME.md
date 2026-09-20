@@ -1,3 +1,20 @@
+## n305（2026-09-21）: choose の select が ghost でヘッドをコピーする。`Geom.chooseParked` を消費者から外した
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: `given_openModesAndPhysicalMachine` の仮説 `hgeomTracked : InvC … m → Geom m.vm` から、偽の疑いが濃かった場 `chooseParked`（choose モード中ずっと `left = right`、`center = right`）が消えた。`Geom` は 4 場（`shiftMag`／`copyWork`／`copyProper`／`rewindClean`）、`ChooseWF` は 2 場（`notReplaying`／`polLength`）。
+* `LocalTick3.chooseSelectVm c x := { chooseVm c x with left := x.right, center := x.right }`、`abs'_chooseSelectVm`（`hleft`／`hcenter` 無しで抽象 `choose` に一致。`hsplit` が `rfl`、あとは `abs'_bankTick` 2 回）。`TickL3.choose_select` の着地をこれに一般化。`tickL3_local`（`StepLocalN`、外に消費者なし）は `hnotSelect` 付き。
+* `LocalRealizesScan.chooseSelectM m`（`mirL := m.vm.right`。鏡は新しい `center` の twin）を `chooseStepC`、`CloseoutCoreAgree.chooseStepW`、旧 encoder `CloseoutCoreEnc8/9/10` の仮説の場で共用（`chooseStepC = chooseStepW := rfl` は維持）。
+* **物理側に残る義務**: fallback 相（copy／home／fpp／markEnd／choose）の間に物理 L／C テープが R まで歩くこと。これは `Enc` の側に置く。抽象 Tick がこの相で `left`／`center` に依らないことはスクラッチで機械検査済み（n304）、歩行の台帳は `SpanRep`＋`ScanInvariant`（n304）。
+
+**学び**: 構造体リテラルの関数引数を次の行の浅い桁に置くと parse error（`unexpected token '{'; expected '}'`）。名前付き定義にして回避した。
+
+**次の goal**: `Geom` の残り 4 場を、同じやり方で 1 場ずつ正本（`ScaffoldGalil.scala`）と突き合わせる。最初は `rewindClean`。
+
 ## n304（2026-09-21）: choose のヘッドコピーは「正本＝ポインタ別名、Lean の到達先＝TM」の機械モデル差。物理設計を決めた
 
 **全体 build 成功（最新の全体 build は ba6aeec）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本: `obligation_localRealization`）。Lean のコードは変えていない（調査と設計決定）。

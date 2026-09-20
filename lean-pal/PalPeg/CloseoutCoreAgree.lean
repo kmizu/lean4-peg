@@ -76,7 +76,7 @@ open PalPeg.LocalArrival (abs')
 open PalPeg.LocalReplayParked (Mirrored1 mirrorTick1)
 open PalPeg.LocalSysConcrete (Steps Realizes InvC Needy Starved)
 open PalPeg.GalilTickFun3 (marksOf)
-open PalPeg.LocalTick3 (TickL3 chooseVm marksVm rewindDoneVm rewindPairVm rewindOneVm)
+open PalPeg.LocalTick3 (TickL3 marksVm rewindDoneVm rewindPairVm rewindOneVm)
 open PalPeg.LocalRealizesPhase (copyStepL homeStepL markEndStepL shiftStepL shiftPick
   shiftDoneCtl refreshOf RemPosL)
 open PalPeg.LocalRealizesScan (chooseStepC rewindStepC)
@@ -148,8 +148,7 @@ open Classical in
 /-- The word-free `choose` step: `markSet` inlined as the MARKS read. -/
 noncomputable def chooseStepW (first : Fin 9) (m : Mirrored1 P) : Mirrored1 P :=
   if m.vm.ctl.odd = true ∧ MarkSetL first (abs' m.vm) then
-    mirrorTick1 .stay (chooseVm
-      { m.vm.ctl with mode := .rewind, pair := false } m.vm) m
+    PalPeg.LocalRealizesScan.chooseSelectM m
   else
     mirrorTick1 .stay
       (marksVm GalilScaffoldTape.moveLeft

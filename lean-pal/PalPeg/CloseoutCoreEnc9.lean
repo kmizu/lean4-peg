@@ -338,8 +338,7 @@ structure WinPieces : Type where
       Mirrored1 P)) .markEnd (fun m => True ∧ ¬ AtEndL m.vm)
   /-- `choose`, select branch: `choose_select`, into `rewind`. -/
   chooseSelect : NAMED_winOn (P := P) (encPadN n delay Lp Lf rep)
-    (fun m => mirrorTick1 .stay (PalPeg.LocalTick3.chooseVm
-      { m.vm.ctl with mode := .rewind, pair := false } m.vm) m)
+    (fun m => (PalPeg.LocalRealizesScan.chooseSelectM m))
     .choose (fun m => True ∧ ChooseBr first m)
   /-- `choose`, scan branch: MARKS left and the parity flips. -/
   chooseScan : NAMED_winOn (P := P) (encPadN n delay Lp Lf rep)
@@ -550,8 +549,7 @@ theorem widthEnc1_markEnd {qq : ℕ} {first : Fin 9}
 
 theorem widthEnc1_choose {qq : ℕ} {first : Fin 9}
     (hp : NAMED_widthStep (P := P) rep
-      (fun m => mirrorTick1 .stay (PalPeg.LocalTick3.chooseVm
-        { m.vm.ctl with mode := .rewind, pair := false } m.vm) m)
+      (fun m => (PalPeg.LocalRealizesScan.chooseSelectM m))
       .choose (fun m => ChooseBr first m))
     (hn : NAMED_widthStep (P := P) rep
       (fun m => mirrorTick1 .stay (PalPeg.LocalTick3.marksVm GalilScaffoldTape.moveLeft

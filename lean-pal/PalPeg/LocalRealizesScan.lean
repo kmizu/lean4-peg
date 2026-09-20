@@ -68,7 +68,8 @@ open PalPeg.LocalState
 open PalPeg.LocalInputView (InputView)
 open PalPeg.LocalArrival (absHead' abs')
 open PalPeg.GalilTickFun3 (marksOf)
-open PalPeg.LocalTick3 (TickL3 rewindDoneVm rewindOneVm rewindPairVm chooseVm marksVm absState''_eq)
+open PalPeg.LocalTick3 (TickL3 rewindDoneVm rewindOneVm rewindPairVm chooseSelectVm marksVm
+  absState''_eq)
 open PalPeg.LocalReplayParked (abs'' absState'' ParkedOK Mirrored1 MirInv1 mirrorTick1)
 open PalPeg.LocalTick1 (Inv)
 open PalPeg.GalilThrottledRun (truncS)
@@ -305,21 +306,26 @@ theorem realizes_rewind {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
 
 /-! ## 4. The `choose` mode -/
 
-/-- The local side conditions a `choose` tick needs.  `headsLeft`/`headsCenter`
-are the parking invariant the selection relies on: `chooseVm` does not move the
-heads, so L and C must already sit on R when the selection fires. -/
+/-- The local side conditions a `choose` tick needs.  The selection copies the right head onto
+the left and centre heads (`LocalTick3.chooseSelectVm`), so nothing is asked of where those heads
+stand during `choose`: the scaffold leaves them where the comparison left them. -/
 structure ChooseWF (x : GalilVML P) : Prop where
   notReplaying : x.ctl.replaying = false
   polLength : x.pol .length = true
-  headsLeft : absHead' x.left x.pending = absHead' x.right x.pending
-  headsCenter : absHead' x.center x.pending = absHead' x.right x.pending
+
+/-- **The landing of the `choose` selection on a mirrored state.**  The heads are copied by
+`LocalTick3.chooseSelectVm`; the mirror of the centre becomes the right view, which is the new
+centre. -/
+noncomputable def chooseSelectM (m : Mirrored1 P) : Mirrored1 P :=
+  { vm := chooseSelectVm { m.vm.ctl with mode := .rewind, pair := false } m.vm,
+    mirL := m.vm.right }
 
 open Classical in
 /-- **The local `choose` step.** -/
 noncomputable def chooseStepC (Pw : Shared) (qq : ℕ) (firstT : Fin 9)
     (m : Mirrored1 P) : Mirrored1 P :=
   if m.vm.ctl.odd = true ∧ (galilFrameS Pw qq firstT).markSet (abs' m.vm) then
-    mirrorTick1 .stay (chooseVm { m.vm.ctl with mode := .rewind, pair := false } m.vm) m
+    chooseSelectM m
   else
     mirrorTick1 .stay
       (marksVm GalilScaffoldTape.moveLeft { m.vm.ctl with odd := !m.vm.ctl.odd } m.vm) m
@@ -344,7 +350,6 @@ theorem tickL3_chooseStepC {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : �
   by_cases hsel : m.vm.ctl.odd = true ∧ (galilFrameS Pw qq firstT).markSet (abs' m.vm)
   · rw [if_pos hsel]
     exact .choose_select m.vm hmd hwf.notReplaying hsel.1 hsel.2 hwf.polLength
-      hwf.headsLeft hwf.headsCenter
   · have hs : m.vm.ctl.odd = false ∨ ¬ (galilFrameS Pw qq firstT).markSet (abs' m.vm) := by
       by_cases ho : m.vm.ctl.odd = true
       · exact Or.inr (fun hk => hsel ⟨ho, hk⟩)
@@ -353,12 +358,13 @@ theorem tickL3_chooseStepC {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : �
     exact .choose_step m.vm hmd hwf.notReplaying hs (marksLeft_of_choose_tick hmd hs ht)
 
 theorem mirInv1_chooseStepC {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {m : Mirrored1 P}
-    (h : MirInv1 m) (hc : PalPeg.LocalInputView.WF m.vm.center) :
+    (h : MirInv1 m) (hc : PalPeg.LocalInputView.WF m.vm.center)
+    (hright : PalPeg.LocalInputView.WF m.vm.right) :
     MirInv1 (chooseStepC Pw qq firstT m) := by
   classical
   unfold chooseStepC
   by_cases hsel : m.vm.ctl.odd = true ∧ (galilFrameS Pw qq firstT).markSet (abs' m.vm)
-  · rw [if_pos hsel]; exact PalPeg.LocalReplayParked.mirInv1_mirrorTick1 h hc .stay rfl
+  · rw [if_pos hsel]; exact ⟨PalPeg.LocalReplaySwap.Twin.refl _, hright⟩
   · rw [if_neg hsel]; exact PalPeg.LocalReplayParked.mirInv1_mirrorTick1 h hc .stay rfl
 
 /-- **The `choose` obligation**, modulo the local side conditions `ChooseWF`. -/
@@ -372,7 +378,8 @@ theorem realizes_choose {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
   intro m t hinv hmd hns ht
   have htl := tickL3_chooseStepC (H_chooseWF m hinv hmd) hmd ht
   exact ⟨PalPeg.LocalTick3.tickL3_abs delay hinv.phys.inv htl,
-    physWF_of_tickL3 hinv.phys htl, mirInv1_chooseStepC hinv.mir hinv.phys.inv.views.2.1⟩
+    physWF_of_tickL3 hinv.phys htl,
+    mirInv1_chooseStepC hinv.mir hinv.phys.inv.views.2.1 hinv.phys.inv.views.2.2.1⟩
 
 #print axioms realizes_rewind
 #print axioms realizes_choose

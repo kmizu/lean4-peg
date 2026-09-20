@@ -719,21 +719,26 @@ theorem chooseOps2_ok {x : GalilVML P} (hp : x.pol .length = true) :
   cases c
   all_goals first | exact ok_push _ hp | exact ok_keep _ _
 
-theorem abs'_chooseVm {x : GalilVML P} (hinj : RolesInjective x) (c : Control)
-    (hp : x.pol .length = true)
-    (hleft : absHead' x.left x.pending = absHead' x.right x.pending)
-    (hcenter : absHead' x.center x.pending = absHead' x.right x.pending) :
-    abs' (chooseVm c x)
+/-- **The `choose_select` step.**  The counters are reset by `chooseVm`, and the left and centre
+heads become copies of the right head, as the scaffold's `choose` asks (`left := right`,
+`center := right`).  The copy is a step of the ghost state only: on the physical machine the
+left and centre tapes have walked onto the right head during the fallback phases, which read
+neither of them, and the representation relation carries that walk. -/
+noncomputable def chooseSelectVm (c : Control) (x : GalilVML P) : GalilVML P :=
+  { chooseVm c x with left := x.right, center := x.right }
+
+theorem abs'_chooseSelectVm {x : GalilVML P} (hinj : RolesInjective x) (c : Control)
+    (hp : x.pol .length = true) :
+    abs' (chooseSelectVm c x)
       = rewindLens.set (abs' x) { rewindLens.get (abs' x) with
           left := (abs' x).right, center := (abs' x).right,
           length := GalilScaffoldCounter.ofNat 1, radius := GalilScaffoldCounter.reset } := by
   have hinj1 : RolesInjective (bankTick chooseOps1 x) := hinj
-  rw [show abs' (chooseVm c x) = abs' (bankTick chooseOps2 (bankTick chooseOps1 x)) from rfl,
-    abs'_bankTick hinj1 (chooseOps2_ok hp), abs'_bankTick hinj (chooseOps1_ok x)]
-  ext
-  · exact hleft
-  · exact hcenter
-  all_goals rfl
+  have hsplit : abs' (chooseSelectVm c x)
+      = { abs' (bankTick chooseOps2 (bankTick chooseOps1 x)) with
+          left := (abs' x).right, center := (abs' x).right } := rfl
+  rw [hsplit, abs'_bankTick hinj1 (chooseOps2_ok hp), abs'_bankTick hinj (chooseOps1_ok x)]
+  rfl
 
 theorem stepLocalN_chooseVm (c : Control) (x : GalilVML P) : StepLocalN 2 x (chooseVm c x) :=
   stepLocalN_trans 1 1
@@ -914,10 +919,8 @@ inductive TickL3 {P : ℕ} (S : Shared) (q : ℕ) (first : Fin 9) :
   | choose_select (x : GalilVML P)
       (hm : x.ctl.mode = .choose) (hr : x.ctl.replaying = false)
       (ho : x.ctl.odd = true) (hs : (galilFrameS S q first).markSet (abs' x))
-      (hpol : x.pol .length = true)
-      (hleft : absHead' x.left x.pending = absHead' x.right x.pending)
-      (hcenter : absHead' x.center x.pending = absHead' x.right x.pending) :
-      TickL3 S q first x (chooseVm { x.ctl with mode := .rewind, pair := false } x)
+      (hpol : x.pol .length = true) :
+      TickL3 S q first x (chooseSelectVm { x.ctl with mode := .rewind, pair := false } x)
   | choose_step (x : GalilVML P)
       (hm : x.ctl.mode = .choose) (hr : x.ctl.replaying = false)
       (hs : x.ctl.odd = false ∨ ¬ (galilFrameS S q first).markSet (abs' x))
@@ -955,7 +958,8 @@ theorem absState''_eq {x : GalilVML P} (hr : x.ctl.replaying = false) :
 /-! ### Locality: every local phase tick costs at most `c₃ = 66` steps -/
 
 theorem tickL3_local {S : Shared} {q : ℕ} {first : Fin 9} {x y : GalilVML P}
-    (h : TickL3 S q first x y) : StepLocalN c₃ x y := by
+    (h : TickL3 S q first x y)
+    (hnotSelect : ¬ (x.ctl.mode = .choose ∧ y.ctl.mode = .rewind)) : StepLocalN c₃ x y := by
   cases h with
   | shift_one w => exact stepLocalN_le (by decide) (stepLocalN_shiftVm w x)
   | shift_done o =>
@@ -985,7 +989,7 @@ theorem tickL3_local {S : Shared} {q : ℕ} {first : Fin 9} {x y : GalilVML P}
       exact stepLocalN_le (n := 1) (by decide) (stepLocalN_one (stepLocal_marksVm _ _ _))
   | markEnd_step =>
       exact stepLocalN_le (n := 1) (by decide) (stepLocalN_one (stepLocal_marksVm _ _ _))
-  | choose_select => exact stepLocalN_le (by decide) (stepLocalN_chooseVm _ x)
+  | choose_select hm => exact absurd ⟨hm, rfl⟩ hnotSelect
   | choose_step =>
       exact stepLocalN_le (n := 1) (by decide) (stepLocalN_one (stepLocal_marksVm _ _ _))
   | rewind_done =>
@@ -1027,7 +1031,8 @@ theorem tickL3_inv {S : Shared} {q : ℕ} {first : Fin 9} {x y : GalilVML P}
         inv_bankTick hinv (fun c hc => by cases c <;> exact (nomatch hc))
       have i2 : Inv (bankTick chooseOps2 (bankTick chooseOps1 x)) :=
         inv_bankTick i1 (fun c hc => by cases c <;> exact (nomatch hc))
-      exact inv_congr i2 rfl rfl rfl rfl rfl i2.views
+      exact inv_congr i2 rfl rfl rfl rfl rfl
+        ⟨i2.views.2.2.1, i2.views.2.2.1, i2.views.2.2.1, i2.views.2.2.2.1, i2.views.2.2.2.2⟩
   | choose_step => exact inv_congr hinv rfl rfl rfl rfl rfl hv
   | rewind_done => exact inv_congr hinv rfl rfl rfl rfl rfl hv
   | rewind_one =>
@@ -1103,8 +1108,8 @@ theorem tickL3_abs {S : Shared} {q : ℕ} {first : Fin 9} (delay : ℕ) {x y : G
   | markEnd_step hm hr he =>
       rw [abs'_marksVm]
       exact Tick.markEnd_step x.ctl (abs' x) _ hm he (frameS_markForward S q first rfl)
-  | choose_select hm hr ho hs hpol hleft hcenter =>
-      rw [abs'_chooseVm hinj _ hpol hleft hcenter]
+  | choose_select hm hr ho hs hpol =>
+      rw [abs'_chooseSelectVm hinj _ hpol]
       exact Tick.choose_select x.ctl (abs' x) _ hm ho hs (frameS_choose S q first rfl)
   | choose_step hm hr hs hne =>
       rw [abs'_marksVm_rewind]
@@ -1126,7 +1131,7 @@ theorem tickL3_abs {S : Shared} {q : ℕ} {first : Fin 9} (delay : ℕ) {x y : G
 #print axioms abs'_shiftVm
 #print axioms abs'_copyVm
 #print axioms abs'_doneVm
-#print axioms abs'_chooseVm
+#print axioms abs'_chooseSelectVm
 #print axioms abs'_rewindDoneVm
 #print axioms abs'_rewindPairVm
 #print axioms tickL3_local

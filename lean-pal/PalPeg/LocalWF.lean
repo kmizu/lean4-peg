@@ -381,9 +381,6 @@ structure Geom (x : GalilVML P) : Prop where
   copyProper : x.ctl.mode = .copy → PalPeg.LocalChain.ProperView x.fppWalker
   rewindClean : x.ctl.mode = .rewind →
     ∀ i, PalPeg.LocalBuffers.Cleared (PalPeg.LocalBuffers.idle x.fppBuf i)
-  chooseParked : x.ctl.mode = .choose →
-    absHead' x.left x.pending = absHead' x.right x.pending ∧
-      absHead' x.center x.pending = absHead' x.right x.pending
 
 /-- **The local well-formedness pack**: the polarity bundle (§4, invariant) and
 the geometric residual. -/
@@ -404,9 +401,9 @@ theorem rewindWF_of {x : GalilVML P} (h : LocalWF x) (hnr : x.ctl.replaying = fa
     (hmd : x.ctl.mode = .rewind) : RewindWF x :=
   ⟨hnr, h.pol.2.2.1, h.pol.2.1, h.geom.rewindClean hmd⟩
 
-theorem chooseWF_of {x : GalilVML P} (h : LocalWF x) (hnr : x.ctl.replaying = false)
-    (hmd : x.ctl.mode = .choose) : ChooseWF x :=
-  ⟨hnr, h.pol.2.2.1, (h.geom.chooseParked hmd).1, (h.geom.chooseParked hmd).2⟩
+theorem chooseWF_of {x : GalilVML P} (h : LocalWF x) (hnr : x.ctl.replaying = false) :
+    ChooseWF x :=
+  ⟨hnr, h.pol.2.2.1⟩
 
 end Pack
 
@@ -449,7 +446,7 @@ theorem realizes_seven {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
   exact ⟨h1, h2, h3, h4, h5,
     PalPeg.LocalRealizesScan.realizes_choose (P := P) (delay := delay) H_shared H_trace
       (fun m hinv hmd => chooseWF_of (H_wf m hinv)
-        (notReplaying_of_trace hNR hinv (by unfold PhaseMode; simp [hmd])) hmd),
+        (notReplaying_of_trace hNR hinv (by unfold PhaseMode; simp [hmd]))),
     PalPeg.LocalRealizesScan.realizes_rewind (P := P) (delay := delay) H_shared H_trace
       (fun m hinv hmd => rewindWF_of (H_wf m hinv)
         (notReplaying_of_trace hNR hinv (by unfold PhaseMode; simp [hmd])) hmd)⟩
@@ -528,8 +525,7 @@ end Preservation
 
 * `Geom` (§5) — the counter magnitudes of a shift unit, the fpp work counter of
   a copy unit, `LocalChain.ProperView` of the fpp walker, the cleared idle half
-  of the fpp double buffer in `rewind`, and the parking of L and C on R in
-  `choose`.  None is preserved by a single local step in isolation and none is
+  of the fpp double buffer in `rewind`.  None is preserved by a single local step in isolation and none is
   readable off the abstract guard, so each is a machine invariant of its own.
 * the polarity half for the three modes whose local step is still open
   (`h0`/`h1`/`h2` of `polWF_tickC`).
@@ -539,9 +535,9 @@ end Preservation
 **無条件 PAL ∈ PEG は未完.**
 -/
 
-/-- `Geom` is vacuous in a mode that is none of `shift`/`copy`/`rewind`/`choose`. -/
+/-- `Geom` is vacuous in a mode that is none of `shift`/`copy`/`rewind`. -/
 theorem geom_of_init {x : GalilVML P} (h : x.ctl.mode = .init) : Geom x := by
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> intro hm <;> rw [h] at hm <;> simp at hm
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> intro hm <;> rw [h] at hm <;> simp at hm
 
 theorem localWF_x0C {blank : GalilVML P} (h : PolWF blank) (delay : ℕ) :
     LocalWF (PalPeg.LocalSysConcrete.x0C blank delay).core.vm :=
