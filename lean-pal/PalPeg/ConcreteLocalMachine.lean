@@ -2,6 +2,7 @@ import PalPeg.LocalQueueInit
 import PalPeg.LocalViewCells
 import PalPeg.LocalViewDecision
 import PalPeg.LocalViewLayout
+import PalPeg.LocalViewStep
 
 /-!
 # The concrete local machine
@@ -21,5 +22,7 @@ So far: the Hood–Melville queue of an input view.
 * `PalPeg.LocalViewDecision` — a command to a view as two stack operations and a queue job,
   chosen from the gap bit and three symbols (`viewApply_observed`);
 * `PalPeg.LocalViewLayout` — a view on twelve tapes (`ViewRep`), the three symbols read from the
-  windows (`viewTopsOfWindows_eq`).
+  windows (`viewTopsOfWindows_eq`);
+* `PalPeg.LocalViewStep` — the decision step of a view on its two stack tapes
+  (`viewDecision_sound`).
 -/
