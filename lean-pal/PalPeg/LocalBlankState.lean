@@ -1,0 +1,109 @@
+import PalPeg.LocalSysConcrete
+import PalPeg.GalilFinalAssembly
+
+/-!
+# The blank local state
+
+The local state every run starts in: five empty cursors (with the gap bit of `initialHead`),
+nothing pending, every counter at zero on its own tape, both programs halted, the chain idle.
+Its abstraction is the boot state of any word with all of its letters truncated away, so it does
+not depend on the word.
+-/
+
+set_option autoImplicit false
+set_option maxHeartbeats 2000000
+
+namespace PalPeg.LocalBlankState
+
+open PalPeg PalPeg.GalilScaffoldTop PalPeg.GalilScaffoldController
+open PalPeg.GalilScaffoldChainInputSupply
+open PalPeg.LocalState (GalilVML Ctr)
+open PalPeg.LocalInputView (InputView emptyView WF_emptyView)
+open PalPeg.LocalReplayParked (absState'')
+open PalPeg.LocalSysConcrete (x0C)
+open PalPeg.GalilThrottledRun (truncS)
+open PalPeg.GalilFinalAssembly (boot)
+open PalPeg.Program (STape)
+
+/-- The empty cursor, with the gap bit the initial head carries. -/
+def blankView : InputView := { emptyView with gap := true }
+
+/-- The counter tape holding zero: an empty mark-run above a separator. -/
+def zeroTape : STape LocalCounter.Seg := ⟨[LocalCounter.sep], LocalCounter.sep, []⟩
+
+/-- The number of physical counter tapes: one per logical counter. -/
+abbrev tapeCount : ℕ := Fintype.card Ctr
+
+/-- **The blank local state.** -/
+noncomputable def blankVML : GalilVML tapeCount where
+  left := blankView
+  center := blankView
+  right := blankView
+  pending := []
+  walkerView := emptyView
+  fppWalker := emptyView
+  phys := fun _ => zeroTape
+  roles := Fintype.equivFin Ctr
+  pol := fun _ => true
+  radiusMir := ⟨zeroTape, fun _ => zeroTape⟩
+  lowerMir := ⟨zeroTape, fun _ => zeroTape⟩
+  lengthMir := ⟨zeroTape, fun _ => zeroTape⟩
+  dpBuf := ⟨fun _ => GalilScaffoldTape.reset, fun _ => GalilScaffoldTape.reset, true, none⟩
+  dpPc := 0
+  dpDone := true
+  fppBuf := ⟨fun _ => GalilScaffoldTape.reset, fun _ => GalilScaffoldTape.reset, true, none⟩
+  fppPc := 0
+  fppDone := true
+  chain := .idle
+  ctl := GalilScaffoldController.initial 2048
+  searchMode := .idle
+  searchFinalStage := false
+  searchQuarter := 0
+  fppMode := .run
+  fppFinalStage := false
+  periodOnly := false
+
+/-- Truncating every letter of a word away from its boot VM leaves the boot VM of the empty
+word. -/
+theorem truncVM_initVM0 (w : List (Fin 2)) :
+    GalilThrottledRun.truncVM w.length (GalilBootVM.initVM0 w) = GalilBootVM.initVM0 [] := by
+  have hdrop : GalilThrottledRun.dropN w.length w = [] := by
+    simp [GalilThrottledRun.dropN]
+  unfold GalilThrottledRun.truncVM GalilBootVM.initVM0
+  simp only [GalilThrottledRun.truncPH, initialHead, hdrop, GalilThrottledRun.truncChain]
+
+/-- The abstraction of the blank state is the boot VM of the empty word. -/
+theorem abs''_blank :
+    LocalReplayParked.abs'' (x0C blankVML 2048).core.vm = GalilBootVM.initVM0 [] := by
+  rfl
+
+/-- **The abstraction of the blank state is the truncated boot state of every word.** -/
+theorem absState''_blank (w : List (Fin 2)) :
+    absState'' (x0C blankVML 2048).core.vm = truncS w.length (boot w) := by
+  show (⟨_, _⟩ : State GalilVM) = ⟨_, _⟩
+  congr 1
+  show LocalReplayParked.abs'' _ = GalilThrottledRun.truncVM w.length (GalilBootVM.initVM0 w)
+  rw [truncVM_initVM0, abs''_blank]
+
+#print axioms absState''_blank
+
+theorem segCtr_zeroTape : LocalCounter.SegCtr zeroTape 0 := ⟨[], rfl⟩
+
+theorem wf_blankView : PalPeg.LocalInputView.WF blankView := WF_emptyView
+
+/-- **The blank state satisfies the invariant of the local layer.** -/
+theorem inv_blank : PalPeg.LocalTick1.Inv blankVML where
+  roles := (Fintype.equivFin Ctr).injective
+  attached := ⟨rfl, rfl, rfl⟩
+  views := ⟨wf_blankView, wf_blankView, wf_blankView, WF_emptyView, WF_emptyView⟩
+  radiusShaped := ⟨0, segCtr_zeroTape, fun _ => segCtr_zeroTape⟩
+  lowerShaped := ⟨0, segCtr_zeroTape, fun _ => segCtr_zeroTape⟩
+  lengthShaped := ⟨0, segCtr_zeroTape, fun _ => segCtr_zeroTape⟩
+  shaped := fun _ => ⟨0, segCtr_zeroTape⟩
+
+theorem twin_blank : PalPeg.LocalReplaySwap.Twin blankVML.left blankVML.center :=
+  PalPeg.LocalReplaySwap.Twin.refl _
+
+#print axioms inv_blank
+
+end PalPeg.LocalBlankState

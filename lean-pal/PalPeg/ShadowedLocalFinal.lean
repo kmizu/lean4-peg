@@ -1,5 +1,6 @@
 import PalPeg.CloseoutFinalBranch
 import PalPeg.LocalShadowConcrete
+import PalPeg.LocalBlankState
 
 /-!
 # The final theorem from the local system and a physical machine, the trace side discharged
@@ -36,8 +37,7 @@ open PalPeg.LocalReplayParked (absState'' Mirrored1 MirInv1)
 open PalPeg.LocalSysConcrete (Steps stepOf tickC sysC absSC feedC Starved Needy InvC PhysWF
   Realizes x0C)
 open PalPeg.LocalShadowConcrete (pal_in_peg_of_shadowed_sysC)
-
-variable {P : ℕ}
+open PalPeg.LocalBlankState (tapeCount blankVML absState''_blank inv_blank twin_blank wf_blankView)
 
 /-- The trace held at its last tick: the states of `st` up to `lastTick`, then `st lastTick`
 for ever.  A pre-loaded trace says nothing about its states after the last report point; the
@@ -77,44 +77,39 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     -- the abstract local system
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (M : Steps P) (repC : Control → Bool) (blank : PalPeg.LocalState.GalilVML P)
-    (hblankInv : PalPeg.LocalTick1.Inv blank)
-    (hblankTwin : PalPeg.LocalReplaySwap.Twin blank.left blank.center)
-    (hblankView : PalPeg.LocalInputView.WF blank.left)
-    (hinitTrack : ∀ w : List (Fin 2), 0 < w.length →
-      absState'' (x0C blank 2048).core.vm = truncS w.length (boot w))
+    (M : Steps tapeCount) (repC : Control → Bool)
     (hrealizes : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ mode : Mode, Realizes w (heldAfter (Tc w.length) st) (Tc w.length) (stepOf M mode) mode)
     (hneedOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 P) (k j : ℕ), InvC w (heldAfter (Tc w.length) st) m → ¬ Starved m.vm →
+      ∀ (m : Mirrored1 tapeCount) (k j : ℕ), InvC w (heldAfter (Tc w.length) st) m → ¬ Starved m.vm →
         Needy w (heldAfter (Tc w.length) st) k j m.vm →
         needT' w (heldAfter (Tc w.length) st) k ≤ j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 P) (k j : ℕ), InvC w (heldAfter (Tc w.length) st) m →
+      ∀ (m : Mirrored1 tapeCount) (k j : ℕ), InvC w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
         needT' w (heldAfter (Tc w.length) st) k ≤ j → ¬ Starved m.vm)
     (hstarvedAtLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 P) (j : ℕ), InvC w (heldAfter (Tc w.length) st) m →
+      ∀ (m : Mirrored1 tapeCount) (j : ℕ), InvC w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Starved m.vm)
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
-      repC (micro (sysC M repC) w (x0C blank 2048) s).core.vm.ctl = true →
-      ReportPoint w (stAbs (sysC M repC) absSC w (x0C blank 2048) s) ∧
+      repC (micro (sysC M repC) w (x0C blankVML 2048) s).core.vm.ctl = true →
+      ReportPoint w (stAbs (sysC M repC) absSC w (x0C blankVML 2048) s) ∧
         Refreshed (PofC centreC placeC entry w) q first
-          (stAbs (sysC M repC) absSC w (x0C blank 2048) s))
+          (stAbs (sysC M repC) absSC w (x0C blankVML 2048) s))
     (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
-      ReportPoint w (stAbs (sysC M repC) absSC w (x0C blank 2048) s) →
+      ReportPoint w (stAbs (sysC M repC) absSC w (x0C blankVML 2048) s) →
       Refreshed (PofC centreC placeC entry w) q first
-        (stAbs (sysC M repC) absSC w (x0C blank 2048) s) →
+        (stAbs (sysC M repC) absSC w (x0C blankVML 2048) s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧
-        repC (micro (sysC M repC) w (x0C blank 2048) s').core.vm.ctl = true)
+        repC (micro (sysC M repC) w (x0C blankVML 2048) s').core.vm.ctl = true)
     -- the physical machine and its specification
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
-    (htape : 0 < t) (Rep : Mirrored1 P → Q × (Fin t → STape Γ) → Prop)
-    (hrepInit : Rep (x0C blank 2048).core (q0, fun _ => STape.blankTape blankSymbol))
+    (htape : 0 < t) (Rep : Mirrored1 tapeCount → Q × (Fin t → STape Γ) → Prop)
+    (hrepInit : Rep (x0C blankVML 2048).core (q0, fun _ => STape.blankTape blankSymbol))
     (hsimTick : ∀ m p, PhysWF m.vm → MirInv1 m → Rep m p →
       Rep (tickC M m) (L0.apply blankSymbol p none))
     (hsimFeed : ∀ letter m p, PhysWF m.vm → MirInv1 m → Rep m p →
@@ -136,9 +131,9 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
     fun w hw => (htraceOf w hw).1.base.pre.start
   have hneedBound := fun w (hw : 0 < w.length) =>
     needBound_alongPreTrace entry q first hres hChainVerifierSupply hw (htraceOf w hw).1
-  exact pal_in_peg_of_shadowed_sysC M repC blank 2048 (PofC centreC placeC entry) (fun _ => q)
+  exact pal_in_peg_of_shadowed_sysC M repC blankVML 2048 (PofC centreC placeC entry) (fun _ => q)
     (fun _ => first) (fun w => PofC_onLetter centreC placeC entry w)
-    (fun w => PofC_leftFirst centreC placeC entry w) hblankInv hblankTwin hblankView
+    (fun w => PofC_leftFirst centreC placeC entry w) inv_blank twin_blank wf_blankView
     (fun w => heldAfter (TcOf w w.length) (stOf w)) TcOf
     (fun w j => sharedC_trunc_vm w j centreC placeC entry (fun s => (centrePlaceC w j s).1)
       (fun s => (centrePlaceC w j s).2))
@@ -152,7 +147,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
         (htraceOf w hw).1.base.pre.trace.tick (by rw [hstart w hw]; exact sufVM_boot w) k hk)
     (fun w hw => by
       rw [heldAfter_of_le (stOf w) (Nat.zero_le _), hstart w hw]
-      exact hinitTrack w hw)
+      exact absState''_blank w)
     (fun w hw => by
       have hneed := needL'_boot w (stOf w) (hstart w hw)
       have hused : usedVM w (stOf w 0).vm ≤ needL' w (stOf w) 0 := le_max_left _ _
