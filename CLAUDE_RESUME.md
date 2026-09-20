@@ -32,7 +32,9 @@
 1. `hinv.track` から `k j`、`hctl`、`hvm`（`unfold heldAfter` で添字は `min k (Tc w.length)`）、`hmodeTrace`、`RewindCentre` の trace 形から `r`／`hradiusTrace`／`hcentreTrace`、`CloseoutLPack6.radLedger_pt`（＋`leftLive_of_lpackM (hpreTrace.packs i hi).pack`）。
 2. `hnotReplaying : m.vm.ctl.replaying = false`: `LocalWF.noReplay_run` を `heldAfter` に当て（消費者と同じ引数）、添字 0 は boot で `Mode.noConfusion`、正なら `Nat.exists_eq_succ_of_ne_zero` で 1 つ前を取り `scratch_notReplaying_of_tick_into_replayStart`。
 
-**(d) でまだ示していないもの**（第 3 段・第 4 段）: `hland`／`hradiusLe`／`val = r`（`truncPH_left` の反復、`position_trunc`、`value_absCtr_of_positivePolarity`）、`hreplayStartNext` の組み立て（`htarget` を `cases`、`replayStartVM` の一意性、`truncPH_left` で `hland`、`hflag` は `target.ctl.replaying = replayPos` から）。
+3. （控え `asm_stage3.keep.lean`）`rw [abs''_eq_abs' hnotReplaying] at hvm` のあと、`hradiusEq`／`hrightEq`／`hcentreEq`（`(congrArg GalilVM.場 hvm).trans rfl`）、`hradiusVal : val (radius のテープ) = r`（`LocalWF.value_absCtr_of_positivePolarity`＋`hinv.good.1.2.1`＋`simp [value, ofNat]`＋`omega`）、`hland`（補題 `scratch_truncPH_left_iterate`: `left^[r] (truncPH d p) = truncPH d (left^[r] p)`、`truncPH_left` の帰納）、`hradiusLe`（`hradLedger.le` を `rw [hradiusTrace]` して `omega`、`position (truncPH d p) = position p` は `show` で defeq）。
+
+**(d) でまだ示していないもの**（第 4 段）: `hreplayStartNext` の組み立て（`htarget` を `cases`、`replayStartVM` の一意性、`truncPH_left` で `hland`、`hflag` は `target.ctl.replaying = replayPos` から）。
 
 ## n313（2026-09-21）: `hreplayStartNext` の producer (d) の設計（調査のみ、コードは変えていない）
 
