@@ -1,3 +1,11 @@
+## n294 — 橋から最終定理に届いていない仮定を削った。全体 build 成功
+
+**状態（2026-09-21 未明）**: **全体 build 成功（この commit 時点、`BUILD=0`・`error` 0・`sorry` 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`（`Axioms.lean` の guard は全体 build で通過）。
+
+**内容**: `GalilArriveChain.pal_in_peg_of_latch_realized`（未使用だった `_H_run` を取らない版。`pal_in_peg_of_latch'` はこれを呼ぶ）。`pal_in_peg_of_local_latch`／`pal_in_peg_of_local_core` から `Inv`・`delay`・`x0_inv`・`x0_ctl`・`inv_tick`・`inv_feed`・`stutter_of_starved`・`tick_of_not_starved`・`feed_abs` を削除、`pal_in_peg_of_shadowed_core` から `delay`・`x0_ctl`・`stutter_of_starved`・`tick_of_not_starved`・`feed_abs` を削除（不変量は `micro_shadow` 用に残る）。`pal_in_peg_of_shadowed_sysC` の最後の goal は台帳 1 個。
+
+**これで `hpostTick` の Tick 部分が流れる先は前方模倣の糊（`TickSucc` の一意性）だけ。** 次は Post 相の `Rep`／`hpostTick` を、n293 に書いた本当の要求（最終報告点の後に物理の `rep ∧ out` が新しく真にならない）に合わせて弱められるかを `micro_shadow` の帰納で確かめる。
+
 ## n293 — 調査: 橋の抽象 run 仮定は最終定理で使われていない（`_H_run`）。Post 相の要求を見直す材料
 
 **一次情報（2026-09-20 夜、Lean の変更なし）**: `GalilArriveChain.pal_in_peg_of_latch'` の引数 `_H_run : ∀ w, 0 < |w| → AbstractRun' …` は**未使用**（名前が `_` 始まり、本体は `H_realize`（`M.SAccepts w ↔ LatchTrue …`）と `H_ledger` だけを使う）。`LocalTrackingLatch.pal_in_peg_of_local_latch` の `x0_ctl`／`stutter_of_starved`／`tick_of_not_starved`／`feed_abs` は `abstractRun_of_oracles`（= `_H_run` の供給）にしか流れない。つまり最終定理は「局所 run の抽象が毎歩 tick／stutter／到着である」ことを要求していない。要求しているのは (1) ラッチの同値（`rep_sound`／`rep_complete` と出力の一致、遅い全時点）、(2) 台帳（最終報告点まで）。

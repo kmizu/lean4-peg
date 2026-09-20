@@ -167,9 +167,8 @@ the report test and the output bit. The latch and the started bit are built
 here. -/
 theorem pal_in_peg_of_local_core
     [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (S : List (Fin 2) → LocalSys X) (absS : X → State GalilVM) (Inv : List (Fin 2) → ℕ → X → Prop) (x0 : LX X)
+    (S : List (Fin 2) → LocalSys X) (absS : X → State GalilVM) (x0 : LX X)
     (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ) (firstOf : List (Fin 2) → Fin 9)
-    (delay : ℕ)
     (H_letter : ∀ w : List (Fin 2), (Pof w).onLetter = onLetterVM w)
     (H_first : ∀ w : List (Fin 2), (Pof w).leftFirst = leftFirstVM)
     -- the `K`-local core
@@ -192,27 +191,17 @@ theorem pal_in_peg_of_local_core
       ReportPoint w (stAbs (S w) absS w x0 s) →
       Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absS w x0 s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ (S w).repL (micro (S w) w x0 s').core = true)
-    (x0_inv : ∀ w, 0 < w.length → Inv w 0 x0.core)
-    (x0_ctl : (absS x0.core).ctl = GalilScaffoldController.initial delay)
-    (inv_tick : ∀ w s x, inp w s = none → Inv w s x → Inv w (s+1) ((S w).tickL x))
-    (inv_feed : ∀ w s a x, inp w s = some a → Inv w s x → Inv w (s+1) ((S w).feedC a x))
-    (stutter_of_starved : ∀ w s x, inp w s = none → Inv w s x → (S w).Starved x →
-      absS ((S w).tickL x) = absS x)
-    (tick_of_not_starved : ∀ w s x, inp w s = none → Inv w s x → ¬ (S w).Starved x →
-      Tick (galilFrameS (Pof w) (qof w) (firstOf w)) delay (absS x) (absS ((S w).tickL x)))
-    (feed_abs : ∀ w s a x, inp w s = some a → Inv w s x →
-      absS ((S w).feedC a x) = arriveState' a (absS x))
     (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs (S w) absS w x0)
       (fun w => w.length * nLocalL)) :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_of_local_latch S absS Inv x0 Pof qof firstOf delay H_letter H_first
+  pal_in_peg_of_local_latch S absS x0 Pof qof firstOf H_letter H_first
     (latchL L0 repQ outQ) blank (q0, x0.ans, x0.started)
     (fun p => p.2.1) (fun p => p.2.2) (encL encC) htape
     (fun w => encL_step L0 blank repQ outQ (S w) encC (enc_tick w) (enc_feed w) (rep_eq w)
       (out_eq w))
     (encL_init encC blank x0 q0 encC_init)
     (fun _ => rfl) (fun _ => rfl) x0_started outL_abs rep_sound rep_complete
-    x0_inv x0_ctl inv_tick inv_feed stutter_of_starved tick_of_not_starved feed_abs H_ledger
+    H_ledger
 
 #print axioms latchL_tapes
 #print axioms latchL_core

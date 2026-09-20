@@ -198,10 +198,6 @@ theorem pal_in_peg_of_shadowed_sysC
     rintro w s m ⟨_, _, htracked | ⟨_, _, hpost, hphys, hmir, hgood⟩⟩
     · exact Or.inl htracked.invC
     · exact Or.inr ⟨hpost, hphys, hmir, hgood⟩
-  have hpackOf : ∀ {w s m}, Inv w s m → PhysWF m.vm ∧ MirInv1 m := by
-    rintro w s m ⟨_, _, htracked | ⟨_, _, _, hphys, hmir, _⟩⟩
-    · exact ⟨htracked.phys, htracked.mir⟩
-    · exact ⟨hphys, hmir⟩
   have harrZero : ∀ w : List (Fin 2), arrL w 0 = 0 := fun w => by
     unfold arrL
     rw [nLocalL_eq]
@@ -360,7 +356,7 @@ theorem pal_in_peg_of_shadowed_sysC
           omega
       · omega
     · exact hlt
-  refine pal_in_peg_of_shadowed_core S absSC Inv x0 Pof qof firstOf delay H_letter H_first
+  refine pal_in_peg_of_shadowed_core S absSC Inv x0 Pof qof firstOf H_letter H_first
     L0 blankSymbol q0 repQ outQ htape Rep hrepInit
     (fun w s m p _ hinv hrep => hsimTick w m p hinv.1 (honRun hinv)
       (by
@@ -373,14 +369,7 @@ theorem pal_in_peg_of_shadowed_sysC
     rep_sound
     (fun w s hw hpoint hrefreshed =>
       ⟨s, le_rfl, hlate w hw s hpoint.atLast, rep_complete w s hw hpoint hrefreshed⟩)
-    hinvInit (x0C_ctl blank delay) hinvTick hinvFeed ?_ ?_ ?_ ?_
-  · rintro w s m _ _ hstarved
-    show absSC (tickC (M w) m) = absSC m
-    rw [tickC_starved (M w) hstarved]
-  · rintro w s m _ hinv hstarved
-    exact (hsucc w s m hinv hstarved).1
-  · rintro w s letter m _ hinv
-    exact feed_abs_core (hpackOf hinv).1.inv.views (hpackOf hinv).1.pend letter
+    hinvInit hinvTick hinvFeed ?_
   · exact H_ledger_of_local_oracles S absSC x0 Pof qof firstOf stOf TcOf hpreload
       (fun w hw s hbefore hstarved =>
         (hneedOfNotStarved w _ _ _ hw (hrun w hw s hbefore.le).invC hstarved

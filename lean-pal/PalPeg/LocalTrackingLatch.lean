@@ -510,9 +510,8 @@ theorem empty_accepted {t K : ℕ} {Q' Γ' : Type} [Fintype Q'] [DecidableEq Q']
 local run abstracts to, at the shifted deadline `|w|·τ`. -/
 theorem pal_in_peg_of_local_latch
     {t K : ℕ} {Q' Γ' : Type} [Fintype Q'] [DecidableEq Q'] [Fintype Γ'] [DecidableEq Γ']
-    (S : List (Fin 2) → LocalSys X) (absS : X → State GalilVM) (Inv : List (Fin 2) → ℕ → X → Prop) (x0 : LX X)
+    (S : List (Fin 2) → LocalSys X) (absS : X → State GalilVM) (x0 : LX X)
     (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ) (firstOf : List (Fin 2) → Fin 9)
-    (delay : ℕ)
     (H_letter : ∀ w : List (Fin 2), (Pof w).onLetter = onLetterVM w)
     (H_first : ∀ w : List (Fin 2), (Pof w).leftFirst = leftFirstVM)
     (L : LocalStep (Fin 2) Q' Γ' t K) (blank : Γ') (initQ : Q') (ansQ startQ : Q' → Bool)
@@ -530,26 +529,13 @@ theorem pal_in_peg_of_local_latch
     (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
       ReportPoint w (stAbs (S w) absS w x0 s) → Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absS w x0 s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ (S w).repL (micro (S w) w x0 s').core = true)
-    (x0_inv : ∀ w, 0 < w.length → Inv w 0 x0.core)
-    (x0_ctl : (absS x0.core).ctl = GalilScaffoldController.initial delay)
-    (inv_tick : ∀ w s x, inp w s = none → Inv w s x → Inv w (s+1) ((S w).tickL x))
-    (inv_feed : ∀ w s a x, inp w s = some a → Inv w s x → Inv w (s+1) ((S w).feedC a x))
-    (stutter_of_starved : ∀ w s x, inp w s = none → Inv w s x → (S w).Starved x →
-      absS ((S w).tickL x) = absS x)
-    (tick_of_not_starved : ∀ w s x, inp w s = none → Inv w s x → ¬ (S w).Starved x →
-      Tick (galilFrameS (Pof w) (qof w) (firstOf w)) delay (absS x) (absS ((S w).tickL x)))
-    (feed_abs : ∀ w s a x, inp w s = some a → Inv w s x →
-      absS ((S w).feedC a x) = arriveState' a (absS x))
     (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs (S w) absS w x0)
       (fun w => w.length * nLocalL)) :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_of_latch' (Nat.mul_pos nLocalL_pos (PalPeg.Local.cnt_pos K))
+  pal_in_peg_of_latch_realized (Nat.mul_pos nLocalL_pos (PalPeg.Local.cnt_pos K))
     (L.realize blank initQ (GalilEmptyWord.accept' initQ ansQ) nLocalL htape nLocalL_pos)
-    Pof qof firstOf delay H_letter H_first (fun w => stAbs (S w) absS w x0) (fun w => arrL w)
+    Pof qof firstOf H_letter H_first (fun w => stAbs (S w) absS w x0)
     (fun w => w.length * nLocalL)
-    (fun w hw => abstractRun_of_oracles (S w) absS (Inv w) (Pof w) (qof w) (firstOf w) delay w x0
-      (x0_inv w hw) x0_ctl (inv_tick w) (inv_feed w) (stutter_of_starved w) (tick_of_not_starved w)
-      (feed_abs w))
     (fun w hw => tracking_latch_of_oracles (S w) absS x0 Pof qof firstOf H_letter H_first
       L blank initQ ansQ startQ enc htape (enc_step w) enc_init enc_ans enc_started x0_started
       (outL_abs w) w hw (fun s => rep_sound w s hw) (fun s => rep_complete w s hw))

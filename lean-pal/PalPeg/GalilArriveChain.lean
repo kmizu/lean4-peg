@@ -470,6 +470,32 @@ theorem canRight_of_replay {s : GalilVM} (hf : Frontier s) {m : ℕ} (hm : 0 < m
     (hr : s.replay = GalilScaffoldCounter.ofNat m) : GalilScaffoldChainVerifier.canRight s.right :=
   GalilReplaySegment.canRight_of_frontier hm (hf m hr)
 
+/-- **`PAL ∈ PEG` from the latch equivalence and the ledger.**  This is all the final theorem
+uses of a run: the machine accepts exactly when some refreshed report point by the horizon
+answers `true`, and the ledger puts a report point before the horizon. -/
+theorem pal_in_peg_of_latch_realized {Q Γ : Type} [Fintype Q] [DecidableEq Q]
+    [Fintype Γ] [DecidableEq Γ] {t B : ℕ} (hB : 0 < B)
+    (M : StructuredMachine (Fin 2) Q Γ t B)
+    (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ)
+    (firstOf : List (Fin 2) → Fin 9)
+    (H_letter : ∀ w : List (Fin 2), (Pof w).onLetter = onLetterVM w)
+    (H_first : ∀ w : List (Fin 2), (Pof w).leftFirst = leftFirstVM)
+    (stOf : List (Fin 2) → ℕ → State GalilVM) (T : List (Fin 2) → ℕ)
+    (H_realize : ∀ w : List (Fin 2), 0 < w.length →
+      (M.SAccepts w ↔ LatchTrue (Pof w) (qof w) (firstOf w) w (stOf w) (T w)))
+    (H_ledger : LedgerObligation Pof qof firstOf stOf T)
+    (H_empty : M.SAccepts []) :
+    RecognizedByTotalPEG PAL := by
+  refine pal_in_peg_of_structured hB M ?_
+  intro w
+  rcases w with _ | ⟨a, w⟩
+  · simp only [H_empty, true_iff]
+    rw [mem_PAL_iff_isPal]
+    simp [PalPeg.IsPal]
+  · have hlen : 0 < (a :: w).length := by simp
+    exact (H_realize _ hlen).trans
+      (latch_iff_pal (a :: w) _ (H_letter _) (H_first _) _ _ _ _ (H_ledger _ hlen))
+
 /-- The main commutation: no `NoStart`, `hrep` discharged from `Frontier` and
 a positive replay counter while replaying, `scan_wait` excluded by `hw`. -/
 theorem tick_arrive_comm' {P : Shared} {a : Fin 2} (hP : SharedArrive' P a) (q : ℕ) (first : Fin 9)
@@ -519,16 +545,9 @@ theorem pal_in_peg_of_latch' {Q Γ : Type} [Fintype Q] [DecidableEq Q]
       (M.SAccepts w ↔ LatchTrue (Pof w) (qof w) (firstOf w) w (stOf w) (T w)))
     (H_ledger : LedgerObligation Pof qof firstOf stOf T)
     (H_empty : M.SAccepts []) :
-    RecognizedByTotalPEG PAL := by
-  refine pal_in_peg_of_structured hB M ?_
-  intro w
-  rcases w with _ | ⟨a, w⟩
-  · simp only [H_empty, true_iff]
-    rw [mem_PAL_iff_isPal]
-    simp [PalPeg.IsPal]
-  · have hlen : 0 < (a :: w).length := by simp
-    exact (H_realize _ hlen).trans
-      (latch_iff_pal (a :: w) _ (H_letter _) (H_first _) _ _ _ _ (H_ledger _ hlen))
+    RecognizedByTotalPEG PAL :=
+  pal_in_peg_of_latch_realized hB M Pof qof firstOf H_letter H_first stOf T H_realize H_ledger
+    H_empty
 
 #print axioms arriveChain_idle_iff
 #print axioms chainStart_arrive
