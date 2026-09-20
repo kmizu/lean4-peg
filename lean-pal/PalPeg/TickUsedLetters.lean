@@ -114,4 +114,32 @@ theorem usedVM_compare_le (raw : List (Fin 2)) (P : Shared) (q : ℕ) (first : F
 
 #print axioms usedVM_compare_le
 
+/-- **The letters used after the fallback entry**: the heads stay and the chain becomes idle. -/
+theorem usedVM_beginFallback_le (raw : List (Fin 2)) {s t : GalilVM}
+    (hfallback : beginFallbackVM' s t) : usedVM raw t ≤ usedVM raw s := by
+  obtain ⟨place, hplace, -⟩ := hfallback
+  have hl := usedVM_left raw s
+  have hc := usedVM_center raw s
+  have hr := usedVM_right raw s
+  rw [hplace]
+  show max (max (usedPH raw.length s.left) (usedPH raw.length s.center))
+      (max (usedPH raw.length s.right) (usedChain raw.length ChainVM.idle)) ≤ _
+  simp only [usedChain, PalPeg.GalilThrottledRun.verOf]
+  omega
+
+/-- **The letters used after a restart**: the heads stay and the chain becomes idle. -/
+theorem usedVM_restart_le (raw : List (Fin 2)) {entry : ℕ} {s t : GalilVM}
+    (hrestart : restartVM entry s t) : usedVM raw t ≤ usedVM raw s := by
+  obtain ⟨broken, -, -, -, -, ht⟩ := hrestart
+  have hl := usedVM_left raw s
+  have hc := usedVM_center raw s
+  have hr := usedVM_right raw s
+  rw [ht]
+  show max (max (usedPH raw.length s.left) (usedPH raw.length s.center))
+      (max (usedPH raw.length s.right) (usedChain raw.length ChainVM.idle)) ≤ _
+  simp only [usedChain, PalPeg.GalilThrottledRun.verOf]
+  omega
+
+#print axioms usedVM_restart_le
+
 end PalPeg.TickUsedLetters
