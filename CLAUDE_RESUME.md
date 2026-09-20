@@ -1,3 +1,17 @@
+## n314（2026-09-21）: run 不変量 `localGood` に `work`／`replay` の極性を足し、保存を証明した
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。仮説 `hreplayStartNext` もまだ残っている） |
+
+**やったこと**（n311 の計画の (b)）: `ShadowedLocalFinal.localGood m := PolWF m.vm ∧ m.vm.pol .work = true ∧ m.vm.pol .replay = true`。replay commit は `work` を push し（`hpw`）、`LocalRoles.movePol Ctr.radius Ctr.replay` で `radius` と `replay` の極性を入れ替えるので、commit 後も `PolWF` を保つにはこの 2 本が要る（n313）。
+* 補題 `localGood_of_pol_eq`（極性に触らない step は不変量を保つ）。保存 3 箇所: 関数 step（`localGood_stepOf_localSteps`、init は `work → true`・`replay` 不変）、到着（`LocalWF.pol_feedC`）、blank（`LocalBlankState.blankVML` は `pol := fun _ => true` なので `rfl`）。`H_wf` へは `hinv.good.1`。
+* **強くなった仮説（隠さない）**: 存在仮説 `hscanNext`／`hreplayStartNext`／`hplateauNext` は `Good next` を含むので、このぶん強くなった。
+
+**残り**: (a) `RewindCentre` の trace 形（Tick 保存は n311 のスクラッチで検査済み）、(d) ghost の replayStart 後継で `NextOK`（鏡 3 本 `radiusMir`／`lowerMir`／`lengthMir` の更新込み、n313）。
+
 ## n313（2026-09-21）: `hreplayStartNext` の producer (d) の設計（調査のみ、コードは変えていない）
 
 **全体 build 成功（最新は n312 の `BUILD=0`）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。

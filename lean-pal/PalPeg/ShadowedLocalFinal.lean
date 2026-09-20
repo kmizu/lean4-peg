@@ -775,23 +775,31 @@ theorem frozenAt_of_absSC_eq {w : List (Fin 2)} {encoded m : Mirrored1 (tapeCoun
 `LocalWF.PolWF`, which no step touches.  The counter magnitudes a shift or copy unit needs are
 read off the trace, where the abstraction of a tracked state lives
 (`LocalWF.shiftMagnitudes_of_trace`, `LocalWF.copyRemaining_of_trace`). -/
-def localGood (m : Mirrored1 (tapeCount spare)) : Prop := PalPeg.LocalWF.PolWF m.vm
+def localGood (m : Mirrored1 (tapeCount spare)) : Prop :=
+  PalPeg.LocalWF.PolWF m.vm ∧ m.vm.pol .work = true ∧ m.vm.pol .replay = true
+
+/-- A step that leaves the polarity of every tape alone keeps the run invariant. -/
+theorem localGood_of_pol_eq {m next : Mirrored1 (tapeCount spare)} (hgood : localGood m)
+    (hpol : next.vm.pol = m.vm.pol) : localGood next :=
+  ⟨PalPeg.LocalWF.polWF_congr hgood.1 hpol, by rw [hpol]; exact hgood.2.1,
+    by rw [hpol]; exact hgood.2.2⟩
 
 /-- **The steps that are functions keep the polarity bundle.**  The seven phase steps of
 `CloseoutCoreAgree.SL` do not touch the polarity of any tape, and the `init` step only sets the
-polarity of `length` and `work` to the positive side. -/
+polarity of `length` and `work` to the positive side.  The polarity of `work` and of `replay` is
+carried because the replay commit pushes `work` and exchanges the polarity of `radius` and
+`replay` (`LocalRoles.movePol`). -/
 theorem localGood_stepOf_localSteps (entry q : ℕ) (first : Fin 9)
     (scanStep replayStartStep : Mirrored1 (tapeCount spare) → Mirrored1 (tapeCount spare))
     {m : Mirrored1 (tapeCount spare)} (hgood : localGood m)
     (hnotScan : m.vm.ctl.mode ≠ .scan) (hnotReplayStart : m.vm.ctl.mode ≠ .replayStart) :
     localGood (stepOf (localSteps (spare := spare) q first (PalPeg.LocalInitStep.initStep entry)
       scanStep replayStartStep) m.vm.ctl.mode m) := by
-  unfold localGood at hgood ⊢
   cases hmode : m.vm.ctl.mode with
   | init =>
-      show PalPeg.LocalWF.PolWF (PalPeg.LocalInitStep.initStep entry m).vm
-      obtain ⟨hremaining, hradius, -, hcycle, hfppWork⟩ := hgood
-      refine ⟨?_, ?_, ?_, ?_, ?_⟩
+      show localGood (PalPeg.LocalInitStep.initStep entry m)
+      obtain ⟨⟨hremaining, hradius, -, hcycle, hfppWork⟩, -, hreplay⟩ := hgood
+      refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
       · show (if PalPeg.LocalState.Ctr.remaining = PalPeg.LocalState.Ctr.length ∨ PalPeg.LocalState.Ctr.remaining = PalPeg.LocalState.Ctr.work then true
           else m.vm.pol .remaining) = true
         rw [if_neg (by decide)]; exact hremaining
@@ -807,27 +815,35 @@ theorem localGood_stepOf_localSteps (entry q : ℕ) (first : Fin 9)
       · show (if PalPeg.LocalState.Ctr.fppWork = PalPeg.LocalState.Ctr.length ∨ PalPeg.LocalState.Ctr.fppWork = PalPeg.LocalState.Ctr.work then true
           else m.vm.pol .fppWork) = true
         rw [if_neg (by decide)]; exact hfppWork
+      · show (if PalPeg.LocalState.Ctr.work = PalPeg.LocalState.Ctr.length ∨
+            PalPeg.LocalState.Ctr.work = PalPeg.LocalState.Ctr.work then true
+          else m.vm.pol .work) = true
+        rw [if_pos (Or.inr rfl)]
+      · show (if PalPeg.LocalState.Ctr.replay = PalPeg.LocalState.Ctr.length ∨
+            PalPeg.LocalState.Ctr.replay = PalPeg.LocalState.Ctr.work then true
+          else m.vm.pol .replay) = true
+        rw [if_neg (by decide)]; exact hreplay
   | scan => exact absurd hmode hnotScan
   | replayStart => exact absurd hmode hnotReplayStart
   | shift =>
-      refine PalPeg.LocalWF.polWF_congr hgood ?_
+      refine localGood_of_pol_eq hgood ?_
       show (PalPeg.CloseoutCoreAgree.shiftStepW m).vm.pol = m.vm.pol
       classical
       unfold PalPeg.CloseoutCoreAgree.shiftStepW
       split
       · unfold PalPeg.LocalRealizesPhase.shiftPick; split <;> rfl
       · rfl
-  | copy => exact PalPeg.LocalWF.polWF_congr hgood (PalPeg.LocalWF.pol_copyStepL m)
-  | home => exact PalPeg.LocalWF.polWF_congr hgood (PalPeg.LocalWF.pol_homeStepL m)
+  | copy => exact localGood_of_pol_eq hgood (PalPeg.LocalWF.pol_copyStepL m)
+  | home => exact localGood_of_pol_eq hgood (PalPeg.LocalWF.pol_homeStepL m)
   | fpp =>
-      exact PalPeg.LocalWF.polWF_congr hgood
+      exact localGood_of_pol_eq hgood
         (PalPeg.LocalWF.pol_ffpp PalPeg.CloseoutCoreAgree.dumS q first m)
-  | markEnd => exact PalPeg.LocalWF.polWF_congr hgood (PalPeg.LocalWF.pol_markEndStepL m)
+  | markEnd => exact localGood_of_pol_eq hgood (PalPeg.LocalWF.pol_markEndStepL m)
   | choose =>
-      exact PalPeg.LocalWF.polWF_congr hgood
+      exact localGood_of_pol_eq hgood
         (PalPeg.LocalWF.pol_chooseStepC PalPeg.CloseoutCoreAgree.dumS q first m)
   | rewind =>
-      exact PalPeg.LocalWF.polWF_congr hgood
+      exact localGood_of_pol_eq hgood
         (PalPeg.LocalWF.pol_rewindStepC PalPeg.CloseoutCoreAgree.dumS q first m)
 
 /-- **The phase after the last report point**: the abstract state is still a refreshed report
@@ -970,7 +986,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
   refine given_shadowedLocalSystem entry q first hfirst hor hres hChainVerifierSupply
     (fun w => ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w)
     (fun w m => reportTest entry q first w (absSC m))
-    (localGood (spare := spare)) (PalPeg.LocalWF.polWF_x0C ⟨rfl, rfl, rfl, rfl, rfl⟩ 2048)
+    (localGood (spare := spare)) ⟨PalPeg.LocalWF.polWF_x0C ⟨rfl, rfl, rfl, rfl, rfl⟩ 2048, rfl, rfl⟩
     (fun w st Tc hpreTrace hcanonical m hinv => by
       by_cases hstarved : Starved m.vm
       · rw [PalPeg.LocalSysConcrete.tickC_starved _ hstarved]
@@ -988,7 +1004,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
               exact good_chosenStep hinv.good
             · exact localGood_stepOf_localSteps entry q first _ _ hinv.good hscan hreplayStart)
     (fun w st Tc hpreTrace hcanonical letter m hinv =>
-      PalPeg.LocalWF.polWF_feedC hinv.phys.pend letter hinv.good)
+      localGood_of_pol_eq hinv.good (PalPeg.LocalWF.pol_feedC hinv.phys.pend letter))
     ?_ (postPhase entry q first) frozenAt
     (fun w st Tc hw hpreTrace _ m hinv => notFrozen_of_invC entry q first hw hpreTrace m hinv)
     (fun w st Tc hw hpreTrace _ hscanAtReport m _ hneedy => by
@@ -1149,7 +1165,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (PalPeg.LocalWF.noReplay_zero_of_init (by
       rw [heldAfter_of_le st (Nat.zero_le _), hpreTrace.base.pre.start]
       rfl))
-    hq (fun m hinv => ⟨hinv.good⟩)
+    hq (fun m hinv => ⟨hinv.good.1⟩)
     hshiftIdleInCopy hshiftLedgerOnTrace
     (PofC_onLetter centreC placeC entry w) (PofC_leftFirst centreC placeC entry w)
     (PalPeg.CloseoutRightBounds.rightInBounds
