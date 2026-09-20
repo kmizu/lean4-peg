@@ -160,17 +160,17 @@ theorem pal_in_peg_of_shadowed_sysC
       repM w (micro (sysM (M w) (repM w)) w (x0C blank delay) s).core = true)
     -- the physical machine and its specification
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
-    (htape : 0 < t) (Rep : Mirrored1 P → Q × (Fin t → STape Γ) → Prop)
-    (hrepInit : Rep (x0C blank delay).core (q0, fun _ => STape.blankTape blankSymbol))
+    (htape : 0 < t) (Rep : List (Fin 2) → Mirrored1 P → Q × (Fin t → STape Γ) → Prop)
+    (hrepInit : ∀ w, Rep w (x0C blank delay).core (q0, fun _ => STape.blankTape blankSymbol))
     (hsimTick : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m →
       TickSucc (Pof w) (qof w) (firstOf w) delay (Canon w) (Starved m.vm) (absSC m)
         (absSC (tickC (M w) m)) →
-      Rep m p → Rep (tickC (M w) m) (L0.apply blankSymbol p none))
+      Rep w m p → Rep w (tickC (M w) m) (L0.apply blankSymbol p none))
     (hsimFeed : ∀ (w : List (Fin 2)) letter m p, 0 < w.length → OnRun Good Post w (stOf w) m →
-      Rep m p → Rep (feedC letter m) (L0.apply blankSymbol p (some letter)))
-    (hreadRep : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep m p →
+      Rep w m p → Rep w (feedC letter m) (L0.apply blankSymbol p (some letter)))
+    (hreadRep : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep w m p →
       repM w m = repQ p.1)
-    (hreadOut : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep m p →
+    (hreadOut : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep w m p →
       ReportPoint w (absSC m) → m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   classical

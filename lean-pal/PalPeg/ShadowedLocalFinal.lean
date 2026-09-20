@@ -451,25 +451,26 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       repM w (micro (sysM (M w) (repM w)) w (x0C (blankVML spare) 2048) s).core = true)
     -- the physical machine and its specification
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
-    (htape : 0 < t) (Rep : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
-    (hrepInit : Rep (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
+    (htape : 0 < t) (Rep : List (Fin 2) → Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
+    (hrepInit : ∀ w, Rep w (x0C (blankVML spare) 2048).core
+      (q0, fun _ => STape.blankTape blankSymbol))
     (hsimTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
         TickSucc (PofC centreC placeC entry w) q first 2048
           (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm) (absSC m)
           (absSC (tickC (M w) m)) →
-        Rep m p → Rep (tickC (M w) m) (L0.apply blankSymbol p none))
+        Rep w m p → Rep w (tickC (M w) m) (L0.apply blankSymbol p none))
     (hsimFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ letter m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p →
-        Rep (feedC letter m) (L0.apply blankSymbol p (some letter)))
+      ∀ letter m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep w m p →
+        Rep w (feedC letter m) (L0.apply blankSymbol p (some letter)))
     (hreadRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p → repM w m = repQ p.1)
+      ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep w m p → repM w m = repQ p.1)
     (hreadOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p →
+      ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep w m p →
         ReportPoint w (absSC m) → m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   classical
@@ -811,8 +812,9 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (fun w s _ _ hreport => (reportTest_iff entry q first w _).mp hreport)
     (fun w s _ hpoint hrefreshed => (reportTest_iff entry q first w _).mpr ⟨hpoint, hrefreshed⟩)
     L0
-    blankSymbol q0 repQ outQ htape (fun m p => ∃ encoded, Enc encoded p ∧ absSC encoded = absSC m)
-    ⟨_, hencInit, rfl⟩
+    blankSymbol q0 repQ outQ htape
+    (fun _ m p => ∃ encoded, Enc encoded p ∧ absSC encoded = absSC m)
+    (fun _ => ⟨_, hencInit, rfl⟩)
     (fun w st Tc hpreTrace hcanonical m p honRun hsucc ⟨encoded, henc, habs⟩ => by
       obtain ⟨next, hencNext, hsuccEncoded⟩ :=
         hforwardTick w st Tc hpreTrace hcanonical m encoded p honRun habs henc

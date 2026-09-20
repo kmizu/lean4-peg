@@ -110,14 +110,14 @@ theorem pal_in_peg_of_shadowed_core
     (H_first : ∀ w : List (Fin 2), (Pof w).leftFirst = leftFirstVM)
     -- the physical machine and its specification
     (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (q0 : Q) (repQ outQ : Q → Bool) (htape : 0 < t)
-    (Rep : A → Q × (Fin t → STape Γ) → Prop)
-    (hrepInit : Rep x0.core (q0, fun _ => STape.blankTape blank))
-    (hsimTick : ∀ w s a p, inp w s = none → Inv w s a → Rep a p →
-      Rep ((S w).tickL a) (L0.apply blank p none))
-    (hsimFeed : ∀ w s letter a p, inp w s = some letter → Inv w s a → Rep a p →
-      Rep ((S w).feedC letter a) (L0.apply blank p (some letter)))
-    (hreadRep : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep a p → (S w).repL a = repQ p.1)
-    (hreadOut : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep a p → ReportPoint w (absS a) →
+    (Rep : List (Fin 2) → A → Q × (Fin t → STape Γ) → Prop)
+    (hrepInit : ∀ w, Rep w x0.core (q0, fun _ => STape.blankTape blank))
+    (hsimTick : ∀ w s a p, inp w s = none → Inv w s a → Rep w a p →
+      Rep w ((S w).tickL a) (L0.apply blank p none))
+    (hsimFeed : ∀ w s letter a p, inp w s = some letter → Inv w s a → Rep w a p →
+      Rep w ((S w).feedC letter a) (L0.apply blank p (some letter)))
+    (hreadRep : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep w a p → (S w).repL a = repQ p.1)
+    (hreadOut : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep w a p → ReportPoint w (absS a) →
       (S w).outL a = outQ p.1)
     -- the abstract system
     (x0_started : x0.started = false)
@@ -138,7 +138,7 @@ theorem pal_in_peg_of_shadowed_core
       (fun w => w.length * nLocalL)) :
     RecognizedByTotalPEG PAL := by
   have hrun := fun w (hw : 0 < w.length) =>
-    micro_shadow (S w) L0 blank repQ outQ Inv Rep x0 q0 w hrepInit (x0_inv w hw)
+    micro_shadow (S w) L0 blank repQ outQ Inv (Rep w) x0 q0 w (hrepInit w) (x0_inv w hw)
     (inv_tick w) (inv_feed w) (hsimTick w) (hsimFeed w)
   -- the report point does not read the output bit, which is the only thing `shadowAbs` changes
   have hreportIff : ∀ (w : List (Fin 2)) (x : A × (Q × (Fin t → STape Γ))),
