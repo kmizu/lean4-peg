@@ -320,6 +320,17 @@ def Realizes (Good : Mirrored1 P → Prop) (raw : List (Fin 2)) (stOf : ℕ → 
 /-- The abstraction of the concrete local state. -/
 def absSC (m : Mirrored1 P) : State GalilVM := absState'' m.vm
 
+/-- **The concrete `LocalSys` with a report test on the local state.**  The control of the
+abstract layer has no information on the heads, so a report test that recognizes the report
+points has to read the state; in the shadowed bridge the physical machine keeps the bit in its
+own control (`LocalShadowRealize`). -/
+noncomputable def sysM (M : Steps P) (repM : Mirrored1 P → Bool) : LocalSys (Mirrored1 P) where
+  tickL := tickC M
+  feedC := feedC
+  repL := repM
+  outL := fun m => m.vm.ctl.output
+  Starved := fun m => Starved m.vm
+
 /-- **The concrete `LocalSys`.**  `repL` and `outL` read the finite control only
 (as `LocalLatchRealize.encL_step` requires). -/
 noncomputable def sysC (M : Steps P) (repC : Control → Bool) : LocalSys (Mirrored1 P) where
