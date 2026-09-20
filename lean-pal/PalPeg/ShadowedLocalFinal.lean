@@ -404,7 +404,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
         (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
-        (PalPeg.ShapedRun.OracleTick entry) w)
+        (PalPeg.ShapedRun.OracleTick entry)
+      (fun _ y => y.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan) w)
     (hres : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc →
       ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc)
@@ -483,7 +484,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
   classical
   have hexists : ∀ w : List (Fin 2), ∃ (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc ∧
-        CanonTrace entry w st Tc := by
+        CanonTrace entry w st Tc ∧
+        ∀ m, 1 ≤ m → m ≤ w.length → (st (Tc m)).ctl.mode = Mode.scan := by
     intro w
     by_cases hw : 0 < w.length
     · obtain ⟨st, Tc, h⟩ := canonicalPreTrace_exists entry q first hor w hw
@@ -506,7 +508,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (fun _ => PalPeg.GalilTickFair.Canonical entry 2048)
     (fun w hw k j hk _ => by
       rw [heldAfter_of_le (stOf w) hk.le, heldAfter_of_le (stOf w) (Nat.succ_le_of_lt hk)]
-      exact PalPeg.CanonicalLocalRealizes.canonical_trunc ((htraceOf w hw).2 k hk) _)
+      exact PalPeg.CanonicalLocalRealizes.canonical_trunc ((htraceOf w hw).2.1 k hk) _)
     (fun w hw k hk => by
       rw [heldAfter_of_le (stOf w) hk]
       exact sufVM_trace w (stOf w) (TcOf w w.length)
@@ -535,9 +537,9 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       exact (htraceOf w hw).1.base.pre.report w.length hw le_rfl)
     (fun w hw => usedOfLastLetter_heldAfter entry q first hfirst hw (htraceOf w hw).1)
     Good hgoodInit
-    (fun w m hw hinv => hgoodTick w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m hinv)
-    (fun w letter m hw hinv => hgoodFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 letter m hinv)
-    (fun w hw => hrealizes w _ _ (htraceOf w hw).1 (htraceOf w hw).2)
+    (fun w m hw hinv => hgoodTick w _ _ (htraceOf w hw).1 (htraceOf w hw).2.1 m hinv)
+    (fun w letter m hw hinv => hgoodFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2.1 letter m hinv)
+    (fun w hw => hrealizes w _ _ (htraceOf w hw).1 (htraceOf w hw).2.1)
     (fun w m k j hw hinv hstarved hneedy hbefore hused =>
       nextUsed_heldAfter entry q first hfirst hw (htraceOf w hw).1 (hres w _ _ (htraceOf w hw).1)
         (hChainVerifierSupply w _ _ hw (htraceOf w hw).1) m k j hstarved hneedy hbefore hused)
@@ -550,19 +552,19 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (fun w m k j hw _ hneedy hbefore hneed =>
       notStarved_of_need_heldAfter entry q first hw (htraceOf w hw).1 m k j hneedy hbefore hneed)
     Post frozen
-    (fun w m hw hinv => hnotFrozenTracked w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2 m hinv)
+    (fun w m hw hinv => hnotFrozenTracked w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2.1 m hinv)
     (fun w m hw hinv hneedy =>
-      hpostOfLastReport w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2 m hinv hneedy)
+      hpostOfLastReport w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2.1 m hinv hneedy)
     hpostTick
     rep_sound rep_complete L0 blankSymbol q0 repQ outQ htape Rep hrepInit
     (fun w m p hw honRun honRunNext hsucc hrep =>
-      hsimTick w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m p honRun honRunNext hsucc hrep)
+      hsimTick w _ _ (htraceOf w hw).1 (htraceOf w hw).2.1 m p honRun honRunNext hsucc hrep)
     (fun w letter m p hw hinv honRunNext hrep =>
-      hsimFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 letter m p hinv honRunNext hrep)
+      hsimFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2.1 letter m p hinv honRunNext hrep)
     (fun w m p hw honRun hrep =>
-      hreadRep w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m p honRun hrep)
+      hreadRep w _ _ (htraceOf w hw).1 (htraceOf w hw).2.1 m p honRun hrep)
     (fun w m p hw honRun hrep hpoint =>
-      hreadOut w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m p honRun hrep hpoint)
+      hreadOut w _ _ (htraceOf w hw).1 (htraceOf w hw).2.1 m p honRun hrep hpoint)
 
 #print axioms given_shadowedLocalSystem
 
@@ -821,7 +823,8 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
         (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
-        (PalPeg.ShapedRun.OracleTick entry) w)
+        (PalPeg.ShapedRun.OracleTick entry)
+      (fun _ y => y.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan) w)
     (hres : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc →
       ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc)

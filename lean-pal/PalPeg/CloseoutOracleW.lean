@@ -118,7 +118,7 @@ theorem reachAtIMW_of_reachAtC3R_W {w : List (Fin 2)}
     hpr c r hIC m hrp.pos hrp.le 0 ⟨c, r⟩ (.zero _) k y hx hst
       hrp.notReplaying (le_of_eq hrp.atPlace)
   refine ⟨y, k, L, stepsIMWR_true_of_stepsIMW centre place entry q first hstI, hcr, hrp, hfr,
-    fun hlt => ?_⟩
+    trivial, fun hlt => ?_⟩
   obtain ⟨c', r', k', L', hst', hcr', hIS, hp⟩ := hcont hlt
   exact ⟨c', r', k', L', stepsIMWR_true_of_stepsIMW centre place entry q first
     (hpr c r hIC (m + 1) (by omega) (by omega) k y (stepsAll_steps hst) k' ⟨c', r'⟩

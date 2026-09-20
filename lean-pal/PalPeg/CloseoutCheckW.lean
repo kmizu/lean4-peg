@@ -105,6 +105,9 @@ structure PreTraceIMW (centre : GalilVM → Fin 3) (place : GalilVM → GalilSca
 section
 variable (I : List (Fin 2) → Control → GalilVM → Prop)
 variable (R : List (Fin 2) → State GalilVM → State GalilVM → Prop)
+-- What the oracle says, in addition, about the state of a report point (for instance that it
+-- is a scan state).  The older lineage says nothing (`fun _ _ => True`).
+variable (Y : List (Fin 2) → State GalilVM → Prop)
 
 /-- `StepsIMW` with a tick predicate `R` (`PackedRunR`). -/
 def StepsIMWR (w : List (Fin 2)) (k : ℕ) (x y : State GalilVM) : Prop :=
@@ -139,6 +142,7 @@ def ReachAtOn (w : List (Fin 2)) (m : ℕ) (c : Control) (r : GalilVM) : Prop :=
     CostedRun r y.vm k L ∧
     PalPeg.GalilReportPrefix.ReportPointAt w m y ∧
     Refreshed (PofC centre place entry w) q first y ∧
+    Y w y ∧
     (m < w.length → ∃ (c' : Control) (r' : GalilVM) (k' : ℕ) (L' : List Piece),
       StepsIMWR centre place entry q first R w k' y ⟨c', r'⟩ ∧
       CostedRun y.vm r' k' L' ∧
@@ -146,7 +150,7 @@ def ReachAtOn (w : List (Fin 2)) (m : ℕ) (c : Control) (r : GalilVM) : Prop :=
 
 /-- `CloseoutPackRun30.CycleOutIMG` over `StepsIMW`. -/
 def CycleOutOn (w : List (Fin 2)) (m : ℕ) (c : Control) (r : GalilVM) : Prop :=
-  ReachAtOn centre place entry q first I R w m c r ∨
+  ReachAtOn centre place entry q first I R Y w m c r ∨
     ∃ (cT : Control) (sT : GalilVM) (k : ℕ) (L : List Piece),
       StepsIMWR centre place entry q first R w k ⟨c, r⟩ ⟨cT, sT⟩ ∧
       CostedRun r sT k L ∧
@@ -156,12 +160,12 @@ def CycleOutOn (w : List (Fin 2)) (m : ℕ) (c : Control) (r : GalilVM) : Prop :
 /-- `CloseoutPackRun30.CycleOracleIMG` over `StepsIMW`. -/
 def CycleOracleOn (w : List (Fin 2)) : Prop :=
   ∀ (m : ℕ) (c : Control) (r : GalilVM), 1 ≤ m → m ≤ w.length → I w c r →
-    position r.right ≤ 2 * m - 1 → CycleOutOn centre place entry q first I R w m c r
+    position r.right ≤ 2 * m - 1 → CycleOutOn centre place entry q first I R Y w m c r
 
-theorem reachOn_fuel (w : List (Fin 2)) (hor : CycleOracleOn centre place entry q first I R w)
+theorem reachOn_fuel (w : List (Fin 2)) (hor : CycleOracleOn centre place entry q first I R Y w)
     (m : ℕ) (hm1 : 1 ≤ m) (hmle : m ≤ w.length) :
     ∀ (n : ℕ) (c : Control) (r : GalilVM), mu w r ≤ n → I w c r →
-      position r.right ≤ 2 * m - 1 → ReachAtOn centre place entry q first I R w m c r := by
+      position r.right ≤ 2 * m - 1 → ReachAtOn centre place entry q first I R Y w m c r := by
   intro n
   induction n with
   | zero =>
@@ -173,21 +177,21 @@ theorem reachOn_fuel (w : List (Fin 2)) (hor : CycleOracleOn centre place entry 
     intro c r hn hI hp
     rcases hor m c r hm1 hmle hI hp with hdone | ⟨cT, sT, k, L, hst, hcr, hIT, hlt, hpT⟩
     · exact hdone
-    · obtain ⟨y, k', L', hst', hcr', hrp, hfr, hcont⟩ := ih cT sT (by omega) hIT hpT
+    · obtain ⟨y, k', L', hst', hcr', hrp, hfr, hreportFact, hcont⟩ := ih cT sT (by omega) hIT hpT
       exact ⟨y, k + k', L ++ L',
         stepsIMWR_trans centre place entry q first R hst hst',
-        costedRun_trans hcr hcr', hrp, hfr, hcont⟩
+        costedRun_trans hcr hcr', hrp, hfr, hreportFact, hcont⟩
 
 theorem reachOn_from (w : List (Fin 2))
-    (hor : CycleOracleOn centre place entry q first I R w)
+    (hor : CycleOracleOn centre place entry q first I R Y w)
     {m : ℕ} (hm1 : 1 ≤ m) (hmle : m ≤ w.length) {c : Control} {r : GalilVM}
     (hI : I w c r) (hp : position r.right ≤ 2 * m - 1) :
-    ReachAtOn centre place entry q first I R w m c r :=
-  reachOn_fuel centre place entry q first I R w hor m hm1 hmle _ c r le_rfl hI hp
+    ReachAtOn centre place entry q first I R Y w m c r :=
+  reachOn_fuel centre place entry q first I R Y w hor m hm1 hmle _ c r le_rfl hI hp
 
 /-- `CloseoutPackRun30.checkpoints_costIMG_upto1` over `IPackMG2` (verbatim). -/
 theorem checkpoints_costOn_upto1 (w : List (Fin 2))
-    (hor : CycleOracleOn centre place entry q first I R w)
+    (hor : CycleOracleOn centre place entry q first I R Y w)
     {x0 : State GalilVM} {k0 : ℕ} {c : Control} {r : GalilVM}
     (hpre : StepsIMWR centre place entry q first R w k0 x0 ⟨c, r⟩)
     (hI : I w c r) (hpos : position r.right = 1) :
@@ -199,7 +203,8 @@ theorem checkpoints_costOn_upto1 (w : List (Fin 2))
       (∀ m, m < M → Tc m ≤ Tc (m+1)) ∧ Tc M ≤ e ∧
       (∀ m, 1 ≤ m → m ≤ M →
         PalPeg.GalilReportPrefix.ReportPointAt w m (st (Tc m)) ∧
-        Refreshed (PofC centre place entry w) q first (st (Tc m))) ∧
+        Refreshed (PofC centre place entry w) q first (st (Tc m)) ∧
+        Y w (st (Tc m))) ∧
       (∀ m, 1 ≤ m → m < M →
         Tc (m+1) - Tc m ≤ alpha' 2048 * (Cw w (m+1) - Cw w m) + beta' 2048) ∧
       (M < w.length → ∃ (c' : Control) (r' : GalilVM),
@@ -222,8 +227,8 @@ theorem checkpoints_costOn_upto1 (w : List (Fin 2))
     obtain ⟨st, Tc, e, hst0, hTc0, htr, hcan, hmono, hTcM, hchk, hcost, hres, hzero, hone, hpk⟩ :=
       ih (by omega)
     obtain ⟨c', r', hste, hI', hp', hpend⟩ := hres (by omega)
-    obtain ⟨y, k, L2, hrun, hcr, hrp, hfr, hcont⟩ :=
-      reachOn_from centre place entry q first I R w hor (m := M+1) (by omega) hM hI' hp'
+    obtain ⟨y, k, L2, hrun, hcr, hrp, hfr, hreportFact, hcont⟩ :=
+      reachOn_from centre place entry q first I R Y w hor (m := M+1) (by omega) hM hI' hp'
     have hk0 : M = 0 → k = 0 ∧ e = k0 := by
       intro hM0
       subst hM0
@@ -292,7 +297,7 @@ theorem checkpoints_costOn_upto1 (w : List (Fin 2))
         subst hmM
         simp only [hm', if_false]
         rw [hst2y]
-        exact ⟨hrp, hfr⟩
+        exact ⟨hrp, hfr, hreportFact⟩
     · intro m h1 h2
       by_cases hm' : m + 1 ≤ M
       · simp only [hm', show m ≤ M by omega, if_true]
@@ -303,7 +308,7 @@ theorem checkpoints_costOn_upto1 (w : List (Fin 2))
         obtain ⟨L1, hcr1⟩ := hpend h1
         have hall := costedRun_trans hcr1 hcr
         have hTm := hTcle m le_rfl
-        obtain ⟨hrp0, hfr0⟩ := hchk m h1 le_rfl
+        obtain ⟨hrp0, hfr0, _⟩ := hchk m h1 le_rfl
         have hc' : CostedRun (st (Tc m)).vm y.vm (e + k - Tc m) (L1 ++ L2) := by
           rw [show e + k - Tc m = e - Tc m + k by omega]; exact hall
         exact interval_cost_of_costedRun h1 hrp0 hfr0 hrp hfr hc'
@@ -331,20 +336,21 @@ def H_bootOn : Prop :=
       I (a :: rest) c1 t ∧ position t.right = 1
 
 theorem preTraceOn_exists (hboot : H_bootOn centre place entry q first I R)
-    (hor : ∀ w : List (Fin 2), 0 < w.length → CycleOracleOn centre place entry q first I R w) (w : List (Fin 2)) (hw : 0 < w.length) :
+    (hor : ∀ w : List (Fin 2), 0 < w.length → CycleOracleOn centre place entry q first I R Y w) (w : List (Fin 2)) (hw : 0 < w.length) :
     ∃ st Tc, PreTraceIMW centre place entry q first w st Tc ∧
-      ∀ i, i < Tc w.length → R w (st i) (st (i+1)) := by
+      (∀ i, i < Tc w.length → R w (st i) (st (i+1))) ∧
+      ∀ m, 1 ≤ m → m ≤ w.length → Y w (st (Tc m)) := by
   rcases w with _ | ⟨a, rest⟩
   · simp at hw
   · obtain ⟨c1, t, hst, hI, hpos⟩ := hboot a rest
     obtain ⟨st, Tc, e, hst0, hTc0, htr, hcan, hmono, hTcM, hchk, hcost, -, -, hone, hpk⟩ :=
-      checkpoints_costOn_upto1 centre place entry q first I R (a :: rest) (hor (a :: rest) hw)
+      checkpoints_costOn_upto1 centre place entry q first I R Y (a :: rest) (hor (a :: rest) hw)
         hst hI hpos (a :: rest).length le_rfl
     refine ⟨st, Tc, ⟨⟨⟨hst0, hTc0, trace_le htr hTcM, mono_of_step Tc _ hmono, ?_, hcost⟩,
       hone (by simp)⟩, fun i hi => hpk i (le_trans hi hTcM)⟩,
-      fun i hi => hcan i (lt_of_lt_of_le hi hTcM)⟩
+      fun i hi => hcan i (lt_of_lt_of_le hi hTcM), fun m h1 h2 => (hchk m h1 h2).2.2⟩
     intro m h1 h2
-    exact ledgerAt_of_prefix (hchk m h1 h2).1 (hchk m h1 h2).2
+    exact ledgerAt_of_prefix (hchk m h1 h2).1 (hchk m h1 h2).2.1
 
 
 
@@ -354,15 +360,18 @@ end
 
 def ReachAtIMW (w : List (Fin 2)) (m : ℕ) (c : Control) (r : GalilVM) : Prop :=
   ReachAtOn centre place entry q first
-    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ _ => True) w m c r
+    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ _ => True)
+    (fun _ _ => True) w m c r
 
 def CycleOutIMW (w : List (Fin 2)) (m : ℕ) (c : Control) (r : GalilVM) : Prop :=
   CycleOutOn centre place entry q first
-    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ _ => True) w m c r
+    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ _ => True)
+    (fun _ _ => True) w m c r
 
 def CycleOracleIMW (w : List (Fin 2)) : Prop :=
   CycleOracleOn centre place entry q first
-    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ _ => True) w
+    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ _ => True)
+    (fun _ _ => True) w
 
 /-- `CloseoutPackRun30.H_bootIMG` over `StepsIMW`. -/
 def H_bootIMW : Prop :=
@@ -376,8 +385,9 @@ def H_oracleIMW : Prop :=
 theorem preTraceIMW_exists (hboot : H_bootIMW centre place entry q first)
     (hor : H_oracleIMW centre place entry q first) (w : List (Fin 2)) (hw : 0 < w.length) :
     ∃ st Tc, PreTraceIMW centre place entry q first w st Tc := by
-  obtain ⟨st, Tc, h, -⟩ := preTraceOn_exists centre place entry q first
-    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ _ => True) hboot hor w hw
+  obtain ⟨st, Tc, h, -, -⟩ := preTraceOn_exists centre place entry q first
+    (fun w c r => InvLPS (PofC centre place entry w) q first w c r) (fun _ _ _ => True)
+    (fun _ _ => True) hboot hor w hw
   exact ⟨st, Tc, h⟩
 
 /-! ## The run-shaped instance: scan states on a packed run out of an `InvLPS` origin
@@ -463,16 +473,17 @@ def H_bootRefreshedIMW : Prop :=
 theorem preTraceOnPackedRun_exists (hboot : H_bootRefreshedIMW centre place entry q first)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleOn centre place entry q first (ScanOnPackedRunFromInvLPS centre place entry q first)
-        (PalPeg.ShapedRun.OracleTick entry) w)
+        (PalPeg.ShapedRun.OracleTick entry) (fun _ y => y.ctl.mode = Mode.scan) w)
     (w : List (Fin 2)) (hw : 0 < w.length) :
-    ∃ st Tc, PreTraceIMW centre place entry q first w st Tc ∧ CanonTrace entry w st Tc := by
-  obtain ⟨st, Tc, hpre, hticks⟩ := preTraceOn_exists centre place entry q first _ _
+    ∃ st Tc, PreTraceIMW centre place entry q first w st Tc ∧ CanonTrace entry w st Tc ∧
+      ∀ m, 1 ≤ m → m ≤ w.length → (st (Tc m)).ctl.mode = Mode.scan := by
+  obtain ⟨st, Tc, hpre, hticks, hscan⟩ := preTraceOn_exists centre place entry q first _ _ _
     (fun a rest => by
       obtain ⟨c1, t, hst, ⟨hI, hf⟩, hpos⟩ := hboot a rest
       exact ⟨c1, t, hst, scanOnPackedRunFromInvLPS_of_invLPS centre place entry q first hI hf
         (ipackMW_last_of_stepsIMWC centre place entry q first hst) ⟨1, hst⟩, hpos⟩)
     hor w hw
-  exact ⟨st, Tc, hpre, fun i hi => (hticks i hi).canonical⟩
+  exact ⟨st, Tc, hpre, fun i hi => (hticks i hi).canonical, hscan⟩
 
 #print axioms checkpoints_costOn_upto1
 #print axioms preTraceOnPackedRun_exists
