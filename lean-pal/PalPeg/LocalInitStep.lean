@@ -237,4 +237,45 @@ theorem physWF_initStep (entry : ℕ) {m : Mirrored1 P}
 
 #print axioms physWF_initStep
 
+/-- A counter tape that reads as the zero counter holds zero, whatever its sign. -/
+theorem val_zero_of_absCtr_reset {t : STape LocalCounter.Seg} {b : Bool}
+    (hreset : absCtr t b = GalilScaffoldCounter.reset) : val t = 0 := by
+  cases b
+  · have hneg := congrArg GalilScaffoldCounter.Counter.neg hreset
+    simpa [absCtr, LocalCounter.negOfNat, GalilScaffoldCounter.reset] using hneg
+  · have hpos := congrArg GalilScaffoldCounter.Counter.pos hreset
+    simpa [absCtr, GalilScaffoldCounter.ofNat, GalilScaffoldCounter.reset] using hpos
+
+/-- **At boot the premises of the local `init` step hold.**  A non-replaying state whose
+abstraction is a truncated boot VM has every counter at zero, the DP tapes reset, and its three
+cursors on the same place. -/
+theorem premises_of_truncated_boot {x : GalilVML P} {w : List (Fin 2)} {d : ℕ}
+    (hreplaying : x.ctl.replaying = false)
+    (hboot : PalPeg.LocalReplayParked.abs'' x
+      = PalPeg.GalilThrottledRun.truncVM d (GalilBootVM.initVM0 w)) :
+    (∀ c : Ctr, val (x.phys (x.roles c)) = 0) ∧
+      LocalBuffers.abs x.dpBuf = (fun _ => GalilScaffoldTape.reset) ∧
+      absHead' x.left x.pending = absHead' x.right x.pending ∧
+      absHead' x.center x.pending = absHead' x.right x.pending := by
+  rw [PalPeg.LocalReplayParked.abs''_eq_abs' hreplaying] at hboot
+  have hcounter : ∀ c : Ctr, absCtrs x c = GalilScaffoldCounter.reset := by
+    intro c
+    cases c
+    · exact congrArg GalilVM.cycle hboot
+    · exact congrArg GalilVM.remaining hboot
+    · exact congrArg GalilVM.radius hboot
+    · exact congrArg GalilVM.length hboot
+    · exact congrArg GalilVM.replay hboot
+    · exact congrArg GalilVM.lower hboot
+    · exact congrArg (fun s : GalilVM => s.search.span) hboot
+    · exact congrArg (fun s : GalilVM => s.search.work) hboot
+    · exact congrArg (fun s : GalilVM => s.search.debt) hboot
+    · exact congrArg (fun s : GalilVM => s.fpp.work) hboot
+  refine ⟨fun c => val_zero_of_absCtr_reset (hcounter c), ?_, ?_, ?_⟩
+  · exact congrArg (fun s : GalilVM => s.dp.config.tapes) hboot
+  · exact (congrArg GalilVM.left hboot).trans (congrArg GalilVM.right hboot).symm
+  · exact (congrArg GalilVM.center hboot).trans (congrArg GalilVM.right hboot).symm
+
+#print axioms premises_of_truncated_boot
+
 end PalPeg.LocalInitStep

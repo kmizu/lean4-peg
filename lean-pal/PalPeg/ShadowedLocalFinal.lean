@@ -3,6 +3,7 @@ import PalPeg.LocalShadowConcrete
 import PalPeg.LocalBlankState
 import PalPeg.CloseoutRightBounds
 import PalPeg.CanonicalLocalRealizes
+import PalPeg.LocalInitStep
 
 /-!
 # The final theorem from the local system and a physical machine, the trace side discharged
@@ -223,7 +224,59 @@ theorem traceRightLe_heldAfter (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)
       hlastPos (min k (Tc w.length)) hpos (Nat.min_le_right _ _)
     omega
 
-/-- **`PAL ∈ PEG` from the three open modes and a physical machine.**  The seven phase modes of
+/-- **The `init` mode of the abstract local system.**  A tracked state in `init` mode stands on
+the boot state of the held canonical trace (the trace leaves `init` with its first tick), so its
+counters are zero and its cursors coincide; if it is not starved the next cell is there, and
+`LocalInitStep.initStep` is a canonical `init` tick of the abstraction. -/
+theorem initLocal_heldAfter (entry q : ℕ) (first : Fin 9) {Good : Mirrored1 (tapeCount spare) → Prop}
+    {w : List (Fin 2)} {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc)
+    (m : Mirrored1 (tapeCount spare)) (target : State GalilVM)
+    (hinv : InvC Good w (heldAfter (Tc w.length) st) m) (hmode : m.vm.ctl.mode = .init)
+    (hnotStarved : ¬ Starved m.vm)
+    (_htick : Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
+      (absState'' m.vm) target) :
+    Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
+        (absState'' m.vm) (absState'' (PalPeg.LocalInitStep.initStep entry m).vm) ∧
+      PalPeg.GalilTickFair.Canonical entry 2048 (absState'' m.vm)
+        (absState'' (PalPeg.LocalInitStep.initStep entry m).vm) ∧
+      PhysWF (PalPeg.LocalInitStep.initStep entry m).vm ∧
+      MirInv1 (PalPeg.LocalInitStep.initStep entry m) := by
+  obtain ⟨k, j, _, hneedy⟩ := hinv.track
+  have hindex : min k (Tc w.length) = 0 := by
+    rcases Nat.eq_zero_or_pos (min k (Tc w.length)) with hzero | hpos
+    · exact hzero
+    · have hne := PalPeg.BranchSupply.mode_ne_init_alongTrace_afterFirstStep centreC placeC entry q
+        first hpreTrace.base.pre (min k (Tc w.length)) hpos (Nat.min_le_right _ _)
+      have hctl : m.vm.ctl = (st (min k (Tc w.length))).ctl := congrArg State.ctl hneedy
+      exact absurd (hctl ▸ hmode) hne
+  have hstate : absState'' m.vm = truncS (w.length - j) (boot w) := by
+    rw [hneedy]
+    show truncS _ (st (min k (Tc w.length))) = _
+    rw [hindex, hpreTrace.base.pre.start]
+  have hreplaying : m.vm.ctl.replaying = false := by
+    have hctl : m.vm.ctl = (boot w).ctl := congrArg State.ctl hstate
+    rw [hctl]
+    rfl
+  obtain ⟨hzero, hdp, hleft, hcenter⟩ :=
+    PalPeg.LocalInitStep.premises_of_truncated_boot (w := w) (d := w.length - j) hreplaying
+      (congrArg State.vm hstate)
+  have hcanRight : GalilScaffoldChainVerifier.canRight
+      (PalPeg.LocalArrival.absHead' m.vm.right m.vm.pending) := by
+    have hall := Classical.not_not.mp hnotStarved
+    have hright := hall.2.2.1
+    rw [PalPeg.LocalReplayParked.abs''_eq_abs' hreplaying] at hright
+    exact hright
+  obtain ⟨htick, hcanonical⟩ := PalPeg.LocalInitStep.tick_initStep
+    (Pw := PofC centreC placeC entry w) q first 2048 entry rfl hmode
+    hreplaying hinv.phys.inv.roles hinv.phys.inv.views hinv.phys.pend hleft hcenter hcanRight
+    hzero hdp
+  exact ⟨htick, hcanonical, PalPeg.LocalInitStep.physWF_initStep entry hinv.phys hinv.mir hreplaying⟩
+
+#print axioms initLocal_heldAfter
+
+/-- **`PAL ∈ PEG` from the two open modes and a physical machine.**  The `init` mode is
+`LocalInitStep.initStep` (`initLocal_heldAfter`).  The seven phase modes of
 the abstract local system are `CloseoutCoreAgree.realizes_seven_SL`; its side conditions are
 facts about the held canonical trace. -/
 theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : q ≤ 64)
@@ -238,7 +291,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc →
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (initStep scanStep replayStartStep : Mirrored1 (tapeCount spare) → Mirrored1 (tapeCount spare))
+    (scanStep replayStartStep : Mirrored1 (tapeCount spare) → Mirrored1 (tapeCount spare))
     (repC : Control → Bool)
     (Good : Mirrored1 (tapeCount spare) → Prop)
     (hgoodWF : ∀ m : Mirrored1 (tapeCount spare), Good m → PalPeg.LocalWF.LocalWF m.vm)
@@ -246,21 +299,11 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
     (hgoodTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m : Mirrored1 (tapeCount spare), InvC Good w (heldAfter (Tc w.length) st) m →
-        Good (tickC (localSteps q first initStep scanStep replayStartStep) m))
+        Good (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m))
     (hgoodFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (letter : Fin 2) (m : Mirrored1 (tapeCount spare)),
         InvC Good w (heldAfter (Tc w.length) st) m → Good (feedC letter m))
-    (hinitLocal : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 (tapeCount spare)) (target : State GalilVM),
-        InvC Good w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .init → ¬ Starved m.vm →
-        Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
-        Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
-            (absState'' m.vm) (absState'' (initStep m).vm) ∧
-          PalPeg.GalilTickFair.Canonical entry 2048 (absState'' m.vm)
-            (absState'' (initStep m).vm) ∧
-          PhysWF (initStep m).vm ∧ MirInv1 (initStep m))
     (hscanLocal : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (target : State GalilVM),
@@ -296,27 +339,27 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
       ∀ (m : Mirrored1 (tapeCount spare)) (j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Starved m.vm)
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
-      repC (micro (sysC (localSteps q first initStep scanStep replayStartStep) repC) w
+      repC (micro (sysC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC) w
         (x0C (blankVML spare) 2048) s).core.vm.ctl = true →
-      ReportPoint w (stAbs (sysC (localSteps q first initStep scanStep replayStartStep) repC)
+      ReportPoint w (stAbs (sysC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC)
           absSC w (x0C (blankVML spare) 2048) s) ∧
         Refreshed (PofC centreC placeC entry w) q first
-          (stAbs (sysC (localSteps q first initStep scanStep replayStartStep) repC) absSC w
+          (stAbs (sysC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC) absSC w
             (x0C (blankVML spare) 2048) s))
     (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
-      ReportPoint w (stAbs (sysC (localSteps q first initStep scanStep replayStartStep) repC)
+      ReportPoint w (stAbs (sysC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC)
         absSC w (x0C (blankVML spare) 2048) s) →
       Refreshed (PofC centreC placeC entry w) q first
-        (stAbs (sysC (localSteps q first initStep scanStep replayStartStep) repC) absSC w
+        (stAbs (sysC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC) absSC w
           (x0C (blankVML spare) 2048) s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧
-        repC (micro (sysC (localSteps q first initStep scanStep replayStartStep) repC) w
+        repC (micro (sysC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC) w
           (x0C (blankVML spare) 2048) s').core.vm.ctl = true)
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Rep : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
     (hrepInit : Rep (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
     (hsimTick : ∀ m p, PhysWF m.vm → MirInv1 m → Rep m p →
-      Rep (tickC (localSteps q first initStep scanStep replayStartStep) m)
+      Rep (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m)
         (L0.apply blankSymbol p none))
     (hsimFeed : ∀ letter m p, PhysWF m.vm → MirInv1 m → Rep m p →
       Rep (feedC letter m) (L0.apply blankSymbol p (some letter)))
@@ -324,7 +367,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
     (hreadOut : ∀ m p, Rep m p → m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   refine given_shadowedLocalSystem entry q first hor hres hChainVerifierSupply
-    (localSteps q first initStep scanStep replayStartStep) repC Good hgoodInit hgoodTick hgoodFeed
+    (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC Good hgoodInit hgoodTick hgoodFeed
     ?_ hneedOfNotStarved hnotStarvedOfNeed hstarvedAtLastReport rep_sound rep_complete L0
     blankSymbol q0 repQ outQ htape Rep hrepInit hsimTick hsimFeed hreadRep hreadOut
   intro w st Tc hpreTrace hcanonical mode
@@ -373,7 +416,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
   cases mode with
   | init =>
     exact PalPeg.CanonicalLocalRealizes.realizes_canonical hshared htick hcanonicalTick
-      (hinitLocal w st Tc hpreTrace hcanonical)
+      (fun m target => initLocal_heldAfter entry q first hpreTrace m target)
   | scan =>
     exact PalPeg.CanonicalLocalRealizes.realizes_canonical hshared htick hcanonicalTick
       (hscanLocal w st Tc hpreTrace hcanonical)
