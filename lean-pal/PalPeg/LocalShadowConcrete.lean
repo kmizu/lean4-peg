@@ -117,6 +117,8 @@ theorem pal_in_peg_of_shadowed_sysC
     (hlastReport : ∀ w : List (Fin 2), 0 < w.length →
       GalilLedgerAssembly.ReportPointAt (Pof w) (qof w) (firstOf w) w w.length
         (stOf w (TcOf w w.length)))
+    (hreportUsed : ∀ w : List (Fin 2), 0 < w.length → ∀ k, k ≤ TcOf w w.length →
+      position (stOf w k).vm.right = 2 * w.length - 1 → w.length ≤ usedVM w (stOf w k).vm)
     -- the invariants the abstract local system carries along the run
     (Good : Mirrored1 P → Prop) (hgoodInit : Good (x0C blank delay).core)
     (hgoodTick : ∀ (w : List (Fin 2)) (m : Mirrored1 P), 0 < w.length →
@@ -155,8 +157,7 @@ theorem pal_in_peg_of_shadowed_sysC
     (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
       ReportPoint w (stAbs (sysM (M w) (repM w)) absSC w (x0C blank delay) s) →
       Refreshed (Pof w) (qof w) (firstOf w) (stAbs (sysM (M w) (repM w)) absSC w (x0C blank delay) s) →
-      ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧
-        repM w (micro (sysM (M w) (repM w)) w (x0C blank delay) s').core = true)
+      repM w (micro (sysM (M w) (repM w)) w (x0C blank delay) s).core = true)
     -- the physical machine and its specification
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Rep : Mirrored1 P → Q × (Fin t → STape Γ) → Prop)
@@ -309,6 +310,56 @@ theorem pal_in_peg_of_shadowed_sysC
       htracked | ⟨hafter, _⟩
     · exact htracked
     · omega
+  -- a state whose right head stands on the last letter comes after the last arrival, and not
+  -- at the arrival itself: the tracked state before it has used fewer letters
+  have hlate : ∀ w (hw : 0 < w.length) s,
+      position (absSC (micro (S w) w x0 s).core).vm.right = 2 * w.length - 1 →
+      (w.length - 1) * nLocalL + 1 < s := by
+    intro w hw s hpos
+    have hinvAt := fun s' => inv_micro (S w) w x0 (Inv w) (hinvInit w hw) (hinvTick w) (hinvFeed w) s'
+    have htrackedUsed : ∀ s', TrackedAt Good w (stOf w) (TcOf w w.length) (arrL w s')
+        (kOf (S w) w x0 s') (micro (S w) w x0 s').core →
+        position (absSC (micro (S w) w x0 s').core).vm.right = 2 * w.length - 1 →
+        w.length ≤ usedVM w (stOf w (kOf (S w) w x0 s')).vm := by
+      intro s' htracked hposAt
+      refine hreportUsed w hw _ htracked.beforeEnd ?_
+      rw [← hposAt]
+      show _ = position (absState'' (micro (S w) w x0 s').core.vm).vm.right
+      rw [htracked.needy.2]
+      rfl
+    have harrLe := PalPeg.LocalLedgerShift.arrL_le w s
+    have harr : arrL w s = w.length := by
+      rcases (hinvAt s).2.2 with htracked | ⟨_, harr, _⟩
+      · have := htrackedUsed s htracked hpos
+        have := htracked.used
+        omega
+      · exact harr
+    have hge : (w.length - 1) * nLocalL + 1 ≤ s := by
+      unfold arrL at harr
+      rw [nLocalL_eq] at harr ⊢
+      omega
+    rcases Nat.eq_or_lt_of_le hge with heq | hlt
+    · exfalso
+      subst heq
+      have hinput : inp w ((w.length - 1) * nLocalL) = some w[w.length - 1] :=
+        inp_at w (w.length - 1) (by omega)
+      have hk : kOf (S w) w x0 ((w.length - 1) * nLocalL + 1)
+          = kOf (S w) w x0 ((w.length - 1) * nLocalL) :=
+        kOf_succ_stutter (S w) w x0 _ (fun h => by rw [hinput] at h; exact absurd h.1 (by simp))
+      have harrBefore : arrL w ((w.length - 1) * nLocalL) = w.length - 1 := by
+        unfold arrL
+        rw [nLocalL_eq]
+        omega
+      rcases (hinvAt ((w.length - 1) * nLocalL)).2.2 with hbefore | ⟨_, harrPost, _⟩
+      · have husedBefore := hbefore.used
+        rcases (hinvAt ((w.length - 1) * nLocalL + 1)).2.2 with htracked | ⟨hafter, _⟩
+        · have husedAt := htrackedUsed _ htracked hpos
+          rw [hk] at husedAt
+          omega
+        · have := hbefore.beforeEnd
+          omega
+      · omega
+    · exact hlt
   refine pal_in_peg_of_shadowed_core S absSC Inv x0 Pof qof firstOf delay H_letter H_first
     L0 blankSymbol q0 repQ outQ htape Rep hrepInit
     (fun w s m p _ hinv hrep => hsimTick w m p hinv.1 (honRun hinv)
@@ -319,7 +370,10 @@ theorem pal_in_peg_of_shadowed_sysC
     (fun w s letter m p _ hinv hrep => hsimFeed w letter m p hinv.1 (honRun hinv) hrep)
     (fun w s m p hinv hrep => hreadRep w m p hinv.1 (honRun hinv) hrep)
     (fun w s m p hinv hrep => hreadOut w m p hinv.1 (honRun hinv) hrep) (x0C_started blank delay) (fun _ _ => rfl)
-    rep_sound rep_complete hinvInit (x0C_ctl blank delay) hinvTick hinvFeed ?_ ?_ ?_ ?_
+    rep_sound
+    (fun w s hw hpoint hrefreshed =>
+      ⟨s, le_rfl, hlate w hw s hpoint.atLast, rep_complete w s hw hpoint hrefreshed⟩)
+    hinvInit (x0C_ctl blank delay) hinvTick hinvFeed ?_ ?_ ?_ ?_
   · rintro w s m _ _ hstarved
     show absSC (tickC (M w) m) = absSC m
     rw [tickC_starved (M w) hstarved]

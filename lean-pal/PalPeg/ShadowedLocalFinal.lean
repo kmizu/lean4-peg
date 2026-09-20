@@ -368,6 +368,35 @@ theorem nextUsed_heldAfter (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4
 
 #print axioms nextUsed_heldAfter
 
+/-- **A trace state whose right head stands on the last letter has used the whole word.** -/
+theorem usedOfLastLetter_heldAfter (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4)
+    {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc) :
+    ∀ k, k ≤ Tc w.length →
+      position (heldAfter (Tc w.length) st k).vm.right = 2 * w.length - 1 →
+      w.length ≤ usedVM w (heldAfter (Tc w.length) st k).vm := by
+  intro k hk hpos
+  rw [heldAfter_of_le st hk] at hpos ⊢
+  rcases Nat.eq_zero_or_pos k with hzero | hkpos
+  · exfalso
+    rw [hzero, hpreTrace.base.pre.start] at hpos
+    have hbootPos : position (initialHead w) = 0 := by simp [position, initialHead]
+    have hpos' : position (initialHead w) = 2 * w.length - 1 := hpos
+    omega
+  · have hTcPos : 1 ≤ Tc w.length :=
+      hpreTrace.base.tc1 ▸ hpreTrace.base.pre.mono 1 w.length hw le_rfl
+    have hrep := (PalPeg.BranchSupply.headsRepresent_alongTrace centreC placeC entry q first hw
+      hpreTrace
+      (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC entry q first hfirst
+        hpreTrace.base.pre) hTcPos k hkpos hk).right.1
+    have hsane := (PalPeg.BranchSupply.frontPack_alongTrace centreC placeC entry q first hw
+      hpreTrace.base.pre k hkpos hk).sane
+    have htwice := PalPeg.GalilNeedBound.two_usedPH_of_rep w _ hrep hsane
+    have hright := PalPeg.GalilTruncTick.usedVM_right w (st k).vm
+    split_ifs at htwice <;> omega
+
+#print axioms usedOfLastLetter_heldAfter
+
 /-- **`PAL ∈ PEG` from the local system and a physical machine.**  The first three hypotheses
 are those of `CloseoutFinalBranch.given_scanLandingObligations` other than the realization; the
 rest replaces the realization. -/
@@ -419,8 +448,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       ReportPoint w (stAbs (sysM (M w) (repM w)) absSC w (x0C (blankVML spare) 2048) s) →
       Refreshed (PofC centreC placeC entry w) q first
         (stAbs (sysM (M w) (repM w)) absSC w (x0C (blankVML spare) 2048) s) →
-      ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧
-        repM w (micro (sysM (M w) (repM w)) w (x0C (blankVML spare) 2048) s').core = true)
+      repM w (micro (sysM (M w) (repM w)) w (x0C (blankVML spare) 2048) s).core = true)
     -- the physical machine and its specification
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Rep : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
@@ -497,6 +525,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (fun w hw => by
       rw [heldAfter_of_le (stOf w) le_rfl]
       exact (htraceOf w hw).1.base.pre.report w.length hw le_rfl)
+    (fun w hw => usedOfLastLetter_heldAfter entry q first hfirst hw (htraceOf w hw).1)
     Good hgoodInit
     (fun w m hw hinv => hgoodTick w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m hinv)
     (fun w letter m hw hinv => hgoodFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 letter m hinv)
@@ -606,6 +635,21 @@ theorem initLocal_heldAfter (entry q : ℕ) (first : Fin 9) {Good : Mirrored1 (t
 
 #print axioms initLocal_heldAfter
 
+open Classical in
+/-- **The report test of the abstract local layer, by its meaning**: the abstract state is a
+refreshed report point of the word.  The abstract layer is a ghost and knows the word; the
+physical machine has to keep a bit that agrees with this test on the run (`hencRep`). -/
+noncomputable def reportTest (entry q : ℕ) (first : Fin 9) (w : List (Fin 2))
+    (x : State GalilVM) : Bool :=
+  decide (ReportPoint w x ∧ Refreshed (PofC centreC placeC entry w) q first x)
+
+open Classical in
+theorem reportTest_iff (entry q : ℕ) (first : Fin 9) (w : List (Fin 2)) (x : State GalilVM) :
+    reportTest entry q first w x = true ↔
+      ReportPoint w x ∧ Refreshed (PofC centreC placeC entry w) q first x := by
+  unfold reportTest
+  exact decide_eq_true_iff
+
 /-- **A local successor**: its abstraction is a canonical tick of the frame of the word from the
 abstraction of the source, and it keeps the invariants of the local layer (and the phase after
 the last report point, if the source is in it). -/
@@ -691,7 +735,6 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc →
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (repA : State GalilVM → Bool)
     (Good : Mirrored1 (tapeCount spare) → Prop)
     (Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop)
     (hgoodWF : ∀ m : Mirrored1 (tapeCount spare), Good m → PalPeg.LocalWF.LocalWF m.vm)
@@ -730,23 +773,6 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
         PalPeg.GalilTickFair.Canonical entry 2048 (absSC m) (absSC (tickC (ghostSteps entry q first Good Post w) m))) ∧
         Post w (tickC (ghostSteps entry q first Good Post w) m) ∧ PhysWF (tickC (ghostSteps entry q first Good Post w) m).vm ∧ MirInv1 (tickC (ghostSteps entry q first Good Post w) m) ∧
         Good (tickC (ghostSteps entry q first Good Post w) m))
-    (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
-      repA (absSC (micro (sysM (ghostSteps entry q first Good Post w) (fun m => repA (absSC m))) w
-        (x0C (blankVML spare) 2048) s).core) = true →
-      ReportPoint w (stAbs (sysM (ghostSteps entry q first Good Post w) (fun m => repA (absSC m)))
-          absSC w (x0C (blankVML spare) 2048) s) ∧
-        Refreshed (PofC centreC placeC entry w) q first
-          (stAbs (sysM (ghostSteps entry q first Good Post w) (fun m => repA (absSC m))) absSC w
-            (x0C (blankVML spare) 2048) s))
-    (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
-      ReportPoint w (stAbs (sysM (ghostSteps entry q first Good Post w) (fun m => repA (absSC m)))
-        absSC w (x0C (blankVML spare) 2048) s) →
-      Refreshed (PofC centreC placeC entry w) q first
-        (stAbs (sysM (ghostSteps entry q first Good Post w) (fun m => repA (absSC m))) absSC w
-          (x0C (blankVML spare) 2048) s) →
-      ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧
-        repA (absSC (micro (sysM (ghostSteps entry q first Good Post w) (fun m => repA (absSC m))) w
-        (x0C (blankVML spare) 2048) s').core) = true)
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Enc : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
     (hencInit : Enc (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
@@ -770,16 +796,20 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (hencRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m encoded p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
-        absSC encoded = absSC m → Enc encoded p → repA (absSC encoded) = repQ p.1)
+        absSC encoded = absSC m → Enc encoded p → reportTest entry q first w (absSC encoded) = repQ p.1)
     (hencOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m encoded p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
         absSC encoded = absSC m → Enc encoded p → encoded.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   refine given_shadowedLocalSystem entry q first hfirst hor hres hChainVerifierSupply
-    (fun w => ghostSteps entry q first Good Post w) (fun _ m => repA (absSC m))
+    (fun w => ghostSteps entry q first Good Post w)
+    (fun w m => reportTest entry q first w (absSC m))
     Good hgoodInit hgoodTick hgoodFeed
-    ?_ Post hpostOfLastReport hpostTick rep_sound rep_complete L0
+    ?_ Post hpostOfLastReport hpostTick
+    (fun w s _ _ hreport => (reportTest_iff entry q first w _).mp hreport)
+    (fun w s _ hpoint hrefreshed => (reportTest_iff entry q first w _).mpr ⟨hpoint, hrefreshed⟩)
+    L0
     blankSymbol q0 repQ outQ htape (fun m p => ∃ encoded, Enc encoded p ∧ absSC encoded = absSC m)
     ⟨_, hencInit, rfl⟩
     (fun w st Tc hpreTrace hcanonical m p honRun hsucc ⟨encoded, henc, habs⟩ => by
@@ -791,7 +821,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (fun w st Tc hpreTrace hcanonical letter m p honRun ⟨encoded, henc, habs⟩ =>
       hforwardFeed w st Tc hpreTrace hcanonical letter m encoded p honRun habs henc)
     (fun w st Tc hpreTrace hcanonical m p honRun ⟨encoded, henc, habs⟩ => by
-      show repA (absSC m) = repQ p.1
+      show reportTest entry q first w (absSC m) = repQ p.1
       rw [← habs]
       exact hencRep w st Tc hpreTrace hcanonical m encoded p honRun habs henc)
     (fun w st Tc hpreTrace hcanonical m p honRun ⟨encoded, henc, habs⟩ => by
