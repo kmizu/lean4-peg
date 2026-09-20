@@ -462,13 +462,15 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (hsimTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
+        OnRun Good Post w (heldAfter (Tc w.length) st) (tickC (M w) m) →
         TickSucc (PofC centreC placeC entry w) q first 2048
           (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm ∨ frozen w m) (absSC m)
           (absSC (tickC (M w) m)) →
         Rep w m p → Rep w (tickC (M w) m) (L0.apply blankSymbol p none))
     (hsimFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ letter m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep w m p →
+      ∀ letter m p, InvC Good w (heldAfter (Tc w.length) st) m →
+        OnRun Good Post w (heldAfter (Tc w.length) st) (feedC letter m) → Rep w m p →
         Rep w (feedC letter m) (L0.apply blankSymbol p (some letter)))
     (hreadRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
@@ -553,10 +555,10 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       hpostOfLastReport w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m j hinv hneedy)
     hpostTick
     rep_sound rep_complete L0 blankSymbol q0 repQ outQ htape Rep hrepInit
-    (fun w m p hw honRun hsucc hrep =>
-      hsimTick w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m p honRun hsucc hrep)
-    (fun w letter m p hw honRun hrep =>
-      hsimFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 letter m p honRun hrep)
+    (fun w m p hw honRun honRunNext hsucc hrep =>
+      hsimTick w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m p honRun honRunNext hsucc hrep)
+    (fun w letter m p hw hinv honRunNext hrep =>
+      hsimFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 letter m p hinv honRunNext hrep)
     (fun w m p hw honRun hrep =>
       hreadRep w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m p honRun hrep)
     (fun w m p hw honRun hrep hpoint =>
@@ -692,7 +694,7 @@ no report point lies beyond, so the abstract layer (a ghost that knows the word)
 the machine is only asked to keep its report bit off (not to follow an abstract run for which
 the trace gives no invariant). -/
 def frozenAt (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)) : Prop :=
-  2 * w.length ≤ position (absSC m).vm.right
+  0 < w.length ∧ 2 * w.length ≤ position (absSC m).vm.right
 
 open Classical in
 /-- The steps that do nothing on frozen states. -/
@@ -740,7 +742,7 @@ theorem notFrozen_of_invC (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)} (hw
     show position (absState'' m.vm).vm.right = _
     rw [hneedy.2]
     rfl
-  unfold frozenAt at hfrozen
+  have hfrozen := hfrozen.2
   rw [hpos] at hfrozen
   have hTcPos : 1 ≤ Tc w.length :=
     hpreTrace.base.tc1 ▸ hpreTrace.base.pre.mono 1 w.length hw le_rfl
@@ -866,18 +868,28 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     -- configuration encoding a local state whose abstraction is an abstract successor
     (hforwardTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m encoded p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
+      ∀ m encoded p, OnRun Good Post w (heldAfter (Tc w.length) st) m → ¬ frozenAt w m →
         absSC encoded = absSC m → Enc encoded p →
         ∃ next, Enc next (L0.apply blankSymbol p none) ∧
           TickSucc (PofC centreC placeC entry w) q first 2048
-            (PalPeg.GalilTickFair.Canonical entry 2048)
-            (Starved encoded.vm ∨ frozenAt w encoded) (absSC encoded) (absSC next))
+            (PalPeg.GalilTickFair.Canonical entry 2048) (Starved encoded.vm) (absSC encoded)
+            (absSC next))
     (hforwardFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ letter m encoded p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
+      ∀ letter m encoded p, InvC Good w (heldAfter (Tc w.length) st) m →
         absSC encoded = absSC m → Enc encoded p →
         ∃ next, Enc next (L0.apply blankSymbol p (some letter)) ∧
           absSC next = absSC (feedC letter m))
+    -- once the abstract layer is frozen the machine is not followed any more: it keeps an
+    -- invariant of its own, under which its report bit is off
+    (PhysFrozen : List (Fin 2) → Q × (Fin t → STape Γ) → Prop)
+    (hfrozenEnter : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ m encoded p, OnRun Good Post w (heldAfter (Tc w.length) st) m → frozenAt w m →
+        absSC encoded = absSC m → Enc encoded p → PhysFrozen w p)
+    (hfrozenKeep : ∀ (w : List (Fin 2)) p, PhysFrozen w p →
+      PhysFrozen w (L0.apply blankSymbol p none))
+    (hfrozenQuiet : ∀ (w : List (Fin 2)) p, PhysFrozen w p → repQ p.1 = false)
     (hencRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m encoded p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
@@ -899,24 +911,65 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (fun w s _ hpoint hrefreshed => (reportTest_iff entry q first w _).mpr ⟨hpoint, hrefreshed⟩)
     L0
     blankSymbol q0 repQ outQ htape
-    (fun _ m p => ∃ encoded, Enc encoded p ∧ absSC encoded = absSC m)
-    (fun _ => ⟨_, hencInit, rfl⟩)
-    (fun w st Tc hpreTrace hcanonical m p honRun hsucc ⟨encoded, henc, habs⟩ => by
-      obtain ⟨next, hencNext, hsuccEncoded⟩ :=
-        hforwardTick w st Tc hpreTrace hcanonical m encoded p honRun habs henc
-      rw [habs] at hsuccEncoded
-      exact ⟨next, hencNext,
-        tickSucc_unique entry q first w
-          (or_congr (starved_of_absSC_eq habs) (frozenAt_of_absSC_eq habs)) hsuccEncoded hsucc⟩)
-    (fun w st Tc hpreTrace hcanonical letter m p honRun ⟨encoded, henc, habs⟩ =>
-      hforwardFeed w st Tc hpreTrace hcanonical letter m encoded p honRun habs henc)
-    (fun w st Tc hpreTrace hcanonical m p honRun ⟨encoded, henc, habs⟩ => by
+    (fun w m p => (¬ frozenAt w m ∧ ∃ encoded, Enc encoded p ∧ absSC encoded = absSC m) ∨
+      (frozenAt w m ∧ PhysFrozen w p))
+    (fun w => Or.inl ⟨fun hfrozen => by
+        have hbound := hfrozen.2
+        have hpos : position (absSC (x0C (blankVML spare) 2048).core).vm.right = 0 := by
+          show position (absState'' (x0C (blankVML spare) 2048).core.vm).vm.right = 0
+          rw [absState''_blank spare w]
+          show position (initialHead w) = 0
+          simp [position, initialHead]
+        have := hfrozen.1
+        omega, _, hencInit, rfl⟩)
+    (fun w st Tc hpreTrace hcanonical m p honRun honRunNext hsucc hrep => by
+      rcases hrep with ⟨hnotFrozen, encoded, henc, habs⟩ | ⟨hfrozen, hphys⟩
+      · obtain ⟨next, hencNext, hsuccEncoded⟩ :=
+          hforwardTick w st Tc hpreTrace hcanonical m encoded p honRun hnotFrozen habs henc
+        rw [habs] at hsuccEncoded
+        have hnextAbs := tickSucc_unique entry q first w
+          (⟨fun h => Or.inl ((starved_of_absSC_eq habs).mp h),
+            fun h => h.elim (starved_of_absSC_eq habs).mpr (fun hf => absurd hf hnotFrozen)⟩)
+          hsuccEncoded hsucc
+        by_cases hfrozenNext : frozenAt w (tickC (ghostSteps entry q first Good Post w) m)
+        · exact Or.inr ⟨hfrozenNext, hfrozenEnter w st Tc hpreTrace hcanonical _ next _
+            honRunNext hfrozenNext hnextAbs hencNext⟩
+        · exact Or.inl ⟨hfrozenNext, next, hencNext, hnextAbs⟩
+      · have hstay : absSC (tickC (ghostSteps entry q first Good Post w) m) = absSC m := by
+          rcases hsucc with ⟨_, hstay⟩ | ⟨hmoves, _⟩
+          · exact hstay
+          · exact absurd (Or.inr hfrozen) hmoves
+        exact Or.inr ⟨(frozenAt_of_absSC_eq hstay).mpr hfrozen, hfrozenKeep w p hphys⟩)
+    (fun w st Tc hpreTrace hcanonical letter m p hinv honRunNext hrep => by
+      rcases hrep with ⟨_, encoded, henc, habs⟩ | ⟨hfrozen, _⟩
+      · obtain ⟨next, hencNext, hnextAbs⟩ :=
+          hforwardFeed w st Tc hpreTrace hcanonical letter m encoded p hinv habs henc
+        by_cases hfrozenNext : frozenAt w (feedC letter m)
+        · exact Or.inr ⟨hfrozenNext, hfrozenEnter w st Tc hpreTrace hcanonical _ next _
+            honRunNext hfrozenNext hnextAbs hencNext⟩
+        · exact Or.inl ⟨hfrozenNext, next, hencNext, hnextAbs⟩
+      · exact absurd hfrozen (notFrozen_of_invC entry q first hfrozen.1 hpreTrace m hinv))
+    (fun w st Tc hpreTrace hcanonical m p honRun hrep => by
       show reportTest entry q first w (absSC m) = repQ p.1
-      rw [← habs]
-      exact hencRep w st Tc hpreTrace hcanonical m encoded p honRun habs henc)
-    (fun w st Tc hpreTrace hcanonical m p honRun ⟨encoded, henc, habs⟩ hpoint => by
-      rw [← show encoded.vm.ctl = m.vm.ctl from congrArg State.ctl habs]
-      exact hencOut w st Tc hpreTrace hcanonical m encoded p honRun habs henc hpoint)
+      rcases hrep with ⟨_, encoded, henc, habs⟩ | ⟨hfrozen, hphys⟩
+      · rw [← habs]
+        exact hencRep w st Tc hpreTrace hcanonical m encoded p honRun habs henc
+      · rw [hfrozenQuiet w p hphys]
+        cases htest : reportTest entry q first w (absSC m) with
+        | false => rfl
+        | true =>
+          have hlast := ((reportTest_iff entry q first w _).mp htest).1.atLast
+          have := hfrozen.1
+          have := hfrozen.2
+          omega)
+    (fun w st Tc hpreTrace hcanonical m p honRun hrep hpoint => by
+      rcases hrep with ⟨_, encoded, henc, habs⟩ | ⟨hfrozen, _⟩
+      · rw [← show encoded.vm.ctl = m.vm.ctl from congrArg State.ctl habs]
+        exact hencOut w st Tc hpreTrace hcanonical m encoded p honRun habs henc hpoint
+      · have hlast := hpoint.atLast
+        have := hfrozen.1
+        have := hfrozen.2
+        omega)
   intro w st Tc hpreTrace hcanonical mode
   rcases Nat.eq_zero_or_pos w.length with hempty | hw
   · intro m k j _ _ _ _ _ hbefore

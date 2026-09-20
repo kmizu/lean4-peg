@@ -167,11 +167,12 @@ theorem pal_in_peg_of_shadowed_sysC
     (htape : 0 < t) (Rep : List (Fin 2) → Mirrored1 P → Q × (Fin t → STape Γ) → Prop)
     (hrepInit : ∀ w, Rep w (x0C blank delay).core (q0, fun _ => STape.blankTape blankSymbol))
     (hsimTick : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m →
+      OnRun Good Post w (stOf w) (tickC (M w) m) →
       TickSucc (Pof w) (qof w) (firstOf w) delay (Canon w) (Starved m.vm ∨ frozen w m) (absSC m)
         (absSC (tickC (M w) m)) →
       Rep w m p → Rep w (tickC (M w) m) (L0.apply blankSymbol p none))
-    (hsimFeed : ∀ (w : List (Fin 2)) letter m p, 0 < w.length → OnRun Good Post w (stOf w) m →
-      Rep w m p → Rep w (feedC letter m) (L0.apply blankSymbol p (some letter)))
+    (hsimFeed : ∀ (w : List (Fin 2)) letter m p, 0 < w.length → InvC Good w (stOf w) m →
+      OnRun Good Post w (stOf w) (feedC letter m) → Rep w m p → Rep w (feedC letter m) (L0.apply blankSymbol p (some letter)))
     (hreadRep : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep w m p →
       repM w m = repQ p.1)
     (hreadOut : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep w m p →
@@ -363,14 +364,23 @@ theorem pal_in_peg_of_shadowed_sysC
     · exact hlt
   refine pal_in_peg_of_shadowed_core S absSC Inv x0 Pof qof firstOf H_letter H_first
     L0 blankSymbol q0 repQ outQ htape Rep hrepInit
-    (fun w s m p _ hinv hrep => hsimTick w m p hinv.1 (honRun hinv)
+    (fun w s m p hinput hinv hrep => hsimTick w m p hinv.1 (honRun hinv)
+      (honRun (hinvTick w s m hinput hinv))
       (by
         by_cases hstarved : Starved m.vm
         · exact Or.inl ⟨Or.inl hstarved, by rw [tickC_starved (M w) hstarved]⟩
         · rcases hsucc w s m hinv hstarved with ⟨hfrozen, hstay⟩ | ⟨hnotFrozen, htick, hcanon⟩
           · exact Or.inl ⟨Or.inr hfrozen, hstay⟩
           · exact Or.inr ⟨not_or.mpr ⟨hstarved, hnotFrozen⟩, htick, hcanon⟩) hrep)
-    (fun w s letter m p _ hinv hrep => hsimFeed w letter m p hinv.1 (honRun hinv) hrep)
+    (fun w s letter m p hinput hinv hrep => hsimFeed w letter m p hinv.1
+      (by
+        -- a letter arrives below the last report point only: after it all letters have arrived
+        obtain ⟨harrived, _⟩ := arrL_some w s letter hinput
+        rcases hinv.2.2 with htracked | ⟨_, hall, _⟩
+        · exact htracked.invC
+        · have hle := PalPeg.LocalLedgerShift.arrL_le w (s+1)
+          omega)
+      (honRun (hinvFeed w s letter m hinput hinv)) hrep)
     (fun w s m p hinv hrep => hreadRep w m p hinv.1 (honRun hinv) hrep)
     (fun w s m p hinv hrep hpoint => hreadOut w m p hinv.1 (honRun hinv) hrep hpoint)
     (x0C_started blank delay) (fun _ _ => rfl)
