@@ -1,3 +1,11 @@
+## n296 — 訂正: n295 の案はそのままでは通らない（報告点は台地を成し、`Tc m` は最初の添字とは限らない）
+
+**一次情報（2026-09-21、Lean の変更なし）**: `GalilCheckpoints.ReachAt`／`CycleOutM` は「`ReportPointAt raw m ∧ Refreshed` の状態に到達する `StepsAll` が存在する」としか言わない。報告点の状態は**台地**を成す: `R` が `2m−1` に着いた後、scan_count の背景 tick（clock 2048 の countdown）が続き、その間はヘッド・replay・出力が不変なので全部報告点。`Tc m` は台地のどこかの添字で、最初とは限らない。したがって n295／以前の (A) で鍵だと思った「最初性」は偽の疑いが濃い（機械検査した反証は無い）。n295 の「scan の飢餓テストを次の文字の到着に強める」案は、台地の途中（`k < Tc (m+1)` かつ `R = 2m+1`）で機械が止まり `Tc` に届かなくなるので採らない。**飢餓テストは現状（init／scan は `R`、shift の移動 tick は `C`・`L`・`right L`）のまま。**
+
+**使える事実**: `PreloadL'.needLe` は既に狭義（`k < Tc (m+1)`）、`ledger_local` は need 関数で一般化済み。
+
+**Post 相の見立て（仮説）**: 現在の飢餓テストのままで、最終報告点の後は scan モードの tick だけのはず: 台地の scan_count → gap `2|w|` へ進む比較 1 回（gap 同士なので一致するはず。要確認）→ scan_count → `canRight R` が偽で永久に飢餓。よって `Post w m` は「scan ∧ ¬replaying ∧ 全文字到着後」の意味述語にして、`hpostTick` を (i) Post の scan 状態に `NextOK` な局所後続が存在する、(ii) その後続も Post（比較が一致して mode が scan のまま）の 2 つに落とす。(ii) には「gap 同士の比較は一致する」の vm レベルの補題が要る。背景 tick が `ReportPoint ∧ Refreshed` を保存することは `backgroundS_fields` から出るはず（未証明）。
+
 ## n295 — 設計（未実装・仮説）: 報告点で次の文字の到着まで飢餓させれば Post 相の義務が消える
 
 **一次情報（2026-09-21、Lean の変更なし）**: `LocalShadowRealize.pal_in_peg_of_shadowed_core` は `micro_shadow` の結論のうち `ans`／`started` の等式を捨てている（`obtain ⟨hcore, -, -, hinv, hrep⟩`）。Post 相で橋が使うのは `hrepL`（物理の報告ビット = ghost の報告テスト）と `hstAbs`（`shadowAbs` = ghost の抽象、`hreadOut` 経由）だけ。
