@@ -70,6 +70,14 @@ theorem micro_core_some {X : Type} (S : LocalSys X) (w : List (Fin 2)) (x0 : LX 
   rw [hinput]
   rfl
 
+/-- **The abstract successor of a local tick**: the same state when the test starves, and
+otherwise a tick of the frame that satisfies the scheduling policy `Canon`.  With a policy that
+makes the tick unique, two local states with the same abstraction have successors with the same
+abstraction, whichever local step computed them. -/
+def TickSucc (Pw : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ)
+    (Canon : State GalilVM → State GalilVM → Prop) (starved : Prop) (x y : State GalilVM) : Prop :=
+  (starved ∧ y = x) ∨ (¬ starved ∧ Tick (galilFrameS Pw q first) delay x y ∧ Canon x y)
+
 /-- **`PAL ∈ PEG` from the concrete abstract local system and a physical machine that shadows
 it.**  The hypotheses are: the pre-loaded trace (used below its last report point only), the
 per-mode obligation below the last report point, the starvation test in both directions and at
@@ -90,6 +98,10 @@ theorem pal_in_peg_of_shadowed_sysC
     (hshared : ∀ (w : List (Fin 2)) j, PalPeg.GalilTruncTick.SharedTrunc w j (Pof w))
     (htrace : ∀ w : List (Fin 2), 0 < w.length → ∀ k, k < TcOf w w.length →
       Tick (galilFrameS (Pof w) (qof w) (firstOf w)) delay (stOf w k) (stOf w (k+1)))
+    (Canon : List (Fin 2) → State GalilVM → State GalilVM → Prop)
+    (hcanonTrace : ∀ w : List (Fin 2), 0 < w.length → ∀ k j, k < TcOf w w.length →
+      TickNeed w (stOf w) k j →
+      Canon w (truncS (w.length - j) (stOf w k)) (truncS (w.length - j) (stOf w (k+1))))
     (hsuffix : ∀ w : List (Fin 2), 0 < w.length → ∀ k, k ≤ TcOf w w.length →
       SufVM w (stOf w k).vm)
     (hinitTrack : ∀ w : List (Fin 2), 0 < w.length →
@@ -133,7 +145,8 @@ theorem pal_in_peg_of_shadowed_sysC
       InvC Good w (stOf w) m → Needy w (stOf w) (TcOf w w.length) j m.vm → Post w m)
     (hpostTick : ∀ (w : List (Fin 2)) (m : Mirrored1 P), 0 < w.length → Post w m →
       PhysWF m.vm → MirInv1 m → Good m → ¬ Starved m.vm →
-      Tick (galilFrameS (Pof w) (qof w) (firstOf w)) delay (absSC m) (absSC (tickC M m)) ∧
+      (Tick (galilFrameS (Pof w) (qof w) (firstOf w)) delay (absSC m) (absSC (tickC M m)) ∧
+          Canon w (absSC m) (absSC (tickC M m))) ∧
         Post w (tickC M m) ∧ PhysWF (tickC M m).vm ∧ MirInv1 (tickC M m) ∧ Good (tickC M m))
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
       repC (micro (sysC M repC) w (x0C blank delay) s).core.vm.ctl = true →
@@ -148,8 +161,10 @@ theorem pal_in_peg_of_shadowed_sysC
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Rep : Mirrored1 P → Q × (Fin t → STape Γ) → Prop)
     (hrepInit : Rep (x0C blank delay).core (q0, fun _ => STape.blankTape blankSymbol))
-    (hsimTick : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep m p →
-      Rep (tickC M m) (L0.apply blankSymbol p none))
+    (hsimTick : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m →
+      TickSucc (Pof w) (qof w) (firstOf w) delay (Canon w) (Starved m.vm) (absSC m)
+        (absSC (tickC M m)) →
+      Rep m p → Rep (tickC M m) (L0.apply blankSymbol p none))
     (hsimFeed : ∀ (w : List (Fin 2)) letter m p, 0 < w.length → OnRun Good Post w (stOf w) m →
       Rep m p → Rep (feedC letter m) (L0.apply blankSymbol p (some letter)))
     (hreadRep : ∀ m p, Rep m p → repC m.vm.ctl = repQ p.1)
@@ -208,9 +223,32 @@ theorem pal_in_peg_of_shadowed_sysC
   -- the tick out of the last report point, and every later tick
   have hfreeTick : ∀ w (hw : 0 < w.length) (m : Mirrored1 P), Post w m → PhysWF m.vm →
       MirInv1 m → Good m → ¬ Starved m.vm →
-      Tick (galilFrameS (Pof w) (qof w) (firstOf w)) delay (absSC m) (absSC (tickC M m)) ∧
+      (Tick (galilFrameS (Pof w) (qof w) (firstOf w)) delay (absSC m) (absSC (tickC M m)) ∧
+          Canon w (absSC m) (absSC (tickC M m))) ∧
         Post w (tickC M m) ∧ PhysWF (tickC M m).vm ∧ MirInv1 (tickC M m) ∧ Good (tickC M m) :=
     fun w hw m => hpostTick w m hw
+  have hsucc : ∀ w s m, Inv w s m → ¬ Starved m.vm →
+      Tick (galilFrameS (Pof w) (qof w) (firstOf w)) delay (absSC m) (absSC (tickC M m)) ∧
+        Canon w (absSC m) (absSC (tickC M m)) := by
+    rintro w s m ⟨hw, rfl, hphase⟩ hstarved
+    rcases hphase with htracked | ⟨_, _, hpost, hphys, hmir, hgood⟩
+    · by_cases hend : kOf S w x0 s = TcOf w w.length
+      · exact (hfreeTick w hw _
+          (hpostOfLastReport w _ _ hw htracked.invC (hend ▸ htracked.needy))
+          htracked.phys htracked.mir htracked.good hstarved).1
+      · have hbefore : kOf S w x0 s < TcOf w w.length :=
+          lt_of_le_of_ne htracked.beforeEnd hend
+        have hneed := hneedOfNotStarved w _ _ _ hw htracked.invC hstarved htracked.needy
+          hbefore htracked.used
+        obtain ⟨hneedy, _, _⟩ :=
+          hrealizes w hw _ _ _ _ htracked.invC rfl hstarved htracked.needy hneed hbefore
+        rw [tickC_step M hstarved,
+          show absSC (micro S w x0 s).core = _ from htracked.needy.2,
+          show absSC (stepOf M (micro S w x0 s).core.vm.ctl.mode (micro S w x0 s).core) = _
+            from hneedy.2]
+        exact ⟨tick_of_need (hshared w _) (htrace w hw _ hbefore) hneed,
+          hcanonTrace w hw _ _ hbefore hneed⟩
+    · exact (hfreeTick w hw _ hpost hphys hmir hgood hstarved).1
   have hinvTick : ∀ w s m, inp w s = none → Inv w s m → Inv w (s+1) (S.tickL m) := by
     rintro w s m hinput ⟨hw, rfl, hphase⟩
     refine ⟨hw, (micro_core_none S w x0 hinput).symm, ?_⟩
@@ -271,32 +309,19 @@ theorem pal_in_peg_of_shadowed_sysC
     · omega
   refine pal_in_peg_of_shadowed_core S absSC Inv x0 Pof qof firstOf delay H_letter H_first
     L0 blankSymbol q0 repQ outQ htape Rep hrepInit
-    (fun w s m p _ hinv hrep => hsimTick w m p hinv.1 (honRun hinv) hrep)
+    (fun w s m p _ hinv hrep => hsimTick w m p hinv.1 (honRun hinv)
+      (by
+        by_cases hstarved : Starved m.vm
+        · exact Or.inl ⟨hstarved, by rw [tickC_starved M hstarved]⟩
+        · exact Or.inr ⟨hstarved, hsucc w s m hinv hstarved⟩) hrep)
     (fun w s letter m p _ hinv hrep => hsimFeed w letter m p hinv.1 (honRun hinv) hrep)
     hreadRep hreadOut (x0C_started blank delay) (PalPeg.LocalSysConcrete.outL_abs M repC)
     rep_sound rep_complete hinvInit (x0C_ctl blank delay) hinvTick hinvFeed ?_ ?_ ?_ ?_
   · rintro w s m _ _ hstarved
     show absSC (tickC M m) = absSC m
     rw [tickC_starved M hstarved]
-  · rintro w s m hinput ⟨hw, rfl, hphase⟩ hstarved
-    rcases hphase with htracked | ⟨_, _, hpost, hphys, hmir, hgood⟩
-    · by_cases hend : kOf S w x0 s = TcOf w w.length
-      · exact (hfreeTick w hw _
-          (hpostOfLastReport w _ _ hw htracked.invC (hend ▸ htracked.needy))
-          htracked.phys htracked.mir htracked.good hstarved).1
-      · have hbefore : kOf S w x0 s < TcOf w w.length :=
-          lt_of_le_of_ne htracked.beforeEnd hend
-        have hneed := hneedOfNotStarved w _ _ _ hw htracked.invC hstarved htracked.needy
-          hbefore htracked.used
-        obtain ⟨hneedy, _, _⟩ :=
-          hrealizes w hw _ _ _ _ htracked.invC rfl hstarved htracked.needy hneed hbefore
-        show Tick _ delay (absSC _) (absSC (tickC M _))
-        rw [tickC_step M hstarved,
-          show absSC (micro S w x0 s).core = _ from htracked.needy.2,
-          show absSC (stepOf M (micro S w x0 s).core.vm.ctl.mode (micro S w x0 s).core) = _
-            from hneedy.2]
-        exact tick_of_need (hshared w _) (htrace w hw _ hbefore) hneed
-    · exact (hfreeTick w hw _ hpost hphys hmir hgood hstarved).1
+  · rintro w s m _ hinv hstarved
+    exact (hsucc w s m hinv hstarved).1
   · rintro w s letter m _ hinv
     exact feed_abs_core (hpackOf hinv).1.inv.views (hpackOf hinv).1.pend letter
   · exact H_ledger_of_local_oracles S absSC x0 Pof qof firstOf stOf TcOf hpreload

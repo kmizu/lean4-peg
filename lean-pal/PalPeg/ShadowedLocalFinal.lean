@@ -43,7 +43,7 @@ open PalPeg.LocalTrackingLatch
 open PalPeg.LocalReplayParked (absState'' Mirrored1 MirInv1)
 open PalPeg.LocalSysConcrete (Steps stepOf tickC sysC absSC feedC Starved Needy TickNeed InvC PhysWF
   Realizes x0C)
-open PalPeg.LocalShadowConcrete (pal_in_peg_of_shadowed_sysC OnRun)
+open PalPeg.LocalShadowConcrete (pal_in_peg_of_shadowed_sysC OnRun TickSucc)
 open PalPeg.LocalBlankState (tapeCount blankVML absState''_blank inv_blank twin_blank wf_blankView)
 
 /-- The trace held at its last tick: the states of `st` up to `lastTick`, then `st lastTick`
@@ -405,8 +405,9 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
         Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Post w m)
     (hpostTick : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
       Post w m → PhysWF m.vm → MirInv1 m → Good m → ¬ Starved m.vm →
-      Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absSC m)
+      (Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absSC m)
           (absSC (tickC M m)) ∧
+        PalPeg.GalilTickFair.Canonical entry 2048 (absSC m) (absSC (tickC M m))) ∧
         Post w (tickC M m) ∧ PhysWF (tickC M m).vm ∧ MirInv1 (tickC M m) ∧
         Good (tickC M m))
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
@@ -426,8 +427,11 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (hrepInit : Rep (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
     (hsimTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p →
-        Rep (tickC M m) (L0.apply blankSymbol p none))
+      ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
+        TickSucc (PofC centreC placeC entry w) q first 2048
+          (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm) (absSC m)
+          (absSC (tickC M m)) →
+        Rep m p → Rep (tickC M m) (L0.apply blankSymbol p none))
     (hsimFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ letter m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p →
@@ -458,6 +462,10 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (fun w hw k hk => by
       rw [heldAfter_of_le (stOf w) hk.le, heldAfter_of_le (stOf w) (Nat.succ_le_of_lt hk)]
       exact (htraceOf w hw).1.base.pre.trace.tick k hk)
+    (fun _ => PalPeg.GalilTickFair.Canonical entry 2048)
+    (fun w hw k j hk _ => by
+      rw [heldAfter_of_le (stOf w) hk.le, heldAfter_of_le (stOf w) (Nat.succ_le_of_lt hk)]
+      exact PalPeg.CanonicalLocalRealizes.canonical_trunc ((htraceOf w hw).2 k hk) _)
     (fun w hw k hk => by
       rw [heldAfter_of_le (stOf w) hk]
       exact sufVM_trace w (stOf w) (TcOf w w.length)
@@ -504,8 +512,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       hpostOfLastReport w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m j hinv hneedy)
     hpostTick
     rep_sound rep_complete L0 blankSymbol q0 repQ outQ htape Rep hrepInit
-    (fun w m p hw honRun hrep =>
-      hsimTick w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m p honRun hrep)
+    (fun w m p hw honRun hsucc hrep =>
+      hsimTick w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m p honRun hsucc hrep)
     (fun w letter m p hw honRun hrep =>
       hsimFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 letter m p honRun hrep)
     hreadRep hreadOut
@@ -648,8 +656,9 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
         Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Post w m)
     (hpostTick : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
       Post w m → PhysWF m.vm → MirInv1 m → Good m → ¬ Starved m.vm →
-      Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absSC m)
+      (Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absSC m)
           (absSC (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m)) ∧
+        PalPeg.GalilTickFair.Canonical entry 2048 (absSC m) (absSC (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m))) ∧
         Post w (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m) ∧ PhysWF (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m).vm ∧ MirInv1 (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m) ∧
         Good (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m))
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
@@ -674,9 +683,11 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (hrepInit : Rep (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
     (hsimTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p →
-        Rep (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep
-          replayStartStep) m) (L0.apply blankSymbol p none))
+      ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
+        TickSucc (PofC centreC placeC entry w) q first 2048
+          (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm) (absSC m)
+          (absSC (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m)) →
+        Rep m p → Rep (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m) (L0.apply blankSymbol p none))
     (hsimFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ letter m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p →
