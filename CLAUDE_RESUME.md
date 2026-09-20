@@ -19,7 +19,9 @@
 * `Inv (replayCommitVm entry c x)`: `⟨LocalRoles.moveRoles_injective hinv.roles, ⟨rfl, rfl, rfl⟩, ⟨views.2.1, views.2.1, views.2.2.1, views.2.2.2.1, views.2.2.2.2⟩, 鏡 3 本の Shaped, hshaped⟩`。
 * スクラッチの場所（セッション限り）: `$S/ghost_check.lean`、`$S/rc_check.lean`（`RewindCentre` の Tick 保存）。
 
-**(d) でまだ示していないもの**: `abs'' (replayCommitVm …)` が `replayStartVM entry (abs'' m.vm) ·` を満たすこと（`abs'` は鏡を読まないので `replayStartVM_commitReplayParked` の証明を `left := center` 用に直す）、`ParkedOK`、`hreplayStartNext` の組み立て（`RewindCentre` の trace 形＋`truncPH_left`）。
+**抽象の等式もスクラッチで機械検査済み（2026-09-21、同じ `$S/ghost_check.lean`）**: `replayStartVM entry (abs'' x) (abs'' (replayCommitVm entry c x))`。仮説は `hinj`／`hpl`／`hpw`／`hpre : x.ctl.replaying = false`／`hflag`／`hland` で、`replayStartVM_commitReplayParked` にあった `hm : MirInv1` は不要（`left := x.center` が `rfl`）。形: `rval (replayCommitVm …) = rval (commitReplay …)` は `rfl`、あとは `rval_commitReplay`、`absR_eq_iter`、`abs''_eq_abs' hpre`、`refine ⟨?_, hR, rfl, rfl, …⟩`、残り 11 場は `show (LocalState.abs (LocalTick2.commitReplay entry x)).場 = _; rw [ha]; try rfl`（`rw` が自分で閉じる場があるので `try`）。
+
+**(d) でまだ示していないもの**: `ParkedOK`（`parkedOK_commitReplayParked` の形を `replayCommitVm` 用に）、`RewindCentre` の trace 形、`hreplayStartNext` の組み立て（`htarget` を `cases`、`replayStartVM` の一意性、`truncPH_left` で `hland`、`hflag` は `target.ctl.replaying = replayPos` から）。
 
 ## n313（2026-09-21）: `hreplayStartNext` の producer (d) の設計（調査のみ、コードは変えていない）
 
