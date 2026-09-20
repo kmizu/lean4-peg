@@ -770,6 +770,11 @@ theorem frozenAt_of_absSC_eq {w : List (Fin 2)} {encoded m : Mirrored1 (tapeCoun
   unfold frozenAt
   rw [habs]
 
+/-- **The invariant the abstract local layer carries along the run**: the local well-formedness
+pack `LocalWF` (the polarity bundle and the mode-wise geometry `Geom`), which is what the seven
+phase steps need (`CloseoutCoreAgree.realizes_seven_SL`). -/
+def localGood (m : Mirrored1 (tapeCount spare)) : Prop := PalPeg.LocalWF.LocalWF m.vm
+
 /-- **The phase after the last report point**: the abstract state is still a refreshed report
 point of the word in scan mode (the plateau: the right head stands on the last letter), or it is
 frozen. -/
@@ -836,36 +841,33 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc →
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (Good : Mirrored1 (tapeCount spare) → Prop)
-    (hgoodWF : ∀ m : Mirrored1 (tapeCount spare), Good m → PalPeg.LocalWF.LocalWF m.vm)
-    (hgoodInit : Good (x0C (blankVML spare) 2048).core)
     (hgoodTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m : Mirrored1 (tapeCount spare), InvC Good w (heldAfter (Tc w.length) st) m →
-        Good (tickC (ghostSteps entry q first Good (postPhase entry q first) w) m))
+      ∀ m : Mirrored1 (tapeCount spare), InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m →
+        (localGood (spare := spare)) (tickC (ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w) m))
     (hgoodFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (letter : Fin 2) (m : Mirrored1 (tapeCount spare)),
-        InvC Good w (heldAfter (Tc w.length) st) m → Good (feedC letter m))
+        InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m → (localGood (spare := spare)) (feedC letter m))
     -- the two open modes: a tracked, non-starved local state has a local successor
     (hscanNext : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (target : State GalilVM),
-        InvC Good w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .scan → ¬ Starved m.vm →
+        InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .scan → ¬ Starved m.vm →
         Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
-        ∃ next, NextOK entry q first Good (postPhase entry q first) w m next)
+        ∃ next, NextOK entry q first (localGood (spare := spare)) (postPhase entry q first) w m next)
     (hreplayStartNext : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (target : State GalilVM),
-        InvC Good w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .replayStart →
+        InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .replayStart →
         ¬ Starved m.vm →
         Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
-        ∃ next, NextOK entry q first Good (postPhase entry q first) w m next)
+        ∃ next, NextOK entry q first (localGood (spare := spare)) (postPhase entry q first) w m next)
     -- on the plateau after the last report point the local ticks are still ticks
     (hplateauNext : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
       ReportPoint w (absSC m) → Refreshed (PofC centreC placeC entry w) q first (absSC m) →
-      (absSC m).ctl.mode = Mode.scan → ¬ frozenAt w m → PhysWF m.vm → MirInv1 m → Good m →
-      ¬ Starved m.vm → ∃ next, NextOK entry q first Good (postPhase entry q first) w m next)
+      (absSC m).ctl.mode = Mode.scan → ¬ frozenAt w m → PhysWF m.vm → MirInv1 m → (localGood (spare := spare)) m →
+      ¬ Starved m.vm → ∃ next, NextOK entry q first (localGood (spare := spare)) (postPhase entry q first) w m next)
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Enc : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
     (hencInit : Enc (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
@@ -874,7 +876,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     -- configuration encoding a local state whose abstraction is an abstract successor
     (hforwardTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m encoded p, OnRun Good (postPhase entry q first) w (heldAfter (Tc w.length) st) m → ¬ frozenAt w m →
+      ∀ m encoded p, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m → ¬ frozenAt w m →
         absSC encoded = absSC m → Enc encoded p →
         ∃ next, Enc next (L0.apply blankSymbol p none) ∧
           TickSucc (PofC centreC placeC entry w) q first 2048
@@ -882,7 +884,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
             (absSC next))
     (hforwardFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ letter m encoded p, InvC Good w (heldAfter (Tc w.length) st) m →
+      ∀ letter m encoded p, InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m →
         absSC encoded = absSC m → Enc encoded p →
         ∃ next, Enc next (L0.apply blankSymbol p (some letter)) ∧
           absSC next = absSC (feedC letter m))
@@ -891,25 +893,25 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (PhysFrozen : List (Fin 2) → Q × (Fin t → STape Γ) → Prop)
     (hfrozenEnter : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m encoded p, OnRun Good (postPhase entry q first) w (heldAfter (Tc w.length) st) m → frozenAt w m →
+      ∀ m encoded p, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m → frozenAt w m →
         absSC encoded = absSC m → Enc encoded p → PhysFrozen w p)
     (hfrozenKeep : ∀ (w : List (Fin 2)) p, PhysFrozen w p →
       PhysFrozen w (L0.apply blankSymbol p none))
     (hfrozenQuiet : ∀ (w : List (Fin 2)) p, PhysFrozen w p → repQ p.1 = false)
     (hencRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m encoded p, OnRun Good (postPhase entry q first) w (heldAfter (Tc w.length) st) m →
+      ∀ m encoded p, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m →
         absSC encoded = absSC m → Enc encoded p → reportTest entry q first w (absSC encoded) = repQ p.1)
     (hencOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m encoded p, OnRun Good (postPhase entry q first) w (heldAfter (Tc w.length) st) m →
+      ∀ m encoded p, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m →
         absSC encoded = absSC m → Enc encoded p → ReportPoint w (absSC m) →
         encoded.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   refine given_shadowedLocalSystem entry q first hfirst hor hres hChainVerifierSupply
-    (fun w => ghostSteps entry q first Good (postPhase entry q first) w)
+    (fun w => ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w)
     (fun w m => reportTest entry q first w (absSC m))
-    Good hgoodInit hgoodTick hgoodFeed
+    (localGood (spare := spare)) (PalPeg.LocalWF.localWF_x0C ⟨rfl, rfl, rfl, rfl, rfl⟩ 2048) hgoodTick hgoodFeed
     ?_ (postPhase entry q first) frozenAt
     (fun w st Tc hw hpreTrace _ m hinv => notFrozen_of_invC entry q first hw hpreTrace m hinv)
     (fun w st Tc hw hpreTrace _ hscanAtReport m _ hneedy => by
@@ -925,7 +927,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       exact ⟨hreport.1, hreport.2, hscanAtReport w.length hw le_rfl⟩)
     (fun w m hw hpost hphys hmir hgood hnotStarved => by
       by_cases hfrozen : frozenAt w m
-      · have hstay : tickC (ghostSteps entry q first Good (postPhase entry q first) w) m = m := by
+      · have hstay : tickC (ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w) m = m := by
           rw [PalPeg.LocalSysConcrete.tickC_step _ hnotStarved]
           show stepOf (freezeSteps (frozenAt w) _) m.vm.ctl.mode m = m
           rw [stepOf_freezeSteps, if_pos hfrozen]
@@ -934,8 +936,8 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       · rcases hpost with ⟨hpoint, hrefreshed, hscan⟩ | hfrozen'
         · have hspec := chosenStep_spec
             (hplateauNext w m hw hpoint hrefreshed hscan hfrozen hphys hmir hgood hnotStarved)
-          have hstep : tickC (ghostSteps entry q first Good (postPhase entry q first) w) m
-              = chosenStep entry q first Good (postPhase entry q first) w m := by
+          have hstep : tickC (ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w) m
+              = chosenStep entry q first (localGood (spare := spare)) (postPhase entry q first) w m := by
             rw [PalPeg.LocalSysConcrete.tickC_step _ hnotStarved]
             show stepOf (freezeSteps (frozenAt w) _) m.vm.ctl.mode m = _
             rw [stepOf_freezeSteps, if_neg hfrozen, show m.vm.ctl.mode = Mode.scan from hscan]
@@ -969,11 +971,11 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
           (⟨fun h => Or.inl ((starved_of_absSC_eq habs).mp h),
             fun h => h.elim (starved_of_absSC_eq habs).mpr (fun hf => absurd hf hnotFrozen)⟩)
           hsuccEncoded hsucc
-        by_cases hfrozenNext : frozenAt w (tickC (ghostSteps entry q first Good (postPhase entry q first) w) m)
+        by_cases hfrozenNext : frozenAt w (tickC (ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w) m)
         · exact Or.inr ⟨hfrozenNext, hfrozenEnter w st Tc hpreTrace hcanonical _ next _
             honRunNext hfrozenNext hnextAbs hencNext⟩
         · exact Or.inl ⟨hfrozenNext, next, hencNext, hnextAbs⟩
-      · have hstay : absSC (tickC (ghostSteps entry q first Good (postPhase entry q first) w) m) = absSC m := by
+      · have hstay : absSC (tickC (ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w) m) = absSC m := by
           rcases hsucc with ⟨_, hstay⟩ | ⟨hmoves, _⟩
           · exact hstay
           · exact absurd (Or.inr hfrozen) hmoves
@@ -1025,7 +1027,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
         (heldAfter (Tc w.length) st k) (heldAfter (Tc w.length) st (k+1)) := fun k hk => by
     rw [heldAfter_of_le st hk.le, heldAfter_of_le st (Nat.succ_le_of_lt hk)]
     exact hcanonical k hk
-  have hseven := PalPeg.CloseoutCoreAgree.realizes_seven_SL (P := (tapeCount spare)) (Good := Good)
+  have hseven := PalPeg.CloseoutCoreAgree.realizes_seven_SL (P := (tapeCount spare)) (Good := localGood (spare := spare))
     (raw := w) (stOf := heldAfter (Tc w.length) st) (lastTick := Tc w.length)
     (Pw := PofC centreC placeC entry w) (qq := q) (first := first) (delay := 2048)
     (fun j => sharedC_trunc_vm w j centreC placeC entry (fun s => (centrePlaceC w j s).1)
@@ -1037,7 +1039,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (PalPeg.LocalWF.noReplay_zero_of_init (by
       rw [heldAfter_of_le st (Nat.zero_le _), hpreTrace.base.pre.start]
       rfl))
-    hq hgoodWF (PofC_onLetter centreC placeC entry w) (PofC_leftFirst centreC placeC entry w)
+    hq (fun _ hgood => hgood) (PofC_onLetter centreC placeC entry w) (PofC_leftFirst centreC placeC entry w)
     (PalPeg.CloseoutRightBounds.rightInBounds
       (PalPeg.LocalWF.phaseNoReplay_of_trace
         (PalPeg.LocalWF.noReplay_run (lastTick := Tc w.length)
