@@ -141,17 +141,24 @@ theorem machineInit (viewCount : ℕ) (hK : 2 ≤ K) (input : Option (Fin 2)) (m
 
 /-! ## One slot -/
 
-/-- Through a slot the machine stays started, the counter counts, the letter stays. -/
+/-- The letter latched after `count` steps: the latest arrival, else what was latched before. -/
+def latch (inputs : ℕ → Option (Fin 2)) (pending : Option (Fin 2)) : ℕ → Option (Fin 2)
+  | 0 => pending
+  | count + 1 => inputs count <|> latch inputs pending count
+
+/-- Through a slot the machine stays started, the counter counts, the letter stays, and the
+arrivals are latched. -/
 theorem machineIter_registers (viewCount : ℕ) (hK : 2 ≤ K) (inputs : ℕ → Option (Fin 2))
     (x : MachineState viewCount) (hstarted : x.1.1 = true) (hslot : x.1.2.2.2.1 = 0) :
     ∀ count ≤ 10,
       (machineIter viewCount hK inputs x count).1.1 = true ∧
         (machineIter viewCount hK inputs x count).1.2.2.2.1.val = count ∧
-        (machineIter viewCount hK inputs x count).1.2.1 = x.1.2.1
+        (machineIter viewCount hK inputs x count).1.2.1 = x.1.2.1 ∧
+        (machineIter viewCount hK inputs x count).1.2.2.1 = latch inputs x.1.2.2.1 count
   | 0, _ => ⟨hstarted, by rw [show machineIter viewCount hK inputs x 0 = x from rfl, hslot]; rfl,
-      rfl⟩
+      rfl, rfl⟩
   | count + 1, hcount => by
-    obtain ⟨hstartedAt, hslotAt, hcurrentAt⟩ :=
+    obtain ⟨hstartedAt, hslotAt, hcurrentAt, hpendingAt⟩ :=
       machineIter_registers viewCount hK inputs x hstarted hslot count (by omega)
     obtain ⟨hstartedNext, hregisters⟩ := machineStep_registers viewCount hK
       (machineIter viewCount hK inputs x count) (inputs count)
@@ -160,7 +167,8 @@ theorem machineIter_registers (viewCount : ℕ) (hK : 2 ≤ K) (inputs : ℕ →
     rw [hstartedAt, if_pos rfl, if_neg hnotLast] at hregisters
     have hcurrentNext := congrArg Prod.fst hregisters
     have hslotNext := congrArg (fun registers => registers.2.2) hregisters
-    refine ⟨hstartedNext, ?_, ?_⟩
+    have hpendingNext := congrArg (fun registers => registers.2.1) hregisters
+    refine ⟨hstartedNext, ?_, ?_, ?_⟩
     · show (machineStep viewCount hK _ _).1.2.2.2.1.val = count + 1
       rw [show (machineStep viewCount hK (machineIter viewCount hK inputs x count)
         (inputs count)).1.2.2.2.1 = nextSlot (machineIter viewCount hK inputs x count).1.2.2.2.1
@@ -174,6 +182,36 @@ theorem machineIter_registers (viewCount : ℕ) (hK : 2 ≤ K) (inputs : ℕ →
         (inputs count)).1.2.1 = (machineIter viewCount hK inputs x count).1.2.1
         from hcurrentNext]
       exact hcurrentAt
+    · show (machineStep viewCount hK _ _).1.2.2.1
+        = (inputs count <|> latch inputs x.1.2.2.1 count)
+      rw [← hpendingAt]
+      exact hpendingNext
+
+-- From here on a real step is used through `machineStep_registers` and `machine_viewStep` only.
+seal machineStep
+
+/-- **The end of a slot**: after eleven steps the machine is at step `0` of the next slot, whose
+letter is the letter latched during the slot. -/
+theorem machineIter_slotEnd (viewCount : ℕ) (hK : 2 ≤ K) (inputs : ℕ → Option (Fin 2))
+    (x : MachineState viewCount) (hstarted : x.1.1 = true) (hslot : x.1.2.2.2.1 = 0) :
+    (machineIter viewCount hK inputs x 11).1.1 = true ∧
+      (machineIter viewCount hK inputs x 11).1.2.2.2.1 = 0 ∧
+      (machineIter viewCount hK inputs x 11).1.2.1 = latch inputs x.1.2.2.1 11 ∧
+      (machineIter viewCount hK inputs x 11).1.2.2.1 = none := by
+  obtain ⟨hstartedAt, hslotAt, -, hpendingAt⟩ :=
+    machineIter_registers viewCount hK inputs x hstarted hslot 10 (le_refl _)
+  obtain ⟨hstartedNext, hregisters⟩ := machineStep_registers viewCount hK
+    (machineIter viewCount hK inputs x 10) (inputs 10)
+  unfold registersAfter at hregisters
+  rw [hstartedAt, if_pos rfl, if_pos hslotAt] at hregisters
+  have hlast : machineIter viewCount hK inputs x 11
+      = machineStep viewCount hK (machineIter viewCount hK inputs x 10) (inputs 10) := rfl
+  obtain ⟨hcurrentNext, hrest⟩ := Prod.mk.inj hregisters
+  obtain ⟨hpendingNext, hslotNext⟩ := Prod.mk.inj hrest
+  rw [hlast]
+  refine ⟨hstartedNext, hslotNext, ?_, hpendingNext⟩
+  rw [hcurrentNext, hpendingAt]
+  rfl
 
 /-- **One slot of the machine.**  Eleven real steps from step `0` of a slot take every view to
 the view commanded by the letter of the slot, with nothing owed. -/
@@ -193,7 +231,7 @@ theorem machineSlot (viewCount : ℕ) (hK : 2 ≤ K) (inputs : ℕ → Option (F
     (fun count => viewStateOf (machineIter viewCount hK inputs x count) view) ?_ (hrep view)
     (howed view) last
   intro step hstep
-  obtain ⟨-, hslotAt, hcurrentAt⟩ :=
+  obtain ⟨-, hslotAt, hcurrentAt, -⟩ :=
     machineIter_registers viewCount hK inputs x hstarted hslot step (by omega)
   have hview := machine_viewStep viewCount hK (machineIter viewCount hK inputs x step)
     (inputs step) view
@@ -202,8 +240,62 @@ theorem machineSlot (viewCount : ℕ) (hK : 2 ≤ K) (inputs : ℕ → Option (F
   rw [hslotEq, hcurrentAt] at hview
   exact hview
 
+theorem machineIter_add (viewCount : ℕ) (hK : 2 ≤ K) (inputs : ℕ → Option (Fin 2))
+    (x : MachineState viewCount) (before : ℕ) :
+    ∀ count, machineIter viewCount hK inputs x (before + count)
+      = machineIter viewCount hK (fun index => inputs (before + index))
+          (machineIter viewCount hK inputs x before) count
+  | 0 => rfl
+  | count + 1 => by
+    show machineStep viewCount hK (machineIter viewCount hK inputs x (before + count)) _ = _
+    rw [machineIter_add viewCount hK inputs x before count]
+    rfl
+
+/-- **The first letter reaches every view.**  From blank tapes, one step of initialization and
+one slot: after twelve real steps every view represents `arrive a emptyView` with nothing owed,
+and the machine is at step `0` of the next slot, on the letter latched meanwhile. -/
+theorem machineFirstLetter (viewCount : ℕ) (hK : 2 ≤ K) (inputs : ℕ → Option (Fin 2))
+    (a : Fin 2) (hfirst : inputs 0 = some a) (last : MicroOp) :
+    (machineIter viewCount hK inputs (machineInitState viewCount) 12).1.1 = true ∧
+      (machineIter viewCount hK inputs (machineInitState viewCount) 12).1.2.2.2.1 = 0 ∧
+      (machineIter viewCount hK inputs (machineInitState viewCount) 12).1.2.1
+        = latch (fun index => inputs (1 + index)) none 11 ∧
+      (machineIter viewCount hK inputs (machineInitState viewCount) 12).1.2.2.1 = none ∧
+      ∀ view : Fin viewCount,
+        ViewRep K (arrive a emptyView)
+          (viewStateOf (machineIter viewCount hK inputs (machineInitState viewCount) 12) view).1.1
+          (last, (viewStateOf
+            (machineIter viewCount hK inputs (machineInitState viewCount) 12) view).1.2.2)
+          (viewStateOf (machineIter viewCount hK inputs (machineInitState viewCount) 12) view).2 ∧
+        (viewStateOf (machineIter viewCount hK inputs (machineInitState viewCount) 12)
+          view).1.2.2.2.2.val = 0 := by
+  obtain ⟨hstarted, hcurrent, hpending, hslot, hviews⟩ :=
+    machineInit viewCount hK (some a) MicroOp.incLength
+  have hsplit : machineIter viewCount hK inputs (machineInitState viewCount) 12
+      = machineIter viewCount hK (fun index => inputs (1 + index))
+          (machineStep viewCount hK (machineInitState viewCount) (inputs 0)) 11 :=
+    machineIter_add viewCount hK inputs (machineInitState viewCount) 1 11
+  rw [hsplit, hfirst]
+  obtain ⟨hstartedEnd, hslotEnd, hcurrentEnd, hpendingEnd⟩ := machineIter_slotEnd viewCount hK
+    (fun index => inputs (1 + index)) _ hstarted hslot
+  rw [hpending] at hcurrentEnd
+  refine ⟨hstartedEnd, hslotEnd, hcurrentEnd, hpendingEnd, fun view => ?_⟩
+  have hslotRun := machineSlot viewCount hK (fun index => inputs (1 + index)) _ hstarted hslot
+    (fun _ => emptyView) (fun _ => WF_emptyView) (fun _ => viewCells_emptyView)
+    (first := MicroOp.incLength)
+    (fun view => by
+      rw [(hviews view).1]
+      exact (hviews view).2)
+    (fun view => by
+      rw [(hviews view).1]
+      rfl)
+    last view
+  rw [hcurrent] at hslotRun
+  exact hslotRun
+
 #print axioms machineInit
 #print axioms machineSlot
+#print axioms machineFirstLetter
 
 end Machine
 
