@@ -4,6 +4,7 @@ import PalPeg.LocalInitStep
 import PalPeg.TickOnLetterCongr
 import PalPeg.HeadBehindRight
 import PalPeg.LocalStarvedRight
+import PalPeg.ChainLookBehindRight
 import PalPeg.CanonicalFallback
 import PalPeg.CanonicalFallbackInput
 import PalPeg.CanonicalReplay
