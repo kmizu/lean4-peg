@@ -158,31 +158,42 @@ theorem chainLook_heldAfter (entry q : ℕ) (first : Fin 9)
 
 #print axioms chainLook_heldAfter
 
-/-- **The letters used by the target of an `init` or `replayStart` tick have arrived.**  Such a
-tick is forced by the mode: `init` puts the three heads on the place right of the right head,
-whose lookahead the starvation test gives; `replayStart` puts them on the centre head.  Every
-other mode is left to `hother`. -/
+/-- **The letters used by the target of a tick have arrived**, for an `init` tick, a
+`replayStart` tick, and a `scan` tick that does not enter `shift`.  `init` puts the three heads on
+the place right of the right head, whose lookahead the starvation test gives; `replayStart` puts
+them on the centre head; a `scan` tick other than the shift entry uses the letters of the source,
+the lookahead of the right head and that of the chain verifier
+(`TickUsedLetters.usedVM_scanTick_le`, `chainLook_heldAfter`).  The shift entry and every other
+mode are left to `hother`. -/
 theorem nextUsed_heldAfter (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc)
+    (hres : ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc)
+    (hsupply : PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
+    (hbackRep : ∀ i, i ≤ Tc w.length → (st i).ctl.mode = .scan →
+      ∀ (v : GalilScaffoldChainPeriod.Tape) (h lag margin : GalilScaffoldCounter.Counter)
+        (ver : GalilScaffoldInputHead.PlaceHead), (st i).vm.chain = .back v h lag margin ver →
+        GalilScaffoldInputTrace.Represents ver.head w ∧ 0 ≤ GalilScaffoldCounter.value lag)
     (m : Mirrored1 (tapeCount spare)) (k j : ℕ) (hnotStarved : ¬ Starved m.vm)
     (hneedy : Needy w (heldAfter (Tc w.length) st) k j m.vm) (hbefore : k < Tc w.length)
     (hused : usedVM w (heldAfter (Tc w.length) st k).vm ≤ j)
     (hother : (heldAfter (Tc w.length) st k).ctl.mode ≠ .init →
       (heldAfter (Tc w.length) st k).ctl.mode ≠ .replayStart →
+      ((heldAfter (Tc w.length) st k).ctl.mode = .scan →
+        (heldAfter (Tc w.length) st (k+1)).ctl.mode = .shift) →
       usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j) :
     usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j := by
+  have hsuffix : PalPeg.GalilThrottledRun.SufVM w (heldAfter (Tc w.length) st k).vm := by
+    rw [heldAfter_of_le st hbefore.le]
+    exact sufVM_trace w st (Tc w.length) (sharedC_suf w _ _ centreC placeC entry) q first 2048
+      hpreTrace.base.pre.trace.tick (by rw [hpreTrace.base.pre.start]; exact sufVM_boot w) k
+      hbefore.le
+  have hlookRight :=
+    PalPeg.LocalStarvedRight.usedPH_right_le_of_notStarved hneedy hnotStarved hsuffix hused
+  have htick := hpreTrace.base.pre.trace.tick k hbefore
   by_cases hinitMode : (heldAfter (Tc w.length) st k).ctl.mode = .init
-  · have hsuffix : PalPeg.GalilThrottledRun.SufVM w (heldAfter (Tc w.length) st k).vm := by
-      rw [heldAfter_of_le st hbefore.le]
-      exact sufVM_trace w st (Tc w.length) (sharedC_suf w _ _ centreC placeC entry) q first 2048
-        hpreTrace.base.pre.trace.tick (by rw [hpreTrace.base.pre.start]; exact sufVM_boot w) k
-        hbefore.le
-    have hlookRight :=
-      PalPeg.LocalStarvedRight.usedPH_right_le_of_notStarved hneedy hnotStarved hsuffix hused
-    rw [heldAfter_of_le st hbefore.le] at hinitMode hlookRight
+  · rw [heldAfter_of_le st hbefore.le] at hinitMode hlookRight
     rw [heldAfter_of_le st (Nat.succ_le_of_lt hbefore)]
-    have htick := hpreTrace.base.pre.trace.tick k hbefore
     obtain ⟨t, hinit, hnext⟩ := PalPeg.GalilTickFair.tick_init_cases (c := (st k).ctl)
       (s := (st k).vm) hinitMode htick
     rw [hnext]
@@ -190,12 +201,20 @@ theorem nextUsed_heldAfter (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)} (h
   · by_cases hreplayMode : (heldAfter (Tc w.length) st k).ctl.mode = .replayStart
     · rw [heldAfter_of_le st hbefore.le] at hreplayMode hused
       rw [heldAfter_of_le st (Nat.succ_le_of_lt hbefore)]
-      have htick := hpreTrace.base.pre.trace.tick k hbefore
       obtain ⟨t, o, hreplayStart, -, -, hnext⟩ := PalPeg.GalilTickFair.tick_replayStart_cases
         (c := (st k).ctl) (s := (st k).vm) hreplayMode htick
       rw [hnext]
       exact (PalPeg.TickUsedLetters.usedVM_replayStart_le w hreplayStart).trans hused
-    · exact hother hinitMode hreplayMode
+    · by_cases hscanMode : (heldAfter (Tc w.length) st k).ctl.mode = .scan
+      · by_cases hshiftNext : (heldAfter (Tc w.length) st (k+1)).ctl.mode = .shift
+        · exact hother hinitMode hreplayMode (fun _ => hshiftNext)
+        · have hlookChain := chainLook_heldAfter entry q first hw hpreTrace hres hsupply hbackRep
+            m k j hnotStarved hneedy hbefore hused hscanMode
+          rw [heldAfter_of_le st hbefore.le] at hscanMode hused hlookRight hlookChain
+          rw [heldAfter_of_le st (Nat.succ_le_of_lt hbefore)] at hshiftNext ⊢
+          exact (PalPeg.TickUsedLetters.usedVM_scanTick_le w (c := (st k).ctl) (s := (st k).vm)
+            hscanMode htick hshiftNext).trans (max_le (max_le hused hlookRight) hlookChain)
+      · exact hother hinitMode hreplayMode (fun hscan => absurd hscan hscanMode)
 
 #print axioms nextUsed_heldAfter
 
@@ -237,6 +256,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
         usedVM w (heldAfter (Tc w.length) st k).vm ≤ j →
         (heldAfter (Tc w.length) st k).ctl.mode ≠ .init →
         (heldAfter (Tc w.length) st k).ctl.mode ≠ .replayStart →
+        ((heldAfter (Tc w.length) st k).ctl.mode = .scan →
+          (heldAfter (Tc w.length) st (k+1)).ctl.mode = .shift) →
         usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j)
     (hbackRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
@@ -337,7 +358,9 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
     (fun w letter m hw hinv => hgoodFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 letter m hinv)
     (fun w hw => hrealizes w _ _ (htraceOf w hw).1 (htraceOf w hw).2)
     (fun w m k j hw hinv hstarved hneedy hbefore hused =>
-      nextUsed_heldAfter entry q first hw (htraceOf w hw).1 m k j hstarved hneedy hbefore hused
+      nextUsed_heldAfter entry q first hw (htraceOf w hw).1 (hres w _ _ (htraceOf w hw).1)
+        (hChainVerifierSupply w _ _ hw (htraceOf w hw).1)
+        (hbackRep w _ _ (htraceOf w hw).1 (htraceOf w hw).2) m k j hstarved hneedy hbefore hused
         (hnextUsedOfNotStarved w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved
           hneedy hbefore hused))
     (fun w m k j hw _ hstarved hneedy hbefore hused hscan =>
@@ -494,6 +517,8 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
         usedVM w (heldAfter (Tc w.length) st k).vm ≤ j →
         (heldAfter (Tc w.length) st k).ctl.mode ≠ .init →
         (heldAfter (Tc w.length) st k).ctl.mode ≠ .replayStart →
+        ((heldAfter (Tc w.length) st k).ctl.mode = .scan →
+          (heldAfter (Tc w.length) st (k+1)).ctl.mode = .shift) →
         usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j)
     (hbackRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →

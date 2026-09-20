@@ -1,4 +1,5 @@
 import PalPeg.GalilLookRefined
+import PalPeg.GalilRunSkeleton
 
 /-!
 # The letters used by the target of a tick
@@ -141,5 +142,50 @@ theorem usedVM_restart_le (raw : List (Fin 2)) {entry : ℕ} {s t : GalilVM}
   omega
 
 #print axioms usedVM_restart_le
+
+/-- **The letters used by the target of a scan tick that does not enter `shift`.**  By cases on
+the tick: a background tick, a comparison (with the matched place, which only touches `replay`),
+a comparison followed by the fallback entry, or a restart.  The shift entry moves the chain
+verifier once more and is not covered. -/
+theorem usedVM_scanTick_le (raw : List (Fin 2)) {centre : GalilVM → Fin 3}
+    {place : GalilVM → GalilScaffoldPlace.Place} {entry q delay : ℕ} {first : Fin 9}
+    {word : List (Fin 2)} {c : PalPeg.GalilScaffoldController.Control} {s : GalilVM}
+    {y : State GalilVM} (hmode : c.mode = .scan)
+    (htick : Tick (galilFrameS (PalPeg.GalilRunSkeleton.PofC centre place entry word) q first)
+      delay ⟨c, s⟩ y)
+    (hnotShift : y.ctl.mode ≠ .shift) :
+    usedVM raw y.vm ≤ max (max (usedVM raw s)
+      (usedPH raw.length (GalilScaffoldChainVerifier.right s.right)))
+      (lookChain' raw.length s.chain) := by
+  have hplaceKeeps : ∀ compared placed : GalilVM,
+      (galilFrameS (PalPeg.GalilRunSkeleton.PofC centre place entry word) q
+        first).matchedPlace c.replaying compared placed →
+      usedVM raw placed = usedVM raw compared := by
+    intro compared placed hplace
+    have hplaced : placed = (if c.replaying then
+        { compared with replay := GalilScaffoldCounter.dec compared.replay } else compared) :=
+      hplace
+    rw [hplaced]
+    split <;> rfl
+  cases htick
+  case scan_wait =>
+    exact (usedVM_background_le raw _ q first (by assumption)).trans
+      (max_le (le_trans (le_max_left _ _) (le_max_left _ _)) (le_max_right _ _))
+  case scan_count =>
+    exact (usedVM_background_le raw _ q first (by assumption)).trans
+      (max_le (le_trans (le_max_left _ _) (le_max_left _ _)) (le_max_right _ _))
+  case scan_match =>
+    exact (le_of_eq (hplaceKeeps _ _ (by assumption))).trans
+      (usedVM_compare_le raw _ q first (by assumption))
+  case scan_shift => exact absurd rfl hnotShift
+  case scan_fallback =>
+    exact (usedVM_beginFallback_le raw (by assumption)).trans
+      (usedVM_compare_le raw _ q first (by assumption))
+  case restart =>
+    exact (usedVM_restart_le raw (by assumption)).trans
+      (le_trans (le_max_left _ _) (le_max_left _ _))
+  all_goals (exfalso; simp_all)
+
+#print axioms usedVM_scanTick_le
 
 end PalPeg.TickUsedLetters
