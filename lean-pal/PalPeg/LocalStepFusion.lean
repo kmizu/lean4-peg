@@ -15,7 +15,7 @@ set_option autoImplicit false
 namespace PalPeg.LocalStepFusion
 
 open PalPeg.CloseoutCoreEnc12 (Act actList runA runA_eq runA_shift runA_cur_le runA_le_cur
-  cellOfWin ActRule)
+  cellOfWin ActRule compStep compStep_apply TEqG)
 open PalPeg.CloseoutCoreEnc13 (actList_append)
 open PalPeg.Local (Window idx idx_val pos rd readWin readWin_eq)
 open PalPeg.Program (STape)
@@ -135,5 +135,73 @@ theorem seqRule_ideal (blank : Γ) (R₁ : ActRule Terminal Q Γ tapeCount first
     secondWindows_readWin blank R₁ x.1 input x.2 hmargin, actList_append]
 
 #print axioms seqRule_ideal
+
+/-! ## A rule iterated -/
+
+/-- The radius of `count` fused steps of radius `K`. -/
+def iterRadius (K : ℕ) : ℕ → ℕ
+  | 0 => 0
+  | count + 1 => K + iterRadius K count
+
+theorem iterRadius_eq (K : ℕ) : ∀ count, iterRadius K count = count * K
+  | 0 => by simp [iterRadius]
+  | count + 1 => by rw [iterRadius, iterRadius_eq K count]; ring
+
+/-- The rule that does nothing. -/
+def idleRule (Terminal Q Γ : Type) (tapeCount : ℕ) : ActRule Terminal Q Γ tapeCount 0 where
+  nq := fun control _ _ => control
+  acts := fun _ _ _ _ => []
+  len_le := fun _ _ _ _ => le_refl _
+
+/-- **`count` steps of a rule as one rule**: the first step gets the input. -/
+def iterRule {K : ℕ} (R : ActRule Terminal Q Γ tapeCount K) :
+    (count : ℕ) → ActRule Terminal Q Γ tapeCount (iterRadius K count)
+  | 0 => idleRule Terminal Q Γ tapeCount
+  | count + 1 => seqRule R (iterRule R count)
+
+/-- `count` ideal steps: the first gets the input. -/
+def idealIter {K : ℕ} (R : ActRule Terminal Q Γ tapeCount K) (blank : Γ) :
+    ℕ → Q × (Fin tapeCount → STape Γ) → Option Terminal → Q × (Fin tapeCount → STape Γ)
+  | 0, x, _ => x
+  | count + 1, x, input => idealIter R blank count (idealStep R blank x input) none
+
+/-- A list of actions moves the head left by at most its length. -/
+theorem pos_actList_ge (blank : Γ) (tape : STape Γ) (acts : List (Act Γ)) :
+    pos tape - acts.length ≤ pos (actList blank tape acts) := by
+  have hlow := runA_le_cur acts (rd blank tape, pos tape)
+  rw [runA_eq blank acts tape] at hlow
+  exact hlow
+
+/-- **The iterated rule prescribes the ideal run.** -/
+theorem iterRule_ideal {K : ℕ} (blank : Γ) (R : ActRule Terminal Q Γ tapeCount K) :
+    ∀ (count : ℕ) (x : Q × (Fin tapeCount → STape Γ)) (input : Option Terminal),
+      (∀ tape, iterRadius K count ≤ pos (x.2 tape)) →
+      idealStep (iterRule R count) blank x input = idealIter R blank count x input
+  | 0, _, _, _ => rfl
+  | count + 1, x, input, hmargin => by
+    show idealStep (seqRule R (iterRule R count)) blank x input = _
+    rw [seqRule_ideal blank R (iterRule R count) x input hmargin]
+    refine iterRule_ideal blank R count (idealStep R blank x input) none (fun tape => ?_)
+    have hmoved := pos_actList_ge blank (x.2 tape)
+      (R.acts x.1 input (fun tape => readWin blank K (x.2 tape)) tape)
+    have hlength := R.len_le x.1 input (fun tape => readWin blank K (x.2 tape)) tape
+    have hstart : K + iterRadius K count ≤ pos (x.2 tape) := hmargin tape
+    show iterRadius K count ≤ pos (actList blank (x.2 tape) _)
+    omega
+
+/-- **One real step of the iterated rule is the ideal run of `count` steps**: the same control,
+the same tapes up to `TEqG`. -/
+theorem compStep_iterRule {K : ℕ} (blank : Γ) (R : ActRule Terminal Q Γ tapeCount K)
+    (count : ℕ) (x : Q × (Fin tapeCount → STape Γ)) (input : Option Terminal)
+    (hmargin : ∀ tape, iterRadius K count ≤ pos (x.2 tape)) :
+    ((compStep (iterRule R count)).apply blank x input).1
+        = (idealIter R blank count x input).1 ∧
+      ∀ tape, TEqG blank ((idealIter R blank count x input).2 tape)
+        (((compStep (iterRule R count)).apply blank x input).2 tape) := by
+  have hreal := compStep_apply (iterRule R count) blank x input hmargin
+  rw [← iterRule_ideal blank R count x input hmargin]
+  exact hreal
+
+#print axioms compStep_iterRule
 
 end PalPeg.LocalStepFusion
