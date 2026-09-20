@@ -19,6 +19,8 @@
 * (B) R の twin を 2 本常駐させて select で役割交換 — 採らない。交換後の旧 L／旧 C は R から `2·r_j`／`r_j` 離れており、戻すのに O(r_j) tick 要るが、次の select は 1 文字後に来うる（`a^n b a b`）。固定本数では供給が尽きる。
 * (C) ghost 層 `Mirrored1` をやめて抽象状態そのものを ghost にする — 採らない。局所→抽象の精密化（`TickL1/2/3`）を物理の高さでやり直すことになる。
 
+**台帳は既存部品にある（2026-09-21 追記、定義で確認）**: copy 相の長さは `beginFallbackVM`（`GalilScaffoldTopFallbackCycle:19`）が `s.length` から決め、窓は `take (ℓ+1)`。`GalilSpanCounter.SpanRep s : value s.length = 2 * value s.radius + 1` は `CloseoutWatchPhase.spanRep_of_invLP` でタダ（`BranchSupply.SpanRepOnScanAndShift` もある）。位置は `CloseoutPackRun10.LPackM.scanGeom` の `ScanInvariant`（`leftPos : position l = center − radius`、`rightPos : position r = center + radius`）。よって歩く距離 `2·rad` は copy 相の tick 数 `2·rad+2` に収まる。未確認: `ScanInvariant` の `rad` と `s.radius` カウンタの同一視（`RadiusRep`）が同じ点で取れるか。
+
 **次の具体 goal**: copy 相の局所 step に「`canRight` の間 L と C を右へ 1 歩」を足したとき、select 時点で `Twin left right ∧ Twin center right` になること（copy 相の tick 数 ≥ `position right − position left` の台帳が要る。抽象側の `position center + value radius = position right` の類を tracked state で確認する）。
 
 ## n303 — 突き合わせで見つかった形式化ミスの候補: 局所層の choose は `L := R`・`C := R` を実装していない
