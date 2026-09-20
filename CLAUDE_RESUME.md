@@ -1,3 +1,13 @@
+## n295 — 設計（未実装・仮説）: 報告点で次の文字の到着まで飢餓させれば Post 相の義務が消える
+
+**一次情報（2026-09-21、Lean の変更なし）**: `LocalShadowRealize.pal_in_peg_of_shadowed_core` は `micro_shadow` の結論のうち `ans`／`started` の等式を捨てている（`obtain ⟨hcore, -, -, hinv, hrep⟩`）。Post 相で橋が使うのは `hrepL`（物理の報告ビット = ghost の報告テスト）と `hstAbs`（`shadowAbs` = ghost の抽象、`hreadOut` 経由）だけ。
+
+**Post 相が重い理由**: 最終報告点の後も機械は tick を続け（`R` が最後の文字から gap へ、不一致なら shift／fallback／replay）、その間の状態は trace の外。報告ビットと出力の健全性を trace の外で言う不変量が無い。
+
+**案**: scan の飢餓テストを「`R` の次の文字が到着している」（`canRight R ∧ canRight (right R)` 相当）に強める。すると最後の報告点（以後文字が来ない）で機械は永久に飢餓＝stutter し、Post 相の状態は報告点の状態そのもの。報告ビットは真のまま、出力は refresh された値のまま。`hpostTick` は前提 `¬ Starved` が成り立たず空虚、`Post w m` は「報告点の状態で飢餓」と定義できる。Scala 正本は文字の到着ごとに仕事をする online 機械なので、この方が仕様に近い。
+
+**影響（要確認）**: (1) `hnotStarvedOfNeed`（need ≤ 到着 ⇒ 非飢餓）が報告点 `k = Tc m`・`j = m` で破れるので、台帳の need を「tick `k` の need は、`Tc m ≤ k` なら `m+1` 以上」に上げる。(2) `GalilLookRefined.PreloadL'`／`needLe` の上界は `i ≤ Tc (m+1) → need i ≤ m+1`（端点込み）。端点 `i = Tc m` の tick は報告 `m` に不要（状態 `Tc m` は tick `0..Tc m − 1` で到達）なので `i < Tc (m+1)` 版で足りるはずだが、`ledger_localL'` の証明が端点を使っていないかを読む必要がある。(3) `nextUsed`／`chainLook` の scan 側は前提が強くなるだけなので通るはず。(4) `CloseoutCoreEnc7.NotStarvedReads` の局所読みに `right R` の読みを足す。
+
 ## n294 — 橋から最終定理に届いていない仮定を削った。全体 build 成功
 
 **状態（2026-09-21 未明）**: **全体 build 成功（この commit 時点、`BUILD=0`・`error` 0・`sorry` 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`（`Axioms.lean` の guard は全体 build で通過）。
