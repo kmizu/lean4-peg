@@ -1,3 +1,15 @@
+## n289 — `obligation_localRealization`: `hnextUsedOfNotStarved` を shift 入口 1 つまで狭めた（公理は未変化）
+
+**状態（2026-09-20）**: 全体 build の最新は `dd21451`（`BUILD=0`・`error` 0・`sorry` 0）。以後の commit（…・`ab326d6`・`4476b48`・`a6280d0`）は module build `PalPeg.ShadowedLocalFinal` の `BUILD=0` のみ。**全体 build 成功（`dd21451` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: `propext`／`Classical.choice`／`Quot.sound` ＋ `obligation_localRealization`。
+
+**証明して消費者鎖（`given_shadowedLocalSystem`／`given_openModesAndPhysicalMachine`）へ接続したもの**: `TickUsedLetters.usedVM_scanTick_le`（shift 入口以外の scan tick）、`usedVM_shiftOne_le`（shift の移動 tick は `C` を 1 歩・`L` を 2 歩、verifier は不動）、`usedVM_phaseTick_le`（init／scan／replayStart 以外の全 tick）、`LocalStarvedRight.usedPH_shiftHeads_le_of_notStarved`（飢餓テストの残り 3 読み）。`ShadowedLocalFinal.nextUsed_heldAfter` がこれらを当て、`hnextUsedOfNotStarved` は「scan かつ着地が shift」の場合だけを問う形になった。
+
+**未接続・調査**: shift 入口（`beginShiftVM`: `immediate` が verifier を 1 歩進める）。調べた一次情報: guard は `zero w.lag = true`、着地の `ShiftPhaseChainLedger` は `position ver + lag = position right`。`usedPH` は「その頭が到達した最大位置」で決まり現在位置だけでは決まらない（`two_usedPH_of_rep` の右スタック項）ので、位置台帳だけでは足りない。候補: 大域の `needBound_alongPreTrace`（`i ≤ Tc (m+1) → needL' i ≤ m+1`）を `m+1 = usedPH (着地の right) ≤ j` で使い、`k+1 ≤ Tc (m+1)` を front ポテンシャルの単調性（shift 入口は `replaying = false`）から出す。未着手。
+
+**発見（未適用）**: `BranchSupply.chainVerifierRepresents_alongTrace`／`chainLagCanonical_alongTrace` は mode guard なしで trace 全点に効き、`backVer`／`backLagField` が `hbackRep` の中身そのもの。`first ≠ 4` を取れば `hbackRep` は既存定理で放電できる。
+
+**残る仮定（`given_openModesAndPhysicalMachine`）**: `scanStep`／`replayStartStep` と `hscanLocal`／`hreplayStartLocal`、`Good` 系 4 本、`hnextUsedOfNotStarved`（shift 入口のみ）、`hbackRep`（上の発見で放電可能）、`hnotStarvedOfNeed`、`Post` 系、`rep_sound`／`rep_complete`、物理機械（`L0`・`Rep`・`hsimTick`・`hsimFeed` ほか）。物理 ActRule は未実装。
+
 ## n288 — `obligation_localRealization`: 自分が入れた仮定 `hstarvedAtLastReport` は偽の疑いが濃い。橋の終端の扱いを直す必要がある
 
 **状態（2026-09-20）**: 全体 build は `1f8e1c5` 時点で `BUILD=0`・`error` 0 件・`sorry` 0 件、その後の commit（`adfe7f9`・`75b1ef9`・`f86fa03`・`21dbd31`・`64e10d4`・`151aed4`）は module build `BUILD=0`。標準公理のみの guard は `unconditional` について `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization` のまま。**無条件 PAL は未完。**
