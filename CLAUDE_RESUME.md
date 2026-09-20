@@ -1,3 +1,26 @@
+## n304（2026-09-21）: choose のヘッドコピーは「正本＝ポインタ別名、Lean の到達先＝TM」の機械モデル差。物理設計を決めた
+
+**全体 build 成功（最新の全体 build は ba6aeec）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本: `obligation_localRealization`）。Lean のコードは変えていない（調査と設計決定）。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（未接続） |
+
+**実行で確かめたこと（Scala 正本、語 ab／aab／abab、probe は削除済み）**: choose モードの間は `L ≠ R`、`C ≠ R`（例: ab の tick 269–270 で `L=0 C=1 R=2`）。コピーは choose→rewind の 1 歩（tick 271 で `L=2 C=2 R=2`）。fallback 各相の長さは窓幅 `2·radius+1` に比例（R=6,L=0 で copy 7／home 8／fpp 10／mark_end 6／choose 4）。
+
+**一次情報で確かめたこと**:
+* 抽象側 `GalilScaffoldTopRewind.lean:56` の `choose` は `left := x.right, center := x.right` を select の 1 歩で代入。`GalilScaffoldTopFallback.lean` の copy／home／fpp／markEnd は VM の `left`／`center` を読みも書きもしない。
+* よって `LocalWF.Geom.chooseParked`＝`LocalRealizesScan.ChooseWF.headsLeft/headsCenter`（choose モード中ずっと `absHead' left = absHead' right`）は、`InvC`（`abs''` が trace と厳密一致）と両立しない。**偽の疑いが濃い**（Lean の `False` 定理は未作成）。
+* 根は機械モデルの差。正本 `docs/palindromes-in-peg/SCA_INPUT_HEADS.md:21`:「Copying a head aliases its focus, stack roots …」＝永続スタックのポインタ別名で O(1)。Lean の消費者 `CloseoutFinalW.H_realizeCanonical` が要求するのは `LocalStep … → realize`＝Kim–Park の実時間多テープ TM（`ProgramMachine.STape` は zipper、1 命令 1 セル）。ヘッドのコピーは原始操作ではない。
+* `LocalTick2 §3`／`LocalTick3:43` の元設計は「コピーせず、L と C が自分のテープを R まで歩く（head-copy job）」。物理としては正しいが、`abs'` が物理 `left` を読むので、歩いている間 `InvC` が壊れる。これが `chooseParked` という偽の疑いが濃い仮説の出どころ。replayStart は `LocalReplayParked`（`absR`＝駐車 view＋再生量、鏡 `mirL`）で同じ問題を解決済みだが、choose には対応物が無い。
+
+**設計決定（A を採る）**:
+* (A) **fallback の各相（copy／home／fpp／markEnd／choose）の間に、物理の L と C を R まで歩かせる。** 距離は `2·radius` と `radius`、copy 相だけで `2·radius+1` tick あるので収まる。select の時点で全テープが R に居るので、遠くに取り残されるテープが無い。抽象はこの区間 `left`／`center` を読まないので、抽象値は ghost の控え（`Enc` が無視する場）で持つ。
+* (B) R の twin を 2 本常駐させて select で役割交換 — 採らない。交換後の旧 L／旧 C は R から `2·r_j`／`r_j` 離れており、戻すのに O(r_j) tick 要るが、次の select は 1 文字後に来うる（`a^n b a b`）。固定本数では供給が尽きる。
+* (C) ghost 層 `Mirrored1` をやめて抽象状態そのものを ghost にする — 採らない。局所→抽象の精密化（`TickL1/2/3`）を物理の高さでやり直すことになる。
+
+**次の具体 goal**: copy 相の局所 step に「`canRight` の間 L と C を右へ 1 歩」を足したとき、select 時点で `Twin left right ∧ Twin center right` になること（copy 相の tick 数 ≥ `position right − position left` の台帳が要る。抽象側の `position center + value radius = position right` の類を tracked state で確認する）。
+
 ## n303 — 突き合わせで見つかった形式化ミスの候補: 局所層の choose は `L := R`・`C := R` を実装していない
 
 **方法（n302）の 2 回目（2026-09-21、Lean の変更なし）**: `hgeomTracked` の各場を Scala 正本と突き合わせた。
