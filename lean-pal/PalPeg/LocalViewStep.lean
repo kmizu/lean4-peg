@@ -79,7 +79,7 @@ theorem viewDecision_sound {v : InputView} {gap : Bool} {micro : MicroControl}
       (actList blankc (tapes nearTape)
         (nearActsOfWindows command gap micro.2.1 (fun tape => readWin blankc K (tapes tape))))
       nearTape') :
-    (∃ bottom : List (Option (Fin 2)), K ≤ bottom.length ∧
+    (∃ bottom : List (Option (Fin 2)), K ≤ bottom.length + 1 ∧
         StackTape backTape' (backStack (viewApply command v) ++ bottom)) ∧
       (∃ bottom : List (Option (Fin 2)), Sealed bottom ∧ K ≤ bottom.length ∧
         StackTape nearTape' ((viewApply command v).near ++ bottom)) ∧

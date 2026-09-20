@@ -32,13 +32,14 @@ def queueTapeOfView (tape : Fin 10) : Fin 12 := Fin.castLE (by omega) tape
 def frontTape (tag : RTag) : Fin 12 :=
   queueTapeOfView (Fin.castLE (by omega) (roleTape tag .front))
 
-/-- **A view on twelve tapes.**  The gap bit is in the control; the bottoms are at least `K`
-high, which is the margin of `compStep_apply`. -/
+/-- **A view on twelve tapes.**  The gap bit is in the control; the stack tapes are at least
+`K` high, which is the margin of `compStep_apply` (on the tape `focus :: back` the sentinel is
+one of the `K` cells: a blank tape gives no more, and the sentinel is never popped). -/
 structure ViewRep (K : ℕ) (v : InputView) (gap : Bool) (micro : MicroControl)
     (tapes : Fin 12 → STape Γc) : Prop where
   gap : gap = v.gap
   queue : MicroRep K v.far micro (fun tape => tapes (queueTapeOfView tape))
-  back : ∃ bottom : List (Option (Fin 2)), K ≤ bottom.length ∧
+  back : ∃ bottom : List (Option (Fin 2)), K ≤ bottom.length + 1 ∧
     StackTape (tapes backTape) (backStack v ++ bottom)
   near : ∃ bottom : List (Option (Fin 2)), Sealed bottom ∧ K ≤ bottom.length ∧
     StackTape (tapes nearTape) (v.near ++ bottom)

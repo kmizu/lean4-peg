@@ -138,6 +138,22 @@ def initControl : ProgramControl := (.snoc 0, 10, (0, false), .idle, 0)
 
 theorem currentOp_initControl : currentOp initControl = .incLength := rfl
 
+/-- **Ten stacks of `K` seals represent the empty queue.** -/
+theorem microRep_empty_of_seals {tapes : Fin 10 → STape Γc}
+    (htape : ∀ tape, StackTape (tapes tape) (List.replicate K none)) (micro : MicroOp) :
+    MicroRep K RTQueue.empty (micro, initControl.2.2) tapes := by
+  refine ⟨⟨fun _ => List.replicate K none, fun _ => List.replicate K none,
+      List.replicate K none, rfl, ⟨fun ro => ?_, fun _ => sealed_replicate K⟩,
+      fun _ => by rw [List.length_replicate], fun tape _ => htape _, sealed_replicate K,
+      by rw [List.length_replicate], htape _⟩,
+    0, List.replicate K none, List.replicate K none, ?_, sealed_replicate K,
+    by rw [List.length_replicate], htape _, sealed_replicate K,
+    by rw [List.length_replicate], htape _⟩
+  · cases ro <;> rfl
+  · show (0 : ℤ) + ((0 : Fin 3).val : ℤ) + lengthDebt RTQueue.empty.state
+      = ((RTQueue.empty : Queue (Fin 2)).lenf : ℤ) - ((RTQueue.empty : Queue (Fin 2)).lenr : ℤ)
+    rfl
+
 /-- **The first step: from blank tapes to the empty queue.**  One step of the machine from its
 initial control on blank tapes leaves the control as it is and the ten tapes representing the
 empty queue, with every bottom `K` seals high. -/
@@ -185,17 +201,7 @@ theorem programInit (hK : 2 ≤ K) (input : Option Terminal) (micro : MicroOp) :
         = initControl
     rw [currentOp_initControl, microRule_nq_none hK _ input _ rfl]
     rfl
-  · refine ⟨⟨fun _ => List.replicate K none, fun _ => List.replicate K none,
-        List.replicate K none, rfl, ⟨fun ro => ?_, fun _ => sealed_replicate K⟩,
-        fun _ => by rw [List.length_replicate], fun tape _ => htape _, sealed_replicate K,
-        by rw [List.length_replicate], htape _⟩,
-      0, List.replicate K none, List.replicate K none, ?_, sealed_replicate K,
-      by rw [List.length_replicate], htape _, sealed_replicate K,
-      by rw [List.length_replicate], htape _⟩
-    · cases ro <;> rfl
-    · show (0 : ℤ) + ((0 : Fin 3).val : ℤ) + lengthDebt RTQueue.empty.state
-        = ((RTQueue.empty : Queue (Fin 2)).lenf : ℤ) - ((RTQueue.empty : Queue (Fin 2)).lenr : ℤ)
-      rfl
+  · exact microRep_empty_of_seals htape micro
 
 #print axioms programInit
 

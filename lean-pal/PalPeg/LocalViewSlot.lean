@@ -287,7 +287,7 @@ theorem viewDecisionStep (Terminal : Type) (hK : 2 ≤ K) {slot : Fin 11} (hslot
     {v : InputView} {first : MicroOp} (hcells : ViewCells v)
     (hrep : ViewRep K v state.1.1 (first, state.1.2.2) state.2) :
     ∃ (job : Option QueueJob) (backBottom nearBottom : List (Option (Fin 2))),
-      K ≤ backBottom.length ∧ Sealed nearBottom ∧ K ≤ nearBottom.length ∧
+      K ≤ backBottom.length + 1 ∧ Sealed nearBottom ∧ K ≤ nearBottom.length ∧
       QuietView (viewApply command v).gap job
         (backStack (viewApply command v) ++ backBottom)
         ((viewApply command v).near ++ nearBottom) state' ∧
@@ -301,7 +301,7 @@ theorem viewDecisionStep (Terminal : Type) (hK : 2 ≤ K) {slot : Fin 11} (hslot
   obtain ⟨backBottom0, hbackHeight0, hbackStack0⟩ := hrep.back
   obtain ⟨nearBottom0, -, hnearHeight0, hnearStack0⟩ := hrep.near
   have hmargin := viewMargin hK hrep.queue hbackStack0
-    (by simp only [List.length_append]; omega) hnearStack0
+    (by simp only [backStack, List.length_append, List.length_cons]; omega) hnearStack0
     (by simp only [List.length_append]; omega)
   have hbackTape := htapes backTape (hmargin backTape)
   have hnearTape := htapes nearTape (hmargin nearTape)
@@ -370,7 +370,7 @@ theorem viewSlot_sound (Terminal : Type) (hK : 2 ≤ K) {v : InputView} (hwf : W
     hfront, hidle⟩ := viewDecisionStep Terminal hK (slot := ⟨0, by omega⟩) rfl
       (hsteps 0 (by omega)) hcells hrep
   have hbackLength : K ≤ (backStack (viewApply command v) ++ backBottom).length := by
-    simp only [List.length_append]; omega
+    simp only [backStack, List.length_append, List.length_cons]; omega
   have hnearLength : K ≤ ((viewApply command v).near ++ nearBottom).length := by
     simp only [List.length_append]; omega
   obtain ⟨hrun, hfinal⟩ := viewQuietRun Terminal hK command states hsteps hbackLength
