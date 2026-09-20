@@ -1,3 +1,21 @@
+## n308（2026-09-21）: copy の work カウンタの正値を trace から証明した。`Geom.copyWork` を消費者から外した
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: 仮説 `hgeomTracked` から場 `copyWork`（copy モードで `RemPosL` なら `0 < val (phys (roles .fppWork))`）が消えた。`Geom` は 1 場（`shiftMag`）。状態仮説（producer なし）を trace 形の仮説に置き換え、その仮説を消費者の中で放電したので、新しい仮説は残っていない。
+* `LocalWF.val_fppWork_pos_of_copyRemaining`: 抽象の `fpp.work` が 0 でない ⇒ 局所テープの `val > 0`（`absCtr` は極性に依らず `val = 0` で zero）。
+* `LocalWF.copyRemaining_of_trace`: tracked な copy 状態では `RemPosL` は copy 側。`truncVM` はカウンタに触らない（`rfl`）。
+* `realizes_seven`／`CloseoutCoreStep.realizes_seven_of_agree`／`CloseoutCoreAgree.realizes_seven_SL` に trace 形の仮説 `H_shiftIdleInCopy : ∀ k, (stOf k).ctl.mode = .copy → ¬ ShiftRemaining (stOf k).vm` を通し、`ShadowedLocalFinal` で `BranchSupply.cpack_alongTrace` の `GalilCentreLive.CPack.idle`＋`GalilScaffoldChainInputSupply.shiftIdle_iff` から放電。添字 0 は boot（mode = init、`Mode.noConfusion`）、`Tc` 以降は `heldAfter` の `min`。
+* 学び: 自由変数を含む goal に `decide` は使えない（`Expected type must not contain free variables`）。
+
+**今日の `Geom`**: 5 場 → 1 場。`chooseParked`（n305）と `rewindClean`（n306）は偽の疑いが濃い仮説を形式化を直して外し、`copyProper`（n307）と `copyWork`（n308）は本物の事実を証明して外した。
+
+**次の場 `shiftMag`**: `mode = shift → RemPosL x → 0 < val remaining ∧ 0 < val radius ∧ 2 ≤ val length`。`remaining` は n308 と同じ橋（`ShiftRemaining` ⇒ `val > 0`、cross case は `CloseoutRadPack3.copyIdle_trace`）。`radius > 0` と `2 ≤ length` は trace の `CloseoutPackRun23.ShiftGeom`／`SpanRep`（`value length = 2·value radius + 1`）を定義で確かめてから。
+
 ## n307（2026-09-21）: fpp walker の左番兵を run に沿って証明した。`Geom.copyProper` を消費者から外した
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。

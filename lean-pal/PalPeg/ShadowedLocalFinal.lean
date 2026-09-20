@@ -1070,6 +1070,23 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
         (heldAfter (Tc w.length) st k) (heldAfter (Tc w.length) st (k+1)) := fun k hk => by
     rw [heldAfter_of_le st hk.le, heldAfter_of_le st (Nat.succ_le_of_lt hk)]
     exact hcanonical k hk
+  have hshiftIdleInCopy : ∀ k, (heldAfter (Tc w.length) st k).ctl.mode = .copy →
+      ¬ PalPeg.GalilTickFun3.ShiftRemaining (heldAfter (Tc w.length) st k).vm := by
+    intro k hmode hshift
+    have hTcPos : 1 ≤ Tc w.length :=
+      hpreTrace.base.tc1 ▸ hpreTrace.base.pre.mono 1 w.length hw le_rfl
+    unfold heldAfter at hmode hshift
+    have hindexLe : min k (Tc w.length) ≤ Tc w.length := Nat.min_le_right _ _
+    rcases Nat.eq_zero_or_pos (min k (Tc w.length)) with hindexZero | hindexPos
+    · rw [hindexZero, hpreTrace.base.pre.start] at hmode
+      exact Mode.noConfusion hmode
+    · have hcpack := PalPeg.BranchSupply.cpack_alongTrace centreC placeC entry q first hw
+        hpreTrace.base.pre hTcPos _ hindexPos hindexLe
+      have hidle := hcpack.idle (by rw [hmode]; decide)
+      rw [PalPeg.GalilScaffoldChainInputSupply.shiftIdle_iff] at hidle
+      unfold PalPeg.GalilTickFun3.ShiftRemaining at hshift
+      rw [hidle] at hshift
+      exact absurd hshift (by decide)
   have hseven := PalPeg.CloseoutCoreAgree.realizes_seven_SL (P := (tapeCount spare)) (Good := localGood (spare := spare))
     (raw := w) (stOf := heldAfter (Tc w.length) st) (lastTick := Tc w.length)
     (Pw := PofC centreC placeC entry w) (qq := q) (first := first) (delay := 2048)
@@ -1083,6 +1100,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       rw [heldAfter_of_le st (Nat.zero_le _), hpreTrace.base.pre.start]
       rfl))
     hq (fun m hinv => ⟨hinv.good, hgeomTracked w st Tc hpreTrace hcanonical m hinv⟩)
+    hshiftIdleInCopy
     (PofC_onLetter centreC placeC entry w) (PofC_leftFirst centreC placeC entry w)
     (PalPeg.CloseoutRightBounds.rightInBounds
       (PalPeg.LocalWF.phaseNoReplay_of_trace
