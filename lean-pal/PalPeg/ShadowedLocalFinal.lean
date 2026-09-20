@@ -39,6 +39,28 @@ open PalPeg.LocalShadowConcrete (pal_in_peg_of_shadowed_sysC)
 
 variable {P : ℕ}
 
+/-- The trace held at its last tick: the states of `st` up to `lastTick`, then `st lastTick`
+for ever.  A pre-loaded trace says nothing about its states after the last report point; the
+local layer reads the trace through an index that is not bounded by its invariant, so it is
+given a trace that says something at every index. -/
+def heldAfter (lastTick : ℕ) (st : ℕ → State GalilVM) : ℕ → State GalilVM :=
+  fun k => st (min k lastTick)
+
+theorem heldAfter_of_le {lastTick k : ℕ} (st : ℕ → State GalilVM) (hk : k ≤ lastTick) :
+    heldAfter lastTick st k = st k := by
+  unfold heldAfter
+  rw [Nat.min_eq_left hk]
+
+theorem heldAfter_afterLast {lastTick k : ℕ} (st : ℕ → State GalilVM) (hk : lastTick ≤ k) :
+    heldAfter lastTick st k = heldAfter lastTick st lastTick := by
+  unfold heldAfter
+  rw [Nat.min_eq_right hk, Nat.min_self]
+
+theorem needL'_heldAfter (w : List (Fin 2)) {lastTick i : ℕ} (st : ℕ → State GalilVM)
+    (hi : i ≤ lastTick) : needL' w (heldAfter lastTick st) i = needL' w st i := by
+  unfold needL' PalPeg.GalilThrottledRun.needS
+  rw [heldAfter_of_le st hi]
+
 /-- **`PAL ∈ PEG` from the local system and a physical machine.**  The first three hypotheses
 are those of `CloseoutFinalBranch.given_scanLandingObligations` other than the realization; the
 rest replaces the realization. -/
@@ -63,19 +85,21 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
       absState'' (x0C blank 2048).core.vm = truncS w.length (boot w))
     (hrealizes : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ mode : Mode, Realizes w st (Tc w.length) (stepOf M mode) mode)
+      ∀ mode : Mode, Realizes w (heldAfter (Tc w.length) st) (Tc w.length) (stepOf M mode) mode)
     (hneedOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 P) (k j : ℕ), InvC w st m → ¬ Starved m.vm → Needy w st k j m.vm →
-        needT' w st k ≤ j)
+      ∀ (m : Mirrored1 P) (k j : ℕ), InvC w (heldAfter (Tc w.length) st) m → ¬ Starved m.vm →
+        Needy w (heldAfter (Tc w.length) st) k j m.vm →
+        needT' w (heldAfter (Tc w.length) st) k ≤ j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 P) (k j : ℕ), InvC w st m → Needy w st k j m.vm → k < Tc w.length →
-        needT' w st k ≤ j → ¬ Starved m.vm)
+      ∀ (m : Mirrored1 P) (k j : ℕ), InvC w (heldAfter (Tc w.length) st) m →
+        Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
+        needT' w (heldAfter (Tc w.length) st) k ≤ j → ¬ Starved m.vm)
     (hstarvedAtLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 P) (j : ℕ), InvC w st m → Needy w st (Tc w.length) j m.vm →
-        Starved m.vm)
+      ∀ (m : Mirrored1 P) (j : ℕ), InvC w (heldAfter (Tc w.length) st) m →
+        Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Starved m.vm)
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
       repC (micro (sysC M repC) w (x0C blank 2048) s).core.vm.ctl = true →
       ReportPoint w (stAbs (sysC M repC) absSC w (x0C blank 2048) s) ∧
@@ -114,25 +138,39 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
     needBound_alongPreTrace entry q first hres hChainVerifierSupply hw (htraceOf w hw).1
   exact pal_in_peg_of_shadowed_sysC M repC blank 2048 (PofC centreC placeC entry) (fun _ => q)
     (fun _ => first) (fun w => PofC_onLetter centreC placeC entry w)
-    (fun w => PofC_leftFirst centreC placeC entry w) hblankInv hblankTwin hblankView stOf TcOf
+    (fun w => PofC_leftFirst centreC placeC entry w) hblankInv hblankTwin hblankView
+    (fun w => heldAfter (TcOf w w.length) (stOf w)) TcOf
     (fun w j => sharedC_trunc_vm w j centreC placeC entry (fun s => (centrePlaceC w j s).1)
       (fun s => (centrePlaceC w j s).2))
-    (fun w hw k hk => (htraceOf w hw).1.base.pre.trace.tick k hk)
-    (fun w hw k hk => sufVM_trace w (stOf w) (TcOf w w.length)
-      (sharedC_suf w _ _ centreC placeC entry) q first 2048
-      (htraceOf w hw).1.base.pre.trace.tick (by rw [hstart w hw]; exact sufVM_boot w) k hk)
-    (fun w hw => by rw [hstart w hw]; exact hinitTrack w hw)
+    (fun w hw k hk => by
+      rw [heldAfter_of_le (stOf w) hk.le, heldAfter_of_le (stOf w) (Nat.succ_le_of_lt hk)]
+      exact (htraceOf w hw).1.base.pre.trace.tick k hk)
+    (fun w hw k hk => by
+      rw [heldAfter_of_le (stOf w) hk]
+      exact sufVM_trace w (stOf w) (TcOf w w.length)
+        (sharedC_suf w _ _ centreC placeC entry) q first 2048
+        (htraceOf w hw).1.base.pre.trace.tick (by rw [hstart w hw]; exact sufVM_boot w) k hk)
+    (fun w hw => by
+      rw [heldAfter_of_le (stOf w) (Nat.zero_le _), hstart w hw]
+      exact hinitTrack w hw)
     (fun w hw => by
       have hneed := needL'_boot w (stOf w) (hstart w hw)
       have hused : usedVM w (stOf w 0).vm ≤ needL' w (stOf w) 0 := le_max_left _ _
+      rw [heldAfter_of_le (stOf w) (Nat.zero_le _)]
       omega)
     (fun w hw => ⟨(htraceOf w hw).1.base.pre.tc0,
       fun m hm => (htraceOf w hw).1.base.pre.mono m (m+1) (by omega) hm,
-      needL'_boot w (stOf w) (hstart w hw),
-      needLe_of_pointwise' w (stOf w) (TcOf w) (hneedBound w hw)⟩)
+      by rw [needL'_heldAfter w (stOf w) (Nat.zero_le _)]
+         exact needL'_boot w (stOf w) (hstart w hw),
+      needLe_of_pointwise' w _ (TcOf w) (fun m hm i hi => by
+        rw [needL'_heldAfter w (stOf w)
+          (hi.trans ((htraceOf w hw).1.base.pre.mono (m+1) w.length hm le_rfl))]
+        exact hneedBound w hw m hm i hi)⟩)
     (fun w hw => base_of_preTraceB (htraceOf w hw).1.base)
     (fun w hw => (htraceOf w hw).1.base.pre.cost)
-    (fun w hw => (htraceOf w hw).1.base.pre.report w.length hw le_rfl)
+    (fun w hw => by
+      rw [heldAfter_of_le (stOf w) le_rfl]
+      exact (htraceOf w hw).1.base.pre.report w.length hw le_rfl)
     (fun w hw => hrealizes w _ _ (htraceOf w hw).1 (htraceOf w hw).2)
     (fun w m k j hw hinv hstarved hneedy =>
       hneedOfNotStarved w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved hneedy)
