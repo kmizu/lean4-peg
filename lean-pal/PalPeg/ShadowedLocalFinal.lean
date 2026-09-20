@@ -66,6 +66,36 @@ theorem needL'_heldAfter (w : List (Fin 2)) {lastTick i : ℕ} (st : ℕ → Sta
   unfold needL' PalPeg.GalilThrottledRun.needS
   rw [heldAfter_of_le st hi]
 
+/-- **The chain position invariant along a packed pre-trace**, from the scan landing obligations:
+the assembly `BranchSupply.needBound_of_scanLandingObligations` makes on its way to the need
+bound.  In scan mode with a chain at work it gives `position verifier + lag = position right`. -/
+theorem chainPosInv2_alongPreTrace (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
+    (hw : 0 < w.length) {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc)
+    (hres : ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc) :
+    ∀ i, i ≤ Tc w.length →
+      PalPeg.CloseoutPackRun41.ChainPositionInvariantWithShiftPhase w (st i).ctl (st i).vm := by
+  have hleftLive : ∀ i, i ≤ Tc w.length →
+      PalPeg.GalilTrailSane.LeftLive (st i).ctl (st i).vm :=
+    fun i hi => PalPeg.CloseoutPackRun10.leftLive_of_lpackM (hpreTrace.packs i hi).pack
+  have hradLedger := PalPeg.CloseoutLPack6.radLedger_pt centreC placeC entry q first hw
+    hpreTrace.base.pre hleftLive
+  have hshiftCanRight := PalPeg.BranchSupply.shiftRightHeadCanRight_alongTrace centreC placeC
+    entry q first hw hpreTrace.base.pre (fun j hj => (hpreTrace.packs j hj).m2)
+  exact PalPeg.BranchSupply.chainPosInv2_alongTrace centreC placeC entry q first
+    hpreTrace.base.pre
+    (fun i hi => PalPeg.BranchSupply.landingObligationsAt_of_sansRadiusLedger centreC placeC
+      entry q first (hradLedger i hi)
+      ⟨(hres i hi).bg, (hres i hi).matchLand, (hres i hi).entryLand,
+        fun hmode _ => hshiftCanRight i hi hmode⟩)
+    (PalPeg.BranchSupply.canRightAtScanOrShift_alongTrace centreC placeC entry q first hw
+      hpreTrace)
+    (by rw [hpreTrace.base.pre.start]
+        exact PalPeg.CloseoutPackRun41.chainPosInv2_of_idle
+          (PalPeg.CloseoutShiftFinal.boot_chain_idle w))
+
+#print axioms chainPosInv2_alongPreTrace
+
 /-- **`PAL ∈ PEG` from the local system and a physical machine.**  The first three hypotheses
 are those of `CloseoutFinalBranch.given_scanLandingObligations` other than the realization; the
 rest replaces the realization. -/
@@ -106,6 +136,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
+        usedVM w (heldAfter (Tc w.length) st k).vm ≤ j →
         (heldAfter (Tc w.length) st k).ctl.mode = .scan →
         PalPeg.GalilLookRefined.lookChain' w.length (heldAfter (Tc w.length) st k).vm.chain ≤ j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
@@ -203,9 +234,9 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
     (fun w m k j hw hinv hstarved hneedy hbefore =>
       hnextUsedOfNotStarved w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved hneedy
         hbefore)
-    (fun w m k j hw hinv hstarved hneedy hbefore hscan =>
+    (fun w m k j hw hinv hstarved hneedy hbefore hused hscan =>
       hchainLookOfNotStarved w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved hneedy
-        hbefore hscan)
+        hbefore hused hscan)
     (fun w m k j hw hinv hneedy hbefore hneed =>
       hnotStarvedOfNeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hneedy hbefore
         hneed)
@@ -357,6 +388,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
+        usedVM w (heldAfter (Tc w.length) st k).vm ≤ j →
         (heldAfter (Tc w.length) st k).ctl.mode = .scan →
         PalPeg.GalilLookRefined.lookChain' w.length (heldAfter (Tc w.length) st k).vm.chain ≤ j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),

@@ -115,7 +115,7 @@ theorem pal_in_peg_of_shadowed_sysC
       k < TcOf w w.length → usedVM w (stOf w (k+1)).vm ≤ j)
     (hchainLookOfNotStarved : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), 0 < w.length →
       InvC Good w (stOf w) m → ¬ Starved m.vm → Needy w (stOf w) k j m.vm →
-      k < TcOf w w.length → (stOf w k).ctl.mode = .scan →
+      k < TcOf w w.length → usedVM w (stOf w k).vm ≤ j → (stOf w k).ctl.mode = .scan →
       GalilLookRefined.lookChain' w.length (stOf w k).vm.chain ≤ j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), 0 < w.length →
       InvC Good w (stOf w) m →
@@ -168,7 +168,7 @@ theorem pal_in_peg_of_shadowed_sysC
       exact max_le
         (PalPeg.LocalStarvedRight.usedPH_right_le_of_notStarved hneedy hnotStarved
           (hsuffix w hw k hbefore.le) hused)
-        (hchainLookOfNotStarved w m k j hw hinv hnotStarved hneedy hbefore hscan)
+        (hchainLookOfNotStarved w m k j hw hinv hnotStarved hneedy hbefore hused hscan)
     · exact Nat.zero_le _
   have hpackOf : ∀ {w s m}, Inv w s m → PhysWF m.vm ∧ MirInv1 m := by
     rintro w s m ⟨_, _, htracked | ⟨_, _, _, hphys, hmir, _⟩⟩
