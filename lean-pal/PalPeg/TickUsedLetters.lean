@@ -188,4 +188,90 @@ theorem usedVM_scanTick_le (raw : List (Fin 2)) {centre : GalilVM → Fin 3}
 
 #print axioms usedVM_scanTick_le
 
+/-- An effect through the fallback-program lens keeps the three heads and the chain. -/
+theorem usedVM_fppRel (raw : List (Fin 2)) {R : FppControl.State → FppControl.State → Prop}
+    {s t : GalilVM} (hrel : fppLens.rel R s t) : usedVM raw t = usedVM raw s := by
+  rw [hrel.2]
+  rfl
+
+/-- An effect through the rewind lens keeps the chain, so the letters used by its target are
+bounded as soon as those used by its three heads are. -/
+theorem usedVM_rewindRel_le (raw : List (Fin 2)) {R : RewindVM → RewindVM → Prop} {s t : GalilVM}
+    (hrel : rewindLens.rel R s t)
+    (hleft : usedPH raw.length (rewindLens.get t).left ≤ usedVM raw s)
+    (hcenter : usedPH raw.length (rewindLens.get t).center ≤ usedVM raw s)
+    (hright : usedPH raw.length (rewindLens.get t).right ≤ usedVM raw s) :
+    usedVM raw t ≤ usedVM raw s := by
+  rw [hrel.2]
+  exact max_le (max_le hleft hcenter)
+    (max_le hright (le_trans (le_max_right _ _) (le_max_right _ _)))
+
+/-- **A tick of the fallback phases, and the last tick of a shift, use no new letter.**  The
+fallback program does not touch the heads; marking keeps them; `choose` puts the left and the
+centre head on the right head; rewinding moves the left and the centre head to the left, which
+uses nothing.  The ticks left out are `init`, `scan`, `replayStart` (`usedVM_init_le`,
+`usedVM_scanTick_le`, `usedVM_replayStart_le`) and the moving tick of a shift. -/
+theorem usedVM_phaseTick_le (raw : List (Fin 2)) {P : Shared} {q delay : ℕ} {first : Fin 9}
+    {x y : State GalilVM} (htick : Tick (galilFrameS P q first) delay x y)
+    (hnotInit : x.ctl.mode ≠ .init) (hnotScan : x.ctl.mode ≠ .scan)
+    (hnotReplayStart : x.ctl.mode ≠ .replayStart)
+    (hshiftDone : x.ctl.mode = .shift → ¬ (galilFrameS P q first).remainingPos x.vm) :
+    usedVM raw y.vm ≤ usedVM raw x.vm := by
+  cases htick with
+  | init c s s' hm h0 => exact absurd hm hnotInit
+  | scan_wait c s s' hm h0 hb => exact absurd hm hnotScan
+  | scan_count c s s' hm h0 hc hb => exact absurd hm hnotScan
+  | scan_match c s s' s'' o hm h0 hc hcmp hmt hpl ho => exact absurd hm hnotScan
+  | scan_shift c s s' s'' hm h0 hc hcmp hmt hr hg hb => exact absurd hm hnotScan
+  | scan_fallback c s s' s'' hm h0 hc hcmp hmt hg hr hb => exact absurd hm hnotScan
+  | shift_one c s s' hm hp h0 => exact absurd hp (hshiftDone hm)
+  | shift_done c s o hm hp ho => exact le_rfl
+  | copy_one c s s' hm hp h0 => exact le_of_eq (usedVM_fppRel raw h0)
+  | copy_done c s s' hm hp h0 => exact le_of_eq (usedVM_fppRel raw h0)
+  | home_start c s s' hm hl h0 => exact le_of_eq (usedVM_fppRel raw h0)
+  | home_step c s s' hm hl h0 => exact le_of_eq (usedVM_fppRel raw h0)
+  | fpp_slice c s s' hm h0 => exact le_of_eq (usedVM_fppRel raw h0)
+  | fpp_done c s s' hm h0 => exact le_of_eq (usedVM_fppRel raw h0)
+  | markEnd_found c s s' hm he h0 =>
+    obtain ⟨-, htarget⟩ := h0.1
+    refine usedVM_rewindRel_le raw h0 ?_ ?_ ?_ <;> rw [htarget]
+    · exact usedVM_left raw s
+    · exact usedVM_center raw s
+    · exact usedVM_right raw s
+  | markEnd_step c s s' hm he h0 => exact le_of_eq (usedVM_fppRel raw h0)
+  | choose_select c s s' hm ho hs h0 =>
+    have htarget := h0.1
+    refine usedVM_rewindRel_le raw h0 ?_ ?_ ?_ <;> rw [htarget]
+    · exact usedVM_right raw s
+    · exact usedVM_right raw s
+    · exact usedVM_right raw s
+  | choose_step c s s' hm hs h0 =>
+    obtain ⟨-, htarget⟩ := h0.1
+    refine usedVM_rewindRel_le raw h0 ?_ ?_ ?_ <;> rw [htarget]
+    · exact usedVM_left raw s
+    · exact usedVM_center raw s
+    · exact usedVM_right raw s
+  | rewind_done c s s' hm hf h0 =>
+    have htarget := h0.1
+    refine usedVM_rewindRel_le raw h0 ?_ ?_ ?_ <;> rw [htarget]
+    · exact usedVM_left raw s
+    · exact usedVM_center raw s
+    · exact usedVM_right raw s
+  | rewind_one c s s' hm hf hp h0 =>
+    obtain ⟨-, htarget⟩ := h0.1
+    refine usedVM_rewindRel_le raw h0 ?_ ?_ ?_ <;> rw [htarget]
+    · exact (le_of_eq (PalPeg.GalilTruncTick.usedPH_left _ _)).trans (usedVM_left raw s)
+    · exact usedVM_center raw s
+    · exact usedVM_right raw s
+  | rewind_pair c s s' hm hf hp h0 =>
+    obtain ⟨-, htarget⟩ := h0.1
+    refine usedVM_rewindRel_le raw h0 ?_ ?_ ?_ <;> rw [htarget]
+    · exact (le_of_eq (PalPeg.GalilTruncTick.usedPH_left _ _)).trans (usedVM_left raw s)
+    · exact (le_of_eq (PalPeg.GalilTruncTick.usedPH_left _ _)).trans (usedVM_center raw s)
+    · exact usedVM_right raw s
+  | replayStart c s s' o hm h0 ho ho' => exact absurd hm hnotReplayStart
+  | restart c s s' hm hb => exact absurd hm hnotScan
+
+#print axioms usedVM_phaseTick_le
+
 end PalPeg.TickUsedLetters
