@@ -2,6 +2,7 @@ import PalPeg.CloseoutFinalBranch
 import PalPeg.LocalShadowConcrete
 import PalPeg.LocalBlankState
 import PalPeg.CloseoutRightBounds
+import PalPeg.CanonicalLocalRealizes
 
 /-!
 # The final theorem from the local system and a physical machine, the trace side discharged
@@ -248,15 +249,36 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (letter : Fin 2) (m : Mirrored1 tapeCount),
         InvC Good w (heldAfter (Tc w.length) st) m → Good (feedC letter m))
-    (hinitMode : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+    (hinitLocal : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      Realizes Good w (heldAfter (Tc w.length) st) (Tc w.length) initStep .init)
-    (hscanMode : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      ∀ (m : Mirrored1 tapeCount) (target : State GalilVM),
+        InvC Good w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .init → ¬ Starved m.vm →
+        Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
+        Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
+            (absState'' m.vm) (absState'' (initStep m).vm) ∧
+          PalPeg.GalilTickFair.Canonical entry 2048 (absState'' m.vm)
+            (absState'' (initStep m).vm) ∧
+          PhysWF (initStep m).vm ∧ MirInv1 (initStep m))
+    (hscanLocal : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      Realizes Good w (heldAfter (Tc w.length) st) (Tc w.length) scanStep .scan)
-    (hreplayStartMode : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      ∀ (m : Mirrored1 tapeCount) (target : State GalilVM),
+        InvC Good w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .scan → ¬ Starved m.vm →
+        Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
+        Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
+            (absState'' m.vm) (absState'' (scanStep m).vm) ∧
+          PalPeg.GalilTickFair.Canonical entry 2048 (absState'' m.vm)
+            (absState'' (scanStep m).vm) ∧
+          PhysWF (scanStep m).vm ∧ MirInv1 (scanStep m))
+    (hreplayStartLocal : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      Realizes Good w (heldAfter (Tc w.length) st) (Tc w.length) replayStartStep .replayStart)
+      ∀ (m : Mirrored1 tapeCount) (target : State GalilVM),
+        InvC Good w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .replayStart → ¬ Starved m.vm →
+        Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
+        Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
+            (absState'' m.vm) (absState'' (replayStartStep m).vm) ∧
+          PalPeg.GalilTickFair.Canonical entry 2048 (absState'' m.vm)
+            (absState'' (replayStartStep m).vm) ∧
+          PhysWF (replayStartStep m).vm ∧ MirInv1 (replayStartStep m))
     (hneedOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 tapeCount) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
@@ -308,6 +330,18 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
   · intro m k j _ _ _ _ _ hbefore
     rw [hempty, hpreTrace.base.pre.tc0] at hbefore
     exact absurd hbefore (Nat.not_lt_zero _)
+  have hshared := fun j => sharedC_trunc_vm w j centreC placeC entry
+    (fun s => (centrePlaceC w j s).1) (fun s => (centrePlaceC w j s).2)
+  have htick : ∀ k, k < Tc w.length →
+      Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
+        (heldAfter (Tc w.length) st k) (heldAfter (Tc w.length) st (k+1)) := fun k hk => by
+    rw [heldAfter_of_le st hk.le, heldAfter_of_le st (Nat.succ_le_of_lt hk)]
+    exact hpreTrace.base.pre.trace.tick k hk
+  have hcanonicalTick : ∀ k, k < Tc w.length →
+      PalPeg.GalilTickFair.Canonical entry 2048
+        (heldAfter (Tc w.length) st k) (heldAfter (Tc w.length) st (k+1)) := fun k hk => by
+    rw [heldAfter_of_le st hk.le, heldAfter_of_le st (Nat.succ_le_of_lt hk)]
+    exact hcanonical k hk
   have hseven := PalPeg.CloseoutCoreAgree.realizes_seven_SL (P := tapeCount) (Good := Good)
     (raw := w) (stOf := heldAfter (Tc w.length) st) (lastTick := Tc w.length)
     (Pw := PofC centreC placeC entry w) (qq := q) (first := first) (delay := 2048)
@@ -335,8 +369,12 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
       (traceRightLe_heldAfter entry q first hw hpreTrace))
   obtain ⟨hshift, hcopy, hhome, hfpp, hmarkEnd, hchoose, hrewind⟩ := hseven
   cases mode with
-  | init => exact hinitMode w st Tc hpreTrace hcanonical
-  | scan => exact hscanMode w st Tc hpreTrace hcanonical
+  | init =>
+    exact PalPeg.CanonicalLocalRealizes.realizes_canonical hshared htick hcanonicalTick
+      (hinitLocal w st Tc hpreTrace hcanonical)
+  | scan =>
+    exact PalPeg.CanonicalLocalRealizes.realizes_canonical hshared htick hcanonicalTick
+      (hscanLocal w st Tc hpreTrace hcanonical)
   | shift => exact hshift
   | copy => exact hcopy
   | home => exact hhome
@@ -344,7 +382,9 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
   | markEnd => exact hmarkEnd
   | choose => exact hchoose
   | rewind => exact hrewind
-  | replayStart => exact hreplayStartMode w st Tc hpreTrace hcanonical
+  | replayStart =>
+    exact PalPeg.CanonicalLocalRealizes.realizes_canonical hshared htick hcanonicalTick
+      (hreplayStartLocal w st Tc hpreTrace hcanonical)
 
 #print axioms given_openModesAndPhysicalMachine
 
