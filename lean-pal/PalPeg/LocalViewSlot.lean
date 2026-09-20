@@ -327,10 +327,10 @@ theorem viewDecisionStep (Terminal : Type) (hK : 2 ≤ K) {slot : Fin 11} (hslot
     exact htape
 
 /-- Steps `start + 1`–`10` of a slot are a `MicroRun` of the queue along the rest of the job. -/
-theorem viewQuietRun (Terminal : Type) (hK : 2 ≤ K) (command : ViewCommand)
+theorem viewQuietRun (Terminal : Type) (hK : 2 ≤ K) (commands : ℕ → ViewCommand)
     (states : ℕ → ViewState)
     (hsteps : ∀ (step : ℕ) (hstep : step < 11),
-      ViewStep Terminal hK ⟨step, hstep⟩ command (states step) (states (step + 1)))
+      ViewStep Terminal hK ⟨step, hstep⟩ (commands step) (states step) (states (step + 1)))
     {gap : Bool} {job : Option QueueJob} {backFull nearFull : List (Option (Fin 2))}
     (hbackLength : K ≤ backFull.length) (hnearLength : K ≤ nearFull.length) :
     ∀ (count start : ℕ), start + count = 10 →
@@ -346,7 +346,7 @@ theorem viewQuietRun (Terminal : Type) (hK : 2 ≤ K) (command : ViewCommand)
     have hslot : start + 1 < 11 := by omega
     obtain ⟨hquiet', hmicro⟩ := viewQuietStep Terminal hK (slot := ⟨start + 1, hslot⟩)
       (by simp) (hsteps (start + 1) hslot) hquiet hbackLength hnearLength
-    obtain ⟨hrun, hfinal⟩ := viewQuietRun Terminal hK command states hsteps hbackLength
+    obtain ⟨hrun, hfinal⟩ := viewQuietRun Terminal hK commands states hsteps hbackLength
       hnearLength count (start + 1) (by omega) hquiet'
     have hlt : start < (slotTail job).length := by rw [slotTail_length]; omega
     have hop : slotMicroOp ⟨start + 1, hslot⟩ job = (slotTail job)[start] := by
@@ -355,25 +355,27 @@ theorem viewQuietRun (Terminal : Type) (hK : 2 ≤ K) (command : ViewCommand)
     rw [List.drop_eq_getElem_cons hlt, ← hop]
     exact ⟨MicroRun.cons hmicro hrun, hfinal⟩
 
-/-- **One slot of a view.**  Eleven steps of the rule on a command take a representation of `v`
-to a representation of `viewApply command v`; nothing is owed at the end, so slots compose. -/
+/-- **One slot of a view.**  Eleven steps of the rule take a representation of `v` to a
+representation of `viewApply (commands 0) v`: only the command of step `0` is used, so the
+commands of the later steps are free.  Nothing is owed at the end, so slots compose. -/
 theorem viewSlot_sound (Terminal : Type) (hK : 2 ≤ K) {v : InputView} (hwf : WF v)
-    (hcells : ViewCells v) (command : ViewCommand) (states : ℕ → ViewState)
+    (hcells : ViewCells v) (commands : ℕ → ViewCommand) (states : ℕ → ViewState)
     (hsteps : ∀ (step : ℕ) (hstep : step < 11),
-      ViewStep Terminal hK ⟨step, hstep⟩ command (states step) (states (step + 1)))
+      ViewStep Terminal hK ⟨step, hstep⟩ (commands step) (states step) (states (step + 1)))
     {first : MicroOp}
     (hrep : ViewRep K v (states 0).1.1 (first, (states 0).1.2.2) (states 0).2)
     (howed : (states 0).1.2.2.2.2 = 0) (last : MicroOp) :
-    ViewRep K (viewApply command v) (states 11).1.1 (last, (states 11).1.2.2) (states 11).2 ∧
+    ViewRep K (viewApply (commands 0) v) (states 11).1.1 (last, (states 11).1.2.2)
+        (states 11).2 ∧
       (states 11).1.2.2.2.2.val = 0 := by
   obtain ⟨job, backBottom, nearBottom, hbackHeight, hnearSealed, hnearHeight, hquiet, hfar,
     hfront, hidle⟩ := viewDecisionStep Terminal hK (slot := ⟨0, by omega⟩) rfl
       (hsteps 0 (by omega)) hcells hrep
-  have hbackLength : K ≤ (backStack (viewApply command v) ++ backBottom).length := by
+  have hbackLength : K ≤ (backStack (viewApply (commands 0) v) ++ backBottom).length := by
     simp only [backStack, List.length_append, List.length_cons]; omega
-  have hnearLength : K ≤ ((viewApply command v).near ++ nearBottom).length := by
+  have hnearLength : K ≤ ((viewApply (commands 0) v).near ++ nearBottom).length := by
     simp only [List.length_append]; omega
-  obtain ⟨hrun, hfinal⟩ := viewQuietRun Terminal hK command states hsteps hbackLength
+  obtain ⟨hrun, hfinal⟩ := viewQuietRun Terminal hK commands states hsteps hbackLength
     hnearLength 10 0 (by omega) hquiet
   have hone := idleRun_sound hK (none : Option Terminal) 1
     (MicroRun.cons hidle (MicroRun.nil _)) hrep.queue howed .incLength

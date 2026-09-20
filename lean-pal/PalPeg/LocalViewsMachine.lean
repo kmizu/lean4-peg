@@ -227,7 +227,7 @@ theorem machineSlot (viewCount : ℕ) (hK : 2 ≤ K) (inputs : ℕ → Option (F
         (last, (viewStateOf (machineIter viewCount hK inputs x 11) view).1.2.2)
         (viewStateOf (machineIter viewCount hK inputs x 11) view).2 ∧
       (viewStateOf (machineIter viewCount hK inputs x 11) view).1.2.2.2.2.val = 0 := by
-  refine viewSlot_sound (Fin 2) hK (hwf view) (hcells view) (commandOfLetter x.1.2.1)
+  refine viewSlot_sound (Fin 2) hK (hwf view) (hcells view) (fun _ => commandOfLetter x.1.2.1)
     (fun count => viewStateOf (machineIter viewCount hK inputs x count) view) ?_ (hrep view)
     (howed view) last
   intro step hstep
