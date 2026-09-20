@@ -43,7 +43,7 @@ open PalPeg.LocalTrackingLatch
 open PalPeg.LocalReplayParked (absState'' Mirrored1 MirInv1)
 open PalPeg.LocalSysConcrete (Steps stepOf tickC sysC absSC feedC Starved Needy TickNeed InvC PhysWF
   Realizes x0C)
-open PalPeg.LocalShadowConcrete (pal_in_peg_of_shadowed_sysC)
+open PalPeg.LocalShadowConcrete (pal_in_peg_of_shadowed_sysC OnRun)
 open PalPeg.LocalBlankState (tapeCount blankVML absState''_blank inv_blank twin_blank wf_blankView)
 
 /-- The trace held at its last tick: the states of `st` up to `lastTick`, then `st lastTick`
@@ -424,10 +424,14 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Rep : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
     (hrepInit : Rep (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
-    (hsimTick : ∀ m p, PhysWF m.vm → MirInv1 m → Rep m p →
-      Rep (tickC M m) (L0.apply blankSymbol p none))
-    (hsimFeed : ∀ letter m p, PhysWF m.vm → MirInv1 m → Rep m p →
-      Rep (feedC letter m) (L0.apply blankSymbol p (some letter)))
+    (hsimTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p →
+        Rep (tickC M m) (L0.apply blankSymbol p none))
+    (hsimFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ letter m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p →
+        Rep (feedC letter m) (L0.apply blankSymbol p (some letter)))
     (hreadRep : ∀ m p, Rep m p → repC m.vm.ctl = repQ p.1)
     (hreadOut : ∀ m p, Rep m p → m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
@@ -499,7 +503,11 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (fun w m j hw hinv hneedy =>
       hpostOfLastReport w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m j hinv hneedy)
     hpostTick
-    rep_sound rep_complete L0 blankSymbol q0 repQ outQ htape Rep hrepInit hsimTick hsimFeed
+    rep_sound rep_complete L0 blankSymbol q0 repQ outQ htape Rep hrepInit
+    (fun w m p hw honRun hrep =>
+      hsimTick w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m p honRun hrep)
+    (fun w letter m p hw honRun hrep =>
+      hsimFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 letter m p honRun hrep)
     hreadRep hreadOut
 
 #print axioms given_shadowedLocalSystem
@@ -664,11 +672,15 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Rep : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
     (hrepInit : Rep (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
-    (hsimTick : ∀ m p, PhysWF m.vm → MirInv1 m → Rep m p →
-      Rep (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m)
-        (L0.apply blankSymbol p none))
-    (hsimFeed : ∀ letter m p, PhysWF m.vm → MirInv1 m → Rep m p →
-      Rep (feedC letter m) (L0.apply blankSymbol p (some letter)))
+    (hsimTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p →
+        Rep (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep
+          replayStartStep) m) (L0.apply blankSymbol p none))
+    (hsimFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ letter m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p →
+        Rep (feedC letter m) (L0.apply blankSymbol p (some letter)))
     (hreadRep : ∀ m p, Rep m p → repC m.vm.ctl = repQ p.1)
     (hreadOut : ∀ m p, Rep m p → m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by

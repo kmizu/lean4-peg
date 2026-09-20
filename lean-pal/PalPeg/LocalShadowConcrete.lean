@@ -45,6 +45,12 @@ structure TrackedAt (Good : Mirrored1 P → Prop) (raw : List (Fin 2))
   used : usedVM raw (stOf k).vm ≤ j
   good : Good m
 
+/-- **The states of the run**: tracked below the last report point, or in the phase after it.
+The simulation by the physical machine is asked for on these states only. -/
+def OnRun (Good : Mirrored1 P → Prop) (Post : List (Fin 2) → Mirrored1 P → Prop)
+    (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) (m : Mirrored1 P) : Prop :=
+  InvC Good raw stOf m ∨ (Post raw m ∧ PhysWF m.vm ∧ MirInv1 m ∧ Good m)
+
 theorem TrackedAt.invC {Good : Mirrored1 P → Prop} {raw : List (Fin 2)}
     {stOf : ℕ → State GalilVM} {lastReport j k : ℕ} {m : Mirrored1 P}
     (h : TrackedAt Good raw stOf lastReport j k m) : InvC Good raw stOf m :=
@@ -142,10 +148,10 @@ theorem pal_in_peg_of_shadowed_sysC
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Rep : Mirrored1 P → Q × (Fin t → STape Γ) → Prop)
     (hrepInit : Rep (x0C blank delay).core (q0, fun _ => STape.blankTape blankSymbol))
-    (hsimTick : ∀ m p, PhysWF m.vm → MirInv1 m → Rep m p →
+    (hsimTick : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep m p →
       Rep (tickC M m) (L0.apply blankSymbol p none))
-    (hsimFeed : ∀ letter m p, PhysWF m.vm → MirInv1 m → Rep m p →
-      Rep (feedC letter m) (L0.apply blankSymbol p (some letter)))
+    (hsimFeed : ∀ (w : List (Fin 2)) letter m p, 0 < w.length → OnRun Good Post w (stOf w) m →
+      Rep m p → Rep (feedC letter m) (L0.apply blankSymbol p (some letter)))
     (hreadRep : ∀ m p, Rep m p → repC m.vm.ctl = repQ p.1)
     (hreadOut : ∀ m p, Rep m p → m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
@@ -170,6 +176,10 @@ theorem pal_in_peg_of_shadowed_sysC
           (hsuffix w hw k hbefore.le) hused (Or.inr hscan))
         (hchainLookOfNotStarved w m k j hw hinv hnotStarved hneedy hbefore hused hscan)
     · exact Nat.zero_le _
+  have honRun : ∀ {w s m}, Inv w s m → OnRun Good Post w (stOf w) m := by
+    rintro w s m ⟨_, _, htracked | ⟨_, _, hpost, hphys, hmir, hgood⟩⟩
+    · exact Or.inl htracked.invC
+    · exact Or.inr ⟨hpost, hphys, hmir, hgood⟩
   have hpackOf : ∀ {w s m}, Inv w s m → PhysWF m.vm ∧ MirInv1 m := by
     rintro w s m ⟨_, _, htracked | ⟨_, _, _, hphys, hmir, _⟩⟩
     · exact ⟨htracked.phys, htracked.mir⟩
@@ -261,8 +271,8 @@ theorem pal_in_peg_of_shadowed_sysC
     · omega
   refine pal_in_peg_of_shadowed_core S absSC Inv x0 Pof qof firstOf delay H_letter H_first
     L0 blankSymbol q0 repQ outQ htape Rep hrepInit
-    (fun w s m p _ hinv hrep => hsimTick m p (hpackOf hinv).1 (hpackOf hinv).2 hrep)
-    (fun w s letter m p _ hinv hrep => hsimFeed letter m p (hpackOf hinv).1 (hpackOf hinv).2 hrep)
+    (fun w s m p _ hinv hrep => hsimTick w m p hinv.1 (honRun hinv) hrep)
+    (fun w s letter m p _ hinv hrep => hsimFeed w letter m p hinv.1 (honRun hinv) hrep)
     hreadRep hreadOut (x0C_started blank delay) (PalPeg.LocalSysConcrete.outL_abs M repC)
     rep_sound rep_complete hinvInit (x0C_ctl blank delay) hinvTick hinvFeed ?_ ?_ ?_ ?_
   · rintro w s m _ _ hstarved
