@@ -62,8 +62,9 @@ section Lockstep
 variable (S : LocalSys A) (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (repQ outQ : Q → Bool)
   (Inv : List (Fin 2) → ℕ → A → Prop) (Rep : A → Q × (Fin t → STape Γ) → Prop)
 
-/-- **The lockstep run.**  The abstract half of the run of the pair is the abstract run, with
-the same latch and the same started bit, and the physical half represents it. -/
+/-- **The lockstep run.**  The abstract half of the run of the pair is the abstract run, and the
+physical half represents it.  (The latch of the pair reads the physical control; how it relates to
+the abstract report test is the business of `pal_in_peg_of_shadowed_core`.) -/
 theorem micro_shadow (x0 : LX A) (q0 : Q) (w : List (Fin 2))
     (hrepInit : Rep x0.core (q0, fun _ => STape.blankTape blank))
     (hinvInit : Inv w 0 x0.core)
@@ -73,42 +74,27 @@ theorem micro_shadow (x0 : LX A) (q0 : Q) (w : List (Fin 2))
     (hsimTick : ∀ s a p, inp w s = none → Inv w s a → Rep a p →
       Rep (S.tickL a) (L0.apply blank p none))
     (hsimFeed : ∀ s letter a p, inp w s = some letter → Inv w s a → Rep a p →
-      Rep (S.feedC letter a) (L0.apply blank p (some letter)))
-    (hreadRep : ∀ s a p, Inv w s a → Rep a p → S.repL a = repQ p.1)
-    (hreadOut : ∀ s a p, Inv w s a → Rep a p → S.outL a = outQ p.1) :
+      Rep (S.feedC letter a) (L0.apply blank p (some letter))) :
     ∀ s, (micro (shadowSys S L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core.1
           = (micro S w x0 s).core ∧
-      (micro (shadowSys S L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).ans
-          = (micro S w x0 s).ans ∧
-      (micro (shadowSys S L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).started
-          = (micro S w x0 s).started ∧
       Inv w s (micro S w x0 s).core ∧
       Rep (micro S w x0 s).core
         (micro (shadowSys S L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core.2
-  | 0 => ⟨rfl, rfl, rfl, hinvInit, hrepInit⟩
+  | 0 => ⟨rfl, hinvInit, hrepInit⟩
   | s + 1 => by
-    obtain ⟨hcore, hans, hstarted, hinv, hrep⟩ := micro_shadow x0 q0 w hrepInit hinvInit hinvTick
-      hinvFeed hsimTick hsimFeed hreadRep hreadOut s
+    obtain ⟨hcore, hinv, hrep⟩ := micro_shadow x0 q0 w hrepInit hinvInit hinvTick
+      hinvFeed hsimTick hsimFeed s
     show (stepL (shadowSys S L0 blank repQ outQ) (inp w s) _).core.1
         = (stepL S (inp w s) _).core ∧
-      (stepL (shadowSys S L0 blank repQ outQ) (inp w s) _).ans = (stepL S (inp w s) _).ans ∧
-      (stepL (shadowSys S L0 blank repQ outQ) (inp w s) _).started
-        = (stepL S (inp w s) _).started ∧
       Inv w (s+1) (stepL S (inp w s) _).core ∧
       Rep (stepL S (inp w s) _).core
         (stepL (shadowSys S L0 blank repQ outQ) (inp w s) _).core.2
     cases hinput : inp w s with
     | none =>
-      have hrepNext := hsimTick s _ _ hinput hinv hrep
-      refine ⟨by show S.tickL _ = S.tickL _; rw [hcore], ?_, hstarted,
-        hinvTick s _ hinput hinv, ?_⟩
-      · show (_ || (repQ (L0.apply blank _ none).1 && outQ (L0.apply blank _ none).1))
-          = (_ || (S.repL (S.tickL _) && S.outL (S.tickL _)))
-        rw [hans, hreadRep (s+1) _ _ (hinvTick s _ hinput hinv) hrepNext,
-          hreadOut (s+1) _ _ (hinvTick s _ hinput hinv) hrepNext]
-      · exact hrepNext
+      exact ⟨by show S.tickL _ = S.tickL _; rw [hcore], hinvTick s _ hinput hinv,
+        hsimTick s _ _ hinput hinv hrep⟩
     | some letter =>
-      refine ⟨by show S.feedC letter _ = S.feedC letter _; rw [hcore], rfl, rfl,
+      exact ⟨by show S.feedC letter _ = S.feedC letter _; rw [hcore],
         hinvFeed s _ _ hinput hinv, hsimFeed s _ _ _ hinput hinv hrep⟩
 
 end Lockstep
@@ -131,7 +117,8 @@ theorem pal_in_peg_of_shadowed_core
     (hsimFeed : ∀ w s letter a p, inp w s = some letter → Inv w s a → Rep a p →
       Rep ((S w).feedC letter a) (L0.apply blank p (some letter)))
     (hreadRep : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep a p → (S w).repL a = repQ p.1)
-    (hreadOut : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep a p → (S w).outL a = outQ p.1)
+    (hreadOut : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep a p → ReportPoint w (absS a) →
+      (S w).outL a = outQ p.1)
     -- the abstract system
     (x0_started : x0.started = false)
     (outL_abs : ∀ (w : List (Fin 2)) (a : A), (S w).outL a = (absS a).ctl.output)
@@ -152,41 +139,55 @@ theorem pal_in_peg_of_shadowed_core
     RecognizedByTotalPEG PAL := by
   have hrun := fun w (hw : 0 < w.length) =>
     micro_shadow (S w) L0 blank repQ outQ Inv Rep x0 q0 w hrepInit (x0_inv w hw)
-    (inv_tick w) (inv_feed w) (hsimTick w) (hsimFeed w) (hreadRep w) (hreadOut w)
-  have habsOf : ∀ w s (a : A) (p : Q × (Fin t → STape Γ)), Inv w s a → Rep a p →
-      shadowAbs absS outQ (a, p) = absS a := fun w s a p hinv hrep =>
-    shadowAbs_eq absS outQ (a, p) (by rw [← hreadOut w s a p hinv hrep, outL_abs w])
-  have hstAbs : ∀ w, 0 < w.length → ∀ s,
+    (inv_tick w) (inv_feed w) (hsimTick w) (hsimFeed w)
+  -- the report point does not read the output bit, which is the only thing `shadowAbs` changes
+  have hreportIff : ∀ (w : List (Fin 2)) (x : A × (Q × (Fin t → STape Γ))),
+      ReportPoint w (shadowAbs absS outQ x) ↔ ReportPoint w (absS x.1) := fun w x =>
+    ⟨fun h => ⟨h.notReplaying, h.scanInv, h.centre, h.atLast, h.nonempty⟩,
+      fun h => ⟨h.notReplaying, h.scanInv, h.centre, h.atLast, h.nonempty⟩⟩
+  -- at a report point of the abstract run the two abstractions agree
+  have hstAbsAt : ∀ w, 0 < w.length → ∀ s, ReportPoint w (stAbs (S w) absS w x0 s) →
       stAbs (shadowSys (S w) L0 blank repQ outQ) (shadowAbs absS outQ) w
         (shadowInit x0 q0 blank) s = stAbs (S w) absS w x0 s := by
-    intro w hw s
-    obtain ⟨hcore, -, -, hinv, hrep⟩ := hrun w hw s
+    intro w hw s hpoint
+    obtain ⟨hcore, hinv, hrep⟩ := hrun w hw s
     show shadowAbs absS outQ (micro _ w _ s).core = absS (micro (S w) w x0 s).core
-    rw [← habsOf w s _ _ hinv hrep, ← hcore]
+    have habs : shadowAbs absS outQ ((micro (S w) w x0 s).core,
+        (micro (shadowSys (S w) L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core.2)
+          = absS (micro (S w) w x0 s).core :=
+      shadowAbs_eq absS outQ _ (by rw [← hreadOut w s _ _ hinv hrep hpoint, outL_abs w])
+    rw [← habs, ← hcore]
   have hrepL : ∀ w, 0 < w.length → ∀ s, (shadowSys (S w) L0 blank repQ outQ).repL
       (micro (shadowSys (S w) L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core
         = (S w).repL (micro (S w) w x0 s).core := by
     intro w hw s
-    obtain ⟨-, -, -, hinv, hrep⟩ := hrun w hw s
+    obtain ⟨-, hinv, hrep⟩ := hrun w hw s
     exact (hreadRep w s _ _ hinv hrep).symm
   refine pal_in_peg_of_local_core (fun w => shadowSys (S w) L0 blank repQ outQ)
     (shadowAbs absS outQ) (shadowInit x0 q0 blank) Pof qof firstOf
     H_letter H_first L0 blank q0 repQ outQ Prod.snd htape (fun _ _ => rfl) (fun _ _ _ => rfl)
     (fun _ _ => rfl) (fun _ _ => rfl) rfl x0_started (fun _ _ => rfl) ?_ ?_ ?_
   · intro w s hw hlate hreport
-    rw [hstAbs w hw]
-    exact rep_sound w s hw hlate (by rw [← hrepL w hw]; exact hreport)
+    have hghost := rep_sound w s hw hlate (by rw [← hrepL w hw]; exact hreport)
+    rw [hstAbsAt w hw s hghost.1]
+    exact hghost
   · intro w s hw hpoint hrefreshed
-    rw [hstAbs w hw] at hpoint hrefreshed
+    have hpointGhost : ReportPoint w (stAbs (S w) absS w x0 s) := by
+      have h := (hreportIff w _).mp hpoint
+      rw [(hrun w hw s).1] at h
+      exact h
+    rw [hstAbsAt w hw s hpointGhost] at hpoint hrefreshed
     obtain ⟨s', hle, hlate, hreport⟩ := rep_complete w s hw hpoint hrefreshed
     exact ⟨s', hle, hlate, by rw [hrepL w hw]; exact hreport⟩
   · intro w hw hpal
-    have hfun : stAbs (shadowSys (S w) L0 blank repQ outQ) (shadowAbs absS outQ) w
-        (shadowInit x0 q0 blank) = stAbs (S w) absS w x0 := funext (hstAbs w hw)
-    show Reported (Pof w) (qof w) (firstOf w) w
-      (stAbs (shadowSys (S w) L0 blank repQ outQ) (shadowAbs absS outQ) w (shadowInit x0 q0 blank)) _
-    rw [hfun]
-    exact H_ledger w hw hpal
+    obtain ⟨t', hle, hpoint, hrefreshed⟩ := H_ledger w hw hpal
+    refine ⟨t', hle, ?_⟩
+    show ReportPoint w (stAbs (shadowSys (S w) L0 blank repQ outQ) (shadowAbs absS outQ) w
+        (shadowInit x0 q0 blank) t') ∧
+      Refreshed (Pof w) (qof w) (firstOf w) (stAbs (shadowSys (S w) L0 blank repQ outQ)
+        (shadowAbs absS outQ) w (shadowInit x0 q0 blank) t')
+    rw [hstAbsAt w hw t' hpoint]
+    exact ⟨hpoint, hrefreshed⟩
 
 #print axioms pal_in_peg_of_shadowed_core
 

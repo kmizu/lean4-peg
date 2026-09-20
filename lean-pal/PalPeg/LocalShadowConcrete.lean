@@ -171,7 +171,7 @@ theorem pal_in_peg_of_shadowed_sysC
     (hreadRep : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep m p →
       repM w m = repQ p.1)
     (hreadOut : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep m p →
-      m.vm.ctl.output = outQ p.1) :
+      ReportPoint w (absSC m) → m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   classical
   let S : List (Fin 2) → LocalSys (Mirrored1 P) := fun w => sysM (M w) (repM w)
@@ -365,7 +365,8 @@ theorem pal_in_peg_of_shadowed_sysC
         · exact Or.inr ⟨hstarved, hsucc w s m hinv hstarved⟩) hrep)
     (fun w s letter m p _ hinv hrep => hsimFeed w letter m p hinv.1 (honRun hinv) hrep)
     (fun w s m p hinv hrep => hreadRep w m p hinv.1 (honRun hinv) hrep)
-    (fun w s m p hinv hrep => hreadOut w m p hinv.1 (honRun hinv) hrep) (x0C_started blank delay) (fun _ _ => rfl)
+    (fun w s m p hinv hrep hpoint => hreadOut w m p hinv.1 (honRun hinv) hrep hpoint)
+    (x0C_started blank delay) (fun _ _ => rfl)
     rep_sound
     (fun w s hw hpoint hrefreshed =>
       ⟨s, le_rfl, hlate w hw s hpoint.atLast, rep_complete w s hw hpoint hrefreshed⟩)

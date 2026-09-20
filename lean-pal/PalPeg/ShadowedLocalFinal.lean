@@ -470,7 +470,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (hreadOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p →
-        m.vm.ctl.output = outQ p.1) :
+        ReportPoint w (absSC m) → m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   classical
   have hexists : ∀ w : List (Fin 2), ∃ (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
@@ -552,8 +552,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       hsimFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 letter m p honRun hrep)
     (fun w m p hw honRun hrep =>
       hreadRep w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m p honRun hrep)
-    (fun w m p hw honRun hrep =>
-      hreadOut w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m p honRun hrep)
+    (fun w m p hw honRun hrep hpoint =>
+      hreadOut w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m p honRun hrep hpoint)
 
 #print axioms given_shadowedLocalSystem
 
@@ -800,7 +800,8 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (hencOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m encoded p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
-        absSC encoded = absSC m → Enc encoded p → encoded.vm.ctl.output = outQ p.1) :
+        absSC encoded = absSC m → Enc encoded p → ReportPoint w (absSC m) →
+        encoded.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   refine given_shadowedLocalSystem entry q first hfirst hor hres hChainVerifierSupply
     (fun w => ghostSteps entry q first Good Post w)
@@ -824,9 +825,9 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       show reportTest entry q first w (absSC m) = repQ p.1
       rw [← habs]
       exact hencRep w st Tc hpreTrace hcanonical m encoded p honRun habs henc)
-    (fun w st Tc hpreTrace hcanonical m p honRun ⟨encoded, henc, habs⟩ => by
+    (fun w st Tc hpreTrace hcanonical m p honRun ⟨encoded, henc, habs⟩ hpoint => by
       rw [← show encoded.vm.ctl = m.vm.ctl from congrArg State.ctl habs]
-      exact hencOut w st Tc hpreTrace hcanonical m encoded p honRun habs henc)
+      exact hencOut w st Tc hpreTrace hcanonical m encoded p honRun habs henc hpoint)
   intro w st Tc hpreTrace hcanonical mode
   rcases Nat.eq_zero_or_pos w.length with hempty | hw
   · intro m k j _ _ _ _ _ hbefore
