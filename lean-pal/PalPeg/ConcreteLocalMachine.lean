@@ -5,6 +5,7 @@ import PalPeg.LocalViewLayout
 import PalPeg.LocalViewStep
 import PalPeg.LocalViewSlot
 import PalPeg.LocalViewInit
+import PalPeg.LocalViewsMachine
 
 /-!
 # The concrete local machine
@@ -30,5 +31,7 @@ So far: the Hood–Melville queue of an input view.
 * `PalPeg.LocalViewSlot` — the rule of a view on twelve tapes (`viewNext` / `viewActs`) and one
   slot of eleven steps: `ViewRep v` to `ViewRep (viewApply command v)` (`viewSlot_sound`);
 * `PalPeg.LocalViewInit` — the first step of a view, from blank tapes to the empty view
-  (`viewInit_of_apply`).
+  (`viewInit_of_apply`);
+* `PalPeg.LocalViewsMachine` — the machine of several views with a letter latch and one slot
+  counter (`machineRule`), its first step (`machineInit`) and one slot (`machineSlot`).
 -/
