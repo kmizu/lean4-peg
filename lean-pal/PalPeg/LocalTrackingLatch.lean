@@ -529,7 +529,7 @@ theorem pal_in_peg_of_local_latch
     (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
       ReportPoint w (stAbs S absS w x0 s) → Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ S.repL (micro S w x0 s').core = true)
-    (x0_inv : ∀ w, Inv w 0 x0.core)
+    (x0_inv : ∀ w, 0 < w.length → Inv w 0 x0.core)
     (x0_ctl : (absS x0.core).ctl = GalilScaffoldController.initial delay)
     (inv_tick : ∀ w s x, inp w s = none → Inv w s x → Inv w (s+1) (S.tickL x))
     (inv_feed : ∀ w s a x, inp w s = some a → Inv w s x → Inv w (s+1) (S.feedC a x))
@@ -546,8 +546,8 @@ theorem pal_in_peg_of_local_latch
     (L.realize blank initQ (GalilEmptyWord.accept' initQ ansQ) nLocalL htape nLocalL_pos)
     Pof qof firstOf delay H_letter H_first (fun w => stAbs S absS w x0) (fun w => arrL w)
     (fun w => w.length * nLocalL)
-    (fun w _ => abstractRun_of_oracles S absS (Inv w) (Pof w) (qof w) (firstOf w) delay w x0
-      (x0_inv w) x0_ctl (inv_tick w) (inv_feed w) (stutter_of_starved w) (tick_of_not_starved w)
+    (fun w hw => abstractRun_of_oracles S absS (Inv w) (Pof w) (qof w) (firstOf w) delay w x0
+      (x0_inv w hw) x0_ctl (inv_tick w) (inv_feed w) (stutter_of_starved w) (tick_of_not_starved w)
       (feed_abs w))
     (fun w hw => tracking_latch_of_oracles S absS x0 Pof qof firstOf H_letter H_first
       L blank initQ ansQ startQ enc htape enc_step enc_init enc_ans enc_started x0_started outL_abs

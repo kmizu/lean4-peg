@@ -129,7 +129,7 @@ theorem pal_in_peg_of_coreLocal {X Q Γ : Type} {t K : ℕ}
           (PalPeg.LocalTrackingLatch.stAbs S absS w x0 s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * PalPeg.LocalTrackingLatch.nLocalL + 1 < s' ∧
         S.repL (PalPeg.LocalTrackingLatch.micro S w x0 s').core = true)
-    (x0_inv : ∀ w, Inv w 0 x0.core)
+    (x0_inv : ∀ w, 0 < w.length → Inv w 0 x0.core)
     (x0_ctl : (absS x0.core).ctl = PalPeg.GalilScaffoldController.initial delay)
     (inv_tick : ∀ w s x, PalPeg.LocalTrackingLatch.inp w s = none → Inv w s x →
       Inv w (s+1) (S.tickL x))

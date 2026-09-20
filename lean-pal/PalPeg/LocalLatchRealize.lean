@@ -191,7 +191,7 @@ theorem pal_in_peg_of_local_core
       ReportPoint w (stAbs S absS w x0 s) →
       Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ S.repL (micro S w x0 s').core = true)
-    (x0_inv : ∀ w, Inv w 0 x0.core)
+    (x0_inv : ∀ w, 0 < w.length → Inv w 0 x0.core)
     (x0_ctl : (absS x0.core).ctl = GalilScaffoldController.initial delay)
     (inv_tick : ∀ w s x, inp w s = none → Inv w s x → Inv w (s+1) (S.tickL x))
     (inv_feed : ∀ w s a x, inp w s = some a → Inv w s x → Inv w (s+1) (S.feedC a x))

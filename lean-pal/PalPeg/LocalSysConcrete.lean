@@ -431,9 +431,10 @@ theorem localSys_oracles
 
 /-! ## 9. Arrival of the *correct* letter keeps the trace
 
-`H_feed_track` above is stated for an arbitrary letter, because
-`LocalTrackingLatch`'s `inv_feed` quantifies over all letters.  For the letter
-the run actually delivers it is a theorem: -/
+`H_feed_track` above is stated for an arbitrary letter; a tracking invariant cannot be expected
+to survive a wrong letter.  `LocalTrackingLatch`'s `inv_feed` now only concerns the letter of
+the input slot, and `LocalShadowConcrete.pal_in_peg_of_shadowed_sysC` uses the theorem below
+instead of `H_feed_track`.  For the letter the run actually delivers it is a theorem: -/
 
 theorem tracked_feedC {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {m : Mirrored1 P}
     {k j : ℕ} (hw : ViewsWF m.vm) (hp : m.vm.pending = [])

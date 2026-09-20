@@ -143,7 +143,7 @@ theorem pal_in_peg_of_shadowed_core
       ReportPoint w (stAbs S absS w x0 s) →
       Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ S.repL (micro S w x0 s').core = true)
-    (x0_inv : ∀ w, Inv w 0 x0.core)
+    (x0_inv : ∀ w, 0 < w.length → Inv w 0 x0.core)
     (x0_ctl : (absS x0.core).ctl = GalilScaffoldController.initial delay)
     (inv_tick : ∀ w s a, inp w s = none → Inv w s a → Inv w (s+1) (S.tickL a))
     (inv_feed : ∀ w s letter a, inp w s = some letter → Inv w s a →
@@ -157,38 +157,40 @@ theorem pal_in_peg_of_shadowed_core
     (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs S absS w x0)
       (fun w => w.length * nLocalL)) :
     RecognizedByTotalPEG PAL := by
-  have hrun := fun w => micro_shadow S L0 blank repQ outQ Inv Rep x0 q0 w hrepInit (x0_inv w)
+  have hrun := fun w (hw : 0 < w.length) =>
+    micro_shadow S L0 blank repQ outQ Inv Rep x0 q0 w hrepInit (x0_inv w hw)
     (inv_tick w) (inv_feed w) (hsimTick w) (hsimFeed w) hreadRep hreadOut
   have habsOf : ∀ (a : A) (p : Q × (Fin t → STape Γ)), Rep a p →
       shadowAbs absS outQ (a, p) = absS a := fun a p hrep =>
     shadowAbs_eq absS outQ (a, p) (by rw [← hreadOut a p hrep, outL_abs])
-  have hstAbs : ∀ w s, stAbs (shadowSys S L0 blank repQ outQ) (shadowAbs absS outQ) w
-      (shadowInit x0 q0 blank) s = stAbs S absS w x0 s := by
-    intro w s
-    obtain ⟨hcore, -, -, -, hrep⟩ := hrun w s
+  have hstAbs : ∀ w, 0 < w.length → ∀ s,
+      stAbs (shadowSys S L0 blank repQ outQ) (shadowAbs absS outQ) w
+        (shadowInit x0 q0 blank) s = stAbs S absS w x0 s := by
+    intro w hw s
+    obtain ⟨hcore, -, -, -, hrep⟩ := hrun w hw s
     show shadowAbs absS outQ (micro _ w _ s).core = absS (micro S w x0 s).core
     rw [← habsOf _ _ hrep, ← hcore]
-  have hrepL : ∀ w s, (shadowSys S L0 blank repQ outQ).repL
+  have hrepL : ∀ w, 0 < w.length → ∀ s, (shadowSys S L0 blank repQ outQ).repL
       (micro (shadowSys S L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core
         = S.repL (micro S w x0 s).core := by
-    intro w s
-    obtain ⟨-, -, -, -, hrep⟩ := hrun w s
+    intro w hw s
+    obtain ⟨-, -, -, -, hrep⟩ := hrun w hw s
     exact (hreadRep _ _ hrep).symm
   refine pal_in_peg_of_local_core (shadowSys S L0 blank repQ outQ) (shadowAbs absS outQ)
     (fun w s x => Inv w s x.1 ∧ Rep x.1 x.2) (shadowInit x0 q0 blank) Pof qof firstOf delay
     H_letter H_first L0 blank q0 repQ outQ Prod.snd htape (fun _ => rfl) (fun _ _ => rfl)
     (fun _ => rfl) (fun _ => rfl) rfl x0_started (fun _ => rfl) ?_ ?_
-    (fun w => ⟨x0_inv w, hrepInit⟩) ?_
+    (fun w hw => ⟨x0_inv w hw, hrepInit⟩) ?_
     (fun w s x hinput hx => ⟨inv_tick w s _ hinput hx.1, hsimTick w s _ _ hinput hx.1 hx.2⟩)
     (fun w s letter x hinput hx =>
       ⟨inv_feed w s _ _ hinput hx.1, hsimFeed w s _ _ _ hinput hx.1 hx.2⟩) ?_ ?_ ?_ ?_
   · intro w s hw hlate hreport
-    rw [hstAbs]
-    exact rep_sound w s hw hlate (by rw [← hrepL]; exact hreport)
+    rw [hstAbs w hw]
+    exact rep_sound w s hw hlate (by rw [← hrepL w hw]; exact hreport)
   · intro w s hw hpoint hrefreshed
-    rw [hstAbs] at hpoint hrefreshed
+    rw [hstAbs w hw] at hpoint hrefreshed
     obtain ⟨s', hle, hlate, hreport⟩ := rep_complete w s hw hpoint hrefreshed
-    exact ⟨s', hle, hlate, by rw [hrepL]; exact hreport⟩
+    exact ⟨s', hle, hlate, by rw [hrepL w hw]; exact hreport⟩
   · show (shadowAbs absS outQ (x0.core, (q0, fun _ => STape.blankTape blank))).ctl = _
     rw [habsOf _ _ hrepInit]
     exact x0_ctl
@@ -206,11 +208,13 @@ theorem pal_in_peg_of_shadowed_core
       = arriveState' letter (shadowAbs absS outQ x)
     rw [habsOf _ _ (hsimFeed w s _ _ _ hinput hx.1 hx.2), habsOf x.1 x.2 hx.2]
     exact feed_abs w s _ _ hinput hx.1
-  · have hfun : (fun w => stAbs (shadowSys S L0 blank repQ outQ) (shadowAbs absS outQ) w
-        (shadowInit x0 q0 blank)) = fun w => stAbs S absS w x0 :=
-      funext fun w => funext fun s => hstAbs w s
+  · intro w hw hpal
+    have hfun : stAbs (shadowSys S L0 blank repQ outQ) (shadowAbs absS outQ) w
+        (shadowInit x0 q0 blank) = stAbs S absS w x0 := funext (hstAbs w hw)
+    show Reported (Pof w) (qof w) (firstOf w) w
+      (stAbs (shadowSys S L0 blank repQ outQ) (shadowAbs absS outQ) w (shadowInit x0 q0 blank)) _
     rw [hfun]
-    exact H_ledger
+    exact H_ledger w hw hpal
 
 #print axioms pal_in_peg_of_shadowed_core
 
