@@ -28,7 +28,11 @@
 * `$S/nr_check.lean`（控え `nr_check.keep.lean`）: `LocalWF.NoReplay x → Tick F delay x y → y.ctl.mode = .replayStart → y.ctl.replaying = false`。`LocalWF.PhaseMode` に replayStart が入っていないので既存の `NoReplay` からは直接出ない。`cases` で残るのは `rewind_done` だけ（制御は mode 以外不変）で、source の `NoReplay`（rewind は `PhaseMode`）から出る。公理は `propext` のみ。
 * 組み立てで使う既存補題: `GalilThrottledRun.position_trunc`（`position (truncPH d p) = position p := rfl`）、`GalilTruncTick.truncPH_left`、`ShadowedLocalFinal.notFrozen_of_invC`（`hw : 0 < w.length` を取る）。
 
-**(d) でまだ示していないもの**: `hreplayStartNext` の組み立て（`htarget` を `cases`、`replayStartVM` の一意性、`truncPH_left` で `hland`、`hflag` は `target.ctl.replaying = replayPos` から）。
+**組み立てのスクラッチ（2026-09-21、`$S/asm_check.lean`、控え `asm_stage2.keep.lean`）**: `import PalPeg.ShadowedLocalFinal` の上に部品 3 ファイルを束ね、`scratch_replayStartNext`（`hreplayStartNext` の本体と同じ文、`hw : 0 < w.length` つき）を段階的に書いている。通った段（末尾の `sorry` 1 つを除き error 0）:
+1. `hinv.track` から `k j`、`hctl`、`hvm`（`unfold heldAfter` で添字は `min k (Tc w.length)`）、`hmodeTrace`、`RewindCentre` の trace 形から `r`／`hradiusTrace`／`hcentreTrace`、`CloseoutLPack6.radLedger_pt`（＋`leftLive_of_lpackM (hpreTrace.packs i hi).pack`）。
+2. `hnotReplaying : m.vm.ctl.replaying = false`: `LocalWF.noReplay_run` を `heldAfter` に当て（消費者と同じ引数）、添字 0 は boot で `Mode.noConfusion`、正なら `Nat.exists_eq_succ_of_ne_zero` で 1 つ前を取り `scratch_notReplaying_of_tick_into_replayStart`。
+
+**(d) でまだ示していないもの**（第 3 段・第 4 段）: `hland`／`hradiusLe`／`val = r`（`truncPH_left` の反復、`position_trunc`、`value_absCtr_of_positivePolarity`）、`hreplayStartNext` の組み立て（`htarget` を `cases`、`replayStartVM` の一意性、`truncPH_left` で `hland`、`hflag` は `target.ctl.replaying = replayPos` から）。
 
 ## n313（2026-09-21）: `hreplayStartNext` の producer (d) の設計（調査のみ、コードは変えていない）
 
