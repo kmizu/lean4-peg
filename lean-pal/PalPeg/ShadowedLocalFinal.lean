@@ -384,19 +384,19 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     -- the abstract local system
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (M : Steps (tapeCount spare)) (repC : Control → Bool)
+    (M : List (Fin 2) → Steps (tapeCount spare)) (repC : Control → Bool)
     -- the invariants the abstract local system carries along the run
     (Good : Mirrored1 (tapeCount spare) → Prop) (hgoodInit : Good (x0C (blankVML spare) 2048).core)
     (hgoodTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m : Mirrored1 (tapeCount spare), InvC Good w (heldAfter (Tc w.length) st) m → Good (tickC M m))
+      ∀ m : Mirrored1 (tapeCount spare), InvC Good w (heldAfter (Tc w.length) st) m → Good (tickC (M w) m))
     (hgoodFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (letter : Fin 2) (m : Mirrored1 (tapeCount spare)),
         InvC Good w (heldAfter (Tc w.length) st) m → Good (feedC letter m))
     (hrealizes : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ mode : Mode, Realizes Good w (heldAfter (Tc w.length) st) (Tc w.length) (stepOf M mode) mode)
+      ∀ mode : Mode, Realizes Good w (heldAfter (Tc w.length) st) (Tc w.length) (stepOf (M w) mode) mode)
     -- after the last report point the trace says nothing: the local ticks are still ticks
     (Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop)
     (hpostOfLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
@@ -406,21 +406,21 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (hpostTick : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
       Post w m → PhysWF m.vm → MirInv1 m → Good m → ¬ Starved m.vm →
       (Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absSC m)
-          (absSC (tickC M m)) ∧
-        PalPeg.GalilTickFair.Canonical entry 2048 (absSC m) (absSC (tickC M m))) ∧
-        Post w (tickC M m) ∧ PhysWF (tickC M m).vm ∧ MirInv1 (tickC M m) ∧
-        Good (tickC M m))
+          (absSC (tickC (M w) m)) ∧
+        PalPeg.GalilTickFair.Canonical entry 2048 (absSC m) (absSC (tickC (M w) m))) ∧
+        Post w (tickC (M w) m) ∧ PhysWF (tickC (M w) m).vm ∧ MirInv1 (tickC (M w) m) ∧
+        Good (tickC (M w) m))
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
-      repC (micro (sysC M repC) w (x0C (blankVML spare) 2048) s).core.vm.ctl = true →
-      ReportPoint w (stAbs (sysC M repC) absSC w (x0C (blankVML spare) 2048) s) ∧
+      repC (micro (sysC (M w) repC) w (x0C (blankVML spare) 2048) s).core.vm.ctl = true →
+      ReportPoint w (stAbs (sysC (M w) repC) absSC w (x0C (blankVML spare) 2048) s) ∧
         Refreshed (PofC centreC placeC entry w) q first
-          (stAbs (sysC M repC) absSC w (x0C (blankVML spare) 2048) s))
+          (stAbs (sysC (M w) repC) absSC w (x0C (blankVML spare) 2048) s))
     (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
-      ReportPoint w (stAbs (sysC M repC) absSC w (x0C (blankVML spare) 2048) s) →
+      ReportPoint w (stAbs (sysC (M w) repC) absSC w (x0C (blankVML spare) 2048) s) →
       Refreshed (PofC centreC placeC entry w) q first
-        (stAbs (sysC M repC) absSC w (x0C (blankVML spare) 2048) s) →
+        (stAbs (sysC (M w) repC) absSC w (x0C (blankVML spare) 2048) s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧
-        repC (micro (sysC M repC) w (x0C (blankVML spare) 2048) s').core.vm.ctl = true)
+        repC (micro (sysC (M w) repC) w (x0C (blankVML spare) 2048) s').core.vm.ctl = true)
     -- the physical machine and its specification
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Rep : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
@@ -430,8 +430,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
         TickSucc (PofC centreC placeC entry w) q first 2048
           (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm) (absSC m)
-          (absSC (tickC M m)) →
-        Rep m p → Rep (tickC M m) (L0.apply blankSymbol p none))
+          (absSC (tickC (M w) m)) →
+        Rep m p → Rep (tickC (M w) m) (L0.apply blankSymbol p none))
     (hsimFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ letter m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p →
@@ -731,7 +731,8 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (hencOut : ∀ encoded p, Enc encoded p → encoded.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   refine given_shadowedLocalSystem entry q first hfirst hor hres hChainVerifierSupply
-    (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC Good hgoodInit hgoodTick hgoodFeed
+    (fun _ => localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC
+    Good hgoodInit hgoodTick hgoodFeed
     ?_ Post hpostOfLastReport hpostTick rep_sound rep_complete L0
     blankSymbol q0 repQ outQ htape (fun m p => ∃ encoded, Enc encoded p ∧ absSC encoded = absSC m)
     ⟨_, hencInit, rfl⟩

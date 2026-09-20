@@ -438,30 +438,30 @@ its checkpoint costs (`GalilTraceCost.checkpoints_cost`), its report point at
 `TcOf w |w|`, the starvation oracle in both directions, and the tracking
 equation `habs` (the local run's abstraction is the pre-loaded trace truncated
 to the letters that have arrived). -/
-theorem H_ledger_of_local_oracles (S : LocalSys X) (absS : X → State GalilVM) (x0 : LX X)
+theorem H_ledger_of_local_oracles (S : List (Fin 2) → LocalSys X) (absS : X → State GalilVM) (x0 : LX X)
     (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ) (firstOf : List (Fin 2) → Fin 9)
     (stOf : List (Fin 2) → ℕ → State GalilVM) (TcOf : List (Fin 2) → ℕ → ℕ)
     (hpre : ∀ w : List (Fin 2), 0 < w.length → GalilLookRefined.PreloadL' w (stOf w) (TcOf w))
     (starved_need : ∀ (w : List (Fin 2)), 0 < w.length → ∀ s,
-      kOf S w x0 s < TcOf w w.length → ¬ S.Starved (micro S w x0 s).core →
-        needS w (stOf w) (kOf S w x0 s + 1) ≤ arrL w s)
+      kOf (S w) w x0 s < TcOf w w.length → ¬ (S w).Starved (micro (S w) w x0 s).core →
+        needS w (stOf w) (kOf (S w) w x0 s + 1) ≤ arrL w s)
     (need_not_starved : ∀ (w : List (Fin 2)), 0 < w.length → ∀ s,
-      kOf S w x0 s < TcOf w w.length →
-        GalilLookRefined.needT' w (stOf w) (kOf S w x0 s) ≤ arrL w s →
-        ¬ S.Starved (micro S w x0 s).core)
+      kOf (S w) w x0 s < TcOf w w.length →
+        GalilLookRefined.needT' w (stOf w) (kOf (S w) w x0 s) ≤ arrL w s →
+        ¬ (S w).Starved (micro (S w) w x0 s).core)
     (hbase : ∀ w : List (Fin 2), 0 < w.length → TcOf w 1 ≤ 2050)
     (hcost : ∀ (w : List (Fin 2)), 0 < w.length → ∀ m, 1 ≤ m → m < w.length →
       TcOf w (m+1) - TcOf w m ≤ alpha' 2048 * (Cw w (m+1) - Cw w m) + beta' 2048)
-    (habs : ∀ (w : List (Fin 2)), 0 < w.length → ∀ s, kOf S w x0 s ≤ TcOf w w.length →
-      stAbs S absS w x0 s = truncS (w.length - arrL w s) (stOf w (kOf S w x0 s)))
+    (habs : ∀ (w : List (Fin 2)), 0 < w.length → ∀ s, kOf (S w) w x0 s ≤ TcOf w w.length →
+      stAbs (S w) absS w x0 s = truncS (w.length - arrL w s) (stOf w (kOf (S w) w x0 s)))
     (hrep : ∀ w : List (Fin 2), 0 < w.length →
       GalilLedgerAssembly.ReportPointAt (Pof w) (qof w) (firstOf w) w w.length
         (stOf w (TcOf w w.length))) :
-    LedgerObligation Pof qof firstOf (fun w => stAbs S absS w x0)
+    LedgerObligation Pof qof firstOf (fun w => stAbs (S w) absS w x0)
       (fun w => w.length * nLocalL) :=
-  ledger_localL' Pof qof firstOf stOf (fun w => stAbs S absS w x0) (fun w => kOf S w x0) TcOf
+  ledger_localL' Pof qof firstOf stOf (fun w => stAbs (S w) absS w x0) (fun w => kOf (S w) w x0) TcOf
     hpre
-    (fun w hw => sched_of_starved S w x0 (GalilLookRefined.needT' w (stOf w))
+    (fun w hw => sched_of_starved (S w) w x0 (GalilLookRefined.needT' w (stOf w))
       (fun k => needS w (stOf w) (k+1)) (TcOf w w.length)
       (starved_need w hw) (need_not_starved w hw))
     hbase hcost habs hrep
