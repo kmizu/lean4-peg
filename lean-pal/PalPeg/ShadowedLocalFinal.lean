@@ -772,10 +772,9 @@ theorem frozenAt_of_absSC_eq {w : List (Fin 2)} {encoded m : Mirrored1 (tapeCoun
   rw [habs]
 
 /-- **The invariant the abstract local layer carries along the run**: the polarity bundle
-`LocalWF.PolWF`, which no step touches.  The other half of what the seven phase steps need, the
-mode-wise geometry `LocalWF.Geom`, is not preserved by a single step in isolation
-(`LocalWF` §8); it is asked for on tracked states instead (`hgeomTracked`), where the abstraction
-is a state of the trace. -/
+`LocalWF.PolWF`, which no step touches.  The counter magnitudes a shift or copy unit needs are
+read off the trace, where the abstraction of a tracked state lives
+(`LocalWF.shiftMagnitudes_of_trace`, `LocalWF.copyRemaining_of_trace`). -/
 def localGood (m : Mirrored1 (tapeCount spare)) : Prop := PalPeg.LocalWF.PolWF m.vm
 
 /-- **The phase after the last report point**: the abstract state is still a refreshed report
@@ -867,12 +866,6 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
           (chosenStep entry q first (localGood (spare := spare)) (postPhase entry q first) w)
           (chosenStep entry q first (localGood (spare := spare)) (postPhase entry q first) w))
           m.vm.ctl.mode m))
-    -- the mode-wise geometry of a tracked state (its abstraction is a state of the trace)
-    (hgeomTracked : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m : Mirrored1 (tapeCount spare),
-        InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m →
-        PalPeg.LocalWF.Geom m.vm)
     -- the two open modes: a tracked, non-starved local state has a local successor
     (hscanNext : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
@@ -1087,6 +1080,22 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       unfold PalPeg.GalilTickFun3.ShiftRemaining at hshift
       rw [hidle] at hshift
       exact absurd hshift (by decide)
+  have hshiftLedgerOnTrace : ∀ k, (heldAfter (Tc w.length) st k).ctl.mode = .shift →
+      CopyIdle (heldAfter (Tc w.length) st k).vm ∧
+        GalilScaffoldCounter.value (heldAfter (Tc w.length) st k).vm.remaining
+          ≤ GalilScaffoldCounter.value (heldAfter (Tc w.length) st k).vm.radius ∧
+        SpanRep (heldAfter (Tc w.length) st k).vm := by
+    intro k hmode
+    unfold heldAfter at hmode ⊢
+    have hindexLe : min k (Tc w.length) ≤ Tc w.length := Nat.min_le_right _ _
+    have hradLedger := PalPeg.CloseoutLPack6.radLedger_pt centreC placeC entry q first hw
+      hpreTrace.base.pre
+      (fun j hj => PalPeg.CloseoutPackRun10.leftLive_of_lpackM (hpreTrace.packs j hj).pack)
+    exact ⟨PalPeg.CloseoutRadPack3.copyIdle_trace centreC placeC entry q first
+        hpreTrace.base.pre _ hindexLe hmode,
+      (hradLedger _ hindexLe).shiftBud hmode,
+      PalPeg.BranchSupply.spanRepOnScanAndShift_alongTrace centreC placeC entry q first
+        hpreTrace.base.pre _ hindexLe (Or.inr hmode)⟩
   have hseven := PalPeg.CloseoutCoreAgree.realizes_seven_SL (P := (tapeCount spare)) (Good := localGood (spare := spare))
     (raw := w) (stOf := heldAfter (Tc w.length) st) (lastTick := Tc w.length)
     (Pw := PofC centreC placeC entry w) (qq := q) (first := first) (delay := 2048)
@@ -1099,8 +1108,8 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (PalPeg.LocalWF.noReplay_zero_of_init (by
       rw [heldAfter_of_le st (Nat.zero_le _), hpreTrace.base.pre.start]
       rfl))
-    hq (fun m hinv => ⟨hinv.good, hgeomTracked w st Tc hpreTrace hcanonical m hinv⟩)
-    hshiftIdleInCopy
+    hq (fun m hinv => ⟨hinv.good⟩)
+    hshiftIdleInCopy hshiftLedgerOnTrace
     (PofC_onLetter centreC placeC entry w) (PofC_leftFirst centreC placeC entry w)
     (PalPeg.CloseoutRightBounds.rightInBounds
       (PalPeg.LocalWF.phaseNoReplay_of_trace

@@ -1,3 +1,22 @@
+## n309（2026-09-21）: shift 単位のカウンタの大きさを trace から証明した。仮説 `hgeomTracked` が消費者から丸ごと消えた
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: `given_openModesAndPhysicalMachine` の仮説 `hgeomTracked` が無くなった。構造 `LocalWF.Geom` と `geom_of_init` は削除、`LocalWF` は極性の束 `pol` だけ。
+* 正本との突き合わせ: `ScaffoldGalil.stepShift`（`:324`）は符号付きカウンタを `dec()` するだけで `radius > 0` は要求しない。要求しているのは局所層（正の極性の側で pop する設計、`LocalTick3.ShiftCounters`）。
+* `LocalWF.value_absCtr_of_positivePolarity`、`LocalWF.shiftMagnitudes_of_trace`: tracked な shift 状態で `RemPosL` なら `0 < val remaining ∧ 0 < val radius ∧ 2 ≤ val length`。copy 側は trace で idle、`remaining ≤ radius`、`length = 2·radius + 1`、`truncVM` はカウンタと `fpp` に触らない。
+* trace 形の仮説 `H_shiftLedgerOnTrace` を `realizes_seven` 系 3 本に通し、`ShadowedLocalFinal` で放電: `CloseoutRadPack3.copyIdle_trace`、`CloseoutLPack6.radLedger_pt`（＋`CloseoutPackRun10.leftLive_of_lpackM`）の `shiftBud`、`BranchSupply.spanRepOnScanAndShift_alongTrace`。新しい仮説は残っていない。
+
+**今日の `Geom`: 5 場 → 0**（n305 `chooseParked`／n306 `rewindClean` は偽の疑いが濃い仮説を形式化を直して外し、n307 `copyProper`／n308 `copyWork`／n309 `shiftMag` は本物の事実を証明して外した）。
+
+**`given_openModesAndPhysicalMachine` に残る仮説**: 供給可能（`hfirst`／`hq`／`hor`／`hres`／`hChainVerifierSupply`）、抽象局所層（`hgoodPhaseStep`、`hscanNext`／`hreplayStartNext`／`hplateauNext`）、物理機械（`htape`、`Enc`、`hencInit`、`hforwardTick`、`hforwardFeed`、`hencRep`、`hencOut`、`PhysFrozen`、`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`）。物理側に置いた義務: fallback 相の間の L／C の歩行（n305）、reset 後の junk を読まないこと（n306）。
+
+**次の goal**: `hgoodPhaseStep`（極性が init と 7 つの phase step で保たれる）。`pol_tickL3`／`pol_chooseStepC`／`pol_feedC` は既にあるので、`SL` の各 step 関数について同じ形が揃うかを確かめる。
+
 ## n308（2026-09-21）: copy の work カウンタの正値を trace から証明した。`Geom.copyWork` を消費者から外した
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。

@@ -304,6 +304,11 @@ theorem realizes_seven_SL {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay : ℕ}
     (H_wf : ∀ m : Mirrored1 P, InvC Good raw stOf m → PalPeg.LocalWF.LocalWF m.vm)
     (H_shiftIdleInCopy : ∀ k, (stOf k).ctl.mode = .copy →
       ¬ PalPeg.GalilTickFun3.ShiftRemaining (stOf k).vm)
+    (H_shiftLedgerOnTrace : ∀ k, (stOf k).ctl.mode = .shift →
+      PalPeg.GalilScaffoldChainInputSupply.CopyIdle (stOf k).vm ∧
+        GalilScaffoldCounter.value (stOf k).vm.remaining
+          ≤ GalilScaffoldCounter.value (stOf k).vm.radius ∧
+        PalPeg.GalilScaffoldChainInputSupply.SpanRep (stOf k).vm)
     (H_letter : Pw.onLetter = onLetterVM raw) (H_first : Pw.leftFirst = leftFirstVM)
     (H_bound : RightInBounds P Good raw stOf) :
     Realizes Good raw stOf lastTick (SL (P := P) qq first).shift .shift ∧
@@ -314,7 +319,7 @@ theorem realizes_seven_SL {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay : ℕ}
     Realizes Good raw stOf lastTick (SL (P := P) qq first).choose .choose ∧
     Realizes Good raw stOf lastTick (SL (P := P) qq first).rewind .rewind :=
   PalPeg.CloseoutCoreStep.realizes_seven_of_agree (SL qq first) H_shared H_trace H_afterLast H_start hq H_wf
-    H_shiftIdleInCopy
+    H_shiftIdleInCopy H_shiftLedgerOnTrace
     (agree_shift qq first H_letter H_first H_bound)
     (agree_copy qq first) (agree_home qq first) (agree_fpp Pw qq first)
     (agree_markEnd qq first) (agree_choose Pw qq first) (agree_rewind Pw qq first)
