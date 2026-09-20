@@ -1,3 +1,22 @@
+## n286 — `obligation_localRealization`: 方針を消費者側からに変えた。融合定理 `compStep_iterRule` は通ったが、公理への接続はまだ無い
+
+**状態（2026-09-20）**: 全体 build 成功（`lake build --quiet PalPeg`、ログ末尾 `BUILD=0`・`error` 0 件・`sorry` 0 件、新モジュールは `ConcreteLocalMachine` → `Workbench` 経由で登録済み）。標準公理のみの guard（`PalPeg/Axioms.lean`）は `unconditional` について `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization` のまま通過。無条件 PAL は未完（残り 1 公理 `obligation_localRealization`）。**この節の定理は 1 本も公理の消費者に繋がっていない。進捗として数えない。**
+
+**なぜ方針を変えたか**: n285 以降、queue → view → views 機械を下から 10 モジュール積んだが接続はゼロだった。コウタの指摘（「接続がない時点でアプローチ疑え」「producer がないとき確実に形式化が間違ってる」）を受けて型を読み直した結果:
+
+* `H_realizeCanonical`（`CloseoutFinalW:113`）を結論に持つ定理はリポジトリに 1 本も無い。最終組み立て `CloseoutFinalFour.given_preTraceIMW_on` は `pal_in_peg_of_structured` で `M.SAccepts w ↔ w ∈ PAL` を要求し、公理の仕事は「機械の受理 ↔ 抽象 trace の latch」。`latch_iff_pal_of_preTrace` があるので、公理の中身は実質「PAL を実時間で受理する `LocalStep` 機械の存在」そのもの。
+* 局所層の既存の橋は `LocalTrackingLatch.tracking_latch_of_oracles`（機械の受理 ↔ 機械自身の影 trace `stAbs` の latch）→ `pal_in_peg_of_local_latch` → `LocalLatchRealize.pal_in_peg_of_local_core`。中間層は `LocalSysConcrete.sysC`（`X = Mirrored1 P`、1 局所 tick = 抽象 Tick 1 回、`Realizes` 10 モード＋`H_ready`＋`H_feed_track` が残差）、台帳は `LocalLedgerShift.H_ledger_of_local_oracles`（`habs`・飢餓同値が残差）。
+* この橋の `enc_tick`／`enc_feed`／`rep_eq`／`out_eq`／`outL_abs` は**全状態への厳密等式**。実機の `sweep` は `TEqG` までしか一致せず、`Rep`（stack の底が存在量化）は物理状態から抽象状態を一意に決めないので、`X := 物理状態` で `absS` を関数として書けない。`outL_abs` は `tracking_latch_of_oracles` の中では走行上の状態（`(micro S w x0 s).core`）にしか使われていない。
+* **次の具体 goal（未着手・設計のみ）**: `X := A × (Q × (Fin t → STape Γ))`、`tickL (a, p) := (S.tickL a, L0.apply blank p none)`、`feedC` も同様、`repL`／`outL` は物理制御の読み、`absS' (a, p)` は `absS a` の `ctl.output` を物理の読みで上書きしたもの。こうすると `enc_tick`／`enc_feed`／`rep_eq`／`out_eq`／`outL_abs` は全部 `rfl` になるはずで（**Lean では未確認**）、残る仮定は `Rep a₀ (q0, blank)`・`Rep` の tick／feed 保存・`Rep a p → repL a = repQ p.1 ∧ outL a = outQ p.1` になる。これが物理機械の仕様。
+
+**今回通した定理（未接続）**: `PalPeg/LocalStepFusion.lean`。消費者の時間仕様は「局所 1 歩 = 抽象 Tick 1 回」（`need_not_starved`＋`Sched.progress`）で、抽象局所 tick は最大 67 局所操作（`LocalTick1`）。複数の微小歩を窓 `count * K` の 1 歩へ融合する:
+
+* `windowAfter`／`windowAfter_readWin`: 大窓に命令列を仮想適用して読んだ内窓 = 実テープに命令列を適用した後の `readWin`。
+* `idealStep`、`seqRule`／`seqRule_ideal`: 2 規則の直列を 1 規則に融合、指示する 1 歩は理想 2 歩と厳密に等しい。
+* `iterRadius`（再帰定義で cast を避けた、`iterRadius_eq : = count * K`）、`iterRule`、`idealIter`、`iterRule_ideal`、**`compStep_iterRule`**: margin `iterRadius K count ≤ pos` の下で、実機 `compStep (iterRule R count)` の 1 歩は制御が理想 `count` 歩走行と等しく、テープは `TEqG` で一致。
+
+**未完**: 上の積構成の橋、物理機械の master 制御・chain／探索／counter bank／10 モード、`Realizes` 残り、`habs`・飢餓同値、`rep_sound`／`rep_complete`。
+
 ## n285 — `obligation_localRealization`: 具体機械の上で enqueue／dequeue 1 回が固定長の微小プログラムになった（`snocRun_sound`／`tailRun_sound`）。公理への接続はまだ無い
 
 **n285 続き（2026-09-20、入力 view 1 本の具体機械。公理への接続は無い・進捗として数えない）**: 全体 build は n285 の `BUILD=0` 以降走らせていない（公理も葉も不変）。module build `PalPeg.ConcreteLocalMachine` は `BUILD=0`・error 0、下の定理は標準 3 公理のみ・`sorry` 0。無条件 PAL は未完（残り 1 公理 `obligation_localRealization`）。物理配置: view 1 本 = 12 テープ（0–9 = queue 機械、10 = `focus :: back` の stack、11 = `near` の stack）、slot = 11 歩（0 歩目 = 判断、1–10 歩目 = queue job、`incLength` で padding）、slot counter は共有・job と gap bit は view の制御、`repositionStep` の方向は送り手が決める（`ViewCommand.stepRight`／`stepLeft`）。

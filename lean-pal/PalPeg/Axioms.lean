@@ -381,7 +381,7 @@ import PalPeg.PalInPegUnconditional
 /-! ## 目標定理のラチェット
 
 `PalPeg.PalInPeg.unconditional : RecognizedByTotalPEG PAL` は**閉じた項**だが、
-いま 2 個の未証明義務を `axiom` として持っている（cycle oracle と局所実現）。下の guard がその一覧を固定するので、
+いま 1 個の未証明義務を `axiom` として持っている（局所実現 `obligation_localRealization`）。下の guard がその一覧を固定するので、
 
 * 義務を 1 個証明して `axiom` を外すと guard が壊れる → 更新を強制される（前進の記録）
 * うっかり新しい穴を開けても guard が壊れる → 気づける
