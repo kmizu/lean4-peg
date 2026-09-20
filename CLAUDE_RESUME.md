@@ -1,5 +1,13 @@
 ## n285 — `obligation_localRealization`: 具体機械の上で enqueue／dequeue 1 回が固定長の微小プログラムになった（`snocRun_sound`／`tailRun_sound`）。公理への接続はまだ無い
 
+**n285 続き（2026-09-20、入力 view 1 本の具体機械。公理への接続は無い・進捗として数えない）**: 全体 build は n285 の `BUILD=0` 以降走らせていない（公理も葉も不変）。module build `PalPeg.ConcreteLocalMachine` は `BUILD=0`・error 0、下の定理は標準 3 公理のみ・`sorry` 0。無条件 PAL は未完（残り 1 公理 `obligation_localRealization`）。物理配置: view 1 本 = 12 テープ（0–9 = queue 機械、10 = `focus :: back` の stack、11 = `near` の stack）、slot = 11 歩（0 歩目 = 判断、1–10 歩目 = queue job、`incLength` で padding）、slot counter は共有・job と gap bit は view の制御、`repositionStep` の方向は送り手が決める（`ViewCommand.stepRight`／`stepLeft`）。
+* `LocalViewCells`: `ViewCells v := ∃ letters, cells v = none :: letters.map some` は `ViewLocal` の全操作で保存。`back = [] ↔ focus = none`、`near` は全部文字。番兵 `none` は底の seal と同一視でき、push されるのは文字だけ。
+* `LocalViewDecision`: `viewApply_observed` — 1 コマンド = back／near の stack 操作各 1 回＋queue job 高々 1 個、gap bit と 3 記号（`ViewTops`）から決まる。
+* `LocalViewLayout`: `ViewRep`、`viewTopsOfWindows_eq`（3 記号は back 中心・near 中心・front 役テープ中心の窓から読める）。
+* `LocalViewStep`: `viewDecision_sound`（判断歩で 2 本の stack テープが `viewApply command v` のものへ）。
+* `LocalViewSlot`: `viewNext`／`viewActs`（12 本の規則、`viewActs_length ≤ K`）、`ViewStep`（テープごとの margin 条件つき `TEqG`）、`viewSlot_sound`: `WF v`・`ViewCells v`・`ViewRep K v`・未払い 0 → 11 歩後 `ViewRep K (viewApply command v)`・未払い 0（slot は連結できる）。
+* **未完**: この規則を呼ぶ全体機械の `ActRule`（複数 view・共有 slot counter・`compStep_apply` のテープごと版から `ViewStep` を出す）、blank からの view 初期化、chain／探索／counter bank／10 モード、`TrackAt`、期限・latch、`realize_SAccepts`。
+
 **公理への進捗**
 
 | 公理 | このノートでの変化 |
