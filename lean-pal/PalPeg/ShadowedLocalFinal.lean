@@ -864,10 +864,14 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
           (chosenStep entry q first (localGood (spare := spare)) (postPhase entry q first) w)
           (chosenStep entry q first (localGood (spare := spare)) (postPhase entry q first) w))
           m.vm.ctl.mode m))
-    (hgoodFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+    -- the geometry half of the run invariant under an arrival (the polarity half is
+    -- `LocalWF.polWF_feedC`); an arrival changes what the fallback walker reads, so the guards of
+    -- `Geom` can change
+    (hgeomFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (letter : Fin 2) (m : Mirrored1 (tapeCount spare)),
-        InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m → (localGood (spare := spare)) (feedC letter m))
+        InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m →
+        PalPeg.LocalWF.Geom (feedC letter m).vm)
     -- the two open modes: a tracked, non-starved local state has a local successor
     (hscanNext : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
@@ -948,7 +952,9 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
               exact good_chosenStep hinv.good
             · exact hgoodPhaseStep w st Tc hpreTrace hcanonical m hinv hscan hreplayStart
                 hstarved)
-    hgoodFeed
+    (fun w st Tc hpreTrace hcanonical letter m hinv =>
+      ⟨PalPeg.LocalWF.polWF_feedC hinv.phys.pend letter hinv.good.pol,
+        hgeomFeed w st Tc hpreTrace hcanonical letter m hinv⟩)
     ?_ (postPhase entry q first) frozenAt
     (fun w st Tc hw hpreTrace _ m hinv => notFrozen_of_invC entry q first hw hpreTrace m hinv)
     (fun w st Tc hw hpreTrace _ hscanAtReport m _ hneedy => by
