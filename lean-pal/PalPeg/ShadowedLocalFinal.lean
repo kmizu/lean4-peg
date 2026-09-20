@@ -598,10 +598,39 @@ theorem initLocal_heldAfter (entry q : ℕ) (first : Fin 9) {Good : Mirrored1 (t
 
 #print axioms initLocal_heldAfter
 
+/-- The starvation test reads the abstraction only (the mode and the abstract heads). -/
+theorem starved_of_absSC_eq {encoded m : Mirrored1 (tapeCount spare)}
+    (habs : absSC encoded = absSC m) : Starved encoded.vm ↔ Starved m.vm := by
+  have hctl : encoded.vm.ctl = m.vm.ctl := congrArg State.ctl habs
+  have hvm : PalPeg.LocalReplayParked.abs'' encoded.vm = PalPeg.LocalReplayParked.abs'' m.vm :=
+    congrArg State.vm habs
+  unfold Starved
+  rw [hctl, hvm]
+
+/-- **The abstract successor of a local tick is unique**: a canonical tick of the frame has one
+target (`GalilTickFair.tick_canonical_unique`), and a starved state stays. -/
+theorem tickSucc_unique (entry q : ℕ) (first : Fin 9) (w : List (Fin 2)) {starved₁ starved₂ : Prop}
+    (hiff : starved₁ ↔ starved₂) {x y₁ y₂ : State GalilVM}
+    (h₁ : TickSucc (PofC centreC placeC entry w) q first 2048
+      (PalPeg.GalilTickFair.Canonical entry 2048) starved₁ x y₁)
+    (h₂ : TickSucc (PofC centreC placeC entry w) q first 2048
+      (PalPeg.GalilTickFair.Canonical entry 2048) starved₂ x y₂) : y₁ = y₂ := by
+  rcases h₁ with ⟨hstarved₁, hy₁⟩ | ⟨hnot₁, htick₁, hcanon₁⟩
+  · rcases h₂ with ⟨_, hy₂⟩ | ⟨hnot₂, _, _⟩
+    · rw [hy₁, hy₂]
+    · exact absurd (hiff.mp hstarved₁) hnot₂
+  · rcases h₂ with ⟨hstarved₂, _⟩ | ⟨_, htick₂, hcanon₂⟩
+    · exact absurd (hiff.mpr hstarved₂) hnot₁
+    · exact PalPeg.GalilTickFair.tick_canonical_unique htick₁ hcanon₁ htick₂ hcanon₂
+
+#print axioms tickSucc_unique
+
 /-- **`PAL ∈ PEG` from the two open modes and a physical machine.**  The `init` mode is
 `LocalInitStep.initStep` (`initLocal_heldAfter`).  The seven phase modes of
 the abstract local system are `CloseoutCoreAgree.realizes_seven_SL`; its side conditions are
-facts about the held canonical trace. -/
+facts about the held canonical trace.  The physical machine is asked for a forward simulation up
+to the abstraction (`hforwardTick`, `hforwardFeed`): it may compute any local state whose
+abstraction is an abstract successor, because that successor is unique (`tickSucc_unique`). -/
 theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4)
     (hq : q ≤ 64)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
@@ -679,26 +708,47 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
         repC (micro (sysC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC) w
           (x0C (blankVML spare) 2048) s').core.vm.ctl = true)
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
-    (htape : 0 < t) (Rep : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
-    (hrepInit : Rep (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
-    (hsimTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+    (htape : 0 < t) (Enc : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
+    (hencInit : Enc (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
+    -- the machine simulates the local layer forwards, up to the abstraction: from a configuration
+    -- encoding some local state with the abstraction of a state of the run, one step reaches a
+    -- configuration encoding a local state whose abstraction is an abstract successor
+    (hforwardTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
-        TickSucc (PofC centreC placeC entry w) q first 2048
-          (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm) (absSC m)
-          (absSC (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m)) →
-        Rep m p → Rep (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m) (L0.apply blankSymbol p none))
-    (hsimFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      ∀ m encoded p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
+        absSC encoded = absSC m → Enc encoded p →
+        ∃ next, Enc next (L0.apply blankSymbol p none) ∧
+          TickSucc (PofC centreC placeC entry w) q first 2048
+            (PalPeg.GalilTickFair.Canonical entry 2048) (Starved encoded.vm) (absSC encoded)
+            (absSC next))
+    (hforwardFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ letter m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep m p →
-        Rep (feedC letter m) (L0.apply blankSymbol p (some letter)))
-    (hreadRep : ∀ m p, Rep m p → repC m.vm.ctl = repQ p.1)
-    (hreadOut : ∀ m p, Rep m p → m.vm.ctl.output = outQ p.1) :
+      ∀ letter m encoded p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
+        absSC encoded = absSC m → Enc encoded p →
+        ∃ next, Enc next (L0.apply blankSymbol p (some letter)) ∧
+          absSC next = absSC (feedC letter m))
+    (hencRep : ∀ encoded p, Enc encoded p → repC encoded.vm.ctl = repQ p.1)
+    (hencOut : ∀ encoded p, Enc encoded p → encoded.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   refine given_shadowedLocalSystem entry q first hfirst hor hres hChainVerifierSupply
     (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC Good hgoodInit hgoodTick hgoodFeed
     ?_ Post hpostOfLastReport hpostTick rep_sound rep_complete L0
-    blankSymbol q0 repQ outQ htape Rep hrepInit hsimTick hsimFeed hreadRep hreadOut
+    blankSymbol q0 repQ outQ htape (fun m p => ∃ encoded, Enc encoded p ∧ absSC encoded = absSC m)
+    ⟨_, hencInit, rfl⟩
+    (fun w st Tc hpreTrace hcanonical m p honRun hsucc ⟨encoded, henc, habs⟩ => by
+      obtain ⟨next, hencNext, hsuccEncoded⟩ :=
+        hforwardTick w st Tc hpreTrace hcanonical m encoded p honRun habs henc
+      rw [habs] at hsuccEncoded
+      exact ⟨next, hencNext,
+        tickSucc_unique entry q first w (starved_of_absSC_eq habs) hsuccEncoded hsucc⟩)
+    (fun w st Tc hpreTrace hcanonical letter m p honRun ⟨encoded, henc, habs⟩ =>
+      hforwardFeed w st Tc hpreTrace hcanonical letter m encoded p honRun habs henc)
+    (fun m p ⟨encoded, henc, habs⟩ => by
+      rw [← show encoded.vm.ctl = m.vm.ctl from congrArg State.ctl habs]
+      exact hencRep encoded p henc)
+    (fun m p ⟨encoded, henc, habs⟩ => by
+      rw [← show encoded.vm.ctl = m.vm.ctl from congrArg State.ctl habs]
+      exact hencOut encoded p henc)
   intro w st Tc hpreTrace hcanonical mode
   rcases Nat.eq_zero_or_pos w.length with hempty | hw
   · intro m k j _ _ _ _ _ hbefore
