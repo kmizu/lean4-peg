@@ -147,8 +147,8 @@ theorem pal_in_peg_of_shadowed_sysC
     (frozen : List (Fin 2) → Mirrored1 P → Prop)
     (hnotFrozenTracked : ∀ (w : List (Fin 2)) (m : Mirrored1 P), 0 < w.length →
       InvC Good w (stOf w) m → ¬ frozen w m)
-    (hpostOfLastReport : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (j : ℕ), 0 < w.length →
-      InvC Good w (stOf w) m → Needy w (stOf w) (TcOf w w.length) j m.vm → Post w m)
+    (hpostOfLastReport : ∀ (w : List (Fin 2)) (m : Mirrored1 P), 0 < w.length →
+      InvC Good w (stOf w) m → Needy w (stOf w) (TcOf w w.length) w.length m.vm → Post w m)
     (hpostTick : ∀ (w : List (Fin 2)) (m : Mirrored1 P), 0 < w.length → Post w m →
       PhysWF m.vm → MirInv1 m → Good m → ¬ Starved m.vm →
       TickSucc (Pof w) (qof w) (firstOf w) delay (Canon w) (frozen w m) (absSC m)
@@ -238,7 +238,10 @@ theorem pal_in_peg_of_shadowed_sysC
     rcases hphase with htracked | ⟨_, _, hpost, hphys, hmir, hgood⟩
     · by_cases hend : kOf (S w) w x0 s = TcOf w w.length
       · exact (hfreeTick w hw _
-          (hpostOfLastReport w _ _ hw htracked.invC (hend ▸ htracked.needy))
+          (hpostOfLastReport w _ hw htracked.invC (by
+            have hneedy := htracked.needy
+            rw [hend, hallArrived w hw s htracked hend] at hneedy
+            exact hneedy))
           htracked.phys htracked.mir htracked.good hstarved).1
       · have hbefore : kOf (S w) w x0 s < TcOf w w.length :=
           lt_of_le_of_ne htracked.beforeEnd hend
@@ -268,7 +271,10 @@ theorem pal_in_peg_of_shadowed_sysC
       rcases hphase with htracked | ⟨hafter, harrived, hpost, hphys, hmir, hgood⟩
       · by_cases hend : kOf (S w) w x0 s = TcOf w w.length
         · obtain ⟨_, hpost', hphys', hmir', hgood'⟩ := hfreeTick w hw _
-            (hpostOfLastReport w _ _ hw htracked.invC (hend ▸ htracked.needy))
+            (hpostOfLastReport w _ hw htracked.invC (by
+              have hneedy := htracked.needy
+              rw [hend, hallArrived w hw s htracked hend] at hneedy
+              exact hneedy))
             htracked.phys htracked.mir htracked.good hstarved
           exact Or.inr ⟨by omega, hallArrived w hw s htracked hend, hpost', hphys', hmir', hgood'⟩
         · have hbefore : kOf (S w) w x0 s < TcOf w w.length :=
