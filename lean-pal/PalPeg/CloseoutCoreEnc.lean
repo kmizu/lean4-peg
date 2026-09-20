@@ -344,12 +344,12 @@ def NAMED_feedWindow {P : ℕ} (delay Lp Lf : ℕ)
 /-- **The fpp quantum.**  One `.fpp` tick is to be a single `GalilDpCode`
 instruction executed in a fixed window; this is the `.fpp` component of
 `CloseoutCoreStep.realizes_seven_of_agree`. -/
-def NAMED_fppQuantum {P : ℕ} (raw : List (Fin 2))
+def NAMED_fppQuantum {P : ℕ} (Good : Mirrored1 P → Prop) (raw : List (Fin 2))
     (stOf : ℕ → PalPeg.GalilScaffoldTop.State
       PalPeg.GalilScaffoldChainInputSupply.GalilVM)
     (Pw : PalPeg.GalilScaffoldChainInputSupply.Shared) (qq : ℕ) (first : Fin 9) : Prop :=
   ∃ g : Mirrored1 P → Mirrored1 P,
-    CloseoutCoreStep.AgreeOn raw stOf (PalPeg.LocalWF.ffpp (P := P) Pw qq first) g
+    CloseoutCoreStep.AgreeOn Good raw stOf (PalPeg.LocalWF.ffpp (P := P) Pw qq first) g
       PalPeg.GalilScaffoldController.Mode.fpp
 
 end PalPeg.CloseoutCoreEnc

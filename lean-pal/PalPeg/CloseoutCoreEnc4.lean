@@ -438,30 +438,30 @@ def NAMED_reducedFeed {Q : Type} {t : ℕ} (enc : Mirrored1 P → Q × (Fin t �
 /-- **The fpp residual of `CloseoutCoreEnc3` holds for every input**, by taking
 `g := ffpp` itself.  `AgreeOn` is reflexive, and nothing in the statement forces
 `g` to be window-local, so the obligation carries none of its intended content. -/
-theorem named_fppQuantum_trivial (raw : List (Fin 2))
+theorem named_fppQuantum_trivial (Good : Mirrored1 P → Prop) (raw : List (Fin 2))
     (stOf : ℕ → PalPeg.GalilScaffoldTop.State PalPeg.GalilScaffoldChainInputSupply.GalilVM)
     (Pw : PalPeg.GalilScaffoldChainInputSupply.Shared) (qq : ℕ) (first : Fin 9) :
-    PalPeg.CloseoutCoreEnc3.NAMED_fppQuantum (P := P) raw stOf Pw qq first :=
+    PalPeg.CloseoutCoreEnc3.NAMED_fppQuantum (P := P) Good raw stOf Pw qq first :=
   ⟨PalPeg.LocalWF.ffpp (P := P) Pw qq first, agreeOn_refl _ _⟩
 
 /-- **The repaired fpp residual.**  The witness must agree with `ffpp` on
 reachable states *and* be realized by window data over the sentinel layout. -/
-def NAMED_fppQuantum' (raw : List (Fin 2))
+def NAMED_fppQuantum' (Good : Mirrored1 P → Prop) (raw : List (Fin 2))
     (stOf : ℕ → PalPeg.GalilScaffoldTop.State PalPeg.GalilScaffoldChainInputSupply.GalilVM)
     (Pw : PalPeg.GalilScaffoldChainInputSupply.Shared) (qq : ℕ) (first : Fin 9)
     (delay Lp Lf : ℕ) (rep : ChainVM → ChainL) : Prop :=
   ∃ g : Mirrored1 P → Mirrored1 P,
-    AgreeOn raw stOf (PalPeg.LocalWF.ffpp (P := P) Pw qq first) g
+    AgreeOn Good raw stOf (PalPeg.LocalWF.ffpp (P := P) Pw qq first) g
       PalPeg.GalilScaffoldController.Mode.fpp ∧
     Nonempty (WinStep (QL delay Lp Lf P QChain) (tL P tChain) (enc1 delay Lp Lf rep) g)
 
 /-- The repaired form still *implies* the old one, so nothing was lost. -/
-theorem named_fppQuantum_of_prime {raw : List (Fin 2)}
+theorem named_fppQuantum_of_prime {Good : Mirrored1 P → Prop} {raw : List (Fin 2)}
     {stOf : ℕ → PalPeg.GalilScaffoldTop.State PalPeg.GalilScaffoldChainInputSupply.GalilVM}
     {Pw : PalPeg.GalilScaffoldChainInputSupply.Shared} {qq : ℕ} {first : Fin 9}
     {delay Lp Lf : ℕ} {rep : ChainVM → ChainL}
-    (h : NAMED_fppQuantum' (P := P) raw stOf Pw qq first delay Lp Lf rep) :
-    PalPeg.CloseoutCoreEnc3.NAMED_fppQuantum (P := P) raw stOf Pw qq first := by
+    (h : NAMED_fppQuantum' (P := P) Good raw stOf Pw qq first delay Lp Lf rep) :
+    PalPeg.CloseoutCoreEnc3.NAMED_fppQuantum (P := P) Good raw stOf Pw qq first := by
   obtain ⟨g, hg, _⟩ := h
   exact ⟨g, hg⟩
 

@@ -1,3 +1,394 @@
+## n285 — `obligation_localRealization`: 具体機械の上で enqueue／dequeue 1 回が固定長の微小プログラムになった（`snocRun_sound`／`tailRun_sound`）。公理への接続はまだ無い
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | **変化なし。** 下の定理は入力 view 1 本の queue についての具体機械で、`H_realizeCanonical` を与える全体機械からはまだ使われていない。進捗として数えない |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 1 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization`（n282 から変化なし）。`snocRun_sound`／`tailRun_sound`／`microRun_sound` は標準 3 公理のみ、`sorry` 0。
+
+**何を証明したか**: 入力 view が queue に対して行う 2 操作（`LocalInputView.arrive` ＝ `RTQueue.snoc`、`stepRight` ＝ `head?`＋`RTQueue.tail`）を、具体的な局所機械の固定長の走行にした。
+
+* `snocRun_sound : RTQueue.Inv q → MicroRun … (snocProgram a) state final → MicroRep K q … → owed = 0 → MicroRep K (RTQueue.snoc q a) … ∧ owed = 0`（9 手）。`tailRun_sound` は `front ≠ []` の下で `RTQueue.tail q`（10 手）。**前提は `RTQueue.Inv q` だけ**で、終わりに未払いが 0 に戻るので連結できる。
+* 機械は n284 の `queueRule`（8 本）に長さ counter の 2 本を足した `microRule`（10 本、`LocalQueueMicro`）。微小操作は `sub op`／`checkStart`／`incLength`。`microRule_sound`（sweep 前の健全性、`MicroRep` の保存）。n284 の証明は `queueRule_sound`（sweep 前）に切り出して再利用した。
+* **`lenr ≤ lenf` の局所化**（`LocalQueueLength`）: 2 本の stack の高さ比較は局所的でなく、`rotStart` の `lenf := lenf + lenr` は単独 counter では O(1) に更新できない。符号つき counter を**遅延更新**する: `LengthCounter q c := c + lengthDebt q.state = lenf − lenr`、`lengthDebt` は reversing で `2·|f| + 2`。`rotStart` は `c` を触らず（開始時は `lenr = |front| + 1`）、reversing の `exec` ごとに 2 単位を借り（制御の `owed : Fin 3`）、`incLength` で 1 ずつ返す。`startsRotation_iff`: `¬ lenr ≤ lenf ↔ phase = idle ∧ c < 0`。counter は mark の stack 2 本（pos／neg）で、増減は反対側が空かの 1 bit で選ぶ（`marks_increment`／`marks_decrement`）。
+* `LocalQueueProgram`: `runMicro_snoc`／`runMicro_tail`（抽象 queue 上で `snoc`／`tail` ＝微小操作列、`check_eq_sApply`）、`MicroRun`（`compStep_apply` が与える `TEqG` までの 1 歩の列）、`microRun_sound`（列に沿った反復。プログラムの形 `OwedOk` と各点の HM 前提 `PremisesAlong`）。HM の事実の出所は既存の `RTQueue.snoc_pinv`、`CloseoutCoreEnc22.tail_hrot`、`RTQueue.frontList_eq_append`、`eq_idle_of_rem_zero`。
+* 整理: `ConcreteLocalMachine.lean`（2,155 行）を `LocalQueueLayout`／`LocalQueueMachine`／`LocalQueueLength`／`LocalQueueMicro`／`LocalQueueProgram` に分割（入口は `ConcreteLocalMachine.lean`）。
+
+**未完の部分**: (1) `MicroRun` を実機の走行にする: 制御に job と program counter を持たせた rule（`microRule` の `nq`／`acts` をそのまま使う）と `compStep_apply` で `MicroStep` を出す。(2) `MicroRep` の初期化（高さ K の底を敷く prologue、空の queue）。(3) `head?`（`stepRight` が読む先頭）を tape から読む。(4) view の残り（`back`／`focus`／`near`）と 3 本の view、chain（`LocalChain`）、探索、7 モード（`init = scan = replayStart = id` は仮実装）、入力配布。(5) `LocalStep.realize`／`realize_SAccepts` と `H_realizeCanonical`。
+
+## n284 — `obligation_localRealization`: queue sub-step の具体的な局所機械とその正しさ（`queueRep_step`）。公理への接続はまだ無い
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | **変化なし。** 下の定理は queue 1 本の sub-step についての具体機械で、`H_realizeCanonical` を与える全体機械からはまだ使われていない（全体機械が存在しない）。進捗として数えない |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 1 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization`（n282 から変化なし）。`ConcreteLocalMachine.queueRep_step` は標準 3 公理のみ、`sorry` 0。
+
+**何を証明したか**（`PalPeg/ConcreteLocalMachine.lean`、handoff §4 L2 の「第一成果」）: `queueRep_step : QueueRep K q control tapes → QueueRep K (sApply control.1 q) (step.1) (step.2)`、`step = (queueLocalStep Terminal hK).apply blankc (control, tapes) input`、`2 ≤ K`。具体的な局所機械の 1 ステップが、抽象 queue の 1 sub-step（`CloseoutCoreEnc25.sApply`、6 操作）に等しい。
+
+* **機械**: `queueRule : ActRule Terminal QueueControl Γc 8 K`、`queueLocalStep := compStep queueRule`。テープ 8 本（`0`–`6` が役割 stack、`7` が valid counter）、制御 `QueueControl = SOp × RTag × RotationPhase`。`nq`／`acts` は制御と窓（各テープの中央セル `centreSym` と左隣 `belowSym`）だけの関数。`len_le` は `cellActsOfTop_length ≤ 2 ≤ K`。
+* **有限観測**: `QueueView`（`Fintype`）。`deltaOf_eq_view`／`tagStep_eq_view`／`sealRoleOf_eq_view`／`rotationPhase_sApply`／`validCells_sApply`: stack 操作・role tag・封じるアドレス・次の phase・valid counter の操作は全部観測の関数。
+* **物理表現**: `LaysS` は役割の中身の後ろに junk が続くので先頭セルから空判定ができない → **junk の先頭を `none`（番兵）にする** `LaysSealed`。`GalilVMEncode.blank = sOpt none` なので番兵は物理的には空白セル 1 個。junk が生まれる 3 箇所（`inval`／`exec` の `appending 0`、`install` の `done`）で 1 回 push（そこでは元の delta は `keep`）。`laysSealed_sApply`。読み取りは `queueView_eq_tops`（先頭 2 セル）。
+* **tape**: `StackTape tape stack := ∃ debris, TEqG blankc tape (dTape stack debris)`（`compStep` の sweep は `STape` の項を文字どおりには返さないので `TEqG` まで）。既存に無かった `teqG_actOnG`／`teqG_actList`／`readWin_teqG` を追加。`dTape_cellApply`（セル操作 1 回＝先頭記号で選んだ 2 個以下の action）。
+* **`QueueRep`**: 制御の phase ＝ `rotationPhase q.state`、`LaysSealed`、**junk の高さ ≥ K**（`compStep_apply` の margin `K ≤ pos`。`pos (dTape stack _) = stack.length` なので空の stack では破れる。junk は増えるだけで pop は junk に届かない）、7 本の `StackTape`、counter ＝ `validStack` を高さ ≥ K の sealed な底の上に。役割でないアドレスは `roleOf_surjective`（`decide`）で存在しない。
+* **点検で直した不具合**: `inval` の `reversing` は `ok − 1`（`ok = 0` で 0 のまま）。抽象の `dApply pop [] = []` では無害だが、物理では counter の底を pop する。`validDeltaOfView` が counter のゼロ判定を読んで `keep` にする。
+* **一次情報**: handoff が既存部品として挙げた `CloseoutCoreEnc25` は root から import されておらず build error 20 件だった（n283 で修理）。
+
+**未完の部分**: (1) `lenf − lenr` の符号 counter と、それで sub-step の**操作 `SOp` を選ぶ**スケジュール（`RTQueue.check`／`exec2`／`snoc`／`tail` を sub-step 列に分解した `CloseoutCoreEnc21.SStep` との対応。いまの制御は `op` を外から与えられている）。(2) `QueueRep` の初期化（高さ K の底を敷く prologue）。(3) queue 以外（chain `LocalChain`、入力配布、7 モード、`init = scan = replayStart = id` の仮実装の置き換え）。(4) `LocalStep.realize`／`realize_SAccepts` への接続と `H_realizeCanonical`。
+
+## n283 — `obligation_localRealization` に着手: queue sub-step の分岐は有限観測 `QueueView` だけで選べる（未接続）。`CloseoutCoreEnc25` は build が通っていなかったので修理した
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | **変化なし。** このノートの定理はまだどの機械からも使われていない（具体的な局所機械が存在しないため）。進捗として数えない |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 1 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization`（n282 から変化なし）。
+
+**一次情報で分かったこと（重要）**: handoff が既存部品として挙げる `CloseoutCoreEnc25`（`RTag`／`sApply`／`deltaOf`／`laysS_sApply`）は **root から import されておらず、単体 build は error 20 件で失敗していた**（`CoreEnc24` までは通る）。原因は toolchain 由来の tactic のずれ 3 種: `match hst : q.state with` が goal の `q.state` を先に置換するので `rw [show invalDelta … q.state = …]` が当たらない（16 箇所 → `simp only [invalDelta, invalJunk]`／`[execDelta, execJunk]`）、`isDone_eq` の余分な `exact`、`snocPush` の `simp` に `junkOf` が不足。修理して error 0・`sorry` 0。**「ファイルがある」と「検査されている」は別**（CLAUDE.md の警告どおり）。
+
+**何を証明したか**（`PalPeg/ConcreteLocalMachine.lean`、新規、`Workbench` の先頭 import 群に登録して root の build 対象にした）: handoff L2 の 1〜2。`deltaOf`／`tagStep` は抽象 queue 全体を受け取るが、実際に読むのは有限個の判定だけ。
+
+* `RotationView`（`idle`／`done`／`reversing (forwardHead reverseHead) (reverseIsSingle)`／`appending (validIsZero) (forwardHead) (rebuiltNonempty)`）と `QueueView`（`frontEmpty`＋`rotation`）。どちらも `Fintype`・`DecidableEq`。
+* `deltaOfView`／`tagStepOfView`: 観測だけから stack 操作と role tag の更新を選ぶ関数。
+* `deltaOf_eq_view : deltaOf op q ρ = deltaOfView op (queueView q) ρ`、`tagStep_eq_view`。標準公理のみ。
+
+**未完の部分（次の具体 goal）**: 観測の各 bit を**物理テープから読めるようにする表現**が無い。`LaysS q ρ L J` は `L (ρ ro) = sRoleList q ro ++ J (ρ ro)`（役割の中身の後ろに不要領域 `J` が続く）なので、stack の先頭を見ても「空かどうか」「先頭記号が本物か」は分からない（空なら先頭は junk）。必要なのは、`frontEmpty`／`forwardHead = none`／`reverseIsSingle`／`validIsZero`／`rebuiltNonempty` のそれぞれに対する局所的な担い手（sentinel か、更新とともに保つ counter の符号・ゼロ判定）と、それを含む `Rep` の場。これを決めてから `ActRule` の `nq`／`acts` を書く（handoff L2 の 3〜4）。`CloseoutCoreEnc22` の 9 本配置（`tViewQ = 9`）が何を持っているかの確認が先。
+
+## n282 — 公理 `obligation_cycleOracleOnPackedRun` を証明して外した（2 → 1）。残る義務は `obligation_localRealization` だけ
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | **証明して削除。** `PalInPeg.cycleOracleOnPackedRun`（定理、固定証人 `entry = 0, q = 1, first = 0`）＝ `OracleReady.cycleOracleOn_of_readyLeaves centreC placeC 0 1 0 (decodesC 0 w) …`。producer の最後の葉 `hmove` が無くなった |
+| `obligation_localRealization` | 変化なし（未着手） |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件、`Axioms.lean` の guard を 1 公理に更新した上で通過）・標準公理のみ（3 本）・無条件 PAL は未完（残り 1 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization`（**本数 5 → 4、義務 2 → 1**）。`PalInPeg.cycleOracleOnPackedRun` と `OracleReady.cycleOracleOn_of_readyLeaves` は標準 3 公理のみ。`PalInPegUnconditional.lean` に残る `axiom` 宣言は `obligation_localRealization` の 1 本。
+
+**何を証明したか**: 葉 `hmove` の最後の場合（shift 後のラウンドで不一致状態の chain が既に broken）。`FirstRoundGuard` を全ラウンド版 `BrokenGuard (b : Bool)`（`scan → periodOnly = b → broken なら restartGuardVM`）にし、`MinimalAcrossRestart.guard : ∀ b, BrokenGuard b c s` として run に載せた。tick（`brokenGuard_tick`）は `b` 汎用で、break の入口 2 つを callback で受ける。
+
+* shift 後（`b = true`）の正 lag `WatchBreak`: watch は常に lag ゼロ（n281 の `Continuation`）なので起きない。
+* shift 後の lag ゼロ `BreakStep`: `lateBreak_tailRound`。watch は追い付いていて背景 step で動かないので `distance = R`。fresh 側（`FreshC`・phase 4）は `four_of_freshC` で `4h ≤ R`。`Other'` 側（`5h ≤ R + cycle`）は、`cycle ≤ 1` なら `4h ≤ R`、`cycle ≥ 2` なら左の place が `[Lb, C]` の中にあるので、`matched_text`（matched 比較の文字＝左の文字）と `prediction_eq_left_of_period`（左の文字＝予測: 周期 → 回文の鏡像 → 検証済み窓）から「読んだ文字＝予測」となり break しない。`4h ≤ distance` からは n278 の `restartGuard_of_lateBreak`。
+* `prediction_eq_left_of_period` は n280 の `shiftGuard_of_tail_caughtUp` の中身から切り出して両方が使う。
+* 消費者: `not_broken_offGuard`（旧 `not_broken_firstRound` の全ラウンド版）→ `OracleReady` の `hMove` の broken 分岐 2 箇所。これで `hmove` を呼ぶ分岐が無くなり、仮説 `hmove` を `cycleOracleOn_of_readyLeaves` から削除した。前提は `Decodes`／`first ≠ 4`／`0 < q`／`first ≠ 7`／`first ≠ 8` だけで、固定証人では `decodesC` と `decide` で出る。
+* 公理は `(entry q first)` 一般＋`first ≠ 4` の形だったが、使用箇所は `unconditional` の 1 箇所（`0 1 0`）だけだったので、定理は固定証人で述べた（`0 < q`・`first ≠ 7/8` を一般には仮定できないため）。
+
+**`hmove` が消えるまでの経路（n272〜n282）**: idle（n272/n273）→ 第 1 ラウンド: 追い付いた watch（n274/n275）、仕事の残る chain（n276/n277、chain の時計）、既に broken（n278、`FirstRoundGuard`）→ shift 後: 予測外れ（n279、`TailRound`／`CycleBound`）、予測一致（n280、`Continuation`＝Scala `checkPair`）、lag ゼロ・phase 4（n281）、既に broken（n282、`BrokenGuard`）。
+
+**未完の部分**: `obligation_localRealization`（`H_realizeCanonical centreC placeC entry q first`、局所実現）。handoff の順序 (2): 具体的な永続物理有限局所機械（`ActRule → compStep → LocalStep.realize`、`CoreEnc12/22/25`、`LocalChain`、`TEqG`/`Rep`）、最初の成果物は queue sub-step の `ActRule` を有限観測から。**未着手。**
+
+## n281 — 葉 `hmove`: shift 後のラウンドの watch は常に lag ゼロ・phase 4。葉に残るのは「shift 後のラウンドで不一致状態の chain が既に broken」だけ
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` の前提が「`periodOnly = true` かつ `∃ wb, s.chain = .broken wb`」になった（遅れている watch、phase ≠ 4 の watch は葉から消えた） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。`OracleReady.cycleOracleOn_of_readyLeaves` と `RestartLowerRun.tailTick_cases` は標準 3 公理のみ。
+
+**何を証明したか**: `Continuation` の 2 節に `zero w.lag = true ∧ w.machine.control.phase = 4` を足した。`beginShiftVM'` は guard（lag ゼロ・phase 4）の下でしか起きず、`immediate` は lag を変えない、`shiftOne` は counter だけ。chain tick での保存は `caughtUp_watch_tick`: lag ゼロの `Internal` は `idle`、matched は `Outer.immediate`（即 consume、Scala `matched()`）、phase 4 は `consume_phase_four` で吸収的。消費者は `tailTick_cases`（shift 後の不一致状態の live chain は、既に broken か、chain tick が lag ゼロ・phase 4 の watch を出すかのどちらか。copy／back は `TailRound` が排除）→ `OracleReady` の `hMove`。watch が出る側は n279（予測外れ）／n280（予測一致）が閉じる。
+
+**未完の部分**: 葉 `hmove` の最後の場合 = shift 後のラウンドで不一致状態の chain が既に broken（restart guard 不成立）。計画（`CLAUDE_RESUME.md` 冒頭の「(c3) の計画」2.）: `FirstRoundGuard` を全ラウンドに広げる。shift 後は lag ゼロなので break は matched 比較の `BreakStep` だけ。`cycle ≥ 2` なら左の place が `[Lb, C]` の中で、`matched_text`＋周期＋鏡像＋窓から予測＝読んだ文字となり break しない。`cycle ≤ 1` なら `Other'`（`5h ≤ R + cycle`）から `4h ≤ R` で `restartGuard_of_lateBreak`。fresh 側（`FreshC`・phase 4）は `four_of_freshC` で直接 `4h ≤ R`。`obligation_localRealization` は未着手。
+
+## n280 — 葉 `hmove`: shift 後のラウンドで、追い付いた watch（lag ゼロ・phase 4）が出てくる不一致は全部閉じた
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` の前提が「`periodOnly = true`、かつ chain tick の結果が lag ゼロの watch なら **phase ≠ 4**」になった（n279 の「予測が当たる場合」も葉から消えた） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。`OracleReady.cycleOracleOn_of_readyLeaves` と `RestartLowerRun.shiftGuard_of_tail_caughtUp` は標準 3 公理のみ。
+
+**何を証明したか**: Scala `ScaffoldChain.checkPair` の主張（lag ゼロなら `left == prediction ⇔ ¬ cycleEnd`）のうち必要な向きを run 不変量から証明した。`RestartLowerRun.shiftGuard_of_tail_caughtUp`: shift 後のラウンドで、追い付いた watch（phase 4）が右の文字を当てた不一致では shift guard が立つ。`shiftGuardVM` の定義上、`periodOnly` で guard が落ちうるのは `singlePositive cycle` だけなので、示すのは `cycle = 1`。消費者は `OracleReady` の `hMove`（`¬ shiftGuard` と矛盾）。
+
+* n279 の `CycleBound` を `Continuation` に拡張した（全部消費済み）。scan かつ `periodOnly = true` の watch について: `Canonical cycle`、`cycle ≤ 2h`、`∃ Lb, Lb + R + cycle = C + 1 ∧ LeftEnd raw h Lb C`。shift 中は `cycle + 2·remaining ≤ 2h` と `LeftEnd raw h Lb (C + rem)`。**`Lb` はラウンド中動かない**（matched で `R+1, cycle−1`、`shiftOne` で `C+1, R−1, cycle+2`）。
+* `LeftEnd raw h Lb E := 1 ≤ Lb ∧ Lb ≤ E ∧ PeriodOn e (2h) Lb E ∧ signedRead e (Lb − 1) ≠ e[Lb − 1 + 2h]?`。`Lb` は shift が出発した scan 回文の左端 `C₀ − R₀`、破れはその不一致そのもの（左の文字 ≠ 右の文字＝予測＝鏡像 `e[C₀−R₀−1+2h]`）。左の読みは `signedRead`（place 0 は `none`）なので破れもその形で持つ（リスト等式で書くと place 0 で偽になりうる）。`continuation_start` が `spanPeriod_of_window` と `prediction_eq_text` から供給。
+* `cycle = 1` の証明: `cycle ≥ 2` なら不一致の左 place `C − R − 1` が `[Lb, C]` の中にあり、周期 → 回文の鏡像 → 検証済みの窓、で予測＝右の文字に等しくなって不一致と矛盾。`cycle ≤ 0` なら破れの place `Lb − 1` が scan 回文 `[C − R, C + R]` の中に入るが、そこは chain の周期を持つ（`spanPeriod_of_window`）ので `LeftEnd` の破れと矛盾。
+* `two_semiperiods_le`（`4h ≤ distance ∨ Other'` と `cycle ≤ 2h` から `2h ≤ R`）を切り出して n279 の `move_of_tail_mispredict` と共有。`caughtUp_watch` は不一致比較が countdown を保つこと（`compare'_inv`）も返す。
+
+**未完の部分**: 葉 `hmove` の `periodOnly = true` の残り（(c3)、未調査）: chain tick の結果が lag ゼロ・phase ≠ 4 の watch、遅れている watch（正 lag）、既に broken の chain。第 1 ラウンドでは順に `move_of_watch_short`／`move_of_working_*`（chain の時計）／`FirstRoundGuard` が対応した。`obligation_localRealization` は未着手。
+
+## n279 — 葉 `hmove`: shift 後のラウンドで、追い付いた watch（phase 4）が予測を外す不一致を閉じた
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` に前提が 1 つ増えた（＝葉が狭くなった）: `s.periodOnly = true` に加えて「chain tick の結果が lag ゼロ・phase 4 の watch なら、その予測は右で読んだ文字に等しい」。予測を外す場合は葉から消えた |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。`OracleReady.cycleOracleOn_of_readyLeaves` と `RestartLowerRun.move_of_tail_mispredict` は標準 3 公理のみ。
+
+**何を証明したか**: `RestartLowerRun.move_of_tail_mispredict` → `RestartLower.move_of_prediction_break`（一般化した）→ `move_of_activePeriodBreak`。run 不変量 `MinimalAcrossRestart` に場を 2 つ足した。どちらもこの定理が消費する。
+
+* `TailRound raw c s := scan → periodOnly = true → ScanMinimal (fun _ _ => False) raw s`。payload を `False` にすると `WatchMinimal` の `Sem` 側は `watch_moveMinimal` で `False` になるので、「shift 後は `TailMinimal` 側（`base ≤ R`）」と同値。copy／back も同じ理由で排除される。`tailRound_tick`: source の chain が idle でなければ `Move` 汎用の `modeMinimal_tick_packed`（`BirthMinimal` は `s.chain = .idle` が偽で空虚）、idle なら誕生が無い（誕生すれば target の `periodOnly = false`）ので target も idle、`shift_done` は `ShiftMinimal`。
+* `CycleBound c s`: watch について、scan かつ `periodOnly = true` なら `cycle ≤ 2h`、shift なら `cycle + 2·remaining ≤ 2h`。`cycleBound_tick` は `beginShiftVM'`（`cycle := reset`, `remaining := ofNat h`）、`shift_one`（`cycle += 2`, `remaining −= 1`）、matched（`compare'_inv` の `cycleAfter`）、`shift_done`（`radiusShift` の `remaining = ofNat rem` と `positive = false` から `rem = 0`）。**run 上に `cycle` の上界はこれまで無かった**（`Other'` は `5h ≤ R + cycle`、`OnlyCredit` は `0 ≤ margin + cycle` でどちらも下界）。
+* `2h ≤ R` の出所: `caughtUp_watch`（`caughtUp_facts` から `hfirstRound` を外した一般形。第 1 ラウンド版はそこから導く）が `4h ≤ distance ∨ Other'` を返す。前者は `4h ≤ R`、後者は `5h ≤ R + cycle` と `cycle ≤ 2h` で `3h ≤ R`。
+* `move_of_prediction_break` は `4h ≤ R` と `ScanMinimal` を取っていたが、`4h` は `Sem` 側の最小性のためだけだった。`2h ≤ R` と最小性の供給関数 `hnoShortOf` を取る形にして、第 1 ラウンド（`scanMinimal_watch_no_short`）と shift 後（`TailMinimal`）の両方が同じ定理を使う。
+
+**未完の部分**: 葉 `hmove` の `periodOnly = true` の残り。(c2) 追い付いた watch（phase 4）が予測を当て、shift guard が立たない（＝`cycleEnd` でない）不一致。Scala `checkPair` は到達不能と主張（lag ゼロなら `left == prediction ⇔ ¬ cycleEnd`）、Lean では継続不変量が要る（未着手）。(c3) phase ≠ 4 の追い付いた watch、遅れている watch、既に broken の chain（未調査）。`obligation_localRealization` は未着手。
+
+## n278 — 葉 `hmove`: 第 1 ラウンドで「不一致状態の chain が既に broken」は到達不能。第 1 ラウンドは全部閉じ、葉に残るのは `periodOnly = true` だけ
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` は、chain が idle でなく **`s.periodOnly = true`** である不一致状態だけを負う（前提 `(s.periodOnly = false → ∃ wb, s.chain = .broken wb)` を `s.periodOnly = true` に置き換えた。第 1 ラウンドの場合は葉から消えた） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件、`Axioms.olean` が `OracleReady.olean` より後に作り直されたことを確認）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。`OracleReady.cycleOracleOn_of_readyLeaves` と `RestartLowerRun.not_broken_firstRound` は標準 3 公理のみ。
+
+**何を証明したか**: Scala 正本 `ScaffoldGalil.background()` が `AssertionError("chain restart violates the confirmed-period invariant")` で主張している到達不能性を、run 不変量として証明した。`RestartLowerRun.FirstRoundGuard c s := c.mode = .scan → s.periodOnly = false → ∀ w, s.chain = .broken w → restartGuardVM s` を `MinimalAcrossRestart` の場 `guard` に追加（`firstRoundGuard_tick`）。消費者は `not_broken_firstRound` → `OracleReady` の `hMove` の第 1 ラウンド・broken 分岐（`¬ restartGuardVM s` と矛盾）。
+
+* 一次情報で確認した事実: `ChainStep.brokenIdle` と `ChainMatched.brokenMatched` は broken を**保つ**。guard の立たない broken は永久に残るので、不変量で排除する以外に無い。broken の生まれ口は 2 つだけ（`not_step_to_broken`）。
+* 正 lag の `WatchBreak`（background）: `no_watchBreak_firstRound`。chain の時計 `ClockAt` から `R < 4h`、verifier は右ヘッドより手前なので検査する place は scan 回文の内側かつ `C + 4h` 未満 → 予測＝テキスト。
+* lag ゼロの `BreakStep`（matched 比較）: `lateBreak_firstRound`。`distance ≤ 4h − 2` なら予測＝テキスト（matched 比較が与える `R+1` の鏡像等式 `RestartBoundary.matched_text` を使う）、`distance = 4h − 1` は既存の `distance_ne_boundary`。よって `4h ≤ distance`、そこから `restartGuard_of_lateBreak`（`WatchLedger.balance` で margin ≥ 0、`WatchLedger.last_bounds` で `last > 0`、lag は 0）。
+* 予測＝テキストの核: `RestartLowerRun.firstRound_watch_predicts` → `ChainBlockText.prediction_eq_text_of_window` → `bounce_eq_text`。材料は `FirstRoundWindow`（窓が現在の中心に固定）、`BlockTextAt`（block の文字＝中心の左のテキスト）、`MovePayload` の block 回文 `PalAt (C − H) H`、`CertAt` の `LeftPeriod`。n277 の時点で消費者の無かった `BlockTextAt`／`FirstRoundWindow`／`bounce_eq_text` はこれで全部消費された。
+* `bounce_eq_text`／`prediction_eq_text_of_window` は「scan 回文全体」でなく「その 1 点の鏡像等式」を取る形にした（matched 比較の break では `R + 1` の鏡像しか手元に無い）。
+* コピペを避けるため `distance_ne_boundary` の中身から `RestartBoundary.matched_text` を補題として切り出した（両方が使う）。
+
+**未完の部分**: 葉 `hmove` の `periodOnly = true`（shift 後のラウンド。Scala `checkPair` に当たる継続不変量が run 上に無い、未調査）。`obligation_localRealization` は未着手。
+
+## n277 — 葉 `hmove`: 追い付く前に壊れる watch（この tick の正 lag の break）を閉じた。第 1 ラウンドで残るのは「source の chain が既に broken」だけ
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` は、chain が idle でなく、かつ「`periodOnly = false` なら **不一致状態の chain が既に broken**」である場合だけを負う（`periodOnly = true` の場合は従来どおり全部） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。
+
+**何を証明したか**: 量化範囲を見直した。chain tick の結果が broken になる経路のうち `watchBreak`（正 lag）は、**source 状態**の chain に仕事が残っている場合なので、source の時計 `ClockAt` から直接 `Rad < 4H` が出る（chain tick の結果は関係ない）。`RestartLowerRun.move_of_working_source`。共通部分は `move_of_bounded_chain`（`Sem` payload ＋ `Rad < 4·chainPeriod` → `move_of_activeBound`）に切り出し、`move_of_working_chain` もそれを使う形に直した。`chainTick_cases` は「source が既に broken ／ source に仕事あり ／ 結果に仕事あり ／ 追い付いた watch」の 4 分岐。
+
+**run 不変量への追加（まだ消費者なし）**: `PalPeg/BlockText.lean`（新規、namespace `PalPeg.ChainBlockText`）と `RestartLowerRun.BlockTextAt`: 第 1 ラウンドの間、period block の文字列は中心の place の stream の 2 番目以降（＝中心の左のテキスト）。`WindowInv` は block の中身とテキストを結ぶ場を持っていなかった。
+
+**未完の部分**: (c) `periodOnly = true`（Scala `checkPair` に当たる継続不変量が run 上に無い、未調査）。(d) 第 1 ラウンドで不一致状態の chain が既に broken（restart guard 不成立）。Scala 正本は `AssertionError` で到達不能と主張しており、Lean では到達不能性の証明が要る: 正 lag の break が起きないこと（追い付き中は予測が外れない）と、lag ゼロの break が `Rad + 1 ≤ 4H` では起きないこと（`distance_ne_boundary` は `distance = 4h − 1` の 1 点だけ）。どちらも `BlockTextAt`＋`Candidate` の回文＋chain の時計から出す見立てで、証明は未着手。`obligation_localRealization` は未着手。
+
+## n276 — 葉 `hmove`: 仕事が残っている第 1 ラウンドの chain（copy／back／追い付き中の watch）を閉じた。第 1 ラウンドで残るのは broken だけ
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` は、chain が idle でなく、かつ「`periodOnly = false` なら chain tick の結果が broken」である不一致状態だけを負う（`periodOnly = true` の場合は従来どおり全部） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。
+
+**何を証明したか**: `RestartLowerRun.move_of_working_chain` → `move_of_activeBound`。`Rad < 4H` は chain の時間の台帳から:
+
+* `PalPeg/ChainClock.lean`（新規）: chain 状態の関数 `chainWork`（copy: 残り bit×2 ＋ cells ＋ 1 ＋ lag、back: 左端までの歩数 ＋ 1 ＋ lag、watch: lag）と `chainPeriod`（copy 中は cells ＋ 残り bit − 1）。`chainWork_step`（1 歩で 1 減る・周期は不変）、`chainWork_matched`（一致で高々 1 増える）、`…_done`、`chainWork_chainStart`、`period_of_semWith`（payload の `H` ＝ `chainPeriod`。copy 中は `AnswerAhead` の一意性 `remainingBits_of_answerAhead`）、そして `clock_chainAt`: 不変量 `0 < W → W + E ≤ 2047·(4H − R)`（`E` は直前の一致からの時間）が chain tick 1 回で保たれる。一致 tick は `R+1`（`−2047`）と `E: 2047 → 0`（`+2047`）が相殺する。
+* 誕生時 `R ≤ 2H`: `SearchStageHistory.found_radius_le`。`WindowBound` を `span ≤ 2H_prev + 2` に強め、最小候補 `H` は前段の窓に入らない（`candidate_rewindow`）ので `span ≤ 8H`、`Rad ≤ span/4`。`run_of_found`（`found` に入るのは `run` からだけ）。
+* run 上: `ClockAt`／`clockAt_tick`／`birth_radius`、`MinimalAcrossRestart.clock`。時刻の上下界は `SearchStageRun.stageAt_field_packed` が返す `Field` から。
+* 分岐の網羅: `RestartLowerRun.chainTick_cases`（chain 非 idle の chain tick の結果は broken／仕事あり／追い付いた watch のどれか）。
+
+**未完の部分**: `hmove` の残りは (c) `periodOnly = true`（shift 後のラウンド。Scala `checkPair` に当たる継続不変量が run 上に無い）と (d) 第 1 ラウンドで chain tick の結果が broken（restart guard は source 状態について不成立。正 lag の break か、source が既に broken）。どちらも未調査で、証明は未着手。`obligation_localRealization` は未着手。
+
+## n275 — 葉 `hmove`: 第 1 ラウンドで追い付いた watch（`lag = 0`）を `phase` によらず全部閉じた（葉は 1 本のまま、前提がもう 1 つ狭まった）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` は、chain が idle でなく、かつ chain tick の結果が「`periodOnly = false`・`lag = 0` の watch」**でない**不一致状態だけを負う |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。
+
+**何を証明したか**（`phase ≠ 4` の場合。`phase = 4` は n274）
+
+* `RestartLowerRun.move_of_watch_short` → `CanonicalFallbackInput.move_of_activeBound`（最小性の仮説は現在半径の形に一般化済み）。入力:
+  * `Rad ≤ 4h`: mark 台帳に `phase < 4 → boundary − shiftDebt = phase·h` を足し（`MarkLedger.phase`、`advancePhase_val`、`consume_phase_four`、shift 入口は guard の `phase = 4` を渡す）、`WatchLedger.distance_lt_four` で `distance < 4h`。`lag = 0` なので `distance = Rad`。
+  * `g ≤ lower` の排除: `LowerAt`（guard を `chain = idle ∨ periodOnly = false` に延長、`lowerGuard_source`。`BrokenStage` は shift mode の間 `periodOnly = true` を運ぶ）。
+  * `lower < g < h` の排除: chain の payload `CanonicalSearchProgram.MoveAbove`（DP が自分で示す範囲。旧 `MoveMinimal` は `lower = 0` の場合）。run 上では `MovePayload raw s`／`modeMinimal_tick_lower`、そして第 1 ラウンドの chain が payload そのもの（shift 後の閾値つきの形でなく）を持つことを運ぶ新しい場 `FirstRoundSem`（`firstRoundSem_tick`、`semWith_chainAt` を再利用）。
+
+**未完の部分**: `hmove` の残りは chain 非 idle で、chain tick の結果が (a) copy／back、(b) `lag ≠ 0` の watch、(c) `periodOnly = true` の watch、(d) broken（restart guard 不成立）の場合。(a)(b) は `Rad ≤ 4H` を出す chain の**時間の台帳**が要る（設計は n274 の下の「`Rad < 4h` 側の設計」の 2。`FirstRoundSem`／`LowerAt`／`MoveAbove` は (a)(b) でもそのまま使える形になっている）。(c) は Scala `checkPair` に当たる継続不変量が run 上に無い。(d) は未調査。`obligation_localRealization` は未着手。
+
+## n274 — 葉 `hmove`: 追い付いた第 1 ラウンドの watch（`lag = 0`・`phase = 4`）の場合を閉じた（葉は 1 本のまま、前提がもう 1 つ狭まった）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` は、chain が idle でなく、かつ chain tick の結果が「`periodOnly = false`・`lag = 0`・`phase = 4` の watch」**でない**不一致状態だけを負う |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。
+
+**何を証明したか**
+
+* 予測が外れた場合: `RestartLower.move_of_prediction_break` → `CanonicalFallbackInput.move_of_activePeriodBreak`（`Rad ≤ 4h` 不要）。入力は scan span の周期 `2h`（`spanPeriod_of_window`）、その最小性（run 不変量の `ScanMinimal`＋`scanMinimal_watch_no_short`）、fallback 窓の先頭がその周期を壊すこと。最後の点は `RestartBoundary.prediction_eq_text`（予測記号 ＝ `text[P+1−2h]`、`not_breakStep_of_text` から切り出して共有）と、窓の先頭 ＝ 直前に読んだ場所 `text[P+1]`（`stream_index`）と、span の回文性から。
+* 予測が当たった場合: `RestartLowerRun.shiftGuard_of_caughtUp`。`phase = 4` から `4h ≤ distance`（`four_of_freshC`、`periodOnly = false` なので `Other'` 側は矛盾）、`WatchLedger.balance` から `margin = distance − 4h ≥ 0`、よって shift guard が立ち、葉の前提 `¬ shiftGuard` と矛盾する。このために chain の台帳（`WatchLedger`／`ChainLedger`）に **margin の canonical 性**を足した（`not_negative_of_nonneg`）。
+* 共通部分は `RestartLowerRun.caughtUp_facts`、比較の構成は `CanonicalChainMinimal.compare_of_mismatch`（`shiftPeriodMinimal_packed` と共有）。
+
+**未完の部分**: `hmove` の残りは chain 非 idle で、chain tick の結果が (a) copy／back、(b) `lag ≠ 0` の watch、(c) `phase ≠ 4` の watch、(d) `periodOnly = true` の watch、(e) broken（restart guard 不成立）の場合。調査で分かっていること（証明は未着手）: (a)(b)(c) は「`Rad < 4h`」の側で、`ChainLedger` の `lag − margin = 4·(copy 済み)`／`balance = 4h` は lag／margin の関係だけを持ち、`Rad < 4h` を出すには chain の**時間の台帳**（1 tick に chain 1 歩・2048 tick に一致 1 回、誕生時 `R₀ ≤ 2h`）が要る。その上で `move_of_activeBound` に渡す `MoveMinimal` は restart 後は `lower` を知っている形に弱める必要がある（`g ≤ lower` は `LowerAt` を chain 非 idle の第 1 ラウンドに延長して排除、`lower < g < h` は DP の最小性）。(d) は Scala の `checkPair`（2 半周期の継続不変量: 非終端では左の読み ＝ 予測）に当たる不変量が run 上に無い。`obligation_localRealization` は未着手。
+
+## n273 — 葉 `hmove` の chain idle 分岐を全部証明して接続（葉は 1 本のまま、前提は `s.chain ≠ .idle` に狭まった）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉 `hmove` は「chain が idle でない不一致状態」だけを負う形になった。chain idle の分岐（探索が段の途中の場合も、最終段で `missed` の場合も）は `RestartLowerRun.move_of_idle` が証明して内部で供給する |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。`cycleOracleOn_of_readyLeaves`／`move_of_idle` は標準 3 本のみ。
+
+**何を証明したか**（Python 実測で fallback の約 9 割を占める分岐）
+
+* `PalPeg/SearchStageHistory.lean`（新規）: `StageHistory p lower R v` = 債務バランス `4·(debt + R) (+ quarter) = span (+ work)`（`double` のときだけ補正項）、`wait` での `0 ≤ debt`、候補無し窓 `∃ H, NoCandidate p lower H ∧ WindowBound v.search H`（`wait`: `span ≤ H`、`double`: `span + 2·work ≤ 2H`、`grow`: `span + 8·work ≤ 4H`、それ以外: `span ≤ 4H`）、`started`（`idle` モードに戻らない）。`stageHistory_begin`（第 1 段の窓は `H = 4·lower+3`: `Candidate` は `4h+1 ≤ 長さ` を要るので空虚）、`stageHistory_step`（`searchStep` の全モード。`run` が `wait`／`double` に抜ける瞬間に、失敗した段の窓 `take (span+1)` を `noCandidate_of_failed` で採用する）、`radius_le_window`（`BudgetInv` の credit から `debt` の下界 → 半径 `R ≤ H`。`grow`／`double` の算術は `omega`）。
+* `PalPeg/SearchStageRun.lean`（新規）: `BudgetInv` を**中心の実 place** に固定して同梱した `StageAt`（既存の `Field` は place を忘れた `BudgetSome` しか運ばないので、DP 窓と `span` の対応が取れなかった）。`stageAt_tick`／`stageAt_shaped`／`stageAt_invLPS`（origin は `InvLPS` の `ReplayStage` が持つ `Restarted` から）／`stageAt_packed`。`dpPack_of_stage`: 段の途中でも `DpPack`（探索契約）が出る。`DpPack` の DP config は存在量化なので、`pc := 347` の config と `NoCandidate` から `Result` を作る。
+* `CanonicalSearchBudget.budgetInv_restarted`: restart 着地の budget を呼び手が指定した place で返す（`budgetSome_restarted` はその系）。
+* `RestartLowerRun.move_of_idle`: `lower` 以下は `LowerAt`（現在の半径）、`lower` より上は探索（段の途中は窓、最終段は DP 結果）。
+
+**未完の部分**: `hmove` の chain 非 idle 分岐（copy／back、稼働中 watch、guard 不成立の broken）。調査で分かったこと（証明は未着手）: 既存の `move_of_preShift_packed`／`move_of_live_sem_packed` は `hquarter : Rad ≤ 4h` を**仮説として**取っており、その producer は無い。`Rad ≤ 4h` は「chain の誕生時 `R₀ ≤ 2h`（`found_radius_le_two_period`）＋ copy／back／追い付きの間に進む一致は高々数回」という**時間の台帳**から出る事実で、`RestartStageLedger.WatchLedger` の `balance = 4h` は lag／margin の関係だけで clock を持っていない。watch が追い付いた後（`lag = 0`）で guard が立たないのは予測が外れた場合で、そこは `CanonicalFallbackInput.move_of_activePeriodBreak`（`Rad ≤ 4h` 不要）が受け口になる。その入力（周期・最小性・break）の接続は未着手。`obligation_localRealization` は未着手。
+
+## n272 — 葉 `hmove` の idle＋`missed` 分岐を証明して接続（葉の本数は 1 のまま、前提が 1 つ狭まった）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉は `hmove` の 1 本のまま。ただし `hmove` は前提 `¬ (s.chain = .idle ∧ vq.search.mode = .missed)` と `PackedFromBoot ⟨c₀,r₀⟩` を受け取る形になり、idle＋`missed` 分岐は `RestartLowerRun.move_of_idle_missed` が証明して内部で供給する |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。
+
+**何をしたか**
+
+* `CanonicalSearchProgram.LowerExcludedFrom raw C lower base`: `base` 以上の半径の span すべてで `δ ≤ lower` の周期 `2δ` が無い。`LowerExcludedAtBreak.lowerExcluded_of_break` はこの形（`base = d+1`、break を含む span）を出すようになり、前提 `d+1 ≤ 4(last+1)` は不要になった（`toLowerExcluded` が旧形に落とすときだけ使う）。
+* run 不変量の載せ替え: `LowerAt` は「`∃ base ≤ 現在の半径`, `base ≤ 4(L+1)`, `LowerExcludedFrom … base`」、`LastExcluded raw C Rad w` は restart が見る半径 `Rad` を base にする。`BrokenStage` の payload は `Extra : ℕ → ℕ → Watch.State → Prop`（centre、半径）。
+* `RestartLowerRun.no_lower_period_at_scan`: chain idle の scan 状態で、**現在の半径**の span に `δ ≤ lower` の周期が無い（fallback 移動不等式の `hlow`）。
+* `CanonicalChainMinimal.move_of_idle_missed_packed` は `lower = reset` の代わりに `hlow` を取る。`OracleRun` の fallback 葉に `PackedFromBoot` を通した。
+
+**未完の部分**: `hmove` の残り分岐（設計表は n271 直下の「`hmove` の設計」）。idle で探索が段の途中（`grow`／`lower`…`run`／`wait`／`double`）の分岐は既存部品が無く、新しい run 不変量 `StageHistory`（失敗した段の窓に `Candidate` が無い ∧ `Rad ≤ その窓`）と `value debt + Rad` の台帳が要る。`GalilSearchContractStage.no_span_period_of_stage` の核は「窓に `Candidate` が無い」だけを使っている（`hnone`）ので、帰着先はそこ。copy／back、稼働中 watch、guard 不成立の broken の各分岐も未着手。`obligation_localRealization` は未着手。
+
+## n271 — 葉 `hshiftPeriodMinimal` を証明して `OracleReady` に接続（producer の葉は 2 → 1）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉が `hshiftPeriodMinimal`／`hmove` の 2 本から **`hmove` の 1 本**になった（`hshiftPeriodMinimal` は `RestartLowerRun.scanMinimal_packed` → `CanonicalChainMinimal.shiftPeriodMinimal_packed` が証明し、定理の仮説から外して内部で供給） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_cycleOracleOnPackedRun`／`obligation_localRealization`（本数は変化なし）。`cycleOracleOn_of_readyLeaves` と `scanMinimal_packed` は標準 3 本のみ。
+
+**葉の量化範囲を直した（過剰量化の疑い、9 例目）**: 葉 `hshiftPeriodMinimal` は任意の `InvLPS` origin に量化されていたが、`InvLPS` の `ReplayStage` は「`Restarted r Rad last` から来た」としか言わず、`lower = last > 0` の origin では `≤ last` の周期を排除する履歴が run の外にある。その形の葉は偽の疑いが濃い（機械検査した反証は無い）。公理の guard `ScanOnPackedRunFromInvLPS` は元から `PackedFromBoot ⟨c₀,r₀⟩` を持っているので、`OracleRun.cycleOracleOn_of_leaves`／`_of_fourLeaves` の shift 葉にそれを渡すだけで済んだ（公理の文は不変）。
+
+**証明の経路**
+
+* `CanonicalSearchProgram.LowerExcluded raw C lower`（n270 後に追加）: 再始動が入れる下界 `last` の意味。`RestartLower.lowerExcluded_at_break` が lag ゼロ break で出す（Fine–Wilf `no_period_across_break`＋旧 chain の最小周期＋break の 1 箇所不一致＋mark 台帳）。
+* `RestartStageRun.BrokenStage` に guard 状態の追加 payload `Extra : ℕ → Watch.State → Prop`（centre 位置キー）を持たせ、`brokenStage_tick` の場合分けを再利用（コピペなし）。`restartStage` 用は `Extra := fun _ _ => True`。
+* `RestartLowerRun.MinimalAcrossRestart`（run 不変量）: `ModeMinimal (fun _ _ => True)` ∧ `LowerAt`（scan・chain idle のとき `value lower = L → LowerExcluded raw C L`）∧ `BrokenStage (LastExcluded raw)`。3 つは相互依存（誕生は `LowerAt`、restart 時の `LowerAt` は `BrokenStage`、break 時の payload は `ScanMinimal`）なので 1 本の帰納 `minimalAcrossRestart_packed`。
+* origin: `lowerAt_of_packedFromBoot`。boot からの packed run の 1 tick 目を `CloseoutStageBoot.invLPS_init` の着地と `GalilTickFair.tick_canonical_unique` で同定し（`lower = reset`）、そこから origin まで `minimalAcrossRestart_packed` を走らせる。
+* 最小周期スタック（`Sem`／`WatchMinimal`／`ScanMinimal`／`ModeMinimal`／`BirthMinimal`）は payload `Move` でパラメータ化済み。`birthMinimals_packed` は `lower = reset` の代わりに `LowerExcluded` を取り、`MoveMinimal` は `lower = reset` のときだけ返す。`shiftPeriodMinimal_packed` は scan 状態の `ScanMinimal ∧ BirthMinimal` を入力に取る。`modeMinimal_tick_packed` を切り出して `budgetMinimal_tick` と共有。参照ゼロだった `birthFutureMinimal_packed` は削除。
+
+**新規モジュール**（`OracleReady` から import。sorry なし）: `PalPeg/PeriodAcrossBreak.lean`、`PalPeg/LowerExcludedAtBreak.lean`、`PalPeg/RestartLower.lean`、`PalPeg/RestartLowerRun.lean`。
+
+**未完の部分**: producer の残り葉は `hmove`（Galil の移動不等式、restart guard の下の比較不一致状態）。一次情報で分かったこと: idle＋`missed` 分岐の消費者 `CanonicalSearchHistory.dpPack_of_idle_missed_packed` は「**現在の半径 `Rad`** の span で `δ ≤ lower` の周期が無い」を要る。今の `LowerExcluded` は `k ≥ 4(lower+1)` の span しか言わないので足りない。break を含む span すべて（`k ≥ 再始動時の半径`）に強めた形が要る（`no_period_across_break` の前提 `δ + h ≤ d` は `last_bounds` が既に出している。強めた形の証明と run への載せ替えは未着手）。active chain 分岐は `CanonicalFallbackInput.move_of_activePeriodBreak`（`Rad ≤ 4h` 不要、周期＋最小性＋break）が既にあり、入力は `RestartLower.spanPeriod_of_window`／`scanMinimal_watch_no_short` と同じ材料。`hmove` も任意 origin に量化されているので `PackedFromBoot` を通す必要がある。`obligation_localRealization` は未着手。
+
+## n270 — 葉 `hrestartStage` を証明して `OracleReady` に接続（producer の葉は 3 → 2）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 公理自体は残る。producer `OracleReady.cycleOracleOn_of_readyLeaves` の葉が `hrestartStage`／`hshiftPeriodMinimal`／`hmove` の 3 本から **`hshiftPeriodMinimal`／`hmove` の 2 本**になった（`hrestartStage` は `RestartCertificate.restartStage` が証明し、定理の仮説から外して内部で供給） |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、`2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。** `#print axioms PalPeg.OracleReady.cycleOracleOn_of_readyLeaves` は `propext`／`Classical.choice`／`Quot.sound`。
+
+**n269 の未完 3 点の決着**
+
+* `NoBoundaryBreak` → **証明済み**（`RestartCertificate.noBoundaryBreak_packed`）。核は `RestartBoundary.not_breakStep_of_text`: 予測記号 `= bounce[(P+1−anchor) % 2h]`（`symbol_of_coreP`）`= text[P+1−2h]`（`BlockOn`）`= text[C−R−1+2h]`（scan の回文）`= text[C−R−1]`（左証明書）`= text[P+1]`（matched）なので `BreakStep` の `read ≠ some a` と矛盾。`RestartBoundary.distance_ne_boundary` が 3 つの添字等式を `ScanInvariant`＋`LeftCertificate`＋matched 比較から出す。左端（`C−R−1 ≤ 0`）では `read left = none` で matched が成立しないので場合分けで消える。
+* 左証明書の運搬 → `RestartCertificate.CertAt`／`certAt_tick`／`certAt_packed`。誕生点は `candidate_periodOn`（`birthMinimal_packed` 経由、`lower` 不問）、中心が動かない間は chain の semantic datum に乗せる、shift 入口は全区間周期（`periodOn_right_succ`＋`periodOn_span_of_next`、`4h ≤ R` は `four_of_guard`）で着地中心に張り直す。**コピペを避けるため `CanonicalChainMinimal.Sem` を証明書について一般化**（`SemWith Cert`、`Sem raw C` はその instance、`sem_step`／`sem_matched`／`sem_tick`／`semWith_start`／`semWith_chainAt` は任意の `Cert`）。
+* replay 中の `ScanInvariant` → **既に pack にあった**（`IPackMW.m2.scanGeomR`）。n269 で「pack に無い」と書いたのはウチの見落とし（`budgetMinimal_tick` が使っていた）。`scanInvariant_packed` にまとめた。`Canonical length` は `CPack.canon`（`cpack_steps`＋`hfloor_of_invLP2`＋`cpack_of_entry`、`CloseoutMarksPack` と同じ recipe）。
+
+**新規モジュール（すべて `OracleReady` から推移的に import。sorry なし）**
+
+| ファイル | 中身 |
+|---|---|
+| `PalPeg/RestartStageLedger.lean` | `MarkLedger`／`WatchLedger`／`ChainLedger`、`WatchLedger.stageEntry_of_break` |
+| `PalPeg/RestartStageRun.lean` | `LedgerAt`／`ledgerAt_packed`、`BrokenStage`／`brokenStage_tick`／`brokenStage_packed`、`restartStage_packed` |
+| `PalPeg/RestartBoundary.lean` | `not_breakStep_of_text`、`LeftCertificate`、`distance_ne_boundary` |
+| `PalPeg/RestartCertificate.lean` | `CertAt`／`certAt_packed`、`scanInvariant_packed`、`noBoundaryBreak_packed`、`canonicalLength_packed`、**`restartStage`** |
+
+**未完の部分**: producer の残り葉 `hshiftPeriodMinimal`（restart 後は `lower = last ≠ reset`。`CanonicalChainMinimal.shiftPeriodMinimal_packed` は `lower = reset` 前提で未接続、`≤ last` の周期の排除が要る）と `hmove`（Galil の移動不等式）。`obligation_localRealization` は未着手。
+
+## n269 — `hrestartStage` を 1 仮説 `NoBoundaryBreak` まで還元（未接続）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 変化なし。葉 `hrestartStage` の producer `RestartStageRun.restartStage_packed` を書いたが、仮説 `NoBoundaryBreak` が残っており `OracleReady` へは**未接続** |
+| `obligation_localRealization` | 変化なし |
+
+**状態: 全体 build 成功（`BUILD=0`、3e6e411 時点。新 2 モジュールはルート未 import なので全体 build は再実行していない。モジュール build `PalPeg.RestartStageRun` は `BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
+**一次情報で確かめたこと（定義を読んだ）**
+
+* `chainStart` は `lag := radius, margin := radius`。`copyBit` は `decFour margin`、matched は `inc lag`／`inc margin`、`BreakStep` は失敗 consume ＋ `inc margin`、`chainShiftOne` は `distance／boundary／last／margin` を一斉に `dec`。よって watch では **`distance + lag − margin = 4h`**（既存の `GalilScaffoldChainWatch.balance`）。
+* found 時の半径は `≤ 2h`（`found_radius_le_two_period`）。だから **「誕生時に `4h ≤ R`」は偽**で、margin は負から始まる（過去の自分の計画メモの F1 は誤り）。
+* guard の `margin ≥ 0` から出るのは `4h − 1 ≤ distance` まで。**境界 `distance = 4h − 1` では `R = 4h`・`last = 2h` で `StageEntry`（`3R ≤ 5·last`）は偽**。この状態が到達不能であること（周期領域内の matched 比較は break しない）を別に示す必要がある。これは Scala の `AssertionError("chain restart violates …")` が主張している内容と同じ。
+* Python 参照実装の実測（`stage_probe`, `lagbreak2`）: restart 60 回超で `3R ≤ 5·last` 違反 0、正 lag の break 0、margin の最小観測値 1。有限テストであり証明ではない。
+
+**書いたもの（すべて `lake env lean`／モジュール build で検査、sorry なし、標準 3 公理）**
+
+* `PalPeg/RestartStageLedger.lean`: `MarkLedger h shiftDebt k`（forward: `d = boundary + p − 1`／backward: `d = boundary + h − 1 − p`、`boundary = last ∨ boundary = last + h`、`boundary − shiftDebt = n·h`、3 カウンタ canonical）と `MarkLedger.consume`／`shiftOne`／`beginShift`。`WatchLedger`（marks ＋ `balance = 4h` ＋ lag canonical・非負）。`ChainLedger` と `chainLedger_step`／`_matched`／`_chainAt`。**`WatchLedger.stageEntry_of_break`**: lag ゼロの break で、break 後 `margin ≥ 0` かつ `distance ≠ 4h − 1` なら `StageEntry Rad last ∧ Canonical last`。
+* `PalPeg/RestartStageRun.lean`: `LedgerAt`／`ledgerAt_tick`／`ledgerAt_packed`（packed run の全点で台帳）。`BrokenStage`／`brokenStage_tick`（restart-first の `Canonical` の下で保存。guard 状態は次 tick で restart されるので broken の guard 状態は break 直後の 1 状態だけ）。`brokenStage_packed`、**`restartStage_packed`**（packed run の guard 状態の restart は `Restarted ∧ StageEntry` に着地。入力: `NoBoundaryBreak`、`ScanInvariant`、`Canonical length`）。
+
+**未完の部分（区別して書く）**
+
+* 仮説 `NoBoundaryBreak`（未証明）: packed run 上の matched 比較で `ChainStep s.chain (.watch w1) ∧ BreakStep w1 w'` なら `distance w1 ≠ 4h − 1`。証明の筋: 予測記号 `= bounce[(P+1−anchor) % 2h]`（`symbol_of_coreP`）`= text[P+1−2h]`（`BlockOn`）`= text[C−R−1+2h]`（`ScanInvariant` の回文）`= text[C−R−1]`（**左証明書** `PeriodOn (2h) (C−4h) C`）`= text[C+R+1]`（matched）。左証明書は誕生点で `GalilCandidatePeriod.candidate_periodOn`（`birthMinimal_packed` 経由、`lower` 不問）、shift 入口で全区間周期（`periodOn_span_of_next`、`R ≥ 4h` は `four_of_guard`）から作り、中心に沿って運ぶ新しい run 不変量が要る。
+* replay 中（`replaying = true`）は `LPackM.scanGeom` が `ScanInvariant` を出さない。`restartStage_packed` は `ScanInvariant` を入力に取る形にした。`NoBoundaryBreak` の証明でも同じ問題が出る（replay 中の `ScanInvariant` は `OracleTick.replayStage` の `Restarted … 0 reset` から replay 区間に沿って運ぶ必要がある）。
+* 葉 `hrestartStage` の形（`OracleRun.settle`／`CanonicalReplay.comparison` の呼び出し側）に `ScanInvariant`／`Canonical length` を渡す変更は未着手。
+
+## n268 — canonical 方針を restart-first に戻した（no-restart は `hmove` と両立しない）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_cycleOracleOnPackedRun` | 型の tick 述語が `GalilTickFair.Canonical`（no-restart）から `ShapedRun.OracleTick entry`（restart-first の `Canonical` ＋ fresh search の再入点）に。producer `OracleReady.cycleOracleOn_of_readyLeaves` は標準公理のみのまま、葉は `hrestartStage`（新）／`hshiftPeriodMinimal`／`hmove`。**公理は減っていない。** |
+| `obligation_localRealization` | `CanonTrace` が参照する `Canonical` が restart-first になった。`tick_canonical_unique`／`canonical_trunc` は新方針で再証明済み |
+
+**状態: 全体 build 成功（`BUILD=0`）・標準公理のみ（3 本）・無条件 PAL は未完（残り 2 公理）。**
+
+**なぜ変えたか**: n256 で葉 `hrestart`／`hreplayStart` を消すために「oracle の run は restart しない」としたのはウチの判断で、それが時間評価の根拠を壊していた。Lean でも Python でも break 後は `chain ≠ idle` で search が凍るので、broken のまま走ると次の fallback の半径 `R` が移動量 `d` に対して非有界になる。診断（`docs/palindromes-in-peg/diagnose_no_restart_fallback.py` と同じ計装、診断語の 40 文字 prefix＋周期語に欠陥を入れた 12 語）:
+
+| 方針 | fallback 数 | `R > 4d` | fallback 時の chain |
+|---|---|---|---|
+| restart あり（正本） | 123 | 0 | idle 115／watch 8、AssertionError 0 |
+| restart なし | 124 | 1（`R=25, d=6`、broken） | idle 108／broken 8／watch 8 |
+
+Lean の形式反証は無いので旧 `hmove`（no-restart）は「偽の疑いが濃い（Python 診断で再現）」と記録する。
+
+**何をしたか**
+
+* `GalilTickFair.Canonical`: `noRestart` → `restartFirst`（`Fair` と同じ節）。guard の下では `restartVM` は不可能（`not_restartVM_of_noGuard`）。`canonical_of_restart` 追加、`tick_canonical_unique` は guard で場合分け。`CanonicalLocalRealizes.canonical_trunc` は `restartGuard_of_trunc`／`restartVM_trunc` で再証明（`Tick` 前提が不要になった）。
+* `ShapedRun`: `ShapedSteps` の restart 節を「restart は `Restarted ∧ StageEntry ∧ scan ∧ clock = 2048` に着地」に。`restartGuard_background`（背景 tick は guard を立てない: 背景の break は正 lag だけ）。`OracleTick entry w`（canonical ＋ restart／replayStart の着地）を packed path の tick 述語に（`CloseoutCheckW` の `R` を語で添字づけ）。
+* `OracleRun`: 運ぶ述語 `I` に `¬ restartGuardVM` を追加。`settle`（full-clock の scan 着地で guard が立っていれば restart tick、heads／centre／replay は不変、`MInv`／`Refreshed` は移送）を一致比較の着地に挿入。cost は `matchPiece` の `wait` が 1 増えるだけ（`≤ 2048`）。shift 着地は watch、fallback／replay 着地は葉／`segment` が `¬ guard` を返す。
+* `CanonicalReplay.comparison`／`segment`: 比較ごとに `settle`。tick 数は `N ≤ rem·2049`（`R ≤ 4d` の下で `≤ 8·2048·d`）。
+* `CanonicalSearchReady.field_alongShaped`／`CanonicalSearchHistory.atState_tick`: restart 着地で `field_restarted`／`atState_restart`。chain readiness（`birthCopy_packed`）は新方針でも通る。
+* 削除: `CanonicalPeriod.lean`（「canonical trace 上で `lower = reset`」は restart-first では偽）、`ReadyTransport.lean`（参照ゼロ）。
+
+**次の goal**: `hrestartStage`。材料: `Restarted` の各場は pack から（`centreRep`／`scanGeom(R)`／`radiusScan`）、`Canonical last`／`0 ≤ last`／`3·Rad ≤ 5·last` は chain の ledger（`GalilScaffoldChainRestart.run_order`／`run_canonical`、`GalilScaffoldChainSweep.four_boundaries`）を packed run 上の watch の履歴（`WindowInv`）に接続して出す。その後 `lower = last` の履歴（`≤ last` の周期の排除、Fine–Wilf＋break）で `hshiftPeriodMinimal`／`hmove` の idle 分岐。
+
 ## 2026-09-19: inline draft reverted; checkpoint
 
 ユーザー指示で未完成・未検証の cycle inline proof を撤去し、既存の2公理による

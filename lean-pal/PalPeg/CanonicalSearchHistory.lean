@@ -1,6 +1,7 @@
 import PalPeg.CanonicalSearchProgram
 import PalPeg.ShapedRun
 import PalPeg.GalilLeafDp
+import PalPeg.GalilCandidatePeriod
 
 /-! # The actual search program along a finite canonical run
 
@@ -81,12 +82,37 @@ private theorem compare_program {raw : List (Fin 2)} {s t : GalilVM}
   rw [hget,hP.2 t s hcenter]
   exact ⟨lower,programInv_step hinv hstep⟩
 
+private theorem atState_restart {raw : List (Fin 2)} {c : Control} {s : GalilVM}
+    {rad : ℕ} {last : Counter} (hm : c.mode = .scan) (hr : Restarted raw s rad last) :
+    AtState centre place entry raw ⟨c,s⟩ := by
+  obtain ⟨_,_,_,_,_,_,hs,hl,hcan,hn⟩ := hr
+  have he : last = ofNat (value last).toNat := by
+    apply PalPeg.CloseoutPreload5.canonical_eq_ofNat hcan
+    omega
+  refine ⟨fun _ _ => ⟨(value last).toNat,?_⟩,
+    fun h _ => by
+      have hc : c.mode = .shift := by simpa using h
+      rw [hm] at hc
+      cases hc⟩
+  have h := programInv_begin ((PofC centre place entry raw).place s) (searchLens.get s)
+    (value last).toNat s.radius
+  let w := searchLens.get s
+  let b := GalilScaffoldSearchFinish.begin (ofNat (value last).toNat) s.radius
+  have hv : ({w with search := b, lower := ofNat (value last).toNat}) = searchLens.get s := by
+    dsimp [w,b]
+    rw [← he]
+    simp only [searchLens]
+    rw [← hs, ← hl]
+  rwa [hv] at h
+
 /-- Every actual canonical tick transports the semantic search certificate. -/
 theorem atState_tick {raw : List (Fin 2)} {x y : State GalilVM}
     (hP : Decodes (PofC centre place entry raw))
     (hi : AtState centre place entry raw x)
     (ht : Tick (galilFrameS (PofC centre place entry raw) q first) 2048 x y)
-    (hnr : x.ctl.mode = .scan → ¬ restartVM entry x.vm y.vm) :
+    (hrestart : x.ctl.mode = .scan → restartVM entry x.vm y.vm →
+      ∃ (Rad : ℕ) (last : Counter), Restarted raw y.vm Rad last ∧ StageEntry Rad last ∧
+        y.ctl.mode = .scan ∧ y.ctl.clock = 2048) :
     AtState centre place entry raw y := by
   cases ht with
   | init c s t hm ht =>
@@ -118,7 +144,9 @@ theorem atState_tick {raw : List (Fin 2)} {x y : State GalilVM}
   | replayStart c s t o hm hr _ _ =>
     obtain ⟨_,_,_,_,_,_,_,_,_,_,hs,hl,_⟩ := hr
     exact ⟨fun _ _ => ⟨0,reset_program hl hs⟩,fun h => by cases h⟩
-  | restart c s t hm hr => exact (hnr hm hr).elim
+  | restart c s t hm hr =>
+    obtain ⟨Rad,last,hR,_,hmode,_⟩ := hrestart hm hr
+    exact atState_restart centre place entry hmode hR
   | scan_fallback | copy_one | copy_done | home_start | home_step | fpp_slice | fpp_done
   | markEnd_step | markEnd_found | choose_select | choose_step | rewind_done | rewind_one | rewind_pair =>
     constructor
@@ -134,29 +162,6 @@ theorem atState_shaped {raw : List (Fin 2)} {n : ℕ} {x y : State GalilVM}
   induction hr with
   | zero => exact hi
   | succ ht hnr _ _ ih => exact ih (atState_tick centre place entry q first hP hi ht hnr)
-
-private theorem atState_restart {raw : List (Fin 2)} {c : Control} {s : GalilVM}
-    {rad : ℕ} {last : Counter} (hm : c.mode = .scan) (hr : Restarted raw s rad last) :
-    AtState centre place entry raw ⟨c,s⟩ := by
-  obtain ⟨_,_,_,_,_,_,hs,hl,hcan,hn⟩ := hr
-  have he : last = ofNat (value last).toNat := by
-    apply PalPeg.CloseoutPreload5.canonical_eq_ofNat hcan
-    omega
-  refine ⟨fun _ _ => ⟨(value last).toNat,?_⟩,
-    fun h _ => by
-      have hc : c.mode = .shift := by simpa using h
-      rw [hm] at hc
-      cases hc⟩
-  have h := programInv_begin ((PofC centre place entry raw).place s) (searchLens.get s)
-    (value last).toNat s.radius
-  let w := searchLens.get s
-  let b := GalilScaffoldSearchFinish.begin (ofNat (value last).toNat) s.radius
-  have hv : ({w with search := b, lower := ofNat (value last).toNat}) = searchLens.get s := by
-    dsimp [w,b]
-    rw [← he]
-    simp only [searchLens]
-    rw [← hs, ← hl]
-  rwa [hv] at h
 
 /-- The origin already records the search segment from its last restart. -/
 theorem atState_invLPS {raw : List (Fin 2)} {c : Control} {s : GalilVM}
@@ -185,7 +190,7 @@ theorem atState_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
     | succ i ih =>
       intro hn
       exact atState_tick centre place entry q first hP (ih (by omega))
-        (ht.tick i (by omega)) (hcan i (by omega)).noRestart
+        (ht.tick i (by omega)) (hcan i (by omega)).restartStage
   simpa only [hk] using hall k le_rfl
 
 /-- BirthCopy, the final residue of chain readiness, now follows from its actual DP history. -/
@@ -338,25 +343,25 @@ theorem birthMinimals_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
     (hm : y.ctl.mode = .scan) {a : Bool} {vq : SearchVM}
     (hidle : y.vm.chain = .idle)
     (he : searchEffect (PofC centre place entry raw) a y.vm vq)
-    (hf : vq.search.mode = .found) (hz : vq.lower = reset) :
+    (hf : vq.search.mode = .found)
+    (hexcluded : ∀ lower, vq.lower = ofNat lower →
+      LowerExcluded raw (position y.vm.center) lower) :
     ∃ h,
       GalilBranchInvariants.CopyInv (vq.dp.config.tapes 11) reset
         ((PofC centre place entry raw).place y.vm)
         (GalilScaffoldChainPeriod.start ((PofC centre place entry raw).centre y.vm)) h ∧
       FutureMinimal raw (position y.vm.center) h ∧
-      MoveMinimal raw (position y.vm.center) h := by
+      MoveAbove raw (position y.vm.center) (value vq.lower).toNat h ∧
+      Manacher.PalAt (encoded raw) (position y.vm.center - h) h := by
   obtain ⟨lower,span,h,hlower,hres,hcand,hmin,hcopy⟩ :=
     birthMinimal_packed centre place entry q first hP hI hr hm hidle he hf
-  have hlower0 : lower = 0 := by
-    apply (PalPeg.GalilScaffoldChainInputSupply.zero_ofNat_iff lower).mp
-    rw [← hlower,hz]
-    rfl
+  have hexcludedLower := hexcluded lower hlower
   have hp := PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centre place entry q first hr
   have hcen := (hp.win hP).centreRep (Or.inl hm)
   obtain ⟨a,ls,rs,suffix,hdec,hraw⟩ :=
     represents_decompose y.vm.center raw hcen.1 hcen.2
   obtain ⟨_,hplace⟩ := hP.1 y.vm a ls rs suffix y.vm.center.gap hdec
-  refine ⟨h,hcopy,?_,?_⟩
+  refine ⟨h,hcopy,?_,?_,?_⟩
   rw [hraw]
   apply futureMinimal_of_candidate a ls rs suffix y.vm.center.gap
     (congrArg position hdec)
@@ -365,34 +370,23 @@ theorem birthMinimals_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : Galil
   · intro g hg
     rw [← hplace]
     exact hmin g hg
-  · exact hlower0
-  · rw [hraw]
-    apply moveMinimal_of_candidate a ls rs suffix y.vm.center.gap
+  · rw [← hraw]
+    exact hexcludedLower
+  · have hlowerNat : (value vq.lower).toNat = lower := by
+      rw [hlower,ofNat_value,Int.toNat_natCast]
+    rw [hraw,hlowerNat]
+    apply moveAbove_of_candidate a ls rs suffix y.vm.center.gap
       (congrArg position hdec)
     · rw [← hplace]
       exact hcand
     · intro g hg
       rw [← hplace]
       exact hmin g hg
-    · exact hlower0
-
-theorem birthFutureMinimal_packed {raw : List (Fin 2)} {c₀ : Control} {r₀ : GalilVM}
-    (hP : Decodes (PofC centre place entry raw))
-    (hI : InvLPS (PofC centre place entry raw) q first raw c₀ r₀)
-    {k : ℕ} {y : State GalilVM}
-    (hr : CloseoutCheckW.StepsIMWC centre place entry q first raw k ⟨c₀,r₀⟩ y)
-    (hm : y.ctl.mode = .scan) {a : Bool} {vq : SearchVM}
-    (hidle : y.vm.chain = .idle)
-    (he : searchEffect (PofC centre place entry raw) a y.vm vq)
-    (hf : vq.search.mode = .found) (hz : vq.lower = reset) :
-    ∃ h,
-      GalilBranchInvariants.CopyInv (vq.dp.config.tapes 11) reset
-        ((PofC centre place entry raw).place y.vm)
-        (GalilScaffoldChainPeriod.start ((PofC centre place entry raw).centre y.vm)) h ∧
-      FutureMinimal raw (position y.vm.center) h := by
-  obtain ⟨h,hcopy,hfuture,_⟩ := birthMinimals_packed centre place entry q first
-    hP hI hr hm hidle he hf hz
-  exact ⟨h,hcopy,hfuture⟩
+  · have hblockPal := (PalPeg.GalilScaffoldChainInputSupply.candidate_palAt a ls rs suffix y.vm.center.gap span lower h (by
+      rw [← hplace]
+      exact hcand)).1
+    rw [hraw, congrArg position hdec]
+    exact hblockPal
 
 #print axioms birthCopy_packed
 end PalPeg.CanonicalSearchHistory

@@ -512,11 +512,11 @@ def NAMED_feedWindow {P : ℕ} (delay Lp Lf : ℕ) (rep : ChainVM → ChainL) : 
     CloseoutCoreStep.RealizedFeed (P := P) (PalPeg.CloseoutCoreEnc.encCOf delay Lp Lf rep) L0
 
 /-- **The fpp quantum.** -/
-def NAMED_fppQuantum {P : ℕ} (raw : List (Fin 2))
+def NAMED_fppQuantum {P : ℕ} (Good : Mirrored1 P → Prop) (raw : List (Fin 2))
     (stOf : ℕ → PalPeg.GalilScaffoldTop.State PalPeg.GalilScaffoldChainInputSupply.GalilVM)
     (Pw : PalPeg.GalilScaffoldChainInputSupply.Shared) (qq : ℕ) (first : Fin 9) : Prop :=
   ∃ g : Mirrored1 P → Mirrored1 P,
-    CloseoutCoreStep.AgreeOn raw stOf (PalPeg.LocalWF.ffpp (P := P) Pw qq first) g
+    CloseoutCoreStep.AgreeOn Good raw stOf (PalPeg.LocalWF.ffpp (P := P) Pw qq first) g
       PalPeg.GalilScaffoldController.Mode.fpp
 
 /-- **Injectivity of the layout on reachable states.** -/

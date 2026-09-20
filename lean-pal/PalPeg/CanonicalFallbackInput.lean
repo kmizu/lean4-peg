@@ -154,7 +154,8 @@ theorem move_of_activeScaledBound {raw : List (Fin 2)} {c : Control} {s : GalilV
     (hi : ScanInvariant raw (position s.center) Rad s.left s.right)
     (hav : canRight s.right) (hlen : value s.length = (2*Rad+1 : ℕ))
     (hkC : Rad < position s.center)
-    (hmin : PalPeg.CanonicalSearchProgram.MoveMinimal raw (position s.center) h)
+    (hmin : ∀ g, 0 < g → g < h → 4*g ≤ Rad →
+      ¬ HasPeriod (Span raw (position s.center) Rad) (2*g))
     (hB : 4 ≤ B) (hbound : Rad ≤ B*h) (hℓ : ℓ = (value s.length).toNat) :
     let s1 := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
       (afterMismatch s ⟨GalilScaffoldInputHead.left s.left,right s.right,z⟩ vq)
@@ -218,7 +219,7 @@ theorem move_of_activeScaledBound {raw : List (Fin 2)} {c : Control} {s : GalilV
         have := Nat.mul_le_mul_right (2*g) hB
         omega
       have hfour : 4*g ≤ Rad := by omega
-      exact (hmin Rad hkC hi.palindrome g hg0 hgh hfour hper).elim
+      exact (hmin g hg0 hgh hfour hper).elim
     · have hhg : h ≤ g := by omega
       calc
         2*Rad ≤ 2*(B*h) := Nat.mul_le_mul_left 2 hbound
@@ -305,7 +306,8 @@ theorem move_of_activeBound {raw : List (Fin 2)} {c : Control} {s : GalilVM}
     (hi : ScanInvariant raw (position s.center) Rad s.left s.right)
     (hav : canRight s.right) (hlen : value s.length = (2*Rad+1 : ℕ))
     (hkC : Rad < position s.center)
-    (hmin : PalPeg.CanonicalSearchProgram.MoveMinimal raw (position s.center) h)
+    (hmin : ∀ g, 0 < g → g < h → 4*g ≤ Rad →
+      ¬ HasPeriod (Span raw (position s.center) Rad) (2*g))
     (hbound : Rad ≤ 4*h) (hℓ : ℓ = (value s.length).toNat) :
     let s1 := afterBirth (chainBorn (decide (vq.search.mode = .found)) s.chain)
       (afterMismatch s ⟨GalilScaffoldInputHead.left s.left,right s.right,z⟩ vq)

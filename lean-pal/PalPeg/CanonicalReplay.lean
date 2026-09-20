@@ -1,5 +1,4 @@
 import PalPeg.OracleRun
-import PalPeg.ReadyTransport
 
 /-! # Replay with the actual search and chain co-processes
 
@@ -25,11 +24,17 @@ theorem comparison {raw : List (Fin 2)} (c : Control) (s : GalilVM) (rad rem : �
     (hScan : ScanInvariant raw (position s.center) rad s.left s.right)
     (hMinv : MInv raw c s) (hRep : s.replay = ofNat (rem+1)) (hFront : Frontier s)
     (hSearch : ∃ v, searchEffect (PofC centre place entry raw) true s v)
-    (hChain : ChainReady s.chain) :
-    ∃ y : State GalilVM,
+    (hChain : ChainReady s.chain) (hNoGuard : ¬ restartGuardVM s)
+    (hStage : ∀ y : State GalilVM,
       StepsAllR (galilFrameS (PofC centre place entry raw) q first) 2048
-        (SoundScanNR raw) (Canonical entry 2048) 1 ⟨c,s⟩ y ∧
-      ShapedSteps centre place entry q first raw 1 ⟨c,s⟩ y ∧
+        (SoundScanNR raw) (OracleTick entry raw) 1 ⟨c,s⟩ y →
+      y.ctl.mode = .scan → y.vm.right = right s.right → y.vm.replay = ofNat rem →
+      restartGuardVM y.vm → ∀ t' : GalilVM, restartVM entry y.vm t' →
+      ∃ (Rad : ℕ) (last : Counter), Restarted raw t' Rad last ∧ StageEntry Rad last) :
+    ∃ (n : ℕ) (y : State GalilVM), n ≤ 1 ∧
+      StepsAllR (galilFrameS (PofC centre place entry raw) q first) 2048
+        (SoundScanNR raw) (OracleTick entry raw) (1+n) ⟨c,s⟩ y ∧
+      ShapedSteps centre place entry q first raw (1+n) ⟨c,s⟩ y ∧ ¬ restartGuardVM y.vm ∧
       y.ctl.mode = .scan ∧ y.ctl.clock = 2048 ∧ y.ctl.replaying = decide (0 < rem) ∧
       y.vm.replay = ofNat rem ∧ y.vm.center = s.center ∧
       position y.vm.right = position s.right+1 ∧
@@ -74,13 +79,18 @@ theorem comparison {raw : List (Fin 2)} (c : Control) (s : GalilVM) (rad rem : �
   have hNoRestart : ¬ restartVM entry s t :=
     not_restartVM_of_chainAt_target entry hz
       (by simp only [t,replayDec_chain,afterBirth_chain,afterCompare_chain,vs])
-  have hCan : Canonical entry 2048 ⟨c,s⟩ ⟨c',t⟩ :=
-    canonical_of_scan_nonCopy hm (by change c.mode ≠ .copy; rw [hm]; decide) hNoRestart
-  refine ⟨⟨c',t⟩,.succ (soundScanNR_replaying raw hr) hTick hCan (.zero _ hQ),
-    .succ hTick (fun _ => hNoRestart)
-      (fun h => (by have : c.mode = .replayStart := h; rw [hm] at this; cases this)) (.zero _),
-    hm,rfl,hFlag,hReplay,hC,hPos,hScan',?_,?_,?_,⟨c.output,hRefresh⟩⟩
-  · have hBase := minv_matchR (PofC centre place entry raw) (fun _ => rfl)
+  have hCan : OracleTick entry raw ⟨c,s⟩ ⟨c',t⟩ :=
+    oracleTick_of_noGuard
+      (canonical_of_scan_nonCopy hm (by change c.mode ≠ .copy; rw [hm]; decide) hNoGuard)
+      hm hNoGuard
+  have hStep : StepsAllR (galilFrameS (PofC centre place entry raw) q first) 2048
+      (SoundScanNR raw) (OracleTick entry raw) 1 ⟨c,s⟩ ⟨c',t⟩ :=
+    .succ (soundScanNR_replaying raw hr) hTick hCan (.zero _ hQ)
+  have hStepShape : ShapedSteps centre place entry q first raw 1 ⟨c,s⟩ ⟨c',t⟩ :=
+    .succ hTick (fun _ hr0 => (hNoRestart hr0).elim)
+      (fun h => (by have : c.mode = .replayStart := h; rw [hm] at this; cases this)) (.zero _)
+  have hMinvT : MInv raw c' t := by
+    have hBase := minv_matchR (PofC centre place entry raw) (fun _ => rfl)
       (vs := vs) (vq := vq) o 2048 hr rfl hav hScan hMinv
     apply minv_same (s := replayDec true (afterCompare s vs vq)) (c :=
       {c with clock := 2048,output := o, replaying := !(PofC centre place entry raw).replayExhausted (replayDec true (afterCompare s vs vq))})
@@ -90,12 +100,27 @@ theorem comparison {raw : List (Fin 2)} (c : Control) (s : GalilVM) (rad rem : �
     · simp only [t,replayDec_right,afterBirth_right]
     · simp only [t,replayDec_center,afterBirth_center]
     · simp only [t,replayDec_true_replay,afterBirth_replay]
-  · intro m hm
-    have he : m = rem := (ofNat_inj (hReplay.symm.trans hm)).symm
+  have hRemT : t.remaining = s.remaining := by
+    simp only [t,PalPeg.GalilReplaySegment.replayDec_remaining,afterBirth_remaining,PalPeg.GalilReplaySegment.afterCompare_remaining]
+  -- the restart, if this comparison broke a chain at lag zero
+  obtain ⟨n,t2,hn,hSet,hSetShape,hNoGuard2,hL2,hR2,hC2,hRep2,hRem2,hRef2⟩ :=
+    PalPeg.OracleRun.settle centre place entry q first c' t hm rfl hQ
+      (hStage ⟨c',t⟩ hStep (by change c.mode = .scan; exact hm) hR hReplay)
+  refine ⟨n,⟨c',t2⟩,hn,stepsAllR_trans hStep hSet,
+    shapedSteps_trans centre place entry q first hStepShape hSetShape,hNoGuard2,
+    hm,rfl,hFlag,hRep2.trans hReplay,hC2.trans hC,?_,?_,?_,?_,hRem2.trans hRemT,
+    hRef2 ⟨c.output,hRefresh⟩⟩
+  · show position t2.right = position s.right+1
+    rw [hR2]; exact hPos
+  · show ScanInvariant raw (position t2.center) (rad+1) t2.left t2.right
+    rw [hL2,hR2,hC2]; exact hScan'
+  · exact minv_same rfl hR2 hC2 hRep2 hMinvT
+  · intro m hm'
+    have he : m = rem := (ofNat_inj ((hRep2.trans hReplay).symm.trans hm')).symm
     subst m
-    rw [hR]
-    exact right_frontier_step s.right rem hBound
-  · simp only [t,PalPeg.GalilReplaySegment.replayDec_remaining,afterBirth_remaining,PalPeg.GalilReplaySegment.afterCompare_remaining]
+    have hstep := right_frontier_step s.right rem hBound
+    have hR2' : t2.right = right s.right := hR2.trans hR
+    simpa only [hR2'] using hstep
 
 /-- Complete a replay using readiness only at states on the constructed run.
 The chain may start or advance during replay. -/
@@ -103,17 +128,23 @@ theorem segment {raw : List (Fin 2)} (rem : ℕ) :
     ∀ (c : Control) (s : GalilVM) (rad : ℕ),
     c.mode = .scan → c.clock = 2048 → c.replaying = decide (0 < rem) →
     s.replay = ofNat rem → ScanInvariant raw (position s.center) rad s.left s.right →
-    MInv raw c s → Frontier s → SoundScanNR raw ⟨c,s⟩ →
+    MInv raw c s → Frontier s → SoundScanNR raw ⟨c,s⟩ → ¬ restartGuardVM s →
     (rem = 0 → Refreshed (PofC centre place entry raw) q first ⟨c,s⟩) →
     (∀ k y, ShapedSteps centre place entry q first raw k ⟨c,s⟩ y →
       y.ctl.mode = .scan → y.vm.chain = .idle →
       PalPeg.GalilBranchInvariants2.SearchReady (searchLens.get y.vm)) →
     (∀ k y, StepsAllR (galilFrameS (PofC centre place entry raw) q first) 2048
-      (SoundScanNR raw) (Canonical entry 2048) k ⟨c,s⟩ y →
+      (SoundScanNR raw) (OracleTick entry raw) k ⟨c,s⟩ y →
       y.ctl.mode = .scan → front y.vm = front s → ChainReady y.vm.chain) →
-    ∃ y, StepsAllR (galilFrameS (PofC centre place entry raw) q first) 2048
-      (SoundScanNR raw) (Canonical entry 2048) (rem*2048) ⟨c,s⟩ y ∧
-      ShapedSteps centre place entry q first raw (rem*2048) ⟨c,s⟩ y ∧
+    (∀ k y, StepsAllR (galilFrameS (PofC centre place entry raw) q first) 2048
+      (SoundScanNR raw) (OracleTick entry raw) k ⟨c,s⟩ y →
+      y.ctl.mode = .scan → front y.vm = front s → restartGuardVM y.vm →
+      ∀ t' : GalilVM, restartVM entry y.vm t' →
+      ∃ (Rad : ℕ) (last : Counter), Restarted raw t' Rad last ∧ StageEntry Rad last) →
+    ∃ (N : ℕ) (y : State GalilVM), N ≤ rem*2049 ∧
+      StepsAllR (galilFrameS (PofC centre place entry raw) q first) 2048
+      (SoundScanNR raw) (OracleTick entry raw) N ⟨c,s⟩ y ∧
+      ShapedSteps centre place entry q first raw N ⟨c,s⟩ y ∧ ¬ restartGuardVM y.vm ∧
       y.ctl.mode = .scan ∧ y.ctl.clock = 2048 ∧ y.ctl.replaying = false ∧
       y.vm.replay = reset ∧
       ScanInvariant raw (position y.vm.center) (rad+rem) y.vm.left y.vm.right ∧
@@ -122,17 +153,17 @@ theorem segment {raw : List (Fin 2)} (rem : ℕ) :
       y.vm.remaining = s.remaining ∧ Refreshed (PofC centre place entry raw) q first y := by
   induction rem with
   | zero =>
-    intro c s rad hm hc hr hRep hScan hMinv hFront hQ hRefresh hReady hChain
-    exact ⟨⟨c,s⟩,.zero _ hQ,.zero _,hm,hc,by simpa using hr,hRep,
+    intro c s rad hm hc hr hRep hScan hMinv hFront hQ hNoGuard hRefresh hReady hChain hStage
+    exact ⟨0,⟨c,s⟩,by omega,.zero _ hQ,.zero _,hNoGuard,hm,hc,by simpa using hr,hRep,
       by simpa using hScan,hMinv,rfl,by simp,hFront,rfl,hRefresh rfl⟩
   | succ rem ih =>
-    intro c s rad hm hc hFlag hRep hScan hMinv hFront hQ hRefresh hReady hChain
+    intro c s rad hm hc hFlag hRep hScan hMinv hFront hQ hNoGuard hRefresh hReady hChain hStage
     have hr : c.replaying = true := by simpa using hFlag
     have hav := PalPeg.GalilReplaySegment.canRight_of_frontier (Nat.succ_pos rem)
       (hFront (rem+1) hRep)
-    obtain ⟨t,hBg,hL,hR,hC,hReplay,hRemaining,hRadius,hLength,hFpp,hBgShape⟩ :=
+    obtain ⟨t,hBg,hL,hR,hC,hReplay,hRemaining,hRadius,hLength,hFpp,hBgShape,hNoGuardT⟩ :=
       PalPeg.OracleRun.scanBackground_run_all centre place entry q first 2047 c s hm hc hav hQ
-        hReady (fun k y h hy _ hyr hyrep => hChain k y h hy (front_congr hyr hyrep))
+        hNoGuard hReady (fun k y h hy _ hyr hyrep => hChain k y h hy (front_congr hyr hyrep))
     have hScanT : ScanInvariant raw (position t.center) rad t.left t.right := by
       rw [hL,hR,hC]; exact hScan
     have hMinvT : MInv raw {c with clock := 1} t := minv_same rfl hR hC hReplay hMinv
@@ -142,30 +173,46 @@ theorem segment {raw : List (Fin 2)} (rem : ℕ) :
       · exact PalPeg.GalilBranchInvariants2.searchEffect_exists _ true t
           (hReady 2047 ⟨{c with clock := 1},t⟩ hBgShape hm hi)
       · exact ⟨searchLens.get t,Or.inr ⟨hi,rfl⟩⟩
-    obtain ⟨y1,hStep,hStepShape,hm1,hc1,hr1,hRep1,hC1,hPos1,hScan1,hMinv1,hFront1,hRem1,hRef1⟩ :=
+    have hFrontBg : front (⟨{c with clock := 1},t⟩ : State GalilVM).vm = front s :=
+      front_congr hR hReplay
+    obtain ⟨n1,y1,hn1,hStep,hStepShape,hNoGuard1,hm1,hc1,hr1,hRep1,hC1,hPos1,hScan1,hMinv1,hFront1,
+        hRem1,hRef1⟩ :=
       comparison centre place entry q first {c with clock := 1} t rad rem hm hr rfl
         hScanT hMinvT (hReplay.trans hRep) hFrontT hSearch
-        (hChain 2047 ⟨{c with clock := 1},t⟩ hBg hm (front_congr hR hReplay))
+        (hChain 2047 ⟨{c with clock := 1},t⟩ hBg hm hFrontBg) hNoGuardT
+        (fun y hy hmy hyr hyrep hg t' ht' => by
+          have hposy : position y.vm.right = position t.right + 1 := by
+            rw [hyr]
+            exact right_position t.right (by rw [hR]; exact hav)
+              (represented_position _ raw hScanT.rightRep hScanT.rightPresent).1
+          have hfy : front y.vm = front s := by
+            rw [front_ofNat hyrep,front_ofNat hRep,hposy,hR]
+            push_cast
+            ring
+          exact hStage _ y (stepsAllR_trans hBg hy) hmy hfy hg t' ht')
     have hRound : StepsAllR (galilFrameS (PofC centre place entry raw) q first) 2048
-        (SoundScanNR raw) (Canonical entry 2048) 2048 ⟨c,s⟩ y1 :=
+        (SoundScanNR raw) (OracleTick entry raw) (2047+(1+n1)) ⟨c,s⟩ y1 :=
       stepsAllR_trans hBg hStep
-    have hRoundShape : ShapedSteps centre place entry q first raw 2048 ⟨c,s⟩ y1 :=
+    have hRoundShape : ShapedSteps centre place entry q first raw (2047+(1+n1)) ⟨c,s⟩ y1 :=
       shapedSteps_trans centre place entry q first hBgShape hStepShape
     have hFrontRound : front y1.vm = front s := by
       rw [front_ofNat hRep1,front_ofNat hRep,hPos1,hR]
       push_cast
       ring
-    obtain ⟨y,hRest,hRestShape,hm2,hc2,hr2,hRep2,hScan2,hMinv2,hC2,hPos2,hFront2,hRem2,hRef2⟩ :=
+    obtain ⟨N,y,hN,hRest,hRestShape,hNoGuard2,hm2,hc2,hr2,hRep2,hScan2,hMinv2,hC2,hPos2,hFront2,hRem2,
+        hRef2⟩ :=
       ih y1.ctl y1.vm (rad+1) hm1 hc1 hr1 hRep1 hScan1 hMinv1 hFront1
-        (stepsAll_last (stepsAllR_stepsAll hStep)) (fun _ => hRef1)
-        (fun k y hs hmode hidle => hReady (2048+k) y
+        (stepsAll_last (stepsAllR_stepsAll hStep)) hNoGuard1 (fun _ => hRef1)
+        (fun k y hs hmode hidle => hReady (2047+(1+n1)+k) y
           (shapedSteps_trans centre place entry q first hRoundShape hs) hmode hidle)
-        (fun k y hs hmode hf => hChain (2048+k) y (stepsAllR_trans hRound hs) hmode (hf.trans hFrontRound))
-    have hTicks : (rem+1)*2048 = 2048+rem*2048 := by omega
-    refine ⟨y,?_,?_,hm2,hc2,hr2,hRep2,?_,hMinv2,hC2.trans (hC1.trans hC),?_,hFront2,
+        (fun k y hs hmode hf => hChain (2047+(1+n1)+k) y (stepsAllR_trans hRound hs) hmode
+          (hf.trans hFrontRound))
+        (fun k y hs hmode hf => hStage (2047+(1+n1)+k) y (stepsAllR_trans hRound hs) hmode
+          (hf.trans hFrontRound))
+    refine ⟨2047+(1+n1)+N,y,by omega,stepsAllR_trans hRound hRest,
+      shapedSteps_trans centre place entry q first hRoundShape hRestShape,hNoGuard2,
+      hm2,hc2,hr2,hRep2,?_,hMinv2,hC2.trans (hC1.trans hC),?_,hFront2,
       hRem2.trans (hRem1.trans hRemaining),hRef2⟩
-    · rw [hTicks]; exact stepsAllR_trans hRound hRest
-    · rw [hTicks]; exact shapedSteps_trans centre place entry q first hRoundShape hRestShape
     · convert hScan2 using 1 <;> omega
     · rw [hPos2,hPos1,hR]; omega
 

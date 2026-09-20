@@ -1,5 +1,4 @@
 import PalPeg.OracleReady
-import PalPeg.CanonicalPeriod
 import PalPeg.CanonicalLocalRealizes
 import PalPeg.Basic
 import PalPeg.Existence
@@ -382,7 +381,7 @@ import PalPeg.PalInPegUnconditional
 /-! ## 目標定理のラチェット
 
 `PalPeg.PalInPeg.unconditional : RecognizedByTotalPEG PAL` は**閉じた項**だが、
-いま 2 個の未証明義務を `axiom` として持っている（cycle oracle と局所実現）。下の guard がその一覧を固定するので、
+いま 1 個の未証明義務を `axiom` として持っている（局所実現 `obligation_localRealization`）。下の guard がその一覧を固定するので、
 
 * 義務を 1 個証明して `axiom` を外すと guard が壊れる → 更新を強制される（前進の記録）
 * うっかり新しい穴を開けても guard が壊れる → 気づける
@@ -393,7 +392,6 @@ import PalPeg.PalInPegUnconditional
 /-- info: 'PalPeg.PalInPeg.unconditional' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- PalPeg.PalInPeg.obligation_cycleOracleOnPackedRun,
  PalPeg.PalInPeg.obligation_localRealization] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.PalInPeg.unconditional
@@ -413,14 +411,6 @@ import PalPeg.PalInPegUnconditional
 /-- info: 'PalPeg.CloseoutFinalFour.latch_iff_pal_of_preTrace' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.CloseoutFinalFour.latch_iff_pal_of_preTrace
-
-/-- info: 'PalPeg.CanonicalPeriod.preTrace_lower_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms PalPeg.CanonicalPeriod.preTrace_lower_zero
-
-/-- info: 'PalPeg.CanonicalPeriod.noBelow_first_canonical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in
-#print axioms PalPeg.CanonicalPeriod.noBelow_first_canonical
 
 /-- info: 'PalPeg.GalilTickFair.fallback_right_not_searchPin' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in

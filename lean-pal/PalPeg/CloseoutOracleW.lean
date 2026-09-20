@@ -243,7 +243,8 @@ theorem h_bootRefreshedIMW_of_bootIPack
     subst hi0
     have ht := htr2.tick 0 (by omega)
     rw [hg20] at ht ⊢
-    exact PalPeg.GalilTickFair.canonical_of_init rfl ht
+    exact PalPeg.ShapedRun.oracleTick_of_offScan (PalPeg.GalilTickFair.canonical_of_init rfl ht)
+      (by show Mode.init ≠ Mode.scan; decide) (by show Mode.init ≠ Mode.replayStart; decide)
   · cases i with
     | zero => rw [hg20]; exact lpackM2_boot (a :: rest)
     | succ n =>

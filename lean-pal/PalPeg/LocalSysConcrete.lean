@@ -36,17 +36,15 @@ one mirror the parked `replayStart` swap needs), abstracted by
   side conditions of `GalilLookRefined.tick_trunc'`, so the trace's own tick
   `stOf k → stOf (k+1)` survives truncation (`tick_of_need`); the mode
   obligation only has to say where the local step lands.
-* **`inv_feed` is proved** except for its tracking half (`H_feed_track`), which
-  is false for a wrong letter and a theorem for the right one
-  (`tracked_feedC`, via `GalilThrottledRun.arrive_trunc`).
+* **Tracking across an arrival is a theorem for the letter the run delivers**
+  (`tracked_feedC`, via `GalilThrottledRun.arrive_trunc`); it is false for a wrong letter, and
+  the run never feeds one.
 * **`x0_ctl`, `x0_started`, `x0_ans` are `rfl`** for `x0C`; `x0_inv` splits into
   `x0C_physWF` (proved from `LocalTick1.Inv` of the blank core) and
   `x0C_mirInv1`.
 
-**Named hypotheses left open** (one per mode, plus three trace hypotheses):
-`H_init`, `H_scan`, `H_shift`, `H_copy`, `H_home`, `H_fpp`, `H_markEnd`,
-`H_choose`, `H_rewind`, `H_replayStart` — each a `Realizes` obligation — and
-`H_shared`, `H_trace`, `H_ready`, `H_feed_track`.  `realizes_of_parts` splits a
+**Left open**: one `Realizes` obligation per mode, below the last tick of the trace.  The
+consumer is `LocalShadowConcrete.pal_in_peg_of_shadowed_sysC`.  `realizes_of_parts` splits a
 `Realizes` into its abstract and physical halves; the **physical half of the
 seven phase modes is closed** by `physWF_of_tickL3` (from
 `LocalTick3.tickL3_inv` / `tickL3_replaying` / `pending_tickL3`) and the
@@ -161,10 +159,15 @@ def Tracked (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) (x : GalilVML P)
 
 /-- **The invariant of the concrete local system.**  The physical pack, the left
 mirror's twin invariant, and the tracking datum. -/
-structure InvC (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) (m : Mirrored1 P) : Prop where
+structure InvC (Good : Mirrored1 P → Prop) (raw : List (Fin 2)) (stOf : ℕ → State GalilVM)
+    (m : Mirrored1 P) : Prop where
   phys : PhysWF m.vm
   mir : MirInv1 m
   track : Tracked raw stOf m.vm
+  /-- The invariants of the local layer that are neither physical nor read off the trace (the
+  polarity bundle, the counter magnitudes, the parking of the cursors).  They are carried along
+  the run, not assumed of every tracked state. -/
+  good : Good m
 
 /-! ## 3. The arrival oracles -/
 
@@ -281,11 +284,13 @@ theorem tickC_step (M : Steps P) {m : Mirrored1 P} (h : ¬ Starved m.vm) :
 /-- **The `LocalStep`-style obligation of one mode.**  On an invariant,
 non-starved state standing at trace index `k` with `j` letters arrived and the
 need of tick `k` met, the mode's local step lands on the trace's next state and
-keeps the physical invariants. -/
-def Realizes (raw : List (Fin 2)) (stOf : ℕ → State GalilVM)
+keeps the physical invariants.  Only ticks below `lastTick` are concerned: a pre-loaded trace
+is a trace of ticks up to its last report point only. -/
+def Realizes (Good : Mirrored1 P → Prop) (raw : List (Fin 2)) (stOf : ℕ → State GalilVM)
+    (lastTick : ℕ)
     (f : Mirrored1 P → Mirrored1 P) (md : Mode) : Prop :=
-  ∀ (m : Mirrored1 P) (k j : ℕ), InvC raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
-    Needy raw stOf k j m.vm → needT' raw stOf k ≤ j →
+  ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
+    Needy raw stOf k j m.vm → needT' raw stOf k ≤ j → k < lastTick →
       Needy raw stOf (k+1) j (f m).vm ∧ PhysWF (f m).vm ∧ MirInv1 (f m)
 
 /-! ## 6. The `LocalSys` instance -/
@@ -343,97 +348,26 @@ theorem tick_of_need {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {Pw : S
 
 /-! ## 8. The oracles -/
 
-theorem stepOf_realizes {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {M : Steps P}
-    (H_init : Realizes raw stOf M.init .init)
-    (H_scan : Realizes raw stOf M.scan .scan)
-    (H_shift : Realizes raw stOf M.shift .shift)
-    (H_copy : Realizes raw stOf M.copy .copy)
-    (H_home : Realizes raw stOf M.home .home)
-    (H_fpp : Realizes raw stOf M.fpp .fpp)
-    (H_markEnd : Realizes raw stOf M.markEnd .markEnd)
-    (H_choose : Realizes raw stOf M.choose .choose)
-    (H_rewind : Realizes raw stOf M.rewind .rewind)
-    (H_replayStart : Realizes raw stOf M.replayStart .replayStart) :
-    ∀ md : Mode, Realizes raw stOf (stepOf M md) md := by
+theorem stepOf_realizes {Good : Mirrored1 P → Prop} {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {lastTick : ℕ}
+    {M : Steps P}
+    (H_init : Realizes Good raw stOf lastTick M.init .init)
+    (H_scan : Realizes Good raw stOf lastTick M.scan .scan)
+    (H_shift : Realizes Good raw stOf lastTick M.shift .shift)
+    (H_copy : Realizes Good raw stOf lastTick M.copy .copy)
+    (H_home : Realizes Good raw stOf lastTick M.home .home)
+    (H_fpp : Realizes Good raw stOf lastTick M.fpp .fpp)
+    (H_markEnd : Realizes Good raw stOf lastTick M.markEnd .markEnd)
+    (H_choose : Realizes Good raw stOf lastTick M.choose .choose)
+    (H_rewind : Realizes Good raw stOf lastTick M.rewind .rewind)
+    (H_replayStart : Realizes Good raw stOf lastTick M.replayStart .replayStart) :
+    ∀ md : Mode, Realizes Good raw stOf lastTick (stepOf M md) md := by
   intro md; cases md <;> assumption
-
-/-- **The oracles of `LocalTrackingLatch.LocalSys`, on the concrete state.**
-
-`stutter_of_starved` and `outL_abs` are unconditional; `feed_abs` and the
-physical half of `inv_feed` come from `LocalArrival`/`LocalReplayParked`;
-`tick_of_not_starved` and `inv_tick` are derived from the truncated trace tick
-(`GalilLookRefined.tick_trunc'`) and the ten per-mode obligations. -/
-theorem localSys_oracles
-    (M : Steps P) (repC : Control → Bool)
-    (raw : List (Fin 2)) (stOf : ℕ → State GalilVM)
-    (Pw : Shared) (qq : ℕ) (first : Fin 9) (delay : ℕ)
-    (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
-    (H_trace : ∀ k, Tick (galilFrameS Pw qq first) delay (stOf k) (stOf (k+1)))
-    (H_ready : ∀ (m : Mirrored1 P) (k j : ℕ), InvC raw stOf m → ¬ Starved m.vm →
-      Needy raw stOf k j m.vm → needT' raw stOf k ≤ j)
-    (H_init : Realizes raw stOf M.init .init)
-    (H_scan : Realizes raw stOf M.scan .scan)
-    (H_shift : Realizes raw stOf M.shift .shift)
-    (H_copy : Realizes raw stOf M.copy .copy)
-    (H_home : Realizes raw stOf M.home .home)
-    (H_fpp : Realizes raw stOf M.fpp .fpp)
-    (H_markEnd : Realizes raw stOf M.markEnd .markEnd)
-    (H_choose : Realizes raw stOf M.choose .choose)
-    (H_rewind : Realizes raw stOf M.rewind .rewind)
-    (H_replayStart : Realizes raw stOf M.replayStart .replayStart)
-    (H_feed_track : ∀ (a : Fin 2) (m : Mirrored1 P), InvC raw stOf m →
-      Tracked raw stOf (feedC a m).vm) :
-    (∀ m : Mirrored1 P, InvC raw stOf m → (sysC M repC).Starved m →
-        absSC ((sysC M repC).tickL m) = absSC m) ∧
-    (∀ m : Mirrored1 P, InvC raw stOf m → ¬ (sysC M repC).Starved m →
-        Tick (galilFrameS Pw qq first) delay (absSC m) (absSC ((sysC M repC).tickL m))) ∧
-    (∀ (a : Fin 2) (m : Mirrored1 P), InvC raw stOf m →
-        absSC ((sysC M repC).feedC a m) = arriveState' a (absSC m)) ∧
-    (∀ m : Mirrored1 P, InvC raw stOf m → InvC raw stOf ((sysC M repC).tickL m)) ∧
-    (∀ (a : Fin 2) (m : Mirrored1 P), InvC raw stOf m →
-        InvC raw stOf ((sysC M repC).feedC a m)) ∧
-    (∀ m : Mirrored1 P, (sysC M repC).outL m = (absSC m).ctl.output) := by
-  have hreal := stepOf_realizes H_init H_scan H_shift H_copy H_home H_fpp H_markEnd H_choose
-    H_rewind H_replayStart
-  have key : ∀ (m : Mirrored1 P) (k j : ℕ), InvC raw stOf m → ¬ Starved m.vm →
-      Needy raw stOf k j m.vm → needT' raw stOf k ≤ j →
-      Needy raw stOf (k+1) j (tickC M m).vm ∧ PhysWF (tickC M m).vm ∧ MirInv1 (tickC M m) := by
-    intro m k j hinv hns hn hneed
-    rw [tickC_step M hns]
-    exact hreal m.vm.ctl.mode m k j hinv rfl hns hn hneed
-  refine ⟨?_, ?_, ?_, ?_, ?_, outL_abs M repC⟩
-  · intro m hinv hs
-    show absSC (tickC M m) = absSC m
-    rw [tickC_starved M hs]
-  · intro m hinv hns
-    obtain ⟨k, j, hn⟩ := hinv.track
-    have hneed := H_ready m k j hinv hns hn
-    obtain ⟨hn', -, -⟩ := key m k j hinv hns hn hneed
-    have ht := tick_of_need (Pw := Pw) (qq := qq) (first := first) (delay := delay)
-      (H_shared j) (H_trace k) hneed
-    show Tick (galilFrameS Pw qq first) delay (absSC m) (absSC (tickC M m))
-    rw [show absSC m = truncS (raw.length - j) (stOf k) from hn.2,
-      show absSC (tickC M m) = truncS (raw.length - j) (stOf (k+1)) from hn'.2]
-    exact ht
-  · intro a m hinv
-    exact feed_abs_core hinv.phys.inv.views hinv.phys.pend a
-  · intro m hinv
-    by_cases hs : Starved m.vm
-    · rw [sysC_tickL, tickC_starved M hs]; exact hinv
-    · obtain ⟨k, j, hn⟩ := hinv.track
-      have hneed := H_ready m k j hinv hs hn
-      obtain ⟨hn', hph, hmir⟩ := key m k j hinv hs hn hneed
-      exact ⟨hph, hmir, ⟨k+1, j, hn'⟩⟩
-  · intro a m hinv
-    exact ⟨physWF_feedC hinv.phys a,
-      mirInv1_feedC hinv.mir hinv.phys.pend hinv.phys.inv.views.2.1 a,
-      H_feed_track a m hinv⟩
 
 /-! ## 9. Arrival of the *correct* letter keeps the trace
 
-`H_feed_track` above is stated for an arbitrary letter, because
-`LocalTrackingLatch`'s `inv_feed` quantifies over all letters.  For the letter
-the run actually delivers it is a theorem: -/
+The run only ever feeds the letter of its input slot
+(`LocalTrackingLatch.inv_micro`), and `LocalShadowConcrete.pal_in_peg_of_shadowed_sysC` tracks
+the run across an arrival with the theorem below.  For the letter the run actually delivers it is a theorem: -/
 
 theorem tracked_feedC {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {m : Mirrored1 P}
     {k j : ℕ} (hw : ViewsWF m.vm) (hp : m.vm.pending = [])
@@ -511,16 +445,17 @@ theorem physWF_of_tickL1 {S : Shared} {qq : ℕ} {firstT : Fin 9} {d : ℕ} {x y
   · rw [pending_tickL1 ht]; exact h.pend
 
 /-- **A mode obligation splits into its abstract and physical halves.** -/
-theorem realizes_of_parts {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
+theorem realizes_of_parts {Good : Mirrored1 P → Prop} {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {lastTick : ℕ}
     (f : Mirrored1 P → Mirrored1 P) (md : Mode)
-    (habs : ∀ (m : Mirrored1 P) (k j : ℕ), InvC raw stOf m → m.vm.ctl.mode = md →
-      ¬ Starved m.vm → Needy raw stOf k j m.vm → needT' raw stOf k ≤ j →
+    (habs : ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = md →
+      ¬ Starved m.vm → Needy raw stOf k j m.vm → needT' raw stOf k ≤ j → k < lastTick →
       Needy raw stOf (k+1) j (f m).vm)
-    (hphys : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
+    (hphys : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
       PhysWF (f m).vm ∧ MirInv1 (f m)) :
-    Realizes raw stOf f md := by
-  intro m k j hinv hmd hns hn hneed
-  exact ⟨habs m k j hinv hmd hns hn hneed, (hphys m hinv hmd hns).1, (hphys m hinv hmd hns).2⟩
+    Realizes Good raw stOf lastTick f md := by
+  intro m k j hinv hmd hns hn hneed hbefore
+  exact ⟨habs m k j hinv hmd hns hn hneed hbefore, (hphys m hinv hmd hns).1,
+    (hphys m hinv hmd hns).2⟩
 
 
 #print axioms absHead'_append
@@ -532,7 +467,6 @@ theorem realizes_of_parts {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
 #print axioms used_le_of_need
 #print axioms tick_of_need
 #print axioms stepOf_realizes
-#print axioms localSys_oracles
 #print axioms tracked_feedC
 #print axioms x0C_ctl
 #print axioms x0C_physWF

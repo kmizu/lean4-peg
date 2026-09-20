@@ -194,6 +194,45 @@ theorem given_landingObligationsSansRadiusLedger (entry q : ℕ) (first : Fin 9)
       (hres w st Tc h) (hChainVerifierSupply w st Tc hw h)
       (canRightAtScanOrShift_alongTrace centreC placeC entry q first hw h))
 
+
+/-- **The canonical pre-loaded trace of every non-empty word**, from the cycle oracle on packed
+runs.  The boot landing is unconditional. -/
+theorem canonicalPreTrace_exists (entry q : ℕ) (first : Fin 9)
+    (hor : ∀ w : List (Fin 2), 0 < w.length →
+      PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
+        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
+        (PalPeg.ShapedRun.OracleTick entry) w)
+    (w : List (Fin 2)) (hw : 0 < w.length) :
+    ∃ (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc ∧
+        PalPeg.CloseoutCheckW.CanonTrace entry w st Tc :=
+  PalPeg.CloseoutCheckW.preTraceOnPackedRun_exists centreC placeC entry q first
+    (h_bootRefreshedIMW_of_bootIPack centreC placeC entry q first
+      (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
+      (bootIPack_of_parts centreC placeC entry q first h_lrepC
+        (CloseoutPackRun6.h_bootShift centreC placeC entry q first)
+        (CloseoutPackRun6.h_landShift centreC placeC entry q first)))
+    hor w hw
+
+
+/-- **The lookahead need along a pre-loaded trace**: before checkpoint `m+1` a tick needs at
+most `m+1` letters.  The chain position invariant at the origin is that of the boot state. -/
+theorem needBound_alongPreTrace (entry q : ℕ) (first : Fin 9)
+    (hres : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc)
+    (hChainVerifierSupply : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM)
+      (Tc : ℕ → ℕ), 0 < w.length →
+      PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
+      PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
+    {w : List (Fin 2)} {st : ℕ → GalilScaffoldTop.State GalilVM} {Tc : ℕ → ℕ}
+    (hw : 0 < w.length)
+    (hPreTrace : PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc) :
+    ∀ m, m < w.length → ∀ i, i ≤ Tc (m+1) → PalPeg.GalilLookRefined.needL' w st i ≤ m + 1 :=
+  needBound_of_scanLandingObligations centreC placeC entry q first hw hPreTrace
+    (by rw [hPreTrace.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
+    (hres w st Tc hPreTrace) (hChainVerifierSupply w st Tc hw hPreTrace)
+
 /-- **`shiftDone` 義務を完全に放電した最上位。**
 
 `LandingObligationsAt.shiftDone` の 2 節はどちらも新規入力ゼロで出る：
@@ -212,7 +251,7 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
         (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
-        (PalPeg.GalilTickFair.Canonical entry 2048) w)
+        (PalPeg.ShapedRun.OracleTick entry) w)
     (hC : H_realizeCanonical centreC placeC entry q first)
     (hres : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
@@ -223,17 +262,9 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc) :
     RecognizedByTotalPEG PAL :=
   given_preTraceIMW_on entry q first (PalPeg.CloseoutCheckW.CanonTrace entry)
-    (fun w hw => PalPeg.CloseoutCheckW.preTraceOnPackedRun_exists centreC placeC entry q first
-      (h_bootRefreshedIMW_of_bootIPack centreC placeC entry q first
-        (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
-        (bootIPack_of_parts centreC placeC entry q first h_lrepC
-          (CloseoutPackRun6.h_bootShift centreC placeC entry q first)
-          (CloseoutPackRun6.h_landShift centreC placeC entry q first)))
-      hor w hw)
+    (canonicalPreTrace_exists entry q first hor)
     hC
-    (fun w st Tc hw h => needBound_of_scanLandingObligations centreC placeC entry q first hw h
-      (by rw [h.base.pre.start]; exact chainPosInv2_of_idle (boot_chain_idle w))
-      (hres w st Tc h) (hChainVerifierSupply w st Tc hw h))
+    (fun w st Tc hw h => needBound_alongPreTrace entry q first hres hChainVerifierSupply hw h)
 
 #print axioms given_scanLandingObligations
 
