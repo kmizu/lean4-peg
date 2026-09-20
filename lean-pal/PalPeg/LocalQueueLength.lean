@@ -105,7 +105,7 @@ and `hstart` are facts of the Hood–Melville invariant: a non-empty front has p
 length, and a rotation starts when the rear is one longer than the front. -/
 theorem lengthCounter_sApply (op : SOp) (q : Queue (Fin 2)) (counter : ℤ)
     (hcounter : LengthCounter q counter)
-    (hfront : q.front ≠ [] → 1 ≤ q.lenf)
+    (hfront : op = .tailPop → q.front ≠ [] → 1 ≤ q.lenf)
     (hstart : op = .rotStart → q.state = .idle → q.lenr = q.front.length + 1) :
     LengthCounter (sApply op q) (counter + lengthDeltaOfView op (queueView q)) := by
   unfold LengthCounter at hcounter ⊢
@@ -128,7 +128,7 @@ theorem lengthCounter_sApply (op : SOp) (q : Queue (Fin 2)) (counter : ℤ)
       have hpop : sApply .tailPop q = { q with lenf := q.lenf - 1, front := q.front.tail } := by
         show (if q.front = [] then q else _) = _
         rw [if_neg hempty]
-      have hpositive := hfront hempty
+      have hpositive := hfront rfl hempty
       rw [hpop]
       simp only [lengthDeltaOfView, hview]
       show counter + (if false = true then (0 : ℤ) else -1) + lengthDebt q.state

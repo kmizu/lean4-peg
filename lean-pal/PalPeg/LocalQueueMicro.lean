@@ -307,13 +307,15 @@ theorem topLetter_marks_isSome {marks : List (Fin 2)} {bottom : List (Option (Fi
   cases marks <;> rfl
 
 /-- **The micro-programmed rule is sound before the sweep.**  `hfront`, `hstart`, `hrot` are
-facts of the Hood–Melville invariant; `howed` and `hnoStart` are facts of the micro-program (a
-rotation step runs with nothing owed; a rotation is started by `checkStart` only). -/
+facts of the Hood–Melville invariant, each asked only of the micro-operation that needs it;
+`howed` and `hnoStart` are facts of the micro-program (a rotation step runs with nothing owed; a
+rotation is started by `checkStart` only). -/
 theorem microRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : MicroControl}
     {tapes : Fin 10 → STape Γc} (hrep : MicroRep K q control tapes) (input : Option Terminal)
-    (hfront : q.front ≠ [] → 1 ≤ q.lenf)
-    (hstart : q.state = .idle → ¬ q.lenr ≤ q.lenf → q.lenr = q.front.length + 1)
-    (hrot : q.lenf < q.lenr → q.state = .idle)
+    (hfront : control.1 = .sub .tailPop → q.front ≠ [] → 1 ≤ q.lenf)
+    (hstart : control.1 = .checkStart → q.state = .idle → ¬ q.lenr ≤ q.lenf →
+      q.lenr = q.front.length + 1)
+    (hrot : control.1 = .checkStart → q.lenf < q.lenr → q.state = .idle)
     (howed : control.1 ≠ .incLength → control.2.2.2 = 0)
     (hnoStart : control.1 ≠ .sub .rotStart) :
     (∀ tape : Fin 10, K ≤ pos (tapes tape)) ∧
@@ -369,7 +371,7 @@ theorem microRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : MicroContr
       have hcounter : LengthCounter q counter := by
         rw [hzero] at hlength
         simpa using hlength
-      have hiff := startsRotation_iff hcounter hrot
+      have hiff := startsRotation_iff hcounter (hrot hmicro)
       have hsign := negative_iff_marks counter
       show effectiveOp .checkStart control.2.2.1 (!(negativeMarks counter).isEmpty)
         = if q.lenr ≤ q.lenf then none else some .rotStart
@@ -533,8 +535,23 @@ theorem microRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : MicroContr
           rw [hmicro] at hab
           by_cases hle : q.lenr ≤ q.lenf
           · simp [abstractOp, hle] at hab
-          · exact hstart hidle hle
-      have hnext := lengthCounter_sApply op q counter hcounter hfront hstartOp
+          · exact hstart hmicro hidle hle
+      have hfrontOp : op = .tailPop → q.front ≠ [] → 1 ≤ q.lenf := by
+        intro hopEq
+        cases hmicro : control.1 with
+        | sub op' =>
+          rw [hmicro] at hab
+          have hsame : op' = op := Option.some.inj hab
+          exact hfront (by rw [hmicro, hsame, hopEq])
+        | incLength => exact absurd hmicro hnotInc
+        | checkStart =>
+          rw [hmicro] at hab
+          by_cases hle : q.lenr ≤ q.lenf
+          · simp [abstractOp, hle] at hab
+          · simp [abstractOp, hle] at hab
+            rw [← hab] at hopEq
+            cases hopEq
+      have hnext := lengthCounter_sApply op q counter hcounter hfrontOp hstartOp
       have hdeltas : ruleLengthDeltas control windows
           = lengthDeltas (lengthMoveOf control.1 (some op) (queueView q) control.2.2.2)
               (positiveMarks counter).isEmpty (negativeMarks counter).isEmpty := by

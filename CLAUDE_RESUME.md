@@ -1,3 +1,23 @@
+## n285 — `obligation_localRealization`: 具体機械の上で enqueue／dequeue 1 回が固定長の微小プログラムになった（`snocRun_sound`／`tailRun_sound`）。公理への接続はまだ無い
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | **変化なし。** 下の定理は入力 view 1 本の queue についての具体機械で、`H_realizeCanonical` を与える全体機械からはまだ使われていない。進捗として数えない |
+
+**状態: 全体 build 成功（`BUILD=0`、2026-09-20 に `lake build --quiet PalPeg` を再実行、error 0 件）・標準公理のみ（3 本）・無条件 PAL は未完（残り 1 公理）。** `#print axioms PalPeg.PalInPeg.unconditional` は `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization`（n282 から変化なし）。`snocRun_sound`／`tailRun_sound`／`microRun_sound` は標準 3 公理のみ、`sorry` 0。
+
+**何を証明したか**: 入力 view が queue に対して行う 2 操作（`LocalInputView.arrive` ＝ `RTQueue.snoc`、`stepRight` ＝ `head?`＋`RTQueue.tail`）を、具体的な局所機械の固定長の走行にした。
+
+* `snocRun_sound : RTQueue.Inv q → MicroRun … (snocProgram a) state final → MicroRep K q … → owed = 0 → MicroRep K (RTQueue.snoc q a) … ∧ owed = 0`（9 手）。`tailRun_sound` は `front ≠ []` の下で `RTQueue.tail q`（10 手）。**前提は `RTQueue.Inv q` だけ**で、終わりに未払いが 0 に戻るので連結できる。
+* 機械は n284 の `queueRule`（8 本）に長さ counter の 2 本を足した `microRule`（10 本、`LocalQueueMicro`）。微小操作は `sub op`／`checkStart`／`incLength`。`microRule_sound`（sweep 前の健全性、`MicroRep` の保存）。n284 の証明は `queueRule_sound`（sweep 前）に切り出して再利用した。
+* **`lenr ≤ lenf` の局所化**（`LocalQueueLength`）: 2 本の stack の高さ比較は局所的でなく、`rotStart` の `lenf := lenf + lenr` は単独 counter では O(1) に更新できない。符号つき counter を**遅延更新**する: `LengthCounter q c := c + lengthDebt q.state = lenf − lenr`、`lengthDebt` は reversing で `2·|f| + 2`。`rotStart` は `c` を触らず（開始時は `lenr = |front| + 1`）、reversing の `exec` ごとに 2 単位を借り（制御の `owed : Fin 3`）、`incLength` で 1 ずつ返す。`startsRotation_iff`: `¬ lenr ≤ lenf ↔ phase = idle ∧ c < 0`。counter は mark の stack 2 本（pos／neg）で、増減は反対側が空かの 1 bit で選ぶ（`marks_increment`／`marks_decrement`）。
+* `LocalQueueProgram`: `runMicro_snoc`／`runMicro_tail`（抽象 queue 上で `snoc`／`tail` ＝微小操作列、`check_eq_sApply`）、`MicroRun`（`compStep_apply` が与える `TEqG` までの 1 歩の列）、`microRun_sound`（列に沿った反復。プログラムの形 `OwedOk` と各点の HM 前提 `PremisesAlong`）。HM の事実の出所は既存の `RTQueue.snoc_pinv`、`CloseoutCoreEnc22.tail_hrot`、`RTQueue.frontList_eq_append`、`eq_idle_of_rem_zero`。
+* 整理: `ConcreteLocalMachine.lean`（2,155 行）を `LocalQueueLayout`／`LocalQueueMachine`／`LocalQueueLength`／`LocalQueueMicro`／`LocalQueueProgram` に分割（入口は `ConcreteLocalMachine.lean`）。
+
+**未完の部分**: (1) `MicroRun` を実機の走行にする: 制御に job と program counter を持たせた rule（`microRule` の `nq`／`acts` をそのまま使う）と `compStep_apply` で `MicroStep` を出す。(2) `MicroRep` の初期化（高さ K の底を敷く prologue、空の queue）。(3) `head?`（`stepRight` が読む先頭）を tape から読む。(4) view の残り（`back`／`focus`／`near`）と 3 本の view、chain（`LocalChain`）、探索、7 モード（`init = scan = replayStart = id` は仮実装）、入力配布。(5) `LocalStep.realize`／`realize_SAccepts` と `H_realizeCanonical`。
+
 ## n284 — `obligation_localRealization`: queue sub-step の具体的な局所機械とその正しさ（`queueRep_step`）。公理への接続はまだ無い
 
 **公理への進捗**
