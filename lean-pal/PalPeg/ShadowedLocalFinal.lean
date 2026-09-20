@@ -105,10 +105,18 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
         needT' w (heldAfter (Tc w.length) st) k ≤ j → ¬ Starved m.vm)
-    (hstarvedAtLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+    -- after the last report point the trace says nothing: the local ticks are still ticks
+    (Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop)
+    (hpostOfLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
-        Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Starved m.vm)
+        Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Post w m)
+    (hpostTick : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
+      Post w m → PhysWF m.vm → MirInv1 m → Good m → ¬ Starved m.vm →
+      Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absSC m)
+          (absSC (tickC M m)) ∧
+        Post w (tickC M m) ∧ PhysWF (tickC M m).vm ∧ MirInv1 (tickC M m) ∧
+        Good (tickC M m))
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
       repC (micro (sysC M repC) w (x0C (blankVML spare) 2048) s).core.vm.ctl = true →
       ReportPoint w (stAbs (sysC M repC) absSC w (x0C (blankVML spare) 2048) s) ∧
@@ -189,8 +197,10 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
     (fun w m k j hw hinv hneedy hbefore hneed =>
       hnotStarvedOfNeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hneedy hbefore
         hneed)
+    Post
     (fun w m j hw hinv hneedy =>
-      hstarvedAtLastReport w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m j hinv hneedy)
+      hpostOfLastReport w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m j hinv hneedy)
+    hpostTick
     rep_sound rep_complete L0 blankSymbol q0 repQ outQ htape Rep hrepInit hsimTick hsimFeed
     hreadRep hreadOut
 
@@ -334,10 +344,18 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
         needT' w (heldAfter (Tc w.length) st) k ≤ j → ¬ Starved m.vm)
-    (hstarvedAtLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+    -- after the last report point the trace says nothing: the local ticks are still ticks
+    (Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop)
+    (hpostOfLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
-        Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Starved m.vm)
+        Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Post w m)
+    (hpostTick : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
+      Post w m → PhysWF m.vm → MirInv1 m → Good m → ¬ Starved m.vm →
+      Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absSC m)
+          (absSC (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m)) ∧
+        Post w (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m) ∧ PhysWF (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m).vm ∧ MirInv1 (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m) ∧
+        Good (tickC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) m))
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
       repC (micro (sysC (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC) w
         (x0C (blankVML spare) 2048) s).core.vm.ctl = true →
@@ -368,7 +386,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
     RecognizedByTotalPEG PAL := by
   refine given_shadowedLocalSystem entry q first hor hres hChainVerifierSupply
     (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC Good hgoodInit hgoodTick hgoodFeed
-    ?_ hneedOfNotStarved hnotStarvedOfNeed hstarvedAtLastReport rep_sound rep_complete L0
+    ?_ hneedOfNotStarved hnotStarvedOfNeed Post hpostOfLastReport hpostTick rep_sound rep_complete L0
     blankSymbol q0 repQ outQ htape Rep hrepInit hsimTick hsimFeed hreadRep hreadOut
   intro w st Tc hpreTrace hcanonical mode
   rcases Nat.eq_zero_or_pos w.length with hempty | hw
