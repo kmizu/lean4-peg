@@ -167,7 +167,7 @@ theorem pal_in_peg_of_shadowed_sysC
     · rename_i hscan
       exact max_le
         (PalPeg.LocalStarvedRight.usedPH_right_le_of_notStarved hneedy hnotStarved
-          (hsuffix w hw k hbefore.le) hused)
+          (hsuffix w hw k hbefore.le) hused (Or.inr hscan))
         (hchainLookOfNotStarved w m k j hw hinv hnotStarved hneedy hbefore hused hscan)
     · exact Nat.zero_le _
   have hpackOf : ∀ {w s m}, Inv w s m → PhysWF m.vm ∧ MirInv1 m := by

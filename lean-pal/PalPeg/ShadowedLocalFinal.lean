@@ -149,8 +149,8 @@ theorem chainLook_heldAfter (entry q : ℕ) (first : Fin 9)
     exact sufVM_trace w st (Tc w.length) (sharedC_suf w _ _ centreC placeC entry) q first 2048
       hpreTrace.base.pre.trace.tick (by rw [hpreTrace.base.pre.start]; exact sufVM_boot w) k
       hbefore.le
-  have hlookRight :=
-    PalPeg.LocalStarvedRight.usedPH_right_le_of_notStarved hneedy hnotStarved hsuffix hused
+  have hlookRight := PalPeg.LocalStarvedRight.usedPH_right_le_of_notStarved hneedy hnotStarved
+    hsuffix hused (Or.inr hscan)
   rw [hheld] at hused hscan hlookRight ⊢
   have hpositive : 1 ≤ k := by
     rcases Nat.eq_zero_or_pos k with hzero | hpos
@@ -187,8 +187,9 @@ the place right of the right head, whose lookahead the starvation test gives; `r
 them on the centre head; a `scan` tick other than the shift entry uses the letters of the source,
 the lookahead of the right head and that of the chain verifier
 (`TickUsedLetters.usedVM_scanTick_le`, `chainLook_heldAfter`); a tick of any other mode uses the
-letters of the source or moves the centre head one place and the left head two, which the
-starvation test reads (`TickUsedLetters.usedVM_phaseTick_le`,
+letters of the source, or is the moving tick of a shift, which moves the centre head one place
+and the left head two, as the starvation test reads in that mode
+(`TickUsedLetters.usedVM_phaseTick_le`,
 `LocalStarvedRight.usedPH_shiftHeads_le_of_notStarved`).  At the shift entry the chain verifier
 moves once more; the position ledger of the target (in `shift` mode) puts the moved verifier not
 right of the right head, which has arrived (`HeadBehindRight.usedPH_right_le_of_next_position_le`). -/
@@ -208,11 +209,11 @@ theorem nextUsed_heldAfter (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4
     exact sufVM_trace w st (Tc w.length) (sharedC_suf w _ _ centreC placeC entry) q first 2048
       hpreTrace.base.pre.trace.tick (by rw [hpreTrace.base.pre.start]; exact sufVM_boot w) k
       hbefore.le
-  have hlookRight :=
-    PalPeg.LocalStarvedRight.usedPH_right_le_of_notStarved hneedy hnotStarved hsuffix hused
   have htick := hpreTrace.base.pre.trace.tick k hbefore
   by_cases hinitMode : (heldAfter (Tc w.length) st k).ctl.mode = .init
-  · rw [heldAfter_of_le st hbefore.le] at hinitMode hlookRight
+  · have hlookRight := PalPeg.LocalStarvedRight.usedPH_right_le_of_notStarved hneedy hnotStarved
+      hsuffix hused (Or.inl hinitMode)
+    rw [heldAfter_of_le st hbefore.le] at hinitMode hlookRight
     rw [heldAfter_of_le st (Nat.succ_le_of_lt hbefore)]
     obtain ⟨t, hinit, hnext⟩ := PalPeg.GalilTickFair.tick_init_cases (c := (st k).ctl)
       (s := (st k).vm) hinitMode htick
@@ -226,7 +227,9 @@ theorem nextUsed_heldAfter (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4
       rw [hnext]
       exact (PalPeg.TickUsedLetters.usedVM_replayStart_le w hreplayStart).trans hused
     · by_cases hscanMode : (heldAfter (Tc w.length) st k).ctl.mode = .scan
-      · have hlookChain := chainLook_heldAfter entry q first hw hpreTrace hres hsupply hbackRep
+      · have hlookRight := PalPeg.LocalStarvedRight.usedPH_right_le_of_notStarved hneedy
+          hnotStarved hsuffix hused (Or.inr hscanMode)
+        have hlookChain := chainLook_heldAfter entry q first hw hpreTrace hres hsupply hbackRep
           m k j hnotStarved hneedy hbefore hused hscanMode
         have hnextLe : k + 1 ≤ Tc w.length := Nat.succ_le_of_lt hbefore
         rw [heldAfter_of_le st hbefore.le] at hscanMode hused hlookRight hlookChain
@@ -279,14 +282,16 @@ theorem nextUsed_heldAfter (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4
           exact hbound.trans (max_le hcomparedUsed hverifierNext)
         · exact (PalPeg.TickUsedLetters.usedVM_scanTick_le w (c := (st k).ctl) (s := (st k).vm)
             hscanMode htick hshiftNext).trans (max_le (max_le hused hlookRight) hlookChain)
-      · obtain ⟨hlookCenter, hlookLeftTwice⟩ :=
-          PalPeg.LocalStarvedRight.usedPH_shiftHeads_le_of_notStarved hneedy hnotStarved hsuffix
-            hused
-        rw [heldAfter_of_le st hbefore.le] at hinitMode hreplayMode hscanMode hused
-        rw [heldAfter_of_le st hbefore.le] at hlookCenter hlookLeftTwice
+      · have hheld := heldAfter_of_le st hbefore.le
         rw [heldAfter_of_le st (Nat.succ_le_of_lt hbefore)]
-        exact (PalPeg.TickUsedLetters.usedVM_phaseTick_le w htick hinitMode hscanMode
-          hreplayMode).trans (max_le hused (max_le hlookCenter hlookLeftTwice))
+        rcases PalPeg.TickUsedLetters.usedVM_phaseTick_le w htick (hheld ▸ hinitMode)
+          (hheld ▸ hscanMode) (hheld ▸ hreplayMode) with hkeeps | ⟨hshiftMode, hmoves, hmoved⟩
+        · exact hkeeps.trans (hheld ▸ hused)
+        · obtain ⟨hlookCenter, hlookLeftTwice⟩ :=
+            PalPeg.LocalStarvedRight.usedPH_shiftHeads_le_of_notStarved hneedy hnotStarved
+              hsuffix hused (hheld.symm ▸ hshiftMode) (hheld.symm ▸ hmoves)
+          rw [hheld] at hused hlookCenter hlookLeftTwice
+          exact hmoved.trans (max_le hused (max_le hlookCenter hlookLeftTwice))
 
 #print axioms nextUsed_heldAfter
 
@@ -499,8 +504,7 @@ theorem initLocal_heldAfter (entry q : ℕ) (first : Fin 9) {Good : Mirrored1 (t
       (congrArg State.vm hstate)
   have hcanRight : GalilScaffoldChainVerifier.canRight
       (PalPeg.LocalArrival.absHead' m.vm.right m.vm.pending) := by
-    have hall := Classical.not_not.mp hnotStarved
-    have hright := hall.2.2.1
+    have hright := (Classical.not_not.mp hnotStarved).1 (Or.inl hmode)
     rw [PalPeg.LocalReplayParked.abs''_eq_abs' hreplaying] at hright
     exact hright
   obtain ⟨htick, hcanonical⟩ := PalPeg.LocalInitStep.tick_initStep

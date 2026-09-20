@@ -140,12 +140,26 @@ invisible, `LocalArrival.absState'_feed'`). -/
 def feedC (a : Fin 2) (m : Mirrored1 P) : Mirrored1 P :=
   ⟨PalPeg.LocalArrival.feed' (feedV a m.vm), PalPeg.LocalInputView.arrive a m.mirL⟩
 
-/-- **The local starvation test.**  The next abstract tick would have to move one
-of the four cursor positions the scan and shift ticks use, and the cell it needs
-has not arrived. -/
+/-- The guard of the moving tick of a shift (`Tick.shift_one`), which does not depend on the
+shared part of the frame. -/
+def ShiftMoves (s : GalilVM) : Prop :=
+  (Frame.pull shiftLens (shiftFrame (fun _ => True) (fun _ => True))).remainingPos s ∨
+    (Frame.pull fppLens (fallbackFrame (fun _ => True) (fun _ => True))).remainingPos s
+
+theorem shiftMoves_eq (Pw : Shared) (q : ℕ) (first : Fin 9) (s : GalilVM) :
+    ShiftMoves s = (galilFrameS Pw q first).remainingPos s := rfl
+
+/-- **The local starvation test.**  The next abstract tick would have to move a cursor onto a
+cell that has not arrived.  Which cursors a tick moves depends on the mode, and the test reads
+exactly those: an `init` or `scan` tick moves the right head one place; the moving tick of a
+shift moves the centre head one place and the left head two; every other tick moves no head to
+the right.  A test that read all four places in every mode would starve a scan state whose left
+head stands on the last arrived letter, although its tick needs no further letter. -/
 def Starved (x : GalilVML P) : Prop :=
-  ¬ (canRight (abs'' x).left ∧ canRight (abs'' x).center ∧ canRight (abs'' x).right ∧
-      canRight (PalPeg.GalilScaffoldChainVerifier.right (abs'' x).left))
+  ¬ ((x.ctl.mode = .init ∨ x.ctl.mode = .scan → canRight (abs'' x).right) ∧
+      (x.ctl.mode = .shift → ShiftMoves (abs'' x) →
+        canRight (abs'' x).center ∧ canRight (abs'' x).left ∧
+          canRight (PalPeg.GalilScaffoldChainVerifier.right (abs'' x).left)))
 
 /-- **The tracking datum.**  The abstraction of the local state is the pre-loaded
 trace state `stOf k`, truncated to the `raw.length - j` letters that have not

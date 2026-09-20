@@ -7,9 +7,9 @@ import PalPeg.HeadBehindRight
 `LocalSysConcrete.Starved` reads the abstraction of the local state, which on a tracked state is
 the pre-loaded trace state truncated to the arrived letters.  If the state is not starved, its
 right head can still move right after truncation, so the move uses no letter that has not
-arrived: the right-head half of the lookahead of a scan tick has arrived.  The other three
-readings of the test (the centre head, the left head, the left head moved once) give the same for
-the heads a shift moves.
+arrived: the right-head half of the lookahead of an `init` or `scan` tick has arrived.  In
+`shift` mode the test reads the centre head, the left head and the left head moved once, which
+gives the same for the heads the moving tick of a shift moves.
 -/
 
 set_option autoImplicit false
@@ -19,7 +19,7 @@ namespace PalPeg.LocalStarvedRight
 open PalPeg PalPeg.GalilScaffoldTop PalPeg.GalilScaffoldChainInputSupply
 open PalPeg.GalilThrottledRun (truncS truncVM truncPH usedPH usedVM SufVM)
 open PalPeg.LocalReplayParked (Mirrored1 abs'')
-open PalPeg.LocalSysConcrete (Starved Needy)
+open PalPeg.LocalSysConcrete (Starved Needy ShiftMoves)
 
 variable {P : ℕ}
 
@@ -40,29 +40,34 @@ letters.** -/
 theorem usedPH_right_le_of_notStarved {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     {k j : ℕ} {m : Mirrored1 P} (hneedy : Needy raw stOf k j m.vm)
     (hnotStarved : ¬ Starved m.vm) (hsuffix : SufVM raw (stOf k).vm)
-    (hused : usedVM raw (stOf k).vm ≤ j) :
+    (hused : usedVM raw (stOf k).vm ≤ j)
+    (hmode : (stOf k).ctl.mode = .init ∨ (stOf k).ctl.mode = .scan) :
     usedPH raw.length (GalilScaffoldChainVerifier.right (stOf k).vm.right) ≤ j := by
   have hvm : abs'' m.vm = truncVM (raw.length - j) (stOf k).vm := congrArg State.vm hneedy.2
+  have hctl : m.vm.ctl = (stOf k).ctl := congrArg State.ctl hneedy.2
   have hcanRight : GalilScaffoldChainVerifier.canRight (abs'' m.vm).right :=
-    (Classical.not_not.mp hnotStarved).2.2.1
+    (Classical.not_not.mp hnotStarved).1 (by rw [hctl]; exact hmode)
   rw [hvm] at hcanRight
   exact usedPH_right_le_of_suffix hsuffix.2.2.1
     ((PalPeg.GalilTruncTick.usedVM_right raw (stOf k).vm).trans hused) hcanRight
 
 #print axioms usedPH_right_le_of_notStarved
 
-/-- **The heads a shift moves, of a tracked state that is not starved, move within the arrived
-letters**: the centre head one place, the left head two places.  These are the other three
-readings of the starvation test. -/
+/-- **The heads the moving tick of a shift moves, of a tracked state that is not starved, move
+within the arrived letters**: the centre head one place, the left head two places.  These are the
+readings of the starvation test in `shift` mode. -/
 theorem usedPH_shiftHeads_le_of_notStarved {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     {k j : ℕ} {m : Mirrored1 P} (hneedy : Needy raw stOf k j m.vm)
     (hnotStarved : ¬ Starved m.vm) (hsuffix : SufVM raw (stOf k).vm)
-    (hused : usedVM raw (stOf k).vm ≤ j) :
+    (hused : usedVM raw (stOf k).vm ≤ j)
+    (hmode : (stOf k).ctl.mode = .shift) (hmoves : ShiftMoves (stOf k).vm) :
     usedPH raw.length (GalilScaffoldChainVerifier.right (stOf k).vm.center) ≤ j ∧
       usedPH raw.length (GalilScaffoldChainVerifier.right
         (GalilScaffoldChainVerifier.right (stOf k).vm.left)) ≤ j := by
   have hvm : abs'' m.vm = truncVM (raw.length - j) (stOf k).vm := congrArg State.vm hneedy.2
-  obtain ⟨hcanLeft, hcanCenter, -, hcanLeftTwice⟩ := Classical.not_not.mp hnotStarved
+  have hctl : m.vm.ctl = (stOf k).ctl := congrArg State.ctl hneedy.2
+  obtain ⟨hcanCenter, hcanLeft, hcanLeftTwice⟩ :=
+    (Classical.not_not.mp hnotStarved).2 (by rw [hctl]; exact hmode) (by rw [hvm]; exact hmoves)
   rw [hvm] at hcanLeft hcanCenter hcanLeftTwice
   have hleftOnce := usedPH_right_le_of_suffix hsuffix.1
     ((PalPeg.GalilTruncTick.usedVM_left raw (stOf k).vm).trans hused) hcanLeft

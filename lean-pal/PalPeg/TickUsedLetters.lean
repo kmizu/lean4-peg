@@ -254,20 +254,22 @@ theorem usedVM_rewindRel_le (raw : List (Fin 2)) {R : RewindVM → RewindVM → 
   exact max_le (max_le hleft hcenter)
     (max_le hright (le_trans (le_max_right _ _) (le_max_right _ _)))
 
-/-- **The letters used by the target of a tick outside `init`, `scan` and `replayStart`.**  The
-moving tick of a shift moves the centre head one place and the left head two
-(`usedVM_shiftOne_le`); every other such tick uses no new letter: the fallback program does not
-touch the heads, marking keeps them, `choose` puts the left and the centre head on the right
-head, and rewinding moves the left and the centre head to the left.  The ticks left out are
-`usedVM_init_le`, `usedVM_scanTick_le` and `usedVM_replayStart_le`. -/
+/-- **The letters used by the target of a tick outside `init`, `scan` and `replayStart`.**  Either
+the tick uses no new letter — the fallback program does not touch the heads, marking keeps them,
+`choose` puts the left and the centre head on the right head, rewinding moves the left and the
+centre head to the left, the last tick of a shift moves nothing — or it is the moving tick of a
+shift, which moves the centre head one place and the left head two (`usedVM_shiftOne_le`).  The
+ticks left out are `usedVM_init_le`, `usedVM_scanTick_le` and `usedVM_replayStart_le`. -/
 theorem usedVM_phaseTick_le (raw : List (Fin 2)) {P : Shared} {q delay : ℕ} {first : Fin 9}
     {x y : State GalilVM} (htick : Tick (galilFrameS P q first) delay x y)
     (hnotInit : x.ctl.mode ≠ .init) (hnotScan : x.ctl.mode ≠ .scan)
     (hnotReplayStart : x.ctl.mode ≠ .replayStart) :
-    usedVM raw y.vm ≤ max (usedVM raw x.vm)
-      (max (usedPH raw.length (GalilScaffoldChainVerifier.right x.vm.center))
-        (usedPH raw.length (GalilScaffoldChainVerifier.right
-          (GalilScaffoldChainVerifier.right x.vm.left)))) := by
+    usedVM raw y.vm ≤ usedVM raw x.vm ∨
+      (x.ctl.mode = .shift ∧ (galilFrameS P q first).remainingPos x.vm ∧
+        usedVM raw y.vm ≤ max (usedVM raw x.vm)
+          (max (usedPH raw.length (GalilScaffoldChainVerifier.right x.vm.center))
+            (usedPH raw.length (GalilScaffoldChainVerifier.right
+              (GalilScaffoldChainVerifier.right x.vm.left))))) := by
   cases htick with
   | init c s s' hm h0 => exact absurd hm hnotInit
   | scan_wait c s s' hm h0 hb => exact absurd hm hnotScan
@@ -275,48 +277,48 @@ theorem usedVM_phaseTick_le (raw : List (Fin 2)) {P : Shared} {q delay : ℕ} {f
   | scan_match c s s' s'' o hm h0 hc hcmp hmt hpl ho => exact absurd hm hnotScan
   | scan_shift c s s' s'' hm h0 hc hcmp hmt hr hg hb => exact absurd hm hnotScan
   | scan_fallback c s s' s'' hm h0 hc hcmp hmt hg hr hb => exact absurd hm hnotScan
-  | shift_one c s s' hm hp h0 => exact usedVM_shiftOne_le raw h0
-  | shift_done c s o hm hp ho => exact le_max_left _ _
-  | copy_one c s s' hm hp h0 => exact le_trans (le_of_eq (usedVM_fppRel raw h0)) (le_max_left _ _)
-  | copy_done c s s' hm hp h0 => exact le_trans (le_of_eq (usedVM_fppRel raw h0)) (le_max_left _ _)
-  | home_start c s s' hm hl h0 => exact le_trans (le_of_eq (usedVM_fppRel raw h0)) (le_max_left _ _)
-  | home_step c s s' hm hl h0 => exact le_trans (le_of_eq (usedVM_fppRel raw h0)) (le_max_left _ _)
-  | fpp_slice c s s' hm h0 => exact le_trans (le_of_eq (usedVM_fppRel raw h0)) (le_max_left _ _)
-  | fpp_done c s s' hm h0 => exact le_trans (le_of_eq (usedVM_fppRel raw h0)) (le_max_left _ _)
+  | shift_one c s s' hm hp h0 => exact Or.inr ⟨hm, hp, usedVM_shiftOne_le raw h0⟩
+  | shift_done c s o hm hp ho => exact Or.inl le_rfl
+  | copy_one c s s' hm hp h0 => exact Or.inl (le_of_eq (usedVM_fppRel raw h0))
+  | copy_done c s s' hm hp h0 => exact Or.inl (le_of_eq (usedVM_fppRel raw h0))
+  | home_start c s s' hm hl h0 => exact Or.inl (le_of_eq (usedVM_fppRel raw h0))
+  | home_step c s s' hm hl h0 => exact Or.inl (le_of_eq (usedVM_fppRel raw h0))
+  | fpp_slice c s s' hm h0 => exact Or.inl (le_of_eq (usedVM_fppRel raw h0))
+  | fpp_done c s s' hm h0 => exact Or.inl (le_of_eq (usedVM_fppRel raw h0))
   | markEnd_found c s s' hm he h0 =>
     obtain ⟨-, htarget⟩ := h0.1
-    refine le_trans (usedVM_rewindRel_le raw h0 ?_ ?_ ?_) (le_max_left _ _) <;> rw [htarget]
+    refine Or.inl (usedVM_rewindRel_le raw h0 ?_ ?_ ?_) <;> rw [htarget]
     · exact usedVM_left raw s
     · exact usedVM_center raw s
     · exact usedVM_right raw s
-  | markEnd_step c s s' hm he h0 => exact le_trans (le_of_eq (usedVM_fppRel raw h0)) (le_max_left _ _)
+  | markEnd_step c s s' hm he h0 => exact Or.inl (le_of_eq (usedVM_fppRel raw h0))
   | choose_select c s s' hm ho hs h0 =>
     have htarget := h0.1
-    refine le_trans (usedVM_rewindRel_le raw h0 ?_ ?_ ?_) (le_max_left _ _) <;> rw [htarget]
+    refine Or.inl (usedVM_rewindRel_le raw h0 ?_ ?_ ?_) <;> rw [htarget]
     · exact usedVM_right raw s
     · exact usedVM_right raw s
     · exact usedVM_right raw s
   | choose_step c s s' hm hs h0 =>
     obtain ⟨-, htarget⟩ := h0.1
-    refine le_trans (usedVM_rewindRel_le raw h0 ?_ ?_ ?_) (le_max_left _ _) <;> rw [htarget]
+    refine Or.inl (usedVM_rewindRel_le raw h0 ?_ ?_ ?_) <;> rw [htarget]
     · exact usedVM_left raw s
     · exact usedVM_center raw s
     · exact usedVM_right raw s
   | rewind_done c s s' hm hf h0 =>
     have htarget := h0.1
-    refine le_trans (usedVM_rewindRel_le raw h0 ?_ ?_ ?_) (le_max_left _ _) <;> rw [htarget]
+    refine Or.inl (usedVM_rewindRel_le raw h0 ?_ ?_ ?_) <;> rw [htarget]
     · exact usedVM_left raw s
     · exact usedVM_center raw s
     · exact usedVM_right raw s
   | rewind_one c s s' hm hf hp h0 =>
     obtain ⟨-, htarget⟩ := h0.1
-    refine le_trans (usedVM_rewindRel_le raw h0 ?_ ?_ ?_) (le_max_left _ _) <;> rw [htarget]
+    refine Or.inl (usedVM_rewindRel_le raw h0 ?_ ?_ ?_) <;> rw [htarget]
     · exact (le_of_eq (PalPeg.GalilTruncTick.usedPH_left _ _)).trans (usedVM_left raw s)
     · exact usedVM_center raw s
     · exact usedVM_right raw s
   | rewind_pair c s s' hm hf hp h0 =>
     obtain ⟨-, htarget⟩ := h0.1
-    refine le_trans (usedVM_rewindRel_le raw h0 ?_ ?_ ?_) (le_max_left _ _) <;> rw [htarget]
+    refine Or.inl (usedVM_rewindRel_le raw h0 ?_ ?_ ?_) <;> rw [htarget]
     · exact (le_of_eq (PalPeg.GalilTruncTick.usedPH_left _ _)).trans (usedVM_left raw s)
     · exact (le_of_eq (PalPeg.GalilTruncTick.usedPH_left _ _)).trans (usedVM_center raw s)
     · exact usedVM_right raw s

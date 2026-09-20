@@ -19,9 +19,10 @@ residual next to it.
 * **§2 (starvation is local).**  `canRight_right_iff` computes the lookahead
   conjunct of `Starved`, and `canRight_and_lookahead` collapses the pair
   `canRight p ∧ canRight (right p)` to `p.head.right ≠ [] ∨ p.head.incoming ≠ []`
-  — the `gap` bit drops out.  `four_iff_three` and `starved_iff` therefore
-  rewrite `Starved` as **three** local reads: one stored cell right of `left`,
-  `canRight` of `center`, and `canRight` of the parked right head.
+  — the `gap` bit drops out.  `notStarved_reads_iff` and `starved_iff` therefore
+  rewrite `Starved` as local reads chosen by the mode (`NotStarvedReads`): `canRight` of the
+  parked right head in `init`/`scan` mode; in `shift` mode with a moving tick, `canRight` of
+  `center` and one stored cell right of `left`.
   `gap_left_iterate` and `canRight_or_canRight_left` handle the parked head:
   the gap alternates along the replay offset, so one of any two consecutive
   offsets is unconditionally non-starving (`canRight_absR_of_parity`).
@@ -144,8 +145,9 @@ theorem applyAction_right_TEq_sweep (T : STape Γc) (s : Γc) (hK : Kc ≤ pos T
 
 /-! ## 2. Starvation is a local read of four cursors
 
-`Starved x` is `¬ (canRight left ∧ canRight center ∧ canRight right ∧
-canRight (right left))`.  Unfolding `canRight` on `absHead'` turns each
+`Starved x` reads, by the mode, `canRight right` (`init`/`scan`) or `canRight center`,
+`canRight left` and `canRight (right left)` (the moving tick of a shift).  Unfolding `canRight`
+on `absHead'` turns each
 conjunct into a read of the cursor's own `gap` bit, its `near` stack and its
 `far` queue — window data.  Two simplifications happen on the way. -/
 
@@ -177,30 +179,35 @@ theorem hasNext_iff (v : InputView) (q : List (Fin 2)) :
     HasNext v q ↔ ((absHead' v q).head.right ≠ [] ∨ (absHead' v q).head.incoming ≠ []) :=
   Iff.rfl
 
-/-- The four conjuncts of `¬ Starved`, as three local reads. -/
-theorem four_iff_three (x : GalilVML P) :
-    (canRight (abs'' x).left ∧ canRight (abs'' x).center ∧ canRight (abs'' x).right ∧
-        canRight (PalPeg.GalilScaffoldChainVerifier.right (abs'' x).left))
-      ↔ (HasNext x.left x.pending ∧
-          canRight (absHead' x.center x.pending) ∧ canRight (absR x)) := by
+/-- **What `¬ Starved` reads, as local reads.**  In `init` and `scan` mode the parked right head;
+in `shift` mode with a moving tick, the `center` cursor and one stored cell right of `left`
+(`canRight_and_lookahead` collapses the two obligations of the `left` cursor). -/
+def NotStarvedReads (x : GalilVML P) : Prop :=
+  (x.ctl.mode = .init ∨ x.ctl.mode = .scan → canRight (absR x)) ∧
+    (x.ctl.mode = .shift → PalPeg.LocalSysConcrete.ShiftMoves (abs'' x) →
+      canRight (absHead' x.center x.pending) ∧ HasNext x.left x.pending)
+
+/-- The conjuncts of `¬ Starved`, as local reads. -/
+theorem notStarved_reads_iff (x : GalilVML P) :
+    ((x.ctl.mode = .init ∨ x.ctl.mode = .scan → canRight (abs'' x).right) ∧
+      (x.ctl.mode = .shift → PalPeg.LocalSysConcrete.ShiftMoves (abs'' x) →
+        canRight (abs'' x).center ∧ canRight (abs'' x).left ∧
+          canRight (PalPeg.GalilScaffoldChainVerifier.right (abs'' x).left)))
+      ↔ NotStarvedReads x := by
   constructor
   · intro h
-    exact ⟨(canRight_and_lookahead _).mp ⟨h.1, h.2.2.2⟩, h.2.1, h.2.2.1⟩
+    exact ⟨h.1, fun hshift hmoves => ⟨(h.2 hshift hmoves).1,
+      (canRight_and_lookahead _).mp ⟨(h.2 hshift hmoves).2.1, (h.2 hshift hmoves).2.2⟩⟩⟩
   · intro h
-    have h14 := (canRight_and_lookahead (absHead' x.left x.pending)).mpr h.1
-    exact ⟨h14.1, h.2.1, h.2.2, h14.2⟩
+    refine ⟨h.1, fun hshift hmoves => ?_⟩
+    have hleft := (canRight_and_lookahead (absHead' x.left x.pending)).mpr (h.2 hshift hmoves).2
+    exact ⟨(h.2 hshift hmoves).1, hleft.1, hleft.2⟩
 
-/-- **Starvation, spelled out as local reads.**  The `left` cursor contributes a
-gap-free condition (`canRight_and_lookahead`), the `center` cursor its own
-`canRight`, and the parked right head its own. -/
-theorem starved_iff (x : GalilVML P) :
-    Starved x ↔ ¬ (HasNext x.left x.pending ∧
-      canRight (absHead' x.center x.pending) ∧ canRight (absR x)) :=
-  not_congr (four_iff_three x)
+/-- **Starvation, spelled out as local reads.** -/
+theorem starved_iff (x : GalilVML P) : Starved x ↔ ¬ NotStarvedReads x :=
+  not_congr (notStarved_reads_iff x)
 
-theorem not_starved_iff (x : GalilVML P) :
-    ¬ Starved x ↔ (HasNext x.left x.pending ∧
-      canRight (absHead' x.center x.pending) ∧ canRight (absR x)) := by
+theorem not_starved_iff (x : GalilVML P) : ¬ Starved x ↔ NotStarvedReads x := by
   classical
   rw [starved_iff, not_not]
 
@@ -258,8 +265,7 @@ def NAMED_starvedRead {Q : Type} {t : ℕ}
   { test : Q → (Fin t → Window Γc Kc) → Bool //
     ∀ m : Mirrored1 P,
       (test (enc m).1 (fun j => readWin blankc Kc ((enc m).2 j)) = true
-        ↔ ¬ (HasNext m.vm.left m.vm.pending ∧
-             canRight (absHead' m.vm.center m.vm.pending) ∧ canRight (absR m.vm))) }
+        ↔ ¬ NotStarvedReads m.vm) }
 
 /-- …and it is exactly `NAMED_starvedWindow`, by `not_starved_iff`. -/
 def starvedWindow_of_read {Q : Type} {t : ℕ}
@@ -698,7 +704,7 @@ end PalPeg.CloseoutCoreEnc7
 #print axioms PalPeg.CloseoutCoreEnc7.applyAction_right_TEq_sweep
 #print axioms PalPeg.CloseoutCoreEnc7.canRight_right_iff
 #print axioms PalPeg.CloseoutCoreEnc7.canRight_and_lookahead
-#print axioms PalPeg.CloseoutCoreEnc7.four_iff_three
+#print axioms PalPeg.CloseoutCoreEnc7.notStarved_reads_iff
 #print axioms PalPeg.CloseoutCoreEnc7.starved_iff
 #print axioms PalPeg.CloseoutCoreEnc7.not_starved_iff
 #print axioms PalPeg.CloseoutCoreEnc7.gap_left_iterate
