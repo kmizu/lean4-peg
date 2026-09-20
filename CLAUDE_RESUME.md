@@ -1,3 +1,17 @@
+## n290 — `obligation_localRealization`: 仮定 4 本を証明で消した。次は 1 段下ろして義務を書き出す（設計メモ）
+
+**状態（2026-09-20）**: 全体 build の最新は `dd21451`（`BUILD=0`）。以後は module build のみ（`PalPeg.ShadowedLocalFinal` と、`Starved` に触れる 27 モジュールの狙い build、どちらも `BUILD=0`）。**全体 build 成功（`dd21451` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。
+
+**n289 以降に証明して消費者鎖から消した仮定**（`given_shadowedLocalSystem`／`given_openModesAndPhysicalMachine`、どちらも `#print axioms` は標準 3 本）: `hnextUsedOfNotStarved`（shift 入口は `usedVM_shiftEntry_le` ＋ `HeadBehindRight.usedPH_right_le_of_next_position_le`、着地 `k+1` の `shiftPay` 台帳と `watchLag` は trace 点で無条件）、`hbackRep`（`backVerifier_alongPreTrace`、`first ≠ 4` を新しく取る）、`hnotStarvedOfNeed`（`notStarved_of_need_heldAfter`）。commit `e67299d`・`af080ce`・`4391e31`・`35cd885`。
+
+**飢餓テストを直した（`4391e31`）**: 旧 `Starved` はモード無視で `canRight` を `L`・`C`・`R`・`right L` 全部に要求していて、init 直後（`L = C = R` が先端）の scan 状態は need が到着済みでも飢餓になる（`hnotStarvedOfNeed` は偽の疑いが濃かった。機械検査した反証は無い）。新しい定義は init／scan で `R`、shift かつ `ShiftMoves`（frame の `remainingPos` と `rfl` で一致）で `C`・`L`・`right L`。局所読みの形は `CloseoutCoreEnc7.NotStarvedReads`。
+
+**コウタのヒント（同日）**: 「もう localRealization だけやん。一段階下に落として、localRealization を成立させる axiom を書き出して潰していく」「難しく見えたときは視点を変える」。
+
+**設計（未実装・仮説）— 関数の精密化をやめて前方模倣にする**: 残る仮定の `scanStep`／`replayStartStep` は自由変数で、具体関数が無い（`LocalTick1.TickL1` は `SearchLocal`・`chainAt` を含む関係）。関数を書く代わりに (1) `scanStep m := choose (∃ m', 局所後続 m m')`（抽象層は ghost なので noncomputable でよい）、(2) `Rep m p := ∃ m₀, Enc m₀ p ∧ m₀ ~ m`、`~` は「`absState''`・`ctl` が等しく両方 `PhysWF`／`MirInv1`／`Good`」、(3) 物理側の義務は前方模倣 `Enc m₀ p → ∃ m₀', Enc m₀' (L0.apply p none) ∧ 局所後続 m₀ m₀'`。`hsimTick` は `GalilTickFair.tick_canonical_unique`（`Tick ∧ Canonical` の後続は一意）から出る: 物理が計算した `m₀'` と `tickC m` は同じ抽象後続を持つ。`Starved`・`repC` は `abs''` と `ctl` しか読まないので `~` 不変。`LocalShadowRealize.micro_shadow` の `hsimTick` は既に `Inv w s a` を受け取るので、`pal_in_peg_of_shadowed_sysC` の `hsimTick` を「追跡中 or Post」の不変量つきに弱められる（その場で一般化）。Post 相にも `Canonical` を持たせる必要がある。
+
+**書き出す義務の候補（原子・trace 形・状態局所で）**: 局所後続の存在（scan／replayStart、追跡状態で）、`Good` の保存（tick／feed）、`Good → LocalWF`、`Post` の 2 本、`rep_sound`／`rep_complete`、物理機械の存在命題 1 本（`∃ Q Γ t K L0 Enc …`、前方模倣 ＋ feed ＋ 読み出し 2 本）。`repC`・`Good`・`Post` は具体的な定義にしてから公理にする。
+
 ## n289 — `obligation_localRealization`: `hnextUsedOfNotStarved` を shift 入口 1 つまで狭めた（公理は未変化）
 
 **状態（2026-09-20）**: 全体 build の最新は `dd21451`（`BUILD=0`・`error` 0・`sorry` 0）。以後の commit（…・`ab326d6`・`4476b48`・`a6280d0`）は module build `PalPeg.ShadowedLocalFinal` の `BUILD=0` のみ。**全体 build 成功（`dd21451` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: `propext`／`Classical.choice`／`Quot.sound` ＋ `obligation_localRealization`。
