@@ -6,6 +6,7 @@ import PalPeg.CanonicalLocalRealizes
 import PalPeg.LocalInitStep
 import PalPeg.ChainLookBehindRight
 import PalPeg.TickUsedLetters
+import PalPeg.ReplayStartGhost
 
 /-!
 # The final theorem from the local system and a physical machine, the trace side discharged
@@ -904,6 +905,147 @@ theorem tickSucc_unique (entry q : ℕ) (first : Fin 9) (w : List (Fin 2)) {star
 
 #print axioms tickSucc_unique
 
+open PalPeg.ReplayStartGhost
+open PalPeg.GalilScaffoldChainInputSupply
+open PalPeg.GalilScaffoldCounter (ofNat)
+open PalPeg.LocalReplayParked (abs'')
+open PalPeg.LocalArrival (abs')
+
+/-- **A tracked `replayStart` state has a local successor.**  The successor is the ghost commit
+`ReplayStartGhost.replayCommitVm`: its abstraction is the unique `replayStartVM` landing, so it is
+the target of the tick.  The facts the commit needs are read off the trace: in `replayStart` the
+centre head is the right head moved left by the radius, the radius is at most the position of the
+right head, and the state is not replaying. -/
+theorem replayStartNext (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
+    (hw : 0 < w.length) {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc)
+    (m : Mirrored1 (tapeCount spare)) (target : State GalilVM)
+    (hinv : InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m)
+    (hmode : m.vm.ctl.mode = .replayStart)
+    (htarget : Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
+      (absState'' m.vm) target) :
+    ∃ next, NextOK entry q first (localGood (spare := spare)) (postPhase entry q first) w m
+      next := by
+  obtain ⟨k, j, hneedy⟩ := hinv.track
+  have hctl : m.vm.ctl = (heldAfter (Tc w.length) st k).ctl := PalPeg.LocalWF.ctl_of_needy hneedy
+  have hvm : abs'' m.vm
+      = PalPeg.GalilThrottledRun.truncVM (w.length - j) (heldAfter (Tc w.length) st k).vm :=
+    congrArg State.vm hneedy.2
+  unfold heldAfter at hctl hvm
+  have hindexLe : min k (Tc w.length) ≤ Tc w.length := Nat.min_le_right _ _
+  have hmodeTrace : (st (min k (Tc w.length))).ctl.mode = .replayStart := by
+    rw [← hctl]; exact hmode
+  obtain ⟨r, hradiusTrace, hcentreTrace⟩ :=
+    rewindCentre_trace centreC placeC entry q first hpreTrace.base.pre _ hindexLe
+      (Or.inr hmodeTrace)
+  have hradLedger := PalPeg.CloseoutLPack6.radLedger_pt centreC placeC entry q first hw
+    hpreTrace.base.pre
+    (fun i hi => PalPeg.CloseoutPackRun10.leftLive_of_lpackM (hpreTrace.packs i hi).pack)
+    _ hindexLe
+  have hnotReplaying : m.vm.ctl.replaying = false := by
+    have hnoReplay : ∀ i, PalPeg.LocalWF.NoReplay (heldAfter (Tc w.length) st i) :=
+      PalPeg.LocalWF.noReplay_run (lastTick := Tc w.length)
+        (F := galilFrameS (PofC centreC placeC entry w) q first) (delay := 2048)
+        (fun i hi => by
+          rw [heldAfter_of_le st hi.le, heldAfter_of_le st (Nat.succ_le_of_lt hi)]
+          exact hpreTrace.base.pre.trace.tick i hi)
+        (fun i hi => heldAfter_afterLast st hi)
+        (PalPeg.LocalWF.noReplay_zero_of_init (by
+          rw [heldAfter_of_le st (Nat.zero_le _), hpreTrace.base.pre.start]
+          rfl))
+    rcases Nat.eq_zero_or_pos (min k (Tc w.length)) with hindexZero | hindexPos
+    · rw [hindexZero, hpreTrace.base.pre.start] at hmodeTrace
+      exact Mode.noConfusion hmodeTrace
+    · obtain ⟨previous, hprevious⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.pos_iff_ne_zero.mp hindexPos)
+      have hpreviousLt : previous < Tc w.length := by omega
+      have hsource := hnoReplay previous
+      rw [heldAfter_of_le st hpreviousLt.le] at hsource
+      have htick := hpreTrace.base.pre.trace.tick previous hpreviousLt
+      rw [hctl, hprevious]
+      exact notReplaying_of_tick_into_replayStart hsource htick
+        (by rw [← hprevious]; exact hmodeTrace)
+  rw [PalPeg.LocalReplayParked.abs''_eq_abs' hnotReplaying] at hvm
+  have hradiusEq : (abs' m.vm).radius = ofNat r :=
+    ((congrArg GalilVM.radius hvm).trans rfl).trans hradiusTrace
+  have hrightEq : (abs' m.vm).right
+      = PalPeg.GalilThrottledRun.truncPH (w.length - j) (st (min k (Tc w.length))).vm.right :=
+    (congrArg GalilVM.right hvm).trans rfl
+  have hcentreEq : (abs' m.vm).center
+      = PalPeg.GalilThrottledRun.truncPH (w.length - j) (st (min k (Tc w.length))).vm.center :=
+    (congrArg GalilVM.center hvm).trans rfl
+  have hradiusVal : LocalCounter.val (m.vm.phys (m.vm.roles .radius)) = r := by
+    have hvalue := PalPeg.LocalWF.value_absCtr_of_positivePolarity
+      (m.vm.phys (m.vm.roles .radius))
+    have hradiusAbs : (abs' m.vm).radius
+        = PalPeg.LocalCounter.absCtr (m.vm.phys (m.vm.roles .radius)) true := by
+      rw [← hinv.good.1.2.1]; rfl
+    rw [← hradiusAbs, hradiusEq] at hvalue
+    have hofNat : PalPeg.GalilScaffoldCounter.value (ofNat r) = (r : ℤ) := by
+      simp [PalPeg.GalilScaffoldCounter.value, ofNat]
+    omega
+  have hland : GalilScaffoldInputHead.left^[LocalCounter.val (m.vm.phys (m.vm.roles .radius))]
+      (abs' m.vm).right = (abs' m.vm).center := by
+    rw [hradiusVal, hrightEq, hcentreEq, truncPH_left_iterate, ← hcentreTrace]
+  have hradiusLe : LocalCounter.val (m.vm.phys (m.vm.roles .radius))
+      ≤ position (abs' m.vm).right := by
+    rw [hradiusVal, hrightEq]
+    have hle := hradLedger.le
+    rw [hradiusTrace] at hle
+    have hofNat : PalPeg.GalilScaffoldCounter.value (ofNat r) = (r : ℤ) := by
+      simp [PalPeg.GalilScaffoldCounter.value, ofNat]
+    show r ≤ position (st (min k (Tc w.length))).vm.right
+    omega
+  obtain ⟨landing, o, hlanding, -, -, htargetEq⟩ :=
+    PalPeg.GalilTickFair.tick_replayStart_cases (c := m.vm.ctl) (s := abs'' m.vm) hmode htarget
+  have hlandingVM : replayStartVM entry (abs'' m.vm) landing := hlanding
+  obtain ⟨landingReplaying, hlandingReplaying⟩ : ∃ flag : Bool,
+      flag = (galilFrameS (PofC centreC placeC entry w) q first).replayPos landing := ⟨_, rfl⟩
+  rw [← hlandingReplaying] at htargetEq
+  have hflag : landingReplaying = true ∨
+      LocalCounter.val (m.vm.phys (m.vm.roles .radius)) = 0 := by
+    cases r with
+    | zero => exact Or.inr hradiusVal
+    | succ r' =>
+      left
+      rw [hlandingReplaying]
+      show PalPeg.GalilScaffoldCounter.positive landing.replay = true
+      rw [hlandingVM.1, show (abs'' m.vm).radius = (abs' m.vm).radius from rfl, hradiusEq]
+      rfl
+  have hnextLanding := replayStartVM_replayCommitVm (x := m.vm) entry
+    { m.vm.ctl with mode := Mode.scan, clock := 2048, output := o, replaying := landingReplaying }
+    hinv.phys.inv.roles hinv.good.1.2.2.1 hinv.good.2.1 hnotReplaying hflag hland
+  have hnextVm := replayStartVM_unique hnextLanding hlandingVM
+  refine ⟨⟨replayCommitVm entry
+    { m.vm.ctl with mode := Mode.scan, clock := 2048, output := o, replaying := landingReplaying }
+    m.vm, m.vm.center⟩, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · -- the tick
+    suffices htickTo : ∀ landed : State GalilVM, landed = target →
+        Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) landed from
+      htickTo _ (by rw [htargetEq]; exact congrArg (State.mk _) hnextVm)
+    intro landed hlanded
+    rw [hlanded]
+    exact htarget
+  · -- canonical: only the search cursor clause applies
+    refine ⟨fun hscan => ?_, fun hscan => ?_, fun _ => ?_⟩
+    · exact absurd (hmode.symm.trans hscan) (by decide)
+    · exact absurd (hmode.symm.trans hscan) (by decide)
+    · obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, hperiodOnly, hwalker⟩ := hnextLanding
+      exact ⟨hperiodOnly, hwalker⟩
+  · -- the physical pack
+    exact ⟨inv_replayCommitVm entry _ hinv.phys.inv,
+      parkedOK_replayCommitVm entry _ hinv.phys.inv.roles hradiusLe,
+      hinv.phys.pend, hinv.phys.walkerProper⟩
+  · -- the mirror of the centre
+    exact ⟨PalPeg.LocalReplaySwap.Twin.refl _, hinv.phys.inv.views.2.1⟩
+  · -- the polarity bundle: `radius` and `replay` exchange their polarity
+    obtain ⟨⟨hremaining, hradius, hlength, hcycle, hfppWork⟩, hwork, hreplay⟩ := hinv.good
+    exact ⟨⟨hremaining, hreplay, hlength, hcycle, hfppWork⟩, hwork, hradius⟩
+  · -- the phase after the last report point
+    intro hpost
+    rcases hpost with ⟨-, -, hscan⟩ | hfrozen
+    · exact absurd (hmode.symm.trans hscan) (by decide)
+    · exact absurd hfrozen (notFrozen_of_invC entry q first hw hpreTrace m hinv)
+
 /-- **`PAL ∈ PEG` from the two open modes and a physical machine.**  The `init` mode is
 `LocalInitStep.initStep` (`initLocal_heldAfter`).  The seven phase modes of
 the abstract local system are `CloseoutCoreAgree.realizes_seven_SL`; its side conditions are
@@ -924,18 +1066,12 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc →
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    -- the two open modes: a tracked, non-starved local state has a local successor
+    -- the open mode `scan`: a tracked, non-starved local state has a local successor
+    -- (`replayStart` has one by `replayStartNext`)
     (hscanNext : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (target : State GalilVM),
         InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .scan → ¬ Starved m.vm →
-        Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
-        ∃ next, NextOK entry q first (localGood (spare := spare)) (postPhase entry q first) w m next)
-    (hreplayStartNext : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 (tapeCount spare)) (target : State GalilVM),
-        InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .replayStart →
-        ¬ Starved m.vm →
         Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
         ∃ next, NextOK entry q first (localGood (spare := spare)) (postPhase entry q first) w m next)
     -- on the plateau after the last report point the local ticks are still ticks
@@ -1203,7 +1339,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     exact PalPeg.CanonicalLocalRealizes.realizes_canonical hshared htick hcanonicalTick
       (fun m target hinv hmode hnotStarved htarget => by
         have hspec := chosenStep_spec
-          (hreplayStartNext w st Tc hpreTrace hcanonical m target hinv hmode hnotStarved htarget)
+          (replayStartNext entry q first hw hpreTrace m target hinv hmode htarget)
         exact ⟨hspec.1, hspec.2.1, hspec.2.2.1, hspec.2.2.2.1⟩)
 
 #print axioms given_openModesAndPhysicalMachine

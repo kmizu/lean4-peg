@@ -1,3 +1,24 @@
+## n315（2026-09-21）: tracked な replayStart 状態に局所後継があることを証明した。仮説 `hreplayStartNext` が消えた
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: `given_openModesAndPhysicalMachine` の仮説 `hreplayStartNext` が無くなり、定理 `ShadowedLocalFinal.replayStartNext` になった。
+* 新モジュール `PalPeg/ReplayStartGhost.lean`（`ShadowedLocalFinal` が import、`Workbench` 経由でルートに入る）。
+  * trace 側: `RewindCentre`（rewind／replayStart で `center = left^[r] right`、`radius = ofNat r`）、`rewindCentre_tick`、`rewindCentre_trace`、`notReplaying_of_tick_into_replayStart`（着地は `rewind_done` だけ。`LocalWF.PhaseMode` に replayStart が無いので既存の `NoReplay` からは直接出ない）。
+  * ghost 側: `mirrorOfTape`、`replayCommitVm`（`LocalTick2.commitReplay`＋`left := center`＋鏡 3 本を新しいテープに付け直し）、`countersShaped_commitReplay`、`inv_replayCommitVm`、`replayStartVM_replayCommitVm`（`MirInv1` の仮説は不要）、`parkedOK_replayCommitVm`。
+  * `replayStartVM_unique`（15 場を全部固定するので着地は一意）、`truncPH_left_iterate`。
+* 組み立て `replayStartNext`: `hinv.track` から trace の添字を取り、`rewindCentre_trace`・`radLedger_pt`・`noReplay_run` で `hland`／`hradiusLe`／`hnotReplaying` を tracked 状態に運び、既存の `GalilTickFair.tick_replayStart_cases` で `htarget` を分解、一意性で `abs'' next.vm = landing`。`NextOK` の 6 場を埋める（`Good` は `radius`／`replay` の極性入れ替え、`Post` は `notFrozen_of_invC`）。
+* **形式化のミスだった点**: 既存の `commitReplay` は役割を入れ替え・reset・push するのに鏡 `radiusMir`／`lowerMir`／`lengthMir` に触らず、局所層自身の不変量 `LocalTick1.Inv`（`MirrorsAttached`）を保たなかった（n313）。replayStart の局所 step は一度も `Inv` と突き合わされていなかった。
+* 進め方の記録: 部品を 1 つずつスクラッチで機械検査し（n311〜n314）、最後に束ねてから移設した。移設は 2 ファイルとも一発で通った。つまずきは「構造体リテラルを 2 行に割ると parse error」が 3 回。
+
+**`given_openModesAndPhysicalMachine` に残る仮説**: 供給可能（`hfirst`／`hq`／`hor`／`hres`／`hChainVerifierSupply`）、抽象局所層は存在仮説 2 本（`hscanNext`、`hplateauNext`）、物理機械（`htape`、`Enc`、`hencInit`、`hforwardTick`、`hforwardFeed`、`hencRep`、`hencOut`、`PhysFrozen`、`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`）。ActRule の実装は未着手。物理側に置いた義務: fallback 相の L／C の歩行（n305）、reset 後の junk を読まないこと（n306、n312）、replayStart の鏡テープ付け替え（n315）。
+
+**次の goal**: `hscanNext`（tracked・非 starved な scan 状態に局所後継がある）。scan は wait／count／match／restart／shift 入口／fallback 入口の分岐を持つ。replayStart と同じ手順で、まず抽象の着地がどこまで一意か（`GalilTickFair.tick_canonical_unique`）と、既存の `LocalTick1.TickL1`／`LocalReplayParked` の scan 部品がどの分岐を覆っているかを一次情報で確かめる。
+
 ## n314（2026-09-21）: run 不変量 `localGood` に `work`／`replay` の極性を足し、保存を証明した
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
