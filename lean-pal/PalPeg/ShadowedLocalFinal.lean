@@ -428,15 +428,20 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       ∀ mode : Mode, Realizes Good w (heldAfter (Tc w.length) st) (Tc w.length) (stepOf (M w) mode) mode)
     -- after the last report point the trace says nothing: the local ticks are still ticks
     (Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop)
+    (frozen : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop)
+    (hnotFrozenTracked : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ m : Mirrored1 (tapeCount spare), InvC Good w (heldAfter (Tc w.length) st) m →
+        ¬ frozen w m)
     (hpostOfLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Post w m)
     (hpostTick : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
       Post w m → PhysWF m.vm → MirInv1 m → Good m → ¬ Starved m.vm →
-      (Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absSC m)
+      TickSucc (PofC centreC placeC entry w) q first 2048
+          (PalPeg.GalilTickFair.Canonical entry 2048) (frozen w m) (absSC m)
           (absSC (tickC (M w) m)) ∧
-        PalPeg.GalilTickFair.Canonical entry 2048 (absSC m) (absSC (tickC (M w) m))) ∧
         Post w (tickC (M w) m) ∧ PhysWF (tickC (M w) m).vm ∧ MirInv1 (tickC (M w) m) ∧
         Good (tickC (M w) m))
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
@@ -458,7 +463,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
         TickSucc (PofC centreC placeC entry w) q first 2048
-          (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm) (absSC m)
+          (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm ∨ frozen w m) (absSC m)
           (absSC (tickC (M w) m)) →
         Rep w m p → Rep w (tickC (M w) m) (L0.apply blankSymbol p none))
     (hsimFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
@@ -542,7 +547,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
         hscan)
     (fun w m k j hw _ hneedy hbefore hneed =>
       notStarved_of_need_heldAfter entry q first hw (htraceOf w hw).1 m k j hneedy hbefore hneed)
-    Post
+    Post frozen
+    (fun w m hw hinv => hnotFrozenTracked w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2 m hinv)
     (fun w m j hw hinv hneedy =>
       hpostOfLastReport w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m j hinv hneedy)
     hpostTick
@@ -681,14 +687,92 @@ theorem chosenStep_spec {entry q : ℕ} {first : Fin 9} {Good : Mirrored1 (tapeC
   rw [dif_pos h]
   exact Classical.choose_spec h
 
+/-- **The abstract layer is frozen** once its right head has left the last letter of the word:
+no report point lies beyond, so the abstract layer (a ghost that knows the word) stops there, and
+the machine is only asked to keep its report bit off (not to follow an abstract run for which
+the trace gives no invariant). -/
+def frozenAt (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)) : Prop :=
+  2 * w.length ≤ position (absSC m).vm.right
+
+open Classical in
+/-- The steps that do nothing on frozen states. -/
+noncomputable def freezeSteps (isFrozen : Mirrored1 (tapeCount spare) → Prop)
+    (M : Steps (tapeCount spare)) : Steps (tapeCount spare) where
+  init := fun m => if isFrozen m then m else M.init m
+  scan := fun m => if isFrozen m then m else M.scan m
+  shift := fun m => if isFrozen m then m else M.shift m
+  copy := fun m => if isFrozen m then m else M.copy m
+  home := fun m => if isFrozen m then m else M.home m
+  fpp := fun m => if isFrozen m then m else M.fpp m
+  markEnd := fun m => if isFrozen m then m else M.markEnd m
+  choose := fun m => if isFrozen m then m else M.choose m
+  rewind := fun m => if isFrozen m then m else M.rewind m
+  replayStart := fun m => if isFrozen m then m else M.replayStart m
+
+open Classical in
+theorem stepOf_freezeSteps (isFrozen : Mirrored1 (tapeCount spare) → Prop)
+    (M : Steps (tapeCount spare)) (mode : Mode) (m : Mirrored1 (tapeCount spare)) :
+    stepOf (freezeSteps isFrozen M) mode m = if isFrozen m then m else stepOf M mode m := by
+  cases mode <;> rfl
+
+/-- Freezing does not change what the steps realize: tracked states are not frozen. -/
+theorem realizes_freeze {Good : Mirrored1 (tapeCount spare) → Prop} {w : List (Fin 2)}
+    {stOf : ℕ → State GalilVM} {lastTick : ℕ} {isFrozen : Mirrored1 (tapeCount spare) → Prop}
+    {M : Steps (tapeCount spare)} {mode : Mode}
+    (hnotFrozen : ∀ m, InvC Good w stOf m → ¬ isFrozen m)
+    (hrealizes : Realizes Good w stOf lastTick (stepOf M mode) mode) :
+    Realizes Good w stOf lastTick (stepOf (freezeSteps isFrozen M) mode) mode := by
+  intro m k j hinv hmode hnotStarved hneedy hneed hbefore
+  rw [stepOf_freezeSteps, if_neg (hnotFrozen m hinv)]
+  exact hrealizes m k j hinv hmode hnotStarved hneedy hneed hbefore
+
+/-- **A tracked state is not frozen**: on the trace the right head stays on or before the last
+letter (`BranchSupply.rightHeadPos_le_alongTrace`), and truncation keeps positions. -/
+theorem notFrozen_of_invC (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc)
+    {Good : Mirrored1 (tapeCount spare) → Prop} (m : Mirrored1 (tapeCount spare))
+    (hinv : InvC Good w (heldAfter (Tc w.length) st) m) : ¬ frozenAt w m := by
+  intro hfrozen
+  obtain ⟨_, _, ⟨k, j, hneedy⟩, _⟩ := hinv
+  have hpos : position (absSC m).vm.right
+      = position (st (min k (Tc w.length))).vm.right := by
+    show position (absState'' m.vm).vm.right = _
+    rw [hneedy.2]
+    rfl
+  unfold frozenAt at hfrozen
+  rw [hpos] at hfrozen
+  have hTcPos : 1 ≤ Tc w.length :=
+    hpreTrace.base.tc1 ▸ hpreTrace.base.pre.mono 1 w.length hw le_rfl
+  rcases Nat.eq_zero_or_pos (min k (Tc w.length)) with hzero | hindexPos
+  · rw [hzero, hpreTrace.base.pre.start] at hfrozen
+    have hbootPos : position (initialHead w) = 0 := by simp [position, initialHead]
+    have hfrozen' : 2 * w.length ≤ position (initialHead w) := hfrozen
+    omega
+  · have hbound := PalPeg.BranchSupply.rightHeadPos_le_alongTrace centreC placeC entry q first hw
+      hpreTrace.base.pre
+      (PalPeg.BranchSupply.frontPack_alongTrace centreC placeC entry q first hw
+        hpreTrace.base.pre)
+      hTcPos (min k (Tc w.length)) hindexPos (Nat.min_le_right _ _)
+    omega
+
+#print axioms notFrozen_of_invC
+
+/-- The abstraction decides whether a state is frozen. -/
+theorem frozenAt_of_absSC_eq {w : List (Fin 2)} {encoded m : Mirrored1 (tapeCount spare)}
+    (habs : absSC encoded = absSC m) : frozenAt w encoded ↔ frozenAt w m := by
+  unfold frozenAt
+  rw [habs]
+
 /-- The steps of the abstract local layer for the word `w`: `LocalInitStep.initStep`, the seven
 phase steps of `CloseoutCoreAgree.SL`, and `chosenStep` for `scan` and `replayStart`. -/
 noncomputable def ghostSteps (entry q : ℕ) (first : Fin 9)
     (Good : Mirrored1 (tapeCount spare) → Prop)
     (Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop) (w : List (Fin 2)) :
     Steps (tapeCount spare) :=
-  localSteps q first (PalPeg.LocalInitStep.initStep entry) (chosenStep entry q first Good Post w)
-    (chosenStep entry q first Good Post w)
+  freezeSteps (frozenAt w)
+    (localSteps q first (PalPeg.LocalInitStep.initStep entry)
+      (chosenStep entry q first Good Post w) (chosenStep entry q first Good Post w))
 
 /-- The starvation test reads the abstraction only (the mode and the abstract heads). -/
 theorem starved_of_absSC_eq {encoded m : Mirrored1 (tapeCount spare)}
@@ -769,9 +853,9 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
         Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Post w m)
     (hpostTick : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
       Post w m → PhysWF m.vm → MirInv1 m → Good m → ¬ Starved m.vm →
-      (Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absSC m)
+      TickSucc (PofC centreC placeC entry w) q first 2048
+          (PalPeg.GalilTickFair.Canonical entry 2048) (frozenAt w m) (absSC m)
           (absSC (tickC (ghostSteps entry q first Good Post w) m)) ∧
-        PalPeg.GalilTickFair.Canonical entry 2048 (absSC m) (absSC (tickC (ghostSteps entry q first Good Post w) m))) ∧
         Post w (tickC (ghostSteps entry q first Good Post w) m) ∧ PhysWF (tickC (ghostSteps entry q first Good Post w) m).vm ∧ MirInv1 (tickC (ghostSteps entry q first Good Post w) m) ∧
         Good (tickC (ghostSteps entry q first Good Post w) m))
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
@@ -786,8 +870,8 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
         absSC encoded = absSC m → Enc encoded p →
         ∃ next, Enc next (L0.apply blankSymbol p none) ∧
           TickSucc (PofC centreC placeC entry w) q first 2048
-            (PalPeg.GalilTickFair.Canonical entry 2048) (Starved encoded.vm) (absSC encoded)
-            (absSC next))
+            (PalPeg.GalilTickFair.Canonical entry 2048)
+            (Starved encoded.vm ∨ frozenAt w encoded) (absSC encoded) (absSC next))
     (hforwardFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ letter m encoded p, OnRun Good Post w (heldAfter (Tc w.length) st) m →
@@ -808,7 +892,9 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (fun w => ghostSteps entry q first Good Post w)
     (fun w m => reportTest entry q first w (absSC m))
     Good hgoodInit hgoodTick hgoodFeed
-    ?_ Post hpostOfLastReport hpostTick
+    ?_ Post frozenAt
+    (fun w st Tc hw hpreTrace _ m hinv => notFrozen_of_invC entry q first hw hpreTrace m hinv)
+    hpostOfLastReport hpostTick
     (fun w s _ _ hreport => (reportTest_iff entry q first w _).mp hreport)
     (fun w s _ hpoint hrefreshed => (reportTest_iff entry q first w _).mpr ⟨hpoint, hrefreshed⟩)
     L0
@@ -820,7 +906,8 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
         hforwardTick w st Tc hpreTrace hcanonical m encoded p honRun habs henc
       rw [habs] at hsuccEncoded
       exact ⟨next, hencNext,
-        tickSucc_unique entry q first w (starved_of_absSC_eq habs) hsuccEncoded hsucc⟩)
+        tickSucc_unique entry q first w
+          (or_congr (starved_of_absSC_eq habs) (frozenAt_of_absSC_eq habs)) hsuccEncoded hsucc⟩)
     (fun w st Tc hpreTrace hcanonical letter m p honRun ⟨encoded, henc, habs⟩ =>
       hforwardFeed w st Tc hpreTrace hcanonical letter m encoded p honRun habs henc)
     (fun w st Tc hpreTrace hcanonical m p honRun ⟨encoded, henc, habs⟩ => by
@@ -873,6 +960,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
             rfl))))
       (traceRightLe_heldAfter entry q first hw hpreTrace))
   obtain ⟨hshift, hcopy, hhome, hfpp, hmarkEnd, hchoose, hrewind⟩ := hseven
+  refine realizes_freeze (fun m hinv => notFrozen_of_invC entry q first hw hpreTrace m hinv) ?_
   cases mode with
   | init =>
     exact PalPeg.CanonicalLocalRealizes.realizes_canonical hshared htick hcanonicalTick
