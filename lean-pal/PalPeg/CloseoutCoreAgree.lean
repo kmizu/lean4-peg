@@ -46,7 +46,7 @@ NAMED residual.  It builds no `LocalStep` and proves no new dynamics, so
 
 ```
 RightInBounds (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) : Prop :=
-  ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .shift →
+  ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = .shift →
     ¬ RemPosL m.vm → (abs' m.vm).right.head.left.length ≤ raw.length
 ```
 
@@ -83,6 +83,8 @@ open PalPeg.LocalRealizesScan (chooseStepC rewindStepC)
 open PalPeg.CloseoutCoreStep (AgreeOn agreeOn_refl realizes_congr)
 
 variable {P : ℕ}
+
+variable {Good : Mirrored1 P → Prop}
 
 /-! ## 1. Word-free local reads -/
 
@@ -211,21 +213,21 @@ noncomputable def SL (qq : ℕ) (first : Fin 9) : Steps P where
 variable {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
 
 theorem agree_copy (qq : ℕ) (first : Fin 9) :
-    AgreeOn raw stOf (copyStepL (P := P)) (SL qq first).copy .copy := agreeOn_refl _ _
+    AgreeOn Good raw stOf (copyStepL (P := P)) (SL qq first).copy .copy := agreeOn_refl _ _
 
 theorem agree_home (qq : ℕ) (first : Fin 9) :
-    AgreeOn raw stOf (homeStepL (P := P)) (SL qq first).home .home := agreeOn_refl _ _
+    AgreeOn Good raw stOf (homeStepL (P := P)) (SL qq first).home .home := agreeOn_refl _ _
 
 theorem agree_markEnd (qq : ℕ) (first : Fin 9) :
-    AgreeOn raw stOf (markEndStepL (P := P)) (SL qq first).markEnd .markEnd :=
+    AgreeOn Good raw stOf (markEndStepL (P := P)) (SL qq first).markEnd .markEnd :=
   agreeOn_refl _ _
 
 theorem agree_choose (Pw : Shared) (qq : ℕ) (first : Fin 9) :
-    AgreeOn raw stOf (chooseStepC (P := P) Pw qq first) (SL qq first).choose .choose :=
+    AgreeOn Good raw stOf (chooseStepC (P := P) Pw qq first) (SL qq first).choose .choose :=
   fun m _ _ _ _ _ _ _ => chooseStepW_eq Pw qq first m
 
 theorem agree_rewind (Pw : Shared) (qq : ℕ) (first : Fin 9) :
-    AgreeOn raw stOf (rewindStepC (P := P) Pw qq first) (SL qq first).rewind .rewind :=
+    AgreeOn Good raw stOf (rewindStepC (P := P) Pw qq first) (SL qq first).rewind .rewind :=
   fun m _ _ _ _ _ _ _ => rewindStepW_eq Pw qq first m
 
 /-! ## 4. `fpp`: `TickL3` is frame-blind on `fpp` states -/
@@ -251,7 +253,7 @@ theorem ffpp_eq_of_fpp (Pw : Shared) (qq : ℕ) (first : Fin 9) (m : Mirrored1 P
   rw [tickL3_fpp_congr Pw dumS qq first m.vm hmd]
 
 theorem agree_fpp (Pw : Shared) (qq : ℕ) (first : Fin 9) :
-    AgreeOn raw stOf (PalPeg.LocalWF.ffpp (P := P) Pw qq first) (SL qq first).fpp .fpp :=
+    AgreeOn Good raw stOf (PalPeg.LocalWF.ffpp (P := P) Pw qq first) (SL qq first).fpp .fpp :=
   fun m _ _ _ hmd _ _ _ => ffpp_eq_of_fpp Pw qq first m hmd
 
 /-! ## 5. `shift`: the one NAMED residual -/
@@ -259,14 +261,15 @@ theorem agree_fpp (Pw : Shared) (qq : ℕ) (first : Fin 9) :
 /-- **NAMED residual.**  The R head never stands past the end of the input on
 a `shift` state that is handing back to `scan`.  A reachability fact about the
 input supply; *not proved here*. -/
-def RightInBounds (P : ℕ) (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) : Prop :=
-  ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .shift → ¬ RemPosL m.vm →
+def RightInBounds (P : ℕ) (Good : Mirrored1 P → Prop) (raw : List (Fin 2))
+    (stOf : ℕ → State GalilVM) : Prop :=
+  ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = .shift → ¬ RemPosL m.vm →
     (abs' m.vm).right.head.left.length ≤ raw.length
 
 theorem agree_shift {Pw : Shared} (qq : ℕ) (first : Fin 9)
     (H_letter : Pw.onLetter = onLetterVM raw) (H_first : Pw.leftFirst = leftFirstVM)
-    (H_bound : RightInBounds P raw stOf) :
-    AgreeOn raw stOf (shiftStepL (P := P) Pw) (SL qq first).shift .shift := by
+    (H_bound : RightInBounds P Good raw stOf) :
+    AgreeOn Good raw stOf (shiftStepL (P := P) Pw) (SL qq first).shift .shift := by
   classical
   intro m k j hinv hmd hns hn hneed
   show shiftStepL Pw m = shiftStepW m
@@ -299,16 +302,16 @@ theorem realizes_seven_SL {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay : ℕ}
       (stOf k) (stOf (k+1)))
     (H_afterLast : ∀ k, lastTick ≤ k → stOf k = stOf lastTick)
     (H_start : PalPeg.LocalWF.NoReplay (stOf 0)) (hq : qq ≤ 64)
-    (H_wf : ∀ m : Mirrored1 P, InvC raw stOf m → PalPeg.LocalWF.LocalWF m.vm)
+    (H_wf : ∀ m : Mirrored1 P, Good m → PalPeg.LocalWF.LocalWF m.vm)
     (H_letter : Pw.onLetter = onLetterVM raw) (H_first : Pw.leftFirst = leftFirstVM)
-    (H_bound : RightInBounds P raw stOf) :
-    Realizes raw stOf lastTick (SL (P := P) qq first).shift .shift ∧
-    Realizes raw stOf lastTick (SL (P := P) qq first).copy .copy ∧
-    Realizes raw stOf lastTick (SL (P := P) qq first).home .home ∧
-    Realizes raw stOf lastTick (SL (P := P) qq first).fpp .fpp ∧
-    Realizes raw stOf lastTick (SL (P := P) qq first).markEnd .markEnd ∧
-    Realizes raw stOf lastTick (SL (P := P) qq first).choose .choose ∧
-    Realizes raw stOf lastTick (SL (P := P) qq first).rewind .rewind :=
+    (H_bound : RightInBounds P Good raw stOf) :
+    Realizes Good raw stOf lastTick (SL (P := P) qq first).shift .shift ∧
+    Realizes Good raw stOf lastTick (SL (P := P) qq first).copy .copy ∧
+    Realizes Good raw stOf lastTick (SL (P := P) qq first).home .home ∧
+    Realizes Good raw stOf lastTick (SL (P := P) qq first).fpp .fpp ∧
+    Realizes Good raw stOf lastTick (SL (P := P) qq first).markEnd .markEnd ∧
+    Realizes Good raw stOf lastTick (SL (P := P) qq first).choose .choose ∧
+    Realizes Good raw stOf lastTick (SL (P := P) qq first).rewind .rewind :=
   PalPeg.CloseoutCoreStep.realizes_seven_of_agree (SL qq first) H_shared H_trace H_afterLast H_start hq H_wf
     (agree_shift qq first H_letter H_first H_bound)
     (agree_copy qq first) (agree_home qq first) (agree_fpp Pw qq first)

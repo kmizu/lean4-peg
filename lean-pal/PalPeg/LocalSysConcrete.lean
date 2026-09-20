@@ -159,10 +159,15 @@ def Tracked (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) (x : GalilVML P)
 
 /-- **The invariant of the concrete local system.**  The physical pack, the left
 mirror's twin invariant, and the tracking datum. -/
-structure InvC (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) (m : Mirrored1 P) : Prop where
+structure InvC (Good : Mirrored1 P → Prop) (raw : List (Fin 2)) (stOf : ℕ → State GalilVM)
+    (m : Mirrored1 P) : Prop where
   phys : PhysWF m.vm
   mir : MirInv1 m
   track : Tracked raw stOf m.vm
+  /-- The invariants of the local layer that are neither physical nor read off the trace (the
+  polarity bundle, the counter magnitudes, the parking of the cursors).  They are carried along
+  the run, not assumed of every tracked state. -/
+  good : Good m
 
 /-! ## 3. The arrival oracles -/
 
@@ -281,9 +286,10 @@ non-starved state standing at trace index `k` with `j` letters arrived and the
 need of tick `k` met, the mode's local step lands on the trace's next state and
 keeps the physical invariants.  Only ticks below `lastTick` are concerned: a pre-loaded trace
 is a trace of ticks up to its last report point only. -/
-def Realizes (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) (lastTick : ℕ)
+def Realizes (Good : Mirrored1 P → Prop) (raw : List (Fin 2)) (stOf : ℕ → State GalilVM)
+    (lastTick : ℕ)
     (f : Mirrored1 P → Mirrored1 P) (md : Mode) : Prop :=
-  ∀ (m : Mirrored1 P) (k j : ℕ), InvC raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
+  ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
     Needy raw stOf k j m.vm → needT' raw stOf k ≤ j → k < lastTick →
       Needy raw stOf (k+1) j (f m).vm ∧ PhysWF (f m).vm ∧ MirInv1 (f m)
 
@@ -342,19 +348,19 @@ theorem tick_of_need {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {Pw : S
 
 /-! ## 8. The oracles -/
 
-theorem stepOf_realizes {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {lastTick : ℕ}
+theorem stepOf_realizes {Good : Mirrored1 P → Prop} {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {lastTick : ℕ}
     {M : Steps P}
-    (H_init : Realizes raw stOf lastTick M.init .init)
-    (H_scan : Realizes raw stOf lastTick M.scan .scan)
-    (H_shift : Realizes raw stOf lastTick M.shift .shift)
-    (H_copy : Realizes raw stOf lastTick M.copy .copy)
-    (H_home : Realizes raw stOf lastTick M.home .home)
-    (H_fpp : Realizes raw stOf lastTick M.fpp .fpp)
-    (H_markEnd : Realizes raw stOf lastTick M.markEnd .markEnd)
-    (H_choose : Realizes raw stOf lastTick M.choose .choose)
-    (H_rewind : Realizes raw stOf lastTick M.rewind .rewind)
-    (H_replayStart : Realizes raw stOf lastTick M.replayStart .replayStart) :
-    ∀ md : Mode, Realizes raw stOf lastTick (stepOf M md) md := by
+    (H_init : Realizes Good raw stOf lastTick M.init .init)
+    (H_scan : Realizes Good raw stOf lastTick M.scan .scan)
+    (H_shift : Realizes Good raw stOf lastTick M.shift .shift)
+    (H_copy : Realizes Good raw stOf lastTick M.copy .copy)
+    (H_home : Realizes Good raw stOf lastTick M.home .home)
+    (H_fpp : Realizes Good raw stOf lastTick M.fpp .fpp)
+    (H_markEnd : Realizes Good raw stOf lastTick M.markEnd .markEnd)
+    (H_choose : Realizes Good raw stOf lastTick M.choose .choose)
+    (H_rewind : Realizes Good raw stOf lastTick M.rewind .rewind)
+    (H_replayStart : Realizes Good raw stOf lastTick M.replayStart .replayStart) :
+    ∀ md : Mode, Realizes Good raw stOf lastTick (stepOf M md) md := by
   intro md; cases md <;> assumption
 
 /-! ## 9. Arrival of the *correct* letter keeps the trace
@@ -439,14 +445,14 @@ theorem physWF_of_tickL1 {S : Shared} {qq : ℕ} {firstT : Fin 9} {d : ℕ} {x y
   · rw [pending_tickL1 ht]; exact h.pend
 
 /-- **A mode obligation splits into its abstract and physical halves.** -/
-theorem realizes_of_parts {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {lastTick : ℕ}
+theorem realizes_of_parts {Good : Mirrored1 P → Prop} {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {lastTick : ℕ}
     (f : Mirrored1 P → Mirrored1 P) (md : Mode)
-    (habs : ∀ (m : Mirrored1 P) (k j : ℕ), InvC raw stOf m → m.vm.ctl.mode = md →
+    (habs : ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = md →
       ¬ Starved m.vm → Needy raw stOf k j m.vm → needT' raw stOf k ≤ j → k < lastTick →
       Needy raw stOf (k+1) j (f m).vm)
-    (hphys : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
+    (hphys : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
       PhysWF (f m).vm ∧ MirInv1 (f m)) :
-    Realizes raw stOf lastTick f md := by
+    Realizes Good raw stOf lastTick f md := by
   intro m k j hinv hmd hns hn hneed hbefore
   exact ⟨habs m k j hinv hmd hns hn hneed hbefore, (hphys m hinv hmd hns).1,
     (hphys m hinv hmd hns).2⟩

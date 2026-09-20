@@ -100,6 +100,8 @@ theorem noReplay_zero_of_init {σ : Type} {stOf : ℕ → State σ} (h : (stOf 0
 
 variable {P : ℕ}
 
+variable {Good : Mirrored1 P → Prop}
+
 /-- The tracking datum pins the *whole* controller record, so every control-flow
 fact of the trace transports to the local state. -/
 theorem ctl_of_needy {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {k j : ℕ}
@@ -108,7 +110,7 @@ theorem ctl_of_needy {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {k j : 
 
 /-- **`PhaseNoReplay` is closed**, from the trace invariant. -/
 theorem phaseNoReplay_of_trace {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
-    (h : ∀ k, NoReplay (stOf k)) : PalPeg.LocalRealizesPhase.PhaseNoReplay (P := P) raw stOf := by
+    (h : ∀ k, NoReplay (stOf k)) : PalPeg.LocalRealizesPhase.PhaseNoReplay (P := P) Good raw stOf := by
   intro m hinv hmd
   obtain ⟨k, j, hn⟩ := hinv.track
   have hc : m.vm.ctl = (stOf k).ctl := ctl_of_needy hn
@@ -120,7 +122,7 @@ theorem phaseNoReplay_of_trace {raw : List (Fin 2)} {stOf : ℕ → State GalilV
 
 /-- The same for the two `rewind`/`choose` modes of `LocalRealizesScan`. -/
 theorem notReplaying_of_trace {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
-    (h : ∀ k, NoReplay (stOf k)) {m : Mirrored1 P} (hinv : InvC raw stOf m)
+    (h : ∀ k, NoReplay (stOf k)) {m : Mirrored1 P} (hinv : InvC Good raw stOf m)
     (hmd : PhaseMode m.vm.ctl.mode) : m.vm.ctl.replaying = false := by
   obtain ⟨k, j, hn⟩ := hinv.track
   have hc : m.vm.ctl = (stOf k).ctl := ctl_of_needy hn
@@ -229,9 +231,9 @@ theorem mirInv1_ffpp {m : Mirrored1 P} (hm : MirInv1 m) : MirInv1 (ffpp Pw qq fi
 /-- **`H_fpp` is closed**, modulo the quantum budget `qq ≤ 64` and the
 control-flow fact that an `fpp` state is not replaying. -/
 theorem H_fpp_of_wf {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} (hq : qq ≤ 64)
-    (hnr : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .fpp →
+    (hnr : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = .fpp →
       m.vm.ctl.replaying = false) :
-    ∀ (m : Mirrored1 P) (k j : ℕ), InvC raw stOf m → m.vm.ctl.mode = .fpp →
+    ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = .fpp →
       ¬ Starved m.vm → Needy raw stOf k j m.vm →
       Tick (galilFrameS Pw qq first) delay (absState'' m.vm)
         (truncS (raw.length - j) (stOf (k+1))) →
@@ -425,31 +427,31 @@ theorem realizes_seven {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq first) delay (stOf k) (stOf (k+1)))
     (H_afterLast : ∀ k, lastTick ≤ k → stOf k = stOf lastTick)
     (H_start : NoReplay (stOf 0)) (hq : qq ≤ 64)
-    (H_wf : ∀ m : Mirrored1 P, InvC raw stOf m → LocalWF m.vm) :
-    Realizes raw stOf lastTick (shiftStepL (P := P) Pw) .shift ∧
-    Realizes raw stOf lastTick (copyStepL (P := P)) .copy ∧
-    Realizes raw stOf lastTick (homeStepL (P := P)) .home ∧
-    Realizes raw stOf lastTick (ffpp (P := P) Pw qq first) .fpp ∧
-    Realizes raw stOf lastTick (markEndStepL (P := P)) .markEnd ∧
-    Realizes raw stOf lastTick (chooseStepC (P := P) Pw qq first) .choose ∧
-    Realizes raw stOf lastTick (rewindStepC (P := P) Pw qq first) .rewind := by
+    (H_wf : ∀ m : Mirrored1 P, Good m → LocalWF m.vm) :
+    Realizes Good raw stOf lastTick (shiftStepL (P := P) Pw) .shift ∧
+    Realizes Good raw stOf lastTick (copyStepL (P := P)) .copy ∧
+    Realizes Good raw stOf lastTick (homeStepL (P := P)) .home ∧
+    Realizes Good raw stOf lastTick (ffpp (P := P) Pw qq first) .fpp ∧
+    Realizes Good raw stOf lastTick (markEndStepL (P := P)) .markEnd ∧
+    Realizes Good raw stOf lastTick (chooseStepC (P := P) Pw qq first) .choose ∧
+    Realizes Good raw stOf lastTick (rewindStepC (P := P) Pw qq first) .rewind := by
   have hNR : ∀ k, NoReplay (stOf k) := noReplay_run H_trace H_afterLast H_start
-  have hnr : PalPeg.LocalRealizesPhase.PhaseNoReplay (P := P) raw stOf :=
+  have hnr : PalPeg.LocalRealizesPhase.PhaseNoReplay (P := P) Good raw stOf :=
     phaseNoReplay_of_trace hNR
   obtain ⟨h1, h2, h3, h4, h5⟩ :=
     PalPeg.LocalRealizesPhase.realizes_phases (P := P) (delay := delay)
       (ffpp Pw qq first) H_shared H_trace hnr
-      (fun m hinv hmd hns hr => copySide_of (H_wf m hinv) hmd hr)
-      (fun m hinv hmd hns hr => shiftCounters_of (H_wf m hinv) hmd hr)
+      (fun m hinv hmd hns hr => copySide_of (H_wf m hinv.good) hmd hr)
+      (fun m hinv hmd hns hr => shiftCounters_of (H_wf m hinv.good) hmd hr)
       (H_fpp_of_wf (Pw := Pw) (qq := qq) (first := first) (delay := delay) hq
         (fun m hinv hmd => hnr m hinv (Or.inr (Or.inr (Or.inr (Or.inl hmd))))))
       (fun m hinv hmd hns => mirInv1_ffpp hinv.mir)
   exact ⟨h1, h2, h3, h4, h5,
     PalPeg.LocalRealizesScan.realizes_choose (P := P) (delay := delay) H_shared H_trace
-      (fun m hinv hmd => chooseWF_of (H_wf m hinv)
+      (fun m hinv hmd => chooseWF_of (H_wf m hinv.good)
         (notReplaying_of_trace hNR hinv (by unfold PhaseMode; simp [hmd])) hmd),
     PalPeg.LocalRealizesScan.realizes_rewind (P := P) (delay := delay) H_shared H_trace
-      (fun m hinv hmd => rewindWF_of (H_wf m hinv)
+      (fun m hinv hmd => rewindWF_of (H_wf m hinv.good)
         (notReplaying_of_trace hNR hinv (by unfold PhaseMode; simp [hmd])) hmd)⟩
 
 end Assembly

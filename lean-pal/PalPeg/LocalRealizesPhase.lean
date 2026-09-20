@@ -6,7 +6,7 @@ import PalPeg.LocalSysConcrete
 `PalPeg.LocalSysConcrete.localSys_oracles` leaves ten `Realizes` obligations
 open, one per control mode.  This file discharges the five *phase* modes
 `shift`, `copy`, `home`, `fpp`, `markEnd` — it supplies the `Steps` fields and
-proves `Realizes raw stOf lastTick · md` for them.
+proves `Realizes Good raw stOf lastTick · md` for them.
 
 ## The shape of the argument
 
@@ -73,6 +73,8 @@ open PalPeg.GalilThrottledRun (truncS)
 open PalPeg.GalilLookRefined (needT')
 
 variable {P : ℕ}
+
+variable {Good : Mirrored1 P → Prop}
 
 /-! ## 1. Every frame field a phase tick consults is functional -/
 
@@ -345,14 +347,14 @@ theorem realizes_of_mode (f : Mirrored1 P → Mirrored1 P) (md : Mode)
     (huniq : ∀ (c : Control) (s : GalilVM) (y z : State GalilVM), c.mode = md →
       Tick (galilFrameS Pw qq first) delay ⟨c, s⟩ y →
       Tick (galilFrameS Pw qq first) delay ⟨c, s⟩ z → y = z)
-    (hstep : ∀ (m : Mirrored1 P) (k j : ℕ), InvC raw stOf m → m.vm.ctl.mode = md →
+    (hstep : ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = md →
       ¬ Starved m.vm → Needy raw stOf k j m.vm →
       Tick (galilFrameS Pw qq first) delay (absState'' m.vm)
         (truncS (raw.length - j) (stOf (k+1))) →
       TickL3 Pw qq first m.vm (f m).vm)
-    (hmir : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
+    (hmir : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
       MirInv1 (f m)) :
-    Realizes raw stOf lastTick f md := by
+    Realizes Good raw stOf lastTick f md := by
   intro m k j hinv hmd hns hn hneed hbefore
   have htr : Tick (galilFrameS Pw qq first) delay
       (truncS (raw.length - j) (stOf k)) (truncS (raw.length - j) (stOf (k+1))) :=
@@ -414,9 +416,9 @@ theorem realizes_home {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay : ℕ}
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
     (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq first) delay (stOf k) (stOf (k+1)))
-    (H_nr : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .home →
+    (H_nr : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = .home →
       m.vm.ctl.replaying = false) :
-    Realizes raw stOf lastTick (homeStepL (P := P)) .home :=
+    Realizes Good raw stOf lastTick (homeStepL (P := P)) .home :=
   realizes_of_mode (delay := delay) (qq := qq) (first := first) _ _ H_shared H_trace
     (fun _ _ _ _ hm h₁ h₂ => tick_home_unique hm h₁ h₂)
     (fun m k j hinv hmd _ _ htr => tickL3_homeStepL (H_nr m hinv hmd) hmd htr)
@@ -473,9 +475,9 @@ theorem realizes_markEnd {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay : ℕ}
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
     (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq first) delay (stOf k) (stOf (k+1)))
-    (H_nr : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .markEnd →
+    (H_nr : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = .markEnd →
       m.vm.ctl.replaying = false) :
-    Realizes raw stOf lastTick (markEndStepL (P := P)) .markEnd :=
+    Realizes Good raw stOf lastTick (markEndStepL (P := P)) .markEnd :=
   realizes_of_mode (delay := delay) (qq := qq) (first := first) _ _ H_shared H_trace
     (fun _ _ _ _ hm h₁ h₂ => tick_markEnd_unique hm h₁ h₂)
     (fun m k j hinv hmd _ _ htr => tickL3_markEndStepL (H_nr m hinv hmd) hmd htr)
@@ -552,11 +554,11 @@ theorem realizes_copy {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay : ℕ}
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
     (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq first) delay (stOf k) (stOf (k+1)))
-    (H_nr : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .copy →
+    (H_nr : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = .copy →
       m.vm.ctl.replaying = false)
-    (H_copy : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .copy →
+    (H_copy : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = .copy →
       ¬ Starved m.vm → RemPosL m.vm → CopySide m.vm) :
-    Realizes raw stOf lastTick (copyStepL (P := P)) .copy :=
+    Realizes Good raw stOf lastTick (copyStepL (P := P)) .copy :=
   realizes_of_mode (delay := delay) (qq := qq) (first := first) _ _ H_shared H_trace
     (fun _ _ _ _ hm h₁ h₂ => tick_copy_unique hm h₁ h₂)
     (fun m k j hinv hmd hns _ htr =>
@@ -649,11 +651,11 @@ theorem realizes_shift {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay : ℕ}
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
     (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq first) delay (stOf k) (stOf (k+1)))
-    (H_nr : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .shift →
+    (H_nr : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = .shift →
       m.vm.ctl.replaying = false)
-    (H_shift : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .shift →
+    (H_shift : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = .shift →
       ¬ Starved m.vm → RemPosL m.vm → ShiftCounters m.vm) :
-    Realizes raw stOf lastTick (shiftStepL (P := P) Pw) .shift :=
+    Realizes Good raw stOf lastTick (shiftStepL (P := P) Pw) .shift :=
   realizes_of_mode (delay := delay) (qq := qq) (first := first) _ _ H_shared H_trace
     (fun _ _ _ _ hm h₁ h₂ => tick_shift_unique hm h₁ h₂)
     (fun m k j hinv hmd hns _ htr =>
@@ -674,14 +676,14 @@ theorem realizes_fpp {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     (ffpp : Mirrored1 P → Mirrored1 P)
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
     (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq first) delay (stOf k) (stOf (k+1)))
-    (H_fpp : ∀ (m : Mirrored1 P) (k j : ℕ), InvC raw stOf m → m.vm.ctl.mode = .fpp →
+    (H_fpp : ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = .fpp →
       ¬ Starved m.vm → Needy raw stOf k j m.vm →
       Tick (galilFrameS Pw qq first) delay (absState'' m.vm)
         (truncS (raw.length - j) (stOf (k+1))) →
       TickL3 Pw qq first m.vm (ffpp m).vm)
-    (H_fpp_mir : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .fpp →
+    (H_fpp_mir : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = .fpp →
       ¬ Starved m.vm → MirInv1 (ffpp m)) :
-    Realizes raw stOf lastTick ffpp .fpp :=
+    Realizes Good raw stOf lastTick ffpp .fpp :=
   realizes_of_mode (delay := delay) (qq := qq) (first := first) _ _ H_shared H_trace
     (fun _ _ _ _ hm h₁ h₂ => tick_fpp_unique hm h₁ h₂) H_fpp H_fpp_mir
 
@@ -729,8 +731,9 @@ by `scan_match`/`replayStart`, and `scan` leaves for `shift`/`copy` only when
 `replaying = false`), so it cannot be proved from `InvC` alone. -/
 
 /-- "A phase mode never replays." -/
-def PhaseNoReplay (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) : Prop :=
-  ∀ m : Mirrored1 P, InvC raw stOf m →
+def PhaseNoReplay (Good : Mirrored1 P → Prop) (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) :
+    Prop :=
+  ∀ m : Mirrored1 P, InvC Good raw stOf m →
     (m.vm.ctl.mode = .shift ∨ m.vm.ctl.mode = .copy ∨ m.vm.ctl.mode = .home ∨
       m.vm.ctl.mode = .fpp ∨ m.vm.ctl.mode = .markEnd) → m.vm.ctl.replaying = false
 
@@ -744,23 +747,23 @@ theorem realizes_phases {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     (ffpp : Mirrored1 P → Mirrored1 P)
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
     (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq first) delay (stOf k) (stOf (k+1)))
-    (H_nr : PhaseNoReplay (P := P) raw stOf)
-    (H_copy : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .copy →
+    (H_nr : PhaseNoReplay (P := P) Good raw stOf)
+    (H_copy : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = .copy →
       ¬ Starved m.vm → RemPosL m.vm → CopySide m.vm)
-    (H_shift : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .shift →
+    (H_shift : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = .shift →
       ¬ Starved m.vm → RemPosL m.vm → ShiftCounters m.vm)
-    (H_fpp : ∀ (m : Mirrored1 P) (k j : ℕ), InvC raw stOf m → m.vm.ctl.mode = .fpp →
+    (H_fpp : ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = .fpp →
       ¬ Starved m.vm → Needy raw stOf k j m.vm →
       Tick (galilFrameS Pw qq first) delay (absState'' m.vm)
         (truncS (raw.length - j) (stOf (k+1))) →
       TickL3 Pw qq first m.vm (ffpp m).vm)
-    (H_fpp_mir : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .fpp →
+    (H_fpp_mir : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = .fpp →
       ¬ Starved m.vm → MirInv1 (ffpp m)) :
-    Realizes raw stOf lastTick (shiftStepL (P := P) Pw) .shift ∧
-    Realizes raw stOf lastTick (copyStepL (P := P)) .copy ∧
-    Realizes raw stOf lastTick (homeStepL (P := P)) .home ∧
-    Realizes raw stOf lastTick ffpp .fpp ∧
-    Realizes raw stOf lastTick (markEndStepL (P := P)) .markEnd :=
+    Realizes Good raw stOf lastTick (shiftStepL (P := P) Pw) .shift ∧
+    Realizes Good raw stOf lastTick (copyStepL (P := P)) .copy ∧
+    Realizes Good raw stOf lastTick (homeStepL (P := P)) .home ∧
+    Realizes Good raw stOf lastTick ffpp .fpp ∧
+    Realizes Good raw stOf lastTick (markEndStepL (P := P)) .markEnd :=
   ⟨realizes_shift (delay := delay) H_shared H_trace
       (fun m hinv hmd => H_nr m hinv (Or.inl hmd)) H_shift,
    realizes_copy (delay := delay) H_shared H_trace

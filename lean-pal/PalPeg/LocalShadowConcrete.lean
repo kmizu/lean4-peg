@@ -35,17 +35,19 @@ variable {P : ℕ}
 
 /-- The state `m` stands on the pre-loaded trace at index `k ≤ lastReport`, with `j` letters
 arrived, none of which beyond `j` has been used. -/
-structure TrackedAt (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) (lastReport j k : ℕ)
-    (m : Mirrored1 P) : Prop where
+structure TrackedAt (Good : Mirrored1 P → Prop) (raw : List (Fin 2))
+    (stOf : ℕ → State GalilVM) (lastReport j k : ℕ) (m : Mirrored1 P) : Prop where
   phys : PhysWF m.vm
   mir : MirInv1 m
   needy : Needy raw stOf k j m.vm
   beforeEnd : k ≤ lastReport
   used : usedVM raw (stOf k).vm ≤ j
+  good : Good m
 
-theorem TrackedAt.invC {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {lastReport j k : ℕ}
-    {m : Mirrored1 P} (h : TrackedAt raw stOf lastReport j k m) : InvC raw stOf m :=
-  ⟨h.phys, h.mir, ⟨k, j, h.needy⟩⟩
+theorem TrackedAt.invC {Good : Mirrored1 P → Prop} {raw : List (Fin 2)}
+    {stOf : ℕ → State GalilVM} {lastReport j k : ℕ} {m : Mirrored1 P}
+    (h : TrackedAt Good raw stOf lastReport j k m) : InvC Good raw stOf m :=
+  ⟨h.phys, h.mir, ⟨k, j, h.needy⟩, h.good⟩
 
 theorem micro_core_none {X : Type} (S : LocalSys X) (w : List (Fin 2)) (x0 : LX X) {s : ℕ}
     (hinput : inp w s = none) :
@@ -96,18 +98,24 @@ theorem pal_in_peg_of_shadowed_sysC
     (hlastReport : ∀ w : List (Fin 2), 0 < w.length →
       GalilLedgerAssembly.ReportPointAt (Pof w) (qof w) (firstOf w) w w.length
         (stOf w (TcOf w w.length)))
+    -- the invariants the abstract local system carries along the run
+    (Good : Mirrored1 P → Prop) (hgoodInit : Good (x0C blank delay).core)
+    (hgoodTick : ∀ (w : List (Fin 2)) (m : Mirrored1 P), 0 < w.length →
+      InvC Good w (stOf w) m → Good (tickC M m))
+    (hgoodFeed : ∀ (w : List (Fin 2)) (letter : Fin 2) (m : Mirrored1 P), 0 < w.length →
+      InvC Good w (stOf w) m → Good (feedC letter m))
     -- the abstract local system on tracked states
     (hrealizes : ∀ (w : List (Fin 2)), 0 < w.length → ∀ mode : Mode,
-      Realizes w (stOf w) (TcOf w w.length) (stepOf M mode) mode)
+      Realizes Good w (stOf w) (TcOf w w.length) (stepOf M mode) mode)
     (hneedOfNotStarved : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), 0 < w.length →
-      InvC w (stOf w) m →
+      InvC Good w (stOf w) m →
       ¬ Starved m.vm → Needy w (stOf w) k j m.vm → needT' w (stOf w) k ≤ j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), 0 < w.length →
-      InvC w (stOf w) m →
+      InvC Good w (stOf w) m →
       Needy w (stOf w) k j m.vm → k < TcOf w w.length → needT' w (stOf w) k ≤ j →
       ¬ Starved m.vm)
     (hstarvedAtLastReport : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (j : ℕ), 0 < w.length →
-      InvC w (stOf w) m →
+      InvC Good w (stOf w) m →
       Needy w (stOf w) (TcOf w w.length) j m.vm → Starved m.vm)
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
       repC (micro (sysC M repC) w (x0C blank delay) s).core.vm.ctl = true →
@@ -134,14 +142,14 @@ theorem pal_in_peg_of_shadowed_sysC
   let x0 := x0C blank delay
   let Inv : List (Fin 2) → ℕ → Mirrored1 P → Prop := fun w s m =>
     0 < w.length ∧ m = (micro S w x0 s).core ∧
-      TrackedAt w (stOf w) (TcOf w w.length) (arrL w s) (kOf S w x0 s) m
+      TrackedAt Good w (stOf w) (TcOf w w.length) (arrL w s) (kOf S w x0 s) m
   have harrZero : ∀ w : List (Fin 2), arrL w 0 = 0 := fun w => by
     unfold arrL
     rw [nLocalL_eq]
     omega
   have hinvInit : ∀ w, 0 < w.length → Inv w 0 x0.core := fun w hw => by
     refine ⟨hw, rfl, x0C_physWF hblankInv delay, x0C_mirInv1 hblankTwin hblankView delay, ?_,
-      Nat.zero_le _, ?_⟩
+      Nat.zero_le _, ?_, hgoodInit⟩
     · rw [harrZero]
       exact ⟨Nat.zero_le _, hinitTrack w hw⟩
     · rw [harrZero]
@@ -152,7 +160,7 @@ theorem pal_in_peg_of_shadowed_sysC
     rw [arrL_none w s hinput]
     by_cases hstarved : Starved (micro S w x0 s).core.vm
     · rw [kOf_succ_stutter S w x0 s (fun h => h.2 hstarved)]
-      show TrackedAt _ _ _ _ _ (tickC M _)
+      show TrackedAt _ _ _ _ _ _ (tickC M _)
       rw [tickC_starved M hstarved]
       exact htracked
     · have hneed := hneedOfNotStarved w _ _ _ hw htracked.invC hstarved htracked.needy
@@ -163,10 +171,11 @@ theorem pal_in_peg_of_shadowed_sysC
           exact absurd (hstarvedAtLastReport w _ _ hw htracked.invC (hend ▸ htracked.needy)) hstarved
       obtain ⟨hneedy, hphys, hmir⟩ :=
         hrealizes w hw _ _ _ _ htracked.invC rfl hstarved htracked.needy hneed hbefore
+      have hgoodNext := hgoodTick w _ hw htracked.invC
       rw [kOf_succ_tick S w x0 s ⟨hinput, hstarved⟩]
-      show TrackedAt _ _ _ _ _ (tickC M _)
-      rw [tickC_step M hstarved]
-      exact ⟨hphys, hmir, hneedy, hbefore, (used_le_of_need hneed).2.1⟩
+      show TrackedAt _ _ _ _ _ _ (tickC M _)
+      rw [tickC_step M hstarved] at hgoodNext ⊢
+      exact ⟨hphys, hmir, hneedy, hbefore, (used_le_of_need hneed).2.1, hgoodNext⟩
   have hinvFeed : ∀ w s letter m, inp w s = some letter → Inv w s m →
       Inv w (s+1) (S.feedC letter m) := by
     rintro w s letter m hinput ⟨hw, rfl, htracked⟩
@@ -177,12 +186,13 @@ theorem pal_in_peg_of_shadowed_sysC
     rw [harrived, kOf_succ_stutter S w x0 s (fun h => by rw [hinput] at h; exact absurd h.1 (by simp))]
     refine ⟨physWF_feedC htracked.phys letter,
       mirInv1_feedC htracked.mir htracked.phys.pend htracked.phys.inv.views.2.1 letter, ?_,
-      htracked.beforeEnd, by have := htracked.used; omega⟩
+      htracked.beforeEnd, by have := htracked.used; omega,
+      hgoodFeed w letter _ hw htracked.invC⟩
     rw [hletterEq]
     exact tracked_feedC htracked.phys.inv.views htracked.phys.pend htracked.needy hindex
       (hsuffix w hw _ htracked.beforeEnd) htracked.used
   have hrun : ∀ w, 0 < w.length → ∀ s,
-      TrackedAt w (stOf w) (TcOf w w.length) (arrL w s) (kOf S w x0 s) (micro S w x0 s).core :=
+      TrackedAt Good w (stOf w) (TcOf w w.length) (arrL w s) (kOf S w x0 s) (micro S w x0 s).core :=
     fun w hw s => (inv_micro S w x0 (Inv w) (hinvInit w hw) (hinvTick w) (hinvFeed w) s).2.2
   refine pal_in_peg_of_shadowed_core S absSC Inv x0 Pof qof firstOf delay H_letter H_first
     L0 blankSymbol q0 repQ outQ htape Rep hrepInit

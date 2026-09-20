@@ -368,11 +368,11 @@ def NAMED_feedWindow (delay Lp Lf : ℕ) (rep : ChainVM → ChainL) : Prop :=
         fun i => encTapes1 rep m i.val)) L0
 
 /-- **The fpp quantum.** -/
-def NAMED_fppQuantum (raw : List (Fin 2))
+def NAMED_fppQuantum (Good : Mirrored1 P → Prop) (raw : List (Fin 2))
     (stOf : ℕ → PalPeg.GalilScaffoldTop.State PalPeg.GalilScaffoldChainInputSupply.GalilVM)
     (Pw : PalPeg.GalilScaffoldChainInputSupply.Shared) (qq : ℕ) (first : Fin 9) : Prop :=
   ∃ g : Mirrored1 P → Mirrored1 P,
-    PalPeg.CloseoutCoreStep.AgreeOn raw stOf (PalPeg.LocalWF.ffpp (P := P) Pw qq first) g
+    PalPeg.CloseoutCoreStep.AgreeOn Good raw stOf (PalPeg.LocalWF.ffpp (P := P) Pw qq first) g
       PalPeg.GalilScaffoldController.Mode.fpp
 
 /-- **Injectivity of the sentinel layout on reachable states.** -/

@@ -78,22 +78,31 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
     -- the abstract local system
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
     (M : Steps tapeCount) (repC : Control → Bool)
+    -- the invariants the abstract local system carries along the run
+    (Good : Mirrored1 tapeCount → Prop) (hgoodInit : Good (x0C blankVML 2048).core)
+    (hgoodTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ m : Mirrored1 tapeCount, InvC Good w (heldAfter (Tc w.length) st) m → Good (tickC M m))
+    (hgoodFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ (letter : Fin 2) (m : Mirrored1 tapeCount),
+        InvC Good w (heldAfter (Tc w.length) st) m → Good (feedC letter m))
     (hrealizes : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ mode : Mode, Realizes w (heldAfter (Tc w.length) st) (Tc w.length) (stepOf M mode) mode)
+      ∀ mode : Mode, Realizes Good w (heldAfter (Tc w.length) st) (Tc w.length) (stepOf M mode) mode)
     (hneedOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 tapeCount) (k j : ℕ), InvC w (heldAfter (Tc w.length) st) m → ¬ Starved m.vm →
+      ∀ (m : Mirrored1 tapeCount) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m → ¬ Starved m.vm →
         Needy w (heldAfter (Tc w.length) st) k j m.vm →
         needT' w (heldAfter (Tc w.length) st) k ≤ j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 tapeCount) (k j : ℕ), InvC w (heldAfter (Tc w.length) st) m →
+      ∀ (m : Mirrored1 tapeCount) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
         needT' w (heldAfter (Tc w.length) st) k ≤ j → ¬ Starved m.vm)
     (hstarvedAtLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 tapeCount) (j : ℕ), InvC w (heldAfter (Tc w.length) st) m →
+      ∀ (m : Mirrored1 tapeCount) (j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) (Tc w.length) j m.vm → Starved m.vm)
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
       repC (micro (sysC M repC) w (x0C blankVML 2048) s).core.vm.ctl = true →
@@ -166,6 +175,9 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
     (fun w hw => by
       rw [heldAfter_of_le (stOf w) le_rfl]
       exact (htraceOf w hw).1.base.pre.report w.length hw le_rfl)
+    Good hgoodInit
+    (fun w m hw hinv => hgoodTick w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m hinv)
+    (fun w letter m hw hinv => hgoodFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 letter m hinv)
     (fun w hw => hrealizes w _ _ (htraceOf w hw).1 (htraceOf w hw).2)
     (fun w m k j hw hinv hstarved hneedy =>
       hneedOfNotStarved w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved hneedy)

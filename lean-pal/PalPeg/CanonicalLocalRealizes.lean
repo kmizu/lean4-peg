@@ -65,19 +65,19 @@ open PalPeg.LocalSysConcrete (InvC Starved PhysWF Realizes)
 /-- Canonical determinism supplies the successor-identification obligation for
 any local mode.  The remaining premise is the actual local step and its physical
 invariants, not functionality of the unrefined nondeterministic relation. -/
-theorem realizes_canonical {P : ℕ} {stOf : ℕ → State GalilVM}
+theorem realizes_canonical {P : ℕ} {Good : Mirrored1 P → Prop} {stOf : ℕ → State GalilVM}
     {f : Mirrored1 P → Mirrored1 P} {mode : Mode}
     (hShared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j (PofC centre place entry raw))
     (hTrace : ∀ k, k < lastTick → Tick (galilFrameS (PofC centre place entry raw) q first) delay
       (stOf k) (stOf (k+1)))
     (hCanonical : ∀ k, k < lastTick → Canonical entry delay (stOf k) (stOf (k+1)))
-    (hLocal : ∀ (m : Mirrored1 P) (target : State GalilVM), InvC raw stOf m →
+    (hLocal : ∀ (m : Mirrored1 P) (target : State GalilVM), InvC Good raw stOf m →
       m.vm.ctl.mode = mode → ¬ Starved m.vm →
       Tick (galilFrameS (PofC centre place entry raw) q first) delay (absState'' m.vm) target →
       Tick (galilFrameS (PofC centre place entry raw) q first) delay
         (absState'' m.vm) (absState'' (f m).vm) ∧
       Canonical entry delay (absState'' m.vm) (absState'' (f m).vm) ∧
-      PhysWF (f m).vm ∧ MirInv1 (f m)) : Realizes raw stOf lastTick f mode := by
+      PhysWF (f m).vm ∧ MirInv1 (f m)) : Realizes Good raw stOf lastTick f mode := by
   apply PalPeg.LocalRealizesScan.realizes_of_refined_tick_det hShared hTrace
     (Canonical entry delay) (fun k j hbefore _ => canonical_trunc (hCanonical k hbefore) _) hLocal
   intro source target₁ target₂ _ hTick₁ hCanonical₁ hTick₂ hCanonical₂

@@ -9,8 +9,8 @@ of `CloseoutCoreStep.realizes_seven_of_agree` — is stated modulo the NAMED
 residual
 
 ```
-RightInBounds P raw stOf :=
-  ∀ m, InvC raw stOf m → m.vm.ctl.mode = .shift → ¬ RemPosL m.vm →
+RightInBounds P Good raw stOf :=
+  ∀ m, InvC Good raw stOf m → m.vm.ctl.mode = .shift → ¬ RemPosL m.vm →
     (abs' m.vm).right.head.left.length ≤ raw.length
 ```
 
@@ -55,6 +55,8 @@ open PalPeg.LocalRealizesPhase (PhaseNoReplay RemPosL)
 open PalPeg.CloseoutCoreAgree (RightInBounds)
 
 variable {P : ℕ}
+
+variable {Good : Mirrored1 P → Prop}
 
 /-! ## 1. `position` bounds the left stack -/
 
@@ -110,8 +112,8 @@ theorem abs'_right_head_left {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
 
 /-- **`RightInBounds` is discharged.** -/
 theorem rightInBounds {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
-    (H_nr : PhaseNoReplay (P := P) raw stOf) (H_pos : TraceRightLe raw stOf) :
-    RightInBounds P raw stOf := by
+    (H_nr : PhaseNoReplay (P := P) Good raw stOf) (H_pos : TraceRightLe raw stOf) :
+    RightInBounds P Good raw stOf := by
   intro m hinv hmd _
   obtain ⟨k, j, hn⟩ := hinv.track
   have hnr : m.vm.ctl.replaying = false := H_nr m hinv (Or.inl hmd)
