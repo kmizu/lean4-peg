@@ -167,7 +167,7 @@ the report test and the output bit. The latch and the started bit are built
 here. -/
 theorem pal_in_peg_of_local_core
     [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (S : LocalSys X) (absS : X → State GalilVM) (Inv : List (Fin 2) → X → Prop) (x0 : LX X)
+    (S : LocalSys X) (absS : X → State GalilVM) (Inv : List (Fin 2) → ℕ → X → Prop) (x0 : LX X)
     (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ) (firstOf : List (Fin 2) → Fin 9)
     (delay : ℕ)
     (H_letter : ∀ w : List (Fin 2), (Pof w).onLetter = onLetterVM w)
@@ -191,14 +191,16 @@ theorem pal_in_peg_of_local_core
       ReportPoint w (stAbs S absS w x0 s) →
       Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ S.repL (micro S w x0 s').core = true)
-    (x0_inv : ∀ w, Inv w x0.core)
+    (x0_inv : ∀ w, Inv w 0 x0.core)
     (x0_ctl : (absS x0.core).ctl = GalilScaffoldController.initial delay)
-    (inv_tick : ∀ w x, Inv w x → Inv w (S.tickL x))
-    (inv_feed : ∀ w a x, Inv w x → Inv w (S.feedC a x))
-    (stutter_of_starved : ∀ w x, Inv w x → S.Starved x → absS (S.tickL x) = absS x)
-    (tick_of_not_starved : ∀ w x, Inv w x → ¬ S.Starved x →
+    (inv_tick : ∀ w s x, inp w s = none → Inv w s x → Inv w (s+1) (S.tickL x))
+    (inv_feed : ∀ w s a x, inp w s = some a → Inv w s x → Inv w (s+1) (S.feedC a x))
+    (stutter_of_starved : ∀ w s x, inp w s = none → Inv w s x → S.Starved x →
+      absS (S.tickL x) = absS x)
+    (tick_of_not_starved : ∀ w s x, inp w s = none → Inv w s x → ¬ S.Starved x →
       Tick (galilFrameS (Pof w) (qof w) (firstOf w)) delay (absS x) (absS (S.tickL x)))
-    (feed_abs : ∀ w a x, Inv w x → absS (S.feedC a x) = arriveState' a (absS x))
+    (feed_abs : ∀ w s a x, inp w s = some a → Inv w s x →
+      absS (S.feedC a x) = arriveState' a (absS x))
     (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs S absS w x0)
       (fun w => w.length * nLocalL)) :
     RecognizedByTotalPEG PAL :=

@@ -292,18 +292,18 @@ theorem latch_ans (S : LocalSys X) (w : List (Fin 2)) (x0 : LX X) (hw : 0 < w.le
 
 /-! ## 7. The abstract run with arrivals -/
 
-theorem inv_micro (S : LocalSys X) (w : List (Fin 2)) (x0 : LX X) (Inv : X → Prop)
-    (h0 : Inv x0.core) (ht : ∀ x, Inv x → Inv (S.tickL x))
-    (hf : ∀ a x, Inv x → Inv (S.feedC a x)) :
-    ∀ s, Inv (micro S w x0 s).core := by
+theorem inv_micro (S : LocalSys X) (w : List (Fin 2)) (x0 : LX X) (Inv : ℕ → X → Prop)
+    (h0 : Inv 0 x0.core) (ht : ∀ s x, inp w s = none → Inv s x → Inv (s+1) (S.tickL x))
+    (hf : ∀ s a x, inp w s = some a → Inv s x → Inv (s+1) (S.feedC a x)) :
+    ∀ s, Inv s (micro S w x0 s).core := by
   intro s
   induction s with
   | zero => exact h0
   | succ s ih =>
-      show Inv (stepL S (inp w s) (micro S w x0 s)).core
-      cases inp w s with
-      | none => exact ht _ ih
-      | some a => exact hf a _ ih
+      show Inv (s+1) (stepL S (inp w s) (micro S w x0 s)).core
+      cases hi : inp w s with
+      | none => exact ht s _ hi ih
+      | some a => exact hf s a _ hi ih
 
 theorem arrL_none (w : List (Fin 2)) (s : ℕ) (h : inp w s = none) : arrL w (s+1) = arrL w s := by
   unfold inp at h
@@ -336,16 +336,18 @@ theorem tick_or_stutter (S : LocalSys X) (absS : X → State GalilVM) (Inv : X �
   · exact Or.inl (tick_of_not_starved x hx h)
 
 /-- **The local run abstracts to an `AbstractRun'`.** -/
-theorem abstractRun_of_oracles (S : LocalSys X) (absS : X → State GalilVM) (Inv : X → Prop)
+theorem abstractRun_of_oracles (S : LocalSys X) (absS : X → State GalilVM) (Inv : ℕ → X → Prop)
     (Pw : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) (w : List (Fin 2)) (x0 : LX X)
-    (x0_inv : Inv x0.core)
+    (x0_inv : Inv 0 x0.core)
     (x0_ctl : (absS x0.core).ctl = GalilScaffoldController.initial delay)
-    (inv_tick : ∀ x, Inv x → Inv (S.tickL x))
-    (inv_feed : ∀ a x, Inv x → Inv (S.feedC a x))
-    (stutter_of_starved : ∀ x, Inv x → S.Starved x → absS (S.tickL x) = absS x)
-    (tick_of_not_starved : ∀ x, Inv x → ¬ S.Starved x →
+    (inv_tick : ∀ s x, inp w s = none → Inv s x → Inv (s+1) (S.tickL x))
+    (inv_feed : ∀ s a x, inp w s = some a → Inv s x → Inv (s+1) (S.feedC a x))
+    (stutter_of_starved : ∀ s x, inp w s = none → Inv s x → S.Starved x →
+      absS (S.tickL x) = absS x)
+    (tick_of_not_starved : ∀ s x, inp w s = none → Inv s x → ¬ S.Starved x →
       Tick (galilFrameS Pw q first) delay (absS x) (absS (S.tickL x)))
-    (feed_abs : ∀ a x, Inv x → absS (S.feedC a x) = arriveState' a (absS x)) :
+    (feed_abs : ∀ s a x, inp w s = some a → Inv s x →
+      absS (S.feedC a x) = arriveState' a (absS x)) :
     AbstractRun' Pw q first delay w (stAbs S absS w x0) (arrL w) := by
   refine ⟨x0_ctl, by unfold arrL; rw [nLocalL_eq]; omega, fun s => ?_⟩
   have hinv := inv_micro S w x0 Inv x0_inv inv_tick inv_feed s
@@ -356,29 +358,30 @@ theorem abstractRun_of_oracles (S : LocalSys X) (absS : X → State GalilVM) (In
       show Tick _ _ (absL absS (micro S w x0 s)) (absL absS (micro S w x0 (s+1))) ∨
         absL absS (micro S w x0 (s+1)) = absL absS (micro S w x0 s)
       rw [hm, hi]
-      exact tick_or_stutter S absS Inv Pw q first delay stutter_of_starved tick_of_not_starved _ hinv
+      exact tick_or_stutter S absS (Inv s) Pw q first delay (fun x => stutter_of_starved s x hi)
+        (fun x => tick_of_not_starved s x hi) _ hinv
   | some a =>
       obtain ⟨h1, h2⟩ := arrL_some w s a hi
       refine Or.inr ⟨h1, a, h2, ?_⟩
       show absL absS (micro S w x0 (s+1)) = arriveState' a (absL absS (micro S w x0 s))
       rw [hm, hi]
-      exact feed_abs a _ hinv
+      exact feed_abs s a _ hi hinv
 
 /-- **Stutter correctness, run form.** At a non-arrival micro-step the abstract
 run ticks iff the local core is not starved. -/
-theorem run_progress (S : LocalSys X) (absS : X → State GalilVM) (Inv : X → Prop)
+theorem run_progress (S : LocalSys X) (absS : X → State GalilVM) (Inv : ℕ → X → Prop)
     (Pw : Shared) (q : ℕ) (first : Fin 9) (delay : ℕ) (w : List (Fin 2)) (x0 : LX X)
-    (x0_inv : Inv x0.core)
-    (inv_tick : ∀ x, Inv x → Inv (S.tickL x))
-    (inv_feed : ∀ a x, Inv x → Inv (S.feedC a x))
-    (tick_of_not_starved : ∀ x, Inv x → ¬ S.Starved x →
+    (x0_inv : Inv 0 x0.core)
+    (inv_tick : ∀ s x, inp w s = none → Inv s x → Inv (s+1) (S.tickL x))
+    (inv_feed : ∀ s a x, inp w s = some a → Inv s x → Inv (s+1) (S.feedC a x))
+    (tick_of_not_starved : ∀ s x, inp w s = none → Inv s x → ¬ S.Starved x →
       Tick (galilFrameS Pw q first) delay (absS x) (absS (S.tickL x)))
     (s : ℕ) (hi : inp w s = none) (hns : ¬ S.Starved (micro S w x0 s).core) :
     Tick (galilFrameS Pw q first) delay (stAbs S absS w x0 s) (stAbs S absS w x0 (s+1)) := by
   have hinv := inv_micro S w x0 Inv x0_inv inv_tick inv_feed s
   show Tick _ _ (absL absS (micro S w x0 s)) (absL absS (stepL S (inp w s) (micro S w x0 s)))
   rw [hi]
-  exact tick_of_not_starved _ hinv hns
+  exact tick_of_not_starved s _ hi hinv hns
 
 /-! ## 8. The deadline slot -/
 
@@ -507,7 +510,7 @@ theorem empty_accepted {t K : ℕ} {Q' Γ' : Type} [Fintype Q'] [DecidableEq Q']
 local run abstracts to, at the shifted deadline `|w|·τ`. -/
 theorem pal_in_peg_of_local_latch
     {t K : ℕ} {Q' Γ' : Type} [Fintype Q'] [DecidableEq Q'] [Fintype Γ'] [DecidableEq Γ']
-    (S : LocalSys X) (absS : X → State GalilVM) (Inv : List (Fin 2) → X → Prop) (x0 : LX X)
+    (S : LocalSys X) (absS : X → State GalilVM) (Inv : List (Fin 2) → ℕ → X → Prop) (x0 : LX X)
     (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ) (firstOf : List (Fin 2) → Fin 9)
     (delay : ℕ)
     (H_letter : ∀ w : List (Fin 2), (Pof w).onLetter = onLetterVM w)
@@ -526,14 +529,16 @@ theorem pal_in_peg_of_local_latch
     (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
       ReportPoint w (stAbs S absS w x0 s) → Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ S.repL (micro S w x0 s').core = true)
-    (x0_inv : ∀ w, Inv w x0.core)
+    (x0_inv : ∀ w, Inv w 0 x0.core)
     (x0_ctl : (absS x0.core).ctl = GalilScaffoldController.initial delay)
-    (inv_tick : ∀ w x, Inv w x → Inv w (S.tickL x))
-    (inv_feed : ∀ w a x, Inv w x → Inv w (S.feedC a x))
-    (stutter_of_starved : ∀ w x, Inv w x → S.Starved x → absS (S.tickL x) = absS x)
-    (tick_of_not_starved : ∀ w x, Inv w x → ¬ S.Starved x →
+    (inv_tick : ∀ w s x, inp w s = none → Inv w s x → Inv w (s+1) (S.tickL x))
+    (inv_feed : ∀ w s a x, inp w s = some a → Inv w s x → Inv w (s+1) (S.feedC a x))
+    (stutter_of_starved : ∀ w s x, inp w s = none → Inv w s x → S.Starved x →
+      absS (S.tickL x) = absS x)
+    (tick_of_not_starved : ∀ w s x, inp w s = none → Inv w s x → ¬ S.Starved x →
       Tick (galilFrameS (Pof w) (qof w) (firstOf w)) delay (absS x) (absS (S.tickL x)))
-    (feed_abs : ∀ w a x, Inv w x → absS (S.feedC a x) = arriveState' a (absS x))
+    (feed_abs : ∀ w s a x, inp w s = some a → Inv w s x →
+      absS (S.feedC a x) = arriveState' a (absS x))
     (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs S absS w x0)
       (fun w => w.length * nLocalL)) :
     RecognizedByTotalPEG PAL :=
