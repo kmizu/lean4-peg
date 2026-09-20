@@ -88,7 +88,7 @@ theorem realizes_of_refined_tick_det {raw : List (Fin 2)} {stOf : ℕ → State 
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
     (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
     (Refinement : State GalilVM → State GalilVM → Prop)
-    (hTraceRefinement : ∀ k j, k < lastTick → needT' raw stOf k ≤ j →
+    (hTraceRefinement : ∀ k j, k < lastTick → TickNeed raw stOf k j →
       Refinement (truncS (raw.length - j) (stOf k))
         (truncS (raw.length - j) (stOf (k+1))))
     (Hloc : ∀ (m : Mirrored1 P) (t : State GalilVM), InvC Good raw stOf m → m.vm.ctl.mode = md →

@@ -26,7 +26,7 @@ open PalPeg.LocalTrackingLatch PalPeg.LocalShadowRealize
 open PalPeg.LocalLedgerShift (kOf kOf_succ_tick kOf_succ_stutter H_ledger_of_local_oracles)
 open PalPeg.LocalReplayParked (absState'' Mirrored1 MirInv1)
 open PalPeg.LocalSysConcrete (Steps stepOf tickC tickC_starved tickC_step sysC absSC feedC Starved
-  Needy InvC PhysWF Realizes x0C x0C_ctl x0C_started x0C_physWF x0C_mirInv1 tick_of_need used_le_of_need
+  Needy TickNeed InvC PhysWF Realizes x0C x0C_ctl x0C_started x0C_physWF x0C_mirInv1 tick_of_need used_le_of_need
   tracked_feedC feed_abs_core physWF_feedC mirInv1_feedC)
 open PalPeg.GalilThrottledRun (truncS usedVM SufVM)
 open PalPeg.GalilLookRefined (needT')
@@ -109,7 +109,7 @@ theorem pal_in_peg_of_shadowed_sysC
       Realizes Good w (stOf w) (TcOf w w.length) (stepOf M mode) mode)
     (hneedOfNotStarved : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), 0 < w.length →
       InvC Good w (stOf w) m →
-      ¬ Starved m.vm → Needy w (stOf w) k j m.vm → needT' w (stOf w) k ≤ j)
+      ¬ Starved m.vm → Needy w (stOf w) k j m.vm → TickNeed w (stOf w) k j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), 0 < w.length →
       InvC Good w (stOf w) m →
       Needy w (stOf w) k j m.vm → k < TcOf w w.length → needT' w (stOf w) k ≤ j →
@@ -207,7 +207,7 @@ theorem pal_in_peg_of_shadowed_sysC
           refine Or.inl ?_
           show TrackedAt _ _ _ _ _ _ (tickC M _)
           rw [tickC_step M hstarved] at hgoodNext ⊢
-          exact ⟨hphys', hmir', hneedy, hbefore, (used_le_of_need hneed).2.1, hgoodNext⟩
+          exact ⟨hphys', hmir', hneedy, hbefore, hneed.2.1, hgoodNext⟩
       · obtain ⟨_, hpost', hphys', hmir', hgood'⟩ :=
           hfreeTick w hw _ hpost hphys hmir hgood hstarved
         exact Or.inr ⟨by omega, harrived, hpost', hphys', hmir', hgood'⟩
@@ -269,8 +269,8 @@ theorem pal_in_peg_of_shadowed_sysC
     exact feed_abs_core (hpackOf hinv).1.inv.views (hpackOf hinv).1.pend letter
   · exact H_ledger_of_local_oracles S absSC x0 Pof qof firstOf stOf TcOf hpreload
       (fun w hw s hbefore hstarved =>
-        (used_le_of_need (hneedOfNotStarved w _ _ _ hw (hrun w hw s hbefore.le).invC hstarved
-          (hrun w hw s hbefore.le).needy)).2.1)
+        (hneedOfNotStarved w _ _ _ hw (hrun w hw s hbefore.le).invC hstarved
+          (hrun w hw s hbefore.le).needy).2.1)
       (fun w hw s hbefore hneed =>
         hnotStarvedOfNeed w _ _ _ hw (hrun w hw s hbefore.le).invC
           (hrun w hw s hbefore.le).needy hbefore hneed)

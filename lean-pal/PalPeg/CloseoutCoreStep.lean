@@ -64,7 +64,7 @@ open PalPeg.GalilScaffoldController (Control Mode Bounded BoundedControl)
 open PalPeg.GalilScaffoldChainInputSupply (GalilVM ChainVM Shared galilFrameS)
 open PalPeg.LocalState (GalilVML Ctr)
 open PalPeg.LocalReplayParked (Mirrored1)
-open PalPeg.LocalSysConcrete (Steps Realizes InvC Needy Starved sysC tickC feedC)
+open PalPeg.LocalSysConcrete (Steps Realizes InvC Needy TickNeed Starved sysC tickC feedC)
 open PalPeg.GalilLookRefined (needT')
 open PalPeg.Local (LocalStep)
 open PalPeg.LocalTrackingLatch (LocalSys LX)
@@ -209,7 +209,7 @@ variable {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
 def AgreeOn (Good : Mirrored1 P → Prop) (raw : List (Fin 2)) (stOf : ℕ → State GalilVM)
     (f g : Mirrored1 P → Mirrored1 P) (md : Mode) : Prop :=
   ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
-    Needy raw stOf k j m.vm → needT' raw stOf k ≤ j → f m = g m
+    Needy raw stOf k j m.vm → TickNeed raw stOf k j → f m = g m
 
 theorem agreeOn_refl (f : Mirrored1 P → Mirrored1 P) (md : Mode) :
     AgreeOn Good raw stOf f f md := fun _ _ _ _ _ _ _ _ => rfl

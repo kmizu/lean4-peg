@@ -281,6 +281,14 @@ theorem tickC_step (M : Steps P) {m : Mirrored1 P} (h : ¬ Starved m.vm) :
 
 /-! ## 5. The per-mode obligation -/
 
+/-- **What a truncated tick needs of the arrivals**: the three side conditions of
+`GalilLookRefined.tick_trunc'` — the letters used by the source and by the target, and the
+lookahead of the source.  It is weaker than `needT' raw stOf k ≤ j`, which also bounds the
+lookahead of the target: a tick can be legitimate although the lookahead of its target has not
+arrived (the right head stands on the last arrived letter and steps into the gap after it). -/
+def TickNeed (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) (k j : ℕ) : Prop :=
+  usedVM raw (stOf k).vm ≤ j ∧ usedVM raw (stOf (k+1)).vm ≤ j ∧ look' raw (stOf k) ≤ j
+
 /-- **The `LocalStep`-style obligation of one mode.**  On an invariant,
 non-starved state standing at trace index `k` with `j` letters arrived and the
 need of tick `k` met, the mode's local step lands on the trace's next state and
@@ -290,7 +298,7 @@ def Realizes (Good : Mirrored1 P → Prop) (raw : List (Fin 2)) (stOf : ℕ → 
     (lastTick : ℕ)
     (f : Mirrored1 P → Mirrored1 P) (md : Mode) : Prop :=
   ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
-    Needy raw stOf k j m.vm → needT' raw stOf k ≤ j → k < lastTick →
+    Needy raw stOf k j m.vm → TickNeed raw stOf k j → k < lastTick →
       Needy raw stOf (k+1) j (f m).vm ∧ PhysWF (f m).vm ∧ MirInv1 (f m)
 
 /-! ## 6. The `LocalSys` instance -/
@@ -323,8 +331,7 @@ theorem outL_abs (M : Steps P) (repC : Control → Bool) (m : Mirrored1 P) :
 /-! ## 7. From the need to the truncated tick -/
 
 theorem used_le_of_need {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {k j : ℕ}
-    (h : needT' raw stOf k ≤ j) :
-    usedVM raw (stOf k).vm ≤ j ∧ usedVM raw (stOf (k+1)).vm ≤ j ∧ look' raw (stOf k) ≤ j := by
+    (h : needT' raw stOf k ≤ j) : TickNeed raw stOf k j := by
   have e1 : needL' raw stOf k ≤ needT' raw stOf k :=
     needL'_le_needT' raw stOf (Nat.le_succ k)
   have e2 : needL' raw stOf (k+1) ≤ needT' raw stOf k :=
@@ -340,10 +347,10 @@ theorem tick_of_need {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {Pw : S
     {qq : ℕ} {first : Fin 9} {delay : ℕ} {k j : ℕ}
     (hP : PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
     (hT : Tick (galilFrameS Pw qq first) delay (stOf k) (stOf (k+1)))
-    (h : needT' raw stOf k ≤ j) :
+    (h : TickNeed raw stOf k j) :
     Tick (galilFrameS Pw qq first) delay
       (truncS (raw.length - j) (stOf k)) (truncS (raw.length - j) (stOf (k+1))) := by
-  obtain ⟨h1, h2, h3⟩ := used_le_of_need h
+  obtain ⟨h1, h2, h3⟩ := h
   exact tick_trunc' raw j hP qq first delay hT h1 h2 h3
 
 /-! ## 8. The oracles -/
@@ -448,7 +455,7 @@ theorem physWF_of_tickL1 {S : Shared} {qq : ℕ} {firstT : Fin 9} {d : ℕ} {x y
 theorem realizes_of_parts {Good : Mirrored1 P → Prop} {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {lastTick : ℕ}
     (f : Mirrored1 P → Mirrored1 P) (md : Mode)
     (habs : ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = md →
-      ¬ Starved m.vm → Needy raw stOf k j m.vm → needT' raw stOf k ≤ j → k < lastTick →
+      ¬ Starved m.vm → Needy raw stOf k j m.vm → TickNeed raw stOf k j → k < lastTick →
       Needy raw stOf (k+1) j (f m).vm)
     (hphys : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
       PhysWF (f m).vm ∧ MirInv1 (f m)) :

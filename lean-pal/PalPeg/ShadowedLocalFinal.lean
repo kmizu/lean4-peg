@@ -39,7 +39,7 @@ open PalPeg.CloseoutFinalBranch (canonicalPreTrace_exists needBound_alongPreTrac
 open PalPeg.Local (LocalStep)
 open PalPeg.LocalTrackingLatch
 open PalPeg.LocalReplayParked (absState'' Mirrored1 MirInv1)
-open PalPeg.LocalSysConcrete (Steps stepOf tickC sysC absSC feedC Starved Needy InvC PhysWF
+open PalPeg.LocalSysConcrete (Steps stepOf tickC sysC absSC feedC Starved Needy TickNeed InvC PhysWF
   Realizes x0C)
 open PalPeg.LocalShadowConcrete (pal_in_peg_of_shadowed_sysC)
 open PalPeg.LocalBlankState (tapeCount blankVML absState''_blank inv_blank twin_blank wf_blankView)
@@ -99,7 +99,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m → ¬ Starved m.vm →
         Needy w (heldAfter (Tc w.length) st) k j m.vm →
-        needT' w (heldAfter (Tc w.length) st) k ≤ j)
+        TickNeed w (heldAfter (Tc w.length) st) k j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
@@ -338,7 +338,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm →
-        needT' w (heldAfter (Tc w.length) st) k ≤ j)
+        TickNeed w (heldAfter (Tc w.length) st) k j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
