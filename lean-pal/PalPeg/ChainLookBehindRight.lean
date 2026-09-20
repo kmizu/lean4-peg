@@ -54,4 +54,34 @@ theorem lookChain'_watch_le (raw : List (Fin 2)) (j : ℕ) (wch : GalilScaffoldC
 
 #print axioms lookChain'_watch_le
 
+/-- **The lookahead of the chain verifier has arrived when that of the right head has**, for
+every form of the chain.  An idle chain looks at nothing; a copying or broken chain looks at the
+place its verifier stands on, whose letters have been used; a watching chain is
+`lookChain'_watch_le`.  For a chain walking back, `VerRep` and `LagCan` say nothing (they speak of
+watching chains only), so the representation of its verifier and the sign of its lag are asked
+for here. -/
+theorem lookChain'_le (raw : List (Fin 2)) (j : ℕ) (z : ChainVM)
+    (R : GalilScaffoldInputHead.PlaceHead)
+    (hverRep : VerRep raw z) (hledger : ChainPositionLedger z (position R)) (hlag : LagCan z)
+    (hbackRep : ∀ (v : GalilScaffoldChainPeriod.Tape) (h lag margin : GalilScaffoldCounter.Counter)
+      (ver : GalilScaffoldInputHead.PlaceHead), z = .back v h lag margin ver →
+      GalilScaffoldInputTrace.Represents ver.head raw ∧ 0 ≤ GalilScaffoldCounter.value lag)
+    (hR : GalilScaffoldInputTrace.Represents R.head raw) (hRs : GalilFrontMono.Sane R)
+    (husedChain : PalPeg.GalilThrottledRun.usedChain raw.length z ≤ j)
+    (hlookRight : usedPH raw.length (GalilScaffoldChainVerifier.right R) ≤ j) :
+    lookChain' raw.length z ≤ j := by
+  cases z with
+  | idle => exact Nat.zero_le _
+  | copy t h p v lag margin ver => exact husedChain
+  | back v h lag margin ver =>
+    obtain ⟨hrep, hnonneg⟩ := hbackRep v h lag margin ver rfl
+    obtain ⟨_, hsane, hsum⟩ := hledger.back v h lag margin ver rfl
+    exact usedPH_right_le_of_position_le raw j ver R hrep hsane hR hRs (by omega) husedChain
+      hlookRight
+  | watch wch =>
+    exact lookChain'_watch_le raw j wch R hverRep hledger hlag hR hRs husedChain hlookRight
+  | broken wch => exact husedChain
+
+#print axioms lookChain'_le
+
 end PalPeg.ChainLookBehindRight
