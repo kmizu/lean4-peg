@@ -1,4 +1,5 @@
 import PalPeg.LocalQueueInit
+import PalPeg.LocalViewCells
 
 /-!
 # The concrete local machine
@@ -12,5 +13,7 @@ So far: the Hood–Melville queue of an input view.
 * `PalPeg.LocalQueueMicro` — the micro-programmed machine, `MicroRep`, `microRule_sound`.
 * `PalPeg.LocalQueueProgram` — `RTQueue.snoc` / `tail` as lists of micro-operations, the machine
   with a program counter, `programRun_snoc` / `programRun_tail`;
-* `PalPeg.LocalQueueInit` — the first step, from blank tapes to the empty queue (`programInit`).
+* `PalPeg.LocalQueueInit` — the first step, from blank tapes to the empty queue (`programInit`);
+* `PalPeg.LocalViewCells` — the content of a view is the sentinel followed by letters, so the
+  emptiness of `back` is readable from the focus (`back_nil_iff_focus_none`).
 -/
