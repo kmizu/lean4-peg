@@ -95,11 +95,19 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
     (hrealizes : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ mode : Mode, Realizes Good w (heldAfter (Tc w.length) st) (Tc w.length) (stepOf M mode) mode)
-    (hneedOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+    -- what a non-starved tracked state still owes for its tick: the letters used by the target,
+    -- and the lookahead of the chain verifier (the starvation test does not read the chain)
+    (hnextUsedOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m → ¬ Starved m.vm →
-        Needy w (heldAfter (Tc w.length) st) k j m.vm →
-        TickNeed w (heldAfter (Tc w.length) st) k j)
+      ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
+        ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
+        usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j)
+    (hchainLookOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
+        ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
+        (heldAfter (Tc w.length) st k).ctl.mode = .scan →
+        PalPeg.GalilLookRefined.lookChain' w.length (heldAfter (Tc w.length) st k).vm.chain ≤ j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
@@ -192,8 +200,12 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
     (fun w m hw hinv => hgoodTick w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m hinv)
     (fun w letter m hw hinv => hgoodFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 letter m hinv)
     (fun w hw => hrealizes w _ _ (htraceOf w hw).1 (htraceOf w hw).2)
-    (fun w m k j hw hinv hstarved hneedy =>
-      hneedOfNotStarved w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved hneedy)
+    (fun w m k j hw hinv hstarved hneedy hbefore =>
+      hnextUsedOfNotStarved w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved hneedy
+        hbefore)
+    (fun w m k j hw hinv hstarved hneedy hbefore hscan =>
+      hchainLookOfNotStarved w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved hneedy
+        hbefore hscan)
     (fun w m k j hw hinv hneedy hbefore hneed =>
       hnotStarvedOfNeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hneedy hbefore
         hneed)
@@ -334,11 +346,19 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
           PalPeg.GalilTickFair.Canonical entry 2048 (absState'' m.vm)
             (absState'' (replayStartStep m).vm) ∧
           PhysWF (replayStartStep m).vm ∧ MirInv1 (replayStartStep m))
-    (hneedOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+    -- what a non-starved tracked state still owes for its tick: the letters used by the target,
+    -- and the lookahead of the chain verifier (the starvation test does not read the chain)
+    (hnextUsedOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
-        ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm →
-        TickNeed w (heldAfter (Tc w.length) st) k j)
+        ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
+        usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j)
+    (hchainLookOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
+        ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
+        (heldAfter (Tc w.length) st k).ctl.mode = .scan →
+        PalPeg.GalilLookRefined.lookChain' w.length (heldAfter (Tc w.length) st k).vm.chain ≤ j)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
@@ -386,7 +406,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
     RecognizedByTotalPEG PAL := by
   refine given_shadowedLocalSystem entry q first hor hres hChainVerifierSupply
     (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC Good hgoodInit hgoodTick hgoodFeed
-    ?_ hneedOfNotStarved hnotStarvedOfNeed Post hpostOfLastReport hpostTick rep_sound rep_complete L0
+    ?_ hnextUsedOfNotStarved hchainLookOfNotStarved hnotStarvedOfNeed Post hpostOfLastReport hpostTick rep_sound rep_complete L0
     blankSymbol q0 repQ outQ htape Rep hrepInit hsimTick hsimFeed hreadRep hreadOut
   intro w st Tc hpreTrace hcanonical mode
   rcases Nat.eq_zero_or_pos w.length with hempty | hw
