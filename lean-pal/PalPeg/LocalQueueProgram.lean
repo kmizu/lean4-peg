@@ -18,8 +18,8 @@ open PalPeg.CloseoutCoreEnc22 (tail_hrot)
 open PalPeg.CloseoutCoreEnc25 (SOp RTag sApply)
 open PalPeg.RTQueue (Queue)
 open PalPeg.CloseoutCoreStep (Γc blankc)
-open PalPeg.CloseoutCoreEnc12 (actList TEqG)
-open PalPeg.Local (readWin)
+open PalPeg.CloseoutCoreEnc12 (actList TEqG ActRule compStep compStep_apply)
+open PalPeg.Local (readWin pos)
 open PalPeg.Program (STape)
 
 /-- The abstract effect of a list of micro-operations. -/
@@ -212,16 +212,17 @@ variable {K : ℕ} {Terminal : Type}
 /-- The part of the control a program moves: role tag, rotation phase, units owed. -/
 abbrev MicroState : Type := (RTag × RotationPhase × Fin 3) × (Fin 10 → STape Γc)
 
-/-- One step of the machine on a micro-operation, up to `TEqG` (what `compStep_apply` gives). -/
+/-- One step of the machine on a micro-operation: the next control, and — when every tape has
+the margin of `compStep_apply` — the tapes up to `TEqG`. -/
 def MicroStep (hK : 2 ≤ K) (input : Option Terminal) (micro : MicroOp)
     (state state' : MicroState) : Prop :=
   ((microRule Terminal hK).nq (micro, state.1) input
       (fun tape => readWin blankc K (state.2 tape))).2 = state'.1 ∧
-    ∀ tape, TEqG blankc
+    ((∀ tape, K ≤ pos (state.2 tape)) → ∀ tape, TEqG blankc
       (actList blankc (state.2 tape)
         ((microRule Terminal hK).acts (micro, state.1) input
           (fun tape => readWin blankc K (state.2 tape)) tape))
-      (state'.2 tape)
+      (state'.2 tape))
 
 /-- A run of the machine along a program. -/
 inductive MicroRun (hK : 2 ≤ K) (input : Option Terminal) :
@@ -255,11 +256,11 @@ theorem microRun_sound (hK : 2 ≤ K) (input : Option Terminal) :
       obtain ⟨hpremise, hpremisesRest⟩ := hpremises
       obtain ⟨howedZero, hnoStart⟩ := OwedOk.head howed
       have hrep' : MicroRep K q (micro, state.1) state.2 := hrep
-      obtain ⟨-, hnq, hsound⟩ := microRule_sound (Terminal := Terminal) hK hrep' input
+      obtain ⟨hmargin, hnq, hsound⟩ := microRule_sound (Terminal := Terminal) hK hrep' input
         hpremise.1 (fun hmicro => (hpremise.2 hmicro).1) (fun hmicro => (hpremise.2 hmicro).2)
         (fun hne => Fin.ext (howedZero hne)) hnoStart
       obtain ⟨hcontrol, htapes⟩ := hstep
-      have hmiddle := hsound middle.2 htapes
+      have hmiddle := hsound middle.2 (htapes hmargin)
       have hmiddleControl : middle.1 = (microControlAfter (micro, state.1) q).2 := by
         rw [← hcontrol, hnq]
       have hmiddleRep : MicroRep K (microApply micro q) (micro, middle.1) middle.2 := by
@@ -380,5 +381,148 @@ theorem tailRun_sound (hK : 2 ≤ K) (input : Option Terminal) {q : Queue (Fin 2
 #print axioms tailRun_sound
 
 end Run
+
+/-! ## The machine with a program counter -/
+
+/-- The two jobs of the queue machine. -/
+inductive QueueJob where
+  | snoc (a : Fin 2)
+  | tail
+  deriving DecidableEq
+
+def programOf : QueueJob → List MicroOp
+  | .snoc a => snocProgram a
+  | .tail => tailProgram
+
+theorem programOf_length_le (job : QueueJob) : (programOf job).length ≤ 10 := by
+  cases job <;> simp [programOf, snocProgram, tailProgram, checkProgram]
+
+/-- The control: the job, the program counter, and the state a program moves. -/
+abbrev ProgramControl : Type := QueueJob × Fin 11 × RTag × RotationPhase × Fin 3
+
+/-- The micro-operation under the program counter (past the end: an increment, which does
+nothing when nothing is owed). -/
+def currentOp (control : ProgramControl) : MicroOp :=
+  (programOf control.1).getD control.2.1.val .incLength
+
+def nextCounter (counter : Fin 11) : Fin 11 :=
+  if h : counter.val + 1 < 11 then ⟨counter.val + 1, h⟩ else counter
+
+section ProgramMachine
+
+variable {K : ℕ} {Terminal : Type}
+
+/-- **The queue machine with its program counter**: the rule of `microRule` on the
+micro-operation under the counter; the counter advances. -/
+def programRule (Terminal : Type) (hK : 2 ≤ K) : ActRule Terminal ProgramControl Γc 10 K where
+  nq := fun control input windows =>
+    (control.1, nextCounter control.2.1,
+      ((microRule Terminal hK).nq (currentOp control, control.2.2) input windows).2)
+  acts := fun control input windows tape =>
+    (microRule Terminal hK).acts (currentOp control, control.2.2) input windows tape
+  len_le := fun control input windows tape => (microRule Terminal hK).len_le _ _ _ _
+
+def programLocalStep (Terminal : Type) (hK : 2 ≤ K) :
+    PalPeg.Local.LocalStep Terminal ProgramControl Γc 10 K :=
+  compStep (programRule Terminal hK)
+
+/-- The machine run on a list of inputs (it ignores them). -/
+def programRun (hK : 2 ≤ K) :
+    List (Option Terminal) → ProgramControl × (Fin 10 → STape Γc) →
+      ProgramControl × (Fin 10 → STape Γc)
+  | [], x => x
+  | input :: rest, x => programRun hK rest ((programLocalStep Terminal hK).apply blankc x input)
+
+/-- One real step is a `MicroStep` on the micro-operation under the counter. -/
+theorem microStep_of_apply (hK : 2 ≤ K) (input input' : Option Terminal)
+    (control : ProgramControl) (tapes : Fin 10 → STape Γc) :
+    MicroStep hK input (currentOp control) (control.2.2, tapes)
+        (((programLocalStep Terminal hK).apply blankc (control, tapes) input').1.2.2,
+          ((programLocalStep Terminal hK).apply blankc (control, tapes) input').2) ∧
+      ((programLocalStep Terminal hK).apply blankc (control, tapes) input').1.1 = control.1 ∧
+      ((programLocalStep Terminal hK).apply blankc (control, tapes) input').1.2.1
+        = nextCounter control.2.1 := by
+  refine ⟨⟨rfl, fun hmargin => ?_⟩, rfl, rfl⟩
+  exact (compStep_apply (programRule Terminal hK) blankc (control, tapes) input' hmargin).2
+
+/-- **The real run is a `MicroRun`** along the rest of the program, and the counter ends at the
+end of the program. -/
+theorem microRun_of_programRun (hK : 2 ≤ K) (input : Option Terminal) :
+    ∀ (inputs : List (Option Terminal)) (control : ProgramControl)
+      (tapes : Fin 10 → STape Γc),
+      control.2.1.val + inputs.length = (programOf control.1).length →
+      MicroRun hK input ((programOf control.1).drop control.2.1.val) (control.2.2, tapes)
+          ((programRun hK inputs (control, tapes)).1.2.2,
+            (programRun hK inputs (control, tapes)).2) ∧
+        (programRun hK inputs (control, tapes)).1.1 = control.1 ∧
+        (programRun hK inputs (control, tapes)).1.2.1.val = (programOf control.1).length := by
+  intro inputs
+  induction inputs with
+  | nil =>
+    intro control tapes hlength
+    have hdrop : (programOf control.1).drop control.2.1.val = [] := by
+      apply List.drop_eq_nil_of_le
+      simp only [List.length_nil] at hlength
+      omega
+    rw [hdrop]
+    refine ⟨MicroRun.nil _, rfl, ?_⟩
+    simp only [List.length_nil] at hlength
+    exact hlength
+  | cons first rest ih =>
+    intro control tapes hlength
+    simp only [List.length_cons] at hlength
+    have hbound := programOf_length_le control.1
+    have hlt : control.2.1.val < (programOf control.1).length := by omega
+    obtain ⟨hstep, hjob, hcounter⟩ := microStep_of_apply hK input first control tapes
+    have hnext : (nextCounter control.2.1).val = control.2.1.val + 1 := by
+      unfold nextCounter
+      rw [dif_pos (by omega)]
+    set result := (programLocalStep Terminal hK).apply blankc (control, tapes) first
+      with hresult
+    have hih := ih result.1 result.2 (by rw [hjob, hcounter, hnext]; omega)
+    rw [hjob, hcounter, hnext] at hih
+    have hdrop : (programOf control.1).drop control.2.1.val
+        = currentOp control :: (programOf control.1).drop (control.2.1.val + 1) := by
+      rw [List.drop_eq_getElem_cons hlt]
+      congr 1
+      unfold currentOp
+      rw [List.getD_eq_getElem _ _ hlt]
+    rw [hdrop]
+    exact ⟨MicroRun.cons hstep hih.1, hih.2.1, hih.2.2⟩
+
+/-- **An enqueue on the real machine**: nine steps of `programLocalStep` from the start of the
+`snoc a` job take a representation of `q` to a representation of `RTQueue.snoc q a`. -/
+theorem programRun_snoc (hK : 2 ≤ K) {q : Queue (Fin 2)} (hq : RTQueue.Inv q) (a : Fin 2)
+    (inputs : List (Option Terminal)) (hinputs : inputs.length = 9)
+    {tag : RTag} {phase : RotationPhase} {tapes : Fin 10 → STape Γc} {first : MicroOp}
+    (hrep : MicroRep K q (first, tag, phase, 0) tapes) (last : MicroOp) :
+    MicroRep K (RTQueue.snoc q a)
+        (last, (programRun hK inputs ((.snoc a, 0, tag, phase, 0), tapes)).1.2.2)
+        (programRun hK inputs ((.snoc a, 0, tag, phase, 0), tapes)).2 ∧
+      (programRun hK inputs ((.snoc a, 0, tag, phase, 0), tapes)).1.2.2.2.2.val = 0 := by
+  obtain ⟨hrun, -, -⟩ := microRun_of_programRun hK (none : Option Terminal) inputs
+    ((.snoc a, 0, tag, phase, 0) : ProgramControl) tapes (by
+      simp [programOf, snocProgram, checkProgram, hinputs])
+  exact snocRun_sound hK none hq a hrun hrep rfl last
+
+/-- **A dequeue on the real machine**: ten steps from the start of the `tail` job. -/
+theorem programRun_tail (hK : 2 ≤ K) {q : Queue (Fin 2)} (hq : RTQueue.Inv q)
+    (hfront : q.front ≠ [])
+    (inputs : List (Option Terminal)) (hinputs : inputs.length = 10)
+    {tag : RTag} {phase : RotationPhase} {tapes : Fin 10 → STape Γc} {first : MicroOp}
+    (hrep : MicroRep K q (first, tag, phase, 0) tapes) (last : MicroOp) :
+    MicroRep K (RTQueue.tail q)
+        (last, (programRun hK inputs ((.tail, 0, tag, phase, 0), tapes)).1.2.2)
+        (programRun hK inputs ((.tail, 0, tag, phase, 0), tapes)).2 ∧
+      (programRun hK inputs ((.tail, 0, tag, phase, 0), tapes)).1.2.2.2.2.val = 0 := by
+  obtain ⟨hrun, -, -⟩ := microRun_of_programRun hK (none : Option Terminal) inputs
+    ((.tail, 0, tag, phase, 0) : ProgramControl) tapes (by
+      simp [programOf, tailProgram, checkProgram, hinputs])
+  exact tailRun_sound hK none hq hfront hrun hrep rfl last
+
+#print axioms programRun_snoc
+#print axioms programRun_tail
+
+end ProgramMachine
 
 end PalPeg.ConcreteLocalMachine

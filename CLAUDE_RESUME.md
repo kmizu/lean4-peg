@@ -16,6 +16,8 @@
 * `LocalQueueProgram`: `runMicro_snoc`／`runMicro_tail`（抽象 queue 上で `snoc`／`tail` ＝微小操作列、`check_eq_sApply`）、`MicroRun`（`compStep_apply` が与える `TEqG` までの 1 歩の列）、`microRun_sound`（列に沿った反復。プログラムの形 `OwedOk` と各点の HM 前提 `PremisesAlong`）。HM の事実の出所は既存の `RTQueue.snoc_pinv`、`CloseoutCoreEnc22.tail_hrot`、`RTQueue.frontList_eq_append`、`eq_idle_of_rem_zero`。
 * 整理: `ConcreteLocalMachine.lean`（2,155 行）を `LocalQueueLayout`／`LocalQueueMachine`／`LocalQueueLength`／`LocalQueueMicro`／`LocalQueueProgram` に分割（入口は `ConcreteLocalMachine.lean`）。
 
+**n285 の続き（2026-09-20、検査済み・未接続）— 実機の走行にした**: `LocalQueueProgram` に `QueueJob = snoc a | tail`、`ProgramControl = QueueJob × Fin 11 × RTag × RotationPhase × Fin 3`、`programRule`（counter の下の微小操作に `microRule` の `nq`／`acts` をそのまま使い、counter を進める）、`programLocalStep := compStep programRule`、`programRun`（入力列に沿った実機の反復。入力は無視する）。**`programRun_snoc`／`programRun_tail`**: job の先頭から 9 歩／10 歩で `MicroRep K q …` が `MicroRep K (RTQueue.snoc q a) …`／`(RTQueue.tail q)` になり、未払いは 0。前提は `RTQueue.Inv q`（tail は `front ≠ []` も）。鍵は `LocalStep.apply` の制御成分の等式が `rfl`（margin 不要）なこと: `MicroStep` のテープ部分だけを margin 条件つきにして、実機の反復から `MicroRun` を無条件に作り（`microRun_of_programRun`）、margin は `microRule_sound` が各点で供給する。(1) はこれで済み。
+
 **未完の部分**: (1) `MicroRun` を実機の走行にする: 制御に job と program counter を持たせた rule（`microRule` の `nq`／`acts` をそのまま使う）と `compStep_apply` で `MicroStep` を出す。(2) `MicroRep` の初期化（高さ K の底を敷く prologue、空の queue）。(3) `head?`（`stepRight` が読む先頭）を tape から読む。(4) view の残り（`back`／`focus`／`near`）と 3 本の view、chain（`LocalChain`）、探索、7 モード（`init = scan = replayStart = id` は仮実装）、入力配布。(5) `LocalStep.realize`／`realize_SAccepts` と `H_realizeCanonical`。
 
 ## n284 — `obligation_localRealization`: queue sub-step の具体的な局所機械とその正しさ（`queueRep_step`）。公理への接続はまだ無い
