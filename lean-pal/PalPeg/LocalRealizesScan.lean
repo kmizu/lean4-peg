@@ -231,7 +231,6 @@ structure RewindWF (x : GalilVML P) : Prop where
   notReplaying : x.ctl.replaying = false
   polLength : x.pol .length = true
   polRadius : x.pol .radius = true
-  clean : ∀ i, PalPeg.LocalBuffers.Cleared (PalPeg.LocalBuffers.idle x.fppBuf i)
 
 open Classical in
 /-- **The local `rewind` step.**  `LocalTick3`'s three rewind actions, selected
@@ -265,7 +264,7 @@ theorem tickL3_rewindStepC {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : �
   unfold rewindStepC
   by_cases hf : (galilFrameS Pw qq firstT).atFirst (abs' m.vm)
   · rw [if_pos hf]
-    exact .rewind_done m.vm hmd hwf.notReplaying hf hwf.clean
+    exact .rewind_done m.vm hmd hwf.notReplaying hf
   · have hne := marksLeft_of_rewind_tick hmd hf ht
     rw [if_neg hf]
     by_cases hp : m.vm.ctl.pair = true

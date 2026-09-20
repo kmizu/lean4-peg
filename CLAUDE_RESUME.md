@@ -1,3 +1,19 @@
+## n306（2026-09-21）: rewind の reset が ghost で新品の半分へ切り替わる。`Geom.rewindClean` を消費者から外した
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: 仮説 `hgeomTracked : InvC … m → Geom m.vm` から場 `rewindClean`（rewind モードで fpp 二重バッファの idle 半分が消去済み）が消えた。`Geom` は 3 場（`shiftMag`／`copyWork`／`copyProper`）、`RewindWF` は 3 場。
+* **なぜ偽の疑いが濃かったか**（`False` 定理は未作成）: 局所 step（`TickL1/2/3`、`LocalSysConcrete`）のどれも `LocalBuffers.clearTick` を回していない（`LocalTick2:896` 自身が「assumed, not scheduled」）。1 回目の `resetL` で idle に回った半分は消されないので、fallback が 2 回以上ある語（`abab` は 3 回）の 2 回目の `rewind_done` で成り立たない。
+* **直し方**: `LocalBuffers.resetFresh`（新品の半分へ切替）と `abs_resetFresh`（無条件）。`rewindDoneVm`／`abs'_rewindDoneVm`／`TickL3.rewind_done` から `hclean` を削除。`tickL3_local` に `hnotReset`、消費者を失った `stepLocal_rewindDoneVm` は削除。handoff の指定（junk をその場で消さない、`TEqG`＝同じ head 位置・同じ読取りで運ぶ）に合わせた。物理側は active の反転だけで、junk を読まないことは `Enc` の側の義務。
+* **不採用**: `clearTick` を各 step に入れて締切を証明する案。消去は距離ぶんの tick が要るが、次の reset は 1〜2 文字後に来うる（`a^n b a b`）。半分を k 本に増やしても、半径が毎回縮む列で未完了ジョブが溜まるので固定本数では足りない。
+* `LocalTick2.commitFallback` と `commitReplay`（`dpBuf`）にも同じ `resetL`＋`hclean` の形が残っている。新経路の scan／replayStart は `chosenStep`（存在仮説）なので今は消費者に出ていない。
+
+**次の場 `copyProper` の調査（読み取りのみ）**: `ProperView x.fppWalker`＝view の左端に番兵 `none` がちょうど 1 個。これは前の 2 つと違って**本物の局所不変量**。`LocalState.absPlace` が番兵を落とすので `InvC` からは出ない。仮説で受けるのでなく、run に沿って運ぶ束（`Inv.views`／`ViewsWF`、`tickL*_inv` で保存が証明済み）に入れるのが筋。既存の保存補題は左移動だけ（`LocalChain.properView_stepLeft`／`properView_moveLeftV`）。fppWalker を動かす局所 step は copy（`moveLeftV`）と到着（`arrive`）だけ。fallback 入口の `walker := R`（Scala `:314`）は scan の `chosenStep` の中に隠れているので、`right` の view の anchoring も要る。
+
 ## n305（2026-09-21）: choose の select が ghost でヘッドをコピーする。`Geom.chooseParked` を消費者から外した
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
