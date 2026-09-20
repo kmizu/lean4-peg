@@ -4,6 +4,7 @@ import PalPeg.LocalBlankState
 import PalPeg.CloseoutRightBounds
 import PalPeg.CanonicalLocalRealizes
 import PalPeg.LocalInitStep
+import PalPeg.ChainLookBehindRight
 
 /-!
 # The final theorem from the local system and a physical machine, the trace side discharged
@@ -96,6 +97,66 @@ theorem chainPosInv2_alongPreTrace (entry q : ℕ) (first : Fin 9) {w : List (Fi
 
 #print axioms chainPosInv2_alongPreTrace
 
+/-- **The lookahead of the chain verifier of a tracked, non-starved scan state has arrived.**
+On the held canonical trace below the last report point: the verifier supply gives `VerRep` and
+`LagCan`, `chainPosInv2_alongPreTrace` the position ledger, the scan geometry of the pack the
+representation of the right head, the front pack its sanity, and the starvation test the
+lookahead of the right head.  For a chain walking back the representation of its verifier and the
+sign of its lag are not in these invariants and are asked for (`hbackRep`). -/
+theorem chainLook_heldAfter (entry q : ℕ) (first : Fin 9)
+    {w : List (Fin 2)} (hw : 0 < w.length)
+    {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc)
+    (hres : ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc)
+    (hsupply : PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
+    (hbackRep : ∀ i, i ≤ Tc w.length → (st i).ctl.mode = .scan →
+      ∀ (v : GalilScaffoldChainPeriod.Tape) (h lag margin : GalilScaffoldCounter.Counter)
+        (ver : GalilScaffoldInputHead.PlaceHead), (st i).vm.chain = .back v h lag margin ver →
+        GalilScaffoldInputTrace.Represents ver.head w ∧ 0 ≤ GalilScaffoldCounter.value lag)
+    (m : Mirrored1 (tapeCount spare)) (k j : ℕ)
+    (hnotStarved : ¬ Starved m.vm)
+    (hneedy : Needy w (heldAfter (Tc w.length) st) k j m.vm) (hbefore : k < Tc w.length)
+    (hused : usedVM w (heldAfter (Tc w.length) st k).vm ≤ j)
+    (hscan : (heldAfter (Tc w.length) st k).ctl.mode = .scan) :
+    PalPeg.GalilLookRefined.lookChain' w.length (heldAfter (Tc w.length) st k).vm.chain ≤ j := by
+  have hheld : heldAfter (Tc w.length) st k = st k := heldAfter_of_le st hbefore.le
+  have hsuffix : PalPeg.GalilThrottledRun.SufVM w (heldAfter (Tc w.length) st k).vm := by
+    rw [hheld]
+    exact sufVM_trace w st (Tc w.length) (sharedC_suf w _ _ centreC placeC entry) q first 2048
+      hpreTrace.base.pre.trace.tick (by rw [hpreTrace.base.pre.start]; exact sufVM_boot w) k
+      hbefore.le
+  have hlookRight :=
+    PalPeg.LocalStarvedRight.usedPH_right_le_of_notStarved hneedy hnotStarved hsuffix hused
+  rw [hheld] at hused hscan hlookRight ⊢
+  have hpositive : 1 ≤ k := by
+    rcases Nat.eq_zero_or_pos k with hzero | hpos
+    · rw [hzero, hpreTrace.base.pre.start] at hscan
+      cases hscan
+    · exact hpos
+  have hsane := (PalPeg.BranchSupply.frontPack_alongTrace centreC placeC entry q first hw
+    hpreTrace.base.pre k hpositive hbefore.le).sane
+  have hrightRep : GalilScaffoldInputTrace.Represents (st k).vm.right.head w := by
+    cases hreplaying : (st k).ctl.replaying with
+    | false =>
+      obtain ⟨radius, hgeometry⟩ :=
+        (hpreTrace.packs k hbefore.le).m2.packM.scanGeom hscan hreplaying
+      exact hgeometry.rightRep
+    | true =>
+      obtain ⟨radius, hgeometry⟩ := (hpreTrace.packs k hbefore.le).m2.scanGeomR hscan hreplaying
+      exact hgeometry.rightRep
+  obtain ⟨hverRep, hlagCan⟩ := hsupply k hbefore.le hscan
+  by_cases hidle : (st k).vm.chain = ChainVM.idle
+  · rw [hidle]
+    exact Nat.zero_le _
+  · have hledger := ((chainPosInv2_alongPreTrace entry q first hw hpreTrace hres k
+      hbefore.le).payload hscan hidle).chainPos
+    have husedChain : PalPeg.GalilThrottledRun.usedChain w.length (st k).vm.chain ≤ j :=
+      le_trans (le_trans (le_max_right _ _) (le_max_right _ _)) hused
+    exact PalPeg.ChainLookBehindRight.lookChain'_le w j (st k).vm.chain (st k).vm.right hverRep
+      hledger hlagCan (hbackRep k hbefore.le hscan) hrightRep hsane husedChain hlookRight
+
+#print axioms chainLook_heldAfter
+
 /-- **`PAL ∈ PEG` from the local system and a physical machine.**  The first three hypotheses
 are those of `CloseoutFinalBranch.given_scanLandingObligations` other than the realization; the
 rest replaces the realization. -/
@@ -132,13 +193,12 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
         usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j)
-    (hchainLookOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+    (hbackRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
-        ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
-        usedVM w (heldAfter (Tc w.length) st k).vm ≤ j →
-        (heldAfter (Tc w.length) st k).ctl.mode = .scan →
-        PalPeg.GalilLookRefined.lookChain' w.length (heldAfter (Tc w.length) st k).vm.chain ≤ j)
+      ∀ i, i ≤ Tc w.length → (st i).ctl.mode = .scan →
+      ∀ (v : GalilScaffoldChainPeriod.Tape) (h lag margin : GalilScaffoldCounter.Counter)
+        (ver : GalilScaffoldInputHead.PlaceHead), (st i).vm.chain = .back v h lag margin ver →
+        GalilScaffoldInputTrace.Represents ver.head w ∧ 0 ≤ GalilScaffoldCounter.value lag)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
@@ -234,9 +294,11 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
     (fun w m k j hw hinv hstarved hneedy hbefore =>
       hnextUsedOfNotStarved w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved hneedy
         hbefore)
-    (fun w m k j hw hinv hstarved hneedy hbefore hused hscan =>
-      hchainLookOfNotStarved w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved hneedy
-        hbefore hused hscan)
+    (fun w m k j hw _ hstarved hneedy hbefore hused hscan =>
+      chainLook_heldAfter entry q first hw (htraceOf w hw).1 (hres w _ _ (htraceOf w hw).1)
+        (hChainVerifierSupply w _ _ hw (htraceOf w hw).1)
+        (hbackRep w _ _ (htraceOf w hw).1 (htraceOf w hw).2) m k j hstarved hneedy hbefore hused
+        hscan)
     (fun w m k j hw hinv hneedy hbefore hneed =>
       hnotStarvedOfNeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hneedy hbefore
         hneed)
@@ -384,13 +446,12 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
         usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j)
-    (hchainLookOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+    (hbackRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
-        ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
-        usedVM w (heldAfter (Tc w.length) st k).vm ≤ j →
-        (heldAfter (Tc w.length) st k).ctl.mode = .scan →
-        PalPeg.GalilLookRefined.lookChain' w.length (heldAfter (Tc w.length) st k).vm.chain ≤ j)
+      ∀ i, i ≤ Tc w.length → (st i).ctl.mode = .scan →
+      ∀ (v : GalilScaffoldChainPeriod.Tape) (h lag margin : GalilScaffoldCounter.Counter)
+        (ver : GalilScaffoldInputHead.PlaceHead), (st i).vm.chain = .back v h lag margin ver →
+        GalilScaffoldInputTrace.Represents ver.head w ∧ 0 ≤ GalilScaffoldCounter.value lag)
     (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
@@ -438,7 +499,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
     RecognizedByTotalPEG PAL := by
   refine given_shadowedLocalSystem entry q first hor hres hChainVerifierSupply
     (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC Good hgoodInit hgoodTick hgoodFeed
-    ?_ hnextUsedOfNotStarved hchainLookOfNotStarved hnotStarvedOfNeed Post hpostOfLastReport hpostTick rep_sound rep_complete L0
+    ?_ hnextUsedOfNotStarved hbackRep hnotStarvedOfNeed Post hpostOfLastReport hpostTick rep_sound rep_complete L0
     blankSymbol q0 repQ outQ htape Rep hrepInit hsimTick hsimFeed hreadRep hreadOut
   intro w st Tc hpreTrace hcanonical mode
   rcases Nat.eq_zero_or_pos w.length with hempty | hw
