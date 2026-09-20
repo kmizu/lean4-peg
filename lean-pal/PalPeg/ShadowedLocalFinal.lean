@@ -163,10 +163,11 @@ theorem chainLook_heldAfter (entry q : ℕ) (first : Fin 9)
 the place right of the right head, whose lookahead the starvation test gives; `replayStart` puts
 them on the centre head; a `scan` tick other than the shift entry uses the letters of the source,
 the lookahead of the right head and that of the chain verifier
-(`TickUsedLetters.usedVM_scanTick_le`, `chainLook_heldAfter`); a tick of the fallback phases and
-the last tick of a shift use no new letter (`TickUsedLetters.usedVM_phaseTick_le`).  The two ticks
-that move a head without the starvation test covering it — the shift entry and the moving tick of
-a shift — are left to `hshiftMoves`. -/
+(`TickUsedLetters.usedVM_scanTick_le`, `chainLook_heldAfter`); a tick of any other mode uses the
+letters of the source or moves the centre head one place and the left head two, which the
+starvation test reads (`TickUsedLetters.usedVM_phaseTick_le`,
+`LocalStarvedRight.usedPH_shiftHeads_le_of_notStarved`).  The shift entry, which moves the chain
+verifier once more, is left to `hshiftEntry`. -/
 theorem nextUsed_heldAfter (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)} (hw : 0 < w.length)
     {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
     (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc)
@@ -179,11 +180,8 @@ theorem nextUsed_heldAfter (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)} (h
     (m : Mirrored1 (tapeCount spare)) (k j : ℕ) (hnotStarved : ¬ Starved m.vm)
     (hneedy : Needy w (heldAfter (Tc w.length) st) k j m.vm) (hbefore : k < Tc w.length)
     (hused : usedVM w (heldAfter (Tc w.length) st k).vm ≤ j)
-    (hshiftMoves : ((heldAfter (Tc w.length) st k).ctl.mode = .scan ∧
-        (heldAfter (Tc w.length) st (k+1)).ctl.mode = .shift) ∨
-      ((heldAfter (Tc w.length) st k).ctl.mode = .shift ∧
-        (galilFrameS (PofC centreC placeC entry w) q first).remainingPos
-          (heldAfter (Tc w.length) st k).vm) →
+    (hshiftEntry : (heldAfter (Tc w.length) st k).ctl.mode = .scan →
+      (heldAfter (Tc w.length) st (k+1)).ctl.mode = .shift →
       usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j) :
     usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j := by
   have hsuffix : PalPeg.GalilThrottledRun.SufVM w (heldAfter (Tc w.length) st k).vm := by
@@ -210,21 +208,21 @@ theorem nextUsed_heldAfter (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)} (h
       exact (PalPeg.TickUsedLetters.usedVM_replayStart_le w hreplayStart).trans hused
     · by_cases hscanMode : (heldAfter (Tc w.length) st k).ctl.mode = .scan
       · by_cases hshiftNext : (heldAfter (Tc w.length) st (k+1)).ctl.mode = .shift
-        · exact hshiftMoves (Or.inl ⟨hscanMode, hshiftNext⟩)
+        · exact hshiftEntry hscanMode hshiftNext
         · have hlookChain := chainLook_heldAfter entry q first hw hpreTrace hres hsupply hbackRep
             m k j hnotStarved hneedy hbefore hused hscanMode
           rw [heldAfter_of_le st hbefore.le] at hscanMode hused hlookRight hlookChain
           rw [heldAfter_of_le st (Nat.succ_le_of_lt hbefore)] at hshiftNext ⊢
           exact (PalPeg.TickUsedLetters.usedVM_scanTick_le w (c := (st k).ctl) (s := (st k).vm)
             hscanMode htick hshiftNext).trans (max_le (max_le hused hlookRight) hlookChain)
-      · by_cases hshiftMoving : (heldAfter (Tc w.length) st k).ctl.mode = .shift ∧
-            (galilFrameS (PofC centreC placeC entry w) q first).remainingPos
-              (heldAfter (Tc w.length) st k).vm
-        · exact hshiftMoves (Or.inr hshiftMoving)
-        · rw [heldAfter_of_le st hbefore.le] at hinitMode hreplayMode hscanMode hshiftMoving hused
-          rw [heldAfter_of_le st (Nat.succ_le_of_lt hbefore)]
-          exact (PalPeg.TickUsedLetters.usedVM_phaseTick_le w htick hinitMode hscanMode hreplayMode
-            (fun hshiftMode hremaining => hshiftMoving ⟨hshiftMode, hremaining⟩)).trans hused
+      · obtain ⟨hlookCenter, hlookLeftTwice⟩ :=
+          PalPeg.LocalStarvedRight.usedPH_shiftHeads_le_of_notStarved hneedy hnotStarved hsuffix
+            hused
+        rw [heldAfter_of_le st hbefore.le] at hinitMode hreplayMode hscanMode hused
+        rw [heldAfter_of_le st hbefore.le] at hlookCenter hlookLeftTwice
+        rw [heldAfter_of_le st (Nat.succ_le_of_lt hbefore)]
+        exact (PalPeg.TickUsedLetters.usedVM_phaseTick_le w htick hinitMode hscanMode
+          hreplayMode).trans (max_le hused (max_le hlookCenter hlookLeftTwice))
 
 #print axioms nextUsed_heldAfter
 
@@ -264,11 +262,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
         usedVM w (heldAfter (Tc w.length) st k).vm ≤ j →
-        ((heldAfter (Tc w.length) st k).ctl.mode = .scan ∧
-            (heldAfter (Tc w.length) st (k+1)).ctl.mode = .shift) ∨
-          ((heldAfter (Tc w.length) st k).ctl.mode = .shift ∧
-            (galilFrameS (PofC centreC placeC entry w) q first).remainingPos
-              (heldAfter (Tc w.length) st k).vm) →
+        (heldAfter (Tc w.length) st k).ctl.mode = .scan →
+        (heldAfter (Tc w.length) st (k+1)).ctl.mode = .shift →
         usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j)
     (hbackRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
@@ -526,11 +521,8 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hq : 
       ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
         ¬ Starved m.vm → Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
         usedVM w (heldAfter (Tc w.length) st k).vm ≤ j →
-        ((heldAfter (Tc w.length) st k).ctl.mode = .scan ∧
-            (heldAfter (Tc w.length) st (k+1)).ctl.mode = .shift) ∨
-          ((heldAfter (Tc w.length) st k).ctl.mode = .shift ∧
-            (galilFrameS (PofC centreC placeC entry w) q first).remainingPos
-              (heldAfter (Tc w.length) st k).vm) →
+        (heldAfter (Tc w.length) st k).ctl.mode = .scan →
+        (heldAfter (Tc w.length) st (k+1)).ctl.mode = .shift →
         usedVM w (heldAfter (Tc w.length) st (k+1)).vm ≤ j)
     (hbackRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
