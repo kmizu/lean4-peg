@@ -74,8 +74,8 @@ theorem micro_shadow (x0 : LX A) (q0 : Q) (w : List (Fin 2))
       Rep (S.tickL a) (L0.apply blank p none))
     (hsimFeed : ∀ s letter a p, inp w s = some letter → Inv w s a → Rep a p →
       Rep (S.feedC letter a) (L0.apply blank p (some letter)))
-    (hreadRep : ∀ a p, Rep a p → S.repL a = repQ p.1)
-    (hreadOut : ∀ a p, Rep a p → S.outL a = outQ p.1) :
+    (hreadRep : ∀ s a p, Inv w s a → Rep a p → S.repL a = repQ p.1)
+    (hreadOut : ∀ s a p, Inv w s a → Rep a p → S.outL a = outQ p.1) :
     ∀ s, (micro (shadowSys S L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core.1
           = (micro S w x0 s).core ∧
       (micro (shadowSys S L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).ans
@@ -104,7 +104,8 @@ theorem micro_shadow (x0 : LX A) (q0 : Q) (w : List (Fin 2))
         hinvTick s _ hinput hinv, ?_⟩
       · show (_ || (repQ (L0.apply blank _ none).1 && outQ (L0.apply blank _ none).1))
           = (_ || (S.repL (S.tickL _) && S.outL (S.tickL _)))
-        rw [hans, hreadRep _ _ hrepNext, hreadOut _ _ hrepNext]
+        rw [hans, hreadRep (s+1) _ _ (hinvTick s _ hinput hinv) hrepNext,
+          hreadOut (s+1) _ _ (hinvTick s _ hinput hinv) hrepNext]
       · exact hrepNext
     | some letter =>
       refine ⟨by show S.feedC letter _ = S.feedC letter _; rw [hcore], rfl, rfl,
@@ -130,8 +131,8 @@ theorem pal_in_peg_of_shadowed_core
       Rep ((S w).tickL a) (L0.apply blank p none))
     (hsimFeed : ∀ w s letter a p, inp w s = some letter → Inv w s a → Rep a p →
       Rep ((S w).feedC letter a) (L0.apply blank p (some letter)))
-    (hreadRep : ∀ (w : List (Fin 2)) a p, Rep a p → (S w).repL a = repQ p.1)
-    (hreadOut : ∀ (w : List (Fin 2)) a p, Rep a p → (S w).outL a = outQ p.1)
+    (hreadRep : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep a p → (S w).repL a = repQ p.1)
+    (hreadOut : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep a p → (S w).outL a = outQ p.1)
     -- the abstract system
     (x0_started : x0.started = false)
     (outL_abs : ∀ (w : List (Fin 2)) (a : A), (S w).outL a = (absS a).ctl.output)
@@ -160,22 +161,22 @@ theorem pal_in_peg_of_shadowed_core
   have hrun := fun w (hw : 0 < w.length) =>
     micro_shadow (S w) L0 blank repQ outQ Inv Rep x0 q0 w hrepInit (x0_inv w hw)
     (inv_tick w) (inv_feed w) (hsimTick w) (hsimFeed w) (hreadRep w) (hreadOut w)
-  have habsOf : ∀ (a : A) (p : Q × (Fin t → STape Γ)), Rep a p →
-      shadowAbs absS outQ (a, p) = absS a := fun a p hrep =>
-    shadowAbs_eq absS outQ (a, p) (by rw [← hreadOut [] a p hrep, outL_abs []])
+  have habsOf : ∀ w s (a : A) (p : Q × (Fin t → STape Γ)), Inv w s a → Rep a p →
+      shadowAbs absS outQ (a, p) = absS a := fun w s a p hinv hrep =>
+    shadowAbs_eq absS outQ (a, p) (by rw [← hreadOut w s a p hinv hrep, outL_abs w])
   have hstAbs : ∀ w, 0 < w.length → ∀ s,
       stAbs (shadowSys (S w) L0 blank repQ outQ) (shadowAbs absS outQ) w
         (shadowInit x0 q0 blank) s = stAbs (S w) absS w x0 s := by
     intro w hw s
-    obtain ⟨hcore, -, -, -, hrep⟩ := hrun w hw s
+    obtain ⟨hcore, -, -, hinv, hrep⟩ := hrun w hw s
     show shadowAbs absS outQ (micro _ w _ s).core = absS (micro (S w) w x0 s).core
-    rw [← habsOf _ _ hrep, ← hcore]
+    rw [← habsOf w s _ _ hinv hrep, ← hcore]
   have hrepL : ∀ w, 0 < w.length → ∀ s, (shadowSys (S w) L0 blank repQ outQ).repL
       (micro (shadowSys (S w) L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core
         = (S w).repL (micro (S w) w x0 s).core := by
     intro w hw s
-    obtain ⟨-, -, -, -, hrep⟩ := hrun w hw s
-    exact (hreadRep w _ _ hrep).symm
+    obtain ⟨-, -, -, hinv, hrep⟩ := hrun w hw s
+    exact (hreadRep w s _ _ hinv hrep).symm
   refine pal_in_peg_of_local_core (fun w => shadowSys (S w) L0 blank repQ outQ)
     (shadowAbs absS outQ)
     (fun w s x => Inv w s x.1 ∧ Rep x.1 x.2) (shadowInit x0 q0 blank) Pof qof firstOf delay
@@ -193,21 +194,24 @@ theorem pal_in_peg_of_shadowed_core
     obtain ⟨s', hle, hlate, hreport⟩ := rep_complete w s hw hpoint hrefreshed
     exact ⟨s', hle, hlate, by rw [hrepL w hw]; exact hreport⟩
   · show (shadowAbs absS outQ (x0.core, (q0, fun _ => STape.blankTape blank))).ctl = _
-    rw [habsOf _ _ hrepInit]
+    rw [habsOf [0] 0 _ _ (x0_inv [0] (by simp)) hrepInit]
     exact x0_ctl
   · intro w s x hinput hx hstarved
     show shadowAbs absS outQ ((S w).tickL x.1, L0.apply blank x.2 none) = shadowAbs absS outQ x
-    rw [habsOf _ _ (hsimTick w s _ _ hinput hx.1 hx.2), habsOf x.1 x.2 hx.2]
+    rw [habsOf w (s+1) _ _ (inv_tick w s _ hinput hx.1) (hsimTick w s _ _ hinput hx.1 hx.2),
+      habsOf w s x.1 x.2 hx.1 hx.2]
     exact stutter_of_starved w s _ hinput hx.1 hstarved
   · intro w s x hinput hx hstarved
     show Tick _ delay (shadowAbs absS outQ x)
       (shadowAbs absS outQ ((S w).tickL x.1, L0.apply blank x.2 none))
-    rw [habsOf _ _ (hsimTick w s _ _ hinput hx.1 hx.2), habsOf x.1 x.2 hx.2]
+    rw [habsOf w (s+1) _ _ (inv_tick w s _ hinput hx.1) (hsimTick w s _ _ hinput hx.1 hx.2),
+      habsOf w s x.1 x.2 hx.1 hx.2]
     exact tick_of_not_starved w s _ hinput hx.1 hstarved
   · intro w s letter x hinput hx
     show shadowAbs absS outQ ((S w).feedC letter x.1, L0.apply blank x.2 (some letter))
       = arriveState' letter (shadowAbs absS outQ x)
-    rw [habsOf _ _ (hsimFeed w s _ _ _ hinput hx.1 hx.2), habsOf x.1 x.2 hx.2]
+    rw [habsOf w (s+1) _ _ (inv_feed w s _ _ hinput hx.1) (hsimFeed w s _ _ _ hinput hx.1 hx.2),
+      habsOf w s x.1 x.2 hx.1 hx.2]
     exact feed_abs w s _ _ hinput hx.1
   · intro w hw hpal
     have hfun : stAbs (shadowSys (S w) L0 blank repQ outQ) (shadowAbs absS outQ) w

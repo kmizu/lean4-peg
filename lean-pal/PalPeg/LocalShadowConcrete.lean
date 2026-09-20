@@ -85,7 +85,7 @@ the last report point, the report test on the run, and the specification of the 
 machine. -/
 theorem pal_in_peg_of_shadowed_sysC
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (M : List (Fin 2) → Steps P) (repM : Mirrored1 P → Bool) (blank : PalPeg.LocalState.GalilVML P) (delay : ℕ)
+    (M : List (Fin 2) → Steps P) (repM : List (Fin 2) → Mirrored1 P → Bool) (blank : PalPeg.LocalState.GalilVML P) (delay : ℕ)
     (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ) (firstOf : List (Fin 2) → Fin 9)
     (H_letter : ∀ w : List (Fin 2), (Pof w).onLetter = onLetterVM w)
     (H_first : ∀ w : List (Fin 2), (Pof w).leftFirst = leftFirstVM)
@@ -149,14 +149,14 @@ theorem pal_in_peg_of_shadowed_sysC
           Canon w (absSC m) (absSC (tickC (M w) m))) ∧
         Post w (tickC (M w) m) ∧ PhysWF (tickC (M w) m).vm ∧ MirInv1 (tickC (M w) m) ∧ Good (tickC (M w) m))
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
-      repM (micro (sysM (M w) repM) w (x0C blank delay) s).core = true →
-      ReportPoint w (stAbs (sysM (M w) repM) absSC w (x0C blank delay) s) ∧
-        Refreshed (Pof w) (qof w) (firstOf w) (stAbs (sysM (M w) repM) absSC w (x0C blank delay) s))
+      repM w (micro (sysM (M w) (repM w)) w (x0C blank delay) s).core = true →
+      ReportPoint w (stAbs (sysM (M w) (repM w)) absSC w (x0C blank delay) s) ∧
+        Refreshed (Pof w) (qof w) (firstOf w) (stAbs (sysM (M w) (repM w)) absSC w (x0C blank delay) s))
     (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
-      ReportPoint w (stAbs (sysM (M w) repM) absSC w (x0C blank delay) s) →
-      Refreshed (Pof w) (qof w) (firstOf w) (stAbs (sysM (M w) repM) absSC w (x0C blank delay) s) →
+      ReportPoint w (stAbs (sysM (M w) (repM w)) absSC w (x0C blank delay) s) →
+      Refreshed (Pof w) (qof w) (firstOf w) (stAbs (sysM (M w) (repM w)) absSC w (x0C blank delay) s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧
-        repM (micro (sysM (M w) repM) w (x0C blank delay) s').core = true)
+        repM w (micro (sysM (M w) (repM w)) w (x0C blank delay) s').core = true)
     -- the physical machine and its specification
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Rep : Mirrored1 P → Q × (Fin t → STape Γ) → Prop)
@@ -167,11 +167,13 @@ theorem pal_in_peg_of_shadowed_sysC
       Rep m p → Rep (tickC (M w) m) (L0.apply blankSymbol p none))
     (hsimFeed : ∀ (w : List (Fin 2)) letter m p, 0 < w.length → OnRun Good Post w (stOf w) m →
       Rep m p → Rep (feedC letter m) (L0.apply blankSymbol p (some letter)))
-    (hreadRep : ∀ m p, Rep m p → repM m = repQ p.1)
-    (hreadOut : ∀ m p, Rep m p → m.vm.ctl.output = outQ p.1) :
+    (hreadRep : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep m p →
+      repM w m = repQ p.1)
+    (hreadOut : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep m p →
+      m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   classical
-  let S : List (Fin 2) → LocalSys (Mirrored1 P) := fun w => sysM (M w) repM
+  let S : List (Fin 2) → LocalSys (Mirrored1 P) := fun w => sysM (M w) (repM w)
   let x0 := x0C blank delay
   let Inv : List (Fin 2) → ℕ → Mirrored1 P → Prop := fun w s m =>
     0 < w.length ∧ m = (micro (S w) w x0 s).core ∧
@@ -315,7 +317,8 @@ theorem pal_in_peg_of_shadowed_sysC
         · exact Or.inl ⟨hstarved, by rw [tickC_starved (M w) hstarved]⟩
         · exact Or.inr ⟨hstarved, hsucc w s m hinv hstarved⟩) hrep)
     (fun w s letter m p _ hinv hrep => hsimFeed w letter m p hinv.1 (honRun hinv) hrep)
-    (fun _ => hreadRep) (fun _ => hreadOut) (x0C_started blank delay) (fun _ _ => rfl)
+    (fun w s m p hinv hrep => hreadRep w m p hinv.1 (honRun hinv) hrep)
+    (fun w s m p hinv hrep => hreadOut w m p hinv.1 (honRun hinv) hrep) (x0C_started blank delay) (fun _ _ => rfl)
     rep_sound rep_complete hinvInit (x0C_ctl blank delay) hinvTick hinvFeed ?_ ?_ ?_ ?_
   · rintro w s m _ _ hstarved
     show absSC (tickC (M w) m) = absSC m
