@@ -56,6 +56,8 @@ set_option linter.unusedVariables false
 
 namespace PalPeg.CloseoutCoreStep
 
+variable {lastTick : ℕ}
+
 open PalPeg PalPeg.Program
 open PalPeg.GalilScaffoldTop (State)
 open PalPeg.GalilScaffoldController (Control Mode Bounded BoundedControl)
@@ -214,10 +216,10 @@ theorem agreeOn_refl (f : Mirrored1 P → Mirrored1 P) (md : Mode) :
 `AgreeOn`.  This is the lemma that makes word-independence a *pointwise* residual
 rather than a structural one. -/
 theorem realizes_congr {f g : Mirrored1 P → Mirrored1 P} {md : Mode}
-    (h : AgreeOn raw stOf f g md) (hf : Realizes raw stOf f md) :
-    Realizes raw stOf g md := by
-  intro m k j hinv hmd hns hn hneed
-  have := hf m k j hinv hmd hns hn hneed
+    (h : AgreeOn raw stOf f g md) (hf : Realizes raw stOf lastTick f md) :
+    Realizes raw stOf lastTick g md := by
+  intro m k j hinv hmd hns hn hneed hbefore
+  have := hf m k j hinv hmd hns hn hneed hbefore
   rwa [h m k j hinv hmd hns hn hneed] at this
 
 /-- **Gap (2), reduced.**  Given the word-dependent seven of `LocalWF`, any
@@ -230,8 +232,9 @@ be a fixed-window function (one `GalilDpCode` instruction), and must agree with
 theorem realizes_seven_of_agree {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay : ℕ}
     (SL : Steps P)
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
-    (H_trace : ∀ k, PalPeg.GalilScaffoldTop.Tick (galilFrameS Pw qq first) delay
+    (H_trace : ∀ k, k < lastTick → PalPeg.GalilScaffoldTop.Tick (galilFrameS Pw qq first) delay
       (stOf k) (stOf (k+1)))
+    (H_afterLast : ∀ k, lastTick ≤ k → stOf k = stOf lastTick)
     (H_start : PalPeg.LocalWF.NoReplay (stOf 0)) (hq : qq ≤ 64)
     (H_wf : ∀ m : Mirrored1 P, InvC raw stOf m → PalPeg.LocalWF.LocalWF m.vm)
     (h_shift : AgreeOn raw stOf (PalPeg.LocalRealizesPhase.shiftStepL (P := P) Pw) SL.shift .shift)
@@ -244,12 +247,12 @@ theorem realizes_seven_of_agree {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay 
       SL.choose .choose)
     (h_rewind : AgreeOn raw stOf (PalPeg.LocalRealizesScan.rewindStepC (P := P) Pw qq first)
       SL.rewind .rewind) :
-    Realizes raw stOf SL.shift .shift ∧ Realizes raw stOf SL.copy .copy ∧
-    Realizes raw stOf SL.home .home ∧ Realizes raw stOf SL.fpp .fpp ∧
-    Realizes raw stOf SL.markEnd .markEnd ∧ Realizes raw stOf SL.choose .choose ∧
-    Realizes raw stOf SL.rewind .rewind := by
+    Realizes raw stOf lastTick SL.shift .shift ∧ Realizes raw stOf lastTick SL.copy .copy ∧
+    Realizes raw stOf lastTick SL.home .home ∧ Realizes raw stOf lastTick SL.fpp .fpp ∧
+    Realizes raw stOf lastTick SL.markEnd .markEnd ∧ Realizes raw stOf lastTick SL.choose .choose ∧
+    Realizes raw stOf lastTick SL.rewind .rewind := by
   obtain ⟨r1, r2, r3, r4, r5, r6, r7⟩ :=
-    PalPeg.LocalWF.realizes_seven (P := P) (delay := delay) H_shared H_trace H_start hq H_wf
+    PalPeg.LocalWF.realizes_seven (P := P) (delay := delay) H_shared H_trace H_afterLast H_start hq H_wf
   exact ⟨realizes_congr h_shift r1, realizes_congr h_copy r2, realizes_congr h_home r3,
     realizes_congr h_fpp r4, realizes_congr h_markEnd r5, realizes_congr h_choose r6,
     realizes_congr h_rewind r7⟩

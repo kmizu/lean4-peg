@@ -26,7 +26,7 @@ open PalPeg.LocalTrackingLatch PalPeg.LocalShadowRealize
 open PalPeg.LocalLedgerShift (kOf kOf_succ_tick kOf_succ_stutter H_ledger_of_local_oracles)
 open PalPeg.LocalReplayParked (absState'' Mirrored1 MirInv1)
 open PalPeg.LocalSysConcrete (Steps stepOf tickC tickC_starved tickC_step sysC absSC feedC Starved
-  Needy InvC PhysWF x0C x0C_ctl x0C_started x0C_physWF x0C_mirInv1 tick_of_need used_le_of_need
+  Needy InvC PhysWF Realizes x0C x0C_ctl x0C_started x0C_physWF x0C_mirInv1 tick_of_need used_le_of_need
   tracked_feedC feed_abs_core physWF_feedC mirInv1_feedC)
 open PalPeg.GalilThrottledRun (truncS usedVM SufVM)
 open PalPeg.GalilLookRefined (needT')
@@ -97,12 +97,8 @@ theorem pal_in_peg_of_shadowed_sysC
       GalilLedgerAssembly.ReportPointAt (Pof w) (qof w) (firstOf w) w w.length
         (stOf w (TcOf w w.length)))
     -- the abstract local system on tracked states
-    (hrealizes : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), 0 < w.length →
-      InvC w (stOf w) m →
-      ¬ Starved m.vm → Needy w (stOf w) k j m.vm → needT' w (stOf w) k ≤ j →
-      k < TcOf w w.length →
-      Needy w (stOf w) (k+1) j (stepOf M m.vm.ctl.mode m).vm ∧
-        PhysWF (stepOf M m.vm.ctl.mode m).vm ∧ MirInv1 (stepOf M m.vm.ctl.mode m))
+    (hrealizes : ∀ (w : List (Fin 2)), 0 < w.length → ∀ mode : Mode,
+      Realizes w (stOf w) (TcOf w w.length) (stepOf M mode) mode)
     (hneedOfNotStarved : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), 0 < w.length →
       InvC w (stOf w) m →
       ¬ Starved m.vm → Needy w (stOf w) k j m.vm → needT' w (stOf w) k ≤ j)
@@ -166,7 +162,7 @@ theorem pal_in_peg_of_shadowed_sysC
         · have hend : kOf S w x0 s = TcOf w w.length := le_antisymm htracked.beforeEnd h
           exact absurd (hstarvedAtLastReport w _ _ hw htracked.invC (hend ▸ htracked.needy)) hstarved
       obtain ⟨hneedy, hphys, hmir⟩ :=
-        hrealizes w _ _ _ hw htracked.invC hstarved htracked.needy hneed hbefore
+        hrealizes w hw _ _ _ _ htracked.invC rfl hstarved htracked.needy hneed hbefore
       rw [kOf_succ_tick S w x0 s ⟨hinput, hstarved⟩]
       show TrackedAt _ _ _ _ _ (tickC M _)
       rw [tickC_step M hstarved]

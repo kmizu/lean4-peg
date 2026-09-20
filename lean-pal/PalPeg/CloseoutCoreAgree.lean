@@ -65,6 +65,8 @@ set_option linter.unusedVariables false
 
 namespace PalPeg.CloseoutCoreAgree
 
+variable {lastTick : ℕ}
+
 open PalPeg PalPeg.Program
 open PalPeg.GalilScaffoldTop
 open PalPeg.GalilScaffoldController (Control Mode)
@@ -293,20 +295,21 @@ theorem agree_shift {Pw : Shared} (qq : ℕ) (first : Fin 9)
 /-- **Gap (2) closed, modulo `RightInBounds`.** -/
 theorem realizes_seven_SL {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay : ℕ}
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
-    (H_trace : ∀ k, PalPeg.GalilScaffoldTop.Tick (galilFrameS Pw qq first) delay
+    (H_trace : ∀ k, k < lastTick → PalPeg.GalilScaffoldTop.Tick (galilFrameS Pw qq first) delay
       (stOf k) (stOf (k+1)))
+    (H_afterLast : ∀ k, lastTick ≤ k → stOf k = stOf lastTick)
     (H_start : PalPeg.LocalWF.NoReplay (stOf 0)) (hq : qq ≤ 64)
     (H_wf : ∀ m : Mirrored1 P, InvC raw stOf m → PalPeg.LocalWF.LocalWF m.vm)
     (H_letter : Pw.onLetter = onLetterVM raw) (H_first : Pw.leftFirst = leftFirstVM)
     (H_bound : RightInBounds P raw stOf) :
-    Realizes raw stOf (SL (P := P) qq first).shift .shift ∧
-    Realizes raw stOf (SL (P := P) qq first).copy .copy ∧
-    Realizes raw stOf (SL (P := P) qq first).home .home ∧
-    Realizes raw stOf (SL (P := P) qq first).fpp .fpp ∧
-    Realizes raw stOf (SL (P := P) qq first).markEnd .markEnd ∧
-    Realizes raw stOf (SL (P := P) qq first).choose .choose ∧
-    Realizes raw stOf (SL (P := P) qq first).rewind .rewind :=
-  PalPeg.CloseoutCoreStep.realizes_seven_of_agree (SL qq first) H_shared H_trace H_start hq H_wf
+    Realizes raw stOf lastTick (SL (P := P) qq first).shift .shift ∧
+    Realizes raw stOf lastTick (SL (P := P) qq first).copy .copy ∧
+    Realizes raw stOf lastTick (SL (P := P) qq first).home .home ∧
+    Realizes raw stOf lastTick (SL (P := P) qq first).fpp .fpp ∧
+    Realizes raw stOf lastTick (SL (P := P) qq first).markEnd .markEnd ∧
+    Realizes raw stOf lastTick (SL (P := P) qq first).choose .choose ∧
+    Realizes raw stOf lastTick (SL (P := P) qq first).rewind .rewind :=
+  PalPeg.CloseoutCoreStep.realizes_seven_of_agree (SL qq first) H_shared H_trace H_afterLast H_start hq H_wf
     (agree_shift qq first H_letter H_first H_bound)
     (agree_copy qq first) (agree_home qq first) (agree_fpp Pw qq first)
     (agree_markEnd qq first) (agree_choose Pw qq first) (agree_rewind Pw qq first)

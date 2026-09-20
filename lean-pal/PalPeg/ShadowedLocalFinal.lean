@@ -33,7 +33,8 @@ open PalPeg.CloseoutFinalBranch (canonicalPreTrace_exists needBound_alongPreTrac
 open PalPeg.Local (LocalStep)
 open PalPeg.LocalTrackingLatch
 open PalPeg.LocalReplayParked (absState'' Mirrored1 MirInv1)
-open PalPeg.LocalSysConcrete (Steps stepOf tickC sysC absSC feedC Starved Needy InvC PhysWF x0C)
+open PalPeg.LocalSysConcrete (Steps stepOf tickC sysC absSC feedC Starved Needy InvC PhysWF
+  Realizes x0C)
 open PalPeg.LocalShadowConcrete (pal_in_peg_of_shadowed_sysC)
 
 variable {P : ℕ}
@@ -62,10 +63,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
       absState'' (x0C blank 2048).core.vm = truncS w.length (boot w))
     (hrealizes : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 P) (k j : ℕ), InvC w st m → ¬ Starved m.vm → Needy w st k j m.vm →
-        needT' w st k ≤ j → k < Tc w.length →
-        Needy w st (k+1) j (stepOf M m.vm.ctl.mode m).vm ∧
-          PhysWF (stepOf M m.vm.ctl.mode m).vm ∧ MirInv1 (stepOf M m.vm.ctl.mode m))
+      ∀ mode : Mode, Realizes w st (Tc w.length) (stepOf M mode) mode)
     (hneedOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 P) (k j : ℕ), InvC w st m → ¬ Starved m.vm → Needy w st k j m.vm →
@@ -135,9 +133,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
     (fun w hw => base_of_preTraceB (htraceOf w hw).1.base)
     (fun w hw => (htraceOf w hw).1.base.pre.cost)
     (fun w hw => (htraceOf w hw).1.base.pre.report w.length hw le_rfl)
-    (fun w m k j hw hinv hstarved hneedy hneed hbefore =>
-      hrealizes w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved hneedy hneed
-        hbefore)
+    (fun w hw => hrealizes w _ _ (htraceOf w hw).1 (htraceOf w hw).2)
     (fun w m k j hw hinv hstarved hneedy =>
       hneedOfNotStarved w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved hneedy)
     (fun w m k j hw hinv hneedy hbefore hneed =>

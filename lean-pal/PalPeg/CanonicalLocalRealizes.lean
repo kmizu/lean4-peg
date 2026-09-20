@@ -14,6 +14,8 @@ set_option maxHeartbeats 2000000
 
 namespace PalPeg.CanonicalLocalRealizes
 
+variable {lastTick : ℕ}
+
 open PalPeg.GalilScaffoldTop PalPeg.GalilScaffoldController
 open PalPeg.GalilScaffoldChainInputSupply PalPeg.GalilRunSkeleton
 open PalPeg.GalilThrottledRun PalPeg.GalilTickFair PalPeg.ShapedRun
@@ -66,18 +68,18 @@ invariants, not functionality of the unrefined nondeterministic relation. -/
 theorem realizes_canonical {P : ℕ} {stOf : ℕ → State GalilVM}
     {f : Mirrored1 P → Mirrored1 P} {mode : Mode}
     (hShared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j (PofC centre place entry raw))
-    (hTrace : ∀ k, Tick (galilFrameS (PofC centre place entry raw) q first) delay
+    (hTrace : ∀ k, k < lastTick → Tick (galilFrameS (PofC centre place entry raw) q first) delay
       (stOf k) (stOf (k+1)))
-    (hCanonical : ∀ k, Canonical entry delay (stOf k) (stOf (k+1)))
+    (hCanonical : ∀ k, k < lastTick → Canonical entry delay (stOf k) (stOf (k+1)))
     (hLocal : ∀ (m : Mirrored1 P) (target : State GalilVM), InvC raw stOf m →
       m.vm.ctl.mode = mode → ¬ Starved m.vm →
       Tick (galilFrameS (PofC centre place entry raw) q first) delay (absState'' m.vm) target →
       Tick (galilFrameS (PofC centre place entry raw) q first) delay
         (absState'' m.vm) (absState'' (f m).vm) ∧
       Canonical entry delay (absState'' m.vm) (absState'' (f m).vm) ∧
-      PhysWF (f m).vm ∧ MirInv1 (f m)) : Realizes raw stOf f mode := by
+      PhysWF (f m).vm ∧ MirInv1 (f m)) : Realizes raw stOf lastTick f mode := by
   apply PalPeg.LocalRealizesScan.realizes_of_refined_tick_det hShared hTrace
-    (Canonical entry delay) (fun k j _ => canonical_trunc (hCanonical k) _) hLocal
+    (Canonical entry delay) (fun k j hbefore _ => canonical_trunc (hCanonical k hbefore) _) hLocal
   intro source target₁ target₂ _ hTick₁ hCanonical₁ hTick₂ hCanonical₂
   exact tick_canonical_unique hTick₁ hCanonical₁ hTick₂ hCanonical₂
 

@@ -3,7 +3,7 @@ import PalPeg.LocalSysConcrete
 /-!
 # Discharging the mode obligations of `LocalSysConcrete.Realizes`
 
-`LocalSysConcrete.localSys_oracles` needs one `Realizes raw stOf M.<mode> <mode>`
+`LocalSysConcrete.localSys_oracles` needs one `Realizes raw stOf lastTick M.<mode> <mode>`
 per control mode.  This file supplies the general bridge and then the modes
 `rewind`, `choose`, `init`, `replayStart`, `scan`.
 
@@ -60,6 +60,8 @@ set_option maxHeartbeats 2000000
 
 namespace PalPeg.LocalRealizesScan
 
+variable {lastTick : ℕ}
+
 open PalPeg.GalilScaffoldTop PalPeg.GalilScaffoldController
 open PalPeg.GalilScaffoldChainInputSupply
 open PalPeg.LocalState
@@ -82,9 +84,9 @@ theorem realizes_of_refined_tick_det {raw : List (Fin 2)} {stOf : ℕ → State 
     {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : ℕ}
     {f : Mirrored1 P → Mirrored1 P} {md : Mode}
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
-    (H_trace : ∀ k, Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
+    (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
     (Refinement : State GalilVM → State GalilVM → Prop)
-    (hTraceRefinement : ∀ k j, needT' raw stOf k ≤ j →
+    (hTraceRefinement : ∀ k j, k < lastTick → needT' raw stOf k ≤ j →
       Refinement (truncS (raw.length - j) (stOf k))
         (truncS (raw.length - j) (stOf (k+1))))
     (Hloc : ∀ (m : Mirrored1 P) (t : State GalilVM), InvC raw stOf m → m.vm.ctl.mode = md →
@@ -94,23 +96,23 @@ theorem realizes_of_refined_tick_det {raw : List (Fin 2)} {stOf : ℕ → State 
     (Hdet : ∀ {s t₁ t₂ : State GalilVM}, s.ctl.mode = md →
       Tick (galilFrameS Pw qq firstT) delay s t₁ → Refinement s t₁ →
       Tick (galilFrameS Pw qq firstT) delay s t₂ → Refinement s t₂ → t₁ = t₂) :
-    Realizes raw stOf f md := by
-  intro m k j hinv hmd hns hn hneed
+    Realizes raw stOf lastTick f md := by
+  intro m k j hinv hmd hns hn hneed hbefore
   have h2 := tick_of_need (Pw := Pw) (qq := qq) (first := firstT) (delay := delay)
-    (H_shared j) (H_trace k) hneed
+    (H_shared j) (H_trace k hbefore) hneed
   rw [← hn.2] at h2
   obtain ⟨ht, hRefinement, hph, hmir⟩ := Hloc m _ hinv hmd hns h2
   refine ⟨⟨hn.1, ?_⟩, hph, hmir⟩
   rw [hn.2] at ht h2 hRefinement
   have hm0 : (truncS (raw.length - j) (stOf k)).ctl.mode = md := by
     rw [← hn.2]; exact hmd
-  exact Hdet hm0 ht hRefinement h2 (hTraceRefinement k j hneed)
+  exact Hdet hm0 ht hRefinement h2 (hTraceRefinement k j hbefore hneed)
 
 theorem realizes_of_tick_det {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : ℕ}
     {f : Mirrored1 P → Mirrored1 P} {md : Mode}
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
-    (H_trace : ∀ k, Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
+    (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
     (Hloc : ∀ (m : Mirrored1 P) (t : State GalilVM), InvC raw stOf m → m.vm.ctl.mode = md →
       ¬ Starved m.vm → Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) t →
       Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) (absState'' (f m).vm) ∧
@@ -118,9 +120,9 @@ theorem realizes_of_tick_det {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     (Hdet : ∀ {s t₁ t₂ : State GalilVM}, s.ctl.mode = md →
       Tick (galilFrameS Pw qq firstT) delay s t₁ →
       Tick (galilFrameS Pw qq firstT) delay s t₂ → t₁ = t₂) :
-    Realizes raw stOf f md := by
+    Realizes raw stOf lastTick f md := by
   apply realizes_of_refined_tick_det H_shared H_trace (fun _ _ => True)
-    (fun _ _ _ => True.intro)
+    (fun _ _ _ _ => True.intro)
   · intro m t hInvariant hMode hNotStarved hTick
     obtain ⟨hLocalTick, hPhysical, hMirror⟩ := Hloc m t hInvariant hMode hNotStarved hTick
     exact ⟨hLocalTick, True.intro, hPhysical, hMirror⟩
@@ -290,9 +292,9 @@ theorem mirInv1_rewindStepC {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {m : Mirro
 theorem realizes_rewind {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : ℕ}
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
-    (H_trace : ∀ k, Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
+    (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
     (H_rewindWF : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .rewind → RewindWF m.vm) :
-    Realizes (P := P) raw stOf (rewindStepC (P := P) Pw qq firstT) .rewind := by
+    Realizes (P := P) raw stOf lastTick (rewindStepC (P := P) Pw qq firstT) .rewind := by
   refine realizes_of_tick_det H_shared H_trace ?_ (tick_det_rewind Pw qq firstT delay)
   intro m t hinv hmd hns ht
   have htl := tickL3_rewindStepC (H_rewindWF m hinv hmd) hmd ht
@@ -361,9 +363,9 @@ theorem mirInv1_chooseStepC {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {m : Mirro
 theorem realizes_choose {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : ℕ}
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
-    (H_trace : ∀ k, Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
+    (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
     (H_chooseWF : ∀ m : Mirrored1 P, InvC raw stOf m → m.vm.ctl.mode = .choose → ChooseWF m.vm) :
-    Realizes (P := P) raw stOf (chooseStepC (P := P) Pw qq firstT) .choose := by
+    Realizes (P := P) raw stOf lastTick (chooseStepC (P := P) Pw qq firstT) .choose := by
   refine realizes_of_tick_det H_shared H_trace ?_ (tick_det_choose Pw qq firstT delay)
   intro m t hinv hmd hns ht
   have htl := tickL3_chooseStepC (H_chooseWF m hinv hmd) hmd ht
@@ -421,14 +423,14 @@ functionality of `Pw.init`. -/
 theorem realizes_init {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : ℕ} {f : Mirrored1 P → Mirrored1 P}
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
-    (H_trace : ∀ k, Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
+    (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
     (H_initFun : ∀ s t₁ t₂ : GalilVM, Pw.init s t₁ → Pw.init s t₂ → t₁ = t₂)
     (H_initLoc : ∀ (m : Mirrored1 P) (t : State GalilVM), InvC raw stOf m →
       m.vm.ctl.mode = .init → ¬ Starved m.vm →
       Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) t →
       Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) (absState'' (f m).vm) ∧
         PhysWF (f m).vm ∧ MirInv1 (f m)) :
-    Realizes (P := P) raw stOf f .init :=
+    Realizes (P := P) raw stOf lastTick f .init :=
   realizes_of_tick_det H_shared H_trace H_initLoc (tick_det_init H_initFun)
 
 /-- **The `replayStart` obligation**, reduced to the local realization
@@ -436,14 +438,14 @@ theorem realizes_init {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
 theorem realizes_replayStart {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : ℕ} {f : Mirrored1 P → Mirrored1 P}
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
-    (H_trace : ∀ k, Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
+    (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
     (H_rsFun : ∀ s t₁ t₂ : GalilVM, Pw.replayStart s t₁ → Pw.replayStart s t₂ → t₁ = t₂)
     (H_replayStartLoc : ∀ (m : Mirrored1 P) (t : State GalilVM), InvC raw stOf m →
       m.vm.ctl.mode = .replayStart → ¬ Starved m.vm →
       Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) t →
       Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) (absState'' (f m).vm) ∧
         PhysWF (f m).vm ∧ MirInv1 (f m)) :
-    Realizes (P := P) raw stOf f .replayStart :=
+    Realizes (P := P) raw stOf lastTick f .replayStart :=
   realizes_of_tick_det H_shared H_trace H_replayStartLoc (tick_det_replayStart H_rsFun)
 
 /-! ## 6. The `scan` mode
@@ -477,7 +479,7 @@ theorem physWF_mir_of_tickL1 {S : Shared} {q : ℕ} {firstT : Fin 9} {d : ℕ}
 theorem realizes_scan {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : ℕ} {f : Mirrored1 P → Mirrored1 P}
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
-    (H_trace : ∀ k, Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
+    (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
     (H_scanDet : ∀ {s t₁ t₂ : State GalilVM}, s.ctl.mode = .scan →
       Tick (galilFrameS Pw qq firstT) delay s t₁ →
       Tick (galilFrameS Pw qq firstT) delay s t₂ → t₁ = t₂)
@@ -486,7 +488,7 @@ theorem realizes_scan {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
       Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) t →
       Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) (absState'' (f m).vm) ∧
         PhysWF (f m).vm ∧ MirInv1 (f m)) :
-    Realizes (P := P) raw stOf f .scan :=
+    Realizes (P := P) raw stOf lastTick f .scan :=
   realizes_of_tick_det H_shared H_trace H_scanLoc H_scanDet
 
 #print axioms refresh_unique
