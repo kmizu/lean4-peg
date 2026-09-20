@@ -1,3 +1,21 @@
+## n311（2026-09-21）: `hreplayStartNext` の分解（調査のみ、コードは変えていない）
+
+**全体 build 成功（最新は n310 の `BUILD=0`）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（未接続） |
+
+`hreplayStartNext` は tracked・非 starved な replayStart 状態 `m` に `∃ next, NextOK … m next` を求める。`NextOK`（`ShadowedLocalFinal:670`）= `Tick (absState'' m) (absState'' next)` ∧ `Canonical` ∧ `PhysWF next.vm` ∧ `MirInv1 next` ∧ `Good next` ∧ `(Post w m → Post w next)`。
+
+既存の `LocalReplayParked.replayStartVM_commitReplayParked`（`:366`）を一次情報で読んだ結果、そのままでは使えない点が 4 つ:
+1. **`MirInv1 next` が直後に成り立たない。** `commitReplayParked` は `left := mirL`、`mirL := 旧 left`。旧 `left` は `center` の twin ではない（Scala の run: rewind 末 `L=4 C=5 R=6`）。ghost は自由なので、n305 と同じく ghost の後継は `left := m.vm.center`、`mirL := m.vm.center`（view のコピー）にすれば `Twin.refl` で済む。鏡の再構築は `Enc` の側。
+2. **`hclean`（`dpBuf` の idle が消去済み）。** n306 と同じ型。`LocalTick2.commitReplay` の `resetL` を `resetFresh` に替える（`commitReplay` は `LocalReplaySwap` も使うので波及を build で確かめる）。
+3. **`hpw : pol .work = true`。** `PolWF` は `remaining`／`radius`／`length`／`cycle`／`fppWork` の 5 本で `.work` を持たない。`initVml` が `.work` を `true` にするので、`localGood` に足して運ぶ（極性補題は `pol` 全体の等式なので保存は同じ証明で済む）。
+4. **`hland : left^[val radius] (abs' right) = (abs' center)`。** 今の trace pack には無い（`CentreRep` は表現だけ）。新しい trace 不変量「mode ∈ {rewind, replayStart} → `center = left^[value radius] right` ∧ `Canonical radius`」が要る。Tick の場合分けで保たれる形: `choose_select` で `center = right`・`radius = reset`、`rewind_pair` で `center := left center`・`radius++`、`rewind_one`／`rewind_done` は両方不変。`GalilScaffoldTopRewind:195` に rewind 内の run 形（`y.center = left^[m/2] x.center ∧ y.right = x.right`）が既にある。
+
+**次の goal**: 4 の trace 不変量を `PreTrace` に沿って証明する（harness は `CloseoutRadPack3.coupledPack_trace` と同じ形）。
+
 ## n310（2026-09-21）: 関数である step（init と 7 つの phase）が極性の束を保つことを証明した。仮説 `hgoodPhaseStep` が消えた
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
