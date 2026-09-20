@@ -1119,16 +1119,28 @@ theorem queueViewOfWindows_eq (hK : 1 ≤ K) {q : Queue (Fin 2)} {control : Queu
       (fun ro => belowSym (readWin blankc K (tapes (roleTape control.2.1 ro)))) = _
   rw [hzero, htop, hbelow, hphase]
 
-/-- **One step of the local machine is one sub-step of the queue.** -/
-theorem queueRep_step (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : QueueControl}
+/-- **The rule is sound before the sweep.**  On a representation, every tape has the margin of
+`compStep_apply`, the next control is the control of the sub-step, and any tapes `TEqG`-equal to
+the rule's actions on the old tapes represent the queue after the sub-step.  Stated on `nq` and
+`acts`, so that a machine which runs this rule on some of its tapes can use it as it is. -/
+theorem queueRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : QueueControl}
     {tapes : Fin 8 → STape Γc} (hrep : QueueRep K q control tapes) (input : Option Terminal) :
-    QueueRep K (sApply control.1 q)
-      ((queueLocalStep Terminal hK).apply blankc (control, tapes) input).1
-      ((queueLocalStep Terminal hK).apply blankc (control, tapes) input).2 := by
+    (∀ tape : Fin 8, K ≤ pos (tapes tape)) ∧
+      (queueRule Terminal hK).nq control input (fun tape => readWin blankc K (tapes tape))
+        = (control.1, tagStep control.1 q control.2.1,
+          rotationPhase (sApply control.1 q).state) ∧
+      ∀ tapes' : Fin 8 → STape Γc,
+        (∀ tape, TEqG blankc
+          (actList blankc (tapes tape)
+            ((queueRule Terminal hK).acts control input
+              (fun tape => readWin blankc K (tapes tape)) tape))
+          (tapes' tape)) →
+        QueueRep K (sApply control.1 q)
+          (control.1, tagStep control.1 q control.2.1,
+            rotationPhase (sApply control.1 q).state) tapes' := by
   obtain ⟨stack, junk, bottom, hphase, hlays, hheight, htapes, hsealed, hbottom, hcounter⟩ := hrep
   obtain ⟨hzero, hview⟩ := queueViewOfWindows_eq (by omega) hphase hlays hheight htapes hsealed
     hbottom hcounter
-  -- the margin of every tape
   have hstackHeight : ∀ tape : Fin 8, tape.val < 7 → K ≤ (stack tape.val).length := by
     intro tape htape
     obtain ⟨ro, hro⟩ := roleOf_surjective control.2.1 ⟨tape.val, htape⟩
@@ -1149,60 +1161,63 @@ theorem queueRep_step (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : QueueControl
       rw [hlast, hcounter.pos_eq]
       simp only [List.length_append]
       omega
-  obtain ⟨hcontrol, hacts⟩ := compStep_apply (queueRule Terminal hK) blankc (control, tapes) input
-    hmargin
-  have hcontrol' : ((queueLocalStep Terminal hK).apply blankc (control, tapes) input).1
-      = (control.1, tagStep control.1 q control.2.1,
-        rotationPhase (sApply control.1 q).state) := by
-    rw [show (queueLocalStep Terminal hK) = compStep (queueRule Terminal hK) from rfl, hcontrol]
-    show (control.1,
+  refine ⟨hmargin, ?_, fun tapes' hacts => ?_⟩
+  · show (control.1,
       tagStepOfView control.1
         (queueViewOfWindows control (fun tape => readWin blankc K (tapes tape))) control.2.1,
       nextPhaseOfView control.1
         (queueViewOfWindows control (fun tape => readWin blankc K (tapes tape))).rotation) = _
     rw [hview, ← tagStep_eq_view, rotationPhase_sApply]
     rfl
-  refine ⟨fun i => cellApply (deltaOf control.1 q (roleOf control.2.1) i)
-      (decide ((sealRoleOf control.1 q).map (roleOf control.2.1) = some i)) (stack i),
-    sealedJunkOf control.1 q (roleOf control.2.1) junk, bottom, ?_, ?_,
-    sealedJunkOf_height _ _ _ hheight, ?_, hsealed, hbottom, ?_⟩
-  · rw [hcontrol']
-  · rw [hcontrol']
-    exact laysSealed_sApply control.1 q control.2.1 stack junk hlays
-  · intro tape htape
-    refine StackTape.of_teqG ?_ (hacts tape)
-    show StackTape (actList blankc (tapes tape)
-      ((queueRule Terminal hK).acts control input
-        (fun tape => readWin blankc K (tapes tape)) tape)) _
-    have hactsEq : (queueRule Terminal hK).acts control input
-        (fun tape => readWin blankc K (tapes tape)) tape
-        = cellActsOfTop (deltaOf control.1 q (roleOf control.2.1) tape.val)
-          (decide ((sealRoleOf control.1 q).map (roleOf control.2.1) = some tape.val))
-          (topSym (stack tape.val)) := by
-      show (if tape.val < 7 then _ else _) = _
-      rw [if_pos htape, hview, ← deltaOf_eq_view, ← sealRoleOf_eq_view,
-        (htapes tape htape).centreSym_eq (hstackHeight tape htape)]
-    rw [hactsEq]
-    exact (htapes tape htape).cellApply _ _
-  · refine StackTape.of_teqG ?_ (hacts validTape)
-    show StackTape (actList blankc (tapes validTape)
-      ((queueRule Terminal hK).acts control input
-        (fun tape => readWin blankc K (tapes tape)) validTape)) _
-    have hactsEq : (queueRule Terminal hK).acts control input
-        (fun tape => readWin blankc K (tapes tape)) validTape
-        = cellActsOfTop (validDeltaOfView control.1 (rotationView q.state)
-            (validIsZero q.state)) false
-          (topSym ((validStack q.state).map some ++ bottom)) := by
-      show cellActsOfTop
-          (validDeltaOfView control.1
-            (queueViewOfWindows control (fun tape => readWin blankc K (tapes tape))).rotation
-            (symLetter (centreSym (readWin blankc K (tapes validTape)))).isNone)
-          false (centreSym (readWin blankc K (tapes validTape))) = _
-      rw [hview, hzero, hcounter.centreSym_eq (by simp only [List.length_append]; omega)]
-      rfl
-    rw [hactsEq, ← validCells_sApply]
-    exact hcounter.cellApply _ _
+  · refine ⟨fun i => cellApply (deltaOf control.1 q (roleOf control.2.1) i)
+        (decide ((sealRoleOf control.1 q).map (roleOf control.2.1) = some i)) (stack i),
+      sealedJunkOf control.1 q (roleOf control.2.1) junk, bottom, rfl,
+      laysSealed_sApply control.1 q control.2.1 stack junk hlays,
+      sealedJunkOf_height _ _ _ hheight, ?_, hsealed, hbottom, ?_⟩
+    · intro tape htape
+      refine StackTape.of_teqG ?_ (hacts tape)
+      have hactsEq : (queueRule Terminal hK).acts control input
+          (fun tape => readWin blankc K (tapes tape)) tape
+          = cellActsOfTop (deltaOf control.1 q (roleOf control.2.1) tape.val)
+            (decide ((sealRoleOf control.1 q).map (roleOf control.2.1) = some tape.val))
+            (topSym (stack tape.val)) := by
+        show (if tape.val < 7 then _ else _) = _
+        rw [if_pos htape, hview, ← deltaOf_eq_view, ← sealRoleOf_eq_view,
+          (htapes tape htape).centreSym_eq (hstackHeight tape htape)]
+      rw [hactsEq]
+      exact (htapes tape htape).cellApply _ _
+    · refine StackTape.of_teqG ?_ (hacts validTape)
+      have hactsEq : (queueRule Terminal hK).acts control input
+          (fun tape => readWin blankc K (tapes tape)) validTape
+          = cellActsOfTop (validDeltaOfView control.1 (rotationView q.state)
+              (validIsZero q.state)) false
+            (topSym ((validStack q.state).map some ++ bottom)) := by
+        show cellActsOfTop
+            (validDeltaOfView control.1
+              (queueViewOfWindows control (fun tape => readWin blankc K (tapes tape))).rotation
+              (symLetter (centreSym (readWin blankc K (tapes validTape)))).isNone)
+            false (centreSym (readWin blankc K (tapes validTape))) = _
+        rw [hview, hzero, hcounter.centreSym_eq (by simp only [List.length_append]; omega)]
+        rfl
+      rw [hactsEq, ← validCells_sApply]
+      exact hcounter.cellApply _ _
 
+/-- **One step of the local machine is one sub-step of the queue.** -/
+theorem queueRep_step (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : QueueControl}
+    {tapes : Fin 8 → STape Γc} (hrep : QueueRep K q control tapes) (input : Option Terminal) :
+    QueueRep K (sApply control.1 q)
+      ((queueLocalStep Terminal hK).apply blankc (control, tapes) input).1
+      ((queueLocalStep Terminal hK).apply blankc (control, tapes) input).2 := by
+  obtain ⟨hmargin, hnq, hsound⟩ := queueRule_sound (Terminal := Terminal) hK hrep input
+  obtain ⟨hcontrol, hacts⟩ := compStep_apply (queueRule Terminal hK) blankc (control, tapes) input
+    hmargin
+  have hcontrol' : ((queueLocalStep Terminal hK).apply blankc (control, tapes) input).1
+      = (control.1, tagStep control.1 q control.2.1,
+        rotationPhase (sApply control.1 q).state) := hcontrol.trans hnq
+  rw [hcontrol']
+  exact hsound _ hacts
+
+#print axioms queueRule_sound
 #print axioms queueRep_step
 
 end Step
@@ -1551,5 +1566,112 @@ theorem negative_iff_marks (value : ℤ) : value < 0 ↔ (negativeMarks value).i
 
 #print axioms marks_increment
 #print axioms marks_decrement
+
+/-! ## The micro-programmed queue machine
+
+Ten tapes: `0`–`7` are the tapes of `queueRule`, `8` and `9` the positive and negative marks of
+the length counter.  A micro-operation is a sub-step, the rotation test of `RTQueue.check`, or
+one increment of the length counter paying a unit of what the counter owes. -/
+
+inductive MicroOp where
+  | sub (op : SOp)
+  | checkStart
+  | incLength
+  deriving DecidableEq
+
+/-- The control: the micro-operation, the role tag, the rotation phase, the units owed to the
+length counter. -/
+abbrev MicroControl : Type := MicroOp × RTag × RotationPhase × Fin 3
+
+/-- The sub-step a micro-operation runs, if any: `checkStart` starts a rotation exactly when the
+control is idle and the length counter is negative. -/
+def effectiveOp : MicroOp → RotationPhase → Bool → Option SOp
+  | .sub op, _, _ => some op
+  | .checkStart, .idle, true => some .rotStart
+  | _, _, _ => none
+
+inductive LengthMove where
+  | stay | decrement | increment
+  deriving DecidableEq
+
+/-- What a micro-operation does to the length counter tapes now. -/
+def lengthMoveOf (micro : MicroOp) (effective : Option SOp) (view : QueueView) (owed : Fin 3) :
+    LengthMove :=
+  match micro, effective with
+  | .incLength, _ => if owed.val = 0 then .stay else .increment
+  | _, some op => if lengthDeltaOfView op view = -1 then .decrement else .stay
+  | _, none => .stay
+
+/-- The units owed after a micro-operation: a reversing rotation step owes two, an increment
+pays one. -/
+def owedAfter (micro : MicroOp) (effective : Option SOp) (view : QueueView) (owed : Fin 3) :
+    Fin 3 :=
+  match micro, effective with
+  | .incLength, _ => ⟨owed.val - 1, by omega⟩
+  | _, some op => if lengthDeltaOfView op view = 2 then 2 else owed
+  | _, none => owed
+
+section MicroRule
+
+variable {K : ℕ}
+
+def positiveTape : Fin 10 := 8
+def negativeTape : Fin 10 := 9
+
+/-- The windows of the eight queue tapes. -/
+def queueWindows (windows : Fin 10 → Window Γc K) : Fin 8 → Window Γc K :=
+  fun tape => windows (Fin.castLE (by omega) tape)
+
+def lengthDeltas (move : LengthMove) (positiveEmpty negativeEmpty : Bool) : Delta × Delta :=
+  match move with
+  | .stay => (.keep, .keep)
+  | .decrement => decrementDeltas positiveEmpty
+  | .increment => incrementDeltas negativeEmpty
+
+/-- **The micro-programmed queue machine as a rule.** -/
+def microRule (Terminal : Type) (hK : 2 ≤ K) : ActRule Terminal MicroControl Γc 10 K where
+  nq := fun control input windows =>
+    let negativeNonempty := (symLetter (centreSym (windows negativeTape))).isSome
+    let effective := effectiveOp control.1 control.2.2.1 negativeNonempty
+    let view := queueViewOfWindows (SOp.exec, control.2.1, control.2.2.1) (queueWindows windows)
+    let owed := owedAfter control.1 effective view control.2.2.2
+    match effective with
+    | some op =>
+        let next := (queueRule Terminal hK).nq (op, control.2.1, control.2.2.1) input
+          (queueWindows windows)
+        (control.1, next.2.1, next.2.2, owed)
+    | none => (control.1, control.2.1, control.2.2.1, owed)
+  acts := fun control input windows tape =>
+    let negativeNonempty := (symLetter (centreSym (windows negativeTape))).isSome
+    let positiveEmpty := (symLetter (centreSym (windows positiveTape))).isNone
+    let effective := effectiveOp control.1 control.2.2.1 negativeNonempty
+    let view := queueViewOfWindows (SOp.exec, control.2.1, control.2.2.1) (queueWindows windows)
+    if htape : tape.val < 8 then
+      match effective with
+      | some op =>
+          (queueRule Terminal hK).acts (op, control.2.1, control.2.2.1) input
+            (queueWindows windows) ⟨tape.val, htape⟩
+      | none => []
+    else
+      let deltas := lengthDeltas (lengthMoveOf control.1 effective view control.2.2.2)
+        positiveEmpty (!negativeNonempty)
+      if tape.val = 8 then cellActsOfTop deltas.1 false (centreSym (windows tape))
+      else cellActsOfTop deltas.2 false (centreSym (windows tape))
+  len_le := fun control input windows tape => by
+    dsimp only
+    split
+    · split
+      · exact (queueRule Terminal hK).len_le _ _ _ _
+      · simp
+    · split
+      · exact le_trans (cellActsOfTop_length _ _ _) hK
+      · exact le_trans (cellActsOfTop_length _ _ _) hK
+
+/-- The local step of the micro-programmed queue machine. -/
+def microLocalStep (Terminal : Type) (hK : 2 ≤ K) :
+    PalPeg.Local.LocalStep Terminal MicroControl Γc 10 K :=
+  compStep (microRule Terminal hK)
+
+end MicroRule
 
 end PalPeg.ConcreteLocalMachine
