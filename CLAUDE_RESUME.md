@@ -19,6 +19,11 @@
 4. `Good next`: `commitReplay` は `movePol Ctr.radius Ctr.replay` で極性を入れ替えるので、`PolWF` の `radius` を保つには入れ替え前の `pol .replay = true` が要る見込み。`localGood` に `.work` と `.replay` を足す必要があるかを `movePol` の定義で確かめる。
 5. `Post w m → Post w next`: `postPhase` の左枝は `mode = scan` を要求するので、replayStart の source では前件が偽になるはず（要確認）。
 
+**未確認 3 点を定義で潰した（2026-09-21 追記）**:
+* **極性**: `LocalRoles.movePol src dst pol ℓ = pol (swapAt src dst ℓ)`（`:107`）。`commitReplay` は `movePol Ctr.radius Ctr.replay` なので、commit 後の `pol .radius` は commit 前の `pol .replay`。`PolWF` を保つには `pol .replay = true` が要る。`hpw` のために `pol .work = true` も要る。→ (b) は `localGood m := PolWF m.vm ∧ m.vm.pol .work = true ∧ m.vm.pol .replay = true`。phase step の極性補題は `pol` 全体の等式なので保存は同じ証明、`initVml` は `length`／`work` を `true` にして他は不変、blank の `pol` は要確認。
+* **`postPhase`**（`ShadowedLocalFinal:836`）の左枝は `(absSC m).ctl.mode = Mode.scan` を要求するので replayStart の source では偽。右枝 `frozenAt w m` のときは `hreplayStartNext` の前件 `InvC` と `notFrozen_of_invC` で排除できる。
+* **`Inv`（これが重い）**: `LocalState.MirrorsAttached`（`:169`）は `radiusMir.src = phys (roles .radius)`、`lowerMir.src = phys (roles .lower)`、`lengthMir.src = phys (roles .length)` を**テープの等式**で要求する。`LocalTick2.commitReplay` は役割を入れ替え、`replayCleared` のテープを reset し、`length`／`work` を push するのに、`radiusMir`／`lowerMir`／`lengthMir` に触らない（`initVml` は `lengthMir := pushAll` をしている）。よって `commitReplay` の着地は `LocalTick1.Inv` を保たない。`Inv (commitReplay …)` の既存補題も無い（あるのは `LocalAlloc.allocInv_commitReplay` と `LocalReplaySwap.mirInv_commitReplay` だけ）。ghost の後継は鏡 3 本も新しいテープに合わせて更新する形にし、`Shaped` を示す必要がある。
+
 **順序**: (a) `RewindCentre` の trace 形 → (b) `localGood` の拡張 → (d)。どれも (d) が入って初めて消費者につながるので、1 回の作業でまとめて入れる。
 
 ## n312（2026-09-21）: replayStart の commit が `dpBuf` を新品の半分へ切り替える。4 本の定理から `hclean` が落ちた
