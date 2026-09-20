@@ -1,3 +1,17 @@
+## n302 — 進め方の変更: 残りの仮定は、証明に入る前に Scala 正本の該当行と突き合わせて形式化を検査する
+
+**きっかけ（2026-09-21、コウタ）**: 「もうちょっと視点変えてすすめよう」「形式化のミスとかさ」「同じところぐるぐるまわらんように」。今日見つけた障害（飢餓テストの読みすぎ、`repC : Control → Bool`、`Geom` を run 不変量に入れた、模倣を全状態に要求、Post 相で ghost に tick を強制）は全部**自分の形式化のミス**で、1 個ずつ偶然に踏んで見つけていた。Post 相は挙動を 2 回推測で外した（n295→n296→n297）。
+
+**方法**: `scala/pal/src/main/scala/pal/ScaffoldGalil.scala` は実行できる仕様。仮定を証明・公理化する前に、対応する Scala の行を読み（必要なら極小の語で走らせ）、Lean の述語の形がそれと合うかを先に確かめる。
+
+**今回の突き合わせ結果（一次情報、行番号は ScaffoldGalil.scala）**:
+* `:203-206` `quiescent = mode == Scan && !replaying && !right.head.canRight`、`caught = quiescent && !right.gap`、`report = caught && output`、`inputReady = quiescent && right.gap`。→ Lean の報告テスト（scan ∧ ¬replaying ∧ `R` が文字上 ∧ 次の文字が無い）と形が合う。
+* `:255` `available = replaying || (if (advanceTrailingGap) right.canRight else right.head.canRight)`。Lean の `scanFrame.available := canRight s.right`（`GalilScaffoldTopScan:37`）は **`advanceTrailingGap = true` の版**（online 経路 `:545`）に当たる: 最後の文字の後ろの gap へは入力なしで進める。既定の `step`／`run`（`:486`、`false`）は `R` が最後の到着文字で止まる別の版。→ n297 の「報告の後、比較が左端で不一致になり shift／fallback に入る」は Scala の online 版でも同じ挙動で、Lean のモデルのミスではない。
+* `:187-189` scan モードでは毎 tick `background()` が先に走る。Scala は文字待ちの間も背景仕事を進める。Lean の局所層は飢餓時に stutter する（切り詰めた pre-loaded trace と等しく保つための設計）。物理機械に「飢餓なら抽象を変えない」を要求するのはこの設計の帰結で、Scala と同じ機械を作るわけではない。
+* `:273` `beginChainShift` は `length.inc()` を 2 回 → `Geom.shiftMag` の `2 ≤ length` の出所。
+
+**次に突き合わせるもの**: `hgeomTracked` の各場 ↔ `stepShift`(`:324`)／`stepCopy`(`:342`)／`stepChoose`(`:393`)／`stepRewind`(`:409`)、`hscanNext`／`hplateauNext` ↔ `stepScan`(`:254`)、`spare` の本数 ↔ 局所層の commit（`RestartStaged` など）が同時に使う役割なしテープの最大数。
+
 ## n301 — 到達点の棚卸し: `given_openModesAndPhysicalMachine` に残る仮定は抽象層 5 本＋物理側 8 本
 
 **状態（2026-09-21 未明）**: 最新の全体 build は `ba6aeec`（`BUILD=0`・`error` 0・`sorry` 0）。以後は module build `PalPeg.ShadowedLocalFinal` `BUILD=0`（最後は commit `b9accbd`、push 済み）。**全体 build 成功（`ba6aeec` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。`unconditional` は未付け替え。
