@@ -69,4 +69,49 @@ theorem usedVM_replayStart_le (raw : List (Fin 2)) {entry : ℕ} {s t : GalilVM}
 
 #print axioms usedVM_replayStart_le
 
+/-- **The letters used after a comparison**: the left head moves left (no letter), the right head
+moves right, the centre stays, and the chain ticks within its refined lookahead, stays idle, or
+is born on the centre head (a matched step does not move the verifier of a copying chain). -/
+theorem usedVM_compare_le (raw : List (Fin 2)) (P : Shared) (q : ℕ) (first : Fin 9)
+    {s t : GalilVM} (hcompare : compareFound P q first s t) :
+    usedVM raw t ≤ max (max (usedVM raw s)
+      (usedPH raw.length (GalilScaffoldChainVerifier.right s.right)))
+      (lookChain' raw.length s.chain) := by
+  obtain ⟨vs, vq, a, hleft, hright, -, -, hchain, ht⟩ := hcompare
+  have hfields : t.left = vs.left ∧ t.center = s.center ∧ t.right = vs.right ∧
+      t.chain = vs.chain := by
+    subst ht
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · rw [afterBirth_left]; cases a <;> rfl
+    · rw [afterBirth_center]; cases a <;> rfl
+    · rw [afterBirth_right]; cases a <;> rfl
+    · rw [afterBirth_chain]; cases a <;> rfl
+  obtain ⟨htl, htc, htr, htchain⟩ := hfields
+  have hcenterUsed := usedVM_center raw s
+  have hleftUsed := usedVM_left raw s
+  have hchainBound : usedChain raw.length vs.chain
+      ≤ max (usedVM raw s) (lookChain' raw.length s.chain) := by
+    rcases hchain with ⟨_, htick⟩ | ⟨_, _, hidle⟩ | ⟨_, _, hborn⟩
+    · exact le_trans (chainTick_used' raw.length htick) (le_max_right _ _)
+    · rw [hidle]
+      exact Nat.zero_le _
+    · have hverifier : usedChain raw.length vs.chain = usedPH raw.length s.center := by
+        cases a
+        · simp only [Bool.false_eq_true, if_false] at hborn
+          rw [hborn]
+          rfl
+        · simp only [if_true] at hborn
+          generalize vs.chain = born at hborn ⊢
+          unfold chainStart at hborn
+          cases hborn
+          rfl
+      rw [hverifier]
+      exact le_trans hcenterUsed (le_max_left _ _)
+  show max (max (usedPH raw.length t.left) (usedPH raw.length t.center))
+      (max (usedPH raw.length t.right) (usedChain raw.length t.chain)) ≤ _
+  rw [htl, htc, htr, htchain, hleft, hright, PalPeg.GalilTruncTick.usedPH_left]
+  omega
+
+#print axioms usedVM_compare_le
+
 end PalPeg.TickUsedLetters
