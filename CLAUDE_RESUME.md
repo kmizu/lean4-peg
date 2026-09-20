@@ -21,6 +21,9 @@
 
 **台帳は既存部品にある（2026-09-21 追記、定義で確認）**: copy 相の長さは `beginFallbackVM`（`GalilScaffoldTopFallbackCycle:19`）が `s.length` から決め、窓は `take (ℓ+1)`。`GalilSpanCounter.SpanRep s : value s.length = 2 * value s.radius + 1` は `CloseoutWatchPhase.spanRep_of_invLP` でタダ（`BranchSupply.SpanRepOnScanAndShift` もある）。位置は `CloseoutPackRun10.LPackM.scanGeom` の `ScanInvariant`（`leftPos : position l = center − radius`、`rightPos : position r = center + radius`）。よって歩く距離 `2·rad` は copy 相の tick 数 `2·rad+2` に収まる。未確認: `ScanInvariant` の `rad` と `s.radius` カウンタの同一視（`RadiusRep`）が同じ点で取れるか。
 
+**設計 (A) の要をスクラッチで機械検査した（2026-09-21、リポジトリには未投入・消費者と一緒に入れる）**: `Tick (galilFrameS Pw q first) delay ⟨c, s⟩ ⟨c', t⟩` かつ `c.mode ∈ {copy, home, fpp, markEnd}` または `c.mode = choose ∧ c'.mode = choose` なら、任意の `l cc : PlaceHead` で `Tick … ⟨c, {s with left := l, center := cc}⟩ ⟨c', {t with left := l, center := cc}⟩`。error 0、公理は `propext`／`Quot.sound`。証明の形: `cases h` してモードで 9 構成子（copy_one／copy_done／home_start／home_step／fpp_slice／fpp_done／markEnd_found／markEnd_step／choose_step）に絞る。7 つは関係が `fppLens.rel`（`s.fpp` だけ読む）なので `obtain ⟨hstep, hframe⟩ := hrel; exact ⟨hstep, congrArg (fun v : GalilVM => {v with left := l, center := cc}) hframe⟩`、ガードは defeq で `exact hp`。`markBack` の 2 つは `rewindLens` 経由なので `obtain ⟨⟨hmarksLeft, hnext⟩, hframe⟩ := hrel; rw [hnext] at hframe; subst hframe; exact Tick.… _ _ _ hm hp ⟨⟨hmarksLeft, rfl⟩, rfl⟩`。
+**波及の見積り**: `abs''` は 12 ファイル約 100 箇所、`absState''_eq`（replay でなければ `abs'' = abs'`）が fallback 相の `tickL3_*StepC` でも使われている。控えを入れるなら `abs''` の `left`／`center` を fallback 相だけ控えから読む形にし、`absState''_eq` に「fallback 相でない」を足す。
+
 **次の具体 goal**: copy 相の局所 step に「`canRight` の間 L と C を右へ 1 歩」を足したとき、select 時点で `Twin left right ∧ Twin center right` になること（copy 相の tick 数 ≥ `position right − position left` の台帳が要る。抽象側の `position center + value radius = position right` の類を tracked state で確認する）。
 
 ## n303 — 突き合わせで見つかった形式化ミスの候補: 局所層の choose は `L := R`・`C := R` を実装していない
