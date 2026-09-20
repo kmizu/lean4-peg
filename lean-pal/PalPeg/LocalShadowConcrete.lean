@@ -219,11 +219,11 @@ theorem pal_in_peg_of_shadowed_sysC
   · rintro w s letter m _ ⟨_, rfl, htracked⟩
     exact feed_abs_core htracked.phys.inv.views htracked.phys.pend letter
   · exact H_ledger_of_local_oracles S absSC x0 Pof qof firstOf stOf TcOf hpreload
-      (fun w hw s hstarved =>
+      (fun w hw s _ hstarved =>
         hneedOfNotStarved w _ _ _ hw (hrun w hw s).invC hstarved (hrun w hw s).needy)
       (fun w hw s hbefore hneed =>
         hnotStarvedOfNeed w _ _ _ hw (hrun w hw s).invC (hrun w hw s).needy hbefore hneed)
-      hbase hcost (fun w hw s => (hrun w hw s).needy.2) hlastReport
+      hbase hcost (fun w hw s _ => (hrun w hw s).needy.2) hlastReport
 
 #print axioms pal_in_peg_of_shadowed_sysC
 
