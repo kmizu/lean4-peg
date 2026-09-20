@@ -6,7 +6,9 @@
 * `LocalViewLayout`: `ViewRep`、`viewTopsOfWindows_eq`（3 記号は back 中心・near 中心・front 役テープ中心の窓から読める）。
 * `LocalViewStep`: `viewDecision_sound`（判断歩で 2 本の stack テープが `viewApply command v` のものへ）。
 * `LocalViewSlot`: `viewNext`／`viewActs`（12 本の規則、`viewActs_length ≤ K`）、`ViewStep`（テープごとの margin 条件つき `TEqG`）、`viewSlot_sound`: `WF v`・`ViewCells v`・`ViewRep K v`・未払い 0 → 11 歩後 `ViewRep K (viewApply command v)`・未払い 0（slot は連結できる）。
-* **未完**: この規則を呼ぶ全体機械の `ActRule`（複数 view・共有 slot counter・`compStep_apply` のテープごと版から `ViewStep` を出す）、blank からの view 初期化、chain／探索／counter bank／10 モード、`TrackAt`、期限・latch、`realize_SAccepts`。
+* `LocalViewInit`: `ViewRep.back` の条件を `K ≤ bottom.length + 1` に直した（blank から 1 歩で作れる底は高さ K ちょうどで、`focus :: back` のテープは番兵 1 セルを含む。番兵は pop されない）。`viewInit_of_apply`: blank 12 本＋初期制御から 1 歩で `ViewRep K emptyView`（端での `sweep` を `sweep_blank_edge` で直接検証、`compStep_apply` の margin は先取りしない）。
+* `LocalViewsMachine`: `machineRule : ActRule (Fin 2) _ Γc (viewCount * 12) K`（制御 = started × current × pending × slot × 各 view の制御。入力は 1 歩にしか来ず最初の 1 歩は初期化なので文字を latch する）、`machine_viewStep`（`viewStep_of_apply` の消費者）、`machineInit`、`machineSlot`、`machineIter_slotEnd`、**`machineFirstLetter`**: blank から実 12 歩（初期化 1 歩＋1 slot）で全 view が `ViewRep K (arrive a emptyView)`・未払い 0・slot 0・`pending = none`。handoff 第二成果のうち「blank から init＋入力到着」を同じ物理表現の実走行で通した。**scan 比較 1 回は未着手**（`commandOfLetter` の `none` 側がモードの command を入れる場所）。
+* **未完**: master 制御とモードの command 選択（scan 比較から）、chain／探索／counter bank／10 モード、`TrackAt`、期限・latch、`realize_SAccepts`。
 
 **公理への進捗**
 
