@@ -44,4 +44,29 @@ theorem usedVM_background_le (raw : List (Fin 2)) (P : Shared) (q : ℕ) (first 
 
 #print axioms usedVM_background_le
 
+/-- **The letters used after the `init` effect**: the three heads stand on the place right of the
+right head and the chain is idle, so they are the letters used by that move. -/
+theorem usedVM_init_le (raw : List (Fin 2)) {entry : ℕ} {s t : GalilVM}
+    (hinit : initVM entry s t) :
+    usedVM raw t ≤ usedPH raw.length (GalilScaffoldChainVerifier.right s.right) := by
+  obtain ⟨hright, hleft, hcenter, -, -, -, -, -, -, hchain, -⟩ := hinit
+  show max (max (usedPH raw.length t.left) (usedPH raw.length t.center))
+      (max (usedPH raw.length t.right) (usedChain raw.length t.chain)) ≤ _
+  rw [hleft, hcenter, hright, hchain]
+  simp [usedChain, PalPeg.GalilThrottledRun.verOf]
+
+/-- **The letters used after the `replayStart` effect**: the three heads stand on the centre head
+and the chain is idle, so no new letter is used. -/
+theorem usedVM_replayStart_le (raw : List (Fin 2)) {entry : ℕ} {s t : GalilVM}
+    (hreplayStart : replayStartVM entry s t) : usedVM raw t ≤ usedVM raw s := by
+  obtain ⟨-, hright, hleft, hcenter, -, -, -, -, -, hchain, -⟩ := hreplayStart
+  have hcenterUsed := usedVM_center raw s
+  show max (max (usedPH raw.length t.left) (usedPH raw.length t.center))
+      (max (usedPH raw.length t.right) (usedChain raw.length t.chain)) ≤ _
+  rw [hleft, hcenter, hright, hchain]
+  simp only [usedChain, PalPeg.GalilThrottledRun.verOf]
+  omega
+
+#print axioms usedVM_replayStart_le
+
 end PalPeg.TickUsedLetters

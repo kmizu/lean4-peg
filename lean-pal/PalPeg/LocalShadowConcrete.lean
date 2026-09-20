@@ -112,7 +112,7 @@ theorem pal_in_peg_of_shadowed_sysC
     -- and the lookahead of the chain verifier (the starvation test does not read the chain)
     (hnextUsedOfNotStarved : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), 0 < w.length →
       InvC Good w (stOf w) m → ¬ Starved m.vm → Needy w (stOf w) k j m.vm →
-      k < TcOf w w.length → usedVM w (stOf w (k+1)).vm ≤ j)
+      k < TcOf w w.length → usedVM w (stOf w k).vm ≤ j → usedVM w (stOf w (k+1)).vm ≤ j)
     (hchainLookOfNotStarved : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), 0 < w.length →
       InvC Good w (stOf w) m → ¬ Starved m.vm → Needy w (stOf w) k j m.vm →
       k < TcOf w w.length → usedVM w (stOf w k).vm ≤ j → (stOf w k).ctl.mode = .scan →
@@ -161,7 +161,7 @@ theorem pal_in_peg_of_shadowed_sysC
       InvC Good w (stOf w) m → ¬ Starved m.vm → Needy w (stOf w) k j m.vm →
       k < TcOf w w.length → usedVM w (stOf w k).vm ≤ j → TickNeed w (stOf w) k j := by
     intro w m k j hw hinv hnotStarved hneedy hbefore hused
-    refine ⟨hused, hnextUsedOfNotStarved w m k j hw hinv hnotStarved hneedy hbefore, ?_⟩
+    refine ⟨hused, hnextUsedOfNotStarved w m k j hw hinv hnotStarved hneedy hbefore hused, ?_⟩
     unfold GalilLookRefined.look'
     split
     · rename_i hscan
