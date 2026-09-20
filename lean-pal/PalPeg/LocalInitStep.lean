@@ -1,4 +1,5 @@
 import PalPeg.LocalSysConcrete
+import PalPeg.GalilTickFair
 
 /-!
 # The local step of the `init` mode
@@ -140,5 +141,100 @@ theorem initVM_initVml (entry : ℕ) {x : GalilVML P} (hinj : RolesInjective x)
     rfl
 
 #print axioms initVM_initVml
+
+/-- The `init` tick is canonical: it is not a scan tick, and it keeps the search cursor. -/
+theorem canonical_of_init {entry initEntry delay : ℕ} {x y : State GalilVM}
+    (hmode : x.ctl.mode = .init) (hinit : initVM initEntry x.vm y.vm) :
+    PalPeg.GalilTickFair.Canonical entry delay x y where
+  restartFirst := fun hscan => by rw [hmode] at hscan; cases hscan
+  fallbackPlace := fun hscan => by rw [hmode] at hscan; cases hscan
+  keepsSearchCursor := fun _ => ⟨hinit.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hinit.2.2.2.2.2.2.2.2.2.2.2.2.2.2⟩
+
+/-- **The local `init` step is a canonical `init` tick of the abstraction.** -/
+theorem tick_initStep {Pw : Shared} (qq : ℕ) (first : Fin 9) (delay entry : ℕ)
+    (hinit : Pw.init = initVM entry) {m : Mirrored1 P}
+    (hmode : m.vm.ctl.mode = .init) (hreplaying : m.vm.ctl.replaying = false)
+    (hinj : RolesInjective m.vm) (hviews : PalPeg.LocalState.ViewsWF m.vm)
+    (hpending : m.vm.pending = [])
+    (hleft : absHead' m.vm.left m.vm.pending = absHead' m.vm.right m.vm.pending)
+    (hcenter : absHead' m.vm.center m.vm.pending = absHead' m.vm.right m.vm.pending)
+    (hcanRight : GalilScaffoldChainVerifier.canRight (absHead' m.vm.right m.vm.pending))
+    (hzero : ∀ c : Ctr, val (m.vm.phys (m.vm.roles c)) = 0)
+    (hdp : LocalBuffers.abs m.vm.dpBuf = fun _ => GalilScaffoldTape.reset) :
+    Tick (galilFrameS Pw qq first) delay (PalPeg.LocalReplayParked.absState'' m.vm)
+        (PalPeg.LocalReplayParked.absState'' (initStep entry m).vm) ∧
+      PalPeg.GalilTickFair.Canonical entry delay (PalPeg.LocalReplayParked.absState'' m.vm)
+        (PalPeg.LocalReplayParked.absState'' (initStep entry m).vm) := by
+  have hvm := initVM_initVml entry hinj hviews hpending hleft hcenter hcanRight hzero hdp
+  have hbefore : PalPeg.LocalReplayParked.abs'' m.vm = abs' m.vm :=
+    PalPeg.LocalReplayParked.abs''_eq_abs' hreplaying
+  have hafter : PalPeg.LocalReplayParked.abs'' (initVml entry m.vm) = abs' (initVml entry m.vm) :=
+    PalPeg.LocalReplayParked.abs''_eq_abs' hreplaying
+  refine ⟨?_, canonical_of_init (initEntry := entry) hmode (by
+    show initVM entry (PalPeg.LocalReplayParked.abs'' m.vm)
+      (PalPeg.LocalReplayParked.abs'' (initVml entry m.vm))
+    rw [hbefore, hafter]
+    exact hvm)⟩
+  show Tick _ delay ⟨m.vm.ctl, PalPeg.LocalReplayParked.abs'' m.vm⟩
+    ⟨{ m.vm.ctl with mode := .scan, output := true },
+      PalPeg.LocalReplayParked.abs'' (initVml entry m.vm)⟩
+  rw [hbefore, hafter]
+  exact Tick.init m.vm.ctl _ _ hmode (by
+    show Pw.init _ _
+    rw [hinit]
+    exact hvm)
+
+#print axioms tick_initStep
+
+/-- **The local `init` step keeps the physical pack and the left mirror.** -/
+theorem physWF_initStep (entry : ℕ) {m : Mirrored1 P}
+    (hphys : PalPeg.LocalSysConcrete.PhysWF m.vm) (hmir : PalPeg.LocalReplayParked.MirInv1 m)
+    (hreplaying : m.vm.ctl.replaying = false) :
+    PalPeg.LocalSysConcrete.PhysWF (initStep entry m).vm ∧
+      PalPeg.LocalReplayParked.MirInv1 (initStep entry m) := by
+  have hinj := hphys.inv.roles
+  have hother : ∀ c : Ctr, c ≠ .length → c ≠ .work →
+      initPhys m.vm (m.vm.roles c) = m.vm.phys (m.vm.roles c) := fun c hl hw => by
+    unfold initPhys
+    rw [if_neg (fun h => hl (hinj h)), if_neg (fun h => hw (hinj h))]
+  have hlengthTape : initPhys m.vm (m.vm.roles .length) = push (m.vm.phys (m.vm.roles .length)) := by
+    unfold initPhys
+    rw [if_pos rfl]
+  refine ⟨⟨⟨hinj, ⟨?_, ?_, ?_⟩,
+      ⟨PalPeg.LocalTick1.WF_moveRight hphys.inv.views.1,
+        PalPeg.LocalTick1.WF_moveRight hphys.inv.views.2.1,
+        PalPeg.LocalTick1.WF_moveRight hphys.inv.views.2.2.1,
+        hphys.inv.views.2.2.2.1, hphys.inv.views.2.2.2.2⟩,
+      hphys.inv.radiusShaped, hphys.inv.lowerShaped, ?_, ?_⟩, ?_, hphys.pend⟩,
+    PalPeg.LocalReplaySwap.Twin.moveRight hmir.2 hphys.inv.views.2.1 hmir.1,
+    PalPeg.LocalTick1.WF_moveRight hmir.2⟩
+  · show m.vm.radiusMir.src = initPhys m.vm (m.vm.roles .radius)
+    rw [hother .radius (by decide) (by decide)]
+    exact hphys.inv.attached.1
+  · show m.vm.lowerMir.src = initPhys m.vm (m.vm.roles .lower)
+    rw [hother .lower (by decide) (by decide)]
+    exact hphys.inv.attached.2.1
+  · show (LocalMirror.pushAll m.vm.lengthMir).src = initPhys m.vm (m.vm.roles .length)
+    rw [hlengthTape, LocalMirror.pushAll_src, hphys.inv.attached.2.2]
+    rfl
+  · obtain ⟨v, hshaped⟩ := hphys.inv.lengthShaped
+    exact ⟨v + 1, LocalMirror.shaped_pushAll hshaped⟩
+  · intro c
+    obtain ⟨v, hv⟩ := hphys.inv.shaped c
+    show ∃ v, LocalCounter.SegCtr (initPhys m.vm (m.vm.roles c)) v
+    unfold initPhys
+    by_cases hl : m.vm.roles c = m.vm.roles .length
+    · rw [if_pos hl]
+      exact ⟨v + 1, LocalCounter.segCtr_push hv⟩
+    · rw [if_neg hl]
+      by_cases hw : m.vm.roles c = m.vm.roles .work
+      · rw [if_pos hw]
+        exact ⟨v + 1, LocalCounter.segCtr_push hv⟩
+      · rw [if_neg hw]
+        exact ⟨v, hv⟩
+  · intro hr
+    exact absurd (show m.vm.ctl.replaying = true from hr) (by rw [hreplaying]; decide)
+
+#print axioms physWF_initStep
 
 end PalPeg.LocalInitStep
