@@ -1,3 +1,17 @@
+## n303 — 突き合わせで見つかった形式化ミスの候補: 局所層の choose は `L := R`・`C := R` を実装していない
+
+**方法（n302）の 2 回目（2026-09-21、Lean の変更なし）**: `hgeomTracked` の各場を Scala 正本と突き合わせた。
+
+**確認できたこと（一次情報）**:
+* Scala の `stepShift`(`:324`) と `stepCopy`(`:342`) は**同じカウンタ `remaining`** を使う（`beginChainShift` は `alias(remaining, chain.h)`、`beginFallback` は `alias(remaining, length); remaining.inc()`）。Lean は copy 側を `fpp.work` に分け、合成 frame の `remainingPos` を `H.remainingPos ∨ B.remainingPos` にした。交差の場合は trace 上で排除済み: shift モードで copy 側が立たないのは `CloseoutRadPack3.copyIdle_trace`（`PreTrace` だけから）、shift 以外のモードで shift 側が立たないのは `GalilCentreLive.CPack.idle : c.mode ≠ .shift → ShiftIdle s`（`BranchSupply.cpack_alongTrace`）。
+* よって `Geom.copyWork` は追跡状態で導ける見込み: copy モード ∧ `RemPosL` ⇒（`ShiftIdle`）`CopyRemaining` ⇒ `LocalWF.work_of_copyRemaining`。`Geom.shiftMag` の `remaining > 0` も同様（`remaining_of_shiftRemaining`）。`radius > 0`・`2 ≤ length` は未確認（`ShiftGeom` に radius／length カウンタが無い）。
+
+**偽の疑いが濃い（機械検査した反証は無い）**: `Geom.chooseParked`＝`ChooseWF.headsLeft／headsCenter`（`LocalRealizesScan:311`）は「choose モードの間 `absHead' left = absHead' right` かつ `absHead' center = absHead' right`」を要求する。追跡状態では `abs'` は trace の状態そのもの（切り詰め）なので、これは「trace の choose モードで抽象の `left = right`」を意味する。しかし Scala の `stepChoose`(`:393`) は選択の瞬間に `left.copyFrom(right)`・`center.copyFrom(right)` をしており、Lean の `rewindFrame.choose` も `y = {x with left := x.right, center := x.right, …}`（選択時に代入）。fallback の各相（copy／home／fpp／markEnd）は `left`・`center` に触らない（`fppLens`）。つまり choose モードの途中では一般に `left ≠ right`。**局所層の `chooseStepC` はヘッドのコピーを実装しておらず、「既に同じ位置にいる」ことを側条件に置いているだけ**で、その側条件は run 上で成り立たない疑いが濃い。
+
+**含意**: `realizes_seven` の choose モードは偽の疑いが濃い側条件の上に立っている。ヘッドのコピーは K 局所な 1 歩ではできないので、物理表現の設計が要る。既存の仕掛けは replay 用の 1 本だけ（`Mirrored1.mirL` は center の twin で、`commitReplayParked` が `left ↔ mirL` の役割を入れ替える）。choose には `R` の twin が 2 本（`L` 用・`C` 用）要り、入れ替えた後の古いカーソルを次の choose までに `R` へ追い付かせる（fallback の各相は Θ(length) tick あるので償却できる見立て。未検証）。`spare` の本数の問題もこれと同じ根。
+
+**次の一手**: (1) Scala を極小の語（fallback が起きる語）で走らせ、choose モードの tick で `left`／`center`／`right` の位置を出して上の疑いを実行で確かめる。(2) 確かめられたら、`Mirrored1` を「`R` の twin 2 本つき」に広げる設計を先に決める（handoff: 別々の物理配置で部品を作って後で統合する進め方には戻らない）。
+
 ## n302 — 進め方の変更: 残りの仮定は、証明に入る前に Scala 正本の該当行と突き合わせて形式化を検査する
 
 **きっかけ（2026-09-21、コウタ）**: 「もうちょっと視点変えてすすめよう」「形式化のミスとかさ」「同じところぐるぐるまわらんように」。今日見つけた障害（飢餓テストの読みすぎ、`repC : Control → Bool`、`Geom` を run 不変量に入れた、模倣を全状態に要求、Post 相で ghost に tick を強制）は全部**自分の形式化のミス**で、1 個ずつ偶然に踏んで見つけていた。Post 相は挙動を 2 回推測で外した（n295→n296→n297）。
