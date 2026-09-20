@@ -7,6 +7,7 @@ import PalPeg.LocalViewSlot
 import PalPeg.LocalViewInit
 import PalPeg.LocalViewsMachine
 import PalPeg.LocalStepFusion
+import PalPeg.LocalShadowRealize
 
 /-!
 # The concrete local machine
