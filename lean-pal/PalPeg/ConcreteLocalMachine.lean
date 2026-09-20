@@ -1674,4 +1674,164 @@ def microLocalStep (Terminal : Type) (hK : 2 ≤ K) :
 
 end MicroRule
 
+/-! ## The representation of the micro-programmed machine -/
+
+theorem QueueRep.of_teqG {K : ℕ} {q : Queue (Fin 2)} {control : QueueControl}
+    {tapes tapes' : Fin 8 → STape Γc} (hrep : QueueRep K q control tapes)
+    (hteq : ∀ tape, TEqG blankc (tapes tape) (tapes' tape)) : QueueRep K q control tapes' := by
+  obtain ⟨stack, junk, bottom, hphase, hlays, hheight, htapes, hsealed, hbottom, hcounter⟩ := hrep
+  exact ⟨stack, junk, bottom, hphase, hlays, hheight,
+    fun tape htape => (htapes tape htape).of_teqG (hteq tape), hsealed, hbottom,
+    hcounter.of_teqG (hteq validTape)⟩
+
+/-- A pop of marks over a bottom meets a mark, not the bottom. -/
+theorem cellApply_marks (delta : Delta) (marks : List (Fin 2)) (bottom : List (Option (Fin 2)))
+    (hpop : delta = .pop → marks ≠ []) :
+    cellApply delta false (marks.map some ++ bottom) = (dApply delta marks).map some ++ bottom := by
+  cases delta with
+  | keep => rfl
+  | push a => rfl
+  | pop =>
+    cases marks with
+    | nil => exact absurd rfl (hpop rfl)
+    | cons mark rest => rfl
+
+theorem topLetter_marks_isNone {marks : List (Fin 2)} {bottom : List (Option (Fin 2))}
+    (hsealed : Sealed bottom) :
+    (topLetter (marks.map some ++ bottom)).isNone = marks.isEmpty := by
+  rw [topLetter_sealed hsealed]
+  cases marks <;> rfl
+
+theorem lengthDeltaOfView_cases (op : SOp) (view : QueueView) :
+    lengthDeltaOfView op view = -1 ∨ lengthDeltaOfView op view = 0 ∨
+      lengthDeltaOfView op view = 2 := by
+  obtain ⟨frontEmpty, rotation⟩ := view
+  cases op with
+  | snocPush a => simp [lengthDeltaOfView]
+  | tailPop => cases frontEmpty <;> simp [lengthDeltaOfView]
+  | inval => simp [lengthDeltaOfView]
+  | rotStart => simp [lengthDeltaOfView]
+  | install => simp [lengthDeltaOfView]
+  | exec =>
+    cases rotation with
+    | idle => simp [lengthDeltaOfView, execLengthDelta]
+    | done => simp [lengthDeltaOfView, execLengthDelta]
+    | appending validZero forwardHead rebuilt => simp [lengthDeltaOfView, execLengthDelta]
+    | reversing forwardHead reverseHead single =>
+      cases forwardHead <;> cases reverseHead <;> cases single <;>
+        simp [lengthDeltaOfView, execLengthDelta]
+
+/-- The sub-step a micro-operation runs on the abstract queue, if any. -/
+def abstractOp (micro : MicroOp) (q : Queue (Fin 2)) : Option SOp :=
+  match micro with
+  | .sub op => some op
+  | .checkStart => if q.lenr ≤ q.lenf then none else some .rotStart
+  | .incLength => none
+
+/-- The queue after a micro-operation. -/
+def microApply (micro : MicroOp) (q : Queue (Fin 2)) : Queue (Fin 2) :=
+  match abstractOp micro q with
+  | some op => sApply op q
+  | none => q
+
+/-- The control after a micro-operation. -/
+def microControlAfter (control : MicroControl) (q : Queue (Fin 2)) : MicroControl :=
+  match abstractOp control.1 q with
+  | some op =>
+      (control.1, tagStep op q control.2.1, rotationPhase (sApply op q).state,
+        owedAfter control.1 (some op) (queueView q) control.2.2.2)
+  | none =>
+      (control.1, control.2.1, control.2.2.1,
+        owedAfter control.1 none (queueView q) control.2.2.2)
+
+/-- **The micro-programmed machine represents the queue and its length counter**: the queue
+tapes as in `QueueRep`, and the two mark tapes carry a signed value that, with the units still
+owed, is the lazy length counter. -/
+def MicroRep (K : ℕ) (q : Queue (Fin 2)) (control : MicroControl)
+    (tapes : Fin 10 → STape Γc) : Prop :=
+  QueueRep K q (SOp.exec, control.2.1, control.2.2.1)
+      (fun tape => tapes (Fin.castLE (by omega) tape)) ∧
+    ∃ (counter : ℤ) (positiveBottom negativeBottom : List (Option (Fin 2))),
+      LengthCounter q (counter + (control.2.2.2.val : ℤ)) ∧
+      Sealed positiveBottom ∧ K ≤ positiveBottom.length ∧
+      StackTape (tapes positiveTape) ((positiveMarks counter).map some ++ positiveBottom) ∧
+      Sealed negativeBottom ∧ K ≤ negativeBottom.length ∧
+      StackTape (tapes negativeTape) ((negativeMarks counter).map some ++ negativeBottom)
+
+section MicroSound
+
+variable {K : ℕ} {Terminal : Type}
+
+/-- The sub-step the rule runs: from the control and the top of the negative length tape. -/
+def ruleOp (control : MicroControl) (windows : Fin 10 → Window Γc K) : Option SOp :=
+  effectiveOp control.1 control.2.2.1 (symLetter (centreSym (windows negativeTape))).isSome
+
+/-- The observation the rule makes of the queue tapes. -/
+def ruleView (control : MicroControl) (windows : Fin 10 → Window Γc K) : QueueView :=
+  queueViewOfWindows (SOp.exec, control.2.1, control.2.2.1) (queueWindows windows)
+
+theorem microRule_nq_some (hK : 2 ≤ K) (control : MicroControl) (input : Option Terminal)
+    (windows : Fin 10 → Window Γc K) {op : SOp} (hop : ruleOp control windows = some op) :
+    (microRule Terminal hK).nq control input windows
+      = (control.1,
+          ((queueRule Terminal hK).nq (op, control.2.1, control.2.2.1) input
+            (queueWindows windows)).2.1,
+          ((queueRule Terminal hK).nq (op, control.2.1, control.2.2.1) input
+            (queueWindows windows)).2.2,
+          owedAfter control.1 (some op) (ruleView control windows) control.2.2.2) := by
+  unfold ruleOp at hop
+  show (match effectiveOp control.1 control.2.2.1
+      (symLetter (centreSym (windows negativeTape))).isSome with
+    | some op => _
+    | none => _) = _
+  rw [hop]
+  rfl
+
+theorem microRule_nq_none (hK : 2 ≤ K) (control : MicroControl) (input : Option Terminal)
+    (windows : Fin 10 → Window Γc K) (hop : ruleOp control windows = none) :
+    (microRule Terminal hK).nq control input windows
+      = (control.1, control.2.1, control.2.2.1,
+          owedAfter control.1 none (ruleView control windows) control.2.2.2) := by
+  unfold ruleOp at hop
+  show (match effectiveOp control.1 control.2.2.1
+      (symLetter (centreSym (windows negativeTape))).isSome with
+    | some op => _
+    | none => _) = _
+  rw [hop]
+  rfl
+
+theorem microRule_acts_queue (hK : 2 ≤ K) (control : MicroControl) (input : Option Terminal)
+    (windows : Fin 10 → Window Γc K) (tape : Fin 8) :
+    (microRule Terminal hK).acts control input windows (Fin.castLE (by omega) tape)
+      = match ruleOp control windows with
+        | some op =>
+            (queueRule Terminal hK).acts (op, control.2.1, control.2.2.1) input
+              (queueWindows windows) tape
+        | none => [] := by
+  have htape : (Fin.castLE (by omega : 8 ≤ 10) tape).val < 8 := tape.isLt
+  show (if h : (Fin.castLE (by omega : 8 ≤ 10) tape).val < 8 then _ else _) = _
+  rw [dif_pos htape]
+  rfl
+
+/-- The move of the length counter the rule makes. -/
+def ruleLengthDeltas (control : MicroControl) (windows : Fin 10 → Window Γc K) : Delta × Delta :=
+  lengthDeltas
+    (lengthMoveOf control.1 (ruleOp control windows) (ruleView control windows) control.2.2.2)
+    (symLetter (centreSym (windows positiveTape))).isNone
+    (!(symLetter (centreSym (windows negativeTape))).isSome)
+
+theorem microRule_acts_positive (hK : 2 ≤ K) (control : MicroControl) (input : Option Terminal)
+    (windows : Fin 10 → Window Γc K) :
+    (microRule Terminal hK).acts control input windows positiveTape
+      = cellActsOfTop (ruleLengthDeltas control windows).1 false
+          (centreSym (windows positiveTape)) := rfl
+
+theorem microRule_acts_negative (hK : 2 ≤ K) (control : MicroControl) (input : Option Terminal)
+    (windows : Fin 10 → Window Γc K) :
+    (microRule Terminal hK).acts control input windows negativeTape
+      = cellActsOfTop (ruleLengthDeltas control windows).2 false
+          (centreSym (windows negativeTape)) := rfl
+
+end MicroSound
+
 end PalPeg.ConcreteLocalMachine
