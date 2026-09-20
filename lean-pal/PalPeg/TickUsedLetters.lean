@@ -236,6 +236,33 @@ theorem usedVM_shiftEntry_le (raw : List (Fin 2)) {centre : GalilVM → Fin 3}
 
 #print axioms usedVM_shiftEntry_le
 
+/-- **The moving tick of a shift, read off the tick.**  In `shift` mode with the guard of the
+moving tick, the tick is `shift_one`: the centre head and the left head (twice) can move right,
+and the target has them moved. -/
+theorem shiftMove_of_tick {P : Shared} {q delay : ℕ} {first : Fin 9} {x y : State GalilVM}
+    (htick : Tick (galilFrameS P q first) delay x y) (hmode : x.ctl.mode = .shift)
+    (hmoves : (galilFrameS P q first).remainingPos x.vm) :
+    GalilScaffoldChainVerifier.canRight x.vm.center ∧
+      GalilScaffoldChainVerifier.canRight x.vm.left ∧
+      GalilScaffoldChainVerifier.canRight (GalilScaffoldChainVerifier.right x.vm.left) ∧
+      y.vm.center = GalilScaffoldChainVerifier.right x.vm.center ∧
+      y.vm.left = GalilScaffoldChainVerifier.right (GalilScaffoldChainVerifier.right x.vm.left) := by
+  cases htick
+  case shift_one c s s' hm hp h0 =>
+    obtain ⟨⟨hcanCenter, hcanLeft, hcanLeftTwice, watching, -, htarget⟩, hset⟩ := h0
+    have hs' := hset.trans (congrArg _ htarget)
+    refine ⟨hcanCenter, hcanLeft, hcanLeftTwice, ?_, ?_⟩
+    · show s'.center = _
+      rw [hs']
+      rfl
+    · show s'.left = _
+      rw [hs']
+      rfl
+  case shift_done c s o hm hp ho => exact absurd hmoves hp
+  all_goals (exfalso; simp_all)
+
+#print axioms shiftMove_of_tick
+
 /-- An effect through the fallback-program lens keeps the three heads and the chain. -/
 theorem usedVM_fppRel (raw : List (Fin 2)) {R : FppControl.State → FppControl.State → Prop}
     {s t : GalilVM} (hrel : fppLens.rel R s t) : usedVM raw t = usedVM raw s := by

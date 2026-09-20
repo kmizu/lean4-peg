@@ -181,6 +181,79 @@ theorem chainLook_heldAfter (entry q : ℕ) (first : Fin 9)
 
 #print axioms chainLook_heldAfter
 
+/-- **A tracked state whose need has arrived is not starved.**  The starvation test reads, by the
+mode, the cursors the tick moves; the need bounds the letters used by the target of the tick and
+the lookahead of the right head, so each cursor the test reads can move after truncation
+(`canRight_truncPH`).  `init` occurs at the boot state only, whose right head has the word
+pending. -/
+theorem notStarved_of_need_heldAfter (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
+    (hw : 0 < w.length) {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc)
+    (m : Mirrored1 (tapeCount spare)) (k j : ℕ)
+    (hneedy : Needy w (heldAfter (Tc w.length) st) k j m.vm) (hbefore : k < Tc w.length)
+    (hneed : needT' w (heldAfter (Tc w.length) st) k ≤ j) : ¬ Starved m.vm := by
+  obtain ⟨-, hnextUsed, hlook⟩ := PalPeg.LocalSysConcrete.used_le_of_need hneed
+  have hheld := heldAfter_of_le st hbefore.le
+  rw [heldAfter_of_le st (Nat.succ_le_of_lt hbefore)] at hnextUsed
+  rw [hheld] at hlook
+  have hstate := hneedy.2
+  rw [hheld] at hstate
+  have hvm : PalPeg.LocalReplayParked.abs'' m.vm
+      = PalPeg.GalilThrottledRun.truncVM (w.length - j) (st k).vm := congrArg State.vm hstate
+  have hctl : m.vm.ctl = (st k).ctl := congrArg State.ctl hstate
+  have htick := hpreTrace.base.pre.trace.tick k hbefore
+  refine Classical.not_not.mpr ⟨fun hmode => ?_, fun hshift hmoves => ?_⟩
+  · rw [hvm]
+    rw [hctl] at hmode
+    rcases hmode with hinit | hscan
+    · have hzero : k = 0 := by
+        rcases Nat.eq_zero_or_pos k with hzero | hpos
+        · exact hzero
+        · exact absurd hinit (PalPeg.BranchSupply.mode_ne_init_alongTrace_afterFirstStep centreC
+            placeC entry q first hpreTrace.base.pre k hpos hbefore.le)
+      obtain ⟨t, hinitVM, hnext⟩ := PalPeg.GalilTickFair.tick_init_cases (c := (st k).ctl)
+        (s := (st k).vm) hinit htick
+      have hright : t.right = GalilScaffoldChainVerifier.right (st k).vm.right := hinitVM.1
+      have hlookRight : PalPeg.GalilThrottledRun.usedPH w.length
+          (GalilScaffoldChainVerifier.right (st k).vm.right) ≤ j := by
+        rw [← hright]
+        rw [hnext] at hnextUsed
+        exact (PalPeg.GalilTruncTick.usedVM_right w t).trans hnextUsed
+      refine PalPeg.GalilTruncTick.canRight_truncPH w.length j _ ?_ hlookRight
+      rw [hzero, hpreTrace.base.pre.start]
+      exact initialHead_canRight w (by
+        intro hnil
+        rw [hnil] at hw
+        exact Nat.lt_irrefl 0 hw)
+    · exact PalPeg.GalilTruncTick.canRight_truncPH w.length j _
+        (PalPeg.BranchSupply.canRightAtScanOrShift_alongTrace centreC placeC entry q first hw
+          hpreTrace k hbefore.le (Or.inl hscan))
+        (le_trans (PalPeg.GalilLookRefined.look'_scan w hscan).1 hlook)
+  · rw [hctl] at hshift
+    rw [hvm] at hmoves ⊢
+    have hmoves' : (galilFrameS (PofC centreC placeC entry w) q first).remainingPos (st k).vm :=
+      hmoves
+    obtain ⟨hcanCenter, hcanLeft, hcanLeftTwice, hcenterNext, hleftNext⟩ :=
+      PalPeg.TickUsedLetters.shiftMove_of_tick htick hshift hmoves'
+    have hlookCenter : PalPeg.GalilThrottledRun.usedPH w.length
+        (GalilScaffoldChainVerifier.right (st k).vm.center) ≤ j := by
+      rw [← hcenterNext]
+      exact (PalPeg.GalilTruncTick.usedVM_center w _).trans hnextUsed
+    have hlookLeftTwice : PalPeg.GalilThrottledRun.usedPH w.length
+        (GalilScaffoldChainVerifier.right (GalilScaffoldChainVerifier.right (st k).vm.left))
+          ≤ j := by
+      rw [← hleftNext]
+      exact (PalPeg.GalilTruncTick.usedVM_left w _).trans hnextUsed
+    have hlookLeft := le_trans (PalPeg.GalilTruncTick.usedPH_right_mono w.length _) hlookLeftTwice
+    refine ⟨PalPeg.GalilTruncTick.canRight_truncPH w.length j _ hcanCenter hlookCenter,
+      PalPeg.GalilTruncTick.canRight_truncPH w.length j _ hcanLeft hlookLeft, ?_⟩
+    show GalilScaffoldChainVerifier.canRight (GalilScaffoldChainVerifier.right
+      (PalPeg.GalilThrottledRun.truncPH (w.length - j) (st k).vm.left))
+    rw [PalPeg.GalilTruncTick.truncPH_right w.length j _ hlookLeft]
+    exact PalPeg.GalilTruncTick.canRight_truncPH w.length j _ hcanLeftTwice hlookLeftTwice
+
+#print axioms notStarved_of_need_heldAfter
+
 /-- **The letters used by the target of a tick have arrived**, for an `init` tick, a
 `replayStart` tick, and a `scan` tick that does not enter `shift`.  `init` puts the three heads on
 the place right of the right head, whose lookahead the starvation test gives; `replayStart` puts
@@ -324,11 +397,6 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (hrealizes : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ mode : Mode, Realizes Good w (heldAfter (Tc w.length) st) (Tc w.length) (stepOf M mode) mode)
-    (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
-        Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
-        needT' w (heldAfter (Tc w.length) st) k ≤ j → ¬ Starved m.vm)
     -- after the last report point the trace says nothing: the local ticks are still ticks
     (Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop)
     (hpostOfLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
@@ -425,9 +493,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
         (backVerifier_alongPreTrace entry q first hfirst hw (htraceOf w hw).1) m k j hstarved hneedy
         hbefore hused
         hscan)
-    (fun w m k j hw hinv hneedy hbefore hneed =>
-      hnotStarvedOfNeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hneedy hbefore
-        hneed)
+    (fun w m k j hw _ hneedy hbefore hneed =>
+      notStarved_of_need_heldAfter entry q first hw (htraceOf w hw).1 m k j hneedy hbefore hneed)
     Post
     (fun w m j hw hinv hneedy =>
       hpostOfLastReport w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m j hinv hneedy)
@@ -565,11 +632,6 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
           PalPeg.GalilTickFair.Canonical entry 2048 (absState'' m.vm)
             (absState'' (replayStartStep m).vm) ∧
           PhysWF (replayStartStep m).vm ∧ MirInv1 (replayStartStep m))
-    (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 (tapeCount spare)) (k j : ℕ), InvC Good w (heldAfter (Tc w.length) st) m →
-        Needy w (heldAfter (Tc w.length) st) k j m.vm → k < Tc w.length →
-        needT' w (heldAfter (Tc w.length) st) k ≤ j → ¬ Starved m.vm)
     -- after the last report point the trace says nothing: the local ticks are still ticks
     (Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop)
     (hpostOfLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
@@ -612,7 +674,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     RecognizedByTotalPEG PAL := by
   refine given_shadowedLocalSystem entry q first hfirst hor hres hChainVerifierSupply
     (localSteps q first (PalPeg.LocalInitStep.initStep entry) scanStep replayStartStep) repC Good hgoodInit hgoodTick hgoodFeed
-    ?_ hnotStarvedOfNeed Post hpostOfLastReport hpostTick rep_sound rep_complete L0
+    ?_ Post hpostOfLastReport hpostTick rep_sound rep_complete L0
     blankSymbol q0 repQ outQ htape Rep hrepInit hsimTick hsimFeed hreadRep hreadOut
   intro w st Tc hpreTrace hcanonical mode
   rcases Nat.eq_zero_or_pos w.length with hempty | hw
