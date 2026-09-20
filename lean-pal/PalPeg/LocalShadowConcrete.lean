@@ -91,6 +91,7 @@ theorem pal_in_peg_of_shadowed_sysC
     (H_first : ∀ w : List (Fin 2), (Pof w).leftFirst = leftFirstVM)
     -- the initial abstract state
     (hblankInv : PalPeg.LocalTick1.Inv blank)
+    (hblankWalkerProper : PalPeg.LocalChain.ProperView blank.fppWalker)
     (hblankTwin : PalPeg.LocalReplaySwap.Twin blank.left blank.center)
     (hblankView : PalPeg.LocalInputView.WF blank.left)
     -- the pre-loaded trace
@@ -208,7 +209,7 @@ theorem pal_in_peg_of_shadowed_sysC
     rw [nLocalL_eq]
     omega
   have hinvInit : ∀ w, 0 < w.length → Inv w 0 x0.core := fun w hw => by
-    refine ⟨hw, rfl, Or.inl ⟨x0C_physWF hblankInv delay,
+    refine ⟨hw, rfl, Or.inl ⟨x0C_physWF hblankInv hblankWalkerProper delay,
       x0C_mirInv1 hblankTwin hblankView delay, ?_, Nat.zero_le _, ?_, hgoodInit⟩⟩
     · rw [harrZero]
       exact ⟨Nat.zero_le _, hinitTrack w hw⟩

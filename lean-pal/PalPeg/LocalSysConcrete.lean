@@ -132,6 +132,9 @@ structure PhysWF (x : GalilVML P) : Prop where
   inv : PalPeg.LocalTick1.Inv x
   parked : ParkedOK x
   pend : x.pending = []
+  /-- The fpp walker's stored copy keeps its left sentinel.  The abstraction forgets the sentinel
+  (`LocalState.absPlace`), so this is carried along the run, not read off the tracked state. -/
+  walkerProper : PalPeg.LocalChain.ProperView x.fppWalker
 
 /-- The arrival step of the concrete `LocalSys`: the letter joins the shared
 `pending` list and the chain verifier (`feedV`, the abstract arrival), and is
@@ -222,7 +225,7 @@ theorem physWF_feedC {m : Mirrored1 P} (h : PhysWF m.vm) (a : Fin 2) :
   have hpv := pending_feedV h.pend a
   have h1 : (feedC a m).vm = feedL' a [] (feedV a m.vm) :=
     PalPeg.LocalArrival.feed'_cons hpv
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · rw [h1]
     exact ⟨h.inv.roles, h.inv.attached,
       ⟨PalPeg.LocalInputView.WF_arrive hw.1 a, PalPeg.LocalInputView.WF_arrive hw.2.1 a,
@@ -234,6 +237,7 @@ theorem physWF_feedC {m : Mirrored1 P} (h : PhysWF m.vm) (a : Fin 2) :
     exact PalPeg.LocalReplayParked.parkedOK_feedL' (viewsWF_feedV a m.vm hw) a []
       hpv (parkedOK_feedV a h.parked)
   · rw [h1]; rfl
+  · rw [h1]; exact h.walkerProper
 
 /-- **Oracle `inv_feed`, mirror half.** -/
 theorem mirInv1_feedC {m : Mirrored1 P} (h : MirInv1 m) (hp : m.vm.pending = [])
@@ -429,10 +433,11 @@ theorem x0C_started (blank : GalilVML P) (delay : ℕ) : (x0C blank delay).start
 theorem x0C_ans (blank : GalilVML P) (delay : ℕ) : (x0C blank delay).ans = false := rfl
 
 /-- **Oracle `x0_inv`, physical half.** -/
-theorem x0C_physWF {blank : GalilVML P} (h : PalPeg.LocalTick1.Inv blank) (delay : ℕ) :
+theorem x0C_physWF {blank : GalilVML P} (h : PalPeg.LocalTick1.Inv blank)
+    (hwalkerProper : PalPeg.LocalChain.ProperView blank.fppWalker) (delay : ℕ) :
     PhysWF (x0C blank delay).core.vm := by
   refine ⟨⟨h.roles, h.attached, h.views, h.radiusShaped, h.lowerShaped, h.lengthShaped,
-    h.shaped⟩, ?_, rfl⟩
+    h.shaped⟩, ?_, rfl, hwalkerProper⟩
   intro hr
   exact absurd (show (false : Bool) = true from hr) (by decide)
 
@@ -447,12 +452,22 @@ theorem pending_tickL3 {S : Shared} {qq : ℕ} {firstT : Fin 9} {x y : GalilVML 
     (h : PalPeg.LocalTick3.TickL3 S qq firstT x y) : y.pending = x.pending := by
   cases h <;> rfl
 
+/-- A phase tick keeps the left sentinel of the fpp walker: only the copy unit moves it, one
+cell to the left. -/
+theorem walkerProper_tickL3 {S : Shared} {qq : ℕ} {firstT : Fin 9} {x y : GalilVML P}
+    (h : PalPeg.LocalTick3.TickL3 S qq firstT x y)
+    (hproper : PalPeg.LocalChain.ProperView x.fppWalker) :
+    PalPeg.LocalChain.ProperView y.fppWalker := by
+  cases h <;> first
+    | exact hproper
+    | exact PalPeg.LocalChain.properView_moveLeftV hproper
+
 /-- **The seven phase modes keep the physical pack.**  `LocalTick3.tickL3_inv`
 gives `LocalTick1.Inv`; `tickL3_replaying` makes `ParkedOK` vacuous; no phase
 tick touches `pending`. -/
 theorem physWF_of_tickL3 {S : Shared} {qq : ℕ} {firstT : Fin 9} {x y : GalilVML P}
     (h : PhysWF x) (ht : PalPeg.LocalTick3.TickL3 S qq firstT x y) : PhysWF y := by
-  refine ⟨PalPeg.LocalTick3.tickL3_inv h.inv ht, ?_, ?_⟩
+  refine ⟨PalPeg.LocalTick3.tickL3_inv h.inv ht, ?_, ?_, walkerProper_tickL3 ht h.walkerProper⟩
   · intro hr
     exact absurd ((PalPeg.LocalTick3.tickL3_replaying ht).2 ▸ hr) (by decide)
   · rw [pending_tickL3 ht]; exact h.pend
@@ -467,14 +482,31 @@ theorem pending_tickL1 {S : Shared} {qq : ℕ} {firstT : Fin 9} {d : ℕ} {x y :
   | «match» z ch o hm hav hc hpol hrep hper hahead hcan hs hmt hch ho =>
       exact (PalPeg.LocalTick1.birthL_pending _ _).trans hs.frame.pending
 
+/-- The birth of a chain does not touch the fpp walker. -/
+theorem birthL_fppWalker (b : Bool) (z : GalilVML P) :
+    (PalPeg.LocalTick1.birthL b z).fppWalker = z.fppWalker := by
+  cases b <;> rfl
+
+/-- A scan tick does not touch the fpp walker. -/
+theorem fppWalker_tickL1 {S : Shared} {qq : ℕ} {firstT : Fin 9} {d : ℕ} {x y : GalilVML P}
+    (h : PalPeg.LocalTick1.TickL1 S qq firstT d x y) : y.fppWalker = x.fppWalker := by
+  cases h with
+  | wait z ch hm hr hav hs hch =>
+      exact (birthL_fppWalker _ _).trans hs.frame.fppWalker
+  | count z ch hm hav hc hs hch =>
+      exact (birthL_fppWalker _ _).trans hs.frame.fppWalker
+  | «match» z ch o hm hav hc hpol hrep hper hahead hcan hs hmt hch ho =>
+      exact (birthL_fppWalker _ _).trans hs.frame.fppWalker
+
 /-- **A non-replaying scan tick keeps the physical pack.** -/
 theorem physWF_of_tickL1 {S : Shared} {qq : ℕ} {firstT : Fin 9} {d : ℕ} {x y : GalilVML P}
     (h : PhysWF x) (hr : x.ctl.replaying = false)
     (ht : PalPeg.LocalTick1.TickL1 S qq firstT d x y) : PhysWF y := by
-  refine ⟨PalPeg.LocalTick1.tickL1_inv h.inv ht, ?_, ?_⟩
+  refine ⟨PalPeg.LocalTick1.tickL1_inv h.inv ht, ?_, ?_, ?_⟩
   · intro hr'
     exact absurd (PalPeg.LocalReplayParked.tickL1_replaying_false ht hr ▸ hr') (by decide)
   · rw [pending_tickL1 ht]; exact h.pend
+  · rw [fppWalker_tickL1 ht]; exact h.walkerProper
 
 /-- **A mode obligation splits into its abstract and physical halves.** -/
 theorem realizes_of_parts {Good : Mirrored1 P → Prop} {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {lastTick : ℕ}

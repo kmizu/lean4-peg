@@ -44,7 +44,8 @@ open PalPeg.LocalReplayParked (absState'' Mirrored1 MirInv1)
 open PalPeg.LocalSysConcrete (Steps stepOf tickC sysC sysM absSC feedC Starved Needy TickNeed InvC PhysWF
   Realizes x0C)
 open PalPeg.LocalShadowConcrete (pal_in_peg_of_shadowed_sysC OnRun TickSucc)
-open PalPeg.LocalBlankState (tapeCount blankVML absState''_blank inv_blank twin_blank wf_blankView)
+open PalPeg.LocalBlankState (tapeCount blankVML absState''_blank inv_blank twin_blank wf_blankView
+  walkerProper_blank)
 
 /-- The trace held at its last tick: the states of `st` up to `lastTick`, then `st lastTick`
 for ever.  A pre-loaded trace says nothing about its states after the last report point; the
@@ -499,7 +500,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     needBound_alongPreTrace entry q first hres hChainVerifierSupply hw (htraceOf w hw).1
   exact pal_in_peg_of_shadowed_sysC M repM (blankVML spare) 2048 (PofC centreC placeC entry) (fun _ => q)
     (fun _ => first) (fun w => PofC_onLetter centreC placeC entry w)
-    (fun w => PofC_leftFirst centreC placeC entry w) (inv_blank spare) (twin_blank spare) wf_blankView
+    (fun w => PofC_leftFirst centreC placeC entry w) (inv_blank spare) (walkerProper_blank spare) (twin_blank spare) wf_blankView
     (fun w => heldAfter (TcOf w w.length) (stOf w)) TcOf
     (fun w j => sharedC_trunc_vm w j centreC placeC entry (fun s => (centrePlaceC w j s).1)
       (fun s => (centrePlaceC w j s).2))

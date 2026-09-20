@@ -1,3 +1,18 @@
+## n307（2026-09-21）: fpp walker の左番兵を run に沿って証明した。`Geom.copyProper` を消費者から外した
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: 仮説 `hgeomTracked` から場 `copyProper`（copy モードで `ProperView x.fppWalker`＝view の左端に番兵 `none` がちょうど 1 個）が消えた。`Geom` は 2 場（`shiftMag`／`copyWork`）。n305／n306 と違い、これは偽だから外したのではなく**本物の局所不変量を証明して外した**。
+* `LocalSysConcrete.PhysWF` に場 `walkerProper : ProperView x.fppWalker` を追加。`LocalState.absPlace` が番兵を落とすので `InvC` からは出ない。`LocalTick1.Inv` に足さなかったのは、探索量子の frame 仮説 `SearchFrame.inv` まで強めてしまうから。
+* 保存: `walkerProper_tickL3`（`cases` して copy だけ `properView_moveLeftV`、他は不変）、`birthL_fppWalker`＋`fppWalker_tickL1`（scan tick は walker に触らない、`frame.fppWalker`）、`physWF_feedC`（`arrive` は `far` しか触らない）、`physWF_initStep`、blank は `LocalBlankState.walkerProper_blank := rfl`。`x0C_physWF` と `pal_in_peg_of_shadowed_sysC` は blank の仮定 `hblankWalkerProper` を取り、`ShadowedLocalFinal` が `walkerProper_blank` を渡す。
+* **強くなった仮説（隠さない）**: 存在仮説 `hscanNext`／`hreplayStartNext`／`hplateauNext` は `PhysWF next.vm` を含むので `walkerProper` のぶん強くなった。fallback 入口で `walker := R`（Scala `:314`）にする後継は `right` の view の anchoring が要る。
+
+**次の場 `copyWork` の調査（読み取りのみ）**: `RemPosL = ShiftRemaining ∨ CopyRemaining`。cross case（copy モードで shift 側 `remaining > 0`）は trace 上で `GalilCentreLive.CPack.idle : c.mode ≠ Mode.shift → ShiftIdle s`（`BranchSupply.cpack_alongTrace`）が排除する。`GalilChainCoupling.CopyPack` は逆向き（copy 以外で `CopyIdle`）なので使えない。足りないのは「抽象 `fpp.work` が 0 でない ⇒ 局所テープの `val > 0`」の橋（`LocalTick3:525` は仮定で受けているだけ）。形: 状態仮説 `Geom.copyWork`（producer なし）を、trace 形の仮説「copy モードの trace 点で `ShiftIdle`」（producer あり）に置き換えて `ShadowedLocalFinal` で放電する。
+
 ## n306（2026-09-21）: rewind の reset が ghost で新品の半分へ切り替わる。`Geom.rewindClean` を消費者から外した
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。

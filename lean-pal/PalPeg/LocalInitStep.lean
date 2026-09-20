@@ -205,7 +205,8 @@ theorem physWF_initStep (entry : ℕ) {m : Mirrored1 P}
         PalPeg.LocalTick1.WF_moveRight hphys.inv.views.2.1,
         PalPeg.LocalTick1.WF_moveRight hphys.inv.views.2.2.1,
         hphys.inv.views.2.2.2.1, hphys.inv.views.2.2.2.2⟩,
-      hphys.inv.radiusShaped, hphys.inv.lowerShaped, ?_, ?_⟩, ?_, hphys.pend⟩,
+      hphys.inv.radiusShaped, hphys.inv.lowerShaped, ?_, ?_⟩, ?_, hphys.pend,
+      hphys.walkerProper⟩,
     PalPeg.LocalReplaySwap.Twin.moveRight hmir.2 hphys.inv.views.2.1 hmir.1,
     PalPeg.LocalTick1.WF_moveRight hmir.2⟩
   · show m.vm.radiusMir.src = initPhys m.vm (m.vm.roles .radius)

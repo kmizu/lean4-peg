@@ -108,6 +108,10 @@ theorem twin_blank (spare : ℕ) :
     PalPeg.LocalReplaySwap.Twin (blankVML spare).left (blankVML spare).center :=
   PalPeg.LocalReplaySwap.Twin.refl _
 
+/-- The fpp walker of the blank state stands on its left sentinel. -/
+theorem walkerProper_blank (spare : ℕ) :
+    PalPeg.LocalChain.ProperView (blankVML spare).fppWalker := rfl
+
 #print axioms inv_blank
 
 end PalPeg.LocalBlankState

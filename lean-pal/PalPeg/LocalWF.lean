@@ -378,7 +378,6 @@ structure Geom (x : GalilVML P) : Prop where
     0 < val (x.phys (x.roles .remaining)) ∧ 0 < val (x.phys (x.roles .radius)) ∧
       2 ≤ val (x.phys (x.roles .length))
   copyWork : x.ctl.mode = .copy → RemPosL x → 0 < val (x.phys (x.roles .fppWork))
-  copyProper : x.ctl.mode = .copy → PalPeg.LocalChain.ProperView x.fppWalker
 
 /-- **The local well-formedness pack**: the polarity bundle (§4, invariant) and
 the geometric residual. -/
@@ -391,9 +390,10 @@ theorem shiftCounters_of {x : GalilVML P} (h : LocalWF x) (hmd : x.ctl.mode = .s
   ⟨h.pol.1, h.pol.2.1, h.pol.2.2.1, h.pol.2.2.2.1,
     (h.geom.shiftMag hmd hr).1, (h.geom.shiftMag hmd hr).2.1, (h.geom.shiftMag hmd hr).2.2⟩
 
-theorem copySide_of {x : GalilVML P} (h : LocalWF x) (hmd : x.ctl.mode = .copy)
+theorem copySide_of {x : GalilVML P} (h : LocalWF x)
+    (hwalkerProper : PalPeg.LocalChain.ProperView x.fppWalker) (hmd : x.ctl.mode = .copy)
     (hr : RemPosL x) : CopySide x :=
-  ⟨h.pol.2.2.2.2, h.geom.copyWork hmd hr, h.geom.copyProper hmd⟩
+  ⟨h.pol.2.2.2.2, h.geom.copyWork hmd hr, hwalkerProper⟩
 
 theorem rewindWF_of {x : GalilVML P} (h : LocalWF x) (hnr : x.ctl.replaying = false) :
     RewindWF x :=
@@ -436,7 +436,7 @@ theorem realizes_seven {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
   obtain ⟨h1, h2, h3, h4, h5⟩ :=
     PalPeg.LocalRealizesPhase.realizes_phases (P := P) (delay := delay)
       (ffpp Pw qq first) H_shared H_trace hnr
-      (fun m hinv hmd hns hr => copySide_of (H_wf m hinv) hmd hr)
+      (fun m hinv hmd hns hr => copySide_of (H_wf m hinv) hinv.phys.walkerProper hmd hr)
       (fun m hinv hmd hns hr => shiftCounters_of (H_wf m hinv) hmd hr)
       (H_fpp_of_wf (Pw := Pw) (qq := qq) (first := first) (delay := delay) hq
         (fun m hinv hmd => hnr m hinv (Or.inr (Or.inr (Or.inr (Or.inl hmd))))))
@@ -521,10 +521,9 @@ end Preservation
 
 /-! ## 8. The residuals this file does **not** close
 
-* `Geom` (§5) — the counter magnitudes of a shift unit, the fpp work counter of
-  a copy unit, `LocalChain.ProperView` of the fpp walker.  None is preserved by a single
-  local step in isolation and none is readable off the abstract guard, so each is a machine
-  invariant of its own.
+* `Geom` (§5) — the counter magnitudes of a shift unit and the fpp work counter of a copy
+  unit.  Neither is preserved by a single local step in isolation nor readable off the abstract
+  guard, so each is a machine invariant of its own.
 * the polarity half for the three modes whose local step is still open
   (`h0`/`h1`/`h2` of `polWF_tickC`).
 * `LocalWF` at `x0C` reduces to `PolWF blank` (`polWF_x0C`) plus `Geom` of the
@@ -535,7 +534,7 @@ end Preservation
 
 /-- `Geom` is vacuous in a mode that is neither `shift` nor `copy`. -/
 theorem geom_of_init {x : GalilVML P} (h : x.ctl.mode = .init) : Geom x := by
-  refine ⟨?_, ?_, ?_⟩ <;> intro hm <;> rw [h] at hm <;> simp at hm
+  refine ⟨?_, ?_⟩ <;> intro hm <;> rw [h] at hm <;> simp at hm
 
 theorem localWF_x0C {blank : GalilVML P} (h : PolWF blank) (delay : ℕ) :
     LocalWF (PalPeg.LocalSysConcrete.x0C blank delay).core.vm :=
