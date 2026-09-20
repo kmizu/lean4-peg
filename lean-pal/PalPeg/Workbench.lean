@@ -1,5 +1,6 @@
 import PalPeg.ConcreteLocalMachine
 import PalPeg.ShadowedLocalFinal
+import PalPeg.LocalInitStep
 import PalPeg.CanonicalFallback
 import PalPeg.CanonicalFallbackInput
 import PalPeg.CanonicalReplay
