@@ -302,7 +302,7 @@ theorem realizes_seven_SL {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay : ℕ}
       (stOf k) (stOf (k+1)))
     (H_afterLast : ∀ k, lastTick ≤ k → stOf k = stOf lastTick)
     (H_start : PalPeg.LocalWF.NoReplay (stOf 0)) (hq : qq ≤ 64)
-    (H_wf : ∀ m : Mirrored1 P, Good m → PalPeg.LocalWF.LocalWF m.vm)
+    (H_wf : ∀ m : Mirrored1 P, InvC Good raw stOf m → PalPeg.LocalWF.LocalWF m.vm)
     (H_letter : Pw.onLetter = onLetterVM raw) (H_first : Pw.leftFirst = leftFirstVM)
     (H_bound : RightInBounds P Good raw stOf) :
     Realizes Good raw stOf lastTick (SL (P := P) qq first).shift .shift ∧

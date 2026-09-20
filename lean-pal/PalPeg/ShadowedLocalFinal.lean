@@ -770,10 +770,12 @@ theorem frozenAt_of_absSC_eq {w : List (Fin 2)} {encoded m : Mirrored1 (tapeCoun
   unfold frozenAt
   rw [habs]
 
-/-- **The invariant the abstract local layer carries along the run**: the local well-formedness
-pack `LocalWF` (the polarity bundle and the mode-wise geometry `Geom`), which is what the seven
-phase steps need (`CloseoutCoreAgree.realizes_seven_SL`). -/
-def localGood (m : Mirrored1 (tapeCount spare)) : Prop := PalPeg.LocalWF.LocalWF m.vm
+/-- **The invariant the abstract local layer carries along the run**: the polarity bundle
+`LocalWF.PolWF`, which no step touches.  The other half of what the seven phase steps need, the
+mode-wise geometry `LocalWF.Geom`, is not preserved by a single step in isolation
+(`LocalWF` §8); it is asked for on tracked states instead (`hgeomTracked`), where the abstraction
+is a state of the trace. -/
+def localGood (m : Mirrored1 (tapeCount spare)) : Prop := PalPeg.LocalWF.PolWF m.vm
 
 /-- **The phase after the last report point**: the abstract state is still a refreshed report
 point of the word in scan mode (the plateau: the right head stands on the last letter), or it is
@@ -864,14 +866,12 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
           (chosenStep entry q first (localGood (spare := spare)) (postPhase entry q first) w)
           (chosenStep entry q first (localGood (spare := spare)) (postPhase entry q first) w))
           m.vm.ctl.mode m))
-    -- the geometry half of the run invariant under an arrival (the polarity half is
-    -- `LocalWF.polWF_feedC`); an arrival changes what the fallback walker reads, so the guards of
-    -- `Geom` can change
-    (hgeomFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+    -- the mode-wise geometry of a tracked state (its abstraction is a state of the trace)
+    (hgeomTracked : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (letter : Fin 2) (m : Mirrored1 (tapeCount spare)),
+      ∀ m : Mirrored1 (tapeCount spare),
         InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m →
-        PalPeg.LocalWF.Geom (feedC letter m).vm)
+        PalPeg.LocalWF.Geom m.vm)
     -- the two open modes: a tracked, non-starved local state has a local successor
     (hscanNext : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
@@ -934,7 +934,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
   refine given_shadowedLocalSystem entry q first hfirst hor hres hChainVerifierSupply
     (fun w => ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w)
     (fun w m => reportTest entry q first w (absSC m))
-    (localGood (spare := spare)) (PalPeg.LocalWF.localWF_x0C ⟨rfl, rfl, rfl, rfl, rfl⟩ 2048)
+    (localGood (spare := spare)) (PalPeg.LocalWF.polWF_x0C ⟨rfl, rfl, rfl, rfl, rfl⟩ 2048)
     (fun w st Tc hpreTrace hcanonical m hinv => by
       by_cases hstarved : Starved m.vm
       · rw [PalPeg.LocalSysConcrete.tickC_starved _ hstarved]
@@ -953,8 +953,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
             · exact hgoodPhaseStep w st Tc hpreTrace hcanonical m hinv hscan hreplayStart
                 hstarved)
     (fun w st Tc hpreTrace hcanonical letter m hinv =>
-      ⟨PalPeg.LocalWF.polWF_feedC hinv.phys.pend letter hinv.good.pol,
-        hgeomFeed w st Tc hpreTrace hcanonical letter m hinv⟩)
+      PalPeg.LocalWF.polWF_feedC hinv.phys.pend letter hinv.good)
     ?_ (postPhase entry q first) frozenAt
     (fun w st Tc hw hpreTrace _ m hinv => notFrozen_of_invC entry q first hw hpreTrace m hinv)
     (fun w st Tc hw hpreTrace _ hscanAtReport m _ hneedy => by
@@ -1082,7 +1081,8 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (PalPeg.LocalWF.noReplay_zero_of_init (by
       rw [heldAfter_of_le st (Nat.zero_le _), hpreTrace.base.pre.start]
       rfl))
-    hq (fun _ hgood => hgood) (PofC_onLetter centreC placeC entry w) (PofC_leftFirst centreC placeC entry w)
+    hq (fun m hinv => ⟨hinv.good, hgeomTracked w st Tc hpreTrace hcanonical m hinv⟩)
+    (PofC_onLetter centreC placeC entry w) (PofC_leftFirst centreC placeC entry w)
     (PalPeg.CloseoutRightBounds.rightInBounds
       (PalPeg.LocalWF.phaseNoReplay_of_trace
         (PalPeg.LocalWF.noReplay_run (lastTick := Tc w.length)

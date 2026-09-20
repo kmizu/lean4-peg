@@ -427,7 +427,7 @@ theorem realizes_seven {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq first) delay (stOf k) (stOf (k+1)))
     (H_afterLast : ∀ k, lastTick ≤ k → stOf k = stOf lastTick)
     (H_start : NoReplay (stOf 0)) (hq : qq ≤ 64)
-    (H_wf : ∀ m : Mirrored1 P, Good m → LocalWF m.vm) :
+    (H_wf : ∀ m : Mirrored1 P, InvC Good raw stOf m → LocalWF m.vm) :
     Realizes Good raw stOf lastTick (shiftStepL (P := P) Pw) .shift ∧
     Realizes Good raw stOf lastTick (copyStepL (P := P)) .copy ∧
     Realizes Good raw stOf lastTick (homeStepL (P := P)) .home ∧
@@ -441,17 +441,17 @@ theorem realizes_seven {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
   obtain ⟨h1, h2, h3, h4, h5⟩ :=
     PalPeg.LocalRealizesPhase.realizes_phases (P := P) (delay := delay)
       (ffpp Pw qq first) H_shared H_trace hnr
-      (fun m hinv hmd hns hr => copySide_of (H_wf m hinv.good) hmd hr)
-      (fun m hinv hmd hns hr => shiftCounters_of (H_wf m hinv.good) hmd hr)
+      (fun m hinv hmd hns hr => copySide_of (H_wf m hinv) hmd hr)
+      (fun m hinv hmd hns hr => shiftCounters_of (H_wf m hinv) hmd hr)
       (H_fpp_of_wf (Pw := Pw) (qq := qq) (first := first) (delay := delay) hq
         (fun m hinv hmd => hnr m hinv (Or.inr (Or.inr (Or.inr (Or.inl hmd))))))
       (fun m hinv hmd hns => mirInv1_ffpp hinv.mir)
   exact ⟨h1, h2, h3, h4, h5,
     PalPeg.LocalRealizesScan.realizes_choose (P := P) (delay := delay) H_shared H_trace
-      (fun m hinv hmd => chooseWF_of (H_wf m hinv.good)
+      (fun m hinv hmd => chooseWF_of (H_wf m hinv)
         (notReplaying_of_trace hNR hinv (by unfold PhaseMode; simp [hmd])) hmd),
     PalPeg.LocalRealizesScan.realizes_rewind (P := P) (delay := delay) H_shared H_trace
-      (fun m hinv hmd => rewindWF_of (H_wf m hinv.good)
+      (fun m hinv hmd => rewindWF_of (H_wf m hinv)
         (notReplaying_of_trace hNR hinv (by unfold PhaseMode; simp [hmd])) hmd)⟩
 
 end Assembly

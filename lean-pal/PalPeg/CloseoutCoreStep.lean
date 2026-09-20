@@ -238,7 +238,7 @@ theorem realizes_seven_of_agree {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay 
       (stOf k) (stOf (k+1)))
     (H_afterLast : ∀ k, lastTick ≤ k → stOf k = stOf lastTick)
     (H_start : PalPeg.LocalWF.NoReplay (stOf 0)) (hq : qq ≤ 64)
-    (H_wf : ∀ m : Mirrored1 P, Good m → PalPeg.LocalWF.LocalWF m.vm)
+    (H_wf : ∀ m : Mirrored1 P, InvC Good raw stOf m → PalPeg.LocalWF.LocalWF m.vm)
     (h_shift : AgreeOn Good raw stOf (PalPeg.LocalRealizesPhase.shiftStepL (P := P) Pw) SL.shift .shift)
     (h_copy : AgreeOn Good raw stOf (PalPeg.LocalRealizesPhase.copyStepL (P := P)) SL.copy .copy)
     (h_home : AgreeOn Good raw stOf (PalPeg.LocalRealizesPhase.homeStepL (P := P)) SL.home .home)
