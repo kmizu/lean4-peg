@@ -1,3 +1,17 @@
+## n312（2026-09-21）: replayStart の commit が `dpBuf` を新品の半分へ切り替える。4 本の定理から `hclean` が落ちた
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。仮説 `hreplayStartNext` もまだ残っている） |
+
+**やったこと**（n311 の計画の (c)）: `LocalTick2.commitReplay` の `dpBuf := resetL` を `LocalBuffers.resetFresh` にして、`abs_commitReplay`／`replayStartVM_commitReplay`／`LocalReplaySwap.replayStartVM_commitReplaySwap`／`LocalReplayParked.replayStartVM_commitReplayParked` から仮説 `hclean`（`dpBuf` の idle 半分が消去済み）を外した。n306 と同じ型: 背景消去 `clearTick` はどの局所 step も回していないので、2 回目の replayStart から成り立たない要求だった。`stepLocal2_commitReplay` は外に消費者が無く、fresh な切替は局所 step ではないので削除。
+* 同じ形が `LocalTick2.commitFallback`（`fppBuf`、`:806` 付近）と restart 側（`:351`、`RestartStaged.clean`）に残っている。新経路の scan は `chosenStep`（存在仮説）なので今は消費者に出ていない。
+* 失敗と修正: python の削除範囲が 1 段落広く `section ReplayAbs` の開始行まで消した。コンパイルエラー（`Invalid name after end`）で気づき、`git diff` で確かめて戻した。
+
+**残り**（n311 の計画）: (a) `RewindCentre` の trace 形、(b) `localGood` に `pol .work` を足す、(d) ghost の replayStart 後継（`left := center`、`mirL := center`）で `NextOK` を示して `hreplayStartNext` を外す。
+
 ## n311（2026-09-21）: `hreplayStartNext` の分解（調査のみ、コードは変えていない）
 
 **全体 build 成功（最新は n310 の `BUILD=0`）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。

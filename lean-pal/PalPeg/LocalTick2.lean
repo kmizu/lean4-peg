@@ -502,30 +502,9 @@ def commitReplay (entry : ℕ) (x : GalilVML P) : GalilVML P :=
     searchMode := .grow
     searchFinalStage := false
     searchQuarter := 0
-    dpBuf := LocalBuffers.resetL x.dpBuf
+    dpBuf := LocalBuffers.resetFresh x.dpBuf
     dpPc := entry
     dpDone := true }
-
-theorem stepLocal2_commitReplay (entry : ℕ) (x : GalilVML P) :
-    StepLocal2 x (commitReplay entry x) := by
-  refine ⟨{ x with phys := resetSlots (ctrSlots replayCleared x) x.phys
-                   roles := LocalRoles.moveRoles Ctr.radius Ctr.replay x.roles
-                   pol := LocalRoles.movePol Ctr.radius Ctr.replay x.pol
-                   chain := .idle, searchMode := .grow, searchFinalStage := false
-                   searchQuarter := 0, dpBuf := LocalBuffers.resetL x.dpBuf
-                   dpPc := entry, dpDone := true }, ?_, ?_⟩
-  · exact ⟨fun j => tapeLocal_resetSlots _ _ j,
-      ⟨tapeLocal_refl _, fun _ => tapeLocal_refl _⟩,
-      ⟨tapeLocal_refl _, fun _ => tapeLocal_refl _⟩,
-      ⟨tapeLocal_refl _, fun _ => tapeLocal_refl _⟩,
-      viewLocal_refl _, viewLocal_refl _, viewLocal_refl _, viewLocal_refl _, viewLocal_refl _,
-      bufLocal_resetL _, bufLocal_refl _⟩
-  · exact ⟨fun j => tapeLocal_pushSlots _ _ j,
-      ⟨tapeLocal_refl _, fun _ => tapeLocal_refl _⟩,
-      ⟨tapeLocal_refl _, fun _ => tapeLocal_refl _⟩,
-      ⟨tapeLocal_refl _, fun _ => tapeLocal_refl _⟩,
-      viewLocal_refl _, viewLocal_refl _, viewLocal_refl _, viewLocal_refl _, viewLocal_refl _,
-      bufLocal_refl _, bufLocal_refl _⟩
 
 section ReplayAbs
 
@@ -592,8 +571,7 @@ theorem absCtrs_commitReplay_one (c : Ctr)
 
 /-- **The replay-start commit realizes `replayStartVM entry`'s effect.** -/
 theorem abs_commitReplay (hinj : RolesInjective x)
-    (hpl : x.pol Ctr.length = true) (hpw : x.pol Ctr.work = true)
-    (hclean : ∀ i, LocalBuffers.Cleared (LocalBuffers.idle x.dpBuf i)) :
+    (hpl : x.pol Ctr.length = true) (hpw : x.pol Ctr.work = true) :
     LocalState.abs (commitReplay entry x)
       = { LocalState.abs x with
           replay := (LocalState.abs x).radius
@@ -604,8 +582,8 @@ theorem abs_commitReplay (hinj : RolesInjective x)
                       GalilScaffoldCounter.reset
           lower := GalilScaffoldCounter.reset
           dp := GalilScaffoldControl.reset entry (LocalState.abs x).dp } := by
-  have hdp : LocalBuffers.abs (LocalBuffers.resetL x.dpBuf) = fun _ => GalilScaffoldTape.reset :=
-    LocalBuffers.abs_resetL_of_clean hclean
+  have hdp : LocalBuffers.abs (LocalBuffers.resetFresh x.dpBuf)
+      = fun _ => GalilScaffoldTape.reset := LocalBuffers.abs_resetFresh _
   simp only [LocalState.abs, GalilScaffoldSearchFinish.begin, GalilScaffoldControl.reset,
     GalilScaffoldSearchFinish.initialDebt,
     absCtrs_commitReplay_stable hinj Ctr.cycle (by decide) (by decide) (by decide)
@@ -631,11 +609,10 @@ theorem abs_commitReplay (hinj : RolesInjective x)
 have brought `right` and `left` onto `center`. -/
 theorem replayStartVM_commitReplay (hinj : RolesInjective x)
     (hpl : x.pol Ctr.length = true) (hpw : x.pol Ctr.work = true)
-    (hclean : ∀ i, LocalBuffers.Cleared (LocalBuffers.idle x.dpBuf i))
     (hright : (LocalState.abs x).right = (LocalState.abs x).center)
     (hleft : (LocalState.abs x).left = (LocalState.abs x).center) :
     replayStartVM entry (LocalState.abs x) (LocalState.abs (commitReplay entry x)) := by
-  rw [abs_commitReplay hinj hpl hpw hclean]
+  rw [abs_commitReplay hinj hpl hpw]
   exact ⟨rfl, hright, hleft, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 end ReplayAbs
@@ -916,7 +893,6 @@ that consumes it.
 #print axioms stepLocal2_commitRestart
 #print axioms abs_commitRestart
 #print axioms restartVM_commitRestart
-#print axioms stepLocal2_commitReplay
 #print axioms abs_commitReplay
 #print axioms replayStartVM_commitReplay
 #print axioms stepLocal2_commitShift

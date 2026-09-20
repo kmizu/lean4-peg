@@ -338,11 +338,10 @@ theorem mirInv_commitReplay {m : Mirrored2 P} (entry : ℕ) (h : MirInv m) :
 theorem replayStartVM_commitReplaySwap {m : Mirrored2 P} {entry : ℕ}
     (hinj : LocalState.RolesInjective m.vm)
     (hpl : m.vm.pol LocalState.Ctr.length = true) (hpw : m.vm.pol LocalState.Ctr.work = true)
-    (hclean : ∀ i, LocalBuffers.Cleared (LocalBuffers.idle m.vm.dpBuf i))
     (hm : MirInv m) :
     GalilScaffoldChainInputSupply.replayStartVM entry (abs' m.vm) (abs' (commitReplaySwap entry m).vm) := by
   have hs := abs'_swap2 (mirInv_commitReplay (m := m) entry hm)
-  have ha := LocalTick2.abs_commitReplay (entry := entry) hinj hpl hpw hclean
+  have ha := LocalTick2.abs_commitReplay (entry := entry) hinj hpl hpw
   unfold commitReplaySwap
   rw [hs]
   have hc : (abs' (LocalTick2.commitReplay entry m.vm)).center = (abs' m.vm).center := rfl
