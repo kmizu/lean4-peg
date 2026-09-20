@@ -2,6 +2,7 @@ import PalPeg.ConcreteLocalMachine
 import PalPeg.ShadowedLocalFinal
 import PalPeg.LocalInitStep
 import PalPeg.TickOnLetterCongr
+import PalPeg.HeadBehindRight
 import PalPeg.CanonicalFallback
 import PalPeg.CanonicalFallbackInput
 import PalPeg.CanonicalReplay
