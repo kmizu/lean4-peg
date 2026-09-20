@@ -1,4 +1,4 @@
-import PalPeg.CloseoutCoreEnc12
+import PalPeg.CloseoutCoreEnc13
 
 /-!
 # Fusing several micro-steps into one local step
@@ -15,7 +15,8 @@ set_option autoImplicit false
 namespace PalPeg.LocalStepFusion
 
 open PalPeg.CloseoutCoreEnc12 (Act actList runA runA_eq runA_shift runA_cur_le runA_le_cur
-  cellOfWin)
+  cellOfWin ActRule)
+open PalPeg.CloseoutCoreEnc13 (actList_append)
 open PalPeg.Local (Window idx idx_val pos rd readWin readWin_eq)
 open PalPeg.Program (STape)
 
@@ -58,5 +59,81 @@ theorem windowAfter_readWin (blank : Γ) {K inner : ℕ} (tape : STape Γ) (acts
   omega
 
 #print axioms windowAfter_readWin
+
+/-! ## Two rules in sequence -/
+
+variable {Terminal Q : Type} {tapeCount firstRadius secondRadius : ℕ}
+
+/-- The step a rule prescribes, performed exactly: the next control, and the actions applied to
+the tapes as they are (no sweep). -/
+def idealStep {K : ℕ} (R : ActRule Terminal Q Γ tapeCount K) (blank : Γ)
+    (x : Q × (Fin tapeCount → STape Γ)) (input : Option Terminal) :
+    Q × (Fin tapeCount → STape Γ) :=
+  (R.nq x.1 input (fun tape => readWin blank K (x.2 tape)),
+    fun tape => actList blank (x.2 tape)
+      (R.acts x.1 input (fun tape => readWin blank K (x.2 tape)) tape))
+
+/-- The windows the first rule reads: the centre of the large windows. -/
+def firstWindows (windows : Fin tapeCount → Window Γ (firstRadius + secondRadius)) :
+    Fin tapeCount → Window Γ firstRadius :=
+  fun tape => windowAfter (firstRadius + secondRadius) firstRadius (windows tape) []
+
+/-- The windows the second rule reads: the large windows after the actions of the first. -/
+def secondWindows (R₁ : ActRule Terminal Q Γ tapeCount firstRadius) (control : Q)
+    (input : Option Terminal) (windows : Fin tapeCount → Window Γ (firstRadius + secondRadius)) :
+    Fin tapeCount → Window Γ secondRadius :=
+  fun tape => windowAfter (firstRadius + secondRadius) secondRadius (windows tape)
+    (R₁.acts control input (firstWindows windows) tape)
+
+/-- **Two rules in sequence as one rule**: the first gets the input, the second reads the tapes
+the first leaves, computed from the large windows. -/
+def seqRule (R₁ : ActRule Terminal Q Γ tapeCount firstRadius)
+    (R₂ : ActRule Terminal Q Γ tapeCount secondRadius) :
+    ActRule Terminal Q Γ tapeCount (firstRadius + secondRadius) where
+  nq := fun control input windows =>
+    R₂.nq (R₁.nq control input (firstWindows windows)) none
+      (secondWindows R₁ control input windows)
+  acts := fun control input windows tape =>
+    R₁.acts control input (firstWindows windows) tape
+      ++ R₂.acts (R₁.nq control input (firstWindows windows)) none
+          (secondWindows R₁ control input windows) tape
+  len_le := fun control input windows tape => by
+    rw [List.length_append]
+    exact Nat.add_le_add (R₁.len_le _ _ _ _) (R₂.len_le _ _ _ _)
+
+theorem firstWindows_readWin (blank : Γ) (tapes : Fin tapeCount → STape Γ)
+    (hmargin : ∀ tape, firstRadius + secondRadius ≤ pos (tapes tape)) :
+    firstWindows (secondRadius := secondRadius)
+        (fun tape => readWin blank (firstRadius + secondRadius) (tapes tape))
+      = fun tape => readWin blank firstRadius (tapes tape) := by
+  funext tape
+  exact windowAfter_readWin blank (tapes tape) [] (by simp) (hmargin tape)
+
+theorem secondWindows_readWin (blank : Γ) (R₁ : ActRule Terminal Q Γ tapeCount firstRadius)
+    (control : Q) (input : Option Terminal) (tapes : Fin tapeCount → STape Γ)
+    (hmargin : ∀ tape, firstRadius + secondRadius ≤ pos (tapes tape)) :
+    secondWindows (secondRadius := secondRadius) R₁ control input
+        (fun tape => readWin blank (firstRadius + secondRadius) (tapes tape))
+      = fun tape => readWin blank secondRadius
+          (actList blank (tapes tape)
+            (R₁.acts control input (fun tape => readWin blank firstRadius (tapes tape)) tape)) := by
+  funext tape
+  unfold secondWindows
+  rw [firstWindows_readWin blank tapes hmargin]
+  exact windowAfter_readWin blank (tapes tape) _
+    (Nat.add_le_add_right (R₁.len_le _ _ _ _) _) (hmargin tape)
+
+/-- **The fused rule prescribes the two ideal steps in sequence.** -/
+theorem seqRule_ideal (blank : Γ) (R₁ : ActRule Terminal Q Γ tapeCount firstRadius)
+    (R₂ : ActRule Terminal Q Γ tapeCount secondRadius)
+    (x : Q × (Fin tapeCount → STape Γ)) (input : Option Terminal)
+    (hmargin : ∀ tape, firstRadius + secondRadius ≤ pos (x.2 tape)) :
+    idealStep (seqRule R₁ R₂) blank x input
+      = idealStep R₂ blank (idealStep R₁ blank x input) none := by
+  unfold idealStep seqRule
+  simp only [firstWindows_readWin blank x.2 hmargin,
+    secondWindows_readWin blank R₁ x.1 input x.2 hmargin, actList_append]
+
+#print axioms seqRule_ideal
 
 end PalPeg.LocalStepFusion
