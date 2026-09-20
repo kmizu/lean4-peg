@@ -777,6 +777,59 @@ read off the trace, where the abstraction of a tracked state lives
 (`LocalWF.shiftMagnitudes_of_trace`, `LocalWF.copyRemaining_of_trace`). -/
 def localGood (m : Mirrored1 (tapeCount spare)) : Prop := PalPeg.LocalWF.PolWF m.vm
 
+/-- **The steps that are functions keep the polarity bundle.**  The seven phase steps of
+`CloseoutCoreAgree.SL` do not touch the polarity of any tape, and the `init` step only sets the
+polarity of `length` and `work` to the positive side. -/
+theorem localGood_stepOf_localSteps (entry q : ℕ) (first : Fin 9)
+    (scanStep replayStartStep : Mirrored1 (tapeCount spare) → Mirrored1 (tapeCount spare))
+    {m : Mirrored1 (tapeCount spare)} (hgood : localGood m)
+    (hnotScan : m.vm.ctl.mode ≠ .scan) (hnotReplayStart : m.vm.ctl.mode ≠ .replayStart) :
+    localGood (stepOf (localSteps (spare := spare) q first (PalPeg.LocalInitStep.initStep entry)
+      scanStep replayStartStep) m.vm.ctl.mode m) := by
+  unfold localGood at hgood ⊢
+  cases hmode : m.vm.ctl.mode with
+  | init =>
+      show PalPeg.LocalWF.PolWF (PalPeg.LocalInitStep.initStep entry m).vm
+      obtain ⟨hremaining, hradius, -, hcycle, hfppWork⟩ := hgood
+      refine ⟨?_, ?_, ?_, ?_, ?_⟩
+      · show (if PalPeg.LocalState.Ctr.remaining = PalPeg.LocalState.Ctr.length ∨ PalPeg.LocalState.Ctr.remaining = PalPeg.LocalState.Ctr.work then true
+          else m.vm.pol .remaining) = true
+        rw [if_neg (by decide)]; exact hremaining
+      · show (if PalPeg.LocalState.Ctr.radius = PalPeg.LocalState.Ctr.length ∨ PalPeg.LocalState.Ctr.radius = PalPeg.LocalState.Ctr.work then true
+          else m.vm.pol .radius) = true
+        rw [if_neg (by decide)]; exact hradius
+      · show (if PalPeg.LocalState.Ctr.length = PalPeg.LocalState.Ctr.length ∨ PalPeg.LocalState.Ctr.length = PalPeg.LocalState.Ctr.work then true
+          else m.vm.pol .length) = true
+        rw [if_pos (Or.inl rfl)]
+      · show (if PalPeg.LocalState.Ctr.cycle = PalPeg.LocalState.Ctr.length ∨ PalPeg.LocalState.Ctr.cycle = PalPeg.LocalState.Ctr.work then true
+          else m.vm.pol .cycle) = true
+        rw [if_neg (by decide)]; exact hcycle
+      · show (if PalPeg.LocalState.Ctr.fppWork = PalPeg.LocalState.Ctr.length ∨ PalPeg.LocalState.Ctr.fppWork = PalPeg.LocalState.Ctr.work then true
+          else m.vm.pol .fppWork) = true
+        rw [if_neg (by decide)]; exact hfppWork
+  | scan => exact absurd hmode hnotScan
+  | replayStart => exact absurd hmode hnotReplayStart
+  | shift =>
+      refine PalPeg.LocalWF.polWF_congr hgood ?_
+      show (PalPeg.CloseoutCoreAgree.shiftStepW m).vm.pol = m.vm.pol
+      classical
+      unfold PalPeg.CloseoutCoreAgree.shiftStepW
+      split
+      · unfold PalPeg.LocalRealizesPhase.shiftPick; split <;> rfl
+      · rfl
+  | copy => exact PalPeg.LocalWF.polWF_congr hgood (PalPeg.LocalWF.pol_copyStepL m)
+  | home => exact PalPeg.LocalWF.polWF_congr hgood (PalPeg.LocalWF.pol_homeStepL m)
+  | fpp =>
+      exact PalPeg.LocalWF.polWF_congr hgood
+        (PalPeg.LocalWF.pol_ffpp PalPeg.CloseoutCoreAgree.dumS q first m)
+  | markEnd => exact PalPeg.LocalWF.polWF_congr hgood (PalPeg.LocalWF.pol_markEndStepL m)
+  | choose =>
+      exact PalPeg.LocalWF.polWF_congr hgood
+        (PalPeg.LocalWF.pol_chooseStepC PalPeg.CloseoutCoreAgree.dumS q first m)
+  | rewind =>
+      exact PalPeg.LocalWF.polWF_congr hgood
+        (PalPeg.LocalWF.pol_rewindStepC PalPeg.CloseoutCoreAgree.dumS q first m)
+
 /-- **The phase after the last report point**: the abstract state is still a refreshed report
 point of the word in scan mode (the plateau: the right head stands on the last letter), or it is
 frozen. -/
@@ -855,17 +908,6 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc →
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    -- the run invariant under the steps that are functions (`init` and the seven phases); the
-    -- steps by choice keep it by construction (`good_chosenStep`)
-    (hgoodPhaseStep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m : Mirrored1 (tapeCount spare),
-        InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m →
-        m.vm.ctl.mode ≠ .scan → m.vm.ctl.mode ≠ .replayStart → ¬ Starved m.vm →
-        (localGood (spare := spare)) (stepOf (localSteps q first (PalPeg.LocalInitStep.initStep entry)
-          (chosenStep entry q first (localGood (spare := spare)) (postPhase entry q first) w)
-          (chosenStep entry q first (localGood (spare := spare)) (postPhase entry q first) w))
-          m.vm.ctl.mode m))
     -- the two open modes: a tracked, non-starved local state has a local successor
     (hscanNext : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
@@ -944,8 +986,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
           · by_cases hreplayStart : m.vm.ctl.mode = .replayStart
             · rw [hreplayStart]
               exact good_chosenStep hinv.good
-            · exact hgoodPhaseStep w st Tc hpreTrace hcanonical m hinv hscan hreplayStart
-                hstarved)
+            · exact localGood_stepOf_localSteps entry q first _ _ hinv.good hscan hreplayStart)
     (fun w st Tc hpreTrace hcanonical letter m hinv =>
       PalPeg.LocalWF.polWF_feedC hinv.phys.pend letter hinv.good)
     ?_ (postPhase entry q first) frozenAt

@@ -1,3 +1,19 @@
+## n310（2026-09-21）: 関数である step（init と 7 つの phase）が極性の束を保つことを証明した。仮説 `hgoodPhaseStep` が消えた
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: `given_openModesAndPhysicalMachine` の仮説 `hgoodPhaseStep` が無くなった。`ShadowedLocalFinal.localGood_stepOf_localSteps`: `localGood m`、`mode ≠ scan`、`mode ≠ replayStart` から、`localSteps q first (initStep entry) scanStep replayStartStep` の step 後も `localGood`。仮説は tracked・非 starved を付けていたが、どの状態でも成り立つので条件ごと落とした。
+* 材料は全部既存: `LocalWF.pol_copyStepL`／`pol_homeStepL`／`pol_markEndStepL`、`ffppW = ffpp dumS` なので `pol_ffpp dumS`、`chooseStepW`／`rewindStepW` は C 版と `rfl` で等しいので `pol_chooseStepC`／`pol_rewindStepC dumS`、`shiftStepW` は `pol_shiftStepL` と同じ形、`LocalInitStep.initVml` は `length`／`work` の極性を `true` にするだけ。
+* 学び: `Ctr` は `PalPeg.LocalState.Ctr`。
+
+**`given_openModesAndPhysicalMachine` に残る仮説**: 供給可能（`hfirst`／`hq`／`hor`／`hres`／`hChainVerifierSupply`）、抽象局所層は存在仮説 3 本（`hscanNext`／`hreplayStartNext`／`hplateauNext`、各々 `∃ next, NextOK …`）、物理機械（`htape`、`Enc`、`hencInit`、`hforwardTick`、`hforwardFeed`、`hencRep`、`hencOut`、`PhysFrozen`、`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`）。ActRule の実装は未着手。
+
+**次の goal**: `hreplayStartNext`（tracked・非 starved な replayStart 状態に局所後継が存在する）。`LocalReplayParked.commitReplayParked`（§5、`left := center` は鏡 `mirL` を消費、`right` は駐車）が既にあるので、`NextOK` の各場（`Tick` の後継の抽象一致、`PhysWF`（`walkerProper` 込み）、`MirInv1`、`localGood`）を満たすかを定義で確かめる。`dpBuf` の reset は `resetL`＋`hclean` の形のままなので、n306 と同じ `resetFresh` への切替が要る見込みかどうかも一次情報で確認する。
+
 ## n309（2026-09-21）: shift 単位のカウンタの大きさを trace から証明した。仮説 `hgeomTracked` が消費者から丸ごと消えた
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
