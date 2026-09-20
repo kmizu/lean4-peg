@@ -1,3 +1,26 @@
+## n313（2026-09-21）: `hreplayStartNext` の producer (d) の設計（調査のみ、コードは変えていない）
+
+**全体 build 成功（最新は n312 の `BUILD=0`）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（未接続） |
+
+一次情報で確かめたこと:
+* `Tick.replayStart`（`GalilScaffoldTop:166`）の着地は `⟨{c with mode := .scan, clock := delay, output := o, replaying := F.replayPos s'}, s'⟩` で `F.replayStart s s'`。`replayStartVM entry s t`（`GalilScaffoldTopReplay:33`）は 15 場を全部固定する**関数的な関係**なので、抽象の着地 `s'` は source から一意。
+* `GalilTickFair.Canonical`（`:224`）が replayStart の tick に課すのは `keepsSearchCursor`（`periodOnly`／`walker` を保つ）だけで、`replayStartVM` の最後の 2 連言そのもの。
+* `GalilTruncTick.truncPH_left`（`:32`）は無条件。よって trace の `center = left^[r] right` は `truncVM` を越えて `abs'' m.vm` に運べる（`hland` の供給）。
+* `replayStartVM` の一意性補題は既存に無い（`GalilVM` に `ext` が登録されていないので `cases` して場ごとに示す）。
+
+**(d) の設計**: 仮説が与える `htarget : Tick … (absState'' m.vm) target` を `cases` して `replayStartVM entry (abs'' m.vm) target.vm` と `target.ctl` の形を取り出す。ghost の後継は `next := ⟨{ commitReplay entry m.vm with left := m.vm.center, ctl := target.ctl }, m.vm.center⟩`（view のコピー、n305 と同じ手）。示すもの:
+1. `abs'' next.vm` が `replayStartVM entry (abs'' m.vm) ·` を満たす（`replayStartVM_commitReplayParked` の証明を `left := center` 用に直す。`hm : MirInv1` は不要になる）→ `Tick.replayStart` を組み直して `NextOK` の Tick、`Canonical` は最後の 2 連言。
+2. `PhysWF next.vm`: `Inv`（`commitReplay` 後の `roles`／`attached`／`shaped` — 既存補題の有無を要確認）、`ParkedOK`（`parkedOK_commitReplayParked`、`val radius ≤ position right` は `RewindCentre` から）、`pend`、`walkerProper`（`fppWalker` 不変）。
+3. `MirInv1 next`: `Twin.refl`＋`WF center`。
+4. `Good next`: `commitReplay` は `movePol Ctr.radius Ctr.replay` で極性を入れ替えるので、`PolWF` の `radius` を保つには入れ替え前の `pol .replay = true` が要る見込み。`localGood` に `.work` と `.replay` を足す必要があるかを `movePol` の定義で確かめる。
+5. `Post w m → Post w next`: `postPhase` の左枝は `mode = scan` を要求するので、replayStart の source では前件が偽になるはず（要確認）。
+
+**順序**: (a) `RewindCentre` の trace 形 → (b) `localGood` の拡張 → (d)。どれも (d) が入って初めて消費者につながるので、1 回の作業でまとめて入れる。
+
 ## n312（2026-09-21）: replayStart の commit が `dpBuf` を新品の半分へ切り替える。4 本の定理から `hclean` が落ちた
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
