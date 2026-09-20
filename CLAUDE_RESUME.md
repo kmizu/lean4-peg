@@ -14,7 +14,9 @@
 3. **`hpw : pol .work = true`。** `PolWF` は `remaining`／`radius`／`length`／`cycle`／`fppWork` の 5 本で `.work` を持たない。`initVml` が `.work` を `true` にするので、`localGood` に足して運ぶ（極性補題は `pol` 全体の等式なので保存は同じ証明で済む）。
 4. **`hland : left^[val radius] (abs' right) = (abs' center)`。** 今の trace pack には無い（`CentreRep` は表現だけ）。新しい trace 不変量「mode ∈ {rewind, replayStart} → `center = left^[value radius] right` ∧ `Canonical radius`」が要る。Tick の場合分けで保たれる形: `choose_select` で `center = right`・`radius = reset`、`rewind_pair` で `center := left center`・`radius++`、`rewind_one`／`rewind_done` は両方不変。`GalilScaffoldTopRewind:195` に rewind 内の run 形（`y.center = left^[m/2] x.center ∧ y.right = x.right`）が既にある。
 
-**次の goal**: 4 の trace 不変量を `PreTrace` に沿って証明する（harness は `CloseoutRadPack3.coupledPack_trace` と同じ形）。
+**4 の Tick 保存はスクラッチで機械検査済み（2026-09-21、リポジトリには未投入・producer と一緒に入れる）**: `RewindCentre c s := c.mode = .rewind ∨ c.mode = .replayStart → ∃ r : ℕ, s.radius = ofNat r ∧ s.center = left^[r] s.right`、`RewindCentre c s → Tick (galilFrameS Pw q first) delay ⟨c, s⟩ ⟨c', t⟩ → RewindCentre c' t`。error 0、公理 `propext`／`Quot.sound`。形: `cases h <;> first | (intro hmode; exfalso; simp_all; done) | skip` で `choose_select`／`rewind_done`／`rewind_one`／`rewind_pair` の 4 つだけ残る。どれも `obtain ⟨hstep, hframe⟩ := hrel`（`rewind_one`／`rewind_pair` は `⟨⟨_, hstep⟩, hframe⟩`）、`rw [hstep] at hframe; subst hframe`。`choose_select` は `⟨0, rfl, rfl⟩`、`rewind_pair` は `⟨r + 1, by rw [hradius, GalilScaffoldCounter.inc_ofNat], by rw [Function.iterate_succ_apply', ← hcentre]⟩`（先に `show` で形を出す）、他 2 つは `⟨r, hradius, hcentre⟩`。抽象規則は `GalilScaffoldTopRewind:56–62` で確認済み（`right` はどれも触らない）。
+
+**次の goal**: producer を一式で入れる。順に (a) trace 形（`PreTrace` に沿う、boot は mode = init で空虚、harness は `CloseoutRadPack3.coupledPack_trace`）、(b) `localGood` に `pol .work` を足す、(c) `LocalTick2.commitReplay` の `dpBuf` を `resetFresh` に、(d) ghost の replayStart 後継（`left := center`、`mirL := center`）で `NextOK` を示して `hreplayStartNext` を外す。
 
 ## n310（2026-09-21）: 関数である step（init と 7 つの phase）が極性の束を保つことを証明した。仮説 `hgoodPhaseStep` が消えた
 
