@@ -206,6 +206,36 @@ theorem usedVM_shiftOne_le (raw : List (Fin 2)) {P : Shared} {q : ℕ} {first : 
       (le_trans (le_max_left _ _) (le_max_right _ _)))
     (max_le (le_trans (usedVM_right raw s) (le_max_left _ _)) (le_trans hchain (le_max_left _ _)))
 
+/-- **The shift entry.**  A scan tick whose target is in `shift` mode is a comparison followed by
+the immediate step of the watching chain: the three heads are those of the compared state, and the
+verifier of the chain has moved right once more. -/
+theorem usedVM_shiftEntry_le (raw : List (Fin 2)) {centre : GalilVM → Fin 3}
+    {place : GalilVM → GalilScaffoldPlace.Place} {entry q delay : ℕ} {first : Fin 9}
+    {word : List (Fin 2)} {x y : State GalilVM}
+    (htick : Tick (galilFrameS (PalPeg.GalilRunSkeleton.PofC centre place entry word) q first)
+      delay x y)
+    (hmode : x.ctl.mode = .scan) (hshift : y.ctl.mode = .shift) :
+    ∃ (compared : GalilVM) (watching : GalilScaffoldChainWatch.State),
+      (galilFrameS (PalPeg.GalilRunSkeleton.PofC centre place entry word) q first).compare x.vm
+        compared ∧
+      compared.chain = .watch watching ∧
+      y.vm.chain = .watch (GalilScaffoldChainWatch.immediate watching) ∧
+      y.vm.right = compared.right ∧
+      usedVM raw y.vm ≤ max (usedVM raw compared)
+        (usedPH raw.length (GalilScaffoldChainVerifier.right watching.machine.verifier)) := by
+  cases htick
+  case scan_shift c s s' s'' hm h0 hc hcmp hmt hr hg hb =>
+    obtain ⟨watching, hchain, htarget⟩ := hb
+    refine ⟨s', watching, hcmp, hchain, by rw [htarget], by rw [htarget], ?_⟩
+    show usedVM raw s'' ≤ _
+    rw [htarget]
+    exact max_le (max_le (le_trans (usedVM_left raw s') (le_max_left _ _))
+        (le_trans (usedVM_center raw s') (le_max_left _ _)))
+      (max_le (le_trans (usedVM_right raw s') (le_max_left _ _)) (le_max_right _ _))
+  all_goals (exfalso; simp_all)
+
+#print axioms usedVM_shiftEntry_le
+
 /-- An effect through the fallback-program lens keeps the three heads and the chain. -/
 theorem usedVM_fppRel (raw : List (Fin 2)) {R : FppControl.State → FppControl.State → Prop}
     {s t : GalilVM} (hrel : fppLens.rel R s t) : usedVM raw t = usedVM raw s := by

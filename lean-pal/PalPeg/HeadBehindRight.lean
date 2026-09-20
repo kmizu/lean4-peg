@@ -148,4 +148,43 @@ theorem usedPH_right_le_of_position_le (raw : List (Fin 2)) (j : ℕ)
 
 #print axioms usedPH_right_le_of_position_le
 
+/-- **A head whose next place is not right of a head that has arrived moves right within the
+arrived letters.**  Unlike `usedPH_right_le_of_position_le` the position is that of the moved
+head, and nothing is asked of the head before the move except that it represents the word: off
+its front a right move consumes nothing, and on its front the head has its gap bit set, so it is
+sane and its position is twice the letters it has used. -/
+theorem usedPH_right_le_of_next_position_le (raw : List (Fin 2)) (j : ℕ)
+    (X R : GalilScaffoldInputHead.PlaceHead)
+    (hX : GalilScaffoldInputTrace.Represents X.head raw)
+    (hR : GalilScaffoldInputTrace.Represents R.head raw) (hRs : GalilFrontMono.Sane R)
+    (hposNext : position (GalilScaffoldChainVerifier.right X) ≤ position R)
+    (husedX : usedPH raw.length X ≤ j) (husedR : usedPH raw.length R ≤ j) :
+    usedPH raw.length (GalilScaffoldChainVerifier.right X) ≤ j := by
+  by_cases hfront : X.gap = true ∧ X.head.right = []
+  · have hXs : GalilFrontMono.Sane X := Or.inl hfront.1
+    have hx := two_usedPH_of_rep raw X hX hXs
+    have hr := two_usedPH_of_rep raw R hR hRs
+    rw [hfront.1, hfront.2] at hx
+    simp only [if_true, List.length_nil] at hx
+    by_cases hcanRight : GalilScaffoldChainVerifier.canRight X
+    · have hnext := (GalilFrontMono.right_sane hcanRight hXs).1
+      have hstep := usedPH_right_right_le raw.length X
+      have hmono := usedPH_right_mono raw.length X
+      rw [usedPH_right_of_front _ X hfront.1 hfront.2] at *
+      have hpending := incoming_length_le hX
+      have husedEq : usedPH raw.length X = raw.length - X.head.incoming.length := rfl
+      split_ifs at hr <;> omega
+    · have hpendingNil : X.head.incoming = [] := by
+        by_contra hne
+        exact hcanRight (Or.inr (Or.inr hne))
+      rw [usedPH_right_of_front _ X hfront.1 hfront.2, hpendingNil]
+      have husedEq : usedPH raw.length X = raw.length - X.head.incoming.length := rfl
+      rw [hpendingNil] at husedEq
+      simp only [List.length_nil] at husedEq ⊢
+      omega
+  · rw [usedPH_right_of_not_front _ X hfront]
+    exact husedX
+
+#print axioms usedPH_right_le_of_next_position_le
+
 end PalPeg.HeadBehindRight
