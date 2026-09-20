@@ -1,0 +1,153 @@
+import PalPeg.CloseoutFinalBranch
+import PalPeg.LocalShadowConcrete
+
+/-!
+# The final theorem from the local system and a physical machine, the trace side discharged
+
+`LocalShadowConcrete.pal_in_peg_of_shadowed_sysC` takes a pre-loaded trace with nine facts about
+it.  Here the trace is the canonical pre-loaded trace of `CloseoutFinalBranch`
+(`canonicalPreTrace_exists`), and the nine facts are theorems about it.  What remains is stated
+over canonical pre-loaded traces: the per-mode obligation of the abstract local system, its
+starvation test, its report test, and the specification of the physical machine.
+-/
+
+set_option autoImplicit false
+set_option maxHeartbeats 2000000
+set_option synthInstance.maxSize 2000
+set_option synthInstance.maxHeartbeats 400000
+
+namespace PalPeg.ShadowedLocalFinal
+
+open PalPeg PalPeg.Program PalPeg.GalilScaffoldTop PalPeg.GalilScaffoldController
+  PalPeg.GalilScaffoldChainInputSupply PegSeparation PalPeg.GalilStructuredSkeleton
+open PalPeg.GalilRunSkeleton (PofC PofC_onLetter PofC_leftFirst)
+open PalPeg.GalilFinalAssembly (boot)
+open PalPeg.GalilFinalAssembly2 (centreC placeC centrePlaceC sufVM_boot)
+open PalPeg.GalilFinalBaseNeed (base_of_preTraceB)
+open PalPeg.GalilTruncTick (sharedC_trunc_vm sharedC_suf sufVM_trace)
+open PalPeg.GalilLookRefined (needL' needT' needL'_boot needLe_of_pointwise')
+open PalPeg.GalilThrottledRun (truncS usedVM)
+open PalPeg.CloseoutCheckW (PreTraceIMW CanonTrace)
+open PalPeg.BranchSupply (ScanLandingObligationsAlongTrace)
+open PalPeg.CloseoutFinalBranch (canonicalPreTrace_exists needBound_alongPreTrace)
+open PalPeg.Local (LocalStep)
+open PalPeg.LocalTrackingLatch
+open PalPeg.LocalReplayParked (absState'' Mirrored1 MirInv1)
+open PalPeg.LocalSysConcrete (Steps stepOf tickC sysC absSC feedC Starved Needy InvC PhysWF x0C)
+open PalPeg.LocalShadowConcrete (pal_in_peg_of_shadowed_sysC)
+
+variable {P : ℕ}
+
+/-- **`PAL ∈ PEG` from the local system and a physical machine.**  The first three hypotheses
+are those of `CloseoutFinalBranch.given_scanLandingObligations` other than the realization; the
+rest replaces the realization. -/
+theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9)
+    (hor : ∀ w : List (Fin 2), 0 < w.length →
+      PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
+        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
+        (PalPeg.ShapedRun.OracleTick entry) w)
+    (hres : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc →
+      ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc)
+    (hChainVerifierSupply : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc →
+      PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
+    -- the abstract local system
+    {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
+    (M : Steps P) (repC : Control → Bool) (blank : PalPeg.LocalState.GalilVML P)
+    (hblankInv : PalPeg.LocalTick1.Inv blank)
+    (hblankTwin : PalPeg.LocalReplaySwap.Twin blank.left blank.center)
+    (hblankView : PalPeg.LocalInputView.WF blank.left)
+    (hinitTrack : ∀ w : List (Fin 2), 0 < w.length →
+      absState'' (x0C blank 2048).core.vm = truncS w.length (boot w))
+    (hrealizes : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ (m : Mirrored1 P) (k j : ℕ), InvC w st m → ¬ Starved m.vm → Needy w st k j m.vm →
+        needT' w st k ≤ j → k < Tc w.length →
+        Needy w st (k+1) j (stepOf M m.vm.ctl.mode m).vm ∧
+          PhysWF (stepOf M m.vm.ctl.mode m).vm ∧ MirInv1 (stepOf M m.vm.ctl.mode m))
+    (hneedOfNotStarved : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ (m : Mirrored1 P) (k j : ℕ), InvC w st m → ¬ Starved m.vm → Needy w st k j m.vm →
+        needT' w st k ≤ j)
+    (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ (m : Mirrored1 P) (k j : ℕ), InvC w st m → Needy w st k j m.vm → k < Tc w.length →
+        needT' w st k ≤ j → ¬ Starved m.vm)
+    (hstarvedAtLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
+      ∀ (m : Mirrored1 P) (j : ℕ), InvC w st m → Needy w st (Tc w.length) j m.vm →
+        Starved m.vm)
+    (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
+      repC (micro (sysC M repC) w (x0C blank 2048) s).core.vm.ctl = true →
+      ReportPoint w (stAbs (sysC M repC) absSC w (x0C blank 2048) s) ∧
+        Refreshed (PofC centreC placeC entry w) q first
+          (stAbs (sysC M repC) absSC w (x0C blank 2048) s))
+    (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
+      ReportPoint w (stAbs (sysC M repC) absSC w (x0C blank 2048) s) →
+      Refreshed (PofC centreC placeC entry w) q first
+        (stAbs (sysC M repC) absSC w (x0C blank 2048) s) →
+      ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧
+        repC (micro (sysC M repC) w (x0C blank 2048) s').core.vm.ctl = true)
+    -- the physical machine and its specification
+    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
+    (htape : 0 < t) (Rep : Mirrored1 P → Q × (Fin t → STape Γ) → Prop)
+    (hrepInit : Rep (x0C blank 2048).core (q0, fun _ => STape.blankTape blankSymbol))
+    (hsimTick : ∀ m p, PhysWF m.vm → MirInv1 m → Rep m p →
+      Rep (tickC M m) (L0.apply blankSymbol p none))
+    (hsimFeed : ∀ letter m p, PhysWF m.vm → MirInv1 m → Rep m p →
+      Rep (feedC letter m) (L0.apply blankSymbol p (some letter)))
+    (hreadRep : ∀ m p, Rep m p → repC m.vm.ctl = repQ p.1)
+    (hreadOut : ∀ m p, Rep m p → m.vm.ctl.output = outQ p.1) :
+    RecognizedByTotalPEG PAL := by
+  classical
+  have hexists : ∀ w : List (Fin 2), ∃ (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+      0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc ∧
+        CanonTrace entry w st Tc := by
+    intro w
+    by_cases hw : 0 < w.length
+    · obtain ⟨st, Tc, h⟩ := canonicalPreTrace_exists entry q first hor w hw
+      exact ⟨st, Tc, fun _ => h⟩
+    · exact ⟨fun _ => boot w, fun _ => 0, fun h => absurd h hw⟩
+  choose stOf TcOf htraceOf using hexists
+  have hstart : ∀ w, 0 < w.length → stOf w 0 = boot w :=
+    fun w hw => (htraceOf w hw).1.base.pre.start
+  have hneedBound := fun w (hw : 0 < w.length) =>
+    needBound_alongPreTrace entry q first hres hChainVerifierSupply hw (htraceOf w hw).1
+  exact pal_in_peg_of_shadowed_sysC M repC blank 2048 (PofC centreC placeC entry) (fun _ => q)
+    (fun _ => first) (fun w => PofC_onLetter centreC placeC entry w)
+    (fun w => PofC_leftFirst centreC placeC entry w) hblankInv hblankTwin hblankView stOf TcOf
+    (fun w j => sharedC_trunc_vm w j centreC placeC entry (fun s => (centrePlaceC w j s).1)
+      (fun s => (centrePlaceC w j s).2))
+    (fun w hw k hk => (htraceOf w hw).1.base.pre.trace.tick k hk)
+    (fun w hw k hk => sufVM_trace w (stOf w) (TcOf w w.length)
+      (sharedC_suf w _ _ centreC placeC entry) q first 2048
+      (htraceOf w hw).1.base.pre.trace.tick (by rw [hstart w hw]; exact sufVM_boot w) k hk)
+    (fun w hw => by rw [hstart w hw]; exact hinitTrack w hw)
+    (fun w hw => by
+      have hneed := needL'_boot w (stOf w) (hstart w hw)
+      have hused : usedVM w (stOf w 0).vm ≤ needL' w (stOf w) 0 := le_max_left _ _
+      omega)
+    (fun w hw => ⟨(htraceOf w hw).1.base.pre.tc0,
+      fun m hm => (htraceOf w hw).1.base.pre.mono m (m+1) (by omega) hm,
+      needL'_boot w (stOf w) (hstart w hw),
+      needLe_of_pointwise' w (stOf w) (TcOf w) (hneedBound w hw)⟩)
+    (fun w hw => base_of_preTraceB (htraceOf w hw).1.base)
+    (fun w hw => (htraceOf w hw).1.base.pre.cost)
+    (fun w hw => (htraceOf w hw).1.base.pre.report w.length hw le_rfl)
+    (fun w m k j hw hinv hstarved hneedy hneed hbefore =>
+      hrealizes w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved hneedy hneed
+        hbefore)
+    (fun w m k j hw hinv hstarved hneedy =>
+      hneedOfNotStarved w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hstarved hneedy)
+    (fun w m k j hw hinv hneedy hbefore hneed =>
+      hnotStarvedOfNeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m k j hinv hneedy hbefore
+        hneed)
+    (fun w m j hw hinv hneedy =>
+      hstarvedAtLastReport w _ _ (htraceOf w hw).1 (htraceOf w hw).2 m j hinv hneedy)
+    rep_sound rep_complete L0 blankSymbol q0 repQ outQ htape Rep hrepInit hsimTick hsimFeed
+    hreadRep hreadOut
+
+#print axioms given_shadowedLocalSystem
+
+end PalPeg.ShadowedLocalFinal

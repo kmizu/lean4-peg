@@ -97,17 +97,21 @@ theorem pal_in_peg_of_shadowed_sysC
       GalilLedgerAssembly.ReportPointAt (Pof w) (qof w) (firstOf w) w w.length
         (stOf w (TcOf w w.length)))
     -- the abstract local system on tracked states
-    (hrealizes : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), InvC w (stOf w) m →
+    (hrealizes : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), 0 < w.length →
+      InvC w (stOf w) m →
       ¬ Starved m.vm → Needy w (stOf w) k j m.vm → needT' w (stOf w) k ≤ j →
       k < TcOf w w.length →
       Needy w (stOf w) (k+1) j (stepOf M m.vm.ctl.mode m).vm ∧
         PhysWF (stepOf M m.vm.ctl.mode m).vm ∧ MirInv1 (stepOf M m.vm.ctl.mode m))
-    (hneedOfNotStarved : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), InvC w (stOf w) m →
+    (hneedOfNotStarved : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), 0 < w.length →
+      InvC w (stOf w) m →
       ¬ Starved m.vm → Needy w (stOf w) k j m.vm → needT' w (stOf w) k ≤ j)
-    (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), InvC w (stOf w) m →
+    (hnotStarvedOfNeed : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (k j : ℕ), 0 < w.length →
+      InvC w (stOf w) m →
       Needy w (stOf w) k j m.vm → k < TcOf w w.length → needT' w (stOf w) k ≤ j →
       ¬ Starved m.vm)
-    (hstarvedAtLastReport : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (j : ℕ), InvC w (stOf w) m →
+    (hstarvedAtLastReport : ∀ (w : List (Fin 2)) (m : Mirrored1 P) (j : ℕ), 0 < w.length →
+      InvC w (stOf w) m →
       Needy w (stOf w) (TcOf w w.length) j m.vm → Starved m.vm)
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
       repC (micro (sysC M repC) w (x0C blank delay) s).core.vm.ctl = true →
@@ -155,14 +159,14 @@ theorem pal_in_peg_of_shadowed_sysC
       show TrackedAt _ _ _ _ _ (tickC M _)
       rw [tickC_starved M hstarved]
       exact htracked
-    · have hneed := hneedOfNotStarved w _ _ _ htracked.invC hstarved htracked.needy
+    · have hneed := hneedOfNotStarved w _ _ _ hw htracked.invC hstarved htracked.needy
       have hbefore : kOf S w x0 s < TcOf w w.length := by
         rcases Nat.lt_or_ge (kOf S w x0 s) (TcOf w w.length) with h | h
         · exact h
         · have hend : kOf S w x0 s = TcOf w w.length := le_antisymm htracked.beforeEnd h
-          exact absurd (hstarvedAtLastReport w _ _ htracked.invC (hend ▸ htracked.needy)) hstarved
+          exact absurd (hstarvedAtLastReport w _ _ hw htracked.invC (hend ▸ htracked.needy)) hstarved
       obtain ⟨hneedy, hphys, hmir⟩ :=
-        hrealizes w _ _ _ htracked.invC hstarved htracked.needy hneed hbefore
+        hrealizes w _ _ _ hw htracked.invC hstarved htracked.needy hneed hbefore
       rw [kOf_succ_tick S w x0 s ⟨hinput, hstarved⟩]
       show TrackedAt _ _ _ _ _ (tickC M _)
       rw [tickC_step M hstarved]
@@ -195,12 +199,12 @@ theorem pal_in_peg_of_shadowed_sysC
     rw [tickC_starved M hstarved]
   · rintro w s m hinput ⟨hw, rfl, htracked⟩ hstarved
     have hnext := (hinvTick w s _ hinput ⟨hw, rfl, htracked⟩).2.2
-    have hneed := hneedOfNotStarved w _ _ _ htracked.invC hstarved htracked.needy
+    have hneed := hneedOfNotStarved w _ _ _ hw htracked.invC hstarved htracked.needy
     have hbefore : kOf S w x0 s < TcOf w w.length := by
       rcases Nat.lt_or_ge (kOf S w x0 s) (TcOf w w.length) with h | h
       · exact h
       · have hend : kOf S w x0 s = TcOf w w.length := le_antisymm htracked.beforeEnd h
-        exact absurd (hstarvedAtLastReport w _ _ htracked.invC (hend ▸ htracked.needy)) hstarved
+        exact absurd (hstarvedAtLastReport w _ _ hw htracked.invC (hend ▸ htracked.needy)) hstarved
     rw [arrL_none w s hinput, kOf_succ_tick S w x0 s ⟨hinput, hstarved⟩] at hnext
     show Tick _ delay (absSC _) (absSC (tickC M _))
     rw [show absSC (micro S w x0 s).core = _ from htracked.needy.2,
@@ -210,9 +214,9 @@ theorem pal_in_peg_of_shadowed_sysC
     exact feed_abs_core htracked.phys.inv.views htracked.phys.pend letter
   · exact H_ledger_of_local_oracles S absSC x0 Pof qof firstOf stOf TcOf hpreload
       (fun w hw s hstarved =>
-        hneedOfNotStarved w _ _ _ (hrun w hw s).invC hstarved (hrun w hw s).needy)
+        hneedOfNotStarved w _ _ _ hw (hrun w hw s).invC hstarved (hrun w hw s).needy)
       (fun w hw s hbefore hneed =>
-        hnotStarvedOfNeed w _ _ _ (hrun w hw s).invC (hrun w hw s).needy hbefore hneed)
+        hnotStarvedOfNeed w _ _ _ hw (hrun w hw s).invC (hrun w hw s).needy hbefore hneed)
       hbase hcost (fun w hw s => (hrun w hw s).needy.2) hlastReport
 
 #print axioms pal_in_peg_of_shadowed_sysC
