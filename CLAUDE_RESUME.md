@@ -1,3 +1,33 @@
+## n287 — `obligation_localRealization`: 消費者側の橋を 3 段通し、producer の無い量化を 4 件直した。公理は未接続のまま
+
+**状態（2026-09-20）**: 全体 build 成功（`lake build --quiet PalPeg`、ログ末尾 `BUILD=0`・`error` 0 件・`sorry` 0 件、commit `95f160b` 時点。その後の `cd22894` は module build `PalPeg.ShadowedLocalFinal` が `BUILD=0`）。標準公理のみの guard は `unconditional` について `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization` のまま。**無条件 PAL は未完。下の定理は `unconditional` にまだ適用していない。**
+
+**通した橋（どれも結論は `RecognizedByTotalPEG PAL`、標準 3 公理のみ）**:
+
+| 定理 | ファイル | 何を消したか |
+|---|---|---|
+| `pal_in_peg_of_shadowed_core` | `LocalShadowRealize` | 局所状態を「抽象状態 × 物理状態」の lockstep にして、`pal_in_peg_of_local_core` の全状態の厳密等式 6 本（`enc_tick`／`enc_feed`／`rep_eq`／`out_eq`／`outL_abs`／`encC_init`）を `rfl` にした。物理機械の仕様は `hrepInit`／`hsimTick`／`hsimFeed`／`hreadRep`／`hreadOut` の 5 本 |
+| `pal_in_peg_of_shadowed_sysC` | `LocalShadowConcrete` | 上を `LocalSysConcrete.sysC` に適用。不変量は走行形（状態 = `s` 歩後の走行状態、`TrackedAt … (arrL w s) (kOf … s)`）。台帳 `H_ledger`（`habs`・飢餓の両方向）を同じ不変量から放電 |
+| `given_shadowedLocalSystem` | `ShadowedLocalFinal` | trace 側 9 仮定を canonical な preload trace（`CloseoutFinalBranch.canonicalPreTrace_exists`、今回切り出し）で放電。trace は最終報告点で頭打ちにした `heldAfter` で渡す |
+
+**直した量化（どれも producer が無かった。機械検査した反証は無いので「偽の疑いが濃い」止まり）**:
+
+1. `inv_feed`／`feed_abs` が任意の文字に量化 → 不変量を micro-step 番号つきにし、その slot の文字だけにした（`LocalTrackingLatch` 4 定理・`pal_in_peg_of_local_core`・`pal_in_peg_of_coreLocal`、in place）。`H_feed_track` は `tracked_feedC` で置き換わった。
+2. `x0_inv` が空語にも量化 → 非空語だけに（`LedgerObligation` 自体が非空語にしか量化していない）。
+3. `Realizes` と producer 群の `H_trace : ∀ k` → 上限 `lastTick` を入れた（`LocalSysConcrete`・`LocalRealizesScan`・`LocalRealizesPhase`・`LocalWF`・`CanonicalLocalRealizes`・`CloseoutCoreStep`・`CloseoutCoreAgree`、in place）。preload trace は最終報告点までしか Tick の列でない。
+4. `InvC.track` の添字に上限が無く `NoReplay` を全添字で要る → `noReplay_run` は「最終 tick の後は一定」の trace を取る形にし、`heldAfter` で満たす。
+
+`LocalSysConcrete.localSys_oracles` は削除した（呼び出し元なし、`pal_in_peg_of_shadowed_sysC` が役割を引き継ぎ、全添字 trace と任意文字 feed を仮定に取っていた）。
+
+**`given_shadowedLocalSystem` に残る仮定（これが公理の中身の地図）**:
+
+* 抽象局所側（頭打ち canonical trace の上）: `hrealizes : ∀ mode, Realizes …`、`hneedOfNotStarved`、`hnotStarvedOfNeed`、`hstarvedAtLastReport`、`rep_sound`、`rep_complete`、`hinitTrack`、初期状態 `blank` の `Inv`／`Twin`／`WF`。
+* 物理側: `hrepInit`／`hsimTick`／`hsimFeed`／`hreadRep`／`hreadOut`（`hsimTick` は 1 物理歩 = `tickC M` 1 回。`LocalStepFusion.compStep_iterRule` が複数微小歩を 1 歩に融合する道具）。
+
+**調査（証明ではない）**: `hrealizes` の既存 producer `CloseoutCoreAgree.realizes_seven_SL` は 7 モードぶんで、語に依らない `SL` の `init`・`scan`・`replayStart` は `id` の仮実装。前提 `H_wf : ∀ m, InvC … → LocalWF m.vm` は `InvC` から出ず（`LocalWF` = `PolWF ∧ Geom`、`Geom` は `LocalWF` のヘッダ自身が Residuals と明記）、producer が無い。**このまま刺さない**。具体的な `blank : GalilVML P` も未定義。
+
+**次**: (1) 具体的な `blank` を定義して `hinitTrack`・`Inv`・`Twin`・`WF` を閉じる、(2) `LocalWF` を `Realizes` の前提側（走行不変量）へ移して `H_wf` の量化を直す、(3) `scan`／`init`／`replayStart` の局所 step を `CanonicalLocalRealizes.realizes_canonical` で `Realizes` に載せる。
+
 ## n286 — `obligation_localRealization`: 方針を消費者側からに変えた。融合定理 `compStep_iterRule` は通ったが、公理への接続はまだ無い
 
 **状態（2026-09-20）**: 全体 build 成功（`lake build --quiet PalPeg`、ログ末尾 `BUILD=0`・`error` 0 件・`sorry` 0 件、新モジュールは `ConcreteLocalMachine` → `Workbench` 経由で登録済み）。標準公理のみの guard（`PalPeg/Axioms.lean`）は `unconditional` について `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization` のまま通過。無条件 PAL は未完（残り 1 公理 `obligation_localRealization`）。**この節の定理は 1 本も公理の消費者に繋がっていない。進捗として数えない。**
