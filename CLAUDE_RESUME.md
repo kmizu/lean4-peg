@@ -1,3 +1,15 @@
+## n288 — `obligation_localRealization`: 自分が入れた仮定 `hstarvedAtLastReport` は偽の疑いが濃い。橋の終端の扱いを直す必要がある
+
+**状態（2026-09-20）**: 全体 build は `1f8e1c5` 時点で `BUILD=0`・`error` 0 件・`sorry` 0 件、その後の commit（`adfe7f9`・`75b1ef9`・`f86fa03`・`21dbd31`・`64e10d4`・`151aed4`）は module build `BUILD=0`。標準公理のみの guard は `unconditional` について `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization` のまま。**無条件 PAL は未完。**
+
+**n287 以降に通したもの（どれも `unconditional` には未適用）**: `InvC` に走行で運ぶ不変量の場 `good` を追加（`H_wf` の量化を修正）、`given_openModesAndPhysicalMachine`（10 モード中 7 モードを `realizes_seven_SL` で放電、側条件は頭打ち canonical trace の事実で供給、`traceRightLe_heldAfter`）、3 モードの仮定を `realizes_canonical` で「局所 step は抽象の canonical な Tick」へ帰着、`blankVML` に予備 counter テープ（`tapeCount spare`）、`LocalInitStep`（`initVml`／`initStep`、`initVM_initVml`、`tick_initStep`、`physWF_initStep`、`premises_of_truncated_boot`）と `initLocal_heldAfter` で **`init` モードを放電**（開いているモードは `scan` と `replayStart`）。
+
+**偽の疑いが濃い仮定（機械検査した反証は無い）**: `pal_in_peg_of_shadowed_sysC`／`given_shadowedLocalSystem`／`given_openModesAndPhysicalMachine` の `hstarvedAtLastReport`（最終報告点 `Tc |w|` に立つ追跡状態は必ず `Starved`）。一次情報: `ReportPointAt.atPrefix` は `position right = 2|w| − 1`（奇数なので `gap = false`）、`canRight p := p.gap = false ∨ …` なので右 head は `canRight`、left／center も入力の内側。よって最終報告点では **飢餓していない** はずで、機械は `Tc |w|` を越えて tick し続ける（次の不一致から fallback 一式まで、文字 `|w|+1` が要るところで初めて飢餓する）。この仮定は n287 で自分が「trace は最終報告点までしか Tick の列でない」ことへの対処として入れたもので、**対処の仕方が間違っていた**。上の 3 定理は定理としては正しいが、この仮定がある限り producer が立たない。
+
+**なぜ元の設計も同じ所で破れていたか**: `LocalLedgerShift.H_ledger_of_local_oracles` の `habs`／`starved_need` は全 micro-step `s` に量化し、`stOf (kOf s)` を最終報告点の先でも機械の抽象走行そのものとして要求する（＝無限に続く正しい trace を暗黙に仮定）。`PreTraceIMW` は最終報告点までしか与えない。
+
+**直し方の案（未着手・設計のみ）**: 機械を語 `w` で走らせるとき、追跡する trace を **延長語 `w ++ [a]` の canonical preload trace** にする。機械は文字 `|w|+1` が要る tick の手前で必ず飢餓し（延長語の次の報告点 `position right = 2(|w|+1) − 1` は文字 `|w|+1` を消費済み、つまりそこへ至る tick の need は `|w|` を超える）、以後文字は届かないので永久に stutter する。したがって追跡は trace の端を決して越えない。prefix `m ≤ |w|` の事実（`PreloadL'`・cost・報告点）は延長語の trace が全部持っている。要確認: (1) 枠 `PofC … w` と `PofC … (w ++ [a])` は `onLetterVM raw` で語に依存するので、切り詰めた状態の上で一致すること、(2) 延長語の prefix `|w|` の報告点を切り詰めたものが語 `w` の `ReportPoint` であること、(3) 台帳 `LedgerObligation … w` をその走行に対して出すこと。`heldAfter` と `hstarvedAtLastReport` はこの設計では不要になる。
+
 ## n287 — `obligation_localRealization`: 消費者側の橋を 3 段通し、producer の無い量化を 4 件直した。公理は未接続のまま
 
 **状態（2026-09-20）**: 全体 build 成功（`lake build --quiet PalPeg`、ログ末尾 `BUILD=0`・`error` 0 件・`sorry` 0 件、commit `95f160b` 時点。その後の `cd22894` は module build `PalPeg.ShadowedLocalFinal` が `BUILD=0`）。標準公理のみの guard は `unconditional` について `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization` のまま。**無条件 PAL は未完。下の定理は `unconditional` にまだ適用していない。**
