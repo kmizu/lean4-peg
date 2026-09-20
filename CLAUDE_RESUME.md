@@ -1,3 +1,18 @@
+## n298 — 凍結相・台地相を橋に入れた。残る仮定の一覧と、`hplateauTick` の障害（報告点にモードの場が無い）
+
+**状態（2026-09-21 未明）**: 最新の全体 build は `e0bb107`（`BUILD=0`）。以後は module build `PalPeg.ShadowedLocalFinal` `BUILD=0`（最後は commit `9299aac`、push 済み）。**全体 build 成功（`e0bb107` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。`unconditional` は未付け替え。
+
+**n297 以降に `ShadowedLocalFinal.given_openModesAndPhysicalMachine`（`#print axioms` 標準 3 本、`sorry` 0）へ接続したもの**:
+* `10ea280` 物理の出力ビットの一致は抽象 run の報告点でだけ要求（`hreportIff`／`hstAbsAt`）。`micro_shadow` は core の等式・不変量・`Rep` だけ。
+* `d4391dd` 橋の `Rep` を語添字に。
+* `d54c2e8` `frozenAt w m`（`0 < |w| ∧ 2|w| ≤ position right`）、`freezeSteps`、`realizes_freeze`、`notFrozen_of_invC`。橋に渡す抽象後続の「留まる」旗は `Starved ∨ frozen`。
+* `0c158db` `Rep` を二枝に: 非凍結は前方模倣（`hforwardTick` は `¬ frozenAt` の状態だけ）、凍結は物理側の不変量 `PhysFrozen w p`（`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`）。`hsimFeed` の源は追跡状態（最終報告点の後に文字は来ない）。
+* `9299aac` `postPhase`（台地 = `ReportPoint ∧ Refreshed`、または凍結）。`hpostOfLastReport` は証明で消えた（最終報告点では全文字到着 ⇒ `truncS_zero`）。`hpostTick` は凍結の場合を証明し、台地の場合だけ `hplateauTick` に残した。
+
+**残る仮定**: `hfirst`・`hq`・`hor`／`hres`／`hChainVerifierSupply`（`unconditional` で供給可能）、`Good` 系 4 本、`hscanNext`／`hreplayStartNext`、`hplateauTick`、物理側 `hencInit`／`hforwardTick`／`hforwardFeed`／`hencRep`／`hencOut`／`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`。自由データ: `Good`・`Enc`・`PhysFrozen`・物理機械。
+
+**`hplateauTick` の障害（一次情報）**: `ReportPoint`／`GalilReportPrefix.ReportPointAt`／`GalilLedgerAssembly.ReportPointAt` のどれにも `mode` の場が無く、`CloseoutCheckW.ReachAtOn` も報告点の状態 `y` のモードを言わない。したがって台地の状態が scan モードだとは今の pre-trace からは言えず、`hplateauTick` は全モードの tick を問う形のまま。台地の tick を scan の tick（`chosenStep`）に限るには、オラクルの到達述語（`ReachAtOn`）に「報告点は scan モード」を足して `cycleOracleOnPackedRun` の証明鎖で供給する必要がある（大域側の作業）。
+
 ## n297 — 訂正: Post 相は scan だけではない（回文のとき最後の比較は左端で不一致）。三相の設計案
 
 **一次情報（2026-09-21、Lean の変更なし）**: `GalilScaffoldTopScan:42` `matched s := read s.left = read s.right`、`GalilScaffoldInputHead:40` `read p := p.head.focus.map (fun a => if p.gap then 2 else letter a)`、`left p := ⟨if p.gap then p.head else moveLeft p.head, !p.gap⟩`。報告点の台地の後の比較で `R` は gap（`some 2`）へ進むが、`L` が最初の文字にいる場合（＝接頭辞全体が回文、出力 true の場合）`left L` は focus が `none` になり `read = none ≠ some 2` で**不一致** → scan_shift／scan_fallback → shift／fallback／fpp／replay に入る。**n296 の「Post 相は scan だけ」は偽**（回文の場合に破れる）。
