@@ -123,4 +123,29 @@ theorem usedPH_right_le_of_canRight_trunc (n j : ℕ) (p : GalilScaffoldInputHea
 
 #print axioms usedPH_right_le_of_canRight_trunc
 
+/-- **A head that stands no further right than the right head looks ahead within the arrived
+letters as soon as the right head does.**  Off its front the move consumes nothing, and the
+letters the head has used have arrived; on its front its place pins the letters it has used, so
+they are at most those of the right head, and `usedPH_right_le_right` applies.  No comparison of
+the letters used by the two heads is assumed: only their places. -/
+theorem usedPH_right_le_of_position_le (raw : List (Fin 2)) (j : ℕ)
+    (X R : GalilScaffoldInputHead.PlaceHead)
+    (hX : GalilScaffoldInputTrace.Represents X.head raw) (hXs : GalilFrontMono.Sane X)
+    (hR : GalilScaffoldInputTrace.Represents R.head raw) (hRs : GalilFrontMono.Sane R)
+    (hpos : position X ≤ position R) (husedX : usedPH raw.length X ≤ j)
+    (hlookR : usedPH raw.length (GalilScaffoldChainVerifier.right R) ≤ j) :
+    usedPH raw.length (GalilScaffoldChainVerifier.right X) ≤ j := by
+  by_cases hfront : X.gap = true ∧ X.head.right = []
+  · have hx := two_usedPH_of_rep raw X hX hXs
+    have hr := two_usedPH_of_rep raw R hR hRs
+    rw [hfront.1, hfront.2] at hx
+    simp only [if_true, List.length_nil] at hx
+    have hused : usedPH raw.length X ≤ usedPH raw.length R := by
+      split_ifs at hr <;> omega
+    exact (usedPH_right_le_right raw X R hX hXs hR hRs hused hpos).trans hlookR
+  · rw [usedPH_right_of_not_front raw.length X hfront]
+    exact husedX
+
+#print axioms usedPH_right_le_of_position_le
+
 end PalPeg.HeadBehindRight
