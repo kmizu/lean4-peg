@@ -1,3 +1,11 @@
+## n297 — 訂正: Post 相は scan だけではない（回文のとき最後の比較は左端で不一致）。三相の設計案
+
+**一次情報（2026-09-21、Lean の変更なし）**: `GalilScaffoldTopScan:42` `matched s := read s.left = read s.right`、`GalilScaffoldInputHead:40` `read p := p.head.focus.map (fun a => if p.gap then 2 else letter a)`、`left p := ⟨if p.gap then p.head else moveLeft p.head, !p.gap⟩`。報告点の台地の後の比較で `R` は gap（`some 2`）へ進むが、`L` が最初の文字にいる場合（＝接頭辞全体が回文、出力 true の場合）`left L` は focus が `none` になり `read = none ≠ some 2` で**不一致** → scan_shift／scan_fallback → shift／fallback／fpp／replay に入る。**n296 の「Post 相は scan だけ」は偽**（回文の場合に破れる）。
+
+**三相の設計案（未実装・仮説）**: (T) 追跡相 `k ≤ Tc |w|`（現状どおり）。(P) 台地相: `Tc |w|` の後、`R` が最後の文字 `2|w|−1` にいる間。ここは scan モードの tick だけ（scan_count の背景 tick と、`R` を gap へ進める比較 1 回）。`Post w m := ReportPoint w (absSC m) ∧ Refreshed … (absSC m)` とし、背景 tick での保存を `backgroundS_fields` から示す。局所後続の存在は `hscanNext` を台地相にも広げる。(F) 凍結相: `R` が gap `2|w|` に出た後。ghost は語を知っているので `position (abs m).right ≥ 2 * |w|` で飢餓（stutter）させる。このとき ghost の報告テストは偽（`atLast` が成り立たない）。物理側は「`R` の物理ヘッドが到着の先端の gap にいて pending が無い ⇒ 報告ビットは偽」という局所不変量だけで足りる（`R` の物理ヘッドは比較でしか右へ動かず、左へは動かない。replay は abs の `R` を左へ跳ばすが `replaying = true` なのでテストは偽）。
+
+**橋に要る変更**: `pal_in_peg_of_shadowed_core` の `hstAbs`（`shadowAbs` = ghost の抽象）は凍結相では保てない（replay 中の refresh で物理の出力が変わる）。使い道は (a) `rep_sound` の転送（報告ビットが真の時点だけ）、(b) `rep_complete` の転送（`ReportPoint (shadowAbs s)` が真の時点だけ。凍結相は vm の `R` が `2|w|` なので偽）、(c) 台帳（追跡相の時点）。よって `Rep` を凍結相では「報告ビットが偽 ∧ vm 部分は凍結 ghost と同じ」に弱める形へその場で一般化できる見込みは、橋の 3 箇所を書き換えて確かめる必要がある。
+
 ## n296 — 訂正: n295 の案はそのままでは通らない（報告点は台地を成し、`Tc m` は最初の添字とは限らない）
 
 **一次情報（2026-09-21、Lean の変更なし）**: `GalilCheckpoints.ReachAt`／`CycleOutM` は「`ReportPointAt raw m ∧ Refreshed` の状態に到達する `StepsAll` が存在する」としか言わない。報告点の状態は**台地**を成す: `R` が `2m−1` に着いた後、scan_count の背景 tick（clock 2048 の countdown）が続き、その間はヘッド・replay・出力が不変なので全部報告点。`Tc m` は台地のどこかの添字で、最初とは限らない。したがって n295／以前の (A) で鍵だと思った「最初性」は偽の疑いが濃い（機械検査した反証は無い）。n295 の「scan の飢餓テストを次の文字の到着に強める」案は、台地の途中（`k < Tc (m+1)` かつ `R = 2m+1`）で機械が止まり `Tc` に届かなくなるので採らない。**飢餓テストは現状（init／scan は `R`、shift の移動 tick は `C`・`L`・`right L`）のまま。**
