@@ -2439,6 +2439,153 @@ theorem choose_back_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (c
   exact choose_back_atFloor margin centre place entry entryQ first w F delay x q T hmode hkeep
     hfloor henc
 
+/-! ### the rule itself
+
+The tables above are assembled into one `ActRule` by dispatching on the controller's mode.  The
+modes not yet given a table stand still; each one is replaced as its branch is proved, and the
+branch lemmas then apply to this rule with their `hnq` and `hacts` discharged by a mode lemma
+instead of assumed. -/
+
+theorem markEndActs_length {K : ℕ} (hK : 1 ≤ K) (ws : Fin 95 → PalPeg.Local.Window Γm K)
+    (j : Fin 95) : (markEndActs ws j).length ≤ K := by
+  unfold markEndActs
+  split
+  · split
+    · exact actsAt_length _ _ (by simp) j
+    · exact actsAt_length _ _ (by simpa using hK) j
+  · exact actsAt_length _ _ (by simpa using hK) j
+
+theorem homeActs_length {K : ℕ} (hK : 1 ≤ K) (ws : Fin 95 → PalPeg.Local.Window Γm K)
+    (j : Fin 95) : (homeActs ws j).length ≤ K := by
+  unfold homeActs
+  split
+  · exact actsAt_length _ _ (by simp) j
+  · split
+    · exact actsAt_length _ _ (by simp) j
+    · exact actsAt_length _ _ (by simpa using hK) j
+
+theorem chooseBackActs_length {K : ℕ} (hK : 1 ≤ K) (ws : Fin 95 → PalPeg.Local.Window Γm K)
+    (j : Fin 95) : (chooseBackActs ws j).length ≤ K := by
+  unfold chooseBackActs
+  split
+  · exact actsAt_length _ _ (by simp) j
+  · exact actsAt_length _ _ (by simpa using hK) j
+
+/-- the control of the machine, mode by mode. -/
+noncomputable def ruleNext {fppBound dpBound K : ℕ} (hbound : 320 < fppBound)
+    (q : QPhys fppBound dpBound) (ws : Fin 95 → PalPeg.Local.Window Γm K) :
+    QPhys fppBound dpBound :=
+  match q.ctl.mode with
+  | PalPeg.GalilScaffoldController.Mode.markEnd => markEndNext q ws
+  | PalPeg.GalilScaffoldController.Mode.home => homeNext hbound q ws
+  | PalPeg.GalilScaffoldController.Mode.choose => chooseBackNext q
+  | _ => q
+
+/-- the actions of the machine, mode by mode. -/
+noncomputable def ruleActs {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin 95 → PalPeg.Local.Window Γm K) :
+    Fin 95 → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  match q.ctl.mode with
+  | PalPeg.GalilScaffoldController.Mode.markEnd => markEndActs ws
+  | PalPeg.GalilScaffoldController.Mode.home => homeActs ws
+  | PalPeg.GalilScaffoldController.Mode.choose => chooseBackActs ws
+  | _ => fun _ => []
+
+theorem ruleActs_length {fppBound dpBound K : ℕ} (hK : 1 ≤ K) (q : QPhys fppBound dpBound)
+    (ws : Fin 95 → PalPeg.Local.Window Γm K) (j : Fin 95) :
+    (ruleActs q ws j).length ≤ K := by
+  unfold ruleActs
+  cases hm : q.ctl.mode
+  all_goals
+    simp only [hm]
+  all_goals
+    first
+      | exact markEndActs_length hK ws j
+      | exact homeActs_length hK ws j
+      | exact chooseBackActs_length hK ws j
+      | exact Nat.zero_le K
+
+/-- **the rule of the physical machine**, so far as its branches are proved. -/
+noncomputable def physRule {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K) :
+    PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm 95 K where
+  nq := fun q _ ws => ruleNext hbound q ws
+  acts := fun q _ ws => ruleActs q ws
+  len_le := fun q _ ws j => ruleActs_length hK q ws j
+
+theorem physRule_nq_markEnd {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
+    (q : QPhys fppBound dpBound) (ws : Fin 95 → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd) :
+    (physRule (dpBound := dpBound) hbound hK).nq q none ws = markEndNext q ws := by
+  show ruleNext hbound q ws = _
+  unfold ruleNext
+  rw [hm]
+
+theorem physRule_acts_markEnd {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
+    (q : QPhys fppBound dpBound) (ws : Fin 95 → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd) :
+    (physRule (dpBound := dpBound) hbound hK).acts q none ws = markEndActs ws := by
+  show ruleActs q ws = _
+  unfold ruleActs
+  rw [hm]
+
+theorem physRule_nq_home {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
+    (q : QPhys fppBound dpBound) (ws : Fin 95 → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home) :
+    (physRule (dpBound := dpBound) hbound hK).nq q none ws = homeNext hbound q ws := by
+  show ruleNext hbound q ws = _
+  unfold ruleNext
+  rw [hm]
+
+theorem physRule_acts_home {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
+    (q : QPhys fppBound dpBound) (ws : Fin 95 → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home) :
+    (physRule (dpBound := dpBound) hbound hK).acts q none ws = homeActs ws := by
+  show ruleActs q ws = _
+  unfold ruleActs
+  rw [hm]
+
+theorem physRule_nq_choose {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
+    (q : QPhys fppBound dpBound) (ws : Fin 95 → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose) :
+    (physRule (dpBound := dpBound) hbound hK).nq q none ws = chooseBackNext q := by
+  show ruleNext hbound q ws = _
+  unfold ruleNext
+  rw [hm]
+
+theorem physRule_acts_choose {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
+    (q : QPhys fppBound dpBound) (ws : Fin 95 → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose) :
+    (physRule (dpBound := dpBound) hbound hK).acts q none ws = chooseBackActs ws := by
+  show ruleActs q ws = _
+  unfold ruleActs
+  rw [hm]
+
+/-- **the mark walk of the machine itself.**  The same statement as `markEnd_forward_of_rule`,
+with its two hypotheses about the rule discharged: this is the rule the machine runs, not one
+assumed to exist. -/
+theorem physRule_markEnd_forward {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hK : 1 ≤ K)
+    (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
+    (hnotEnd : (x.vm.fpp.program.config.tapes 8).focus ≠ 5)
+    (hnotMark : (T (progSlot 8)).focus ≠ encProg 5)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) hbound hK) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) hbound hK) blankM
+          (q, tapesOf T) none).2 (slotIndex i)) :=
+  markEnd_forward_of_rule margin centre place entry entryQ first w F delay x q T
+    (physRule hbound hK)
+    (physRule_nq_markEnd hbound hK q _ hqmode) (physRule_acts_markEnd hbound hK q _ hqmode)
+    hmargin hmode hnotEnd hnotMark henc
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -2509,6 +2656,10 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.markEnd_back_of_rule_atFloor
 #print axioms PalPeg.PhysicalEncoding.home_step_of_rule_atFloor
 #print axioms PalPeg.PhysicalEncoding.choose_back_of_rule_atFloor
+#print axioms PalPeg.PhysicalEncoding.physRule_acts_markEnd
+#print axioms PalPeg.PhysicalEncoding.physRule_acts_home
+#print axioms PalPeg.PhysicalEncoding.physRule_acts_choose
+#print axioms PalPeg.PhysicalEncoding.physRule_markEnd_forward
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeftAtFloor
