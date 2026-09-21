@@ -97,6 +97,8 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 **margin を確かめたら設計上の要求が出た（`$S/pad.keep.lean`、EXIT=0・error 0、`padLeft_right`／`padLeft_left` は**公理ゼロ**）**: `compStep_apply` はどのヘッドにも「左端から `K` 以上」を要求するが、プログラムのテープは自分の左端から始まる。よって物理テープは成分の下に `n` 個の空白を敷く: `padLeft blank n T`、`pos (padLeft blank n T) = pos T + n`。書き込みと右移動は両方で同じ action（`padLeft_stay`／`padLeft_right`）。**左移動だけは成分に行き先があるときに限って一致する**（`padLeft_left`、仮説 `T.left ≠ []`）——成分が自分の左端で止まるのに対し物理ヘッドは余白へ踏み込むから。プログラム機械はそこで左へ動かないので（`GalilScaffoldProgram.Execute.left` がその仮説を持つ）両者は離れない。ヘッドの view とカウンタは底の junk／区切りが同じ役目を果たす。
 
+**規則の形と、2 つ目の条件の落とし込み（`$S/rule_shape.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `ruleOf starvedReading workNext workActs`——**規則はまず飢餓を読み、立っていれば制御を変えず命令も名指さず、そうでなければ tick の仕事をする**。`len_le` は仕事側の上界から。そして `idle_of_reading`: **停止分岐は「規則の読みが `starvedTest` と一致する」に落ちる**。読みは有限（モード、4 ヘッド × 3 つ、カウンタ 2 本の符号）で、その全部がテープの先頭セルか有限制御にある（上の `starvedOf`／`canRightOf`／`isEmpty_iff_topLetter`／`toList_isEmpty`）。
+
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
 ## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
