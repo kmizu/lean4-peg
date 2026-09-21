@@ -3845,6 +3845,38 @@ theorem progRunActs_length (code : List (Instruction 9)) :
       have h₂ := ih (PalPeg.ProgramFunction.tickFun code true m) i
       omega
 
+/-! ### reading a component's symbol back out of the window
+
+The rule sees the machine's alphabet; the program it is simulating works in the component's.
+`decProg` is the way back, and it is exact on everything the encoding can produce — including
+the blank, which both alphabets share. -/
+
+/-- the component symbol a machine symbol stands for. -/
+def decProg (a : Γm) : Fin 9 :=
+  match a with
+  | .inr (.inr (.inl s)) => s
+  | _ => 6
+
+@[simp] theorem decProg_encProg (s : Fin 9) : decProg (encProg s) = s := by
+  unfold decProg encProg
+  by_cases h : s = 6
+  · rw [if_pos h, h]
+    rfl
+  · rw [if_neg h]
+
+/-- **so the rule can read a component's symbol from its window.** -/
+theorem decProg_centreRead {fppBound dpBound K : ℕ} {margin : ℕ} {x : State GalilVM}
+    {q : QPhys fppBound dpBound} {T : Slot → STape Γm} (henc : Enc margin x (q, T))
+    (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i)) (i : Fin 9) :
+    decProg (centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+        (progSlot q.fppLive i))
+      = (x.vm.fpp.program.config.tapes i).focus := by
+  rw [centreRead_of_margin T (progSlot q.fppLive i) (hmargin _)]
+  have hfpp : T (progSlot q.fppLive i)
+      = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i))) :=
+    henc.2.fpp i
+  rw [hfpp, focus_padded, decProg_encProg]
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3932,6 +3964,8 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.physRule_home
 #print axioms PalPeg.PhysicalEncoding.physRule_choose
 #print axioms PalPeg.PhysicalEncoding.progRunActs_length
+#print axioms PalPeg.PhysicalEncoding.decProg_encProg
+#print axioms PalPeg.PhysicalEncoding.decProg_centreRead
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
