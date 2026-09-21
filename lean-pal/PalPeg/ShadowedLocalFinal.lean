@@ -798,34 +798,45 @@ theorem localGood_stepOf_localSteps (entry q : ℕ) (first : Fin 9)
   | scan => exact absurd hmode hnotScan
   | replayStart => exact absurd hmode hnotReplayStart
   | shift =>
-      refine fun _ => PalPeg.LocalWF.polWF_congr hbundle ?_ (fun _ => hmode)
-      show (PalPeg.CloseoutCoreAgree.shiftStepW m).vm.pol = m.vm.pol
-      classical
-      unfold PalPeg.CloseoutCoreAgree.shiftStepW
-      split
-      · unfold PalPeg.LocalRealizesPhase.shiftPick; split <;> rfl
-      · rfl
+      refine fun _ => PalPeg.LocalWF.polWF_congr hbundle ?_ (fun {M} hentry hland => ?_)
+      · show (PalPeg.CloseoutCoreAgree.shiftStepW m).vm.pol = m.vm.pol
+        classical
+        unfold PalPeg.CloseoutCoreAgree.shiftStepW
+        split
+        · unfold PalPeg.LocalRealizesPhase.shiftPick; split <;> rfl
+        · rfl
+      · -- a shift step lands in `shift` or in `scan`
+        rcases hentry with rfl | rfl
+        · exact hmode
+        · exfalso
+          classical
+          have hland : (PalPeg.CloseoutCoreAgree.shiftStepW m).vm.ctl.mode = Mode.copy := hland
+          unfold PalPeg.CloseoutCoreAgree.shiftStepW at hland
+          split at hland
+          · unfold PalPeg.LocalRealizesPhase.shiftPick at hland
+            split at hland <;> exact Mode.noConfusion (hmode.symm.trans hland)
+          · exact Mode.noConfusion hland
   | copy =>
       exact fun _ => PalPeg.LocalWF.polWF_congr hbundle (PalPeg.LocalWF.pol_copyStepL m)
-        PalPeg.LocalWF.mode_shift_of_copyStepL
+        PalPeg.LocalWF.entryMode_of_copyStepL
   | home =>
       exact fun _ => PalPeg.LocalWF.polWF_congr hbundle (PalPeg.LocalWF.pol_homeStepL m)
-        PalPeg.LocalWF.mode_shift_of_homeStepL
+        PalPeg.LocalWF.entryMode_of_homeStepL
   | fpp =>
       exact fun _ => PalPeg.LocalWF.polWF_congr hbundle
         (PalPeg.LocalWF.pol_ffpp PalPeg.CloseoutCoreAgree.dumS q first m)
-        (PalPeg.LocalWF.mode_shift_of_ffpp PalPeg.CloseoutCoreAgree.dumS q first)
+        (PalPeg.LocalWF.entryMode_of_ffpp PalPeg.CloseoutCoreAgree.dumS q first)
   | markEnd =>
       exact fun _ => PalPeg.LocalWF.polWF_congr hbundle (PalPeg.LocalWF.pol_markEndStepL m)
-        PalPeg.LocalWF.mode_shift_of_markEndStepL
+        PalPeg.LocalWF.entryMode_of_markEndStepL
   | choose =>
       exact fun _ => PalPeg.LocalWF.polWF_congr hbundle
         (PalPeg.LocalWF.pol_chooseStepC PalPeg.CloseoutCoreAgree.dumS q first m)
-        (PalPeg.LocalWF.mode_shift_of_chooseStepC PalPeg.CloseoutCoreAgree.dumS q first)
+        (PalPeg.LocalWF.entryMode_of_chooseStepC PalPeg.CloseoutCoreAgree.dumS q first)
   | rewind =>
       exact fun _ => PalPeg.LocalWF.polWF_congr hbundle
         (PalPeg.LocalWF.pol_rewindStepC PalPeg.CloseoutCoreAgree.dumS q first m)
-        (PalPeg.LocalWF.mode_shift_of_rewindStepC PalPeg.CloseoutCoreAgree.dumS q first)
+        (PalPeg.LocalWF.entryMode_of_rewindStepC PalPeg.CloseoutCoreAgree.dumS q first)
 
 /-- **The phase after the last report point**: the abstract state is still a refreshed report
 point of the word in scan mode (the plateau: the right head stands on the last letter), or it is
@@ -1101,7 +1112,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (fun w => ghostSteps entry q first (localGood (spare := spare)) w)
     (fun w m => reportTest entry q first w (absSC m))
     (localGood (spare := spare))
-    (fun _ => PalPeg.LocalWF.polWF_x0C ⟨rfl, rfl, rfl, fun _ => rfl, rfl⟩ 2048)
+    (fun _ => PalPeg.LocalWF.polWF_x0C ⟨fun _ => rfl, rfl, rfl, fun _ => rfl, fun _ => rfl⟩ 2048)
     (fun w st Tc hpreTrace hcanonical m hinv => by
       by_cases hstarved : Starved m.vm
       · rw [PalPeg.LocalSysConcrete.tickC_starved _ hstarved]
@@ -1122,7 +1133,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       fun hnotScan => PalPeg.LocalWF.polWF_congr
         (hinv.good (by rwa [PalPeg.LocalWF.ctl_feedC hinv.phys.pend letter] at hnotScan))
         (PalPeg.LocalWF.pol_feedC hinv.phys.pend letter)
-        (fun hshift => by rwa [PalPeg.LocalWF.ctl_feedC hinv.phys.pend letter] at hshift))
+        (fun _ hland => by rwa [PalPeg.LocalWF.ctl_feedC hinv.phys.pend letter] at hland))
     ?_ (postPhase entry q first) frozenAt
     (fun w st Tc hw hpreTrace _ m hinv => notFrozen_of_invC entry q first hw hpreTrace m hinv)
     (fun w st Tc hw hpreTrace _ hscanAtReport m _ hneedy => by

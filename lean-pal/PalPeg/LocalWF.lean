@@ -308,23 +308,23 @@ open PalPeg.LocalSysConcrete (feedC)
 
 /-- The five counters whose sign bit the phase steps rely on. -/
 def PolWF (x : GalilVML P) : Prop :=
-  x.pol .remaining = true ∧ x.pol .radius = true ∧ x.pol .length = true ∧
-    (x.ctl.mode = .shift → x.pol .cycle = true) ∧ x.pol .fppWork = true
+  (x.ctl.mode = .shift → x.pol .remaining = true) ∧ x.pol .radius = true ∧
+    x.pol .length = true ∧ (x.ctl.mode = .shift → x.pol .cycle = true) ∧
+    (x.ctl.mode = .copy → x.pol .fppWork = true)
 
-/-- A phase tick lands in `shift` only from `shift`. -/
-theorem mode_shift_of_tickL3 {S : Shared} {q : ℕ} {firstT : Fin 9} {x y : GalilVML P}
-    (h : TickL3 S q firstT x y) (hshift : y.ctl.mode = .shift) : x.ctl.mode = .shift := by
-  cases h <;> first
+/-- The two modes that a phase step enters from the same mode only: `shift` and `copy` are
+entered from `scan`, which is not a phase mode.  The polarity of `remaining` and of `cycle` is
+read in `shift` only, that of `fppWork` in `copy` only. -/
+def EntryMode (M : Mode) : Prop := M = .shift ∨ M = .copy
+
+/-- A phase tick lands in `shift` or in `copy` only from the same mode. -/
+theorem entryMode_of_tickL3 {S : Shared} {q : ℕ} {firstT : Fin 9} {x y : GalilVML P}
+    (h : TickL3 S q firstT x y) {M : Mode} (hentry : EntryMode M) (hland : y.ctl.mode = M) :
+    x.ctl.mode = M := by
+  rcases hentry with rfl | rfl <;> cases h <;> first
     | assumption
-    | exact hshift
-    | exact absurd (show Mode.scan = Mode.shift from hshift) (by decide)
-    | exact absurd (show Mode.home = Mode.shift from hshift) (by decide)
-    | exact absurd (show Mode.fpp = Mode.shift from hshift) (by decide)
-    | exact absurd (show Mode.markEnd = Mode.shift from hshift) (by decide)
-    | exact absurd (show Mode.choose = Mode.shift from hshift) (by decide)
-    | exact absurd (show Mode.rewind = Mode.shift from hshift) (by decide)
-    | exact absurd (show Mode.replayStart = Mode.shift from hshift) (by decide)
-    | exact absurd (show Mode.copy = Mode.shift from hshift) (by decide)
+    | exact hland
+    | exact Mode.noConfusion hland
     | (exfalso; simp_all; done)
 
 /-- **No phase tick touches the polarity bundle.** -/
@@ -336,8 +336,9 @@ theorem polWF_of_tickL3 {S : Shared} {q : ℕ} {firstT : Fin 9} {x y : GalilVML 
     (h : PolWF x) (ht : TickL3 S q firstT x y) : PolWF y := by
   unfold PolWF at h ⊢
   rw [pol_tickL3 ht]
-  exact ⟨h.1, h.2.1, h.2.2.1, fun hshift => h.2.2.2.1 (mode_shift_of_tickL3 ht hshift),
-    h.2.2.2.2⟩
+  exact ⟨fun hshift => h.1 (entryMode_of_tickL3 ht (Or.inl rfl) hshift), h.2.1, h.2.2.1,
+    fun hshift => h.2.2.2.1 (entryMode_of_tickL3 ht (Or.inl rfl) hshift),
+    fun hcopy => h.2.2.2.2 (entryMode_of_tickL3 ht (Or.inr rfl) hcopy)⟩
 
 theorem pol_shiftStepL (Pw : Shared) (m : Mirrored1 P) :
     (shiftStepL Pw m).vm.pol = m.vm.pol := by
@@ -397,55 +398,58 @@ theorem pol_feedC {m : Mirrored1 P} (hp : m.vm.pending = []) (a : Fin 2) :
 The polarity of `cycle` is asked for in `shift` only, so carrying it along a step needs to know
 that no other phase step lands there. -/
 
-theorem mode_shift_of_copyStepL {m : Mirrored1 P}
-    (hshift : (copyStepL m).vm.ctl.mode = .shift) : m.vm.ctl.mode = .shift := by
+theorem entryMode_of_copyStepL {m : Mirrored1 P} {M : Mode} (hentry : EntryMode M)
+    (hland : (copyStepL m).vm.ctl.mode = M) : m.vm.ctl.mode = M := by
   classical
-  unfold copyStepL at hshift
-  split at hshift
-  · unfold PalPeg.LocalRealizesPhase.copyPick at hshift
-    split at hshift <;> exact hshift
-  · exact absurd (show Mode.home = Mode.shift from hshift) (by decide)
+  unfold copyStepL at hland
+  split at hland
+  · unfold PalPeg.LocalRealizesPhase.copyPick at hland
+    split at hland <;> exact hland
+  · rcases hentry with rfl | rfl <;> exact Mode.noConfusion hland
 
-theorem mode_shift_of_homeStepL {m : Mirrored1 P}
-    (hshift : (homeStepL m).vm.ctl.mode = .shift) : m.vm.ctl.mode = .shift := by
+theorem entryMode_of_homeStepL {m : Mirrored1 P} {M : Mode} (hentry : EntryMode M)
+    (hland : (homeStepL m).vm.ctl.mode = M) : m.vm.ctl.mode = M := by
   classical
-  unfold homeStepL at hshift
-  split at hshift
-  · exact absurd (show Mode.fpp = Mode.shift from hshift) (by decide)
-  · exact hshift
+  unfold homeStepL at hland
+  split at hland
+  · rcases hentry with rfl | rfl <;> exact Mode.noConfusion hland
+  · exact hland
 
-theorem mode_shift_of_markEndStepL {m : Mirrored1 P}
-    (hshift : (markEndStepL m).vm.ctl.mode = .shift) : m.vm.ctl.mode = .shift := by
+theorem entryMode_of_markEndStepL {m : Mirrored1 P} {M : Mode} (hentry : EntryMode M)
+    (hland : (markEndStepL m).vm.ctl.mode = M) : m.vm.ctl.mode = M := by
   classical
-  unfold markEndStepL at hshift
-  split at hshift
-  · exact absurd (show Mode.choose = Mode.shift from hshift) (by decide)
-  · exact hshift
+  unfold markEndStepL at hland
+  split at hland
+  · rcases hentry with rfl | rfl <;> exact Mode.noConfusion hland
+  · exact hland
 
-theorem mode_shift_of_chooseStepC (Pw : Shared) (qq : ℕ) (firstT : Fin 9) {m : Mirrored1 P}
-    (hshift : (chooseStepC Pw qq firstT m).vm.ctl.mode = .shift) : m.vm.ctl.mode = .shift := by
+theorem entryMode_of_chooseStepC (Pw : Shared) (qq : ℕ) (firstT : Fin 9) {m : Mirrored1 P}
+    {M : Mode} (hentry : EntryMode M) (hland : (chooseStepC Pw qq firstT m).vm.ctl.mode = M) :
+    m.vm.ctl.mode = M := by
   classical
-  unfold chooseStepC at hshift
-  split at hshift
-  · exact absurd (show Mode.rewind = Mode.shift from hshift) (by decide)
-  · exact hshift
+  unfold chooseStepC at hland
+  split at hland
+  · rcases hentry with rfl | rfl <;> exact Mode.noConfusion hland
+  · exact hland
 
-theorem mode_shift_of_rewindStepC (Pw : Shared) (qq : ℕ) (firstT : Fin 9) {m : Mirrored1 P}
-    (hshift : (rewindStepC Pw qq firstT m).vm.ctl.mode = .shift) : m.vm.ctl.mode = .shift := by
+theorem entryMode_of_rewindStepC (Pw : Shared) (qq : ℕ) (firstT : Fin 9) {m : Mirrored1 P}
+    {M : Mode} (hentry : EntryMode M) (hland : (rewindStepC Pw qq firstT m).vm.ctl.mode = M) :
+    m.vm.ctl.mode = M := by
   classical
-  unfold rewindStepC at hshift
-  split at hshift
-  · exact absurd (show Mode.replayStart = Mode.shift from hshift) (by decide)
-  · split at hshift <;> exact hshift
+  unfold rewindStepC at hland
+  split at hland
+  · rcases hentry with rfl | rfl <;> exact Mode.noConfusion hland
+  · split at hland <;> exact hland
 
-theorem mode_shift_of_ffpp (Pw : Shared) (qq : ℕ) (firstT : Fin 9) {m : Mirrored1 P}
-    (hshift : (ffpp Pw qq firstT m).vm.ctl.mode = .shift) : m.vm.ctl.mode = .shift := by
+theorem entryMode_of_ffpp (Pw : Shared) (qq : ℕ) (firstT : Fin 9) {m : Mirrored1 P}
+    {M : Mode} (hentry : EntryMode M) (hland : (ffpp Pw qq firstT m).vm.ctl.mode = M) :
+    m.vm.ctl.mode = M := by
   classical
-  unfold ffpp at hshift
-  split at hshift
+  unfold ffpp at hland
+  split at hland
   · rename_i hexists
-    exact mode_shift_of_tickL3 hexists.choose_spec.1 hshift
-  · exact hshift
+    exact entryMode_of_tickL3 hexists.choose_spec.1 hentry hland
+  · exact hland
 
 /-- **Arrival does not touch the control either.** -/
 theorem ctl_feedC {m : Mirrored1 P} (hp : m.vm.pending = []) (a : Fin 2) :
@@ -460,8 +464,9 @@ theorem ctl_feedC {m : Mirrored1 P} (hp : m.vm.pending = []) (a : Fin 2) :
 its counters on the positive side. -/
 theorem polWF_x0C {blank : GalilVML P} (h : PolWF blank) (delay : ℕ) :
     PolWF (PalPeg.LocalSysConcrete.x0C blank delay).core.vm :=
-  ⟨h.1, h.2.1, h.2.2.1,
-    fun hshift => absurd (show Mode.init = Mode.shift from hshift) (by decide), h.2.2.2.2⟩
+  ⟨fun hshift => absurd (show Mode.init = Mode.shift from hshift) (by decide), h.2.1, h.2.2.1,
+    fun hshift => absurd (show Mode.init = Mode.shift from hshift) (by decide),
+    fun hcopy => absurd (show Mode.init = Mode.copy from hcopy) (by decide)⟩
 
 end Pol
 
@@ -525,7 +530,7 @@ theorem shiftMagnitudes_of_trace {raw : List (Fin 2)} {stOf : ℕ → State Gali
       exact hcopy hcopyIdle
   have hremainingVal : (abs' m.vm).remaining
       = PalPeg.LocalCounter.absCtr (m.vm.phys (m.vm.roles .remaining)) true := by
-    rw [← hpol.1]; rfl
+    rw [← hpol.1 hmode]; rfl
   have hradiusVal : (abs' m.vm).radius
       = PalPeg.LocalCounter.absCtr (m.vm.phys (m.vm.roles .radius)) true := by
     rw [← hpol.2.1]; rfl
@@ -552,7 +557,7 @@ theorem shiftMagnitudes_of_trace {raw : List (Fin 2)} {stOf : ℕ → State Gali
 theorem shiftCounters_of {x : GalilVML P} (h : LocalWF x) (hmode : x.ctl.mode = .shift)
     (hmagnitudes : 0 < val (x.phys (x.roles .remaining)) ∧ 0 < val (x.phys (x.roles .radius)) ∧
       2 ≤ val (x.phys (x.roles .length))) : ShiftCounters x :=
-  ⟨h.pol.1, h.pol.2.1, h.pol.2.2.1, h.pol.2.2.2.1 hmode, hmagnitudes.1, hmagnitudes.2.1,
+  ⟨h.pol.1 hmode, h.pol.2.1, h.pol.2.2.1, h.pol.2.2.2.1 hmode, hmagnitudes.1, hmagnitudes.2.1,
     hmagnitudes.2.2⟩
 
 /-- The abstract work counter of the copy reads the local tape: if it is not zero, the tape
@@ -573,10 +578,10 @@ theorem val_fppWork_pos_of_copyRemaining {x : GalilVML P}
     cases x.pol .fppWork <;> rfl
   · exact hpos
 
-theorem copySide_of {x : GalilVML P} (h : LocalWF x)
+theorem copySide_of {x : GalilVML P} (h : LocalWF x) (hmode : x.ctl.mode = .copy)
     (hwalkerProper : PalPeg.LocalChain.ProperView x.fppWalker)
     (hcopyRemaining : PalPeg.GalilTickFun3.CopyRemaining (abs' x)) : CopySide x :=
-  ⟨h.pol.2.2.2.2, val_fppWork_pos_of_copyRemaining hcopyRemaining, hwalkerProper⟩
+  ⟨h.pol.2.2.2.2 hmode, val_fppWork_pos_of_copyRemaining hcopyRemaining, hwalkerProper⟩
 
 theorem rewindWF_of {x : GalilVML P} (h : LocalWF x) (hnr : x.ctl.replaying = false) :
     RewindWF x :=
@@ -625,7 +630,7 @@ theorem realizes_seven {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
   obtain ⟨h1, h2, h3, h4, h5⟩ :=
     PalPeg.LocalRealizesPhase.realizes_phases (P := P) (delay := delay)
       (ffpp Pw qq first) H_shared H_trace hnr
-      (fun m hinv hmd hns hr => copySide_of (H_wf m hinv (by rw [hmd]; decide)) hinv.phys.walkerProper
+      (fun m hinv hmd hns hr => copySide_of (H_wf m hinv (by rw [hmd]; decide)) hmd hinv.phys.walkerProper
         (copyRemaining_of_trace H_shiftIdleInCopy hinv hmd hr))
       (fun m hinv hmd hns hr => shiftCounters_of (H_wf m hinv (by rw [hmd]; decide)) hmd
         (shiftMagnitudes_of_trace H_shiftLedgerOnTrace hinv hmd hr (H_wf m hinv (by rw [hmd]; decide)).pol))
@@ -651,10 +656,12 @@ open PalPeg.LocalRealizesPhase (shiftStepL copyStepL homeStepL markEndStepL)
 open PalPeg.LocalRealizesScan (chooseStepC rewindStepC)
 
 theorem polWF_congr {x y : GalilVML P} (h : PolWF x) (hp : y.pol = x.pol)
-    (hmode : y.ctl.mode = .shift → x.ctl.mode = .shift) : PolWF y := by
+    (hmode : ∀ {M : Mode}, EntryMode M → y.ctl.mode = M → x.ctl.mode = M) : PolWF y := by
   unfold PolWF at h ⊢
   rw [hp]
-  exact ⟨h.1, h.2.1, h.2.2.1, fun hshift => h.2.2.2.1 (hmode hshift), h.2.2.2.2⟩
+  exact ⟨fun hshift => h.1 (hmode (Or.inl rfl) hshift), h.2.1, h.2.2.1,
+    fun hshift => h.2.2.2.1 (hmode (Or.inl rfl) hshift),
+    fun hcopy => h.2.2.2.2 (hmode (Or.inr rfl) hcopy)⟩
 
 /-- The `Steps` record of this file: the seven closed modes, with `init`,
 `scan` and `replayStart` left as parameters. -/
@@ -698,9 +705,9 @@ theorem polWF_tickC (Pw : Shared) (qq : ℕ) (first : Fin 9)
     (h0 : ∀ m : Mirrored1 P, (init m).vm.pol = m.vm.pol)
     (h1 : ∀ m : Mirrored1 P, (scan m).vm.pol = m.vm.pol)
     (h2 : ∀ m : Mirrored1 P, (replayStart m).vm.pol = m.vm.pol)
-    (hmode : ∀ (md : Mode) (m : Mirrored1 P),
-      (stepOf (stepsWF Pw qq first init scan replayStart) md m).vm.ctl.mode = .shift →
-        m.vm.ctl.mode = .shift)
+    (hmode : ∀ (md : Mode) (m : Mirrored1 P) {M : Mode}, EntryMode M →
+      (stepOf (stepsWF Pw qq first init scan replayStart) md m).vm.ctl.mode = M →
+        m.vm.ctl.mode = M)
     {m : Mirrored1 P} (h : PolWF m.vm) :
     PolWF (tickC (stepsWF Pw qq first init scan replayStart) m).vm := by
   classical
@@ -712,7 +719,7 @@ theorem polWF_tickC (Pw : Shared) (qq : ℕ) (first : Fin 9)
 /-- **`PolWF` is preserved by an arrival.** -/
 theorem polWF_feedC {m : Mirrored1 P} (hp : m.vm.pending = []) (a : Fin 2) (h : PolWF m.vm) :
     PolWF (PalPeg.LocalSysConcrete.feedC a m).vm :=
-  polWF_congr h (pol_feedC hp a) (fun hshift => by rwa [ctl_feedC hp a] at hshift)
+  polWF_congr h (pol_feedC hp a) (fun _ hland => by rwa [ctl_feedC hp a] at hland)
 
 end Preservation
 

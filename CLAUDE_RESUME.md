@@ -1,3 +1,18 @@
+## n322（2026-09-21）: `remaining` の極性は shift、`fppWork` の極性は copy でだけ求める
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。存在仮説 `hscanNext`／`hplateauNext` の `Good next` は、shift の入口で `fppWork`、copy の入口で `remaining` を求めなくなった） |
+
+**やったこと**: `PolWF` の各成分を読む者を利用箇所で確かめた（`remaining`＝`shiftCounters_of` と `shiftMagnitudes_of_trace`、どちらも shift。`fppWork`＝`copySide_of`、copy）。`CopyIdle` は符号の事実ではない（walker が none を読むか work がゼロ）ので、shift の入口で `fppWork` の符号は trace から取れない。読む者のモードで guard した。
+* `LocalWF.PolWF := (mode = shift → pol remaining) ∧ pol radius ∧ pol length ∧ (mode = shift → pol cycle) ∧ (mode = copy → pol fppWork)`。
+* コピペを避けた: `mode_shift_of_*` 7 本に copy 版を足さず、`EntryMode M := M = .shift ∨ M = .copy` を立てて `entryMode_of_tickL3`／`_copyStepL`／`_homeStepL`／`_markEndStepL`／`_chooseStepC`／`_rewindStepC`／`_ffpp`（shift か copy に着地するなら源も同じモード）へその場で一般化。`polWF_congr` は `∀ {M}, EntryMode M → y.mode = M → x.mode = M` を取る。`copySide_of` は `hmode` を取る。
+* 技: 着地モードが定義の中に隠れていても `exact Mode.noConfusion hland` で落ちる（n317 の `show Mode.X = Mode.shift from …` の列挙が要らない）。`stepOf` 形の仮説は `have hland : (shiftStepW m).vm.ctl.mode = Mode.copy := hland` で言い直してから `unfold`。
+
+**入口の符号（定義を読んだ）**: `afterMismatch` は `radius` だけ +1 で `length` はそのまま、`afterCompare` は `length` に +2。`beginShiftVM` は `remaining := ofNat h`・`cycle := reset`・`length := inc (inc length)`、`beginFallback` は `fpp.work := inc length`。なので入口の符号は、源の scan 状態の `SpanRep` と `0 ≤ value radius` から tick の場合分けで全部出る（スクラッチ `$S/entry_signs.keep.lean` に書いた。検証はこれから）。
+
 ## n321（2026-09-21）: replay commit は `length`／`work` の極性を自分で立てる。run 不変量は `PolWF` だけ
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
