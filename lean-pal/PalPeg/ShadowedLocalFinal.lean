@@ -1078,12 +1078,16 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
     -- the open mode `scan`: a tracked, non-starved local state has a local successor
-    -- (`replayStart` has one by `replayStartNext`)
+    -- (`replayStart` has one by `replayStartNext`).  The target is the next state of the trace,
+    -- truncated to the letters that have arrived, and the tick into it is canonical.
     (hscanNext : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (m : Mirrored1 (tapeCount spare)) (target : State GalilVM),
         InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .scan → ¬ Starved m.vm →
         Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
+        (∃ k j, Needy w (heldAfter (Tc w.length) st) k j m.vm ∧ k < Tc w.length ∧
+          target = truncS (w.length - j) (heldAfter (Tc w.length) st (k+1))) →
+        PalPeg.GalilTickFair.Canonical entry 2048 (absState'' m.vm) target →
         ∃ next, NextOK entry q first (localGood (spare := spare)) (postPhase entry q first) w m next)
     -- on the plateau after the last report point the local ticks are still ticks
     (hplateauNext : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
@@ -1333,12 +1337,14 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
   cases mode with
   | init =>
     exact PalPeg.CanonicalLocalRealizes.realizes_canonical hshared htick hcanonicalTick
-      (fun m target => initLocal_heldAfter entry q first hpreTrace m target)
+      (fun m target hinv hmode hnotStarved htarget _ _ =>
+        initLocal_heldAfter entry q first hpreTrace m target hinv hmode hnotStarved htarget)
   | scan =>
     exact PalPeg.CanonicalLocalRealizes.realizes_canonical hshared htick hcanonicalTick
-      (fun m target hinv hmode hnotStarved htarget => by
+      (fun m target hinv hmode hnotStarved htarget honTrace htargetCanonical => by
         have hspec := chosenStep_spec
-          (hscanNext w st Tc hpreTrace hcanonical m target hinv hmode hnotStarved htarget)
+          (hscanNext w st Tc hpreTrace hcanonical m target hinv hmode hnotStarved htarget
+            honTrace htargetCanonical)
         exact ⟨hspec.1, hspec.2.1, hspec.2.2.1, hspec.2.2.2.1⟩)
   | shift => exact hshift
   | copy => exact hcopy
@@ -1349,7 +1355,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
   | rewind => exact hrewind
   | replayStart =>
     exact PalPeg.CanonicalLocalRealizes.realizes_canonical hshared htick hcanonicalTick
-      (fun m target hinv hmode hnotStarved htarget => by
+      (fun m target hinv hmode hnotStarved htarget _ _ => by
         have hspec := chosenStep_spec
           (replayStartNext entry q first hw hpreTrace m target hinv hmode htarget)
         exact ⟨hspec.1, hspec.2.1, hspec.2.2.1, hspec.2.2.2.1⟩)

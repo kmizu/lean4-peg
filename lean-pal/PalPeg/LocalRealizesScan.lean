@@ -94,6 +94,10 @@ theorem realizes_of_refined_tick_det {raw : List (Fin 2)} {stOf : ℕ → State 
         (truncS (raw.length - j) (stOf (k+1))))
     (Hloc : ∀ (m : Mirrored1 P) (t : State GalilVM), InvC Good raw stOf m → m.vm.ctl.mode = md →
       ¬ Starved m.vm → Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) t →
+      -- the target is the truncated next state of the trace, and the tick into it is refined
+      (∃ k j, Needy raw stOf k j m.vm ∧ k < lastTick ∧
+        t = truncS (raw.length - j) (stOf (k+1))) →
+      Refinement (absState'' m.vm) t →
       Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) (absState'' (f m).vm) ∧
         Refinement (absState'' m.vm) (absState'' (f m).vm) ∧ PhysWF (f m).vm ∧ MirInv1 (f m))
     (Hdet : ∀ {s t₁ t₂ : State GalilVM}, s.ctl.mode = md →
@@ -103,8 +107,10 @@ theorem realizes_of_refined_tick_det {raw : List (Fin 2)} {stOf : ℕ → State 
   intro m k j hinv hmd hns hn hneed hbefore
   have h2 := tick_of_need (Pw := Pw) (qq := qq) (first := firstT) (delay := delay)
     (H_shared j) (H_trace k hbefore) hneed
-  rw [← hn.2] at h2
-  obtain ⟨ht, hRefinement, hph, hmir⟩ := Hloc m _ hinv hmd hns h2
+  have htraceRefinement := hTraceRefinement k j hbefore hneed
+  rw [← hn.2] at h2 htraceRefinement
+  obtain ⟨ht, hRefinement, hph, hmir⟩ :=
+    Hloc m _ hinv hmd hns h2 ⟨k, j, hn, hbefore, rfl⟩ htraceRefinement
   refine ⟨⟨hn.1, ?_⟩, hph, hmir⟩
   rw [hn.2] at ht h2 hRefinement
   have hm0 : (truncS (raw.length - j) (stOf k)).ctl.mode = md := by
@@ -126,7 +132,7 @@ theorem realizes_of_tick_det {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     Realizes Good raw stOf lastTick f md := by
   apply realizes_of_refined_tick_det H_shared H_trace (fun _ _ => True)
     (fun _ _ _ _ => True.intro)
-  · intro m t hInvariant hMode hNotStarved hTick
+  · intro m t hInvariant hMode hNotStarved hTick _ _
     obtain ⟨hLocalTick, hPhysical, hMirror⟩ := Hloc m t hInvariant hMode hNotStarved hTick
     exact ⟨hLocalTick, True.intro, hPhysical, hMirror⟩
   · intro s t₁ t₂ hMode hTick₁ _ hTick₂ _

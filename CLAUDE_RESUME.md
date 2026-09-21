@@ -1,3 +1,20 @@
+## n318（2026-09-21）: scan の後継の仮説は、target が trace の次状態であることと `Canonical` を受け取る
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。存在仮説 `hscanNext`／`hplateauNext` は残っているが、`hscanNext` は弱くなった） |
+
+**やったこと**: 部品を下から積むのをやめて消費者の型から読んだら、道 A の (5) の正体が分かった。`LocalRealizesScan.realizes_of_refined_tick_det` の中で `Hloc` に渡している target は実は `truncS (raw.length - j) (stOf (k+1))` で、`Tick` も `Refinement`（＝`Canonical`）も手元にあるのに、`Hloc` の型がそれを捨てていた。なぜ捨てていたか: `Hloc` は「任意の tick target に対して局所 step が tick である」という分岐別の局所 step 向けの形で書かれており、target の正体を使う消費者（切断）が当時無かった。そのせいで `hscanNext` は、追跡添字が最後の点かもしれない任意の target に対して `Tick` と `Canonical` を自前で作る形になっていた。
+* `realizes_of_refined_tick_det` の `Hloc` をその場で一般化: `(∃ k j, Needy raw stOf k j m.vm ∧ k < lastTick ∧ t = truncS (raw.length - j) (stOf (k+1)))` と `Refinement (absState'' m.vm) t` を追加で受け取る。`realizes_of_tick_det` は内部で無視（署名は不変）。`CanonicalLocalRealizes.realizes_canonical` の `hLocal` も同じ 2 つを受け取る。
+* 消費者 `given_openModesAndPhysicalMachine` の `hscanNext` が同じ 2 つを受け取る形になった。`init` と `replayStart` の呼び出しは無視するだけ。
+* 効果: 切断 `next` が `absState'' next.vm = target` を満たせば、`NextOK` の `Tick` と `Canonical` は書き換えで出る。**道 A の (5)（`NextOK` の `Canonical`、`k < Tc` の未確認点）は消えた。**
+
+**`Post` 節と plateau（定義を読んだだけ）**: `given_shadowedLocalSystem` では `Post` は自由パラメタ（入口 `hpostOfLastReport`、保存 `hpostTick`）。「報告点で凍らせて plateau を消す」案は採れない: `hfrozenQuiet` が凍結中の rep bit off を要求し、物理機械は語の終わりを知らず報告点の後も count → compare → 右へ 1 歩進むので、ghost だけ報告点で止めると `reportTest = true` と物理側が食い違う。`2n` で凍る現設計は意図的。plateau は「報告点 → count tick → compare 1 回で `2n`」で、trace が無いので抽象 tick の存在が要る（既存に `GalilTickFun.tick_exists`（`sharedFun` 版）と `GalilTickFair.fair_restart`。`sharedC` との対応は未確認）。
+
+**道 A の残り**: (1) カウンタの `Canonical`（スクラッチ完成）、(2) 非負性 6 本、(3) 切断本体（ヘッド・鏡・銀行・`Place`・バッファは部品あり、組み上げと `Inv` が未）、(4) replaying の右ヘッド（`parkedRight_trace` スクラッチ完成）、(6) `scanNext` の組み立て（`Post` 節を含む）と仮説の除去。その後に `hplateauNext`。
+
 ## n317（2026-09-21）: run 不変量の `cycle` の極性を shift モード限定にした
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。

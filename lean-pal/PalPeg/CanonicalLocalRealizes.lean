@@ -74,6 +74,10 @@ theorem realizes_canonical {P : ℕ} {Good : Mirrored1 P → Prop} {stOf : ℕ �
     (hLocal : ∀ (m : Mirrored1 P) (target : State GalilVM), InvC Good raw stOf m →
       m.vm.ctl.mode = mode → ¬ Starved m.vm →
       Tick (galilFrameS (PofC centre place entry raw) q first) delay (absState'' m.vm) target →
+      -- the target is the truncated next state of the trace, and the tick into it is canonical
+      (∃ k j, PalPeg.LocalSysConcrete.Needy raw stOf k j m.vm ∧ k < lastTick ∧
+        target = truncS (raw.length - j) (stOf (k+1))) →
+      Canonical entry delay (absState'' m.vm) target →
       Tick (galilFrameS (PofC centre place entry raw) q first) delay
         (absState'' m.vm) (absState'' (f m).vm) ∧
       Canonical entry delay (absState'' m.vm) (absState'' (f m).vm) ∧
