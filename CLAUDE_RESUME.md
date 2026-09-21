@@ -99,6 +99,8 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 **規則の形と、2 つ目の条件の落とし込み（`$S/rule_shape.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `ruleOf starvedReading workNext workActs`——**規則はまず飢餓を読み、立っていれば制御を変えず命令も名指さず、そうでなければ tick の仕事をする**。`len_le` は仕事側の上界から。そして `idle_of_reading`: **停止分岐は「規則の読みが `starvedTest` と一致する」に落ちる**。読みは有限（モード、4 ヘッド × 3 つ、カウンタ 2 本の符号）で、その全部がテープの先頭セルか有限制御にある（上の `starvedOf`／`canRightOf`／`isEmpty_iff_topLetter`／`toList_isEmpty`）。
 
+**モードごとの仕事の取り出し（`$S/mode_work.keep.lean`、EXIT=0・error 0・公理 `propext` のみ）**: 規則はモードで分岐するので、`tickFun` の値をモードごとに読める形にする。まず 2 本: `tickFun_markEnd`（marks テープが終端記号の上なら一歩戻って `choose` へ、そうでなければ一歩進む。**動くのは marks テープだけ**）と `tickFun_home`（左端なら fpp プログラムを起動して `fpp` へ、そうでなければ source テープを一歩左へ）。どちらも `simp only [tickFun, hmode]` で出る。残り 8 モードも同じ形。
+
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
 ## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
