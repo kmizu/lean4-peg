@@ -52,7 +52,14 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 **カウンタもテープ 1 本で足りる（既存 `LocalCounter` の確認＋スクラッチ `$S/counter_rep.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `GalilScaffoldCounter.Counter` は `Unit` の 2 スタックで、`inc`／`dec` は片方への push／pop。`LocalCounter` は `Seg = Fin 3`（空白・マーク・区切り）の 1 本に載せ、**`push`／`pop`／`resetSeg` が各 `STape.applyAction` 1 個**（reset は新しい区切りを置いて下の段を捨てるだけ）、符号は有限制御の極性ビット、`absCtr` は常に `Canonical`。新たに示したのは `exists_ctrTape : Canonical c → ∃ tape polarity, absCtr tape polarity = c`——**符号化が各カウンタに仮定してよいのはこれで、走行に沿ってそれを供給するのが `CountersCanonicalTrace`。**
 
-**残る非局所操作はコピーだけ**（`alias`、n327）: chain 誕生の `lag := radius`・`margin := radius`、`finish` の `work := span`（移動なので役割交換）、`prepare` の `work := lower`、restart の `search := begin last radius`（`debt := negate radius`）。ここだけ `LocalMirror` の事前鏡と、`LocalBudget`／`LocalSchedule` の締切算術が要る。
+**残る非局所操作はコピーだけで、その道具も既にある**（`LocalMirror`、一次情報で確認。新しい証明は書いていない）: `take m i = m.mir i` は**制御だけの操作で action ゼロ**、`abs_take : Synced m → absCtr (take m i) b = absCtr m.src b`（外した鏡は源の複製）、`negate_via_pol : absCtr (take m i) (!b) = negate (absCtr m.src b)`——**極性ビットを反転して同じ鏡を渡せば否定された複製**で、これが restart の `debt := negate radius` そのもの。`pushAll`／`popAll`／`resetAll` は鏡も源も各 1 action なので、同期の維持は無料（機械はどの歩でも全テープに書く）。よって
+
+* chain 誕生の `lag := radius`・`margin := radius` → radius の鏡 2 枚を渡す
+* restart の `debt := negate radius` → 3 枚目を極性反転で渡す
+* `prepare` の `work := lower` → lower の鏡を渡す
+* `finish` の `work := span` → 移動なので役割交換＋`resetSeg` 1 回
+
+外した枠の補充は背景ジョブで、締切は `LocalBudget`／`LocalSchedule` が純算術で切り出し済み。**符号化のどの成分にも、これで O(1) の道具が揃った。**
 
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
