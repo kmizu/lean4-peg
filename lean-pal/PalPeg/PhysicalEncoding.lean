@@ -2093,6 +2093,353 @@ theorem idealStep_oneSlot {Q : Type} {K : ℕ}
   · intro j hj
     rw [hkept (slotIndex j) (fun h => hj (slotIndex.injective h)), tapesOf_apply]
 
+/-! ### rules that touch two slots
+
+Some branches move a program tape and a bank counter in the same tick.  The general fact is that
+the ideal step applies each slot's own action list and nothing else; `actsAtPair` is the table
+for two named slots, and `idealStep_pair` reads it back. -/
+
+/-- **the ideal step, slot by slot.**  Nothing more than the definition, but it is the statement
+every branch needs: each slot gets its own list and no slot gets anything else. -/
+theorem idealStep_tapes {Q Γ : Type} {t K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γ t K) (blank : Γ)
+    (q : Q) (tapes : Fin t → STape Γ) (j : Fin t) :
+    (PalPeg.LocalStepFusion.idealStep R blank (q, tapes) none).2 j
+      = PalPeg.CloseoutCoreEnc12.actList blank (tapes j)
+          (R.acts q none (fun tape => PalPeg.Local.readWin blank K (tapes tape)) j) := rfl
+
+/-- the action table of a rule that touches two slots. -/
+def actsAtPair {Γ : Type} {t : ℕ} (i i' : Fin t)
+    (l l' : List (PalPeg.CloseoutCoreEnc12.Act Γ)) :
+    Fin t → List (PalPeg.CloseoutCoreEnc12.Act Γ) :=
+  fun j => if j = i then l else if j = i' then l' else []
+
+theorem actsAtPair_length {Γ : Type} {t K : ℕ} (i i' : Fin t)
+    (l l' : List (PalPeg.CloseoutCoreEnc12.Act Γ)) (hl : l.length ≤ K) (hl' : l'.length ≤ K)
+    (j : Fin t) : (actsAtPair i i' l l' j).length ≤ K := by
+  unfold actsAtPair
+  by_cases hj : j = i
+  · rw [if_pos hj]; exact hl
+  · rw [if_neg hj]
+    by_cases hj' : j = i'
+    · rw [if_pos hj']; exact hl'
+    · rw [if_neg hj']; exact Nat.zero_le K
+
+/-- **the ideal step of a two-slot rule, read back through the slots.** -/
+theorem idealStep_pair {Q : Type} {K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K) (q : Q)
+    (T : Slot → STape Γm) (i i' : Slot) (hne : i' ≠ i)
+    (l l' : List (PalPeg.CloseoutCoreEnc12.Act Γm))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = actsAtPair (slotIndex i) (slotIndex i') l l') :
+    (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex i)
+        = PalPeg.CloseoutCoreEnc12.actList blankM (T i) l
+      ∧ (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex i')
+        = PalPeg.CloseoutCoreEnc12.actList blankM (T i') l'
+      ∧ ∀ j : Slot, j ≠ i → j ≠ i' →
+        (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex j) = T j := by
+  refine ⟨?_, ?_, ?_⟩
+  · rw [idealStep_tapes, hacts, tapesOf_apply]
+    show PalPeg.CloseoutCoreEnc12.actList blankM (T i)
+      (if slotIndex i = slotIndex i then l else _) = _
+    rw [if_pos rfl]
+  · rw [idealStep_tapes, hacts, tapesOf_apply]
+    show PalPeg.CloseoutCoreEnc12.actList blankM (T i')
+      (if slotIndex i' = slotIndex i then l else if slotIndex i' = slotIndex i' then l' else []) = _
+    rw [if_neg (fun h => hne (slotIndex.injective h)), if_pos rfl]
+  · intro j hj hj'
+    rw [idealStep_tapes, hacts, tapesOf_apply]
+    show PalPeg.CloseoutCoreEnc12.actList blankM (T j)
+      (if slotIndex j = slotIndex i then l else if slotIndex j = slotIndex i' then l' else []) = _
+    rw [if_neg (fun h => hj (slotIndex.injective h)),
+      if_neg (fun h => hj' (slotIndex.injective h))]
+    rfl
+
+/-! ### carrying the idle half's blankness
+
+`rewind_fppReset` asks that the half becoming live is already blank.  Every other branch proved
+so far names an action only on the live half, so it leaves that blankness alone — which is what
+lets the condition be carried along a run rather than assumed at each tick. -/
+
+theorem progSlotOf_ne_of_live {l l' : Bool} (h : l ≠ l') (i j : Fin 9) :
+    progSlotOf l i ≠ progSlotOf l' j := by
+  cases l <;> cases l' <;> simp_all [progSlotOf]
+
+theorem dpSlotOf_ne_of_live {l l' : Bool} (h : l ≠ l') (i j : Fin 12) :
+    dpSlotOf l i ≠ dpSlotOf l' j := by
+  cases l <;> cases l' <;> simp_all [dpSlotOf]
+
+/-- **a step that names one slot of the live half leaves the idle half blank.**  The two halves
+are distinct slots, so the rule that moves one cannot reach the other. -/
+theorem idle_blank_of_oneSlot {fppBound dpBound : ℕ} (margin : ℕ) (q : QPhys fppBound dpBound)
+    (T newT : Slot → STape Γm) (i : Fin 9)
+    (hkept : ∀ slot, slot ≠ progSlotOf q.fppLive i → newT slot = T slot)
+    (hidle : ∀ j : Fin 9, T (progSlotOf (!q.fppLive) j)
+      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset))) :
+    ∀ j : Fin 9, newT (progSlotOf (!q.fppLive) j)
+      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset)) := by
+  intro j
+  rw [hkept _ (progSlotOf_ne_of_live (by cases q.fppLive <;> simp) j i), hidle j]
+
+/-- and after the flip the roles swap: the half that was live becomes the one the erasure must
+blank, and the half that was idle is the one the encoding now speaks about. -/
+theorem idle_blank_after_flip {fppBound dpBound : ℕ} (margin : ℕ) (q : QPhys fppBound dpBound)
+    (T : Slot → STape Γm)
+    (hidle : ∀ j : Fin 9, T (progSlotOf (!q.fppLive) j)
+      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset))) :
+    ∀ j : Fin 9, T (progSlotOf ({q with fppLive := !q.fppLive} : QPhys fppBound dpBound).fppLive j)
+      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset)) := hidle
+
+/-! ### the background erasure
+
+The half retired by a wipe holds whatever the program left on it, and it must be blank again by
+the next wipe.  The machine erases it in the background: every tick, one cell of each of the nine
+idle tapes, walking left until the floor sentinel is under the head.  Nine slots at once costs
+nothing, because a rule names each slot's actions separately. -/
+
+/-- the erasure's action on one slot: blank the cell and step left, unless the cell below is the
+floor, in which case the tape is already back at its own left edge. -/
+noncomputable def eraseAct {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (j : Fin tapeCountM) : List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  if ws j ⟨K - 1, by omega⟩ = bottomM then []
+  else [some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+
+/-- the erasure's whole table: the idle half's nine slots, and nothing else. -/
+noncomputable def eraseOf {K : ℕ} (live : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
+    List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  if ∃ i : Fin 9, j = slotIndex (progSlotOf (!live) i) then eraseAct ws j else []
+
+theorem eraseOf_length {K : ℕ} (hK : 1 ≤ K) (live : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
+    (eraseOf live ws j).length ≤ K := by
+  unfold eraseOf eraseAct
+  split
+  · split
+    · simp
+    · simpa using hK
+  · simp
+
+/-- **the erasure never touches the live half.**  Its table is empty on every slot that is not
+one of the idle half's nine, so it composes with any branch's own actions. -/
+theorem eraseOf_live {K : ℕ} (live : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (i : Fin 9) : eraseOf live ws (slotIndex (progSlotOf live i)) = [] := by
+  unfold eraseOf
+  rw [if_neg]
+  rintro ⟨k, hk⟩
+  exact progSlotOf_ne_of_live (by cases live <;> simp) i k (slotIndex.injective hk)
+
+/-- and it is empty on every slot outside the two program halves. -/
+theorem eraseOf_other {K : ℕ} (live : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (slot : Slot) (h : ∀ i : Fin 9, slot ≠ progSlotOf (!live) i) :
+    eraseOf live ws (slotIndex slot) = [] := by
+  unfold eraseOf
+  rw [if_neg]
+  rintro ⟨k, hk⟩
+  exact h k (slotIndex.injective hk)
+
+/-- **a branch's actions together with the erasure.**  The two never name the same slot, so the
+composition is just the branch's own table on the live half and elsewhere, and the erasure's on
+the idle half. -/
+noncomputable def withErase {K : ℕ} (live : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm)) :
+    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  fun j => base j ++ eraseOf live ws j
+
+/-- two actions in a tick is all it costs: the branch's own, and one cell of one idle tape. -/
+theorem withErase_length {K : ℕ} (hK : 2 ≤ K) (live : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm))
+    (hbase : ∀ j, (base j).length ≤ 1) (j : Fin tapeCountM) :
+    (withErase live ws base j).length ≤ K := by
+  have herase : (eraseOf live ws j).length ≤ 1 := by
+    unfold eraseOf eraseAct
+    split
+    · split
+      · simp
+      · simp
+    · simp
+  have := hbase j
+  unfold withErase
+  rw [List.length_append]
+  omega
+
+theorem withErase_at_live {K : ℕ} (live : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm)) (i : Fin 9) :
+    withErase live ws base (slotIndex (progSlotOf live i))
+      = base (slotIndex (progSlotOf live i)) := by
+  unfold withErase
+  rw [eraseOf_live, List.append_nil]
+
+theorem withErase_at_other {K : ℕ} (live : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm)) (slot : Slot)
+    (h : ∀ i : Fin 9, slot ≠ progSlotOf (!live) i) :
+    withErase live ws base (slotIndex slot) = base (slotIndex slot) := by
+  unfold withErase
+  rw [eraseOf_other live ws slot h, List.append_nil]
+
+/-- **the ideal step of a branch that also erases.**  At its own slot the branch's action list is
+applied; at every slot the encoding speaks about other than that one, nothing happens.  The idle
+half is deliberately left out: that is where the erasure writes. -/
+theorem idealStep_withErase {Q : Type} {K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K) (q : Q)
+    (T : Slot → STape Γm) (live : Bool) (i : Fin 9)
+    (l : List (PalPeg.CloseoutCoreEnc12.Act Γm))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase live (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (actsAt (slotIndex (progSlotOf live i)) l)) :
+    (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+        (slotIndex (progSlotOf live i))
+        = PalPeg.CloseoutCoreEnc12.actList blankM (T (progSlotOf live i)) l
+      ∧ ∀ slot : Slot, slot ≠ progSlotOf live i →
+        (∀ k : Fin 9, slot ≠ progSlotOf (!live) k) →
+        (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot)
+          = T slot := by
+  refine ⟨?_, ?_⟩
+  · rw [idealStep_tapes, hacts, withErase_at_live, tapesOf_apply]
+    show PalPeg.CloseoutCoreEnc12.actList blankM (T (progSlotOf live i))
+      (if slotIndex (progSlotOf live i) = slotIndex (progSlotOf live i) then l else []) = _
+    rw [if_pos rfl]
+  · intro slot hs hidle
+    rw [idealStep_tapes, hacts, withErase_at_other live _ _ slot hidle, tapesOf_apply]
+    show PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
+      (if slotIndex slot = slotIndex (progSlotOf live i) then l else []) = _
+    rw [if_neg (fun h => hs (slotIndex.injective h))]
+    rfl
+
+/-- **the erasure keeps the shape it needs.**  Blanking a cell and stepping left sends a padded
+tape to a padded tape: the blank the machine writes is the component alphabet's own blank, so the
+result is still in the image of the encoding, and the step left cannot reach the floor because
+the rule only takes it while the cell below is not the sentinel. -/
+theorem erase_preserves_shape (margin K : ℕ) (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (raw : STape (Fin 9))
+    (hbelow : PalPeg.Local.readWin blankM K (padLeft margin (mapTape encProg raw))
+      ⟨K - 1, by omega⟩ ≠ bottomM) :
+    PalPeg.CloseoutCoreEnc12.actList blankM (padLeft margin (mapTape encProg raw))
+        [some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+      = padLeft margin (mapTape encProg
+          (STape.applyAction (6 : Fin 9) raw ((6 : Fin 9), .left))) := by
+  have hleft : raw.left ≠ [] := by
+    intro hnil
+    apply hbelow
+    rw [window_below margin K (mapTape encProg raw) hK1 hKn]
+    show ((mapTape encProg raw).left).headD bottomM = bottomM
+    show (raw.left.map encProg).headD bottomM = bottomM
+    rw [hnil]
+    rfl
+  have hmapped : (mapTape encProg raw).left ≠ [] := by
+    intro hnil
+    apply hleft
+    have : raw.left.map encProg = [] := hnil
+    exact List.map_eq_nil_iff.mp this
+  rw [mapTape_applyAction encProg (if_pos rfl) raw (6 : Fin 9) .left,
+    padLeft_applyAction_left margin (mapTape encProg raw) (encProg 6) hmapped]
+  rfl
+
+/-- **the idle half's shape survives the tick.**  At each of its nine slots the rule's table is
+the erasure's alone — the branch names nothing there — and the erasure either stops, or blanks a
+cell and steps left, which `erase_preserves_shape` shows keeps the padding. -/
+theorem idle_shape_after_erase {Q : Type} {K : ℕ} (margin : ℕ) (hK1 : 1 ≤ K)
+    (hKn : K ≤ margin + 1)
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K) (q : Q)
+    (T : Slot → STape Γm) (live : Bool) (i : Fin 9)
+    (l : List (PalPeg.CloseoutCoreEnc12.Act Γm))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase live (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (actsAt (slotIndex (progSlotOf live i)) l))
+    (hshape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
+      T (progSlotOf (!live) k) = padLeft margin (mapTape encProg raw)) (k : Fin 9) :
+    ∃ raw : STape (Fin 9),
+      (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+        (slotIndex (progSlotOf (!live) k)) = padLeft margin (mapTape encProg raw) := by
+  obtain ⟨raw, hraw⟩ := hshape k
+  have htable : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (slotIndex (progSlotOf (!live) k))
+      = eraseAct (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (slotIndex (progSlotOf (!live) k)) := by
+    rw [hacts]
+    show actsAt (slotIndex (progSlotOf live i)) l (slotIndex (progSlotOf (!live) k))
+      ++ eraseOf live _ (slotIndex (progSlotOf (!live) k)) = _
+    rw [show actsAt (slotIndex (progSlotOf live i)) l (slotIndex (progSlotOf (!live) k)) = [] from by
+      unfold actsAt
+      rw [if_neg (fun h => progSlotOf_ne_flip live i k (slotIndex.injective h).symm)]]
+    show [] ++ eraseOf live _ (slotIndex (progSlotOf (!live) k)) = _
+    rw [List.nil_append]
+    unfold eraseOf
+    rw [if_pos ⟨k, rfl⟩]
+  rw [idealStep_tapes, htable, tapesOf_apply, hraw]
+  unfold eraseAct
+  by_cases hstop : PalPeg.Local.readWin blankM K (tapesOf T (slotIndex (progSlotOf (!live) k)))
+      ⟨K - 1, by omega⟩ = bottomM
+  · rw [if_pos hstop]
+    exact ⟨raw, rfl⟩
+  · rw [if_neg hstop]
+    refine ⟨STape.applyAction (6 : Fin 9) raw ((6 : Fin 9), .left), ?_⟩
+    rw [tapesOf_apply, hraw] at hstop
+    exact erase_preserves_shape margin K hK1 hKn raw hstop
+
+/-- **a tick in which only the idle half moved.**  The branches that name no action at all — the
+three that stop at a floor, the start of the program, the wipe — still see the background erasure
+write on the retired half.  Everything the encoding speaks about is untouched, and the retired
+half keeps its shape, so the encoding moves across unchanged. -/
+theorem encTapes_idleOnly (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Bool)
+    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
+    (fppLive dpLive : Bool) (tapes newTapes : Slot → STape Γm)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
+    (hkept : ∀ slot, (∀ k : Fin 9, slot ≠ progSlotOf (!fppLive) k) → newTapes slot = tapes slot)
+    (hidleShape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
+      newTapes (progSlotOf (!fppLive) k) = padLeft margin (mapTape encProg raw)) :
+    EncTapes margin x polarity gap micro fppLive dpLive newTapes where
+  margins := by
+    intro slot
+    by_cases hidle : ∃ k : Fin 9, slot = progSlotOf (!fppLive) k
+    · obtain ⟨k, hk⟩ := hidle
+      obtain ⟨raw, hraw⟩ := hidleShape k
+      rw [hk, hraw, pos_padLeft]
+      omega
+    · rw [hkept slot (fun k hk => hidle ⟨k, hk⟩)]
+      exact henc.margins slot
+  heads := by
+    intro v head hhead
+    obtain ⟨view, viewTapes, habs, hrep, hslots⟩ := henc.heads v head hhead
+    exact ⟨view, viewTapes, habs, hrep, fun j => by
+      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslots j]⟩
+  fpp := by
+    intro j
+    rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf])]
+    exact henc.fpp j
+  idleShape := hidleShape
+  dp := by
+    intro j
+    rw [hkept _ (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
+    exact henc.dp j
+  counters := by
+    intro c value hvalue
+    obtain ⟨segments, habs, hslot⟩ := henc.counters c value hvalue
+    exact ⟨segments, habs, by
+      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  mirrors := by
+    intro m value hvalue
+    obtain ⟨segments, habs, hslot⟩ := henc.mirrors m value hvalue
+    exact ⟨segments, habs, by
+      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  places := by
+    intro j place hplace
+    obtain ⟨stackTape, junk, hsealed, hlen, hstack, hslot⟩ := henc.places j place hplace
+    exact ⟨stackTape, junk, hsealed, hlen, hstack, by
+      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  period := by
+    intro tape htape
+    rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf])]
+    exact henc.period tape htape
+  answer := by
+    intro tape htape
+    rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf])]
+    exact henc.answer tape htape
+
 /-! ### the first branch of the rule: the mark walk
 
 The machine decides this branch from one reading — the symbol under the head of the marks tape
@@ -2777,68 +3124,6 @@ theorem padded_resetSeg (n : ℕ) (segments : STape Seg) :
           (encSeg PalPeg.LocalCounter.sep, .right) :=
   padded_seg_right n segments PalPeg.LocalCounter.sep
 
-/-! ### rules that touch two slots
-
-Some branches move a program tape and a bank counter in the same tick.  The general fact is that
-the ideal step applies each slot's own action list and nothing else; `actsAtPair` is the table
-for two named slots, and `idealStep_pair` reads it back. -/
-
-/-- **the ideal step, slot by slot.**  Nothing more than the definition, but it is the statement
-every branch needs: each slot gets its own list and no slot gets anything else. -/
-theorem idealStep_tapes {Q Γ : Type} {t K : ℕ}
-    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γ t K) (blank : Γ)
-    (q : Q) (tapes : Fin t → STape Γ) (j : Fin t) :
-    (PalPeg.LocalStepFusion.idealStep R blank (q, tapes) none).2 j
-      = PalPeg.CloseoutCoreEnc12.actList blank (tapes j)
-          (R.acts q none (fun tape => PalPeg.Local.readWin blank K (tapes tape)) j) := rfl
-
-/-- the action table of a rule that touches two slots. -/
-def actsAtPair {Γ : Type} {t : ℕ} (i i' : Fin t)
-    (l l' : List (PalPeg.CloseoutCoreEnc12.Act Γ)) :
-    Fin t → List (PalPeg.CloseoutCoreEnc12.Act Γ) :=
-  fun j => if j = i then l else if j = i' then l' else []
-
-theorem actsAtPair_length {Γ : Type} {t K : ℕ} (i i' : Fin t)
-    (l l' : List (PalPeg.CloseoutCoreEnc12.Act Γ)) (hl : l.length ≤ K) (hl' : l'.length ≤ K)
-    (j : Fin t) : (actsAtPair i i' l l' j).length ≤ K := by
-  unfold actsAtPair
-  by_cases hj : j = i
-  · rw [if_pos hj]; exact hl
-  · rw [if_neg hj]
-    by_cases hj' : j = i'
-    · rw [if_pos hj']; exact hl'
-    · rw [if_neg hj']; exact Nat.zero_le K
-
-/-- **the ideal step of a two-slot rule, read back through the slots.** -/
-theorem idealStep_pair {Q : Type} {K : ℕ}
-    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K) (q : Q)
-    (T : Slot → STape Γm) (i i' : Slot) (hne : i' ≠ i)
-    (l l' : List (PalPeg.CloseoutCoreEnc12.Act Γm))
-    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = actsAtPair (slotIndex i) (slotIndex i') l l') :
-    (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex i)
-        = PalPeg.CloseoutCoreEnc12.actList blankM (T i) l
-      ∧ (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex i')
-        = PalPeg.CloseoutCoreEnc12.actList blankM (T i') l'
-      ∧ ∀ j : Slot, j ≠ i → j ≠ i' →
-        (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex j) = T j := by
-  refine ⟨?_, ?_, ?_⟩
-  · rw [idealStep_tapes, hacts, tapesOf_apply]
-    show PalPeg.CloseoutCoreEnc12.actList blankM (T i)
-      (if slotIndex i = slotIndex i then l else _) = _
-    rw [if_pos rfl]
-  · rw [idealStep_tapes, hacts, tapesOf_apply]
-    show PalPeg.CloseoutCoreEnc12.actList blankM (T i')
-      (if slotIndex i' = slotIndex i then l else if slotIndex i' = slotIndex i' then l' else []) = _
-    rw [if_neg (fun h => hne (slotIndex.injective h)), if_pos rfl]
-  · intro j hj hj'
-    rw [idealStep_tapes, hacts, tapesOf_apply]
-    show PalPeg.CloseoutCoreEnc12.actList blankM (T j)
-      (if slotIndex j = slotIndex i then l else if slotIndex j = slotIndex i' then l' else []) = _
-    rw [if_neg (fun h => hj (slotIndex.injective h)),
-      if_neg (fun h => hj' (slotIndex.injective h))]
-    rfl
-
 /-! ### one call of the program machine, as actions on the encoded tapes
 
 `progTickFun_tapes` said the call changes at most one slot, by at most one action.  Here that
@@ -3114,291 +3399,6 @@ theorem physRule_rewind_fppReset {fppBound dpBound K : ℕ} (margin : ℕ) (cent
   rw [hq, hsame]
   exact rewind_fppReset margin centre place entry entryQ first w F delay x q T hbound hmode
     hatFirst henc hidle
-
-/-! ### carrying the idle half's blankness
-
-`rewind_fppReset` asks that the half becoming live is already blank.  Every other branch proved
-so far names an action only on the live half, so it leaves that blankness alone — which is what
-lets the condition be carried along a run rather than assumed at each tick. -/
-
-theorem progSlotOf_ne_of_live {l l' : Bool} (h : l ≠ l') (i j : Fin 9) :
-    progSlotOf l i ≠ progSlotOf l' j := by
-  cases l <;> cases l' <;> simp_all [progSlotOf]
-
-theorem dpSlotOf_ne_of_live {l l' : Bool} (h : l ≠ l') (i j : Fin 12) :
-    dpSlotOf l i ≠ dpSlotOf l' j := by
-  cases l <;> cases l' <;> simp_all [dpSlotOf]
-
-/-- **a step that names one slot of the live half leaves the idle half blank.**  The two halves
-are distinct slots, so the rule that moves one cannot reach the other. -/
-theorem idle_blank_of_oneSlot {fppBound dpBound : ℕ} (margin : ℕ) (q : QPhys fppBound dpBound)
-    (T newT : Slot → STape Γm) (i : Fin 9)
-    (hkept : ∀ slot, slot ≠ progSlotOf q.fppLive i → newT slot = T slot)
-    (hidle : ∀ j : Fin 9, T (progSlotOf (!q.fppLive) j)
-      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset))) :
-    ∀ j : Fin 9, newT (progSlotOf (!q.fppLive) j)
-      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset)) := by
-  intro j
-  rw [hkept _ (progSlotOf_ne_of_live (by cases q.fppLive <;> simp) j i), hidle j]
-
-/-- and after the flip the roles swap: the half that was live becomes the one the erasure must
-blank, and the half that was idle is the one the encoding now speaks about. -/
-theorem idle_blank_after_flip {fppBound dpBound : ℕ} (margin : ℕ) (q : QPhys fppBound dpBound)
-    (T : Slot → STape Γm)
-    (hidle : ∀ j : Fin 9, T (progSlotOf (!q.fppLive) j)
-      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset))) :
-    ∀ j : Fin 9, T (progSlotOf ({q with fppLive := !q.fppLive} : QPhys fppBound dpBound).fppLive j)
-      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset)) := hidle
-
-/-! ### the background erasure
-
-The half retired by a wipe holds whatever the program left on it, and it must be blank again by
-the next wipe.  The machine erases it in the background: every tick, one cell of each of the nine
-idle tapes, walking left until the floor sentinel is under the head.  Nine slots at once costs
-nothing, because a rule names each slot's actions separately. -/
-
-/-- the erasure's action on one slot: blank the cell and step left, unless the cell below is the
-floor, in which case the tape is already back at its own left edge. -/
-noncomputable def eraseAct {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (j : Fin tapeCountM) : List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
-  if ws j ⟨K - 1, by omega⟩ = bottomM then []
-  else [some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
-
-/-- the erasure's whole table: the idle half's nine slots, and nothing else. -/
-noncomputable def eraseOf {K : ℕ} (live : Bool)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
-    List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
-  if ∃ i : Fin 9, j = slotIndex (progSlotOf (!live) i) then eraseAct ws j else []
-
-theorem eraseOf_length {K : ℕ} (hK : 1 ≤ K) (live : Bool)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
-    (eraseOf live ws j).length ≤ K := by
-  unfold eraseOf eraseAct
-  split
-  · split
-    · simp
-    · simpa using hK
-  · simp
-
-/-- **the erasure never touches the live half.**  Its table is empty on every slot that is not
-one of the idle half's nine, so it composes with any branch's own actions. -/
-theorem eraseOf_live {K : ℕ} (live : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (i : Fin 9) : eraseOf live ws (slotIndex (progSlotOf live i)) = [] := by
-  unfold eraseOf
-  rw [if_neg]
-  rintro ⟨k, hk⟩
-  exact progSlotOf_ne_of_live (by cases live <;> simp) i k (slotIndex.injective hk)
-
-/-- and it is empty on every slot outside the two program halves. -/
-theorem eraseOf_other {K : ℕ} (live : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (slot : Slot) (h : ∀ i : Fin 9, slot ≠ progSlotOf (!live) i) :
-    eraseOf live ws (slotIndex slot) = [] := by
-  unfold eraseOf
-  rw [if_neg]
-  rintro ⟨k, hk⟩
-  exact h k (slotIndex.injective hk)
-
-/-- **a branch's actions together with the erasure.**  The two never name the same slot, so the
-composition is just the branch's own table on the live half and elsewhere, and the erasure's on
-the idle half. -/
-noncomputable def withErase {K : ℕ} (live : Bool)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm)) :
-    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
-  fun j => base j ++ eraseOf live ws j
-
-/-- two actions in a tick is all it costs: the branch's own, and one cell of one idle tape. -/
-theorem withErase_length {K : ℕ} (hK : 2 ≤ K) (live : Bool)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm))
-    (hbase : ∀ j, (base j).length ≤ 1) (j : Fin tapeCountM) :
-    (withErase live ws base j).length ≤ K := by
-  have herase : (eraseOf live ws j).length ≤ 1 := by
-    unfold eraseOf eraseAct
-    split
-    · split
-      · simp
-      · simp
-    · simp
-  have := hbase j
-  unfold withErase
-  rw [List.length_append]
-  omega
-
-theorem withErase_at_live {K : ℕ} (live : Bool)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm)) (i : Fin 9) :
-    withErase live ws base (slotIndex (progSlotOf live i))
-      = base (slotIndex (progSlotOf live i)) := by
-  unfold withErase
-  rw [eraseOf_live, List.append_nil]
-
-theorem withErase_at_other {K : ℕ} (live : Bool)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm)) (slot : Slot)
-    (h : ∀ i : Fin 9, slot ≠ progSlotOf (!live) i) :
-    withErase live ws base (slotIndex slot) = base (slotIndex slot) := by
-  unfold withErase
-  rw [eraseOf_other live ws slot h, List.append_nil]
-
-/-- **the ideal step of a branch that also erases.**  At its own slot the branch's action list is
-applied; at every slot the encoding speaks about other than that one, nothing happens.  The idle
-half is deliberately left out: that is where the erasure writes. -/
-theorem idealStep_withErase {Q : Type} {K : ℕ}
-    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K) (q : Q)
-    (T : Slot → STape Γm) (live : Bool) (i : Fin 9)
-    (l : List (PalPeg.CloseoutCoreEnc12.Act Γm))
-    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = withErase live (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-          (actsAt (slotIndex (progSlotOf live i)) l)) :
-    (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
-        (slotIndex (progSlotOf live i))
-        = PalPeg.CloseoutCoreEnc12.actList blankM (T (progSlotOf live i)) l
-      ∧ ∀ slot : Slot, slot ≠ progSlotOf live i →
-        (∀ k : Fin 9, slot ≠ progSlotOf (!live) k) →
-        (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot)
-          = T slot := by
-  refine ⟨?_, ?_⟩
-  · rw [idealStep_tapes, hacts, withErase_at_live, tapesOf_apply]
-    show PalPeg.CloseoutCoreEnc12.actList blankM (T (progSlotOf live i))
-      (if slotIndex (progSlotOf live i) = slotIndex (progSlotOf live i) then l else []) = _
-    rw [if_pos rfl]
-  · intro slot hs hidle
-    rw [idealStep_tapes, hacts, withErase_at_other live _ _ slot hidle, tapesOf_apply]
-    show PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
-      (if slotIndex slot = slotIndex (progSlotOf live i) then l else []) = _
-    rw [if_neg (fun h => hs (slotIndex.injective h))]
-    rfl
-
-/-- **the erasure keeps the shape it needs.**  Blanking a cell and stepping left sends a padded
-tape to a padded tape: the blank the machine writes is the component alphabet's own blank, so the
-result is still in the image of the encoding, and the step left cannot reach the floor because
-the rule only takes it while the cell below is not the sentinel. -/
-theorem erase_preserves_shape (margin K : ℕ) (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
-    (raw : STape (Fin 9))
-    (hbelow : PalPeg.Local.readWin blankM K (padLeft margin (mapTape encProg raw))
-      ⟨K - 1, by omega⟩ ≠ bottomM) :
-    PalPeg.CloseoutCoreEnc12.actList blankM (padLeft margin (mapTape encProg raw))
-        [some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
-      = padLeft margin (mapTape encProg
-          (STape.applyAction (6 : Fin 9) raw ((6 : Fin 9), .left))) := by
-  have hleft : raw.left ≠ [] := by
-    intro hnil
-    apply hbelow
-    rw [window_below margin K (mapTape encProg raw) hK1 hKn]
-    show ((mapTape encProg raw).left).headD bottomM = bottomM
-    show (raw.left.map encProg).headD bottomM = bottomM
-    rw [hnil]
-    rfl
-  have hmapped : (mapTape encProg raw).left ≠ [] := by
-    intro hnil
-    apply hleft
-    have : raw.left.map encProg = [] := hnil
-    exact List.map_eq_nil_iff.mp this
-  rw [mapTape_applyAction encProg (if_pos rfl) raw (6 : Fin 9) .left,
-    padLeft_applyAction_left margin (mapTape encProg raw) (encProg 6) hmapped]
-  rfl
-
-/-- **the idle half's shape survives the tick.**  At each of its nine slots the rule's table is
-the erasure's alone — the branch names nothing there — and the erasure either stops, or blanks a
-cell and steps left, which `erase_preserves_shape` shows keeps the padding. -/
-theorem idle_shape_after_erase {Q : Type} {K : ℕ} (margin : ℕ) (hK1 : 1 ≤ K)
-    (hKn : K ≤ margin + 1)
-    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K) (q : Q)
-    (T : Slot → STape Γm) (live : Bool) (i : Fin 9)
-    (l : List (PalPeg.CloseoutCoreEnc12.Act Γm))
-    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = withErase live (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-          (actsAt (slotIndex (progSlotOf live i)) l))
-    (hshape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
-      T (progSlotOf (!live) k) = padLeft margin (mapTape encProg raw)) (k : Fin 9) :
-    ∃ raw : STape (Fin 9),
-      (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
-        (slotIndex (progSlotOf (!live) k)) = padLeft margin (mapTape encProg raw) := by
-  obtain ⟨raw, hraw⟩ := hshape k
-  have htable : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (slotIndex (progSlotOf (!live) k))
-      = eraseAct (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-          (slotIndex (progSlotOf (!live) k)) := by
-    rw [hacts]
-    show actsAt (slotIndex (progSlotOf live i)) l (slotIndex (progSlotOf (!live) k))
-      ++ eraseOf live _ (slotIndex (progSlotOf (!live) k)) = _
-    rw [show actsAt (slotIndex (progSlotOf live i)) l (slotIndex (progSlotOf (!live) k)) = [] from by
-      unfold actsAt
-      rw [if_neg (fun h => progSlotOf_ne_flip live i k (slotIndex.injective h).symm)]]
-    show [] ++ eraseOf live _ (slotIndex (progSlotOf (!live) k)) = _
-    rw [List.nil_append]
-    unfold eraseOf
-    rw [if_pos ⟨k, rfl⟩]
-  rw [idealStep_tapes, htable, tapesOf_apply, hraw]
-  unfold eraseAct
-  by_cases hstop : PalPeg.Local.readWin blankM K (tapesOf T (slotIndex (progSlotOf (!live) k)))
-      ⟨K - 1, by omega⟩ = bottomM
-  · rw [if_pos hstop]
-    exact ⟨raw, rfl⟩
-  · rw [if_neg hstop]
-    refine ⟨STape.applyAction (6 : Fin 9) raw ((6 : Fin 9), .left), ?_⟩
-    rw [tapesOf_apply, hraw] at hstop
-    exact erase_preserves_shape margin K hK1 hKn raw hstop
-
-/-- **a tick in which only the idle half moved.**  The branches that name no action at all — the
-three that stop at a floor, the start of the program, the wipe — still see the background erasure
-write on the retired half.  Everything the encoding speaks about is untouched, and the retired
-half keeps its shape, so the encoding moves across unchanged. -/
-theorem encTapes_idleOnly (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Bool)
-    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
-    (fppLive dpLive : Bool) (tapes newTapes : Slot → STape Γm)
-    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
-    (hkept : ∀ slot, (∀ k : Fin 9, slot ≠ progSlotOf (!fppLive) k) → newTapes slot = tapes slot)
-    (hidleShape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
-      newTapes (progSlotOf (!fppLive) k) = padLeft margin (mapTape encProg raw)) :
-    EncTapes margin x polarity gap micro fppLive dpLive newTapes where
-  margins := by
-    intro slot
-    by_cases hidle : ∃ k : Fin 9, slot = progSlotOf (!fppLive) k
-    · obtain ⟨k, hk⟩ := hidle
-      obtain ⟨raw, hraw⟩ := hidleShape k
-      rw [hk, hraw, pos_padLeft]
-      omega
-    · rw [hkept slot (fun k hk => hidle ⟨k, hk⟩)]
-      exact henc.margins slot
-  heads := by
-    intro v head hhead
-    obtain ⟨view, viewTapes, habs, hrep, hslots⟩ := henc.heads v head hhead
-    exact ⟨view, viewTapes, habs, hrep, fun j => by
-      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslots j]⟩
-  fpp := by
-    intro j
-    rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf])]
-    exact henc.fpp j
-  idleShape := hidleShape
-  dp := by
-    intro j
-    rw [hkept _ (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
-    exact henc.dp j
-  counters := by
-    intro c value hvalue
-    obtain ⟨segments, habs, hslot⟩ := henc.counters c value hvalue
-    exact ⟨segments, habs, by
-      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
-  mirrors := by
-    intro m value hvalue
-    obtain ⟨segments, habs, hslot⟩ := henc.mirrors m value hvalue
-    exact ⟨segments, habs, by
-      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
-  places := by
-    intro j place hplace
-    obtain ⟨stackTape, junk, hsealed, hlen, hstack, hslot⟩ := henc.places j place hplace
-    exact ⟨stackTape, junk, hsealed, hlen, hstack, by
-      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
-  period := by
-    intro tape htape
-    rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf])]
-    exact henc.period tape htape
-  answer := by
-    intro tape htape
-    rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf])]
-    exact henc.answer tape htape
 
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
