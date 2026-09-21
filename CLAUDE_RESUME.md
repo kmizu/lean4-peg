@@ -187,6 +187,28 @@
 **残りは同じ型を 10 モードぶん書く作業**（`init` / `scan` / `shift` / `copy` / `fpp` / `rewind` /
 `replayStart` と、各モードの残りの場合）。`scan` が最も重い。
 
+**そして消去の話が端から端まで閉じた**（`vml_rewind_fppReset`、`EXIT=0`・標準公理のみ）:
+
+```
+tickFun … (absState'' y)
+  = absState'' {y with ctl := …replayStart, fppBuf := LocalBuffers.resetFresh y.fppBuf,
+                      fppPc := 320, fppDone := true}
+```
+
+抽象側は 9 本のテープを全部空白に置き換えるが、物理側は**二重緩衝の反対側に切り替えて、
+離れた方に消去ジョブを立てるだけ**。`LocalBuffers.abs_resetFresh`（「生きている側は新品の束として
+読める。物理では古い内容はそこに残り、二度と読まれない。それは表現関係が担い、消去の締切ではない」）が
+両者を一致させる。**テープは 1 本も動いていない。** このノートの前半で「実現できない」と書いた当の一歩が、
+物理の土台に移した途端にこう通った。
+
+**物理の土台で通った枝は 6 本**: `vml_markEnd_forward` / `vml_markEnd_back` / `vml_home_step` /
+`vml_choose_back` / `vml_home_fppStart` / `vml_rewind_fppReset`。
+
+**次に必要なのは符号化の緩和（記録）。** `BufEnc` はいまテープの**リテラルな等式**を要求しているので、
+`resetFresh` で新しく生きた半分（物理にはゴミが残っている）には効かない。
+読む範囲での一致（`Rep`／`TEqG`）に緩める必要がある。引き継ぎ資料の
+「`Rep`／`TEqG` で模擬する。リテラルな等式を要求しない」がまさにここ。
+
 **進め方について。** モードごとに `tickFun` を言い換える補題（`tickFun_markEnd`／`tickFun_home`）は `simp only [tickFun, hmode]` で出る**薄い言い換え**で、中身が無い。そこで手を変えて、いちばん単純なモード（`markEnd`、動くのは fpp プログラムのテープ 8 だけ）を規則の枝まで書こうとしたところ、上の左端の取り違えに当たった。**モードの一覧を増やすより、1 モードを物理まで通す方が誤りを出す。**
 
 ## n332（2026-09-21）: 抽象 frame が丸ごと関数になった。物理機械への要求は「符号化を保つ 2 本」だけになった
