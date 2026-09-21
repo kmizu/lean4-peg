@@ -65,6 +65,8 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 **これで `GalilVM` の全成分に O(1) の表現が付いた**: ヘッド 3 本と verifier（`HeadRep`、view 1 本 = 12 テープ）、カウンタ（`ctrTape` ＋ 極性ビット、コピーは鏡）、プログラム束 fpp 9 本と DP 12 本（`encTape`）、chain の answer テープと period テープ（同じ zipper）、walker と place（スタック＋ビット）、chain のタグと有限制御のビット群。
 
+**`hstay` の核（`$S/idle_step.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `compStep_apply_idle`——**命令を 1 つも名指さず制御も変えない規則は、配置をそこに置いたまま残す**（sweep が許す `TEqG` まで）。飢餓のところで機械がすることはこれだけなので、`hstay` は「`Enc` が `TEqG` で閉じていること」と「規則が `starvedTest` を見て何もしないこと」に落ちる。**したがって `Enc` は最初から `TEqG` を通して書く**（`ProgRepG`・`StackTape` と同じ形）。
+
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
 ## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
