@@ -82,6 +82,9 @@ def dpSlotOf (live : Bool) (i : Fin 12) : Slot :=
   else .inr (.inr (.inl i))
 
 theorem progSlotOf_false (i : Fin 9) : progSlotOf false i = .inr (.inl i) := rfl
+
+theorem progSlotOf_true (i : Fin 9) :
+    progSlotOf true i = .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl i)))))))) := rfl
 theorem dpSlotOf_false (i : Fin 12) : dpSlotOf false i = .inr (.inr (.inl i)) := rfl
 
 theorem progSlotOf_injective (live : Bool) : Function.Injective (progSlotOf live) := by
@@ -4048,6 +4051,49 @@ theorem tickFun_control_congr (code : List (Instruction 9))
   · rw [if_pos (by simp [hd]), if_pos (by simp [hd])]
     exact ⟨hpc, hdone⟩
 
+/-! ### the branch that runs the preparation program
+
+The rule does not need to shrink its windows as the quantum proceeds: `winMachine` hands it whole
+tapes, and the quantum runs on those.  What it names for a slot is what that run performs there. -/
+
+/-- **the actions the `fpp` branch names.**  On each tape of the live half, the actions the
+quantum performs there; on every other slot, none. -/
+noncomputable def fppActs {K : ℕ} (code : List (Instruction 9)) (quantum : ℕ) (live : Bool)
+    (pc : ℕ) (done : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  fun j =>
+    match slotIndex.symm j with
+    | .inr (.inl i) =>
+        if live then [] else progRunActs code quantum (winMachine pc done ws live) i
+    | .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl i)))))))) =>
+        if live then progRunActs code quantum (winMachine pc done ws live) i else []
+    | _ => []
+
+theorem fppActs_length {K : ℕ} (code : List (Instruction 9)) (quantum : ℕ) (live : Bool)
+    (pc : ℕ) (done : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (j : Fin tapeCountM) : (fppActs code quantum live pc done ws j).length ≤ quantum := by
+  unfold fppActs
+  split
+  · split
+    · simp
+    · exact progRunActs_length code quantum _ _
+  · split
+    · exact progRunActs_length code quantum _ _
+    · simp
+  · simp
+
+/-- **and on the live half it is exactly the quantum's own actions.** -/
+theorem fppActs_at_live {K : ℕ} (code : List (Instruction 9)) (quantum : ℕ) (live : Bool)
+    (pc : ℕ) (done : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (i : Fin 9) :
+    fppActs code quantum live pc done ws (slotIndex (progSlotOf live i))
+      = progRunActs code quantum (winMachine pc done ws live) i := by
+  unfold fppActs
+  cases live
+  · rw [progSlotOf_false, Equiv.symm_apply_apply]
+    rfl
+  · rw [progSlotOf_true, Equiv.symm_apply_apply]
+    rfl
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -4144,6 +4190,8 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.rd_padded
 #print axioms PalPeg.PhysicalEncoding.rd_winTape_of_padded
 #print axioms PalPeg.PhysicalEncoding.tickFun_control_congr
+#print axioms PalPeg.PhysicalEncoding.fppActs_length
+#print axioms PalPeg.PhysicalEncoding.fppActs_at_live
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
