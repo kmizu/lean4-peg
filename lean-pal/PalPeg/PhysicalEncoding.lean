@@ -356,6 +356,22 @@ theorem padded_write (n : ℕ) (t : PalPeg.GalilScaffoldTape.Tape) (symbol : Fin
   obtain ⟨left, focus, right⟩ := t
   rfl
 
+/-- **marking a new block, as two actions on the encoded tape.**  `markNew` steps right, writes
+the component's label and steps right again; writing and then stepping is one action, so the whole
+of it is the pair the branch names. -/
+theorem padded_markNew (margin : ℕ) (t : PalPeg.GalilScaffoldTape.Tape) (first : Fin 9) :
+    PalPeg.CloseoutCoreEnc12.actList blankM (padLeft margin (mapTape encProg (encTape t)))
+        [some (encProg t.focus, (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+          some (encProg first, (.right : PalPeg.CloseoutCoreEnc12.MoveC))]
+      = padLeft margin (mapTape encProg (encTape
+          (PalPeg.GalilScaffoldTape.moveRight
+            (PalPeg.GalilScaffoldTape.write
+              (PalPeg.GalilScaffoldTape.moveRight t) first)))) := by
+  obtain ⟨left, focus, right⟩ := t
+  cases right with
+  | nil => rfl
+  | cons a as => cases as <;> rfl
+
 /-- the bookkeeping for a rule that stamps one program tape and leaves the rest alone. -/
 theorem prog_slots_after_write {n : ℕ} (margin : ℕ) (i : Fin n) (symbol : Fin 9)
     (source : Fin n → PalPeg.GalilScaffoldTape.Tape) (T : Fin n → STape Γm)
@@ -1065,6 +1081,14 @@ theorem frameFun_fppHalts (centre : GalilVM → Fin 3)
     (w : List (Fin 2)) (s : GalilVM) :
     (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).fppHalts s
       = (PalPeg.ProgramFunction.fppRunFun entryQ s.fpp.program).done := rfl
+
+theorem frameFun_fppDone (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (s : GalilVM) :
+    (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).fppDone s
+      = {s with fpp := {s.fpp with
+          program := PalPeg.GalilScaffoldChainInputSupply.markNew
+            (PalPeg.ProgramFunction.fppRunFun entryQ s.fpp.program) first}} := rfl
 
 theorem frameFun_fppSlice (centre : GalilVM → Fin 3)
     (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
@@ -4789,6 +4813,165 @@ theorem physRule_fpp {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM
           (pcOf q) q.fppDone _ hwinRun])
     (by omega) hK1 hKn hcomp hfloorRun hpc hdone hmode hnothalt henc
 
+/-- **the quantum that reaches the halt, rule and encoding together.**  The run's tapes land on
+the live half as before, the marks tape takes two more actions, and the controller goes to the
+mark walk. -/
+theorem fpp_done_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
+    (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = fppNext entryQ q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (fppBranchActs PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
+    (hq : entryQ ≤ K) (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hcomp : ∀ t : Fin 9, K ≤ PalPeg.Local.pos (encTape (x.vm.fpp.program.config.tapes t)))
+    (hfloorRun : ∀ k, ∀ t : Fin 9, ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
+      (List.replicate k true) x.vm.fpp.program).config.tapes t).left ≠ [])
+    (hpc : x.vm.fpp.program.config.pc = pcOf q)
+    (hdone : x.vm.fpp.program.done = q.fppDone)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
+    (hhalt : (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program).done = true)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+          (slotIndex i)) := by
+  have hagree : MachineAgree entryQ
+      (winMachine (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) q.fppLive) x.vm.fpp.program :=
+    machineAgree_mono hq (machineAgree_winMachine henc hcomp (pcOf q) q.fppDone hpc hdone)
+  obtain ⟨hpcRun, hdoneRun⟩ := runFun_control_of_agree PalPeg.GalilFppMarkedCode.code entryQ _ _ hagree
+  have hfocusRun := runFun_focus_of_agree PalPeg.GalilFppMarkedCode.code entryQ _ _ hagree 8
+  have hwinDone : (winRun PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).done = true := by
+    show (PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code (List.replicate entryQ true)
+      (winMachine (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) q.fppLive)).done = true
+    rw [hdoneRun]
+    exact hhalt
+  have hctl : ctlAbs {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.markEnd} = {x.ctl with mode := PalPeg.GalilScaffoldController.Mode.markEnd} := by
+    rw [← henc.1.ctl]
+    rfl
+  have hstate : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1
+      = {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.markEnd}, fppPc := pcPhysOf fppBound (winRun PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).config.pc, fppDone := true} := by
+    show R.nq q none _ = _
+    rw [hnq]
+    unfold fppNext
+    rw [if_pos (by simp [hwinDone])]
+  have htick : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
+      = (⟨{x.ctl with mode := PalPeg.GalilScaffoldController.Mode.markEnd},
+          {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.markNew (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program) first}}⟩ : State GalilVM) := by
+    simp only [PalPeg.GalilScaffoldTop.tickFun, hmode, frameFun_fppHalts, frameFun_fppDone]
+    rw [if_pos (by simp [hhalt])]
+  have htable : fppBranchActs PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = fun j => fppActs PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) j
+          ++ (if j = slotIndex (progSlotOf q.fppLive 8)
+                then markNewActs PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) else []) := by
+    unfold fppBranchActs
+    rw [if_pos (by simp [hwinDone])]
+  obtain ⟨hmoved, hkept⟩ :=
+    idealStep_withErase R q T q.fppLive _ hacts
+      (fppBranchActs_off_live PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+  have hslot : ∀ j : Fin 9,
+      (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+          (slotIndex (progSlotOf q.fppLive j))
+        = padLeft margin (mapTape encProg (encTape ((PalPeg.GalilScaffoldChainInputSupply.markNew (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program) first).config.tapes j))) := by
+    intro j
+    rw [hmoved j, htable]
+    by_cases hj : j = 8
+    · subst hj
+      show PalPeg.CloseoutCoreEnc12.actList blankM (T (progSlotOf q.fppLive 8))
+        (fppActs PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+            (slotIndex (progSlotOf q.fppLive 8))
+          ++ (if slotIndex (progSlotOf q.fppLive 8) = slotIndex (progSlotOf q.fppLive 8)
+                then markNewActs PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) else [])) = _
+      rw [if_pos rfl, actList_append,
+        fpp_slot_after PalPeg.GalilFppMarkedCode.code entryQ hq henc hcomp hfloorRun (pcOf q) q.fppDone hpc hdone 8]
+      show PalPeg.CloseoutCoreEnc12.actList blankM
+          (padLeft margin (mapTape encProg (encTape ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code (List.replicate entryQ true) x.vm.fpp.program).config.tapes 8))))
+          [some (encProg ((winRun PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).config.tapes 8).focus,
+              (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+            some (encProg first, (.right : PalPeg.CloseoutCoreEnc12.MoveC))] = _
+      rw [show ((winRun PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).config.tapes 8).focus = ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code (List.replicate entryQ true) x.vm.fpp.program).config.tapes 8).focus from hfocusRun]
+      rw [padded_markNew margin ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code (List.replicate entryQ true) x.vm.fpp.program).config.tapes 8) first]
+      rfl
+    · show PalPeg.CloseoutCoreEnc12.actList blankM (T (progSlotOf q.fppLive j))
+        (fppActs PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+            (slotIndex (progSlotOf q.fppLive j))
+          ++ (if slotIndex (progSlotOf q.fppLive j) = slotIndex (progSlotOf q.fppLive 8)
+                then markNewActs PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) else [])) = _
+      rw [if_neg (fun h => hj (progSlotOf_injective q.fppLive (slotIndex.injective h))), List.append_nil,
+        fpp_slot_after PalPeg.GalilFppMarkedCode.code entryQ hq henc hcomp hfloorRun (pcOf q) q.fppDone hpc hdone j]
+      show _ = padLeft margin (mapTape encProg (encTape
+        (Function.update (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program).config.tapes 8
+          (PalPeg.GalilScaffoldTape.moveRight (PalPeg.GalilScaffoldTape.write
+            (PalPeg.GalilScaffoldTape.moveRight
+              ((PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program).config.tapes 8))
+            first)) j)))
+      rw [Function.update_of_ne hj]
+      rfl
+  rw [htick, hstate]
+  refine ⟨?_, ?_⟩
+  · exact
+      { ctl := hctl
+        chainTag := henc.1.chainTag
+        chainPhase := henc.1.chainPhase
+        chainForward := henc.1.chainForward
+        chainBroken := henc.1.chainBroken
+        fppMode := henc.1.fppMode
+        fppFinalStage := henc.1.fppFinalStage
+        fppPc := by
+          show EncPc (pcPhysOf fppBound (winRun PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).config.pc)
+            (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program).config.pc
+          rw [fppRunFun_eq_runFun, ← hpcRun]
+          exact encPc_pcPhysOf _ _
+        fppDone := hhalt.symm
+        dpPc := henc.1.dpPc
+        dpDone := henc.1.dpDone
+        searchMode := henc.1.searchMode
+        searchFinalStage := henc.1.searchFinalStage
+        searchQuarter := henc.1.searchQuarter
+        periodOnly := henc.1.periodOnly }
+  · exact encTapes_fppTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T
+      (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+        (slotIndex slot))
+      henc.2 (PalPeg.GalilScaffoldChainInputSupply.markNew (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program) first) {x.ctl with mode := PalPeg.GalilScaffoldController.Mode.markEnd} hslot
+      (fun slot hs hidle => hkept slot hs hidle)
+      (fun k => idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts
+        (fppBranchActs_off_live PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+        henc.2.idleShape k)
+
+/-- **the quantum that halts, for the machine's own rule.** -/
+theorem physRule_fpp_done {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hcomp : ∀ t : Fin 9, K ≤ PalPeg.Local.pos (encTape (x.vm.fpp.program.config.tapes t)))
+    (hfloorRun : ∀ k, ∀ t : Fin 9, ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
+      (List.replicate k true) x.vm.fpp.program).config.tapes t).left ≠ [])
+    (hpc : x.vm.fpp.program.config.pc = pcOf q)
+    (hdone : x.vm.fpp.program.done = q.fppDone)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
+    (hhalt : (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program).done = true)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hK)
+          blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first
+          hbound hK) blankM (q, tapesOf T) none).2 (slotIndex i)) :=
+  fpp_done_of_rule margin centre place entry entryQ first w F delay x q T
+    (physRule entryQ first hbound hK)
+    (physRule_nq_fpp entryQ first hbound hK q _ hqmode)
+    (physRule_acts_fpp entryQ first hbound hK q _ hqmode)
+    (by omega) hK1 hKn hcomp hfloorRun hpc hdone hmode hhalt henc
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -4898,7 +5081,9 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.fppActs_eq
 #print axioms PalPeg.PhysicalEncoding.fpp_slot_after
 #print axioms PalPeg.PhysicalEncoding.fpp_slice_of_rule
+#print axioms PalPeg.PhysicalEncoding.fpp_done_of_rule
 #print axioms PalPeg.PhysicalEncoding.physRule_fpp
+#print axioms PalPeg.PhysicalEncoding.physRule_fpp_done
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
