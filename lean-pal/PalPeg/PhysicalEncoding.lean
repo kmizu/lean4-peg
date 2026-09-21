@@ -411,6 +411,72 @@ theorem encProg_eq_iff (s r : Fin 9) : encProg s = encProg r ↔ s = r := by
   unfold encProg blankM
   split <;> split <;> simp_all <;> omega
 
+/-- **a cursor with a cell on its stack stands clear of the left edge.**  Its head sits on the
+top of the stack and the rest of the stack lies below, so its left stack is not empty. -/
+theorem stackTape_left_ne_nil (stackTape : STape PalPeg.CloseoutCoreStep.Γc)
+    (cell : Option (Fin 2)) (rest : List (Option (Fin 2)))
+    (h : PalPeg.ConcreteLocalMachine.StackTape stackTape (cell :: rest)) :
+    stackTape.left ≠ [] := by
+  obtain ⟨debris, hteq⟩ := h
+  have hpos : stackTape.left.length = rest.length + 1 := by
+    have h1 : PalPeg.Local.pos stackTape
+        = PalPeg.Local.pos (PalPeg.CloseoutCoreEnc18.dTape (cell :: rest) debris) := hteq.1
+    rw [show PalPeg.Local.pos stackTape = stackTape.left.length from rfl] at h1
+    rw [h1]
+    show (rest.map PalPeg.CloseoutCoreEnc.cellSym ++ [PalPeg.CloseoutCoreStep.blankc]).length
+      = rest.length + 1
+    simp
+  intro hnil
+  rw [hnil] at hpos
+  simp at hpos
+
+/-- **popping a cursor's stack is one step left.**  `dTape` keeps the top of the stack under the
+head and the rest of it below, so writing the top back and stepping left uncovers the next cell.
+The cursor's own tape need only agree with `dTape` on its readings, and one action preserves that
+agreement. -/
+theorem stackTape_pop (stackTape : STape PalPeg.CloseoutCoreStep.Γc)
+    (cell : Option (Fin 2)) (rest : List (Option (Fin 2)))
+    (h : PalPeg.ConcreteLocalMachine.StackTape stackTape (cell :: rest)) :
+    PalPeg.ConcreteLocalMachine.StackTape
+      (PalPeg.CloseoutCoreEnc12.actOnG PalPeg.CloseoutCoreStep.blankc stackTape
+        (some (PalPeg.CloseoutCoreEnc.cellSym cell, (.left : PalPeg.CloseoutCoreEnc12.MoveC))))
+      rest := by
+  obtain ⟨debris, hteq⟩ := h
+  refine ⟨PalPeg.CloseoutCoreEnc.cellSym cell :: debris, ?_⟩
+  have hstep := PalPeg.ConcreteLocalMachine.teqG_actOnG hteq
+    (some (PalPeg.CloseoutCoreEnc.cellSym cell, (.left : PalPeg.CloseoutCoreEnc12.MoveC)))
+  have hideal : PalPeg.CloseoutCoreEnc12.actOnG PalPeg.CloseoutCoreStep.blankc
+      (PalPeg.CloseoutCoreEnc18.dTape (cell :: rest) debris)
+      (some (PalPeg.CloseoutCoreEnc.cellSym cell, (.left : PalPeg.CloseoutCoreEnc12.MoveC)))
+      = PalPeg.CloseoutCoreEnc18.dTape rest (PalPeg.CloseoutCoreEnc.cellSym cell :: debris) := by
+    cases rest <;> rfl
+  rw [hideal] at hstep
+  exact hstep
+
+/-- **and the same step on the encoded tape.**  The cursor's tape is padded below, so the step
+left cannot reach the floor. -/
+theorem padded_place_pop (margin : ℕ) (stackTape : STape PalPeg.CloseoutCoreStep.Γc)
+    (cell : Option (Fin 2)) (rest : List (Option (Fin 2)))
+    (h : PalPeg.ConcreteLocalMachine.StackTape stackTape (cell :: rest)) :
+    padLeft margin (mapTape encCell
+        (PalPeg.CloseoutCoreEnc12.actOnG PalPeg.CloseoutCoreStep.blankc stackTape
+          (some (PalPeg.CloseoutCoreEnc.cellSym cell, (.left : PalPeg.CloseoutCoreEnc12.MoveC)))))
+      = PalPeg.CloseoutCoreEnc12.actOnG blankM (padLeft margin (mapTape encCell stackTape))
+          (some (encCell (PalPeg.CloseoutCoreEnc.cellSym cell),
+            (.left : PalPeg.CloseoutCoreEnc12.MoveC))) := by
+  show padLeft margin (mapTape encCell
+      (STape.applyAction PalPeg.CloseoutCoreStep.blankc stackTape
+        (PalPeg.CloseoutCoreEnc.cellSym cell, .left))) = _
+  rw [mapTape_applyAction encCell rfl stackTape (PalPeg.CloseoutCoreEnc.cellSym cell) .left,
+    padLeft_applyAction_left margin (mapTape encCell stackTape)
+      (encCell (PalPeg.CloseoutCoreEnc.cellSym cell))
+      (by
+        obtain ⟨left, focus, right⟩ := stackTape
+        cases left with
+        | nil => exact absurd rfl (stackTape_left_ne_nil _ cell rest h)
+        | cons head tail => exact List.cons_ne_nil _ _)]
+  rfl
+
 /-- **writing a cell without moving is one action too.**  Every branch that stamps a
 symbol on a program tape — the end marker the copy leaves, the letters the preparation lays down
 — is this one. -/
@@ -2774,6 +2840,30 @@ noncomputable def belowRead {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Wind
 
 /-- the slot of the machine's `c`-th counter. -/
 abbrev counterSlot (c : Fin 16) : Slot := .inr (.inr (.inr (.inr (.inr (.inr (.inl c))))))
+
+/-- **one decrement of a counter, on its tape.**  A counter tape holds the absolute value and
+the finite control holds the sign, so a decrement is a pop while the value is positive and a push
+otherwise — and the sign bit that comes out is exactly the bit that chose between them.  At zero
+on the positive side the push is what crosses into the negative numbers. -/
+theorem absCtr_dec (t : STape Seg) (b : Bool) :
+    absCtr
+        (if b && decide (PalPeg.LocalCounter.val t ≠ 0) then PalPeg.LocalCounter.pop t
+          else PalPeg.LocalCounter.push t)
+        (b && decide (PalPeg.LocalCounter.val t ≠ 0))
+      = PalPeg.GalilScaffoldCounter.dec (absCtr t b) := by
+  cases b
+  · simp [absCtr, PalPeg.LocalCounter.negOfNat, PalPeg.GalilScaffoldCounter.dec,
+      List.replicate_succ]
+  · by_cases hv : PalPeg.LocalCounter.val t = 0
+    · simp [hv, absCtr, PalPeg.LocalCounter.negOfNat, PalPeg.GalilScaffoldCounter.ofNat,
+        PalPeg.GalilScaffoldCounter.dec]
+    · obtain ⟨v, hvv⟩ : ∃ v, PalPeg.LocalCounter.val t = v + 1 := by
+        cases hval : PalPeg.LocalCounter.val t with
+        | zero => exact absurd hval hv
+        | succ v => exact ⟨v, rfl⟩
+      simp only [hv, Bool.true_and, decide_not, ne_eq, decide_false, Bool.not_false, if_pos]
+      rw [PalPeg.LocalCounter.absCtr_pop hvv true]
+      simp
 
 /-- **a counter is positive exactly when it carries marks on the positive side.**  A counter
 tape holds only the absolute value; the sign is a bit of the finite control, so the sign test
