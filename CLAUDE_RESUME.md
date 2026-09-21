@@ -50,6 +50,10 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 **`TEqG` 版（同じスクラッチ、EXIT=0・error 0・標準公理のみ）**: 実機械の sweep が返すのは `TEqG` までなので、`ProgRepG`（テープは `TEqG` まで）と `progRepG_of_progRep`、そして **`idealStep_teqG`**——規則は `TEqG` を通して読み書きする（`TEqG` な 2 つのテープ割当は同じ窓を与えるので同じ制御と同じ action になり、結果はまた `TEqG`）。**その前に `teqG_actOnG`／`teqG_actList`／`readWin_teqG`（`LocalQueueMachine`）を `Γc` から任意の `Γ` へその場で一般化した**（変種は作っていない。全体の module build `BUILD=0`）。
 
+**カウンタもテープ 1 本で足りる（既存 `LocalCounter` の確認＋スクラッチ `$S/counter_rep.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `GalilScaffoldCounter.Counter` は `Unit` の 2 スタックで、`inc`／`dec` は片方への push／pop。`LocalCounter` は `Seg = Fin 3`（空白・マーク・区切り）の 1 本に載せ、**`push`／`pop`／`resetSeg` が各 `STape.applyAction` 1 個**（reset は新しい区切りを置いて下の段を捨てるだけ）、符号は有限制御の極性ビット、`absCtr` は常に `Canonical`。新たに示したのは `exists_ctrTape : Canonical c → ∃ tape polarity, absCtr tape polarity = c`——**符号化が各カウンタに仮定してよいのはこれで、走行に沿ってそれを供給するのが `CountersCanonicalTrace`。**
+
+**残る非局所操作はコピーだけ**（`alias`、n327）: chain 誕生の `lag := radius`・`margin := radius`、`finish` の `work := span`（移動なので役割交換）、`prepare` の `work := lower`、restart の `search := begin last radius`（`debt := negate radius`）。ここだけ `LocalMirror` の事前鏡と、`LocalBudget`／`LocalSchedule` の締切算術が要る。
+
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
 ## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
