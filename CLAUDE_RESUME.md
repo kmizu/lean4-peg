@@ -1,3 +1,33 @@
+## n387 — 「カーソル分岐は 1 歩で書けない」は誤り（訂正）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit 6a9cfbd`、公理リスト変更なし。
+`PalPeg/PhysicalEncoding.lean` module build EXIT=0・error 0・sorry 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+**訂正する記述**（n344 で書いたもの）: 「`copy` / `shift` / `rewind` の 2 分岐 /
+`choose` の選択側はカーソルを動かすので `ActRule` の 1 歩では書けない。view 機械の
+11 マイクロ歩が要る」。
+
+**一次情報**: `CloseoutCoreEnc12.ActRule` の場は
+
+```
+acts : Q → Option Terminal → (Fin t → Window Γ K) → Fin t → List (Act Γ)
+len_le : ∀ q a ws j, (acts q a ws j).length ≤ K
+```
+
+で、`compStep` はそのリストを `actList` で順に当てる。つまり **1 ステップで 1 テープあたり
+`K` 個までのアクションができる**。`LocalViewSlot.viewSlot_sound` の「one slot of eleven
+steps」は view 機械自身の歩数の話であって、テープへのアクションとしては 11 個であり、
+`K ≥ 11` なら 1 ステップの `acts` に収まる。
+
+**帰結**: カーソルを動かす分岐も単一の `ActRule` で書ける。窓半径 `K` を大きく取る
+（`fpp` の quantum 長、view コマンドの 11、消去の 1、分岐自身の 1 の最大値以上）だけの
+問題になる。`forwardTick_of_rule` が要求する「1 tick = 1 ideal step」は維持できる。
+
+**この訂正が効く範囲**: 残りモードの設計。`copy` / `shift` / `rewind`(one, pair) /
+`choose`(select) を view 機械の出す action 列（`LocalViewSlot.viewActs`）で書けばよく、
+`LocalStepFusion` の 2 規則合成に逃げる必要はない。
+
 ## n347 — 自分の符号化に設計欠陥を見つけた（二重バッファがスロットに無い）
 
 全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit af47138` まで、
