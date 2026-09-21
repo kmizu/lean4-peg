@@ -1,3 +1,29 @@
+## n397 — Astra への引き継ぎ（ドキュメント整理）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`HEAD 479ea19`、**公理リスト変更なし**
+（`propext` / `Classical.choice` / `Quot.sound` / `PalPeg.PalInPeg.obligation_localRealization`）。
+`PalPeg/PhysicalEncoding.lean` 単体 EXIT=0・error 0・sorry 0、`PalPeg.Workbench` BUILD=0。
+**コードは変更していない。ドキュメントのみ。**
+
+リポジトリ直下に `AGENTS.md` を作った（`CLAUDE.md` の複製 ＋ 先頭に `§0 現状`）。
+`§0` に入れたのは 9 項目:
+
+| 節 | 内容 |
+|---|---|
+| 0.2 | 進捗の計器は `PalPeg/Axioms.lean:392` の guard。残り 1 本 |
+| 0.3 | 義務の型（`PalInPegUnconditional.lean:144`）と消費者 `ShadowedLocalFinal.forwardTick_of_rule:984` の `hideal:995` |
+| 0.4 | `PhysicalEncoding.lean` の設計固定点 5 つ（`Rep`/`TEqG` でのシミュレーション、`acts` はリスト、背景消去、番号を状態に持たない、no-restart） |
+| 0.5 | 10 モードの実装状況表（`markEnd`/`home`/`choose`/`rewind` 済、`fpp` ほか未） |
+| 0.6 | 次の一手 6 段（`fppActs` を `ruleActs` に載せる → … → guard 更新） |
+| 0.7 | 検証の作法（`BUILD=` 行を読む、build 1 本ずつ、`reset --hard` 禁止） |
+| 0.8 | 繰り返し踏んだ Lean の罠 8 件 |
+| 0.9 | `CLAUDE.md` 由来の §1〜§5 は 2026-09-19 の地層で、到達点としては読まない旨 |
+
+引用した識別子は全部 grep で存在確認した（`fppActs_length` / `pcOf` / `withErase_length` /
+`fppActs_eq` / `fpp_slot_after` / `vml_fpp_slice` / `vml_fpp_done` / `physRule_*` /
+`GalilFppMarkedCode.code` / `LocalViewSlot.viewActs` / `CloseoutCoreAgree.SL`）。
+`SL` の `init = scan = replayStart = id` も一次情報（`CloseoutCoreAgree.lean:199,200,208`）で確認。
+
 ## n389 — 帰納段の道具は既にあった（`windowAfter_readWin`）
 
 全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit 7d80372`、公理リスト変更なし。
