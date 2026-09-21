@@ -1,3 +1,45 @@
+## n333 続き 32 — 多成分の一歩は局所層に全部あった。足りんのは tick 形の橋だけ
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。HEAD `3528a4b`、公理リスト変更なし
+（`propext` / `Classical.choice` / `Quot.sound` / `obligation_localRealization`）。
+スクラッチ `$S/enc_body.keep.lean` は EXIT=0・error 0・sorry 0・標準公理のみ、**未投入**。
+
+**一次情報の確認で方針が変わった。** `PalPeg/LocalTick3.lean` には既に全モード分の
+局所歩とその抽象補題がある: `shiftVm` / `copyVm` / `copyDoneVm` / `homeStartVm` /
+`homeStepVm` / `sliceVm` / `doneVm` / `marksVm` / `chooseSelectVm` / `rewindDoneVm` /
+`rewindOneVm` / `rewindPairVm`、それぞれに `abs'_…`。銀行の道具も
+`bankTick (f : Ctr → Op)` / `BankOk` / `absCtrs_bankTick` / `bankTick_phys` /
+`bufAt` / `abs_bufAt` が揃っている。書きかけた `absCtrs_bankStep` は
+`absCtrs_bankTick` の重複だったので**外した**（wrapper を増やさない）。
+
+**本当に欠けているのは tick 形の橋だけ**: `grep tickFun PalPeg/Local*.lean` は 0 件。
+今回そこを 1 本通した。
+
+```
+theorem vml_copy_one … (hmode : y.ctl.mode = .copy)
+    (hrem : (galilFrameFun …).remainingPos (abs'' y) = true)
+    (hread : GalilScaffoldPlace.read (absPlace y.fppWalker) = some a)
+    (hinj : RolesInjective y) (hpol : y.pol .fppWork = true)
+    (hval : 0 < LocalCounter.val (y.phys (y.roles .fppWork)))
+    (hprop : LocalChain.ProperView y.fppWalker) :
+    tickFun (galilFrameFun centre place entry entryQ first w) F delay (absState'' y)
+      = absState'' (LocalTick3.copyVm a y)
+```
+
+証明の型（以後どのモードにもそのまま流す）:
+1. `hstate : absState'' y = ⟨y.ctl, abs'' y⟩ := rfl` で開く
+2. `simp only [tickFun, hmode]`
+3. `rw [if_pos hrem]`
+4. `habs : abs'' (copyVm a y) = {abs'' y with fpp := copyOneFun (abs'' y).fpp}` を
+   `abs'_copyVm` と新しい `absR_copyVm` から作る
+5. `show _ = ⟨y.ctl, abs'' (copyVm a y)⟩` で右辺を開いてから `rw [habs]; rfl`
+
+`absR_copyVm`（新規、標準公理のみ）は「**駐車した右ヘッドは copy を感知しない**」:
+`bankTick_phys hinj workOps .replay` が `workOps .replay = .keep` を通して `rval` の
+不変を与え、`right` / `pending` / `ctl` は `copyVm` が触らない。
+
+教訓の再確認: 「無い」と書く前に `PalPeg/Local*.lean` を読む。
+
 ## n325（2026-09-21）: 最後の報告点の後の tick にも局所後継ができた。抽象局所層への仮説はゼロ
 
 **公理への進捗**
