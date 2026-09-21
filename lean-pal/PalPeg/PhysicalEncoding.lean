@@ -589,6 +589,68 @@ only — that tape's slot.  Everything else the encoding speaks about (the views
 the cursors, the chain's two tapes) reads parts of the state the step does not touch, and sits
 in slots the rule does not name.  This is what lets a rule realize `markForward`, `markBack`,
 `homeStep` and the copy: they are all this one shape. -/
+theorem encTapes_fppTapes (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Bool)
+    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (fppLive dpLive : Bool)
+    (tapes newTapes : Slot → STape Γm)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
+    (prog : PalPeg.GalilScaffoldControl.Machine 9)
+    (ctl : PalPeg.GalilScaffoldController.Control)
+    (hmoved : ∀ j : Fin 9, newTapes (progSlotOf fppLive j)
+      = padLeft margin (mapTape encProg (encTape (prog.config.tapes j))))
+    (hkept : ∀ slot, (∀ j : Fin 9, slot ≠ progSlotOf fppLive j) →
+      (∀ k : Fin 9, slot ≠ progSlotOf (!fppLive) k) → newTapes slot = tapes slot)
+    (hidleShape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
+      newTapes (progSlotOf (!fppLive) k) = padLeft margin (mapTape encProg raw)) :
+    EncTapes margin
+      ⟨ctl, {x.vm with fpp := {x.vm.fpp with program := prog}}⟩
+      polarity gap micro fppLive dpLive newTapes where
+  margins := by
+    intro slot
+    by_cases hs : ∃ j : Fin 9, slot = progSlotOf fppLive j
+    · obtain ⟨j, hj⟩ := hs
+      rw [hj, hmoved j, pos_padLeft]
+      omega
+    · by_cases hidle : ∃ k : Fin 9, slot = progSlotOf (!fppLive) k
+      · obtain ⟨k, hk⟩ := hidle
+        obtain ⟨raw, hraw⟩ := hidleShape k
+        rw [hk, hraw, pos_padLeft]
+        omega
+      · rw [hkept slot (fun j hj => hs ⟨j, hj⟩) (fun k hk => hidle ⟨k, hk⟩)]
+        exact henc.margins slot
+  heads := by
+    intro v head hhead
+    obtain ⟨view, viewTapes, habs, hrep, hslots⟩ := henc.heads v head hhead
+    exact ⟨view, viewTapes, habs, hrep, fun j => by
+      rw [hkept _ (by intro j; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]), hslots j]⟩
+  fpp := hmoved
+  dp := by
+    intro j
+    rw [hkept _ (by intro j; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
+    exact henc.dp j
+  counters := by
+    intro c value hvalue
+    obtain ⟨segments, habs, hslot⟩ := henc.counters c value hvalue
+    exact ⟨segments, habs, by rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  mirrors := by
+    intro m value hvalue
+    obtain ⟨segments, habs, hslot⟩ := henc.mirrors m value hvalue
+    exact ⟨segments, habs, by rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  places := by
+    intro j place hplace
+    obtain ⟨stackTape, junk, hsealed, hlen, hstack, hslot⟩ := henc.places j place hplace
+    exact ⟨stackTape, junk, hsealed, hlen, hstack, by rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  idleShape := hidleShape
+  period := by
+    intro tape htape
+    rw [hkept _ (by intro j; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
+    exact henc.period tape htape
+  answer := by
+    intro tape htape
+    rw [hkept _ (by intro j; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
+    exact henc.answer tape htape
+
+/-- **the case of a tick that moves one tape of the preparation program**, which is what the
+walks do.  The other eight keep what they had, so the whole machine's tapes are known. -/
 theorem encTapes_fppStep (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Bool)
     (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (fppLive dpLive : Bool)
     (tapes newTapes : Slot → STape Γm)
@@ -603,58 +665,18 @@ theorem encTapes_fppStep (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 �
       newTapes (progSlotOf (!fppLive) k) = padLeft margin (mapTape encProg raw)) :
     EncTapes margin
       ⟨ctl, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp i f}}⟩
-      polarity gap micro fppLive dpLive newTapes where
-  margins := by
-    intro slot
-    by_cases hs : slot = (progSlotOf fppLive i)
-    · rw [hs, hmoved, pos_padLeft]
-      omega
-    · by_cases hidle : ∃ k : Fin 9, slot = progSlotOf (!fppLive) k
-      · obtain ⟨k, hk⟩ := hidle
-        obtain ⟨raw, hraw⟩ := hidleShape k
-        rw [hk, hraw, pos_padLeft]
-        omega
-      · rw [hkept slot hs (fun k hk => hidle ⟨k, hk⟩)]
-        exact henc.margins slot
-  heads := by
-    intro v head hhead
-    obtain ⟨view, viewTapes, habs, hrep, hslots⟩ := henc.heads v head hhead
-    exact ⟨view, viewTapes, habs, hrep, fun j => by
-      rw [hkept _ (by simp) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]), hslots j]⟩
-  fpp := by
-    intro j
-    rw [fppTape_tapes, Function.update_apply]
-    by_cases hji : j = i
-    · subst hji
-      rw [if_pos rfl, hmoved]
-    · rw [if_neg hji, hkept _ (by simp [hji]) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
-      exact henc.fpp j
-  dp := by
-    intro j
-    rw [hkept _ (by simp) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
-    exact henc.dp j
-  counters := by
-    intro c value hvalue
-    obtain ⟨segments, habs, hslot⟩ := henc.counters c value hvalue
-    exact ⟨segments, habs, by rw [hkept _ (by simp) (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
-  mirrors := by
-    intro m value hvalue
-    obtain ⟨segments, habs, hslot⟩ := henc.mirrors m value hvalue
-    exact ⟨segments, habs, by rw [hkept _ (by simp) (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
-  places := by
-    intro j place hplace
-    obtain ⟨stackTape, junk, hsealed, hlen, hstack, hslot⟩ := henc.places j place hplace
-    exact ⟨stackTape, junk, hsealed, hlen, hstack, by rw [hkept _ (by simp) (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
-  idleShape := hidleShape
-  period := by
-    intro tape htape
-    rw [hkept _ (by simp) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
-    exact henc.period tape htape
-  answer := by
-    intro tape htape
-    rw [hkept _ (by simp) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
-    exact henc.answer tape htape
-
+      polarity gap micro fppLive dpLive newTapes :=
+  encTapes_fppTapes margin x polarity gap micro fppLive dpLive tapes newTapes henc
+    (PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp i f) ctl
+    (fun j => by
+      rw [fppTape_tapes, Function.update_apply]
+      by_cases hji : j = i
+      · subst hji
+        rw [if_pos rfl, hmoved]
+      · rw [if_neg hji, hkept _ (by simp [hji]) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
+        exact henc.fpp j)
+    (fun slot hs hidle => hkept slot (hs i) hidle)
+    hidleShape
 /-! ### the mark walk, both directions -/
 
 /-- **the rule that moves the marks tape forward realizes `markForward`.**  It names one
@@ -4535,6 +4557,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.prog_slots_after_left
 #print axioms PalPeg.PhysicalEncoding.prog_slots_at_floor
 #print axioms PalPeg.PhysicalEncoding.fppTape_tapes
+#print axioms PalPeg.PhysicalEncoding.encTapes_fppTapes
 #print axioms PalPeg.PhysicalEncoding.encTapes_fppStep
 #print axioms PalPeg.PhysicalEncoding.encControl_fppStep
 #print axioms PalPeg.PhysicalEncoding.encControl_ctl
