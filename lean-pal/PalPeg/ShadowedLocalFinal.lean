@@ -13,6 +13,7 @@ import PalPeg.ParkedRight
 import PalPeg.ScanEntrySigns
 import PalPeg.PlateauInvariant
 import PalPeg.TickFunction
+import PalPeg.FrameFunction
 
 /-!
 # The final theorem from the local system and a physical machine, the trace side discharged
@@ -932,6 +933,35 @@ theorem forwardTick_of_machine (entry q : ℕ) (first : Fin 9) {Q Γ : Type} {t 
     exact hstep w (absSC m) p henc (fun hs => hmoves (starvedAbs_absSC.mp hs))
 
 #print axioms forwardTick_of_machine
+
+/-- **The forward obligation, with the frame functions supplied.**  `FrameFunction` computes the
+frame of the Galil controller, so the machine is asked for nothing about the abstract layer any
+more: it keeps the encoding across its own step, standing still where the abstraction starves
+and stepping by `tickFun` otherwise. -/
+theorem forwardTick_of_stepping (entry q : ℕ) (first : Fin 9) {Q Γ : Type} {t K : ℕ}
+    [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
+    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ)
+    (Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop)
+    (hstay : ∀ (w : List (Fin 2)) (x : State GalilVM) p, Enc x p → StarvedAbs x →
+      Enc x (L0.apply blankSymbol p none))
+    (hstep : ∀ (w : List (Fin 2)) (x : State GalilVM) p, Enc x p → ¬ StarvedAbs x →
+      Enc (PalPeg.GalilScaffoldTop.tickFun
+            (PalPeg.FrameFunction.galilFrameFun centreC placeC entry q first w)
+            (galilFrameS (PofC centreC placeC entry w) q first) 2048 x)
+        (L0.apply blankSymbol p none))
+    (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)) (p : Q × (Fin t → STape Γ))
+    (successor : State GalilVM) (henc : Enc (absSC m) p)
+    (hsucc : TickSucc (PofC centreC placeC entry w) q first 2048
+      (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm) (absSC m) successor) :
+    Enc successor (L0.apply blankSymbol p none) :=
+  forwardTick_of_machine entry q first L0 blankSymbol Enc
+    (fun w => PalPeg.FrameFunction.galilFrameFun centreC placeC entry q first w)
+    (fun w landed => PalPeg.FrameFunction.computes_galilFrameFun centreC placeC entry q first w
+      landed)
+    (fun _ s hguard => (PalPeg.GalilScaffoldChainInputSupply.restartGuardTest_iff s).mpr hguard)
+    hstay hstep w m p successor henc hsucc
+
+#print axioms forwardTick_of_stepping
 
 /-- **The starvation test of an abstract successor may be replaced by an equivalent one.** -/
 theorem tickSucc_congr_starved {Pw : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}

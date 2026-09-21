@@ -75,7 +75,7 @@ structure Computes (F : Frame σ) (G : FrameFun σ) (Pin : σ → Prop) (t : σ)
   matchedPlace : ∀ b s s', F.matchedPlace b s s' → s' = G.matchedPlace b s
   onLetter : ∀ s, F.onLetter s ↔ G.onLetter s = true
   leftFirst : ∀ s, F.leftFirst s ↔ G.leftFirst s = true
-  beginShift : ∀ s s', F.beginShift s s' → s' = G.beginShift s
+  beginShift : ∀ s s', F.shiftGuard s → F.beginShift s s' → s' = G.beginShift s
   beginFallback : ∀ s, F.beginFallback s t → Pin t → t = G.beginFallback s
   remainingPos : ∀ s, F.remainingPos s ↔ G.remainingPos s = true
   shiftOne : ∀ s s', F.shiftOne s s' → s' = G.shiftOne s
@@ -225,7 +225,7 @@ theorem tick_eq_tickFun {F : Frame σ} {G : FrameFun σ} {Pin : σ → Prop} {de
       have hmatched : G.matched (G.compare s) = false :=
         bool_ne_true (fun hm' => hmt ((hG.matched _).mpr hm'))
       have hshift : G.shiftGuard (G.compare s) = true := (hG.shiftGuard _).mp hg
-      have hvalue : s'' = G.beginShift (G.compare s) := hG.beginShift _ s'' hb
+      have hvalue : s'' = G.beginShift (G.compare s) := hG.beginShift _ s'' hg hb
       simp only [tickFun, hm, bool_ne_true hguard, hnotWait, hmatched, hshift, hvalue,
         Bool.false_eq_true, if_false, if_neg hclock, if_true]
   | scan_fallback c s s' s'' hm hready hc hcmp hmt hg hr hb =>

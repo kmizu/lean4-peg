@@ -1,3 +1,32 @@
+## n332（2026-09-21）: 抽象 frame が丸ごと関数になった。物理機械への要求は「符号化を保つ 2 本」だけになった
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リスト不変（義務 1 本）、`unconditional` は付け替えていない。消費者側の前進義務 `hforwardTick` が、抽象層について何も要求しない形まで落ちた。 |
+
+**状態: module build `PalPeg.FrameFunction`・`PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0、下の定理は標準公理のみ・無条件 PAL は未完。**（全体 build は n325 以降走らせていない。）
+
+**新モジュール `PalPeg/FrameFunction.lean`（945 行、`ShadowedLocalFinal` → `Workbench` 経由で root の build 対象）**: `Frame` の 33 場すべてを関数と Bool 判定にし、**`computes_galilFrameFun`**（`Computes (galilFrameS (PofC centre place entry w) q first) (galilFrameFun …) (fun s => s.fpp.walker = rightPlace s) landed`）を証明した。作業は 3 種類に分かれた。
+
+1. **既に等式の関係**（`copyEnd`／`fppStart`／mark と rewind の各単位ほか）は読み取るだけ。証明は `h` か `h.2`。
+2. **存在量化つきの関係**（`shiftOne`／`copyOne`／chain と search の各歩、chain の 2 つのガード）は、その存在が構成子か `Option` で固定されているので `match` で計算できる。
+3. **プログラム機械の走行**（探索の DP 量子、fpp のスライス）は `GalilScaffoldControl.Tick` の走行で、`read` の分配表が一価（`GalilTickDet.ReadFun`、両方の code について `decide`）なら関数。
+
+レンズの引き戻しは補題 1 本（`lensRel_eq`、公理ゼロ）で上がる。既存の `beginShiftFun`／`beginFallbackFun`／`restartFun`（`GalilSharedFunctional`）はそのまま使った。
+
+**消費者 `ShadowedLocalFinal.forwardTick_of_stepping`**: `hcomputes` と `hguard`（`restartGuardTest_iff`）を埋めたので、物理機械に残る要求は 2 本だけになった。
+
+```
+hstay : Enc x p → StarvedAbs x → Enc x (L0.apply p none)
+hstep : Enc x p → ¬ StarvedAbs x → Enc (tickFun (galilFrameFun …) (galilFrameS …) 2048 x) (L0.apply p none)
+```
+
+**途中で直した形式化**: `Computes.beginShift` は `F.shiftGuard s` を取る形でないと埋まらない（既存 `beginShiftFun_eq` がガードを要求し、`beginShiftVM'` だけでは `beginShiftFun` が `s` を返す場合がある）。`Tick.scan_shift` の構成子がそのガードを持っているので、場に足した。
+
+**次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
+
 ## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
 
 **公理への進捗**
