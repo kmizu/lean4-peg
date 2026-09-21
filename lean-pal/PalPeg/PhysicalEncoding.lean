@@ -3095,6 +3095,54 @@ theorem idle_blank_after_flip {fppBound dpBound : ℕ} (margin : ℕ) (q : QPhys
     ∀ j : Fin 9, T (progSlotOf ({q with fppLive := !q.fppLive} : QPhys fppBound dpBound).fppLive j)
       = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset)) := hidle
 
+/-! ### the background erasure
+
+The half retired by a wipe holds whatever the program left on it, and it must be blank again by
+the next wipe.  The machine erases it in the background: every tick, one cell of each of the nine
+idle tapes, walking left until the floor sentinel is under the head.  Nine slots at once costs
+nothing, because a rule names each slot's actions separately. -/
+
+/-- the erasure's action on one slot: blank the cell and step left, unless the cell below is the
+floor, in which case the tape is already back at its own left edge. -/
+noncomputable def eraseAct {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (j : Fin tapeCountM) : List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  if ws j ⟨K - 1, by omega⟩ = bottomM then []
+  else [some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+
+/-- the erasure's whole table: the idle half's nine slots, and nothing else. -/
+noncomputable def eraseOf {K : ℕ} (live : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
+    List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  if ∃ i : Fin 9, j = slotIndex (progSlotOf (!live) i) then eraseAct ws j else []
+
+theorem eraseOf_length {K : ℕ} (hK : 1 ≤ K) (live : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
+    (eraseOf live ws j).length ≤ K := by
+  unfold eraseOf eraseAct
+  split
+  · split
+    · simp
+    · simpa using hK
+  · simp
+
+/-- **the erasure never touches the live half.**  Its table is empty on every slot that is not
+one of the idle half's nine, so it composes with any branch's own actions. -/
+theorem eraseOf_live {K : ℕ} (live : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (i : Fin 9) : eraseOf live ws (slotIndex (progSlotOf live i)) = [] := by
+  unfold eraseOf
+  rw [if_neg]
+  rintro ⟨k, hk⟩
+  exact progSlotOf_ne_of_live (by cases live <;> simp) i k (slotIndex.injective hk)
+
+/-- and it is empty on every slot outside the two program halves. -/
+theorem eraseOf_other {K : ℕ} (live : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (slot : Slot) (h : ∀ i : Fin 9, slot ≠ progSlotOf (!live) i) :
+    eraseOf live ws (slotIndex slot) = [] := by
+  unfold eraseOf
+  rw [if_neg]
+  rintro ⟨k, hk⟩
+  exact h k (slotIndex.injective hk)
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3180,6 +3228,8 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.rewind_fppReset
 #print axioms PalPeg.PhysicalEncoding.physRule_rewind_fppReset
 #print axioms PalPeg.PhysicalEncoding.idle_blank_of_oneSlot
+#print axioms PalPeg.PhysicalEncoding.eraseOf_live
+#print axioms PalPeg.PhysicalEncoding.eraseOf_other
 #print axioms PalPeg.PhysicalEncoding.progSlotOf_ne
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
