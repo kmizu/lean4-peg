@@ -2251,10 +2251,10 @@ noncomputable def withErase {K : ℕ} (live : Bool)
   fun j => base j ++ eraseOf live ws j
 
 /-- two actions in a tick is all it costs: the branch's own, and one cell of one idle tape. -/
-theorem withErase_length {K : ℕ} (hK : 2 ≤ K) (live : Bool)
+theorem withErase_length {K b : ℕ} (hK : b + 1 ≤ K) (live : Bool)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm))
-    (hbase : ∀ j, (base j).length ≤ 1) (j : Fin tapeCountM) :
+    (hbase : ∀ j, (base j).length ≤ b) (j : Fin tapeCountM) :
     (withErase live ws base j).length ≤ K := by
   have herase : (eraseOf live ws j).length ≤ 1 := by
     unfold eraseOf eraseAct
@@ -2996,6 +2996,12 @@ theorem chooseBackActs_length {K : ℕ} (live : Bool) (ws : Fin tapeCountM → P
   · exact actsAt_length _ _ (by simp) j
   · exact actsAt_length _ _ (by simp) j
 
+/-- the program counter the finite control carries, as a number. -/
+def pcOf {fppBound dpBound : ℕ} (q : QPhys fppBound dpBound) : ℕ :=
+  match q.fppPc with
+  | some k => k.val
+  | none => 0
+
 /-- the control of the wipe: the live bit flips, the program counter goes home and the halting
 flag is set.  The test is the marks tape's own symbol. -/
 noncomputable def rewindNext {fppBound dpBound K : ℕ} (first : Fin 9) (hbound : 320 < fppBound)
@@ -3043,11 +3049,14 @@ theorem ruleActs_length {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (q : QPhys fpp
     simp only [hm]
   all_goals
     first
-      | exact withErase_length hK q.fppLive ws _ (fun j => markEndActs_length q.fppLive ws j) j
-      | exact withErase_length hK q.fppLive ws _ (fun j => homeActs_length q.fppLive ws j) j
-      | exact withErase_length hK q.fppLive ws _ (fun j => chooseBackActs_length q.fppLive ws j) j
-      | exact withErase_length hK q.fppLive ws _ (fun j => by simp [rewindActs]) j
-      | exact withErase_length hK q.fppLive ws _ (fun j => by simp) j
+      | exact withErase_length (b := 1) hK q.fppLive ws _
+          (fun j => markEndActs_length q.fppLive ws j) j
+      | exact withErase_length (b := 1) hK q.fppLive ws _
+          (fun j => homeActs_length q.fppLive ws j) j
+      | exact withErase_length (b := 1) hK q.fppLive ws _
+          (fun j => chooseBackActs_length q.fppLive ws j) j
+      | exact withErase_length (b := 1) hK q.fppLive ws _ (fun j => by simp [rewindActs]) j
+      | exact withErase_length (b := 1) hK q.fppLive ws _ (fun j => by simp) j
 
 /-- **the rule of the physical machine**, so far as its branches are proved. -/
 noncomputable def physRule {fppBound dpBound K : ℕ} (first : Fin 9) (hbound : 320 < fppBound) (hK : 2 ≤ K) :
