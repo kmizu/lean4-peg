@@ -881,18 +881,23 @@ noncomputable def galilFrameFun (centre : GalilVM → Fin 3)
   restart := restartFun entry
 
 /-- **The starvation test, as a Boolean function of the state.**  The machine has to decide for
-itself whether the abstraction starves, so the test has to be one it can read off its window:
-the mode, the three heads, and the two remaining counters.  `ShadowedLocalFinal.starvedAbs_iff`
-identifies it with `LocalSysConcrete.Starved` at the abstraction. -/
-def starvedTest (x : PalPeg.GalilScaffoldTop.State GalilVM) : Bool :=
-  !((if x.ctl.mode = PalPeg.GalilScaffoldController.Mode.init ||
-        x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan then canRightTest x.vm.right
-      else true) &&
-    (if (x.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift) &&
-        (shiftRemainingTest (shiftLens.get x.vm) || copyRemainingTest (fppLens.get x.vm)) then
-      canRightTest x.vm.center && canRightTest x.vm.left &&
-        canRightTest (PalPeg.GalilScaffoldChainVerifier.right x.vm.left)
+itself whether the abstraction starves, so the test has to be one it can read off its window: it
+factors through seven finite readings — the mode, whether each of the four heads can advance,
+and the two remaining counters.  `ShadowedLocalFinal.starvedAbs_iff` identifies it with
+`LocalSysConcrete.Starved` at the abstraction. -/
+def starvedOf (mode : PalPeg.GalilScaffoldController.Mode)
+    (rightCanMove centreCanMove leftCanMove verifierCanMove shiftRemains copyRemains : Bool) :
+    Bool :=
+  !((if mode = PalPeg.GalilScaffoldController.Mode.init ||
+        mode = PalPeg.GalilScaffoldController.Mode.scan then rightCanMove else true) &&
+    (if (mode = PalPeg.GalilScaffoldController.Mode.shift) && (shiftRemains || copyRemains) then
+      centreCanMove && leftCanMove && verifierCanMove
      else true))
+
+def starvedTest (x : PalPeg.GalilScaffoldTop.State GalilVM) : Bool :=
+  starvedOf x.ctl.mode (canRightTest x.vm.right) (canRightTest x.vm.center)
+    (canRightTest x.vm.left) (canRightTest (PalPeg.GalilScaffoldChainVerifier.right x.vm.left))
+    (shiftRemainingTest (shiftLens.get x.vm)) (copyRemainingTest (fppLens.get x.vm))
 
 /-- The shape `starvedTest` was built from, so that its reader can rewrite the guards one at a
 time. -/
@@ -908,7 +913,7 @@ theorem starvedTest_iff (x : PalPeg.GalilScaffoldTop.State GalilVM) :
             PalPeg.GalilScaffoldChainVerifier.canRight x.vm.left ∧
             PalPeg.GalilScaffoldChainVerifier.canRight
               (PalPeg.GalilScaffoldChainVerifier.right x.vm.left))) := by
-  unfold starvedTest
+  unfold starvedTest starvedOf
   have hright := canRightTest_iff x.vm.right
   have hcentre := canRightTest_iff x.vm.center
   have hleft := canRightTest_iff x.vm.left
