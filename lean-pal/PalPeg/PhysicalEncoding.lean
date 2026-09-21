@@ -2433,10 +2433,25 @@ theorem actsAt_off_live (live : Bool) (i : Fin 9)
   show (if slotIndex slot = slotIndex (progSlotOf live i) then l else []) = []
   exact if_neg (fun h => hslot i (slotIndex.injective h))
 
-/-- **the ideal step of a branch that also erases.**  At its own slot the branch's action list is
-applied; at every slot the encoding speaks about other than that one, nothing happens.  The idle
-half is deliberately left out: that is where the erasure writes. -/
+/-- **the ideal step of a branch that also erases.**  Away from the retired half — which is the
+only place the erasure writes — every slot gets exactly the branch's own action list, whichever
+slot it is.  A branch that names actions on a counter or a cursor is served by this as much as
+one that names them on a program tape. -/
 theorem idealStep_withErase {Q : Type} {K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K) (q : Q)
+    (T : Slot → STape Γm) (live : Bool)
+    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase live (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) base)
+    (slot : Slot) (hidle : ∀ k : Fin 9, slot ≠ progSlotOf (!live) k) :
+    (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (T slot) (base (slotIndex slot)) := by
+  rw [idealStep_tapes, hacts, withErase_at_other live _ _ slot hidle, tapesOf_apply]
+
+/-- **a branch whose actions live on the live half leaves every other slot alone.**  The shape
+every branch but the fallback copy has: outside the live half the action list is empty, and an
+empty action list is the identity on a tape. -/
+theorem idealStep_offBase {Q : Type} {K : ℕ}
     (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K) (q : Q)
     (T : Slot → STape Γm) (live : Bool)
     (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm))
@@ -2453,10 +2468,10 @@ theorem idealStep_withErase {Q : Type} {K : ℕ}
         (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot)
           = T slot := by
   refine ⟨fun i => ?_, ?_⟩
-  · rw [idealStep_tapes, hacts, withErase_at_live, tapesOf_apply]
+  · exact idealStep_withErase R q T live base hacts (progSlotOf live i)
+      (fun k => progSlotOf_ne_flip live i k)
   · intro slot hs hidle
-    rw [idealStep_tapes, hacts, withErase_at_other live _ _ slot hidle, tapesOf_apply,
-      hbase slot hs]
+    rw [idealStep_withErase R q T live base hacts slot hidle, hbase slot hs]
     rfl
 
 /-- **the case of a branch that names actions on a single slot of the live half.**  Every branch
@@ -2477,7 +2492,7 @@ theorem idealStep_atLiveSlot {Q : Type} {K : ℕ}
         (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot)
           = T slot := by
   obtain ⟨hmoved, hkept⟩ :=
-    idealStep_withErase R q T live _ hacts (actsAt_off_live live i l)
+    idealStep_offBase R q T live _ hacts (actsAt_off_live live i l)
   refine ⟨?_, ?_⟩
   · have hi := hmoved i
     rwa [show actsAt (slotIndex (progSlotOf live i)) l (slotIndex (progSlotOf live i)) = l from
@@ -2799,6 +2814,27 @@ theorem remainingPos_iff_window {margin K : ℕ} {x : State GalilVM} {polarity :
   rw [frameFun_remainingPos, Bool.or_eq_true]
   exact or_congr (counterPositive_iff_belowRead henc hK1 hK 1 x.vm.remaining rfl)
     (copyRemainingTest_iff_window henc hK1 hK)
+
+/-- **the branch the shift and copy modes take, as a reading of the window.**  The rule cannot
+ask the abstraction anything; it computes this bit from three cells of the window and the sign
+bit of the shift counter, and `remainsTest_eq` says the bit it computes is the test the tick
+function asks. -/
+noncomputable def remainsTest {K : ℕ} (polarity : Fin 16 → Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  (polarity 1 && decide (belowRead ws (counterSlot 1) = encSeg PalPeg.LocalCounter.mark))
+    || (decide (centreRead ws (placeSlot 1) ≠ blankM)
+        && decide (belowRead ws (counterSlot 9) = encSeg PalPeg.LocalCounter.mark))
+
+theorem remainsTest_eq {margin K : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {T : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive T) (hK1 : 1 ≤ K) (hK : K ≤ margin)
+    (centre : GalilVM → Fin 3) (place : GalilVM → PalPeg.GalilScaffoldPlace.Place)
+    (entry entryQ : ℕ) (first : Fin 9) (w : List (Fin 2)) :
+    remainsTest polarity (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos x.vm := by
+  rw [Bool.eq_iff_iff, remainingPos_iff_window henc hK1 hK centre place entry entryQ first w]
+  simp [remainsTest]
 
 /-- **the action table of the mark walk.**  The marks tape walks right while the head is not on
 the end mark, and left on the step that finds it. -/
@@ -4988,7 +5024,7 @@ theorem fpp_slice_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
     simp only [PalPeg.GalilScaffoldTop.tickFun, hmode, frameFun_fppHalts, frameFun_fppSlice]
     rw [if_neg (by simp [hnothalt])]
   obtain ⟨hmoved, hkept⟩ :=
-    idealStep_withErase R q T q.fppLive _ hacts
+    idealStep_offBase R q T q.fppLive _ hacts
       (fppActs_off_live PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
   rw [htick, hstate]
   refine ⟨?_, ?_⟩
@@ -5116,7 +5152,7 @@ theorem fpp_done_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Gal
     unfold fppBranchActs
     rw [if_pos (by simp [hwinDone])]
   obtain ⟨hmoved, hkept⟩ :=
-    idealStep_withErase R q T q.fppLive _ hacts
+    idealStep_offBase R q T q.fppLive _ hacts
       (fppBranchActs_off_live PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
   have hslot : ∀ j : Fin 9,
       (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
