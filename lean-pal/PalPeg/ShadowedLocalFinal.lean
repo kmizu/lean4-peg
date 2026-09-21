@@ -772,31 +772,18 @@ theorem frozenAt_of_absSC_eq {w : List (Fin 2)} {encoded m : Mirrored1 (tapeCoun
   unfold frozenAt
   rw [habs]
 
-/-- The polarity bundle `LocalWF.PolWF`, with the polarity of `work` and of `replay`. -/
-def polarityBundle (m : Mirrored1 (tapeCount spare)) : Prop :=
-  PalPeg.LocalWF.PolWF m.vm ∧ m.vm.pol .work = true ∧ m.vm.pol .replay = true
-
-/-- **The invariant the abstract local layer carries along the run**: the polarity bundle,
-outside `scan`.  The readers of a polarity are the seven phase steps and the replay commit, none
-of them in `scan`; a successor of a scan state is a state with the right abstraction, and it need
-not keep a polarity.  The counter magnitudes a shift or copy unit needs are read off the trace,
-where the abstraction of a tracked state lives (`LocalWF.shiftMagnitudes_of_trace`,
-`LocalWF.copyRemaining_of_trace`). -/
+/-- **The invariant the abstract local layer carries along the run**: the polarity bundle
+`LocalWF.PolWF`, outside `scan`.  The readers of a polarity are the seven phase steps and the
+replay commit, none of them in `scan`; a successor of a scan state is a state with the right
+abstraction, and it need not keep a polarity.  The counter magnitudes a shift or copy unit needs
+are read off the trace, where the abstraction of a tracked state lives
+(`LocalWF.shiftMagnitudes_of_trace`, `LocalWF.copyRemaining_of_trace`). -/
 def localGood (m : Mirrored1 (tapeCount spare)) : Prop :=
-  m.vm.ctl.mode ≠ .scan → polarityBundle m
-
-/-- A step that leaves the polarity of every tape alone keeps the polarity bundle. -/
-theorem polarityBundle_of_pol_eq {m next : Mirrored1 (tapeCount spare)}
-    (hgood : polarityBundle m) (hpol : next.vm.pol = m.vm.pol)
-    (hmodeShift : next.vm.ctl.mode = .shift → m.vm.ctl.mode = .shift) : polarityBundle next :=
-  ⟨PalPeg.LocalWF.polWF_congr hgood.1 hpol hmodeShift, by rw [hpol]; exact hgood.2.1,
-    by rw [hpol]; exact hgood.2.2⟩
+  m.vm.ctl.mode ≠ .scan → PalPeg.LocalWF.PolWF m.vm
 
 /-- **The steps that are functions keep the polarity bundle.**  The seven phase steps of
-`CloseoutCoreAgree.SL` do not touch the polarity of any tape, and the `init` step only sets the
-polarity of `length` and `work` to the positive side.  The polarity of `work` and of `replay` is
-carried because the replay commit pushes `work` and exchanges the polarity of `radius` and
-`replay` (`LocalRoles.movePol`). -/
+`CloseoutCoreAgree.SL` do not touch the polarity of any tape, and the `init` step lands in
+`scan`. -/
 theorem localGood_stepOf_localSteps (entry q : ℕ) (first : Fin 9)
     (scanStep replayStartStep : Mirrored1 (tapeCount spare) → Mirrored1 (tapeCount spare))
     {m : Mirrored1 (tapeCount spare)} (hgood : localGood m)
@@ -811,7 +798,7 @@ theorem localGood_stepOf_localSteps (entry q : ℕ) (first : Fin 9)
   | scan => exact absurd hmode hnotScan
   | replayStart => exact absurd hmode hnotReplayStart
   | shift =>
-      refine fun _ => polarityBundle_of_pol_eq hbundle ?_ (fun _ => hmode)
+      refine fun _ => PalPeg.LocalWF.polWF_congr hbundle ?_ (fun _ => hmode)
       show (PalPeg.CloseoutCoreAgree.shiftStepW m).vm.pol = m.vm.pol
       classical
       unfold PalPeg.CloseoutCoreAgree.shiftStepW
@@ -819,24 +806,24 @@ theorem localGood_stepOf_localSteps (entry q : ℕ) (first : Fin 9)
       · unfold PalPeg.LocalRealizesPhase.shiftPick; split <;> rfl
       · rfl
   | copy =>
-      exact fun _ => polarityBundle_of_pol_eq hbundle (PalPeg.LocalWF.pol_copyStepL m)
+      exact fun _ => PalPeg.LocalWF.polWF_congr hbundle (PalPeg.LocalWF.pol_copyStepL m)
         PalPeg.LocalWF.mode_shift_of_copyStepL
   | home =>
-      exact fun _ => polarityBundle_of_pol_eq hbundle (PalPeg.LocalWF.pol_homeStepL m)
+      exact fun _ => PalPeg.LocalWF.polWF_congr hbundle (PalPeg.LocalWF.pol_homeStepL m)
         PalPeg.LocalWF.mode_shift_of_homeStepL
   | fpp =>
-      exact fun _ => polarityBundle_of_pol_eq hbundle
+      exact fun _ => PalPeg.LocalWF.polWF_congr hbundle
         (PalPeg.LocalWF.pol_ffpp PalPeg.CloseoutCoreAgree.dumS q first m)
         (PalPeg.LocalWF.mode_shift_of_ffpp PalPeg.CloseoutCoreAgree.dumS q first)
   | markEnd =>
-      exact fun _ => polarityBundle_of_pol_eq hbundle (PalPeg.LocalWF.pol_markEndStepL m)
+      exact fun _ => PalPeg.LocalWF.polWF_congr hbundle (PalPeg.LocalWF.pol_markEndStepL m)
         PalPeg.LocalWF.mode_shift_of_markEndStepL
   | choose =>
-      exact fun _ => polarityBundle_of_pol_eq hbundle
+      exact fun _ => PalPeg.LocalWF.polWF_congr hbundle
         (PalPeg.LocalWF.pol_chooseStepC PalPeg.CloseoutCoreAgree.dumS q first m)
         (PalPeg.LocalWF.mode_shift_of_chooseStepC PalPeg.CloseoutCoreAgree.dumS q first)
   | rewind =>
-      exact fun _ => polarityBundle_of_pol_eq hbundle
+      exact fun _ => PalPeg.LocalWF.polWF_congr hbundle
         (PalPeg.LocalWF.pol_rewindStepC PalPeg.CloseoutCoreAgree.dumS q first m)
         (PalPeg.LocalWF.mode_shift_of_rewindStepC PalPeg.CloseoutCoreAgree.dumS q first)
 
@@ -971,7 +958,7 @@ theorem replayStartNext (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
       (m.vm.phys (m.vm.roles .radius))
     have hradiusAbs : (abs' m.vm).radius
         = PalPeg.LocalCounter.absCtr (m.vm.phys (m.vm.roles .radius)) true := by
-      rw [← hbundle.1.2.1]; rfl
+      rw [← hbundle.2.1]; rfl
     rw [← hradiusAbs, hradiusEq] at hvalue
     have hofNat : PalPeg.GalilScaffoldCounter.value (ofNat r) = (r : ℤ) := by
       simp [PalPeg.GalilScaffoldCounter.value, ofNat]
@@ -1006,7 +993,7 @@ theorem replayStartNext (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
       rfl
   have hnextLanding := replayStartVM_replayCommitVm (x := m.vm) entry
     { m.vm.ctl with mode := Mode.scan, clock := 2048, output := o, replaying := landingReplaying }
-    hinv.phys.inv.roles hbundle.1.2.2.1 hbundle.2.1 hnotReplaying hflag hland
+    hinv.phys.inv.roles hnotReplaying hflag hland
   have hnextVm := replayStartVM_unique hnextLanding hlandingVM
   refine ⟨⟨replayCommitVm entry
     { m.vm.ctl with mode := Mode.scan, clock := 2048, output := o, replaying := landingReplaying }
@@ -1114,7 +1101,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (fun w => ghostSteps entry q first (localGood (spare := spare)) w)
     (fun w m => reportTest entry q first w (absSC m))
     (localGood (spare := spare))
-    (fun _ => ⟨PalPeg.LocalWF.polWF_x0C ⟨rfl, rfl, rfl, fun _ => rfl, rfl⟩ 2048, rfl, rfl⟩)
+    (fun _ => PalPeg.LocalWF.polWF_x0C ⟨rfl, rfl, rfl, fun _ => rfl, rfl⟩ 2048)
     (fun w st Tc hpreTrace hcanonical m hinv => by
       by_cases hstarved : Starved m.vm
       · rw [PalPeg.LocalSysConcrete.tickC_starved _ hstarved]
@@ -1132,7 +1119,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
               exact good_chosenStep hinv.good
             · exact localGood_stepOf_localSteps entry q first _ _ hinv.good hscan hreplayStart)
     (fun w st Tc hpreTrace hcanonical letter m hinv =>
-      fun hnotScan => polarityBundle_of_pol_eq
+      fun hnotScan => PalPeg.LocalWF.polWF_congr
         (hinv.good (by rwa [PalPeg.LocalWF.ctl_feedC hinv.phys.pend letter] at hnotScan))
         (PalPeg.LocalWF.pol_feedC hinv.phys.pend letter)
         (fun hshift => by rwa [PalPeg.LocalWF.ctl_feedC hinv.phys.pend letter] at hshift))
@@ -1301,7 +1288,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     (PalPeg.LocalWF.noReplay_zero_of_init (by
       rw [heldAfter_of_le st (Nat.zero_le _), hpreTrace.base.pre.start]
       rfl))
-    hq (fun m hinv hnotScan => ⟨(hinv.good hnotScan).1⟩)
+    hq (fun m hinv hnotScan => ⟨hinv.good hnotScan⟩)
     hshiftIdleInCopy hshiftLedgerOnTrace
     (PofC_onLetter centreC placeC entry w) (PofC_leftFirst centreC placeC entry w)
     (PalPeg.CloseoutRightBounds.rightInBounds

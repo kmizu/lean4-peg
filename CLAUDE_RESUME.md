@@ -1,3 +1,18 @@
+## n321（2026-09-21）: replay commit は `length`／`work` の極性を自分で立てる。run 不変量は `PolWF` だけ
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。存在仮説 `hscanNext`／`hplateauNext` の `Good next` から `pol work`／`pol replay` が消えた） |
+
+**やったこと**: `pol work` を読むのは replay commit（`LocalTick2.abs_commitReplay` の `hpw`）だけだった。そこは `length`／`work` を reset して push するだけなので、`LocalInitStep.initVml` と同じく極性を自分で正に立てればよい（`pol := fun c => if c = .length ∨ c = .work then true else movePol .radius .replay x.pol c`）。なぜ今まで前提だったか: `commitReplay` は `movePol` の置換だけを書いていて、push 先の極性を前提に回していた。
+* `LocalTick2`: `absCtrs_commitReplay_stable`／`_replay` は `if_neg`、`_one` は `if_pos h6`（`hp` を除去）。`abs_commitReplay`／`replayStartVM_commitReplay` から `hpl`／`hpw` を除去。`LocalReplaySwap`／`LocalReplayParked`／`ReplayStartGhost` の同じ 2 前提も除去（他の呼び出し元は無い）。
+* その結果、束の `pol work`／`pol replay` を読む者がいなくなった（利用箇所を全部確認）。途中で置いた `polarityBundle` を消して `localGood m := m.vm.ctl.mode ≠ .scan → PolWF m.vm`。相 step の保存は `LocalWF.polWF_congr` を直接使う。
+* 効果: `search.work` の符号を trace で示す問題が消えた。
+
+**極性の残り（定義を読んだ）**: `PolWF` の各成分を読む者は、`remaining`＝shift だけ（`shiftCounters_of`）、`cycle`＝shift だけ、`fppWork`＝copy だけ（`copySide_of`）、`radius`＝shift／rewind／replayStart、`length`＝shift／choose／rewind。`CopyIdle` は符号の事実ではない（walker が none を読むか work がゼロ）ので、shift の入口で `fppWork` の符号は取れない。次の一手: `remaining` を shift、`fppWork` を copy で guard し、`mode_shift_of_*` 系は「shift か copy に着地するなら源も同じモード」へその場で一般化する。入口で要るのは、shift: `remaining = ofNat h`・`cycle = reset`（`beginShiftVM`）、`length` は `SpanRep`＋`RadLedger.nonneg`。copy: `fpp.work = inc length`（`beginFallback`）、`length` は源の `SpanRep` と `spanRep_afterCompare`。
+
 ## n320（2026-09-21）: run 不変量の極性の束は scan 以外のモードでだけ求める
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。

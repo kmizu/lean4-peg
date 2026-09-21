@@ -175,7 +175,6 @@ open PalPeg.LocalReplayParked (abs'' absR rval physHead absR_eq_iter abs''_eq_ab
 theorem replayStartVM_replayCommitVm {x : GalilVML P} (entry : ℕ)
     (c : GalilScaffoldController.Control)
     (hinj : RolesInjective x)
-    (hpl : x.pol Ctr.length = true) (hpw : x.pol Ctr.work = true)
     (hpre : x.ctl.replaying = false)
     (hflag : c.replaying = true ∨ LocalCounter.val (x.phys (x.roles .radius)) = 0)
     (hland : GalilScaffoldInputHead.left^[LocalCounter.val (x.phys (x.roles .radius))]
@@ -187,7 +186,7 @@ theorem replayStartVM_replayCommitVm {x : GalilVML P} (entry : ℕ)
   have hR : absR (replayCommitVm entry c x) = (abs' x).center := by
     rw [absR_eq_iter (by rcases hflag with h | h; exact Or.inl h; exact Or.inr (hv.trans h)), hv]
     exact hland
-  have ha := LocalTick2.abs_commitReplay (entry := entry) hinj hpl hpw
+  have ha := LocalTick2.abs_commitReplay (entry := entry) hinj
   rw [abs''_eq_abs' hpre]
   refine ⟨?_, hR, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   all_goals first
