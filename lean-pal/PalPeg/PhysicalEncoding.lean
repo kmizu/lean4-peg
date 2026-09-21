@@ -2873,6 +2873,13 @@ theorem erase_preserves_shape (margin K : ℕ) (hK1 : 1 ≤ K) (hKn : K ≤ marg
     padLeft_applyAction_left margin (mapTape encProg raw) (encProg 6) hmapped]
   rfl
 
+/-- a branch that names no action off the live half names none on the retired half either. -/
+theorem offLive_offIdle {live : Bool}
+    {base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm)}
+    (h : ∀ slot : Slot, (∀ j : Fin 9, slot ≠ progSlotOf live j) → base (slotIndex slot) = [])
+    (k : Fin 9) : base (slotIndex (progSlotOf (!live) k)) = [] :=
+  h (progSlotOf (!live) k) (fun j => (progSlotOf_ne_flip live j k).symm)
+
 /-- **the idle half's shape survives the tick.**  At each of its nine slots the rule's table is
 the erasure's alone — the branch names nothing there — and the erasure either stops, or blanks a
 cell and steps left, which `erase_preserves_shape` shows keeps the padding. -/
@@ -2883,8 +2890,7 @@ theorem idle_shape_after_erase {Q : Type} {K : ℕ} (margin : ℕ) (hK1 : 1 ≤ 
     (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm))
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
       = withErase live (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) base)
-    (hbase : ∀ slot : Slot, (∀ j : Fin 9, slot ≠ progSlotOf live j) →
-      base (slotIndex slot) = [])
+    (hbase : ∀ k : Fin 9, base (slotIndex (progSlotOf (!live) k)) = [])
     (hshape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
       T (progSlotOf (!live) k) = padLeft margin (mapTape encProg raw)) (k : Fin 9) :
     ∃ raw : STape (Fin 9),
@@ -2898,7 +2904,7 @@ theorem idle_shape_after_erase {Q : Type} {K : ℕ} (margin : ℕ) (hK1 : 1 ≤ 
     rw [hacts]
     show base (slotIndex (progSlotOf (!live) k))
       ++ eraseOf live _ (slotIndex (progSlotOf (!live) k)) = _
-    rw [hbase (progSlotOf (!live) k) (fun j => (progSlotOf_ne_flip live j k).symm)]
+    rw [hbase k]
     show [] ++ eraseOf live _ (slotIndex (progSlotOf (!live) k)) = _
     rw [List.nil_append]
     unfold eraseOf
@@ -3330,7 +3336,7 @@ theorem markEnd_forward_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centr
     (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
     hmode hnotEnd henc hmoved hkept
     (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
-      (actsAt_off_live q.fppLive 8 _) henc.2.idleShape)
+      (offLive_offIdle (actsAt_off_live q.fppLive 8 _)) henc.2.idleShape)
 
 /-- **the mark walk back, rule and encoding together.**  The step that finds the end mark: the
 marks tape walks one cell left and the controller goes to `choose`. -/
@@ -3383,7 +3389,7 @@ theorem markEnd_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
     (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
     hmode hatEnd hfloor henc hmoved hkept
     (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
-      (actsAt_off_live q.fppLive 8 _) henc.2.idleShape)
+      (offLive_offIdle (actsAt_off_live q.fppLive 8 _)) henc.2.idleShape)
 
 /-! ### the walk home
 
@@ -3466,7 +3472,7 @@ theorem home_fppStart_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre 
       (home_fppStart margin centre place entry entryQ first w F delay x q T hbound hmode
         hatLeft henc).2 hkeptAll
       (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
-      (actsAt_off_live q.fppLive 7 _) henc.2.idleShape)⟩
+      (offLive_offIdle (actsAt_off_live q.fppLive 7 _)) henc.2.idleShape)⟩
 
 /-- **the walk home itself, rule and encoding together.**  The head is not on the left mark and
 the cell below it is not the floor, so the source tape walks one cell left. -/
@@ -3519,7 +3525,7 @@ theorem home_step_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
     (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
     hmode hnotLeft hfloor henc hmoved hkept
     (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
-      (actsAt_off_live q.fppLive 7 _) henc.2.idleShape)
+      (offLive_offIdle (actsAt_off_live q.fppLive 7 _)) henc.2.idleShape)
 
 /-! ### the parity walk of `choose`
 
@@ -3585,7 +3591,7 @@ theorem choose_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : 
     (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
     hmode hkeep hfloor henc hmoved hkept
     (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
-      (actsAt_off_live q.fppLive 8 _) henc.2.idleShape)
+      (offLive_offIdle (actsAt_off_live q.fppLive 8 _)) henc.2.idleShape)
 
 /-! ### the three branches that stop at a component's own floor
 
@@ -3651,7 +3657,7 @@ theorem markEnd_back_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (
     encTapes_idleOnly margin _ _ _ _ _ _ T _ (markEnd_back_atFloor margin centre place entry entryQ first w F delay x q T hmode
     hatEnd hfloor henc).2 hkeptAll
       (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
-      (actsAt_off_live q.fppLive 8 _)
+      (offLive_offIdle (actsAt_off_live q.fppLive 8 _))
         henc.2.idleShape)⟩
 
 /-- **the walk home, on the floor.**  The source tape is already on its first cell, so nothing
@@ -3711,7 +3717,7 @@ theorem home_step_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (cen
     encTapes_idleOnly margin _ _ _ _ _ _ T _ (home_step_atFloor margin centre place entry entryQ first w F delay x q T hmode
     hnotLeft hfloor henc).2 hkeptAll
       (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
-      (actsAt_off_live q.fppLive 7 _)
+      (offLive_offIdle (actsAt_off_live q.fppLive 7 _))
         henc.2.idleShape)⟩
 
 /-- **the parity walk, on the floor.**  Only the parity bit changes -/
@@ -3765,7 +3771,7 @@ theorem choose_back_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (c
     encTapes_idleOnly margin _ _ _ _ _ _ T _ (choose_back_atFloor margin centre place entry entryQ first w F delay x q T hmode hkeep
     hfloor henc).2 hkeptAll
       (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
-      (actsAt_off_live q.fppLive 8 _)
+      (offLive_offIdle (actsAt_off_live q.fppLive 8 _))
         henc.2.idleShape)⟩
 
 /-! ### the counter bank: three tape actions and no more
@@ -4873,6 +4879,223 @@ theorem physRule_acts_choose {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : 
   unfold ruleActs
   rw [hm]
 
+/-- **the three slots one tick of the fallback copy writes on**, named once so that the branch
+can read each of them off.  The program's copy tape takes the symbol and steps right, the work
+counter is popped or pushed according to its sign, and the walker is popped unless it stands on a
+gap. -/
+noncomputable def copyOneBase {K : ℕ} (live gapBit : Bool) (polarity : Fin 16 → Bool) (a : Fin 3)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  fun j =>
+    if j = slotIndex (progSlot live 7) then
+      [some (encProg (PalPeg.GalilFppPreparation.symbol a),
+        (.right : PalPeg.CloseoutCoreEnc12.MoveC))]
+    else if j = slotIndex (counterSlot 9) then
+      [if workPositive polarity ws then some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))
+        else some (encSeg PalPeg.LocalCounter.mark, (.right : PalPeg.CloseoutCoreEnc12.MoveC))]
+    else if j = slotIndex (placeSlot 1) then
+      (if gapBit then []
+        else [some (centreRead ws (placeSlot 1), (.left : PalPeg.CloseoutCoreEnc12.MoveC))])
+    else []
+
+theorem progSlot_ne_counterSlot (live : Bool) (i : Fin 9) (c : Fin 16) :
+    progSlot live i ≠ counterSlot c := by
+  cases live <;> simp [progSlotOf]
+
+theorem progSlot_ne_placeSlot (live : Bool) (i : Fin 9) (p : Fin 3) :
+    progSlot live i ≠ placeSlot p := by
+  cases live <;> simp [progSlotOf]
+
+theorem counterSlot_ne_placeSlot (c : Fin 16) (p : Fin 3) : counterSlot c ≠ placeSlot p := by
+  simp
+
+@[simp] theorem copyOneBase_prog {K : ℕ} (live gapBit : Bool) (polarity : Fin 16 → Bool)
+    (a : Fin 3) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    copyOneBase live gapBit polarity a ws (slotIndex (progSlot live 7))
+      = [some (encProg (PalPeg.GalilFppPreparation.symbol a),
+          (.right : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+  unfold copyOneBase
+  rw [if_pos rfl]
+
+@[simp] theorem copyOneBase_counter {K : ℕ} (live gapBit : Bool) (polarity : Fin 16 → Bool)
+    (a : Fin 3) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    copyOneBase live gapBit polarity a ws (slotIndex (counterSlot 9))
+      = [if workPositive polarity ws then
+            some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))
+          else some (encSeg PalPeg.LocalCounter.mark,
+            (.right : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+  unfold copyOneBase
+  rw [if_neg (fun h => (progSlot_ne_counterSlot live 7 9) (slotIndex.injective h).symm),
+    if_pos rfl]
+
+@[simp] theorem copyOneBase_place {K : ℕ} (live gapBit : Bool) (polarity : Fin 16 → Bool)
+    (a : Fin 3) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    copyOneBase live gapBit polarity a ws (slotIndex (placeSlot 1))
+      = (if gapBit then []
+          else [some (centreRead ws (placeSlot 1),
+            (.left : PalPeg.CloseoutCoreEnc12.MoveC))]) := by
+  unfold copyOneBase
+  rw [if_neg (fun h => (progSlot_ne_placeSlot live 7 1) (slotIndex.injective h).symm),
+    if_neg (fun h => (counterSlot_ne_placeSlot 9 1) (slotIndex.injective h).symm), if_pos rfl]
+
+theorem copyOneBase_progOther {K : ℕ} (live gapBit : Bool) (polarity : Fin 16 → Bool)
+    (a : Fin 3) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin 9) (hj : j ≠ 7) :
+    copyOneBase live gapBit polarity a ws (slotIndex (progSlot live j)) = [] := by
+  unfold copyOneBase
+  rw [if_neg (fun h => hj (progSlotOf_injective live (slotIndex.injective h))),
+    if_neg (fun h => (progSlot_ne_counterSlot live j 9) (slotIndex.injective h)),
+    if_neg (fun h => (progSlot_ne_placeSlot live j 1) (slotIndex.injective h))]
+
+theorem copyOneBase_off {K : ℕ} (live gapBit : Bool) (polarity : Fin 16 → Bool)
+    (a : Fin 3) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (slot : Slot)
+    (hprog : ∀ j : Fin 9, slot ≠ progSlot live j) (hcounter : slot ≠ counterSlot 9)
+    (hplace : slot ≠ placeSlot 1) :
+    copyOneBase live gapBit polarity a ws (slotIndex slot) = [] := by
+  unfold copyOneBase
+  rw [if_neg (fun h => hprog 7 (slotIndex.injective h)),
+    if_neg (fun h => hcounter (slotIndex.injective h)),
+    if_neg (fun h => hplace (slotIndex.injective h))]
+
+/-- **the symbol the rule copies is the symbol the abstraction copies.**  The cursor's own bit
+says whether it stands on a gap, and the centre of its window says which letter it stands on, so
+the rule computes `GalilScaffoldPlace.read` without asking for it. -/
+theorem copySymbol_eq {margin K : ℕ} (hK : K ≤ margin)
+    (tapes : Slot → STape Γm) (walker : PalPeg.GalilScaffoldPlace.Place)
+    (gapBit : Bool) (hgap : gapBit = walker.gap)
+    (a : Fin 3) (hread : PalPeg.GalilScaffoldPlace.read walker = some a)
+    (stackTape : STape PalPeg.CloseoutCoreStep.Γc) (junk : List (Option (Fin 2)))
+    (hstack : PalPeg.ConcreteLocalMachine.StackTape stackTape
+      (walker.letters.map (fun letter => some letter) ++ junk))
+    (hslot : tapes (placeSlot 1) = padLeft margin (mapTape encCell stackTape)) :
+    copySymbol gapBit (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)) = a := by
+  obtain ⟨letter, rest, hletters⟩ : ∃ letter rest, walker.letters = letter :: rest := by
+    cases hl : walker.letters with
+    | nil =>
+      exfalso
+      rw [show PalPeg.GalilScaffoldPlace.read walker = none from by
+        unfold PalPeg.GalilScaffoldPlace.read
+        rw [hl]] at hread
+      simp at hread
+    | cons b bs => exact ⟨b, bs, rfl⟩
+  have ha : (if walker.gap then (2 : Fin 3) else PalPeg.GalilScaffoldPlace.letter letter) = a := by
+    have hr : PalPeg.GalilScaffoldPlace.read walker
+        = some (if walker.gap then 2 else PalPeg.GalilScaffoldPlace.letter letter) := by
+      unfold PalPeg.GalilScaffoldPlace.read
+      rw [hletters]
+    exact Option.some.inj (hr.symm.trans hread)
+  unfold copySymbol
+  rw [hgap, ← ha]
+  by_cases hg : walker.gap = true
+  · rw [if_pos hg, if_pos hg]
+  · rw [if_neg hg, if_neg hg]
+    have hmargin : K ≤ PalPeg.Local.pos (tapes (placeSlot 1)) := by
+      rw [hslot, pos_padLeft]
+      omega
+    have hcentre : centreRead
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)) (placeSlot 1)
+        = encCell (PalPeg.CloseoutCoreEnc.cellSym (some letter)) := by
+      rw [centreRead_of_margin tapes (placeSlot 1) hmargin, hslot]
+      show encCell stackTape.focus = _
+      rw [stackTape_focus stackTape _ hstack, hletters]
+      rfl
+    rw [hcentre, placeLetter_encCell]
+
+/-- the action table of the fallback copy, once the window has said the copy still has work and
+the walker still has a letter. -/
+theorem copyActs_eq_copyOneBase {fppBound dpBound K : ℕ} (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (a : Fin 3)
+    (hremains : remainsTest q.polarity ws = true)
+    (hnotBlank : ¬ (centreRead ws (placeSlot 1) = blankM))
+    (hsym : copySymbol (q.placeGap 1) ws = a) :
+    copyActs live q ws = copyOneBase live (q.placeGap 1) q.polarity a ws := by
+  unfold copyActs copyOneBase
+  rw [if_pos hremains, if_neg hnotBlank]
+  simp only [hsym]
+
+/-- **a tick of the fallback copy that still has work, rule and encoding together.**  Everything
+the rule needs is in the window: whether the copy still has work, whether the walker still has a
+letter, which letter that is, and whether the work counter can be decremented without crossing
+zero. -/
+theorem copy_one_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
+    (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = copyNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (copyActs q.fppLive q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
+    (hK1 : 1 ≤ K) (hK : K ≤ margin)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hremains : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos x.vm
+      = true)
+    (a : Fin 3) (hread : PalPeg.GalilScaffoldPlace.read x.vm.fpp.walker = some a)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+          (slotIndex i)) := by
+  obtain ⟨stackTape, junk, hsealed, hjunk, hstack, hslotPlace⟩ :=
+    henc.2.places 1 x.vm.fpp.walker rfl
+  have hgapBit : q.placeGap 1 = x.vm.fpp.walker.gap := henc.1.placeGap 1 x.vm.fpp.walker rfl
+  have hsym := copySymbol_eq hK T x.vm.fpp.walker (q.placeGap 1) hgapBit a hread stackTape junk
+    hstack hslotPlace
+  have hbit : remainsTest q.polarity
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true := by
+    rw [remainsTest_eq henc.2 hK1 hK centre place entry entryQ first w, hremains]
+  have hnotBlank : ¬ (centreRead
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (placeSlot 1) = blankM) := by
+    intro hblank
+    have hnone := (placeRead_isNone_iff_centre henc.2 hK 1 x.vm.fpp.walker rfl).mpr hblank
+    rw [hread] at hnone
+    simp at hnone
+  have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1
+      = {q with placeGap := Function.update q.placeGap 1 (!q.placeGap 1), polarity := Function.update q.polarity 9 (workPositive q.polarity (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))} := by
+    show R.nq q none _ = _
+    rw [hnq]
+    unfold copyNext
+    rw [if_pos hbit, if_neg hnotBlank]
+  have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (copyOneBase q.fppLive (q.placeGap 1) q.polarity a
+            (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))) := by
+    rw [hacts]
+    congr 1
+    exact copyActs_eq_copyOneBase q.fppLive q _ a hbit hnotBlank hsym
+  have hstep := idealStep_withErase R q T q.fppLive _ hacts'
+  have hidleOff : ∀ k : Fin 9,
+      copyOneBase q.fppLive (q.placeGap 1) q.polarity a
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (slotIndex (progSlotOf (!q.fppLive) k)) = [] :=
+    fun k => copyOneBase_off q.fppLive (q.placeGap 1) q.polarity a _
+      (progSlotOf (!q.fppLive) k) (fun j => (progSlotOf_ne_flip q.fppLive j k).symm)
+      (by simpa using (progSlot_ne_counterSlot (!q.fppLive) k 9))
+      (by simpa using (progSlot_ne_placeSlot (!q.fppLive) k 1))
+  rw [hq]
+  exact copy_one margin K centre place entry entryQ first w F delay x q T
+    (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
+    a hK1 hK hmode hremains hread henc
+    (by rw [hstep _ (fun k => progSlotOf_ne_flip q.fppLive 7 k), copyOneBase_prog])
+    (by
+      rw [hstep (counterSlot 9)
+        (fun k => (progSlot_ne_counterSlot (!q.fppLive) k 9).symm), copyOneBase_counter])
+    (by
+      rw [hstep (placeSlot 1)
+        (fun k => (progSlot_ne_placeSlot (!q.fppLive) k 1).symm), copyOneBase_place])
+    (fun j hj => by
+      rw [hstep _ (fun k => progSlotOf_ne_flip q.fppLive j k),
+        copyOneBase_progOther q.fppLive (q.placeGap 1) q.polarity a _ j hj]
+      rfl)
+    (fun slot hprog hcounter hplace hidle => by
+      rw [hstep slot hidle,
+        copyOneBase_off q.fppLive (q.placeGap 1) q.polarity a _ slot hprog hcounter hplace]
+      rfl)
+    (fun k => idle_shape_after_erase margin hK1 (by omega) R q T q.fppLive _ hacts'
+      hidleOff henc.2.idleShape k)
+
 /-- **the last tick of the fallback copy, rule and encoding together.**  The window says the
 copy has nothing left to move, so the rule stamps the end mark where the head stands and reads
 off the cursor to set the final-stage flag. -/
@@ -4923,7 +5146,7 @@ theorem copy_end_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Gal
     (by rw [Bool.eq_iff_iff, hwalker]; simp)
     henc hmoved hkept
     (idle_shape_after_erase margin hK1 (by omega) R q T q.fppLive _ hacts'
-      (actsAt_off_live q.fppLive 7 _) henc.2.idleShape)
+      (offLive_offIdle (actsAt_off_live q.fppLive 7 _)) henc.2.idleShape)
 
 theorem physRule_nq_copy {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
@@ -5149,6 +5372,32 @@ theorem physRule_home_fppStart {fppBound dpBound K : ℕ} (margin : ℕ) (centre
     (physRule entryQ first hbound hK) hbound
     (physRule_nq_home entryQ first hbound hK q _ hqmode) (physRule_acts_home entryQ first hbound hK q _ hqmode)
     hmargin hK1 hKn hmode hatLeft hatMark henc
+
+/-- **a tick of the fallback copy that still has work, of the machine itself.** -/
+theorem physRule_copy_one {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hKb : entryQ + 3 ≤ K)
+    (hK1 : 1 ≤ K) (hK : K ≤ margin)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hremains : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos x.vm
+      = true)
+    (a : Fin 3) (hread : PalPeg.GalilScaffoldPlace.read x.vm.fpp.walker = some a)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hKb) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hKb)
+          blankM (q, tapesOf T) none).2 (slotIndex i)) :=
+  copy_one_of_rule margin centre place entry entryQ first w F delay x q T
+    (physRule entryQ first hbound hKb)
+    (physRule_nq_copy entryQ first hbound hKb q _ hqmode)
+    (physRule_acts_copy entryQ first hbound hKb q _ hqmode)
+    hK1 hK hmode hremains a hread henc
 
 /-- **the last tick of the fallback copy, of the machine itself.** -/
 theorem physRule_copy_end {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
@@ -5785,7 +6034,7 @@ theorem fpp_slice_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
         exact fpp_slot_after PalPeg.GalilFppMarkedCode.code entryQ hq henc hcomp hfloorRun (pcOf q) q.fppDone hpc hdone j)
       (fun slot hs hidle => hkept slot hs hidle)
       (fun k => idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts
-        (fppActs_off_live PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+        (offLive_offIdle (fppActs_off_live PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
         henc.2.idleShape k)
 
 /-- **the quantum of the machine itself.**  The two hypotheses about the rule are discharged
@@ -5950,7 +6199,7 @@ theorem fpp_done_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Gal
       henc.2 (PalPeg.GalilScaffoldChainInputSupply.markNew (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program) first) {x.ctl with mode := PalPeg.GalilScaffoldController.Mode.markEnd} hslot
       (fun slot hs hidle => hkept slot hs hidle)
       (fun k => idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts
-        (fppBranchActs_off_live PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+        (offLive_offIdle (fppBranchActs_off_live PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
         henc.2.idleShape k)
 
 /-- **the quantum that halts, for the machine's own rule.** -/
