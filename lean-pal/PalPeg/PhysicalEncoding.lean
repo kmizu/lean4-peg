@@ -4203,6 +4203,41 @@ theorem tapes_after_call (code : List (Instruction 9))
             rfl
   · simp [hdone]
 
+/-- one action moves a head by at most one cell, so it costs at most one of the margin. -/
+theorem pos_applyAction_ge {Γ : Type} (blank : Γ) (T : STape Γ) (a : Γ × PalPeg.CloseoutCoreEnc12.MoveC) :
+    PalPeg.Local.pos T - 1 ≤ PalPeg.Local.pos (T.applyAction blank a) := by
+  obtain ⟨left, focus, right⟩ := T
+  obtain ⟨sym, move⟩ := a
+  cases move <;> cases left <;> cases right <;>
+    simp [STape.applyAction, PalPeg.Local.pos] <;> omega
+
+theorem pos_actList_ge {Γ : Type} (blank : Γ) (T : STape Γ)
+    (l : List (PalPeg.CloseoutCoreEnc12.Act Γ)) (hl : l.length ≤ 1) :
+    PalPeg.Local.pos T - 1 ≤ PalPeg.Local.pos (PalPeg.CloseoutCoreEnc12.actList blank T l) := by
+  match l with
+  | [] => exact Nat.sub_le _ _
+  | [none] => exact Nat.sub_le _ _
+  | [some a] => exact pos_applyAction_ge blank T a
+  | _ :: _ :: _ => simp at hl
+
+/-- the raw action of a call is decided by what the machine can see, just as the encoded one is. -/
+theorem progActRaw_congr (code : List (Instruction 9))
+    (m m' : PalPeg.GalilScaffoldControl.Machine 9)
+    (hdone : m.done = m'.done) (hpc : m.config.pc = m'.config.pc)
+    (hfocus : ∀ t : Fin 9, (m.config.tapes t).focus = (m'.config.tapes t).focus) (i : Fin 9) :
+    progActRaw code m i = progActRaw code m' i := by
+  unfold progActRaw
+  rw [hdone, hpc]
+  cases hd : m'.done
+  · simp only [Bool.false_eq_true, if_false]
+    match hcode : code[m'.config.pc]? with
+    | none => simp [hcode]
+    | some .halt => simp [hcode]
+    | some (.read t cs) => simp [hcode]
+    | some (.write t sym pc) => simp [hcode]
+    | some (.move t dir pc) => cases dir <;> simp only [hcode, hfocus t]
+  · simp
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -4303,6 +4338,8 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.fppActs_at_live
 #print axioms PalPeg.PhysicalEncoding.machineAgree_focus
 #print axioms PalPeg.PhysicalEncoding.tapes_after_call
+#print axioms PalPeg.PhysicalEncoding.pos_actList_ge
+#print axioms PalPeg.PhysicalEncoding.progActRaw_congr
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
