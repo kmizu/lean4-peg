@@ -2011,14 +2011,24 @@ noncomputable def markEndActs {K : ℕ} (ws : Fin 95 → PalPeg.Local.Window Γm
       (if centreRead ws (progSlot 8) = encProg 5 then .left else .right :
         PalPeg.CloseoutCoreEnc12.MoveC))]
 
-/-- **the mark walk, rule and encoding together.**  Given a rule whose actions in this control
-are `markEndActs`, the ideal step it prescribes carries the encoding across the controller's
-tick. -/
+/-- **the control table of the mark walk.**  Finding the end mark sends the controller to
+`choose` with its parity bit cleared; otherwise the control stands still. -/
+noncomputable def markEndNext {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin 95 → PalPeg.Local.Window Γm K) : QPhys fppBound dpBound :=
+  if centreRead ws (progSlot 8) = encProg 5 then
+    {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false}}
+  else q
+
+/-- **the mark walk forward, rule and encoding together.**  Given a rule whose control and
+actions in this state are `markEndNext` and `markEndActs`, the ideal step it prescribes carries
+the encoding across the controller's tick. -/
 theorem markEnd_forward_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
     (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
     (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
     (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
     (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm 95 K)
+    (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = markEndNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
       = markEndActs (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
@@ -2029,11 +2039,17 @@ theorem markEnd_forward_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centr
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
         (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
-      (q, fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
-        (slotIndex i)) := by
+      ((PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+          (slotIndex i)) := by
   have hread : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
       (progSlot 8) = (T (progSlot 8)).focus :=
     centreRead_of_margin T (progSlot 8) (hmargin _)
+  have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1 = q := by
+    show R.nq q none _ = _
+    rw [hnq]
+    unfold markEndNext
+    rw [hread, if_neg hnotMark]
   have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
       = actsAt (slotIndex (progSlot 8))
           [some ((T (progSlot 8)).focus, (.right : PalPeg.CloseoutCoreEnc12.MoveC))] := by
@@ -2041,7 +2057,51 @@ theorem markEnd_forward_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centr
     unfold markEndActs
     rw [hread, if_neg hnotMark]
   obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot 8) _ hacts'
+  rw [hq]
   exact markEnd_forward margin centre place entry entryQ first w F delay x q T _ hmode hnotEnd
+    henc hmoved (fun slot hslot => hkept slot hslot)
+
+/-- **the mark walk back, rule and encoding together.**  The step that finds the end mark: the
+marks tape walks one cell left and the controller goes to `choose`. -/
+theorem markEnd_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm 95 K)
+    (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = markEndNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = markEndActs (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+    (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
+    (hatEnd : (x.vm.fpp.program.config.tapes 8).focus = 5)
+    (hfloor : (x.vm.fpp.program.config.tapes 8).left ≠ [])
+    (hatMark : (T (progSlot 8)).focus = encProg 5)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+          (slotIndex i)) := by
+  have hread : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (progSlot 8) = (T (progSlot 8)).focus :=
+    centreRead_of_margin T (progSlot 8) (hmargin _)
+  have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1
+      = {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false}} := by
+    show R.nq q none _ = _
+    rw [hnq]
+    unfold markEndNext
+    rw [hread, if_pos hatMark]
+  have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = actsAt (slotIndex (progSlot 8))
+          [some ((T (progSlot 8)).focus, (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+    rw [hacts]
+    unfold markEndActs
+    rw [hread, if_pos hatMark]
+  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot 8) _ hacts'
+  rw [hq]
+  exact markEnd_back margin centre place entry entryQ first w F delay x q T _ hmode hatEnd hfloor
     henc hmoved (fun slot hslot => hkept slot hslot)
 
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
@@ -2107,6 +2167,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.card_slot
 #print axioms PalPeg.PhysicalEncoding.idealStep_oneSlot
 #print axioms PalPeg.PhysicalEncoding.markEnd_forward_of_rule
+#print axioms PalPeg.PhysicalEncoding.markEnd_back_of_rule
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeftAtFloor
