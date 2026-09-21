@@ -4350,6 +4350,30 @@ theorem fppActs_eq {fppBound dpBound K : ℕ} {margin : ℕ} {x : State GalilVM}
   exact progRunActs_of_agree code quantum _ _
     (machineAgree_mono hq (machineAgree_winMachine henc hcomp pc done hpc hdone)) i
 
+/-- **the `fpp` branch carries a program slot across the quantum.**  What the rule names there is
+the quantum's own actions, and applying them to the encoded tape lands on the encoding of the tape
+the run leaves behind. -/
+theorem fpp_slot_after {fppBound dpBound K : ℕ} {margin : ℕ} {x : State GalilVM}
+    {q : QPhys fppBound dpBound} {T : Slot → STape Γm} (code : List (Instruction 9))
+    (quantum : ℕ) (hq : quantum ≤ K) (henc : Enc margin x (q, T))
+    (hcomp : ∀ t : Fin 9, K ≤ PalPeg.Local.pos (encTape (x.vm.fpp.program.config.tapes t)))
+    (hfloorRun : ∀ k, ∀ t : Fin 9, ((PalPeg.ProgramFunction.runFun code
+      (List.replicate k true) x.vm.fpp.program).config.tapes t).left ≠ [])
+    (pc : ℕ) (done : Bool) (hpc : x.vm.fpp.program.config.pc = pc)
+    (hdone : x.vm.fpp.program.done = done) (i : Fin 9) :
+    PalPeg.CloseoutCoreEnc12.actList blankM (T (progSlot q.fppLive i))
+        (fppActs code quantum q.fppLive pc done
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (slotIndex (progSlot q.fppLive i)))
+      = padLeft margin (mapTape encProg (encTape
+          ((PalPeg.ProgramFunction.runFun code (List.replicate quantum true)
+            x.vm.fpp.program).config.tapes i))) := by
+  have hfpp : T (progSlot q.fppLive i)
+      = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i))) :=
+    henc.2.fpp i
+  rw [fppActs_eq code quantum hq henc hcomp pc done hpc hdone i, hfpp,
+    padded_progRun margin code quantum x.vm.fpp.program i hfloorRun]
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -4456,6 +4480,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.progRunActs_of_agree
 #print axioms PalPeg.PhysicalEncoding.machineAgree_winMachine
 #print axioms PalPeg.PhysicalEncoding.fppActs_eq
+#print axioms PalPeg.PhysicalEncoding.fpp_slot_after
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
