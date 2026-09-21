@@ -25,11 +25,32 @@ open PalPeg.GalilScaffoldTop (State)
 
 variable {Q Γ : Type} {t K : ℕ}
 
-/-- an encoding a sweep can keep: it only ever speaks of the tapes up to `TEqG`. -/
+/-- An encoding a sweep can keep: it only ever speaks of the tapes up to `TEqG`. -/
 def SweepClosed (blank : Γ) (Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop) : Prop :=
   ∀ x p p', Enc x p → p.1 = p'.1 → (∀ tape, TEqG blank (p.2 tape) (p'.2 tape)) → Enc x p'
 
-/-- **where the abstraction starves, a machine whose rule names no action keeps its
+/-- Two tapes a sweep cannot tell apart stand for the same thing. -/
+theorem teqG_trans {blank : Γ} {T T' T'' : STape Γ} (h : TEqG blank T T')
+    (h' : TEqG blank T' T'') : TEqG blank T T'' :=
+  ⟨h.1.trans h'.1, fun p => (h.2 p).trans (h'.2 p)⟩
+
+/-- **The closure of an exact encoding under `TEqG`.**  A machine designer writes down what the
+tapes hold exactly; the sweep returns them shifted only in the trailing blanks, and this closure
+is what the machine keeps. -/
+def sweepClosure (blank : Γ) (Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop) :
+    State GalilVM → Q × (Fin t → STape Γ) → Prop :=
+  fun x p => ∃ ideal : Fin t → STape Γ, Enc x (p.1, ideal) ∧ ∀ tape, TEqG blank (ideal tape) (p.2 tape)
+
+/-- **The closure is what a sweep can keep**, whatever the exact encoding was. -/
+theorem sweepClosed_sweepClosure (blank : Γ)
+    (Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop) :
+    SweepClosed blank (sweepClosure blank Enc) := by
+  rintro x p p' ⟨ideal, hexact, hteq⟩ hcontrol hsweep
+  refine ⟨ideal, ?_, fun tape => teqG_trans (hteq tape) (hsweep tape)⟩
+  rw [← hcontrol]
+  exact hexact
+
+/-- **Where the abstraction starves, a machine whose rule names no action keeps its
 encoding.**  This is the standing-still branch of the physical obligation, with nothing left of
 it but a property of the rule. -/
 theorem enc_of_starved {blank : Γ} {Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop}
@@ -48,7 +69,7 @@ theorem enc_of_starved {blank : Γ} {Enc : State GalilVM → Q × (Fin t → STa
   rw [hacts tape] at hkept
   exact hkept
 
-/-- **where the abstraction moves, a machine whose ideal step encodes the successor
+/-- **Where the abstraction moves, a machine whose ideal step encodes the successor
 keeps its encoding.**  The sweep only ever returns the ideal tapes up to `TEqG`, which a
 `SweepClosed` encoding absorbs; so the stepping branch of the physical obligation is a property
 of the rule alone. -/
@@ -67,6 +88,7 @@ theorem enc_of_stepping {blank : Γ} {Enc : State GalilVM → Q × (Fin t → ST
   show R.nq p.1 none (fun tape => readWin blank K (p.2 tape)) = _
   rw [hnext]
 
+#print axioms sweepClosed_sweepClosure
 #print axioms enc_of_starved
 #print axioms enc_of_stepping
 

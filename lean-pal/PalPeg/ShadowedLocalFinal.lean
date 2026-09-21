@@ -976,33 +976,42 @@ theorem forwardTick_of_stepping (entry q : ℕ) (first : Fin 9) {Q Γ : Type} {t
 #print axioms forwardTick_of_stepping
 
 /-- **`PAL ∈ PEG` from one rule.**  Everything the physical machine is asked about the abstract
-layer has been discharged: what is left of the forward obligation are two properties of the rule
-itself — that it names no action where the starvation test stands, and that its ideal step
-encodes the value of `tickFun`.  The sweep of `compStep` returns the tapes only up to `TEqG`,
-which a `SweepClosed` encoding absorbs. -/
+layer has been discharged.  The machine designer writes down what the tapes hold exactly; the
+sweep of `compStep` returns them shifted only in the trailing blanks, and `MachineStep.
+sweepClosure` is what the machine keeps.  What is left of the forward obligation are three
+properties of the rule itself: the margin its window needs, that it names no action where the
+starvation test stands, and that its ideal step encodes the value of `tickFun`. -/
 theorem forwardTick_of_rule (entry q : ℕ) (first : Fin 9) {Q Γ : Type} {t K : ℕ}
     [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
     (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γ t K) (blankSymbol : Γ)
     (Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop)
-    (hclosed : PalPeg.MachineStep.SweepClosed blankSymbol Enc)
-    (hmargin : ∀ x p, Enc x p → ∀ tape, K ≤ PalPeg.Local.pos (p.2 tape))
-    (hidle : ∀ x p, Enc x p → PalPeg.FrameFunction.starvedTest x = true →
+    (hmargin : ∀ x p, PalPeg.MachineStep.sweepClosure blankSymbol Enc x p →
+      ∀ tape, K ≤ PalPeg.Local.pos (p.2 tape))
+    (hidle : ∀ x p, PalPeg.MachineStep.sweepClosure blankSymbol Enc x p →
+      PalPeg.FrameFunction.starvedTest x = true →
       R.nq p.1 none (fun tape => PalPeg.Local.readWin blankSymbol K (p.2 tape)) = p.1 ∧
         ∀ tape, R.acts p.1 none
           (fun tape => PalPeg.Local.readWin blankSymbol K (p.2 tape)) tape = [])
-    (hideal : ∀ (w : List (Fin 2)) x p, Enc x p → PalPeg.FrameFunction.starvedTest x = false →
-      Enc (PalPeg.GalilScaffoldTop.tickFun
-            (PalPeg.FrameFunction.galilFrameFun centreC placeC entry q first w)
-            (galilFrameS (PofC centreC placeC entry w) q first) 2048 x)
+    (hideal : ∀ (w : List (Fin 2)) x p, PalPeg.MachineStep.sweepClosure blankSymbol Enc x p →
+      PalPeg.FrameFunction.starvedTest x = false →
+      PalPeg.MachineStep.sweepClosure blankSymbol Enc
+        (PalPeg.GalilScaffoldTop.tickFun
+          (PalPeg.FrameFunction.galilFrameFun centreC placeC entry q first w)
+          (galilFrameS (PofC centreC placeC entry w) q first) 2048 x)
         (PalPeg.LocalStepFusion.idealStep R blankSymbol p none))
     (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)) (p : Q × (Fin t → STape Γ))
-    (successor : State GalilVM) (henc : Enc (absSC m) p)
+    (successor : State GalilVM)
+    (henc : PalPeg.MachineStep.sweepClosure blankSymbol Enc (absSC m) p)
     (hsucc : TickSucc (PofC centreC placeC entry w) q first 2048
       (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm) (absSC m) successor) :
-    Enc successor ((PalPeg.CloseoutCoreEnc12.compStep R).apply blankSymbol p none) :=
-  forwardTick_of_stepping entry q first (PalPeg.CloseoutCoreEnc12.compStep R) blankSymbol Enc
-    (fun _ x p => PalPeg.MachineStep.enc_of_starved hclosed R hmargin hidle x p)
-    (fun w x p => PalPeg.MachineStep.enc_of_stepping hclosed R hmargin (hideal w) x p)
+    PalPeg.MachineStep.sweepClosure blankSymbol Enc successor
+      ((PalPeg.CloseoutCoreEnc12.compStep R).apply blankSymbol p none) :=
+  forwardTick_of_stepping entry q first (PalPeg.CloseoutCoreEnc12.compStep R) blankSymbol
+    (PalPeg.MachineStep.sweepClosure blankSymbol Enc)
+    (fun _ x p => PalPeg.MachineStep.enc_of_starved
+      (PalPeg.MachineStep.sweepClosed_sweepClosure blankSymbol Enc) R hmargin hidle x p)
+    (fun w x p => PalPeg.MachineStep.enc_of_stepping
+      (PalPeg.MachineStep.sweepClosed_sweepClosure blankSymbol Enc) R hmargin (hideal w) x p)
     w m p successor henc hsucc
 
 #print axioms forwardTick_of_rule
