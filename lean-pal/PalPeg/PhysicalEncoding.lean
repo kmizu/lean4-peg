@@ -389,6 +389,22 @@ theorem placeRead_isNone_iff_head (p : PalPeg.GalilScaffoldPlace.Place)
     simp only [List.map_cons, List.cons_append, List.head?_cons, Option.isNone_some]
     refine ⟨fun h => absurd h (by simp), fun h => absurd (h b) (by simp)⟩
 
+/-- **the top of a cursor's stack is the symbol under its head.**  `dTape` puts the top of the
+stack at the focus and the rest below it, so the head stands on the top cell rather than above it,
+and `TEqG` hands that cell across unchanged. -/
+theorem stackTape_focus (stackTape : STape PalPeg.CloseoutCoreStep.Γc)
+    (stack : List (Option (Fin 2)))
+    (h : PalPeg.ConcreteLocalMachine.StackTape stackTape stack) :
+    stackTape.focus
+      = stack.head?.elim PalPeg.CloseoutCoreStep.blankc PalPeg.CloseoutCoreEnc.cellSym := by
+  obtain ⟨debris, hteq⟩ := h
+  have hfocus : stackTape.focus
+      = (PalPeg.CloseoutCoreEnc18.dTape stack debris).focus := by
+    rw [← PalPeg.Local.rd_pos PalPeg.CloseoutCoreStep.blankc stackTape, hteq.2, hteq.1,
+      PalPeg.Local.rd_pos]
+  rw [hfocus]
+  cases stack <;> rfl
+
 /-- a program tape's cells are told apart by their encodings, so a rule testing the
 window against `encProg r` is testing the cell against `r`. -/
 theorem encProg_eq_iff (s r : Fin 9) : encProg s = encProg r ↔ s = r := by
