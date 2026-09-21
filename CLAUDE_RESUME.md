@@ -72,7 +72,7 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 * **`enc_of_starved`**: `starvedTest` が立つところで制御を変えず命令も名指さない規則なら、飢餓の歩で符号化は保たれる。
 * **`enc_of_stepping`**: ideal な 1 歩が後継を符号化する規則なら、実の 1 歩でも符号化は保たれる（sweep が返す `TEqG` を `SweepClosed` が吸収する）。
 
-**飢餓判定は七つの読み値を通る**（`FrameFunction.starvedOf`／`starvedTest`、module build `BUILD=0`）: モード、4 本のヘッドそれぞれが進めるか、残量カウンタ 2 本。**それ以外は状態から入らない。**規則が読むべきものはこれで確定した。
+**飢餓判定は七つの読み値を通る**（`FrameFunction.starvedOf`／`starvedTest`、module build `BUILD=0`）: モード、4 本のヘッドそれぞれが進めるか、残量カウンタ 2 本。**それ以外は状態から入らない。**さらに 1 本のヘッドについては（スクラッチ `$S/head_read.keep.lean`、EXIT=0・公理 `propext` のみ）`canRightTest (absHead' v []) = canRightOf v.gap v.near.isEmpty (RTQueue.toList v.far).isEmpty`——**gap ビット、押し戻したセルが尽きたか、到着待ちの queue が空か**の 3 つだけで、焦点も訪問済みのセルも入らない。規則が読むべきものはこれで確定した。
 
 `SweepClosed` は書かなくてよい:`SweepClosed` は書かなくてよい: **`sweepClosure blank Enc`（厳密な符号化を `TEqG` で閉じたもの）はいつでも `SweepClosed`**（`sweepClosed_sweepClosure`、公理は `propext` のみ）。機械の設計者はテープが厳密に何を持つかだけを書けばよく、sweep が末尾の空白をずらす分はこの閉包が吸収する。
 
