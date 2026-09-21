@@ -3737,6 +3737,23 @@ def pcOf {fppBound dpBound : ℕ} (q : QPhys fppBound dpBound) : ℕ :=
   | some k => k.val
   | none => 0
 
+/-- **the counter the finite state holds is the program's own, while it fits.**  `EncPc` reads a
+missing counter as "past the bound", so this is the whole of what the bound buys: inside it the
+state knows the counter exactly, and `pcOf` reads it back. -/
+theorem pcOf_of_enc {fppBound dpBound : ℕ} {x : State GalilVM} {q : QPhys fppBound dpBound}
+    (henc : EncControl x q) (hin : x.vm.fpp.program.config.pc < fppBound) :
+    x.vm.fpp.program.config.pc = pcOf q := by
+  have hpc := henc.fppPc
+  unfold pcOf
+  cases hq : q.fppPc with
+  | none =>
+    rw [hq] at hpc
+    have hge : fppBound ≤ x.vm.fpp.program.config.pc := hpc
+    omega
+  | some k =>
+    rw [hq] at hpc
+    exact hpc.symm
+
 /-- the program counter as the finite control can hold it: the number itself while it fits in the
 bound, and otherwise the mark that says it does not.  `EncPc` accepts both readings, so this is a
 total inverse of `pcOf` as far as the encoding is concerned. -/
@@ -4789,8 +4806,7 @@ theorem physRule_fpp {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM
     (hcomp : ∀ t : Fin 9, K ≤ PalPeg.Local.pos (encTape (x.vm.fpp.program.config.tapes t)))
     (hfloorRun : ∀ k, ∀ t : Fin 9, ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
       (List.replicate k true) x.vm.fpp.program).config.tapes t).left ≠ [])
-    (hpc : x.vm.fpp.program.config.pc = pcOf q)
-    (hdone : x.vm.fpp.program.done = q.fppDone)
+    (hin : x.vm.fpp.program.config.pc < fppBound)
     (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
     (hnothalt : (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program).done = false)
@@ -4811,7 +4827,7 @@ theorem physRule_fpp {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM
       rw [physRule_acts_fpp entryQ first hbound hK q _ hqmode,
         fppBranchActs_of_running PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first
           (pcOf q) q.fppDone _ hwinRun])
-    (by omega) hK1 hKn hcomp hfloorRun hpc hdone hmode hnothalt henc
+    (by omega) hK1 hKn hcomp hfloorRun (pcOf_of_enc henc.1 hin) henc.1.fppDone.symm hmode hnothalt henc
 
 /-- **the quantum that reaches the halt, rule and encoding together.**  The run's tapes land on
 the live half as before, the marks tape takes two more actions, and the controller goes to the
@@ -4953,8 +4969,7 @@ theorem physRule_fpp_done {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
     (hcomp : ∀ t : Fin 9, K ≤ PalPeg.Local.pos (encTape (x.vm.fpp.program.config.tapes t)))
     (hfloorRun : ∀ k, ∀ t : Fin 9, ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
       (List.replicate k true) x.vm.fpp.program).config.tapes t).left ≠ [])
-    (hpc : x.vm.fpp.program.config.pc = pcOf q)
-    (hdone : x.vm.fpp.program.done = q.fppDone)
+    (hin : x.vm.fpp.program.config.pc < fppBound)
     (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
     (hhalt : (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program).done = true)
@@ -4970,7 +4985,7 @@ theorem physRule_fpp_done {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
     (physRule entryQ first hbound hK)
     (physRule_nq_fpp entryQ first hbound hK q _ hqmode)
     (physRule_acts_fpp entryQ first hbound hK q _ hqmode)
-    (by omega) hK1 hKn hcomp hfloorRun hpc hdone hmode hhalt henc
+    (by omega) hK1 hKn hcomp hfloorRun (pcOf_of_enc henc.1 hin) henc.1.fppDone.symm hmode hhalt henc
 
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
