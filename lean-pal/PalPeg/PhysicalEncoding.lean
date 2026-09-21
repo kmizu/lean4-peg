@@ -91,6 +91,14 @@ theorem progSlotOf_injective (live : Bool) : Function.Injective (progSlotOf live
 theorem progSlotOf_ne (i j : Fin 9) : progSlotOf true i ≠ progSlotOf false j := by
   simp [progSlotOf]
 
+@[simp] theorem progSlotOf_ne_flip (l : Bool) (i j : Fin 9) :
+    progSlotOf l i ≠ progSlotOf (!l) j := by
+  cases l <;> simp [progSlotOf]
+
+@[simp] theorem dpSlotOf_ne_flip (l : Bool) (i j : Fin 12) :
+    dpSlotOf l i ≠ dpSlotOf (!l) j := by
+  cases l <;> simp [dpSlotOf]
+
 /-! The disequalities a proof needs once a slot's address carries the live bit.  Without them
 `simp` cannot see that a view's slot, or the search program's, is not the preparation program's,
 because it does not know which half is live.  Each is stated so that `simp` discharges the two
@@ -580,7 +588,9 @@ theorem encTapes_fppStep (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 �
     (ctl : PalPeg.GalilScaffoldController.Control)
     (hmoved : newTapes (progSlotOf fppLive i)
       = padLeft margin (mapTape encProg (encTape (f (x.vm.fpp.program.config.tapes i)))))
-    (hkept : ∀ slot, slot ≠ (progSlotOf fppLive i) → newTapes slot = tapes slot) :
+    (hkept : ∀ slot, slot ≠ (progSlotOf fppLive i) → (∀ k : Fin 9, slot ≠ progSlotOf (!fppLive) k) →
+      newTapes slot = tapes slot)
+    (hidleMargin : ∀ k : Fin 9, margin ≤ PalPeg.Local.pos (newTapes (progSlotOf (!fppLive) k))) :
     EncTapes margin
       ⟨ctl, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp i f}}⟩
       polarity gap micro fppLive dpLive newTapes where
@@ -589,44 +599,48 @@ theorem encTapes_fppStep (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 �
     by_cases hs : slot = (progSlotOf fppLive i)
     · rw [hs, hmoved, pos_padLeft]
       omega
-    · rw [hkept slot hs]
-      exact henc.margins slot
+    · by_cases hidle : ∃ k : Fin 9, slot = progSlotOf (!fppLive) k
+      · obtain ⟨k, hk⟩ := hidle
+        rw [hk]
+        exact hidleMargin k
+      · rw [hkept slot hs (fun k hk => hidle ⟨k, hk⟩)]
+        exact henc.margins slot
   heads := by
     intro v head hhead
     obtain ⟨view, viewTapes, habs, hrep, hslots⟩ := henc.heads v head hhead
     exact ⟨view, viewTapes, habs, hrep, fun j => by
-      rw [hkept _ (by simp), hslots j]⟩
+      rw [hkept _ (by simp) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]), hslots j]⟩
   fpp := by
     intro j
     rw [fppTape_tapes, Function.update_apply]
     by_cases hji : j = i
     · subst hji
       rw [if_pos rfl, hmoved]
-    · rw [if_neg hji, hkept _ (by simp [hji])]
+    · rw [if_neg hji, hkept _ (by simp [hji]) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
       exact henc.fpp j
   dp := by
     intro j
-    rw [hkept _ (by simp)]
+    rw [hkept _ (by simp) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
     exact henc.dp j
   counters := by
     intro c value hvalue
     obtain ⟨segments, habs, hslot⟩ := henc.counters c value hvalue
-    exact ⟨segments, habs, by rw [hkept _ (by simp), hslot]⟩
+    exact ⟨segments, habs, by rw [hkept _ (by simp) (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
   mirrors := by
     intro m value hvalue
     obtain ⟨segments, habs, hslot⟩ := henc.mirrors m value hvalue
-    exact ⟨segments, habs, by rw [hkept _ (by simp), hslot]⟩
+    exact ⟨segments, habs, by rw [hkept _ (by simp) (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
   places := by
     intro j place hplace
     obtain ⟨stackTape, junk, hsealed, hlen, hstack, hslot⟩ := henc.places j place hplace
-    exact ⟨stackTape, junk, hsealed, hlen, hstack, by rw [hkept _ (by simp), hslot]⟩
+    exact ⟨stackTape, junk, hsealed, hlen, hstack, by rw [hkept _ (by simp) (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
   period := by
     intro tape htape
-    rw [hkept _ (by simp)]
+    rw [hkept _ (by simp) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
     exact henc.period tape htape
   answer := by
     intro tape htape
-    rw [hkept _ (by simp)]
+    rw [hkept _ (by simp) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
     exact henc.answer tape htape
 
 /-! ### the mark walk, both directions -/
@@ -642,12 +656,14 @@ theorem encTapes_progRight (margin : ℕ) (x : State GalilVM) (polarity : Fin 16
     (hmoved : newTapes (progSlotOf fppLive i)
       = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf fppLive i))
           [some ((tapes (progSlotOf fppLive i)).focus, .right)])
-    (hkept : ∀ slot, slot ≠ (progSlotOf fppLive i) → newTapes slot = tapes slot) :
+    (hkept : ∀ slot, slot ≠ (progSlotOf fppLive i) → (∀ k : Fin 9, slot ≠ progSlotOf (!fppLive) k) →
+      newTapes slot = tapes slot)
+    (hidleMargin : ∀ k : Fin 9, margin ≤ PalPeg.Local.pos (newTapes (progSlotOf (!fppLive) k))) :
     EncTapes margin
       ⟨ctl, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp i PalPeg.GalilScaffoldTape.moveRight}}⟩
       polarity gap micro fppLive dpLive newTapes := by
   refine encTapes_fppStep margin x polarity gap micro fppLive dpLive tapes newTapes henc i
-    PalPeg.GalilScaffoldTape.moveRight ctl ?_ hkept
+    PalPeg.GalilScaffoldTape.moveRight ctl ?_ hkept hidleMargin
   rw [hmoved, henc.fpp i, focus_padded]
   show (padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i)))).applyAction
       blankM (encProg (x.vm.fpp.program.config.tapes i).focus, .right) = _
@@ -664,12 +680,14 @@ theorem encTapes_progLeft (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 
     (hmoved : newTapes (progSlotOf fppLive i)
       = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf fppLive i))
           [some ((tapes (progSlotOf fppLive i)).focus, .left)])
-    (hkept : ∀ slot, slot ≠ (progSlotOf fppLive i) → newTapes slot = tapes slot) :
+    (hkept : ∀ slot, slot ≠ (progSlotOf fppLive i) → (∀ k : Fin 9, slot ≠ progSlotOf (!fppLive) k) →
+      newTapes slot = tapes slot)
+    (hidleMargin : ∀ k : Fin 9, margin ≤ PalPeg.Local.pos (newTapes (progSlotOf (!fppLive) k))) :
     EncTapes margin
       ⟨ctl, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp i PalPeg.GalilScaffoldTape.moveLeft}}⟩
       polarity gap micro fppLive dpLive newTapes := by
   refine encTapes_fppStep margin x polarity gap micro fppLive dpLive tapes newTapes henc i
-    PalPeg.GalilScaffoldTape.moveLeft ctl ?_ hkept
+    PalPeg.GalilScaffoldTape.moveLeft ctl ?_ hkept hidleMargin
   rw [hmoved, henc.fpp i, focus_padded]
   show (padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i)))).applyAction
       blankM (encProg (x.vm.fpp.program.config.tapes i).focus, .left) = _
@@ -902,7 +920,10 @@ theorem markEnd_forward {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilV
     (hmoved : newTapes (progSlotOf q.fppLive 8)
       = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf q.fppLive 8))
           [some ((tapes (progSlotOf q.fppLive 8)).focus, .right)])
-    (hkept : ∀ slot, slot ≠ (progSlotOf q.fppLive 8) → newTapes slot = tapes slot) :
+    (hkept : ∀ slot, slot ≠ (progSlotOf q.fppLive 8) →
+      (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) → newTapes slot = tapes slot)
+    (hidleMargin : ∀ k : Fin 9,
+      margin ≤ PalPeg.Local.pos (newTapes (progSlotOf (!q.fppLive) k))) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
         (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
@@ -915,7 +936,7 @@ theorem markEnd_forward {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilV
     rfl
   rw [hval]
   exact ⟨encControl_fppStep x q henc.1 PalPeg.GalilScaffoldTape.moveRight 8,
-    encTapes_progRight margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes newTapes henc.2 x.ctl 8 hmoved hkept⟩
+    encTapes_progRight margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes newTapes henc.2 x.ctl 8 hmoved hkept hidleMargin⟩
 
 /-- **the mark walk back, both sides at once**, when the marks tape still has a cell
 below its head.  The tick also sends the controller to `choose` and clears the parity bit, and
@@ -931,7 +952,10 @@ theorem markEnd_back {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM �
     (hmoved : newTapes (progSlotOf q.fppLive 8)
       = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf q.fppLive 8))
           [some ((tapes (progSlotOf q.fppLive 8)).focus, .left)])
-    (hkept : ∀ slot, slot ≠ (progSlotOf q.fppLive 8) → newTapes slot = tapes slot) :
+    (hkept : ∀ slot, slot ≠ (progSlotOf q.fppLive 8) →
+      (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) → newTapes slot = tapes slot)
+    (hidleMargin : ∀ k : Fin 9,
+      margin ≤ PalPeg.Local.pos (newTapes (progSlotOf (!q.fppLive) k))) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
         (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
@@ -945,7 +969,7 @@ theorem markEnd_back {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM �
     rfl
   rw [hval]
   refine ⟨encControl_fppStep ⟨{x.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false}, x.vm⟩ _ (encControl_ctl x q henc.1 {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false} {x.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false} (by rw [← henc.1.ctl]; rfl)) PalPeg.GalilScaffoldTape.moveLeft 8, ?_⟩
-  exact encTapes_progLeft margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes newTapes henc.2 _ 8 hfloor hmoved hkept
+  exact encTapes_progLeft margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes newTapes henc.2 _ 8 hfloor hmoved hkept hidleMargin
 
 /-- **and on the floor the marks tape stays**, so the rule names no action at all and
 only the control word changes. -/
@@ -1032,7 +1056,10 @@ theorem home_step {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM → 
     (hmoved : newTapes (progSlotOf q.fppLive 7)
       = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf q.fppLive 7))
           [some ((tapes (progSlotOf q.fppLive 7)).focus, .left)])
-    (hkept : ∀ slot, slot ≠ (progSlotOf q.fppLive 7) → newTapes slot = tapes slot) :
+    (hkept : ∀ slot, slot ≠ (progSlotOf q.fppLive 7) →
+      (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) → newTapes slot = tapes slot)
+    (hidleMargin : ∀ k : Fin 9,
+      margin ≤ PalPeg.Local.pos (newTapes (progSlotOf (!q.fppLive) k))) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
         (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
@@ -1044,7 +1071,7 @@ theorem home_step {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM → 
     rw [if_neg (by simpa using hnotLeft)]
   rw [hval]
   exact ⟨encControl_fppStep x q henc.1 PalPeg.GalilScaffoldTape.moveLeft 7,
-    encTapes_progLeft margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes newTapes henc.2 x.ctl 7 hfloor hmoved hkept⟩
+    encTapes_progLeft margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes newTapes henc.2 x.ctl 7 hfloor hmoved hkept hidleMargin⟩
 
 /-- and on the floor the seventh tape stays, so the rule names no action. -/
 theorem home_step_atFloor {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
@@ -1118,7 +1145,10 @@ theorem choose_back {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM �
     (hmoved : newTapes (progSlotOf q.fppLive 8)
       = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf q.fppLive 8))
           [some ((tapes (progSlotOf q.fppLive 8)).focus, .left)])
-    (hkept : ∀ slot, slot ≠ (progSlotOf q.fppLive 8) → newTapes slot = tapes slot) :
+    (hkept : ∀ slot, slot ≠ (progSlotOf q.fppLive 8) →
+      (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) → newTapes slot = tapes slot)
+    (hidleMargin : ∀ k : Fin 9,
+      margin ≤ PalPeg.Local.pos (newTapes (progSlotOf (!q.fppLive) k))) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
         (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
@@ -1135,7 +1165,7 @@ theorem choose_back {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM �
   refine ⟨encControl_fppStep ⟨{x.ctl with odd := !x.ctl.odd}, x.vm⟩ _
     (encControl_ctl x q henc.1 {q.ctl with odd := !q.ctl.odd} {x.ctl with odd := !x.ctl.odd} hctl)
     PalPeg.GalilScaffoldTape.moveLeft 8, ?_⟩
-  exact encTapes_progLeft margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes newTapes henc.2 _ 8 hfloor hmoved hkept
+  exact encTapes_progLeft margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes newTapes henc.2 _ 8 hfloor hmoved hkept hidleMargin
 
 /-- and on the floor the marks tape stays, so only the parity bit changes. -/
 theorem choose_back_atFloor {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
@@ -2135,7 +2165,10 @@ theorem markEnd_forward_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centr
   obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 8) _ hacts'
   rw [hq]
   exact markEnd_forward margin centre place entry entryQ first w F delay x q T _ hmode hnotEnd
-    henc hmoved (fun slot hslot => hkept slot hslot)
+    henc hmoved (fun slot hslot _ => hkept slot hslot)
+    (fun k => by
+      rw [hkept _ (by cases hl : q.fppLive <;> simp [progSlot, progSlotOf, hl])]
+      exact henc.2.margins _)
 
 /-- **the mark walk back, rule and encoding together.**  The step that finds the end mark: the
 marks tape walks one cell left and the controller goes to `choose`. -/
@@ -2180,7 +2213,10 @@ theorem markEnd_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
   obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 8) _ hacts'
   rw [hq]
   exact markEnd_back margin centre place entry entryQ first w F delay x q T _ hmode hatEnd hfloor
-    henc hmoved (fun slot hslot => hkept slot hslot)
+    henc hmoved (fun slot hslot _ => hkept slot hslot)
+    (fun k => by
+      rw [hkept _ (by cases hl : q.fppLive <;> simp [progSlot, progSlotOf, hl])]
+      exact henc.2.margins _)
 
 /-! ### the walk home
 
@@ -2298,7 +2334,10 @@ theorem home_step_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
   obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 7) _ hacts'
   rw [hq]
   exact home_step margin centre place entry entryQ first w F delay x q T _ hmode hnotLeft hfloor
-    henc hmoved (fun slot hslot => hkept slot hslot)
+    henc hmoved (fun slot hslot _ => hkept slot hslot)
+    (fun k => by
+      rw [hkept _ (by cases hl : q.fppLive <;> simp [progSlot, progSlotOf, hl])]
+      exact henc.2.margins _)
 
 /-! ### the parity walk of `choose`
 
@@ -2356,7 +2395,10 @@ theorem choose_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : 
   obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 8) _ hacts'
   rw [hq]
   exact choose_back margin centre place entry entryQ first w F delay x q T _ hmode hkeep hfloor
-    henc hmoved (fun slot hslot => hkept slot hslot)
+    henc hmoved (fun slot hslot _ => hkept slot hslot)
+    (fun k => by
+      rw [hkept _ (by cases hl : q.fppLive <;> simp [progSlot, progSlotOf, hl])]
+      exact henc.2.margins _)
 
 /-! ### the three branches that stop at a component's own floor
 
