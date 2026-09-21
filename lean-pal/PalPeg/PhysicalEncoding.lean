@@ -4576,6 +4576,125 @@ theorem fpp_slot_after {fppBound dpBound K : ℕ} {margin : ℕ} {x : State Gali
   rw [fppActs_eq code quantum hq henc hcomp pc done hpc hdone i, hfpp,
     padded_progRun margin code quantum x.vm.fpp.program i hfloorRun]
 
+/-! ### the branch that runs the preparation program, rule and encoding together
+
+The quantum is the one branch whose actions the rule cannot read off a single cell: it has to run
+the program in its head.  `fppActs` is that run, `fpp_slot_after` says the actions land on the
+encoding of the tapes the real run leaves, and `runFun_control_of_agree` says the control the rule
+installs is the control the tick installs.  Nothing here assumes the rule; it is proved for any
+rule whose table at this state is the one the branch names. -/
+
+theorem fpp_slice_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
+    (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = fppNext entryQ q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (fppActs PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
+    (hq : entryQ ≤ K) (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hcomp : ∀ t : Fin 9, K ≤ PalPeg.Local.pos (encTape (x.vm.fpp.program.config.tapes t)))
+    (hfloorRun : ∀ k, ∀ t : Fin 9, ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
+      (List.replicate k true) x.vm.fpp.program).config.tapes t).left ≠ [])
+    (hpc : x.vm.fpp.program.config.pc = pcOf q)
+    (hdone : x.vm.fpp.program.done = q.fppDone)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
+    (hnothalt : (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program).done = false)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+          (slotIndex i)) := by
+  have hagree : MachineAgree entryQ
+      (winMachine (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) q.fppLive) x.vm.fpp.program :=
+    machineAgree_mono hq (machineAgree_winMachine henc hcomp (pcOf q) q.fppDone hpc hdone)
+  obtain ⟨hpcRun, hdoneRun⟩ := runFun_control_of_agree PalPeg.GalilFppMarkedCode.code entryQ _ _ hagree
+  have hrunDone : (winRun PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).done = false := by
+    show (PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code (List.replicate entryQ true)
+      (winMachine (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) q.fppLive)).done = false
+    rw [hdoneRun]
+    exact hnothalt
+  have hstate : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1
+      = {q with fppPc := pcPhysOf fppBound (winRun PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).config.pc, fppDone := false} := by
+    show R.nq q none _ = _
+    rw [hnq]
+    unfold fppNext
+    rw [if_neg (by simp [hrunDone])]
+  have htick : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
+      = (⟨x.ctl, {x.vm with fpp := {x.vm.fpp with
+          program := PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program}}⟩ :
+            State GalilVM) := by
+    simp only [PalPeg.GalilScaffoldTop.tickFun, hmode, frameFun_fppHalts, frameFun_fppSlice]
+    rw [if_neg (by simp [hnothalt])]
+  obtain ⟨hmoved, hkept⟩ :=
+    idealStep_withErase R q T q.fppLive _ hacts
+      (fppActs_off_live PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+  rw [htick, hstate]
+  refine ⟨?_, ?_⟩
+  · exact
+      { ctl := henc.1.ctl
+        chainTag := henc.1.chainTag
+        chainPhase := henc.1.chainPhase
+        chainForward := henc.1.chainForward
+        chainBroken := henc.1.chainBroken
+        fppMode := henc.1.fppMode
+        fppFinalStage := henc.1.fppFinalStage
+        fppPc := by
+          rw [fppRunFun_eq_runFun, ← hpcRun]
+          exact encPc_pcPhysOf _ _
+        fppDone := hnothalt.symm
+        dpPc := henc.1.dpPc
+        dpDone := henc.1.dpDone
+        searchMode := henc.1.searchMode
+        searchFinalStage := henc.1.searchFinalStage
+        searchQuarter := henc.1.searchQuarter
+        periodOnly := henc.1.periodOnly }
+  · exact encTapes_fppTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T
+      (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+        (slotIndex slot))
+      henc.2 (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program) x.ctl
+      (fun j => by
+        rw [hmoved j, fppRunFun_eq_runFun]
+        exact fpp_slot_after PalPeg.GalilFppMarkedCode.code entryQ hq henc hcomp hfloorRun (pcOf q) q.fppDone hpc hdone j)
+      (fun slot hs hidle => hkept slot hs hidle)
+      (fun k => idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts
+        (fppActs_off_live PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+        henc.2.idleShape k)
+
+/-- **the quantum of the machine itself.**  The two hypotheses about the rule are discharged
+against the rule the machine runs. -/
+theorem physRule_fpp {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hK : entryQ + 2 ≤ K)
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hcomp : ∀ t : Fin 9, K ≤ PalPeg.Local.pos (encTape (x.vm.fpp.program.config.tapes t)))
+    (hfloorRun : ∀ k, ∀ t : Fin 9, ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
+      (List.replicate k true) x.vm.fpp.program).config.tapes t).left ≠ [])
+    (hpc : x.vm.fpp.program.config.pc = pcOf q)
+    (hdone : x.vm.fpp.program.done = q.fppDone)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
+    (hnothalt : (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program).done = false)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hK)
+          blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first
+          hbound hK) blankM (q, tapesOf T) none).2 (slotIndex i)) :=
+  fpp_slice_of_rule margin centre place entry entryQ first w F delay x q T
+    (physRule entryQ first hbound hK)
+    (physRule_nq_fpp entryQ first hbound hK q _ hqmode)
+    (physRule_acts_fpp entryQ first hbound hK q _ hqmode)
+    (by omega) hK1 hKn hcomp hfloorRun hpc hdone hmode hnothalt henc
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -4684,6 +4803,8 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.machineAgree_winMachine
 #print axioms PalPeg.PhysicalEncoding.fppActs_eq
 #print axioms PalPeg.PhysicalEncoding.fpp_slot_after
+#print axioms PalPeg.PhysicalEncoding.fpp_slice_of_rule
+#print axioms PalPeg.PhysicalEncoding.physRule_fpp
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
