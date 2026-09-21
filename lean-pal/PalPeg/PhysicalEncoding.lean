@@ -4064,6 +4064,70 @@ def rewindActs : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) := f
 theorem rewindActs_length {K : ℕ} (j : Fin tapeCountM) : (rewindActs j).length ≤ K :=
   Nat.zero_le K
 
+/-- the letter a cursor shows, as the rule decodes the centre of its window. -/
+noncomputable def placeLetter (c : Γm) : Fin 3 :=
+  if c = encCell (PalPeg.CloseoutCoreEnc.cellSym (some 0)) then 0 else 1
+
+theorem placeLetter_encCell (a : Fin 2) :
+    placeLetter (encCell (PalPeg.CloseoutCoreEnc.cellSym (some a)))
+      = PalPeg.GalilScaffoldPlace.letter a := by
+  revert a
+  decide
+
+/-- **the symbol the fallback copy writes.**  A cursor standing on the gap beside a letter
+copies the gap symbol; one standing on a letter copies that letter.  The first is the cursor's
+own bit of the finite control, the second the centre of its window. -/
+noncomputable def copySymbol {K : ℕ} (gapBit : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Fin 3 :=
+  if gapBit then 2 else placeLetter (centreRead ws (placeSlot 1))
+
+/-- **the bit that says the work counter can be decremented without crossing zero.**  A counter
+tape holds the absolute value, so a decrement is a pop on the positive side and a push on the
+negative side — and on the positive side of zero it is a push that changes the sign. -/
+noncomputable def workPositive {K : ℕ} (polarity : Fin 16 → Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  polarity 9 && decide (belowRead ws (counterSlot 9) = encSeg PalPeg.LocalCounter.mark)
+
+/-- **the control table of the fallback copy.**  A tick that still has work flips the cursor's
+half-step bit and moves the sign of the work counter if the decrement crossed zero; a tick that
+has none hands the machine to the walk home, recording whether the cursor ran out. -/
+noncomputable def copyNext {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : QPhys fppBound dpBound :=
+  if remainsTest q.polarity ws then
+    (if centreRead ws (placeSlot 1) = blankM then q
+      else {q with placeGap := Function.update q.placeGap 1 (!q.placeGap 1), polarity := Function.update q.polarity 9 (workPositive q.polarity ws)})
+  else {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.home}, fppMode := PalPeg.GalilScaffoldChainInputSupply.FppControl.Mode.home, fppFinalStage := decide (centreRead ws (placeSlot 1) = blankM)}
+
+/-- **the action table of the fallback copy.**  A tick that still has work writes one symbol on
+the program's copy tape and steps right, decrements the work counter, and pops the cursor unless
+it was standing on a gap; a tick that has none writes the end mark where it stands. -/
+noncomputable def copyActs {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  if remainsTest q.polarity ws then
+    (if centreRead ws (placeSlot 1) = blankM then fun _ => []
+      else fun j =>
+        if j = slotIndex (progSlot live 7) then
+          [some (encProg (PalPeg.GalilFppPreparation.symbol (copySymbol (q.placeGap 1) ws)),
+            (.right : PalPeg.CloseoutCoreEnc12.MoveC))]
+        else if j = slotIndex (counterSlot 9) then
+          [if workPositive q.polarity ws then
+              some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))
+            else some (encSeg PalPeg.LocalCounter.mark, (.right : PalPeg.CloseoutCoreEnc12.MoveC))]
+        else if j = slotIndex (placeSlot 1) then
+          (if q.placeGap 1 then []
+            else [some (centreRead ws (placeSlot 1), (.left : PalPeg.CloseoutCoreEnc12.MoveC))])
+        else [])
+  else
+    actsAt (slotIndex (progSlot live 7))
+      [some (encProg 5, (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
+
+theorem copyActs_length {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
+    (copyActs live q ws j).length ≤ 1 := by
+  unfold copyActs actsAt
+  split_ifs <;> (try dsimp only) <;> (try split_ifs) <;> simp
+
 /-- the control of the machine, mode by mode. -/
 noncomputable def ruleNext {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
@@ -4074,6 +4138,7 @@ noncomputable def ruleNext {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fi
   | PalPeg.GalilScaffoldController.Mode.choose => chooseBackNext q
   | PalPeg.GalilScaffoldController.Mode.rewind => rewindNext first hbound q ws
   | PalPeg.GalilScaffoldController.Mode.fpp => fppNext entryQ q ws
+  | PalPeg.GalilScaffoldController.Mode.copy => copyNext q ws
   | _ => q
 
 /-- **the two actions that mark a new block.**  `markNew` steps the marks tape right, writes the
@@ -4160,6 +4225,8 @@ noncomputable def ruleActs {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fi
   | PalPeg.GalilScaffoldController.Mode.fpp =>
       withErase q.fppLive ws
         (fppBranchActs PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first (pcOf q) q.fppDone ws)
+  | PalPeg.GalilScaffoldController.Mode.copy =>
+      withErase q.fppLive ws (copyActs q.fppLive q ws)
   | _ => withErase q.fppLive ws (fun _ => [])
 
 theorem ruleActs_length {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
@@ -4182,6 +4249,8 @@ theorem ruleActs_length {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9
           (fun j => fppBranchActs_length PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first
             (pcOf q) q.fppDone ws j) j
       | exact withErase_length (b := 1) (by omega) q.fppLive ws _ (fun j => by simp [rewindActs]) j
+      | exact withErase_length (b := 1) (by omega) q.fppLive ws _
+          (fun j => copyActs_length q.fppLive q ws j) j
 
 /-- **the rule of the physical machine**, so far as its branches are proved. -/
 noncomputable def physRule {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) :
@@ -4234,6 +4303,23 @@ theorem physRule_acts_choose {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : 
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose) :
     (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none ws = withErase q.fppLive ws (chooseBackActs q.fppLive ws) := by
+  show ruleActs entryQ first q ws = _
+  unfold ruleActs
+  rw [hm]
+
+theorem physRule_nq_copy {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy) :
+    (physRule (dpBound := dpBound) entryQ first hbound hK).nq q none ws = copyNext q ws := by
+  show ruleNext entryQ first hbound q ws = _
+  unfold ruleNext
+  rw [hm]
+
+theorem physRule_acts_copy {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy) :
+    (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none ws
+      = withErase q.fppLive ws (copyActs q.fppLive q ws) := by
   show ruleActs entryQ first q ws = _
   unfold ruleActs
   rw [hm]
