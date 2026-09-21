@@ -876,23 +876,17 @@ noncomputable def ghostSteps (entry q : ℕ) (first : Fin 9)
     (localSteps q first (PalPeg.LocalInitStep.initStep entry)
       (chosenStep entry q first Good w) (chosenStep entry q first Good w))
 
-/-- **The abstract successor of a local tick is unique**: a canonical tick of the frame has one
-target (`GalilTickFair.tick_canonical_unique`), and a starved state stays. -/
-theorem tickSucc_unique (entry q : ℕ) (first : Fin 9) (w : List (Fin 2)) {starved₁ starved₂ : Prop}
-    (hiff : starved₁ ↔ starved₂) {x y₁ y₂ : State GalilVM}
-    (h₁ : TickSucc (PofC centreC placeC entry w) q first 2048
-      (PalPeg.GalilTickFair.Canonical entry 2048) starved₁ x y₁)
-    (h₂ : TickSucc (PofC centreC placeC entry w) q first 2048
-      (PalPeg.GalilTickFair.Canonical entry 2048) starved₂ x y₂) : y₁ = y₂ := by
-  rcases h₁ with ⟨hstarved₁, hy₁⟩ | ⟨hnot₁, htick₁, hcanon₁⟩
-  · rcases h₂ with ⟨_, hy₂⟩ | ⟨hnot₂, _, _⟩
-    · rw [hy₁, hy₂]
-    · exact absurd (hiff.mp hstarved₁) hnot₂
-  · rcases h₂ with ⟨hstarved₂, _⟩ | ⟨_, htick₂, hcanon₂⟩
-    · exact absurd (hiff.mpr hstarved₂) hnot₁
-    · exact PalPeg.GalilTickFair.tick_canonical_unique htick₁ hcanon₁ htick₂ hcanon₂
+/-- **The starvation test of an abstract successor may be replaced by an equivalent one.** -/
+theorem tickSucc_congr_starved {Pw : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
+    {Canon : State GalilVM → State GalilVM → Prop} {starved₁ starved₂ : Prop}
+    (hiff : starved₁ ↔ starved₂) {x y : State GalilVM}
+    (h : TickSucc Pw q first delay Canon starved₁ x y) :
+    TickSucc Pw q first delay Canon starved₂ x y := by
+  rcases h with ⟨hstarved, hy⟩ | ⟨hnot, htick, hcanon⟩
+  · exact Or.inl ⟨hiff.mp hstarved, hy⟩
+  · exact Or.inr ⟨fun hs => hnot (hiff.mpr hs), htick, hcanon⟩
 
-#print axioms tickSucc_unique
+#print axioms tickSucc_congr_starved
 
 open PalPeg.ReplayStartGhost
 open PalPeg.GalilScaffoldChainInputSupply
@@ -1278,15 +1272,16 @@ theorem given_physicalMachine (entry q : ℕ) (first : Fin 9) (hfirst : first �
       (q0, fun _ => STape.blankTape blankSymbol))
     -- the machine simulates the abstract states of the run forwards: from a configuration
     -- encoding the abstraction of a state of the run, one step reaches a configuration encoding
-    -- an abstract successor.  The local layer is the carrier of "on the run" only; the machine
-    -- keeps a layout of its own
+    -- the abstract successor.  The successor is handed to the machine — the run has one, and it
+    -- is unique — so the machine has to compute and encode it, not to prove that it exists.  The
+    -- local layer is the carrier of "on the run" only; the machine keeps a layout of its own
     (hforwardTick : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m p, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m → ¬ frozenAt w m →
+      ∀ m p successor, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m → ¬ frozenAt w m →
         Enc (absSC m) p →
-        ∃ successor, Enc successor (L0.apply blankSymbol p none) ∧
-          TickSucc (PofC centreC placeC entry w) q first 2048
-            (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm) (absSC m) successor)
+        TickSucc (PofC centreC placeC entry w) q first 2048
+          (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm) (absSC m) successor →
+        Enc successor (L0.apply blankSymbol p none))
     (hforwardFeed : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ letter m p, InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m →
@@ -1390,12 +1385,9 @@ theorem given_physicalMachine (entry q : ℕ) (first : Fin 9) (hfirst : first �
         omega, hencInit⟩)
     (fun w st Tc hpreTrace hcanonical m p honRun honRunNext hsucc hrep => by
       rcases hrep with ⟨hnotFrozen, henc⟩ | ⟨hfrozen, hphys⟩
-      · obtain ⟨successor, hencSuccessor, hsuccPhysical⟩ :=
-          hforwardTick w st Tc hpreTrace hcanonical m p honRun hnotFrozen henc
-        have hsuccessorEq := tickSucc_unique entry q first w
-          (⟨Or.inl, fun h => h.elim id (fun hf => absurd hf hnotFrozen)⟩)
-          hsuccPhysical hsucc
-        rw [hsuccessorEq] at hencSuccessor
+      · have hencSuccessor := hforwardTick w st Tc hpreTrace hcanonical m p _ honRun hnotFrozen
+          henc (tickSucc_congr_starved
+            (⟨fun h => h.elim id (fun hf => absurd hf hnotFrozen), Or.inl⟩) hsucc)
         by_cases hfrozenNext : frozenAt w (tickC (ghostSteps entry q first (localGood (spare := spare)) w) m)
         · exact Or.inr ⟨hfrozenNext, hfrozenEnter w st Tc hpreTrace hcanonical _ _
             honRunNext hfrozenNext hencSuccessor⟩

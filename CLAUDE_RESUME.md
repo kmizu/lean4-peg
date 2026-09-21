@@ -1,3 +1,31 @@
+## n328（2026-09-21）: 物理機械は「後継を見つける」のではなく「渡された後継を計算して符号化する」
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リスト不変（義務 1 本）、`unconditional` は付け替えていない。消費者 `given_physicalMachine` の `hforwardTick` から**存在の証明義務が消えた**。仮説の本数は同じ。 |
+
+**状態: module build `PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0、`#print axioms given_physicalMachine` は標準 3 公理・無条件 PAL は未完。**（全体 build は n325 以降走らせていない。公理にも最終定理の経路にも触っていない。）
+
+**何を直したか（消費者の型を上から読んで分かったこと）**: 旧 `hforwardTick` は `∃ successor, Enc successor (L0.apply p none) ∧ TickSucc … (absSC m) successor` を要求していた。つまり物理機械に「抽象 tick の後継が存在すること」まで証明させていた。ところが消費者の使用箇所では、その後継 `hsucc` は**既に引数として手元にある**（走行の状態なので trace か `plateauStep` が出している）。新しい形は
+
+```
+∀ m p successor, OnRun … m → ¬ frozenAt w m → Enc (absSC m) p →
+  TickSucc (PofC …) q first 2048 (Canonical entry 2048) (Starved m.vm) (absSC m) successor →
+  Enc successor (L0.apply blankSymbol p none)
+```
+
+で、機械の仕事は「渡された（一意な）後継を計算して符号化する」だけになった。`tickSucc_unique` は最後の読み手を失ったので、代わりに使う `tickSucc_congr_starved`（飢餓判定を同値なものに置き換える）に差し替えて削除。
+
+**この形が効く理由（スクラッチ `$S/tick_fun.keep.lean`、EXIT=0・error 0・公理 `propext`／`Quot.sound`）**: 抽象 tick を状態の関数にする定理が通った。`FrameFun σ`（`Frame` の 33 個の関係・述語を関数と Bool 判定にしたもの）、`Computes F G t`（「関数が関係を計算する」。frame が開いている 3 つ——`init`／`beginFallback`／`replayStart`——は目標 `t` についてだけ要求）、`tickFun G F delay x`（モードで分岐し、scan では restart → 待機 → 計数 → 一致 → shift 入口 → fallback 入口 の順に Bool で分岐）、そして
+
+**`tick_eq_tickFun : Computes F G y.vm → Tick F delay x y → (x.ctl.mode = scan → G.restartGuard x.vm → y = ⟨{x.ctl with clock := delay}, G.restart x.vm⟩) → y = tickFun G F delay x`**（24 構成子すべて）。
+
+restart 優先の側条件は `GalilTickFair.Canonical.restartFirst` そのもの。つまり「trace が後継の存在を出し、機械が `tickFun` を計算し、`Canonical` と決定性が両者の一致を出す」という分担になる。
+
+**投入していない理由**: `tickFun` はまだ読み手が無い（参照ゼロの宣言を作らない）。次に `Computes` を具体 frame `galilFrameS (PofC …)` について埋め（`searchEffectFun`／`chainAtFun`／`backgroundFun` は `$S/scan_fun.keep.lean` で検査済み、残りは compare と入口 2 つ）、`hforwardTick` を「機械が `tickFun` を計算する」へ落とす定理と一緒に投入する。
+
 ## n327（2026-09-21）: 点検 — 物理機械の山は「view の機械」ではなく「scan の計算できる局所 step」（調査のみ、コードは変えていない）
 
 **公理への進捗**
