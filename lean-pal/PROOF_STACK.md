@@ -1,3 +1,42 @@
+## n347 — 自分の符号化に設計欠陥を見つけた（二重バッファがスロットに無い）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit af47138` まで、
+`PalPeg/PhysicalEncoding.lean` module build EXIT=0・error 0・sorry 0、
+`PalPeg.Workbench` BUILD=0・error 0、公理リスト変更なし。
+
+**一次情報で確認したこと。**
+
+* `MachineStep.sweepClosure blank Enc x p := ∃ ideal, Enc x (p.1, ideal) ∧ ∀ tape,
+  TEqG blank (ideal tape) (p.2 tape)`（`PalPeg/MachineStep.lean:40`）。
+* `CloseoutCoreEnc12.TEqG blank T T' := pos T = pos T' ∧ ∀ p, rd blank T p = rd blank T' p`
+  （`:257`）。**全位置での一致**であって、窓の中だけの一致ではない。
+
+つまり `hideal` が取る `sweepClosure` は掃引の後始末を吸収するだけで、
+「読まない領域にゴミが残っていてよい」とは言っていない。
+
+**帰結（欠陥）。** いま `Slot` のプログラム部は `Fin 9` の 9 枠しかなく、
+`EncTapes.fpp` は
+
+```
+tapes (progSlot i) = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i)))
+```
+
+と**抽象テープとの一致**を要求している。`rewind` の `fppReset` は抽象側で 9 本すべてを
+`Tape.reset` にする（局所層では `LocalBuffers.resetFresh`＝生きている半分の切り替えで、
+テープは 1 本も動かない）。ところが物理側は 9 枠しか持たないので、同じ 1 tick で
+9 本を白紙にしなければならず、**1 tick 1 アクションの規律で不可能**。
+
+**直し方（次の一手）。** プログラム部（と DP 部）のスロットを二重にする:
+`Fin 9` を `Fin 9 × Bool`、`Fin 12` を `Fin 12 × Bool` にし、どちらが生きているかを
+`QPhys` の 1 ビットで持つ。符号化は**生きている半分だけ**を抽象テープに結びつけ、
+`fppReset` はそのビットの反転になる。遊んでいる半分は背景の消去仕事
+（`LocalBuffers.clearTick`、1 tick 1 セル）で白紙に戻る。これは局所層が
+`LocalBuffers.Buffered n`（`A` / `B` / `active` / `job`）で既に持っている構造そのもので、
+`LocalState.lean:18-56` の設計註がまさにこれを答えとして挙げている。
+
+**この欠陥は、これ以上分岐を積む前に直す。** 直さずに `fpp` / `rewind` を書くと、
+1 tick で 9 本を消す規則を書くことになり、`ActRule.len_le` か忠実性のどちらかが壊れる。
+
 ## n336 — shift の 2 分岐、および接続点の地図
 
 全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit cfab8bc`、公理リスト変更なし。
