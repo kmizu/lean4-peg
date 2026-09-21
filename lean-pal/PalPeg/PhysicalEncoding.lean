@@ -4478,16 +4478,31 @@ theorem progRunActs_of_agree (code : List (Instruction 9)) :
 /-- **a quantum cannot tell the control of two machines apart either.**  Each call spends one of
 the radius the machines agree on, so after `n` of them the two runs carry the same program counter
 and the same halting bit.  This is the control-side twin of `progRunActs_of_agree`. -/
-theorem runFun_control_of_agree (code : List (Instruction 9)) :
+theorem machineAgree_run (code : List (Instruction 9)) :
     ∀ (n : ℕ) (m m' : PalPeg.GalilScaffoldControl.Machine 9), MachineAgree n m m' →
+      MachineAgree 0 (PalPeg.ProgramFunction.runFun code (List.replicate n true) m)
+        (PalPeg.ProgramFunction.runFun code (List.replicate n true) m')
+  | 0, _, _, h => h
+  | n + 1, m, m', h => by
+      rw [List.replicate_succ]
+      exact machineAgree_run code n _ _ (machineAgree_tick code h)
+
+/-- the control is part of what survives, and it is the part the finite state carries. -/
+theorem runFun_control_of_agree (code : List (Instruction 9)) (n : ℕ)
+    (m m' : PalPeg.GalilScaffoldControl.Machine 9) (h : MachineAgree n m m') :
       (PalPeg.ProgramFunction.runFun code (List.replicate n true) m).config.pc
           = (PalPeg.ProgramFunction.runFun code (List.replicate n true) m').config.pc
         ∧ (PalPeg.ProgramFunction.runFun code (List.replicate n true) m).done
-          = (PalPeg.ProgramFunction.runFun code (List.replicate n true) m').done
-  | 0, _, _, h => ⟨h.pc, h.done⟩
-  | n + 1, m, m', h => by
-      rw [List.replicate_succ]
-      exact runFun_control_of_agree code n _ _ (machineAgree_tick code h)
+          = (PalPeg.ProgramFunction.runFun code (List.replicate n true) m').done :=
+  ⟨(machineAgree_run code n m m' h).pc, (machineAgree_run code n m m' h).done⟩
+
+/-- **and so is the symbol under each head**, which is what the branch that marks the new block
+needs: the rule must write beside a cell it can only know through its windows. -/
+theorem runFun_focus_of_agree (code : List (Instruction 9)) (n : ℕ)
+    (m m' : PalPeg.GalilScaffoldControl.Machine 9) (h : MachineAgree n m m') (t : Fin 9) :
+    ((PalPeg.ProgramFunction.runFun code (List.replicate n true) m).config.tapes t).focus
+      = ((PalPeg.ProgramFunction.runFun code (List.replicate n true) m').config.tapes t).focus :=
+  machineAgree_focus (machineAgree_run code n m m' h) t
 
 /-- **the machine the rule runs in its head agrees with the abstraction's, as far as a quantum of
 `K` calls can look.**  Its heads sit at the centre of their windows by construction, and each of
