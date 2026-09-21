@@ -2284,10 +2284,44 @@ theorem withErase_at_other {K : ℕ} (live : Bool)
   unfold withErase
   rw [eraseOf_other live ws slot h, List.append_nil]
 
+/-- naming actions at one slot of the live half names none anywhere else on it. -/
+theorem actsAt_off_live (live : Bool) (i : Fin 9)
+    (l : List (PalPeg.CloseoutCoreEnc12.Act Γm)) (slot : Slot)
+    (hslot : ∀ j : Fin 9, slot ≠ progSlotOf live j) :
+    actsAt (slotIndex (progSlotOf live i)) l (slotIndex slot) = [] := by
+  show (if slotIndex slot = slotIndex (progSlotOf live i) then l else []) = []
+  exact if_neg (fun h => hslot i (slotIndex.injective h))
+
 /-- **the ideal step of a branch that also erases.**  At its own slot the branch's action list is
 applied; at every slot the encoding speaks about other than that one, nothing happens.  The idle
 half is deliberately left out: that is where the erasure writes. -/
 theorem idealStep_withErase {Q : Type} {K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K) (q : Q)
+    (T : Slot → STape Γm) (live : Bool)
+    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase live (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) base)
+    (hbase : ∀ slot : Slot, (∀ j : Fin 9, slot ≠ progSlotOf live j) →
+      base (slotIndex slot) = []) :
+    (∀ i : Fin 9, (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+        (slotIndex (progSlotOf live i))
+        = PalPeg.CloseoutCoreEnc12.actList blankM (T (progSlotOf live i))
+            (base (slotIndex (progSlotOf live i))))
+      ∧ ∀ slot : Slot, (∀ j : Fin 9, slot ≠ progSlotOf live j) →
+        (∀ k : Fin 9, slot ≠ progSlotOf (!live) k) →
+        (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot)
+          = T slot := by
+  refine ⟨fun i => ?_, ?_⟩
+  · rw [idealStep_tapes, hacts, withErase_at_live, tapesOf_apply]
+  · intro slot hs hidle
+    rw [idealStep_tapes, hacts, withErase_at_other live _ _ slot hidle, tapesOf_apply,
+      hbase slot hs]
+    rfl
+
+/-- **the case of a branch that names actions on a single slot of the live half.**  Every branch
+but the one that runs the preparation program is of this shape: the other eight live slots get the
+empty list, which leaves their tapes where they were. -/
+theorem idealStep_atLiveSlot {Q : Type} {K : ℕ}
     (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K) (q : Q)
     (T : Slot → STape Γm) (live : Bool) (i : Fin 9)
     (l : List (PalPeg.CloseoutCoreEnc12.Act Γm))
@@ -2301,17 +2335,22 @@ theorem idealStep_withErase {Q : Type} {K : ℕ}
         (∀ k : Fin 9, slot ≠ progSlotOf (!live) k) →
         (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot)
           = T slot := by
+  obtain ⟨hmoved, hkept⟩ :=
+    idealStep_withErase R q T live _ hacts (actsAt_off_live live i l)
   refine ⟨?_, ?_⟩
-  · rw [idealStep_tapes, hacts, withErase_at_live, tapesOf_apply]
-    show PalPeg.CloseoutCoreEnc12.actList blankM (T (progSlotOf live i))
-      (if slotIndex (progSlotOf live i) = slotIndex (progSlotOf live i) then l else []) = _
-    rw [if_pos rfl]
+  · have hi := hmoved i
+    rwa [show actsAt (slotIndex (progSlotOf live i)) l (slotIndex (progSlotOf live i)) = l from
+      if_pos rfl] at hi
   · intro slot hs hidle
-    rw [idealStep_tapes, hacts, withErase_at_other live _ _ slot hidle, tapesOf_apply]
-    show PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
-      (if slotIndex slot = slotIndex (progSlotOf live i) then l else []) = _
-    rw [if_neg (fun h => hs (slotIndex.injective h))]
-    rfl
+    by_cases hlive : ∃ j : Fin 9, slot = progSlotOf live j
+    · obtain ⟨j, hj⟩ := hlive
+      subst hj
+      have hjj := hmoved j
+      rw [show actsAt (slotIndex (progSlotOf live i)) l (slotIndex (progSlotOf live j)) = [] from by
+        show (if slotIndex (progSlotOf live j) = slotIndex (progSlotOf live i) then l else []) = []
+        exact if_neg (fun h => hs (slotIndex.injective h))] at hjj
+      exact hjj
+    · exact hkept slot (fun j hj => hlive ⟨j, hj⟩) hidle
 
 /-- **the erasure keeps the shape it needs.**  Blanking a cell and stepping left sends a padded
 tape to a padded tape: the blank the machine writes is the component alphabet's own blank, so the
@@ -2348,11 +2387,12 @@ cell and steps left, which `erase_preserves_shape` shows keeps the padding. -/
 theorem idle_shape_after_erase {Q : Type} {K : ℕ} (margin : ℕ) (hK1 : 1 ≤ K)
     (hKn : K ≤ margin + 1)
     (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K) (q : Q)
-    (T : Slot → STape Γm) (live : Bool) (i : Fin 9)
-    (l : List (PalPeg.CloseoutCoreEnc12.Act Γm))
+    (T : Slot → STape Γm) (live : Bool)
+    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm))
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = withErase live (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-          (actsAt (slotIndex (progSlotOf live i)) l))
+      = withErase live (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) base)
+    (hbase : ∀ slot : Slot, (∀ j : Fin 9, slot ≠ progSlotOf live j) →
+      base (slotIndex slot) = [])
     (hshape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
       T (progSlotOf (!live) k) = padLeft margin (mapTape encProg raw)) (k : Fin 9) :
     ∃ raw : STape (Fin 9),
@@ -2364,11 +2404,9 @@ theorem idle_shape_after_erase {Q : Type} {K : ℕ} (margin : ℕ) (hK1 : 1 ≤ 
       = eraseAct (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
           (slotIndex (progSlotOf (!live) k)) := by
     rw [hacts]
-    show actsAt (slotIndex (progSlotOf live i)) l (slotIndex (progSlotOf (!live) k))
+    show base (slotIndex (progSlotOf (!live) k))
       ++ eraseOf live _ (slotIndex (progSlotOf (!live) k)) = _
-    rw [show actsAt (slotIndex (progSlotOf live i)) l (slotIndex (progSlotOf (!live) k)) = [] from by
-      unfold actsAt
-      rw [if_neg (fun h => progSlotOf_ne_flip live i k (slotIndex.injective h).symm)]]
+    rw [hbase (progSlotOf (!live) k) (fun j => (progSlotOf_ne_flip live j k).symm)]
     show [] ++ eraseOf live _ (slotIndex (progSlotOf (!live) k)) = _
     rw [List.nil_append]
     unfold eraseOf
@@ -2528,12 +2566,13 @@ theorem markEnd_forward_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centr
     congr 1
     unfold markEndActs
     rw [hread, if_neg hnotMark]
-  obtain ⟨hmoved, hkept⟩ := idealStep_withErase R q T q.fppLive 8 _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_atLiveSlot R q T q.fppLive 8 _ hacts'
   rw [hq]
   exact markEnd_forward margin centre place entry entryQ first w F delay x q T
     (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
     hmode hnotEnd henc hmoved hkept
-    (idle_shape_after_erase margin hK1 hKn R q T q.fppLive 8 _ hacts' henc.2.idleShape)
+    (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
+      (actsAt_off_live q.fppLive 8 _) henc.2.idleShape)
 
 /-- **the mark walk back, rule and encoding together.**  The step that finds the end mark: the
 marks tape walks one cell left and the controller goes to `choose`. -/
@@ -2580,12 +2619,13 @@ theorem markEnd_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
     congr 1
     unfold markEndActs
     rw [hread, if_pos hatMark, if_neg hnotFloor]
-  obtain ⟨hmoved, hkept⟩ := idealStep_withErase R q T q.fppLive 8 _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_atLiveSlot R q T q.fppLive 8 _ hacts'
   rw [hq]
   exact markEnd_back margin centre place entry entryQ first w F delay x q T
     (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
     hmode hatEnd hfloor henc hmoved hkept
-    (idle_shape_after_erase margin hK1 hKn R q T q.fppLive 8 _ hacts' henc.2.idleShape)
+    (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
+      (actsAt_off_live q.fppLive 8 _) henc.2.idleShape)
 
 /-! ### the walk home
 
@@ -2653,7 +2693,7 @@ theorem home_fppStart_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre 
     congr 1
     unfold homeActs
     rw [hread, if_pos hatMark]
-  obtain ⟨hmoved, hkept⟩ := idealStep_withErase R q T q.fppLive 7 _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_atLiveSlot R q T q.fppLive 7 _ hacts'
   have hkeptAll : ∀ slot : Slot, (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) →
       (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot)
         = T slot := by
@@ -2667,7 +2707,8 @@ theorem home_fppStart_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre 
     encTapes_idleOnly margin _ _ _ _ _ _ T _
       (home_fppStart margin centre place entry entryQ first w F delay x q T hbound hmode
         hatLeft henc).2 hkeptAll
-      (idle_shape_after_erase margin hK1 hKn R q T q.fppLive 7 _ hacts' henc.2.idleShape)⟩
+      (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
+      (actsAt_off_live q.fppLive 7 _) henc.2.idleShape)⟩
 
 /-- **the walk home itself, rule and encoding together.**  The head is not on the left mark and
 the cell below it is not the floor, so the source tape walks one cell left. -/
@@ -2714,12 +2755,13 @@ theorem home_step_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
     congr 1
     unfold homeActs
     rw [hread, if_neg hnotMark, if_neg hnotFloor]
-  obtain ⟨hmoved, hkept⟩ := idealStep_withErase R q T q.fppLive 7 _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_atLiveSlot R q T q.fppLive 7 _ hacts'
   rw [hq]
   exact home_step margin centre place entry entryQ first w F delay x q T
     (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
     hmode hnotLeft hfloor henc hmoved hkept
-    (idle_shape_after_erase margin hK1 hKn R q T q.fppLive 7 _ hacts' henc.2.idleShape)
+    (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
+      (actsAt_off_live q.fppLive 7 _) henc.2.idleShape)
 
 /-! ### the parity walk of `choose`
 
@@ -2779,12 +2821,13 @@ theorem choose_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : 
     congr 1
     unfold chooseBackActs
     rw [if_neg hnotFloor, hread]
-  obtain ⟨hmoved, hkept⟩ := idealStep_withErase R q T q.fppLive 8 _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_atLiveSlot R q T q.fppLive 8 _ hacts'
   rw [hq]
   exact choose_back margin centre place entry entryQ first w F delay x q T
     (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
     hmode hkeep hfloor henc hmoved hkept
-    (idle_shape_after_erase margin hK1 hKn R q T q.fppLive 8 _ hacts' henc.2.idleShape)
+    (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
+      (actsAt_off_live q.fppLive 8 _) henc.2.idleShape)
 
 /-! ### the three branches that stop at a component's own floor
 
@@ -2836,7 +2879,7 @@ theorem markEnd_back_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (
     congr 1
     unfold markEndActs
     rw [hread, if_pos hatMark, if_pos hisFloor]
-  obtain ⟨hmoved, hkept⟩ := idealStep_withErase R q T q.fppLive 8 _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_atLiveSlot R q T q.fppLive 8 _ hacts'
   have hkeptAll : ∀ slot : Slot, (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) →
       (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot)
         = T slot := by
@@ -2849,7 +2892,8 @@ theorem markEnd_back_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (
     hatEnd hfloor henc).1,
     encTapes_idleOnly margin _ _ _ _ _ _ T _ (markEnd_back_atFloor margin centre place entry entryQ first w F delay x q T hmode
     hatEnd hfloor henc).2 hkeptAll
-      (idle_shape_after_erase margin hK1 hKn R q T q.fppLive 8 _ hacts'
+      (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
+      (actsAt_off_live q.fppLive 8 _)
         henc.2.idleShape)⟩
 
 /-- **the walk home, on the floor.**  The source tape is already on its first cell, so nothing
@@ -2895,7 +2939,7 @@ theorem home_step_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (cen
     congr 1
     unfold homeActs
     rw [hread, if_neg hnotMark, if_pos hisFloor]
-  obtain ⟨hmoved, hkept⟩ := idealStep_withErase R q T q.fppLive 7 _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_atLiveSlot R q T q.fppLive 7 _ hacts'
   have hkeptAll : ∀ slot : Slot, (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) →
       (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot)
         = T slot := by
@@ -2908,7 +2952,8 @@ theorem home_step_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (cen
     hnotLeft hfloor henc).1,
     encTapes_idleOnly margin _ _ _ _ _ _ T _ (home_step_atFloor margin centre place entry entryQ first w F delay x q T hmode
     hnotLeft hfloor henc).2 hkeptAll
-      (idle_shape_after_erase margin hK1 hKn R q T q.fppLive 7 _ hacts'
+      (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
+      (actsAt_off_live q.fppLive 7 _)
         henc.2.idleShape)⟩
 
 /-- **the parity walk, on the floor.**  Only the parity bit changes -/
@@ -2948,7 +2993,7 @@ theorem choose_back_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (c
     congr 1
     unfold chooseBackActs
     rw [if_pos hisFloor]
-  obtain ⟨hmoved, hkept⟩ := idealStep_withErase R q T q.fppLive 8 _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_atLiveSlot R q T q.fppLive 8 _ hacts'
   have hkeptAll : ∀ slot : Slot, (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) →
       (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot)
         = T slot := by
@@ -2961,7 +3006,8 @@ theorem choose_back_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (c
     hfloor henc).1,
     encTapes_idleOnly margin _ _ _ _ _ _ T _ (choose_back_atFloor margin centre place entry entryQ first w F delay x q T hmode hkeep
     hfloor henc).2 hkeptAll
-      (idle_shape_after_erase margin hK1 hKn R q T q.fppLive 8 _ hacts'
+      (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts'
+      (actsAt_off_live q.fppLive 8 _)
         henc.2.idleShape)⟩
 
 /-! ### the counter bank: three tape actions and no more
@@ -3733,6 +3779,24 @@ theorem physRule_acts_choose {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : 
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose) :
     (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none ws = withErase q.fppLive ws (chooseBackActs q.fppLive ws) := by
+  show ruleActs entryQ q ws = _
+  unfold ruleActs
+  rw [hm]
+
+theorem physRule_nq_fpp {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 2 ≤ K)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp) :
+    (physRule (dpBound := dpBound) entryQ first hbound hK).nq q none ws = fppNext entryQ q ws := by
+  show ruleNext entryQ first hbound q ws = _
+  unfold ruleNext
+  rw [hm]
+
+theorem physRule_acts_fpp {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 2 ≤ K)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp) :
+    (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none ws
+      = withErase q.fppLive ws
+          (fppActs PalPeg.GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone ws) := by
   show ruleActs entryQ q ws = _
   unfold ruleActs
   rw [hm]
@@ -4543,6 +4607,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.withErase_length
 #print axioms PalPeg.PhysicalEncoding.withErase_at_live
 #print axioms PalPeg.PhysicalEncoding.idealStep_withErase
+#print axioms PalPeg.PhysicalEncoding.idealStep_atLiveSlot
 #print axioms PalPeg.PhysicalEncoding.erase_preserves_shape
 #print axioms PalPeg.PhysicalEncoding.idle_shape_after_erase
 #print axioms PalPeg.PhysicalEncoding.encTapes_idleOnly
