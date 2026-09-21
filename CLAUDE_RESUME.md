@@ -17,7 +17,9 @@
 * しかし scan の局所 step は**計算できる形では存在しない**: 消費者の scan／replayStart／plateau の後継は `chosenStep`（`Classical.choice` で選んだ ghost）。`LocalTick1.TickL1`（`:777`）は関係で、wait／count／match のどの構成子も探索量子の局所後継の存在 `SearchLocal S b x z` と、**抽象のままの** `ChainVM` 上の `chainAt` を仮説に取る（`GalilVML.chain` は「still abstract」）。mismatch（shift 入口・fallback 入口）と restart の局所構成子は無い。
 * よって物理機械が自前で持つべきものは: (i) 計算できる局所状態 `X`（`GalilVML` の view・カウンタ bank・鏡・buffer に、局所 chain `LocalChain.ChainL` を加えたもの）と抽象化 `absX : X → State GalilVM`、各モードの**関数としての**局所 step とその `Tick ∧ Canonical` への simulation、(ii) `X` とテープの対応（各成分は stack テープと queue なので n326 の機械と同じ部品）。n326 で `Enc` を `State GalilVM` の上に切り直したので、`X` は `Mirrored1` と一致しなくてよい。
 
-**次の一手（変える）**: view の機械を広げるのをやめ、(i) のいちばん危ない 1 点を機械検査する — `scan_wait`（head もカウンタも動かさず、探索量子 1 個と chain 1 歩だけ）について、探索量子の局所後継を**関数として**書けるか。`SearchLocal` の定義と、既存の `LocalBuffers`（DP 束）／`LocalTick1` の探索の局所 step（`searchStepL` の類）が関数か関係かを読む。関数があれば `SearchLocal` の producer になる。無ければそこが最初に作るもの。
+**追記（同日、定義と grep で確認）: `SearchLocal` に producer は 1 つも無い。** `LocalTick1.SearchLocal S a x z`（`:262`）は 4 場の構造（`steps : StepLocalN searchSteps x z`、`frame : SearchFrame x z`、`inv`、`effect : searchEffect S a (abs' x) (searchLens.get (abs' z))`）で、出現は `LocalTick1` と `LocalReplayParked` の**仮説としてだけ**。`dpStep`／`dpRun`（DP 束への点ごとの `LocalBuffers.stepL`、`abs_dpStep`）は「64 個の局所 step で書ける」ことの証人で、docstring 自身が「その 64 個の関数が `SafeQuanta` を計算することは `SearchLocal.effect` に残した gap」と書いている。探索の各 mode（grow／lower／lowerHome／copy／home＝`PrepareControl.Tick`、run＝`SafeQuanta`、wait／double）を**状態から計算する関数**は無い。ghost 方式（n316）はこの穴を迂回していただけで、物理機械では最初に埋めるもの。
+
+**次の一手（変える）**: view の機械を広げるのをやめ、(i) のいちばん危ない 1 点を機械検査する — `scan_wait`（head もカウンタも動かさず、探索量子 1 個と chain 1 歩だけ）について、探索量子の局所後継を**関数として**書けるか。関数 `searchStepL : Bool → GalilVML P → GalilVML P` を mode ごとに書き、`SearchLocal S a x (searchStepL a x)` を示す。最初は変化の無い 3 mode（idle／found／missed）と chain 非 idle の枝（探索不変）、次に run（`GalilDpCode.code` の命令を `dpPc` と DP 束の head から読む 1 命令 step が `SafeQuanta` の 1 量子であること。`GalilTickFair.readFun_code` が既にある）。
 
 ## n326（2026-09-21）: 物理機械の仮説を抽象状態の上に切り直した（`Enc : State GalilVM → 物理配置 → Prop`）
 
