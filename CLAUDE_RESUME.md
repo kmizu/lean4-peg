@@ -1,3 +1,24 @@
+## n327（2026-09-21）: 点検 — 物理機械の山は「view の機械」ではなく「scan の計算できる局所 step」（調査のみ、コードは変えていない）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リスト不変（義務 1 本）、`unconditional` は付け替えていない。 |
+
+**状態: 全体 build 成功（最新の全体 build は n325 の `BUILD=0`。n326 は module build のみ）・標準公理のみ・無条件 PAL は未完。**
+
+**なぜ点検したか**: n326 で view の機械（融合 slot、blank からの初歩、`HeadRep`）は通ったが、2 回続けて消費者 `given_physicalMachine` の仮説は 1 本も埋まっていない。部品を積む前に義務と一次情報を読み直した。
+
+**一次情報で確かめたこと**:
+* 義務 `H_realizeCanonical`（`CloseoutFinalW:113`）は「**w に依らない 1 台**の `LocalStep` 機械があり、全ての非空 `w` と `PreTraceIMW`／`CanonTrace` な trace について `SAccepts w ↔ LatchTrue …`」。機械は抽象 tick を 1 歩ずつ追う必要は無いが、実時間で PAL を認識する計算そのものは要る（近道は無い）。
+* 正本 Scala の `alias(target, source)`（`ScaffoldSearch.scala:32`）は `copyFrom`＝永続スタックのポインタ複製で O(1)。呼び出しは 9 箇所: chain 誕生の `lag := radius`・`margin := radius`（`ScaffoldChain:91–92`）、`last := boundary`・`boundary := distance`（`:145–146`）、`remaining := chain.h`（`ScaffoldGalil:303`）、`remaining := length`（`:315`）、`replay := radius`（`:427`）、探索の `lower／work := lowerBound`（`ScaffoldSearch:106–107`）、`work := lower`（`:134`）、`work := span`（`:144`, `:200`）。Lean の抽象 `Tick` も値のコピーとして写している（`beginShiftVM`: `remaining := ofNat h`、`restartVM`: `lower := last`・`search := begin last radius` など）。n304 の head コピーと同じ機械モデルの差（ポインタ機械 vs 実時間多テープ TM）。
+* 局所層はこれを eager mirroring で解いている（`LocalMirror`: `take` は制御だけの操作、切り離した鏡の再構築は 1 tick 1 mark で犠牲の複製を消費）。締切は純算術で切り出し済み（`LocalBudget`／`LocalSchedule`: 場所クロック `delay = 2048`、2048 tick の窓で `radius` は高々 1 回しか変わらない、head の再配置だけは歩いて間に合わない → parked view）。
+* しかし scan の局所 step は**計算できる形では存在しない**: 消費者の scan／replayStart／plateau の後継は `chosenStep`（`Classical.choice` で選んだ ghost）。`LocalTick1.TickL1`（`:777`）は関係で、wait／count／match のどの構成子も探索量子の局所後継の存在 `SearchLocal S b x z` と、**抽象のままの** `ChainVM` 上の `chainAt` を仮説に取る（`GalilVML.chain` は「still abstract」）。mismatch（shift 入口・fallback 入口）と restart の局所構成子は無い。
+* よって物理機械が自前で持つべきものは: (i) 計算できる局所状態 `X`（`GalilVML` の view・カウンタ bank・鏡・buffer に、局所 chain `LocalChain.ChainL` を加えたもの）と抽象化 `absX : X → State GalilVM`、各モードの**関数としての**局所 step とその `Tick ∧ Canonical` への simulation、(ii) `X` とテープの対応（各成分は stack テープと queue なので n326 の機械と同じ部品）。n326 で `Enc` を `State GalilVM` の上に切り直したので、`X` は `Mirrored1` と一致しなくてよい。
+
+**次の一手（変える）**: view の機械を広げるのをやめ、(i) のいちばん危ない 1 点を機械検査する — `scan_wait`（head もカウンタも動かさず、探索量子 1 個と chain 1 歩だけ）について、探索量子の局所後継を**関数として**書けるか。`SearchLocal` の定義と、既存の `LocalBuffers`（DP 束）／`LocalTick1` の探索の局所 step（`searchStepL` の類）が関数か関係かを読む。関数があれば `SearchLocal` の producer になる。無ければそこが最初に作るもの。
+
 ## n326（2026-09-21）: 物理機械の仮説を抽象状態の上に切り直した（`Enc : State GalilVM → 物理配置 → Prop`）
 
 **公理への進捗**
