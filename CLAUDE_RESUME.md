@@ -1,3 +1,20 @@
+## n320（2026-09-21）: run 不変量の極性の束は scan 以外のモードでだけ求める
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。存在仮説 `hscanNext`／`hplateauNext` は残っているが、`Good next` は scan の着地では空虚になった） |
+
+**やったこと**: 極性を誰が読むかを利用箇所で全部確かめた。読むのは 7 つの相 step（`LocalWF.realizes_seven` の `H_wf`、5 箇所、どれも `hmd : mode = X` を持つ）と `replayStartNext` だけで、scan では誰も読まない。scan の後継は切断（抽象が合う状態）で作るので、極性を保つ理由が無い。
+* `ShadowedLocalFinal`: `polarityBundle m`（旧 `localGood` の中身: `PolWF` ∧ `pol work` ∧ `pol replay`）と `localGood m := m.vm.ctl.mode ≠ .scan → polarityBundle m`。`localGood_of_pol_eq` は `polarityBundle_of_pol_eq` に改名。相 step の保存は「源は scan でない」（`hnotScan`）から束を取り出して運ぶ。`init` と `replayStart` の着地は scan なので `fun hnotScanNext => absurd rfl hnotScanNext`（`replayStartNext` の `radius`／`replay` の極性交換の証明が消えた）。到着は `ctl_feedC` で源のモードに戻す。
+* `LocalWF.realizes_seven`／`CloseoutCoreStep.realizes_seven_of_agree`／`CloseoutCoreAgree.realizes_seven_SL` の `H_wf` に `m.vm.ctl.mode ≠ .scan` の前提を足した（use site は `(by rw [hmd]; decide)`）。
+
+**極性の残り（定義を読んだ）**: scan→shift と scan→copy の入口でだけ符号が要る。
+* shift の入口（`beginShiftVM`、`GalilScaffoldTopShiftCycle:23`）: `remaining := ofNat h`、`cycle := reset`、`length := inc (inc length)`。copy の入口（`FppControl.beginFallback`、`GalilScaffoldChainFallback:404`）: `fpp.work := inc length`。fresh に入る分は tick の場合分けから直接読める。
+* `length` は `GalilSpanCounter.SpanRep`（`value length = 2·value radius + 1`）が scan と shift の trace 点で成立（`BranchSupply.spanRepOnScanAndShift_alongTrace`）、`radius` は `RadLedger.nonneg`、`replay` は非 scan なら `ReplayRest` で reset。
+* `search.work`（`Ctr.work`）だけ材料が無い。読むのは replay commit（`LocalTick2.abs_commitReplay` の `hpw`）だけで、そこは `length`／`work` を reset して push する。`LocalInitStep.initVml` は同じことをするとき極性を自分で正に立てている（`pol := fun c => if c = .length ∨ c = .work then true else x.pol c`）。`commitReplay` も同じ形にすれば `hpl`／`hpw` が要らなくなり、`pol work` は束から外せる。
+
 ## n319（2026-09-21）: 報告点の後の相は tick そのものが保つ。`NextOK` から `Post` 節を削った
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
