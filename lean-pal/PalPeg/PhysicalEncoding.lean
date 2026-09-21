@@ -746,6 +746,11 @@ structure QPhys (fppBound dpBound : ℕ) where
   polarity : Fin 16 → Bool
   gap : Fin 4 → Bool
   micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl
+  /-- which half of each double buffer the encoding speaks about.  The bit is physical only:
+  the abstraction cannot see it, and a wipe of a program machine is its flip.  The encoding's
+  own fields still address the `false` half; moving them onto this bit is the next step. -/
+  fppLive : Bool
+  dpLive : Bool
 
 /-- **what the finite control says about the state.**  Each field is read off the state;
 nothing here mentions a tape. -/
