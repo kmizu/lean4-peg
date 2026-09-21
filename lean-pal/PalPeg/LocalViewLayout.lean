@@ -54,8 +54,9 @@ def viewTopsOfWindows (tag : RTag) (windows : Fin 12 → Window Γc K) : ViewTop
     symLetter (centreSym (windows (frontTape tag)))⟩
 
 /-- **The windows of a represented view show its three symbols.** -/
-theorem viewTopsOfWindows_eq {v : InputView} {gap : Bool} {micro : MicroControl}
-    {tapes : Fin 12 → STape Γc} (hcells : ViewCells v) (hrep : ViewRep K v gap micro tapes) :
+theorem viewTopsOfWindows_eq {margin : ℕ} (hmarginLe : K ≤ margin)
+    {v : InputView} {gap : Bool} {micro : MicroControl}
+    {tapes : Fin 12 → STape Γc} (hcells : ViewCells v) (hrep : ViewRep margin v gap micro tapes) :
     viewTopsOfWindows micro.2.1 (fun tape => readWin blankc K (tapes tape)) = viewTops v := by
   obtain ⟨backBottom, hbackHeight, hbackTape⟩ := hrep.back
   obtain ⟨nearBottom, hnearSealed, hnearHeight, hnearTape⟩ := hrep.near

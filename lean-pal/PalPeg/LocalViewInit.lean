@@ -50,11 +50,12 @@ theorem viewNext_init (Terminal : Type) (hK : 2 ≤ K) {slot : Fin 11} (hslot : 
   rw [if_pos hslot, slotMicroOp_zero hslot, microRule_nq_none hK _ none _ rfl]
   rfl
 
-/-- **Twelve stacks of `K` seals represent the empty view.** -/
-theorem viewRep_empty_of_seals (hK : 2 ≤ K) {tapes : Fin 12 → STape Γc}
-    (htape : ∀ tape, StackTape (tapes tape) (List.replicate K none)) (micro : MicroOp) :
-    ViewRep K emptyView viewInitControl.1 (micro, viewInitControl.2.2) tapes := by
-  obtain ⟨height, rfl⟩ : ∃ height, K = height + 1 := ⟨K - 1, by omega⟩
+/-- **Twelve stacks of `margin` seals represent the empty view.** -/
+theorem viewRep_empty_of_seals {margin : ℕ} (hmarginPos : 1 ≤ margin)
+    {tapes : Fin 12 → STape Γc}
+    (htape : ∀ tape, StackTape (tapes tape) (List.replicate margin none)) (micro : MicroOp) :
+    ViewRep margin emptyView viewInitControl.1 (micro, viewInitControl.2.2) tapes := by
+  obtain ⟨height, rfl⟩ : ∃ height, margin = height + 1 := ⟨margin - 1, by omega⟩
   refine ⟨rfl, microRep_empty_of_seals (fun tape => htape _) micro,
     ⟨List.replicate height none, by rw [List.length_replicate], ?_⟩,
     ⟨List.replicate (height + 1) none, sealed_replicate _, by rw [List.length_replicate], ?_⟩⟩
@@ -80,7 +81,7 @@ theorem viewInit_of_apply {Terminal Q : Type} {tapeCount : ℕ} (ViewTerminal : 
     project ((compStep R).apply blankc x input).1 = viewInitControl ∧
       ViewRep K emptyView viewInitControl.1 (micro, viewInitControl.2.2)
         (fun tape => ((compStep R).apply blankc x input).2 (embed tape)) := by
-  refine ⟨?_, viewRep_empty_of_seals hK (fun tape => ?_) micro⟩
+  refine ⟨?_, viewRep_empty_of_seals (by omega) (fun tape => ?_) micro⟩
   · show project (R.nq x.1 input _) = _
     rw [hnq, hcontrol, viewNext_init ViewTerminal hK hslot]
   · have hnone : R.acts x.1 input (fun tape => readWin blankc K (x.2 tape)) (embed tape) = [] := by

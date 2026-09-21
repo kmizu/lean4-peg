@@ -50,11 +50,11 @@ theorem microRun_append (hK : 2 ≤ K) (input : Option Terminal) :
       exact ⟨middle, MicroRun.cons hstep hfirst, hsecond⟩
 
 /-- Increments of the length counter with nothing owed leave the represented queue as it is. -/
-theorem idleRun_sound (hK : 2 ≤ K) (input : Option Terminal) :
+theorem idleRun_sound (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin) (input : Option Terminal) :
     ∀ (count : ℕ) {q : Queue (Fin 2)} {state final : MicroState} {first : MicroOp},
       MicroRun hK input (List.replicate count .incLength) state final →
-      MicroRep K q (first, state.1) state.2 → state.1.2.2 = 0 →
-      ∀ last : MicroOp, MicroRep K q (last, final.1) final.2 ∧ final.1.2.2.val = 0
+      MicroRep margin q (first, state.1) state.2 → state.1.2.2 = 0 →
+      ∀ last : MicroOp, MicroRep margin q (last, final.1) final.2 ∧ final.1.2.2.val = 0
   | 0, q, state, final, first, hrun, hrep, howed, last => by
     cases hrun
     exact ⟨hrep, by rw [howed]; rfl⟩
@@ -62,28 +62,29 @@ theorem idleRun_sound (hK : 2 ≤ K) (input : Option Terminal) :
     cases hrun with
     | cons hstep hrest =>
       rename_i middle
-      have hone := microRun_sound hK input [.incLength] q state middle first .incLength
+      have hone := microRun_sound hK hmarginLe input [.incLength] q state middle first .incLength
         (MicroRun.cons hstep (MicroRun.nil _)) hrep
         (by rw [howed]; exact (rfl : (0 - 1 : ℕ) = 0))
         ⟨microPremises_trivial _ (by simp) (by simp), trivial⟩
-      exact idleRun_sound hK input count hrest hone.1 (Fin.ext hone.2) last
+      exact idleRun_sound hK hmarginLe input count hrest hone.1 (Fin.ext hone.2) last
 
 /-- **Steps `1`–`10` of a slot perform the job on the queue.** -/
-theorem slotTailRun_sound (hK : 2 ≤ K) (input : Option Terminal) {q : Queue (Fin 2)}
+theorem slotTailRun_sound (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    (input : Option Terminal) {q : Queue (Fin 2)}
     (hq : RTQueue.Inv q) (job : Option QueueJob) (hfront : job = some .tail → q.front ≠ [])
     {state final : MicroState} {first : MicroOp}
     (hrun : MicroRun hK input (slotTail job) state final)
-    (hrep : MicroRep K q (first, state.1) state.2) (howed : state.1.2.2 = 0) (last : MicroOp) :
-    MicroRep K (jobApply job q) (last, final.1) final.2 ∧ final.1.2.2.val = 0 := by
+    (hrep : MicroRep margin q (first, state.1) state.2) (howed : state.1.2.2 = 0) (last : MicroOp) :
+    MicroRep margin (jobApply job q) (last, final.1) final.2 ∧ final.1.2.2.val = 0 := by
   cases job with
-  | none => exact idleRun_sound hK input 10 hrun hrep howed last
+  | none => exact idleRun_sound hK hmarginLe input 10 hrun hrep howed last
   | some job =>
     cases job with
-    | tail => exact tailRun_sound hK input hq (hfront rfl) hrun hrep howed last
+    | tail => exact tailRun_sound hK hmarginLe input hq (hfront rfl) hrun hrep howed last
     | snoc a =>
       obtain ⟨middle, hsnoc, hidle⟩ := microRun_append hK input _ _ _ _ hrun
-      have hmiddle := snocRun_sound hK input hq a hsnoc hrep howed .incLength
-      exact idleRun_sound hK input 1 hidle hmiddle.1 (Fin.ext hmiddle.2) last
+      have hmiddle := snocRun_sound hK hmarginLe input hq a hsnoc hrep howed .incLength
+      exact idleRun_sound hK hmarginLe input 1 hidle hmiddle.1 (Fin.ext hmiddle.2) last
 
 #print axioms slotTailRun_sound
 
@@ -200,22 +201,23 @@ def ViewStep (Terminal : Type) (hK : 2 ≤ K) (slot : Fin 11) (command : ViewCom
       (state'.2 tape)
 
 /-- Every tape of a view has the margin. -/
-theorem viewMargin (hK : 2 ≤ K) {q : Queue (Fin 2)} {micro : MicroControl}
+theorem viewMargin (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    {q : Queue (Fin 2)} {micro : MicroControl}
     {tapes : Fin 12 → STape Γc} {backFull nearFull : List (Option (Fin 2))}
-    (hqueue : MicroRep K q micro (fun tape => tapes (queueTapeOfView tape)))
+    (hqueue : MicroRep margin q micro (fun tape => tapes (queueTapeOfView tape)))
     (hback : StackTape (tapes backTape) backFull) (hbackLength : K ≤ backFull.length)
     (hnear : StackTape (tapes nearTape) nearFull) (hnearLength : K ≤ nearFull.length) :
     ∀ tape, K ≤ pos (tapes tape) := by
   intro tape
   by_cases hqueueTape : tape.val < 10
   · have htape : tape = queueTapeOfView ⟨tape.val, hqueueTape⟩ := Fin.ext rfl
-    have hqueue' : MicroRep K q (MicroOp.incLength, micro.2)
+    have hqueue' : MicroRep margin q (MicroOp.incLength, micro.2)
         (fun tape => tapes (queueTapeOfView tape)) := hqueue
-    have hmargin := (microRule_sound (Terminal := Unit) hK hqueue' none
+    have hmargin := (microRule_sound (Terminal := Unit) hK hmarginLe hqueue' none
       (fun h => by cases h) (fun h => by cases h) (fun h => by cases h)
       (fun hne => absurd rfl hne) (fun h => by cases h)).1 ⟨tape.val, hqueueTape⟩
     rw [htape]
-    exact hmargin
+    exact hmarginLe.trans hmargin
   · have hlt := tape.isLt
     rcases (by omega : tape.val = 10 ∨ tape.val = 11) with hval | hval
     · have htape : tape = backTape := Fin.ext hval
@@ -281,13 +283,14 @@ theorem viewQuietStep (Terminal : Type) (hK : 2 ≤ K) {slot : Fin 11} (hslot : 
 
 /-- **The decision step.**  From a represented view the step settles the gap bit, the job and
 the two stacks of `viewApply command v`, and is an idle `MicroStep` of the queue. -/
-theorem viewDecisionStep (Terminal : Type) (hK : 2 ≤ K) {slot : Fin 11} (hslot : slot.val = 0)
+theorem viewDecisionStep (Terminal : Type) (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    {slot : Fin 11} (hslot : slot.val = 0)
     {command : ViewCommand} {state state' : ViewState}
     (hstep : ViewStep Terminal hK slot command state state')
     {v : InputView} {first : MicroOp} (hcells : ViewCells v)
-    (hrep : ViewRep K v state.1.1 (first, state.1.2.2) state.2) :
+    (hrep : ViewRep margin v state.1.1 (first, state.1.2.2) state.2) :
     ∃ (job : Option QueueJob) (backBottom nearBottom : List (Option (Fin 2))),
-      K ≤ backBottom.length + 1 ∧ Sealed nearBottom ∧ K ≤ nearBottom.length ∧
+      margin ≤ backBottom.length + 1 ∧ Sealed nearBottom ∧ margin ≤ nearBottom.length ∧
       QuietView (viewApply command v).gap job
         (backStack (viewApply command v) ++ backBottom)
         ((viewApply command v).near ++ nearBottom) state' ∧
@@ -300,7 +303,7 @@ theorem viewDecisionStep (Terminal : Type) (hK : 2 ≤ K) {slot : Fin 11} (hslot
   rw [if_pos hslot] at hcontrol
   obtain ⟨backBottom0, hbackHeight0, hbackStack0⟩ := hrep.back
   obtain ⟨nearBottom0, -, hnearHeight0, hnearStack0⟩ := hrep.near
-  have hmargin := viewMargin hK hrep.queue hbackStack0
+  have hmargin := viewMargin hK hmarginLe hrep.queue hbackStack0
     (by simp only [backStack, List.length_append, List.length_cons]; omega) hnearStack0
     (by simp only [List.length_append]; omega)
   have hbackTape := htapes backTape (hmargin backTape)
@@ -308,7 +311,7 @@ theorem viewDecisionStep (Terminal : Type) (hK : 2 ≤ K) {slot : Fin 11} (hslot
   rw [viewActs_back Terminal hK hslot] at hbackTape
   rw [viewActs_near Terminal hK hslot] at hnearTape
   obtain ⟨⟨backBottom, hbackHeight, hback⟩, ⟨nearBottom, hnearSealed, hnearHeight, hnear⟩,
-    hfar, hgap⟩ := viewDecision_sound hcells hrep command hbackTape hnearTape
+    hfar, hgap⟩ := viewDecision_sound hmarginLe hcells hrep command hbackTape hnearTape
   refine ⟨_, backBottom, nearBottom, hbackHeight, hnearSealed, hnearHeight,
     ⟨?_, ?_, hback, hnear⟩, hfar, ?_, ?_, ?_⟩
   · rw [hcontrol]
@@ -316,7 +319,7 @@ theorem viewDecisionStep (Terminal : Type) (hK : 2 ≤ K) {slot : Fin 11} (hslot
   · rw [hcontrol]
   · intro htail hnil
     unfold queueJobOfWindows at htail
-    rw [viewTopsOfWindows_eq hcells hrep] at htail
+    rw [viewTopsOfWindows_eq hmarginLe hcells hrep] at htail
     exact front_ne_nil_of_tailJob htail hnil
   · show ((microRule Terminal hK).nq (MicroOp.incLength, state.1.2.2) none _).2 = state'.1.2.2
     rw [hcontrol, slotMicroOp_zero hslot]
@@ -358,18 +361,19 @@ theorem viewQuietRun (Terminal : Type) (hK : 2 ≤ K) (commands : ℕ → ViewCo
 /-- **One slot of a view.**  Eleven steps of the rule take a representation of `v` to a
 representation of `viewApply (commands 0) v`: only the command of step `0` is used, so the
 commands of the later steps are free.  Nothing is owed at the end, so slots compose. -/
-theorem viewSlot_sound (Terminal : Type) (hK : 2 ≤ K) {v : InputView} (hwf : WF v)
+theorem viewSlot_sound (Terminal : Type) (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    {v : InputView} (hwf : WF v)
     (hcells : ViewCells v) (commands : ℕ → ViewCommand) (states : ℕ → ViewState)
     (hsteps : ∀ (step : ℕ) (hstep : step < 11),
       ViewStep Terminal hK ⟨step, hstep⟩ (commands step) (states step) (states (step + 1)))
     {first : MicroOp}
-    (hrep : ViewRep K v (states 0).1.1 (first, (states 0).1.2.2) (states 0).2)
+    (hrep : ViewRep margin v (states 0).1.1 (first, (states 0).1.2.2) (states 0).2)
     (howed : (states 0).1.2.2.2.2 = 0) (last : MicroOp) :
-    ViewRep K (viewApply (commands 0) v) (states 11).1.1 (last, (states 11).1.2.2)
+    ViewRep margin (viewApply (commands 0) v) (states 11).1.1 (last, (states 11).1.2.2)
         (states 11).2 ∧
       (states 11).1.2.2.2.2.val = 0 := by
   obtain ⟨job, backBottom, nearBottom, hbackHeight, hnearSealed, hnearHeight, hquiet, hfar,
-    hfront, hidle⟩ := viewDecisionStep Terminal hK (slot := ⟨0, by omega⟩) rfl
+    hfront, hidle⟩ := viewDecisionStep Terminal hK hmarginLe (slot := ⟨0, by omega⟩) rfl
       (hsteps 0 (by omega)) hcells hrep
   have hbackLength : K ≤ (backStack (viewApply (commands 0) v) ++ backBottom).length := by
     simp only [backStack, List.length_append, List.length_cons]; omega
@@ -377,9 +381,9 @@ theorem viewSlot_sound (Terminal : Type) (hK : 2 ≤ K) {v : InputView} (hwf : W
     simp only [List.length_append]; omega
   obtain ⟨hrun, hfinal⟩ := viewQuietRun Terminal hK commands states hsteps hbackLength
     hnearLength 10 0 (by omega) hquiet
-  have hone := idleRun_sound hK (none : Option Terminal) 1
+  have hone := idleRun_sound hK hmarginLe (none : Option Terminal) 1
     (MicroRun.cons hidle (MicroRun.nil _)) hrep.queue howed .incLength
-  have hqueue := slotTailRun_sound hK (none : Option Terminal) hwf job hfront hrun hone.1
+  have hqueue := slotTailRun_sound hK hmarginLe (none : Option Terminal) hwf job hfront hrun hone.1
     (Fin.ext hone.2) last
   refine ⟨⟨hfinal.gap, ?_, ⟨backBottom, hbackHeight, hfinal.back⟩,
     ⟨nearBottom, hnearSealed, hnearHeight, hfinal.near⟩⟩, hqueue.2⟩

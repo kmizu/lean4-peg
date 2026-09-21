@@ -139,15 +139,15 @@ def initControl : ProgramControl := (.snoc 0, 10, (0, false), .idle, 0)
 theorem currentOp_initControl : currentOp initControl = .incLength := rfl
 
 /-- **Ten stacks of `K` seals represent the empty queue.** -/
-theorem microRep_empty_of_seals {tapes : Fin 10 → STape Γc}
-    (htape : ∀ tape, StackTape (tapes tape) (List.replicate K none)) (micro : MicroOp) :
-    MicroRep K RTQueue.empty (micro, initControl.2.2) tapes := by
-  refine ⟨⟨fun _ => List.replicate K none, fun _ => List.replicate K none,
-      List.replicate K none, rfl, ⟨fun ro => ?_, fun _ => sealed_replicate K⟩,
-      fun _ => by rw [List.length_replicate], fun tape _ => htape _, sealed_replicate K,
+theorem microRep_empty_of_seals {margin : ℕ} {tapes : Fin 10 → STape Γc}
+    (htape : ∀ tape, StackTape (tapes tape) (List.replicate margin none)) (micro : MicroOp) :
+    MicroRep margin RTQueue.empty (micro, initControl.2.2) tapes := by
+  refine ⟨⟨fun _ => List.replicate margin none, fun _ => List.replicate margin none,
+      List.replicate margin none, rfl, ⟨fun ro => ?_, fun _ => sealed_replicate margin⟩,
+      fun _ => by rw [List.length_replicate], fun tape _ => htape _, sealed_replicate margin,
       by rw [List.length_replicate], htape _⟩,
-    0, List.replicate K none, List.replicate K none, ?_, sealed_replicate K,
-    by rw [List.length_replicate], htape _, sealed_replicate K,
+    0, List.replicate margin none, List.replicate margin none, ?_, sealed_replicate margin,
+    by rw [List.length_replicate], htape _, sealed_replicate margin,
     by rw [List.length_replicate], htape _⟩
   · cases ro <;> rfl
   · show (0 : ℤ) + ((0 : Fin 3).val : ℤ) + lengthDebt RTQueue.empty.state

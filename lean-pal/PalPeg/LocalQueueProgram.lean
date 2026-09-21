@@ -234,14 +234,15 @@ inductive MicroRun (hK : 2 ≤ K) (input : Option Terminal) :
       MicroRun hK input (micro :: rest) state final
 
 /-- **A run of the machine along a program is the program on the abstract queue.** -/
-theorem microRun_sound (hK : 2 ≤ K) (input : Option Terminal) :
+theorem microRun_sound (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    (input : Option Terminal) :
     ∀ (program : List MicroOp) (q : Queue (Fin 2)) (state final : MicroState)
       (first last : MicroOp),
       MicroRun hK input program state final →
-      MicroRep K q (first, state.1) state.2 →
+      MicroRep margin q (first, state.1) state.2 →
       OwedOk program state.1.2.2.val →
       PremisesAlong program q →
-      MicroRep K (runMicro program q) (last, final.1) final.2 ∧ final.1.2.2.val = 0 := by
+      MicroRep margin (runMicro program q) (last, final.1) final.2 ∧ final.1.2.2.val = 0 := by
   intro program
   induction program with
   | nil =>
@@ -255,15 +256,15 @@ theorem microRun_sound (hK : 2 ≤ K) (input : Option Terminal) :
       rename_i middle
       obtain ⟨hpremise, hpremisesRest⟩ := hpremises
       obtain ⟨howedZero, hnoStart⟩ := OwedOk.head howed
-      have hrep' : MicroRep K q (micro, state.1) state.2 := hrep
-      obtain ⟨hmargin, hnq, hsound⟩ := microRule_sound (Terminal := Terminal) hK hrep' input
-        hpremise.1 (fun hmicro => (hpremise.2 hmicro).1) (fun hmicro => (hpremise.2 hmicro).2)
+      have hrep' : MicroRep margin q (micro, state.1) state.2 := hrep
+      obtain ⟨hmargin, hnq, hsound⟩ := microRule_sound (Terminal := Terminal) hK hmarginLe
+        hrep' input hpremise.1 (fun hmicro => (hpremise.2 hmicro).1) (fun hmicro => (hpremise.2 hmicro).2)
         (fun hne => Fin.ext (howedZero hne)) hnoStart
       obtain ⟨hcontrol, htapes⟩ := hstep
-      have hmiddle := hsound middle.2 (htapes hmargin)
+      have hmiddle := hsound middle.2 (htapes (fun tape => hmarginLe.trans (hmargin tape)))
       have hmiddleControl : middle.1 = (microControlAfter (micro, state.1) q).2 := by
         rw [← hcontrol, hnq]
-      have hmiddleRep : MicroRep K (microApply micro q) (micro, middle.1) middle.2 := by
+      have hmiddleRep : MicroRep margin (microApply micro q) (micro, middle.1) middle.2 := by
         rw [hmiddleControl]
         exact hmiddle
       have howedRest : OwedOk rest middle.1.2.2.val := by
@@ -303,13 +304,14 @@ theorem owedOk_check : OwedOk checkProgram 0 := by
 /-- **An enqueue on the machine.**  A run of the machine along `snocProgram a`, from a
 representation of `q` with nothing owed, ends in a representation of `RTQueue.snoc q a` with
 nothing owed. -/
-theorem snocRun_sound (hK : 2 ≤ K) (input : Option Terminal) {q : Queue (Fin 2)}
+theorem snocRun_sound (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    (input : Option Terminal) {q : Queue (Fin 2)}
     (hq : RTQueue.Inv q) (a : Fin 2) {state final : MicroState} {first : MicroOp}
     (hrun : MicroRun hK input (snocProgram a) state final)
-    (hrep : MicroRep K q (first, state.1) state.2) (howed : state.1.2.2 = 0) (last : MicroOp) :
-    MicroRep K (RTQueue.snoc q a) (last, final.1) final.2 ∧ final.1.2.2.val = 0 := by
+    (hrep : MicroRep margin q (first, state.1) state.2) (howed : state.1.2.2 = 0) (last : MicroOp) :
+    MicroRep margin (RTQueue.snoc q a) (last, final.1) final.2 ∧ final.1.2.2.val = 0 := by
   rw [← runMicro_snoc hq a]
-  refine microRun_sound hK input (snocProgram a) q state final first last hrun hrep ?_ ?_
+  refine microRun_sound hK hmarginLe input (snocProgram a) q state final first last hrun hrep ?_ ?_
   · rw [howed]
     exact ⟨rfl, owedOk_check⟩
   · have hpinv := RTQueue.snoc_pinv hq a
@@ -333,11 +335,12 @@ theorem snocRun_sound (hK : 2 ≤ K) (input : Option Terminal) {q : Queue (Fin 2
 /-- **A dequeue on the machine.**  A run of the machine along `tailProgram`, from a
 representation of a queue with a non-empty front and nothing owed, ends in a representation of
 `RTQueue.tail q` with nothing owed. -/
-theorem tailRun_sound (hK : 2 ≤ K) (input : Option Terminal) {q : Queue (Fin 2)}
+theorem tailRun_sound (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    (input : Option Terminal) {q : Queue (Fin 2)}
     (hq : RTQueue.Inv q) (hfront : q.front ≠ []) {state final : MicroState} {first : MicroOp}
     (hrun : MicroRun hK input tailProgram state final)
-    (hrep : MicroRep K q (first, state.1) state.2) (howed : state.1.2.2 = 0) (last : MicroOp) :
-    MicroRep K (RTQueue.tail q) (last, final.1) final.2 ∧ final.1.2.2.val = 0 := by
+    (hrep : MicroRep margin q (first, state.1) state.2) (howed : state.1.2.2 = 0) (last : MicroOp) :
+    MicroRep margin (RTQueue.tail q) (last, final.1) final.2 ∧ final.1.2.2.val = 0 := by
   rw [← runMicro_tail hq hfront]
   obtain ⟨P, hP⟩ := RTQueue.frontList_eq_append hq.sinv hq.nd
   have hpositive : 1 ≤ q.lenf := by
@@ -351,7 +354,7 @@ theorem tailRun_sound (hK : 2 ≤ K) (input : Option Terminal) {q : Queue (Fin 2
   have hpop : sApply .tailPop q = { q with lenf := q.lenf - 1, front := q.front.tail } := by
     show (if q.front = [] then q else _) = _
     rw [if_neg hfront]
-  refine microRun_sound hK input tailProgram q state final first last hrun hrep ?_ ?_
+  refine microRun_sound hK hmarginLe input tailProgram q state final first last hrun hrep ?_ ?_
   · rw [howed]
     exact ⟨rfl, rfl, owedOk_check⟩
   · refine ⟨⟨fun _ _ => hpositive, fun h => by cases h⟩,
@@ -492,33 +495,35 @@ theorem microRun_of_programRun (hK : 2 ≤ K) (input : Option Terminal) :
 
 /-- **An enqueue on the real machine**: nine steps of `programLocalStep` from the start of the
 `snoc a` job take a representation of `q` to a representation of `RTQueue.snoc q a`. -/
-theorem programRun_snoc (hK : 2 ≤ K) {q : Queue (Fin 2)} (hq : RTQueue.Inv q) (a : Fin 2)
+theorem programRun_snoc (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    {q : Queue (Fin 2)} (hq : RTQueue.Inv q) (a : Fin 2)
     (inputs : List (Option Terminal)) (hinputs : inputs.length = 9)
     {tag : RTag} {phase : RotationPhase} {tapes : Fin 10 → STape Γc} {first : MicroOp}
-    (hrep : MicroRep K q (first, tag, phase, 0) tapes) (last : MicroOp) :
-    MicroRep K (RTQueue.snoc q a)
+    (hrep : MicroRep margin q (first, tag, phase, 0) tapes) (last : MicroOp) :
+    MicroRep margin (RTQueue.snoc q a)
         (last, (programRun hK inputs ((.snoc a, 0, tag, phase, 0), tapes)).1.2.2)
         (programRun hK inputs ((.snoc a, 0, tag, phase, 0), tapes)).2 ∧
       (programRun hK inputs ((.snoc a, 0, tag, phase, 0), tapes)).1.2.2.2.2.val = 0 := by
   obtain ⟨hrun, -, -⟩ := microRun_of_programRun hK (none : Option Terminal) inputs
     ((.snoc a, 0, tag, phase, 0) : ProgramControl) tapes (by
       simp [programOf, snocProgram, checkProgram, hinputs])
-  exact snocRun_sound hK none hq a hrun hrep rfl last
+  exact snocRun_sound hK hmarginLe none hq a hrun hrep rfl last
 
 /-- **A dequeue on the real machine**: ten steps from the start of the `tail` job. -/
-theorem programRun_tail (hK : 2 ≤ K) {q : Queue (Fin 2)} (hq : RTQueue.Inv q)
+theorem programRun_tail (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    {q : Queue (Fin 2)} (hq : RTQueue.Inv q)
     (hfront : q.front ≠ [])
     (inputs : List (Option Terminal)) (hinputs : inputs.length = 10)
     {tag : RTag} {phase : RotationPhase} {tapes : Fin 10 → STape Γc} {first : MicroOp}
-    (hrep : MicroRep K q (first, tag, phase, 0) tapes) (last : MicroOp) :
-    MicroRep K (RTQueue.tail q)
+    (hrep : MicroRep margin q (first, tag, phase, 0) tapes) (last : MicroOp) :
+    MicroRep margin (RTQueue.tail q)
         (last, (programRun hK inputs ((.tail, 0, tag, phase, 0), tapes)).1.2.2)
         (programRun hK inputs ((.tail, 0, tag, phase, 0), tapes)).2 ∧
       (programRun hK inputs ((.tail, 0, tag, phase, 0), tapes)).1.2.2.2.2.val = 0 := by
   obtain ⟨hrun, -, -⟩ := microRun_of_programRun hK (none : Option Terminal) inputs
     ((.tail, 0, tag, phase, 0) : ProgramControl) tapes (by
       simp [programOf, tailProgram, checkProgram, hinputs])
-  exact tailRun_sound hK none hq hfront hrun hrep rfl last
+  exact tailRun_sound hK hmarginLe none hq hfront hrun hrep rfl last
 
 #print axioms programRun_snoc
 #print axioms programRun_tail

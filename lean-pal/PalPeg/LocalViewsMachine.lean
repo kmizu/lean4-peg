@@ -215,19 +215,21 @@ theorem machineIter_slotEnd (viewCount : ℕ) (hK : 2 ≤ K) (inputs : ℕ → O
 
 /-- **One slot of the machine.**  Eleven real steps from step `0` of a slot take every view to
 the view commanded by the letter of the slot, with nothing owed. -/
-theorem machineSlot (viewCount : ℕ) (hK : 2 ≤ K) (inputs : ℕ → Option (Fin 2))
+theorem machineSlot (viewCount : ℕ) (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    (inputs : ℕ → Option (Fin 2))
     (x : MachineState viewCount) (hstarted : x.1.1 = true) (hslot : x.1.2.2.2.1 = 0)
     (views : Fin viewCount → InputView) (hwf : ∀ view, WF (views view))
     (hcells : ∀ view, ViewCells (views view)) {first : MicroOp}
-    (hrep : ∀ view, ViewRep K (views view) (viewStateOf x view).1.1
+    (hrep : ∀ view, ViewRep margin (views view) (viewStateOf x view).1.1
       (first, (viewStateOf x view).1.2.2) (viewStateOf x view).2)
     (howed : ∀ view, (viewStateOf x view).1.2.2.2.2 = 0) (last : MicroOp) (view : Fin viewCount) :
-    ViewRep K (viewApply (commandOfLetter x.1.2.1) (views view))
+    ViewRep margin (viewApply (commandOfLetter x.1.2.1) (views view))
         (viewStateOf (machineIter viewCount hK inputs x 11) view).1.1
         (last, (viewStateOf (machineIter viewCount hK inputs x 11) view).1.2.2)
         (viewStateOf (machineIter viewCount hK inputs x 11) view).2 ∧
       (viewStateOf (machineIter viewCount hK inputs x 11) view).1.2.2.2.2.val = 0 := by
-  refine viewSlot_sound (Fin 2) hK (hwf view) (hcells view) (fun _ => commandOfLetter x.1.2.1)
+  refine viewSlot_sound (Fin 2) hK hmarginLe (hwf view) (hcells view)
+    (fun _ => commandOfLetter x.1.2.1)
     (fun count => viewStateOf (machineIter viewCount hK inputs x count) view) ?_ (hrep view)
     (howed view) last
   intro step hstep
@@ -280,8 +282,8 @@ theorem machineFirstLetter (viewCount : ℕ) (hK : 2 ≤ K) (inputs : ℕ → Op
     (fun index => inputs (1 + index)) _ hstarted hslot
   rw [hpending] at hcurrentEnd
   refine ⟨hstartedEnd, hslotEnd, hcurrentEnd, hpendingEnd, fun view => ?_⟩
-  have hslotRun := machineSlot viewCount hK (fun index => inputs (1 + index)) _ hstarted hslot
-    (fun _ => emptyView) (fun _ => WF_emptyView) (fun _ => viewCells_emptyView)
+  have hslotRun := machineSlot viewCount hK le_rfl (fun index => inputs (1 + index)) _
+    hstarted hslot (fun _ => emptyView) (fun _ => WF_emptyView) (fun _ => viewCells_emptyView)
     (first := MicroOp.incLength)
     (fun view => by
       rw [(hviews view).1]
