@@ -3992,6 +3992,28 @@ theorem rd_padded (n : ℕ) (t : PalPeg.GalilScaffoldTape.Tape) (p : ℕ) (hp : 
   · rw [List.getD_eq_default _ _ (by simpa using hk'), List.getD_eq_default _ _ hk']
     rfl
 
+@[simp] theorem pos_mapTape {Γ₁ : Type} (f : Γ₁ → Γm) (T : STape Γ₁) :
+    PalPeg.Local.pos (mapTape f T) = PalPeg.Local.pos T := by
+  show (T.left.map f).length = T.left.length
+  simp
+
+/-- **the reconstructed tape is the component's tape, shifted.**  Cell `j` of the one is cell
+`pos - K + j` of the other, so long as the component's head stands at least `K` cells from its own
+left end — below that the window shows the padding instead, which is what the floor sentinel is
+for. -/
+theorem rd_winTape_of_padded {K margin : ℕ} (t : PalPeg.GalilScaffoldTape.Tape)
+    (hK : K ≤ PalPeg.Local.pos (encTape t)) (j : Fin (2 * K + 1)) :
+    PalPeg.Local.rd (6 : Fin 9)
+        (encTape (winTape (PalPeg.Local.readWin blankM K
+          (padLeft margin (mapTape encProg (encTape t)))))) j.val
+      = PalPeg.Local.rd (6 : Fin 9) (encTape t)
+          (PalPeg.Local.pos (encTape t) - K + j.val) := by
+  rw [rd_winTape, PalPeg.Local.readWin_eq, pos_padLeft, pos_mapTape,
+    rd_padded margin t (PalPeg.Local.pos (encTape t) + margin + 1 - K + j.val) (by omega),
+    decProg_encProg]
+  congr 1
+  omega
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -4086,6 +4108,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.winTape_pos
 #print axioms PalPeg.PhysicalEncoding.rd_winTape
 #print axioms PalPeg.PhysicalEncoding.rd_padded
+#print axioms PalPeg.PhysicalEncoding.rd_winTape_of_padded
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
