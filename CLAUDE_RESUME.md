@@ -14,6 +14,7 @@
 
 **要確認（次にやる順）**:
 1. 新経路は `abs'`／`abs''`（`absHead'`、`far`／`near` を見る版）を使う。`viewOfPH` が `absHead'` の切断にもなるか（`far := 空`、`near := right`、`pending := []` なら `incoming` は `far ++ pending` なので、`incoming` を `far` に載せる必要がある。`RTQueue` を list から作る構成子と `RTQueue.Inv` の補題を探す）。
+   **→ 解決（2026-09-21、スクラッチ `$S/sec_check.lean`、控え `sec_check.keep.lean`、error 0・標準 3 公理）**: `PhysWF.pend` が `pending = []` を要求するので、各ヘッドの `incoming` は自分の `far` に載せる。`queueOfList l := l.foldl RTQueue.snoc RTQueue.empty`、`Inv (queueOfList l) ∧ toList (queueOfList l) = l`（一般の開始 queue で帰納、`RTQueue.inv_snoc`／`toList_snoc`／`inv_empty`／`toList_empty`）。`viewOfHead p := ⟨p.head.left, p.head.focus, p.head.right, queueOfList p.head.incoming, p.gap⟩` で `absHead' (viewOfHead p) [] = p` と `LocalInputView.WF (viewOfHead p)`。旧 `viewOfPH` は `far := empty` で `incoming` を `pending` に回す形なので、3 本のヘッドで `incoming` が違う新経路には使えない。
 2. `PolWF`＋`work`／`replay` は正の極性を要求する。`ctrOf c` の極性は `c.neg.isEmpty` なので、着地でこの 7 本が非負であることが要る。trace 上の既存材料（`GalilLengthFloor.FPack.radius`、`CloseoutLenNonneg`、`RadLedger.canon`、`CPack.canon`）でどこまで出るか。全カウンタの `Canonical` も同様。
 3. replaying の着地では `abs''.right = left^[rval] physHead`。非 replaying の着地は `viewOfPH target.right`、replaying の着地は source の駐車 view を引き継ぐ（replay の tick は物理 right を動かさず `rval` が 1 減るだけ、`LocalReplayParked §3`）。
 4. `NextOK` の `Canonical`: 仮説が与える `target` は canonical とは限らない（restart guard が立っているときの `scan_wait` など）。後継は trace の canonical な次状態（`st (k+1)` の truncation）を具体化したものにする。`GalilTruncTick` の「tick は truncation と可換」と、`CanonicalLocalRealizes.realizes_canonical` が何を要求しているかを読む。
