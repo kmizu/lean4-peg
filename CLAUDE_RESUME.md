@@ -1,3 +1,26 @@
+## n316（2026-09-21）: `hscanNext`／`hplateauNext` の方針 — 分岐ごとの局所 step でなく、抽象の着地を具体化した ghost を後継にする（調査のみ、コードは変えていない）
+
+**全体 build 成功（最新は n315 の `BUILD=0`）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（未接続） |
+
+**視点の変更**: n315 で分かったのは「ghost は自由なので、後継は抽象の着地に合うものを直接作ればよい」こと。scan は分岐が多く（wait／count／match／replay の match／restart／shift 入口／fallback 入口）、既存の局所部品（`LocalTick2.commitRestart`、`beginShift` の `shiftSlot`、`commitFallback` の `jF`）は割当や staging の名前付き仮説を大量に抱えている。分岐ごとに組むのをやめ、**抽象状態 → ghost の切断（section）**を 1 本作って、`next := 切断 (着地)` とする。`hscanNext` と `hplateauNext` の両方に効く。
+
+**一次情報で確かめたこと**:
+* `LocalState.abs`（`:189`）は場ごとの単純な写像: ヘッド 3 本（`absHead`）、`chain` はそのまま、カウンタ 10 本（`absCtrs`: cycle／remaining／radius／length／replay／fppWork／span／work／debt／lower）、fpp（mode／pc／`LocalBuffers.abs fppBuf`／done／walker は `absPlace fppWalker`／finalStage）、search（mode／finalStage／quarter）、dp（pc／`LocalBuffers.abs dpBuf`／done）、`periodOnly`、`walker := absPlace walkerView`。
+* 切断の部品は旧 encoder 経路に既にある（`CloseoutCoreEnc2`）: `ctrOf`＋`absCtr_ctrOf`（`Canonical` なカウンタ）、`viewOfPH`（`absHead` の切断、`:122`）、`viewOfPlace`（`absPlace` の切断、`:144`）。鏡は n315 の `ReplayStartGhost.mirrorOfTape`。
+
+**要確認（次にやる順）**:
+1. 新経路は `abs'`／`abs''`（`absHead'`、`far`／`near` を見る版）を使う。`viewOfPH` が `absHead'` の切断にもなるか（`far := 空`、`near := right`、`pending := []` なら `incoming` は `far ++ pending` なので、`incoming` を `far` に載せる必要がある。`RTQueue` を list から作る構成子と `RTQueue.Inv` の補題を探す）。
+2. `PolWF`＋`work`／`replay` は正の極性を要求する。`ctrOf c` の極性は `c.neg.isEmpty` なので、着地でこの 7 本が非負であることが要る。trace 上の既存材料（`GalilLengthFloor.FPack.radius`、`CloseoutLenNonneg`、`RadLedger.canon`、`CPack.canon`）でどこまで出るか。全カウンタの `Canonical` も同様。
+3. replaying の着地では `abs''.right = left^[rval] physHead`。非 replaying の着地は `viewOfPH target.right`、replaying の着地は source の駐車 view を引き継ぐ（replay の tick は物理 right を動かさず `rval` が 1 減るだけ、`LocalReplayParked §3`）。
+4. `NextOK` の `Canonical`: 仮説が与える `target` は canonical とは限らない（restart guard が立っているときの `scan_wait` など）。後継は trace の canonical な次状態（`st (k+1)` の truncation）を具体化したものにする。`GalilTruncTick` の「tick は truncation と可換」と、`CanonicalLocalRealizes.realizes_canonical` が何を要求しているかを読む。
+5. fpp walker の番兵（`PhysWF.walkerProper`）: `viewOfPlace` の出力が `ProperView` か。
+
+**物理側への含意（隠さない）**: ghost が「抽象状態の切断」になると、抽象局所層は証明上の媒介にすぎなくなり、実質の内容は物理機械の側（`Enc`、`hforwardTick` ほか 9 本、ActRule の実装）に集まる。ここは未着手のまま。
+
 ## n315（2026-09-21）: tracked な replayStart 状態に局所後継があることを証明した。仮説 `hreplayStartNext` が消えた
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
