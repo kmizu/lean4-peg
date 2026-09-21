@@ -14,6 +14,7 @@ import PalPeg.ScanEntrySigns
 import PalPeg.PlateauInvariant
 import PalPeg.TickFunction
 import PalPeg.FrameFunction
+import PalPeg.MachineStep
 
 /-!
 # The final theorem from the local system and a physical machine, the trace side discharged
@@ -973,6 +974,38 @@ theorem forwardTick_of_stepping (entry q : ℕ) (first : Fin 9) {Q Γ : Type} {t
     w m p successor henc hsucc
 
 #print axioms forwardTick_of_stepping
+
+/-- **`PAL ∈ PEG` from one rule.**  Everything the physical machine is asked about the abstract
+layer has been discharged: what is left of the forward obligation are two properties of the rule
+itself — that it names no action where the starvation test stands, and that its ideal step
+encodes the value of `tickFun`.  The sweep of `compStep` returns the tapes only up to `TEqG`,
+which a `SweepClosed` encoding absorbs. -/
+theorem forwardTick_of_rule (entry q : ℕ) (first : Fin 9) {Q Γ : Type} {t K : ℕ}
+    [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γ t K) (blankSymbol : Γ)
+    (Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop)
+    (hclosed : PalPeg.MachineStep.SweepClosed blankSymbol Enc)
+    (hmargin : ∀ x p, Enc x p → ∀ tape, K ≤ PalPeg.Local.pos (p.2 tape))
+    (hidle : ∀ x p, Enc x p → PalPeg.FrameFunction.starvedTest x = true →
+      R.nq p.1 none (fun tape => PalPeg.Local.readWin blankSymbol K (p.2 tape)) = p.1 ∧
+        ∀ tape, R.acts p.1 none
+          (fun tape => PalPeg.Local.readWin blankSymbol K (p.2 tape)) tape = [])
+    (hideal : ∀ (w : List (Fin 2)) x p, Enc x p → PalPeg.FrameFunction.starvedTest x = false →
+      Enc (PalPeg.GalilScaffoldTop.tickFun
+            (PalPeg.FrameFunction.galilFrameFun centreC placeC entry q first w)
+            (galilFrameS (PofC centreC placeC entry w) q first) 2048 x)
+        (PalPeg.LocalStepFusion.idealStep R blankSymbol p none))
+    (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)) (p : Q × (Fin t → STape Γ))
+    (successor : State GalilVM) (henc : Enc (absSC m) p)
+    (hsucc : TickSucc (PofC centreC placeC entry w) q first 2048
+      (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm) (absSC m) successor) :
+    Enc successor ((PalPeg.CloseoutCoreEnc12.compStep R).apply blankSymbol p none) :=
+  forwardTick_of_stepping entry q first (PalPeg.CloseoutCoreEnc12.compStep R) blankSymbol Enc
+    (fun _ x p => PalPeg.MachineStep.enc_of_starved hclosed R hmargin hidle x p)
+    (fun w x p => PalPeg.MachineStep.enc_of_stepping hclosed R hmargin (hideal w) x p)
+    w m p successor henc hsucc
+
+#print axioms forwardTick_of_rule
 
 /-- **The starvation test of an abstract successor may be replaced by an equivalent one.** -/
 theorem tickSucc_congr_starved {Pw : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}

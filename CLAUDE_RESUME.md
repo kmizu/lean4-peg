@@ -67,7 +67,12 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 **`hstay` の核（`$S/idle_step.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `compStep_apply_idle`——**命令を 1 つも名指さず制御も変えない規則は、配置をそこに置いたまま残す**（sweep が許す `TEqG` まで）。飢餓のところで機械がすることはこれだけなので、`hstay` は「`Enc` が `TEqG` で閉じていること」と「規則が `starvedTest` を見て何もしないこと」に落ちる。**したがって `Enc` は最初から `TEqG` を通して書く**（`ProgRepG`・`StackTape` と同じ形）。
 
-**`hstay` は規則の性質 1 つに落ちた（`$S/stay.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `SweepClosed`（符号化はテープを `TEqG` までしか語らない）と **`enc_of_starved`**——`SweepClosed` な `Enc` と、`starvedTest` が立つところで制御を変えず命令も名指さない規則があれば、飢餓の歩で符号化は保たれる。**物理側の停止分岐に残るのは「規則が飢餓のとき何もしない」という規則自身の性質だけ。**
+**両分岐が規則の性質に落ちた（新モジュール `PalPeg/MachineStep.lean`、消費者つきで投入。module build `PalPeg.MachineStep`・`PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0、標準公理のみ）**: `SweepClosed blank Enc`（符号化はテープを `TEqG` までしか語らない）のもとで
+
+* **`enc_of_starved`**: `starvedTest` が立つところで制御を変えず命令も名指さない規則なら、飢餓の歩で符号化は保たれる。
+* **`enc_of_stepping`**: ideal な 1 歩が後継を符号化する規則なら、実の 1 歩でも符号化は保たれる（sweep が返す `TEqG` を `SweepClosed` が吸収する）。
+
+消費者 `ShadowedLocalFinal.forwardTick_of_rule`: `ActRule` R ひとつについて、**`SweepClosed`・margin・「飢餓では何もしない」・「ideal な 1 歩が `tickFun` の値を符号化する」の 4 つ**から `hforwardTick` の本体が出る。`L0 := compStep R`。
 
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
