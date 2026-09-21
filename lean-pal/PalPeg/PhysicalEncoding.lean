@@ -3585,6 +3585,39 @@ theorem fppActs_length {K : ℕ} (code : List (Instruction 9)) (quantum : ℕ) (
     · simp
   · simp
 
+/-- **the branch names nothing outside the live half's program slots.**  This is what lets the
+erasure own every other slot, and it is the side condition the ideal step asks for. -/
+theorem fppActs_off_live {K : ℕ} (code : List (Instruction 9)) (quantum : ℕ) (live : Bool)
+    (pc : ℕ) (done : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (slot : Slot) (hslot : ∀ j : Fin 9, slot ≠ progSlotOf live j) :
+    fppActs code quantum live pc done ws (slotIndex slot) = [] := by
+  unfold fppActs
+  rw [Equiv.symm_apply_apply]
+  cases live
+  · match slot, hslot with
+    | .inr (.inl i), hslot => exact absurd (progSlotOf_false i).symm (hslot i)
+    | .inl _, _ => rfl
+    | .inr (.inr (.inl _)), _ => rfl
+    | .inr (.inr (.inr (.inl _))), _ => rfl
+    | .inr (.inr (.inr (.inr (.inl _)))), _ => rfl
+    | .inr (.inr (.inr (.inr (.inr (.inl _))))), _ => rfl
+    | .inr (.inr (.inr (.inr (.inr (.inr (.inl _)))))), _ => rfl
+    | .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl _))))))), _ => rfl
+    | .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl _)))))))), _ => rfl
+    | .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inr (.inr _)))))))), _ => rfl
+  · match slot, hslot with
+    | .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl i)))))))), hslot =>
+        exact absurd (progSlotOf_true i).symm (hslot i)
+    | .inl _, _ => rfl
+    | .inr (.inl _), _ => rfl
+    | .inr (.inr (.inl _)), _ => rfl
+    | .inr (.inr (.inr (.inl _))), _ => rfl
+    | .inr (.inr (.inr (.inr (.inl _)))), _ => rfl
+    | .inr (.inr (.inr (.inr (.inr (.inl _))))), _ => rfl
+    | .inr (.inr (.inr (.inr (.inr (.inr (.inl _)))))), _ => rfl
+    | .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl _))))))), _ => rfl
+    | .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inr (.inr _)))))))), _ => rfl
+
 /-- **and on the live half it is exactly the quantum's own actions.** -/
 theorem fppActs_at_live {K : ℕ} (code : List (Instruction 9)) (quantum : ℕ) (live : Bool)
     (pc : ℕ) (done : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (i : Fin 9) :
