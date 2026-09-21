@@ -1291,7 +1291,8 @@ theorem given_physicalMachine (entry q : ℕ) (first : Fin 9) (hfirst : first �
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ letter m p, InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m →
         Enc (absSC m) p →
-        Enc (absSC (feedC letter m)) (L0.apply blankSymbol p (some letter)))
+        Enc (PalPeg.GalilArriveChain.arriveState' letter (absSC m))
+          (L0.apply blankSymbol p (some letter)))
     -- once the abstract layer is frozen the machine is not followed any more: it keeps an
     -- invariant of its own, under which its report bit is off
     (PhysFrozen : List (Fin 2) → Q × (Fin t → STape Γ) → Prop)
@@ -1407,6 +1408,10 @@ theorem given_physicalMachine (entry q : ℕ) (first : Fin 9) (hfirst : first �
     (fun w st Tc hpreTrace hcanonical letter m p hinv honRunNext hrep => by
       rcases hrep with ⟨_, henc⟩ | ⟨hfrozen, _⟩
       · have hencNext := hforwardFeed w st Tc hpreTrace hcanonical letter m p hinv henc
+        rw [← show absSC (feedC letter m)
+            = PalPeg.GalilArriveChain.arriveState' letter (absSC m) from
+          PalPeg.LocalSysConcrete.feed_abs_core hinv.phys.inv.views hinv.phys.pend letter]
+          at hencNext
         by_cases hfrozenNext : frozenAt w (feedC letter m)
         · exact Or.inr ⟨hfrozenNext, hfrozenEnter w st Tc hpreTrace hcanonical _ _
             honRunNext hfrozenNext hencNext⟩

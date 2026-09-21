@@ -23,6 +23,8 @@
 * `machineFirstSlot`: **blank テープ・左端からの最初の実 1 歩は初期化の歩なしで 1 slot**。`LocalQueueInit.compStep_apply_blankEdge`（スクラッチから投入: 左端の blank からの sweep は head が半径に立つ blank からの sweep と `TEqG`、`sweep_blank_edge_shifted`）＋高さ `iterRadius K 11` の seal は空 view の表現（`viewRep_empty_of_seals`）。`hencInit`＋最初の `hforwardFeed` の view 成分の中身に当たる。
 * 片付け: 未融合の init 経路（`sweep_blank_edge`／`programRule_acts_idle`／`currentOp_initControl`／`programInit`／`viewActs_init`／`viewNext_init`／`viewInit_of_apply`／旧 `machineInit`／`machineFirstLetter`／`machineIter*`／`registersAfter`／`latch`）は読む者がいなくなったので削除。
 
+**n326 続き 3（消費者の `hforwardFeed` から局所層の `feedC` を消した）**: module build `PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0。`hforwardFeed` の結論は `Enc (GalilArriveChain.arriveState' letter (absSC m)) (L0.apply p (some letter))`。消費者の中で既存の `LocalSysConcrete.feed_abs_core`（`absState'' (feedC a m).vm = arriveState' a (absState'' m.vm)`、`ViewsWF`＋`pending = []` は `InvC` から）で戻す。`arriveState'` は抽象の 3 本の head（left／center／right）と chain の verifier の `incoming` に 1 文字足すだけ（`LocalTracking.arriveVM`／`GalilArriveChain.arriveChain`）。これで物理側の 2 本の前進仮説はどちらも抽象状態だけで述べられている。仮説の本数・公理リストは不変。
+
 **次**: 同じ物理配置（`LocalViewsMachine.machineRule`、view 1 本 = 12 テープ）の上で、command を制御（モード）と窓から決める形に広げる（tick の 1 歩＝各 view に `stepRight`／`stepLeft`／`stay`）。抽象 head と `InputView` の対応（`absHead'`、`feedC` が view にすること）を一次情報で確認して `Enc` の head 成分を定義する。n304 の 3 義務（P1〜P3）は未着手。
 
 ## n325（2026-09-21）: 最後の報告点の後の tick にも局所後継ができた。抽象局所層への仮説はゼロ
