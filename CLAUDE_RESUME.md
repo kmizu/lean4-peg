@@ -170,6 +170,23 @@
 (ii) の道具は今日のもの（`prog_slots_*`／`padded_move*`／`window_*`）がそのまま効くことを
 `bufEnc_stepRight` で確かめた。
 
+**物理の土台の上で枝が 5 本通った**（同じスクラッチ、`EXIT=0`・標準公理のみ）:
+`vml_markEnd_forward` / `vml_markEnd_back` / `vml_home_step` / `vml_choose_back` / `vml_home_fppStart`。
+
+**証明の骨が定型化した。** どれも同じ 6 手:
+1. `hstate : absState'' y = ⟨y.ctl, abs'' y⟩ := rfl` を噛ませて状態を開く
+2. `simp only [tickFun, hmode, 判定の補題, 動きの補題]`
+3. `if` を倒す。条件は **`abs''` の形で書く**（`rw` は構文一致を要求するので、`LocalBuffers.abs` の形では当たらない）
+4. `unfold absState'' abs'' abs' abs FppControl.tape put`
+5. `simp only [abs_stepL]`
+6. `rfl`
+
+`vml_home_fppStart` だけは 5 が要らない——**テープを 1 本も動かさない**ので、変わるのは
+`fppPc` / `fppDone` / `fppMode` と制御語だけ。二重緩衝は両半分とも手つかず。
+
+**残りは同じ型を 10 モードぶん書く作業**（`init` / `scan` / `shift` / `copy` / `fpp` / `rewind` /
+`replayStart` と、各モードの残りの場合）。`scan` が最も重い。
+
 **進め方について。** モードごとに `tickFun` を言い換える補題（`tickFun_markEnd`／`tickFun_home`）は `simp only [tickFun, hmode]` で出る**薄い言い換え**で、中身が無い。そこで手を変えて、いちばん単純なモード（`markEnd`、動くのは fpp プログラムのテープ 8 だけ）を規則の枝まで書こうとしたところ、上の左端の取り違えに当たった。**モードの一覧を増やすより、1 モードを物理まで通す方が誤りを出す。**
 
 ## n332（2026-09-21）: 抽象 frame が丸ごと関数になった。物理機械への要求は「符号化を保つ 2 本」だけになった
