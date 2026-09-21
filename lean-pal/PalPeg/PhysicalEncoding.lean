@@ -3228,6 +3228,35 @@ theorem withErase_at_other {K : ℕ} (live : Bool)
   unfold withErase
   rw [eraseOf_other live ws slot h, List.append_nil]
 
+/-- **the ideal step of a branch that also erases.**  At its own slot the branch's action list is
+applied; at every slot the encoding speaks about other than that one, nothing happens.  The idle
+half is deliberately left out: that is where the erasure writes. -/
+theorem idealStep_withErase {Q : Type} {K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K) (q : Q)
+    (T : Slot → STape Γm) (live : Bool) (i : Fin 9)
+    (l : List (PalPeg.CloseoutCoreEnc12.Act Γm))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase live (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (actsAt (slotIndex (progSlotOf live i)) l)) :
+    (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+        (slotIndex (progSlotOf live i))
+        = PalPeg.CloseoutCoreEnc12.actList blankM (T (progSlotOf live i)) l
+      ∧ ∀ slot : Slot, slot ≠ progSlotOf live i →
+        (∀ k : Fin 9, slot ≠ progSlotOf (!live) k) →
+        (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot)
+          = T slot := by
+  refine ⟨?_, ?_⟩
+  · rw [idealStep_tapes, hacts, withErase_at_live, tapesOf_apply]
+    show PalPeg.CloseoutCoreEnc12.actList blankM (T (progSlotOf live i))
+      (if slotIndex (progSlotOf live i) = slotIndex (progSlotOf live i) then l else []) = _
+    rw [if_pos rfl]
+  · intro slot hs hidle
+    rw [idealStep_tapes, hacts, withErase_at_other live _ _ slot hidle, tapesOf_apply]
+    show PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
+      (if slotIndex slot = slotIndex (progSlotOf live i) then l else []) = _
+    rw [if_neg (fun h => hs (slotIndex.injective h))]
+    rfl
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3317,6 +3346,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.eraseOf_other
 #print axioms PalPeg.PhysicalEncoding.withErase_length
 #print axioms PalPeg.PhysicalEncoding.withErase_at_live
+#print axioms PalPeg.PhysicalEncoding.idealStep_withErase
 #print axioms PalPeg.PhysicalEncoding.progSlotOf_ne
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
