@@ -11,7 +11,13 @@
 * やったこと: `ReachAtOn` の構造は変えず、報告点で外に出す述語 `Y` を強めた。`CloseoutCheckW.ReportOnPackedRun w y := y.ctl.mode = scan ∧ ScanOnPackedRunFromInvLPS w y.ctl y.vm`。6 ファイル 11 箇所の literal `(fun _ y => y.ctl.mode = Mode.scan)` をこの名前に置換、producer 3 箇所は `⟨hI'.1.1, hI'⟩`。`preTraceOnPackedRun_exists` と `canonicalPreTrace_exists` の結論に 4 番目の連言「各 checkpoint で `ScanOnPackedRunFromInvLPS`」を追加（3 番目の scan モードは残した）。
 * **1 回目の全体 build は `BUILD=1`**（背景タスクの通知は exit code 0 だった。ログの `BUILD=` 行で気づいた）。`given_shadowedLocalSystem` の `hexists` が存在定理の結論を 3 連言の形で書き下していた。4 連言に直して `BUILD=0`。
 
-**次の一手**: 最後の checkpoint の不変量から `settle` → `scanBackground_run`（clock = 1 まで）→ compare 1 回の canonical な run を組み、`Post` を「その run の上を追跡している」に強める。切断（`GhostSection.ghostOf`）に要る事実は tick の保存補題（`allCanonical_tick`、`parkedRight_tick`、`entrySigns_of_scanTick`）で run に沿って運ぶ。
+**plateau の定理の形（部品の文を読んで決めた。未着手）**:
+* `Post` は `List (Fin 2) → Mirrored1 → Prop` で trace を引数に取れない（`given_shadowedLocalSystem:433`）。なので `Post w m` は「`absSC m` は、ある canonical な plateau run の上にある」を**存在量化**で持つ: `∃ x₀ K g, ScanOnPackedRunFromInvLPS w x₀ ∧ ReportPoint w x₀ ∧ g 0 = x₀ ∧ (∀ i < K, Tick (g i) (g (i+1)) ∧ OracleTick …) ∧ (∀ i < K, (g i).vm.right = x₀.vm.right ∧ scan ∧ 非 replay) ∧ 2·|w| ≤ position (g K).vm.right ∧ ∃ i ≤ K, absSC m = g i`、または `frozenAt`。入口は `canonicalPreTrace_exists` の 4 番目の連言（n324）と `hpostOfLastReport` の `Needy … (Tc n) n`（truncation は `truncS 0 = id`）。
+* run の存在: 起点の不変量は `¬ restartGuardVM` を含むので `settle` は不要。`scanBackground_run`（`clock − 1` 回の count tick、前提は `canRight right`＝報告点では `gap = false`、`OutputRel`、run 形の readiness 入力＝`OracleReady` の 2 葉で放電）→ `scanCompare_cases`（`clock = 1`、matched／shift／fallback の 3 通り、どれも右ヘッドが 1 歩右＝`position_right_of_atLast` で `2n`）。compare の tick が `OracleTick` であることは `scanCycle_of_leaves` の matched の場合と第 4 の葉（fallback の canonical な place `rightPlace`）の組み方を写す。
+* 後継は `next := GhostSection.ghostOf … (g (i+1))`。`Tick`／`Canonical` は run から（`OracleTick` の `.canonical`）。切断の事実（`AllCanonical`、`ParkedRight`、入口の符号）は、trace 版の 3 定理（`countersCanonical_trace`、`parkedRight_trace`、`entrySigns_of_scanTick`）を「boot からの tick 列」の形へ**その場で一般化**して、`PackedFromBoot` の run ＋ plateau run に当てる（trace 版は `PreTrace` の `start` と `trace.tick` しか使っていない。`parkedRight_trace` だけ `frontPack_alongTrace`／`rewindCentre_trace` 経由なので run 形の `FrontPack` が要る）。
+* `hplateauNext` の消費箇所（`:1188` 付近）の `Post` の保存は、`i < K` なら同じ run の `i+1`、`i = K` は `frozenAt`。
+
+**次の一手**: 最後の checkpoint の不変量から `scanBackground_run`（clock = 1 まで）→ compare 1 回の canonical な run を組み、`Post` を「その run の上を追跡している」に強める。切断（`GhostSection.ghostOf`）に要る事実は tick の保存補題（`allCanonical_tick`、`parkedRight_tick`、`entrySigns_of_scanTick`）で run に沿って運ぶ。
 
 ## n323（2026-09-21）: 開いていたモード `scan` に局所後継ができた。仮説 `hscanNext` を消費者から外した
 
