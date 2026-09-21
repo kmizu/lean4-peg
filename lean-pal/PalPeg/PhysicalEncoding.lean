@@ -3143,6 +3143,49 @@ theorem eraseOf_other {K : ℕ} (live : Bool) (ws : Fin tapeCountM → PalPeg.Lo
   rintro ⟨k, hk⟩
   exact h k (slotIndex.injective hk)
 
+/-- **a branch's actions together with the erasure.**  The two never name the same slot, so the
+composition is just the branch's own table on the live half and elsewhere, and the erasure's on
+the idle half. -/
+noncomputable def withErase {K : ℕ} (live : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm)) :
+    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  fun j => base j ++ eraseOf live ws j
+
+/-- two actions in a tick is all it costs: the branch's own, and one cell of one idle tape. -/
+theorem withErase_length {K : ℕ} (hK : 2 ≤ K) (live : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm))
+    (hbase : ∀ j, (base j).length ≤ 1) (j : Fin tapeCountM) :
+    (withErase live ws base j).length ≤ K := by
+  have herase : (eraseOf live ws j).length ≤ 1 := by
+    unfold eraseOf eraseAct
+    split
+    · split
+      · simp
+      · simp
+    · simp
+  have := hbase j
+  unfold withErase
+  rw [List.length_append]
+  omega
+
+theorem withErase_at_live {K : ℕ} (live : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm)) (i : Fin 9) :
+    withErase live ws base (slotIndex (progSlotOf live i))
+      = base (slotIndex (progSlotOf live i)) := by
+  unfold withErase
+  rw [eraseOf_live, List.append_nil]
+
+theorem withErase_at_other {K : ℕ} (live : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm)) (slot : Slot)
+    (h : ∀ i : Fin 9, slot ≠ progSlotOf (!live) i) :
+    withErase live ws base (slotIndex slot) = base (slotIndex slot) := by
+  unfold withErase
+  rw [eraseOf_other live ws slot h, List.append_nil]
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3230,6 +3273,8 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.idle_blank_of_oneSlot
 #print axioms PalPeg.PhysicalEncoding.eraseOf_live
 #print axioms PalPeg.PhysicalEncoding.eraseOf_other
+#print axioms PalPeg.PhysicalEncoding.withErase_length
+#print axioms PalPeg.PhysicalEncoding.withErase_at_live
 #print axioms PalPeg.PhysicalEncoding.progSlotOf_ne
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
