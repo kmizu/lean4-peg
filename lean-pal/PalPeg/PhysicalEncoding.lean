@@ -2668,8 +2668,10 @@ theorem home_step_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
     (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
       = homeNext q.fppLive hbound q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = homeActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (homeActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
     (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.home)
     (hnotLeft : (x.vm.fpp.program.config.tapes 7).focus ≠ 4)
     (hfloor : (x.vm.fpp.program.config.tapes 7).left ≠ [])
@@ -2692,18 +2694,20 @@ theorem home_step_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
     unfold homeNext
     rw [hread, if_neg hnotMark]
   have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = actsAt (slotIndex (progSlot q.fppLive 7))
-          [some ((T (progSlot q.fppLive 7)).focus, (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (actsAt (slotIndex (progSlot q.fppLive 7))
+            [some ((T (progSlot q.fppLive 7)).focus,
+              (.left : PalPeg.CloseoutCoreEnc12.MoveC))]) := by
     rw [hacts]
+    congr 1
     unfold homeActs
     rw [hread, if_neg hnotMark, if_neg hnotFloor]
-  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 7) _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_withErase R q T q.fppLive 7 _ hacts'
   rw [hq]
-  exact home_step margin centre place entry entryQ first w F delay x q T _ hmode hnotLeft hfloor
-    henc hmoved (fun slot hslot _ => hkept slot hslot)
-    (fun k => by
-      rw [hkept _ (by cases hl : q.fppLive <;> simp [progSlot, progSlotOf, hl])]
-      exact henc.2.idleShape k)
+  exact home_step margin centre place entry entryQ first w F delay x q T
+    (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
+    hmode hnotLeft hfloor henc hmoved hkept
+    (idle_shape_after_erase margin hK1 hKn R q T q.fppLive 7 _ hacts' henc.2.idleShape)
 
 /-! ### the parity walk of `choose`
 
@@ -2732,8 +2736,10 @@ theorem choose_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : 
     (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
       = chooseBackNext q)
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = chooseBackActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (chooseBackActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
     (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose)
     (hkeep : (x.ctl.odd && (decide ((x.vm.fpp.program.config.tapes 8).focus = 8)
         || decide ((x.vm.fpp.program.config.tapes 8).focus = first))) = false)
@@ -2753,18 +2759,20 @@ theorem choose_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : 
   have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1
       = {q with ctl := {q.ctl with odd := !q.ctl.odd}} := hnq
   have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = actsAt (slotIndex (progSlot q.fppLive 8))
-          [some ((T (progSlot q.fppLive 8)).focus, (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (actsAt (slotIndex (progSlot q.fppLive 8))
+            [some ((T (progSlot q.fppLive 8)).focus,
+              (.left : PalPeg.CloseoutCoreEnc12.MoveC))]) := by
     rw [hacts]
+    congr 1
     unfold chooseBackActs
     rw [if_neg hnotFloor, hread]
-  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 8) _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_withErase R q T q.fppLive 8 _ hacts'
   rw [hq]
-  exact choose_back margin centre place entry entryQ first w F delay x q T _ hmode hkeep hfloor
-    henc hmoved (fun slot hslot _ => hkept slot hslot)
-    (fun k => by
-      rw [hkept _ (by cases hl : q.fppLive <;> simp [progSlot, progSlotOf, hl])]
-      exact henc.2.idleShape k)
+  exact choose_back margin centre place entry entryQ first w F delay x q T
+    (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
+    hmode hkeep hfloor henc hmoved hkept
+    (idle_shape_after_erase margin hK1 hKn R q T q.fppLive 8 _ hacts' henc.2.idleShape)
 
 /-! ### the three branches that stop at a component's own floor
 
