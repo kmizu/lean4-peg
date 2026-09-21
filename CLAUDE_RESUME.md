@@ -44,6 +44,8 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 **プログラム機械の `ActRule`（スクラッチ `$S/prog_rule.keep.lean`、EXIT=0・error 0・標準公理のみ）**: 上の土台の上に、1 call を 1 歩で走らせる規則を書いた。有限制御は `ProgControl code := Fin (code.length + 1) × Bool`（カウンタと停止ビット）——**範囲外のカウンタは「命令が無い」唯一の値に潰す**ので、`getElem?_clampPc : code[clampPc code counter]? = code[counter]?` が成り立ち、機械は抽象側が止まるところでちょうど止まる。`controlAfter`（`read` は窓の中央記号で分配表を引く）、`actsAfter`（命令が名指しするテープに action を 1 個、`halt` と `read` は 0 個）、`progRule` の `len_le`（`1 ≤ K` で足りる）。対応の道具として `ProgRep`（制御がカウンタと停止ビットを持ち、物理テープが `encTape` の像）、`currentInstruction_progRep`、`centreOf_progRep`（窓の中央は抽象テープの焦点。margin `K ≤ pos` から）。
 
+**作業中（未完、`$S/prog_pres.wip.lean`）**: `progRep_idealStep`——規則の 1 歩が `ProgramFunction.tickFun code true` の 1 call に一致すること。停止済み（`done = true`）の枝と、カウンタが範囲外（`code[pc]? = none`）の枝は閉じた。命令 4 種の枝が未完で、詰まっているのは `match` の簡約（`unfold controlAfter` のあと `rw [hsome]` では `match currentInstruction …` が残るので `simp only [controlAfter, hsome]` に替えたが、`read` の分配表の枝がまだ）。検証済みの部分（`progRule` とその `len_le`、`ProgRep`、`currentInstruction_progRep`、`centreOf_progRep`、テープの土台）は `$S/prog_rule.keep.lean` に分けて EXIT=0 のまま保ってある。
+
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
 ## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
