@@ -80,6 +80,8 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 **成分ごとに違うアルファベットを 1 本に載せる移送（`$S/alphabet.keep.lean`、EXIT=0・error 0、`mapTape_applyAction` は**公理ゼロ**）**: 機械のアルファベットは全テープで 1 つだが、ヘッド（`Γc`）・カウンタ（`Seg`）・プログラム（`Fin 9`）・chain の period（`Token`）はそれぞれ自分の記号で書かれている。`mapTape f T` と、**空白を空白に送る写像は action をそのまま運ぶ**（`mapTape_applyAction`）、ヘッド位置も動かない（`pos_mapTape`）。これで各成分は自分の補題を持ったまま大きいアルファベットに載る。
 
+**機械のアルファベット（`$S/gamma.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `LocalStep` はどのテープにも同じ空白記号を使うので、成分ごとのアルファベット——ヘッドのセル `Γc`、プログラムの記号 `Fin 9`、chain の period のトークン、カウンタのマーク `Seg`——を**空白を同一視して**並べる: `Γm := Unit ⊕ Γc ⊕ Fin 9 ⊕ Token ⊕ Seg`、`blankM := .inl ()`、各成分の埋め込みは自分の空白を `blankM` へ送り他を単射に送る（`encCell`／`encProg`／`encToken`／`encSeg` と、空白の保存 4 本・単射性 4 本）。`Fintype` と `DecidableEq` は和型から自動で付く（`realize` が要求する）。
+
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
 ## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
