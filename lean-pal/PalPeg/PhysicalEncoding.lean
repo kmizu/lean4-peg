@@ -3270,6 +3270,35 @@ theorem idealStep_withErase {Q : Type} {K : ℕ}
     rw [if_neg (fun h => hs (slotIndex.injective h))]
     rfl
 
+/-- **the erasure keeps the shape it needs.**  Blanking a cell and stepping left sends a padded
+tape to a padded tape: the blank the machine writes is the component alphabet's own blank, so the
+result is still in the image of the encoding, and the step left cannot reach the floor because
+the rule only takes it while the cell below is not the sentinel. -/
+theorem erase_preserves_shape (margin K : ℕ) (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (raw : STape (Fin 9))
+    (hbelow : PalPeg.Local.readWin blankM K (padLeft margin (mapTape encProg raw))
+      ⟨K - 1, by omega⟩ ≠ bottomM) :
+    PalPeg.CloseoutCoreEnc12.actList blankM (padLeft margin (mapTape encProg raw))
+        [some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+      = padLeft margin (mapTape encProg
+          (STape.applyAction (6 : Fin 9) raw ((6 : Fin 9), .left))) := by
+  have hleft : raw.left ≠ [] := by
+    intro hnil
+    apply hbelow
+    rw [window_below margin K (mapTape encProg raw) hK1 hKn]
+    show ((mapTape encProg raw).left).headD bottomM = bottomM
+    show (raw.left.map encProg).headD bottomM = bottomM
+    rw [hnil]
+    rfl
+  have hmapped : (mapTape encProg raw).left ≠ [] := by
+    intro hnil
+    apply hleft
+    have : raw.left.map encProg = [] := hnil
+    exact List.map_eq_nil_iff.mp this
+  rw [mapTape_applyAction encProg (if_pos rfl) raw (6 : Fin 9) .left,
+    padLeft_applyAction_left margin (mapTape encProg raw) (encProg 6) hmapped]
+  rfl
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3360,6 +3389,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.withErase_length
 #print axioms PalPeg.PhysicalEncoding.withErase_at_live
 #print axioms PalPeg.PhysicalEncoding.idealStep_withErase
+#print axioms PalPeg.PhysicalEncoding.erase_preserves_shape
 #print axioms PalPeg.PhysicalEncoding.progSlotOf_ne
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
