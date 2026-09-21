@@ -2818,6 +2818,30 @@ theorem padded_progRun (margin : ℕ) (code : List (Instruction 9)) :
           (fun k t => hfloor (k + 1) t), List.replicate_succ]
       rfl
 
+/-- **one call of the program machine is decided by what the machine can see.**  The halting
+bit, the program counter and the symbols under the heads settle both the action and the tape it
+falls on — nothing below or beyond the heads is consulted.  This is why the rule can name the
+call from its windows. -/
+theorem progActOf_congr (code : List (Instruction 9))
+    (m m' : PalPeg.GalilScaffoldControl.Machine 9)
+    (hdone : m.done = m'.done) (hpc : m.config.pc = m'.config.pc)
+    (hfocus : ∀ t : Fin 9, (m.config.tapes t).focus = (m'.config.tapes t).focus) (i : Fin 9) :
+    progActOf code m i = progActOf code m' i := by
+  unfold progActOf
+  rw [hdone, hpc]
+  cases hdone' : m'.done
+  · simp only [Bool.false_eq_true, if_false]
+    match hcode : code[m'.config.pc]? with
+    | none => simp [hcode]
+    | some .halt => simp [hcode]
+    | some (.read t cs) => simp [hcode]
+    | some (.write t sym pc) => simp [hcode]
+    | some (.move t dir pc) =>
+        cases dir
+        · simp only [hcode, hfocus t]
+        · simp only [hcode, hfocus t]
+  · simp
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -2899,6 +2923,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.idealStep_pair
 #print axioms PalPeg.PhysicalEncoding.padded_progStep
 #print axioms PalPeg.PhysicalEncoding.padded_progRun
+#print axioms PalPeg.PhysicalEncoding.progActOf_congr
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeftAtFloor
