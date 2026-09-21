@@ -56,6 +56,19 @@
 
 **閉じたモード: `markEnd`（3 場合）、`home`（3 場合）。残り 8 モード。** `copy` の `remainingPos` は `shiftRemainingTest ∨ copyRemainingTest` の論理和なので、規則は 2 つの読みを持つ必要がある。`scan` が最も重い。
 
+**3 つ目のモード `choose` の片枝も閉じた**（`frameFun_markSet`＝`rfl`、`choose_back` / `choose_back_atFloor`）。判定は再び準備機械の 8 番テープの読みで、動きは印つけ歩きと同じなので既存の部品で通る。
+
+**`refreshFun` は局所だった（見かけの障害が 1 つ消えた）。** `position p = if p.gap then 2·|left| else 2·|left| − 1`（`GalilScaffoldChainInputSupply.lean:496`）なので、`onLetterTest` の `position right % 2 = 1` は **gap ビットそのもの**（`|left| ≥ 1` のとき）で、`leftFirstTest` の `position left = 1` は「gap が降りていて左が 1 升」。どちらも有限制御と窓で読める。gap は既に `QPhys` にある。
+
+**ここで、証明を続ける前に直さなければならない物理表現の穴が 2 つ見つかった。** どちらも「一歩で無限の仕事をしている」型で、左端の取り違え（このノート冒頭）と同じ種類。**正本の Scala を読んで確認した。**
+
+1. **頭の複写。** `ScaffoldGalil.scala:395` の `stepChoose` は `left.copyFrom(right)` と `center.copyFrom(right)` を 1 ティックで行い、その実体は `ScaffoldCircuitInput.scala:77–82` の `leftStack.copyFrom(...)`／`rightStack.copyFrom(...)`／`incoming.copyFrom(...)`——**スタックの丸ごと複写**。回路模型では 1 操作だが、テープ機械では大きさに比例する。Lean 側も忠実に `chooseFun x = {x with left := x.right, center := x.right, …}` になっている。
+   **直し方（案）：** 頭にも写しの仕掛けを入れる。`choose` の直後、`left` と `center` は `right` と同じ位置にあり、続く `rewind` では `left` だけが 1 升ずつ**後ろへ**動き `right` は止まっている（`stepRewind`、`:409–415`）。よって `left = right − (カウンタ)` の形で持てば一歩 O(1)。カウンタ側で既に使っている `LocalMirror` と同じ発想を頭に広げる。
+2. **プログラムの全消去。** `fppResetFun` は `GalilScaffoldControl.reset 320` を呼び、その定義（`GalilScaffoldControl.lean:16`）は `⟨⟨entry, fun _ => GalilScaffoldTape.reset⟩, true⟩`——**9 本のテープを全部空白に戻す**。これもテープ機械では長さに比例する。
+   **直し方（案）：** 消さない。新しい領域を現在のヘッド位置から始め、そこを新しい原点とする。引き継ぎ資料の「ゴミをその場で消さない」がまさにこれ。ただし `EncTapes.fpp` がいまテープの**リテラルな等式**を要求しているので、原点のずれを許す形（`TEqG`／相対位置）に緩める必要がある。
+
+**次の一手はこの 2 つの表現変更で、新しい枝を積むのはその後。** 表現が間違ったまま枝を増やすと、増やした分だけ書き直しになる。
+
 **進め方について。** モードごとに `tickFun` を言い換える補題（`tickFun_markEnd`／`tickFun_home`）は `simp only [tickFun, hmode]` で出る**薄い言い換え**で、中身が無い。そこで手を変えて、いちばん単純なモード（`markEnd`、動くのは fpp プログラムのテープ 8 だけ）を規則の枝まで書こうとしたところ、上の左端の取り違えに当たった。**モードの一覧を増やすより、1 モードを物理まで通す方が誤りを出す。**
 
 ## n332（2026-09-21）: 抽象 frame が丸ごと関数になった。物理機械への要求は「符号化を保つ 2 本」だけになった
