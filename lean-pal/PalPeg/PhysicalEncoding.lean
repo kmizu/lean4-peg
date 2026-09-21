@@ -4238,6 +4238,55 @@ theorem progActRaw_congr (code : List (Instruction 9))
     | some (.move t dir pc) => cases dir <;> simp only [hcode, hfocus t]
   · simp
 
+/-- **a call spends one of the agreement.**  Machines agreeing to radius `n + 1` leave a call
+agreeing to radius `n`: the action they perform is the same, so the new windows are the same
+function of the old ones, and a head that was `n + 1` from its left end is still `n`. -/
+theorem machineAgree_tick {n : ℕ} (code : List (Instruction 9))
+    {m m' : PalPeg.GalilScaffoldControl.Machine 9} (h : MachineAgree (n + 1) m m') :
+    MachineAgree n (PalPeg.ProgramFunction.tickFun code true m)
+      (PalPeg.ProgramFunction.tickFun code true m') where
+  done := (tickFun_control_of_agree code h).2
+  pc := (tickFun_control_of_agree code h).1
+  margin := fun t => by
+    rw [tapes_after_call]
+    have hstep := pos_actList_ge (6 : Fin 9) (encTape (m.config.tapes t)) (progActRaw code m t)
+      (progActRaw_length code m t)
+    have hm := h.margin t
+    omega
+  margin' := fun t => by
+    rw [tapes_after_call]
+    have hstep := pos_actList_ge (6 : Fin 9) (encTape (m'.config.tapes t)) (progActRaw code m' t)
+      (progActRaw_length code m' t)
+    have hm := h.margin' t
+    omega
+  window := fun t => by
+    rw [tapes_after_call, tapes_after_call,
+      ← PalPeg.LocalStepFusion.windowAfter_readWin (6 : Fin 9) (encTape (m.config.tapes t))
+        (progActRaw code m t)
+        (by have := progActRaw_length code m t; omega) (h.margin t),
+      ← PalPeg.LocalStepFusion.windowAfter_readWin (6 : Fin 9) (encTape (m'.config.tapes t))
+        (progActRaw code m' t)
+        (by have := progActRaw_length code m' t; omega) (h.margin' t),
+      h.window t, progActRaw_congr code m m' h.done h.pc (machineAgree_focus h) t]
+
+/-- **a quantum of `n` calls cannot tell apart two machines agreeing to radius `n`.**  This is
+what lets the rule name the `fpp` branch's actions from its windows: the machine it runs in its
+head agrees with the abstraction's exactly as far as the quantum can look. -/
+theorem progRunActs_of_agree (code : List (Instruction 9)) :
+    ∀ (n : ℕ) (m m' : PalPeg.GalilScaffoldControl.Machine 9), MachineAgree n m m' →
+      ∀ i : Fin 9, progRunActs code n m i = progRunActs code n m' i := by
+  intro n
+  induction n with
+  | zero => intro m m' _ i; rfl
+  | succ n ih =>
+      intro m m' h i
+      show progActOf code m i ++ progRunActs code n (PalPeg.ProgramFunction.tickFun code true m) i
+        = progActOf code m' i
+          ++ progRunActs code n (PalPeg.ProgramFunction.tickFun code true m') i
+      rw [progActOf_of_agree code h i,
+        ih (PalPeg.ProgramFunction.tickFun code true m)
+          (PalPeg.ProgramFunction.tickFun code true m') (machineAgree_tick code h) i]
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -4340,6 +4389,8 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.tapes_after_call
 #print axioms PalPeg.PhysicalEncoding.pos_actList_ge
 #print axioms PalPeg.PhysicalEncoding.progActRaw_congr
+#print axioms PalPeg.PhysicalEncoding.machineAgree_tick
+#print axioms PalPeg.PhysicalEncoding.progRunActs_of_agree
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
