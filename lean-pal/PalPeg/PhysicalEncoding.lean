@@ -1377,23 +1377,27 @@ are already local operations of `GalilVML` — `LocalTick3.copyVm` is the step a
 `LocalTick3.abs'_copyVm` is its abstraction.  What is new here is the *tick* form: the abstract
 controller's own step function lands on exactly that physical state. -/
 
-/-- the parked right head does not notice a copy tick.  The bank op at `.replay` is
-`keep`, and the right view and the arrival queue are untouched. -/
-theorem absR_copyVm {P : ℕ} {y : PalPeg.LocalState.GalilVML P}
-    (hinj : PalPeg.LocalState.RolesInjective y) (a : Fin 3) :
-    PalPeg.LocalReplayParked.absR (PalPeg.LocalTick3.copyVm a y)
-      = PalPeg.LocalReplayParked.absR y := by
-  have hrval : PalPeg.LocalReplayParked.rval (PalPeg.LocalTick3.copyVm a y)
-      = PalPeg.LocalReplayParked.rval y := by
-    show PalPeg.LocalCounter.val
-        ((PalPeg.LocalTick3.bankTick PalPeg.LocalTick3.workOps y).phys
-          ((PalPeg.LocalTick3.bankTick PalPeg.LocalTick3.workOps y).roles .replay)) = _
-    rw [PalPeg.LocalTick3.bankTick_phys hinj PalPeg.LocalTick3.workOps .replay]
-    rfl
+/-- the parked right head is decided by three readings: the replay flag, the replay counter and
+the physical right view.  A step that leaves all three alone leaves it alone. -/
+theorem absR_congr {P : ℕ} {y z : PalPeg.LocalState.GalilVML P}
+    (hctl : z.ctl.replaying = y.ctl.replaying)
+    (hrval : PalPeg.LocalReplayParked.rval z = PalPeg.LocalReplayParked.rval y)
+    (hhead : PalPeg.LocalReplayParked.physHead z = PalPeg.LocalReplayParked.physHead y) :
+    PalPeg.LocalReplayParked.absR z = PalPeg.LocalReplayParked.absR y := by
   unfold PalPeg.LocalReplayParked.absR
-  rw [show (PalPeg.LocalTick3.copyVm a y).ctl = y.ctl from rfl, hrval,
-    show PalPeg.LocalReplayParked.physHead (PalPeg.LocalTick3.copyVm a y)
-      = PalPeg.LocalReplayParked.physHead y from rfl]
+  rw [hctl, hrval, hhead]
+
+/-- and a bank tick that keeps the replay counter keeps the replay counter's value, whatever it
+does to the other fifteen. -/
+theorem rval_bankTick {P : ℕ} {y : PalPeg.LocalState.GalilVML P}
+    (hinj : PalPeg.LocalState.RolesInjective y) {f : PalPeg.LocalState.Ctr → PalPeg.LocalTick3.Op}
+    (hkeep : f .replay = PalPeg.LocalTick3.Op.keep) :
+    PalPeg.LocalReplayParked.rval (PalPeg.LocalTick3.bankTick f y)
+      = PalPeg.LocalReplayParked.rval y := by
+  show PalPeg.LocalCounter.val ((PalPeg.LocalTick3.bankTick f y).phys
+    ((PalPeg.LocalTick3.bankTick f y).roles .replay)) = _
+  rw [PalPeg.LocalTick3.bankTick_phys hinj f .replay, hkeep]
+  rfl
 
 /-- **one copy tick of the controller is one local step of the physical state.** -/
 theorem vml_copy_one {P : ℕ} (centre : GalilVM → Fin 3)
@@ -1435,7 +1439,9 @@ theorem vml_copy_one {P : ℕ} (centre : GalilVM → Fin 3)
         = PalPeg.LocalState.absPlace y.fppWalker from rfl, hread]
     show { PalPeg.LocalArrival.abs' (PalPeg.LocalTick3.copyVm a y) with
         right := PalPeg.LocalReplayParked.absR (PalPeg.LocalTick3.copyVm a y) } = _
-    rw [PalPeg.LocalTick3.abs'_copyVm hinj a hpol hval hprop, absR_copyVm hinj a, hfpp, hcopy]
+    rw [PalPeg.LocalTick3.abs'_copyVm hinj a hpol hval hprop,
+      absR_congr (z := PalPeg.LocalTick3.copyVm a y) (y := y) rfl
+        (rval_bankTick hinj (f := PalPeg.LocalTick3.workOps) rfl) rfl, hfpp, hcopy]
     rfl
   show _ = (⟨y.ctl, PalPeg.LocalReplayParked.abs'' (PalPeg.LocalTick3.copyVm a y)⟩ : State GalilVM)
   rw [habs]
@@ -1621,6 +1627,199 @@ theorem vml_fpp_slice {P : ℕ} (centre : GalilVM → Fin 3)
   rw [habs]
   rfl
 
+/-- **one rewind tick that walks a single head.**  The marks tape moves one cell left, the left
+head one place left and `length` takes a push; the controller flips its pair bit. -/
+theorem vml_rewind_one {P : ℕ} (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (y : PalPeg.LocalState.GalilVML P)
+    (hmode : y.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotFirst : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).atFirst
+      (PalPeg.LocalReplayParked.abs'' y) = false)
+    (hpair : y.ctl.pair = false)
+    (hinj : PalPeg.LocalState.RolesInjective y)
+    (hlen : y.pol .length = true) :
+    PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay
+        (PalPeg.LocalReplayParked.absState'' y)
+      = PalPeg.LocalReplayParked.absState''
+          (PalPeg.LocalTick3.rewindOneVm {y.ctl with pair := true} y) := by
+  have hstate : PalPeg.LocalReplayParked.absState'' y
+      = (⟨y.ctl, PalPeg.LocalReplayParked.abs'' y⟩ : State GalilVM) := rfl
+  rw [hstate]
+  simp only [PalPeg.GalilScaffoldTop.tickFun, hmode]
+  rw [if_neg (by simp [hnotFirst]), if_neg (by simp [hpair])]
+  show _ = (⟨{y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := true},
+    PalPeg.LocalReplayParked.abs'' (PalPeg.LocalTick3.rewindOneVm
+      {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := true} y)⟩ :
+      State GalilVM)
+  have habs : PalPeg.LocalReplayParked.abs''
+        (PalPeg.LocalTick3.rewindOneVm
+          {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := true} y)
+      = (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).rewindOne
+          (PalPeg.LocalReplayParked.abs'' y) := by
+    show { PalPeg.LocalArrival.abs'
+        (PalPeg.LocalTick3.rewindOneVm {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := true} y) with
+        right := PalPeg.LocalReplayParked.absR
+          (PalPeg.LocalTick3.rewindOneVm
+            {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := true} y) } = _
+    rw [PalPeg.LocalTick3.abs'_rewindOneVm hinj _ hlen,
+      absR_congr (z := PalPeg.LocalTick3.rewindOneVm
+          {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := true} y)
+        (y := y) rfl
+        (rval_bankTick hinj (f := PalPeg.LocalTick3.rewindOps1) rfl) rfl]
+    rfl
+  rw [habs]
+
+/-- **one rewind tick that walks both heads.**  The same marks move, with the centre head and
+`radius` carried along. -/
+theorem vml_rewind_pair {P : ℕ} (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (y : PalPeg.LocalState.GalilVML P)
+    (hmode : y.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotFirst : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).atFirst
+      (PalPeg.LocalReplayParked.abs'' y) = false)
+    (hpair : y.ctl.pair = true)
+    (hinj : PalPeg.LocalState.RolesInjective y)
+    (hlen : y.pol .length = true) (hrad : y.pol .radius = true) :
+    PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay
+        (PalPeg.LocalReplayParked.absState'' y)
+      = PalPeg.LocalReplayParked.absState''
+          (PalPeg.LocalTick3.rewindPairVm {y.ctl with pair := false} y) := by
+  have hstate : PalPeg.LocalReplayParked.absState'' y
+      = (⟨y.ctl, PalPeg.LocalReplayParked.abs'' y⟩ : State GalilVM) := rfl
+  rw [hstate]
+  simp only [PalPeg.GalilScaffoldTop.tickFun, hmode]
+  rw [if_neg (by simp [hnotFirst]), if_pos (by simp [hpair])]
+  show _ = (⟨{y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := false},
+    PalPeg.LocalReplayParked.abs'' (PalPeg.LocalTick3.rewindPairVm
+      {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := false} y)⟩ :
+      State GalilVM)
+  have habs : PalPeg.LocalReplayParked.abs''
+        (PalPeg.LocalTick3.rewindPairVm
+          {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := false} y)
+      = (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).rewindPair
+          (PalPeg.LocalReplayParked.abs'' y) := by
+    show { PalPeg.LocalArrival.abs'
+        (PalPeg.LocalTick3.rewindPairVm {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := false} y) with
+        right := PalPeg.LocalReplayParked.absR
+          (PalPeg.LocalTick3.rewindPairVm
+            {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := false} y) } = _
+    rw [PalPeg.LocalTick3.abs'_rewindPairVm hinj _ hlen hrad,
+      absR_congr (z := PalPeg.LocalTick3.rewindPairVm
+          {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := false} y)
+        (y := y) rfl
+        (rval_bankTick hinj (f := PalPeg.LocalTick3.rewindOps2) rfl) rfl]
+    rfl
+  rw [habs]
+
+/-- **the tick that chooses a centre.**  Two bank ticks (`length` and `radius` reset, then
+`length++`) and the ghost copy of the right head into the left and centre cursors. -/
+theorem vml_choose_select {P : ℕ} (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (y : PalPeg.LocalState.GalilVML P)
+    (hmode : y.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose)
+    (hset : (y.ctl.odd && (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).markSet
+      (PalPeg.LocalReplayParked.abs'' y)) = true)
+    (hinj : PalPeg.LocalState.RolesInjective y)
+    (hlen : y.pol .length = true)
+    (hpark : PalPeg.LocalReplayParked.abs'' y = PalPeg.LocalArrival.abs' y) :
+    PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay
+        (PalPeg.LocalReplayParked.absState'' y)
+      = PalPeg.LocalReplayParked.absState''
+          (PalPeg.LocalTick3.chooseSelectVm
+            {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := false} y) := by
+  have hstate : PalPeg.LocalReplayParked.absState'' y
+      = (⟨y.ctl, PalPeg.LocalReplayParked.abs'' y⟩ : State GalilVM) := rfl
+  rw [hstate]
+  simp only [PalPeg.GalilScaffoldTop.tickFun, hmode]
+  rw [if_pos hset]
+  show _ = (⟨{y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := false},
+    PalPeg.LocalReplayParked.abs'' (PalPeg.LocalTick3.chooseSelectVm _ y)⟩ : State GalilVM)
+  have hinj1 : PalPeg.LocalState.RolesInjective
+      (PalPeg.LocalTick3.bankTick PalPeg.LocalTick3.chooseOps1 y) := hinj
+  have habs : PalPeg.LocalReplayParked.abs''
+        (PalPeg.LocalTick3.chooseSelectVm
+          {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := false} y)
+      = (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).choose
+          (PalPeg.LocalReplayParked.abs'' y) := by
+    show { PalPeg.LocalArrival.abs' (PalPeg.LocalTick3.chooseSelectVm {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := false} y) with
+        right := PalPeg.LocalReplayParked.absR
+          (PalPeg.LocalTick3.chooseSelectVm {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := false} y) } = _
+    rw [PalPeg.LocalTick3.abs'_chooseSelectVm hinj _ hlen,
+      absR_congr (z := PalPeg.LocalTick3.chooseSelectVm
+          {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.rewind, pair := false} y)
+        (y := y) rfl
+        ((rval_bankTick hinj1 (f := PalPeg.LocalTick3.chooseOps2) rfl).trans
+          (rval_bankTick hinj (f := PalPeg.LocalTick3.chooseOps1) rfl)) rfl,
+      show PalPeg.LocalReplayParked.absR y = (PalPeg.LocalArrival.abs' y).right from
+        congrArg GalilVM.right hpark, hpark]
+    rfl
+  rw [habs]
+
+/-- **the tick on which the preparation program halts.**  The same quantum as `vml_fpp_slice`,
+followed by the two marks actions that open a fresh mark block. -/
+theorem vml_fpp_done {P : ℕ} (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (y : PalPeg.LocalState.GalilVML P)
+    (hmode : y.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
+    (hhalt : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).fppHalts
+      (PalPeg.LocalReplayParked.abs'' y) = true) :
+    ∃ (g : ℕ → Fin 9 → PalPeg.GalilScaffoldTape.Tape → PalPeg.GalilScaffoldTape.Tape) (pc : ℕ),
+      PalPeg.GalilScaffoldTop.tickFun
+          (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay
+          (PalPeg.LocalReplayParked.absState'' y)
+        = PalPeg.LocalReplayParked.absState''
+            (PalPeg.LocalTick3.doneVm first g entryQ pc
+              {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.markEnd} y) := by
+  obtain ⟨g, hg⟩ := abs_fppRunBuf PalPeg.GalilFppMarkedCode.code entryQ y.fppBuf y.fppPc y.fppDone
+  refine ⟨g, (PalPeg.ProgramFunction.fppRunFun entryQ
+    ⟨⟨y.fppPc, PalPeg.LocalBuffers.abs y.fppBuf⟩, y.fppDone⟩).config.pc, ?_⟩
+  have hstate : PalPeg.LocalReplayParked.absState'' y
+      = (⟨y.ctl, PalPeg.LocalReplayParked.abs'' y⟩ : State GalilVM) := rfl
+  rw [hstate]
+  simp only [PalPeg.GalilScaffoldTop.tickFun, hmode]
+  rw [if_pos hhalt]
+  have hdone : (PalPeg.ProgramFunction.fppRunFun entryQ
+      ⟨⟨y.fppPc, PalPeg.LocalBuffers.abs y.fppBuf⟩, y.fppDone⟩).done = true := hhalt
+  have hprog : PalPeg.ProgramFunction.fppRunFun entryQ
+        ⟨⟨y.fppPc, PalPeg.LocalBuffers.abs y.fppBuf⟩, y.fppDone⟩
+      = ⟨⟨(PalPeg.ProgramFunction.fppRunFun entryQ
+            ⟨⟨y.fppPc, PalPeg.LocalBuffers.abs y.fppBuf⟩, y.fppDone⟩).config.pc,
+          PalPeg.LocalBuffers.abs
+            (PalPeg.LocalTick3.fppRunBuf g entryQ y.fppBuf)⟩, true⟩ := by
+    rw [hg]
+    exact congrArg (fun d => (⟨(PalPeg.ProgramFunction.fppRunFun entryQ
+      ⟨⟨y.fppPc, PalPeg.LocalBuffers.abs y.fppBuf⟩, y.fppDone⟩).config, d⟩ :
+        PalPeg.GalilScaffoldControl.Machine 9)) hdone
+  show _ = (⟨{y.ctl with mode := PalPeg.GalilScaffoldController.Mode.markEnd},
+    PalPeg.LocalReplayParked.abs'' (PalPeg.LocalTick3.doneVm first g entryQ _ _ y)⟩ :
+      State GalilVM)
+  have habs : PalPeg.LocalReplayParked.abs''
+        (PalPeg.LocalTick3.doneVm first g entryQ (PalPeg.ProgramFunction.fppRunFun entryQ
+          ⟨⟨y.fppPc, PalPeg.LocalBuffers.abs y.fppBuf⟩, y.fppDone⟩).config.pc
+          {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.markEnd} y)
+      = { PalPeg.LocalReplayParked.abs'' y with
+          fpp := PalPeg.ProgramFunction.fppDoneFun entryQ first
+            (PalPeg.LocalReplayParked.abs'' y).fpp } := by
+    show { PalPeg.LocalArrival.abs' (PalPeg.LocalTick3.doneVm first g entryQ _ _ y) with
+        right := PalPeg.LocalReplayParked.absR y } = _
+    rw [PalPeg.LocalTick3.abs'_doneVm]
+    show _ = { PalPeg.LocalReplayParked.abs'' y with
+      fpp := { (PalPeg.LocalArrival.abs' y).fpp with
+        program := PalPeg.GalilScaffoldChainInputSupply.markNew
+          (PalPeg.ProgramFunction.fppRunFun entryQ
+            ⟨⟨y.fppPc, PalPeg.LocalBuffers.abs y.fppBuf⟩, y.fppDone⟩) first } }
+    rw [hprog]
+    rfl
+  rw [habs]
+  rfl
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -1667,11 +1866,16 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.vml_home_fppStart
 #print axioms PalPeg.PhysicalEncoding.vml_rewind_fppReset
 #print axioms PalPeg.PhysicalEncoding.vml_copy_end
-#print axioms PalPeg.PhysicalEncoding.absR_copyVm
+#print axioms PalPeg.PhysicalEncoding.absR_congr
+#print axioms PalPeg.PhysicalEncoding.rval_bankTick
 #print axioms PalPeg.PhysicalEncoding.vml_copy_one
 #print axioms PalPeg.PhysicalEncoding.progTickFun_tapes
 #print axioms PalPeg.PhysicalEncoding.abs_fppRunBuf
 #print axioms PalPeg.PhysicalEncoding.vml_fpp_slice
+#print axioms PalPeg.PhysicalEncoding.vml_rewind_one
+#print axioms PalPeg.PhysicalEncoding.vml_rewind_pair
+#print axioms PalPeg.PhysicalEncoding.vml_choose_select
+#print axioms PalPeg.PhysicalEncoding.vml_fpp_done
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeftAtFloor
