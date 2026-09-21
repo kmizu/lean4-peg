@@ -903,7 +903,7 @@ theorem forwardTick_of_machine (entry q : ℕ) (first : Fin 9) {Q Γ : Type} {t 
     (G : List (Fin 2) → PalPeg.GalilScaffoldTop.FrameFun GalilVM)
     (hcomputes : ∀ (w : List (Fin 2)) (landed : GalilVM),
       PalPeg.GalilScaffoldTop.Computes (galilFrameS (PofC centreC placeC entry w) q first)
-        (G w) landed)
+        (G w) (fun s => s.fpp.walker = PalPeg.GalilTickFair.rightPlace s) landed)
     (hguard : ∀ (w : List (Fin 2)) (s : GalilVM), (G w).restartGuard s = true → restartGuardVM s)
     (hstay : ∀ (w : List (Fin 2)) (x : State GalilVM) p, Enc x p → StarvedAbs x →
       Enc x (L0.apply blankSymbol p none))
@@ -919,13 +919,17 @@ theorem forwardTick_of_machine (entry q : ℕ) (first : Fin 9) {Q Γ : Type} {t 
   rcases hsucc with ⟨hstarved, hkept⟩ | ⟨hmoves, htick, hcanonical⟩
   · rw [hkept]
     exact hstay w (absSC m) p henc (starvedAbs_absSC.mpr hstarved)
-  · have hvalue := PalPeg.GalilScaffoldTop.tick_eq_tickFun (hcomputes w successor.vm) htick ?_
-    · rw [hvalue]
-      exact hstep w (absSC m) p henc (fun hs => hmoves (starvedAbs_absSC.mp hs))
-    · intro hmode hrestartGuard
+  · have hrestartFirst : (absSC m).ctl.mode = Mode.scan →
+        (G w).restartGuard (absSC m).vm = true →
+        successor = ⟨{(absSC m).ctl with clock := 2048}, (G w).restart (absSC m).vm⟩ := by
+      intro hmode hrestartGuard
       obtain ⟨hctl, hrestart⟩ := hcanonical.restartFirst hmode (hguard w _ hrestartGuard)
       obtain ⟨-, hvm⟩ := (hcomputes w successor.vm).restart _ _ hrestart
       exact (show (⟨successor.ctl, successor.vm⟩ : State GalilVM) = _ by rw [hctl, hvm])
+    have hvalue := PalPeg.GalilScaffoldTop.tick_eq_tickFun (hcomputes w successor.vm) htick
+      hrestartFirst hcanonical.fallbackPlace
+    rw [hvalue]
+    exact hstep w (absSC m) p henc (fun hs => hmoves (starvedAbs_absSC.mp hs))
 
 #print axioms forwardTick_of_machine
 

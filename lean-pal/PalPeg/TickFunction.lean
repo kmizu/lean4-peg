@@ -9,9 +9,12 @@ have a successor, and three of the frame's relations (`init`, `beginFallback`, `
 admit several.  A machine, on the other hand, computes: it needs one value per state.
 
 This file closes that gap in the direction a simulation needs.  `FrameFun` is the frame with
-functions and Boolean tests in place of relations and predicates, `Computes F G t` says the
-functions compute the relations (the three open ones only at the target `t`), and `tickFun`
-runs the controller on them.  `tick_eq_tickFun` then reads: **whenever the relation has a
+functions and Boolean tests in place of relations and predicates, `Computes F G Pin t` says the
+functions compute the relations (`init` and `replayStart` only at the target `t`, which they
+determine anyway; `beginFallback` only at a target satisfying `Pin`, because that relation is
+genuinely not unique — `GalilSharedFunctional.beginFallbackVM'_not_unique` — and it is the
+scheduling policy that pins the place it copies from), and `tickFun` runs the controller on
+them.  `tick_eq_tickFun` then reads: **whenever the relation has a
 successor, it is the value of the function.**  The existence comes from elsewhere (a run), the
 value from the machine, and the equation from the two together, with the restart of a broken
 chain given priority exactly as `GalilTickFair.Canonical.restartFirst` prescribes.
@@ -59,9 +62,10 @@ structure FrameFun (σ : Type) where
 
 variable {σ : Type}
 
-/-- the functions compute the relations of the frame.  The three relations the frame
-leaves open (`init`, `beginFallback`, `replayStart`) are asked for the target `t` only. -/
-structure Computes (F : Frame σ) (G : FrameFun σ) (t : σ) : Prop where
+/-- The functions compute the relations of the frame.  The three relations the frame leaves
+open (`init`, `beginFallback`, `replayStart`) are asked for the target `t` only, and the
+fallback entry — which several targets satisfy — only at a target the policy has pinned. -/
+structure Computes (F : Frame σ) (G : FrameFun σ) (Pin : σ → Prop) (t : σ) : Prop where
   init : ∀ s, F.init s t → t = G.init s
   available : ∀ s, F.available s ↔ G.available s = true
   background : ∀ s s', F.background s s' → s' = G.background s
@@ -72,7 +76,7 @@ structure Computes (F : Frame σ) (G : FrameFun σ) (t : σ) : Prop where
   onLetter : ∀ s, F.onLetter s ↔ G.onLetter s = true
   leftFirst : ∀ s, F.leftFirst s ↔ G.leftFirst s = true
   beginShift : ∀ s s', F.beginShift s s' → s' = G.beginShift s
-  beginFallback : ∀ s, F.beginFallback s t → t = G.beginFallback s
+  beginFallback : ∀ s, F.beginFallback s t → Pin t → t = G.beginFallback s
   remainingPos : ∀ s, F.remainingPos s ↔ G.remainingPos s = true
   shiftOne : ∀ s s', F.shiftOne s s' → s' = G.shiftOne s
   copyOne : ∀ s s', F.copyOne s s' → s' = G.copyOne s
@@ -98,8 +102,8 @@ structure Computes (F : Frame σ) (G : FrameFun σ) (t : σ) : Prop where
 def refreshFun (G : FrameFun σ) (s : σ) (old : Bool) : Bool :=
   if G.onLetter s then G.leftFirst s else old
 
-theorem refresh_eq_refreshFun {F : Frame σ} {G : FrameFun σ} {t : σ}
-    (hG : Computes F G t) {s : σ} {old o : Bool} (h : refresh F s old o) :
+theorem refresh_eq_refreshFun {F : Frame σ} {G : FrameFun σ} {Pin : σ → Prop} {t : σ}
+    (hG : Computes F G Pin t) {s : σ} {old o : Bool} (h : refresh F s old o) :
     o = refreshFun G s old := by
   unfold refreshFun
   by_cases hletter : G.onLetter s = true
@@ -159,10 +163,11 @@ theorem bool_ne_true {b : Bool} (h : ¬ b = true) : b = false := by
 
 /-- **a tick of the frame is the value of the tick function**, when the functions compute
 the frame at the target and the restart of a broken chain comes first. -/
-theorem tick_eq_tickFun {F : Frame σ} {G : FrameFun σ} {delay : ℕ} {x y : State σ}
-    (hG : Computes F G y.vm) (h : Tick F delay x y)
+theorem tick_eq_tickFun {F : Frame σ} {G : FrameFun σ} {Pin : σ → Prop} {delay : ℕ}
+    {x y : State σ} (hG : Computes F G Pin y.vm) (h : Tick F delay x y)
     (hrestartFirst : x.ctl.mode = .scan → G.restartGuard x.vm = true →
-      y = ⟨{x.ctl with clock := delay}, G.restart x.vm⟩) :
+      y = ⟨{x.ctl with clock := delay}, G.restart x.vm⟩)
+    (hfallbackPinned : x.ctl.mode = .scan → y.ctl.mode = .copy → Pin y.vm) :
     y = tickFun G F delay x := by
   cases h with
   | init c s s' hm hinit =>
@@ -241,7 +246,8 @@ theorem tick_eq_tickFun {F : Frame σ} {G : FrameFun σ} {delay : ℕ} {x y : St
         rcases hg with hrep | hng
         · rw [hr] at hrep; exact absurd hrep (by decide)
         · exact hng ((hG.shiftGuard _).mpr hs)
-      have hvalue : s'' = G.beginFallback (G.compare s) := hG.beginFallback _ hb
+      have hvalue : s'' = G.beginFallback (G.compare s) :=
+        hG.beginFallback _ hb (hfallbackPinned hm rfl)
       simp only [tickFun, hm, bool_ne_true hguard, hnotWait, hmatched, hnoShift, hvalue,
         Bool.false_eq_true, if_false, if_neg hclock]
   | shift_one c s s' hm hp hstep =>

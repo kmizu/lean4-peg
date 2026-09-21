@@ -1,3 +1,17 @@
+## n330（2026-09-21）: `Computes` の fallback 入口は目標だけでは決まらない（形式化の誤りを直した）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リスト不変（義務 1 本）、`unconditional` は付け替えていない。n329 で入れた `Computes` の場が 1 つ**証明不能な形**だったのを直した。 |
+
+**状態: module build `PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0、`forwardTick_of_machine` は標準公理・`tick_eq_tickFun` は `propext`／`Quot.sound`・無条件 PAL は未完。**
+
+**何が間違っていたか**: n329 の `Computes F G t` は、frame が開いている 3 つの関係（`init`／`beginFallback`／`replayStart`）を「目標 `t` について」だけ要求していた。`init` と `replayStart` はそれで足りる——`initVM`（`GalilScaffoldTopReplay:20`）は `GalilVM` の 15 場すべてを等式で固定し、`replayStartVM_unique`（`ReplayStartGhost:224`）もある。**しかし `beginFallbackVM'` は違う。** `GalilSharedFunctional` には `beginFallbackVM'_not_unique` が**定理として**あり、同じ源から複数の目標に行ける（コピー元の place が自由）。目標を 1 つに決めるのは走行ではなく**方針** `GalilTickFair.Canonical.fallbackPlace`（`scan` から `copy` に着地したなら `y.vm.fpp.walker = rightPlace y.vm`）である。
+
+**直し方**: `Computes F G Pin t` に方針の述語 `Pin : σ → Prop` を足し、`beginFallback : ∀ s, F.beginFallback s t → Pin t → t = G.beginFallback s` にした。`tick_eq_tickFun` は側条件 `hfallbackPinned : x.ctl.mode = scan → y.ctl.mode = copy → Pin y.vm` を取る。消費者 `forwardTick_of_machine` では `Pin s := s.fpp.walker = rightPlace s` を渡し、側条件は `hcanonical.fallbackPlace` そのもの。**`restartFirst` と `fallbackPlace` は `Canonical` の 3 場のうち 2 場で、どちらも「関係が複数の後継を許す所で方針が 1 つに決める」という同じ役目だった。**
+
 ## n329（2026-09-21）: 抽象 tick の関数形を投入し、物理側の前進義務を「1 本の関数を計算する」へ落とした
 
 **公理への進捗**
