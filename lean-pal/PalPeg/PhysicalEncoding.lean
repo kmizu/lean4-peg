@@ -9,6 +9,7 @@ import PalPeg.LocalQueueMachine
 import PalPeg.LocalBuffers
 import PalPeg.LocalReplayParked
 import PalPeg.LocalTick3
+import PalPeg.LocalStepFusion
 import Mathlib.Data.Fintype.Sum
 import Mathlib.Tactic.DeriveFintype
 import Mathlib.Data.Fintype.Prod
@@ -1903,6 +1904,48 @@ theorem vml_shift_one {P : ℕ} (centre : GalilVM → Fin 3)
           (f := PalPeg.LocalTick3.shiftOps1) rfl)) rfl]
   rfl
 
+/-! ### the rule: one action on one slot
+
+Every branch proved above moves at most one slot, by at most one action.  `actsAt` is that
+shape as a rule's action table, and `idealStep_oneAct` says what the ideal step then does: the
+named slot takes the action, every other slot stands still.  These are the two halves the
+branch lemmas above ask for as `hmoved` and `hkept`. -/
+
+/-- the action table of a rule that touches one slot. -/
+def actsAt {Γ : Type} {t : ℕ} (i : Fin t) (l : List (PalPeg.CloseoutCoreEnc12.Act Γ)) :
+    Fin t → List (PalPeg.CloseoutCoreEnc12.Act Γ) :=
+  fun j => if j = i then l else []
+
+theorem actsAt_length {Γ : Type} {t K : ℕ} (i : Fin t) (l : List (PalPeg.CloseoutCoreEnc12.Act Γ))
+    (hl : l.length ≤ K) (j : Fin t) : (actsAt i l j).length ≤ K := by
+  unfold actsAt
+  by_cases hj : j = i
+  · rw [if_pos hj]; exact hl
+  · rw [if_neg hj]; exact Nat.zero_le K
+
+/-- **the ideal step of a one-slot rule.**  The named slot takes the action list; every other
+slot is returned untouched. -/
+theorem idealStep_oneAct {Q Γ : Type} {t K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γ t K) (blank : Γ)
+    (q : Q) (tapes : Fin t → STape Γ) (i : Fin t) (l : List (PalPeg.CloseoutCoreEnc12.Act Γ))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blank K (tapes tape)) = actsAt i l) :
+    (PalPeg.LocalStepFusion.idealStep R blank (q, tapes) none).2 i
+        = PalPeg.CloseoutCoreEnc12.actList blank (tapes i) l
+      ∧ ∀ j, j ≠ i → (PalPeg.LocalStepFusion.idealStep R blank (q, tapes) none).2 j = tapes j := by
+  refine ⟨?_, ?_⟩
+  · show PalPeg.CloseoutCoreEnc12.actList blank (tapes i)
+      (R.acts q none (fun tape => PalPeg.Local.readWin blank K (tapes tape)) i) = _
+    rw [hacts]
+    show PalPeg.CloseoutCoreEnc12.actList blank (tapes i) (if i = i then l else []) = _
+    rw [if_pos rfl]
+  · intro j hj
+    show PalPeg.CloseoutCoreEnc12.actList blank (tapes j)
+      (R.acts q none (fun tape => PalPeg.Local.readWin blank K (tapes tape)) j) = _
+    rw [hacts]
+    show PalPeg.CloseoutCoreEnc12.actList blank (tapes j) (if j = i then l else []) = _
+    rw [if_neg hj]
+    rfl
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -1961,6 +2004,8 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.vml_fpp_done
 #print axioms PalPeg.PhysicalEncoding.vml_shift_exit
 #print axioms PalPeg.PhysicalEncoding.vml_shift_one
+#print axioms PalPeg.PhysicalEncoding.actsAt_length
+#print axioms PalPeg.PhysicalEncoding.idealStep_oneAct
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeftAtFloor
