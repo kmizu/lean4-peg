@@ -25,6 +25,8 @@
 
 **n326 続き 3（消費者の `hforwardFeed` から局所層の `feedC` を消した）**: module build `PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0。`hforwardFeed` の結論は `Enc (GalilArriveChain.arriveState' letter (absSC m)) (L0.apply p (some letter))`。消費者の中で既存の `LocalSysConcrete.feed_abs_core`（`absState'' (feedC a m).vm = arriveState' a (absState'' m.vm)`、`ViewsWF`＋`pending = []` は `InvC` から）で戻す。`arriveState'` は抽象の 3 本の head（left／center／right）と chain の verifier の `incoming` に 1 文字足すだけ（`LocalTracking.arriveVM`／`GalilArriveChain.arriveChain`）。これで物理側の 2 本の前進仮説はどちらも抽象状態だけで述べられている。仮説の本数・公理リストは不変。
 
+**n326 続き 4（`Enc` の head 成分。公理への接続は無い・進捗として数えない）**: 新モジュール `PalPeg/LocalHeadRep.lean`（`ConcreteLocalMachine` → `Workbench` 経由で登録、module build `BUILD=0`・error 0・sorry 0、標準 3 公理）。`HeadRep margin head state := ∃ v first, WF v ∧ ViewCells v ∧ absHead' v [] = head ∧ ViewRep margin v … ∧ 未払い 0`（抽象の `PlaceHead` は、view の 12 テープが表す整形式な view の抽象。届いていない文字は誰の `incoming` にも無いので pending は空）。`headRep_machineSlot`: 融合機械の実 1 歩は全 head に `headAfter input`（`some a` なら抽象の到着 `GalilTickArrive.arrivePH a`、`none` なら不変）。`headRep_machineFirstSlot`: blank テープからの最初の実 1 歩は空 view の head への到着。`arriveState'` が head にすること（`arriveVM_eq`）とちょうど同じ形。**まだ無いもの**: chain の verifier の head（`arriveChain`）、replay 中の right（`left^[r] parked`）、head 以外の全成分、tick の全分岐。
+
 **次**: 同じ物理配置（`LocalViewsMachine.machineRule`、view 1 本 = 12 テープ）の上で、command を制御（モード）と窓から決める形に広げる（tick の 1 歩＝各 view に `stepRight`／`stepLeft`／`stay`）。抽象 head と `InputView` の対応（`absHead'`、`feedC` が view にすること）を一次情報で確認して `Enc` の head 成分を定義する。n304 の 3 義務（P1〜P3）は未着手。
 
 ## n325（2026-09-21）: 最後の報告点の後の tick にも局所後継ができた。抽象局所層への仮説はゼロ

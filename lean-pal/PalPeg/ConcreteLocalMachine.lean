@@ -6,6 +6,7 @@ import PalPeg.LocalViewStep
 import PalPeg.LocalViewSlot
 import PalPeg.LocalViewInit
 import PalPeg.LocalViewsMachine
+import PalPeg.LocalHeadRep
 import PalPeg.LocalStepFusion
 import PalPeg.LocalShadowRealize
 import PalPeg.LocalShadowConcrete
@@ -37,5 +38,8 @@ So far: the Hood–Melville queue of an input view.
 * `PalPeg.LocalViewInit` — stacks of seals represent the empty view (`viewRep_empty_of_seals`);
 * `PalPeg.LocalViewsMachine` — the machine of several views with one slot counter
   (`machineRule`); one real step of its fusion is one slot of every view (`machineSlot`), also
-  from blank tapes (`machineFirstSlot`).
+  from blank tapes (`machineFirstSlot`);
+* `PalPeg.LocalHeadRep` — an abstract input head on the twelve tapes of a view (`HeadRep`): a
+  real step is the abstract arrival at every head (`headRep_machineSlot`,
+  `headRep_machineFirstSlot`).
 -/
