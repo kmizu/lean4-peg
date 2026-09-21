@@ -8,6 +8,10 @@ import PalPeg.ChainLookBehindRight
 import PalPeg.TickUsedLetters
 import PalPeg.ReplayStartGhost
 import PalPeg.ReportPhase
+import PalPeg.GhostSection
+import PalPeg.CountersCanonicalTrace
+import PalPeg.ParkedRight
+import PalPeg.ScanEntrySigns
 
 /-!
 # The final theorem from the local system and a physical machine, the trace side discharged
@@ -1031,8 +1035,123 @@ theorem replayStartNext (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
   · -- the landing is a scan state: no polarity is asked for
     exact fun hnotScanNext => absurd rfl hnotScanNext
 
-/-- **`PAL ∈ PEG` from the two open modes and a physical machine.**  The `init` mode is
-`LocalInitStep.initStep` (`initLocal_heldAfter`).  The seven phase modes of
+section ScanSuccessor
+
+open PalPeg.GalilScaffoldChainInputSupply GalilScaffoldInputHead
+open PalPeg.GalilScaffoldCounter (Canonical value ofNat)
+open PalPeg.GhostSection (ghostOf countersOf absState''_ghostOf physWF_ghostOf polOf_of_nonneg)
+open PalPeg.ScanEntrySigns (entrySigns_of_scanTick)
+
+/-- **The successor by the section.**  A tick target with canonical counters, a parked right
+head and the signs of the entry counters has a local successor. -/
+theorem nextOK_ghostOf (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
+    {m : Mirrored1 (tapeCount spare)} {target : State GalilVM} {parked : PlaceHead} {r : ℕ}
+    (hinj : Function.Injective m.vm.roles)
+    (htick : Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
+      (absState'' m.vm) target)
+    (hcanonicalTick : PalPeg.GalilTickFair.Canonical entry 2048 (absState'' m.vm) target)
+    (hcanonical : ∀ role, Canonical (countersOf target.vm role))
+    (hreplay : target.vm.replay = ofNat r)
+    (hright : target.vm.right = GalilScaffoldInputHead.left^[r] parked)
+    (hparkedLe : r ≤ position parked)
+    (hrest : target.ctl.replaying = false → r = 0)
+    (hsigns : target.ctl.mode ≠ Mode.scan →
+      0 ≤ value target.vm.radius ∧ 0 ≤ value target.vm.length ∧
+        (target.ctl.mode = Mode.shift →
+          0 ≤ value target.vm.remaining ∧ 0 ≤ value target.vm.cycle) ∧
+        (target.ctl.mode = Mode.copy → 0 ≤ value target.vm.fpp.work)) :
+    ∃ next, NextOK entry q first (localGood (spare := spare)) w m next := by
+  refine ⟨ghostOf m.vm.roles m.vm.phys target.ctl target.vm parked, ?_⟩
+  have habs : absState'' (ghostOf m.vm.roles m.vm.phys target.ctl target.vm parked).vm = target :=
+    absState''_ghostOf hinj m.vm.phys target.ctl hcanonical hreplay hright hrest
+  obtain ⟨hphys, hmir⟩ := physWF_ghostOf hinj m.vm.phys target.ctl hreplay hparkedLe
+  refine ⟨by rw [habs]; exact htick, by rw [habs]; exact hcanonicalTick, hphys, hmir, ?_⟩
+  intro hnotScan
+  obtain ⟨hradius, hlength, hshift, hcopy⟩ := hsigns hnotScan
+  exact ⟨fun hmode => polOf_of_nonneg (hcanonical .remaining) (hshift hmode).1,
+    polOf_of_nonneg (hcanonical .radius) hradius,
+    polOf_of_nonneg (hcanonical .length) hlength,
+    fun hmode => polOf_of_nonneg (hcanonical .cycle) (hshift hmode).2,
+    fun hmode => polOf_of_nonneg (hcanonical .fppWork) (hcopy hmode)⟩
+
+/-- **The open mode `scan`.**  A tracked scan state whose tick target is the next state of the
+trace, truncated to the letters that have arrived, has a local successor: the section of that
+target (`GhostSection.ghostOf`).  The counters of a trace state are canonical
+(`CountersCanonicalTrace.countersCanonical_trace`), its right head is parked
+(`ParkedRight.parkedRight_trace`), and truncation touches neither. -/
+theorem scanNext (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
+    (hw : 0 < w.length) {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc)
+    (m : Mirrored1 (tapeCount spare)) (target : State GalilVM)
+    (hinv : InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m)
+    (hmode : m.vm.ctl.mode = .scan)
+    (htarget : Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
+      (absState'' m.vm) target)
+    (honTrace : ∃ k j, Needy w (heldAfter (Tc w.length) st) k j m.vm ∧ k < Tc w.length ∧
+      target = truncS (w.length - j) (heldAfter (Tc w.length) st (k+1)))
+    (hcanonicalTick : PalPeg.GalilTickFair.Canonical entry 2048 (absState'' m.vm) target) :
+    ∃ next, NextOK entry q first (localGood (spare := spare)) w m next := by
+  obtain ⟨k, j, hneedy, hbefore, htargetEq⟩ := honTrace
+  have hpre := hpreTrace.base.pre
+  rw [heldAfter_of_le st (Nat.succ_le_of_lt hbefore)] at htargetEq
+  have hsource : absState'' m.vm = truncS (w.length - j) (st k) := by
+    rw [hneedy.2, heldAfter_of_le st hbefore.le]
+  -- the counters of the target
+  have hall := (PalPeg.CountersCanonicalTrace.countersCanonical_trace centreC placeC entry q first
+    hpre (k+1) (Nat.succ_le_of_lt hbefore)).1
+  have hcanonical : ∀ role, Canonical (countersOf target.vm role) := by
+    intro role
+    rw [htargetEq]
+    cases role
+    · exact hall.cycle
+    · exact hall.remaining
+    · exact hall.radius
+    · exact hall.length
+    · exact hall.replay
+    · exact hall.lower
+    · exact hall.span
+    · exact hall.work
+    · exact hall.debt
+    · exact hall.fppWork
+  -- the parked right head of the target
+  obtain ⟨r, parked, hreplay, hright, hparkedLe⟩ :=
+    PalPeg.ParkedRight.parkedRight_trace centreC placeC entry q first hw hpre (k+1)
+      (Nat.succ_le_of_lt hbefore)
+  have hpack := PalPeg.BranchSupply.frontPack_alongTrace centreC placeC entry q first hw hpre
+    (k+1) (Nat.succ_le_succ (Nat.zero_le k)) (Nat.succ_le_of_lt hbefore)
+  -- the signs at an entry, from the source
+  have hspanSource := PalPeg.BranchSupply.spanRepOnScanAndShift_alongTrace centreC placeC entry q
+    first hpre k hbefore.le
+  have hradLedger := PalPeg.CloseoutLPack6.radLedger_pt centreC placeC entry q first hw hpre
+    (fun i hi => PalPeg.CloseoutPackRun10.leftLive_of_lpackM (hpreTrace.packs i hi).pack)
+    k hbefore.le
+  have hscanTrace : (st k).ctl.mode = Mode.scan := by
+    have hctl : m.vm.ctl = (truncS (w.length - j) (st k)).ctl := congrArg State.ctl hsource
+    rw [← hmode, hctl]; rfl
+  have hsigns := entrySigns_of_scanTick _ _ centreC placeC entry q first 2048
+    (c := (st k).ctl) (s := PalPeg.GalilThrottledRun.truncVM (w.length - j) (st k).vm)
+    (c' := target.ctl) (t := target.vm) hscanTrace
+    (hspanSource (Or.inl hscanTrace)) hradLedger.nonneg
+    (by have htickSource := htarget; rw [hsource] at htickSource; exact htickSource)
+  refine nextOK_ghostOf entry q first hinv.phys.inv.roles htarget hcanonicalTick hcanonical
+    (r := r) (parked := PalPeg.GalilThrottledRun.truncPH (w.length - j) parked) ?_ ?_ ?_ ?_ hsigns
+  · rw [htargetEq]; exact hreplay
+  · rw [htargetEq]
+    show PalPeg.GalilThrottledRun.truncPH (w.length - j) (st (k+1)).vm.right = _
+    rw [hright, PalPeg.ReplayStartGhost.truncPH_left_iterate]
+  · exact hparkedLe
+  · intro hnotReplaying
+    rw [htargetEq] at hnotReplaying
+    exact ofNat_eq_reset (hreplay.symm.trans (hpack.rest (Or.inl hnotReplaying)))
+
+#print axioms scanNext
+
+end ScanSuccessor
+
+/-- **`PAL ∈ PEG` from the plateau step and a physical machine.**  The `init` mode is
+`LocalInitStep.initStep` (`initLocal_heldAfter`), `scan` and `replayStart` have a local successor
+on the trace (`scanNext`, `replayStartNext`); what is still asked of the abstract local layer is a
+successor on the plateau after the last report point (`hplateauNext`).  The seven phase modes of
 the abstract local system are `CloseoutCoreAgree.realizes_seven_SL`; its side conditions are
 facts about the held canonical trace.  The physical machine is asked for a forward simulation up
 to the abstraction (`hforwardTick`, `hforwardFeed`): it may compute any local state whose
@@ -1051,18 +1170,6 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc →
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    -- the open mode `scan`: a tracked, non-starved local state has a local successor
-    -- (`replayStart` has one by `replayStartNext`).  The target is the next state of the trace,
-    -- truncated to the letters that have arrived, and the tick into it is canonical.
-    (hscanNext : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ (m : Mirrored1 (tapeCount spare)) (target : State GalilVM),
-        InvC (localGood (spare := spare)) w (heldAfter (Tc w.length) st) m → m.vm.ctl.mode = .scan → ¬ Starved m.vm →
-        Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) target →
-        (∃ k j, Needy w (heldAfter (Tc w.length) st) k j m.vm ∧ k < Tc w.length ∧
-          target = truncS (w.length - j) (heldAfter (Tc w.length) st (k+1))) →
-        PalPeg.GalilTickFair.Canonical entry 2048 (absState'' m.vm) target →
-        ∃ next, NextOK entry q first (localGood (spare := spare)) w m next)
     -- on the plateau after the last report point the local ticks are still ticks
     (hplateauNext : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
       ReportPoint w (absSC m) → Refreshed (PofC centreC placeC entry w) q first (absSC m) →
@@ -1325,8 +1432,8 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
     exact PalPeg.CanonicalLocalRealizes.realizes_canonical hshared htick hcanonicalTick
       (fun m target hinv hmode hnotStarved htarget honTrace htargetCanonical => by
         have hspec := chosenStep_spec
-          (hscanNext w st Tc hpreTrace hcanonical m target hinv hmode hnotStarved htarget
-            honTrace htargetCanonical)
+          (scanNext entry q first hw hpreTrace m target hinv hmode htarget honTrace
+            htargetCanonical)
         exact ⟨hspec.1, hspec.2.1, hspec.2.2.1, hspec.2.2.2.1⟩)
   | shift => exact hshift
   | copy => exact hcopy

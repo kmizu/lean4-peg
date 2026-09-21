@@ -1,3 +1,24 @@
+## n323（2026-09-21）: 開いていたモード `scan` に局所後継ができた。仮説 `hscanNext` を消費者から外した
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リストは不変（義務 1 本）、`unconditional` は付け替えていない。局所経路の消費者 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` の仮説から `hscanNext` が消えた。抽象局所層に残る仮説は `hplateauNext` だけ。物理機械の仮説（`htape`／`Enc`／`hencInit`／`hforwardTick`／`hforwardFeed`／`hencRep`／`hencOut`／`PhysFrozen` 系 3 本）と ActRule は未着手。 |
+
+**状態: 全体 build 成功（`BUILD=0`、error 0、sorry 0。`GalilFrontier` を触ったので木全体を再 build）・標準公理のみ・無条件 PAL は未完。**
+
+**何を証明したか**: 定理 `ShadowedLocalFinal.scanNext`。追跡されている scan 状態 `m` の tick target が「trace の次状態を、到着済みの文字まで truncation したもの」であるとき、`NextOK` を満たす局所後継がある。後継は源 `m` から計算せず、target の**切断**（`GhostSection.ghostOf`）として作る。抽象局所層は証明の ghost なので非局所でよい（n304）。
+* 道筋（n316 の道 A）。消費者の型から読んで仮説を順に弱めた: n318（target の正体と `Canonical` を `Hloc` が受け取る）、n319（`NextOK` から `Post` 節を削除、`ReportPhase.reportPhase_tick`）、n320–n322（極性は読む者のモードでだけ求める。`localGood := mode ≠ scan → PolWF`、`PolWF` の `remaining`／`cycle` は shift、`fppWork` は copy。replay commit は `length`／`work` の極性を自分で立てる）。
+* 新モジュール 4 本（全部 `scanNext` が消費。`ShadowedLocalFinal` の import から `Workbench` 経由でルートに届く）:
+  - `GhostSection`: `ghostOf roles background c t parked`（ヘッドは `viewOfHead`、カウンタの銀行は `Function.extend roles …`、鏡は `mirrorOfTape`、バッファは `⟨tapes, tapes, true, none⟩`、walker は `viewOfPlace`）、`absState''_ghostOf`（カウンタが `Canonical`、`replay = ofNat r`、`right = left^[r] parked`、非 replay なら `r = 0` の下で `absState'' = ⟨c, t⟩`）、`physWF_ghostOf`（`PhysWF` ∧ `MirInv1`）、`polOf_of_nonneg`。`ctrOf` 系 6 宣言と `viewOfPlace` 系 3 宣言は旧 encoder `CloseoutCoreEnc2` から**移動**し、旧側は `export` で名前を保つ（`CloseoutCoreEnc2` は消費者の import 閉包に入っていなかった）。
+  - `CountersCanonicalTrace`: 抽象が読むカウンタ 10 本は trace の全点で `Canonical`（`allCanonical_tick`、restart が `last` を `radius` に写すので chain 側の `ChainLastCan` も運ぶ）。
+  - `ParkedRight`: `ParkedRight s := ∃ r parked, replay = ofNat r ∧ right = left^[r] parked ∧ r ≤ position parked` が trace の全点で成立。抽象の `right` は右スタックが空なら `incoming` から引くので `left (right p) = p` は一般に偽で、`Frontier` だけでは駐車 view を逆算できない。
+  - `ScanEntrySigns`: `entrySigns_of_scanTick`。源の `SpanRep` と `0 ≤ radius` から、shift の入口（`remaining := ofNat h`、`cycle := reset`、`length += 2`）と copy の入口（`fpp.work := inc length`）の符号。
+* コピペ回避: tick での `(right, replay)` の動きの分類 `RightReplayMove`／`rightReplayMove_of_tick` を `GalilFrontier` に置き、`frontier_tick` をその 4 場合から導く形に直した（120 行 → 25 行）。
+
+**次の goal `hplateauNext`（定義と下流を読んだ。未着手）**: 受理は最後の窓 `((n−1)·L, n·L]` の latch で読まれる（`LocalTrackingLatch.tracking_latch_of_oracles`）ので plateau は高々 `nLocalL` tick だが、その間の抽象 tick の**存在**は要る（止まると `chosenStep` が `m` のままで `TickSucc` が立たない）。存在は `OracleRun.scan_tick_exists_PofC`（`SearchReady` と `ChainReady` から）で、run に沿う部品 `settle`／`scanBackground_run`（前提は `canRight right`、報告点では `gap = false` なので成立）／`scanCompare_cases` が oracle 側に既にある。案: 最後の報告点から右ヘッドが `2n` に出るまでの canonical な run の存在を 1 本立て、`Post` を「その run の上を追跡している」に強める。切断に要る事実は tick の保存補題（`allCanonical_tick`、`parkedRight_tick`、`entrySigns_of_scanTick`）で run に沿って運ぶ。採らなかった案: 報告点で ghost を凍らせる（物理機械が右へ 1 歩進んだ時点で `hencRep` が破れる）、延長語 `w ++ [a]` の trace を追跡させる（下流が `Pof w`／`H_letter` で `w` の frame に固定されていて改造が大きい）。
+
 ## n285 — `obligation_localRealization`: 具体機械の上で enqueue／dequeue 1 回が固定長の微小プログラムになった（`snocRun_sound`／`tailRun_sound`）。公理への接続はまだ無い
 
 **公理への進捗**

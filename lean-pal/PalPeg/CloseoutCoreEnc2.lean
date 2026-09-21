@@ -1,4 +1,5 @@
 import PalPeg.CloseoutCoreEnc
+import PalPeg.GhostSection
 
 /-!
 # Closeout, step 2b: closing (and refuting) the NAMED residuals of `CloseoutCoreEnc`
@@ -69,43 +70,9 @@ open PalPeg.CloseoutCoreEnc (Kc WinRealizes segSym mapTape listTape cellSym view
 `LocalCounter.absCtr` lands in the canonical counters only, so it can only be
 sectioned there — but on those it can be, explicitly. -/
 
-/-- The counter tape holding the unary value `n`: `n` marks above a separator. -/
-def ctrTapeSeg (n : ℕ) : STape Seg :=
-  ⟨List.replicate n LocalCounter.mark ++ [LocalCounter.sep], LocalCounter.blank, []⟩
-
-@[simp] theorem val_ctrTapeSeg (n : ℕ) : LocalCounter.val (ctrTapeSeg n) = n :=
-  LocalCounter.markRun_replicate_sep n []
-
-theorem segCtr_ctrTapeSeg (n : ℕ) : LocalCounter.SegCtr (ctrTapeSeg n) n := ⟨[], rfl⟩
-
-/-- Every list of units is a replicate of its own length. -/
-theorem list_unit_eq (l : List Unit) : l = List.replicate l.length () := by
-  induction l with
-  | nil => rfl
-  | cons a t ih => cases a; simpa [List.replicate_succ] using congrArg (fun x => () :: x) ih
-
-/-- The tape/sign pair representing a canonical counter. -/
-def ctrOf (c : Counter) : STape Seg × Bool :=
-  (ctrTapeSeg (if c.neg.isEmpty then c.pos.length else c.neg.length), c.neg.isEmpty)
-
-/-- **A section of `absCtr` on the canonical counters.** -/
-theorem absCtr_ctrOf {c : Counter} (hc : Canonical c) :
-    LocalCounter.absCtr (ctrOf c).1 (ctrOf c).2 = c := by
-  rcases c with ⟨ps, ns⟩
-  cases ns with
-  | cons b ns' =>
-      have hp : ps = [] := by
-        rcases hc with h | h
-        · exact h
-        · exact absurd h (by simp)
-      subst hp
-      simp only [ctrOf, LocalCounter.absCtr, List.isEmpty_cons, Bool.false_eq_true,
-        if_false, val_ctrTapeSeg, LocalCounter.negOfNat]
-      exact congrArg (fun l => (⟨[], l⟩ : Counter)) (list_unit_eq (b :: ns')).symm
-  | nil =>
-      simp only [ctrOf, LocalCounter.absCtr, List.isEmpty_nil, if_true,
-        val_ctrTapeSeg, ofNat]
-      exact congrArg (fun l => (⟨l, []⟩ : Counter)) (list_unit_eq ps).symm
+-- The section of the counter abstraction lives in `PalPeg.GhostSection`.
+export PalPeg.GhostSection (ctrTapeSeg val_ctrTapeSeg segCtr_ctrTapeSeg list_unit_eq ctrOf
+  absCtr_ctrOf)
 
 /-! ## 2. Sections of the cursor abstractions -/
 
@@ -126,32 +93,8 @@ theorem absHead_viewOfPH (p : PlaceHead) :
   show (⟨⟨f, l, r ++ [], q⟩, g⟩ : PlaceHead) = ⟨⟨f, l, r, q⟩, g⟩
   rw [List.append_nil]
 
-/-- The cursor representing a `Place`: the letters to the left of the head, with
-the `none` sentinel closing the run. -/
-def viewOfPlace (p : Place) : InputView :=
-  match p.letters with
-  | [] => ⟨[], none, [], RTQueue.empty, p.gap⟩
-  | a :: t => ⟨t.map some ++ [none], some a, [], RTQueue.empty, p.gap⟩
-
-theorem placeLetters_map (t : List (Fin 2)) :
-    LocalState.placeLetters (t.map some ++ [none]) = t := by
-  induction t with
-  | nil => rfl
-  | cons a t ih =>
-      show a :: LocalState.placeLetters (t.map some ++ [none]) = a :: t
-      rw [ih]
-
-/-- **A section of `absPlace`.** -/
-theorem absPlace_viewOfPlace (p : Place) : LocalState.absPlace (viewOfPlace p) = p := by
-  rcases p with ⟨letters, g⟩
-  cases letters with
-  | nil => rfl
-  | cons a t =>
-      show (⟨LocalState.placeLetters (some a :: (t.map some ++ [none])), g⟩ : Place)
-        = ⟨a :: t, g⟩
-      rw [show LocalState.placeLetters (some a :: (t.map some ++ [none]))
-            = a :: LocalState.placeLetters (t.map some ++ [none]) from rfl,
-        placeLetters_map]
+-- The section of `absPlace` lives in `PalPeg.GhostSection`.
+export PalPeg.GhostSection (viewOfPlace placeLetters_map absPlace_viewOfPlace)
 
 /-! ## 3. A section of `absChain` on the canonical chains -/
 

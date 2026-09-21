@@ -190,32 +190,43 @@ It is only ever used to discharge the branches that move the right head
 def ReplayRest (c : Control) (s : GalilVM) : Prop :=
   (c.replaying = false ∨ c.mode = Mode.init) → s.replay = GalilScaffoldCounter.reset
 
-/-- The frontier invariant is preserved by every controller tick.  The only
-tick that moves the right head while replaying is the matched comparison, and
-it decrements `replay` in the same breath (`matchedPlace`). -/
-theorem frontier_tick (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM → Fin 3)
+/-- How one controller tick moves the right head and the replay counter. -/
+inductive RightReplayMove (c : Control) (s t : GalilVM) : Prop
+  | rested (hreplay : t.replay = GalilScaffoldCounter.reset)
+  | kept (hright : t.right = s.right) (hreplay : t.replay = s.replay)
+  | replayed (hreplaying : c.replaying = true)
+      (hright : t.right = GalilScaffoldChainVerifier.right s.right)
+      (hreplay : t.replay = GalilScaffoldCounter.dec s.replay)
+  | started (hmode : c.mode = Mode.replayStart) (hright : t.right = s.center)
+      (hreplay : t.replay = s.radius)
+
+theorem RightReplayMove.pull {σ' : Type} (L : Lens GalilVM σ') {c : Control} {s t : GalilVM}
+    (h2 : t = L.set s (L.get t))
+    (hr : (L.set s (L.get t)).right = s.right)
+    (hp : (L.set s (L.get t)).replay = s.replay) : RightReplayMove c s t :=
+  .kept ((congrArg GalilVM.right h2).trans hr) ((congrArg GalilVM.replay h2).trans hp)
+
+theorem rightReplayMove_of_tick (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry q : ℕ) (first : Fin 9) (delay : ℕ)
     {c c' : Control} {s t : GalilVM}
-    (hrest : ReplayRest c s) (hf : Frontier s)
-    (hrep : c.mode = Mode.replayStart → ∀ r, s.radius = GalilScaffoldCounter.ofNat r →
-      position s.center + r ≤ 2 * arrived s.center)
+    (hrest : ReplayRest c s)
     (h : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay
-      ⟨c, s⟩ ⟨c', t⟩) : Frontier t := by
+      ⟨c, s⟩ ⟨c', t⟩) : RightReplayMove c s t := by
   cases h
   case init =>
     rename_i hm hi
     have hi' : initVM entry s t := hi
-    exact frontier_of_reset (hi'.2.2.2.2.2.2.1.trans (hrest (Or.inr hm)))
+    exact .rested (hi'.2.2.2.2.2.2.1.trans (hrest (Or.inr hm)))
   case scan_wait =>
     rename_i hm hav hb
     obtain ⟨-, hr, -, -, -, -, -, -, -, hpr, -, -⟩ :=
       backgroundS_fields (sharedC onLetter leftFirst centre place entry) q first hb
-    exact frontier_congr hr hpr hf
+    exact .kept hr hpr
   case scan_count =>
     rename_i hm hc hav hb
     obtain ⟨-, hr, -, -, -, -, -, -, -, hpr, -, -⟩ :=
       backgroundS_fields (sharedC onLetter leftFirst centre place entry) q first hb
-    exact frontier_congr hr hpr hf
+    exact .kept hr hpr
   case scan_match =>
     rename_i s' o hmt hm hc hcmp hav hpl ho
     obtain ⟨vs, vq, a, -, hvr, -, -, -, hteq⟩ :
@@ -229,17 +240,10 @@ theorem frontier_tick (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM 
     cases hcr : c.replaying with
     | false =>
       rw [hcr, if_neg (by simp)] at hpl'
-      exact frontier_of_reset (by rw [hpl', hs'p]; exact hrest (Or.inl hcr))
+      exact .rested (by rw [hpl', hs'p]; exact hrest (Or.inl hcr))
     | true =>
       rw [hcr, if_pos rfl] at hpl'
-      intro m hm2
-      have htp : t.replay = GalilScaffoldCounter.dec s.replay := by rw [hpl', ← hs'p]
-      have htr : t.right = GalilScaffoldChainVerifier.right s.right := by
-        rw [hpl', ← hs'r]
-      rw [htp] at hm2
-      have hsr := hf (m+1) (dec_eq_ofNat hm2)
-      rw [htr]
-      exact right_frontier_step s.right m hsr
+      exact .replayed hcr (by rw [hpl', ← hs'r]) (by rw [hpl', ← hs'p])
   case scan_shift =>
     rename_i s' hmt hg hm hc hr hcmp hav hb
     obtain ⟨vs, vq, a, -, -, -, -, -, hteq⟩ :
@@ -247,7 +251,7 @@ theorem frontier_tick (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM 
     have hs'p : s'.replay = s.replay := by
       rw [hteq, GalilScaffoldChainInputSupply.afterBirth_replay]; cases a <;> rfl
     obtain ⟨w, -, ht⟩ : beginShiftVM' s' t := hb
-    exact frontier_of_reset (by rw [ht]; show s'.replay = _; rw [hs'p]; exact hrest (Or.inl hr))
+    exact .rested (by rw [ht]; show s'.replay = _; rw [hs'p]; exact hrest (Or.inl hr))
   case scan_fallback =>
     rename_i s' hmt hm hc hg hr hcmp hav hb
     obtain ⟨vs, vq, a, -, -, -, -, -, hteq⟩ :
@@ -255,60 +259,83 @@ theorem frontier_tick (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM 
     have hs'p : s'.replay = s.replay := by
       rw [hteq, GalilScaffoldChainInputSupply.afterBirth_replay]; cases a <;> rfl
     obtain ⟨pl, ht, -⟩ : beginFallbackVM' s' t := hb
-    exact frontier_of_reset (by rw [ht]; show s'.replay = _; rw [hs'p]; exact hrest (Or.inl hr))
+    exact .rested (by rw [ht]; show s'.replay = _; rw [hs'p]; exact hrest (Or.inl hr))
   case shift_one =>
     rename_i hm hp hi
-    exact frontier_pull shiftLens hi.2 rfl rfl hf
-  case shift_done => exact hf
+    exact .pull shiftLens hi.2 rfl rfl
+  case shift_done => exact .kept rfl rfl
   case copy_one =>
     rename_i hm hp hi
-    exact frontier_pull fppLens hi.2 rfl rfl hf
+    exact .pull fppLens hi.2 rfl rfl
   case copy_done =>
     rename_i hm hp hi
-    exact frontier_pull fppLens hi.2 rfl rfl hf
+    exact .pull fppLens hi.2 rfl rfl
   case home_start =>
     rename_i hm hl hi
-    exact frontier_pull fppLens hi.2 rfl rfl hf
+    exact .pull fppLens hi.2 rfl rfl
   case home_step =>
     rename_i hm hl hi
-    exact frontier_pull fppLens hi.2 rfl rfl hf
+    exact .pull fppLens hi.2 rfl rfl
   case fpp_slice =>
     rename_i hm hi
-    exact frontier_pull fppLens hi.2 rfl rfl hf
+    exact .pull fppLens hi.2 rfl rfl
   case fpp_done =>
     rename_i hm hi
-    exact frontier_pull fppLens hi.2 rfl rfl hf
+    exact .pull fppLens hi.2 rfl rfl
   case markEnd_found =>
     rename_i hm he hi
-    exact frontier_pull rewindLens hi.2 (by rw [hi.1.2]; rfl) rfl hf
+    exact .pull rewindLens hi.2 (by rw [hi.1.2]; rfl) rfl
   case markEnd_step =>
     rename_i hm he hi
-    exact frontier_pull fppLens hi.2 rfl rfl hf
+    exact .pull fppLens hi.2 rfl rfl
   case choose_select =>
     rename_i hm hodd hs hi
-    exact frontier_pull rewindLens hi.2 (by rw [hi.1]; rfl) rfl hf
+    exact .pull rewindLens hi.2 (by rw [hi.1]; rfl) rfl
   case choose_step =>
     rename_i hm hs hi
-    exact frontier_pull rewindLens hi.2 (by rw [hi.1.2]; rfl) rfl hf
+    exact .pull rewindLens hi.2 (by rw [hi.1.2]; rfl) rfl
   case rewind_done =>
     rename_i hm hfi hi
-    exact frontier_pull rewindLens hi.2 (by rw [hi.1]; rfl) rfl hf
+    exact .pull rewindLens hi.2 (by rw [hi.1]; rfl) rfl
   case rewind_one =>
     rename_i hm hpr hfi hi
-    exact frontier_pull rewindLens hi.2 (by rw [hi.1.2]; rfl) rfl hf
+    exact .pull rewindLens hi.2 (by rw [hi.1.2]; rfl) rfl
   case rewind_pair =>
     rename_i hm hpr hfi hi
-    exact frontier_pull rewindLens hi.2 (by rw [hi.1.2]; rfl) rfl hf
+    exact .pull rewindLens hi.2 (by rw [hi.1.2]; rfl) rfl
   case replayStart =>
     rename_i o hm ho ho' hi
     have hi' : replayStartVM entry s t := hi
-    intro m hm2
-    rw [hi'.2.1]
-    exact hrep hm m (hi'.1 ▸ hm2)
+    exact .started hm hi'.2.1 hi'.1
   case restart =>
     rename_i hm hb
     obtain ⟨w, -, -, -, -, ht⟩ : restartVM entry s t := hb
-    exact frontier_congr (by rw [ht]) (by rw [ht]) hf
+    exact .kept (by rw [ht]) (by rw [ht])
+
+/-- The frontier invariant is preserved by every controller tick.  The only
+tick that moves the right head while replaying is the matched comparison, and
+it decrements `replay` in the same breath (`matchedPlace`). -/
+theorem frontier_tick (onLetter leftFirst : GalilVM → Prop) (centre : GalilVM → Fin 3)
+    (place : GalilVM → GalilScaffoldPlace.Place) (entry q : ℕ) (first : Fin 9) (delay : ℕ)
+    {c c' : Control} {s t : GalilVM}
+    (hrest : ReplayRest c s) (hf : Frontier s)
+    (hrep : c.mode = Mode.replayStart → ∀ r, s.radius = GalilScaffoldCounter.ofNat r →
+      position s.center + r ≤ 2 * arrived s.center)
+    (h : Tick (galilFrameS (sharedC onLetter leftFirst centre place entry) q first) delay
+      ⟨c, s⟩ ⟨c', t⟩) : Frontier t := by
+  cases rightReplayMove_of_tick onLetter leftFirst centre place entry q first delay hrest h with
+  | rested hreplay => exact frontier_of_reset hreplay
+  | kept hright hreplay => exact frontier_congr hright hreplay hf
+  | replayed hreplaying hright hreplay =>
+    intro m hm2
+    rw [hreplay] at hm2
+    have hsr := hf (m+1) (dec_eq_ofNat hm2)
+    rw [hright]
+    exact right_frontier_step s.right m hsr
+  | started hmode hright hreplay =>
+    intro m hm2
+    rw [hright]
+    exact hrep hmode m (hreplay ▸ hm2)
 
 /-- The right head's next move needs a fresh letter: it stands on a gap (so
 the move is a letter move) with an empty saved right stack, hence `moveRight`
