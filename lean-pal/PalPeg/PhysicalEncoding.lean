@@ -3341,6 +3341,65 @@ theorem idle_shape_after_erase {Q : Type} {K : ℕ} (margin : ℕ) (hK1 : 1 ≤ 
     rw [tapesOf_apply, hraw] at hstop
     exact erase_preserves_shape margin K hK1 hKn raw hstop
 
+/-- **a tick in which only the idle half moved.**  The branches that name no action at all — the
+three that stop at a floor, the start of the program, the wipe — still see the background erasure
+write on the retired half.  Everything the encoding speaks about is untouched, and the retired
+half keeps its shape, so the encoding moves across unchanged. -/
+theorem encTapes_idleOnly (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Bool)
+    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
+    (fppLive dpLive : Bool) (tapes newTapes : Slot → STape Γm)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
+    (hkept : ∀ slot, (∀ k : Fin 9, slot ≠ progSlotOf (!fppLive) k) → newTapes slot = tapes slot)
+    (hidleShape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
+      newTapes (progSlotOf (!fppLive) k) = padLeft margin (mapTape encProg raw)) :
+    EncTapes margin x polarity gap micro fppLive dpLive newTapes where
+  margins := by
+    intro slot
+    by_cases hidle : ∃ k : Fin 9, slot = progSlotOf (!fppLive) k
+    · obtain ⟨k, hk⟩ := hidle
+      obtain ⟨raw, hraw⟩ := hidleShape k
+      rw [hk, hraw, pos_padLeft]
+      omega
+    · rw [hkept slot (fun k hk => hidle ⟨k, hk⟩)]
+      exact henc.margins slot
+  heads := by
+    intro v head hhead
+    obtain ⟨view, viewTapes, habs, hrep, hslots⟩ := henc.heads v head hhead
+    exact ⟨view, viewTapes, habs, hrep, fun j => by
+      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslots j]⟩
+  fpp := by
+    intro j
+    rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf])]
+    exact henc.fpp j
+  idleShape := hidleShape
+  dp := by
+    intro j
+    rw [hkept _ (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
+    exact henc.dp j
+  counters := by
+    intro c value hvalue
+    obtain ⟨segments, habs, hslot⟩ := henc.counters c value hvalue
+    exact ⟨segments, habs, by
+      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  mirrors := by
+    intro m value hvalue
+    obtain ⟨segments, habs, hslot⟩ := henc.mirrors m value hvalue
+    exact ⟨segments, habs, by
+      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  places := by
+    intro j place hplace
+    obtain ⟨stackTape, junk, hsealed, hlen, hstack, hslot⟩ := henc.places j place hplace
+    exact ⟨stackTape, junk, hsealed, hlen, hstack, by
+      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  period := by
+    intro tape htape
+    rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf])]
+    exact henc.period tape htape
+  answer := by
+    intro tape htape
+    rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf])]
+    exact henc.answer tape htape
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3433,6 +3492,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.idealStep_withErase
 #print axioms PalPeg.PhysicalEncoding.erase_preserves_shape
 #print axioms PalPeg.PhysicalEncoding.idle_shape_after_erase
+#print axioms PalPeg.PhysicalEncoding.encTapes_idleOnly
 #print axioms PalPeg.PhysicalEncoding.progSlotOf_ne
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
