@@ -4137,6 +4137,72 @@ theorem tickFun_control_of_agree {n : ℕ} (code : List (Instruction 9))
         = (PalPeg.ProgramFunction.tickFun code true m').done :=
   tickFun_control_congr code m m' h.done h.pc (machineAgree_focus h)
 
+/-- the action one call performs on a slot, in the component's own alphabet. -/
+def progActRaw (code : List (Instruction 9)) (m : PalPeg.GalilScaffoldControl.Machine 9)
+    (i : Fin 9) : List (PalPeg.CloseoutCoreEnc12.Act (Fin 9)) :=
+  if m.done then []
+  else
+    match code[m.config.pc]? with
+    | some (.move t true _) => if i = t then [some ((m.config.tapes t).focus, .right)] else []
+    | some (.move t false _) => if i = t then [some ((m.config.tapes t).focus, .left)] else []
+    | some (.write t sym _) => if i = t then [some (sym, .stay)] else []
+    | _ => []
+
+theorem progActRaw_length (code : List (Instruction 9))
+    (m : PalPeg.GalilScaffoldControl.Machine 9) (i : Fin 9) :
+    (progActRaw code m i).length ≤ 1 := by
+  unfold progActRaw
+  split
+  · simp
+  · split
+    · split <;> simp
+    · split <;> simp
+    · split <;> simp
+    · simp
+
+/-- **a call performs exactly that action on the component's tape.** -/
+theorem tapes_after_call (code : List (Instruction 9))
+    (m : PalPeg.GalilScaffoldControl.Machine 9) (i : Fin 9) :
+    encTape ((PalPeg.ProgramFunction.tickFun code true m).config.tapes i)
+      = PalPeg.CloseoutCoreEnc12.actList (6 : Fin 9) (encTape (m.config.tapes i))
+          (progActRaw code m i) := by
+  rw [progTickFun_tapes code m]
+  unfold progActRaw progStepTapes
+  cases hdone : m.done
+  · simp only [Bool.false_eq_true, if_false]
+    match hcode : code[m.config.pc]? with
+    | none => simp [hcode]
+    | some .halt => simp [hcode]
+    | some (.read t cs) => simp [hcode]
+    | some (.write t sym pc) =>
+        simp only [hcode]
+        by_cases hit : i = t
+        · subst hit
+          rw [if_pos rfl, Function.update_self]
+          obtain ⟨left, focus, right⟩ := m.config.tapes i
+          rfl
+        · rw [if_neg hit, Function.update_of_ne hit]
+          rfl
+    | some (.move t dir pc) =>
+        cases dir
+        · simp only [hcode]
+          by_cases hit : i = t
+          · subst hit
+            rw [if_pos rfl, Function.update_self]
+            obtain ⟨left, focus, right⟩ := m.config.tapes i
+            cases left <;> rfl
+          · rw [if_neg hit, Function.update_of_ne hit]
+            rfl
+        · simp only [hcode]
+          by_cases hit : i = t
+          · subst hit
+            rw [if_pos rfl, Function.update_self]
+            obtain ⟨left, focus, right⟩ := m.config.tapes i
+            cases right <;> rfl
+          · rw [if_neg hit, Function.update_of_ne hit]
+            rfl
+  · simp [hdone]
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -4236,6 +4302,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.fppActs_length
 #print axioms PalPeg.PhysicalEncoding.fppActs_at_live
 #print axioms PalPeg.PhysicalEncoding.machineAgree_focus
+#print axioms PalPeg.PhysicalEncoding.tapes_after_call
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
