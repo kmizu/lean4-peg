@@ -132,7 +132,7 @@ theorem cycleOracleOnPackedRun :
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC 0 1 0
         (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC 0 1 0)
         (PalPeg.ShapedRun.OracleTick 0)
-      (fun _ y => y.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan) w :=
+      (PalPeg.CloseoutCheckW.ReportOnPackedRun centreC placeC 0 1 0) w :=
   fun w _ => PalPeg.OracleReady.cycleOracleOn_of_readyLeaves centreC placeC 0 1 0
     (PalPeg.GalilFinalAssembly2.decodesC 0 w) (by decide) (by decide) (by decide) (by decide)
 

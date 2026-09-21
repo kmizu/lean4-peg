@@ -1,3 +1,18 @@
+## n324（2026-09-21）: oracle の不変量を全 checkpoint で外に出した（plateau の run の材料）
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残。抽象局所層の仮説は `hplateauNext` だけ（まだ仮説のまま）。今回はその証明に要る材料を消費者の手元まで運んだだけ。物理機械の仮説と ActRule は未着手。 |
+
+**なぜ要ったか**: plateau（最後の報告点の後、右ヘッドが `2n` に出るまで）には trace が無く、抽象 tick の**存在**が要る。部品は `OracleRun` に既にある（`settle`、`scanBackground_run`、`scanCompare_cases`、存在は `scan_tick_exists_PofC`）が、どれも oracle の不変量 `ScanOnPackedRunFromInvLPS`（`InvLPS` の origin と packed／shaped な run を運ぶ）を起点に取る。readiness の葉は n282 で全部放電済みで、chain の葉の条件 `position right + 1 < |encoded w| = 2n+1` は最後の報告点 `2n−1` でも成り立つ。ところが `canonicalPreTrace_exists` は `PreTraceIMW`・`CanonTrace`・checkpoint の scan モードしか外に出しておらず、`ReachAtOn` の継続節は `m < |w|` のときしか不変量を出さない（当時の消費者は次の目標へ進むだけで、最後の点の不変量を必要としなかった）。
+* 調べたこと: `ReachAtOn` の producer は `OracleRun` の 3 箇所だけで、どれも報告状態の不変量 `hI'` が手元にある。`ShapedSteps` は 1 歩ごとに restart の証明書（`Restarted`／`StageEntry`）を運ぶので、外に出ている事実からの再構成は重い。
+* やったこと: `ReachAtOn` の構造は変えず、報告点で外に出す述語 `Y` を強めた。`CloseoutCheckW.ReportOnPackedRun w y := y.ctl.mode = scan ∧ ScanOnPackedRunFromInvLPS w y.ctl y.vm`。6 ファイル 11 箇所の literal `(fun _ y => y.ctl.mode = Mode.scan)` をこの名前に置換、producer 3 箇所は `⟨hI'.1.1, hI'⟩`。`preTraceOnPackedRun_exists` と `canonicalPreTrace_exists` の結論に 4 番目の連言「各 checkpoint で `ScanOnPackedRunFromInvLPS`」を追加（3 番目の scan モードは残した）。
+* **1 回目の全体 build は `BUILD=1`**（背景タスクの通知は exit code 0 だった。ログの `BUILD=` 行で気づいた）。`given_shadowedLocalSystem` の `hexists` が存在定理の結論を 3 連言の形で書き下していた。4 連言に直して `BUILD=0`。
+
+**次の一手**: 最後の checkpoint の不変量から `settle` → `scanBackground_run`（clock = 1 まで）→ compare 1 回の canonical な run を組み、`Post` を「その run の上を追跡している」に強める。切断（`GhostSection.ghostOf`）に要る事実は tick の保存補題（`allCanonical_tick`、`parkedRight_tick`、`entrySigns_of_scanTick`）で run に沿って運ぶ。
+
 ## n323（2026-09-21）: 開いていたモード `scan` に局所後継ができた。仮説 `hscanNext` を消費者から外した
 
 **公理への進捗**

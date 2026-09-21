@@ -412,7 +412,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
         (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
         (PalPeg.ShapedRun.OracleTick entry)
-      (fun _ y => y.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan) w)
+      (PalPeg.CloseoutCheckW.ReportOnPackedRun centreC placeC entry q first) w)
     (hres : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc →
       ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc)
@@ -493,7 +493,10 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
   have hexists : ∀ w : List (Fin 2), ∃ (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc ∧
         CanonTrace entry w st Tc ∧
-        ∀ m, 1 ≤ m → m ≤ w.length → (st (Tc m)).ctl.mode = Mode.scan := by
+        (∀ m, 1 ≤ m → m ≤ w.length → (st (Tc m)).ctl.mode = Mode.scan) ∧
+        ∀ m, 1 ≤ m → m ≤ w.length →
+          PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first w
+            (st (Tc m)).ctl (st (Tc m)).vm := by
     intro w
     by_cases hw : 0 < w.length
     · obtain ⟨st, Tc, h⟩ := canonicalPreTrace_exists entry q first hor w hw
@@ -562,7 +565,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     Post frozen
     (fun w m hw hinv => hnotFrozenTracked w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2.1 m hinv)
     (fun w m hw hinv hneedy =>
-      hpostOfLastReport w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2.1 (htraceOf w hw).2.2 m hinv
+      hpostOfLastReport w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2.1 (htraceOf w hw).2.2.1 m hinv
         hneedy)
     hpostTick
     rep_sound rep_complete L0 blankSymbol q0 repQ outQ htape Rep hrepInit
@@ -1162,7 +1165,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
         (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
         (PalPeg.ShapedRun.OracleTick entry)
-      (fun _ y => y.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan) w)
+      (PalPeg.CloseoutCheckW.ReportOnPackedRun centreC placeC entry q first) w)
     (hres : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc →
       ScanLandingObligationsAlongTrace centreC placeC entry q first w st Tc)

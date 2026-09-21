@@ -439,6 +439,13 @@ def ScanOnPackedRunFromInvLPS (w : List (Fin 2)) (c : Control) (r : GalilVM) : P
     StepsIMWC centre place entry q first w j ⟨c₀, r₀⟩ ⟨c, r⟩ ∧
     ∃ j' : ℕ, PalPeg.ShapedRun.ShapedSteps centre place entry q first w j' ⟨c₀, r₀⟩ ⟨c, r⟩
 
+/-- **What the oracle says about a report point**: it is a scan state, and it carries the
+invariant of the packed run itself.  The consumer of the last report point runs on from it
+(the ticks after the last letter), so the invariant is handed out at every report point, not
+only below the last one. -/
+def ReportOnPackedRun (w : List (Fin 2)) (y : State GalilVM) : Prop :=
+  y.ctl.mode = Mode.scan ∧ ScanOnPackedRunFromInvLPS centre place entry q first w y.ctl y.vm
+
 /-- An `InvLPS` state carrying its pack is on the packed run out of itself. -/
 theorem scanOnPackedRunFromInvLPS_of_invLPS {w : List (Fin 2)} {c : Control} {r : GalilVM}
     (hI : InvLPS (PofC centre place entry w) q first w c r)
@@ -473,17 +480,20 @@ def H_bootRefreshedIMW : Prop :=
 theorem preTraceOnPackedRun_exists (hboot : H_bootRefreshedIMW centre place entry q first)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       CycleOracleOn centre place entry q first (ScanOnPackedRunFromInvLPS centre place entry q first)
-        (PalPeg.ShapedRun.OracleTick entry) (fun _ y => y.ctl.mode = Mode.scan) w)
+        (PalPeg.ShapedRun.OracleTick entry) (ReportOnPackedRun centre place entry q first) w)
     (w : List (Fin 2)) (hw : 0 < w.length) :
     ∃ st Tc, PreTraceIMW centre place entry q first w st Tc ∧ CanonTrace entry w st Tc ∧
-      ∀ m, 1 ≤ m → m ≤ w.length → (st (Tc m)).ctl.mode = Mode.scan := by
+      (∀ m, 1 ≤ m → m ≤ w.length → (st (Tc m)).ctl.mode = Mode.scan) ∧
+      ∀ m, 1 ≤ m → m ≤ w.length →
+        ScanOnPackedRunFromInvLPS centre place entry q first w (st (Tc m)).ctl (st (Tc m)).vm := by
   obtain ⟨st, Tc, hpre, hticks, hscan⟩ := preTraceOn_exists centre place entry q first _ _ _
     (fun a rest => by
       obtain ⟨c1, t, hst, ⟨hI, hf⟩, hpos⟩ := hboot a rest
       exact ⟨c1, t, hst, scanOnPackedRunFromInvLPS_of_invLPS centre place entry q first hI hf
         (ipackMW_last_of_stepsIMWC centre place entry q first hst) ⟨1, hst⟩, hpos⟩)
     hor w hw
-  exact ⟨st, Tc, hpre, fun i hi => (hticks i hi).canonical, hscan⟩
+  exact ⟨st, Tc, hpre, fun i hi => (hticks i hi).canonical,
+    fun m hm1 hmle => (hscan m hm1 hmle).1, fun m hm1 hmle => (hscan m hm1 hmle).2⟩
 
 #print axioms checkpoints_costOn_upto1
 #print axioms preTraceOnPackedRun_exists

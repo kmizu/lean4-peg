@@ -75,7 +75,7 @@ theorem cycleOracleOn_of_readyLeaves {w : List (Fin 2)} (hP : Decodes (PofC cent
     PalPeg.CloseoutCheckW.CycleOracleOn centre place entry q first
       (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first)
       (PalPeg.ShapedRun.OracleTick entry)
-      (fun _ y => y.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan) w := by
+      (PalPeg.CloseoutCheckW.ReportOnPackedRun centre place entry q first) w := by
   have hrestartStage : ∀ (c₀ : Control) (r₀ : GalilVM) (k : ℕ) (y : State GalilVM),
       InvLPS (PofC centre place entry w) q first w c₀ r₀ →
       PalPeg.CloseoutCheckW.StepsIMWC centre place entry q first w k ⟨c₀, r₀⟩ y →
