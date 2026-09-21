@@ -3581,6 +3581,90 @@ theorem physRule_choose_back {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
     (physRule_nq_choose first hbound hK q _ hqmode) (physRule_acts_choose first hbound hK q _ hqmode)
     hmargin hK1 hKn hmode hkeep hfloor hnotFloor henc
 
+/-- **the mark walk back on the floor, of the machine itself.** -/
+theorem physRule_markEnd_back_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hK : 2 ≤ K)
+    (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
+    (hatEnd : (x.vm.fpp.program.config.tapes 8).focus = 5)
+    (hfloor : (x.vm.fpp.program.config.tapes 8).left = [])
+    (hatMark : (T (progSlot q.fppLive 8)).focus = encProg 5)
+    (hisFloor : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (progSlot q.fppLive 8) = bottomM)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK)
+          blankM (q, tapesOf T) none).2 (slotIndex i)) :=
+  markEnd_back_of_rule_atFloor margin centre place entry entryQ first w F delay x q T
+    (physRule first hbound hK)
+    (physRule_nq_markEnd first hbound hK q _ hqmode) (physRule_acts_markEnd first hbound hK q _ hqmode)
+    hK1 hKn hmode hatEnd hfloor hatMark hmargin hisFloor henc
+
+/-- **the walk home on the floor, of the machine itself.** -/
+theorem physRule_home_step_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hK : 2 ≤ K)
+    (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.home)
+    (hnotLeft : (x.vm.fpp.program.config.tapes 7).focus ≠ 4)
+    (hfloor : (x.vm.fpp.program.config.tapes 7).left = [])
+    (hnotMark : (T (progSlot q.fppLive 7)).focus ≠ encProg 4)
+    (hisFloor : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (progSlot q.fppLive 7) = bottomM)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK)
+          blankM (q, tapesOf T) none).2 (slotIndex i)) :=
+  home_step_of_rule_atFloor margin centre place entry entryQ first w F delay x q T
+    (physRule first hbound hK) hbound
+    (physRule_nq_home first hbound hK q _ hqmode) (physRule_acts_home first hbound hK q _ hqmode)
+    hK1 hKn hmode hnotLeft hfloor hnotMark hmargin hisFloor henc
+
+/-- **the parity walk on the floor, of the machine itself.** -/
+theorem physRule_choose_back_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hK : 2 ≤ K)
+    (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose)
+    (hkeep : (x.ctl.odd && (decide ((x.vm.fpp.program.config.tapes 8).focus = 8)
+        || decide ((x.vm.fpp.program.config.tapes 8).focus = first))) = false)
+    (hfloor : (x.vm.fpp.program.config.tapes 8).left = [])
+    (hisFloor : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (progSlot q.fppLive 8) = bottomM)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK)
+          blankM (q, tapesOf T) none).2 (slotIndex i)) :=
+  choose_back_of_rule_atFloor margin centre place entry entryQ first w F delay x q T
+    (physRule first hbound hK)
+    (physRule_nq_choose first hbound hK q _ hqmode) (physRule_acts_choose first hbound hK q _ hqmode)
+    hK1 hKn hmode hkeep hfloor hmargin hisFloor henc
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3659,6 +3743,9 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.physRule_home_step
 #print axioms PalPeg.PhysicalEncoding.physRule_home_fppStart
 #print axioms PalPeg.PhysicalEncoding.physRule_choose_back
+#print axioms PalPeg.PhysicalEncoding.physRule_markEnd_back_atFloor
+#print axioms PalPeg.PhysicalEncoding.physRule_home_step_atFloor
+#print axioms PalPeg.PhysicalEncoding.physRule_choose_back_atFloor
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
