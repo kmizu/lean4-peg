@@ -4094,6 +4094,49 @@ theorem fppActs_at_live {K : ℕ} (code : List (Instruction 9)) (quantum : ℕ) 
   · rw [progSlotOf_true, Equiv.symm_apply_apply]
     rfl
 
+/-! ### how far two program machines have to agree
+
+A call consults the halting bit, the program counter and the symbols under the heads.  A quantum
+of `n` calls can walk a head `n` cells, so `n` is how far the tapes have to agree for the whole
+quantum to run the same way. -/
+
+/-- two program machines agreeing to radius `n`. -/
+structure MachineAgree (n : ℕ) (m m' : PalPeg.GalilScaffoldControl.Machine 9) : Prop where
+  done : m.done = m'.done
+  pc : m.config.pc = m'.config.pc
+  margin : ∀ t : Fin 9, n ≤ PalPeg.Local.pos (encTape (m.config.tapes t))
+  margin' : ∀ t : Fin 9, n ≤ PalPeg.Local.pos (encTape (m'.config.tapes t))
+  window : ∀ t : Fin 9, PalPeg.Local.readWin (6 : Fin 9) n (encTape (m.config.tapes t))
+    = PalPeg.Local.readWin (6 : Fin 9) n (encTape (m'.config.tapes t))
+
+/-- **agreeing at all means agreeing under the heads.** -/
+theorem machineAgree_focus {n : ℕ} {m m' : PalPeg.GalilScaffoldControl.Machine 9}
+    (h : MachineAgree n m m') (t : Fin 9) :
+    (m.config.tapes t).focus = (m'.config.tapes t).focus := by
+  have hm := h.margin t
+  have hm' := h.margin' t
+  have hw := congrFun (h.window t) ⟨n, by omega⟩
+  rw [PalPeg.Local.readWin_eq, PalPeg.Local.readWin_eq] at hw
+  rw [show PalPeg.Local.pos (encTape (m.config.tapes t)) - n + n
+      = PalPeg.Local.pos (encTape (m.config.tapes t)) from by omega] at hw
+  rw [show PalPeg.Local.pos (encTape (m'.config.tapes t)) - n + n
+      = PalPeg.Local.pos (encTape (m'.config.tapes t)) from by omega] at hw
+  rwa [PalPeg.Local.rd_pos, PalPeg.Local.rd_pos] at hw
+
+/-- **so the two name the same action and leave with the same control.** -/
+theorem progActOf_of_agree {n : ℕ} (code : List (Instruction 9))
+    {m m' : PalPeg.GalilScaffoldControl.Machine 9} (h : MachineAgree n m m') (i : Fin 9) :
+    progActOf code m i = progActOf code m' i :=
+  progActOf_congr code m m' h.done h.pc (machineAgree_focus h) i
+
+theorem tickFun_control_of_agree {n : ℕ} (code : List (Instruction 9))
+    {m m' : PalPeg.GalilScaffoldControl.Machine 9} (h : MachineAgree n m m') :
+    (PalPeg.ProgramFunction.tickFun code true m).config.pc
+        = (PalPeg.ProgramFunction.tickFun code true m').config.pc
+      ∧ (PalPeg.ProgramFunction.tickFun code true m).done
+        = (PalPeg.ProgramFunction.tickFun code true m').done :=
+  tickFun_control_congr code m m' h.done h.pc (machineAgree_focus h)
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -4192,6 +4235,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.tickFun_control_congr
 #print axioms PalPeg.PhysicalEncoding.fppActs_length
 #print axioms PalPeg.PhysicalEncoding.fppActs_at_live
+#print axioms PalPeg.PhysicalEncoding.machineAgree_focus
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
