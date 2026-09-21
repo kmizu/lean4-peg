@@ -2634,6 +2634,43 @@ theorem centreRead_of_margin {K : ℕ} (T : Slot → STape Γm) (i : Slot)
   rw [tapesOf_apply]
   exact window_centre K (T i) hm
 
+/-- the slot of the machine's `i`-th cursor. -/
+abbrev placeSlot (i : Fin 3) : Slot := .inr (.inr (.inr (.inr (.inr (.inl i)))))
+
+/-- **a cursor is exhausted exactly when the centre of its window is blank.**  The abstract
+test `(read place).isNone` asks whether the cursor's letters have run out; physically the
+cursor's remaining letters sit on its tape with the top of the stack under the head, padded
+below by sealed junk, so the test is one reading of the window's centre cell. -/
+theorem placeRead_isNone_iff_centre {margin K : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {T : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive T) (hK : K ≤ margin)
+    (i : Fin 3) (place : PalPeg.GalilScaffoldPlace.Place) (hplace : placeOf x i = some place) :
+    (PalPeg.GalilScaffoldPlace.read place).isNone = true
+      ↔ centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (placeSlot i)
+          = blankM := by
+  obtain ⟨stackTape, junk, hsealed, _, hstack, htape⟩ := henc.places i place hplace
+  have hcentre :
+      centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (placeSlot i)
+        = encCell stackTape.focus := by
+    rw [centreRead_of_margin T (placeSlot i) (margin_le_pos henc hK _)]
+    show (T (placeSlot i)).focus = encCell stackTape.focus
+    rw [show T (placeSlot i) = padLeft margin (mapTape encCell stackTape) from htape]
+    rfl
+  rw [hcentre, stackTape_focus stackTape _ hstack, placeRead_isNone_iff_head place junk hsealed]
+  cases hhead : (place.letters.map (fun letter => some letter) ++ junk).head? with
+  | none => simp [encCell, PalPeg.CloseoutCoreStep.blankc]
+  | some cell =>
+    cases cell with
+    | none =>
+      simp [encCell, PalPeg.CloseoutCoreEnc.cellSym, PalPeg.CloseoutCoreStep.blankc,
+        PalPeg.GalilVMEncode.blank]
+    | some a =>
+      have hletter : PalPeg.CloseoutCoreEnc.cellSym (some a) ≠ PalPeg.CloseoutCoreStep.blankc := by
+        simp [PalPeg.CloseoutCoreEnc.cellSym, PalPeg.CloseoutCoreStep.blankc,
+          PalPeg.GalilVMEncode.blank, PalPeg.GalilVMEncode.sOpt]
+      simp [encCell, hletter, blankM]
+
 /-- the symbol one cell below the head of a slot, as the rule reads it from the window. -/
 noncomputable def belowRead {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (i : Slot) : Γm :=
   ws (slotIndex i) ⟨K - 1, by omega⟩
