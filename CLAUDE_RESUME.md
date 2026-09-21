@@ -25,6 +25,15 @@ hstep : Enc x p → ¬ StarvedAbs x → Enc (tickFun (galilFrameFun …) (galilF
 
 **途中で直した形式化**: `Computes.beginShift` は `F.shiftGuard s` を取る形でないと埋まらない（既存 `beginShiftFun_eq` がガードを要求し、`beginShiftVM'` だけでは `beginShiftFun` が `s` を返す場合がある）。`Tick.scan_shift` の構成子がそのガードを持っているので、場に足した。
 
+**同日の追加（投入済み）**: 機械は自分がどちらの分岐にいるかを読めなければならないので、飢餓判定も Bool 関数にした——`FrameFunction.starvedTest`（モード、3 本のヘッド、2 本の残量カウンタだけを読む）と `starvedTest_iff`、消費者側の `ShadowedLocalFinal.starvedAbs_iff`。`forwardTick_of_stepping` の 2 本は
+
+```
+hstay : Enc x p → starvedTest x = true  → Enc x (L0.apply p none)
+hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (galilFrameS …) 2048 x) (L0.apply p none)
+```
+
+になった。**物理機械への要求は、有限窓から読める判定 1 つと、計算すべき関数 1 本だけである。**
+
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
 ## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本

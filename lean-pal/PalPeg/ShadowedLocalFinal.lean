@@ -892,6 +892,12 @@ def StarvedAbs (x : State GalilVM) : Prop :=
 theorem starvedAbs_absSC {m : Mirrored1 (tapeCount spare)} :
     StarvedAbs (absSC m) ↔ Starved m.vm := Iff.rfl
 
+/-- **The starvation test is a Boolean function of the state** (`FrameFunction.starvedTest`),
+so the machine can read which of its two branches it is in. -/
+theorem starvedAbs_iff (x : State GalilVM) :
+    StarvedAbs x ↔ PalPeg.FrameFunction.starvedTest x = true :=
+  (PalPeg.FrameFunction.starvedTest_iff x).symm
+
 /-- **The forward obligation of the physical machine is to compute one function.**  On the run
 the abstract successor exists and, the tick being canonical, it is the value of
 `GalilScaffoldTop.tickFun` on the frame functions `G w` — a starved state stays where it is.
@@ -942,9 +948,10 @@ theorem forwardTick_of_stepping (entry q : ℕ) (first : Fin 9) {Q Γ : Type} {t
     [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ)
     (Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop)
-    (hstay : ∀ (w : List (Fin 2)) (x : State GalilVM) p, Enc x p → StarvedAbs x →
-      Enc x (L0.apply blankSymbol p none))
-    (hstep : ∀ (w : List (Fin 2)) (x : State GalilVM) p, Enc x p → ¬ StarvedAbs x →
+    (hstay : ∀ (w : List (Fin 2)) (x : State GalilVM) p, Enc x p →
+      PalPeg.FrameFunction.starvedTest x = true → Enc x (L0.apply blankSymbol p none))
+    (hstep : ∀ (w : List (Fin 2)) (x : State GalilVM) p, Enc x p →
+      PalPeg.FrameFunction.starvedTest x = false →
       Enc (PalPeg.GalilScaffoldTop.tickFun
             (PalPeg.FrameFunction.galilFrameFun centreC placeC entry q first w)
             (galilFrameS (PofC centreC placeC entry w) q first) 2048 x)
@@ -959,7 +966,11 @@ theorem forwardTick_of_stepping (entry q : ℕ) (first : Fin 9) {Q Γ : Type} {t
     (fun w landed => PalPeg.FrameFunction.computes_galilFrameFun centreC placeC entry q first w
       landed)
     (fun _ s hguard => (PalPeg.GalilScaffoldChainInputSupply.restartGuardTest_iff s).mpr hguard)
-    hstay hstep w m p successor henc hsucc
+    (fun w x p henc hstarved => hstay w x p henc ((starvedAbs_iff x).mp hstarved))
+    (fun w x p henc hmoves =>
+      hstep w x p henc (PalPeg.GalilScaffoldTop.bool_ne_true
+        (fun htest => hmoves ((starvedAbs_iff x).mpr htest))))
+    w m p successor henc hsucc
 
 #print axioms forwardTick_of_stepping
 

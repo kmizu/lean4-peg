@@ -880,7 +880,53 @@ noncomputable def galilFrameFun (centre : GalilVM → Fin 3)
   restartGuard := restartGuardTest
   restart := restartFun entry
 
-/-- **the functions compute the frame.** -/
+/-- **The starvation test, as a Boolean function of the state.**  The machine has to decide for
+itself whether the abstraction starves, so the test has to be one it can read off its window:
+the mode, the three heads, and the two remaining counters.  `ShadowedLocalFinal.starvedAbs_iff`
+identifies it with `LocalSysConcrete.Starved` at the abstraction. -/
+def starvedTest (x : PalPeg.GalilScaffoldTop.State GalilVM) : Bool :=
+  !((if x.ctl.mode = PalPeg.GalilScaffoldController.Mode.init ||
+        x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan then canRightTest x.vm.right
+      else true) &&
+    (if (x.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift) &&
+        (shiftRemainingTest (shiftLens.get x.vm) || copyRemainingTest (fppLens.get x.vm)) then
+      canRightTest x.vm.center && canRightTest x.vm.left &&
+        canRightTest (PalPeg.GalilScaffoldChainVerifier.right x.vm.left)
+     else true))
+
+/-- The shape `starvedTest` was built from, so that its reader can rewrite the guards one at a
+time. -/
+theorem starvedTest_iff (x : PalPeg.GalilScaffoldTop.State GalilVM) :
+    starvedTest x = true ↔
+      ¬ (((x.ctl.mode = PalPeg.GalilScaffoldController.Mode.init ∨
+            x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan) →
+          PalPeg.GalilScaffoldChainVerifier.canRight x.vm.right) ∧
+        (x.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift →
+          ((shiftFrame (fun _ => True) (fun _ => True)).remainingPos (shiftLens.get x.vm) ∨
+            (fallbackFrame (fun _ => True) (fun _ => True)).remainingPos (fppLens.get x.vm)) →
+          PalPeg.GalilScaffoldChainVerifier.canRight x.vm.center ∧
+            PalPeg.GalilScaffoldChainVerifier.canRight x.vm.left ∧
+            PalPeg.GalilScaffoldChainVerifier.canRight
+              (PalPeg.GalilScaffoldChainVerifier.right x.vm.left))) := by
+  unfold starvedTest
+  have hright := canRightTest_iff x.vm.right
+  have hcentre := canRightTest_iff x.vm.center
+  have hleft := canRightTest_iff x.vm.left
+  have hverifier := canRightTest_iff (PalPeg.GalilScaffoldChainVerifier.right x.vm.left)
+  have hmoves := shiftRemaining_test (onLetter := fun _ => True) (leftFirst := fun _ => True)
+    (shiftLens.get x.vm)
+  have hcopy := copyRemaining_test (onLetter := fun _ => True) (leftFirst := fun _ => True)
+    (fppLens.get x.vm)
+  cases hmode : x.ctl.mode <;>
+    cases hcentreValue : canRightTest x.vm.center <;>
+    cases hleftValue : canRightTest x.vm.left <;>
+    cases hverifierValue :
+      canRightTest (PalPeg.GalilScaffoldChainVerifier.right x.vm.left) <;>
+    cases hshiftValue : shiftRemainingTest (shiftLens.get x.vm) <;>
+    cases hcopyValue : copyRemainingTest (fppLens.get x.vm) <;>
+    simp_all
+
+/-- **The functions compute the frame.** -/
 theorem computes_galilFrameFun (centre : GalilVM → Fin 3)
     (place : GalilVM → GalilScaffoldPlace.Place) (entry q : ℕ) (first : Fin 9)
     (w : List (Fin 2)) (landed : GalilVM) :
