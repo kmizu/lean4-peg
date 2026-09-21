@@ -1057,6 +1057,29 @@ theorem frameFun_fppStart (centre : GalilVM → Fin 3)
     (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).fppStart s
       = {s with fpp := {s.fpp with program := PalPeg.GalilScaffoldControl.start 320 s.fpp.program, mode := .run}} := rfl
 
+/-- **a quantum of the preparation program is a run of the marked code.**  The frame's halting
+test asks whether that run reaches the halt; the tick's non-halting branch installs the run's
+machine and leaves every other component of the state alone. -/
+theorem frameFun_fppHalts (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (s : GalilVM) :
+    (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).fppHalts s
+      = (PalPeg.ProgramFunction.fppRunFun entryQ s.fpp.program).done := rfl
+
+theorem frameFun_fppSlice (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (s : GalilVM) :
+    (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).fppSlice s
+      = {s with fpp := {s.fpp with
+          program := PalPeg.ProgramFunction.fppRunFun entryQ s.fpp.program}} := rfl
+
+/-- and the run is exactly the quantum the action table walks: `fppRunFun` unfolds to the run of
+the marked code on a list of `entryQ` enabled calls. -/
+theorem fppRunFun_eq_runFun (entryQ : ℕ) (m : PalPeg.GalilScaffoldControl.Machine 9) :
+    PalPeg.ProgramFunction.fppRunFun entryQ m
+      = PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
+          (List.replicate entryQ true) m := rfl
+
 /-- and the finite control makes exactly those three changes. -/
 theorem encControl_fppStart {fppBound dpBound : ℕ} (x : State GalilVM)
     (q : QPhys fppBound dpBound) (henc : EncControl x q) (hbound : 320 < fppBound)
