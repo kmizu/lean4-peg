@@ -453,6 +453,40 @@ theorem stackTape_pop (stackTape : STape PalPeg.CloseoutCoreStep.Γc)
   rw [hideal] at hstep
   exact hstep
 
+/-- **pushing a cell onto a stack tape is two actions.**  The head stands on the top of the
+stack, so the old top has to be written back and stepped over before the new one can be written
+where the head now stands.  What the head steps onto is debris, and debris is what the encoding
+allows below a stack. -/
+theorem stackTape_push (stackTape : STape PalPeg.CloseoutCoreStep.Γc)
+    (cell : Option (Fin 2)) (stack : List (Option (Fin 2)))
+    (h : PalPeg.ConcreteLocalMachine.StackTape stackTape stack) :
+    PalPeg.ConcreteLocalMachine.StackTape
+      (PalPeg.CloseoutCoreEnc12.actList PalPeg.CloseoutCoreStep.blankc stackTape
+        [some (stackTape.focus, (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+          some (PalPeg.CloseoutCoreEnc.cellSym cell,
+            (.stay : PalPeg.CloseoutCoreEnc12.MoveC))])
+      (cell :: stack) := by
+  obtain ⟨debris, hteq⟩ := h
+  have hfocus : stackTape.focus
+      = (PalPeg.CloseoutCoreEnc18.dTape stack debris).focus := by
+    rw [← PalPeg.Local.rd_pos PalPeg.CloseoutCoreStep.blankc stackTape, hteq.2, hteq.1,
+      PalPeg.Local.rd_pos]
+  refine ⟨debris.tail, ?_⟩
+  have hstep := PalPeg.ConcreteLocalMachine.teqG_actList hteq
+    [some (stackTape.focus, (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+      some (PalPeg.CloseoutCoreEnc.cellSym cell,
+        (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
+  have hideal : PalPeg.CloseoutCoreEnc12.actList PalPeg.CloseoutCoreStep.blankc
+      (PalPeg.CloseoutCoreEnc18.dTape stack debris)
+      [some (stackTape.focus, (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+        some (PalPeg.CloseoutCoreEnc.cellSym cell,
+          (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
+      = PalPeg.CloseoutCoreEnc18.dTape (cell :: stack) debris.tail := by
+    rw [hfocus]
+    cases stack <;> cases debris <;> rfl
+  rw [hideal] at hstep
+  exact hstep
+
 /-- **and the same step on the encoded tape.**  The cursor's tape is padded below, so the step
 left cannot reach the floor. -/
 theorem padded_place_pop (margin : ℕ) (stackTape : STape PalPeg.CloseoutCoreStep.Γc)
