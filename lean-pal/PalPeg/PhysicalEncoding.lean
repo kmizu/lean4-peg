@@ -4014,6 +4014,40 @@ theorem rd_winTape_of_padded {K margin : ℕ} (t : PalPeg.GalilScaffoldTape.Tape
   congr 1
   omega
 
+/-- **the finite control of a call is decided by what the machine can see, too.**  Two machines
+agreeing on the halting bit, the program counter and the symbols under the heads leave the call
+with the same halting bit and the same program counter — the only thing an instruction consults
+beyond those is the symbol it reads. -/
+theorem tickFun_control_congr (code : List (Instruction 9))
+    (m m' : PalPeg.GalilScaffoldControl.Machine 9)
+    (hdone : m.done = m'.done) (hpc : m.config.pc = m'.config.pc)
+    (hfocus : ∀ t : Fin 9, (m.config.tapes t).focus = (m'.config.tapes t).focus) :
+    (PalPeg.ProgramFunction.tickFun code true m).config.pc
+        = (PalPeg.ProgramFunction.tickFun code true m').config.pc
+      ∧ (PalPeg.ProgramFunction.tickFun code true m).done
+        = (PalPeg.ProgramFunction.tickFun code true m').done := by
+  unfold PalPeg.ProgramFunction.tickFun
+  rw [hdone, hpc]
+  cases hd : m'.done
+  · rw [if_neg (by simp [hd]), if_neg (by simp [hd])]
+    match hcode : code[m'.config.pc]? with
+    | none => exact ⟨hpc, hdone⟩
+    | some .halt => exact ⟨hpc, rfl⟩
+    | some (.read t cs) =>
+        simp only [hcode]
+        show (PalPeg.ProgramFunction.executeFun (.read t cs) m.config).pc
+          = (PalPeg.ProgramFunction.executeFun (.read t cs) m'.config).pc ∧ _
+        unfold PalPeg.ProgramFunction.executeFun
+        simp only [hfocus t]
+        cases hfind : (cs.find? (fun choice => choice.1 = (m'.config.tapes t).focus)) with
+        | none => simp [hfind]; exact hpc
+        | some choice => simp [hfind]
+    | some (.write t sym pc) => simp only [hcode]; exact ⟨rfl, by first | rfl | trivial⟩
+    | some (.move t dir pc) =>
+        cases dir <;> (simp only [hcode]; exact ⟨rfl, by first | rfl | trivial⟩)
+  · rw [if_pos (by simp [hd]), if_pos (by simp [hd])]
+    exact ⟨hpc, hdone⟩
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -4109,6 +4143,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.rd_winTape
 #print axioms PalPeg.PhysicalEncoding.rd_padded
 #print axioms PalPeg.PhysicalEncoding.rd_winTape_of_padded
+#print axioms PalPeg.PhysicalEncoding.tickFun_control_congr
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
