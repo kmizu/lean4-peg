@@ -2586,6 +2586,55 @@ theorem physRule_markEnd_forward {fppBound dpBound K : ℕ} (margin : ℕ) (cent
     (physRule_nq_markEnd hbound hK q _ hqmode) (physRule_acts_markEnd hbound hK q _ hqmode)
     hmargin hmode hnotEnd hnotMark henc
 
+/-! ### the counter bank: three tape actions and no more
+
+A counter of the bank is a segmented unary tape, and each of the three things the machine does
+to one — `push`, `pop`, `resetSeg` — is a single `applyAction`.  So a counter slot obeys the
+same one-action discipline as a program slot, with the alphabet `Seg` in place of `Fin 9`. -/
+
+theorem encSeg_blank : encSeg PalPeg.LocalCounter.blank = blankM := if_pos rfl
+
+theorem padded_seg_right (n : ℕ) (segments : STape Seg) (written : Seg) :
+    padLeft n (mapTape encSeg
+        (STape.applyAction PalPeg.LocalCounter.blank segments (written, .right)))
+      = (padLeft n (mapTape encSeg segments)).applyAction blankM (encSeg written, .right) := by
+  rw [mapTape_applyAction encSeg encSeg_blank segments written .right,
+    padLeft_applyAction_right]
+
+theorem padded_seg_left (n : ℕ) (segments : STape Seg) (written : Seg)
+    (hleft : segments.left ≠ []) :
+    padLeft n (mapTape encSeg
+        (STape.applyAction PalPeg.LocalCounter.blank segments (written, .left)))
+      = (padLeft n (mapTape encSeg segments)).applyAction blankM (encSeg written, .left) := by
+  rw [mapTape_applyAction encSeg encSeg_blank segments written .left,
+    padLeft_applyAction_left n (mapTape encSeg segments) (encSeg written)
+      (by obtain ⟨left, focus, right⟩ := segments
+          cases left with
+          | nil => exact absurd rfl hleft
+          | cons head rest => exact List.cons_ne_nil _ _)]
+
+/-- **a push of a counter is one action on the tape the machine keeps.** -/
+theorem padded_push (n : ℕ) (segments : STape Seg) :
+    padLeft n (mapTape encSeg (PalPeg.LocalCounter.push segments))
+      = (padLeft n (mapTape encSeg segments)).applyAction blankM
+          (encSeg PalPeg.LocalCounter.mark, .right) :=
+  padded_seg_right n segments PalPeg.LocalCounter.mark
+
+/-- **a pop of a counter is one action**: blank the frontier and step back onto the top mark.
+The written symbol is the blank of the machine's own alphabet. -/
+theorem padded_pop (n : ℕ) (segments : STape Seg) (hleft : segments.left ≠ []) :
+    padLeft n (mapTape encSeg (PalPeg.LocalCounter.pop segments))
+      = (padLeft n (mapTape encSeg segments)).applyAction blankM (blankM, .left) := by
+  rw [show (blankM : Γm) = encSeg PalPeg.LocalCounter.blank from encSeg_blank.symm]
+  exact padded_seg_left n segments PalPeg.LocalCounter.blank hleft
+
+/-- **a reset of a counter is one action**: drop a fresh separator and step past it. -/
+theorem padded_resetSeg (n : ℕ) (segments : STape Seg) :
+    padLeft n (mapTape encSeg (PalPeg.LocalCounter.resetSeg segments))
+      = (padLeft n (mapTape encSeg segments)).applyAction blankM
+          (encSeg PalPeg.LocalCounter.sep, .right) :=
+  padded_seg_right n segments PalPeg.LocalCounter.sep
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -2660,6 +2709,9 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.physRule_acts_home
 #print axioms PalPeg.PhysicalEncoding.physRule_acts_choose
 #print axioms PalPeg.PhysicalEncoding.physRule_markEnd_forward
+#print axioms PalPeg.PhysicalEncoding.padded_push
+#print axioms PalPeg.PhysicalEncoding.padded_pop
+#print axioms PalPeg.PhysicalEncoding.padded_resetSeg
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeftAtFloor
