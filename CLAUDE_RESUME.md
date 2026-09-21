@@ -78,6 +78,8 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 消費者 `ShadowedLocalFinal.forwardTick_of_rule`: `ActRule` R ひとつについて、**規則自身の 3 性質——窓に要る margin、「飢餓では何もしない」、「ideal な 1 歩が `tickFun` の値を符号化する」——**から `hforwardTick` の本体が出る。`L0 := compStep R`、符号化は `sweepClosure blankSymbol Enc`。
 
+**成分ごとに違うアルファベットを 1 本に載せる移送（`$S/alphabet.keep.lean`、EXIT=0・error 0、`mapTape_applyAction` は**公理ゼロ**）**: 機械のアルファベットは全テープで 1 つだが、ヘッド（`Γc`）・カウンタ（`Seg`）・プログラム（`Fin 9`）・chain の period（`Token`）はそれぞれ自分の記号で書かれている。`mapTape f T` と、**空白を空白に送る写像は action をそのまま運ぶ**（`mapTape_applyAction`）、ヘッド位置も動かない（`pos_mapTape`）。これで各成分は自分の補題を持ったまま大きいアルファベットに載る。
+
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
 ## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
