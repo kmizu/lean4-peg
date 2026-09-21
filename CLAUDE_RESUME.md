@@ -1,3 +1,31 @@
+## n329（2026-09-21）: 抽象 tick の関数形を投入し、物理側の前進義務を「1 本の関数を計算する」へ落とした
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リスト不変（義務 1 本）、`unconditional` は付け替えていない。`hforwardTick` の中身が「抽象関係の模倣」から「明示関数 `tickFun` の計算」へ落ちた。仮説の本数は同じ。 |
+
+**状態: module build `PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0、下の定理は標準公理のみ・無条件 PAL は未完。**（全体 build は n325 以降走らせていない。公理にも最終定理の経路にも触っていない。）
+
+**新モジュール `PalPeg/TickFunction.lean`**（`ShadowedLocalFinal` → `Workbench` 経由で root の build 対象、`tick_eq_tickFun` は `propext`／`Quot.sound` のみ）:
+* `FrameFun σ`: `Frame σ` の 33 個の関係・述語を関数と Bool 判定に置き換えたもの。
+* `Computes F G t`: 関数が関係を計算する。frame が開いている 3 つ（`init`／`beginFallback`／`replayStart`）は**目標 `t` についてだけ**要求する（この 3 つは複数の後継を許す関係で、どれになるかは走行が決める）。
+* `tickFun G F delay x`: モードで分岐し、`scan` では restart → 待機 → 計数 → 一致 → shift 入口 → fallback 入口 の順に Bool で分岐する。
+* **`tick_eq_tickFun`**（24 構成子すべて）: `Computes F G y.vm` と `Tick F delay x y` と restart 優先の側条件から `y = tickFun G F delay x`。**関係に後継があるなら、それは関数の値である。**
+
+**消費者へ繋いだ定理 `ShadowedLocalFinal.forwardTick_of_machine`**: `StarvedAbs`（`LocalSysConcrete.Starved` を抽象状態の上に書いたもの。`starvedAbs_absSC` は `Iff.rfl`）を使って、
+
+```
+(hstay : Enc x p → StarvedAbs x → Enc x (L0.apply p none))
+(hstep : Enc x p → ¬ StarvedAbs x → Enc (tickFun (G w) (galilFrameS (PofC …) q first) 2048 x) (L0.apply p none))
+⟹ hforwardTick の本体
+```
+
+restart 優先の側条件は `GalilTickFair.Canonical.restartFirst` から出す（`PofC` の `restart` 場は `restartVM entry` そのものなので、`Computes.restart` に定義どおり渡る）。側入力は `hcomputes`（関数が具体 frame を計算する）と `hguard`（`G.restartGuard` が立つなら `restartGuardVM`）。
+
+**残るのは `hcomputes` を埋めること。** `backgroundFun`／`searchEffectFun`／`chainAtFun`（`$S/scan_fun.keep.lean`、検査済み・未投入）が `background` の場を埋める。残りは `compare`（`compareFound`）と、開いている 3 つの入口。
+
 ## n328（2026-09-21）: 物理機械は「後継を見つける」のではなく「渡された後継を計算して符号化する」
 
 **公理への進捗**

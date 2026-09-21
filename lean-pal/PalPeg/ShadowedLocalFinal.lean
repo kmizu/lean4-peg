@@ -12,6 +12,7 @@ import PalPeg.CountersCanonicalTrace
 import PalPeg.ParkedRight
 import PalPeg.ScanEntrySigns
 import PalPeg.PlateauInvariant
+import PalPeg.TickFunction
 
 /-!
 # The final theorem from the local system and a physical machine, the trace side discharged
@@ -875,6 +876,58 @@ noncomputable def ghostSteps (entry q : ℕ) (first : Fin 9)
   freezeSteps (frozenAt w)
     (localSteps q first (PalPeg.LocalInitStep.initStep entry)
       (chosenStep entry q first Good w) (chosenStep entry q first Good w))
+
+/-- **The starvation test, read off the abstraction.**  `LocalSysConcrete.Starved` reads the
+mode and the abstract heads only, so it is this test at the abstraction of the local state. -/
+def StarvedAbs (x : State GalilVM) : Prop :=
+  ¬ ((x.ctl.mode = Mode.init ∨ x.ctl.mode = Mode.scan →
+        PalPeg.GalilScaffoldChainVerifier.canRight x.vm.right) ∧
+      (x.ctl.mode = Mode.shift → PalPeg.LocalSysConcrete.ShiftMoves x.vm →
+        PalPeg.GalilScaffoldChainVerifier.canRight x.vm.center ∧
+          PalPeg.GalilScaffoldChainVerifier.canRight x.vm.left ∧
+          PalPeg.GalilScaffoldChainVerifier.canRight
+            (PalPeg.GalilScaffoldChainVerifier.right x.vm.left)))
+
+theorem starvedAbs_absSC {m : Mirrored1 (tapeCount spare)} :
+    StarvedAbs (absSC m) ↔ Starved m.vm := Iff.rfl
+
+/-- **The forward obligation of the physical machine is to compute one function.**  On the run
+the abstract successor exists and, the tick being canonical, it is the value of
+`GalilScaffoldTop.tickFun` on the frame functions `G w` — a starved state stays where it is.
+So a machine that keeps the encoding across its own step, stepping by that function, discharges
+`hforwardTick` of `given_physicalMachine`. -/
+theorem forwardTick_of_machine (entry q : ℕ) (first : Fin 9) {Q Γ : Type} {t K : ℕ}
+    [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
+    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ)
+    (Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop)
+    (G : List (Fin 2) → PalPeg.GalilScaffoldTop.FrameFun GalilVM)
+    (hcomputes : ∀ (w : List (Fin 2)) (landed : GalilVM),
+      PalPeg.GalilScaffoldTop.Computes (galilFrameS (PofC centreC placeC entry w) q first)
+        (G w) landed)
+    (hguard : ∀ (w : List (Fin 2)) (s : GalilVM), (G w).restartGuard s = true → restartGuardVM s)
+    (hstay : ∀ (w : List (Fin 2)) (x : State GalilVM) p, Enc x p → StarvedAbs x →
+      Enc x (L0.apply blankSymbol p none))
+    (hstep : ∀ (w : List (Fin 2)) (x : State GalilVM) p, Enc x p → ¬ StarvedAbs x →
+      Enc (PalPeg.GalilScaffoldTop.tickFun (G w)
+            (galilFrameS (PofC centreC placeC entry w) q first) 2048 x)
+        (L0.apply blankSymbol p none))
+    (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)) (p : Q × (Fin t → STape Γ))
+    (successor : State GalilVM) (henc : Enc (absSC m) p)
+    (hsucc : TickSucc (PofC centreC placeC entry w) q first 2048
+      (PalPeg.GalilTickFair.Canonical entry 2048) (Starved m.vm) (absSC m) successor) :
+    Enc successor (L0.apply blankSymbol p none) := by
+  rcases hsucc with ⟨hstarved, hkept⟩ | ⟨hmoves, htick, hcanonical⟩
+  · rw [hkept]
+    exact hstay w (absSC m) p henc (starvedAbs_absSC.mpr hstarved)
+  · have hvalue := PalPeg.GalilScaffoldTop.tick_eq_tickFun (hcomputes w successor.vm) htick ?_
+    · rw [hvalue]
+      exact hstep w (absSC m) p henc (fun hs => hmoves (starvedAbs_absSC.mp hs))
+    · intro hmode hrestartGuard
+      obtain ⟨hctl, hrestart⟩ := hcanonical.restartFirst hmode (hguard w _ hrestartGuard)
+      obtain ⟨-, hvm⟩ := (hcomputes w successor.vm).restart _ _ hrestart
+      exact (show (⟨successor.ctl, successor.vm⟩ : State GalilVM) = _ by rw [hctl, hvm])
+
+#print axioms forwardTick_of_machine
 
 /-- **The starvation test of an abstract successor may be replaced by an equivalent one.** -/
 theorem tickSucc_congr_starved {Pw : Shared} {q : ℕ} {first : Fin 9} {delay : ℕ}
