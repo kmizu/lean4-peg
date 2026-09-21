@@ -91,6 +91,45 @@ theorem progSlotOf_injective (live : Bool) : Function.Injective (progSlotOf live
 theorem progSlotOf_ne (i j : Fin 9) : progSlotOf true i ≠ progSlotOf false j := by
   simp [progSlotOf]
 
+/-! The disequalities a proof needs once a slot's address carries the live bit.  Without them
+`simp` cannot see that a view's slot, or the search program's, is not the preparation program's,
+because it does not know which half is live.  Each is stated so that `simp` discharges the two
+concrete cases itself. -/
+
+@[simp] theorem dpSlotOf_ne_progSlotOf (l l' : Bool) (j : Fin 12) (i : Fin 9) :
+    dpSlotOf l j ≠ progSlotOf l' i := by
+  cases l <;> cases l' <;> simp [dpSlotOf, progSlotOf]
+
+@[simp] theorem progSlotOf_ne_dpSlotOf (l l' : Bool) (i : Fin 9) (j : Fin 12) :
+    progSlotOf l i ≠ dpSlotOf l' j := by
+  cases l <;> cases l' <;> simp [dpSlotOf, progSlotOf]
+
+@[simp] theorem progSlotOf_inj_iff (live : Bool) (i j : Fin 9) :
+    progSlotOf live i = progSlotOf live j ↔ i = j :=
+  ⟨fun h => progSlotOf_injective live h, fun h => by rw [h]⟩
+
+@[simp] theorem dpSlotOf_inj_iff (live : Bool) (i j : Fin 12) :
+    dpSlotOf live i = dpSlotOf live j ↔ i = j := by
+  cases live <;> simp [dpSlotOf]
+
+/-- a slot that is neither half's `i`-th program tape is not the live one, whichever half is
+live. -/
+@[simp] theorem ne_progSlotOf (live : Bool) (i : Fin 9) (slot : Slot)
+    (h₀ : slot ≠ (.inr (.inl i) : Slot))
+    (h₁ : slot ≠ (.inr (.inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl i))))))))  : Slot)) :
+    slot ≠ progSlotOf live i := by
+  cases live
+  · exact h₀
+  · exact h₁
+
+@[simp] theorem ne_dpSlotOf (live : Bool) (i : Fin 12) (slot : Slot)
+    (h₀ : slot ≠ (.inr (.inr (.inl i)) : Slot))
+    (h₁ : slot ≠ (.inr (.inr (.inr (.inr (.inr (.inr (.inr (.inr (.inr i)))))))) : Slot)) :
+    slot ≠ dpSlotOf live i := by
+  cases live
+  · exact h₀
+  · exact h₁
+
 def mapTape {Γ₁ Γ₂ : Type} (f : Γ₁ → Γ₂) (T : STape Γ₁) : STape Γ₂ :=
   ⟨T.left.map f, f T.focus, T.right.map f⟩
 
