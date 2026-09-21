@@ -12,6 +12,8 @@
 * `ShadowedLocalFinal`: `localGood_of_pol_eq` に `hmodeShift`、shift の場合は `fun _ => hmode`、`init` と `replayStartNext` の着地は scan なので `cycle` の節は空虚、blank は `fun _ => rfl`、到着は `ctl_feedC`。
 * 進め方: 先にスクラッチ複製（`$S/LocalWF.trial.lean`）で 5 箇所を直して通してからリポジトリへ反映した。
 
+**(5) `NextOK` の `Canonical` の見通し（2026-09-21、定義を読んだだけ）**: `CanonicalLocalRealizes.realizes_canonical`（`:68`）の `hLocal` は、tracked・非 starved な `m` と任意の `target`（`Tick … (absState'' m.vm) target`）に対して `Tick … (absState'' (f m).vm)` ∧ `Canonical …` ∧ `PhysWF` ∧ `MirInv1` を求める（`NextOK` とほぼ同じ）。仮説の `target` は canonical とは限らないので、後継は `target` でなく **trace の次状態の truncation `truncS (n − j) (stOf (k+1))` を具体化したもの**にする。材料: `canonical_trunc`（`:56` 付近、trace の canonical な tick は truncation しても canonical。`restartVM_trunc`／`restartGuard_of_trunc` を使う）、`LocalSysConcrete.tick_of_need`（need が満たされていれば truncation 同士が tick）、`ShadowedLocalFinal.nextUsed_heldAfter`（非 starved なら次の used ≤ j）。未確認: `InvC` の `Tracked` は添字 `k` を縛らないので、非 starved な tracked 状態では `k < Tc` が出ること（`notStarved_of_need_heldAfter` の周辺に既にあるはず、要確認）。
+
 **道 A の残り**（n316 の一覧から更新）: (1) カウンタの `Canonical` は trace の事実としてスクラッチで完成（`$S/lift_trace.keep.lean`、未投入）、(2) 非負性は `cycle` を外したので残り 6 本（`remaining`／`radius`／`length`／`fppWork`／`work`／`replay`、各モードの入口で要る分だけ）、(3) 切断本体と `abs''` の等式・`Inv`（ヘッドの切断は `$S/sec_check.keep.lean`）、(4) replaying の着地の右ヘッド、(5) `NextOK` の `Canonical`、(6) `scanNext`／`plateauNext` の組み立てと仮説の除去。
 
 ## n316（2026-09-21）: `hscanNext`／`hplateauNext` の方針 — 分岐ごとの局所 step でなく、抽象の着地を具体化した ghost を後継にする（調査のみ、コードは変えていない）
