@@ -341,6 +341,36 @@ theorem window_centre (K : ℕ) (T : STape Γm) (hK : K ≤ PalPeg.Local.pos T) 
   rw [hidx]
   exact PalPeg.Local.rd_pos blankM T
 
+/-- **a counter's zero test is one cell of its window.**  The value a counter tape holds is the
+run of marks at the top of its left stack, so it is zero exactly when the cell below the head is
+not a mark — and that is the cell `window_below` reads.  The machine therefore decides the test
+without moving a head. -/
+theorem counterZero_iff_below {K margin : ℕ} (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (segments : STape PalPeg.LocalCounter.Seg) :
+    PalPeg.LocalCounter.val segments = 0
+      ↔ PalPeg.Local.readWin blankM K (padLeft margin (mapTape encSeg segments))
+          ⟨K - 1, by omega⟩ ≠ encSeg PalPeg.LocalCounter.mark := by
+  have hinj : ∀ a : PalPeg.LocalCounter.Seg,
+      (encSeg a = encSeg PalPeg.LocalCounter.mark) ↔ a = PalPeg.LocalCounter.mark := by decide
+  rw [window_below margin K (mapTape encSeg segments) hK1 hKn]
+  obtain ⟨left, focus, right⟩ := segments
+  cases left with
+  | nil =>
+    refine ⟨fun _ => ?_, fun _ => rfl⟩
+    show ¬ (bottomM = encSeg PalPeg.LocalCounter.mark)
+    decide
+  | cons a rest =>
+    have hm : PalPeg.LocalCounter.markRun (a :: rest) = 0
+        ↔ a ≠ PalPeg.LocalCounter.mark := by
+      by_cases ha : a = PalPeg.LocalCounter.mark
+      · subst ha
+        simp [PalPeg.LocalCounter.markRun]
+      · simp [PalPeg.LocalCounter.markRun, ha]
+    show PalPeg.LocalCounter.markRun (a :: rest) = 0 ↔ _
+    rw [hm]
+    show ¬ a = PalPeg.LocalCounter.mark ↔ ¬ (encSeg a = encSeg PalPeg.LocalCounter.mark)
+    rw [hinj a]
+
 /-- a program tape's cells are told apart by their encodings, so a rule testing the
 window against `encProg r` is testing the cell against `r`. -/
 theorem encProg_eq_iff (s r : Fin 9) : encProg s = encProg r ↔ s = r := by
