@@ -3888,6 +3888,86 @@ theorem copy_one_counter {margin K : ℕ} (hK1 : 1 ≤ K) (hKn : K ≤ margin + 
     · rw [if_neg hbit, if_neg hbit]
       exact (padded_push margin segments).symm
 
+/-- the tick function's own name for a tick of the fallback copy that still has work. -/
+theorem frameFun_copyOne (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (s : GalilVM) :
+    (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).copyOne s
+      = {s with fpp := PalPeg.FrameFunction.copyOneFun s.fpp} := rfl
+
+/-- **a tick of the fallback copy that still has work, on the whole state.**  Three components
+move: the program's copy tape takes the walker's letter and steps right, the work counter goes
+down by one, and the walker steps half a place left.  Every one of the three is named by a
+reading the rule has, and the encoding comes out the other side. -/
+theorem copy_one {fppBound dpBound : ℕ} (margin K : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (tapes newTapes : Slot → STape Γm)
+    (a : Fin 3) (hK1 : 1 ≤ K) (hK : K ≤ margin)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hremains : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos x.vm
+      = true)
+    (hread : PalPeg.GalilScaffoldPlace.read x.vm.fpp.walker = some a)
+    (henc : Enc margin x (q, tapes))
+    (hprog : newTapes (progSlotOf q.fppLive 7)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf q.fppLive 7))
+          [some (encProg (PalPeg.GalilFppPreparation.symbol a),
+            (.right : PalPeg.CloseoutCoreEnc12.MoveC))])
+    (hcounterTape : newTapes (counterSlot 9)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (counterSlot 9))
+          [if workPositive q.polarity
+                (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)) then
+              some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))
+            else some (encSeg PalPeg.LocalCounter.mark,
+              (.right : PalPeg.CloseoutCoreEnc12.MoveC))])
+    (hplaceTape : newTapes (placeSlot 1)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (placeSlot 1))
+          (if q.placeGap 1 then []
+            else [some (centreRead
+                (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)) (placeSlot 1),
+              (.left : PalPeg.CloseoutCoreEnc12.MoveC))]))
+    (hprogOther : ∀ j : Fin 9, j ≠ 7 →
+      newTapes (progSlotOf q.fppLive j) = tapes (progSlotOf q.fppLive j))
+    (hkept : ∀ slot, (∀ j : Fin 9, slot ≠ progSlotOf q.fppLive j) → slot ≠ counterSlot 9 →
+      slot ≠ placeSlot 1 → (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) →
+      newTapes slot = tapes slot)
+    (hidleShape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
+      newTapes (progSlotOf (!q.fppLive) k) = padLeft margin (mapTape encProg raw)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ({q with placeGap := Function.update q.placeGap 1 (!q.placeGap 1), polarity := Function.update q.polarity 9 (workPositive q.polarity (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)))}, newTapes) := by
+  obtain ⟨segments, habsWork, hslotWork⟩ := henc.2.counters 9 x.vm.fpp.work rfl
+  obtain ⟨stackTape, junk, hsealed, hjunk, hstack, hslotPlace⟩ :=
+    henc.2.places 1 x.vm.fpp.walker rfl
+  obtain ⟨segments', habs', hcount'⟩ :=
+    copy_one_counter hK1 (by omega) q.polarity tapes segments x.vm.fpp.work habsWork hslotWork
+  obtain ⟨stackTape', hstack', hplace'⟩ :=
+    copy_one_place hK tapes x.vm.fpp.walker (q.placeGap 1)
+      (henc.1.placeGap 1 x.vm.fpp.walker rfl) a hread stackTape junk hstack hslotPlace
+  have hval : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
+      = ⟨x.ctl, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp 7 (fun t => PalPeg.GalilScaffoldTape.moveRight (PalPeg.GalilScaffoldTape.write t (PalPeg.GalilFppPreparation.symbol a))), work := PalPeg.GalilScaffoldCounter.dec x.vm.fpp.work, walker := PalPeg.GalilScaffoldPlace.left x.vm.fpp.walker}}⟩ := by
+    simp only [PalPeg.GalilScaffoldTop.tickFun, hmode, frameFun_copyOne]
+    rw [if_pos (by simp [hremains]), copyOneFun_eq x.vm.fpp a hread]
+  rw [hval]
+  refine ⟨encControl_copyOne x q henc.1 a hread _,
+    encTapes_copyOne margin x q.polarity _ q.gap q.micro q.fppLive q.dpLive tapes newTapes
+      henc.2 x.ctl a (fun c hc => Function.update_of_ne hc _ _) segments' ?_ ?_
+      stackTape' junk hsealed hjunk hstack' ?_ ?_ hprogOther hkept hidleShape⟩
+  · show absCtr segments' (Function.update q.polarity 9 (workPositive q.polarity (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))) 9) = _
+    rw [Function.update_self]
+    exact habs'
+  · rw [hcounterTape]
+    exact hcount'
+  · rw [hplaceTape]
+    exact hplace'
+  · rw [hprog, show tapes (progSlotOf q.fppLive 7)
+        = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes 7)))
+        from henc.2.fpp 7]
+    exact (padded_writeRight margin (x.vm.fpp.program.config.tapes 7)
+      (PalPeg.GalilFppPreparation.symbol a)).symm
+
 /-- the action one call of the program machine performs on a given slot. -/
 noncomputable def progActOf (code : List (Instruction 9))
     (m : PalPeg.GalilScaffoldControl.Machine 9) (i : Fin 9) :
