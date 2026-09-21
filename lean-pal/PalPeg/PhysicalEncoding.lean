@@ -3928,6 +3928,14 @@ theorem progActOf_winMachine {fppBound dpBound K : ℕ} {margin : ℕ} {x : Stat
   progActOf_congr code _ _ (by rw [winMachine_done, hdone]) (by rw [winMachine_pc, hpc])
     (fun t => winMachine_focus henc hmargin pc done t) i
 
+/-- **the window tape's head sits at the window's centre.**  Its `K` cells to the left are the
+window's left half, so the head is at `K` however far along the real tape the component's head
+has walked. -/
+@[simp] theorem winTape_pos {K : ℕ} (ws : PalPeg.Local.Window Γm K) :
+    PalPeg.Local.pos (encTape (winTape ws)) = K := by
+  show (List.ofFn (fun j : Fin K => decProg (ws ⟨K - 1 - j.val, by omega⟩))).length = K
+  exact List.length_ofFn
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -4019,6 +4027,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.decProg_centreRead
 #print axioms PalPeg.PhysicalEncoding.winMachine_focus
 #print axioms PalPeg.PhysicalEncoding.progActOf_winMachine
+#print axioms PalPeg.PhysicalEncoding.winTape_pos
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
