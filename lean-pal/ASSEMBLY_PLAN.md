@@ -1,3 +1,23 @@
+## n325（2026-09-21）: 最後の報告点の後の tick にも局所後継ができた。抽象局所層への仮説はゼロ
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リストは不変（義務 1 本）、`unconditional` は付け替えていない。局所経路の消費者（`ShadowedLocalFinal.given_physicalMachine`、旧名 `given_openModesAndPhysicalMachine`）から `hplateauNext` が消え、**抽象局所層に対する存在仮説は無くなった**。残っているのは物理機械の仮説（`htape`／`Enc`／`hencInit`／`hforwardTick`／`hforwardFeed`／`hencRep`／`hencOut`／`PhysFrozen`／`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`）と、供給できる側条件（`hfirst`／`hq`／`hor`／`hres`／`hChainVerifierSupply`、今回足した `0 < q`／`first ≠ 7`／`first ≠ 8`。実例 `0 1 0` では成立）。ActRule は未着手。 |
+
+**状態: 全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。**
+
+**何を証明したか**: 最後の文字の後、その文字の窓が終わるまで局所層は tick し続けるが、trace は最後の報告点で止まる。その先の抽象 tick は**存在**を示さないと ghost が止まって物理機械との対応が切れる。
+* 新モジュール `PlateauInvariant`: `PlateauInv w x`（1 tick で閉じた不変量: scan、非 replay、`1 ≤ clock`、`¬restartGuardVM`、`position right = 2|w|−1`、`MInv`、`SoundScanNR`、`InvLPS` の origin からの `StepsIMWC`／`ShapedSteps`、切断の事実 `AllCanonical`／`ChainLastCan`／`replay = reset`／`SpanRep`／`0 ≤ radius`）、`plateauStep`（`∃ y, Tick ∧ Canonical ∧ (PlateauInv y ∨ 2|w| ≤ position y.right)`）、`plateauCompare`、`replayReset_of_plateauTick`。count tick は `backgroundS_exists`＋`Tick.scan_count`（`OracleRun.scanBackground_run_all` の帰納段と同じ組み方、`restartGuard_background` で guard が無いまま）、compare は `scanCompare_cases`、fallback の canonical な着地は `CanonicalFallbackInput.begin_at_mismatch`。**oracle の readiness の葉は `m := |w|`、`hmle := le_rfl` で最後の報告点にもそのまま当てはまる**（境界は `position ≤ 2m−1` と `position+1 < |encoded w|`、等号で通る）。
+* `ShadowedLocalFinal`: `postPhase := PlateauInv … (absSC m) ∨ frozenAt w m`。`plateauInv_of_lastReport`（入口。n324 の 4 番目の連言＝各 checkpoint での oracle の不変量と、trace の事実 `countersCanonical_trace`／`FrontPack.rest`／`spanRepOnScanAndShift_alongTrace`／`radLedger_pt`）、`plateauNext`（`nextOK_ghostOf` に `r = 0`・`parked := y.vm.right`。plateau では `replay = reset` が保たれるので駐車形は自明）、`plateau_of_nextOK`（`chosenStep` の抽象は `GalilTickFair.tick_canonical_unique` で一致）。`given_shadowedLocalSystem` の `hpostOfLastReport` は oracle の不変量を受け取る。
+* 片付け: `ReportPhase` は読む者がいなくなったのでモジュールごと削除（`position_right_of_atLast` は `PlateauInvariant` へ移動）。消費者の名前を実態に合わせて `given_physicalMachine` に変えた。
+* 進め方: 同じ goal で 2 回接続ゼロが続いた時点で、設計を足すのをやめて「いちばん危ない 1 点」（葉の量化範囲が最後の報告点に届くか）をスクラッチで機械検査した。そこから 5 定理が全部一発で通った。
+
+**投入時に残したコピペ（次に片付ける）**: `plateauCompare`／`plateauStep` の前置き（pack、`rightHead_of_packs`、`canRight_of_bound`）と chain の readiness の導出は `OracleRun.scanCycle_of_leaves`／`OracleReady.cycleOracleOn_of_readyLeaves` の中の `have` と同じ形。名前付き補題に切り出して両方から使う。
+
+**次**: 物理機械。`Enc`・`PhysFrozen` の具体化と ActRule の分岐（`ActRule → compStep → LocalStep.realize`）。n304 の 3 義務（P1: L／C テープが fallback 相で R まで歩く、P2: reset 後の junk を読まない、P3: replayStart の鏡テープの役割交代）。
+
 ## n323（2026-09-21）: 開いていたモード `scan` に局所後継ができた。仮説 `hscanNext` を消費者から外した
 
 **公理への進捗**

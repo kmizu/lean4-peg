@@ -7,11 +7,11 @@ import PalPeg.LocalInitStep
 import PalPeg.ChainLookBehindRight
 import PalPeg.TickUsedLetters
 import PalPeg.ReplayStartGhost
-import PalPeg.ReportPhase
 import PalPeg.GhostSection
 import PalPeg.CountersCanonicalTrace
 import PalPeg.ParkedRight
 import PalPeg.ScanEntrySigns
+import PalPeg.PlateauInvariant
 
 /-!
 # The final theorem from the local system and a physical machine, the trace side discharged
@@ -444,6 +444,9 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (hpostOfLastReport : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       (∀ index, 1 ≤ index → index ≤ w.length → (st (Tc index)).ctl.mode = Mode.scan) →
+      (∀ index, 1 ≤ index → index ≤ w.length →
+        PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first w
+          (st (Tc index)).ctl (st (Tc index)).vm) →
       ∀ (m : Mirrored1 (tapeCount spare)), InvC Good w (heldAfter (Tc w.length) st) m →
         Needy w (heldAfter (Tc w.length) st) (Tc w.length) w.length m.vm → Post w m)
     (hpostTick : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
@@ -565,8 +568,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     Post frozen
     (fun w m hw hinv => hnotFrozenTracked w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2.1 m hinv)
     (fun w m hw hinv hneedy =>
-      hpostOfLastReport w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2.1 (htraceOf w hw).2.2.1 m hinv
-        hneedy)
+      hpostOfLastReport w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2.1 (htraceOf w hw).2.2.1
+        (htraceOf w hw).2.2.2 m hinv hneedy)
     hpostTick
     rep_sound rep_complete L0 blankSymbol q0 repQ outQ htape Rep hrepInit
     (fun w m p hw honRun honRunNext hsucc hrep =>
@@ -845,14 +848,12 @@ theorem localGood_stepOf_localSteps (entry q : ℕ) (first : Fin 9)
         (PalPeg.LocalWF.pol_rewindStepC PalPeg.CloseoutCoreAgree.dumS q first m)
         (PalPeg.LocalWF.entryMode_of_rewindStepC PalPeg.CloseoutCoreAgree.dumS q first)
 
-/-- **The phase after the last report point**: the abstract state is still a refreshed report
-point of the word in scan mode (the plateau: the right head stands on the last letter), or it is
-frozen. -/
+/-- **The phase after the last report point**: the abstract state is on the plateau (a scan
+state of the packed run with its right head on the last letter, `PlateauInvariant.PlateauInv`),
+or it is frozen. -/
 def postPhase (entry q : ℕ) (first : Fin 9) (w : List (Fin 2))
     (m : Mirrored1 (tapeCount spare)) : Prop :=
-  (ReportPoint w (absSC m) ∧ Refreshed (PofC centreC placeC entry w) q first (absSC m) ∧
-      (absSC m).ctl.mode = Mode.scan) ∨
-    frozenAt w m
+  PalPeg.PlateauInvariant.PlateauInv centreC placeC entry q first w (absSC m) ∨ frozenAt w m
 
 /-- The step by choice keeps the run invariant: a local successor has it (`NextOK`), and without
 a local successor the step does nothing. -/
@@ -1151,16 +1152,123 @@ theorem scanNext (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
 
 end ScanSuccessor
 
-/-- **`PAL ∈ PEG` from the plateau step and a physical machine.**  The `init` mode is
-`LocalInitStep.initStep` (`initLocal_heldAfter`), `scan` and `replayStart` have a local successor
-on the trace (`scanNext`, `replayStartNext`); what is still asked of the abstract local layer is a
-successor on the plateau after the last report point (`hplateauNext`).  The seven phase modes of
+section Plateau
+
+open PalPeg.GalilScaffoldChainInputSupply GalilScaffoldInputHead
+
+/-- **The last report point is on the plateau.**  The invariant of the packed run is handed
+out by the trace existence theorem at every checkpoint; the facts a section needs are facts of
+the trace. -/
+theorem plateauInv_of_lastReport (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
+    (hw : 0 < w.length) {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc)
+    (hI : PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first w
+      (st (Tc w.length)).ctl (st (Tc w.length)).vm) :
+    PalPeg.PlateauInvariant.PlateauInv centreC placeC entry q first w (st (Tc w.length)) := by
+  have hpre := hpreTrace.base.pre
+  obtain ⟨⟨hm, hr⟩, -, hminv, hnoGuard, c₀, r₀, j, hI₀, -, hrun, jS, hsh⟩ := hI
+  have hTcPos : 1 ≤ Tc w.length := by
+    rcases Nat.eq_zero_or_pos (Tc w.length) with hzero | hpos
+    · rw [hzero, hpre.start] at hm
+      exact absurd (show Mode.init = Mode.scan from hm) (by decide)
+    · exact hpos
+  obtain ⟨g, hg0, hgj, htr, -, -⟩ := id hrun
+  have hjx : PalPeg.GalilScaffoldChainInputSupply.Steps
+      (galilFrameS (PofC centreC placeC entry w) q first)
+      2048 j ⟨c₀, r₀⟩ ⟨(st (Tc w.length)).ctl, (st (Tc w.length)).vm⟩ := by
+    have := PalPeg.CloseoutPackRun2.steps_of_trace htr j le_rfl
+    rwa [hg0, hgj] at this
+  obtain ⟨hclockPos, -⟩ := PalPeg.OracleRun.steps_clock_bounds hjx
+    (by rw [PalPeg.OracleRun.invLPS_clock centreC placeC entry q first hI₀]; decide)
+    (by rw [PalPeg.OracleRun.invLPS_clock centreC placeC entry q first hI₀])
+  have hcounters := PalPeg.CountersCanonicalTrace.countersCanonical_trace centreC placeC entry q
+    first hpre (Tc w.length) le_rfl
+  have hpack := PalPeg.BranchSupply.frontPack_alongTrace centreC placeC entry q first hw hpre
+    (Tc w.length) hTcPos le_rfl
+  exact {
+    scan := hm
+    notReplaying := hr
+    clockPos := hclockPos
+    noGuard := hnoGuard
+    atLast := (hpre.report w.length hw le_rfl).atPrefix
+    minv := hminv
+    sound := by
+      have hgood := htr.good j le_rfl
+      rw [hgj] at hgood
+      exact hgood
+    onRun := ⟨c₀, r₀, j, jS, hI₀, hrun, hsh⟩
+    counters := hcounters.1
+    chainLast := hcounters.2
+    replayReset := hpack.rest (Or.inl hr)
+    span := PalPeg.BranchSupply.spanRepOnScanAndShift_alongTrace centreC placeC entry q first hpre
+      (Tc w.length) le_rfl (Or.inl hm)
+    radiusNonneg := (PalPeg.CloseoutLPack6.radLedger_pt centreC placeC entry q first hw hpre
+      (fun i hi => PalPeg.CloseoutPackRun10.leftLive_of_lpackM (hpreTrace.packs i hi).pack)
+      (Tc w.length) le_rfl).nonneg }
+
+/-- **the successor on the plateau exists.** -/
+theorem plateauNext (entry q : ℕ) (first : Fin 9) (h4 : first ≠ 4) (hq : 0 < q)
+    (h7 : first ≠ 7) (h8 : first ≠ 8) {w : List (Fin 2)} (hw : 0 < w.length)
+    {m : Mirrored1 (tapeCount spare)} (hinj : Function.Injective m.vm.roles)
+    (hinv : PalPeg.PlateauInvariant.PlateauInv centreC placeC entry q first w (absSC m)) :
+    ∃ next, NextOK entry q first (localGood (spare := spare)) w m next := by
+  obtain ⟨y, htick, hcanonical, -⟩ :=
+    PalPeg.PlateauInvariant.plateauStep centreC placeC entry q first (PalPeg.GalilFinalAssembly2.decodesC entry w) h4 hq h7 h8 hw hinv
+  have hall := PalPeg.CountersCanonicalTrace.allCanonical_tick _ _ centreC placeC entry q first 2048 hinv.counters
+    hinv.chainLast (show Tick _ 2048 ⟨(absSC m).ctl, (absSC m).vm⟩ ⟨y.ctl, y.vm⟩ from htick)
+  have hreplay := PalPeg.PlateauInvariant.replayReset_of_plateauTick hinv htick
+  have hsigns := PalPeg.ScanEntrySigns.entrySigns_of_scanTick _ _ centreC placeC entry q first
+    2048 (c := (absSC m).ctl) (s := (absSC m).vm) (c' := y.ctl) (t := y.vm) hinv.scan hinv.span
+    hinv.radiusNonneg htick
+  refine nextOK_ghostOf entry q first hinj htick hcanonical ?_ (r := 0) (parked := y.vm.right)
+    hreplay rfl (Nat.zero_le _) (fun _ => rfl) hsigns
+  intro role
+  cases role
+  · exact hall.cycle
+  · exact hall.remaining
+  · exact hall.radius
+  · exact hall.length
+  · exact hall.replay
+  · exact hall.lower
+  · exact hall.span
+  · exact hall.work
+  · exact hall.debt
+  · exact hall.fppWork
+
+/-- **every successor on the plateau is on the plateau or frozen**: the canonical tick
+target is unique. -/
+theorem plateau_of_nextOK (entry q : ℕ) (first : Fin 9) (h4 : first ≠ 4)
+    (hq : 0 < q) (h7 : first ≠ 7) (h8 : first ≠ 8) {w : List (Fin 2)} (hw : 0 < w.length)
+    {m next : Mirrored1 (tapeCount spare)}
+    (hinv : PalPeg.PlateauInvariant.PlateauInv centreC placeC entry q first w (absSC m))
+    (hnext : NextOK entry q first (localGood (spare := spare)) w m next) :
+    PalPeg.PlateauInvariant.PlateauInv centreC placeC entry q first w (absSC next) ∨ frozenAt w next := by
+  obtain ⟨y, htick, hcanonical, hland⟩ :=
+    PalPeg.PlateauInvariant.plateauStep centreC placeC entry q first (PalPeg.GalilFinalAssembly2.decodesC entry w) h4 hq h7 h8 hw hinv
+  have hsame : absSC next = y :=
+    PalPeg.GalilTickFair.tick_canonical_unique hnext.1 hnext.2.1 htick hcanonical
+  rw [hsame]
+  rcases hland with hplateau | hoff
+  · exact Or.inl hplateau
+  · refine Or.inr ⟨hw, ?_⟩
+    show 2 * w.length ≤ position (absSC next).vm.right
+    rw [hsame]; exact hoff
+
+#print axioms plateauNext
+#print axioms plateau_of_nextOK
+
+end Plateau
+
+/-- **`PAL ∈ PEG` from a physical machine.**  Nothing is asked of the abstract local layer any
+more: the `init` mode is `LocalInitStep.initStep` (`initLocal_heldAfter`), `scan` and
+`replayStart` have a local successor on the trace (`scanNext`, `replayStartNext`), and the ticks
+after the last report point have one on the plateau (`plateauNext`).  The seven phase modes of
 the abstract local system are `CloseoutCoreAgree.realizes_seven_SL`; its side conditions are
 facts about the held canonical trace.  The physical machine is asked for a forward simulation up
 to the abstraction (`hforwardTick`, `hforwardFeed`): it may compute any local state whose
 abstraction is an abstract successor, because that successor is unique (`tickSucc_unique`). -/
-theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4)
-    (hq : q ≤ 64)
+theorem given_physicalMachine (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4)
+    (hq : q ≤ 64) (hqPos : 0 < q) (hfirstSeven : first ≠ 7) (hfirstEight : first ≠ 8)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
         (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
@@ -1173,11 +1281,6 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc →
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    -- on the plateau after the last report point the local ticks are still ticks
-    (hplateauNext : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
-      ReportPoint w (absSC m) → Refreshed (PofC centreC placeC entry w) q first (absSC m) →
-      (absSC m).ctl.mode = Mode.scan → ¬ frozenAt w m → PhysWF m.vm → MirInv1 m → (localGood (spare := spare)) m →
-      ¬ Starved m.vm → ∃ next, NextOK entry q first (localGood (spare := spare)) w m next)
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Enc : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
     (hencInit : Enc (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
@@ -1246,17 +1349,15 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
         (fun _ hland => by rwa [PalPeg.LocalWF.ctl_feedC hinv.phys.pend letter] at hland))
     ?_ (postPhase entry q first) frozenAt
     (fun w st Tc hw hpreTrace _ m hinv => notFrozen_of_invC entry q first hw hpreTrace m hinv)
-    (fun w st Tc hw hpreTrace _ hscanAtReport m _ hneedy => by
+    (fun w st Tc hw hpreTrace _ _ hpackedAtReport m _ hneedy => by
       refine Or.inl ?_
       have hstate := hneedy.2
       rw [Nat.sub_self, PalPeg.GalilThrottledRun.truncS_zero, heldAfter_of_le st le_rfl]
         at hstate
-      show ReportPoint w (absState'' m.vm) ∧ Refreshed _ q first (absState'' m.vm) ∧
-        (absState'' m.vm).ctl.mode = Mode.scan
+      show PalPeg.PlateauInvariant.PlateauInv centreC placeC entry q first w (absState'' m.vm)
       rw [hstate]
-      have hreport := PalPeg.GalilLedgerAssembly.reportPoint_of_at_length hw
-        (hpreTrace.base.pre.report w.length hw le_rfl)
-      exact ⟨hreport.1, hreport.2, hscanAtReport w.length hw le_rfl⟩)
+      exact plateauInv_of_lastReport entry q first hw hpreTrace
+        (hpackedAtReport w.length hw le_rfl))
     (fun w m hw hpost hphys hmir hgood hnotStarved => by
       by_cases hfrozen : frozenAt w m
       · have hstay : tickC (ghostSteps entry q first (localGood (spare := spare)) w) m = m := by
@@ -1265,9 +1366,11 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
           rw [stepOf_freezeSteps, if_pos hfrozen]
         rw [hstay]
         exact ⟨Or.inl ⟨hfrozen, rfl⟩, Or.inr hfrozen, hphys, hmir, hgood⟩
-      · rcases hpost with ⟨hpoint, hrefreshed, hscan⟩ | hfrozen'
-        · have hspec := chosenStep_spec
-            (hplateauNext w m hw hpoint hrefreshed hscan hfrozen hphys hmir hgood hnotStarved)
+      · rcases hpost with hplateau | hfrozen'
+        · have hscan : (absSC m).ctl.mode = Mode.scan := hplateau.scan
+          have hspec := chosenStep_spec
+            (plateauNext entry q first hfirst hqPos hfirstSeven hfirstEight hw hphys.inv.roles
+              hplateau)
           have hstep : tickC (ghostSteps entry q first (localGood (spare := spare)) w) m
               = chosenStep entry q first (localGood (spare := spare)) w m := by
             rw [PalPeg.LocalSysConcrete.tickC_step _ hnotStarved]
@@ -1275,14 +1378,9 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
             rw [stepOf_freezeSteps, if_neg hfrozen, show m.vm.ctl.mode = Mode.scan from hscan]
             rfl
           rw [hstep]
-          have hphase : postPhase entry q first w
-              (chosenStep entry q first (localGood (spare := spare)) w m) := by
-            rcases PalPeg.ReportPhase.reportPhase_tick centreC placeC entry q first 2048
-                hpoint hrefreshed hscan hspec.1 with hkept | hleft
-            · exact Or.inl hkept
-            · exact Or.inr ⟨hw, hleft⟩
-          exact ⟨Or.inr ⟨hfrozen, hspec.1, hspec.2.1⟩, hphase, hspec.2.2.1, hspec.2.2.2.1,
-            hspec.2.2.2.2⟩
+          exact ⟨Or.inr ⟨hfrozen, hspec.1, hspec.2.1⟩,
+            plateau_of_nextOK entry q first hfirst hqPos hfirstSeven hfirstEight hw hplateau hspec,
+            hspec.2.2.1, hspec.2.2.2.1, hspec.2.2.2.2⟩
         · exact absurd hfrozen' hfrozen)
     (fun w s _ _ hreport => (reportTest_iff entry q first w _).mp hreport)
     (fun w s _ hpoint hrefreshed => (reportTest_iff entry q first w _).mpr ⟨hpoint, hrefreshed⟩)
@@ -1452,6 +1550,6 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
           (replayStartNext entry q first hw hpreTrace m target hinv hmode htarget)
         exact ⟨hspec.1, hspec.2.1, hspec.2.2.1, hspec.2.2.2.1⟩)
 
-#print axioms given_openModesAndPhysicalMachine
+#print axioms given_physicalMachine
 
 end PalPeg.ShadowedLocalFinal
