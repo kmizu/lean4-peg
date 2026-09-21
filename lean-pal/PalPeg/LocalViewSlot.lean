@@ -205,9 +205,9 @@ theorem viewMargin (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
     {q : Queue (Fin 2)} {micro : MicroControl}
     {tapes : Fin 12 → STape Γc} {backFull nearFull : List (Option (Fin 2))}
     (hqueue : MicroRep margin q micro (fun tape => tapes (queueTapeOfView tape)))
-    (hback : StackTape (tapes backTape) backFull) (hbackLength : K ≤ backFull.length)
-    (hnear : StackTape (tapes nearTape) nearFull) (hnearLength : K ≤ nearFull.length) :
-    ∀ tape, K ≤ pos (tapes tape) := by
+    (hback : StackTape (tapes backTape) backFull) (hbackLength : margin ≤ backFull.length)
+    (hnear : StackTape (tapes nearTape) nearFull) (hnearLength : margin ≤ nearFull.length) :
+    ∀ tape, margin ≤ pos (tapes tape) := by
   intro tape
   by_cases hqueueTape : tape.val < 10
   · have htape : tape = queueTapeOfView ⟨tape.val, hqueueTape⟩ := Fin.ext rfl
@@ -217,7 +217,7 @@ theorem viewMargin (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
       (fun h => by cases h) (fun h => by cases h) (fun h => by cases h)
       (fun hne => absurd rfl hne) (fun h => by cases h)).1 ⟨tape.val, hqueueTape⟩
     rw [htape]
-    exact hmarginLe.trans hmargin
+    exact hmargin
   · have hlt := tape.isLt
     rcases (by omega : tape.val = 10 ∨ tape.val = 11) with hval | hval
     · have htape : tape = backTape := Fin.ext hval
@@ -226,6 +226,16 @@ theorem viewMargin (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
     · have htape : tape = nearTape := Fin.ext hval
       rw [htape, hnear.pos_eq]
       exact hnearLength
+
+/-- **Every tape of a represented view has the margin of the representation.** -/
+theorem ViewRep.margin_le_pos (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    {v : InputView} {gap : Bool} {micro : MicroControl} {tapes : Fin 12 → STape Γc}
+    (hrep : ViewRep margin v gap micro tapes) : ∀ tape, margin ≤ pos (tapes tape) := by
+  obtain ⟨backBottom, hbackHeight, hbackStack⟩ := hrep.back
+  obtain ⟨nearBottom, -, hnearHeight, hnearStack⟩ := hrep.near
+  exact viewMargin hK hmarginLe hrep.queue hbackStack
+    (by simp only [backStack, List.length_append, List.length_cons]; omega) hnearStack
+    (by simp only [List.length_append]; omega)
 
 /-- A dequeue is chosen only when the queue has a head. -/
 theorem front_ne_nil_of_tailJob {command : ViewCommand} {move : HeadMove} {v : InputView}
@@ -301,13 +311,9 @@ theorem viewDecisionStep (Terminal : Type) (hK : 2 ≤ K) {margin : ℕ} (hmargi
   obtain ⟨hcontrol, htapes⟩ := hstep
   unfold viewNext at hcontrol
   rw [if_pos hslot] at hcontrol
-  obtain ⟨backBottom0, hbackHeight0, hbackStack0⟩ := hrep.back
-  obtain ⟨nearBottom0, -, hnearHeight0, hnearStack0⟩ := hrep.near
-  have hmargin := viewMargin hK hmarginLe hrep.queue hbackStack0
-    (by simp only [backStack, List.length_append, List.length_cons]; omega) hnearStack0
-    (by simp only [List.length_append]; omega)
-  have hbackTape := htapes backTape (hmargin backTape)
-  have hnearTape := htapes nearTape (hmargin nearTape)
+  have hmargin := hrep.margin_le_pos hK hmarginLe
+  have hbackTape := htapes backTape (hmarginLe.trans (hmargin backTape))
+  have hnearTape := htapes nearTape (hmarginLe.trans (hmargin nearTape))
   rw [viewActs_back Terminal hK hslot] at hbackTape
   rw [viewActs_near Terminal hK hslot] at hnearTape
   obtain ⟨⟨backBottom, hbackHeight, hback⟩, ⟨nearBottom, hnearSealed, hnearHeight, hnear⟩,

@@ -22,7 +22,8 @@ So far: the Hood–Melville queue of an input view.
 * `PalPeg.LocalQueueMicro` — the micro-programmed machine, `MicroRep`, `microRule_sound`.
 * `PalPeg.LocalQueueProgram` — `RTQueue.snoc` / `tail` as lists of micro-operations, the machine
   with a program counter, `programRun_snoc` / `programRun_tail`;
-* `PalPeg.LocalQueueInit` — the first step, from blank tapes to the empty queue (`programInit`);
+* `PalPeg.LocalQueueInit` — the first step of a rule needs no margin (`compStep_apply_blankEdge`);
+  stacks of seals represent the empty queue;
 * `PalPeg.LocalViewCells` — the content of a view is the sentinel followed by letters, so the
   emptiness of `back` is readable from the focus (`back_nil_iff_focus_none`);
 * `PalPeg.LocalViewDecision` — a command to a view as two stack operations and a queue job,
@@ -33,8 +34,8 @@ So far: the Hood–Melville queue of an input view.
   (`viewDecision_sound`);
 * `PalPeg.LocalViewSlot` — the rule of a view on twelve tapes (`viewNext` / `viewActs`) and one
   slot of eleven steps: `ViewRep v` to `ViewRep (viewApply command v)` (`viewSlot_sound`);
-* `PalPeg.LocalViewInit` — the first step of a view, from blank tapes to the empty view
-  (`viewInit_of_apply`);
-* `PalPeg.LocalViewsMachine` — the machine of several views with a letter latch and one slot
-  counter (`machineRule`), its first step (`machineInit`) and one slot (`machineSlot`).
+* `PalPeg.LocalViewInit` — stacks of seals represent the empty view (`viewRep_empty_of_seals`);
+* `PalPeg.LocalViewsMachine` — the machine of several views with one slot counter
+  (`machineRule`); one real step of its fusion is one slot of every view (`machineSlot`), also
+  from blank tapes (`machineFirstSlot`).
 -/

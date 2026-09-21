@@ -17,7 +17,13 @@
 
 **時間モデルの不整合（未修正）**: `machineRule` は入力を `pending` に latch して次の slot で配る（1 slot 遅れ）。融合 1 歩＝`feedC` ちょうどにするには command を `commandOfLetter input`（その微小歩の入力）から取る。`viewSlot_sound` は step 0 の command しか読まないので、後の微小歩の command は自由。
 
-**次**: 同じ物理配置（`LocalViewsMachine.machineRule`、view 1 本 = 12 テープ）の上で `Enc` の head 成分を定義し、`hforwardFeed` の head 部分を `machineSlot`／`LocalStepFusion.compStep_iterRule` から出す。n304 の 3 義務（P1〜P3）は未着手。
+**n326 続き 2（融合した slot。時間モデルの不整合を直した。公理への接続は無い・進捗として数えない）**: module build `PalPeg.ConcreteLocalMachine`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0、下の定理は標準 3 公理のみ。
+* `LocalViewsMachine` を書き直した（441 → 271 行）。制御は `slot × 各 view の制御` だけ（`started`／`current`／`pending`／`latch` は消えた）。`machineRule` の command は**その微小歩の入力** `commandOfLetter input`。動かす機械は融合 `compStep (iterRule (machineRule …) 11)` で、実 1 歩＝1 slot、入力は slot の微小歩 0 に届く。これで「feed 1 歩＝全 view に `arrive a` ちょうど」になり、1 slot 遅れが消えた。
+* `machineSlot_of_ideal`: ideal な 11 微小歩（`LocalStepFusion.idealRun`＝入力は最初の歩だけ、`idealIter_eq_idealRun`）と制御が一致しテープが `TEqG` な状態は、全 view が `viewApply (commandOfLetter input)` 後の `ViewRep margin`・未払い 0・slot 0。`machineSlot`: margin `iterRadius K 11 ≤ margin` の表現から実 1 歩（`compStep_iterRule`、各テープの margin は新しい `ViewRep.margin_le_pos`）。
+* `machineFirstSlot`: **blank テープ・左端からの最初の実 1 歩は初期化の歩なしで 1 slot**。`LocalQueueInit.compStep_apply_blankEdge`（スクラッチから投入: 左端の blank からの sweep は head が半径に立つ blank からの sweep と `TEqG`、`sweep_blank_edge_shifted`）＋高さ `iterRadius K 11` の seal は空 view の表現（`viewRep_empty_of_seals`）。`hencInit`＋最初の `hforwardFeed` の view 成分の中身に当たる。
+* 片付け: 未融合の init 経路（`sweep_blank_edge`／`programRule_acts_idle`／`currentOp_initControl`／`programInit`／`viewActs_init`／`viewNext_init`／`viewInit_of_apply`／旧 `machineInit`／`machineFirstLetter`／`machineIter*`／`registersAfter`／`latch`）は読む者がいなくなったので削除。
+
+**次**: 同じ物理配置（`LocalViewsMachine.machineRule`、view 1 本 = 12 テープ）の上で、command を制御（モード）と窓から決める形に広げる（tick の 1 歩＝各 view に `stepRight`／`stepLeft`／`stay`）。抽象 head と `InputView` の対応（`absHead'`、`feedC` が view にすること）を一次情報で確認して `Enc` の head 成分を定義する。n304 の 3 義務（P1〜P3）は未着手。
 
 ## n325（2026-09-21）: 最後の報告点の後の tick にも局所後継ができた。抽象局所層への仮説はゼロ
 
