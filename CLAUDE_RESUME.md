@@ -93,7 +93,7 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 `slotIndex : Slot ≃ Fin 95` が `LocalStep` の要求する番号付け。
 
-**符号化の本体、厳密な部分（`$S/enc_body.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `EncTapes x polarity tapes`——95 本のうち**状態をそのまま読むだけの枠**を書いた: fpp の 9 本と DP の 12 本は `mapTape encProg (encTape …)`、16 本のカウンタ枠のうち状態が埋めるものは `∃ segments, absCtr segments (polarity c) = value ∧ tapes … = mapTape encSeg segments`（`exists_ctrTape` が `Canonical` からその `segments` を出す）。`counterOf` が 16 枠の並び（`cycle`／`remaining`／`radius`／`length`／`replay`／`lower`／`span`／`work`／`debt`／`fppWork` と、chain のタグから読む 4 本＋consume の 2 本）。ヘッド・place・chain のカウンタは自分の不変量（`ViewRep`・`LaysSealed`・鏡）を通して入るので、この構造には入れていない。
+**符号化の本体、厳密な部分（`$S/enc_body.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `EncTapes x polarity tapes`——95 本のうち**状態をそのまま読むだけの枠**を書いた: fpp の 9 本と DP の 12 本は `mapTape encProg (encTape …)`、16 本のカウンタ枠のうち状態が埋めるものは `∃ segments, absCtr segments (polarity c) = value ∧ tapes … = mapTape encSeg segments`（`exists_ctrTape` が `Canonical` からその `segments` を出す）。`counterOf` が 16 枠の並び（`cycle`／`remaining`／`radius`／`length`／`replay`／`lower`／`span`／`work`／`debt`／`fppWork` と、chain のタグから読む 4 本＋consume の 2 本）。さらに chain のテープ 2 本を足した: `periodOf`／`answerOf`（どちらも chain のタグから読むので `Option`）、`period` 枠は `mapTape encToken (encPeriod tape)`、`answer` 枠は `mapTape encProg (encTape tape)`。どの枠を状態が埋めるかを決める関数も書いた: `headOf`（scan の 3 ヘッドと chain の verifier、idle な chain には verifier が無い）、`placeOf`（探索の walker、fpp の walker、chain のコピー walker）。ヘッドと place と chain のカウンタの**中身**は自分の不変量（`ViewRep`・`LaysSealed`・鏡）を通して入るので、この構造にはまだ入れていない。
 
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
