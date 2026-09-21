@@ -1,3 +1,38 @@
+## n336 — shift の 2 分岐、および接続点の地図
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit cfab8bc`、公理リスト変更なし。
+`PalPeg/PhysicalEncoding.lean` module build EXIT=0・error 0・sorry 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+**今回閉じた分岐**: `vml_shift_exit`（テープもカーソルも動かない。制御が `scan` に戻り
+`output` を refresh するだけ）と `vml_shift_one`（最も広い多成分 tick: 中心ヘッド右 1、
+左ヘッド右 2、銀行 4 op、chain の watch 前進）。側条件は局所層のもの
+（`LocalTick1.Inv` / `LocalTick3.ShiftCounters` / `Ahead` 3 / `canRight` 3）＋
+`y.chain = .watch wv`（抽象 `shiftOneFun` の `match` を落とす鍵）。
+
+**物理基底で閉じた分岐**: `copy`(copyOne) / `fpp`(slice, done) / `rewind`(one, pair) /
+`choose`(select) / `shift`(one, exit) ＋ 手書き 7 本。
+
+**接続点の地図（一次情報で確認）**
+
+* 公理は `obligation_localRealization : H_realizeCanonical centreC placeC entry q first`
+  （`PalPeg/PalInPegUnconditional.lean:144`）。
+* 消費者は `ShadowedLocalFinal.forwardTick_of_rule`（`:984`）。その `hideal`（`:995`）は
+  `Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop` を取る。**抽象状態**上の関係なので、
+  `Enc x p := ∃ y, absState'' y = x ∧ …` へ組み替える必要がある。ここが `vml_*` の合流点。
+* `scan` の tick は**既に関係形で存在する**:
+  `LocalReplayParked.tickL1_abs''_nonreplay` が
+  `Tick (galilFrameS S q first) delay (absState'' x) (absState'' y)` を与える
+  （`LocalTick1.tickL1_abs` の `abs''` 版）。`scan` の 3 出口も
+  `abs''_commitShift` / `abs''_commitFallback` / `abs''_commitRestart` で `abs'` に落ちる。
+* 規則 `R : ActRule` の側は、入力 view については**既に機械化済み**:
+  `LocalViewSlot.viewNext` / `viewActs` / `viewSlot_sound`、
+  `LocalViewsMachine.machineRule` / `machineSlot`、`LocalHeadRep.headRep_machineSlot`
+  （`PalPeg/ConcreteLocalMachine.lean` の目次）。
+
+**残っている本体**: 規則 `R` をプログラムテープと銀行テープについても定義し、
+`Enc` を上の `∃ y` 形に組み替えて `hideal` を放電すること。
+
 ## n333 続き 32 — 多成分の一歩は局所層に全部あった。足りんのは tick 形の橋だけ
 
 全体 build 成功・標準公理のみ・無条件 PAL は未完。HEAD `3528a4b`、公理リスト変更なし
