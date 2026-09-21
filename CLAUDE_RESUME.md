@@ -34,6 +34,14 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 になった。**物理機械への要求は、有限窓から読める判定 1 つと、計算すべき関数 1 本だけである。**
 
+**機械化の土台（スクラッチ `$S/tape_enc.keep.lean`、EXIT=0・error 0・標準公理のみ）: 足場のプログラムテープは物理テープそのものだった。** `GalilScaffoldTape.Tape` は `left : List (Fin 9)`／`focus`／`right` の zipper で空白記号は `6`、`Program.STape (Fin 9)` と同じ形。`encTape t := ⟨t.left, t.focus, t.right⟩` について
+
+* `encTape (moveRight t) = STape.applyAction 6 (encTape t) (t.focus, .right)`（右端では両方とも空白を置く）
+* `encTape (moveLeft t) = STape.applyAction 6 (encTape t) (t.focus, .left)`（左端では足場は止まり、物理側も読んだ記号を書き戻すので止まる）
+* `encTape (write t s) = STape.applyAction 6 (encTape t) (s, .stay)`、`encTape reset = STape.blankTape 6`（どちらも `rfl`）
+
+そして **`executeFun_tapes`**: 1 命令は `pcOf` で数えるプログラムカウンタの更新と、`actOf` が名指しする**テープ 1 本への action 1 個**（`halt` と `read` は action なし）。つまり fpp の 9 本と DP の 12 本は物理テープをそのまま使い、`ActRule` はカウンタが指す命令を有限制御から引いて action を 1 個出すだけでよい。
+
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
 ## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
