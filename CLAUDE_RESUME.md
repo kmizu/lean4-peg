@@ -102,6 +102,47 @@
 `markEnd`（3 場合）、`home`（3 場合）、`choose` の歩き側（2 場合）。いずれも**準備機械のテープしか動かさない枝**で、
 上のコスト模型の食い違いに触れない。触れないからこそ通った、とも言える。
 
+**訂正（同日、これが今日いちばん大きい）。上の「食い違い」は設計では既に解かれていた。ウチが土台を間違えていた。**
+
+`PalPeg/LocalState.lean` の冒頭（`:18–56`）が、まさにこの 3 点を名指しで解いている。
+
+* 「`LocalBuffers` — `GalilScaffoldControl.reset`（一歩で丸ごと消える `ProgLang` 機械）を、**背景消去つきの二重緩衝**として」
+* 「`LocalInputView` — 頭と walker の複写（`left := right`、`walker := p`）を、**カーソル自身が保つ入力の写しの上の位置直しジョブ**として」
+* 「`LocalCounter` … 同期した鏡の銀行と背景の再構築」
+
+そして中心の記録 `GalilVML P`（`:125–159`）は、ウチが `QPhys` と `EncTapes` で作り直していたものそのもの:
+5 つのカーソル＋`pending`、役割と極性つきのカウンタ銀行、鏡、**二重緩衝になった 2 つのプログラム機械と
+その計数子・停止旗**、chain、制御記録と有限制御ビット（`searchMode`/`searchFinalStage`/`searchQuarter`/
+`fppMode`/`fppFinalStage`/`periodOnly`）。抽象化写像 `abs`（`:189`）と `absState`（`:218`）まである。
+
+決定的なのは `abs` の性質（同ファイル冒頭の記述）: **「全域かつジョブ非依存。二重緩衝の生きている側、
+カウンタ銀行の `roles`/`pol` と視野だけを読み、`job` 場も休んでいる緩衝も鏡も決して読まない。
+だから背景のジョブ（消去・再構築・位置直し）は抽象の水準では見えない」**。
+`StepLocal` は一ティックの局所性予算まで決めている: カウンタテープは `applyAction` を高々 1 回、
+各カーソルは `arrive`/`moveRight`/`moveLeftV`/`repositionStep` を高々 1 回、各二重緩衝は
+`resetL`/`clearTick`/プログラム 1 歩を高々 1 回。`stepLocal_reposition`（`:518`、**「頭を複写する仕事の
+位置直し 1 微小歩は局所である」**）も `CloseoutCoreEnc7:516–518`（**「一ティック 1 升、内容の複写ではない」**）もある。
+`LocalReplayParked` は `left` を鏡と**交換**する——内容は動かない、それが parked 設計の眼目。
+
+**つまり「複写は局所機械で実現できない」は正しいが、設計はその複写を抽象層の見かけとして扱い、
+物理層では位置直しジョブ・二重緩衝・鏡の交換に置き換え済みだった。**
+
+**ウチの誤りは土台の取り違え。** `EncTapes` を `State GalilVM`（**抽象**状態）の上に直接建ててしまった。
+正しい土台は `GalilVML P`（**物理**状態）で、消費者も既にそちらを向いている——
+`forwardTick_of_machine` は `m : Mirrored1 (tapeCount spare)` を取り `Enc (absSC m) p` を使う。
+符号化すべきは `m` であって `absSC m` ではない。
+
+**次にやること（土台の取り直し）。**
+1. `Enc x p := ∃ y, absState y = x ∧ (p は y のテープ＋有限制御の符号化)` の形にする。
+2. 前進義務を「`GalilVML` の局所一歩が `ActRule` の一歩である」に読み替える。粒度は `StepLocal` が既に決めている。
+3. 今日証明した枝（`markEnd` 3・`home` 3・`choose` 2）は意味は残るが、`x.vm.fpp.program.config.tapes i` ではなく
+   `y.fppBuf` の生きている側の上に建て直す。テープ 1 本の移動の補題（`padded_moveRight`/`padded_moveLeft`/
+   `window_below`/`window_centre`/`prog_slots_*`）は**土台に依らないのでそのまま使える**。
+
+**教訓。** 「無い」と書く前に、一次情報を探す範囲を `PalPeg/Local*.lean` まで広げる。
+`CLAUDE.md` が「コードベース全体を俯瞰していない状態で『○○は無い』と書かない」と書いているのは、
+まさに今日のこの失敗の形。**今日は 1 日で 2 回、同じ落とし穴に落ちた（左端の取り違えは本物、コスト模型は誤報）。**
+
 **進め方について。** モードごとに `tickFun` を言い換える補題（`tickFun_markEnd`／`tickFun_home`）は `simp only [tickFun, hmode]` で出る**薄い言い換え**で、中身が無い。そこで手を変えて、いちばん単純なモード（`markEnd`、動くのは fpp プログラムのテープ 8 だけ）を規則の枝まで書こうとしたところ、上の左端の取り違えに当たった。**モードの一覧を増やすより、1 モードを物理まで通す方が誤りを出す。**
 
 ## n332（2026-09-21）: 抽象 frame が丸ごと関数になった。物理機械への要求は「符号化を保つ 2 本」だけになった
