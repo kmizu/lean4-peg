@@ -1,3 +1,19 @@
+## n317（2026-09-21）: run 不変量の `cycle` の極性を shift モード限定にした
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。存在仮説 `hscanNext`／`hplateauNext` は残っている） |
+
+**やったこと**: `LocalWF.PolWF` の `cycle` 成分を `x.ctl.mode = .shift → x.pol .cycle = true` にした。消費者 `given_openModesAndPhysicalMachine` の存在仮説が要求する `Good next` がそのぶん弱くなった（scan の着地で `cycle` の極性を示さなくてよい）。
+* **なぜ要ったか**: 正本 `ScaffoldChain.scala:156–160` の `matched()` は `periodOnly` なら `cycle.dec()` を無条件で実行し、「`cycle > 0`」は `checkPair`（`:117–127`）の assertion（2 半周期の継続不変量）でしか守られていない。trace 上で全状態の `cycle ≥ 0` を示すには Galil の周期性の議論が要る。一方、`cycle` の極性を実際に読むのは `shiftCounters_of` の 1 箇所だけで、shift 入口で `cycle := reset`・shift 中は inc だけなので shift モードの間は安く出る。
+* 追加した宣言（全部消費者あり）: `mode_shift_of_tickL3`（`cases h`、着地モードは `exact absurd (show Mode.X = Mode.shift from hshift) (by decide)` を `first` で当てる。**着地モードが `copyDoneVm` などの定義の中に隠れているので `decide` も `simp_all` も届かない。`show` で defeq を明示する**）、関数 step 6 個の `mode_shift_of_copyStepL`／`homeStepL`／`markEndStepL`／`chooseStepC`／`rewindStepC`／`ffpp`（`unfold … at hshift; split at hshift`、`ffpp` は `hexists.choose_spec.1` と `mode_shift_of_tickL3`）、`ctl_feedC`。`polWF_congr` と `shiftCounters_of` は `hmode` を取る。`polWF_tickC` は外に使用者が無いが、`hmode` の仮説を足して残した。
+* `ShadowedLocalFinal`: `localGood_of_pol_eq` に `hmodeShift`、shift の場合は `fun _ => hmode`、`init` と `replayStartNext` の着地は scan なので `cycle` の節は空虚、blank は `fun _ => rfl`、到着は `ctl_feedC`。
+* 進め方: 先にスクラッチ複製（`$S/LocalWF.trial.lean`）で 5 箇所を直して通してからリポジトリへ反映した。
+
+**道 A の残り**（n316 の一覧から更新）: (1) カウンタの `Canonical` は trace の事実としてスクラッチで完成（`$S/lift_trace.keep.lean`、未投入）、(2) 非負性は `cycle` を外したので残り 6 本（`remaining`／`radius`／`length`／`fppWork`／`work`／`replay`、各モードの入口で要る分だけ）、(3) 切断本体と `abs''` の等式・`Inv`（ヘッドの切断は `$S/sec_check.keep.lean`）、(4) replaying の着地の右ヘッド、(5) `NextOK` の `Canonical`、(6) `scanNext`／`plateauNext` の組み立てと仮説の除去。
+
 ## n316（2026-09-21）: `hscanNext`／`hplateauNext` の方針 — 分岐ごとの局所 step でなく、抽象の着地を具体化した ghost を後継にする（調査のみ、コードは変えていない）
 
 **全体 build 成功（最新は n315 の `BUILD=0`）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。

@@ -781,8 +781,9 @@ def localGood (m : Mirrored1 (tapeCount spare)) : Prop :=
 
 /-- A step that leaves the polarity of every tape alone keeps the run invariant. -/
 theorem localGood_of_pol_eq {m next : Mirrored1 (tapeCount spare)} (hgood : localGood m)
-    (hpol : next.vm.pol = m.vm.pol) : localGood next :=
-  ⟨PalPeg.LocalWF.polWF_congr hgood.1 hpol, by rw [hpol]; exact hgood.2.1,
+    (hpol : next.vm.pol = m.vm.pol)
+    (hmodeShift : next.vm.ctl.mode = .shift → m.vm.ctl.mode = .shift) : localGood next :=
+  ⟨PalPeg.LocalWF.polWF_congr hgood.1 hpol hmodeShift, by rw [hpol]; exact hgood.2.1,
     by rw [hpol]; exact hgood.2.2⟩
 
 /-- **The steps that are functions keep the polarity bundle.**  The seven phase steps of
@@ -810,9 +811,8 @@ theorem localGood_stepOf_localSteps (entry q : ℕ) (first : Fin 9)
       · show (if PalPeg.LocalState.Ctr.length = PalPeg.LocalState.Ctr.length ∨ PalPeg.LocalState.Ctr.length = PalPeg.LocalState.Ctr.work then true
           else m.vm.pol .length) = true
         rw [if_pos (Or.inl rfl)]
-      · show (if PalPeg.LocalState.Ctr.cycle = PalPeg.LocalState.Ctr.length ∨ PalPeg.LocalState.Ctr.cycle = PalPeg.LocalState.Ctr.work then true
-          else m.vm.pol .cycle) = true
-        rw [if_neg (by decide)]; exact hcycle
+      · intro hshift
+        exact absurd (show Mode.scan = Mode.shift from hshift) (by decide)
       · show (if PalPeg.LocalState.Ctr.fppWork = PalPeg.LocalState.Ctr.length ∨ PalPeg.LocalState.Ctr.fppWork = PalPeg.LocalState.Ctr.work then true
           else m.vm.pol .fppWork) = true
         rw [if_neg (by decide)]; exact hfppWork
@@ -827,25 +827,34 @@ theorem localGood_stepOf_localSteps (entry q : ℕ) (first : Fin 9)
   | scan => exact absurd hmode hnotScan
   | replayStart => exact absurd hmode hnotReplayStart
   | shift =>
-      refine localGood_of_pol_eq hgood ?_
+      refine localGood_of_pol_eq hgood ?_ (fun _ => hmode)
       show (PalPeg.CloseoutCoreAgree.shiftStepW m).vm.pol = m.vm.pol
       classical
       unfold PalPeg.CloseoutCoreAgree.shiftStepW
       split
       · unfold PalPeg.LocalRealizesPhase.shiftPick; split <;> rfl
       · rfl
-  | copy => exact localGood_of_pol_eq hgood (PalPeg.LocalWF.pol_copyStepL m)
-  | home => exact localGood_of_pol_eq hgood (PalPeg.LocalWF.pol_homeStepL m)
+  | copy =>
+      exact localGood_of_pol_eq hgood (PalPeg.LocalWF.pol_copyStepL m)
+        PalPeg.LocalWF.mode_shift_of_copyStepL
+  | home =>
+      exact localGood_of_pol_eq hgood (PalPeg.LocalWF.pol_homeStepL m)
+        PalPeg.LocalWF.mode_shift_of_homeStepL
   | fpp =>
       exact localGood_of_pol_eq hgood
         (PalPeg.LocalWF.pol_ffpp PalPeg.CloseoutCoreAgree.dumS q first m)
-  | markEnd => exact localGood_of_pol_eq hgood (PalPeg.LocalWF.pol_markEndStepL m)
+        (PalPeg.LocalWF.mode_shift_of_ffpp PalPeg.CloseoutCoreAgree.dumS q first)
+  | markEnd =>
+      exact localGood_of_pol_eq hgood (PalPeg.LocalWF.pol_markEndStepL m)
+        PalPeg.LocalWF.mode_shift_of_markEndStepL
   | choose =>
       exact localGood_of_pol_eq hgood
         (PalPeg.LocalWF.pol_chooseStepC PalPeg.CloseoutCoreAgree.dumS q first m)
+        (PalPeg.LocalWF.mode_shift_of_chooseStepC PalPeg.CloseoutCoreAgree.dumS q first)
   | rewind =>
       exact localGood_of_pol_eq hgood
         (PalPeg.LocalWF.pol_rewindStepC PalPeg.CloseoutCoreAgree.dumS q first m)
+        (PalPeg.LocalWF.mode_shift_of_rewindStepC PalPeg.CloseoutCoreAgree.dumS q first)
 
 /-- **The phase after the last report point**: the abstract state is still a refreshed report
 point of the word in scan mode (the plateau: the right head stands on the last letter), or it is
@@ -1039,7 +1048,9 @@ theorem replayStartNext (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
     exact ⟨PalPeg.LocalReplaySwap.Twin.refl _, hinv.phys.inv.views.2.1⟩
   · -- the polarity bundle: `radius` and `replay` exchange their polarity
     obtain ⟨⟨hremaining, hradius, hlength, hcycle, hfppWork⟩, hwork, hreplay⟩ := hinv.good
-    exact ⟨⟨hremaining, hreplay, hlength, hcycle, hfppWork⟩, hwork, hradius⟩
+    exact ⟨⟨hremaining, hreplay, hlength,
+      fun hshift => absurd (show Mode.scan = Mode.shift from hshift) (by decide), hfppWork⟩,
+      hwork, hradius⟩
   · -- the phase after the last report point
     intro hpost
     rcases hpost with ⟨-, -, hscan⟩ | hfrozen
@@ -1122,7 +1133,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
   refine given_shadowedLocalSystem entry q first hfirst hor hres hChainVerifierSupply
     (fun w => ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w)
     (fun w m => reportTest entry q first w (absSC m))
-    (localGood (spare := spare)) ⟨PalPeg.LocalWF.polWF_x0C ⟨rfl, rfl, rfl, rfl, rfl⟩ 2048, rfl, rfl⟩
+    (localGood (spare := spare)) ⟨PalPeg.LocalWF.polWF_x0C ⟨rfl, rfl, rfl, fun _ => rfl, rfl⟩ 2048, rfl, rfl⟩
     (fun w st Tc hpreTrace hcanonical m hinv => by
       by_cases hstarved : Starved m.vm
       · rw [PalPeg.LocalSysConcrete.tickC_starved _ hstarved]
@@ -1140,7 +1151,8 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
               exact good_chosenStep hinv.good
             · exact localGood_stepOf_localSteps entry q first _ _ hinv.good hscan hreplayStart)
     (fun w st Tc hpreTrace hcanonical letter m hinv =>
-      localGood_of_pol_eq hinv.good (PalPeg.LocalWF.pol_feedC hinv.phys.pend letter))
+      localGood_of_pol_eq hinv.good (PalPeg.LocalWF.pol_feedC hinv.phys.pend letter)
+        (fun hshift => by rwa [PalPeg.LocalWF.ctl_feedC hinv.phys.pend letter] at hshift))
     ?_ (postPhase entry q first) frozenAt
     (fun w st Tc hw hpreTrace _ m hinv => notFrozen_of_invC entry q first hw hpreTrace m hinv)
     (fun w st Tc hw hpreTrace _ hscanAtReport m _ hneedy => by
