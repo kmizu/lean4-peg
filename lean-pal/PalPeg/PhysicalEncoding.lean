@@ -3965,6 +3965,33 @@ theorem rd_winTape {K : ℕ} (ws : PalPeg.Local.Window Γm K) (j : Fin (2 * K + 
   show (PalPeg.Local.toList (encTape (winTape ws))).getD j.val (6 : Fin 9) = _
   rw [toList_winTape, List.getD_eq_getElem _ _ (by simpa using j.isLt), List.getElem_ofFn]
 
+/-- laying a component's tape out and re-alphabetising it commute. -/
+theorem toList_mapTape {Γ₁ : Type} (f : Γ₁ → Γm) (T : STape Γ₁) :
+    PalPeg.Local.toList (mapTape f T) = (PalPeg.Local.toList T).map f := by
+  show (T.left.map f).reverse ++ f T.focus :: T.right.map f
+    = (T.left.reverse ++ T.focus :: T.right).map f
+  rw [List.map_append, List.map_reverse, List.map_cons]
+
+/-- **a cell of the padded tape, above the floor, is the component's own cell.** -/
+theorem rd_padded (n : ℕ) (t : PalPeg.GalilScaffoldTape.Tape) (p : ℕ) (hp : n + 1 ≤ p) :
+    PalPeg.Local.rd blankM (padLeft n (mapTape encProg (encTape t))) p
+      = encProg (PalPeg.Local.rd (6 : Fin 9) (encTape t) (p - n - 1)) := by
+  show (PalPeg.Local.toList (padLeft n (mapTape encProg (encTape t)))).getD p blankM = _
+  rw [toList_padLeft]
+  obtain ⟨k, hk⟩ : ∃ k, p = n + (k + 1) := ⟨p - n - 1, by omega⟩
+  subst hk
+  rw [getD_replicate_append]
+  show (bottomM :: PalPeg.Local.toList (mapTape encProg (encTape t))).getD (k + 1) blankM = _
+  rw [List.getD_cons_succ, toList_mapTape]
+  show ((PalPeg.Local.toList (encTape t)).map encProg).getD k blankM = _
+  rw [show (n + (k + 1)) - n - 1 = k from by omega]
+  show _ = encProg ((PalPeg.Local.toList (encTape t)).getD k (6 : Fin 9))
+  rcases lt_or_ge k (PalPeg.Local.toList (encTape t)).length with hk' | hk'
+  · rw [List.getD_eq_getElem _ _ (by simpa using hk'), List.getD_eq_getElem _ _ hk',
+      List.getElem_map]
+  · rw [List.getD_eq_default _ _ (by simpa using hk'), List.getD_eq_default _ _ hk']
+    rfl
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -4058,6 +4085,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.progActOf_winMachine
 #print axioms PalPeg.PhysicalEncoding.winTape_pos
 #print axioms PalPeg.PhysicalEncoding.rd_winTape
+#print axioms PalPeg.PhysicalEncoding.rd_padded
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
