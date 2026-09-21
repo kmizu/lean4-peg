@@ -3665,6 +3665,55 @@ theorem physRule_choose_back_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (
     (physRule_nq_choose first hbound hK q _ hqmode) (physRule_acts_choose first hbound hK q _ hqmode)
     hK1 hKn hmode hkeep hfloor hmargin hisFloor henc
 
+/-! ### the machine reads from its window what the abstraction knows
+
+Every branch above carries two hypotheses of the same fact, one about the abstract component and
+one about the machine's tape.  They are the same fact: the encoding makes the window's centre the
+component's own symbol, and the cell below it the sentinel exactly when the component sits on its
+first cell. -/
+
+/-- **the symbol the rule reads is the component's own.** -/
+theorem focus_iff_of_enc {fppBound dpBound K : ℕ} {margin : ℕ} {x : State GalilVM}
+    {q : QPhys fppBound dpBound} {T : Slot → STape Γm} (henc : Enc margin x (q, T))
+    (i : Fin 9) (sym : Fin 9) :
+    (T (progSlot q.fppLive i)).focus = encProg sym
+      ↔ (x.vm.fpp.program.config.tapes i).focus = sym := by
+  have hfpp : T (progSlot q.fppLive i)
+      = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i))) :=
+    henc.2.fpp i
+  rw [hfpp, focus_padded]
+  exact encProg_eq_iff _ _
+
+/-- **the sentinel below the head means the component is on its first cell.** -/
+theorem floor_iff_of_enc {fppBound dpBound K : ℕ} {margin : ℕ} {x : State GalilVM}
+    {q : QPhys fppBound dpBound} {T : Slot → STape Γm} (henc : Enc margin x (q, T))
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1) (i : Fin 9) :
+    belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (progSlot q.fppLive i)
+        = bottomM
+      ↔ (x.vm.fpp.program.config.tapes i).left = [] := by
+  have hbelow : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (progSlot q.fppLive i)
+      = ((x.vm.fpp.program.config.tapes i).left.map encProg).headD bottomM := by
+    show PalPeg.Local.readWin blankM K (tapesOf T (slotIndex (progSlot q.fppLive i)))
+      ⟨K - 1, by omega⟩ = _
+    have hfpp : T (progSlot q.fppLive i)
+        = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i))) :=
+      henc.2.fpp i
+    rw [tapesOf_apply, hfpp,
+      window_below margin K (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i))) hK1 hKn]
+    rfl
+  rw [hbelow]
+  constructor
+  · intro h
+    cases hl : (x.vm.fpp.program.config.tapes i).left with
+    | nil => rfl
+    | cons head rest =>
+        rw [hl] at h
+        exact absurd h (encProg_ne_bottom head)
+  · intro h
+    rw [h]
+    rfl
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3746,6 +3795,8 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.physRule_markEnd_back_atFloor
 #print axioms PalPeg.PhysicalEncoding.physRule_home_step_atFloor
 #print axioms PalPeg.PhysicalEncoding.physRule_choose_back_atFloor
+#print axioms PalPeg.PhysicalEncoding.focus_iff_of_enc
+#print axioms PalPeg.PhysicalEncoding.floor_iff_of_enc
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
