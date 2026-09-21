@@ -1,3 +1,25 @@
+## n398 — fpp 分岐が規則に載った（5 commit）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`HEAD 7190bfd`、**公理リスト変更なし**。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0・sorry 0、`PalPeg.Workbench` BUILD=0。
+
+| commit | 中身 |
+|---|---|
+| `c035252` | 規則表を窓シミュレータの**下へ移動**し、`ruleNext`/`ruleActs`/`physRule` に quantum `entryQ` を通した。`ruleActs` の `fpp` = `withErase live ws (fppActs code entryQ live (pcOf q) q.fppDone ws)`、`ruleNext` の `fpp` = `fppNext`（`winRun` の pc/done、halt なら mode := markEnd）。長さは `withErase_length (b := entryQ)`、条件は `hK : entryQ + 2 ≤ K`（1 アクション分岐の `b := 1` も omega で出る）。`pcPhysOf` ＋ `encPc_pcPhysOf` |
+| `13a2fd0` | `idealStep_withErase` を**その場で一般化** — 1 スロットではなく live 半分を支持集合とする任意の action 表を取る。既存 8 箇所は特殊化 `idealStep_atLiveSlot` が受ける。`idle_shape_after_erase` も同じ表を取る |
+| `6ff80d2` | `fppActs_off_live` — live 側 9 スロット以外で `fppActs` は空。`idealStep_withErase` の側条件 |
+| `8196cb0` | `encTapes_fppStep`（1 テープ）を `encTapes_fppTapes`（プログラム機械まるごと）に一般化。1 テープ版は名前も文も保ったまま、一般版から出る |
+| `7190bfd` | `frameFun_fppHalts` / `frameFun_fppSlice` / `fppRunFun_eq_runFun` — 抽象側の 3 本、すべて `rfl` |
+
+**踏んだ罠**: `grep -c 'error:'` は `error(lean.unknownIdentifier):` 形式を拾わない。
+検査は `grep -c error` で行うこと。これで一度 EXIT=1 を「error 0」と読み違えた。
+
+**未接続**: `fpp` 分岐の Enc 保存（`physRule_fpp`）はまだ無い。素材は揃っている
+（`idealStep_withErase` ＋ `fppActs_off_live` → 理想歩、`fpp_slot_after` → 符号化、
+`encTapes_fppTapes` → 組み立て、`idle_shape_after_erase` → 退役半分、
+`frameFun_fppSlice` → 抽象側）が、組んでいない。制御側（`EncControl` が `fppNext` と
+合うこと）も未着手。
+
 ## n397 — Astra への引き継ぎ（ドキュメント整理）
 
 全体 build 成功・標準公理のみ・無条件 PAL は未完。`HEAD 479ea19`、**公理リスト変更なし**
