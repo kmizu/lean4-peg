@@ -26,7 +26,9 @@ restart 優先の側条件は `GalilTickFair.Canonical.restartFirst` から出�
 
 **同日のスクラッチ（未投入、`$S/tests_fun.keep.lean`、EXIT=0・error 0・標準公理のみ）: frame の判定 5 個が Bool 関数になった。** `shiftGuardTest`／`restartGuardTest`（どちらも存在量化された watch 状態は chain の構成子が固定するので、`match s.chain` で計算できる）、`canRightTest`（`gap = false ∨ right ≠ [] ∨ incoming ≠ []`）、`onLetterTest`（右ヘッド位置が奇数かつ語の中。証人は `k = (位置+1)/2`）、`leftFirstTest`。どれも `… ↔ … = true`。**有限窓から読むもの**が具体的になった: chain のタグと watch の `lag`／`phase`／`broken`／`margin`／period テープの焦点記号、`periodOnly` と `cycle`、右ヘッドの gap・右スタック・incoming の空判定、左右ヘッドの位置。Lean の罠: `cases hchain : s.chain` は目標の `s.chain` を**すでに**置換するので、取り出した仮説に `rw [hchain]` は当たらない（`injection`／`rfl` を直接使う）。
 
-**残るのは `hcomputes` を埋めること。** `backgroundFun`／`searchEffectFun`／`chainAtFun`（`$S/scan_fun.keep.lean`、検査済み・未投入）が `background` の場を埋める。残りは `compare`（`compareFound`）、`matchedPlace`、shift／copy／fpp／markEnd／rewind の各 1 歩、開いている 3 つの入口。
+**同日のスクラッチ 2（未投入、`$S/prog_run.keep.lean`、EXIT=0・error 0・標準公理のみ）: プログラム機械の走行が関数になった。** `executeFun`（1 命令。`read` は `cs.find?`、詰まれば不変）／`tickFun`（1 call）／`runFun`（call 列）と `run_eq_runFun : ReadFun code → Run code x bs y → y = runFun code bs x`（任意の code について）。`readFun_marked : ReadFun GalilFppMarkedCode.code`（`readFun_of_b (by decide)`、`maxRecDepth 40000` が要る）。これで fpp の場が埋まった: `fppHaltsTest q x := (fppRunFun q x.program).done`、`fppSliceFun`、`fppDoneFun`（`markNew`）と **`fppSlice_eq`／`fppDone_eq`**（`Computes` の `fppSlice`／`fppDone` 場そのものの形）。`fppSlice` と `fppDone` は同じ `q` 回走行の結果を `done` で分けているだけなので、判定 1 個と関数 2 個で足りる。
+
+**残るのは `hcomputes` を埋めること。** `backgroundFun`／`searchEffectFun`／`chainAtFun`（`$S/scan_fun.keep.lean`、検査済み・未投入）が `background` の場を埋める。残りは `compare`（`compareFound`）、`matchedPlace`（`galilFrame` の定義で既に関数形）、shift／copy／home／markEnd／choose／rewind の各 1 歩、開いている 3 つの入口。
 
 ## n328（2026-09-21）: 物理機械は「後継を見つける」のではなく「渡された後継を計算して符号化する」
 
