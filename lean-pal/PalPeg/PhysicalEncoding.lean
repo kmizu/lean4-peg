@@ -3816,6 +3816,35 @@ theorem physRule_choose {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Gali
       hbound hK hmargin hK1 hKn hqmode hmode hkeep hfloor
       (fun h => hfloor ((floor_iff_of_enc henc hK1 hKn 8).mp h)) henc
 
+/-- one call names at most one action on a slot. -/
+theorem progActOf_length (code : List (Instruction 9))
+    (m : PalPeg.GalilScaffoldControl.Machine 9) (i : Fin 9) : (progActOf code m i).length ≤ 1 := by
+  unfold progActOf
+  split
+  · simp
+  · split
+    · split <;> simp
+    · split <;> simp
+    · split <;> simp
+    · simp
+
+/-- **a quantum of `n` calls names at most `n` actions on a slot**, which is what lets the `fpp`
+branch of the rule fit inside a window of radius `n`. -/
+theorem progRunActs_length (code : List (Instruction 9)) :
+    ∀ (n : ℕ) (m : PalPeg.GalilScaffoldControl.Machine 9) (i : Fin 9),
+      (progRunActs code n m i).length ≤ n := by
+  intro n
+  induction n with
+  | zero => intro m i; simp [progRunActs]
+  | succ n ih =>
+      intro m i
+      show (progActOf code m i
+        ++ progRunActs code n (PalPeg.ProgramFunction.tickFun code true m) i).length ≤ n + 1
+      rw [List.length_append]
+      have h₁ := progActOf_length code m i
+      have h₂ := ih (PalPeg.ProgramFunction.tickFun code true m) i
+      omega
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3902,6 +3931,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.physRule_markEnd
 #print axioms PalPeg.PhysicalEncoding.physRule_home
 #print axioms PalPeg.PhysicalEncoding.physRule_choose
+#print axioms PalPeg.PhysicalEncoding.progRunActs_length
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
