@@ -81,6 +81,7 @@ import PalPeg.GalilScaffoldStructured
 import PalPeg.GalilSourceCost
 import PalPeg.CloseoutFinalVer
 import PalPeg.CloseoutFinalBranch
+import PalPeg.PhysicalEncoding
 import PalPeg.ReadyFuelRefute
 import PalPeg.PostRunInduction
 import PalPeg.StageLocalPrep
