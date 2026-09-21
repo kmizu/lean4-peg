@@ -1,3 +1,34 @@
+## n389 — 帰納段の道具は既にあった（`windowAfter_readWin`）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit 7d80372`、公理リスト変更なし。
+`PalPeg/PhysicalEncoding.lean` module build EXIT=0・error 0・sorry 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+**一次情報**（`PalPeg/LocalStepFusion.lean:32`）:
+
+```
+theorem windowAfter_readWin (blank : Γ) {K inner : ℕ} (tape : STape Γ) (acts : List (Act Γ))
+    (hlength : acts.length + inner ≤ K) (hmargin : K ≤ pos tape) :
+    windowAfter K inner (readWin blank K tape) acts
+      = readWin blank inner (actList blank tape acts)
+```
+
+つまり**半径 `K` の窓と、そこまでに行ったアクション列だけから、半径 `inner` の「その後の窓」が
+計算できる**。これが `fpp` の quantum を窓から走らせるために要っていた帰納段そのもの。
+自分で「窓の半径が 1 減る形で帰納する」と書いていたものが、既に一般形で証明されている。
+
+**この道具での `fpp` の設計**: 規則の `acts` は、半径 `K` の窓から出発して
+
+1. `winMachine` で最初の call の action を決める（`progActOf_winMachine` で実機械と一致）、
+2. `windowAfter K (K-1) window acts₁` で次の窓を得る、
+3. これを `q` 回繰り返して action 列を連結する
+
+という形になる。`hlength` は `progRunActs_length`（quantum は高々 `q` アクション）が、
+`hmargin` は `EncTapes.margins` が与える。
+
+**教訓（再び）**: 「これを証明せなあかん」と思った補題は、`LocalStepFusion` に既にあった。
+n344 で `windowAfter` の名前を書いておきながら、中身を読んでいなかった。
+
 ## n387 — 「カーソル分岐は 1 歩で書けない」は誤り（訂正）
 
 全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit 6a9cfbd`、公理リスト変更なし。
