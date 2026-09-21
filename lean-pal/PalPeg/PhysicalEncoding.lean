@@ -2697,6 +2697,127 @@ theorem idealStep_pair {Q : Type} {K : ℕ}
       if_neg (fun h => hj' (slotIndex.injective h))]
     rfl
 
+/-! ### one call of the program machine, as actions on the encoded tapes
+
+`progTickFun_tapes` said the call changes at most one slot, by at most one action.  Here that
+action is named in the machine's own alphabet, and the encoding is shown to survive it. -/
+
+/-- the action one call of the program machine performs on a given slot. -/
+noncomputable def progActOf (code : List (Instruction 9))
+    (m : PalPeg.GalilScaffoldControl.Machine 9) (i : Fin 9) :
+    List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  if m.done then []
+  else
+    match code[m.config.pc]? with
+    | some (.move t true _) =>
+        if i = t then [some (encProg (m.config.tapes t).focus, .right)] else []
+    | some (.move t false _) =>
+        if i = t then [some (encProg (m.config.tapes t).focus, .left)] else []
+    | some (.write t sym _) => if i = t then [some (encProg sym, .stay)] else []
+    | _ => []
+
+/-- **the encoding survives one call of the program machine.**  A left move needs the tape to
+have a cell below its head, which is the same floor condition every component carries. -/
+theorem padded_progStep (margin : ℕ) (code : List (Instruction 9))
+    (m : PalPeg.GalilScaffoldControl.Machine 9) (i : Fin 9)
+    (hfloor : ∀ t : Fin 9, (m.config.tapes t).left ≠ []) :
+    PalPeg.CloseoutCoreEnc12.actList blankM
+        (padLeft margin (mapTape encProg (encTape (m.config.tapes i)))) (progActOf code m i)
+      = padLeft margin (mapTape encProg (encTape
+          ((PalPeg.ProgramFunction.tickFun code true m).config.tapes i))) := by
+  rw [progTickFun_tapes code m]
+  unfold progActOf progStepTapes
+  cases hdone : m.done
+  · simp only [Bool.false_eq_true, if_false]
+    match hcode : code[m.config.pc]? with
+    | none => simp [hcode]
+    | some .halt => simp [hcode]
+    | some (.read t cs) => simp [hcode]
+    | some (.write t sym pc) =>
+        simp only [hcode]
+        by_cases hit : i = t
+        · subst hit
+          rw [if_pos rfl]
+          show PalPeg.CloseoutCoreEnc12.actList blankM _ [some (encProg sym, .stay)]
+            = padLeft margin (mapTape encProg (encTape
+                (Function.update (fun _ => id) i (fun tp =>
+                  PalPeg.GalilScaffoldTape.write tp sym) i (m.config.tapes i))))
+          rw [Function.update_self, padded_write]
+          rfl
+        · rw [if_neg hit, Function.update_of_ne hit]
+          rfl
+    | some (.move t dir pc) =>
+        cases dir
+        · simp only [hcode]
+          by_cases hit : i = t
+          · subst hit
+            rw [if_pos rfl]
+            show PalPeg.CloseoutCoreEnc12.actList blankM _
+              [some (encProg (m.config.tapes i).focus, .left)]
+              = padLeft margin (mapTape encProg (encTape
+                  (Function.update (fun _ => id) i PalPeg.GalilScaffoldTape.moveLeft i
+                    (m.config.tapes i))))
+            rw [Function.update_self, padded_moveLeft margin (m.config.tapes i) (hfloor i)]
+            rfl
+          · rw [if_neg hit, Function.update_of_ne hit]
+            rfl
+        · simp only [hcode]
+          by_cases hit : i = t
+          · subst hit
+            rw [if_pos rfl]
+            show PalPeg.CloseoutCoreEnc12.actList blankM _
+              [some (encProg (m.config.tapes i).focus, .right)]
+              = padLeft margin (mapTape encProg (encTape
+                  (Function.update (fun _ => id) i PalPeg.GalilScaffoldTape.moveRight i
+                    (m.config.tapes i))))
+            rw [Function.update_self, padded_moveRight]
+            rfl
+          · rw [if_neg hit, Function.update_of_ne hit]
+            rfl
+  · simp [hdone]
+
+theorem actList_append {Γ : Type} (blank : Γ) (T : STape Γ)
+    (l l' : List (PalPeg.CloseoutCoreEnc12.Act Γ)) :
+    PalPeg.CloseoutCoreEnc12.actList blank T (l ++ l')
+      = PalPeg.CloseoutCoreEnc12.actList blank
+          (PalPeg.CloseoutCoreEnc12.actList blank T l) l' := by
+  induction l generalizing T with
+  | nil => rfl
+  | cons a as ih => exact ih _
+
+/-- the actions a quantum of `n` calls performs on a given slot, in order. -/
+noncomputable def progRunActs (code : List (Instruction 9)) :
+    ℕ → PalPeg.GalilScaffoldControl.Machine 9 → Fin 9 →
+      List (PalPeg.CloseoutCoreEnc12.Act Γm)
+  | 0, _ => fun _ => []
+  | n + 1, m => fun i =>
+      progActOf code m i ++ progRunActs code n (PalPeg.ProgramFunction.tickFun code true m) i
+
+/-- **the encoding survives a whole quantum.**  Each slot's actions are exactly the ones its own
+calls perform, in order, and applying them to the encoded tape lands on the encoding of the tape
+the run leaves behind. -/
+theorem padded_progRun (margin : ℕ) (code : List (Instruction 9)) :
+    ∀ (n : ℕ) (m : PalPeg.GalilScaffoldControl.Machine 9) (i : Fin 9),
+      (∀ k, ∀ t : Fin 9, ((PalPeg.ProgramFunction.runFun code
+        (List.replicate k true) m).config.tapes t).left ≠ []) →
+      PalPeg.CloseoutCoreEnc12.actList blankM
+          (padLeft margin (mapTape encProg (encTape (m.config.tapes i))))
+          (progRunActs code n m i)
+        = padLeft margin (mapTape encProg (encTape
+            ((PalPeg.ProgramFunction.runFun code (List.replicate n true) m).config.tapes i))) := by
+  intro n
+  induction n with
+  | zero => intro m i _; rfl
+  | succ n ih =>
+      intro m i hfloor
+      show PalPeg.CloseoutCoreEnc12.actList blankM _
+        (progActOf code m i ++ progRunActs code n
+          (PalPeg.ProgramFunction.tickFun code true m) i) = _
+      rw [actList_append, padded_progStep margin code m i (hfloor 0),
+        ih (PalPeg.ProgramFunction.tickFun code true m) i
+          (fun k t => hfloor (k + 1) t), List.replicate_succ]
+      rfl
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -2776,6 +2897,8 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
 #print axioms PalPeg.PhysicalEncoding.idealStep_tapes
 #print axioms PalPeg.PhysicalEncoding.idealStep_pair
+#print axioms PalPeg.PhysicalEncoding.padded_progStep
+#print axioms PalPeg.PhysicalEncoding.padded_progRun
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeftAtFloor
