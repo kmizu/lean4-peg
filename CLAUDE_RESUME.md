@@ -1,3 +1,18 @@
+## n326（2026-09-21）: 物理機械の仮説を抽象状態の上に切り直した（`Enc : State GalilVM → 物理配置 → Prop`）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リストは不変（義務 1 本）、`unconditional` は付け替えていない。消費者 `ShadowedLocalFinal.given_physicalMachine` の物理側仮説の**形**を弱めただけで、仮説の本数は同じ。 |
+
+**状態: 全体 build 成功（n325 の `BUILD=0` 以降は module build のみ: `PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`、error 0、sorry 0）・標準公理のみ（`#print axioms given_physicalMachine` = 標準 3 本）・無条件 PAL は未完。**
+
+**何を変えたか（形式化の点検）**: 旧形は `Enc : Mirrored1 → 物理配置 → Prop` で、`hforwardTick` は「`Enc next p'` な `next : Mirrored1` を物理側が作れ」と要求していた。消費者の証明が `encoded` から読むのは `absSC encoded`（と、その関数である `Starved`・`ctl.output`）だけだったので、これは余計な縛り: 物理配置が `Mirrored1` の役割・極性・bank 配置の witness を毎歩作らされる。任意の抽象状態に `Mirrored1` の切断は無い（`ghostOf` は canonical counter・駐車形を要る）ので、`Enc := R ∘ absSC` という素直な定義では旧形を満たせなかった。
+新形: `Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop`（handoff §4.2 の `Rep`）。`hforwardTick : OnRun m → ¬frozenAt w m → Enc (absSC m) p → ∃ successor, Enc successor (L0.apply p none) ∧ TickSucc … (Starved m.vm) (absSC m) successor`、`hforwardFeed : InvC m → Enc (absSC m) p → Enc (absSC (feedC letter m)) (L0.apply p (some letter))`。後継の同定は既存の `tickSucc_unique` が消費者の中でやる。局所層 `m` は「run 上にいる」ことの運び手としてだけ残る。参照ゼロになった `starved_of_absSC_eq` は削除。
+
+**次**: 同じ物理配置（`LocalViewsMachine.machineRule`、view 1 本 = 12 テープ）の上で `Enc` の head 成分を定義し、`hforwardFeed` の head 部分を `machineSlot`／`LocalStepFusion.compStep_iterRule` から出す。n304 の 3 義務（P1〜P3）は未着手。
+
 ## n325（2026-09-21）: 最後の報告点の後の tick にも局所後継ができた。抽象局所層への仮説はゼロ
 
 **公理への進捗**
