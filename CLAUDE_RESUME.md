@@ -61,6 +61,10 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 外した枠の補充は背景ジョブで、締切は `LocalBudget`／`LocalSchedule` が純算術で切り出し済み。**符号化のどの成分にも、これで O(1) の道具が揃った。**
 
+**chain の成分も物理テープで足りる（`$S/period_enc.keep.lean`、EXIT=0・error 0・**公理ゼロ**）**: `GalilScaffoldChainPeriod.Tape` も `left`／`focus`／`right` の zipper（空白は `.blank`）で、`encPeriod` について `moveRight`／`moveLeft`／`write` が各 1 action、chain のコピー tick の `put` はちょうど 2 action（右へ移って plain トークンを書く）。`GalilScaffoldPlace.Place` は `⟨letters : List (Fin 2), gap : Bool⟩`——**スタック 1 本と制御の 1 ビット**で、`read` は先頭の読み取り、`left` は gap の反転か pop。
+
+**これで `GalilVM` の全成分に O(1) の表現が付いた**: ヘッド 3 本と verifier（`HeadRep`、view 1 本 = 12 テープ）、カウンタ（`ctrTape` ＋ 極性ビット、コピーは鏡）、プログラム束 fpp 9 本と DP 12 本（`encTape`）、chain の answer テープと period テープ（同じ zipper）、walker と place（スタック＋ビット）、chain のタグと有限制御のビット群。
+
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
 ## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
