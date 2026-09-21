@@ -4797,7 +4797,7 @@ theorem fpp_slice_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
 
 /-- **the quantum of the machine itself.**  The two hypotheses about the rule are discharged
 against the rule the machine runs. -/
-theorem physRule_fpp {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+theorem physRule_fpp_running {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
     (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
     (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
     (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
@@ -4987,6 +4987,46 @@ theorem physRule_fpp_done {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
     (physRule_acts_fpp entryQ first hbound hK q _ hqmode)
     (by omega) hK1 hKn hcomp hfloorRun (pcOf_of_enc henc.1 hin) henc.1.fppDone.symm hmode hhalt henc
 
+/-- **the whole of the `fpp` mode.**  Whether or not the quantum reaches the halt, the tick and
+the rule's ideal step land on the same encoded state; which of the two it is, the rule decides
+from its windows, and `runFun_control_of_agree` says that decision is the right one. -/
+theorem physRule_fpp {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hcomp : ∀ t : Fin 9, K ≤ PalPeg.Local.pos (encTape (x.vm.fpp.program.config.tapes t)))
+    (hfloorRun : ∀ k, ∀ t : Fin 9, ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
+      (List.replicate k true) x.vm.fpp.program).config.tapes t).left ≠ [])
+    (hin : x.vm.fpp.program.config.pc < fppBound)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hK)
+          blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first
+          hbound hK) blankM (q, tapesOf T) none).2 (slotIndex i)) := by
+  have hagree : MachineAgree entryQ
+      (winMachine (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) q.fppLive) x.vm.fpp.program :=
+    machineAgree_mono (by omega) (machineAgree_winMachine henc hcomp (pcOf q) q.fppDone
+      (pcOf_of_enc henc.1 hin) henc.1.fppDone.symm)
+  obtain ⟨-, hdoneRun⟩ := runFun_control_of_agree PalPeg.GalilFppMarkedCode.code entryQ _ _ hagree
+  cases hhalt : (PalPeg.ProgramFunction.fppRunFun entryQ x.vm.fpp.program).done with
+  | true =>
+      exact physRule_fpp_done margin centre place entry entryQ first w F delay x q T hbound hK
+        hK1 hKn hcomp hfloorRun hin hqmode hmode hhalt henc
+  | false =>
+      refine physRule_fpp_running margin centre place entry entryQ first w F delay x q T hbound hK
+        hK1 hKn hcomp hfloorRun hin hqmode hmode hhalt ?_ henc
+      show (PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code (List.replicate entryQ true)
+        (winMachine (pcOf q) q.fppDone (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) q.fppLive)).done = false
+      rw [hdoneRun]
+      exact hhalt
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -5097,6 +5137,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.fpp_slot_after
 #print axioms PalPeg.PhysicalEncoding.fpp_slice_of_rule
 #print axioms PalPeg.PhysicalEncoding.fpp_done_of_rule
+#print axioms PalPeg.PhysicalEncoding.physRule_fpp_running
 #print axioms PalPeg.PhysicalEncoding.physRule_fpp
 #print axioms PalPeg.PhysicalEncoding.physRule_fpp_done
 #print axioms PalPeg.PhysicalEncoding.padded_push
