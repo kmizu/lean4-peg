@@ -3060,6 +3060,41 @@ theorem physRule_rewind_fppReset {fppBound dpBound K : ℕ} (margin : ℕ) (cent
   exact rewind_fppReset margin centre place entry entryQ first w F delay x q T hbound hmode
     hatFirst henc hidle
 
+/-! ### carrying the idle half's blankness
+
+`rewind_fppReset` asks that the half becoming live is already blank.  Every other branch proved
+so far names an action only on the live half, so it leaves that blankness alone — which is what
+lets the condition be carried along a run rather than assumed at each tick. -/
+
+theorem progSlotOf_ne_of_live {l l' : Bool} (h : l ≠ l') (i j : Fin 9) :
+    progSlotOf l i ≠ progSlotOf l' j := by
+  cases l <;> cases l' <;> simp_all [progSlotOf]
+
+theorem dpSlotOf_ne_of_live {l l' : Bool} (h : l ≠ l') (i j : Fin 12) :
+    dpSlotOf l i ≠ dpSlotOf l' j := by
+  cases l <;> cases l' <;> simp_all [dpSlotOf]
+
+/-- **a step that names one slot of the live half leaves the idle half blank.**  The two halves
+are distinct slots, so the rule that moves one cannot reach the other. -/
+theorem idle_blank_of_oneSlot {fppBound dpBound : ℕ} (margin : ℕ) (q : QPhys fppBound dpBound)
+    (T newT : Slot → STape Γm) (i : Fin 9)
+    (hkept : ∀ slot, slot ≠ progSlotOf q.fppLive i → newT slot = T slot)
+    (hidle : ∀ j : Fin 9, T (progSlotOf (!q.fppLive) j)
+      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset))) :
+    ∀ j : Fin 9, newT (progSlotOf (!q.fppLive) j)
+      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset)) := by
+  intro j
+  rw [hkept _ (progSlotOf_ne_of_live (by cases q.fppLive <;> simp) j i), hidle j]
+
+/-- and after the flip the roles swap: the half that was live becomes the one the erasure must
+blank, and the half that was idle is the one the encoding now speaks about. -/
+theorem idle_blank_after_flip {fppBound dpBound : ℕ} (margin : ℕ) (q : QPhys fppBound dpBound)
+    (T : Slot → STape Γm)
+    (hidle : ∀ j : Fin 9, T (progSlotOf (!q.fppLive) j)
+      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset))) :
+    ∀ j : Fin 9, T (progSlotOf ({q with fppLive := !q.fppLive} : QPhys fppBound dpBound).fppLive j)
+      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset)) := hidle
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3144,6 +3179,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.progActOf_congr
 #print axioms PalPeg.PhysicalEncoding.rewind_fppReset
 #print axioms PalPeg.PhysicalEncoding.physRule_rewind_fppReset
+#print axioms PalPeg.PhysicalEncoding.idle_blank_of_oneSlot
 #print axioms PalPeg.PhysicalEncoding.progSlotOf_ne
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
