@@ -4475,6 +4475,20 @@ theorem progRunActs_of_agree (code : List (Instruction 9)) :
         ih (PalPeg.ProgramFunction.tickFun code true m)
           (PalPeg.ProgramFunction.tickFun code true m') (machineAgree_tick code h) i]
 
+/-- **a quantum cannot tell the control of two machines apart either.**  Each call spends one of
+the radius the machines agree on, so after `n` of them the two runs carry the same program counter
+and the same halting bit.  This is the control-side twin of `progRunActs_of_agree`. -/
+theorem runFun_control_of_agree (code : List (Instruction 9)) :
+    ∀ (n : ℕ) (m m' : PalPeg.GalilScaffoldControl.Machine 9), MachineAgree n m m' →
+      (PalPeg.ProgramFunction.runFun code (List.replicate n true) m).config.pc
+          = (PalPeg.ProgramFunction.runFun code (List.replicate n true) m').config.pc
+        ∧ (PalPeg.ProgramFunction.runFun code (List.replicate n true) m).done
+          = (PalPeg.ProgramFunction.runFun code (List.replicate n true) m').done
+  | 0, _, _, h => ⟨h.pc, h.done⟩
+  | n + 1, m, m', h => by
+      rw [List.replicate_succ]
+      exact runFun_control_of_agree code n _ _ (machineAgree_tick code h)
+
 /-- **the machine the rule runs in its head agrees with the abstraction's, as far as a quantum of
 `K` calls can look.**  Its heads sit at the centre of their windows by construction, and each of
 its cells is the component's own by `rd_winTape_of_padded`. -/
