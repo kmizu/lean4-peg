@@ -916,6 +916,10 @@ structure QPhys (fppBound dpBound : ℕ) where
   searchFinalStage : Bool
   searchQuarter : Fin 4
   periodOnly : Bool
+  /-- the half-step bit of each cursor.  A cursor's letters live on its tape, but the bit
+  saying whether it stands on a letter or on the gap beside it is one bit, so it lives in the
+  finite control. -/
+  placeGap : Fin 3 → Bool
   polarity : Fin 16 → Bool
   gap : Fin 4 → Bool
   micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl
@@ -944,6 +948,7 @@ structure EncControl {fppBound dpBound : ℕ} (x : State GalilVM)
   searchFinalStage : q.searchFinalStage = x.vm.search.finalStage
   searchQuarter : q.searchQuarter = x.vm.search.quarter
   periodOnly : q.periodOnly = x.vm.periodOnly
+  placeGap : ∀ (i : Fin 3) place, placeOf x i = some place → q.placeGap i = place.gap
 
 /-- **a step of a program's tapes leaves the finite control where it was.**  The
 counter and the halting flag of the program sit beside its tapes, and putting a tape back changes
@@ -967,6 +972,7 @@ theorem encControl_fppStep {fppBound dpBound : ℕ} (x : State GalilVM)
   searchFinalStage := henc.searchFinalStage
   searchQuarter := henc.searchQuarter
   periodOnly := henc.periodOnly
+  placeGap := henc.placeGap
 
 /-- **and a change of the control word is the same change on both sides**, whenever the
 new word reads as the new controller.  Every branch discharges that by computation: the reading
@@ -990,6 +996,7 @@ theorem encControl_ctl {fppBound dpBound : ℕ} (x : State GalilVM)
   searchFinalStage := henc.searchFinalStage
   searchQuarter := henc.searchQuarter
   periodOnly := henc.periodOnly
+  placeGap := henc.placeGap
 
 /-! ### the mark walk, as the tick function computes it -/
 
@@ -1189,6 +1196,7 @@ theorem encControl_fppStart {fppBound dpBound : ℕ} (x : State GalilVM)
   searchFinalStage := henc.searchFinalStage
   searchQuarter := henc.searchQuarter
   periodOnly := henc.periodOnly
+  placeGap := henc.placeGap
 
 /-- **the walk home, both sides at once**, while the seventh tape still has a cell below
 its head. -/
@@ -2678,6 +2686,16 @@ noncomputable def belowRead {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Wind
 /-- the slot of the machine's `c`-th counter. -/
 abbrev counterSlot (c : Fin 16) : Slot := .inr (.inr (.inr (.inr (.inr (.inr (.inl c))))))
 
+/-- **a counter is positive exactly when it carries marks on the positive side.**  A counter
+tape holds only the absolute value; the sign is a bit of the finite control, so the sign test
+is that bit together with the zero test. -/
+theorem positive_absCtr (t : STape Seg) (b : Bool) :
+    PalPeg.GalilScaffoldCounter.positive (absCtr t b)
+      = (b && decide (PalPeg.LocalCounter.val t ≠ 0)) := by
+  cases b <;> cases hv : PalPeg.LocalCounter.val t <;>
+    simp [absCtr, PalPeg.GalilScaffoldCounter.positive, PalPeg.GalilScaffoldCounter.ofNat,
+      PalPeg.LocalCounter.negOfNat, hv, List.replicate_succ]
+
 /-- **a counter is zero exactly when the cell below its head is not a mark.**  A counter is
 stored as a run of marks at the top of its left stack, so its value is zero exactly when the
 cell below the head carries something else — and that cell is in the window.  This is the
@@ -2706,6 +2724,31 @@ theorem counterZero_iff_belowRead {margin K : ℕ} {x : State GalilVM} {polarity
   rw [hbelow, hzero, decide_eq_true_eq]
   exact counterZero_iff_below hK1 (by omega) segments
 
+/-- **a counter is positive exactly when its sign bit is set and the cell below its head is a
+mark.**  The counterpart of `counterZero_iff_belowRead` for the sign test. -/
+theorem counterPositive_iff_belowRead {margin K : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {T : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive T) (hK1 : 1 ≤ K) (hK : K ≤ margin)
+    (c : Fin 16) (value : PalPeg.GalilScaffoldCounter.Counter)
+    (hvalue : counterOf x c = some value) :
+    PalPeg.GalilScaffoldCounter.positive value = true
+      ↔ polarity c = true
+        ∧ belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (counterSlot c)
+            = encSeg PalPeg.LocalCounter.mark := by
+  obtain ⟨segments, habs, htape⟩ := henc.counters c value hvalue
+  have hbelow :
+      belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (counterSlot c)
+        = PalPeg.Local.readWin blankM K (padLeft margin (mapTape encSeg segments))
+            ⟨K - 1, by omega⟩ := by
+    show PalPeg.Local.readWin blankM K (tapesOf T (slotIndex (counterSlot c))) ⟨K - 1, by omega⟩ = _
+    rw [tapesOf_apply,
+      show T (counterSlot c) = padLeft margin (mapTape encSeg segments) from htape]
+  have hval := counterZero_iff_below hK1 (show K ≤ margin + 1 by omega) segments
+  rw [← habs, positive_absCtr, hbelow, Bool.and_eq_true, decide_eq_true_eq]
+  refine and_congr_right (fun _ => ⟨fun hne => ?_, fun hmark hzero => (hval.mp hzero) hmark⟩)
+  exact not_not.mp (fun hnotmark => hne (hval.mpr hnotmark))
+
 /-- **the fallback copy's branch condition is two readings of the window.**  The copy continues
 while the walker still has a letter and the work counter is not yet spent; the first is the
 centre of the walker's slot, the second the cell below the head of the work counter's slot.
@@ -2724,6 +2767,38 @@ theorem copyRemainingTest_iff_window {margin K : ℕ} {x : State GalilVM} {polar
   unfold PalPeg.FrameFunction.copyRemainingTest
   cases hread : (PalPeg.GalilScaffoldPlace.read x.vm.fpp.walker).isNone <;>
     cases hzero : PalPeg.GalilScaffoldCounter.zero x.vm.fpp.work <;> simp_all
+
+/-- the test the tick function asks in both the shift mode and the copy mode, read off the
+frame. -/
+theorem frameFun_remainingPos (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (s : GalilVM) :
+    (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos s
+      = (PalPeg.GalilScaffoldCounter.positive s.remaining
+          || PalPeg.FrameFunction.copyRemainingTest s.fpp) := rfl
+
+/-- **the whole branch condition of the copy mode is three cells of the window and one bit of
+the finite control.**  The tick function asks one test in both the shift mode and the copy mode,
+and it is a disjunction: the shift's own counter is still positive, or the fallback copy still
+has a letter and work left.  Each disjunct is decided where it stands. -/
+theorem remainingPos_iff_window {margin K : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {T : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive T) (hK1 : 1 ≤ K) (hK : K ≤ margin)
+    (centre : GalilVM → Fin 3) (place : GalilVM → PalPeg.GalilScaffoldPlace.Place)
+    (entry entryQ : ℕ) (first : Fin 9) (w : List (Fin 2)) :
+    (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos x.vm
+        = true
+      ↔ (polarity 1 = true
+            ∧ belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (counterSlot 1)
+                = encSeg PalPeg.LocalCounter.mark)
+          ∨ (centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (placeSlot 1)
+                ≠ blankM
+              ∧ belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+                  (counterSlot 9) = encSeg PalPeg.LocalCounter.mark) := by
+  rw [frameFun_remainingPos, Bool.or_eq_true]
+  exact or_congr (counterPositive_iff_belowRead henc hK1 hK 1 x.vm.remaining rfl)
+    (copyRemainingTest_iff_window henc hK1 hK)
 
 /-- **the action table of the mark walk.**  The marks tape walks right while the head is not on
 the end mark, and left on the step that finds it. -/
@@ -3450,6 +3525,7 @@ theorem encControl_fppReset {fppBound dpBound : ℕ} (x : State GalilVM)
   searchFinalStage := henc.searchFinalStage
   searchQuarter := henc.searchQuarter
   periodOnly := henc.periodOnly
+  placeGap := henc.placeGap
 
 /-- **the wipe of the preparation program, encoding and tick together.**  The rule names no
 action: the nine tapes the abstraction blanks are the nine the machine stops looking at.  What it
@@ -4933,7 +5009,8 @@ theorem fpp_slice_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
         searchMode := henc.1.searchMode
         searchFinalStage := henc.1.searchFinalStage
         searchQuarter := henc.1.searchQuarter
-        periodOnly := henc.1.periodOnly }
+        periodOnly := henc.1.periodOnly
+        placeGap := henc.1.placeGap }
   · exact encTapes_fppTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T
       (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
         (slotIndex slot))
@@ -5100,7 +5177,8 @@ theorem fpp_done_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Gal
         searchMode := henc.1.searchMode
         searchFinalStage := henc.1.searchFinalStage
         searchQuarter := henc.1.searchQuarter
-        periodOnly := henc.1.periodOnly }
+        periodOnly := henc.1.periodOnly
+        placeGap := henc.1.placeGap }
   · exact encTapes_fppTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T
       (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
         (slotIndex slot))
