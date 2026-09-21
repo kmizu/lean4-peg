@@ -3714,6 +3714,45 @@ theorem floor_iff_of_enc {fppBound dpBound K : ℕ} {margin : ℕ} {x : State Ga
     rw [h]
     rfl
 
+/-! ### a whole mode at once
+
+With the two readings identified, a mode's branches can be put together into one statement that
+mentions only the abstract state: whatever the marks tape holds and wherever its head stands, the
+machine's own rule carries the encoding across the tick. -/
+
+/-- **the mark walk, whatever it finds.**  The first mode of the controller proved entire against
+the rule the machine runs. -/
+theorem physRule_markEnd {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hK : 2 ≤ K)
+    (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK)
+          blankM (q, tapesOf T) none).2 (slotIndex i)) := by
+  by_cases hend : (x.vm.fpp.program.config.tapes 8).focus = 5
+  · by_cases hfloor : (x.vm.fpp.program.config.tapes 8).left = []
+    · exact physRule_markEnd_back_atFloor margin centre place entry entryQ first w F delay x q T
+        hbound hK hmargin hK1 hKn hqmode hmode hend hfloor
+        ((focus_iff_of_enc (K := K) henc 8 5).mpr hend)
+        ((floor_iff_of_enc henc hK1 hKn 8).mpr hfloor) henc
+    · exact physRule_markEnd_back margin centre place entry entryQ first w F delay x q T
+        hbound hK hmargin hK1 hKn hqmode hmode hend hfloor
+        ((focus_iff_of_enc (K := K) henc 8 5).mpr hend)
+        (fun h => hfloor ((floor_iff_of_enc henc hK1 hKn 8).mp h)) henc
+  · exact physRule_markEnd_forward margin centre place entry entryQ first w F delay x q T
+      hbound hK hmargin hK1 hKn hqmode hmode hend
+      (fun h => hend ((focus_iff_of_enc (K := K) henc 8 5).mp h)) henc
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3797,6 +3836,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.physRule_choose_back_atFloor
 #print axioms PalPeg.PhysicalEncoding.focus_iff_of_enc
 #print axioms PalPeg.PhysicalEncoding.floor_iff_of_enc
+#print axioms PalPeg.PhysicalEncoding.physRule_markEnd
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
