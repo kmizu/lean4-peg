@@ -624,6 +624,12 @@ def answerOf (x : State GalilVM) : Option PalPeg.GalilScaffoldTape.Tape :=
   | .copy answer _ _ _ _ _ _ => some answer
   | _ => none
 
+/-- the slot of the machine's `i`-th cursor. -/
+abbrev placeSlot (i : Fin 3) : Slot := .inr (.inr (.inr (.inr (.inr (.inl i)))))
+
+/-- the slot of the machine's `c`-th counter. -/
+abbrev counterSlot (c : Fin 16) : Slot := .inr (.inr (.inr (.inr (.inr (.inr (.inl c))))))
+
 /-- **which counter each spare copy is kept in step with.**  Three of `radius`, for the
 `lag` and `margin` a chain is born with and for the negated `debt` a restart starts from; one of
 `lower`, for the `work` a preparation starts from; one of `span`, for the `work` the doubling
@@ -793,6 +799,135 @@ theorem encTapes_fppTapes (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 
   answer := by
     intro tape htape
     rw [hkept _ (by intro j; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
+    exact henc.answer tape htape
+
+/-- **the tick of the fallback copy, on the tapes.**  Three components move at once: one tape of
+the preparation program, the work counter, and the walker.  Everything else the encoding speaks
+about is where it was, and the sign of the work counter is the only polarity that moves. -/
+theorem encTapes_copyOne (margin : ℕ) (x : State GalilVM) (polarity newPolarity : Fin 16 → Bool)
+    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
+    (fppLive dpLive : Bool) (tapes newTapes : Slot → STape Γm)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
+    (ctl : PalPeg.GalilScaffoldController.Control) (a : Fin 3)
+    (hpolarity : ∀ c : Fin 16, c ≠ 9 → newPolarity c = polarity c)
+    (segments : STape Seg)
+    (hwork : absCtr segments (newPolarity 9) = PalPeg.GalilScaffoldCounter.dec x.vm.fpp.work)
+    (hcounterTape : newTapes (counterSlot 9) = padLeft margin (mapTape encSeg segments))
+    (stackTape : STape PalPeg.CloseoutCoreStep.Γc) (junk : List (Option (Fin 2)))
+    (hsealed : PalPeg.ConcreteLocalMachine.Sealed junk) (hjunk : margin ≤ junk.length)
+    (hstack : PalPeg.ConcreteLocalMachine.StackTape stackTape
+      ((PalPeg.GalilScaffoldPlace.left x.vm.fpp.walker).letters.map (fun letter => some letter)
+        ++ junk))
+    (hplaceTape : newTapes (placeSlot 1) = padLeft margin (mapTape encCell stackTape))
+    (hprog : newTapes (progSlotOf fppLive 7)
+      = padLeft margin (mapTape encProg (encTape
+          (PalPeg.GalilScaffoldTape.moveRight (PalPeg.GalilScaffoldTape.write
+            (x.vm.fpp.program.config.tapes 7) (PalPeg.GalilFppPreparation.symbol a))))))
+    (hprogOther : ∀ j : Fin 9, j ≠ 7 →
+      newTapes (progSlotOf fppLive j) = tapes (progSlotOf fppLive j))
+    (hkept : ∀ slot, (∀ j : Fin 9, slot ≠ progSlotOf fppLive j) → slot ≠ counterSlot 9 →
+      slot ≠ placeSlot 1 → (∀ k : Fin 9, slot ≠ progSlotOf (!fppLive) k) →
+      newTapes slot = tapes slot)
+    (hidleShape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
+      newTapes (progSlotOf (!fppLive) k) = padLeft margin (mapTape encProg raw)) :
+    EncTapes margin
+      ⟨ctl, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp 7 (fun t => PalPeg.GalilScaffoldTape.moveRight (PalPeg.GalilScaffoldTape.write t (PalPeg.GalilFppPreparation.symbol a))), work := PalPeg.GalilScaffoldCounter.dec x.vm.fpp.work, walker := PalPeg.GalilScaffoldPlace.left x.vm.fpp.walker}}⟩
+      newPolarity gap micro fppLive dpLive newTapes where
+  margins := by
+    intro slot
+    by_cases hs : ∃ j : Fin 9, slot = progSlotOf fppLive j
+    · obtain ⟨j, hj⟩ := hs
+      subst hj
+      by_cases hj7 : j = 7
+      · subst hj7
+        rw [hprog, pos_padLeft]
+        omega
+      · rw [hprogOther j hj7]
+        exact henc.margins _
+    · by_cases hidle : ∃ k : Fin 9, slot = progSlotOf (!fppLive) k
+      · obtain ⟨k, hk⟩ := hidle
+        obtain ⟨raw, hraw⟩ := hidleShape k
+        rw [hk, hraw, pos_padLeft]
+        omega
+      · by_cases hc : slot = counterSlot 9
+        · rw [hc, hcounterTape, pos_padLeft]
+          omega
+        · by_cases hp : slot = placeSlot 1
+          · rw [hp, hplaceTape, pos_padLeft]
+            omega
+          · rw [hkept slot (fun j hj => hs ⟨j, hj⟩) hc hp (fun k hk => hidle ⟨k, hk⟩)]
+            exact henc.margins slot
+  heads := by
+    intro v head hhead
+    obtain ⟨view, viewTapes, habs, hrep, hslots⟩ := henc.heads v head hhead
+    exact ⟨view, viewTapes, habs, hrep, fun j => by
+      rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp) (by simp)
+        (by intro k; cases fppLive <;> simp [progSlotOf]), hslots j]⟩
+  fpp := by
+    intro j
+    by_cases hj7 : j = 7
+    · subst hj7
+      rw [hprog]
+      rfl
+    · have hj : (PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp 7 (fun t => PalPeg.GalilScaffoldTape.moveRight (PalPeg.GalilScaffoldTape.write t (PalPeg.GalilFppPreparation.symbol a)))).config.tapes j
+          = x.vm.fpp.program.config.tapes j := by
+        rw [fppTape_tapes, Function.update_of_ne hj7]
+      rw [hprogOther j hj7, henc.fpp j]
+      dsimp only
+      rw [hj]
+  dp := by
+    intro j
+    rw [hkept _ (by intro j; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])
+      (by cases dpLive <;> simp [dpSlotOf]) (by cases dpLive <;> simp [dpSlotOf])
+      (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
+    exact henc.dp j
+  counters := by
+    intro c value hvalue
+    by_cases hc9 : c = 9
+    · subst hc9
+      exact ⟨segments, by rw [hwork]; exact Option.some.inj hvalue, hcounterTape⟩
+    · have hold : counterOf x c = some value := by
+        rw [← hvalue]
+        fin_cases c <;> first | exact absurd rfl hc9 | rfl
+      obtain ⟨seg, habs, hslot⟩ := henc.counters c value hold
+      exact ⟨seg, by rw [hpolarity c hc9]; exact habs, by
+        rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf])
+          (by simpa using fun h => hc9 h) (by simp)
+          (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  mirrors := by
+    intro m value hvalue
+    have hne : mirrorSource m ≠ 9 := by fin_cases m <;> decide
+    have hold : counterOf x (mirrorSource m) = some value := by
+      rw [← hvalue]
+      fin_cases m <;> rfl
+    obtain ⟨seg, habs, hslot⟩ := henc.mirrors m value hold
+    exact ⟨seg, by rw [hpolarity _ hne]; exact habs, by
+      rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp) (by simp), hslot]
+      intro k
+      cases fppLive <;> simp [progSlotOf]⟩
+  places := by
+    intro i pl hpl
+    by_cases hi1 : i = 1
+    · subst hi1
+      exact ⟨stackTape, junk, hsealed, hjunk, (Option.some.inj hpl) ▸ hstack, hplaceTape⟩
+    · have hold : placeOf x i = some pl := by
+        rw [← hpl]
+        fin_cases i <;> first | exact absurd rfl hi1 | rfl
+      obtain ⟨st, jk, hsl, hln, hstk, hslot⟩ := henc.places i pl hold
+      exact ⟨st, jk, hsl, hln, hstk, by
+        rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp)
+          (by simpa using fun h => hi1 h)
+          (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  idleShape := hidleShape
+  period := by
+    intro tape htape
+    rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp) (by simp)
+      (by intro k; cases fppLive <;> simp [progSlotOf])]
+    exact henc.period tape htape
+  answer := by
+    intro tape htape
+    rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp) (by simp)
+      (by intro k; cases fppLive <;> simp [progSlotOf])]
     exact henc.answer tape htape
 
 /-- **the case of a tick that moves one tape of the preparation program**, which is what the
@@ -1240,6 +1375,58 @@ theorem fppRunFun_eq_runFun (entryQ : ℕ) (m : PalPeg.GalilScaffoldControl.Mach
     PalPeg.ProgramFunction.fppRunFun entryQ m
       = PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
           (List.replicate entryQ true) m := rfl
+
+/-- the shape of one tick of the fallback copy, once the walker is known to show a symbol:
+one stamp and one step right on the program's copy tape, one off the work counter, and the
+walker half a place to the left. -/
+theorem copyOneFun_eq (x : PalPeg.GalilScaffoldChainInputSupply.FppControl.State) (a : Fin 3)
+    (hread : PalPeg.GalilScaffoldPlace.read x.walker = some a) :
+    PalPeg.FrameFunction.copyOneFun x
+      = {x with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x 7 (fun t => PalPeg.GalilScaffoldTape.moveRight (PalPeg.GalilScaffoldTape.write t (PalPeg.GalilFppPreparation.symbol a))), work := PalPeg.GalilScaffoldCounter.dec x.work, walker := PalPeg.GalilScaffoldPlace.left x.walker} := by
+  unfold PalPeg.FrameFunction.copyOneFun
+  rw [hread]
+
+/-- **a tick of the fallback copy moves the walker half a place and nothing else in the
+control.**  The controller's word is unchanged, the preparation's mode and flag are unchanged,
+and the program's counter and halting flag sit beside its tapes.  What does change is the
+walker's half-step bit, which `GalilScaffoldPlace.left` flips whichever way it steps. -/
+theorem encControl_copyOne {fppBound dpBound : ℕ} (x : State GalilVM)
+    (q : QPhys fppBound dpBound) (henc : EncControl x q)
+    (a : Fin 3) (hread : PalPeg.GalilScaffoldPlace.read x.vm.fpp.walker = some a)
+    (newPolarity : Fin 16 → Bool) :
+    EncControl ⟨x.ctl, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp 7 (fun t => PalPeg.GalilScaffoldTape.moveRight (PalPeg.GalilScaffoldTape.write t (PalPeg.GalilFppPreparation.symbol a))), work := PalPeg.GalilScaffoldCounter.dec x.vm.fpp.work, walker := PalPeg.GalilScaffoldPlace.left x.vm.fpp.walker}}⟩
+      {q with placeGap := Function.update q.placeGap 1 (!q.placeGap 1), polarity := newPolarity} where
+  ctl := henc.ctl
+  chainTag := henc.chainTag
+  chainPhase := henc.chainPhase
+  chainForward := henc.chainForward
+  chainBroken := henc.chainBroken
+  fppMode := henc.fppMode
+  fppFinalStage := henc.fppFinalStage
+  fppPc := henc.fppPc
+  fppDone := henc.fppDone
+  dpPc := henc.dpPc
+  dpDone := henc.dpDone
+  searchMode := henc.searchMode
+  searchFinalStage := henc.searchFinalStage
+  searchQuarter := henc.searchQuarter
+  periodOnly := henc.periodOnly
+  placeGap := by
+    intro i place hplace
+    fin_cases i
+    · show Function.update q.placeGap 1 (!q.placeGap 1) 0 = place.gap
+      rw [Function.update_of_ne (by decide)]
+      exact henc.placeGap 0 place hplace
+    · show Function.update q.placeGap 1 (!q.placeGap 1) 1 = place.gap
+      rw [Function.update_self]
+      have hwalk : place = PalPeg.GalilScaffoldPlace.left x.vm.fpp.walker :=
+        (Option.some.inj hplace).symm
+      rw [hwalk, henc.placeGap 1 x.vm.fpp.walker rfl]
+      unfold PalPeg.GalilScaffoldPlace.left
+      cases x.vm.fpp.walker.gap <;> simp
+    · show Function.update q.placeGap 1 (!q.placeGap 1) 2 = place.gap
+      rw [Function.update_of_ne (by decide)]
+      exact henc.placeGap 2 place hplace
 
 /-- **the last tick of the fallback copy leaves the control where the copy put it.**  The copy
 writes the end mark on its own tape, hands the machine to the walk home and records whether the
@@ -2797,9 +2984,6 @@ theorem centreRead_of_margin {K : ℕ} (T : Slot → STape Γm) (i : Slot)
   rw [tapesOf_apply]
   exact window_centre K (T i) hm
 
-/-- the slot of the machine's `i`-th cursor. -/
-abbrev placeSlot (i : Fin 3) : Slot := .inr (.inr (.inr (.inr (.inr (.inl i)))))
-
 /-- **a cursor is exhausted exactly when the centre of its window is blank.**  The abstract
 test `(read place).isNone` asks whether the cursor's letters have run out; physically the
 cursor's remaining letters sit on its tape with the top of the stack under the head, padded
@@ -2837,9 +3021,6 @@ theorem placeRead_isNone_iff_centre {margin K : ℕ} {x : State GalilVM} {polari
 /-- the symbol one cell below the head of a slot, as the rule reads it from the window. -/
 noncomputable def belowRead {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (i : Slot) : Γm :=
   ws (slotIndex i) ⟨K - 1, by omega⟩
-
-/-- the slot of the machine's `c`-th counter. -/
-abbrev counterSlot (c : Fin 16) : Slot := .inr (.inr (.inr (.inr (.inr (.inr (.inl c))))))
 
 /-- **one decrement of a counter, on its tape.**  A counter tape holds the absolute value and
 the finite control holds the sign, so a decrement is a pop while the value is positive and a push
