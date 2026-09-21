@@ -82,6 +82,17 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 **機械のアルファベット（`$S/gamma.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `LocalStep` はどのテープにも同じ空白記号を使うので、成分ごとのアルファベット——ヘッドのセル `Γc`、プログラムの記号 `Fin 9`、chain の period のトークン、カウンタのマーク `Seg`——を**空白を同一視して**並べる: `Γm := Unit ⊕ Γc ⊕ Fin 9 ⊕ Token ⊕ Seg`、`blankM := .inl ()`、各成分の埋め込みは自分の空白を `blankM` へ送り他を単射に送る（`encCell`／`encProg`／`encToken`／`encSeg` と、空白の保存 4 本・単射性 4 本）。`Fintype` と `DecidableEq` は和型から自動で付く（`realize` が要求する）。
 
+**テープ割当（`$S/slots.keep.lean`、EXIT=0・error 0・標準公理のみ）**: 成分ごとの枠を名前で定義し、**機械は 95 本のテープを持つ**ことを `decide` で確かめた（`card_slot`）。内訳は
+
+* `view v i`（4 × 12 = 48）: scan の左・中央・右のヘッドと chain の verifier、それぞれ `ViewRep` の 12 本
+* `fpp i`（9）／`dp i`（12）: プログラム機械の 2 本の束、1 call が 1 action
+* `answer`／`period`（2）: chain の答えテープと周期テープ
+* `place p`（3）: 探索の walker、fpp の walker、chain のコピー walker
+* `counter c`（16）: `cycle`／`remaining`／`radius`／`length`／`replay`／`lower`／`span`／`work`／`debt`／`fppWork`、chain の `h`／`lag`／`margin`、consume 制御の `distance`／`boundary`／`last`
+* `mirror m`（5）: `radius` の 3 枚（`lag`・`margin`・否定した `debt` 用）、`lower` と `span` の 1 枚ずつ
+
+`slotIndex : Slot ≃ Fin 95` が `LocalStep` の要求する番号付け。
+
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
 ## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
