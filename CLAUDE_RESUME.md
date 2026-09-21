@@ -1,3 +1,25 @@
+## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リスト不変（義務 1 本）。リポジトリのコードは変えていない（スクラッチ検証のみ）。 |
+
+**先に確かめたこと（作り直しを避けるため）**: `GalilSharedFunctional` に既に 3 つの関数形がある——`beginShiftFun` と `beginShiftFun_eq`（`shiftGuardVM s → beginShiftVM' s t → t = beginShiftFun s`）、`beginFallbackFun place` と `beginFallbackFun_eq`、`restartFun entry` と `restartFun_eq`。`Computes` の場そのものの形なので、そのまま使う。
+
+**レンズの引き戻しは 1 本で済む（`$S/steps_fun.keep.lean`、EXIT=0・error 0）**: `Lens.rel R s t = R (get s) (get t) ∧ t = set s (get t)`（`GalilScaffoldTopLens:28`）なので、
+
+**`lensRel_eq : (∀ v v', R v v' → v' = f v) → L.rel R s t → t = L.set s (f (L.get s))`**（公理ゼロ）。
+
+下位 frame の関数性さえ出せば、`galilFrame` の各場はこれで上がる。
+
+**1 歩の関数（13 本、すべて検査済み）**: `shiftOneFun`（chain の `.watch` が存在量化された `w` を固定）、`copyOneFun`（`Place.read walker` の `some a` が固定）、`copyEndFun`／`fppStartFun`／`homeStepFun`／`markBackFun`／`markForwardFun`／`chooseFun`／`fppResetFun`／`rewindOneFun`／`rewindPairFun`（どれも関係が `y = 式` かガード付きの `y = 式` なので、証明は `h` か `h.2`）、そして n329 の `fppSliceFun`／`fppDoneFun`。
+
+**判定（11 本、すべて検査済み）**: n329 の `shiftGuardTest`／`restartGuardTest`／`canRightTest`／`onLetterTest`／`leftFirstTest` に加えて `matchedTest`／`shiftRemainingTest`／`copyRemainingTest`／`atLeftTest`／`atEndTest`／`markSetTest`／`atFirstTest`。
+
+**残り**: `compare`（`compareFound`。`searchEffectFun`／`chainAtFun`／`backgroundFun` は検査済みなので組み立てるだけ）、`init`（`initVM` は 15 場を固定＝関数）、`replayStart`（`replayStartVM_unique` あり、関数はまだ）、`matchedPlace`（`galilFrame` の定義で既に関数形）。揃ったら `galilFrameFun` と `hcomputes` を作って投入する。
+
 ## n330（2026-09-21）: `Computes` の fallback 入口は目標だけでは決まらない（形式化の誤りを直した）
 
 **公理への進捗**
