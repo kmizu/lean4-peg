@@ -3299,6 +3299,48 @@ theorem erase_preserves_shape (margin K : ℕ) (hK1 : 1 ≤ K) (hKn : K ≤ marg
     padLeft_applyAction_left margin (mapTape encProg raw) (encProg 6) hmapped]
   rfl
 
+/-- **the idle half's shape survives the tick.**  At each of its nine slots the rule's table is
+the erasure's alone — the branch names nothing there — and the erasure either stops, or blanks a
+cell and steps left, which `erase_preserves_shape` shows keeps the padding. -/
+theorem idle_shape_after_erase {Q : Type} {K : ℕ} (margin : ℕ) (hK1 : 1 ≤ K)
+    (hKn : K ≤ margin + 1)
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K) (q : Q)
+    (T : Slot → STape Γm) (live : Bool) (i : Fin 9)
+    (l : List (PalPeg.CloseoutCoreEnc12.Act Γm))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase live (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (actsAt (slotIndex (progSlotOf live i)) l))
+    (hshape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
+      T (progSlotOf (!live) k) = padLeft margin (mapTape encProg raw)) (k : Fin 9) :
+    ∃ raw : STape (Fin 9),
+      (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+        (slotIndex (progSlotOf (!live) k)) = padLeft margin (mapTape encProg raw) := by
+  obtain ⟨raw, hraw⟩ := hshape k
+  have htable : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (slotIndex (progSlotOf (!live) k))
+      = eraseAct (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (slotIndex (progSlotOf (!live) k)) := by
+    rw [hacts]
+    show actsAt (slotIndex (progSlotOf live i)) l (slotIndex (progSlotOf (!live) k))
+      ++ eraseOf live _ (slotIndex (progSlotOf (!live) k)) = _
+    rw [show actsAt (slotIndex (progSlotOf live i)) l (slotIndex (progSlotOf (!live) k)) = [] from by
+      unfold actsAt
+      rw [if_neg (fun h => progSlotOf_ne_flip live i k (slotIndex.injective h).symm)]]
+    show [] ++ eraseOf live _ (slotIndex (progSlotOf (!live) k)) = _
+    rw [List.nil_append]
+    unfold eraseOf
+    rw [if_pos ⟨k, rfl⟩]
+  rw [idealStep_tapes, htable, tapesOf_apply, hraw]
+  unfold eraseAct
+  by_cases hstop : PalPeg.Local.readWin blankM K (tapesOf T (slotIndex (progSlotOf (!live) k)))
+      ⟨K - 1, by omega⟩ = bottomM
+  · rw [if_pos hstop]
+    exact ⟨raw, rfl⟩
+  · rw [if_neg hstop]
+    refine ⟨STape.applyAction (6 : Fin 9) raw ((6 : Fin 9), .left), ?_⟩
+    rw [tapesOf_apply, hraw] at hstop
+    exact erase_preserves_shape margin K hK1 hKn raw hstop
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3390,6 +3432,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.withErase_at_live
 #print axioms PalPeg.PhysicalEncoding.idealStep_withErase
 #print axioms PalPeg.PhysicalEncoding.erase_preserves_shape
+#print axioms PalPeg.PhysicalEncoding.idle_shape_after_erase
 #print axioms PalPeg.PhysicalEncoding.progSlotOf_ne
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
