@@ -24,7 +24,9 @@
 
 restart 優先の側条件は `GalilTickFair.Canonical.restartFirst` から出す（`PofC` の `restart` 場は `restartVM entry` そのものなので、`Computes.restart` に定義どおり渡る）。側入力は `hcomputes`（関数が具体 frame を計算する）と `hguard`（`G.restartGuard` が立つなら `restartGuardVM`）。
 
-**残るのは `hcomputes` を埋めること。** `backgroundFun`／`searchEffectFun`／`chainAtFun`（`$S/scan_fun.keep.lean`、検査済み・未投入）が `background` の場を埋める。残りは `compare`（`compareFound`）と、開いている 3 つの入口。
+**同日のスクラッチ（未投入、`$S/tests_fun.keep.lean`、EXIT=0・error 0・標準公理のみ）: frame の判定 5 個が Bool 関数になった。** `shiftGuardTest`／`restartGuardTest`（どちらも存在量化された watch 状態は chain の構成子が固定するので、`match s.chain` で計算できる）、`canRightTest`（`gap = false ∨ right ≠ [] ∨ incoming ≠ []`）、`onLetterTest`（右ヘッド位置が奇数かつ語の中。証人は `k = (位置+1)/2`）、`leftFirstTest`。どれも `… ↔ … = true`。**有限窓から読むもの**が具体的になった: chain のタグと watch の `lag`／`phase`／`broken`／`margin`／period テープの焦点記号、`periodOnly` と `cycle`、右ヘッドの gap・右スタック・incoming の空判定、左右ヘッドの位置。Lean の罠: `cases hchain : s.chain` は目標の `s.chain` を**すでに**置換するので、取り出した仮説に `rw [hchain]` は当たらない（`injection`／`rfl` を直接使う）。
+
+**残るのは `hcomputes` を埋めること。** `backgroundFun`／`searchEffectFun`／`chainAtFun`（`$S/scan_fun.keep.lean`、検査済み・未投入）が `background` の場を埋める。残りは `compare`（`compareFound`）、`matchedPlace`、shift／copy／fpp／markEnd／rewind の各 1 歩、開いている 3 つの入口。
 
 ## n328（2026-09-21）: 物理機械は「後継を見つける」のではなく「渡された後継を計算して符号化する」
 
