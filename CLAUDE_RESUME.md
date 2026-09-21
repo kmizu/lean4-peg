@@ -209,6 +209,14 @@ tickFun … (absState'' y)
 読む範囲での一致（`Rep`／`TEqG`）に緩める必要がある。引き継ぎ資料の
 「`Rep`／`TEqG` で模擬する。リテラルな等式を要求しない」がまさにここ。
 
+**最後にもう 1 つ、どのモードでも要る部品**（`EXIT=0`・`propext`／`Quot.sound` のみ）:
+`padded_write`（**書いて動かないのも 1 アクション**。`GalilScaffoldTape.write t s = {t with focus := s}` は
+`applyAction (encProg s, .stay)` そのもの）と `prog_slots_after_write`。
+複写が残す終端記号も、準備が並べる文字も、全部この形。
+
+**スクラッチの最終状態**: `$S/enc_body.keep.lean`（`$S/enc_body.n333-final.lean` に同内容を退避）。
+`EXIT=0`・error 0・sorry 0・標準公理のみ。**リポジトリには未投入。**
+
 **進め方について。** モードごとに `tickFun` を言い換える補題（`tickFun_markEnd`／`tickFun_home`）は `simp only [tickFun, hmode]` で出る**薄い言い換え**で、中身が無い。そこで手を変えて、いちばん単純なモード（`markEnd`、動くのは fpp プログラムのテープ 8 だけ）を規則の枝まで書こうとしたところ、上の左端の取り違えに当たった。**モードの一覧を増やすより、1 モードを物理まで通す方が誤りを出す。**
 
 ## n332（2026-09-21）: 抽象 frame が丸ごと関数になった。物理機械への要求は「符号化を保つ 2 本」だけになった
