@@ -46,6 +46,16 @@
 * `encTapes_ctl`: **テープの符号化は制御語を読まない**ので、同じテープはどの制御語の下でも同じ状態を表す。これがあって初めて「モードが変わる枝」でテープ側の補題が使える。
 * **`markEnd_forward` / `markEnd_back` / `markEnd_back_atFloor`**: `Enc := EncControl ∧ EncTapes` として、`markEnd` の 3 つの場合それぞれで **`Enc` が `tickFun` の一歩を越える**。これが `hideal` の最初の 1 枝。
 
+**2 つ目のモード `home` も閉じた。道具を 2 つ一般化してから入った**（同じスクラッチ、`EXIT=0`・標準公理のみ）:
+
+* `encTapes_congr`（`encTapes_ctl` をその場で一般化）: **テープの符号化が読むのは 7 つだけ**——2 つのプログラム束のテープ、16 のカウンタ、4 つのヘッド、3 つのカーソル、chain の周期テープと答テープ。そこが一致する 2 状態は同じテープで符号化される。**制御語は出てこないし、プログラムの計数子も停止旗も出てこない。**
+* `encControl_ctl`（`encControl_setMode` と `ctlAbs_setMode` をまとめて一般化）: 制御語の変更一般。読みの条件は各枝が `rfl` で払う。
+* `encTapes_progRight` / `encTapes_progLeft` / `encTapes_progLeftAtFloor`（印つけ歩き専用だったものを**テープ番号 `i` で一般化**）: 印つけ歩きは `i = 8`、帰りの歩きと複写は `i = 7`。
+* `frameFun_atLeft` / `frameFun_homeStep` / `frameFun_fppStart`（すべて `rfl`）。**`fppStart` はテープを 1 本も動かさない**——計数子を入口に、停止旗を降ろし、準備を走行モードにする、有限制御の 3 つの変更だけ。
+* `encControl_fppStart`、そして **`home_step` / `home_step_atFloor` / `home_fppStart`**。
+
+**閉じたモード: `markEnd`（3 場合）、`home`（3 場合）。残り 8 モード。** `copy` の `remainingPos` は `shiftRemainingTest ∨ copyRemainingTest` の論理和なので、規則は 2 つの読みを持つ必要がある。`scan` が最も重い。
+
 **進め方について。** モードごとに `tickFun` を言い換える補題（`tickFun_markEnd`／`tickFun_home`）は `simp only [tickFun, hmode]` で出る**薄い言い換え**で、中身が無い。そこで手を変えて、いちばん単純なモード（`markEnd`、動くのは fpp プログラムのテープ 8 だけ）を規則の枝まで書こうとしたところ、上の左端の取り違えに当たった。**モードの一覧を増やすより、1 モードを物理まで通す方が誤りを出す。**
 
 ## n332（2026-09-21）: 抽象 frame が丸ごと関数になった。物理機械への要求は「符号化を保つ 2 本」だけになった
