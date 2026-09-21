@@ -48,7 +48,7 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 **量子ぶんの call が実 1 歩に融合する（同じスクラッチ、EXIT=0・error 0・標準公理のみ）**: `progRep_idealIter`（`count` 回の ideal な call が表現を保つ。融合規則が要る margin `iterRadius K count` は 1 call ずつ削られていく——`pos_actList_ge` と `len_le` で `omega`）と **`progRep_realStep`**（融合規則の実 1 歩は制御が ideal と一致し、表現を保ち、テープは `TEqG` まで一致する）。探索の 64 call と fpp のスライスはこれで実 1 歩になる。
 
-**次に直すところ**: `ProgRep` はテープの**厳密な**等式で書いてあるが、実機械の sweep が返すのは `TEqG` まで。`Enc` に組み込むときは `ProgRep` を `TEqG` 版に書き換える（`StackTape` が `∃ debris, TEqG …` としているのと同じ形）。
+**`TEqG` 版（同じスクラッチ、EXIT=0・error 0・標準公理のみ）**: 実機械の sweep が返すのは `TEqG` までなので、`ProgRepG`（テープは `TEqG` まで）と `progRepG_of_progRep`、そして **`idealStep_teqG`**——規則は `TEqG` を通して読み書きする（`TEqG` な 2 つのテープ割当は同じ窓を与えるので同じ制御と同じ action になり、結果はまた `TEqG`）。**その前に `teqG_actOnG`／`teqG_actList`／`readWin_teqG`（`LocalQueueMachine`）を `Γc` から任意の `Γ` へその場で一般化した**（変種は作っていない。全体の module build `BUILD=0`）。
 
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 

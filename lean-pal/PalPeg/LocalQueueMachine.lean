@@ -344,7 +344,7 @@ The local machine keeps its tapes only up to `TEqG` (same head position, same ce
 `compStep` does not return the literal `STape` term.  Reading a window and applying actions
 respect `TEqG`, so a stack is represented by any tape `TEqG`-equal to its debris tape. -/
 
-theorem teqG_actOnG {blank : Γc} {T T' : STape Γc} (h : TEqG blank T T') (a : Act Γc) :
+theorem teqG_actOnG {Γ : Type} {blank : Γ} {T T' : STape Γ} (h : TEqG blank T T') (a : Act Γ) :
     TEqG blank (actOnG blank T a) (actOnG blank T' a) := by
   cases a with
   | none => exact h
@@ -357,13 +357,14 @@ theorem teqG_actOnG {blank : Γc} {T T' : STape Γc} (h : TEqG blank T T') (a : 
         = rd blank (T'.applyAction blank (written, move)) p
       rw [rd_applyAction, rd_applyAction, h.1, h.2 p]
 
-theorem teqG_actList {blank : Γc} {T T' : STape Γc} (h : TEqG blank T T') (acts : List (Act Γc)) :
+theorem teqG_actList {Γ : Type} {blank : Γ} {T T' : STape Γ} (h : TEqG blank T T')
+    (acts : List (Act Γ)) :
     TEqG blank (actList blank T acts) (actList blank T' acts) := by
   induction acts generalizing T T' with
   | nil => exact h
   | cons a rest ih => exact ih (teqG_actOnG h a)
 
-theorem readWin_teqG {blank : Γc} {K : ℕ} {T T' : STape Γc} (h : TEqG blank T T') :
+theorem readWin_teqG {Γ : Type} {blank : Γ} {K : ℕ} {T T' : STape Γ} (h : TEqG blank T T') :
     readWin blank K T = readWin blank K T' := by
   funext i
   rw [readWin_eq, readWin_eq, h.1, h.2]
