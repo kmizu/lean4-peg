@@ -1820,6 +1820,89 @@ theorem vml_fpp_done {P : ℕ} (centre : GalilVM → Fin 3)
   rw [habs]
   rfl
 
+/-- **the tick that leaves the shift.**  No tape and no cursor moves: the controller goes back
+to scanning and refreshes its output bit, both readings of the state it already has. -/
+theorem vml_shift_exit {P : ℕ} (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (y : PalPeg.LocalState.GalilVML P)
+    (hmode : y.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift)
+    (hrem : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos
+      (PalPeg.LocalReplayParked.abs'' y) = false) :
+    PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay
+        (PalPeg.LocalReplayParked.absState'' y)
+      = PalPeg.LocalReplayParked.absState''
+          {y with ctl := {y.ctl with mode := PalPeg.GalilScaffoldController.Mode.scan, output := PalPeg.GalilScaffoldTop.refreshFun (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) (PalPeg.LocalReplayParked.abs'' y) y.ctl.output}} := by
+  have hstate : PalPeg.LocalReplayParked.absState'' y
+      = (⟨y.ctl, PalPeg.LocalReplayParked.abs'' y⟩ : State GalilVM) := rfl
+  rw [hstate]
+  simp only [PalPeg.GalilScaffoldTop.tickFun, hmode]
+  rw [if_neg (by simp [hrem])]
+  rfl
+
+/-- **one shift tick.**  The centre and left heads walk right (the left one twice), the bank
+takes its four ops and the chain's watch advances — the multi-component step at its widest.  The
+side conditions are the local layer's own (`Inv`, `ShiftCounters`, and that each head really has
+a cell to walk onto). -/
+theorem vml_shift_one {P : ℕ} (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (y : PalPeg.LocalState.GalilVML P) (wv : PalPeg.GalilScaffoldChainWatch.State)
+    (hmode : y.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift)
+    (hrem : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos
+      (PalPeg.LocalReplayParked.abs'' y) = true)
+    (hchain : y.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wv)
+    (hinv : PalPeg.LocalTick1.Inv y) (hcnt : PalPeg.LocalTick3.ShiftCounters y)
+    (haC : PalPeg.LocalArrival.Ahead y.center y.pending)
+    (haL : PalPeg.LocalArrival.Ahead y.left y.pending)
+    (haL' : PalPeg.LocalArrival.Ahead (PalPeg.LocalInputView.moveRight y.left) y.pending)
+    (hcC : PalPeg.GalilScaffoldChainVerifier.canRight (PalPeg.LocalArrival.abs' y).center)
+    (hcL : PalPeg.GalilScaffoldChainVerifier.canRight (PalPeg.LocalArrival.abs' y).left)
+    (hcL' : PalPeg.GalilScaffoldChainVerifier.canRight
+      (PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.abs' y).left)) :
+    PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay
+        (PalPeg.LocalReplayParked.absState'' y)
+      = PalPeg.LocalReplayParked.absState'' (PalPeg.LocalTick3.shiftVm wv y) := by
+  have hstate : PalPeg.LocalReplayParked.absState'' y
+      = (⟨y.ctl, PalPeg.LocalReplayParked.abs'' y⟩ : State GalilVM) := rfl
+  rw [hstate]
+  simp only [PalPeg.GalilScaffoldTop.tickFun, hmode]
+  rw [if_pos hrem]
+  show _ = (⟨y.ctl, PalPeg.LocalReplayParked.abs''
+    (PalPeg.LocalTick3.shiftVm wv y)⟩ : State GalilVM)
+  have hframe : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).shiftOne
+        (PalPeg.LocalReplayParked.abs'' y)
+      = PalPeg.GalilScaffoldChainInputSupply.shiftLens.set (PalPeg.LocalReplayParked.abs'' y)
+          ⟨PalPeg.GalilScaffoldChainInputSupply.shiftTick
+              ⟨(PalPeg.LocalArrival.abs' y).center, (PalPeg.LocalArrival.abs' y).left,
+                (PalPeg.LocalArrival.abs' y).remaining, (PalPeg.LocalArrival.abs' y).radius,
+                (PalPeg.LocalArrival.abs' y).length⟩,
+            .watch (PalPeg.GalilScaffoldChainInputSupply.chainShiftOne wv),
+            PalPeg.GalilScaffoldCounter.inc (PalPeg.GalilScaffoldCounter.inc
+              (PalPeg.LocalArrival.abs' y).cycle)⟩ := by
+    show PalPeg.GalilScaffoldChainInputSupply.shiftLens.set (PalPeg.LocalReplayParked.abs'' y)
+        (PalPeg.FrameFunction.shiftOneFun
+          (PalPeg.GalilScaffoldChainInputSupply.shiftLens.get
+            (PalPeg.LocalReplayParked.abs'' y))) = _
+    unfold PalPeg.FrameFunction.shiftOneFun
+    rw [show (PalPeg.GalilScaffoldChainInputSupply.shiftLens.get
+      (PalPeg.LocalReplayParked.abs'' y)).chain
+        = PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wv from hchain]
+    rfl
+  rw [hframe]
+  congr 1
+  show _ = { PalPeg.LocalArrival.abs' (PalPeg.LocalTick3.shiftVm wv y) with
+      right := PalPeg.LocalReplayParked.absR (PalPeg.LocalTick3.shiftVm wv y) }
+  rw [PalPeg.LocalTick3.abs'_shiftVm hinv hcnt wv haC haL haL' hcC hcL hcL',
+    absR_congr (z := PalPeg.LocalTick3.shiftVm wv y) (y := y) rfl
+      ((rval_bankTick (y := PalPeg.LocalTick3.shiftMid wv y) (hinj := hinv.roles)
+          (f := PalPeg.LocalTick3.shiftOps2) rfl).trans
+        (rval_bankTick (y := y) (hinj := hinv.roles)
+          (f := PalPeg.LocalTick3.shiftOps1) rfl)) rfl]
+  rfl
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -1876,6 +1959,8 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.vml_rewind_pair
 #print axioms PalPeg.PhysicalEncoding.vml_choose_select
 #print axioms PalPeg.PhysicalEncoding.vml_fpp_done
+#print axioms PalPeg.PhysicalEncoding.vml_shift_exit
+#print axioms PalPeg.PhysicalEncoding.vml_shift_one
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeftAtFloor
