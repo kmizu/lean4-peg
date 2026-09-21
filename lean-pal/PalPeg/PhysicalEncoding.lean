@@ -486,6 +486,15 @@ theorem padded_write (n : ℕ) (t : PalPeg.GalilScaffoldTape.Tape) (symbol : Fin
   obtain ⟨left, focus, right⟩ := t
   rfl
 
+/-- **writing a symbol and stepping right is one action.**  The fallback copy stamps the
+walker's letter on its tape and moves on, and the encoded tape does it in one. -/
+theorem padded_writeRight (n : ℕ) (t : PalPeg.GalilScaffoldTape.Tape) (symbol : Fin 9) :
+    padLeft n (mapTape encProg (encTape
+        (PalPeg.GalilScaffoldTape.moveRight (PalPeg.GalilScaffoldTape.write t symbol))))
+      = (padLeft n (mapTape encProg (encTape t))).applyAction blankM (encProg symbol, .right) := by
+  obtain ⟨left, focus, right⟩ := t
+  cases right <;> rfl
+
 /-- **marking a new block, as two actions on the encoded tape.**  `markNew` steps right, writes
 the component's label and steps right again; writing and then stepping is one action, so the whole
 of it is the pair the branch names. -/
@@ -3160,6 +3169,79 @@ theorem remainingPos_iff_window {margin K : ℕ} {x : State GalilVM} {polarity :
   exact or_congr (counterPositive_iff_belowRead henc hK1 hK 1 x.vm.remaining rfl)
     (copyRemainingTest_iff_window henc hK1 hK)
 
+/-- **one tick of the fallback copy, on the walker.**  A cursor standing on the gap beside a
+letter only flips its own bit, so its tape does not move; one standing on a letter hands that
+letter over and pops it.  Either way the tape that comes out represents the cursor that
+`GalilScaffoldPlace.left` returns. -/
+theorem copy_one_place {margin K : ℕ} (hK : K ≤ margin)
+    (tapes : Slot → STape Γm) (walker : PalPeg.GalilScaffoldPlace.Place)
+    (gapBit : Bool) (hgap : gapBit = walker.gap)
+    (a : Fin 3) (hread : PalPeg.GalilScaffoldPlace.read walker = some a)
+    (stackTape : STape PalPeg.CloseoutCoreStep.Γc) (junk : List (Option (Fin 2)))
+    (hstack : PalPeg.ConcreteLocalMachine.StackTape stackTape
+      (walker.letters.map (fun letter => some letter) ++ junk))
+    (hslot : tapes (placeSlot 1) = padLeft margin (mapTape encCell stackTape)) :
+    ∃ stackTape' : STape PalPeg.CloseoutCoreStep.Γc,
+      PalPeg.ConcreteLocalMachine.StackTape stackTape'
+          ((PalPeg.GalilScaffoldPlace.left walker).letters.map (fun letter => some letter) ++ junk)
+        ∧ PalPeg.CloseoutCoreEnc12.actList blankM (tapes (placeSlot 1))
+            (if gapBit then []
+              else [some (centreRead
+                  (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)) (placeSlot 1),
+                (.left : PalPeg.CloseoutCoreEnc12.MoveC))])
+          = padLeft margin (mapTape encCell stackTape') := by
+  by_cases hg : gapBit = true
+  · refine ⟨stackTape, ?_, ?_⟩
+    · have hletters : (PalPeg.GalilScaffoldPlace.left walker).letters = walker.letters := by
+        unfold PalPeg.GalilScaffoldPlace.left
+        rw [if_pos (hgap ▸ hg)]
+      rw [hletters]
+      exact hstack
+    · rw [if_pos hg]
+      exact hslot
+  · have hnotGap : walker.gap = false := by
+      cases hw : walker.gap
+      · rfl
+      · exact absurd (hgap.trans hw) hg
+    obtain ⟨letter, rest, hletters⟩ : ∃ letter rest, walker.letters = letter :: rest := by
+      cases hl : walker.letters with
+      | nil =>
+        exfalso
+        rw [show PalPeg.GalilScaffoldPlace.read walker = none from by
+          unfold PalPeg.GalilScaffoldPlace.read
+          rw [hl]] at hread
+        simp at hread
+      | cons b bs => exact ⟨b, bs, rfl⟩
+    have hmargin : K ≤ PalPeg.Local.pos (tapes (placeSlot 1)) := by
+      rw [hslot, pos_padLeft]
+      omega
+    have hcentre : centreRead
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)) (placeSlot 1)
+        = encCell (PalPeg.CloseoutCoreEnc.cellSym (some letter)) := by
+      rw [centreRead_of_margin tapes (placeSlot 1) hmargin, hslot]
+      show encCell stackTape.focus = _
+      rw [stackTape_focus stackTape _ hstack, hletters]
+      rfl
+    have hstack2 : PalPeg.ConcreteLocalMachine.StackTape stackTape
+        (some letter :: (rest.map (fun letter => some letter) ++ junk)) := by
+      have h := hstack
+      rw [hletters] at h
+      simpa only [List.map_cons, List.cons_append] using h
+    have hstack' := stackTape_pop stackTape (some letter)
+      (rest.map (fun letter => some letter) ++ junk) hstack2
+    refine ⟨PalPeg.CloseoutCoreEnc12.actOnG PalPeg.CloseoutCoreStep.blankc stackTape
+        (some (PalPeg.CloseoutCoreEnc.cellSym (some letter),
+          (.left : PalPeg.CloseoutCoreEnc12.MoveC))), ?_, ?_⟩
+    · have hletters' : (PalPeg.GalilScaffoldPlace.left walker).letters = rest := by
+        unfold PalPeg.GalilScaffoldPlace.left
+        rw [if_neg (by simp [hnotGap]), hletters]
+        rfl
+      rw [hletters']
+      exact hstack'
+    · rw [if_neg hg, hcentre, hslot]
+      exact (padded_place_pop margin stackTape (some letter)
+        (rest.map (fun letter => some letter) ++ junk) hstack2).symm
+
 /-- **the branch the shift and copy modes take, as a reading of the window.**  The rule cannot
 ask the abstraction anything; it computes this bit from three cells of the window and the sign
 bit of the shift counter, and `remainsTest_eq` says the bit it computes is the test the tick
@@ -3739,6 +3821,72 @@ theorem padded_resetSeg (n : ℕ) (segments : STape Seg) :
 
 `progTickFun_tapes` said the call changes at most one slot, by at most one action.  Here that
 action is named in the machine's own alphabet, and the encoding is shown to survive it. -/
+
+/-- **the bit that says the work counter can be decremented without crossing zero.**  A counter
+tape holds the absolute value, so a decrement is a pop on the positive side and a push on the
+negative side — and on the positive side of zero it is a push that changes the sign. -/
+noncomputable def workPositive {K : ℕ} (polarity : Fin 16 → Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  polarity 9 && decide (belowRead ws (counterSlot 9) = encSeg PalPeg.LocalCounter.mark)
+
+/-- **a counter whose value is not zero stands clear of the left edge.** -/
+theorem counter_left_ne_nil (segments : STape Seg) (h : PalPeg.LocalCounter.val segments ≠ 0) :
+    segments.left ≠ [] := by
+  intro hnil
+  exact h (by show PalPeg.LocalCounter.markRun segments.left = 0; rw [hnil]; rfl)
+
+/-- **one tick of the fallback copy, on the work counter.**  The rule pops while the value is
+positive and pushes otherwise, and the bit it branches on becomes the counter's new sign, so the
+counter it leaves behind holds one less than it did. -/
+theorem copy_one_counter {margin K : ℕ} (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (polarity : Fin 16 → Bool) (tapes : Slot → STape Γm) (segments : STape Seg)
+    (value : PalPeg.GalilScaffoldCounter.Counter)
+    (habs : absCtr segments (polarity 9) = value)
+    (hslot : tapes (counterSlot 9) = padLeft margin (mapTape encSeg segments)) :
+    ∃ segments' : STape Seg,
+      absCtr segments'
+          (workPositive polarity (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)))
+        = PalPeg.GalilScaffoldCounter.dec value
+      ∧ PalPeg.CloseoutCoreEnc12.actList blankM (tapes (counterSlot 9))
+            [if workPositive polarity
+                  (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)) then
+                some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))
+              else some (encSeg PalPeg.LocalCounter.mark,
+                (.right : PalPeg.CloseoutCoreEnc12.MoveC))]
+          = padLeft margin (mapTape encSeg segments') := by
+  have hbelow :
+      belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)) (counterSlot 9)
+        = PalPeg.Local.readWin blankM K (padLeft margin (mapTape encSeg segments))
+            ⟨K - 1, by omega⟩ := by
+    show PalPeg.Local.readWin blankM K (tapesOf tapes (slotIndex (counterSlot 9)))
+      ⟨K - 1, by omega⟩ = _
+    rw [tapesOf_apply, hslot]
+  have hval := counterZero_iff_below hK1 hKn segments
+  have hwp : workPositive polarity
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+      = (polarity 9 && decide (PalPeg.LocalCounter.val segments ≠ 0)) := by
+    unfold workPositive
+    rw [hbelow]
+    congr 1
+    rw [Bool.eq_iff_iff, decide_eq_true_eq, decide_eq_true_eq]
+    constructor
+    · intro hmark hzero
+      exact (hval.mp hzero) hmark
+    · intro hne
+      exact not_not.mp (fun hnotmark => hne (hval.mpr hnotmark))
+  refine ⟨if polarity 9 && decide (PalPeg.LocalCounter.val segments ≠ 0) then
+      PalPeg.LocalCounter.pop segments else PalPeg.LocalCounter.push segments, ?_, ?_⟩
+  · rw [hwp, ← habs]
+    exact absCtr_dec segments (polarity 9)
+  · rw [hwp, hslot]
+    by_cases hbit : (polarity 9 && decide (PalPeg.LocalCounter.val segments ≠ 0)) = true
+    · rw [if_pos hbit, if_pos hbit]
+      have hne : PalPeg.LocalCounter.val segments ≠ 0 := by
+        have := (Bool.and_eq_true _ _).mp hbit
+        exact of_decide_eq_true this.2
+      exact (padded_pop margin segments (counter_left_ne_nil segments hne)).symm
+    · rw [if_neg hbit, if_neg hbit]
+      exact (padded_push margin segments).symm
 
 /-- the action one call of the program machine performs on a given slot. -/
 noncomputable def progActOf (code : List (Instruction 9))
@@ -4425,13 +4573,6 @@ own bit of the finite control, the second the centre of its window. -/
 noncomputable def copySymbol {K : ℕ} (gapBit : Bool)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Fin 3 :=
   if gapBit then 2 else placeLetter (centreRead ws (placeSlot 1))
-
-/-- **the bit that says the work counter can be decremented without crossing zero.**  A counter
-tape holds the absolute value, so a decrement is a pop on the positive side and a push on the
-negative side — and on the positive side of zero it is a push that changes the sign. -/
-noncomputable def workPositive {K : ℕ} (polarity : Fin 16 → Bool)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
-  polarity 9 && decide (belowRead ws (counterSlot 9) = encSeg PalPeg.LocalCounter.mark)
 
 /-- **the control table of the fallback copy.**  A tick that still has work flips the cursor's
 half-step bit and moves the sign of the work counter if the decrement crossed zero; a tick that
