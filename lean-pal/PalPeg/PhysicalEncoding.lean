@@ -2541,14 +2541,31 @@ theorem chooseBackActs_length {K : ℕ} (live : Bool) (hK : 1 ≤ K) (ws : Fin t
   · exact actsAt_length _ _ (by simp) j
   · exact actsAt_length _ _ (by simpa using hK) j
 
+/-- the control of the wipe: the live bit flips, the program counter goes home and the halting
+flag is set.  The test is the marks tape's own symbol. -/
+noncomputable def rewindNext {fppBound dpBound K : ℕ} (first : Fin 9) (hbound : 320 < fppBound)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    QPhys fppBound dpBound :=
+  if centreRead ws (progSlot q.fppLive 8) = encProg first then
+    {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.replayStart}, fppPc := some ⟨320, hbound⟩, fppDone := true, fppLive := !q.fppLive}
+  else q
+
+/-- the actions of the wipe: none.  The nine tapes the abstraction blanks are the nine the
+machine stops looking at. -/
+def rewindActs : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) := fun _ => []
+
+theorem rewindActs_length {K : ℕ} (j : Fin tapeCountM) : (rewindActs j).length ≤ K :=
+  Nat.zero_le K
+
 /-- the control of the machine, mode by mode. -/
-noncomputable def ruleNext {fppBound dpBound K : ℕ} (hbound : 320 < fppBound)
+noncomputable def ruleNext {fppBound dpBound K : ℕ} (first : Fin 9) (hbound : 320 < fppBound)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
     QPhys fppBound dpBound :=
   match q.ctl.mode with
   | PalPeg.GalilScaffoldController.Mode.markEnd => markEndNext q.fppLive q ws
   | PalPeg.GalilScaffoldController.Mode.home => homeNext q.fppLive hbound q ws
   | PalPeg.GalilScaffoldController.Mode.choose => chooseBackNext q
+  | PalPeg.GalilScaffoldController.Mode.rewind => rewindNext first hbound q ws
   | _ => q
 
 /-- the actions of the machine, mode by mode. -/
@@ -2559,6 +2576,7 @@ noncomputable def ruleActs {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBoun
   | PalPeg.GalilScaffoldController.Mode.markEnd => markEndActs q.fppLive ws
   | PalPeg.GalilScaffoldController.Mode.home => homeActs q.fppLive ws
   | PalPeg.GalilScaffoldController.Mode.choose => chooseBackActs q.fppLive ws
+  | PalPeg.GalilScaffoldController.Mode.rewind => rewindActs
   | _ => fun _ => []
 
 theorem ruleActs_length {fppBound dpBound K : ℕ} (hK : 1 ≤ K) (q : QPhys fppBound dpBound)
@@ -2573,59 +2591,60 @@ theorem ruleActs_length {fppBound dpBound K : ℕ} (hK : 1 ≤ K) (q : QPhys fpp
       | exact markEndActs_length q.fppLive hK ws j
       | exact homeActs_length q.fppLive hK ws j
       | exact chooseBackActs_length q.fppLive hK ws j
+      | exact rewindActs_length j
       | exact Nat.zero_le K
 
 /-- **the rule of the physical machine**, so far as its branches are proved. -/
-noncomputable def physRule {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K) :
+noncomputable def physRule {fppBound dpBound K : ℕ} (first : Fin 9) (hbound : 320 < fppBound) (hK : 1 ≤ K) :
     PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K where
-  nq := fun q _ ws => ruleNext hbound q ws
+  nq := fun q _ ws => ruleNext first hbound q ws
   acts := fun q _ ws => ruleActs q ws
   len_le := fun q _ ws j => ruleActs_length hK q ws j
 
-theorem physRule_nq_markEnd {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
+theorem physRule_nq_markEnd {fppBound dpBound K : ℕ} (first : Fin 9) (hbound : 320 < fppBound) (hK : 1 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd) :
-    (physRule (dpBound := dpBound) hbound hK).nq q none ws = markEndNext q.fppLive q ws := by
-  show ruleNext hbound q ws = _
+    (physRule (dpBound := dpBound) first hbound hK).nq q none ws = markEndNext q.fppLive q ws := by
+  show ruleNext first hbound q ws = _
   unfold ruleNext
   rw [hm]
 
-theorem physRule_acts_markEnd {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
+theorem physRule_acts_markEnd {fppBound dpBound K : ℕ} (first : Fin 9) (hbound : 320 < fppBound) (hK : 1 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd) :
-    (physRule (dpBound := dpBound) hbound hK).acts q none ws = markEndActs q.fppLive ws := by
+    (physRule (dpBound := dpBound) first hbound hK).acts q none ws = markEndActs q.fppLive ws := by
   show ruleActs q ws = _
   unfold ruleActs
   rw [hm]
 
-theorem physRule_nq_home {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
+theorem physRule_nq_home {fppBound dpBound K : ℕ} (first : Fin 9) (hbound : 320 < fppBound) (hK : 1 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home) :
-    (physRule (dpBound := dpBound) hbound hK).nq q none ws = homeNext q.fppLive hbound q ws := by
-  show ruleNext hbound q ws = _
+    (physRule (dpBound := dpBound) first hbound hK).nq q none ws = homeNext q.fppLive hbound q ws := by
+  show ruleNext first hbound q ws = _
   unfold ruleNext
   rw [hm]
 
-theorem physRule_acts_home {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
+theorem physRule_acts_home {fppBound dpBound K : ℕ} (first : Fin 9) (hbound : 320 < fppBound) (hK : 1 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home) :
-    (physRule (dpBound := dpBound) hbound hK).acts q none ws = homeActs q.fppLive ws := by
+    (physRule (dpBound := dpBound) first hbound hK).acts q none ws = homeActs q.fppLive ws := by
   show ruleActs q ws = _
   unfold ruleActs
   rw [hm]
 
-theorem physRule_nq_choose {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
+theorem physRule_nq_choose {fppBound dpBound K : ℕ} (first : Fin 9) (hbound : 320 < fppBound) (hK : 1 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose) :
-    (physRule (dpBound := dpBound) hbound hK).nq q none ws = chooseBackNext q := by
-  show ruleNext hbound q ws = _
+    (physRule (dpBound := dpBound) first hbound hK).nq q none ws = chooseBackNext q := by
+  show ruleNext first hbound q ws = _
   unfold ruleNext
   rw [hm]
 
-theorem physRule_acts_choose {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
+theorem physRule_acts_choose {fppBound dpBound K : ℕ} (first : Fin 9) (hbound : 320 < fppBound) (hK : 1 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose) :
-    (physRule (dpBound := dpBound) hbound hK).acts q none ws = chooseBackActs q.fppLive ws := by
+    (physRule (dpBound := dpBound) first hbound hK).acts q none ws = chooseBackActs q.fppLive ws := by
   show ruleActs q ws = _
   unfold ruleActs
   rw [hm]
@@ -2647,13 +2666,13 @@ theorem physRule_markEnd_forward {fppBound dpBound K : ℕ} (margin : ℕ) (cent
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
         (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
-      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) hbound hK) blankM
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK) blankM
           (q, tapesOf T) none).1,
-        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) hbound hK) blankM
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK) blankM
           (q, tapesOf T) none).2 (slotIndex i)) :=
   markEnd_forward_of_rule margin centre place entry entryQ first w F delay x q T
-    (physRule hbound hK)
-    (physRule_nq_markEnd hbound hK q _ hqmode) (physRule_acts_markEnd hbound hK q _ hqmode)
+    (physRule first hbound hK)
+    (physRule_nq_markEnd first hbound hK q _ hqmode) (physRule_acts_markEnd first hbound hK q _ hqmode)
     hmargin hmode hnotEnd hnotMark henc
 
 /-! ### the counter bank: three tape actions and no more
@@ -2979,6 +2998,68 @@ theorem rewind_fppReset {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilV
           period := henc.2.period
           answer := henc.2.answer }
 
+theorem physRule_nq_rewind {fppBound dpBound K : ℕ} (first : Fin 9) (hbound : 320 < fppBound)
+    (hK : 1 ≤ K) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind) :
+    (physRule (dpBound := dpBound) first hbound hK).nq q none ws = rewindNext first hbound q ws := by
+  show ruleNext first hbound q ws = _
+  unfold ruleNext
+  rw [hm]
+
+theorem physRule_acts_rewind {fppBound dpBound K : ℕ} (first : Fin 9) (hbound : 320 < fppBound)
+    (hK : 1 ≤ K) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind) :
+    (physRule (dpBound := dpBound) first hbound hK).acts q none ws = rewindActs := by
+  show ruleActs q ws = _
+  unfold ruleActs
+  rw [hm]
+
+/-- **the wipe of the machine itself.**  The rule is the one the machine runs, and it names no
+action at all; the nine tapes the abstraction blanks are the nine the machine stops looking at,
+and the half that becomes live is the one the background erasure kept blank. -/
+theorem physRule_rewind_fppReset {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hK : 1 ≤ K)
+    (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hatFirst : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).atFirst
+      x.vm = true)
+    (hatMark : (T (progSlot q.fppLive 8)).focus = encProg first)
+    (henc : Enc margin x (q, T))
+    (hidle : ∀ i : Fin 9, T (progSlotOf (!q.fppLive) i)
+      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset))) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK)
+          blankM (q, tapesOf T) none).2 (slotIndex i)) := by
+  have hread : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (progSlot q.fppLive 8) = (T (progSlot q.fppLive 8)).focus :=
+    centreRead_of_margin T (progSlot q.fppLive 8) (hmargin _)
+  have hq : (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK)
+        blankM (q, tapesOf T) none).1
+      = {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.replayStart}, fppPc := some ⟨320, hbound⟩, fppDone := true, fppLive := !q.fppLive} := by
+    show (physRule (dpBound := dpBound) first hbound hK).nq q none _ = _
+    rw [physRule_nq_rewind first hbound hK q _ hqmode]
+    unfold rewindNext
+    rw [hread, if_pos hatMark]
+  have hsame : (fun i => (PalPeg.LocalStepFusion.idealStep
+      (physRule (dpBound := dpBound) first hbound hK) blankM (q, tapesOf T) none).2
+        (slotIndex i)) = T := by
+    funext i
+    rw [idealStep_tapes, physRule_acts_rewind first hbound hK q _ hqmode, tapesOf_apply]
+    rfl
+  rw [hq, hsame]
+  exact rewind_fppReset margin centre place entry entryQ first w F delay x q T hbound hmode
+    hatFirst henc hidle
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3062,6 +3143,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.padded_progRun
 #print axioms PalPeg.PhysicalEncoding.progActOf_congr
 #print axioms PalPeg.PhysicalEncoding.rewind_fppReset
+#print axioms PalPeg.PhysicalEncoding.physRule_rewind_fppReset
 #print axioms PalPeg.PhysicalEncoding.progSlotOf_ne
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
