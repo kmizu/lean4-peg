@@ -2912,6 +2912,73 @@ theorem progActOf_congr (code : List (Instruction 9))
         · simp only [hcode, hfocus t]
   · simp
 
+/-! ### the wipe of the preparation program
+
+This is the branch the double buffer exists for.  Abstractly `fppReset` blanks all nine tapes of
+the preparation program at once; on the machine nothing is written, the live bit flips, and the
+half that becomes live was blanked in the background while the other one was in use. -/
+
+theorem encControl_fppReset {fppBound dpBound : ℕ} (x : State GalilVM)
+    (q : QPhys fppBound dpBound) (henc : EncControl x q) (hbound : 320 < fppBound)
+    (c : CtlPhys) (a : PalPeg.GalilScaffoldController.Control) (hc : ctlAbs c = a) :
+    EncControl ⟨a, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldControl.reset 320 x.vm.fpp.program}}⟩
+      {q with ctl := c, fppPc := some ⟨320, hbound⟩, fppDone := true, fppLive := !q.fppLive} where
+  ctl := hc
+  chainTag := henc.chainTag
+  chainPhase := henc.chainPhase
+  chainForward := henc.chainForward
+  chainBroken := henc.chainBroken
+  fppMode := henc.fppMode
+  fppFinalStage := henc.fppFinalStage
+  fppPc := rfl
+  fppDone := rfl
+  dpPc := henc.dpPc
+  dpDone := henc.dpDone
+  searchMode := henc.searchMode
+  searchFinalStage := henc.searchFinalStage
+  searchQuarter := henc.searchQuarter
+  periodOnly := henc.periodOnly
+
+/-- **the wipe of the preparation program, encoding and tick together.**  The rule names no
+action: the nine tapes the abstraction blanks are the nine the machine stops looking at.  What it
+needs instead is that the other half is already blank, which is what the background erasure job
+maintains while that half is idle. -/
+theorem rewind_fppReset {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (tapes : Slot → STape Γm)
+    (hbound : 320 < fppBound)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hatFirst : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).atFirst
+      x.vm = true)
+    (henc : Enc margin x (q, tapes))
+    (hidle : ∀ i : Fin 9, tapes (progSlotOf (!q.fppLive) i)
+      = padLeft margin (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset))) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ({q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.replayStart}, fppPc := some ⟨320, hbound⟩, fppDone := true, fppLive := !q.fppLive},
+        tapes) := by
+  have hval : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
+      = ⟨{x.ctl with mode := PalPeg.GalilScaffoldController.Mode.replayStart}, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldControl.reset 320 x.vm.fpp.program}}⟩ := by
+    simp only [PalPeg.GalilScaffoldTop.tickFun, hmode]
+    rw [if_pos hatFirst]
+    rfl
+  rw [hval]
+  refine ⟨encControl_fppReset x q henc.1 hbound
+    {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.replayStart}
+    {x.ctl with mode := PalPeg.GalilScaffoldController.Mode.replayStart} (by rw [← henc.1.ctl]; rfl), ?_⟩
+  exact { margins := henc.2.margins
+          heads := henc.2.heads
+          fpp := hidle
+          dp := henc.2.dp
+          counters := henc.2.counters
+          mirrors := henc.2.mirrors
+          places := henc.2.places
+          period := henc.2.period
+          answer := henc.2.answer }
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -2994,6 +3061,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.padded_progStep
 #print axioms PalPeg.PhysicalEncoding.padded_progRun
 #print axioms PalPeg.PhysicalEncoding.progActOf_congr
+#print axioms PalPeg.PhysicalEncoding.rewind_fppReset
 #print axioms PalPeg.PhysicalEncoding.progSlotOf_ne
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
