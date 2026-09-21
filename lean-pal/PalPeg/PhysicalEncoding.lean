@@ -3389,6 +3389,86 @@ theorem shift_exit_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : G
       (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts (fun _ => rfl)
         henc.2.idleShape)⟩
 
+/-- **the view a head steps left onto.**  The head's own step takes the top of the back stack
+for its focus and drops the old focus onto the near stack; the queue is not touched. -/
+def leftView (v : PalPeg.LocalInputView.InputView) : PalPeg.LocalInputView.InputView :=
+  match v.back with
+  | [] => {v with gap := true}
+  | a :: tail => ⟨tail, a, v.focus :: v.near, v.far, true⟩
+
+/-- **the abstraction of that view is the head one step left**, when the head was on a letter
+rather than on the gap beside it. -/
+theorem absHead_leftView (v : PalPeg.LocalInputView.InputView) (hgap : v.gap = false)
+    (a : Option (Fin 2)) (tail : List (Option (Fin 2))) (hback : v.back = a :: tail) :
+    PalPeg.LocalArrival.absHead' (leftView v) []
+      = PalPeg.GalilScaffoldInputHead.left (PalPeg.LocalArrival.absHead' v []) := by
+  simp [leftView, PalPeg.GalilScaffoldInputHead.left, PalPeg.LocalArrival.absHead',
+    PalPeg.GalilScaffoldInputHead.moveLeft, hgap, hback]
+
+/-- **a head's step left, on the twelve tapes of its view.**  One action pops the back stack and
+two push the old focus onto the near stack; the ten tapes of the queue are not touched, so the
+queue's own representation survives with the same micro-control. -/
+theorem viewRep_left {margin : ℕ} (v : PalPeg.LocalInputView.InputView)
+    (micro : PalPeg.ConcreteLocalMachine.MicroControl)
+    (tapes tapes' : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (a : Option (Fin 2)) (tail : List (Option (Fin 2))) (hback : v.back = a :: tail)
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin v false micro tapes)
+    (hbackTape : tapes' PalPeg.ConcreteLocalMachine.backTape
+      = PalPeg.CloseoutCoreEnc12.actOnG PalPeg.CloseoutCoreStep.blankc
+          (tapes PalPeg.ConcreteLocalMachine.backTape)
+          (some (PalPeg.CloseoutCoreEnc.cellSym v.focus,
+            (.left : PalPeg.CloseoutCoreEnc12.MoveC))))
+    (hnearTape : tapes' PalPeg.ConcreteLocalMachine.nearTape
+      = PalPeg.CloseoutCoreEnc12.actList PalPeg.CloseoutCoreStep.blankc
+          (tapes PalPeg.ConcreteLocalMachine.nearTape)
+          [some ((tapes PalPeg.ConcreteLocalMachine.nearTape).focus,
+              (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+            some (PalPeg.CloseoutCoreEnc.cellSym v.focus,
+              (.stay : PalPeg.CloseoutCoreEnc12.MoveC))])
+    (hkept : ∀ t, t ≠ PalPeg.ConcreteLocalMachine.backTape →
+      t ≠ PalPeg.ConcreteLocalMachine.nearTape → tapes' t = tapes t) :
+    PalPeg.ConcreteLocalMachine.ViewRep margin (leftView v) true micro tapes' where
+  gap := by
+    unfold leftView
+    rw [hback]
+  queue := by
+    have hq : (fun tape => tapes' (PalPeg.ConcreteLocalMachine.queueTapeOfView tape))
+        = fun tape => tapes (PalPeg.ConcreteLocalMachine.queueTapeOfView tape) := by
+      funext t
+      have ht := t.isLt
+      refine hkept _ ?_ ?_ <;>
+        · intro hEq
+          have hv := congrArg Fin.val hEq
+          simp [PalPeg.ConcreteLocalMachine.queueTapeOfView,
+            PalPeg.ConcreteLocalMachine.backTape, PalPeg.ConcreteLocalMachine.nearTape] at hv
+          omega
+    have hfar : (leftView v).far = v.far := by
+      unfold leftView
+      rw [hback]
+    rw [hfar, hq]
+    exact hrep.queue
+  back := by
+    obtain ⟨bottom, hlen, hst⟩ := hrep.back
+    refine ⟨bottom, hlen, ?_⟩
+    have hstack : PalPeg.ConcreteLocalMachine.backStack (leftView v) ++ bottom
+        = v.back ++ bottom := by
+      unfold PalPeg.ConcreteLocalMachine.backStack leftView
+      rw [hback]
+    rw [hstack, hbackTape]
+    exact stackTape_pop (tapes PalPeg.ConcreteLocalMachine.backTape) v.focus (v.back ++ bottom)
+      (by
+        have : PalPeg.ConcreteLocalMachine.backStack v ++ bottom
+            = v.focus :: (v.back ++ bottom) := rfl
+        rwa [this] at hst)
+  near := by
+    obtain ⟨bottom, hsealed, hlen, hst⟩ := hrep.near
+    refine ⟨bottom, hsealed, hlen, ?_⟩
+    have hnear : (leftView v).near = v.focus :: v.near := by
+      unfold leftView
+      rw [hback]
+    rw [hnear, hnearTape, List.cons_append]
+    exact stackTape_push (tapes PalPeg.ConcreteLocalMachine.nearTape) v.focus (v.near ++ bottom) hst
+
 /-- **the branch the shift and copy modes take, as a reading of the window.**  The rule cannot
 ask the abstraction anything; it computes this bit from three cells of the window and the sign
 bit of the shift counter, and `remainsTest_eq` says the bit it computes is the test the tick
