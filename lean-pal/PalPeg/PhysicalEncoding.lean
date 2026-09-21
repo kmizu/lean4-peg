@@ -3882,7 +3882,7 @@ theorem decProg_centreRead {fppBound dpBound K : ℕ} {margin : ℕ} {x : State 
 nothing beyond it.  A run of at most `K` calls never looks further, so it cannot tell the
 difference. -/
 def winTape {K : ℕ} (ws : PalPeg.Local.Window Γm K) : PalPeg.GalilScaffoldTape.Tape :=
-  ⟨List.ofFn (fun j : Fin K => decProg (ws ⟨K - 1 - j.val, by omega⟩)),
+  ⟨(List.ofFn (fun j : Fin K => decProg (ws ⟨j.val, by omega⟩))).reverse,
     decProg (ws ⟨K, by omega⟩),
     List.ofFn (fun j : Fin K => decProg (ws ⟨K + 1 + j.val, by omega⟩))⟩
 
@@ -3933,8 +3933,37 @@ window's left half, so the head is at `K` however far along the real tape the co
 has walked. -/
 @[simp] theorem winTape_pos {K : ℕ} (ws : PalPeg.Local.Window Γm K) :
     PalPeg.Local.pos (encTape (winTape ws)) = K := by
-  show (List.ofFn (fun j : Fin K => decProg (ws ⟨K - 1 - j.val, by omega⟩))).length = K
-  exact List.length_ofFn
+  show (List.ofFn (fun j : Fin K => decProg (ws ⟨j.val, by omega⟩))).reverse.length = K
+  simp
+
+/-- **the window tape is the window.**  Laid out from its left end, the tape the rule
+reconstructs is exactly the window's `2K+1` cells, decoded. -/
+theorem toList_winTape {K : ℕ} (ws : PalPeg.Local.Window Γm K) :
+    PalPeg.Local.toList (encTape (winTape ws))
+      = List.ofFn (fun j : Fin (2 * K + 1) => decProg (ws j)) := by
+  show (List.ofFn (fun j : Fin K => decProg (ws ⟨j.val, by omega⟩))).reverse.reverse
+    ++ decProg (ws ⟨K, by omega⟩)
+      :: List.ofFn (fun j : Fin K => decProg (ws ⟨K + 1 + j.val, by omega⟩)) = _
+  rw [List.reverse_reverse]
+  refine List.ext_getElem (by simp; omega) ?_
+  intro n h₁ h₂
+  rw [List.getElem_ofFn]
+  rcases lt_trichotomy n K with hn | hn | hn
+  · rw [List.getElem_append_left (by simpa using hn), List.getElem_ofFn]
+  · subst hn
+    rw [List.getElem_append_right (by simp)]
+    simp
+  · rw [List.getElem_append_right (by simpa using Nat.le_of_lt hn)]
+    simp only [List.length_ofFn]
+    obtain ⟨d, hd⟩ : ∃ d, n - K = d + 1 := ⟨n - K - 1, by omega⟩
+    simp only [hd, List.getElem_cons_succ, List.getElem_ofFn]
+    exact congrArg (fun z => decProg (ws z)) (Fin.ext (show K + 1 + d = n by omega))
+
+/-- so the rule reads the window's `j`-th cell where the reconstructed tape has its `j`-th. -/
+theorem rd_winTape {K : ℕ} (ws : PalPeg.Local.Window Γm K) (j : Fin (2 * K + 1)) :
+    PalPeg.Local.rd (6 : Fin 9) (encTape (winTape ws)) j.val = decProg (ws j) := by
+  show (PalPeg.Local.toList (encTape (winTape ws))).getD j.val (6 : Fin 9) = _
+  rw [toList_winTape, List.getD_eq_getElem _ _ (by simpa using j.isLt), List.getElem_ofFn]
 
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
@@ -4028,6 +4057,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.winMachine_focus
 #print axioms PalPeg.PhysicalEncoding.progActOf_winMachine
 #print axioms PalPeg.PhysicalEncoding.winTape_pos
+#print axioms PalPeg.PhysicalEncoding.rd_winTape
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
