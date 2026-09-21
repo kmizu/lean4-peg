@@ -3267,6 +3267,94 @@ theorem copy_one_place {margin K : ℕ} (hK : K ≤ margin)
       exact (padded_place_pop margin stackTape (some letter)
         (rest.map (fun letter => some letter) ++ junk) hstack2).symm
 
+/-- the refresh of the controller's output, read off the frame: two questions about the input
+heads, and the old bit when the first of them says no. -/
+theorem frameFun_refresh (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (s : GalilVM) (old : Bool) :
+    PalPeg.GalilScaffoldTop.refreshFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) s old
+      = if PalPeg.GalilScaffoldChainInputSupply.onLetterTest w s then
+          PalPeg.GalilScaffoldChainInputSupply.leftFirstTest s else old := rfl
+
+/-- **the control table of the end of the shift.**  The shift has nothing left to move, so the
+machine goes back to scanning and refreshes its output — and the refresh is the two bits the
+control already carries. -/
+noncomputable def shiftExitNext {fppBound dpBound : ℕ} (q : QPhys fppBound dpBound) :
+    QPhys fppBound dpBound :=
+  {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.scan, output := if q.onLetterBit then q.leftFirstBit else q.ctl.output}}
+
+/-- **the end of the shift, on the whole state.**  Not one tape moves: the tick changes the
+controller's mode and its output bit, and the output bit is what the two carried bits say. -/
+theorem shift_exit {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (tapes : Slot → STape Γm)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift)
+    (hdone : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos x.vm
+      = false)
+    (henc : Enc w margin x (q, tapes)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      (shiftExitNext q, tapes) := by
+  have hval : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
+      = ⟨{x.ctl with mode := PalPeg.GalilScaffoldController.Mode.scan, output := PalPeg.GalilScaffoldTop.refreshFun (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) x.vm x.ctl.output}, x.vm⟩ := by
+    simp only [PalPeg.GalilScaffoldTop.tickFun, hmode]
+    rw [if_neg (by simp [hdone])]
+  have hctl : ctlAbs {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.scan, output := if q.onLetterBit then q.leftFirstBit else q.ctl.output}
+      = {x.ctl with mode := PalPeg.GalilScaffoldController.Mode.scan, output := PalPeg.GalilScaffoldTop.refreshFun (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) x.vm x.ctl.output} := by
+    rw [frameFun_refresh, ← henc.1.ctl, henc.1.onLetter, henc.1.leftFirst]
+    rfl
+  rw [hval]
+  exact ⟨encControl_ctl x q henc.1 _ _ hctl,
+    encTapes_congr margin x _ q.polarity q.gap q.micro q.fppLive q.dpLive tapes
+      (fun i => rfl) (fun i => rfl) rfl rfl rfl rfl rfl henc.2⟩
+
+/-- **the end of the shift, rule and encoding together.**  The branch names no action at all. -/
+theorem shift_exit_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
+    (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = shiftExitNext q)
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (fun _ => []))
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift)
+    (hdone : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos x.vm
+      = false)
+    (henc : Enc w margin x (q, T)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+          (slotIndex i)) := by
+  have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1 = shiftExitNext q := by
+    show R.nq q none _ = _
+    rw [hnq]
+  obtain ⟨hmovedAll, hkept⟩ := idealStep_offBase R q T q.fppLive _ hacts (fun _ _ => rfl)
+  have hkeptAll : ∀ slot : Slot, (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) →
+      (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot)
+        = T slot := by
+    intro slot hslot
+    by_cases hlive : ∃ j : Fin 9, slot = progSlotOf q.fppLive j
+    · obtain ⟨j, hj⟩ := hlive
+      subst hj
+      exact hmovedAll j
+    · exact hkept slot (fun j hj => hlive ⟨j, hj⟩) hslot
+  rw [hq]
+  exact ⟨(shift_exit margin centre place entry entryQ first w F delay x q T hmode hdone henc).1,
+    encTapes_idleOnly margin _ _ _ _ _ _ T _
+      (shift_exit margin centre place entry entryQ first w F delay x q T hmode hdone henc).2
+      hkeptAll
+      (idle_shape_after_erase margin hK1 hKn R q T q.fppLive _ hacts (fun _ => rfl)
+        henc.2.idleShape)⟩
+
 /-- **the branch the shift and copy modes take, as a reading of the window.**  The rule cannot
 ask the abstraction anything; it computes this bit from three cells of the window and the sign
 bit of the shift counter, and `remainsTest_eq` says the bit it computes is the test the tick
