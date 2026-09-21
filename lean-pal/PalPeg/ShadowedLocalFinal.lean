@@ -7,6 +7,7 @@ import PalPeg.LocalInitStep
 import PalPeg.ChainLookBehindRight
 import PalPeg.TickUsedLetters
 import PalPeg.ReplayStartGhost
+import PalPeg.ReportPhase
 
 /-!
 # The final theorem from the local system and a physical machine, the trace side discharged
@@ -669,12 +670,12 @@ theorem reportTest_iff (entry q : ℕ) (first : Fin 9) (w : List (Fin 2)) (x : S
 abstraction of the source, and it keeps the invariants of the local layer (and the phase after
 the last report point, if the source is in it). -/
 def NextOK (entry q : ℕ) (first : Fin 9) (Good : Mirrored1 (tapeCount spare) → Prop)
-    (Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop) (w : List (Fin 2))
+    (w : List (Fin 2))
     (m next : Mirrored1 (tapeCount spare)) : Prop :=
   Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm)
       (absState'' next.vm) ∧
     PalPeg.GalilTickFair.Canonical entry 2048 (absState'' m.vm) (absState'' next.vm) ∧
-    PhysWF next.vm ∧ MirInv1 next ∧ Good next ∧ (Post w m → Post w next)
+    PhysWF next.vm ∧ MirInv1 next ∧ Good next
 
 open Classical in
 /-- **The step of the two open modes, by choice.**  The abstract local layer is a ghost of the
@@ -682,15 +683,14 @@ proof, so its step need not be computed: it is some local successor when there i
 the word, because the frame reads `onLetterVM w`; the physical machine does not
 (`hforwardTick` asks it for any local state with a successor abstraction). -/
 noncomputable def chosenStep (entry q : ℕ) (first : Fin 9)
-    (Good : Mirrored1 (tapeCount spare) → Prop)
-    (Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop) (w : List (Fin 2))
+    (Good : Mirrored1 (tapeCount spare) → Prop) (w : List (Fin 2))
     (m : Mirrored1 (tapeCount spare)) : Mirrored1 (tapeCount spare) :=
-  if h : ∃ next, NextOK entry q first Good Post w m next then Classical.choose h else m
+  if h : ∃ next, NextOK entry q first Good w m next then Classical.choose h else m
 
 theorem chosenStep_spec {entry q : ℕ} {first : Fin 9} {Good : Mirrored1 (tapeCount spare) → Prop}
-    {Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop} {w : List (Fin 2)}
-    {m : Mirrored1 (tapeCount spare)} (h : ∃ next, NextOK entry q first Good Post w m next) :
-    NextOK entry q first Good Post w m (chosenStep entry q first Good Post w m) := by
+    {w : List (Fin 2)}
+    {m : Mirrored1 (tapeCount spare)} (h : ∃ next, NextOK entry q first Good w m next) :
+    NextOK entry q first Good w m (chosenStep entry q first Good w m) := by
   unfold chosenStep
   rw [dif_pos h]
   exact Classical.choose_spec h
@@ -868,11 +868,11 @@ def postPhase (entry q : ℕ) (first : Fin 9) (w : List (Fin 2))
 /-- The step by choice keeps the run invariant: a local successor has it (`NextOK`), and without
 a local successor the step does nothing. -/
 theorem good_chosenStep {entry q : ℕ} {first : Fin 9} {Good : Mirrored1 (tapeCount spare) → Prop}
-    {Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop} {w : List (Fin 2)}
+    {w : List (Fin 2)}
     {m : Mirrored1 (tapeCount spare)} (hgood : Good m) :
-    Good (chosenStep entry q first Good Post w m) := by
-  by_cases hnext : ∃ next, NextOK entry q first Good Post w m next
-  · exact (chosenStep_spec hnext).2.2.2.2.1
+    Good (chosenStep entry q first Good w m) := by
+  by_cases hnext : ∃ next, NextOK entry q first Good w m next
+  · exact (chosenStep_spec hnext).2.2.2.2
   · unfold chosenStep
     rw [dif_neg hnext]
     exact hgood
@@ -880,12 +880,11 @@ theorem good_chosenStep {entry q : ℕ} {first : Fin 9} {Good : Mirrored1 (tapeC
 /-- The steps of the abstract local layer for the word `w`: `LocalInitStep.initStep`, the seven
 phase steps of `CloseoutCoreAgree.SL`, and `chosenStep` for `scan` and `replayStart`. -/
 noncomputable def ghostSteps (entry q : ℕ) (first : Fin 9)
-    (Good : Mirrored1 (tapeCount spare) → Prop)
-    (Post : List (Fin 2) → Mirrored1 (tapeCount spare) → Prop) (w : List (Fin 2)) :
+    (Good : Mirrored1 (tapeCount spare) → Prop) (w : List (Fin 2)) :
     Steps (tapeCount spare) :=
   freezeSteps (frozenAt w)
     (localSteps q first (PalPeg.LocalInitStep.initStep entry)
-      (chosenStep entry q first Good Post w) (chosenStep entry q first Good Post w))
+      (chosenStep entry q first Good w) (chosenStep entry q first Good w))
 
 /-- The starvation test reads the abstraction only (the mode and the abstract heads). -/
 theorem starved_of_absSC_eq {encoded m : Mirrored1 (tapeCount spare)}
@@ -933,7 +932,7 @@ theorem replayStartNext (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
     (hmode : m.vm.ctl.mode = .replayStart)
     (htarget : Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048
       (absState'' m.vm) target) :
-    ∃ next, NextOK entry q first (localGood (spare := spare)) (postPhase entry q first) w m
+    ∃ next, NextOK entry q first (localGood (spare := spare)) w m
       next := by
   obtain ⟨k, j, hneedy⟩ := hinv.track
   have hctl : m.vm.ctl = (heldAfter (Tc w.length) st k).ctl := PalPeg.LocalWF.ctl_of_needy hneedy
@@ -1026,7 +1025,7 @@ theorem replayStartNext (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
   have hnextVm := replayStartVM_unique hnextLanding hlandingVM
   refine ⟨⟨replayCommitVm entry
     { m.vm.ctl with mode := Mode.scan, clock := 2048, output := o, replaying := landingReplaying }
-    m.vm, m.vm.center⟩, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    m.vm, m.vm.center⟩, ?_, ?_, ?_, ?_, ?_⟩
   · -- the tick
     suffices htickTo : ∀ landed : State GalilVM, landed = target →
         Tick (galilFrameS (PofC centreC placeC entry w) q first) 2048 (absState'' m.vm) landed from
@@ -1051,11 +1050,6 @@ theorem replayStartNext (entry q : ℕ) (first : Fin 9) {w : List (Fin 2)}
     exact ⟨⟨hremaining, hreplay, hlength,
       fun hshift => absurd (show Mode.scan = Mode.shift from hshift) (by decide), hfppWork⟩,
       hwork, hradius⟩
-  · -- the phase after the last report point
-    intro hpost
-    rcases hpost with ⟨-, -, hscan⟩ | hfrozen
-    · exact absurd (hmode.symm.trans hscan) (by decide)
-    · exact absurd hfrozen (notFrozen_of_invC entry q first hw hpreTrace m hinv)
 
 /-- **`PAL ∈ PEG` from the two open modes and a physical machine.**  The `init` mode is
 `LocalInitStep.initStep` (`initLocal_heldAfter`).  The seven phase modes of
@@ -1088,12 +1082,12 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
         (∃ k j, Needy w (heldAfter (Tc w.length) st) k j m.vm ∧ k < Tc w.length ∧
           target = truncS (w.length - j) (heldAfter (Tc w.length) st (k+1))) →
         PalPeg.GalilTickFair.Canonical entry 2048 (absState'' m.vm) target →
-        ∃ next, NextOK entry q first (localGood (spare := spare)) (postPhase entry q first) w m next)
+        ∃ next, NextOK entry q first (localGood (spare := spare)) w m next)
     -- on the plateau after the last report point the local ticks are still ticks
     (hplateauNext : ∀ (w : List (Fin 2)) (m : Mirrored1 (tapeCount spare)), 0 < w.length →
       ReportPoint w (absSC m) → Refreshed (PofC centreC placeC entry w) q first (absSC m) →
       (absSC m).ctl.mode = Mode.scan → ¬ frozenAt w m → PhysWF m.vm → MirInv1 m → (localGood (spare := spare)) m →
-      ¬ Starved m.vm → ∃ next, NextOK entry q first (localGood (spare := spare)) (postPhase entry q first) w m next)
+      ¬ Starved m.vm → ∃ next, NextOK entry q first (localGood (spare := spare)) w m next)
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Enc : Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
     (hencInit : Enc (x0C (blankVML spare) 2048).core (q0, fun _ => STape.blankTape blankSymbol))
@@ -1135,7 +1129,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
         encoded.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   refine given_shadowedLocalSystem entry q first hfirst hor hres hChainVerifierSupply
-    (fun w => ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w)
+    (fun w => ghostSteps entry q first (localGood (spare := spare)) w)
     (fun w m => reportTest entry q first w (absSC m))
     (localGood (spare := spare)) ⟨PalPeg.LocalWF.polWF_x0C ⟨rfl, rfl, rfl, fun _ => rfl, rfl⟩ 2048, rfl, rfl⟩
     (fun w st Tc hpreTrace hcanonical m hinv => by
@@ -1172,7 +1166,7 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       exact ⟨hreport.1, hreport.2, hscanAtReport w.length hw le_rfl⟩)
     (fun w m hw hpost hphys hmir hgood hnotStarved => by
       by_cases hfrozen : frozenAt w m
-      · have hstay : tickC (ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w) m = m := by
+      · have hstay : tickC (ghostSteps entry q first (localGood (spare := spare)) w) m = m := by
           rw [PalPeg.LocalSysConcrete.tickC_step _ hnotStarved]
           show stepOf (freezeSteps (frozenAt w) _) m.vm.ctl.mode m = m
           rw [stepOf_freezeSteps, if_pos hfrozen]
@@ -1181,16 +1175,21 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
       · rcases hpost with ⟨hpoint, hrefreshed, hscan⟩ | hfrozen'
         · have hspec := chosenStep_spec
             (hplateauNext w m hw hpoint hrefreshed hscan hfrozen hphys hmir hgood hnotStarved)
-          have hstep : tickC (ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w) m
-              = chosenStep entry q first (localGood (spare := spare)) (postPhase entry q first) w m := by
+          have hstep : tickC (ghostSteps entry q first (localGood (spare := spare)) w) m
+              = chosenStep entry q first (localGood (spare := spare)) w m := by
             rw [PalPeg.LocalSysConcrete.tickC_step _ hnotStarved]
             show stepOf (freezeSteps (frozenAt w) _) m.vm.ctl.mode m = _
             rw [stepOf_freezeSteps, if_neg hfrozen, show m.vm.ctl.mode = Mode.scan from hscan]
             rfl
           rw [hstep]
-          exact ⟨Or.inr ⟨hfrozen, hspec.1, hspec.2.1⟩,
-            hspec.2.2.2.2.2 (Or.inl ⟨hpoint, hrefreshed, hscan⟩), hspec.2.2.1, hspec.2.2.2.1,
-            hspec.2.2.2.2.1⟩
+          have hphase : postPhase entry q first w
+              (chosenStep entry q first (localGood (spare := spare)) w m) := by
+            rcases PalPeg.ReportPhase.reportPhase_tick centreC placeC entry q first 2048
+                hpoint hrefreshed hscan hspec.1 with hkept | hleft
+            · exact Or.inl hkept
+            · exact Or.inr ⟨hw, hleft⟩
+          exact ⟨Or.inr ⟨hfrozen, hspec.1, hspec.2.1⟩, hphase, hspec.2.2.1, hspec.2.2.2.1,
+            hspec.2.2.2.2⟩
         · exact absurd hfrozen' hfrozen)
     (fun w s _ _ hreport => (reportTest_iff entry q first w _).mp hreport)
     (fun w s _ hpoint hrefreshed => (reportTest_iff entry q first w _).mpr ⟨hpoint, hrefreshed⟩)
@@ -1216,11 +1215,11 @@ theorem given_openModesAndPhysicalMachine (entry q : ℕ) (first : Fin 9) (hfirs
           (⟨fun h => Or.inl ((starved_of_absSC_eq habs).mp h),
             fun h => h.elim (starved_of_absSC_eq habs).mpr (fun hf => absurd hf hnotFrozen)⟩)
           hsuccEncoded hsucc
-        by_cases hfrozenNext : frozenAt w (tickC (ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w) m)
+        by_cases hfrozenNext : frozenAt w (tickC (ghostSteps entry q first (localGood (spare := spare)) w) m)
         · exact Or.inr ⟨hfrozenNext, hfrozenEnter w st Tc hpreTrace hcanonical _ next _
             honRunNext hfrozenNext hnextAbs hencNext⟩
         · exact Or.inl ⟨hfrozenNext, next, hencNext, hnextAbs⟩
-      · have hstay : absSC (tickC (ghostSteps entry q first (localGood (spare := spare)) (postPhase entry q first) w) m) = absSC m := by
+      · have hstay : absSC (tickC (ghostSteps entry q first (localGood (spare := spare)) w) m) = absSC m := by
           rcases hsucc with ⟨_, hstay⟩ | ⟨hmoves, _⟩
           · exact hstay
           · exact absurd (Or.inr hfrozen) hmoves

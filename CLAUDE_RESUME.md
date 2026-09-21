@@ -1,3 +1,21 @@
+## n319（2026-09-21）: 報告点の後の相は tick そのものが保つ。`NextOK` から `Post` 節を削った
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。存在仮説 `hscanNext`／`hplateauNext` は残っているが、両方とも `Post` 節のぶん弱くなった） |
+
+**やったこと**: `NextOK` の最後の節 `Post w m → Post w next` は、消費が plateau 側 1 箇所だけなのに `chosenStep` が共有しているせいで scan 側でも証明が要った。定義を読むと、`ReportPoint`／`Refreshed` が読むのは 3 ヘッドと control の `replaying`・`output` だけ。なので trace を使わない抽象補題 1 本で両方に効く。
+* 新モジュール `PalPeg/ReportPhase.lean`（`ShadowedLocalFinal` が import、`Workbench` 経由でルートに届く）:
+  - `scanTick_kept_or_moved`: scan・非 replaying の状態からの tick は、3 ヘッドと `replaying`／`output`／`mode` を保つ（`scan_wait`／`scan_count`／`restart`）か、右ヘッドを 1 歩右へ動かす（`scan_match`／`scan_shift`／`scan_fallback`）。scan 以外の構成子は `cases h <;> first | (exfalso; simp_all; done) | skip` で先に落とす。
+  - `position_right_of_atLast`: `position p = 2n − 1`（`0 < n`）なら `position (right p) = 2n`。偶奇で `gap = true` が消えるので `Sane` も `canRight` も要らない。
+  - `reportPhase_tick`: refreshed な報告点 ∧ scan からの tick は、同じ相に着地するか、右ヘッドが `2·|w|` に出る。結論がちょうど `postPhase`。
+* `ShadowedLocalFinal`: `NextOK`／`chosenStep`／`chosenStep_spec`／`good_chosenStep`／`ghostSteps` から `Post` 引数を除去。plateau の消費箇所は `hspec.1`（`Tick`）から `reportPhase_tick` で `postPhase` を出す。`replayStartNext` の `Post` 節の証明も削除。
+* 進め方: スクラッチ（`$S/post_check.keep.lean`）で通してから、消費者と一緒にリポジトリへ入れた。
+
+**`hscanNext` の残り**: target（trace の次状態の truncation）に対して `absState'' next.vm = target` ∧ `PhysWF` ∧ `MirInv1` ∧ `localGood` を満たす切断を作ること。材料: ヘッド・銀行・`Place`・バッファの切断と `parkedRight_trace`・`countersCanonical_trace`（全部スクラッチ）、鏡（投入済み）。未: 極性（`localGood` が求める `remaining`／`radius`／`length`／`fppWork`／`work`／`replay` の非負性を target で示す）、`Inv` の組み上げ。
+
 ## n318（2026-09-21）: scan の後継の仮説は、target が trace の次状態であることと `Canonical` を受け取る
 
 **全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
