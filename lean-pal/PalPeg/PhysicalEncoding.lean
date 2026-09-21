@@ -1175,6 +1175,32 @@ theorem fppRunFun_eq_runFun (entryQ : ℕ) (m : PalPeg.GalilScaffoldControl.Mach
       = PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
           (List.replicate entryQ true) m := rfl
 
+/-- **the last tick of the fallback copy leaves the control where the copy put it.**  The copy
+writes the end mark on its own tape, hands the machine to the walk home and records whether the
+cursor ran out; the program's counter and halting flag are untouched, and so is every cursor. -/
+theorem encControl_copyEnd {fppBound dpBound : ℕ} (x : State GalilVM)
+    (q : QPhys fppBound dpBound) (henc : EncControl x q)
+    (c : CtlPhys) (a : PalPeg.GalilScaffoldController.Control) (hc : ctlAbs c = a)
+    (bit : Bool) (hbit : bit = (PalPeg.GalilScaffoldPlace.read x.vm.fpp.walker).isNone) :
+    EncControl ⟨a, {x.vm with fpp := PalPeg.FrameFunction.copyEndFun x.vm.fpp}⟩
+      {q with ctl := c, fppMode := PalPeg.GalilScaffoldChainInputSupply.FppControl.Mode.home, fppFinalStage := bit} where
+  ctl := hc
+  chainTag := henc.chainTag
+  chainPhase := henc.chainPhase
+  chainForward := henc.chainForward
+  chainBroken := henc.chainBroken
+  fppMode := rfl
+  fppFinalStage := hbit
+  fppPc := henc.fppPc
+  fppDone := henc.fppDone
+  dpPc := henc.dpPc
+  dpDone := henc.dpDone
+  searchMode := henc.searchMode
+  searchFinalStage := henc.searchFinalStage
+  searchQuarter := henc.searchQuarter
+  periodOnly := henc.periodOnly
+  placeGap := henc.placeGap
+
 /-- and the finite control makes exactly those three changes. -/
 theorem encControl_fppStart {fppBound dpBound : ℕ} (x : State GalilVM)
     (q : QPhys fppBound dpBound) (henc : EncControl x q) (hbound : 320 < fppBound)
@@ -1624,6 +1650,54 @@ theorem vml_copy_end {P : ℕ} (centre : GalilVM → Fin 3)
     PalPeg.GalilScaffoldChainInputSupply.FppControl.tape PalPeg.GalilScaffoldLoading.put
   simp only [abs_stepL]
   rfl
+
+/-- **the last tick of the fallback copy**: the copy has nothing left to move, so it writes the
+end mark where its head stands and hands the machine to the walk home.  One action on one tape,
+and two bits of the finite control. -/
+theorem copy_end {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (tapes newTapes : Slot → STape Γm)
+    (bit : Bool)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hdone : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos x.vm
+      = false)
+    (hbit : bit = (PalPeg.GalilScaffoldPlace.read x.vm.fpp.walker).isNone)
+    (henc : Enc margin x (q, tapes))
+    (hmoved : newTapes (progSlotOf q.fppLive 7)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf q.fppLive 7))
+          [some (encProg 5, (.stay : PalPeg.CloseoutCoreEnc12.MoveC))])
+    (hkept : ∀ slot, slot ≠ progSlotOf q.fppLive 7 →
+      (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) → newTapes slot = tapes slot)
+    (hidleShape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
+      newTapes (progSlotOf (!q.fppLive) k) = padLeft margin (mapTape encProg raw)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ({q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.home}, fppMode := PalPeg.GalilScaffoldChainInputSupply.FppControl.Mode.home, fppFinalStage := bit}, newTapes) := by
+  have hval : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
+      = ⟨{x.ctl with mode := PalPeg.GalilScaffoldController.Mode.home}, {x.vm with fpp := PalPeg.FrameFunction.copyEndFun x.vm.fpp}⟩ := by
+    simp only [PalPeg.GalilScaffoldTop.tickFun, hmode, frameFun_copyEnd]
+    rw [if_neg (by simp [hdone])]
+    rfl
+  have hstep : newTapes (progSlotOf q.fppLive 7)
+      = padLeft margin (mapTape encProg (encTape
+          (PalPeg.GalilScaffoldTape.write (x.vm.fpp.program.config.tapes 7) 5))) := by
+    rw [hmoved, show tapes (progSlotOf q.fppLive 7)
+        = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes 7)))
+        from henc.2.fpp 7, padded_write]
+    rfl
+  rw [hval]
+  refine ⟨encControl_copyEnd x q henc.1 {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.home} {x.ctl with mode := PalPeg.GalilScaffoldController.Mode.home} (by rw [← henc.1.ctl]; rfl) bit hbit, ?_⟩
+  exact encTapes_congr margin
+    ⟨{x.ctl with mode := PalPeg.GalilScaffoldController.Mode.home}, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp 7 (fun t => PalPeg.GalilScaffoldTape.write t 5)}}⟩
+    ⟨{x.ctl with mode := PalPeg.GalilScaffoldController.Mode.home}, {x.vm with fpp := PalPeg.FrameFunction.copyEndFun x.vm.fpp}⟩
+    q.polarity q.gap q.micro q.fppLive q.dpLive newTapes
+    (fun i => rfl) (fun i => rfl) rfl rfl rfl rfl rfl
+    (encTapes_fppStep margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes newTapes henc.2
+      7 (fun t => PalPeg.GalilScaffoldTape.write t 5)
+      {x.ctl with mode := PalPeg.GalilScaffoldController.Mode.home} hstep hkept hidleShape)
 
 /-! ### the fallback copy: a tick that moves three components at once
 
@@ -4307,6 +4381,58 @@ theorem physRule_acts_choose {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : 
   unfold ruleActs
   rw [hm]
 
+/-- **the last tick of the fallback copy, rule and encoding together.**  The window says the
+copy has nothing left to move, so the rule stamps the end mark where the head stands and reads
+off the cursor to set the final-stage flag. -/
+theorem copy_end_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
+    (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = copyNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (copyActs q.fppLive q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
+    (hK1 : 1 ≤ K) (hK : K ≤ margin)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hdone : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos x.vm
+      = false)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+          (slotIndex i)) := by
+  have hwalker := placeRead_isNone_iff_centre henc.2 hK 1 x.vm.fpp.walker rfl
+  have hbit : remainsTest q.polarity
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = false := by
+    rw [remainsTest_eq henc.2 hK1 hK centre place entry entryQ first w, hdone]
+  have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1
+      = {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.home}, fppMode := PalPeg.GalilScaffoldChainInputSupply.FppControl.Mode.home, fppFinalStage := decide (centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (placeSlot 1) = blankM)} := by
+    show R.nq q none _ = _
+    rw [hnq]
+    unfold copyNext
+    rw [if_neg (by simp [hbit])]
+  have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (actsAt (slotIndex (progSlot q.fppLive 7))
+            [some (encProg 5, (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]) := by
+    rw [hacts]
+    congr 1
+    unfold copyActs
+    rw [if_neg (by simp [hbit])]
+  obtain ⟨hmoved, hkept⟩ := idealStep_atLiveSlot R q T q.fppLive 7 _ hacts'
+  rw [hq]
+  exact copy_end margin centre place entry entryQ first w F delay x q T
+    (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
+    _ hmode hdone
+    (by rw [Bool.eq_iff_iff, hwalker]; simp)
+    henc hmoved hkept
+    (idle_shape_after_erase margin hK1 (by omega) R q T q.fppLive _ hacts'
+      (actsAt_off_live q.fppLive 7 _) henc.2.idleShape)
+
 theorem physRule_nq_copy {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy) :
@@ -4531,6 +4657,31 @@ theorem physRule_home_fppStart {fppBound dpBound K : ℕ} (margin : ℕ) (centre
     (physRule entryQ first hbound hK) hbound
     (physRule_nq_home entryQ first hbound hK q _ hqmode) (physRule_acts_home entryQ first hbound hK q _ hqmode)
     hmargin hK1 hKn hmode hatLeft hatMark henc
+
+/-- **the last tick of the fallback copy, of the machine itself.** -/
+theorem physRule_copy_end {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hKb : entryQ + 3 ≤ K)
+    (hK1 : 1 ≤ K) (hK : K ≤ margin)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hdone : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos x.vm
+      = false)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hKb) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hKb)
+          blankM (q, tapesOf T) none).2 (slotIndex i)) :=
+  copy_end_of_rule margin centre place entry entryQ first w F delay x q T
+    (physRule entryQ first hbound hKb)
+    (physRule_nq_copy entryQ first hbound hKb q _ hqmode)
+    (physRule_acts_copy entryQ first hbound hKb q _ hqmode)
+    hK1 hK hmode hdone henc
 
 /-- **the parity walk, of the machine itself.** -/
 theorem physRule_choose_back {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
