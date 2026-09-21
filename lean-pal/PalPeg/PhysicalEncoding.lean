@@ -489,7 +489,7 @@ its own invariants (`ViewRep`, `LaysSealed`, the mirrors), and they enter the en
 those. -/
 structure EncTapes (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Bool)
     (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
-    (tapes : Slot → STape Γm) : Prop where
+    (fppLive dpLive : Bool) (tapes : Slot → STape Γm) : Prop where
   margins : ∀ slot, margin ≤ PalPeg.Local.pos (tapes slot)
   heads : ∀ (v : Fin 4) head, headOf x v = some head →
     ∃ (view : PalPeg.LocalInputView.InputView) (viewTapes : Fin 12 → STape Γc),
@@ -497,8 +497,8 @@ structure EncTapes (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Boo
         PalPeg.ConcreteLocalMachine.ViewRep margin view (gap v) (micro v) viewTapes ∧
         ∀ i, tapes (.inl (v, i)) = mapTape encCell (viewTapes i)
   fpp : ∀ i : Fin 9,
-    tapes (.inr (.inl i)) = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i)))
-  dp : ∀ i : Fin 12, tapes (.inr (.inr (.inl i))) = padLeft margin (mapTape encProg (encTape (x.vm.dp.config.tapes i)))
+    tapes (progSlotOf fppLive i) = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i)))
+  dp : ∀ i : Fin 12, tapes (dpSlotOf dpLive i) = padLeft margin (mapTape encProg (encTape (x.vm.dp.config.tapes i)))
   counters : ∀ c : Fin 16, ∀ value, counterOf x c = some value →
     ∃ segments : STape Seg, absCtr segments (polarity c) = value ∧
       tapes (.inr (.inr (.inr (.inr (.inr (.inr (.inl c)))))) ) = padLeft margin (mapTape encSeg segments)
@@ -519,8 +519,8 @@ structure EncTapes (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Boo
 /-- **every head of the machine stands clear of the left edge**, which is what the
 sweep of `compStep` asks of a rule with window radius `K ≤ margin`. -/
 theorem margin_le_pos {margin : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
-    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
-    {tapes : Slot → STape Γm} (henc : EncTapes margin x polarity gap micro tapes)
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl} {fppLive dpLive : Bool}
+    {tapes : Slot → STape Γm} (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
     {K : ℕ} (hK : K ≤ margin) (slot : Slot) : K ≤ PalPeg.Local.pos (tapes slot) :=
   hK.trans (henc.margins slot)
 
@@ -529,15 +529,15 @@ bundles' tapes, the sixteen counters, the four heads, the three cursors, and the
 and answer tapes.  Two states that agree on those are encoded by the same tapes.  In particular
 the control word does not appear, and neither does a program's counter or its halting flag. -/
 theorem encTapes_congr (margin : ℕ) (x y : State GalilVM) (polarity : Fin 16 → Bool)
-    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
+    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (fppLive dpLive : Bool)
     (tapes : Slot → STape Γm)
     (hfpp : ∀ i, y.vm.fpp.program.config.tapes i = x.vm.fpp.program.config.tapes i)
     (hdp : ∀ i, y.vm.dp.config.tapes i = x.vm.dp.config.tapes i)
     (hcounters : counterOf y = counterOf x) (hheads : headOf y = headOf x)
     (hplaces : placeOf y = placeOf x) (hperiod : periodOf y = periodOf x)
     (hanswer : answerOf y = answerOf x)
-    (h : EncTapes margin x polarity gap micro tapes) :
-    EncTapes margin y polarity gap micro tapes where
+    (h : EncTapes margin x polarity gap micro fppLive dpLive tapes) :
+    EncTapes margin y polarity gap micro fppLive dpLive tapes where
   margins := h.margins
   heads := by
     intro v head hhead
@@ -573,20 +573,20 @@ the cursors, the chain's two tapes) reads parts of the state the step does not t
 in slots the rule does not name.  This is what lets a rule realize `markForward`, `markBack`,
 `homeStep` and the copy: they are all this one shape. -/
 theorem encTapes_fppStep (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Bool)
-    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
+    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (fppLive dpLive : Bool)
     (tapes newTapes : Slot → STape Γm)
-    (henc : EncTapes margin x polarity gap micro tapes)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
     (i : Fin 9) (f : PalPeg.GalilScaffoldTape.Tape → PalPeg.GalilScaffoldTape.Tape)
     (ctl : PalPeg.GalilScaffoldController.Control)
-    (hmoved : newTapes (.inr (.inl i))
+    (hmoved : newTapes (progSlotOf fppLive i)
       = padLeft margin (mapTape encProg (encTape (f (x.vm.fpp.program.config.tapes i)))))
-    (hkept : ∀ slot, slot ≠ (.inr (.inl i) : Slot) → newTapes slot = tapes slot) :
+    (hkept : ∀ slot, slot ≠ (progSlotOf fppLive i) → newTapes slot = tapes slot) :
     EncTapes margin
       ⟨ctl, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp i f}}⟩
-      polarity gap micro newTapes where
+      polarity gap micro fppLive dpLive newTapes where
   margins := by
     intro slot
-    by_cases hs : slot = (.inr (.inl i) : Slot)
+    by_cases hs : slot = (progSlotOf fppLive i)
     · rw [hs, hmoved, pos_padLeft]
       omega
     · rw [hkept slot hs]
@@ -635,18 +635,18 @@ theorem encTapes_fppStep (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 �
 action, at the slot of the preparation machine's eighth tape: write back what the window shows at
 its centre, and move right. -/
 theorem encTapes_progRight (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Bool)
-    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
+    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (fppLive dpLive : Bool)
     (tapes newTapes : Slot → STape Γm)
-    (henc : EncTapes margin x polarity gap micro tapes)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
     (ctl : PalPeg.GalilScaffoldController.Control) (i : Fin 9)
-    (hmoved : newTapes (.inr (.inl i))
-      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (.inr (.inl i)))
-          [some ((tapes (.inr (.inl i))).focus, .right)])
-    (hkept : ∀ slot, slot ≠ (.inr (.inl i) : Slot) → newTapes slot = tapes slot) :
+    (hmoved : newTapes (progSlotOf fppLive i)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf fppLive i))
+          [some ((tapes (progSlotOf fppLive i)).focus, .right)])
+    (hkept : ∀ slot, slot ≠ (progSlotOf fppLive i) → newTapes slot = tapes slot) :
     EncTapes margin
       ⟨ctl, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp i PalPeg.GalilScaffoldTape.moveRight}}⟩
-      polarity gap micro newTapes := by
-  refine encTapes_fppStep margin x polarity gap micro tapes newTapes henc i
+      polarity gap micro fppLive dpLive newTapes := by
+  refine encTapes_fppStep margin x polarity gap micro fppLive dpLive tapes newTapes henc i
     PalPeg.GalilScaffoldTape.moveRight ctl ?_ hkept
   rw [hmoved, henc.fpp i, focus_padded]
   show (padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i)))).applyAction
@@ -656,19 +656,19 @@ theorem encTapes_progRight (margin : ℕ) (x : State GalilVM) (polarity : Fin 16
 /-- **and the rule that moves it back realizes `markBack`, when the tape still has a
 cell below its head.**  The window's cell below the head says which case this is. -/
 theorem encTapes_progLeft (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Bool)
-    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
+    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (fppLive dpLive : Bool)
     (tapes newTapes : Slot → STape Γm)
-    (henc : EncTapes margin x polarity gap micro tapes)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
     (ctl : PalPeg.GalilScaffoldController.Control) (i : Fin 9)
     (hfloor : (x.vm.fpp.program.config.tapes i).left ≠ [])
-    (hmoved : newTapes (.inr (.inl i))
-      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (.inr (.inl i)))
-          [some ((tapes (.inr (.inl i))).focus, .left)])
-    (hkept : ∀ slot, slot ≠ (.inr (.inl i) : Slot) → newTapes slot = tapes slot) :
+    (hmoved : newTapes (progSlotOf fppLive i)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf fppLive i))
+          [some ((tapes (progSlotOf fppLive i)).focus, .left)])
+    (hkept : ∀ slot, slot ≠ (progSlotOf fppLive i) → newTapes slot = tapes slot) :
     EncTapes margin
       ⟨ctl, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp i PalPeg.GalilScaffoldTape.moveLeft}}⟩
-      polarity gap micro newTapes := by
-  refine encTapes_fppStep margin x polarity gap micro tapes newTapes henc i
+      polarity gap micro fppLive dpLive newTapes := by
+  refine encTapes_fppStep margin x polarity gap micro fppLive dpLive tapes newTapes henc i
     PalPeg.GalilScaffoldTape.moveLeft ctl ?_ hkept
   rw [hmoved, henc.fpp i, focus_padded]
   show (padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i)))).applyAction
@@ -687,19 +687,19 @@ theorem fppStep_fixed (x : PalPeg.GalilScaffoldChainInputSupply.FppControl.State
 
 /-- the mark walk on the floor: the state stands still and so does the machine. -/
 theorem encTapes_progLeftAtFloor (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Bool)
-    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
+    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (fppLive dpLive : Bool)
     (tapes : Slot → STape Γm)
-    (henc : EncTapes margin x polarity gap micro tapes)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
     (ctl : PalPeg.GalilScaffoldController.Control) (i : Fin 9)
     (hfloor : (x.vm.fpp.program.config.tapes i).left = []) :
     EncTapes margin
       ⟨ctl, {x.vm with fpp := {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp i PalPeg.GalilScaffoldTape.moveLeft}}⟩
-      polarity gap micro tapes := by
+      polarity gap micro fppLive dpLive tapes := by
   have hstep : {x.vm.fpp with program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp i PalPeg.GalilScaffoldTape.moveLeft} = x.vm.fpp := by
     rw [fppStep_fixed x.vm.fpp i PalPeg.GalilScaffoldTape.moveLeft
       (moveLeft_atFloor (x.vm.fpp.program.config.tapes i) hfloor)]
   rw [hstep]
-  exact encTapes_congr margin x ⟨ctl, x.vm⟩ polarity gap micro tapes (fun i => rfl) (fun i => rfl) rfl rfl rfl rfl rfl henc
+  exact encTapes_congr margin x ⟨ctl, x.vm⟩ polarity gap micro fppLive dpLive tapes (fun i => rfl) (fun i => rfl) rfl rfl rfl rfl rfl henc
 
 /-! ### the finite control word -/
 
@@ -886,7 +886,7 @@ theorem frameFun_markBack (centre : GalilVM → Fin 3)
 read the rest. -/
 def Enc {fppBound dpBound : ℕ} (margin : ℕ) (x : State GalilVM)
     (p : QPhys fppBound dpBound × (Slot → STape Γm)) : Prop :=
-  EncControl x p.1 ∧ EncTapes margin x p.1.polarity p.1.gap p.1.micro p.2
+  EncControl x p.1 ∧ EncTapes margin x p.1.polarity p.1.gap p.1.micro p.1.fppLive p.1.dpLive p.2
 
 /-- **the mark walk forward, both sides at once.**  In `markEnd`, with the marks tape
 not yet on the end symbol, the tick moves that tape one cell right and leaves the control word
@@ -899,10 +899,10 @@ theorem markEnd_forward {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilV
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
     (hnotEnd : (x.vm.fpp.program.config.tapes 8).focus ≠ 5)
     (henc : Enc margin x (q, tapes))
-    (hmoved : newTapes (.inr (.inl 8))
-      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (.inr (.inl 8)))
-          [some ((tapes (.inr (.inl 8))).focus, .right)])
-    (hkept : ∀ slot, slot ≠ (.inr (.inl 8) : Slot) → newTapes slot = tapes slot) :
+    (hmoved : newTapes (progSlotOf q.fppLive 8)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf q.fppLive 8))
+          [some ((tapes (progSlotOf q.fppLive 8)).focus, .right)])
+    (hkept : ∀ slot, slot ≠ (progSlotOf q.fppLive 8) → newTapes slot = tapes slot) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
         (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
@@ -915,7 +915,7 @@ theorem markEnd_forward {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilV
     rfl
   rw [hval]
   exact ⟨encControl_fppStep x q henc.1 PalPeg.GalilScaffoldTape.moveRight 8,
-    encTapes_progRight margin x q.polarity q.gap q.micro tapes newTapes henc.2 x.ctl 8 hmoved hkept⟩
+    encTapes_progRight margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes newTapes henc.2 x.ctl 8 hmoved hkept⟩
 
 /-- **the mark walk back, both sides at once**, when the marks tape still has a cell
 below its head.  The tick also sends the controller to `choose` and clears the parity bit, and
@@ -928,10 +928,10 @@ theorem markEnd_back {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM �
     (hatEnd : (x.vm.fpp.program.config.tapes 8).focus = 5)
     (hfloor : (x.vm.fpp.program.config.tapes 8).left ≠ [])
     (henc : Enc margin x (q, tapes))
-    (hmoved : newTapes (.inr (.inl 8))
-      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (.inr (.inl 8)))
-          [some ((tapes (.inr (.inl 8))).focus, .left)])
-    (hkept : ∀ slot, slot ≠ (.inr (.inl 8) : Slot) → newTapes slot = tapes slot) :
+    (hmoved : newTapes (progSlotOf q.fppLive 8)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf q.fppLive 8))
+          [some ((tapes (progSlotOf q.fppLive 8)).focus, .left)])
+    (hkept : ∀ slot, slot ≠ (progSlotOf q.fppLive 8) → newTapes slot = tapes slot) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
         (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
@@ -945,7 +945,7 @@ theorem markEnd_back {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM �
     rfl
   rw [hval]
   refine ⟨encControl_fppStep ⟨{x.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false}, x.vm⟩ _ (encControl_ctl x q henc.1 {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false} {x.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false} (by rw [← henc.1.ctl]; rfl)) PalPeg.GalilScaffoldTape.moveLeft 8, ?_⟩
-  exact encTapes_progLeft margin x q.polarity q.gap q.micro tapes newTapes henc.2 _ 8 hfloor hmoved hkept
+  exact encTapes_progLeft margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes newTapes henc.2 _ 8 hfloor hmoved hkept
 
 /-- **and on the floor the marks tape stays**, so the rule names no action at all and
 only the control word changes. -/
@@ -970,7 +970,7 @@ theorem markEnd_back_atFloor {fppBound dpBound : ℕ} (margin : ℕ) (centre : G
     rfl
   rw [hval]
   refine ⟨encControl_fppStep ⟨{x.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false}, x.vm⟩ _ (encControl_ctl x q henc.1 {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false} {x.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false} (by rw [← henc.1.ctl]; rfl)) PalPeg.GalilScaffoldTape.moveLeft 8, ?_⟩
-  exact encTapes_progLeftAtFloor margin x q.polarity q.gap q.micro tapes henc.2 _ 8 hfloor
+  exact encTapes_progLeftAtFloor margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes henc.2 _ 8 hfloor
 
 /-! ### the walk home, and the start of the preparation program -/
 
@@ -1029,10 +1029,10 @@ theorem home_step {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM → 
     (hnotLeft : (x.vm.fpp.program.config.tapes 7).focus ≠ 4)
     (hfloor : (x.vm.fpp.program.config.tapes 7).left ≠ [])
     (henc : Enc margin x (q, tapes))
-    (hmoved : newTapes (.inr (.inl 7))
-      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (.inr (.inl 7)))
-          [some ((tapes (.inr (.inl 7))).focus, .left)])
-    (hkept : ∀ slot, slot ≠ (.inr (.inl 7) : Slot) → newTapes slot = tapes slot) :
+    (hmoved : newTapes (progSlotOf q.fppLive 7)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf q.fppLive 7))
+          [some ((tapes (progSlotOf q.fppLive 7)).focus, .left)])
+    (hkept : ∀ slot, slot ≠ (progSlotOf q.fppLive 7) → newTapes slot = tapes slot) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
         (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
@@ -1044,7 +1044,7 @@ theorem home_step {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM → 
     rw [if_neg (by simpa using hnotLeft)]
   rw [hval]
   exact ⟨encControl_fppStep x q henc.1 PalPeg.GalilScaffoldTape.moveLeft 7,
-    encTapes_progLeft margin x q.polarity q.gap q.micro tapes newTapes henc.2 x.ctl 7 hfloor hmoved hkept⟩
+    encTapes_progLeft margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes newTapes henc.2 x.ctl 7 hfloor hmoved hkept⟩
 
 /-- and on the floor the seventh tape stays, so the rule names no action. -/
 theorem home_step_atFloor {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
@@ -1066,7 +1066,7 @@ theorem home_step_atFloor {fppBound dpBound : ℕ} (margin : ℕ) (centre : Gali
     rw [if_neg (by simpa using hnotLeft)]
   rw [hval]
   exact ⟨encControl_fppStep x q henc.1 PalPeg.GalilScaffoldTape.moveLeft 7,
-    encTapes_progLeftAtFloor margin x q.polarity q.gap q.micro tapes henc.2 x.ctl 7 hfloor⟩
+    encTapes_progLeftAtFloor margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes henc.2 x.ctl 7 hfloor⟩
 
 /-- **and at the left end the preparation program starts.**  No tape moves; the control
 word takes the entry point, clears the halting flag, and the controller goes to `fpp`. -/
@@ -1089,7 +1089,7 @@ theorem home_fppStart {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM 
     rw [if_pos (by simpa using hatLeft)]
   rw [hval]
   refine ⟨encControl_fppStart x q henc.1 hbound {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.fpp} {x.ctl with mode := PalPeg.GalilScaffoldController.Mode.fpp} (by rw [← henc.1.ctl]; rfl), ?_⟩
-  exact encTapes_congr margin x _ q.polarity q.gap q.micro tapes
+  exact encTapes_congr margin x _ q.polarity q.gap q.micro q.fppLive q.dpLive tapes
     (fun i => rfl) (fun i => rfl) rfl rfl rfl rfl rfl henc.2
 
 /-! ### the parity walk of `choose` -/
@@ -1115,10 +1115,10 @@ theorem choose_back {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM �
         || decide ((x.vm.fpp.program.config.tapes 8).focus = first))) = false)
     (hfloor : (x.vm.fpp.program.config.tapes 8).left ≠ [])
     (henc : Enc margin x (q, tapes))
-    (hmoved : newTapes (.inr (.inl 8))
-      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (.inr (.inl 8)))
-          [some ((tapes (.inr (.inl 8))).focus, .left)])
-    (hkept : ∀ slot, slot ≠ (.inr (.inl 8) : Slot) → newTapes slot = tapes slot) :
+    (hmoved : newTapes (progSlotOf q.fppLive 8)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (tapes (progSlotOf q.fppLive 8))
+          [some ((tapes (progSlotOf q.fppLive 8)).focus, .left)])
+    (hkept : ∀ slot, slot ≠ (progSlotOf q.fppLive 8) → newTapes slot = tapes slot) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
         (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
@@ -1135,7 +1135,7 @@ theorem choose_back {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM �
   refine ⟨encControl_fppStep ⟨{x.ctl with odd := !x.ctl.odd}, x.vm⟩ _
     (encControl_ctl x q henc.1 {q.ctl with odd := !q.ctl.odd} {x.ctl with odd := !x.ctl.odd} hctl)
     PalPeg.GalilScaffoldTape.moveLeft 8, ?_⟩
-  exact encTapes_progLeft margin x q.polarity q.gap q.micro tapes newTapes henc.2 _ 8 hfloor hmoved hkept
+  exact encTapes_progLeft margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes newTapes henc.2 _ 8 hfloor hmoved hkept
 
 /-- and on the floor the marks tape stays, so only the parity bit changes. -/
 theorem choose_back_atFloor {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
@@ -1163,7 +1163,7 @@ theorem choose_back_atFloor {fppBound dpBound : ℕ} (margin : ℕ) (centre : Ga
   refine ⟨encControl_fppStep ⟨{x.ctl with odd := !x.ctl.odd}, x.vm⟩ _
     (encControl_ctl x q henc.1 {q.ctl with odd := !q.ctl.odd} {x.ctl with odd := !x.ctl.odd} hctl)
     PalPeg.GalilScaffoldTape.moveLeft 8, ?_⟩
-  exact encTapes_progLeftAtFloor margin x q.polarity q.gap q.micro tapes henc.2 _ 8 hfloor
+  exact encTapes_progLeftAtFloor margin x q.polarity q.gap q.micro q.fppLive q.dpLive tapes henc.2 _ 8 hfloor
 
 /-! ### the programs as double buffers, which is where they actually live
 
@@ -2059,7 +2059,7 @@ The machine decides this branch from one reading — the symbol under the head o
 rule is a function of what the machine can see. -/
 
 /-- the slot of the preparation program's `i`-th tape. -/
-def progSlot (i : Fin 9) : Slot := .inr (.inl i)
+abbrev progSlot (live : Bool) (i : Fin 9) : Slot := progSlotOf live i
 
 /-- the symbol under the head of a slot, as the rule reads it from the window. -/
 noncomputable def centreRead {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (i : Slot) : Γm :=
@@ -2078,20 +2078,20 @@ noncomputable def belowRead {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Wind
 
 /-- **the action table of the mark walk.**  The marks tape walks right while the head is not on
 the end mark, and left on the step that finds it. -/
-noncomputable def markEndActs {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+noncomputable def markEndActs {K : ℕ} (live : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
     Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
-  if centreRead ws (progSlot 8) = encProg 5 then
-    (if belowRead ws (progSlot 8) = bottomM then actsAt (slotIndex (progSlot 8)) []
-      else actsAt (slotIndex (progSlot 8))
-        [some (centreRead ws (progSlot 8), (.left : PalPeg.CloseoutCoreEnc12.MoveC))])
-  else actsAt (slotIndex (progSlot 8))
-    [some (centreRead ws (progSlot 8), (.right : PalPeg.CloseoutCoreEnc12.MoveC))]
+  if centreRead ws (progSlot live 8) = encProg 5 then
+    (if belowRead ws (progSlot live 8) = bottomM then actsAt (slotIndex (progSlot live 8)) []
+      else actsAt (slotIndex (progSlot live 8))
+        [some (centreRead ws (progSlot live 8), (.left : PalPeg.CloseoutCoreEnc12.MoveC))])
+  else actsAt (slotIndex (progSlot live 8))
+    [some (centreRead ws (progSlot live 8), (.right : PalPeg.CloseoutCoreEnc12.MoveC))]
 
 /-- **the control table of the mark walk.**  Finding the end mark sends the controller to
 `choose` with its parity bit cleared; otherwise the control stands still. -/
-noncomputable def markEndNext {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+noncomputable def markEndNext {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : QPhys fppBound dpBound :=
-  if centreRead ws (progSlot 8) = encProg 5 then
+  if centreRead ws (progSlot live 8) = encProg 5 then
     {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false}}
   else q
 
@@ -2104,13 +2104,13 @@ theorem markEnd_forward_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centr
     (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
     (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
     (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = markEndNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = markEndNext q.fppLive q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = markEndActs (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = markEndActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
     (hnotEnd : (x.vm.fpp.program.config.tapes 8).focus ≠ 5)
-    (hnotMark : (T (progSlot 8)).focus ≠ encProg 5)
+    (hnotMark : (T (progSlot q.fppLive 8)).focus ≠ encProg 5)
     (henc : Enc margin x (q, T)) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
@@ -2119,20 +2119,20 @@ theorem markEnd_forward_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centr
         fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
           (slotIndex i)) := by
   have hread : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 8) = (T (progSlot 8)).focus :=
-    centreRead_of_margin T (progSlot 8) (hmargin _)
+      (progSlot q.fppLive 8) = (T (progSlot q.fppLive 8)).focus :=
+    centreRead_of_margin T (progSlot q.fppLive 8) (hmargin _)
   have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1 = q := by
     show R.nq q none _ = _
     rw [hnq]
     unfold markEndNext
     rw [hread, if_neg hnotMark]
   have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = actsAt (slotIndex (progSlot 8))
-          [some ((T (progSlot 8)).focus, (.right : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+      = actsAt (slotIndex (progSlot q.fppLive 8))
+          [some ((T (progSlot q.fppLive 8)).focus, (.right : PalPeg.CloseoutCoreEnc12.MoveC))] := by
     rw [hacts]
     unfold markEndActs
     rw [hread, if_neg hnotMark]
-  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot 8) _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 8) _ hacts'
   rw [hq]
   exact markEnd_forward margin centre place entry entryQ first w F delay x q T _ hmode hnotEnd
     henc hmoved (fun slot hslot => hkept slot hslot)
@@ -2145,16 +2145,16 @@ theorem markEnd_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
     (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
     (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
     (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = markEndNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = markEndNext q.fppLive q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = markEndActs (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = markEndActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
     (hatEnd : (x.vm.fpp.program.config.tapes 8).focus = 5)
     (hfloor : (x.vm.fpp.program.config.tapes 8).left ≠ [])
-    (hatMark : (T (progSlot 8)).focus = encProg 5)
+    (hatMark : (T (progSlot q.fppLive 8)).focus = encProg 5)
     (hnotFloor : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 8) ≠ bottomM)
+      (progSlot q.fppLive 8) ≠ bottomM)
     (henc : Enc margin x (q, T)) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
@@ -2163,8 +2163,8 @@ theorem markEnd_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
         fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
           (slotIndex i)) := by
   have hread : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 8) = (T (progSlot 8)).focus :=
-    centreRead_of_margin T (progSlot 8) (hmargin _)
+      (progSlot q.fppLive 8) = (T (progSlot q.fppLive 8)).focus :=
+    centreRead_of_margin T (progSlot q.fppLive 8) (hmargin _)
   have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1
       = {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false}} := by
     show R.nq q none _ = _
@@ -2172,12 +2172,12 @@ theorem markEnd_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
     unfold markEndNext
     rw [hread, if_pos hatMark]
   have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = actsAt (slotIndex (progSlot 8))
-          [some ((T (progSlot 8)).focus, (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+      = actsAt (slotIndex (progSlot q.fppLive 8))
+          [some ((T (progSlot q.fppLive 8)).focus, (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
     rw [hacts]
     unfold markEndActs
     rw [hread, if_pos hatMark, if_neg hnotFloor]
-  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot 8) _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 8) _ hacts'
   rw [hq]
   exact markEnd_back margin centre place entry entryQ first w F delay x q T _ hmode hatEnd hfloor
     henc hmoved (fun slot hslot => hkept slot hslot)
@@ -2191,21 +2191,21 @@ cells below the head. -/
 
 /-- **the control table of the walk home.**  Reaching the left end starts the preparation
 program: a program counter, a cleared halting flag and a mode, all finite control. -/
-noncomputable def homeNext {fppBound dpBound K : ℕ} (hbound : 320 < fppBound)
+noncomputable def homeNext {fppBound dpBound K : ℕ} (live : Bool) (hbound : 320 < fppBound)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
     QPhys fppBound dpBound :=
-  if centreRead ws (progSlot 7) = encProg 4 then
+  if centreRead ws (progSlot live 7) = encProg 4 then
     {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.fpp}, fppMode := .run, fppPc := some ⟨320, hbound⟩, fppDone := false}
   else q
 
 /-- **the action table of the walk home.**  The source tape walks one cell left, unless the
 head is on the left mark — which starts the program — or the cell below is the floor. -/
-noncomputable def homeActs {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+noncomputable def homeActs {K : ℕ} (live : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
     Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
-  if centreRead ws (progSlot 7) = encProg 4 then actsAt (slotIndex (progSlot 7)) []
-  else if belowRead ws (progSlot 7) = bottomM then actsAt (slotIndex (progSlot 7)) []
-  else actsAt (slotIndex (progSlot 7))
-    [some (centreRead ws (progSlot 7), (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+  if centreRead ws (progSlot live 7) = encProg 4 then actsAt (slotIndex (progSlot live 7)) []
+  else if belowRead ws (progSlot live 7) = bottomM then actsAt (slotIndex (progSlot live 7)) []
+  else actsAt (slotIndex (progSlot live 7))
+    [some (centreRead ws (progSlot live 7), (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
 
 /-- **the start of the preparation program, rule and encoding together.**  The one branch of the
 whole machine that names no action at all. -/
@@ -2216,13 +2216,13 @@ theorem home_fppStart_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre 
     (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
     (hbound : 320 < fppBound)
     (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = homeNext hbound q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = homeNext q.fppLive hbound q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = homeActs (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = homeActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.home)
     (hatLeft : (x.vm.fpp.program.config.tapes 7).focus = 4)
-    (hatMark : (T (progSlot 7)).focus = encProg 4)
+    (hatMark : (T (progSlot q.fppLive 7)).focus = encProg 4)
     (henc : Enc margin x (q, T)) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
@@ -2231,8 +2231,8 @@ theorem home_fppStart_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre 
         fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
           (slotIndex i)) := by
   have hread : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 7) = (T (progSlot 7)).focus :=
-    centreRead_of_margin T (progSlot 7) (hmargin _)
+      (progSlot q.fppLive 7) = (T (progSlot q.fppLive 7)).focus :=
+    centreRead_of_margin T (progSlot q.fppLive 7) (hmargin _)
   have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1
       = {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.fpp}, fppMode := .run, fppPc := some ⟨320, hbound⟩, fppDone := false} := by
     show R.nq q none _ = _
@@ -2240,15 +2240,15 @@ theorem home_fppStart_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre 
     unfold homeNext
     rw [hread, if_pos hatMark]
   have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = actsAt (slotIndex (progSlot 7)) [] := by
+      = actsAt (slotIndex (progSlot q.fppLive 7)) [] := by
     rw [hacts]
     unfold homeActs
     rw [hread, if_pos hatMark]
-  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot 7) _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 7) _ hacts'
   have hsame : (fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
       (slotIndex i)) = T := by
     funext i
-    by_cases hi : i = progSlot 7
+    by_cases hi : i = progSlot q.fppLive 7
     · subst hi; rw [hmoved]; rfl
     · exact hkept i hi
   rw [hq, hsame]
@@ -2264,16 +2264,16 @@ theorem home_step_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
     (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
     (hbound : 320 < fppBound)
     (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = homeNext hbound q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = homeNext q.fppLive hbound q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = homeActs (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = homeActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.home)
     (hnotLeft : (x.vm.fpp.program.config.tapes 7).focus ≠ 4)
     (hfloor : (x.vm.fpp.program.config.tapes 7).left ≠ [])
-    (hnotMark : (T (progSlot 7)).focus ≠ encProg 4)
+    (hnotMark : (T (progSlot q.fppLive 7)).focus ≠ encProg 4)
     (hnotFloor : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 7) ≠ bottomM)
+      (progSlot q.fppLive 7) ≠ bottomM)
     (henc : Enc margin x (q, T)) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
@@ -2282,20 +2282,20 @@ theorem home_step_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
         fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
           (slotIndex i)) := by
   have hread : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 7) = (T (progSlot 7)).focus :=
-    centreRead_of_margin T (progSlot 7) (hmargin _)
+      (progSlot q.fppLive 7) = (T (progSlot q.fppLive 7)).focus :=
+    centreRead_of_margin T (progSlot q.fppLive 7) (hmargin _)
   have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1 = q := by
     show R.nq q none _ = _
     rw [hnq]
     unfold homeNext
     rw [hread, if_neg hnotMark]
   have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = actsAt (slotIndex (progSlot 7))
-          [some ((T (progSlot 7)).focus, (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+      = actsAt (slotIndex (progSlot q.fppLive 7))
+          [some ((T (progSlot q.fppLive 7)).focus, (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
     rw [hacts]
     unfold homeActs
     rw [hread, if_neg hnotMark, if_neg hnotFloor]
-  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot 7) _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 7) _ hacts'
   rw [hq]
   exact home_step margin centre place entry entryQ first w F delay x q T _ hmode hnotLeft hfloor
     henc hmoved (fun slot hslot => hkept slot hslot)
@@ -2312,11 +2312,11 @@ def chooseBackNext {fppBound dpBound : ℕ} (q : QPhys fppBound dpBound) :
   {q with ctl := {q.ctl with odd := !q.ctl.odd}}
 
 /-- the actions of the parity walk: the marks tape one cell left, unless it is on its floor. -/
-noncomputable def chooseBackActs {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+noncomputable def chooseBackActs {K : ℕ} (live : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
     Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
-  if belowRead ws (progSlot 8) = bottomM then actsAt (slotIndex (progSlot 8)) []
-  else actsAt (slotIndex (progSlot 8))
-    [some (centreRead ws (progSlot 8), (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+  if belowRead ws (progSlot live 8) = bottomM then actsAt (slotIndex (progSlot live 8)) []
+  else actsAt (slotIndex (progSlot live 8))
+    [some (centreRead ws (progSlot live 8), (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
 
 /-- **the parity walk, rule and encoding together.** -/
 theorem choose_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
@@ -2327,14 +2327,14 @@ theorem choose_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : 
     (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
       = chooseBackNext q)
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = chooseBackActs (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = chooseBackActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose)
     (hkeep : (x.ctl.odd && (decide ((x.vm.fpp.program.config.tapes 8).focus = 8)
         || decide ((x.vm.fpp.program.config.tapes 8).focus = first))) = false)
     (hfloor : (x.vm.fpp.program.config.tapes 8).left ≠ [])
     (hnotFloor : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 8) ≠ bottomM)
+      (progSlot q.fppLive 8) ≠ bottomM)
     (henc : Enc margin x (q, T)) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
@@ -2343,17 +2343,17 @@ theorem choose_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : 
         fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
           (slotIndex i)) := by
   have hread : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 8) = (T (progSlot 8)).focus :=
-    centreRead_of_margin T (progSlot 8) (hmargin _)
+      (progSlot q.fppLive 8) = (T (progSlot q.fppLive 8)).focus :=
+    centreRead_of_margin T (progSlot q.fppLive 8) (hmargin _)
   have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1
       = {q with ctl := {q.ctl with odd := !q.ctl.odd}} := hnq
   have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = actsAt (slotIndex (progSlot 8))
-          [some ((T (progSlot 8)).focus, (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+      = actsAt (slotIndex (progSlot q.fppLive 8))
+          [some ((T (progSlot q.fppLive 8)).focus, (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
     rw [hacts]
     unfold chooseBackActs
     rw [if_neg hnotFloor, hread]
-  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot 8) _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 8) _ hacts'
   rw [hq]
   exact choose_back margin centre place entry entryQ first w F delay x q T _ hmode hkeep hfloor
     henc hmoved (fun slot hslot => hkept slot hslot)
@@ -2374,16 +2374,16 @@ theorem markEnd_back_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (
     (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
     (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
     (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = markEndNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = markEndNext q.fppLive q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = markEndActs (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = markEndActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
     (hatEnd : (x.vm.fpp.program.config.tapes 8).focus = 5)
     (hfloor : (x.vm.fpp.program.config.tapes 8).left = [])
-    (hatMark : (T (progSlot 8)).focus = encProg 5)
+    (hatMark : (T (progSlot q.fppLive 8)).focus = encProg 5)
     (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
     (hisFloor : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 8) = bottomM)
+      (progSlot q.fppLive 8) = bottomM)
     (henc : Enc margin x (q, T)) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
@@ -2392,23 +2392,23 @@ theorem markEnd_back_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (
         fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
           (slotIndex i)) := by
   have hread : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 8) = (T (progSlot 8)).focus :=
-    centreRead_of_margin T (progSlot 8) (hmargin _)
+      (progSlot q.fppLive 8) = (T (progSlot q.fppLive 8)).focus :=
+    centreRead_of_margin T (progSlot q.fppLive 8) (hmargin _)
   have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1 = {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.choose, odd := false}} := by
     show R.nq q none _ = _
     rw [hnq]
     unfold markEndNext
     rw [hread, if_pos hatMark]
   have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = actsAt (slotIndex (progSlot 8)) [] := by
+      = actsAt (slotIndex (progSlot q.fppLive 8)) [] := by
     rw [hacts]
     unfold markEndActs
     rw [hread, if_pos hatMark, if_pos hisFloor]
-  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot 8) _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 8) _ hacts'
   have hsame : (fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
       (slotIndex i)) = T := by
     funext i
-    by_cases hi : i = progSlot 8
+    by_cases hi : i = progSlot q.fppLive 8
     · subst hi; rw [hmoved]; rfl
     · exact hkept i hi
   rw [hq, hsame]
@@ -2424,16 +2424,16 @@ theorem home_step_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (cen
     (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
     (hbound : 320 < fppBound)
     (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = homeNext hbound q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = homeNext q.fppLive hbound q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = homeActs (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = homeActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.home)
     (hnotLeft : (x.vm.fpp.program.config.tapes 7).focus ≠ 4)
     (hfloor : (x.vm.fpp.program.config.tapes 7).left = [])
-    (hnotMark : (T (progSlot 7)).focus ≠ encProg 4)
+    (hnotMark : (T (progSlot q.fppLive 7)).focus ≠ encProg 4)
     (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
     (hisFloor : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 7) = bottomM)
+      (progSlot q.fppLive 7) = bottomM)
     (henc : Enc margin x (q, T)) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
@@ -2442,23 +2442,23 @@ theorem home_step_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (cen
         fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
           (slotIndex i)) := by
   have hread : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 7) = (T (progSlot 7)).focus :=
-    centreRead_of_margin T (progSlot 7) (hmargin _)
+      (progSlot q.fppLive 7) = (T (progSlot q.fppLive 7)).focus :=
+    centreRead_of_margin T (progSlot q.fppLive 7) (hmargin _)
   have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1 = q := by
     show R.nq q none _ = _
     rw [hnq]
     unfold homeNext
     rw [hread, if_neg hnotMark]
   have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = actsAt (slotIndex (progSlot 7)) [] := by
+      = actsAt (slotIndex (progSlot q.fppLive 7)) [] := by
     rw [hacts]
     unfold homeActs
     rw [hread, if_neg hnotMark, if_pos hisFloor]
-  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot 7) _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 7) _ hacts'
   have hsame : (fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
       (slotIndex i)) = T := by
     funext i
-    by_cases hi : i = progSlot 7
+    by_cases hi : i = progSlot q.fppLive 7
     · subst hi; rw [hmoved]; rfl
     · exact hkept i hi
   rw [hq, hsame]
@@ -2474,14 +2474,14 @@ theorem choose_back_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (c
     (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
       = chooseBackNext q)
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = chooseBackActs (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = chooseBackActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose)
     (hkeep : (x.ctl.odd && (decide ((x.vm.fpp.program.config.tapes 8).focus = 8)
         || decide ((x.vm.fpp.program.config.tapes 8).focus = first))) = false)
     (hfloor : (x.vm.fpp.program.config.tapes 8).left = [])
     (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
     (hisFloor : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 8) = bottomM)
+      (progSlot q.fppLive 8) = bottomM)
     (henc : Enc margin x (q, T)) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
@@ -2490,19 +2490,19 @@ theorem choose_back_of_rule_atFloor {fppBound dpBound K : ℕ} (margin : ℕ) (c
         fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
           (slotIndex i)) := by
   have hread : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (progSlot 8) = (T (progSlot 8)).focus :=
-    centreRead_of_margin T (progSlot 8) (hmargin _)
+      (progSlot q.fppLive 8) = (T (progSlot q.fppLive 8)).focus :=
+    centreRead_of_margin T (progSlot q.fppLive 8) (hmargin _)
   have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1 = {q with ctl := {q.ctl with odd := !q.ctl.odd}} := hnq
   have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = actsAt (slotIndex (progSlot 8)) [] := by
+      = actsAt (slotIndex (progSlot q.fppLive 8)) [] := by
     rw [hacts]
     unfold chooseBackActs
     rw [if_pos hisFloor]
-  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot 8) _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 8) _ hacts'
   have hsame : (fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
       (slotIndex i)) = T := by
     funext i
-    by_cases hi : i = progSlot 8
+    by_cases hi : i = progSlot q.fppLive 8
     · subst hi; rw [hmoved]; rfl
     · exact hkept i hi
   rw [hq, hsame]
@@ -2516,8 +2516,8 @@ modes not yet given a table stand still; each one is replaced as its branch is p
 branch lemmas then apply to this rule with their `hnq` and `hacts` discharged by a mode lemma
 instead of assumed. -/
 
-theorem markEndActs_length {K : ℕ} (hK : 1 ≤ K) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (j : Fin tapeCountM) : (markEndActs ws j).length ≤ K := by
+theorem markEndActs_length {K : ℕ} (live : Bool) (hK : 1 ≤ K) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (j : Fin tapeCountM) : (markEndActs live ws j).length ≤ K := by
   unfold markEndActs
   split
   · split
@@ -2525,8 +2525,8 @@ theorem markEndActs_length {K : ℕ} (hK : 1 ≤ K) (ws : Fin tapeCountM → Pal
     · exact actsAt_length _ _ (by simpa using hK) j
   · exact actsAt_length _ _ (by simpa using hK) j
 
-theorem homeActs_length {K : ℕ} (hK : 1 ≤ K) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (j : Fin tapeCountM) : (homeActs ws j).length ≤ K := by
+theorem homeActs_length {K : ℕ} (live : Bool) (hK : 1 ≤ K) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (j : Fin tapeCountM) : (homeActs live ws j).length ≤ K := by
   unfold homeActs
   split
   · exact actsAt_length _ _ (by simp) j
@@ -2534,8 +2534,8 @@ theorem homeActs_length {K : ℕ} (hK : 1 ≤ K) (ws : Fin tapeCountM → PalPeg
     · exact actsAt_length _ _ (by simp) j
     · exact actsAt_length _ _ (by simpa using hK) j
 
-theorem chooseBackActs_length {K : ℕ} (hK : 1 ≤ K) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (j : Fin tapeCountM) : (chooseBackActs ws j).length ≤ K := by
+theorem chooseBackActs_length {K : ℕ} (live : Bool) (hK : 1 ≤ K) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (j : Fin tapeCountM) : (chooseBackActs live ws j).length ≤ K := by
   unfold chooseBackActs
   split
   · exact actsAt_length _ _ (by simp) j
@@ -2546,8 +2546,8 @@ noncomputable def ruleNext {fppBound dpBound K : ℕ} (hbound : 320 < fppBound)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
     QPhys fppBound dpBound :=
   match q.ctl.mode with
-  | PalPeg.GalilScaffoldController.Mode.markEnd => markEndNext q ws
-  | PalPeg.GalilScaffoldController.Mode.home => homeNext hbound q ws
+  | PalPeg.GalilScaffoldController.Mode.markEnd => markEndNext q.fppLive q ws
+  | PalPeg.GalilScaffoldController.Mode.home => homeNext q.fppLive hbound q ws
   | PalPeg.GalilScaffoldController.Mode.choose => chooseBackNext q
   | _ => q
 
@@ -2556,9 +2556,9 @@ noncomputable def ruleActs {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBoun
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
     Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
   match q.ctl.mode with
-  | PalPeg.GalilScaffoldController.Mode.markEnd => markEndActs ws
-  | PalPeg.GalilScaffoldController.Mode.home => homeActs ws
-  | PalPeg.GalilScaffoldController.Mode.choose => chooseBackActs ws
+  | PalPeg.GalilScaffoldController.Mode.markEnd => markEndActs q.fppLive ws
+  | PalPeg.GalilScaffoldController.Mode.home => homeActs q.fppLive ws
+  | PalPeg.GalilScaffoldController.Mode.choose => chooseBackActs q.fppLive ws
   | _ => fun _ => []
 
 theorem ruleActs_length {fppBound dpBound K : ℕ} (hK : 1 ≤ K) (q : QPhys fppBound dpBound)
@@ -2570,9 +2570,9 @@ theorem ruleActs_length {fppBound dpBound K : ℕ} (hK : 1 ≤ K) (q : QPhys fpp
     simp only [hm]
   all_goals
     first
-      | exact markEndActs_length hK ws j
-      | exact homeActs_length hK ws j
-      | exact chooseBackActs_length hK ws j
+      | exact markEndActs_length q.fppLive hK ws j
+      | exact homeActs_length q.fppLive hK ws j
+      | exact chooseBackActs_length q.fppLive hK ws j
       | exact Nat.zero_le K
 
 /-- **the rule of the physical machine**, so far as its branches are proved. -/
@@ -2585,7 +2585,7 @@ noncomputable def physRule {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) 
 theorem physRule_nq_markEnd {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd) :
-    (physRule (dpBound := dpBound) hbound hK).nq q none ws = markEndNext q ws := by
+    (physRule (dpBound := dpBound) hbound hK).nq q none ws = markEndNext q.fppLive q ws := by
   show ruleNext hbound q ws = _
   unfold ruleNext
   rw [hm]
@@ -2593,7 +2593,7 @@ theorem physRule_nq_markEnd {fppBound dpBound K : ℕ} (hbound : 320 < fppBound)
 theorem physRule_acts_markEnd {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd) :
-    (physRule (dpBound := dpBound) hbound hK).acts q none ws = markEndActs ws := by
+    (physRule (dpBound := dpBound) hbound hK).acts q none ws = markEndActs q.fppLive ws := by
   show ruleActs q ws = _
   unfold ruleActs
   rw [hm]
@@ -2601,7 +2601,7 @@ theorem physRule_acts_markEnd {fppBound dpBound K : ℕ} (hbound : 320 < fppBoun
 theorem physRule_nq_home {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home) :
-    (physRule (dpBound := dpBound) hbound hK).nq q none ws = homeNext hbound q ws := by
+    (physRule (dpBound := dpBound) hbound hK).nq q none ws = homeNext q.fppLive hbound q ws := by
   show ruleNext hbound q ws = _
   unfold ruleNext
   rw [hm]
@@ -2609,7 +2609,7 @@ theorem physRule_nq_home {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (h
 theorem physRule_acts_home {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home) :
-    (physRule (dpBound := dpBound) hbound hK).acts q none ws = homeActs ws := by
+    (physRule (dpBound := dpBound) hbound hK).acts q none ws = homeActs q.fppLive ws := by
   show ruleActs q ws = _
   unfold ruleActs
   rw [hm]
@@ -2625,7 +2625,7 @@ theorem physRule_nq_choose {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) 
 theorem physRule_acts_choose {fppBound dpBound K : ℕ} (hbound : 320 < fppBound) (hK : 1 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose) :
-    (physRule (dpBound := dpBound) hbound hK).acts q none ws = chooseBackActs ws := by
+    (physRule (dpBound := dpBound) hbound hK).acts q none ws = chooseBackActs q.fppLive ws := by
   show ruleActs q ws = _
   unfold ruleActs
   rw [hm]
@@ -2642,7 +2642,7 @@ theorem physRule_markEnd_forward {fppBound dpBound K : ℕ} (margin : ℕ) (cent
     (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
     (hnotEnd : (x.vm.fpp.program.config.tapes 8).focus ≠ 5)
-    (hnotMark : (T (progSlot 8)).focus ≠ encProg 5)
+    (hnotMark : (T (progSlot q.fppLive 8)).focus ≠ encProg 5)
     (henc : Enc margin x (q, T)) :
     Enc margin
       (PalPeg.GalilScaffoldTop.tickFun
