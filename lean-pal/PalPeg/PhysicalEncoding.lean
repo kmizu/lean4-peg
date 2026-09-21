@@ -3877,6 +3877,43 @@ theorem decProg_centreRead {fppBound dpBound K : ℕ} {margin : ℕ} {x : State 
     henc.2.fpp i
   rw [hfpp, focus_padded, decProg_encProg]
 
+/-- **the component tape a window stands for.**  The rule cannot see a whole tape, only the
+`2K+1` cells around the head; this is that stretch read back into the component's alphabet, with
+nothing beyond it.  A run of at most `K` calls never looks further, so it cannot tell the
+difference. -/
+def winTape {K : ℕ} (ws : PalPeg.Local.Window Γm K) : PalPeg.GalilScaffoldTape.Tape :=
+  ⟨List.ofFn (fun j : Fin K => decProg (ws ⟨K - 1 - j.val, by omega⟩)),
+    decProg (ws ⟨K, by omega⟩),
+    List.ofFn (fun j : Fin K => decProg (ws ⟨K + 1 + j.val, by omega⟩))⟩
+
+@[simp] theorem winTape_focus {K : ℕ} (ws : PalPeg.Local.Window Γm K) :
+    (winTape ws).focus = decProg (ws ⟨K, by omega⟩) := rfl
+
+/-- the machine the rule runs in its head: the program counter and halting bit it carries in its
+finite control, on the tapes its windows stand for. -/
+noncomputable def winMachine {K : ℕ} (pc : ℕ) (done : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (live : Bool) : PalPeg.GalilScaffoldControl.Machine 9 :=
+  ⟨⟨pc, fun t => winTape (ws (slotIndex (progSlotOf live t)))⟩, done⟩
+
+@[simp] theorem winMachine_pc {K : ℕ} (pc : ℕ) (done : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (live : Bool) :
+    (winMachine pc done ws live).config.pc = pc := rfl
+
+@[simp] theorem winMachine_done {K : ℕ} (pc : ℕ) (done : Bool)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (live : Bool) :
+    (winMachine pc done ws live).done = done := rfl
+
+/-- **the head of a window machine's tape carries the component's own symbol.** -/
+theorem winMachine_focus {fppBound dpBound K : ℕ} {margin : ℕ} {x : State GalilVM}
+    {q : QPhys fppBound dpBound} {T : Slot → STape Γm} (henc : Enc margin x (q, T))
+    (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i)) (pc : ℕ) (done : Bool) (i : Fin 9) :
+    ((winMachine pc done (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+        q.fppLive).config.tapes i).focus = (x.vm.fpp.program.config.tapes i).focus := by
+  show (winTape (PalPeg.Local.readWin blankM K
+    (tapesOf T (slotIndex (progSlotOf q.fppLive i))))).focus = _
+  rw [winTape_focus]
+  exact decProg_centreRead henc hmargin i
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3966,6 +4003,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.progRunActs_length
 #print axioms PalPeg.PhysicalEncoding.decProg_encProg
 #print axioms PalPeg.PhysicalEncoding.decProg_centreRead
+#print axioms PalPeg.PhysicalEncoding.winMachine_focus
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
