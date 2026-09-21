@@ -2635,6 +2635,68 @@ theorem padded_resetSeg (n : ℕ) (segments : STape Seg) :
           (encSeg PalPeg.LocalCounter.sep, .right) :=
   padded_seg_right n segments PalPeg.LocalCounter.sep
 
+/-! ### rules that touch two slots
+
+Some branches move a program tape and a bank counter in the same tick.  The general fact is that
+the ideal step applies each slot's own action list and nothing else; `actsAtPair` is the table
+for two named slots, and `idealStep_pair` reads it back. -/
+
+/-- **the ideal step, slot by slot.**  Nothing more than the definition, but it is the statement
+every branch needs: each slot gets its own list and no slot gets anything else. -/
+theorem idealStep_tapes {Q Γ : Type} {t K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γ t K) (blank : Γ)
+    (q : Q) (tapes : Fin t → STape Γ) (j : Fin t) :
+    (PalPeg.LocalStepFusion.idealStep R blank (q, tapes) none).2 j
+      = PalPeg.CloseoutCoreEnc12.actList blank (tapes j)
+          (R.acts q none (fun tape => PalPeg.Local.readWin blank K (tapes tape)) j) := rfl
+
+/-- the action table of a rule that touches two slots. -/
+def actsAtPair {Γ : Type} {t : ℕ} (i i' : Fin t)
+    (l l' : List (PalPeg.CloseoutCoreEnc12.Act Γ)) :
+    Fin t → List (PalPeg.CloseoutCoreEnc12.Act Γ) :=
+  fun j => if j = i then l else if j = i' then l' else []
+
+theorem actsAtPair_length {Γ : Type} {t K : ℕ} (i i' : Fin t)
+    (l l' : List (PalPeg.CloseoutCoreEnc12.Act Γ)) (hl : l.length ≤ K) (hl' : l'.length ≤ K)
+    (j : Fin t) : (actsAtPair i i' l l' j).length ≤ K := by
+  unfold actsAtPair
+  by_cases hj : j = i
+  · rw [if_pos hj]; exact hl
+  · rw [if_neg hj]
+    by_cases hj' : j = i'
+    · rw [if_pos hj']; exact hl'
+    · rw [if_neg hj']; exact Nat.zero_le K
+
+/-- **the ideal step of a two-slot rule, read back through the slots.** -/
+theorem idealStep_pair {Q : Type} {K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm 95 K) (q : Q)
+    (T : Slot → STape Γm) (i i' : Slot) (hne : i' ≠ i)
+    (l l' : List (PalPeg.CloseoutCoreEnc12.Act Γm))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = actsAtPair (slotIndex i) (slotIndex i') l l') :
+    (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex i)
+        = PalPeg.CloseoutCoreEnc12.actList blankM (T i) l
+      ∧ (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex i')
+        = PalPeg.CloseoutCoreEnc12.actList blankM (T i') l'
+      ∧ ∀ j : Slot, j ≠ i → j ≠ i' →
+        (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex j) = T j := by
+  refine ⟨?_, ?_, ?_⟩
+  · rw [idealStep_tapes, hacts, tapesOf_apply]
+    show PalPeg.CloseoutCoreEnc12.actList blankM (T i)
+      (if slotIndex i = slotIndex i then l else _) = _
+    rw [if_pos rfl]
+  · rw [idealStep_tapes, hacts, tapesOf_apply]
+    show PalPeg.CloseoutCoreEnc12.actList blankM (T i')
+      (if slotIndex i' = slotIndex i then l else if slotIndex i' = slotIndex i' then l' else []) = _
+    rw [if_neg (fun h => hne (slotIndex.injective h)), if_pos rfl]
+  · intro j hj hj'
+    rw [idealStep_tapes, hacts, tapesOf_apply]
+    show PalPeg.CloseoutCoreEnc12.actList blankM (T j)
+      (if slotIndex j = slotIndex i then l else if slotIndex j = slotIndex i' then l' else []) = _
+    rw [if_neg (fun h => hj (slotIndex.injective h)),
+      if_neg (fun h => hj' (slotIndex.injective h))]
+    rfl
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -2712,6 +2774,8 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
+#print axioms PalPeg.PhysicalEncoding.idealStep_tapes
+#print axioms PalPeg.PhysicalEncoding.idealStep_pair
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeftAtFloor
