@@ -3914,6 +3914,20 @@ theorem winMachine_focus {fppBound dpBound K : ℕ} {margin : ℕ} {x : State Ga
   rw [winTape_focus]
   exact decProg_centreRead henc hmargin i
 
+/-- **one call cannot tell the two machines apart.**  The rule's machine and the abstraction's
+agree on the halting bit, on the program counter and on every symbol under a head, and
+`progActOf_congr` says that is all a call consults. -/
+theorem progActOf_winMachine {fppBound dpBound K : ℕ} {margin : ℕ} {x : State GalilVM}
+    {q : QPhys fppBound dpBound} {T : Slot → STape Γm} (code : List (Instruction 9))
+    (henc : Enc margin x (q, T)) (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (pc : ℕ) (done : Bool) (hpc : x.vm.fpp.program.config.pc = pc)
+    (hdone : x.vm.fpp.program.done = done) (i : Fin 9) :
+    progActOf code (winMachine pc done
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) q.fppLive) i
+      = progActOf code x.vm.fpp.program i :=
+  progActOf_congr code _ _ (by rw [winMachine_done, hdone]) (by rw [winMachine_pc, hpc])
+    (fun t => winMachine_focus henc hmargin pc done t) i
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -4004,6 +4018,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.decProg_encProg
 #print axioms PalPeg.PhysicalEncoding.decProg_centreRead
 #print axioms PalPeg.PhysicalEncoding.winMachine_focus
+#print axioms PalPeg.PhysicalEncoding.progActOf_winMachine
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
