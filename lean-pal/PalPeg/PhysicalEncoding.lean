@@ -2542,8 +2542,10 @@ theorem markEnd_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
     (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
       = markEndNext q.fppLive q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = markEndActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (markEndActs q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
     (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
     (hatEnd : (x.vm.fpp.program.config.tapes 8).focus = 5)
     (hfloor : (x.vm.fpp.program.config.tapes 8).left ≠ [])
@@ -2567,18 +2569,20 @@ theorem markEnd_back_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
     unfold markEndNext
     rw [hread, if_pos hatMark]
   have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      = actsAt (slotIndex (progSlot q.fppLive 8))
-          [some ((T (progSlot q.fppLive 8)).focus, (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (actsAt (slotIndex (progSlot q.fppLive 8))
+            [some ((T (progSlot q.fppLive 8)).focus,
+              (.left : PalPeg.CloseoutCoreEnc12.MoveC))]) := by
     rw [hacts]
+    congr 1
     unfold markEndActs
     rw [hread, if_pos hatMark, if_neg hnotFloor]
-  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot q.fppLive 8) _ hacts'
+  obtain ⟨hmoved, hkept⟩ := idealStep_withErase R q T q.fppLive 8 _ hacts'
   rw [hq]
-  exact markEnd_back margin centre place entry entryQ first w F delay x q T _ hmode hatEnd hfloor
-    henc hmoved (fun slot hslot _ => hkept slot hslot)
-    (fun k => by
-      rw [hkept _ (by cases hl : q.fppLive <;> simp [progSlot, progSlotOf, hl])]
-      exact henc.2.idleShape k)
+  exact markEnd_back margin centre place entry entryQ first w F delay x q T
+    (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
+    hmode hatEnd hfloor henc hmoved hkept
+    (idle_shape_after_erase margin hK1 hKn R q T q.fppLive 8 _ hacts' henc.2.idleShape)
 
 /-! ### the walk home
 
@@ -3423,6 +3427,35 @@ theorem physRule_rewind_fppReset {fppBound dpBound K : ℕ} (margin : ℕ) (cent
   exact rewind_fppReset margin centre place entry entryQ first w F delay x q T hbound hmode
     hatFirst henc hidle
 
+/-- **the mark walk back, of the machine itself.**  The step that finds the end mark, with
+nothing assumed about the rule. -/
+theorem physRule_markEnd_back {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hK : 2 ≤ K)
+    (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
+    (hatEnd : (x.vm.fpp.program.config.tapes 8).focus = 5)
+    (hfloor : (x.vm.fpp.program.config.tapes 8).left ≠ [])
+    (hatMark : (T (progSlot q.fppLive 8)).focus = encProg 5)
+    (hnotFloor : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (progSlot q.fppLive 8) ≠ bottomM)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK)
+          blankM (q, tapesOf T) none).2 (slotIndex i)) :=
+  markEnd_back_of_rule margin centre place entry entryQ first w F delay x q T
+    (physRule first hbound hK)
+    (physRule_nq_markEnd first hbound hK q _ hqmode) (physRule_acts_markEnd first hbound hK q _ hqmode)
+    hmargin hK1 hKn hmode hatEnd hfloor hatMark hnotFloor henc
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3497,6 +3530,7 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.physRule_acts_home
 #print axioms PalPeg.PhysicalEncoding.physRule_acts_choose
 #print axioms PalPeg.PhysicalEncoding.physRule_markEnd_forward
+#print axioms PalPeg.PhysicalEncoding.physRule_markEnd_back
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
