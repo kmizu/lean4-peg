@@ -3753,6 +3753,69 @@ theorem physRule_markEnd {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Gal
       hbound hK hmargin hK1 hKn hqmode hmode hend
       (fun h => hend ((focus_iff_of_enc (K := K) henc 8 5).mp h)) henc
 
+/-- **the walk home, wherever it stands.**  Either the head is on the left mark and the
+preparation program starts, or the tape walks one cell left, or it is already on its own first
+cell and nothing moves. -/
+theorem physRule_home {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hK : 2 ≤ K)
+    (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.home)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK)
+          blankM (q, tapesOf T) none).2 (slotIndex i)) := by
+  by_cases hleft : (x.vm.fpp.program.config.tapes 7).focus = 4
+  · exact physRule_home_fppStart margin centre place entry entryQ first w F delay x q T
+      hbound hK hmargin hK1 hKn hqmode hmode hleft
+      ((focus_iff_of_enc (K := K) henc 7 4).mpr hleft) henc
+  · by_cases hfloor : (x.vm.fpp.program.config.tapes 7).left = []
+    · exact physRule_home_step_atFloor margin centre place entry entryQ first w F delay x q T
+        hbound hK hmargin hK1 hKn hqmode hmode hleft hfloor
+        (fun h => hleft ((focus_iff_of_enc (K := K) henc 7 4).mp h))
+        ((floor_iff_of_enc henc hK1 hKn 7).mpr hfloor) henc
+    · exact physRule_home_step margin centre place entry entryQ first w F delay x q T
+        hbound hK hmargin hK1 hKn hqmode hmode hleft hfloor
+        (fun h => hleft ((focus_iff_of_enc (K := K) henc 7 4).mp h))
+        (fun h => hfloor ((floor_iff_of_enc henc hK1 hKn 7).mp h)) henc
+
+/-- **the parity walk, wherever it stands.**  The branch that stops looking moves a cursor, so it
+is not yet here; this is the one that keeps looking, on a cell or on the floor. -/
+theorem physRule_choose {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hK : 2 ≤ K)
+    (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose)
+    (hkeep : (x.ctl.odd && (decide ((x.vm.fpp.program.config.tapes 8).focus = 8)
+        || decide ((x.vm.fpp.program.config.tapes 8).focus = first))) = false)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) first hbound hK)
+          blankM (q, tapesOf T) none).2 (slotIndex i)) := by
+  by_cases hfloor : (x.vm.fpp.program.config.tapes 8).left = []
+  · exact physRule_choose_back_atFloor margin centre place entry entryQ first w F delay x q T
+      hbound hK hmargin hK1 hKn hqmode hmode hkeep hfloor
+      ((floor_iff_of_enc henc hK1 hKn 8).mpr hfloor) henc
+  · exact physRule_choose_back margin centre place entry entryQ first w F delay x q T
+      hbound hK hmargin hK1 hKn hqmode hmode hkeep hfloor
+      (fun h => hfloor ((floor_iff_of_enc henc hK1 hKn 8).mp h)) henc
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -3837,6 +3900,8 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.focus_iff_of_enc
 #print axioms PalPeg.PhysicalEncoding.floor_iff_of_enc
 #print axioms PalPeg.PhysicalEncoding.physRule_markEnd
+#print axioms PalPeg.PhysicalEncoding.physRule_home
+#print axioms PalPeg.PhysicalEncoding.physRule_choose
 #print axioms PalPeg.PhysicalEncoding.padded_push
 #print axioms PalPeg.PhysicalEncoding.padded_pop
 #print axioms PalPeg.PhysicalEncoding.padded_resetSeg
