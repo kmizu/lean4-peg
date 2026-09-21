@@ -46,6 +46,10 @@ hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (
 
 **プログラム機械の表現が保たれる（`$S/prog_rule.keep.lean`、EXIT=0・error 0・標準公理のみ、未投入）**: **`progRep_idealStep`**——規則の 1 歩は `ProgramFunction.tickFun code true` の 1 call ちょうど。物理テープは足場のテープそのままで、途中に再符号化は無い。枝は 6 つ（停止済み、カウンタ範囲外、`halt`、`read`、`move`、`write`）。道具として命令ごとの値の補題 8 本（`controlAfter_halt`／`_move`／`_write`／`_read`、`actsAfter_*`）を切り出した——**総称の `controlAfter_some` は、仮説が命令に言及するため `match` が依存型になって書き換えが当たらない。** 命令ごとに述べれば当たる。
 
+**量子ぶんの call が実 1 歩に融合する（同じスクラッチ、EXIT=0・error 0・標準公理のみ）**: `progRep_idealIter`（`count` 回の ideal な call が表現を保つ。融合規則が要る margin `iterRadius K count` は 1 call ずつ削られていく——`pos_actList_ge` と `len_le` で `omega`）と **`progRep_realStep`**（融合規則の実 1 歩は制御が ideal と一致し、表現を保ち、テープは `TEqG` まで一致する）。探索の 64 call と fpp のスライスはこれで実 1 歩になる。
+
+**次に直すところ**: `ProgRep` はテープの**厳密な**等式で書いてあるが、実機械の sweep が返すのは `TEqG` まで。`Enc` に組み込むときは `ProgRep` を `TEqG` 版に書き換える（`StackTape` が `∃ debris, TEqG …` としているのと同じ形）。
+
 **次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
 
 ## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
