@@ -371,6 +371,24 @@ theorem counterZero_iff_below {K margin : ℕ} (hK1 : 1 ≤ K) (hKn : K ≤ marg
     show ¬ a = PalPeg.LocalCounter.mark ↔ ¬ (encSeg a = encSeg PalPeg.LocalCounter.mark)
     rw [hinj a]
 
+/-- **the test that a cursor has run out is a test on the top cell of its stack.**  A cursor is
+stored as its remaining letters followed by sealed junk, and junk never shows a letter, so the top
+cell holds a letter exactly when the cursor still has one.  The stack is kept with its head just
+above the top, so that cell is the one below the head — the one `window_below` reads. -/
+theorem placeRead_isNone_iff_head (p : PalPeg.GalilScaffoldPlace.Place)
+    (junk : List (Option (Fin 2))) (hsealed : PalPeg.ConcreteLocalMachine.Sealed junk) :
+    (PalPeg.GalilScaffoldPlace.read p).isNone = true
+      ↔ ∀ a : Fin 2,
+          (p.letters.map (fun letter => some letter) ++ junk).head? ≠ some (some a) := by
+  unfold PalPeg.GalilScaffoldPlace.read
+  cases hl : p.letters with
+  | nil =>
+    simp only [List.map_nil, List.nil_append, Option.isNone_none]
+    exact ⟨fun _ => hsealed, fun _ => trivial⟩
+  | cons b rest =>
+    simp only [List.map_cons, List.cons_append, List.head?_cons, Option.isNone_some]
+    refine ⟨fun h => absurd h (by simp), fun h => absurd (h b) (by simp)⟩
+
 /-- a program tape's cells are told apart by their encodings, so a rule testing the
 window against `encProg r` is testing the cell against `r`. -/
 theorem encProg_eq_iff (s r : Fin 9) : encProg s = encProg r ↔ s = r := by
