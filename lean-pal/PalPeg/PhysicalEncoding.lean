@@ -1946,6 +1946,104 @@ theorem idealStep_oneAct {Q Γ : Type} {t K : ℕ}
     rw [if_neg hj]
     rfl
 
+/-! ### the slots as the machine's tape indices
+
+The encoding names a component's tape by a `Slot`; a rule names it by a `Fin t`.  The two are
+the same finite set, so one equivalence carries the one-slot lemma across. -/
+
+theorem card_slot : Fintype.card Slot = 95 := by decide
+
+/-- the machine's tape index of a slot. -/
+noncomputable def slotIndex : Slot ≃ Fin 95 :=
+  (Fintype.equivFin Slot).trans (finCongr card_slot)
+
+/-- the tapes of the encoding, as the machine holds them. -/
+noncomputable def tapesOf (T : Slot → STape Γm) : Fin 95 → STape Γm :=
+  fun j => T (slotIndex.symm j)
+
+@[simp] theorem tapesOf_apply (T : Slot → STape Γm) (i : Slot) :
+    tapesOf T (slotIndex i) = T i := by
+  unfold tapesOf
+  rw [Equiv.symm_apply_apply]
+
+/-- **the ideal step of a one-slot rule, read back through the slots.** -/
+theorem idealStep_oneSlot {Q : Type} {K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm 95 K) (q : Q)
+    (T : Slot → STape Γm) (i : Slot) (l : List (PalPeg.CloseoutCoreEnc12.Act Γm))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = actsAt (slotIndex i) l) :
+    (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex i)
+        = PalPeg.CloseoutCoreEnc12.actList blankM (T i) l
+      ∧ ∀ j : Slot, j ≠ i →
+        (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex j) = T j := by
+  obtain ⟨hmoved, hkept⟩ := idealStep_oneAct R blankM q (tapesOf T) (slotIndex i) l hacts
+  refine ⟨?_, ?_⟩
+  · rw [hmoved, tapesOf_apply]
+  · intro j hj
+    rw [hkept (slotIndex j) (fun h => hj (slotIndex.injective h)), tapesOf_apply]
+
+/-! ### the first branch of the rule: the mark walk
+
+The machine decides this branch from one reading — the symbol under the head of the marks tape
+— and performs one action on that same tape.  Both halves are readings of the window, so the
+rule is a function of what the machine can see. -/
+
+/-- the slot of the preparation program's `i`-th tape. -/
+def progSlot (i : Fin 9) : Slot := .inr (.inl i)
+
+/-- the symbol under the head of a slot, as the rule reads it from the window. -/
+noncomputable def centreRead {K : ℕ} (ws : Fin 95 → PalPeg.Local.Window Γm K) (i : Slot) : Γm :=
+  ws (slotIndex i) ⟨K, by omega⟩
+
+theorem centreRead_of_margin {K : ℕ} (T : Slot → STape Γm) (i : Slot)
+    (hm : K ≤ PalPeg.Local.pos (T i)) :
+    centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) i = (T i).focus := by
+  show PalPeg.Local.readWin blankM K (tapesOf T (slotIndex i)) ⟨K, by omega⟩ = _
+  rw [tapesOf_apply]
+  exact window_centre K (T i) hm
+
+/-- **the action table of the mark walk.**  The marks tape walks right while the head is not on
+the end mark, and left on the step that finds it. -/
+noncomputable def markEndActs {K : ℕ} (ws : Fin 95 → PalPeg.Local.Window Γm K) :
+    Fin 95 → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  actsAt (slotIndex (progSlot 8))
+    [some (centreRead ws (progSlot 8),
+      (if centreRead ws (progSlot 8) = encProg 5 then .left else .right :
+        PalPeg.CloseoutCoreEnc12.MoveC))]
+
+/-- **the mark walk, rule and encoding together.**  Given a rule whose actions in this control
+are `markEndActs`, the ideal step it prescribes carries the encoding across the controller's
+tick. -/
+theorem markEnd_forward_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm 95 K)
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = markEndActs (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+    (hmargin : ∀ i : Slot, K ≤ PalPeg.Local.pos (T i))
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd)
+    (hnotEnd : (x.vm.fpp.program.config.tapes 8).focus ≠ 5)
+    (hnotMark : (T (progSlot 8)).focus ≠ encProg 5)
+    (henc : Enc margin x (q, T)) :
+    Enc margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      (q, fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+        (slotIndex i)) := by
+  have hread : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (progSlot 8) = (T (progSlot 8)).focus :=
+    centreRead_of_margin T (progSlot 8) (hmargin _)
+  have hacts' : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = actsAt (slotIndex (progSlot 8))
+          [some ((T (progSlot 8)).focus, (.right : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+    rw [hacts]
+    unfold markEndActs
+    rw [hread, if_neg hnotMark]
+  obtain ⟨hmoved, hkept⟩ := idealStep_oneSlot R q T (progSlot 8) _ hacts'
+  exact markEnd_forward margin centre place entry entryQ first w F delay x q T _ hmode hnotEnd
+    henc hmoved (fun slot hslot => hkept slot hslot)
+
 -- the machine's alphabet must be finite and decidable, as the physical machine demands
 #synth Fintype Γm
 #synth DecidableEq Γm
@@ -2006,6 +2104,9 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.vml_shift_one
 #print axioms PalPeg.PhysicalEncoding.actsAt_length
 #print axioms PalPeg.PhysicalEncoding.idealStep_oneAct
+#print axioms PalPeg.PhysicalEncoding.card_slot
+#print axioms PalPeg.PhysicalEncoding.idealStep_oneSlot
+#print axioms PalPeg.PhysicalEncoding.markEnd_forward_of_rule
 #print axioms PalPeg.PhysicalEncoding.encTapes_progRight
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeft
 #print axioms PalPeg.PhysicalEncoding.encTapes_progLeftAtFloor
