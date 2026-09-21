@@ -2675,6 +2675,56 @@ theorem placeRead_isNone_iff_centre {margin K : ℕ} {x : State GalilVM} {polari
 noncomputable def belowRead {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (i : Slot) : Γm :=
   ws (slotIndex i) ⟨K - 1, by omega⟩
 
+/-- the slot of the machine's `c`-th counter. -/
+abbrev counterSlot (c : Fin 16) : Slot := .inr (.inr (.inr (.inr (.inr (.inr (.inl c))))))
+
+/-- **a counter is zero exactly when the cell below its head is not a mark.**  A counter is
+stored as a run of marks at the top of its left stack, so its value is zero exactly when the
+cell below the head carries something else — and that cell is in the window.  This is the
+counter half of the branch conditions, as `placeRead_isNone_iff_centre` is the cursor half. -/
+theorem counterZero_iff_belowRead {margin K : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {T : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive T) (hK1 : 1 ≤ K) (hK : K ≤ margin)
+    (c : Fin 16) (value : PalPeg.GalilScaffoldCounter.Counter)
+    (hvalue : counterOf x c = some value) :
+    PalPeg.GalilScaffoldCounter.zero value = true
+      ↔ belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (counterSlot c)
+          ≠ encSeg PalPeg.LocalCounter.mark := by
+  obtain ⟨segments, habs, htape⟩ := henc.counters c value hvalue
+  have hzero : PalPeg.GalilScaffoldCounter.zero value
+      = decide (PalPeg.LocalCounter.val segments = 0) := by
+    rw [← habs]
+    exact PalPeg.LocalCounter.zero_iff segments (polarity c)
+  have hbelow :
+      belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (counterSlot c)
+        = PalPeg.Local.readWin blankM K (padLeft margin (mapTape encSeg segments))
+            ⟨K - 1, by omega⟩ := by
+    show PalPeg.Local.readWin blankM K (tapesOf T (slotIndex (counterSlot c))) ⟨K - 1, by omega⟩ = _
+    rw [tapesOf_apply,
+      show T (counterSlot c) = padLeft margin (mapTape encSeg segments) from htape]
+  rw [hbelow, hzero, decide_eq_true_eq]
+  exact counterZero_iff_below hK1 (by omega) segments
+
+/-- **the fallback copy's branch condition is two readings of the window.**  The copy continues
+while the walker still has a letter and the work counter is not yet spent; the first is the
+centre of the walker's slot, the second the cell below the head of the work counter's slot.
+Neither asks the machine to move a head, so the branch is taken on what the rule can see. -/
+theorem copyRemainingTest_iff_window {margin K : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {T : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive T) (hK1 : 1 ≤ K) (hK : K ≤ margin) :
+    PalPeg.FrameFunction.copyRemainingTest x.vm.fpp = true
+      ↔ centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (placeSlot 1)
+            ≠ blankM
+          ∧ belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (counterSlot 9)
+            = encSeg PalPeg.LocalCounter.mark := by
+  have hwalker := placeRead_isNone_iff_centre henc hK 1 x.vm.fpp.walker rfl
+  have hwork := counterZero_iff_belowRead henc hK1 hK 9 x.vm.fpp.work rfl
+  unfold PalPeg.FrameFunction.copyRemainingTest
+  cases hread : (PalPeg.GalilScaffoldPlace.read x.vm.fpp.walker).isNone <;>
+    cases hzero : PalPeg.GalilScaffoldCounter.zero x.vm.fpp.work <;> simp_all
+
 /-- **the action table of the mark walk.**  The marks tape walks right while the head is not on
 the end mark, and left on the step that finds it. -/
 noncomputable def markEndActs {K : ℕ} (live : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
