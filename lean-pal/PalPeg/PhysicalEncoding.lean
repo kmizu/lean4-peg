@@ -4207,6 +4207,75 @@ theorem viewRep_rightOn {margin : ℕ} (v : PalPeg.LocalInputView.InputView)
         rw [hnear] at h
         simpa only [List.cons_append] using h)
 
+/-- **a head's step right does not change what its view holds either.** -/
+theorem cells_rightViewOn (v : PalPeg.LocalInputView.InputView) (a : Option (Fin 2))
+    (rest : List (Option (Fin 2))) (hnear : v.near = a :: rest) :
+    PalPeg.LocalInputView.cells (rightViewOn v a rest) = PalPeg.LocalInputView.cells v := by
+  unfold PalPeg.LocalInputView.cells rightViewOn PalPeg.LocalInputView.absRight
+  rw [hnear]
+  simp [PalPeg.LocalInputView.farList]
+
+theorem viewCells_rightViewOn (v : PalPeg.LocalInputView.InputView) (a : Option (Fin 2))
+    (rest : List (Option (Fin 2))) (hnear : v.near = a :: rest)
+    (hcells : PalPeg.LocalViewCells.ViewCells v) :
+    PalPeg.LocalViewCells.ViewCells (rightViewOn v a rest) := by
+  obtain ⟨letters, hletters⟩ := hcells
+  exact ⟨letters, by rw [cells_rightViewOn v a rest hnear, hletters]⟩
+
+/-- the twelve tapes of a view after its head steps right: two actions on the back stack, one on
+the near stack, and the queue untouched. -/
+noncomputable def rightViewTapes (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (a : Option (Fin 2)) : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc :=
+  fun t =>
+    if t = PalPeg.ConcreteLocalMachine.backTape then
+      PalPeg.CloseoutCoreEnc12.actList PalPeg.CloseoutCoreStep.blankc
+        (viewTapes PalPeg.ConcreteLocalMachine.backTape)
+        [some ((viewTapes PalPeg.ConcreteLocalMachine.backTape).focus,
+            (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+          some (PalPeg.CloseoutCoreEnc.cellSym a,
+            (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
+    else if t = PalPeg.ConcreteLocalMachine.nearTape then
+      PalPeg.CloseoutCoreEnc12.actOnG PalPeg.CloseoutCoreStep.blankc
+        (viewTapes PalPeg.ConcreteLocalMachine.nearTape)
+        (some (PalPeg.CloseoutCoreEnc.cellSym a,
+          (.left : PalPeg.CloseoutCoreEnc12.MoveC)))
+    else viewTapes t
+
+theorem encCell_rightViewTapes_back (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (a : Option (Fin 2)) :
+    mapTape encCell (rightViewTapes viewTapes a PalPeg.ConcreteLocalMachine.backTape)
+      = PalPeg.CloseoutCoreEnc12.actList blankM
+          (mapTape encCell (viewTapes PalPeg.ConcreteLocalMachine.backTape))
+          [some ((mapTape encCell (viewTapes PalPeg.ConcreteLocalMachine.backTape)).focus,
+              (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+            some (encCell (PalPeg.CloseoutCoreEnc.cellSym a),
+              (.stay : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+  unfold rightViewTapes
+  rw [if_pos rfl]
+  simp only [PalPeg.CloseoutCoreEnc12.actList, PalPeg.CloseoutCoreEnc12.actOnG]
+  rw [mapTape_applyAction encCell rfl _ (PalPeg.CloseoutCoreEnc.cellSym a) .stay,
+    mapTape_applyAction encCell rfl _
+      (viewTapes PalPeg.ConcreteLocalMachine.backTape).focus .right]
+  rfl
+
+theorem encCell_rightViewTapes_near (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (a : Option (Fin 2)) :
+    mapTape encCell (rightViewTapes viewTapes a PalPeg.ConcreteLocalMachine.nearTape)
+      = PalPeg.CloseoutCoreEnc12.actOnG blankM
+          (mapTape encCell (viewTapes PalPeg.ConcreteLocalMachine.nearTape))
+          (some (encCell (PalPeg.CloseoutCoreEnc.cellSym a),
+            (.left : PalPeg.CloseoutCoreEnc12.MoveC))) := by
+  unfold rightViewTapes
+  rw [if_neg (by decide), if_pos rfl]
+  exact mapTape_applyAction encCell rfl _ _ _
+
+theorem encCell_rightViewTapes_other (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (a : Option (Fin 2)) (t : Fin 12) (hback : t ≠ PalPeg.ConcreteLocalMachine.backTape)
+    (hnear : t ≠ PalPeg.ConcreteLocalMachine.nearTape) :
+    mapTape encCell (rightViewTapes viewTapes a t) = mapTape encCell (viewTapes t) := by
+  unfold rightViewTapes
+  rw [if_neg hback, if_neg hnear]
+
 /-- **a head that stands on the gap beside a letter steps left for free.**  Only its own bit
 moves; not one of its twelve tapes does. -/
 theorem headRep_leftGap {margin : ℕ} {micro : PalPeg.ConcreteLocalMachine.MicroControl}
