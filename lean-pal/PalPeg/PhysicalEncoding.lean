@@ -7108,6 +7108,27 @@ def decCell (g : Γm) : PalPeg.CloseoutCoreStep.Γc :=
   · rw [if_neg h]
     rfl
 
+/-- **the windows of a head's twelve slots, read in the view's own alphabet.**  The machine keeps
+a head's tapes as the encoded tapes of a view, so decoding cell by cell is all it takes to hand
+the view layer the windows it expects.
+
+Naming it is what lets the rows that read a head — the actions it names, and the symbol its
+cursor is about to reach — be stated against the view layer's own observations. -/
+noncomputable def viewWindows {K : ℕ} (v : Fin 4) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin 12 → PalPeg.Local.Window PalPeg.CloseoutCoreStep.Γc K :=
+  fun tape i => decCell (ws (slotIndex (headSlot v tape)) i)
+
+/-- **and on encoded tapes those are the view's own windows.** -/
+theorem viewWindows_of_encoded {K : ℕ} (v : Fin 4) (T : Slot → STape Γm)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hold : ∀ t, T (headSlot v t) = mapTape encCell (viewTapes t)) :
+    viewWindows v (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = fun tape => PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K (viewTapes tape) := by
+  funext tape i
+  show decCell (PalPeg.Local.readWin blankM K (tapesOf T (slotIndex (headSlot v tape))) i) = _
+  rw [tapesOf_apply, hold tape, readWin_mapTape encCell (by rw [encCell]; rw [if_pos rfl]),
+    decCell_encCell]
+
 /-- **the actions the machine names on the twelve slots of a head: the view layer's own, through
 the encoding.**  The rule reads the head's own windows, decodes them to cells, asks the view
 layer what a view does on this step of the slot under this command, and sends those actions back
@@ -7119,7 +7140,7 @@ noncomputable def headViewActs {fppBound dpBound K : ℕ} (hK : 2 ≤ K)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (t : Fin 12) :
     List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
   (PalPeg.ConcreteLocalMachine.viewActs (Fin 2) hK slot command (viewControlOf q v)
-    (fun tape i => decCell (ws (slotIndex (headSlot v tape)) i)) t).map (encAct encCell)
+    (viewWindows v ws) t).map (encAct encCell)
 
 theorem headViewActs_length {fppBound dpBound K : ℕ} (hK : 2 ≤ K)
     (q : QPhys fppBound dpBound) (v : Fin 4) (slot : Fin 11)
