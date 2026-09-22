@@ -9874,6 +9874,43 @@ theorem copyActs_eq_copyOneBase {fppBound dpBound K : ℕ} (live : Bool)
   rw [if_pos hremains, if_neg hnotBlank]
   simp only [hsym]
 
+/-- **a branch theorem, carried to the machine of twelve steps.**  Everything a mode whose branch
+moves no head has to do is name its branch theorem and say that its tick moves no input head.
+Written once here, so that each such mode is one line and not four.
+
+The five modes that qualify are the end mark, the walk home, the back half of the choice, the
+preparation program and the fallback copy: their branches name counters, program tapes and
+period tapes, and nothing of a head. -/
+theorem enc_ofBranchStep_still {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hmargin : K ≤ margin)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (w : List (Fin 2)) (x y : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (input : Option (Fin 2)) (hslot0 : q.slot.val = 0)
+    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (howed : ∀ v, (q.micro v).2.2.2 = 0) (hheadsSame : ∀ v, headOf y v = headOf x v)
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (hbranch : Enc w margin y
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hKq)
+          blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep
+          (physRule (dpBound := dpBound) entryQ first hbound hKq) blankM (q, tapesOf T) none).2
+            (slotIndex i))) :
+    Enc w margin y
+      ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK2 rest) blankM
+          (q, tapesOf T) input 12).1,
+        fun i => (PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hKq hK2 rest) blankM (q, tapesOf T) input 12).2
+            (slotIndex i)) := by
+  obtain ⟨hctl, htapes⟩ := enc_step_pieces margin entryQ first hbound hKq w y q T hbranch
+  exact enc_afterStillTick margin entryQ first hbound hKq hK2 hmargin rest w x y q T input hslot0
+    hmode howed hheadsSame henc hctl htapes
+
 /-- **a tick of the fallback copy moves no input head.**  It writes the preparation program's
 copy tape, decrements the work counter and steps the walker: everything it touches is inside the
 preparation's own state, so the three input cursors and the chain's verifier are where they
@@ -10434,17 +10471,14 @@ theorem copy_one_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Gal
         fun i => (PalPeg.LocalStepFusion.idealRun
           (tickPhysRule entryQ first hbound hKb hK2 rest) blankM (q, tapesOf T) input 12).2
             (slotIndex i)) := by
-  obtain ⟨hctl, htapes⟩ := enc_step_pieces margin entryQ first hbound hKb w
-    (PalPeg.GalilScaffoldTop.tickFun
-      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) q T
-    (physRule_copy_one margin centre place entry entryQ first w F delay x q T hbound hKb hK1 hK
-      hqmode hmode hremains a hread henc)
-  exact enc_afterStillTick margin entryQ first hbound hKb hK2 hK rest w x
+  exact enc_ofBranchStep_still margin entryQ first hbound hKb hK2 hK rest w x
     (PalPeg.GalilScaffoldTop.tickFun
       (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) q T input
     hslot0 (Or.inr (Or.inr (Or.inr (Or.inr hqmode)))) howed
     (headOf_tickFun_copy centre place entry entryQ first w F delay x hmode hremains a hread)
-    henc.2 hctl htapes
+    henc.2
+    (physRule_copy_one margin centre place entry entryQ first w F delay x q T hbound hKb hK1 hK
+      hqmode hmode hremains a hread henc)
 
 /-- **the last tick of the fallback copy, of the machine itself.** -/
 theorem physRule_copy_end {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
