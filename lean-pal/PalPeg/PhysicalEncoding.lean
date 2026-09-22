@@ -12135,6 +12135,38 @@ theorem backgroundFun_chain_active (P : PalPeg.GalilScaffoldChainInputSupply.Sha
   | watch wm => rfl
   | broken wm => rfl
 
+/-- **what a background tick leaves in the search, the preparation's dynamic program, the
+lower bound and the preparation's cursor.**  The background writes all four through one
+lens and the birth wrapper touches none of them, so each is the corresponding field of
+one quantum of the search applied to the state the tick started from.
+
+These are the atoms the non-head side of a background tick is built from.  Naming them
+separately is what lets the branch be stated against the tables already proved about the
+search and the dynamic program, instead of against a lens. -/
+theorem backgroundFun_searchSide (P : PalPeg.GalilScaffoldChainInputSupply.Shared)
+    (s : GalilVM) :
+    (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).search
+        = (PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s).search
+      ∧ (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).dp
+        = (PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s).dp
+      ∧ (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).lower
+        = (PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s).lower
+      ∧ (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).walker
+        = (PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s).walker := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_search]
+    rfl
+  · unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_dp]
+    rfl
+  · unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_lower]
+    rfl
+  · unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_walker]
+    rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
