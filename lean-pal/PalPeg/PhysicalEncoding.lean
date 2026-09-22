@@ -5261,54 +5261,82 @@ theorem belowRead_backSlot {K : ℕ} {tapes : Slot → STape Γm} (hK1 : 1 ≤ K
       unfold encCell
       rw [if_pos rfl]), hbelow]
 
-/-- **the bit for the first letter, after a head steps left, is one reading of the window.**
-The head stands on the first letter afterwards exactly when it stood on a gap and the cell below
-its back head is the sentinel — the first of those is a bit the control already carries, and the
-second is in the window. -/
+/-- **the symbol under a head, on the slot the machine carries it on.**  The companion of
+`belowRead_backSlot`: the centre of the back slot's window is the encoding of the top of the back
+stack, which is the view's own focus. -/
+theorem centreRead_backSlot {K : ℕ} {tapes : Slot → STape Γm} (v : Fin 4)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (stack : List (Option (Fin 2)))
+    (hslot : tapes (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+      = mapTape encCell (viewTapes PalPeg.ConcreteLocalMachine.backTape))
+    (hstack : PalPeg.ConcreteLocalMachine.StackTape
+      (viewTapes PalPeg.ConcreteLocalMachine.backTape) stack)
+    (hmargin : K ≤ stack.length) :
+    centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+        (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+      = encCell (PalPeg.CloseoutCoreEnc18.topSym stack) := by
+  have hcentre := hstack.centreSym_eq (K := K) hmargin
+  unfold PalPeg.ConcreteLocalMachine.centreSym at hcentre
+  have hidx : PalPeg.Local.idx K K = (⟨K, by omega⟩ : Fin (2 * K + 1)) := by
+    refine Fin.ext ?_
+    show min K (2 * K) = K
+    omega
+  rw [hidx] at hcentre
+  show PalPeg.Local.readWin blankM K
+    (tapesOf tapes (slotIndex (headSlot v PalPeg.ConcreteLocalMachine.backTape)))
+    ⟨K, by omega⟩ = _
+  rw [tapesOf_apply, hslot,
+    readWin_mapTape encCell (show encCell PalPeg.CloseoutCoreStep.blankc = blankM from by
+      unfold encCell
+      rw [if_pos rfl]), hcentre]
+
+/-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
+head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
+which is a bit the control carries; the symbol under its back head is a letter rather than the
+sentinel, so there is a letter to step back onto; and the cell below its back head is the
+sentinel, so that letter is the first one.  All three are in hand where the rule stands. -/
 theorem leftFirst_after_step_iff {margin K : ℕ} {polarity : Fin 16 → Bool} {gap : Fin 4 → Bool}
     {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl} {fppLive dpLive : Bool}
     {x : State GalilVM} {tapes : Slot → STape Γm}
     (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes) (hK1 : 1 ≤ K)
     (hK : K ≤ margin)
     (v : Fin 4) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
-    (hhead : headOf x v = some head)
-    (a : Option (Fin 2)) (tail : List (Option (Fin 2))) (hleft : head.head.left = a :: tail) :
+    (hhead : headOf x v = some head) :
     PalPeg.GalilScaffoldChainInputSupply.position
         (PalPeg.GalilScaffoldInputHead.left head) = 1
       ↔ (gap v = true ∧
+          centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+              (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+            ≠ encCell (PalPeg.CloseoutCoreEnc.cellSym none) ∧
           belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
               (headSlot v PalPeg.ConcreteLocalMachine.backTape)
             = encCell (PalPeg.CloseoutCoreEnc.cellSym none)) := by
   obtain ⟨view, viewTapes, habs, hrep, hslots, hcells⟩ := henc.heads v head hhead
-  have hviewBack : view.back = a :: tail := by
+  have hviewBack : view.back = head.head.left := by
     have hb : (PalPeg.LocalArrival.absHead' view []).head.left = head.head.left := by rw [habs]
-    rw [← hleft]
     exact hb
-  have hviewGap : view.gap = head.gap := by
+  have hgapBit : gap v = head.gap := by
     have hg : (PalPeg.LocalArrival.absHead' view []).gap = head.gap := by rw [habs]
+    rw [hrep.gap]
     exact hg
-  have hgapBit : gap v = head.gap := by rw [hrep.gap, hviewGap]
   obtain ⟨bottom, hbottomHeight, hstack⟩ := hrep.back
-  have hbelow : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+  have hmarginStack : K ≤ (PalPeg.ConcreteLocalMachine.backStack view ++ bottom).length := by
+    have hlen : (PalPeg.ConcreteLocalMachine.backStack view ++ bottom).length
+        = view.back.length + 1 + bottom.length := by
+      show (view.focus :: view.back ++ bottom).length = _
+      simp only [List.length_append, List.length_cons]
+    omega
+  have hcentre : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
       (headSlot v PalPeg.ConcreteLocalMachine.backTape)
-      = encCell (PalPeg.CloseoutCoreEnc.cellSym a) := by
-    rw [belowRead_backSlot hK1 v viewTapes
-      (PalPeg.ConcreteLocalMachine.backStack view ++ bottom)
-      (hslots PalPeg.ConcreteLocalMachine.backTape) hstack
-      (by
-        have hlen : (PalPeg.ConcreteLocalMachine.backStack view ++ bottom).length
-            = view.back.length + 1 + bottom.length := by
-          show (view.focus :: view.back ++ bottom).length = _
-          simp only [List.length_append, List.length_cons]
-        omega)]
-    congr 1
-    show PalPeg.CloseoutCoreEnc18.topSym (view.back ++ bottom) = _
-    rw [hviewBack]
+      = encCell (PalPeg.CloseoutCoreEnc.cellSym view.focus) := by
+    rw [centreRead_backSlot v viewTapes (PalPeg.ConcreteLocalMachine.backStack view ++ bottom)
+      (hslots PalPeg.ConcreteLocalMachine.backTape) hstack hmarginStack]
     rfl
-  rw [hbelow, leftFirst_after_left head, hleft, hgapBit]
-  have hsym : (encCell (PalPeg.CloseoutCoreEnc.cellSym a)
-      = encCell (PalPeg.CloseoutCoreEnc.cellSym none)) ↔ a = none := by
-    cases a with
+  have hsentinel : ∀ cell : Option (Fin 2),
+      (encCell (PalPeg.CloseoutCoreEnc.cellSym cell)
+        = encCell (PalPeg.CloseoutCoreEnc.cellSym none)) ↔ cell = none := by
+    intro cell
+    cases cell with
     | none => simp
     | some b =>
       simp only [iff_false, reduceCtorEq, iff_false]
@@ -5317,15 +5345,41 @@ theorem leftFirst_after_step_iff {margin K : ℕ} {polarity : Fin 16 → Bool} {
         simp [PalPeg.CloseoutCoreEnc.cellSym, PalPeg.CloseoutCoreStep.blankc,
           PalPeg.GalilVMEncode.blank, PalPeg.GalilVMEncode.sOpt]
       simp [encCell, hne, blankM]
-  rw [hsym]
-  constructor
-  · rintro ⟨hg, hlen⟩
-    exact ⟨hg, (back_singleton_iff_sentinel view hcells a tail hviewBack).mp
-      (by simpa using hlen)⟩
-  · rintro ⟨hg, ha⟩
-    exact ⟨hg, by
-      rw [(back_singleton_iff_sentinel view hcells a tail hviewBack).mpr ha]
-      rfl⟩
+  rw [leftFirst_after_left head, hcentre, hgapBit, ← hviewBack]
+  cases hback : view.back with
+  | nil =>
+    have hfocus : view.focus = none :=
+      (PalPeg.LocalViewCells.back_nil_iff_focus_none hcells).mp hback
+    rw [hfocus]
+    simp
+  | cons a tail =>
+    have hfocus : view.focus ≠ none := by
+      intro hnone
+      rw [(PalPeg.LocalViewCells.back_nil_iff_focus_none hcells).mpr hnone] at hback
+      simp at hback
+    have hbelow : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+        (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+        = encCell (PalPeg.CloseoutCoreEnc.cellSym a) := by
+      rw [belowRead_backSlot hK1 v viewTapes
+        (PalPeg.ConcreteLocalMachine.backStack view ++ bottom)
+        (hslots PalPeg.ConcreteLocalMachine.backTape) hstack hmarginStack]
+      congr 1
+      show PalPeg.CloseoutCoreEnc18.topSym (view.back ++ bottom) = _
+      rw [hback]
+      rfl
+    have hsplit := back_singleton_iff_sentinel view hcells a tail hback
+    rw [hbelow]
+    constructor
+    · rintro ⟨hg, hlen⟩
+      refine ⟨hg, ?_, ?_⟩
+      · intro hEq
+        exact hfocus ((hsentinel view.focus).mp hEq)
+      · rw [hsentinel a]
+        exact hsplit.mp (by simpa using hlen)
+    · rintro ⟨hg, -, ha⟩
+      refine ⟨hg, ?_⟩
+      rw [hsplit.mpr ((hsentinel a).mp ha)]
+      simp
 
 /-- **the reconstructed tape is the component's tape, shifted.**  Cell `j` of the one is cell
 `pos - K + j` of the other, so long as the component's head stands at least `K` cells from its own
