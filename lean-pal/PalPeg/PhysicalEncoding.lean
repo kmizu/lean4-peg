@@ -9021,6 +9021,85 @@ theorem encControl_congr {fppBound dpBound : ℕ} {w : List (Fin 2)} {x : State 
       onLetter := by rw [← honLetter]; exact h.onLetter
       leftFirst := by rw [← hleftFirst]; exact h.leftFirst }
 
+/-- **the tapes of a tick whose cursors moved, from the tapes of its step.**  The step's table
+writes the counters, the programs and the chain's own tapes; the twelve slots of each cursor are
+written afterwards by the view layer.  So the encoding after a tick is assembled from two
+different states: everything but the cursors is read off the state the step reached, and the
+cursors are read off the state the tick reached.
+
+`encTapes_replaceHeads` is the case in which those two states are the same, which is every branch
+whose cursors move left or stand still — a left step is one action, so the step's own table can
+write it.  A step right is not one action: it is eleven slots of the view layer.  This is the
+theorem that lets such a branch be assembled. -/
+theorem encTapes_replaceHeadsOfState {margin : ℕ} {z y : State GalilVM}
+    {polarity polarity' : Fin 16 → Bool} {gap gap' : Fin 4 → Bool}
+    {micro micro' : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive fppLive' dpLive' : Bool} {T T' : Slot → STape Γm}
+    (h : EncTapes margin z polarity gap micro fppLive dpLive T)
+    (hfpp : ∀ i, y.vm.fpp.program.config.tapes i = z.vm.fpp.program.config.tapes i)
+    (hdp : ∀ i, y.vm.dp.config.tapes i = z.vm.dp.config.tapes i)
+    (hcounters : counterOf y = counterOf z) (hplaces : placeOf y = placeOf z)
+    (hperiod : periodOf y = periodOf z) (hanswer : answerOf y = answerOf z)
+    (hother : ∀ slot : Slot, (∀ v i, slot ≠ headSlot v i) → T' slot = T slot)
+    (hmargins : ∀ (v : Fin 4) (i : Fin 12), margin ≤ PalPeg.Local.pos (T' (headSlot v i)))
+    (hpolarity : polarity' = polarity) (hfppLive : fppLive' = fppLive)
+    (hdpLive : dpLive' = dpLive)
+    (hheads : ∀ (v : Fin 4) head, headOf y v = some head →
+      ∃ (view : PalPeg.LocalInputView.InputView)
+          (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+        PalPeg.LocalArrival.absHead' view [] = head ∧
+          PalPeg.ConcreteLocalMachine.ViewRep margin view (gap' v) (micro' v) viewTapes ∧
+          (∀ i, T' (headSlot v i) = mapTape encCell (viewTapes i)) ∧
+            PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view)
+    (hidleHead : headOf y 3 = none → HeadSlotsRep margin gap' micro' T' 3) :
+    EncTapes margin y polarity' gap' micro' fppLive' dpLive' T' := by
+  subst hpolarity
+  subst hfppLive
+  subst hdpLive
+  refine
+    { margins := fun slot => ?_
+      heads := hheads
+      idleHead := hidleHead
+      fpp := fun i => ?_
+      dp := fun i => ?_
+      idleShape := fun i => ?_
+      counters := fun c value hc => ?_
+      places := fun i place hp => ?_
+      mirrors := fun m value hm => ?_
+      period := fun tape hp => ?_
+      answer := fun tape ha => ?_ }
+  · match slot with
+    | .inl p => exact hmargins p.1 p.2
+    | .inr r =>
+      rw [hother (Sum.inr r) (by intro v i hEq; exact absurd hEq (by simp [headSlot]))]
+      exact h.margins _
+  · rw [hother _ (by intro v t hEq; exact absurd hEq (progSlotOf_ne_headSlot _ _ v t)), hfpp i]
+    exact h.fpp i
+  · rw [hother _ (by intro v t hEq; exact absurd hEq (dpSlotOf_ne_headSlot _ _ v t)), hdp i]
+    exact h.dp i
+  · obtain ⟨raw, hraw⟩ := h.idleShape i
+    exact ⟨raw, by
+      rw [hother _ (by intro v t hEq; exact absurd hEq (progSlotOf_ne_headSlot _ _ v t))]
+      exact hraw⟩
+  · obtain ⟨seg, hseg, hslot⟩ := h.counters c value (by rw [← congrFun hcounters c]; exact hc)
+    exact ⟨seg, hseg, by
+      rw [hother _ (by intro v i hEq; exact absurd hEq (by simp [counterSlot, headSlot]))]
+      exact hslot⟩
+  · obtain ⟨stack, junk, hsealed, hjunk, hstack, hslot⟩ :=
+      h.places i place (by rw [← congrFun hplaces i]; exact hp)
+    exact ⟨stack, junk, hsealed, hjunk, hstack, by
+      rw [hother _ (by intro v i hEq; exact absurd hEq (by simp [placeSlot, headSlot]))]
+      exact hslot⟩
+  · obtain ⟨seg, hseg, hslot⟩ :=
+      h.mirrors m value (by rw [← congrFun hcounters _]; exact hm)
+    exact ⟨seg, hseg, by
+      rw [hother _ (by intro v i hEq; exact absurd hEq (by simp [mirrorSlot, headSlot]))]
+      exact hslot⟩
+  · rw [hother _ (by intro v t hEq; exact absurd hEq (by simp [headSlot]))]
+    exact h.period tape (by rw [← hperiod]; exact hp)
+  · rw [hother _ (by intro v t hEq; exact absurd hEq (by simp [headSlot]))]
+    exact h.answer tape (by rw [← hanswer]; exact ha)
+
 /-- **what the tapes of the encoding say, with the heads replaced.**  Every field of `EncTapes`
 but `heads` and `margins` names a slot that is not a head's — the two programs, the counter bank,
 the mirrors, the cursors, the period tape, the answer — so a tick that leaves those slots as the
