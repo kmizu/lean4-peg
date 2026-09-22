@@ -12070,6 +12070,27 @@ theorem headOf_tickFun_init (centre : GalilVM → Fin 3)
      dsimp only
      rfl)
 
+/-- **the background quantum of the scan leaves the three input cursors where they are.**  It
+runs the search, steps the preparation's machinery and writes the chain; the left, the centre and
+the right cursor are carried through.
+
+So the only cursor a background tick can move is the chain's verifier, and the only way it moves
+is by the chain being born — which is where the mirror of the centre pays for itself. -/
+theorem backgroundFun_cursors (P : PalPeg.GalilScaffoldChainInputSupply.Shared) (s : GalilVM) :
+    (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).left = s.left
+      ∧ (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).center = s.center
+      ∧ (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).right = s.right := by
+  refine ⟨?_, ?_, ?_⟩
+  · unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_left]
+    rfl
+  · unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_center]
+    rfl
+  · unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_right]
+    rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)

@@ -1,3 +1,27 @@
+## n512 (2026-09-22): 訂正の訂正 — background はカーソルを動かさない。証明が下手だっただけ
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+
+n511 で「`backgroundFun` がカーソルを運ぶことは `rfl` で通らないので、主張を取り下げる」
+と書いた。**取り下げるべきだったのは主張ではなく、証明の書き方だった。**
+
+`PalPeg/GalilScaffoldTopSearch.lean:77` の `afterBirth b s` は
+`if b then {s with periodOnly := false, cycle := reset} else s` で、`b` が変数のままでは
+`rfl` は通らない（`cases b` が要る）。そして**その射影補題は既に全部そこにある**:
+`afterBirth_left` (:89) / `afterBirth_right` (:91) / `afterBirth_chain` (:93) /
+`afterBirth_center` (:95) / `afterBirth_radius` (:97) / `afterBirth_length` (:99) /
+`afterBirth_remaining` / `afterBirth_replay` / `afterBirth_fpp` / `afterBirth_search` /
+`afterBirth_dp`。
+
+`backgroundFun_cursors`（公理は `propext` / `Quot.sound` のみ）を入れた:
+scan の背景量子は左・中心・右の 3 カーソルをそのまま運ぶ。
+**だから背景 tick が動かしうるカーソルは chain の verifier だけで、
+動く唯一の理由は chain が生まれることだけ** — 中心の鏡（n504/n505）が効く場所。
+
+**この往復の教訓**: `rfl` が通らないことは「偽」の証拠ではないし、
+「無償ではない」の証拠でもない。**定義が `if` を含むとき、変数のままでは `rfl` は通らない。**
+取り下げる前に射影補題を探すべきだった（既にあった）。n511 の note はこの n512 で訂正される。
+
 ## n511 (2026-09-22): scan の background がカーソルに何をするかは、まだ言えない
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
