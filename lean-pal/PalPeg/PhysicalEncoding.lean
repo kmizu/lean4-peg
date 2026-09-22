@@ -8567,6 +8567,45 @@ theorem absHead'_mirror_afterCommand {view : PalPeg.LocalInputView.InputView}
       = f centre := by
   rw [absHead'_viewApply hwf [] command hready f hf, hmirror]
 
+/-- **the ten modes, as the dispatch of a tick's obligation sees them.**  A tick's obligation has
+to be met in every mode, so the work of meeting it is exactly this list, and what is left of it
+is measurable: the branches carried through the division of labour so far are the end mark, the
+walk home, the back half of the choice, the preparation program, the fallback copy and the three
+branches of the rewind. -/
+theorem ctlPhys_mode_cases (c : CtlPhys) :
+    c.mode = PalPeg.GalilScaffoldController.Mode.init
+      ∨ c.mode = PalPeg.GalilScaffoldController.Mode.scan
+      ∨ c.mode = PalPeg.GalilScaffoldController.Mode.shift
+      ∨ c.mode = PalPeg.GalilScaffoldController.Mode.copy
+      ∨ c.mode = PalPeg.GalilScaffoldController.Mode.home
+      ∨ c.mode = PalPeg.GalilScaffoldController.Mode.fpp
+      ∨ c.mode = PalPeg.GalilScaffoldController.Mode.markEnd
+      ∨ c.mode = PalPeg.GalilScaffoldController.Mode.choose
+      ∨ c.mode = PalPeg.GalilScaffoldController.Mode.rewind
+      ∨ c.mode = PalPeg.GalilScaffoldController.Mode.replayStart := by
+  cases h : c.mode <;> simp [h]
+
+/-- **and the five that are carried, as one hypothesis to discharge.**  Given a state whose mode
+is one of these five, the still rows of the command table apply and the branch theorems are in
+hand; the other five — the scan, the shift, the start, the replay's start and the half of the
+choice that starts a chain — are what remains of a tick's obligation. -/
+def StillMode (c : CtlPhys) : Prop :=
+  c.mode = PalPeg.GalilScaffoldController.Mode.markEnd
+    ∨ c.mode = PalPeg.GalilScaffoldController.Mode.home
+    ∨ c.mode = PalPeg.GalilScaffoldController.Mode.choose
+    ∨ c.mode = PalPeg.GalilScaffoldController.Mode.fpp
+    ∨ c.mode = PalPeg.GalilScaffoldController.Mode.copy
+
+theorem not_stillMode_cases {c : CtlPhys} (h : ¬ StillMode c) :
+    c.mode = PalPeg.GalilScaffoldController.Mode.init
+      ∨ c.mode = PalPeg.GalilScaffoldController.Mode.scan
+      ∨ c.mode = PalPeg.GalilScaffoldController.Mode.shift
+      ∨ c.mode = PalPeg.GalilScaffoldController.Mode.rewind
+      ∨ c.mode = PalPeg.GalilScaffoldController.Mode.replayStart := by
+  unfold StillMode at h
+  rcases ctlPhys_mode_cases c with hm | hm | hm | hm | hm | hm | hm | hm | hm | hm <;>
+    simp [hm] at h ⊢
+
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
 which is a bit the control carries; the symbol under its back head is a letter rather than the
