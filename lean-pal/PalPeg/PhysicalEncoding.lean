@@ -14499,6 +14499,43 @@ theorem scan_consume_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
     exact physRule_scan_consume margin entryQ first hbound hKq hK1 hmargin (by omega) x q T
       hqmode hconsume (by rw [htest, hverdict]) hfwdBit wm hchain a htok hseen hforward henc.2
 
+/-- **where a comparison leaves the two input cursors.**  Both outcomes — the one that agrees
+and the one that does not — write the scan lens with the pair the comparison formed, and the
+birth wrapper touches neither; so the left cursor has stepped left and the right one right,
+whichever way the letters went. -/
+theorem compareFun_cursors (P : PalPeg.GalilScaffoldChainInputSupply.Shared) (s : GalilVM) :
+    (PalPeg.GalilScaffoldChainInputSupply.compareFun P s).left
+        = PalPeg.GalilScaffoldInputHead.left s.left
+      ∧ (PalPeg.GalilScaffoldChainInputSupply.compareFun P s).right
+        = PalPeg.GalilScaffoldChainVerifier.right s.right := by
+  constructor
+  · unfold PalPeg.GalilScaffoldChainInputSupply.compareFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_left]
+    split <;> rfl
+  · unfold PalPeg.GalilScaffoldChainInputSupply.compareFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_right]
+    split <;> rfl
+
+/-- **and so the matched test is the comparison's own bit.**  The scan asks whether the two
+cursors it has just moved read the same letter, and those are the letters the comparison compared
+to decide which way to go — so the guard of the matched arm is `agree`.
+
+With `agreeTest_eq` this puts the guard of that arm inside the window. -/
+theorem matchedTest_compareFun (P : PalPeg.GalilScaffoldChainInputSupply.Shared) (s : GalilVM) :
+    PalPeg.FrameFunction.matchedTest
+        (PalPeg.GalilScaffoldChainInputSupply.scanLens.get
+          (PalPeg.GalilScaffoldChainInputSupply.compareFun P s))
+      = decide (PalPeg.GalilScaffoldInputHead.read
+            (PalPeg.GalilScaffoldInputHead.left s.left)
+          = PalPeg.GalilScaffoldInputHead.read
+            (PalPeg.GalilScaffoldChainVerifier.right s.right)) := by
+  unfold PalPeg.FrameFunction.matchedTest
+  show decide (PalPeg.GalilScaffoldInputHead.read
+      (PalPeg.GalilScaffoldChainInputSupply.compareFun P s).left
+    = PalPeg.GalilScaffoldInputHead.read
+      (PalPeg.GalilScaffoldChainInputSupply.compareFun P s).right) = _
+  rw [(compareFun_cursors P s).1, (compareFun_cursors P s).2]
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
