@@ -12286,6 +12286,54 @@ theorem backgroundFun_prepSide (P : PalPeg.GalilScaffoldChainInputSupply.Shared)
     rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_radius]
     rfl
 
+/-- **a comparison hands a running chain to the chain's own step.**  The birth arm of the
+table is reached only from an idle chain, so on every other chain the table is one step of
+the chain and the answer tape, the centre and the radius it was handed go unread. -/
+theorem chainAtFun_of_active (found : Bool) (answer : PalPeg.GalilScaffoldTape.Tape)
+    (c : Fin 3) (walker : PalPeg.GalilScaffoldPlace.Place)
+    (ver : PalPeg.GalilScaffoldInputHead.PlaceHead) (radius : PalPeg.GalilScaffoldCounter.Counter)
+    (x : PalPeg.GalilScaffoldChainInputSupply.ChainVM)
+    (hactive : ¬ x = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle) :
+    PalPeg.GalilScaffoldChainInputSupply.chainAtFun false found answer c walker ver radius x
+      = PalPeg.GalilScaffoldChainInputSupply.chainStepFun x := by
+  cases x with
+  | idle => exact absurd rfl hactive
+  | copy a b d e f g h => rfl
+  | back a b d e f => rfl
+  | watch wm => rfl
+  | broken wm => rfl
+
+/-- **a background tick that finds the chain standing is the identity.**  Over a running chain
+the search takes no quantum and the background writes back the three scan fields it read; so if
+the chain's own step leaves the chain where it was, the tick leaves the whole machine where it
+was.
+
+This covers the watching chain with no lag to spend and the one whose verdict the period tape
+withholds, and every copy step the answer tape refuses.  For the encoding it is the cheapest
+branch there is: the machine's scan row does nothing either. -/
+theorem backgroundFun_id_of_chainFixed (P : PalPeg.GalilScaffoldChainInputSupply.Shared)
+    (s : GalilVM) (hactive : ¬ s.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle)
+    (hfixed : PalPeg.GalilScaffoldChainInputSupply.chainStepFun s.chain = s.chain) :
+    PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s = s := by
+  have hget : PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s
+      = PalPeg.GalilScaffoldChainInputSupply.searchLens.get s := by
+    unfold PalPeg.GalilScaffoldChainInputSupply.searchEffectFun
+    cases hc : s.chain with
+    | idle => exact absurd hc hactive
+    | copy a b d e f g h => rfl
+    | back a b d e f => rfl
+    | watch wm => rfl
+    | broken wm => rfl
+  unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+  rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_of_ne_idle (s := s) hactive,
+    chainAtFun_of_active _ _ _ _ _ _ s.chain hactive, hfixed]
+  show PalPeg.GalilScaffoldChainInputSupply.searchLens.set
+    (PalPeg.GalilScaffoldChainInputSupply.scanLens.set s
+      (PalPeg.GalilScaffoldChainInputSupply.scanLens.get s))
+    (PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s) = s
+  rw [hget, PalPeg.GalilScaffoldChainInputSupply.scanLens.set_get]
+  exact PalPeg.GalilScaffoldChainInputSupply.searchLens.set_get s
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
