@@ -13948,6 +13948,29 @@ theorem scanConsume_periodTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ) 
   rw [hacts, encPeriod_moveRight, padded_token_right, ← hslot]
   rfl
 
+/-- **the consumed control, when the letter is a plain one of the block.**  A letter that does
+not close a block leaves the phase, the direction and the two block boundaries where they were;
+the distance counts one more and the period tape takes a step the direction chooses. -/
+theorem caught_control_of_plain (wm : PalPeg.GalilScaffoldChainWatch.State) (a : Fin 3)
+    (htok : wm.machine.control.period.focus = PalPeg.GalilScaffoldChainPeriod.Token.plain a)
+    (hseen : PalPeg.GalilScaffoldInputHead.read
+      (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier) = some a)
+    (hforward : wm.machine.control.forward = true) :
+    (PalPeg.GalilScaffoldChainWatch.caught wm).machine.control
+      = {wm.machine.control with
+          distance := PalPeg.GalilScaffoldCounter.inc wm.machine.control.distance,
+          period := PalPeg.GalilScaffoldChainPeriod.moveRight wm.machine.control.period} := by
+  show PalPeg.GalilScaffoldChainConsume.consume wm.machine.control
+      (PalPeg.GalilScaffoldInputHead.read
+        (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier)) = _
+  rw [hseen, PalPeg.GalilScaffoldChainConsume.plain wm.machine.control a htok, if_pos hforward]
+
+/-- **the lag and the margin a consuming tick leaves.** -/
+theorem caught_lag_margin (wm : PalPeg.GalilScaffoldChainWatch.State) :
+    (PalPeg.GalilScaffoldChainWatch.caught wm).lag
+        = PalPeg.GalilScaffoldCounter.dec wm.lag
+      ∧ (PalPeg.GalilScaffoldChainWatch.caught wm).margin = wm.margin := ⟨rfl, rfl⟩
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
