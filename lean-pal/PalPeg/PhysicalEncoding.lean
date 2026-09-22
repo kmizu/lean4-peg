@@ -16,6 +16,7 @@ import Mathlib.Tactic.DeriveFintype
 import Mathlib.Data.Fintype.Prod
 import Mathlib.Data.Fintype.Pi
 import Mathlib.Data.Fintype.Sigma
+import PalPeg.MachineStep
 
 /-!
 # The physical encoding of the local machine
@@ -8305,6 +8306,51 @@ theorem teqG_actList {Γ : Type} (blank : Γ) :
   | a :: rest, T, T', h => by
     rw [PalPeg.CloseoutCoreEnc12.actList_cons, PalPeg.CloseoutCoreEnc12.actList_cons]
     exact teqG_actList blank rest (teqG_actOnG blank h a)
+
+/-- **the ideal step of a rule does not see a sweep.**  The control it reaches is the same, and
+the tapes it leaves are the same up to the equality a sweep respects: the rule reads only
+windows, and a composite step carries the equality. -/
+theorem idealStep_congr_teqG {Q Γ : Type} {t K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γ t K) (blank : Γ) (q : Q)
+    (T T' : Fin t → PalPeg.Program.STape Γ)
+    (h : ∀ tape, PalPeg.CloseoutCoreEnc12.TEqG blank (T tape) (T' tape))
+    (input : Option (Fin 2)) :
+    (PalPeg.LocalStepFusion.idealStep R blank (q, T) input).1
+        = (PalPeg.LocalStepFusion.idealStep R blank (q, T') input).1 ∧
+      ∀ tape, PalPeg.CloseoutCoreEnc12.TEqG blank
+        ((PalPeg.LocalStepFusion.idealStep R blank (q, T) input).2 tape)
+        ((PalPeg.LocalStepFusion.idealStep R blank (q, T') input).2 tape) := by
+  have hwin : (fun tape => PalPeg.Local.readWin blank K (T tape))
+      = fun tape => PalPeg.Local.readWin blank K (T' tape) := by
+    funext tape
+    exact readWin_congr_teqG (h tape)
+  refine ⟨?_, fun tape => ?_⟩
+  · show R.nq q input (fun tape => PalPeg.Local.readWin blank K (T tape)) = _
+    rw [hwin]
+    rfl
+  · show PalPeg.CloseoutCoreEnc12.TEqG blank
+      (PalPeg.CloseoutCoreEnc12.actList blank (T tape)
+        (R.acts q input (fun tape => PalPeg.Local.readWin blank K (T tape)) tape)) _
+    rw [hwin]
+    exact teqG_actList blank _ (h tape)
+
+/-- **and so a tick's obligation on the encoding gives the obligation on its sweep closure.**
+The consumer of the local realization asks for the closure, because what a machine's tape really
+holds after a sweep is only the ideal tape up to `TEqG`; this is where that gap is crossed, once.
+-/
+theorem sweepClosure_afterStep {Q Γ : Type} {t K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γ t K) (blank : Γ)
+    (Enc0 : State GalilVM → Q × (Fin t → PalPeg.Program.STape Γ) → Prop)
+    (x y : State GalilVM) (q : Q) (T : Fin t → PalPeg.Program.STape Γ)
+    (hstep : ∀ ideal, Enc0 x (q, ideal) →
+      Enc0 y (PalPeg.LocalStepFusion.idealStep R blank (q, ideal) none))
+    (h : PalPeg.MachineStep.sweepClosure blank Enc0 x (q, T)) :
+    PalPeg.MachineStep.sweepClosure blank Enc0 y
+      (PalPeg.LocalStepFusion.idealStep R blank (q, T) none) := by
+  obtain ⟨ideal, henc, hteq⟩ := h
+  obtain ⟨hnq, htapes⟩ := idealStep_congr_teqG R blank q ideal T hteq none
+  exact ⟨(PalPeg.LocalStepFusion.idealStep R blank (q, ideal) none).2,
+    by rw [← hnq]; exact hstep ideal henc, htapes⟩
 
 /-- **a slot that is not a head's holds, after the tick, exactly what the mode's branch wrote at
 step `0`.**  Step `0` gives it the branch's own actions and the eleven steps after it give it
