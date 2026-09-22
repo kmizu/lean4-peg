@@ -9338,6 +9338,87 @@ theorem encTapes_afterTick {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ : �
       rw [tapesOf_apply])
     hmargins hpolarity hfppLive hdpLive hheads
 
+/-- **the twelve slots of one cursor hold a view.**  This is what `EncTapes.heads` says about a
+cursor, with the abstract head left out: the slots hold the encoded tapes of some view, whatever
+that view abstracts to.
+
+The abstraction names only three of the four cursors always.  The fourth is the chain's verifier,
+and `headOf x 3` is `none` exactly when the chain is idle — but `EncTapes.margins` asks for the
+margin of every slot, that cursor's twelve included.  So the margin of those slots cannot come
+from `heads`, and this is the property it comes from instead. -/
+def HeadSlotsRep (margin : ℕ) (gap : Fin 4 → Bool)
+    (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (tapes : Slot → STape Γm)
+    (v : Fin 4) : Prop :=
+  ∃ (view : PalPeg.LocalInputView.InputView)
+      (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+    PalPeg.ConcreteLocalMachine.ViewRep margin view (gap v) (micro v) viewTapes ∧
+      (∀ i, tapes (headSlot v i) = mapTape encCell (viewTapes i)) ∧
+        PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view
+
+/-- **a cursor the abstraction names has it.** -/
+theorem headSlotsRep_of_heads {margin : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {tapes : Slot → STape Γm}
+    (h : EncTapes margin x polarity gap micro fppLive dpLive tapes) (v : Fin 4)
+    (head : PalPeg.GalilScaffoldInputHead.PlaceHead) (hhead : headOf x v = some head) :
+    HeadSlotsRep margin gap micro tapes v := by
+  obtain ⟨view, viewTapes, -, hrep, hslots, hcells, hwf⟩ := h.heads v head hhead
+  exact ⟨view, viewTapes, hrep, hslots, hcells, hwf⟩
+
+/-- **and it gives the margin of that cursor's twelve slots.**  A view's own tapes stand clear of
+the left edge, and the change of alphabet does not move a head. -/
+theorem margin_le_pos_headSlot {margin K : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {tapes : Slot → STape Γm} {v : Fin 4} (h : HeadSlotsRep margin gap micro tapes v)
+    (i : Fin 12) : margin ≤ PalPeg.Local.pos (tapes (headSlot v i)) := by
+  obtain ⟨view, viewTapes, hrep, hslots, -, -⟩ := h
+  rw [hslots i, pos_mapTape]
+  exact PalPeg.ConcreteLocalMachine.ViewRep.margin_le_pos hK hmargin hrep i
+
+/-- **and a tick carries it, whether or not the abstraction names that cursor.**  The twelve
+steps ask nothing of the abstract head: they carry out the command the control holds, and the
+view they leave behind is the view that command names.  What the command has to be is a command
+of a cursor — standing still, a step left or a step right — which is what the rows of the table
+name; the step right carries its arrival condition as usual. -/
+theorem headSlotsRep_afterTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
+    (base commandsOf baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K) (v : Fin 4)
+    (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
+    (hslot0 : x.1.slot.val = 0) (howed : (x.1.micro v).2.2.2 = 0)
+    (view : PalPeg.LocalInputView.InputView)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view (x.1.gap v) (x.1.micro v) viewTapes)
+    (hslots : ∀ i, x.2 (slotIndex (headSlot v i)) = mapTape encCell (viewTapes i))
+    (hcells : PalPeg.LocalViewCells.ViewCells view) (hwf : PalPeg.LocalInputView.WF view)
+    (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (hrow : commandsOf x.1 input (fun tape => PalPeg.Local.readWin blankM K (x.2 tape)) v
+      = command)
+    (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hf : headOp command = some f)
+    (hready : command = .moveRight →
+      view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    HeadSlotsRep margin
+        (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x
+          input 12).1.gap
+        (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x
+          input 12).1.micro
+        (fun slot => (PalPeg.LocalStepFusion.idealRun
+          (tickRule hK base commandsOf baseActs baseLen) blankM x input 12).2 (slotIndex slot))
+        v := by
+  have hcommand : (PalPeg.LocalStepFusion.idealRun
+      (tickRule hK base commandsOf baseActs baseLen) blankM x input 1).1.commands v = command := by
+    rw [commands_afterFirstStep hK base commandsOf baseActs baseLen x input hslot0 v, hrow]
+  obtain ⟨hrep', howed', hslots'⟩ := headTick_of_tickRule hK hmargin base commandsOf baseActs
+    baseLen v x input hslot0
+    (fun step => (PalPeg.LocalStepFusion.idealRun
+      (tickRule hK base commandsOf baseActs baseLen) blankM x input step).1)
+    (fun step slot => (PalPeg.LocalStepFusion.idealRun
+      (tickRule hK base commandsOf baseActs baseLen) blankM x input step).2 (slotIndex slot))
+    (fun _ => rfl) (fun _ _ => rfl) view hwf hcells viewTapes hslots hrep howed
+  rw [hcommand] at hrep'
+  exact ⟨PalPeg.ConcreteLocalMachine.viewApply command view, _, hrep', hslots',
+    viewCells_viewApply hwf command (fun h => hready h) hcells f hf,
+    wf_viewApply hwf command f hf⟩
+
 theorem physRule_nq_markEnd {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd) :
