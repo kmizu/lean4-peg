@@ -11473,6 +11473,79 @@ theorem home_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM
       henc)
 
 
+
+/-- **the parity walk that keeps looking, on the machine of twelve steps.** -/
+theorem choose_back_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (input : Option (Fin 2))
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hK1 : 1 ≤ K)
+    (hmargin : K ≤ margin) (hKn : K ≤ margin + 1)
+    (hslot0 : q.slot.val = 0) (howed : ∀ v, (q.micro v).2.2.2 = 0)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose)
+    (hkeep : (x.ctl.odd && (decide ((x.vm.fpp.program.config.tapes 8).focus = 8)
+        || decide ((x.vm.fpp.program.config.tapes 8).focus = first))) = false)
+    (henc : Enc w margin x (q, T)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hK hK2 rest) blankM
+          (q, tapesOf T) input 12).1,
+        fun i => (PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hK hK2 rest) blankM (q, tapesOf T) input 12).2
+            (slotIndex i)) :=
+  enc_ofBranchStep_still margin entryQ first hbound hK hK2 hmargin rest w x
+    (PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) q T input
+    hslot0 (Or.inr (Or.inr (Or.inl hqmode))) howed
+    (headOf_tickFun_chooseBack centre place entry entryQ first w F delay x hmode hkeep)
+    henc.2
+    (physRule_choose margin centre place entry entryQ first w F delay x q T hbound hK
+      (fun i => hmargin.trans (henc.2.margins i)) hK1 hKn hqmode hmode hkeep henc)
+
+/-- **the preparation program's own tick, on the machine of twelve steps.**  Its branch carries
+the three facts about the program that the preparation needs; they are passed through. -/
+theorem fpp_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (input : Option (Fin 2))
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hK1 : 1 ≤ K)
+    (hmargin : K ≤ margin) (hKn : K ≤ margin + 1)
+    (hcomp : ∀ t : Fin 9, K ≤ PalPeg.Local.pos (encTape (x.vm.fpp.program.config.tapes t)))
+    (hfloorRun : ∀ k, ∀ t : Fin 9, ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
+      (List.replicate k true) x.vm.fpp.program).config.tapes t).left ≠ [])
+    (hin : x.vm.fpp.program.config.pc < fppBound)
+    (hslot0 : q.slot.val = 0) (howed : ∀ v, (q.micro v).2.2.2 = 0)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp)
+    (henc : Enc w margin x (q, T)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hK hK2 rest) blankM
+          (q, tapesOf T) input 12).1,
+        fun i => (PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hK hK2 rest) blankM (q, tapesOf T) input 12).2
+            (slotIndex i)) :=
+  enc_ofBranchStep_still margin entryQ first hbound hK hK2 hmargin rest w x
+    (PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) q T input
+    hslot0 (Or.inr (Or.inr (Or.inr (Or.inl hqmode)))) howed
+    (headOf_tickFun_still centre place entry entryQ first w F delay x
+      (Or.inr (Or.inr (Or.inl hmode))))
+    henc.2
+    (physRule_fpp margin centre place entry entryQ first w F delay x q T hbound hK hK1 hKn hcomp
+      hfloorRun hin hqmode hmode henc)
+
 end PalPeg.PhysicalEncoding
 
 #print axioms PalPeg.PhysicalEncoding.padded_write
