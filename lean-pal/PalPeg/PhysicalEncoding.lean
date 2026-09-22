@@ -9536,6 +9536,44 @@ theorem tickPhysRule_bits {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin
     hfree.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1,
     hfree.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2⟩
 
+/-- **after a tick of one of the five still modes, every cursor still holds a view.**  Which is
+what the margins of all four cursors' slots come from, the chain's verifier included, whether or
+not the abstraction names it. -/
+theorem tickPhysRule_headSlotsRep_still {fppBound dpBound K margin : ℕ} (entryQ : ℕ)
+    (first : Fin 9) (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK : 2 ≤ K)
+    (hmargin : K ≤ margin)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (input : Option (Fin 2)) (hslot0 : q.slot.val = 0)
+    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (howed : ∀ v, (q.micro v).2.2.2 = 0)
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T) (v : Fin 4) :
+    HeadSlotsRep margin
+        (PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK rest) blankM
+          (q, tapesOf T) input 12).1.gap
+        (PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK rest) blankM
+          (q, tapesOf T) input 12).1.micro
+        (fun slot => (PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hKq hK rest) blankM (q, tapesOf T) input 12).2
+            (slotIndex slot)) v := by
+  obtain ⟨view, viewTapes, hrep, hslots, hcells, hwf⟩ := headSlotsRep_all henc v
+  rw [tickPhysRule_eq entryQ first hbound hKq hK rest]
+  exact headSlotsRep_afterTick hK hmargin (fun q _ ws => ruleNext entryQ first hbound q ws)
+    (modeCommands first rest) (fun q _ ws => ruleActs entryQ first q ws)
+    (fun q _ ws j => ruleActs_length entryQ first hKq q ws j) v (q, tapesOf T) input hslot0
+    (howed v) view viewTapes hrep (fun i => by
+      show tapesOf T (slotIndex (headSlot v i)) = _
+      rw [tapesOf_apply]
+      exact hslots i) hcells hwf
+    .stay (by rw [modeCommands_eq_stay first rest q input _ hmode]; rfl) id rfl
+    (fun h => absurd h (by simp))
+
 theorem physRule_nq_markEnd {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd) :
