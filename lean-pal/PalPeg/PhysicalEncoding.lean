@@ -7999,6 +7999,42 @@ theorem heads_afterStillTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
     view hwf hcells viewTapes hold hrep howed head head habs id (by rw [hcommand]; rfl) rfl
     (fun hmove => absurd (hcommand.symm.trans hmove) (by simp))
 
+/-- **the command table, for the modes whose branches move no head.**  Five of the branches that
+are already proved — the end mark, the walk home, the back half of the choice, the preparation
+program and the fallback copy — name nothing but counters, program tapes and period tapes, so
+every head stands still through their ticks.  Those five rows are written here; the rest of the
+table is a parameter, so filling a row in later cannot disturb these.
+
+The rewind is deliberately not among them: its branch moves two heads, and under the division of
+labour a head's motion is a command, so its row has to name one. -/
+noncomputable def stillCommands {fppBound dpBound K : ℕ}
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (q : QPhys fppBound dpBound) (i : Option (Fin 2))
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand :=
+  match q.ctl.mode with
+  | PalPeg.GalilScaffoldController.Mode.markEnd => stayCommands
+  | PalPeg.GalilScaffoldController.Mode.home => stayCommands
+  | PalPeg.GalilScaffoldController.Mode.choose => stayCommands
+  | PalPeg.GalilScaffoldController.Mode.fpp => stayCommands
+  | PalPeg.GalilScaffoldController.Mode.copy => stayCommands
+  | _ => rest q i ws
+
+/-- **in those five modes the table's row is standing still.**  One statement for the five, since
+the reason is the same one in each: the row is written as `stayCommands`. -/
+theorem stillCommands_eq_stay {fppBound dpBound K : ℕ} (rest) (q : QPhys fppBound dpBound)
+    (i : Option (Fin 2)) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy) :
+    stillCommands rest q i ws = stayCommands := by
+  unfold stillCommands
+  rcases hmode with h | h | h | h | h <;> rw [h]
+
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
 which is a bit the control carries; the symbol under its back head is a letter rather than the
