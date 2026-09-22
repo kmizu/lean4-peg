@@ -13829,6 +13829,125 @@ theorem headOf_stepState_three (y : State GalilVM)
   rw [hchain]
   rfl
 
+/-- **the lag's tape after a consuming tick.**  The step's table pops the chain's lag, and the
+bit it branches on is the one the counter's own window gives — so the tape it leaves holds one
+less than it did, under the sign the control now carries. -/
+theorem scanConsume_lagTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hconsume : chainConsumesTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true)
+    (hmatch : watchVerdictTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = some true)
+    (lag : PalPeg.GalilScaffoldCounter.Counter) (hlag : counterOf x 11 = some lag)
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T) :
+    ∃ seg : STape Seg,
+      absCtr seg (decSignAt (q.polarity 11) (counterSlot 11)
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+        = PalPeg.GalilScaffoldCounter.dec lag
+      ∧ PalPeg.CloseoutCoreEnc12.actList blankM (T (counterSlot 11))
+          (ruleActs entryQ first q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+            (slotIndex (counterSlot 11)))
+        = padLeft margin (mapTape encSeg seg) := by
+  obtain ⟨segments, habs, hslot⟩ := henc.counters 11 lag hlag
+  obtain ⟨seg, habsDec, htape⟩ :=
+    counter_dec_at (margin := margin) q.polarity 11
+      (decSignAt (q.polarity 11) (counterSlot 11)
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      segments lag habs
+      (decSignAt_eq hK1 hKn (q.polarity 11) 11 T segments hslot)
+      (T (counterSlot 11)) hslot
+  refine ⟨seg, habsDec, ?_⟩
+  have hacts : ruleActs entryQ first q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (slotIndex (counterSlot 11))
+      = [decAct q 11 (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))] := by
+    unfold ruleActs
+    rw [hqmode]
+    dsimp only
+    rw [withErase_at_other q.fppLive _ _ (counterSlot 11)
+      (by intro k; cases q.fppLive <;> simp [progSlotOf, counterSlot]),
+      scanConsumeActs_lag q _ hconsume hmatch]
+  rw [hacts]
+  exact htape
+
+/-- **the distance's tape after a consuming tick.**  One more letter of the block, counted the
+way every increment is counted. -/
+theorem scanConsume_distanceTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hconsume : chainConsumesTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true)
+    (hmatch : watchVerdictTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = some true)
+    (dist : PalPeg.GalilScaffoldCounter.Counter) (hdist : counterOf x 13 = some dist)
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T) :
+    ∃ seg : STape Seg,
+      absCtr seg (incSign q.polarity 13
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+        = PalPeg.GalilScaffoldCounter.inc dist
+      ∧ PalPeg.CloseoutCoreEnc12.actList blankM (T (counterSlot 13))
+          (ruleActs entryQ first q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+            (slotIndex (counterSlot 13)))
+        = padLeft margin (mapTape encSeg seg) := by
+  obtain ⟨segments, habs, hslot⟩ := henc.counters 13 dist hdist
+  obtain ⟨seg, habsInc, htape⟩ :=
+    counter_inc_at (margin := margin) q.polarity 13
+      (incSign q.polarity 13 (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      segments dist habs
+      (incSign_eq hK1 hKn q.polarity 13 T segments hslot)
+      (T (counterSlot 13)) hslot
+  refine ⟨seg, habsInc, ?_⟩
+  have hacts : ruleActs entryQ first q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (slotIndex (counterSlot 13))
+      = [incAct q 13 (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))] := by
+    unfold ruleActs
+    rw [hqmode]
+    dsimp only
+    rw [withErase_at_other q.fppLive _ _ (counterSlot 13)
+      (by intro k; cases q.fppLive <;> simp [progSlotOf, counterSlot]),
+      scanConsumeActs_distance q _ hconsume hmatch]
+  rw [hacts]
+  exact htape
+
+/-- **the period tape after a consuming tick, when the chain walks it right.**  The action writes
+back the symbol already under the head and steps, which is what the chain's own step does. -/
+theorem scanConsume_periodTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hK : K ≤ margin)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hconsume : chainConsumesTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true)
+    (hmatch : watchVerdictTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = some true)
+    (hforward : (scanConsumeNext q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).chainForward = true)
+    (tape : PalPeg.GalilScaffoldChainPeriod.Tape) (hperiod : periodOf x = some tape)
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T) :
+    PalPeg.CloseoutCoreEnc12.actList blankM (T periodSlot)
+        (ruleActs entryQ first q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (slotIndex periodSlot))
+      = padLeft margin (mapTape encToken
+          (encPeriod (PalPeg.GalilScaffoldChainPeriod.moveRight tape))) := by
+  have hslot : T periodSlot = padLeft margin (mapTape encToken (encPeriod tape)) :=
+    henc.period tape hperiod
+  have hcentre : centreRead (fun t => PalPeg.Local.readWin blankM K (tapesOf T t)) periodSlot
+      = encToken (encPeriod tape).focus := centreRead_periodSlot henc hK tape hperiod
+  have hacts : ruleActs entryQ first q
+      (fun t => PalPeg.Local.readWin blankM K (tapesOf T t)) (slotIndex periodSlot)
+      = [some (encToken (encPeriod tape).focus, (.right : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+    unfold ruleActs
+    rw [hqmode]
+    dsimp only
+    rw [withErase_at_other q.fppLive _ _ periodSlot
+      (by intro k; cases q.fppLive <;> simp [progSlotOf, periodSlot]),
+      scanConsumeActs_period q _ hconsume hmatch, hcentre, hforward, if_pos rfl]
+  rw [hacts, encPeriod_moveRight, padded_token_right, ← hslot]
+  rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
