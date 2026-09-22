@@ -12528,8 +12528,8 @@ theorem physRule_background_still {fppBound dpBound K : ℕ} (margin : ℕ) (cen
     (hquiet : (!x.ctl.replaying
       && !(PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).available x.vm)
         = true)
-    (hactive : ¬ x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle)
-    (hfixed : PalPeg.GalilScaffoldChainInputSupply.chainStepFun x.vm.chain = x.vm.chain)
+    (hid : PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+      (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm = x.vm)
     (henc : Enc w margin x (q, T)) :
     Enc w margin
       (PalPeg.GalilScaffoldTop.tickFun
@@ -12541,9 +12541,7 @@ theorem physRule_background_still {fppBound dpBound K : ℕ} (margin : ℕ) (cen
   have htick : PalPeg.GalilScaffoldTop.tickFun
       (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x = x := by
     rw [tickFun_scan_background_quiet centre place entry entryQ first w F delay x hmode hnorestart
-      hquiet,
-      backgroundFun_id_of_chainFixed (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm
-        hactive hfixed]
+      hquiet, hid]
   have hacts : (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none
       (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
       = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
@@ -12572,7 +12570,11 @@ gives that tick is the row that moves nothing, so the twelve slots carry it with
 machinery as the five still modes.
 
 This is the first arm of the scan to be carried end to end.  What it costs the machine is the
-background erasure of the idle program half and nothing else. -/
+background erasure of the idle program half and nothing else.
+
+Two ways a tick can stand still feed it: `backgroundFun_id_of_chainFixed`, a running chain whose
+own step leaves it where it was, and `backgroundFun_id_of_searchAtRest`, an idle chain with the
+search stopped. -/
 theorem background_still_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
     (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
     (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
@@ -12590,8 +12592,8 @@ theorem background_still_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (cent
     (hquiet : (!x.ctl.replaying
       && !(PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).available x.vm)
         = true)
-    (hactive : ¬ x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle)
-    (hfixed : PalPeg.GalilScaffoldChainInputSupply.chainStepFun x.vm.chain = x.vm.chain)
+    (hid : PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+      (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm = x.vm)
     (hnoconsume : chainConsumesTest q
       (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = false)
     (henc : Enc w margin x (q, T)) :
@@ -12606,9 +12608,7 @@ theorem background_still_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (cent
   have htick : PalPeg.GalilScaffoldTop.tickFun
       (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x = x := by
     rw [tickFun_scan_background_quiet centre place entry entryQ first w F delay x hmode hnorestart
-      hquiet,
-      backgroundFun_id_of_chainFixed (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm
-        hactive hfixed]
+      hquiet, hid]
   exact enc_ofBranchStep_stay margin entryQ first hbound hKb hK2 hK rest w x
     (PalPeg.GalilScaffoldTop.tickFun
       (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) q T input
@@ -12619,7 +12619,63 @@ theorem background_still_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (cent
       exact scanCommands_eq_stay q _ hnoconsume)
     howed (fun v => by rw [htick]) henc.2
     (physRule_background_still margin centre place entry entryQ first w F delay x q T hbound hKb
-      hK1 (by omega) hqmode hmode hnorestart hquiet hactive hfixed henc)
+      hK1 (by omega) hqmode hmode hnorestart hquiet hid henc)
+
+/-- **a background tick with the search at rest and no chain to run is the identity too.**  The
+search steps only in the seven modes that are looking for the period; in the three that have
+stopped — before it starts, when it has found one, and when it has given up — the quantum is the
+identity, and with an idle chain there is nothing else for the tick to do.
+
+Two of those three are branches of the scan: the one before the search starts and the one after
+it has given up.  The third is the tick that gives birth to a chain, and that one moves. -/
+theorem backgroundFun_id_of_searchAtRest (P : PalPeg.GalilScaffoldChainInputSupply.Shared)
+    (s : GalilVM) (hidle : s.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle)
+    (hrest : s.search.mode = PalPeg.GalilScaffoldSearchFinish.Mode.idle
+      ∨ s.search.mode = PalPeg.GalilScaffoldSearchFinish.Mode.missed) :
+    PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s = s := by
+  have hmode : (PalPeg.GalilScaffoldChainInputSupply.searchLens.get s).search.mode
+      = s.search.mode := rfl
+  have hstep : PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s
+      = PalPeg.GalilScaffoldChainInputSupply.searchLens.get s := by
+    unfold PalPeg.GalilScaffoldChainInputSupply.searchEffectFun
+    rw [hidle]
+    show PalPeg.GalilScaffoldChainInputSupply.searchStepFun (P.place s) false
+      (PalPeg.GalilScaffoldChainInputSupply.searchLens.get s) = _
+    unfold PalPeg.GalilScaffoldChainInputSupply.searchStepFun
+    rw [hmode]
+    rcases hrest with h | h <;> rw [h]
+  have hnotFound : ¬ (PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s).search.mode
+      = PalPeg.GalilScaffoldSearchFinish.Mode.found := by
+    rw [hstep, hmode]
+    rcases hrest with h | h <;> rw [h] <;> exact fun hEq => by cases hEq
+  unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+  rw [show PalPeg.GalilScaffoldChainInputSupply.chainBorn
+      (decide ((PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s).search.mode
+        = PalPeg.GalilScaffoldSearchFinish.Mode.found)) s.chain = false by
+    unfold PalPeg.GalilScaffoldChainInputSupply.chainBorn
+    rw [decide_eq_false hnotFound]
+    exact Bool.and_false _,
+    PalPeg.GalilScaffoldChainInputSupply.afterBirth_false]
+  show PalPeg.GalilScaffoldChainInputSupply.searchLens.set
+    (PalPeg.GalilScaffoldChainInputSupply.scanLens.set s
+      ⟨s.left, s.right, PalPeg.GalilScaffoldChainInputSupply.chainAtFun false
+        (decide ((PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s).search.mode
+          = PalPeg.GalilScaffoldSearchFinish.Mode.found))
+        ((PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s).dp.config.tapes 11)
+        (P.centre s) (P.place s) s.center s.radius s.chain⟩)
+    (PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s) = s
+  rw [decide_eq_false hnotFound, hidle]
+  show PalPeg.GalilScaffoldChainInputSupply.searchLens.set
+    (PalPeg.GalilScaffoldChainInputSupply.scanLens.set s
+      ⟨s.left, s.right, PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle⟩)
+    (PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s) = s
+  rw [hstep, ← hidle]
+  show PalPeg.GalilScaffoldChainInputSupply.searchLens.set
+    (PalPeg.GalilScaffoldChainInputSupply.scanLens.set s
+      (PalPeg.GalilScaffoldChainInputSupply.scanLens.get s))
+    (PalPeg.GalilScaffoldChainInputSupply.searchLens.get s) = s
+  rw [PalPeg.GalilScaffoldChainInputSupply.scanLens.set_get]
+  exact PalPeg.GalilScaffoldChainInputSupply.searchLens.set_get s
 
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
