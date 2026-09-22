@@ -7489,6 +7489,112 @@ theorem physRule_rewind_fppReset {fppBound dpBound K : ℕ} (margin : ℕ) (cent
   exact rewind_fppReset margin centre place entry entryQ first w F delay x q T hbound hmode
     hatFirst henc hidle
 
+theorem physRule_nq_rewind_one {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotMark : centreRead ws (progSlot q.fppLive 8) ≠ encProg first)
+    (hpair : q.ctl.pair = false) :
+    (physRule (dpBound := dpBound) entryQ first hbound hK).nq q none ws = rewindOneNext q ws := by
+  rw [physRule_nq_rewind entryQ first hbound hK q ws hm]
+  unfold rewindNext
+  rw [if_neg hnotMark, if_neg (by simp [hpair])]
+
+theorem physRule_acts_rewind_one {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotMark : centreRead ws (progSlot q.fppLive 8) ≠ encProg first)
+    (hpair : q.ctl.pair = false) :
+    (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none ws
+      = withErase q.fppLive ws (rewindOneActs q.fppLive q ws) := by
+  rw [physRule_acts_rewind entryQ first hbound hK q ws hm]
+  congr 1
+  unfold rewindActs
+  rw [if_neg hnotMark, if_neg (by simp [hpair])]
+
+theorem physRule_nq_rewind_pair {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotMark : centreRead ws (progSlot q.fppLive 8) ≠ encProg first)
+    (hpair : q.ctl.pair = true) :
+    (physRule (dpBound := dpBound) entryQ first hbound hK).nq q none ws = rewindPairNext q ws := by
+  rw [physRule_nq_rewind entryQ first hbound hK q ws hm]
+  unfold rewindNext
+  rw [if_neg hnotMark, if_pos (by simp [hpair])]
+
+theorem physRule_acts_rewind_pair {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotMark : centreRead ws (progSlot q.fppLive 8) ≠ encProg first)
+    (hpair : q.ctl.pair = true) :
+    (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none ws
+      = withErase q.fppLive ws (rewindPairActs q.fppLive q ws) := by
+  rw [physRule_acts_rewind entryQ first hbound hK q ws hm]
+  congr 1
+  unfold rewindActs
+  rw [if_neg hnotMark, if_pos (by simp [hpair])]
+
+/-- **the single step of the rewind, of the machine itself.** -/
+theorem physRule_rewind_one {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hKb : entryQ + 3 ≤ K)
+    (hK1 : 1 ≤ K) (hK : K ≤ margin) (hmargin2 : 2 ≤ margin)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotFirst : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).atFirst x.vm
+      = false)
+    (hqpair : q.ctl.pair = false) (hpair : x.ctl.pair = false)
+    (hnotMark : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (progSlot q.fppLive 8) ≠ encProg first)
+    (hfloor : (x.vm.fpp.program.config.tapes 8).left ≠ [])
+    (henc : Enc w margin x (q, T)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hKb) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hKb)
+          blankM (q, tapesOf T) none).2 (slotIndex i)) :=
+  rewind_one_of_rule margin centre place entry entryQ first w F delay x q T
+    (physRule entryQ first hbound hKb)
+    (physRule_nq_rewind_one entryQ first hbound hKb q _ hqmode hnotMark hqpair)
+    (physRule_acts_rewind_one entryQ first hbound hKb q _ hqmode hnotMark hqpair)
+    hK1 hK hmargin2 hmode hnotFirst hpair hfloor henc
+
+/-- **the paired step of the rewind, of the machine itself.** -/
+theorem physRule_rewind_pair {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hKb : entryQ + 3 ≤ K)
+    (hK1 : 1 ≤ K) (hK : K ≤ margin) (hmargin2 : 2 ≤ margin)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotFirst : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).atFirst x.vm
+      = false)
+    (hqpair : q.ctl.pair = true) (hpair : x.ctl.pair = true)
+    (hnotMark : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (progSlot q.fppLive 8) ≠ encProg first)
+    (hfloor : (x.vm.fpp.program.config.tapes 8).left ≠ [])
+    (henc : Enc w margin x (q, T)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hKb) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hKb)
+          blankM (q, tapesOf T) none).2 (slotIndex i)) :=
+  rewind_pair_of_rule margin centre place entry entryQ first w F delay x q T
+    (physRule entryQ first hbound hKb)
+    (physRule_nq_rewind_pair entryQ first hbound hKb q _ hqmode hnotMark hqpair)
+    (physRule_acts_rewind_pair entryQ first hbound hKb q _ hqmode hnotMark hqpair)
+    hK1 hK hmargin2 hmode hnotFirst hpair hfloor henc
+
 /-- **the mark walk back, of the machine itself.**  The step that finds the end mark, with
 nothing assumed about the rule. -/
 theorem physRule_markEnd_back {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
