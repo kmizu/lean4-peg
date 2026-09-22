@@ -3572,6 +3572,80 @@ theorem encCell_leftViewTapes_other (viewTapes : Fin 12 → STape PalPeg.Closeou
   unfold leftViewTapes
   rw [if_neg hback, if_neg hnear]
 
+/-- the slot of the `i`-th tape of the `v`-th input head's view. -/
+abbrev headSlot (v : Fin 4) (i : Fin 12) : Slot := .inl (v, i)
+
+/-- **a head's step left, on the slots of the whole machine.**  The three actions name only
+symbols the rule reads off its own windows — the symbol under the back head and the one under
+the near head — and what comes out is a view of the head one step left, on tapes the encoding
+accepts. -/
+theorem headSlots_left {margin : ℕ} {polarity : Fin 16 → Bool} {gap : Fin 4 → Bool}
+    {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl} {fppLive dpLive : Bool}
+    {x : State GalilVM} {tapes : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
+    (v : Fin 4) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hhead : headOf x v = some head) (hgap : head.gap = false)
+    (a : Option (Fin 2)) (tail : List (Option (Fin 2)))
+    (hleft : head.head.left = a :: tail)
+    (newTapes : Slot → STape Γm)
+    (hbackSlot : newTapes (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+      = PalPeg.CloseoutCoreEnc12.actOnG blankM
+          (tapes (headSlot v PalPeg.ConcreteLocalMachine.backTape))
+          (some ((tapes (headSlot v PalPeg.ConcreteLocalMachine.backTape)).focus,
+            (.left : PalPeg.CloseoutCoreEnc12.MoveC))))
+    (hnearSlot : newTapes (headSlot v PalPeg.ConcreteLocalMachine.nearTape)
+      = PalPeg.CloseoutCoreEnc12.actList blankM
+          (tapes (headSlot v PalPeg.ConcreteLocalMachine.nearTape))
+          [some ((tapes (headSlot v PalPeg.ConcreteLocalMachine.nearTape)).focus,
+              (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+            some ((tapes (headSlot v PalPeg.ConcreteLocalMachine.backTape)).focus,
+              (.stay : PalPeg.CloseoutCoreEnc12.MoveC))])
+    (hotherSlot : ∀ i, i ≠ PalPeg.ConcreteLocalMachine.backTape →
+      i ≠ PalPeg.ConcreteLocalMachine.nearTape →
+      newTapes (headSlot v i) = tapes (headSlot v i)) :
+    ∃ (view : PalPeg.LocalInputView.InputView) (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+      PalPeg.LocalArrival.absHead' view []
+          = PalPeg.GalilScaffoldInputHead.left head ∧
+        PalPeg.ConcreteLocalMachine.ViewRep margin view true (micro v) viewTapes ∧
+        ∀ i, newTapes (headSlot v i) = mapTape encCell (viewTapes i) := by
+  obtain ⟨view, viewTapes, habs, hrep, hold⟩ := henc.heads v head hhead
+  have hviewGap : view.gap = false := by
+    have : (PalPeg.LocalArrival.absHead' view []).gap = head.gap := by rw [habs]
+    rw [← hgap]
+    exact this
+  have hviewBack : view.back = a :: tail := by
+    have : (PalPeg.LocalArrival.absHead' view []).head.left = head.head.left := by rw [habs]
+    rw [← hleft]
+    exact this
+  have hgapBit : gap v = false := by rw [hrep.gap, hviewGap]
+  have hrep' : PalPeg.ConcreteLocalMachine.ViewRep margin view false (micro v) viewTapes := by
+    rw [← hgapBit]
+    exact hrep
+  obtain ⟨habs', hrep''⟩ := headRep_left view viewTapes a tail hviewBack hviewGap hrep'
+  have hbackFocus : (viewTapes PalPeg.ConcreteLocalMachine.backTape).focus
+      = PalPeg.CloseoutCoreEnc.cellSym view.focus := by
+    obtain ⟨bottom, -, hst⟩ := hrep'.back
+    have hstack : PalPeg.ConcreteLocalMachine.backStack view ++ bottom
+        = view.focus :: (view.back ++ bottom) := rfl
+    rw [hstack] at hst
+    rw [stackTape_focus _ _ hst]
+    rfl
+  have hmapFocus : (mapTape encCell (viewTapes PalPeg.ConcreteLocalMachine.backTape)).focus
+      = encCell (PalPeg.CloseoutCoreEnc.cellSym view.focus) := by
+    show encCell (viewTapes PalPeg.ConcreteLocalMachine.backTape).focus = _
+    rw [hbackFocus]
+  refine ⟨leftView view, leftViewTapes viewTapes view.focus, habs.symm ▸ habs', hrep'', ?_⟩
+  intro i
+  by_cases hb : i = PalPeg.ConcreteLocalMachine.backTape
+  · subst hb
+    rw [hbackSlot, encCell_leftViewTapes_back, hold PalPeg.ConcreteLocalMachine.backTape,
+      hmapFocus]
+  · by_cases hn : i = PalPeg.ConcreteLocalMachine.nearTape
+    · subst hn
+      rw [hnearSlot, encCell_leftViewTapes_near, hold PalPeg.ConcreteLocalMachine.nearTape,
+        hold PalPeg.ConcreteLocalMachine.backTape, hmapFocus]
+    · rw [hotherSlot i hb hn, encCell_leftViewTapes_other viewTapes view.focus i hb hn, hold i]
+
 /-- **the branch the shift and copy modes take, as a reading of the window.**  The rule cannot
 ask the abstraction anything; it computes this bit from three cells of the window and the sign
 bit of the shift counter, and `remainsTest_eq` says the bit it computes is the test the tick
