@@ -1712,11 +1712,29 @@ structure QPhys (fppBound dpBound : ℕ) where
   polarity : Fin 16 → Bool
   gap : Fin 4 → Bool
   micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl
+  /-- the queue job of each view: what the ten tapes of the queue of pending arrivals are busy
+  with for the rest of this slot.  Step `0` of a slot computes it afresh from the windows and
+  the later steps only carry it, so nothing the abstraction can see depends on it — the field is
+  physical only, like the live halves of the double buffers. -/
+  job : Fin 4 → Option PalPeg.ConcreteLocalMachine.QueueJob
   /-- which half of each double buffer the encoding speaks about.  The bit is physical only:
   the abstraction cannot see it, and a wipe of a program machine is its flip.  The encoding's
   own fields still address the `false` half; moving them onto this bit is the next step. -/
   fppLive : Bool
   dpLive : Bool
+
+/-- **the control of one view, as the finite control carries it.**  The view layer's own rule
+reads a view's gap bit, its queue job and the control of the micro-schedule; the state of the
+machine carries all three, so a view's control is a projection of it and needs nothing else. -/
+def viewControlOf {fppBound dpBound : ℕ} (q : QPhys fppBound dpBound) (v : Fin 4) :
+    PalPeg.ConcreteLocalMachine.ViewControl :=
+  (q.gap v, q.job v, (q.micro v).2)
+
+@[simp] theorem viewControlOf_gap {fppBound dpBound : ℕ} (q : QPhys fppBound dpBound)
+    (v : Fin 4) : (viewControlOf q v).1 = q.gap v := rfl
+
+@[simp] theorem viewControlOf_micro {fppBound dpBound : ℕ} (q : QPhys fppBound dpBound)
+    (v : Fin 4) : (viewControlOf q v).2.2 = (q.micro v).2 := rfl
 
 /-- **what the finite control says about the state.**  Each field is read off the state;
 nothing here mentions a tape. -/
@@ -6860,6 +6878,65 @@ theorem headSlots_rightStep {margin K : ℕ} {polarity : Fin 16 → Bool} {gap :
         rfl)
     exact hres
 
+/-- **reading a cell back out of the machine's alphabet.**  The machine's alphabet has a summand
+for the cells of a view, so a symbol of that summand is a cell and everything else — the
+machine's blank included — reads back as the blank cell.  A rule may use this: it is a function
+of one symbol, so it is part of reading a window. -/
+def decCell (g : Γm) : PalPeg.CloseoutCoreStep.Γc :=
+  match g with
+  | .inr (.inl c) => c
+  | _ => PalPeg.CloseoutCoreStep.blankc
+
+@[simp] theorem decCell_encCell (c : PalPeg.CloseoutCoreStep.Γc) : decCell (encCell c) = c := by
+  unfold encCell
+  by_cases h : c = PalPeg.CloseoutCoreStep.blankc
+  · rw [if_pos h, h]
+    rfl
+  · rw [if_neg h]
+    rfl
+
+/-- **the actions the machine names on the twelve slots of a head: the view layer's own, through
+the encoding.**  The rule reads the head's own windows, decodes them to cells, asks the view
+layer what a view does on this step of the slot under this command, and sends those actions back
+through the encoding.  Nothing here is hand-rolled: the case analysis of a head's step — the
+half-steps, the stack that moves, the arrival that goes to the queue — is the view layer's. -/
+noncomputable def headViewActs {fppBound dpBound K : ℕ} (hK : 2 ≤ K)
+    (q : QPhys fppBound dpBound) (v : Fin 4) (slot : Fin 11)
+    (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (t : Fin 12) :
+    List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  (PalPeg.ConcreteLocalMachine.viewActs (Fin 2) hK slot command (viewControlOf q v)
+    (fun tape i => decCell (ws (slotIndex (headSlot v tape)) i)) t).map (encAct encCell)
+
+theorem headViewActs_length {fppBound dpBound K : ℕ} (hK : 2 ≤ K)
+    (q : QPhys fppBound dpBound) (v : Fin 4) (slot : Fin 11)
+    (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (t : Fin 12) :
+    (headViewActs hK q v slot command ws t).length ≤ K := by
+  unfold headViewActs
+  rw [List.length_map]
+  exact PalPeg.ConcreteLocalMachine.viewActs_length (Fin 2) hK slot command _ _ t
+
+/-- **on the encoded tapes of a view, those actions are the view's own actions read off the
+view's own windows.**  Decoding what the machine reads off an encoded tape gives back what the
+view reads off its own tape, so the rule and the view layer are looking at the same windows. -/
+theorem headViewActs_encoded {fppBound dpBound K : ℕ} (hK : 2 ≤ K)
+    (q : QPhys fppBound dpBound) (v : Fin 4) (slot : Fin 11)
+    (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc) (T : Slot → STape Γm)
+    (hold : ∀ t, T (headSlot v t) = mapTape encCell (viewTapes t)) (t : Fin 12) :
+    headViewActs hK q v slot command (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) t
+      = (PalPeg.ConcreteLocalMachine.viewActs (Fin 2) hK slot command (viewControlOf q v)
+          (fun tape => PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K (viewTapes tape))
+          t).map (encAct encCell) := by
+  unfold headViewActs
+  congr 1
+  congr 1
+  funext tape i
+  show decCell (PalPeg.Local.readWin blankM K (tapesOf T (slotIndex (headSlot v tape))) i) = _
+  rw [tapesOf_apply, hold tape, readWin_mapTape encCell (by rw [encCell]; rw [if_pos rfl]),
+    decCell_encCell]
+
 /-- **a step of the machine on the twelve slots of a head is a step of that head's view.**  The
 machine keeps a head's tapes as the encoded tapes of a view, so if the actions the rule names on
 those slots are the actions the view layer's own rule names — read off the same windows, through
@@ -6889,6 +6966,32 @@ theorem viewStep_of_encodedActs {K : ℕ} (hK : 2 ≤ K) (slot : Fin 11)
         (fun tape => PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K (viewTapes tape)) t),
     fun t => ?_, rfl, fun t _ => ⟨rfl, fun _ => rfl⟩⟩
   rw [hslots t, hold t, ← mapTape_actList encCell (by rw [encCell]; rw [if_pos rfl])]
+
+/-- **one step of a head, from the actions the rule names, is a step of that head's view.**  This
+is the composition of the two halves: the rule's actions on a head's slots are the view layer's
+own actions read off the view's own windows, and a step that follows them takes the encoded
+tapes of a view to the encoded tapes of the view one step later.  Eleven of these, chained
+through `viewSlot_sound`, are one command of the view. -/
+theorem viewStep_of_headViewActs {fppBound dpBound K : ℕ} (hK : 2 ≤ K)
+    (q : QPhys fppBound dpBound) (v : Fin 4) (slot : Fin 11)
+    (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc) (T newTapes : Slot → STape Γm)
+    (hold : ∀ t, T (headSlot v t) = mapTape encCell (viewTapes t))
+    (hslots : ∀ t, newTapes (headSlot v t)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (T (headSlot v t))
+          (headViewActs hK q v slot command
+            (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) t)) :
+    ∃ viewTapes' : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc,
+      (∀ t, newTapes (headSlot v t) = mapTape encCell (viewTapes' t)) ∧
+        PalPeg.ConcreteLocalMachine.ViewStep (Fin 2) hK slot command
+          (viewControlOf q v, viewTapes)
+          (PalPeg.ConcreteLocalMachine.viewNext (Fin 2) hK slot command (viewControlOf q v)
+              (fun tape =>
+                PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K (viewTapes tape)),
+            viewTapes') :=
+  viewStep_of_encodedActs hK slot command (viewControlOf q v) viewTapes T newTapes (headSlot v)
+    hold (fun t => by
+      rw [hslots t, headViewActs_encoded hK q v slot command viewTapes T hold t])
 
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
