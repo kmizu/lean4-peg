@@ -4045,6 +4045,117 @@ theorem centreRead_periodSlot {margin K : ℕ} {x : State GalilVM} {polarity : F
       henc.period tape hperiod]
   rfl
 
+/-- **a tick in which the chain consumes a letter, on the slots the step writes.**  Three things
+move and nothing else the encoding speaks about does: the lag comes down by one, the distance
+goes up by one, and the period tape takes a step.  Neither counter is anybody's mirror, so the
+three slots are the whole of it.
+
+The cursors are not here.  The chain's verifier moves too, but a step right is not an action of
+the step's own table — it is eleven slots of the view layer — so this theorem is about the state
+in which the cursor has not moved yet, which is `stepState`. -/
+theorem encTapes_chainConsume (margin : ℕ) (x y : State GalilVM)
+    (polarity newPolarity : Fin 16 → Bool) (gap : Fin 4 → Bool)
+    (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (fppLive dpLive : Bool)
+    (tapes newTapes : Slot → STape Γm)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
+    (hheads : headOf y = headOf x) (hplaces : placeOf y = placeOf x)
+    (hfpp : ∀ i, y.vm.fpp.program.config.tapes i = x.vm.fpp.program.config.tapes i)
+    (hdp : ∀ i, y.vm.dp.config.tapes i = x.vm.dp.config.tapes i)
+    (hanswer : answerOf y = answerOf x)
+    (hcountersOther : ∀ c : Fin 16, c ≠ 11 → c ≠ 13 → counterOf y c = counterOf x c)
+    (hpolOther : ∀ c : Fin 16, c ≠ 11 → c ≠ 13 → newPolarity c = polarity c)
+    (lag : PalPeg.GalilScaffoldCounter.Counter) (hlag : counterOf y 11 = some lag)
+    (segLag : STape Seg) (habsLag : absCtr segLag (newPolarity 11) = lag)
+    (hslotLag : newTapes (counterSlot 11) = padLeft margin (mapTape encSeg segLag))
+    (dist : PalPeg.GalilScaffoldCounter.Counter) (hdist : counterOf y 13 = some dist)
+    (segDist : STape Seg) (habsDist : absCtr segDist (newPolarity 13) = dist)
+    (hslotDist : newTapes (counterSlot 13) = padLeft margin (mapTape encSeg segDist))
+    (tape : PalPeg.GalilScaffoldChainPeriod.Tape) (hperiod : periodOf y = some tape)
+    (hslotPeriod : newTapes periodSlot = padLeft margin (mapTape encToken (encPeriod tape)))
+    (hkept : ∀ slot, slot ≠ counterSlot 11 → slot ≠ counterSlot 13 → slot ≠ periodSlot →
+      newTapes slot = tapes slot) :
+    EncTapes margin y newPolarity gap micro fppLive dpLive newTapes where
+  margins := by
+    intro slot
+    by_cases h11 : slot = counterSlot 11
+    · rw [h11, hslotLag, pos_padLeft]; omega
+    · by_cases h13 : slot = counterSlot 13
+      · rw [h13, hslotDist, pos_padLeft]; omega
+      · by_cases hp : slot = periodSlot
+        · rw [hp, hslotPeriod, pos_padLeft]; omega
+        · rw [hkept slot h11 h13 hp]
+          exact henc.margins slot
+  heads := by
+    intro v head hhead
+    obtain ⟨view, viewTapes, habs, hrep, hslots, hcells, hwf⟩ :=
+      henc.heads v head (by rw [← congrFun hheads v]; exact hhead)
+    exact ⟨view, viewTapes, habs, hrep, fun i => by
+      rw [hkept _ (by simp [headSlot, counterSlot]) (by simp [headSlot, counterSlot])
+        (by simp [headSlot, periodSlot]), hslots i], hcells, hwf⟩
+  idleHead := by
+    intro h3
+    obtain ⟨view, viewTapes, hrep, hslots, hcells, hwf⟩ :=
+      henc.idleHead (by rw [← congrFun hheads 3]; exact h3)
+    exact ⟨view, viewTapes, hrep, fun i => by
+      rw [hkept _ (by simp [headSlot, counterSlot]) (by simp [headSlot, counterSlot])
+        (by simp [headSlot, periodSlot]), hslots i], hcells, hwf⟩
+  fpp := by
+    intro i
+    rw [hkept _ (by cases fppLive <;> simp [progSlotOf, counterSlot])
+      (by cases fppLive <;> simp [progSlotOf, counterSlot])
+      (by cases fppLive <;> simp [progSlotOf, periodSlot]), henc.fpp i, hfpp i]
+  dp := by
+    intro i
+    rw [hkept _ (by cases dpLive <;> simp [dpSlotOf, counterSlot])
+      (by cases dpLive <;> simp [dpSlotOf, counterSlot])
+      (by cases dpLive <;> simp [dpSlotOf, periodSlot]), henc.dp i, hdp i]
+  idleShape := by
+    intro i
+    obtain ⟨raw, hraw⟩ := henc.idleShape i
+    exact ⟨raw, by
+      rw [hkept _ (by cases fppLive <;> simp [progSlotOf, counterSlot])
+        (by cases fppLive <;> simp [progSlotOf, counterSlot])
+        (by cases fppLive <;> simp [progSlotOf, periodSlot]), hraw]⟩
+  counters := by
+    intro c value hvalue
+    by_cases h11 : c = 11
+    · subst h11
+      rw [hlag] at hvalue
+      exact ⟨segLag, by rw [habsLag, Option.some.inj hvalue], hslotLag⟩
+    · by_cases h13 : c = 13
+      · subst h13
+        rw [hdist] at hvalue
+        exact ⟨segDist, by rw [habsDist, Option.some.inj hvalue], hslotDist⟩
+      · obtain ⟨seg, habs, hslot⟩ :=
+          henc.counters c value (by rw [← hcountersOther c h11 h13]; exact hvalue)
+        exact ⟨seg, by rw [hpolOther c h11 h13]; exact habs, by
+          rw [hkept _ (by simpa using fun h => h11 h) (by simpa using fun h => h13 h)
+            (by simp [counterSlot, periodSlot]), hslot]⟩
+  places := by
+    intro i place hplace
+    obtain ⟨st, jk, hsealed, hlen, hstack, hslotp⟩ :=
+      henc.places i place (by rw [← congrFun hplaces i]; exact hplace)
+    exact ⟨st, jk, hsealed, hlen, hstack, by
+      rw [hkept _ (by simp [placeSlot, counterSlot]) (by simp [placeSlot, counterSlot])
+        (by simp [placeSlot, periodSlot]), hslotp]⟩
+  mirrors := by
+    intro m value hvalue
+    have h11 : mirrorSource m ≠ 11 := by fin_cases m <;> decide
+    have h13 : mirrorSource m ≠ 13 := by fin_cases m <;> decide
+    obtain ⟨seg, habs, hslotm⟩ :=
+      henc.mirrors m value (by rw [← hcountersOther _ h11 h13]; exact hvalue)
+    exact ⟨seg, by rw [hpolOther _ h11 h13]; exact habs, by
+      rw [hkept _ (by simp [mirrorSlot, counterSlot]) (by simp [mirrorSlot, counterSlot])
+        (by simp [mirrorSlot, periodSlot]), hslotm]⟩
+  period := by
+    intro tape' htape'
+    rw [hperiod] at htape'
+    rw [← Option.some.inj htape', hslotPeriod]
+  answer := by
+    intro tape' htape'
+    rw [hkept _ (by simp [counterSlot]) (by simp [counterSlot]) (by simp [periodSlot])]
+    exact henc.answer tape' (by rw [← hanswer]; exact htape')
+
 /-- **a tick that walks the chain's period tape and nothing else the encoding speaks about.**
 The period tape is nobody's mirror, so one slot changes.  Stated for two states that agree
 everywhere but there, so that a branch which moves several components applies it once among the
