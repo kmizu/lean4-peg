@@ -9515,6 +9515,40 @@ def HeadSlotsRepAt (margin : ℕ) (gap : Fin 4 → Bool)
       (∀ i, tapes (headSlot v i) = mapTape encCell (viewTapes i)) ∧
         PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view
 
+/-- **the verifier's slots mirror the centre while the chain is idle.**  The encoding's own field
+says those twelve slots hold some view; this says which one — the centre cursor's.
+
+The point of asking for it is the moment a chain is born.  The scan's background quantum starts a
+chain whose verifier *is* the centre cursor (`FrameFunction.chainAtFun`, with `ver := s.center`),
+and no command of a view copies a cursor.  If the slots already hold the centre's view, nothing
+has to be copied: the encoding of the new verifier is the encoding that was already there. -/
+def IdleHeadMirrorsCentre (margin : ℕ) (gap : Fin 4 → Bool)
+    (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (tapes : Slot → STape Γm)
+    (x : State GalilVM) : Prop :=
+  headOf x 3 = none →
+    ∃ view : PalPeg.LocalInputView.InputView,
+      HeadSlotsRepAt margin gap micro tapes 3 view ∧
+        PalPeg.LocalArrival.absHead' view [] = x.vm.center
+
+/-- **so a chain's birth costs the machine nothing on the verifier's slots.**  Whatever tick
+starts the chain, the twelve slots of the fourth cursor already encode a view of the head the new
+verifier is, and that is exactly what the `heads` field of the encoding asks for it.
+
+This is the whole of `M-headCopy` for the chain's birth: the copy is not made, it is kept. -/
+theorem heads_atChainBirth {margin : ℕ} {gap : Fin 4 → Bool}
+    {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl} {tapes : Slot → STape Γm}
+    {x y : State GalilVM} (hmirror : IdleHeadMirrorsCentre margin gap micro tapes x)
+    (hidle : headOf x 3 = none) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hborn : headOf y 3 = some head) (hver : head = x.vm.center) :
+    ∃ (view : PalPeg.LocalInputView.InputView)
+        (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+      PalPeg.LocalArrival.absHead' view [] = head ∧
+        PalPeg.ConcreteLocalMachine.ViewRep margin view (gap 3) (micro 3) viewTapes ∧
+        (∀ i, tapes (headSlot 3 i) = mapTape encCell (viewTapes i)) ∧
+          PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view := by
+  obtain ⟨view, ⟨viewTapes, hrep, hslots, hcells, hwf⟩, habs⟩ := hmirror hidle
+  exact ⟨view, viewTapes, by rw [hver]; exact habs, hrep, hslots, hcells, hwf⟩
+
 /-- **a cursor the abstraction names has it.** -/
 theorem headSlotsRep_of_heads {margin : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
     {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
