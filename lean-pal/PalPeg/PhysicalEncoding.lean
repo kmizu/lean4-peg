@@ -691,6 +691,30 @@ theorem progSlot_ne_placeSlot (live : Bool) (i : Fin 9) (p : Fin 3) :
 theorem counterSlot_ne_placeSlot (c : Fin 16) (p : Fin 3) : counterSlot c ≠ placeSlot p := by
   simp
 
+/-- the slot of the machine's `m`-th mirror of a counter. -/
+abbrev mirrorSlot (m : Fin 5) : Slot := .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl m)))))))
+
+theorem progSlot_ne_mirrorSlot (live : Bool) (i : Fin 9) (m : Fin 5) :
+    progSlot live i ≠ mirrorSlot m := by
+  cases live <;> simp [progSlotOf]
+
+theorem counterSlot_ne_mirrorSlot (c : Fin 16) (m : Fin 5) : counterSlot c ≠ mirrorSlot m := by
+  simp
+
+theorem headSlot_ne_mirrorSlot (v : Fin 4) (t : Fin 12) (m : Fin 5) :
+    headSlot v t ≠ mirrorSlot m := by
+  simp
+
+theorem headSlot_ne_of_head_ne (v v' : Fin 4) (t t' : Fin 12) (h : v ≠ v') :
+    headSlot v t ≠ headSlot v' t' := by
+  intro hEq
+  have hpair : v = v' ∧ t = t' := by simpa [headSlot] using hEq
+  exact h hpair.1
+
+theorem mirrorSlot_injective : Function.Injective mirrorSlot := by
+  intro m m' hEq
+  simpa using hEq
+
 theorem progSlot_ne_headSlot (live : Bool) (i : Fin 9) (v : Fin 4) (t : Fin 12) :
     progSlot live i ≠ headSlot v t := by
   cases live <;> simp [progSlotOf]
@@ -1223,9 +1247,6 @@ theorem encTapes_headStep (margin : ℕ) (x y : State GalilVM) (polarity : Fin 1
     intro tape htape
     rw [hkept _ (by intro k; simp)]
     exact henc.answer tape (by rw [← hanswer]; exact htape)
-
-/-- the slot of the machine's `m`-th mirror of a counter. -/
-abbrev mirrorSlot (m : Fin 5) : Slot := .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl m)))))))
 
 /-- **a tick that changes one counter and nothing else the encoding speaks about.**  A counter
 may be mirrored — three of the five mirror slots hold copies of the radius — so the mirrors of
@@ -4467,6 +4488,111 @@ noncomputable def rewindPairActs {fppBound dpBound K : ℕ} (live : Bool)
     else if j = slotIndex (headSlot 1 PalPeg.ConcreteLocalMachine.nearTape) then
       headStepActs q 1 ws PalPeg.ConcreteLocalMachine.nearTape
     else []
+
+theorem rewindPairActs_prog {fppBound dpBound K : ℕ} (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    rewindPairActs live q ws (slotIndex (progSlot live 8))
+      = [some (centreRead ws (progSlot live 8), (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+  unfold rewindPairActs
+  rw [if_pos rfl]
+
+theorem rewindPairActs_counterLen {fppBound dpBound K : ℕ} (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    rewindPairActs live q ws (slotIndex (counterSlot 3)) = [incAct q 3 ws] := by
+  unfold rewindPairActs
+  rw [if_neg (fun h => (progSlot_ne_counterSlot live 8 3) (slotIndex.injective h).symm),
+    if_pos rfl]
+
+theorem rewindPairActs_counterRad {fppBound dpBound K : ℕ} (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    rewindPairActs live q ws (slotIndex (counterSlot 2)) = [incAct q 2 ws] := by
+  unfold rewindPairActs
+  rw [if_neg (fun h => (progSlot_ne_counterSlot live 8 2) (slotIndex.injective h).symm),
+    if_neg (fun h => by simpa using slotIndex.injective h), if_pos rfl]
+
+theorem rewindPairActs_mirror {fppBound dpBound K : ℕ} (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (m : Fin 5) (hsrc : mirrorSource m = 2) :
+    rewindPairActs live q ws (slotIndex (mirrorSlot m)) = [incAct q 2 ws] := by
+  unfold rewindPairActs
+  rw [if_neg (fun h => (progSlot_ne_mirrorSlot live 8 m) (slotIndex.injective h).symm),
+    if_neg (fun h => (counterSlot_ne_mirrorSlot 3 m) (slotIndex.injective h).symm),
+    if_neg (fun h => (counterSlot_ne_mirrorSlot 2 m) (slotIndex.injective h).symm),
+    if_pos ⟨m, hsrc, rfl⟩]
+
+theorem rewindPairActs_head {fppBound dpBound K : ℕ} (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (v : Fin 4) (hv : v = 0 ∨ v = 1) (t : Fin 12) :
+    rewindPairActs live q ws (slotIndex (headSlot v t)) = headStepActs q v ws t := by
+  unfold rewindPairActs
+  rw [if_neg (fun h => (progSlot_ne_headSlot live 8 v t) (slotIndex.injective h).symm),
+    if_neg (fun h => (counterSlot_ne_headSlot 3 v t) (slotIndex.injective h).symm),
+    if_neg (fun h => (counterSlot_ne_headSlot 2 v t) (slotIndex.injective h).symm),
+    if_neg (fun h => by
+      obtain ⟨m, -, hEq⟩ := h
+      exact (headSlot_ne_mirrorSlot v t m) (slotIndex.injective hEq))]
+  rcases hv with hv | hv
+  · subst hv
+    by_cases hb : t = PalPeg.ConcreteLocalMachine.backTape
+    · subst hb
+      rw [if_pos rfl]
+    · rw [if_neg (headSlot_ne_of_tape_ne 0 t PalPeg.ConcreteLocalMachine.backTape hb)]
+      by_cases hn : t = PalPeg.ConcreteLocalMachine.nearTape
+      · subst hn
+        rw [if_pos rfl]
+      · rw [if_neg (headSlot_ne_of_tape_ne 0 t PalPeg.ConcreteLocalMachine.nearTape hn),
+          if_neg (fun h => (headSlot_ne_of_head_ne 0 1 t _ (by decide))
+            (slotIndex.injective h)),
+          if_neg (fun h => (headSlot_ne_of_head_ne 0 1 t _ (by decide))
+            (slotIndex.injective h))]
+        simp [headStepActs, hb, hn]
+  · subst hv
+    rw [if_neg (fun h => (headSlot_ne_of_head_ne 1 0 t _ (by decide)) (slotIndex.injective h)),
+      if_neg (fun h => (headSlot_ne_of_head_ne 1 0 t _ (by decide)) (slotIndex.injective h))]
+    by_cases hb : t = PalPeg.ConcreteLocalMachine.backTape
+    · subst hb
+      rw [if_pos rfl]
+    · rw [if_neg (headSlot_ne_of_tape_ne 1 t PalPeg.ConcreteLocalMachine.backTape hb)]
+      by_cases hn : t = PalPeg.ConcreteLocalMachine.nearTape
+      · subst hn
+        rw [if_pos rfl]
+      · rw [if_neg (headSlot_ne_of_tape_ne 1 t PalPeg.ConcreteLocalMachine.nearTape hn)]
+        simp [headStepActs, hb, hn]
+
+theorem rewindPairActs_progOther {fppBound dpBound K : ℕ} (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (j : Fin 9) (hj : j ≠ 8) :
+    rewindPairActs live q ws (slotIndex (progSlot live j)) = [] := by
+  unfold rewindPairActs
+  rw [if_neg (fun h => hj (progSlotOf_injective live (slotIndex.injective h))),
+    if_neg (fun h => (progSlot_ne_counterSlot live j 3) (slotIndex.injective h)),
+    if_neg (fun h => (progSlot_ne_counterSlot live j 2) (slotIndex.injective h)),
+    if_neg (fun h => by
+      obtain ⟨m, -, hEq⟩ := h
+      exact (progSlot_ne_mirrorSlot live j m) (slotIndex.injective hEq)),
+    if_neg (fun h => (progSlot_ne_headSlot live j 0 _) (slotIndex.injective h)),
+    if_neg (fun h => (progSlot_ne_headSlot live j 0 _) (slotIndex.injective h)),
+    if_neg (fun h => (progSlot_ne_headSlot live j 1 _) (slotIndex.injective h)),
+    if_neg (fun h => (progSlot_ne_headSlot live j 1 _) (slotIndex.injective h))]
+
+theorem rewindPairActs_off {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (slot : Slot)
+    (hprog : ∀ j : Fin 9, slot ≠ progSlot live j) (hlen : slot ≠ counterSlot 3)
+    (hrad : slot ≠ counterSlot 2)
+    (hmirror : ∀ m : Fin 5, mirrorSource m = 2 → slot ≠ mirrorSlot m)
+    (hhead0 : ∀ t : Fin 12, slot ≠ headSlot 0 t) (hhead1 : ∀ t : Fin 12, slot ≠ headSlot 1 t) :
+    rewindPairActs live q ws (slotIndex slot) = [] := by
+  unfold rewindPairActs
+  rw [if_neg (fun h => hprog 8 (slotIndex.injective h)),
+    if_neg (fun h => hlen (slotIndex.injective h)),
+    if_neg (fun h => hrad (slotIndex.injective h)),
+    if_neg (fun h => by
+      obtain ⟨m, hsrc, hEq⟩ := h
+      exact hmirror m hsrc (slotIndex.injective hEq)),
+    if_neg (fun h => hhead0 _ (slotIndex.injective h)),
+    if_neg (fun h => hhead0 _ (slotIndex.injective h)),
+    if_neg (fun h => hhead1 _ (slotIndex.injective h)),
+    if_neg (fun h => hhead1 _ (slotIndex.injective h))]
 
 theorem rewindPairActs_length {fppBound dpBound K : ℕ} (live : Bool)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
