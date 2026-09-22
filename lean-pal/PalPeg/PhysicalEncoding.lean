@@ -8180,6 +8180,51 @@ theorem heads_afterLeftTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hm
     (PalPeg.GalilScaffoldInputHead.left head) habs PalPeg.GalilScaffoldInputHead.left rfl rfl
     (fun h => absurd h (by simp))
 
+/-- **a slot that is not a head's holds, after the tick, exactly what the mode's branch wrote at
+step `0`.**  Step `0` gives it the branch's own actions and the eleven steps after it give it
+none, so whatever the branch is already proved to leave there is what the tick leaves there. -/
+theorem tickRule_otherSlots {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base commandsOf baseActs)
+    (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K)
+    (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
+    (hslot0 : x.1.slot.val = 0) (j : Fin tapeCountM) (hj : (slotIndex.symm j).isLeft = false) :
+    (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x input
+        12).2 j
+      = PalPeg.CloseoutCoreEnc12.actList blankM (x.2 j)
+          (baseActs x.1 input (fun tape => PalPeg.Local.readWin blankM K (x.2 tape)) j) := by
+  rw [(tickRule_still hK base commandsOf baseActs baseLen x input hslot0 12 (by omega)
+      (by omega)).1 j hj,
+    PalPeg.LocalStepFusion.idealRun_step, if_pos rfl]
+  show PalPeg.CloseoutCoreEnc12.actList blankM _
+      ((tickRule hK base commandsOf baseActs baseLen).acts x.1 input _ j) = _
+  rw [show (tickRule hK base commandsOf baseActs baseLen).acts x.1 input
+        (fun tape => PalPeg.Local.readWin blankM K
+          ((PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM
+            x input 0).2 tape)) j
+      = baseActs x.1 input (fun tape => PalPeg.Local.readWin blankM K (x.2 tape)) j from by
+    show (if x.1.slot.val = 0 then _ else _) = _
+    rw [if_pos hslot0, if_neg (by rw [hj]; simp)]
+    rfl]
+  rfl
+
+/-- **the fields of the control that are not a view's hold, after the tick, exactly what the
+mode's branch put there at step `0`.**  Same reason: step `0` is the branch and the eleven steps
+after it write only a view's own three fields. -/
+theorem tickRule_headFree {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base commandsOf baseActs)
+    (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K)
+    (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
+    (hslot0 : x.1.slot.val = 0) :
+    headFreeFields (PalPeg.LocalStepFusion.idealRun
+        (tickRule hK base commandsOf baseActs baseLen) blankM x input 12).1
+      = headFreeFields
+          (base x.1 input (fun tape => PalPeg.Local.readWin blankM K (x.2 tape))) := by
+  rw [(tickRule_still hK base commandsOf baseActs baseLen x input hslot0 12 (by omega)
+      (by omega)).2,
+    PalPeg.LocalStepFusion.idealRun_step, if_pos rfl]
+  show headFreeFields ((tickRule hK base commandsOf baseActs baseLen).nq x.1 input _) = _
+  show headFreeFields (if x.1.slot.val = 0 then _ else _ : QPhys fppBound dpBound) = _
+  rw [if_pos hslot0]
+  rfl
+
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
 which is a bit the control carries; the symbol under its back head is a letter rather than the
