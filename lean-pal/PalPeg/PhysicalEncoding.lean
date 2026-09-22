@@ -8112,7 +8112,22 @@ noncomputable def modeCommands {fppBound dpBound K : ℕ} (first : Fin 9)
   | PalPeg.GalilScaffoldController.Mode.fpp => stayCommands
   | PalPeg.GalilScaffoldController.Mode.copy => stayCommands
   | PalPeg.GalilScaffoldController.Mode.rewind => rewindCommands first q.fppLive q ws
+  | PalPeg.GalilScaffoldController.Mode.shift =>
+      if remainsTest q.polarity ws then rest q i ws else stayCommands
   | _ => rest q i ws
+
+/-- **the shift's row, once the shift is over.**  Nothing moves in the tick that leaves the
+shift: the machine's whole state is carried over and only the controller's word changes. -/
+theorem modeCommands_shiftExit {fppBound dpBound K : ℕ} (first : Fin 9) (rest)
+    (q : QPhys fppBound dpBound) (i : Option (Fin 2))
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift)
+    (hdone : remainsTest q.polarity ws = false) :
+    modeCommands first rest q i ws = stayCommands := by
+  unfold modeCommands
+  rw [hmode]
+  dsimp only
+  rw [if_neg (by rw [hdone]; simp)]
 
 /-- **in those five modes the table's row is standing still.**  One statement for the five, since
 the reason is the same one in each: the row is written as `stayCommands`. -/
@@ -12009,6 +12024,23 @@ theorem headOf_tickFun_rewindReset (centre : GalilVM → Fin 3)
      rw [if_pos hatFirst]
      rfl)
 
+/-- **the tick that leaves the shift moves no input head.**  It carries the whole machine state
+over and changes only the controller's word. -/
+theorem headOf_tickFun_shiftExit (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift)
+    (hdone : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos
+      x.vm = false) (v : Fin 4) :
+    headOf (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) v
+      = headOf x v := by
+  refine headOf_congr_of_vm ?_ ?_ ?_ ?_ v <;>
+    (unfold PalPeg.GalilScaffoldTop.tickFun
+     rw [hmode]
+     dsimp only
+     rw [if_neg (by rw [hdone]; simp)])
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
@@ -12252,6 +12284,53 @@ theorem rewind_pair_of_tick_branch {fppBound dpBound K : ℕ} (margin : ℕ)
       hmargin2 hqmode hmode hnotFirst hqpair hpair hnotMark hfloor henc)
   exact rewind_one_of_tick margin centre place entry entryQ first w F delay x q T rest input
     hbound hKb hK2 hK hslot0 howed hqmode hnotFocus henc hctl htapes
+
+
+/-- **the tick that leaves the shift, on the machine of twelve steps.**  Its row is standing
+still and its branch was proved long ago; what was missing was an arm in the mode table. -/
+theorem shift_exit_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (input : Option (Fin 2))
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hK1 : 1 ≤ K)
+    (hmargin : K ≤ margin) (hKn : K ≤ margin + 1)
+    (hslot0 : q.slot.val = 0) (howed : ∀ v, (q.micro v).2.2.2 = 0)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift)
+    (hdoneQ : remainsTest q.polarity
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = false)
+    (hdone : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos
+      x.vm = false)
+    (henc : Enc w margin x (q, T)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hK hK2 rest) blankM
+          (q, tapesOf T) input 12).1,
+        fun i => (PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hK hK2 rest) blankM (q, tapesOf T) input 12).2
+            (slotIndex i)) := by
+  obtain ⟨hctl, htapes⟩ := enc_step_pieces margin entryQ first hbound hK w
+    (PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) q T
+    (shift_exit_of_rule margin centre place entry entryQ first w F delay x q T
+      (physRule entryQ first hbound hK)
+      (physRule_nq_shift entryQ first hbound hK q _ hqmode hdoneQ)
+      (physRule_acts_shift entryQ first hbound hK q _ hqmode) hK1 hKn hmode hdone henc)
+  exact enc_afterTick margin entryQ first hbound hK hK2 hmargin rest w x _ q T input hslot0 howed
+    (fun _ => .stay)
+    (fun _ => by rw [modeCommands_shiftExit first rest q input _ hqmode hdoneQ]; rfl)
+    (fun _ => id) (fun _ => rfl)
+    (fun v => by
+      rw [headOf_tickFun_shiftExit centre place entry entryQ first w F delay x hmode hdone v])
+    (fun v head hhead => by
+      rw [headOf_tickFun_shiftExit centre place entry entryQ first w F delay x hmode hdone v]
+      exact hhead)
+    (fun _ _ _ h => absurd h (by simp)) henc.2 hctl htapes
 
 end PalPeg.PhysicalEncoding
 
