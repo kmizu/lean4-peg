@@ -201,11 +201,17 @@ theorem canonicalPreTrace_exists (entry q : ℕ) (first : Fin 9)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
         (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
-        (PalPeg.ShapedRun.OracleTick entry) w)
+        (PalPeg.ShapedRun.OracleTick entry)
+      (PalPeg.CloseoutCheckW.ReportOnPackedRun centreC placeC entry q first) w)
     (w : List (Fin 2)) (hw : 0 < w.length) :
     ∃ (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc ∧
-        PalPeg.CloseoutCheckW.CanonTrace entry w st Tc :=
+        PalPeg.CloseoutCheckW.CanonTrace entry w st Tc ∧
+        (∀ m, 1 ≤ m → m ≤ w.length →
+          (st (Tc m)).ctl.mode = PalPeg.GalilScaffoldController.Mode.scan) ∧
+        ∀ m, 1 ≤ m → m ≤ w.length →
+          PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first w
+            (st (Tc m)).ctl (st (Tc m)).vm :=
   PalPeg.CloseoutCheckW.preTraceOnPackedRun_exists centreC placeC entry q first
     (h_bootRefreshedIMW_of_bootIPack centreC placeC entry q first
       (fun w => h_shiftLocalG centreC placeC entry q first (raw := w))
@@ -251,7 +257,8 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
     (hor : ∀ w : List (Fin 2), 0 < w.length →
       PalPeg.CloseoutCheckW.CycleOracleOn centreC placeC entry q first
         (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centreC placeC entry q first)
-        (PalPeg.ShapedRun.OracleTick entry) w)
+        (PalPeg.ShapedRun.OracleTick entry)
+      (PalPeg.CloseoutCheckW.ReportOnPackedRun centreC placeC entry q first) w)
     (hC : H_realizeCanonical centreC placeC entry q first)
     (hres : ∀ (w : List (Fin 2)) (st : ℕ → GalilScaffoldTop.State GalilVM) (Tc : ℕ → ℕ),
       PalPeg.CloseoutCheckW.PreTraceIMW centreC placeC entry q first w st Tc →
@@ -262,7 +269,9 @@ theorem given_scanLandingObligations (entry q : ℕ) (first : Fin 9)
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc) :
     RecognizedByTotalPEG PAL :=
   given_preTraceIMW_on entry q first (PalPeg.CloseoutCheckW.CanonTrace entry)
-    (canonicalPreTrace_exists entry q first hor)
+    (fun w hw => by
+      obtain ⟨st, Tc, hpreTrace, hcanonical, -⟩ := canonicalPreTrace_exists entry q first hor w hw
+      exact ⟨st, Tc, hpreTrace, hcanonical⟩)
     hC
     (fun w st Tc hw h => needBound_alongPreTrace entry q first hres hChainVerifierSupply hw h)
 

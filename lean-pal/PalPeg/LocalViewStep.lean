@@ -68,8 +68,9 @@ def queueJobOfWindows (command : ViewCommand) (gap : Bool) (tag : RTag)
 /-- **The decision step on the two stack tapes.**  Tapes `TEqG`-equal to the results of the
 chosen actions carry the stacks of `viewApply command v`, over bottoms still `K` high; the chosen
 job of the queue and the next gap bit are those of `viewApply command v`. -/
-theorem viewDecision_sound {v : InputView} {gap : Bool} {micro : MicroControl}
-    {tapes : Fin 12 → STape Γc} (hcells : ViewCells v) (hrep : ViewRep K v gap micro tapes)
+theorem viewDecision_sound {margin : ℕ} (hmarginLe : K ≤ margin)
+    {v : InputView} {gap : Bool} {micro : MicroControl}
+    {tapes : Fin 12 → STape Γc} (hcells : ViewCells v) (hrep : ViewRep margin v gap micro tapes)
     (command : ViewCommand) {backTape' nearTape' : STape Γc}
     (hbackTape : TEqG blankc
       (actList blankc (tapes backTape)
@@ -79,16 +80,16 @@ theorem viewDecision_sound {v : InputView} {gap : Bool} {micro : MicroControl}
       (actList blankc (tapes nearTape)
         (nearActsOfWindows command gap micro.2.1 (fun tape => readWin blankc K (tapes tape))))
       nearTape') :
-    (∃ bottom : List (Option (Fin 2)), K ≤ bottom.length + 1 ∧
+    (∃ bottom : List (Option (Fin 2)), margin ≤ bottom.length + 1 ∧
         StackTape backTape' (backStack (viewApply command v) ++ bottom)) ∧
-      (∃ bottom : List (Option (Fin 2)), Sealed bottom ∧ K ≤ bottom.length ∧
+      (∃ bottom : List (Option (Fin 2)), Sealed bottom ∧ margin ≤ bottom.length ∧
         StackTape nearTape' ((viewApply command v).near ++ bottom)) ∧
       (viewApply command v).far
         = jobApply (queueJobOfWindows command gap micro.2.1
             (fun tape => readWin blankc K (tapes tape))) v.far ∧
       (viewApply command v).gap = (headMoveOf command gap).2 := by
   obtain ⟨hback, hnear, hfar, hgap⟩ := viewApply_observed hcells command
-  have htops := viewTopsOfWindows_eq hcells hrep
+  have htops := viewTopsOfWindows_eq hmarginLe hcells hrep
   obtain ⟨backBottom, hbackHeight, hbackStack⟩ := hrep.back
   obtain ⟨nearBottom, hnearSealed, hnearHeight, hnearStack⟩ := hrep.near
   have hgapEq : gap = v.gap := hrep.gap

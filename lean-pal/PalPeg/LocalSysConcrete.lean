@@ -132,6 +132,9 @@ structure PhysWF (x : GalilVML P) : Prop where
   inv : PalPeg.LocalTick1.Inv x
   parked : ParkedOK x
   pend : x.pending = []
+  /-- The fpp walker's stored copy keeps its left sentinel.  The abstraction forgets the sentinel
+  (`LocalState.absPlace`), so this is carried along the run, not read off the tracked state. -/
+  walkerProper : PalPeg.LocalChain.ProperView x.fppWalker
 
 /-- The arrival step of the concrete `LocalSys`: the letter joins the shared
 `pending` list and the chain verifier (`feedV`, the abstract arrival), and is
@@ -140,12 +143,26 @@ invisible, `LocalArrival.absState'_feed'`). -/
 def feedC (a : Fin 2) (m : Mirrored1 P) : Mirrored1 P :=
   ⟨PalPeg.LocalArrival.feed' (feedV a m.vm), PalPeg.LocalInputView.arrive a m.mirL⟩
 
-/-- **The local starvation test.**  The next abstract tick would have to move one
-of the four cursor positions the scan and shift ticks use, and the cell it needs
-has not arrived. -/
+/-- The guard of the moving tick of a shift (`Tick.shift_one`), which does not depend on the
+shared part of the frame. -/
+def ShiftMoves (s : GalilVM) : Prop :=
+  (Frame.pull shiftLens (shiftFrame (fun _ => True) (fun _ => True))).remainingPos s ∨
+    (Frame.pull fppLens (fallbackFrame (fun _ => True) (fun _ => True))).remainingPos s
+
+theorem shiftMoves_eq (Pw : Shared) (q : ℕ) (first : Fin 9) (s : GalilVM) :
+    ShiftMoves s = (galilFrameS Pw q first).remainingPos s := rfl
+
+/-- **The local starvation test.**  The next abstract tick would have to move a cursor onto a
+cell that has not arrived.  Which cursors a tick moves depends on the mode, and the test reads
+exactly those: an `init` or `scan` tick moves the right head one place; the moving tick of a
+shift moves the centre head one place and the left head two; every other tick moves no head to
+the right.  A test that read all four places in every mode would starve a scan state whose left
+head stands on the last arrived letter, although its tick needs no further letter. -/
 def Starved (x : GalilVML P) : Prop :=
-  ¬ (canRight (abs'' x).left ∧ canRight (abs'' x).center ∧ canRight (abs'' x).right ∧
-      canRight (PalPeg.GalilScaffoldChainVerifier.right (abs'' x).left))
+  ¬ ((x.ctl.mode = .init ∨ x.ctl.mode = .scan → canRight (abs'' x).right) ∧
+      (x.ctl.mode = .shift → ShiftMoves (abs'' x) →
+        canRight (abs'' x).center ∧ canRight (abs'' x).left ∧
+          canRight (PalPeg.GalilScaffoldChainVerifier.right (abs'' x).left)))
 
 /-- **The tracking datum.**  The abstraction of the local state is the pre-loaded
 trace state `stOf k`, truncated to the `raw.length - j` letters that have not
@@ -208,7 +225,7 @@ theorem physWF_feedC {m : Mirrored1 P} (h : PhysWF m.vm) (a : Fin 2) :
   have hpv := pending_feedV h.pend a
   have h1 : (feedC a m).vm = feedL' a [] (feedV a m.vm) :=
     PalPeg.LocalArrival.feed'_cons hpv
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · rw [h1]
     exact ⟨h.inv.roles, h.inv.attached,
       ⟨PalPeg.LocalInputView.WF_arrive hw.1 a, PalPeg.LocalInputView.WF_arrive hw.2.1 a,
@@ -220,6 +237,7 @@ theorem physWF_feedC {m : Mirrored1 P} (h : PhysWF m.vm) (a : Fin 2) :
     exact PalPeg.LocalReplayParked.parkedOK_feedL' (viewsWF_feedV a m.vm hw) a []
       hpv (parkedOK_feedV a h.parked)
   · rw [h1]; rfl
+  · rw [h1]; exact h.walkerProper
 
 /-- **Oracle `inv_feed`, mirror half.** -/
 theorem mirInv1_feedC {m : Mirrored1 P} (h : MirInv1 m) (hp : m.vm.pending = [])
@@ -281,6 +299,14 @@ theorem tickC_step (M : Steps P) {m : Mirrored1 P} (h : ¬ Starved m.vm) :
 
 /-! ## 5. The per-mode obligation -/
 
+/-- **What a truncated tick needs of the arrivals**: the three side conditions of
+`GalilLookRefined.tick_trunc'` — the letters used by the source and by the target, and the
+lookahead of the source.  It is weaker than `needT' raw stOf k ≤ j`, which also bounds the
+lookahead of the target: a tick can be legitimate although the lookahead of its target has not
+arrived (the right head stands on the last arrived letter and steps into the gap after it). -/
+def TickNeed (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) (k j : ℕ) : Prop :=
+  usedVM raw (stOf k).vm ≤ j ∧ usedVM raw (stOf (k+1)).vm ≤ j ∧ look' raw (stOf k) ≤ j
+
 /-- **The `LocalStep`-style obligation of one mode.**  On an invariant,
 non-starved state standing at trace index `k` with `j` letters arrived and the
 need of tick `k` met, the mode's local step lands on the trace's next state and
@@ -290,13 +316,24 @@ def Realizes (Good : Mirrored1 P → Prop) (raw : List (Fin 2)) (stOf : ℕ → 
     (lastTick : ℕ)
     (f : Mirrored1 P → Mirrored1 P) (md : Mode) : Prop :=
   ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
-    Needy raw stOf k j m.vm → needT' raw stOf k ≤ j → k < lastTick →
+    Needy raw stOf k j m.vm → TickNeed raw stOf k j → k < lastTick →
       Needy raw stOf (k+1) j (f m).vm ∧ PhysWF (f m).vm ∧ MirInv1 (f m)
 
 /-! ## 6. The `LocalSys` instance -/
 
 /-- The abstraction of the concrete local state. -/
 def absSC (m : Mirrored1 P) : State GalilVM := absState'' m.vm
+
+/-- **The concrete `LocalSys` with a report test on the local state.**  The control of the
+abstract layer has no information on the heads, so a report test that recognizes the report
+points has to read the state; in the shadowed bridge the physical machine keeps the bit in its
+own control (`LocalShadowRealize`). -/
+noncomputable def sysM (M : Steps P) (repM : Mirrored1 P → Bool) : LocalSys (Mirrored1 P) where
+  tickL := tickC M
+  feedC := feedC
+  repL := repM
+  outL := fun m => m.vm.ctl.output
+  Starved := fun m => Starved m.vm
 
 /-- **The concrete `LocalSys`.**  `repL` and `outL` read the finite control only
 (as `LocalLatchRealize.encL_step` requires). -/
@@ -323,8 +360,7 @@ theorem outL_abs (M : Steps P) (repC : Control → Bool) (m : Mirrored1 P) :
 /-! ## 7. From the need to the truncated tick -/
 
 theorem used_le_of_need {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {k j : ℕ}
-    (h : needT' raw stOf k ≤ j) :
-    usedVM raw (stOf k).vm ≤ j ∧ usedVM raw (stOf (k+1)).vm ≤ j ∧ look' raw (stOf k) ≤ j := by
+    (h : needT' raw stOf k ≤ j) : TickNeed raw stOf k j := by
   have e1 : needL' raw stOf k ≤ needT' raw stOf k :=
     needL'_le_needT' raw stOf (Nat.le_succ k)
   have e2 : needL' raw stOf (k+1) ≤ needT' raw stOf k :=
@@ -340,10 +376,10 @@ theorem tick_of_need {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {Pw : S
     {qq : ℕ} {first : Fin 9} {delay : ℕ} {k j : ℕ}
     (hP : PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
     (hT : Tick (galilFrameS Pw qq first) delay (stOf k) (stOf (k+1)))
-    (h : needT' raw stOf k ≤ j) :
+    (h : TickNeed raw stOf k j) :
     Tick (galilFrameS Pw qq first) delay
       (truncS (raw.length - j) (stOf k)) (truncS (raw.length - j) (stOf (k+1))) := by
-  obtain ⟨h1, h2, h3⟩ := used_le_of_need h
+  obtain ⟨h1, h2, h3⟩ := h
   exact tick_trunc' raw j hP qq first delay hT h1 h2 h3
 
 /-! ## 8. The oracles -/
@@ -397,10 +433,11 @@ theorem x0C_started (blank : GalilVML P) (delay : ℕ) : (x0C blank delay).start
 theorem x0C_ans (blank : GalilVML P) (delay : ℕ) : (x0C blank delay).ans = false := rfl
 
 /-- **Oracle `x0_inv`, physical half.** -/
-theorem x0C_physWF {blank : GalilVML P} (h : PalPeg.LocalTick1.Inv blank) (delay : ℕ) :
+theorem x0C_physWF {blank : GalilVML P} (h : PalPeg.LocalTick1.Inv blank)
+    (hwalkerProper : PalPeg.LocalChain.ProperView blank.fppWalker) (delay : ℕ) :
     PhysWF (x0C blank delay).core.vm := by
   refine ⟨⟨h.roles, h.attached, h.views, h.radiusShaped, h.lowerShaped, h.lengthShaped,
-    h.shaped⟩, ?_, rfl⟩
+    h.shaped⟩, ?_, rfl, hwalkerProper⟩
   intro hr
   exact absurd (show (false : Bool) = true from hr) (by decide)
 
@@ -415,12 +452,22 @@ theorem pending_tickL3 {S : Shared} {qq : ℕ} {firstT : Fin 9} {x y : GalilVML 
     (h : PalPeg.LocalTick3.TickL3 S qq firstT x y) : y.pending = x.pending := by
   cases h <;> rfl
 
+/-- A phase tick keeps the left sentinel of the fpp walker: only the copy unit moves it, one
+cell to the left. -/
+theorem walkerProper_tickL3 {S : Shared} {qq : ℕ} {firstT : Fin 9} {x y : GalilVML P}
+    (h : PalPeg.LocalTick3.TickL3 S qq firstT x y)
+    (hproper : PalPeg.LocalChain.ProperView x.fppWalker) :
+    PalPeg.LocalChain.ProperView y.fppWalker := by
+  cases h <;> first
+    | exact hproper
+    | exact PalPeg.LocalChain.properView_moveLeftV hproper
+
 /-- **The seven phase modes keep the physical pack.**  `LocalTick3.tickL3_inv`
 gives `LocalTick1.Inv`; `tickL3_replaying` makes `ParkedOK` vacuous; no phase
 tick touches `pending`. -/
 theorem physWF_of_tickL3 {S : Shared} {qq : ℕ} {firstT : Fin 9} {x y : GalilVML P}
     (h : PhysWF x) (ht : PalPeg.LocalTick3.TickL3 S qq firstT x y) : PhysWF y := by
-  refine ⟨PalPeg.LocalTick3.tickL3_inv h.inv ht, ?_, ?_⟩
+  refine ⟨PalPeg.LocalTick3.tickL3_inv h.inv ht, ?_, ?_, walkerProper_tickL3 ht h.walkerProper⟩
   · intro hr
     exact absurd ((PalPeg.LocalTick3.tickL3_replaying ht).2 ▸ hr) (by decide)
   · rw [pending_tickL3 ht]; exact h.pend
@@ -435,20 +482,37 @@ theorem pending_tickL1 {S : Shared} {qq : ℕ} {firstT : Fin 9} {d : ℕ} {x y :
   | «match» z ch o hm hav hc hpol hrep hper hahead hcan hs hmt hch ho =>
       exact (PalPeg.LocalTick1.birthL_pending _ _).trans hs.frame.pending
 
+/-- The birth of a chain does not touch the fpp walker. -/
+theorem birthL_fppWalker (b : Bool) (z : GalilVML P) :
+    (PalPeg.LocalTick1.birthL b z).fppWalker = z.fppWalker := by
+  cases b <;> rfl
+
+/-- A scan tick does not touch the fpp walker. -/
+theorem fppWalker_tickL1 {S : Shared} {qq : ℕ} {firstT : Fin 9} {d : ℕ} {x y : GalilVML P}
+    (h : PalPeg.LocalTick1.TickL1 S qq firstT d x y) : y.fppWalker = x.fppWalker := by
+  cases h with
+  | wait z ch hm hr hav hs hch =>
+      exact (birthL_fppWalker _ _).trans hs.frame.fppWalker
+  | count z ch hm hav hc hs hch =>
+      exact (birthL_fppWalker _ _).trans hs.frame.fppWalker
+  | «match» z ch o hm hav hc hpol hrep hper hahead hcan hs hmt hch ho =>
+      exact (birthL_fppWalker _ _).trans hs.frame.fppWalker
+
 /-- **A non-replaying scan tick keeps the physical pack.** -/
 theorem physWF_of_tickL1 {S : Shared} {qq : ℕ} {firstT : Fin 9} {d : ℕ} {x y : GalilVML P}
     (h : PhysWF x) (hr : x.ctl.replaying = false)
     (ht : PalPeg.LocalTick1.TickL1 S qq firstT d x y) : PhysWF y := by
-  refine ⟨PalPeg.LocalTick1.tickL1_inv h.inv ht, ?_, ?_⟩
+  refine ⟨PalPeg.LocalTick1.tickL1_inv h.inv ht, ?_, ?_, ?_⟩
   · intro hr'
     exact absurd (PalPeg.LocalReplayParked.tickL1_replaying_false ht hr ▸ hr') (by decide)
   · rw [pending_tickL1 ht]; exact h.pend
+  · rw [fppWalker_tickL1 ht]; exact h.walkerProper
 
 /-- **A mode obligation splits into its abstract and physical halves.** -/
 theorem realizes_of_parts {Good : Mirrored1 P → Prop} {raw : List (Fin 2)} {stOf : ℕ → State GalilVM} {lastTick : ℕ}
     (f : Mirrored1 P → Mirrored1 P) (md : Mode)
     (habs : ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = md →
-      ¬ Starved m.vm → Needy raw stOf k j m.vm → needT' raw stOf k ≤ j → k < lastTick →
+      ¬ Starved m.vm → Needy raw stOf k j m.vm → TickNeed raw stOf k j → k < lastTick →
       Needy raw stOf (k+1) j (f m).vm)
     (hphys : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
       PhysWF (f m).vm ∧ MirInv1 (f m)) :

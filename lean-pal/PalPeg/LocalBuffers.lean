@@ -152,6 +152,19 @@ theorem abs_resetL (x : Buffered n) : abs (resetL x) = idle x := by
 theorem idle_resetL (x : Buffered n) : idle (resetL x) = abs x := by
   cases h : x.active <;> simp [abs, idle, resetL, h]
 
+/-- **The reset of the ghost state**: switch to the other half *as a fresh bundle*.  Its abstract
+tapes are new whatever the idle half held, so no cleanliness is asked of the state.  On the
+physical machine the old contents stay where they are and are never read again; that is carried by
+the representation relation, not by an erasing deadline. -/
+def resetFresh (x : Buffered n) : Buffered n :=
+  match x.active with
+  | true => { x with B := fun _ => GalilScaffoldTape.reset, active := false, job := some 0 }
+  | false => { x with A := fun _ => GalilScaffoldTape.reset, active := true, job := some 0 }
+
+theorem abs_resetFresh (x : Buffered n) :
+    abs (resetFresh x) = fun _ => GalilScaffoldTape.reset := by
+  cases h : x.active <;> simp [abs, resetFresh, h]
+
 /-- **リセットの正しさ**：遊休側が消去済みなら、局所リセットは抽象レベルで
 `GalilScaffoldControl.reset` の `fun _ => Tape.reset` とちょうど一致する。 -/
 theorem abs_resetL_of_clean {x : Buffered n} (h : ∀ i, Cleared (idle x i)) :

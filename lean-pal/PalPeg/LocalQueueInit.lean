@@ -1,15 +1,16 @@
 import PalPeg.LocalQueueProgram
 
 /-!
-# The first step of the queue machine: from blank tapes to the empty queue
+# The first step of a machine: from blank tapes
 
 `compStep_apply` needs every head at least `K` cells from the left edge, and a machine starts on
-blank tapes with its heads at the edge.  So the first step is verified directly on `sweep`.
+blank tapes with its heads at the edge.  The `K` left moves of the sweep are clamped at the edge,
+so from there the sweep does what it does from a blank tape whose head stands at `K`
+(`sweep_blank_edge_shifted`), and the first step of any rule needs no margin
+(`compStep_apply_blankEdge`).
 
-The seal of the sealed layout is the blank symbol, so a bottom of `K` seals is a blank tape with
-its head at position `K`.  A step without actions from the edge does exactly that: the `K` left
-moves of the sweep are clamped at the edge, the window written back is blank, and the final right
-moves bring the head to `K`.  After this one step the ten tapes represent the empty queue.
+The seal of the sealed layout is the blank symbol, so a blank tape with its head at position
+`margin` is a stack of `margin` seals, and ten of them represent the empty queue.
 -/
 
 set_option autoImplicit false
@@ -30,24 +31,6 @@ open PalPeg.RTQueue (Queue)
 /-- A tape whose cells are all blank. -/
 def AllBlank (tape : STape Γc) : Prop := ∀ p, rd blankc tape p = blankc
 
-/-- **A step without actions from the left edge**: the head goes to `K`, the tape stays blank. -/
-theorem sweep_blank_edge (K : ℕ) {tape : STape Γc} (hedge : pos tape = 0)
-    (hblank : AllBlank tape) {window : Window Γc K} (hwindow : ∀ i, window i = blankc) :
-    pos (sweep blankc K tape window 0) = K ∧ AllBlank (sweep blankc K tape window 0) := by
-  have htoNat : ((0 : ℤ) + (K : ℤ)).toNat = K := by omega
-  constructor
-  · rw [sweep, pos_mvRN, pos_cPhase, pos_mvRN, pos_mvLN, htoNat, hedge]
-    omega
-  · intro p
-    have hmargin : 2 * K ≤ pos ((PalPeg.Local.mvR blankc)^[2 * K]
-        ((PalPeg.Local.mvL blankc)^[K] tape)) := by
-      rw [pos_mvRN, pos_mvLN]
-      omega
-    rw [sweep, rd_mvRN, rd_cPhase _ _ _ _ hmargin, rd_mvRN, rd_mvLN]
-    split
-    · exact hwindow _
-    · exact hblank p
-
 theorem allBlank_blankTape : AllBlank (STape.blankTape blankc) := by
   intro p
   show ([] ++ blankc :: ([] : List Γc)).getD p blankc = blankc
@@ -59,6 +42,71 @@ theorem readWin_allBlank {K : ℕ} {tape : STape Γc} (hblank : AllBlank tape)
     (i : Fin (2 * K + 1)) : readWin blankc K tape i = blankc := by
   rw [readWin_eq]
   exact hblank _
+
+/-- From the left edge of a blank tape the sweep does what it does from a blank tape
+whose head stands at `K`. -/
+theorem sweep_blank_edge_shifted (K : ℕ) {edge shifted : STape Γc} (hedge : pos edge = 0)
+    (hedgeBlank : AllBlank edge) (hshifted : pos shifted = K) (hshiftedBlank : AllBlank shifted)
+    (window : Window Γc K) (displacement : ℤ) :
+    TEqG blankc (sweep blankc K shifted window displacement)
+      (sweep blankc K edge window displacement) := by
+  constructor
+  · rw [sweep, sweep, pos_mvRN, pos_cPhase, pos_mvRN, pos_mvLN, pos_mvRN, pos_cPhase, pos_mvRN,
+      pos_mvLN, hedge, hshifted]
+    omega
+  · intro p
+    have hmarginEdge : 2 * K ≤ pos ((PalPeg.Local.mvR blankc)^[2 * K]
+        ((PalPeg.Local.mvL blankc)^[K] edge)) := by
+      rw [pos_mvRN, pos_mvLN]; omega
+    have hmarginShifted : 2 * K ≤ pos ((PalPeg.Local.mvR blankc)^[2 * K]
+        ((PalPeg.Local.mvL blankc)^[K] shifted)) := by
+      rw [pos_mvRN, pos_mvLN]; omega
+    rw [sweep, sweep, rd_mvRN, rd_cPhase _ _ _ _ hmarginShifted, rd_mvRN, rd_mvLN, rd_mvRN,
+      rd_cPhase _ _ _ _ hmarginEdge, rd_mvRN, rd_mvLN]
+    simp only [pos_mvRN, pos_mvLN, hedge, hshifted, hedgeBlank p, hshiftedBlank p]
+    simp
+
+/-- **The first step needs no margin.**  From blank tapes at the left edge, a step of
+`compStep R` is, up to `TEqG`, the rule's actions applied to blank tapes whose heads stand at
+`K`; the control is the rule's. -/
+theorem compStep_apply_blankEdge {Terminal Q : Type} {tapeCount K : ℕ}
+    (R : ActRule Terminal Q Γc tapeCount K) (control : Q) (input : Option Terminal)
+    (edge shifted : Fin tapeCount → STape Γc) (hedge : ∀ tape, pos (edge tape) = 0)
+    (hedgeBlank : ∀ tape, AllBlank (edge tape)) (hshifted : ∀ tape, pos (shifted tape) = K)
+    (hshiftedBlank : ∀ tape, AllBlank (shifted tape)) :
+    ((compStep R).apply blankc (control, edge) input).1
+        = R.nq control input (fun tape => readWin blankc K (shifted tape)) ∧
+      ∀ tape, TEqG blankc
+        (actList blankc (shifted tape)
+          (R.acts control input (fun tape => readWin blankc K (shifted tape)) tape))
+        (((compStep R).apply blankc (control, edge) input).2 tape) := by
+  have hwindows : (fun tape => readWin blankc K (edge tape))
+      = fun tape => readWin blankc K (shifted tape) := by
+    funext tape i
+    rw [readWin_allBlank (hedgeBlank tape), readWin_allBlank (hshiftedBlank tape)]
+  refine ⟨?_, fun tape => ?_⟩
+  · show R.nq control input (fun tape => readWin blankc K (edge tape)) = _
+    rw [hwindows]
+  · have hideal := PalPeg.CloseoutCoreEnc12.teq_sweep_actList blankc K (shifted tape)
+      (R.acts control input (fun tape => readWin blankc K (shifted tape)) tape)
+      (R.len_le _ _ _ _) (hshifted tape).ge
+    have hsame := sweep_blank_edge_shifted K (hedge tape) (hedgeBlank tape) (hshifted tape)
+      (hshiftedBlank tape)
+      (winAfter K (readWin blankc K (shifted tape))
+        (R.acts control input (fun tape => readWin blankc K (shifted tape)) tape))
+      (dAfter K (readWin blankc K (shifted tape))
+        (R.acts control input (fun tape => readWin blankc K (shifted tape)) tape))
+    have hgoal : ((compStep R).apply blankc (control, edge) input).2 tape
+        = sweep blankc K (edge tape)
+            (winAfter K (readWin blankc K (shifted tape))
+              (R.acts control input (fun tape => readWin blankc K (shifted tape)) tape))
+            (dAfter K (readWin blankc K (shifted tape))
+              (R.acts control input (fun tape => readWin blankc K (shifted tape)) tape)) := by
+      show sweep blankc K (edge tape) _ _ = _
+      simp only [hwindows]
+      rfl
+    rw [hgoal]
+    exact ⟨hideal.1.trans hsame.1, fun p => (hideal.2 p).trans (hsame.2 p)⟩
 
 /-- The cells of a stack of seals are blank. -/
 theorem allBlank_dTape_seals (height : ℕ) :
@@ -104,106 +152,25 @@ section Init
 
 variable {K : ℕ} {Terminal : Type}
 
-/-- Past the end of its program, with nothing owed, the machine makes no action on any tape. -/
-theorem programRule_acts_idle (hK : 2 ≤ K) {control : ProgramControl}
-    (hidle : currentOp control = .incLength) (howed : control.2.2.2.2 = 0)
-    (input : Option Terminal) (windows : Fin 10 → Window Γc K) (tape : Fin 10) :
-    (programRule Terminal hK).acts control input windows tape = [] := by
-  show (microRule Terminal hK).acts (currentOp control, control.2.2) input windows tape = []
-  rw [hidle]
-  by_cases htape : tape.val < 8
-  · have hcast : tape = Fin.castLE (by omega : 8 ≤ 10) ⟨tape.val, htape⟩ := Fin.ext rfl
-    rw [hcast, microRule_acts_queue]
-    rfl
-  · by_cases hpositive : tape = positiveTape
-    · rw [hpositive, microRule_acts_positive]
-      show cellActsOfTop (lengthDeltas (lengthMoveOf .incLength _ _ control.2.2.2.2) _ _).1 false _
-        = []
-      rw [howed]
-      rfl
-    · have hnegative : tape = negativeTape := by
-        apply Fin.ext
-        have hne : tape.val ≠ 8 := fun h => hpositive (Fin.ext h)
-        show tape.val = 9
-        omega
-      rw [hnegative, microRule_acts_negative]
-      show cellActsOfTop (lengthDeltas (lengthMoveOf .incLength _ _ control.2.2.2.2) _ _).2 false _
-        = []
-      rw [howed]
-      rfl
-
 /-- The control the machine starts in: no job running (the counter is past the end of the
 program), idle, nothing owed. -/
 def initControl : ProgramControl := (.snoc 0, 10, (0, false), .idle, 0)
 
-theorem currentOp_initControl : currentOp initControl = .incLength := rfl
-
 /-- **Ten stacks of `K` seals represent the empty queue.** -/
-theorem microRep_empty_of_seals {tapes : Fin 10 → STape Γc}
-    (htape : ∀ tape, StackTape (tapes tape) (List.replicate K none)) (micro : MicroOp) :
-    MicroRep K RTQueue.empty (micro, initControl.2.2) tapes := by
-  refine ⟨⟨fun _ => List.replicate K none, fun _ => List.replicate K none,
-      List.replicate K none, rfl, ⟨fun ro => ?_, fun _ => sealed_replicate K⟩,
-      fun _ => by rw [List.length_replicate], fun tape _ => htape _, sealed_replicate K,
+theorem microRep_empty_of_seals {margin : ℕ} {tapes : Fin 10 → STape Γc}
+    (htape : ∀ tape, StackTape (tapes tape) (List.replicate margin none)) (micro : MicroOp) :
+    MicroRep margin RTQueue.empty (micro, initControl.2.2) tapes := by
+  refine ⟨⟨fun _ => List.replicate margin none, fun _ => List.replicate margin none,
+      List.replicate margin none, rfl, ⟨fun ro => ?_, fun _ => sealed_replicate margin⟩,
+      fun _ => by rw [List.length_replicate], fun tape _ => htape _, sealed_replicate margin,
       by rw [List.length_replicate], htape _⟩,
-    0, List.replicate K none, List.replicate K none, ?_, sealed_replicate K,
-    by rw [List.length_replicate], htape _, sealed_replicate K,
+    0, List.replicate margin none, List.replicate margin none, ?_, sealed_replicate margin,
+    by rw [List.length_replicate], htape _, sealed_replicate margin,
     by rw [List.length_replicate], htape _⟩
   · cases ro <;> rfl
   · show (0 : ℤ) + ((0 : Fin 3).val : ℤ) + lengthDebt RTQueue.empty.state
       = ((RTQueue.empty : Queue (Fin 2)).lenf : ℤ) - ((RTQueue.empty : Queue (Fin 2)).lenr : ℤ)
     rfl
-
-/-- **The first step: from blank tapes to the empty queue.**  One step of the machine from its
-initial control on blank tapes leaves the control as it is and the ten tapes representing the
-empty queue, with every bottom `K` seals high. -/
-theorem programInit (hK : 2 ≤ K) (input : Option Terminal) (micro : MicroOp) :
-    ((programLocalStep Terminal hK).apply blankc
-        (initControl, fun _ => STape.blankTape blankc) input).1 = initControl ∧
-      MicroRep K RTQueue.empty (micro, initControl.2.2)
-        ((programLocalStep Terminal hK).apply blankc
-          (initControl, fun _ => STape.blankTape blankc) input).2 := by
-  have hwindow : ∀ tape : Fin 10, ∀ i,
-      readWin blankc K ((fun _ : Fin 10 => STape.blankTape blankc) tape) i = blankc :=
-    fun _ i => readWin_allBlank allBlank_blankTape i
-  have htape : ∀ tape : Fin 10,
-      StackTape (((programLocalStep Terminal hK).apply blankc
-        (initControl, fun _ => STape.blankTape blankc) input).2 tape)
-        (List.replicate K none) := by
-    intro tape
-    have hacts := programRule_acts_idle (Terminal := Terminal) hK currentOp_initControl rfl input
-      (fun tape => readWin blankc K ((fun _ : Fin 10 => STape.blankTape blankc) tape)) tape
-    show StackTape (sweep blankc K (STape.blankTape blankc)
-      (winAfter K (readWin blankc K (STape.blankTape blankc))
-        ((programRule Terminal hK).acts initControl input
-          (fun tape => readWin blankc K ((fun _ : Fin 10 => STape.blankTape blankc) tape)) tape))
-      (dAfter K (readWin blankc K (STape.blankTape blankc))
-        ((programRule Terminal hK).acts initControl input
-          (fun tape => readWin blankc K ((fun _ : Fin 10 => STape.blankTape blankc) tape)) tape)))
-      _
-    rw [hacts]
-    have hdisplacement : dAfter K (readWin blankc K (STape.blankTape blankc)) ([] : List (Act Γc))
-        = 0 := by
-      unfold dAfter
-      simp
-    rw [hdisplacement]
-    obtain ⟨hpos, hblank⟩ := sweep_blank_edge K (tape := STape.blankTape blankc) rfl
-      allBlank_blankTape (window := winAfter K (readWin blankc K (STape.blankTape blankc)) [])
-      (fun i => by
-        show (readWin blankc K (STape.blankTape blankc)) (idx K (i : ℕ)) = blankc
-        exact readWin_allBlank allBlank_blankTape _)
-    exact stackTape_of_blank hpos hblank
-  refine ⟨?_, ?_⟩
-  · -- the control: no sub-step runs, the counter is clamped at the end
-    show (programRule Terminal hK).nq initControl input _ = initControl
-    show (initControl.1, nextCounter initControl.2.1,
-      ((microRule Terminal hK).nq (currentOp initControl, initControl.2.2) input _).2)
-        = initControl
-    rw [currentOp_initControl, microRule_nq_none hK _ input _ rfl]
-    rfl
-  · exact microRep_empty_of_seals htape micro
-
-#print axioms programInit
 
 end Init
 

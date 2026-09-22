@@ -147,11 +147,11 @@ theorem pal_in_peg_of_coreLocal {X Q Γ : Type} {t K : ℕ}
       (fun w => PalPeg.LocalTrackingLatch.stAbs S absS w x0)
       (fun w => w.length * PalPeg.LocalTrackingLatch.nLocalL)) :
     PegSeparation.RecognizedByTotalPEG PalPeg.PAL :=
-  PalPeg.LocalLatchRealize.pal_in_peg_of_local_core S absS Inv x0 Pof qof firstOf delay
+  PalPeg.LocalLatchRealize.pal_in_peg_of_local_core (fun _ => S) absS x0 Pof qof firstOf
     H_letter H_first C.L0 C.blank C.q0 C.repQ C.outQ C.encC htape
-    C.enc_tick C.enc_feed C.rep_eq C.out_eq C.encC_init x0_started
-    outL_abs rep_sound rep_complete x0_inv x0_ctl inv_tick inv_feed
-    stutter_of_starved tick_of_not_starved feed_abs H_ledger
+    (fun _ => C.enc_tick) (fun _ => C.enc_feed) (fun _ => C.rep_eq) (fun _ => C.out_eq)
+    C.encC_init x0_started
+    (fun _ => outL_abs) rep_sound rep_complete H_ledger
 
 #print axioms pal_in_peg_of_coreLocal
 

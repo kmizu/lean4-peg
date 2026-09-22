@@ -457,13 +457,13 @@ theorem tracking_latch_of_oracles
     (enc_started : ∀ x : LX X, startQ (enc x).1 = x.started)
     (x0_started : x0.started = false)
     (outL_abs : ∀ x : X, S.outL x = (absS x).ctl.output)
-    (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
+    (w : List (Fin 2)) (hw : 0 < w.length)
+    (rep_sound : ∀ s : ℕ, (w.length - 1) * nLocalL < s →
       S.repL (micro S w x0 s).core = true →
       ReportPoint w (stAbs S absS w x0 s) ∧ Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s))
-    (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
+    (rep_complete : ∀ s : ℕ,
       ReportPoint w (stAbs S absS w x0 s) → Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s) →
-      ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ S.repL (micro S w x0 s').core = true)
-    (w : List (Fin 2)) (hw : 0 < w.length) :
+      ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ S.repL (micro S w x0 s').core = true) :
     (L.realize blank initQ (GalilEmptyWord.accept' initQ ansQ) nLocalL htape nLocalL_pos).SAccepts w ↔
       LatchTrue (Pof w) (qof w) (firstOf w) w (stAbs S absS w x0) (w.length * nLocalL) := by
   have hfold := foldl_encL L blank S enc enc_step w x0
@@ -486,12 +486,12 @@ theorem tracking_latch_of_oracles
   rw [hE, latch_ans S w x0 hw, ← hE]
   constructor
   · rintro ⟨s, h1, h2, h3, h4⟩
-    obtain ⟨hrp, hfr⟩ := rep_sound w s hw (by omega) h3
+    obtain ⟨hrp, hfr⟩ := rep_sound s (by omega) h3
     refine ⟨s, h2, hrp, hfr, ?_⟩
     rw [outL_abs] at h4; exact h4
   · rintro ⟨s, h1, hrp, hfr, ho⟩
-    obtain ⟨s', h1', h2', h3'⟩ := rep_complete w s hw hrp hfr
-    obtain ⟨hrp', hfr'⟩ := rep_sound w s' hw (by omega) h3'
+    obtain ⟨s', h1', h2', h3'⟩ := rep_complete s hrp hfr
+    obtain ⟨hrp', hfr'⟩ := rep_sound s' (by omega) h3'
     refine ⟨s', h2', by omega, h3', ?_⟩
     rw [outL_abs]
     show (stAbs S absS w x0 s').ctl.output = true
@@ -510,48 +510,35 @@ theorem empty_accepted {t K : ℕ} {Q' Γ' : Type} [Fintype Q'] [DecidableEq Q']
 local run abstracts to, at the shifted deadline `|w|·τ`. -/
 theorem pal_in_peg_of_local_latch
     {t K : ℕ} {Q' Γ' : Type} [Fintype Q'] [DecidableEq Q'] [Fintype Γ'] [DecidableEq Γ']
-    (S : LocalSys X) (absS : X → State GalilVM) (Inv : List (Fin 2) → ℕ → X → Prop) (x0 : LX X)
+    (S : List (Fin 2) → LocalSys X) (absS : X → State GalilVM) (x0 : LX X)
     (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ) (firstOf : List (Fin 2) → Fin 9)
-    (delay : ℕ)
     (H_letter : ∀ w : List (Fin 2), (Pof w).onLetter = onLetterVM w)
     (H_first : ∀ w : List (Fin 2), (Pof w).leftFirst = leftFirstVM)
     (L : LocalStep (Fin 2) Q' Γ' t K) (blank : Γ') (initQ : Q') (ansQ startQ : Q' → Bool)
     (enc : LX X → Q' × (Fin t → STape Γ')) (htape : 0 < t)
-    (enc_step : ∀ (x : LX X) (a : Option (Fin 2)), L.apply blank (enc x) a = enc (stepL S a x))
+    (enc_step : ∀ (w : List (Fin 2)) (x : LX X) (a : Option (Fin 2)),
+      L.apply blank (enc x) a = enc (stepL (S w) a x))
     (enc_init : enc x0 = (initQ, fun _ => STape.blankTape blank))
     (enc_ans : ∀ x : LX X, ansQ (enc x).1 = x.ans)
     (enc_started : ∀ x : LX X, startQ (enc x).1 = x.started)
     (x0_started : x0.started = false)
-    (outL_abs : ∀ x : X, S.outL x = (absS x).ctl.output)
+    (outL_abs : ∀ (w : List (Fin 2)) (x : X), (S w).outL x = (absS x).ctl.output)
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
-      S.repL (micro S w x0 s).core = true →
-      ReportPoint w (stAbs S absS w x0 s) ∧ Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s))
+      (S w).repL (micro (S w) w x0 s).core = true →
+      ReportPoint w (stAbs (S w) absS w x0 s) ∧ Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absS w x0 s))
     (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
-      ReportPoint w (stAbs S absS w x0 s) → Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s) →
-      ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ S.repL (micro S w x0 s').core = true)
-    (x0_inv : ∀ w, 0 < w.length → Inv w 0 x0.core)
-    (x0_ctl : (absS x0.core).ctl = GalilScaffoldController.initial delay)
-    (inv_tick : ∀ w s x, inp w s = none → Inv w s x → Inv w (s+1) (S.tickL x))
-    (inv_feed : ∀ w s a x, inp w s = some a → Inv w s x → Inv w (s+1) (S.feedC a x))
-    (stutter_of_starved : ∀ w s x, inp w s = none → Inv w s x → S.Starved x →
-      absS (S.tickL x) = absS x)
-    (tick_of_not_starved : ∀ w s x, inp w s = none → Inv w s x → ¬ S.Starved x →
-      Tick (galilFrameS (Pof w) (qof w) (firstOf w)) delay (absS x) (absS (S.tickL x)))
-    (feed_abs : ∀ w s a x, inp w s = some a → Inv w s x →
-      absS (S.feedC a x) = arriveState' a (absS x))
-    (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs S absS w x0)
+      ReportPoint w (stAbs (S w) absS w x0 s) → Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absS w x0 s) →
+      ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ (S w).repL (micro (S w) w x0 s').core = true)
+    (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs (S w) absS w x0)
       (fun w => w.length * nLocalL)) :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_of_latch' (Nat.mul_pos nLocalL_pos (PalPeg.Local.cnt_pos K))
+  pal_in_peg_of_latch_realized (Nat.mul_pos nLocalL_pos (PalPeg.Local.cnt_pos K))
     (L.realize blank initQ (GalilEmptyWord.accept' initQ ansQ) nLocalL htape nLocalL_pos)
-    Pof qof firstOf delay H_letter H_first (fun w => stAbs S absS w x0) (fun w => arrL w)
+    Pof qof firstOf H_letter H_first (fun w => stAbs (S w) absS w x0)
     (fun w => w.length * nLocalL)
-    (fun w hw => abstractRun_of_oracles S absS (Inv w) (Pof w) (qof w) (firstOf w) delay w x0
-      (x0_inv w hw) x0_ctl (inv_tick w) (inv_feed w) (stutter_of_starved w) (tick_of_not_starved w)
-      (feed_abs w))
-    (fun w hw => tracking_latch_of_oracles S absS x0 Pof qof firstOf H_letter H_first
-      L blank initQ ansQ startQ enc htape enc_step enc_init enc_ans enc_started x0_started outL_abs
-      rep_sound rep_complete w hw)
+    (fun w hw => tracking_latch_of_oracles (S w) absS x0 Pof qof firstOf H_letter H_first
+      L blank initQ ansQ startQ enc htape (enc_step w) enc_init enc_ans enc_started x0_started
+      (outL_abs w) w hw (fun s => rep_sound w s hw) (fun s => rep_complete w s hw))
     H_ledger (empty_accepted L blank initQ ansQ htape)
 
 #print axioms nLocalL_eq

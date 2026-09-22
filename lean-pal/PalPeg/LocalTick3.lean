@@ -24,7 +24,7 @@ constructors `shift_one … rewind_pair`) against `galilFrameS`.
 | `fpp_done` | `q + 2 ≤ 66` | `q` steps, then `markNew` = two MARKS actions |
 | `markEnd_*`, `choose_step` | 1 | one MARKS move |
 | `choose_select` | 2 | `length`/`radius` `resetSeg`, then `length` push |
-| `rewind_done` | 1 | `resetL` on the fpp double buffer |
+| `rewind_done` | — | `resetFresh` on the fpp double buffer (a ghost step, not a local one) |
 | `rewind_one` / `rewind_pair` | 1 | MARKS left, L (and C) `moveLeftV`, `length` (and `radius`) push |
 
 Every counter update goes through one generic bank tick (`bankTick`, one `Op`
@@ -42,7 +42,6 @@ invariant preservation (`inv_bankTick`) are proved once.
   `Run` of the marked FPP code over `q` ticks (`hprog`), and `q ≤ 64`;
 * `choose_select`: the head-copy jobs have already brought L and C onto R
   (`hleft`/`hcenter`), as in `LocalTick2`;
-* `rewind_done`: the idle half of the fpp buffer is erased (`hclean`).
 * Frame guards (`remainingPos`, `atLeft`, `atEnd`, `markSet`, `atFirst`) and
   the "cell to the left" facts are stated on `abs' x`.
 
@@ -719,21 +718,26 @@ theorem chooseOps2_ok {x : GalilVML P} (hp : x.pol .length = true) :
   cases c
   all_goals first | exact ok_push _ hp | exact ok_keep _ _
 
-theorem abs'_chooseVm {x : GalilVML P} (hinj : RolesInjective x) (c : Control)
-    (hp : x.pol .length = true)
-    (hleft : absHead' x.left x.pending = absHead' x.right x.pending)
-    (hcenter : absHead' x.center x.pending = absHead' x.right x.pending) :
-    abs' (chooseVm c x)
+/-- **The `choose_select` step.**  The counters are reset by `chooseVm`, and the left and centre
+heads become copies of the right head, as the scaffold's `choose` asks (`left := right`,
+`center := right`).  The copy is a step of the ghost state only: on the physical machine the
+left and centre tapes have walked onto the right head during the fallback phases, which read
+neither of them, and the representation relation carries that walk. -/
+noncomputable def chooseSelectVm (c : Control) (x : GalilVML P) : GalilVML P :=
+  { chooseVm c x with left := x.right, center := x.right }
+
+theorem abs'_chooseSelectVm {x : GalilVML P} (hinj : RolesInjective x) (c : Control)
+    (hp : x.pol .length = true) :
+    abs' (chooseSelectVm c x)
       = rewindLens.set (abs' x) { rewindLens.get (abs' x) with
           left := (abs' x).right, center := (abs' x).right,
           length := GalilScaffoldCounter.ofNat 1, radius := GalilScaffoldCounter.reset } := by
   have hinj1 : RolesInjective (bankTick chooseOps1 x) := hinj
-  rw [show abs' (chooseVm c x) = abs' (bankTick chooseOps2 (bankTick chooseOps1 x)) from rfl,
-    abs'_bankTick hinj1 (chooseOps2_ok hp), abs'_bankTick hinj (chooseOps1_ok x)]
-  ext
-  · exact hleft
-  · exact hcenter
-  all_goals rfl
+  have hsplit : abs' (chooseSelectVm c x)
+      = { abs' (bankTick chooseOps2 (bankTick chooseOps1 x)) with
+          left := (abs' x).right, center := (abs' x).right } := rfl
+  rw [hsplit, abs'_bankTick hinj1 (chooseOps2_ok hp), abs'_bankTick hinj (chooseOps1_ok x)]
+  rfl
 
 theorem stepLocalN_chooseVm (c : Control) (x : GalilVML P) : StepLocalN 2 x (chooseVm c x) :=
   stepLocalN_trans 1 1
@@ -745,27 +749,21 @@ theorem stepLocalN_chooseVm (c : Control) (x : GalilVML P) : StepLocalN 2 x (cho
       (viewLocal_refl _) (viewLocal_refl _) (viewLocal_refl _) (viewLocal_refl _)
       (viewLocal_refl _) (bufLocal_refl _) (bufLocal_refl _)))
 
-/-- `rewind_done`: `fpp.reset()` is one `resetL` on the double buffer. -/
+/-- `rewind_done`: `fpp.reset()` switches the double buffer to a fresh half
+(`LocalBuffers.resetFresh`), so the state is asked nothing about the idle half. -/
 def rewindDoneVm (c : Control) (x : GalilVML P) : GalilVML P :=
-  { x with fppBuf := LocalBuffers.resetL x.fppBuf, fppPc := 320, fppDone := true, ctl := c }
+  { x with fppBuf := LocalBuffers.resetFresh x.fppBuf, fppPc := 320, fppDone := true, ctl := c }
 
-theorem abs'_rewindDoneVm {x : GalilVML P} (c : Control)
-    (hclean : ∀ i, LocalBuffers.Cleared (LocalBuffers.idle x.fppBuf i)) :
+theorem abs'_rewindDoneVm {x : GalilVML P} (c : Control) :
     abs' (rewindDoneVm c x)
       = rewindLens.set (abs' x) { rewindLens.get (abs' x) with
           fpp := { (abs' x).fpp with
             program := GalilScaffoldControl.reset 320 (abs' x).fpp.program } } := by
   rw [show abs' (rewindDoneVm c x)
       = fppLens.set (abs' x) { (abs' x).fpp with
-          program := ⟨⟨320, LocalBuffers.abs (LocalBuffers.resetL x.fppBuf)⟩, true⟩ } from rfl,
-    LocalBuffers.abs_resetL_of_clean hclean]
+          program := ⟨⟨320, LocalBuffers.abs (LocalBuffers.resetFresh x.fppBuf)⟩, true⟩ } from rfl,
+    LocalBuffers.abs_resetFresh]
   rfl
-
-theorem stepLocal_rewindDoneVm (c : Control) (x : GalilVML P) :
-    StepLocal x (rewindDoneVm c x) :=
-  stepLocal_noBank _ _ rfl rfl rfl rfl (viewLocal_refl _) (viewLocal_refl _)
-    (viewLocal_refl _) (viewLocal_refl _) (viewLocal_refl _) (bufLocal_refl _)
-    (bufLocal_resetL _)
 
 /-- `rewind_one`: MARKS left, L left, `length++`. -/
 def rewindOps1 : Ctr → Op
@@ -914,10 +912,8 @@ inductive TickL3 {P : ℕ} (S : Shared) (q : ℕ) (first : Fin 9) :
   | choose_select (x : GalilVML P)
       (hm : x.ctl.mode = .choose) (hr : x.ctl.replaying = false)
       (ho : x.ctl.odd = true) (hs : (galilFrameS S q first).markSet (abs' x))
-      (hpol : x.pol .length = true)
-      (hleft : absHead' x.left x.pending = absHead' x.right x.pending)
-      (hcenter : absHead' x.center x.pending = absHead' x.right x.pending) :
-      TickL3 S q first x (chooseVm { x.ctl with mode := .rewind, pair := false } x)
+      (hpol : x.pol .length = true) :
+      TickL3 S q first x (chooseSelectVm { x.ctl with mode := .rewind, pair := false } x)
   | choose_step (x : GalilVML P)
       (hm : x.ctl.mode = .choose) (hr : x.ctl.replaying = false)
       (hs : x.ctl.odd = false ∨ ¬ (galilFrameS S q first).markSet (abs' x))
@@ -926,8 +922,7 @@ inductive TickL3 {P : ℕ} (S : Shared) (q : ℕ) (first : Fin 9) :
         (marksVm GalilScaffoldTape.moveLeft { x.ctl with odd := !x.ctl.odd } x)
   | rewind_done (x : GalilVML P)
       (hm : x.ctl.mode = .rewind) (hr : x.ctl.replaying = false)
-      (hf : (galilFrameS S q first).atFirst (abs' x))
-      (hclean : ∀ i, LocalBuffers.Cleared (LocalBuffers.idle x.fppBuf i)) :
+      (hf : (galilFrameS S q first).atFirst (abs' x)) :
       TickL3 S q first x (rewindDoneVm { x.ctl with mode := .replayStart } x)
   | rewind_one (x : GalilVML P)
       (hm : x.ctl.mode = .rewind) (hr : x.ctl.replaying = false)
@@ -955,7 +950,9 @@ theorem absState''_eq {x : GalilVML P} (hr : x.ctl.replaying = false) :
 /-! ### Locality: every local phase tick costs at most `c₃ = 66` steps -/
 
 theorem tickL3_local {S : Shared} {q : ℕ} {first : Fin 9} {x y : GalilVML P}
-    (h : TickL3 S q first x y) : StepLocalN c₃ x y := by
+    (h : TickL3 S q first x y)
+    (hnotSelect : ¬ (x.ctl.mode = .choose ∧ y.ctl.mode = .rewind))
+    (hnotReset : ¬ (x.ctl.mode = .rewind ∧ y.ctl.mode = .replayStart)) : StepLocalN c₃ x y := by
   cases h with
   | shift_one w => exact stepLocalN_le (by decide) (stepLocalN_shiftVm w x)
   | shift_done o =>
@@ -985,11 +982,10 @@ theorem tickL3_local {S : Shared} {q : ℕ} {first : Fin 9} {x y : GalilVML P}
       exact stepLocalN_le (n := 1) (by decide) (stepLocalN_one (stepLocal_marksVm _ _ _))
   | markEnd_step =>
       exact stepLocalN_le (n := 1) (by decide) (stepLocalN_one (stepLocal_marksVm _ _ _))
-  | choose_select => exact stepLocalN_le (by decide) (stepLocalN_chooseVm _ x)
+  | choose_select hm => exact absurd ⟨hm, rfl⟩ hnotSelect
   | choose_step =>
       exact stepLocalN_le (n := 1) (by decide) (stepLocalN_one (stepLocal_marksVm _ _ _))
-  | rewind_done =>
-      exact stepLocalN_le (n := 1) (by decide) (stepLocalN_one (stepLocal_rewindDoneVm _ _))
+  | rewind_done hm => exact absurd ⟨hm, rfl⟩ hnotReset
   | rewind_one =>
       exact stepLocalN_le (n := 1) (by decide) (stepLocalN_one
         (stepLocal_bank rewindOps1 x _ rfl rfl rfl rfl (viewLocal_moveLeft _)
@@ -1027,7 +1023,8 @@ theorem tickL3_inv {S : Shared} {q : ℕ} {first : Fin 9} {x y : GalilVML P}
         inv_bankTick hinv (fun c hc => by cases c <;> exact (nomatch hc))
       have i2 : Inv (bankTick chooseOps2 (bankTick chooseOps1 x)) :=
         inv_bankTick i1 (fun c hc => by cases c <;> exact (nomatch hc))
-      exact inv_congr i2 rfl rfl rfl rfl rfl i2.views
+      exact inv_congr i2 rfl rfl rfl rfl rfl
+        ⟨i2.views.2.2.1, i2.views.2.2.1, i2.views.2.2.1, i2.views.2.2.2.1, i2.views.2.2.2.2⟩
   | choose_step => exact inv_congr hinv rfl rfl rfl rfl rfl hv
   | rewind_done => exact inv_congr hinv rfl rfl rfl rfl rfl hv
   | rewind_one =>
@@ -1103,14 +1100,14 @@ theorem tickL3_abs {S : Shared} {q : ℕ} {first : Fin 9} (delay : ℕ) {x y : G
   | markEnd_step hm hr he =>
       rw [abs'_marksVm]
       exact Tick.markEnd_step x.ctl (abs' x) _ hm he (frameS_markForward S q first rfl)
-  | choose_select hm hr ho hs hpol hleft hcenter =>
-      rw [abs'_chooseVm hinj _ hpol hleft hcenter]
+  | choose_select hm hr ho hs hpol =>
+      rw [abs'_chooseSelectVm hinj _ hpol]
       exact Tick.choose_select x.ctl (abs' x) _ hm ho hs (frameS_choose S q first rfl)
   | choose_step hm hr hs hne =>
       rw [abs'_marksVm_rewind]
       exact Tick.choose_step x.ctl (abs' x) _ hm hs (frameS_markBack S q first ⟨hne, rfl⟩)
-  | rewind_done hm hr hf hclean =>
-      rw [abs'_rewindDoneVm _ hclean]
+  | rewind_done hm hr hf =>
+      rw [abs'_rewindDoneVm]
       exact Tick.rewind_done x.ctl (abs' x) _ hm hf (frameS_fppReset S q first rfl)
   | rewind_one hm hr hf hp hne hpol =>
       rw [abs'_rewindOneVm hinj _ hpol]
@@ -1126,7 +1123,7 @@ theorem tickL3_abs {S : Shared} {q : ℕ} {first : Fin 9} (delay : ℕ) {x y : G
 #print axioms abs'_shiftVm
 #print axioms abs'_copyVm
 #print axioms abs'_doneVm
-#print axioms abs'_chooseVm
+#print axioms abs'_chooseSelectVm
 #print axioms abs'_rewindDoneVm
 #print axioms abs'_rewindPairVm
 #print axioms tickL3_local

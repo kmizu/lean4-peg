@@ -265,8 +265,7 @@ structure ActPieces : Type where
     (fun m => (⟨PalPeg.LocalTick3.marksVm GalilScaffoldTape.moveRight m.vm.ctl m.vm, m.mirL⟩ :
       Mirrored1 P)) .markEnd (fun m => True ∧ ¬ AtEndL m.vm)
   chooseSelect : TapeAct (P := P) n delay Lp Lf rep
-    (fun m => mirrorTick1 .stay (PalPeg.LocalTick3.chooseVm
-      { m.vm.ctl with mode := .rewind, pair := false } m.vm) m)
+    (fun m => PalPeg.LocalRealizesScan.chooseSelectM m)
     .choose (fun m => True ∧ ChooseBr first m)
   chooseScan : TapeAct (P := P) n delay Lp Lf rep
     (fun m => mirrorTick1 .stay (PalPeg.LocalTick3.marksVm GalilScaffoldTape.moveLeft

@@ -167,50 +167,41 @@ the report test and the output bit. The latch and the started bit are built
 here. -/
 theorem pal_in_peg_of_local_core
     [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (S : LocalSys X) (absS : X → State GalilVM) (Inv : List (Fin 2) → ℕ → X → Prop) (x0 : LX X)
+    (S : List (Fin 2) → LocalSys X) (absS : X → State GalilVM) (x0 : LX X)
     (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ) (firstOf : List (Fin 2) → Fin 9)
-    (delay : ℕ)
     (H_letter : ∀ w : List (Fin 2), (Pof w).onLetter = onLetterVM w)
     (H_first : ∀ w : List (Fin 2), (Pof w).leftFirst = leftFirstVM)
     -- the `K`-local core
     (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (encC : X → Q × (Fin t → STape Γ)) (htape : 0 < t)
-    (enc_tick : ∀ x : X, encC (S.tickL x) = L0.apply blank (encC x) none)
-    (enc_feed : ∀ (a : Fin 2) (x : X), encC (S.feedC a x) = L0.apply blank (encC x) (some a))
-    (rep_eq : ∀ x : X, S.repL x = repQ (encC x).1)
-    (out_eq : ∀ x : X, S.outL x = outQ (encC x).1)
+    (enc_tick : ∀ (w : List (Fin 2)) (x : X), encC ((S w).tickL x) = L0.apply blank (encC x) none)
+    (enc_feed : ∀ (w : List (Fin 2)) (a : Fin 2) (x : X),
+      encC ((S w).feedC a x) = L0.apply blank (encC x) (some a))
+    (rep_eq : ∀ (w : List (Fin 2)) (x : X), (S w).repL x = repQ (encC x).1)
+    (out_eq : ∀ (w : List (Fin 2)) (x : X), (S w).outL x = outQ (encC x).1)
     (encC_init : encC x0.core = (q0, fun _ => STape.blankTape blank))
     (x0_started : x0.started = false)
     -- unchanged oracles
-    (outL_abs : ∀ x : X, S.outL x = (absS x).ctl.output)
+    (outL_abs : ∀ (w : List (Fin 2)) (x : X), (S w).outL x = (absS x).ctl.output)
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
-      S.repL (micro S w x0 s).core = true →
-      ReportPoint w (stAbs S absS w x0 s) ∧
-        Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s))
+      (S w).repL (micro (S w) w x0 s).core = true →
+      ReportPoint w (stAbs (S w) absS w x0 s) ∧
+        Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absS w x0 s))
     (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
-      ReportPoint w (stAbs S absS w x0 s) →
-      Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s) →
-      ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ S.repL (micro S w x0 s').core = true)
-    (x0_inv : ∀ w, 0 < w.length → Inv w 0 x0.core)
-    (x0_ctl : (absS x0.core).ctl = GalilScaffoldController.initial delay)
-    (inv_tick : ∀ w s x, inp w s = none → Inv w s x → Inv w (s+1) (S.tickL x))
-    (inv_feed : ∀ w s a x, inp w s = some a → Inv w s x → Inv w (s+1) (S.feedC a x))
-    (stutter_of_starved : ∀ w s x, inp w s = none → Inv w s x → S.Starved x →
-      absS (S.tickL x) = absS x)
-    (tick_of_not_starved : ∀ w s x, inp w s = none → Inv w s x → ¬ S.Starved x →
-      Tick (galilFrameS (Pof w) (qof w) (firstOf w)) delay (absS x) (absS (S.tickL x)))
-    (feed_abs : ∀ w s a x, inp w s = some a → Inv w s x →
-      absS (S.feedC a x) = arriveState' a (absS x))
-    (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs S absS w x0)
+      ReportPoint w (stAbs (S w) absS w x0 s) →
+      Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absS w x0 s) →
+      ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ (S w).repL (micro (S w) w x0 s').core = true)
+    (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs (S w) absS w x0)
       (fun w => w.length * nLocalL)) :
     RecognizedByTotalPEG PAL :=
-  pal_in_peg_of_local_latch S absS Inv x0 Pof qof firstOf delay H_letter H_first
+  pal_in_peg_of_local_latch S absS x0 Pof qof firstOf H_letter H_first
     (latchL L0 repQ outQ) blank (q0, x0.ans, x0.started)
     (fun p => p.2.1) (fun p => p.2.2) (encL encC) htape
-    (encL_step L0 blank repQ outQ S encC enc_tick enc_feed rep_eq out_eq)
+    (fun w => encL_step L0 blank repQ outQ (S w) encC (enc_tick w) (enc_feed w) (rep_eq w)
+      (out_eq w))
     (encL_init encC blank x0 q0 encC_init)
     (fun _ => rfl) (fun _ => rfl) x0_started outL_abs rep_sound rep_complete
-    x0_inv x0_ctl inv_tick inv_feed stutter_of_starved tick_of_not_starved feed_abs H_ledger
+    H_ledger
 
 #print axioms latchL_tapes
 #print axioms latchL_core

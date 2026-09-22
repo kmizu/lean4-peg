@@ -1,3 +1,1157 @@
+## n552-555 (2026-09-22): 右に動くヘッドの壁を越えた。消費 tick の道具が揃った
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、`PalPeg.Workbench` BUILD=0・error 0。
+commit `ce494e9` / `bbef584` / `d8609e3` / `433a4f5`。
+
+n551 で「いまの組み立ては右に動くヘッドを運べない」と分かった。四手で越えた。
+
+| # | 入れたもの | 何を解いたか |
+|---|---|---|
+| n552 | `encTapes_replaceHeadsOfState` | ヘッド以外を**一歩が到達した状態**から、ヘッドを**tick が到達した状態**から読む |
+| n553 | `encTapes_afterTickOfState` / `enc_afterTickOfState` | その分割を組み立て器まで通した（既存 4 枝は同じ状態を二度渡すだけ） |
+| n554 | `chainVerifierBack` / `stepState` ＋ 一致補題 5 本 | 「カーソルだけ戻した状態」を作り、六つの読み取りのうち四つの一致と一つの相違を証明 |
+| n555 | `encTapes_periodStep` | 消費 tick が動かす三つのうち、輸送子が無かった period テープ |
+
+**消費 tick の一歩規則の道具**:
+
+| 動くもの | 行動 | 輸送子 |
+|---|---|---|
+| counter 11（lag） | `decAct q 11` | `encTapes_counterStep` |
+| counter 13（distance） | `incAct q 13` | `encTapes_counterStep` |
+| period | `centreRead` を書き戻して右 | `encTapes_periodStep` |
+| 待機側プログラム | 背景消去 | `encTapes_idleOnly` |
+
+**scan の四つの行**: `scanConsumeNext`（制御・正しさ 2 本）、`scanCommands`（命令・判定を読まずに
+決まる）、`scanConsumeActs`（行動）、`headOf_tickFun_scan_consume`（ヘッド）。
+
+**次の一手**: `physRule_scan_consume`——上の四つを繋いで
+`EncTapes margin (stepState y wm.machine.verifier) … (一歩のテープ)` を作る。
+`encTapes_rewindOne` が「複数の部品を一度に動かす枝」の手本（構造インスタンスを直接書く）で、
+`encTapes_counterStep` は「一部品ずつ、中間状態を経由する」手本。どちらでも書けるが、
+中間状態を三つ作るより構造インスタンスを直接書くほうが短い見込み。
+
+**未検証**: `hready`（ビューに行き先がある）の producer。chain が消費するとき検証ヘッドが
+右に進めることは `consume_realize` が `canRight` を要求する形で言っているが、それを
+ビューの `gap = true → near = [] → toList far ≠ []` に繋ぐ補題はまだ無い。
+
+## n551 (2026-09-22): 答え——いまの組み立ては「右に動くヘッド」を運べない
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0。コード変更なし（n550 の問いへの答え）。
+
+一次情報を辿った:
+
+* `enc_afterTick`（:10415）は `htapes`（一歩規則のテープで `y` を符号化する）を
+  `encTapes_afterTick`（:10154）へ渡す。
+* `encTapes_afterTick` は `hstep` を `encTapes_replaceHeads`（:9033）に渡すだけで、
+  **`hstep` のヘッドの場は捨てられる**——ヘッドは `hheads`（12 スロットを走らせた後の
+  テープについての主張）が供給する。
+* ところが `encTapes_replaceHeads` の仮説と結論は**同じ状態 `x`** についてである。
+  したがって `hstep : EncTapes margin y … (一歩のテープ)` は、`y` のヘッドについても
+  真でなければならない。
+
+**帰結**: 一歩規則の行動表がヘッドを動かせる枝でしか、この経路は使えない。
+`rewindOneActs` が `headSlot 0` の back/near に `headStepActs` で書いているのはそのため
+（tick 層ではその行動は `isLeft` で捨てられ、slot 1–11 が改めて動かす。二重の記述は
+無駄ではなく、一歩規則の層を閉じるために要る）。
+
+**そして左移動は 1 行動で書けるが、右移動は書けない。** 右移動はビュー層が 11 スロットを
+使ってやることで、1 つの `applyAction` にならない。だから **scan の消費腕（4 本目が右へ
+一歩）は、いまの `enc_afterTick` にそのままでは載らない。**
+
+**採らなかった道**: `scanConsumeActs` にヘッドの行動を足して一歩規則を通す——右移動は
+1 行動にならないので、書けば嘘になる。
+
+**次の一手（設計）**: `encTapes_replaceHeads` を二状態に一般化する。仮説は
+「ヘッド以外が `y` と一致する状態 `z` の符号化」、結論は `y` の符号化、ヘッドは `hheads`
+から。`encTapes_congr`（:896）が既に「ヘッド以外の一致」を束ねているので、それを
+`replaceHeads` の仮説に組み込む形になる。これが済めば、右に動くヘッドを持つ枝
+（scan の消費腕、matched の比較、chain の誕生）がまとめて載る。
+
+**測っていない**: この一般化が既存の呼び出し側（`rewind_one_of_tick` ほか）に何箇所
+波及するか。次はそこから。
+
+## n550 (2026-09-22): 消費腕の組み立て前に、ヘッドを誰が動かすのかを確かめる
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0。コード変更なし（この節は問いの記録）。
+
+scan の消費腕は四つ揃った: `scanConsumeNext`（制御）、`scanCommands`（命令）、
+`scanConsumeActs`（行動）、`headOf_tickFun_scan_consume`（ヘッド）。残るは組み立てだが、
+`enc_afterTick` に載せる前に**架構の一点**を確かめる必要が出た。
+
+`tickRule` の行動は
+
+```lean
+acts := fun q i ws j =>
+  if q.slot.val = 0 then (if (slotIndex.symm j).isLeft then [] else baseActs q i ws j)
+  else …headViewActs…
+```
+
+で、**step 0 ではヘッドのスロット（`isLeft`）の行動が捨てられる**。分業はそう設計した。
+ところが既存の `rewindOneActs` は `headSlot 0` の back/near テープに `headStepActs` で
+書いている。つまり一歩規則（`physRule`）の層ではヘッドを動かし、tick の層ではその行動が
+捨てられて代わりに slot 1–11 が動かす、という二重の記述になっている。
+
+**確かめること**: `enc_afterTick` の `htapes`（`ruleActs` のテープで `y` を符号化する）が、
+ヘッドの動いた `y` に対してどう成り立っているのか。`rewind_one_of_tick` ではそれが
+`rewind_one_of_rule` から来ており、そこでは一歩規則がヘッドを動かしている。消費腕の
+`scanConsumeActs` はヘッドに何も書かないので、同じ経路ではそのままでは載らない。
+
+**分かるまで書かない。** 一歩規則の層と tick の層でヘッドの扱いが二重になっている理由を
+一次情報（`tickRule` の定義、`enc_afterTick` の本体、`headTick_of_tickRule`）で確かめてから、
+消費腕の `htapes` をどの形で作るかを決める。ここを読まずに `physRule_scan_consume` を
+書き始めると、偽の補題を作るか、通らない形を何度も書き直すことになる。
+
+**次の一手**: `enc_afterTick` の本体で `htapes` がヘッドのスロットにどう使われているかを読む。
+
+## n544 (2026-09-22): 七本目、四度目——23 → 2。残りは供給側の補題 1 本と箇条書き 1 本
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、作業木クリーン。
+
+四度目で **error 23 → 2** まで来た。通った順に:
+
+| 直したもの | やったこと |
+|---|---|
+| 行動表の射影補題 8 本 | `if_neg` を 1 本ずつ（`p125.py`） |
+| `encTapes_rewindOne` の全フィールド | `hkept` に鏡除外を足し、各場に「鏡ではない」証明を挿入（`p126.py`） |
+| 同 `margins` 場 | 鏡の枝を新設（`hmirrorLen` から `pos_padLeft`） |
+| 同 `mirrors` 場 | `fin_cases m <;> first | exact absurd rfl hne | rfl`（源 3 の鏡を除外） |
+| `encTapes_rewindPair` | `hmirrorLen` を足して内側の `rewindOne` へ通し、`hkept` に条件を追加 |
+| `rewind_one` / `rewind_pair` | 同じ 2 つを足して素通し |
+
+**残る 2**（どちらも `rewind_one_of_rule` / `rewind_pair_of_rule`、行動表から実際にテープを
+作る側）:
+
+1. `rewindOneActs_mirror` / `rewindPairActs_mirrorLen` —— 新しい枝の射影補題がまだ無い。
+   「源が 3 の鏡のスロットでは行動は `[incAct q 3 ws]`」。
+2. `hmirrorLen` を供給する箇条書き。`counter_inc_at` を鏡のスロットに当てるだけだが、
+   符号ビットの側条件 `bit = polarity 3 || decide (val segMir = 0)` を、**源の窓から読んだ
+   ビット**と結ぶのに `LocalCounter.zero_iff` を二度使う小さな橋が要る
+   （`absCtr segMir (polarity 3) = x.vm.length = absCtr segments (polarity 3)` から
+   `val` のゼロ判定が一致する）。
+
+**作業中の patch は保存してある**: `scratchpad/mirror7.patch`（493 行）。
+次はこれを当ててから上の 2 つを書く。
+
+**四度測って分かったこと**: 鏡 1 本の費用は「行動表 8 本（一様）＋ 輸送子 2 つの全フィールド
+（一様でない）＋ 供給側 2 箇所」。最後の供給側が一番小さいが、新しい枝の射影補題という
+**新しい定理**を要求する。ここまで来て初めて、費用の全体が見えた。
+
+## n543 (2026-09-22): 七本目、三度目の測定——23 → 12。patch は残してある
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、作業木はクリーン。七本目は**また戻した**。
+
+三度目は行動表と輸送子を**同じ patch に入れて**一度に回した。結果 **error 23 → 12**。
+
+残っている 12 の内訳（一次情報、`/tmp/pe.log`）:
+
+| 位置 | 型 |
+|---|---|
+| 1211, 1212 | `encTapes_rewindOne` の `heads` 場——挿入した引数の位置がずれている（`Fin 7` と `Fin 12` の取り違え） |
+| 1295 | 同 `mirrors` 場の `rfl` |
+| 1644, 1646, 1655 | `encTapes_rewindPair`——こちらの `hkept` にも同じ穴を開ける必要がある |
+| 5247 | `rewindPairActs_off` の呼び出し |
+| 9177 ほか | `rewind_one_of_rule` / `rewind_pair_of_rule` の呼び出し |
+
+**patch は捨てていない**: `scratchpad/p125.py`（行動表・七本目の宣言）と
+`p126.py`（輸送子、`encTapes_rewindOne` の切片だけに作用する形）に残してある。
+次はこの 2 つを当ててから上の 12 を潰す。
+
+**三度測って分かったこと**: 鏡 1 本の費用は「行動表の射影補題（一様・patch 済み）」と
+「輸送子 2 つの全フィールド（一様でない・場ごとに『鏡ではない』証明が要る）」に分かれる。
+後者が本体で、**`hkept` の仮説が 1 つ増えるたびに輸送子の全フィールドが動く**のが原因。
+だから鏡を足す前に輸送子側を「触った場所」の述語 1 つに書き換える方が、長い目では安い。
+
+**次の一手**: `encTapes_rewindOne` / `_rewindPair` の `hkept` を、除外条件の連言ではなく
+「この一歩が触るスロット」の述語 1 つにする。各場の否定証明が一様になれば、鏡を足す費用は
+行動表だけになる。
+
+## n541 (2026-09-22): 七本目の鏡、二度目の測定——表は直った、残るは輸送子の中
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0。七本目の試みは**また戻した**。
+
+n540 では error 16・9 宣言だった。今回は行動表の射影補題を全部先に直してから広げた:
+
+| 直したもの | 型 |
+|---|---|
+| `rewindOneActs_head` / `_progOther` | `if_neg` を 1 本、`headSlot_ne_mirrorSlot` / `progSlot_ne_mirrorSlot` |
+| `rewindOneActs_off` | 仮説 `hmirrorLen : ∀ m, mirrorSource m = 3 → slot ≠ mirrorSlot m` |
+| `rewindPairActs_counterRad` / `_mirror` / `_head` / `_progOther` / `_off` | 同型 |
+
+結果 **error 16 → 8**。残りは `encTapes_rewindOne` の中と、その呼び出し側 4 箇所。
+そこで輸送子にも `hmirrorLen` と `hkept` の鏡除外を足したら **error 23 に増えた**——
+`hkept` の引数が 1 つ増えたので、その輸送子の**他の全ての場**（`margins` / `heads` /
+`counters` / `places` / `period` / `answer` …）の `hkept _ a b c` が全部合わなくなる。
+
+**測り直した費用**: 鏡 1 本を足す本当の費用は「表の射影補題（型は一様、今回作った patch が
+そのまま使える）＋ 輸送子 1 つの全フィールドの `hkept` 引数 ＋ 呼び出し側」。
+最後の二つは一様ではなく、場ごとに鏡でないことの証明が要る。
+
+**採らなかった道**: `hkept` に引数を足さず、鏡のスロットを `hkept` の対象外と**せずに**
+おくこと。鏡のテープが「触っていない」と主張することになり、行動表と矛盾する。
+
+**次の一手**: `hkept` の引数を増やす代わりに、**除外条件を 1 つの述語にまとめる**。
+`rewindOneTouched slot : Prop` のような形にして、輸送子の全フィールドが
+`hkept slot (fun h => …)` の 1 引数で済むようにしてから鏡を足す。そうすれば次に
+鏡を足すときも輸送子の中は動かない。
+
+## n538-539 (2026-09-22): 六本目の鏡は入った。七本目は九宣言
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、`PalPeg.Workbench` BUILD=0・error 0。
+commit `dca6f2a`（六本目）、`a5565a9`（`incActAt`）。七本目の試みは**戻した**。
+
+**入った（`dca6f2a`）**: 六本目の鏡、chain の copy カウンタ（counter 10、
+`ScaffoldGalil.scala:303` の `alias(remaining, chain.h)` のため）。`Slot` の `Fin 5` →
+`Fin 6`、`tapeCountM` 116 → 117、`mirrorSource` に `5 => 10`。**一発で緑**——counter 10 を
+動かす枝をまだ一つも建てていないので、今日の費用はゼロ。符号化が義務を述べたので、
+その枝を建てるときに払う。
+
+**規律**: 鏡は、その源を動かす枝がまだ無いうちに足すのが一番安い。
+
+**入った（`a5565a9`）**: `incSignAt` / `incActAt`——カウンタの添字ではなくテープのスロットと
+符号ビットを取る形。`incAct` はそれを counter 自身のスロットに当てたもの（defeq）。
+
+**測った（戻した）**: 七本目（`length` = counter 3）。`Fin 7`、`tapeCountM` 118、
+`mirrorSource` に `6 => 3`、`rewindOneActs`/`rewindPairActs` に鏡の行を 1 本ずつ
+（counter 2 の鏡については **`rewindPairActs:4996` に既に同じ行がある**——追随の型は
+最初から表の中にあった）。結果は **error 16・9 宣言**:
+
+```
+1152 encTapes_rewindOne
+4945 4961 4971 5024 5031 5041 5080 5096   （rewind の行動表とその射影補題）
+```
+
+枝を 1 本増やすと、その表の「どのスロットに何が起きるか」を数え上げる補題が全部
+動くから。**九宣言は一回の往復では収まらないので、緑に戻した。**
+
+**次の一手**: 上の 9 宣言を順に直してから、もう一度 `Fin 7` に広げる。手本は counter 2 の
+鏡の扱い（`rewindPairActs` とその周りの `hmirrorRad` / `∃ m, mirrorSource m = 2 ∧ …`）。
+
+## n537 (2026-09-22): 鏡を七本にする費用を測った。一箇所だが行動表まで届く
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0（広げる変更は**戻した**。木を赤いまま
+置かない）。
+
+n536 の通り `Slot` の `Fin 5` を `Fin 7`、`tapeCountM` を 116 → 118、`mirrorSource` に
+`5 => 10`（`chain.h`）と `6 => 3`（`length`）を足して単体ビルドを回した。**落ちたのは
+1 宣言だけ**:
+
+```
+PalPeg/PhysicalEncoding.lean:1278  encTapes_rewindOne
+  decide proved that  mirrorSource ⟨6,_⟩ ≠ 3  is false
+```
+
+`encTapes_rewindOne` は rewind の一歩で `length` を増やす輸送子で、その `mirrors` 節は
+「鏡の源は 3 ではない」に寄りかかっていた。**鏡は源と常に同じ値でなければならない**から、
+`length` を動かす一歩は鏡 6 も同じ行動で動かさねばならない。つまり必要なのは
+
+1. `rewindActs` に鏡 6 のスロットへの行動を足す（長さ補題も追随）、
+2. `encTapes_rewindOne` に鏡 6 の新しいテープの仮説を足し、`hkept` から鏡 6 を除く、
+3. 呼び出し側 2 箇所を追随させる。
+
+**測った結果**: 鏡 1 本を足す費用は「その源を動かす全ての枝に 1 行動と 1 仮説」。
+`length` を動かす枝は rewind の一歩ひとつだけだったので、費用は小さい。
+`chain.h`（counter 10）を動かす枝も同様に数えてから足す。
+
+**採らなかった道**: 鏡 5/6 の源を既に鏡のある counter 2 に向けて「通る形」にすること。
+名前が中身を表さなくなり、後から見て嘘になる。番号だけ合わせるのは前進ではない。
+
+**次の一手**: `length` を動かす枝を数え（`GalilScaffoldCounter.inc x.vm.length` の出現）、
+その枝の行動表に鏡 6 を足してから、もう一度広げる。
+
+## n536 (2026-09-22): 鏡は二本足りない。そして役とテープの対応が要る
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n535 の末尾で残した 2 つを一次情報で見た。
+
+```scala
+// ScaffoldGalil.scala:297  beginChainShift —— chain は走り続ける
+chain.matched(); chain.beginShift(); length.inc(); length.inc()
+alias(remaining, chain.h)
+
+// ScaffoldGalil.scala:308  beginFallback —— length は生き続ける
+fpp.reset(); walker.copyFrom(right)
+alias(remaining, length); remaining.inc()
+```
+
+どちらも**源が生きたまま**で、その後 `remaining` だけが減っていく。つまり鏡の機構が要る。
+源は `chain.h`（counter 10）と `length`（counter 3）で、**どちらも `mirrorSource` に無い**。
+
+**結論 1: 鏡は 5 本ではなく 7 本要る。** `mirrorSource` に `10` と `3` を足す。
+`Slot` の `Fin 5` が `Fin 7` になり、`tapeCountM` は 116 → 118。
+
+**結論 2: 「役 → テープ」の対応が要る。** 鏡があっても、いま `EncTapes.counters` は
+`counterSlot c` という**固定**の対応で読んでいる。別名を「付け替え」として実現するには、
+どのテープがどの counter の役を演じているかを `QPhys` が持ち、`EncTapes.counters` が
+その対応を通して読まねばならない。`counterSlot c` を `counterSlotOf role c` に一般化する。
+
+対応は有限（16 の役 → 18 本のカウンタ系スロット）なので有限制御に入る。これは
+「数を Q に入れない」規律を破らない——入るのは値ではなく配役表である。
+
+**この二つが、消費 tick の行動表を書く前に要る土台だった。** 行動表そのもの
+（counter 11 の pop = `counter_dec_at`、period の右移動 = `encPeriod_moveRight`、
+counter 13 の inc = `counter_inc_at`）は既にある。
+
+**次の一手**: `mirrorSource` を 7 本に広げ、`Slot`/`tapeCountM`/`slotIndex` と
+`EncTapes` の producer 群を追随させる。機械的だが広い。
+
+## n535 (2026-09-22): 別名の問題は既に二通りの答えを持っていた——鏡と段
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n531 で開けた「`alias` をテープでどう払うか」という問いを閉じる。正本の `alias` は
+13 箇所ある（`grep -rn 'alias(' scala/pal/src/main/scala/pal/`）:
+
+| 場所 | 別名 |
+|---|---|
+| `ScaffoldChain.scala:91,92` | `lag ← radius`, `margin ← radius` |
+| `ScaffoldChain.scala:145,146` | `last ← boundary`, `boundary ← distance` |
+| `ScaffoldGalil.scala:303,315` | `remaining ← chain.h`, `remaining ← length` |
+| `ScaffoldGalil.scala:427` | `replay ← radius` |
+| `ScaffoldSearch.scala:106,107,134,144,200` | `lower ← lowerBound`, `work ← lowerBound / lower / span` |
+
+**答え (1): 鏡。** 符号化には既に 5 本の鏡がある（`PhysicalEncoding:771`）:
+
+```lean
+def mirrorSource : Fin 5 → Fin 16
+  | 0 => 2 | 1 => 2 | 2 => 2      -- radius を三重に
+  | 3 => 5                        -- lower
+  | _ => 6                        -- span
+```
+
+`EncTapes.mirrors` は「鏡のスロットは源と**同じ値**を持つテープを抱える」と言う。
+源を動かすたびに鏡も同じ行動で動かせば、別名は**役とテープの対応を替えるだけ**になる。
+`radius` の別名がちょうど 3 つ（`lag` / `margin` / `replay`）、`lower` と `span` が
+1 つずつ——**`mirrorSource` の数はこの表の数そのものだった。** 鏡は最初からこのために
+建っていた。
+
+**答え (2): 段。** chain の三つ組（13/14/15）は鏡の源ではない。そちらは n534 の通り、
+入れ子の三つ組を 1 本の区切り付きテープの段として持つ。境界事象は `resetSeg` 1 行動。
+
+**二つの機構は補い合う**: 別名の源が生きているとき（`radius` は chain が走っている間ずっと
+動く）は鏡、源が入れ子で増えるだけのとき（`last ≤ boundary ≤ distance`）は段。
+
+**まだ繋いでいない**: `remaining ← chain.h` と `remaining ← length` は鏡の源に無い
+（`chain.h` は counter 10、`length` は counter 3）。この 2 つがどちらの機構に載るか、
+あるいは源が死ぬので付け替えだけで済むかを次に見る。
+
+## n534 (2026-09-22): 三つ組は三本ではなく、一本の区切り付きテープ
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n532 で「差分 2 本 ＋ 交換 1 ビット」と書き、n533 で「可動原点は既にある」と訂正した。
+もう一段ある。**差分を 2 本に分ける必要すらない。**
+
+`consume` の境界事象は
+
+```
+last := boundary ; boundary := distance ; distance := inc distance
+```
+
+で、三つの値は常に `last ≤ boundary ≤ distance` と入れ子になっている。入れ子の数列を
+単項テープに置くなら、区切り記号で段を作るのが自然な形になる:
+
+```
+… | sep | mark^(boundary − last) | sep | mark^(distance − boundary)   ← ヘッドはここ
+```
+
+* `distance` を増やす = `push`（`mark` を 1 つ）
+* 境界事象 = `resetSeg`（今いる位置に `sep` を置く）——**1 行動**
+* `val`（`markRun t.left`）= 先頭の区切りより上 = `distance − boundary`
+* その下の段 = `boundary − last`
+
+`resetSeg` の docstring は「下の段を捨てる (abandoning the segment below)」と言うが、
+**捨てているのではない。捨てられた段が `boundary − last` そのものである。**
+`SegCtr` が「区切りの下は何が居てもよい」と言っているのは、上の段だけを見る補題群が
+下の段に触れないという意味で、下の段が無意味だという意味ではない。
+
+**帰結**: 交換ビットも 2 本目のテープも要らない。chain の三つ組は 1 本の区切り付き
+テープで、`EncTapes.counters` の 13/14/15 を「1 本のテープの段」として書き直す。
+アルファベットに `sep` がある理由、`resetSeg` が 1 行動である理由、`SegCtr` が下を
+自由にしている理由が、これで一つに揃う。
+
+**未検証（次の一手）**: 絶対値を要求する読み手があるか。`CanonicalChainMinimal:1117` は
+chain が壊れたとき `lower = w.machine.control.last` になると言っている。これが絶対値の
+転送なら、同じ別名の問題がもう一度出る——ただし壊れた chain の `last` は死ぬので、
+役とテープの対応を付け替えるだけで済む可能性が高い。そこを一次情報で確かめる。
+
+## n533 (2026-09-22): 可動原点はもう建っていた。残るのは交換と差分表現
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n532 の末尾で「未接続: 可動原点のカウンタ（`absCtr` は原点をテープの底に固定している）」
+と書いた。**これは誤り。** カウンタ層を読み直したら、可動原点はとうに建っていた。
+
+```lean
+-- PalPeg/LocalCounter.lean
+abbrev Seg := Fin 3
+def blank : Seg := 0
+def sep : Seg := 1          -- 「セグメント区切り」
+def mark : Seg := 2
+def val (t : STape Seg) : ℕ := markRun t.left      -- 先頭の mark 連なりだけを数える
+def SegCtr (t : STape Seg) (v : ℕ) : Prop :=        -- 区切りの下は何が居てもよい
+  ∃ garbage : List Seg, t.left = List.replicate v mark ++ sep :: garbage
+def resetSeg (t : STape Seg) : STape Seg := STape.applyAction blank t (sep, Move.right)
+theorem absCtr_reset (t) (b) : absCtr (resetSeg t) b = reset          -- :216
+```
+
+`val` は**先頭の区切りより上**だけを数え、`resetSeg` は今いる位置に新しい区切りを置いて
+下の段を捨てる——1 行動。符号化側の `padded_resetSeg`（`PhysicalEncoding:5837`）まで
+通っている。**アルファベットに `sep` がある理由がこれ。** 零化は O(1) で、置いてきた段は
+junk として残る（「junk をその場で消すな」がここで効いている）。
+
+**だから n532 で「採る道」と書いたものの半分は、既に建っていた道だった。** 残るのは:
+
+1. **交換**: 差分 2 本のどちらが `d1` かを有限制御に持つ（`QPhys` に 1 ビット）。
+2. **差分表現**: `EncTapes.counters` は今 16 本すべてについて
+   `absCtr segments (polarity c) = counterOf x c` を要求する。chain の 3 本
+   （13 distance / 14 boundary / 15 last）だけは絶対値ではなく差分を置くので、
+   この節を 13/14/15 について書き直す必要がある。
+
+**未検証**: 機械が distance / boundary / last の**絶対値**を読む場所があるかどうか。
+差分表現が通るのはそれが無いときだけ。次はそこを一次情報で確かめる。
+
+## n532 (2026-09-22): 別名付けの正体はポインタ。テープでどう払うかを決める
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n531 で「正本は `alias` で O(1)」と書いた。その `alias` が何であるかを最後まで辿った。
+
+```scala
+// ScavmStructs.scala:139
+def copyFrom(other: StackView): Unit = { top = other.top }
+// ScavmStructs.scala:159
+final class CounterView(...) { val pos: StackView; val neg: StackView
+  def inc() = if (!neg.empty) neg.pop() else pos.push(None)
+  def reset() = { pos.top = None; neg.top = None } }
+```
+
+`StackView.top` は**共有スタックの節点へのポインタ**（`b.ptr(name + ".top")`、
+`tname`/`tslot` が節点を名指す）。つまり正本の counter は永続リストへのポインタで、
+`alias` は指し先の共有、`reset` は底への付け替え。どちらもポインタ操作だから O(1)。
+
+**テープにはポインタが無い。** だから「O(1) である」という正本の事実は、そのままでは
+実時間テープ機械の設計にならない。この 3 つが同じテープ上の 3 つのヘッドだとすると、
+`last ← boundary` はヘッドを `boundary − last` だけ歩かせることになり、O(1) ではない。
+
+**採らなかった道**:
+
+* **役割の置換だけで済ます** — 境界事象の直後は `boundary = distance` で、その後
+  `distance` だけが伸びる。同じヘッドに 2 つの役をさせると次の tick で壊れる。だから
+  置換だけでは足りない（n531 の見立ての誤りをここで訂正する）。
+* **差分で持つ**（`d1 = distance − boundary`, `d2 = boundary − last`）— 事象は
+  `d2 ← d1`, `d1 ← 0`。`d2 ← d1` は交換（有限制御の名前替え、O(1)）にできるが、
+  `d1 ← 0` が残る。単項テープの零化はヘッドを底まで歩かせる操作で O(1) ではない。
+
+**採る道**: 差分の 2 本に**可動原点**を持たせる。カウンタの値を「原点印からヘッドまで」
+で測り、`reset` は**今いる位置に新しい原点印を書く**（1 行動）。交換は有限制御の名前替え。
+どちらも O(1) で、置いてきた古い印はそのまま残す——引き継ぎ書の「junk をその場で消すな」
+と同じ規律。
+
+**まだ繋いでいない**: 可動原点のカウンタ（`absCtr` は原点をテープの底に固定している）。
+`EncTapes.counters` が `absCtr segments (polarity c)` で値を読む形を、原点印からの距離で
+読む形に一般化する必要がある。既存の 16 本のうち chain の 3 本だけがこれを要る。
+
+## n531 (2026-09-22): chain の三つ組カウンタは複写やない、別名付けや
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+commit `dae6941` → `d601f71`。`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+消費 tick の行動表を作る途中で、`GalilScaffoldChainConsume.consume` の境界事象の行に
+当たった:
+
+```
+last     := if boundaryEvent then s.boundary else s.last
+boundary := if boundaryEvent then distance   else s.boundary
+distance := inc s.distance
+```
+
+`last := boundary` は単項テープの**複写**に見える。値に比例する時間がかかるから、
+実時間機械では 1 tick に収まらない。ここで止まって正本を読んだ:
+
+```scala
+// ScaffoldGalil の chain（ScaffoldChain.scala:143-146）
+distance.inc()
+if (boundaryEvent) {
+  alias(last, boundary)
+  alias(boundary, distance)
+}
+```
+
+`alias`（`ScaffoldSearch.scala:32`）は `target.pos.copyFrom(source.pos)` で、
+**テープ view の付け替え**。つまり正本はこれを O(1) の名前の付け替えとして書いている。
+
+**帰結（符号化の設計）**: `QPhys` は chain の三つ組（counter 13/14/15）の**役割の置換**を
+持たねばならず、`EncTapes.counters` はその置換を通してスロットを読む。今の
+`counterSlot c` は固定なので、`counterSlotOf alias c` に一般化する。置換は有限（`Fin 3`
+の巡回で足りる: `last ← boundary ← distance`）なので有限制御に入る。
+
+**これは「数を Q に入れない」規律の一例**でもある。三つの値そのものは入れられないが、
+どのテープがどの役を演じているかは入れられる。
+
+**まだ繋いでいない**: 置換の導入そのもの（`counterOf` の 13/14/15、`EncTapes.counters`、
+その producer 群）。counter 13 の `inc` は `counter_inc_at` がそのまま使える。
+
+## n518 (2026-09-22): scan の行が命令表に入った — 判定を読まずにヘッドが決まる
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更
+（`propext` / `Classical.choice` / `Quot.sound` / `PalPeg.PalInPeg.obligation_localRealization`）。
+commit `637d5ca` → `a8ddcaf`。`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+**背景 tick の 2 腕は逆のトレードをする。** `searchEffectFun P a s`
+（`PalPeg/FrameFunction.lean:330`）は chain が idle のときだけ `searchStepFun` を呼び、
+それ以外は `searchLens.get s`。だから
+
+| chain | カーソル | 探索（dp 12 テープ） | 機械側の仕事 |
+|---|---|---|---|
+| idle | 1 つも動かない | 1 量子進む | DP プログラム走者が要る（重い） |
+| 走行中 | 4 本目が一歩 | 完全に静止 | 走らせるプログラムが無い（軽い） |
+
+軽いほうから取った。`backgroundFun_searchSide` / `_searchSide_active` / `_prepSide` /
+`backgroundFun_id_of_chainFixed`（chain 自身の一歩が chain を動かさないなら、tick は機械全体の
+恒等写像）。
+
+**検証ヘッドが動く条件は一次情報から出た。** `chainStepFun`（`FrameFunction.lean:370`）で
+ver を書き換えるのは `.watch` 腕だけ。しかも `GalilScaffoldChainWatch.caught` は
+`GalilScaffoldChainVerifier.consume` で `right s.verifier`、判定が偽の `.broken` 側も
+`right w.machine.verifier`。**真でも偽でも右に一歩**。だから機械は判定の値を読まなくてよい。
+読むのは 3 つだけ: 制御が持つ `chainTag`、counter 11（lag）の符号ビットとヘッド直下のセル、
+period スロットの中心セル。全部窓の中にある（`centreRead_periodSlot` を新設）。
+
+新しい行: `chainConsumesTest` と `scanCommands`、そして `modeCommands` の `scan` 行。
+stay になる条件は `chainConsumesTest_of_tag_ne` と `chainConsumesTest_of_lag_zero`。
+
+**その場で一般化**: `enc_afterStillTick` の `hmode`（5 モードの選言）は本体で 1 回しか
+使われておらず、実際に要るのは「命令表のこの行が stay」だけだった。`hstay` に置き換え、
+5 モード版は `modeCommands_eq_stay` を渡す 1 行の系にした（呼び出し側は無変更）。
+
+**次の一手**: scan の静止腕を `enc_afterStillTick` に載せて分岐定理にする。その先が
+idle 腕の DP 走者（12 テープ、`fppActs`/`winRun` の対応物）。
+
+## n512 (2026-09-22): 訂正の訂正 — background はカーソルを動かさない。証明が下手だっただけ
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+
+n511 で「`backgroundFun` がカーソルを運ぶことは `rfl` で通らないので、主張を取り下げる」
+と書いた。**取り下げるべきだったのは主張ではなく、証明の書き方だった。**
+
+`PalPeg/GalilScaffoldTopSearch.lean:77` の `afterBirth b s` は
+`if b then {s with periodOnly := false, cycle := reset} else s` で、`b` が変数のままでは
+`rfl` は通らない（`cases b` が要る）。そして**その射影補題は既に全部そこにある**:
+`afterBirth_left` (:89) / `afterBirth_right` (:91) / `afterBirth_chain` (:93) /
+`afterBirth_center` (:95) / `afterBirth_radius` (:97) / `afterBirth_length` (:99) /
+`afterBirth_remaining` / `afterBirth_replay` / `afterBirth_fpp` / `afterBirth_search` /
+`afterBirth_dp`。
+
+`backgroundFun_cursors`（公理は `propext` / `Quot.sound` のみ）を入れた:
+scan の背景量子は左・中心・右の 3 カーソルをそのまま運ぶ。
+**だから背景 tick が動かしうるカーソルは chain の verifier だけで、
+動く唯一の理由は chain が生まれることだけ** — 中心の鏡（n504/n505）が効く場所。
+
+**この往復の教訓**: `rfl` が通らないことは「偽」の証拠ではないし、
+「無償ではない」の証拠でもない。**定義が `if` を含むとき、変数のままでは `rfl` は通らない。**
+取り下げる前に射影補題を探すべきだった（既にあった）。n511 の note はこの n512 で訂正される。
+
+## n511 (2026-09-22): scan の background がカーソルに何をするかは、まだ言えない
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+
+**自分の見立てを取り下げた。** このターンの前半で「`backgroundFun` は左・中心・右の
+3 カーソルをそのまま運ぶ」と書き、補題にしようとした。**`rfl` が 3 つとも通らない。**
+左だけでも通らない。
+
+理由は `PalPeg/FrameFunction.lean:491` の `backgroundFun` が
+`afterBirth (chainBorn …) (searchLens.set (scanLens.set s ⟨s.left, s.right, chainAtFun …⟩) …)`
+という形で、結果が **`afterBirth` に包まれている**こと。`afterBirth` は `M-periodOnly` を
+直したときに入れた包みで、chain が生まれた tick に chain 自身の場を初期化する。
+その包みはカーソルに対して定義的に透明ではない。
+
+`CLAUDE.md` の古い記述「`backgroundS` は右ヘッドも radius も変えない」は
+**この形になる前のもの**で、いまの定義について言えることではない。
+
+**帰結**: 「scan の background はカーソルを動かさない」は**無償ではない**。
+`afterBirth` の定義から証明する必要があり、証明できるかどうかもまだ確かめていない。
+scan を書くときの最初の一手はここになる。
+
+主張を取り下げて補題は削除した。build は緑のまま。
+
+## n504 (2026-09-22): `M-headCopy` は scan に居る。そして今日足した場がその解になる
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+
+**一次情報で確かめた。** `PalPeg/FrameFunction.lean:491` の `backgroundFun` は
+scan の背景量子で、`scanLens.set s ⟨s.left, s.right, chainAtFun … s.center … s.chain⟩`
+を書く。左と右のカーソルはそのままやが、chain は `chainAtFun` を通る。
+
+`:461` の `chainAtFun` は、chain が `.idle` で `found` が立った tick で
+`chainStart answer c walker ver radius` を作り、**その `ver` が `s.center`**。
+つまり**新しく生まれる chain の verifier は中心カーソルの複製**である。
+
+分業の下でカーソルの 12 スロットを書くのは view のコマンドだけで、
+**カーソル 1 本を丸ごと複製するコマンドは無い**。だから `M-headCopy` は
+`init` / `choose` select / `replayStart` だけでなく、**`scan` の背景量子にも居る**。
+しかもそこは走行の大半を占める。
+
+**帰結 1**: `enc_afterTick` の `hheadSome`（頭の有無が tick で変わらない）は
+scan の chain 誕生 tick では**偽**である。頭 3 が `none` から `some` になる。
+このまま scan を書こうとしても通らない。
+
+**帰結 2（解）**: 今日 margins のために足した `EncTapes.idleHead` が、そのまま解になる。
+いま `idleHead` は「chain が idle のあいだ verifier の 12 スロットは**何らかの** view を
+持つ」としか言っていない。これを
+
+> chain が idle のあいだ、verifier の 12 スロットは**中心カーソルと同じ view** を持つ
+
+に強めれば、chain が生まれた瞬間にスロットは既に中心の複製を保持しており、
+**複製する tick が要らない**。維持のコストは分業の下ではゼロに近い:
+chain が idle のあいだ、行は view 3 に view 1 と同じコマンドを名指すだけでよい。
+
+これは `M-headCopy` を回避する構成であって、`M-headCopy` が偽であるという主張ではない。
+Scala 正本が中心を verifier に複製するのは事実で、機械はその複製を**前もって**持つ。
+
+**次の一手**: `idleHead` の強化（`HeadSlotsRepAt … 3 view` を
+「view は中心の view と等しい」に替える）と、その維持（行が view 3 に view 1 の
+コマンドを名指す）を書く。維持が閉じたら scan の chain 誕生が `hheadSome` を
+要求しない形になるので、`enc_afterTick` をそこまで一般化する。
+
+## n500 (2026-09-22): 公理は証明せんでもええ。迂回路が既に proved で存在する
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+公理リスト未変更: `propext` / `Classical.choice` / `Quot.sound` /
+`PalPeg.PalInPeg.obligation_localRealization`。
+
+**一次情報で読んだ結果、終盤の地図が変わった。**
+
+`PalPeg/PalInPegUnconditional.lean:226` の `unconditional` は
+
+```
+given_scanLandingObligations 0 1 0
+  cycleOracleOnPackedRun                 -- 証明済み（n282）
+  (obligation_localRealization 0 1 0)    -- ★ 唯一の公理
+  (scan landing の 4 場)                  -- 証明済み（BranchSupply.*）
+  (chain verifier supply)                -- 証明済み（BranchSupply.*）
+```
+
+いっぽう `PalPeg/ShadowedLocalFinal.lean:1395` の **`given_physicalMachine` は
+`#print axioms` で標準 3 公理のみ**。取るのは:
+
+| 引数 | 状態 |
+|---|---|
+| `hor` / `hres` / `hChainVerifierSupply` | `unconditional` が既に渡している 3 つと**同じもの**。証明済み |
+| `L0 : LocalStep (Fin 2) Q Γ t K`、`blankSymbol`、`q0`、`repQ`、`outQ`、`htape`、`Enc` | 具体機械と符号化。こちらが供給する |
+| `hencInit` | 初期状態が符号化されている |
+| `hforwardTick` | 機械の 1 歩が抽象後継を符号化する |
+| `hforwardFeed` | 文字つきの 1 歩が到着を符号化する |
+| `PhysFrozen` ＋ `hfrozenEnter` / `hfrozenKeep` / `hfrozenQuiet` | 凍結後は報告ビットが落ちている |
+| `hencRep` | 報告判定が機械の報告ビットに一致する |
+| `hencOut` | 報告点で出力ビットが一致する |
+
+結論は `RecognizedByTotalPEG PAL` **そのもの**で、`H_realizeCanonical` を経由しない。
+
+**だから `obligation_localRealization` は証明する対象ではない。**
+`unconditional` を `given_physicalMachine` 経由に張り替えれば、公理は参照されなくなって
+リストから消える。証明すべきは `H_realizeCanonical`（存在量化された機械と
+`SAccepts ↔ LatchTrue` の同値）ではなく、**この 7 つの符号化義務**。
+
+**今日ここまでの仕事がどこに入るか**: `hforwardTick` の 1 つ。
+`forwardTick_of_rule`（`:984`）がその形を `hmargin` / `hidle` / `hideal` から作る。
+今日 9 分岐について tick の `Enc` を証明したのは、その `hideal` の中身である。
+
+**残り 6 義務の性質**（`hforwardTick` 以外）:
+
+* `hencInit` — 初期配置。`Enc` の各場を空テープについて言うだけで、tick を含まない。
+* `hforwardFeed` — 文字が到着する 1 歩。頭の側は view 層の `arrive` コマンドで、
+  今日作った `heads_afterTableTick` の族に `.arrive a` の行を足す形になる
+  （`headOp` に `.arrive` が入っていないのは頭だけの操作ではないから。ここは別扱いが要る）。
+* `PhysFrozen` ×3 — 凍結後の不変量。抽象を追わないので `Enc` とは独立に設計できる。
+* `hencRep` / `hencOut` — 報告ビットと出力ビット。制御の場を 1 つ足せば読める。
+
+**次の一手**: `given_physicalMachine` の 7 義務を、今日の部品でどこまで埋まるか
+1 つずつ確かめる。まず `hforwardTick` を `forwardTick_of_rule` 経由で組み、
+`hideal` に必要な「全 10 モード分の tick」のうち、今日閉じた 9 分岐で足りない
+モード（`scan` / `shift` / `init` / `replayStart` / `choose` select）を数える。
+
+## n455 (2026-09-22): view 層は最初から「任意の機械」について語れていた
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+公理リスト未変更: `propext` / `Classical.choice` / `Quot.sound` /
+`PalPeg.PalInPeg.obligation_localRealization`。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、`PalPeg.Workbench` BUILD=0・error 0。
+commit: `9b2ea2f`（WF）、`849e9fc`（橋）。
+
+**n453 note の項目 (2) は不要だった。** 「`LocalViewsMachine` に view ごとの
+コマンドを取る規則 `viewsRule` を足して `machineSlot` を一般化する」と書いたが、
+一次情報を読んだら既にある:
+
+| 部品 | 場所 | 何が汎用か |
+|---|---|---|
+| `viewStep_of_apply` | `PalPeg/LocalViewSlot.lean:418` | `Q`・`tapeCount`・`embed`・`project`・`slot`・`command` が全部パラメータ |
+| `viewSlot_sound` | `PalPeg/LocalViewSlot.lean:370` | `commands : ℕ → ViewCommand`・`states : ℕ → ViewState` を取る |
+
+`machineRule` が arrivals-only なのは `LocalViewsMachine` という**一つの
+インスタンス**の性質で、view 層の制約ではない。だから道は「machineRule を
+一般化する」ではなく「自分の `physRule` に view 層の汎用補題を当てる」。
+
+**足りなかったのはアルファベットの変換だけ。** 機械は頭のテープを view の
+テープの `encCell` 像として持つ（`EncTapes.heads`）ので、`Γc` 上の `ViewStep` と
+`Γm` 上の行動リストの間に橋が要る。入れたのは 2 本:
+
+* `mapTape_actList` — 成分の合成ステップは、機械が持つテープ上の同じ合成ステップ。
+  各行動が `mapTape_applyAction` で交換するので、リスト全体も交換する。公理ゼロ。
+* `viewStep_of_encodedActs` — 頭の 12 スロット上の機械のステップを、view 層の
+  `ViewStep` として読み返す。前提は「規則がその 12 スロットに名づける行動が、
+  同じ窓から読んだ view 規則の行動を `encAct` で送ったもの」。結論の view テープは
+  `actList blankc (viewTapes t) (viewActs …)` そのものなので `TEqG` は `rfl`。
+
+**書いたが消したもの**: `teqG_of_mapTape` / `rd_mapTape` / `encCell_injective`。
+橋が前向き（`Γc` → `Γm`）だけで済んだので引き戻しが要らず、参照ゼロになった。
+参照ゼロの宣言は残さない規律に従ってその場で削除した。
+
+**`EncTapes.heads` に `WF`（= `RTQueue.Inv view.far`）を足した**（項目 (3) の前半、
+`9b2ea2f`）。`viewSlot_sound` が要求するので運ぶ必要がある。コストは補題 3 本だけ:
+`far_leftView` / `wf_leftView` / `wf_rightViewOn` / `wf_setGap`——頭の左ステップ、
+近スタックへの右ステップ、ビットだけ動く半歩は全部 `far` をそのまま写す。
+
+**次の一手**: `physRule` の頭スロットの行動を、手書きの `headStepActs` /
+`headRightActs` ではなく `viewActs … (encAct encCell)` の像として書き直し、
+`viewStep_of_encodedActs` → `viewSlot_sound` の鎖に載せる。手書きの 3〜4 分岐は
+`leftView_eq_moveLeftV` / `rightViewOn_eq_moveRight` で `viewApply` と繋がっている
+ので、載せ替えの正しさはそこで確かめられる。
+
+## n453 (2026-09-22): 融合を使うには「コマンドを 1 歩先に決める」— 12 歩案
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+n452 で「11 歩スロットは `compStep (iterRule R 11)` 1 回に収まる」と分かった。
+その続きとして、**既存の融合をヘッド移動にそのまま使えるか**を一次情報で確かめた。使えない。理由と直し方。
+
+### 使えない理由
+
+`PalPeg/LocalViewsMachine.lean:50` の `machineRule` は
+
+```
+nq := fun control input windows =>
+  (nextSlot control.1, fun view => viewNext _ hK control.1 (commandOfLetter input) …)
+```
+
+すなわち **コマンドは入力文字から決まり、全 view に同じものが当たる。** これは「到着」の機械である。
+ヘッド移動はヘッドごとに違うコマンド（左ヘッドは左、右ヘッドは右）なので、この規則では表せない。
+
+下の層（`viewNext` / `viewActs` / `LocalViewSlot.viewSlot_sound`）は**コマンドについて一般**である。
+足りないのは view ごとにコマンドを与える機械規則だけ。
+
+### 直し方が自明でない点
+
+規則の `acts` はその時点の control を見る。1 スロットは 11 歩あり、その間 control は
+`nq` で 11 回変わる。よって **コマンドは 11 歩のあいだ不変で、かつ各歩で control から読めなければならない。**
+`commandOfLetter input` は入力から毎歩読み直せるので成り立っていた。ヘッド移動のコマンドは
+抽象モードから決まるので、control に**載せる**必要がある。
+
+しかし分岐が次の状態を決める `nq` は「このステップの後」を言うので、
+**このスロットで実行するコマンドは、スロットが始まる前の control に既に入っていなければならない。**
+
+### 12 歩案
+
+`physRule := iterRule R₀ 12` とし、`R₀` の control に「ヘッドごとのコマンド」の場を持たせる。
+
+* 1 歩目: テープには何も書かず、抽象モードと窓の読みから 4 つのコマンドを決めて control に書く。
+* 2〜12 歩目: `viewNext` / `viewActs` をその control のコマンドで回す（= 11 歩スロット）。
+
+`compStep (iterRule R₀ 12)` 1 回が 1 抽象 tick になる。窓の半径は `iterRadius K 12`。
+`ViewCommand` は有限なので control に載る（`QPhys` に `Fin 4 → ViewCommand` の場を足す）。
+
+### 次の一手
+
+1. `ViewCommand` が本当に有限型か（`Fintype`/`DecidableEq` が付くか）を確かめる。
+   `QPhys` は `Fintype` を要求する。
+2. view ごとにコマンドを取る機械規則 `viewsRule` を `LocalViewsMachine` に足し、
+   `machineSlot` をそれで一般化する（既存の到着経路は `fun _ => commandOfLetter input` で回収）。
+3. `EncTapes.heads` に `WF`（= `RTQueue.Inv v.far`）と `howed` を足す。
+   `ViewCells` は n417 で入れた。
+4. `physRule` を `iterRule R₀ 12` の形に組み替える。既存 9 分岐は
+   「1 歩目でコマンドを空にし、2〜12 歩目で何もしない」形に載せ替えれば通る。
+
+これは複数セッションの仕事である。`M-headCopy`（n444）はこの枠組みでも残る:
+コピーは 1 コマンドではない。
+## n452 (2026-09-22): 11 歩スロットは 1 compStep に収まる — 融合はもう建ってる
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+n444 で「`hideal` は 1 抽象 tick = 1 `idealStep` を要求する」と確認し、
+n445 以降ヘッドの左歩・右歩を手で（1〜3 アクションで）作ってきた。
+そのうち右歩の 4 番目のケース（near が空で queue に文字がある）だけが
+「queue のスケジュールを進めなあかん」ので手では届かなかった。
+
+**一次情報を読んで、矛盾の解き方が分かった。**
+
+`PalPeg/LocalViewsMachine.lean:182` の `machineSlot` の結論は
+
+```
+((compStep (iterRule (machineRule viewCount hK) 11)).apply blankc x input).1.1 = 0 ∧ …
+  ViewRep margin (viewApply (commandOfLetter input) (views view)) … 
+```
+
+すなわち **`iterRule R 11` の `compStep` 1 回が、view のコマンド 1 つ（11 歩ぶん）を丸ごと実行する。**
+橋は `compStep_iterRule`（`LocalStepFusion`）。代償は窓の半径が `iterRadius K 11` に増えることだけで、
+`forwardTick_of_rule` は `R : ActRule (Fin 2) Q Γ t K` を任意の `K` で取るので型は合う。
+
+理由は素朴で、`ActRule.acts` が 1 テープあたり**アクションの列**（長さ ≤ K）を返すこと。
+11 歩ぶんの決定は、半径 K の窓に入っているセルだけで計算できる（各歩がヘッドから距離 ≤ 11 しか触らない）。
+だから融合できる。
+
+### これが意味すること
+
+* ヘッド移動の実現は**もう建っている**。`LocalViewSlot.viewSlot_sound`（任意のコマンド）と
+  `LocalViewsMachine.machineSlot`（到着コマンド）が 11 歩スロットの健全性で、
+  `compStep (iterRule … 11)` がそれを 1 ステップに畳む。
+* n445〜n451 で手で作った左歩・右歩（`headSlots_left` / `headSlots_rightStep` ほか）は
+  **安いケースだけの並行実装**である。間違いではないが本道ではない。
+  queue を要するケースまで含めて一様に効くのは融合の側。
+* よって `physRule` のヘッド部分は手書きのスタック操作ではなく、
+  `iterRule (machineRule 4 hK) 11` 側から取るべきである。
+
+### 次の一手
+
+1. `viewSlot_sound` / `machineSlot` が要求する側条件（`WF`・`ViewCells`・`howed`・
+   スロット位置 `x.1.1 = 0`）を `EncTapes.heads` が供給できるかを確かめる。
+   `ViewCells` は n417 で入れた。`WF`（= `RTQueue.Inv v.far`）と `howed` は無い。
+2. 無い側条件を `EncTapes.heads` に足す（`ViewCells` を足したのと同じ手）。
+3. `physRule` の窓半径を `iterRadius K 11` に上げ、ヘッド部分を融合規則から取る。
+   既存 9 分岐は半径が増えても通る（窓を広く読むだけ）。
+4. その上で `init` / `scan` / `shift` / `choose` / `replayStart` を書く。
+   `M-headCopy`（n444）はこの枠組みでも残る: コピーは 1 コマンドではない。
+## n444 (2026-09-22): 残りの障害は分岐の本数ではない — `M-headCopy`
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`hideal` に向けて 9 分岐（fpp running/done, markEnd forward/back, home step/fppStart/atFloor,
+choose back, copy one/end, rewind wipe/one/pair）を機械レベルで閉じ、shift 出口も証明した。
+残る `shift` one・`choose` 選択側・`scan`・`init`・`replayStart` を書こうとして、
+**一次情報で構造的な障害を確認した。**
+
+### 何を確認したか
+
+正本 `scala/pal/src/main/scala/pal/ScaffoldGalil.scala` の 3 つの tick は
+**入力ヘッドを丸ごとコピーする**:
+
+* `stepInit` (`:243`): `right.right(); left.copyFrom(right); center.copyFrom(right)`
+* `stepChoose` (`:393`): `left.copyFrom(right); center.copyFrom(right)`
+* `stepReplayStart` (`:426`): `alias(replay, radius); right.copyFrom(center); left.copyFrom(center)`
+
+`copyFrom` は `scala/pal/src/main/scala/pal/ScaffoldCircuitInput.scala:77` で
+`focus` と **3 本のスタック全部**（leftStack / rightStack / incoming）をコピーする。
+`alias` はカウンタの別名付け（参照の差し替え）。
+
+Lean 側の `PalPeg.FrameFunction.initFun` / `chooseFun` / `replayStartFun` はこれを忠実に写している
+（`left := right s.right` 等）。
+
+### なぜこれが障害か
+
+`ShadowedLocalFinal.forwardTick_of_rule` の `hideal` は
+**抽象 tick 1 回 = `idealStep` 1 回**を要求する（読んで確認済み）。
+1 回の `idealStep` で各テープに書けるのは高々 K アクションで、K は窓の半径という定数。
+ヘッドの view は 12 本のテープで、うち 2 本は入力長に比例して伸びるスタックである
+（`ViewRep.back` / `.near`）。よって **1 ステップでヘッドを複製する方法を、今の符号化は持たない。**
+
+「不可能」と証明したわけではない。機械検査済みの反証はまだ無い。
+確認したのは「正本がコピーを要求し、符号化にそれを供給する手段が無い」ことだけ。
+
+### 考えられる出口（どれも未着手）
+
+1. **不変量でコピーを恒等にする。** `stepInit` は boot 直後なので 3 ヘッドが一致しており、
+   コピーは「3 ヘッドがそれぞれ 1 歩進む」と同じになる（各ヘッド ≤ 3 アクション、計 ≤ 9）。
+   これは今の枠組みで書ける。`choose` 選択側と `replayStart` では、
+   コピー元と先が一致しているという不変量が必要で、まだ見つけていない。
+2. **役割 → スロットの写像を有限制御に持つ。** `fppLive` / `dpLive` が準備プログラムの
+   二重バッファでやっているのと同じ手。`alias(replay, radius)` はこれで消える。
+   ただしコピーは置換ではない（2 つの役割が同じスロットを指したあと別々に動く）ので、
+   ヘッドのコピーはこれだけでは消えない。
+3. **物理側を 1 tick 複数ステップにする。** `forwardTick_of_rule` の形を変えることになり、
+   その定理（上流・既証明）に手を入れる。
+4. **モデルを編集する。** 引き継ぎ書が禁じている（「モデルは編集せず」）。
+
+### 次の一手
+
+出口 1 を `init` について実行する（3 ヘッドが一致する不変量は boot から来る）。
+`choose` 選択側と `replayStart` については、まず
+「コピー元と先が一致している」不変量が scaffold 層にあるかを探す。
+無ければ `hideal` は現在の形では閉じられないので、出口 2・3 の設計を検討する。
+## n398 — fpp 分岐が規則に載った（5 commit）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`HEAD 7190bfd`、**公理リスト変更なし**。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0・sorry 0、`PalPeg.Workbench` BUILD=0。
+
+| commit | 中身 |
+|---|---|
+| `c035252` | 規則表を窓シミュレータの**下へ移動**し、`ruleNext`/`ruleActs`/`physRule` に quantum `entryQ` を通した。`ruleActs` の `fpp` = `withErase live ws (fppActs code entryQ live (pcOf q) q.fppDone ws)`、`ruleNext` の `fpp` = `fppNext`（`winRun` の pc/done、halt なら mode := markEnd）。長さは `withErase_length (b := entryQ)`、条件は `hK : entryQ + 2 ≤ K`（1 アクション分岐の `b := 1` も omega で出る）。`pcPhysOf` ＋ `encPc_pcPhysOf` |
+| `13a2fd0` | `idealStep_withErase` を**その場で一般化** — 1 スロットではなく live 半分を支持集合とする任意の action 表を取る。既存 8 箇所は特殊化 `idealStep_atLiveSlot` が受ける。`idle_shape_after_erase` も同じ表を取る |
+| `6ff80d2` | `fppActs_off_live` — live 側 9 スロット以外で `fppActs` は空。`idealStep_withErase` の側条件 |
+| `8196cb0` | `encTapes_fppStep`（1 テープ）を `encTapes_fppTapes`（プログラム機械まるごと）に一般化。1 テープ版は名前も文も保ったまま、一般版から出る |
+| `7190bfd` | `frameFun_fppHalts` / `frameFun_fppSlice` / `fppRunFun_eq_runFun` — 抽象側の 3 本、すべて `rfl` |
+
+**踏んだ罠**: `grep -c 'error:'` は `error(lean.unknownIdentifier):` 形式を拾わない。
+検査は `grep -c error` で行うこと。これで一度 EXIT=1 を「error 0」と読み違えた。
+
+**未接続**: `fpp` 分岐の Enc 保存（`physRule_fpp`）はまだ無い。素材は揃っている
+（`idealStep_withErase` ＋ `fppActs_off_live` → 理想歩、`fpp_slot_after` → 符号化、
+`encTapes_fppTapes` → 組み立て、`idle_shape_after_erase` → 退役半分、
+`frameFun_fppSlice` → 抽象側）が、組んでいない。制御側（`EncControl` が `fppNext` と
+合うこと）も未着手。
+
+## n397 — Astra への引き継ぎ（ドキュメント整理）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`HEAD 479ea19`、**公理リスト変更なし**
+（`propext` / `Classical.choice` / `Quot.sound` / `PalPeg.PalInPeg.obligation_localRealization`）。
+`PalPeg/PhysicalEncoding.lean` 単体 EXIT=0・error 0・sorry 0、`PalPeg.Workbench` BUILD=0。
+**コードは変更していない。ドキュメントのみ。**
+
+リポジトリ直下に `AGENTS.md` を作った（`CLAUDE.md` の複製 ＋ 先頭に `§0 現状`）。
+`§0` に入れたのは 9 項目:
+
+| 節 | 内容 |
+|---|---|
+| 0.2 | 進捗の計器は `PalPeg/Axioms.lean:392` の guard。残り 1 本 |
+| 0.3 | 義務の型（`PalInPegUnconditional.lean:144`）と消費者 `ShadowedLocalFinal.forwardTick_of_rule:984` の `hideal:995` |
+| 0.4 | `PhysicalEncoding.lean` の設計固定点 5 つ（`Rep`/`TEqG` でのシミュレーション、`acts` はリスト、背景消去、番号を状態に持たない、no-restart） |
+| 0.5 | 10 モードの実装状況表（`markEnd`/`home`/`choose`/`rewind` 済、`fpp` ほか未） |
+| 0.6 | 次の一手 6 段（`fppActs` を `ruleActs` に載せる → … → guard 更新） |
+| 0.7 | 検証の作法（`BUILD=` 行を読む、build 1 本ずつ、`reset --hard` 禁止） |
+| 0.8 | 繰り返し踏んだ Lean の罠 8 件 |
+| 0.9 | `CLAUDE.md` 由来の §1〜§5 は 2026-09-19 の地層で、到達点としては読まない旨 |
+
+引用した識別子は全部 grep で存在確認した（`fppActs_length` / `pcOf` / `withErase_length` /
+`fppActs_eq` / `fpp_slot_after` / `vml_fpp_slice` / `vml_fpp_done` / `physRule_*` /
+`GalilFppMarkedCode.code` / `LocalViewSlot.viewActs` / `CloseoutCoreAgree.SL`）。
+`SL` の `init = scan = replayStart = id` も一次情報（`CloseoutCoreAgree.lean:199,200,208`）で確認。
+
+## n389 — 帰納段の道具は既にあった（`windowAfter_readWin`）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit 7d80372`、公理リスト変更なし。
+`PalPeg/PhysicalEncoding.lean` module build EXIT=0・error 0・sorry 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+**一次情報**（`PalPeg/LocalStepFusion.lean:32`）:
+
+```
+theorem windowAfter_readWin (blank : Γ) {K inner : ℕ} (tape : STape Γ) (acts : List (Act Γ))
+    (hlength : acts.length + inner ≤ K) (hmargin : K ≤ pos tape) :
+    windowAfter K inner (readWin blank K tape) acts
+      = readWin blank inner (actList blank tape acts)
+```
+
+つまり**半径 `K` の窓と、そこまでに行ったアクション列だけから、半径 `inner` の「その後の窓」が
+計算できる**。これが `fpp` の quantum を窓から走らせるために要っていた帰納段そのもの。
+自分で「窓の半径が 1 減る形で帰納する」と書いていたものが、既に一般形で証明されている。
+
+**この道具での `fpp` の設計**: 規則の `acts` は、半径 `K` の窓から出発して
+
+1. `winMachine` で最初の call の action を決める（`progActOf_winMachine` で実機械と一致）、
+2. `windowAfter K (K-1) window acts₁` で次の窓を得る、
+3. これを `q` 回繰り返して action 列を連結する
+
+という形になる。`hlength` は `progRunActs_length`（quantum は高々 `q` アクション）が、
+`hmargin` は `EncTapes.margins` が与える。
+
+**教訓（再び）**: 「これを証明せなあかん」と思った補題は、`LocalStepFusion` に既にあった。
+n344 で `windowAfter` の名前を書いておきながら、中身を読んでいなかった。
+
+## n387 — 「カーソル分岐は 1 歩で書けない」は誤り（訂正）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit 6a9cfbd`、公理リスト変更なし。
+`PalPeg/PhysicalEncoding.lean` module build EXIT=0・error 0・sorry 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+**訂正する記述**（n344 で書いたもの）: 「`copy` / `shift` / `rewind` の 2 分岐 /
+`choose` の選択側はカーソルを動かすので `ActRule` の 1 歩では書けない。view 機械の
+11 マイクロ歩が要る」。
+
+**一次情報**: `CloseoutCoreEnc12.ActRule` の場は
+
+```
+acts : Q → Option Terminal → (Fin t → Window Γ K) → Fin t → List (Act Γ)
+len_le : ∀ q a ws j, (acts q a ws j).length ≤ K
+```
+
+で、`compStep` はそのリストを `actList` で順に当てる。つまり **1 ステップで 1 テープあたり
+`K` 個までのアクションができる**。`LocalViewSlot.viewSlot_sound` の「one slot of eleven
+steps」は view 機械自身の歩数の話であって、テープへのアクションとしては 11 個であり、
+`K ≥ 11` なら 1 ステップの `acts` に収まる。
+
+**帰結**: カーソルを動かす分岐も単一の `ActRule` で書ける。窓半径 `K` を大きく取る
+（`fpp` の quantum 長、view コマンドの 11、消去の 1、分岐自身の 1 の最大値以上）だけの
+問題になる。`forwardTick_of_rule` が要求する「1 tick = 1 ideal step」は維持できる。
+
+**この訂正が効く範囲**: 残りモードの設計。`copy` / `shift` / `rewind`(one, pair) /
+`choose`(select) を view 機械の出す action 列（`LocalViewSlot.viewActs`）で書けばよく、
+`LocalStepFusion` の 2 規則合成に逃げる必要はない。
+
+## n347 — 自分の符号化に設計欠陥を見つけた（二重バッファがスロットに無い）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit af47138` まで、
+`PalPeg/PhysicalEncoding.lean` module build EXIT=0・error 0・sorry 0、
+`PalPeg.Workbench` BUILD=0・error 0、公理リスト変更なし。
+
+**一次情報で確認したこと。**
+
+* `MachineStep.sweepClosure blank Enc x p := ∃ ideal, Enc x (p.1, ideal) ∧ ∀ tape,
+  TEqG blank (ideal tape) (p.2 tape)`（`PalPeg/MachineStep.lean:40`）。
+* `CloseoutCoreEnc12.TEqG blank T T' := pos T = pos T' ∧ ∀ p, rd blank T p = rd blank T' p`
+  （`:257`）。**全位置での一致**であって、窓の中だけの一致ではない。
+
+つまり `hideal` が取る `sweepClosure` は掃引の後始末を吸収するだけで、
+「読まない領域にゴミが残っていてよい」とは言っていない。
+
+**帰結（欠陥）。** いま `Slot` のプログラム部は `Fin 9` の 9 枠しかなく、
+`EncTapes.fpp` は
+
+```
+tapes (progSlot i) = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i)))
+```
+
+と**抽象テープとの一致**を要求している。`rewind` の `fppReset` は抽象側で 9 本すべてを
+`Tape.reset` にする（局所層では `LocalBuffers.resetFresh`＝生きている半分の切り替えで、
+テープは 1 本も動かない）。ところが物理側は 9 枠しか持たないので、同じ 1 tick で
+9 本を白紙にしなければならず、**1 tick 1 アクションの規律で不可能**。
+
+**直し方（次の一手）。** プログラム部（と DP 部）のスロットを二重にする:
+`Fin 9` を `Fin 9 × Bool`、`Fin 12` を `Fin 12 × Bool` にし、どちらが生きているかを
+`QPhys` の 1 ビットで持つ。符号化は**生きている半分だけ**を抽象テープに結びつけ、
+`fppReset` はそのビットの反転になる。遊んでいる半分は背景の消去仕事
+（`LocalBuffers.clearTick`、1 tick 1 セル）で白紙に戻る。これは局所層が
+`LocalBuffers.Buffered n`（`A` / `B` / `active` / `job`）で既に持っている構造そのもので、
+`LocalState.lean:18-56` の設計註がまさにこれを答えとして挙げている。
+
+**この欠陥は、これ以上分岐を積む前に直す。** 直さずに `fpp` / `rewind` を書くと、
+1 tick で 9 本を消す規則を書くことになり、`ActRule.len_le` か忠実性のどちらかが壊れる。
+
+## n336 — shift の 2 分岐、および接続点の地図
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit cfab8bc`、公理リスト変更なし。
+`PalPeg/PhysicalEncoding.lean` module build EXIT=0・error 0・sorry 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+**今回閉じた分岐**: `vml_shift_exit`（テープもカーソルも動かない。制御が `scan` に戻り
+`output` を refresh するだけ）と `vml_shift_one`（最も広い多成分 tick: 中心ヘッド右 1、
+左ヘッド右 2、銀行 4 op、chain の watch 前進）。側条件は局所層のもの
+（`LocalTick1.Inv` / `LocalTick3.ShiftCounters` / `Ahead` 3 / `canRight` 3）＋
+`y.chain = .watch wv`（抽象 `shiftOneFun` の `match` を落とす鍵）。
+
+**物理基底で閉じた分岐**: `copy`(copyOne) / `fpp`(slice, done) / `rewind`(one, pair) /
+`choose`(select) / `shift`(one, exit) ＋ 手書き 7 本。
+
+**接続点の地図（一次情報で確認）**
+
+* 公理は `obligation_localRealization : H_realizeCanonical centreC placeC entry q first`
+  （`PalPeg/PalInPegUnconditional.lean:144`）。
+* 消費者は `ShadowedLocalFinal.forwardTick_of_rule`（`:984`）。その `hideal`（`:995`）は
+  `Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop` を取る。**抽象状態**上の関係なので、
+  `Enc x p := ∃ y, absState'' y = x ∧ …` へ組み替える必要がある。ここが `vml_*` の合流点。
+* `scan` の tick は**既に関係形で存在する**:
+  `LocalReplayParked.tickL1_abs''_nonreplay` が
+  `Tick (galilFrameS S q first) delay (absState'' x) (absState'' y)` を与える
+  （`LocalTick1.tickL1_abs` の `abs''` 版）。`scan` の 3 出口も
+  `abs''_commitShift` / `abs''_commitFallback` / `abs''_commitRestart` で `abs'` に落ちる。
+* 規則 `R : ActRule` の側は、入力 view については**既に機械化済み**:
+  `LocalViewSlot.viewNext` / `viewActs` / `viewSlot_sound`、
+  `LocalViewsMachine.machineRule` / `machineSlot`、`LocalHeadRep.headRep_machineSlot`
+  （`PalPeg/ConcreteLocalMachine.lean` の目次）。
+
+**残っている本体**: 規則 `R` をプログラムテープと銀行テープについても定義し、
+`Enc` を上の `∃ y` 形に組み替えて `hideal` を放電すること。
+
+## n333 続き 32 — 多成分の一歩は局所層に全部あった。足りんのは tick 形の橋だけ
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。HEAD `3528a4b`、公理リスト変更なし
+（`propext` / `Classical.choice` / `Quot.sound` / `obligation_localRealization`）。
+スクラッチ `$S/enc_body.keep.lean` は EXIT=0・error 0・sorry 0・標準公理のみ、**未投入**。
+
+**一次情報の確認で方針が変わった。** `PalPeg/LocalTick3.lean` には既に全モード分の
+局所歩とその抽象補題がある: `shiftVm` / `copyVm` / `copyDoneVm` / `homeStartVm` /
+`homeStepVm` / `sliceVm` / `doneVm` / `marksVm` / `chooseSelectVm` / `rewindDoneVm` /
+`rewindOneVm` / `rewindPairVm`、それぞれに `abs'_…`。銀行の道具も
+`bankTick (f : Ctr → Op)` / `BankOk` / `absCtrs_bankTick` / `bankTick_phys` /
+`bufAt` / `abs_bufAt` が揃っている。書きかけた `absCtrs_bankStep` は
+`absCtrs_bankTick` の重複だったので**外した**（wrapper を増やさない）。
+
+**本当に欠けているのは tick 形の橋だけ**: `grep tickFun PalPeg/Local*.lean` は 0 件。
+今回そこを 1 本通した。
+
+```
+theorem vml_copy_one … (hmode : y.ctl.mode = .copy)
+    (hrem : (galilFrameFun …).remainingPos (abs'' y) = true)
+    (hread : GalilScaffoldPlace.read (absPlace y.fppWalker) = some a)
+    (hinj : RolesInjective y) (hpol : y.pol .fppWork = true)
+    (hval : 0 < LocalCounter.val (y.phys (y.roles .fppWork)))
+    (hprop : LocalChain.ProperView y.fppWalker) :
+    tickFun (galilFrameFun centre place entry entryQ first w) F delay (absState'' y)
+      = absState'' (LocalTick3.copyVm a y)
+```
+
+証明の型（以後どのモードにもそのまま流す）:
+1. `hstate : absState'' y = ⟨y.ctl, abs'' y⟩ := rfl` で開く
+2. `simp only [tickFun, hmode]`
+3. `rw [if_pos hrem]`
+4. `habs : abs'' (copyVm a y) = {abs'' y with fpp := copyOneFun (abs'' y).fpp}` を
+   `abs'_copyVm` と新しい `absR_copyVm` から作る
+5. `show _ = ⟨y.ctl, abs'' (copyVm a y)⟩` で右辺を開いてから `rw [habs]; rfl`
+
+`absR_copyVm`（新規、標準公理のみ）は「**駐車した右ヘッドは copy を感知しない**」:
+`bankTick_phys hinj workOps .replay` が `workOps .replay = .keep` を通して `rval` の
+不変を与え、`right` / `pending` / `ctl` は `copyVm` が触らない。
+
+教訓の再確認: 「無い」と書く前に `PalPeg/Local*.lean` を読む。
+
+## n325（2026-09-21）: 最後の報告点の後の tick にも局所後継ができた。抽象局所層への仮説はゼロ
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リストは不変（義務 1 本）、`unconditional` は付け替えていない。局所経路の消費者（`ShadowedLocalFinal.given_physicalMachine`、旧名 `given_openModesAndPhysicalMachine`）から `hplateauNext` が消え、**抽象局所層に対する存在仮説は無くなった**。残っているのは物理機械の仮説（`htape`／`Enc`／`hencInit`／`hforwardTick`／`hforwardFeed`／`hencRep`／`hencOut`／`PhysFrozen`／`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`）と、供給できる側条件（`hfirst`／`hq`／`hor`／`hres`／`hChainVerifierSupply`、今回足した `0 < q`／`first ≠ 7`／`first ≠ 8`。実例 `0 1 0` では成立）。ActRule は未着手。 |
+
+**状態: 全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。**
+
+**何を証明したか**: 最後の文字の後、その文字の窓が終わるまで局所層は tick し続けるが、trace は最後の報告点で止まる。その先の抽象 tick は**存在**を示さないと ghost が止まって物理機械との対応が切れる。
+* 新モジュール `PlateauInvariant`: `PlateauInv w x`（1 tick で閉じた不変量: scan、非 replay、`1 ≤ clock`、`¬restartGuardVM`、`position right = 2|w|−1`、`MInv`、`SoundScanNR`、`InvLPS` の origin からの `StepsIMWC`／`ShapedSteps`、切断の事実 `AllCanonical`／`ChainLastCan`／`replay = reset`／`SpanRep`／`0 ≤ radius`）、`plateauStep`（`∃ y, Tick ∧ Canonical ∧ (PlateauInv y ∨ 2|w| ≤ position y.right)`）、`plateauCompare`、`replayReset_of_plateauTick`。count tick は `backgroundS_exists`＋`Tick.scan_count`（`OracleRun.scanBackground_run_all` の帰納段と同じ組み方、`restartGuard_background` で guard が無いまま）、compare は `scanCompare_cases`、fallback の canonical な着地は `CanonicalFallbackInput.begin_at_mismatch`。**oracle の readiness の葉は `m := |w|`、`hmle := le_rfl` で最後の報告点にもそのまま当てはまる**（境界は `position ≤ 2m−1` と `position+1 < |encoded w|`、等号で通る）。
+* `ShadowedLocalFinal`: `postPhase := PlateauInv … (absSC m) ∨ frozenAt w m`。`plateauInv_of_lastReport`（入口。n324 の 4 番目の連言＝各 checkpoint での oracle の不変量と、trace の事実 `countersCanonical_trace`／`FrontPack.rest`／`spanRepOnScanAndShift_alongTrace`／`radLedger_pt`）、`plateauNext`（`nextOK_ghostOf` に `r = 0`・`parked := y.vm.right`。plateau では `replay = reset` が保たれるので駐車形は自明）、`plateau_of_nextOK`（`chosenStep` の抽象は `GalilTickFair.tick_canonical_unique` で一致）。`given_shadowedLocalSystem` の `hpostOfLastReport` は oracle の不変量を受け取る。
+* 片付け: `ReportPhase` は読む者がいなくなったのでモジュールごと削除（`position_right_of_atLast` は `PlateauInvariant` へ移動）。消費者の名前を実態に合わせて `given_physicalMachine` に変えた。
+* 進め方: 同じ goal で 2 回接続ゼロが続いた時点で、設計を足すのをやめて「いちばん危ない 1 点」（葉の量化範囲が最後の報告点に届くか）をスクラッチで機械検査した。そこから 5 定理が全部一発で通った。
+
+**投入時に残したコピペ（次に片付ける）**: `plateauCompare`／`plateauStep` の前置き（pack、`rightHead_of_packs`、`canRight_of_bound`）と chain の readiness の導出は `OracleRun.scanCycle_of_leaves`／`OracleReady.cycleOracleOn_of_readyLeaves` の中の `have` と同じ形。名前付き補題に切り出して両方から使う。
+
+**次**: 物理機械。`Enc`・`PhysFrozen` の具体化と ActRule の分岐（`ActRule → compStep → LocalStep.realize`）。n304 の 3 義務（P1: L／C テープが fallback 相で R まで歩く、P2: reset 後の junk を読まない、P3: replayStart の鏡テープの役割交代）。
+
+## n323（2026-09-21）: 開いていたモード `scan` に局所後継ができた。仮説 `hscanNext` を消費者から外した
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リストは不変（義務 1 本）、`unconditional` は付け替えていない。局所経路の消費者 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` の仮説から `hscanNext` が消えた。抽象局所層に残る仮説は `hplateauNext` だけ。物理機械の仮説（`htape`／`Enc`／`hencInit`／`hforwardTick`／`hforwardFeed`／`hencRep`／`hencOut`／`PhysFrozen` 系 3 本）と ActRule は未着手。 |
+
+**状態: 全体 build 成功（`BUILD=0`、error 0、sorry 0。`GalilFrontier` を触ったので木全体を再 build）・標準公理のみ・無条件 PAL は未完。**
+
+**何を証明したか**: 定理 `ShadowedLocalFinal.scanNext`。追跡されている scan 状態 `m` の tick target が「trace の次状態を、到着済みの文字まで truncation したもの」であるとき、`NextOK` を満たす局所後継がある。後継は源 `m` から計算せず、target の**切断**（`GhostSection.ghostOf`）として作る。抽象局所層は証明の ghost なので非局所でよい（n304）。
+* 道筋（n316 の道 A）。消費者の型から読んで仮説を順に弱めた: n318（target の正体と `Canonical` を `Hloc` が受け取る）、n319（`NextOK` から `Post` 節を削除、`ReportPhase.reportPhase_tick`）、n320–n322（極性は読む者のモードでだけ求める。`localGood := mode ≠ scan → PolWF`、`PolWF` の `remaining`／`cycle` は shift、`fppWork` は copy。replay commit は `length`／`work` の極性を自分で立てる）。
+* 新モジュール 4 本（全部 `scanNext` が消費。`ShadowedLocalFinal` の import から `Workbench` 経由でルートに届く）:
+  - `GhostSection`: `ghostOf roles background c t parked`（ヘッドは `viewOfHead`、カウンタの銀行は `Function.extend roles …`、鏡は `mirrorOfTape`、バッファは `⟨tapes, tapes, true, none⟩`、walker は `viewOfPlace`）、`absState''_ghostOf`（カウンタが `Canonical`、`replay = ofNat r`、`right = left^[r] parked`、非 replay なら `r = 0` の下で `absState'' = ⟨c, t⟩`）、`physWF_ghostOf`（`PhysWF` ∧ `MirInv1`）、`polOf_of_nonneg`。`ctrOf` 系 6 宣言と `viewOfPlace` 系 3 宣言は旧 encoder `CloseoutCoreEnc2` から**移動**し、旧側は `export` で名前を保つ（`CloseoutCoreEnc2` は消費者の import 閉包に入っていなかった）。
+  - `CountersCanonicalTrace`: 抽象が読むカウンタ 10 本は trace の全点で `Canonical`（`allCanonical_tick`、restart が `last` を `radius` に写すので chain 側の `ChainLastCan` も運ぶ）。
+  - `ParkedRight`: `ParkedRight s := ∃ r parked, replay = ofNat r ∧ right = left^[r] parked ∧ r ≤ position parked` が trace の全点で成立。抽象の `right` は右スタックが空なら `incoming` から引くので `left (right p) = p` は一般に偽で、`Frontier` だけでは駐車 view を逆算できない。
+  - `ScanEntrySigns`: `entrySigns_of_scanTick`。源の `SpanRep` と `0 ≤ radius` から、shift の入口（`remaining := ofNat h`、`cycle := reset`、`length += 2`）と copy の入口（`fpp.work := inc length`）の符号。
+* コピペ回避: tick での `(right, replay)` の動きの分類 `RightReplayMove`／`rightReplayMove_of_tick` を `GalilFrontier` に置き、`frontier_tick` をその 4 場合から導く形に直した（120 行 → 25 行）。
+
+**次の goal `hplateauNext`（定義と下流を読んだ。未着手）**: 受理は最後の窓 `((n−1)·L, n·L]` の latch で読まれる（`LocalTrackingLatch.tracking_latch_of_oracles`）ので plateau は高々 `nLocalL` tick だが、その間の抽象 tick の**存在**は要る（止まると `chosenStep` が `m` のままで `TickSucc` が立たない）。存在は `OracleRun.scan_tick_exists_PofC`（`SearchReady` と `ChainReady` から）で、run に沿う部品 `settle`／`scanBackground_run`（前提は `canRight right`、報告点では `gap = false` なので成立）／`scanCompare_cases` が oracle 側に既にある。案: 最後の報告点から右ヘッドが `2n` に出るまでの canonical な run の存在を 1 本立て、`Post` を「その run の上を追跡している」に強める。切断に要る事実は tick の保存補題（`allCanonical_tick`、`parkedRight_tick`、`entrySigns_of_scanTick`）で run に沿って運ぶ。採らなかった案: 報告点で ghost を凍らせる（物理機械が右へ 1 歩進んだ時点で `hencRep` が破れる）、延長語 `w ++ [a]` の trace を追跡させる（下流が `Pof w`／`H_letter` で `w` の frame に固定されていて改造が大きい）。
+
 ## n285 — `obligation_localRealization`: 具体機械の上で enqueue／dequeue 1 回が固定長の微小プログラムになった（`snocRun_sound`／`tailRun_sound`）。公理への接続はまだ無い
 
 **公理への進捗**

@@ -62,8 +62,9 @@ section Lockstep
 variable (S : LocalSys A) (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (repQ outQ : Q → Bool)
   (Inv : List (Fin 2) → ℕ → A → Prop) (Rep : A → Q × (Fin t → STape Γ) → Prop)
 
-/-- **The lockstep run.**  The abstract half of the run of the pair is the abstract run, with
-the same latch and the same started bit, and the physical half represents it. -/
+/-- **The lockstep run.**  The abstract half of the run of the pair is the abstract run, and the
+physical half represents it.  (The latch of the pair reads the physical control; how it relates to
+the abstract report test is the business of `pal_in_peg_of_shadowed_core`.) -/
 theorem micro_shadow (x0 : LX A) (q0 : Q) (w : List (Fin 2))
     (hrepInit : Rep x0.core (q0, fun _ => STape.blankTape blank))
     (hinvInit : Inv w 0 x0.core)
@@ -73,41 +74,27 @@ theorem micro_shadow (x0 : LX A) (q0 : Q) (w : List (Fin 2))
     (hsimTick : ∀ s a p, inp w s = none → Inv w s a → Rep a p →
       Rep (S.tickL a) (L0.apply blank p none))
     (hsimFeed : ∀ s letter a p, inp w s = some letter → Inv w s a → Rep a p →
-      Rep (S.feedC letter a) (L0.apply blank p (some letter)))
-    (hreadRep : ∀ a p, Rep a p → S.repL a = repQ p.1)
-    (hreadOut : ∀ a p, Rep a p → S.outL a = outQ p.1) :
+      Rep (S.feedC letter a) (L0.apply blank p (some letter))) :
     ∀ s, (micro (shadowSys S L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core.1
           = (micro S w x0 s).core ∧
-      (micro (shadowSys S L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).ans
-          = (micro S w x0 s).ans ∧
-      (micro (shadowSys S L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).started
-          = (micro S w x0 s).started ∧
       Inv w s (micro S w x0 s).core ∧
       Rep (micro S w x0 s).core
         (micro (shadowSys S L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core.2
-  | 0 => ⟨rfl, rfl, rfl, hinvInit, hrepInit⟩
+  | 0 => ⟨rfl, hinvInit, hrepInit⟩
   | s + 1 => by
-    obtain ⟨hcore, hans, hstarted, hinv, hrep⟩ := micro_shadow x0 q0 w hrepInit hinvInit hinvTick
-      hinvFeed hsimTick hsimFeed hreadRep hreadOut s
+    obtain ⟨hcore, hinv, hrep⟩ := micro_shadow x0 q0 w hrepInit hinvInit hinvTick
+      hinvFeed hsimTick hsimFeed s
     show (stepL (shadowSys S L0 blank repQ outQ) (inp w s) _).core.1
         = (stepL S (inp w s) _).core ∧
-      (stepL (shadowSys S L0 blank repQ outQ) (inp w s) _).ans = (stepL S (inp w s) _).ans ∧
-      (stepL (shadowSys S L0 blank repQ outQ) (inp w s) _).started
-        = (stepL S (inp w s) _).started ∧
       Inv w (s+1) (stepL S (inp w s) _).core ∧
       Rep (stepL S (inp w s) _).core
         (stepL (shadowSys S L0 blank repQ outQ) (inp w s) _).core.2
     cases hinput : inp w s with
     | none =>
-      have hrepNext := hsimTick s _ _ hinput hinv hrep
-      refine ⟨by show S.tickL _ = S.tickL _; rw [hcore], ?_, hstarted,
-        hinvTick s _ hinput hinv, ?_⟩
-      · show (_ || (repQ (L0.apply blank _ none).1 && outQ (L0.apply blank _ none).1))
-          = (_ || (S.repL (S.tickL _) && S.outL (S.tickL _)))
-        rw [hans, hreadRep _ _ hrepNext, hreadOut _ _ hrepNext]
-      · exact hrepNext
+      exact ⟨by show S.tickL _ = S.tickL _; rw [hcore], hinvTick s _ hinput hinv,
+        hsimTick s _ _ hinput hinv hrep⟩
     | some letter =>
-      refine ⟨by show S.feedC letter _ = S.feedC letter _; rw [hcore], rfl, rfl,
+      exact ⟨by show S.feedC letter _ = S.feedC letter _; rw [hcore],
         hinvFeed s _ _ hinput hinv, hsimFeed s _ _ _ hinput hinv hrep⟩
 
 end Lockstep
@@ -117,104 +104,90 @@ hypotheses on the abstract system are those of `pal_in_peg_of_local_core`; the p
 enters only through the representation relation `Rep`. -/
 theorem pal_in_peg_of_shadowed_core
     [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (S : LocalSys A) (absS : A → State GalilVM) (Inv : List (Fin 2) → ℕ → A → Prop) (x0 : LX A)
+    (S : List (Fin 2) → LocalSys A) (absS : A → State GalilVM) (Inv : List (Fin 2) → ℕ → A → Prop) (x0 : LX A)
     (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ) (firstOf : List (Fin 2) → Fin 9)
-    (delay : ℕ)
     (H_letter : ∀ w : List (Fin 2), (Pof w).onLetter = onLetterVM w)
     (H_first : ∀ w : List (Fin 2), (Pof w).leftFirst = leftFirstVM)
     -- the physical machine and its specification
     (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (q0 : Q) (repQ outQ : Q → Bool) (htape : 0 < t)
-    (Rep : A → Q × (Fin t → STape Γ) → Prop)
-    (hrepInit : Rep x0.core (q0, fun _ => STape.blankTape blank))
-    (hsimTick : ∀ w s a p, inp w s = none → Inv w s a → Rep a p →
-      Rep (S.tickL a) (L0.apply blank p none))
-    (hsimFeed : ∀ w s letter a p, inp w s = some letter → Inv w s a → Rep a p →
-      Rep (S.feedC letter a) (L0.apply blank p (some letter)))
-    (hreadRep : ∀ a p, Rep a p → S.repL a = repQ p.1)
-    (hreadOut : ∀ a p, Rep a p → S.outL a = outQ p.1)
+    (Rep : List (Fin 2) → A → Q × (Fin t → STape Γ) → Prop)
+    (hrepInit : ∀ w, Rep w x0.core (q0, fun _ => STape.blankTape blank))
+    (hsimTick : ∀ w s a p, inp w s = none → Inv w s a → Rep w a p →
+      Rep w ((S w).tickL a) (L0.apply blank p none))
+    (hsimFeed : ∀ w s letter a p, inp w s = some letter → Inv w s a → Rep w a p →
+      Rep w ((S w).feedC letter a) (L0.apply blank p (some letter)))
+    (hreadRep : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep w a p → (S w).repL a = repQ p.1)
+    (hreadOut : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep w a p → ReportPoint w (absS a) →
+      (S w).outL a = outQ p.1)
     -- the abstract system
     (x0_started : x0.started = false)
-    (outL_abs : ∀ a : A, S.outL a = (absS a).ctl.output)
+    (outL_abs : ∀ (w : List (Fin 2)) (a : A), (S w).outL a = (absS a).ctl.output)
     (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
-      S.repL (micro S w x0 s).core = true →
-      ReportPoint w (stAbs S absS w x0 s) ∧
-        Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s))
+      (S w).repL (micro (S w) w x0 s).core = true →
+      ReportPoint w (stAbs (S w) absS w x0 s) ∧
+        Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absS w x0 s))
     (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
-      ReportPoint w (stAbs S absS w x0 s) →
-      Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s) →
-      ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ S.repL (micro S w x0 s').core = true)
+      ReportPoint w (stAbs (S w) absS w x0 s) →
+      Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absS w x0 s) →
+      ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ (S w).repL (micro (S w) w x0 s').core = true)
     (x0_inv : ∀ w, 0 < w.length → Inv w 0 x0.core)
-    (x0_ctl : (absS x0.core).ctl = GalilScaffoldController.initial delay)
-    (inv_tick : ∀ w s a, inp w s = none → Inv w s a → Inv w (s+1) (S.tickL a))
+    (inv_tick : ∀ w s a, inp w s = none → Inv w s a → Inv w (s+1) ((S w).tickL a))
     (inv_feed : ∀ w s letter a, inp w s = some letter → Inv w s a →
-      Inv w (s+1) (S.feedC letter a))
-    (stutter_of_starved : ∀ w s a, inp w s = none → Inv w s a → S.Starved a →
-      absS (S.tickL a) = absS a)
-    (tick_of_not_starved : ∀ w s a, inp w s = none → Inv w s a → ¬ S.Starved a →
-      Tick (galilFrameS (Pof w) (qof w) (firstOf w)) delay (absS a) (absS (S.tickL a)))
-    (feed_abs : ∀ w s letter a, inp w s = some letter → Inv w s a →
-      absS (S.feedC letter a) = arriveState' letter (absS a))
-    (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs S absS w x0)
+      Inv w (s+1) ((S w).feedC letter a))
+    (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs (S w) absS w x0)
       (fun w => w.length * nLocalL)) :
     RecognizedByTotalPEG PAL := by
   have hrun := fun w (hw : 0 < w.length) =>
-    micro_shadow S L0 blank repQ outQ Inv Rep x0 q0 w hrepInit (x0_inv w hw)
-    (inv_tick w) (inv_feed w) (hsimTick w) (hsimFeed w) hreadRep hreadOut
-  have habsOf : ∀ (a : A) (p : Q × (Fin t → STape Γ)), Rep a p →
-      shadowAbs absS outQ (a, p) = absS a := fun a p hrep =>
-    shadowAbs_eq absS outQ (a, p) (by rw [← hreadOut a p hrep, outL_abs])
-  have hstAbs : ∀ w, 0 < w.length → ∀ s,
-      stAbs (shadowSys S L0 blank repQ outQ) (shadowAbs absS outQ) w
-        (shadowInit x0 q0 blank) s = stAbs S absS w x0 s := by
+    micro_shadow (S w) L0 blank repQ outQ Inv (Rep w) x0 q0 w (hrepInit w) (x0_inv w hw)
+    (inv_tick w) (inv_feed w) (hsimTick w) (hsimFeed w)
+  -- the report point does not read the output bit, which is the only thing `shadowAbs` changes
+  have hreportIff : ∀ (w : List (Fin 2)) (x : A × (Q × (Fin t → STape Γ))),
+      ReportPoint w (shadowAbs absS outQ x) ↔ ReportPoint w (absS x.1) := fun w x =>
+    ⟨fun h => ⟨h.notReplaying, h.scanInv, h.centre, h.atLast, h.nonempty⟩,
+      fun h => ⟨h.notReplaying, h.scanInv, h.centre, h.atLast, h.nonempty⟩⟩
+  -- at a report point of the abstract run the two abstractions agree
+  have hstAbsAt : ∀ w, 0 < w.length → ∀ s, ReportPoint w (stAbs (S w) absS w x0 s) →
+      stAbs (shadowSys (S w) L0 blank repQ outQ) (shadowAbs absS outQ) w
+        (shadowInit x0 q0 blank) s = stAbs (S w) absS w x0 s := by
+    intro w hw s hpoint
+    obtain ⟨hcore, hinv, hrep⟩ := hrun w hw s
+    show shadowAbs absS outQ (micro _ w _ s).core = absS (micro (S w) w x0 s).core
+    have habs : shadowAbs absS outQ ((micro (S w) w x0 s).core,
+        (micro (shadowSys (S w) L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core.2)
+          = absS (micro (S w) w x0 s).core :=
+      shadowAbs_eq absS outQ _ (by rw [← hreadOut w s _ _ hinv hrep hpoint, outL_abs w])
+    rw [← habs, ← hcore]
+  have hrepL : ∀ w, 0 < w.length → ∀ s, (shadowSys (S w) L0 blank repQ outQ).repL
+      (micro (shadowSys (S w) L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core
+        = (S w).repL (micro (S w) w x0 s).core := by
     intro w hw s
-    obtain ⟨hcore, -, -, -, hrep⟩ := hrun w hw s
-    show shadowAbs absS outQ (micro _ w _ s).core = absS (micro S w x0 s).core
-    rw [← habsOf _ _ hrep, ← hcore]
-  have hrepL : ∀ w, 0 < w.length → ∀ s, (shadowSys S L0 blank repQ outQ).repL
-      (micro (shadowSys S L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core
-        = S.repL (micro S w x0 s).core := by
-    intro w hw s
-    obtain ⟨-, -, -, -, hrep⟩ := hrun w hw s
-    exact (hreadRep _ _ hrep).symm
-  refine pal_in_peg_of_local_core (shadowSys S L0 blank repQ outQ) (shadowAbs absS outQ)
-    (fun w s x => Inv w s x.1 ∧ Rep x.1 x.2) (shadowInit x0 q0 blank) Pof qof firstOf delay
-    H_letter H_first L0 blank q0 repQ outQ Prod.snd htape (fun _ => rfl) (fun _ _ => rfl)
-    (fun _ => rfl) (fun _ => rfl) rfl x0_started (fun _ => rfl) ?_ ?_
-    (fun w hw => ⟨x0_inv w hw, hrepInit⟩) ?_
-    (fun w s x hinput hx => ⟨inv_tick w s _ hinput hx.1, hsimTick w s _ _ hinput hx.1 hx.2⟩)
-    (fun w s letter x hinput hx =>
-      ⟨inv_feed w s _ _ hinput hx.1, hsimFeed w s _ _ _ hinput hx.1 hx.2⟩) ?_ ?_ ?_ ?_
+    obtain ⟨-, hinv, hrep⟩ := hrun w hw s
+    exact (hreadRep w s _ _ hinv hrep).symm
+  refine pal_in_peg_of_local_core (fun w => shadowSys (S w) L0 blank repQ outQ)
+    (shadowAbs absS outQ) (shadowInit x0 q0 blank) Pof qof firstOf
+    H_letter H_first L0 blank q0 repQ outQ Prod.snd htape (fun _ _ => rfl) (fun _ _ _ => rfl)
+    (fun _ _ => rfl) (fun _ _ => rfl) rfl x0_started (fun _ _ => rfl) ?_ ?_ ?_
   · intro w s hw hlate hreport
-    rw [hstAbs w hw]
-    exact rep_sound w s hw hlate (by rw [← hrepL w hw]; exact hreport)
+    have hghost := rep_sound w s hw hlate (by rw [← hrepL w hw]; exact hreport)
+    rw [hstAbsAt w hw s hghost.1]
+    exact hghost
   · intro w s hw hpoint hrefreshed
-    rw [hstAbs w hw] at hpoint hrefreshed
+    have hpointGhost : ReportPoint w (stAbs (S w) absS w x0 s) := by
+      have h := (hreportIff w _).mp hpoint
+      rw [(hrun w hw s).1] at h
+      exact h
+    rw [hstAbsAt w hw s hpointGhost] at hpoint hrefreshed
     obtain ⟨s', hle, hlate, hreport⟩ := rep_complete w s hw hpoint hrefreshed
     exact ⟨s', hle, hlate, by rw [hrepL w hw]; exact hreport⟩
-  · show (shadowAbs absS outQ (x0.core, (q0, fun _ => STape.blankTape blank))).ctl = _
-    rw [habsOf _ _ hrepInit]
-    exact x0_ctl
-  · intro w s x hinput hx hstarved
-    show shadowAbs absS outQ (S.tickL x.1, L0.apply blank x.2 none) = shadowAbs absS outQ x
-    rw [habsOf _ _ (hsimTick w s _ _ hinput hx.1 hx.2), habsOf x.1 x.2 hx.2]
-    exact stutter_of_starved w s _ hinput hx.1 hstarved
-  · intro w s x hinput hx hstarved
-    show Tick _ delay (shadowAbs absS outQ x)
-      (shadowAbs absS outQ (S.tickL x.1, L0.apply blank x.2 none))
-    rw [habsOf _ _ (hsimTick w s _ _ hinput hx.1 hx.2), habsOf x.1 x.2 hx.2]
-    exact tick_of_not_starved w s _ hinput hx.1 hstarved
-  · intro w s letter x hinput hx
-    show shadowAbs absS outQ (S.feedC letter x.1, L0.apply blank x.2 (some letter))
-      = arriveState' letter (shadowAbs absS outQ x)
-    rw [habsOf _ _ (hsimFeed w s _ _ _ hinput hx.1 hx.2), habsOf x.1 x.2 hx.2]
-    exact feed_abs w s _ _ hinput hx.1
   · intro w hw hpal
-    have hfun : stAbs (shadowSys S L0 blank repQ outQ) (shadowAbs absS outQ) w
-        (shadowInit x0 q0 blank) = stAbs S absS w x0 := funext (hstAbs w hw)
-    show Reported (Pof w) (qof w) (firstOf w) w
-      (stAbs (shadowSys S L0 blank repQ outQ) (shadowAbs absS outQ) w (shadowInit x0 q0 blank)) _
-    rw [hfun]
-    exact H_ledger w hw hpal
+    obtain ⟨t', hle, hpoint, hrefreshed⟩ := H_ledger w hw hpal
+    refine ⟨t', hle, ?_⟩
+    show ReportPoint w (stAbs (shadowSys (S w) L0 blank repQ outQ) (shadowAbs absS outQ) w
+        (shadowInit x0 q0 blank) t') ∧
+      Refreshed (Pof w) (qof w) (firstOf w) (stAbs (shadowSys (S w) L0 blank repQ outQ)
+        (shadowAbs absS outQ) w (shadowInit x0 q0 blank) t')
+    rw [hstAbsAt w hw t' hpoint]
+    exact ⟨hpoint, hrefreshed⟩
 
 #print axioms pal_in_peg_of_shadowed_core
 

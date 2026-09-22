@@ -366,8 +366,6 @@ theorem commitReplayParked_physHead (entry : ℕ) (c : Control) (m : Mirrored1 P
 theorem replayStartVM_commitReplayParked
     {mm : Mirrored1 P} (entry : ℕ) (c : Control)
     (hinj : RolesInjective mm.vm)
-    (hpl : mm.vm.pol Ctr.length = true) (hpw : mm.vm.pol Ctr.work = true)
-    (hclean : ∀ i, LocalBuffers.Cleared (LocalBuffers.idle mm.vm.dpBuf i))
     (hm : MirInv1 mm) (hpre : mm.vm.ctl.replaying = false)
     (hflag : c.replaying = true ∨ LocalCounter.val (mm.vm.phys (mm.vm.roles .radius)) = 0)
     (hland : GalilScaffoldInputHead.left^[LocalCounter.val (mm.vm.phys (mm.vm.roles .radius))]
@@ -378,7 +376,7 @@ theorem replayStartVM_commitReplayParked
     rw [absR_eq_iter (by rcases hflag with h | h; exact Or.inl h; exact Or.inr (hv.trans h)),
       hv, commitReplayParked_physHead]
     exact hland
-  have ha := LocalTick2.abs_commitReplay (entry := entry) hinj hpl hpw hclean
+  have ha := LocalTick2.abs_commitReplay (entry := entry) hinj
   rw [abs''_eq_abs' hpre]
   have hL : absHead' mm.mirL mm.vm.pending = (abs' mm.vm).center := hm.1.absHead' _
   refine ⟨?_, hR, hL, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩

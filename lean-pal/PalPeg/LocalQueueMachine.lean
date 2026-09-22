@@ -344,7 +344,7 @@ The local machine keeps its tapes only up to `TEqG` (same head position, same ce
 `compStep` does not return the literal `STape` term.  Reading a window and applying actions
 respect `TEqG`, so a stack is represented by any tape `TEqG`-equal to its debris tape. -/
 
-theorem teqG_actOnG {blank : Γc} {T T' : STape Γc} (h : TEqG blank T T') (a : Act Γc) :
+theorem teqG_actOnG {Γ : Type} {blank : Γ} {T T' : STape Γ} (h : TEqG blank T T') (a : Act Γ) :
     TEqG blank (actOnG blank T a) (actOnG blank T' a) := by
   cases a with
   | none => exact h
@@ -357,13 +357,14 @@ theorem teqG_actOnG {blank : Γc} {T T' : STape Γc} (h : TEqG blank T T') (a : 
         = rd blank (T'.applyAction blank (written, move)) p
       rw [rd_applyAction, rd_applyAction, h.1, h.2 p]
 
-theorem teqG_actList {blank : Γc} {T T' : STape Γc} (h : TEqG blank T T') (acts : List (Act Γc)) :
+theorem teqG_actList {Γ : Type} {blank : Γ} {T T' : STape Γ} (h : TEqG blank T T')
+    (acts : List (Act Γ)) :
     TEqG blank (actList blank T acts) (actList blank T' acts) := by
   induction acts generalizing T T' with
   | nil => exact h
   | cons a rest ih => exact ih (teqG_actOnG h a)
 
-theorem readWin_teqG {blank : Γc} {K : ℕ} {T T' : STape Γc} (h : TEqG blank T T') :
+theorem readWin_teqG {Γ : Type} {blank : Γ} {K : ℕ} {T T' : STape Γ} (h : TEqG blank T T') :
     readWin blank K T = readWin blank K T' := by
   funext i
   rw [readWin_eq, readWin_eq, h.1, h.2]
@@ -554,9 +555,10 @@ theorem queueViewOfWindows_eq (hK : 1 ≤ K) {q : Queue (Fin 2)} {control : Queu
 `compStep_apply`, the next control is the control of the sub-step, and any tapes `TEqG`-equal to
 the rule's actions on the old tapes represent the queue after the sub-step.  Stated on `nq` and
 `acts`, so that a machine which runs this rule on some of its tapes can use it as it is. -/
-theorem queueRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : QueueControl}
-    {tapes : Fin 8 → STape Γc} (hrep : QueueRep K q control tapes) (input : Option Terminal) :
-    (∀ tape : Fin 8, K ≤ pos (tapes tape)) ∧
+theorem queueRule_sound (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    {q : Queue (Fin 2)} {control : QueueControl}
+    {tapes : Fin 8 → STape Γc} (hrep : QueueRep margin q control tapes) (input : Option Terminal) :
+    (∀ tape : Fin 8, margin ≤ pos (tapes tape)) ∧
       (queueRule Terminal hK).nq control input (fun tape => readWin blankc K (tapes tape))
         = (control.1, tagStep control.1 q control.2.1,
           rotationPhase (sApply control.1 q).state) ∧
@@ -566,13 +568,13 @@ theorem queueRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : QueueContr
             ((queueRule Terminal hK).acts control input
               (fun tape => readWin blankc K (tapes tape)) tape))
           (tapes' tape)) →
-        QueueRep K (sApply control.1 q)
+        QueueRep margin (sApply control.1 q)
           (control.1, tagStep control.1 q control.2.1,
             rotationPhase (sApply control.1 q).state) tapes' := by
   obtain ⟨stack, junk, bottom, hphase, hlays, hheight, htapes, hsealed, hbottom, hcounter⟩ := hrep
-  obtain ⟨hzero, hview⟩ := queueViewOfWindows_eq (by omega) hphase hlays hheight htapes hsealed
-    hbottom hcounter
-  have hstackHeight : ∀ tape : Fin 8, tape.val < 7 → K ≤ (stack tape.val).length := by
+  obtain ⟨hzero, hview⟩ := queueViewOfWindows_eq (by omega) hphase hlays
+    (fun i => hmarginLe.trans (hheight i)) htapes hsealed (hmarginLe.trans hbottom) hcounter
+  have hstackHeight : ∀ tape : Fin 8, tape.val < 7 → margin ≤ (stack tape.val).length := by
     intro tape htape
     obtain ⟨ro, hro⟩ := roleOf_surjective control.2.1 ⟨tape.val, htape⟩
     have hrole : roleOf control.2.1 ro = tape.val := hro
@@ -580,7 +582,7 @@ theorem queueRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : QueueContr
     have := hheight (roleOf control.2.1 ro)
     simp only [List.length_append]
     omega
-  have hmargin : ∀ tape : Fin 8, K ≤ pos (tapes tape) := by
+  have hmargin : ∀ tape : Fin 8, margin ≤ pos (tapes tape) := by
     intro tape
     by_cases htape : tape.val < 7
     · rw [(htapes tape htape).pos_eq]
@@ -614,7 +616,7 @@ theorem queueRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : QueueContr
             (topSym (stack tape.val)) := by
         show (if tape.val < 7 then _ else _) = _
         rw [if_pos htape, hview, ← deltaOf_eq_view, ← sealRoleOf_eq_view,
-          (htapes tape htape).centreSym_eq (hstackHeight tape htape)]
+          (htapes tape htape).centreSym_eq (hmarginLe.trans (hstackHeight tape htape))]
       rw [hactsEq]
       exact (htapes tape htape).cellApply _ _
     · refine StackTape.of_teqG ?_ (hacts validTape)
@@ -634,14 +636,15 @@ theorem queueRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : QueueContr
       exact hcounter.cellApply _ _
 
 /-- **One step of the local machine is one sub-step of the queue.** -/
-theorem queueRep_step (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : QueueControl}
-    {tapes : Fin 8 → STape Γc} (hrep : QueueRep K q control tapes) (input : Option Terminal) :
-    QueueRep K (sApply control.1 q)
+theorem queueRep_step (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    {q : Queue (Fin 2)} {control : QueueControl}
+    {tapes : Fin 8 → STape Γc} (hrep : QueueRep margin q control tapes) (input : Option Terminal) :
+    QueueRep margin (sApply control.1 q)
       ((queueLocalStep Terminal hK).apply blankc (control, tapes) input).1
       ((queueLocalStep Terminal hK).apply blankc (control, tapes) input).2 := by
-  obtain ⟨hmargin, hnq, hsound⟩ := queueRule_sound (Terminal := Terminal) hK hrep input
+  obtain ⟨hmargin, hnq, hsound⟩ := queueRule_sound (Terminal := Terminal) hK hmarginLe hrep input
   obtain ⟨hcontrol, hacts⟩ := compStep_apply (queueRule Terminal hK) blankc (control, tapes) input
-    hmargin
+    (fun tape => hmarginLe.trans (hmargin tape))
   have hcontrol' : ((queueLocalStep Terminal hK).apply blankc (control, tapes) input).1
       = (control.1, tagStep control.1 q control.2.1,
         rotationPhase (sApply control.1 q).state) := hcontrol.trans hnq

@@ -310,15 +310,16 @@ theorem topLetter_marks_isSome {marks : List (Fin 2)} {bottom : List (Option (Fi
 facts of the Hood–Melville invariant, each asked only of the micro-operation that needs it;
 `howed` and `hnoStart` are facts of the micro-program (a rotation step runs with nothing owed; a
 rotation is started by `checkStart` only). -/
-theorem microRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : MicroControl}
-    {tapes : Fin 10 → STape Γc} (hrep : MicroRep K q control tapes) (input : Option Terminal)
+theorem microRule_sound (hK : 2 ≤ K) {margin : ℕ} (hmarginLe : K ≤ margin)
+    {q : Queue (Fin 2)} {control : MicroControl}
+    {tapes : Fin 10 → STape Γc} (hrep : MicroRep margin q control tapes) (input : Option Terminal)
     (hfront : control.1 = .sub .tailPop → q.front ≠ [] → 1 ≤ q.lenf)
     (hstart : control.1 = .checkStart → q.state = .idle → ¬ q.lenr ≤ q.lenf →
       q.lenr = q.front.length + 1)
     (hrot : control.1 = .checkStart → q.lenf < q.lenr → q.state = .idle)
     (howed : control.1 ≠ .incLength → control.2.2.2 = 0)
     (hnoStart : control.1 ≠ .sub .rotStart) :
-    (∀ tape : Fin 10, K ≤ pos (tapes tape)) ∧
+    (∀ tape : Fin 10, margin ≤ pos (tapes tape)) ∧
       (microRule Terminal hK).nq control input (fun tape => readWin blankc K (tapes tape))
         = microControlAfter control q ∧
       ∀ tapes' : Fin 10 → STape Γc,
@@ -327,7 +328,7 @@ theorem microRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : MicroContr
             ((microRule Terminal hK).acts control input
               (fun tape => readWin blankc K (tapes tape)) tape))
           (tapes' tape)) →
-        MicroRep K (microApply control.1 q) (microControlAfter control q) tapes' := by
+        MicroRep margin (microApply control.1 q) (microControlAfter control q) tapes' := by
   obtain ⟨hqueue, counter, positiveBottom, negativeBottom, hlength, hsealedP, hheightP, htapeP,
     hsealedN, hheightN, htapeN⟩ := hrep
   let windows : Fin 10 → Window Γc K := fun tape => readWin blankc K (tapes tape)
@@ -337,7 +338,8 @@ theorem microRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : MicroContr
   have hview : ruleView control windows = queueView q := by
     obtain ⟨stack, junk, bottom, hphase, hlays, hheight, htapes, hsealed, hbottom,
       hcounterTape⟩ := hqueue
-    exact (queueViewOfWindows_eq (K := K) (by omega) hphase hlays hheight htapes hsealed hbottom
+    exact (queueViewOfWindows_eq (K := K) (by omega) hphase hlays
+      (fun i => hmarginLe.trans (hheight i)) htapes hsealed (hmarginLe.trans hbottom)
       hcounterTape).2
   have hphase : control.2.2.1 = rotationPhase q.state := by
     obtain ⟨stack, junk, bottom, hphase, -⟩ := hqueue
@@ -396,19 +398,21 @@ theorem microRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : MicroContr
         rw [hphase, hidle, hsign.mp hnegative]
         rfl
   -- the margins
-  obtain ⟨hqueueMargin, -, -⟩ := queueRule_sound (Terminal := Terminal) hK hqueue input
-  have hmargin : ∀ tape : Fin 10, K ≤ pos (tapes tape) := by
+  obtain ⟨hqueueMargin, -, -⟩ := queueRule_sound (Terminal := Terminal) hK hmarginLe hqueue input
+  have hmargin : ∀ tape : Fin 10, margin ≤ pos (tapes tape) := by
     intro tape
     by_cases htape : tape.val < 8
     · exact hqueueMargin ⟨tape.val, htape⟩
     · by_cases hpositive : tape = positiveTape
-      · rw [hpositive, htapeP.pos_eq]; exact hpositiveHeight
+      · rw [hpositive, htapeP.pos_eq]
+        simp only [List.length_append]; omega
       · have hnegative : tape = negativeTape := by
           apply Fin.ext
           have hne : tape.val ≠ 8 := fun h => hpositive (Fin.ext h)
           show tape.val = 9
           omega
-        rw [hnegative, htapeN.pos_eq]; exact hnegativeHeight
+        rw [hnegative, htapeN.pos_eq]
+        simp only [List.length_append]; omega
   have howedZero : control.1 ≠ .incLength → LengthCounter q counter := by
     intro hne
     rw [howed hne] at hlength
@@ -421,15 +425,15 @@ theorem microRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : MicroContr
       rw [microRule_nq_none hK control input windows (hop.trans hab), hview]
     | some op =>
       rw [microRule_nq_some hK control input windows (hop.trans hab), hview, hwindows]
-      have hq : QueueRep K q (op, control.2.1, control.2.2.1) queueTapes := hqueue
-      obtain ⟨-, hnq, -⟩ := queueRule_sound (Terminal := Terminal) hK hq input
+      have hq : QueueRep margin q (op, control.2.1, control.2.2.1) queueTapes := hqueue
+      obtain ⟨-, hnq, -⟩ := queueRule_sound (Terminal := Terminal) hK hmarginLe hq input
       rw [hnq]
   · intro tapes' hacts
     unfold microApply microControlAfter
     cases hab : abstractOp control.1 q with
     | none =>
       -- the queue tapes are kept, the length counter may take one increment
-      show MicroRep K q (control.1, control.2.1, control.2.2.1,
+      show MicroRep margin q (control.1, control.2.1, control.2.2.1,
         owedAfter control.1 none (queueView q) control.2.2.2) tapes'
       have hruleNone := hop.trans hab
       refine ⟨QueueRep.of_teqG hqueue (fun tape => ?_), ?_⟩
@@ -506,7 +510,7 @@ theorem microRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : MicroContr
           exact ⟨counter, positiveBottom, negativeBottom, hlength, hsealedP, hheightP,
             htapeP.of_teqG hP, hsealedN, hheightN, htapeN.of_teqG hN⟩
     | some op =>
-      show MicroRep K (sApply op q) (control.1, tagStep op q control.2.1,
+      show MicroRep margin (sApply op q) (control.1, tagStep op q control.2.1,
         rotationPhase (sApply op q).state,
         owedAfter control.1 (some op) (queueView q) control.2.2.2) tapes'
       have hruleSome := hop.trans hab
@@ -515,8 +519,8 @@ theorem microRule_sound (hK : 2 ≤ K) {q : Queue (Fin 2)} {control : MicroContr
         rw [hmicro] at hab
         cases hab
       have hcounter := howedZero hnotInc
-      have hq : QueueRep K q (op, control.2.1, control.2.2.1) queueTapes := hqueue
-      obtain ⟨-, -, hsound⟩ := queueRule_sound (Terminal := Terminal) hK hq input
+      have hq : QueueRep margin q (op, control.2.1, control.2.2.1) queueTapes := hqueue
+      obtain ⟨-, -, hsound⟩ := queueRule_sound (Terminal := Terminal) hK hmarginLe hq input
       have hqueue' := hsound (fun tape => tapes' (Fin.castLE (by omega) tape)) (fun tape => by
         have h := hacts (Fin.castLE (by omega) tape)
         rw [microRule_acts_queue, hruleSome] at h

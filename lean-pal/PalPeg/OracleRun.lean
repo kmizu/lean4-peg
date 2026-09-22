@@ -472,7 +472,8 @@ theorem scanCycle_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre place 
       y.ctl.mode = .scan → restartGuardVM y.vm → ∀ t : GalilVM, restartVM entry y.vm t →
       ∃ (Rad : ℕ) (last : Counter), Restarted w t Rad last ∧ StageEntry Rad last) :
     PalPeg.CloseoutCheckW.CycleOutOn centre place entry q first
-      (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) (OracleTick entry) w m c s ∨
+      (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) (OracleTick entry)
+      (PalPeg.CloseoutCheckW.ReportOnPackedRun centre place entry q first) w m c s ∨
     (position s.right < 2 * m - 1 ∧ ∃ t : GalilVM,
       StepsAllR (galilFrameS (PofC centre place entry w) q first) 2048 (SoundScanNR w) (OracleTick entry w)
         (c.clock - 1) ⟨c, s⟩ ⟨{c with clock := 1}, t⟩ ∧
@@ -508,7 +509,9 @@ theorem scanCycle_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre place 
         fun i hi => absurd hi (Nat.not_lt_zero _), fun _ _ => hpack⟩
     have hrp : PalPeg.GalilReportPrefix.ReportPointAt w m ⟨c, s⟩ :=
       ⟨hr, ⟨rad, hsi⟩, hminvS, hat, hm1, hmle⟩
-    refine ⟨⟨c, s⟩, 0, [], hstI0, costedRun_nil s, hrp, hf, fun _ => ⟨c, s, 0, [], hstI0,
+    refine ⟨⟨c, s⟩, 0, [], hstI0, costedRun_nil s, hrp, hf,
+      ⟨hm, ⟨hm, hr⟩, hf, hminvS, hnoGuardS, c₀, r₀, j, hI₀, hBoot, hrun, jS, hsh⟩,
+      fun _ => ⟨c, s, 0, [], hstI0,
       costedRun_nil s, ⟨⟨hm, hr⟩, hf, hminvS, hnoGuardS, c₀, r₀, j, hI₀, hBoot, hrun, jS, hsh⟩, by omega⟩⟩
   have hlt : position s.right < 2 * m - 1 := lt_of_le_of_ne hp hat
   -- the background ticks
@@ -632,7 +635,7 @@ theorem scanCycle_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre place 
           fun i hi => absurd hi (Nat.not_lt_zero _), fun _ _ => hpack'⟩
       have hrp : PalPeg.GalilReportPrefix.ReportPointAt w m ⟨c', s''⟩ :=
         ⟨rfl, ⟨rad + 1, hsi''⟩, hminv', hat', hm1, hmle⟩
-      exact ⟨⟨c', s''⟩, _, _, hstI, hcr, hrp, hf', fun _ => ⟨c', s'', 0, [], hstI0,
+      exact ⟨⟨c', s''⟩, _, _, hstI, hcr, hrp, hf', ⟨hI'.1.1, hI'⟩, fun _ => ⟨c', s'', 0, [], hstI0,
         costedRun_nil s'', hI', by omega⟩⟩
     · right
       refine ⟨c', s'', _, _, hstI, hcr, hI', ?_, by omega⟩
@@ -765,7 +768,8 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
         position s'.center = position s.center + (kk + 1 - r) ∧
         fb ≤ 12704 * (kk + 1 - r) + 4012 ∧ replay ≤ 8 * 2048 * (kk + 1 - r)) :
     PalPeg.CloseoutCheckW.CycleOracleOn centre place entry q first
-      (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) (OracleTick entry) w := by
+      (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) (OracleTick entry)
+      (PalPeg.CloseoutCheckW.ReportOnPackedRun centre place entry q first) w := by
   classical
   intro m c s hm1 hmle hI hp
   rcases scanCycle_of_leaves centre place entry q first hP h4 hm1 hmle hI hp hready hchain
@@ -859,7 +863,8 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
       PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first w c' s' →
       position s'.right = position s.right + 1 → position s.center < position s'.center →
       PalPeg.CloseoutCheckW.CycleOutOn centre place entry q first
-        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) (OracleTick entry) w m c s := by
+        (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) (OracleTick entry)
+      (PalPeg.CloseoutCheckW.ReportOnPackedRun centre place entry q first) w m c s := by
     intro c' s' K L hstI hcr hI' hpos' hcen'
     obtain ⟨⟨hm', hr'⟩, hf', hminv', -, c₀', r₀', j', hI₀', hBoot', hrun', jS', hsh'⟩ := id hI'
     have hpack' : IPackMW centre place entry q first w ⟨c', s'⟩ :=
@@ -877,7 +882,7 @@ theorem cycleOracleOn_of_leaves {w : List (Fin 2)} (hP : Decodes (PofC centre pl
           fun i hi => absurd hi (Nat.not_lt_zero _), fun _ _ => hpack'⟩
       have hrp : PalPeg.GalilReportPrefix.ReportPointAt w m ⟨c', s'⟩ :=
         ⟨hr', ⟨rad', hsi'⟩, hminv', hat', hm1, hmle⟩
-      exact ⟨⟨c', s'⟩, K, L, hstI, hcr, hrp, hf', fun _ => ⟨c', s', 0, [], hstI0,
+      exact ⟨⟨c', s'⟩, K, L, hstI, hcr, hrp, hf', ⟨hI'.1.1, hI'⟩, fun _ => ⟨c', s', 0, [], hstI0,
         costedRun_nil s', hI', by omega⟩⟩
     · right
       refine ⟨c', s', K, L, hstI, hcr, hI', ?_, by omega⟩
@@ -1354,7 +1359,8 @@ theorem cycleOracleOn_of_fourLeaves {w : List (Fin 2)} (hP : Decodes (PofC centr
         position s'.center = position s.center + (kk + 1 - r) ∧
         fb ≤ 12704 * (kk + 1 - r) + 4012 ∧ replay ≤ 8 * 2048 * (kk + 1 - r)) :
     PalPeg.CloseoutCheckW.CycleOracleOn centre place entry q first
-      (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) (OracleTick entry) w :=
+      (PalPeg.CloseoutCheckW.ScanOnPackedRunFromInvLPS centre place entry q first) (OracleTick entry)
+      (PalPeg.CloseoutCheckW.ReportOnPackedRun centre place entry q first) w :=
   cycleOracleOn_of_leaves centre place entry q first hP h4 hready hchain hrestartStage
     (fun c₀ r₀ k c s vq z u m hm1 hmle hI₀ hBoot hrun hnoGuardS hm hr hc hp hminvS hmis hq hz hg hb
         htick =>

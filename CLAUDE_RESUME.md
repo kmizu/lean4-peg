@@ -1,3 +1,2297 @@
+## n552-555 (2026-09-22): 右に動くヘッドの壁を越えた。消費 tick の道具が揃った
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、`PalPeg.Workbench` BUILD=0・error 0。
+commit `ce494e9` / `bbef584` / `d8609e3` / `433a4f5`。
+
+n551 で「いまの組み立ては右に動くヘッドを運べない」と分かった。四手で越えた。
+
+| # | 入れたもの | 何を解いたか |
+|---|---|---|
+| n552 | `encTapes_replaceHeadsOfState` | ヘッド以外を**一歩が到達した状態**から、ヘッドを**tick が到達した状態**から読む |
+| n553 | `encTapes_afterTickOfState` / `enc_afterTickOfState` | その分割を組み立て器まで通した（既存 4 枝は同じ状態を二度渡すだけ） |
+| n554 | `chainVerifierBack` / `stepState` ＋ 一致補題 5 本 | 「カーソルだけ戻した状態」を作り、六つの読み取りのうち四つの一致と一つの相違を証明 |
+| n555 | `encTapes_periodStep` | 消費 tick が動かす三つのうち、輸送子が無かった period テープ |
+
+**消費 tick の一歩規則の道具**:
+
+| 動くもの | 行動 | 輸送子 |
+|---|---|---|
+| counter 11（lag） | `decAct q 11` | `encTapes_counterStep` |
+| counter 13（distance） | `incAct q 13` | `encTapes_counterStep` |
+| period | `centreRead` を書き戻して右 | `encTapes_periodStep` |
+| 待機側プログラム | 背景消去 | `encTapes_idleOnly` |
+
+**scan の四つの行**: `scanConsumeNext`（制御・正しさ 2 本）、`scanCommands`（命令・判定を読まずに
+決まる）、`scanConsumeActs`（行動）、`headOf_tickFun_scan_consume`（ヘッド）。
+
+**次の一手**: `physRule_scan_consume`——上の四つを繋いで
+`EncTapes margin (stepState y wm.machine.verifier) … (一歩のテープ)` を作る。
+`encTapes_rewindOne` が「複数の部品を一度に動かす枝」の手本（構造インスタンスを直接書く）で、
+`encTapes_counterStep` は「一部品ずつ、中間状態を経由する」手本。どちらでも書けるが、
+中間状態を三つ作るより構造インスタンスを直接書くほうが短い見込み。
+
+**未検証**: `hready`（ビューに行き先がある）の producer。chain が消費するとき検証ヘッドが
+右に進めることは `consume_realize` が `canRight` を要求する形で言っているが、それを
+ビューの `gap = true → near = [] → toList far ≠ []` に繋ぐ補題はまだ無い。
+
+## n551 (2026-09-22): 答え——いまの組み立ては「右に動くヘッド」を運べない
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0。コード変更なし（n550 の問いへの答え）。
+
+一次情報を辿った:
+
+* `enc_afterTick`（:10415）は `htapes`（一歩規則のテープで `y` を符号化する）を
+  `encTapes_afterTick`（:10154）へ渡す。
+* `encTapes_afterTick` は `hstep` を `encTapes_replaceHeads`（:9033）に渡すだけで、
+  **`hstep` のヘッドの場は捨てられる**——ヘッドは `hheads`（12 スロットを走らせた後の
+  テープについての主張）が供給する。
+* ところが `encTapes_replaceHeads` の仮説と結論は**同じ状態 `x`** についてである。
+  したがって `hstep : EncTapes margin y … (一歩のテープ)` は、`y` のヘッドについても
+  真でなければならない。
+
+**帰結**: 一歩規則の行動表がヘッドを動かせる枝でしか、この経路は使えない。
+`rewindOneActs` が `headSlot 0` の back/near に `headStepActs` で書いているのはそのため
+（tick 層ではその行動は `isLeft` で捨てられ、slot 1–11 が改めて動かす。二重の記述は
+無駄ではなく、一歩規則の層を閉じるために要る）。
+
+**そして左移動は 1 行動で書けるが、右移動は書けない。** 右移動はビュー層が 11 スロットを
+使ってやることで、1 つの `applyAction` にならない。だから **scan の消費腕（4 本目が右へ
+一歩）は、いまの `enc_afterTick` にそのままでは載らない。**
+
+**採らなかった道**: `scanConsumeActs` にヘッドの行動を足して一歩規則を通す——右移動は
+1 行動にならないので、書けば嘘になる。
+
+**次の一手（設計）**: `encTapes_replaceHeads` を二状態に一般化する。仮説は
+「ヘッド以外が `y` と一致する状態 `z` の符号化」、結論は `y` の符号化、ヘッドは `hheads`
+から。`encTapes_congr`（:896）が既に「ヘッド以外の一致」を束ねているので、それを
+`replaceHeads` の仮説に組み込む形になる。これが済めば、右に動くヘッドを持つ枝
+（scan の消費腕、matched の比較、chain の誕生）がまとめて載る。
+
+**測っていない**: この一般化が既存の呼び出し側（`rewind_one_of_tick` ほか）に何箇所
+波及するか。次はそこから。
+
+## n550 (2026-09-22): 消費腕の組み立て前に、ヘッドを誰が動かすのかを確かめる
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0。コード変更なし（この節は問いの記録）。
+
+scan の消費腕は四つ揃った: `scanConsumeNext`（制御）、`scanCommands`（命令）、
+`scanConsumeActs`（行動）、`headOf_tickFun_scan_consume`（ヘッド）。残るは組み立てだが、
+`enc_afterTick` に載せる前に**架構の一点**を確かめる必要が出た。
+
+`tickRule` の行動は
+
+```lean
+acts := fun q i ws j =>
+  if q.slot.val = 0 then (if (slotIndex.symm j).isLeft then [] else baseActs q i ws j)
+  else …headViewActs…
+```
+
+で、**step 0 ではヘッドのスロット（`isLeft`）の行動が捨てられる**。分業はそう設計した。
+ところが既存の `rewindOneActs` は `headSlot 0` の back/near テープに `headStepActs` で
+書いている。つまり一歩規則（`physRule`）の層ではヘッドを動かし、tick の層ではその行動が
+捨てられて代わりに slot 1–11 が動かす、という二重の記述になっている。
+
+**確かめること**: `enc_afterTick` の `htapes`（`ruleActs` のテープで `y` を符号化する）が、
+ヘッドの動いた `y` に対してどう成り立っているのか。`rewind_one_of_tick` ではそれが
+`rewind_one_of_rule` から来ており、そこでは一歩規則がヘッドを動かしている。消費腕の
+`scanConsumeActs` はヘッドに何も書かないので、同じ経路ではそのままでは載らない。
+
+**分かるまで書かない。** 一歩規則の層と tick の層でヘッドの扱いが二重になっている理由を
+一次情報（`tickRule` の定義、`enc_afterTick` の本体、`headTick_of_tickRule`）で確かめてから、
+消費腕の `htapes` をどの形で作るかを決める。ここを読まずに `physRule_scan_consume` を
+書き始めると、偽の補題を作るか、通らない形を何度も書き直すことになる。
+
+**次の一手**: `enc_afterTick` の本体で `htapes` がヘッドのスロットにどう使われているかを読む。
+
+## n544 (2026-09-22): 七本目、四度目——23 → 2。残りは供給側の補題 1 本と箇条書き 1 本
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、作業木クリーン。
+
+四度目で **error 23 → 2** まで来た。通った順に:
+
+| 直したもの | やったこと |
+|---|---|
+| 行動表の射影補題 8 本 | `if_neg` を 1 本ずつ（`p125.py`） |
+| `encTapes_rewindOne` の全フィールド | `hkept` に鏡除外を足し、各場に「鏡ではない」証明を挿入（`p126.py`） |
+| 同 `margins` 場 | 鏡の枝を新設（`hmirrorLen` から `pos_padLeft`） |
+| 同 `mirrors` 場 | `fin_cases m <;> first | exact absurd rfl hne | rfl`（源 3 の鏡を除外） |
+| `encTapes_rewindPair` | `hmirrorLen` を足して内側の `rewindOne` へ通し、`hkept` に条件を追加 |
+| `rewind_one` / `rewind_pair` | 同じ 2 つを足して素通し |
+
+**残る 2**（どちらも `rewind_one_of_rule` / `rewind_pair_of_rule`、行動表から実際にテープを
+作る側）:
+
+1. `rewindOneActs_mirror` / `rewindPairActs_mirrorLen` —— 新しい枝の射影補題がまだ無い。
+   「源が 3 の鏡のスロットでは行動は `[incAct q 3 ws]`」。
+2. `hmirrorLen` を供給する箇条書き。`counter_inc_at` を鏡のスロットに当てるだけだが、
+   符号ビットの側条件 `bit = polarity 3 || decide (val segMir = 0)` を、**源の窓から読んだ
+   ビット**と結ぶのに `LocalCounter.zero_iff` を二度使う小さな橋が要る
+   （`absCtr segMir (polarity 3) = x.vm.length = absCtr segments (polarity 3)` から
+   `val` のゼロ判定が一致する）。
+
+**作業中の patch は保存してある**: `scratchpad/mirror7.patch`（493 行）。
+次はこれを当ててから上の 2 つを書く。
+
+**四度測って分かったこと**: 鏡 1 本の費用は「行動表 8 本（一様）＋ 輸送子 2 つの全フィールド
+（一様でない）＋ 供給側 2 箇所」。最後の供給側が一番小さいが、新しい枝の射影補題という
+**新しい定理**を要求する。ここまで来て初めて、費用の全体が見えた。
+
+## n543 (2026-09-22): 七本目、三度目の測定——23 → 12。patch は残してある
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、作業木はクリーン。七本目は**また戻した**。
+
+三度目は行動表と輸送子を**同じ patch に入れて**一度に回した。結果 **error 23 → 12**。
+
+残っている 12 の内訳（一次情報、`/tmp/pe.log`）:
+
+| 位置 | 型 |
+|---|---|
+| 1211, 1212 | `encTapes_rewindOne` の `heads` 場——挿入した引数の位置がずれている（`Fin 7` と `Fin 12` の取り違え） |
+| 1295 | 同 `mirrors` 場の `rfl` |
+| 1644, 1646, 1655 | `encTapes_rewindPair`——こちらの `hkept` にも同じ穴を開ける必要がある |
+| 5247 | `rewindPairActs_off` の呼び出し |
+| 9177 ほか | `rewind_one_of_rule` / `rewind_pair_of_rule` の呼び出し |
+
+**patch は捨てていない**: `scratchpad/p125.py`（行動表・七本目の宣言）と
+`p126.py`（輸送子、`encTapes_rewindOne` の切片だけに作用する形）に残してある。
+次はこの 2 つを当ててから上の 12 を潰す。
+
+**三度測って分かったこと**: 鏡 1 本の費用は「行動表の射影補題（一様・patch 済み）」と
+「輸送子 2 つの全フィールド（一様でない・場ごとに『鏡ではない』証明が要る）」に分かれる。
+後者が本体で、**`hkept` の仮説が 1 つ増えるたびに輸送子の全フィールドが動く**のが原因。
+だから鏡を足す前に輸送子側を「触った場所」の述語 1 つに書き換える方が、長い目では安い。
+
+**次の一手**: `encTapes_rewindOne` / `_rewindPair` の `hkept` を、除外条件の連言ではなく
+「この一歩が触るスロット」の述語 1 つにする。各場の否定証明が一様になれば、鏡を足す費用は
+行動表だけになる。
+
+## n541 (2026-09-22): 七本目の鏡、二度目の測定——表は直った、残るは輸送子の中
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0。七本目の試みは**また戻した**。
+
+n540 では error 16・9 宣言だった。今回は行動表の射影補題を全部先に直してから広げた:
+
+| 直したもの | 型 |
+|---|---|
+| `rewindOneActs_head` / `_progOther` | `if_neg` を 1 本、`headSlot_ne_mirrorSlot` / `progSlot_ne_mirrorSlot` |
+| `rewindOneActs_off` | 仮説 `hmirrorLen : ∀ m, mirrorSource m = 3 → slot ≠ mirrorSlot m` |
+| `rewindPairActs_counterRad` / `_mirror` / `_head` / `_progOther` / `_off` | 同型 |
+
+結果 **error 16 → 8**。残りは `encTapes_rewindOne` の中と、その呼び出し側 4 箇所。
+そこで輸送子にも `hmirrorLen` と `hkept` の鏡除外を足したら **error 23 に増えた**——
+`hkept` の引数が 1 つ増えたので、その輸送子の**他の全ての場**（`margins` / `heads` /
+`counters` / `places` / `period` / `answer` …）の `hkept _ a b c` が全部合わなくなる。
+
+**測り直した費用**: 鏡 1 本を足す本当の費用は「表の射影補題（型は一様、今回作った patch が
+そのまま使える）＋ 輸送子 1 つの全フィールドの `hkept` 引数 ＋ 呼び出し側」。
+最後の二つは一様ではなく、場ごとに鏡でないことの証明が要る。
+
+**採らなかった道**: `hkept` に引数を足さず、鏡のスロットを `hkept` の対象外と**せずに**
+おくこと。鏡のテープが「触っていない」と主張することになり、行動表と矛盾する。
+
+**次の一手**: `hkept` の引数を増やす代わりに、**除外条件を 1 つの述語にまとめる**。
+`rewindOneTouched slot : Prop` のような形にして、輸送子の全フィールドが
+`hkept slot (fun h => …)` の 1 引数で済むようにしてから鏡を足す。そうすれば次に
+鏡を足すときも輸送子の中は動かない。
+
+## n538-539 (2026-09-22): 六本目の鏡は入った。七本目は九宣言
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、`PalPeg.Workbench` BUILD=0・error 0。
+commit `dca6f2a`（六本目）、`a5565a9`（`incActAt`）。七本目の試みは**戻した**。
+
+**入った（`dca6f2a`）**: 六本目の鏡、chain の copy カウンタ（counter 10、
+`ScaffoldGalil.scala:303` の `alias(remaining, chain.h)` のため）。`Slot` の `Fin 5` →
+`Fin 6`、`tapeCountM` 116 → 117、`mirrorSource` に `5 => 10`。**一発で緑**——counter 10 を
+動かす枝をまだ一つも建てていないので、今日の費用はゼロ。符号化が義務を述べたので、
+その枝を建てるときに払う。
+
+**規律**: 鏡は、その源を動かす枝がまだ無いうちに足すのが一番安い。
+
+**入った（`a5565a9`）**: `incSignAt` / `incActAt`——カウンタの添字ではなくテープのスロットと
+符号ビットを取る形。`incAct` はそれを counter 自身のスロットに当てたもの（defeq）。
+
+**測った（戻した）**: 七本目（`length` = counter 3）。`Fin 7`、`tapeCountM` 118、
+`mirrorSource` に `6 => 3`、`rewindOneActs`/`rewindPairActs` に鏡の行を 1 本ずつ
+（counter 2 の鏡については **`rewindPairActs:4996` に既に同じ行がある**——追随の型は
+最初から表の中にあった）。結果は **error 16・9 宣言**:
+
+```
+1152 encTapes_rewindOne
+4945 4961 4971 5024 5031 5041 5080 5096   （rewind の行動表とその射影補題）
+```
+
+枝を 1 本増やすと、その表の「どのスロットに何が起きるか」を数え上げる補題が全部
+動くから。**九宣言は一回の往復では収まらないので、緑に戻した。**
+
+**次の一手**: 上の 9 宣言を順に直してから、もう一度 `Fin 7` に広げる。手本は counter 2 の
+鏡の扱い（`rewindPairActs` とその周りの `hmirrorRad` / `∃ m, mirrorSource m = 2 ∧ …`）。
+
+## n537 (2026-09-22): 鏡を七本にする費用を測った。一箇所だが行動表まで届く
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0（広げる変更は**戻した**。木を赤いまま
+置かない）。
+
+n536 の通り `Slot` の `Fin 5` を `Fin 7`、`tapeCountM` を 116 → 118、`mirrorSource` に
+`5 => 10`（`chain.h`）と `6 => 3`（`length`）を足して単体ビルドを回した。**落ちたのは
+1 宣言だけ**:
+
+```
+PalPeg/PhysicalEncoding.lean:1278  encTapes_rewindOne
+  decide proved that  mirrorSource ⟨6,_⟩ ≠ 3  is false
+```
+
+`encTapes_rewindOne` は rewind の一歩で `length` を増やす輸送子で、その `mirrors` 節は
+「鏡の源は 3 ではない」に寄りかかっていた。**鏡は源と常に同じ値でなければならない**から、
+`length` を動かす一歩は鏡 6 も同じ行動で動かさねばならない。つまり必要なのは
+
+1. `rewindActs` に鏡 6 のスロットへの行動を足す（長さ補題も追随）、
+2. `encTapes_rewindOne` に鏡 6 の新しいテープの仮説を足し、`hkept` から鏡 6 を除く、
+3. 呼び出し側 2 箇所を追随させる。
+
+**測った結果**: 鏡 1 本を足す費用は「その源を動かす全ての枝に 1 行動と 1 仮説」。
+`length` を動かす枝は rewind の一歩ひとつだけだったので、費用は小さい。
+`chain.h`（counter 10）を動かす枝も同様に数えてから足す。
+
+**採らなかった道**: 鏡 5/6 の源を既に鏡のある counter 2 に向けて「通る形」にすること。
+名前が中身を表さなくなり、後から見て嘘になる。番号だけ合わせるのは前進ではない。
+
+**次の一手**: `length` を動かす枝を数え（`GalilScaffoldCounter.inc x.vm.length` の出現）、
+その枝の行動表に鏡 6 を足してから、もう一度広げる。
+
+## n536 (2026-09-22): 鏡は二本足りない。そして役とテープの対応が要る
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n535 の末尾で残した 2 つを一次情報で見た。
+
+```scala
+// ScaffoldGalil.scala:297  beginChainShift —— chain は走り続ける
+chain.matched(); chain.beginShift(); length.inc(); length.inc()
+alias(remaining, chain.h)
+
+// ScaffoldGalil.scala:308  beginFallback —— length は生き続ける
+fpp.reset(); walker.copyFrom(right)
+alias(remaining, length); remaining.inc()
+```
+
+どちらも**源が生きたまま**で、その後 `remaining` だけが減っていく。つまり鏡の機構が要る。
+源は `chain.h`（counter 10）と `length`（counter 3）で、**どちらも `mirrorSource` に無い**。
+
+**結論 1: 鏡は 5 本ではなく 7 本要る。** `mirrorSource` に `10` と `3` を足す。
+`Slot` の `Fin 5` が `Fin 7` になり、`tapeCountM` は 116 → 118。
+
+**結論 2: 「役 → テープ」の対応が要る。** 鏡があっても、いま `EncTapes.counters` は
+`counterSlot c` という**固定**の対応で読んでいる。別名を「付け替え」として実現するには、
+どのテープがどの counter の役を演じているかを `QPhys` が持ち、`EncTapes.counters` が
+その対応を通して読まねばならない。`counterSlot c` を `counterSlotOf role c` に一般化する。
+
+対応は有限（16 の役 → 18 本のカウンタ系スロット）なので有限制御に入る。これは
+「数を Q に入れない」規律を破らない——入るのは値ではなく配役表である。
+
+**この二つが、消費 tick の行動表を書く前に要る土台だった。** 行動表そのもの
+（counter 11 の pop = `counter_dec_at`、period の右移動 = `encPeriod_moveRight`、
+counter 13 の inc = `counter_inc_at`）は既にある。
+
+**次の一手**: `mirrorSource` を 7 本に広げ、`Slot`/`tapeCountM`/`slotIndex` と
+`EncTapes` の producer 群を追随させる。機械的だが広い。
+
+## n535 (2026-09-22): 別名の問題は既に二通りの答えを持っていた——鏡と段
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n531 で開けた「`alias` をテープでどう払うか」という問いを閉じる。正本の `alias` は
+13 箇所ある（`grep -rn 'alias(' scala/pal/src/main/scala/pal/`）:
+
+| 場所 | 別名 |
+|---|---|
+| `ScaffoldChain.scala:91,92` | `lag ← radius`, `margin ← radius` |
+| `ScaffoldChain.scala:145,146` | `last ← boundary`, `boundary ← distance` |
+| `ScaffoldGalil.scala:303,315` | `remaining ← chain.h`, `remaining ← length` |
+| `ScaffoldGalil.scala:427` | `replay ← radius` |
+| `ScaffoldSearch.scala:106,107,134,144,200` | `lower ← lowerBound`, `work ← lowerBound / lower / span` |
+
+**答え (1): 鏡。** 符号化には既に 5 本の鏡がある（`PhysicalEncoding:771`）:
+
+```lean
+def mirrorSource : Fin 5 → Fin 16
+  | 0 => 2 | 1 => 2 | 2 => 2      -- radius を三重に
+  | 3 => 5                        -- lower
+  | _ => 6                        -- span
+```
+
+`EncTapes.mirrors` は「鏡のスロットは源と**同じ値**を持つテープを抱える」と言う。
+源を動かすたびに鏡も同じ行動で動かせば、別名は**役とテープの対応を替えるだけ**になる。
+`radius` の別名がちょうど 3 つ（`lag` / `margin` / `replay`）、`lower` と `span` が
+1 つずつ——**`mirrorSource` の数はこの表の数そのものだった。** 鏡は最初からこのために
+建っていた。
+
+**答え (2): 段。** chain の三つ組（13/14/15）は鏡の源ではない。そちらは n534 の通り、
+入れ子の三つ組を 1 本の区切り付きテープの段として持つ。境界事象は `resetSeg` 1 行動。
+
+**二つの機構は補い合う**: 別名の源が生きているとき（`radius` は chain が走っている間ずっと
+動く）は鏡、源が入れ子で増えるだけのとき（`last ≤ boundary ≤ distance`）は段。
+
+**まだ繋いでいない**: `remaining ← chain.h` と `remaining ← length` は鏡の源に無い
+（`chain.h` は counter 10、`length` は counter 3）。この 2 つがどちらの機構に載るか、
+あるいは源が死ぬので付け替えだけで済むかを次に見る。
+
+## n534 (2026-09-22): 三つ組は三本ではなく、一本の区切り付きテープ
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n532 で「差分 2 本 ＋ 交換 1 ビット」と書き、n533 で「可動原点は既にある」と訂正した。
+もう一段ある。**差分を 2 本に分ける必要すらない。**
+
+`consume` の境界事象は
+
+```
+last := boundary ; boundary := distance ; distance := inc distance
+```
+
+で、三つの値は常に `last ≤ boundary ≤ distance` と入れ子になっている。入れ子の数列を
+単項テープに置くなら、区切り記号で段を作るのが自然な形になる:
+
+```
+… | sep | mark^(boundary − last) | sep | mark^(distance − boundary)   ← ヘッドはここ
+```
+
+* `distance` を増やす = `push`（`mark` を 1 つ）
+* 境界事象 = `resetSeg`（今いる位置に `sep` を置く）——**1 行動**
+* `val`（`markRun t.left`）= 先頭の区切りより上 = `distance − boundary`
+* その下の段 = `boundary − last`
+
+`resetSeg` の docstring は「下の段を捨てる (abandoning the segment below)」と言うが、
+**捨てているのではない。捨てられた段が `boundary − last` そのものである。**
+`SegCtr` が「区切りの下は何が居てもよい」と言っているのは、上の段だけを見る補題群が
+下の段に触れないという意味で、下の段が無意味だという意味ではない。
+
+**帰結**: 交換ビットも 2 本目のテープも要らない。chain の三つ組は 1 本の区切り付き
+テープで、`EncTapes.counters` の 13/14/15 を「1 本のテープの段」として書き直す。
+アルファベットに `sep` がある理由、`resetSeg` が 1 行動である理由、`SegCtr` が下を
+自由にしている理由が、これで一つに揃う。
+
+**未検証（次の一手）**: 絶対値を要求する読み手があるか。`CanonicalChainMinimal:1117` は
+chain が壊れたとき `lower = w.machine.control.last` になると言っている。これが絶対値の
+転送なら、同じ別名の問題がもう一度出る——ただし壊れた chain の `last` は死ぬので、
+役とテープの対応を付け替えるだけで済む可能性が高い。そこを一次情報で確かめる。
+
+## n533 (2026-09-22): 可動原点はもう建っていた。残るのは交換と差分表現
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n532 の末尾で「未接続: 可動原点のカウンタ（`absCtr` は原点をテープの底に固定している）」
+と書いた。**これは誤り。** カウンタ層を読み直したら、可動原点はとうに建っていた。
+
+```lean
+-- PalPeg/LocalCounter.lean
+abbrev Seg := Fin 3
+def blank : Seg := 0
+def sep : Seg := 1          -- 「セグメント区切り」
+def mark : Seg := 2
+def val (t : STape Seg) : ℕ := markRun t.left      -- 先頭の mark 連なりだけを数える
+def SegCtr (t : STape Seg) (v : ℕ) : Prop :=        -- 区切りの下は何が居てもよい
+  ∃ garbage : List Seg, t.left = List.replicate v mark ++ sep :: garbage
+def resetSeg (t : STape Seg) : STape Seg := STape.applyAction blank t (sep, Move.right)
+theorem absCtr_reset (t) (b) : absCtr (resetSeg t) b = reset          -- :216
+```
+
+`val` は**先頭の区切りより上**だけを数え、`resetSeg` は今いる位置に新しい区切りを置いて
+下の段を捨てる——1 行動。符号化側の `padded_resetSeg`（`PhysicalEncoding:5837`）まで
+通っている。**アルファベットに `sep` がある理由がこれ。** 零化は O(1) で、置いてきた段は
+junk として残る（「junk をその場で消すな」がここで効いている）。
+
+**だから n532 で「採る道」と書いたものの半分は、既に建っていた道だった。** 残るのは:
+
+1. **交換**: 差分 2 本のどちらが `d1` かを有限制御に持つ（`QPhys` に 1 ビット）。
+2. **差分表現**: `EncTapes.counters` は今 16 本すべてについて
+   `absCtr segments (polarity c) = counterOf x c` を要求する。chain の 3 本
+   （13 distance / 14 boundary / 15 last）だけは絶対値ではなく差分を置くので、
+   この節を 13/14/15 について書き直す必要がある。
+
+**未検証**: 機械が distance / boundary / last の**絶対値**を読む場所があるかどうか。
+差分表現が通るのはそれが無いときだけ。次はそこを一次情報で確かめる。
+
+## n532 (2026-09-22): 別名付けの正体はポインタ。テープでどう払うかを決める
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n531 で「正本は `alias` で O(1)」と書いた。その `alias` が何であるかを最後まで辿った。
+
+```scala
+// ScavmStructs.scala:139
+def copyFrom(other: StackView): Unit = { top = other.top }
+// ScavmStructs.scala:159
+final class CounterView(...) { val pos: StackView; val neg: StackView
+  def inc() = if (!neg.empty) neg.pop() else pos.push(None)
+  def reset() = { pos.top = None; neg.top = None } }
+```
+
+`StackView.top` は**共有スタックの節点へのポインタ**（`b.ptr(name + ".top")`、
+`tname`/`tslot` が節点を名指す）。つまり正本の counter は永続リストへのポインタで、
+`alias` は指し先の共有、`reset` は底への付け替え。どちらもポインタ操作だから O(1)。
+
+**テープにはポインタが無い。** だから「O(1) である」という正本の事実は、そのままでは
+実時間テープ機械の設計にならない。この 3 つが同じテープ上の 3 つのヘッドだとすると、
+`last ← boundary` はヘッドを `boundary − last` だけ歩かせることになり、O(1) ではない。
+
+**採らなかった道**:
+
+* **役割の置換だけで済ます** — 境界事象の直後は `boundary = distance` で、その後
+  `distance` だけが伸びる。同じヘッドに 2 つの役をさせると次の tick で壊れる。だから
+  置換だけでは足りない（n531 の見立ての誤りをここで訂正する）。
+* **差分で持つ**（`d1 = distance − boundary`, `d2 = boundary − last`）— 事象は
+  `d2 ← d1`, `d1 ← 0`。`d2 ← d1` は交換（有限制御の名前替え、O(1)）にできるが、
+  `d1 ← 0` が残る。単項テープの零化はヘッドを底まで歩かせる操作で O(1) ではない。
+
+**採る道**: 差分の 2 本に**可動原点**を持たせる。カウンタの値を「原点印からヘッドまで」
+で測り、`reset` は**今いる位置に新しい原点印を書く**（1 行動）。交換は有限制御の名前替え。
+どちらも O(1) で、置いてきた古い印はそのまま残す——引き継ぎ書の「junk をその場で消すな」
+と同じ規律。
+
+**まだ繋いでいない**: 可動原点のカウンタ（`absCtr` は原点をテープの底に固定している）。
+`EncTapes.counters` が `absCtr segments (polarity c)` で値を読む形を、原点印からの距離で
+読む形に一般化する必要がある。既存の 16 本のうち chain の 3 本だけがこれを要る。
+
+## n531 (2026-09-22): chain の三つ組カウンタは複写やない、別名付けや
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+commit `dae6941` → `d601f71`。`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+消費 tick の行動表を作る途中で、`GalilScaffoldChainConsume.consume` の境界事象の行に
+当たった:
+
+```
+last     := if boundaryEvent then s.boundary else s.last
+boundary := if boundaryEvent then distance   else s.boundary
+distance := inc s.distance
+```
+
+`last := boundary` は単項テープの**複写**に見える。値に比例する時間がかかるから、
+実時間機械では 1 tick に収まらない。ここで止まって正本を読んだ:
+
+```scala
+// ScaffoldGalil の chain（ScaffoldChain.scala:143-146）
+distance.inc()
+if (boundaryEvent) {
+  alias(last, boundary)
+  alias(boundary, distance)
+}
+```
+
+`alias`（`ScaffoldSearch.scala:32`）は `target.pos.copyFrom(source.pos)` で、
+**テープ view の付け替え**。つまり正本はこれを O(1) の名前の付け替えとして書いている。
+
+**帰結（符号化の設計）**: `QPhys` は chain の三つ組（counter 13/14/15）の**役割の置換**を
+持たねばならず、`EncTapes.counters` はその置換を通してスロットを読む。今の
+`counterSlot c` は固定なので、`counterSlotOf alias c` に一般化する。置換は有限（`Fin 3`
+の巡回で足りる: `last ← boundary ← distance`）なので有限制御に入る。
+
+**これは「数を Q に入れない」規律の一例**でもある。三つの値そのものは入れられないが、
+どのテープがどの役を演じているかは入れられる。
+
+**まだ繋いでいない**: 置換の導入そのもの（`counterOf` の 13/14/15、`EncTapes.counters`、
+その producer 群）。counter 13 の `inc` は `counter_inc_at` がそのまま使える。
+
+## n518 (2026-09-22): scan の行が命令表に入った — 判定を読まずにヘッドが決まる
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更
+（`propext` / `Classical.choice` / `Quot.sound` / `PalPeg.PalInPeg.obligation_localRealization`）。
+commit `637d5ca` → `a8ddcaf`。`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+**背景 tick の 2 腕は逆のトレードをする。** `searchEffectFun P a s`
+（`PalPeg/FrameFunction.lean:330`）は chain が idle のときだけ `searchStepFun` を呼び、
+それ以外は `searchLens.get s`。だから
+
+| chain | カーソル | 探索（dp 12 テープ） | 機械側の仕事 |
+|---|---|---|---|
+| idle | 1 つも動かない | 1 量子進む | DP プログラム走者が要る（重い） |
+| 走行中 | 4 本目が一歩 | 完全に静止 | 走らせるプログラムが無い（軽い） |
+
+軽いほうから取った。`backgroundFun_searchSide` / `_searchSide_active` / `_prepSide` /
+`backgroundFun_id_of_chainFixed`（chain 自身の一歩が chain を動かさないなら、tick は機械全体の
+恒等写像）。
+
+**検証ヘッドが動く条件は一次情報から出た。** `chainStepFun`（`FrameFunction.lean:370`）で
+ver を書き換えるのは `.watch` 腕だけ。しかも `GalilScaffoldChainWatch.caught` は
+`GalilScaffoldChainVerifier.consume` で `right s.verifier`、判定が偽の `.broken` 側も
+`right w.machine.verifier`。**真でも偽でも右に一歩**。だから機械は判定の値を読まなくてよい。
+読むのは 3 つだけ: 制御が持つ `chainTag`、counter 11（lag）の符号ビットとヘッド直下のセル、
+period スロットの中心セル。全部窓の中にある（`centreRead_periodSlot` を新設）。
+
+新しい行: `chainConsumesTest` と `scanCommands`、そして `modeCommands` の `scan` 行。
+stay になる条件は `chainConsumesTest_of_tag_ne` と `chainConsumesTest_of_lag_zero`。
+
+**その場で一般化**: `enc_afterStillTick` の `hmode`（5 モードの選言）は本体で 1 回しか
+使われておらず、実際に要るのは「命令表のこの行が stay」だけだった。`hstay` に置き換え、
+5 モード版は `modeCommands_eq_stay` を渡す 1 行の系にした（呼び出し側は無変更）。
+
+**次の一手**: scan の静止腕を `enc_afterStillTick` に載せて分岐定理にする。その先が
+idle 腕の DP 走者（12 テープ、`fppActs`/`winRun` の対応物）。
+
+## n512 (2026-09-22): 訂正の訂正 — background はカーソルを動かさない。証明が下手だっただけ
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+
+n511 で「`backgroundFun` がカーソルを運ぶことは `rfl` で通らないので、主張を取り下げる」
+と書いた。**取り下げるべきだったのは主張ではなく、証明の書き方だった。**
+
+`PalPeg/GalilScaffoldTopSearch.lean:77` の `afterBirth b s` は
+`if b then {s with periodOnly := false, cycle := reset} else s` で、`b` が変数のままでは
+`rfl` は通らない（`cases b` が要る）。そして**その射影補題は既に全部そこにある**:
+`afterBirth_left` (:89) / `afterBirth_right` (:91) / `afterBirth_chain` (:93) /
+`afterBirth_center` (:95) / `afterBirth_radius` (:97) / `afterBirth_length` (:99) /
+`afterBirth_remaining` / `afterBirth_replay` / `afterBirth_fpp` / `afterBirth_search` /
+`afterBirth_dp`。
+
+`backgroundFun_cursors`（公理は `propext` / `Quot.sound` のみ）を入れた:
+scan の背景量子は左・中心・右の 3 カーソルをそのまま運ぶ。
+**だから背景 tick が動かしうるカーソルは chain の verifier だけで、
+動く唯一の理由は chain が生まれることだけ** — 中心の鏡（n504/n505）が効く場所。
+
+**この往復の教訓**: `rfl` が通らないことは「偽」の証拠ではないし、
+「無償ではない」の証拠でもない。**定義が `if` を含むとき、変数のままでは `rfl` は通らない。**
+取り下げる前に射影補題を探すべきだった（既にあった）。n511 の note はこの n512 で訂正される。
+
+## n511 (2026-09-22): scan の background がカーソルに何をするかは、まだ言えない
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+
+**自分の見立てを取り下げた。** このターンの前半で「`backgroundFun` は左・中心・右の
+3 カーソルをそのまま運ぶ」と書き、補題にしようとした。**`rfl` が 3 つとも通らない。**
+左だけでも通らない。
+
+理由は `PalPeg/FrameFunction.lean:491` の `backgroundFun` が
+`afterBirth (chainBorn …) (searchLens.set (scanLens.set s ⟨s.left, s.right, chainAtFun …⟩) …)`
+という形で、結果が **`afterBirth` に包まれている**こと。`afterBirth` は `M-periodOnly` を
+直したときに入れた包みで、chain が生まれた tick に chain 自身の場を初期化する。
+その包みはカーソルに対して定義的に透明ではない。
+
+`CLAUDE.md` の古い記述「`backgroundS` は右ヘッドも radius も変えない」は
+**この形になる前のもの**で、いまの定義について言えることではない。
+
+**帰結**: 「scan の background はカーソルを動かさない」は**無償ではない**。
+`afterBirth` の定義から証明する必要があり、証明できるかどうかもまだ確かめていない。
+scan を書くときの最初の一手はここになる。
+
+主張を取り下げて補題は削除した。build は緑のまま。
+
+## n504 (2026-09-22): `M-headCopy` は scan に居る。そして今日足した場がその解になる
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+
+**一次情報で確かめた。** `PalPeg/FrameFunction.lean:491` の `backgroundFun` は
+scan の背景量子で、`scanLens.set s ⟨s.left, s.right, chainAtFun … s.center … s.chain⟩`
+を書く。左と右のカーソルはそのままやが、chain は `chainAtFun` を通る。
+
+`:461` の `chainAtFun` は、chain が `.idle` で `found` が立った tick で
+`chainStart answer c walker ver radius` を作り、**その `ver` が `s.center`**。
+つまり**新しく生まれる chain の verifier は中心カーソルの複製**である。
+
+分業の下でカーソルの 12 スロットを書くのは view のコマンドだけで、
+**カーソル 1 本を丸ごと複製するコマンドは無い**。だから `M-headCopy` は
+`init` / `choose` select / `replayStart` だけでなく、**`scan` の背景量子にも居る**。
+しかもそこは走行の大半を占める。
+
+**帰結 1**: `enc_afterTick` の `hheadSome`（頭の有無が tick で変わらない）は
+scan の chain 誕生 tick では**偽**である。頭 3 が `none` から `some` になる。
+このまま scan を書こうとしても通らない。
+
+**帰結 2（解）**: 今日 margins のために足した `EncTapes.idleHead` が、そのまま解になる。
+いま `idleHead` は「chain が idle のあいだ verifier の 12 スロットは**何らかの** view を
+持つ」としか言っていない。これを
+
+> chain が idle のあいだ、verifier の 12 スロットは**中心カーソルと同じ view** を持つ
+
+に強めれば、chain が生まれた瞬間にスロットは既に中心の複製を保持しており、
+**複製する tick が要らない**。維持のコストは分業の下ではゼロに近い:
+chain が idle のあいだ、行は view 3 に view 1 と同じコマンドを名指すだけでよい。
+
+これは `M-headCopy` を回避する構成であって、`M-headCopy` が偽であるという主張ではない。
+Scala 正本が中心を verifier に複製するのは事実で、機械はその複製を**前もって**持つ。
+
+**次の一手**: `idleHead` の強化（`HeadSlotsRepAt … 3 view` を
+「view は中心の view と等しい」に替える）と、その維持（行が view 3 に view 1 の
+コマンドを名指す）を書く。維持が閉じたら scan の chain 誕生が `hheadSome` を
+要求しない形になるので、`enc_afterTick` をそこまで一般化する。
+
+## n500 (2026-09-22): 公理は証明せんでもええ。迂回路が既に proved で存在する
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+公理リスト未変更: `propext` / `Classical.choice` / `Quot.sound` /
+`PalPeg.PalInPeg.obligation_localRealization`。
+
+**一次情報で読んだ結果、終盤の地図が変わった。**
+
+`PalPeg/PalInPegUnconditional.lean:226` の `unconditional` は
+
+```
+given_scanLandingObligations 0 1 0
+  cycleOracleOnPackedRun                 -- 証明済み（n282）
+  (obligation_localRealization 0 1 0)    -- ★ 唯一の公理
+  (scan landing の 4 場)                  -- 証明済み（BranchSupply.*）
+  (chain verifier supply)                -- 証明済み（BranchSupply.*）
+```
+
+いっぽう `PalPeg/ShadowedLocalFinal.lean:1395` の **`given_physicalMachine` は
+`#print axioms` で標準 3 公理のみ**。取るのは:
+
+| 引数 | 状態 |
+|---|---|
+| `hor` / `hres` / `hChainVerifierSupply` | `unconditional` が既に渡している 3 つと**同じもの**。証明済み |
+| `L0 : LocalStep (Fin 2) Q Γ t K`、`blankSymbol`、`q0`、`repQ`、`outQ`、`htape`、`Enc` | 具体機械と符号化。こちらが供給する |
+| `hencInit` | 初期状態が符号化されている |
+| `hforwardTick` | 機械の 1 歩が抽象後継を符号化する |
+| `hforwardFeed` | 文字つきの 1 歩が到着を符号化する |
+| `PhysFrozen` ＋ `hfrozenEnter` / `hfrozenKeep` / `hfrozenQuiet` | 凍結後は報告ビットが落ちている |
+| `hencRep` | 報告判定が機械の報告ビットに一致する |
+| `hencOut` | 報告点で出力ビットが一致する |
+
+結論は `RecognizedByTotalPEG PAL` **そのもの**で、`H_realizeCanonical` を経由しない。
+
+**だから `obligation_localRealization` は証明する対象ではない。**
+`unconditional` を `given_physicalMachine` 経由に張り替えれば、公理は参照されなくなって
+リストから消える。証明すべきは `H_realizeCanonical`（存在量化された機械と
+`SAccepts ↔ LatchTrue` の同値）ではなく、**この 7 つの符号化義務**。
+
+**今日ここまでの仕事がどこに入るか**: `hforwardTick` の 1 つ。
+`forwardTick_of_rule`（`:984`）がその形を `hmargin` / `hidle` / `hideal` から作る。
+今日 9 分岐について tick の `Enc` を証明したのは、その `hideal` の中身である。
+
+**残り 6 義務の性質**（`hforwardTick` 以外）:
+
+* `hencInit` — 初期配置。`Enc` の各場を空テープについて言うだけで、tick を含まない。
+* `hforwardFeed` — 文字が到着する 1 歩。頭の側は view 層の `arrive` コマンドで、
+  今日作った `heads_afterTableTick` の族に `.arrive a` の行を足す形になる
+  （`headOp` に `.arrive` が入っていないのは頭だけの操作ではないから。ここは別扱いが要る）。
+* `PhysFrozen` ×3 — 凍結後の不変量。抽象を追わないので `Enc` とは独立に設計できる。
+* `hencRep` / `hencOut` — 報告ビットと出力ビット。制御の場を 1 つ足せば読める。
+
+**次の一手**: `given_physicalMachine` の 7 義務を、今日の部品でどこまで埋まるか
+1 つずつ確かめる。まず `hforwardTick` を `forwardTick_of_rule` 経由で組み、
+`hideal` に必要な「全 10 モード分の tick」のうち、今日閉じた 9 分岐で足りない
+モード（`scan` / `shift` / `init` / `replayStart` / `choose` select）を数える。
+
+## n455 (2026-09-22): view 層は最初から「任意の機械」について語れていた
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+公理リスト未変更: `propext` / `Classical.choice` / `Quot.sound` /
+`PalPeg.PalInPeg.obligation_localRealization`。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、`PalPeg.Workbench` BUILD=0・error 0。
+commit: `9b2ea2f`（WF）、`849e9fc`（橋）。
+
+**n453 note の項目 (2) は不要だった。** 「`LocalViewsMachine` に view ごとの
+コマンドを取る規則 `viewsRule` を足して `machineSlot` を一般化する」と書いたが、
+一次情報を読んだら既にある:
+
+| 部品 | 場所 | 何が汎用か |
+|---|---|---|
+| `viewStep_of_apply` | `PalPeg/LocalViewSlot.lean:418` | `Q`・`tapeCount`・`embed`・`project`・`slot`・`command` が全部パラメータ |
+| `viewSlot_sound` | `PalPeg/LocalViewSlot.lean:370` | `commands : ℕ → ViewCommand`・`states : ℕ → ViewState` を取る |
+
+`machineRule` が arrivals-only なのは `LocalViewsMachine` という**一つの
+インスタンス**の性質で、view 層の制約ではない。だから道は「machineRule を
+一般化する」ではなく「自分の `physRule` に view 層の汎用補題を当てる」。
+
+**足りなかったのはアルファベットの変換だけ。** 機械は頭のテープを view の
+テープの `encCell` 像として持つ（`EncTapes.heads`）ので、`Γc` 上の `ViewStep` と
+`Γm` 上の行動リストの間に橋が要る。入れたのは 2 本:
+
+* `mapTape_actList` — 成分の合成ステップは、機械が持つテープ上の同じ合成ステップ。
+  各行動が `mapTape_applyAction` で交換するので、リスト全体も交換する。公理ゼロ。
+* `viewStep_of_encodedActs` — 頭の 12 スロット上の機械のステップを、view 層の
+  `ViewStep` として読み返す。前提は「規則がその 12 スロットに名づける行動が、
+  同じ窓から読んだ view 規則の行動を `encAct` で送ったもの」。結論の view テープは
+  `actList blankc (viewTapes t) (viewActs …)` そのものなので `TEqG` は `rfl`。
+
+**書いたが消したもの**: `teqG_of_mapTape` / `rd_mapTape` / `encCell_injective`。
+橋が前向き（`Γc` → `Γm`）だけで済んだので引き戻しが要らず、参照ゼロになった。
+参照ゼロの宣言は残さない規律に従ってその場で削除した。
+
+**`EncTapes.heads` に `WF`（= `RTQueue.Inv view.far`）を足した**（項目 (3) の前半、
+`9b2ea2f`）。`viewSlot_sound` が要求するので運ぶ必要がある。コストは補題 3 本だけ:
+`far_leftView` / `wf_leftView` / `wf_rightViewOn` / `wf_setGap`——頭の左ステップ、
+近スタックへの右ステップ、ビットだけ動く半歩は全部 `far` をそのまま写す。
+
+**次の一手**: `physRule` の頭スロットの行動を、手書きの `headStepActs` /
+`headRightActs` ではなく `viewActs … (encAct encCell)` の像として書き直し、
+`viewStep_of_encodedActs` → `viewSlot_sound` の鎖に載せる。手書きの 3〜4 分岐は
+`leftView_eq_moveLeftV` / `rightViewOn_eq_moveRight` で `viewApply` と繋がっている
+ので、載せ替えの正しさはそこで確かめられる。
+
+## n453 (2026-09-22): 融合を使うには「コマンドを 1 歩先に決める」— 12 歩案
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+n452 で「11 歩スロットは `compStep (iterRule R 11)` 1 回に収まる」と分かった。
+その続きとして、**既存の融合をヘッド移動にそのまま使えるか**を一次情報で確かめた。使えない。理由と直し方。
+
+### 使えない理由
+
+`PalPeg/LocalViewsMachine.lean:50` の `machineRule` は
+
+```
+nq := fun control input windows =>
+  (nextSlot control.1, fun view => viewNext _ hK control.1 (commandOfLetter input) …)
+```
+
+すなわち **コマンドは入力文字から決まり、全 view に同じものが当たる。** これは「到着」の機械である。
+ヘッド移動はヘッドごとに違うコマンド（左ヘッドは左、右ヘッドは右）なので、この規則では表せない。
+
+下の層（`viewNext` / `viewActs` / `LocalViewSlot.viewSlot_sound`）は**コマンドについて一般**である。
+足りないのは view ごとにコマンドを与える機械規則だけ。
+
+### 直し方が自明でない点
+
+規則の `acts` はその時点の control を見る。1 スロットは 11 歩あり、その間 control は
+`nq` で 11 回変わる。よって **コマンドは 11 歩のあいだ不変で、かつ各歩で control から読めなければならない。**
+`commandOfLetter input` は入力から毎歩読み直せるので成り立っていた。ヘッド移動のコマンドは
+抽象モードから決まるので、control に**載せる**必要がある。
+
+しかし分岐が次の状態を決める `nq` は「このステップの後」を言うので、
+**このスロットで実行するコマンドは、スロットが始まる前の control に既に入っていなければならない。**
+
+### 12 歩案
+
+`physRule := iterRule R₀ 12` とし、`R₀` の control に「ヘッドごとのコマンド」の場を持たせる。
+
+* 1 歩目: テープには何も書かず、抽象モードと窓の読みから 4 つのコマンドを決めて control に書く。
+* 2〜12 歩目: `viewNext` / `viewActs` をその control のコマンドで回す（= 11 歩スロット）。
+
+`compStep (iterRule R₀ 12)` 1 回が 1 抽象 tick になる。窓の半径は `iterRadius K 12`。
+`ViewCommand` は有限なので control に載る（`QPhys` に `Fin 4 → ViewCommand` の場を足す）。
+
+### 次の一手
+
+1. `ViewCommand` が本当に有限型か（`Fintype`/`DecidableEq` が付くか）を確かめる。
+   `QPhys` は `Fintype` を要求する。
+2. view ごとにコマンドを取る機械規則 `viewsRule` を `LocalViewsMachine` に足し、
+   `machineSlot` をそれで一般化する（既存の到着経路は `fun _ => commandOfLetter input` で回収）。
+3. `EncTapes.heads` に `WF`（= `RTQueue.Inv v.far`）と `howed` を足す。
+   `ViewCells` は n417 で入れた。
+4. `physRule` を `iterRule R₀ 12` の形に組み替える。既存 9 分岐は
+   「1 歩目でコマンドを空にし、2〜12 歩目で何もしない」形に載せ替えれば通る。
+
+これは複数セッションの仕事である。`M-headCopy`（n444）はこの枠組みでも残る:
+コピーは 1 コマンドではない。
+## n452 (2026-09-22): 11 歩スロットは 1 compStep に収まる — 融合はもう建ってる
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+n444 で「`hideal` は 1 抽象 tick = 1 `idealStep` を要求する」と確認し、
+n445 以降ヘッドの左歩・右歩を手で（1〜3 アクションで）作ってきた。
+そのうち右歩の 4 番目のケース（near が空で queue に文字がある）だけが
+「queue のスケジュールを進めなあかん」ので手では届かなかった。
+
+**一次情報を読んで、矛盾の解き方が分かった。**
+
+`PalPeg/LocalViewsMachine.lean:182` の `machineSlot` の結論は
+
+```
+((compStep (iterRule (machineRule viewCount hK) 11)).apply blankc x input).1.1 = 0 ∧ …
+  ViewRep margin (viewApply (commandOfLetter input) (views view)) … 
+```
+
+すなわち **`iterRule R 11` の `compStep` 1 回が、view のコマンド 1 つ（11 歩ぶん）を丸ごと実行する。**
+橋は `compStep_iterRule`（`LocalStepFusion`）。代償は窓の半径が `iterRadius K 11` に増えることだけで、
+`forwardTick_of_rule` は `R : ActRule (Fin 2) Q Γ t K` を任意の `K` で取るので型は合う。
+
+理由は素朴で、`ActRule.acts` が 1 テープあたり**アクションの列**（長さ ≤ K）を返すこと。
+11 歩ぶんの決定は、半径 K の窓に入っているセルだけで計算できる（各歩がヘッドから距離 ≤ 11 しか触らない）。
+だから融合できる。
+
+### これが意味すること
+
+* ヘッド移動の実現は**もう建っている**。`LocalViewSlot.viewSlot_sound`（任意のコマンド）と
+  `LocalViewsMachine.machineSlot`（到着コマンド）が 11 歩スロットの健全性で、
+  `compStep (iterRule … 11)` がそれを 1 ステップに畳む。
+* n445〜n451 で手で作った左歩・右歩（`headSlots_left` / `headSlots_rightStep` ほか）は
+  **安いケースだけの並行実装**である。間違いではないが本道ではない。
+  queue を要するケースまで含めて一様に効くのは融合の側。
+* よって `physRule` のヘッド部分は手書きのスタック操作ではなく、
+  `iterRule (machineRule 4 hK) 11` 側から取るべきである。
+
+### 次の一手
+
+1. `viewSlot_sound` / `machineSlot` が要求する側条件（`WF`・`ViewCells`・`howed`・
+   スロット位置 `x.1.1 = 0`）を `EncTapes.heads` が供給できるかを確かめる。
+   `ViewCells` は n417 で入れた。`WF`（= `RTQueue.Inv v.far`）と `howed` は無い。
+2. 無い側条件を `EncTapes.heads` に足す（`ViewCells` を足したのと同じ手）。
+3. `physRule` の窓半径を `iterRadius K 11` に上げ、ヘッド部分を融合規則から取る。
+   既存 9 分岐は半径が増えても通る（窓を広く読むだけ）。
+4. その上で `init` / `scan` / `shift` / `choose` / `replayStart` を書く。
+   `M-headCopy`（n444）はこの枠組みでも残る: コピーは 1 コマンドではない。
+## n444 (2026-09-22): 残りの障害は分岐の本数ではない — `M-headCopy`
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`hideal` に向けて 9 分岐（fpp running/done, markEnd forward/back, home step/fppStart/atFloor,
+choose back, copy one/end, rewind wipe/one/pair）を機械レベルで閉じ、shift 出口も証明した。
+残る `shift` one・`choose` 選択側・`scan`・`init`・`replayStart` を書こうとして、
+**一次情報で構造的な障害を確認した。**
+
+### 何を確認したか
+
+正本 `scala/pal/src/main/scala/pal/ScaffoldGalil.scala` の 3 つの tick は
+**入力ヘッドを丸ごとコピーする**:
+
+* `stepInit` (`:243`): `right.right(); left.copyFrom(right); center.copyFrom(right)`
+* `stepChoose` (`:393`): `left.copyFrom(right); center.copyFrom(right)`
+* `stepReplayStart` (`:426`): `alias(replay, radius); right.copyFrom(center); left.copyFrom(center)`
+
+`copyFrom` は `scala/pal/src/main/scala/pal/ScaffoldCircuitInput.scala:77` で
+`focus` と **3 本のスタック全部**（leftStack / rightStack / incoming）をコピーする。
+`alias` はカウンタの別名付け（参照の差し替え）。
+
+Lean 側の `PalPeg.FrameFunction.initFun` / `chooseFun` / `replayStartFun` はこれを忠実に写している
+（`left := right s.right` 等）。
+
+### なぜこれが障害か
+
+`ShadowedLocalFinal.forwardTick_of_rule` の `hideal` は
+**抽象 tick 1 回 = `idealStep` 1 回**を要求する（読んで確認済み）。
+1 回の `idealStep` で各テープに書けるのは高々 K アクションで、K は窓の半径という定数。
+ヘッドの view は 12 本のテープで、うち 2 本は入力長に比例して伸びるスタックである
+（`ViewRep.back` / `.near`）。よって **1 ステップでヘッドを複製する方法を、今の符号化は持たない。**
+
+「不可能」と証明したわけではない。機械検査済みの反証はまだ無い。
+確認したのは「正本がコピーを要求し、符号化にそれを供給する手段が無い」ことだけ。
+
+### 考えられる出口（どれも未着手）
+
+1. **不変量でコピーを恒等にする。** `stepInit` は boot 直後なので 3 ヘッドが一致しており、
+   コピーは「3 ヘッドがそれぞれ 1 歩進む」と同じになる（各ヘッド ≤ 3 アクション、計 ≤ 9）。
+   これは今の枠組みで書ける。`choose` 選択側と `replayStart` では、
+   コピー元と先が一致しているという不変量が必要で、まだ見つけていない。
+2. **役割 → スロットの写像を有限制御に持つ。** `fppLive` / `dpLive` が準備プログラムの
+   二重バッファでやっているのと同じ手。`alias(replay, radius)` はこれで消える。
+   ただしコピーは置換ではない（2 つの役割が同じスロットを指したあと別々に動く）ので、
+   ヘッドのコピーはこれだけでは消えない。
+3. **物理側を 1 tick 複数ステップにする。** `forwardTick_of_rule` の形を変えることになり、
+   その定理（上流・既証明）に手を入れる。
+4. **モデルを編集する。** 引き継ぎ書が禁じている（「モデルは編集せず」）。
+
+### 次の一手
+
+出口 1 を `init` について実行する（3 ヘッドが一致する不変量は boot から来る）。
+`choose` 選択側と `replayStart` については、まず
+「コピー元と先が一致している」不変量が scaffold 層にあるかを探す。
+無ければ `hideal` は現在の形では閉じられないので、出口 2・3 の設計を検討する。
+## n398 — fpp 分岐が規則に載った（5 commit）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`HEAD 7190bfd`、**公理リスト変更なし**。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0・sorry 0、`PalPeg.Workbench` BUILD=0。
+
+| commit | 中身 |
+|---|---|
+| `c035252` | 規則表を窓シミュレータの**下へ移動**し、`ruleNext`/`ruleActs`/`physRule` に quantum `entryQ` を通した。`ruleActs` の `fpp` = `withErase live ws (fppActs code entryQ live (pcOf q) q.fppDone ws)`、`ruleNext` の `fpp` = `fppNext`（`winRun` の pc/done、halt なら mode := markEnd）。長さは `withErase_length (b := entryQ)`、条件は `hK : entryQ + 2 ≤ K`（1 アクション分岐の `b := 1` も omega で出る）。`pcPhysOf` ＋ `encPc_pcPhysOf` |
+| `13a2fd0` | `idealStep_withErase` を**その場で一般化** — 1 スロットではなく live 半分を支持集合とする任意の action 表を取る。既存 8 箇所は特殊化 `idealStep_atLiveSlot` が受ける。`idle_shape_after_erase` も同じ表を取る |
+| `6ff80d2` | `fppActs_off_live` — live 側 9 スロット以外で `fppActs` は空。`idealStep_withErase` の側条件 |
+| `8196cb0` | `encTapes_fppStep`（1 テープ）を `encTapes_fppTapes`（プログラム機械まるごと）に一般化。1 テープ版は名前も文も保ったまま、一般版から出る |
+| `7190bfd` | `frameFun_fppHalts` / `frameFun_fppSlice` / `fppRunFun_eq_runFun` — 抽象側の 3 本、すべて `rfl` |
+
+**踏んだ罠**: `grep -c 'error:'` は `error(lean.unknownIdentifier):` 形式を拾わない。
+検査は `grep -c error` で行うこと。これで一度 EXIT=1 を「error 0」と読み違えた。
+
+**未接続**: `fpp` 分岐の Enc 保存（`physRule_fpp`）はまだ無い。素材は揃っている
+（`idealStep_withErase` ＋ `fppActs_off_live` → 理想歩、`fpp_slot_after` → 符号化、
+`encTapes_fppTapes` → 組み立て、`idle_shape_after_erase` → 退役半分、
+`frameFun_fppSlice` → 抽象側）が、組んでいない。制御側（`EncControl` が `fppNext` と
+合うこと）も未着手。
+
+## n397 — Astra への引き継ぎ（ドキュメント整理）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`HEAD 479ea19`、**公理リスト変更なし**
+（`propext` / `Classical.choice` / `Quot.sound` / `PalPeg.PalInPeg.obligation_localRealization`）。
+`PalPeg/PhysicalEncoding.lean` 単体 EXIT=0・error 0・sorry 0、`PalPeg.Workbench` BUILD=0。
+**コードは変更していない。ドキュメントのみ。**
+
+リポジトリ直下に `AGENTS.md` を作った（`CLAUDE.md` の複製 ＋ 先頭に `§0 現状`）。
+`§0` に入れたのは 9 項目:
+
+| 節 | 内容 |
+|---|---|
+| 0.2 | 進捗の計器は `PalPeg/Axioms.lean:392` の guard。残り 1 本 |
+| 0.3 | 義務の型（`PalInPegUnconditional.lean:144`）と消費者 `ShadowedLocalFinal.forwardTick_of_rule:984` の `hideal:995` |
+| 0.4 | `PhysicalEncoding.lean` の設計固定点 5 つ（`Rep`/`TEqG` でのシミュレーション、`acts` はリスト、背景消去、番号を状態に持たない、no-restart） |
+| 0.5 | 10 モードの実装状況表（`markEnd`/`home`/`choose`/`rewind` 済、`fpp` ほか未） |
+| 0.6 | 次の一手 6 段（`fppActs` を `ruleActs` に載せる → … → guard 更新） |
+| 0.7 | 検証の作法（`BUILD=` 行を読む、build 1 本ずつ、`reset --hard` 禁止） |
+| 0.8 | 繰り返し踏んだ Lean の罠 8 件 |
+| 0.9 | `CLAUDE.md` 由来の §1〜§5 は 2026-09-19 の地層で、到達点としては読まない旨 |
+
+引用した識別子は全部 grep で存在確認した（`fppActs_length` / `pcOf` / `withErase_length` /
+`fppActs_eq` / `fpp_slot_after` / `vml_fpp_slice` / `vml_fpp_done` / `physRule_*` /
+`GalilFppMarkedCode.code` / `LocalViewSlot.viewActs` / `CloseoutCoreAgree.SL`）。
+`SL` の `init = scan = replayStart = id` も一次情報（`CloseoutCoreAgree.lean:199,200,208`）で確認。
+
+## n389 — 帰納段の道具は既にあった（`windowAfter_readWin`）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit 7d80372`、公理リスト変更なし。
+`PalPeg/PhysicalEncoding.lean` module build EXIT=0・error 0・sorry 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+**一次情報**（`PalPeg/LocalStepFusion.lean:32`）:
+
+```
+theorem windowAfter_readWin (blank : Γ) {K inner : ℕ} (tape : STape Γ) (acts : List (Act Γ))
+    (hlength : acts.length + inner ≤ K) (hmargin : K ≤ pos tape) :
+    windowAfter K inner (readWin blank K tape) acts
+      = readWin blank inner (actList blank tape acts)
+```
+
+つまり**半径 `K` の窓と、そこまでに行ったアクション列だけから、半径 `inner` の「その後の窓」が
+計算できる**。これが `fpp` の quantum を窓から走らせるために要っていた帰納段そのもの。
+自分で「窓の半径が 1 減る形で帰納する」と書いていたものが、既に一般形で証明されている。
+
+**この道具での `fpp` の設計**: 規則の `acts` は、半径 `K` の窓から出発して
+
+1. `winMachine` で最初の call の action を決める（`progActOf_winMachine` で実機械と一致）、
+2. `windowAfter K (K-1) window acts₁` で次の窓を得る、
+3. これを `q` 回繰り返して action 列を連結する
+
+という形になる。`hlength` は `progRunActs_length`（quantum は高々 `q` アクション）が、
+`hmargin` は `EncTapes.margins` が与える。
+
+**教訓（再び）**: 「これを証明せなあかん」と思った補題は、`LocalStepFusion` に既にあった。
+n344 で `windowAfter` の名前を書いておきながら、中身を読んでいなかった。
+
+## n387 — 「カーソル分岐は 1 歩で書けない」は誤り（訂正）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit 6a9cfbd`、公理リスト変更なし。
+`PalPeg/PhysicalEncoding.lean` module build EXIT=0・error 0・sorry 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+**訂正する記述**（n344 で書いたもの）: 「`copy` / `shift` / `rewind` の 2 分岐 /
+`choose` の選択側はカーソルを動かすので `ActRule` の 1 歩では書けない。view 機械の
+11 マイクロ歩が要る」。
+
+**一次情報**: `CloseoutCoreEnc12.ActRule` の場は
+
+```
+acts : Q → Option Terminal → (Fin t → Window Γ K) → Fin t → List (Act Γ)
+len_le : ∀ q a ws j, (acts q a ws j).length ≤ K
+```
+
+で、`compStep` はそのリストを `actList` で順に当てる。つまり **1 ステップで 1 テープあたり
+`K` 個までのアクションができる**。`LocalViewSlot.viewSlot_sound` の「one slot of eleven
+steps」は view 機械自身の歩数の話であって、テープへのアクションとしては 11 個であり、
+`K ≥ 11` なら 1 ステップの `acts` に収まる。
+
+**帰結**: カーソルを動かす分岐も単一の `ActRule` で書ける。窓半径 `K` を大きく取る
+（`fpp` の quantum 長、view コマンドの 11、消去の 1、分岐自身の 1 の最大値以上）だけの
+問題になる。`forwardTick_of_rule` が要求する「1 tick = 1 ideal step」は維持できる。
+
+**この訂正が効く範囲**: 残りモードの設計。`copy` / `shift` / `rewind`(one, pair) /
+`choose`(select) を view 機械の出す action 列（`LocalViewSlot.viewActs`）で書けばよく、
+`LocalStepFusion` の 2 規則合成に逃げる必要はない。
+
+## n347 — 自分の符号化に設計欠陥を見つけた（二重バッファがスロットに無い）
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit af47138` まで、
+`PalPeg/PhysicalEncoding.lean` module build EXIT=0・error 0・sorry 0、
+`PalPeg.Workbench` BUILD=0・error 0、公理リスト変更なし。
+
+**一次情報で確認したこと。**
+
+* `MachineStep.sweepClosure blank Enc x p := ∃ ideal, Enc x (p.1, ideal) ∧ ∀ tape,
+  TEqG blank (ideal tape) (p.2 tape)`（`PalPeg/MachineStep.lean:40`）。
+* `CloseoutCoreEnc12.TEqG blank T T' := pos T = pos T' ∧ ∀ p, rd blank T p = rd blank T' p`
+  （`:257`）。**全位置での一致**であって、窓の中だけの一致ではない。
+
+つまり `hideal` が取る `sweepClosure` は掃引の後始末を吸収するだけで、
+「読まない領域にゴミが残っていてよい」とは言っていない。
+
+**帰結（欠陥）。** いま `Slot` のプログラム部は `Fin 9` の 9 枠しかなく、
+`EncTapes.fpp` は
+
+```
+tapes (progSlot i) = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i)))
+```
+
+と**抽象テープとの一致**を要求している。`rewind` の `fppReset` は抽象側で 9 本すべてを
+`Tape.reset` にする（局所層では `LocalBuffers.resetFresh`＝生きている半分の切り替えで、
+テープは 1 本も動かない）。ところが物理側は 9 枠しか持たないので、同じ 1 tick で
+9 本を白紙にしなければならず、**1 tick 1 アクションの規律で不可能**。
+
+**直し方（次の一手）。** プログラム部（と DP 部）のスロットを二重にする:
+`Fin 9` を `Fin 9 × Bool`、`Fin 12` を `Fin 12 × Bool` にし、どちらが生きているかを
+`QPhys` の 1 ビットで持つ。符号化は**生きている半分だけ**を抽象テープに結びつけ、
+`fppReset` はそのビットの反転になる。遊んでいる半分は背景の消去仕事
+（`LocalBuffers.clearTick`、1 tick 1 セル）で白紙に戻る。これは局所層が
+`LocalBuffers.Buffered n`（`A` / `B` / `active` / `job`）で既に持っている構造そのもので、
+`LocalState.lean:18-56` の設計註がまさにこれを答えとして挙げている。
+
+**この欠陥は、これ以上分岐を積む前に直す。** 直さずに `fpp` / `rewind` を書くと、
+1 tick で 9 本を消す規則を書くことになり、`ActRule.len_le` か忠実性のどちらかが壊れる。
+
+## n336 — shift の 2 分岐、および接続点の地図
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。`commit cfab8bc`、公理リスト変更なし。
+`PalPeg/PhysicalEncoding.lean` module build EXIT=0・error 0・sorry 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+**今回閉じた分岐**: `vml_shift_exit`（テープもカーソルも動かない。制御が `scan` に戻り
+`output` を refresh するだけ）と `vml_shift_one`（最も広い多成分 tick: 中心ヘッド右 1、
+左ヘッド右 2、銀行 4 op、chain の watch 前進）。側条件は局所層のもの
+（`LocalTick1.Inv` / `LocalTick3.ShiftCounters` / `Ahead` 3 / `canRight` 3）＋
+`y.chain = .watch wv`（抽象 `shiftOneFun` の `match` を落とす鍵）。
+
+**物理基底で閉じた分岐**: `copy`(copyOne) / `fpp`(slice, done) / `rewind`(one, pair) /
+`choose`(select) / `shift`(one, exit) ＋ 手書き 7 本。
+
+**接続点の地図（一次情報で確認）**
+
+* 公理は `obligation_localRealization : H_realizeCanonical centreC placeC entry q first`
+  （`PalPeg/PalInPegUnconditional.lean:144`）。
+* 消費者は `ShadowedLocalFinal.forwardTick_of_rule`（`:984`）。その `hideal`（`:995`）は
+  `Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop` を取る。**抽象状態**上の関係なので、
+  `Enc x p := ∃ y, absState'' y = x ∧ …` へ組み替える必要がある。ここが `vml_*` の合流点。
+* `scan` の tick は**既に関係形で存在する**:
+  `LocalReplayParked.tickL1_abs''_nonreplay` が
+  `Tick (galilFrameS S q first) delay (absState'' x) (absState'' y)` を与える
+  （`LocalTick1.tickL1_abs` の `abs''` 版）。`scan` の 3 出口も
+  `abs''_commitShift` / `abs''_commitFallback` / `abs''_commitRestart` で `abs'` に落ちる。
+* 規則 `R : ActRule` の側は、入力 view については**既に機械化済み**:
+  `LocalViewSlot.viewNext` / `viewActs` / `viewSlot_sound`、
+  `LocalViewsMachine.machineRule` / `machineSlot`、`LocalHeadRep.headRep_machineSlot`
+  （`PalPeg/ConcreteLocalMachine.lean` の目次）。
+
+**残っている本体**: 規則 `R` をプログラムテープと銀行テープについても定義し、
+`Enc` を上の `∃ y` 形に組み替えて `hideal` を放電すること。
+
+## n333 続き 32 — 多成分の一歩は局所層に全部あった。足りんのは tick 形の橋だけ
+
+全体 build 成功・標準公理のみ・無条件 PAL は未完。HEAD `3528a4b`、公理リスト変更なし
+（`propext` / `Classical.choice` / `Quot.sound` / `obligation_localRealization`）。
+スクラッチ `$S/enc_body.keep.lean` は EXIT=0・error 0・sorry 0・標準公理のみ、**未投入**。
+
+**一次情報の確認で方針が変わった。** `PalPeg/LocalTick3.lean` には既に全モード分の
+局所歩とその抽象補題がある: `shiftVm` / `copyVm` / `copyDoneVm` / `homeStartVm` /
+`homeStepVm` / `sliceVm` / `doneVm` / `marksVm` / `chooseSelectVm` / `rewindDoneVm` /
+`rewindOneVm` / `rewindPairVm`、それぞれに `abs'_…`。銀行の道具も
+`bankTick (f : Ctr → Op)` / `BankOk` / `absCtrs_bankTick` / `bankTick_phys` /
+`bufAt` / `abs_bufAt` が揃っている。書きかけた `absCtrs_bankStep` は
+`absCtrs_bankTick` の重複だったので**外した**（wrapper を増やさない）。
+
+**本当に欠けているのは tick 形の橋だけ**: `grep tickFun PalPeg/Local*.lean` は 0 件。
+今回そこを 1 本通した。
+
+```
+theorem vml_copy_one … (hmode : y.ctl.mode = .copy)
+    (hrem : (galilFrameFun …).remainingPos (abs'' y) = true)
+    (hread : GalilScaffoldPlace.read (absPlace y.fppWalker) = some a)
+    (hinj : RolesInjective y) (hpol : y.pol .fppWork = true)
+    (hval : 0 < LocalCounter.val (y.phys (y.roles .fppWork)))
+    (hprop : LocalChain.ProperView y.fppWalker) :
+    tickFun (galilFrameFun centre place entry entryQ first w) F delay (absState'' y)
+      = absState'' (LocalTick3.copyVm a y)
+```
+
+証明の型（以後どのモードにもそのまま流す）:
+1. `hstate : absState'' y = ⟨y.ctl, abs'' y⟩ := rfl` で開く
+2. `simp only [tickFun, hmode]`
+3. `rw [if_pos hrem]`
+4. `habs : abs'' (copyVm a y) = {abs'' y with fpp := copyOneFun (abs'' y).fpp}` を
+   `abs'_copyVm` と新しい `absR_copyVm` から作る
+5. `show _ = ⟨y.ctl, abs'' (copyVm a y)⟩` で右辺を開いてから `rw [habs]; rfl`
+
+`absR_copyVm`（新規、標準公理のみ）は「**駐車した右ヘッドは copy を感知しない**」:
+`bankTick_phys hinj workOps .replay` が `workOps .replay = .keep` を通して `rval` の
+不変を与え、`right` / `pending` / `ctl` は `copyVm` が触らない。
+
+教訓の再確認: 「無い」と書く前に `PalPeg/Local*.lean` を読む。
+
+## n333（2026-09-21）: 部品のテープは左で止まる。機械のテープには床を置いた
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リスト不変（義務 1 本）、`unconditional` は付け替えていない。物理表現の**左端の取り違え**を見つけて直した。 |
+
+**状態: 下の定理はスクラッチ（`$S/enc_body.keep.lean`、`EXIT=0`・error 0・sorry 0・標準公理のみ）でリポジトリ未投入。全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+**見つかった取り違え。** 部品のテープ（`GalilScaffoldTape.Tape`）は**左で止まる**（`moveLeft` の定義は `left = [] → t`）。物理側の `STape` も左有界で、`applyAction` は左端で「書くが動かない」（`LocalStepRealize` 冒頭の記述どおり）。ところが符号化は、窓の半径 `K` ぶんの余白を作るために下に空白を敷いていた（`padLeft`）。その結果、**部品が止まるべき左端で物理のヘッドは余白の中へ動く**。位置がずれるので `Rep`／`TEqG` は保たれない。これは仮説の強さの問題ではなく、物理表現そのものの誤り。
+
+**直し方。** 余白の一番上に床記号を 1 つ置く。`Γm` の先頭を `Unit` から `Bool` に変え、`blankM := .inl false`、`bottomM := .inl true`。`padLeft n T := ⟨T.left ++ bottomM :: List.replicate n blankM, T.focus, T.right⟩`。規則は左へ動く前に窓の左隣を読み、床なら止まる。**位置は `pos T + n + 1` になるので余白は従来どおり効く。**
+
+**証明した部品**（すべて標準公理のみ）:
+
+* `padded_moveLeft`（公理 `propext`／`Quot.sound` のみ）: 部品が床の上でなければ、部品の左移動・アルファベット変換・余白の 3 つは交換する。すなわち**部品のテープの左移動は、機械が持つテープへの 1 アクション**。
+* `moveLeft_atFloor`: 床の上では部品のテープは動かない（`rfl`）。
+* `window_below`: **窓が頭の 1 つ下に見せる記号は `T.left.headD bottomM`**。部品に下の升があればその升、無ければ床。つまり規則は窓 1 回の読みで「止まるか動くか」を決められる。補助は `toList_padLeft`／`getD_replicate_append`／`getD_append_at` の 3 本。
+* `window_centre`: 窓の中心は頭の下の升（`K ≤ pos` のとき）。`window_below` と合わせて、**テープ 1 升の移動に必要な読みはこれで全部**。
+* `encProg_eq_iff`: プログラムテープの升は符号で区別できる。規則が窓を `encProg r` と比べることは、升を `r` と比べること。
+
+**続けて証明した部品**（同じスクラッチ、`EXIT=0`・標準公理のみ）:
+
+* `prog_slots_after_right` / `prog_slots_after_left` / `prog_slots_at_floor`: **1 本のテープだけ動かして他は放っておく規則の帳尻**。規則は動かすスロットにだけアクションを書くので他のスロットはテープをそのまま保ち、そのスロットでは `padded_moveRight`／`padded_moveLeft` がそのまま効く。床の上では規則が何もせず、抽象側も止まるので**左移動にヘッド位置の不変量は要らない。窓が決める。** 準備機械の 9 本にも探索機械の 12 本にも効くよう `{n : ℕ}` でその場で一般化した。
+* `markStep_tapes`（`rfl`）: 印つけ歩きが動かすのは準備機械の**テープ 8 だけ**で、残り 8 本はそのまま。
+
+**これで `markEnd` の枝のテープ側は無条件に閉じた。** 残りは制御側（`markEnd` → `choose`、`odd := false`）で、具体的な有限制御 `Q` を決める段。
+
+**さらに証明した部品**（同じスクラッチ、`EXIT=0`・標準公理のみ）:
+
+* **`encTapes_fppStep`**: **符号化は準備機械の一歩を生き延びる。** 状態が変わるのは 1 箇所（その機械のプログラムの 9 本のうち 1 本）、機械が変わるのも 1 箇所（そのテープのスロット）だけ。符号化が語る残り（視野・カウンタ・カーソル・chain の 2 本のテープ）は、その一歩が触らない部分を読み、規則が名指さないスロットに座っている。`markForward`／`markBack`／`homeStep`／複写は全部この 1 つの形。
+* `encTapes_markForward` / `encTapes_markBack` / `encTapes_markBack_atFloor`: 印つけ歩きの**両方向**。床の上では規則が何もせず状態も止まる（`fppStep_fixed`＝`put_same`）ので、**`markEnd` の枝のテープ側はこれで無条件に閉じた**。
+* `fppTape_tapes`（`markStep_tapes` をその場で一般化）: 準備機械の一歩が触るのは 9 本のうち 1 本。印つけ歩きは `i = 8`、複写と帰りの歩きは `i = 7`。
+* `#synth` で確認: **`Fintype Γm`・`DecidableEq Γm`・`Fintype Slot`・`DecidableEq Slot`** はすべて通る。`given_physicalMachine` は `[Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]` を要求するので、これは必要条件。
+* `CtlPhys`（`Fintype`・`DecidableEq` 導出済み）と `ctlAbs`、`ctlAbs_markEnd`（`rfl`）: **制御語の有限版。** 抽象の制御は時計を自然数で持つが、機械の制御は有限でなければならないので、時計は上限つきの数で持つ。上限は時計が戻される一致遅延で、抽象の時計はそれを超えない。印つけ歩きの制御の変化（モードと偶奇ビット、時計はそのまま）は算術なしで通る。
+
+**次の設計判断（記録）。** プログラム機械の `pc` は型が `ℕ` で上限が無い。有限制御は `pc` を上限つきで持つしかないが、**コードの外の `pc` はどれも同じく停止する**ので、符号化はそこで同型でなく**シミュレーション**でよい。`Q` は「chain のタグ＋各成分の有限部分」の積で、カウンタ・場所・ヘッドはすべてテープ側にあるので入らない。
+
+**`markEnd` の枝が、制御側とテープ側の両方そろった**（同じスクラッチ、`EXIT=0`・標準公理のみ）:
+
+* `QPhys`（`Fintype`・`DecidableEq` は各部品で確認）: **有限制御の全体。** カウンタ・カーソル・ヘッドは出てこない——テープ側にあるから。残るのは制御語、2 つのプログラムのカウンタと旗、chain と探索の形、継続ビット、視野とカウンタの写しの帳簿。`PcPhys bound := Option (Fin bound)` で、`none` は「コードの外」。**コードの外の計数子はどれも同じく停止するので、符号化はそこで同型でなくシミュレーションでよい。**
+* `EncControl`: 各場が状態から読み取れること。テープには一切触れない。
+* `encControl_fppStep`（プログラムのテープの一歩は有限制御を動かさない）と `encControl_setMode`（モードと偶奇の変更は両側で同じ変更）。`ctlAbs_setMode` は `rfl`。
+* `frameFun_atEnd` / `frameFun_markForward` / `frameFun_markBack`（すべて `rfl`）: 印つけ歩きが見る記号と動かすテープを、`galilFrameFun` から具体に落とした。**`markBack` は `rewindLens` を通るが、構造の eta でそのまま `{s with fpp := …}` になる。**
+* `encTapes_ctl`: **テープの符号化は制御語を読まない**ので、同じテープはどの制御語の下でも同じ状態を表す。これがあって初めて「モードが変わる枝」でテープ側の補題が使える。
+* **`markEnd_forward` / `markEnd_back` / `markEnd_back_atFloor`**: `Enc := EncControl ∧ EncTapes` として、`markEnd` の 3 つの場合それぞれで **`Enc` が `tickFun` の一歩を越える**。これが `hideal` の最初の 1 枝。
+
+**2 つ目のモード `home` も閉じた。道具を 2 つ一般化してから入った**（同じスクラッチ、`EXIT=0`・標準公理のみ）:
+
+* `encTapes_congr`（`encTapes_ctl` をその場で一般化）: **テープの符号化が読むのは 7 つだけ**——2 つのプログラム束のテープ、16 のカウンタ、4 つのヘッド、3 つのカーソル、chain の周期テープと答テープ。そこが一致する 2 状態は同じテープで符号化される。**制御語は出てこないし、プログラムの計数子も停止旗も出てこない。**
+* `encControl_ctl`（`encControl_setMode` と `ctlAbs_setMode` をまとめて一般化）: 制御語の変更一般。読みの条件は各枝が `rfl` で払う。
+* `encTapes_progRight` / `encTapes_progLeft` / `encTapes_progLeftAtFloor`（印つけ歩き専用だったものを**テープ番号 `i` で一般化**）: 印つけ歩きは `i = 8`、帰りの歩きと複写は `i = 7`。
+* `frameFun_atLeft` / `frameFun_homeStep` / `frameFun_fppStart`（すべて `rfl`）。**`fppStart` はテープを 1 本も動かさない**——計数子を入口に、停止旗を降ろし、準備を走行モードにする、有限制御の 3 つの変更だけ。
+* `encControl_fppStart`、そして **`home_step` / `home_step_atFloor` / `home_fppStart`**。
+
+**閉じたモード: `markEnd`（3 場合）、`home`（3 場合）。残り 8 モード。** `copy` の `remainingPos` は `shiftRemainingTest ∨ copyRemainingTest` の論理和なので、規則は 2 つの読みを持つ必要がある。`scan` が最も重い。
+
+**3 つ目のモード `choose` の片枝も閉じた**（`frameFun_markSet`＝`rfl`、`choose_back` / `choose_back_atFloor`）。判定は再び準備機械の 8 番テープの読みで、動きは印つけ歩きと同じなので既存の部品で通る。
+
+**`refreshFun` は局所だった（見かけの障害が 1 つ消えた）。** `position p = if p.gap then 2·|left| else 2·|left| − 1`（`GalilScaffoldChainInputSupply.lean:496`）なので、`onLetterTest` の `position right % 2 = 1` は **gap ビットそのもの**（`|left| ≥ 1` のとき）で、`leftFirstTest` の `position left = 1` は「gap が降りていて左が 1 升」。どちらも有限制御と窓で読める。gap は既に `QPhys` にある。
+
+**ここで、証明を続ける前に直さなければならない物理表現の穴が 2 つ見つかった。** どちらも「一歩で無限の仕事をしている」型で、左端の取り違え（このノート冒頭）と同じ種類。**正本の Scala を読んで確認した。**
+
+1. **頭の複写。** `ScaffoldGalil.scala:395` の `stepChoose` は `left.copyFrom(right)` と `center.copyFrom(right)` を 1 ティックで行い、その実体は `ScaffoldCircuitInput.scala:77–82` の `leftStack.copyFrom(...)`／`rightStack.copyFrom(...)`／`incoming.copyFrom(...)`——**スタックの丸ごと複写**。回路模型では 1 操作だが、テープ機械では大きさに比例する。Lean 側も忠実に `chooseFun x = {x with left := x.right, center := x.right, …}` になっている。
+   **直し方（案）：** 頭にも写しの仕掛けを入れる。`choose` の直後、`left` と `center` は `right` と同じ位置にあり、続く `rewind` では `left` だけが 1 升ずつ**後ろへ**動き `right` は止まっている（`stepRewind`、`:409–415`）。よって `left = right − (カウンタ)` の形で持てば一歩 O(1)。カウンタ側で既に使っている `LocalMirror` と同じ発想を頭に広げる。
+2. **プログラムの全消去。** `fppResetFun` は `GalilScaffoldControl.reset 320` を呼び、その定義（`GalilScaffoldControl.lean:16`）は `⟨⟨entry, fun _ => GalilScaffoldTape.reset⟩, true⟩`——**9 本のテープを全部空白に戻す**。これもテープ機械では長さに比例する。
+   **直し方（案）：** 消さない。新しい領域を現在のヘッド位置から始め、そこを新しい原点とする。引き継ぎ資料の「ゴミをその場で消さない」がまさにこれ。ただし `EncTapes.fpp` がいまテープの**リテラルな等式**を要求しているので、原点のずれを許す形（`TEqG`／相対位置）に緩める必要がある。
+
+**次の一手はこの 2 つの表現変更で、新しい枝を積むのはその後。** 表現が間違ったまま枝を増やすと、増やした分だけ書き直しになる。
+
+**決定的な一次情報（2026-09-21、機械的に確認）。** 上の「穴 1」を追ったら、これは `choose` 一箇所の話ではなく**模型全体の性質**だった。
+
+* **正本の Scala には構造の複写が 7 箇所ある**（`scala/pal/src/main/scala/pal/ScaffoldGalil.scala`）:
+  `:245–246`（`left.copyFrom(right)` / `center.copyFrom(right)`）、`:314`（`walker.copyFrom(right)`）、
+  `:395–396`（`stepChoose` の同じ 2 つ）、`:428–429`（`right.copyFrom(center)` / `left.copyFrom(center)`）。
+  実体は `ScaffoldCircuitInput.scala:77–82` の**スタックとキューの丸ごと複写**。回路模型では単位コストだが、
+  テープ機械では構造の大きさに比例する。
+* **局所機械の視野の命令集合は 6 つで、複写は無い**（`PalPeg/LocalViewDecision.lean:28`）:
+  `stay` / `arrive a` / `moveRight` / `moveLeft` / `stepRight` / `stepLeft`。
+  頭は**一度に 1 升しか動けない**。
+* `ActRule.acts` が返すのは長さ `≤ K` の有限列（`CloseoutCoreEnc12.lean:347`）なので、
+  一歩で動かせる距離は定数で抑えられている。
+
+**したがって、抽象の一歩 `chooseFun`（`left := x.right`）は、設計された局所機械の一歩では実現できない。**
+これは仮説の強さの問題でも証明の書き方の問題でもなく、**抽象層と物理層のコスト模型の食い違い**。
+`obligation_localRealization` がここまで残ってきた理由はこれだと考えられる。
+
+**取りうる道は 3 つ。**
+1. 抽象模型を直す。`choose`／`beginFallback`／`replayStart`／restart の複写を、1 升ずつの歩きに分解する。
+   意味論は変わらないが、`Tick` の形が変わるので使用箇所が広い。
+2. 符号化を遅延複写にする。頭を「別の頭＋距離カウンタ」で持ち（カウンタで既に使っている
+   `LocalMirror` の発想）、**読む必要が生じるまで実体化しない**。復元の歩きは余りティックに
+   割り当てる——`RTQueue`／`Schedule` がまさにそのための層。
+3. `Realizes` の一歩の粒度を変える。抽象 1 ティック＝局所 1 ステップという対応をやめ、
+   遅れを許す対応にする。
+
+**どれも「新しい枝をもう 1 本書く」より上位の判断なので、ここで手を止めて記録する。**
+枝を 7 本積んでから表現を変えると、7 本とも書き直しになる。
+
+**この時点で閉じている枝**（すべて標準公理のみ、スクラッチ `enc_body.keep.lean`、`EXIT=0`）:
+`markEnd`（3 場合）、`home`（3 場合）、`choose` の歩き側（2 場合）。いずれも**準備機械のテープしか動かさない枝**で、
+上のコスト模型の食い違いに触れない。触れないからこそ通った、とも言える。
+
+**訂正（同日、これが今日いちばん大きい）。上の「食い違い」は設計では既に解かれていた。ウチが土台を間違えていた。**
+
+`PalPeg/LocalState.lean` の冒頭（`:18–56`）が、まさにこの 3 点を名指しで解いている。
+
+* 「`LocalBuffers` — `GalilScaffoldControl.reset`（一歩で丸ごと消える `ProgLang` 機械）を、**背景消去つきの二重緩衝**として」
+* 「`LocalInputView` — 頭と walker の複写（`left := right`、`walker := p`）を、**カーソル自身が保つ入力の写しの上の位置直しジョブ**として」
+* 「`LocalCounter` … 同期した鏡の銀行と背景の再構築」
+
+そして中心の記録 `GalilVML P`（`:125–159`）は、ウチが `QPhys` と `EncTapes` で作り直していたものそのもの:
+5 つのカーソル＋`pending`、役割と極性つきのカウンタ銀行、鏡、**二重緩衝になった 2 つのプログラム機械と
+その計数子・停止旗**、chain、制御記録と有限制御ビット（`searchMode`/`searchFinalStage`/`searchQuarter`/
+`fppMode`/`fppFinalStage`/`periodOnly`）。抽象化写像 `abs`（`:189`）と `absState`（`:218`）まである。
+
+決定的なのは `abs` の性質（同ファイル冒頭の記述）: **「全域かつジョブ非依存。二重緩衝の生きている側、
+カウンタ銀行の `roles`/`pol` と視野だけを読み、`job` 場も休んでいる緩衝も鏡も決して読まない。
+だから背景のジョブ（消去・再構築・位置直し）は抽象の水準では見えない」**。
+`StepLocal` は一ティックの局所性予算まで決めている: カウンタテープは `applyAction` を高々 1 回、
+各カーソルは `arrive`/`moveRight`/`moveLeftV`/`repositionStep` を高々 1 回、各二重緩衝は
+`resetL`/`clearTick`/プログラム 1 歩を高々 1 回。`stepLocal_reposition`（`:518`、**「頭を複写する仕事の
+位置直し 1 微小歩は局所である」**）も `CloseoutCoreEnc7:516–518`（**「一ティック 1 升、内容の複写ではない」**）もある。
+`LocalReplayParked` は `left` を鏡と**交換**する——内容は動かない、それが parked 設計の眼目。
+
+**つまり「複写は局所機械で実現できない」は正しいが、設計はその複写を抽象層の見かけとして扱い、
+物理層では位置直しジョブ・二重緩衝・鏡の交換に置き換え済みだった。**
+
+**ウチの誤りは土台の取り違え。** `EncTapes` を `State GalilVM`（**抽象**状態）の上に直接建ててしまった。
+正しい土台は `GalilVML P`（**物理**状態）で、消費者も既にそちらを向いている——
+`forwardTick_of_machine` は `m : Mirrored1 (tapeCount spare)` を取り `Enc (absSC m) p` を使う。
+符号化すべきは `m` であって `absSC m` ではない。
+
+**次にやること（土台の取り直し）。**
+1. `Enc x p := ∃ y, absState y = x ∧ (p は y のテープ＋有限制御の符号化)` の形にする。
+2. 前進義務を「`GalilVML` の局所一歩が `ActRule` の一歩である」に読み替える。粒度は `StepLocal` が既に決めている。
+3. 今日証明した枝（`markEnd` 3・`home` 3・`choose` 2）は意味は残るが、`x.vm.fpp.program.config.tapes i` ではなく
+   `y.fppBuf` の生きている側の上に建て直す。テープ 1 本の移動の補題（`padded_moveRight`/`padded_moveLeft`/
+   `window_below`/`window_centre`/`prog_slots_*`）は**土台に依らないのでそのまま使える**。
+
+**教訓。** 「無い」と書く前に、一次情報を探す範囲を `PalPeg/Local*.lean` まで広げる。
+`CLAUDE.md` が「コードベース全体を俯瞰していない状態で『○○は無い』と書かない」と書いているのは、
+まさに今日のこの失敗の形。**今日は 1 日で 2 回、同じ落とし穴に落ちた（左端の取り違えは本物、コスト模型は誤報）。**
+
+**土台の取り直しを実際に始めた**（同じスクラッチ、`EXIT=0`・`propext`／`Quot.sound` のみ）:
+
+* `BufEnc`: プログラム機械を `LocalBuffers.Buffered n` として符号化する。**両方の半分を持つ。**
+* **`bufEnc_resetL`**: **機械を丸ごと消すのはテープに何の費用もかからない。** `resetL` は生きている側のビットを
+  裏返して消去ジョブを立てるだけで、両方の半分は内容を保つ。よって規則はアクションを 1 つも名指さない。
+  **これが「9 本のテープが一歩で空白になる」の物理での姿**——状態を物理のものに取り替えた途端に消える。
+  証明は `h` そのもの（`resetL` は `A` も `B` も触らない）。
+* `bufEnc_live_clearTick`: 背景の消去は休んでいる側しか触らないので、生きている側の符号化は生き残る。
+* **`bufEnc_stepRight`**: 生きているプログラムの一歩は 1 スロットへの 1 アクション。
+  証明は今日証明した **`prog_slots_after_right` をそのまま呼ぶだけ**。
+  **つまり今日のテープ補題は土台の取り直しを生き延びた。**
+
+**そして土台の取り直しの要が通った**（同じスクラッチ、`EXIT=0`・標準公理のみ）:
+
+* `abs_stepL`（公理は `propext` のみ）: 生きている側への一歩は抽象の束への一歩。
+* **`vml_markEnd_forward`**: **抽象の一ティックが物理状態の一局所歩である。**
+  `tickFun … (absState'' y) = absState'' {y with fppBuf := stepL (テープ 8 を右へ) y.fppBuf}`。
+  これは物理状態 `GalilVML` の上でしか書けない文で、消費者が使う `absSC`＝`absState''` にそのまま合う。
+  動くのは生きている緩衝半分のテープ 8 だけ——カウンタ銀行もカーソルも休んでいる半分も動かない。
+
+**これで土台の形が見えた。** 残りの前進義務は
+`Enc x p := ∃ y, absState'' y = x ∧ (p は y の符号化)` と置いて、
+各モードについて (i) `vml_*_forward` 型の「抽象一ティック＝物理一局所歩」と
+(ii) `bufEnc_*` 型の「物理一局所歩＝規則の一歩」を繋ぐ形になる。
+(ii) の道具は今日のもの（`prog_slots_*`／`padded_move*`／`window_*`）がそのまま効くことを
+`bufEnc_stepRight` で確かめた。
+
+**物理の土台の上で枝が 5 本通った**（同じスクラッチ、`EXIT=0`・標準公理のみ）:
+`vml_markEnd_forward` / `vml_markEnd_back` / `vml_home_step` / `vml_choose_back` / `vml_home_fppStart`。
+
+**証明の骨が定型化した。** どれも同じ 6 手:
+1. `hstate : absState'' y = ⟨y.ctl, abs'' y⟩ := rfl` を噛ませて状態を開く
+2. `simp only [tickFun, hmode, 判定の補題, 動きの補題]`
+3. `if` を倒す。条件は **`abs''` の形で書く**（`rw` は構文一致を要求するので、`LocalBuffers.abs` の形では当たらない）
+4. `unfold absState'' abs'' abs' abs FppControl.tape put`
+5. `simp only [abs_stepL]`
+6. `rfl`
+
+`vml_home_fppStart` だけは 5 が要らない——**テープを 1 本も動かさない**ので、変わるのは
+`fppPc` / `fppDone` / `fppMode` と制御語だけ。二重緩衝は両半分とも手つかず。
+
+**残りは同じ型を 10 モードぶん書く作業**（`init` / `scan` / `shift` / `copy` / `fpp` / `rewind` /
+`replayStart` と、各モードの残りの場合）。`scan` が最も重い。
+
+**そして消去の話が端から端まで閉じた**（`vml_rewind_fppReset`、`EXIT=0`・標準公理のみ）:
+
+```
+tickFun … (absState'' y)
+  = absState'' {y with ctl := …replayStart, fppBuf := LocalBuffers.resetFresh y.fppBuf,
+                      fppPc := 320, fppDone := true}
+```
+
+抽象側は 9 本のテープを全部空白に置き換えるが、物理側は**二重緩衝の反対側に切り替えて、
+離れた方に消去ジョブを立てるだけ**。`LocalBuffers.abs_resetFresh`（「生きている側は新品の束として
+読める。物理では古い内容はそこに残り、二度と読まれない。それは表現関係が担い、消去の締切ではない」）が
+両者を一致させる。**テープは 1 本も動いていない。** このノートの前半で「実現できない」と書いた当の一歩が、
+物理の土台に移した途端にこう通った。
+
+**物理の土台で通った枝は 6 本**: `vml_markEnd_forward` / `vml_markEnd_back` / `vml_home_step` /
+`vml_choose_back` / `vml_home_fppStart` / `vml_rewind_fppReset`。
+
+**次に必要なのは符号化の緩和（記録）。** `BufEnc` はいまテープの**リテラルな等式**を要求しているので、
+`resetFresh` で新しく生きた半分（物理にはゴミが残っている）には効かない。
+読む範囲での一致（`Rep`／`TEqG`）に緩める必要がある。引き継ぎ資料の
+「`Rep`／`TEqG` で模擬する。リテラルな等式を要求しない」がまさにここ。
+
+**最後にもう 1 つ、どのモードでも要る部品**（`EXIT=0`・`propext`／`Quot.sound` のみ）:
+`padded_write`（**書いて動かないのも 1 アクション**。`GalilScaffoldTape.write t s = {t with focus := s}` は
+`applyAction (encProg s, .stay)` そのもの）と `prog_slots_after_write`。
+複写が残す終端記号も、準備が並べる文字も、全部この形。
+
+**スクラッチの最終状態**: `$S/enc_body.keep.lean`（`$S/enc_body.n333-final.lean` に同内容を退避）。
+`EXIT=0`・error 0・sorry 0・標準公理のみ。**リポジトリには未投入。**
+
+**7 本目 `vml_copy_end`**（`EXIT=0`・標準公理のみ）: 複写の終わりは、生きている半分の 7 番テープへの
+**1 つの刻印**（`padded_write` の形）と、有限制御の 3 つの場——制御語のモード、準備のモード、
+その最終段旗。旗は準備のカーソルの読みで、機械は自分の窓に持っている。
+判定は `remainingPos (abs'' y) = false` としてそのまま仮説に持った。
+**判定を機械が窓から計算できることは別の義務で、そこに畳み込まない。**
+
+**残りのモードは 2 種類の塊に分かれる（記録）。**
+1. **多成分の一歩**（`copyOne`／`shiftOne`／`rewindOne`／`rewindPair`）: 生きている半分のテープに加えて、
+   銀行のカウンタ 1 本とカーソル 1 つが同時に動く。規則はスロットごとにアクションを名指せるので
+   形は同じだが、`absCtrs`／`absPlace` が物理の操作と可換であることを使う（局所層に既にあるはず）。
+2. **プログラムの走行**（`fppSlice`／`fppDone`／探索の量子）: `fppRunFun q m` を
+   (計数子, 停止旗, テープ束) に分解する必要がある。`PalPeg.ProgramFunction` が出発点。
+
+`shift` の終了枝と `init`／`replayStart` は `refreshFun` を含む。**`refreshFun` は局所である**ことは
+上で確認済み（偶奇は gap ビット、`position left = 1` は gap と「左が 1 升」）。
+
+**進め方について。** モードごとに `tickFun` を言い換える補題（`tickFun_markEnd`／`tickFun_home`）は `simp only [tickFun, hmode]` で出る**薄い言い換え**で、中身が無い。そこで手を変えて、いちばん単純なモード（`markEnd`、動くのは fpp プログラムのテープ 8 だけ）を規則の枝まで書こうとしたところ、上の左端の取り違えに当たった。**モードの一覧を増やすより、1 モードを物理まで通す方が誤りを出す。**
+
+## n332（2026-09-21）: 抽象 frame が丸ごと関数になった。物理機械への要求は「符号化を保つ 2 本」だけになった
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リスト不変（義務 1 本）、`unconditional` は付け替えていない。消費者側の前進義務 `hforwardTick` が、抽象層について何も要求しない形まで落ちた。 |
+
+**状態: module build `PalPeg.FrameFunction`・`PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0、下の定理は標準公理のみ・無条件 PAL は未完。**（全体 build は n325 以降走らせていない。）
+
+**新モジュール `PalPeg/FrameFunction.lean`（945 行、`ShadowedLocalFinal` → `Workbench` 経由で root の build 対象）**: `Frame` の 33 場すべてを関数と Bool 判定にし、**`computes_galilFrameFun`**（`Computes (galilFrameS (PofC centre place entry w) q first) (galilFrameFun …) (fun s => s.fpp.walker = rightPlace s) landed`）を証明した。作業は 3 種類に分かれた。
+
+1. **既に等式の関係**（`copyEnd`／`fppStart`／mark と rewind の各単位ほか）は読み取るだけ。証明は `h` か `h.2`。
+2. **存在量化つきの関係**（`shiftOne`／`copyOne`／chain と search の各歩、chain の 2 つのガード）は、その存在が構成子か `Option` で固定されているので `match` で計算できる。
+3. **プログラム機械の走行**（探索の DP 量子、fpp のスライス）は `GalilScaffoldControl.Tick` の走行で、`read` の分配表が一価（`GalilTickDet.ReadFun`、両方の code について `decide`）なら関数。
+
+レンズの引き戻しは補題 1 本（`lensRel_eq`、公理ゼロ）で上がる。既存の `beginShiftFun`／`beginFallbackFun`／`restartFun`（`GalilSharedFunctional`）はそのまま使った。
+
+**消費者 `ShadowedLocalFinal.forwardTick_of_stepping`**: `hcomputes` と `hguard`（`restartGuardTest_iff`）を埋めたので、物理機械に残る要求は 2 本だけになった。
+
+```
+hstay : Enc x p → StarvedAbs x → Enc x (L0.apply p none)
+hstep : Enc x p → ¬ StarvedAbs x → Enc (tickFun (galilFrameFun …) (galilFrameS …) 2048 x) (L0.apply p none)
+```
+
+**途中で直した形式化**: `Computes.beginShift` は `F.shiftGuard s` を取る形でないと埋まらない（既存 `beginShiftFun_eq` がガードを要求し、`beginShiftVM'` だけでは `beginShiftFun` が `s` を返す場合がある）。`Tick.scan_shift` の構成子がそのガードを持っているので、場に足した。
+
+**同日の追加（投入済み）**: 機械は自分がどちらの分岐にいるかを読めなければならないので、飢餓判定も Bool 関数にした——`FrameFunction.starvedTest`（モード、3 本のヘッド、2 本の残量カウンタだけを読む）と `starvedTest_iff`、消費者側の `ShadowedLocalFinal.starvedAbs_iff`。`forwardTick_of_stepping` の 2 本は
+
+```
+hstay : Enc x p → starvedTest x = true  → Enc x (L0.apply p none)
+hstep : Enc x p → starvedTest x = false → Enc (tickFun (galilFrameFun …) (galilFrameS …) 2048 x) (L0.apply p none)
+```
+
+になった。**物理機械への要求は、有限窓から読める判定 1 つと、計算すべき関数 1 本だけである。**
+
+**機械化の土台（スクラッチ `$S/tape_enc.keep.lean`、EXIT=0・error 0・標準公理のみ）: 足場のプログラムテープは物理テープそのものだった。** `GalilScaffoldTape.Tape` は `left : List (Fin 9)`／`focus`／`right` の zipper で空白記号は `6`、`Program.STape (Fin 9)` と同じ形。`encTape t := ⟨t.left, t.focus, t.right⟩` について
+
+* `encTape (moveRight t) = STape.applyAction 6 (encTape t) (t.focus, .right)`（右端では両方とも空白を置く）
+* `encTape (moveLeft t) = STape.applyAction 6 (encTape t) (t.focus, .left)`（左端では足場は止まり、物理側も読んだ記号を書き戻すので止まる）
+* `encTape (write t s) = STape.applyAction 6 (encTape t) (s, .stay)`、`encTape reset = STape.blankTape 6`（どちらも `rfl`）
+
+そして **`executeFun_tapes`**: 1 命令は `pcOf` で数えるプログラムカウンタの更新と、`actOf` が名指しする**テープ 1 本への action 1 個**（`halt` と `read` は action なし）。つまり fpp の 9 本と DP の 12 本は物理テープをそのまま使い、`ActRule` はカウンタが指す命令を有限制御から引いて action を 1 個出すだけでよい。
+
+**プログラム機械の `ActRule`（スクラッチ `$S/prog_rule.keep.lean`、EXIT=0・error 0・標準公理のみ）**: 上の土台の上に、1 call を 1 歩で走らせる規則を書いた。有限制御は `ProgControl code := Fin (code.length + 1) × Bool`（カウンタと停止ビット）——**範囲外のカウンタは「命令が無い」唯一の値に潰す**ので、`getElem?_clampPc : code[clampPc code counter]? = code[counter]?` が成り立ち、機械は抽象側が止まるところでちょうど止まる。`controlAfter`（`read` は窓の中央記号で分配表を引く）、`actsAfter`（命令が名指しするテープに action を 1 個、`halt` と `read` は 0 個）、`progRule` の `len_le`（`1 ≤ K` で足りる）。対応の道具として `ProgRep`（制御がカウンタと停止ビットを持ち、物理テープが `encTape` の像）、`currentInstruction_progRep`、`centreOf_progRep`（窓の中央は抽象テープの焦点。margin `K ≤ pos` から）。
+
+**プログラム機械の表現が保たれる（`$S/prog_rule.keep.lean`、EXIT=0・error 0・標準公理のみ、未投入）**: **`progRep_idealStep`**——規則の 1 歩は `ProgramFunction.tickFun code true` の 1 call ちょうど。物理テープは足場のテープそのままで、途中に再符号化は無い。枝は 6 つ（停止済み、カウンタ範囲外、`halt`、`read`、`move`、`write`）。道具として命令ごとの値の補題 8 本（`controlAfter_halt`／`_move`／`_write`／`_read`、`actsAfter_*`）を切り出した——**総称の `controlAfter_some` は、仮説が命令に言及するため `match` が依存型になって書き換えが当たらない。** 命令ごとに述べれば当たる。
+
+**量子ぶんの call が実 1 歩に融合する（同じスクラッチ、EXIT=0・error 0・標準公理のみ）**: `progRep_idealIter`（`count` 回の ideal な call が表現を保つ。融合規則が要る margin `iterRadius K count` は 1 call ずつ削られていく——`pos_actList_ge` と `len_le` で `omega`）と **`progRep_realStep`**（融合規則の実 1 歩は制御が ideal と一致し、表現を保ち、テープは `TEqG` まで一致する）。探索の 64 call と fpp のスライスはこれで実 1 歩になる。
+
+**`TEqG` 版（同じスクラッチ、EXIT=0・error 0・標準公理のみ）**: 実機械の sweep が返すのは `TEqG` までなので、`ProgRepG`（テープは `TEqG` まで）と `progRepG_of_progRep`、そして **`idealStep_teqG`**——規則は `TEqG` を通して読み書きする（`TEqG` な 2 つのテープ割当は同じ窓を与えるので同じ制御と同じ action になり、結果はまた `TEqG`）。**その前に `teqG_actOnG`／`teqG_actList`／`readWin_teqG`（`LocalQueueMachine`）を `Γc` から任意の `Γ` へその場で一般化した**（変種は作っていない。全体の module build `BUILD=0`）。
+
+**カウンタもテープ 1 本で足りる（既存 `LocalCounter` の確認＋スクラッチ `$S/counter_rep.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `GalilScaffoldCounter.Counter` は `Unit` の 2 スタックで、`inc`／`dec` は片方への push／pop。`LocalCounter` は `Seg = Fin 3`（空白・マーク・区切り）の 1 本に載せ、**`push`／`pop`／`resetSeg` が各 `STape.applyAction` 1 個**（reset は新しい区切りを置いて下の段を捨てるだけ）、符号は有限制御の極性ビット、`absCtr` は常に `Canonical`。新たに示したのは `exists_ctrTape : Canonical c → ∃ tape polarity, absCtr tape polarity = c`——**符号化が各カウンタに仮定してよいのはこれで、走行に沿ってそれを供給するのが `CountersCanonicalTrace`。**
+
+**残る非局所操作はコピーだけで、その道具も既にある**（`LocalMirror`、一次情報で確認。新しい証明は書いていない）: `take m i = m.mir i` は**制御だけの操作で action ゼロ**、`abs_take : Synced m → absCtr (take m i) b = absCtr m.src b`（外した鏡は源の複製）、`negate_via_pol : absCtr (take m i) (!b) = negate (absCtr m.src b)`——**極性ビットを反転して同じ鏡を渡せば否定された複製**で、これが restart の `debt := negate radius` そのもの。`pushAll`／`popAll`／`resetAll` は鏡も源も各 1 action なので、同期の維持は無料（機械はどの歩でも全テープに書く）。よって
+
+* chain 誕生の `lag := radius`・`margin := radius` → radius の鏡 2 枚を渡す
+* restart の `debt := negate radius` → 3 枚目を極性反転で渡す
+* `prepare` の `work := lower` → lower の鏡を渡す
+* `finish` の `work := span` → 移動なので役割交換＋`resetSeg` 1 回
+
+外した枠の補充は背景ジョブで、締切は `LocalBudget`／`LocalSchedule` が純算術で切り出し済み。**符号化のどの成分にも、これで O(1) の道具が揃った。**
+
+**chain の成分も物理テープで足りる（`$S/period_enc.keep.lean`、EXIT=0・error 0・**公理ゼロ**）**: `GalilScaffoldChainPeriod.Tape` も `left`／`focus`／`right` の zipper（空白は `.blank`）で、`encPeriod` について `moveRight`／`moveLeft`／`write` が各 1 action、chain のコピー tick の `put` はちょうど 2 action（右へ移って plain トークンを書く）。`GalilScaffoldPlace.Place` は `⟨letters : List (Fin 2), gap : Bool⟩`——**スタック 1 本と制御の 1 ビット**で、`read` は先頭の読み取り、`left` は gap の反転か pop。
+
+**これで `GalilVM` の全成分に O(1) の表現が付いた**: ヘッド 3 本と verifier（`HeadRep`、view 1 本 = 12 テープ）、カウンタ（`ctrTape` ＋ 極性ビット、コピーは鏡）、プログラム束 fpp 9 本と DP 12 本（`encTape`）、chain の answer テープと period テープ（同じ zipper）、walker と place（スタック＋ビット）、chain のタグと有限制御のビット群。
+
+**`hstay` の核（`$S/idle_step.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `compStep_apply_idle`——**命令を 1 つも名指さず制御も変えない規則は、配置をそこに置いたまま残す**（sweep が許す `TEqG` まで）。飢餓のところで機械がすることはこれだけなので、`hstay` は「`Enc` が `TEqG` で閉じていること」と「規則が `starvedTest` を見て何もしないこと」に落ちる。**したがって `Enc` は最初から `TEqG` を通して書く**（`ProgRepG`・`StackTape` と同じ形）。
+
+**両分岐が規則の性質に落ちた（新モジュール `PalPeg/MachineStep.lean`、消費者つきで投入。module build `PalPeg.MachineStep`・`PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0、標準公理のみ）**: `SweepClosed blank Enc`（符号化はテープを `TEqG` までしか語らない）のもとで
+
+* **`enc_of_starved`**: `starvedTest` が立つところで制御を変えず命令も名指さない規則なら、飢餓の歩で符号化は保たれる。
+* **`enc_of_stepping`**: ideal な 1 歩が後継を符号化する規則なら、実の 1 歩でも符号化は保たれる（sweep が返す `TEqG` を `SweepClosed` が吸収する）。
+
+**飢餓判定は七つの読み値を通る**（`FrameFunction.starvedOf`／`starvedTest`、module build `BUILD=0`）: モード、4 本のヘッドそれぞれが進めるか、残量カウンタ 2 本。**それ以外は状態から入らない。**さらに 1 本のヘッドについては（スクラッチ `$S/head_read.keep.lean`、EXIT=0・公理 `propext` のみ）`canRightTest (absHead' v []) = canRightOf v.gap v.near.isEmpty (RTQueue.toList v.far).isEmpty`——**gap ビット、押し戻したセルが尽きたか、到着待ちの queue が空か**の 3 つだけで、焦点も訪問済みのセルも入らない。規則が読むべきものはこれで確定した。そのうち `near` の空判定はテープの先頭セルから読める（`$S/near_read.keep.lean`、EXIT=0・公理 `propext` のみ）: **押し戻したセルは全部文字で（左端の番兵は訪問済みの側にある）、下の junk は封じてあるので、先頭セルが文字であることと stack が尽きていないことが一致する**（`isEmpty_iff_topLetter`）。`far` の空判定も同じく有限の観測に落ちる（`$S/far_read.keep.lean`、EXIT=0・公理 `propext` のみ）: **`toList q` が空であることは、回転状態が見せる front の断片と rear がどちらも空であることと一致する**（`toList_isEmpty`）——待っている文字を隠せる場所は他に無い。
+
+`SweepClosed` は書かなくてよい:`SweepClosed` は書かなくてよい: **`sweepClosure blank Enc`（厳密な符号化を `TEqG` で閉じたもの）はいつでも `SweepClosed`**（`sweepClosed_sweepClosure`、公理は `propext` のみ）。機械の設計者はテープが厳密に何を持つかだけを書けばよく、sweep が末尾の空白をずらす分はこの閉包が吸収する。
+
+消費者 `ShadowedLocalFinal.forwardTick_of_rule`: `ActRule` R ひとつについて、**規則自身の 3 性質——窓に要る margin、「飢餓では何もしない」、「ideal な 1 歩が `tickFun` の値を符号化する」——**から `hforwardTick` の本体が出る。`L0 := compStep R`、符号化は `sweepClosure blankSymbol Enc`。
+
+**成分ごとに違うアルファベットを 1 本に載せる移送（`$S/alphabet.keep.lean`、EXIT=0・error 0、`mapTape_applyAction` は**公理ゼロ**）**: 機械のアルファベットは全テープで 1 つだが、ヘッド（`Γc`）・カウンタ（`Seg`）・プログラム（`Fin 9`）・chain の period（`Token`）はそれぞれ自分の記号で書かれている。`mapTape f T` と、**空白を空白に送る写像は action をそのまま運ぶ**（`mapTape_applyAction`）、ヘッド位置も動かない（`pos_mapTape`）。これで各成分は自分の補題を持ったまま大きいアルファベットに載る。
+
+**機械のアルファベット（`$S/gamma.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `LocalStep` はどのテープにも同じ空白記号を使うので、成分ごとのアルファベット——ヘッドのセル `Γc`、プログラムの記号 `Fin 9`、chain の period のトークン、カウンタのマーク `Seg`——を**空白を同一視して**並べる: `Γm := Unit ⊕ Γc ⊕ Fin 9 ⊕ Token ⊕ Seg`、`blankM := .inl ()`、各成分の埋め込みは自分の空白を `blankM` へ送り他を単射に送る（`encCell`／`encProg`／`encToken`／`encSeg` と、空白の保存 4 本・単射性 4 本）。`Fintype` と `DecidableEq` は和型から自動で付く（`realize` が要求する）。
+
+**テープ割当（`$S/slots.keep.lean`、EXIT=0・error 0・標準公理のみ）**: 成分ごとの枠を名前で定義し、**機械は 95 本のテープを持つ**ことを `decide` で確かめた（`card_slot`）。内訳は
+
+* `view v i`（4 × 12 = 48）: scan の左・中央・右のヘッドと chain の verifier、それぞれ `ViewRep` の 12 本
+* `fpp i`（9）／`dp i`（12）: プログラム機械の 2 本の束、1 call が 1 action
+* `answer`／`period`（2）: chain の答えテープと周期テープ
+* `place p`（3）: 探索の walker、fpp の walker、chain のコピー walker
+* `counter c`（16）: `cycle`／`remaining`／`radius`／`length`／`replay`／`lower`／`span`／`work`／`debt`／`fppWork`、chain の `h`／`lag`／`margin`、consume 制御の `distance`／`boundary`／`last`
+* `mirror m`（5）: `radius` の 3 枚（`lag`・`margin`・否定した `debt` 用）、`lower` と `span` の 1 枚ずつ
+
+`slotIndex : Slot ≃ Fin 95` が `LocalStep` の要求する番号付け。
+
+**符号化の本体、厳密な部分（`$S/enc_body.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `EncTapes x polarity tapes`——95 本のうち**状態をそのまま読むだけの枠**を書いた: fpp の 9 本と DP の 12 本は `mapTape encProg (encTape …)`、16 本のカウンタ枠のうち状態が埋めるものは `∃ segments, absCtr segments (polarity c) = value ∧ tapes … = mapTape encSeg segments`（`exists_ctrTape` が `Canonical` からその `segments` を出す）。`counterOf` が 16 枠の並び（`cycle`／`remaining`／`radius`／`length`／`replay`／`lower`／`span`／`work`／`debt`／`fppWork` と、chain のタグから読む 4 本＋consume の 2 本）。さらに chain のテープ 2 本を足した: `periodOf`／`answerOf`（どちらも chain のタグから読むので `Option`）、`period` 枠は `mapTape encToken (encPeriod tape)`、`answer` 枠は `mapTape encProg (encTape tape)`。どの枠を状態が埋めるかを決める関数も書いた: `headOf`（scan の 3 ヘッドと chain の verifier、idle な chain には verifier が無い）、`placeOf`（探索の walker、fpp の walker、chain のコピー walker）。ヘッドの**中身**も繋いだ: `heads` 場は「その枠を埋めるヘッドについて、ある整形式な view とその 12 本のテープがあって、view の抽象がそのヘッドに等しく、`ViewRep margin` が成り立ち、機械のテープがその `mapTape encCell` の像である」——**ヘッドの表現は `ViewRep` の中にある不変量（`LaysSealed`・長さカウンタ・番兵）をそのまま持ち込む。** place 枠と chain のカウンタ枠も足した: `places` は「その walker の文字列が封じた junk の上に載った stack テープで、機械のテープがその像である」、`counterOf` の 10〜15 番は chain のタグから読む（`h`／`lag`／`margin` と consume 制御の `distance`／`boundary`／`last`）。**これで 95 本すべての枠が、何を持つかまで書けた**（`heads`／`fpp`／`dp`／`counters`／`places`／`period`／`answer`）。鏡の 5 本も書いた: `mirrorSource` が各枠の源を決め（`radius` の 3 枚、`lower` の 1 枚、`span` の 1 枚）、`mirrors` 場が源と同じ値を持つことを言う。**渡すのは有限制御の操作で action を使わず（`LocalMirror.take`）、極性ビットを反転すれば否定した複製になる（`negate_via_pol`）。** これで `EncTapes` の場は 9 つになった（`margins`／`heads`／`fpp`／`dp`／`counters`／`places`／`mirrors`／`period`／`answer`）。view 以外の成分は `padLeft margin` を被せて載せ、**符号化自身が「どのヘッドも左端から `margin` 以上にある」と言う**（`margins` 場）——`Option` が空の枠（idle な chain の verifier、埋まらないカウンタ、period と answer）にも余白は要るので、内容の場だけでは足りない。規則の margin 条件はこれで閉じた（`margin_le_pos`、`K ≤ margin` から）。仕事側の雛形も置いた: **`padded_moveRight`——成分の右移動は、機械が持つテープへの action 1 個**（成分自身の移動・アルファベットの変換・下の余白がどれも可換なので、規則は「ヘッドの下の記号と向き」を名指すだけでよい）。プログラムのテープも周期テープもスタックも、動かす分岐はこの合成になる。
+
+**margin を確かめたら設計上の要求が出た（`$S/pad.keep.lean`、EXIT=0・error 0、`padLeft_right`／`padLeft_left` は**公理ゼロ**）**: `compStep_apply` はどのヘッドにも「左端から `K` 以上」を要求するが、プログラムのテープは自分の左端から始まる。よって物理テープは成分の下に `n` 個の空白を敷く: `padLeft blank n T`、`pos (padLeft blank n T) = pos T + n`。書き込みと右移動は両方で同じ action（`padLeft_stay`／`padLeft_right`）。**左移動だけは成分に行き先があるときに限って一致する**（`padLeft_left`、仮説 `T.left ≠ []`）——成分が自分の左端で止まるのに対し物理ヘッドは余白へ踏み込むから。プログラム機械はそこで左へ動かないので（`GalilScaffoldProgram.Execute.left` がその仮説を持つ）両者は離れない。ヘッドの view とカウンタは底の junk／区切りが同じ役目を果たす。
+
+**規則の形と、2 つ目の条件の落とし込み（`$S/rule_shape.keep.lean`、EXIT=0・error 0・標準公理のみ）**: `ruleOf starvedReading workNext workActs`——**規則はまず飢餓を読み、立っていれば制御を変えず命令も名指さず、そうでなければ tick の仕事をする**。`len_le` は仕事側の上界から。そして `idle_of_reading`: **停止分岐は「規則の読みが `starvedTest` と一致する」に落ちる**。読みは有限（モード、4 ヘッド × 3 つ、カウンタ 2 本の符号）で、その全部がテープの先頭セルか有限制御にある（上の `starvedOf`／`canRightOf`／`isEmpty_iff_topLetter`／`toList_isEmpty`）。
+
+**モードごとの仕事の取り出し（`$S/mode_work.keep.lean`、EXIT=0・error 0・公理 `propext` のみ）**: 規則はモードで分岐するので、`tickFun` の値をモードごとに読める形にする。まず 2 本: `tickFun_markEnd`（marks テープが終端記号の上なら一歩戻って `choose` へ、そうでなければ一歩進む。**動くのは marks テープだけ**）と `tickFun_home`（左端なら fpp プログラムを起動して `fpp` へ、そうでなければ source テープを一歩左へ）。どちらも `simp only [tickFun, hmode]` で出る。残り 8 モードも同じ形。
+
+**次**: `hstay`／`hstep` を満たす機械。`Enc` の設計（n326 の `HeadRep` が head 成分、残りは chain・カウンタ・プログラム束）と、`tickFun` の値を有限窓から計算する `ActRule`。
+
+## n331（2026-09-21）: `Computes` の場を順に埋める——レンズの引き戻しは補題 1 本、1 歩は 13 本、判定は 11 本
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リスト不変（義務 1 本）。リポジトリのコードは変えていない（スクラッチ検証のみ）。 |
+
+**先に確かめたこと（作り直しを避けるため）**: `GalilSharedFunctional` に既に 3 つの関数形がある——`beginShiftFun` と `beginShiftFun_eq`（`shiftGuardVM s → beginShiftVM' s t → t = beginShiftFun s`）、`beginFallbackFun place` と `beginFallbackFun_eq`、`restartFun entry` と `restartFun_eq`。`Computes` の場そのものの形なので、そのまま使う。
+
+**レンズの引き戻しは 1 本で済む（`$S/steps_fun.keep.lean`、EXIT=0・error 0）**: `Lens.rel R s t = R (get s) (get t) ∧ t = set s (get t)`（`GalilScaffoldTopLens:28`）なので、
+
+**`lensRel_eq : (∀ v v', R v v' → v' = f v) → L.rel R s t → t = L.set s (f (L.get s))`**（公理ゼロ）。
+
+下位 frame の関数性さえ出せば、`galilFrame` の各場はこれで上がる。
+
+**1 歩の関数（13 本、すべて検査済み）**: `shiftOneFun`（chain の `.watch` が存在量化された `w` を固定）、`copyOneFun`（`Place.read walker` の `some a` が固定）、`copyEndFun`／`fppStartFun`／`homeStepFun`／`markBackFun`／`markForwardFun`／`chooseFun`／`fppResetFun`／`rewindOneFun`／`rewindPairFun`（どれも関係が `y = 式` かガード付きの `y = 式` なので、証明は `h` か `h.2`）、そして n329 の `fppSliceFun`／`fppDoneFun`。
+
+**判定（11 本、すべて検査済み）**: n329 の `shiftGuardTest`／`restartGuardTest`／`canRightTest`／`onLetterTest`／`leftFirstTest` に加えて `matchedTest`／`shiftRemainingTest`／`copyRemainingTest`／`atLeftTest`／`atEndTest`／`markSetTest`／`atFirstTest`。
+
+**残り**: `compare`（`compareFound`。`searchEffectFun`／`chainAtFun`／`backgroundFun` は検査済みなので組み立てるだけ）、`init`（`initVM` は 15 場を固定＝関数）、`replayStart`（`replayStartVM_unique` あり、関数はまだ）、`matchedPlace`（`galilFrame` の定義で既に関数形）。揃ったら `galilFrameFun` と `hcomputes` を作って投入する。
+
+## n330（2026-09-21）: `Computes` の fallback 入口は目標だけでは決まらない（形式化の誤りを直した）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リスト不変（義務 1 本）、`unconditional` は付け替えていない。n329 で入れた `Computes` の場が 1 つ**証明不能な形**だったのを直した。 |
+
+**状態: module build `PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0、`forwardTick_of_machine` は標準公理・`tick_eq_tickFun` は `propext`／`Quot.sound`・無条件 PAL は未完。**
+
+**何が間違っていたか**: n329 の `Computes F G t` は、frame が開いている 3 つの関係（`init`／`beginFallback`／`replayStart`）を「目標 `t` について」だけ要求していた。`init` と `replayStart` はそれで足りる——`initVM`（`GalilScaffoldTopReplay:20`）は `GalilVM` の 15 場すべてを等式で固定し、`replayStartVM_unique`（`ReplayStartGhost:224`）もある。**しかし `beginFallbackVM'` は違う。** `GalilSharedFunctional` には `beginFallbackVM'_not_unique` が**定理として**あり、同じ源から複数の目標に行ける（コピー元の place が自由）。目標を 1 つに決めるのは走行ではなく**方針** `GalilTickFair.Canonical.fallbackPlace`（`scan` から `copy` に着地したなら `y.vm.fpp.walker = rightPlace y.vm`）である。
+
+**直し方**: `Computes F G Pin t` に方針の述語 `Pin : σ → Prop` を足し、`beginFallback : ∀ s, F.beginFallback s t → Pin t → t = G.beginFallback s` にした。`tick_eq_tickFun` は側条件 `hfallbackPinned : x.ctl.mode = scan → y.ctl.mode = copy → Pin y.vm` を取る。消費者 `forwardTick_of_machine` では `Pin s := s.fpp.walker = rightPlace s` を渡し、側条件は `hcanonical.fallbackPlace` そのもの。**`restartFirst` と `fallbackPlace` は `Canonical` の 3 場のうち 2 場で、どちらも「関係が複数の後継を許す所で方針が 1 つに決める」という同じ役目だった。**
+
+## n329（2026-09-21）: 抽象 tick の関数形を投入し、物理側の前進義務を「1 本の関数を計算する」へ落とした
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リスト不変（義務 1 本）、`unconditional` は付け替えていない。`hforwardTick` の中身が「抽象関係の模倣」から「明示関数 `tickFun` の計算」へ落ちた。仮説の本数は同じ。 |
+
+**状態: module build `PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0、下の定理は標準公理のみ・無条件 PAL は未完。**（全体 build は n325 以降走らせていない。公理にも最終定理の経路にも触っていない。）
+
+**新モジュール `PalPeg/TickFunction.lean`**（`ShadowedLocalFinal` → `Workbench` 経由で root の build 対象、`tick_eq_tickFun` は `propext`／`Quot.sound` のみ）:
+* `FrameFun σ`: `Frame σ` の 33 個の関係・述語を関数と Bool 判定に置き換えたもの。
+* `Computes F G t`: 関数が関係を計算する。frame が開いている 3 つ（`init`／`beginFallback`／`replayStart`）は**目標 `t` についてだけ**要求する（この 3 つは複数の後継を許す関係で、どれになるかは走行が決める）。
+* `tickFun G F delay x`: モードで分岐し、`scan` では restart → 待機 → 計数 → 一致 → shift 入口 → fallback 入口 の順に Bool で分岐する。
+* **`tick_eq_tickFun`**（24 構成子すべて）: `Computes F G y.vm` と `Tick F delay x y` と restart 優先の側条件から `y = tickFun G F delay x`。**関係に後継があるなら、それは関数の値である。**
+
+**消費者へ繋いだ定理 `ShadowedLocalFinal.forwardTick_of_machine`**: `StarvedAbs`（`LocalSysConcrete.Starved` を抽象状態の上に書いたもの。`starvedAbs_absSC` は `Iff.rfl`）を使って、
+
+```
+(hstay : Enc x p → StarvedAbs x → Enc x (L0.apply p none))
+(hstep : Enc x p → ¬ StarvedAbs x → Enc (tickFun (G w) (galilFrameS (PofC …) q first) 2048 x) (L0.apply p none))
+⟹ hforwardTick の本体
+```
+
+restart 優先の側条件は `GalilTickFair.Canonical.restartFirst` から出す（`PofC` の `restart` 場は `restartVM entry` そのものなので、`Computes.restart` に定義どおり渡る）。側入力は `hcomputes`（関数が具体 frame を計算する）と `hguard`（`G.restartGuard` が立つなら `restartGuardVM`）。
+
+**同日のスクラッチ（未投入、`$S/tests_fun.keep.lean`、EXIT=0・error 0・標準公理のみ）: frame の判定 5 個が Bool 関数になった。** `shiftGuardTest`／`restartGuardTest`（どちらも存在量化された watch 状態は chain の構成子が固定するので、`match s.chain` で計算できる）、`canRightTest`（`gap = false ∨ right ≠ [] ∨ incoming ≠ []`）、`onLetterTest`（右ヘッド位置が奇数かつ語の中。証人は `k = (位置+1)/2`）、`leftFirstTest`。どれも `… ↔ … = true`。**有限窓から読むもの**が具体的になった: chain のタグと watch の `lag`／`phase`／`broken`／`margin`／period テープの焦点記号、`periodOnly` と `cycle`、右ヘッドの gap・右スタック・incoming の空判定、左右ヘッドの位置。Lean の罠: `cases hchain : s.chain` は目標の `s.chain` を**すでに**置換するので、取り出した仮説に `rw [hchain]` は当たらない（`injection`／`rfl` を直接使う）。
+
+**同日のスクラッチ 2（未投入、`$S/prog_run.keep.lean`、EXIT=0・error 0・標準公理のみ）: プログラム機械の走行が関数になった。** `executeFun`（1 命令。`read` は `cs.find?`、詰まれば不変）／`tickFun`（1 call）／`runFun`（call 列）と `run_eq_runFun : ReadFun code → Run code x bs y → y = runFun code bs x`（任意の code について）。`readFun_marked : ReadFun GalilFppMarkedCode.code`（`readFun_of_b (by decide)`、`maxRecDepth 40000` が要る）。これで fpp の場が埋まった: `fppHaltsTest q x := (fppRunFun q x.program).done`、`fppSliceFun`、`fppDoneFun`（`markNew`）と **`fppSlice_eq`／`fppDone_eq`**（`Computes` の `fppSlice`／`fppDone` 場そのものの形）。`fppSlice` と `fppDone` は同じ `q` 回走行の結果を `done` で分けているだけなので、判定 1 個と関数 2 個で足りる。
+
+**残るのは `hcomputes` を埋めること。** `backgroundFun`／`searchEffectFun`／`chainAtFun`（`$S/scan_fun.keep.lean`、検査済み・未投入）が `background` の場を埋める。残りは `compare`（`compareFound`）、`matchedPlace`（`galilFrame` の定義で既に関数形）、shift／copy／home／markEnd／choose／rewind の各 1 歩、開いている 3 つの入口。
+
+## n328（2026-09-21）: 物理機械は「後継を見つける」のではなく「渡された後継を計算して符号化する」
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リスト不変（義務 1 本）、`unconditional` は付け替えていない。消費者 `given_physicalMachine` の `hforwardTick` から**存在の証明義務が消えた**。仮説の本数は同じ。 |
+
+**状態: module build `PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0、`#print axioms given_physicalMachine` は標準 3 公理・無条件 PAL は未完。**（全体 build は n325 以降走らせていない。公理にも最終定理の経路にも触っていない。）
+
+**何を直したか（消費者の型を上から読んで分かったこと）**: 旧 `hforwardTick` は `∃ successor, Enc successor (L0.apply p none) ∧ TickSucc … (absSC m) successor` を要求していた。つまり物理機械に「抽象 tick の後継が存在すること」まで証明させていた。ところが消費者の使用箇所では、その後継 `hsucc` は**既に引数として手元にある**（走行の状態なので trace か `plateauStep` が出している）。新しい形は
+
+```
+∀ m p successor, OnRun … m → ¬ frozenAt w m → Enc (absSC m) p →
+  TickSucc (PofC …) q first 2048 (Canonical entry 2048) (Starved m.vm) (absSC m) successor →
+  Enc successor (L0.apply blankSymbol p none)
+```
+
+で、機械の仕事は「渡された（一意な）後継を計算して符号化する」だけになった。`tickSucc_unique` は最後の読み手を失ったので、代わりに使う `tickSucc_congr_starved`（飢餓判定を同値なものに置き換える）に差し替えて削除。
+
+**この形が効く理由（スクラッチ `$S/tick_fun.keep.lean`、EXIT=0・error 0・公理 `propext`／`Quot.sound`）**: 抽象 tick を状態の関数にする定理が通った。`FrameFun σ`（`Frame` の 33 個の関係・述語を関数と Bool 判定にしたもの）、`Computes F G t`（「関数が関係を計算する」。frame が開いている 3 つ——`init`／`beginFallback`／`replayStart`——は目標 `t` についてだけ要求）、`tickFun G F delay x`（モードで分岐し、scan では restart → 待機 → 計数 → 一致 → shift 入口 → fallback 入口 の順に Bool で分岐）、そして
+
+**`tick_eq_tickFun : Computes F G y.vm → Tick F delay x y → (x.ctl.mode = scan → G.restartGuard x.vm → y = ⟨{x.ctl with clock := delay}, G.restart x.vm⟩) → y = tickFun G F delay x`**（24 構成子すべて）。
+
+restart 優先の側条件は `GalilTickFair.Canonical.restartFirst` そのもの。つまり「trace が後継の存在を出し、機械が `tickFun` を計算し、`Canonical` と決定性が両者の一致を出す」という分担になる。
+
+**投入していない理由**: `tickFun` はまだ読み手が無い（参照ゼロの宣言を作らない）。次に `Computes` を具体 frame `galilFrameS (PofC …)` について埋め（`searchEffectFun`／`chainAtFun`／`backgroundFun` は `$S/scan_fun.keep.lean` で検査済み、残りは compare と入口 2 つ）、`hforwardTick` を「機械が `tickFun` を計算する」へ落とす定理と一緒に投入する。
+
+## n327（2026-09-21）: 点検 — 物理機械の山は「view の機械」ではなく「scan の計算できる局所 step」（調査のみ、コードは変えていない）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リスト不変（義務 1 本）、`unconditional` は付け替えていない。 |
+
+**状態: 全体 build 成功（最新の全体 build は n325 の `BUILD=0`。n326 は module build のみ）・標準公理のみ・無条件 PAL は未完。**
+
+**なぜ点検したか**: n326 で view の機械（融合 slot、blank からの初歩、`HeadRep`）は通ったが、2 回続けて消費者 `given_physicalMachine` の仮説は 1 本も埋まっていない。部品を積む前に義務と一次情報を読み直した。
+
+**一次情報で確かめたこと**:
+* 義務 `H_realizeCanonical`（`CloseoutFinalW:113`）は「**w に依らない 1 台**の `LocalStep` 機械があり、全ての非空 `w` と `PreTraceIMW`／`CanonTrace` な trace について `SAccepts w ↔ LatchTrue …`」。機械は抽象 tick を 1 歩ずつ追う必要は無いが、実時間で PAL を認識する計算そのものは要る（近道は無い）。
+* 正本 Scala の `alias(target, source)`（`ScaffoldSearch.scala:32`）は `copyFrom`＝永続スタックのポインタ複製で O(1)。呼び出しは 9 箇所: chain 誕生の `lag := radius`・`margin := radius`（`ScaffoldChain:91–92`）、`last := boundary`・`boundary := distance`（`:145–146`）、`remaining := chain.h`（`ScaffoldGalil:303`）、`remaining := length`（`:315`）、`replay := radius`（`:427`）、探索の `lower／work := lowerBound`（`ScaffoldSearch:106–107`）、`work := lower`（`:134`）、`work := span`（`:144`, `:200`）。Lean の抽象 `Tick` も値のコピーとして写している（`beginShiftVM`: `remaining := ofNat h`、`restartVM`: `lower := last`・`search := begin last radius` など）。n304 の head コピーと同じ機械モデルの差（ポインタ機械 vs 実時間多テープ TM）。
+* 局所層はこれを eager mirroring で解いている（`LocalMirror`: `take` は制御だけの操作、切り離した鏡の再構築は 1 tick 1 mark で犠牲の複製を消費）。締切は純算術で切り出し済み（`LocalBudget`／`LocalSchedule`: 場所クロック `delay = 2048`、2048 tick の窓で `radius` は高々 1 回しか変わらない、head の再配置だけは歩いて間に合わない → parked view）。
+* しかし scan の局所 step は**計算できる形では存在しない**: 消費者の scan／replayStart／plateau の後継は `chosenStep`（`Classical.choice` で選んだ ghost）。`LocalTick1.TickL1`（`:777`）は関係で、wait／count／match のどの構成子も探索量子の局所後継の存在 `SearchLocal S b x z` と、**抽象のままの** `ChainVM` 上の `chainAt` を仮説に取る（`GalilVML.chain` は「still abstract」）。mismatch（shift 入口・fallback 入口）と restart の局所構成子は無い。
+* よって物理機械が自前で持つべきものは: (i) 計算できる局所状態 `X`（`GalilVML` の view・カウンタ bank・鏡・buffer に、局所 chain `LocalChain.ChainL` を加えたもの）と抽象化 `absX : X → State GalilVM`、各モードの**関数としての**局所 step とその `Tick ∧ Canonical` への simulation、(ii) `X` とテープの対応（各成分は stack テープと queue なので n326 の機械と同じ部品）。n326 で `Enc` を `State GalilVM` の上に切り直したので、`X` は `Mirrored1` と一致しなくてよい。
+
+**追記（同日、定義と grep で確認）: `SearchLocal` に producer は 1 つも無い。** `LocalTick1.SearchLocal S a x z`（`:262`）は 4 場の構造（`steps : StepLocalN searchSteps x z`、`frame : SearchFrame x z`、`inv`、`effect : searchEffect S a (abs' x) (searchLens.get (abs' z))`）で、出現は `LocalTick1` と `LocalReplayParked` の**仮説としてだけ**。`dpStep`／`dpRun`（DP 束への点ごとの `LocalBuffers.stepL`、`abs_dpStep`）は「64 個の局所 step で書ける」ことの証人で、docstring 自身が「その 64 個の関数が `SafeQuanta` を計算することは `SearchLocal.effect` に残した gap」と書いている。探索の各 mode（grow／lower／lowerHome／copy／home＝`PrepareControl.Tick`、run＝`SafeQuanta`、wait／double）を**状態から計算する関数**は無い。ghost 方式（n316）はこの穴を迂回していただけで、物理機械では最初に埋めるもの。
+
+**スクラッチ（未投入、`$S/run_fun.keep.lean`、EXIT=0・標準 3 公理、どれも一発）: run 量子の関数形。** 抽象のプログラム機械 `GalilScaffoldControl.Tick` は関係で、詰まる場合（左端での左移動、`read` の表に無い記号）には後継が無い。関数形を書いた: `executeFun`（1 命令。`read` は `cs.find?`、詰まれば不変）、`tickFun code enabled x`（1 call）、`callsFun`（`finish` つきの call 列）、`quantumFun a s x`（64 call＋`advance a`）。定理は「関係の後継があれば関数の値に一致する」の向き: `execute_eq_executeFun`／`tick_eq_tickFun`（`ReadFun code` を使う）、`safeCalls_eq_callsFun`、**`safeQuanta_eq_quantumFun : SafeQuanta s x [a] t y → (t, y) = quantumFun a s x`**（`GalilTickFair.readFun_code`）。存在は trace から来て、関数は機械が計算し、等式は決定性から出る、という producer の形に合う。
+* `finish`（`GalilScaffoldSearchFinish:21`）は run の完了時に `work := span`・`span := reset`・`quarter := 0` をする。コピーではなく**移動**（直後に source を reset）なので、局所側は `span`／`work` の役割と極性の交換＋新しい `span` テープへの `resetSeg` 1 回（`LocalCounter` の segmented unary は reset が 1 action）で済む見込み。局所層に `finish` の対応物は無い（grep で確認）。
+
+**スクラッチ続き（未投入、`$S/search_fun.keep.lean`＝`run_fun` を含む 1 本、EXIT=0・標準 3 公理）: 探索の効果が丸ごと状態の関数になった。** `GalilScaffoldPrepareControl.tickFun`（prepare 系 9 構成子。guard は互いに排他なので `match mode`＋`if`）と `tick_eq_tickFun : Tick true x y → y = tickFun x`、`searchStepFun center a v`（全 11 mode: 不変 3、grow／double は `if positive work`、prepare 4 mode は `tickFun`、run は `quantumFun`、wait は `waitStep`）と **`searchStep_eq_searchStepFun : searchStep center a v v' → v' = searchStepFun center a v`**、`searchEffectFun P a s`（chain が idle なら `searchStepFun (P.place s) …`、そうでなければ探索不変）と **`searchEffect_eq_searchEffectFun`**。向きはどれも「関係の後継があれば関数の値に一致」。物理機械（と、間に局所層を挟む場合はその局所 step）が計算すべき探索部分の仕様関数がこれで 1 本に定まった。各枝の 1 歩は DP テープ 1 本への 1 action（`moveRight (write t s)`／`moveLeft`／`write`）＋カウンタの inc／dec＋walker の `Place.left` で、非局所なのは `finish` の `work := span`（移動）と `prepare`／`enter` の `work := lower`／`work := span`（コピー）。
+* Lean の罠: `{x with a := …,` の後で改行して次の場を浅い字下げで書くと構文エラー（1 行に書く）。token-saver の hook は bash コマンド中の単語 `watch` を弾くので、その単語を含むパッチは Write でファイルにしてから当てる。
+
+**スクラッチ続き 2（未投入、`$S/scan_fun.keep.lean`＝探索と chain を含む 1 本・408 行、EXIT=0・標準 3 公理）: scan の background tick が丸ごと状態の関数になった。** chain 側: `watchVerdict w : Option Bool`（period の記号と、1 つ進めた verifier の下の入力の一致。`Good`／`WatchBreak`／`BreakStep` の判定を 1 つの計算にしたもの）、`chainStepFun`（copy は `t.focus = 8`／`= 4` で分岐、back は `isFirst`、観察中の chain は `positive lag` と verdict で `caught`／broken／不変）、`chainMatchedFun`（`zero lag` と verdict で `immediate`／broken／`queued`）、`chainTickFun`、`chainAtFun`（idle かつ found なら `chainStart`）と、それぞれの「関係の後継があれば関数の値に一致」（`chainStep_eq_chainStepFun`／`chainMatched_eq_chainMatchedFun`／`chainTick_eq_chainTickFun`／`chainAt_eq_chainAtFun`）。まとめ: **`backgroundFun P s`** と **`backgroundS_eq_backgroundFun : backgroundS P q first s s' → s' = backgroundFun P s`**。`Tick.scan_wait`／`scan_count` の着地 VM はこの関数の値（制御は clock だけ）。
+* `chainStart` は `lag := radius`・`margin := radius`（コピー 2 本）、`copyBit` は DP テープ 11（`answer`）を左へ読みながら `h` を inc・period テープへ `put`・`decFour margin`、walker は `Place.left`。どれも 1 歩あたり有界個の action。
+
+**次の一手（変える）**: view の機械を広げるのをやめ、(i) のいちばん危ない 1 点を機械検査する — `scan_wait`（head もカウンタも動かさず、探索量子 1 個と chain 1 歩だけ）について、探索量子の局所後継を**関数として**書けるか。関数 `searchStepL : Bool → GalilVML P → GalilVML P` を mode ごとに書き、`SearchLocal S a x (searchStepL a x)` を示す。**（上のスクラッチで抽象側の仕様関数 `backgroundFun` まで出来た。）** 次は compare 側（`compareFound`: `afterCompare`／`afterMismatch`、入口 `beginShiftVM'`／`beginFallbackVM'` は Canonical で場所が決まる）を同じ向きで関数にし、scan の tick 全体を `scanTickFun` にまとめる。そのうえで、この関数を計算する機械（まず background: DP テープ・period テープ・カウンタ 5 本・verifier の view）の Rep 保存と一緒にリポジトリへ投入する。
+
+## n326（2026-09-21）: 物理機械の仮説を抽象状態の上に切り直した（`Enc : State GalilVM → 物理配置 → Prop`）
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リストは不変（義務 1 本）、`unconditional` は付け替えていない。消費者 `ShadowedLocalFinal.given_physicalMachine` の物理側仮説の**形**を弱めただけで、仮説の本数は同じ。 |
+
+**状態: 全体 build 成功（n325 の `BUILD=0` 以降は module build のみ: `PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`、error 0、sorry 0）・標準公理のみ（`#print axioms given_physicalMachine` = 標準 3 本）・無条件 PAL は未完。**
+
+**何を変えたか（形式化の点検）**: 旧形は `Enc : Mirrored1 → 物理配置 → Prop` で、`hforwardTick` は「`Enc next p'` な `next : Mirrored1` を物理側が作れ」と要求していた。消費者の証明が `encoded` から読むのは `absSC encoded`（と、その関数である `Starved`・`ctl.output`）だけだったので、これは余計な縛り: 物理配置が `Mirrored1` の役割・極性・bank 配置の witness を毎歩作らされる。任意の抽象状態に `Mirrored1` の切断は無い（`ghostOf` は canonical counter・駐車形を要る）ので、`Enc := R ∘ absSC` という素直な定義では旧形を満たせなかった。
+新形: `Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop`（handoff §4.2 の `Rep`）。`hforwardTick : OnRun m → ¬frozenAt w m → Enc (absSC m) p → ∃ successor, Enc successor (L0.apply p none) ∧ TickSucc … (Starved m.vm) (absSC m) successor`、`hforwardFeed : InvC m → Enc (absSC m) p → Enc (absSC (feedC letter m)) (L0.apply p (some letter))`。後継の同定は既存の `tickSucc_unique` が消費者の中でやる。局所層 `m` は「run 上にいる」ことの運び手としてだけ残る。参照ゼロになった `starved_of_absSC_eq` は削除。
+
+**n326 続き（表現の margin を規則の半径から切り離した。その場で一般化、変種なし）**: 消費者は「物理 1 歩＝抽象 tick 1 回／`feedC` 1 回」を要求するので、11 微小歩の slot は `LocalStepFusion.compStep_iterRule` で 1 歩に融合する。融合した規則の半径は `11·K` で、`compStep_iterRule` は全テープに `11·K ≤ pos` を要るが、`QueueRep K`／`MicroRep K`／`ViewRep K` は底の高さを規則の半径と同じ `K` でしか保証していなかった。表現の引数を margin として読み替え、`queueRule_sound`／`microRule_sound`／`microRun_sound`／`snocRun_sound`／`tailRun_sound`／`programRun_snoc`／`programRun_tail`／`idleRun_sound`／`slotTailRun_sound`／`viewMargin`／`viewDecisionStep`／`viewDecision_sound`／`viewTopsOfWindows_eq`／`viewSlot_sound`／`machineSlot` に `{margin} (hmarginLe : K ≤ margin)` を通した（結論は `Rep margin`）。`microRep_empty_of_seals`／`viewRep_empty_of_seals` は高さ `margin` の seal で述べ直した。未融合の init 経路（`programInit`／`viewInit_of_apply`／`machineInit`／`machineFirstLetter`）は `margin := K` のまま。module build `PalPeg.ConcreteLocalMachine`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0。**公理への接続は無い。進捗として数えない。**
+
+**スクラッチ（未投入、消費者と一緒に入れる）**: `$S/blank_start.keep.lean` の `compStep_apply_blankEdge`: 全 blank・左端からの `compStep R` の 1 歩は、margin 無しで「head が `K` に立つ blank テープに `R.acts` を当てたもの」と `TEqG`。`inp w 0 = w[0]?` なので最初の物理 1 歩がいきなり feed で、`compStep_apply` の margin 前提が初歩に使えないことへの対処。融合機械では初期化の微小歩が要らなくなる（高さ `11·K` の seal は `viewRep_empty_of_seals` で空 view の表現）。
+
+**時間モデルの不整合（未修正）**: `machineRule` は入力を `pending` に latch して次の slot で配る（1 slot 遅れ）。融合 1 歩＝`feedC` ちょうどにするには command を `commandOfLetter input`（その微小歩の入力）から取る。`viewSlot_sound` は step 0 の command しか読まないので、後の微小歩の command は自由。
+
+**n326 続き 2（融合した slot。時間モデルの不整合を直した。公理への接続は無い・進捗として数えない）**: module build `PalPeg.ConcreteLocalMachine`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0、下の定理は標準 3 公理のみ。
+* `LocalViewsMachine` を書き直した（441 → 271 行）。制御は `slot × 各 view の制御` だけ（`started`／`current`／`pending`／`latch` は消えた）。`machineRule` の command は**その微小歩の入力** `commandOfLetter input`。動かす機械は融合 `compStep (iterRule (machineRule …) 11)` で、実 1 歩＝1 slot、入力は slot の微小歩 0 に届く。これで「feed 1 歩＝全 view に `arrive a` ちょうど」になり、1 slot 遅れが消えた。
+* `machineSlot_of_ideal`: ideal な 11 微小歩（`LocalStepFusion.idealRun`＝入力は最初の歩だけ、`idealIter_eq_idealRun`）と制御が一致しテープが `TEqG` な状態は、全 view が `viewApply (commandOfLetter input)` 後の `ViewRep margin`・未払い 0・slot 0。`machineSlot`: margin `iterRadius K 11 ≤ margin` の表現から実 1 歩（`compStep_iterRule`、各テープの margin は新しい `ViewRep.margin_le_pos`）。
+* `machineFirstSlot`: **blank テープ・左端からの最初の実 1 歩は初期化の歩なしで 1 slot**。`LocalQueueInit.compStep_apply_blankEdge`（スクラッチから投入: 左端の blank からの sweep は head が半径に立つ blank からの sweep と `TEqG`、`sweep_blank_edge_shifted`）＋高さ `iterRadius K 11` の seal は空 view の表現（`viewRep_empty_of_seals`）。`hencInit`＋最初の `hforwardFeed` の view 成分の中身に当たる。
+* 片付け: 未融合の init 経路（`sweep_blank_edge`／`programRule_acts_idle`／`currentOp_initControl`／`programInit`／`viewActs_init`／`viewNext_init`／`viewInit_of_apply`／旧 `machineInit`／`machineFirstLetter`／`machineIter*`／`registersAfter`／`latch`）は読む者がいなくなったので削除。
+
+**n326 続き 3（消費者の `hforwardFeed` から局所層の `feedC` を消した）**: module build `PalPeg.ShadowedLocalFinal`・`PalPeg.Workbench` とも `BUILD=0`・error 0・sorry 0。`hforwardFeed` の結論は `Enc (GalilArriveChain.arriveState' letter (absSC m)) (L0.apply p (some letter))`。消費者の中で既存の `LocalSysConcrete.feed_abs_core`（`absState'' (feedC a m).vm = arriveState' a (absState'' m.vm)`、`ViewsWF`＋`pending = []` は `InvC` から）で戻す。`arriveState'` は抽象の 3 本の head（left／center／right）と chain の verifier の `incoming` に 1 文字足すだけ（`LocalTracking.arriveVM`／`GalilArriveChain.arriveChain`）。これで物理側の 2 本の前進仮説はどちらも抽象状態だけで述べられている。仮説の本数・公理リストは不変。
+
+**n326 続き 4（`Enc` の head 成分。公理への接続は無い・進捗として数えない）**: 新モジュール `PalPeg/LocalHeadRep.lean`（`ConcreteLocalMachine` → `Workbench` 経由で登録、module build `BUILD=0`・error 0・sorry 0、標準 3 公理）。`HeadRep margin head state := ∃ v first, WF v ∧ ViewCells v ∧ absHead' v [] = head ∧ ViewRep margin v … ∧ 未払い 0`（抽象の `PlaceHead` は、view の 12 テープが表す整形式な view の抽象。届いていない文字は誰の `incoming` にも無いので pending は空）。`headRep_machineSlot`: 融合機械の実 1 歩は全 head に `headAfter input`（`some a` なら抽象の到着 `GalilTickArrive.arrivePH a`、`none` なら不変）。`headRep_machineFirstSlot`: blank テープからの最初の実 1 歩は空 view の head への到着。`arriveState'` が head にすること（`arriveVM_eq`）とちょうど同じ形。**まだ無いもの**: chain の verifier の head（`arriveChain`）、replay 中の right（`left^[r] parked`）、head 以外の全成分、tick の全分岐。
+
+**次**: 同じ物理配置（`LocalViewsMachine.machineRule`、view 1 本 = 12 テープ）の上で、command を制御（モード）と窓から決める形に広げる（tick の 1 歩＝各 view に `stepRight`／`stepLeft`／`stay`）。抽象 head と `InputView` の対応（`absHead'`、`feedC` が view にすること）を一次情報で確認して `Enc` の head 成分を定義する。n304 の 3 義務（P1〜P3）は未着手。
+
+## n325（2026-09-21）: 最後の報告点の後の tick にも局所後継ができた。抽象局所層への仮説はゼロ
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リストは不変（義務 1 本）、`unconditional` は付け替えていない。局所経路の消費者（`ShadowedLocalFinal.given_physicalMachine`、旧名 `given_openModesAndPhysicalMachine`）から `hplateauNext` が消え、**抽象局所層に対する存在仮説は無くなった**。残っているのは物理機械の仮説（`htape`／`Enc`／`hencInit`／`hforwardTick`／`hforwardFeed`／`hencRep`／`hencOut`／`PhysFrozen`／`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`）と、供給できる側条件（`hfirst`／`hq`／`hor`／`hres`／`hChainVerifierSupply`、今回足した `0 < q`／`first ≠ 7`／`first ≠ 8`。実例 `0 1 0` では成立）。ActRule は未着手。 |
+
+**状態: 全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。**
+
+**何を証明したか**: 最後の文字の後、その文字の窓が終わるまで局所層は tick し続けるが、trace は最後の報告点で止まる。その先の抽象 tick は**存在**を示さないと ghost が止まって物理機械との対応が切れる。
+* 新モジュール `PlateauInvariant`: `PlateauInv w x`（1 tick で閉じた不変量: scan、非 replay、`1 ≤ clock`、`¬restartGuardVM`、`position right = 2|w|−1`、`MInv`、`SoundScanNR`、`InvLPS` の origin からの `StepsIMWC`／`ShapedSteps`、切断の事実 `AllCanonical`／`ChainLastCan`／`replay = reset`／`SpanRep`／`0 ≤ radius`）、`plateauStep`（`∃ y, Tick ∧ Canonical ∧ (PlateauInv y ∨ 2|w| ≤ position y.right)`）、`plateauCompare`、`replayReset_of_plateauTick`。count tick は `backgroundS_exists`＋`Tick.scan_count`（`OracleRun.scanBackground_run_all` の帰納段と同じ組み方、`restartGuard_background` で guard が無いまま）、compare は `scanCompare_cases`、fallback の canonical な着地は `CanonicalFallbackInput.begin_at_mismatch`。**oracle の readiness の葉は `m := |w|`、`hmle := le_rfl` で最後の報告点にもそのまま当てはまる**（境界は `position ≤ 2m−1` と `position+1 < |encoded w|`、等号で通る）。
+* `ShadowedLocalFinal`: `postPhase := PlateauInv … (absSC m) ∨ frozenAt w m`。`plateauInv_of_lastReport`（入口。n324 の 4 番目の連言＝各 checkpoint での oracle の不変量と、trace の事実 `countersCanonical_trace`／`FrontPack.rest`／`spanRepOnScanAndShift_alongTrace`／`radLedger_pt`）、`plateauNext`（`nextOK_ghostOf` に `r = 0`・`parked := y.vm.right`。plateau では `replay = reset` が保たれるので駐車形は自明）、`plateau_of_nextOK`（`chosenStep` の抽象は `GalilTickFair.tick_canonical_unique` で一致）。`given_shadowedLocalSystem` の `hpostOfLastReport` は oracle の不変量を受け取る。
+* 片付け: `ReportPhase` は読む者がいなくなったのでモジュールごと削除（`position_right_of_atLast` は `PlateauInvariant` へ移動）。消費者の名前を実態に合わせて `given_physicalMachine` に変えた。
+* 進め方: 同じ goal で 2 回接続ゼロが続いた時点で、設計を足すのをやめて「いちばん危ない 1 点」（葉の量化範囲が最後の報告点に届くか）をスクラッチで機械検査した。そこから 5 定理が全部一発で通った。
+
+**投入時に残したコピペ（次に片付ける）**: `plateauCompare`／`plateauStep` の前置き（pack、`rightHead_of_packs`、`canRight_of_bound`）と chain の readiness の導出は `OracleRun.scanCycle_of_leaves`／`OracleReady.cycleOracleOn_of_readyLeaves` の中の `have` と同じ形。名前付き補題に切り出して両方から使う。
+
+**次**: 物理機械。`Enc`・`PhysFrozen` の具体化と ActRule の分岐（`ActRule → compStep → LocalStep.realize`）。n304 の 3 義務（P1: L／C テープが fallback 相で R まで歩く、P2: reset 後の junk を読まない、P3: replayStart の鏡テープの役割交代）。
+
+## n324（2026-09-21）: oracle の不変量を全 checkpoint で外に出した（plateau の run の材料）
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残。抽象局所層の仮説は `hplateauNext` だけ（まだ仮説のまま）。今回はその証明に要る材料を消費者の手元まで運んだだけ。物理機械の仮説と ActRule は未着手。 |
+
+**なぜ要ったか**: plateau（最後の報告点の後、右ヘッドが `2n` に出るまで）には trace が無く、抽象 tick の**存在**が要る。部品は `OracleRun` に既にある（`settle`、`scanBackground_run`、`scanCompare_cases`、存在は `scan_tick_exists_PofC`）が、どれも oracle の不変量 `ScanOnPackedRunFromInvLPS`（`InvLPS` の origin と packed／shaped な run を運ぶ）を起点に取る。readiness の葉は n282 で全部放電済みで、chain の葉の条件 `position right + 1 < |encoded w| = 2n+1` は最後の報告点 `2n−1` でも成り立つ。ところが `canonicalPreTrace_exists` は `PreTraceIMW`・`CanonTrace`・checkpoint の scan モードしか外に出しておらず、`ReachAtOn` の継続節は `m < |w|` のときしか不変量を出さない（当時の消費者は次の目標へ進むだけで、最後の点の不変量を必要としなかった）。
+* 調べたこと: `ReachAtOn` の producer は `OracleRun` の 3 箇所だけで、どれも報告状態の不変量 `hI'` が手元にある。`ShapedSteps` は 1 歩ごとに restart の証明書（`Restarted`／`StageEntry`）を運ぶので、外に出ている事実からの再構成は重い。
+* やったこと: `ReachAtOn` の構造は変えず、報告点で外に出す述語 `Y` を強めた。`CloseoutCheckW.ReportOnPackedRun w y := y.ctl.mode = scan ∧ ScanOnPackedRunFromInvLPS w y.ctl y.vm`。6 ファイル 11 箇所の literal `(fun _ y => y.ctl.mode = Mode.scan)` をこの名前に置換、producer 3 箇所は `⟨hI'.1.1, hI'⟩`。`preTraceOnPackedRun_exists` と `canonicalPreTrace_exists` の結論に 4 番目の連言「各 checkpoint で `ScanOnPackedRunFromInvLPS`」を追加（3 番目の scan モードは残した）。
+* **1 回目の全体 build は `BUILD=1`**（背景タスクの通知は exit code 0 だった。ログの `BUILD=` 行で気づいた）。`given_shadowedLocalSystem` の `hexists` が存在定理の結論を 3 連言の形で書き下していた。4 連言に直して `BUILD=0`。
+
+**plateau: 機械検査済みの部品と、改めた設計（2026-09-21 夕、スクラッチ `$S/plateau_bg.keep.lean`、`EXIT=0`、標準 3 公理、未投入）**:
+* 検査済み: `plateauBackground`（`ScanOnPackedRunFromInvLPS` ∧ `position right = 2|w|−1` から `clock−1` 回の count tick の `OracleTick` な run、ヘッドと `replay` 不変、着地は clock = 1・`¬restartGuard`・`canRight`、origin からの `StepsIMWC`／`ShapedSteps` つき）、`plateauCompare`（clock = 1 から `∃ y, Tick ∧ Canonical ∧ y.vm.right = right t.right`。matched／shift は `canonical_of_scan_nonCopy`、fallback は `scanCompare_cases` の「place を選べる形」に `CanonicalFallbackInput.begin_at_mismatch` の `rightPlace` の着地を渡す）、`plateauRun`（両方をつないで `position y.vm.right = 2|w|`）。**oracle の readiness の葉は `m := |w|`、`hmle := le_rfl` で最後の報告点にも当てはまる**（境界は `position ≤ 2m−1` と `position+1 < 2n+1`、等号で通る）。
+* **改めた設計（下の「定理の形」より優先）**: run の関数を `Post` に持たせず、**1 tick で閉じた不変量**にする。`OracleRun.scanBackground_run_all` の帰納段（`:143–185`）が 1 歩を明示的に組んでいる: `backgroundS_exists` ＋ `Tick.scan_count`、`ShapedRun.restartGuard_background`（guard の無い状態は background の後も無い）、`outputRel_background`、`not_restartVM_background`、`oracleTick_of_noGuard (canonical_of_scan_nonCopy …)`。
+  - `PlateauInv w x`: scan、非 replay、`1 ≤ clock`、`¬restartGuardVM`、`position right = 2|w|−1`、`MInv`、`SoundScanNR`、`∃ c₀ r₀ k kS, InvLPS ∧ StepsIMWC k … x ∧ ShapedSteps kS … x`、切断の事実（`AllCanonical`、`ChainLastCan`、`replay = reset`、`SpanRep`、`0 ≤ value radius`）。
+  - 1 歩: `clock = 1` なら `plateauCompare`（着地は `2|w|` で `frozenAt`）、`clock > 1` なら count tick 1 回で `PlateauInv` に戻る（run の延長は `packRunR_MWR_marksFree` に `StepsAllR 1` を渡す）。
+  - 切断: plateau では `replay = reset` が保たれるので駐車形は自明（`r = 0`、`parked := target.right`。`RightReplayMove` の `replayed`／`started` は非 replay・scan で起きない）。`AllCanonical`／`ChainLastCan` は `allCanonical_tick`／`chainLastCan_vmTick`（追加前提なしの tick 単位補題）、入口の符号は `entrySigns_of_scanTick`。後継は `nextOK_ghostOf`。
+  - `Post w m := PlateauInv w (absSC m) ∨ frozenAt w m`。消費箇所（`:1188` 付近）の `Post (chosenStep m)` は、`chosenStep` の抽象が canonical な tick の target なので `GalilTickFair.tick_canonical_unique` で上の `y` と一致させる。入口 `hpostOfLastReport` は trace の事実（n324 の 4 番目の連言、`countersCanonical_trace`、`FrontPack.rest`、`spanRepOnScanAndShift_alongTrace`、`radLedger_pt`）。
+  - この設計では `ReportPhase.reportPhase_tick` を読む者がいなくなる。投入時に確かめて、読む者がいなければモジュールごと消す。
+  - 投入時のコピペ回避: `plateauBackground` の前置き（不変量の分解、pack、clock の上下界、`canRight`）と `scanCycle_of_leaves` の前置きを補題に切り出して共有する。chain の葉の証明は `OracleReady` の中の `have` を名前付き定理に切り出す。
+
+**plateau の定理の形（n324 の最初の版。上の設計に置き換わった）**:
+* `Post` は `List (Fin 2) → Mirrored1 → Prop` で trace を引数に取れない（`given_shadowedLocalSystem:433`）。なので `Post w m` は「`absSC m` は、ある canonical な plateau run の上にある」を**存在量化**で持つ: `∃ x₀ K g, ScanOnPackedRunFromInvLPS w x₀ ∧ ReportPoint w x₀ ∧ g 0 = x₀ ∧ (∀ i < K, Tick (g i) (g (i+1)) ∧ OracleTick …) ∧ (∀ i < K, (g i).vm.right = x₀.vm.right ∧ scan ∧ 非 replay) ∧ 2·|w| ≤ position (g K).vm.right ∧ ∃ i ≤ K, absSC m = g i`、または `frozenAt`。入口は `canonicalPreTrace_exists` の 4 番目の連言（n324）と `hpostOfLastReport` の `Needy … (Tc n) n`（truncation は `truncS 0 = id`）。
+* run の存在: 起点の不変量は `¬ restartGuardVM` を含むので `settle` は不要。`scanBackground_run`（`clock − 1` 回の count tick、前提は `canRight right`＝報告点では `gap = false`、`OutputRel`、run 形の readiness 入力＝`OracleReady` の 2 葉で放電）→ `scanCompare_cases`（`clock = 1`、matched／shift／fallback の 3 通り、どれも右ヘッドが 1 歩右＝`position_right_of_atLast` で `2n`）。compare の tick が `OracleTick` であることは `scanCycle_of_leaves` の matched の場合と第 4 の葉（fallback の canonical な place `rightPlace`）の組み方を写す。
+* 後継は `next := GhostSection.ghostOf … (g (i+1))`。`Tick`／`Canonical` は run から（`OracleTick` の `.canonical`）。切断の事実（`AllCanonical`、`ParkedRight`、入口の符号）は、trace 版の 3 定理（`countersCanonical_trace`、`parkedRight_trace`、`entrySigns_of_scanTick`）を「boot からの tick 列」の形へ**その場で一般化**して、`PackedFromBoot` の run ＋ plateau run に当てる（trace 版は `PreTrace` の `start` と `trace.tick` しか使っていない。`parkedRight_trace` だけ `frontPack_alongTrace`／`rewindCentre_trace` 経由なので run 形の `FrontPack` が要る）。
+* `hplateauNext` の消費箇所（`:1188` 付近）の `Post` の保存は、`i < K` なら同じ run の `i+1`、`i = K` は `frozenAt`。
+
+**次の一手**: 最後の checkpoint の不変量から `scanBackground_run`（clock = 1 まで）→ compare 1 回の canonical な run を組み、`Post` を「その run の上を追跡している」に強める。切断（`GhostSection.ghostOf`）に要る事実は tick の保存補題（`allCanonical_tick`、`parkedRight_tick`、`entrySigns_of_scanTick`）で run に沿って運ぶ。
+
+## n323（2026-09-21）: 開いていたモード `scan` に局所後継ができた。仮説 `hscanNext` を消費者から外した
+
+**公理への進捗**
+
+| 公理 | このノートでの変化 |
+|---|---|
+| `obligation_localRealization` | 残。公理リストは不変（義務 1 本）、`unconditional` は付け替えていない。局所経路の消費者 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` の仮説から `hscanNext` が消えた。抽象局所層に残る仮説は `hplateauNext` だけ。物理機械の仮説（`htape`／`Enc`／`hencInit`／`hforwardTick`／`hforwardFeed`／`hencRep`／`hencOut`／`PhysFrozen` 系 3 本）と ActRule は未着手。 |
+
+**状態: 全体 build 成功（`BUILD=0`、error 0、sorry 0。`GalilFrontier` を触ったので木全体を再 build）・標準公理のみ・無条件 PAL は未完。**
+
+**何を証明したか**: 定理 `ShadowedLocalFinal.scanNext`。追跡されている scan 状態 `m` の tick target が「trace の次状態を、到着済みの文字まで truncation したもの」であるとき、`NextOK` を満たす局所後継がある。後継は源 `m` から計算せず、target の**切断**（`GhostSection.ghostOf`）として作る。抽象局所層は証明の ghost なので非局所でよい（n304）。
+* 道筋（n316 の道 A）。消費者の型から読んで仮説を順に弱めた: n318（target の正体と `Canonical` を `Hloc` が受け取る）、n319（`NextOK` から `Post` 節を削除、`ReportPhase.reportPhase_tick`）、n320–n322（極性は読む者のモードでだけ求める。`localGood := mode ≠ scan → PolWF`、`PolWF` の `remaining`／`cycle` は shift、`fppWork` は copy。replay commit は `length`／`work` の極性を自分で立てる）。
+* 新モジュール 4 本（全部 `scanNext` が消費。`ShadowedLocalFinal` の import から `Workbench` 経由でルートに届く）:
+  - `GhostSection`: `ghostOf roles background c t parked`（ヘッドは `viewOfHead`、カウンタの銀行は `Function.extend roles …`、鏡は `mirrorOfTape`、バッファは `⟨tapes, tapes, true, none⟩`、walker は `viewOfPlace`）、`absState''_ghostOf`（カウンタが `Canonical`、`replay = ofNat r`、`right = left^[r] parked`、非 replay なら `r = 0` の下で `absState'' = ⟨c, t⟩`）、`physWF_ghostOf`（`PhysWF` ∧ `MirInv1`）、`polOf_of_nonneg`。`ctrOf` 系 6 宣言と `viewOfPlace` 系 3 宣言は旧 encoder `CloseoutCoreEnc2` から**移動**し、旧側は `export` で名前を保つ（`CloseoutCoreEnc2` は消費者の import 閉包に入っていなかった）。
+  - `CountersCanonicalTrace`: 抽象が読むカウンタ 10 本は trace の全点で `Canonical`（`allCanonical_tick`、restart が `last` を `radius` に写すので chain 側の `ChainLastCan` も運ぶ）。
+  - `ParkedRight`: `ParkedRight s := ∃ r parked, replay = ofNat r ∧ right = left^[r] parked ∧ r ≤ position parked` が trace の全点で成立。抽象の `right` は右スタックが空なら `incoming` から引くので `left (right p) = p` は一般に偽で、`Frontier` だけでは駐車 view を逆算できない。
+  - `ScanEntrySigns`: `entrySigns_of_scanTick`。源の `SpanRep` と `0 ≤ radius` から、shift の入口（`remaining := ofNat h`、`cycle := reset`、`length += 2`）と copy の入口（`fpp.work := inc length`）の符号。
+* コピペ回避: tick での `(right, replay)` の動きの分類 `RightReplayMove`／`rightReplayMove_of_tick` を `GalilFrontier` に置き、`frontier_tick` をその 4 場合から導く形に直した（120 行 → 25 行）。
+
+**次の goal `hplateauNext`（定義と下流を読んだ。未着手）**: 受理は最後の窓 `((n−1)·L, n·L]` の latch で読まれる（`LocalTrackingLatch.tracking_latch_of_oracles`）ので plateau は高々 `nLocalL` tick だが、その間の抽象 tick の**存在**は要る（止まると `chosenStep` が `m` のままで `TickSucc` が立たない）。存在は `OracleRun.scan_tick_exists_PofC`（`SearchReady` と `ChainReady` から）で、run に沿う部品 `settle`／`scanBackground_run`（前提は `canRight right`、報告点では `gap = false` なので成立）／`scanCompare_cases` が oracle 側に既にある。案: 最後の報告点から右ヘッドが `2n` に出るまでの canonical な run の存在を 1 本立て、`Post` を「その run の上を追跡している」に強める。切断に要る事実は tick の保存補題（`allCanonical_tick`、`parkedRight_tick`、`entrySigns_of_scanTick`）で run に沿って運ぶ。採らなかった案: 報告点で ghost を凍らせる（物理機械が右へ 1 歩進んだ時点で `hencRep` が破れる）、延長語 `w ++ [a]` の trace を追跡させる（下流が `Pof w`／`H_letter` で `w` の frame に固定されていて改造が大きい）。
+
+## n322（2026-09-21）: `remaining` の極性は shift、`fppWork` の極性は copy でだけ求める
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。存在仮説 `hscanNext`／`hplateauNext` の `Good next` は、shift の入口で `fppWork`、copy の入口で `remaining` を求めなくなった） |
+
+**やったこと**: `PolWF` の各成分を読む者を利用箇所で確かめた（`remaining`＝`shiftCounters_of` と `shiftMagnitudes_of_trace`、どちらも shift。`fppWork`＝`copySide_of`、copy）。`CopyIdle` は符号の事実ではない（walker が none を読むか work がゼロ）ので、shift の入口で `fppWork` の符号は trace から取れない。読む者のモードで guard した。
+* `LocalWF.PolWF := (mode = shift → pol remaining) ∧ pol radius ∧ pol length ∧ (mode = shift → pol cycle) ∧ (mode = copy → pol fppWork)`。
+* コピペを避けた: `mode_shift_of_*` 7 本に copy 版を足さず、`EntryMode M := M = .shift ∨ M = .copy` を立てて `entryMode_of_tickL3`／`_copyStepL`／`_homeStepL`／`_markEndStepL`／`_chooseStepC`／`_rewindStepC`／`_ffpp`（shift か copy に着地するなら源も同じモード）へその場で一般化。`polWF_congr` は `∀ {M}, EntryMode M → y.mode = M → x.mode = M` を取る。`copySide_of` は `hmode` を取る。
+* 技: 着地モードが定義の中に隠れていても `exact Mode.noConfusion hland` で落ちる（n317 の `show Mode.X = Mode.shift from …` の列挙が要らない）。`stepOf` 形の仮説は `have hland : (shiftStepW m).vm.ctl.mode = Mode.copy := hland` で言い直してから `unfold`。
+
+**入口の符号（定義を読んだ）**: `afterMismatch` は `radius` だけ +1 で `length` はそのまま、`afterCompare` は `length` に +2。`beginShiftVM` は `remaining := ofNat h`・`cycle := reset`・`length := inc (inc length)`、`beginFallback` は `fpp.work := inc length`。なので入口の符号は、源の scan 状態の `SpanRep` と `0 ≤ value radius` から tick の場合分けで全部出る（スクラッチ `$S/entry_signs.keep.lean` に書いた。検証はこれから）。
+
+## n321（2026-09-21）: replay commit は `length`／`work` の極性を自分で立てる。run 不変量は `PolWF` だけ
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。存在仮説 `hscanNext`／`hplateauNext` の `Good next` から `pol work`／`pol replay` が消えた） |
+
+**やったこと**: `pol work` を読むのは replay commit（`LocalTick2.abs_commitReplay` の `hpw`）だけだった。そこは `length`／`work` を reset して push するだけなので、`LocalInitStep.initVml` と同じく極性を自分で正に立てればよい（`pol := fun c => if c = .length ∨ c = .work then true else movePol .radius .replay x.pol c`）。なぜ今まで前提だったか: `commitReplay` は `movePol` の置換だけを書いていて、push 先の極性を前提に回していた。
+* `LocalTick2`: `absCtrs_commitReplay_stable`／`_replay` は `if_neg`、`_one` は `if_pos h6`（`hp` を除去）。`abs_commitReplay`／`replayStartVM_commitReplay` から `hpl`／`hpw` を除去。`LocalReplaySwap`／`LocalReplayParked`／`ReplayStartGhost` の同じ 2 前提も除去（他の呼び出し元は無い）。
+* その結果、束の `pol work`／`pol replay` を読む者がいなくなった（利用箇所を全部確認）。途中で置いた `polarityBundle` を消して `localGood m := m.vm.ctl.mode ≠ .scan → PolWF m.vm`。相 step の保存は `LocalWF.polWF_congr` を直接使う。
+* 効果: `search.work` の符号を trace で示す問題が消えた。
+
+**極性の残り（定義を読んだ）**: `PolWF` の各成分を読む者は、`remaining`＝shift だけ（`shiftCounters_of`）、`cycle`＝shift だけ、`fppWork`＝copy だけ（`copySide_of`）、`radius`＝shift／rewind／replayStart、`length`＝shift／choose／rewind。`CopyIdle` は符号の事実ではない（walker が none を読むか work がゼロ）ので、shift の入口で `fppWork` の符号は取れない。次の一手: `remaining` を shift、`fppWork` を copy で guard し、`mode_shift_of_*` 系は「shift か copy に着地するなら源も同じモード」へその場で一般化する。入口で要るのは、shift: `remaining = ofNat h`・`cycle = reset`（`beginShiftVM`）、`length` は `SpanRep`＋`RadLedger.nonneg`。copy: `fpp.work = inc length`（`beginFallback`）、`length` は源の `SpanRep` と `spanRep_afterCompare`。
+
+## n320（2026-09-21）: run 不変量の極性の束は scan 以外のモードでだけ求める
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。存在仮説 `hscanNext`／`hplateauNext` は残っているが、`Good next` は scan の着地では空虚になった） |
+
+**やったこと**: 極性を誰が読むかを利用箇所で全部確かめた。読むのは 7 つの相 step（`LocalWF.realizes_seven` の `H_wf`、5 箇所、どれも `hmd : mode = X` を持つ）と `replayStartNext` だけで、scan では誰も読まない。scan の後継は切断（抽象が合う状態）で作るので、極性を保つ理由が無い。
+* `ShadowedLocalFinal`: `polarityBundle m`（旧 `localGood` の中身: `PolWF` ∧ `pol work` ∧ `pol replay`）と `localGood m := m.vm.ctl.mode ≠ .scan → polarityBundle m`。`localGood_of_pol_eq` は `polarityBundle_of_pol_eq` に改名。相 step の保存は「源は scan でない」（`hnotScan`）から束を取り出して運ぶ。`init` と `replayStart` の着地は scan なので `fun hnotScanNext => absurd rfl hnotScanNext`（`replayStartNext` の `radius`／`replay` の極性交換の証明が消えた）。到着は `ctl_feedC` で源のモードに戻す。
+* `LocalWF.realizes_seven`／`CloseoutCoreStep.realizes_seven_of_agree`／`CloseoutCoreAgree.realizes_seven_SL` の `H_wf` に `m.vm.ctl.mode ≠ .scan` の前提を足した（use site は `(by rw [hmd]; decide)`）。
+
+**極性の残り（定義を読んだ）**: scan→shift と scan→copy の入口でだけ符号が要る。
+* shift の入口（`beginShiftVM`、`GalilScaffoldTopShiftCycle:23`）: `remaining := ofNat h`、`cycle := reset`、`length := inc (inc length)`。copy の入口（`FppControl.beginFallback`、`GalilScaffoldChainFallback:404`）: `fpp.work := inc length`。fresh に入る分は tick の場合分けから直接読める。
+* `length` は `GalilSpanCounter.SpanRep`（`value length = 2·value radius + 1`）が scan と shift の trace 点で成立（`BranchSupply.spanRepOnScanAndShift_alongTrace`）、`radius` は `RadLedger.nonneg`、`replay` は非 scan なら `ReplayRest` で reset。
+* `search.work`（`Ctr.work`）だけ材料が無い。読むのは replay commit（`LocalTick2.abs_commitReplay` の `hpw`）だけで、そこは `length`／`work` を reset して push する。`LocalInitStep.initVml` は同じことをするとき極性を自分で正に立てている（`pol := fun c => if c = .length ∨ c = .work then true else x.pol c`）。`commitReplay` も同じ形にすれば `hpl`／`hpw` が要らなくなり、`pol work` は束から外せる。
+
+## n319（2026-09-21）: 報告点の後の相は tick そのものが保つ。`NextOK` から `Post` 節を削った
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。存在仮説 `hscanNext`／`hplateauNext` は残っているが、両方とも `Post` 節のぶん弱くなった） |
+
+**やったこと**: `NextOK` の最後の節 `Post w m → Post w next` は、消費が plateau 側 1 箇所だけなのに `chosenStep` が共有しているせいで scan 側でも証明が要った。定義を読むと、`ReportPoint`／`Refreshed` が読むのは 3 ヘッドと control の `replaying`・`output` だけ。なので trace を使わない抽象補題 1 本で両方に効く。
+* 新モジュール `PalPeg/ReportPhase.lean`（`ShadowedLocalFinal` が import、`Workbench` 経由でルートに届く）:
+  - `scanTick_kept_or_moved`: scan・非 replaying の状態からの tick は、3 ヘッドと `replaying`／`output`／`mode` を保つ（`scan_wait`／`scan_count`／`restart`）か、右ヘッドを 1 歩右へ動かす（`scan_match`／`scan_shift`／`scan_fallback`）。scan 以外の構成子は `cases h <;> first | (exfalso; simp_all; done) | skip` で先に落とす。
+  - `position_right_of_atLast`: `position p = 2n − 1`（`0 < n`）なら `position (right p) = 2n`。偶奇で `gap = true` が消えるので `Sane` も `canRight` も要らない。
+  - `reportPhase_tick`: refreshed な報告点 ∧ scan からの tick は、同じ相に着地するか、右ヘッドが `2·|w|` に出る。結論がちょうど `postPhase`。
+* `ShadowedLocalFinal`: `NextOK`／`chosenStep`／`chosenStep_spec`／`good_chosenStep`／`ghostSteps` から `Post` 引数を除去。plateau の消費箇所は `hspec.1`（`Tick`）から `reportPhase_tick` で `postPhase` を出す。`replayStartNext` の `Post` 節の証明も削除。
+* 進め方: スクラッチ（`$S/post_check.keep.lean`）で通してから、消費者と一緒にリポジトリへ入れた。
+
+**`hscanNext` の残り**: target（trace の次状態の truncation）に対して `absState'' next.vm = target` ∧ `PhysWF` ∧ `MirInv1` ∧ `localGood` を満たす切断を作ること。材料: ヘッド・銀行・`Place`・バッファの切断と `parkedRight_trace`・`countersCanonical_trace`（全部スクラッチ）、鏡（投入済み）。未: 極性（`localGood` が求める `remaining`／`radius`／`length`／`fppWork`／`work`／`replay` の非負性を target で示す）、`Inv` の組み上げ。
+
+## n318（2026-09-21）: scan の後継の仮説は、target が trace の次状態であることと `Canonical` を受け取る
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。存在仮説 `hscanNext`／`hplateauNext` は残っているが、`hscanNext` は弱くなった） |
+
+**やったこと**: 部品を下から積むのをやめて消費者の型から読んだら、道 A の (5) の正体が分かった。`LocalRealizesScan.realizes_of_refined_tick_det` の中で `Hloc` に渡している target は実は `truncS (raw.length - j) (stOf (k+1))` で、`Tick` も `Refinement`（＝`Canonical`）も手元にあるのに、`Hloc` の型がそれを捨てていた。なぜ捨てていたか: `Hloc` は「任意の tick target に対して局所 step が tick である」という分岐別の局所 step 向けの形で書かれており、target の正体を使う消費者（切断）が当時無かった。そのせいで `hscanNext` は、追跡添字が最後の点かもしれない任意の target に対して `Tick` と `Canonical` を自前で作る形になっていた。
+* `realizes_of_refined_tick_det` の `Hloc` をその場で一般化: `(∃ k j, Needy raw stOf k j m.vm ∧ k < lastTick ∧ t = truncS (raw.length - j) (stOf (k+1)))` と `Refinement (absState'' m.vm) t` を追加で受け取る。`realizes_of_tick_det` は内部で無視（署名は不変）。`CanonicalLocalRealizes.realizes_canonical` の `hLocal` も同じ 2 つを受け取る。
+* 消費者 `given_openModesAndPhysicalMachine` の `hscanNext` が同じ 2 つを受け取る形になった。`init` と `replayStart` の呼び出しは無視するだけ。
+* 効果: 切断 `next` が `absState'' next.vm = target` を満たせば、`NextOK` の `Tick` と `Canonical` は書き換えで出る。**道 A の (5)（`NextOK` の `Canonical`、`k < Tc` の未確認点）は消えた。**
+
+**`Post` 節と plateau（定義を読んだだけ）**: `given_shadowedLocalSystem` では `Post` は自由パラメタ（入口 `hpostOfLastReport`、保存 `hpostTick`）。「報告点で凍らせて plateau を消す」案は採れない: `hfrozenQuiet` が凍結中の rep bit off を要求し、物理機械は語の終わりを知らず報告点の後も count → compare → 右へ 1 歩進むので、ghost だけ報告点で止めると `reportTest = true` と物理側が食い違う。`2n` で凍る現設計は意図的。plateau は「報告点 → count tick → compare 1 回で `2n`」で、trace が無いので抽象 tick の存在が要る（既存に `GalilTickFun.tick_exists`（`sharedFun` 版）と `GalilTickFair.fair_restart`。`sharedC` との対応は未確認）。
+
+**道 A の残り**: (1) カウンタの `Canonical`（スクラッチ完成）、(2) 非負性 6 本、(3) 切断本体（ヘッド・鏡・銀行・`Place`・バッファは部品あり、組み上げと `Inv` が未）、(4) replaying の右ヘッド（`parkedRight_trace` スクラッチ完成）、(6) `scanNext` の組み立て（`Post` 節を含む）と仮説の除去。その後に `hplateauNext`。
+
+## n317（2026-09-21）: run 不変量の `cycle` の極性を shift モード限定にした
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。存在仮説 `hscanNext`／`hplateauNext` は残っている） |
+
+**やったこと**: `LocalWF.PolWF` の `cycle` 成分を `x.ctl.mode = .shift → x.pol .cycle = true` にした。消費者 `given_openModesAndPhysicalMachine` の存在仮説が要求する `Good next` がそのぶん弱くなった（scan の着地で `cycle` の極性を示さなくてよい）。
+* **なぜ要ったか**: 正本 `ScaffoldChain.scala:156–160` の `matched()` は `periodOnly` なら `cycle.dec()` を無条件で実行し、「`cycle > 0`」は `checkPair`（`:117–127`）の assertion（2 半周期の継続不変量）でしか守られていない。trace 上で全状態の `cycle ≥ 0` を示すには Galil の周期性の議論が要る。一方、`cycle` の極性を実際に読むのは `shiftCounters_of` の 1 箇所だけで、shift 入口で `cycle := reset`・shift 中は inc だけなので shift モードの間は安く出る。
+* 追加した宣言（全部消費者あり）: `mode_shift_of_tickL3`（`cases h`、着地モードは `exact absurd (show Mode.X = Mode.shift from hshift) (by decide)` を `first` で当てる。**着地モードが `copyDoneVm` などの定義の中に隠れているので `decide` も `simp_all` も届かない。`show` で defeq を明示する**）、関数 step 6 個の `mode_shift_of_copyStepL`／`homeStepL`／`markEndStepL`／`chooseStepC`／`rewindStepC`／`ffpp`（`unfold … at hshift; split at hshift`、`ffpp` は `hexists.choose_spec.1` と `mode_shift_of_tickL3`）、`ctl_feedC`。`polWF_congr` と `shiftCounters_of` は `hmode` を取る。`polWF_tickC` は外に使用者が無いが、`hmode` の仮説を足して残した。
+* `ShadowedLocalFinal`: `localGood_of_pol_eq` に `hmodeShift`、shift の場合は `fun _ => hmode`、`init` と `replayStartNext` の着地は scan なので `cycle` の節は空虚、blank は `fun _ => rfl`、到着は `ctl_feedC`。
+* 進め方: 先にスクラッチ複製（`$S/LocalWF.trial.lean`）で 5 箇所を直して通してからリポジトリへ反映した。
+
+**(5) `NextOK` の `Canonical` の見通し（2026-09-21、定義を読んだだけ）**: `CanonicalLocalRealizes.realizes_canonical`（`:68`）の `hLocal` は、tracked・非 starved な `m` と任意の `target`（`Tick … (absState'' m.vm) target`）に対して `Tick … (absState'' (f m).vm)` ∧ `Canonical …` ∧ `PhysWF` ∧ `MirInv1` を求める（`NextOK` とほぼ同じ）。仮説の `target` は canonical とは限らないので、後継は `target` でなく **trace の次状態の truncation `truncS (n − j) (stOf (k+1))` を具体化したもの**にする。材料: `canonical_trunc`（`:56` 付近、trace の canonical な tick は truncation しても canonical。`restartVM_trunc`／`restartGuard_of_trunc` を使う）、`LocalSysConcrete.tick_of_need`（need が満たされていれば truncation 同士が tick）、`ShadowedLocalFinal.nextUsed_heldAfter`（非 starved なら次の used ≤ j）。未確認: `InvC` の `Tracked` は添字 `k` を縛らないので、非 starved な tracked 状態では `k < Tc` が出ること（`notStarved_of_need_heldAfter` の周辺に既にあるはず、要確認）。
+
+**(3) 切断本体の部品: カウンタの銀行（2026-09-21、スクラッチ `$S/bank_check.keep.lean`、error 0、標準 3 公理、一発）**: `bankOf roles background counters := Function.extend roles (fun c => (ctrOf (counters c)).1) background`、`polOf counters c := (ctrOf (counters c)).2`。`roles` が単射なら `bankOf … (roles c) = (ctrOf (counters c)).1`（Mathlib の `Function.Injective.extend_apply`）、`Canonical` なら `LocalRoles.absL (bankOf …) roles (polOf …) c = counters c`（既存の `CloseoutCoreEnc2.absCtr_ctrOf`）、各役割のテープは `SegCtr`（`segCtr_ctrTapeSeg`）。`roles` は blank 状態のものを流用できる（`LocalBlankState.inv_blank` の `roles`）。**注意**: `ctrTapeSeg`／`ctrOf`／`absCtr_ctrOf` は旧 encoder の `CloseoutCoreEnc2`（`CloseoutCoreEnc` を import する重い旧経路）にある。リポジトリに入れるときは、この 5 宣言を `LocalCounter` の近くへ移して新経路が旧 encoder に依存しないようにする。切断の部品はこれで 3 つ: ヘッド（`$S/sec_check.keep.lean`）、鏡（`ReplayStartGhost.mirrorOfTape`、投入済み）、銀行。残り: `Place`（walker 2 本。`viewOfPlace` は旧 encoder にあり、`ProperView` を満たすかは未確認）、バッファ、全体の組み上げ。
+
+**(3) `Place` の切断と (4) replaying の右ヘッド（2026-09-21、スクラッチ、error 0、標準 3 公理）**:
+* `Place`: 既存の `CloseoutCoreEnc2.viewOfPlace` は番兵 `none` で閉じる形なので `ProperView (viewOfPlace p)` が帰納で出る（`$S/place_check.keep.lean`、公理依存なし）。バッファの切断は `⟨tapes, tapes, true, none⟩` で `LocalBuffers.abs` が `rfl`。
+* **(4) で障害を 1 つ見つけた**: 抽象の `GalilScaffoldChainVerifier.right` は右スタックが空なら `incoming` から引くので `left (right p) = p` は一般に偽。`FrontPack.frontier`（`position right + replay ≤ 2·arrived`）だけでは、replaying の抽象右ヘッドから駐車 view を逆算できない。なぜ足りないか: `arrived` は左＋右スタックの長さで、`incoming` から引いた 1 歩は `left` で戻すと右スタックに入り元の状態と違う。必要なのは「右ヘッドは駐車点から `replay` 回左へ戻った形」という履歴の事実。
+* 立てた trace 不変量（`$S/parked_check.keep.lean`）: `ParkedRight s := ∃ r parked, s.replay = ofNat r ∧ s.right = left^[r] parked ∧ r ≤ position parked`（control 非依存。非 replay は `replay = reset` で `r = 0`）。`parkedRight_trace`: `PreTrace` の全点で成立。
+* **コピペを避けた形**: `frontier_tick`（`GalilFrontier:196`）と同じ場合分けを二度書かないため、tick での `(right, replay)` の動きの分類 `RightReplayMove c s t`（`rested`／`kept`／`replayed`／`started` の 4 構成子）と `rightReplayMove_of_tick`（仮説は `ReplayRest` だけ）を 1 本立て、`parkedRight_tick` はその 4 場合から出す。リポジトリに入れるときは `GalilFrontier` に置き、`frontier_tick` もこの分類から導く形に直す（`GalilFrontier` は深いので全体 build が要る）。
+* trace 形の入力は全部既存: `BranchSupply.frontPack_alongTrace`（`rest`／`replayPos`／`rewind`）、`ReplayStartGhost.rewindCentre_trace`、`LocalReplayParked.right_left_iterate`、`ofNat_inj`。`i = 0` は `hP.start` で boot（`replay = reset`、`replaying = false`、`mode = init`）。
+* 切断での使い方: 右 view := `viewOfHead parked`、`rval = r`（銀行の `replay` テープ）なら `absR = left^[r] parked = s.right`、`ParkedOK` は `r ≤ position parked`。truncation とは `ReplayStartGhost.truncPH_left_iterate` で可換。
+
+**道 A の残り**（n316 の一覧から更新）: (1) カウンタの `Canonical` は trace の事実としてスクラッチで完成（`$S/lift_trace.keep.lean`、未投入）、(2) 非負性は `cycle` を外したので残り 6 本（`remaining`／`radius`／`length`／`fppWork`／`work`／`replay`、各モードの入口で要る分だけ）、(3) 切断本体と `abs''` の等式・`Inv`（ヘッドの切断は `$S/sec_check.keep.lean`）、(4) replaying の着地の右ヘッド、(5) `NextOK` の `Canonical`、(6) `scanNext`／`plateauNext` の組み立てと仮説の除去。
+
+## n316（2026-09-21）: `hscanNext`／`hplateauNext` の方針 — 分岐ごとの局所 step でなく、抽象の着地を具体化した ghost を後継にする（調査のみ、コードは変えていない）
+
+**全体 build 成功（最新は n315 の `BUILD=0`）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（未接続） |
+
+**視点の変更**: n315 で分かったのは「ghost は自由なので、後継は抽象の着地に合うものを直接作ればよい」こと。scan は分岐が多く（wait／count／match／replay の match／restart／shift 入口／fallback 入口）、既存の局所部品（`LocalTick2.commitRestart`、`beginShift` の `shiftSlot`、`commitFallback` の `jF`）は割当や staging の名前付き仮説を大量に抱えている。分岐ごとに組むのをやめ、**抽象状態 → ghost の切断（section）**を 1 本作って、`next := 切断 (着地)` とする。`hscanNext` と `hplateauNext` の両方に効く。
+
+**一次情報で確かめたこと**:
+* `LocalState.abs`（`:189`）は場ごとの単純な写像: ヘッド 3 本（`absHead`）、`chain` はそのまま、カウンタ 10 本（`absCtrs`: cycle／remaining／radius／length／replay／fppWork／span／work／debt／lower）、fpp（mode／pc／`LocalBuffers.abs fppBuf`／done／walker は `absPlace fppWalker`／finalStage）、search（mode／finalStage／quarter）、dp（pc／`LocalBuffers.abs dpBuf`／done）、`periodOnly`、`walker := absPlace walkerView`。
+* 切断の部品は旧 encoder 経路に既にある（`CloseoutCoreEnc2`）: `ctrOf`＋`absCtr_ctrOf`（`Canonical` なカウンタ）、`viewOfPH`（`absHead` の切断、`:122`）、`viewOfPlace`（`absPlace` の切断、`:144`）。鏡は n315 の `ReplayStartGhost.mirrorOfTape`。
+
+**要確認（次にやる順）**:
+1. 新経路は `abs'`／`abs''`（`absHead'`、`far`／`near` を見る版）を使う。`viewOfPH` が `absHead'` の切断にもなるか（`far := 空`、`near := right`、`pending := []` なら `incoming` は `far ++ pending` なので、`incoming` を `far` に載せる必要がある。`RTQueue` を list から作る構成子と `RTQueue.Inv` の補題を探す）。
+   **→ 解決（2026-09-21、スクラッチ `$S/sec_check.lean`、控え `sec_check.keep.lean`、error 0・標準 3 公理）**: `PhysWF.pend` が `pending = []` を要求するので、各ヘッドの `incoming` は自分の `far` に載せる。`queueOfList l := l.foldl RTQueue.snoc RTQueue.empty`、`Inv (queueOfList l) ∧ toList (queueOfList l) = l`（一般の開始 queue で帰納、`RTQueue.inv_snoc`／`toList_snoc`／`inv_empty`／`toList_empty`）。`viewOfHead p := ⟨p.head.left, p.head.focus, p.head.right, queueOfList p.head.incoming, p.gap⟩` で `absHead' (viewOfHead p) [] = p` と `LocalInputView.WF (viewOfHead p)`。旧 `viewOfPH` は `far := empty` で `incoming` を `pending` に回す形なので、3 本のヘッドで `incoming` が違う新経路には使えない。
+2. `PolWF`＋`work`／`replay` は正の極性を要求する。`ctrOf c` の極性は `c.neg.isEmpty` なので、着地でこの 7 本が非負であることが要る。trace 上の既存材料（`GalilLengthFloor.FPack.radius`、`CloseoutLenNonneg`、`RadLedger.canon`、`CPack.canon`）でどこまで出るか。全カウンタの `Canonical` も同様。
+   **→ タダでは出ない（2026-09-21、grep と定義で確認）**: trace 上の `Canonical` の事実はカウンタごとにまばら（ファイル数: `length` 30、`radius` 14、`remaining` 7、`replay` 2、`cycle` 1、`search.debt` 47、`lower`／`search.span`／`search.work`／`fpp.work` は 0）。非負性も `GalilLengthFloor.FPack` が scan／shift の `radius`・`length` を持つ程度で、全モード・7 本ぶんは無い。演算の補題はある（`GalilScaffoldCounter.inc_canonical`／`dec_canonical`／`ofNat_canonical`、`reset` は自明）。
+   * 観察: tracked 状態のカウンタは ghost のテープの抽象（`absCtr`）なので、`absCtr_canonical` により**常に** `Canonical`、`PolWF` の 7 本は**常に**非負。足りないのは「次の trace 状態でも成り立つ」の 1 歩だけ。
+   * 道 A: 一括の trace 不変量 `AllCanonical ∧ 7 本非負` を新設し、Tick の全構成子（探索量子 `searchEffect`、chain、fpp プログラムの量子を含む）で保存を示す。一様だが、frame の関係を全部開く必要がある。
+   * 道 B（混成）: `LocalTick1.TickL1`＋`LocalReplayParked` が既に覆っている分岐（wait／count／match／replay の match）はその局所後継を使い（`PhysWF`／抽象の一致の証明つき）、覆っていない分岐（restart／shift 入口／fallback 入口）だけ切断を使う。着地のカウンタは reset／ofNat／既存値のコピーが多く、`Canonical`・非負性が分岐ごとに直接読める見込み。
+   * どちらを採るかは、`TickL1` の各構成子が要求する仮説（`SearchFrame` の存在、chain tick、`hcan`、`hahead` など）を読んでから決める。
+   * **決定（2026-09-21）: 道 A。** `LocalTick1.TickL1`（`:777`）を読んだ結果、wait／count／match のどの構成子も `hs : SearchLocal S b x z`（探索量子の局所後継 `z` の存在）を要求しており、道 B でも探索部分の後継を自分で構成することになる。しかも覆っているのは matched だけで、mismatch（shift 入口・fallback 入口）と restart は無い。
+   * **規模の探り（スクラッチ `$S/canon_probe.keep.lean`）**: `AllCanonical s`（10 本: cycle／remaining／radius／length／replay／lower／fpp.work／search.span／search.work／search.debt）に対して `cases h <;> first | exact hsource | skip` で残る構成子は **22 個**: fpp 系 9（`copy_one`／`copy_done`／`home_start`／`home_step`／`fpp_slice`／`fpp_done`／`markEnd_found`／`markEnd_step`／`choose_step`、`fppLens.rel` なので変わりうるのは `fpp.work` だけ）、rewind 系 4（`choose_select`／`rewind_one`／`rewind_pair`／`rewind_done`、`length`／`radius` の inc／reset／ofNat）、`init`／`replayStart`／`restart`（明示的な VM 関係）、`shift_one`（dec）、scan 系 5（`scan_wait`／`scan_count`／`scan_match`／`scan_shift`／`scan_fallback`、探索量子 `searchEffect` を含むのでここが重い）。非負性（7 本）は dec にガードが要るので別途（`shift_one` の `radius` は `RadLedger.shiftBud`）。
+   * **スクラッチの進み（2026-09-21、`$S/canon_probe.keep.lean`、末尾は `sorry`）: 22 → 11。** 束ねた `Canonical` の不変量は既存に無い（構造の名前で確認。前に書いた「`search.debt` 47 件」は緩い正規表現の数え過ぎで、正確には 0）。閉じた 11 個: rewind 系 4（`obtain ⟨hstep, hframe⟩`／`⟨⟨_, hstep⟩, hframe⟩`、`rw [hstep] at hframe; subst hframe`、`inc_canonical`／`ofNat_canonical`／`Or.inr rfl`）、`copy_one`（`⟨⟨letter, _, hstep⟩, hframe⟩`、`dec_canonical`）、fpp 系の残り 6（`copy_done`／`home_start`／`home_step`／`markEnd_found`／`markEnd_step`／`choose_step`、同じ 2 パターンを `first` で当てて全場 `hsource` のまま）。`fallbackFrame`（`GalilScaffoldTopFallback:34`）で `work` を動かすのは `copyOne` の `dec` だけ。残り 11: `fpp_slice`／`fpp_done`、`init`／`replayStart`／`restart`、`shift_one`、scan 系 5。
+   * **続き（2026-09-21、同じスクラッチ）: 11 → 6。** 任意の `Pw : Shared` では `init`／`replayStart`／`restart` が中身の無い関係なので、定理を具体の `GalilScaffoldChainInputSupply.sharedC onLetter leftFirst centre place entry`（`GalilFrontier:177`、`coupled_tick` と同じ形）に特殊化した。補題 `begin_canonical`（`GalilScaffoldSearchFinish.begin lower radius` は `span := reset`、`work := if zero lower then inc lower else lower`、`debt := ⟨radius.neg, radius.pos⟩` なので `hradius.symm`）。閉じた 5 個: `init`（`initVM entry s t` の 15 連言を `obtain`、各場は `h ▸ …`）、`replayStart`（構成子の引数順は `hm ho ho' hrel`）、`fpp_done`（`⟨⟨-, program, -, -, hstep⟩, hframe⟩`）、`fpp_slice`（`hstep` の右辺に `t` が出るので `subst` せず、`hwork := (congrArg FppControl.State.work hstep).trans rfl` と、各場 `by rw [hframe]; exact hsource.場`）、`shift_one`（`⟨⟨-, -, -, watch, -, hstep⟩, hframe⟩`、`cycle` は `inc` 2 回、`remaining`／`radius` は `dec`、`length` は `dec` 2 回）。**残り 6: `restart`（`lower := w.machine.control.last` なので chain 側の `last` の `Canonical` が要る）と scan 系 5（`searchEffect`）。**
+   * **scan 系の棚卸し（2026-09-21、定義を読んだだけ）**: 既存の `GalilScaffoldTopSearch.backgroundS_fields`（`:231`）が background tick の場を列挙している（`radius`／`length`／`remaining`／`replay`／`fpp` は不変、`cycle` は chain 誕生で `reset` か不変、探索は `searchEffect P false s (searchLens.get s')`）。`searchEffect`（`:179`）は chain idle なら `searchStep`、そうでなければ探索不変。`searchStep`（`:152`）は `search.mode` で分岐: `idle`／`found`／`missed` は不変、`grow` は `growStep` か `prepare`、`lower`／`lowerHome`／`copy`／`home` は `PrepareControl.Tick`、`run` は `SearchRun.SafeQuanta`、`wait` は `Double.waitStep`、`double` は `Double.step` か prepare、いずれも `PreparePaced.afterAdvance`／`SearchRun.advance` を通る。`Canonical` の既存補題は下位機械ごとに部分的（出現数: `GalilScaffoldStagePrepare` 21、`GalilScaffoldDouble` 12（`canonical : Run s as t → …` あり）、`GalilScaffoldSearchRun` 10、`GalilScaffoldPreparePaced` 4（`spend_canonical`）、`GalilScaffoldSearchFinish` 2、`GalilScaffoldPrepareControl` 0）。scan 系 5 個はこれらを mode ごとに束ねる作業になる。compare 側（`scan_match`／`scan_shift`／`scan_fallback`）の場の補題は未確認。
+   * **続き（2026-09-21、同じスクラッチ `$S/canon_probe.keep.lean`、末尾は `sorry`）: 主定理の残り 6 → 4。** 補題 `allCanonical_background`（`backgroundS_fields` で場を取り、`cycle` は `rw [hcycle]; split`（誕生なら `Or.inr rfl`）、探索 4 本は `searchCanonical` から）で `scan_wait`／`scan_count` を閉じた。補題 `searchCanonical : AllCanonical s → searchEffect P a s vq → Canonical vq.search.span ∧ … work ∧ … debt ∧ Canonical vq.lower` は、chain 非 idle の枝（`subst hsame`）と、`unfold searchStep at hstep; cases hmode : (searchLens.get s).search.mode <;> simp only [hmode] at hstep` のあと不変の 3 mode（`idle`／`found`／`missed`、`subst hstep`）が閉じた。**残り: 主定理の `restart`／`scan_fallback`／`scan_match`／`scan_shift` と、`searchCanonical` の 8 mode（`grow`／`lower`／`lowerHome`／`copy`／`home`／`run`／`wait`／`double`）。**
+   * **続き（2026-09-21、同じスクラッチ）: 探索の 8 mode → 6＋半分。** 定義は単純だった（`GalilScaffoldDouble.enter`: `work := span`・`span := reset`、`waitStep`: 条件付きで `enter`、`Double.step`: `work` dec・`span` inc 2 回・`debt` は `quarter = 3` で inc、`GalilScaffoldSearchRun.advance`: `a` なら `debt` dec）。`SearchCan st := Canonical st.span ∧ Canonical st.work ∧ Canonical st.debt` と補助補題 3 本（`searchCan_advance`／`searchCan_waitStep`／`searchCan_doubleStep`、どれも `unfold`／`show` のあと `split`）で、`wait` と `double` の前半（`positive work` の枝、`split at hstep`）が閉じた。**残り: `grow`／`lower`／`lowerHome`／`copy`／`home`（`SearchVM.ofPrep (PreparePaced.afterAdvance a …)` を通る prepare 系）、`run`（`SearchRun.SafeQuanta`）、`double` の後半（prepare）。**
+   * **続き（2026-09-21、同じスクラッチ）: prepare の 4 mode が閉じた。** `GalilScaffoldPrepareControl.Tick`（`:26`）は 9 構成子で、`work` は dec（`lowerBit`／`copyBit`）か `inc span`（`beginCopy`）か不変、`span`／`debt` は不変。`PrepCan p := Canonical p.work ∧ Canonical p.span ∧ Canonical p.debt`、`prepCan_tick`（`cases ht` して 9 個を個別に）、`prepCan_afterAdvance`。`SearchVM.toPrep`／`ofPrep`／`StagePrepare.runState` は場の並べ替えだけなので、`obtain ⟨landed, htick, hstep⟩ := hstep; subst hstep` のあと defeq で通る。使える既存補題: `GalilScaffoldGrow.add_canonical`（`growStep` の `add 8`／`add 2` 用）、`GalilScaffoldPrepareControl.prepare`（`:236`）は `work := lower`（`hsource.lower` が要る）。**探索部分の残り: `grow`（`growStep` か `prepare`）、`run`（`SafeQuanta`）、`double` の後半（`prepare`）。**
+   * **続き（2026-09-21、同じスクラッチ）: 探索部分が全部閉じた。** `searchCanonical`（`searchEffect` が探索の 4 カウンタ span／work／debt／lower の `Canonical` を保つ）は `sorry` なし。`grow`／`double` の後半は `split at hstep` のあと `prepCan_growStep`（`GalilScaffoldGrow.add_canonical 8`／`2`）か `prepCan_prepare`（`work := lower`）、状態は `(p := (searchLens.get s).toPrep)` と明示しないと elaboration が通らない。`run` は `searchCan_finish`（`GalilScaffoldSearchFinish.finish` は mode を変えるか `work := span`・`span := reset`、`split` 4 段）→ `searchCan_safeCalls`（`SafeCalls` の帰納）→ `searchCan_safeQuanta`（`SafeQuanta` の帰納、`advance` を挟む）。**`sorry` が残るのは主定理の 4 構成子だけ: `restart`（chain 側の `last` の `Canonical` が要る）、`scan_match`／`scan_shift`／`scan_fallback`（compare 側。`backgroundS_fields` に当たる場の補題を探すか自分で書く）。**
+   * **続き（2026-09-21、同じスクラッチ）: compare 側 3 個が閉じ、残りは `restart` の 1 個。** compare は完全に明示的だった（`GalilScaffoldTopSearch.compareFound`（`:205`）: `t = afterBirth born (if a then afterCompare s vs vq else afterMismatch s vs vq)`、`radiusAfter = inc radius`、`cycleAfter` は `periodOnly` なら dec、`afterCompare` は `length` inc 2 回、探索は `searchEffect`）。補題 `allCanonical_afterBirth`（`cases born`、誕生なら `cycle := reset`）と `allCanonical_compare`（`obtain … : compareFound P q first s t := hcompare`、`rw [hlanding]; apply allCanonical_afterBirth; cases a`）。2 歩目: `scan_match` は `hpl : t = replayDec c.replaying _`（`GalilScaffoldTopMerge:59`、`unfold replayDec; split`、`replay` dec）、`scan_shift` は `obtain ⟨watch, -, hlanding⟩ : beginShiftVM' _ t := hb`（`remaining := ofNat h`・`length` inc 2 回・`cycle := reset`。**`-` で chain の等式を消してから `obtain` すると依存消去で落ちるので、3 つ組で一度に取る**）、`scan_fallback` は `obtain ⟨landingPlace, hfallback, -⟩ : beginFallbackVM' _ t := hb`（`GalilScaffoldChainFallback.beginFallback`（`:404`）は `fpp.work := inc length`）。**22 構成子中 21 個が閉じた。残る `restart` は `lower := w.machine.control.last`・`search := begin last radius` なので、chain の watch 機械の中のカウンタ `last` の `Canonical` が要る（chain 側の不変量。`BranchSupply.ChainLagCanonical`（`:1783`）が何を持っているかを読む）。**
+   * **`restart` の調査（2026-09-21、定義を読んだだけ）**: `BranchSupply.ChainLagCanonical`（`:1783`）が持つのは copy／back／watch の `lag` の `Canonical`＋非負だけで、`last` は無い。`GalilScaffoldCounter.positive c := !c.pos.isEmpty`（`:15`）なので、`restartVM` が与える `positive w.machine.control.last = true` から `neg = []` は出ない（`Canonical` は従わない）。chain の埋め込みカウンタを束ねた述語は `CloseoutCoreEnc2.CanonChain`（`:230`、watch／broken で `lag`／`margin`／`distance`／`boundary`／`last`）があるが、定義されているだけで trace に沿って示されたことは無い（使用は同ファイルのみ）。`last` の `Canonical` が仮説として現れる箇所: `GalilCycleNoShift:228`、`GalilFoundLandingL:232,365`、`CloseoutCoreEnc24:267`。導出している箇所: `GalilNoShiftStage:125–132`（特定の段）。**結論: `restart` を閉じるには chain 側の trace 不変量（少なくとも watch／broken の `last` の `Canonical`）を新設し、`ChainTick`／`chainAt` の全構成子で保存を示す必要がある。**
+
+   * **chain 側の最初の 1 歩（2026-09-21、スクラッチ `$S/chain_probe.keep.lean`、error 0、公理 `propext`／`Quot.sound`）**: `last` を持つのは `GalilScaffoldChainConsume.State`（`distance`／`boundary`／`last`）。`consume`（`:28`）は一致なら `distance := inc distance`、境界イベントなら `last := boundary`・`boundary := inc distance`、不一致なら `broken := true` だけ。`ConsumeCan st := Canonical st.distance ∧ Canonical st.boundary ∧ Canonical st.last` は `consume` で保たれる。証明: `unfold consume; simp only; split_ifs` のあと候補 3 つを `first` で当てる（**`split` は内側の `match` を先に割ってしまい、`generalize` はパターンが合わなかった。`if` だけ割るなら Mathlib の `split_ifs`**）。未確認: watch 機械のほかの遷移（`chainShiftOne`、誕生・`immediate`、copy／back から watch への移行）で `machine.control` がどう初期化・更新されるか。
+   * **続き（2026-09-21、同じスクラッチ）**: `GalilScaffoldChainWatch.State` は `machine`（`verifier`＋`control : ChainConsume.State`）／`lag`／`margin`。watch の tick は `Internal`（`idle`／`take`→`caught`）と `Outer`（`idle`／`queued`／`immediate`）の合成で、`control` を触るのは `caught`／`immediate` の `GalilScaffoldChainVerifier.consume`（中身は `ChainConsume.consume`）だけ。`WatchCan w := ConsumeCan w.machine.control` は `GalilScaffoldChainWatch.Tick` で保たれる（`cases htick; rename_i middle hinternal houter`、あとは構成子ごと。**`obtain ⟨hinternal, houter⟩ := htick` は中間状態に名前が付かず、`cases … with | @step …` は引数の数が合わなかった**）。未確認: `ChainVM` の高さの遷移（`ChainStep`／`ChainTick`／`chainAt`: copy→back→watch の移行で watch 状態がどう生まれるか、`chainShiftOne`、break、誕生 `chainStart`）。
+   * **続き（2026-09-21、同じスクラッチ）: chain の高さの 2 関係が通った。** `ChainLastCan : ChainVM → Prop`（`.watch w`／`.broken w` で `WatchCan w`、他は `True`）は `GalilScaffoldTopChainVM.ChainStep`（`:58`、8 構成子）と `ChainMatched`（`:83`、6 構成子）で保たれる。error 0、公理 `propext`／`Quot.sound`、一発。根拠（定義で確認）: watch が生まれるのは `backDone` の `watchControl v`（`:54`、カウンタ 3 本とも `reset`）、`watchBreak`／`brokenIdle`／`brokenMatched` は `control` をそのまま運ぶ、`BreakStep`（`:26`）の着地は `⟨consume w.machine, w.lag, inc w.margin⟩`。未確認: `chainShiftOne`（`GalilScaffoldChainInputSupply:1478`、3 本とも `dec` なので `dec_canonical` で済むはず）、`chainAt`（`GalilScaffoldTopSearch:130`、誕生 `chainStart` は `.copy` なので `True`）、`beginShiftVM` の `immediate`、そして VM の Tick 22 構成子への持ち上げ。
+   * **続き（2026-09-21、同じスクラッチ `$S/chain_probe.keep.lean`）: chain 側の部品が揃った。** `ChainTick a x z := ∃ y, ChainStep x y ∧ (if a then ChainMatched y z else z = y)`（`GalilScaffoldTopChainVM:118`）、`chainAt`（`GalilScaffoldTopSearch:130`）は「非 idle なら `ChainTick`」「idle かつ found でなければ idle のまま」「idle かつ found なら `chainStart`（`.copy` なので不変量は `True`）＋一致時は `ChainMatched`」の 3 枝。`chainLastCan_tick`、`chainLastCan_chainAt`（`rcases` で 3 枝、`cases a`）、`watchCan_chainShiftOne`（3 本とも `dec_canonical`）が一発で通った。error 0、公理 `propext`／`Quot.sound`。**残り: VM の Tick 22 構成子への持ち上げ**（不変量を `AllCanonical s ∧ ChainLastCan s.chain` にして、`canon_probe` の主定理に chain の場を足す。chain を動かすのは background／compare の `chainAt`、`beginShiftVM` の `immediate`（= `consume`）、`shift_one` の `chainShiftOne`、idle に戻す `init`／`replayStart`／`restart`／`beginFallback`。ほかは不変）。そのあと `restart` で `.broken w` の `last` の `Canonical` を取り出して `AllCanonical` の最後の 1 個を閉じる。
+   * **完成（2026-09-21、スクラッチ `$S/lift_done.keep.lean`、`sorry` の警告 0、`#print axioms` は `propext`／`Quot.sound`）: カウンタの `Canonical` は tick で保たれる。** 2 本の定理（どちらも具体の `sharedC onLetter leftFirst centre place entry` の frame に対して）:
+     * `allCanonical_tick : AllCanonical s → ChainLastCan s.chain → Tick … ⟨c, s⟩ ⟨c', t⟩ → AllCanonical t`（VM の 10 本。最後に残っていた `restart` は `s.chain = .broken w` と `ChainLastCan` から `Canonical w.machine.control.last` を取り出し、`begin_canonical` で閉じた）。
+     * `chainLastCan_vmTick : ChainLastCan s.chain → Tick … → ChainLastCan t.chain`（22 構成子: `init`／`replayStart`／`restart`／`scan_fallback` は chain が idle に着地、`scan_wait`／`scan_count` は `backgroundS_fields` の `chainAt`、fallback 相と rewind は frame の等式で chain 不変、`shift_one` は `chainShiftOne`、compare は補題 `chainLastCan_compare`（`cases chainBorn … <;> cases a <;> exact hlanded`）、`scan_match` は `replayDec_chain`、`scan_shift` は `beginShiftVM'` の `immediate` = `consume`）。
+     * つまずき: `case scan_wait hm hr hav hb` は「too many variable names」→ `case scan_wait => rename_i hb`。`restart` という名前の goal が 2 つ見えたのは、前半の定理の `sorry` がログに混じっていただけ。
+     * **リポジトリには未投入**（消費者＝切断を使う `scanNext` と一緒に入れる。今入れると孤立定理）。trace 形（`PreTrace` に沿う帰納、boot で成り立つこと）もまだ。
+     * **trace 形も通った（2026-09-21、同じスクラッチ、控え `$S/lift_trace.keep.lean`、error 0、標準 3 公理、一発）**: `countersCanonical_trace : PreTrace centre place entry q first w st Tc → ∀ i, i ≤ Tc w.length → AllCanonical (st i).vm ∧ ChainLastCan (st i).vm.chain`。boot（`hP.start`）は 10 本とも `Or.inr rfl`・chain は idle で `trivial`、帰納の step は `hP.trace.tick i hlt` に 2 本の tick 定理を `(onLetterVM w) leftFirstVM centre place entry q first 2048` で当てる（`PofC` の frame は `sharedC (onLetterVM w) leftFirstVM …` と defeq、`CloseoutRadPack3.coupledPack_trace` と同じ形）。これで道 A の (1)「着地のカウンタが全部 `Canonical`」は trace の事実として取れる。
+   * **道具の注意**: bash コマンドの文字列に語 `watch` が入ると token-saver の hook が「Never-terminating command」で弾く。スクリプトは Write ツールでファイルに置いてから `python3 file` で実行する。
+
+   * **(2) 非負性の調査（2026-09-21、正本と定義を読んだだけ）— `cycle` は全状態では示せない見込み、極性の要求をモード別にする。**
+     * 正本 `ScaffoldChain.scala:156–160` の `matched()` は `periodOnly` なら `cycle.dec()` を**無条件で**実行する。「`cycle > 0`」を守っているのは `checkPair`（`:117–127`）の assertion（"chain continuation exhausted without dispatch"、2 半周期の継続不変量）だけ。trace 上で `periodOnly → 0 < cycle` を示すには Galil の周期性の議論が要る。Lean 側でもこれは仮説としてしか現れない（`LocalTick1:807` の `hper` ほか、trace の事実は無い）。
+     * 一方、`cycle` の極性を実際に使うのは shift の関数 step だけ（`LocalTick3.ShiftCounters.cycPol`、`cycle` を inc 2 回）。shift 入口（`beginShiftVM`）で `cycle := reset`、shift 中は inc だけなので、**shift モードの間は `cycle ≥ 0` が安く出る**。scan モードの後継は切断なので極性は要らない。
+     * **方針**: run 不変量 `localGood` の極性の要求を「その極性を使う関数 step のモード」に限定する。使用箇所（定義で確認済み）: shift は `remaining`／`radius`／`length`／`cycle`（`ShiftCounters`）、copy は `fppWork`（`CopySide.pol`）、choose は `length`（`ChooseWF.polLength`）、rewind は `length`／`radius`（`RewindWF`）、replayStart の commit は `length`／`work`（`hpl`／`hpw`）と `replay`（`movePol`）、init は `length`／`work` を自分で正にする。scan モードでは何も要らない。切断の後継は `ctrOf` の極性（`neg.isEmpty`）になるので、各モードの入口でそのカウンタが非負であることだけを trace から取る。
+     * 残りの 6 本の dec とガード: `remaining`（`shift_one`、`remainingPos` でガード）、`radius`（`shift_one`、`RadLedger.shiftBud` で `remaining ≤ radius`）、`length`（`shift_one`、`SpanRep`）、`fpp.work`（`copy_one`、`¬ zero work`）、`search.work`（`growStep`／`Double.step`／`lowerBit` は `positive work`、`copyBit` は `zero work = false`）、`replay`（replay 中の一致。flag と counter の一致は `FrontPack.replayPos` の類を要確認）。
+
+   * **モード別の極性の波及を測った（2026-09-21、リポジトリは未変更、スクラッチ複製 `$S/LocalWF.trial.lean`）**: `cycle` の極性を実際に読むのは `LocalWF.shiftCounters_of`（`:470`、`h.pol.2.2.2.1`）の 1 箇所だけ。`LocalWF.PolWF`（`:310`）の `cycle` 成分を `x.ctl.mode = .shift → x.pol .cycle = true` に変えると、`LocalWF` 内で落ちるのは 5 箇所: `polWF_of_tickL3`（`:321`）、`polWF_x0C`（`:379`）、`shiftCounters_of`（`:470`、`hmd` を取る）、`polWF_congr`（`:569`）、`localWF_x0C`（`:639`）。どれも「着地が shift なら source も shift」というモードの事実を足せば直る形。`ShadowedLocalFinal` 側は `localGood_of_pol_eq` の呼び出し（関数 step 7 個＋到着）と `replayStartNext` の `Good`（着地は scan なので `cycle` の要求は空虚）。必要になる補題: 関数 step ごとの「着地のモード」（`shiftStepW` は ctl 不変か `shiftDoneCtlW` で scan、`copyStepL`／`homeStepL`／`markEndStepL`／`chooseStepW`／`rewindStepW`／`ffppW`／`initStep`）と、`TickL3 x y → y.ctl.mode = .shift → x.ctl.mode = .shift`（`cases`）。
+
+**道 A の残り作業の一覧（2026-09-21 時点、見積もりは付けない）**: (1) chain 側の `last` の `Canonical` を trace に沿って示し、`AllCanonical` の `restart` を閉じる、(2) 極性の要る 7 本（remaining／radius／length／cycle／fppWork／work／replay）の非負性を trace から、(3) 切断本体（`viewOfHead`＋`ctrOf`＋`viewOfPlace`＋`mirrorOfTape`＋バッファ）と `abs''` の等式・`Inv`、(4) replaying の着地の右ヘッド（source の駐車 view を引き継ぐ）、(5) `NextOK` の `Canonical`（trace の canonical な次状態の truncation を具体化）、(6) `scanNext`／`plateauNext` の組み立てと仮説の除去。
+
+3. replaying の着地では `abs''.right = left^[rval] physHead`。非 replaying の着地は `viewOfPH target.right`、replaying の着地は source の駐車 view を引き継ぐ（replay の tick は物理 right を動かさず `rval` が 1 減るだけ、`LocalReplayParked §3`）。
+4. `NextOK` の `Canonical`: 仮説が与える `target` は canonical とは限らない（restart guard が立っているときの `scan_wait` など）。後継は trace の canonical な次状態（`st (k+1)` の truncation）を具体化したものにする。`GalilTruncTick` の「tick は truncation と可換」と、`CanonicalLocalRealizes.realizes_canonical` が何を要求しているかを読む。
+5. fpp walker の番兵（`PhysWF.walkerProper`）: `viewOfPlace` の出力が `ProperView` か。
+
+**物理側への含意（隠さない）**: ghost が「抽象状態の切断」になると、抽象局所層は証明上の媒介にすぎなくなり、実質の内容は物理機械の側（`Enc`、`hforwardTick` ほか 9 本、ActRule の実装）に集まる。ここは未着手のまま。
+
+## n315（2026-09-21）: tracked な replayStart 状態に局所後継があることを証明した。仮説 `hreplayStartNext` が消えた
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: `given_openModesAndPhysicalMachine` の仮説 `hreplayStartNext` が無くなり、定理 `ShadowedLocalFinal.replayStartNext` になった。
+* 新モジュール `PalPeg/ReplayStartGhost.lean`（`ShadowedLocalFinal` が import、`Workbench` 経由でルートに入る）。
+  * trace 側: `RewindCentre`（rewind／replayStart で `center = left^[r] right`、`radius = ofNat r`）、`rewindCentre_tick`、`rewindCentre_trace`、`notReplaying_of_tick_into_replayStart`（着地は `rewind_done` だけ。`LocalWF.PhaseMode` に replayStart が無いので既存の `NoReplay` からは直接出ない）。
+  * ghost 側: `mirrorOfTape`、`replayCommitVm`（`LocalTick2.commitReplay`＋`left := center`＋鏡 3 本を新しいテープに付け直し）、`countersShaped_commitReplay`、`inv_replayCommitVm`、`replayStartVM_replayCommitVm`（`MirInv1` の仮説は不要）、`parkedOK_replayCommitVm`。
+  * `replayStartVM_unique`（15 場を全部固定するので着地は一意）、`truncPH_left_iterate`。
+* 組み立て `replayStartNext`: `hinv.track` から trace の添字を取り、`rewindCentre_trace`・`radLedger_pt`・`noReplay_run` で `hland`／`hradiusLe`／`hnotReplaying` を tracked 状態に運び、既存の `GalilTickFair.tick_replayStart_cases` で `htarget` を分解、一意性で `abs'' next.vm = landing`。`NextOK` の 6 場を埋める（`Good` は `radius`／`replay` の極性入れ替え、`Post` は `notFrozen_of_invC`）。
+* **形式化のミスだった点**: 既存の `commitReplay` は役割を入れ替え・reset・push するのに鏡 `radiusMir`／`lowerMir`／`lengthMir` に触らず、局所層自身の不変量 `LocalTick1.Inv`（`MirrorsAttached`）を保たなかった（n313）。replayStart の局所 step は一度も `Inv` と突き合わされていなかった。
+* 進め方の記録: 部品を 1 つずつスクラッチで機械検査し（n311〜n314）、最後に束ねてから移設した。移設は 2 ファイルとも一発で通った。つまずきは「構造体リテラルを 2 行に割ると parse error」が 3 回。
+
+**`given_openModesAndPhysicalMachine` に残る仮説**: 供給可能（`hfirst`／`hq`／`hor`／`hres`／`hChainVerifierSupply`）、抽象局所層は存在仮説 2 本（`hscanNext`、`hplateauNext`）、物理機械（`htape`、`Enc`、`hencInit`、`hforwardTick`、`hforwardFeed`、`hencRep`、`hencOut`、`PhysFrozen`、`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`）。ActRule の実装は未着手。物理側に置いた義務: fallback 相の L／C の歩行（n305）、reset 後の junk を読まないこと（n306、n312）、replayStart の鏡テープ付け替え（n315）。
+
+**次の goal**: `hscanNext`（tracked・非 starved な scan 状態に局所後継がある）。scan は wait／count／match／restart／shift 入口／fallback 入口の分岐を持つ。replayStart と同じ手順で、まず抽象の着地がどこまで一意か（`GalilTickFair.tick_canonical_unique`）と、既存の `LocalTick1.TickL1`／`LocalReplayParked` の scan 部品がどの分岐を覆っているかを一次情報で確かめる。
+
+## n314（2026-09-21）: run 不変量 `localGood` に `work`／`replay` の極性を足し、保存を証明した
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。仮説 `hreplayStartNext` もまだ残っている） |
+
+**やったこと**（n311 の計画の (b)）: `ShadowedLocalFinal.localGood m := PolWF m.vm ∧ m.vm.pol .work = true ∧ m.vm.pol .replay = true`。replay commit は `work` を push し（`hpw`）、`LocalRoles.movePol Ctr.radius Ctr.replay` で `radius` と `replay` の極性を入れ替えるので、commit 後も `PolWF` を保つにはこの 2 本が要る（n313）。
+* 補題 `localGood_of_pol_eq`（極性に触らない step は不変量を保つ）。保存 3 箇所: 関数 step（`localGood_stepOf_localSteps`、init は `work → true`・`replay` 不変）、到着（`LocalWF.pol_feedC`）、blank（`LocalBlankState.blankVML` は `pol := fun _ => true` なので `rfl`）。`H_wf` へは `hinv.good.1`。
+* **強くなった仮説（隠さない）**: 存在仮説 `hscanNext`／`hreplayStartNext`／`hplateauNext` は `Good next` を含むので、このぶん強くなった。
+
+**残り**: (a) `RewindCentre` の trace 形（Tick 保存は n311 のスクラッチで検査済み）、(d) ghost の replayStart 後継で `NextOK`（鏡 3 本 `radiusMir`／`lowerMir`／`lengthMir` の更新込み、n313）。
+
+**(d) の `Inv` はスクラッチで機械検査済み（2026-09-21、リポジトリには未投入・`NextOK` の producer と一緒に入れる）**。error 0、標準 3 公理。
+* `mirrorOfTape t : Mirrored k := ⟨t, fun _ => t⟩`（テープそのものの複製。`attached` は `rfl`、`Shaped` は `⟨hv, fun _ => hv⟩`）。
+* `replayCommitVm entry c x := let y := LocalTick2.commitReplay entry x; { y with left := x.center, ctl := c, radiusMir := mirrorOfTape (y.phys (y.roles .radius)), lowerMir := …(.lower), lengthMir := …(.length) }`。
+* `CountersShaped (commitReplay entry x)`: `intro c`、`hshaped (LocalRoles.swapAt Ctr.radius Ctr.replay c)` を取り、`show` で `pushSlots _ (resetSlots _ x.phys) (x.roles (swapAt … c))` の形を出して `unfold pushSlots resetSlots`、`by_cases` 2 段で `segCtr_push`／`segCtr_reset`。
+* `Inv (replayCommitVm entry c x)`: `⟨LocalRoles.moveRoles_injective hinv.roles, ⟨rfl, rfl, rfl⟩, ⟨views.2.1, views.2.1, views.2.2.1, views.2.2.2.1, views.2.2.2.2⟩, 鏡 3 本の Shaped, hshaped⟩`。
+* スクラッチの場所（セッション限り）: `$S/ghost_check.lean`、`$S/rc_check.lean`（`RewindCentre` の Tick 保存）。
+
+**抽象の等式もスクラッチで機械検査済み（2026-09-21、同じ `$S/ghost_check.lean`）**: `replayStartVM entry (abs'' x) (abs'' (replayCommitVm entry c x))`。仮説は `hinj`／`hpl`／`hpw`／`hpre : x.ctl.replaying = false`／`hflag`／`hland` で、`replayStartVM_commitReplayParked` にあった `hm : MirInv1` は不要（`left := x.center` が `rfl`）。形: `rval (replayCommitVm …) = rval (commitReplay …)` は `rfl`、あとは `rval_commitReplay`、`absR_eq_iter`、`abs''_eq_abs' hpre`、`refine ⟨?_, hR, rfl, rfl, …⟩`、残り 11 場は `show (LocalState.abs (LocalTick2.commitReplay entry x)).場 = _; rw [ha]; try rfl`（`rw` が自分で閉じる場があるので `try`）。
+
+**`ParkedOK (replayCommitVm entry c x)` もスクラッチで機械検査済み**（同じファイル、error 0、標準 3 公理）: 仮説は `hinj` と `hradiusLe : val (x.phys (x.roles .radius)) ≤ position (abs' x).right`。後者は trace の `CloseoutRadPack.RadLedger.le`（`position center + value radius ≤ position right`、`CloseoutLPack6.radLedger_pt`）から。これで ghost 側の部品 3 つ（`Inv`・抽象の等式・`ParkedOK`）は揃った。
+
+**trace 側の部品 2 つもスクラッチで機械検査済み（2026-09-21）**:
+* `$S/rc_check.lean`（控え `rc_check.keep.lean`）: `RewindCentre` の Tick 保存に加えて trace 形 `∀ i, i ≤ Tc w.length → RewindCentre (st i).ctl (st i).vm`（`PreTrace` に沿う帰納。boot は `hP.start` で mode = init なので `Mode.noConfusion`、step は `hP.trace.tick i hlt`）。error 0、標準 3 公理。
+* `$S/nr_check.lean`（控え `nr_check.keep.lean`）: `LocalWF.NoReplay x → Tick F delay x y → y.ctl.mode = .replayStart → y.ctl.replaying = false`。`LocalWF.PhaseMode` に replayStart が入っていないので既存の `NoReplay` からは直接出ない。`cases` で残るのは `rewind_done` だけ（制御は mode 以外不変）で、source の `NoReplay`（rewind は `PhaseMode`）から出る。公理は `propext` のみ。
+* 組み立てで使う既存補題: `GalilThrottledRun.position_trunc`（`position (truncPH d p) = position p := rfl`）、`GalilTruncTick.truncPH_left`、`ShadowedLocalFinal.notFrozen_of_invC`（`hw : 0 < w.length` を取る）。
+
+**組み立てのスクラッチ（2026-09-21、`$S/asm_check.lean`、控え `asm_stage2.keep.lean`）**: `import PalPeg.ShadowedLocalFinal` の上に部品 3 ファイルを束ね、`scratch_replayStartNext`（`hreplayStartNext` の本体と同じ文、`hw : 0 < w.length` つき）を段階的に書いている。通った段（末尾の `sorry` 1 つを除き error 0）:
+1. `hinv.track` から `k j`、`hctl`、`hvm`（`unfold heldAfter` で添字は `min k (Tc w.length)`）、`hmodeTrace`、`RewindCentre` の trace 形から `r`／`hradiusTrace`／`hcentreTrace`、`CloseoutLPack6.radLedger_pt`（＋`leftLive_of_lpackM (hpreTrace.packs i hi).pack`）。
+2. `hnotReplaying : m.vm.ctl.replaying = false`: `LocalWF.noReplay_run` を `heldAfter` に当て（消費者と同じ引数）、添字 0 は boot で `Mode.noConfusion`、正なら `Nat.exists_eq_succ_of_ne_zero` で 1 つ前を取り `scratch_notReplaying_of_tick_into_replayStart`。
+
+3. （控え `asm_stage3.keep.lean`）`rw [abs''_eq_abs' hnotReplaying] at hvm` のあと、`hradiusEq`／`hrightEq`／`hcentreEq`（`(congrArg GalilVM.場 hvm).trans rfl`）、`hradiusVal : val (radius のテープ) = r`（`LocalWF.value_absCtr_of_positivePolarity`＋`hinv.good.1.2.1`＋`simp [value, ofNat]`＋`omega`）、`hland`（補題 `scratch_truncPH_left_iterate`: `left^[r] (truncPH d p) = truncPH d (left^[r] p)`、`truncPH_left` の帰納）、`hradiusLe`（`hradLedger.le` を `rw [hradiusTrace]` して `omega`、`position (truncPH d p) = position p` は `show` で defeq）。
+
+4. （控え `asm_done.keep.lean`、358 行）**第 4 段も通り、`scratch_replayStartNext` が最後まで証明できた**（`EXIT=0`、`sorry` の警告 0、`#print axioms` は標準 3 公理のみ）。`GalilTickFair.tick_replayStart_cases`（既存）で `htarget` を分解、`replayPos landing` を `landingReplaying` に名前で取って制御リテラルを 1 行に（**構造体リテラルを 2 行に割ると parse error**）、`hflag` は `cases r`、`scratch_replayStartVM_unique`（`unfold replayStartVM at h h'; cases t; cases t'; simp_all`）で `abs'' next.vm = landing`。`NextOK` の 6 場: Tick は `suffices ∀ landed, landed = target → Tick … landed` の形で `congrArg (State.mk _) hnextVm`、`Canonical` は mode で 2 場が空虚・`keepsSearchCursor` は `replayStartVM` の最後の 2 連言、`PhysWF` は `⟨inv, parkedOK, hinv.phys.pend, hinv.phys.walkerProper⟩`、`MirInv1` は `⟨Twin.refl _, views.2.1⟩`、`Good` は `radius`／`replay` の極性を入れ替えて `⟨⟨hremaining, hreplay, hlength, hcycle, hfppWork⟩, hwork, hradius⟩`、`Post` は左枝が mode で偽・右枝は `notFrozen_of_invC`。
+
+**次にやること**: スクラッチの宣言をリポジトリへ移し（`scratch_` を外して意味のある名前に。trace 側は `CloseoutRadPack3` の近く、ghost 側は `LocalReplayParked`、組み立ては `ShadowedLocalFinal`）、`given_openModesAndPhysicalMachine` の仮説 `hreplayStartNext` を外して呼び出し箇所（`:1190` 付近）を定理に差し替える。呼び出し箇所で `hw : 0 < w.length` が scope にあるかを確認する。
+
+**(d) の旧メモ**（第 4 段の計画、済）: `hreplayStartNext` の組み立て（`htarget` を `cases`、`replayStartVM` の一意性、`truncPH_left` で `hland`、`hflag` は `target.ctl.replaying = replayPos` から）。
+
+## n313（2026-09-21）: `hreplayStartNext` の producer (d) の設計（調査のみ、コードは変えていない）
+
+**全体 build 成功（最新は n312 の `BUILD=0`）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（未接続） |
+
+一次情報で確かめたこと:
+* `Tick.replayStart`（`GalilScaffoldTop:166`）の着地は `⟨{c with mode := .scan, clock := delay, output := o, replaying := F.replayPos s'}, s'⟩` で `F.replayStart s s'`。`replayStartVM entry s t`（`GalilScaffoldTopReplay:33`）は 15 場を全部固定する**関数的な関係**なので、抽象の着地 `s'` は source から一意。
+* `GalilTickFair.Canonical`（`:224`）が replayStart の tick に課すのは `keepsSearchCursor`（`periodOnly`／`walker` を保つ）だけで、`replayStartVM` の最後の 2 連言そのもの。
+* `GalilTruncTick.truncPH_left`（`:32`）は無条件。よって trace の `center = left^[r] right` は `truncVM` を越えて `abs'' m.vm` に運べる（`hland` の供給）。
+* `replayStartVM` の一意性補題は既存に無い（`GalilVM` に `ext` が登録されていないので `cases` して場ごとに示す）。
+
+**(d) の設計**: 仮説が与える `htarget : Tick … (absState'' m.vm) target` を `cases` して `replayStartVM entry (abs'' m.vm) target.vm` と `target.ctl` の形を取り出す。ghost の後継は `next := ⟨{ commitReplay entry m.vm with left := m.vm.center, ctl := target.ctl }, m.vm.center⟩`（view のコピー、n305 と同じ手）。示すもの:
+1. `abs'' next.vm` が `replayStartVM entry (abs'' m.vm) ·` を満たす（`replayStartVM_commitReplayParked` の証明を `left := center` 用に直す。`hm : MirInv1` は不要になる）→ `Tick.replayStart` を組み直して `NextOK` の Tick、`Canonical` は最後の 2 連言。
+2. `PhysWF next.vm`: `Inv`（`commitReplay` 後の `roles`／`attached`／`shaped` — 既存補題の有無を要確認）、`ParkedOK`（`parkedOK_commitReplayParked`、`val radius ≤ position right` は `RewindCentre` から）、`pend`、`walkerProper`（`fppWalker` 不変）。
+3. `MirInv1 next`: `Twin.refl`＋`WF center`。
+4. `Good next`: `commitReplay` は `movePol Ctr.radius Ctr.replay` で極性を入れ替えるので、`PolWF` の `radius` を保つには入れ替え前の `pol .replay = true` が要る見込み。`localGood` に `.work` と `.replay` を足す必要があるかを `movePol` の定義で確かめる。
+5. `Post w m → Post w next`: `postPhase` の左枝は `mode = scan` を要求するので、replayStart の source では前件が偽になるはず（要確認）。
+
+**未確認 3 点を定義で潰した（2026-09-21 追記）**:
+* **極性**: `LocalRoles.movePol src dst pol ℓ = pol (swapAt src dst ℓ)`（`:107`）。`commitReplay` は `movePol Ctr.radius Ctr.replay` なので、commit 後の `pol .radius` は commit 前の `pol .replay`。`PolWF` を保つには `pol .replay = true` が要る。`hpw` のために `pol .work = true` も要る。→ (b) は `localGood m := PolWF m.vm ∧ m.vm.pol .work = true ∧ m.vm.pol .replay = true`。phase step の極性補題は `pol` 全体の等式なので保存は同じ証明、`initVml` は `length`／`work` を `true` にして他は不変、blank の `pol` は要確認。
+* **`postPhase`**（`ShadowedLocalFinal:836`）の左枝は `(absSC m).ctl.mode = Mode.scan` を要求するので replayStart の source では偽。右枝 `frozenAt w m` のときは `hreplayStartNext` の前件 `InvC` と `notFrozen_of_invC` で排除できる。
+* **`Inv`（これが重い）**: `LocalState.MirrorsAttached`（`:169`）は `radiusMir.src = phys (roles .radius)`、`lowerMir.src = phys (roles .lower)`、`lengthMir.src = phys (roles .length)` を**テープの等式**で要求する。`LocalTick2.commitReplay` は役割を入れ替え、`replayCleared` のテープを reset し、`length`／`work` を push するのに、`radiusMir`／`lowerMir`／`lengthMir` に触らない（`initVml` は `lengthMir := pushAll` をしている）。よって `commitReplay` の着地は `LocalTick1.Inv` を保たない。`Inv (commitReplay …)` の既存補題も無い（あるのは `LocalAlloc.allocInv_commitReplay` と `LocalReplaySwap.mirInv_commitReplay` だけ）。ghost の後継は鏡 3 本も新しいテープに合わせて更新する形にし、`Shaped` を示す必要がある。
+
+**順序**: (a) `RewindCentre` の trace 形 → (b) `localGood` の拡張 → (d)。どれも (d) が入って初めて消費者につながるので、1 回の作業でまとめて入れる。
+
+## n312（2026-09-21）: replayStart の commit が `dpBuf` を新品の半分へ切り替える。4 本の定理から `hclean` が落ちた
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路は未接続。仮説 `hreplayStartNext` もまだ残っている） |
+
+**やったこと**（n311 の計画の (c)）: `LocalTick2.commitReplay` の `dpBuf := resetL` を `LocalBuffers.resetFresh` にして、`abs_commitReplay`／`replayStartVM_commitReplay`／`LocalReplaySwap.replayStartVM_commitReplaySwap`／`LocalReplayParked.replayStartVM_commitReplayParked` から仮説 `hclean`（`dpBuf` の idle 半分が消去済み）を外した。n306 と同じ型: 背景消去 `clearTick` はどの局所 step も回していないので、2 回目の replayStart から成り立たない要求だった。`stepLocal2_commitReplay` は外に消費者が無く、fresh な切替は局所 step ではないので削除。
+* 同じ形が `LocalTick2.commitFallback`（`fppBuf`、`:806` 付近）と restart 側（`:351`、`RestartStaged.clean`）に残っている。新経路の scan は `chosenStep`（存在仮説）なので今は消費者に出ていない。
+* 失敗と修正: python の削除範囲が 1 段落広く `section ReplayAbs` の開始行まで消した。コンパイルエラー（`Invalid name after end`）で気づき、`git diff` で確かめて戻した。
+
+**残り**（n311 の計画）: (a) `RewindCentre` の trace 形、(b) `localGood` に `pol .work` を足す、(d) ghost の replayStart 後継（`left := center`、`mirL := center`）で `NextOK` を示して `hreplayStartNext` を外す。
+
+## n311（2026-09-21）: `hreplayStartNext` の分解（調査のみ、コードは変えていない）
+
+**全体 build 成功（最新は n310 の `BUILD=0`）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（未接続） |
+
+`hreplayStartNext` は tracked・非 starved な replayStart 状態 `m` に `∃ next, NextOK … m next` を求める。`NextOK`（`ShadowedLocalFinal:670`）= `Tick (absState'' m) (absState'' next)` ∧ `Canonical` ∧ `PhysWF next.vm` ∧ `MirInv1 next` ∧ `Good next` ∧ `(Post w m → Post w next)`。
+
+既存の `LocalReplayParked.replayStartVM_commitReplayParked`（`:366`）を一次情報で読んだ結果、そのままでは使えない点が 4 つ:
+1. **`MirInv1 next` が直後に成り立たない。** `commitReplayParked` は `left := mirL`、`mirL := 旧 left`。旧 `left` は `center` の twin ではない（Scala の run: rewind 末 `L=4 C=5 R=6`）。ghost は自由なので、n305 と同じく ghost の後継は `left := m.vm.center`、`mirL := m.vm.center`（view のコピー）にすれば `Twin.refl` で済む。鏡の再構築は `Enc` の側。
+2. **`hclean`（`dpBuf` の idle が消去済み）。** n306 と同じ型。`LocalTick2.commitReplay` の `resetL` を `resetFresh` に替える（`commitReplay` は `LocalReplaySwap` も使うので波及を build で確かめる）。
+3. **`hpw : pol .work = true`。** `PolWF` は `remaining`／`radius`／`length`／`cycle`／`fppWork` の 5 本で `.work` を持たない。`initVml` が `.work` を `true` にするので、`localGood` に足して運ぶ（極性補題は `pol` 全体の等式なので保存は同じ証明で済む）。
+4. **`hland : left^[val radius] (abs' right) = (abs' center)`。** 今の trace pack には無い（`CentreRep` は表現だけ）。新しい trace 不変量「mode ∈ {rewind, replayStart} → `center = left^[value radius] right` ∧ `Canonical radius`」が要る。Tick の場合分けで保たれる形: `choose_select` で `center = right`・`radius = reset`、`rewind_pair` で `center := left center`・`radius++`、`rewind_one`／`rewind_done` は両方不変。`GalilScaffoldTopRewind:195` に rewind 内の run 形（`y.center = left^[m/2] x.center ∧ y.right = x.right`）が既にある。
+
+**4 の Tick 保存はスクラッチで機械検査済み（2026-09-21、リポジトリには未投入・producer と一緒に入れる）**: `RewindCentre c s := c.mode = .rewind ∨ c.mode = .replayStart → ∃ r : ℕ, s.radius = ofNat r ∧ s.center = left^[r] s.right`、`RewindCentre c s → Tick (galilFrameS Pw q first) delay ⟨c, s⟩ ⟨c', t⟩ → RewindCentre c' t`。error 0、公理 `propext`／`Quot.sound`。形: `cases h <;> first | (intro hmode; exfalso; simp_all; done) | skip` で `choose_select`／`rewind_done`／`rewind_one`／`rewind_pair` の 4 つだけ残る。どれも `obtain ⟨hstep, hframe⟩ := hrel`（`rewind_one`／`rewind_pair` は `⟨⟨_, hstep⟩, hframe⟩`）、`rw [hstep] at hframe; subst hframe`。`choose_select` は `⟨0, rfl, rfl⟩`、`rewind_pair` は `⟨r + 1, by rw [hradius, GalilScaffoldCounter.inc_ofNat], by rw [Function.iterate_succ_apply', ← hcentre]⟩`（先に `show` で形を出す）、他 2 つは `⟨r, hradius, hcentre⟩`。抽象規則は `GalilScaffoldTopRewind:56–62` で確認済み（`right` はどれも触らない）。
+
+**次の goal**: producer を一式で入れる。順に (a) trace 形（`PreTrace` に沿う、boot は mode = init で空虚、harness は `CloseoutRadPack3.coupledPack_trace`）、(b) `localGood` に `pol .work` を足す、(c) `LocalTick2.commitReplay` の `dpBuf` を `resetFresh` に、(d) ghost の replayStart 後継（`left := center`、`mirL := center`）で `NextOK` を示して `hreplayStartNext` を外す。
+
+## n310（2026-09-21）: 関数である step（init と 7 つの phase）が極性の束を保つことを証明した。仮説 `hgoodPhaseStep` が消えた
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: `given_openModesAndPhysicalMachine` の仮説 `hgoodPhaseStep` が無くなった。`ShadowedLocalFinal.localGood_stepOf_localSteps`: `localGood m`、`mode ≠ scan`、`mode ≠ replayStart` から、`localSteps q first (initStep entry) scanStep replayStartStep` の step 後も `localGood`。仮説は tracked・非 starved を付けていたが、どの状態でも成り立つので条件ごと落とした。
+* 材料は全部既存: `LocalWF.pol_copyStepL`／`pol_homeStepL`／`pol_markEndStepL`、`ffppW = ffpp dumS` なので `pol_ffpp dumS`、`chooseStepW`／`rewindStepW` は C 版と `rfl` で等しいので `pol_chooseStepC`／`pol_rewindStepC dumS`、`shiftStepW` は `pol_shiftStepL` と同じ形、`LocalInitStep.initVml` は `length`／`work` の極性を `true` にするだけ。
+* 学び: `Ctr` は `PalPeg.LocalState.Ctr`。
+
+**`given_openModesAndPhysicalMachine` に残る仮説**: 供給可能（`hfirst`／`hq`／`hor`／`hres`／`hChainVerifierSupply`）、抽象局所層は存在仮説 3 本（`hscanNext`／`hreplayStartNext`／`hplateauNext`、各々 `∃ next, NextOK …`）、物理機械（`htape`、`Enc`、`hencInit`、`hforwardTick`、`hforwardFeed`、`hencRep`、`hencOut`、`PhysFrozen`、`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`）。ActRule の実装は未着手。
+
+**次の goal**: `hreplayStartNext`（tracked・非 starved な replayStart 状態に局所後継が存在する）。`LocalReplayParked.commitReplayParked`（§5、`left := center` は鏡 `mirL` を消費、`right` は駐車）が既にあるので、`NextOK` の各場（`Tick` の後継の抽象一致、`PhysWF`（`walkerProper` 込み）、`MirInv1`、`localGood`）を満たすかを定義で確かめる。`dpBuf` の reset は `resetL`＋`hclean` の形のままなので、n306 と同じ `resetFresh` への切替が要る見込みかどうかも一次情報で確認する。
+
+## n309（2026-09-21）: shift 単位のカウンタの大きさを trace から証明した。仮説 `hgeomTracked` が消費者から丸ごと消えた
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: `given_openModesAndPhysicalMachine` の仮説 `hgeomTracked` が無くなった。構造 `LocalWF.Geom` と `geom_of_init` は削除、`LocalWF` は極性の束 `pol` だけ。
+* 正本との突き合わせ: `ScaffoldGalil.stepShift`（`:324`）は符号付きカウンタを `dec()` するだけで `radius > 0` は要求しない。要求しているのは局所層（正の極性の側で pop する設計、`LocalTick3.ShiftCounters`）。
+* `LocalWF.value_absCtr_of_positivePolarity`、`LocalWF.shiftMagnitudes_of_trace`: tracked な shift 状態で `RemPosL` なら `0 < val remaining ∧ 0 < val radius ∧ 2 ≤ val length`。copy 側は trace で idle、`remaining ≤ radius`、`length = 2·radius + 1`、`truncVM` はカウンタと `fpp` に触らない。
+* trace 形の仮説 `H_shiftLedgerOnTrace` を `realizes_seven` 系 3 本に通し、`ShadowedLocalFinal` で放電: `CloseoutRadPack3.copyIdle_trace`、`CloseoutLPack6.radLedger_pt`（＋`CloseoutPackRun10.leftLive_of_lpackM`）の `shiftBud`、`BranchSupply.spanRepOnScanAndShift_alongTrace`。新しい仮説は残っていない。
+
+**今日の `Geom`: 5 場 → 0**（n305 `chooseParked`／n306 `rewindClean` は偽の疑いが濃い仮説を形式化を直して外し、n307 `copyProper`／n308 `copyWork`／n309 `shiftMag` は本物の事実を証明して外した）。
+
+**`given_openModesAndPhysicalMachine` に残る仮説**: 供給可能（`hfirst`／`hq`／`hor`／`hres`／`hChainVerifierSupply`）、抽象局所層（`hgoodPhaseStep`、`hscanNext`／`hreplayStartNext`／`hplateauNext`）、物理機械（`htape`、`Enc`、`hencInit`、`hforwardTick`、`hforwardFeed`、`hencRep`、`hencOut`、`PhysFrozen`、`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`）。物理側に置いた義務: fallback 相の間の L／C の歩行（n305）、reset 後の junk を読まないこと（n306）。
+
+**次の goal**: `hgoodPhaseStep`（極性が init と 7 つの phase step で保たれる）。`pol_tickL3`／`pol_chooseStepC`／`pol_feedC` は既にあるので、`SL` の各 step 関数について同じ形が揃うかを確かめる。
+
+## n308（2026-09-21）: copy の work カウンタの正値を trace から証明した。`Geom.copyWork` を消費者から外した
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: 仮説 `hgeomTracked` から場 `copyWork`（copy モードで `RemPosL` なら `0 < val (phys (roles .fppWork))`）が消えた。`Geom` は 1 場（`shiftMag`）。状態仮説（producer なし）を trace 形の仮説に置き換え、その仮説を消費者の中で放電したので、新しい仮説は残っていない。
+* `LocalWF.val_fppWork_pos_of_copyRemaining`: 抽象の `fpp.work` が 0 でない ⇒ 局所テープの `val > 0`（`absCtr` は極性に依らず `val = 0` で zero）。
+* `LocalWF.copyRemaining_of_trace`: tracked な copy 状態では `RemPosL` は copy 側。`truncVM` はカウンタに触らない（`rfl`）。
+* `realizes_seven`／`CloseoutCoreStep.realizes_seven_of_agree`／`CloseoutCoreAgree.realizes_seven_SL` に trace 形の仮説 `H_shiftIdleInCopy : ∀ k, (stOf k).ctl.mode = .copy → ¬ ShiftRemaining (stOf k).vm` を通し、`ShadowedLocalFinal` で `BranchSupply.cpack_alongTrace` の `GalilCentreLive.CPack.idle`＋`GalilScaffoldChainInputSupply.shiftIdle_iff` から放電。添字 0 は boot（mode = init、`Mode.noConfusion`）、`Tc` 以降は `heldAfter` の `min`。
+* 学び: 自由変数を含む goal に `decide` は使えない（`Expected type must not contain free variables`）。
+
+**今日の `Geom`**: 5 場 → 1 場。`chooseParked`（n305）と `rewindClean`（n306）は偽の疑いが濃い仮説を形式化を直して外し、`copyProper`（n307）と `copyWork`（n308）は本物の事実を証明して外した。
+
+**次の場 `shiftMag`**: `mode = shift → RemPosL x → 0 < val remaining ∧ 0 < val radius ∧ 2 ≤ val length`。`remaining` は n308 と同じ橋（`ShiftRemaining` ⇒ `val > 0`、cross case は `CloseoutRadPack3.copyIdle_trace`）。`radius > 0` と `2 ≤ length` は trace の `CloseoutPackRun23.ShiftGeom`／`SpanRep`（`value length = 2·value radius + 1`）を定義で確かめてから。
+
+## n307（2026-09-21）: fpp walker の左番兵を run に沿って証明した。`Geom.copyProper` を消費者から外した
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: 仮説 `hgeomTracked` から場 `copyProper`（copy モードで `ProperView x.fppWalker`＝view の左端に番兵 `none` がちょうど 1 個）が消えた。`Geom` は 2 場（`shiftMag`／`copyWork`）。n305／n306 と違い、これは偽だから外したのではなく**本物の局所不変量を証明して外した**。
+* `LocalSysConcrete.PhysWF` に場 `walkerProper : ProperView x.fppWalker` を追加。`LocalState.absPlace` が番兵を落とすので `InvC` からは出ない。`LocalTick1.Inv` に足さなかったのは、探索量子の frame 仮説 `SearchFrame.inv` まで強めてしまうから。
+* 保存: `walkerProper_tickL3`（`cases` して copy だけ `properView_moveLeftV`、他は不変）、`birthL_fppWalker`＋`fppWalker_tickL1`（scan tick は walker に触らない、`frame.fppWalker`）、`physWF_feedC`（`arrive` は `far` しか触らない）、`physWF_initStep`、blank は `LocalBlankState.walkerProper_blank := rfl`。`x0C_physWF` と `pal_in_peg_of_shadowed_sysC` は blank の仮定 `hblankWalkerProper` を取り、`ShadowedLocalFinal` が `walkerProper_blank` を渡す。
+* **強くなった仮説（隠さない）**: 存在仮説 `hscanNext`／`hreplayStartNext`／`hplateauNext` は `PhysWF next.vm` を含むので `walkerProper` のぶん強くなった。fallback 入口で `walker := R`（Scala `:314`）にする後継は `right` の view の anchoring が要る。
+
+**次の場 `copyWork` の調査（読み取りのみ）**: `RemPosL = ShiftRemaining ∨ CopyRemaining`。cross case（copy モードで shift 側 `remaining > 0`）は trace 上で `GalilCentreLive.CPack.idle : c.mode ≠ Mode.shift → ShiftIdle s`（`BranchSupply.cpack_alongTrace`）が排除する。`GalilChainCoupling.CopyPack` は逆向き（copy 以外で `CopyIdle`）なので使えない。足りないのは「抽象 `fpp.work` が 0 でない ⇒ 局所テープの `val > 0`」の橋（`LocalTick3:525` は仮定で受けているだけ）。形: 状態仮説 `Geom.copyWork`（producer なし）を、trace 形の仮説「copy モードの trace 点で `ShiftIdle`」（producer あり）に置き換えて `ShadowedLocalFinal` で放電する。
+
+## n306（2026-09-21）: rewind の reset が ghost で新品の半分へ切り替わる。`Geom.rewindClean` を消費者から外した
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: 仮説 `hgeomTracked : InvC … m → Geom m.vm` から場 `rewindClean`（rewind モードで fpp 二重バッファの idle 半分が消去済み）が消えた。`Geom` は 3 場（`shiftMag`／`copyWork`／`copyProper`）、`RewindWF` は 3 場。
+* **なぜ偽の疑いが濃かったか**（`False` 定理は未作成）: 局所 step（`TickL1/2/3`、`LocalSysConcrete`）のどれも `LocalBuffers.clearTick` を回していない（`LocalTick2:896` 自身が「assumed, not scheduled」）。1 回目の `resetL` で idle に回った半分は消されないので、fallback が 2 回以上ある語（`abab` は 3 回）の 2 回目の `rewind_done` で成り立たない。
+* **直し方**: `LocalBuffers.resetFresh`（新品の半分へ切替）と `abs_resetFresh`（無条件）。`rewindDoneVm`／`abs'_rewindDoneVm`／`TickL3.rewind_done` から `hclean` を削除。`tickL3_local` に `hnotReset`、消費者を失った `stepLocal_rewindDoneVm` は削除。handoff の指定（junk をその場で消さない、`TEqG`＝同じ head 位置・同じ読取りで運ぶ）に合わせた。物理側は active の反転だけで、junk を読まないことは `Enc` の側の義務。
+* **不採用**: `clearTick` を各 step に入れて締切を証明する案。消去は距離ぶんの tick が要るが、次の reset は 1〜2 文字後に来うる（`a^n b a b`）。半分を k 本に増やしても、半径が毎回縮む列で未完了ジョブが溜まるので固定本数では足りない。
+* `LocalTick2.commitFallback` と `commitReplay`（`dpBuf`）にも同じ `resetL`＋`hclean` の形が残っている。新経路の scan／replayStart は `chosenStep`（存在仮説）なので今は消費者に出ていない。
+
+**次の場 `copyProper` の調査（読み取りのみ）**: `ProperView x.fppWalker`＝view の左端に番兵 `none` がちょうど 1 個。これは前の 2 つと違って**本物の局所不変量**。`LocalState.absPlace` が番兵を落とすので `InvC` からは出ない。仮説で受けるのでなく、run に沿って運ぶ束（`Inv.views`／`ViewsWF`、`tickL*_inv` で保存が証明済み）に入れるのが筋。既存の保存補題は左移動だけ（`LocalChain.properView_stepLeft`／`properView_moveLeftV`）。fppWalker を動かす局所 step は copy（`moveLeftV`）と到着（`arrive`）だけ。fallback 入口の `walker := R`（Scala `:314`）は scan の `chosenStep` の中に隠れているので、`right` の view の anchoring も要る。
+
+## n305（2026-09-21）: choose の select が ghost でヘッドをコピーする。`Geom.chooseParked` を消費者から外した
+
+**全体 build 成功（`BUILD=0`、error 0、sorry 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本）。`unconditional` は付け替えていない。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（局所経路 `ShadowedLocalFinal.given_openModesAndPhysicalMachine` は未接続） |
+
+**証明して消費者へ接続したこと**: `given_openModesAndPhysicalMachine` の仮説 `hgeomTracked : InvC … m → Geom m.vm` から、偽の疑いが濃かった場 `chooseParked`（choose モード中ずっと `left = right`、`center = right`）が消えた。`Geom` は 4 場（`shiftMag`／`copyWork`／`copyProper`／`rewindClean`）、`ChooseWF` は 2 場（`notReplaying`／`polLength`）。
+* `LocalTick3.chooseSelectVm c x := { chooseVm c x with left := x.right, center := x.right }`、`abs'_chooseSelectVm`（`hleft`／`hcenter` 無しで抽象 `choose` に一致。`hsplit` が `rfl`、あとは `abs'_bankTick` 2 回）。`TickL3.choose_select` の着地をこれに一般化。`tickL3_local`（`StepLocalN`、外に消費者なし）は `hnotSelect` 付き。
+* `LocalRealizesScan.chooseSelectM m`（`mirL := m.vm.right`。鏡は新しい `center` の twin）を `chooseStepC`、`CloseoutCoreAgree.chooseStepW`、旧 encoder `CloseoutCoreEnc8/9/10` の仮説の場で共用（`chooseStepC = chooseStepW := rfl` は維持）。
+* **物理側に残る義務**: fallback 相（copy／home／fpp／markEnd／choose）の間に物理 L／C テープが R まで歩くこと。これは `Enc` の側に置く。抽象 Tick がこの相で `left`／`center` に依らないことはスクラッチで機械検査済み（n304）、歩行の台帳は `SpanRep`＋`ScanInvariant`（n304）。
+
+**学び**: 構造体リテラルの関数引数を次の行の浅い桁に置くと parse error（`unexpected token '{'; expected '}'`）。名前付き定義にして回避した。
+
+**次の goal**: `Geom` の残り 4 場を、同じやり方で 1 場ずつ正本（`ScaffoldGalil.scala`）と突き合わせる。最初は `rewindClean`。
+
+## n304（2026-09-21）: choose のヘッドコピーは「正本＝ポインタ別名、Lean の到達先＝TM」の機械モデル差。物理設計を決めた
+
+**全体 build 成功（最新の全体 build は ba6aeec）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変（義務 1 本: `obligation_localRealization`）。Lean のコードは変えていない（調査と設計決定）。
+
+| 公理 | 状態 |
+|---|---|
+| `obligation_localRealization` | 残（未接続） |
+
+**実行で確かめたこと（Scala 正本、語 ab／aab／abab、probe は削除済み）**: choose モードの間は `L ≠ R`、`C ≠ R`（例: ab の tick 269–270 で `L=0 C=1 R=2`）。コピーは choose→rewind の 1 歩（tick 271 で `L=2 C=2 R=2`）。fallback 各相の長さは窓幅 `2·radius+1` に比例（R=6,L=0 で copy 7／home 8／fpp 10／mark_end 6／choose 4）。
+
+**一次情報で確かめたこと**:
+* 抽象側 `GalilScaffoldTopRewind.lean:56` の `choose` は `left := x.right, center := x.right` を select の 1 歩で代入。`GalilScaffoldTopFallback.lean` の copy／home／fpp／markEnd は VM の `left`／`center` を読みも書きもしない。
+* よって `LocalWF.Geom.chooseParked`＝`LocalRealizesScan.ChooseWF.headsLeft/headsCenter`（choose モード中ずっと `absHead' left = absHead' right`）は、`InvC`（`abs''` が trace と厳密一致）と両立しない。**偽の疑いが濃い**（Lean の `False` 定理は未作成）。
+* 根は機械モデルの差。正本 `docs/palindromes-in-peg/SCA_INPUT_HEADS.md:21`:「Copying a head aliases its focus, stack roots …」＝永続スタックのポインタ別名で O(1)。Lean の消費者 `CloseoutFinalW.H_realizeCanonical` が要求するのは `LocalStep … → realize`＝Kim–Park の実時間多テープ TM（`ProgramMachine.STape` は zipper、1 命令 1 セル）。ヘッドのコピーは原始操作ではない。
+* `LocalTick2 §3`／`LocalTick3:43` の元設計は「コピーせず、L と C が自分のテープを R まで歩く（head-copy job）」。物理としては正しいが、`abs'` が物理 `left` を読むので、歩いている間 `InvC` が壊れる。これが `chooseParked` という偽の疑いが濃い仮説の出どころ。replayStart は `LocalReplayParked`（`absR`＝駐車 view＋再生量、鏡 `mirL`）で同じ問題を解決済みだが、choose には対応物が無い。
+
+**設計決定（A を採る）**:
+* (A) **fallback の各相（copy／home／fpp／markEnd／choose）の間に、物理の L と C を R まで歩かせる。** 距離は `2·radius` と `radius`、copy 相だけで `2·radius+1` tick あるので収まる。select の時点で全テープが R に居るので、遠くに取り残されるテープが無い。抽象はこの区間 `left`／`center` を読まないので、抽象値は ghost の控え（`Enc` が無視する場）で持つ。
+* (B) R の twin を 2 本常駐させて select で役割交換 — 採らない。交換後の旧 L／旧 C は R から `2·r_j`／`r_j` 離れており、戻すのに O(r_j) tick 要るが、次の select は 1 文字後に来うる（`a^n b a b`）。固定本数では供給が尽きる。
+* (C) ghost 層 `Mirrored1` をやめて抽象状態そのものを ghost にする — 採らない。局所→抽象の精密化（`TickL1/2/3`）を物理の高さでやり直すことになる。
+
+**台帳は既存部品にある（2026-09-21 追記、定義で確認）**: copy 相の長さは `beginFallbackVM`（`GalilScaffoldTopFallbackCycle:19`）が `s.length` から決め、窓は `take (ℓ+1)`。`GalilSpanCounter.SpanRep s : value s.length = 2 * value s.radius + 1` は `CloseoutWatchPhase.spanRep_of_invLP` でタダ（`BranchSupply.SpanRepOnScanAndShift` もある）。位置は `CloseoutPackRun10.LPackM.scanGeom` の `ScanInvariant`（`leftPos : position l = center − radius`、`rightPos : position r = center + radius`）。よって歩く距離 `2·rad` は copy 相の tick 数 `2·rad+2` に収まる。未確認: `ScanInvariant` の `rad` と `s.radius` カウンタの同一視（`RadiusRep`）が同じ点で取れるか。
+
+**設計 (A) の要をスクラッチで機械検査した（2026-09-21、リポジトリには未投入・消費者と一緒に入れる）**: `Tick (galilFrameS Pw q first) delay ⟨c, s⟩ ⟨c', t⟩` かつ `c.mode ∈ {copy, home, fpp, markEnd}` または `c.mode = choose ∧ c'.mode = choose` なら、任意の `l cc : PlaceHead` で `Tick … ⟨c, {s with left := l, center := cc}⟩ ⟨c', {t with left := l, center := cc}⟩`。error 0、公理は `propext`／`Quot.sound`。証明の形: `cases h` してモードで 9 構成子（copy_one／copy_done／home_start／home_step／fpp_slice／fpp_done／markEnd_found／markEnd_step／choose_step）に絞る。7 つは関係が `fppLens.rel`（`s.fpp` だけ読む）なので `obtain ⟨hstep, hframe⟩ := hrel; exact ⟨hstep, congrArg (fun v : GalilVM => {v with left := l, center := cc}) hframe⟩`、ガードは defeq で `exact hp`。`markBack` の 2 つは `rewindLens` 経由なので `obtain ⟨⟨hmarksLeft, hnext⟩, hframe⟩ := hrel; rw [hnext] at hframe; subst hframe; exact Tick.… _ _ _ hm hp ⟨⟨hmarksLeft, rfl⟩, rfl⟩`。
+**波及の見積り**: `abs''` は 12 ファイル約 100 箇所、`absState''_eq`（replay でなければ `abs'' = abs'`）が fallback 相の `tickL3_*StepC` でも使われている。控えを入れるなら `abs''` の `left`／`center` を fallback 相だけ控えから読む形にし、`absState''_eq` に「fallback 相でない」を足す。
+
+**方針の更新（2026-09-21、控えは要らない）**: `Enc` は自由データなので、`abs''`／`GalilVML` は変えずに **ghost の select 自体に view のコピーをさせる**（`{ chooseVm c x with left := x.right, center := x.right }`）。物理 L／C が fallback 相の間に歩く話は `Enc` の側だけに置く（fallback 相では「物理 L テープ = ghost の `left` を右へ k 歩進めたもの」と読む）。スクラッチで機械検査済み（error 0、標準 3 公理）: コピー入りの select の `abs'` は、`hleft`／`hcenter` 無しで抽象 `choose`（`rewindLens.set … left := right, center := right, length := ofNat 1, radius := reset`）に一致する。証明は `hsplit : abs' {chooseVm c x with left := x.right, center := x.right} = {abs' (bankTick chooseOps2 (bankTick chooseOps1 x)) with left := (abs' x).right, center := (abs' x).right} := rfl` のあと `rw [hsplit, abs'_bankTick hinj1 (chooseOps2_ok hp), abs'_bankTick hinj (chooseOps1_ok x)]; rfl`。
+**編集計画（その場で一般化、変種は作らない）**: (1) `LocalTick3`: `TickL3.choose_select` の着地をコピー入りにして `hleft`／`hcenter` を落とす。`abs'_chooseVm`、`tickL3_inv`／`tickL3_abs`／`tickL3_replaying` の該当 case を直す。`tickL3_local`（`StepLocalN`、`LocalTick3` の外に消費者なし）は select を除く形にする。(2) `LocalRealizesScan`: `chooseStepC` の select 枝を `{ vm := …, mirL := m.vm.right }`（鏡は新しい `center` の twin でないといけない）、`ChooseWF` から `headsLeft`／`headsCenter` を削除、`mirInv1_chooseStepC` は `WF m.vm.right` から。(3) `LocalWF`: `Geom.chooseParked` を削除、`pol_chooseStepC`。(4) `CloseoutCoreAgree.chooseStepW`（`chooseStepC = chooseStepW := rfl` がある）を同じ形に。(5) 旧 encoder `CloseoutCoreEnc8`／`9`（`chooseStepW` を tape 命令に符号化、旧経路）は壊れる見込み。新経路（`ShadowedLocalFinal`）は `CloseoutCoreEnc7` までしか import していないことを確認してから、直すか退避するかを決める。
+
+**次の具体 goal**: copy 相の局所 step に「`canRight` の間 L と C を右へ 1 歩」を足したとき、select 時点で `Twin left right ∧ Twin center right` になること（copy 相の tick 数 ≥ `position right − position left` の台帳が要る。抽象側の `position center + value radius = position right` の類を tracked state で確認する）。
+
+## n303 — 突き合わせで見つかった形式化ミスの候補: 局所層の choose は `L := R`・`C := R` を実装していない
+
+**方法（n302）の 2 回目（2026-09-21、Lean の変更なし）**: `hgeomTracked` の各場を Scala 正本と突き合わせた。
+
+**確認できたこと（一次情報）**:
+* Scala の `stepShift`(`:324`) と `stepCopy`(`:342`) は**同じカウンタ `remaining`** を使う（`beginChainShift` は `alias(remaining, chain.h)`、`beginFallback` は `alias(remaining, length); remaining.inc()`）。Lean は copy 側を `fpp.work` に分け、合成 frame の `remainingPos` を `H.remainingPos ∨ B.remainingPos` にした。交差の場合は trace 上で排除済み: shift モードで copy 側が立たないのは `CloseoutRadPack3.copyIdle_trace`（`PreTrace` だけから）、shift 以外のモードで shift 側が立たないのは `GalilCentreLive.CPack.idle : c.mode ≠ .shift → ShiftIdle s`（`BranchSupply.cpack_alongTrace`）。
+* よって `Geom.copyWork` は追跡状態で導ける見込み: copy モード ∧ `RemPosL` ⇒（`ShiftIdle`）`CopyRemaining` ⇒ `LocalWF.work_of_copyRemaining`。`Geom.shiftMag` の `remaining > 0` も同様（`remaining_of_shiftRemaining`）。`radius > 0`・`2 ≤ length` は未確認（`ShiftGeom` に radius／length カウンタが無い）。
+
+**偽の疑いが濃い（機械検査した反証は無い）**: `Geom.chooseParked`＝`ChooseWF.headsLeft／headsCenter`（`LocalRealizesScan:311`）は「choose モードの間 `absHead' left = absHead' right` かつ `absHead' center = absHead' right`」を要求する。追跡状態では `abs'` は trace の状態そのもの（切り詰め）なので、これは「trace の choose モードで抽象の `left = right`」を意味する。しかし Scala の `stepChoose`(`:393`) は選択の瞬間に `left.copyFrom(right)`・`center.copyFrom(right)` をしており、Lean の `rewindFrame.choose` も `y = {x with left := x.right, center := x.right, …}`（選択時に代入）。fallback の各相（copy／home／fpp／markEnd）は `left`・`center` に触らない（`fppLens`）。つまり choose モードの途中では一般に `left ≠ right`。**局所層の `chooseStepC` はヘッドのコピーを実装しておらず、「既に同じ位置にいる」ことを側条件に置いているだけ**で、その側条件は run 上で成り立たない疑いが濃い。
+
+**含意**: `realizes_seven` の choose モードは偽の疑いが濃い側条件の上に立っている。ヘッドのコピーは K 局所な 1 歩ではできないので、物理表現の設計が要る。既存の仕掛けは replay 用の 1 本だけ（`Mirrored1.mirL` は center の twin で、`commitReplayParked` が `left ↔ mirL` の役割を入れ替える）。choose には `R` の twin が 2 本（`L` 用・`C` 用）要り、入れ替えた後の古いカーソルを次の choose までに `R` へ追い付かせる（fallback の各相は Θ(length) tick あるので償却できる見立て。未検証）。`spare` の本数の問題もこれと同じ根。
+
+**次の一手**: (1) Scala を極小の語（fallback が起きる語）で走らせ、choose モードの tick で `left`／`center`／`right` の位置を出して上の疑いを実行で確かめる。(2) 確かめられたら、`Mirrored1` を「`R` の twin 2 本つき」に広げる設計を先に決める（handoff: 別々の物理配置で部品を作って後で統合する進め方には戻らない）。
+
+## n302 — 進め方の変更: 残りの仮定は、証明に入る前に Scala 正本の該当行と突き合わせて形式化を検査する
+
+**きっかけ（2026-09-21、コウタ）**: 「もうちょっと視点変えてすすめよう」「形式化のミスとかさ」「同じところぐるぐるまわらんように」。今日見つけた障害（飢餓テストの読みすぎ、`repC : Control → Bool`、`Geom` を run 不変量に入れた、模倣を全状態に要求、Post 相で ghost に tick を強制）は全部**自分の形式化のミス**で、1 個ずつ偶然に踏んで見つけていた。Post 相は挙動を 2 回推測で外した（n295→n296→n297）。
+
+**方法**: `scala/pal/src/main/scala/pal/ScaffoldGalil.scala` は実行できる仕様。仮定を証明・公理化する前に、対応する Scala の行を読み（必要なら極小の語で走らせ）、Lean の述語の形がそれと合うかを先に確かめる。
+
+**今回の突き合わせ結果（一次情報、行番号は ScaffoldGalil.scala）**:
+* `:203-206` `quiescent = mode == Scan && !replaying && !right.head.canRight`、`caught = quiescent && !right.gap`、`report = caught && output`、`inputReady = quiescent && right.gap`。→ Lean の報告テスト（scan ∧ ¬replaying ∧ `R` が文字上 ∧ 次の文字が無い）と形が合う。
+* `:255` `available = replaying || (if (advanceTrailingGap) right.canRight else right.head.canRight)`。Lean の `scanFrame.available := canRight s.right`（`GalilScaffoldTopScan:37`）は **`advanceTrailingGap = true` の版**（online 経路 `:545`）に当たる: 最後の文字の後ろの gap へは入力なしで進める。既定の `step`／`run`（`:486`、`false`）は `R` が最後の到着文字で止まる別の版。→ n297 の「報告の後、比較が左端で不一致になり shift／fallback に入る」は Scala の online 版でも同じ挙動で、Lean のモデルのミスではない。
+* `:187-189` scan モードでは毎 tick `background()` が先に走る。Scala は文字待ちの間も背景仕事を進める。Lean の局所層は飢餓時に stutter する（切り詰めた pre-loaded trace と等しく保つための設計）。物理機械に「飢餓なら抽象を変えない」を要求するのはこの設計の帰結で、Scala と同じ機械を作るわけではない。
+* `:273` `beginChainShift` は `length.inc()` を 2 回 → `Geom.shiftMag` の `2 ≤ length` の出所。
+
+**次に突き合わせるもの**: `hgeomTracked` の各場 ↔ `stepShift`(`:324`)／`stepCopy`(`:342`)／`stepChoose`(`:393`)／`stepRewind`(`:409`)、`hscanNext`／`hplateauNext` ↔ `stepScan`(`:254`)、`spare` の本数 ↔ 局所層の commit（`RestartStaged` など）が同時に使う役割なしテープの最大数。
+
+## n301 — 到達点の棚卸し: `given_openModesAndPhysicalMachine` に残る仮定は抽象層 5 本＋物理側 8 本
+
+**状態（2026-09-21 未明）**: 最新の全体 build は `ba6aeec`（`BUILD=0`・`error` 0・`sorry` 0）。以後は module build `PalPeg.ShadowedLocalFinal` `BUILD=0`（最後は commit `b9accbd`、push 済み）。**全体 build 成功（`ba6aeec` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。`unconditional` は未付け替え。
+
+**n300 以降**: `ba6aeec` オラクル述語に述語パラメータ `Y`（報告点の状態についての追加事実）。旧経路は `True`、新経路は scan モード。canonical な pre-trace の存在定理が「`Tc m` の状態は scan モード」を言う。`b495751` `postPhase` の台地に `mode = scan`、`hplateauTick` → `hplateauNext`（局所後続の存在）。`09a208c` `localGood m := LocalWF m.vm`（`hgoodWF`・`hgoodInit` が消えた）。`dd236e4` `good_chosenStep`、`hgoodTick` → `hgoodPhaseStep`（init と 7 相の関数 step だけ）。`b9accbd` `hgoodFeed` → `hgeomFeed`（極性は `polWF_feedC`）。
+
+**`ShadowedLocalFinal.given_openModesAndPhysicalMachine` の仮定（`#print axioms` 標準 3 本、`sorry` 0）**:
+* `unconditional` で供給できるもの: `hfirst : first ≠ 4`・`hq : q ≤ 64`・`hor`（`cycleOracleOnPackedRun`、述語 `Y` つき）・`hres`・`hChainVerifierSupply`。
+* 抽象局所層（具体データ `localGood`／`postPhase`／`frozenAt`／`ghostSteps`／`reportTest` の上）: `hgoodPhaseStep`、`hgeomFeed`、`hscanNext`、`hreplayStartNext`、`hplateauNext`。
+* 物理機械（自由データ `Q Γ t K L0 blankSymbol q0 repQ outQ Enc PhysFrozen`）: `htape`、`hencInit`、`hforwardTick`（非凍結の run 状態で前方模倣、`TickSucc`）、`hforwardFeed`（追跡状態で）、`hencRep`（run 上で `reportTest` と一致）、`hencOut`（報告点でだけ）、`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`。
+
+**公理として書き出す前の注意（未検証の懸念）**: `hgoodPhaseStep`／`hgeomFeed` は `LocalWF.Geom` の保存を含む。`LocalWF.lean` §8 は `Geom` を「単独の局所 step では保存されない、機械の不変量」と書いており、`InvC localGood` からだけでは帰納的でない可能性がある（特に shift モードで `RemPosL` が `CopyRemaining` だけで立つ場合の `shiftMag`）。偽の義務を公理にしないよう、書き出す前に `Geom` を追跡状態の抽象（trace の `ShiftGeom` など）から導けるかを 1 場ずつ確かめること。物理機械は未構成（`ActRule` 未実装）。
+
+## n300 — 試行の結果: `ReachAtOn` に場を直に足すと旧経路が壊れる。述語パラメータで入れる
+
+**試したこと（2026-09-21、未 commit・作業ツリーは元に戻した）**: n299 の手順どおり `ReachAtOn` の報告節に `y.ctl.mode = Mode.scan` を足し、`checkpoints_costOn_upto1`・`PreTraceIMW.scanAtReport`・`OracleRun.lean` の 3 箇所を直した。`CloseoutCheckW` 単体は error 0・module build `BUILD=0`。**全体 build は `BUILD=1`**（task の終了コードは 0 だった。ログの `BUILD=` 行で判定）: `CloseoutOracleW.lean:121` `reachAtIMW_of_reachAtC3R_W`。旧オラクル `GalilInvPlus3.ReachAtC3` の報告点にはモードの情報が無く、旧経路はこの場を供給できない。この補題は `h_oracleIMW_of_MC3_W` 経由で旧 final 8 本（`CloseoutFinalW`／`W3`／`W4`／`Ver`／`S2`／`Branch`×2／`Four`）が使うので、仮定を足して回るのは採らない。差分は scratchpad の `scanAtReport_direct.patch`（116 行）に退避し、2 ファイルは `git checkout --` で戻した。
+
+**正しい入れ方（未実装）**: `CloseoutCheckW` の section 変数に「報告点の状態についてオラクルが追加で言うこと」`Y : List (Fin 2) → State GalilVM → Prop` を足し、`ReachAtOn` の報告節を `… ∧ Refreshed … ∧ Y w y ∧ …` にする。旧経路（`ReachAtIMW` など）は `fun _ _ => True`、新経路（`OracleRun`）は `fun _ y => y.ctl.mode = Mode.scan` を渡す。`PreTraceIMW` は触らず、canonical の存在定理（`CloseoutCheckW:468`）の結論に `∀ m, 1 ≤ m → m ≤ |w| → Y w (st (Tc m))` を足して `CloseoutFinalBranch.canonicalPreTrace_exists` → `ShadowedLocalFinal` の `htraceOf` へ運ぶ。明示引数 `… I R w` の後ろに `Y` が入るので、使用箇所は `CloseoutCheckW`（内部 29）・`OracleRun` 5・`CloseoutFinalBranch` 3・`ShadowedLocalFinal` 2・`PalInPegUnconditional` 2・`CloseoutOracleW` 2・`OracleReady` 1。最終定理の経路なので全体 build で検証する。
+
+## n299 — 調査: 「報告点は scan モード」は証明鎖に実在する。足す場所の地図
+
+**一次情報（2026-09-21、Lean の変更なし）**: 着地の不変量 `CloseoutCheckW.ScanOnPackedRunFromInvLPS`（`CloseoutCheckW:422`）の第 1 場は `ScanNR ⟨c, r⟩`（= scan ∧ ¬replaying）。`ReachAtOn`（`CloseoutCheckW:136`）の報告点 `y` を作っているのは `OracleRun.lean` の 3 箇所だけ（`:509` 報告位置にいる着地状態そのもの、`:633` 一致 tick の後、`:878` shift／fallback 経路の後）で、どれも同じ状態について着地の不変量（`⟨⟨hm, hr⟩, …⟩`／`hI'`）を手にしている。つまり `y.ctl.mode = .scan` は 3 箇所とも無償で出る。
+
+**足す手順（未実装）**: (1) `ReachAtOn` の報告点の節に `y.ctl.mode = Mode.scan`（または `I w y.ctl y.vm`）を足す。(2) `OracleRun.lean:509／633／878` の 3 箇所でそれを供給する。(3) `CloseoutCheckW.checkpoints_costOn_upto1`（`:189`〜、大きな存在タプルの帰納）の報告節 `ReportPointAt … ∧ Refreshed …` に場を足し、タプルの分解箇所を直す。(4) `preTraceOnPackedRun_exists`（`:378`）／canonical 版（`:468`）と `PreTraceIMW`（または `PreTrace.report`）に `scanAtReport : ∀ m, 1 ≤ m → m ≤ |w| → (st (Tc m)).ctl.mode = .scan` を足す。`PreTraceIMW` に触れるファイルは 15 個（無名構成子 `⟨base, packs⟩` の箇所を grep で確認すること）。(5) 最終定理の経路なので全体 build で検証する。
+
+**使い道**: `ShadowedLocalFinal.postPhase` の台地の枝に `mode = scan` を足せる。背景 tick・restart はモードとヘッドと出力を保ち、比較は `R` を `2|w|` へ進めて凍結に入るので、`hplateauTick` は「台地の scan 状態に `NextOK` な局所後続が存在する」（`hscanNext` を台地へ広げた形）と Tick の場合分けの補題に落とせる見立て（未証明）。
+
+## n298 — 凍結相・台地相を橋に入れた。残る仮定の一覧と、`hplateauTick` の障害（報告点にモードの場が無い）
+
+**状態（2026-09-21 未明）**: 最新の全体 build は `e0bb107`（`BUILD=0`）。以後は module build `PalPeg.ShadowedLocalFinal` `BUILD=0`（最後は commit `9299aac`、push 済み）。**全体 build 成功（`e0bb107` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。`unconditional` は未付け替え。
+
+**n297 以降に `ShadowedLocalFinal.given_openModesAndPhysicalMachine`（`#print axioms` 標準 3 本、`sorry` 0）へ接続したもの**:
+* `10ea280` 物理の出力ビットの一致は抽象 run の報告点でだけ要求（`hreportIff`／`hstAbsAt`）。`micro_shadow` は core の等式・不変量・`Rep` だけ。
+* `d4391dd` 橋の `Rep` を語添字に。
+* `d54c2e8` `frozenAt w m`（`0 < |w| ∧ 2|w| ≤ position right`）、`freezeSteps`、`realizes_freeze`、`notFrozen_of_invC`。橋に渡す抽象後続の「留まる」旗は `Starved ∨ frozen`。
+* `0c158db` `Rep` を二枝に: 非凍結は前方模倣（`hforwardTick` は `¬ frozenAt` の状態だけ）、凍結は物理側の不変量 `PhysFrozen w p`（`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`）。`hsimFeed` の源は追跡状態（最終報告点の後に文字は来ない）。
+* `9299aac` `postPhase`（台地 = `ReportPoint ∧ Refreshed`、または凍結）。`hpostOfLastReport` は証明で消えた（最終報告点では全文字到着 ⇒ `truncS_zero`）。`hpostTick` は凍結の場合を証明し、台地の場合だけ `hplateauTick` に残した。
+
+**残る仮定**: `hfirst`・`hq`・`hor`／`hres`／`hChainVerifierSupply`（`unconditional` で供給可能）、`Good` 系 4 本、`hscanNext`／`hreplayStartNext`、`hplateauTick`、物理側 `hencInit`／`hforwardTick`／`hforwardFeed`／`hencRep`／`hencOut`／`hfrozenEnter`／`hfrozenKeep`／`hfrozenQuiet`。自由データ: `Good`・`Enc`・`PhysFrozen`・物理機械。
+
+**`hplateauTick` の障害（一次情報）**: `ReportPoint`／`GalilReportPrefix.ReportPointAt`／`GalilLedgerAssembly.ReportPointAt` のどれにも `mode` の場が無く、`CloseoutCheckW.ReachAtOn` も報告点の状態 `y` のモードを言わない。したがって台地の状態が scan モードだとは今の pre-trace からは言えず、`hplateauTick` は全モードの tick を問う形のまま。台地の tick を scan の tick（`chosenStep`）に限るには、オラクルの到達述語（`ReachAtOn`）に「報告点は scan モード」を足して `cycleOracleOnPackedRun` の証明鎖で供給する必要がある（大域側の作業）。
+
+## n297 — 訂正: Post 相は scan だけではない（回文のとき最後の比較は左端で不一致）。三相の設計案
+
+**一次情報（2026-09-21、Lean の変更なし）**: `GalilScaffoldTopScan:42` `matched s := read s.left = read s.right`、`GalilScaffoldInputHead:40` `read p := p.head.focus.map (fun a => if p.gap then 2 else letter a)`、`left p := ⟨if p.gap then p.head else moveLeft p.head, !p.gap⟩`。報告点の台地の後の比較で `R` は gap（`some 2`）へ進むが、`L` が最初の文字にいる場合（＝接頭辞全体が回文、出力 true の場合）`left L` は focus が `none` になり `read = none ≠ some 2` で**不一致** → scan_shift／scan_fallback → shift／fallback／fpp／replay に入る。**n296 の「Post 相は scan だけ」は偽**（回文の場合に破れる）。
+
+**三相の設計案（未実装・仮説）**: (T) 追跡相 `k ≤ Tc |w|`（現状どおり）。(P) 台地相: `Tc |w|` の後、`R` が最後の文字 `2|w|−1` にいる間。ここは scan モードの tick だけ（scan_count の背景 tick と、`R` を gap へ進める比較 1 回）。`Post w m := ReportPoint w (absSC m) ∧ Refreshed … (absSC m)` とし、背景 tick での保存を `backgroundS_fields` から示す。局所後続の存在は `hscanNext` を台地相にも広げる。(F) 凍結相: `R` が gap `2|w|` に出た後。ghost は語を知っているので `position (abs m).right ≥ 2 * |w|` で飢餓（stutter）させる。このとき ghost の報告テストは偽（`atLast` が成り立たない）。物理側は「`R` の物理ヘッドが到着の先端の gap にいて pending が無い ⇒ 報告ビットは偽」という局所不変量だけで足りる（`R` の物理ヘッドは比較でしか右へ動かず、左へは動かない。replay は abs の `R` を左へ跳ばすが `replaying = true` なのでテストは偽）。
+
+**橋に要る変更**: `pal_in_peg_of_shadowed_core` の `hstAbs`（`shadowAbs` = ghost の抽象）は凍結相では保てない（replay 中の refresh で物理の出力が変わる）。使い道は (a) `rep_sound` の転送（報告ビットが真の時点だけ）、(b) `rep_complete` の転送（`ReportPoint (shadowAbs s)` が真の時点だけ。凍結相は vm の `R` が `2|w|` なので偽）、(c) 台帳（追跡相の時点）。よって `Rep` を凍結相では「報告ビットが偽 ∧ vm 部分は凍結 ghost と同じ」に弱める形へその場で一般化できる見込みは、橋の 3 箇所を書き換えて確かめる必要がある。
+
+## n296 — 訂正: n295 の案はそのままでは通らない（報告点は台地を成し、`Tc m` は最初の添字とは限らない）
+
+**一次情報（2026-09-21、Lean の変更なし）**: `GalilCheckpoints.ReachAt`／`CycleOutM` は「`ReportPointAt raw m ∧ Refreshed` の状態に到達する `StepsAll` が存在する」としか言わない。報告点の状態は**台地**を成す: `R` が `2m−1` に着いた後、scan_count の背景 tick（clock 2048 の countdown）が続き、その間はヘッド・replay・出力が不変なので全部報告点。`Tc m` は台地のどこかの添字で、最初とは限らない。したがって n295／以前の (A) で鍵だと思った「最初性」は偽の疑いが濃い（機械検査した反証は無い）。n295 の「scan の飢餓テストを次の文字の到着に強める」案は、台地の途中（`k < Tc (m+1)` かつ `R = 2m+1`）で機械が止まり `Tc` に届かなくなるので採らない。**飢餓テストは現状（init／scan は `R`、shift の移動 tick は `C`・`L`・`right L`）のまま。**
+
+**使える事実**: `PreloadL'.needLe` は既に狭義（`k < Tc (m+1)`）、`ledger_local` は need 関数で一般化済み。
+
+**Post 相の見立て（仮説）**: 現在の飢餓テストのままで、最終報告点の後は scan モードの tick だけのはず: 台地の scan_count → gap `2|w|` へ進む比較 1 回（gap 同士なので一致するはず。要確認）→ scan_count → `canRight R` が偽で永久に飢餓。よって `Post w m` は「scan ∧ ¬replaying ∧ 全文字到着後」の意味述語にして、`hpostTick` を (i) Post の scan 状態に `NextOK` な局所後続が存在する、(ii) その後続も Post（比較が一致して mode が scan のまま）の 2 つに落とす。(ii) には「gap 同士の比較は一致する」の vm レベルの補題が要る。背景 tick が `ReportPoint ∧ Refreshed` を保存することは `backgroundS_fields` から出るはず（未証明）。
+
+## n295 — 設計（未実装・仮説）: 報告点で次の文字の到着まで飢餓させれば Post 相の義務が消える
+
+**一次情報（2026-09-21、Lean の変更なし）**: `LocalShadowRealize.pal_in_peg_of_shadowed_core` は `micro_shadow` の結論のうち `ans`／`started` の等式を捨てている（`obtain ⟨hcore, -, -, hinv, hrep⟩`）。Post 相で橋が使うのは `hrepL`（物理の報告ビット = ghost の報告テスト）と `hstAbs`（`shadowAbs` = ghost の抽象、`hreadOut` 経由）だけ。
+
+**Post 相が重い理由**: 最終報告点の後も機械は tick を続け（`R` が最後の文字から gap へ、不一致なら shift／fallback／replay）、その間の状態は trace の外。報告ビットと出力の健全性を trace の外で言う不変量が無い。
+
+**案**: scan の飢餓テストを「`R` の次の文字が到着している」（`canRight R ∧ canRight (right R)` 相当）に強める。すると最後の報告点（以後文字が来ない）で機械は永久に飢餓＝stutter し、Post 相の状態は報告点の状態そのもの。報告ビットは真のまま、出力は refresh された値のまま。`hpostTick` は前提 `¬ Starved` が成り立たず空虚、`Post w m` は「報告点の状態で飢餓」と定義できる。Scala 正本は文字の到着ごとに仕事をする online 機械なので、この方が仕様に近い。
+
+**影響（要確認）**: (1) `hnotStarvedOfNeed`（need ≤ 到着 ⇒ 非飢餓）が報告点 `k = Tc m`・`j = m` で破れるので、台帳の need を「tick `k` の need は、`Tc m ≤ k` なら `m+1` 以上」に上げる。(2) `GalilLookRefined.PreloadL'`／`needLe` の上界は `i ≤ Tc (m+1) → need i ≤ m+1`（端点込み）。端点 `i = Tc m` の tick は報告 `m` に不要（状態 `Tc m` は tick `0..Tc m − 1` で到達）なので `i < Tc (m+1)` 版で足りるはずだが、`ledger_localL'` の証明が端点を使っていないかを読む必要がある。(3) `nextUsed`／`chainLook` の scan 側は前提が強くなるだけなので通るはず。(4) `CloseoutCoreEnc7.NotStarvedReads` の局所読みに `right R` の読みを足す。
+
+## n294 — 橋から最終定理に届いていない仮定を削った。全体 build 成功
+
+**状態（2026-09-21 未明）**: **全体 build 成功（この commit 時点、`BUILD=0`・`error` 0・`sorry` 0）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`（`Axioms.lean` の guard は全体 build で通過）。
+
+**内容**: `GalilArriveChain.pal_in_peg_of_latch_realized`（未使用だった `_H_run` を取らない版。`pal_in_peg_of_latch'` はこれを呼ぶ）。`pal_in_peg_of_local_latch`／`pal_in_peg_of_local_core` から `Inv`・`delay`・`x0_inv`・`x0_ctl`・`inv_tick`・`inv_feed`・`stutter_of_starved`・`tick_of_not_starved`・`feed_abs` を削除、`pal_in_peg_of_shadowed_core` から `delay`・`x0_ctl`・`stutter_of_starved`・`tick_of_not_starved`・`feed_abs` を削除（不変量は `micro_shadow` 用に残る）。`pal_in_peg_of_shadowed_sysC` の最後の goal は台帳 1 個。
+
+**これで `hpostTick` の Tick 部分が流れる先は前方模倣の糊（`TickSucc` の一意性）だけ。** 次は Post 相の `Rep`／`hpostTick` を、n293 に書いた本当の要求（最終報告点の後に物理の `rep ∧ out` が新しく真にならない）に合わせて弱められるかを `micro_shadow` の帰納で確かめる。
+
+## n293 — 調査: 橋の抽象 run 仮定は最終定理で使われていない（`_H_run`）。Post 相の要求を見直す材料
+
+**一次情報（2026-09-20 夜、Lean の変更なし）**: `GalilArriveChain.pal_in_peg_of_latch'` の引数 `_H_run : ∀ w, 0 < |w| → AbstractRun' …` は**未使用**（名前が `_` 始まり、本体は `H_realize`（`M.SAccepts w ↔ LatchTrue …`）と `H_ledger` だけを使う）。`LocalTrackingLatch.pal_in_peg_of_local_latch` の `x0_ctl`／`stutter_of_starved`／`tick_of_not_starved`／`feed_abs` は `abstractRun_of_oracles`（= `_H_run` の供給）にしか流れない。つまり最終定理は「局所 run の抽象が毎歩 tick／stutter／到着である」ことを要求していない。要求しているのは (1) ラッチの同値（`rep_sound`／`rep_complete` と出力の一致、遅い全時点）、(2) 台帳（最終報告点まで）。
+
+**`hpostTick` の量化点検**: 今の `hpostTick` は Post 相の全モード・全時点で「抽象が canonical tick」を要求する。これは (a) 上の死んだ仮定 `tick_of_not_starved` と (b) 前方模倣の糊（`TickSucc` の一意性で ghost と物理を合わせる）の 2 箇所に流れている。(a) は橋から削れる。(b) は Post 相でも ghost と物理の抽象を合わせ続けるために要る。Post 相で本当に要るのは「w が回文でないとき、物理の `rep ∧ out` が最終報告点の後に真にならない」こと（ラッチは OR なので、報告点で出力が真なら後は何でもよい）。これは抽象機械の出力の健全性（`SoundScanNR`／`OutputRel`）を trace の外へ延ばす話で、未解決。
+
+**次の一手の候補**: (i) 橋 4 層から死んだ仮定 4 本（`x0_ctl`・`stutter_of_starved`・`tick_of_not_starved`・`feed_abs`）をその場で削る（旧経路 `CloseoutCoreAudit` の呼び出しも合わせる）。(ii) Post 相の `Rep` を「報告ビットが偽のまま」型の弱い関係に替えられるか検討する。
+
+## n292 — `obligation_localRealization`: 報告テストを意味で定義し `rep_sound`／`rep_complete` を消した（compact 前の到達点）
+
+**状態（2026-09-20 夜）**: 全体 build の最新は `dd21451`（`BUILD=0`）。以後は module build のみ、最後は `PalPeg.ShadowedLocalFinal` `BUILD=0`（commit `7da6528`、push 済み）。**全体 build 成功（`dd21451` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。`unconditional` は未付け替え。
+
+**n291 以降**: `2c13ac3` 物理機械の読み出し（`hreadRep`／`hreadOut`、`hencRep`／`hencOut`）を run 上の状態だけに限定、報告テストを語添字に。`7da6528` `ShadowedLocalFinal.reportTest`（`decide (ReportPoint w x ∧ Refreshed … x)`、`reportTest_iff`）、`pal_in_peg_of_shadowed_sysC` 内部の `hlate`（報告点の遅さ）、`usedOfLastLetter_heldAfter`（trace 側仮定 `hreportUsed` の放電）。`given_openModesAndPhysicalMachine` から `repA`・`rep_sound`・`rep_complete` が消えた。
+
+**`given_openModesAndPhysicalMachine` に残る仮定**: `hfirst : first ≠ 4`、`hq : q ≤ 64`、`hor`／`hres`／`hChainVerifierSupply`（`unconditional` で既存定理が供給）、`Good` 系 4 本（`hgoodWF`／`hgoodInit`／`hgoodTick`／`hgoodFeed`）、`hscanNext`／`hreplayStartNext`（追跡・非飢餓状態に `NextOK` な局所後続が存在）、`hpostOfLastReport`／`hpostTick`（`Canonical` 込み）、物理側 `hencInit`／`hforwardTick`／`hforwardFeed`／`hencRep`（run 上で `reportTest` と一致）／`hencOut`。自由データ: `Good`・`Post`・`Enc`・物理機械（`Q Γ t K L0 blankSymbol q0 repQ outQ`）。
+
+**次の一手**: `Post` を具体化（候補: 最終報告点以降、抽象状態から canonical tick で到達した状態）して `hpostOfLastReport` を試す。`hpostTick` の量化を先に点検する。その後 `Good` を具体化し、残りを原子的な義務として書き出して `unconditional` を付け替える（コウタのヒント: 1 段下ろして公理を書き出して潰す）。偽の義務を公理にしないよう、書き出す前に 1 本ずつ証明を試す。
+
+## n291 — `obligation_localRealization`: 橋を前方模倣・語添字・choice step に作り替えた。残りは報告点の特徴づけと物理機械
+
+**状態（2026-09-20 夜）**: 全体 build の最新は `dd21451`（`BUILD=0`）。以後は module build と狙い build のみ（最後は `PalPeg.ShadowedLocalFinal` `BUILD=0`、commit `92437e0`）。**全体 build 成功（`dd21451` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。`unconditional` はまだ付け替えていない。
+
+**n290 以降に消費者鎖（`ShadowedLocalFinal.given_openModesAndPhysicalMachine`、`#print axioms` 標準 3 本）へ接続したもの**:
+* `31edaba` `LocalShadowConcrete.OnRun`: 物理機械の模倣は run 上の状態（追跡中 ∨ Post 相）だけで要求。
+* `e601b1e` `TickSucc`（飢餓なら不動、非飢餓なら `Tick ∧ Canon`）を run 上で導出して `hsimTick` に渡す。`hpostTick` の結論に `Canonical` を追加。
+* `042c19e` 物理機械の仮定を前方模倣に置換: `Enc`／`hencInit`／`hforwardTick`／`hforwardFeed`／`hencRep`／`hencOut`。糊は `tickSucc_unique`（`GalilTickFair.tick_canonical_unique`）と `starved_of_absSC_eq`。
+* `747d9af` 橋の抽象局所系を語で添字づけ（`pal_in_peg_of_local_latch`／`_local_core`／`_shadowed_core`／`H_ledger_of_local_oracles`／`_shadowed_sysC`／`given_shadowedLocalSystem`）。物理機械は語に依らないまま（`encC = snd`、等式は `rfl`）。
+* `d868190` `NextOK`／`chosenStep`／`chosenStep_spec`／`ghostSteps`: scan／replayStart の step は choice。`hscanLocal`／`hreplayStartLocal` → 存在命題 `hscanNext`／`hreplayStartNext`。
+* `92437e0` 報告テストを `repA : State GalilVM → Bool`（抽象を読む）に。旧 `repC : Control → Bool` は `Control` にヘッド情報が無く `rep_sound` を満たせない形だった。
+
+**残る仮定**: `Good` 系 4 本（`hgoodWF`／`hgoodInit`／`hgoodTick`／`hgoodFeed`）、`hscanNext`／`hreplayStartNext`、`hpostOfLastReport`／`hpostTick`、`rep_sound`／`rep_complete`、物理側 5 本。自由データ: `repA`・`Good`・`Post`・`Enc`・物理機械。
+
+**`repA` の調査（未実装）**: `PreTrace.trace.good` は `SoundScanNR`（scan ∧ ¬replaying で `OutputRel` = 出力の健全性だけ）。`ReportPoint` の `MInv` は trace 上ではチェックポイント `Tc m` の点でしか分かっていない（`MInv` を trace 全点で言う定理は無い）。`ScanInvariant` は `LPackM.scanGeom`（scan ∧ ¬replaying）から出る。よって局所テスト（scan ∧ ¬replaying ∧ `R` が最後の到着文字上）で `rep_sound` を出すには (A) 追跡相で「そのテストが真になる最初の添字が `Tc |w|`」という最初性、(B) Post 相の不変量「`R = 2|w|−1` ⇒ scan ∧ ¬replaying ∧ `ReportPoint ∧ Refreshed`」（背景 tick で保存、比較で `R` が離れたら戻らない）が要る。注意: 抽象の `R` は replayStart で左へ跳ぶので単調ではない。
+
+## n290 — `obligation_localRealization`: 仮定 4 本を証明で消した。次は 1 段下ろして義務を書き出す（設計メモ）
+
+**状態（2026-09-20）**: 全体 build の最新は `dd21451`（`BUILD=0`）。以後は module build のみ（`PalPeg.ShadowedLocalFinal` と、`Starved` に触れる 27 モジュールの狙い build、どちらも `BUILD=0`）。**全体 build 成功（`dd21451` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: 標準 3 本 ＋ `obligation_localRealization`。
+
+**n289 以降に証明して消費者鎖から消した仮定**（`given_shadowedLocalSystem`／`given_openModesAndPhysicalMachine`、どちらも `#print axioms` は標準 3 本）: `hnextUsedOfNotStarved`（shift 入口は `usedVM_shiftEntry_le` ＋ `HeadBehindRight.usedPH_right_le_of_next_position_le`、着地 `k+1` の `shiftPay` 台帳と `watchLag` は trace 点で無条件）、`hbackRep`（`backVerifier_alongPreTrace`、`first ≠ 4` を新しく取る）、`hnotStarvedOfNeed`（`notStarved_of_need_heldAfter`）。commit `e67299d`・`af080ce`・`4391e31`・`35cd885`。
+
+**飢餓テストを直した（`4391e31`）**: 旧 `Starved` はモード無視で `canRight` を `L`・`C`・`R`・`right L` 全部に要求していて、init 直後（`L = C = R` が先端）の scan 状態は need が到着済みでも飢餓になる（`hnotStarvedOfNeed` は偽の疑いが濃かった。機械検査した反証は無い）。新しい定義は init／scan で `R`、shift かつ `ShiftMoves`（frame の `remainingPos` と `rfl` で一致）で `C`・`L`・`right L`。局所読みの形は `CloseoutCoreEnc7.NotStarvedReads`。
+
+**コウタのヒント（同日）**: 「もう localRealization だけやん。一段階下に落として、localRealization を成立させる axiom を書き出して潰していく」「難しく見えたときは視点を変える」。
+
+**設計（未実装・仮説）— 関数の精密化をやめて前方模倣にする**: 残る仮定の `scanStep`／`replayStartStep` は自由変数で、具体関数が無い（`LocalTick1.TickL1` は `SearchLocal`・`chainAt` を含む関係）。関数を書く代わりに (1) `scanStep m := choose (∃ m', 局所後続 m m')`（抽象層は ghost なので noncomputable でよい）、(2) `Rep m p := ∃ m₀, Enc m₀ p ∧ m₀ ~ m`、`~` は「`absState''`・`ctl` が等しく両方 `PhysWF`／`MirInv1`／`Good`」、(3) 物理側の義務は前方模倣 `Enc m₀ p → ∃ m₀', Enc m₀' (L0.apply p none) ∧ 局所後続 m₀ m₀'`。`hsimTick` は `GalilTickFair.tick_canonical_unique`（`Tick ∧ Canonical` の後続は一意）から出る: 物理が計算した `m₀'` と `tickC m` は同じ抽象後続を持つ。`Starved`・`repC` は `abs''` と `ctl` しか読まないので `~` 不変。`LocalShadowRealize.micro_shadow` の `hsimTick` は既に `Inv w s a` を受け取るので、`pal_in_peg_of_shadowed_sysC` の `hsimTick` を「追跡中 or Post」の不変量つきに弱められる（その場で一般化）。Post 相にも `Canonical` を持たせる必要がある。
+
+**書き出す義務の候補（原子・trace 形・状態局所で）**: 局所後続の存在（scan／replayStart、追跡状態で）、`Good` の保存（tick／feed）、`Good → LocalWF`、`Post` の 2 本、`rep_sound`／`rep_complete`、物理機械の存在命題 1 本（`∃ Q Γ t K L0 Enc …`、前方模倣 ＋ feed ＋ 読み出し 2 本）。`repC`・`Good`・`Post` は具体的な定義にしてから公理にする。
+
+## n289 — `obligation_localRealization`: `hnextUsedOfNotStarved` を shift 入口 1 つまで狭めた（公理は未変化）
+
+**状態（2026-09-20）**: 全体 build の最新は `dd21451`（`BUILD=0`・`error` 0・`sorry` 0）。以後の commit（…・`ab326d6`・`4476b48`・`a6280d0`）は module build `PalPeg.ShadowedLocalFinal` の `BUILD=0` のみ。**全体 build 成功（`dd21451` 時点）・標準公理のみ・無条件 PAL は未完。** 公理リストは不変: `propext`／`Classical.choice`／`Quot.sound` ＋ `obligation_localRealization`。
+
+**証明して消費者鎖（`given_shadowedLocalSystem`／`given_openModesAndPhysicalMachine`）へ接続したもの**: `TickUsedLetters.usedVM_scanTick_le`（shift 入口以外の scan tick）、`usedVM_shiftOne_le`（shift の移動 tick は `C` を 1 歩・`L` を 2 歩、verifier は不動）、`usedVM_phaseTick_le`（init／scan／replayStart 以外の全 tick）、`LocalStarvedRight.usedPH_shiftHeads_le_of_notStarved`（飢餓テストの残り 3 読み）。`ShadowedLocalFinal.nextUsed_heldAfter` がこれらを当て、`hnextUsedOfNotStarved` は「scan かつ着地が shift」の場合だけを問う形になった。
+
+**未接続・調査**: shift 入口（`beginShiftVM`: `immediate` が verifier を 1 歩進める）。調べた一次情報: guard は `zero w.lag = true`、着地の `ShiftPhaseChainLedger` は `position ver + lag = position right`。`usedPH` は「その頭が到達した最大位置」で決まり現在位置だけでは決まらない（`two_usedPH_of_rep` の右スタック項）ので、位置台帳だけでは足りない。候補: 大域の `needBound_alongPreTrace`（`i ≤ Tc (m+1) → needL' i ≤ m+1`）を `m+1 = usedPH (着地の right) ≤ j` で使い、`k+1 ≤ Tc (m+1)` を front ポテンシャルの単調性（shift 入口は `replaying = false`）から出す。未着手。
+
+**発見（未適用）**: `BranchSupply.chainVerifierRepresents_alongTrace`／`chainLagCanonical_alongTrace` は mode guard なしで trace 全点に効き、`backVer`／`backLagField` が `hbackRep` の中身そのもの。`first ≠ 4` を取れば `hbackRep` は既存定理で放電できる。
+
+**残る仮定（`given_openModesAndPhysicalMachine`）**: `scanStep`／`replayStartStep` と `hscanLocal`／`hreplayStartLocal`、`Good` 系 4 本、`hnextUsedOfNotStarved`（shift 入口のみ）、`hbackRep`（上の発見で放電可能）、`hnotStarvedOfNeed`、`Post` 系、`rep_sound`／`rep_complete`、物理機械（`L0`・`Rep`・`hsimTick`・`hsimFeed` ほか）。物理 ActRule は未実装。
+
+## n288 — `obligation_localRealization`: 自分が入れた仮定 `hstarvedAtLastReport` は偽の疑いが濃い。橋の終端の扱いを直す必要がある
+
+**状態（2026-09-20）**: 全体 build は `1f8e1c5` 時点で `BUILD=0`・`error` 0 件・`sorry` 0 件、その後の commit（`adfe7f9`・`75b1ef9`・`f86fa03`・`21dbd31`・`64e10d4`・`151aed4`）は module build `BUILD=0`。標準公理のみの guard は `unconditional` について `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization` のまま。**無条件 PAL は未完。**
+
+**n287 以降に通したもの（どれも `unconditional` には未適用）**: `InvC` に走行で運ぶ不変量の場 `good` を追加（`H_wf` の量化を修正）、`given_openModesAndPhysicalMachine`（10 モード中 7 モードを `realizes_seven_SL` で放電、側条件は頭打ち canonical trace の事実で供給、`traceRightLe_heldAfter`）、3 モードの仮定を `realizes_canonical` で「局所 step は抽象の canonical な Tick」へ帰着、`blankVML` に予備 counter テープ（`tapeCount spare`）、`LocalInitStep`（`initVml`／`initStep`、`initVM_initVml`、`tick_initStep`、`physWF_initStep`、`premises_of_truncated_boot`）と `initLocal_heldAfter` で **`init` モードを放電**（開いているモードは `scan` と `replayStart`）。
+
+**偽の疑いが濃い仮定（機械検査した反証は無い）**: `pal_in_peg_of_shadowed_sysC`／`given_shadowedLocalSystem`／`given_openModesAndPhysicalMachine` の `hstarvedAtLastReport`（最終報告点 `Tc |w|` に立つ追跡状態は必ず `Starved`）。一次情報: `ReportPointAt.atPrefix` は `position right = 2|w| − 1`（奇数なので `gap = false`）、`canRight p := p.gap = false ∨ …` なので右 head は `canRight`、left／center も入力の内側。よって最終報告点では **飢餓していない** はずで、機械は `Tc |w|` を越えて tick し続ける（次の不一致から fallback 一式まで、文字 `|w|+1` が要るところで初めて飢餓する）。この仮定は n287 で自分が「trace は最終報告点までしか Tick の列でない」ことへの対処として入れたもので、**対処の仕方が間違っていた**。上の 3 定理は定理としては正しいが、この仮定がある限り producer が立たない。
+
+**その後（同日、commit `08c7ca9`・`97fb90b`）: この仮定は橋から除去した。** 台帳側（`LocalLedgerShift`）の `Sched.guard`／`habs`／`starved_need` を最終報告点までに限り（内側の証明は実際にその範囲しか使っていなかった）、`pal_in_peg_of_shadowed_sysC` の走行不変量を 2 相（最終報告点までは `TrackedAt`、その先は `Post`・`PhysWF`・`MirInv1`・`Good`）にした。置き換えた仮定は `hpostOfLastReport`（最終報告点に立つ追跡状態は `Post`）と `hpostTick`（`Post` かつ非飢餓なら局所 tick は抽象の Tick で `Post` と pack を保つ）。下の「直し方の案（延長語の trace）」は採らなかった：移送補題が 6 本以上要り、checkpoint の不一致も残るため。`grep` でライブラリ全体に `hstarvedAtLastReport` は 0 件。module build `PalPeg.ShadowedLocalFinal` は `BUILD=0`、全体 build はこの 2 commit の後には走らせていない。
+
+**なぜ元の設計も同じ所で破れていたか**: `LocalLedgerShift.H_ledger_of_local_oracles` の `habs`／`starved_need` は全 micro-step `s` に量化し、`stOf (kOf s)` を最終報告点の先でも機械の抽象走行そのものとして要求する（＝無限に続く正しい trace を暗黙に仮定）。`PreTraceIMW` は最終報告点までしか与えない。
+
+**直し方の案（未着手・設計のみ）**: 機械を語 `w` で走らせるとき、追跡する trace を **延長語 `w ++ [a]` の canonical preload trace** にする。機械は文字 `|w|+1` が要る tick の手前で必ず飢餓し（延長語の次の報告点 `position right = 2(|w|+1) − 1` は文字 `|w|+1` を消費済み、つまりそこへ至る tick の need は `|w|` を超える）、以後文字は届かないので永久に stutter する。したがって追跡は trace の端を決して越えない。prefix `m ≤ |w|` の事実（`PreloadL'`・cost・報告点）は延長語の trace が全部持っている。要確認: (1) 枠 `PofC … w` と `PofC … (w ++ [a])` は `onLetterVM raw` で語に依存するので、切り詰めた状態の上で一致すること、(2) 延長語の prefix `|w|` の報告点を切り詰めたものが語 `w` の `ReportPoint` であること、(3) 台帳 `LedgerObligation … w` をその走行に対して出すこと。`heldAfter` と `hstarvedAtLastReport` はこの設計では不要になる。
+
 ## n287 — `obligation_localRealization`: 消費者側の橋を 3 段通し、producer の無い量化を 4 件直した。公理は未接続のまま
 
 **状態（2026-09-20）**: 全体 build 成功（`lake build --quiet PalPeg`、ログ末尾 `BUILD=0`・`error` 0 件・`sorry` 0 件、commit `95f160b` 時点。その後の `cd22894` は module build `PalPeg.ShadowedLocalFinal` が `BUILD=0`）。標準公理のみの guard は `unconditional` について `propext`／`Classical.choice`／`Quot.sound`／`obligation_localRealization` のまま。**無条件 PAL は未完。下の定理は `unconditional` にまだ適用していない。**

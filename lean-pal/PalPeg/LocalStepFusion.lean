@@ -204,4 +204,39 @@ theorem compStep_iterRule {K : ℕ} (blank : Γ) (R : ActRule Terminal Q Γ tape
 
 #print axioms compStep_iterRule
 
+/-! ## The ideal run, forwards -/
+
+/-- The ideal run written forwards: the input reaches the first step only. -/
+def idealRun {K : ℕ} (R : ActRule Terminal Q Γ tapeCount K) (blank : Γ)
+    (x : Q × (Fin tapeCount → STape Γ)) (input : Option Terminal) :
+    ℕ → Q × (Fin tapeCount → STape Γ)
+  | 0 => x
+  | count + 1 => idealStep R blank (idealRun R blank x input count)
+      (if count = 0 then input else none)
+
+theorem idealRun_step {K : ℕ} (R : ActRule Terminal Q Γ tapeCount K) (blank : Γ)
+    (x : Q × (Fin tapeCount → STape Γ)) (input : Option Terminal) (count : ℕ) :
+    idealRun R blank x input (count + 1)
+      = idealStep R blank (idealRun R blank x input count) (if count = 0 then input else none) :=
+  rfl
+
+theorem idealRun_succ {K : ℕ} (R : ActRule Terminal Q Γ tapeCount K) (blank : Γ)
+    (x : Q × (Fin tapeCount → STape Γ)) (input : Option Terminal) :
+    ∀ count, idealRun R blank x input (count + 1)
+      = idealRun R blank (idealStep R blank x input) none count
+  | 0 => rfl
+  | count + 1 => by
+    show idealStep R blank (idealRun R blank x input (count + 1)) _ = _
+    rw [idealRun_succ R blank x input count, if_neg (Nat.succ_ne_zero count)]
+    show _ = idealStep R blank _ (if count = 0 then none else none)
+    rw [ite_self]
+
+theorem idealIter_eq_idealRun {K : ℕ} (R : ActRule Terminal Q Γ tapeCount K) (blank : Γ) :
+    ∀ (count : ℕ) (x : Q × (Fin tapeCount → STape Γ)) (input : Option Terminal),
+      idealIter R blank count x input = idealRun R blank x input count
+  | 0, _, _ => rfl
+  | count + 1, x, input => by
+    rw [idealRun_succ]
+    exact idealIter_eq_idealRun R blank count _ none
+
 end PalPeg.LocalStepFusion

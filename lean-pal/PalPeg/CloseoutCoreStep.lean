@@ -64,7 +64,7 @@ open PalPeg.GalilScaffoldController (Control Mode Bounded BoundedControl)
 open PalPeg.GalilScaffoldChainInputSupply (GalilVM ChainVM Shared galilFrameS)
 open PalPeg.LocalState (GalilVML Ctr)
 open PalPeg.LocalReplayParked (Mirrored1)
-open PalPeg.LocalSysConcrete (Steps Realizes InvC Needy Starved sysC tickC feedC)
+open PalPeg.LocalSysConcrete (Steps Realizes InvC Needy TickNeed Starved sysC tickC feedC)
 open PalPeg.GalilLookRefined (needT')
 open PalPeg.Local (LocalStep)
 open PalPeg.LocalTrackingLatch (LocalSys LX)
@@ -209,7 +209,7 @@ variable {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
 def AgreeOn (Good : Mirrored1 P → Prop) (raw : List (Fin 2)) (stOf : ℕ → State GalilVM)
     (f g : Mirrored1 P → Mirrored1 P) (md : Mode) : Prop :=
   ∀ (m : Mirrored1 P) (k j : ℕ), InvC Good raw stOf m → m.vm.ctl.mode = md → ¬ Starved m.vm →
-    Needy raw stOf k j m.vm → needT' raw stOf k ≤ j → f m = g m
+    Needy raw stOf k j m.vm → TickNeed raw stOf k j → f m = g m
 
 theorem agreeOn_refl (f : Mirrored1 P → Mirrored1 P) (md : Mode) :
     AgreeOn Good raw stOf f f md := fun _ _ _ _ _ _ _ _ => rfl
@@ -238,7 +238,15 @@ theorem realizes_seven_of_agree {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay 
       (stOf k) (stOf (k+1)))
     (H_afterLast : ∀ k, lastTick ≤ k → stOf k = stOf lastTick)
     (H_start : PalPeg.LocalWF.NoReplay (stOf 0)) (hq : qq ≤ 64)
-    (H_wf : ∀ m : Mirrored1 P, Good m → PalPeg.LocalWF.LocalWF m.vm)
+    (H_wf : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode ≠ .scan →
+      PalPeg.LocalWF.LocalWF m.vm)
+    (H_shiftIdleInCopy : ∀ k, (stOf k).ctl.mode = .copy →
+      ¬ PalPeg.GalilTickFun3.ShiftRemaining (stOf k).vm)
+    (H_shiftLedgerOnTrace : ∀ k, (stOf k).ctl.mode = .shift →
+      PalPeg.GalilScaffoldChainInputSupply.CopyIdle (stOf k).vm ∧
+        GalilScaffoldCounter.value (stOf k).vm.remaining
+          ≤ GalilScaffoldCounter.value (stOf k).vm.radius ∧
+        PalPeg.GalilScaffoldChainInputSupply.SpanRep (stOf k).vm)
     (h_shift : AgreeOn Good raw stOf (PalPeg.LocalRealizesPhase.shiftStepL (P := P) Pw) SL.shift .shift)
     (h_copy : AgreeOn Good raw stOf (PalPeg.LocalRealizesPhase.copyStepL (P := P)) SL.copy .copy)
     (h_home : AgreeOn Good raw stOf (PalPeg.LocalRealizesPhase.homeStepL (P := P)) SL.home .home)
@@ -255,6 +263,7 @@ theorem realizes_seven_of_agree {Pw : Shared} {qq : ℕ} {first : Fin 9} {delay 
     Realizes Good raw stOf lastTick SL.rewind .rewind := by
   obtain ⟨r1, r2, r3, r4, r5, r6, r7⟩ :=
     PalPeg.LocalWF.realizes_seven (P := P) (delay := delay) H_shared H_trace H_afterLast H_start hq H_wf
+      H_shiftIdleInCopy H_shiftLedgerOnTrace
   exact ⟨realizes_congr h_shift r1, realizes_congr h_copy r2, realizes_congr h_home r3,
     realizes_congr h_fpp r4, realizes_congr h_markEnd r5, realizes_congr h_choose r6,
     realizes_congr h_rewind r7⟩

@@ -30,16 +30,15 @@ not need abstract-tick determinism.
   `remainingPos` *is* `positive remaining`, which pins the sign bit **and** the
   tape value (`remaining_of_shiftRemaining`); the copy reading pins
   `0 < val fppWork` (`work_of_copyRemaining`).
-* **The pack and its consumers** (§5, §6): `LocalWF = PolWF ∧ Geom` yields
+* **The pack and its consumers** (§5, §6): `LocalWF` is the polarity bundle `PolWF`.  Together
+  with the counter magnitudes read off the trace (`shiftMagnitudes_of_trace`,
+  `copyRemaining_of_trace`) and the walker's sentinel carried by `PhysWF`, it yields
   `ShiftCounters`, `CopySide`, `RewindWF`, `ChooseWF`, and `realizes_seven`
   assembles seven of the ten `Realizes` obligations.
 
 ## Residuals (§8)
 
-`Geom` — the shift unit's counter magnitudes, the copy unit's work counter,
-`ProperView` of the fpp walker, the cleared idle buffer in `rewind`, and the
-parking of L and C on R in `choose`; plus the polarity half of the three modes
-whose local step is still open.
+The polarity half of the three modes whose local step is still open.
 
 **無条件 PAL ∈ PEG は未完.**
 -/
@@ -128,6 +127,27 @@ theorem notReplaying_of_trace {raw : List (Fin 2)} {stOf : ℕ → State GalilVM
   have hc : m.vm.ctl = (stOf k).ctl := ctl_of_needy hn
   rw [hc]
   exact h k (by rw [← hc]; exact hmd)
+
+/-- **On a tracked `copy` state the guard `remainingPos` is the copy reading.**  The shift
+counter of the trace is spent outside `shift`, and truncation does not touch counters. -/
+theorem copyRemaining_of_trace {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
+    (hshiftIdleInCopy : ∀ k, (stOf k).ctl.mode = .copy →
+      ¬ PalPeg.GalilTickFun3.ShiftRemaining (stOf k).vm)
+    {m : Mirrored1 P} (hinv : InvC Good raw stOf m) (hmode : m.vm.ctl.mode = .copy)
+    (hremaining : PalPeg.LocalRealizesPhase.RemPosL m.vm) :
+    PalPeg.GalilTickFun3.CopyRemaining (abs' m.vm) := by
+  obtain ⟨k, j, hneedy⟩ := hinv.track
+  have hctl : m.vm.ctl = (stOf k).ctl := ctl_of_needy hneedy
+  have hvm : abs'' m.vm = PalPeg.GalilThrottledRun.truncVM (raw.length - j) (stOf k).vm :=
+    congrArg State.vm hneedy.2
+  have hremainingEq : (abs' m.vm).remaining = (stOf k).vm.remaining :=
+    (show (abs' m.vm).remaining = (abs'' m.vm).remaining from rfl).trans
+      ((congrArg GalilVM.remaining hvm).trans rfl)
+  rcases hremaining with hshift | hcopy
+  · exact absurd (show PalPeg.GalilTickFun3.ShiftRemaining (stOf k).vm by
+      unfold PalPeg.GalilTickFun3.ShiftRemaining at hshift ⊢
+      rw [← hremainingEq]; exact hshift) (hshiftIdleInCopy k (by rw [← hctl]; exact hmode))
+  · exact hcopy
 
 /-! ## 2. The `fpp` quantum: `ffpp`, `H_fpp` and `H_fpp_mir` -/
 
@@ -288,8 +308,24 @@ open PalPeg.LocalSysConcrete (feedC)
 
 /-- The five counters whose sign bit the phase steps rely on. -/
 def PolWF (x : GalilVML P) : Prop :=
-  x.pol .remaining = true ∧ x.pol .radius = true ∧ x.pol .length = true ∧
-    x.pol .cycle = true ∧ x.pol .fppWork = true
+  (x.ctl.mode = .shift → x.pol .remaining = true) ∧ x.pol .radius = true ∧
+    x.pol .length = true ∧ (x.ctl.mode = .shift → x.pol .cycle = true) ∧
+    (x.ctl.mode = .copy → x.pol .fppWork = true)
+
+/-- The two modes that a phase step enters from the same mode only: `shift` and `copy` are
+entered from `scan`, which is not a phase mode.  The polarity of `remaining` and of `cycle` is
+read in `shift` only, that of `fppWork` in `copy` only. -/
+def EntryMode (M : Mode) : Prop := M = .shift ∨ M = .copy
+
+/-- A phase tick lands in `shift` or in `copy` only from the same mode. -/
+theorem entryMode_of_tickL3 {S : Shared} {q : ℕ} {firstT : Fin 9} {x y : GalilVML P}
+    (h : TickL3 S q firstT x y) {M : Mode} (hentry : EntryMode M) (hland : y.ctl.mode = M) :
+    x.ctl.mode = M := by
+  rcases hentry with rfl | rfl <;> cases h <;> first
+    | assumption
+    | exact hland
+    | exact Mode.noConfusion hland
+    | (exfalso; simp_all; done)
 
 /-- **No phase tick touches the polarity bundle.** -/
 theorem pol_tickL3 {S : Shared} {q : ℕ} {firstT : Fin 9} {x y : GalilVML P}
@@ -298,7 +334,11 @@ theorem pol_tickL3 {S : Shared} {q : ℕ} {firstT : Fin 9} {x y : GalilVML P}
 
 theorem polWF_of_tickL3 {S : Shared} {q : ℕ} {firstT : Fin 9} {x y : GalilVML P}
     (h : PolWF x) (ht : TickL3 S q firstT x y) : PolWF y := by
-  unfold PolWF at h ⊢; rw [pol_tickL3 ht]; exact h
+  unfold PolWF at h ⊢
+  rw [pol_tickL3 ht]
+  exact ⟨fun hshift => h.1 (entryMode_of_tickL3 ht (Or.inl rfl) hshift), h.2.1, h.2.2.1,
+    fun hshift => h.2.2.2.1 (entryMode_of_tickL3 ht (Or.inl rfl) hshift),
+    fun hcopy => h.2.2.2.2 (entryMode_of_tickL3 ht (Or.inr rfl) hcopy)⟩
 
 theorem pol_shiftStepL (Pw : Shared) (m : Mirrored1 P) :
     (shiftStepL Pw m).vm.pol = m.vm.pol := by
@@ -353,10 +393,80 @@ theorem pol_feedC {m : Mirrored1 P} (hp : m.vm.pending = []) (a : Fin 2) :
   rw [h1]
   rfl
 
+/-! ### The phase steps land in `shift` only from `shift`
+
+The polarity of `cycle` is asked for in `shift` only, so carrying it along a step needs to know
+that no other phase step lands there. -/
+
+theorem entryMode_of_copyStepL {m : Mirrored1 P} {M : Mode} (hentry : EntryMode M)
+    (hland : (copyStepL m).vm.ctl.mode = M) : m.vm.ctl.mode = M := by
+  classical
+  unfold copyStepL at hland
+  split at hland
+  · unfold PalPeg.LocalRealizesPhase.copyPick at hland
+    split at hland <;> exact hland
+  · rcases hentry with rfl | rfl <;> exact Mode.noConfusion hland
+
+theorem entryMode_of_homeStepL {m : Mirrored1 P} {M : Mode} (hentry : EntryMode M)
+    (hland : (homeStepL m).vm.ctl.mode = M) : m.vm.ctl.mode = M := by
+  classical
+  unfold homeStepL at hland
+  split at hland
+  · rcases hentry with rfl | rfl <;> exact Mode.noConfusion hland
+  · exact hland
+
+theorem entryMode_of_markEndStepL {m : Mirrored1 P} {M : Mode} (hentry : EntryMode M)
+    (hland : (markEndStepL m).vm.ctl.mode = M) : m.vm.ctl.mode = M := by
+  classical
+  unfold markEndStepL at hland
+  split at hland
+  · rcases hentry with rfl | rfl <;> exact Mode.noConfusion hland
+  · exact hland
+
+theorem entryMode_of_chooseStepC (Pw : Shared) (qq : ℕ) (firstT : Fin 9) {m : Mirrored1 P}
+    {M : Mode} (hentry : EntryMode M) (hland : (chooseStepC Pw qq firstT m).vm.ctl.mode = M) :
+    m.vm.ctl.mode = M := by
+  classical
+  unfold chooseStepC at hland
+  split at hland
+  · rcases hentry with rfl | rfl <;> exact Mode.noConfusion hland
+  · exact hland
+
+theorem entryMode_of_rewindStepC (Pw : Shared) (qq : ℕ) (firstT : Fin 9) {m : Mirrored1 P}
+    {M : Mode} (hentry : EntryMode M) (hland : (rewindStepC Pw qq firstT m).vm.ctl.mode = M) :
+    m.vm.ctl.mode = M := by
+  classical
+  unfold rewindStepC at hland
+  split at hland
+  · rcases hentry with rfl | rfl <;> exact Mode.noConfusion hland
+  · split at hland <;> exact hland
+
+theorem entryMode_of_ffpp (Pw : Shared) (qq : ℕ) (firstT : Fin 9) {m : Mirrored1 P}
+    {M : Mode} (hentry : EntryMode M) (hland : (ffpp Pw qq firstT m).vm.ctl.mode = M) :
+    m.vm.ctl.mode = M := by
+  classical
+  unfold ffpp at hland
+  split at hland
+  · rename_i hexists
+    exact entryMode_of_tickL3 hexists.choose_spec.1 hentry hland
+  · exact hland
+
+/-- **Arrival does not touch the control either.** -/
+theorem ctl_feedC {m : Mirrored1 P} (hp : m.vm.pending = []) (a : Fin 2) :
+    (feedC a m).vm.ctl = m.vm.ctl := by
+  have h1 : (feedC a m).vm
+      = PalPeg.LocalArrival.feedL' a [] (PalPeg.LocalSysConcrete.feedV a m.vm) :=
+    PalPeg.LocalArrival.feed'_cons (PalPeg.LocalSysConcrete.pending_feedV hp a)
+  rw [h1]
+  rfl
+
 /-- **`PolWF` holds at the initial latched state** as soon as the blank core has
 its counters on the positive side. -/
 theorem polWF_x0C {blank : GalilVML P} (h : PolWF blank) (delay : ℕ) :
-    PolWF (PalPeg.LocalSysConcrete.x0C blank delay).core.vm := h
+    PolWF (PalPeg.LocalSysConcrete.x0C blank delay).core.vm :=
+  ⟨fun hshift => absurd (show Mode.init = Mode.shift from hshift) (by decide), h.2.1, h.2.2.1,
+    fun hshift => absurd (show Mode.init = Mode.shift from hshift) (by decide),
+    fun hcopy => absurd (show Mode.init = Mode.copy from hcopy) (by decide)⟩
 
 end Pol
 
@@ -369,44 +479,117 @@ open PalPeg.LocalTick3 (ShiftCounters)
 open PalPeg.LocalRealizesPhase (RemPosL CopySide)
 open PalPeg.LocalRealizesScan (RewindWF ChooseWF)
 
-/-- **The geometric residual.**  These are the facts that are *not* transported
-by a single local step (a shift unit eats two `length` cells, so `2 ≤ length` is
-not preserved by itself) and are not readable off the abstract guard either;
-they are the machine's own counter/parking invariants. -/
-structure Geom (x : GalilVML P) : Prop where
-  shiftMag : x.ctl.mode = .shift → RemPosL x →
-    0 < val (x.phys (x.roles .remaining)) ∧ 0 < val (x.phys (x.roles .radius)) ∧
-      2 ≤ val (x.phys (x.roles .length))
-  copyWork : x.ctl.mode = .copy → RemPosL x → 0 < val (x.phys (x.roles .fppWork))
-  copyProper : x.ctl.mode = .copy → PalPeg.LocalChain.ProperView x.fppWalker
-  rewindClean : x.ctl.mode = .rewind →
-    ∀ i, PalPeg.LocalBuffers.Cleared (PalPeg.LocalBuffers.idle x.fppBuf i)
-  chooseParked : x.ctl.mode = .choose →
-    absHead' x.left x.pending = absHead' x.right x.pending ∧
-      absHead' x.center x.pending = absHead' x.right x.pending
-
-/-- **The local well-formedness pack**: the polarity bundle (§4, invariant) and
-the geometric residual. -/
+/-- **The local well-formedness pack**: the polarity bundle (§4, invariant).  The counter
+magnitudes a shift or copy unit needs are not part of it: they are read off the trace
+(`shiftMagnitudes_of_trace`, `copyRemaining_of_trace`). -/
 structure LocalWF (x : GalilVML P) : Prop where
   pol : PolWF x
-  geom : Geom x
 
-theorem shiftCounters_of {x : GalilVML P} (h : LocalWF x) (hmd : x.ctl.mode = .shift)
-    (hr : RemPosL x) : ShiftCounters x :=
-  ⟨h.pol.1, h.pol.2.1, h.pol.2.2.1, h.pol.2.2.2.1,
-    (h.geom.shiftMag hmd hr).1, (h.geom.shiftMag hmd hr).2.1, (h.geom.shiftMag hmd hr).2.2⟩
+/-- A tape of positive polarity abstracts to its value. -/
+theorem value_absCtr_of_positivePolarity (t : PalPeg.Program.STape PalPeg.LocalCounter.Seg) :
+    GalilScaffoldCounter.value (PalPeg.LocalCounter.absCtr t true) = (val t : ℤ) := by
+  unfold PalPeg.LocalCounter.absCtr
+  rw [if_pos rfl]
+  simp [GalilScaffoldCounter.value, GalilScaffoldCounter.ofNat]
 
-theorem copySide_of {x : GalilVML P} (h : LocalWF x) (hmd : x.ctl.mode = .copy)
-    (hr : RemPosL x) : CopySide x :=
-  ⟨h.pol.2.2.2.2, h.geom.copyWork hmd hr, h.geom.copyProper hmd⟩
+open PalPeg.GalilScaffoldCounter (value positive) in
+/-- **The counter magnitudes of a shift unit, on a tracked state.**  On the trace the copy side is
+idle in `shift`, the shift counter is at most the radius, and the span is `2 · radius + 1`;
+truncation does not touch counters, and the three tapes have positive polarity. -/
+theorem shiftMagnitudes_of_trace {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
+    (hshiftLedgerOnTrace : ∀ k, (stOf k).ctl.mode = .shift →
+      CopyIdle (stOf k).vm ∧ value (stOf k).vm.remaining ≤ value (stOf k).vm.radius ∧
+        SpanRep (stOf k).vm)
+    {m : Mirrored1 P} (hinv : InvC Good raw stOf m) (hmode : m.vm.ctl.mode = .shift)
+    (hremaining : RemPosL m.vm) (hpol : PolWF m.vm) :
+    0 < val (m.vm.phys (m.vm.roles .remaining)) ∧ 0 < val (m.vm.phys (m.vm.roles .radius)) ∧
+      2 ≤ val (m.vm.phys (m.vm.roles .length)) := by
+  obtain ⟨k, j, hneedy⟩ := hinv.track
+  have hctl : m.vm.ctl = (stOf k).ctl := ctl_of_needy hneedy
+  have hvm : abs'' m.vm = PalPeg.GalilThrottledRun.truncVM (raw.length - j) (stOf k).vm :=
+    congrArg State.vm hneedy.2
+  obtain ⟨hcopyIdle, hbudget, hspan⟩ := hshiftLedgerOnTrace k (by rw [← hctl]; exact hmode)
+  have hfppEq : (abs' m.vm).fpp = (stOf k).vm.fpp :=
+    (show (abs' m.vm).fpp = (abs'' m.vm).fpp from rfl).trans ((congrArg GalilVM.fpp hvm).trans rfl)
+  have hremainingEq : (abs' m.vm).remaining = (stOf k).vm.remaining :=
+    (show (abs' m.vm).remaining = (abs'' m.vm).remaining from rfl).trans
+      ((congrArg GalilVM.remaining hvm).trans rfl)
+  have hradiusEq : (abs' m.vm).radius = (stOf k).vm.radius :=
+    (show (abs' m.vm).radius = (abs'' m.vm).radius from rfl).trans
+      ((congrArg GalilVM.radius hvm).trans rfl)
+  have hlengthEq : (abs' m.vm).length = (stOf k).vm.length :=
+    (show (abs' m.vm).length = (abs'' m.vm).length from rfl).trans
+      ((congrArg GalilVM.length hvm).trans rfl)
+  have hshiftRemaining : positive (abs' m.vm).remaining = true := by
+    rcases hremaining with hshift | hcopy
+    · exact hshift
+    · exfalso
+      rw [copyIdle_iff] at hcopyIdle
+      unfold PalPeg.GalilTickFun3.CopyRemaining at hcopy
+      rw [hfppEq] at hcopy
+      exact hcopy hcopyIdle
+  have hremainingVal : (abs' m.vm).remaining
+      = PalPeg.LocalCounter.absCtr (m.vm.phys (m.vm.roles .remaining)) true := by
+    rw [← hpol.1 hmode]; rfl
+  have hradiusVal : (abs' m.vm).radius
+      = PalPeg.LocalCounter.absCtr (m.vm.phys (m.vm.roles .radius)) true := by
+    rw [← hpol.2.1]; rfl
+  have hlengthVal : (abs' m.vm).length
+      = PalPeg.LocalCounter.absCtr (m.vm.phys (m.vm.roles .length)) true := by
+    rw [← hpol.2.2.1]; rfl
+  have hremainingValue := value_absCtr_of_positivePolarity (m.vm.phys (m.vm.roles .remaining))
+  have hradiusValue := value_absCtr_of_positivePolarity (m.vm.phys (m.vm.roles .radius))
+  have hlengthValue := value_absCtr_of_positivePolarity (m.vm.phys (m.vm.roles .length))
+  rw [← hremainingVal, hremainingEq] at hremainingValue
+  rw [← hradiusVal, hradiusEq] at hradiusValue
+  rw [← hlengthVal, hlengthEq] at hlengthValue
+  have hremainingPos : 0 < val (m.vm.phys (m.vm.roles .remaining)) := by
+    rcases Nat.eq_zero_or_pos (val (m.vm.phys (m.vm.roles .remaining))) with hzero | hpos
+    · exfalso
+      rw [hremainingVal] at hshiftRemaining
+      unfold PalPeg.LocalCounter.absCtr at hshiftRemaining
+      rw [if_pos rfl, hzero] at hshiftRemaining
+      exact absurd hshiftRemaining (by decide)
+    · exact hpos
+  unfold SpanRep at hspan
+  refine ⟨hremainingPos, ?_, ?_⟩ <;> omega
 
-theorem rewindWF_of {x : GalilVML P} (h : LocalWF x) (hnr : x.ctl.replaying = false)
-    (hmd : x.ctl.mode = .rewind) : RewindWF x :=
-  ⟨hnr, h.pol.2.2.1, h.pol.2.1, h.geom.rewindClean hmd⟩
+theorem shiftCounters_of {x : GalilVML P} (h : LocalWF x) (hmode : x.ctl.mode = .shift)
+    (hmagnitudes : 0 < val (x.phys (x.roles .remaining)) ∧ 0 < val (x.phys (x.roles .radius)) ∧
+      2 ≤ val (x.phys (x.roles .length))) : ShiftCounters x :=
+  ⟨h.pol.1 hmode, h.pol.2.1, h.pol.2.2.1, h.pol.2.2.2.1 hmode, hmagnitudes.1, hmagnitudes.2.1,
+    hmagnitudes.2.2⟩
 
-theorem chooseWF_of {x : GalilVML P} (h : LocalWF x) (hnr : x.ctl.replaying = false)
-    (hmd : x.ctl.mode = .choose) : ChooseWF x :=
-  ⟨hnr, h.pol.2.2.1, (h.geom.chooseParked hmd).1, (h.geom.chooseParked hmd).2⟩
+/-- The abstract work counter of the copy reads the local tape: if it is not zero, the tape
+holds a positive value, whatever its polarity. -/
+theorem val_fppWork_pos_of_copyRemaining {x : GalilVML P}
+    (hcopyRemaining : PalPeg.GalilTickFun3.CopyRemaining (abs' x)) :
+    0 < val (x.phys (x.roles .fppWork)) := by
+  have hworkNotZero : ¬ GalilScaffoldCounter.zero (abs' x).fpp.work = true :=
+    fun hzero => hcopyRemaining (Or.inr hzero)
+  have hwork : (abs' x).fpp.work
+      = PalPeg.LocalCounter.absCtr (x.phys (x.roles .fppWork)) (x.pol .fppWork) := rfl
+  rw [hwork] at hworkNotZero
+  rcases Nat.eq_zero_or_pos (val (x.phys (x.roles .fppWork))) with hzero | hpos
+  · exfalso
+    apply hworkNotZero
+    unfold PalPeg.LocalCounter.absCtr
+    rw [hzero]
+    cases x.pol .fppWork <;> rfl
+  · exact hpos
+
+theorem copySide_of {x : GalilVML P} (h : LocalWF x) (hmode : x.ctl.mode = .copy)
+    (hwalkerProper : PalPeg.LocalChain.ProperView x.fppWalker)
+    (hcopyRemaining : PalPeg.GalilTickFun3.CopyRemaining (abs' x)) : CopySide x :=
+  ⟨h.pol.2.2.2.2 hmode, val_fppWork_pos_of_copyRemaining hcopyRemaining, hwalkerProper⟩
+
+theorem rewindWF_of {x : GalilVML P} (h : LocalWF x) (hnr : x.ctl.replaying = false) :
+    RewindWF x :=
+  ⟨hnr, h.pol.2.2.1, h.pol.2.1⟩
+
+theorem chooseWF_of {x : GalilVML P} (h : LocalWF x) (hnr : x.ctl.replaying = false) :
+    ChooseWF x :=
+  ⟨hnr, h.pol.2.2.1⟩
 
 end Pack
 
@@ -427,7 +610,13 @@ theorem realizes_seven {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq first) delay (stOf k) (stOf (k+1)))
     (H_afterLast : ∀ k, lastTick ≤ k → stOf k = stOf lastTick)
     (H_start : NoReplay (stOf 0)) (hq : qq ≤ 64)
-    (H_wf : ∀ m : Mirrored1 P, Good m → LocalWF m.vm) :
+    (H_wf : ∀ m : Mirrored1 P, InvC Good raw stOf m → m.vm.ctl.mode ≠ .scan → LocalWF m.vm)
+    (H_shiftIdleInCopy : ∀ k, (stOf k).ctl.mode = .copy →
+      ¬ PalPeg.GalilTickFun3.ShiftRemaining (stOf k).vm)
+    (H_shiftLedgerOnTrace : ∀ k, (stOf k).ctl.mode = .shift →
+      CopyIdle (stOf k).vm ∧
+        GalilScaffoldCounter.value (stOf k).vm.remaining
+          ≤ GalilScaffoldCounter.value (stOf k).vm.radius ∧ SpanRep (stOf k).vm) :
     Realizes Good raw stOf lastTick (shiftStepL (P := P) Pw) .shift ∧
     Realizes Good raw stOf lastTick (copyStepL (P := P)) .copy ∧
     Realizes Good raw stOf lastTick (homeStepL (P := P)) .home ∧
@@ -441,18 +630,20 @@ theorem realizes_seven {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
   obtain ⟨h1, h2, h3, h4, h5⟩ :=
     PalPeg.LocalRealizesPhase.realizes_phases (P := P) (delay := delay)
       (ffpp Pw qq first) H_shared H_trace hnr
-      (fun m hinv hmd hns hr => copySide_of (H_wf m hinv.good) hmd hr)
-      (fun m hinv hmd hns hr => shiftCounters_of (H_wf m hinv.good) hmd hr)
+      (fun m hinv hmd hns hr => copySide_of (H_wf m hinv (by rw [hmd]; decide)) hmd hinv.phys.walkerProper
+        (copyRemaining_of_trace H_shiftIdleInCopy hinv hmd hr))
+      (fun m hinv hmd hns hr => shiftCounters_of (H_wf m hinv (by rw [hmd]; decide)) hmd
+        (shiftMagnitudes_of_trace H_shiftLedgerOnTrace hinv hmd hr (H_wf m hinv (by rw [hmd]; decide)).pol))
       (H_fpp_of_wf (Pw := Pw) (qq := qq) (first := first) (delay := delay) hq
         (fun m hinv hmd => hnr m hinv (Or.inr (Or.inr (Or.inr (Or.inl hmd))))))
       (fun m hinv hmd hns => mirInv1_ffpp hinv.mir)
   exact ⟨h1, h2, h3, h4, h5,
     PalPeg.LocalRealizesScan.realizes_choose (P := P) (delay := delay) H_shared H_trace
-      (fun m hinv hmd => chooseWF_of (H_wf m hinv.good)
-        (notReplaying_of_trace hNR hinv (by unfold PhaseMode; simp [hmd])) hmd),
+      (fun m hinv hmd => chooseWF_of (H_wf m hinv (by rw [hmd]; decide))
+        (notReplaying_of_trace hNR hinv (by unfold PhaseMode; simp [hmd]))),
     PalPeg.LocalRealizesScan.realizes_rewind (P := P) (delay := delay) H_shared H_trace
-      (fun m hinv hmd => rewindWF_of (H_wf m hinv.good)
-        (notReplaying_of_trace hNR hinv (by unfold PhaseMode; simp [hmd])) hmd)⟩
+      (fun m hinv hmd => rewindWF_of (H_wf m hinv (by rw [hmd]; decide))
+        (notReplaying_of_trace hNR hinv (by unfold PhaseMode; simp [hmd])))⟩
 
 end Assembly
 
@@ -464,8 +655,13 @@ open PalPeg.LocalSysConcrete (Steps stepOf tickC tickC_step tickC_starved x0C)
 open PalPeg.LocalRealizesPhase (shiftStepL copyStepL homeStepL markEndStepL)
 open PalPeg.LocalRealizesScan (chooseStepC rewindStepC)
 
-theorem polWF_congr {x y : GalilVML P} (h : PolWF x) (hp : y.pol = x.pol) : PolWF y := by
-  unfold PolWF at h ⊢; rw [hp]; exact h
+theorem polWF_congr {x y : GalilVML P} (h : PolWF x) (hp : y.pol = x.pol)
+    (hmode : ∀ {M : Mode}, EntryMode M → y.ctl.mode = M → x.ctl.mode = M) : PolWF y := by
+  unfold PolWF at h ⊢
+  rw [hp]
+  exact ⟨fun hshift => h.1 (hmode (Or.inl rfl) hshift), h.2.1, h.2.2.1,
+    fun hshift => h.2.2.2.1 (hmode (Or.inl rfl) hshift),
+    fun hcopy => h.2.2.2.2 (hmode (Or.inr rfl) hcopy)⟩
 
 /-- The `Steps` record of this file: the seven closed modes, with `init`,
 `scan` and `replayStart` left as parameters. -/
@@ -509,43 +705,36 @@ theorem polWF_tickC (Pw : Shared) (qq : ℕ) (first : Fin 9)
     (h0 : ∀ m : Mirrored1 P, (init m).vm.pol = m.vm.pol)
     (h1 : ∀ m : Mirrored1 P, (scan m).vm.pol = m.vm.pol)
     (h2 : ∀ m : Mirrored1 P, (replayStart m).vm.pol = m.vm.pol)
+    (hmode : ∀ (md : Mode) (m : Mirrored1 P) {M : Mode}, EntryMode M →
+      (stepOf (stepsWF Pw qq first init scan replayStart) md m).vm.ctl.mode = M →
+        m.vm.ctl.mode = M)
     {m : Mirrored1 P} (h : PolWF m.vm) :
     PolWF (tickC (stepsWF Pw qq first init scan replayStart) m).vm := by
   classical
   by_cases hs : Starved m.vm
   · rw [tickC_starved _ hs]; exact h
   · rw [tickC_step _ hs]
-    exact polWF_congr h (pol_stepOf Pw qq first h0 h1 h2 _ m)
+    exact polWF_congr h (pol_stepOf Pw qq first h0 h1 h2 _ m) (hmode _ m)
 
 /-- **`PolWF` is preserved by an arrival.** -/
 theorem polWF_feedC {m : Mirrored1 P} (hp : m.vm.pending = []) (a : Fin 2) (h : PolWF m.vm) :
     PolWF (PalPeg.LocalSysConcrete.feedC a m).vm :=
-  polWF_congr h (pol_feedC hp a)
+  polWF_congr h (pol_feedC hp a) (fun _ hland => by rwa [ctl_feedC hp a] at hland)
 
 end Preservation
 
 /-! ## 8. The residuals this file does **not** close
 
-* `Geom` (§5) — the counter magnitudes of a shift unit, the fpp work counter of
-  a copy unit, `LocalChain.ProperView` of the fpp walker, the cleared idle half
-  of the fpp double buffer in `rewind`, and the parking of L and C on R in
-  `choose`.  None is preserved by a single local step in isolation and none is
-  readable off the abstract guard, so each is a machine invariant of its own.
 * the polarity half for the three modes whose local step is still open
   (`h0`/`h1`/`h2` of `polWF_tickC`).
-* `LocalWF` at `x0C` reduces to `PolWF blank` (`polWF_x0C`) plus `Geom` of the
-  blank core, which is vacuous as soon as the blank's mode is `init`.
+* `LocalWF` at `x0C` reduces to `PolWF blank` (`polWF_x0C`).
 
 **無条件 PAL ∈ PEG は未完.**
 -/
 
-/-- `Geom` is vacuous in a mode that is none of `shift`/`copy`/`rewind`/`choose`. -/
-theorem geom_of_init {x : GalilVML P} (h : x.ctl.mode = .init) : Geom x := by
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> intro hm <;> rw [h] at hm <;> simp at hm
-
 theorem localWF_x0C {blank : GalilVML P} (h : PolWF blank) (delay : ℕ) :
     LocalWF (PalPeg.LocalSysConcrete.x0C blank delay).core.vm :=
-  ⟨h, geom_of_init rfl⟩
+  ⟨polWF_x0C h delay⟩
 
 #print axioms noReplay_tick
 #print axioms noReplay_run

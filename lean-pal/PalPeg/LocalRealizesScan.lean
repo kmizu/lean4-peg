@@ -68,7 +68,8 @@ open PalPeg.LocalState
 open PalPeg.LocalInputView (InputView)
 open PalPeg.LocalArrival (absHead' abs')
 open PalPeg.GalilTickFun3 (marksOf)
-open PalPeg.LocalTick3 (TickL3 rewindDoneVm rewindOneVm rewindPairVm chooseVm marksVm absState''_eq)
+open PalPeg.LocalTick3 (TickL3 rewindDoneVm rewindOneVm rewindPairVm chooseSelectVm marksVm
+  absState''_eq)
 open PalPeg.LocalReplayParked (abs'' absState'' ParkedOK Mirrored1 MirInv1 mirrorTick1)
 open PalPeg.LocalTick1 (Inv)
 open PalPeg.GalilThrottledRun (truncS)
@@ -88,11 +89,15 @@ theorem realizes_of_refined_tick_det {raw : List (Fin 2)} {stOf : ℕ → State 
     (H_shared : ∀ j, PalPeg.GalilTruncTick.SharedTrunc raw j Pw)
     (H_trace : ∀ k, k < lastTick → Tick (galilFrameS Pw qq firstT) delay (stOf k) (stOf (k+1)))
     (Refinement : State GalilVM → State GalilVM → Prop)
-    (hTraceRefinement : ∀ k j, k < lastTick → needT' raw stOf k ≤ j →
+    (hTraceRefinement : ∀ k j, k < lastTick → TickNeed raw stOf k j →
       Refinement (truncS (raw.length - j) (stOf k))
         (truncS (raw.length - j) (stOf (k+1))))
     (Hloc : ∀ (m : Mirrored1 P) (t : State GalilVM), InvC Good raw stOf m → m.vm.ctl.mode = md →
       ¬ Starved m.vm → Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) t →
+      -- the target is the truncated next state of the trace, and the tick into it is refined
+      (∃ k j, Needy raw stOf k j m.vm ∧ k < lastTick ∧
+        t = truncS (raw.length - j) (stOf (k+1))) →
+      Refinement (absState'' m.vm) t →
       Tick (galilFrameS Pw qq firstT) delay (absState'' m.vm) (absState'' (f m).vm) ∧
         Refinement (absState'' m.vm) (absState'' (f m).vm) ∧ PhysWF (f m).vm ∧ MirInv1 (f m))
     (Hdet : ∀ {s t₁ t₂ : State GalilVM}, s.ctl.mode = md →
@@ -102,8 +107,10 @@ theorem realizes_of_refined_tick_det {raw : List (Fin 2)} {stOf : ℕ → State 
   intro m k j hinv hmd hns hn hneed hbefore
   have h2 := tick_of_need (Pw := Pw) (qq := qq) (first := firstT) (delay := delay)
     (H_shared j) (H_trace k hbefore) hneed
-  rw [← hn.2] at h2
-  obtain ⟨ht, hRefinement, hph, hmir⟩ := Hloc m _ hinv hmd hns h2
+  have htraceRefinement := hTraceRefinement k j hbefore hneed
+  rw [← hn.2] at h2 htraceRefinement
+  obtain ⟨ht, hRefinement, hph, hmir⟩ :=
+    Hloc m _ hinv hmd hns h2 ⟨k, j, hn, hbefore, rfl⟩ htraceRefinement
   refine ⟨⟨hn.1, ?_⟩, hph, hmir⟩
   rw [hn.2] at ht h2 hRefinement
   have hm0 : (truncS (raw.length - j) (stOf k)).ctl.mode = md := by
@@ -125,7 +132,7 @@ theorem realizes_of_tick_det {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
     Realizes Good raw stOf lastTick f md := by
   apply realizes_of_refined_tick_det H_shared H_trace (fun _ _ => True)
     (fun _ _ _ _ => True.intro)
-  · intro m t hInvariant hMode hNotStarved hTick
+  · intro m t hInvariant hMode hNotStarved hTick _ _
     obtain ⟨hLocalTick, hPhysical, hMirror⟩ := Hloc m t hInvariant hMode hNotStarved hTick
     exact ⟨hLocalTick, True.intro, hPhysical, hMirror⟩
   · intro s t₁ t₂ hMode hTick₁ _ hTick₂ _
@@ -230,7 +237,6 @@ structure RewindWF (x : GalilVML P) : Prop where
   notReplaying : x.ctl.replaying = false
   polLength : x.pol .length = true
   polRadius : x.pol .radius = true
-  clean : ∀ i, PalPeg.LocalBuffers.Cleared (PalPeg.LocalBuffers.idle x.fppBuf i)
 
 open Classical in
 /-- **The local `rewind` step.**  `LocalTick3`'s three rewind actions, selected
@@ -264,7 +270,7 @@ theorem tickL3_rewindStepC {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : �
   unfold rewindStepC
   by_cases hf : (galilFrameS Pw qq firstT).atFirst (abs' m.vm)
   · rw [if_pos hf]
-    exact .rewind_done m.vm hmd hwf.notReplaying hf hwf.clean
+    exact .rewind_done m.vm hmd hwf.notReplaying hf
   · have hne := marksLeft_of_rewind_tick hmd hf ht
     rw [if_neg hf]
     by_cases hp : m.vm.ctl.pair = true
@@ -305,21 +311,26 @@ theorem realizes_rewind {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
 
 /-! ## 4. The `choose` mode -/
 
-/-- The local side conditions a `choose` tick needs.  `headsLeft`/`headsCenter`
-are the parking invariant the selection relies on: `chooseVm` does not move the
-heads, so L and C must already sit on R when the selection fires. -/
+/-- The local side conditions a `choose` tick needs.  The selection copies the right head onto
+the left and centre heads (`LocalTick3.chooseSelectVm`), so nothing is asked of where those heads
+stand during `choose`: the scaffold leaves them where the comparison left them. -/
 structure ChooseWF (x : GalilVML P) : Prop where
   notReplaying : x.ctl.replaying = false
   polLength : x.pol .length = true
-  headsLeft : absHead' x.left x.pending = absHead' x.right x.pending
-  headsCenter : absHead' x.center x.pending = absHead' x.right x.pending
+
+/-- **The landing of the `choose` selection on a mirrored state.**  The heads are copied by
+`LocalTick3.chooseSelectVm`; the mirror of the centre becomes the right view, which is the new
+centre. -/
+noncomputable def chooseSelectM (m : Mirrored1 P) : Mirrored1 P :=
+  { vm := chooseSelectVm { m.vm.ctl with mode := .rewind, pair := false } m.vm,
+    mirL := m.vm.right }
 
 open Classical in
 /-- **The local `choose` step.** -/
 noncomputable def chooseStepC (Pw : Shared) (qq : ℕ) (firstT : Fin 9)
     (m : Mirrored1 P) : Mirrored1 P :=
   if m.vm.ctl.odd = true ∧ (galilFrameS Pw qq firstT).markSet (abs' m.vm) then
-    mirrorTick1 .stay (chooseVm { m.vm.ctl with mode := .rewind, pair := false } m.vm) m
+    chooseSelectM m
   else
     mirrorTick1 .stay
       (marksVm GalilScaffoldTape.moveLeft { m.vm.ctl with odd := !m.vm.ctl.odd } m.vm) m
@@ -344,7 +355,6 @@ theorem tickL3_chooseStepC {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : �
   by_cases hsel : m.vm.ctl.odd = true ∧ (galilFrameS Pw qq firstT).markSet (abs' m.vm)
   · rw [if_pos hsel]
     exact .choose_select m.vm hmd hwf.notReplaying hsel.1 hsel.2 hwf.polLength
-      hwf.headsLeft hwf.headsCenter
   · have hs : m.vm.ctl.odd = false ∨ ¬ (galilFrameS Pw qq firstT).markSet (abs' m.vm) := by
       by_cases ho : m.vm.ctl.odd = true
       · exact Or.inr (fun hk => hsel ⟨ho, hk⟩)
@@ -353,12 +363,13 @@ theorem tickL3_chooseStepC {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {delay : �
     exact .choose_step m.vm hmd hwf.notReplaying hs (marksLeft_of_choose_tick hmd hs ht)
 
 theorem mirInv1_chooseStepC {Pw : Shared} {qq : ℕ} {firstT : Fin 9} {m : Mirrored1 P}
-    (h : MirInv1 m) (hc : PalPeg.LocalInputView.WF m.vm.center) :
+    (h : MirInv1 m) (hc : PalPeg.LocalInputView.WF m.vm.center)
+    (hright : PalPeg.LocalInputView.WF m.vm.right) :
     MirInv1 (chooseStepC Pw qq firstT m) := by
   classical
   unfold chooseStepC
   by_cases hsel : m.vm.ctl.odd = true ∧ (galilFrameS Pw qq firstT).markSet (abs' m.vm)
-  · rw [if_pos hsel]; exact PalPeg.LocalReplayParked.mirInv1_mirrorTick1 h hc .stay rfl
+  · rw [if_pos hsel]; exact ⟨PalPeg.LocalReplaySwap.Twin.refl _, hright⟩
   · rw [if_neg hsel]; exact PalPeg.LocalReplayParked.mirInv1_mirrorTick1 h hc .stay rfl
 
 /-- **The `choose` obligation**, modulo the local side conditions `ChooseWF`. -/
@@ -372,7 +383,8 @@ theorem realizes_choose {raw : List (Fin 2)} {stOf : ℕ → State GalilVM}
   intro m t hinv hmd hns ht
   have htl := tickL3_chooseStepC (H_chooseWF m hinv hmd) hmd ht
   exact ⟨PalPeg.LocalTick3.tickL3_abs delay hinv.phys.inv htl,
-    physWF_of_tickL3 hinv.phys htl, mirInv1_chooseStepC hinv.mir hinv.phys.inv.views.2.1⟩
+    physWF_of_tickL3 hinv.phys htl,
+    mirInv1_chooseStepC hinv.mir hinv.phys.inv.views.2.1 hinv.phys.inv.views.2.2.1⟩
 
 #print axioms realizes_rewind
 #print axioms realizes_choose
