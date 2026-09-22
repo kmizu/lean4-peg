@@ -6810,14 +6810,34 @@ noncomputable def rewindNext {fppBound dpBound K : ℕ} (first : Fin 9) (hbound 
     QPhys fppBound dpBound :=
   if centreRead ws (progSlot q.fppLive 8) = encProg first then
     {q with ctl := {q.ctl with mode := PalPeg.GalilScaffoldController.Mode.replayStart}, fppPc := some ⟨320, hbound⟩, fppDone := true, fppLive := !q.fppLive}
-  else q
+  else if q.ctl.pair then rewindPairNext q ws
+  else rewindOneNext q ws
 
-/-- the actions of the wipe: none.  The nine tapes the abstraction blanks are the nine the
-machine stops looking at. -/
-def rewindActs : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) := fun _ => []
+/-- **the action table of the rewind.**  The tick that finds the first letter names no action at
+all — the nine tapes the abstraction blanks are the nine the machine stops looking at — and the
+other two ticks are the single and the paired step. -/
+noncomputable def rewindActs {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  if centreRead ws (progSlot live 8) = encProg first then fun _ => []
+  else if q.ctl.pair then rewindPairActs live q ws
+  else rewindOneActs live q ws
 
-theorem rewindActs_length {K : ℕ} (j : Fin tapeCountM) : (rewindActs j).length ≤ K :=
-  Nat.zero_le K
+theorem rewindActs_length {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (j : Fin tapeCountM) : (rewindActs first live q ws j).length ≤ 2 := by
+  unfold rewindActs
+  split_ifs
+  · simp
+  · exact rewindPairActs_length live q ws j
+  · exact rewindOneActs_length live q ws j
+
+theorem rewindActs_atFirst {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hatMark : centreRead ws (progSlot live 8) = encProg first) (j : Fin tapeCountM) :
+    rewindActs first live q ws j = [] := by
+  unfold rewindActs
+  rw [if_pos hatMark]
 
 /-- the letter a cursor shows, as the rule decodes the centre of its window. -/
 noncomputable def placeLetter (c : Γm) : Fin 3 :=
@@ -6969,7 +6989,8 @@ noncomputable def ruleActs {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fi
   | PalPeg.GalilScaffoldController.Mode.markEnd => withErase q.fppLive ws (markEndActs q.fppLive ws)
   | PalPeg.GalilScaffoldController.Mode.home => withErase q.fppLive ws (homeActs q.fppLive ws)
   | PalPeg.GalilScaffoldController.Mode.choose => withErase q.fppLive ws (chooseBackActs q.fppLive ws)
-  | PalPeg.GalilScaffoldController.Mode.rewind => withErase q.fppLive ws rewindActs
+  | PalPeg.GalilScaffoldController.Mode.rewind =>
+      withErase q.fppLive ws (rewindActs first q.fppLive q ws)
   | PalPeg.GalilScaffoldController.Mode.fpp =>
       withErase q.fppLive ws
         (fppBranchActs PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first (pcOf q) q.fppDone ws)
@@ -6996,7 +7017,10 @@ theorem ruleActs_length {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9
       | exact withErase_length (b := entryQ + 2) (by omega) q.fppLive ws _
           (fun j => fppBranchActs_length PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first
             (pcOf q) q.fppDone ws j) j
-      | exact withErase_length (b := 1) (by omega) q.fppLive ws _ (fun j => by simp [rewindActs]) j
+      | exact withErase_length (b := 2) (by omega) q.fppLive ws _
+          (fun j => rewindActs_length first q.fppLive q ws j) j
+      | exact withErase_length (b := 1) (by omega) q.fppLive ws (fun _ => [])
+          (fun j => by simp) j
       | exact withErase_length (b := 1) (by omega) q.fppLive ws _
           (fun j => copyActs_length q.fppLive q ws j) j
 
@@ -7389,7 +7413,8 @@ theorem physRule_acts_rewind {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : 
     (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind) :
-    (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none ws = withErase q.fppLive ws rewindActs := by
+    (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none ws
+      = withErase q.fppLive ws (rewindActs first q.fppLive q ws) := by
   show ruleActs entryQ first q ws = _
   unfold ruleActs
   rw [hm]
@@ -7437,9 +7462,16 @@ theorem physRule_rewind_fppReset {fppBound dpBound K : ℕ} (margin : ℕ) (cent
     by_cases hid : ∃ k : Fin 9, i = progSlotOf (!q.fppLive) k
     · obtain ⟨k, hk⟩ := hid
       subst hk
+      rw [show withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (rewindActs first q.fppLive q
+            (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+          (slotIndex (progSlotOf (!q.fppLive) k))
+          = eraseOf q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+              (slotIndex (progSlotOf (!q.fppLive) k)) from by
+        unfold withErase
+        rw [rewindActs_atFirst first q.fppLive q _ (by rw [hread]; exact hatMark), List.nil_append]]
       show PalPeg.CloseoutCoreEnc12.actList blankM _
-        (rewindActs (slotIndex (progSlotOf (!q.fppLive) k))
-          ++ eraseOf q.fppLive _ (slotIndex (progSlotOf (!q.fppLive) k))) = _
+        (eraseOf q.fppLive _ (slotIndex (progSlotOf (!q.fppLive) k))) = _
       rw [show eraseOf q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
           (slotIndex (progSlotOf (!q.fppLive) k)) = [] from by
         unfold eraseOf eraseAct
@@ -7450,7 +7482,8 @@ theorem physRule_rewind_fppReset {fppBound dpBound K : ℕ} (margin : ℕ) (cent
           (mapTape encProg (encTape PalPeg.GalilScaffoldTape.reset)) hK1 hKn]
         rfl]
       rfl
-    · rw [withErase_at_other q.fppLive _ _ i (fun k hk => hid ⟨k, hk⟩)]
+    · rw [withErase_at_other q.fppLive _ _ i (fun k hk => hid ⟨k, hk⟩),
+        rewindActs_atFirst first q.fppLive q _ (by rw [hread]; exact hatMark)]
       rfl
   rw [hq, hsame]
   exact rewind_fppReset margin centre place entry entryQ first w F delay x q T hbound hmode
