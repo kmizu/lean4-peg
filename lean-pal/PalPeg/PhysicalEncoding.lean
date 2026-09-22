@@ -6993,6 +6993,109 @@ theorem viewStep_of_headViewActs {fppBound dpBound K : ℕ} (hK : 2 ≤ K)
     hold (fun t => by
       rw [hslots t, headViewActs_encoded hK q v slot command viewTapes T hold t])
 
+/-- **the tapes of a view along the eleven steps of a slot.**  The view layer's own rule decides
+them: each step applies the actions it names, read off the view's own windows.  The steps past
+the eleventh stand still, so the function is total. -/
+noncomputable def viewRunTapes {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (v : Fin 4)
+    (qs : ℕ → QPhys fppBound dpBound)
+    (commands : ℕ → PalPeg.ConcreteLocalMachine.ViewCommand)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc) :
+    ℕ → Fin 12 → STape PalPeg.CloseoutCoreStep.Γc
+  | 0 => viewTapes
+  | step + 1 => fun t =>
+    if h : step < 11 then
+      PalPeg.CloseoutCoreEnc12.actList PalPeg.CloseoutCoreStep.blankc
+        (viewRunTapes hK v qs commands viewTapes step t)
+        (PalPeg.ConcreteLocalMachine.viewActs (Fin 2) hK ⟨step, h⟩ (commands step)
+          (viewControlOf (qs step) v)
+          (fun tape => PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K
+            (viewRunTapes hK v qs commands viewTapes step tape)) t)
+    else viewRunTapes hK v qs commands viewTapes step t
+
+/-- **the slots of a head hold the encoded tapes of that view at every step of the slot.**  The
+step `0` case is the hypothesis; each step after it follows because the rule names the view's own
+actions through the encoding, and a composite step of a component is the same composite step on
+the tape the machine keeps. -/
+theorem viewRunTapes_encoded {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (v : Fin 4)
+    (qs : ℕ → QPhys fppBound dpBound) (Ts : ℕ → Slot → STape Γm)
+    (commands : ℕ → PalPeg.ConcreteLocalMachine.ViewCommand)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hold : ∀ t, Ts 0 (headSlot v t) = mapTape encCell (viewTapes t))
+    (hsteps : ∀ (step : ℕ) (h : step < 11) (t : Fin 12),
+      Ts (step + 1) (headSlot v t)
+        = PalPeg.CloseoutCoreEnc12.actList blankM (Ts step (headSlot v t))
+            (headViewActs hK (qs step) v ⟨step, h⟩ (commands step)
+              (fun tape => PalPeg.Local.readWin blankM K (tapesOf (Ts step) tape)) t)) :
+    ∀ step, step ≤ 11 → ∀ t, Ts step (headSlot v t)
+      = mapTape encCell (viewRunTapes hK v qs commands viewTapes step t)
+  | 0, _, t => hold t
+  | step + 1, hle, t => by
+    have hstep : step < 11 := by omega
+    have hprevious := viewRunTapes_encoded hK v qs Ts commands viewTapes hold hsteps step
+      (by omega)
+    rw [hsteps step hstep t,
+      headViewActs_encoded hK (qs step) v ⟨step, hstep⟩ (commands step)
+        (viewRunTapes hK v qs commands viewTapes step) (Ts step) hprevious t,
+      hprevious t, ← mapTape_actList encCell (by rw [encCell]; rw [if_pos rfl])]
+    show _ = mapTape encCell (viewRunTapes hK v qs commands viewTapes (step + 1) t)
+    rw [show viewRunTapes hK v qs commands viewTapes (step + 1) t
+        = PalPeg.CloseoutCoreEnc12.actList PalPeg.CloseoutCoreStep.blankc
+            (viewRunTapes hK v qs commands viewTapes step t)
+            (PalPeg.ConcreteLocalMachine.viewActs (Fin 2) hK ⟨step, hstep⟩ (commands step)
+              (viewControlOf (qs step) v)
+              (fun tape => PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K
+                (viewRunTapes hK v qs commands viewTapes step tape)) t)
+      from by rw [viewRunTapes]; dsimp only; rw [dif_pos hstep]]
+
+/-- **eleven steps of the machine on a head's slots are one command of that head's view.**  The
+control hypothesis says the finite control follows the view layer's own `viewNext` on each of the
+eleven steps, and the tape hypothesis says the rule names the view layer's own actions through
+the encoding.  Then `viewSlot_sound` carries the whole slot: the head's slots afterwards hold the
+encoded tapes of the view the command names, nothing is owed, and so slots compose. -/
+theorem viewSlot_of_headRun {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
+    (v : Fin 4) (qs : ℕ → QPhys fppBound dpBound) (Ts : ℕ → Slot → STape Γm)
+    (commands : ℕ → PalPeg.ConcreteLocalMachine.ViewCommand)
+    (view : PalPeg.LocalInputView.InputView) (hwf : PalPeg.LocalInputView.WF view)
+    (hcells : PalPeg.LocalViewCells.ViewCells view)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hold : ∀ t, Ts 0 (headSlot v t) = mapTape encCell (viewTapes t))
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view ((qs 0).gap v) ((qs 0).micro v)
+      viewTapes)
+    (howed : ((qs 0).micro v).2.2.2 = 0)
+    (hctl : ∀ (step : ℕ) (h : step < 11),
+      viewControlOf (qs (step + 1)) v
+        = PalPeg.ConcreteLocalMachine.viewNext (Fin 2) hK ⟨step, h⟩ (commands step)
+            (viewControlOf (qs step) v)
+            (fun tape => PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K
+              (viewRunTapes hK v qs commands viewTapes step tape)))
+    (hsteps : ∀ (step : ℕ) (h : step < 11) (t : Fin 12),
+      Ts (step + 1) (headSlot v t)
+        = PalPeg.CloseoutCoreEnc12.actList blankM (Ts step (headSlot v t))
+            (headViewActs hK (qs step) v ⟨step, h⟩ (commands step)
+              (fun tape => PalPeg.Local.readWin blankM K (tapesOf (Ts step) tape)) t)) :
+    PalPeg.ConcreteLocalMachine.ViewRep margin
+        (PalPeg.ConcreteLocalMachine.viewApply (commands 0) view) ((qs 11).gap v)
+        ((qs 11).micro v) (viewRunTapes hK v qs commands viewTapes 11) ∧
+      (((qs 11).micro v).2.2.2.val = 0 ∧
+        ∀ t, Ts 11 (headSlot v t)
+          = mapTape encCell (viewRunTapes hK v qs commands viewTapes 11 t)) := by
+  have hsound := PalPeg.ConcreteLocalMachine.viewSlot_sound (Fin 2) hK hmargin hwf hcells
+    commands (fun step => (viewControlOf (qs step) v,
+      viewRunTapes hK v qs commands viewTapes step))
+    (fun step hstep => ⟨hctl step hstep, fun t _ => by
+      refine ⟨?_, fun _ => ?_⟩ <;> dsimp only <;>
+        rw [show viewRunTapes hK v qs commands viewTapes (step + 1) t
+            = PalPeg.CloseoutCoreEnc12.actList PalPeg.CloseoutCoreStep.blankc
+                (viewRunTapes hK v qs commands viewTapes step t)
+                (PalPeg.ConcreteLocalMachine.viewActs (Fin 2) hK ⟨step, hstep⟩ (commands step)
+                  (viewControlOf (qs step) v)
+                  (fun tape => PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K
+                    (viewRunTapes hK v qs commands viewTapes step tape)) t)
+          from by rw [viewRunTapes]; dsimp only; rw [dif_pos hstep]]⟩)
+    (first := ((qs 0).micro v).1) hrep howed (((qs 11).micro v).1)
+  exact ⟨hsound.1, hsound.2,
+    viewRunTapes_encoded hK v qs Ts commands viewTapes hold hsteps 11 le_rfl⟩
+
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
 which is a bit the control carries; the symbol under its back head is a letter rather than the
