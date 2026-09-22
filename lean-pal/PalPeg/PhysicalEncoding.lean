@@ -1120,6 +1120,161 @@ theorem encTapes_rewindOne (margin : ℕ) (x : State GalilVM) (polarity newPolar
       (by intro k; cases fppLive <;> simp [progSlotOf])]
     exact henc.answer tape htape
 
+/-- **a tick that moves one input head and nothing else the encoding speaks about.**  The
+caller supplies the head's new view and the twelve tapes that represent it; everything else is
+carried across.  Stated for two states that agree everywhere but at that head. -/
+theorem encTapes_headStep (margin : ℕ) (x y : State GalilVM) (polarity : Fin 16 → Bool)
+    (gap newGap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
+    (fppLive dpLive : Bool) (tapes newTapes : Slot → STape Γm)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
+    (v : Fin 4) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hhead : headOf y v = some head)
+    (hother : ∀ v' : Fin 4, v' ≠ v → headOf y v' = headOf x v')
+    (hcounters : counterOf y = counterOf x) (hplaces : placeOf y = placeOf x)
+    (hfpp : ∀ i, y.vm.fpp.program.config.tapes i = x.vm.fpp.program.config.tapes i)
+    (hdp : ∀ i, y.vm.dp.config.tapes i = x.vm.dp.config.tapes i)
+    (hperiod : periodOf y = periodOf x) (hanswer : answerOf y = answerOf x)
+    (hgapOther : ∀ v' : Fin 4, v' ≠ v → newGap v' = gap v')
+    (view : PalPeg.LocalInputView.InputView)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (habsView : PalPeg.LocalArrival.absHead' view [] = head)
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view (newGap v) (micro v) viewTapes)
+    (hcells : PalPeg.LocalViewCells.ViewCells view)
+    (hslots : ∀ i, newTapes (headSlot v i) = mapTape encCell (viewTapes i))
+    (hkept : ∀ slot, (∀ i : Fin 12, slot ≠ headSlot v i) → newTapes slot = tapes slot)
+    (hmargin : ∀ i : Fin 12, margin ≤ PalPeg.Local.pos (newTapes (headSlot v i))) :
+    EncTapes margin y polarity newGap micro fppLive dpLive newTapes where
+  margins := by
+    intro slot
+    by_cases hh : ∃ i : Fin 12, slot = headSlot v i
+    · obtain ⟨i, hi⟩ := hh
+      rw [hi]
+      exact hmargin i
+    · rw [hkept slot (fun i hi => hh ⟨i, hi⟩)]
+      exact henc.margins slot
+  heads := by
+    intro v' head' hhead'
+    by_cases hv : v' = v
+    · subst hv
+      exact ⟨view, viewTapes, (Option.some.inj (hhead.symm.trans hhead')) ▸ habsView, hrep,
+        hslots, hcells⟩
+    · obtain ⟨view', viewTapes', habs', hrep', hslots', hcells'⟩ :=
+        henc.heads v' head' (by rw [← hother v' hv]; exact hhead')
+      refine ⟨view', viewTapes', habs', ?_, ?_, hcells'⟩
+      · rw [hgapOther v' hv]
+        exact hrep'
+      · intro i
+        rw [hkept _ (by
+          intro k hEq
+          have hpair : v' = v ∧ i = k := by simpa [headSlot] using hEq
+          exact hv hpair.1), hslots' i]
+  fpp := by
+    intro i
+    rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), henc.fpp i, hfpp i]
+  dp := by
+    intro i
+    rw [hkept _ (by intro k; cases dpLive <;> simp [dpSlotOf]), henc.dp i, hdp i]
+  idleShape := by
+    intro i
+    obtain ⟨raw, hraw⟩ := henc.idleShape i
+    exact ⟨raw, by rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hraw]⟩
+  counters := by
+    intro c value hvalue
+    obtain ⟨seg, habsOld, hslotOld⟩ :=
+      henc.counters c value (by rw [← congrFun hcounters c]; exact hvalue)
+    exact ⟨seg, habsOld, by rw [hkept _ (by intro k; simp), hslotOld]⟩
+  mirrors := by
+    intro m value hvalue
+    obtain ⟨seg, habsOld, hslotOld⟩ :=
+      henc.mirrors m value (by rw [← congrFun hcounters _]; exact hvalue)
+    exact ⟨seg, habsOld, by rw [hkept _ (by intro k; simp), hslotOld]⟩
+  places := by
+    intro i pl hpl
+    obtain ⟨st, jk, hsl, hln, hstk, hslotOld⟩ :=
+      henc.places i pl (by rw [← congrFun hplaces i]; exact hpl)
+    exact ⟨st, jk, hsl, hln, hstk, by rw [hkept _ (by intro k; simp), hslotOld]⟩
+  period := by
+    intro tape htape
+    rw [hkept _ (by intro k; simp)]
+    exact henc.period tape (by rw [← hperiod]; exact htape)
+  answer := by
+    intro tape htape
+    rw [hkept _ (by intro k; simp)]
+    exact henc.answer tape (by rw [← hanswer]; exact htape)
+
+/-- **a tick that changes one counter and nothing else the encoding speaks about.**  Stated for
+two states that agree everywhere but at that counter, so that a branch which moves several
+components can apply it once for each of them. -/
+theorem encTapes_counterStep (margin : ℕ) (x y : State GalilVM)
+    (polarity newPolarity : Fin 16 → Bool) (gap : Fin 4 → Bool)
+    (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (fppLive dpLive : Bool)
+    (tapes newTapes : Slot → STape Γm)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
+    (c : Fin 16) (value : PalPeg.GalilScaffoldCounter.Counter)
+    (hcounter : counterOf y c = some value)
+    (hother : ∀ c' : Fin 16, c' ≠ c → counterOf y c' = counterOf x c')
+    (hheads : headOf y = headOf x) (hplaces : placeOf y = placeOf x)
+    (hfpp : ∀ i, y.vm.fpp.program.config.tapes i = x.vm.fpp.program.config.tapes i)
+    (hdp : ∀ i, y.vm.dp.config.tapes i = x.vm.dp.config.tapes i)
+    (hperiod : periodOf y = periodOf x) (hanswer : answerOf y = answerOf x)
+    (hmirror : ∀ m : Fin 5, mirrorSource m ≠ c)
+    (hpolOther : ∀ c' : Fin 16, c' ≠ c → newPolarity c' = polarity c')
+    (segments : STape Seg) (habs : absCtr segments (newPolarity c) = value)
+    (hslot : newTapes (counterSlot c) = padLeft margin (mapTape encSeg segments))
+    (hkept : ∀ slot, slot ≠ counterSlot c → newTapes slot = tapes slot) :
+    EncTapes margin y newPolarity gap micro fppLive dpLive newTapes where
+  margins := by
+    intro slot
+    by_cases hc : slot = counterSlot c
+    · rw [hc, hslot, pos_padLeft]
+      omega
+    · rw [hkept slot hc]
+      exact henc.margins slot
+  heads := by
+    intro v head hhead
+    obtain ⟨view, viewTapes, habsView, hrep, hslots, hcells⟩ :=
+      henc.heads v head (by rw [← congrFun hheads v]; exact hhead)
+    exact ⟨view, viewTapes, habsView, hrep, fun i => by
+      rw [hkept _ (by simp), hslots i], hcells⟩
+  fpp := by
+    intro i
+    rw [hkept _ (by cases fppLive <;> simp [progSlotOf]), henc.fpp i, hfpp i]
+  dp := by
+    intro i
+    rw [hkept _ (by cases dpLive <;> simp [dpSlotOf]), henc.dp i, hdp i]
+  idleShape := by
+    intro i
+    obtain ⟨raw, hraw⟩ := henc.idleShape i
+    exact ⟨raw, by rw [hkept _ (by cases fppLive <;> simp [progSlotOf]), hraw]⟩
+  counters := by
+    intro c' value' hvalue'
+    by_cases hc : c' = c
+    · subst hc
+      exact ⟨segments, by rw [habs]; exact Option.some.inj (hcounter.symm.trans hvalue'), hslot⟩
+    · obtain ⟨seg, habsOld, hslotOld⟩ :=
+        henc.counters c' value' (by rw [← hother c' hc]; exact hvalue')
+      exact ⟨seg, by rw [hpolOther c' hc]; exact habsOld, by
+        rw [hkept _ (fun h => hc (by simpa using h)), hslotOld]⟩
+  mirrors := by
+    intro m value' hvalue'
+    obtain ⟨seg, habsOld, hslotOld⟩ :=
+      henc.mirrors m value' (by rw [← hother _ (hmirror m)]; exact hvalue')
+    exact ⟨seg, by rw [hpolOther _ (hmirror m)]; exact habsOld, by
+      rw [hkept _ (fun h => (hmirror m) (by simpa using h)), hslotOld]⟩
+  places := by
+    intro i pl hpl
+    obtain ⟨st, jk, hsl, hln, hstk, hslotOld⟩ :=
+      henc.places i pl (by rw [← congrFun hplaces i]; exact hpl)
+    exact ⟨st, jk, hsl, hln, hstk, by rw [hkept _ (by simp), hslotOld]⟩
+  period := by
+    intro tape htape
+    rw [hkept _ (by simp)]
+    exact henc.period tape (by rw [← hperiod]; exact htape)
+  answer := by
+    intro tape htape
+    rw [hkept _ (by simp)]
+    exact henc.answer tape (by rw [← hanswer]; exact htape)
+
 /-- **the case of a tick that moves one tape of the preparation program**, which is what the
 walks do.  The other eight keep what they had, so the whole machine's tapes are known. -/
 theorem encTapes_fppStep (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Bool)
