@@ -67,11 +67,15 @@ def encSeg (s : Seg) : Γm :=
   if s = PalPeg.LocalCounter.blank then blankM else .inr (.inr (.inr (.inr s)))
 
 abbrev Slot : Type :=
-  (Fin 4 × Fin 12) ⊕ Fin 9 ⊕ Fin 12 ⊕ Unit ⊕ Unit ⊕ Fin 3 ⊕ Fin 16 ⊕ Fin 5 ⊕ Fin 9 ⊕ Fin 12
+  (Fin 4 × Fin 12) ⊕ Fin 9 ⊕ Fin 12 ⊕ Unit ⊕ Unit ⊕ Fin 3 ⊕ Fin 16 ⊕ Fin 6 ⊕ Fin 9 ⊕ Fin 12
 
 /-- the number of tapes the machine keeps: the four views, **both halves** of each of the two
-program machines, the two mirrors, the three places, the counter bank and the answer. -/
-abbrev tapeCountM : ℕ := 116
+program machines, the mirrors, the three places, the counter bank and the answer.
+
+There is one mirror per alias the controller performs.  A mirror is a second tape carrying its
+source's value, kept in step with it, so that an alias is a change of which tape plays which part
+and not a walk along a unary tape. -/
+abbrev tapeCountM : ℕ := 117
 
 /-- the slot of the `i`-th tape of the preparation program's live half, and of its idle half.
 The two halves are what makes a wipe of the whole machine a flip of one bit rather than nine
@@ -731,16 +735,16 @@ theorem counterSlot_ne_placeSlot (c : Fin 16) (p : Fin 3) : counterSlot c ≠ pl
   simp
 
 /-- the slot of the machine's `m`-th mirror of a counter. -/
-abbrev mirrorSlot (m : Fin 5) : Slot := .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl m)))))))
+abbrev mirrorSlot (m : Fin 6) : Slot := .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl m)))))))
 
-theorem progSlot_ne_mirrorSlot (live : Bool) (i : Fin 9) (m : Fin 5) :
+theorem progSlot_ne_mirrorSlot (live : Bool) (i : Fin 9) (m : Fin 6) :
     progSlot live i ≠ mirrorSlot m := by
   cases live <;> simp [progSlotOf]
 
-theorem counterSlot_ne_mirrorSlot (c : Fin 16) (m : Fin 5) : counterSlot c ≠ mirrorSlot m := by
+theorem counterSlot_ne_mirrorSlot (c : Fin 16) (m : Fin 6) : counterSlot c ≠ mirrorSlot m := by
   simp
 
-theorem headSlot_ne_mirrorSlot (v : Fin 4) (t : Fin 12) (m : Fin 5) :
+theorem headSlot_ne_mirrorSlot (v : Fin 4) (t : Fin 12) (m : Fin 6) :
     headSlot v t ≠ mirrorSlot m := by
   simp
 
@@ -768,12 +772,13 @@ theorem counterSlot_ne_headSlot (c : Fin 16) (v : Fin 4) (t : Fin 12) :
 enters with.  Handing one over is a move of the finite control and costs no action
 (`LocalMirror.take`), and the opposite polarity bit hands over the negated copy
 (`LocalMirror.negate_via_pol`). -/
-def mirrorSource : Fin 5 → Fin 16
+def mirrorSource : Fin 6 → Fin 16
   | 0 => 2
   | 1 => 2
   | 2 => 2
   | 3 => 5
-  | _ => 6
+  | 4 => 6
+  | _ => 10
 
 /-! ### what the tapes hold -/
 
@@ -873,7 +878,7 @@ structure EncTapes (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Boo
         PalPeg.ConcreteLocalMachine.StackTape stackTape
           (place.letters.map (fun letter => some letter) ++ junk) ∧
         tapes (.inr (.inr (.inr (.inr (.inr (.inl i)))))) = padLeft margin (mapTape encCell stackTape)
-  mirrors : ∀ (m : Fin 5) value, counterOf x (mirrorSource m) = some value →
+  mirrors : ∀ (m : Fin 6) value, counterOf x (mirrorSource m) = some value →
     ∃ segments : STape Seg, absCtr segments (polarity (mirrorSource m)) = value ∧
       tapes (.inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl m)))))))) = padLeft margin (mapTape encSeg segments)
   period : ∀ tape, periodOf x = some tape →
@@ -1411,11 +1416,11 @@ theorem encTapes_counterStep (margin : ℕ) (x y : State GalilVM)
     (hpolOther : ∀ c' : Fin 16, c' ≠ c → newPolarity c' = polarity c')
     (segments : STape Seg) (habs : absCtr segments (newPolarity c) = value)
     (hslot : newTapes (counterSlot c) = padLeft margin (mapTape encSeg segments))
-    (hmirrorSlot : ∀ m : Fin 5, mirrorSource m = c → ∃ seg : STape Seg,
+    (hmirrorSlot : ∀ m : Fin 6, mirrorSource m = c → ∃ seg : STape Seg,
       absCtr seg (newPolarity c) = value
         ∧ newTapes (mirrorSlot m) = padLeft margin (mapTape encSeg seg))
     (hkept : ∀ slot, slot ≠ counterSlot c →
-      (∀ m : Fin 5, mirrorSource m = c → slot ≠ mirrorSlot m) →
+      (∀ m : Fin 6, mirrorSource m = c → slot ≠ mirrorSlot m) →
       newTapes slot = tapes slot) :
     EncTapes margin y newPolarity gap micro fppLive dpLive newTapes where
   margins := by
@@ -1423,7 +1428,7 @@ theorem encTapes_counterStep (margin : ℕ) (x y : State GalilVM)
     by_cases hc : slot = counterSlot c
     · rw [hc, hslot, pos_padLeft]
       omega
-    · by_cases hm : ∃ m : Fin 5, mirrorSource m = c ∧ slot = mirrorSlot m
+    · by_cases hm : ∃ m : Fin 6, mirrorSource m = c ∧ slot = mirrorSlot m
       · obtain ⟨m, hsrc, hmm⟩ := hm
         obtain ⟨seg, -, hseg⟩ := hmirrorSlot m hsrc
         rw [hmm, hseg, pos_padLeft]
@@ -1526,7 +1531,7 @@ theorem encTapes_rewindPair (margin : ℕ) (x : State GalilVM) (polarity newPola
     (segRad : STape Seg)
     (hradius : absCtr segRad (newPolarity 2) = PalPeg.GalilScaffoldCounter.inc x.vm.radius)
     (hcounterRad : newTapes (counterSlot 2) = padLeft margin (mapTape encSeg segRad))
-    (hmirrorRad : ∀ m : Fin 5, mirrorSource m = 2 → ∃ seg : STape Seg,
+    (hmirrorRad : ∀ m : Fin 6, mirrorSource m = 2 → ∃ seg : STape Seg,
       absCtr seg (newPolarity 2) = PalPeg.GalilScaffoldCounter.inc x.vm.radius
         ∧ newTapes (mirrorSlot m) = padLeft margin (mapTape encSeg seg))
     (hprog : newTapes (progSlotOf fppLive 8)
@@ -1535,7 +1540,7 @@ theorem encTapes_rewindPair (margin : ℕ) (x : State GalilVM) (polarity newPola
     (hprogOther : ∀ j : Fin 9, j ≠ 8 →
       newTapes (progSlotOf fppLive j) = tapes (progSlotOf fppLive j))
     (hkept : ∀ slot, (∀ j : Fin 9, slot ≠ progSlotOf fppLive j) → slot ≠ counterSlot 3 →
-      slot ≠ counterSlot 2 → (∀ m : Fin 5, mirrorSource m = 2 → slot ≠ mirrorSlot m) →
+      slot ≠ counterSlot 2 → (∀ m : Fin 6, mirrorSource m = 2 → slot ≠ mirrorSlot m) →
       (∀ i : Fin 12, slot ≠ headSlot 0 i) → (∀ i : Fin 12, slot ≠ headSlot 1 i) →
       (∀ k : Fin 9, slot ≠ progSlotOf (!fppLive) k) → newTapes slot = tapes slot)
     (hmarginLeft : ∀ i : Fin 12, margin ≤ PalPeg.Local.pos (newTapes (headSlot 0 i)))
@@ -1551,7 +1556,7 @@ theorem encTapes_rewindPair (margin : ℕ) (x : State GalilVM) (polarity newPola
     polarity (fun c => if c = 2 then newPolarity 2 else polarity c) gap micro fppLive dpLive
     tapes
     (fun slot => if slot = counterSlot 2
-        ∨ (∃ m : Fin 5, mirrorSource m = 2 ∧ slot = mirrorSlot m) then newTapes slot
+        ∨ (∃ m : Fin 6, mirrorSource m = 2 ∧ slot = mirrorSlot m) then newTapes slot
       else tapes slot)
     henc 2 (PalPeg.GalilScaffoldCounter.inc x.vm.radius) rfl
     (fun c' hc' => by fin_cases c' <;> first | exact absurd rfl hc' | rfl)
@@ -1575,11 +1580,11 @@ theorem encTapes_rewindPair (margin : ℕ) (x : State GalilVM) (polarity newPola
     (fun c => if c = 2 then newPolarity 2 else polarity c) gap
     (fun v => if v = 1 then newGap 1 else gap v) micro fppLive dpLive
     (fun slot => if slot = counterSlot 2
-        ∨ (∃ m : Fin 5, mirrorSource m = 2 ∧ slot = mirrorSlot m) then newTapes slot
+        ∨ (∃ m : Fin 6, mirrorSource m = 2 ∧ slot = mirrorSlot m) then newTapes slot
       else tapes slot)
     (fun slot => if (∃ i : Fin 12, slot = headSlot 1 i) then newTapes slot
       else if slot = counterSlot 2
-          ∨ (∃ m : Fin 5, mirrorSource m = 2 ∧ slot = mirrorSlot m) then newTapes slot
+          ∨ (∃ m : Fin 6, mirrorSource m = 2 ∧ slot = mirrorSlot m) then newTapes slot
         else tapes slot)
     hradStep 1 (PalPeg.GalilScaffoldInputHead.left x.vm.center) rfl
     (fun v' hv' => by fin_cases v' <;> first | exact absurd rfl hv' | rfl)
@@ -1595,7 +1600,7 @@ theorem encTapes_rewindPair (margin : ℕ) (x : State GalilVM) (polarity newPola
     (fun v => if v = 1 then newGap 1 else gap v) newGap micro fppLive dpLive
     (fun slot => if (∃ i : Fin 12, slot = headSlot 1 i) then newTapes slot
       else if slot = counterSlot 2
-          ∨ (∃ m : Fin 5, mirrorSource m = 2 ∧ slot = mirrorSlot m) then newTapes slot
+          ∨ (∃ m : Fin 6, mirrorSource m = 2 ∧ slot = mirrorSlot m) then newTapes slot
         else tapes slot)
     newTapes hcentreStep ctl
     ⟨viewLeft, viewTapesLeft, habsLeft, hrepLeft, hslotsLeft, hcellsLeft, hwfLeft⟩
@@ -1626,7 +1631,7 @@ theorem encTapes_rewindPair (margin : ℕ) (x : State GalilVM) (polarity newPola
       · rw [if_pos hh1]
       · rw [if_neg hh1]
         by_cases hrad : slot = counterSlot 2
-            ∨ (∃ m : Fin 5, mirrorSource m = 2 ∧ slot = mirrorSlot m)
+            ∨ (∃ m : Fin 6, mirrorSource m = 2 ∧ slot = mirrorSlot m)
         · rw [if_pos hrad]
         · rw [if_neg hrad]
           refine hkept slot hprogSlot hc3 (fun h => hrad (Or.inl h))
@@ -4970,7 +4975,7 @@ noncomputable def rewindPairActs {fppBound dpBound K : ℕ} (live : Bool)
       [some (centreRead ws (progSlot live 8), (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
     else if j = slotIndex (counterSlot 3) then [incAct q 3 ws]
     else if j = slotIndex (counterSlot 2) then [incAct q 2 ws]
-    else if ∃ m : Fin 5, mirrorSource m = 2 ∧ j = slotIndex (mirrorSlot m) then [incAct q 2 ws]
+    else if ∃ m : Fin 6, mirrorSource m = 2 ∧ j = slotIndex (mirrorSlot m) then [incAct q 2 ws]
     else if j = slotIndex (headSlot 0 PalPeg.ConcreteLocalMachine.backTape) then
       headStepActs q 0 ws PalPeg.ConcreteLocalMachine.backTape
     else if j = slotIndex (headSlot 0 PalPeg.ConcreteLocalMachine.nearTape) then
@@ -5004,7 +5009,7 @@ theorem rewindPairActs_counterRad {fppBound dpBound K : ℕ} (live : Bool)
 
 theorem rewindPairActs_mirror {fppBound dpBound K : ℕ} (live : Bool)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (m : Fin 5) (hsrc : mirrorSource m = 2) :
+    (m : Fin 6) (hsrc : mirrorSource m = 2) :
     rewindPairActs live q ws (slotIndex (mirrorSlot m)) = [incAct q 2 ws] := by
   unfold rewindPairActs
   rw [if_neg (fun h => (progSlot_ne_mirrorSlot live 8 m) (slotIndex.injective h).symm),
@@ -5071,7 +5076,7 @@ theorem rewindPairActs_off {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys f
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (slot : Slot)
     (hprog : ∀ j : Fin 9, slot ≠ progSlot live j) (hlen : slot ≠ counterSlot 3)
     (hrad : slot ≠ counterSlot 2)
-    (hmirror : ∀ m : Fin 5, mirrorSource m = 2 → slot ≠ mirrorSlot m)
+    (hmirror : ∀ m : Fin 6, mirrorSource m = 2 → slot ≠ mirrorSlot m)
     (hhead0 : ∀ t : Fin 12, slot ≠ headSlot 0 t) (hhead1 : ∀ t : Fin 12, slot ≠ headSlot 1 t) :
     rewindPairActs live q ws (slotIndex slot) = [] := by
   unfold rewindPairActs
@@ -5231,7 +5236,7 @@ theorem rewind_pair {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM �
     (segRad : STape Seg)
     (hradius : absCtr segRad (newPolarity 2) = PalPeg.GalilScaffoldCounter.inc x.vm.radius)
     (hcounterRad : newTapes (counterSlot 2) = padLeft margin (mapTape encSeg segRad))
-    (hmirrorRad : ∀ m : Fin 5, mirrorSource m = 2 → ∃ seg : STape Seg,
+    (hmirrorRad : ∀ m : Fin 6, mirrorSource m = 2 → ∃ seg : STape Seg,
       absCtr seg (newPolarity 2) = PalPeg.GalilScaffoldCounter.inc x.vm.radius
         ∧ newTapes (mirrorSlot m) = padLeft margin (mapTape encSeg seg))
     (hprog : newTapes (progSlotOf q.fppLive 8)
@@ -5240,7 +5245,7 @@ theorem rewind_pair {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM �
     (hprogOther : ∀ j : Fin 9, j ≠ 8 →
       newTapes (progSlotOf q.fppLive j) = tapes (progSlotOf q.fppLive j))
     (hkept : ∀ slot, (∀ j : Fin 9, slot ≠ progSlotOf q.fppLive j) → slot ≠ counterSlot 3 →
-      slot ≠ counterSlot 2 → (∀ m : Fin 5, mirrorSource m = 2 → slot ≠ mirrorSlot m) →
+      slot ≠ counterSlot 2 → (∀ m : Fin 6, mirrorSource m = 2 → slot ≠ mirrorSlot m) →
       (∀ i : Fin 12, slot ≠ headSlot 0 i) → (∀ i : Fin 12, slot ≠ headSlot 1 i) →
       (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) → newTapes slot = tapes slot)
     (hmarginLeft : ∀ i : Fin 12, margin ≤ PalPeg.Local.pos (newTapes (headSlot 0 i)))
