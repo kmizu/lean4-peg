@@ -4171,6 +4171,31 @@ theorem rewind_one {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM →
       tapes newTapes henc.2 {x.ctl with pair := true} hheads hgapOther hpolarity segments hlength
       hcounterTape hprog hprogOther hkept hmarginHead hidleShape⟩
 
+/-- **a program tape that steps left, from the action the rule names.**  The rule writes back
+the symbol under the head and steps left; the head is not on the floor, so what comes out is the
+padded encoding of the tape one cell left. -/
+theorem progSlot_after_moveLeft {margin K : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {T newTapes : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive T) (hK : K ≤ margin)
+    (i : Fin 9) (hfloor : (x.vm.fpp.program.config.tapes i).left ≠ [])
+    (hmoved : newTapes (progSlotOf fppLive i)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (T (progSlotOf fppLive i))
+          [some (centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+              (progSlot fppLive i), (.left : PalPeg.CloseoutCoreEnc12.MoveC))]) :
+    newTapes (progSlotOf fppLive i)
+      = padLeft margin (mapTape encProg (encTape
+          (PalPeg.GalilScaffoldTape.moveLeft (x.vm.fpp.program.config.tapes i)))) := by
+  have hslot : T (progSlotOf fppLive i)
+      = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i))) := henc.fpp i
+  have hcentre : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (progSlot fppLive i) = encProg (x.vm.fpp.program.config.tapes i).focus := by
+    rw [centreRead_of_margin T (progSlot fppLive i) (le_trans hK (henc.margins _)), hslot]
+    exact focus_padded margin (x.vm.fpp.program.config.tapes i)
+  rw [hmoved, hcentre, hslot,
+    padded_moveLeft margin (x.vm.fpp.program.config.tapes i) hfloor]
+  rfl
+
 /-- **the branch the shift and copy modes take, as a reading of the window.**  The rule cannot
 ask the abstraction anything; it computes this bit from three cells of the window and the sign
 bit of the shift counter, and `remainsTest_eq` says the bit it computes is the test the tick
@@ -5455,6 +5480,57 @@ theorem centreRead_backSlot {K : ℕ} {tapes : Slot → STape Γm} (v : Fin 4)
     readWin_mapTape encCell (show encCell PalPeg.CloseoutCoreStep.blankc = blankM from by
       unfold encCell
       rw [if_pos rfl]), hcentre]
+
+/-- **the symbol under a head's back head says whether the head has anything behind it.**  A
+view holds the left sentinel and then letters, so the top of its back stack is the sentinel
+exactly when nothing is behind the head — which is the reading that tells the three cases of a
+head's step apart. -/
+theorem centreRead_head_ne_sentinel_iff {margin K : ℕ} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {x : State GalilVM} {tapes : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes) (hK : K ≤ margin)
+    (v : Fin 4) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hhead : headOf x v = some head) :
+    centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+        (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+        ≠ encCell (PalPeg.CloseoutCoreEnc.cellSym none)
+      ↔ head.head.left ≠ [] := by
+  obtain ⟨view, viewTapes, habs, hrep, hslots, hcells⟩ := henc.heads v head hhead
+  have hviewBack : view.back = head.head.left := by
+    have hb : (PalPeg.LocalArrival.absHead' view []).head.left = head.head.left := by rw [habs]
+    exact hb
+  obtain ⟨bottom, hbottomHeight, hstack⟩ := hrep.back
+  have hmarginStack : K ≤ (PalPeg.ConcreteLocalMachine.backStack view ++ bottom).length := by
+    have hlen : (PalPeg.ConcreteLocalMachine.backStack view ++ bottom).length
+        = view.back.length + 1 + bottom.length := by
+      show (view.focus :: view.back ++ bottom).length = _
+      simp only [List.length_append, List.length_cons]
+    omega
+  have hcentre : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+      (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+      = encCell (PalPeg.CloseoutCoreEnc.cellSym view.focus) := by
+    rw [centreRead_backSlot v viewTapes (PalPeg.ConcreteLocalMachine.backStack view ++ bottom)
+      (hslots PalPeg.ConcreteLocalMachine.backTape) hstack hmarginStack]
+    rfl
+  have hsentinel : (encCell (PalPeg.CloseoutCoreEnc.cellSym view.focus)
+      = encCell (PalPeg.CloseoutCoreEnc.cellSym none)) ↔ view.focus = none := by
+    cases hf : view.focus with
+    | none => simp
+    | some b =>
+      simp only [iff_false, reduceCtorEq, iff_false]
+      have hne : PalPeg.CloseoutCoreEnc.cellSym (some b) ≠ PalPeg.CloseoutCoreStep.blankc := by
+        simp [PalPeg.CloseoutCoreEnc.cellSym, PalPeg.CloseoutCoreStep.blankc,
+          PalPeg.GalilVMEncode.blank, PalPeg.GalilVMEncode.sOpt]
+      rw [show encCell (PalPeg.CloseoutCoreEnc.cellSym (some b))
+          = (.inr (.inl (PalPeg.CloseoutCoreEnc.cellSym (some b))) : Γm) from if_neg hne,
+        show encCell (PalPeg.CloseoutCoreEnc.cellSym none) = blankM from by decide]
+      simp [blankM]
+  rw [hcentre, ← hviewBack]
+  constructor
+  · intro hne hnil
+    exact hne (hsentinel.mpr ((PalPeg.LocalViewCells.back_nil_iff_focus_none hcells).mp hnil))
+  · intro hne hEq
+    exact hne ((PalPeg.LocalViewCells.back_nil_iff_focus_none hcells).mpr (hsentinel.mp hEq))
 
 /-- **a head that steps left for free, on the slots of the whole machine.**  Two of the three
 cases of a head's step move no tape: the head stands on a gap, or it stands on a letter with
