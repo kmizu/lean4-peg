@@ -6175,6 +6175,51 @@ theorem centreRead_backSlot {K : ℕ} {tapes : Slot → STape Γm} (v : Fin 4)
       unfold encCell
       rw [if_pos rfl]), hcentre]
 
+/-- **the symbol under a head's near head, on the slot the machine carries it on.**  The
+companion of `centreRead_backSlot` for the other stack. -/
+theorem centreRead_nearSlot {K : ℕ} {tapes : Slot → STape Γm} (v : Fin 4)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (stack : List (Option (Fin 2)))
+    (hslot : tapes (headSlot v PalPeg.ConcreteLocalMachine.nearTape)
+      = mapTape encCell (viewTapes PalPeg.ConcreteLocalMachine.nearTape))
+    (hstack : PalPeg.ConcreteLocalMachine.StackTape
+      (viewTapes PalPeg.ConcreteLocalMachine.nearTape) stack)
+    (hmargin : K ≤ stack.length) :
+    centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+        (headSlot v PalPeg.ConcreteLocalMachine.nearTape)
+      = encCell (PalPeg.CloseoutCoreEnc18.topSym stack) := by
+  have hcentre := hstack.centreSym_eq (K := K) hmargin
+  unfold PalPeg.ConcreteLocalMachine.centreSym at hcentre
+  have hidx : PalPeg.Local.idx K K = (⟨K, by omega⟩ : Fin (2 * K + 1)) := by
+    refine Fin.ext ?_
+    show min K (2 * K) = K
+    omega
+  rw [hidx] at hcentre
+  show PalPeg.Local.readWin blankM K
+    (tapesOf tapes (slotIndex (headSlot v PalPeg.ConcreteLocalMachine.nearTape)))
+    ⟨K, by omega⟩ = _
+  rw [tapesOf_apply, hslot,
+    readWin_mapTape encCell (show encCell PalPeg.CloseoutCoreStep.blankc = blankM from by
+      unfold encCell
+      rw [if_pos rfl]), hcentre]
+
+/-- **the top of a sealed stack of junk is not a letter.**  Which is what the seal is for: the
+machine can tell the cells it stored from the debris under them. -/
+theorem topSym_sealed (junk : List (Option (Fin 2)))
+    (hsealed : PalPeg.ConcreteLocalMachine.Sealed junk) :
+    PalPeg.CloseoutCoreEnc18.topSym junk = PalPeg.CloseoutCoreStep.blankc := by
+  cases hj : junk with
+  | nil => rfl
+  | cons c rest =>
+    show PalPeg.CloseoutCoreEnc.cellSym c = _
+    cases hc : c with
+    | none => rfl
+    | some a =>
+      exfalso
+      apply hsealed a
+      rw [hj, hc]
+      rfl
+
 /-- **the symbol under a head's back head says whether the head has anything behind it.**  A
 view holds the left sentinel and then letters, so the top of its back stack is the sentinel
 exactly when nothing is behind the head — which is the reading that tells the three cases of a
