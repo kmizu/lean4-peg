@@ -4905,6 +4905,46 @@ theorem rd_padded (n : ℕ) (t : PalPeg.GalilScaffoldTape.Tape) (p : ℕ) (hp : 
   show (T.left.map f).length = T.left.length
   simp
 
+/-- **a window on an encoded tape is the encoding of the window.**  Reading is by position and
+the encoding does not move anything, so the two commute. -/
+theorem readWin_mapTape {Γ₁ : Type} (f : Γ₁ → Γm) {blank₁ : Γ₁} (hblank : f blank₁ = blankM)
+    (K : ℕ) (T : STape Γ₁) (i : Fin (2 * K + 1)) :
+    PalPeg.Local.readWin blankM K (mapTape f T) i
+      = f (PalPeg.Local.readWin blank₁ K T i) := by
+  rw [PalPeg.Local.readWin_eq, PalPeg.Local.readWin_eq, pos_mapTape]
+  show (PalPeg.Local.toList (mapTape f T)).getD _ blankM
+    = f ((PalPeg.Local.toList T).getD _ blank₁)
+  rw [toList_mapTape, ← hblank, List.getD_map]
+
+/-- **the cell below a head, on the slot the machine carries it on.**  A head's view sits on the
+machine's tapes under `mapTape encCell`, and reading a window commutes with that, so the cell
+below the head of the back slot is the encoding of the cell below the top of the back stack. -/
+theorem belowRead_backSlot {K : ℕ} {tapes : Slot → STape Γm} (hK1 : 1 ≤ K) (v : Fin 4)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (stack : List (Option (Fin 2)))
+    (hslot : tapes (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+      = mapTape encCell (viewTapes PalPeg.ConcreteLocalMachine.backTape))
+    (hstack : PalPeg.ConcreteLocalMachine.StackTape
+      (viewTapes PalPeg.ConcreteLocalMachine.backTape) stack)
+    (hmargin : K ≤ stack.length) :
+    belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+        (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+      = encCell (PalPeg.CloseoutCoreEnc18.topSym stack.tail) := by
+  have hbelow := hstack.belowSym_eq (K := K) hK1 hmargin
+  unfold PalPeg.ConcreteLocalMachine.belowSym at hbelow
+  have hidx : PalPeg.Local.idx K (K - 1) = (⟨K - 1, by omega⟩ : Fin (2 * K + 1)) := by
+    refine Fin.ext ?_
+    show min (K - 1) (2 * K) = K - 1
+    omega
+  rw [hidx] at hbelow
+  show PalPeg.Local.readWin blankM K
+    (tapesOf tapes (slotIndex (headSlot v PalPeg.ConcreteLocalMachine.backTape)))
+    ⟨K - 1, by omega⟩ = _
+  rw [tapesOf_apply, hslot,
+    readWin_mapTape encCell (show encCell PalPeg.CloseoutCoreStep.blankc = blankM from by
+      unfold encCell
+      rw [if_pos rfl]), hbelow]
+
 /-- **the reconstructed tape is the component's tape, shifted.**  Cell `j` of the one is cell
 `pos - K + j` of the other, so long as the component's head stands at least `K` cells from its own
 left end — below that the window shows the padding instead, which is what the floor sentinel is
