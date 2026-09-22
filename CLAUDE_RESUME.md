@@ -1,3 +1,59 @@
+## n444 (2026-09-22): 残りの障害は分岐の本数ではない — `M-headCopy`
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+`hideal` に向けて 9 分岐（fpp running/done, markEnd forward/back, home step/fppStart/atFloor,
+choose back, copy one/end, rewind wipe/one/pair）を機械レベルで閉じ、shift 出口も証明した。
+残る `shift` one・`choose` 選択側・`scan`・`init`・`replayStart` を書こうとして、
+**一次情報で構造的な障害を確認した。**
+
+### 何を確認したか
+
+正本 `scala/pal/src/main/scala/pal/ScaffoldGalil.scala` の 3 つの tick は
+**入力ヘッドを丸ごとコピーする**:
+
+* `stepInit` (`:243`): `right.right(); left.copyFrom(right); center.copyFrom(right)`
+* `stepChoose` (`:393`): `left.copyFrom(right); center.copyFrom(right)`
+* `stepReplayStart` (`:426`): `alias(replay, radius); right.copyFrom(center); left.copyFrom(center)`
+
+`copyFrom` は `scala/pal/src/main/scala/pal/ScaffoldCircuitInput.scala:77` で
+`focus` と **3 本のスタック全部**（leftStack / rightStack / incoming）をコピーする。
+`alias` はカウンタの別名付け（参照の差し替え）。
+
+Lean 側の `PalPeg.FrameFunction.initFun` / `chooseFun` / `replayStartFun` はこれを忠実に写している
+（`left := right s.right` 等）。
+
+### なぜこれが障害か
+
+`ShadowedLocalFinal.forwardTick_of_rule` の `hideal` は
+**抽象 tick 1 回 = `idealStep` 1 回**を要求する（読んで確認済み）。
+1 回の `idealStep` で各テープに書けるのは高々 K アクションで、K は窓の半径という定数。
+ヘッドの view は 12 本のテープで、うち 2 本は入力長に比例して伸びるスタックである
+（`ViewRep.back` / `.near`）。よって **1 ステップでヘッドを複製する方法を、今の符号化は持たない。**
+
+「不可能」と証明したわけではない。機械検査済みの反証はまだ無い。
+確認したのは「正本がコピーを要求し、符号化にそれを供給する手段が無い」ことだけ。
+
+### 考えられる出口（どれも未着手）
+
+1. **不変量でコピーを恒等にする。** `stepInit` は boot 直後なので 3 ヘッドが一致しており、
+   コピーは「3 ヘッドがそれぞれ 1 歩進む」と同じになる（各ヘッド ≤ 3 アクション、計 ≤ 9）。
+   これは今の枠組みで書ける。`choose` 選択側と `replayStart` では、
+   コピー元と先が一致しているという不変量が必要で、まだ見つけていない。
+2. **役割 → スロットの写像を有限制御に持つ。** `fppLive` / `dpLive` が準備プログラムの
+   二重バッファでやっているのと同じ手。`alias(replay, radius)` はこれで消える。
+   ただしコピーは置換ではない（2 つの役割が同じスロットを指したあと別々に動く）ので、
+   ヘッドのコピーはこれだけでは消えない。
+3. **物理側を 1 tick 複数ステップにする。** `forwardTick_of_rule` の形を変えることになり、
+   その定理（上流・既証明）に手を入れる。
+4. **モデルを編集する。** 引き継ぎ書が禁じている（「モデルは編集せず」）。
+
+### 次の一手
+
+出口 1 を `init` について実行する（3 ヘッドが一致する不変量は boot から来る）。
+`choose` 選択側と `replayStart` については、まず
+「コピー元と先が一致している」不変量が scaffold 層にあるかを探す。
+無ければ `hideal` は現在の形では閉じられないので、出口 2・3 の設計を検討する。
 ## n398 — fpp 分岐が規則に載った（5 commit）
 
 全体 build 成功・標準公理のみ・無条件 PAL は未完。`HEAD 7190bfd`、**公理リスト変更なし**。
