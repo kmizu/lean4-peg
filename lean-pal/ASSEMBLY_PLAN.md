@@ -1,3 +1,44 @@
+## n531 (2026-09-22): chain の三つ組カウンタは複写やない、別名付けや
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+commit `dae6941` → `d601f71`。`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+消費 tick の行動表を作る途中で、`GalilScaffoldChainConsume.consume` の境界事象の行に
+当たった:
+
+```
+last     := if boundaryEvent then s.boundary else s.last
+boundary := if boundaryEvent then distance   else s.boundary
+distance := inc s.distance
+```
+
+`last := boundary` は単項テープの**複写**に見える。値に比例する時間がかかるから、
+実時間機械では 1 tick に収まらない。ここで止まって正本を読んだ:
+
+```scala
+// ScaffoldGalil の chain（ScaffoldChain.scala:143-146）
+distance.inc()
+if (boundaryEvent) {
+  alias(last, boundary)
+  alias(boundary, distance)
+}
+```
+
+`alias`（`ScaffoldSearch.scala:32`）は `target.pos.copyFrom(source.pos)` で、
+**テープ view の付け替え**。つまり正本はこれを O(1) の名前の付け替えとして書いている。
+
+**帰結（符号化の設計）**: `QPhys` は chain の三つ組（counter 13/14/15）の**役割の置換**を
+持たねばならず、`EncTapes.counters` はその置換を通してスロットを読む。今の
+`counterSlot c` は固定なので、`counterSlotOf alias c` に一般化する。置換は有限（`Fin 3`
+の巡回で足りる: `last ← boundary ← distance`）なので有限制御に入る。
+
+**これは「数を Q に入れない」規律の一例**でもある。三つの値そのものは入れられないが、
+どのテープがどの役を演じているかは入れられる。
+
+**まだ繋いでいない**: 置換の導入そのもの（`counterOf` の 13/14/15、`EncTapes.counters`、
+その producer 群）。counter 13 の `inc` は `counter_inc_at` がそのまま使える。
+
 ## n518 (2026-09-22): scan の行が命令表に入った — 判定を読まずにヘッドが決まる
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更
