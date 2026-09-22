@@ -5962,12 +5962,41 @@ theorem padded_resetSeg (n : ℕ) (segments : STape Seg) :
 `progTickFun_tapes` said the call changes at most one slot, by at most one action.  Here that
 action is named in the machine's own alphabet, and the encoding is shown to survive it. -/
 
+/-- **a counter is positive exactly when its sign bit is set and its frontier is a mark**, read
+off whichever tape carries it.  This is the bit a decrement branches on, and the bit it leaves
+behind as the counter's new sign. -/
+noncomputable def decSignAt {K : ℕ} (bit : Bool) (slot : Slot)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  bit && decide (belowRead ws slot = encSeg PalPeg.LocalCounter.mark)
+
+/-- **the action a decrement names, on whichever tape carries the counter.**  Pop while the value
+is positive, push otherwise — the mirror image of `incActAt`, and what `counter_dec_at` is stated
+for. -/
+noncomputable def decActAt {K : ℕ} (bit : Bool) (slot : Slot)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : PalPeg.CloseoutCoreEnc12.Act Γm :=
+  if decSignAt bit slot ws then some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))
+  else some (encSeg PalPeg.LocalCounter.mark, (.right : PalPeg.CloseoutCoreEnc12.MoveC))
+
+noncomputable def decAct {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound) (c : Fin 16)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : PalPeg.CloseoutCoreEnc12.Act Γm :=
+  decActAt (q.polarity c) (counterSlot c) ws
+
 /-- **the bit that says the work counter can be decremented without crossing zero.**  A counter
 tape holds the absolute value, so a decrement is a pop on the positive side and a push on the
 negative side — and on the positive side of zero it is a push that changes the sign. -/
 noncomputable def workPositive {K : ℕ} (polarity : Fin 16 → Bool)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
   polarity 9 && decide (belowRead ws (counterSlot 9) = encSeg PalPeg.LocalCounter.mark)
+
+/-- **the fallback copy's work counter comes down by that action.**  Said once, so that the
+chain's lag — which comes down the same way — does not have to say it again. -/
+theorem decAct_workCounter {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    decAct q 9 ws
+      = (if workPositive q.polarity ws then
+          some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))
+        else some (encSeg PalPeg.LocalCounter.mark,
+          (.right : PalPeg.CloseoutCoreEnc12.MoveC))) := rfl
 
 /-- **a counter whose value is not zero stands clear of the left edge.** -/
 theorem counter_left_ne_nil (segments : STape Seg) (h : PalPeg.LocalCounter.val segments ≠ 0) :
