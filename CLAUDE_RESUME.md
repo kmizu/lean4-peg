@@ -1,3 +1,44 @@
+## n532 (2026-09-22): 別名付けの正体はポインタ。テープでどう払うかを決める
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n531 で「正本は `alias` で O(1)」と書いた。その `alias` が何であるかを最後まで辿った。
+
+```scala
+// ScavmStructs.scala:139
+def copyFrom(other: StackView): Unit = { top = other.top }
+// ScavmStructs.scala:159
+final class CounterView(...) { val pos: StackView; val neg: StackView
+  def inc() = if (!neg.empty) neg.pop() else pos.push(None)
+  def reset() = { pos.top = None; neg.top = None } }
+```
+
+`StackView.top` は**共有スタックの節点へのポインタ**（`b.ptr(name + ".top")`、
+`tname`/`tslot` が節点を名指す）。つまり正本の counter は永続リストへのポインタで、
+`alias` は指し先の共有、`reset` は底への付け替え。どちらもポインタ操作だから O(1)。
+
+**テープにはポインタが無い。** だから「O(1) である」という正本の事実は、そのままでは
+実時間テープ機械の設計にならない。この 3 つが同じテープ上の 3 つのヘッドだとすると、
+`last ← boundary` はヘッドを `boundary − last` だけ歩かせることになり、O(1) ではない。
+
+**採らなかった道**:
+
+* **役割の置換だけで済ます** — 境界事象の直後は `boundary = distance` で、その後
+  `distance` だけが伸びる。同じヘッドに 2 つの役をさせると次の tick で壊れる。だから
+  置換だけでは足りない（n531 の見立ての誤りをここで訂正する）。
+* **差分で持つ**（`d1 = distance − boundary`, `d2 = boundary − last`）— 事象は
+  `d2 ← d1`, `d1 ← 0`。`d2 ← d1` は交換（有限制御の名前替え、O(1)）にできるが、
+  `d1 ← 0` が残る。単項テープの零化はヘッドを底まで歩かせる操作で O(1) ではない。
+
+**採る道**: 差分の 2 本に**可動原点**を持たせる。カウンタの値を「原点印からヘッドまで」
+で測り、`reset` は**今いる位置に新しい原点印を書く**（1 行動）。交換は有限制御の名前替え。
+どちらも O(1) で、置いてきた古い印はそのまま残す——引き継ぎ書の「junk をその場で消すな」
+と同じ規律。
+
+**まだ繋いでいない**: 可動原点のカウンタ（`absCtr` は原点をテープの底に固定している）。
+`EncTapes.counters` が `absCtr segments (polarity c)` で値を読む形を、原点印からの距離で
+読む形に一般化する必要がある。既存の 16 本のうち chain の 3 本だけがこれを要る。
+
 ## n531 (2026-09-22): chain の三つ組カウンタは複写やない、別名付けや
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
