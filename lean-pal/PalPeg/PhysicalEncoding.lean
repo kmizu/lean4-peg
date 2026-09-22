@@ -668,6 +668,9 @@ def answerOf (x : State GalilVM) : Option PalPeg.GalilScaffoldTape.Tape :=
   | .copy answer _ _ _ _ _ _ => some answer
   | _ => none
 
+/-- the slot of the preparation program's `i`-th tape. -/
+abbrev progSlot (live : Bool) (i : Fin 9) : Slot := progSlotOf live i
+
 /-- the slot of the `i`-th tape of the `v`-th input head's view. -/
 abbrev headSlot (v : Fin 4) (i : Fin 12) : Slot := .inl (v, i)
 
@@ -676,6 +679,25 @@ abbrev placeSlot (i : Fin 3) : Slot := .inr (.inr (.inr (.inr (.inr (.inl i)))))
 
 /-- the slot of the machine's `c`-th counter. -/
 abbrev counterSlot (c : Fin 16) : Slot := .inr (.inr (.inr (.inr (.inr (.inr (.inl c))))))
+
+theorem progSlot_ne_counterSlot (live : Bool) (i : Fin 9) (c : Fin 16) :
+    progSlot live i ≠ counterSlot c := by
+  cases live <;> simp [progSlotOf]
+
+theorem progSlot_ne_placeSlot (live : Bool) (i : Fin 9) (p : Fin 3) :
+    progSlot live i ≠ placeSlot p := by
+  cases live <;> simp [progSlotOf]
+
+theorem counterSlot_ne_placeSlot (c : Fin 16) (p : Fin 3) : counterSlot c ≠ placeSlot p := by
+  simp
+
+theorem progSlot_ne_headSlot (live : Bool) (i : Fin 9) (v : Fin 4) (t : Fin 12) :
+    progSlot live i ≠ headSlot v t := by
+  cases live <;> simp [progSlotOf]
+
+theorem counterSlot_ne_headSlot (c : Fin 16) (v : Fin 4) (t : Fin 12) :
+    counterSlot c ≠ headSlot v t := by
+  simp
 
 /-- **which counter each spare copy is kept in step with.**  Three of `radius`, for the
 `lag` and `margin` a chain is born with and for the negated `debt` a restart starts from; one of
@@ -1298,6 +1320,139 @@ theorem encTapes_counterStep (margin : ℕ) (x y : State GalilVM)
     intro tape htape
     rw [hkept _ (by simp) (fun m _ => by simp)]
     exact henc.answer tape (by rw [← hanswer]; exact htape)
+
+/-- **the paired step of the rewind, on the tapes.**  It is the single step with the centre head
+and the radius added, so it is proved by adding them: the radius first, with its three mirrors,
+then the centre head, then the single step's own transport on top. -/
+theorem encTapes_rewindPair (margin : ℕ) (x : State GalilVM) (polarity newPolarity : Fin 16 → Bool)
+    (gap newGap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
+    (fppLive dpLive : Bool) (tapes newTapes : Slot → STape Γm)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
+    (ctl : PalPeg.GalilScaffoldController.Control)
+    (viewLeft : PalPeg.LocalInputView.InputView)
+    (viewTapesLeft : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (habsLeft : PalPeg.LocalArrival.absHead' viewLeft []
+      = PalPeg.GalilScaffoldInputHead.left x.vm.left)
+    (hrepLeft : PalPeg.ConcreteLocalMachine.ViewRep margin viewLeft (newGap 0) (micro 0)
+      viewTapesLeft)
+    (hslotsLeft : ∀ i, newTapes (headSlot 0 i) = mapTape encCell (viewTapesLeft i))
+    (hcellsLeft : PalPeg.LocalViewCells.ViewCells viewLeft)
+    (viewCentre : PalPeg.LocalInputView.InputView)
+    (viewTapesCentre : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (habsCentre : PalPeg.LocalArrival.absHead' viewCentre []
+      = PalPeg.GalilScaffoldInputHead.left x.vm.center)
+    (hrepCentre : PalPeg.ConcreteLocalMachine.ViewRep margin viewCentre (newGap 1) (micro 1)
+      viewTapesCentre)
+    (hslotsCentre : ∀ i, newTapes (headSlot 1 i) = mapTape encCell (viewTapesCentre i))
+    (hcellsCentre : PalPeg.LocalViewCells.ViewCells viewCentre)
+    (hgapOther : ∀ v : Fin 4, v ≠ 0 → v ≠ 1 → newGap v = gap v)
+    (hpolarity : ∀ c : Fin 16, c ≠ 3 → c ≠ 2 → newPolarity c = polarity c)
+    (segLen : STape Seg)
+    (hlength : absCtr segLen (newPolarity 3) = PalPeg.GalilScaffoldCounter.inc x.vm.length)
+    (hcounterLen : newTapes (counterSlot 3) = padLeft margin (mapTape encSeg segLen))
+    (segRad : STape Seg)
+    (hradius : absCtr segRad (newPolarity 2) = PalPeg.GalilScaffoldCounter.inc x.vm.radius)
+    (hcounterRad : newTapes (counterSlot 2) = padLeft margin (mapTape encSeg segRad))
+    (hmirrorRad : ∀ m : Fin 5, mirrorSource m = 2 →
+      newTapes (mirrorSlot m) = padLeft margin (mapTape encSeg segRad))
+    (hprog : newTapes (progSlotOf fppLive 8)
+      = padLeft margin (mapTape encProg (encTape
+          (PalPeg.GalilScaffoldTape.moveLeft (x.vm.fpp.program.config.tapes 8)))))
+    (hprogOther : ∀ j : Fin 9, j ≠ 8 →
+      newTapes (progSlotOf fppLive j) = tapes (progSlotOf fppLive j))
+    (hkept : ∀ slot, (∀ j : Fin 9, slot ≠ progSlotOf fppLive j) → slot ≠ counterSlot 3 →
+      slot ≠ counterSlot 2 → (∀ m : Fin 5, mirrorSource m = 2 → slot ≠ mirrorSlot m) →
+      (∀ i : Fin 12, slot ≠ headSlot 0 i) → (∀ i : Fin 12, slot ≠ headSlot 1 i) →
+      (∀ k : Fin 9, slot ≠ progSlotOf (!fppLive) k) → newTapes slot = tapes slot)
+    (hmarginLeft : ∀ i : Fin 12, margin ≤ PalPeg.Local.pos (newTapes (headSlot 0 i)))
+    (hmarginCentre : ∀ i : Fin 12, margin ≤ PalPeg.Local.pos (newTapes (headSlot 1 i)))
+    (hidleShape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
+      newTapes (progSlotOf (!fppLive) k) = padLeft margin (mapTape encProg raw)) :
+    EncTapes margin
+      ⟨ctl, {x.vm with fpp := PalPeg.GalilScaffoldChainInputSupply.markStep x.vm.fpp PalPeg.GalilScaffoldTape.moveLeft, left := PalPeg.GalilScaffoldInputHead.left x.vm.left, length := PalPeg.GalilScaffoldCounter.inc x.vm.length, center := PalPeg.GalilScaffoldInputHead.left x.vm.center, radius := PalPeg.GalilScaffoldCounter.inc x.vm.radius}⟩
+      newPolarity newGap micro fppLive dpLive newTapes := by
+  classical
+  have hradStep := encTapes_counterStep margin x
+    ⟨x.ctl, {x.vm with radius := PalPeg.GalilScaffoldCounter.inc x.vm.radius}⟩
+    polarity (fun c => if c = 2 then newPolarity 2 else polarity c) gap micro fppLive dpLive
+    tapes
+    (fun slot => if slot = counterSlot 2
+        ∨ (∃ m : Fin 5, mirrorSource m = 2 ∧ slot = mirrorSlot m) then newTapes slot
+      else tapes slot)
+    henc 2 (PalPeg.GalilScaffoldCounter.inc x.vm.radius) rfl
+    (fun c' hc' => by fin_cases c' <;> first | exact absurd rfl hc' | rfl)
+    rfl rfl (fun i => rfl) (fun i => rfl) rfl rfl
+    (fun c' hc' => if_neg hc') segRad (by rw [if_pos rfl]; exact hradius)
+    (by rw [if_pos (Or.inl rfl)]; exact hcounterRad)
+    (fun m hsrc => by rw [if_pos (Or.inr ⟨m, hsrc, rfl⟩)]; exact hmirrorRad m hsrc)
+    (fun slot hc hm => if_neg (fun h => by
+      rcases h with h | ⟨m, hsrc, hEq⟩
+      · exact hc h
+      · exact hm m hsrc hEq))
+  have hcentreStep := encTapes_headStep margin
+    ⟨x.ctl, {x.vm with radius := PalPeg.GalilScaffoldCounter.inc x.vm.radius}⟩
+    ⟨x.ctl, {x.vm with radius := PalPeg.GalilScaffoldCounter.inc x.vm.radius, center := PalPeg.GalilScaffoldInputHead.left x.vm.center}⟩
+    (fun c => if c = 2 then newPolarity 2 else polarity c) gap
+    (fun v => if v = 1 then newGap 1 else gap v) micro fppLive dpLive
+    (fun slot => if slot = counterSlot 2
+        ∨ (∃ m : Fin 5, mirrorSource m = 2 ∧ slot = mirrorSlot m) then newTapes slot
+      else tapes slot)
+    (fun slot => if (∃ i : Fin 12, slot = headSlot 1 i) then newTapes slot
+      else if slot = counterSlot 2
+          ∨ (∃ m : Fin 5, mirrorSource m = 2 ∧ slot = mirrorSlot m) then newTapes slot
+        else tapes slot)
+    hradStep 1 (PalPeg.GalilScaffoldInputHead.left x.vm.center) rfl
+    (fun v' hv' => by fin_cases v' <;> first | exact absurd rfl hv' | rfl)
+    rfl rfl (fun i => rfl) (fun i => rfl) rfl rfl
+    (fun v' hv' => if_neg hv') viewCentre viewTapesCentre habsCentre
+    (by rw [if_pos rfl]; exact hrepCentre) hcellsCentre
+    (fun i => by rw [if_pos ⟨i, rfl⟩]; exact hslotsCentre i)
+    (fun slot hi => if_neg (fun h => by obtain ⟨i, hEq⟩ := h; exact hi i hEq))
+    (fun i => by rw [if_pos ⟨i, rfl⟩]; exact hmarginCentre i)
+  exact encTapes_rewindOne margin
+    ⟨x.ctl, {x.vm with radius := PalPeg.GalilScaffoldCounter.inc x.vm.radius, center := PalPeg.GalilScaffoldInputHead.left x.vm.center}⟩
+    (fun c => if c = 2 then newPolarity 2 else polarity c) newPolarity
+    (fun v => if v = 1 then newGap 1 else gap v) newGap micro fppLive dpLive
+    (fun slot => if (∃ i : Fin 12, slot = headSlot 1 i) then newTapes slot
+      else if slot = counterSlot 2
+          ∨ (∃ m : Fin 5, mirrorSource m = 2 ∧ slot = mirrorSlot m) then newTapes slot
+        else tapes slot)
+    newTapes hcentreStep ctl
+    ⟨viewLeft, viewTapesLeft, habsLeft, hrepLeft, hslotsLeft, hcellsLeft⟩
+    (fun v hv => by
+      by_cases h1 : v = 1
+      · subst h1
+        rw [if_pos rfl]
+      · rw [if_neg h1]
+        exact hgapOther v hv h1)
+    (fun c hc => by
+      by_cases h2 : c = 2
+      · subst h2
+        rw [if_pos rfl]
+      · rw [if_neg h2]
+        exact hpolarity c hc h2)
+    segLen hlength hcounterLen hprog
+    (fun j hj => by
+      rw [if_neg (fun h => by
+          obtain ⟨i, hEq⟩ := h
+          exact (progSlot_ne_headSlot fppLive j 1 i) hEq),
+        if_neg (fun h => by
+          rcases h with h | ⟨m, -, hEq⟩
+          · exact (progSlot_ne_counterSlot fppLive j 2) h
+          · exact absurd hEq (by cases fppLive <;> simp [progSlotOf]))]
+      exact hprogOther j hj)
+    (fun slot hprogSlot hc3 hhead0 hidle => by
+      by_cases hh1 : ∃ i : Fin 12, slot = headSlot 1 i
+      · rw [if_pos hh1]
+      · rw [if_neg hh1]
+        by_cases hrad : slot = counterSlot 2
+            ∨ (∃ m : Fin 5, mirrorSource m = 2 ∧ slot = mirrorSlot m)
+        · rw [if_pos hrad]
+        · rw [if_neg hrad]
+          refine hkept slot hprogSlot hc3 (fun h => hrad (Or.inl h))
+            (fun m hsrc hEq => hrad (Or.inr ⟨m, hsrc, hEq⟩)) hhead0
+            (fun i hEq => hh1 ⟨i, hEq⟩) hidle)
+    hmarginLeft hidleShape
 
 /-- **the case of a tick that moves one tape of the preparation program**, which is what the
 walks do.  The other eight keep what they had, so the whole machine's tapes are known. -/
@@ -3427,9 +3582,6 @@ The machine decides this branch from one reading — the symbol under the head o
 — and performs one action on that same tape.  Both halves are readings of the window, so the
 rule is a function of what the machine can see. -/
 
-/-- the slot of the preparation program's `i`-th tape. -/
-abbrev progSlot (live : Bool) (i : Fin 9) : Slot := progSlotOf live i
-
 /-- the symbol under the head of a slot, as the rule reads it from the window. -/
 noncomputable def centreRead {K : ℕ} (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (i : Slot) : Γm :=
   ws (slotIndex i) ⟨K, by omega⟩
@@ -4211,25 +4363,6 @@ noncomputable def rewindOneActs {fppBound dpBound K : ℕ} (live : Bool) (q : QP
         some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape),
           (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
     else []
-
-theorem progSlot_ne_counterSlot (live : Bool) (i : Fin 9) (c : Fin 16) :
-    progSlot live i ≠ counterSlot c := by
-  cases live <;> simp [progSlotOf]
-
-theorem progSlot_ne_placeSlot (live : Bool) (i : Fin 9) (p : Fin 3) :
-    progSlot live i ≠ placeSlot p := by
-  cases live <;> simp [progSlotOf]
-
-theorem counterSlot_ne_placeSlot (c : Fin 16) (p : Fin 3) : counterSlot c ≠ placeSlot p := by
-  simp
-
-theorem progSlot_ne_headSlot (live : Bool) (i : Fin 9) (v : Fin 4) (t : Fin 12) :
-    progSlot live i ≠ headSlot v t := by
-  cases live <;> simp [progSlotOf]
-
-theorem counterSlot_ne_headSlot (c : Fin 16) (v : Fin 4) (t : Fin 12) :
-    counterSlot c ≠ headSlot v t := by
-  simp
 
 theorem rewindOneActs_prog {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
