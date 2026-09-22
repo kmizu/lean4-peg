@@ -9213,6 +9213,8 @@ noncomputable def ruleNext {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fi
   | PalPeg.GalilScaffoldController.Mode.rewind => rewindNext first hbound q ws
   | PalPeg.GalilScaffoldController.Mode.fpp => fppNext entryQ q ws
   | PalPeg.GalilScaffoldController.Mode.copy => copyNext q ws
+  | PalPeg.GalilScaffoldController.Mode.shift =>
+      if remainsTest q.polarity ws then q else shiftExitNext q
   | _ => q
 
 /-- **the two actions that mark a new block.**  `markNew` steps the marks tape right, writes the
@@ -10003,6 +10005,28 @@ theorem enc_step_pieces {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ : ℕ)
     rw [tapesOf_apply]
   rw [← htapes]
   exact h.2
+
+theorem physRule_nq_shift {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift)
+    (hdone : remainsTest q.polarity ws = false) :
+    (physRule (dpBound := dpBound) entryQ first hbound hK).nq q none ws = shiftExitNext q := by
+  show ruleNext entryQ first hbound q ws = _
+  unfold ruleNext
+  rw [hm]
+  dsimp only
+  rw [if_neg (by rw [hdone]; simp)]
+
+theorem physRule_acts_shift {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift) :
+    (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none ws
+      = withErase q.fppLive ws (fun _ => []) := by
+  show ruleActs entryQ first q ws = _
+  unfold ruleActs
+  rw [hm]
 
 theorem physRule_nq_markEnd {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
