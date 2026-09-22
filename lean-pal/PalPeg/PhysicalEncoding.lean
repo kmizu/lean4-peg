@@ -1788,6 +1788,37 @@ theorem encControl_copyOne {fppBound dpBound : ℕ} {w : List (Fin 2)} (x : Stat
       rw [Function.update_of_ne (by decide)]
       exact henc.placeGap 2 place hplace
 
+/-- **the paired step of the rewind leaves the control where the single step does.**  It moves
+the centre head as well, and counts that on the radius; neither is a field of the control, and
+the bit for the first letter is about the left head, so the two sides agree. -/
+theorem encControl_rewindPair {fppBound dpBound : ℕ} {w : List (Fin 2)} (x : State GalilVM)
+    (q : QPhys fppBound dpBound) (henc : EncControl w x q)
+    (c : CtlPhys) (a : PalPeg.GalilScaffoldController.Control) (hc : ctlAbs c = a)
+    (bit : Bool)
+    (hbit : bit = decide (PalPeg.GalilScaffoldChainInputSupply.position
+      (PalPeg.GalilScaffoldInputHead.left x.vm.left) = 1))
+    (newPolarity : Fin 16 → Bool) (newGap : Fin 4 → Bool) :
+    EncControl w ⟨a, {x.vm with fpp := PalPeg.GalilScaffoldChainInputSupply.markStep x.vm.fpp PalPeg.GalilScaffoldTape.moveLeft, left := PalPeg.GalilScaffoldInputHead.left x.vm.left, length := PalPeg.GalilScaffoldCounter.inc x.vm.length, center := PalPeg.GalilScaffoldInputHead.left x.vm.center, radius := PalPeg.GalilScaffoldCounter.inc x.vm.radius}⟩
+      {q with ctl := c, leftFirstBit := bit, polarity := newPolarity, gap := newGap} where
+  ctl := hc
+  chainTag := henc.chainTag
+  chainPhase := henc.chainPhase
+  chainForward := henc.chainForward
+  chainBroken := henc.chainBroken
+  fppMode := henc.fppMode
+  fppFinalStage := henc.fppFinalStage
+  fppPc := henc.fppPc
+  fppDone := henc.fppDone
+  dpPc := henc.dpPc
+  dpDone := henc.dpDone
+  searchMode := henc.searchMode
+  searchFinalStage := henc.searchFinalStage
+  searchQuarter := henc.searchQuarter
+  periodOnly := henc.periodOnly
+  placeGap := henc.placeGap
+  onLetter := henc.onLetter
+  leftFirst := hbit
+
 /-- **one tick of the rewind leaves all of the control but two bits where it was.**  The tick
 steps the marks tape left, steps the left input head left and counts the step; the controller's
 word changes by its own pair bit, and the only field of the control that follows the state is the
@@ -4264,6 +4295,13 @@ theorem rewindOneActs_length {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys
     (rewindOneActs live q ws j).length ≤ 2 := by
   unfold rewindOneActs
   split_ifs <;> simp
+
+/-- the tick function's own name for the paired step of the rewind. -/
+theorem frameFun_rewindPair (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (s : GalilVM) :
+    (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).rewindPair s
+      = {s with fpp := PalPeg.GalilScaffoldChainInputSupply.markStep s.fpp PalPeg.GalilScaffoldTape.moveLeft, left := PalPeg.GalilScaffoldInputHead.left s.left, length := PalPeg.GalilScaffoldCounter.inc s.length, center := PalPeg.GalilScaffoldInputHead.left s.center, radius := PalPeg.GalilScaffoldCounter.inc s.radius} := rfl
 
 /-- the tick function's own name for one step of the rewind. -/
 theorem frameFun_rewindOne (centre : GalilVM → Fin 3)
