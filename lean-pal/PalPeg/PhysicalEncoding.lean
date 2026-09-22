@@ -12937,6 +12937,117 @@ theorem headOf_three_of_watchConsume {y : State GalilVM}
   | true => rfl
   | false => rfl
 
+/-- **a match keeps the chain watching and hands its control one letter.**  The period tape's
+focus decides whether that letter closes a block, and that is the whole of what moves in the
+control word: the phase advances and the direction is reset on a boundary, and the broken bit
+stays down.
+
+The machine reads that focus as the centre cell of the period slot, so the row writes the same
+word the chain does. -/
+theorem scanConsumeNext_of_match {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (htest : watchVerdictTest q ws = PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm)
+    (hverdict : PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm = some true)
+    (htag : q.chainTag = ChainTag.watchers)
+    (htoken : decToken (centreRead ws periodSlot) = wm.machine.control.period.focus)
+    (hphase : q.chainPhase = wm.machine.control.phase)
+    (hforward : q.chainForward = wm.machine.control.forward)
+    (hbroken : q.chainBroken = wm.machine.control.broken)
+    (hlag : PalPeg.GalilScaffoldCounter.positive wm.lag = true) :
+    (scanConsumeNext q ws).chainTag
+        = chainTagOf (PalPeg.GalilScaffoldChainInputSupply.chainStepFun
+            (PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm))
+      ∧ chainConsumeOf (PalPeg.GalilScaffoldChainInputSupply.chainStepFun
+            (PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm))
+          = ((scanConsumeNext q ws).chainPhase, (scanConsumeNext q ws).chainForward,
+            (scanConsumeNext q ws).chainBroken) := by
+  have hsame : (match PalPeg.GalilScaffoldChainConsume.symbol wm.machine.control.period.focus with
+      | none => false
+      | some a => decide (PalPeg.GalilScaffoldInputHead.read
+          (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier) = some a)) = true := by
+    unfold PalPeg.GalilScaffoldChainInputSupply.watchVerdict at hverdict
+    cases hs : PalPeg.GalilScaffoldChainConsume.symbol wm.machine.control.period.focus with
+    | none => rw [hs] at hverdict; exact absurd hverdict (by simp)
+    | some a =>
+        rw [hs] at hverdict
+        exact Option.some.inj hverdict
+  have hstep : PalPeg.GalilScaffoldChainInputSupply.chainStepFun
+      (PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm)
+      = PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch
+          (PalPeg.GalilScaffoldChainWatch.caught wm) := by
+    simp only [PalPeg.GalilScaffoldChainInputSupply.chainStepFun]
+    rw [if_pos hlag, hverdict]
+  have hcontrol : (PalPeg.GalilScaffoldChainWatch.caught wm).machine.control
+      = PalPeg.GalilScaffoldChainConsume.consume wm.machine.control
+          (PalPeg.GalilScaffoldInputHead.read
+            (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier)) := rfl
+  have hnext : scanConsumeNext q ws
+      = { q with
+          chainPhase :=
+            if PalPeg.GalilScaffoldChainPeriod.isFirst wm.machine.control.period.focus
+                || PalPeg.GalilScaffoldChainConsume.isLast wm.machine.control.period.focus then
+              PalPeg.GalilScaffoldChainConsume.advancePhase q.chainPhase
+            else q.chainPhase,
+          chainForward :=
+            if PalPeg.GalilScaffoldChainPeriod.isFirst wm.machine.control.period.focus
+                || PalPeg.GalilScaffoldChainConsume.isLast wm.machine.control.period.focus then
+              PalPeg.GalilScaffoldChainPeriod.isFirst wm.machine.control.period.focus
+            else q.chainForward } := by
+    unfold scanConsumeNext
+    rw [htest, hverdict, htoken]
+  refine ⟨?_, ?_⟩
+  · rw [hnext, hstep, htag]
+    rfl
+  · rw [hnext, hstep]
+    show chainConsumeOf (PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch
+      (PalPeg.GalilScaffoldChainWatch.caught wm)) = _
+    simp only [chainConsumeOf]
+    rw [hcontrol]
+    cases hs : PalPeg.GalilScaffoldChainConsume.symbol wm.machine.control.period.focus with
+    | none =>
+        rw [hs] at hsame
+        exact absurd hsame (by simp)
+    | some a =>
+        rw [hs] at hsame
+        simp only [PalPeg.GalilScaffoldChainConsume.consume, hs]
+        rw [if_pos hsame, hphase, hforward, hbroken]
+
+/-- **a mismatch breaks the chain and leaves its control alone.**  The broken chain carries the
+control it had, on the letter the verifier has already moved to, so the only field of the control
+word that changes is the tag. -/
+theorem scanConsumeNext_of_mismatch {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (htest : watchVerdictTest q ws = PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm)
+    (hverdict : PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm = some false)
+    (hphase : q.chainPhase = wm.machine.control.phase)
+    (hforward : q.chainForward = wm.machine.control.forward)
+    (hbroken : q.chainBroken = wm.machine.control.broken)
+    (hlag : PalPeg.GalilScaffoldCounter.positive wm.lag = true) :
+    (scanConsumeNext q ws).chainTag
+        = chainTagOf (PalPeg.GalilScaffoldChainInputSupply.chainStepFun
+            (PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm))
+      ∧ chainConsumeOf (PalPeg.GalilScaffoldChainInputSupply.chainStepFun
+            (PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm))
+          = ((scanConsumeNext q ws).chainPhase, (scanConsumeNext q ws).chainForward,
+            (scanConsumeNext q ws).chainBroken) := by
+  have hstep : PalPeg.GalilScaffoldChainInputSupply.chainStepFun
+      (PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm)
+      = PalPeg.GalilScaffoldChainInputSupply.ChainVM.broken
+          ⟨⟨PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier, wm.machine.control⟩,
+            wm.lag, wm.margin⟩ := by
+    simp only [PalPeg.GalilScaffoldChainInputSupply.chainStepFun]
+    rw [if_pos hlag, hverdict]
+  have hnext : scanConsumeNext q ws = { q with chainTag := ChainTag.broken } := by
+    unfold scanConsumeNext
+    rw [htest, hverdict]
+  refine ⟨?_, ?_⟩
+  · rw [hnext, hstep]
+    rfl
+  · rw [hnext, hstep, hphase, hforward, hbroken]
+    rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
