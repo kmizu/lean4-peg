@@ -7689,6 +7689,51 @@ theorem wf_viewApply {v : PalPeg.LocalInputView.InputView} (hwf : PalPeg.LocalIn
   | stepRight => exact absurd hf (by simp [headOp])
   | stepLeft => exact absurd hf (by simp [headOp])
 
+/-- **the heads of the encoding after a tick.**  Everything the encoding asks about a head is
+put back together here, for one head, out of the two halves that are now proved: the machine's
+twelve steps carry out the command the control holds, and the command is the operation the
+abstract tick does to that head.
+
+The hypotheses are what a mode's branch has to say about that head and nothing else: what the
+head becomes, that the command names that operation, and — only for a step right — that the cell
+the head needs has arrived. -/
+theorem heads_afterTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
+    (base baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K) (v : Fin 4)
+    (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
+    (hslot0 : x.1.slot.val = 0)
+    (qs : ℕ → QPhys fppBound dpBound) (Ts : ℕ → Slot → STape Γm)
+    (hqs : ∀ step, qs step
+      = (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+          step).1)
+    (hTs : ∀ step slot, Ts step slot
+      = (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+          step).2 (slotIndex slot))
+    (view : PalPeg.LocalInputView.InputView) (hwf : PalPeg.LocalInputView.WF view)
+    (hcells : PalPeg.LocalViewCells.ViewCells view)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hold : ∀ t, Ts 0 (headSlot v t) = mapTape encCell (viewTapes t))
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view ((qs 0).gap v) ((qs 0).micro v)
+      viewTapes)
+    (howed : ((qs 0).micro v).2.2.2 = 0)
+    (head head' : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (habs : PalPeg.LocalArrival.absHead' view [] = head)
+    (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hf : headOp ((qs 1).commands v) = some f) (hhead' : head' = f head)
+    (hready : (qs 1).commands v = .moveRight →
+      view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    ∃ (view' : PalPeg.LocalInputView.InputView)
+        (viewTapes' : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+      PalPeg.LocalArrival.absHead' view' [] = head' ∧
+        PalPeg.ConcreteLocalMachine.ViewRep margin view' ((qs 12).gap v) ((qs 12).micro v)
+            viewTapes' ∧
+          (∀ i, Ts 12 (headSlot v i) = mapTape encCell (viewTapes' i)) ∧
+            PalPeg.LocalViewCells.ViewCells view' ∧ PalPeg.LocalInputView.WF view' := by
+  obtain ⟨hrep', howed', hslots'⟩ := headTick_of_tickRule hK hmargin base baseActs baseLen v x
+    input hslot0 qs Ts hqs hTs view hwf hcells viewTapes hold hrep howed
+  exact ⟨PalPeg.ConcreteLocalMachine.viewApply ((qs 1).commands v) view, _,
+    by rw [hhead', ← habs]; exact absHead'_viewApply hwf [] _ hready f hf,
+    hrep', hslots', viewCells_viewApply hwf _ hready hcells f hf, wf_viewApply hwf _ f hf⟩
+
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
 which is a bit the control carries; the symbol under its back head is a letter rather than the
