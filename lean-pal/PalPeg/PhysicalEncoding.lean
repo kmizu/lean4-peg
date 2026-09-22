@@ -667,6 +667,9 @@ def answerOf (x : State GalilVM) : Option PalPeg.GalilScaffoldTape.Tape :=
   | .copy answer _ _ _ _ _ _ => some answer
   | _ => none
 
+/-- the slot of the `i`-th tape of the `v`-th input head's view. -/
+abbrev headSlot (v : Fin 4) (i : Fin 12) : Slot := .inl (v, i)
+
 /-- the slot of the machine's `i`-th cursor. -/
 abbrev placeSlot (i : Fin 3) : Slot := .inr (.inr (.inr (.inr (.inr (.inl i)))))
 
@@ -962,6 +965,148 @@ theorem encTapes_copyOne (margin : ℕ) (x : State GalilVM) (polarity newPolarit
         rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp)
           (by simpa using fun h => hi1 h)
           (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  idleShape := hidleShape
+  period := by
+    intro tape htape
+    rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp) (by simp)
+      (by intro k; cases fppLive <;> simp [progSlotOf])]
+    exact henc.period tape htape
+  answer := by
+    intro tape htape
+    rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp) (by simp)
+      (by intro k; cases fppLive <;> simp [progSlotOf])]
+    exact henc.answer tape htape
+
+/-- **one tick of the rewind, on the tapes.**  Three components move: the marks tape of the
+preparation program, the left input head, and the counter of the length.  The head's new view is
+the caller's to supply — `headSlots_left` supplies it — and everything else the encoding speaks
+about is where it was. -/
+theorem encTapes_rewindOne (margin : ℕ) (x : State GalilVM) (polarity newPolarity : Fin 16 → Bool)
+    (gap newGap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
+    (fppLive dpLive : Bool) (tapes newTapes : Slot → STape Γm)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
+    (ctl : PalPeg.GalilScaffoldController.Control)
+    (hheads : ∃ (view : PalPeg.LocalInputView.InputView)
+        (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+      PalPeg.LocalArrival.absHead' view []
+          = PalPeg.GalilScaffoldInputHead.left x.vm.left ∧
+        PalPeg.ConcreteLocalMachine.ViewRep margin view (newGap 0) (micro 0) viewTapes ∧
+        (∀ i, newTapes (headSlot 0 i) = mapTape encCell (viewTapes i)) ∧
+          PalPeg.LocalViewCells.ViewCells view)
+    (hgapOther : ∀ v : Fin 4, v ≠ 0 → newGap v = gap v)
+    (hpolarity : ∀ c : Fin 16, c ≠ 3 → newPolarity c = polarity c)
+    (segments : STape Seg)
+    (hlength : absCtr segments (newPolarity 3)
+      = PalPeg.GalilScaffoldCounter.inc x.vm.length)
+    (hcounterTape : newTapes (counterSlot 3) = padLeft margin (mapTape encSeg segments))
+    (hprog : newTapes (progSlotOf fppLive 8)
+      = padLeft margin (mapTape encProg (encTape
+          (PalPeg.GalilScaffoldTape.moveLeft (x.vm.fpp.program.config.tapes 8)))))
+    (hprogOther : ∀ j : Fin 9, j ≠ 8 →
+      newTapes (progSlotOf fppLive j) = tapes (progSlotOf fppLive j))
+    (hkept : ∀ slot, (∀ j : Fin 9, slot ≠ progSlotOf fppLive j) → slot ≠ counterSlot 3 →
+      (∀ i : Fin 12, slot ≠ headSlot 0 i) →
+      (∀ k : Fin 9, slot ≠ progSlotOf (!fppLive) k) → newTapes slot = tapes slot)
+    (hmarginHead : ∀ i : Fin 12, margin ≤ PalPeg.Local.pos (newTapes (headSlot 0 i)))
+    (hidleShape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
+      newTapes (progSlotOf (!fppLive) k) = padLeft margin (mapTape encProg raw)) :
+    EncTapes margin
+      ⟨ctl, {x.vm with fpp := PalPeg.GalilScaffoldChainInputSupply.markStep x.vm.fpp PalPeg.GalilScaffoldTape.moveLeft, left := PalPeg.GalilScaffoldInputHead.left x.vm.left, length := PalPeg.GalilScaffoldCounter.inc x.vm.length}⟩
+      newPolarity newGap micro fppLive dpLive newTapes where
+  margins := by
+    intro slot
+    by_cases hs : ∃ j : Fin 9, slot = progSlotOf fppLive j
+    · obtain ⟨j, hj⟩ := hs
+      subst hj
+      by_cases hj8 : j = 8
+      · subst hj8
+        rw [hprog, pos_padLeft]
+        omega
+      · rw [hprogOther j hj8]
+        exact henc.margins _
+    · by_cases hidle : ∃ k : Fin 9, slot = progSlotOf (!fppLive) k
+      · obtain ⟨k, hk⟩ := hidle
+        obtain ⟨raw, hraw⟩ := hidleShape k
+        rw [hk, hraw, pos_padLeft]
+        omega
+      · by_cases hc : slot = counterSlot 3
+        · rw [hc, hcounterTape, pos_padLeft]
+          omega
+        · by_cases hh : ∃ i : Fin 12, slot = headSlot 0 i
+          · obtain ⟨i, hi⟩ := hh
+            rw [hi]
+            exact hmarginHead i
+          · rw [hkept slot (fun j hj => hs ⟨j, hj⟩) hc (fun i hi => hh ⟨i, hi⟩)
+              (fun k hk => hidle ⟨k, hk⟩)]
+            exact henc.margins slot
+  heads := by
+    intro v head hhead
+    by_cases hv0 : v = 0
+    · subst hv0
+      obtain ⟨view, viewTapes, habs, hrep, hslots, hcells⟩ := hheads
+      exact ⟨view, viewTapes, (Option.some.inj hhead) ▸ habs, hrep, hslots, hcells⟩
+    · have hold : headOf x v = some head := by
+        rw [← hhead]
+        fin_cases v <;> first | exact absurd rfl hv0 | rfl
+      obtain ⟨view, viewTapes, habs, hrep, hslots, hcells⟩ := henc.heads v head hold
+      refine ⟨view, viewTapes, habs, ?_, ?_, hcells⟩
+      · rw [hgapOther v hv0]
+        exact hrep
+      · intro i
+        rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp)
+          (by
+            intro k hEq
+            have hpair : v = 0 ∧ i = k := by simpa [headSlot] using hEq
+            exact hv0 hpair.1)
+          (by intro k; cases fppLive <;> simp [progSlotOf]), hslots i]
+  fpp := by
+    intro j
+    by_cases hj8 : j = 8
+    · subst hj8
+      rw [hprog]
+      rfl
+    · have hj : (PalPeg.GalilScaffoldChainInputSupply.markStep x.vm.fpp PalPeg.GalilScaffoldTape.moveLeft).program.config.tapes j
+          = x.vm.fpp.program.config.tapes j := by
+        show (PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp 8 PalPeg.GalilScaffoldTape.moveLeft).config.tapes j = _
+        rw [fppTape_tapes, Function.update_of_ne hj8]
+      rw [hprogOther j hj8, henc.fpp j]
+      dsimp only
+      rw [hj]
+  dp := by
+    intro j
+    rw [hkept _ (by intro j; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])
+      (by cases dpLive <;> simp [dpSlotOf]) (by intro i; cases dpLive <;> simp [dpSlotOf])
+      (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf])]
+    exact henc.dp j
+  counters := by
+    intro c value hvalue
+    by_cases hc3 : c = 3
+    · subst hc3
+      exact ⟨segments, by rw [hlength]; exact Option.some.inj hvalue, hcounterTape⟩
+    · have hold : counterOf x c = some value := by
+        rw [← hvalue]
+        fin_cases c <;> first | exact absurd rfl hc3 | rfl
+      obtain ⟨seg, habs, hslot⟩ := henc.counters c value hold
+      exact ⟨seg, by rw [hpolarity c hc3]; exact habs, by
+        rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf])
+          (by simpa using fun h => hc3 h) (by simp)
+          (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  mirrors := by
+    intro m value hvalue
+    have hne : mirrorSource m ≠ 3 := by fin_cases m <;> decide
+    have hold : counterOf x (mirrorSource m) = some value := by
+      rw [← hvalue]
+      fin_cases m <;> rfl
+    obtain ⟨seg, habs, hslot⟩ := henc.mirrors m value hold
+    exact ⟨seg, by rw [hpolarity _ hne]; exact habs, by
+      rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp) (by simp)
+        (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+  places := by
+    intro i pl hpl
+    obtain ⟨st, jk, hsl, hln, hstk, hslot⟩ := henc.places i pl hpl
+    exact ⟨st, jk, hsl, hln, hstk, by
+      rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp) (by simp)
+        (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
   idleShape := hidleShape
   period := by
     intro tape htape
@@ -1486,6 +1631,38 @@ theorem encControl_copyOne {fppBound dpBound : ℕ} {w : List (Fin 2)} (x : Stat
     · show Function.update q.placeGap 1 (!q.placeGap 1) 2 = place.gap
       rw [Function.update_of_ne (by decide)]
       exact henc.placeGap 2 place hplace
+
+/-- **one tick of the rewind leaves all of the control but two bits where it was.**  The tick
+steps the marks tape left, steps the left input head left and counts the step; the controller's
+word changes by its own pair bit, and the only field of the control that follows the state is the
+bit for the first letter, which the head's step is about. -/
+theorem encControl_rewindOne {fppBound dpBound : ℕ} {w : List (Fin 2)} (x : State GalilVM)
+    (q : QPhys fppBound dpBound) (henc : EncControl w x q)
+    (c : CtlPhys) (a : PalPeg.GalilScaffoldController.Control) (hc : ctlAbs c = a)
+    (bit : Bool)
+    (hbit : bit = decide (PalPeg.GalilScaffoldChainInputSupply.position
+      (PalPeg.GalilScaffoldInputHead.left x.vm.left) = 1))
+    (newPolarity : Fin 16 → Bool) :
+    EncControl w ⟨a, {x.vm with fpp := PalPeg.GalilScaffoldChainInputSupply.markStep x.vm.fpp PalPeg.GalilScaffoldTape.moveLeft, left := PalPeg.GalilScaffoldInputHead.left x.vm.left, length := PalPeg.GalilScaffoldCounter.inc x.vm.length}⟩
+      {q with ctl := c, leftFirstBit := bit, polarity := newPolarity} where
+  ctl := hc
+  chainTag := henc.chainTag
+  chainPhase := henc.chainPhase
+  chainForward := henc.chainForward
+  chainBroken := henc.chainBroken
+  fppMode := henc.fppMode
+  fppFinalStage := henc.fppFinalStage
+  fppPc := henc.fppPc
+  fppDone := henc.fppDone
+  dpPc := henc.dpPc
+  dpDone := henc.dpDone
+  searchMode := henc.searchMode
+  searchFinalStage := henc.searchFinalStage
+  searchQuarter := henc.searchQuarter
+  periodOnly := henc.periodOnly
+  placeGap := henc.placeGap
+  onLetter := henc.onLetter
+  leftFirst := hbit
 
 /-- **the last tick of the fallback copy leaves the control where the copy put it.**  The copy
 writes the end mark on its own tape, hands the machine to the walk home and records whether the
@@ -3620,9 +3797,6 @@ theorem encCell_leftViewTapes_other (viewTapes : Fin 12 → STape PalPeg.Closeou
     mapTape encCell (leftViewTapes viewTapes focus t) = mapTape encCell (viewTapes t) := by
   unfold leftViewTapes
   rw [if_neg hback, if_neg hnear]
-
-/-- the slot of the `i`-th tape of the `v`-th input head's view. -/
-abbrev headSlot (v : Fin 4) (i : Fin 12) : Slot := .inl (v, i)
 
 /-- **a head's step left, on the slots of the whole machine.**  The three actions name only
 symbols the rule reads off its own windows — the symbol under the back head and the one under
