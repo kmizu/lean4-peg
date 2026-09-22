@@ -12115,6 +12115,26 @@ theorem backgroundFun_chain_stillIdle (P : PalPeg.GalilScaffoldChainInputSupply.
     PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle) = _
   rw [if_neg (by simpa using hnotFound)]
 
+/-- **a chain that is not idle is handed to the chain's own step by the background.**  So
+the fourth cursor's fate in a background tick is decided in one place, and the row of the
+command table has one thing to say about it: whatever that step does to the verifier.
+
+Together with the idle case and with `backgroundFun_cursors`, this is the whole head side
+of a background tick, split into its three cases and each localised. -/
+theorem backgroundFun_chain_active (P : PalPeg.GalilScaffoldChainInputSupply.Shared)
+    (s : GalilVM) (hactive : ¬ s.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle) :
+    (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).chain
+      = PalPeg.GalilScaffoldChainInputSupply.chainTickFun false s.chain := by
+  unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+  rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_chain]
+  show PalPeg.GalilScaffoldChainInputSupply.chainAtFun false _ _ _ _ _ _ s.chain = _
+  cases hc : s.chain with
+  | idle => exact absurd hc hactive
+  | copy a b c d e f g => rfl
+  | back a b c d e => rfl
+  | watch wm => rfl
+  | broken wm => rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
