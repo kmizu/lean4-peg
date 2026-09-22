@@ -12738,6 +12738,38 @@ theorem readV_moveRight (v : PalPeg.LocalInputView.InputView) :
   · rw [if_neg hgap, if_neg hgap]
     rfl
 
+/-- **the cursor's next cell, when its near stack still has one.**  The step pops the near stack,
+so the cell it lands on is the top of that stack — and the top of the near stack is the symbol
+`viewTopsOfWindows` reads out of the near tape's window. -/
+theorem stepRight_focus_of_near (v : PalPeg.LocalInputView.InputView) (a : Option (Fin 2))
+    (rest : List (Option (Fin 2))) (hnear : v.near = a :: rest) :
+    (PalPeg.LocalInputView.stepRight v).focus = a := by
+  unfold PalPeg.LocalInputView.stepRight
+  rw [hnear]
+
+/-- **and when the near stack is spent, the front of the queue.**  The queue is where the letters
+that have arrived but not yet been walked over wait, and the readiness condition the view layer
+carries says the queue is not empty exactly when the cursor is asked to step with nothing near.
+
+With `stepRight_focus_of_near` this is the second half of the reading the scan's row owes: both
+cells the cursor can land on are symbols the windows show. -/
+theorem stepRight_focus_of_queue (v : PalPeg.LocalInputView.InputView)
+    (hnear : v.near = []) (hinv : PalPeg.RTQueue.Inv v.far)
+    (hready : PalPeg.RTQueue.toList v.far ≠ []) :
+    (PalPeg.LocalInputView.stepRight v).focus = PalPeg.RTQueue.head? v.far := by
+  have hhead : PalPeg.RTQueue.head? v.far = (PalPeg.RTQueue.toList v.far).head? :=
+    PalPeg.RTQueue.head?_eq hinv
+  unfold PalPeg.LocalInputView.stepRight
+  rw [hnear]
+  cases hq : PalPeg.RTQueue.head? v.far with
+  | none =>
+      refine absurd ?_ hready
+      rw [hq] at hhead
+      cases hl : PalPeg.RTQueue.toList v.far with
+      | nil => rfl
+      | cons c tail => rw [hl] at hhead; exact absurd hhead (by simp)
+  | some a => rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
