@@ -8263,6 +8263,16 @@ theorem heads_afterLeftTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hm
     (PalPeg.GalilScaffoldInputHead.left head) habs PalPeg.GalilScaffoldInputHead.left rfl rfl
     (fun h => absurd h (by simp))
 
+/-- **two tapes that a sweep cannot tell apart give the same window.**  `TEqG` says the head
+stands in the same place and every cell reads the same, and a window is nothing but readings
+around the head — which is why the rule cannot tell a swept tape from the ideal one, and why the
+encoding may be taken up to `TEqG` at all. -/
+theorem readWin_congr_teqG {Γ : Type} {blank : Γ} {K : ℕ} {T T' : PalPeg.Program.STape Γ}
+    (h : PalPeg.CloseoutCoreEnc12.TEqG blank T T') :
+    PalPeg.Local.readWin blank K T = PalPeg.Local.readWin blank K T' := by
+  funext i
+  rw [PalPeg.Local.readWin_eq, PalPeg.Local.readWin_eq, h.1, h.2]
+
 /-- **a slot that is not a head's holds, after the tick, exactly what the mode's branch wrote at
 step `0`.**  Step `0` gives it the branch's own actions and the eleven steps after it give it
 none, so whatever the branch is already proved to leave there is what the tick leaves there. -/
