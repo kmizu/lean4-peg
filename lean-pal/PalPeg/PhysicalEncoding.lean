@@ -7397,6 +7397,9 @@ case analysis of a head's step is the view layer's, once, for all modes. -/
 noncomputable def tickRule {fppBound dpBound K : ℕ} (hK : 2 ≤ K)
     (base : QPhys fppBound dpBound → Option (Fin 2) →
       (Fin tapeCountM → PalPeg.Local.Window Γm K) → QPhys fppBound dpBound)
+    (commandsOf : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
     (baseActs : QPhys fppBound dpBound → Option (Fin 2) →
       (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin tapeCountM →
       List (PalPeg.CloseoutCoreEnc12.Act Γm))
@@ -7408,7 +7411,8 @@ noncomputable def tickRule {fppBound dpBound K : ℕ} (hK : 2 ≤ K)
         slot := slotAdvance q.slot
         gap := q.gap
         job := q.job
-        micro := q.micro }
+        micro := q.micro
+        commands := commandsOf q i ws }
     else
       { headControlStep hK q ⟨q.slot.val - 1, by have := q.slot.isLt; omega⟩ ws with
         slot := slotAdvance q.slot }
@@ -7434,11 +7438,11 @@ noncomputable def tickRule {fppBound dpBound K : ℕ} (hK : 2 ≤ K)
 /-- **the four promises of `headTick_of_rule`, for the rule built that way.**  Each of them is
 the division of labour read off the definition: the step counter advances, step `0` is not a
 head's step, and the steps after it are nothing but. -/
-theorem tickRule_advance {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base baseActs)
+theorem tickRule_advance {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base commandsOf baseActs)
     (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K)
     (q : QPhys fppBound dpBound) (i : Option (Fin 2))
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (h : q.slot.val < 11) :
-    ((tickRule hK base baseActs baseLen).nq q i ws).slot.val = q.slot.val + 1 := by
+    ((tickRule hK base commandsOf baseActs baseLen).nq q i ws).slot.val = q.slot.val + 1 := by
   show (if q.slot.val = 0 then _ else _ : QPhys fppBound dpBound).slot.val = _
   by_cases hslot : q.slot.val = 0
   · rw [if_pos hslot]
@@ -7446,36 +7450,36 @@ theorem tickRule_advance {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base baseAct
   · rw [if_neg hslot]
     exact slotAdvance_val h
 
-theorem tickRule_firstGap {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base baseActs)
+theorem tickRule_firstGap {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base commandsOf baseActs)
     (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K)
     (q : QPhys fppBound dpBound) (i : Option (Fin 2))
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (hslot : q.slot.val = 0) (v : Fin 4) :
-    ((tickRule hK base baseActs baseLen).nq q i ws).gap v = q.gap v := by
+    ((tickRule hK base commandsOf baseActs baseLen).nq q i ws).gap v = q.gap v := by
   show (if q.slot.val = 0 then _ else _ : QPhys fppBound dpBound).gap v = _
   rw [if_pos hslot]
 
-theorem tickRule_firstMicro {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base baseActs)
+theorem tickRule_firstMicro {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base commandsOf baseActs)
     (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K)
     (q : QPhys fppBound dpBound) (i : Option (Fin 2))
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (hslot : q.slot.val = 0) (v : Fin 4) :
-    ((tickRule hK base baseActs baseLen).nq q i ws).micro v = q.micro v := by
+    ((tickRule hK base commandsOf baseActs baseLen).nq q i ws).micro v = q.micro v := by
   show (if q.slot.val = 0 then _ else _ : QPhys fppBound dpBound).micro v = _
   rw [if_pos hslot]
 
-theorem tickRule_firstActs {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base baseActs)
+theorem tickRule_firstActs {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base commandsOf baseActs)
     (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K)
     (q : QPhys fppBound dpBound) (i : Option (Fin 2))
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4) (t : Fin 12)
     (hslot : q.slot.val = 0) :
-    (tickRule hK base baseActs baseLen).acts q i ws (slotIndex (headSlot v t)) = [] := by
+    (tickRule hK base commandsOf baseActs baseLen).acts q i ws (slotIndex (headSlot v t)) = [] := by
   show (if q.slot.val = 0 then _ else _) = _
   rw [if_pos hslot, if_pos (by rw [Equiv.symm_apply_apply]; rfl)]
 
-theorem tickRule_nqHead {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base baseActs)
+theorem tickRule_nqHead {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base commandsOf baseActs)
     (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (k : ℕ) (hk : k < 11) (hslot : q.slot.val = k + 1) (v : Fin 4) :
-    viewControlOf ((tickRule hK base baseActs baseLen).nq q none ws) v
+    viewControlOf ((tickRule hK base commandsOf baseActs baseLen).nq q none ws) v
       = viewNextOfHead hK q v ⟨k, hk⟩ ws := by
   have hne : ¬ q.slot.val = 0 := by omega
   have hfin : (⟨q.slot.val - 1, by have := q.slot.isLt; omega⟩ : Fin 11) = ⟨k, hk⟩ :=
@@ -7490,11 +7494,11 @@ theorem tickRule_nqHead {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base baseActs
           (⟨q.slot.val - 1, by have := q.slot.isLt; omega⟩ : Fin 11) ws) v from rfl,
     viewControlOf_headControlStep, hfin]
 
-theorem tickRule_actsHead {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base baseActs)
+theorem tickRule_actsHead {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base commandsOf baseActs)
     (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (k : ℕ) (hk : k < 11) (hslot : q.slot.val = k + 1) (v : Fin 4) (t : Fin 12) :
-    (tickRule hK base baseActs baseLen).acts q none ws (slotIndex (headSlot v t))
+    (tickRule hK base commandsOf baseActs baseLen).acts q none ws (slotIndex (headSlot v t))
       = headViewActs hK q v ⟨k, hk⟩ (q.commands v) ws t := by
   have hne : ¬ q.slot.val = 0 := by omega
   have hfin : (⟨q.slot.val - 1, by have := q.slot.isLt; omega⟩ : Fin 11) = ⟨k, hk⟩ :=
@@ -7513,15 +7517,15 @@ does.**  The four promises of `headTick_of_rule` are all read off the division o
 head side of a tick is closed once and for all: what remains of a mode's branch is to name the
 counters, the program tapes and the four commands. -/
 theorem headTick_of_tickRule {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
-    (base baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K) (v : Fin 4)
+    (base commandsOf baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K) (v : Fin 4)
     (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
     (hslot0 : x.1.slot.val = 0)
     (qs : ℕ → QPhys fppBound dpBound) (Ts : ℕ → Slot → STape Γm)
     (hqs : ∀ step, qs step
-      = (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+      = (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x input
           step).1)
     (hTs : ∀ step slot, Ts step slot
-      = (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+      = (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x input
           step).2 (slotIndex slot))
     (view : PalPeg.LocalInputView.InputView) (hwf : PalPeg.LocalInputView.WF view)
     (hcells : PalPeg.LocalViewCells.ViewCells view)
@@ -7540,13 +7544,13 @@ theorem headTick_of_tickRule {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
           = mapTape encCell
               (viewRunTapes hK v (fun step => qs (step + 1))
                 (fun step => (qs (step + 1)).commands v) viewTapes 11 t)) :=
-  headTick_of_rule hK hmargin (tickRule hK base baseActs baseLen) v
-    (fun q i ws h => tickRule_advance hK base baseActs baseLen q i ws h)
-    (fun q i ws hslot => tickRule_firstGap hK base baseActs baseLen q i ws hslot v)
-    (fun q i ws hslot => tickRule_firstMicro hK base baseActs baseLen q i ws hslot v)
-    (fun q i ws t hslot => tickRule_firstActs hK base baseActs baseLen q i ws v t hslot)
-    (fun q ws k hk hslot => tickRule_nqHead hK base baseActs baseLen q ws k hk hslot v)
-    (fun q ws k hk t hslot => tickRule_actsHead hK base baseActs baseLen q ws k hk hslot v t)
+  headTick_of_rule hK hmargin (tickRule hK base commandsOf baseActs baseLen) v
+    (fun q i ws h => tickRule_advance hK base commandsOf baseActs baseLen q i ws h)
+    (fun q i ws hslot => tickRule_firstGap hK base commandsOf baseActs baseLen q i ws hslot v)
+    (fun q i ws hslot => tickRule_firstMicro hK base commandsOf baseActs baseLen q i ws hslot v)
+    (fun q i ws t hslot => tickRule_firstActs hK base commandsOf baseActs baseLen q i ws v t hslot)
+    (fun q ws k hk hslot => tickRule_nqHead hK base commandsOf baseActs baseLen q ws k hk hslot v)
+    (fun q ws k hk t hslot => tickRule_actsHead hK base commandsOf baseActs baseLen q ws k hk hslot v t)
     x input hslot0 qs Ts hqs hTs view hwf hcells viewTapes hold hrep howed
 
 /-- **a view's step left realizes the abstract head's step left, with the arrivals still
@@ -7754,15 +7758,15 @@ The hypotheses are what a mode's branch has to say about that head and nothing e
 head becomes, that the command names that operation, and — only for a step right — that the cell
 the head needs has arrived. -/
 theorem heads_afterTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
-    (base baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K) (v : Fin 4)
+    (base commandsOf baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K) (v : Fin 4)
     (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
     (hslot0 : x.1.slot.val = 0)
     (qs : ℕ → QPhys fppBound dpBound) (Ts : ℕ → Slot → STape Γm)
     (hqs : ∀ step, qs step
-      = (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+      = (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x input
           step).1)
     (hTs : ∀ step slot, Ts step slot
-      = (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+      = (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x input
           step).2 (slotIndex slot))
     (view : PalPeg.LocalInputView.InputView) (hwf : PalPeg.LocalInputView.WF view)
     (hcells : PalPeg.LocalViewCells.ViewCells view)
@@ -7784,7 +7788,7 @@ theorem heads_afterTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargi
             viewTapes' ∧
           (∀ i, Ts 12 (headSlot v i) = mapTape encCell (viewTapes' i)) ∧
             PalPeg.LocalViewCells.ViewCells view' ∧ PalPeg.LocalInputView.WF view' := by
-  obtain ⟨hrep', howed', hslots'⟩ := headTick_of_tickRule hK hmargin base baseActs baseLen v x
+  obtain ⟨hrep', howed', hslots'⟩ := headTick_of_tickRule hK hmargin base commandsOf baseActs baseLen v x
     input hslot0 qs Ts hqs hTs view hwf hcells viewTapes hold hrep howed
   exact ⟨PalPeg.ConcreteLocalMachine.viewApply ((qs 1).commands v) view, _,
     by rw [hhead', ← habs]; exact absHead'_viewApply hwf [] _ hready f hf,
@@ -7807,7 +7811,7 @@ theorem idealStep_fused {Q : Type} {K : ℕ}
 `heads_afterTick` on the step the consumer actually takes: one step of the rule fused twelve
 times, whose control and tapes are those of the twelfth state of the run. -/
 theorem heads_afterFusedStep {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
-    (base baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K) (v : Fin 4)
+    (base commandsOf baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K) (v : Fin 4)
     (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
     (hslot0 : x.1.slot.val = 0)
     (hfused : ∀ tape, PalPeg.LocalStepFusion.iterRadius K 12 ≤ PalPeg.Local.pos (x.2 tape))
@@ -7820,10 +7824,10 @@ theorem heads_afterFusedStep {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
     (head head' : PalPeg.GalilScaffoldInputHead.PlaceHead)
     (habs : PalPeg.LocalArrival.absHead' view [] = head)
     (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
-    (hf : headOp ((PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x
+    (hf : headOp ((PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x
       input 1).1.commands v) = some f)
     (hhead' : head' = f head)
-    (hready : (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+    (hready : (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x input
         1).1.commands v = .moveRight →
       view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
     ∃ (view' : PalPeg.LocalInputView.InputView)
@@ -7831,20 +7835,20 @@ theorem heads_afterFusedStep {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
       PalPeg.LocalArrival.absHead' view' [] = head' ∧
         PalPeg.ConcreteLocalMachine.ViewRep margin view'
             ((PalPeg.LocalStepFusion.idealStep
-              (PalPeg.LocalStepFusion.iterRule (tickRule hK base baseActs baseLen) 12) blankM x
+              (PalPeg.LocalStepFusion.iterRule (tickRule hK base commandsOf baseActs baseLen) 12) blankM x
                 input).1.gap v)
             ((PalPeg.LocalStepFusion.idealStep
-              (PalPeg.LocalStepFusion.iterRule (tickRule hK base baseActs baseLen) 12) blankM x
+              (PalPeg.LocalStepFusion.iterRule (tickRule hK base commandsOf baseActs baseLen) 12) blankM x
                 input).1.micro v) viewTapes' ∧
           (∀ i, (PalPeg.LocalStepFusion.idealStep
-              (PalPeg.LocalStepFusion.iterRule (tickRule hK base baseActs baseLen) 12) blankM x
+              (PalPeg.LocalStepFusion.iterRule (tickRule hK base commandsOf baseActs baseLen) 12) blankM x
                 input).2 (slotIndex (headSlot v i)) = mapTape encCell (viewTapes' i)) ∧
             PalPeg.LocalViewCells.ViewCells view' ∧ PalPeg.LocalInputView.WF view' := by
-  rw [idealStep_fused (tickRule hK base baseActs baseLen) x input hfused]
-  exact heads_afterTick hK hmargin base baseActs baseLen v x input hslot0
-    (fun step => (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x
+  rw [idealStep_fused (tickRule hK base commandsOf baseActs baseLen) x input hfused]
+  exact heads_afterTick hK hmargin base commandsOf baseActs baseLen v x input hslot0
+    (fun step => (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x
       input step).1)
-    (fun step slot => (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM
+    (fun step slot => (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM
       x input step).2 (slotIndex slot))
     (fun _ => rfl) (fun _ _ => rfl) view hwf hcells viewTapes hold hrep howed head head' habs f hf
     hhead' hready
@@ -7871,38 +7875,38 @@ so whatever a mode's branch settles at step `0` is what the tick leaves behind.
 This is what lets the branches that are already proved stand as the `base` of the rule: they
 speak of counters, program tapes, period tapes and the answer, and the eleven steps after them
 do not touch any of it. -/
-theorem tickRule_still {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base baseActs)
+theorem tickRule_still {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base commandsOf baseActs)
     (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K)
     (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
     (hslot0 : x.1.slot.val = 0) :
     ∀ step, 1 ≤ step → step ≤ 12 →
       (∀ j : Fin tapeCountM, (slotIndex.symm j).isLeft = false →
-          (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+          (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x input
             step).2 j
-            = (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+            = (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x input
               1).2 j) ∧
-        headFreeFields (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen)
+        headFreeFields (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen)
             blankM x input step).1
-          = headFreeFields (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen)
+          = headFreeFields (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen)
             blankM x input 1).1
   | 1, _, _ => ⟨fun _ _ => rfl, rfl⟩
   | step + 2, _, hle => by
     have hstep : 1 ≤ step + 1 := by omega
     have hslotLt : step + 1 ≤ 11 := by omega
-    obtain ⟨htapes, hfields⟩ := tickRule_still hK base baseActs baseLen x input hslot0 (step + 1)
+    obtain ⟨htapes, hfields⟩ := tickRule_still hK base commandsOf baseActs baseLen x input hslot0 (step + 1)
       hstep (by omega)
-    have hslotVal : (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x
+    have hslotVal : (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x
         input (step + 1)).1.slot.val = step + 1 :=
-      slot_idealRun (tickRule hK base baseActs baseLen) x input hslot0
-        (fun q i ws h => tickRule_advance hK base baseActs baseLen q i ws h) (step + 1) hslotLt
-    have hne : ¬ (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x
+      slot_idealRun (tickRule hK base commandsOf baseActs baseLen) x input hslot0
+        (fun q i ws h => tickRule_advance hK base commandsOf baseActs baseLen q i ws h) (step + 1) hslotLt
+    have hne : ¬ (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x
         input (step + 1)).1.slot.val = 0 := by omega
     refine ⟨fun j hj => ?_, ?_⟩
     · rw [PalPeg.LocalStepFusion.idealRun_step, PalPeg.LocalStepFusion.idealStep]
       show PalPeg.CloseoutCoreEnc12.actList blankM _
-          ((tickRule hK base baseActs baseLen).acts _ _ _ j) = _
-      rw [show (tickRule hK base baseActs baseLen).acts
-            (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+          ((tickRule hK base commandsOf baseActs baseLen).acts _ _ _ j) = _
+      rw [show (tickRule hK base commandsOf baseActs baseLen).acts
+            (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x input
               (step + 1)).1 _ _ j = [] from by
         show (if _ = 0 then _ else _) = _
         rw [if_neg hne]
@@ -7911,22 +7915,38 @@ theorem tickRule_still {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base baseActs)
         | .inr r => rfl]
       exact htapes j hj
     · rw [PalPeg.LocalStepFusion.idealRun_step, PalPeg.LocalStepFusion.idealStep]
-      show headFreeFields ((tickRule hK base baseActs baseLen).nq _ _ _) = _
-      rw [show (tickRule hK base baseActs baseLen).nq
-            (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+      show headFreeFields ((tickRule hK base commandsOf baseActs baseLen).nq _ _ _) = _
+      rw [show (tickRule hK base commandsOf baseActs baseLen).nq
+            (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x input
               (step + 1)).1 _ _
           = { headControlStep hK (PalPeg.LocalStepFusion.idealRun
-                (tickRule hK base baseActs baseLen) blankM x input (step + 1)).1
-                ⟨(PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x
+                (tickRule hK base commandsOf baseActs baseLen) blankM x input (step + 1)).1
+                ⟨(PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x
                   input (step + 1)).1.slot.val - 1, by omega⟩
                 (fun tape => PalPeg.Local.readWin blankM K
-                  ((PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x
+                  ((PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x
                     input (step + 1)).2 tape)) with
               slot := slotAdvance (PalPeg.LocalStepFusion.idealRun
-                (tickRule hK base baseActs baseLen) blankM x input (step + 1)).1.slot } from by
+                (tickRule hK base commandsOf baseActs baseLen) blankM x input (step + 1)).1.slot } from by
         show (if _ = 0 then _ else _) = _
         rw [if_neg hne]]
       exact hfields
+
+/-- **the command each head carries out is the one the table names at step `0`.**  A mode's
+branch names four commands, read off the windows of the state the tick starts from, and that is
+what the eleven steps after it carry out. -/
+theorem commands_afterFirstStep {fppBound dpBound K : ℕ} (hK : 2 ≤ K)
+    (base commandsOf baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K)
+    (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
+    (hslot0 : x.1.slot.val = 0) (v : Fin 4) :
+    (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x input
+        1).1.commands v
+      = commandsOf x.1 input (fun tape => PalPeg.Local.readWin blankM K (x.2 tape)) v := by
+  rw [PalPeg.LocalStepFusion.idealRun_step, if_pos rfl]
+  show ((tickRule hK base commandsOf baseActs baseLen).nq x.1 input _).commands v = _
+  show (if x.1.slot.val = 0 then _ else _ : QPhys fppBound dpBound).commands v = _
+  rw [if_pos hslot0]
+  rfl
 
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
