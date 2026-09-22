@@ -12237,6 +12237,55 @@ theorem headOf_tickFun_background_stillIdle (centre : GalilVM → Fin 3)
   · rw [hvm, backgroundFun_chain_stillIdle (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm
       hidle hnotFound, hidle]
 
+/-- **a background tick over a chain that is running touches nothing but the chain.**  The
+search takes a quantum only over an idle chain, so over a running chain the search, the
+preparation's dynamic program, the lower bound and the preparation's cursor are the ones
+the tick started from.
+
+With `backgroundFun_cursors` and `backgroundFun_chain_active` this is the whole of such a
+tick: three cursors still, four search fields still, and one chain step.  It is the arm in
+which the machine has no program to run — the opposite trade from the idle arm, where the
+cursors stand still and the search advances. -/
+theorem backgroundFun_searchSide_active (P : PalPeg.GalilScaffoldChainInputSupply.Shared)
+    (s : GalilVM) (hactive : ¬ s.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle) :
+    (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).search = s.search
+      ∧ (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).dp = s.dp
+      ∧ (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).lower = s.lower
+      ∧ (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).walker = s.walker := by
+  have hquiet : PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s
+      = PalPeg.GalilScaffoldChainInputSupply.searchLens.get s := by
+    unfold PalPeg.GalilScaffoldChainInputSupply.searchEffectFun
+    cases hc : s.chain with
+    | idle => exact absurd hc hactive
+    | copy a b c d e f g => rfl
+    | back a b c d e => rfl
+    | watch wm => rfl
+    | broken wm => rfl
+  obtain ⟨hsearch, hdp, hlower, hwalker⟩ := backgroundFun_searchSide P s
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rw [hsearch, hquiet]; rfl
+  · rw [hdp, hquiet]; rfl
+  · rw [hlower, hquiet]; rfl
+  · rw [hwalker, hquiet]; rfl
+
+/-- **and it leaves the preparation program, the centre and the radius alone in either arm.**
+The background writes through two lenses only — the scan's three fields and the search's four —
+and the birth wrapper touches neither of these three. -/
+theorem backgroundFun_prepSide (P : PalPeg.GalilScaffoldChainInputSupply.Shared) (s : GalilVM) :
+    (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).fpp = s.fpp
+      ∧ (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).center = s.center
+      ∧ (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).radius = s.radius := by
+  refine ⟨?_, ?_, ?_⟩
+  · unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_fpp]
+    rfl
+  · unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_center]
+    rfl
+  · unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_radius]
+    rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
