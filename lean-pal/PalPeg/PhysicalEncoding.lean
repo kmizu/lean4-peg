@@ -3616,9 +3616,9 @@ theorem viewCells_leftView (v : PalPeg.LocalInputView.InputView) (a : Option (Fi
   obtain ⟨letters, hletters⟩ := hcells
   exact ⟨letters, by rw [cells_leftView v a tail hback, hletters]⟩
 
-theorem viewCells_gapFlip (v : PalPeg.LocalInputView.InputView)
+theorem viewCells_setGap (v : PalPeg.LocalInputView.InputView) (b : Bool)
     (hcells : PalPeg.LocalViewCells.ViewCells v) :
-    PalPeg.LocalViewCells.ViewCells {v with gap := false} := by
+    PalPeg.LocalViewCells.ViewCells {v with gap := b} := by
   obtain ⟨letters, hletters⟩ := hcells
   exact ⟨letters, hletters⟩
 
@@ -5353,6 +5353,86 @@ theorem centreRead_backSlot {K : ℕ} {tapes : Slot → STape Γm} (v : Fin 4)
     readWin_mapTape encCell (show encCell PalPeg.CloseoutCoreStep.blankc = blankM from by
       unfold encCell
       rw [if_pos rfl]), hcentre]
+
+/-- **a head that steps left for free, on the slots of the whole machine.**  Two of the three
+cases of a head's step move no tape: the head stands on a gap, or it stands on a letter with
+nothing behind it.  The rule tells them from the third by one reading, the symbol under the back
+head, and in both of them the twelve tapes it already had represent the head it becomes. -/
+theorem headSlots_still {margin K : ℕ} {polarity : Fin 16 → Bool} {gap : Fin 4 → Bool}
+    {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl} {fppLive dpLive : Bool}
+    {x : State GalilVM} {tapes : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes) (hK : K ≤ margin)
+    (v : Fin 4) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hhead : headOf x v = some head)
+    (hfree : gap v = true ∨
+      centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+          (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+        = encCell (PalPeg.CloseoutCoreEnc.cellSym none))
+    (newTapes : Slot → STape Γm)
+    (hsame : ∀ i, newTapes (headSlot v i) = tapes (headSlot v i)) :
+    ∃ (view : PalPeg.LocalInputView.InputView)
+        (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+      PalPeg.LocalArrival.absHead' view []
+          = PalPeg.GalilScaffoldInputHead.left head ∧
+        PalPeg.ConcreteLocalMachine.ViewRep margin view (!gap v) (micro v) viewTapes ∧
+        (∀ i, newTapes (headSlot v i) = mapTape encCell (viewTapes i)) ∧
+          PalPeg.LocalViewCells.ViewCells view := by
+  obtain ⟨view, viewTapes, habs, hrep, hslots, hcells⟩ := henc.heads v head hhead
+  have hslots' : ∀ i, newTapes (headSlot v i) = mapTape encCell (viewTapes i) := by
+    intro i
+    rw [hsame i]
+    exact hslots i
+  cases hgapBit : gap v
+  · have hviewGap : view.gap = false := by rw [← hrep.gap, hgapBit]
+    have hcentre : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+        (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+        = encCell (PalPeg.CloseoutCoreEnc.cellSym none) := by
+      cases hfree with
+      | inl hg => exact absurd (hgapBit ▸ hg) (by simp)
+      | inr hc => exact hc
+    obtain ⟨bottom, hbottomHeight, hstack⟩ := hrep.back
+    have hmarginStack : K ≤ (PalPeg.ConcreteLocalMachine.backStack view ++ bottom).length := by
+      have hlen : (PalPeg.ConcreteLocalMachine.backStack view ++ bottom).length
+          = view.back.length + 1 + bottom.length := by
+        show (view.focus :: view.back ++ bottom).length = _
+        simp only [List.length_append, List.length_cons]
+      omega
+    have hfocus : view.focus = none := by
+      have hread : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+          (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+          = encCell (PalPeg.CloseoutCoreEnc.cellSym view.focus) := by
+        rw [centreRead_backSlot v viewTapes (PalPeg.ConcreteLocalMachine.backStack view ++ bottom)
+          (hslots PalPeg.ConcreteLocalMachine.backTape) hstack hmarginStack]
+        rfl
+      rw [hread] at hcentre
+      cases hf : view.focus with
+      | none => rfl
+      | some b =>
+        exfalso
+        rw [hf] at hcentre
+        have hne : PalPeg.CloseoutCoreEnc.cellSym (some b) ≠ PalPeg.CloseoutCoreStep.blankc := by
+          simp [PalPeg.CloseoutCoreEnc.cellSym, PalPeg.CloseoutCoreStep.blankc,
+            PalPeg.GalilVMEncode.blank, PalPeg.GalilVMEncode.sOpt]
+        rw [show encCell (PalPeg.CloseoutCoreEnc.cellSym (some b))
+            = (.inr (.inl (PalPeg.CloseoutCoreEnc.cellSym (some b))) : Γm) from if_neg hne,
+          show encCell (PalPeg.CloseoutCoreEnc.cellSym none) = blankM from by decide] at hcentre
+        simp [blankM] at hcentre
+    have hback : view.back = [] := (PalPeg.LocalViewCells.back_nil_iff_focus_none hcells).mpr hfocus
+    have hrep' : PalPeg.ConcreteLocalMachine.ViewRep margin view false (micro v) viewTapes := by
+      rw [← hgapBit]
+      exact hrep
+    obtain ⟨habs', hrep''⟩ := headRep_leftEmpty view viewTapes hback hviewGap hrep'
+    exact ⟨leftView view, viewTapes, habs.symm ▸ habs', hrep'', hslots',
+      by
+        rw [show leftView view = {view with gap := true} from by unfold leftView; rw [hback]]
+        exact viewCells_setGap view true hcells⟩
+  · have hviewGap : view.gap = true := by rw [← hrep.gap, hgapBit]
+    have hrep' : PalPeg.ConcreteLocalMachine.ViewRep margin view true (micro v) viewTapes := by
+      rw [← hgapBit]
+      exact hrep
+    obtain ⟨habs', hrep''⟩ := headRep_leftGap view viewTapes hviewGap hrep'
+    exact ⟨{view with gap := false}, viewTapes, habs.symm ▸ habs', hrep'', hslots',
+      viewCells_setGap view false hcells⟩
 
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
