@@ -7790,6 +7790,65 @@ theorem heads_afterTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargi
     by rw [hhead', ← habs]; exact absHead'_viewApply hwf [] _ hready f hf,
     hrep', hslots', viewCells_viewApply hwf _ hready hcells f hf, wf_viewApply hwf _ f hf⟩
 
+/-- **one ideal step of the fused rule is the ideal run of the twelve steps.**  The consumer of
+the local realization asks for one ideal step of one rule per abstract tick; the twelve steps of
+a tick are that one step of the rule fused twelve times, and the two halves of the bridge are
+already in the fusion.  The margin is the fused radius, which the encoding's own margins give. -/
+theorem idealStep_fused {Q : Type} {K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γm tapeCountM K)
+    (x : Q × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
+    (hmargin : ∀ tape, PalPeg.LocalStepFusion.iterRadius K 12 ≤ PalPeg.Local.pos (x.2 tape)) :
+    PalPeg.LocalStepFusion.idealStep (PalPeg.LocalStepFusion.iterRule R 12) blankM x input
+      = PalPeg.LocalStepFusion.idealRun R blankM x input 12 :=
+  (PalPeg.LocalStepFusion.iterRule_ideal blankM R 12 x input hmargin).trans
+    (PalPeg.LocalStepFusion.idealIter_eq_idealRun R blankM 12 x input)
+
+/-- **the heads of the encoding after one ideal step of the fused rule.**  This is
+`heads_afterTick` on the step the consumer actually takes: one step of the rule fused twelve
+times, whose control and tapes are those of the twelfth state of the run. -/
+theorem heads_afterFusedStep {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
+    (base baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K) (v : Fin 4)
+    (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
+    (hslot0 : x.1.slot.val = 0)
+    (hfused : ∀ tape, PalPeg.LocalStepFusion.iterRadius K 12 ≤ PalPeg.Local.pos (x.2 tape))
+    (view : PalPeg.LocalInputView.InputView) (hwf : PalPeg.LocalInputView.WF view)
+    (hcells : PalPeg.LocalViewCells.ViewCells view)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hold : ∀ t, x.2 (slotIndex (headSlot v t)) = mapTape encCell (viewTapes t))
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view (x.1.gap v) (x.1.micro v) viewTapes)
+    (howed : (x.1.micro v).2.2.2 = 0)
+    (head head' : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (habs : PalPeg.LocalArrival.absHead' view [] = head)
+    (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hf : headOp ((PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x
+      input 1).1.commands v) = some f)
+    (hhead' : head' = f head)
+    (hready : (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+        1).1.commands v = .moveRight →
+      view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    ∃ (view' : PalPeg.LocalInputView.InputView)
+        (viewTapes' : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+      PalPeg.LocalArrival.absHead' view' [] = head' ∧
+        PalPeg.ConcreteLocalMachine.ViewRep margin view'
+            ((PalPeg.LocalStepFusion.idealStep
+              (PalPeg.LocalStepFusion.iterRule (tickRule hK base baseActs baseLen) 12) blankM x
+                input).1.gap v)
+            ((PalPeg.LocalStepFusion.idealStep
+              (PalPeg.LocalStepFusion.iterRule (tickRule hK base baseActs baseLen) 12) blankM x
+                input).1.micro v) viewTapes' ∧
+          (∀ i, (PalPeg.LocalStepFusion.idealStep
+              (PalPeg.LocalStepFusion.iterRule (tickRule hK base baseActs baseLen) 12) blankM x
+                input).2 (slotIndex (headSlot v i)) = mapTape encCell (viewTapes' i)) ∧
+            PalPeg.LocalViewCells.ViewCells view' ∧ PalPeg.LocalInputView.WF view' := by
+  rw [idealStep_fused (tickRule hK base baseActs baseLen) x input hfused]
+  exact heads_afterTick hK hmargin base baseActs baseLen v x input hslot0
+    (fun step => (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x
+      input step).1)
+    (fun step slot => (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM
+      x input step).2 (slotIndex slot))
+    (fun _ => rfl) (fun _ _ => rfl) view hwf hcells viewTapes hold hrep howed head head' habs f hf
+    hhead' hready
+
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
 which is a bit the control carries; the symbol under its back head is a letter rather than the
