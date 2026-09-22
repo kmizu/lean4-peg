@@ -1,3 +1,60 @@
+## n500 (2026-09-22): 公理は証明せんでもええ。迂回路が既に proved で存在する
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+公理リスト未変更: `propext` / `Classical.choice` / `Quot.sound` /
+`PalPeg.PalInPeg.obligation_localRealization`。
+
+**一次情報で読んだ結果、終盤の地図が変わった。**
+
+`PalPeg/PalInPegUnconditional.lean:226` の `unconditional` は
+
+```
+given_scanLandingObligations 0 1 0
+  cycleOracleOnPackedRun                 -- 証明済み（n282）
+  (obligation_localRealization 0 1 0)    -- ★ 唯一の公理
+  (scan landing の 4 場)                  -- 証明済み（BranchSupply.*）
+  (chain verifier supply)                -- 証明済み（BranchSupply.*）
+```
+
+いっぽう `PalPeg/ShadowedLocalFinal.lean:1395` の **`given_physicalMachine` は
+`#print axioms` で標準 3 公理のみ**。取るのは:
+
+| 引数 | 状態 |
+|---|---|
+| `hor` / `hres` / `hChainVerifierSupply` | `unconditional` が既に渡している 3 つと**同じもの**。証明済み |
+| `L0 : LocalStep (Fin 2) Q Γ t K`、`blankSymbol`、`q0`、`repQ`、`outQ`、`htape`、`Enc` | 具体機械と符号化。こちらが供給する |
+| `hencInit` | 初期状態が符号化されている |
+| `hforwardTick` | 機械の 1 歩が抽象後継を符号化する |
+| `hforwardFeed` | 文字つきの 1 歩が到着を符号化する |
+| `PhysFrozen` ＋ `hfrozenEnter` / `hfrozenKeep` / `hfrozenQuiet` | 凍結後は報告ビットが落ちている |
+| `hencRep` | 報告判定が機械の報告ビットに一致する |
+| `hencOut` | 報告点で出力ビットが一致する |
+
+結論は `RecognizedByTotalPEG PAL` **そのもの**で、`H_realizeCanonical` を経由しない。
+
+**だから `obligation_localRealization` は証明する対象ではない。**
+`unconditional` を `given_physicalMachine` 経由に張り替えれば、公理は参照されなくなって
+リストから消える。証明すべきは `H_realizeCanonical`（存在量化された機械と
+`SAccepts ↔ LatchTrue` の同値）ではなく、**この 7 つの符号化義務**。
+
+**今日ここまでの仕事がどこに入るか**: `hforwardTick` の 1 つ。
+`forwardTick_of_rule`（`:984`）がその形を `hmargin` / `hidle` / `hideal` から作る。
+今日 9 分岐について tick の `Enc` を証明したのは、その `hideal` の中身である。
+
+**残り 6 義務の性質**（`hforwardTick` 以外）:
+
+* `hencInit` — 初期配置。`Enc` の各場を空テープについて言うだけで、tick を含まない。
+* `hforwardFeed` — 文字が到着する 1 歩。頭の側は view 層の `arrive` コマンドで、
+  今日作った `heads_afterTableTick` の族に `.arrive a` の行を足す形になる
+  （`headOp` に `.arrive` が入っていないのは頭だけの操作ではないから。ここは別扱いが要る）。
+* `PhysFrozen` ×3 — 凍結後の不変量。抽象を追わないので `Enc` とは独立に設計できる。
+* `hencRep` / `hencOut` — 報告ビットと出力ビット。制御の場を 1 つ足せば読める。
+
+**次の一手**: `given_physicalMachine` の 7 義務を、今日の部品でどこまで埋まるか
+1 つずつ確かめる。まず `hforwardTick` を `forwardTick_of_rule` 経由で組み、
+`hideal` に必要な「全 10 モード分の tick」のうち、今日閉じた 9 分岐で足りない
+モード（`scan` / `shift` / `init` / `replayStart` / `choose` select）を数える。
+
 ## n455 (2026-09-22): view 層は最初から「任意の機械」について語れていた
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
