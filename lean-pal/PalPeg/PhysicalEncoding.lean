@@ -12703,6 +12703,22 @@ theorem headOf_three_of_watchConsume {y : State GalilVM}
   | true => rfl
   | false => rfl
 
+/-- **the letter a cursor is about to reach is a reading of its view.**  Stepping the abstract
+head right and reading it is stepping the view right and reading that, so the letter the chain's
+verdict compares against is named by the view alone — and the view is what the twelve head slots
+hold.
+
+This is the reading the scan's row still owes: the row knows where the cursor goes without the
+verdict, but the control's new chain tag does need it. -/
+theorem read_right_absHead' {v : PalPeg.LocalInputView.InputView} (q : List (Fin 2))
+    (hwf : PalPeg.LocalInputView.WF v)
+    (hready : v.gap = true → v.near = [] → PalPeg.RTQueue.toList v.far ≠ []) :
+    PalPeg.GalilScaffoldInputHead.read
+        (PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' v q))
+      = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveRight v) := by
+  rw [← absHead'_moveRight hwf q hready]
+  rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
