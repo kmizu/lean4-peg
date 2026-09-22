@@ -4114,6 +4114,29 @@ theorem headRep_leftEmpty {margin : ℕ} {micro : PalPeg.ConcreteLocalMachine.Mi
         back := hrep.back
         near := hrep.near }
 
+/-- **a head with nothing left to read steps right for free.**  `moveRight` leaves a head whose
+near stack and whose queue are both empty exactly where it is, so only the bit moves.  This is
+the third of the four cases of a step right; the fourth, where the queue still holds a letter, is
+the micro-schedule's. -/
+theorem headRep_rightExhausted {margin : ℕ} {micro : PalPeg.ConcreteLocalMachine.MicroControl}
+    (view : PalPeg.LocalInputView.InputView)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hgap : view.gap = true) (hnear : view.near = [])
+    (hfar : PalPeg.RTQueue.toList view.far = [])
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view true micro viewTapes) :
+    PalPeg.LocalArrival.absHead' {view with gap := false} []
+        = PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' view [])
+      ∧ PalPeg.ConcreteLocalMachine.ViewRep margin {view with gap := false} false micro
+          viewTapes := by
+  refine ⟨?_, ?_⟩
+  · simp [PalPeg.GalilScaffoldChainVerifier.right, PalPeg.LocalArrival.absHead',
+      PalPeg.GalilScaffoldInputTrace.moveRight, hgap, hnear, hfar]
+  · exact
+      { gap := rfl
+        queue := hrep.queue
+        back := hrep.back
+        near := hrep.near }
+
 /-- **the view a head steps right onto, when the cell it steps onto is on its near stack.**
 The mirror of `leftView`: the old focus goes onto the back stack and the top of the near stack
 becomes the focus.  The case where the near stack is empty is the queue's, and is not this. -/
