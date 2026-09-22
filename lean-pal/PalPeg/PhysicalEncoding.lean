@@ -9874,6 +9874,29 @@ theorem copyActs_eq_copyOneBase {fppBound dpBound K : ℕ} (live : Bool)
   rw [if_pos hremains, if_neg hnotBlank]
   simp only [hsym]
 
+/-- **what it takes for a tick to move no input head.**  `headOf` reads four things and nothing
+else: the three input cursors and the chain.  A tick that leaves those four alone moves no head,
+whatever else it does to the counters, the programs or the period tapes — which is the criterion
+each still mode discharges, and the reason its branch has nothing to say about a head. -/
+theorem headOf_congr_of_vm {x y : State GalilVM} (hleft : y.vm.left = x.vm.left)
+    (hcentre : y.vm.center = x.vm.center) (hright : y.vm.right = x.vm.right)
+    (hchain : y.vm.chain = x.vm.chain) (v : Fin 4) : headOf y v = headOf x v := by
+  fin_cases v
+  · show some y.vm.left = some x.vm.left
+    rw [hleft]
+  · show some y.vm.center = some x.vm.center
+    rw [hcentre]
+  · show some y.vm.right = some x.vm.right
+    rw [hright]
+  · show (match y.vm.chain with
+      | .idle => none
+      | .copy _ _ _ _ _ _ verifier => some verifier
+      | .back _ _ _ _ verifier => some verifier
+      | .watch w => some w.machine.verifier
+      | .broken w => some w.machine.verifier) = _
+    rw [hchain]
+    rfl
+
 /-- **a branch theorem, carried to the machine of twelve steps.**  Everything a mode whose branch
 moves no head has to do is name its branch theorem and say that its tick moves no input head.
 Written once here, so that each such mode is one line and not four.
@@ -9935,8 +9958,7 @@ theorem headOf_tickFun_copy (centre : GalilVM → Fin 3)
           walker := PalPeg.GalilScaffoldPlace.left x.vm.fpp.walker}}⟩ := by
     simp only [PalPeg.GalilScaffoldTop.tickFun, hmode, frameFun_copyOne]
     rw [if_pos (by simp [hremains]), copyOneFun_eq x.vm.fpp a hread]
-  rw [hval]
-  fin_cases v <;> rfl
+  exact headOf_congr_of_vm (by rw [hval]) (by rw [hval]) (by rw [hval]) (by rw [hval]) v
 
 /-- **a tick of the fallback copy that still has work, rule and encoding together.**  Everything
 the rule needs is in the window: whether the copy still has work, whether the walker still has a
