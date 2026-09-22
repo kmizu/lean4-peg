@@ -701,7 +701,8 @@ structure EncTapes (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Boo
     ∃ (view : PalPeg.LocalInputView.InputView) (viewTapes : Fin 12 → STape Γc),
       PalPeg.LocalArrival.absHead' view [] = head ∧
         PalPeg.ConcreteLocalMachine.ViewRep margin view (gap v) (micro v) viewTapes ∧
-        ∀ i, tapes (.inl (v, i)) = mapTape encCell (viewTapes i)
+        (∀ i, tapes (.inl (v, i)) = mapTape encCell (viewTapes i)) ∧
+          PalPeg.LocalViewCells.ViewCells view
   fpp : ∀ i : Fin 9,
     tapes (progSlotOf fppLive i) = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i)))
   dp : ∀ i : Fin 12, tapes (dpSlotOf dpLive i) = padLeft margin (mapTape encProg (encTape (x.vm.dp.config.tapes i)))
@@ -814,9 +815,9 @@ theorem encTapes_fppTapes (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 
         exact henc.margins slot
   heads := by
     intro v head hhead
-    obtain ⟨view, viewTapes, habs, hrep, hslots⟩ := henc.heads v head hhead
+    obtain ⟨view, viewTapes, habs, hrep, hslots, hcells⟩ := henc.heads v head hhead
     exact ⟨view, viewTapes, habs, hrep, fun j => by
-      rw [hkept _ (by intro j; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]), hslots j]⟩
+      rw [hkept _ (by intro j; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]), hslots j], hcells⟩
   fpp := hmoved
   dp := by
     intro j
@@ -902,10 +903,10 @@ theorem encTapes_copyOne (margin : ℕ) (x : State GalilVM) (polarity newPolarit
             exact henc.margins slot
   heads := by
     intro v head hhead
-    obtain ⟨view, viewTapes, habs, hrep, hslots⟩ := henc.heads v head hhead
+    obtain ⟨view, viewTapes, habs, hrep, hslots, hcells⟩ := henc.heads v head hhead
     exact ⟨view, viewTapes, habs, hrep, fun j => by
       rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp) (by simp)
-        (by intro k; cases fppLive <;> simp [progSlotOf]), hslots j]⟩
+        (by intro k; cases fppLive <;> simp [progSlotOf]), hslots j], hcells⟩
   fpp := by
     intro j
     by_cases hj7 : j = 7
@@ -2996,9 +2997,9 @@ theorem encTapes_idleOnly (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 
       exact henc.margins slot
   heads := by
     intro v head hhead
-    obtain ⟨view, viewTapes, habs, hrep, hslots⟩ := henc.heads v head hhead
+    obtain ⟨view, viewTapes, habs, hrep, hslots, hcells⟩ := henc.heads v head hhead
     exact ⟨view, viewTapes, habs, hrep, fun j => by
-      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslots j]⟩
+      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslots j], hcells⟩
   fpp := by
     intro j
     rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf])]
@@ -3396,6 +3397,29 @@ def leftView (v : PalPeg.LocalInputView.InputView) : PalPeg.LocalInputView.Input
   | [] => {v with gap := true}
   | a :: tail => ⟨tail, a, v.focus :: v.near, v.far, true⟩
 
+/-- **a head's step does not change what its view holds.**  The cells of a view are its back
+reversed, its focus and everything right of it; a step left moves the boundary and not the
+content. -/
+theorem cells_leftView (v : PalPeg.LocalInputView.InputView) (a : Option (Fin 2))
+    (tail : List (Option (Fin 2))) (hback : v.back = a :: tail) :
+    PalPeg.LocalInputView.cells (leftView v) = PalPeg.LocalInputView.cells v := by
+  unfold PalPeg.LocalInputView.cells leftView
+  rw [hback]
+  simp [PalPeg.LocalInputView.absRight, PalPeg.LocalInputView.farList]
+
+theorem viewCells_leftView (v : PalPeg.LocalInputView.InputView) (a : Option (Fin 2))
+    (tail : List (Option (Fin 2))) (hback : v.back = a :: tail)
+    (hcells : PalPeg.LocalViewCells.ViewCells v) :
+    PalPeg.LocalViewCells.ViewCells (leftView v) := by
+  obtain ⟨letters, hletters⟩ := hcells
+  exact ⟨letters, by rw [cells_leftView v a tail hback, hletters]⟩
+
+theorem viewCells_gapFlip (v : PalPeg.LocalInputView.InputView)
+    (hcells : PalPeg.LocalViewCells.ViewCells v) :
+    PalPeg.LocalViewCells.ViewCells {v with gap := false} := by
+  obtain ⟨letters, hletters⟩ := hcells
+  exact ⟨letters, hletters⟩
+
 /-- **the abstraction of that view is the head one step left**, when the head was on a letter
 rather than on the gap beside it. -/
 theorem absHead_leftView (v : PalPeg.LocalInputView.InputView) (hgap : v.gap = false)
@@ -3607,8 +3631,9 @@ theorem headSlots_left {margin : ℕ} {polarity : Fin 16 → Bool} {gap : Fin 4 
       PalPeg.LocalArrival.absHead' view []
           = PalPeg.GalilScaffoldInputHead.left head ∧
         PalPeg.ConcreteLocalMachine.ViewRep margin view true (micro v) viewTapes ∧
-        ∀ i, newTapes (headSlot v i) = mapTape encCell (viewTapes i) := by
-  obtain ⟨view, viewTapes, habs, hrep, hold⟩ := henc.heads v head hhead
+        (∀ i, newTapes (headSlot v i) = mapTape encCell (viewTapes i)) ∧
+          PalPeg.LocalViewCells.ViewCells view := by
+  obtain ⟨view, viewTapes, habs, hrep, hold, hviewCells⟩ := henc.heads v head hhead
   have hviewGap : view.gap = false := by
     have : (PalPeg.LocalArrival.absHead' view []).gap = head.gap := by rw [habs]
     rw [← hgap]
@@ -3634,7 +3659,8 @@ theorem headSlots_left {margin : ℕ} {polarity : Fin 16 → Bool} {gap : Fin 4 
       = encCell (PalPeg.CloseoutCoreEnc.cellSym view.focus) := by
     show encCell (viewTapes PalPeg.ConcreteLocalMachine.backTape).focus = _
     rw [hbackFocus]
-  refine ⟨leftView view, leftViewTapes viewTapes view.focus, habs.symm ▸ habs', hrep'', ?_⟩
+  refine ⟨leftView view, leftViewTapes viewTapes view.focus, habs.symm ▸ habs', hrep'', ?_,
+    viewCells_leftView view a tail hviewBack hviewCells⟩
   intro i
   by_cases hb : i = PalPeg.ConcreteLocalMachine.backTape
   · subst hb
