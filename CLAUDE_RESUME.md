@@ -1,3 +1,37 @@
+## n544 (2026-09-22): 七本目、四度目——23 → 2。残りは供給側の補題 1 本と箇条書き 1 本
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、作業木クリーン。
+
+四度目で **error 23 → 2** まで来た。通った順に:
+
+| 直したもの | やったこと |
+|---|---|
+| 行動表の射影補題 8 本 | `if_neg` を 1 本ずつ（`p125.py`） |
+| `encTapes_rewindOne` の全フィールド | `hkept` に鏡除外を足し、各場に「鏡ではない」証明を挿入（`p126.py`） |
+| 同 `margins` 場 | 鏡の枝を新設（`hmirrorLen` から `pos_padLeft`） |
+| 同 `mirrors` 場 | `fin_cases m <;> first | exact absurd rfl hne | rfl`（源 3 の鏡を除外） |
+| `encTapes_rewindPair` | `hmirrorLen` を足して内側の `rewindOne` へ通し、`hkept` に条件を追加 |
+| `rewind_one` / `rewind_pair` | 同じ 2 つを足して素通し |
+
+**残る 2**（どちらも `rewind_one_of_rule` / `rewind_pair_of_rule`、行動表から実際にテープを
+作る側）:
+
+1. `rewindOneActs_mirror` / `rewindPairActs_mirrorLen` —— 新しい枝の射影補題がまだ無い。
+   「源が 3 の鏡のスロットでは行動は `[incAct q 3 ws]`」。
+2. `hmirrorLen` を供給する箇条書き。`counter_inc_at` を鏡のスロットに当てるだけだが、
+   符号ビットの側条件 `bit = polarity 3 || decide (val segMir = 0)` を、**源の窓から読んだ
+   ビット**と結ぶのに `LocalCounter.zero_iff` を二度使う小さな橋が要る
+   （`absCtr segMir (polarity 3) = x.vm.length = absCtr segments (polarity 3)` から
+   `val` のゼロ判定が一致する）。
+
+**作業中の patch は保存してある**: `scratchpad/mirror7.patch`（493 行）。
+次はこれを当ててから上の 2 つを書く。
+
+**四度測って分かったこと**: 鏡 1 本の費用は「行動表 8 本（一様）＋ 輸送子 2 つの全フィールド
+（一様でない）＋ 供給側 2 箇所」。最後の供給側が一番小さいが、新しい枝の射影補題という
+**新しい定理**を要求する。ここまで来て初めて、費用の全体が見えた。
+
 ## n543 (2026-09-22): 七本目、三度目の測定——23 → 12。patch は残してある
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
