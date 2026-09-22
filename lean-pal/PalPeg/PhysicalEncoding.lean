@@ -13263,6 +13263,30 @@ theorem chainAtFun_of_active (found : Bool) (answer : PalPeg.GalilScaffoldTape.T
   | watch wm => rfl
   | broken wm => rfl
 
+/-- **a background tick over a running chain is one step of the chain and nothing else.**  The
+search takes no quantum, the three input cursors stay, and the two lenses the background writes
+through put back what they read — so the whole tick is the chain's own step, written into the
+machine's chain field.
+
+`backgroundFun_id_of_chainFixed` is the case in which that step stands still. -/
+theorem backgroundFun_of_active (P : PalPeg.GalilScaffoldChainInputSupply.Shared) (s : GalilVM)
+    (hactive : ¬ s.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle) :
+    PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s
+      = {s with chain := PalPeg.GalilScaffoldChainInputSupply.chainStepFun s.chain} := by
+  have hget : PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s
+      = PalPeg.GalilScaffoldChainInputSupply.searchLens.get s := by
+    unfold PalPeg.GalilScaffoldChainInputSupply.searchEffectFun
+    cases hc : s.chain with
+    | idle => exact absurd hc hactive
+    | copy a b d e f g h => rfl
+    | back a b d e f => rfl
+    | watch wm => rfl
+    | broken wm => rfl
+  unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+  rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_of_ne_idle (s := s) hactive,
+    chainAtFun_of_active _ _ _ _ _ _ s.chain hactive, hget]
+  rfl
+
 /-- **a background tick that finds the chain standing is the identity.**  Over a running chain
 the search takes no quantum and the background writes back the three scan fields it read; so if
 the chain's own step leaves the chain where it was, the tick leaves the whole machine where it
