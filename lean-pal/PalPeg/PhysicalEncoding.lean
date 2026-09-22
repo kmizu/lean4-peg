@@ -12390,6 +12390,59 @@ theorem backgroundFun_id_of_chainFixed (P : PalPeg.GalilScaffoldChainInputSupply
   rw [hget, PalPeg.GalilScaffoldChainInputSupply.scanLens.set_get]
   exact PalPeg.GalilScaffoldChainInputSupply.searchLens.set_get s
 
+/-- **a chain in any other shape does not consume.**  The tag alone decides it, and the control
+holds the tag, so this needs nothing from the tapes. -/
+theorem chainConsumesTest_of_tag_ne {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (htag : ¬ q.chainTag = ChainTag.watchers) : chainConsumesTest q ws = false := by
+  unfold chainConsumesTest
+  rw [decide_eq_false htag]
+  rfl
+
+/-- **and a watching chain with no lag to spend does not consume either.**  The lag is the
+eleventh counter, so the reading that decides it is the sign bit the control holds together with
+the cell below that counter's head. -/
+theorem chainConsumesTest_of_lag_zero {margin K fppBound dpBound : ℕ} {x : State GalilVM}
+    {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (hK1 : 1 ≤ K) (hK : K ≤ margin)
+    (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (hchain : x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm)
+    (hlag : PalPeg.GalilScaffoldCounter.positive wm.lag = false) :
+    chainConsumesTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = false := by
+  have hvalue : counterOf x 11 = some wm.lag := by
+    show (match x.vm.chain with
+      | .copy _ _ _ _ lag _ _ => some lag
+      | .back _ _ lag _ _ => some lag
+      | .watch w => some w.lag
+      | .broken w => some w.lag
+      | _ => none) = some wm.lag
+    rw [hchain]
+  have hiff := counterPositive_iff_belowRead henc hK1 hK 11 wm.lag hvalue
+  have hnot : ¬ (q.polarity 11 = true
+      ∧ belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (counterSlot 11)
+          = encSeg PalPeg.LocalCounter.mark) := by
+    intro hboth
+    rw [hiff.mpr hboth] at hlag
+    exact Bool.noConfusion hlag
+  unfold chainConsumesTest
+  rcases hpol : q.polarity 11 with _ | _
+  · simp
+  · have hbelow : ¬ belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+        (counterSlot 11) = encSeg PalPeg.LocalCounter.mark := fun h => hnot ⟨hpol, h⟩
+    rw [decide_eq_false hbelow]
+    simp
+
+/-- **and then the scan's row is the row that moves nothing.**  Which is what lets the branch be
+carried by the same slot machinery as the five still modes. -/
+theorem scanCommands_eq_stay {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hquiet : chainConsumesTest q ws = false) : scanCommands q ws = stayCommands := by
+  unfold scanCommands
+  funext v
+  rw [hquiet]
+  split <;> rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
