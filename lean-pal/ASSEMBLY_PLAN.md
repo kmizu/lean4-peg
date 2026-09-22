@@ -1,3 +1,40 @@
+## n518 (2026-09-22): scan の行が命令表に入った — 判定を読まずにヘッドが決まる
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更
+（`propext` / `Classical.choice` / `Quot.sound` / `PalPeg.PalInPeg.obligation_localRealization`）。
+commit `637d5ca` → `a8ddcaf`。`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、
+`PalPeg.Workbench` BUILD=0・error 0。
+
+**背景 tick の 2 腕は逆のトレードをする。** `searchEffectFun P a s`
+（`PalPeg/FrameFunction.lean:330`）は chain が idle のときだけ `searchStepFun` を呼び、
+それ以外は `searchLens.get s`。だから
+
+| chain | カーソル | 探索（dp 12 テープ） | 機械側の仕事 |
+|---|---|---|---|
+| idle | 1 つも動かない | 1 量子進む | DP プログラム走者が要る（重い） |
+| 走行中 | 4 本目が一歩 | 完全に静止 | 走らせるプログラムが無い（軽い） |
+
+軽いほうから取った。`backgroundFun_searchSide` / `_searchSide_active` / `_prepSide` /
+`backgroundFun_id_of_chainFixed`（chain 自身の一歩が chain を動かさないなら、tick は機械全体の
+恒等写像）。
+
+**検証ヘッドが動く条件は一次情報から出た。** `chainStepFun`（`FrameFunction.lean:370`）で
+ver を書き換えるのは `.watch` 腕だけ。しかも `GalilScaffoldChainWatch.caught` は
+`GalilScaffoldChainVerifier.consume` で `right s.verifier`、判定が偽の `.broken` 側も
+`right w.machine.verifier`。**真でも偽でも右に一歩**。だから機械は判定の値を読まなくてよい。
+読むのは 3 つだけ: 制御が持つ `chainTag`、counter 11（lag）の符号ビットとヘッド直下のセル、
+period スロットの中心セル。全部窓の中にある（`centreRead_periodSlot` を新設）。
+
+新しい行: `chainConsumesTest` と `scanCommands`、そして `modeCommands` の `scan` 行。
+stay になる条件は `chainConsumesTest_of_tag_ne` と `chainConsumesTest_of_lag_zero`。
+
+**その場で一般化**: `enc_afterStillTick` の `hmode`（5 モードの選言）は本体で 1 回しか
+使われておらず、実際に要るのは「命令表のこの行が stay」だけだった。`hstay` に置き換え、
+5 モード版は `modeCommands_eq_stay` を渡す 1 行の系にした（呼び出し側は無変更）。
+
+**次の一手**: scan の静止腕を `enc_afterStillTick` に載せて分岐定理にする。その先が
+idle 腕の DP 走者（12 テープ、`fppActs`/`winRun` の対応物）。
+
 ## n512 (2026-09-22): 訂正の訂正 — background はカーソルを動かさない。証明が下手だっただけ
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
