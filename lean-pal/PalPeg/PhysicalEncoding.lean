@@ -11770,6 +11770,24 @@ theorem headOp_rewindCommands {fppBound dpBound K : ℕ} (first : Fin 9)
     rw [rewindCommands_still first q.fppLive q ws 3 (by decide) (fun _ => by decide)]
     rfl
 
+/-- **a tick of the rewind that has reached the first instruction moves no input head either.**
+It wipes the preparation program, which is inside the preparation's own state. -/
+theorem headOf_tickFun_rewindReset (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hatFirst : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).atFirst
+      x.vm = true) (v : Fin 4) :
+    headOf (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) v
+      = headOf x v := by
+  refine headOf_congr_of_vm ?_ ?_ ?_ ?_ v <;>
+    (unfold PalPeg.GalilScaffoldTop.tickFun
+     rw [hmode]
+     dsimp only
+     rw [if_pos hatFirst]
+     rfl)
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
