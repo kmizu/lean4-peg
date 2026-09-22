@@ -8582,6 +8582,69 @@ theorem read_right_absHead' {v : PalPeg.LocalInputView.InputView} (q : List (Fin
   rw [← absHead'_moveRight hwf q hready]
   rfl
 
+/-- **the letter a cursor leaves behind, going left.**  The counterpart of `readV_moveRight`,
+and the other half of what the comparison needs: it moves its left cursor left and its right
+cursor right and asks whether the two letters agree, so it reads both landings.
+
+The parity splits the other way round: a cursor standing on a gap reaches the letter it came
+from, which is the focus it already has; one standing on a letter reaches the gap before it. -/
+theorem readV_moveLeftV (v : PalPeg.LocalInputView.InputView) :
+    PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveLeftV v)
+      = if v.gap then v.focus.map PalPeg.GalilScaffoldPlace.letter
+        else (PalPeg.LocalInputView.stepLeft v).focus.map (fun _ => (2 : Fin 3)) := by
+  unfold PalPeg.LocalInputView.moveLeftV
+  by_cases hgap : v.gap = true
+  · rw [if_pos hgap, if_pos hgap]
+    rfl
+  · rw [if_neg hgap, if_neg hgap]
+    rfl
+
+/-- **the letter behind a cursor is the cell below its back tape's head.**  A view keeps
+`focus :: back` on that tape with the head on the focus, so the cell under it is the top of the
+back stack — which is where a step left lands.
+
+`StackTape.belowSym_eq` already said this of a stack tape; naming it for a view is what lets the
+comparison read the letter its left cursor is about to reach.  The side condition is that the
+cursor has something behind it: at the left end the step does not move and the cell below the
+head is whatever was left there. -/
+theorem viewBack_below {margin K : ℕ} (view : PalPeg.LocalInputView.InputView) (gap : Bool)
+    (micro : PalPeg.ConcreteLocalMachine.MicroControl)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view gap micro viewTapes)
+    (hK1 : 1 ≤ K) (hKm : K ≤ margin) (a : Option (Fin 2)) (rest : List (Option (Fin 2)))
+    (hback : view.back = a :: rest) :
+    PalPeg.ConcreteLocalMachine.symLetter (PalPeg.ConcreteLocalMachine.belowSym
+        (PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K
+          (viewTapes PalPeg.ConcreteLocalMachine.backTape))) = a := by
+  obtain ⟨bottom, hheight, hstack⟩ := hrep.back
+  have hlen : K ≤ (PalPeg.ConcreteLocalMachine.backStack view ++ bottom).length := by
+    simp only [PalPeg.ConcreteLocalMachine.backStack, List.length_append, List.length_cons]
+    omega
+  rw [hstack.belowSym_eq hK1 hlen]
+  show PalPeg.ConcreteLocalMachine.symLetter
+    (PalPeg.CloseoutCoreEnc18.topSym (view.back ++ bottom)) = a
+  rw [hback, ← PalPeg.ConcreteLocalMachine.topLetter_eq_sym]
+  rfl
+
+/-- **and the cell it lands on, when its back stack still has one.**  The step pops the back
+stack, so the cell is its top — the symbol `viewTopsOfWindows` reads out of the back tape's
+window. -/
+theorem stepLeft_focus_of_back (v : PalPeg.LocalInputView.InputView) (a : Option (Fin 2))
+    (rest : List (Option (Fin 2))) (hback : v.back = a :: rest) :
+    (PalPeg.LocalInputView.stepLeft v).focus = a := by
+  unfold PalPeg.LocalInputView.stepLeft
+  rw [hback]
+
+/-- **the letter a cursor leaves behind is a reading of its view.**  The mirror of
+`read_right_absHead'`, and it needs no side condition: a step left is one action, so the view
+layer's left move is the abstract head's left move outright. -/
+theorem read_left_absHead' (v : PalPeg.LocalInputView.InputView) (q : List (Fin 2)) :
+    PalPeg.GalilScaffoldInputHead.read
+        (PalPeg.GalilScaffoldInputHead.left (PalPeg.LocalArrival.absHead' v q))
+      = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveLeftV v) := by
+  rw [← absHead'_moveLeftV v q]
+  rfl
+
 /-- **and that reading splits on the parity of the cursor.**  The input head alternates between
 a letter and the gap between letters, so a cursor standing on a letter reaches the gap and reads
 the gap symbol, and one standing on a gap reaches the next cell of its view.
@@ -8650,6 +8713,54 @@ noncomputable def landingLetter {fppBound dpBound K : ℕ} (q : QPhys fppBound d
   else (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
     (viewWindows v ws)).focus.map (fun _ => (2 : Fin 3))
 
+/-- **the letter a cursor reaches going left, as the machine reads it.**  The mirror of
+`landingLetter`: the gap bit is in the control, a cursor on a gap reaches the letter it came from
+— the focus it already holds — and one on a letter reaches the gap before it, which is there
+exactly when the back stack still has a cell.
+
+The comparison needs both: it moves its left cursor left and its right cursor right and asks
+whether the two letters agree. -/
+noncomputable def leavingLetter {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4) : Option (Fin 3) :=
+  if q.gap v then
+    (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
+      (viewWindows v ws)).focus.map PalPeg.GalilScaffoldPlace.letter
+  else
+    (PalPeg.ConcreteLocalMachine.symLetter (PalPeg.ConcreteLocalMachine.belowSym
+      (viewWindows v ws PalPeg.ConcreteLocalMachine.backTape))).map (fun _ => (2 : Fin 3))
+
+/-- **and that reading is the letter the cursor really reaches going left.** -/
+theorem leavingLetter_eq {fppBound dpBound K : ℕ} (margin : ℕ) (q : QPhys fppBound dpBound)
+    (T : Slot → STape Γm) (v : Fin 4) (view : PalPeg.LocalInputView.InputView)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view (q.gap v) (q.micro v) viewTapes)
+    (hold : ∀ t, T (headSlot v t) = mapTape encCell (viewTapes t))
+    (hcells : PalPeg.LocalViewCells.ViewCells view) (hK1 : 1 ≤ K) (hKm : K ≤ margin)
+    (a : Option (Fin 2)) (rest : List (Option (Fin 2))) (hback : view.back = a :: rest) :
+    leavingLetter q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) v
+      = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveLeftV view) := by
+  have hwin : viewWindows v (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = fun tape => PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K (viewTapes tape) :=
+    viewWindows_of_encoded v T viewTapes hold
+  have htops : PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
+      (viewWindows v (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = PalPeg.ConcreteLocalMachine.viewTops view := by
+    rw [hwin]
+    exact PalPeg.ConcreteLocalMachine.viewTopsOfWindows_eq hKm hcells hrep
+  have hbelow : PalPeg.ConcreteLocalMachine.symLetter (PalPeg.ConcreteLocalMachine.belowSym
+      (viewWindows v (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+        PalPeg.ConcreteLocalMachine.backTape)) = a := by
+    rw [hwin]
+    exact viewBack_below view (q.gap v) (q.micro v) viewTapes hrep hK1 hKm a rest hback
+  unfold leavingLetter
+  rw [readV_moveLeftV view, htops, hbelow]
+  by_cases hg : view.gap = true
+  · have hgq : q.gap v = view.gap := hrep.gap
+    rw [hgq, if_pos hg, if_pos hg]
+    rfl
+  · have hgq : q.gap v = view.gap := hrep.gap
+    rw [hgq, if_neg hg, if_neg hg, stepLeft_focus_of_back view a rest hback]
+
 /-- **and that reading is the letter the cursor really reaches.**  The three symbols the windows
 show are the view's own three, the near stack of a represented view carries letters and never a
 gap, and the readiness the view layer carries is what says the queue has one when the near stack
@@ -8707,6 +8818,38 @@ theorem landingLetter_of_verifier {fppBound dpBound K : ℕ} (q : QPhys fppBound
           (PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' view junk)) := by
   rw [landingLetter_eq q ws v view htops hgap hcells hinv hready,
     read_right_absHead' junk hwf (fun hg hn => hready hg hn)]
+
+/-- **whether the comparison agrees, as the machine decides it.**  The scan compares the letter
+its left cursor leaves for with the letter its right cursor reaches; both are readings of the
+window, so the bit the whole arm turns on is too.
+
+This is the discriminator of the scan's row: which arm a scan tick takes depends on it, because
+the matched arm is guarded by it. -/
+noncomputable def agreeTest {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  decide (leavingLetter q ws 0 = landingLetter q ws 2)
+
+/-- **and it is the comparison's own bit.**  Given the two readings — the letter behind the left
+cursor and the letter ahead of the right one — the machine's decision is the scan's. -/
+theorem agreeTest_eq {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (left right : PalPeg.LocalInputView.InputView)
+    (junkLeft junkRight : List (Fin 2))
+    (hleft : leavingLetter q ws 0
+      = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveLeftV left))
+    (hright : landingLetter q ws 2
+      = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveRight right))
+    (hwfRight : PalPeg.LocalInputView.WF right)
+    (hreadyRight : right.gap = true → right.near = [] →
+      PalPeg.RTQueue.toList right.far ≠ []) :
+    agreeTest q ws
+      = decide (PalPeg.GalilScaffoldInputHead.read
+            (PalPeg.GalilScaffoldInputHead.left (PalPeg.LocalArrival.absHead' left junkLeft))
+          = PalPeg.GalilScaffoldInputHead.read
+            (PalPeg.GalilScaffoldChainVerifier.right
+              (PalPeg.LocalArrival.absHead' right junkRight))) := by
+  unfold agreeTest
+  rw [hleft, hright, read_left_absHead' left junkLeft,
+    read_right_absHead' junkRight hwfRight hreadyRight]
 
 /-- **the chain's verdict, as the machine decides it.**  The period tape offers a symbol or it
 does not; if it does, the verdict is whether the letter the verifier reaches is that symbol.
@@ -14355,6 +14498,43 @@ theorem scan_consume_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
     rw [hrule, hgap, hmicro, hfl, hdl]
     exact physRule_scan_consume margin entryQ first hbound hKq hK1 hmargin (by omega) x q T
       hqmode hconsume (by rw [htest, hverdict]) hfwdBit wm hchain a htok hseen hforward henc.2
+
+/-- **where a comparison leaves the two input cursors.**  Both outcomes — the one that agrees
+and the one that does not — write the scan lens with the pair the comparison formed, and the
+birth wrapper touches neither; so the left cursor has stepped left and the right one right,
+whichever way the letters went. -/
+theorem compareFun_cursors (P : PalPeg.GalilScaffoldChainInputSupply.Shared) (s : GalilVM) :
+    (PalPeg.GalilScaffoldChainInputSupply.compareFun P s).left
+        = PalPeg.GalilScaffoldInputHead.left s.left
+      ∧ (PalPeg.GalilScaffoldChainInputSupply.compareFun P s).right
+        = PalPeg.GalilScaffoldChainVerifier.right s.right := by
+  constructor
+  · unfold PalPeg.GalilScaffoldChainInputSupply.compareFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_left]
+    split <;> rfl
+  · unfold PalPeg.GalilScaffoldChainInputSupply.compareFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_right]
+    split <;> rfl
+
+/-- **and so the matched test is the comparison's own bit.**  The scan asks whether the two
+cursors it has just moved read the same letter, and those are the letters the comparison compared
+to decide which way to go — so the guard of the matched arm is `agree`.
+
+With `agreeTest_eq` this puts the guard of that arm inside the window. -/
+theorem matchedTest_compareFun (P : PalPeg.GalilScaffoldChainInputSupply.Shared) (s : GalilVM) :
+    PalPeg.FrameFunction.matchedTest
+        (PalPeg.GalilScaffoldChainInputSupply.scanLens.get
+          (PalPeg.GalilScaffoldChainInputSupply.compareFun P s))
+      = decide (PalPeg.GalilScaffoldInputHead.read
+            (PalPeg.GalilScaffoldInputHead.left s.left)
+          = PalPeg.GalilScaffoldInputHead.read
+            (PalPeg.GalilScaffoldChainVerifier.right s.right)) := by
+  unfold PalPeg.FrameFunction.matchedTest
+  show decide (PalPeg.GalilScaffoldInputHead.read
+      (PalPeg.GalilScaffoldChainInputSupply.compareFun P s).left
+    = PalPeg.GalilScaffoldInputHead.read
+      (PalPeg.GalilScaffoldChainInputSupply.compareFun P s).right) = _
+  rw [(compareFun_cursors P s).1, (compareFun_cursors P s).2]
 
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
