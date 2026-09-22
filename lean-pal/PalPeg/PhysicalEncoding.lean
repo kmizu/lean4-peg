@@ -1268,8 +1268,9 @@ theorem encTapes_counterStep (margin : ℕ) (x y : State GalilVM)
     (hpolOther : ∀ c' : Fin 16, c' ≠ c → newPolarity c' = polarity c')
     (segments : STape Seg) (habs : absCtr segments (newPolarity c) = value)
     (hslot : newTapes (counterSlot c) = padLeft margin (mapTape encSeg segments))
-    (hmirrorSlot : ∀ m : Fin 5, mirrorSource m = c →
-      newTapes (mirrorSlot m) = padLeft margin (mapTape encSeg segments))
+    (hmirrorSlot : ∀ m : Fin 5, mirrorSource m = c → ∃ seg : STape Seg,
+      absCtr seg (newPolarity c) = value
+        ∧ newTapes (mirrorSlot m) = padLeft margin (mapTape encSeg seg))
     (hkept : ∀ slot, slot ≠ counterSlot c →
       (∀ m : Fin 5, mirrorSource m = c → slot ≠ mirrorSlot m) →
       newTapes slot = tapes slot) :
@@ -1281,7 +1282,8 @@ theorem encTapes_counterStep (margin : ℕ) (x y : State GalilVM)
       omega
     · by_cases hm : ∃ m : Fin 5, mirrorSource m = c ∧ slot = mirrorSlot m
       · obtain ⟨m, hsrc, hmm⟩ := hm
-        rw [hmm, hmirrorSlot m hsrc, pos_padLeft]
+        obtain ⟨seg, -, hseg⟩ := hmirrorSlot m hsrc
+        rw [hmm, hseg, pos_padLeft]
         omega
       · rw [hkept slot hc (fun m hsrc hEq => hm ⟨m, hsrc, hEq⟩)]
         exact henc.margins slot
@@ -1317,8 +1319,9 @@ theorem encTapes_counterStep (margin : ℕ) (x y : State GalilVM)
   mirrors := by
     intro m value' hvalue'
     by_cases hsrc : mirrorSource m = c
-    · refine ⟨segments, ?_, hmirrorSlot m hsrc⟩
-      rw [hsrc, habs]
+    · obtain ⟨seg, habsSeg, hseg⟩ := hmirrorSlot m hsrc
+      refine ⟨seg, ?_, hseg⟩
+      rw [hsrc, habsSeg]
       rw [hsrc] at hvalue'
       exact Option.some.inj (hcounter.symm.trans hvalue')
     · obtain ⟨seg, habsOld, hslotOld⟩ :=
@@ -1374,8 +1377,9 @@ theorem encTapes_rewindPair (margin : ℕ) (x : State GalilVM) (polarity newPola
     (segRad : STape Seg)
     (hradius : absCtr segRad (newPolarity 2) = PalPeg.GalilScaffoldCounter.inc x.vm.radius)
     (hcounterRad : newTapes (counterSlot 2) = padLeft margin (mapTape encSeg segRad))
-    (hmirrorRad : ∀ m : Fin 5, mirrorSource m = 2 →
-      newTapes (mirrorSlot m) = padLeft margin (mapTape encSeg segRad))
+    (hmirrorRad : ∀ m : Fin 5, mirrorSource m = 2 → ∃ seg : STape Seg,
+      absCtr seg (newPolarity 2) = PalPeg.GalilScaffoldCounter.inc x.vm.radius
+        ∧ newTapes (mirrorSlot m) = padLeft margin (mapTape encSeg seg))
     (hprog : newTapes (progSlotOf fppLive 8)
       = padLeft margin (mapTape encProg (encTape
           (PalPeg.GalilScaffoldTape.moveLeft (x.vm.fpp.program.config.tapes 8)))))
@@ -1405,7 +1409,13 @@ theorem encTapes_rewindPair (margin : ℕ) (x : State GalilVM) (polarity newPola
     rfl rfl (fun i => rfl) (fun i => rfl) rfl rfl
     (fun c' hc' => if_neg hc') segRad (by rw [if_pos rfl]; exact hradius)
     (by rw [if_pos (Or.inl rfl)]; exact hcounterRad)
-    (fun m hsrc => by rw [if_pos (Or.inr ⟨m, hsrc, rfl⟩)]; exact hmirrorRad m hsrc)
+    (fun m hsrc => by
+      obtain ⟨seg, habsSeg, hseg⟩ := hmirrorRad m hsrc
+      refine ⟨seg, ?_, ?_⟩
+      · rw [if_pos rfl]
+        exact habsSeg
+      · rw [if_pos (Or.inr ⟨m, hsrc, rfl⟩)]
+        exact hseg)
     (fun slot hc hm => if_neg (fun h => by
       rcases h with h | ⟨m, hsrc, hEq⟩
       · exact hc h
@@ -4739,8 +4749,9 @@ theorem rewind_pair {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM �
     (segRad : STape Seg)
     (hradius : absCtr segRad (newPolarity 2) = PalPeg.GalilScaffoldCounter.inc x.vm.radius)
     (hcounterRad : newTapes (counterSlot 2) = padLeft margin (mapTape encSeg segRad))
-    (hmirrorRad : ∀ m : Fin 5, mirrorSource m = 2 →
-      newTapes (mirrorSlot m) = padLeft margin (mapTape encSeg segRad))
+    (hmirrorRad : ∀ m : Fin 5, mirrorSource m = 2 → ∃ seg : STape Seg,
+      absCtr seg (newPolarity 2) = PalPeg.GalilScaffoldCounter.inc x.vm.radius
+        ∧ newTapes (mirrorSlot m) = padLeft margin (mapTape encSeg seg))
     (hprog : newTapes (progSlotOf q.fppLive 8)
       = padLeft margin (mapTape encProg (encTape
           (PalPeg.GalilScaffoldTape.moveLeft (x.vm.fpp.program.config.tapes 8)))))
@@ -5364,6 +5375,17 @@ theorem counter_left_ne_nil (segments : STape Seg) (h : PalPeg.LocalCounter.val 
     segments.left ≠ [] := by
   intro hnil
   exact h (by show PalPeg.LocalCounter.markRun segments.left = 0; rw [hnil]; rfl)
+
+/-- **two tapes that stand for the same counter with the same sign carry the same run of
+marks.**  Which is why the sign bit computed from a counter's own window serves for its mirrors:
+they hold the same value, so they hold the same number of marks. -/
+theorem val_eq_of_absCtr_eq {t t' : STape Seg} {b : Bool} (h : absCtr t b = absCtr t' b) :
+    PalPeg.LocalCounter.val t = PalPeg.LocalCounter.val t' := by
+  cases b
+  · have hneg := congrArg (fun c => c.neg.length) h
+    simpa [absCtr, PalPeg.LocalCounter.negOfNat] using hneg
+  · have hpos := congrArg (fun c => c.pos.length) h
+    simpa [absCtr, PalPeg.GalilScaffoldCounter.ofNat] using hpos
 
 /-- **the sign bit an increment produces, from the window of the counter's own slot.**  A
 counter's mirrors hold the same value with the same sign, so they hold tapes of the same run of
