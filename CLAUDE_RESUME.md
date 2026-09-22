@@ -1,3 +1,42 @@
+## n504 (2026-09-22): `M-headCopy` は scan に居る。そして今日足した場がその解になる
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+
+**一次情報で確かめた。** `PalPeg/FrameFunction.lean:491` の `backgroundFun` は
+scan の背景量子で、`scanLens.set s ⟨s.left, s.right, chainAtFun … s.center … s.chain⟩`
+を書く。左と右のカーソルはそのままやが、chain は `chainAtFun` を通る。
+
+`:461` の `chainAtFun` は、chain が `.idle` で `found` が立った tick で
+`chainStart answer c walker ver radius` を作り、**その `ver` が `s.center`**。
+つまり**新しく生まれる chain の verifier は中心カーソルの複製**である。
+
+分業の下でカーソルの 12 スロットを書くのは view のコマンドだけで、
+**カーソル 1 本を丸ごと複製するコマンドは無い**。だから `M-headCopy` は
+`init` / `choose` select / `replayStart` だけでなく、**`scan` の背景量子にも居る**。
+しかもそこは走行の大半を占める。
+
+**帰結 1**: `enc_afterTick` の `hheadSome`（頭の有無が tick で変わらない）は
+scan の chain 誕生 tick では**偽**である。頭 3 が `none` から `some` になる。
+このまま scan を書こうとしても通らない。
+
+**帰結 2（解）**: 今日 margins のために足した `EncTapes.idleHead` が、そのまま解になる。
+いま `idleHead` は「chain が idle のあいだ verifier の 12 スロットは**何らかの** view を
+持つ」としか言っていない。これを
+
+> chain が idle のあいだ、verifier の 12 スロットは**中心カーソルと同じ view** を持つ
+
+に強めれば、chain が生まれた瞬間にスロットは既に中心の複製を保持しており、
+**複製する tick が要らない**。維持のコストは分業の下ではゼロに近い:
+chain が idle のあいだ、行は view 3 に view 1 と同じコマンドを名指すだけでよい。
+
+これは `M-headCopy` を回避する構成であって、`M-headCopy` が偽であるという主張ではない。
+Scala 正本が中心を verifier に複製するのは事実で、機械はその複製を**前もって**持つ。
+
+**次の一手**: `idleHead` の強化（`HeadSlotsRepAt … 3 view` を
+「view は中心の view と等しい」に替える）と、その維持（行が view 3 に view 1 の
+コマンドを名指す）を書く。維持が閉じたら scan の chain 誕生が `hheadSome` を
+要求しない形になるので、`enc_afterTick` をそこまで一般化する。
+
 ## n500 (2026-09-22): 公理は証明せんでもええ。迂回路が既に proved で存在する
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
