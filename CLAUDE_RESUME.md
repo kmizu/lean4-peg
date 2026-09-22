@@ -1,3 +1,50 @@
+## n455 (2026-09-22): view 層は最初から「任意の機械」について語れていた
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+公理リスト未変更: `propext` / `Classical.choice` / `Quot.sound` /
+`PalPeg.PalInPeg.obligation_localRealization`。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、`PalPeg.Workbench` BUILD=0・error 0。
+commit: `9b2ea2f`（WF）、`849e9fc`（橋）。
+
+**n453 note の項目 (2) は不要だった。** 「`LocalViewsMachine` に view ごとの
+コマンドを取る規則 `viewsRule` を足して `machineSlot` を一般化する」と書いたが、
+一次情報を読んだら既にある:
+
+| 部品 | 場所 | 何が汎用か |
+|---|---|---|
+| `viewStep_of_apply` | `PalPeg/LocalViewSlot.lean:418` | `Q`・`tapeCount`・`embed`・`project`・`slot`・`command` が全部パラメータ |
+| `viewSlot_sound` | `PalPeg/LocalViewSlot.lean:370` | `commands : ℕ → ViewCommand`・`states : ℕ → ViewState` を取る |
+
+`machineRule` が arrivals-only なのは `LocalViewsMachine` という**一つの
+インスタンス**の性質で、view 層の制約ではない。だから道は「machineRule を
+一般化する」ではなく「自分の `physRule` に view 層の汎用補題を当てる」。
+
+**足りなかったのはアルファベットの変換だけ。** 機械は頭のテープを view の
+テープの `encCell` 像として持つ（`EncTapes.heads`）ので、`Γc` 上の `ViewStep` と
+`Γm` 上の行動リストの間に橋が要る。入れたのは 2 本:
+
+* `mapTape_actList` — 成分の合成ステップは、機械が持つテープ上の同じ合成ステップ。
+  各行動が `mapTape_applyAction` で交換するので、リスト全体も交換する。公理ゼロ。
+* `viewStep_of_encodedActs` — 頭の 12 スロット上の機械のステップを、view 層の
+  `ViewStep` として読み返す。前提は「規則がその 12 スロットに名づける行動が、
+  同じ窓から読んだ view 規則の行動を `encAct` で送ったもの」。結論の view テープは
+  `actList blankc (viewTapes t) (viewActs …)` そのものなので `TEqG` は `rfl`。
+
+**書いたが消したもの**: `teqG_of_mapTape` / `rd_mapTape` / `encCell_injective`。
+橋が前向き（`Γc` → `Γm`）だけで済んだので引き戻しが要らず、参照ゼロになった。
+参照ゼロの宣言は残さない規律に従ってその場で削除した。
+
+**`EncTapes.heads` に `WF`（= `RTQueue.Inv view.far`）を足した**（項目 (3) の前半、
+`9b2ea2f`）。`viewSlot_sound` が要求するので運ぶ必要がある。コストは補題 3 本だけ:
+`far_leftView` / `wf_leftView` / `wf_rightViewOn` / `wf_setGap`——頭の左ステップ、
+近スタックへの右ステップ、ビットだけ動く半歩は全部 `far` をそのまま写す。
+
+**次の一手**: `physRule` の頭スロットの行動を、手書きの `headStepActs` /
+`headRightActs` ではなく `viewActs … (encAct encCell)` の像として書き直し、
+`viewStep_of_encodedActs` → `viewSlot_sound` の鎖に載せる。手書きの 3〜4 分岐は
+`leftView_eq_moveLeftV` / `rightViewOn_eq_moveRight` で `viewApply` と繋がっている
+ので、載せ替えの正しさはそこで確かめられる。
+
 ## n453 (2026-09-22): 融合を使うには「コマンドを 1 歩先に決める」— 12 歩案
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
