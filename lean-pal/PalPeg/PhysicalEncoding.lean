@@ -10008,6 +10008,33 @@ def rewindHeadOps (pair : Bool) :
   | 1 => if pair then PalPeg.GalilScaffoldInputHead.left else id
   | _ => id
 
+/-- **and it leaves the chain's verifier where it was**, whether or not the abstraction names
+it — which is what the encoding needs of the fourth cursor when the chain is idle. -/
+theorem headOf_tickFun_rewind_chain (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotFirst : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).atFirst
+      x.vm = false) :
+    headOf (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) 3
+      = headOf x 3 := by
+  have hstep : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
+      = if x.ctl.pair then
+          ⟨{x.ctl with pair := false},
+            (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).rewindPair x.vm⟩
+        else
+          ⟨{x.ctl with pair := true},
+            (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).rewindOne
+              x.vm⟩ := by
+    unfold PalPeg.GalilScaffoldTop.tickFun
+    rw [hmode]
+    dsimp only
+    rw [if_neg (by rw [hnotFirst]; simp)]
+  rw [hstep]
+  cases hpair : x.ctl.pair <;> dsimp only <;> rfl
+
 /-- **a tick of the rewind that is not yet at the first instruction does exactly that.**  Its two
 frame functions say so: `rewindOne` steps the left cursor, `rewindPair` steps the centre with it,
 and neither touches the right cursor or the chain. -/
@@ -11718,6 +11745,137 @@ theorem fpp_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM 
     henc.2
     (physRule_fpp margin centre place entry entryQ first w F delay x q T hbound hK hK1 hKn hcomp
       hfloorRun hin hqmode hmode henc)
+
+
+/-- **the rewind's row names, for each cursor, the operation the tick does to it.** -/
+theorem headOp_rewindCommands {fppBound dpBound K : ℕ} (first : Fin 9)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hnot : ¬ centreRead ws (progSlot q.fppLive 8) = encProg first) (v : Fin 4) :
+    headOp (rewindCommands first q.fppLive q ws v) = some (rewindHeadOps q.ctl.pair v) := by
+  match v with
+  | 0 =>
+    rw [rewindCommands_walks first q.fppLive q ws hnot 0 (Or.inl rfl)]
+    rfl
+  | 1 =>
+    cases hp : q.ctl.pair
+    · rw [rewindCommands_still first q.fppLive q ws 1 (by decide)
+        (fun h => absurd (hp.symm.trans h) (by simp))]
+      rfl
+    · rw [rewindCommands_walks first q.fppLive q ws hnot 1 (Or.inr ⟨hp, rfl⟩)]
+      rfl
+  | 2 =>
+    rw [rewindCommands_still first q.fppLive q ws 2 (by decide) (fun _ => by decide)]
+    rfl
+  | 3 =>
+    rw [rewindCommands_still first q.fppLive q ws 3 (by decide) (fun _ => by decide)]
+    rfl
+
+/-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
+every cursor either steps left or stands still. -/
+theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4) :
+    rewindCommands first live q ws v ≠ .moveRight := by
+  intro hEq
+  unfold rewindCommands at hEq
+  split_ifs at hEq with h1 h2
+  · exact absurd hEq (by simp [stayCommands])
+  · dsimp only at hEq
+    split_ifs at hEq <;> simp at hEq
+  · dsimp only at hEq
+    split_ifs at hEq <;> simp at hEq
+
+/-- **one step of the rewind, on the machine of twelve steps.**  The first mode whose row moves a
+cursor: its row names a step left for the left cursor and, on a paired rewind, for the centre,
+and the abstract tick does exactly that to them.  Everything else is `enc_afterTick`. -/
+theorem rewind_one_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (input : Option (Fin 2))
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hmargin : K ≤ margin)
+    (hslot0 : q.slot.val = 0) (howed : ∀ v, (q.micro v).2.2.2 = 0)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotFirst : ¬ (x.vm.fpp.program.config.tapes 8).focus = first)
+    (henc : Enc w margin x (q, T))
+    (hctl : EncControl w
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      (ruleNext entryQ first hbound q
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
+    (htapes : EncTapes margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      (ruleNext entryQ first hbound q
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).polarity
+      (ruleNext entryQ first hbound q
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).gap
+      (ruleNext entryQ first hbound q
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).micro
+      (ruleNext entryQ first hbound q
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).fppLive
+      (ruleNext entryQ first hbound q
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).dpLive
+      (fun slot => PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
+        (ruleActs entryQ first q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (slotIndex slot)))) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hK hK2 rest) blankM
+          (q, tapesOf T) input 12).1,
+        fun i => (PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hK hK2 rest) blankM (q, tapesOf T) input 12).2
+            (slotIndex i)) := by
+  have hwin : ¬ centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (progSlot q.fppLive 8) = encProg first := by
+    intro hEq
+    exact hnotFirst ((focus_iff_of_enc (K := K) henc 8 first).mp
+      (by rw [← hEq]; exact (centreRead_of_margin T (progSlot q.fppLive 8)
+        (le_trans hmargin (henc.2.margins _))).symm))
+  have hctlPair : x.ctl.pair = q.ctl.pair :=
+    congrArg (fun c => c.pair) henc.1.ctl.symm
+  have hatFirst : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).atFirst
+      x.vm = false := by
+    rw [frameFun_atFirst]
+    exact decide_eq_false hnotFirst
+  have hxmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind :=
+    (congrArg (fun c => c.mode) henc.1.ctl.symm).trans hqmode
+  exact enc_afterTick margin entryQ first hbound hK hK2 hmargin rest w x _ q T input hslot0 howed
+    (rewindCommands first q.fppLive q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+    (fun v => modeCommands_rewind first rest q input _ hqmode ▸ rfl)
+    (rewindHeadOps x.ctl.pair)
+    (fun v => hctlPair ▸ headOp_rewindCommands first q _ hwin v)
+    (fun v => by
+      cases hx : headOf x v with
+      | none =>
+        have h3 : v = 3 := by
+          fin_cases v
+          · exact absurd hx (by simp [headOf])
+          · exact absurd hx (by simp [headOf])
+          · exact absurd hx (by simp [headOf])
+          · rfl
+        subst h3
+        have hnone : headOf (PalPeg.GalilScaffoldTop.tickFun
+            (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) 3
+            = none := by
+          rw [headOf_tickFun_rewind_chain centre place entry entryQ first w F delay x hxmode
+            hatFirst]
+          exact hx
+        rw [hnone]
+      | some head =>
+        rw [headOf_tickFun_rewind centre place entry entryQ first w F delay x hxmode hatFirst
+          v head hx]
+        rfl)
+    (fun v head hhead =>
+      headOf_tickFun_rewind centre place entry entryQ first w F delay x hxmode hatFirst v head
+        hhead)
+    (fun v _ _ hmove =>
+      absurd hmove (rewindCommands_ne_moveRight first q.fppLive q _ v))
+    henc.2 hctl htapes
 
 end PalPeg.PhysicalEncoding
 
