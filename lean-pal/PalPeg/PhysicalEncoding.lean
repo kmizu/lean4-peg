@@ -1722,6 +1722,9 @@ structure QPhys (fppBound dpBound : ℕ) where
   carries it out only read it — so it has to be in the control before the slot starts, and that
   is why a tick is twelve steps and not eleven. -/
   commands : Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand
+  /-- which of the twelve steps of a tick the machine is on.  Step `0` reads the letter and
+  decides what everything does; the eleven after it are the slot that does it. -/
+  slot : Fin 12
   /-- which half of each double buffer the encoding speaks about.  The bit is physical only:
   the abstraction cannot see it, and a wipe of a program machine is its flip.  The encoding's
   own fields still address the `false` half; moving them onto this bit is the next step. -/
@@ -7226,6 +7229,97 @@ theorem viewSlot_of_headTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
   viewSlot_of_headRule hK hmargin v (fun step => qs (step + 1)) (fun step => Ts (step + 1)) view
     hwf hcells viewTapes (fun t => (hfirstTapes t).trans (hold t))
     (by rw [hfirstGap, hfirstMicro]; exact hrep) (by rw [hfirstMicro]; exact howed) hq hsteps
+
+/-- **the step counter along the ideal run of a tick.**  The rule advances it by one while it is
+below eleven, so the state after `step` steps is on step `step` of the tick. -/
+theorem slot_idealRun {fppBound dpBound K : ℕ}
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
+    (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
+    (hslot0 : x.1.slot.val = 0)
+    (hadvance : ∀ q i ws, q.slot.val < 11 →
+      (R.nq q i ws).slot.val = q.slot.val + 1) :
+    ∀ step, step ≤ 11 →
+      (PalPeg.LocalStepFusion.idealRun R blankM x input step).1.slot.val = step
+  | 0, _ => hslot0
+  | step + 1, hle => by
+    have hprevious := slot_idealRun R x input hslot0 hadvance step (by omega)
+    rw [PalPeg.LocalStepFusion.idealRun_step]
+    show (R.nq (PalPeg.LocalStepFusion.idealRun R blankM x input step).1 _ _).slot.val = step + 1
+    rw [hadvance _ _ _ (by rw [hprevious]; omega), hprevious]
+
+/-- **a tick of a rule that agrees with the view layer on a head's slots is one command of that
+head's view.**  The rule has only to promise four things about that head, each of them about one
+step and about the fields of one view: step `0` leaves the head alone, the eleven steps after it
+take the view's three control fields to `viewNext` and name the view's own actions on the head's
+twelve slots, and the step counter advances.  Everything else the rule does — counters, program
+tapes, the other heads — is free. -/
+theorem headTick_of_rule {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
+    (v : Fin 4)
+    (hadvance : ∀ q i ws, q.slot.val < 11 → (R.nq q i ws).slot.val = q.slot.val + 1)
+    (hfirstGap : ∀ q i ws, q.slot.val = 0 → (R.nq q i ws).gap v = q.gap v)
+    (hfirstMicro : ∀ q i ws, q.slot.val = 0 → (R.nq q i ws).micro v = q.micro v)
+    (hfirstActs : ∀ q i ws (t : Fin 12), q.slot.val = 0 →
+      R.acts q i ws (slotIndex (headSlot v t)) = [])
+    (hnqHead : ∀ q ws (k : ℕ) (hk : k < 11), q.slot.val = k + 1 →
+      viewControlOf (R.nq q none ws) v = viewNextOfHead hK q v ⟨k, hk⟩ ws)
+    (hactsHead : ∀ q ws (k : ℕ) (hk : k < 11) (t : Fin 12), q.slot.val = k + 1 →
+      R.acts q none ws (slotIndex (headSlot v t))
+        = headViewActs hK q v ⟨k, hk⟩ (q.commands v) ws t)
+    (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
+    (hslot0 : x.1.slot.val = 0)
+    (qs : ℕ → QPhys fppBound dpBound) (Ts : ℕ → Slot → STape Γm)
+    (hqs : ∀ step, qs step = (PalPeg.LocalStepFusion.idealRun R blankM x input step).1)
+    (hTs : ∀ step slot, Ts step slot
+      = (PalPeg.LocalStepFusion.idealRun R blankM x input step).2 (slotIndex slot))
+    (view : PalPeg.LocalInputView.InputView) (hwf : PalPeg.LocalInputView.WF view)
+    (hcells : PalPeg.LocalViewCells.ViewCells view)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hold : ∀ t, Ts 0 (headSlot v t) = mapTape encCell (viewTapes t))
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view ((qs 0).gap v) ((qs 0).micro v)
+      viewTapes)
+    (howed : ((qs 0).micro v).2.2.2 = 0) :
+    PalPeg.ConcreteLocalMachine.ViewRep margin
+        (PalPeg.ConcreteLocalMachine.viewApply ((qs 1).commands v) view) ((qs 12).gap v)
+        ((qs 12).micro v)
+        (viewRunTapes hK v (fun step => qs (step + 1))
+          (fun step => (qs (step + 1)).commands v) viewTapes 11) ∧
+      (((qs 12).micro v).2.2.2.val = 0 ∧
+        ∀ t, Ts 12 (headSlot v t)
+          = mapTape encCell
+              (viewRunTapes hK v (fun step => qs (step + 1))
+                (fun step => (qs (step + 1)).commands v) viewTapes 11 t)) := by
+  have hslotRun : ∀ step, step ≤ 11 → (qs step).slot.val = step := fun step hle => by
+    rw [hqs step]
+    exact slot_idealRun R x input hslot0 hadvance step hle
+  have hwindows : ∀ step, tapesOf (Ts step)
+      = (PalPeg.LocalStepFusion.idealRun R blankM x input step).2 := fun step => by
+    funext j
+    rw [show tapesOf (Ts step) j = Ts step (slotIndex.symm j) from rfl, hTs,
+      Equiv.apply_symm_apply]
+  have hstepRun : ∀ step, PalPeg.LocalStepFusion.idealRun R blankM x input (step + 1 + 1)
+      = PalPeg.LocalStepFusion.idealStep R blankM
+          (PalPeg.LocalStepFusion.idealRun R blankM x input (step + 1)) none := fun step => by
+    rw [PalPeg.LocalStepFusion.idealRun_step, if_neg (by omega)]
+  refine viewSlot_of_headTick hK hmargin v qs Ts view hwf hcells viewTapes hold hrep howed
+    (fun t => ?_) ?_ ?_ (fun step h => ?_) (fun step h t => ?_)
+  · rw [hTs 1, hTs 0, PalPeg.LocalStepFusion.idealRun_step, if_pos rfl]
+    show PalPeg.CloseoutCoreEnc12.actList blankM _
+        (R.acts (PalPeg.LocalStepFusion.idealRun R blankM x input 0).1 input _
+          (slotIndex (headSlot v t))) = _
+    rw [hfirstActs _ _ _ t (by rw [← hqs 0]; exact hslotRun 0 (by omega))]
+    rfl
+  · rw [hqs 1, hqs 0, PalPeg.LocalStepFusion.idealRun_step, if_pos rfl]
+    exact hfirstGap _ _ _ (by rw [← hqs 0]; exact hslotRun 0 (by omega))
+  · rw [hqs 1, hqs 0, PalPeg.LocalStepFusion.idealRun_step, if_pos rfl]
+    exact hfirstMicro _ _ _ (by rw [← hqs 0]; exact hslotRun 0 (by omega))
+  · rw [hqs (step + 2), hqs (step + 1), hstepRun step, hwindows (step + 1)]
+    show viewControlOf (R.nq _ none _) v = _
+    rw [hnqHead _ _ step h (by rw [← hqs (step + 1)]; exact hslotRun (step + 1) (by omega))]
+  · rw [hTs (step + 2), hTs (step + 1), hstepRun step, hwindows (step + 1), hqs (step + 1)]
+    show PalPeg.CloseoutCoreEnc12.actList blankM _
+        (R.acts _ none _ (slotIndex (headSlot v t))) = _
+    rw [hactsHead _ _ step h t (by rw [← hqs (step + 1)]; exact hslotRun (step + 1) (by omega))]
 
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
