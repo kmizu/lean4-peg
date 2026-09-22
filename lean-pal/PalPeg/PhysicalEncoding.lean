@@ -13332,6 +13332,54 @@ theorem encPeriod_moveRight (t : PalPeg.GalilScaffoldChainPeriod.Tape) :
   | nil => rfl
   | cons a rs => rfl
 
+/-- **what a consuming scan tick does to the four cursors.**  The three input cursors stand
+still — a background tick never walks them — and the fourth steps right, whichever way the
+verdict goes.
+
+This is the head side of the consuming arm, in the form the tick's slot machinery asks for: one
+command per cursor, and for the fourth the place it lands. -/
+theorem headOf_tickFun_scan_consume (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hnorestart : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).restartGuard
+      x.vm = false)
+    (hbackground : (!x.ctl.replaying
+        && !(PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).available x.vm)
+        = true
+      ∨ 1 < x.ctl.clock)
+    (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (hchain : x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm)
+    (hlag : PalPeg.GalilScaffoldCounter.positive wm.lag = true) (b : Bool)
+    (hverdict : PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm = some b) :
+    (∀ v : Fin 4, v ≠ 3 → headOf (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) v
+          = headOf x v)
+      ∧ headOf (PalPeg.GalilScaffoldTop.tickFun
+          (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) 3
+        = some (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier) := by
+  have hvm := tickFun_scan_background_vm centre place entry entryQ first w F delay x hmode
+    hnorestart hbackground
+  have hactive : ¬ x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle := by
+    rw [hchain]
+    exact fun h => PalPeg.GalilScaffoldChainInputSupply.ChainVM.noConfusion h
+  obtain ⟨hleft, hcentre, hright⟩ :=
+    backgroundFun_cursors (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm
+  refine ⟨?_, ?_⟩
+  · intro v hv
+    fin_cases v
+    · show some _ = some _
+      rw [hvm, hleft]
+    · show some _ = some _
+      rw [hvm, hcentre]
+    · show some _ = some _
+      rw [hvm, hright]
+    · exact absurd rfl hv
+  · refine headOf_three_of_watchConsume wm ?_ hlag b hverdict
+    rw [hvm, backgroundFun_chain_active (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm
+      hactive, hchain]
+    rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
