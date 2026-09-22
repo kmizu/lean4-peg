@@ -4845,9 +4845,22 @@ theorem leftFirst_after_left (p : PalPeg.GalilScaffoldInputHead.PlaceHead) :
 /-- **the sign a counter takes after one increment.**  A counter tape holds the absolute value,
 so an increment pushes while the sign is positive and pops while it is negative; at zero on the
 negative side the push turns the sign around, and that is the one case where the bit moves. -/
+noncomputable def incSignAt {K : ℕ} (bit : Bool) (slot : Slot)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  bit || decide (belowRead ws slot ≠ encSeg PalPeg.LocalCounter.mark)
+
+/-- **the action an increment names, on whichever tape carries the counter.**  A mirror carries
+its source's value with its source's sign, so the mirror is incremented by this same action read
+off the mirror's own window — which is what `counter_inc_at` is stated for. -/
+noncomputable def incActAt {K : ℕ} (bit : Bool) (slot : Slot)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : PalPeg.CloseoutCoreEnc12.Act Γm :=
+  if incSignAt bit slot ws then
+    some (encSeg PalPeg.LocalCounter.mark, (.right : PalPeg.CloseoutCoreEnc12.MoveC))
+  else some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))
+
 noncomputable def incSign {K : ℕ} (polarity : Fin 16 → Bool) (c : Fin 16)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
-  polarity c || decide (belowRead ws (counterSlot c) ≠ encSeg PalPeg.LocalCounter.mark)
+  incSignAt (polarity c) (counterSlot c) ws
 
 /-- **the control table of one step of the rewind.**  The controller's pair bit is set, the
 head's own gap bit flips, the sign of the length counter follows the increment, and the bit for
@@ -4859,9 +4872,14 @@ noncomputable def rewindOneNext {fppBound dpBound K : ℕ} (q : QPhys fppBound d
 /-- the action a counter's increment names, on whichever tape carries the value. -/
 noncomputable def incAct {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound) (c : Fin 16)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : PalPeg.CloseoutCoreEnc12.Act Γm :=
-  if incSign q.polarity c ws then
-    some (encSeg PalPeg.LocalCounter.mark, (.right : PalPeg.CloseoutCoreEnc12.MoveC))
-  else some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))
+  incActAt (q.polarity c) (counterSlot c) ws
+
+/-- **a counter and its mirror take the same action.**  The mirror's own window supplies the
+frontier and the control supplies the source's sign, so nothing about the mirror has to be said
+twice. -/
+theorem incAct_eq_incActAt {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound) (c : Fin 16)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    incAct q c ws = incActAt (q.polarity c) (counterSlot c) ws := rfl
 
 /-- the actions one head's step left names on that head's own two stacks. -/
 noncomputable def headStepActs {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound) (v : Fin 4)
@@ -5889,7 +5907,7 @@ theorem incSign_eq {margin K : ℕ} (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
     show PalPeg.Local.readWin blankM K (tapesOf tapes (slotIndex (counterSlot c)))
       ⟨K - 1, by omega⟩ = _
     rw [tapesOf_apply, hslot]
-  unfold incSign
+  unfold incSign incSignAt
   rw [hbelow]
   congr 1
   rw [Bool.eq_iff_iff, decide_eq_true_eq, decide_eq_true_eq]
