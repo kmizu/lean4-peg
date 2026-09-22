@@ -9417,6 +9417,15 @@ theorem encTapes_afterTick {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ : �
       rw [tapesOf_apply])
     hmargins hpolarity hfppLive hdpLive hheads hidleHead
 
+/-- the same, with the view named: what a cursor's twelve slots hold. -/
+def HeadSlotsRepAt (margin : ℕ) (gap : Fin 4 → Bool)
+    (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (tapes : Slot → STape Γm)
+    (v : Fin 4) (view : PalPeg.LocalInputView.InputView) : Prop :=
+  ∃ viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc,
+    PalPeg.ConcreteLocalMachine.ViewRep margin view (gap v) (micro v) viewTapes ∧
+      (∀ i, tapes (headSlot v i) = mapTape encCell (viewTapes i)) ∧
+        PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view
+
 /-- **a cursor the abstraction names has it.** -/
 theorem headSlotsRep_of_heads {margin : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
     {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
@@ -9536,9 +9545,48 @@ theorem tickPhysRule_bits {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin
     hfree.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1,
     hfree.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2⟩
 
-/-- **after a tick of one of the five still modes, every cursor still holds a view.**  Which is
-what the margins of all four cursors' slots come from, the chain's verifier included, whether or
-not the abstraction names it. -/
+/-- **after a tick, every cursor still holds a view**, whatever command the table names for it.
+Which is what the margins of all four cursors' slots come from, the chain's verifier included,
+whether or not the abstraction names it. -/
+theorem tickPhysRule_headSlotsRep {fppBound dpBound K margin : ℕ} (entryQ : ℕ)
+    (first : Fin 9) (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK : 2 ≤ K)
+    (hmargin : K ≤ margin)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (input : Option (Fin 2)) (hslot0 : q.slot.val = 0)
+    (howed : ∀ v, (q.micro v).2.2.2 = 0)
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T) (v : Fin 4)
+    (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (hrow : modeCommands first rest q input
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) v = command)
+    (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hf : headOp command = some f)
+    (hready : ∀ view : PalPeg.LocalInputView.InputView,
+      HeadSlotsRepAt margin q.gap q.micro T v view → command = .moveRight →
+        view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    HeadSlotsRep margin
+        (PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK rest) blankM
+          (q, tapesOf T) input 12).1.gap
+        (PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK rest) blankM
+          (q, tapesOf T) input 12).1.micro
+        (fun slot => (PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hKq hK rest) blankM (q, tapesOf T) input 12).2
+            (slotIndex slot)) v := by
+  obtain ⟨view, viewTapes, hrep, hslots, hcells, hwf⟩ := headSlotsRep_all henc v
+  rw [tickPhysRule_eq entryQ first hbound hKq hK rest]
+  exact headSlotsRep_afterTick hK hmargin (fun q _ ws => ruleNext entryQ first hbound q ws)
+    (modeCommands first rest) (fun q _ ws => ruleActs entryQ first q ws)
+    (fun q _ ws j => ruleActs_length entryQ first hKq q ws j) v (q, tapesOf T) input hslot0
+    (howed v) view viewTapes hrep
+    (fun i => by
+      show tapesOf T (slotIndex (headSlot v i)) = _
+      rw [tapesOf_apply]
+      exact hslots i) hcells hwf command hrow f hf
+    (hready view ⟨viewTapes, hrep, hslots, hcells, hwf⟩)
+
+/-- **after a tick of one of the five still modes, every cursor still holds a view.** -/
 theorem tickPhysRule_headSlotsRep_still {fppBound dpBound K margin : ℕ} (entryQ : ℕ)
     (first : Fin 9) (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK : 2 ≤ K)
     (hmargin : K ≤ margin)
@@ -9561,18 +9609,10 @@ theorem tickPhysRule_headSlotsRep_still {fppBound dpBound K margin : ℕ} (entry
           (q, tapesOf T) input 12).1.micro
         (fun slot => (PalPeg.LocalStepFusion.idealRun
           (tickPhysRule entryQ first hbound hKq hK rest) blankM (q, tapesOf T) input 12).2
-            (slotIndex slot)) v := by
-  obtain ⟨view, viewTapes, hrep, hslots, hcells, hwf⟩ := headSlotsRep_all henc v
-  rw [tickPhysRule_eq entryQ first hbound hKq hK rest]
-  exact headSlotsRep_afterTick hK hmargin (fun q _ ws => ruleNext entryQ first hbound q ws)
-    (modeCommands first rest) (fun q _ ws => ruleActs entryQ first q ws)
-    (fun q _ ws j => ruleActs_length entryQ first hKq q ws j) v (q, tapesOf T) input hslot0
-    (howed v) view viewTapes hrep (fun i => by
-      show tapesOf T (slotIndex (headSlot v i)) = _
-      rw [tapesOf_apply]
-      exact hslots i) hcells hwf
+            (slotIndex slot)) v :=
+  tickPhysRule_headSlotsRep entryQ first hbound hKq hK hmargin rest x q T input hslot0 howed henc v
     .stay (by rw [modeCommands_eq_stay first rest q input _ hmode]; rfl) id rfl
-    (fun h => absurd h (by simp))
+    (fun _ _ h => absurd h (by simp))
 
 /-- **the whole obligation of a tick, in the five modes that move no head.**  The hypotheses are
 what a mode's branch is already proved to leave behind, said of the branch tables: the control it
