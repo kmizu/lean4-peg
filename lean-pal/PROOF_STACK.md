@@ -1,3 +1,43 @@
+## n535 (2026-09-22): 別名の問題は既に二通りの答えを持っていた——鏡と段
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n531 で開けた「`alias` をテープでどう払うか」という問いを閉じる。正本の `alias` は
+13 箇所ある（`grep -rn 'alias(' scala/pal/src/main/scala/pal/`）:
+
+| 場所 | 別名 |
+|---|---|
+| `ScaffoldChain.scala:91,92` | `lag ← radius`, `margin ← radius` |
+| `ScaffoldChain.scala:145,146` | `last ← boundary`, `boundary ← distance` |
+| `ScaffoldGalil.scala:303,315` | `remaining ← chain.h`, `remaining ← length` |
+| `ScaffoldGalil.scala:427` | `replay ← radius` |
+| `ScaffoldSearch.scala:106,107,134,144,200` | `lower ← lowerBound`, `work ← lowerBound / lower / span` |
+
+**答え (1): 鏡。** 符号化には既に 5 本の鏡がある（`PhysicalEncoding:771`）:
+
+```lean
+def mirrorSource : Fin 5 → Fin 16
+  | 0 => 2 | 1 => 2 | 2 => 2      -- radius を三重に
+  | 3 => 5                        -- lower
+  | _ => 6                        -- span
+```
+
+`EncTapes.mirrors` は「鏡のスロットは源と**同じ値**を持つテープを抱える」と言う。
+源を動かすたびに鏡も同じ行動で動かせば、別名は**役とテープの対応を替えるだけ**になる。
+`radius` の別名がちょうど 3 つ（`lag` / `margin` / `replay`）、`lower` と `span` が
+1 つずつ——**`mirrorSource` の数はこの表の数そのものだった。** 鏡は最初からこのために
+建っていた。
+
+**答え (2): 段。** chain の三つ組（13/14/15）は鏡の源ではない。そちらは n534 の通り、
+入れ子の三つ組を 1 本の区切り付きテープの段として持つ。境界事象は `resetSeg` 1 行動。
+
+**二つの機構は補い合う**: 別名の源が生きているとき（`radius` は chain が走っている間ずっと
+動く）は鏡、源が入れ子で増えるだけのとき（`last ≤ boundary ≤ distance`）は段。
+
+**まだ繋いでいない**: `remaining ← chain.h` と `remaining ← length` は鏡の源に無い
+（`chain.h` は counter 10、`length` は counter 3）。この 2 つがどちらの機構に載るか、
+あるいは源が死ぬので付け替えだけで済むかを次に見る。
+
 ## n534 (2026-09-22): 三つ組は三本ではなく、一本の区切り付きテープ
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
