@@ -12677,6 +12677,32 @@ theorem backgroundFun_id_of_searchAtRest (P : PalPeg.GalilScaffoldChainInputSupp
   rw [PalPeg.GalilScaffoldChainInputSupply.scanLens.set_get]
   exact PalPeg.GalilScaffoldChainInputSupply.searchLens.set_get s
 
+/-- **a watching chain that consumes steps its verifier right, whichever way the verdict goes.**
+A match consumes the letter the verifier has moved to and a mismatch breaks the chain on it, so
+the two arms leave the cursor in the same place and differ only in the chain's shape.
+
+This is why the scan's row can be decided without reading the verdict: the row says where the
+cursor goes, and both verdicts send it to the same place. -/
+theorem headOf_three_of_watchConsume {y : State GalilVM}
+    (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (hchain : y.vm.chain = PalPeg.GalilScaffoldChainInputSupply.chainStepFun
+      (PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm))
+    (hlag : PalPeg.GalilScaffoldCounter.positive wm.lag = true) (b : Bool)
+    (hverdict : PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm = some b) :
+    headOf y 3 = some (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier) := by
+  show (match y.vm.chain with
+    | .idle => none
+    | .copy _ _ _ _ _ _ verifier => some verifier
+    | .back _ _ _ _ verifier => some verifier
+    | .watch v => some v.machine.verifier
+    | .broken v => some v.machine.verifier) = _
+  rw [hchain]
+  simp only [PalPeg.GalilScaffoldChainInputSupply.chainStepFun]
+  rw [if_pos hlag, hverdict]
+  cases b with
+  | true => rfl
+  | false => rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
