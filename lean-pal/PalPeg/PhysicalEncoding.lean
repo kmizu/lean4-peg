@@ -6289,6 +6289,63 @@ theorem topSym_sealed (junk : List (Option (Fin 2)))
       rw [hj, hc]
       rfl
 
+/-- **a letter of a view is never the machine's blank.**  The encoding sends the blank cell and
+the sentinel to the blank symbol and a letter to its own, so a letter is visible as such. -/
+theorem encCell_cellSym_some_ne_blank (b : Fin 2) :
+    encCell (PalPeg.CloseoutCoreEnc.cellSym (some b)) ≠ blankM := by
+  have hne : PalPeg.CloseoutCoreEnc.cellSym (some b) ≠ PalPeg.CloseoutCoreStep.blankc := by
+    simp [PalPeg.CloseoutCoreEnc.cellSym, PalPeg.CloseoutCoreStep.blankc,
+      PalPeg.GalilVMEncode.blank, PalPeg.GalilVMEncode.sOpt]
+  simp [encCell, hne, blankM]
+
+/-- **the symbol under a head's near head says whether the head has a cell to step onto.**  A
+view's near stack holds letters and its debris is sealed, so the near head shows a letter exactly
+when the stack is not empty — and that is the reading that tells a step right the machine can
+take by itself from one it has to wait for the queue for. -/
+theorem centreRead_near_ne_blank_iff {margin K : ℕ} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {x : State GalilVM} {tapes : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes) (hK : K ≤ margin)
+    (v : Fin 4) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hhead : headOf x v = some head) :
+    centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+        (headSlot v PalPeg.ConcreteLocalMachine.nearTape) ≠ blankM
+      ↔ head.head.right ≠ [] := by
+  obtain ⟨view, viewTapes, habs, hrep, hslots, hcells⟩ := henc.heads v head hhead
+  have hviewNear : view.near = head.head.right := by
+    have hn : (PalPeg.LocalArrival.absHead' view []).head.right = head.head.right := by rw [habs]
+    exact hn
+  obtain ⟨bottom, hsealed, hbottomLen, hst⟩ := hrep.near
+  have hmarginStack : K ≤ (view.near ++ bottom).length := by
+    have hlen : (view.near ++ bottom).length = view.near.length + bottom.length := by
+      simp
+    omega
+  have hcentre : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+      (headSlot v PalPeg.ConcreteLocalMachine.nearTape)
+      = encCell (PalPeg.CloseoutCoreEnc18.topSym (view.near ++ bottom)) :=
+    centreRead_nearSlot v viewTapes (view.near ++ bottom)
+      (hslots PalPeg.ConcreteLocalMachine.nearTape) hst hmarginStack
+  obtain ⟨nearLetters, hnearLetters⟩ := PalPeg.LocalViewCells.near_letters hcells
+  rw [hcentre, ← hviewNear]
+  cases hn : view.near with
+  | nil =>
+    rw [List.nil_append, topSym_sealed bottom hsealed]
+    simp [encCell]
+  | cons c restNear =>
+    obtain ⟨b, hb⟩ : ∃ b : Fin 2, c = some b := by
+      rw [hn] at hnearLetters
+      cases hl : nearLetters with
+      | nil =>
+        rw [hl] at hnearLetters
+        exact absurd hnearLetters (by simp)
+      | cons d ds =>
+        refine ⟨d, ?_⟩
+        rw [hl] at hnearLetters
+        exact (List.cons.inj hnearLetters).1
+    subst hb
+    show ¬ (encCell (PalPeg.CloseoutCoreEnc.cellSym (some b)) = blankM) ↔ _
+    simp [encCell_cellSym_some_ne_blank b]
+
 /-- **the symbol under a head's back head says whether the head has anything behind it.**  A
 view holds the left sentinel and then letters, so the top of its back stack is the sentinel
 exactly when nothing is behind the head — which is the reading that tells the three cases of a
