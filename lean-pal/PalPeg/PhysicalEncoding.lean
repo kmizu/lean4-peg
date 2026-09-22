@@ -13263,6 +13263,30 @@ theorem chainAtFun_of_active (found : Bool) (answer : PalPeg.GalilScaffoldTape.T
   | watch wm => rfl
   | broken wm => rfl
 
+/-- **a background tick over a running chain is one step of the chain and nothing else.**  The
+search takes no quantum, the three input cursors stay, and the two lenses the background writes
+through put back what they read — so the whole tick is the chain's own step, written into the
+machine's chain field.
+
+`backgroundFun_id_of_chainFixed` is the case in which that step stands still. -/
+theorem backgroundFun_of_active (P : PalPeg.GalilScaffoldChainInputSupply.Shared) (s : GalilVM)
+    (hactive : ¬ s.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle) :
+    PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s
+      = {s with chain := PalPeg.GalilScaffoldChainInputSupply.chainStepFun s.chain} := by
+  have hget : PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s
+      = PalPeg.GalilScaffoldChainInputSupply.searchLens.get s := by
+    unfold PalPeg.GalilScaffoldChainInputSupply.searchEffectFun
+    cases hc : s.chain with
+    | idle => exact absurd hc hactive
+    | copy a b d e f g h => rfl
+    | back a b d e f => rfl
+    | watch wm => rfl
+    | broken wm => rfl
+  unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+  rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_of_ne_idle (s := s) hactive,
+    chainAtFun_of_active _ _ _ _ _ _ s.chain hactive, hget]
+  rfl
+
 /-- **a background tick that finds the chain standing is the identity.**  Over a running chain
 the search takes no quantum and the background writes back the three scan fields it read; so if
 the chain's own step leaves the chain where it was, the tick leaves the whole machine where it
@@ -13980,6 +14004,357 @@ theorem caught_lag_margin (wm : PalPeg.GalilScaffoldChainWatch.State) :
     (PalPeg.GalilScaffoldChainWatch.caught wm).lag
         = PalPeg.GalilScaffoldCounter.dec wm.lag
       ∧ (PalPeg.GalilScaffoldChainWatch.caught wm).margin = wm.margin := ⟨rfl, rfl⟩
+
+/-- **the tapes after a consuming tick, of the machine itself.**  The chain spends one unit of
+its lag, counts one more letter of its distance and walks its period tape one step; the step's
+table writes those three slots and erases one cell of the idle program half, and nothing else it
+writes is read by the encoding.
+
+The cursor is not here: the chain's verifier moves too, but a step right is eleven slots of the
+view layer, so this is the encoding of `stepState` — the tick's state with the cursor put back. -/
+theorem physRule_scan_consume {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK1 : 1 ≤ K) (hK : K ≤ margin)
+    (hKn : K ≤ margin + 1)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hconsume : chainConsumesTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true)
+    (hmatch : watchVerdictTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = some true)
+    (hfwdBit : (scanConsumeNext q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).chainForward = true)
+    (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (hchain : x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm) (a : Fin 3)
+    (htok : wm.machine.control.period.focus = PalPeg.GalilScaffoldChainPeriod.Token.plain a)
+    (hseen : PalPeg.GalilScaffoldInputHead.read
+      (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier) = some a)
+    (hforward : wm.machine.control.forward = true)
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T) :
+    EncTapes margin
+      (stepState ⟨x.ctl, {x.vm with
+        chain := PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch
+          (PalPeg.GalilScaffoldChainWatch.caught wm)}⟩ wm.machine.verifier)
+      (scanConsumeNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).polarity
+      q.gap q.micro q.fppLive q.dpLive
+      (fun slot => PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
+        (ruleActs entryQ first q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (slotIndex slot))) := by
+  have hcontrol := caught_control_of_plain wm a htok hseen hforward
+  have hlagx : counterOf x 11 = some wm.lag := by simp only [counterOf, hchain]
+  have hdistx : counterOf x 13 = some wm.machine.control.distance := by
+    simp only [counterOf, hchain]
+  have hperiodx : periodOf x = some wm.machine.control.period := by
+    simp only [periodOf, hchain]
+  obtain ⟨segLag, habsLag, htapeLag⟩ :=
+    scanConsume_lagTape margin entryQ first hbound hK1 hKn x q T hqmode hconsume hmatch
+      wm.lag hlagx henc
+  obtain ⟨segDist, habsDist, htapeDist⟩ :=
+    scanConsume_distanceTape margin entryQ first hbound hK1 hKn x q T hqmode hconsume hmatch
+      wm.machine.control.distance hdistx henc
+  have htapePeriod :=
+    scanConsume_periodTape margin entryQ first hbound hK x q T hqmode hconsume hmatch hfwdBit
+      wm.machine.control.period hperiodx henc
+  have hzc : (stepState ⟨x.ctl, {x.vm with
+      chain := PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch
+        (PalPeg.GalilScaffoldChainWatch.caught wm)}⟩ wm.machine.verifier).vm.chain
+      = PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch
+          ⟨⟨wm.machine.verifier, (PalPeg.GalilScaffoldChainWatch.caught wm).machine.control⟩,
+            (PalPeg.GalilScaffoldChainWatch.caught wm).lag,
+            (PalPeg.GalilScaffoldChainWatch.caught wm).margin⟩ := rfl
+  refine encTapes_chainConsume margin x _ q.polarity _ q.gap q.micro q.fppLive q.dpLive T _ henc
+    ?_ ?_ (fun i => rfl) (fun i => rfl) ?_ ?_ ?_
+    (PalPeg.GalilScaffoldCounter.dec wm.lag) ?_ segLag ?_ ?_
+    (PalPeg.GalilScaffoldCounter.inc wm.machine.control.distance) ?_ segDist ?_ ?_
+    (PalPeg.GalilScaffoldChainPeriod.moveRight wm.machine.control.period) ?_ ?_ ?_ ?_
+  · funext v
+    fin_cases v <;> simp only [headOf, hzc, hchain] <;> rfl
+  · funext i
+    fin_cases i <;> simp only [placeOf, hzc, hchain] <;> rfl
+  · simp only [answerOf, hzc, hchain]
+  · intro c h11 h13
+    fin_cases c <;> first
+      | exact absurd rfl h11
+      | exact absurd rfl h13
+      | (simp only [counterOf, hzc, hchain, hcontrol]; rfl)
+      | (simp only [counterOf, hzc, hchain, hcontrol])
+  · intro c h11 h13
+    simp only [scanConsumeNext, hmatch]
+    rw [Function.update_of_ne h13, Function.update_of_ne h11]
+  · simp only [counterOf, hzc]
+    rfl
+  · rw [show (scanConsumeNext q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).polarity 11
+        = decSignAt (q.polarity 11) (counterSlot 11)
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) from by
+      simp only [scanConsumeNext, hmatch]
+      rw [Function.update_of_ne (by decide), Function.update_self]]
+    exact habsLag
+  · exact htapeLag
+  · simp only [counterOf, hzc, hcontrol]
+  · rw [show (scanConsumeNext q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).polarity 13
+        = incSign q.polarity 13
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) from by
+      simp only [scanConsumeNext, hmatch]
+      rw [Function.update_self]]
+    exact habsDist
+  · exact htapeDist
+  · simp only [periodOf, hzc, hcontrol]
+  · exact htapePeriod
+  · intro k
+    obtain ⟨raw, hraw⟩ :=
+      idle_shape_after_erase margin hK1 hKn (physRule entryQ first hbound hKq) q T q.fppLive _
+        (by
+          show ruleActs entryQ first q _ = _
+          unfold ruleActs
+          rw [hqmode])
+        (fun k' => scanConsumeActs_off q _ (progSlotOf (!q.fppLive) k')
+          (by cases q.fppLive <;> simp [progSlotOf, counterSlot])
+          (by cases q.fppLive <;> simp [progSlotOf, counterSlot])
+          (by cases q.fppLive <;> simp [progSlotOf, periodSlot]))
+        henc.idleShape k
+    refine ⟨raw, ?_⟩
+    rw [← hraw, idealStep_physRule]
+    dsimp only
+    rw [tapesOf_apply]
+  · intro slot h11 h13 hp hidle
+    rw [show ruleActs entryQ first q
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (slotIndex slot) = [] from by
+      unfold ruleActs
+      rw [hqmode]
+      dsimp only
+      rw [withErase_at_other q.fppLive _ _ slot hidle, scanConsumeActs_off q _ slot h11 h13 hp]]
+    rfl
+
+/-- **what the scan's row of the branch table leaves alone.**  Every arm of it is the control
+word with the chain's tag, phase and direction and two counter signs replaced, so the fourteen
+fields the encoding reads elsewhere are the ones it started with.
+
+Said once, because the row is a `match` on the verdict and does not reduce until the verdict is
+known — and the fields below do not depend on which arm it is. -/
+theorem scanConsumeNext_untouched {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    (scanConsumeNext q ws).ctl = q.ctl
+      ∧ (scanConsumeNext q ws).fppMode = q.fppMode
+      ∧ (scanConsumeNext q ws).fppFinalStage = q.fppFinalStage
+      ∧ (scanConsumeNext q ws).fppPc = q.fppPc
+      ∧ (scanConsumeNext q ws).fppDone = q.fppDone
+      ∧ (scanConsumeNext q ws).dpPc = q.dpPc
+      ∧ (scanConsumeNext q ws).dpDone = q.dpDone
+      ∧ (scanConsumeNext q ws).searchMode = q.searchMode
+      ∧ (scanConsumeNext q ws).searchFinalStage = q.searchFinalStage
+      ∧ (scanConsumeNext q ws).searchQuarter = q.searchQuarter
+      ∧ (scanConsumeNext q ws).periodOnly = q.periodOnly
+      ∧ (scanConsumeNext q ws).placeGap = q.placeGap
+      ∧ (scanConsumeNext q ws).onLetterBit = q.onLetterBit
+      ∧ (scanConsumeNext q ws).leftFirstBit = q.leftFirstBit
+      ∧ (scanConsumeNext q ws).gap = q.gap
+      ∧ (scanConsumeNext q ws).micro = q.micro
+      ∧ (scanConsumeNext q ws).fppLive = q.fppLive
+      ∧ (scanConsumeNext q ws).dpLive = q.dpLive := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+    (simp only [scanConsumeNext]; split <;> rfl)
+
+/-- **the control after a consuming tick.**  Eighteen fields and only the chain's four move: the
+tag stays `watchers` on a match, the phase and the direction follow the period tape's focus, and
+the broken bit stays down.  Everything else names a part of the machine the tick does not touch.
+
+The two counter signs the row also writes are not fields of `EncControl` — they are read through
+`EncTapes`, which is why they do not appear here. -/
+theorem encControl_scanConsume {fppBound dpBound K : ℕ} {w : List (Fin 2)}
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (hctl : EncControl w x q)
+    (hconsume : chainConsumesTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true)
+    (htest : watchVerdictTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm)
+    (hverdict : PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm = some true)
+    (htoken : decToken (centreRead
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) periodSlot)
+      = wm.machine.control.period.focus)
+    (hchain : x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm)
+    (hlag : PalPeg.GalilScaffoldCounter.positive wm.lag = true) :
+    EncControl w ⟨x.ctl, {x.vm with
+      chain := PalPeg.GalilScaffoldChainInputSupply.chainStepFun x.vm.chain}⟩
+      (scanConsumeNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))) := by
+  have htag : q.chainTag = ChainTag.watchers := by rw [hctl.chainTag, hchain]; rfl
+  have hphase : q.chainPhase = wm.machine.control.phase := by
+    rw [hctl.chainPhase, hchain]; rfl
+  have hforward : q.chainForward = wm.machine.control.forward := by
+    rw [hctl.chainForward, hchain]; rfl
+  have hbroken : q.chainBroken = wm.machine.control.broken := by
+    rw [hctl.chainBroken, hchain]; rfl
+  obtain ⟨htagNew, hconsumeNew⟩ :=
+    scanConsumeNext_of_match q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) wm
+      htest hverdict htag htoken hphase hforward hbroken hlag
+  have hstep : PalPeg.GalilScaffoldChainInputSupply.chainStepFun
+      (PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm)
+      = PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch
+          (PalPeg.GalilScaffoldChainWatch.caught wm) := by
+    simp only [PalPeg.GalilScaffoldChainInputSupply.chainStepFun]
+    rw [if_pos hlag, hverdict]
+  obtain ⟨hc, hfm, hfs, hfp, hfd, hdpc, hdd, hsm, hsf, hsq, hpo, hpg, hol, hlf, -, -, -, -⟩ :=
+    scanConsumeNext_untouched q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+  refine
+    { ctl := by rw [hc]; exact hctl.ctl
+      chainTag := ?_
+      chainPhase := ?_
+      chainForward := ?_
+      chainBroken := ?_
+      fppMode := by rw [hfm]; exact hctl.fppMode
+      fppFinalStage := by rw [hfs]; exact hctl.fppFinalStage
+      fppPc := by rw [hfp]; exact hctl.fppPc
+      fppDone := by rw [hfd]; exact hctl.fppDone
+      dpPc := by rw [hdpc]; exact hctl.dpPc
+      dpDone := by rw [hdd]; exact hctl.dpDone
+      searchMode := by rw [hsm]; exact hctl.searchMode
+      searchFinalStage := by rw [hsf]; exact hctl.searchFinalStage
+      searchQuarter := by rw [hsq]; exact hctl.searchQuarter
+      periodOnly := by rw [hpo]; exact hctl.periodOnly
+      placeGap := ?_
+      onLetter := by rw [hol]; exact hctl.onLetter
+      leftFirst := by rw [hlf]; exact hctl.leftFirst }
+  · rw [hchain]
+    exact htagNew
+  · rw [hchain]
+    exact congrArg (fun t => t.1) hconsumeNew.symm
+  · rw [hchain]
+    exact congrArg (fun t => t.2.1) hconsumeNew.symm
+  · rw [hchain]
+    exact congrArg (fun t => t.2.2) hconsumeNew.symm
+  · intro i place hplace
+    rw [hpg]
+    refine hctl.placeGap i place ?_
+    rw [← hplace]
+    fin_cases i <;> simp only [placeOf, hchain, hstep] <;> rfl
+
+/-- **a scan tick in which the chain consumes a letter, carried through the twelve slots.**  The
+three input cursors stand still and the fourth steps right; the step's table spends one unit of
+the chain's lag, counts one more letter of its distance and walks its period tape; the control
+keeps the chain watching and hands it the letter.
+
+This is the first branch whose cursor steps right, which is why it goes through
+`enc_afterTickOfState` rather than through the still assembler: the step's own table cannot write
+a step right, so the encoding after the tick is read off two states — everything but the cursors
+off `stepState`, and the cursors off the tick's own state. -/
+theorem scan_consume_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (input : Option (Fin 2))
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hK1 : 1 ≤ K)
+    (hmargin : K ≤ margin) (hslot0 : q.slot.val = 0) (howed : ∀ v, (q.micro v).2.2.2 = 0)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hnorestart : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).restartGuard
+      x.vm = false)
+    (hquiet : (!x.ctl.replaying
+      && !(PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).available x.vm)
+        = true)
+    (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (hchain : x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm) (a : Fin 3)
+    (htok : wm.machine.control.period.focus = PalPeg.GalilScaffoldChainPeriod.Token.plain a)
+    (hseen : PalPeg.GalilScaffoldInputHead.read
+      (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier) = some a)
+    (hforward : wm.machine.control.forward = true)
+    (hlag : PalPeg.GalilScaffoldCounter.positive wm.lag = true)
+    (hverdict : PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm = some true)
+    (hconsume : chainConsumesTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true)
+    (htest : watchVerdictTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm)
+    (htoken : decToken (centreRead
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) periodSlot)
+      = wm.machine.control.period.focus)
+    (hfwdBit : (scanConsumeNext q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).chainForward = true)
+    (hready : ∀ v view, HeadSlotsRepAt margin q.gap q.micro T v view →
+      scanCommands q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) v
+        = PalPeg.ConcreteLocalMachine.ViewCommand.moveRight →
+      view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ [])
+    (henc : Enc w margin x (q, T)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK2 rest) blankM
+          (q, tapesOf T) input 12).1,
+        fun i => (PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hKq hK2 rest) blankM (q, tapesOf T) input 12).2
+            (slotIndex i)) := by
+  have hactive : ¬ x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle := by
+    rw [hchain]
+    exact fun h => PalPeg.GalilScaffoldChainInputSupply.ChainVM.noConfusion h
+  have hstep : PalPeg.GalilScaffoldChainInputSupply.chainStepFun x.vm.chain
+      = PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch
+          (PalPeg.GalilScaffoldChainWatch.caught wm) := by
+    rw [hchain]
+    simp only [PalPeg.GalilScaffoldChainInputSupply.chainStepFun]
+    rw [if_pos hlag, hverdict]
+  have htick : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
+      = ⟨x.ctl, {x.vm with
+          chain := PalPeg.GalilScaffoldChainInputSupply.chainStepFun x.vm.chain}⟩ := by
+    rw [tickFun_scan_background_quiet centre place entry entryQ first w F delay x hmode hnorestart
+      hquiet,
+      backgroundFun_of_active (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm hactive]
+  have hrule : ruleNext entryQ first hbound q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = scanConsumeNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) := by
+    unfold ruleNext
+    rw [hqmode]
+    dsimp only
+    rw [if_pos hconsume]
+  have hy : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
+      = ⟨x.ctl, {x.vm with
+          chain := PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch
+            (PalPeg.GalilScaffoldChainWatch.caught wm)}⟩ := by rw [htick, hstep]
+  have hheads := headOf_tickFun_scan_consume centre place entry entryQ first w F delay x hmode
+    hnorestart (Or.inl hquiet) wm hchain hlag true hverdict
+  have hx3 : headOf x 3 = some wm.machine.verifier := by
+    simp only [headOf, hchain]
+  rw [hy]
+  refine enc_afterTickOfState margin entryQ first hbound hKq hK2 hmargin rest w x _ q T input
+    hslot0 howed
+    (scanCommands q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+    (fun v => by rw [modeCommands_scan first rest q input _ hqmode])
+    (fun v => if v = 3 ∧ chainConsumesTest q
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) then
+      PalPeg.GalilScaffoldChainVerifier.right else id)
+    (fun v => headOp_scanCommands q _ v) ?_ ?_ hready henc.2 ?_
+    (z := stepState ⟨x.ctl, {x.vm with
+      chain := PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch
+        (PalPeg.GalilScaffoldChainWatch.caught wm)}⟩ wm.machine.verifier)
+    (fun i => rfl) (fun i => rfl) ?_ ?_ ?_ ?_ ?_
+  · intro v
+    by_cases hv : v = 3
+    · subst hv
+      rw [hx3, ← hy, hheads.2]
+      rfl
+    · rw [← hy, hheads.1 v hv]
+  · intro v head hhead
+    by_cases hv : v = 3
+    · subst hv
+      rw [hx3] at hhead
+      rw [← hy, hheads.2, ← Option.some.inj hhead, if_pos ⟨rfl, hconsume⟩]
+    · rw [← hy, hheads.1 v hv, hhead, if_neg (fun h => hv h.1)]
+      rfl
+  · rw [hrule]
+    have hc := encControl_scanConsume x q T wm henc.1 hconsume htest hverdict htoken hchain hlag
+    rwa [hstep] at hc
+  · exact counterOf_stepState _ _
+  · exact placeOf_stepState _ _
+  · exact periodOf_stepState _ _
+  · exact answerOf_stepState _ _
+  · obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, -, hgap, hmicro, hfl, hdl⟩ :=
+      scanConsumeNext_untouched q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+    rw [hrule, hgap, hmicro, hfl, hdl]
+    exact physRule_scan_consume margin entryQ first hbound hKq hK1 hmargin (by omega) x q T
+      hqmode hconsume (by rw [htest, hverdict]) hfwdBit wm hchain a htok hseen hforward henc.2
 
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
