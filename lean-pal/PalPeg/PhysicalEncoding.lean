@@ -12091,6 +12091,30 @@ theorem backgroundFun_cursors (P : PalPeg.GalilScaffoldChainInputSupply.Shared) 
     rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_right]
     rfl
 
+/-- **and while the chain stays idle it leaves the fourth cursor absent.**  `chainAtFun` starts a
+chain only when the search reports its period found; until then an idle chain stays idle, so the
+background tick has no fourth cursor to move and none to encode.
+
+With `backgroundFun_cursors` this pins the head side of a background tick down to one case: the
+tick in which the chain is born.  That case is `heads_atChainBirth`, and the mirror pays for it.
+-/
+theorem backgroundFun_chain_stillIdle (P : PalPeg.GalilScaffoldChainInputSupply.Shared)
+    (s : GalilVM) (hidle : s.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle)
+    (hnotFound : ¬ (PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s).search.mode
+      = PalPeg.GalilScaffoldSearchFinish.Mode.found) :
+    (PalPeg.GalilScaffoldChainInputSupply.backgroundFun P s).chain
+      = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle := by
+  unfold PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+  rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_chain]
+  show PalPeg.GalilScaffoldChainInputSupply.chainAtFun false
+    (decide ((PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s).search.mode
+      = PalPeg.GalilScaffoldSearchFinish.Mode.found)) _ _ _ _ _ s.chain = _
+  rw [hidle]
+  show (if decide ((PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P false s).search.mode
+      = PalPeg.GalilScaffoldSearchFinish.Mode.found) = true then _ else
+    PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle) = _
+  rw [if_neg (by simpa using hnotFound)]
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
