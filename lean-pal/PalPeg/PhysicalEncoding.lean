@@ -4338,31 +4338,57 @@ noncomputable def rewindOneNext {fppBound dpBound K : ℕ} (q : QPhys fppBound d
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : QPhys fppBound dpBound :=
   {q with ctl := {q.ctl with pair := true}, leftFirstBit := q.gap 0 && decide (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape) ≠ encCell (PalPeg.CloseoutCoreEnc.cellSym none)) && decide (belowRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape) = encCell (PalPeg.CloseoutCoreEnc.cellSym none)), polarity := Function.update q.polarity 3 (incSign q.polarity 3 ws), gap := Function.update q.gap 0 (!q.gap 0)}
 
+/-- the action a counter's increment names, on whichever tape carries the value. -/
+noncomputable def incAct {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound) (c : Fin 16)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : PalPeg.CloseoutCoreEnc12.Act Γm :=
+  if incSign q.polarity c ws then
+    some (encSeg PalPeg.LocalCounter.mark, (.right : PalPeg.CloseoutCoreEnc12.MoveC))
+  else some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))
+
+/-- the actions one head's step left names on that head's own two stacks. -/
+noncomputable def headStepActs {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound) (v : Fin 4)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (t : Fin 12) :
+    List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  if q.gap v
+      || decide (centreRead ws (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+          = encCell (PalPeg.CloseoutCoreEnc.cellSym none)) then []
+    else if t = PalPeg.ConcreteLocalMachine.backTape then
+      [some (centreRead ws (headSlot v PalPeg.ConcreteLocalMachine.backTape),
+        (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+    else if t = PalPeg.ConcreteLocalMachine.nearTape then
+      [some (centreRead ws (headSlot v PalPeg.ConcreteLocalMachine.nearTape),
+          (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+        some (centreRead ws (headSlot v PalPeg.ConcreteLocalMachine.backTape),
+          (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
+    else []
+
+theorem headStepActs_length {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound) (v : Fin 4)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (t : Fin 12) :
+    (headStepActs q v ws t).length ≤ 2 := by
+  unfold headStepActs
+  split_ifs <;> simp
+
 /-- **the action table of one step of the rewind.**  The marks tape steps left, the length
-counter is incremented, and the left head's two stacks move — unless the head stood on a gap, in
-which case its bit is the whole of its step. -/
+counter is incremented, and the left head takes its own step — which is nothing at all unless it
+stands on a letter with something behind it. -/
 noncomputable def rewindOneActs {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
     Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
   fun j =>
     if j = slotIndex (progSlot live 8) then
       [some (centreRead ws (progSlot live 8), (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
-    else if j = slotIndex (counterSlot 3) then
-      [if incSign q.polarity 3 ws then
-          some (encSeg PalPeg.LocalCounter.mark, (.right : PalPeg.CloseoutCoreEnc12.MoveC))
-        else some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
-    else if q.gap 0
-        || decide (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape)
-            = encCell (PalPeg.CloseoutCoreEnc.cellSym none)) then []
+    else if j = slotIndex (counterSlot 3) then [incAct q 3 ws]
     else if j = slotIndex (headSlot 0 PalPeg.ConcreteLocalMachine.backTape) then
-      [some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape),
-        (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+      headStepActs q 0 ws PalPeg.ConcreteLocalMachine.backTape
     else if j = slotIndex (headSlot 0 PalPeg.ConcreteLocalMachine.nearTape) then
-      [some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.nearTape),
-          (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
-        some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape),
-          (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
+      headStepActs q 0 ws PalPeg.ConcreteLocalMachine.nearTape
     else []
+
+theorem headSlot_ne_of_tape_ne (v : Fin 4) (t t' : Fin 12) (h : t ≠ t') :
+    slotIndex (headSlot v t) ≠ slotIndex (headSlot v t') := by
+  intro hEq
+  have hpair : v = v ∧ t = t' := by simpa [headSlot] using slotIndex.injective hEq
+  exact h hpair.2
 
 theorem rewindOneActs_prog {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
@@ -4373,54 +4399,26 @@ theorem rewindOneActs_prog {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys f
 
 theorem rewindOneActs_counter {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
-    rewindOneActs live q ws (slotIndex (counterSlot 3))
-      = [if incSign q.polarity 3 ws then
-            some (encSeg PalPeg.LocalCounter.mark, (.right : PalPeg.CloseoutCoreEnc12.MoveC))
-          else some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+    rewindOneActs live q ws (slotIndex (counterSlot 3)) = [incAct q 3 ws] := by
   unfold rewindOneActs
   rw [if_neg (fun h => (progSlot_ne_counterSlot live 8 3) (slotIndex.injective h).symm),
     if_pos rfl]
 
 theorem rewindOneActs_head {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (t : Fin 12) :
-    rewindOneActs live q ws (slotIndex (headSlot 0 t))
-      = (if q.gap 0
-            || decide (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape)
-                = encCell (PalPeg.CloseoutCoreEnc.cellSym none)) then []
-          else if t = PalPeg.ConcreteLocalMachine.backTape then
-            [some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape),
-              (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
-          else if t = PalPeg.ConcreteLocalMachine.nearTape then
-            [some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.nearTape),
-                (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
-              some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape),
-                (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
-          else []) := by
+    rewindOneActs live q ws (slotIndex (headSlot 0 t)) = headStepActs q 0 ws t := by
   unfold rewindOneActs
   rw [if_neg (fun h => (progSlot_ne_headSlot live 8 0 t) (slotIndex.injective h).symm),
     if_neg (fun h => (counterSlot_ne_headSlot 3 0 t) (slotIndex.injective h).symm)]
-  split
-  · rfl
-  · by_cases hb : t = PalPeg.ConcreteLocalMachine.backTape
-    · subst hb
-      rw [if_pos rfl, if_pos rfl]
-    · have hneb : slotIndex (headSlot 0 t)
-          ≠ slotIndex (headSlot 0 PalPeg.ConcreteLocalMachine.backTape) := by
-        intro h
-        have hpair : (0 : Fin 4) = 0 ∧ t = PalPeg.ConcreteLocalMachine.backTape := by
-          simpa [headSlot] using slotIndex.injective h
-        exact hb hpair.2
-      rw [if_neg hneb, if_neg hb]
-      by_cases hn : t = PalPeg.ConcreteLocalMachine.nearTape
-      · subst hn
-        rw [if_pos rfl, if_pos rfl]
-      · have hnen : slotIndex (headSlot 0 t)
-            ≠ slotIndex (headSlot 0 PalPeg.ConcreteLocalMachine.nearTape) := by
-          intro h
-          have hpair : (0 : Fin 4) = 0 ∧ t = PalPeg.ConcreteLocalMachine.nearTape := by
-            simpa [headSlot] using slotIndex.injective h
-          exact hn hpair.2
-        rw [if_neg hnen, if_neg hn]
+  by_cases hb : t = PalPeg.ConcreteLocalMachine.backTape
+  · subst hb
+    rw [if_pos rfl]
+  · rw [if_neg (headSlot_ne_of_tape_ne 0 t PalPeg.ConcreteLocalMachine.backTape hb)]
+    by_cases hn : t = PalPeg.ConcreteLocalMachine.nearTape
+    · subst hn
+      rw [if_pos rfl]
+    · rw [if_neg (headSlot_ne_of_tape_ne 0 t PalPeg.ConcreteLocalMachine.nearTape hn)]
+      simp [headStepActs, hb, hn]
 
 theorem rewindOneActs_progOther {fppBound dpBound K : ℕ} (live : Bool)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
@@ -4428,11 +4426,9 @@ theorem rewindOneActs_progOther {fppBound dpBound K : ℕ} (live : Bool)
     rewindOneActs live q ws (slotIndex (progSlot live j)) = [] := by
   unfold rewindOneActs
   rw [if_neg (fun h => hj (progSlotOf_injective live (slotIndex.injective h))),
-    if_neg (fun h => (progSlot_ne_counterSlot live j 3) (slotIndex.injective h))]
-  split
-  · rfl
-  · rw [if_neg (fun h => (progSlot_ne_headSlot live j 0 _) (slotIndex.injective h)),
-      if_neg (fun h => (progSlot_ne_headSlot live j 0 _) (slotIndex.injective h))]
+    if_neg (fun h => (progSlot_ne_counterSlot live j 3) (slotIndex.injective h)),
+    if_neg (fun h => (progSlot_ne_headSlot live j 0 _) (slotIndex.injective h)),
+    if_neg (fun h => (progSlot_ne_headSlot live j 0 _) (slotIndex.injective h))]
 
 theorem rewindOneActs_off {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (slot : Slot)
@@ -4441,17 +4437,48 @@ theorem rewindOneActs_off {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fp
     rewindOneActs live q ws (slotIndex slot) = [] := by
   unfold rewindOneActs
   rw [if_neg (fun h => hprog 8 (slotIndex.injective h)),
-    if_neg (fun h => hcounter (slotIndex.injective h))]
-  split
-  · rfl
-  · rw [if_neg (fun h => hhead _ (slotIndex.injective h)),
-      if_neg (fun h => hhead _ (slotIndex.injective h))]
+    if_neg (fun h => hcounter (slotIndex.injective h)),
+    if_neg (fun h => hhead _ (slotIndex.injective h)),
+    if_neg (fun h => hhead _ (slotIndex.injective h))]
+
+/-- **the control table of the rewind's paired step.**  Both heads' bits flip, both counters'
+signs follow their increments, and the bit for the first letter is about the left head. -/
+noncomputable def rewindPairNext {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : QPhys fppBound dpBound :=
+  {q with ctl := {q.ctl with pair := false}, leftFirstBit := q.gap 0 && decide (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape) ≠ encCell (PalPeg.CloseoutCoreEnc.cellSym none)) && decide (belowRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape) = encCell (PalPeg.CloseoutCoreEnc.cellSym none)), polarity := Function.update (Function.update q.polarity 3 (incSign q.polarity 3 ws)) 2 (incSign q.polarity 2 ws), gap := Function.update (Function.update q.gap 0 (!q.gap 0)) 1 (!q.gap 1)}
+
+/-- **the action table of the rewind's paired step.**  The marks tape, the two counters with the
+radius's three mirrors, and the two heads' stacks. -/
+noncomputable def rewindPairActs {fppBound dpBound K : ℕ} (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  fun j =>
+    if j = slotIndex (progSlot live 8) then
+      [some (centreRead ws (progSlot live 8), (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+    else if j = slotIndex (counterSlot 3) then [incAct q 3 ws]
+    else if j = slotIndex (counterSlot 2) then [incAct q 2 ws]
+    else if ∃ m : Fin 5, mirrorSource m = 2 ∧ j = slotIndex (mirrorSlot m) then [incAct q 2 ws]
+    else if j = slotIndex (headSlot 0 PalPeg.ConcreteLocalMachine.backTape) then
+      headStepActs q 0 ws PalPeg.ConcreteLocalMachine.backTape
+    else if j = slotIndex (headSlot 0 PalPeg.ConcreteLocalMachine.nearTape) then
+      headStepActs q 0 ws PalPeg.ConcreteLocalMachine.nearTape
+    else if j = slotIndex (headSlot 1 PalPeg.ConcreteLocalMachine.backTape) then
+      headStepActs q 1 ws PalPeg.ConcreteLocalMachine.backTape
+    else if j = slotIndex (headSlot 1 PalPeg.ConcreteLocalMachine.nearTape) then
+      headStepActs q 1 ws PalPeg.ConcreteLocalMachine.nearTape
+    else []
+
+theorem rewindPairActs_length {fppBound dpBound K : ℕ} (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (j : Fin tapeCountM) : (rewindPairActs live q ws j).length ≤ 2 := by
+  unfold rewindPairActs
+  split_ifs <;> first | simp | exact headStepActs_length q _ ws _
 
 theorem rewindOneActs_length {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
     (rewindOneActs live q ws j).length ≤ 2 := by
   unfold rewindOneActs
-  split_ifs <;> simp
+  split_ifs <;> first | exact headStepActs_length q 0 ws _ | simp
 
 /-- the tick function's own name for the paired step of the rewind. -/
 theorem frameFun_rewindPair (centre : GalilVM → Fin 3)
@@ -6256,7 +6283,8 @@ theorem rewind_one_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : G
     (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
     (fun t => by
       rw [hstep (headSlot 0 t) (fun k => (progSlot_ne_headSlot (!q.fppLive) k 0 t).symm),
-        rewindOneActs_head])
+        rewindOneActs_head]
+      rfl)
   obtain ⟨view, viewTapes, habsView, hrepView, hslotsView, hcellsView⟩ := hheads
   rw [hq]
   refine rewind_one margin centre place entry entryQ first w F delay x q T
