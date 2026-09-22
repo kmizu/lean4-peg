@@ -1277,10 +1277,11 @@ theorem encTapes_rewindOne (margin : ℕ) (x : State GalilVM) (polarity newPolar
     have hold : counterOf x (mirrorSource m) = some value := by
       rw [← hvalue]
       fin_cases m <;> rfl
+    have hmirrorKept : newTapes (mirrorSlot m) = tapes (mirrorSlot m) :=
+      hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp) (by simp)
+        (by intro k; cases fppLive <;> simp [progSlotOf])
     obtain ⟨seg, habs, hslot⟩ := henc.mirrors m value hold
-    exact ⟨seg, by rw [hpolarity _ hne]; exact habs, by
-      rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp) (by simp)
-        (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+    exact ⟨seg, by rw [hpolarity _ hne]; exact habs, by rw [hmirrorKept, hslot]⟩
   places := by
     intro i pl hpl
     obtain ⟨st, jk, hsl, hln, hstk, hslot⟩ := henc.places i pl hpl
