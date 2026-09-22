@@ -168,9 +168,27 @@ tick 後の符号化を**二状態**から組み立てる: カーソル以外は
 制御の新しいタグだけが判定を要り、それは `watchVerdictTest`
 ＝「period スロットの中心セルの記号」と「`landingLetter`（着地先の文字）」の比較。
 
-**次に書く枝**: 残りは上の §0.5 の表。`scan` の matched（比較で右カーソルが動く）が
-いま通った枝と同じ型なので近い。`init` / `replayStart` / `choose` の select は
-カーソルが**跳ぶ**（`left := right` など）ので別の型が要る——まだ測っていない。
+**次に書く枝**: 残りは上の §0.5 の表。一次情報で測った結果は次の通り。
+
+* **`scan` の matched は一番重い。** `compareFun`（`FrameFunction.lean:525`）は
+  `headLeft := left s.left` / `headRight := right s.right` /
+  `agree := decide (read headLeft = read headRight)` ——**二本のカーソルが同時に動き
+  （左は左へ、右は右へ）、比較は動いた後の文字同士**。そのうえ `agree` で探索が 1 量子進み、
+  chain も一歩動く。全部入り。
+* **二本同時に動くことは組み立て器が既に運べる。** `rewindCommands` の pair 行
+  （`PhysicalEncoding:8531`）が `v = 0 ∨ v = 1` に `.moveLeft` を出し、
+  `rewind_pair_of_tick_branch` が通っている。命令は `Fin 4 → ViewCommand` なので
+  カーソルごとに独立。
+* **足りないのは左の着地先の読み取り。** 右は `landingLetter`（済）。左は
+  `readV_moveLeftV`（済）が `if gap then focus.map letter else (stepLeft v).focus.map (fun _ => 2)`
+  と割るところまで来ている。`(stepLeft v).focus = v.back.head` で、
+  `backStack v = v.focus :: v.back`（`LocalViewDecision.lean:111`）かつ
+  `ViewRep.back` が back スロットにその積み重ねを置くので、**左の着地先は
+  `belowRead ws (headSlot v backTape)` を復号したもの**になる。
+  カウンタがゼロ判定に `belowRead` を使うのと同じ形。これを書けば `matched` の
+  `agree` が窓の中で閉じる。
+* `init` / `replayStart` / `choose` の select はカーソルが**跳ぶ**（`left := right` など）ので
+  別の型が要る——まだ測っていない。
 
 そのあと: 全枝 → `hideal` を放電 → `unconditional` の経路を
 `given_physicalMachine`（`ShadowedLocalFinal.lean:1395`）へ張り替え →
