@@ -3936,6 +3936,50 @@ theorem leftFirst_after_left (p : PalPeg.GalilScaffoldInputHead.PlaceHead) :
     show 2 * p.head.left.length - 1 = 1 ↔ _
     omega
 
+/-- **the sign a counter takes after one increment.**  A counter tape holds the absolute value,
+so an increment pushes while the sign is positive and pops while it is negative; at zero on the
+negative side the push turns the sign around, and that is the one case where the bit moves. -/
+noncomputable def incSign {K : ℕ} (polarity : Fin 16 → Bool) (c : Fin 16)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  polarity c || decide (belowRead ws (counterSlot c) ≠ encSeg PalPeg.LocalCounter.mark)
+
+/-- **the control table of one step of the rewind.**  The controller's pair bit is set, the
+head's own gap bit flips, the sign of the length counter follows the increment, and the bit for
+the first letter is the three readings `leftFirst_after_step_iff` names. -/
+noncomputable def rewindOneNext {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : QPhys fppBound dpBound :=
+  {q with ctl := {q.ctl with pair := true}, leftFirstBit := q.gap 0 && decide (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape) ≠ encCell (PalPeg.CloseoutCoreEnc.cellSym none)) && decide (belowRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape) = encCell (PalPeg.CloseoutCoreEnc.cellSym none)), polarity := Function.update q.polarity 3 (incSign q.polarity 3 ws), gap := Function.update q.gap 0 (!q.gap 0)}
+
+/-- **the action table of one step of the rewind.**  The marks tape steps left, the length
+counter is incremented, and the left head's two stacks move — unless the head stood on a gap, in
+which case its bit is the whole of its step. -/
+noncomputable def rewindOneActs {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  fun j =>
+    if j = slotIndex (progSlot live 8) then
+      [some (centreRead ws (progSlot live 8), (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+    else if j = slotIndex (counterSlot 3) then
+      [if incSign q.polarity 3 ws then
+          some (encSeg PalPeg.LocalCounter.mark, (.right : PalPeg.CloseoutCoreEnc12.MoveC))
+        else some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+    else if q.gap 0 then []
+    else if j = slotIndex (headSlot 0 PalPeg.ConcreteLocalMachine.backTape) then
+      [some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape),
+        (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+    else if j = slotIndex (headSlot 0 PalPeg.ConcreteLocalMachine.nearTape) then
+      [some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.nearTape),
+          (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+        some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape),
+          (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
+    else []
+
+theorem rewindOneActs_length {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
+    (rewindOneActs live q ws j).length ≤ 2 := by
+  unfold rewindOneActs
+  split_ifs <;> simp
+
 /-- the tick function's own name for one step of the rewind. -/
 theorem frameFun_rewindOne (centre : GalilVM → Fin 3)
     (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
@@ -4590,13 +4634,6 @@ theorem counter_left_ne_nil (segments : STape Seg) (h : PalPeg.LocalCounter.val 
     segments.left ≠ [] := by
   intro hnil
   exact h (by show PalPeg.LocalCounter.markRun segments.left = 0; rw [hnil]; rfl)
-
-/-- **the sign a counter takes after one increment.**  A counter tape holds the absolute value,
-so an increment pushes while the sign is positive and pops while it is negative; at zero on the
-negative side the push turns the sign around, and that is the one case where the bit moves. -/
-noncomputable def incSign {K : ℕ} (polarity : Fin 16 → Bool) (c : Fin 16)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
-  polarity c || decide (belowRead ws (counterSlot c) ≠ encSeg PalPeg.LocalCounter.mark)
 
 /-- **one increment of a counter, on the slot the machine carries it on.**  The mirror of
 `copy_one_counter`. -/
