@@ -12719,6 +12719,25 @@ theorem read_right_absHead' {v : PalPeg.LocalInputView.InputView} (q : List (Fin
   rw [← absHead'_moveRight hwf q hready]
   rfl
 
+/-- **and that reading splits on the parity of the cursor.**  The input head alternates between
+a letter and the gap between letters, so a cursor standing on a letter reaches the gap and reads
+the gap symbol, and one standing on a gap reaches the next cell of its view.
+
+The gap bit is in the control — `QPhys.gap` — so this first half of the reading costs the machine
+nothing.  What the second half still owes is the focus of the stepped view in terms of the three
+symbols `viewTopsOfWindows` shows, and that one needs the cursor to have somewhere to go. -/
+theorem readV_moveRight (v : PalPeg.LocalInputView.InputView) :
+    PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveRight v)
+      = if v.gap then
+          (PalPeg.LocalInputView.stepRight v).focus.map PalPeg.GalilScaffoldPlace.letter
+        else v.focus.map (fun _ => (2 : Fin 3)) := by
+  unfold PalPeg.LocalInputView.moveRight
+  by_cases hgap : v.gap = true
+  · rw [if_pos hgap, if_pos hgap]
+    rfl
+  · rw [if_neg hgap, if_neg hgap]
+    rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
