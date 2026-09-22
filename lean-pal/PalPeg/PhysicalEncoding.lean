@@ -3672,6 +3672,71 @@ theorem headSlots_left {margin : ℕ} {polarity : Fin 16 → Bool} {gap : Fin 4 
         hold PalPeg.ConcreteLocalMachine.backTape, hmapFocus]
     · rw [hotherSlot i hb hn, encCell_leftViewTapes_other viewTapes view.focus i hb hn, hold i]
 
+/-- **a head has one cell behind it exactly when that cell is the sentinel.**  A view holds the
+left sentinel and then letters, so the only cell of a view that is not a letter is the one at its
+left end — and the head has one cell behind it exactly when the cell behind it is that one. -/
+theorem back_singleton_iff_sentinel (v : PalPeg.LocalInputView.InputView)
+    (hcells : PalPeg.LocalViewCells.ViewCells v) (c : Option (Fin 2))
+    (rest : List (Option (Fin 2))) (hback : v.back = c :: rest) :
+    rest = [] ↔ c = none := by
+  obtain ⟨letters, hletters⟩ := hcells
+  constructor
+  · intro hrest
+    have hcells' : PalPeg.LocalInputView.cells v
+        = c :: (v.focus :: PalPeg.LocalInputView.absRight v) := by
+      unfold PalPeg.LocalInputView.cells
+      rw [hback, hrest]
+      rfl
+    rw [hcells'] at hletters
+    exact (List.cons.inj hletters).1
+  · intro hc
+    by_contra hne
+    obtain ⟨e, es, hes⟩ : ∃ e es, rest.reverse = e :: es := by
+      cases hrev : rest.reverse with
+      | nil => exact absurd (by simpa using congrArg List.reverse hrev) hne
+      | cons e es => exact ⟨e, es, rfl⟩
+    have hcells' : PalPeg.LocalInputView.cells v
+        = e :: (es ++ c :: (v.focus :: PalPeg.LocalInputView.absRight v)) := by
+      unfold PalPeg.LocalInputView.cells
+      rw [hback]
+      show (c :: rest).reverse ++ _ = _
+      rw [List.reverse_cons, hes]
+      simp
+    rw [hcells'] at hletters
+    have htail : es ++ c :: (v.focus :: PalPeg.LocalInputView.absRight v)
+        = letters.map some := (List.cons.inj hletters).2
+    have hmem : c ∈ letters.map some := by
+      rw [← htail]
+      simp
+    rw [hc] at hmem
+    simp at hmem
+
+/-- **after a head steps left it stands on the first letter exactly when it was on the gap
+beside it with one cell behind.**  A head on a letter steps onto the gap, and a gap is at an
+even coordinate, so it is never the first letter; a head on a gap steps back onto the letter it
+just left, and that is the first one exactly when there is a single cell behind the head. -/
+theorem leftFirst_after_left (p : PalPeg.GalilScaffoldInputHead.PlaceHead) :
+    PalPeg.GalilScaffoldChainInputSupply.position
+        (PalPeg.GalilScaffoldInputHead.left p) = 1
+      ↔ (p.gap = true ∧ p.head.left.length = 1) := by
+  unfold PalPeg.GalilScaffoldInputHead.left PalPeg.GalilScaffoldChainInputSupply.position
+  cases hgap : p.gap
+  · simp only [Bool.false_eq_true, if_false, Bool.not_false, if_true, false_and, iff_false]
+    cases hleft : p.head.left with
+    | nil =>
+      show ¬ (2 * (PalPeg.GalilScaffoldInputHead.moveLeft p.head).left.length = 1)
+      unfold PalPeg.GalilScaffoldInputHead.moveLeft
+      rw [hleft]
+      simp
+    | cons b rest =>
+      show ¬ (2 * (PalPeg.GalilScaffoldInputHead.moveLeft p.head).left.length = 1)
+      unfold PalPeg.GalilScaffoldInputHead.moveLeft
+      rw [hleft]
+      simp
+  · simp only [if_true, Bool.not_true, Bool.false_eq_true, if_false, true_and]
+    show 2 * p.head.left.length - 1 = 1 ↔ _
+    omega
+
 /-- **the branch the shift and copy modes take, as a reading of the window.**  The rule cannot
 ask the abstraction anything; it computes this bit from three cells of the window and the sign
 bit of the shift counter, and `remainsTest_eq` says the bit it computes is the test the tick
