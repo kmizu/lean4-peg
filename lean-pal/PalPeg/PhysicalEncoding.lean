@@ -7568,6 +7568,127 @@ theorem absHead'_viewApply {v : PalPeg.LocalInputView.InputView}
   | stepRight => exact absurd hf (by simp [headOp])
   | stepLeft => exact absurd hf (by simp [headOp])
 
+/-- **a view's step left does not change what it holds.**  A half-step moves only the bit and a
+full step moves the boundary between the two stacks, so the cells are the same list. -/
+theorem cells_moveLeftV (v : PalPeg.LocalInputView.InputView) :
+    PalPeg.LocalInputView.cells (PalPeg.LocalInputView.moveLeftV v)
+      = PalPeg.LocalInputView.cells v := by
+  rcases v with ⟨back, focus, near, far, gap⟩
+  cases gap
+  · cases back with
+    | nil => rfl
+    | cons c rest =>
+      simp [PalPeg.LocalInputView.cells, PalPeg.LocalInputView.absRight,
+        PalPeg.LocalInputView.farList, PalPeg.LocalInputView.moveLeftV,
+        PalPeg.LocalInputView.stepLeft]
+  · rfl
+
+/-- **a view's step right does not change what it holds either**, when the cell it needs has
+arrived: it moves the boundary, and a cell that comes out of the queue was already counted among
+what the view holds. -/
+theorem cells_moveRight {v : PalPeg.LocalInputView.InputView}
+    (hwf : PalPeg.LocalInputView.WF v)
+    (hready : v.gap = true → v.near = [] → PalPeg.RTQueue.toList v.far ≠ []) :
+    PalPeg.LocalInputView.cells (PalPeg.LocalInputView.moveRight v)
+      = PalPeg.LocalInputView.cells v := by
+  rcases v with ⟨back, focus, near, far, gap⟩
+  cases gap
+  · rfl
+  · cases near with
+    | cons c rest =>
+      simp [PalPeg.LocalInputView.cells, PalPeg.LocalInputView.absRight,
+        PalPeg.LocalInputView.farList, PalPeg.LocalInputView.moveRight,
+        PalPeg.LocalInputView.stepRight]
+    | nil =>
+      have hfar : PalPeg.RTQueue.toList far ≠ [] := hready rfl rfl
+      obtain ⟨a, rest, hlist⟩ : ∃ a rest, PalPeg.RTQueue.toList far = a :: rest := by
+        cases hl : PalPeg.RTQueue.toList far with
+        | nil => exact absurd hl hfar
+        | cons b bs => exact ⟨b, bs, rfl⟩
+      have hhead : PalPeg.RTQueue.head? far = some a := by
+        rw [PalPeg.RTQueue.head?_eq (hwf : PalPeg.RTQueue.Inv far), hlist]
+        rfl
+      have htail : PalPeg.RTQueue.toList (PalPeg.RTQueue.tail far) = rest := by
+        rw [PalPeg.RTQueue.toList_tail (hwf : PalPeg.RTQueue.Inv far), hlist]
+        rfl
+      simp [PalPeg.LocalInputView.cells, PalPeg.LocalInputView.absRight,
+        PalPeg.LocalInputView.farList, PalPeg.LocalInputView.moveRight,
+        PalPeg.LocalInputView.stepRight, hhead, htail, hlist]
+
+/-- **a view's step right keeps the queue's invariant**, because all it does to the queue is take
+its tail. -/
+theorem wf_moveRight {v : PalPeg.LocalInputView.InputView} (hwf : PalPeg.LocalInputView.WF v) :
+    PalPeg.LocalInputView.WF (PalPeg.LocalInputView.moveRight v) := by
+  rcases v with ⟨back, focus, near, far, gap⟩
+  cases gap
+  · exact hwf
+  · cases near with
+    | cons c rest => exact hwf
+    | nil =>
+      show PalPeg.RTQueue.Inv (PalPeg.LocalInputView.stepRight _).far
+      cases hhead : PalPeg.RTQueue.head? far with
+      | none =>
+        rw [show (PalPeg.LocalInputView.stepRight
+              (⟨back, focus, [], far, true⟩ : PalPeg.LocalInputView.InputView)).far = far from by
+          simp [PalPeg.LocalInputView.stepRight, hhead]]
+        exact hwf
+      | some a =>
+        rw [show (PalPeg.LocalInputView.stepRight
+              (⟨back, focus, [], far, true⟩ : PalPeg.LocalInputView.InputView)).far
+            = PalPeg.RTQueue.tail far from by
+          simp [PalPeg.LocalInputView.stepRight, hhead]]
+        exact PalPeg.RTQueue.inv_tail (hwf : PalPeg.RTQueue.Inv far)
+
+/-- **what a view holds, and its queue's invariant, survive the command a mode names.**  These
+are the two side facts `EncTapes.heads` carries about a view, so a mode's branch gets them back
+from the same dispatch that gives it the abstract head. -/
+theorem viewCells_viewApply {v : PalPeg.LocalInputView.InputView}
+    (hwf : PalPeg.LocalInputView.WF v) (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (hready : command = .moveRight →
+      v.gap = true → v.near = [] → PalPeg.RTQueue.toList v.far ≠ [])
+    (hcells : PalPeg.LocalViewCells.ViewCells v)
+    (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hf : headOp command = some f) :
+    PalPeg.LocalViewCells.ViewCells (PalPeg.ConcreteLocalMachine.viewApply command v) := by
+  obtain ⟨letters, hletters⟩ := hcells
+  cases command with
+  | stay => exact ⟨letters, hletters⟩
+  | arrive a => exact absurd hf (by simp [headOp])
+  | moveRight =>
+    exact ⟨letters, by
+      show PalPeg.LocalInputView.cells (PalPeg.LocalInputView.moveRight v) = _
+      rw [cells_moveRight hwf (hready rfl), hletters]⟩
+  | moveLeft =>
+    exact ⟨letters, by
+      show PalPeg.LocalInputView.cells (PalPeg.LocalInputView.moveLeftV v) = _
+      rw [cells_moveLeftV v, hletters]⟩
+  | stepRight => exact absurd hf (by simp [headOp])
+  | stepLeft => exact absurd hf (by simp [headOp])
+
+theorem wf_viewApply {v : PalPeg.LocalInputView.InputView} (hwf : PalPeg.LocalInputView.WF v)
+    (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hf : headOp command = some f) :
+    PalPeg.LocalInputView.WF (PalPeg.ConcreteLocalMachine.viewApply command v) := by
+  cases command with
+  | stay => exact hwf
+  | arrive a => exact absurd hf (by simp [headOp])
+  | moveRight => exact wf_moveRight hwf
+  | moveLeft =>
+    show PalPeg.LocalInputView.WF (PalPeg.LocalInputView.moveLeftV v)
+    have hfar : (PalPeg.LocalInputView.moveLeftV v).far = v.far := by
+      rcases v with ⟨back, focus, near, far, gap⟩
+      cases gap
+      · cases back with
+        | nil => rfl
+        | cons c rest => rfl
+      · rfl
+    show PalPeg.RTQueue.Inv (PalPeg.LocalInputView.moveLeftV v).far
+    rw [hfar]
+    exact hwf
+  | stepRight => exact absurd hf (by simp [headOp])
+  | stepLeft => exact absurd hf (by simp [headOp])
+
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
 which is a bit the control carries; the symbol under its back head is a letter rather than the
