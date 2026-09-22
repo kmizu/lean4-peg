@@ -5920,6 +5920,36 @@ theorem counter_inc_at {margin : ℕ} (polarity : Fin 16 → Bool) (c : Fin 16) 
         exact hb (by rw [hbit]; simp [hzero])
       exact (padded_pop margin segments (counter_left_ne_nil segments hne)).symm
 
+/-- **one decrement of a counter, on whichever tape carries it.**  The counterpart of
+`counter_inc_at`: the rule pops while the value is positive and pushes otherwise, and the bit it
+branches on becomes the counter's new sign.  Stated for a tape and for any index, because the
+chain's lag is decremented by the same two actions as the fallback copy's work counter. -/
+theorem counter_dec_at {margin : ℕ} (polarity : Fin 16 → Bool) (c : Fin 16) (bit : Bool)
+    (segments : STape Seg) (value : PalPeg.GalilScaffoldCounter.Counter)
+    (habs : absCtr segments (polarity c) = value)
+    (hbit : bit = (polarity c && decide (PalPeg.LocalCounter.val segments ≠ 0)))
+    (tape : STape Γm) (hslot : tape = padLeft margin (mapTape encSeg segments)) :
+    ∃ segments' : STape Seg,
+      absCtr segments' bit = PalPeg.GalilScaffoldCounter.dec value
+      ∧ PalPeg.CloseoutCoreEnc12.actList blankM tape
+            [if bit then some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))
+              else some (encSeg PalPeg.LocalCounter.mark,
+                (.right : PalPeg.CloseoutCoreEnc12.MoveC))]
+          = padLeft margin (mapTape encSeg segments') := by
+  refine ⟨if bit then PalPeg.LocalCounter.pop segments else PalPeg.LocalCounter.push segments,
+    ?_, ?_⟩
+  · rw [hbit, ← habs]
+    exact absCtr_dec segments (polarity c)
+  · rw [hslot]
+    by_cases hb : bit = true
+    · rw [if_pos hb, if_pos hb]
+      have hne : PalPeg.LocalCounter.val segments ≠ 0 := by
+        have hand := (Bool.and_eq_true _ _).mp (by rw [← hbit]; exact hb)
+        exact of_decide_eq_true hand.2
+      exact (padded_pop margin segments (counter_left_ne_nil segments hne)).symm
+    · rw [if_neg hb, if_neg hb]
+      exact (padded_push margin segments).symm
+
 /-- **one tick of the fallback copy, on the work counter.**  The rule pops while the value is
 positive and pushes otherwise, and the bit it branches on becomes the counter's new sign, so the
 counter it leaves behind holds one less than it did. -/
