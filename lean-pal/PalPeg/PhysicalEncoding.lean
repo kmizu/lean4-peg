@@ -8548,6 +8548,25 @@ theorem encTapes_replaceHeads {margin : ℕ} {x : State GalilVM} {polarity polar
   · rw [hother _ (by intro v t hEq; exact absurd hEq (by simp [headSlot]))]
     exact h.answer tape hanswer
 
+/-- **a mirror stays a mirror.**  If the fourth cursor's view abstracts to the centre and the
+row names for it whatever it names for the centre, then after the tick it abstracts to the centre
+again — because the command names the operation the tick does to a cursor, and the same command
+names the same operation.
+
+This is the maintenance the mirror costs, and it is one rewrite: the whole of the argument is
+that `absHead'_viewApply` does not care which cursor it is talking about. -/
+theorem absHead'_mirror_afterCommand {view : PalPeg.LocalInputView.InputView}
+    (hwf : PalPeg.LocalInputView.WF view) (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hf : headOp command = some f)
+    (hready : command = .moveRight →
+      view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ [])
+    {centre : PalPeg.GalilScaffoldInputHead.PlaceHead}
+    (hmirror : PalPeg.LocalArrival.absHead' view [] = centre) :
+    PalPeg.LocalArrival.absHead' (PalPeg.ConcreteLocalMachine.viewApply command view) []
+      = f centre := by
+  rw [absHead'_viewApply hwf [] command hready f hf, hmirror]
+
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
 which is a bit the control carries; the symbol under its back head is a letter rather than the
