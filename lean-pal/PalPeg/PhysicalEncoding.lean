@@ -6198,6 +6198,32 @@ theorem val_eq_of_absCtr_eq {t t' : STape Seg} {b : Bool} (h : absCtr t b = absC
   · have hpos := congrArg (fun c => c.pos.length) h
     simpa [absCtr, PalPeg.GalilScaffoldCounter.ofNat] using hpos
 
+/-- **the bit a decrement branches on, read off the counter's own tape.**  The counterpart of
+`incSign_eq`: a counter is positive exactly when its sign bit is set and its value is not zero,
+and the zero test is the cell below the head. -/
+theorem decSignAt_eq {margin K : ℕ} (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (bit : Bool) (c : Fin 16) (tapes : Slot → STape Γm) (segments : STape Seg)
+    (hslot : tapes (counterSlot c) = padLeft margin (mapTape encSeg segments)) :
+    decSignAt bit (counterSlot c) (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+      = (bit && decide (PalPeg.LocalCounter.val segments ≠ 0)) := by
+  have hbelow :
+      belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)) (counterSlot c)
+        = PalPeg.Local.readWin blankM K (padLeft margin (mapTape encSeg segments))
+            ⟨K - 1, by omega⟩ := by
+    show PalPeg.Local.readWin blankM K (tapesOf tapes (slotIndex (counterSlot c)))
+      ⟨K - 1, by omega⟩ = _
+    rw [tapesOf_apply, hslot]
+  unfold decSignAt
+  rw [hbelow]
+  congr 1
+  rw [Bool.eq_iff_iff, decide_eq_true_eq, decide_eq_true_eq]
+  constructor
+  · intro hmark hzero
+    exact ((counterZero_iff_below hK1 (by omega) segments).mp hzero) hmark
+  · intro hne
+    by_contra hmark
+    exact hne ((counterZero_iff_below hK1 (by omega) segments).mpr hmark)
+
 /-- **the sign bit an increment produces, from the window of the counter's own slot.**  A
 counter's mirrors hold the same value with the same sign, so they hold tapes of the same run of
 marks, and the bit computed from the counter's own window serves for all of them. -/
