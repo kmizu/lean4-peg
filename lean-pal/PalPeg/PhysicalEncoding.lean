@@ -7849,6 +7849,85 @@ theorem heads_afterFusedStep {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
     (fun _ => rfl) (fun _ _ => rfl) view hwf hcells viewTapes hold hrep howed head head' habs f hf
     hhead' hready
 
+/-- the fields of the control that do not belong to a view.  The eleven steps of a slot move a
+view's gap bit, its queue job and its micro-schedule, and the step counter; everything else in
+the control is settled at step `0` and then stands still, and this tuple is what stands still.
+
+`headControlStep` writes only the three fields of a view, so it leaves this tuple alone by
+definition, which is what the induction below leans on. -/
+def headFreeFields {fppBound dpBound : ℕ} (q : QPhys fppBound dpBound) :
+    CtlPhys × ChainTag × Fin 5 × Bool × Bool ×
+      PalPeg.GalilScaffoldChainInputSupply.FppControl.Mode × Bool × PcPhys fppBound × Bool ×
+      PcPhys dpBound × Bool × PalPeg.GalilScaffoldSearchFinish.Mode × Bool × Fin 4 × Bool ×
+      (Fin 3 → Bool) × Bool × Bool × (Fin 16 → Bool) × Bool × Bool :=
+  (q.ctl, q.chainTag, q.chainPhase, q.chainForward, q.chainBroken, q.fppMode, q.fppFinalStage,
+    q.fppPc, q.fppDone, q.dpPc, q.dpDone, q.searchMode, q.searchFinalStage, q.searchQuarter,
+    q.periodOnly, q.placeGap, q.onLetterBit, q.leftFirstBit, q.polarity, q.fppLive, q.dpLive)
+
+/-- **after step `0`, a tick changes nothing but the heads.**  The slots that are not a head's
+are not written again, and the fields of the control that are not a view's are not changed again,
+so whatever a mode's branch settles at step `0` is what the tick leaves behind.
+
+This is what lets the branches that are already proved stand as the `base` of the rule: they
+speak of counters, program tapes, period tapes and the answer, and the eleven steps after them
+do not touch any of it. -/
+theorem tickRule_still {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base baseActs)
+    (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K)
+    (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
+    (hslot0 : x.1.slot.val = 0) :
+    ∀ step, 1 ≤ step → step ≤ 12 →
+      (∀ j : Fin tapeCountM, (slotIndex.symm j).isLeft = false →
+          (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+            step).2 j
+            = (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+              1).2 j) ∧
+        headFreeFields (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen)
+            blankM x input step).1
+          = headFreeFields (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen)
+            blankM x input 1).1
+  | 1, _, _ => ⟨fun _ _ => rfl, rfl⟩
+  | step + 2, _, hle => by
+    have hstep : 1 ≤ step + 1 := by omega
+    have hslotLt : step + 1 ≤ 11 := by omega
+    obtain ⟨htapes, hfields⟩ := tickRule_still hK base baseActs baseLen x input hslot0 (step + 1)
+      hstep (by omega)
+    have hslotVal : (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x
+        input (step + 1)).1.slot.val = step + 1 :=
+      slot_idealRun (tickRule hK base baseActs baseLen) x input hslot0
+        (fun q i ws h => tickRule_advance hK base baseActs baseLen q i ws h) (step + 1) hslotLt
+    have hne : ¬ (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x
+        input (step + 1)).1.slot.val = 0 := by omega
+    refine ⟨fun j hj => ?_, ?_⟩
+    · rw [PalPeg.LocalStepFusion.idealRun_step, PalPeg.LocalStepFusion.idealStep]
+      show PalPeg.CloseoutCoreEnc12.actList blankM _
+          ((tickRule hK base baseActs baseLen).acts _ _ _ j) = _
+      rw [show (tickRule hK base baseActs baseLen).acts
+            (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+              (step + 1)).1 _ _ j = [] from by
+        show (if _ = 0 then _ else _) = _
+        rw [if_neg hne]
+        match hjm : slotIndex.symm j with
+        | .inl p => exact absurd (by rw [hjm] at hj; exact hj) (by simp)
+        | .inr r => rfl]
+      exact htapes j hj
+    · rw [PalPeg.LocalStepFusion.idealRun_step, PalPeg.LocalStepFusion.idealStep]
+      show headFreeFields ((tickRule hK base baseActs baseLen).nq _ _ _) = _
+      rw [show (tickRule hK base baseActs baseLen).nq
+            (PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x input
+              (step + 1)).1 _ _
+          = { headControlStep hK (PalPeg.LocalStepFusion.idealRun
+                (tickRule hK base baseActs baseLen) blankM x input (step + 1)).1
+                ⟨(PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x
+                  input (step + 1)).1.slot.val - 1, by omega⟩
+                (fun tape => PalPeg.Local.readWin blankM K
+                  ((PalPeg.LocalStepFusion.idealRun (tickRule hK base baseActs baseLen) blankM x
+                    input (step + 1)).2 tape)) with
+              slot := slotAdvance (PalPeg.LocalStepFusion.idealRun
+                (tickRule hK base baseActs baseLen) blankM x input (step + 1)).1.slot } from by
+        show (if _ = 0 then _ else _) = _
+        rw [if_neg hne]]
+      exact hfields
+
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
 which is a bit the control carries; the symbol under its back head is a letter rather than the
