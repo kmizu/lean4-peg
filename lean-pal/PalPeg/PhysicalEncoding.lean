@@ -3983,6 +3983,28 @@ theorem counterZero_iff_belowRead {margin K : ℕ} {x : State GalilVM} {polarity
   rw [hbelow, hzero, decide_eq_true_eq]
   exact counterZero_iff_below hK1 (by omega) segments
 
+/-- the slot of the chain's period tape. -/
+abbrev periodSlot : Slot := .inr (.inr (.inr (.inr (.inl ()))))
+
+/-- **the symbol the chain's period tape offers is in the window.**  The period tape is stored
+with the symbol under the head, so the machine reads it as the centre cell of one slot.
+
+This is what the scan's row needs of the chain: a watching chain steps its verifier exactly when
+it has lag to spend and its period tape offers a symbol, and the second of those two conditions
+is this reading.  The verdict itself — whether the symbol matches the input — decides which way
+the chain goes, but not whether the cursor moves, so the row does not have to read it. -/
+theorem centreRead_periodSlot {margin K : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {T : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive T) (hK : K ≤ margin)
+    (tape : PalPeg.GalilScaffoldChainPeriod.Tape) (hperiod : periodOf x = some tape) :
+    centreRead (fun t => PalPeg.Local.readWin blankM K (tapesOf T t)) periodSlot
+      = encToken (encPeriod tape).focus := by
+  rw [centreRead_of_margin T periodSlot (hK.trans (henc.margins periodSlot)),
+    show T periodSlot = padLeft margin (mapTape encToken (encPeriod tape)) from
+      henc.period tape hperiod]
+  rfl
+
 /-- **a counter is positive exactly when its sign bit is set and the cell below its head is a
 mark.**  The counterpart of `counterZero_iff_belowRead` for the sign test. -/
 theorem counterPositive_iff_belowRead {margin K : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
@@ -9927,11 +9949,8 @@ theorem enc_afterStillTick {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (fir
       PalPeg.ConcreteLocalMachine.ViewCommand)
     (w : List (Fin 2)) (x y : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
     (input : Option (Fin 2)) (hslot0 : q.slot.val = 0)
-    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd
-      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home
-      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose
-      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp
-      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hstay : ∀ ws : Fin tapeCountM → PalPeg.Local.Window Γm K,
+      modeCommands first rest q input ws = stayCommands)
     (howed : ∀ v, (q.micro v).2.2.2 = 0) (hheadsSame : ∀ v, headOf y v = headOf x v)
     (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
     (hctl : EncControl w y (ruleNext entryQ first hbound q
@@ -9957,7 +9976,7 @@ theorem enc_afterStillTick {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (fir
           (tickPhysRule entryQ first hbound hKq hK rest) blankM (q, tapesOf T) input 12).2
             (slotIndex i)) :=
   enc_afterTick margin entryQ first hbound hKq hK hmargin rest w x y q T input hslot0 howed
-    (fun _ => .stay) (fun _ => by rw [modeCommands_eq_stay first rest q input _ hmode]; rfl)
+    (fun _ => .stay) (fun _ => by rw [hstay _]; rfl)
     (fun _ => id) (fun _ => rfl) (fun v => by rw [hheadsSame v])
     (fun v head hhead => by rw [hheadsSame v]; exact hhead)
     (fun _ _ _ h => absurd h (by simp)) henc hctl htapes
@@ -10368,7 +10387,7 @@ theorem enc_ofBranchStep_still {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ
             (slotIndex i)) := by
   obtain ⟨hctl, htapes⟩ := enc_step_pieces margin entryQ first hbound hKq w y q T hbranch
   exact enc_afterStillTick margin entryQ first hbound hKq hK2 hmargin rest w x y q T input hslot0
-    hmode howed hheadsSame henc hctl htapes
+    (fun ws => modeCommands_eq_stay first rest q input ws hmode) howed hheadsSame henc hctl htapes
 
 /-- **a tick of any of the five still modes moves no input head.**  Their frame functions all
 have the shape `{s with fpp := …}`: the end mark, the walk home, the back half of the choice, the
