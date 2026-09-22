@@ -4016,6 +4016,17 @@ theorem viewCells_setGap (v : PalPeg.LocalInputView.InputView) (b : Bool)
   obtain ⟨letters, hletters⟩ := hcells
   exact ⟨letters, hletters⟩
 
+/-- **the view a head steps left onto is the one the view layer's own command names.**  A head
+move is already a `ViewCommand`, and `LocalInputView.moveLeftV` is what applying it does; the
+`leftView` written here is that, on the half-step that moves the zipper. -/
+theorem leftView_eq_moveLeftV (v : PalPeg.LocalInputView.InputView) (hgap : v.gap = false) :
+    leftView v = PalPeg.LocalInputView.moveLeftV v := by
+  obtain ⟨back, focus, near, far, g⟩ := v
+  subst hgap
+  unfold leftView PalPeg.LocalInputView.moveLeftV PalPeg.LocalInputView.stepLeft
+  rw [if_neg (by simp)]
+  cases back <;> rfl
+
 /-- **the abstraction of that view is the head one step left**, when the head was on a letter
 rather than on the gap beside it. -/
 theorem absHead_leftView (v : PalPeg.LocalInputView.InputView) (hgap : v.gap = false)
@@ -4143,6 +4154,15 @@ becomes the focus.  The case where the near stack is empty is the queue's, and i
 def rightViewOn (v : PalPeg.LocalInputView.InputView) (a : Option (Fin 2))
     (rest : List (Option (Fin 2))) : PalPeg.LocalInputView.InputView :=
   ⟨v.focus :: v.back, a, rest, v.far, false⟩
+
+/-- **and the view a head steps right onto is `LocalInputView.moveRight`**, on the half-step that
+moves the zipper and while the cell it steps onto is on the near stack. -/
+theorem rightViewOn_eq_moveRight (v : PalPeg.LocalInputView.InputView) (hgap : v.gap = true)
+    (a : Option (Fin 2)) (rest : List (Option (Fin 2))) (hnear : v.near = a :: rest) :
+    rightViewOn v a rest = PalPeg.LocalInputView.moveRight v := by
+  unfold rightViewOn PalPeg.LocalInputView.moveRight PalPeg.LocalInputView.stepRight
+  rw [if_pos (by simp [hgap])]
+  rw [hnear]
 
 /-- **the abstraction of that view is the head one step right**, when the head stood on a gap
 with a cell on its near stack. -/
