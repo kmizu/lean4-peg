@@ -7999,15 +7999,27 @@ theorem heads_afterStillTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
     view hwf hcells viewTapes hold hrep howed head head habs id (by rw [hcommand]; rfl) rfl
     (fun hmove => absurd (hcommand.symm.trans hmove) (by simp))
 
-/-- **the command table, for the modes whose branches move no head.**  Five of the branches that
-are already proved — the end mark, the walk home, the back half of the choice, the preparation
-program and the fallback copy — name nothing but counters, program tapes and period tapes, so
-every head stands still through their ticks.  Those five rows are written here; the rest of the
-table is a parameter, so filling a row in later cannot disturb these.
+/-- the row of the command table for the rewind.  Its branch walks the left cursor — and, on a
+paired rewind, the centre with it — one cell to the left, and under the division of labour that
+motion is a command, read off the same window the branch reads: the rewind is over when the
+program's own tape shows the first instruction again, and then nothing moves.
 
-The rewind is deliberately not among them: its branch moves two heads, and under the division of
-labour a head's motion is a command, so its row has to name one. -/
-noncomputable def stillCommands {fppBound dpBound K : ℕ}
+`rewindOneActs` and `rewindPairActs` are the witnesses that these are the right heads and the
+right direction: the one walks head `0`, the pair walks heads `0` and `1`, and both do it with
+`headStepActs`, the step left. -/
+noncomputable def rewindCommands {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand :=
+  if centreRead ws (progSlot live 8) = encProg first then stayCommands
+  else if q.ctl.pair then fun v => if v = 0 ∨ v = 1 then .moveLeft else .stay
+    else fun v => if v = 0 then .moveLeft else .stay
+
+/-- **the command table, as far as the branches that are proved reach.**  Five of them — the end
+mark, the walk home, the back half of the choice, the preparation program and the fallback copy —
+name nothing but counters, program tapes and period tapes, so every head stands still through
+their ticks; the rewind walks one or two cursors left.  The rest of the table is a parameter, so
+filling a row in later cannot disturb these. -/
+noncomputable def modeCommands {fppBound dpBound K : ℕ} (first : Fin 9)
     (rest : QPhys fppBound dpBound → Option (Fin 2) →
       (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
       PalPeg.ConcreteLocalMachine.ViewCommand)
@@ -8020,20 +8032,71 @@ noncomputable def stillCommands {fppBound dpBound K : ℕ}
   | PalPeg.GalilScaffoldController.Mode.choose => stayCommands
   | PalPeg.GalilScaffoldController.Mode.fpp => stayCommands
   | PalPeg.GalilScaffoldController.Mode.copy => stayCommands
+  | PalPeg.GalilScaffoldController.Mode.rewind => rewindCommands first q.fppLive q ws
   | _ => rest q i ws
 
 /-- **in those five modes the table's row is standing still.**  One statement for the five, since
 the reason is the same one in each: the row is written as `stayCommands`. -/
-theorem stillCommands_eq_stay {fppBound dpBound K : ℕ} (rest) (q : QPhys fppBound dpBound)
+theorem modeCommands_eq_stay {fppBound dpBound K : ℕ} (first : Fin 9) (rest)
+    (q : QPhys fppBound dpBound)
     (i : Option (Fin 2)) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd
       ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home
       ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose
       ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp
       ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy) :
-    stillCommands rest q i ws = stayCommands := by
-  unfold stillCommands
+    modeCommands first rest q i ws = stayCommands := by
+  unfold modeCommands
   rcases hmode with h | h | h | h | h <;> rw [h]
+
+/-- **the rewind's row, and the two heads it names.**  In the rewind the table gives the left
+cursor a step left, and the centre one too when the rewind is paired; the other cursors stand
+still, and nothing moves at all once the program's tape shows the first instruction. -/
+theorem modeCommands_rewind {fppBound dpBound K : ℕ} (first : Fin 9) (rest)
+    (q : QPhys fppBound dpBound) (i : Option (Fin 2))
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind) :
+    modeCommands first rest q i ws = rewindCommands first q.fppLive q ws := by
+  unfold modeCommands
+  rw [hmode]
+
+theorem rewindCommands_atFirst {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hat : centreRead ws (progSlot live 8) = encProg first) :
+    rewindCommands first live q ws = stayCommands := by
+  unfold rewindCommands
+  rw [if_pos hat]
+
+theorem rewindCommands_walks {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hnot : ¬ centreRead ws (progSlot live 8) = encProg first) (v : Fin 4)
+    (hv : v = 0 ∨ (q.ctl.pair = true ∧ v = 1)) :
+    rewindCommands first live q ws v = .moveLeft := by
+  unfold rewindCommands
+  rw [if_neg hnot]
+  cases hpair : q.ctl.pair
+  · rw [if_neg (by decide)]
+    cases hv with
+    | inl h => rw [if_pos h]
+    | inr h => exact absurd (hpair.symm.trans h.1) (by simp)
+  · rw [if_pos rfl]
+    cases hv with
+    | inl h => rw [if_pos (Or.inl h)]
+    | inr h => rw [if_pos (Or.inr h.2)]
+
+theorem rewindCommands_still {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4)
+    (hv : v ≠ 0) (hv1 : q.ctl.pair = true → v ≠ 1) :
+    rewindCommands first live q ws v = .stay := by
+  unfold rewindCommands
+  split
+  · rfl
+  · cases hpair : q.ctl.pair
+    · rw [if_neg (by decide), if_neg hv]
+    · rw [if_pos rfl,
+        if_neg (fun h => by cases h with
+          | inl h0 => exact hv h0
+          | inr h1 => exact hv1 hpair h1)]
 
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
