@@ -6471,6 +6471,125 @@ theorem rewind_one_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : G
         (fun t => progSlot_ne_headSlot (!q.fppLive) k 0 t))
       henc.2.idleShape k
 
+/-- **the paired step of the rewind, rule and encoding together.**  Both heads step, both
+counters count, and the radius's three mirrors are written with the counter's own sign bit —
+which is the right bit for them because they stand for the same value. -/
+theorem rewind_pair_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K)
+    (hnq : R.nq q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = rewindPairNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+    (hacts : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (rewindPairActs q.fppLive q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
+    (hK1 : 1 ≤ K) (hK : K ≤ margin) (hmargin2 : 2 ≤ margin)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotFirst : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).atFirst x.vm
+      = false)
+    (hpair : x.ctl.pair = true)
+    (hfloor : (x.vm.fpp.program.config.tapes 8).left ≠ [])
+    (henc : Enc w margin x (q, T)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
+          (slotIndex i)) := by
+  have hq : (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1
+      = rewindPairNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) := by
+    show R.nq q none _ = _
+    rw [hnq]
+  have hstep := idealStep_withErase R q T q.fppLive _ hacts
+  obtain ⟨segLenOld, habsLen, hslotLen⟩ := henc.2.counters 3 x.vm.length rfl
+  obtain ⟨segLen, habsIncLen, hcountLenTape⟩ :=
+    counter_inc_at (margin := margin) q.polarity 3 (incSign q.polarity 3 (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))) segLenOld
+      x.vm.length habsLen (incSign_eq hK1 (by omega) q.polarity 3 T segLenOld hslotLen)
+      (T (counterSlot 3)) hslotLen
+  obtain ⟨segRadOld, habsRad, hslotRad⟩ := henc.2.counters 2 x.vm.radius rfl
+  have hbitRad : incSign q.polarity 2 (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = (q.polarity 2 || decide (PalPeg.LocalCounter.val segRadOld = 0)) :=
+    incSign_eq hK1 (by omega) q.polarity 2 T segRadOld hslotRad
+  obtain ⟨segRad, habsIncRad, hcountRadTape⟩ :=
+    counter_inc_at (margin := margin) q.polarity 2 (incSign q.polarity 2 (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))) segRadOld
+      x.vm.radius habsRad hbitRad (T (counterSlot 2)) hslotRad
+  obtain ⟨viewL, viewTapesL, habsL, hrepL, hslotsL, hcellsL⟩ :=
+    headSlots_step henc.2 hK 0 x.vm.left rfl (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
+      (fun t => by
+        rw [hstep (headSlot 0 t) (fun k => (progSlot_ne_headSlot (!q.fppLive) k 0 t).symm),
+          rewindPairActs_head q.fppLive q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) 0 (Or.inl rfl) t]
+        rfl)
+  obtain ⟨viewC, viewTapesC, habsC, hrepC, hslotsC, hcellsC⟩ :=
+    headSlots_step henc.2 hK 1 x.vm.center rfl (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
+      (fun t => by
+        rw [hstep (headSlot 1 t) (fun k => (progSlot_ne_headSlot (!q.fppLive) k 1 t).symm),
+          rewindPairActs_head q.fppLive q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) 1 (Or.inr rfl) t]
+        rfl)
+  rw [hq]
+  refine rewind_pair margin centre place entry entryQ first w F delay x q T (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
+    (Function.update (Function.update q.polarity 3 (incSign q.polarity 3 (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))) 2
+      (incSign q.polarity 2 (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
+    (Function.update (Function.update q.gap 0 (!q.gap 0)) 1 (!q.gap 1)) _ hmode hnotFirst hpair
+    ?_ henc viewL viewTapesL habsL ?_ hslotsL hcellsL viewC viewTapesC habsC ?_ hslotsC hcellsC
+    ?_ ?_ segLen ?_ ?_ segRad ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · rw [Bool.eq_iff_iff, decide_eq_true_eq,
+      leftFirst_after_step_iff henc.2 hK1 hK 0 x.vm.left rfl]
+    simp only [Bool.and_eq_true, decide_eq_true_eq]
+    exact and_assoc
+  · rw [Function.update_of_ne (by decide), Function.update_self]
+    exact hrepL
+  · rw [Function.update_self]
+    exact hrepC
+  · intro v hv0 hv1
+    rw [Function.update_of_ne hv1, Function.update_of_ne hv0]
+  · intro c hc3 hc2
+    rw [Function.update_of_ne hc2, Function.update_of_ne hc3]
+  · rw [Function.update_of_ne (by decide), Function.update_self]
+    exact habsIncLen
+  · rw [hstep (counterSlot 3) (fun k => (progSlot_ne_counterSlot (!q.fppLive) k 3).symm),
+      rewindPairActs_counterLen]
+    exact hcountLenTape
+  · rw [Function.update_self]
+    exact habsIncRad
+  · rw [hstep (counterSlot 2) (fun k => (progSlot_ne_counterSlot (!q.fppLive) k 2).symm),
+      rewindPairActs_counterRad]
+    exact hcountRadTape
+  · intro m hsrc
+    obtain ⟨segM, habsM, hslotM⟩ := henc.2.mirrors m x.vm.radius (by rw [hsrc]; rfl)
+    rw [hsrc] at habsM
+    have hvalM : PalPeg.LocalCounter.val segM = PalPeg.LocalCounter.val segRadOld :=
+      val_eq_of_absCtr_eq (habsM.trans habsRad.symm)
+    obtain ⟨segM', habsM', htapeM'⟩ :=
+      counter_inc_at (margin := margin) q.polarity 2 (incSign q.polarity 2 (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))) segM
+        x.vm.radius habsM (by rw [hbitRad, hvalM]) (T (mirrorSlot m)) hslotM
+    refine ⟨segM', by rw [Function.update_self]; exact habsM', ?_⟩
+    rw [hstep (mirrorSlot m) (fun k => (progSlot_ne_mirrorSlot (!q.fppLive) k m).symm),
+      rewindPairActs_mirror q.fppLive q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) m hsrc]
+    exact htapeM'
+  · refine progSlot_after_moveLeft (newTapes := (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))) henc.2 hK 8 hfloor ?_
+    rw [hstep _ (fun k => progSlotOf_ne_flip q.fppLive 8 k), rewindPairActs_prog]
+  · intro j hj
+    rw [hstep _ (fun k => progSlotOf_ne_flip q.fppLive j k),
+      rewindPairActs_progOther q.fppLive q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) j hj]
+    rfl
+  · intro slot hprog hlen hrad hmirror hhead0 hhead1 hidle
+    rw [hstep slot hidle,
+      rewindPairActs_off q.fppLive q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) slot hprog hlen hrad hmirror hhead0 hhead1]
+    rfl
+  · intro i
+    rw [hslotsL i, pos_mapTape]
+    exact hrepL.margin_le_pos (by omega) (le_refl margin) i
+  · intro i
+    rw [hslotsC i, pos_mapTape]
+    exact hrepC.margin_le_pos (by omega) (le_refl margin) i
+  · exact fun k => idle_shape_after_erase margin hK1 (by omega) R q T q.fppLive _ hacts
+      (fun k => rewindPairActs_off q.fppLive q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (progSlotOf (!q.fppLive) k)
+        (fun j => (progSlotOf_ne_flip q.fppLive j k).symm)
+        (progSlot_ne_counterSlot (!q.fppLive) k 3)
+        (progSlot_ne_counterSlot (!q.fppLive) k 2)
+        (fun m _ => progSlot_ne_mirrorSlot (!q.fppLive) k m)
+        (fun t => progSlot_ne_headSlot (!q.fppLive) k 0 t)
+        (fun t => progSlot_ne_headSlot (!q.fppLive) k 1 t))
+      henc.2.idleShape k
+
 /-- **the reconstructed tape is the component's tape, shifted.**  Cell `j` of the one is cell
 `pos - K + j` of the other, so long as the component's head stands at least `K` cells from its own
 left end — below that the window shows the padding instead, which is what the floor sentinel is
