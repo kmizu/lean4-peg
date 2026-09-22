@@ -9986,8 +9986,8 @@ theorem enc_afterStillTick {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (fir
       PalPeg.ConcreteLocalMachine.ViewCommand)
     (w : List (Fin 2)) (x y : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
     (input : Option (Fin 2)) (hslot0 : q.slot.val = 0)
-    (hstay : ∀ ws : Fin tapeCountM → PalPeg.Local.Window Γm K,
-      modeCommands first rest q input ws = stayCommands)
+    (hstay : modeCommands first rest q input
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = stayCommands)
     (howed : ∀ v, (q.micro v).2.2.2 = 0) (hheadsSame : ∀ v, headOf y v = headOf x v)
     (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
     (hctl : EncControl w y (ruleNext entryQ first hbound q
@@ -10013,7 +10013,7 @@ theorem enc_afterStillTick {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (fir
           (tickPhysRule entryQ first hbound hKq hK rest) blankM (q, tapesOf T) input 12).2
             (slotIndex i)) :=
   enc_afterTick margin entryQ first hbound hKq hK hmargin rest w x y q T input hslot0 howed
-    (fun _ => .stay) (fun _ => by rw [hstay _]; rfl)
+    (fun _ => .stay) (fun _ => by rw [hstay]; rfl)
     (fun _ => id) (fun _ => rfl) (fun v => by rw [hheadsSame v])
     (fun v head hhead => by rw [hheadsSame v]; exact hhead)
     (fun _ _ _ h => absurd h (by simp)) henc hctl htapes
@@ -10396,6 +10396,34 @@ Written once here, so that each such mode is one line and not four.
 The five modes that qualify are the end mark, the walk home, the back half of the choice, the
 preparation program and the fallback copy: their branches name counters, program tapes and
 period tapes, and nothing of a head. -/
+theorem enc_ofBranchStep_stay {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hmargin : K ≤ margin)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (w : List (Fin 2)) (x y : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (input : Option (Fin 2)) (hslot0 : q.slot.val = 0)
+    (hstay : modeCommands first rest q input
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = stayCommands)
+    (howed : ∀ v, (q.micro v).2.2.2 = 0) (hheadsSame : ∀ v, headOf y v = headOf x v)
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (hbranch : Enc w margin y
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hKq)
+          blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep
+          (physRule (dpBound := dpBound) entryQ first hbound hKq) blankM (q, tapesOf T) none).2
+            (slotIndex i))) :
+    Enc w margin y
+      ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK2 rest) blankM
+          (q, tapesOf T) input 12).1,
+        fun i => (PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hKq hK2 rest) blankM (q, tapesOf T) input 12).2
+            (slotIndex i)) := by
+  obtain ⟨hctl, htapes⟩ := enc_step_pieces margin entryQ first hbound hKq w y q T hbranch
+  exact enc_afterStillTick margin entryQ first hbound hKq hK2 hmargin rest w x y q T input hslot0
+    hstay howed hheadsSame henc hctl htapes
+
+/-- **the five still modes are the case of that in which the mode alone decides the row.** -/
 theorem enc_ofBranchStep_still {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ : ℕ) (first : Fin 9)
     (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hmargin : K ≤ margin)
     (rest : QPhys fppBound dpBound → Option (Fin 2) →
@@ -10422,9 +10450,8 @@ theorem enc_ofBranchStep_still {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ
         fun i => (PalPeg.LocalStepFusion.idealRun
           (tickPhysRule entryQ first hbound hKq hK2 rest) blankM (q, tapesOf T) input 12).2
             (slotIndex i)) := by
-  obtain ⟨hctl, htapes⟩ := enc_step_pieces margin entryQ first hbound hKq w y q T hbranch
-  exact enc_afterStillTick margin entryQ first hbound hKq hK2 hmargin rest w x y q T input hslot0
-    (fun ws => modeCommands_eq_stay first rest q input ws hmode) howed hheadsSame henc hctl htapes
+  exact enc_ofBranchStep_stay margin entryQ first hbound hKq hK2 hmargin rest w x y q T input
+    hslot0 (modeCommands_eq_stay first rest q input _ hmode) howed hheadsSame henc hbranch
 
 /-- **a tick of any of the five still modes moves no input head.**  Their frame functions all
 have the shape `{s with fpp := …}`: the end mark, the walk home, the back half of the choice, the
@@ -12442,6 +12469,157 @@ theorem scanCommands_eq_stay {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBo
   funext v
   rw [hquiet]
   split <;> rfl
+
+/-- **the machine's scan row writes nothing and changes no word.**  The scan reads the input
+through its comparison, so the branch that stands still leaves the control where it was and
+spends the tick on the background erasure of the idle program half. -/
+theorem physRule_nq_scan {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan) :
+    (physRule (dpBound := dpBound) entryQ first hbound hK).nq q none ws = q := by
+  show ruleNext entryQ first hbound q ws = _
+  unfold ruleNext
+  rw [hm]
+
+theorem physRule_acts_scan {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan) :
+    (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none ws
+      = withErase q.fppLive ws (fun _ => []) := by
+  show ruleActs entryQ first q ws = _
+  unfold ruleActs
+  rw [hm]
+
+/-- **the quiet arm of the scan, as a state.**  The arm taken because the input cursor has
+nothing left to read keeps the controller's whole word, clock included. -/
+theorem tickFun_scan_background_quiet (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hnorestart : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).restartGuard
+      x.vm = false)
+    (hquiet : (!x.ctl.replaying
+      && !(PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).available x.vm)
+        = true) :
+    PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
+      = ⟨x.ctl, PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+          (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm⟩ := by
+  unfold PalPeg.GalilScaffoldTop.tickFun
+  rw [hmode]
+  dsimp only
+  rw [if_neg (by rw [hnorestart]; exact Bool.false_ne_true), if_pos hquiet]
+  rfl
+
+/-- **the quiet scan tick over a standing chain, of the machine itself.**  Nothing in the
+abstract state moves, and the machine answers with the erasure and no other action, so the
+encoding after the step is the encoding before it with the idle program half walked back. -/
+theorem physRule_background_still {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hnorestart : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).restartGuard
+      x.vm = false)
+    (hquiet : (!x.ctl.replaying
+      && !(PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).available x.vm)
+        = true)
+    (hactive : ¬ x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle)
+    (hfixed : PalPeg.GalilScaffoldChainInputSupply.chainStepFun x.vm.chain = x.vm.chain)
+    (henc : Enc w margin x (q, T)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hK) blankM
+          (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hK)
+          blankM (q, tapesOf T) none).2 (slotIndex i)) := by
+  have htick : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x = x := by
+    rw [tickFun_scan_background_quiet centre place entry entryQ first w F delay x hmode hnorestart
+      hquiet,
+      backgroundFun_id_of_chainFixed (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm
+        hactive hfixed]
+  have hacts : (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (fun _ => []) :=
+    physRule_acts_scan entryQ first hbound hK q _ hqmode
+  have hkeptAll : ∀ slot : Slot, (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) →
+      (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hK)
+          blankM (q, tapesOf T) none).2 (slotIndex slot) = T slot := by
+    intro slot hslot
+    rw [idealStep_withErase (physRule (dpBound := dpBound) entryQ first hbound hK) q T q.fppLive
+      _ hacts slot hslot]
+    rfl
+  have hq : (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hK)
+      blankM (q, tapesOf T) none).1 = q :=
+    physRule_nq_scan entryQ first hbound hK q _ hqmode
+  rw [htick, hq]
+  exact ⟨henc.1, encTapes_idleOnly margin x q.polarity q.gap q.micro q.fppLive q.dpLive T _
+    henc.2 hkeptAll
+    (idle_shape_after_erase margin hK1 hKn (physRule (dpBound := dpBound) entryQ first hbound hK)
+      q T q.fppLive _ hacts (fun _ => rfl) henc.2.idleShape)⟩
+
+/-- **the quiet scan tick over a standing chain, carried through the twelve slots.**  Nothing in
+the abstract state moves: the input cursor has nothing to read, the chain's own step leaves it
+where it was, and the search takes no quantum over a running chain.  The row the command table
+gives that tick is the row that moves nothing, so the twelve slots carry it with the same
+machinery as the five still modes.
+
+This is the first arm of the scan to be carried end to end.  What it costs the machine is the
+background erasure of the idle program half and nothing else. -/
+theorem background_still_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (input : Option (Fin 2))
+    (hbound : 320 < fppBound) (hKb : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hK1 : 1 ≤ K)
+    (hK : K ≤ margin) (hslot0 : q.slot.val = 0) (howed : ∀ v, (q.micro v).2.2.2 = 0)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hnorestart : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).restartGuard
+      x.vm = false)
+    (hquiet : (!x.ctl.replaying
+      && !(PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).available x.vm)
+        = true)
+    (hactive : ¬ x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle)
+    (hfixed : PalPeg.GalilScaffoldChainInputSupply.chainStepFun x.vm.chain = x.vm.chain)
+    (hnoconsume : chainConsumesTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = false)
+    (henc : Enc w margin x (q, T)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKb hK2 rest) blankM
+          (q, tapesOf T) input 12).1,
+        fun i => (PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hKb hK2 rest) blankM (q, tapesOf T) input 12).2
+            (slotIndex i)) := by
+  have htick : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x = x := by
+    rw [tickFun_scan_background_quiet centre place entry entryQ first w F delay x hmode hnorestart
+      hquiet,
+      backgroundFun_id_of_chainFixed (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm
+        hactive hfixed]
+  exact enc_ofBranchStep_stay margin entryQ first hbound hKb hK2 hK rest w x
+    (PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) q T input
+    hslot0
+    (by
+      unfold modeCommands
+      rw [hqmode]
+      exact scanCommands_eq_stay q _ hnoconsume)
+    howed (fun v => by rw [htick]) henc.2
+    (physRule_background_still margin centre place entry entryQ first w F delay x q T hbound hKb
+      hK1 (by omega) hqmode hmode hnorestart hquiet hactive hfixed henc)
 
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
