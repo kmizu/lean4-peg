@@ -4945,6 +4945,72 @@ theorem belowRead_backSlot {K : ℕ} {tapes : Slot → STape Γm} (hK1 : 1 ≤ K
       unfold encCell
       rw [if_pos rfl]), hbelow]
 
+/-- **the bit for the first letter, after a head steps left, is one reading of the window.**
+The head stands on the first letter afterwards exactly when it stood on a gap and the cell below
+its back head is the sentinel — the first of those is a bit the control already carries, and the
+second is in the window. -/
+theorem leftFirst_after_step_iff {margin K : ℕ} {polarity : Fin 16 → Bool} {gap : Fin 4 → Bool}
+    {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl} {fppLive dpLive : Bool}
+    {x : State GalilVM} {tapes : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes) (hK1 : 1 ≤ K)
+    (hK : K ≤ margin)
+    (v : Fin 4) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hhead : headOf x v = some head)
+    (a : Option (Fin 2)) (tail : List (Option (Fin 2))) (hleft : head.head.left = a :: tail) :
+    PalPeg.GalilScaffoldChainInputSupply.position
+        (PalPeg.GalilScaffoldInputHead.left head) = 1
+      ↔ (gap v = true ∧
+          belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+              (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+            = encCell (PalPeg.CloseoutCoreEnc.cellSym none)) := by
+  obtain ⟨view, viewTapes, habs, hrep, hslots, hcells⟩ := henc.heads v head hhead
+  have hviewBack : view.back = a :: tail := by
+    have hb : (PalPeg.LocalArrival.absHead' view []).head.left = head.head.left := by rw [habs]
+    rw [← hleft]
+    exact hb
+  have hviewGap : view.gap = head.gap := by
+    have hg : (PalPeg.LocalArrival.absHead' view []).gap = head.gap := by rw [habs]
+    exact hg
+  have hgapBit : gap v = head.gap := by rw [hrep.gap, hviewGap]
+  obtain ⟨bottom, hbottomHeight, hstack⟩ := hrep.back
+  have hbelow : belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+      (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+      = encCell (PalPeg.CloseoutCoreEnc.cellSym a) := by
+    rw [belowRead_backSlot hK1 v viewTapes
+      (PalPeg.ConcreteLocalMachine.backStack view ++ bottom)
+      (hslots PalPeg.ConcreteLocalMachine.backTape) hstack
+      (by
+        have hlen : (PalPeg.ConcreteLocalMachine.backStack view ++ bottom).length
+            = view.back.length + 1 + bottom.length := by
+          show (view.focus :: view.back ++ bottom).length = _
+          simp only [List.length_append, List.length_cons]
+        omega)]
+    congr 1
+    show PalPeg.CloseoutCoreEnc18.topSym (view.back ++ bottom) = _
+    rw [hviewBack]
+    rfl
+  rw [hbelow, leftFirst_after_left head, hleft, hgapBit]
+  have hsym : (encCell (PalPeg.CloseoutCoreEnc.cellSym a)
+      = encCell (PalPeg.CloseoutCoreEnc.cellSym none)) ↔ a = none := by
+    cases a with
+    | none => simp
+    | some b =>
+      simp only [iff_false, reduceCtorEq, iff_false]
+      show ¬ (encCell (PalPeg.CloseoutCoreEnc.cellSym (some b)) = blankM)
+      have hne : PalPeg.CloseoutCoreEnc.cellSym (some b) ≠ PalPeg.CloseoutCoreStep.blankc := by
+        simp [PalPeg.CloseoutCoreEnc.cellSym, PalPeg.CloseoutCoreStep.blankc,
+          PalPeg.GalilVMEncode.blank, PalPeg.GalilVMEncode.sOpt]
+      simp [encCell, hne, blankM]
+  rw [hsym]
+  constructor
+  · rintro ⟨hg, hlen⟩
+    exact ⟨hg, (back_singleton_iff_sentinel view hcells a tail hviewBack).mp
+      (by simpa using hlen)⟩
+  · rintro ⟨hg, ha⟩
+    exact ⟨hg, by
+      rw [(back_singleton_iff_sentinel view hcells a tail hviewBack).mpr ha]
+      rfl⟩
+
 /-- **the reconstructed tape is the component's tape, shifted.**  Cell `j` of the one is cell
 `pos - K + j` of the other, so long as the component's head stands at least `K` cells from its own
 left end — below that the window shows the padding instead, which is what the floor sentinel is
