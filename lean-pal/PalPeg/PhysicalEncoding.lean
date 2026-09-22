@@ -9427,6 +9427,26 @@ theorem headSlotsRep_of_heads {margin : ℕ} {x : State GalilVM} {polarity : Fin
   obtain ⟨view, viewTapes, -, hrep, hslots, hcells, hwf⟩ := h.heads v head hhead
   exact ⟨view, viewTapes, hrep, hslots, hcells, hwf⟩
 
+/-- **every cursor of the machine holds a view**, whether or not the abstraction names it.  Three
+of the four always have an abstract head; the fourth has one unless the chain is idle, and then
+the encoding's own field gives it. -/
+theorem headSlotsRep_all {margin : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {tapes : Slot → STape Γm}
+    (h : EncTapes margin x polarity gap micro fppLive dpLive tapes) (v : Fin 4) :
+    HeadSlotsRep margin gap micro tapes v := by
+  match hv : headOf x v with
+  | some head => exact headSlotsRep_of_heads h v head hv
+  | none =>
+    have hv3 : v = 3 := by
+      fin_cases v
+      · exact absurd hv (by simp [headOf])
+      · exact absurd hv (by simp [headOf])
+      · exact absurd hv (by simp [headOf])
+      · rfl
+    subst hv3
+    exact h.idleHead hv
+
 /-- **and it gives the margin of that cursor's twelve slots.**  A view's own tapes stand clear of
 the left edge, and the change of alphabet does not move a head. -/
 theorem margin_le_pos_headSlot {margin K : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
@@ -9480,6 +9500,41 @@ theorem headSlotsRep_afterTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) 
   exact ⟨PalPeg.ConcreteLocalMachine.viewApply command view, _, hrep', hslots',
     viewCells_viewApply hwf command (fun h => hready h) hcells f hf,
     wf_viewApply hwf command f hf⟩
+
+/-- **the three bits of the control a tick leaves as the branch put them**, named so that the
+transports can be given them without digging into a twenty-one-fold tuple.  All three are in
+`headFreeFields`, so this is `tickRule_headFree` read component by component. -/
+theorem tickPhysRule_bits {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK : 2 ≤ K)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (q : QPhys fppBound dpBound) (T : Slot → STape Γm) (input : Option (Fin 2))
+    (hslot0 : q.slot.val = 0) :
+    (PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK rest) blankM
+        (q, tapesOf T) input 12).1.polarity
+      = (ruleNext entryQ first hbound q
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).polarity ∧
+    (PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK rest) blankM
+        (q, tapesOf T) input 12).1.fppLive
+      = (ruleNext entryQ first hbound q
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).fppLive ∧
+    (PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK rest) blankM
+        (q, tapesOf T) input 12).1.dpLive
+      = (ruleNext entryQ first hbound q
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).dpLive := by
+  have hfree : headFreeFields (PalPeg.LocalStepFusion.idealRun
+      (tickPhysRule entryQ first hbound hKq hK rest) blankM (q, tapesOf T) input 12).1
+      = headFreeFields (ruleNext entryQ first hbound q
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))) := by
+    rw [tickPhysRule_eq entryQ first hbound hKq hK rest]
+    exact tickRule_headFree hK (fun q _ ws => ruleNext entryQ first hbound q ws)
+      (modeCommands first rest) (fun q _ ws => ruleActs entryQ first q ws)
+      (fun q _ ws j => ruleActs_length entryQ first hKq q ws j) (q, tapesOf T) input hslot0
+  simp only [headFreeFields, Prod.mk.injEq] at hfree
+  exact ⟨hfree.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1,
+    hfree.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1,
+    hfree.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2⟩
 
 theorem physRule_nq_markEnd {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
