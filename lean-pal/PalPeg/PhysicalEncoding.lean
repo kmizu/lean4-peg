@@ -8225,6 +8225,42 @@ theorem tickRule_headFree {fppBound dpBound K : ℕ} (hK : 2 ≤ K) (base comman
   rw [if_pos hslot0]
   rfl
 
+/-- **what the finite control says about the state depends only on the fields that are not a
+view's.**  Every one of the eighteen fields of `EncControl` speaks of the mode, the chain, the
+two programs, the search, the cursors' half-steps or the two bits about the input heads' places —
+and all of those are in `headFreeFields`.  None of them speaks of a view's gap bit, its queue job
+or its micro-schedule.
+
+So a tick carries `EncControl` across for free: by `tickRule_headFree` the tick leaves those
+fields exactly as the mode's branch put them, and the branch is already proved to put them right.
+-/
+theorem encControl_congr {fppBound dpBound : ℕ} {w : List (Fin 2)} {x : State GalilVM}
+    {q q' : QPhys fppBound dpBound} (hfree : headFreeFields q = headFreeFields q')
+    (h : EncControl w x q) : EncControl w x q' := by
+  simp only [headFreeFields, Prod.mk.injEq] at hfree
+  obtain ⟨hctl, hchainTag, hchainPhase, hchainForward, hchainBroken, hfppMode, hfppFinalStage,
+    hfppPc, hfppDone, hdpPc, hdpDone, hsearchMode, hsearchFinalStage, hsearchQuarter,
+    hperiodOnly, hplaceGap, honLetter, hleftFirst, -, -, -⟩ := hfree
+  exact
+    { ctl := by rw [← hctl]; exact h.ctl
+      chainTag := by rw [← hchainTag]; exact h.chainTag
+      chainPhase := by rw [← hchainPhase]; exact h.chainPhase
+      chainForward := by rw [← hchainForward]; exact h.chainForward
+      chainBroken := by rw [← hchainBroken]; exact h.chainBroken
+      fppMode := by rw [← hfppMode]; exact h.fppMode
+      fppFinalStage := by rw [← hfppFinalStage]; exact h.fppFinalStage
+      fppPc := by rw [← hfppPc]; exact h.fppPc
+      fppDone := by rw [← hfppDone]; exact h.fppDone
+      dpPc := by rw [← hdpPc]; exact h.dpPc
+      dpDone := by rw [← hdpDone]; exact h.dpDone
+      searchMode := by rw [← hsearchMode]; exact h.searchMode
+      searchFinalStage := by rw [← hsearchFinalStage]; exact h.searchFinalStage
+      searchQuarter := by rw [← hsearchQuarter]; exact h.searchQuarter
+      periodOnly := by rw [← hperiodOnly]; exact h.periodOnly
+      placeGap := fun i place hp => by rw [← hplaceGap]; exact h.placeGap i place hp
+      onLetter := by rw [← honLetter]; exact h.onLetter
+      leftFirst := by rw [← hleftFirst]; exact h.leftFirst }
+
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
 which is a bit the control carries; the symbol under its back head is a letter rather than the
