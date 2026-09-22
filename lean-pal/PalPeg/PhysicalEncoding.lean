@@ -6340,6 +6340,90 @@ theorem centreRead_head_ne_sentinel_iff {margin K : ℕ} {polarity : Fin 16 → 
   · intro hne hEq
     exact hne ((PalPeg.LocalViewCells.back_nil_iff_focus_none hcells).mpr (hsentinel.mp hEq))
 
+/-- **a head's step right, on the slots of the whole machine**, while the cell it steps onto is
+on its near stack.  As with the step left, the three actions name only symbols the rule reads off
+its own windows: the back stack writes back its own symbol, steps right, and writes the near
+stack's symbol where it now stands, and the near stack writes back its own symbol and steps
+left. -/
+theorem headSlots_rightOn {margin K : ℕ} {polarity : Fin 16 → Bool} {gap : Fin 4 → Bool}
+    {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl} {fppLive dpLive : Bool}
+    {x : State GalilVM} {T : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive T)
+    (v : Fin 4) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hhead : headOf x v = some head) (hgap : head.gap = true)
+    (a : Option (Fin 2)) (rest : List (Option (Fin 2))) (hnear : head.head.right = a :: rest)
+    (newTapes : Slot → STape Γm)
+    (hbackSlot : newTapes (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+      = PalPeg.CloseoutCoreEnc12.actList blankM
+          (T (headSlot v PalPeg.ConcreteLocalMachine.backTape))
+          [some ((T (headSlot v PalPeg.ConcreteLocalMachine.backTape)).focus,
+              (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+            some ((T (headSlot v PalPeg.ConcreteLocalMachine.nearTape)).focus,
+              (.stay : PalPeg.CloseoutCoreEnc12.MoveC))])
+    (hnearSlot : newTapes (headSlot v PalPeg.ConcreteLocalMachine.nearTape)
+      = PalPeg.CloseoutCoreEnc12.actOnG blankM
+          (T (headSlot v PalPeg.ConcreteLocalMachine.nearTape))
+          (some ((T (headSlot v PalPeg.ConcreteLocalMachine.nearTape)).focus,
+            (.left : PalPeg.CloseoutCoreEnc12.MoveC))))
+    (hotherSlot : ∀ t, t ≠ PalPeg.ConcreteLocalMachine.backTape →
+      t ≠ PalPeg.ConcreteLocalMachine.nearTape →
+      newTapes (headSlot v t) = T (headSlot v t)) :
+    ∃ (view : PalPeg.LocalInputView.InputView)
+        (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+      PalPeg.LocalArrival.absHead' view []
+          = PalPeg.GalilScaffoldChainVerifier.right head ∧
+        PalPeg.ConcreteLocalMachine.ViewRep margin view false (micro v) viewTapes ∧
+        (∀ i, newTapes (headSlot v i) = mapTape encCell (viewTapes i)) ∧
+          PalPeg.LocalViewCells.ViewCells view := by
+  obtain ⟨view, viewTapes, habs, hrep, hold, hcells⟩ := henc.heads v head hhead
+  have hviewNear : view.near = a :: rest := by
+    have hn : (PalPeg.LocalArrival.absHead' view []).head.right = head.head.right := by rw [habs]
+    rw [← hnear]
+    exact hn
+  have hviewGap : view.gap = true := by
+    have hg : (PalPeg.LocalArrival.absHead' view []).gap = head.gap := by rw [habs]
+    rw [← hgap]
+    exact hg
+  have hgapBit : gap v = true := by rw [hrep.gap, hviewGap]
+  have hrep' : PalPeg.ConcreteLocalMachine.ViewRep margin view true (micro v) viewTapes := by
+    rw [← hgapBit]
+    exact hrep
+  have hnearFocus : (viewTapes PalPeg.ConcreteLocalMachine.nearTape).focus
+      = PalPeg.CloseoutCoreEnc.cellSym a := by
+    obtain ⟨bottom, -, -, hst⟩ := hrep'.near
+    have hstack : view.near ++ bottom = a :: (rest ++ bottom) := by
+      rw [hviewNear]
+      rfl
+    rw [hstack] at hst
+    rw [stackTape_focus _ _ hst]
+    rfl
+  have hmapNear : (mapTape encCell (viewTapes PalPeg.ConcreteLocalMachine.nearTape)).focus
+      = encCell (PalPeg.CloseoutCoreEnc.cellSym a) := by
+    show encCell (viewTapes PalPeg.ConcreteLocalMachine.nearTape).focus = _
+    rw [hnearFocus]
+  refine ⟨rightViewOn view a rest, rightViewTapes viewTapes a,
+    habs.symm ▸ absHead_rightViewOn view hviewGap a rest hviewNear,
+    viewRep_rightOn view (micro v) viewTapes (rightViewTapes viewTapes a) a rest hviewNear hrep'
+      ?_ ?_ ?_, ?_, viewCells_rightViewOn view a rest hviewNear hcells⟩
+  · unfold rightViewTapes
+    rw [if_pos rfl]
+  · unfold rightViewTapes
+    rw [if_neg (by decide), if_pos rfl]
+  · intro t hbackT hnearT
+    unfold rightViewTapes
+    rw [if_neg hbackT, if_neg hnearT]
+  · intro i
+    by_cases hb : i = PalPeg.ConcreteLocalMachine.backTape
+    · subst hb
+      rw [hbackSlot, encCell_rightViewTapes_back,
+        hold PalPeg.ConcreteLocalMachine.backTape, hold PalPeg.ConcreteLocalMachine.nearTape,
+        hmapNear]
+    · by_cases hn : i = PalPeg.ConcreteLocalMachine.nearTape
+      · subst hn
+        rw [hnearSlot, encCell_rightViewTapes_near,
+          hold PalPeg.ConcreteLocalMachine.nearTape, hmapNear]
+      · rw [hotherSlot i hb hn, encCell_rightViewTapes_other viewTapes a i hb hn, hold i]
+
 /-- **a head that steps left for free, on the slots of the whole machine.**  Two of the three
 cases of a head's step move no tape: the head stands on a gap, or it stands on a letter with
 nothing behind it.  The rule tells them from the third by one reading, the symbol under the back
