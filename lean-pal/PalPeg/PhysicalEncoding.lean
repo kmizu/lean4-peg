@@ -8619,6 +8619,33 @@ noncomputable def modeCommands {fppBound dpBound K : ℕ} (first : Fin 9)
   | PalPeg.GalilScaffoldController.Mode.scan => scanCommands q ws
   | _ => rest q i ws
 
+/-- **the scan's row of the command table.** -/
+theorem modeCommands_scan {fppBound dpBound K : ℕ} (first : Fin 9) (rest)
+    (q : QPhys fppBound dpBound) (i : Option (Fin 2))
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan) :
+    modeCommands first rest q i ws = scanCommands q ws := by
+  unfold modeCommands
+  rw [hmode]
+
+/-- **the operation each of the scan's commands names.**  Three cursors stay where they are and
+the fourth steps right exactly when the chain consumes. -/
+theorem headOp_scanCommands {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4) :
+    headOp (scanCommands q ws v)
+      = some (if v = 3 ∧ chainConsumesTest q ws then
+          PalPeg.GalilScaffoldChainVerifier.right else id) := by
+  unfold scanCommands
+  by_cases hv : v = 3
+  · rw [if_pos hv]
+    by_cases hc : chainConsumesTest q ws
+    · rw [if_pos hc, if_pos ⟨hv, hc⟩]
+      rfl
+    · rw [if_neg hc, if_neg (fun h => hc h.2)]
+      rfl
+  · rw [if_neg hv, if_neg (fun h => hv h.1)]
+    rfl
+
 /-- **the shift's row, once the shift is over.**  Nothing moves in the tick that leaves the
 shift: the machine's whole state is carried over and only the controller's word changes. -/
 theorem modeCommands_shiftExit {fppBound dpBound K : ℕ} (first : Fin 9) (rest)
