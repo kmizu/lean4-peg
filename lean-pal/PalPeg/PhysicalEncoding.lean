@@ -12791,6 +12791,119 @@ theorem stepRight_focus_of_queue (v : PalPeg.LocalInputView.InputView)
       | cons c tail => rw [hl] at hhead; exact absurd hhead (by simp)
   | some a => rfl
 
+/-- **the letter a cursor is about to reach, as the machine reads it.**  The gap bit is in the
+control: a cursor on a letter reaches the gap and reads the gap symbol, and one on a gap reaches
+the next cell — the top of its near stack, or the front of its queue when the near stack is
+spent.  All three are symbols `viewTopsOfWindows` shows.
+
+This is the one reading the chain's verdict needs that is not already a field of the control. -/
+noncomputable def landingLetter {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4) : Option (Fin 3) :=
+  if q.gap v then
+    (match (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
+        (viewWindows v ws)).near with
+      | some c => some c
+      | none => (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
+          (viewWindows v ws)).front).map PalPeg.GalilScaffoldPlace.letter
+  else (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
+    (viewWindows v ws)).focus.map (fun _ => (2 : Fin 3))
+
+/-- **and that reading is the letter the cursor really reaches.**  The three symbols the windows
+show are the view's own three, the near stack of a represented view carries letters and never a
+gap, and the readiness the view layer carries is what says the queue has one when the near stack
+does not. -/
+theorem landingLetter_eq {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4)
+    (view : PalPeg.LocalInputView.InputView)
+    (htops : PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1 (viewWindows v ws)
+      = PalPeg.ConcreteLocalMachine.viewTops view)
+    (hgap : q.gap v = view.gap) (hcells : PalPeg.LocalViewCells.ViewCells view)
+    (hinv : PalPeg.RTQueue.Inv view.far)
+    (hready : view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    landingLetter q ws v = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveRight view) := by
+  unfold landingLetter
+  rw [htops, hgap, readV_moveRight view]
+  by_cases hg : view.gap = true
+  · rw [if_pos hg, if_pos hg]
+    congr 1
+    obtain ⟨nearLetters, hnl⟩ := PalPeg.LocalViewCells.near_letters hcells
+    cases nearLetters with
+    | nil =>
+        have hnear : view.near = [] := by rw [hnl]; rfl
+        rw [stepRight_focus_of_queue view hnear hinv (hready hg hnear)]
+        show (match (PalPeg.ConcreteLocalMachine.viewTops view).near with
+          | some c => some c
+          | none => (PalPeg.ConcreteLocalMachine.viewTops view).front) = _
+        unfold PalPeg.ConcreteLocalMachine.viewTops
+        rw [hnear]
+        rfl
+    | cons a rest =>
+        have hnear : view.near = some a :: rest.map some := by rw [hnl]; rfl
+        rw [stepRight_focus_of_near view (some a) (rest.map some) hnear]
+        show (match (PalPeg.ConcreteLocalMachine.viewTops view).near with
+          | some c => some c
+          | none => (PalPeg.ConcreteLocalMachine.viewTops view).front) = _
+        unfold PalPeg.ConcreteLocalMachine.viewTops
+        rw [hnear]
+        rfl
+  · rw [if_neg hg, if_neg hg]
+    rfl
+
+/-- **the letter the verifier reaches, from the windows of its view.**  Its view is what the
+twelve head slots hold, so the reading the chain's verdict compares against is the machine's
+own `landingLetter`. -/
+theorem landingLetter_of_verifier {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4)
+    (view : PalPeg.LocalInputView.InputView) (junk : List (Fin 2))
+    (htops : PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1 (viewWindows v ws)
+      = PalPeg.ConcreteLocalMachine.viewTops view)
+    (hgap : q.gap v = view.gap) (hcells : PalPeg.LocalViewCells.ViewCells view)
+    (hwf : PalPeg.LocalInputView.WF view) (hinv : PalPeg.RTQueue.Inv view.far)
+    (hready : view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    landingLetter q ws v
+      = PalPeg.GalilScaffoldInputHead.read
+          (PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' view junk)) := by
+  rw [landingLetter_eq q ws v view htops hgap hcells hinv hready,
+    read_right_absHead' junk hwf (fun hg hn => hready hg hn)]
+
+/-- **the chain's verdict, as the machine decides it.**  The period tape offers a symbol or it
+does not; if it does, the verdict is whether the letter the verifier reaches is that symbol.
+Both readings are in the window: the period tape's centre cell, and the view of the fourth
+cursor. -/
+noncomputable def watchVerdictTest {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Option Bool :=
+  match PalPeg.GalilScaffoldChainConsume.symbol (decToken (centreRead ws periodSlot)) with
+  | some a => some (decide (landingLetter q ws 3 = some a))
+  | none => none
+
+/-- **and it is the verdict.**  Given the two readings — the symbol the period tape offers and
+the letter the verifier reaches — the machine's decision is the chain's. -/
+theorem watchVerdictTest_eq {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (hsymbol : PalPeg.GalilScaffoldChainConsume.symbol (decToken (centreRead ws periodSlot))
+      = PalPeg.GalilScaffoldChainConsume.symbol wm.machine.control.period.focus)
+    (hlanding : landingLetter q ws 3
+      = PalPeg.GalilScaffoldInputHead.read
+          (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier)) :
+    watchVerdictTest q ws = PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm := by
+  unfold watchVerdictTest PalPeg.GalilScaffoldChainInputSupply.watchVerdict
+  rw [hsymbol, hlanding]
+  rfl
+
+/-- **the period tape's symbol is the centre cell of its slot, decoded.**  Which is the first of
+the two readings the verdict needs. -/
+theorem symbol_centreRead_periodSlot {margin K : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {T : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive T) (hK : K ≤ margin)
+    (tape : PalPeg.GalilScaffoldChainPeriod.Tape) (hperiod : periodOf x = some tape) :
+    PalPeg.GalilScaffoldChainConsume.symbol
+        (decToken (centreRead (fun t => PalPeg.Local.readWin blankM K (tapesOf T t)) periodSlot))
+      = PalPeg.GalilScaffoldChainConsume.symbol tape.focus := by
+  rw [centreRead_periodSlot henc hK tape hperiod, decToken_encToken]
+  rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
