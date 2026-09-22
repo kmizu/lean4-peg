@@ -8732,7 +8732,10 @@ noncomputable def scanConsumeNext {fppBound dpBound K : ℕ} (q : QPhys fppBound
           if PalPeg.GalilScaffoldChainPeriod.isFirst (decToken (centreRead ws periodSlot))
               || PalPeg.GalilScaffoldChainConsume.isLast (decToken (centreRead ws periodSlot)) then
             PalPeg.GalilScaffoldChainPeriod.isFirst (decToken (centreRead ws periodSlot))
-          else q.chainForward }
+          else q.chainForward,
+        polarity := Function.update
+          (Function.update q.polarity 11 (decSignAt (q.polarity 11) (counterSlot 11) ws))
+          13 (incSign q.polarity 13 ws) }
   | some false => { q with chainTag := ChainTag.broken }
   | none => q
 
@@ -13605,7 +13608,10 @@ theorem scanConsumeNext_of_match {fppBound dpBound K : ℕ} (q : QPhys fppBound 
             if PalPeg.GalilScaffoldChainPeriod.isFirst wm.machine.control.period.focus
                 || PalPeg.GalilScaffoldChainConsume.isLast wm.machine.control.period.focus then
               PalPeg.GalilScaffoldChainPeriod.isFirst wm.machine.control.period.focus
-            else q.chainForward } := by
+            else q.chainForward,
+          polarity := Function.update
+            (Function.update q.polarity 11 (decSignAt (q.polarity 11) (counterSlot 11) ws))
+            13 (incSign q.polarity 13 ws) } := by
     unfold scanConsumeNext
     rw [htest, hverdict, htoken]
   refine ⟨?_, ?_⟩
