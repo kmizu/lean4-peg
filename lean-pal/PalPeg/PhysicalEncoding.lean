@@ -8553,6 +8553,47 @@ noncomputable def scanConsumeNext {fppBound dpBound K : ℕ} (q : QPhys fppBound
   | some false => { q with chainTag := ChainTag.broken }
   | none => q
 
+/-- **the actions a consuming tick names.**  A match spends one unit of the chain's lag, counts
+one more letter of its distance, and steps the period tape the way the control says to walk it.
+A mismatch spends nothing: the broken chain carries the lag, the margin and the control it had,
+and the only thing that moves is the verifier, which the view layer walks.
+
+The two counters a boundary event renames — the block boundary and the one before it — are not
+here.  Their renaming is `alias` in the spec of record, and on tapes it is the segment the
+counter's own `resetSeg` leaves behind; that representation is not in `counterOf` yet, so the
+tick that closes a block is not among the branches this table is proved for. -/
+noncomputable def scanConsumeActs {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  fun j =>
+    if chainConsumesTest q ws then
+      if watchVerdictTest q ws = some true then
+        if j = slotIndex (counterSlot 11) then [decAct q 11 ws]
+        else if j = slotIndex (counterSlot 13) then [incAct q 13 ws]
+        else if j = slotIndex periodSlot then
+          [some (centreRead ws periodSlot,
+            if (scanConsumeNext q ws).chainForward then
+              (.right : PalPeg.CloseoutCoreEnc12.MoveC)
+            else (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+        else []
+      else []
+    else []
+
+theorem scanConsumeActs_length {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
+    (scanConsumeActs q ws j).length ≤ 1 := by
+  unfold scanConsumeActs
+  split_ifs <;> simp
+
+/-- **a tick that does not consume names no action.**  Which is what lets the arm of the scan
+that stands still keep the tapes it had. -/
+theorem scanConsumeActs_of_quiet {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hquiet : chainConsumesTest q ws = false) : scanConsumeActs q ws = fun _ => [] := by
+  funext j
+  unfold scanConsumeActs
+  rw [if_neg (by rw [hquiet]; exact Bool.false_ne_true)]
+
 /-- **the command table, as far as the branches that are proved reach.**  Five of them — the end
 mark, the walk home, the back half of the choice, the preparation program and the fallback copy —
 name nothing but counters, program tapes and period tapes, so every head stands still through
@@ -9822,6 +9863,8 @@ noncomputable def ruleActs {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fi
         (fppBranchActs PalPeg.GalilFppMarkedCode.code entryQ q.fppLive first (pcOf q) q.fppDone ws)
   | PalPeg.GalilScaffoldController.Mode.copy =>
       withErase q.fppLive ws (copyActs q.fppLive q ws)
+  | PalPeg.GalilScaffoldController.Mode.scan =>
+      withErase q.fppLive ws (scanConsumeActs q ws)
   | _ => withErase q.fppLive ws (fun _ => [])
 
 theorem ruleActs_length {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
@@ -9849,6 +9892,8 @@ theorem ruleActs_length {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9
           (fun j => by simp) j
       | exact withErase_length (b := 1) (by omega) q.fppLive ws _
           (fun j => copyActs_length q.fppLive q ws j) j
+      | exact withErase_length (b := 1) (by omega) q.fppLive ws _
+          (fun j => scanConsumeActs_length q ws j) j
 
 /-- **the rule of the physical machine**, so far as its branches are proved. -/
 noncomputable def physRule {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) :
@@ -12932,12 +12977,15 @@ theorem physRule_nq_scan {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 
 theorem physRule_acts_scan {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
     (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan) :
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hquiet : chainConsumesTest q ws = false) :
     (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none ws
       = withErase q.fppLive ws (fun _ => []) := by
   show ruleActs entryQ first q ws = _
   unfold ruleActs
   rw [hm]
+  dsimp only
+  rw [scanConsumeActs_of_quiet q ws hquiet]
 
 /-- **the quiet arm of the scan, as a state.**  The arm taken because the input cursor has
 nothing left to read keeps the controller's whole word, clock included. -/
@@ -12995,7 +13043,7 @@ theorem physRule_background_still {fppBound dpBound K : ℕ} (margin : ℕ) (cen
       (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
       = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
           (fun _ => []) :=
-    physRule_acts_scan entryQ first hbound hK q _ hqmode
+    physRule_acts_scan entryQ first hbound hK q _ hqmode hnoconsume
   have hkeptAll : ∀ slot : Slot, (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) →
       (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hK)
           blankM (q, tapesOf T) none).2 (slotIndex slot) = T slot := by
