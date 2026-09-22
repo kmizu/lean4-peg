@@ -229,6 +229,32 @@ theorem mapTape_applyAction {Γ₁ : Type} (f : Γ₁ → Γm) {blank₁ : Γ₁
     | nil => rfl
     | cons head rest => rfl
 
+/-- the action of the machine that an action of a component names: the symbol it writes is the
+symbol's own, and the direction is the same. -/
+def encAct {Γ₁ : Type} (f : Γ₁ → Γm) (a : PalPeg.CloseoutCoreEnc12.Act Γ₁) :
+    PalPeg.CloseoutCoreEnc12.Act Γm :=
+  a.map (fun sm => (f sm.1, sm.2))
+
+theorem mapTape_actOnG {Γ₁ : Type} (f : Γ₁ → Γm) {blank₁ : Γ₁} (hblank : f blank₁ = blankM)
+    (T : STape Γ₁) (a : PalPeg.CloseoutCoreEnc12.Act Γ₁) :
+    mapTape f (PalPeg.CloseoutCoreEnc12.actOnG blank₁ T a)
+      = PalPeg.CloseoutCoreEnc12.actOnG blankM (mapTape f T) (encAct f a) := by
+  cases a with
+  | none => rfl
+  | some sm => exact mapTape_applyAction f hblank T sm.1 sm.2
+
+/-- **a composite step of a component is the same composite step on the tape the machine keeps.**
+Each action commutes with the change of alphabet, so a whole list does. -/
+theorem mapTape_actList {Γ₁ : Type} (f : Γ₁ → Γm) {blank₁ : Γ₁} (hblank : f blank₁ = blankM) :
+    ∀ (acts : List (PalPeg.CloseoutCoreEnc12.Act Γ₁)) (T : STape Γ₁),
+      mapTape f (PalPeg.CloseoutCoreEnc12.actList blank₁ T acts)
+        = PalPeg.CloseoutCoreEnc12.actList blankM (mapTape f T) (acts.map (encAct f))
+  | [], T => rfl
+  | a :: rest, T => by
+    rw [PalPeg.CloseoutCoreEnc12.actList_cons, List.map_cons,
+      PalPeg.CloseoutCoreEnc12.actList_cons, ← mapTape_actOnG f hblank T a]
+    exact mapTape_actList f hblank rest _
+
 theorem padLeft_applyAction_right (n : ℕ) (T : STape Γm) (written : Γm) :
     padLeft n (T.applyAction blankM (written, .right))
       = (padLeft n T).applyAction blankM (written, .right) := by
@@ -6833,6 +6859,36 @@ theorem headSlots_rightStep {margin K : ℕ} {polarity : Fin 16 → Bool} {gap :
         rw [hslots t, hguard t, if_neg hb, if_neg hn]
         rfl)
     exact hres
+
+/-- **a step of the machine on the twelve slots of a head is a step of that head's view.**  The
+machine keeps a head's tapes as the encoded tapes of a view, so if the actions the rule names on
+those slots are the actions the view layer's own rule names — read off the same windows, through
+the encoding — then the slots afterwards are the encoded tapes of the view one step later, and
+the view layer's `ViewStep` holds of it.  This is the bridge that lets `viewSlot_sound` speak
+about the machine: eleven of these are one command of the view. -/
+theorem viewStep_of_encodedActs {K : ℕ} (hK : 2 ≤ K) (slot : Fin 11)
+    (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (control : PalPeg.ConcreteLocalMachine.ViewControl)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (T newTapes : Slot → STape Γm) (embed : Fin 12 → Slot)
+    (hold : ∀ t, T (embed t) = mapTape encCell (viewTapes t))
+    (hslots : ∀ t, newTapes (embed t)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (T (embed t))
+          ((PalPeg.ConcreteLocalMachine.viewActs (Fin 2) hK slot command control
+            (fun tape => PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K (viewTapes tape))
+            t).map (encAct encCell))) :
+    ∃ viewTapes' : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc,
+      (∀ t, newTapes (embed t) = mapTape encCell (viewTapes' t)) ∧
+        PalPeg.ConcreteLocalMachine.ViewStep (Fin 2) hK slot command (control, viewTapes)
+          (PalPeg.ConcreteLocalMachine.viewNext (Fin 2) hK slot command control
+              (fun tape =>
+                PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K (viewTapes tape)),
+            viewTapes') := by
+  refine ⟨fun t => PalPeg.CloseoutCoreEnc12.actList PalPeg.CloseoutCoreStep.blankc (viewTapes t)
+      (PalPeg.ConcreteLocalMachine.viewActs (Fin 2) hK slot command control
+        (fun tape => PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K (viewTapes tape)) t),
+    fun t => ?_, rfl, fun t _ => ⟨rfl, fun _ => rfl⟩⟩
+  rw [hslots t, hold t, ← mapTape_actList encCell (by rw [encCell]; rw [if_pos rfl])]
 
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
