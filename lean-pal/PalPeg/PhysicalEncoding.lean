@@ -7951,14 +7951,60 @@ theorem commands_afterFirstStep {fppBound dpBound K : ℕ} (hK : 2 ≤ K)
 /-- the row of the command table for a mode in which no head moves. -/
 def stayCommands : Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand := fun _ => .stay
 
-/-- **a tick in which no head moves keeps the heads of the encoding.**  Every mode whose branch
-touches only counters, program tapes and period tapes gets its head obligations from here, with
-no work of its own: the command table's row is `stayCommands`, the view's command is standing
-still, and standing still is the identity on the abstract head.
+/-- **the heads of the encoding after a tick, from the command the table names.**  This is the
+head side of a tick in the form a mode's branch meets it: the branch names a row of the command
+table, the row names this head's command, and the command names the operation the abstract tick
+does to this head.  The head's tapes, the twelve steps and the view layer are all behind it.
 
-This is the whole head side of a tick for the modes that do not move a head, and it is the
-pattern the other rows follow — a row that names a step names `headOp`'s operation, and the rest
-of the argument is the same. -/
+A row that stands still gives `head' = head` and asks nothing; a row that names a step left asks
+nothing either; only a step right carries the arrival condition. -/
+theorem heads_afterTableTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
+    (base commandsOf baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K) (v : Fin 4)
+    (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
+    (hslot0 : x.1.slot.val = 0)
+    (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (hrow : commandsOf x.1 input (fun tape => PalPeg.Local.readWin blankM K (x.2 tape)) v
+      = command)
+    (hfused : ∀ tape, PalPeg.LocalStepFusion.iterRadius K 12 ≤ PalPeg.Local.pos (x.2 tape))
+    (view : PalPeg.LocalInputView.InputView) (hwf : PalPeg.LocalInputView.WF view)
+    (hcells : PalPeg.LocalViewCells.ViewCells view)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hold : ∀ t, x.2 (slotIndex (headSlot v t)) = mapTape encCell (viewTapes t))
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view (x.1.gap v) (x.1.micro v) viewTapes)
+    (howed : (x.1.micro v).2.2.2 = 0)
+    (head head' : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (habs : PalPeg.LocalArrival.absHead' view [] = head)
+    (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hf : headOp command = some f) (hhead' : head' = f head)
+    (hready : command = .moveRight →
+      view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    ∃ (view' : PalPeg.LocalInputView.InputView)
+        (viewTapes' : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+      PalPeg.LocalArrival.absHead' view' [] = head' ∧
+        PalPeg.ConcreteLocalMachine.ViewRep margin view'
+            ((PalPeg.LocalStepFusion.idealStep
+              (PalPeg.LocalStepFusion.iterRule
+                (tickRule hK base commandsOf baseActs baseLen) 12) blankM x input).1.gap v)
+            ((PalPeg.LocalStepFusion.idealStep
+              (PalPeg.LocalStepFusion.iterRule
+                (tickRule hK base commandsOf baseActs baseLen) 12) blankM x input).1.micro v)
+            viewTapes' ∧
+          (∀ i, (PalPeg.LocalStepFusion.idealStep
+              (PalPeg.LocalStepFusion.iterRule
+                (tickRule hK base commandsOf baseActs baseLen) 12) blankM x input).2
+                (slotIndex (headSlot v i)) = mapTape encCell (viewTapes' i)) ∧
+            PalPeg.LocalViewCells.ViewCells view' ∧ PalPeg.LocalInputView.WF view' := by
+  have hcommand : (PalPeg.LocalStepFusion.idealRun
+      (tickRule hK base commandsOf baseActs baseLen) blankM x input 1).1.commands v = command := by
+    rw [commands_afterFirstStep hK base commandsOf baseActs baseLen x input hslot0 v, hrow]
+  exact heads_afterFusedStep hK hmargin base commandsOf baseActs baseLen v x input hslot0 hfused
+    view hwf hcells viewTapes hold hrep howed head head' habs f (by rw [hcommand]; exact hf)
+    hhead' (fun hmove => hready (hcommand.symm.trans hmove))
+
+/-- **a tick in which no head moves keeps the heads of the encoding.**  Every mode whose branch
+touches only counters, program tapes and period tapes gets its head obligations from here with no
+work of its own: the row is `stayCommands`, and standing still is the identity on the abstract
+head. -/
 theorem heads_afterStillTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
     (base commandsOf baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K) (v : Fin 4)
     (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
@@ -7989,114 +8035,50 @@ theorem heads_afterStillTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
               (PalPeg.LocalStepFusion.iterRule
                 (tickRule hK base commandsOf baseActs baseLen) 12) blankM x input).2
                 (slotIndex (headSlot v i)) = mapTape encCell (viewTapes' i)) ∧
-            PalPeg.LocalViewCells.ViewCells view' ∧ PalPeg.LocalInputView.WF view' := by
-  have hcommand : (PalPeg.LocalStepFusion.idealRun
-      (tickRule hK base commandsOf baseActs baseLen) blankM x input 1).1.commands v
-      = .stay := by
-    rw [commands_afterFirstStep hK base commandsOf baseActs baseLen x input hslot0 v, hstay]
-    rfl
-  exact heads_afterFusedStep hK hmargin base commandsOf baseActs baseLen v x input hslot0 hfused
-    view hwf hcells viewTapes hold hrep howed head head habs id (by rw [hcommand]; rfl) rfl
-    (fun hmove => absurd (hcommand.symm.trans hmove) (by simp))
+            PalPeg.LocalViewCells.ViewCells view' ∧ PalPeg.LocalInputView.WF view' :=
+  heads_afterTableTick hK hmargin base commandsOf baseActs baseLen v x input hslot0 .stay
+    (by rw [hstay]; rfl) hfused view hwf hcells viewTapes hold hrep howed head head habs id rfl rfl
+    (fun h => absurd h (by simp))
 
-/-- the row of the command table for the rewind.  Its branch walks the left cursor — and, on a
-paired rewind, the centre with it — one cell to the left, and under the division of labour that
-motion is a command, read off the same window the branch reads: the rewind is over when the
-program's own tape shows the first instruction again, and then nothing moves.
-
-`rewindOneActs` and `rewindPairActs` are the witnesses that these are the right heads and the
-right direction: the one walks head `0`, the pair walks heads `0` and `1`, and both do it with
-`headStepActs`, the step left. -/
-noncomputable def rewindCommands {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
-    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
-    Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand :=
-  if centreRead ws (progSlot live 8) = encProg first then stayCommands
-  else if q.ctl.pair then fun v => if v = 0 ∨ v = 1 then .moveLeft else .stay
-    else fun v => if v = 0 then .moveLeft else .stay
-
-/-- **the command table, as far as the branches that are proved reach.**  Five of them — the end
-mark, the walk home, the back half of the choice, the preparation program and the fallback copy —
-name nothing but counters, program tapes and period tapes, so every head stands still through
-their ticks; the rewind walks one or two cursors left.  The rest of the table is a parameter, so
-filling a row in later cannot disturb these. -/
-noncomputable def modeCommands {fppBound dpBound K : ℕ} (first : Fin 9)
-    (rest : QPhys fppBound dpBound → Option (Fin 2) →
-      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
-      PalPeg.ConcreteLocalMachine.ViewCommand)
-    (q : QPhys fppBound dpBound) (i : Option (Fin 2))
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
-    Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand :=
-  match q.ctl.mode with
-  | PalPeg.GalilScaffoldController.Mode.markEnd => stayCommands
-  | PalPeg.GalilScaffoldController.Mode.home => stayCommands
-  | PalPeg.GalilScaffoldController.Mode.choose => stayCommands
-  | PalPeg.GalilScaffoldController.Mode.fpp => stayCommands
-  | PalPeg.GalilScaffoldController.Mode.copy => stayCommands
-  | PalPeg.GalilScaffoldController.Mode.rewind => rewindCommands first q.fppLive q ws
-  | _ => rest q i ws
-
-/-- **in those five modes the table's row is standing still.**  One statement for the five, since
-the reason is the same one in each: the row is written as `stayCommands`. -/
-theorem modeCommands_eq_stay {fppBound dpBound K : ℕ} (first : Fin 9) (rest)
-    (q : QPhys fppBound dpBound)
-    (i : Option (Fin 2)) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd
-      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home
-      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose
-      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp
-      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy) :
-    modeCommands first rest q i ws = stayCommands := by
-  unfold modeCommands
-  rcases hmode with h | h | h | h | h <;> rw [h]
-
-/-- **the rewind's row, and the two heads it names.**  In the rewind the table gives the left
-cursor a step left, and the centre one too when the rewind is paired; the other cursors stand
-still, and nothing moves at all once the program's tape shows the first instruction. -/
-theorem modeCommands_rewind {fppBound dpBound K : ℕ} (first : Fin 9) (rest)
-    (q : QPhys fppBound dpBound) (i : Option (Fin 2))
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind) :
-    modeCommands first rest q i ws = rewindCommands first q.fppLive q ws := by
-  unfold modeCommands
-  rw [hmode]
-
-theorem rewindCommands_atFirst {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
-    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (hat : centreRead ws (progSlot live 8) = encProg first) :
-    rewindCommands first live q ws = stayCommands := by
-  unfold rewindCommands
-  rw [if_pos hat]
-
-theorem rewindCommands_walks {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
-    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (hnot : ¬ centreRead ws (progSlot live 8) = encProg first) (v : Fin 4)
-    (hv : v = 0 ∨ (q.ctl.pair = true ∧ v = 1)) :
-    rewindCommands first live q ws v = .moveLeft := by
-  unfold rewindCommands
-  rw [if_neg hnot]
-  cases hpair : q.ctl.pair
-  · rw [if_neg (by decide)]
-    cases hv with
-    | inl h => rw [if_pos h]
-    | inr h => exact absurd (hpair.symm.trans h.1) (by simp)
-  · rw [if_pos rfl]
-    cases hv with
-    | inl h => rw [if_pos (Or.inl h)]
-    | inr h => rw [if_pos (Or.inr h.2)]
-
-theorem rewindCommands_still {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
-    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4)
-    (hv : v ≠ 0) (hv1 : q.ctl.pair = true → v ≠ 1) :
-    rewindCommands first live q ws v = .stay := by
-  unfold rewindCommands
-  split
-  · rfl
-  · cases hpair : q.ctl.pair
-    · rw [if_neg (by decide), if_neg hv]
-    · rw [if_pos rfl,
-        if_neg (fun h => by cases h with
-          | inl h0 => exact hv h0
-          | inr h1 => exact hv1 hpair h1)]
+/-- **a tick whose row walks this head one cell left keeps the heads of the encoding, with that
+head stepped left.**  The step left asks nothing of the head: a half-step moves only its bit and
+a full step pops its back stack, which is what the abstract cursor does. -/
+theorem heads_afterLeftTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
+    (base commandsOf baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K) (v : Fin 4)
+    (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
+    (hslot0 : x.1.slot.val = 0)
+    (hleft : commandsOf x.1 input (fun tape => PalPeg.Local.readWin blankM K (x.2 tape)) v
+      = .moveLeft)
+    (hfused : ∀ tape, PalPeg.LocalStepFusion.iterRadius K 12 ≤ PalPeg.Local.pos (x.2 tape))
+    (view : PalPeg.LocalInputView.InputView) (hwf : PalPeg.LocalInputView.WF view)
+    (hcells : PalPeg.LocalViewCells.ViewCells view)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hold : ∀ t, x.2 (slotIndex (headSlot v t)) = mapTape encCell (viewTapes t))
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view (x.1.gap v) (x.1.micro v) viewTapes)
+    (howed : (x.1.micro v).2.2.2 = 0)
+    (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (habs : PalPeg.LocalArrival.absHead' view [] = head) :
+    ∃ (view' : PalPeg.LocalInputView.InputView)
+        (viewTapes' : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+      PalPeg.LocalArrival.absHead' view' []
+          = PalPeg.GalilScaffoldInputHead.left head ∧
+        PalPeg.ConcreteLocalMachine.ViewRep margin view'
+            ((PalPeg.LocalStepFusion.idealStep
+              (PalPeg.LocalStepFusion.iterRule
+                (tickRule hK base commandsOf baseActs baseLen) 12) blankM x input).1.gap v)
+            ((PalPeg.LocalStepFusion.idealStep
+              (PalPeg.LocalStepFusion.iterRule
+                (tickRule hK base commandsOf baseActs baseLen) 12) blankM x input).1.micro v)
+            viewTapes' ∧
+          (∀ i, (PalPeg.LocalStepFusion.idealStep
+              (PalPeg.LocalStepFusion.iterRule
+                (tickRule hK base commandsOf baseActs baseLen) 12) blankM x input).2
+                (slotIndex (headSlot v i)) = mapTape encCell (viewTapes' i)) ∧
+            PalPeg.LocalViewCells.ViewCells view' ∧ PalPeg.LocalInputView.WF view' :=
+  heads_afterTableTick hK hmargin base commandsOf baseActs baseLen v x input hslot0 .moveLeft
+    hleft hfused view hwf hcells viewTapes hold hrep howed head
+    (PalPeg.GalilScaffoldInputHead.left head) habs PalPeg.GalilScaffoldInputHead.left rfl rfl
+    (fun h => absurd h (by simp))
 
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
