@@ -3695,6 +3695,31 @@ theorem viewRep_left {margin : ℕ} (v : PalPeg.LocalInputView.InputView)
     rw [hnear, hnearTape, List.cons_append]
     exact stackTape_push (tapes PalPeg.ConcreteLocalMachine.nearTape) v.focus (v.near ++ bottom) hst
 
+/-- **a head with nothing behind it steps left for free too.**  `moveLeft` leaves a head whose
+back is empty where it is, so again only the bit moves — and `leftView` is the same view with
+the bit flipped. -/
+theorem headRep_leftEmpty {margin : ℕ} {micro : PalPeg.ConcreteLocalMachine.MicroControl}
+    (view : PalPeg.LocalInputView.InputView)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hback : view.back = []) (hgap : view.gap = false)
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view false micro viewTapes) :
+    PalPeg.LocalArrival.absHead' (leftView view) []
+        = PalPeg.GalilScaffoldInputHead.left (PalPeg.LocalArrival.absHead' view [])
+      ∧ PalPeg.ConcreteLocalMachine.ViewRep margin (leftView view) true micro viewTapes := by
+  have hleftView : leftView view = {view with gap := true} := by
+    unfold leftView
+    rw [hback]
+  refine ⟨?_, ?_⟩
+  · rw [hleftView]
+    simp [PalPeg.GalilScaffoldInputHead.left, PalPeg.LocalArrival.absHead',
+      PalPeg.GalilScaffoldInputHead.moveLeft, hgap, hback]
+  · rw [hleftView]
+    exact
+      { gap := rfl
+        queue := hrep.queue
+        back := hrep.back
+        near := hrep.near }
+
 /-- **a head that stands on the gap beside a letter steps left for free.**  Only its own bit
 moves; not one of its twelve tapes does. -/
 theorem headRep_leftGap {margin : ℕ} {micro : PalPeg.ConcreteLocalMachine.MicroControl}
@@ -3963,7 +3988,9 @@ noncomputable def rewindOneActs {fppBound dpBound K : ℕ} (live : Bool) (q : QP
       [if incSign q.polarity 3 ws then
           some (encSeg PalPeg.LocalCounter.mark, (.right : PalPeg.CloseoutCoreEnc12.MoveC))
         else some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
-    else if q.gap 0 then []
+    else if q.gap 0
+        || decide (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape)
+            = encCell (PalPeg.CloseoutCoreEnc.cellSym none)) then []
     else if j = slotIndex (headSlot 0 PalPeg.ConcreteLocalMachine.backTape) then
       [some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape),
         (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
