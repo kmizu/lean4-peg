@@ -13497,6 +13497,74 @@ theorem headOf_tickFun_scan_consume (centre : GalilVM → Fin 3)
       hactive, hchain]
     rfl
 
+/-- **the chain with its verifier put back where it was.**  The state the step reaches, for a
+tick in which the chain consumes: everything the step's table writes is already here — the lag it
+spent, the distance it counted, the period tape it walked — and only the cursor is still where it
+started.  The tick reaches this state's cursor one slot-run later.
+
+This is the second state `enc_afterTickOfState` asks for, and it is the chain's own shape with
+one field replaced, so every reading but the cursor agrees with the tick's state by definition. -/
+def chainVerifierBack (c : PalPeg.GalilScaffoldChainInputSupply.ChainVM)
+    (ver : PalPeg.GalilScaffoldInputHead.PlaceHead) :
+    PalPeg.GalilScaffoldChainInputSupply.ChainVM :=
+  match c with
+  | .watch w => .watch ⟨⟨ver, w.machine.control⟩, w.lag, w.margin⟩
+  | .broken w => .broken ⟨⟨ver, w.machine.control⟩, w.lag, w.margin⟩
+  | other => other
+
+/-- the state the step reaches, written out. -/
+def stepState (y : State GalilVM) (ver : PalPeg.GalilScaffoldInputHead.PlaceHead) :
+    State GalilVM :=
+  ⟨y.ctl, {y.vm with chain := chainVerifierBack y.vm.chain ver}⟩
+
+/-- **putting the verifier back changes nothing the counters see.**  The lag, the margin and the
+chain's three block counters live in the control and in the watch's own fields, and the cursor is
+neither. -/
+theorem counterOf_stepState (y : State GalilVM)
+    (ver : PalPeg.GalilScaffoldInputHead.PlaceHead) :
+    counterOf y = counterOf (stepState y ver) := by
+  funext c
+  cases hc : y.vm.chain <;> fin_cases c <;>
+    simp [counterOf, stepState, chainVerifierBack, hc]
+
+theorem periodOf_stepState (y : State GalilVM)
+    (ver : PalPeg.GalilScaffoldInputHead.PlaceHead) :
+    periodOf y = periodOf (stepState y ver) := by
+  cases hc : y.vm.chain <;> simp [periodOf, stepState, chainVerifierBack, hc]
+
+theorem answerOf_stepState (y : State GalilVM)
+    (ver : PalPeg.GalilScaffoldInputHead.PlaceHead) :
+    answerOf y = answerOf (stepState y ver) := by
+  cases hc : y.vm.chain <;> simp [answerOf, stepState, chainVerifierBack, hc]
+
+theorem placeOf_stepState (y : State GalilVM)
+    (ver : PalPeg.GalilScaffoldInputHead.PlaceHead) :
+    placeOf y = placeOf (stepState y ver) := by
+  funext i
+  cases hc : y.vm.chain <;> fin_cases i <;>
+    simp [placeOf, stepState, chainVerifierBack, hc]
+
+/-- **and the cursor is exactly the one put back.**  Which is the whole of what the two states
+differ in. -/
+theorem headOf_stepState_three (y : State GalilVM)
+    (ver : PalPeg.GalilScaffoldInputHead.PlaceHead) (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (hchain : y.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm) :
+    headOf (stepState y ver) 3 = some ver := by
+  show (match (stepState y ver).vm.chain with
+    | .idle => none
+    | .copy _ _ _ _ _ _ verifier => some verifier
+    | .back _ _ _ _ verifier => some verifier
+    | .watch v => some v.machine.verifier
+    | .broken v => some v.machine.verifier) = _
+  show (match chainVerifierBack y.vm.chain ver with
+    | .idle => none
+    | .copy _ _ _ _ _ _ verifier => some verifier
+    | .back _ _ _ _ verifier => some verifier
+    | .watch v => some v.machine.verifier
+    | .broken v => some v.machine.verifier) = _
+  rw [hchain]
+  rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
