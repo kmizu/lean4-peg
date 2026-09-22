@@ -14,6 +14,8 @@ import PalPeg.LocalStepFusion
 import Mathlib.Data.Fintype.Sum
 import Mathlib.Tactic.DeriveFintype
 import Mathlib.Data.Fintype.Prod
+import Mathlib.Data.Fintype.Pi
+import Mathlib.Data.Fintype.Sigma
 
 /-!
 # The physical encoding of the local machine
@@ -1673,10 +1675,27 @@ code is a finite list; a counter pointing outside it halts, and every such count
 way, so the machine need not tell them apart. -/
 def PcPhys (bound : ℕ) : Type := Option (Fin bound)
 
+instance instDecidableEqPcPhys {bound : ℕ} : DecidableEq (PcPhys bound) :=
+  inferInstanceAs (DecidableEq (Option (Fin bound)))
+
+instance instFintypePcPhys {bound : ℕ} : Fintype (PcPhys bound) :=
+  inferInstanceAs (Fintype (Option (Fin bound)))
+
 def EncPc {bound : ℕ} (held : PcPhys bound) (pc : ℕ) : Prop :=
   match held with
   | some i => (i : ℕ) = pc
   | none => bound ≤ pc
+
+/-! ### the control is finite
+
+The local realization asks for a finite control and a finite alphabet, so the state has to be
+seen to be finite.  Every field of it is, but four of the view layer's own types were declared
+with decidable equality only, so their finiteness is derived here. -/
+
+deriving instance Fintype for PalPeg.CloseoutCoreEnc25.SOp
+deriving instance Fintype for PalPeg.ConcreteLocalMachine.MicroOp
+deriving instance Fintype for PalPeg.ConcreteLocalMachine.QueueJob
+deriving instance Fintype for PalPeg.ConcreteLocalMachine.ViewCommand
 
 /-- **the whole finite control.**  Counters, cursors and heads do not appear: they are on
 the tapes.  What is left is the controller's word, the two programs' counters and flags, the
@@ -1730,6 +1749,43 @@ structure QPhys (fppBound dpBound : ℕ) where
   own fields still address the `false` half; moving them onto this bit is the next step. -/
   fppLive : Bool
   dpLive : Bool
+
+set_option synthInstance.maxSize 2000 in
+set_option synthInstance.maxHeartbeats 1000000 in
+set_option maxHeartbeats 2000000 in
+deriving instance DecidableEq for QPhys
+
+/-- the fields of the control as one tuple.  The derive handler for finiteness builds a chain of
+sigma types 26 deep and its instance search gives up on it, so the finiteness of the control is
+shown the plain way: this tuple is injective and its type is finite. -/
+def qphysTuple {fppBound dpBound : ℕ} (q : QPhys fppBound dpBound) :
+    CtlPhys × ChainTag × Fin 5 × Bool × Bool ×
+      PalPeg.GalilScaffoldChainInputSupply.FppControl.Mode × Bool × PcPhys fppBound × Bool ×
+      PcPhys dpBound × Bool × PalPeg.GalilScaffoldSearchFinish.Mode × Bool × Fin 4 × Bool ×
+      (Fin 3 → Bool) × Bool × Bool × (Fin 16 → Bool) × (Fin 4 → Bool) ×
+      (Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) ×
+      (Fin 4 → Option PalPeg.ConcreteLocalMachine.QueueJob) ×
+      (Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand) × Fin 12 × Bool × Bool :=
+  (q.ctl, q.chainTag, q.chainPhase, q.chainForward, q.chainBroken, q.fppMode, q.fppFinalStage,
+    q.fppPc, q.fppDone, q.dpPc, q.dpDone, q.searchMode, q.searchFinalStage, q.searchQuarter,
+    q.periodOnly, q.placeGap, q.onLetterBit, q.leftFirstBit, q.polarity, q.gap, q.micro, q.job,
+    q.commands, q.slot, q.fppLive, q.dpLive)
+
+theorem qphysTuple_injective {fppBound dpBound : ℕ} :
+    Function.Injective (qphysTuple (fppBound := fppBound) (dpBound := dpBound)) := by
+  intro a b hab
+  cases a
+  cases b
+  simp only [qphysTuple, Prod.mk.injEq] at hab
+  simp only [QPhys.mk.injEq]
+  exact hab
+
+instance instFiniteQPhys {fppBound dpBound : ℕ} : Finite (QPhys fppBound dpBound) :=
+  Finite.of_injective _ (qphysTuple_injective (fppBound := fppBound) (dpBound := dpBound))
+
+noncomputable instance instFintypeQPhys {fppBound dpBound : ℕ} :
+    Fintype (QPhys fppBound dpBound) :=
+  Fintype.ofFinite _
 
 /-- **the control of one view, as the finite control carries it.**  The view layer's own rule
 reads a view's gap bit, its queue job and the control of the micro-schedule; the state of the
