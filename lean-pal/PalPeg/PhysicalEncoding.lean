@@ -13078,6 +13078,27 @@ theorem scanConsumeNext_of_mismatch {fppBound dpBound K : ℕ} (q : QPhys fppBou
   · rw [hnext, hstep, hphase, hforward, hbroken]
     rfl
 
+/-- the blank of the period tape is the blank of the machine. -/
+theorem encToken_blank : encToken Token.blank = blankM := if_pos rfl
+
+/-- **a step right on the period tape is one action.**  The symbol written back is the one the
+head already carries, so the action moves the head and changes nothing. -/
+theorem padded_token_right (n : ℕ) (tokens : STape Token) (written : Token) :
+    padLeft n (mapTape encToken (STape.applyAction Token.blank tokens (written, .right)))
+      = (padLeft n (mapTape encToken tokens)).applyAction blankM (encToken written, .right) := by
+  rw [mapTape_applyAction encToken encToken_blank tokens written .right,
+    padLeft_applyAction_right]
+
+/-- **and the chain's own step right is that action.**  The period tape is a zipper that pads
+with its blank on the right, which is what the machine's tape does too. -/
+theorem encPeriod_moveRight (t : PalPeg.GalilScaffoldChainPeriod.Tape) :
+    encPeriod (PalPeg.GalilScaffoldChainPeriod.moveRight t)
+      = STape.applyAction Token.blank (encPeriod t) (t.focus, .right) := by
+  unfold PalPeg.GalilScaffoldChainPeriod.moveRight encPeriod
+  cases hr : t.right with
+  | nil => rfl
+  | cons a rs => rfl
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
