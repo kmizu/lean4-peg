@@ -8762,6 +8762,55 @@ noncomputable def scanConsumeActs {fppBound dpBound K : ℕ} (q : QPhys fppBound
       else []
     else []
 
+/-- **the lag's slot, in a tick that consumes on a match.** -/
+theorem scanConsumeActs_lag {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hconsume : chainConsumesTest q ws = true)
+    (hmatch : watchVerdictTest q ws = some true) :
+    scanConsumeActs q ws (slotIndex (counterSlot 11)) = [decAct q 11 ws] := by
+  unfold scanConsumeActs
+  rw [if_pos hconsume, if_pos hmatch, if_pos rfl]
+
+/-- **the distance's slot.** -/
+theorem scanConsumeActs_distance {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hconsume : chainConsumesTest q ws = true)
+    (hmatch : watchVerdictTest q ws = some true) :
+    scanConsumeActs q ws (slotIndex (counterSlot 13)) = [incAct q 13 ws] := by
+  unfold scanConsumeActs
+  rw [if_pos hconsume, if_pos hmatch,
+    if_neg (fun h => by simpa using slotIndex.injective h), if_pos rfl]
+
+/-- **the period tape's slot.** -/
+theorem scanConsumeActs_period {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hconsume : chainConsumesTest q ws = true)
+    (hmatch : watchVerdictTest q ws = some true) :
+    scanConsumeActs q ws (slotIndex periodSlot)
+      = [some (centreRead ws periodSlot,
+          if (scanConsumeNext q ws).chainForward then
+            (.right : PalPeg.CloseoutCoreEnc12.MoveC)
+          else (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+  unfold scanConsumeActs
+  rw [if_pos hconsume, if_pos hmatch,
+    if_neg (fun h => by simpa [counterSlot, periodSlot] using slotIndex.injective h),
+    if_neg (fun h => by simpa [counterSlot, periodSlot] using slotIndex.injective h),
+    if_pos rfl]
+
+/-- **and every other slot is left alone.** -/
+theorem scanConsumeActs_off {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (slot : Slot)
+    (h11 : slot ≠ counterSlot 11) (h13 : slot ≠ counterSlot 13) (hp : slot ≠ periodSlot) :
+    scanConsumeActs q ws (slotIndex slot) = [] := by
+  unfold scanConsumeActs
+  split_ifs with hc hm h1 h2 h3
+  · exact absurd (slotIndex.injective h1) h11
+  · exact absurd (slotIndex.injective h2) h13
+  · exact absurd (slotIndex.injective h3) hp
+  · rfl
+  · rfl
+  · rfl
+
 theorem scanConsumeActs_length {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
     (scanConsumeActs q ws j).length ≤ 1 := by
