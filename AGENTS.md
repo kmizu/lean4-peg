@@ -6,7 +6,7 @@
 
 ---
 
-## §0 現状 — 2026-09-22 引き継ぎ（Astra 向け）
+## §0 現状 — 2026-09-22 引き継ぎ（Codex 向け）
 
 ### 0.1 一言で
 
@@ -59,16 +59,17 @@ axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
 
 ### 0.4 いま書いている構成（`PalPeg/PhysicalEncoding.lean`）
 
-4,522 行 / 237 トップレベル宣言。`PalPeg/Workbench.lean:84` に登録済み。
-**単体 build EXIT=0・error 0・sorry 0、`PalPeg.Workbench` BUILD=0**（HEAD `479ea19` 時点）。
+14,401 行 / 617 トップレベル宣言。`PalPeg/Workbench.lean:84` に登録済み。
+**単体 build EXIT=0・error 0・sorry 0、`PalPeg.Workbench` BUILD=0**（HEAD `e8109cd` 時点）。
 
 | 決めたこと | 実体 |
 |---|---|
 | アルファベット | `Γm`（`blankM` / `bottomM` / `encCell` / `encProg` / `encToken` / `encSeg`） |
-| 物理状態 | `QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)`、`tapeCountM = 116` |
-| テープの割り当て | `abbrev Slot`（`(Fin 4 × Fin 12) ⊕ Fin 9 ⊕ Fin 12 ⊕ Unit ⊕ Unit ⊕ Fin 3 ⊕ Fin 16 ⊕ Fin 5 ⊕ Fin 9 ⊕ Fin 12`）、`slotIndex : Slot ≃ Fin tapeCountM` |
-| 符号化述語 | `Enc margin x p := EncControl x p.1 ∧ EncTapes margin x …  p.2` |
-| 規則 | `physRule first hbound hK : ActRule …`、分岐表は `ruleNext` / `ruleActs` |
+| 物理状態 | `QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)`、`tapeCountM = 118` |
+| テープの割り当て | `abbrev Slot`（`(Fin 4 × Fin 12) ⊕ Fin 9 ⊕ Fin 12 ⊕ Unit ⊕ Unit ⊕ Fin 3 ⊕ Fin 16 ⊕ Fin 7 ⊕ Fin 9 ⊕ Fin 12`）、`slotIndex : Slot ≃ Fin tapeCountM` |
+| 符号化述語 | `Enc margin x p := EncControl x p.1 ∧ EncTapes margin x … p.2` |
+| 規則 | `physRule entryQ first hbound hK : ActRule …`、分岐表は `ruleNext` / `ruleActs`、命令表は `modeCommands` |
+| 1 ティックの分業 | `physRule := iterRule (tickRule …) 12`。step 0 が文字を読み、ヘッド以外（カウンタ・プログラム・period）を全部やって 4 つの**命令**を制御に書く。step 1–11 がその命令を実行し、ヘッドだけを触る |
 
 **設計上の固定点（動かさないこと）**
 
@@ -77,53 +78,100 @@ axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
    `∃ ideal, Enc x (p.1, ideal) ∧ ∀ tape, TEqG blank (ideal tape) (p.2 tape)` で、
    `TEqG` は「ヘッド位置が同じ・全位置の読みが同じ」。
 2. **`ActRule.acts` は 1 ティックあたり最大 `K` 個のアクション*リスト*を返す。**
-   だからカーソルを動かす分岐も 1 歩で書ける（n387 で自分の誤記を訂正済み）。
+   ただし**左へ 1 歩は 1 アクションで書けるが、右へ 1 歩は書けない**（右移動は
+   ビュー層が 11 スロット使ってやること）。§0.6 を読むこと。
 3. **ゴミをその場で消さない。** プログラム機械の全消去は
-   `fppLive` / `dpLive` のビット反転（`rewind_fppReset`）で、退役した半分は
+   `fppLive` / `dpLive` のビット反転で、退役した半分は
    `withErase` が毎ティック 1 セルずつ背景消去する。
 4. **番号を状態に持ち込まない。** `QPhys` は有限。長さはテープが持つ。
+   ただし**配役（どのテープがどの役か）は有限なので制御に入れてよい**（§0.5 の鏡）。
 5. **「別レイアウトで部品を作って後で統合」には戻らない。**
 
-**窓シミュレータ**（`fpp` 分岐のために作ったもの、`:3860` 以降）
+**窓シミュレータ**（`fpp` 分岐のために作ったもの）
 
 `winTape` / `winMachine` が半径 `K` の窓から機械を再構成し、
 `MachineAgree` + `machineAgree_tick` + `progRunActs_of_agree` が
 「半径 `n` まで一致する 2 機械は `n` 回の call で区別できない」を与える。
 出口は `fppActs_eq` と `fpp_slot_after`。
-帰納段の道具は `PalPeg/LocalStepFusion.lean:32` の `windowAfter_readWin`（既存）。
+
+**ビュー層の窓**（ヘッドを読む行のために）
+
+`viewWindows v ws` が機械の窓（`Γm`）を `decCell` でビューの窓（`Γc`）に翻訳し、
+`viewWindows_of_encoded` が「符号化テープの上ではそれがビュー自身の窓」と言う。
+`ConcreteLocalMachine.viewTopsOfWindows` がそこから 3 記号（focus / near / front）を読む。
 
 ### 0.5 分岐の実装状況
 
 `Mode` は 10 個（`GalilScaffoldController.lean:21`）:
 `init | scan | shift | copy | home | fpp | markEnd | choose | rewind | replayStart`。
 
-| 分岐 | `ruleNext` / `ruleActs` | 機械側の定理 |
+**通った分岐は 11 本**（`grep '^theorem .*_of_tick' PalPeg/PhysicalEncoding.lean`）:
+
+| 分岐 | 定理 |
+|---|---|
+| `markEnd` | `markEnd_of_tick` |
+| `home` | `home_of_tick` |
+| `choose`（back 側） | `choose_back_of_tick` |
+| `fpp` | `fpp_of_tick` |
+| `copy` | `copy_one_of_tick` |
+| `rewind` | `rewind_one_of_tick` / `rewind_reset_of_tick` / `rewind_one_of_tick_branch` / `rewind_pair_of_tick_branch` |
+| `shift`（出口） | `shift_exit_of_tick` |
+| `scan`（静止腕） | `background_still_of_tick` |
+
+**残っている分岐**（おおよそ 10 本）: `scan` の消費腕（作業中）・restart・matched・
+beginShift・beginFallback、`scan` の idle 腕の DP 走者（12 テープ、中身は一番大きい）、
+`init`、`replayStart`、`choose` の select 側、`shift` の `shiftOne`、chain の誕生。
+
+**別名（`alias`）の機構** — 正本 `scala/pal/src/main/scala/pal/` の `alias` は 13 箇所あり、
+ポインタの付け替え（`ScavmStructs.scala:139` の `StackView.copyFrom` は `top = other.top`）。
+テープにポインタは無いので、符号化は二通りで払う:
+
+* **鏡** — `mirrorSource : Fin 7 → Fin 16` が `0,1,2 ↦ 2`(radius) / `3 ↦ 5`(lower) /
+  `4 ↦ 6`(span) / `5 ↦ 10`(chain.h) / `6 ↦ 3`(length)。鏡は源と**常に同じ値**を持つ
+  第二のテープで、源を動かす枝は同じティックで鏡も動かす。
+  **鏡を 1 本足す費用 = その源を動かす全ての枝に 1 行動と 1 仮説。**
+  源を動かす枝がまだ無いうちに足すのが一番安い。
+* **段** — chain の三つ組（counter 13 distance / 14 boundary / 15 last）は入れ子
+  （`last ≤ boundary ≤ distance`）なので、1 本の区切り付きテープの段として持つ。
+  `LocalCounter.resetSeg` が「今いる位置に `sep` を書いて下の段を捨てる」1 行動で、
+  捨てた段が `boundary − last` そのもの。**この表現はまだ `counterOf` に入っていない。**
+  だから境界事象（ブロックを閉じるティック）はまだどの枝でも証明されていない。
+
+### 0.6 次の一手
+
+**いま書いている枝**: `scan` の消費腕（watch している chain が 1 文字を消費する）。
+四つの表はもう揃っている:
+
+| 表 | 行 | 何を決めるか |
 |---|---|---|
-| `markEnd` | 済 | `physRule_markEnd`（forward / back / atFloor） |
-| `home` | 済 | `physRule_home`（step / atFloor / fppStart） |
-| `choose` | 済（back 側） | `physRule_choose`（back / atFloor） |
-| `rewind` | 済（`fppReset`） | `physRule_rewind_fppReset` |
-| `fpp` | **未** | tick 側 `vml_fpp_slice` / `vml_fpp_done` はある |
-| `copy` `shift` `scan` `init` `replayStart` | **未** | tick 側 `vml_copy_*` / `vml_shift_*` などはある |
+| `modeCommands` | `scanCommands` | 4 本目カーソルが動くか |
+| `ruleNext` | `scanConsumeNext` | タグ・phase・forward・counter 11/13 の符号 |
+| `ruleActs` | `scanConsumeActs` | lag・distance・period テープ |
+| ヘッド | `headOf_tickFun_scan_consume` | 3 本静止・4 本目は右へ一歩 |
 
-`ruleNext` / `ruleActs` の既定分岐は `| _ => q` / `| _ => withErase … (fun _ => [])`。
+**判定は窓の中で閉じている**。`caught` も `broken` も検証ヘッドを `right ver` に送るので、
+行はカーソルの行き先を**判定を読まずに**決められる（`headOf_three_of_watchConsume`）。
+制御の新しいタグだけが判定を要り、その判定は `watchVerdictTest`
+＝「period スロットの中心セルの記号」と「`landingLetter`（着地先の文字）」の比較。
 
-### 0.6 次の一手（この順で書いていた）
+**右へ動くカーソルのための一般化**（済）:
+`encTapes_replaceHeadsOfState` → `encTapes_afterTickOfState` / `enc_afterTickOfState`。
+tick 後の符号化を二状態から組み立てる——カーソル以外は**一歩が到達した状態**
+（`stepState`、`chainVerifierBack` でカーソルだけ戻したもの）から、カーソルは
+**tick が到達した状態**から。既存 11 枝は同じ状態を二度渡すだけ。
 
-1. `ruleActs` の `fpp` 分岐に `fppActs` を載せる。
-   `physRule` / `ruleNext` / `ruleActs` に quantum `entryQ` を引数として足し、
-   `fpp` の場合を
-   `withErase q.fppLive ws (fppActs GalilFppMarkedCode.code entryQ q.fppLive (pcOf q) q.fppDone ws)`
-   にする。長さは `withErase_length (b := entryQ)`（`hK : entryQ + 1 ≤ K`）＋ `fppActs_length`。
-2. `fpp` 分岐の他スロット保存と `EncTapes.idleShape`。
-3. 制御側 — `EncControl` の `fppPc` / `fppDone` が run 後の値になること
-   （`ruleNext` の `fpp` を `winMachine` から計算した pc / halt にする）。
-4. `physRule_fpp` を tick 側 `vml_fpp_slice` / `vml_fpp_done` と合わせる。
-5. 残りのモードを view 機械のアクション列（`LocalViewSlot.viewActs`）から。
-6. 合成して `hideal` を放電 → `unconditional` の経路を張り替え → `PalPeg/Axioms.lean` の guard 更新。
+**残り**: `physRule_scan_consume` の本体。部品は全部ある——
+`scanConsume_lagTape` / `_distanceTape` / `_periodTape`（三つのテープ）、
+`scanConsumeActs_off`、`idle_shape_after_erase`、`encTapes_chainConsume`（束ねる器）、
+`stepState` の一致補題 5 本、`caught_control_of_plain`（平文字のときの消費後の制御）。
+**境界事象でない平文字の場合に限る**（上の「段」が未実装のため）。
 
-`CloseoutCoreAgree.SL` の `init = scan = replayStart = id` は**暫定の詰め物**であって
-結論ではない。ここを本物にするのが 5 の一部。
+そのあと: 残り 10 枝 → `hideal` を放電 → `unconditional` の経路を
+`given_physicalMachine`（`ShadowedLocalFinal.lean:1395`）へ張り替え →
+`PalPeg/Axioms.lean:392` の guard 更新。
+`given_physicalMachine` は標準 3 公理のみに依存し、`unconditional` が既に供給している
+3 つの側条件と、7 つの符号化義務（`hencInit` / `hforwardTick` / `hforwardFeed` /
+`PhysFrozen`＋3 / `hencRep` / `hencOut`）を取る。**いま作っているのは `hforwardTick` の中身だけ。**
 
 ### 0.7 検証の作法（必ず守る）
 
@@ -149,6 +197,18 @@ lake build --quiet PalPeg.Workbench > /tmp/b.log 2>&1; echo BUILD=$?          # 
 * `slotIndex` は `Fintype.equivFin` 由来で noncomputable。それを使う `def` は全部 `noncomputable def`。
 * 名前に番号を付けない。`_'` / `_2` の変種を作らず**その場で一般化**する。
 * 仮定名は意味で付ける（`hpack` / `hav` という名前だったせいで過剰量化を見逃した）。
+* **新しい宣言を挿し込むときは docstring の境界を見る。** anchor を「定理の行」に取ると
+  その定理の docstring と本体の間に入り `unexpected token '/--'`。4 回踏んだ。
+  anchor は docstring の先頭に取る。
+* **`cases h : e` はゴールを置換するが、`f y` の中の `y.vm.chain` までは届かない。**
+  `counterOf y c` のような射影越しの場合は `simp [counterOf, …, h]` で先に展開する。
+* `unfold f` は外側の `match` を簡約しないことがある。`simp only [f]`（等式補題）を使う。
+* `let x := …` を含む定義（`GalilScaffoldChainConsume.consume`）は `unfold` 後も
+  `have` が残って `rw [if_pos …]` が刺さらない。先に `cases` で `match` を潰す。
+* 表に `if` の枝を 1 本足すと、その表の射影補題が**全部**動く。
+  `rewindOneActs` の枝を 1 本足したときは 9 宣言・error 16 だった。
+* 構造インスタンスの仮説を 1 つ増やすと、その**全フィールド**の呼び出しが動く。
+  足す前に、使用箇所を名前付きの `have` に切り出しておくと影響が 1 箇所で済む。
 
 ### 0.9 下の §（`CLAUDE.md` 由来）の鮮度について
 
