@@ -11949,6 +11949,48 @@ theorem rewind_reset_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
       exact hhead)
     (fun _ _ _ h => absurd h (by simp)) henc.2 hctl htapes
 
+
+/-- **the unpaired step of the rewind, on the machine of twelve steps.**  The branch theorem goes
+in and the encoding of the tick comes out; what the row says about each cursor, and what the tick
+does to it, are `rewind_one_of_tick`'s. -/
+theorem rewind_one_of_tick_branch {fppBound dpBound K : ℕ} (margin : ℕ)
+    (centre : GalilVM → Fin 3) (place : GalilVM → PalPeg.GalilScaffoldPlace.Place)
+    (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (input : Option (Fin 2))
+    (hbound : 320 < fppBound) (hKb : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hK1 : 1 ≤ K)
+    (hK : K ≤ margin) (hmargin2 : 2 ≤ margin)
+    (hslot0 : q.slot.val = 0) (howed : ∀ v, (q.micro v).2.2.2 = 0)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotFirst : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).atFirst
+      x.vm = false)
+    (hqpair : q.ctl.pair = false) (hpair : x.ctl.pair = false)
+    (hnotMark : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      (progSlot q.fppLive 8) ≠ encProg first)
+    (hfloor : (x.vm.fpp.program.config.tapes 8).left ≠ [])
+    (hnotFocus : ¬ (x.vm.fpp.program.config.tapes 8).focus = first)
+    (henc : Enc w margin x (q, T)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKb hK2 rest) blankM
+          (q, tapesOf T) input 12).1,
+        fun i => (PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hKb hK2 rest) blankM (q, tapesOf T) input 12).2
+            (slotIndex i)) := by
+  obtain ⟨hctl, htapes⟩ := enc_step_pieces margin entryQ first hbound hKb w
+    (PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) q T
+    (physRule_rewind_one margin centre place entry entryQ first w F delay x q T hbound hKb hK1 hK
+      hmargin2 hqmode hmode hnotFirst hqpair hpair hnotMark hfloor henc)
+  exact rewind_one_of_tick margin centre place entry entryQ first w F delay x q T rest input
+    hbound hKb hK2 hK hslot0 howed hqmode hnotFocus henc hctl htapes
+
 end PalPeg.PhysicalEncoding
 
 #print axioms PalPeg.PhysicalEncoding.padded_write
