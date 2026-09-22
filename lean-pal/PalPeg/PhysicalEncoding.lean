@@ -10230,16 +10230,21 @@ two hypotheses.
 Both halves are stated on the branch tables `ruleNext` and `ruleActs` rather than on one step of
 the one-step rule.  The two are the same by `physRule_nq_*` and `physRule_acts_*`, but asking the
 elaborator to see it here makes its `whnf` diverge on a rule whose tables are this big. -/
-theorem encTapes_afterTick {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ : ℕ) (first : Fin 9)
+theorem encTapes_afterTickOfState {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ : ℕ) (first : Fin 9)
     (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK : 2 ≤ K)
     (rest : QPhys fppBound dpBound → Option (Fin 2) →
       (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
       PalPeg.ConcreteLocalMachine.ViewCommand)
     (y : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
     (input : Option (Fin 2)) (hslot0 : q.slot.val = 0)
+    {z : State GalilVM}
+    (hfppOf : ∀ i, y.vm.fpp.program.config.tapes i = z.vm.fpp.program.config.tapes i)
+    (hdpOf : ∀ i, y.vm.dp.config.tapes i = z.vm.dp.config.tapes i)
+    (hcountersOf : counterOf y = counterOf z) (hplacesOf : placeOf y = placeOf z)
+    (hperiodOf : periodOf y = periodOf z) (hanswerOf : answerOf y = answerOf z)
     {polarity : Fin 16 → Bool} {gap : Fin 4 → Bool}
     {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl} {fppLive dpLive : Bool}
-    (hstep : EncTapes margin y polarity gap micro fppLive dpLive
+    (hstep : EncTapes margin z polarity gap micro fppLive dpLive
       (fun slot => PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
         (ruleActs entryQ first q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
           (slotIndex slot))))
@@ -10267,7 +10272,7 @@ theorem encTapes_afterTick {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ : �
       (fun slot => (PalPeg.LocalStepFusion.idealRun
         (tickPhysRule entryQ first hbound hKq hK rest) blankM (q, tapesOf T) input 12).2
           (slotIndex slot)) :=
-  encTapes_replaceHeads hstep
+  encTapes_replaceHeadsOfState hstep hfppOf hdpOf hcountersOf hplacesOf hperiodOf hanswerOf
     (fun slot hne => by
       rw [tickPhysRule_eq entryQ first hbound hKq hK rest,
         tickRule_otherSlots hK (fun q _ ws => ruleNext entryQ first hbound q ws)
@@ -10491,7 +10496,7 @@ by the state the machine is in twelve steps later, which is one tick.
 Everything else is assembled from what is proved: the control side is head-free, the tape side
 away from the heads is the branch's own actions, the heads come from the view layer with the row's
 own command, and the margins of all four cursors' slots come from the views those slots hold. -/
-theorem enc_afterTick {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (first : Fin 9)
+theorem enc_afterTickOfState {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (first : Fin 9)
     (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK : 2 ≤ K) (hmargin : K ≤ margin)
     (rest : QPhys fppBound dpBound → Option (Fin 2) →
       (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
@@ -10513,7 +10518,12 @@ theorem enc_afterTick {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (first : 
     (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
     (hctl : EncControl w y (ruleNext entryQ first hbound q
       (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
-    (htapes : EncTapes margin y
+    {z : State GalilVM}
+    (hfppOf : ∀ i, y.vm.fpp.program.config.tapes i = z.vm.fpp.program.config.tapes i)
+    (hdpOf : ∀ i, y.vm.dp.config.tapes i = z.vm.dp.config.tapes i)
+    (hcountersOf : counterOf y = counterOf z) (hplacesOf : placeOf y = placeOf z)
+    (hperiodOf : periodOf y = periodOf z) (hanswerOf : answerOf y = answerOf z)
+    (htapes : EncTapes margin z
       (ruleNext entryQ first hbound q
         (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).polarity
       (ruleNext entryQ first hbound q
@@ -10545,8 +10555,8 @@ theorem enc_afterTick {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (first : 
     tickPhysRule_headSlotsRep entryQ first hbound hKq hK hmargin rest x q T input hslot0 howed
       henc v (commands v) (hrow v) (fs v) (hf v) (hready v)
   have hcontrol := encControl_afterTick entryQ first hbound hKq hK rest w y q T input hslot0 hctl
-  have htape := encTapes_afterTick margin entryQ first hbound hKq hK rest y q T input hslot0
-    htapes hpol hfpp hdp
+  have htape := encTapes_afterTickOfState margin entryQ first hbound hKq hK rest y q T input
+    hslot0 hfppOf hdpOf hcountersOf hplacesOf hperiodOf hanswerOf htapes hpol hfpp hdp
     (fun v i => margin_le_pos_headSlot hK hmargin (hcursor v) i)
     (fun v head hhead => by
       have hsome : (headOf x v).isSome = true := by rw [hheadSome v, hhead]; rfl
@@ -10607,11 +10617,12 @@ theorem enc_afterStillTick {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (fir
         fun i => (PalPeg.LocalStepFusion.idealRun
           (tickPhysRule entryQ first hbound hKq hK rest) blankM (q, tapesOf T) input 12).2
             (slotIndex i)) :=
-  enc_afterTick margin entryQ first hbound hKq hK hmargin rest w x y q T input hslot0 howed
+  enc_afterTickOfState margin entryQ first hbound hKq hK hmargin rest w x y q T input hslot0 howed
     (fun _ => .stay) (fun _ => by rw [hstay]; rfl)
     (fun _ => id) (fun _ => rfl) (fun v => by rw [hheadsSame v])
     (fun v head hhead => by rw [hheadsSame v]; exact hhead)
-    (fun _ _ _ h => absurd h (by simp)) henc hctl htapes
+    (fun _ _ _ h => absurd h (by simp)) henc hctl
+    (fun i => rfl) (fun i => rfl) rfl rfl rfl rfl htapes
 
 /-- **one step of the one-step rule, written out.**  Its control is the mode table's and its
 tapes are the action table's own actions, by definition; saying so once lets the branch theorems
@@ -13559,7 +13570,7 @@ theorem rewind_one_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : G
     exact decide_eq_false hnotFirst
   have hxmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind :=
     (congrArg (fun c => c.mode) henc.1.ctl.symm).trans hqmode
-  exact enc_afterTick margin entryQ first hbound hK hK2 hmargin rest w x _ q T input hslot0 howed
+  exact enc_afterTickOfState margin entryQ first hbound hK hK2 hmargin rest w x _ q T input hslot0 howed
     (rewindCommands first q.fppLive q
       (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
     (fun v => modeCommands_rewind first rest q input _ hqmode ▸ rfl)
@@ -13591,7 +13602,8 @@ theorem rewind_one_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : G
         hhead)
     (fun v _ _ hmove =>
       absurd hmove (rewindCommands_ne_moveRight first q.fppLive q _ v))
-    henc.2 hctl htapes
+    henc.2 hctl
+    (fun i => rfl) (fun i => rfl) rfl rfl rfl rfl htapes
 
 
 /-- **the rewind that has reached the first instruction, on the machine of twelve steps.**  Its
@@ -13638,14 +13650,15 @@ theorem rewind_reset_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
       (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) q T
     (physRule_rewind_fppReset margin centre place entry entryQ first w F delay x q T hbound hK
       (fun i => hmargin.trans (henc.2.margins i)) hK1 hKn hqmode hmode hatFirst hatMark henc hidle)
-  exact enc_afterTick margin entryQ first hbound hK hK2 hmargin rest w x _ q T input hslot0 howed
+  exact enc_afterTickOfState margin entryQ first hbound hK hK2 hmargin rest w x _ q T input hslot0 howed
     (fun _ => .stay) hrow (fun _ => id) (fun _ => rfl)
     (fun v => by
       rw [headOf_tickFun_rewindReset centre place entry entryQ first w F delay x hmode hatFirst v])
     (fun v head hhead => by
       rw [headOf_tickFun_rewindReset centre place entry entryQ first w F delay x hmode hatFirst v]
       exact hhead)
-    (fun _ _ _ h => absurd h (by simp)) henc.2 hctl htapes
+    (fun _ _ _ h => absurd h (by simp)) henc.2 hctl
+    (fun i => rfl) (fun i => rfl) rfl rfl rfl rfl htapes
 
 
 /-- **the unpaired step of the rewind, on the machine of twelve steps.**  The branch theorem goes
@@ -13766,7 +13779,7 @@ theorem shift_exit_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : G
       (physRule entryQ first hbound hK)
       (physRule_nq_shift entryQ first hbound hK q _ hqmode hdoneQ)
       (physRule_acts_shift entryQ first hbound hK q _ hqmode) hK1 hKn hmode hdone henc)
-  exact enc_afterTick margin entryQ first hbound hK hK2 hmargin rest w x _ q T input hslot0 howed
+  exact enc_afterTickOfState margin entryQ first hbound hK hK2 hmargin rest w x _ q T input hslot0 howed
     (fun _ => .stay)
     (fun _ => by rw [modeCommands_shiftExit first rest q input _ hqmode hdoneQ]; rfl)
     (fun _ => id) (fun _ => rfl)
@@ -13775,7 +13788,8 @@ theorem shift_exit_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : G
     (fun v head hhead => by
       rw [headOf_tickFun_shiftExit centre place entry entryQ first w F delay x hmode hdone v]
       exact hhead)
-    (fun _ _ _ h => absurd h (by simp)) henc.2 hctl htapes
+    (fun _ _ _ h => absurd h (by simp)) henc.2 hctl
+    (fun i => rfl) (fun i => rfl) rfl rfl rfl rfl htapes
 
 end PalPeg.PhysicalEncoding
 
