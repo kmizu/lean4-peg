@@ -12167,6 +12167,76 @@ theorem backgroundFun_searchSide (P : PalPeg.GalilScaffoldChainInputSupply.Share
     rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_walker]
     rfl
 
+/-- **both background arms of a scan tick leave the same machine.**  The two arms differ in
+the controller — the clock arm spends one unit of the clock — but the machine they leave is one
+background quantum either way, whether the tick was taken because the input cursor has nothing
+to read or because the clock still has time on it.
+
+Naming that machine once is what lets the two arms share every lemma below them: the head side,
+the counters, and the encoding of the search. -/
+theorem tickFun_scan_background_vm (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hnorestart : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).restartGuard
+      x.vm = false)
+    (hbackground : (!x.ctl.replaying
+        && !(PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).available x.vm)
+        = true
+      ∨ 1 < x.ctl.clock) :
+    (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x).vm
+      = PalPeg.GalilScaffoldChainInputSupply.backgroundFun
+          (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm := by
+  unfold PalPeg.GalilScaffoldTop.tickFun
+  rw [hmode]
+  dsimp only
+  rw [if_neg (by rw [hnorestart]; exact Bool.false_ne_true)]
+  split
+  · rfl
+  · rename_i hquiet
+    rw [if_pos (hbackground.resolve_left hquiet)]
+    rfl
+
+/-- **while the chain stays idle a background tick moves no cursor at all.**  The three input
+cursors are the ones `backgroundFun_cursors` leaves alone; the fourth is absent before and after
+by `backgroundFun_chain_stillIdle`.
+
+So this arm of the scan is a still tick of the heads, and the twelve head slots carry it with the
+same slot machinery as `markEnd`, `home`, `choose` and `copy`. -/
+theorem headOf_tickFun_background_stillIdle (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hnorestart : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).restartGuard
+      x.vm = false)
+    (hbackground : (!x.ctl.replaying
+        && !(PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).available x.vm)
+        = true
+      ∨ 1 < x.ctl.clock)
+    (hidle : x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle)
+    (hnotFound : ¬ (PalPeg.GalilScaffoldChainInputSupply.searchEffectFun
+      (PalPeg.GalilRunSkeleton.PofC centre place entry w) false x.vm).search.mode
+        = PalPeg.GalilScaffoldSearchFinish.Mode.found)
+    (v : Fin 4) :
+    headOf (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) v
+      = headOf x v := by
+  have hvm := tickFun_scan_background_vm centre place entry entryQ first w F delay x hmode
+    hnorestart hbackground
+  refine headOf_congr_of_vm (x := x)
+    (y := PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+    ?_ ?_ ?_ ?_ v
+  · rw [hvm]
+    exact (backgroundFun_cursors (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm).1
+  · rw [hvm]
+    exact (backgroundFun_cursors (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm).2.1
+  · rw [hvm]
+    exact (backgroundFun_cursors (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm).2.2
+  · rw [hvm, backgroundFun_chain_stillIdle (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm
+      hidle hnotFound, hidle]
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
