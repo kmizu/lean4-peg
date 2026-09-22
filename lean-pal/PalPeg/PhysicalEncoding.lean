@@ -10000,6 +10000,76 @@ theorem headOf_congr_of_vm {x y : State GalilVM} (hleft : y.vm.left = x.vm.left)
     rw [hchain]
     rfl
 
+/-- what a rewind does to each cursor: the left one steps left, and the centre with it when the
+rewind is paired; the right cursor and the chain's verifier stand still. -/
+def rewindHeadOps (pair : Bool) :
+    Fin 4 → PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead
+  | 0 => PalPeg.GalilScaffoldInputHead.left
+  | 1 => if pair then PalPeg.GalilScaffoldInputHead.left else id
+  | _ => id
+
+/-- **a tick of the rewind that is not yet at the first instruction does exactly that.**  Its two
+frame functions say so: `rewindOne` steps the left cursor, `rewindPair` steps the centre with it,
+and neither touches the right cursor or the chain. -/
+theorem headOf_tickFun_rewind (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotFirst : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).atFirst
+      x.vm = false)
+    (v : Fin 4) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hhead : headOf x v = some head) :
+    headOf (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) v
+      = some (rewindHeadOps x.ctl.pair v head) := by
+  have hstep : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
+      = if x.ctl.pair then
+          ⟨{x.ctl with pair := false},
+            (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).rewindPair x.vm⟩
+        else
+          ⟨{x.ctl with pair := true},
+            (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).rewindOne
+              x.vm⟩ := by
+    unfold PalPeg.GalilScaffoldTop.tickFun
+    rw [hmode]
+    dsimp only
+    rw [if_neg (by rw [hnotFirst]; simp)]
+  rw [hstep]
+  cases hpair : x.ctl.pair <;> dsimp only <;> fin_cases v
+  · show some (PalPeg.GalilScaffoldInputHead.left x.vm.left) = _
+    rw [show head = x.vm.left from Option.some.inj hhead.symm]
+    rfl
+  · show some x.vm.center = _
+    rw [show head = x.vm.center from Option.some.inj hhead.symm]
+    rfl
+  · show some x.vm.right = _
+    rw [show head = x.vm.right from Option.some.inj hhead.symm]
+    rfl
+  · show (match x.vm.chain with
+      | .idle => none
+      | .copy _ _ _ _ _ _ verifier => some verifier
+      | .back _ _ _ _ verifier => some verifier
+      | .watch wm => some wm.machine.verifier
+      | .broken wm => some wm.machine.verifier) = _
+    exact hhead
+  · show some (PalPeg.GalilScaffoldInputHead.left x.vm.left) = _
+    rw [show head = x.vm.left from Option.some.inj hhead.symm]
+    rfl
+  · show some (PalPeg.GalilScaffoldInputHead.left x.vm.center) = _
+    rw [show head = x.vm.center from Option.some.inj hhead.symm]
+    rfl
+  · show some x.vm.right = _
+    rw [show head = x.vm.right from Option.some.inj hhead.symm]
+    rfl
+  · show (match x.vm.chain with
+      | .idle => none
+      | .copy _ _ _ _ _ _ verifier => some verifier
+      | .back _ _ _ _ verifier => some verifier
+      | .watch wm => some wm.machine.verifier
+      | .broken wm => some wm.machine.verifier) = _
+    exact hhead
+
 /-- **a branch theorem, carried to the machine of twelve steps.**  Everything a mode whose branch
 moves no head has to do is name its branch theorem and say that its tick moves no input head.
 Written once here, so that each such mode is one line and not four.
