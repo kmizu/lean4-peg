@@ -1,3 +1,50 @@
+## n452 (2026-09-22): 11 歩スロットは 1 compStep に収まる — 融合はもう建ってる
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+n444 で「`hideal` は 1 抽象 tick = 1 `idealStep` を要求する」と確認し、
+n445 以降ヘッドの左歩・右歩を手で（1〜3 アクションで）作ってきた。
+そのうち右歩の 4 番目のケース（near が空で queue に文字がある）だけが
+「queue のスケジュールを進めなあかん」ので手では届かなかった。
+
+**一次情報を読んで、矛盾の解き方が分かった。**
+
+`PalPeg/LocalViewsMachine.lean:182` の `machineSlot` の結論は
+
+```
+((compStep (iterRule (machineRule viewCount hK) 11)).apply blankc x input).1.1 = 0 ∧ …
+  ViewRep margin (viewApply (commandOfLetter input) (views view)) … 
+```
+
+すなわち **`iterRule R 11` の `compStep` 1 回が、view のコマンド 1 つ（11 歩ぶん）を丸ごと実行する。**
+橋は `compStep_iterRule`（`LocalStepFusion`）。代償は窓の半径が `iterRadius K 11` に増えることだけで、
+`forwardTick_of_rule` は `R : ActRule (Fin 2) Q Γ t K` を任意の `K` で取るので型は合う。
+
+理由は素朴で、`ActRule.acts` が 1 テープあたり**アクションの列**（長さ ≤ K）を返すこと。
+11 歩ぶんの決定は、半径 K の窓に入っているセルだけで計算できる（各歩がヘッドから距離 ≤ 11 しか触らない）。
+だから融合できる。
+
+### これが意味すること
+
+* ヘッド移動の実現は**もう建っている**。`LocalViewSlot.viewSlot_sound`（任意のコマンド）と
+  `LocalViewsMachine.machineSlot`（到着コマンド）が 11 歩スロットの健全性で、
+  `compStep (iterRule … 11)` がそれを 1 ステップに畳む。
+* n445〜n451 で手で作った左歩・右歩（`headSlots_left` / `headSlots_rightStep` ほか）は
+  **安いケースだけの並行実装**である。間違いではないが本道ではない。
+  queue を要するケースまで含めて一様に効くのは融合の側。
+* よって `physRule` のヘッド部分は手書きのスタック操作ではなく、
+  `iterRule (machineRule 4 hK) 11` 側から取るべきである。
+
+### 次の一手
+
+1. `viewSlot_sound` / `machineSlot` が要求する側条件（`WF`・`ViewCells`・`howed`・
+   スロット位置 `x.1.1 = 0`）を `EncTapes.heads` が供給できるかを確かめる。
+   `ViewCells` は n417 で入れた。`WF`（= `RTQueue.Inv v.far`）と `howed` は無い。
+2. 無い側条件を `EncTapes.heads` に足す（`ViewCells` を足したのと同じ手）。
+3. `physRule` の窓半径を `iterRadius K 11` に上げ、ヘッド部分を融合規則から取る。
+   既存 9 分岐は半径が増えても通る（窓を広く読むだけ）。
+4. その上で `init` / `scan` / `shift` / `choose` / `replayStart` を書く。
+   `M-headCopy`（n444）はこの枠組みでも残る: コピーは 1 コマンドではない。
 ## n444 (2026-09-22): 残りの障害は分岐の本数ではない — `M-headCopy`
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
