@@ -708,6 +708,16 @@ abbrev placeSlot (i : Fin 3) : Slot := .inr (.inr (.inr (.inr (.inr (.inl i)))))
 /-- the slot of the machine's `c`-th counter. -/
 abbrev counterSlot (c : Fin 16) : Slot := .inr (.inr (.inr (.inr (.inr (.inr (.inl c))))))
 
+theorem progSlotOf_ne_headSlot (live : Bool) (i : Fin 9) (v : Fin 4) (t : Fin 12) :
+    progSlotOf live i ≠ headSlot v t := by
+  unfold progSlotOf
+  split <;> simp [headSlot]
+
+theorem dpSlotOf_ne_headSlot (live : Bool) (i : Fin 12) (v : Fin 4) (t : Fin 12) :
+    dpSlotOf live i ≠ headSlot v t := by
+  unfold dpSlotOf
+  split <;> simp [headSlot]
+
 theorem progSlot_ne_counterSlot (live : Bool) (i : Fin 9) (c : Fin 16) :
     progSlot live i ≠ counterSlot c := by
   cases live <;> simp [progSlotOf]
@@ -8260,6 +8270,73 @@ theorem encControl_congr {fppBound dpBound : ℕ} {w : List (Fin 2)} {x : State 
       placeGap := fun i place hp => by rw [← hplaceGap]; exact h.placeGap i place hp
       onLetter := by rw [← honLetter]; exact h.onLetter
       leftFirst := by rw [← hleftFirst]; exact h.leftFirst }
+
+/-- **what the tapes of the encoding say, with the heads replaced.**  Every field of `EncTapes`
+but `heads` and `margins` names a slot that is not a head's — the two programs, the counter bank,
+the mirrors, the cursors, the period tape, the answer — so a tick that leaves those slots as the
+mode's branch wrote them carries all of those fields across, and the heads are supplied on their
+own.  The margins are needed of every slot, the heads' included, which is what the last
+hypothesis is for.
+
+This is the other half of `encControl_congr`: between them, a tick's whole obligation is the
+mode's branch on the slots that are not a head's, plus the heads. -/
+theorem encTapes_replaceHeads {margin : ℕ} {x : State GalilVM} {polarity polarity' : Fin 16 → Bool}
+    {gap gap' : Fin 4 → Bool}
+    {micro micro' : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {T T' : Slot → STape Γm}
+    (h : EncTapes margin x polarity gap micro fppLive dpLive T)
+    (hother : ∀ slot : Slot, (∀ v i, slot ≠ headSlot v i) → T' slot = T slot)
+    (hmargins : ∀ (v : Fin 4) (i : Fin 12), margin ≤ PalPeg.Local.pos (T' (headSlot v i)))
+    (hpolarity : polarity' = polarity)
+    (hheads : ∀ (v : Fin 4) head, headOf x v = some head →
+      ∃ (view : PalPeg.LocalInputView.InputView)
+          (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+        PalPeg.LocalArrival.absHead' view [] = head ∧
+          PalPeg.ConcreteLocalMachine.ViewRep margin view (gap' v) (micro' v) viewTapes ∧
+          (∀ i, T' (headSlot v i) = mapTape encCell (viewTapes i)) ∧
+            PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view) :
+    EncTapes margin x polarity' gap' micro' fppLive dpLive T' := by
+  subst hpolarity
+  refine
+    { margins := fun slot => ?_
+      heads := hheads
+      fpp := fun i => ?_
+      dp := fun i => ?_
+      idleShape := fun i => ?_
+      counters := fun c value hc => ?_
+      places := fun i place hp => ?_
+      mirrors := fun m value hm => ?_
+      period := fun tape hperiod => ?_
+      answer := fun tape hanswer => ?_ }
+  · match slot with
+    | .inl p => exact hmargins p.1 p.2
+    | .inr r =>
+      rw [hother (Sum.inr r) (by intro v i hEq; exact absurd hEq (by simp [headSlot]))]
+      exact h.margins _
+  · rw [hother _ (by intro v t hEq; exact absurd hEq (progSlotOf_ne_headSlot _ _ v t))]
+    exact h.fpp i
+  · rw [hother _ (by intro v t hEq; exact absurd hEq (dpSlotOf_ne_headSlot _ _ v t))]
+    exact h.dp i
+  · obtain ⟨raw, hraw⟩ := h.idleShape i
+    exact ⟨raw, by
+      rw [hother _ (by intro v t hEq; exact absurd hEq (progSlotOf_ne_headSlot _ _ v t))]
+      exact hraw⟩
+  · obtain ⟨seg, hseg, hslot⟩ := h.counters c value hc
+    exact ⟨seg, hseg, by
+      rw [hother _ (by intro v i hEq; exact absurd hEq (by simp [counterSlot, headSlot]))]
+      exact hslot⟩
+  · obtain ⟨stack, junk, hsealed, hjunk, hstack, hslot⟩ := h.places i place hp
+    exact ⟨stack, junk, hsealed, hjunk, hstack, by
+      rw [hother _ (by intro v i hEq; exact absurd hEq (by simp [placeSlot, headSlot]))]
+      exact hslot⟩
+  · obtain ⟨seg, hseg, hslot⟩ := h.mirrors m value hm
+    exact ⟨seg, hseg, by
+      rw [hother _ (by intro v i hEq; exact absurd hEq (by simp [mirrorSlot, headSlot]))]
+      exact hslot⟩
+  · rw [hother _ (by intro v t hEq; exact absurd hEq (by simp [headSlot]))]
+    exact h.period tape hperiod
+  · rw [hother _ (by intro v t hEq; exact absurd hEq (by simp [headSlot]))]
+    exact h.answer tape hanswer
 
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
