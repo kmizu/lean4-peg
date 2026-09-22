@@ -3469,6 +3469,67 @@ theorem viewRep_left {margin : ℕ} (v : PalPeg.LocalInputView.InputView)
     rw [hnear, hnearTape, List.cons_append]
     exact stackTape_push (tapes PalPeg.ConcreteLocalMachine.nearTape) v.focus (v.near ++ bottom) hst
 
+/-- **a head that stands on the gap beside a letter steps left for free.**  Only its own bit
+moves; not one of its twelve tapes does. -/
+theorem headRep_leftGap {margin : ℕ} {micro : PalPeg.ConcreteLocalMachine.MicroControl}
+    (view : PalPeg.LocalInputView.InputView)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hgap : view.gap = true)
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view true micro viewTapes) :
+    PalPeg.LocalArrival.absHead' {view with gap := false} []
+        = PalPeg.GalilScaffoldInputHead.left (PalPeg.LocalArrival.absHead' view [])
+      ∧ PalPeg.ConcreteLocalMachine.ViewRep margin {view with gap := false} false micro
+          viewTapes := by
+  refine ⟨?_, ?_⟩
+  · simp [PalPeg.GalilScaffoldInputHead.left, PalPeg.LocalArrival.absHead', hgap]
+  · exact
+      { gap := rfl
+        queue := hrep.queue
+        back := hrep.back
+        near := hrep.near }
+
+/-- the twelve tapes of a view after its head steps left: one action on the back stack, two on
+the near stack, and the queue untouched. -/
+noncomputable def leftViewTapes (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (focus : Option (Fin 2)) : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc :=
+  fun t =>
+    if t = PalPeg.ConcreteLocalMachine.backTape then
+      PalPeg.CloseoutCoreEnc12.actOnG PalPeg.CloseoutCoreStep.blankc
+        (viewTapes PalPeg.ConcreteLocalMachine.backTape)
+        (some (PalPeg.CloseoutCoreEnc.cellSym focus,
+          (.left : PalPeg.CloseoutCoreEnc12.MoveC)))
+    else if t = PalPeg.ConcreteLocalMachine.nearTape then
+      PalPeg.CloseoutCoreEnc12.actList PalPeg.CloseoutCoreStep.blankc
+        (viewTapes PalPeg.ConcreteLocalMachine.nearTape)
+        [some ((viewTapes PalPeg.ConcreteLocalMachine.nearTape).focus,
+            (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+          some (PalPeg.CloseoutCoreEnc.cellSym focus,
+            (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
+    else viewTapes t
+
+/-- **a head that stands on a letter steps left in one step**, and what the encoding asks for
+afterwards is the view `leftView` names on the tapes `leftViewTapes` names. -/
+theorem headRep_left {margin : ℕ} {micro : PalPeg.ConcreteLocalMachine.MicroControl}
+    (view : PalPeg.LocalInputView.InputView)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (a : Option (Fin 2)) (tail : List (Option (Fin 2))) (hback : view.back = a :: tail)
+    (hgap : view.gap = false)
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view false micro viewTapes) :
+    PalPeg.LocalArrival.absHead' (leftView view) []
+        = PalPeg.GalilScaffoldInputHead.left (PalPeg.LocalArrival.absHead' view [])
+      ∧ PalPeg.ConcreteLocalMachine.ViewRep margin (leftView view) true micro
+          (leftViewTapes viewTapes view.focus) := by
+  refine ⟨absHead_leftView view hgap a tail hback, ?_⟩
+  refine viewRep_left view micro viewTapes (leftViewTapes viewTapes view.focus) a tail hback hrep
+    ?_ ?_ ?_
+  · unfold leftViewTapes
+    rw [if_pos rfl]
+  · unfold leftViewTapes
+    rw [if_neg (by decide), if_pos rfl]
+  · intro t hbackT hnearT
+    unfold leftViewTapes
+    rw [if_neg hbackT, if_neg hnearT]
+
 /-- **the branch the shift and copy modes take, as a reading of the window.**  The rule cannot
 ask the abstraction anything; it computes this bit from three cells of the window and the sign
 bit of the shift counter, and `remainsTest_eq` says the bit it computes is the test the tick
