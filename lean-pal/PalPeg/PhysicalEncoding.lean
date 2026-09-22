@@ -3530,6 +3530,48 @@ theorem headRep_left {margin : ℕ} {micro : PalPeg.ConcreteLocalMachine.MicroCo
     unfold leftViewTapes
     rw [if_neg hbackT, if_neg hnearT]
 
+/-! ### a head's step left, on the slots the whole machine carries
+
+The twelve tapes of a view sit on the machine's own tapes under `mapTape encCell`, so the three
+actions of the step have to be named in the machine's alphabet.  Each of them writes a symbol the
+rule can read: the back stack's action writes back the symbol under its own head, and the near
+stack's two write the symbol under the near head and then the one under the back head. -/
+
+theorem encCell_leftViewTapes_back (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (focus : Option (Fin 2)) :
+    mapTape encCell (leftViewTapes viewTapes focus PalPeg.ConcreteLocalMachine.backTape)
+      = PalPeg.CloseoutCoreEnc12.actOnG blankM
+          (mapTape encCell (viewTapes PalPeg.ConcreteLocalMachine.backTape))
+          (some (encCell (PalPeg.CloseoutCoreEnc.cellSym focus),
+            (.left : PalPeg.CloseoutCoreEnc12.MoveC))) := by
+  unfold leftViewTapes
+  rw [if_pos rfl]
+  exact mapTape_applyAction encCell rfl _ _ _
+
+theorem encCell_leftViewTapes_near (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (focus : Option (Fin 2)) :
+    mapTape encCell (leftViewTapes viewTapes focus PalPeg.ConcreteLocalMachine.nearTape)
+      = PalPeg.CloseoutCoreEnc12.actList blankM
+          (mapTape encCell (viewTapes PalPeg.ConcreteLocalMachine.nearTape))
+          [some ((mapTape encCell (viewTapes PalPeg.ConcreteLocalMachine.nearTape)).focus,
+              (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+            some (encCell (PalPeg.CloseoutCoreEnc.cellSym focus),
+              (.stay : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+  unfold leftViewTapes
+  rw [if_neg (by decide), if_pos rfl]
+  simp only [PalPeg.CloseoutCoreEnc12.actList, PalPeg.CloseoutCoreEnc12.actOnG]
+  rw [mapTape_applyAction encCell rfl _ (PalPeg.CloseoutCoreEnc.cellSym focus) .stay,
+    mapTape_applyAction encCell rfl _
+      (viewTapes PalPeg.ConcreteLocalMachine.nearTape).focus .right]
+  rfl
+
+theorem encCell_leftViewTapes_other (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (focus : Option (Fin 2)) (t : Fin 12) (hback : t ≠ PalPeg.ConcreteLocalMachine.backTape)
+    (hnear : t ≠ PalPeg.ConcreteLocalMachine.nearTape) :
+    mapTape encCell (leftViewTapes viewTapes focus t) = mapTape encCell (viewTapes t) := by
+  unfold leftViewTapes
+  rw [if_neg hback, if_neg hnear]
+
 /-- **the branch the shift and copy modes take, as a reading of the window.**  The rule cannot
 ask the abstraction anything; it computes this bit from three cells of the window and the sign
 bit of the shift counter, and `remainsTest_eq` says the bit it computes is the test the tick
