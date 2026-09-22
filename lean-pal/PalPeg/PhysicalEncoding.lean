@@ -3115,6 +3115,31 @@ theorem absCtr_dec (t : STape Seg) (b : Bool) :
       rw [PalPeg.LocalCounter.absCtr_pop hvv true]
       simp
 
+/-- **one increment of a counter, on its tape.**  The mirror of `absCtr_dec`: a counter tape
+holds the absolute value, so an increment is a push while the sign is positive and a pop while it
+is negative — and at zero on the negative side it is a push that turns the sign around. -/
+theorem absCtr_inc (t : STape Seg) (b : Bool) :
+    absCtr
+        (if b || decide (PalPeg.LocalCounter.val t = 0) then PalPeg.LocalCounter.push t
+          else PalPeg.LocalCounter.pop t)
+        (b || decide (PalPeg.LocalCounter.val t = 0))
+      = PalPeg.GalilScaffoldCounter.inc (absCtr t b) := by
+  cases b
+  · by_cases hv : PalPeg.LocalCounter.val t = 0
+    · simp only [hv, Bool.false_or, decide_true, if_true]
+      simp [absCtr, PalPeg.LocalCounter.negOfNat, PalPeg.GalilScaffoldCounter.ofNat,
+        PalPeg.GalilScaffoldCounter.inc, hv]
+    · obtain ⟨n, hn⟩ : ∃ n, PalPeg.LocalCounter.val t = n + 1 := by
+        cases hval : PalPeg.LocalCounter.val t with
+        | zero => exact absurd hval hv
+        | succ n => exact ⟨n, rfl⟩
+      simp only [Bool.false_or, decide_eq_false hv, Bool.false_eq_true, if_false]
+      rw [PalPeg.LocalCounter.absCtr_pop hn false]
+      simp
+  · simp only [Bool.true_or, if_true]
+    rw [PalPeg.LocalCounter.absCtr_push t true]
+    simp
+
 /-- **a counter is positive exactly when it carries marks on the positive side.**  A counter
 tape holds only the absolute value; the sign is a bit of the finite control, so the sign test
 is that bit together with the zero test. -/
@@ -4329,6 +4354,61 @@ theorem counter_left_ne_nil (segments : STape Seg) (h : PalPeg.LocalCounter.val 
     segments.left ≠ [] := by
   intro hnil
   exact h (by show PalPeg.LocalCounter.markRun segments.left = 0; rw [hnil]; rfl)
+
+/-- **the sign a counter takes after one increment.**  A counter tape holds the absolute value,
+so an increment pushes while the sign is positive and pops while it is negative; at zero on the
+negative side the push turns the sign around, and that is the one case where the bit moves. -/
+noncomputable def incSign {K : ℕ} (polarity : Fin 16 → Bool) (c : Fin 16)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  polarity c || decide (belowRead ws (counterSlot c) ≠ encSeg PalPeg.LocalCounter.mark)
+
+/-- **one increment of a counter, on the slot the machine carries it on.**  The mirror of
+`copy_one_counter`. -/
+theorem counter_inc_witness {margin K : ℕ} (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (polarity : Fin 16 → Bool) (c : Fin 16) (tapes : Slot → STape Γm) (segments : STape Seg)
+    (value : PalPeg.GalilScaffoldCounter.Counter)
+    (habs : absCtr segments (polarity c) = value)
+    (hslot : tapes (counterSlot c) = padLeft margin (mapTape encSeg segments)) :
+    ∃ segments' : STape Seg,
+      absCtr segments'
+          (incSign polarity c (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)))
+        = PalPeg.GalilScaffoldCounter.inc value
+      ∧ PalPeg.CloseoutCoreEnc12.actList blankM (tapes (counterSlot c))
+            [if incSign polarity c
+                  (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)) then
+                some (encSeg PalPeg.LocalCounter.mark,
+                  (.right : PalPeg.CloseoutCoreEnc12.MoveC))
+              else some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+          = padLeft margin (mapTape encSeg segments') := by
+  have hbelow :
+      belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)) (counterSlot c)
+        = PalPeg.Local.readWin blankM K (padLeft margin (mapTape encSeg segments))
+            ⟨K - 1, by omega⟩ := by
+    show PalPeg.Local.readWin blankM K (tapesOf tapes (slotIndex (counterSlot c)))
+      ⟨K - 1, by omega⟩ = _
+    rw [tapesOf_apply, hslot]
+  have hval := counterZero_iff_below hK1 hKn segments
+  have hsign : incSign polarity c
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+      = (polarity c || decide (PalPeg.LocalCounter.val segments = 0)) := by
+    unfold incSign
+    rw [hbelow]
+    congr 1
+    rw [Bool.eq_iff_iff, decide_eq_true_eq, decide_eq_true_eq]
+    exact hval.symm
+  refine ⟨if polarity c || decide (PalPeg.LocalCounter.val segments = 0) then
+      PalPeg.LocalCounter.push segments else PalPeg.LocalCounter.pop segments, ?_, ?_⟩
+  · rw [hsign, ← habs]
+    exact absCtr_inc segments (polarity c)
+  · rw [hsign, hslot]
+    by_cases hbit : (polarity c || decide (PalPeg.LocalCounter.val segments = 0)) = true
+    · rw [if_pos hbit, if_pos hbit]
+      exact (padded_push margin segments).symm
+    · rw [if_neg hbit, if_neg hbit]
+      have hne : PalPeg.LocalCounter.val segments ≠ 0 := by
+        intro hzero
+        exact hbit (by simp [hzero])
+      exact (padded_pop margin segments (counter_left_ne_nil segments hne)).symm
 
 /-- **one tick of the fallback copy, on the work counter.**  The rule pops while the value is
 positive and pushes otherwise, and the bit it branches on becomes the counter's new sign, so the
