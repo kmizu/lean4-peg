@@ -8635,6 +8635,16 @@ theorem stepLeft_focus_of_back (v : PalPeg.LocalInputView.InputView) (a : Option
   unfold PalPeg.LocalInputView.stepLeft
   rw [hback]
 
+/-- **the letter a cursor leaves behind is a reading of its view.**  The mirror of
+`read_right_absHead'`, and it needs no side condition: a step left is one action, so the view
+layer's left move is the abstract head's left move outright. -/
+theorem read_left_absHead' (v : PalPeg.LocalInputView.InputView) (q : List (Fin 2)) :
+    PalPeg.GalilScaffoldInputHead.read
+        (PalPeg.GalilScaffoldInputHead.left (PalPeg.LocalArrival.absHead' v q))
+      = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveLeftV v) := by
+  rw [← absHead'_moveLeftV v q]
+  rfl
+
 /-- **and that reading splits on the parity of the cursor.**  The input head alternates between
 a letter and the gap between letters, so a cursor standing on a letter reaches the gap and reads
 the gap symbol, and one standing on a gap reaches the next cell of its view.
@@ -8808,6 +8818,38 @@ theorem landingLetter_of_verifier {fppBound dpBound K : ℕ} (q : QPhys fppBound
           (PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' view junk)) := by
   rw [landingLetter_eq q ws v view htops hgap hcells hinv hready,
     read_right_absHead' junk hwf (fun hg hn => hready hg hn)]
+
+/-- **whether the comparison agrees, as the machine decides it.**  The scan compares the letter
+its left cursor leaves for with the letter its right cursor reaches; both are readings of the
+window, so the bit the whole arm turns on is too.
+
+This is the discriminator of the scan's row: which arm a scan tick takes depends on it, because
+the matched arm is guarded by it. -/
+noncomputable def agreeTest {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  decide (leavingLetter q ws 0 = landingLetter q ws 2)
+
+/-- **and it is the comparison's own bit.**  Given the two readings — the letter behind the left
+cursor and the letter ahead of the right one — the machine's decision is the scan's. -/
+theorem agreeTest_eq {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (left right : PalPeg.LocalInputView.InputView)
+    (junkLeft junkRight : List (Fin 2))
+    (hleft : leavingLetter q ws 0
+      = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveLeftV left))
+    (hright : landingLetter q ws 2
+      = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveRight right))
+    (hwfRight : PalPeg.LocalInputView.WF right)
+    (hreadyRight : right.gap = true → right.near = [] →
+      PalPeg.RTQueue.toList right.far ≠ []) :
+    agreeTest q ws
+      = decide (PalPeg.GalilScaffoldInputHead.read
+            (PalPeg.GalilScaffoldInputHead.left (PalPeg.LocalArrival.absHead' left junkLeft))
+          = PalPeg.GalilScaffoldInputHead.read
+            (PalPeg.GalilScaffoldChainVerifier.right
+              (PalPeg.LocalArrival.absHead' right junkRight))) := by
+  unfold agreeTest
+  rw [hleft, hright, read_left_absHead' left junkLeft,
+    read_right_absHead' junkRight hwfRight hreadyRight]
 
 /-- **the chain's verdict, as the machine decides it.**  The period tape offers a symbol or it
 does not; if it does, the verdict is whether the letter the verifier reaches is that symbol.
