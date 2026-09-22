@@ -105,7 +105,7 @@ axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
 `Mode` は 10 個（`GalilScaffoldController.lean:21`）:
 `init | scan | shift | copy | home | fpp | markEnd | choose | rewind | replayStart`。
 
-**通った分岐は 11 本**（`grep '^theorem .*_of_tick' PalPeg/PhysicalEncoding.lean`）:
+**通った分岐は 12 本**（`grep '^theorem .*_of_tick' PalPeg/PhysicalEncoding.lean`）:
 
 | 分岐 | 定理 |
 |---|---|
@@ -117,10 +117,12 @@ axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
 | `rewind` | `rewind_one_of_tick` / `rewind_reset_of_tick` / `rewind_one_of_tick_branch` / `rewind_pair_of_tick_branch` |
 | `shift`（出口） | `shift_exit_of_tick` |
 | `scan`（静止腕） | `background_still_of_tick` |
+| `scan`（消費腕） | `scan_consume_of_tick` —— **カーソルが右へ動く最初の枝** |
 
-**残っている分岐**（おおよそ 10 本）: `scan` の消費腕（作業中）・restart・matched・
-beginShift・beginFallback、`scan` の idle 腕の DP 走者（12 テープ、中身は一番大きい）、
-`init`、`replayStart`、`choose` の select 側、`shift` の `shiftOne`、chain の誕生。
+**残っている分岐**（おおよそ 10 本）: `scan` の restart・matched・beginShift・beginFallback、
+`scan` の idle 腕の DP 走者（12 テープ、中身は一番大きい）、`init`、`replayStart`、
+`choose` の select 側、`shift` の `shiftOne`、chain の誕生、そして**境界事象**
+（ブロックを閉じる文字。段の表現が `counterOf` に入るまで書けない）。
 
 **別名（`alias`）の機構** — 正本 `scala/pal/src/main/scala/pal/` の `alias` は 13 箇所あり、
 ポインタの付け替え（`ScavmStructs.scala:139` の `StackView.copyFrom` は `top = other.top`）。
@@ -139,34 +141,38 @@ beginShift・beginFallback、`scan` の idle 腕の DP 走者（12 テープ、�
 
 ### 0.6 次の一手
 
-**いま書いている枝**: `scan` の消費腕（watch している chain が 1 文字を消費する）。
-四つの表はもう揃っている:
+**直前に通した枝**: `scan` の消費腕（`scan_consume_of_tick`）。これが**カーソルが右へ動く
+最初の枝**で、そのために組み立て器を一般化してある:
 
-| 表 | 行 | 何を決めるか |
-|---|---|---|
-| `modeCommands` | `scanCommands` | 4 本目カーソルが動くか |
-| `ruleNext` | `scanConsumeNext` | タグ・phase・forward・counter 11/13 の符号 |
-| `ruleActs` | `scanConsumeActs` | lag・distance・period テープ |
-| ヘッド | `headOf_tickFun_scan_consume` | 3 本静止・4 本目は右へ一歩 |
+`enc_afterTick` は「一歩の表がヘッドを動かせる枝」しか運べなかった。左へ 1 歩は 1 アクション
+だが、右へ 1 歩は 11 スロットのビュー層の仕事で 1 アクションにならない。
+`encTapes_replaceHeadsOfState` → `encTapes_afterTickOfState` / `enc_afterTickOfState` が
+tick 後の符号化を**二状態**から組み立てる: カーソル以外は一歩が到達した状態
+（`stepState`——`chainVerifierBack` でカーソルだけ戻したもの）から、カーソルは tick が
+到達した状態から。既存 11 枝は同じ状態を二度渡すだけ。
+
+**この枝の部品表**（新しい枝を書くときの型）:
+
+| 層 | 定理 |
+|---|---|
+| 命令 | `scanCommands` / `headOp_scanCommands` / `modeCommands_scan` |
+| 制御 | `scanConsumeNext` / `_of_match` / `_of_mismatch` / `scanConsumeNext_untouched` / `encControl_scanConsume` |
+| 行動 | `scanConsumeActs` ＋ 射影 4 本（`_lag` / `_distance` / `_period` / `_off`） |
+| テープ | `scanConsume_lagTape` / `_distanceTape` / `_periodTape` → `encTapes_chainConsume` → `physRule_scan_consume` |
+| ヘッド | `headOf_tickFun_scan_consume` |
+| 二状態 | `stepState` ＋ 一致補題 5 本 / `backgroundFun_of_active` |
+| 組み立て | `scan_consume_of_tick` |
 
 **判定は窓の中で閉じている**。`caught` も `broken` も検証ヘッドを `right ver` に送るので、
-行はカーソルの行き先を**判定を読まずに**決められる（`headOf_three_of_watchConsume`）。
-制御の新しいタグだけが判定を要り、その判定は `watchVerdictTest`
+命令表はカーソルの行き先を**判定を読まずに**決められる（`headOf_three_of_watchConsume`）。
+制御の新しいタグだけが判定を要り、それは `watchVerdictTest`
 ＝「period スロットの中心セルの記号」と「`landingLetter`（着地先の文字）」の比較。
 
-**右へ動くカーソルのための一般化**（済）:
-`encTapes_replaceHeadsOfState` → `encTapes_afterTickOfState` / `enc_afterTickOfState`。
-tick 後の符号化を二状態から組み立てる——カーソル以外は**一歩が到達した状態**
-（`stepState`、`chainVerifierBack` でカーソルだけ戻したもの）から、カーソルは
-**tick が到達した状態**から。既存 11 枝は同じ状態を二度渡すだけ。
+**次に書く枝**: 残りは上の §0.5 の表。`scan` の matched（比較で右カーソルが動く）が
+いま通った枝と同じ型なので近い。`init` / `replayStart` / `choose` の select は
+カーソルが**跳ぶ**（`left := right` など）ので別の型が要る——まだ測っていない。
 
-**残り**: `physRule_scan_consume` の本体。部品は全部ある——
-`scanConsume_lagTape` / `_distanceTape` / `_periodTape`（三つのテープ）、
-`scanConsumeActs_off`、`idle_shape_after_erase`、`encTapes_chainConsume`（束ねる器）、
-`stepState` の一致補題 5 本、`caught_control_of_plain`（平文字のときの消費後の制御）。
-**境界事象でない平文字の場合に限る**（上の「段」が未実装のため）。
-
-そのあと: 残り 10 枝 → `hideal` を放電 → `unconditional` の経路を
+そのあと: 全枝 → `hideal` を放電 → `unconditional` の経路を
 `given_physicalMachine`（`ShadowedLocalFinal.lean:1395`）へ張り替え →
 `PalPeg/Axioms.lean:392` の guard 更新。
 `given_physicalMachine` は標準 3 公理のみに依存し、`unconditional` が既に供給している
