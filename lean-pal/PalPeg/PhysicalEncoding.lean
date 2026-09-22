@@ -9874,6 +9874,33 @@ theorem copyActs_eq_copyOneBase {fppBound dpBound K : ℕ} (live : Bool)
   rw [if_pos hremains, if_neg hnotBlank]
   simp only [hsym]
 
+/-- **a tick of the fallback copy moves no input head.**  It writes the preparation program's
+copy tape, decrements the work counter and steps the walker: everything it touches is inside the
+preparation's own state, so the three input cursors and the chain's verifier are where they
+were. -/
+theorem headOf_tickFun_copy (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hremains : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos
+      x.vm = true)
+    (a : Fin 3) (hread : PalPeg.GalilScaffoldPlace.read x.vm.fpp.walker = some a) (v : Fin 4) :
+    headOf (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) v
+      = headOf x v := by
+  have hval : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
+      = ⟨x.ctl, {x.vm with fpp := {x.vm.fpp with
+          program := PalPeg.GalilScaffoldChainInputSupply.FppControl.tape x.vm.fpp 7
+            (fun t => PalPeg.GalilScaffoldTape.moveRight (PalPeg.GalilScaffoldTape.write t
+              (PalPeg.GalilFppPreparation.symbol a))),
+          work := PalPeg.GalilScaffoldCounter.dec x.vm.fpp.work,
+          walker := PalPeg.GalilScaffoldPlace.left x.vm.fpp.walker}}⟩ := by
+    simp only [PalPeg.GalilScaffoldTop.tickFun, hmode, frameFun_copyOne]
+    rw [if_pos (by simp [hremains]), copyOneFun_eq x.vm.fpp a hread]
+  rw [hval]
+  fin_cases v <;> rfl
+
 /-- **a tick of the fallback copy that still has work, rule and encoding together.**  Everything
 the rule needs is in the window: whether the copy still has work, whether the walker still has a
 letter, which letter that is, and whether the work counter can be decremented without crossing
@@ -10375,6 +10402,49 @@ theorem physRule_copy_one {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
     (physRule_nq_copy entryQ first hbound hKb q _ hqmode)
     (physRule_acts_copy entryQ first hbound hKb q _ hqmode)
     hK1 hK hmode hremains a hread henc
+
+
+/-- **a tick of the fallback copy, on the machine of twelve steps.**  The branch was already
+proved of one step of the one-step rule; this is the same branch on the machine as it really
+runs, with the head side coming from the view layer and everything else from the branch.
+
+This is the first mode carried all the way through the division of labour, and the four other
+still modes are the same four lines with their own branch theorem in place of this one. -/
+theorem copy_one_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (input : Option (Fin 2))
+    (hbound : 320 < fppBound) (hKb : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hK1 : 1 ≤ K)
+    (hK : K ≤ margin) (hslot0 : q.slot.val = 0) (howed : ∀ v, (q.micro v).2.2.2 = 0)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hremains : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos
+      x.vm = true)
+    (a : Fin 3) (hread : PalPeg.GalilScaffoldPlace.read x.vm.fpp.walker = some a)
+    (henc : Enc w margin x (q, T)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKb hK2 rest) blankM
+          (q, tapesOf T) input 12).1,
+        fun i => (PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hKb hK2 rest) blankM (q, tapesOf T) input 12).2
+            (slotIndex i)) := by
+  obtain ⟨hctl, htapes⟩ := enc_step_pieces margin entryQ first hbound hKb w
+    (PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) q T
+    (physRule_copy_one margin centre place entry entryQ first w F delay x q T hbound hKb hK1 hK
+      hqmode hmode hremains a hread henc)
+  exact enc_afterStillTick margin entryQ first hbound hKb hK2 hK rest w x
+    (PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) q T input
+    hslot0 (Or.inr (Or.inr (Or.inr (Or.inr hqmode)))) howed
+    (headOf_tickFun_copy centre place entry entryQ first w F delay x hmode hremains a hread)
+    henc.2 hctl htapes
 
 /-- **the last tick of the fallback copy, of the machine itself.** -/
 theorem physRule_copy_end {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
