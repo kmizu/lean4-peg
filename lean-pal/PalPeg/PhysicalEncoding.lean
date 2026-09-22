@@ -8582,6 +8582,32 @@ theorem read_right_absHead' {v : PalPeg.LocalInputView.InputView} (q : List (Fin
   rw [← absHead'_moveRight hwf q hready]
   rfl
 
+/-- **the letter a cursor leaves behind, going left.**  The counterpart of `readV_moveRight`,
+and the other half of what the comparison needs: it moves its left cursor left and its right
+cursor right and asks whether the two letters agree, so it reads both landings.
+
+The parity splits the other way round: a cursor standing on a gap reaches the letter it came
+from, which is the focus it already has; one standing on a letter reaches the gap before it. -/
+theorem readV_moveLeftV (v : PalPeg.LocalInputView.InputView) :
+    PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveLeftV v)
+      = if v.gap then v.focus.map PalPeg.GalilScaffoldPlace.letter
+        else (PalPeg.LocalInputView.stepLeft v).focus.map (fun _ => (2 : Fin 3)) := by
+  unfold PalPeg.LocalInputView.moveLeftV
+  by_cases hgap : v.gap = true
+  · rw [if_pos hgap, if_pos hgap]
+    rfl
+  · rw [if_neg hgap, if_neg hgap]
+    rfl
+
+/-- **and the cell it lands on, when its back stack still has one.**  The step pops the back
+stack, so the cell is its top — the symbol `viewTopsOfWindows` reads out of the back tape's
+window. -/
+theorem stepLeft_focus_of_back (v : PalPeg.LocalInputView.InputView) (a : Option (Fin 2))
+    (rest : List (Option (Fin 2))) (hback : v.back = a :: rest) :
+    (PalPeg.LocalInputView.stepLeft v).focus = a := by
+  unfold PalPeg.LocalInputView.stepLeft
+  rw [hback]
+
 /-- **and that reading splits on the parity of the cursor.**  The input head alternates between
 a letter and the gap between letters, so a cursor standing on a letter reaches the gap and reads
 the gap symbol, and one standing on a gap reaches the next cell of its view.
