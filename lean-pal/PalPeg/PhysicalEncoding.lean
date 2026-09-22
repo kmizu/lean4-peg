@@ -5212,24 +5212,14 @@ theorem counter_left_ne_nil (segments : STape Seg) (h : PalPeg.LocalCounter.val 
   intro hnil
   exact h (by show PalPeg.LocalCounter.markRun segments.left = 0; rw [hnil]; rfl)
 
-/-- **one increment of a counter, on the slot the machine carries it on.**  The mirror of
-`copy_one_counter`. -/
-theorem counter_inc_witness {margin K : ℕ} (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+/-- **the sign bit an increment produces, from the window of the counter's own slot.**  A
+counter's mirrors hold the same value with the same sign, so they hold tapes of the same run of
+marks, and the bit computed from the counter's own window serves for all of them. -/
+theorem incSign_eq {margin K : ℕ} (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
     (polarity : Fin 16 → Bool) (c : Fin 16) (tapes : Slot → STape Γm) (segments : STape Seg)
-    (value : PalPeg.GalilScaffoldCounter.Counter)
-    (habs : absCtr segments (polarity c) = value)
     (hslot : tapes (counterSlot c) = padLeft margin (mapTape encSeg segments)) :
-    ∃ segments' : STape Seg,
-      absCtr segments'
-          (incSign polarity c (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)))
-        = PalPeg.GalilScaffoldCounter.inc value
-      ∧ PalPeg.CloseoutCoreEnc12.actList blankM (tapes (counterSlot c))
-            [if incSign polarity c
-                  (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)) then
-                some (encSeg PalPeg.LocalCounter.mark,
-                  (.right : PalPeg.CloseoutCoreEnc12.MoveC))
-              else some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
-          = padLeft margin (mapTape encSeg segments') := by
+    incSign polarity c (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
+      = (polarity c || decide (PalPeg.LocalCounter.val segments = 0)) := by
   have hbelow :
       belowRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)) (counterSlot c)
         = PalPeg.Local.readWin blankM K (padLeft margin (mapTape encSeg segments))
@@ -5237,27 +5227,40 @@ theorem counter_inc_witness {margin K : ℕ} (hK1 : 1 ≤ K) (hKn : K ≤ margin
     show PalPeg.Local.readWin blankM K (tapesOf tapes (slotIndex (counterSlot c)))
       ⟨K - 1, by omega⟩ = _
     rw [tapesOf_apply, hslot]
-  have hval := counterZero_iff_below hK1 hKn segments
-  have hsign : incSign polarity c
-      (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))
-      = (polarity c || decide (PalPeg.LocalCounter.val segments = 0)) := by
-    unfold incSign
-    rw [hbelow]
-    congr 1
-    rw [Bool.eq_iff_iff, decide_eq_true_eq, decide_eq_true_eq]
-    exact hval.symm
-  refine ⟨if polarity c || decide (PalPeg.LocalCounter.val segments = 0) then
-      PalPeg.LocalCounter.push segments else PalPeg.LocalCounter.pop segments, ?_, ?_⟩
-  · rw [hsign, ← habs]
+  unfold incSign
+  rw [hbelow]
+  congr 1
+  rw [Bool.eq_iff_iff, decide_eq_true_eq, decide_eq_true_eq]
+  exact (counterZero_iff_below hK1 hKn segments).symm
+
+/-- **one increment of a counter, on whichever tape carries it.**  Stated for a tape rather than
+a slot, so that a counter's mirrors are served by the same lemma as the counter.  The sign bit is
+an input, because all of them take the bit the counter's own window gives. -/
+theorem counter_inc_at {margin : ℕ} (polarity : Fin 16 → Bool) (c : Fin 16) (bit : Bool)
+    (segments : STape Seg) (value : PalPeg.GalilScaffoldCounter.Counter)
+    (habs : absCtr segments (polarity c) = value)
+    (hbit : bit = (polarity c || decide (PalPeg.LocalCounter.val segments = 0)))
+    (tape : STape Γm) (hslot : tape = padLeft margin (mapTape encSeg segments)) :
+    ∃ segments' : STape Seg,
+      absCtr segments' bit = PalPeg.GalilScaffoldCounter.inc value
+      ∧ PalPeg.CloseoutCoreEnc12.actList blankM tape
+            [if bit then
+                some (encSeg PalPeg.LocalCounter.mark,
+                  (.right : PalPeg.CloseoutCoreEnc12.MoveC))
+              else some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+          = padLeft margin (mapTape encSeg segments') := by
+  refine ⟨if bit then PalPeg.LocalCounter.push segments else PalPeg.LocalCounter.pop segments,
+    ?_, ?_⟩
+  · rw [hbit, ← habs]
     exact absCtr_inc segments (polarity c)
-  · rw [hsign, hslot]
-    by_cases hbit : (polarity c || decide (PalPeg.LocalCounter.val segments = 0)) = true
-    · rw [if_pos hbit, if_pos hbit]
+  · rw [hslot]
+    by_cases hb : bit = true
+    · rw [if_pos hb, if_pos hb]
       exact (padded_push margin segments).symm
-    · rw [if_neg hbit, if_neg hbit]
+    · rw [if_neg hb, if_neg hb]
       have hne : PalPeg.LocalCounter.val segments ≠ 0 := by
         intro hzero
-        exact hbit (by simp [hzero])
+        exact hb (by rw [hbit]; simp [hzero])
       exact (padded_pop margin segments (counter_left_ne_nil segments hne)).symm
 
 /-- **one tick of the fallback copy, on the work counter.**  The rule pops while the value is
@@ -6244,7 +6247,11 @@ theorem rewind_one_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : G
   have hstep := idealStep_withErase R q T q.fppLive _ hacts
   obtain ⟨segments, habsLen, hslotLen⟩ := henc.2.counters 3 x.vm.length rfl
   obtain ⟨segments', habsInc, hcountTape⟩ :=
-    counter_inc_witness hK1 (by omega) q.polarity 3 T segments x.vm.length habsLen hslotLen
+    counter_inc_at (margin := margin) q.polarity 3
+      (incSign q.polarity 3 (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      segments x.vm.length habsLen
+      (incSign_eq hK1 (by omega) q.polarity 3 T segments hslotLen)
+      (T (counterSlot 3)) hslotLen
   have hheads := headSlots_step henc.2 hK 0 x.vm.left rfl
     (fun slot => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2 (slotIndex slot))
     (fun t => by
