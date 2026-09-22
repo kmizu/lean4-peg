@@ -1,3 +1,58 @@
+## n453 (2026-09-22): 融合を使うには「コマンドを 1 歩先に決める」— 12 歩案
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+
+n452 で「11 歩スロットは `compStep (iterRule R 11)` 1 回に収まる」と分かった。
+その続きとして、**既存の融合をヘッド移動にそのまま使えるか**を一次情報で確かめた。使えない。理由と直し方。
+
+### 使えない理由
+
+`PalPeg/LocalViewsMachine.lean:50` の `machineRule` は
+
+```
+nq := fun control input windows =>
+  (nextSlot control.1, fun view => viewNext _ hK control.1 (commandOfLetter input) …)
+```
+
+すなわち **コマンドは入力文字から決まり、全 view に同じものが当たる。** これは「到着」の機械である。
+ヘッド移動はヘッドごとに違うコマンド（左ヘッドは左、右ヘッドは右）なので、この規則では表せない。
+
+下の層（`viewNext` / `viewActs` / `LocalViewSlot.viewSlot_sound`）は**コマンドについて一般**である。
+足りないのは view ごとにコマンドを与える機械規則だけ。
+
+### 直し方が自明でない点
+
+規則の `acts` はその時点の control を見る。1 スロットは 11 歩あり、その間 control は
+`nq` で 11 回変わる。よって **コマンドは 11 歩のあいだ不変で、かつ各歩で control から読めなければならない。**
+`commandOfLetter input` は入力から毎歩読み直せるので成り立っていた。ヘッド移動のコマンドは
+抽象モードから決まるので、control に**載せる**必要がある。
+
+しかし分岐が次の状態を決める `nq` は「このステップの後」を言うので、
+**このスロットで実行するコマンドは、スロットが始まる前の control に既に入っていなければならない。**
+
+### 12 歩案
+
+`physRule := iterRule R₀ 12` とし、`R₀` の control に「ヘッドごとのコマンド」の場を持たせる。
+
+* 1 歩目: テープには何も書かず、抽象モードと窓の読みから 4 つのコマンドを決めて control に書く。
+* 2〜12 歩目: `viewNext` / `viewActs` をその control のコマンドで回す（= 11 歩スロット）。
+
+`compStep (iterRule R₀ 12)` 1 回が 1 抽象 tick になる。窓の半径は `iterRadius K 12`。
+`ViewCommand` は有限なので control に載る（`QPhys` に `Fin 4 → ViewCommand` の場を足す）。
+
+### 次の一手
+
+1. `ViewCommand` が本当に有限型か（`Fintype`/`DecidableEq` が付くか）を確かめる。
+   `QPhys` は `Fintype` を要求する。
+2. view ごとにコマンドを取る機械規則 `viewsRule` を `LocalViewsMachine` に足し、
+   `machineSlot` をそれで一般化する（既存の到着経路は `fun _ => commandOfLetter input` で回収）。
+3. `EncTapes.heads` に `WF`（= `RTQueue.Inv v.far`）と `howed` を足す。
+   `ViewCells` は n417 で入れた。
+4. `physRule` を `iterRule R₀ 12` の形に組み替える。既存 9 分岐は
+   「1 歩目でコマンドを空にし、2〜12 歩目で何もしない」形に載せ替えれば通る。
+
+これは複数セッションの仕事である。`M-headCopy`（n444）はこの枠組みでも残る:
+コピーは 1 コマンドではない。
 ## n452 (2026-09-22): 11 歩スロットは 1 compStep に収まる — 融合はもう建ってる
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。**
