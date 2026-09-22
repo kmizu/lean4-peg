@@ -8115,11 +8115,47 @@ noncomputable def rewindCommands {fppBound dpBound K : ℕ} (first : Fin 9) (liv
   else if q.ctl.pair then fun v => if v = 0 ∨ v = 1 then .moveLeft else .stay
     else fun v => if v = 0 then .moveLeft else .stay
 
+/-- the token a cell of the period tape carries, read back.  The inverse of `encToken` on the
+token summand; a cell of any other kind reads as the blank, which carries no symbol. -/
+def decToken (c : Γm) : Token :=
+  match c with
+  | .inr (.inr (.inr (.inl t))) => t
+  | _ => Token.blank
+
+theorem decToken_encToken (t : Token) : decToken (encToken t) = t := by
+  unfold encToken decToken
+  by_cases h : t = Token.blank
+  · rw [if_pos h, h]; rfl
+  · rw [if_neg h]
+
+/-- **when a scan tick steps the chain's verifier.**  A chain steps its verifier in exactly one
+shape — the watching one — and then only when it has lag to spend and its period tape offers a
+symbol to compare.  Both verdicts move the verifier right: a match consumes the letter, and a
+mismatch breaks the chain on the letter it has already moved to.  So the row is decided without
+reading the verdict, which is what keeps it inside the window.
+
+The three readings are the tag the control already holds, the sign and zero test of the lag
+counter, and the centre cell of the period tape. -/
+noncomputable def chainConsumesTest {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  decide (q.chainTag = ChainTag.watchers)
+    && (q.polarity 11 && decide (belowRead ws (counterSlot 11) = encSeg PalPeg.LocalCounter.mark))
+    && (PalPeg.GalilScaffoldChainConsume.symbol (decToken (centreRead ws periodSlot))).isSome
+
+/-- **the scan's row.**  The three input cursors stand still through a background tick — the
+scan reads the input through its comparison, not by walking — and the fourth moves exactly when
+the chain consumes. -/
+noncomputable def scanCommands {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand :=
+  fun v => if v = 3 then (if chainConsumesTest q ws then .moveRight else .stay) else .stay
+
 /-- **the command table, as far as the branches that are proved reach.**  Five of them — the end
 mark, the walk home, the back half of the choice, the preparation program and the fallback copy —
 name nothing but counters, program tapes and period tapes, so every head stands still through
-their ticks; the rewind walks one or two cursors left.  The rest of the table is a parameter, so
-filling a row in later cannot disturb these. -/
+their ticks; the rewind walks one or two cursors left, and the scan moves the chain's verifier
+when the chain is consuming.  The rest of the table is a parameter, so filling a row in later
+cannot disturb these. -/
 noncomputable def modeCommands {fppBound dpBound K : ℕ} (first : Fin 9)
     (rest : QPhys fppBound dpBound → Option (Fin 2) →
       (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
@@ -8136,6 +8172,7 @@ noncomputable def modeCommands {fppBound dpBound K : ℕ} (first : Fin 9)
   | PalPeg.GalilScaffoldController.Mode.rewind => rewindCommands first q.fppLive q ws
   | PalPeg.GalilScaffoldController.Mode.shift =>
       if remainsTest q.polarity ws then rest q i ws else stayCommands
+  | PalPeg.GalilScaffoldController.Mode.scan => scanCommands q ws
   | _ => rest q i ws
 
 /-- **the shift's row, once the shift is over.**  Nothing moves in the tick that leaves the
