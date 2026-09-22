@@ -1,3 +1,39 @@
+## n533 (2026-09-22): 可動原点はもう建っていた。残るのは交換と差分表現
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n532 の末尾で「未接続: 可動原点のカウンタ（`absCtr` は原点をテープの底に固定している）」
+と書いた。**これは誤り。** カウンタ層を読み直したら、可動原点はとうに建っていた。
+
+```lean
+-- PalPeg/LocalCounter.lean
+abbrev Seg := Fin 3
+def blank : Seg := 0
+def sep : Seg := 1          -- 「セグメント区切り」
+def mark : Seg := 2
+def val (t : STape Seg) : ℕ := markRun t.left      -- 先頭の mark 連なりだけを数える
+def SegCtr (t : STape Seg) (v : ℕ) : Prop :=        -- 区切りの下は何が居てもよい
+  ∃ garbage : List Seg, t.left = List.replicate v mark ++ sep :: garbage
+def resetSeg (t : STape Seg) : STape Seg := STape.applyAction blank t (sep, Move.right)
+theorem absCtr_reset (t) (b) : absCtr (resetSeg t) b = reset          -- :216
+```
+
+`val` は**先頭の区切りより上**だけを数え、`resetSeg` は今いる位置に新しい区切りを置いて
+下の段を捨てる——1 行動。符号化側の `padded_resetSeg`（`PhysicalEncoding:5837`）まで
+通っている。**アルファベットに `sep` がある理由がこれ。** 零化は O(1) で、置いてきた段は
+junk として残る（「junk をその場で消すな」がここで効いている）。
+
+**だから n532 で「採る道」と書いたものの半分は、既に建っていた道だった。** 残るのは:
+
+1. **交換**: 差分 2 本のどちらが `d1` かを有限制御に持つ（`QPhys` に 1 ビット）。
+2. **差分表現**: `EncTapes.counters` は今 16 本すべてについて
+   `absCtr segments (polarity c) = counterOf x c` を要求する。chain の 3 本
+   （13 distance / 14 boundary / 15 last）だけは絶対値ではなく差分を置くので、
+   この節を 13/14/15 について書き直す必要がある。
+
+**未検証**: 機械が distance / boundary / last の**絶対値**を読む場所があるかどうか。
+差分表現が通るのはそれが無いときだけ。次はそこを一次情報で確かめる。
+
 ## n532 (2026-09-22): 別名付けの正体はポインタ。テープでどう払うかを決める
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
