@@ -1,3 +1,36 @@
+## n538-539 (2026-09-22): 六本目の鏡は入った。七本目は九宣言
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、`PalPeg.Workbench` BUILD=0・error 0。
+commit `dca6f2a`（六本目）、`a5565a9`（`incActAt`）。七本目の試みは**戻した**。
+
+**入った（`dca6f2a`）**: 六本目の鏡、chain の copy カウンタ（counter 10、
+`ScaffoldGalil.scala:303` の `alias(remaining, chain.h)` のため）。`Slot` の `Fin 5` →
+`Fin 6`、`tapeCountM` 116 → 117、`mirrorSource` に `5 => 10`。**一発で緑**——counter 10 を
+動かす枝をまだ一つも建てていないので、今日の費用はゼロ。符号化が義務を述べたので、
+その枝を建てるときに払う。
+
+**規律**: 鏡は、その源を動かす枝がまだ無いうちに足すのが一番安い。
+
+**入った（`a5565a9`）**: `incSignAt` / `incActAt`——カウンタの添字ではなくテープのスロットと
+符号ビットを取る形。`incAct` はそれを counter 自身のスロットに当てたもの（defeq）。
+
+**測った（戻した）**: 七本目（`length` = counter 3）。`Fin 7`、`tapeCountM` 118、
+`mirrorSource` に `6 => 3`、`rewindOneActs`/`rewindPairActs` に鏡の行を 1 本ずつ
+（counter 2 の鏡については **`rewindPairActs:4996` に既に同じ行がある**——追随の型は
+最初から表の中にあった）。結果は **error 16・9 宣言**:
+
+```
+1152 encTapes_rewindOne
+4945 4961 4971 5024 5031 5041 5080 5096   （rewind の行動表とその射影補題）
+```
+
+枝を 1 本増やすと、その表の「どのスロットに何が起きるか」を数え上げる補題が全部
+動くから。**九宣言は一回の往復では収まらないので、緑に戻した。**
+
+**次の一手**: 上の 9 宣言を順に直してから、もう一度 `Fin 7` に広げる。手本は counter 2 の
+鏡の扱い（`rewindPairActs` とその周りの `hmirrorRad` / `∃ m, mirrorSource m = 2 ∧ …`）。
+
 ## n537 (2026-09-22): 鏡を七本にする費用を測った。一箇所だが行動表まで届く
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
