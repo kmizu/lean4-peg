@@ -8703,6 +8703,54 @@ noncomputable def landingLetter {fppBound dpBound K : ℕ} (q : QPhys fppBound d
   else (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
     (viewWindows v ws)).focus.map (fun _ => (2 : Fin 3))
 
+/-- **the letter a cursor reaches going left, as the machine reads it.**  The mirror of
+`landingLetter`: the gap bit is in the control, a cursor on a gap reaches the letter it came from
+— the focus it already holds — and one on a letter reaches the gap before it, which is there
+exactly when the back stack still has a cell.
+
+The comparison needs both: it moves its left cursor left and its right cursor right and asks
+whether the two letters agree. -/
+noncomputable def leavingLetter {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4) : Option (Fin 3) :=
+  if q.gap v then
+    (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
+      (viewWindows v ws)).focus.map PalPeg.GalilScaffoldPlace.letter
+  else
+    (PalPeg.ConcreteLocalMachine.symLetter (PalPeg.ConcreteLocalMachine.belowSym
+      (viewWindows v ws PalPeg.ConcreteLocalMachine.backTape))).map (fun _ => (2 : Fin 3))
+
+/-- **and that reading is the letter the cursor really reaches going left.** -/
+theorem leavingLetter_eq {fppBound dpBound K : ℕ} (margin : ℕ) (q : QPhys fppBound dpBound)
+    (T : Slot → STape Γm) (v : Fin 4) (view : PalPeg.LocalInputView.InputView)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view (q.gap v) (q.micro v) viewTapes)
+    (hold : ∀ t, T (headSlot v t) = mapTape encCell (viewTapes t))
+    (hcells : PalPeg.LocalViewCells.ViewCells view) (hK1 : 1 ≤ K) (hKm : K ≤ margin)
+    (a : Option (Fin 2)) (rest : List (Option (Fin 2))) (hback : view.back = a :: rest) :
+    leavingLetter q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) v
+      = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveLeftV view) := by
+  have hwin : viewWindows v (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = fun tape => PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K (viewTapes tape) :=
+    viewWindows_of_encoded v T viewTapes hold
+  have htops : PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
+      (viewWindows v (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = PalPeg.ConcreteLocalMachine.viewTops view := by
+    rw [hwin]
+    exact PalPeg.ConcreteLocalMachine.viewTopsOfWindows_eq hKm hcells hrep
+  have hbelow : PalPeg.ConcreteLocalMachine.symLetter (PalPeg.ConcreteLocalMachine.belowSym
+      (viewWindows v (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+        PalPeg.ConcreteLocalMachine.backTape)) = a := by
+    rw [hwin]
+    exact viewBack_below view (q.gap v) (q.micro v) viewTapes hrep hK1 hKm a rest hback
+  unfold leavingLetter
+  rw [readV_moveLeftV view, htops, hbelow]
+  by_cases hg : view.gap = true
+  · have hgq : q.gap v = view.gap := hrep.gap
+    rw [hgq, if_pos hg, if_pos hg]
+    rfl
+  · have hgq : q.gap v = view.gap := hrep.gap
+    rw [hgq, if_neg hg, if_neg hg, stepLeft_focus_of_back view a rest hback]
+
 /-- **and that reading is the letter the cursor really reaches.**  The three symbols the windows
 show are the view's own three, the near stack of a represented view carries letters and never a
 gap, and the readiness the view layer carries is what says the queue has one when the near stack
