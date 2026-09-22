@@ -4072,8 +4072,10 @@ theorem encTapes_chainConsume (margin : ℕ) (x y : State GalilVM)
     (hslotDist : newTapes (counterSlot 13) = padLeft margin (mapTape encSeg segDist))
     (tape : PalPeg.GalilScaffoldChainPeriod.Tape) (hperiod : periodOf y = some tape)
     (hslotPeriod : newTapes periodSlot = padLeft margin (mapTape encToken (encPeriod tape)))
+    (hidleShape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
+      newTapes (progSlotOf (!fppLive) k) = padLeft margin (mapTape encProg raw))
     (hkept : ∀ slot, slot ≠ counterSlot 11 → slot ≠ counterSlot 13 → slot ≠ periodSlot →
-      newTapes slot = tapes slot) :
+      (∀ k : Fin 9, slot ≠ progSlotOf (!fppLive) k) → newTapes slot = tapes slot) :
     EncTapes margin y newPolarity gap micro fppLive dpLive newTapes where
   margins := by
     intro slot
@@ -4083,39 +4085,43 @@ theorem encTapes_chainConsume (margin : ℕ) (x y : State GalilVM)
       · rw [h13, hslotDist, pos_padLeft]; omega
       · by_cases hp : slot = periodSlot
         · rw [hp, hslotPeriod, pos_padLeft]; omega
-        · rw [hkept slot h11 h13 hp]
-          exact henc.margins slot
+        · by_cases hidle : ∃ k : Fin 9, slot = progSlotOf (!fppLive) k
+          · obtain ⟨k, hk⟩ := hidle
+            obtain ⟨raw, hraw⟩ := hidleShape k
+            rw [hk, hraw, pos_padLeft]
+            omega
+          · rw [hkept slot h11 h13 hp (fun k hk => hidle ⟨k, hk⟩)]
+            exact henc.margins slot
   heads := by
     intro v head hhead
     obtain ⟨view, viewTapes, habs, hrep, hslots, hcells, hwf⟩ :=
       henc.heads v head (by rw [← congrFun hheads v]; exact hhead)
     exact ⟨view, viewTapes, habs, hrep, fun i => by
       rw [hkept _ (by simp [headSlot, counterSlot]) (by simp [headSlot, counterSlot])
-        (by simp [headSlot, periodSlot]), hslots i], hcells, hwf⟩
+        (by simp [headSlot, periodSlot])
+        (by intro k; cases fppLive <;> simp [progSlotOf, headSlot]), hslots i], hcells, hwf⟩
   idleHead := by
     intro h3
     obtain ⟨view, viewTapes, hrep, hslots, hcells, hwf⟩ :=
       henc.idleHead (by rw [← congrFun hheads 3]; exact h3)
     exact ⟨view, viewTapes, hrep, fun i => by
       rw [hkept _ (by simp [headSlot, counterSlot]) (by simp [headSlot, counterSlot])
-        (by simp [headSlot, periodSlot]), hslots i], hcells, hwf⟩
+        (by simp [headSlot, periodSlot])
+        (by intro k; cases fppLive <;> simp [progSlotOf, headSlot]), hslots i], hcells, hwf⟩
   fpp := by
     intro i
     rw [hkept _ (by cases fppLive <;> simp [progSlotOf, counterSlot])
       (by cases fppLive <;> simp [progSlotOf, counterSlot])
-      (by cases fppLive <;> simp [progSlotOf, periodSlot]), henc.fpp i, hfpp i]
+      (by cases fppLive <;> simp [progSlotOf, periodSlot])
+      (fun k => progSlotOf_ne_flip fppLive i k), henc.fpp i, hfpp i]
   dp := by
     intro i
     rw [hkept _ (by cases dpLive <;> simp [dpSlotOf, counterSlot])
       (by cases dpLive <;> simp [dpSlotOf, counterSlot])
-      (by cases dpLive <;> simp [dpSlotOf, periodSlot]), henc.dp i, hdp i]
-  idleShape := by
-    intro i
-    obtain ⟨raw, hraw⟩ := henc.idleShape i
-    exact ⟨raw, by
-      rw [hkept _ (by cases fppLive <;> simp [progSlotOf, counterSlot])
-        (by cases fppLive <;> simp [progSlotOf, counterSlot])
-        (by cases fppLive <;> simp [progSlotOf, periodSlot]), hraw]⟩
+      (by cases dpLive <;> simp [dpSlotOf, periodSlot])
+      (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]),
+      henc.dp i, hdp i]
+  idleShape := hidleShape
   counters := by
     intro c value hvalue
     by_cases h11 : c = 11
@@ -4130,14 +4136,16 @@ theorem encTapes_chainConsume (margin : ℕ) (x y : State GalilVM)
           henc.counters c value (by rw [← hcountersOther c h11 h13]; exact hvalue)
         exact ⟨seg, by rw [hpolOther c h11 h13]; exact habs, by
           rw [hkept _ (by simpa using fun h => h11 h) (by simpa using fun h => h13 h)
-            (by simp [counterSlot, periodSlot]), hslot]⟩
+            (by simp [counterSlot, periodSlot])
+            (by intro k; cases fppLive <;> simp [progSlotOf, counterSlot]), hslot]⟩
   places := by
     intro i place hplace
     obtain ⟨st, jk, hsealed, hlen, hstack, hslotp⟩ :=
       henc.places i place (by rw [← congrFun hplaces i]; exact hplace)
     exact ⟨st, jk, hsealed, hlen, hstack, by
       rw [hkept _ (by simp [placeSlot, counterSlot]) (by simp [placeSlot, counterSlot])
-        (by simp [placeSlot, periodSlot]), hslotp]⟩
+        (by simp [placeSlot, periodSlot])
+        (by intro k; cases fppLive <;> simp [progSlotOf, placeSlot]), hslotp]⟩
   mirrors := by
     intro m value hvalue
     have h11 : mirrorSource m ≠ 11 := by fin_cases m <;> decide
@@ -4146,14 +4154,16 @@ theorem encTapes_chainConsume (margin : ℕ) (x y : State GalilVM)
       henc.mirrors m value (by rw [← hcountersOther _ h11 h13]; exact hvalue)
     exact ⟨seg, by rw [hpolOther _ h11 h13]; exact habs, by
       rw [hkept _ (by simp [mirrorSlot, counterSlot]) (by simp [mirrorSlot, counterSlot])
-        (by simp [mirrorSlot, periodSlot]), hslotm]⟩
+        (by simp [mirrorSlot, periodSlot])
+        (by intro k; cases fppLive <;> simp [progSlotOf, mirrorSlot]), hslotm]⟩
   period := by
     intro tape' htape'
     rw [hperiod] at htape'
     rw [← Option.some.inj htape', hslotPeriod]
   answer := by
     intro tape' htape'
-    rw [hkept _ (by simp [counterSlot]) (by simp [counterSlot]) (by simp [periodSlot])]
+    rw [hkept _ (by simp [counterSlot]) (by simp [counterSlot]) (by simp [periodSlot])
+      (by intro k; cases fppLive <;> simp [progSlotOf])]
     exact henc.answer tape' (by rw [← hanswer]; exact htape')
 
 /-- **a tick that walks the chain's period tape and nothing else the encoding speaks about.**
