@@ -1202,9 +1202,14 @@ theorem encTapes_headStep (margin : ℕ) (x y : State GalilVM) (polarity : Fin 1
     rw [hkept _ (by intro k; simp)]
     exact henc.answer tape (by rw [← hanswer]; exact htape)
 
-/-- **a tick that changes one counter and nothing else the encoding speaks about.**  Stated for
-two states that agree everywhere but at that counter, so that a branch which moves several
-components can apply it once for each of them. -/
+/-- the slot of the machine's `m`-th mirror of a counter. -/
+abbrev mirrorSlot (m : Fin 5) : Slot := .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl m)))))))
+
+/-- **a tick that changes one counter and nothing else the encoding speaks about.**  A counter
+may be mirrored — three of the five mirror slots hold copies of the radius — so the mirrors of
+the counter that moved are written too, with the same segments.  Stated for two states that agree
+everywhere but at that counter, so that a branch which moves several components can apply it once
+for each of them. -/
 theorem encTapes_counterStep (margin : ℕ) (x y : State GalilVM)
     (polarity newPolarity : Fin 16 → Bool) (gap : Fin 4 → Bool)
     (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (fppLive dpLive : Bool)
@@ -1217,35 +1222,46 @@ theorem encTapes_counterStep (margin : ℕ) (x y : State GalilVM)
     (hfpp : ∀ i, y.vm.fpp.program.config.tapes i = x.vm.fpp.program.config.tapes i)
     (hdp : ∀ i, y.vm.dp.config.tapes i = x.vm.dp.config.tapes i)
     (hperiod : periodOf y = periodOf x) (hanswer : answerOf y = answerOf x)
-    (hmirror : ∀ m : Fin 5, mirrorSource m ≠ c)
     (hpolOther : ∀ c' : Fin 16, c' ≠ c → newPolarity c' = polarity c')
     (segments : STape Seg) (habs : absCtr segments (newPolarity c) = value)
     (hslot : newTapes (counterSlot c) = padLeft margin (mapTape encSeg segments))
-    (hkept : ∀ slot, slot ≠ counterSlot c → newTapes slot = tapes slot) :
+    (hmirrorSlot : ∀ m : Fin 5, mirrorSource m = c →
+      newTapes (mirrorSlot m) = padLeft margin (mapTape encSeg segments))
+    (hkept : ∀ slot, slot ≠ counterSlot c →
+      (∀ m : Fin 5, mirrorSource m = c → slot ≠ mirrorSlot m) →
+      newTapes slot = tapes slot) :
     EncTapes margin y newPolarity gap micro fppLive dpLive newTapes where
   margins := by
     intro slot
     by_cases hc : slot = counterSlot c
     · rw [hc, hslot, pos_padLeft]
       omega
-    · rw [hkept slot hc]
-      exact henc.margins slot
+    · by_cases hm : ∃ m : Fin 5, mirrorSource m = c ∧ slot = mirrorSlot m
+      · obtain ⟨m, hsrc, hmm⟩ := hm
+        rw [hmm, hmirrorSlot m hsrc, pos_padLeft]
+        omega
+      · rw [hkept slot hc (fun m hsrc hEq => hm ⟨m, hsrc, hEq⟩)]
+        exact henc.margins slot
   heads := by
     intro v head hhead
     obtain ⟨view, viewTapes, habsView, hrep, hslots, hcells⟩ :=
       henc.heads v head (by rw [← congrFun hheads v]; exact hhead)
     exact ⟨view, viewTapes, habsView, hrep, fun i => by
-      rw [hkept _ (by simp), hslots i], hcells⟩
+      rw [hkept _ (by simp) (fun m _ => by simp), hslots i], hcells⟩
   fpp := by
     intro i
-    rw [hkept _ (by cases fppLive <;> simp [progSlotOf]), henc.fpp i, hfpp i]
+    rw [hkept _ (by cases fppLive <;> simp [progSlotOf])
+      (fun m _ => by cases fppLive <;> simp [progSlotOf]), henc.fpp i, hfpp i]
   dp := by
     intro i
-    rw [hkept _ (by cases dpLive <;> simp [dpSlotOf]), henc.dp i, hdp i]
+    rw [hkept _ (by cases dpLive <;> simp [dpSlotOf])
+      (fun m _ => by cases dpLive <;> simp [dpSlotOf]), henc.dp i, hdp i]
   idleShape := by
     intro i
     obtain ⟨raw, hraw⟩ := henc.idleShape i
-    exact ⟨raw, by rw [hkept _ (by cases fppLive <;> simp [progSlotOf]), hraw]⟩
+    exact ⟨raw, by
+      rw [hkept _ (by cases fppLive <;> simp [progSlotOf])
+        (fun m _ => by cases fppLive <;> simp [progSlotOf]), hraw]⟩
   counters := by
     intro c' value' hvalue'
     by_cases hc : c' = c
@@ -1254,25 +1270,33 @@ theorem encTapes_counterStep (margin : ℕ) (x y : State GalilVM)
     · obtain ⟨seg, habsOld, hslotOld⟩ :=
         henc.counters c' value' (by rw [← hother c' hc]; exact hvalue')
       exact ⟨seg, by rw [hpolOther c' hc]; exact habsOld, by
-        rw [hkept _ (fun h => hc (by simpa using h)), hslotOld]⟩
+        rw [hkept _ (fun h => hc (by simpa using h)) (fun m _ => by simp), hslotOld]⟩
   mirrors := by
     intro m value' hvalue'
-    obtain ⟨seg, habsOld, hslotOld⟩ :=
-      henc.mirrors m value' (by rw [← hother _ (hmirror m)]; exact hvalue')
-    exact ⟨seg, by rw [hpolOther _ (hmirror m)]; exact habsOld, by
-      rw [hkept _ (fun h => (hmirror m) (by simpa using h)), hslotOld]⟩
+    by_cases hsrc : mirrorSource m = c
+    · refine ⟨segments, ?_, hmirrorSlot m hsrc⟩
+      rw [hsrc, habs]
+      rw [hsrc] at hvalue'
+      exact Option.some.inj (hcounter.symm.trans hvalue')
+    · obtain ⟨seg, habsOld, hslotOld⟩ :=
+        henc.mirrors m value' (by rw [← hother _ hsrc]; exact hvalue')
+      exact ⟨seg, by rw [hpolOther _ hsrc]; exact habsOld, by
+        rw [hkept _ (by simp) (fun m' hsrc' hEq => by
+          rw [show m = m' from by simpa using hEq] at hsrc
+          exact hsrc hsrc'), hslotOld]⟩
   places := by
     intro i pl hpl
     obtain ⟨st, jk, hsl, hln, hstk, hslotOld⟩ :=
       henc.places i pl (by rw [← congrFun hplaces i]; exact hpl)
-    exact ⟨st, jk, hsl, hln, hstk, by rw [hkept _ (by simp), hslotOld]⟩
+    exact ⟨st, jk, hsl, hln, hstk, by
+      rw [hkept _ (by simp) (fun m _ => by simp), hslotOld]⟩
   period := by
     intro tape htape
-    rw [hkept _ (by simp)]
+    rw [hkept _ (by simp) (fun m _ => by simp)]
     exact henc.period tape (by rw [← hperiod]; exact htape)
   answer := by
     intro tape htape
-    rw [hkept _ (by simp)]
+    rw [hkept _ (by simp) (fun m _ => by simp)]
     exact henc.answer tape (by rw [← hanswer]; exact htape)
 
 /-- **the case of a tick that moves one tape of the preparation program**, which is what the
