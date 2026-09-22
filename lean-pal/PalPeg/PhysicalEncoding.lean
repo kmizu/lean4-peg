@@ -8599,6 +8599,33 @@ theorem readV_moveLeftV (v : PalPeg.LocalInputView.InputView) :
   · rw [if_neg hgap, if_neg hgap]
     rfl
 
+/-- **the letter behind a cursor is the cell below its back tape's head.**  A view keeps
+`focus :: back` on that tape with the head on the focus, so the cell under it is the top of the
+back stack — which is where a step left lands.
+
+`StackTape.belowSym_eq` already said this of a stack tape; naming it for a view is what lets the
+comparison read the letter its left cursor is about to reach.  The side condition is that the
+cursor has something behind it: at the left end the step does not move and the cell below the
+head is whatever was left there. -/
+theorem viewBack_below {margin K : ℕ} (view : PalPeg.LocalInputView.InputView) (gap : Bool)
+    (micro : PalPeg.ConcreteLocalMachine.MicroControl)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view gap micro viewTapes)
+    (hK1 : 1 ≤ K) (hKm : K ≤ margin) (a : Option (Fin 2)) (rest : List (Option (Fin 2)))
+    (hback : view.back = a :: rest) :
+    PalPeg.ConcreteLocalMachine.symLetter (PalPeg.ConcreteLocalMachine.belowSym
+        (PalPeg.Local.readWin PalPeg.CloseoutCoreStep.blankc K
+          (viewTapes PalPeg.ConcreteLocalMachine.backTape))) = a := by
+  obtain ⟨bottom, hheight, hstack⟩ := hrep.back
+  have hlen : K ≤ (PalPeg.ConcreteLocalMachine.backStack view ++ bottom).length := by
+    simp only [PalPeg.ConcreteLocalMachine.backStack, List.length_append, List.length_cons]
+    omega
+  rw [hstack.belowSym_eq hK1 hlen]
+  show PalPeg.ConcreteLocalMachine.symLetter
+    (PalPeg.CloseoutCoreEnc18.topSym (view.back ++ bottom)) = a
+  rw [hback, ← PalPeg.ConcreteLocalMachine.topLetter_eq_sym]
+  rfl
+
 /-- **and the cell it lands on, when its back stack still has one.**  The step pops the back
 stack, so the cell is its top — the symbol `viewTopsOfWindows` reads out of the back tape's
 window. -/
