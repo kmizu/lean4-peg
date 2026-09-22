@@ -8273,6 +8273,39 @@ theorem readWin_congr_teqG {Γ : Type} {blank : Γ} {K : ℕ} {T T' : PalPeg.Pro
   funext i
   rw [PalPeg.Local.readWin_eq, PalPeg.Local.readWin_eq, h.1, h.2]
 
+/-- **one action does not tell two tapes a sweep cannot tell apart apart either.**  Where the
+head lands is fixed by where it stood, and what each cell reads afterwards is fixed by what it
+read before and by the symbol written under the head — both of which `TEqG` already gives. -/
+theorem teqG_applyAction {Γ : Type} (blank : Γ) {T T' : PalPeg.Program.STape Γ}
+    (h : PalPeg.CloseoutCoreEnc12.TEqG blank T T')
+    (sm : Γ × PegSeparation.RealTimeTM.Move) :
+    PalPeg.CloseoutCoreEnc12.TEqG blank (T.applyAction blank sm) (T'.applyAction blank sm) := by
+  obtain ⟨written, move⟩ := sm
+  refine ⟨?_, fun p => ?_⟩
+  · rw [PalPeg.Local.pos_applyAction, PalPeg.Local.pos_applyAction, h.1]
+  · rw [PalPeg.Local.rd_applyAction, PalPeg.Local.rd_applyAction, h.1, h.2]
+
+theorem teqG_actOnG {Γ : Type} (blank : Γ) {T T' : PalPeg.Program.STape Γ}
+    (h : PalPeg.CloseoutCoreEnc12.TEqG blank T T') (a : PalPeg.CloseoutCoreEnc12.Act Γ) :
+    PalPeg.CloseoutCoreEnc12.TEqG blank (PalPeg.CloseoutCoreEnc12.actOnG blank T a)
+      (PalPeg.CloseoutCoreEnc12.actOnG blank T' a) := by
+  cases a with
+  | none => exact h
+  | some sm => exact teqG_applyAction blank h sm
+
+/-- **and neither does a whole composite step.**  So the ideal step of a rule on a swept tape is
+the ideal step on the tape it was swept from, up to the same equality — which is what lets a
+tick's obligation be stated on the sweep closure of the encoding. -/
+theorem teqG_actList {Γ : Type} (blank : Γ) :
+    ∀ (as : List (PalPeg.CloseoutCoreEnc12.Act Γ)) {T T' : PalPeg.Program.STape Γ},
+      PalPeg.CloseoutCoreEnc12.TEqG blank T T' →
+      PalPeg.CloseoutCoreEnc12.TEqG blank (PalPeg.CloseoutCoreEnc12.actList blank T as)
+        (PalPeg.CloseoutCoreEnc12.actList blank T' as)
+  | [], _, _, h => h
+  | a :: rest, T, T', h => by
+    rw [PalPeg.CloseoutCoreEnc12.actList_cons, PalPeg.CloseoutCoreEnc12.actList_cons]
+    exact teqG_actList blank rest (teqG_actOnG blank h a)
+
 /-- **a slot that is not a head's holds, after the tick, exactly what the mode's branch wrote at
 step `0`.**  Step `0` gives it the branch's own actions and the eleven steps after it give it
 none, so whatever the branch is already proved to leave there is what the tick leaves there. -/
