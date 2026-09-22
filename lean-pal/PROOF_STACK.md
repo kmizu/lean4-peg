@@ -1,3 +1,33 @@
+## n541 (2026-09-22): 七本目の鏡、二度目の測定——表は直った、残るは輸送子の中
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0。七本目の試みは**また戻した**。
+
+n540 では error 16・9 宣言だった。今回は行動表の射影補題を全部先に直してから広げた:
+
+| 直したもの | 型 |
+|---|---|
+| `rewindOneActs_head` / `_progOther` | `if_neg` を 1 本、`headSlot_ne_mirrorSlot` / `progSlot_ne_mirrorSlot` |
+| `rewindOneActs_off` | 仮説 `hmirrorLen : ∀ m, mirrorSource m = 3 → slot ≠ mirrorSlot m` |
+| `rewindPairActs_counterRad` / `_mirror` / `_head` / `_progOther` / `_off` | 同型 |
+
+結果 **error 16 → 8**。残りは `encTapes_rewindOne` の中と、その呼び出し側 4 箇所。
+そこで輸送子にも `hmirrorLen` と `hkept` の鏡除外を足したら **error 23 に増えた**——
+`hkept` の引数が 1 つ増えたので、その輸送子の**他の全ての場**（`margins` / `heads` /
+`counters` / `places` / `period` / `answer` …）の `hkept _ a b c` が全部合わなくなる。
+
+**測り直した費用**: 鏡 1 本を足す本当の費用は「表の射影補題（型は一様、今回作った patch が
+そのまま使える）＋ 輸送子 1 つの全フィールドの `hkept` 引数 ＋ 呼び出し側」。
+最後の二つは一様ではなく、場ごとに鏡でないことの証明が要る。
+
+**採らなかった道**: `hkept` に引数を足さず、鏡のスロットを `hkept` の対象外と**せずに**
+おくこと。鏡のテープが「触っていない」と主張することになり、行動表と矛盾する。
+
+**次の一手**: `hkept` の引数を増やす代わりに、**除外条件を 1 つの述語にまとめる**。
+`rewindOneTouched slot : Prop` のような形にして、輸送子の全フィールドが
+`hkept slot (fun h => …)` の 1 引数で済むようにしてから鏡を足す。そうすれば次に
+鏡を足すときも輸送子の中は動かない。
+
 ## n538-539 (2026-09-22): 六本目の鏡は入った。七本目は九宣言
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
