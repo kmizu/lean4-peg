@@ -59,8 +59,8 @@ axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
 
 ### 0.4 いま書いている構成（`PalPeg/PhysicalEncoding.lean`）
 
-14,401 行 / 617 トップレベル宣言。`PalPeg/Workbench.lean:84` に登録済み。
-**単体 build EXIT=0・error 0・sorry 0、`PalPeg.Workbench` BUILD=0**（HEAD `e8109cd` 時点）。
+14,966 行 / 632 トップレベル宣言。`PalPeg/Workbench.lean:84` に登録済み。
+**単体 build EXIT=0・error 0・sorry 0、`PalPeg.Workbench` BUILD=0**（HEAD `a31752a` 時点）。
 
 | 決めたこと | 実体 |
 |---|---|
@@ -117,7 +117,7 @@ axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
 | `rewind` | `rewind_one_of_tick` / `rewind_reset_of_tick` / `rewind_one_of_tick_branch` / `rewind_pair_of_tick_branch` |
 | `shift`（出口） | `shift_exit_of_tick` |
 | `scan`（静止腕） | `background_still_of_tick` |
-| `scan`（消費腕） | `scan_consume_of_tick` —— **カーソルが右へ動く最初の枝** |
+| `scan`（消費腕） | `scan_consume_of_tick` —— **カーソルが右へ動く最初の枝**（平文字に限る） |
 
 **残っている分岐**（おおよそ 10 本）: `scan` の restart・matched・beginShift・beginFallback、
 `scan` の idle 腕の DP 走者（12 テープ、中身は一番大きい）、`init`、`replayStart`、
@@ -139,19 +139,13 @@ axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
   捨てた段が `boundary − last` そのもの。**この表現はまだ `counterOf` に入っていない。**
   だから境界事象（ブロックを閉じるティック）はまだどの枝でも証明されていない。
 
-### 0.6 次の一手
+### 0.6 次の一手 —— `scan` の `matched` 腕
 
-**直前に通した枝**: `scan` の消費腕（`scan_consume_of_tick`）。これが**カーソルが右へ動く
-最初の枝**で、そのために組み立て器を一般化してある:
+**通した枝は 12 本**（§0.5）。最後に通したのが `scan` の消費腕
+（`scan_consume_of_tick`）で、**カーソルが右へ動く最初の枝**。そのために組み立て器を
+二状態化してある（`encTapes_replaceHeadsOfState` → `enc_afterTickOfState`）。
 
-`enc_afterTick` は「一歩の表がヘッドを動かせる枝」しか運べなかった。左へ 1 歩は 1 アクション
-だが、右へ 1 歩は 11 スロットのビュー層の仕事で 1 アクションにならない。
-`encTapes_replaceHeadsOfState` → `encTapes_afterTickOfState` / `enc_afterTickOfState` が
-tick 後の符号化を**二状態**から組み立てる: カーソル以外は一歩が到達した状態
-（`stepState`——`chainVerifierBack` でカーソルだけ戻したもの）から、カーソルは tick が
-到達した状態から。既存 11 枝は同じ状態を二度渡すだけ。
-
-**この枝の部品表**（新しい枝を書くときの型）:
+#### 枝を書くときの型（消費腕の部品表）
 
 | 層 | 定理 |
 |---|---|
@@ -163,34 +157,52 @@ tick 後の符号化を**二状態**から組み立てる: カーソル以外は
 | 二状態 | `stepState` ＋ 一致補題 5 本 / `backgroundFun_of_active` |
 | 組み立て | `scan_consume_of_tick` |
 
-**判定は窓の中で閉じている**。`caught` も `broken` も検証ヘッドを `right ver` に送るので、
-命令表はカーソルの行き先を**判定を読まずに**決められる（`headOf_three_of_watchConsume`）。
-制御の新しいタグだけが判定を要り、それは `watchVerdictTest`
-＝「period スロットの中心セルの記号」と「`landingLetter`（着地先の文字）」の比較。
+#### `matched` 腕について測ったこと
 
-**次に書く枝**: 残りは上の §0.5 の表。一次情報で測った結果は次の通り。
+`compareFun`（`FrameFunction.lean:525`）は
 
-* **`scan` の matched は一番重い。** `compareFun`（`FrameFunction.lean:525`）は
-  `headLeft := left s.left` / `headRight := right s.right` /
-  `agree := decide (read headLeft = read headRight)` ——**二本のカーソルが同時に動き
-  （左は左へ、右は右へ）、比較は動いた後の文字同士**。そのうえ `agree` で探索が 1 量子進み、
-  chain も一歩動く。全部入り。
+```lean
+let headLeft := left s.left          -- 左カーソルが左へ
+let headRight := right s.right       -- 右カーソルが右へ
+let agree := decide (read headLeft = read headRight)   -- 動いた後の文字同士
+let searched := searchEffectFun P agree s              -- 探索も 1 量子
+... chainAtFun agree born ...                          -- chain も一歩
+```
+
+**二本のカーソルが同時に動き、比較は動いた後の文字同士。そのうえ探索と chain も動く。**
+一番重い腕である。ただし:
+
 * **二本同時に動くことは組み立て器が既に運べる。** `rewindCommands` の pair 行
   （`PhysicalEncoding:8531`）が `v = 0 ∨ v = 1` に `.moveLeft` を出し、
-  `rewind_pair_of_tick_branch` が通っている。命令は `Fin 4 → ViewCommand` なので
+  `rewind_pair_of_tick_branch` が通っている。命令は `Fin 4 → ViewCommand` で
   カーソルごとに独立。
-* **足りないのは左の着地先の読み取り。** 右は `landingLetter`（済）。左は
-  `readV_moveLeftV`（済）が `if gap then focus.map letter else (stepLeft v).focus.map (fun _ => 2)`
-  と割るところまで来ている。`(stepLeft v).focus = v.back.head` で、
-  `backStack v = v.focus :: v.back`（`LocalViewDecision.lean:111`）かつ
-  `ViewRep.back` が back スロットにその積み重ねを置くので、**左の着地先は
-  `belowRead ws (headSlot v backTape)` を復号したもの**になる。
-  カウンタがゼロ判定に `belowRead` を使うのと同じ形。これを書けば `matched` の
-  `agree` が窓の中で閉じる。
-* `init` / `replayStart` / `choose` の select はカーソルが**跳ぶ**（`left := right` など）ので
-  別の型が要る——まだ測っていない。
+* **読み取りは 3 つとも窓の中で閉じた**（ここまでが今日の到達点）:
 
-そのあと: 全枝 → `hideal` を放電 → `unconditional` の経路を
+| 読むもの | 定理 |
+|---|---|
+| 右カーソルの着地先 | `landingLetter` / `landingLetter_eq` / `read_right_absHead'`（側条件 `hready` 要） |
+| 左カーソルの着地先 | `leavingLetter` / `leavingLetter_eq` / `read_left_absHead'`（**側条件不要**——左一歩は 1 アクション） |
+| 比較のビット | `agreeTest` / `agreeTest_eq` |
+| `matched` の番人 | `compareFun_cursors` / `matchedTest_compareFun` —— **番人は `agree` そのもの** |
+
+左の着地先は `belowRead`（back テープのヘッド直下）で読む。`backStack v = v.focus :: v.back`
+（`LocalViewDecision.lean:111`）で、`StackTape.belowSym_eq`（`LocalQueueMachine.lean:397`）が
+既にある。側条件は「カーソルの後ろに何かある」こと（左端では step left は動かず、直下は junk。
+`ViewRep.back` の bottom は `near` と違って `Sealed` でない）。
+
+#### `matched` 腕に残っていること
+
+1. **`scanCommands` を腕ごとに分ける。** いまは消費腕（`chainConsumesTest`）しか見ていない。
+   `tickFun` の scan は 6 腕（restart / background×2 / matched / beginShift / beginFallback）で、
+   判別子は順に: `restartGuard`（chainTag = broken、制御）、
+   `!replaying && !available`（`available = canRightTest s.right`、カーソル 2 の窓）、
+   `1 < clock`（制御）、`matched`（＝ `agreeTest`、上で閉じた）、`shiftGuard`。
+2. `matched` の制御行（`afterCompare` は `radius++` / `cycle` / `length += 2`）と行動表。
+3. 探索 1 量子と chain 一歩が同じティックに入るので、行動表は 3 系統を同時に書く。
+
+#### そのあと
+
+残りの枝（§0.5）→ `hideal` を放電 → `unconditional` の経路を
 `given_physicalMachine`（`ShadowedLocalFinal.lean:1395`）へ張り替え →
 `PalPeg/Axioms.lean:392` の guard 更新。
 `given_physicalMachine` は標準 3 公理のみに依存し、`unconditional` が既に供給している
@@ -233,6 +245,14 @@ lake build --quiet PalPeg.Workbench > /tmp/b.log 2>&1; echo BUILD=$?          # 
   `rewindOneActs` の枝を 1 本足したときは 9 宣言・error 16 だった。
 * 構造インスタンスの仮説を 1 つ増やすと、その**全フィールド**の呼び出しが動く。
   足す前に、使用箇所を名前付きの `have` に切り出しておくと影響が 1 箇所で済む。
+* **暗黙引数は最初に解けた制約で潰れる。** `enc_afterTickOfState` の `{z}` は
+  `(fun i => rfl)` で `y` に潰れたので `(z := …)` で明示した。
+* **「この API は知らないから止める」と判断する前に 1 回 grep する。** 今日は既存部品を
+  4 回見落としかけた: `resetSeg`（可動原点）/ `mirrorSource`（鏡）/ `counter_inc_at` の
+  テープ版 / `StackTape.belowSym_eq`。**この建物は思っているより建っている。**
+* **接続を試みないと定義の穴は出ない。** `scanConsumeNext` が使う lag と数える distance の
+  新しい符号を書いていなかったことは、表を書いた時点では分からず、一歩の後の符号化が
+  「新しい polarity の下でのカウンタの値」を求めたときに出た。
 
 ### 0.9 下の §（`CLAUDE.md` 由来）の鮮度について
 
