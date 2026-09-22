@@ -1,3 +1,41 @@
+## n556-565 (2026-09-22): 12 本目——カーソルが右へ動く最初の枝
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、`PalPeg.Workbench` BUILD=0・error 0。
+commit `f5b2cf2`（枝）、`3ca9d10`（引き継ぎ）。
+
+`scan_consume_of_tick` が通った。scan の消費腕——3 本の入力カーソルは静止し、4 本目が
+右へ一歩。一歩の表は chain の lag を 1 つ使い、distance を 1 つ数え、period テープを歩く。
+制御は chain を watch のまま保って文字を渡す。
+
+**これが「カーソルが右へ動く最初の枝」**で、n551 で見つけた壁をここで越えた。
+`enc_afterTick` は一歩の表がヘッドを動かせる枝しか運べない（左 1 歩は 1 アクション、
+右 1 歩は 11 スロットのビュー層）。二状態版（`encTapes_replaceHeadsOfState` →
+`enc_afterTickOfState`）と `stepState`（カーソルだけ戻した状態）で越えた。
+
+| 層 | 入れたもの |
+|---|---|
+| 命令 | `headOp_scanCommands` / `modeCommands_scan` |
+| 制御 | `scanConsumeNext_untouched`（18 場のうち動くのは chain の 4 つ）/ `encControl_scanConsume` |
+| 行動 | `scanConsumeActs` の射影 4 本、`decSignAt_eq`、`decAct` 三兄弟 |
+| テープ | `scanConsume_lagTape` / `_distanceTape` / `_periodTape` / `encTapes_chainConsume` / `physRule_scan_consume` |
+| 二状態 | `chainVerifierBack` / `stepState` ＋ 一致補題 5 本 / `backgroundFun_of_active` |
+| 補助 | `caught_control_of_plain` / `encPeriod_moveRight` / `padded_token_right` / `encTapes_periodStep` |
+
+**制限**: 平文字に限る。ブロックを閉じる文字は境界カウンタ 2 本を付け替え、その付け替えは
+`counterOf` がまだ持っていない「段」の表現（`resetSeg` が残す区切り）。
+
+**繋ごうとして見つかった定義の穴**: `scanConsumeNext` が使う lag と数える distance の
+**新しい符号**を書いていなかった。カウンタのテープは絶対値だけを持ち符号は制御が持つので、
+カウンタを動かす枝は移動が残す符号を書かねばならない。表を書いただけでは分からず、
+一歩の後の符号化が「新しい polarity の下でのカウンタの値」を求めたときに出た。
+
+**この日の往復**: `physRule_scan_consume` は 18 → 7 → 4 → 1 → 0、
+七本目の鏡は 23 → 12 → 8 → 2 → 0（途中 3 回 revert して木を緑に保った）。
+
+**次**: `scan` の matched（比較で右カーソルが動く）が同じ型なので近い。
+`init` / `replayStart` / `choose` の select はカーソルが**跳ぶ**ので別の型が要る。
+
 ## n552-555 (2026-09-22): 右に動くヘッドの壁を越えた。消費 tick の道具が揃った
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
