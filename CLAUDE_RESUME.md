@@ -1,3 +1,45 @@
+## n566-571 (2026-09-22): `matched` 腕の読み取りが三つとも窓の中に入った
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、`PalPeg.Workbench` BUILD=0・error 0。
+HEAD `940148e`。14,966 行 / 632 宣言 / 通った枝 13 本の `_of_tick`（うち分岐は 12）。
+
+12 本目（`scan_consume_of_tick`）を PR #77 でマージしたあと、13 本目に向けて
+`scan` の `matched` 腕を測った。
+
+**見立てを訂正した。** 「消費腕と同じ型なので近い」と書いたが、`compareFun`
+（`FrameFunction.lean:525`）は**二本のカーソルを同時に動かし**（左は左へ、右は右へ）、
+**動いた後の文字同士**を比較し、そのうえ探索 1 量子と chain 一歩が同じティックに入る。
+全部入りで一番重い。
+
+ただし **二本同時に動くことは組み立て器が既に運べる**: `rewindCommands` の pair 行
+（`PhysicalEncoding:8531`）が `v = 0 ∨ v = 1` に `.moveLeft` を出し、
+`rewind_pair_of_tick_branch` が通っている。命令は `Fin 4 → ViewCommand` で独立。
+
+**入れたもの（読み取り側は全部閉じた）**
+
+| 読むもの | 定理 |
+|---|---|
+| 左カーソルの着地先 | `readV_moveLeftV` / `stepLeft_focus_of_back` / `viewBack_below` / `leavingLetter` / `leavingLetter_eq` / `read_left_absHead'` |
+| 比較のビット | `agreeTest` / `agreeTest_eq` |
+| `matched` の番人 | `compareFun_cursors` / `matchedTest_compareFun` |
+
+**`matched` の番人は `agree` そのものだった。** `afterCompare` も `afterMismatch` も
+scan レンズに比較が作った対を入れるだけで、誕生の包みもそこを触らない。だから
+`matchedTest (scanLens.get (compareFun P s))` は「比較が比べた二文字が一致するか」に還元する。
+
+**左は側条件が要らない。** 右の着地先には `hready`（ビューに行き先がある）が要るが、
+左一歩は 1 アクションなのでビュー層の左移動は抽象ヘッドの左移動そのもの
+（`read_left_absHead'`）。左の着地先の読み取り自体には「カーソルの後ろにセルがある」が要る。
+
+**既存部品を 4 回見落としかけた日**: `resetSeg`（可動原点）/ `mirrorSource`（鏡）/
+`counter_inc_at` のテープ版 / `StackTape.belowSym_eq`。最後のは「未知の API に入るから
+止める」と書いた直後に 1 回 grep したら出てきて、10 行で一発緑になった。
+**この建物は思っているより建っている。**
+
+**次**: `scanCommands` を 6 腕に分ける（判別子は `restartGuard` / `available` / `clock` /
+`agreeTest` / `shiftGuard`）。そのあと `matched` の制御行と行動表。
+
 ## n556-565 (2026-09-22): 12 本目——カーソルが右へ動く最初の枝
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
