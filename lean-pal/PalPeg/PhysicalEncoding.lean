@@ -7493,6 +7493,81 @@ theorem headTick_of_tickRule {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
     (fun q ws k hk t hslot => tickRule_actsHead hK base baseActs baseLen q ws k hk hslot v t)
     x input hslot0 qs Ts hqs hTs view hwf hcells viewTapes hold hrep howed
 
+/-- **a view's step left realizes the abstract head's step left, with the arrivals still
+invisible.**  The view layer proves this for `absHead`, which puts the queue on the stack; the
+encoding uses `absHead'`, which leaves the queue as incoming, so the same fact has to be said of
+that abstraction.  It holds with no side condition: a half-step only flips the bit, and a full
+step pops the back stack, which is what the abstract head does to its own left stack. -/
+theorem absHead'_moveLeftV (v : PalPeg.LocalInputView.InputView) (q : List (Fin 2)) :
+    PalPeg.LocalArrival.absHead' (PalPeg.LocalInputView.moveLeftV v) q
+      = PalPeg.GalilScaffoldInputHead.left (PalPeg.LocalArrival.absHead' v q) := by
+  rcases v with ⟨back, focus, near, far, gap⟩
+  cases gap
+  · cases back with
+    | nil => rfl
+    | cons c rest => rfl
+  · rfl
+
+/-- **a view's step right realizes the abstract head's step right** exactly when the cell it
+needs has already arrived.  The view layer proves the three cases apart; this is the one
+statement a mode's branch can use.
+
+The hypothesis cannot be weakened to `Ahead`, which allows the queue to be empty when nothing is
+pending: there the view writes the blank that has not arrived and the abstract head does not, so
+the two sides really differ.  A step right of a head is the one command that is not free.
+-/
+theorem absHead'_moveRight {v : PalPeg.LocalInputView.InputView}
+    (hwf : PalPeg.LocalInputView.WF v) (q : List (Fin 2))
+    (hready : v.gap = true → v.near = [] → PalPeg.RTQueue.toList v.far ≠ []) :
+    PalPeg.LocalArrival.absHead' (PalPeg.LocalInputView.moveRight v) q
+      = PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' v q) := by
+  by_cases hgap : v.gap = false
+  · exact PalPeg.LocalArrival.absHead'_moveRight_gap hgap q
+  · have hgapTrue : v.gap = true := by
+      cases hg : v.gap with
+      | false => exact absurd hg hgap
+      | true => rfl
+    by_cases hnear : v.near = []
+    · exact PalPeg.LocalArrival.absHead'_moveRight_far hwf hnear (hready hgapTrue hnear) q
+    · exact PalPeg.LocalArrival.absHead'_moveRight_near hnear q
+
+/-- the operation on the abstract head that a command carries out, for the three commands that
+move a head on its own: standing still, the step left and the step right.  The arrival is not
+here because it is not an operation on the head alone — it puts a letter into the pending list —
+and the two reposition steps are the halves of a step, which a mode names in pairs. -/
+def headOp : PalPeg.ConcreteLocalMachine.ViewCommand →
+    Option (PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
+  | .stay => some id
+  | .moveLeft => some PalPeg.GalilScaffoldInputHead.left
+  | .moveRight => some PalPeg.GalilScaffoldChainVerifier.right
+  | _ => none
+
+/-- **the one entry point a mode's branch uses: the command it names is the operation the
+abstract tick does to that head.**  The step right carries the arrival condition; the other two
+are free. -/
+theorem absHead'_viewApply {v : PalPeg.LocalInputView.InputView}
+    (hwf : PalPeg.LocalInputView.WF v) (q : List (Fin 2))
+    (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (hready : command = .moveRight →
+      v.gap = true → v.near = [] → PalPeg.RTQueue.toList v.far ≠ [])
+    (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hf : headOp command = some f) :
+    PalPeg.LocalArrival.absHead' (PalPeg.ConcreteLocalMachine.viewApply command v) q
+      = f (PalPeg.LocalArrival.absHead' v q) := by
+  cases command with
+  | stay =>
+    rw [show f = id from (Option.some.inj hf).symm]
+    rfl
+  | arrive a => exact absurd hf (by simp [headOp])
+  | moveRight =>
+    rw [show f = PalPeg.GalilScaffoldChainVerifier.right from (Option.some.inj hf).symm]
+    exact absHead'_moveRight hwf q (hready rfl)
+  | moveLeft =>
+    rw [show f = PalPeg.GalilScaffoldInputHead.left from (Option.some.inj hf).symm]
+    exact absHead'_moveLeftV v q
+  | stepRight => exact absurd hf (by simp [headOp])
+  | stepLeft => exact absurd hf (by simp [headOp])
+
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
 which is a bit the control carries; the symbol under its back head is a letter rather than the
