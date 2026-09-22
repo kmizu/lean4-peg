@@ -776,6 +776,23 @@ def mirrorSource : Fin 5 → Fin 16
 
 /-! ### what the tapes hold -/
 
+/-- **the twelve slots of one cursor hold a view.**  This is what `EncTapes.heads` says about a
+cursor, with the abstract head left out: the slots hold the encoded tapes of some view, whatever
+that view abstracts to.
+
+The abstraction names only three of the four cursors always.  The fourth is the chain's verifier,
+and `headOf x 3` is `none` exactly when the chain is idle — but `EncTapes.margins` asks for the
+margin of every slot, that cursor's twelve included.  So the margin of those slots cannot come
+from `heads`, and this is the property it comes from instead. -/
+def HeadSlotsRep (margin : ℕ) (gap : Fin 4 → Bool)
+    (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (tapes : Slot → STape Γm)
+    (v : Fin 4) : Prop :=
+  ∃ (view : PalPeg.LocalInputView.InputView)
+      (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+    PalPeg.ConcreteLocalMachine.ViewRep margin view (gap v) (micro v) viewTapes ∧
+      (∀ i, tapes (headSlot v i) = mapTape encCell (viewTapes i)) ∧
+        PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view
+
 /-- **the part of the encoding that is an exact reading of the state**: the two program
 bundles, the chain's answer and period tapes, and the counters whose slot the state fills.  The
 heads, the places and the chain's own counters are the components whose representation carries
@@ -791,6 +808,10 @@ structure EncTapes (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Boo
         PalPeg.ConcreteLocalMachine.ViewRep margin view (gap v) (micro v) viewTapes ∧
         (∀ i, tapes (.inl (v, i)) = mapTape encCell (viewTapes i)) ∧
           PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view
+  /-- the chain's verifier holds a view even while the chain is idle and the abstraction does not
+  name it.  Without this the margin of those twelve slots has no source: `heads` speaks of a
+  cursor only through its abstract head, and `headOf x 3` is `none` exactly then. -/
+  idleHead : headOf x 3 = none → HeadSlotsRep margin gap micro tapes 3
   fpp : ∀ i : Fin 9,
     tapes (progSlotOf fppLive i) = padLeft margin (mapTape encProg (encTape (x.vm.fpp.program.config.tapes i)))
   dp : ∀ i : Fin 12, tapes (dpSlotOf dpLive i) = padLeft margin (mapTape encProg (encTape (x.vm.dp.config.tapes i)))
@@ -843,6 +864,7 @@ theorem encTapes_congr (margin : ℕ) (x y : State GalilVM) (polarity : Fin 16 �
   heads := by
     intro v head hhead
     exact h.heads v head (by rw [← congrFun hheads v]; exact hhead)
+  idleHead := fun h3 => h.idleHead ((congrFun hheads 3).symm.trans h3)
   fpp := by
     intro i
     rw [hfpp i]
@@ -905,6 +927,11 @@ theorem encTapes_fppTapes (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 
     intro v head hhead
     obtain ⟨view, viewTapes, habs, hrep, hslots, hcells, hwf⟩ := henc.heads v head hhead
     exact ⟨view, viewTapes, habs, hrep, fun j => by
+      rw [hkept _ (by intro j; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]), hslots j], hcells, hwf⟩
+  idleHead := by
+    intro h3
+    obtain ⟨view, viewTapes, hrep, hslots, hcells, hwf⟩ := henc.idleHead h3
+    exact ⟨view, viewTapes, hrep, fun j => by
       rw [hkept _ (by intro j; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]) (by intro k; cases fppLive <;> cases dpLive <;> simp [progSlotOf, dpSlotOf]), hslots j], hcells, hwf⟩
   fpp := hmoved
   dp := by
@@ -993,6 +1020,12 @@ theorem encTapes_copyOne (margin : ℕ) (x : State GalilVM) (polarity newPolarit
     intro v head hhead
     obtain ⟨view, viewTapes, habs, hrep, hslots, hcells, hwf⟩ := henc.heads v head hhead
     exact ⟨view, viewTapes, habs, hrep, fun j => by
+      rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp) (by simp)
+        (by intro k; cases fppLive <;> simp [progSlotOf]), hslots j], hcells, hwf⟩
+  idleHead := by
+    intro h3
+    obtain ⟨view, viewTapes, hrep, hslots, hcells, hwf⟩ := henc.idleHead h3
+    exact ⟨view, viewTapes, hrep, fun j => by
       rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp) (by simp)
         (by intro k; cases fppLive <;> simp [progSlotOf]), hslots j], hcells, hwf⟩
   fpp := by
@@ -1144,6 +1177,19 @@ theorem encTapes_rewindOne (margin : ℕ) (x : State GalilVM) (polarity newPolar
             have hpair : v = 0 ∧ i = k := by simpa [headSlot] using hEq
             exact hv0 hpair.1)
           (by intro k; cases fppLive <;> simp [progSlotOf]), hslots i]
+  idleHead := by
+    intro h3
+    obtain ⟨view, viewTapes, hrep, hslots, hcells, hwf⟩ := henc.idleHead (by rw [← h3]; rfl)
+    refine ⟨view, viewTapes, ?_, ?_, hcells, hwf⟩
+    · rw [hgapOther 3 (by decide)]
+      exact hrep
+    · intro i
+      rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp)
+        (by
+          intro k hEq
+          have hpair : (3 : Fin 4) = 0 ∧ i = k := by simpa [headSlot] using hEq
+          exact absurd hpair.1 (by decide))
+        (by intro k; cases fppLive <;> simp [progSlotOf]), hslots i]
   fpp := by
     intro j
     by_cases hj8 : j = 8
@@ -1252,6 +1298,21 @@ theorem encTapes_headStep (margin : ℕ) (x y : State GalilVM) (polarity : Fin 1
           intro k hEq
           have hpair : v' = v ∧ i = k := by simpa [headSlot] using hEq
           exact hv hpair.1), hslots' i]
+  idleHead := by
+    intro h3
+    by_cases hv3 : v = 3
+    · subst hv3
+      exact ⟨view, viewTapes, hrep, hslots, hcells, hwf⟩
+    · obtain ⟨view', viewTapes', hrep', hslots', hcells', hwf'⟩ :=
+        henc.idleHead (by rw [← hother 3 (fun h => hv3 h.symm)]; exact h3)
+      refine ⟨view', viewTapes', ?_, ?_, hcells', hwf'⟩
+      · rw [hgapOther 3 (fun h => hv3 h.symm)]
+        exact hrep'
+      · intro i
+        rw [hkept _ (by
+          intro k hEq
+          have hpair : (3 : Fin 4) = v ∧ i = k := by simpa [headSlot] using hEq
+          exact hv3 hpair.1.symm), hslots' i]
   fpp := by
     intro i
     rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), henc.fpp i, hfpp i]
@@ -1330,6 +1391,12 @@ theorem encTapes_counterStep (margin : ℕ) (x y : State GalilVM)
     obtain ⟨view, viewTapes, habsView, hrep, hslots, hcells⟩ :=
       henc.heads v head (by rw [← congrFun hheads v]; exact hhead)
     exact ⟨view, viewTapes, habsView, hrep, fun i => by
+      rw [hkept _ (by simp) (fun m _ => by simp), hslots i], hcells⟩
+  idleHead := by
+    intro h3
+    obtain ⟨view, viewTapes, hrep, hslots, hcells⟩ :=
+      henc.idleHead ((congrFun hheads 3).symm.trans h3)
+    exact ⟨view, viewTapes, hrep, fun i => by
       rw [hkept _ (by simp) (fun m _ => by simp), hslots i], hcells⟩
   fpp := by
     intro i
@@ -3691,6 +3758,11 @@ theorem encTapes_idleOnly (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 
     intro v head hhead
     obtain ⟨view, viewTapes, habs, hrep, hslots, hcells, hwf⟩ := henc.heads v head hhead
     exact ⟨view, viewTapes, habs, hrep, fun j => by
+      rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslots j], hcells, hwf⟩
+  idleHead := by
+    intro h3
+    obtain ⟨view, viewTapes, hrep, hslots, hcells, hwf⟩ := henc.idleHead h3
+    exact ⟨view, viewTapes, hrep, fun j => by
       rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslots j], hcells, hwf⟩
   fpp := by
     intro j
@@ -6117,6 +6189,7 @@ theorem rewind_fppReset {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilV
     {x.ctl with mode := PalPeg.GalilScaffoldController.Mode.replayStart} (by rw [← henc.1.ctl]; rfl), ?_⟩
   exact { margins := henc.2.margins
           heads := henc.2.heads
+          idleHead := henc.2.idleHead
           fpp := hidle
           idleShape := fun i => ⟨encTape (x.vm.fpp.program.config.tapes i), by
             simpa [Bool.not_not] using henc.2.fpp i⟩
@@ -8295,7 +8368,8 @@ theorem encTapes_replaceHeads {margin : ℕ} {x : State GalilVM} {polarity polar
         PalPeg.LocalArrival.absHead' view [] = head ∧
           PalPeg.ConcreteLocalMachine.ViewRep margin view (gap' v) (micro' v) viewTapes ∧
           (∀ i, T' (headSlot v i) = mapTape encCell (viewTapes i)) ∧
-            PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view) :
+            PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view)
+    (hidleHead : headOf x 3 = none → HeadSlotsRep margin gap' micro' T' 3) :
     EncTapes margin x polarity' gap' micro' fppLive' dpLive' T' := by
   subst hpolarity
   subst hfppLive
@@ -8303,6 +8377,7 @@ theorem encTapes_replaceHeads {margin : ℕ} {x : State GalilVM} {polarity polar
   refine
     { margins := fun slot => ?_
       heads := hheads
+      idleHead := hidleHead
       fpp := fun i => ?_
       dp := fun i => ?_
       idleShape := fun i => ?_
@@ -9322,7 +9397,11 @@ theorem encTapes_afterTick {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ : �
           (∀ i, (PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK rest)
               blankM (q, tapesOf T) input 12).2 (slotIndex (headSlot v i))
                 = mapTape encCell (viewTapes i)) ∧
-            PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view) :
+            PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view)
+    (hidleHead : headOf y 3 = none → HeadSlotsRep margin gap' micro'
+      (fun slot => (PalPeg.LocalStepFusion.idealRun
+        (tickPhysRule entryQ first hbound hKq hK rest) blankM (q, tapesOf T) input 12).2
+          (slotIndex slot)) 3) :
     EncTapes margin y polarity' gap' micro' fppLive' dpLive'
       (fun slot => (PalPeg.LocalStepFusion.idealRun
         (tickPhysRule entryQ first hbound hKq hK rest) blankM (q, tapesOf T) input 12).2
@@ -9336,24 +9415,7 @@ theorem encTapes_afterTick {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ : �
           (slotIndex slot) (isLeft_eq_false_of_ne_headSlot hne)]
       show PalPeg.CloseoutCoreEnc12.actList blankM (tapesOf T (slotIndex slot)) _ = _
       rw [tapesOf_apply])
-    hmargins hpolarity hfppLive hdpLive hheads
-
-/-- **the twelve slots of one cursor hold a view.**  This is what `EncTapes.heads` says about a
-cursor, with the abstract head left out: the slots hold the encoded tapes of some view, whatever
-that view abstracts to.
-
-The abstraction names only three of the four cursors always.  The fourth is the chain's verifier,
-and `headOf x 3` is `none` exactly when the chain is idle — but `EncTapes.margins` asks for the
-margin of every slot, that cursor's twelve included.  So the margin of those slots cannot come
-from `heads`, and this is the property it comes from instead. -/
-def HeadSlotsRep (margin : ℕ) (gap : Fin 4 → Bool)
-    (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl) (tapes : Slot → STape Γm)
-    (v : Fin 4) : Prop :=
-  ∃ (view : PalPeg.LocalInputView.InputView)
-      (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
-    PalPeg.ConcreteLocalMachine.ViewRep margin view (gap v) (micro v) viewTapes ∧
-      (∀ i, tapes (headSlot v i) = mapTape encCell (viewTapes i)) ∧
-        PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view
+    hmargins hpolarity hfppLive hdpLive hheads hidleHead
 
 /-- **a cursor the abstraction names has it.** -/
 theorem headSlotsRep_of_heads {margin : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
