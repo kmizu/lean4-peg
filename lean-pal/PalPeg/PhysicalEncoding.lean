@@ -4114,6 +4114,99 @@ theorem headRep_leftEmpty {margin : ℕ} {micro : PalPeg.ConcreteLocalMachine.Mi
         back := hrep.back
         near := hrep.near }
 
+/-- **the view a head steps right onto, when the cell it steps onto is on its near stack.**
+The mirror of `leftView`: the old focus goes onto the back stack and the top of the near stack
+becomes the focus.  The case where the near stack is empty is the queue's, and is not this. -/
+def rightViewOn (v : PalPeg.LocalInputView.InputView) (a : Option (Fin 2))
+    (rest : List (Option (Fin 2))) : PalPeg.LocalInputView.InputView :=
+  ⟨v.focus :: v.back, a, rest, v.far, false⟩
+
+/-- **the abstraction of that view is the head one step right**, when the head stood on a gap
+with a cell on its near stack. -/
+theorem absHead_rightViewOn (v : PalPeg.LocalInputView.InputView) (hgap : v.gap = true)
+    (a : Option (Fin 2)) (rest : List (Option (Fin 2))) (hnear : v.near = a :: rest) :
+    PalPeg.LocalArrival.absHead' (rightViewOn v a rest) []
+      = PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' v []) := by
+  simp [rightViewOn, PalPeg.GalilScaffoldChainVerifier.right, PalPeg.LocalArrival.absHead',
+    PalPeg.GalilScaffoldInputTrace.moveRight, hgap, hnear]
+
+/-- **a head that stands on a letter steps right for free.**  Only its own bit moves; the cell
+it steps onto is the gap beside the letter it is on. -/
+theorem headRep_rightGap {margin : ℕ} {micro : PalPeg.ConcreteLocalMachine.MicroControl}
+    (view : PalPeg.LocalInputView.InputView)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hgap : view.gap = false)
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view false micro viewTapes) :
+    PalPeg.LocalArrival.absHead' {view with gap := true} []
+        = PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' view [])
+      ∧ PalPeg.ConcreteLocalMachine.ViewRep margin {view with gap := true} true micro
+          viewTapes := by
+  refine ⟨?_, ?_⟩
+  · simp [PalPeg.GalilScaffoldChainVerifier.right, PalPeg.LocalArrival.absHead', hgap]
+  · exact
+      { gap := rfl
+        queue := hrep.queue
+        back := hrep.back
+        near := hrep.near }
+
+/-- **a head's step right, on the twelve tapes of its view.**  The mirror of `viewRep_left`:
+two actions push the old focus onto the back stack and one pops the near stack.  The queue is
+untouched, so its representation survives with the same micro-control — which is why this step,
+like the step left, is one physical step. -/
+theorem viewRep_rightOn {margin : ℕ} (v : PalPeg.LocalInputView.InputView)
+    (micro : PalPeg.ConcreteLocalMachine.MicroControl)
+    (tapes tapes' : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (a : Option (Fin 2)) (rest : List (Option (Fin 2))) (hnear : v.near = a :: rest)
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin v true micro tapes)
+    (hbackTape : tapes' PalPeg.ConcreteLocalMachine.backTape
+      = PalPeg.CloseoutCoreEnc12.actList PalPeg.CloseoutCoreStep.blankc
+          (tapes PalPeg.ConcreteLocalMachine.backTape)
+          [some ((tapes PalPeg.ConcreteLocalMachine.backTape).focus,
+              (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+            some (PalPeg.CloseoutCoreEnc.cellSym a,
+              (.stay : PalPeg.CloseoutCoreEnc12.MoveC))])
+    (hnearTape : tapes' PalPeg.ConcreteLocalMachine.nearTape
+      = PalPeg.CloseoutCoreEnc12.actOnG PalPeg.CloseoutCoreStep.blankc
+          (tapes PalPeg.ConcreteLocalMachine.nearTape)
+          (some (PalPeg.CloseoutCoreEnc.cellSym a,
+            (.left : PalPeg.CloseoutCoreEnc12.MoveC))))
+    (hkept : ∀ t, t ≠ PalPeg.ConcreteLocalMachine.backTape →
+      t ≠ PalPeg.ConcreteLocalMachine.nearTape → tapes' t = tapes t) :
+    PalPeg.ConcreteLocalMachine.ViewRep margin (rightViewOn v a rest) false micro tapes' where
+  gap := rfl
+  queue := by
+    have hq : (fun tape => tapes' (PalPeg.ConcreteLocalMachine.queueTapeOfView tape))
+        = fun tape => tapes (PalPeg.ConcreteLocalMachine.queueTapeOfView tape) := by
+      funext t
+      have ht := t.isLt
+      refine hkept _ ?_ ?_ <;>
+        · intro hEq
+          have hv := congrArg Fin.val hEq
+          simp [PalPeg.ConcreteLocalMachine.queueTapeOfView,
+            PalPeg.ConcreteLocalMachine.backTape, PalPeg.ConcreteLocalMachine.nearTape] at hv
+          omega
+    show PalPeg.ConcreteLocalMachine.MicroRep margin v.far micro _
+    rw [hq]
+    exact hrep.queue
+  back := by
+    obtain ⟨bottom, hlen, hst⟩ := hrep.back
+    refine ⟨bottom, hlen, ?_⟩
+    have hstack : PalPeg.ConcreteLocalMachine.backStack (rightViewOn v a rest) ++ bottom
+        = a :: (PalPeg.ConcreteLocalMachine.backStack v ++ bottom) := rfl
+    rw [hstack, hbackTape]
+    exact stackTape_push (tapes PalPeg.ConcreteLocalMachine.backTape) a
+      (PalPeg.ConcreteLocalMachine.backStack v ++ bottom) hst
+  near := by
+    obtain ⟨bottom, hsealed, hlen, hst⟩ := hrep.near
+    refine ⟨bottom, hsealed, hlen, ?_⟩
+    have hstack : (rightViewOn v a rest).near ++ bottom = rest ++ bottom := rfl
+    rw [hstack, hnearTape]
+    exact stackTape_pop (tapes PalPeg.ConcreteLocalMachine.nearTape) a (rest ++ bottom)
+      (by
+        have h := hst
+        rw [hnear] at h
+        simpa only [List.cons_append] using h)
+
 /-- **a head that stands on the gap beside a letter steps left for free.**  Only its own bit
 moves; not one of its twelve tapes does. -/
 theorem headRep_leftGap {margin : ℕ} {micro : PalPeg.ConcreteLocalMachine.MicroControl}
