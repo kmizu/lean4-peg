@@ -12041,6 +12041,35 @@ theorem headOf_tickFun_shiftExit (centre : GalilVM → Fin 3)
      dsimp only
      rw [if_neg (by rw [hdone]; simp)])
 
+/-- **what the start does to the cursors.**  `FrameFunction.initFun` steps the right cursor and
+makes the other two equal to it, and it idles the chain.  So the start is not three copies of a
+cursor but one step of three cursors that are already the same — which is why it costs the
+machine nothing beyond a step right on each, provided their slots already hold the same view.
+
+At the start they do: the machine begins with every tape blank, so every cursor's twelve slots
+hold the same view. -/
+theorem headOf_tickFun_init (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.init) :
+    headOf (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) 0
+        = some (PalPeg.GalilScaffoldChainVerifier.right x.vm.right) ∧
+      headOf (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) 1
+        = some (PalPeg.GalilScaffoldChainVerifier.right x.vm.right) ∧
+      headOf (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) 2
+        = some (PalPeg.GalilScaffoldChainVerifier.right x.vm.right) ∧
+      headOf (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) 3
+        = none := by
+  refine ⟨?_, ?_, ?_, ?_⟩ <;>
+    (unfold PalPeg.GalilScaffoldTop.tickFun
+     rw [hmode]
+     dsimp only
+     rfl)
+
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
 theorem rewindCommands_ne_moveRight {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
