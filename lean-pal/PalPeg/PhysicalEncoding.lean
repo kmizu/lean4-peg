@@ -7162,8 +7162,8 @@ theorem viewSlot_of_headRule {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
     (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view ((qs 0).gap v) ((qs 0).micro v)
       viewTapes)
     (howed : ((qs 0).micro v).2.2.2 = 0)
-    (hq : ∀ (step : ℕ) (h : step < 11), qs (step + 1)
-      = headControlStep hK (qs step) ⟨step, h⟩
+    (hq : ∀ (step : ℕ) (h : step < 11), viewControlOf (qs (step + 1)) v
+      = viewNextOfHead hK (qs step) v ⟨step, h⟩
           (fun tape => PalPeg.Local.readWin blankM K (tapesOf (Ts step) tape)))
     (hsteps : ∀ (step : ℕ) (h : step < 11) (t : Fin 12),
       Ts (step + 1) (headSlot v t)
@@ -7181,12 +7181,51 @@ theorem viewSlot_of_headRule {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
   viewSlot_of_headRun hK hmargin v qs Ts (fun step => (qs step).commands v) view hwf hcells
     viewTapes hold hrep howed
     (fun step h => by
-      rw [hq step h, viewControlOf_headControlStep,
+      rw [hq step h,
         viewNextOfHead_encoded hK (qs step) v ⟨step, h⟩
           (viewRunTapes hK v qs (fun step => (qs step).commands v) viewTapes step) (Ts step)
           (viewRunTapes_encoded hK v qs Ts (fun step => (qs step).commands v) viewTapes hold
             hsteps step (by omega))])
     hsteps
+
+/-- **twelve steps of the machine are one command of every head's view.**  The first step is the
+one that decides the commands: it leaves a head's slots and a view's own three control fields
+alone, so a view sees nothing of it, and the eleven steps after it are the slot that carries the
+command out.  This is why the tick is twelve steps — the command has to be in the control before
+the slot starts, and the slot has no step to spare. -/
+theorem viewSlot_of_headTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
+    (v : Fin 4) (qs : ℕ → QPhys fppBound dpBound) (Ts : ℕ → Slot → STape Γm)
+    (view : PalPeg.LocalInputView.InputView) (hwf : PalPeg.LocalInputView.WF view)
+    (hcells : PalPeg.LocalViewCells.ViewCells view)
+    (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (hold : ∀ t, Ts 0 (headSlot v t) = mapTape encCell (viewTapes t))
+    (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view ((qs 0).gap v) ((qs 0).micro v)
+      viewTapes)
+    (howed : ((qs 0).micro v).2.2.2 = 0)
+    (hfirstTapes : ∀ t, Ts 1 (headSlot v t) = Ts 0 (headSlot v t))
+    (hfirstGap : (qs 1).gap v = (qs 0).gap v)
+    (hfirstMicro : (qs 1).micro v = (qs 0).micro v)
+    (hq : ∀ (step : ℕ) (h : step < 11), viewControlOf (qs (step + 2)) v
+      = viewNextOfHead hK (qs (step + 1)) v ⟨step, h⟩
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf (Ts (step + 1)) tape)))
+    (hsteps : ∀ (step : ℕ) (h : step < 11) (t : Fin 12),
+      Ts (step + 2) (headSlot v t)
+        = PalPeg.CloseoutCoreEnc12.actList blankM (Ts (step + 1) (headSlot v t))
+            (headViewActs hK (qs (step + 1)) v ⟨step, h⟩ ((qs (step + 1)).commands v)
+              (fun tape => PalPeg.Local.readWin blankM K (tapesOf (Ts (step + 1)) tape)) t)) :
+    PalPeg.ConcreteLocalMachine.ViewRep margin
+        (PalPeg.ConcreteLocalMachine.viewApply ((qs 1).commands v) view) ((qs 12).gap v)
+        ((qs 12).micro v)
+        (viewRunTapes hK v (fun step => qs (step + 1))
+          (fun step => (qs (step + 1)).commands v) viewTapes 11) ∧
+      (((qs 12).micro v).2.2.2.val = 0 ∧
+        ∀ t, Ts 12 (headSlot v t)
+          = mapTape encCell
+              (viewRunTapes hK v (fun step => qs (step + 1))
+                (fun step => (qs (step + 1)).commands v) viewTapes 11 t)) :=
+  viewSlot_of_headRule hK hmargin v (fun step => qs (step + 1)) (fun step => Ts (step + 1)) view
+    hwf hcells viewTapes (fun t => (hfirstTapes t).trans (hold t))
+    (by rw [hfirstGap, hfirstMicro]; exact hrep) (by rw [hfirstMicro]; exact howed) hq hsteps
 
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
