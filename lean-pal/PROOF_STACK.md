@@ -1,3 +1,40 @@
+## n536 (2026-09-22): 鏡は二本足りない。そして役とテープの対応が要る
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
+
+n535 の末尾で残した 2 つを一次情報で見た。
+
+```scala
+// ScaffoldGalil.scala:297  beginChainShift —— chain は走り続ける
+chain.matched(); chain.beginShift(); length.inc(); length.inc()
+alias(remaining, chain.h)
+
+// ScaffoldGalil.scala:308  beginFallback —— length は生き続ける
+fpp.reset(); walker.copyFrom(right)
+alias(remaining, length); remaining.inc()
+```
+
+どちらも**源が生きたまま**で、その後 `remaining` だけが減っていく。つまり鏡の機構が要る。
+源は `chain.h`（counter 10）と `length`（counter 3）で、**どちらも `mirrorSource` に無い**。
+
+**結論 1: 鏡は 5 本ではなく 7 本要る。** `mirrorSource` に `10` と `3` を足す。
+`Slot` の `Fin 5` が `Fin 7` になり、`tapeCountM` は 116 → 118。
+
+**結論 2: 「役 → テープ」の対応が要る。** 鏡があっても、いま `EncTapes.counters` は
+`counterSlot c` という**固定**の対応で読んでいる。別名を「付け替え」として実現するには、
+どのテープがどの counter の役を演じているかを `QPhys` が持ち、`EncTapes.counters` が
+その対応を通して読まねばならない。`counterSlot c` を `counterSlotOf role c` に一般化する。
+
+対応は有限（16 の役 → 18 本のカウンタ系スロット）なので有限制御に入る。これは
+「数を Q に入れない」規律を破らない——入るのは値ではなく配役表である。
+
+**この二つが、消費 tick の行動表を書く前に要る土台だった。** 行動表そのもの
+（counter 11 の pop = `counter_dec_at`、period の右移動 = `encPeriod_moveRight`、
+counter 13 の inc = `counter_inc_at`）は既にある。
+
+**次の一手**: `mirrorSource` を 7 本に広げ、`Slot`/`tapeCountM`/`slotIndex` と
+`EncTapes` の producer 群を追随させる。機械的だが広い。
+
 ## n535 (2026-09-22): 別名の問題は既に二通りの答えを持っていた——鏡と段
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。コード変更なし。
