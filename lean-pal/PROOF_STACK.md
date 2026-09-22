@@ -1,3 +1,37 @@
+## n550 (2026-09-22): 消費腕の組み立て前に、ヘッドを誰が動かすのかを確かめる
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0。コード変更なし（この節は問いの記録）。
+
+scan の消費腕は四つ揃った: `scanConsumeNext`（制御）、`scanCommands`（命令）、
+`scanConsumeActs`（行動）、`headOf_tickFun_scan_consume`（ヘッド）。残るは組み立てだが、
+`enc_afterTick` に載せる前に**架構の一点**を確かめる必要が出た。
+
+`tickRule` の行動は
+
+```lean
+acts := fun q i ws j =>
+  if q.slot.val = 0 then (if (slotIndex.symm j).isLeft then [] else baseActs q i ws j)
+  else …headViewActs…
+```
+
+で、**step 0 ではヘッドのスロット（`isLeft`）の行動が捨てられる**。分業はそう設計した。
+ところが既存の `rewindOneActs` は `headSlot 0` の back/near テープに `headStepActs` で
+書いている。つまり一歩規則（`physRule`）の層ではヘッドを動かし、tick の層ではその行動が
+捨てられて代わりに slot 1–11 が動かす、という二重の記述になっている。
+
+**確かめること**: `enc_afterTick` の `htapes`（`ruleActs` のテープで `y` を符号化する）が、
+ヘッドの動いた `y` に対してどう成り立っているのか。`rewind_one_of_tick` ではそれが
+`rewind_one_of_rule` から来ており、そこでは一歩規則がヘッドを動かしている。消費腕の
+`scanConsumeActs` はヘッドに何も書かないので、同じ経路ではそのままでは載らない。
+
+**分かるまで書かない。** 一歩規則の層と tick の層でヘッドの扱いが二重になっている理由を
+一次情報（`tickRule` の定義、`enc_afterTick` の本体、`headTick_of_tickRule`）で確かめてから、
+消費腕の `htapes` をどの形で作るかを決める。ここを読まずに `physRule_scan_consume` を
+書き始めると、偽の補題を作るか、通らない形を何度も書き直すことになる。
+
+**次の一手**: `enc_afterTick` の本体で `htapes` がヘッドのスロットにどう使われているかを読む。
+
 ## n544 (2026-09-22): 七本目、四度目——23 → 2。残りは供給側の補題 1 本と箇条書き 1 本
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
