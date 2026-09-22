@@ -5612,6 +5612,94 @@ theorem headSlots_still {margin K : ℕ} {polarity : Fin 16 → Bool} {gap : Fin
     exact ⟨{view with gap := false}, viewTapes, habs.symm ▸ habs', hrep'', hslots',
       viewCells_setGap view false hcells⟩
 
+/-- **a head's step, from the actions the rule names.**  One guard — the head's own bit, or the
+symbol under its back head being the sentinel — tells the step that moves two stacks from the two
+that move nothing, and either way what comes out is a view of the head one step left on tapes the
+encoding accepts. -/
+theorem headSlots_step {margin K : ℕ} {polarity : Fin 16 → Bool} {gap : Fin 4 → Bool}
+    {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl} {fppLive dpLive : Bool}
+    {x : State GalilVM} {T : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive T) (hK : K ≤ margin)
+    (v : Fin 4) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hhead : headOf x v = some head) (newTapes : Slot → STape Γm)
+    (hslots : ∀ t : Fin 12, newTapes (headSlot v t)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (T (headSlot v t))
+          (if gap v
+                || decide (centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+                    (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+                  = encCell (PalPeg.CloseoutCoreEnc.cellSym none)) then []
+            else if t = PalPeg.ConcreteLocalMachine.backTape then
+              [some (centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+                  (headSlot v PalPeg.ConcreteLocalMachine.backTape),
+                (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+            else if t = PalPeg.ConcreteLocalMachine.nearTape then
+              [some (centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+                  (headSlot v PalPeg.ConcreteLocalMachine.nearTape),
+                  (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+                some (centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+                  (headSlot v PalPeg.ConcreteLocalMachine.backTape),
+                  (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
+            else [])) :
+    ∃ (view : PalPeg.LocalInputView.InputView)
+        (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+      PalPeg.LocalArrival.absHead' view []
+          = PalPeg.GalilScaffoldInputHead.left head ∧
+        PalPeg.ConcreteLocalMachine.ViewRep margin view (!gap v) (micro v) viewTapes ∧
+        (∀ i, newTapes (headSlot v i) = mapTape encCell (viewTapes i)) ∧
+          PalPeg.LocalViewCells.ViewCells view := by
+  have hcentreEq : ∀ t : Fin 12,
+      centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (headSlot v t)
+        = (T (headSlot v t)).focus :=
+    fun t => centreRead_of_margin T (headSlot v t) (le_trans hK (henc.margins _))
+  by_cases hguard : (gap v
+      || decide (centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+        = encCell (PalPeg.CloseoutCoreEnc.cellSym none))) = true
+  · refine headSlots_still henc hK v head hhead ?_ newTapes (fun i => by
+      rw [hslots i, if_pos hguard]
+      rfl)
+    rcases (Bool.or_eq_true _ _).mp hguard with hg | hc
+    · exact Or.inl hg
+    · exact Or.inr (of_decide_eq_true hc)
+  · have hsplit := Bool.or_eq_false_iff.mp (by
+      cases hval : (gap v
+          || decide (centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+              (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+            = encCell (PalPeg.CloseoutCoreEnc.cellSym none))) with
+      | false => rfl
+      | true => exact absurd hval hguard)
+    have hgapFalse : gap v = false := hsplit.1
+    have hnotSentinel : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+        (headSlot v PalPeg.ConcreteLocalMachine.backTape)
+        ≠ encCell (PalPeg.CloseoutCoreEnc.cellSym none) := of_decide_eq_false hsplit.2
+    have hleftNe : head.head.left ≠ [] :=
+      (centreRead_head_ne_sentinel_iff henc hK v head hhead).mp hnotSentinel
+    obtain ⟨a, tail, hleft⟩ : ∃ a tail, head.head.left = a :: tail := by
+      cases hl : head.head.left with
+      | nil => exact absurd hl hleftNe
+      | cons b bs => exact ⟨b, bs, rfl⟩
+    have hheadGap : head.gap = false := by
+      obtain ⟨view, viewTapes, habs, hrep, -, -⟩ := henc.heads v head hhead
+      have hg : (PalPeg.LocalArrival.absHead' view []).gap = head.gap := by rw [habs]
+      rw [← hg]
+      show view.gap = false
+      rw [← hrep.gap]
+      exact hgapFalse
+    have hres := headSlots_left henc v head hhead hheadGap a tail hleft newTapes
+      (by
+        rw [hslots PalPeg.ConcreteLocalMachine.backTape, if_neg hguard, if_pos rfl,
+          hcentreEq PalPeg.ConcreteLocalMachine.backTape]
+        rfl)
+      (by
+        rw [hslots PalPeg.ConcreteLocalMachine.nearTape, if_neg hguard, if_neg (by decide),
+          if_pos rfl, hcentreEq PalPeg.ConcreteLocalMachine.nearTape,
+          hcentreEq PalPeg.ConcreteLocalMachine.backTape])
+      (fun t hb hn => by
+        rw [hslots t, if_neg hguard, if_neg hb, if_neg hn]
+        rfl)
+    rw [hgapFalse]
+    exact hres
+
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
 which is a bit the control carries; the symbol under its back head is a letter rather than the
