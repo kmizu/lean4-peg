@@ -4001,6 +4001,108 @@ noncomputable def rewindOneActs {fppBound dpBound K : ℕ} (live : Bool) (q : QP
           (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
     else []
 
+theorem progSlot_ne_counterSlot (live : Bool) (i : Fin 9) (c : Fin 16) :
+    progSlot live i ≠ counterSlot c := by
+  cases live <;> simp [progSlotOf]
+
+theorem progSlot_ne_placeSlot (live : Bool) (i : Fin 9) (p : Fin 3) :
+    progSlot live i ≠ placeSlot p := by
+  cases live <;> simp [progSlotOf]
+
+theorem counterSlot_ne_placeSlot (c : Fin 16) (p : Fin 3) : counterSlot c ≠ placeSlot p := by
+  simp
+
+theorem progSlot_ne_headSlot (live : Bool) (i : Fin 9) (v : Fin 4) (t : Fin 12) :
+    progSlot live i ≠ headSlot v t := by
+  cases live <;> simp [progSlotOf]
+
+theorem counterSlot_ne_headSlot (c : Fin 16) (v : Fin 4) (t : Fin 12) :
+    counterSlot c ≠ headSlot v t := by
+  simp
+
+theorem rewindOneActs_prog {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    rewindOneActs live q ws (slotIndex (progSlot live 8))
+      = [some (centreRead ws (progSlot live 8), (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+  unfold rewindOneActs
+  rw [if_pos rfl]
+
+theorem rewindOneActs_counter {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    rewindOneActs live q ws (slotIndex (counterSlot 3))
+      = [if incSign q.polarity 3 ws then
+            some (encSeg PalPeg.LocalCounter.mark, (.right : PalPeg.CloseoutCoreEnc12.MoveC))
+          else some (blankM, (.left : PalPeg.CloseoutCoreEnc12.MoveC))] := by
+  unfold rewindOneActs
+  rw [if_neg (fun h => (progSlot_ne_counterSlot live 8 3) (slotIndex.injective h).symm),
+    if_pos rfl]
+
+theorem rewindOneActs_head {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (t : Fin 12) :
+    rewindOneActs live q ws (slotIndex (headSlot 0 t))
+      = (if q.gap 0
+            || decide (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape)
+                = encCell (PalPeg.CloseoutCoreEnc.cellSym none)) then []
+          else if t = PalPeg.ConcreteLocalMachine.backTape then
+            [some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape),
+              (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+          else if t = PalPeg.ConcreteLocalMachine.nearTape then
+            [some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.nearTape),
+                (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+              some (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape),
+                (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
+          else []) := by
+  unfold rewindOneActs
+  rw [if_neg (fun h => (progSlot_ne_headSlot live 8 0 t) (slotIndex.injective h).symm),
+    if_neg (fun h => (counterSlot_ne_headSlot 3 0 t) (slotIndex.injective h).symm)]
+  split
+  · rfl
+  · by_cases hb : t = PalPeg.ConcreteLocalMachine.backTape
+    · subst hb
+      rw [if_pos rfl, if_pos rfl]
+    · have hneb : slotIndex (headSlot 0 t)
+          ≠ slotIndex (headSlot 0 PalPeg.ConcreteLocalMachine.backTape) := by
+        intro h
+        have hpair : (0 : Fin 4) = 0 ∧ t = PalPeg.ConcreteLocalMachine.backTape := by
+          simpa [headSlot] using slotIndex.injective h
+        exact hb hpair.2
+      rw [if_neg hneb, if_neg hb]
+      by_cases hn : t = PalPeg.ConcreteLocalMachine.nearTape
+      · subst hn
+        rw [if_pos rfl, if_pos rfl]
+      · have hnen : slotIndex (headSlot 0 t)
+            ≠ slotIndex (headSlot 0 PalPeg.ConcreteLocalMachine.nearTape) := by
+          intro h
+          have hpair : (0 : Fin 4) = 0 ∧ t = PalPeg.ConcreteLocalMachine.nearTape := by
+            simpa [headSlot] using slotIndex.injective h
+          exact hn hpair.2
+        rw [if_neg hnen, if_neg hn]
+
+theorem rewindOneActs_progOther {fppBound dpBound K : ℕ} (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (j : Fin 9) (hj : j ≠ 8) :
+    rewindOneActs live q ws (slotIndex (progSlot live j)) = [] := by
+  unfold rewindOneActs
+  rw [if_neg (fun h => hj (progSlotOf_injective live (slotIndex.injective h))),
+    if_neg (fun h => (progSlot_ne_counterSlot live j 3) (slotIndex.injective h))]
+  split
+  · rfl
+  · rw [if_neg (fun h => (progSlot_ne_headSlot live j 0 _) (slotIndex.injective h)),
+      if_neg (fun h => (progSlot_ne_headSlot live j 0 _) (slotIndex.injective h))]
+
+theorem rewindOneActs_off {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (slot : Slot)
+    (hprog : ∀ j : Fin 9, slot ≠ progSlot live j) (hcounter : slot ≠ counterSlot 3)
+    (hhead : ∀ t : Fin 12, slot ≠ headSlot 0 t) :
+    rewindOneActs live q ws (slotIndex slot) = [] := by
+  unfold rewindOneActs
+  rw [if_neg (fun h => hprog 8 (slotIndex.injective h)),
+    if_neg (fun h => hcounter (slotIndex.injective h))]
+  split
+  · rfl
+  · rw [if_neg (fun h => hhead _ (slotIndex.injective h)),
+      if_neg (fun h => hhead _ (slotIndex.injective h))]
+
 theorem rewindOneActs_length {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
     (rewindOneActs live q ws j).length ≤ 2 := by
@@ -6008,17 +6110,6 @@ noncomputable def copyOneBase {K : ℕ} (live gapBit : Bool) (polarity : Fin 16 
       (if gapBit then []
         else [some (centreRead ws (placeSlot 1), (.left : PalPeg.CloseoutCoreEnc12.MoveC))])
     else []
-
-theorem progSlot_ne_counterSlot (live : Bool) (i : Fin 9) (c : Fin 16) :
-    progSlot live i ≠ counterSlot c := by
-  cases live <;> simp [progSlotOf]
-
-theorem progSlot_ne_placeSlot (live : Bool) (i : Fin 9) (p : Fin 3) :
-    progSlot live i ≠ placeSlot p := by
-  cases live <;> simp [progSlotOf]
-
-theorem counterSlot_ne_placeSlot (c : Fin 16) (p : Fin 3) : counterSlot c ≠ placeSlot p := by
-  simp
 
 @[simp] theorem copyOneBase_prog {K : ℕ} (live gapBit : Bool) (polarity : Fin 16 → Bool)
     (a : Fin 3) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
