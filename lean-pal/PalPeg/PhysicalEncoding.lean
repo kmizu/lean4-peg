@@ -4045,6 +4045,78 @@ theorem centreRead_periodSlot {margin K : ℕ} {x : State GalilVM} {polarity : F
       henc.period tape hperiod]
   rfl
 
+/-- **a tick that walks the chain's period tape and nothing else the encoding speaks about.**
+The period tape is nobody's mirror, so one slot changes.  Stated for two states that agree
+everywhere but there, so that a branch which moves several components applies it once among the
+others. -/
+theorem encTapes_periodStep (margin : ℕ) (x y : State GalilVM) (polarity : Fin 16 → Bool)
+    (gap : Fin 4 → Bool) (micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl)
+    (fppLive dpLive : Bool) (tapes newTapes : Slot → STape Γm)
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive tapes)
+    (tape : PalPeg.GalilScaffoldChainPeriod.Tape) (hperiod : periodOf y = some tape)
+    (hcounters : counterOf y = counterOf x) (hheads : headOf y = headOf x)
+    (hplaces : placeOf y = placeOf x)
+    (hfpp : ∀ i, y.vm.fpp.program.config.tapes i = x.vm.fpp.program.config.tapes i)
+    (hdp : ∀ i, y.vm.dp.config.tapes i = x.vm.dp.config.tapes i)
+    (hanswer : answerOf y = answerOf x)
+    (hslot : newTapes periodSlot = padLeft margin (mapTape encToken (encPeriod tape)))
+    (hkept : ∀ slot, slot ≠ periodSlot → newTapes slot = tapes slot) :
+    EncTapes margin y polarity gap micro fppLive dpLive newTapes where
+  margins := by
+    intro slot
+    by_cases hp : slot = periodSlot
+    · rw [hp, hslot, pos_padLeft]
+      omega
+    · rw [hkept slot hp]
+      exact henc.margins slot
+  heads := by
+    intro v head hhead
+    obtain ⟨view, viewTapes, habs, hrep, hslots, hcells, hwf⟩ :=
+      henc.heads v head (by rw [← congrFun hheads v]; exact hhead)
+    exact ⟨view, viewTapes, habs, hrep, fun i => by
+      rw [hkept _ (by simp [headSlot, periodSlot]), hslots i], hcells, hwf⟩
+  idleHead := by
+    intro h3
+    obtain ⟨view, viewTapes, hrep, hslots, hcells, hwf⟩ :=
+      henc.idleHead (by rw [← congrFun hheads 3]; exact h3)
+    exact ⟨view, viewTapes, hrep, fun i => by
+      rw [hkept _ (by simp [headSlot, periodSlot]), hslots i], hcells, hwf⟩
+  fpp := by
+    intro i
+    rw [hkept _ (by cases fppLive <;> simp [progSlotOf, periodSlot]), henc.fpp i, hfpp i]
+  dp := by
+    intro i
+    rw [hkept _ (by cases dpLive <;> simp [dpSlotOf, periodSlot]), henc.dp i, hdp i]
+  idleShape := by
+    intro i
+    obtain ⟨raw, hraw⟩ := henc.idleShape i
+    exact ⟨raw, by
+      rw [hkept _ (by cases fppLive <;> simp [progSlotOf, periodSlot]), hraw]⟩
+  counters := by
+    intro c value hvalue
+    obtain ⟨seg, habs, hslotc⟩ :=
+      henc.counters c value (by rw [← congrFun hcounters c]; exact hvalue)
+    exact ⟨seg, habs, by rw [hkept _ (by simp [counterSlot, periodSlot]), hslotc]⟩
+  places := by
+    intro i place hplace
+    obtain ⟨st, jk, hsealed, hlen, hstack, hslotp⟩ :=
+      henc.places i place (by rw [← congrFun hplaces i]; exact hplace)
+    exact ⟨st, jk, hsealed, hlen, hstack, by
+      rw [hkept _ (by simp [placeSlot, periodSlot]), hslotp]⟩
+  mirrors := by
+    intro m value hvalue
+    obtain ⟨seg, habs, hslotm⟩ :=
+      henc.mirrors m value (by rw [← congrFun hcounters _]; exact hvalue)
+    exact ⟨seg, habs, by rw [hkept _ (by simp [mirrorSlot, periodSlot]), hslotm]⟩
+  period := by
+    intro tape' htape'
+    rw [hperiod] at htape'
+    rw [← Option.some.inj htape', hslot]
+  answer := by
+    intro tape' htape'
+    rw [hkept _ (by simp [periodSlot])]
+    exact henc.answer tape' (by rw [← hanswer]; exact htape')
+
 /-- **a counter is positive exactly when its sign bit is set and the cell below its head is a
 mark.**  The counterpart of `counterZero_iff_belowRead` for the sign test. -/
 theorem counterPositive_iff_belowRead {margin K : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
