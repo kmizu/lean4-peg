@@ -6649,6 +6649,127 @@ theorem headSlots_step {margin K : ℕ} {polarity : Fin 16 → Bool} {gap : Fin 
     rw [hgapFalse]
     exact hres
 
+/-- the actions one head's step right names on its own two stacks, while the cell it steps onto
+is on its near stack.  The guard is the head's own bit together with the reading that says the
+near stack is not empty; the case the guard sends to nothing is the free half-step, and the case
+where the near stack is empty but the queue is not belongs to the micro-schedule. -/
+noncomputable def headRightActs {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound) (v : Fin 4)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (t : Fin 12) :
+    List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  if !q.gap v
+      || decide (centreRead ws (headSlot v PalPeg.ConcreteLocalMachine.nearTape) = blankM) then []
+    else if t = PalPeg.ConcreteLocalMachine.backTape then
+      [some (centreRead ws (headSlot v PalPeg.ConcreteLocalMachine.backTape),
+          (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+        some (centreRead ws (headSlot v PalPeg.ConcreteLocalMachine.nearTape),
+          (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
+    else if t = PalPeg.ConcreteLocalMachine.nearTape then
+      [some (centreRead ws (headSlot v PalPeg.ConcreteLocalMachine.nearTape),
+        (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+    else []
+
+theorem headRightActs_length {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound) (v : Fin 4)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (t : Fin 12) :
+    (headRightActs q v ws t).length ≤ 2 := by
+  unfold headRightActs
+  split_ifs <;> simp
+
+/-- **a head's step right, from the actions the rule names**, in the two cases the head can take
+by itself: it stands on a letter, so only its bit moves, or it stands on a gap with a cell on its
+near stack, so two stacks move.  The case where the near stack is empty and the queue is not is
+excluded by the hypothesis, and is the micro-schedule's. -/
+theorem headSlots_rightStep {margin K : ℕ} {polarity : Fin 16 → Bool} {gap : Fin 4 → Bool}
+    {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl} {fppLive dpLive : Bool}
+    {x : State GalilVM} {T : Slot → STape Γm} {fppBound dpBound : ℕ}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive T) (hK : K ≤ margin)
+    (q : QPhys fppBound dpBound) (hqgap : q.gap = gap)
+    (v : Fin 4) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hhead : headOf x v = some head) (newTapes : Slot → STape Γm)
+    (hcase : gap v = false
+      ∨ centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (headSlot v PalPeg.ConcreteLocalMachine.nearTape) ≠ blankM)
+    (hslots : ∀ t : Fin 12, newTapes (headSlot v t)
+      = PalPeg.CloseoutCoreEnc12.actList blankM (T (headSlot v t))
+          (headRightActs q v (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) t)) :
+    ∃ (view : PalPeg.LocalInputView.InputView)
+        (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+      PalPeg.LocalArrival.absHead' view []
+          = PalPeg.GalilScaffoldChainVerifier.right head ∧
+        PalPeg.ConcreteLocalMachine.ViewRep margin view (!gap v) (micro v) viewTapes ∧
+        (∀ i, newTapes (headSlot v i) = mapTape encCell (viewTapes i)) ∧
+          PalPeg.LocalViewCells.ViewCells view := by
+  subst hqgap
+  have hcentreEq : ∀ t : Fin 12,
+      centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (headSlot v t)
+        = (T (headSlot v t)).focus :=
+    fun t => centreRead_of_margin T (headSlot v t) (le_trans hK (henc.margins _))
+  cases hgapBit : q.gap v
+  · obtain ⟨view, viewTapes, habs, hrep, hold, hcells⟩ := henc.heads v head hhead
+    have hviewGap : view.gap = false := by rw [← hrep.gap, hgapBit]
+    have hheadGap : head.gap = false := by
+      have hg : (PalPeg.LocalArrival.absHead' view []).gap = head.gap := by rw [habs]
+      rw [← hg]
+      exact hviewGap
+    have hrep' : PalPeg.ConcreteLocalMachine.ViewRep margin view false (micro v) viewTapes := by
+      rw [← hgapBit]
+      exact hrep
+    obtain ⟨habs', hrep''⟩ := headRep_rightGap view viewTapes hviewGap hrep'
+    refine ⟨{view with gap := true}, viewTapes, habs.symm ▸ habs', ?_, ?_,
+      viewCells_setGap view true hcells⟩
+    · exact hrep''
+    · intro i
+      rw [hslots i, show headRightActs q v _ i = [] from by
+        unfold headRightActs
+        rw [if_pos (by rw [hgapBit]; simp)]]
+      exact hold i
+  · have hnotBlank : centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+        (headSlot v PalPeg.ConcreteLocalMachine.nearTape) ≠ blankM := by
+      cases hcase with
+      | inl hg => exact absurd (hgapBit ▸ hg) (by simp)
+      | inr hc => exact hc
+    have hnearNe : head.head.right ≠ [] :=
+      (centreRead_near_ne_blank_iff henc hK v head hhead).mp hnotBlank
+    obtain ⟨a, rest, hnear⟩ : ∃ a rest, head.head.right = a :: rest := by
+      cases hl : head.head.right with
+      | nil => exact absurd hl hnearNe
+      | cons b bs => exact ⟨b, bs, rfl⟩
+    have hheadGap : head.gap = true := by
+      obtain ⟨view, viewTapes, habs, hrep, -, -⟩ := henc.heads v head hhead
+      have hg : (PalPeg.LocalArrival.absHead' view []).gap = head.gap := by rw [habs]
+      rw [← hg]
+      show view.gap = true
+      rw [← hrep.gap]
+      exact hgapBit
+    have hguard : ∀ t : Fin 12,
+        headRightActs q v (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) t
+          = (if t = PalPeg.ConcreteLocalMachine.backTape then
+              [some ((T (headSlot v PalPeg.ConcreteLocalMachine.backTape)).focus,
+                  (.right : PalPeg.CloseoutCoreEnc12.MoveC)),
+                some ((T (headSlot v PalPeg.ConcreteLocalMachine.nearTape)).focus,
+                  (.stay : PalPeg.CloseoutCoreEnc12.MoveC))]
+            else if t = PalPeg.ConcreteLocalMachine.nearTape then
+              [some ((T (headSlot v PalPeg.ConcreteLocalMachine.nearTape)).focus,
+                (.left : PalPeg.CloseoutCoreEnc12.MoveC))]
+            else []) := by
+      intro t
+      unfold headRightActs
+      rw [if_neg (by
+          rw [hgapBit]
+          simpa using hnotBlank),
+        hcentreEq PalPeg.ConcreteLocalMachine.backTape,
+        hcentreEq PalPeg.ConcreteLocalMachine.nearTape]
+    have hres := headSlots_rightOn (K := K) henc v head hhead hheadGap a rest hnear newTapes
+      (by rw [hslots PalPeg.ConcreteLocalMachine.backTape,
+        hguard PalPeg.ConcreteLocalMachine.backTape, if_pos rfl])
+      (by
+        rw [hslots PalPeg.ConcreteLocalMachine.nearTape,
+          hguard PalPeg.ConcreteLocalMachine.nearTape, if_neg (by decide), if_pos rfl]
+        rfl)
+      (fun t hb hn => by
+        rw [hslots t, hguard t, if_neg hb, if_neg hn]
+        rfl)
+    exact hres
+
 /-- **the bit for the first letter, after a head steps left, is a reading of the window.**  The
 head stands on the first letter afterwards exactly when three things hold: it stood on a gap,
 which is a bit the control carries; the symbol under its back head is a letter rather than the
