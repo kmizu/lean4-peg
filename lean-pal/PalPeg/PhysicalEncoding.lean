@@ -8283,11 +8283,12 @@ mode's branch on the slots that are not a head's, plus the heads. -/
 theorem encTapes_replaceHeads {margin : ℕ} {x : State GalilVM} {polarity polarity' : Fin 16 → Bool}
     {gap gap' : Fin 4 → Bool}
     {micro micro' : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
-    {fppLive dpLive : Bool} {T T' : Slot → STape Γm}
+    {fppLive dpLive fppLive' dpLive' : Bool} {T T' : Slot → STape Γm}
     (h : EncTapes margin x polarity gap micro fppLive dpLive T)
     (hother : ∀ slot : Slot, (∀ v i, slot ≠ headSlot v i) → T' slot = T slot)
     (hmargins : ∀ (v : Fin 4) (i : Fin 12), margin ≤ PalPeg.Local.pos (T' (headSlot v i)))
-    (hpolarity : polarity' = polarity)
+    (hpolarity : polarity' = polarity) (hfppLive : fppLive' = fppLive)
+    (hdpLive : dpLive' = dpLive)
     (hheads : ∀ (v : Fin 4) head, headOf x v = some head →
       ∃ (view : PalPeg.LocalInputView.InputView)
           (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
@@ -8295,8 +8296,10 @@ theorem encTapes_replaceHeads {margin : ℕ} {x : State GalilVM} {polarity polar
           PalPeg.ConcreteLocalMachine.ViewRep margin view (gap' v) (micro' v) viewTapes ∧
           (∀ i, T' (headSlot v i) = mapTape encCell (viewTapes i)) ∧
             PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view) :
-    EncTapes margin x polarity' gap' micro' fppLive dpLive T' := by
+    EncTapes margin x polarity' gap' micro' fppLive' dpLive' T' := by
   subst hpolarity
+  subst hfppLive
+  subst hdpLive
   refine
     { margins := fun slot => ?_
       heads := hheads
@@ -9247,6 +9250,93 @@ theorem tickPhysRule_heads_rewind {fppBound dpBound K margin : ℕ} (entryQ : �
     view hwf hcells viewTapes hold hrep howed head
     (PalPeg.GalilScaffoldInputHead.left head) habs PalPeg.GalilScaffoldInputHead.left rfl rfl
     (fun h => absurd h (by simp))
+
+/-- a slot that is no head's is a slot of the right-hand summand, which is how the rule tells the
+two apart. -/
+theorem isLeft_eq_false_of_ne_headSlot {slot : Slot} (h : ∀ v i, slot ≠ headSlot v i) :
+    (slotIndex.symm (slotIndex slot)).isLeft = false := by
+  rw [Equiv.symm_apply_apply]
+  match slot with
+  | .inl p => exact absurd rfl (h p.1 p.2)
+  | .inr r => rfl
+
+/-- **the control side of the encoding after a tick of the machine, from what the branch is
+already proved to leave behind.**  The hypothesis is the control half of the branch theorems'
+conclusion as they stand, and the conclusion is the same of the tick: the tick leaves every field
+that is not a view's exactly as the branch put it, and those are the only fields `EncControl`
+speaks of. -/
+theorem encControl_afterTick {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK : 2 ≤ K)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (w : List (Fin 2)) (y : State GalilVM) (q : QPhys fppBound dpBound)
+    (T : Slot → STape Γm) (input : Option (Fin 2)) (hslot0 : q.slot.val = 0)
+    (hstep : EncControl w y (ruleNext entryQ first hbound q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))) :
+    EncControl w y (PalPeg.LocalStepFusion.idealRun
+      (tickPhysRule entryQ first hbound hKq hK rest) blankM (q, tapesOf T) input 12).1 :=
+  encControl_congr
+    (by
+      rw [tickPhysRule_eq entryQ first hbound hKq hK rest]
+      exact (tickRule_headFree hK (fun q _ ws => ruleNext entryQ first hbound q ws)
+        (modeCommands first rest) (fun q _ ws => ruleActs entryQ first q ws)
+        (fun q _ ws j => ruleActs_length entryQ first hKq q ws j) (q, tapesOf T) input
+        hslot0).symm)
+    hstep
+
+/-- **the tape side of the encoding after a tick of the machine, away from the heads, from what
+the branch is already proved to leave behind.**  The hypothesis is the tape half of the branch
+theorems' conclusion as they stand — the branch's own actions applied to the tapes — and what it
+gives is every field but `heads`; the heads and the margins of their slots come in as the last
+two hypotheses.
+
+Both halves are stated on the branch tables `ruleNext` and `ruleActs` rather than on one step of
+the one-step rule.  The two are the same by `physRule_nq_*` and `physRule_acts_*`, but asking the
+elaborator to see it here makes its `whnf` diverge on a rule whose tables are this big. -/
+theorem encTapes_afterTick {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK : 2 ≤ K)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (y : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (input : Option (Fin 2)) (hslot0 : q.slot.val = 0)
+    {polarity : Fin 16 → Bool} {gap : Fin 4 → Bool}
+    {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl} {fppLive dpLive : Bool}
+    (hstep : EncTapes margin y polarity gap micro fppLive dpLive
+      (fun slot => PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
+        (ruleActs entryQ first q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (slotIndex slot))))
+    {polarity' : Fin 16 → Bool} {gap' : Fin 4 → Bool}
+    {micro' : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl} {fppLive' dpLive' : Bool}
+    (hpolarity : polarity' = polarity) (hfppLive : fppLive' = fppLive)
+    (hdpLive : dpLive' = dpLive)
+    (hmargins : ∀ (v : Fin 4) (i : Fin 12), margin ≤ PalPeg.Local.pos
+      ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK rest) blankM
+        (q, tapesOf T) input 12).2 (slotIndex (headSlot v i))))
+    (hheads : ∀ (v : Fin 4) head, headOf y v = some head →
+      ∃ (view : PalPeg.LocalInputView.InputView)
+          (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
+        PalPeg.LocalArrival.absHead' view [] = head ∧
+          PalPeg.ConcreteLocalMachine.ViewRep margin view (gap' v) (micro' v) viewTapes ∧
+          (∀ i, (PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK rest)
+              blankM (q, tapesOf T) input 12).2 (slotIndex (headSlot v i))
+                = mapTape encCell (viewTapes i)) ∧
+            PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view) :
+    EncTapes margin y polarity' gap' micro' fppLive' dpLive'
+      (fun slot => (PalPeg.LocalStepFusion.idealRun
+        (tickPhysRule entryQ first hbound hKq hK rest) blankM (q, tapesOf T) input 12).2
+          (slotIndex slot)) :=
+  encTapes_replaceHeads hstep
+    (fun slot hne => by
+      rw [tickPhysRule_eq entryQ first hbound hKq hK rest,
+        tickRule_otherSlots hK (fun q _ ws => ruleNext entryQ first hbound q ws)
+          (modeCommands first rest) (fun q _ ws => ruleActs entryQ first q ws)
+          (fun q _ ws j => ruleActs_length entryQ first hKq q ws j) (q, tapesOf T) input hslot0
+          (slotIndex slot) (isLeft_eq_false_of_ne_headSlot hne)]
+      show PalPeg.CloseoutCoreEnc12.actList blankM (tapesOf T (slotIndex slot)) _ = _
+      rw [tapesOf_apply])
+    hmargins hpolarity hfppLive hdpLive hheads
 
 theorem physRule_nq_markEnd {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
