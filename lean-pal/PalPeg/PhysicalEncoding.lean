@@ -7951,6 +7951,106 @@ theorem commands_afterFirstStep {fppBound dpBound K : ℕ} (hK : 2 ≤ K)
 /-- the row of the command table for a mode in which no head moves. -/
 def stayCommands : Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand := fun _ => .stay
 
+/-- the row of the command table for the rewind.  Its branch walks the left cursor — and, on a
+paired rewind, the centre with it — one cell to the left, and under the division of labour that
+motion is a command, read off the same window the branch reads: the rewind is over when the
+program's own tape shows the first instruction again, and then nothing moves.
+
+`rewindOneActs` and `rewindPairActs` are the witnesses that these are the right heads and the
+right direction: the one walks head `0`, the pair walks heads `0` and `1`, and both do it with
+`headStepActs`, the step left. -/
+noncomputable def rewindCommands {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand :=
+  if centreRead ws (progSlot live 8) = encProg first then stayCommands
+  else if q.ctl.pair then fun v => if v = 0 ∨ v = 1 then .moveLeft else .stay
+    else fun v => if v = 0 then .moveLeft else .stay
+
+/-- **the command table, as far as the branches that are proved reach.**  Five of them — the end
+mark, the walk home, the back half of the choice, the preparation program and the fallback copy —
+name nothing but counters, program tapes and period tapes, so every head stands still through
+their ticks; the rewind walks one or two cursors left.  The rest of the table is a parameter, so
+filling a row in later cannot disturb these. -/
+noncomputable def modeCommands {fppBound dpBound K : ℕ} (first : Fin 9)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (q : QPhys fppBound dpBound) (i : Option (Fin 2))
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand :=
+  match q.ctl.mode with
+  | PalPeg.GalilScaffoldController.Mode.markEnd => stayCommands
+  | PalPeg.GalilScaffoldController.Mode.home => stayCommands
+  | PalPeg.GalilScaffoldController.Mode.choose => stayCommands
+  | PalPeg.GalilScaffoldController.Mode.fpp => stayCommands
+  | PalPeg.GalilScaffoldController.Mode.copy => stayCommands
+  | PalPeg.GalilScaffoldController.Mode.rewind => rewindCommands first q.fppLive q ws
+  | _ => rest q i ws
+
+/-- **in those five modes the table's row is standing still.**  One statement for the five, since
+the reason is the same one in each: the row is written as `stayCommands`. -/
+theorem modeCommands_eq_stay {fppBound dpBound K : ℕ} (first : Fin 9) (rest)
+    (q : QPhys fppBound dpBound)
+    (i : Option (Fin 2)) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.home
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.choose
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.fpp
+      ∨ q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy) :
+    modeCommands first rest q i ws = stayCommands := by
+  unfold modeCommands
+  rcases hmode with h | h | h | h | h <;> rw [h]
+
+/-- **the rewind's row, and the two heads it names.**  In the rewind the table gives the left
+cursor a step left, and the centre one too when the rewind is paired; the other cursors stand
+still, and nothing moves at all once the program's tape shows the first instruction. -/
+theorem modeCommands_rewind {fppBound dpBound K : ℕ} (first : Fin 9) (rest)
+    (q : QPhys fppBound dpBound) (i : Option (Fin 2))
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind) :
+    modeCommands first rest q i ws = rewindCommands first q.fppLive q ws := by
+  unfold modeCommands
+  rw [hmode]
+
+theorem rewindCommands_atFirst {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hat : centreRead ws (progSlot live 8) = encProg first) :
+    rewindCommands first live q ws = stayCommands := by
+  unfold rewindCommands
+  rw [if_pos hat]
+
+theorem rewindCommands_walks {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hnot : ¬ centreRead ws (progSlot live 8) = encProg first) (v : Fin 4)
+    (hv : v = 0 ∨ (q.ctl.pair = true ∧ v = 1)) :
+    rewindCommands first live q ws v = .moveLeft := by
+  unfold rewindCommands
+  rw [if_neg hnot]
+  cases hpair : q.ctl.pair
+  · rw [if_neg (by decide)]
+    cases hv with
+    | inl h => rw [if_pos h]
+    | inr h => exact absurd (hpair.symm.trans h.1) (by simp)
+  · rw [if_pos rfl]
+    cases hv with
+    | inl h => rw [if_pos (Or.inl h)]
+    | inr h => rw [if_pos (Or.inr h.2)]
+
+theorem rewindCommands_still {fppBound dpBound K : ℕ} (first : Fin 9) (live : Bool)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4)
+    (hv : v ≠ 0) (hv1 : q.ctl.pair = true → v ≠ 1) :
+    rewindCommands first live q ws v = .stay := by
+  unfold rewindCommands
+  split
+  · rfl
+  · cases hpair : q.ctl.pair
+    · rw [if_neg (by decide), if_neg hv]
+    · rw [if_pos rfl,
+        if_neg (fun h => by cases h with
+          | inl h0 => exact hv h0
+          | inr h1 => exact hv1 hpair h1)]
+
+
 /-- **the heads of the encoding after a tick, from the command the table names.**  This is the
 head side of a tick in the form a mode's branch meets it: the branch names a row of the command
 table, the row names this head's command, and the command names the operation the abstract tick
@@ -8810,6 +8910,33 @@ noncomputable def physRule {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fi
   nq := fun q _ ws => ruleNext entryQ first hbound q ws
   acts := fun q _ ws => ruleActs entryQ first q ws
   len_le := fun q _ ws j => ruleActs_length entryQ first hK q ws j
+
+/-- **the rule of the machine, with every table it dispatches on put in.**  The base is the mode
+table that was already proved branch by branch — it names counters, program tapes, period tapes
+and the answer — the command table is the one written above, and the division of labour inside a
+tick is `tickRule`.  The rows of the command table that are not written yet are the parameter
+`rest`, so nothing here claims anything about the modes whose branches are still missing. -/
+noncomputable def tickPhysRule {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK : 2 ≤ K)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand) :
+    PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) (QPhys fppBound dpBound) Γm tapeCountM K :=
+  tickRule hK (fun q _ ws => ruleNext entryQ first hbound q ws) (modeCommands first rest)
+    (fun q _ ws => ruleActs entryQ first q ws)
+    (fun q _ ws j => ruleActs_length entryQ first hKq q ws j)
+
+/-- the rule of the machine is that instance of the division of labour, by definition.  Stating
+it costs nothing and saves every consumer from unfolding a rule whose tables are this big. -/
+theorem tickPhysRule_eq {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK : 2 ≤ K)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand) :
+    tickPhysRule entryQ first hbound hKq hK rest
+      = tickRule hK (fun q _ ws => ruleNext entryQ first hbound q ws) (modeCommands first rest)
+          (fun q _ ws => ruleActs entryQ first q ws)
+          (fun q _ ws j => ruleActs_length entryQ first hKq q ws j) := rfl
 
 theorem physRule_nq_markEnd {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
