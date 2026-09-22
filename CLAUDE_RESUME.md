@@ -1,3 +1,40 @@
+## n552-555 (2026-09-22): 右に動くヘッドの壁を越えた。消費 tick の道具が揃った
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+`PalPeg/PhysicalEncoding.lean` EXIT=0・error 0、`PalPeg.Workbench` BUILD=0・error 0。
+commit `ce494e9` / `bbef584` / `d8609e3` / `433a4f5`。
+
+n551 で「いまの組み立ては右に動くヘッドを運べない」と分かった。四手で越えた。
+
+| # | 入れたもの | 何を解いたか |
+|---|---|---|
+| n552 | `encTapes_replaceHeadsOfState` | ヘッド以外を**一歩が到達した状態**から、ヘッドを**tick が到達した状態**から読む |
+| n553 | `encTapes_afterTickOfState` / `enc_afterTickOfState` | その分割を組み立て器まで通した（既存 4 枝は同じ状態を二度渡すだけ） |
+| n554 | `chainVerifierBack` / `stepState` ＋ 一致補題 5 本 | 「カーソルだけ戻した状態」を作り、六つの読み取りのうち四つの一致と一つの相違を証明 |
+| n555 | `encTapes_periodStep` | 消費 tick が動かす三つのうち、輸送子が無かった period テープ |
+
+**消費 tick の一歩規則の道具**:
+
+| 動くもの | 行動 | 輸送子 |
+|---|---|---|
+| counter 11（lag） | `decAct q 11` | `encTapes_counterStep` |
+| counter 13（distance） | `incAct q 13` | `encTapes_counterStep` |
+| period | `centreRead` を書き戻して右 | `encTapes_periodStep` |
+| 待機側プログラム | 背景消去 | `encTapes_idleOnly` |
+
+**scan の四つの行**: `scanConsumeNext`（制御・正しさ 2 本）、`scanCommands`（命令・判定を読まずに
+決まる）、`scanConsumeActs`（行動）、`headOf_tickFun_scan_consume`（ヘッド）。
+
+**次の一手**: `physRule_scan_consume`——上の四つを繋いで
+`EncTapes margin (stepState y wm.machine.verifier) … (一歩のテープ)` を作る。
+`encTapes_rewindOne` が「複数の部品を一度に動かす枝」の手本（構造インスタンスを直接書く）で、
+`encTapes_counterStep` は「一部品ずつ、中間状態を経由する」手本。どちらでも書けるが、
+中間状態を三つ作るより構造インスタンスを直接書くほうが短い見込み。
+
+**未検証**: `hready`（ビューに行き先がある）の producer。chain が消費するとき検証ヘッドが
+右に進めることは `consume_realize` が `canRight` を要求する形で言っているが、それを
+ビューの `gap = true → near = [] → toList far ≠ []` に繋ぐ補題はまだ無い。
+
 ## n551 (2026-09-22): 答え——いまの組み立ては「右に動くヘッド」を運べない
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
