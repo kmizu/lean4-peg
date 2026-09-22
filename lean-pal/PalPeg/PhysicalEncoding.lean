@@ -9645,6 +9645,65 @@ theorem enc_afterStillTick {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (fir
   · exact hcontrol
   · exact htape
 
+/-- **one step of the one-step rule, written out.**  Its control is the mode table's and its
+tapes are the action table's own actions, by definition; saying so once lets the branch theorems
+be read as facts about those two tables, which is the form the tick needs them in. -/
+theorem idealStep_physRule {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
+    (T : Slot → STape Γm) :
+    PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hKq)
+        blankM (q, tapesOf T) none
+      = (ruleNext entryQ first hbound q
+            (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)),
+          fun j => PalPeg.CloseoutCoreEnc12.actList blankM (tapesOf T j)
+            (ruleActs entryQ first q
+              (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) j)) := rfl
+
+/-- **a branch theorem's conclusion, in the two pieces the tick asks for.**  The branch theorems
+conclude `Enc` of one step of the one-step rule; the tick asks for the control the mode table
+writes and the tapes the action table's own actions make.  They are the same thing, and this is
+where that is said, once, so that no statement about a tick has to mention the one-step rule. -/
+theorem enc_step_pieces {fppBound dpBound K : ℕ} (margin : ℕ) (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (w : List (Fin 2)) (y : State GalilVM)
+    (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (h : Enc w margin y
+      ((PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hKq)
+          blankM (q, tapesOf T) none).1,
+        fun i => (PalPeg.LocalStepFusion.idealStep
+          (physRule (dpBound := dpBound) entryQ first hbound hKq) blankM (q, tapesOf T) none).2
+            (slotIndex i))) :
+    EncControl w y (ruleNext entryQ first hbound q
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))) ∧
+      EncTapes margin y
+        (ruleNext entryQ first hbound q
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).polarity
+        (ruleNext entryQ first hbound q
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).gap
+        (ruleNext entryQ first hbound q
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).micro
+        (ruleNext entryQ first hbound q
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).fppLive
+        (ruleNext entryQ first hbound q
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).dpLive
+        (fun slot => PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
+          (ruleActs entryQ first q
+            (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (slotIndex slot))) := by
+  rw [idealStep_physRule entryQ first hbound hKq q T] at h
+  unfold Enc at h
+  dsimp only at h
+  refine ⟨h.1, ?_⟩
+  have htapes : (fun slot : Slot => PalPeg.CloseoutCoreEnc12.actList blankM
+      (tapesOf T (slotIndex slot))
+      (ruleActs entryQ first q
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (slotIndex slot)))
+      = fun slot : Slot => PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
+        (ruleActs entryQ first q
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (slotIndex slot)) := by
+    funext slot
+    rw [tapesOf_apply]
+  rw [← htapes]
+  exact h.2
+
 theorem physRule_nq_markEnd {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.markEnd) :
