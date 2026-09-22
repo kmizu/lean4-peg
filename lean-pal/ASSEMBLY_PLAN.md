@@ -1,3 +1,26 @@
+## n511 (2026-09-22): scan の background がカーソルに何をするかは、まだ言えない
+
+**全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
+
+**自分の見立てを取り下げた。** このターンの前半で「`backgroundFun` は左・中心・右の
+3 カーソルをそのまま運ぶ」と書き、補題にしようとした。**`rfl` が 3 つとも通らない。**
+左だけでも通らない。
+
+理由は `PalPeg/FrameFunction.lean:491` の `backgroundFun` が
+`afterBirth (chainBorn …) (searchLens.set (scanLens.set s ⟨s.left, s.right, chainAtFun …⟩) …)`
+という形で、結果が **`afterBirth` に包まれている**こと。`afterBirth` は `M-periodOnly` を
+直したときに入れた包みで、chain が生まれた tick に chain 自身の場を初期化する。
+その包みはカーソルに対して定義的に透明ではない。
+
+`CLAUDE.md` の古い記述「`backgroundS` は右ヘッドも radius も変えない」は
+**この形になる前のもの**で、いまの定義について言えることではない。
+
+**帰結**: 「scan の background はカーソルを動かさない」は**無償ではない**。
+`afterBirth` の定義から証明する必要があり、証明できるかどうかもまだ確かめていない。
+scan を書くときの最初の一手はここになる。
+
+主張を取り下げて補題は削除した。build は緑のまま。
+
 ## n504 (2026-09-22): `M-headCopy` は scan に居る。そして今日足した場がその解になる
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。
