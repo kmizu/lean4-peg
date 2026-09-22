@@ -4547,6 +4547,78 @@ theorem progSlot_after_moveLeft {margin K : ℕ} {x : State GalilVM} {polarity :
     padded_moveLeft margin (x.vm.fpp.program.config.tapes i) hfloor]
   rfl
 
+/-- **the paired step of the rewind, on the whole state.**  The marks tape steps left, both the
+left and the centre input head step left, and the two counters count the step.  The heads' new
+views are the caller's to supply, as in the single step. -/
+theorem rewind_pair {fppBound dpBound : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (tapes newTapes : Slot → STape Γm)
+    (newPolarity : Fin 16 → Bool) (newGap : Fin 4 → Bool) (bit : Bool)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.rewind)
+    (hnotFirst : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).atFirst x.vm
+      = false)
+    (hpair : x.ctl.pair = true)
+    (hbit : bit = decide (PalPeg.GalilScaffoldChainInputSupply.position
+      (PalPeg.GalilScaffoldInputHead.left x.vm.left) = 1))
+    (henc : Enc w margin x (q, tapes))
+    (viewLeft : PalPeg.LocalInputView.InputView)
+    (viewTapesLeft : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (habsLeft : PalPeg.LocalArrival.absHead' viewLeft []
+      = PalPeg.GalilScaffoldInputHead.left x.vm.left)
+    (hrepLeft : PalPeg.ConcreteLocalMachine.ViewRep margin viewLeft (newGap 0) (q.micro 0)
+      viewTapesLeft)
+    (hslotsLeft : ∀ i, newTapes (headSlot 0 i) = mapTape encCell (viewTapesLeft i))
+    (hcellsLeft : PalPeg.LocalViewCells.ViewCells viewLeft)
+    (viewCentre : PalPeg.LocalInputView.InputView)
+    (viewTapesCentre : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
+    (habsCentre : PalPeg.LocalArrival.absHead' viewCentre []
+      = PalPeg.GalilScaffoldInputHead.left x.vm.center)
+    (hrepCentre : PalPeg.ConcreteLocalMachine.ViewRep margin viewCentre (newGap 1) (q.micro 1)
+      viewTapesCentre)
+    (hslotsCentre : ∀ i, newTapes (headSlot 1 i) = mapTape encCell (viewTapesCentre i))
+    (hcellsCentre : PalPeg.LocalViewCells.ViewCells viewCentre)
+    (hgapOther : ∀ v : Fin 4, v ≠ 0 → v ≠ 1 → newGap v = q.gap v)
+    (hpolarity : ∀ c : Fin 16, c ≠ 3 → c ≠ 2 → newPolarity c = q.polarity c)
+    (segLen : STape Seg)
+    (hlength : absCtr segLen (newPolarity 3) = PalPeg.GalilScaffoldCounter.inc x.vm.length)
+    (hcounterLen : newTapes (counterSlot 3) = padLeft margin (mapTape encSeg segLen))
+    (segRad : STape Seg)
+    (hradius : absCtr segRad (newPolarity 2) = PalPeg.GalilScaffoldCounter.inc x.vm.radius)
+    (hcounterRad : newTapes (counterSlot 2) = padLeft margin (mapTape encSeg segRad))
+    (hmirrorRad : ∀ m : Fin 5, mirrorSource m = 2 →
+      newTapes (mirrorSlot m) = padLeft margin (mapTape encSeg segRad))
+    (hprog : newTapes (progSlotOf q.fppLive 8)
+      = padLeft margin (mapTape encProg (encTape
+          (PalPeg.GalilScaffoldTape.moveLeft (x.vm.fpp.program.config.tapes 8)))))
+    (hprogOther : ∀ j : Fin 9, j ≠ 8 →
+      newTapes (progSlotOf q.fppLive j) = tapes (progSlotOf q.fppLive j))
+    (hkept : ∀ slot, (∀ j : Fin 9, slot ≠ progSlotOf q.fppLive j) → slot ≠ counterSlot 3 →
+      slot ≠ counterSlot 2 → (∀ m : Fin 5, mirrorSource m = 2 → slot ≠ mirrorSlot m) →
+      (∀ i : Fin 12, slot ≠ headSlot 0 i) → (∀ i : Fin 12, slot ≠ headSlot 1 i) →
+      (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) → newTapes slot = tapes slot)
+    (hmarginLeft : ∀ i : Fin 12, margin ≤ PalPeg.Local.pos (newTapes (headSlot 0 i)))
+    (hmarginCentre : ∀ i : Fin 12, margin ≤ PalPeg.Local.pos (newTapes (headSlot 1 i)))
+    (hidleShape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
+      newTapes (progSlotOf (!q.fppLive) k) = padLeft margin (mapTape encProg raw)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ({q with ctl := {q.ctl with pair := false}, leftFirstBit := bit, polarity := newPolarity, gap := newGap}, newTapes) := by
+  have hval : PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
+      = ⟨{x.ctl with pair := false}, {x.vm with fpp := PalPeg.GalilScaffoldChainInputSupply.markStep x.vm.fpp PalPeg.GalilScaffoldTape.moveLeft, left := PalPeg.GalilScaffoldInputHead.left x.vm.left, length := PalPeg.GalilScaffoldCounter.inc x.vm.length, center := PalPeg.GalilScaffoldInputHead.left x.vm.center, radius := PalPeg.GalilScaffoldCounter.inc x.vm.radius}⟩ := by
+    simp only [PalPeg.GalilScaffoldTop.tickFun, hmode, frameFun_rewindPair]
+    rw [if_neg (by simp [hnotFirst]), if_pos (by simp [hpair])]
+  rw [hval]
+  exact ⟨encControl_rewindPair x q henc.1 {q.ctl with pair := false} {x.ctl with pair := false}
+      (by rw [← henc.1.ctl]; rfl) bit hbit newPolarity newGap,
+    encTapes_rewindPair margin x q.polarity newPolarity q.gap newGap q.micro q.fppLive q.dpLive
+      tapes newTapes henc.2 {x.ctl with pair := false} viewLeft viewTapesLeft habsLeft hrepLeft
+      hslotsLeft hcellsLeft viewCentre viewTapesCentre habsCentre hrepCentre hslotsCentre
+      hcellsCentre hgapOther hpolarity segLen hlength hcounterLen segRad hradius hcounterRad
+      hmirrorRad hprog hprogOther hkept hmarginLeft hmarginCentre hidleShape⟩
+
 /-- **the branch the shift and copy modes take, as a reading of the window.**  The rule cannot
 ask the abstraction anything; it computes this bit from three cells of the window and the sign
 bit of the shift counter, and `remainsTest_eq` says the bit it computes is the test the tick
