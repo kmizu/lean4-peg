@@ -8171,6 +8171,212 @@ noncomputable def scanCommands {fppBound dpBound K : ℕ} (q : QPhys fppBound dp
     Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand :=
   fun v => if v = 3 then (if chainConsumesTest q ws then .moveRight else .stay) else .stay
 
+/-- **the letter a cursor is about to reach is a reading of its view.**  Stepping the abstract
+head right and reading it is stepping the view right and reading that, so the letter the chain's
+verdict compares against is named by the view alone — and the view is what the twelve head slots
+hold.
+
+This is the reading the scan's row still owes: the row knows where the cursor goes without the
+verdict, but the control's new chain tag does need it. -/
+theorem read_right_absHead' {v : PalPeg.LocalInputView.InputView} (q : List (Fin 2))
+    (hwf : PalPeg.LocalInputView.WF v)
+    (hready : v.gap = true → v.near = [] → PalPeg.RTQueue.toList v.far ≠ []) :
+    PalPeg.GalilScaffoldInputHead.read
+        (PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' v q))
+      = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveRight v) := by
+  rw [← absHead'_moveRight hwf q hready]
+  rfl
+
+/-- **and that reading splits on the parity of the cursor.**  The input head alternates between
+a letter and the gap between letters, so a cursor standing on a letter reaches the gap and reads
+the gap symbol, and one standing on a gap reaches the next cell of its view.
+
+The gap bit is in the control — `QPhys.gap` — so this first half of the reading costs the machine
+nothing.  What the second half still owes is the focus of the stepped view in terms of the three
+symbols `viewTopsOfWindows` shows, and that one needs the cursor to have somewhere to go. -/
+theorem readV_moveRight (v : PalPeg.LocalInputView.InputView) :
+    PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveRight v)
+      = if v.gap then
+          (PalPeg.LocalInputView.stepRight v).focus.map PalPeg.GalilScaffoldPlace.letter
+        else v.focus.map (fun _ => (2 : Fin 3)) := by
+  unfold PalPeg.LocalInputView.moveRight
+  by_cases hgap : v.gap = true
+  · rw [if_pos hgap, if_pos hgap]
+    rfl
+  · rw [if_neg hgap, if_neg hgap]
+    rfl
+
+/-- **the cursor's next cell, when its near stack still has one.**  The step pops the near stack,
+so the cell it lands on is the top of that stack — and the top of the near stack is the symbol
+`viewTopsOfWindows` reads out of the near tape's window. -/
+theorem stepRight_focus_of_near (v : PalPeg.LocalInputView.InputView) (a : Option (Fin 2))
+    (rest : List (Option (Fin 2))) (hnear : v.near = a :: rest) :
+    (PalPeg.LocalInputView.stepRight v).focus = a := by
+  unfold PalPeg.LocalInputView.stepRight
+  rw [hnear]
+
+/-- **and when the near stack is spent, the front of the queue.**  The queue is where the letters
+that have arrived but not yet been walked over wait, and the readiness condition the view layer
+carries says the queue is not empty exactly when the cursor is asked to step with nothing near.
+
+With `stepRight_focus_of_near` this is the second half of the reading the scan's row owes: both
+cells the cursor can land on are symbols the windows show. -/
+theorem stepRight_focus_of_queue (v : PalPeg.LocalInputView.InputView)
+    (hnear : v.near = []) (hinv : PalPeg.RTQueue.Inv v.far)
+    (hready : PalPeg.RTQueue.toList v.far ≠ []) :
+    (PalPeg.LocalInputView.stepRight v).focus = PalPeg.RTQueue.head? v.far := by
+  have hhead : PalPeg.RTQueue.head? v.far = (PalPeg.RTQueue.toList v.far).head? :=
+    PalPeg.RTQueue.head?_eq hinv
+  unfold PalPeg.LocalInputView.stepRight
+  rw [hnear]
+  cases hq : PalPeg.RTQueue.head? v.far with
+  | none =>
+      refine absurd ?_ hready
+      rw [hq] at hhead
+      cases hl : PalPeg.RTQueue.toList v.far with
+      | nil => rfl
+      | cons c tail => rw [hl] at hhead; exact absurd hhead (by simp)
+  | some a => rfl
+
+/-- **the letter a cursor is about to reach, as the machine reads it.**  The gap bit is in the
+control: a cursor on a letter reaches the gap and reads the gap symbol, and one on a gap reaches
+the next cell — the top of its near stack, or the front of its queue when the near stack is
+spent.  All three are symbols `viewTopsOfWindows` shows.
+
+This is the one reading the chain's verdict needs that is not already a field of the control. -/
+noncomputable def landingLetter {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4) : Option (Fin 3) :=
+  if q.gap v then
+    (match (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
+        (viewWindows v ws)).near with
+      | some c => some c
+      | none => (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
+          (viewWindows v ws)).front).map PalPeg.GalilScaffoldPlace.letter
+  else (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
+    (viewWindows v ws)).focus.map (fun _ => (2 : Fin 3))
+
+/-- **and that reading is the letter the cursor really reaches.**  The three symbols the windows
+show are the view's own three, the near stack of a represented view carries letters and never a
+gap, and the readiness the view layer carries is what says the queue has one when the near stack
+does not. -/
+theorem landingLetter_eq {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4)
+    (view : PalPeg.LocalInputView.InputView)
+    (htops : PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1 (viewWindows v ws)
+      = PalPeg.ConcreteLocalMachine.viewTops view)
+    (hgap : q.gap v = view.gap) (hcells : PalPeg.LocalViewCells.ViewCells view)
+    (hinv : PalPeg.RTQueue.Inv view.far)
+    (hready : view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    landingLetter q ws v = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveRight view) := by
+  unfold landingLetter
+  rw [htops, hgap, readV_moveRight view]
+  by_cases hg : view.gap = true
+  · rw [if_pos hg, if_pos hg]
+    congr 1
+    obtain ⟨nearLetters, hnl⟩ := PalPeg.LocalViewCells.near_letters hcells
+    cases nearLetters with
+    | nil =>
+        have hnear : view.near = [] := by rw [hnl]; rfl
+        rw [stepRight_focus_of_queue view hnear hinv (hready hg hnear)]
+        show (match (PalPeg.ConcreteLocalMachine.viewTops view).near with
+          | some c => some c
+          | none => (PalPeg.ConcreteLocalMachine.viewTops view).front) = _
+        unfold PalPeg.ConcreteLocalMachine.viewTops
+        rw [hnear]
+        rfl
+    | cons a rest =>
+        have hnear : view.near = some a :: rest.map some := by rw [hnl]; rfl
+        rw [stepRight_focus_of_near view (some a) (rest.map some) hnear]
+        show (match (PalPeg.ConcreteLocalMachine.viewTops view).near with
+          | some c => some c
+          | none => (PalPeg.ConcreteLocalMachine.viewTops view).front) = _
+        unfold PalPeg.ConcreteLocalMachine.viewTops
+        rw [hnear]
+        rfl
+  · rw [if_neg hg, if_neg hg]
+    rfl
+
+/-- **the letter the verifier reaches, from the windows of its view.**  Its view is what the
+twelve head slots hold, so the reading the chain's verdict compares against is the machine's
+own `landingLetter`. -/
+theorem landingLetter_of_verifier {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4)
+    (view : PalPeg.LocalInputView.InputView) (junk : List (Fin 2))
+    (htops : PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1 (viewWindows v ws)
+      = PalPeg.ConcreteLocalMachine.viewTops view)
+    (hgap : q.gap v = view.gap) (hcells : PalPeg.LocalViewCells.ViewCells view)
+    (hwf : PalPeg.LocalInputView.WF view) (hinv : PalPeg.RTQueue.Inv view.far)
+    (hready : view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    landingLetter q ws v
+      = PalPeg.GalilScaffoldInputHead.read
+          (PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' view junk)) := by
+  rw [landingLetter_eq q ws v view htops hgap hcells hinv hready,
+    read_right_absHead' junk hwf (fun hg hn => hready hg hn)]
+
+/-- **the chain's verdict, as the machine decides it.**  The period tape offers a symbol or it
+does not; if it does, the verdict is whether the letter the verifier reaches is that symbol.
+Both readings are in the window: the period tape's centre cell, and the view of the fourth
+cursor. -/
+noncomputable def watchVerdictTest {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Option Bool :=
+  match PalPeg.GalilScaffoldChainConsume.symbol (decToken (centreRead ws periodSlot)) with
+  | some a => some (decide (landingLetter q ws 3 = some a))
+  | none => none
+
+/-- **and it is the verdict.**  Given the two readings — the symbol the period tape offers and
+the letter the verifier reaches — the machine's decision is the chain's. -/
+theorem watchVerdictTest_eq {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (hsymbol : PalPeg.GalilScaffoldChainConsume.symbol (decToken (centreRead ws periodSlot))
+      = PalPeg.GalilScaffoldChainConsume.symbol wm.machine.control.period.focus)
+    (hlanding : landingLetter q ws 3
+      = PalPeg.GalilScaffoldInputHead.read
+          (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier)) :
+    watchVerdictTest q ws = PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm := by
+  unfold watchVerdictTest PalPeg.GalilScaffoldChainInputSupply.watchVerdict
+  rw [hsymbol, hlanding]
+  rfl
+
+/-- **the period tape's symbol is the centre cell of its slot, decoded.**  Which is the first of
+the two readings the verdict needs. -/
+theorem symbol_centreRead_periodSlot {margin K : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
+    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
+    {fppLive dpLive : Bool} {T : Slot → STape Γm}
+    (henc : EncTapes margin x polarity gap micro fppLive dpLive T) (hK : K ≤ margin)
+    (tape : PalPeg.GalilScaffoldChainPeriod.Tape) (hperiod : periodOf x = some tape) :
+    PalPeg.GalilScaffoldChainConsume.symbol
+        (decToken (centreRead (fun t => PalPeg.Local.readWin blankM K (tapesOf T t)) periodSlot))
+      = PalPeg.GalilScaffoldChainConsume.symbol tape.focus := by
+  rw [centreRead_periodSlot henc hK tape hperiod, decToken_encToken]
+  rfl
+
+/-- **the control after a watching chain consumes.**  A match keeps the chain watching and hands
+its control one letter: the period tape's focus decides whether this letter closes a block, and
+that is what moves the phase and the direction.  A mismatch leaves the control exactly as it was
+and breaks the chain — the broken chain carries the control it had, on the letter it has already
+moved to.
+
+Both arms are decided from two readings of the window, the period tape's centre cell and the view
+of the fourth cursor, and from fields the control already holds. -/
+noncomputable def scanConsumeNext {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : QPhys fppBound dpBound :=
+  match watchVerdictTest q ws with
+  | some true =>
+      { q with
+        chainPhase :=
+          if PalPeg.GalilScaffoldChainPeriod.isFirst (decToken (centreRead ws periodSlot))
+              || PalPeg.GalilScaffoldChainConsume.isLast (decToken (centreRead ws periodSlot)) then
+            PalPeg.GalilScaffoldChainConsume.advancePhase q.chainPhase
+          else q.chainPhase,
+        chainForward :=
+          if PalPeg.GalilScaffoldChainPeriod.isFirst (decToken (centreRead ws periodSlot))
+              || PalPeg.GalilScaffoldChainConsume.isLast (decToken (centreRead ws periodSlot)) then
+            PalPeg.GalilScaffoldChainPeriod.isFirst (decToken (centreRead ws periodSlot))
+          else q.chainForward }
+  | some false => { q with chainTag := ChainTag.broken }
+  | none => q
+
 /-- **the command table, as far as the branches that are proved reach.**  Five of them — the end
 mark, the walk home, the back half of the choice, the preparation program and the fallback copy —
 name nothing but counters, program tapes and period tapes, so every head stands still through
@@ -9310,6 +9516,8 @@ noncomputable def ruleNext {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fi
   | PalPeg.GalilScaffoldController.Mode.copy => copyNext q ws
   | PalPeg.GalilScaffoldController.Mode.shift =>
       if remainsTest q.polarity ws then q else shiftExitNext q
+  | PalPeg.GalilScaffoldController.Mode.scan =>
+      if chainConsumesTest q ws then scanConsumeNext q ws else q
   | _ => q
 
 /-- **the two actions that mark a new block.**  `markNew` steps the marks tape right, writes the
@@ -12497,11 +12705,14 @@ spends the tick on the background erasure of the idle program half. -/
 theorem physRule_nq_scan {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
     (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan) :
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hquiet : chainConsumesTest q ws = false) :
     (physRule (dpBound := dpBound) entryQ first hbound hK).nq q none ws = q := by
   show ruleNext entryQ first hbound q ws = _
   unfold ruleNext
   rw [hm]
+  dsimp only
+  rw [if_neg (by rw [hquiet]; exact Bool.false_ne_true)]
 
 theorem physRule_acts_scan {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
     (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
@@ -12551,6 +12762,8 @@ theorem physRule_background_still {fppBound dpBound K : ℕ} (margin : ℕ) (cen
         = true)
     (hid : PalPeg.GalilScaffoldChainInputSupply.backgroundFun
       (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm = x.vm)
+    (hnoconsume : chainConsumesTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = false)
     (henc : Enc w margin x (q, T)) :
     Enc w margin
       (PalPeg.GalilScaffoldTop.tickFun
@@ -12577,7 +12790,7 @@ theorem physRule_background_still {fppBound dpBound K : ℕ} (margin : ℕ) (cen
     rfl
   have hq : (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hK)
       blankM (q, tapesOf T) none).1 = q :=
-    physRule_nq_scan entryQ first hbound hK q _ hqmode
+    physRule_nq_scan entryQ first hbound hK q _ hqmode hnoconsume
   rw [htick, hq]
   exact ⟨henc.1, encTapes_idleOnly margin x q.polarity q.gap q.micro q.fppLive q.dpLive T _
     henc.2 hkeptAll
@@ -12640,7 +12853,7 @@ theorem background_still_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (cent
       exact scanCommands_eq_stay q _ hnoconsume)
     howed (fun v => by rw [htick]) henc.2
     (physRule_background_still margin centre place entry entryQ first w F delay x q T hbound hKb
-      hK1 (by omega) hqmode hmode hnorestart hquiet hid henc)
+      hK1 (by omega) hqmode hmode hnorestart hquiet hid hnoconsume henc)
 
 /-- **a background tick with the search at rest and no chain to run is the identity too.**  The
 search steps only in the seven modes that are looking for the period; in the three that have
@@ -12723,186 +12936,6 @@ theorem headOf_three_of_watchConsume {y : State GalilVM}
   cases b with
   | true => rfl
   | false => rfl
-
-/-- **the letter a cursor is about to reach is a reading of its view.**  Stepping the abstract
-head right and reading it is stepping the view right and reading that, so the letter the chain's
-verdict compares against is named by the view alone — and the view is what the twelve head slots
-hold.
-
-This is the reading the scan's row still owes: the row knows where the cursor goes without the
-verdict, but the control's new chain tag does need it. -/
-theorem read_right_absHead' {v : PalPeg.LocalInputView.InputView} (q : List (Fin 2))
-    (hwf : PalPeg.LocalInputView.WF v)
-    (hready : v.gap = true → v.near = [] → PalPeg.RTQueue.toList v.far ≠ []) :
-    PalPeg.GalilScaffoldInputHead.read
-        (PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' v q))
-      = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveRight v) := by
-  rw [← absHead'_moveRight hwf q hready]
-  rfl
-
-/-- **and that reading splits on the parity of the cursor.**  The input head alternates between
-a letter and the gap between letters, so a cursor standing on a letter reaches the gap and reads
-the gap symbol, and one standing on a gap reaches the next cell of its view.
-
-The gap bit is in the control — `QPhys.gap` — so this first half of the reading costs the machine
-nothing.  What the second half still owes is the focus of the stepped view in terms of the three
-symbols `viewTopsOfWindows` shows, and that one needs the cursor to have somewhere to go. -/
-theorem readV_moveRight (v : PalPeg.LocalInputView.InputView) :
-    PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveRight v)
-      = if v.gap then
-          (PalPeg.LocalInputView.stepRight v).focus.map PalPeg.GalilScaffoldPlace.letter
-        else v.focus.map (fun _ => (2 : Fin 3)) := by
-  unfold PalPeg.LocalInputView.moveRight
-  by_cases hgap : v.gap = true
-  · rw [if_pos hgap, if_pos hgap]
-    rfl
-  · rw [if_neg hgap, if_neg hgap]
-    rfl
-
-/-- **the cursor's next cell, when its near stack still has one.**  The step pops the near stack,
-so the cell it lands on is the top of that stack — and the top of the near stack is the symbol
-`viewTopsOfWindows` reads out of the near tape's window. -/
-theorem stepRight_focus_of_near (v : PalPeg.LocalInputView.InputView) (a : Option (Fin 2))
-    (rest : List (Option (Fin 2))) (hnear : v.near = a :: rest) :
-    (PalPeg.LocalInputView.stepRight v).focus = a := by
-  unfold PalPeg.LocalInputView.stepRight
-  rw [hnear]
-
-/-- **and when the near stack is spent, the front of the queue.**  The queue is where the letters
-that have arrived but not yet been walked over wait, and the readiness condition the view layer
-carries says the queue is not empty exactly when the cursor is asked to step with nothing near.
-
-With `stepRight_focus_of_near` this is the second half of the reading the scan's row owes: both
-cells the cursor can land on are symbols the windows show. -/
-theorem stepRight_focus_of_queue (v : PalPeg.LocalInputView.InputView)
-    (hnear : v.near = []) (hinv : PalPeg.RTQueue.Inv v.far)
-    (hready : PalPeg.RTQueue.toList v.far ≠ []) :
-    (PalPeg.LocalInputView.stepRight v).focus = PalPeg.RTQueue.head? v.far := by
-  have hhead : PalPeg.RTQueue.head? v.far = (PalPeg.RTQueue.toList v.far).head? :=
-    PalPeg.RTQueue.head?_eq hinv
-  unfold PalPeg.LocalInputView.stepRight
-  rw [hnear]
-  cases hq : PalPeg.RTQueue.head? v.far with
-  | none =>
-      refine absurd ?_ hready
-      rw [hq] at hhead
-      cases hl : PalPeg.RTQueue.toList v.far with
-      | nil => rfl
-      | cons c tail => rw [hl] at hhead; exact absurd hhead (by simp)
-  | some a => rfl
-
-/-- **the letter a cursor is about to reach, as the machine reads it.**  The gap bit is in the
-control: a cursor on a letter reaches the gap and reads the gap symbol, and one on a gap reaches
-the next cell — the top of its near stack, or the front of its queue when the near stack is
-spent.  All three are symbols `viewTopsOfWindows` shows.
-
-This is the one reading the chain's verdict needs that is not already a field of the control. -/
-noncomputable def landingLetter {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4) : Option (Fin 3) :=
-  if q.gap v then
-    (match (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
-        (viewWindows v ws)).near with
-      | some c => some c
-      | none => (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
-          (viewWindows v ws)).front).map PalPeg.GalilScaffoldPlace.letter
-  else (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
-    (viewWindows v ws)).focus.map (fun _ => (2 : Fin 3))
-
-/-- **and that reading is the letter the cursor really reaches.**  The three symbols the windows
-show are the view's own three, the near stack of a represented view carries letters and never a
-gap, and the readiness the view layer carries is what says the queue has one when the near stack
-does not. -/
-theorem landingLetter_eq {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4)
-    (view : PalPeg.LocalInputView.InputView)
-    (htops : PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1 (viewWindows v ws)
-      = PalPeg.ConcreteLocalMachine.viewTops view)
-    (hgap : q.gap v = view.gap) (hcells : PalPeg.LocalViewCells.ViewCells view)
-    (hinv : PalPeg.RTQueue.Inv view.far)
-    (hready : view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
-    landingLetter q ws v = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveRight view) := by
-  unfold landingLetter
-  rw [htops, hgap, readV_moveRight view]
-  by_cases hg : view.gap = true
-  · rw [if_pos hg, if_pos hg]
-    congr 1
-    obtain ⟨nearLetters, hnl⟩ := PalPeg.LocalViewCells.near_letters hcells
-    cases nearLetters with
-    | nil =>
-        have hnear : view.near = [] := by rw [hnl]; rfl
-        rw [stepRight_focus_of_queue view hnear hinv (hready hg hnear)]
-        show (match (PalPeg.ConcreteLocalMachine.viewTops view).near with
-          | some c => some c
-          | none => (PalPeg.ConcreteLocalMachine.viewTops view).front) = _
-        unfold PalPeg.ConcreteLocalMachine.viewTops
-        rw [hnear]
-        rfl
-    | cons a rest =>
-        have hnear : view.near = some a :: rest.map some := by rw [hnl]; rfl
-        rw [stepRight_focus_of_near view (some a) (rest.map some) hnear]
-        show (match (PalPeg.ConcreteLocalMachine.viewTops view).near with
-          | some c => some c
-          | none => (PalPeg.ConcreteLocalMachine.viewTops view).front) = _
-        unfold PalPeg.ConcreteLocalMachine.viewTops
-        rw [hnear]
-        rfl
-  · rw [if_neg hg, if_neg hg]
-    rfl
-
-/-- **the letter the verifier reaches, from the windows of its view.**  Its view is what the
-twelve head slots hold, so the reading the chain's verdict compares against is the machine's
-own `landingLetter`. -/
-theorem landingLetter_of_verifier {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4)
-    (view : PalPeg.LocalInputView.InputView) (junk : List (Fin 2))
-    (htops : PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1 (viewWindows v ws)
-      = PalPeg.ConcreteLocalMachine.viewTops view)
-    (hgap : q.gap v = view.gap) (hcells : PalPeg.LocalViewCells.ViewCells view)
-    (hwf : PalPeg.LocalInputView.WF view) (hinv : PalPeg.RTQueue.Inv view.far)
-    (hready : view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
-    landingLetter q ws v
-      = PalPeg.GalilScaffoldInputHead.read
-          (PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' view junk)) := by
-  rw [landingLetter_eq q ws v view htops hgap hcells hinv hready,
-    read_right_absHead' junk hwf (fun hg hn => hready hg hn)]
-
-/-- **the chain's verdict, as the machine decides it.**  The period tape offers a symbol or it
-does not; if it does, the verdict is whether the letter the verifier reaches is that symbol.
-Both readings are in the window: the period tape's centre cell, and the view of the fourth
-cursor. -/
-noncomputable def watchVerdictTest {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Option Bool :=
-  match PalPeg.GalilScaffoldChainConsume.symbol (decToken (centreRead ws periodSlot)) with
-  | some a => some (decide (landingLetter q ws 3 = some a))
-  | none => none
-
-/-- **and it is the verdict.**  Given the two readings — the symbol the period tape offers and
-the letter the verifier reaches — the machine's decision is the chain's. -/
-theorem watchVerdictTest_eq {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (wm : PalPeg.GalilScaffoldChainWatch.State)
-    (hsymbol : PalPeg.GalilScaffoldChainConsume.symbol (decToken (centreRead ws periodSlot))
-      = PalPeg.GalilScaffoldChainConsume.symbol wm.machine.control.period.focus)
-    (hlanding : landingLetter q ws 3
-      = PalPeg.GalilScaffoldInputHead.read
-          (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier)) :
-    watchVerdictTest q ws = PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm := by
-  unfold watchVerdictTest PalPeg.GalilScaffoldChainInputSupply.watchVerdict
-  rw [hsymbol, hlanding]
-  rfl
-
-/-- **the period tape's symbol is the centre cell of its slot, decoded.**  Which is the first of
-the two readings the verdict needs. -/
-theorem symbol_centreRead_periodSlot {margin K : ℕ} {x : State GalilVM} {polarity : Fin 16 → Bool}
-    {gap : Fin 4 → Bool} {micro : Fin 4 → PalPeg.ConcreteLocalMachine.MicroControl}
-    {fppLive dpLive : Bool} {T : Slot → STape Γm}
-    (henc : EncTapes margin x polarity gap micro fppLive dpLive T) (hK : K ≤ margin)
-    (tape : PalPeg.GalilScaffoldChainPeriod.Tape) (hperiod : periodOf x = some tape) :
-    PalPeg.GalilScaffoldChainConsume.symbol
-        (decToken (centreRead (fun t => PalPeg.Local.readWin blankM K (tapesOf T t)) periodSlot))
-      = PalPeg.GalilScaffoldChainConsume.symbol tape.focus := by
-  rw [centreRead_periodSlot henc hK tape hperiod, decToken_encToken]
-  rfl
 
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
