@@ -737,4 +737,130 @@ theorem step_hit (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : P
     · have := pcheck_snd (x.take s) T pos c (by rw [hut]; exact hd)
       rw [hut, ← hcc] at this; dsimp only; rw [← hccv]; exact this
 
+theorem mc_14_miss (k : ℕ) (pe : Bool) (ok : Option Bool) (ph : Option ℕ) :
+    (Ctl.pending [mc k (some pe) ok ph 14] (.symbols "A" "B")).resume matchTests false =
+      decisionCtl k pe ok ph := by
+  cases pe <;> rfl
+
+theorem reenter_other (π : String → ℤ) (h : String) (h1 : h ≠ "Walk") (h2 : h ≠ "U") :
+    reenter π h = π h := by
+  simp [reenter, Function.update, h1, h2]
+
+theorem loopRel_period {lx s p₁ r k : ℕ} {pos q c : ℕ} {π : String → ℤ}
+    (h : LoopRel lx s p₁ r k true pos q c π) (hp : p₁ ≤ q) :
+    LoopRel lx s p₁ r k true (pos + p₁) (q - p₁) 0 (reenter (psPos π p₁)) := by
+  obtain ⟨hO, hC, hE, hper, hP, hA, hB, hW, hU⟩ := h
+  obtain ⟨hF, hKF, hR⟩ := hper rfl
+  have ev : ∀ h', reenter (psPos π p₁) h' =
+      if h' = "U" then π "P" + p₁ else if h' = "Walk" then π "Origin"
+      else if h' = "A" then π "A" - p₁ else if h' = "P" then π "P" + p₁
+      else if h' = "KP" then π "KP" - p₁ else π h' := by
+    intro h'
+    simp only [reenter, psPos, Function.update]
+    by_cases h1 : h' = "U" <;> by_cases h2 : h' = "Walk" <;> simp_all
+  refine ⟨?_, ?_, ?_, fun _ => ⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩ <;> rw [ev] <;> simp <;>
+    push_cast <;> omega
+
+theorem loopRel_reset {lx s p₁ r k : ℕ} {pe : Bool} {pos q c t : ℕ} {π : String → ℤ}
+    (h : LoopRel lx s p₁ r k pe pos q c π) :
+    LoopRel lx s p₁ r k pe (pos + t) 0 0 (reenter (rsPos π q t)) := by
+  obtain ⟨hO, hC, hE, hper, hP, hA, hB, hW, hU⟩ := h
+  have ev : ∀ h', reenter (rsPos π q t) h' =
+      if h' = "U" then π "P" + t else if h' = "Walk" then π "Origin"
+      else if h' = "A" then π "A" - q else if h' = "B" then π "B" - q + t
+      else if h' = "P" then π "P" + t else if h' = "KP" then π "KP" - t else π h' := by
+    intro h'
+    simp only [reenter, rsPos, Function.update]
+    by_cases h1 : h' = "U" <;> by_cases h2 : h' = "Walk" <;> simp_all
+  refine ⟨?_, ?_, ?_, fun hp => ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [ev]; simp; omega
+  · rw [ev]; simp; omega
+  · rw [ev]; simp; omega
+  · obtain ⟨hF, hKF, hR⟩ := hper hp
+    exact ⟨by rw [ev]; simp; omega, by rw [ev]; simp; omega, by rw [ev]; simp; omega⟩
+  all_goals (rw [ev]; simp; push_cast; omega)
+
+theorem ceil_le_succ (q k : ℕ) (hk : 1 ≤ k) : max 1 (PalPeg.ceilDiv q k) ≤ q + 1 := by
+  unfold PalPeg.ceilDiv
+  have h1 := Nat.le_mul_of_pos_right q (show 0 < k by omega)
+  have : (q + k - 1) / k < q + 1 :=
+    (Nat.div_lt_iff_lt_mul (by omega)).mpr (by rw [Nat.add_mul, Nat.one_mul]; omega)
+  omega
+
+/-- **A miss** is one `vStep` (a shift). With no period, `p₁` must be large enough that the
+period branch never applies (`|v| < k·p₁`, as for `effPeriod = |v| + 1`). -/
+theorem step_miss (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 1 ≤ k) (pe ok : Bool)
+    (z : PalPeg.VState) (v : HVM) (h : AtHead x T m k s p₁ r pe ok z v)
+    (hen : z.1.pos + z.1.q < m) (hmiss : T[z.1.pos + z.1.q]? ≠ (x.drop s)[z.1.q]?)
+    (hnoper : pe = false → x.length - s < k * p₁) :
+    ∃ n v', iterStep n v = some v' ∧
+      AtHead x T m k s p₁ r pe true (PalPeg.vStep (x.take s) (x.drop s) k p₁ r T z) v' := by
+  obtain ⟨⟨pos, q⟩, c⟩ := z
+  simp only at hen hmiss
+  obtain ⟨ph, hc⟩ := h.ctl
+  have hrel : LoopRel x.length s p₁ r k pe pos q c v.pos := h.rel
+  obtain ⟨hO, hC, hE, hper, hP, hA, hB, hW, hU⟩ := hrel
+  have hsx := h.sx
+  have hcut : s ≤ pos := h.cut
+  have hqv : q < x.length - s := h.qv
+  have htl := h.tl
+  have hlen : v.len = x.length + m := by
+    simp only [HVM.len, h.word, List.length_append, List.length_take]
+    rw [Nat.min_eq_left htl]; push_cast; ring
+  have hvs : PalPeg.vStep (x.take s) (x.drop s) k p₁ r T ((⟨pos, q⟩ : PalPeg.ScanState), c) =
+      (⟨pos + PalPeg.gsShift k p₁ r q, PalPeg.gsNextQ k p₁ r q⟩, 0) := by
+    have hq : q ≠ (x.drop s).length := by simp; omega
+    simp only [PalPeg.vStep, PalPeg.scanStep, hq, if_false, hmiss]
+  rw [hvs]
+  have hwA : v.word[(v.pos "A").toNat]? = (x.drop s)[q]? := by
+    rw [hA, h.word, show ((s : ℤ) + q).toNat = s + q by omega, word_pat x T m (by omega), pat_drop]
+  have hwB : v.word[(v.pos "B").toNat]? = T[pos + q]? := by
+    rw [hB, h.word, show ((x.length : ℤ) + pos + q).toNat = x.length + (pos + q) by omega,
+      word_txt x T m _ hen]
+  have e1 := head_miss k (some pe) ok ph v hc (by rw [hB, hlen]; omega)
+    ⟨by rw [hA]; omega, by rw [hA, hlen]; omega⟩ ⟨by rw [hB]; omega, by rw [hB, hlen]; omega⟩
+    (by rw [hwA, hwB]; exact fun he => hmiss he.symm)
+  rw [mc_14_miss] at e1
+  set v1 : HVM := { v with ctl := decisionCtl k pe (some ok) ph } with hv1
+  have hv1len : v1.len = x.length + m := hlen
+  obtain ⟨n, hper', hres⟩ := shift_any k hk pe (some ok) ph v1 s p₁ r q rfl hC hA
+    (fun hp => hper hp) (by rw [hA, hv1len]; omega) (by rw [hB]; omega) (by rw [hB, hv1len]; omega)
+    (by rw [hP]; omega) (by rw [hP, hv1len]; omega)
+  by_cases hbr : pe = true ∧ k * p₁ ≤ q ∧ q ≤ r
+  · have e2 := hper' hbr
+    refine ⟨2 + n, _, by rw [iterStep_add, e1, Option.bind_some, e2], ?_⟩
+    have hsh : PalPeg.gsShift k p₁ r q = p₁ := by simp [PalPeg.gsShift, hbr.2]
+    have hnq : PalPeg.gsNextQ k p₁ r q = q - p₁ := by simp [PalPeg.gsNextQ, hbr.2]
+    have hp1q : p₁ ≤ q := le_trans (Nat.le_mul_of_pos_left p₁ (by omega)) hbr.2.1
+    rw [hsh, hnq]
+    refine ⟨⟨ph, rfl⟩, h.word, ?_, fun h' => absurd h' (by simp), by dsimp only; omega, hsx,
+      by dsimp only; omega, by dsimp only; omega, by dsimp only; omega, htl⟩
+    dsimp only
+    have := loopRel_period (show LoopRel x.length s p₁ r k true pos q c v.pos by
+      rw [← hbr.1]; exact h.rel) hp1q
+    rw [hbr.1]; exact this
+  · have e2 := hres hbr
+    refine ⟨2 + n, _, by rw [iterStep_add, e1, Option.bind_some, e2], ?_⟩
+    have hsh : PalPeg.gsShift k p₁ r q = max 1 (PalPeg.ceilDiv q k) := by
+      unfold PalPeg.gsShift
+      rw [if_neg]
+      intro h3; apply hbr
+      cases pe with
+      | true => exact ⟨rfl, h3⟩
+      | false => have := hnoper rfl; omega
+    have hnq : PalPeg.gsNextQ k p₁ r q = 0 := by
+      unfold PalPeg.gsNextQ
+      rw [if_neg]
+      intro h3; apply hbr
+      cases pe with
+      | true => exact ⟨rfl, h3⟩
+      | false => have := hnoper rfl; omega
+    have hts := rsShifts_eq k q hk
+    have htq := ceil_le_succ q k hk
+    rw [hsh, hnq, ← hts]
+    rw [← hts] at htq
+    refine ⟨⟨ph, rfl⟩, h.word, loopRel_reset (show LoopRel x.length s p₁ r k pe pos q c v.pos from h.rel),
+      fun h' => absurd h' (by simp), by dsimp only; omega, hsx, by dsimp only; omega,
+      by dsimp only; omega, by dsimp only; omega, htl⟩
+
 end PalPeg.ScaMatcherLoop
