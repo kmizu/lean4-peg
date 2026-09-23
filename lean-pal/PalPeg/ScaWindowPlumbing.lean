@@ -1,0 +1,345 @@
+import PalPeg.ScaWindowFault
+
+/-!
+# The controller's plumbing: middle bits and clean ticks from the flag workers' promise
+
+A stage born at tick `b` with half `S` releases flag job `r` (`r < 4`) at tick `b + (r+1)S`,
+into batch `r`; batch `r` is popped, one bit per tick, during interval `r + 2`, i.e. at ticks
+`b + (r+2)S, …, b + (r+3)S - 1`. The flag worker promises (`FlagsContract`) that job `r` is
+captured at some tick `cap r` before the next release, is not done before, and is done at
+`cap r` with the job's bits: the palindrome bits of the middles `W[b, b + rS + j)`, `j < S`.
+
+`JobInv` describes a stage's fields after `d` ticks of its life in terms of the word and the
+capture ticks; `jobInv_step` / `jobInv_birth` carry it through a tick and show that the tick
+raises no controller violation.
+-/
+set_option autoImplicit false
+namespace PalPeg.ScaWindowPlumbing
+open PalPeg.ScaWindowPal PalPeg.ScaWindowSchedule
+
+/-! ## Jobs -/
+
+/-- The bits of job `r` of the stage born at `b` with half `S`: whether the middle
+`W[b, b + rS + j)` is a palindrome, for `j < S`, top of the flag stack first. -/
+def jobBits (W : List (Fin 2)) (b S r : ℕ) : List Bool :=
+  (List.range S).map fun j => ((W.drop b).take (r * S + j)).reverse == (W.drop b).take (r * S + j)
+
+@[simp] theorem length_jobBits (W : List (Fin 2)) (b S r : ℕ) : (jobBits W b S r).length = S := by
+  simp [jobBits]
+
+theorem getD_jobBits (W : List (Fin 2)) (b S r : ℕ) {j : ℕ} (hj : j < S) :
+    (jobBits W b S r).getD j false = true ↔ IsPal ((W.drop b).take (r * S + j)) := by
+  simp only [jobBits, List.getD_eq_getElem?_getD, List.getElem?_map, List.getElem?_range hj,
+    Option.map_some, Option.getD_some, beq_iff_eq, IsPal]
+
+/-! ## `advance` of a live stage, in closed form -/
+
+/-- The boundary test of `advance` on a live stage is `(d + 1) % S = 0`. -/
+theorem bnd_eq {st : StageState} {S d : ℕ} (hS : 1 ≤ S) (h : StageAt st S d) :
+    (st.alive && (if st.alive then st.clock.pred else st.clock) == 0) = decide ((d + 1) % S = 0) := by
+  obtain ⟨ha, -, hc, -⟩ := h
+  obtain ⟨q, m, hm, rfl⟩ : ∃ q m, m < S ∧ d = q * S + m :=
+    ⟨d / S, d % S, Nat.mod_lt _ (by omega), by rw [Nat.div_add_mod' d S]⟩
+  have hmod : (q * S + m) % S = m := by
+    rw [Nat.add_comm, Nat.add_mul_mod_self_right, Nat.mod_eq_of_lt hm]
+  simp only [ha, if_true, Bool.true_and, hc, hmod, Nat.pred_eq_sub_one]
+  apply Bool.eq_iff_iff.mpr
+  simp only [beq_iff_eq, decide_eq_true_eq]
+  rcases Nat.lt_or_ge (m + 1) S with hl | hl
+  · have h1 : (q * S + m + 1) % S = m + 1 := by
+      rw [Nat.add_assoc, Nat.add_comm, Nat.add_mul_mod_self_right, Nat.mod_eq_of_lt hl]
+    rw [h1]; omega
+  · have hmS : m + 1 = S := by omega
+    have h1 : (q * S + m + 1) % S = 0 := by
+      rw [Nat.add_assoc, hmS, show q * S + S = (q + 1) * S by ring, Nat.mul_mod_left]
+    rw [h1]; omega
+
+/-- `advance` of a live stage off a boundary: only the clock moves. -/
+theorem advance_off {st : StageState} {S d : ℕ} (hS : 1 ≤ S) (h : StageAt st S d)
+    (hb : (d + 1) % S ≠ 0) (src : ℕ) :
+    advance st false src =
+      ({ st with clock := st.clock.pred, birth := false, release := false }, false) := by
+  have hbnd := bnd_eq hS h
+  have hb' : (st.alive && (if st.alive then st.clock.pred else st.clock) == 0) = false := by
+    rw [hbnd]; simpa using hb
+  obtain ⟨ha, -, -, -⟩ := h
+  unfold advance
+  simp only [ha, if_true] at hb' ⊢
+  simp only [hb', Bool.false_and, if_false, Bool.or_false, Bool.not_false,
+    Bool.and_true, Bool.false_eq_true]
+
+/-- Whether a boundary into interval `iv` is a release. -/
+def relOf (iv : Fin 7) : Bool := iv.val == 1 || iv.val == 2 || iv.val == 3 || iv.val == 4
+
+/-- `advance` of a live stage on a boundary: the interval moves on, a release when it is `1..4`. -/
+theorem advance_on {st : StageState} {S d : ℕ} (hS : 1 ≤ S) (h : StageAt st S d)
+    (hb : (d + 1) % S = 0) (src : ℕ) :
+    advance st false src =
+      ({ st with
+          clock := st.half
+          interval := incInterval st.interval
+          alive := !((incInterval st.interval).val == 6)
+          batch := if relOf (incInterval st.interval) then batchOfInterval (incInterval st.interval)
+            else st.batch
+          birth := false
+          release := relOf (incInterval st.interval) },
+        relOf (incInterval st.interval) && st.pending) := by
+  have hbnd := bnd_eq hS h
+  have hb' : (st.alive && (if st.alive then st.clock.pred else st.clock) == 0) = true := by
+    rw [hbnd]; simpa using hb
+  obtain ⟨ha, -, -, -⟩ := h
+  unfold advance
+  simp only [ha, if_true] at hb' ⊢
+  simp only [hb', if_true, Bool.true_and, Bool.or_false, Bool.not_false,
+    Bool.and_true, Bool.false_eq_true, if_false, relOf]
+  simp
+
+/-! ## `consume` and `capture` -/
+
+theorem consume_not (t : StageState) (h : answering t = false) :
+    consume t = ({ t with middle := false }, false) := by
+  unfold consume
+  simp only [h]
+  split
+  · rename_i x
+    cases h2 : t.results ⟨t.interval.val - 2, by omega⟩ <;> simp [popFlag, h2]
+  · simp [popFlag]
+
+theorem consume_ans (t : StageState) (r : Fin 4) (hans : answering t = true)
+    (hr : t.interval.val = r.val + 2) :
+    consume t = ({ t with
+      middle := (t.results r).headD false
+      results := Function.update t.results r (t.results r).tail }, (t.results r).isEmpty) := by
+  unfold consume
+  simp only [hans]
+  rw [dif_pos (by omega)]
+  have hr' : (⟨t.interval.val - 2, by omega⟩ : Fin 4) = r := Fin.ext (by simp; omega)
+  simp only [hr']
+  rcases hl : t.results r with _ | ⟨b, rest⟩
+  · simp only [popFlag, Bool.true_and, List.headD_nil, List.tail_nil, List.isEmpty_nil]
+    refine Prod.ext ?_ rfl
+    simp only [StageState.mk.injEq, true_and, and_true]
+    funext r'
+    by_cases hrr : r = r'
+    · subst hrr; simp
+    · simp [hrr, Function.update_of_ne (Ne.symm hrr)]
+  · simp only [popFlag, Bool.true_and, List.headD_cons, List.tail_cons, List.isEmpty_cons]
+    refine Prod.ext ?_ rfl
+    simp only [StageState.mk.injEq, true_and, and_true]
+    funext r'
+    by_cases hrr : r = r'
+    · subst hrr; simp
+    · simp [hrr, Function.update_of_ne (Ne.symm hrr)]
+
+theorem sched_consume (t : StageState) : sched (consume t).1 = sched t := by
+  unfold consume; split <;> rfl
+
+theorem sched_capture (t : StageState) (wd : Bool) (wf : List Bool) :
+    sched (capture t wd wf) = sched t := rfl
+
+/-! ## The stage invariant -/
+
+/-- Stage `st`, born at tick `b` with half `S`, after `d` more ticks; `cap r` is the tick at
+which job `r` is captured. -/
+structure JobInv (W : List (Fin 2)) (cap : ℕ → ℕ) (b S d : ℕ) (st : StageState) : Prop where
+  sched : StageAt st S d
+  release : st.release = decide (0 < d ∧ d % S = 0 ∧ 1 ≤ d / S ∧ d / S ≤ 4)
+  batch : 1 ≤ d / S → d / S ≤ 4 → st.batch.val = d / S - 1
+  pending : st.pending = decide (1 ≤ d / S ∧ d / S ≤ 4 ∧ b + d < cap (d / S - 1))
+  results : ∀ r : Fin 4, st.results r =
+    if (r.val + 1) * S ≤ d ∧ cap r.val ≤ b + d then
+      (jobBits W b S r.val).drop (d + 1 - (r.val + 2) * S)
+    else []
+  middle : st.middle =
+    if 2 ≤ d / S ∧ d / S ≤ 5 then (jobBits W b S (d / S - 2)).getD (d % S) false else false
+
+/-! ## One tick off a boundary -/
+
+theorem divmod_off {S q m : ℕ} (hm : m + 1 < S) :
+    (q * S + m + 1) / S = q ∧ (q * S + m + 1) % S = m + 1 := by
+  constructor
+  · rw [Nat.add_assoc, Nat.add_comm, Nat.add_mul_div_right _ _ (by omega),
+      Nat.div_eq_of_lt hm, Nat.zero_add]
+  · rw [Nat.add_assoc, Nat.add_comm, Nat.add_mul_mod_self_right, Nat.mod_eq_of_lt hm]
+
+theorem divmod_at {S q m : ℕ} (hm : m < S) :
+    (q * S + m) / S = q ∧ (q * S + m) % S = m := by
+  constructor
+  · rw [Nat.add_comm, Nat.add_mul_div_right _ _ (by omega), Nat.div_eq_of_lt hm, Nat.zero_add]
+  · rw [Nat.add_comm, Nat.add_mul_mod_self_right, Nat.mod_eq_of_lt hm]
+
+theorem jobInv_off {W : List (Fin 2)} {cap : ℕ → ℕ} {b S q m : ℕ} {st : StageState} {src : ℕ}
+    {wd : Bool} {wf : List Bool} (hS : 1 ≤ S) (hm : m + 1 < S) (hq5 : q ≤ 5)
+    (h : JobInv W cap b S (q * S + m) st)
+    (hcap : ∀ r, r < 4 → (r + 1) * S ≤ q * S + m + 1 →
+      b + (r + 1) * S ≤ cap r ∧ cap r < b + (r + 2) * S)
+    (hwd : 1 ≤ q → q ≤ 4 → b + (q * S + m) + 1 ≤ cap (q - 1) →
+      (wd = true ↔ b + (q * S + m) + 1 = cap (q - 1)))
+    (hwf : 1 ≤ q → q ≤ 4 → b + (q * S + m) + 1 = cap (q - 1) → wf = jobBits W b S (q - 1)) :
+    (advance st false src).2 = false ∧ (consume (advance st false src).1).2 = false ∧
+    JobInv W cap b S (q * S + m + 1) (capture (consume (advance st false src).1).1 wd wf) := by
+  have hmS : m < S := by omega
+  obtain ⟨hq0, hm0⟩ := divmod_at (q := q) hmS
+  obtain ⟨hq1, hm1⟩ := divmod_off (q := q) hm
+  have hb : (q * S + m + 1) % S ≠ 0 := by rw [hm1]; omega
+  have hadv := advance_off hS h.sched hb src
+  have hst1 := stageAt_step st S (q * S + m) src hS h.sched (by rw [hq1]; exact hq5)
+  rw [hadv]
+  set t := ({ st with clock := st.clock.pred, birth := false, release := false } : StageState)
+    with ht
+  have hsch : StageAt t S (q * S + m + 1) := by
+    rw [hadv] at hst1; exact hst1
+  have hans : answering t = (decide (2 ≤ q) && decide (q ≤ 5)) := by
+    rw [answering_of_stageAt hsch, hq1]
+  -- consume
+  obtain ⟨tc, vio, hcons, hvio, hctc⟩ : ∃ tc vio, consume t = (tc, vio) ∧ vio = false ∧
+      tc.pending = st.pending ∧ tc.batch = st.batch ∧ tc.release = false ∧
+      sched tc = sched t ∧
+      (∀ r : Fin 4, tc.results r =
+        if 2 ≤ q ∧ q ≤ 5 ∧ r.val = q - 2 then (st.results r).tail else st.results r) ∧
+      tc.middle = (if 2 ≤ q ∧ q ≤ 5 then (st.results ⟨q - 2, by omega⟩).headD false else false)
+      := by
+    by_cases hq : 2 ≤ q ∧ q ≤ 5
+    · set r : Fin 4 := ⟨q - 2, by omega⟩ with hr
+      have e2 : (r.val + 2) * S = q * S := by simp only [hr]; congr 1; omega
+      have e1 : (r.val + 1) * S + S = q * S := by rw [← e2]; ring
+      have hiv : t.interval.val = r.val + 2 := by
+        obtain ⟨_, _, _, h4⟩ := hsch
+        rw [h4, hq1]; simp only [hr]; omega
+      have hc := hcap r.val (by omega) (by omega)
+      have hres : st.results r = (jobBits W b S r.val).drop (q * S + m + 1 - (r.val + 2) * S) := by
+        rw [h.results r, if_pos ⟨by omega, by omega⟩, e2]
+      have hne : (st.results r).isEmpty = false := by
+        rw [hres]
+        have : q * S + m + 1 - (r.val + 2) * S < S := by omega
+        cases hl : (jobBits W b S r.val).drop (q * S + m + 1 - (r.val + 2) * S)
+        · have := congrArg List.length hl; simp at this; omega
+        · rfl
+      refine ⟨_, _, consume_ans t r (by rw [hans]; simp; omega) hiv, hne, rfl, rfl, rfl,
+        sched_consume t ▸ rfl, fun r' => ?_, ?_⟩
+      · by_cases hrr : r' = r
+        · subst hrr
+          show Function.update t.results r (t.results r).tail r = _
+          rw [Function.update_self, if_pos ⟨hq.1, hq.2, by simp only [hr]⟩]
+        · show Function.update t.results r (t.results r).tail r' = _
+          rw [Function.update_of_ne hrr, if_neg]
+          intro ⟨_, _, h3⟩; exact hrr (Fin.ext (by simp only [hr]; omega))
+      · show (t.results r).headD false = _
+        rw [if_pos hq]
+    · refine ⟨_, _, consume_not t (by rw [hans]; simp; omega), rfl, rfl, rfl, rfl, rfl,
+        fun r' => by rw [if_neg (fun h' => hq ⟨h'.1, h'.2.1⟩)], by rw [if_neg hq]⟩
+  obtain ⟨hpend, hbat, hrel, hsc, hres, hmid⟩ := hctc
+  refine ⟨rfl, by show (consume t).2 = false; rw [hcons]; exact hvio, ?_⟩
+  show JobInv W cap b S (q * S + m + 1) (capture (consume t).1 wd wf)
+  rw [hcons]
+  have hsch' : StageAt tc S (q * S + m + 1) := (stageAt_congr hsc.symm _ _).mpr hsch
+  have hle : ∀ a, a * S ≤ q * S + m ↔ a ≤ q := fun a => by
+    rw [← Nat.le_div_iff_mul_le (by omega), hq0]
+  have hle' : ∀ a, a * S ≤ q * S + m + 1 ↔ a ≤ q := fun a => by
+    rw [← Nat.le_div_iff_mul_le (by omega), hq1]
+  have hpst := h.pending
+  rw [hq0] at hpst
+  have hdone : (st.pending && wd) =
+      decide (1 ≤ q ∧ q ≤ 4 ∧ b + (q * S + m) + 1 = cap (q - 1)) := by
+    by_cases hp : 1 ≤ q ∧ q ≤ 4 ∧ b + (q * S + m) < cap (q - 1)
+    · rw [hpst, decide_eq_true hp, Bool.true_and]
+      have := hwd hp.1 hp.2.1 (by omega)
+      cases hw : wd
+      · symm; rw [decide_eq_false_iff_not]; intro h3; rw [hw] at this; simp_all
+      · symm; rw [decide_eq_true_eq]; rw [hw] at this; exact ⟨hp.1, hp.2.1, this.mp rfl⟩
+    · rw [hpst, decide_eq_false hp, Bool.false_and]
+      symm; rw [decide_eq_false_iff_not]; intro h3; exact hp ⟨h3.1, h3.2.1, by omega⟩
+  refine ⟨hsch', ?_, ?_, ?_, fun r => ?_, ?_⟩
+  · show tc.release = _
+    rw [hrel]; symm; rw [decide_eq_false_iff_not]; intro h3; rw [hm1] at h3; omega
+  · intro h1 h2
+    rw [hq1] at h1 h2
+    show tc.batch.val = _
+    rw [hbat, hq1]; have := h.batch; rw [hq0] at this; exact this h1 h2
+  · show ((tc.pending || tc.release) && (!((tc.pending || tc.release) && wd))) = _
+    rw [hpend, hrel, Bool.or_false, hdone, hpst, hq1]
+    by_cases hp : 1 ≤ q ∧ q ≤ 4 ∧ b + (q * S + m) < cap (q - 1)
+    · by_cases he : b + (q * S + m) + 1 = cap (q - 1)
+      · rw [decide_eq_true hp, decide_eq_true ⟨hp.1, hp.2.1, he⟩]
+        symm; simp; omega
+      · rw [decide_eq_true hp, decide_eq_false (fun h3 => he h3.2.2)]
+        symm; simp; omega
+    · rw [decide_eq_false hp]
+      simp only [Bool.false_and]
+      symm; rw [decide_eq_false_iff_not]; intro h3; exact hp ⟨h3.1, h3.2.1, by omega⟩
+  · show (if (tc.pending || tc.release) && wd && tc.batch == r then wf else tc.results r) = _
+    rw [hpend, hrel, Bool.or_false, hdone, hres r, h.results r]
+    have hr4 := r.isLt
+    by_cases hc : 1 ≤ q ∧ q ≤ 4 ∧ b + (q * S + m) + 1 = cap (q - 1) ∧ r.val = q - 1
+    · -- job `q - 1` is captured now
+      have hb2 : (tc.batch == r) = true := by
+        rw [beq_iff_eq, hbat]; apply Fin.ext
+        have := h.batch; rw [hq0] at this; rw [this hc.1 hc.2.1]; exact hc.2.2.2.symm
+      rw [decide_eq_true ⟨hc.1, hc.2.1, hc.2.2.1⟩, Bool.true_and, hb2, if_pos rfl,
+        hwf hc.1 hc.2.1 hc.2.2.1, hc.2.2.2]
+      have hq1S : (q - 1 + 1) * S = q * S := by congr 1; omega
+      rw [if_pos ⟨by rw [hq1S]; omega, by omega⟩]
+      have : q * S + m + 1 + 1 - (q - 1 + 2) * S = 0 := by
+        have : (q - 1 + 2) * S = q * S + S := by rw [show q - 1 + 2 = q + 1 by omega]; ring
+        omega
+      rw [this, List.drop_zero]
+    · have hnc : ((decide (1 ≤ q ∧ q ≤ 4 ∧ b + (q * S + m) + 1 = cap (q - 1))) && (tc.batch == r))
+          = false := by
+        by_cases hd : 1 ≤ q ∧ q ≤ 4 ∧ b + (q * S + m) + 1 = cap (q - 1)
+        · rw [decide_eq_true hd, Bool.true_and, beq_eq_false_iff_ne, hbat]
+          intro he; apply hc; refine ⟨hd.1, hd.2.1, hd.2.2, ?_⟩
+          have := h.batch; rw [hq0] at this; rw [← he, this hd.1 hd.2.1]
+        · rw [decide_eq_false hd, Bool.false_and]
+      rw [hnc]; simp only [Bool.false_eq_true, if_false]
+      have hJ : (jobBits W b S r.val).length = S := length_jobBits _ _ _ _
+      rcases Nat.lt_or_ge (r.val + 1) q with hA | hA
+      · -- released at least a full interval ago: captured, maybe being popped
+        have hr1 : (r.val + 1) * S ≤ q * S + m := (hle _).mpr (by omega)
+        have hr1' : (r.val + 1) * S ≤ q * S + m + 1 := (hle' _).mpr (by omega)
+        have hr2 : (r.val + 2) * S ≤ q * S := Nat.mul_le_mul_right _ (by omega)
+        have hc := hcap r.val hr4 hr1'
+        have hcr : cap r.val ≤ b + (q * S + m) := by omega
+        by_cases hpop : 2 ≤ q ∧ q ≤ 5 ∧ r.val = q - 2
+        · rw [if_pos hpop, if_pos ⟨hr1, hcr⟩, if_pos ⟨hr1', by omega⟩]
+          have e2 : (r.val + 2) * S = q * S := by congr 1; omega
+          rw [e2, List.tail_drop]
+          congr 1; omega
+        · rw [if_neg hpop, if_pos ⟨hr1, hcr⟩, if_pos ⟨hr1', by omega⟩]
+          have hr3 : (r.val + 3) * S ≤ q * S := Nat.mul_le_mul_right _ (by omega)
+          have e3 : (r.val + 3) * S = (r.val + 2) * S + S := by ring
+          rw [List.drop_eq_nil_of_le (by omega), List.drop_eq_nil_of_le (by omega)]
+      · rcases Nat.lt_or_ge r.val q with hB | hB
+        · -- job `q - 1`: released, not captured this tick
+          have hrq : r.val = q - 1 := by omega
+          have hq1' : 1 ≤ q := by omega
+          have hr1 : (r.val + 1) * S ≤ q * S + m := (hle _).mpr (by omega)
+          have hr1' : (r.val + 1) * S ≤ q * S + m + 1 := (hle' _).mpr (by omega)
+          have hne : b + (q * S + m) + 1 ≠ cap (q - 1) := fun he =>
+            hc ⟨hq1', by omega, he, hrq⟩
+          rw [if_neg (fun h3 => by omega)]
+          have hcc : (cap r.val ≤ b + (q * S + m)) ↔ (cap r.val ≤ b + (q * S + m + 1)) := by
+            rw [hrq]; omega
+          have e2 : (r.val + 2) * S = q * S + S := by rw [hrq, show q - 1 + 2 = q + 1 by omega]; ring
+          by_cases hcp : cap r.val ≤ b + (q * S + m)
+          · rw [if_pos ⟨hr1, hcp⟩, if_pos ⟨hr1', hcc.mp hcp⟩, e2]
+            congr 1; omega
+          · rw [if_neg (fun h3 => hcp h3.2), if_neg (fun h3 => hcp (hcc.mpr h3.2))]
+        · -- not released yet
+          have hn1 : ¬ (r.val + 1) * S ≤ q * S + m := fun h3 => by have := (hle _).mp h3; omega
+          have hn1' : ¬ (r.val + 1) * S ≤ q * S + m + 1 := fun h3 => by have := (hle' _).mp h3; omega
+          rw [if_neg (fun h3 => by omega), if_neg (fun h3 => hn1 h3.1), if_neg (fun h3 => hn1' h3.1)]
+  · show tc.middle = _
+    rw [hmid, hq1, hm1]
+    by_cases hq : 2 ≤ q ∧ q ≤ 5
+    · rw [if_pos hq, if_pos hq]
+      have hr1 : (q - 2 + 1) * S ≤ q * S + m := (hle _).mpr (by omega)
+      have hc := hcap (q - 2) (by omega) ((hle' _).mpr (by omega))
+      have hr2 : (q - 2 + 2) * S = q * S := by congr 1; omega
+      have hres2 := h.results ⟨q - 2, by omega⟩
+      simp only at hres2
+      rw [if_pos ⟨hr1, by rw [hr2] at hc; omega⟩, hr2] at hres2
+      rw [hres2, show q * S + m + 1 - q * S = m + 1 by omega]
+      rw [List.headD_eq_head?_getD, List.head?_drop, List.getD_eq_getElem?_getD]
+    · rw [if_neg hq, if_neg hq]
+
+end PalPeg.ScaWindowPlumbing
