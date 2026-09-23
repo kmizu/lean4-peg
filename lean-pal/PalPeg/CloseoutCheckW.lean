@@ -419,9 +419,10 @@ theorem ipackMW_last_of_stepsIMWC {w : List (Fin 2)} {k : ℕ} {x y : State Gali
     IPackMW centre place entry q first w y :=
   ipackMW_last_of_stepsIMWR centre place entry q first _ h
 
-/-- A canonical trace: every tick up to the last report point is `Canonical`. -/
+/-- A canonical trace: every tick up to the last report point is `Canonical`, and records
+where a restart or replayStart lands (`ShapedRun.OracleTick`), as the oracle's runs do. -/
 abbrev CanonTrace (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ) : Prop :=
-  ∀ i, i < Tc w.length → PalPeg.GalilTickFair.Canonical entry 2048 (st i) (st (i+1))
+  ∀ i, i < Tc w.length → PalPeg.ShapedRun.OracleTick entry w (st i) (st (i+1))
 
 /-- A finite canonical packed prefix from the actual boot state. -/
 def PackedFromBoot (w : List (Fin 2)) (x : State GalilVM) : Prop :=
@@ -492,7 +493,7 @@ theorem preTraceOnPackedRun_exists (hboot : H_bootRefreshedIMW centre place entr
       exact ⟨c1, t, hst, scanOnPackedRunFromInvLPS_of_invLPS centre place entry q first hI hf
         (ipackMW_last_of_stepsIMWC centre place entry q first hst) ⟨1, hst⟩, hpos⟩)
     hor w hw
-  exact ⟨st, Tc, hpre, fun i hi => (hticks i hi).canonical,
+  exact ⟨st, Tc, hpre, hticks,
     fun m hm1 hmle => (hscan m hm1 hmle).1, fun m hm1 hmle => (hscan m hm1 hmle).2⟩
 
 #print axioms checkpoints_costOn_upto1

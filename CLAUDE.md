@@ -2,6 +2,119 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 2026-09-23 15:05 JST — CodexからClaude Codeへの引き継ぎ
+
+ユーザーの依頼は「証明に向かって邁進。ログに従って続きを」。今回「Claude Codeに引き継ぎしたいので、引き継ぎをCLAUDE.mdに書いて」と指示され、証明の追加作業を区切った。
+**次はこの節から再開すること。無条件 PAL ∈ PEG は未完成。** 下の既存本文にある古いPALの仮定・ファイル数・進捗より、この節と更新済み `AGENTS.md` §0を優先する。
+
+### 完成条件と現在の残件
+
+- `lean-pal/PalPeg/PalInPegUnconditional.lean` の `obligation_localRealization` が未放電。
+- 最終定理 `PalPeg.PalInPeg.unconditional` は `[propext, Classical.choice, Quot.sound, PalPeg.PalInPeg.obligation_localRealization]` に依存する。
+- **完成は4本目を実証明で除き、標準3公理だけになること。** 追加axiom・sorry・admit・native_decideで代替しない。
+- 日々の指標は `proof-strategy.md` の39作業項目。**21完了・18未完**。補題数や同じ重さの項目数ではなく、完成率として扱わない。
+- 内訳: M0 6/6、M1 7/7、M2 6/6、M3 1/6、M4 0/6、M5 1/8。旧23出口の局所部品は15あり・8未。局所部品ありと最終接続済みは別。
+- M3残5: 境界/lastとrestart、init/replayStart/choose-selectの複製、chain誕生、DP12テープ実行、DP/FPP再利用。
+- M4残6: matched全体、fallback、探索など残りの分岐を同じdispatcherへ接続。
+- M5残7: 完成した同一機械で停止・出力・凍結などを確認し、最終義務を放電。
+- 正本の内訳と証拠は `lean-pal/PHYSICAL_KPI.md` と `lean-pal/PHYSICAL_CONNECTIONS.md`。今回の進展もM3-06全体を閉じていないため、21/18を維持する。
+
+### 最新の共通機械と接続面
+
+**`PhysicalDpCleanup.machine rest` / `PhysicalDpCleanup.Enc` が最新の共通機械/符号化。**
+旧 `PhysicalLoanDispatch.machine rest` / `PhysicalLoanInvariant.Enc` を包み、DP退役12テープのrewind/clear/home/doneを有限制御に追加した。
+同じΓm・118本・micro半径128・macro半径1536・margin1536・ヘッド12段。番号や長さは有限状態に持ち込まない。役割交換は有限なので許可。テープ同値はリテラル等号でなくRep/TEqGを使う。
+
+通常処理の次のlive bit/役割を源窓で読み、その次に退役側となるDPだけを同じ源窓から並行消去する。
+各テープは通常処理か消去の一方を採用するので、半径を加算せず1回の実sweepで進む。消去は各テープ最大1536アクション。
+`Progress` は密な源からの消去履歴 `Good` と物理表現 `View` を証明側だけに持つ。`ready` は全phase=doneからcanonical resetへのTEqGを返す。
+**doneまでに必要な時間が次のlive切替えまでに必ず得られることは未証明。**
+
+接続済み:
+- `PhysicalDpCleanup.enc_initial`: 全空白初期状態。
+- `PhysicalDpCleanupBoot.forward_feed`: 初回入力を含む全feed。
+- `PhysicalDpCleanupBoot.forward_starved`: boot/runningの全starved。
+- **`PhysicalDpCleanupDispatch.cases_of_remaining`: 既存7種類のactiveケースを新機械/Encの最終TickCasesへ移行済み。**
+  `CountAtRest / CountWatch / CountBackReady / mode=shift / Entry / CountGrow / MatchGrow`。
+  watchは全token・両方向・成功失敗を含み、shiftは入口・進行・終了。Grow/MatchGrowは正のworkに限る。
+- `hother` は同じ7除外条件を持つ未実装ケース。今回の移行で残差は減らしていない。合法Tick、ArrivedOnRun、canonical traceを保持している。
+
+`PhysicalDpBank.machine` は現在のLoanDispatchの全有限窓分岐について、dpLiveと両DP bankの物理アドレスの保存を証明した。到達性やEncを仮定しない構造的な証明。
+**これは現在の機械にはDP reset/flip行が未接続だから成立する。** 新たなreset行を接続するときは、その行を別扱いし、全行がbankを保持すると誤って仮定しないこと。
+`PhysicalLoanDispatch.active_of_remaining` に既存ケースの本体を切り出した。局所的な残差継続を受け取るので、新Encへの移行に「全ての旧Enc状態で新Encも成立する」という偽の前提は不要。旧cases APIも保持。
+
+### 今回追加・変更して検証したファイル
+
+すべて `lean-pal/PalPeg/`。新4モジュールはWorkbenchへ登録済み。
+
+| ファイル | 内容・主な出口 |
+|---|---|
+| `PhysicalDpBank.lean` | 合成/反復/有限役割/dispatcherを通じてDP bankを保存。`machine` |
+| `PhysicalDpCleanupDispatch.lean` | `forward_of_previous` / `forward_handled` / `cases_of_remaining`。同じ7ケースを新Encへ接続 |
+| `PhysicalDpPreload.lean` | **ロード途中の任意prefix**で12テープすべてDense。`dense_onRun` / `prepare_run_size` |
+| `PhysicalDpRetirement.lean` | 共通Loan Encからlive DPのTEqGを取り出す `live`。途中ロード/実行中から消去開始へ `forward_preparing` / `forward_program` |
+| `PhysicalLoanDispatch.lean` | `active_of_remaining`を抽出し既存casesを再利用可能にした。ケース被覆は変更なし |
+| `Workbench.lean` | 上記4モジュールのimportを追加 |
+
+`PhysicalDpPreload` の不変量は、全テープの非空白接頭辞＋空白接尾辞、lower/copyの書込みhead=最初のblank、copy開始まではtape7=reset。
+実 `GalilScaffoldPrepareControl.Tick/Run` のlower→lowerHome→copy→home→runで保存し、disabled tickも扱う。
+完成済みpreloadは仮定しない。各テープのleft+right長は `1 + bs.count true` 以下。
+
+`PhysicalDpRetirement.live` はsnapshotによる旧探索カウンタ差し替えと、radiusの部分鏡再建の両方を扱う。
+`forward_preparing/program` はこの源のTEqGと実Run由来のDenseを `PhysicalDpCleanup.forward_retired` へ渡す。
+**これらはreset行完成の証明ではない。** 現在も通常行の後状態Loan Enc・その実step等式・bank flip/役割保存・準備/プログラムRunを引数に取る。
+PAL全体のOnRunから当該Runを供給し、通常reset行を実装してこれらの引数を証明する仕事が残る。後状態Encを新しい義務として仮定して完了扱いしないこと。
+
+### 直前までに完成した基盤（必要時だけ読む）
+
+- `PhysicalProgramErase`: 有限rewind/clear/home/done消去器。Denseから `3*(left.length+right.length)+5` 回以内にresetへTEqG。`bank_real_reset` は実sweep反復まで証明。
+- `PhysicalEraseBatch`: n回を半径nの1sweepへ融合。`stored` / `Good` / `good_run` / `done_clean`。
+- `PhysicalRetiredDpFrame.loan`: 退役DPだけの変更を旧共通Encへ通す（marginも保存）。
+- `PhysicalDpCleanup`: `apply_running` / `forward_kept` / `forward_retired`。源の実表現から消去状態を保存。
+- `PhysicalDpCleanupBoot.boot_banks`: 実blank bootが両bankをblankにする証明。後状態を仮定しない。
+- `GalilDpDenseMarks` / `GalilDpDensityTable` / `GalilDpDensity` / `PhysicalDpDensity`: 任意Fin3入力・lowerの実preloadから、任意program実行prefixのDP12本/FPP9本がDense。MARKS8/9のheadがfrontierを越えるため単純head上限は使えない。既存prepared完成形と実行一意性からemit位置を供給した。
+- `PhysicalDpDensity.bank_reset_onRun`: 実enabled call数でサイズを上から抑え、指定された消去回数でresetへつなぐ。指定回数の利用可能性は別義務。
+
+### 次の着手点・未解決の山
+
+1. **PALの実行からDPの履歴を供給する。** `FrameFunction.searchStepFun` と `GalilScaffoldPrepareControl`、program quantumを結び、任意の退役時に準備途中またはpreload後のprogram Runを得る。初期resetも扱う。
+2. **再liveまでの消去期限。** 消去器の完了上限と実際のbank再利用間隔を結ぶ。stage所要時間の「上限」を利用可能時間の「下限」と取り違えない。
+   `GalilDpCost` の3186*word.length+1683、`GalilScaffoldTimingCost` のrunBudget/first_stage_ticks/later_stage_ticksは上限。現時点で期限証明には接続していない。
+3. **prepare/reset・restartの実行行。** prepareはpc320でDP全reset、tape10へLEFT/right、work=lower、walker=centerを同時実行。後のspan→workも含めaliasを有限役割/既存鏡で実装する。追加抽象tickや瞬間コピーを入れない。
+4. 残る探索モード、search出口の部分鏡不足1補完、不一致/fallback、matched全体、chain誕生、init/replayStart/choose-selectなどを同じ機械へ追加。
+5. FPP退役側の旧左向き消去も置換が必要。旧eraseActはrootで止まり右側を消さない。live時のDenseを、旧消去が既に穴を作った退役FPPへ適用してはいけない。
+
+先に別レイアウトの部品を作って統合し直す方針へ戻らない。今ある共通機械・Enc・TickCasesの接続を維持する。
+サブエージェントは使用していない。ユーザーは進捗を補題数で飾らず、完成/未完を正確に分けることを重視する。
+
+### 最終検証と再開コマンド
+
+2026-09-23、この引き継ぎ直前に実行:
+
+```sh
+cd /home/mizushima/repo/lean4-peg/lean-pal
+. ~/.elan/env
+lake build PalPeg.Workbench
+lake env lean PalPeg/Axioms.lean
+```
+
+- **Workbench BUILD=0、9810 jobs。** `/tmp/physical-dp-retirement-workbench.log`
+- **最終公理監査 AUDIT=0。** `/tmp/physical-dp-retirement-axioms.log`（空ログが正常）。追加公理は依然1本残る。
+- 今回の新10個の公理guardは標準3公理以内。対象5ファイルにsorry/admit/native_decide/新axiomなし。
+- `git diff --check` 通過。ビルド/Leanの実行ジョブは終了済み。
+
+### 実装時の注意・ワークツリー
+
+- **大量の未追跡Leanファイルと既存の変更がある。すべて作業成果で、git reset/cleanで消さない。** 今回commit/pushはしていない。同じローカルcheckoutから引き継ぐこと。
+- `lean/` と `lean-pal/` は別toolchain。ここは後者。`make verify`だけでは今回のモジュールを検証できない。
+- 新モジュールは `PalPeg/Workbench.lean` に登録。単体だけ通して全体build済みとは言わない。
+- 具体的な12段融合をchange/rfl/simpaで直接比較するとheartbeatが膨張する。規則/idealRun関数全体を関連仮説と目標で同時にgeneralizeし、一般補題を先に使う。
+- `PhysicalEraseBatch.step` はirreducible。`PhysicalDpBank` の `feedStep`、CleanupDispatchのLoanDispatch.machineにもlocal irreducibleを用いて巨大展開を避けた。
+- `!b = c` はLeanで `!(b = c)` に読まれ得る。Bool反転の等式には `(!b) = c` と括弧を付ける。
+- `CLAUDE_RESUME.md` / 台帳末尾は詳細履歴。古い「全active移行未完」「ロード途中未検証」は今回この節で更新済み。
+
+---
+
 ## リポジトリの全体像
 
 3 つの独立したサブプロジェクトが同居している。互いに toolchain が違うので混ぜないこと。

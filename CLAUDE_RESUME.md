@@ -1,3 +1,279 @@
+## 2026-09-23 16:15: 最上段から接続・報告契約を到着接頭辞基準へ修正（Claude Code, Opus 5.5）
+
+**Workbench BUILD=0・最終公理監査AUDIT=0・無条件 PAL は未完（`obligation_localRealization` は残る）。**
+- DP履歴: `PhysicalDpHistory`（`DpHistory`＝DP12本Dense＋準備中の形、全tickで保存）、`PhysicalDpSource.dense_onRun`/`forward_onRun`で退役側Denseの前提を除去。`CanonTrace`を`ShapedRun.OracleTick`版に強化（生産者は元から保持）、`PlateauInv.dpDense`追加。
+- 上から接続: `PhysicalFinal.given_remainingCases_and_reports`が`PhysicalDpCleanup.machine rest`から`RecognizedByTotalPEG PAL`を標準3公理で出す。残差は`rest`・`hother`・`ReportResiduals`の3つだけ。
+- 報告契約: 旧`hencRep`（全長wの`reportTest`と`repQ`の一致）は、wを知らない実時間機械では満たせない疑いが強い（機械検査の反証は未作成）。`repM`を到着接頭辞の報告点`reportArrived`へ変更し、`LocalShadowConcrete`の`rep_sound`/`rep_complete`をrun状態つきに弱め、`reportArrived_sound`/`_complete`で供給。
+- 次: `ReportResiduals`（報告・出力ビットと`PhysFrozen`）、reset行、`hother`の残り分岐。KPIの39項目表記は未更新（21/18のまま）。
+
+## 2026-09-23 15:05: Claude Codeへ引き継ぎ — 最新はCLAUDE.md冒頭
+
+ユーザーの依頼により、具体的な再開手順・未解決・注意点を `CLAUDE.md` 冒頭に記載した。
+**無条件PAL未完、KPI21完了18未完、局所実現公理1本は残る。**
+
+`PhysicalDpCleanup.machine rest` / `PhysicalDpCleanup.Enc` が最新の共通接続。
+`PhysicalDpBank.machine`が現在のLoanDispatch全体のDP live bit/両bankアドレス保存を証明し、
+`PhysicalDpCleanupDispatch.cases_of_remaining`で既存7activeケースを新機械/Encへ移行した。
+boot/feed/starvedも接続済み。同じ118本・半径1536・1sweepで背景消去し、hotherの7除外条件は変更なし。
+`PhysicalLoanDispatch.active_of_remaining`を抽出したことで局所ケースを再利用できる。
+
+`PhysicalDpPreload`は実prepareから任意の途中Runで12本Denseと長さ≤1+enabled回数を証明。
+`PhysicalDpRetirement.live`はsnapshot/部分鏡を含む共通源Encからlive DPのTEqGを供給する。
+`forward_preparing/program`が実Run由来のDenseを同じwrapの退役開始へ渡す。
+ただし通常reset行の後状態Enc/実step等式・PAL全体からの当該Run供給・再liveまでの時間は未解決。
+現在の全dispatcherはDP bitを保持する。reset/flip行を追加するときは保持行と別扱いする。
+FPP旧左向き消去の置換、prepareのlower→work/span→work、restart全行なども残る。
+
+新4モジュールをWorkbenchへ登録。今回の新10guardは標準3公理以内、sorry/追加axiomなし。
+**Workbench BUILD=0（9810 jobs）、最終公理監査AUDIT=0。**
+ログ: `/tmp/physical-dp-retirement-{workbench,axioms}.log`。git diff --check通過。
+ビルド実行は終了済み。大量の既存変更/未追跡ファイルは保存し、commit/pushはしていない。
+詳細な次手と性能上の注意は `CLAUDE.md` 冒頭を参照。
+
+以下は過去の作業記録。
+
+## 2026-09-23: DP消去を共通dispatcherと同じsweepへ載せ、boot/feed/starvedを接続
+
+**Workbench BUILD=0・最終公理監査AUDIT=0・無条件PALは未完。**
+`PhysicalDpCleanup.machine rest`は既存`PhysicalLoanDispatch.machine rest`に
+12本分のrewind/clear/home/doneだけを有限制御として加える。同じΓm・118本・半径1536。
+通常処理の次の役割/live bitを源窓から計算し、次に退役側となるDPだけを、同じ源窓から
+消去する。bankを切り替えればphaseをrewindへ戻す。物理テープごとに通常処理/消去の
+窓と移動量を選ぶので、半径を足したり抽象tickを追加したりしない。
+
+`PhysicalEraseBatch.stored`は任意の固定n段を半径nの1回の実sweepへ融合する。
+共通機械ではn=1536（各テープ最大1536アクション）。`Good`は密な源からの実消去経過を
+証明側だけに持ち、`done_clean`と`PhysicalDpCleanup.ready`がdoneからresetへのTEqGを供給。
+長さや経過時間は有限制御に持ち込まない。`PhysicalRetiredDpFrame.loan`はDP退役側の変更を、
+snapshot・貸し出し中の部分鏡を含む既存の共通Loan Encへ通す。
+`apply_running/forward`は実際の並行sweepの等式と旧Enc・消去状態の保存を証明する。
+`forward_kept`はbankとDPの役割が変わらない任意の検証済み行へ進捗を運び、
+`forward_retired`は切替え前の新退役テープのDense/表現を源条件に新しい消去を開始する。
+これらの一般補題にある旧Encの後状態は、接続先の各行の証明で供給する必要がある。
+
+`PhysicalDpCleanupBoot.boot_banks`は実blank bootが両bankへ番兵・空白を用意することを証明。
+`forward_feed/forward_starved`で、初回を含む全feedと全starvedを新しい同じ機械/Encへ接続した。
+源条件は既存Encから取り出し、後状態の空白は仮定しない。新ControlのFintype/DecidableEqも確認。
+具体的な12段実行を直接change/rflで比較すると時間切れになったため、`held_bank/held_roles`、
+`boot_nonhead`の一般補題と、融合規則全体の記号化で回避した。新Boot moduleは最終build約5秒。
+
+**残差:** 非飢餓の既存count/watch/shift/grow/match行を新Progress付きEncへ移す接続、
+最終TickCasesの更新、再liveまでの消去期限、PAL全体のOnRunからprogram Runを供給する接続、
+preload完成前のロード打切り、live切替え・prepare/restartの実行行は未完。
+旧`PhysicalLoanDispatch.cases_of_remaining`は保持し、hotherはまだ減らしていない。
+FPP旧左向き消去の置換も残る。live時のDenseを、既に穴ができた退役FPPへ当てはめない。
+新機械のboot/feed/starved接続と、既存の全activeケースの移行完了を混同しない。
+
+4モジュールをWorkbench登録。新13guardは標準3公理以内、sorry/新axiomなし。
+ログ: `/tmp/physical-dp-cleanup-{workbench,axioms}.log`。git diff --check通過。
+**KPI21完了18未完、T15あり8未、M3-06/T02/M3-01/T05未完を維持。**
+`obligation_localRealization`は残る。
+
+以下は過去の作業記録。
+
+## 2026-09-23: DP12本・FPP9本の全実行途中から消去のDenseを供給
+
+**Workbench BUILD=0・最終公理監査AUDIT=0・無条件 PAL は未完。**
+`GalilDpDensity.onRun`は任意のFin3入力・任意lowerの実DP初期配置から、成功命令の
+任意prefixで12本すべての非空白接頭辞＋空白接尾辞を証明する。Denseの追加仮定はない。
+`fpp_onRun`は既存`GalilDpSimulation.steps`で9本FPPへ同じ結論を戻した。
+
+難所はMARKS8/9のheadがblank frontierを越える点。単純なhead上限は偽になり得る。
+`GalilDpDenseMarks.future_prepared`は実行の一意性とsearch閉包から、実prefixを
+既証明のprepared終状態へ延長する。`emit_inside`はpc36/321以後のMARKS書込みが8だけである
+有限表と、完成形のEND=5・blank suffixから、実emitの位置が現在の密な接頭辞内だと証明した。
+その源条件と、`GalilDpDensityTable.rows`の全373命令×12本×4位置区分のカーネル検査を合わせる。
+表の位相はfrontierに対するheadのpast/edge/last/interior。生成データ自身は信頼せず、
+`GalilDpDensity.step`がread/move/writeの実意味に対する保存を証明する。
+表を巨大な配列で一括decideするとメモリが増えたため、その検証プロセスを止めて
+4bit/PCのNat定数と32命令ごとの検査に変更。最終Table buildは約12秒、native_decide不使用。
+
+`PhysicalDpDensity.dense_onRun/dense_fpp_onRun`は実`GalilScaffoldControl.Run`から
+待機・halt・halt後を含めてこの形を取り出し、既存の`PhysicalProgramErase.Dense`へ変換する。
+`run_size`は各テープのleft+right長を初期長＋enabled call数で抑える。
+`bank_reset_onRun`は前回の実sweep消去器へDenseを供給し、
+3*(max(w.length+1,lower+1)+bs.count true)+5回以上ならresetへのTEqGを返す。
+後状態の空白やDenseを仮定しない。初期preloadからの実行履歴と元のBankRep/Storedは必要。
+
+**残差:** その消去回数を再liveまでに既存ティック内の背景処理へ割り当てる証明、
+有限phaseを共通LoanDispatchへ載せること、PAL全体のOnRunから当該program Runを供給する接続、
+preload完成前のlower/sourceロード中の打切り、DP live切替え・prepare/restartの実行行が未完。
+共通機械は`PhysicalLoanDispatch.machine rest`のまま、hotherも未変更。
+FPPの旧左向きeraseOfは引き続き置換が必要。今回のDenseはlive programの実行由来であり、
+既に旧消去を受けた退役FPPに無条件で当てはめない。
+追加tickや後状態Encを仮定して再利用を閉じない。
+
+4モジュールをWorkbench登録。新8guardは標準3公理以内（Table.rowsはpropext/Quot.soundのみ）。
+ログ: `/tmp/physical-dp-density-{workbench,axioms}.log`、git diff --check通過。
+**KPI21完了18未完、T15あり8未、M3-06/T02/M3-01/T05未完を維持。**
+`obligation_localRealization`は残る。正本はAGENTS.md §0とPHYSICAL_CONNECTIONS.md末尾。
+
+以下は過去の作業記録。
+
+## 2026-09-23: DP退役テープの有限消去器を実sweepで検証
+
+**Workbench BUILD=0・最終公理監査AUDIT=0・無条件 PAL は未完。**
+`PhysicalProgramErase`をWorkbenchへ登録。同じΓm・118本の退役DP12本に対し、
+rewind/clear/home/doneの有限制御と半径1の行動列を実装した。
+`left_only_stuck`は旧eraseActが非空白のrootでも停止し、右側を消去しない具体例を証明する。
+`Dense`（rootから非空白接頭辞と空白接尾辞）の源条件の下で、`reusable`は
+3*(left.length+right.length)+5回以内の消去・root復帰を証明。
+`bank_sweep/stored_run/bank_real_reset`が実compStepの反復まで運び、最終物理テープを
+canonical resetとTEqGで結ぶ。空白接尾辞をリテラルに捨てる操作は要求しない。
+各sweepは各退役DPテープを最大1アクション更新し、他のテープはTEqGで保持する。
+`encTapes_retired_dp/bank_enc/bank_sweep_enc`で既存の全Encと余白も同じ実sweepへ保持した。
+長さは証明側のみで、有限制御に格納しない。**この別の有限制御は共通LoanDispatchへ未統合。**
+Denseと必要な消去時間は定理の明示的な源条件で、実DP trace/スケジュールからの供給は未完。
+既存EncのDP退役側契約・live切替え・prepare/restart接続も未完。hotherは減っていない。
+新5guardは標準3公理以内。ログ: `/tmp/physical-program-erase-{workbench,axioms}.log`。
+git diff --check通過。**KPI21完了18未完、T15あり8未、T02/M3-01/T05未完を維持。**
+
+次は源条件供給と共通契約への統合。GalilDpCodeの小さい381実行（binary長0..6、lower1..3）で
+全途中状態のDenseに反例なし、最大860命令。これはPython診断でありLean証明ではない。
+`/tmp/physical-dp-density-probe.json`に結果あり。
+PCごとにfrontier距離を0/1/2以上へ抽象化した診断では10/12本で不正更新候補なし。
+marksの8/9だけ右移動の候補が残る（8:229/232/235/238、9:323/326/329/332）。
+この表も未検証。GalilDpSimulation.Relatedのmarks/head同期と、0/8/9の位置・長さ関係を
+使うか、既存prepared実行の途中状態の不変量を強める必要がある。
+新しい仮定や小さい実験で実行全体のDenseを代用しない。
+
+正本はAGENTS.md §0とPHYSICAL_CONNECTIONS.md末尾。以下は過去の作業記録。
+
+## 2026-09-23: growの一致比較を共通dispatcher・最終TickCasesへ接続
+
+**Workbench BUILD=0・最終公理監査AUDIT=0・無条件 PAL は未完。**
+最新共通機械/Encは`PhysicalLoanDispatch.machine rest` / `PhysicalLoanInvariant.Enc`のまま拡張。
+`PhysicalGrowMatchTick`がgrow96＋比較32と12段ヘッド処理を一つのmacro1536 sweepへ融合し、
+left/right移動、clock=2048/output/replaying、実部分鏡、全Rebuildingを同時に保存する。
+源の窓からrightOnLetter/leftFirst/replayZeroを読み、idle verifierはstay。瞬間コピーはない。
+`PhysicalGrowMatchCase.successor_eq/guard_running/forward`が実tickFunと窓の選択を同定し、
+源Encからbalance/部分鏡、非飢餓からright.canRightを供給。後状態NeedsLoanも証明。
+`PhysicalLoanDispatch.forward_match/cases_of_remaining`へ接続し、hotherからMatchGrowを除いた。
+MatchGrowはscan/clock≤1/chain idle/search grow/work正/比較一致。最終call siteで
+既存heads_onRunがArrivedOnRunから到来prefixを供給する。未供給の後状態Encは使わない。
+初回feed・全starved・CountGrow・既存count/watch入口/shift入口・進行・終了も同じ機械で保持。
+2モジュールをWorkbench登録、新4guardと更新cases guardは標準3公理以内。
+ログ: `/tmp/physical-grow-match-final-{workbench,axioms}.log`。git diff --check通過。
+**次はwork=0のprepareとDP reset/bank再利用。** 現EncTapes.idleShapeはFPP9本のみ。
+退役DP12本のshape/消去完了の契約は未導入。prepareはpc320で全DPをresetし、tape10へLEFT/right、
+work=lower、walker=centerを同時に行う。lower→work、後のspan→workのaliasも残る。
+他の探索行・不一致比較/fallback・search出口不足1補完・restart全行も未完。
+KPI21完了18未完、T15あり8未、T02/M3-01/T05未完。obligation_localRealizationは残る。
+正本はAGENTS.md §0とPHYSICAL_CONNECTIONS.md末尾。以下は過去の作業記録。
+
+## 2026-09-23: grow比較のカウンタ更新と部分鏡対応の12段組み立て器
+
+**Workbench BUILD=0・最終公理監査AUDIT=0・無条件 PAL は未完。**
+最新共通機械/Encは`PhysicalLoanDispatch.machine rest` / `PhysicalLoanInvariant.Enc`。
+今回の部品はまだgrow比較の最終TickCasesへ接続していない。hotherの残差は前回のまま。
+`PhysicalMatchCounters.actual/currentRule`がradius++/length+=2/debt--、条件付きcycle/replay減算を
+半径32で実行し、実部分鏡・全Rebuilding・balanceを保存する。mirror2をpushするのは源debtが正のときだけ。
+GrowStorageの内部半径を64→32へ縮小し、GrowCount.bodyは96、GrowMatch.bodyは96+32=128。
+中間窓で各返済/減算の符号を読み、1回の実sweepで処理する。`matched_grow`が実compareFunと
+matchedPlaceのVM更新を、同じ行＋left/right移動に同定した。ctl/outputは別途必要。
+`PhysicalTickAssembly.running_tick_optional`がidle verifierのheadOf=noneをstayで扱う。
+旧running_tick APIは互換ラッパー。`PhysicalLoanAssembly.running_tick/running_fused_route`は
+実部分鏡を残したまま12段ヘッド実行とmacro1536の実sweepを組み立てる。瞬間コピーはしない。
+新3モジュールをWorkbench登録、新7guardは標準3公理以内、既存count/watch/shiftも全体buildで検証。
+ログ: `/tmp/physical-grow-match-{workbench,axioms}.log`。git diff --check通過。
+**次はgrow比較にこの組み立て器を個別適用:** ctl/output、右headのreadiness、実窓guardを供給し、
+同じLoanDispatchの最終TickCasesへ接続する。既存DebtFeed.view_repairedがヘッド読みの輸送に使える。
+prepare/work0、他の探索行、search出口不足1補完、DP reset/bank再利用、restart全行は残る。
+KPI21完了18未完、T15あり8未、T02/M3-01未完。obligation_localRealizationは残る。
+正本はAGENTS.md §0とPHYSICAL_CONNECTIONS.md末尾。以下は過去の作業記録。
+
+## 2026-09-23: 正のworkのgrow countを実dispatcherと最終TickCasesへ接続
+
+**Workbench BUILD=0・最終公理監査AUDIT=0・無条件 PAL は未完。**
+最新共通機械/Encは`PhysicalLoanDispatch.machine rest` / `PhysicalLoanInvariant.Enc`のまま拡張した。
+`PhysicalGrowStorage`がspan+=8・work--・span鏡・FPP背景消去を全CoreInvで保存し、
+repairとの可換性から部分鏡を保持。`PhysicalGrowCount.body`はこの64とdebt++の32+32を融合する。
+実macro sweepでclockも減算し、`successor_eq`が実tickFunの非飢餓grow countと一致することを証明。
+源Encからbalance/部分鏡を供給し、有限窓のgrow選択を`guard_running`で接続、
+`forward_grow`→`cases_of_remaining`でhotherからCountGrowを除いた。CountGrowはscan/clock>1/
+chain idle/search grow/work正。work=0のprepare、clock=1の比較を含めた全growの完成ではない。
+countでは全ヘッドが静止するのでテープ/制御/マクロ境界を直接保持し、追加の実行tickはない。
+初回feed/全starvedと既存count/watch入口/shift全体の接続も維持。118本・半径1536は変更なし。
+2モジュールをWorkbench登録、新4guardと更新cases guardは標準3公理のみ。
+検証ログ: `/tmp/physical-grow-count-{workbench,axioms}.log`。git diff --check通過。
+次は比較時のradius++/debt--、残る探索行、出口の不足1補完、DP reset/bank再利用、restart全行。
+doubleの実stepはspan+=2・work--・quarter更新で、debt++は源quarter=3だけ。growの2返済とは異なる。
+prepareはDP reset(pc320)/tape10初期記号、work=lower、walker=centerを同時に行い、未接続。
+KPI21完了18未完、T02/M3-01未完。obligation_localRealizationは残る。
+正本はAGENTS.md §0とPHYSICAL_CONNECTIONS.md末尾。以下は過去の作業記録。
+
+## 2026-09-23: 再準備中の半径鏡を共通Enc・feed/starved・最終TickCasesへ接続
+
+**Workbench BUILD=0・最終公理監査AUDIT=0・無条件 PAL は未完。**
+最新は`PhysicalLoanDispatch.machine rest` / `PhysicalLoanInvariant.Enc`。
+scan・chain idle・searchActiveの間だけRebuilding＋radius/debt balanceを要求し、他はSnapshot Enc。
+`PhysicalDebtFeed`が部分鏡を保った実12段feedとmacro sweep、実窓の飢餓判定を証明した。
+初回到着/blank/全starvedと既存のidle静止count/watch count全体/watch入口/shift入口・進行・終了を、
+同じ最終TickCasesへ接続。shift出口の非idle条件は実TickとOnRunから供給し、後状態を仮定していない。
+3モジュールをWorkbench登録、6guardは標準3公理のみ。新axiom/sorry/admit/native_decideなし。
+ログ: `/tmp/physical-loan-dispatch-{workbench,axioms}.log`。git diff --check通過。
+**探索の非飢餓行・restart全行はまだhotherに残る。** DebtRebuildの1/2回payをgrow/span/workへ融合し、
+比較のradius++/debt--、search終了時の不足1補完、DP退役bank消去/resetを実装・接続する。
+半径32/64のrestart中間行は存在するが、DP resetが未実装なので最終restartを閉じたとは数えない。
+SafeCallsのguardは最後のadvance前なので終了時debt=-1を消さない。
+KPI21完了18未完、T02/M3-01未完。obligation_localRealizationは残る。
+正本はAGENTS.md §0とPHYSICAL_CONNECTIONS.md末尾。以下は時系列の過去記録。
+
+## 2026-09-23: debtへの半径鏡貸出しと再準備を実sweepで証明
+
+**Workbench BUILD=0・最終公理監査AUDIT=0・無条件 PAL は未完。**
+`PhysicalDebtMirror.restart_from_copies`がlastの引き渡しと半径鏡→debtの貸出しを
+32+32の1sweepへ融合。源は既存のコピー付きEnc、残る抽象更新はDP resetのみ。
+再準備中の実mirror2はradius+min(debt,0)を表し、他の全テープは旧CoreInvを保持。
+`repair`は証明用参照で、物理コピーではない。`ready`が条件成立時に旧Runningへ戻す。
+`PhysicalDebtRebuild.running/running_double`がdebt++と負の場合のmirror2++を実行し、
+-1→0を含む2回分も1sweepで検証。6guardは標準3公理のみ。ログは
+`/tmp/physical-debt-rebuild-{workbench,axioms}.log`。両モジュールはWorkbench登録済み。
+**Rebuildingは共通Enc/dispatcherへ未統合。** 比較時radius++/debt--の実行、終了時の
+不足1の補完、DP buffer/resetが残る。SafeCallsの非負guardは最後のadvance前なので、
+終了時debt=-1を排除しない。全growやrestartが完成したとは数えない。
+KPI21完了18未完、T02/M3-01未完、追加公理obligation_localRealizationは残る。
+次は再準備を比較と共通Enc（feed/starved含む）へ統合し、DPバッファを閉じる。
+正本はAGENTS.md §0とPHYSICAL_CONNECTIONS.md末尾。
+
+## 2026-09-23: restartのlast3コピー引き渡しを実sweepで証明
+
+**Workbench全体 build 成功・新規証明は標準3公理のみ・無条件 PAL は未完。**
+`PhysicalRestartCopies` がcounter6→lower、counter15→work、mirror4→lowerの鏡へ渡し、
+旧lower/鏡を同時resetしてspan/鏡へ回す。全Enc・counter形・マクロ境界と、任意の有限役割での
+半径32の実sweepを証明。`from_copies`は源のlastコピーを既存のコピー付きEncから供給する。
+これはrestartへ融合する中間行。debt/DPは旧値のままで、その2更新を加えれば実tickFunと
+一致することを`completed_is_restart`で証明した。物理的なdebt/DP更新や融合は未完。
+最新共通機械は`PhysicalSnapshotEntryDispatch.machine rest`のまま。KPI21完了18未完、
+T02/M3-01は未完。BUILD=0/AUDIT=0: `/tmp/physical-restart-copies-{workbench,axioms}.log`。
+次は半径鏡の貸出し・再準備契約とDPバッファ。旧Encの全mirror義務、inactive DPの空白を
+未供給の後状態仮定にしない。正本はAGENTS.md §0とPHYSICAL_CONNECTIONS.md末尾。
+
+## 2026-09-23: コピー付き二度消費とshift入口を最終TickCasesへ接続
+
+**Workbench全体 build 成功・新規証明は標準公理のみ・無条件 PAL は未完。**
+最新の共通機械は `PhysicalSnapshotEntryDispatch.machine rest`。同じ118本・半径1536で、
+追加コピーを保つ成功二度消費（32+32）、共通入口（64）、3カーソルの12段移動を1sweepへ接続。
+元の合法TickとArrivedOnRunから必要条件を供給し、最終TickCasesのhotherからshift入口を外した。
+boot/feed/starved/count/watch入口/shift進行・終了も保持。新4モジュールをWorkbench登録、
+新7guardは標準3公理のみ。BUILD=0/AUDIT=0: `/tmp/physical-snapshot-entry-{workbench,axioms}.log`。
+他の比較腕・restart・DP等は未完、KPIは21完了18未完、obligation_localRealizationは残る。
+次はrestartのlast3コピー引き渡し・span/debt初期化・鏡再準備・DPバッファへ。
+正本は `AGENTS.md` §0 と `lean-pal/PHYSICAL_CONNECTIONS.md` 末尾。
+
+## 2026-09-23: restart用コピーを保つshift進行・終了を接続
+
+**Workbench全体 build 成功・新規証明は標準公理のみ・無条件 PAL は未完。**
+`PhysicalSnapshotShiftDispatch.machine rest` が同じ118本・半径1536・コピー付きEncで、
+boot/feed/starved/count/watch入口に加えてshift進行・終了を最終TickCasesへ接続した。
+`PhysicalSnapshotShift.saved_tick` が元の合法Tickから保存代表のshiftを作り、`running`が
+既存shiftと6本減算を1sweepで合成、`exit_enc`が終了時のコピー保持を証明する。
+残量上限・CopyIdleは既存OnRunから供給。BUILD=0/AUDIT=0:
+`/tmp/physical-snapshot-shift-{workbench,axioms}.log`。新4guardは標準3公理のみ。
+追加公理obligation_localRealizationは残り、KPIは21完了18未完。次は比較二度消費・shift入口の
+32+32/64+64計画へコピー更新を融合し、restartの3コピー引き渡し・鏡・DP再準備を閉じる。
+現状の正本は `AGENTS.md` §0 と `lean-pal/PHYSICAL_CONNECTIONS.md` 末尾。
+
 ## n566-571 (2026-09-22): `matched` 腕の読み取りが三つとも窓の中に入った
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。

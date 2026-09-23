@@ -51,6 +51,19 @@ def OnRun (Good : Mirrored1 P → Prop) (Post : List (Fin 2) → Mirrored1 P →
     (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) (m : Mirrored1 P) : Prop :=
   InvC Good raw stOf m ∨ (Post raw m ∧ PhysWF m.vm ∧ MirInv1 m ∧ Good m)
 
+/-- A physical tick only simulates states whose already consumed letters have
+arrived. TrackedAt carries this bound; forgetting it in OnRun unnecessarily
+admits truncations behind a head's saved history. The post phase is unchanged. -/
+def ArrivedOnRun (Good : Mirrored1 P → Prop) (Post : List (Fin 2) → Mirrored1 P → Prop)
+    (raw : List (Fin 2)) (stOf : ℕ → State GalilVM) (m : Mirrored1 P) : Prop :=
+  (InvC Good raw stOf m ∧ ∃ k j, Needy raw stOf k j m.vm ∧ usedVM raw (stOf k).vm ≤ j) ∨
+    (Post raw m ∧ PhysWF m.vm ∧ MirInv1 m ∧ Good m)
+
+theorem ArrivedOnRun.onRun {Good : Mirrored1 P → Prop}
+    {Post : List (Fin 2) → Mirrored1 P → Prop} {raw : List (Fin 2)}
+    {stOf : ℕ → State GalilVM} {m : Mirrored1 P} (h : ArrivedOnRun Good Post raw stOf m) :
+    OnRun Good Post raw stOf m := h.imp And.left id
+
 theorem TrackedAt.invC {Good : Mirrored1 P → Prop} {raw : List (Fin 2)}
     {stOf : ℕ → State GalilVM} {lastReport j k : ℕ} {m : Mirrored1 P}
     (h : TrackedAt Good raw stOf lastReport j k m) : InvC Good raw stOf m :=
@@ -155,19 +168,22 @@ theorem pal_in_peg_of_shadowed_sysC
       TickSucc (Pof w) (qof w) (firstOf w) delay (Canon w) (frozen w m) (absSC m)
           (absSC (tickC (M w) m)) ∧
         Post w (tickC (M w) m) ∧ PhysWF (tickC (M w) m).vm ∧ MirInv1 (tickC (M w) m) ∧ Good (tickC (M w) m))
-    (rep_sound : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
-      repM w (micro (sysM (M w) (repM w)) w (x0C blank delay) s).core = true →
-      ReportPoint w (stAbs (sysM (M w) (repM w)) absSC w (x0C blank delay) s) ∧
-        Refreshed (Pof w) (qof w) (firstOf w) (stAbs (sysM (M w) (repM w)) absSC w (x0C blank delay) s))
-    (rep_complete : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
-      ReportPoint w (stAbs (sysM (M w) (repM w)) absSC w (x0C blank delay) s) →
-      Refreshed (Pof w) (qof w) (firstOf w) (stAbs (sysM (M w) (repM w)) absSC w (x0C blank delay) s) →
-      repM w (micro (sysM (M w) (repM w)) w (x0C blank delay) s).core = true)
+    -- the report test only has to be right on the run, given how many letters have arrived
+    (rep_sound : ∀ (w : List (Fin 2)) (m : Mirrored1 P), 0 < w.length →
+      ((∃ k, TrackedAt Good w (stOf w) (TcOf w w.length) w.length k m) ∨
+        (Post w m ∧ PhysWF m.vm ∧ MirInv1 m ∧ Good m)) →
+      repM w m = true →
+      ReportPoint w (absSC m) ∧ Refreshed (Pof w) (qof w) (firstOf w) (absSC m))
+    (rep_complete : ∀ (w : List (Fin 2)) (j : ℕ) (m : Mirrored1 P), 0 < w.length →
+      ((∃ k, TrackedAt Good w (stOf w) (TcOf w w.length) j k m) ∨
+        (Post w m ∧ PhysWF m.vm ∧ MirInv1 m ∧ Good m)) →
+      ReportPoint w (absSC m) → Refreshed (Pof w) (qof w) (firstOf w) (absSC m) →
+      repM w m = true)
     -- the physical machine and its specification
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
     (htape : 0 < t) (Rep : List (Fin 2) → Mirrored1 P → Q × (Fin t → STape Γ) → Prop)
     (hrepInit : ∀ w, Rep w (x0C blank delay).core (q0, fun _ => STape.blankTape blankSymbol))
-    (hsimTick : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m →
+    (hsimTick : ∀ (w : List (Fin 2)) m p, 0 < w.length → ArrivedOnRun Good Post w (stOf w) m →
       OnRun Good Post w (stOf w) (tickC (M w) m) →
       TickSucc (Pof w) (qof w) (firstOf w) delay (Canon w) (Starved m.vm ∨ frozen w m) (absSC m)
         (absSC (tickC (M w) m)) →
@@ -203,6 +219,10 @@ theorem pal_in_peg_of_shadowed_sysC
   have honRun : ∀ {w s m}, Inv w s m → OnRun Good Post w (stOf w) m := by
     rintro w s m ⟨_, _, htracked | ⟨_, _, hpost, hphys, hmir, hgood⟩⟩
     · exact Or.inl htracked.invC
+    · exact Or.inr ⟨hpost, hphys, hmir, hgood⟩
+  have harrivedOnRun : ∀ {w s m}, Inv w s m → ArrivedOnRun Good Post w (stOf w) m := by
+    rintro w s m ⟨_, _, htracked | ⟨_, _, hpost, hphys, hmir, hgood⟩⟩
+    · exact Or.inl ⟨htracked.invC, _, _, htracked.needy, htracked.used⟩
     · exact Or.inr ⟨hpost, hphys, hmir, hgood⟩
   have harrZero : ∀ w : List (Fin 2), arrL w 0 = 0 := fun w => by
     unfold arrL
@@ -369,9 +389,42 @@ theorem pal_in_peg_of_shadowed_sysC
           omega
       · omega
     · exact hlt
+  have hrunAt : ∀ w (hw : 0 < w.length) s,
+      (∃ k, TrackedAt Good w (stOf w) (TcOf w w.length) (arrL w s) k (micro (S w) w x0 s).core) ∨
+        (arrL w s = w.length ∧ Post w (micro (S w) w x0 s).core ∧
+          PhysWF (micro (S w) w x0 s).core.vm ∧ MirInv1 (micro (S w) w x0 s).core ∧
+          Good (micro (S w) w x0 s).core) := by
+    intro w hw s
+    rcases (inv_micro (S w) w x0 (Inv w) (hinvInit w hw) (hinvTick w) (hinvFeed w) s).2.2 with
+      htracked | ⟨_, harr, hpost, hphys, hmir, hgood⟩
+    · exact Or.inl ⟨_, htracked⟩
+    · exact Or.inr ⟨harr, hpost, hphys, hmir, hgood⟩
+  have rep_soundAt : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
+      repM w (micro (S w) w x0 s).core = true →
+      ReportPoint w (stAbs (S w) absSC w x0 s) ∧
+        Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absSC w x0 s) := by
+    intro w s hw hlateS hrep
+    have harr : arrL w s = w.length := by
+      unfold arrL
+      rw [nLocalL_eq] at hlateS ⊢
+      omega
+    refine rep_sound w _ hw ?_ hrep
+    rcases hrunAt w hw s with ⟨k, htracked⟩ | ⟨_, hpost, hphys, hmir, hgood⟩
+    · rw [harr] at htracked
+      exact Or.inl ⟨k, htracked⟩
+    · exact Or.inr ⟨hpost, hphys, hmir, hgood⟩
+  have rep_completeAt : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
+      ReportPoint w (stAbs (S w) absSC w x0 s) →
+      Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absSC w x0 s) →
+      repM w (micro (S w) w x0 s).core = true := by
+    intro w s hw hpoint hrefreshed
+    refine rep_complete w (arrL w s) _ hw ?_ hpoint hrefreshed
+    rcases hrunAt w hw s with htracked | ⟨_, hpost, hphys, hmir, hgood⟩
+    · exact Or.inl htracked
+    · exact Or.inr ⟨hpost, hphys, hmir, hgood⟩
   refine pal_in_peg_of_shadowed_core S absSC Inv x0 Pof qof firstOf H_letter H_first
     L0 blankSymbol q0 repQ outQ htape Rep hrepInit
-    (fun w s m p hinput hinv hrep => hsimTick w m p hinv.1 (honRun hinv)
+    (fun w s m p hinput hinv hrep => hsimTick w m p hinv.1 (harrivedOnRun hinv)
       (honRun (hinvTick w s m hinput hinv))
       (by
         by_cases hstarved : Starved m.vm
@@ -391,9 +444,9 @@ theorem pal_in_peg_of_shadowed_sysC
     (fun w s m p hinv hrep => hreadRep w m p hinv.1 (honRun hinv) hrep)
     (fun w s m p hinv hrep hpoint => hreadOut w m p hinv.1 (honRun hinv) hrep hpoint)
     (x0C_started blank delay) (fun _ _ => rfl)
-    rep_sound
+    rep_soundAt
     (fun w s hw hpoint hrefreshed =>
-      ⟨s, le_rfl, hlate w hw s hpoint.atLast, rep_complete w s hw hpoint hrefreshed⟩)
+      ⟨s, le_rfl, hlate w hw s hpoint.atLast, rep_completeAt w s hw hpoint hrefreshed⟩)
     hinvInit hinvTick hinvFeed ?_
   · exact H_ledger_of_local_oracles S absSC x0 Pof qof firstOf stOf TcOf hpreload
       (fun w hw s hbefore hstarved =>
