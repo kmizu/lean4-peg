@@ -1,4 +1,5 @@
 import PalPeg.PhysicalResidualParts
+import PalPeg.PhysicalFppAlive
 
 /-!
 # `PalInPeg.unconditional` — 目標そのもの（物理機械の経路）
@@ -14,7 +15,7 @@ import PalPeg.PhysicalResidualParts
 | 義務 | 中身 | 状況 |
 |---|---|---|
 | `obligation_scanRest` | scan の tick のうち既存 7 ケース以外（matched・fallback・restart・探索） | 未 |
-| `obligation_fpp` | fpp でプログラムが停止済みの tick（未停止の fpp は処理済み） | 未 |
+| ~~`obligation_fpp`~~ | fpp。未停止は処理済み、停止済みはトレース上に無い（`PhysicalFppAlive.ticks_fppDone`） | **済** |
 | `obligation_chooseSelect` | choose の select。head の瞬時コピー（物理規則に行が無い） | 未 |
 | `obligation_rewindReset` | rewind の reset。退役 FPP bank の reset が要る | 未 |
 | `obligation_init` | init。head の瞬時コピー（物理規則に行が無い） | 未 |
@@ -37,8 +38,6 @@ noncomputable def physRest : PalPeg.PhysicalScanCount.RestCommands := fun _ _ _ 
 
 /-- **(OBLIGATION)** scan ticks outside the seven dispatcher cases. -/
 axiom obligation_scanRest : TicksWhere physRest ScanRest
-/-- **(OBLIGATION)** the `fpp` tick of a program that has already halted. -/
-axiom obligation_fpp : TicksWhere physRest FppDone
 /-- **(OBLIGATION)** the select half of `choose`. -/
 axiom obligation_chooseSelect : TicksWhere physRest ChooseSelect
 /-- **(OBLIGATION)** the rewind at the first mark. -/
@@ -66,7 +65,8 @@ axiom obligation_freeze :
 /-- **目標**: `PAL ∈ PEG`。`#print axioms unconditional` が標準 3 公理だけになったら証明完了。 -/
 theorem unconditional : PegSeparation.RecognizedByTotalPEG PalPeg.PAL :=
   let ⟨PhysFrozen, henter, hkeep, hquiet⟩ := obligation_freeze
-  given_parts_and_frozen physRest obligation_scanRest obligation_fpp obligation_chooseSelect
+  given_parts_and_frozen physRest obligation_scanRest
+    (PalPeg.PhysicalFppAlive.ticks_fppDone physRest) obligation_chooseSelect
     obligation_rewindReset obligation_init obligation_replayStart PhysFrozen henter hkeep hquiet
 
 end PalPeg.PalInPeg

@@ -396,7 +396,6 @@ import PalPeg.PalInPegPhysical
  Classical.choice,
  Quot.sound,
  PalPeg.PalInPeg.obligation_chooseSelect,
- PalPeg.PalInPeg.obligation_fpp,
  PalPeg.PalInPeg.obligation_freeze,
  PalPeg.PalInPeg.obligation_init,
  PalPeg.PalInPeg.obligation_replayStart,
