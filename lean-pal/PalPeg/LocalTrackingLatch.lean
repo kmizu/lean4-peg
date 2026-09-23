@@ -83,9 +83,11 @@ structure LocalSys (X : Type) where
 
 variable {X : Type}
 
-/-- A non-arrival local step: tick the core, then latch. -/
+/-- A non-arrival local step: latch the state the step starts from, then tick the core.
+The report of a state is read when the next step starts, so a local machine may read it
+from its windows as well as its control. -/
 def latchStep (S : LocalSys X) (x : LX X) : LX X :=
-  ⟨S.tickL x.core, x.ans || (S.repL (S.tickL x.core) && S.outL (S.tickL x.core)), x.started⟩
+  ⟨S.tickL x.core, x.ans || (S.repL x.core && S.outL x.core), x.started⟩
 
 /-- An arrival local step: feed the core, reset the latch, mark started. -/
 def arriveL (S : LocalSys X) (a : Fin 2) (x : LX X) : LX X := ⟨S.feedC a x.core, false, true⟩
@@ -252,11 +254,11 @@ end Enc
 
 /-! ## 6. The latch along the run -/
 
-/-- After the last arrival the latch is exactly "some later local step passed
-the report test with output `true`". -/
+/-- After the last arrival the latch is exactly "some earlier local state after the
+arrival passed the report test with output `true`". -/
 theorem latch_ans (S : LocalSys X) (w : List (Fin 2)) (x0 : LX X) (hw : 0 < w.length) :
     ∀ d, (micro S w x0 ((w.length - 1) * nLocalL + 1 + d)).ans = true ↔
-      ∃ s, (w.length - 1) * nLocalL + 1 < s ∧ s ≤ (w.length - 1) * nLocalL + 1 + d ∧
+      ∃ s, (w.length - 1) * nLocalL + 1 ≤ s ∧ s < (w.length - 1) * nLocalL + 1 + d ∧
         S.repL (micro S w x0 s).core = true ∧ S.outL (micro S w x0 s).core = true := by
   intro d
   induction d with
@@ -274,20 +276,18 @@ theorem latch_ans (S : LocalSys X) (w : List (Fin 2)) (x0 : LX X) (hw : 0 < w.le
           = latchStep S (micro S w x0 ((w.length - 1) * nLocalL + 1 + d)) := by
         show stepL S (inp w ((w.length - 1) * nLocalL + 1 + d)) _ = _
         rw [hlate]; rfl
-      have hcore : ∀ y : LX X, (latchStep S y).core = S.tickL y.core := fun _ => rfl
       rw [h]
       simp only [latchStep, Bool.or_eq_true, Bool.and_eq_true]
       rw [ih]
       constructor
       · rintro (⟨s, h1, h2, h3⟩ | ⟨h3, h4⟩)
         · exact ⟨s, h1, by omega, h3⟩
-        · refine ⟨(w.length - 1) * nLocalL + 1 + (d+1), by omega, le_rfl, ?_⟩
-          rw [h]; exact ⟨h3, h4⟩
+        · exact ⟨(w.length - 1) * nLocalL + 1 + d, by omega, by omega, h3, h4⟩
       · rintro ⟨s, h1, h2, h3⟩
-        by_cases hs : s ≤ (w.length - 1) * nLocalL + 1 + d
+        by_cases hs : s < (w.length - 1) * nLocalL + 1 + d
         · exact Or.inl ⟨s, h1, hs, h3⟩
-        · have hse : s = (w.length - 1) * nLocalL + 1 + (d+1) := by omega
-          rw [hse, h] at h3
+        · have hse : s = (w.length - 1) * nLocalL + 1 + d := by omega
+          rw [hse] at h3
           exact Or.inr h3
 
 /-! ## 7. The abstract run with arrivals -/
@@ -454,6 +454,18 @@ theorem reported_of_shift (P : Shared) (q : ℕ) (first : Fin 9) (w : List (Fin 
     Reported P q first w st (w.length * nLocalL) :=
   ⟨Tc w.length, run_on_time_shift d c nLocalL hτ Tc h0 hstep w.length hz, hrep.1, hrep.2⟩
 
+/-- **Deadline slot, one step early.** With any slack (`2c < τ`) the report is in by
+`|w|·τ − 1`, which is what a latch reading the state a step starts from needs. -/
+theorem reported_of_shift_early (P : Shared) (q : ℕ) (first : Fin 9) (w : List (Fin 2))
+    (hw : 0 < w.length)
+    (st : ℕ → State GalilVM) (Tc d : ℕ → ℕ) (c : ℕ) (hτ : 2*c < nLocalL) (h0 : Tc 0 = 0)
+    (hstep : ∀ m, Tc (m+1) ≤ max (Tc m) (m*nLocalL) + d (m+1))
+    (hz : PalPeg.Predictability.backlog d c w.length = 0)
+    (hrep : ReportPoint w (st (Tc w.length)) ∧ Refreshed P q first (st (Tc w.length))) :
+    Reported P q first w st (w.length * nLocalL - 1) := by
+  have h := run_on_time_shift_slack d c nLocalL hτ.le Tc h0 hstep w.length hw hz
+  exact ⟨Tc w.length, by omega, hrep.1, hrep.2⟩
+
 /-! ## 9. The tracking theorem -/
 
 /-- **Latched tracking from the oracles.**
@@ -495,7 +507,7 @@ theorem tracking_latch_of_oracles
       ReportPoint w (stAbs S absS w x0 s) → Refreshed (Pof w) (qof w) (firstOf w) (stAbs S absS w x0 s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ S.repL (micro S w x0 s').core = true) :
     (L.realize blank initQ (GalilEmptyWord.accept' initQ ansQ) nLocalL htape nLocalL_pos).SAccepts w ↔
-      LatchTrue (Pof w) (qof w) (firstOf w) w (stAbs S absS w x0) (w.length * nLocalL) := by
+      LatchTrue (Pof w) (qof w) (firstOf w) w (stAbs S absS w x0) (w.length * nLocalL - 1) := by
   have hfold := foldl_encL L blank S enc enc_step w x0
   rw [enc_init] at hfold
   have hne : (w.foldl (L.applyN blank nLocalL) (initQ, fun _ => STape.blankTape blank)).1 ≠ initQ := by
@@ -517,12 +529,12 @@ theorem tracking_latch_of_oracles
   constructor
   · rintro ⟨s, h1, h2, h3, h4⟩
     obtain ⟨hrp, hfr⟩ := rep_sound s (by omega) h3
-    refine ⟨s, h2, hrp, hfr, ?_⟩
+    refine ⟨s, by omega, hrp, hfr, ?_⟩
     rw [outL_abs] at h4; exact h4
   · rintro ⟨s, h1, hrp, hfr, ho⟩
     obtain ⟨s', h1', h2', h3'⟩ := rep_complete s hrp hfr
     obtain ⟨hrp', hfr'⟩ := rep_sound s' (by omega) h3'
-    refine ⟨s', h2', by omega, h3', ?_⟩
+    refine ⟨s', by omega, by omega, h3', ?_⟩
     rw [outL_abs]
     show (stAbs S absS w x0 s').ctl.output = true
     rw [report_output_eq w (Pof w) (H_letter w) (H_first w) (qof w) (firstOf w) _ _
@@ -560,12 +572,12 @@ theorem pal_in_peg_of_local_latch
       ReportPoint w (stAbs (S w) absS w x0 s) → Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absS w x0 s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ (S w).repL (micro (S w) w x0 s').core = true)
     (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs (S w) absS w x0)
-      (fun w => w.length * nLocalL)) :
+      (fun w => w.length * nLocalL - 1)) :
     RecognizedByTotalPEG PAL :=
   pal_in_peg_of_latch_realized (Nat.mul_pos nLocalL_pos (PalPeg.Local.cnt_pos K))
     (L.realize blank initQ (GalilEmptyWord.accept' initQ ansQ) nLocalL htape nLocalL_pos)
     Pof qof firstOf H_letter H_first (fun w => stAbs (S w) absS w x0)
-    (fun w => w.length * nLocalL)
+    (fun w => w.length * nLocalL - 1)
     (fun w hw => tracking_latch_of_oracles (S w) absS x0 Pof qof firstOf H_letter H_first
       L blank initQ ansQ startQ enc htape (enc_step w) enc_init enc_ans enc_started x0_started
       (outL_abs w) w hw (fun s => rep_sound w s hw) (fun s => rep_complete w s hw))

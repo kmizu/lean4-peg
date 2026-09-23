@@ -27,7 +27,9 @@ open PalPeg.PhysicalDpCleanup (Config Enc machine initialControl)
 /-- The stop, report and output contracts of the fixed consumer, for the common
 machine. These are the M5 contracts; none is assumed elsewhere. -/
 structure ReportResiduals (rest : PalPeg.PhysicalScanCount.RestCommands)
-    (repQ outQ : PalPeg.PhysicalDpCleanup.Control → Bool)
+    (repQ : PalPeg.PhysicalDpCleanup.Control →
+      (Fin tapeCountM → PalPeg.Local.Window Γm PalPeg.PhysicalContract.macroRadius) → Bool)
+    (outQ : PalPeg.PhysicalDpCleanup.Control → Bool)
     (PhysFrozen : List (Fin 2) → Config → Prop) : Prop where
   frozenEnter : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC 0 1 0 w st Tc → CanonTrace 0 w st Tc →
@@ -35,11 +37,11 @@ structure ReportResiduals (rest : PalPeg.PhysicalScanCount.RestCommands)
         frozenAt w m → Enc w (absSC m) p → PhysFrozen w p
   frozenKeep : ∀ (w : List (Fin 2)) p, PhysFrozen w p →
       PhysFrozen w ((machine rest).apply blankM p none)
-  frozenQuiet : ∀ (w : List (Fin 2)) p, PhysFrozen w p → repQ p.1 = false
+  frozenQuiet : ∀ (w : List (Fin 2)) p, PhysFrozen w p → repQ p.1 (fun j => PalPeg.Local.readWin blankM PalPeg.PhysicalContract.macroRadius (p.2 j)) = false
   encRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC 0 1 0 w st Tc → CanonTrace 0 w st Tc →
       ∀ m p, OnRun (localGood (spare := 0)) (postPhase 0 1 0) w (heldAfter (Tc w.length) st) m →
-        Enc w (absSC m) p → reportArrived 0 1 0 w (absSC m) = repQ p.1
+        Enc w (absSC m) p → reportArrived 0 1 0 w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankM PalPeg.PhysicalContract.macroRadius (p.2 j))
   encOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC 0 1 0 w st Tc → CanonTrace 0 w st Tc →
       ∀ m p, OnRun (localGood (spare := 0)) (postPhase 0 1 0) w (heldAfter (Tc w.length) st) m →
@@ -50,7 +52,9 @@ structure ReportResiduals (rest : PalPeg.PhysicalScanCount.RestCommands)
 contracts remain. -/
 theorem given_tickCases_and_reports (rest : PalPeg.PhysicalScanCount.RestCommands)
     (hcases : PalPeg.PhysicalContract.TickCases (machine rest) blankM Enc)
-    (repQ outQ : PalPeg.PhysicalDpCleanup.Control → Bool)
+    (repQ : PalPeg.PhysicalDpCleanup.Control →
+      (Fin tapeCountM → PalPeg.Local.Window Γm PalPeg.PhysicalContract.macroRadius) → Bool)
+    (outQ : PalPeg.PhysicalDpCleanup.Control → Bool)
     (PhysFrozen : List (Fin 2) → Config → Prop)
     (hreports : ReportResiduals rest repQ outQ PhysFrozen) :
     RecognizedByTotalPEG PAL :=
@@ -88,7 +92,9 @@ theorem given_remainingCases_and_reports (rest : PalPeg.PhysicalScanCount.RestCo
         ¬ PalPeg.PhysicalGrowMatchCase.MatchGrow (absSC m) →
         Enc w (PalPeg.PhysicalCacheMachine.successor w (absSC m))
           ((machine rest).apply blankM p none))
-    (repQ outQ : PalPeg.PhysicalDpCleanup.Control → Bool)
+    (repQ : PalPeg.PhysicalDpCleanup.Control →
+      (Fin tapeCountM → PalPeg.Local.Window Γm PalPeg.PhysicalContract.macroRadius) → Bool)
+    (outQ : PalPeg.PhysicalDpCleanup.Control → Bool)
     (PhysFrozen : List (Fin 2) → Config → Prop)
     (hreports : ReportResiduals rest repQ outQ PhysFrozen) :
     RecognizedByTotalPEG PAL :=

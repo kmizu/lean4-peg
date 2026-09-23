@@ -91,12 +91,12 @@ structure CoreLocal {X : Type} (S : LocalSys X) (x0 : LX X)
   L0 : LocalStep (Fin 2) Q Γ t K
   blank : Γ
   q0 : Q
-  repQ : Q → Bool
+  repQ : Q → (Fin t → PalPeg.Local.Window Γ K) → Bool
   outQ : Q → Bool
   encC : X → Q × (Fin t → STape Γ)
   enc_tick : ∀ x : X, encC (S.tickL x) = L0.apply blank (encC x) none
   enc_feed : ∀ (a : Fin 2) (x : X), encC (S.feedC a x) = L0.apply blank (encC x) (some a)
-  rep_eq : ∀ x : X, S.repL x = repQ (encC x).1
+  rep_eq : ∀ x : X, S.repL x = repQ (encC x).1 (fun j => PalPeg.Local.readWin blank K ((encC x).2 j))
   out_eq : ∀ x : X, S.outL x = outQ (encC x).1
   encC_init : encC x0.core = (q0, fun _ => STape.blankTape blank)
 
@@ -145,7 +145,7 @@ theorem pal_in_peg_of_coreLocal {X Q Γ : Type} {t K : ℕ}
       absS (S.feedC a x) = PalPeg.GalilArriveChain.arriveState' a (absS x))
     (H_ledger : LedgerObligation Pof qof firstOf
       (fun w => PalPeg.LocalTrackingLatch.stAbs S absS w x0)
-      (fun w => w.length * PalPeg.LocalTrackingLatch.nLocalL)) :
+      (fun w => w.length * PalPeg.LocalTrackingLatch.nLocalL - 1)) :
     PegSeparation.RecognizedByTotalPEG PalPeg.PAL :=
   PalPeg.LocalLatchRealize.pal_in_peg_of_local_core (fun _ => S) absS x0 Pof qof firstOf
     H_letter H_first C.L0 C.blank C.q0 C.repQ C.outQ C.encC htape

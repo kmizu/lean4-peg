@@ -113,7 +113,8 @@ theorem running_boundary {w : List (Fin 2)} {x : State GalilVM}
 ArrivedOnRun, including the consumed-input bound furnished by the actual tracked
 run. Other contracts keep their existing OnRun and InvC premises. -/
 structure Obligations {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
+    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q)
+    (repQ : Q → (Fin t → PalPeg.Local.Window Γ K) → Bool) (outQ : Q → Bool)
     (Enc : List (Fin 2) → State GalilVM → Q × (Fin t → STape Γ) → Prop)
     (PhysFrozen : List (Fin 2) → Q × (Fin t → STape Γ) → Prop) : Prop where
   hencInit : ∀ w, Enc w (absSC (x0C (blankVML 0) 2048).core)
@@ -137,11 +138,11 @@ structure Obligations {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fin
         Enc w (absSC m) p → PhysFrozen w p
   hfrozenKeep : ∀ (w : List (Fin 2)) p, PhysFrozen w p →
       PhysFrozen w (L0.apply blankSymbol p none)
-  hfrozenQuiet : ∀ (w : List (Fin 2)) p, PhysFrozen w p → repQ p.1 = false
+  hfrozenQuiet : ∀ (w : List (Fin 2)) p, PhysFrozen w p → repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j)) = false
   hencRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC 0 1 0 w st Tc → CanonTrace 0 w st Tc →
       ∀ m p, OnRun (localGood (spare := 0)) (postPhase 0 1 0) w (heldAfter (Tc w.length) st) m →
-        Enc w (absSC m) p → reportArrived 0 1 0 w (absSC m) = repQ p.1
+        Enc w (absSC m) p → reportArrived 0 1 0 w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j))
   hencOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC 0 1 0 w st Tc → CanonTrace 0 w st Tc →
       ∀ m p, OnRun (localGood (spare := 0)) (postPhase 0 1 0) w (heldAfter (Tc w.length) st) m →

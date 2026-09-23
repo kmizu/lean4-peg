@@ -180,7 +180,8 @@ theorem pal_in_peg_of_shadowed_sysC
       ReportPoint w (absSC m) → Refreshed (Pof w) (qof w) (firstOf w) (absSC m) →
       repM w m = true)
     -- the physical machine and its specification
-    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
+    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q)
+    (repQ : Q → (Fin t → PalPeg.Local.Window Γ K) → Bool) (outQ : Q → Bool)
     (htape : 0 < t) (Rep : List (Fin 2) → Mirrored1 P → Q × (Fin t → STape Γ) → Prop)
     (hrepInit : ∀ w, Rep w (x0C blank delay).core (q0, fun _ => STape.blankTape blankSymbol))
     (hsimTick : ∀ (w : List (Fin 2)) m p, 0 < w.length → ArrivedOnRun Good Post w (stOf w) m →
@@ -191,7 +192,7 @@ theorem pal_in_peg_of_shadowed_sysC
     (hsimFeed : ∀ (w : List (Fin 2)) letter m p, 0 < w.length → InvC Good w (stOf w) m →
       OnRun Good Post w (stOf w) (feedC letter m) → Rep w m p → Rep w (feedC letter m) (L0.apply blankSymbol p (some letter)))
     (hreadRep : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep w m p →
-      repM w m = repQ p.1)
+      repM w m = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j)))
     (hreadOut : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep w m p →
       ReportPoint w (absSC m) → m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by

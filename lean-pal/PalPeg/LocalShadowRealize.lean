@@ -34,10 +34,10 @@ variable {A Q Γ : Type} {t K : ℕ}
 /-- The abstract system and the physical machine in lockstep.  The report test and the output
 bit are read from the physical control. -/
 def shadowSys (S : LocalSys A) (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ)
-    (repQ outQ : Q → Bool) : LocalSys (A × (Q × (Fin t → STape Γ))) where
+    (repQ : Q → (Fin t → PalPeg.Local.Window Γ K) → Bool) (outQ : Q → Bool) : LocalSys (A × (Q × (Fin t → STape Γ))) where
   tickL := fun x => (S.tickL x.1, L0.apply blank x.2 none)
   feedC := fun a x => (S.feedC a x.1, L0.apply blank x.2 (some a))
-  repL := fun x => repQ x.2.1
+  repL := fun x => repQ x.2.1 (fun j => PalPeg.Local.readWin blank K (x.2.2 j))
   outL := fun x => outQ x.2.1
   Starved := fun x => S.Starved x.1
 
@@ -59,7 +59,8 @@ def shadowInit (x0 : LX A) (q0 : Q) (blank : Γ) : LX (A × (Q × (Fin t → STa
 
 section Lockstep
 
-variable (S : LocalSys A) (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (repQ outQ : Q → Bool)
+variable (S : LocalSys A) (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ)
+  (repQ : Q → (Fin t → PalPeg.Local.Window Γ K) → Bool) (outQ : Q → Bool)
   (Inv : List (Fin 2) → ℕ → A → Prop) (Rep : A → Q × (Fin t → STape Γ) → Prop)
 
 /-- **The lockstep run.**  The abstract half of the run of the pair is the abstract run, and the
@@ -109,14 +110,16 @@ theorem pal_in_peg_of_shadowed_core
     (H_letter : ∀ w : List (Fin 2), (Pof w).onLetter = onLetterVM w)
     (H_first : ∀ w : List (Fin 2), (Pof w).leftFirst = leftFirstVM)
     -- the physical machine and its specification
-    (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (q0 : Q) (repQ outQ : Q → Bool) (htape : 0 < t)
+    (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (q0 : Q)
+    (repQ : Q → (Fin t → PalPeg.Local.Window Γ K) → Bool) (outQ : Q → Bool) (htape : 0 < t)
     (Rep : List (Fin 2) → A → Q × (Fin t → STape Γ) → Prop)
     (hrepInit : ∀ w, Rep w x0.core (q0, fun _ => STape.blankTape blank))
     (hsimTick : ∀ w s a p, inp w s = none → Inv w s a → Rep w a p →
       Rep w ((S w).tickL a) (L0.apply blank p none))
     (hsimFeed : ∀ w s letter a p, inp w s = some letter → Inv w s a → Rep w a p →
       Rep w ((S w).feedC letter a) (L0.apply blank p (some letter)))
-    (hreadRep : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep w a p → (S w).repL a = repQ p.1)
+    (hreadRep : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep w a p →
+      (S w).repL a = repQ p.1 (fun j => PalPeg.Local.readWin blank K (p.2 j)))
     (hreadOut : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep w a p → ReportPoint w (absS a) →
       (S w).outL a = outQ p.1)
     -- the abstract system
@@ -135,7 +138,7 @@ theorem pal_in_peg_of_shadowed_core
     (inv_feed : ∀ w s letter a, inp w s = some letter → Inv w s a →
       Inv w (s+1) ((S w).feedC letter a))
     (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs (S w) absS w x0)
-      (fun w => w.length * nLocalL)) :
+      (fun w => w.length * nLocalL - 1)) :
     RecognizedByTotalPEG PAL := by
   have hrun := fun w (hw : 0 < w.length) =>
     micro_shadow (S w) L0 blank repQ outQ Inv (Rep w) x0 q0 w (hrepInit w) (x0_inv w hw)

@@ -297,7 +297,7 @@ def coreLocal_of (M : Steps P) (repC : Control → Bool) (x0 : LX (Mirrored1 P))
   L0 := L0
   blank := blankc
   q0 := q0
-  repQ := repQ
+  repQ := fun q _ => repQ q
   outQ := outQ
   encC := encC
   enc_tick := htick

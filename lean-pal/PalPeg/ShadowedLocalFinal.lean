@@ -475,7 +475,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
         ReportPoint w (absSC m) → Refreshed (PofC centreC placeC entry w) q first (absSC m) →
         repM w m = true)
     -- the physical machine and its specification
-    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
+    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q)
+    (repQ : Q → (Fin t → PalPeg.Local.Window Γ K) → Bool) (outQ : Q → Bool)
     (htape : 0 < t) (Rep : List (Fin 2) → Mirrored1 (tapeCount spare) → Q × (Fin t → STape Γ) → Prop)
     (hrepInit : ∀ w, Rep w (x0C (blankVML spare) 2048).core
       (q0, fun _ => STape.blankTape blankSymbol))
@@ -494,7 +495,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
         Rep w (feedC letter m) (L0.apply blankSymbol p (some letter)))
     (hreadRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
-      ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep w m p → repM w m = repQ p.1)
+      ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep w m p → repM w m = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j)))
     (hreadOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep w m p →
@@ -1553,7 +1554,8 @@ theorem given_physicalMachine_indexed (entry q : ℕ) (first : Fin 9) (hfirst : 
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc →
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
+    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q)
+    (repQ : Q → (Fin t → PalPeg.Local.Window Γ K) → Bool) (outQ : Q → Bool)
     (htape : 0 < t) (Enc : List (Fin 2) → State GalilVM → Q × (Fin t → STape Γ) → Prop)
     (hencInit : ∀ w, Enc w (absSC (x0C (blankVML spare) 2048).core)
       (q0, fun _ => STape.blankTape blankSymbol))
@@ -1584,11 +1586,11 @@ theorem given_physicalMachine_indexed (entry q : ℕ) (first : Fin 9) (hfirst : 
         Enc w (absSC m) p → PhysFrozen w p)
     (hfrozenKeep : ∀ (w : List (Fin 2)) p, PhysFrozen w p →
       PhysFrozen w (L0.apply blankSymbol p none))
-    (hfrozenQuiet : ∀ (w : List (Fin 2)) p, PhysFrozen w p → repQ p.1 = false)
+    (hfrozenQuiet : ∀ (w : List (Fin 2)) p, PhysFrozen w p → repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j)) = false)
     (hencRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m →
-        Enc w (absSC m) p → reportArrived entry q first w (absSC m) = repQ p.1)
+        Enc w (absSC m) p → reportArrived entry q first w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j)))
     (hencOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m →
@@ -1699,7 +1701,7 @@ theorem given_physicalMachine_indexed (entry q : ℕ) (first : Fin 9) (hfirst : 
         · exact Or.inl ⟨hfrozenNext, hencNext⟩
       · exact absurd hfrozen (notFrozen_of_invC entry q first hfrozen.1 hpreTrace m hinv))
     (fun w st Tc hpreTrace hcanonical m p honRun hrep => by
-      show reportArrived entry q first w (absSC m) = repQ p.1
+      show reportArrived entry q first w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j))
       rcases hrep with ⟨_, henc⟩ | ⟨hfrozen, hphys⟩
       · exact hencRep w st Tc hpreTrace hcanonical m p honRun henc
       · rw [hfrozenQuiet w p hphys]
@@ -1840,7 +1842,8 @@ theorem given_physicalMachine (entry q : ℕ) (first : Fin 9) (hfirst : first �
       0 < w.length → PreTraceIMW centreC placeC entry q first w st Tc →
       PalPeg.BranchSupply.ChainVerifierSupplyAlongTrace w st Tc)
     {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
+    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q)
+    (repQ : Q → (Fin t → PalPeg.Local.Window Γ K) → Bool) (outQ : Q → Bool)
     (htape : 0 < t) (Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop)
     (hencInit : Enc (absSC (x0C (blankVML spare) 2048).core)
       (q0, fun _ => STape.blankTape blankSymbol))
@@ -1871,11 +1874,11 @@ theorem given_physicalMachine (entry q : ℕ) (first : Fin 9) (hfirst : first �
         Enc (absSC m) p → PhysFrozen w p)
     (hfrozenKeep : ∀ (w : List (Fin 2)) p, PhysFrozen w p →
       PhysFrozen w (L0.apply blankSymbol p none))
-    (hfrozenQuiet : ∀ (w : List (Fin 2)) p, PhysFrozen w p → repQ p.1 = false)
+    (hfrozenQuiet : ∀ (w : List (Fin 2)) p, PhysFrozen w p → repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j)) = false)
     (hencRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m →
-        Enc (absSC m) p → reportArrived entry q first w (absSC m) = repQ p.1)
+        Enc (absSC m) p → reportArrived entry q first w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j)))
     (hencOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m →

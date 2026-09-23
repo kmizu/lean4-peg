@@ -260,7 +260,7 @@ theorem reported_local (P : Shared) (q : ℕ) (first : Fin 9) (w : List (Fin 2))
     (hend : w.length ≤ f (Tc w.length))
     (habs : ∀ s, K s ≤ Tc w.length → run s = truncS (w.length - arrL w s) (st (K s)))
     (hrep : GalilLedgerAssembly.ReportPointAt P q first w w.length (st (Tc w.length))) :
-    Reported P q first w run (w.length * nLocalL) := by
+    Reported P q first w run (w.length * nLocalL - 1) := by
   set α := 2 * alpha' 2048 with hα
   set β := 2 * beta' 2048 + 1 with hβ
   have hτ : 2 * (α + β) ≤ nLocalL := by
@@ -304,8 +304,11 @@ theorem reported_local (P : Shared) (q : ℕ) (first : Fin 9) (w : List (Fin 2))
   have hrep' : ReportPoint w (run (TA K Tc (min w.length w.length))) ∧
       Refreshed P q first (run (TA K Tc (min w.length w.length))) := by
     rw [min_self, hrun]; exact ⟨hrp, hfr⟩
-  exact reported_of_shift P q first w run (fun m => TA K Tc (min m w.length))
-    (fun m => if m ≤ w.length then dwT Tc m else 0) (α + β) hτ
+  have hτs : 2 * (α + β) < nLocalL := by
+    rw [hα, hβ, nLocalL_eq]
+    decide
+  exact reported_of_shift_early P q first w hw run (fun m => TA K Tc (min m w.length))
+    (fun m => if m ≤ w.length then dwT Tc m else 0) (α + β) hτs
     (by simp only [Nat.zero_min]; exact TA_zero hs htc0 htcm hnd) hstep hz hrep'
 
 /-! ## 5. The ledger obligation -/
@@ -331,7 +334,7 @@ theorem ledger_local (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ
     (hrep : ∀ w : List (Fin 2), 0 < w.length →
       GalilLedgerAssembly.ReportPointAt (Pof w) (qof w) (firstOf w) w w.length
         (stOf w (TcOf w w.length))) :
-    LedgerObligation Pof qof firstOf runOf (fun w => w.length * nLocalL) :=
+    LedgerObligation Pof qof firstOf runOf (fun w => w.length * nLocalL - 1) :=
   fun w hw hpal =>
     reported_local (Pof w) (qof w) (firstOf w) w hw hpal (stOf w) (runOf w) (ndOf w) (gdOf w) (fOf w)
       (KOf w) (TcOf w) (hs w hw) (hf0 w hw) (hfgd w hw) (htc0 w hw) (htcm w hw) (hnd w hw)
@@ -356,7 +359,7 @@ theorem ledger_localL' (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → �
     (hrep : ∀ w : List (Fin 2), 0 < w.length →
       GalilLedgerAssembly.ReportPointAt (Pof w) (qof w) (firstOf w) w w.length
         (stOf w (TcOf w w.length))) :
-    LedgerObligation Pof qof firstOf runOf (fun w => w.length * nLocalL) :=
+    LedgerObligation Pof qof firstOf runOf (fun w => w.length * nLocalL - 1) :=
   ledger_local Pof qof firstOf stOf runOf
     (fun w => GalilLookRefined.needT' w (stOf w)) (fun w k => needS w (stOf w) (k+1))
     (fun w => needS w (stOf w))
@@ -458,7 +461,7 @@ theorem H_ledger_of_local_oracles (S : List (Fin 2) → LocalSys X) (absS : X �
       GalilLedgerAssembly.ReportPointAt (Pof w) (qof w) (firstOf w) w w.length
         (stOf w (TcOf w w.length))) :
     LedgerObligation Pof qof firstOf (fun w => stAbs (S w) absS w x0)
-      (fun w => w.length * nLocalL) :=
+      (fun w => w.length * nLocalL - 1) :=
   ledger_localL' Pof qof firstOf stOf (fun w => stAbs (S w) absS w x0) (fun w => kOf (S w) w x0) TcOf
     hpre
     (fun w hw => sched_of_starved (S w) w x0 (GalilLookRefined.needT' w (stOf w))

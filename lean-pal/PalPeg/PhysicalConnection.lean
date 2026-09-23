@@ -21,7 +21,8 @@ open PalPeg.Local (LocalStep)
 /-- Conditional type-check of the final connection, with all three abstract
 contracts supplied at 0 / 1 / 0. The remaining input is exactly `Obligations`. -/
 theorem given_obligations {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
-    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q) (repQ outQ : Q → Bool)
+    (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q)
+    (repQ : Q → (Fin t → PalPeg.Local.Window Γ K) → Bool) (outQ : Q → Bool)
     (Enc : List (Fin 2) → State GalilVM → Q × (Fin t → STape Γ) → Prop)
     (PhysFrozen : List (Fin 2) → Q × (Fin t → STape Γ) → Prop)
     (htape : 0 < t) (h : Obligations L0 blankSymbol q0 repQ outQ Enc PhysFrozen) :

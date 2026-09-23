@@ -66,7 +66,7 @@ namespace PalPeg.LocalLatchRealize
 open PalPeg PalPeg.Program PalPeg.GalilScaffoldTop PalPeg.GalilScaffoldController
   PalPeg.GalilScaffoldChainInputSupply PegSeparation PalPeg.GalilStructuredSkeleton
 open PalPeg.GalilLatchTracking PalPeg.GalilArriveChain
-open PalPeg.Local (LocalStep)
+open PalPeg.Local (LocalStep Window)
 open PalPeg.LocalTrackingLatch
 
 variable {X Q Γ : Type} {t K : ℕ}
@@ -77,11 +77,13 @@ variable {X Q Γ : Type} {t K : ℕ}
 started bit. Finite and decidable whenever `Q` is. -/
 abbrev QL (Q : Type) : Type := Q × Bool × Bool
 
-/-- The new latch bit: reset on an arrival, otherwise `b` or "the new core
-control state passes the report test and outputs `true`". -/
-def ansNext (repQ outQ : Q → Bool) : Option (Fin 2) → Bool → Q → Bool
-  | none, b, q' => b || (repQ q' && outQ q')
-  | some _, _, _ => false
+/-- The new latch bit: reset on an arrival, otherwise `b` or "the state the step starts
+from passes the report test and outputs `true`". The report test may read the windows the
+step reads, not only the control. -/
+def ansNext (repW : Q → (Fin t → Window Γ K) → Bool) (outQ : Q → Bool) :
+    Option (Fin 2) → Bool → Q → (Fin t → Window Γ K) → Bool
+  | none, b, q, ws => b || (repW q ws && outQ q)
+  | some _, _, _, _ => false
 
 /-- The new started bit: set on an arrival, otherwise unchanged. -/
 def startNext : Option (Fin 2) → Bool → Bool
@@ -93,20 +95,22 @@ def startNext : Option (Fin 2) → Bool → Bool
 /-- **The extended step is `K`-local.** `latchL L0 repQ outQ` is a `LocalStep`
 with the *same* tape count `t` and the *same* radius `K`; only the finite
 control grows, by the two bits. -/
-def latchL (L0 : LocalStep (Fin 2) Q Γ t K) (repQ outQ : Q → Bool) :
-    LocalStep (Fin 2) (QL Q) Γ t K where
+def latchL (L0 : LocalStep (Fin 2) Q Γ t K) (repW : Q → (Fin t → Window Γ K) → Bool)
+    (outQ : Q → Bool) : LocalStep (Fin 2) (QL Q) Γ t K where
   next := fun p a ws =>
-    (((L0.next p.1 a ws).1, ansNext repQ outQ a p.2.1 (L0.next p.1 a ws).1,
+    (((L0.next p.1 a ws).1, ansNext repW outQ a p.2.1 p.1 ws,
       startNext a p.2.2), (L0.next p.1 a ws).2)
   disp_le := fun p a ws j => L0.disp_le p.1 a ws j
 
 /-- The tape effect of the latched step is literally that of the core step. -/
-theorem latchL_tapes (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (repQ outQ : Q → Bool)
+theorem latchL_tapes (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ)
+    (repQ : Q → (Fin t → Window Γ K) → Bool) (outQ : Q → Bool)
     (y : QL Q × (Fin t → STape Γ)) (a : Option (Fin 2)) :
     ((latchL L0 repQ outQ).apply blank y a).2 = (L0.apply blank (y.1.1, y.2) a).2 := rfl
 
 /-- The core component of the latched step is literally the core step. -/
-theorem latchL_core (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (repQ outQ : Q → Bool)
+theorem latchL_core (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ)
+    (repQ : Q → (Fin t → Window Γ K) → Bool) (outQ : Q → Bool)
     (y : QL Q × (Fin t → STape Γ)) (a : Option (Fin 2)) :
     ((latchL L0 repQ outQ).apply blank y a).1.1 = (L0.apply blank (y.1.1, y.2) a).1 := rfl
 
@@ -133,22 +137,19 @@ theorem encL_init (encC : X → Q × (Fin t → STape Γ)) (blank : Γ) (x0 : LX
 dynamics is simulated by `L0` through `encC`, and the report test and output bit
 factor through the core control, then `latchL L0 repQ outQ` simulates the latched
 dynamics `stepL S`. -/
-theorem encL_step (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (repQ outQ : Q → Bool)
+theorem encL_step (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ)
+    (repQ : Q → (Fin t → Window Γ K) → Bool) (outQ : Q → Bool)
     (S : LocalSys X) (encC : X → Q × (Fin t → STape Γ))
     (enc_tick : ∀ x : X, encC (S.tickL x) = L0.apply blank (encC x) none)
     (enc_feed : ∀ (a : Fin 2) (x : X), encC (S.feedC a x) = L0.apply blank (encC x) (some a))
-    (rep_eq : ∀ x : X, S.repL x = repQ (encC x).1)
+    (rep_eq : ∀ x : X, S.repL x = repQ (encC x).1 (fun j => PalPeg.Local.readWin blank K ((encC x).2 j)))
     (out_eq : ∀ x : X, S.outL x = outQ (encC x).1)
     (x : LX X) (a : Option (Fin 2)) :
     (latchL L0 repQ outQ).apply blank (encL encC x) a = encL encC (stepL S a x) := by
   cases a with
   | none =>
       have h : encC (S.tickL x.core) = L0.apply blank (encC x.core) none := enc_tick x.core
-      have hr : S.repL (S.tickL x.core) = repQ (L0.apply blank (encC x.core) none).1 := by
-        rw [rep_eq (S.tickL x.core), h]
-      have ho : S.outL (S.tickL x.core) = outQ (L0.apply blank (encC x.core) none).1 := by
-        rw [out_eq (S.tickL x.core), h]
-      simp only [stepL, latchStep, encL, hr, ho, h]
+      simp only [stepL, latchStep, encL, rep_eq x.core, out_eq x.core, h]
       rfl
   | some c =>
       have h : encC (S.feedC c x.core) = L0.apply blank (encC x.core) (some c) :=
@@ -172,12 +173,14 @@ theorem pal_in_peg_of_local_core
     (H_letter : ∀ w : List (Fin 2), (Pof w).onLetter = onLetterVM w)
     (H_first : ∀ w : List (Fin 2), (Pof w).leftFirst = leftFirstVM)
     -- the `K`-local core
-    (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (q0 : Q) (repQ outQ : Q → Bool)
+    (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (q0 : Q)
+    (repQ : Q → (Fin t → Window Γ K) → Bool) (outQ : Q → Bool)
     (encC : X → Q × (Fin t → STape Γ)) (htape : 0 < t)
     (enc_tick : ∀ (w : List (Fin 2)) (x : X), encC ((S w).tickL x) = L0.apply blank (encC x) none)
     (enc_feed : ∀ (w : List (Fin 2)) (a : Fin 2) (x : X),
       encC ((S w).feedC a x) = L0.apply blank (encC x) (some a))
-    (rep_eq : ∀ (w : List (Fin 2)) (x : X), (S w).repL x = repQ (encC x).1)
+    (rep_eq : ∀ (w : List (Fin 2)) (x : X),
+      (S w).repL x = repQ (encC x).1 (fun j => PalPeg.Local.readWin blank K ((encC x).2 j)))
     (out_eq : ∀ (w : List (Fin 2)) (x : X), (S w).outL x = outQ (encC x).1)
     (encC_init : encC x0.core = (q0, fun _ => STape.blankTape blank))
     (x0_started : x0.started = false)
@@ -192,7 +195,7 @@ theorem pal_in_peg_of_local_core
       Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absS w x0 s) →
       ∃ s', s' ≤ s ∧ (w.length - 1) * nLocalL + 1 < s' ∧ (S w).repL (micro (S w) w x0 s').core = true)
     (H_ledger : LedgerObligation Pof qof firstOf (fun w => stAbs (S w) absS w x0)
-      (fun w => w.length * nLocalL)) :
+      (fun w => w.length * nLocalL - 1)) :
     RecognizedByTotalPEG PAL :=
   pal_in_peg_of_local_latch S absS x0 Pof qof firstOf H_letter H_first
     (latchL L0 repQ outQ) blank (q0, x0.ans, x0.started)
