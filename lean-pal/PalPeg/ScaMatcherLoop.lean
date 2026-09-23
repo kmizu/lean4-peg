@@ -643,6 +643,98 @@ theorem step_hit (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : P
     (hhit : T[z.1.pos + z.1.q]? = (x.drop s)[z.1.q]?) (hmore : z.1.q + 1 < x.length - s) :
     ∃ n ok' v', iterStep n v = some v' ∧
       AtHead x T m k s p₁ r pe ok' (PalPeg.vStep (x.take s) (x.drop s) k p₁ r T z) v' := by
-  sorry
+  obtain ⟨⟨pos, q⟩, c⟩ := z
+  simp only at hen hhit hmore
+  obtain ⟨ph, hc⟩ := h.ctl
+  have hrel : LoopRel x.length s p₁ r k pe pos q c v.pos := h.rel
+  obtain ⟨hO, hC, hE, hper, hP, hA, hB, hW, hU⟩ := hrel
+  have hsx := h.sx
+  have hcut : s ≤ pos := h.cut
+  have hcs : c ≤ s := h.cs
+  have htl := h.tl
+  have hlen : v.len = x.length + m := by
+    simp only [HVM.len, h.word, List.length_append, List.length_take]
+    rw [Nat.min_eq_left htl]; push_cast; ring
+  have hut : (x.take s).length = s := by simp [List.length_take]; omega
+  -- the list-level step
+  have hvs : PalPeg.vStep (x.take s) (x.drop s) k p₁ r T ((⟨pos, q⟩ : PalPeg.ScanState), c) =
+      (⟨pos, q + 1⟩, PalPeg.vComp (x.take s) T pos (PalPeg.vComp (x.take s) T pos c)) := by
+    have hq : q ≠ (x.drop s).length := by simp; omega
+    simp only [PalPeg.vStep, PalPeg.scanStep, hq, if_false, hhit, if_true]
+  rw [hvs]
+  -- the pattern-text comparison
+  have hwA : v.word[(v.pos "A").toNat]? = (x.drop s)[q]? := by
+    rw [hA, h.word, show ((s : ℤ) + q).toNat = s + q by omega, word_pat x T m (by omega), pat_drop]
+  have hwB : v.word[(v.pos "B").toNat]? = T[pos + q]? := by
+    rw [hB, h.word, show ((x.length : ℤ) + pos + q).toNat = x.length + (pos + q) by omega,
+      word_txt x T m _ hen]
+  have e1 := head_hit k (some pe) ok ph v hc (by rw [hB, hlen]; omega)
+    ⟨by rw [hA]; omega, by rw [hA, hlen]; omega⟩ ⟨by rw [hB]; omega, by rw [hB, hlen]; omega⟩
+    (by rw [hwA, hwB, hhit]) (by rw [hA, hlen]; omega) (by rw [hB, hlen]; omega)
+  cases ok with
+  | false =>
+    rw [mc_15_dead] at e1
+    obtain ⟨hdc, hdh⟩ := h.dead rfl
+    have hst : PalPeg.vComp (x.take s) T pos (PalPeg.vComp (x.take s) T pos c) = c := by
+      rw [vComp_stuck _ _ _ _ hdh, vComp_stuck _ _ _ _ hdh]
+    let v1 : HVM := { v with
+      ctl := (.pending [mc k (some pe) (some false) (some 0) 19] (.equal "A" "End"))
+      pos := abMove v.pos }
+    have e2 := end_more k (some pe) (some false) (some 0) v1 rfl
+      (by show abMove v.pos "A" ≠ abMove v.pos "End"; simp [abMove, Function.update]; rw [hA, hE]; omega)
+    refine ⟨3 + 1, false, _, by rw [iterStep_add, e1, Option.bind_some, e2], ?_⟩
+    refine ⟨⟨some 0, rfl⟩, h.word, ?_, fun _ => ⟨?_, ?_⟩, by dsimp only; omega, hsx,
+      by dsimp only; omega, by dsimp only; rw [hst]; exact hcs, by dsimp only; omega, htl⟩
+    · have := loopRel_hit 0 (show LoopRel x.length s p₁ r k pe pos q c v.pos from h.rel)
+      simp only [walkMoves, Nat.add_zero] at this
+      dsimp only; rw [hst]; exact this
+    · dsimp only; rw [hst]; exact hdc
+    · dsimp only; rw [hst]; exact hdh
+  | true =>
+    rw [mc_15_ok] at e1
+    let v1 : HVM := { v with
+      ctl := (.pending [mc k (some pe) (some true) (some 0) 16] (.less "Walk" "Cut"))
+      pos := abMove v.pos }
+    have hv1W : v1.pos "Walk" = c := by simp [v1, abMove, Function.update, hW]
+    have hv1U : v1.pos "U" = x.length + pos - s + c := by simp [v1, abMove, Function.update, hU]
+    have hv1C : v1.pos "Cut" = s := by simp [v1, abMove, Function.update, hC]
+    have hv1len : v1.len = x.length + m := hlen
+    obtain ⟨n2, ph', e2⟩ := prefix_part k (some pe) v1 s c (hitAt (x.take s) T pos) rfl hv1C hv1W
+      (fun d hd hcd => by
+        rw [hv1W, hv1U, show ((c : ℤ) + d).toNat = c + d by omega,
+          show ((x.length : ℤ) + pos - s + c + d).toNat = x.length + (pos - s + c + d) by omega]
+        simp only [v1, h.word]
+        rw [word_pat x T m (by omega), word_txt x T m _ (by omega), pat_take x (by omega : c + d < s)]
+        simp only [hitAt, hut, decide_eq_true_eq]
+        rw [show pos - s + (c + d) = pos - s + c + d by omega]
+        constructor <;> intro hh <;> exact hh.symm)
+      (fun d hd hcd => ⟨⟨by rw [hv1W]; omega, by rw [hv1W, hv1len]; omega⟩,
+        by rw [hv1U]; omega, by rw [hv1U, hv1len]; omega⟩)
+      (by rw [hv1len]; omega)
+    set cc := (pcheck (hitAt (x.take s) T pos) s c).1 with hcc
+    set ok' := (pcheck (hitAt (x.take s) T pos) s c).2 with hok'
+    have hccv : cc = PalPeg.vComp (x.take s) T pos (PalPeg.vComp (x.take s) T pos c) := by
+      rw [hcc, ← pcheck_fst (x.take s) T pos c, hut]
+    have hccle : c ≤ cc := by rw [hccv]; exact (PalPeg.le_vComp _ _ _ _).trans (PalPeg.le_vComp _ _ _ _)
+    have hccs : cc ≤ s := by
+      have h1 := PalPeg.vComp_le_length (u := x.take s) (T := T) (pos := pos)
+        (PalPeg.vComp_le_length (u := x.take s) (T := T) (pos := pos) (c := c) (by rw [hut]; exact hcs))
+      rw [hut] at h1; rw [hccv]; exact h1
+    let v2 : HVM := { v1 with
+      ctl := (.pending [mc k (some pe) (some ok') ph' 19] (.equal "A" "End"))
+      pos := walkMoves (cc - c) v1.pos }
+    have e3 := end_more k (some pe) (some ok') ph' v2 rfl (by
+      simp only [v2, v1]
+      rw [(walkMoves_pos _ _).2.2 _ (by decide) (by decide), (walkMoves_pos _ _).2.2 _ (by decide) (by decide)]
+      simp [abMove, Function.update]; rw [hA, hE]; omega)
+    refine ⟨3 + (n2 + 1), ok', _, by rw [iterStep_add, e1, Option.bind_some, iterStep_add, e2,
+      Option.bind_some, e3], ?_⟩
+    refine ⟨⟨ph', rfl⟩, h.word, ?_, fun hd => ?_, by dsimp only; omega, hsx, by dsimp only; omega,
+      by dsimp only; rw [← hccv]; exact hccs, by dsimp only; omega, htl⟩
+    · have := loopRel_hit (cc - c) (show LoopRel x.length s p₁ r k pe pos q c v.pos from h.rel)
+      rw [show c + (cc - c) = cc by omega] at this
+      dsimp only; rw [← hccv]; exact this
+    · have := pcheck_snd (x.take s) T pos c (by rw [hut]; exact hd)
+      rw [hut, ← hcc] at this; dsimp only; rw [← hccv]; exact this
 
 end PalPeg.ScaMatcherLoop
