@@ -130,16 +130,16 @@ theorem successor_put_quiet (w : List (Fin 2)) (x : State GalilVM)
       PalPeg.PhysicalSearchSnapshots.put (PalPeg.PhysicalCacheMachine.successor w x) v := by
   unfold PalPeg.PhysicalCacheMachine.successor PalPeg.PhysicalSearchSnapshots.put
   unfold PalPeg.GalilScaffoldTop.tickFun
-  rcases hq with h | h | h | h | h <;> simp only [h] <;> split <;> split <;>
-    first | rfl | (exfalso; rename_i h1 h2; exact h2 h1) | (exfalso; rename_i h1 h2; exact h1 h2)
+  rcases hq with h | h | h | h | h | h <;> simp only [h] <;> (repeat' split) <;>
+    first | rfl | contradiction | simp_all [PalPeg.PhysicalRestartStorage.replace]
 
 theorem quiet_ne_scan {m : PalPeg.GalilScaffoldController.Mode}
     (hq : PalPeg.PhysicalPhaseStill.QuietPhase m) : m ≠ .scan := by
-  rcases hq with h | h | h | h | h <;> rw [h] <;> decide
+  rcases hq with h | h | h | h | h | h <;> rw [h] <;> decide
 
 theorem quiet_ne_shift {m : PalPeg.GalilScaffoldController.Mode}
     (hq : PalPeg.PhysicalPhaseStill.QuietPhase m) : m ≠ .shift := by
-  rcases hq with h | h | h | h | h <;> rw [h] <;> decide
+  rcases hq with h | h | h | h | h | h <;> rw [h] <;> decide
 
 /-- The per-mode step facts, for every state with the same control and first-period program.
 Snapshots and representatives differ from the source only in the search counters. -/
@@ -244,6 +244,19 @@ theorem runsQuiet_fpp (rest : RestCommands) (w : List (Fin 2)) (x : State GalilV
     PalPeg.PhysicalPhaseStill.ideal_fpp rest w y (p.1, T) hT (by rw [hy]; exact hmode)
       (by rw [hsame]; exact hcomp) (by rw [hsame]; exact hfloorRun) (by rw [hsame]; exact hin))
 
+/-- A rewind step back along the marks tape: not at the first mark, off the floor. -/
+def RewindStep (w : List (Fin 2)) (x : State GalilVM) : Prop :=
+  x.ctl.mode = .rewind ∧
+    (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w).atFirst x.vm = false ∧
+    (x.vm.fpp.program.config.tapes 8).left ≠ []
+
+theorem runsQuiet_rewindStep (rest : RestCommands) (w : List (Fin 2)) (x : State GalilVM)
+    (hstep : RewindStep w x) : RunsQuiet rest w x := fun y hy hsame p hp => by
+  unfold PalPeg.PhysicalRestartStorage.Same at hsame
+  exact PalPeg.PhysicalPhaseStill.running_quiet rest w y p hp (fun T hT =>
+    PalPeg.PhysicalPhaseStill.ideal_rewindStep rest w y (p.1, T) hT (by rw [hy]; exact hstep.1)
+      (by rw [hsame]; exact hstep.2.1) (by rw [hsame]; exact hstep.2.2))
+
 /-- The copy tick whose walker can read the letter it copies. -/
 def CopyReady (w : List (Fin 2)) (x : State GalilVM) : Prop :=
   x.ctl.mode = .copy ∧
@@ -262,7 +275,7 @@ theorem successor_ne_scan (w : List (Fin 2)) (x : State GalilVM)
     (hq : PalPeg.PhysicalPhaseStill.QuietPhase x.ctl.mode) :
     (PalPeg.PhysicalCacheMachine.successor w x).ctl.mode ≠ .scan := by
   unfold PalPeg.PhysicalCacheMachine.successor PalPeg.GalilScaffoldTop.tickFun
-  rcases hq with h | h | h | h | h <;> rw [h] <;> dsimp only <;> split <;> simp_all
+  rcases hq with h | h | h | h | h | h <;> rw [h] <;> dsimp only <;> (repeat' split) <;> simp_all
 
 theorem successor_not_loan (w : List (Fin 2)) (x : State GalilVM)
     (hq : PalPeg.PhysicalPhaseStill.QuietPhase x.ctl.mode) :
@@ -282,7 +295,7 @@ def ChooseBack (x : State GalilVM) : Prop :=
     (x.ctl.odd && (decide ((x.vm.fpp.program.config.tapes 8).focus = 8)
         || decide ((x.vm.fpp.program.config.tapes 8).focus = 0))) = false
 
-/-- **`home`, `markEnd`, the back half of `choose` and `copy` join the handled cases** of the common machine's final tick API.
+/-- **`home`, `markEnd`, the back half of `choose`, `copy` and the rewind steps join the handled cases** of the common machine's final tick API.
 The residual now also excludes these. -/
 theorem cases_of_remaining_quiet (rest : RestCommands)
     (hother : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
@@ -301,7 +314,7 @@ theorem cases_of_remaining_quiet (rest : RestCommands)
         ¬ PalPeg.PhysicalGrowCount.CountGrow (absSC m) →
         ¬ PalPeg.PhysicalGrowMatchCase.MatchGrow (absSC m) →
         (absSC m).ctl.mode ≠ .home → (absSC m).ctl.mode ≠ .markEnd →
-        ¬ ChooseBack (absSC m) → ¬ CopyReady w (absSC m) →
+        ¬ ChooseBack (absSC m) → ¬ CopyReady w (absSC m) → ¬ RewindStep w (absSC m) →
         PalPeg.PhysicalDpCleanup.Enc w (PalPeg.PhysicalCacheMachine.successor w (absSC m))
           ((PalPeg.PhysicalDpCleanup.machine rest).apply blankM p none)) :
     TickCases (PalPeg.PhysicalDpCleanup.machine rest) blankM PalPeg.PhysicalDpCleanup.Enc := by
@@ -321,11 +334,16 @@ theorem cases_of_remaining_quiet (rest : RestCommands)
       (runsQuiet_chooseBack rest w _ hback.1 hback.2)
   by_cases hcopy : CopyReady w (absSC m)
   · have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode :=
-      Or.inr (Or.inr (Or.inr (Or.inr hcopy.1)))
+      Or.inr (Or.inr (Or.inr (Or.inr (Or.inl hcopy.1))))
     exact forward_quiet_machine rest w _ p he hq hs (successor_not_loan w _ hq)
       (runsQuiet_copy rest w _ hcopy)
+  by_cases hrewind : RewindStep w (absSC m)
+  · have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode :=
+      Or.inr (Or.inr (Or.inr (Or.inr (Or.inr hrewind.1))))
+    exact forward_quiet_machine rest w _ p he hq hs (successor_not_loan w _ hq)
+      (runsQuiet_rewindStep rest w _ hrewind)
   exact hother w st Tc hpre hcanon m p hon hf he hs htick h1 h2 h3 h4 h5 h6 h7 hhome hmark hback
-    hcopy
+    hcopy hrewind
 
 /-- info: 'PalPeg.PhysicalPhaseLayers.cases_of_remaining_quiet' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
