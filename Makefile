@@ -20,7 +20,7 @@ lean:
 lake-test:
 	cd lean && $(LAKE_ENV) lake test
 
-# PAL ∈ PEG conditional on a real-time TM, via the Kim–Park artifact (lean-pal/).
+# PAL ∈ PEG (unconditional, standard axioms only), via the Kim–Park artifact (lean-pal/).
 # Separate toolchain (v4.31.0 + Mathlib); downloads the Mathlib cache, so it is
 # deliberately NOT part of `verify`.
 lean-pal:
