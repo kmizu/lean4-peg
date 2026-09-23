@@ -172,6 +172,7 @@ import PalPeg.PhysicalResidualParts
 import PalPeg.PhysicalFppAlive
 import PalPeg.PalInPegSca
 import PalPeg.ScaTyped
+import PalPeg.ScaHeap
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
 import PalPeg.PostRunInduction
