@@ -162,6 +162,8 @@ import PalPeg.PhysicalDpRetirement
 import PalPeg.PhysicalDpHistory
 import PalPeg.PhysicalDpSource
 import PalPeg.PhysicalFinal
+import PalPeg.PhysicalReport
+import PalPeg.PhysicalDevices
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
 import PalPeg.PostRunInduction
