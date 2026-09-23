@@ -205,6 +205,9 @@ import PalPeg.ScaWindowEncode
 import PalPeg.ScaWindowEncodeTick
 import PalPeg.ScaWindowPlumbing
 import PalPeg.ScaWindowFinal
+import PalPeg.ScaHeadRun
+import PalPeg.ScaHeadGen
+import PalPeg.ScaMatcherLoop
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
 import PalPeg.PostRunInduction
