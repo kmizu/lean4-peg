@@ -548,6 +548,86 @@ theorem empty_accepted {t K : ℕ} {Q' Γ' : Type} [Fintype Q'] [DecidableEq Q']
     (L.realize blank initQ (GalilEmptyWord.accept' initQ ansQ) nLocalL htape nLocalL_pos).SAccepts [] :=
   GalilEmptyWord.realize_accept'_nil L blank initQ ansQ nLocalL htape nLocalL_pos
 
+/-- **Latched tracking against `PAL` itself.** Only what the answer needs is asked of the
+report test: a report with a `true` output after the last arrival is a palindrome
+(`rep_sound_pal`), and a palindrome is reported `true` before the deadline
+(`rep_complete_pal`). No report point, scan invariant or refresh is named. -/
+theorem tracking_pal_of_oracles
+    {t K : ℕ} {Q' Γ' : Type} [Fintype Q'] [DecidableEq Q'] [Fintype Γ'] [DecidableEq Γ']
+    (S : LocalSys X) (x0 : LX X)
+    (L : LocalStep (Fin 2) Q' Γ' t K) (blank : Γ') (initQ : Q') (ansQ startQ : Q' → Bool)
+    (enc : LX X → Q' × (Fin t → STape Γ')) (htape : 0 < t)
+    (enc_step : ∀ (x : LX X) (a : Option (Fin 2)), L.apply blank (enc x) a = enc (stepL S a x))
+    (enc_init : enc x0 = (initQ, fun _ => STape.blankTape blank))
+    (enc_ans : ∀ x : LX X, ansQ (enc x).1 = x.ans)
+    (enc_started : ∀ x : LX X, startQ (enc x).1 = x.started)
+    (x0_started : x0.started = false)
+    (w : List (Fin 2)) (hw : 0 < w.length)
+    (rep_sound_pal : ∀ s : ℕ, (w.length - 1) * nLocalL < s →
+      S.repL (micro S w x0 s).core = true → S.outL (micro S w x0 s).core = true → IsPal w)
+    (rep_complete_pal : IsPal w → ∃ s, (w.length - 1) * nLocalL + 1 ≤ s ∧
+      s < w.length * nLocalL ∧
+      S.repL (micro S w x0 s).core = true ∧ S.outL (micro S w x0 s).core = true) :
+    (L.realize blank initQ (GalilEmptyWord.accept' initQ ansQ) nLocalL htape nLocalL_pos).SAccepts w ↔
+      w ∈ PAL := by
+  have hfold := foldl_encL L blank S enc enc_step w x0
+  rw [enc_init] at hfold
+  have hne : (w.foldl (L.applyN blank nLocalL) (initQ, fun _ => STape.blankTape blank)).1 ≠ initQ := by
+    intro hc
+    have h1 : startQ (enc (w.foldl (blockL S) x0)).1 = true := by
+      rw [enc_started]; exact started_foldl S w x0 hw
+    rw [← hfold, hc] at h1
+    have h2 : startQ (enc x0).1 = false := by rw [enc_started, x0_started]
+    rw [enc_init] at h2
+    rw [h1] at h2; cases h2
+  rw [GalilEmptyWord.realize_accept'_pos L blank initQ ansQ nLocalL htape nLocalL_pos w hw hne,
+    hfold, enc_ans, ← micro_end, mem_PAL_iff_isPal]
+  have hE : w.length * nLocalL = (w.length - 1) * nLocalL + 1 + (nLocalL - 1) := by
+    have := nLocalL_pos
+    have e : w.length = (w.length - 1) + 1 := by omega
+    conv_lhs => rw [e]
+    rw [Nat.succ_mul]; omega
+  rw [hE, latch_ans S w x0 hw]
+  constructor
+  · rintro ⟨s, h1, _, h3, h4⟩
+    exact rep_sound_pal s (by omega) h3 h4
+  · intro hpal
+    obtain ⟨s, h1, h2, h3, h4⟩ := rep_complete_pal hpal
+    exact ⟨s, h1, by omega, h3, h4⟩
+
+/-- **`PAL ∈ PEG` from the latched local layer, answer-level oracles only.** -/
+theorem pal_in_peg_of_local_latch_pal
+    {t K : ℕ} {Q' Γ' : Type} [Fintype Q'] [DecidableEq Q'] [Fintype Γ'] [DecidableEq Γ']
+    (S : List (Fin 2) → LocalSys X) (x0 : LX X)
+    (L : LocalStep (Fin 2) Q' Γ' t K) (blank : Γ') (initQ : Q') (ansQ startQ : Q' → Bool)
+    (enc : LX X → Q' × (Fin t → STape Γ')) (htape : 0 < t)
+    (enc_step : ∀ (w : List (Fin 2)) (x : LX X) (a : Option (Fin 2)),
+      L.apply blank (enc x) a = enc (stepL (S w) a x))
+    (enc_init : enc x0 = (initQ, fun _ => STape.blankTape blank))
+    (enc_ans : ∀ x : LX X, ansQ (enc x).1 = x.ans)
+    (enc_started : ∀ x : LX X, startQ (enc x).1 = x.started)
+    (x0_started : x0.started = false)
+    (rep_sound_pal : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
+      (S w).repL (micro (S w) w x0 s).core = true →
+      (S w).outL (micro (S w) w x0 s).core = true → IsPal w)
+    (rep_complete_pal : ∀ w : List (Fin 2), 0 < w.length → IsPal w →
+      ∃ s, (w.length - 1) * nLocalL + 1 ≤ s ∧ s < w.length * nLocalL ∧
+        (S w).repL (micro (S w) w x0 s).core = true ∧
+        (S w).outL (micro (S w) w x0 s).core = true) :
+    RecognizedByTotalPEG PAL := by
+  refine pal_in_peg_of_structured (Nat.mul_pos nLocalL_pos (PalPeg.Local.cnt_pos K))
+    (L.realize blank initQ (GalilEmptyWord.accept' initQ ansQ) nLocalL htape nLocalL_pos) ?_
+  intro w
+  rcases Nat.eq_zero_or_pos w.length with h0 | hw
+  · have hnil : w = [] := List.eq_nil_of_length_eq_zero h0
+    subst hnil
+    simp only [empty_accepted L blank initQ ansQ htape, true_iff]
+    rw [mem_PAL_iff_isPal]
+    simp [PalPeg.IsPal]
+  · exact tracking_pal_of_oracles (S w) x0 L blank initQ ansQ startQ enc htape (enc_step w) enc_init
+      enc_ans enc_started x0_started w hw (fun s => rep_sound_pal w s hw)
+      (rep_complete_pal w hw)
+
 /-- **`PAL ∈ PEG` from the latched local layer** plus the ledger for the run the
 local run abstracts to, at the shifted deadline `|w|·τ`. -/
 theorem pal_in_peg_of_local_latch
