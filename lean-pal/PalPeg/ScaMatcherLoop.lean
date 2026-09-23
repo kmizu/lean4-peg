@@ -507,7 +507,7 @@ theorem shift_any (k : ℕ) (hk : 1 ≤ k) (pe : Bool) (ok : Option Bool) (ph : 
       v.pos "Reach" = s + r)
     (hAL : v.pos "A" ≤ v.len) (hBq : (q : ℤ) ≤ v.pos "B") (hBL : v.pos "B" ≤ v.len)
     (hBF : v.pos "B" - q + (rsShifts k q : ℕ) ≤ v.len)
-    (hP0 : 0 ≤ v.pos "P") (hPL : v.pos "P" + q + 1 ≤ v.len) :
+    (hP0 : 0 ≤ v.pos "P") (hPq : v.pos "P" + q ≤ v.len) (hPL : v.pos "P" + (q / k : ℕ) + 1 ≤ v.len) :
     ∃ n, (pe = true ∧ k * p₁ ≤ q ∧ q ≤ r →
         iterStep n v = some { v with
           ctl := .pending [mc k (some pe) (some true) ph 13] (.available "B")
@@ -526,7 +526,7 @@ theorem shift_any (k : ℕ) (hk : 1 ≤ k) (pe : Bool) (ok : Option Bool) (ph : 
     exact shift_reset k hk (some pe) ok' ph w q hw (by rw [hwp, hA, hC])
       (by rw [hwp, hC]; positivity) (by rw [hwp, hwl]; exact hAL) (by rw [hwp]; exact hBq)
       (by rw [hwp, hwl]; exact hBL) (by rw [hwp, hwl]; exact hBF) (by rw [hwp]; exact hP0)
-      (by rw [hwp, hwl]; omega)
+      (by rw [hwp, hwl]; exact hPL)
   cases pe with
   | false =>
     obtain ⟨n, hn⟩ := hreset ok v rfl rfl (by simpa [decisionCtl] using hv)
@@ -570,7 +570,7 @@ theorem shift_any (k : ℕ) (hk : 1 ≤ k) (pe : Bool) (ok : Option Bool) (ph : 
           p₁ rfl (by simp only; rw [hC, hF]) (by simp only; rw [hC]; positivity)
           (by simp only; rw [hF]; simp only [HVM.len] at hAL ⊢; rw [hA] at hAL; omega)
           (by simp only; rw [hA]; omega) hAL hP0
-          (by simp only; simp only [HVM.len] at hPL ⊢; omega)
+          (by simp only; simp only [HVM.len] at hPq ⊢; omega)
         refine ⟨2 + (2 * p₁ + 4), fun _ => ?_, fun h => absurd ⟨rfl, by omega, by omega⟩ h⟩
         rw [iterStep_add]; simp only [iterStep, e1, e2, Option.bind_some]; exact hsp
 
@@ -833,6 +833,9 @@ theorem step_miss (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 1 ≤ k) (pe o
       rw [← rsShifts_eq k q hk] at htq
       rw [hB, hv1len]; push_cast at htq ⊢; omega)
     (by rw [hP]; omega) (by rw [hP, hv1len]; omega)
+    (by
+      have : q / k ≤ q := Nat.div_le_self q k
+      rw [hP, hv1len]; push_cast; omega)
   by_cases hbr : pe = true ∧ k * p₁ ≤ q ∧ q ≤ r
   · have e2 := hper' hbr
     refine ⟨2 + n, _, by rw [iterStep_add, e1, Option.bind_some, e2], ?_⟩
@@ -869,5 +872,51 @@ theorem step_miss (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 1 ≤ k) (pe o
     refine ⟨⟨ph, rfl⟩, h.word, loopRel_reset (show LoopRel x.length s p₁ r k pe pos q c v.pos from h.rel),
       fun h' => absurd h' (by simp), by dsimp only; omega, hsx, by dsimp only; omega,
       by dsimp only; omega, by dsimp only; omega, htl⟩
+
+theorem mc_19_dead (k : ℕ) (pe : Bool) (ph : Option ℕ) :
+    (Ctl.pending [mc k (some pe) (some false) ph 19] (.equal "A" "End")).resume matchTests true =
+      decisionCtl k pe (some false) ph := by
+  cases pe <;> rfl
+
+theorem mc_21 (k : ℕ) (pe : Bool) (ok : Option Bool) (ph : Option ℕ) :
+    (Ctl.pending [mc k (some pe) ok ph 21] (.«match» "B")).resume matchTests false =
+      decisionCtl k pe ok ph := by
+  cases pe <;> rfl
+
+/-- At the end test with `A = End`: a live check reports (`assert_equal`, then `match B`), a dead
+one goes straight to the shift decision. -/
+theorem end_report (k : ℕ) (pe : Bool) (ph : Option ℕ) (v : HVM)
+    (hv : v.ctl = .pending [mc k (some pe) (some true) ph 19] (.equal "A" "End"))
+    (he : v.pos "A" = v.pos "End") (hwc : v.pos "Walk" = v.pos "Cut") :
+    iterStep 3 v = some { v with
+      ctl := decisionCtl k pe (some true) ph
+      outputs := v.outputs ++ [v.pos "B" - v.patternSize] } := by
+  have e1 := step_equal hv
+  rw [show decide (v.pos "A" = v.pos "End") = true by simp [he], mc_19_report] at e1
+  have e2 := step_assertEqual (v := { v with
+    ctl := (.pending [mc k (some pe) (some true) ph 20] (.assertEqual "Walk" "Cut")) }) rfl hwc
+  rw [mc_20] at e2
+  have e3 := step_match (v := { v with
+    ctl := (.pending [mc k (some pe) (some true) ph 21] (.«match» "B")) }) rfl
+  rw [mc_21] at e3
+  simp [iterStep, e1, e2, e3]
+
+theorem end_dead (k : ℕ) (pe : Bool) (ph : Option ℕ) (v : HVM)
+    (hv : v.ctl = .pending [mc k (some pe) (some false) ph 19] (.equal "A" "End"))
+    (he : v.pos "A" = v.pos "End") :
+    iterStep 1 v = some { v with ctl := decisionCtl k pe (some false) ph } := by
+  have e1 := step_equal hv
+  rw [show decide (v.pos "A" = v.pos "End") = true by simp [he], mc_19_dead] at e1
+  simp [iterStep, e1]
+
+theorem rsShifts_le (k q : ℕ) (hk : 1 ≤ k) (hq : 1 ≤ q) : rsShifts k q ≤ q := by
+  rw [rsShifts_eq k q hk]
+  unfold PalPeg.ceilDiv
+  have hkq : q + k - 1 ≤ k * q := by
+    obtain ⟨a, rfl⟩ : ∃ a, k = a + 1 := ⟨k - 1, by omega⟩
+    obtain ⟨b, rfl⟩ : ∃ b, q = b + 1 := ⟨q - 1, by omega⟩
+    ring_nf; omega
+  have : (q + k - 1) / k ≤ q := Nat.div_le_of_le_mul hkq
+  omega
 
 end PalPeg.ScaMatcherLoop

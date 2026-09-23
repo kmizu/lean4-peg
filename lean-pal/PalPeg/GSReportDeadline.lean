@@ -42,10 +42,16 @@ or `T`.
 
 ## Main results
 
-* `orbit_report_deadline` — the generic statement under `ShiftDeadline`.
-* `report_deadline` — the instance `(s, p₁, r) = decompose x k`, `u = x.take s`,
-  `v = x.drop s`, every orbit index.
-* `report_deadline_iterate` — the same, stated on `(vStep …)^[j] (⟨s, 0⟩, 0)`.
+* `deadline_every_state` — the instance `(s, p₁, r) = decompose x k`, `u = x.take s`,
+  `v = x.drop s`: at **every** orbit index,
+  `|u| ≤ checked + 2 * (|v| - q) ∨ (checked < |u| ∧ T[pos - |u| + checked]? ≠ u[checked]?)`.
+  Variants: `deadline_every_state_iterate` (on `(vStep …)^[j] (⟨s, 0⟩, 0)`),
+  `deadline_every_state_eight` (`k = 8`), generic `orbit_deadline_or_stuck`.
+* `le_add_two_of_hit_orbit` — one `v` comparison before the report (`q + 1 = |v|`), a hit
+  at `checked` forces `|u| ≤ checked + 2`: the last success step cannot end at
+  `checked + 2 < |u|` without a mismatch having been seen.
+* `report_deadline` — the corollary at `q = |v|`: finished or stuck. Variants
+  `report_deadline_iterate`, `report_deadline_eight`, generic `orbit_report_deadline`.
 
 ## A side fact about the raw no-period output
 
@@ -219,6 +225,23 @@ theorem done_or_stuck_of_inv {u v T : List α} {z : VState} (h : DeadlineInv u v
     rw [hq, Nat.sub_self, Nat.mul_zero, Nat.add_zero] at hdd
     omega
 
+/-- The invariant as the plain disjunction "deadline ∨ stuck", at any state. -/
+theorem deadline_or_stuck_of_inv {u v T : List α} {z : VState} (h : DeadlineInv u v T z) :
+    u.length ≤ z.2 + 2 * (v.length - z.1.q) ∨
+      (z.2 < u.length ∧ T[z.1.pos - u.length + z.2]? ≠ u[z.2]?) :=
+  Or.symm h.2.2
+
+/-- **One `v` comparison before the report.** If `q + 1 = |v|` and the next `u` comparison
+(at `checked`) hits, then `|u| ≤ checked + 2`: the two comparisons of the last success step
+cannot end at `checked + 2 < |u|`. -/
+theorem le_add_two_of_hit {u v T : List α} {z : VState} (h : DeadlineInv u v T z)
+    (hq : z.1.q + 1 = v.length) (hhit : T[z.1.pos - u.length + z.2]? = u[z.2]?) :
+    u.length ≤ z.2 + 2 := by
+  rcases deadline_or_stuck_of_inv h with hdd | ⟨_, hne⟩
+  · rw [show v.length - z.1.q = 1 by omega] at hdd
+    omega
+  · exact absurd hhit hne
+
 section Main
 
 variable [DecidableEq α]
@@ -233,6 +256,15 @@ theorem orbit_report_deadline {u v T : List α} {k p₁ r : ℕ} (hdl : ShiftDea
         T[(orbit u v k p₁ r T j).1.pos - u.length + (orbit u v k p₁ r T j).2]?
           ≠ u[(orbit u v k p₁ r T j).2]?) :=
   done_or_stuck_of_inv (orbit_deadlineInv hdl j) hq
+
+/-- **Generic invariant at every orbit state**: deadline or stuck. -/
+theorem orbit_deadline_or_stuck {u v T : List α} {k p₁ r : ℕ}
+    (hdl : ShiftDeadline u v k p₁ r) (j : ℕ) :
+    u.length ≤ (orbit u v k p₁ r T j).2 + 2 * (v.length - (orbit u v k p₁ r T j).1.q) ∨
+      ((orbit u v k p₁ r T j).2 < u.length ∧
+        T[(orbit u v k p₁ r T j).1.pos - u.length + (orbit u v k p₁ r T j).2]?
+          ≠ u[(orbit u v k p₁ r T j).2]?) :=
+  deadline_or_stuck_of_inv (orbit_deadlineInv hdl j)
 
 /-! ## §5 The instance `decompose` -/
 
@@ -262,7 +294,77 @@ theorem vInit_take_decompose {k : ℕ} (hk : 4 ≤ k) (x : List α) :
   unfold vInit
   rw [List.length_take, Nat.min_eq_left hcut]
 
-/-- **Main theorem (unconditional report deadline for `decompose`).**
+/-- **Main theorem (the invariant at every orbit state, for `decompose`).**
+Let `(s, p₁, r) = decompose x k` with `k ≥ 4`, `u = x.take s`, `v = x.drop s`. At **every**
+index `j` of the verifier orbit from `(⟨s, 0⟩, 0)`, either the prefix check will finish in
+time (`|u| ≤ checked + 2 * (|v| - q)`) or it is stuck on a real mismatch
+(`checked < |u|` and `T[pos - |u| + checked]? ≠ u[checked]?`). -/
+theorem deadline_every_state {k : ℕ} (hk : 4 ≤ k) {x : List α} {s p₁ r : ℕ}
+    (hdec : decompose x k = (s, p₁, r)) (T : List α) (j : ℕ) :
+    (x.take s).length ≤ (orbit (x.take s) (x.drop s) k p₁ r T j).2
+        + 2 * ((x.drop s).length - (orbit (x.take s) (x.drop s) k p₁ r T j).1.q) ∨
+      ((orbit (x.take s) (x.drop s) k p₁ r T j).2 < (x.take s).length ∧
+        T[(orbit (x.take s) (x.drop s) k p₁ r T j).1.pos - (x.take s).length
+            + (orbit (x.take s) (x.drop s) k p₁ r T j).2]?
+          ≠ (x.take s)[(orbit (x.take s) (x.drop s) k p₁ r T j).2]?) := by
+  have hdl := decompose_shiftDeadline hk x
+  rw [hdec] at hdl
+  exact orbit_deadline_or_stuck hdl j
+
+/-- The orbit of `decompose` is the `vStep` iteration from `(⟨s, 0⟩, 0)`. -/
+theorem iterate_eq_orbit {k : ℕ} (hk : 4 ≤ k) {x : List α} {s p₁ r : ℕ}
+    (hdec : decompose x k = (s, p₁, r)) (T : List α) (j : ℕ) :
+    (vStep (x.take s) (x.drop s) k p₁ r T)^[j] ((⟨s, 0⟩ : ScanState), 0)
+      = orbit (x.take s) (x.drop s) k p₁ r T j := by
+  have hinit : vInit (x.take s) = ((⟨s, 0⟩ : ScanState), 0) := by
+    have h := vInit_take_decompose hk x
+    rw [hdec] at h
+    exact h
+  unfold orbit
+  rw [hinit]
+
+/-- **The same, on the iterates of `vStep` from `(⟨s, 0⟩, 0)`.** -/
+theorem deadline_every_state_iterate {k : ℕ} (hk : 4 ≤ k) {x : List α} {s p₁ r : ℕ}
+    (hdec : decompose x k = (s, p₁, r)) (T : List α) (j : ℕ) :
+    (x.take s).length
+        ≤ ((vStep (x.take s) (x.drop s) k p₁ r T)^[j] ((⟨s, 0⟩ : ScanState), 0)).2
+          + 2 * ((x.drop s).length
+            - ((vStep (x.take s) (x.drop s) k p₁ r T)^[j] ((⟨s, 0⟩ : ScanState), 0)).1.q) ∨
+      (((vStep (x.take s) (x.drop s) k p₁ r T)^[j] ((⟨s, 0⟩ : ScanState), 0)).2
+          < (x.take s).length ∧
+        T[((vStep (x.take s) (x.drop s) k p₁ r T)^[j] ((⟨s, 0⟩ : ScanState), 0)).1.pos
+            - (x.take s).length
+            + ((vStep (x.take s) (x.drop s) k p₁ r T)^[j] ((⟨s, 0⟩ : ScanState), 0)).2]?
+          ≠ (x.take s)[((vStep (x.take s) (x.drop s) k p₁ r T)^[j]
+              ((⟨s, 0⟩ : ScanState), 0)).2]?) := by
+  rw [iterate_eq_orbit hk hdec T j]
+  exact deadline_every_state hk hdec T j
+
+/-- `k = 8`, the head program's constant. -/
+theorem deadline_every_state_eight {x : List α} {s p₁ r : ℕ}
+    (hdec : decompose x 8 = (s, p₁, r)) (T : List α) (j : ℕ) :
+    (x.take s).length ≤ (orbit (x.take s) (x.drop s) 8 p₁ r T j).2
+        + 2 * ((x.drop s).length - (orbit (x.take s) (x.drop s) 8 p₁ r T j).1.q) ∨
+      ((orbit (x.take s) (x.drop s) 8 p₁ r T j).2 < (x.take s).length ∧
+        T[(orbit (x.take s) (x.drop s) 8 p₁ r T j).1.pos - (x.take s).length
+            + (orbit (x.take s) (x.drop s) 8 p₁ r T j).2]?
+          ≠ (x.take s)[(orbit (x.take s) (x.drop s) 8 p₁ r T j).2]?) :=
+  deadline_every_state (by decide) hdec T j
+
+/-- **The excluded case, for `decompose`.** At an orbit state one `v` comparison before the
+report (`q + 1 = |v|`) whose next `u` comparison hits, `|u| ≤ checked + 2`. -/
+theorem le_add_two_of_hit_orbit {k : ℕ} (hk : 4 ≤ k) {x : List α} {s p₁ r : ℕ}
+    (hdec : decompose x k = (s, p₁, r)) (T : List α) (j : ℕ)
+    (hq : (orbit (x.take s) (x.drop s) k p₁ r T j).1.q + 1 = (x.drop s).length)
+    (hhit : T[(orbit (x.take s) (x.drop s) k p₁ r T j).1.pos - (x.take s).length
+            + (orbit (x.take s) (x.drop s) k p₁ r T j).2]?
+          = (x.take s)[(orbit (x.take s) (x.drop s) k p₁ r T j).2]?) :
+    (x.take s).length ≤ (orbit (x.take s) (x.drop s) k p₁ r T j).2 + 2 := by
+  have hdl := decompose_shiftDeadline hk x
+  rw [hdec] at hdl
+  exact le_add_two_of_hit (orbit_deadlineInv hdl j) hq hhit
+
+/-- **Corollary at a full match (unconditional report deadline for `decompose`).**
 Let `(s, p₁, r) = decompose x k` with `k ≥ 4`, `u = x.take s`, `v = x.drop s`. At every index
 `j` of the verifier orbit from `(⟨s, 0⟩, 0)` where the scan has fully matched `v`
 (`q = |v|`), the prefix check has finished (`checked = |u|`) or is stuck on a real mismatch
@@ -293,15 +395,7 @@ theorem report_deadline_iterate {k : ℕ} (hk : 4 ≤ k) {x : List α} {s p₁ r
             + ((vStep (x.take s) (x.drop s) k p₁ r T)^[j] ((⟨s, 0⟩ : ScanState), 0)).2]?
           ≠ (x.take s)[((vStep (x.take s) (x.drop s) k p₁ r T)^[j]
               ((⟨s, 0⟩ : ScanState), 0)).2]?) := by
-  have hinit : vInit (x.take s) = ((⟨s, 0⟩ : ScanState), 0) := by
-    have h := vInit_take_decompose hk x
-    rw [hdec] at h
-    exact h
-  have horb : (vStep (x.take s) (x.drop s) k p₁ r T)^[j] ((⟨s, 0⟩ : ScanState), 0)
-      = orbit (x.take s) (x.drop s) k p₁ r T j := by
-    unfold orbit
-    rw [hinit]
-  rw [horb] at hq ⊢
+  rw [iterate_eq_orbit hk hdec T j] at hq ⊢
   exact report_deadline hk hdec T j hq
 
 /-- `k = 8`, the head program's constant. -/
