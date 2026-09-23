@@ -26,7 +26,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 W2 の穴（対応表 §6）: head 版が走らせる分解 `GSPreprocess.decompose` の L1（Lean は `decompose2` についてのみ証明）、待ち状態まで回した答え、分解の命令数 ≲ 257·|x|（未確認）、flags の ⟨1,0⟩ 開始・降順ビット列・区間停止・バッチ期限。担当エージェント: L1、drained、BorderJobHead、コスト実測、certFunctional、距離レジスタ不変量、head 表現。
 次の波: 位置レベルの head VM（Config＋head 位置）を定義し CoWorker ≃ head VM（レジスタ不変量経由）、generator ごと（Initialize/First/Second/Decompose/PeriodShift/ResetShift/Matcher 本体）の対応補題、Matcher ↔ `vStep` の揺れ付きシミュレーション（命令数 ≤ 28·ΔΦ）。
 
-**進捗 4（2026-09-24 0時、最新・最優先）: 制御器の符号化が完成、`hencode` は消えた**
+**進捗 5（2026-09-24 1時、最新・最優先）: 最上位は real workers の3約束だけ**
+- **`ScaWindowReal.pal_in_peg_of_real_promises`**（標準3公理、commit 3ed73b9）。前提は real matcher/flags worker の run についての `hmatch` / `FlagsContract`（`ScaWindowPlumbing`）/ `hworkers` の3つだけ。
+  - `hencode` は消えた（`ScaWindowEncode`+`Tick`）。
+  - `hmiddle` / `hclean` は `FlagsContract` から出る（`ScaWindowPlumbing`）。
+  - real worker の符号化は `ScaWorkerEnc`（matcherEnc/flagsEnc）。
+- W2（3約束の放電）の進捗：
+  - `ScaHeadRun`：子生成器の持ち上げ、1歩補題。
+  - `ScaHeadGen`：PeriodShift / ResetShift の探索版の契約、`rsShifts_eq`。
+  - `ScaMatcherLoop`：照合主ループの部品として、shift_any、比較、接頭辞チェック（pcheck = vComp²）、`AtHead` 不変量。`step_hit` は作業中。
+- 残り：主ループの組み立てと報告（deadline・L1）、Decompose の契約、起動部、時間補題、worker との接続（MatchSide など）、flags 側、最終接続。
+
+**進捗 4（2026-09-24 0時）: 制御器の符号化が完成、`hencode` は消えた**
 - **最上位の新しい入口は `ScaWindowEncode.pal_in_peg_of_workers`**（`ScaWindowEncodeTick.lean`、標準3公理、commit 3f103d7）。前提は次のとおり。
   - worker 2種の符号化 `mE fE : WorkerEnc`
   - 初期状態の表現 `hm0 hf0`
