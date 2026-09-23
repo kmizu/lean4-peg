@@ -2,6 +2,33 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 2026-09-23 夜 — Claude Code（Opus 5.5）の進捗と再開点（最新。下の節より優先）
+
+**無条件 PAL ∈ PEG は未完成。`obligation_localRealization` は残る。** ブランチ `feat/lean-pal-report-residuals`（main に未マージ、最新 push 済み）。
+
+### 方針（コウタと合意）
+- **上から詰める**: 最終定理から具体機械まで先に接続し、残差を型付きで外に出す。
+- **詰まったら事前条件を弱め、事後条件を強める**（Curry–Howard: 引数が多すぎ・事前条件が強すぎを疑う）。
+- **デバイス合成**: 仮想デバイス（view=RTQueue+stack、カウンタ、stack、プログラム機械、period/answer）ごとに証明して合成する。`PhysicalDevices.lean`（`encTapes_iff_devices`＋keep 補題、headStep の書き直しで 72→30 行）。
+- **正本は Scala 版**: 挙動は `scala/pal` の `ScaffoldGalil` を短い入力で動かして確認できる（報告は `caught` = Scan∧¬replaying∧¬right.canRight∧¬right.gap）。
+
+### いまの最終接続（標準3公理のみ）
+`PhysicalReportTest.given_remainingCases_and_frozen rest hcases PhysFrozen hfrozenEnter hfrozenKeep hfrozenQuiet : RecognizedByTotalPEG PAL`。
+報告・出力の契約は証明済み（`repW`＝制御の Scan・非replay・onLetterBit ∧ 右 view 窓の `pendingTest` 偽；`encRep`/`encOut`）。
+**残差は2つ**: (A) `hcases`＝`TickCases`（実質 `PhysicalDpCleanupDispatch.cases_of_remaining` の `hother`: matched 全体、fallback、restart、prepare/DP reset、init/replayStart/choose-select 等）と `rest` の具体化。(B) 凍結の3欄。
+
+### この日に変えた契約（下の旧記述より優先）
+- latch は tick 開始時の状態を読む（報告判定は制御と窓から読める。`LocalLatchRealize.rep_eq` を弱めた）。締め切り `|w|·nLocalL − 1`（Lindley の余裕 τ−2c=80910、`run_on_time_shift_slack`）。
+- 受理の契約は答えレベル（`LocalTrackingLatch.tracking_pal_of_oracles`: 健全性＝報告∧output⇒回文、完全性＝回文⇒締め切り前に報告∧output）。`ReportPoint` 一致の旧契約は満たせない形だった。
+- 報告判定は `ShadowedLocalFinal.reportCaught`（Scala の caught と同じ）。健全性は trace の `SoundScanNR`（`OutputRel`）、完全性は台帳 `LocalLedgerShift.H_ledger_of_local_oracles_with`（チェックポイントの Scan を運ぶ）。
+- `CanonTrace` は `ShapedRun.OracleTick` 版。`PlateauInv.dpDense`、DP 履歴 `PhysicalDpHistory`/`PhysicalDpSource`。
+- 余白 margin を広げる案は不可（boot が半径 K ちょうどの余白を作る設計）。
+
+### (B) 凍結の次の一手（設計済み・未実装）
+最後の比較は一致/shift/fallback のどれもありうる（`PlateauInvariant.plateauCompare`）ので「凍結＝飢餓」は偽。代わりに物理側へ粘着ビット b を足す包み層:
+b' = (入力あり → false; なし → b ∨ 「tick 開始時に右ヘッドが gap 上で pendingTest 偽」)、報告は `!b && repW`。
+凍結後は b が立ったまま（保存は制御だけ）。抽象側との一致は「b 立ち ⇒ caught でない」で、前線（位置＋replay 残り、`front_stepsAll_mono`）の単調性から出す。postPhase の凍結側に「gap・先が空」を運ぶよう強める（`plateauStep` の比較分岐で y.right = right t.right）。
+
 ## 2026-09-23 15:05 JST — CodexからClaude Codeへの引き継ぎ
 
 ユーザーの依頼は「証明に向かって邁進。ログに従って続きを」。今回「Claude Codeに引き継ぎしたいので、引き継ぎをCLAUDE.mdに書いて」と指示され、証明の追加作業を区切った。
