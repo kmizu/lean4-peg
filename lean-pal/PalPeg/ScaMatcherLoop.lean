@@ -138,4 +138,92 @@ theorem shift_period (k : ℕ) (ok : Option Bool) (ph : Option ℕ) (v : HVM) (t
   rw [show 2 * t + 4 = (2 * t + 2) + 2 by ring, iterStep_add, hl, Option.bind_some,
     reenter_run k (some true) ok ph _ rfl]
 
+/-! ## Control transitions of the comparison part -/
+
+section Trans
+variable (k : ℕ) (pe ok : Option Bool) (ph : Option ℕ)
+
+theorem mc_13_wait :
+    (Ctl.pending [mc k pe ok ph 13] (.available "B")).resume matchTests false =
+      .pending [mc k pe ok ph 13] (.available "B") := rfl
+
+theorem mc_13_go :
+    (Ctl.pending [mc k pe ok ph 13] (.available "B")).resume matchTests true =
+      .pending [mc k pe ok ph 14] (.symbols "A" "B") := rfl
+
+theorem mc_14_hit :
+    (Ctl.pending [mc k pe ok ph 14] (.symbols "A" "B")).resume matchTests true =
+      .pending [mc k pe ok ph 15] (mv [("A", 1), ("B", 1)]) := rfl
+
+theorem mc_14_miss_period :
+    (Ctl.pending [mc k (some true) ok ph 14] (.symbols "A" "B")).resume matchTests false =
+      .pending [mc k (some true) ok ph 22] (.less "A" "KFirst") := rfl
+
+theorem mc_14_miss_reset :
+    (Ctl.pending [mc k (some false) ok ph 14] (.symbols "A" "B")).resume matchTests false =
+      .pending [mc k (some false) ok ph 25, .resetShift k true 0 none 1] (.equal "A" "Cut") := rfl
+
+theorem mc_15_ok :
+    (Ctl.pending [mc k pe (some true) ph 15] (mv [("A", 1), ("B", 1)])).resume matchTests false =
+      .pending [mc k pe (some true) (some 0) 16] (.less "Walk" "Cut") := rfl
+
+theorem mc_15_dead :
+    (Ctl.pending [mc k pe (some false) ph 15] (mv [("A", 1), ("B", 1)])).resume matchTests false =
+      .pending [mc k pe (some false) (some 0) 19] (.equal "A" "End") := rfl
+
+theorem mc_16_go :
+    (Ctl.pending [mc k pe ok ph 16] (.less "Walk" "Cut")).resume matchTests true =
+      .pending [mc k pe ok ph 17] (.symbols "Walk" "U") := rfl
+
+theorem mc_16_done :
+    (Ctl.pending [mc k pe ok ph 16] (.less "Walk" "Cut")).resume matchTests false =
+      .pending [mc k pe ok ph 19] (.equal "A" "End") := rfl
+
+theorem mc_17_hit :
+    (Ctl.pending [mc k pe ok ph 17] (.symbols "Walk" "U")).resume matchTests true =
+      .pending [mc k pe ok ph 18] (mv [("Walk", 1), ("U", 1)]) := rfl
+
+theorem mc_17_miss :
+    (Ctl.pending [mc k pe ok ph 17] (.symbols "Walk" "U")).resume matchTests false =
+      .pending [mc k pe (some false) ph 19] (.equal "A" "End") := rfl
+
+theorem mc_18_again :
+    (Ctl.pending [mc k pe (some true) (some 0) 18] (mv [("Walk", 1), ("U", 1)])).resume matchTests
+      false = .pending [mc k pe (some true) (some 1) 16] (.less "Walk" "Cut") := rfl
+
+theorem mc_18_done :
+    (Ctl.pending [mc k pe ok (some 1) 18] (mv [("Walk", 1), ("U", 1)])).resume matchTests false =
+      .pending [mc k pe ok (some 1) 19] (.equal "A" "End") := rfl
+
+theorem mc_19_more :
+    (Ctl.pending [mc k pe ok ph 19] (.equal "A" "End")).resume matchTests false =
+      .pending [mc k pe ok ph 13] (.available "B") := rfl
+
+theorem mc_19_report :
+    (Ctl.pending [mc k pe (some true) ph 19] (.equal "A" "End")).resume matchTests true =
+      .pending [mc k pe (some true) ph 20] (.assertEqual "Walk" "Cut") := rfl
+
+theorem mc_19_dead_period :
+    (Ctl.pending [mc k (some true) (some false) ph 19] (.equal "A" "End")).resume matchTests true =
+      .pending [mc k (some true) (some false) ph 22] (.less "A" "KFirst") := rfl
+
+theorem mc_19_dead_reset :
+    (Ctl.pending [mc k (some false) (some false) ph 19] (.equal "A" "End")).resume matchTests true =
+      .pending [mc k (some false) (some false) ph 25, .resetShift k true 0 none 1]
+        (.equal "A" "Cut") := rfl
+
+theorem mc_20 :
+    (Ctl.pending [mc k pe ok ph 20] (.assertEqual "Walk" "Cut")).resume matchTests false =
+      .pending [mc k pe ok ph 21] (.«match» "B") := rfl
+
+theorem mc_21_period :
+    (Ctl.pending [mc k (some true) ok ph 21] (.«match» "B")).resume matchTests false =
+      .pending [mc k (some true) ok ph 22] (.less "A" "KFirst") := rfl
+
+theorem mc_21_reset :
+    (Ctl.pending [mc k (some false) ok ph 21] (.«match» "B")).resume matchTests false =
+      .pending [mc k (some false) ok ph 25, .resetShift k true 0 none 1] (.equal "A" "Cut") := rfl
+
+end Trans
+
 end PalPeg.ScaMatcherLoop
