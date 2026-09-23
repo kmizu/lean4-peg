@@ -176,6 +176,8 @@ import PalPeg.ScaHeap
 import PalPeg.ScaWindowPal
 import PalPeg.ScaGsTables
 import PalPeg.ScaGsProgram
+import PalPeg.ScaWindowSchedule
+import PalPeg.ScaWindowWorker
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
 import PalPeg.PostRunInduction
