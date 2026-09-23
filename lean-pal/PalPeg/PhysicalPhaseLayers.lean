@@ -265,8 +265,14 @@ open PalPeg.LocalReplayParked (Mirrored1)
 open PalPeg.LocalBlankState (tapeCount)
 open PalPeg.ShadowedLocalFinal (localGood postPhase frozenAt heldAfter)
 
-/-- **`home` and `markEnd` join the handled cases** of the common machine's final tick API.
-The residual now also excludes these two modes. -/
+/-- The back half of `choose`: not the tick that selects and leaves for `rewind`. -/
+def ChooseBack (x : State GalilVM) : Prop :=
+  x.ctl.mode = .choose ∧
+    (x.ctl.odd && (decide ((x.vm.fpp.program.config.tapes 8).focus = 8)
+        || decide ((x.vm.fpp.program.config.tapes 8).focus = 0))) = false
+
+/-- **`home`, `markEnd` and the back half of `choose` join the handled cases** of the common machine's final tick API.
+The residual now also excludes these. -/
 theorem cases_of_remaining_quiet (rest : RestCommands)
     (hother : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC 0 1 0 w st Tc → CanonTrace 0 w st Tc →
@@ -284,6 +290,7 @@ theorem cases_of_remaining_quiet (rest : RestCommands)
         ¬ PalPeg.PhysicalGrowCount.CountGrow (absSC m) →
         ¬ PalPeg.PhysicalGrowMatchCase.MatchGrow (absSC m) →
         (absSC m).ctl.mode ≠ .home → (absSC m).ctl.mode ≠ .markEnd →
+        ¬ ChooseBack (absSC m) →
         PalPeg.PhysicalDpCleanup.Enc w (PalPeg.PhysicalCacheMachine.successor w (absSC m))
           ((PalPeg.PhysicalDpCleanup.machine rest).apply blankM p none)) :
     TickCases (PalPeg.PhysicalDpCleanup.machine rest) blankM PalPeg.PhysicalDpCleanup.Enc := by
@@ -297,7 +304,11 @@ theorem cases_of_remaining_quiet (rest : RestCommands)
   · have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode := Or.inl hmark
     exact forward_quiet_machine rest w _ p he hq hs (successor_not_loan w _ hq)
       (runsQuiet_markEnd rest w _ hmark)
-  exact hother w st Tc hpre hcanon m p hon hf he hs htick h1 h2 h3 h4 h5 h6 h7 hhome hmark
+  by_cases hback : ChooseBack (absSC m)
+  · have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode := Or.inr (Or.inr (Or.inr hback.1))
+    exact forward_quiet_machine rest w _ p he hq hs (successor_not_loan w _ hq)
+      (runsQuiet_chooseBack rest w _ hback.1 hback.2)
+  exact hother w st Tc hpre hcanon m p hon hf he hs htick h1 h2 h3 h4 h5 h6 h7 hhome hmark hback
 
 /-- info: 'PalPeg.PhysicalPhaseLayers.cases_of_remaining_quiet' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
