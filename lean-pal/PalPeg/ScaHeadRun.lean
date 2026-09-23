@@ -176,4 +176,57 @@ theorem lift_run (f : Frame) {v w : HVM} (hv : NonEmptyCtl v.ctl) (h : MRun v w)
   | tail hr hs ih =>
     exact Relation.ReflTransGen.tail ih (lift_step f (nonEmpty_run hv hr) hs)
 
+/-! ## One step, per event kind -/
+
+section StepLemmas
+variable {v : HVM} {c : Config}
+
+theorem step_copy {t s' : String} (hv : v.ctl = .pending c (.copy t s')) :
+    stepMatch v = some { v with
+      pos := Function.update v.pos t (v.pos s')
+      ctl := (Ctl.pending c (.copy t s')).resume matchTests false } := by
+  simp only [stepMatch, hv]
+
+theorem step_less {a b : String} (hv : v.ctl = .pending c (.less a b)) :
+    stepMatch v = some { v with
+      ctl := (Ctl.pending c (.less a b)).resume matchTests (decide (v.pos a < v.pos b)) } := by
+  simp only [stepMatch, hv]
+
+theorem step_equal {a b : String} (hv : v.ctl = .pending c (.equal a b)) :
+    stepMatch v = some { v with
+      ctl := (Ctl.pending c (.equal a b)).resume matchTests (decide (v.pos a = v.pos b)) } := by
+  simp only [stepMatch, hv]
+
+theorem step_move {ms : List Movement} {π : String → ℤ} (hv : v.ctl = .pending c (.move ms))
+    (hm : moveSeq blind v.len ms v.pos = some π) :
+    stepMatch v = some { v with
+      pos := π
+      ctl := (Ctl.pending c (.move ms)).resume matchTests false } := by
+  simp only [stepMatch, hv, hm, Option.map_some]
+
+theorem step_symbols {a b : String} (hv : v.ctl = .pending c (.symbols a b))
+    (ha : v.inRange a) (hb : v.inRange b) :
+    stepMatch v = some { v with
+      ctl := (Ctl.pending c (.symbols a b)).resume matchTests
+        (decide (v.word[(v.pos a).toNat]? = v.word[(v.pos b).toNat]?)) } := by
+  simp only [stepMatch, hv, if_pos (And.intro ha hb)]
+
+theorem step_available {h : String} (hv : v.ctl = .pending c (.available h)) :
+    stepMatch v = some { v with
+      ctl := (Ctl.pending c (.available h)).resume matchTests (decide (v.pos h < v.len)) } := by
+  simp only [stepMatch, hv]
+
+theorem step_assertEqual {a b : String} (hv : v.ctl = .pending c (.assertEqual a b))
+    (he : v.pos a = v.pos b) :
+    stepMatch v = some { v with ctl := (Ctl.pending c (.assertEqual a b)).resume matchTests false } := by
+  simp only [stepMatch, hv, if_pos he]
+
+theorem step_match {h : String} (hv : v.ctl = .pending c (.«match» h)) :
+    stepMatch v = some { v with
+      outputs := v.outputs ++ [v.pos h - v.patternSize]
+      ctl := (Ctl.pending c (.«match» h)).resume matchTests false } := by
+  simp only [stepMatch, hv]
+
+end StepLemmas
+
 end PalPeg.ScaHeadRun
