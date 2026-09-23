@@ -180,6 +180,7 @@ import PalPeg.ScaWindowSchedule
 import PalPeg.ScaWindowOutput
 import PalPeg.ScaWindowInstance
 import PalPeg.ScaGsCoroutine
+import PalPeg.ScaGsCert
 import PalPeg.ScaWindowWorker
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
