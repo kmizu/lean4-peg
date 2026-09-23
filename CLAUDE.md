@@ -26,6 +26,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 W2 の穴（対応表 §6）: head 版が走らせる分解 `GSPreprocess.decompose` の L1（Lean は `decompose2` についてのみ証明）、待ち状態まで回した答え、分解の命令数 ≲ 257·|x|（未確認）、flags の ⟨1,0⟩ 開始・降順ビット列・区間停止・バッチ期限。担当エージェント: L1、drained、BorderJobHead、コスト実測、certFunctional、距離レジスタ不変量、head 表現。
 次の波: 位置レベルの head VM（Config＋head 位置）を定義し CoWorker ≃ head VM（レジスタ不変量経由）、generator ごと（Initialize/First/Second/Decompose/PeriodShift/ResetShift/Matcher 本体）の対応補題、Matcher ↔ `vStep` の揺れ付きシミュレーション（命令数 ≤ 28·ΔΦ）。
 
+**進捗 4（2026-09-24 0時、最新・最優先）: 制御器の符号化が完成、`hencode` は消えた**
+- **最上位の新しい入口は `ScaWindowEncode.pal_in_peg_of_workers`**（`ScaWindowEncodeTick.lean`、標準3公理、commit 3f103d7）。前提は次のとおり。
+  - worker 2種の符号化 `mE fE : WorkerEnc`
+  - 初期状態の表現 `hm0 hf0`
+  - `hmatch` / `hmiddle` / `hclean`（`∀ u, ctlViolation (run u) = false`）/ `hworkers`
+  - 型付き自動機械も `hencode` も要らない。
+- `WorkerEnc`：worker 操作ごとの `ScaProg.Prog`。表現関係は「その操作が fault しない限り」保たれればよく（本物の worker は範囲外への移動で fault を立てるだけで、位置は動かしてしまうから）、fault は戻らない（sticky 欄）。全体の表現関係は「run で到達可能 ∧ `Rep`」。
+- 次は3本立て。
+  1. 本物の worker の `WorkerEnc`：`ScaHeadBridge`（head の操作を `ScaProg` へ）、`ScaCounter`、`ScaProgEmbed` を使う。
+  2. `hmiddle` / `hclean` を flags の約束から出す制御器の配線。約束は実測で成り立つ：全長 ≤ 12 とランダムな長い語でエラー 0、区切りから 1 tick 以内に取り込み、ちょうど S 本、1仕事は最大約 1950 行（予算 1024·S）。
+  3. W2 本体（`ScaHeadVM.match_step_certified` / `flags_step_certified` から GS の計算へ）。`ScaHeadVM` は Scala 由来の worker と Python VM の食い違いを側条件（`MatchSide` など）として外に出しているので、run 上でそれが成り立つことを示す必要がある。
+- 作業方針（コウタ）：サブエージェントは写し・実測・閉じた補題だけに使う。設計と層をまたぐ証明はメインが自分で書く。遅いエージェントは止めて引き取る。
+
 **進捗 3（2026-09-23 深夜、エージェント成果・ウチが単体検証中）**
 - `W1` 済: `ScaGsCertFunctional`（`matcher_certified`/`flags_certified`）、`ScaEncode`（1文字1プログラム＋表現関係 ⇒ PEG、`pal_in_peg`）。
 - `GSDecomposeL1.decompose_gsDecomp`: head が走らせる `GSPreprocess.decompose` で L1（k ≥ 4）を直接証明。**`decompose = decompose2` は偽**（長さ 49 の反例、k=4）。
