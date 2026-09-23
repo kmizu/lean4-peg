@@ -226,4 +226,62 @@ theorem mc_21_reset :
 
 end Trans
 
+/-! ## One round of the prefix check -/
+
+section Round
+variable (k : ℕ) (pe : Option Bool)
+
+theorem round_skip (ph : Option ℕ) (v : HVM)
+    (hv : v.ctl = .pending [mc k pe (some true) ph 16] (.less "Walk" "Cut"))
+    (he : v.pos "Cut" ≤ v.pos "Walk") :
+    iterStep 1 v = some { v with ctl := .pending [mc k pe (some true) ph 19] (.equal "A" "End") } := by
+  have e1 := step_less hv
+  rw [show decide (v.pos "Walk" < v.pos "Cut") = false by simp; omega, mc_16_done] at e1
+  simp [iterStep, e1]
+
+/-- The move of one prefix comparison. -/
+def walkMove (π : String → ℤ) : String → ℤ :=
+  Function.update (Function.update π "Walk" (π "Walk" + 1)) "U" (π "U" + 1)
+
+theorem walk_moveSeq (π : String → ℤ) (L : ℤ) (hW : 0 ≤ π "Walk" + 1 ∧ π "Walk" + 1 ≤ L)
+    (hU : 0 ≤ π "U" + 1 ∧ π "U" + 1 ≤ L) :
+    moveSeq blind L [⟨"Walk", 1⟩, ⟨"U", 1⟩] π = some (walkMove π) := by
+  simp only [moveSeq, blind]
+  simp [Function.update, walkMove]
+  exact ⟨hW, hU⟩
+
+theorem round_hit (ph : Option ℕ) (v : HVM)
+    (hv : v.ctl = .pending [mc k pe (some true) ph 16] (.less "Walk" "Cut"))
+    (hlt : v.pos "Walk" < v.pos "Cut") (hW : v.inRange "Walk") (hU : v.inRange "U")
+    (heq : v.word[(v.pos "Walk").toNat]? = v.word[(v.pos "U").toNat]?)
+    (hW1 : v.pos "Walk" + 1 ≤ v.len) (hU1 : v.pos "U" + 1 ≤ v.len) :
+    iterStep 3 v = some { v with
+      ctl := (Ctl.pending [mc k pe (some true) ph 18] (mv [("Walk", 1), ("U", 1)])).resume
+        matchTests false
+      pos := walkMove v.pos } := by
+  have e1 := step_less hv
+  rw [show decide (v.pos "Walk" < v.pos "Cut") = true by simp; omega, mc_16_go] at e1
+  have e2 := step_symbols (v := { v with ctl := (.pending [mc k pe (some true) ph 17] (.symbols "Walk" "U")) }) rfl hW hU
+  simp only [heq, decide_true] at e2
+  rw [mc_17_hit] at e2
+  have e3 := step_move (v := { v with ctl := (.pending [mc k pe (some true) ph 18] (mv [("Walk", 1), ("U", 1)])) }) (ms := [⟨"Walk", 1⟩, ⟨"U", 1⟩]) rfl
+    (walk_moveSeq v.pos _ ⟨by have := hW.1; omega, hW1⟩ ⟨by have := hU.1; omega, hU1⟩)
+  simp [iterStep, e1, e2, e3]
+  rfl
+
+theorem round_miss (ph : Option ℕ) (v : HVM)
+    (hv : v.ctl = .pending [mc k pe (some true) ph 16] (.less "Walk" "Cut"))
+    (hlt : v.pos "Walk" < v.pos "Cut") (hW : v.inRange "Walk") (hU : v.inRange "U")
+    (hne : v.word[(v.pos "Walk").toNat]? ≠ v.word[(v.pos "U").toNat]?) :
+    iterStep 2 v = some { v with
+      ctl := .pending [mc k pe (some false) ph 19] (.equal "A" "End") } := by
+  have e1 := step_less hv
+  rw [show decide (v.pos "Walk" < v.pos "Cut") = true by simp; omega, mc_16_go] at e1
+  have e2 := step_symbols (v := { v with ctl := (.pending [mc k pe (some true) ph 17] (.symbols "Walk" "U")) }) rfl hW hU
+  simp only [hne, decide_false] at e2
+  rw [mc_17_miss] at e2
+  simp [iterStep, e1, e2]
+
+end Round
+
 end PalPeg.ScaMatcherLoop
