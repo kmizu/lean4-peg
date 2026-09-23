@@ -216,6 +216,7 @@ import PalPeg.ScaWorkerEnc
 import PalPeg.ScaWindowReal
 import PalPeg.ScaFlagsLink
 import PalPeg.ScaFlagsReaders
+import PalPeg.ScaFlagsLife
 import PalPeg.ScaMatcherReaders
 import PalPeg.ScaHeadDecompose
 import PalPeg.ScaWorkerLink
