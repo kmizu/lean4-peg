@@ -129,4 +129,192 @@ theorem periodShift_run (k : ℕ) (v : HVM) (t : ℕ)
   rw [this]
   simp
 
+/-! ## `ResetShift k true` -/
+
+/-- The searching shift: `P + 1`, `B + 1`, `KP − 1`. -/
+def rsShift : Event := mv [("P", 1), ("B", 1), ("KP", -1)]
+
+/-- Loop head of `ResetShift k true` at phase `ph`, knowing whether the rewind is non-empty. -/
+def rsLoop (k ph : ℕ) (ne : Bool) : Ctl :=
+  .pending [.resetShift k true ph (some ne) 2] (.equal "A" "Cut")
+
+/-- Heads after rewinding `j` cells with `s` shifts. -/
+def rsPos (π : String → ℤ) (j s : ℤ) : String → ℤ := fun h =>
+  if h = "A" then π "A" - j
+  else if h = "B" then π "B" - j + s
+  else if h = "P" then π "P" + s
+  else if h = "KP" then π "KP" - s
+  else π h
+
+theorem rs_start (k : ℕ) :
+    Ctl.ofOutcome (next [.resetShift k true 0 none 0] none) =
+      .pending [.resetShift k true 0 none 1] (.equal "A" "Cut") := rfl
+
+theorem rs_first (k : ℕ) (v : HVM) (hv : v.ctl = .pending [.resetShift k true 0 none 1] (.equal "A" "Cut")) :
+    iterStep 1 v = some { v with ctl := rsLoop k 0 (decide (v.pos "A" ≠ v.pos "Cut")) } := by
+  simp only [iterStep, step_equal hv, Option.bind_some]
+  congr 2
+  by_cases h : v.pos "A" = v.pos "Cut" <;> simp [h, rsLoop] <;> rfl
+
+theorem rsPos_zero (π : String → ℤ) : rsPos π 0 0 = π := by
+  funext h; simp only [rsPos]; split_ifs <;> simp_all
+
+/-- The rewind move: `A − 1`, `B − 1`. -/
+def rsBack : Event := mv [("A", -1), ("B", -1)]
+
+theorem rs_resume_back (k ph : ℕ) (ne : Bool) :
+    (Ctl.pending [.resetShift k true ph (some ne) 2] (.equal "A" "Cut")).resume matchTests false =
+      .pending [.resetShift k true ph (some ne) 3] rsBack := rfl
+
+/-- One `advance` of a frame that emits. -/
+theorem next_single_emit (f f' : Frame) (r : Option Bool) (e : Event)
+    (hs : stepFrame f r = some (.emit e f')) :
+    next [f] r = some (.yielded e [f']) := by
+  show advance (63 + 1) f r = _
+  rw [advance, hs]
+  rfl
+
+theorem rs_resume_step (k ph : ℕ) (ne : Bool) (hph : ph + 1 < k) :
+    (Ctl.pending [.resetShift k true ph (some ne) 3] rsBack).resume matchTests false =
+      rsLoop k (ph + 1) ne := by
+  have h : (ph + 1 == k) = false := by simp; omega
+  have hs : stepFrame (.resetShift k true ph (some ne) 3) none =
+      some (.emit (.equal "A" "Cut") (.resetShift k true (ph + 1) (some ne) 2)) := by
+    simp only [stepFrame, stepResetShift, h]; rfl
+  show Ctl.ofOutcome (next _ none) = _
+  rw [next_single_emit _ _ _ _ hs]; rfl
+
+theorem rs_resume_wrap (k ph : ℕ) (ne : Bool) (hph : ph + 1 = k) :
+    (Ctl.pending [.resetShift k true ph (some ne) 3] rsBack).resume matchTests false =
+      .pending [.resetShift k true (ph + 1) (some ne) 5] rsShift := by
+  have h : (ph + 1 == k) = true := by simp; omega
+  have hs : stepFrame (.resetShift k true ph (some ne) 3) none =
+      some (.emit rsShift (.resetShift k true (ph + 1) (some ne) 5)) := by
+    simp only [stepFrame, stepResetShift, h]; rfl
+  show Ctl.ofOutcome (next _ none) = _
+  rw [next_single_emit _ _ _ _ hs]; rfl
+
+theorem rs_resume_after_wrap (k ph : ℕ) (ne : Bool) :
+    (Ctl.pending [.resetShift k true ph (some ne) 5] rsShift).resume matchTests false =
+      rsLoop k 0 ne := rfl
+
+theorem rs_move_back (π : String → ℤ) (j s L : ℤ)
+    (hA : 0 ≤ π "A" - j - 1 ∧ π "A" - j - 1 ≤ L) (hB : 0 ≤ π "B" - j + s - 1 ∧ π "B" - j + s - 1 ≤ L) :
+    moveSeq blind L [⟨"A", -1⟩, ⟨"B", -1⟩] (rsPos π j s) = some (rsPos π (j + 1) s) := by
+  simp only [moveSeq, blind]
+  simp [rsPos, Function.update]
+  refine ⟨⟨by omega, by omega⟩, ⟨by omega, by omega⟩, ?_⟩
+  funext h
+  by_cases h1 : h = "KP" <;> by_cases h2 : h = "P" <;> by_cases h3 : h = "A" <;>
+    by_cases h4 : h = "B" <;> simp_all [rsPos] <;> omega
+
+theorem rs_move_shift (π : String → ℤ) (j s L : ℤ)
+    (hP : 0 ≤ π "P" + s + 1 ∧ π "P" + s + 1 ≤ L) (hB : 0 ≤ π "B" - j + s + 1 ∧ π "B" - j + s + 1 ≤ L) :
+    moveSeq blind L [⟨"P", 1⟩, ⟨"B", 1⟩, ⟨"KP", -1⟩] (rsPos π j s) = some (rsPos π j (s + 1)) := by
+  simp only [moveSeq, blind]
+  simp [rsPos, Function.update]
+  refine ⟨⟨by omega, by omega⟩, ⟨by omega, by omega⟩, ?_⟩
+  funext h
+  by_cases h1 : h = "KP" <;> by_cases h2 : h = "P" <;> by_cases h3 : h = "A" <;>
+    by_cases h4 : h = "B" <;> simp_all [rsPos] <;> omega
+
+theorem rs_iter (k ph : ℕ) (ne : Bool) (v : HVM) (π : String → ℤ) (j s : ℤ)
+    (hv : v.ctl = rsLoop k ph ne) (hp : v.pos = rsPos π j s) (hne : π "A" - j ≠ π "Cut")
+    (hph : ph + 1 < k) (hA : 0 ≤ π "A" - j - 1 ∧ π "A" - j - 1 ≤ v.len)
+    (hB : 0 ≤ π "B" - j + s - 1 ∧ π "B" - j + s - 1 ≤ v.len) :
+    iterStep 2 v = some { v with ctl := rsLoop k (ph + 1) ne, pos := rsPos π (j + 1) s } := by
+  have hd : decide (v.pos "A" = v.pos "Cut") = false := by rw [hp]; simp [rsPos, hne]
+  have e1 := step_equal hv
+  rw [hd, rs_resume_back] at e1
+  have e2 : stepMatch { v with ctl := .pending [.resetShift k true ph (some ne) 3] rsBack } =
+      some { v with ctl := rsLoop k (ph + 1) ne, pos := rsPos π (j + 1) s } := by
+    rw [step_move (v := { v with ctl := .pending [.resetShift k true ph (some ne) 3] rsBack })
+      (ms := [⟨"A", -1⟩, ⟨"B", -1⟩]) rfl (by simp only [HVM.len]; rw [hp]; exact rs_move_back π j s _ hA hB)]
+    rw [show (Ctl.pending [.resetShift k true ph (some ne) 3] (.move [⟨"A", -1⟩, ⟨"B", -1⟩])) =
+      .pending [.resetShift k true ph (some ne) 3] rsBack from rfl, rs_resume_step k ph ne hph]
+  simp [iterStep, e1, e2]
+
+theorem rs_wrap (k ph : ℕ) (ne : Bool) (v : HVM) (π : String → ℤ) (j s : ℤ)
+    (hv : v.ctl = rsLoop k ph ne) (hp : v.pos = rsPos π j s) (hne : π "A" - j ≠ π "Cut")
+    (hph : ph + 1 = k) (hA : 0 ≤ π "A" - j - 1 ∧ π "A" - j - 1 ≤ v.len)
+    (hB : 0 ≤ π "B" - j + s - 1 ∧ π "B" - j + s - 1 ≤ v.len)
+    (hP : 0 ≤ π "P" + s + 1 ∧ π "P" + s + 1 ≤ v.len) (hB' : π "B" - j + s ≤ v.len) :
+    iterStep 3 v = some { v with ctl := rsLoop k 0 ne, pos := rsPos π (j + 1) (s + 1) } := by
+  have hd : decide (v.pos "A" = v.pos "Cut") = false := by rw [hp]; simp [rsPos, hne]
+  have e1 := step_equal hv
+  rw [hd, rs_resume_back] at e1
+  have e2 : stepMatch { v with ctl := .pending [.resetShift k true ph (some ne) 3] rsBack } =
+      some { v with
+        ctl := .pending [.resetShift k true (ph + 1) (some ne) 5] rsShift
+        pos := rsPos π (j + 1) s } := by
+    rw [step_move (v := { v with ctl := .pending [.resetShift k true ph (some ne) 3] rsBack })
+      (ms := [⟨"A", -1⟩, ⟨"B", -1⟩]) rfl (by simp only [HVM.len]; rw [hp]; exact rs_move_back π j s _ hA hB)]
+    rw [show (Ctl.pending [.resetShift k true ph (some ne) 3] (.move [⟨"A", -1⟩, ⟨"B", -1⟩])) =
+      .pending [.resetShift k true ph (some ne) 3] rsBack from rfl, rs_resume_wrap k ph ne hph]
+  have e3 : stepMatch { v with
+        ctl := .pending [.resetShift k true (ph + 1) (some ne) 5] rsShift
+        pos := rsPos π (j + 1) s } =
+      some { v with ctl := rsLoop k 0 ne, pos := rsPos π (j + 1) (s + 1) } := by
+    rw [step_move (ms := [⟨"P", 1⟩, ⟨"B", 1⟩, ⟨"KP", -1⟩]) rfl
+      (by
+        have hl : v.len = (v.word.length : ℤ) := rfl
+        simp only [HVM.len]
+        exact rs_move_shift π (j + 1) s _ ⟨by omega, by omega⟩ ⟨by omega, by omega⟩)]
+    rw [show (Ctl.pending [.resetShift k true (ph + 1) (some ne) 5] (.move [⟨"P", 1⟩, ⟨"B", 1⟩, ⟨"KP", -1⟩])) =
+      .pending [.resetShift k true (ph + 1) (some ne) 5] rsShift from rfl, rs_resume_after_wrap]
+  simp [iterStep, e1, e2, e3]
+
+theorem rs_resume_exit_shift (k ph : ℕ) (ne : Bool) (h : (!ne || ph != 0) = true) :
+    (rsLoop k ph ne).resume matchTests true =
+      .pending [.resetShift k true ph (some ne) 7] rsShift := by
+  have hs : stepFrame (.resetShift k true ph (some ne) 2) (some true) =
+      some (.emit rsShift (.resetShift k true ph (some ne) 7)) := by
+    simp [stepFrame, stepResetShift, rsShift]
+    cases ne <;> simp_all
+  show Ctl.ofOutcome (next _ (some true)) = _
+  rw [next_single_emit _ _ _ _ hs]; rfl
+
+theorem rs_resume_exit_ret (k ph : ℕ) (ne : Bool) (h : (!ne || ph != 0) = false) :
+    (rsLoop k ph ne).resume matchTests true = .returned none := by
+  have hs : stepFrame (.resetShift k true ph (some ne) 2) (some true) = some (.ret none) := by
+    simp [stepFrame, stepResetShift]
+    cases ne <;> simp_all
+  show Ctl.ofOutcome (advance (63 + 1) _ (some true)) = _
+  rw [advance, hs]; rfl
+
+theorem rs_resume_after_exit (k ph : ℕ) (ne : Bool) :
+    (Ctl.pending [.resetShift k true ph (some ne) 7] rsShift).resume matchTests false =
+      .returned none := rfl
+
+/-- The loop's exit, with a last shift. -/
+theorem rs_exit_shift (k ph : ℕ) (ne : Bool) (v : HVM) (π : String → ℤ) (j s : ℤ)
+    (hv : v.ctl = rsLoop k ph ne) (hp : v.pos = rsPos π j s) (he : π "A" - j = π "Cut")
+    (h : (!ne || ph != 0) = true) (hP : 0 ≤ π "P" + s + 1 ∧ π "P" + s + 1 ≤ v.len)
+    (hB : 0 ≤ π "B" - j + s + 1 ∧ π "B" - j + s + 1 ≤ v.len) :
+    iterStep 2 v = some { v with ctl := .returned none, pos := rsPos π j (s + 1) } := by
+  have hd : decide (v.pos "A" = v.pos "Cut") = true := by rw [hp]; simp [rsPos, he]
+  have e1 := step_equal hv
+  rw [hd] at e1
+  rw [show (Ctl.pending [.resetShift k true ph (some ne) 2] (.equal "A" "Cut")) = rsLoop k ph ne
+    from rfl, rs_resume_exit_shift k ph ne h] at e1
+  have e2 : stepMatch { v with ctl := .pending [.resetShift k true ph (some ne) 7] rsShift } =
+      some { v with ctl := .returned none, pos := rsPos π j (s + 1) } := by
+    rw [step_move (ms := [⟨"P", 1⟩, ⟨"B", 1⟩, ⟨"KP", -1⟩]) rfl
+      (by simp only [HVM.len]; rw [hp]; exact rs_move_shift π j s _ hP hB)]
+    rw [show (Ctl.pending [.resetShift k true ph (some ne) 7] (.move [⟨"P", 1⟩, ⟨"B", 1⟩, ⟨"KP", -1⟩])) =
+      .pending [.resetShift k true ph (some ne) 7] rsShift from rfl, rs_resume_after_exit]
+  simp [iterStep, e1, e2]
+
+/-- The loop's exit, without a last shift. -/
+theorem rs_exit_ret (k ph : ℕ) (ne : Bool) (v : HVM) (π : String → ℤ) (j s : ℤ)
+    (hv : v.ctl = rsLoop k ph ne) (hp : v.pos = rsPos π j s) (he : π "A" - j = π "Cut")
+    (h : (!ne || ph != 0) = false) :
+    iterStep 1 v = some { v with ctl := .returned none } := by
+  have hd : decide (v.pos "A" = v.pos "Cut") = true := by rw [hp]; simp [rsPos, he]
+  have e1 := step_equal hv
+  rw [hd] at e1
+  rw [show (Ctl.pending [.resetShift k true ph (some ne) 2] (.equal "A" "Cut")) = rsLoop k ph ne
+    from rfl, rs_resume_exit_ret k ph ne h] at e1
+  simp [iterStep, e1]
+
 end PalPeg.ScaHeadGen
