@@ -1,5 +1,5 @@
 import PalPeg.ScaWindowFast
-import PalPeg.PalInPegPhysical
+import PalPeg.EvenLength
 
 /-!
 # `PalInPeg.unconditional` — `PAL ∈ PEG`
@@ -60,5 +60,15 @@ theorem unconditional : PegSeparation.RecognizedByTotalPEG PalPeg.PAL :=
 /-- info: 'PalPeg.PalInPeg.unconditional' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms unconditional
+
+/-- **Loff–Moreira–Reis (2020), Conjecture 7, refuted**: the even-length palindromes
+`{ w wᴿ | w ∈ {0,1}* }` are recognized by a total PEG (intersect `PAL` with the regular language of
+even-length words; PEG languages are closed under intersection and contain the regular languages). -/
+theorem evenPal_in_peg : PegSeparation.RecognizedByTotalPEG PalPeg.EvenPal :=
+  PalPeg.evenPal_ww_reverse_of_pal unconditional
+
+/-- info: 'PalPeg.PalInPeg.evenPal_in_peg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms evenPal_in_peg
 
 end PalPeg.PalInPeg
