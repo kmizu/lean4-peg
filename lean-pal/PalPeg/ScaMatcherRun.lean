@@ -56,7 +56,8 @@ theorem seg (hρ : Orient ρ) (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 
       (PalPeg.GSDrained.matchEvent (x.take s) (x.drop s) (VS x T k s p₁ r z) = true →
         ∃ n₁ u, n₁ ≤ 11 ∧ n₁ < n ∧ iterS x.length ρ n₁ v = some u ∧ u.outputs = v.outputs ∧
           (∃ c, u.ctl = .pending c (.«match» "B")) ∧
-          u.pos "B" = x.length + (VS x T k s p₁ r z).1.pos + (x.length - s)) := by
+          u.pos "B" = x.length + (VS x T k s p₁ r z).1.pos + (x.length - s)) ∧
+      (d = 2 → (VS x T k s p₁ r z).1.q = x.length - s) := by
   obtain ⟨⟨pos, q⟩, c⟩ := z
   simp only at hen
   have hqv : q < x.length - s := h.qv
@@ -79,7 +80,8 @@ theorem seg (hρ : Orient ρ) (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 
       have hme : PalPeg.GSDrained.matchEvent (x.take s) (x.drop s)
           (VS x T k s p₁ r ((⟨pos, q⟩ : PalPeg.ScanState), c)) = false := by
         rw [hvs1]; simp [PalPeg.GSDrained.matchEvent, hvl]; omega
-      refine ⟨1, n, v', ok', le_rfl, by norm_num, ?_, ?_, hrun, hat, ?_, fun h' => absurd h' (by simp [hme])⟩
+      refine ⟨1, n, v', ok', le_rfl, by norm_num, ?_, ?_, hrun, hat, ?_, fun h' => absurd h' (by simp [hme]),
+        fun h => absurd h (by norm_num)⟩
       · show n + 35 * PalPeg.Phi k ⟨pos, q⟩ ≤ 35 * PalPeg.Phi k (VS x T k s p₁ r _).1
         rw [hvs1]; simp only [PalPeg.Phi]; omega
       · show PalPeg.Phi k ⟨pos, q⟩ < PalPeg.Phi k (VS x T k s p₁ r _).1
@@ -101,7 +103,7 @@ theorem seg (hρ : Orient ρ) (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 
           ⟨pos + PalPeg.gsShift k p₁ r (x.length - s), PalPeg.gsNextQ k p₁ r (x.length - s)⟩ := by
         rw [hvs1]
         simp only [VS, PalPeg.vStep_fst, PalPeg.scanStep, hvl, ← hlast, if_true]
-      refine ⟨2, n, v', true, by norm_num, le_rfl, ?_, ?_, hrun, hat, ?_, ?_⟩
+      refine ⟨2, n, v', true, by norm_num, le_rfl, ?_, ?_, hrun, hat, ?_, ?_, fun _ => by rw [hvs1]; exact hlast⟩
       · show n + 35 * PalPeg.Phi k ⟨pos, q⟩ ≤
           35 * PalPeg.Phi k (VS x T k s p₁ r (VS x T k s p₁ r _)).1
         rw [hvs2]; simp only [PalPeg.Phi]
@@ -138,7 +140,7 @@ theorem seg (hρ : Orient ρ) (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 
         (VS x T k s p₁ r ((⟨pos, q⟩ : PalPeg.ScanState), c)) = false := by
       rw [hvs1]; simp [PalPeg.GSDrained.matchEvent, hvl]; omega
     refine ⟨1, n, v', true, le_rfl, by norm_num, ?_, ?_, hrun, hat, ?_,
-      fun h' => absurd h' (by simp [hme])⟩
+      fun h' => absurd h' (by simp [hme]), fun h => absurd h (by norm_num)⟩
     · show n + 35 * PalPeg.Phi k ⟨pos, q⟩ ≤ 35 * PalPeg.Phi k (VS x T k s p₁ r _).1
       rw [hvs1]; simp only [PalPeg.Phi]
       set sh := PalPeg.gsShift k p₁ r q

@@ -187,7 +187,8 @@ def SegOK (L j : ℕ) (v : HVM) (d n : ℕ) (w : HVM) : Prop :=
   (isRep x T s p₁ r j = true →
     ∃ n₁ u, n₁ ≤ 11 ∧ n₁ < n ∧ iterS x.length ρ n₁ v = some u ∧ u.outputs = v.outputs ∧
       (∃ c, u.ctl = .pending c (.«match» "B")) ∧
-      u.pos "B" = x.length + endOf x T s p₁ r j)
+      u.pos "B" = x.length + endOf x T s p₁ r j) ∧
+  (d = 2 → isRep x T s p₁ r (j + 1) = false)
 
 variable {ρ x T s p₁ r pe}
 
@@ -199,10 +200,10 @@ theorem segOK_of (hρ : Orient ρ) {L j ok} {v : HVM}
     (hps : v.patternSize = x.length)
     (hnoper : pe = false → x.length - s < 8 * p₁) (hp1 : pe = true → 1 ≤ p₁) (hp : 0 < p₁) :
     ∃ d n w, SegOK ρ x T s p₁ r pe L j v d n w := by
-  obtain ⟨d, n, w, ok', hd1, hd2, hphi, -, hrun, hat, hout, hmatch⟩ :=
+  obtain ⟨d, n, w, ok', hd1, hd2, hphi, -, hrun, hat, hout, hmatch, hmid⟩ :=
     seg hρ x T L 8 s p₁ r (by norm_num) le_rfl pe ok _ v h hen hdl hps hnoper hp1
   rw [vs_orbit] at hphi hat
-  rw [vs_orbit_one] at hout hmatch
+  rw [vs_orbit_one] at hout hmatch hmid
   have hn : 0 < n := by
     rcases Nat.eq_zero_or_pos n with h0 | h0
     · subst h0
@@ -214,8 +215,15 @@ theorem segOK_of (hρ : Orient ρ) {L j ok} {v : HVM}
       rw [hpq, hqq] at hlt
       exact absurd hlt (lt_irrefl _)
     · exact h0
-  refine ⟨d, n, w, hd1, hd2, hn, hphi, hrun, ⟨ok', hat⟩, ?_, ?_⟩
+  refine ⟨d, n, w, hd1, hd2, hn, hphi, hrun, ⟨ok', hat⟩, ?_, ?_, ?_⟩
   · rw [hout]; rfl
+  rotate_left
+  · intro hd
+    have hq := hmid hd
+    by_contra hc
+    have hc' : isRep x T s p₁ r (j + 1) = true := by simpa using hc
+    have := rep_shape x T s p₁ r (j + 1) hp (by have := h.qv; omega) (le_of_eq hq) hc'
+    omega
   · intro hr
     obtain ⟨n₁, u, h1, h2, h3, h4, h5, h6⟩ := hmatch hr
     refine ⟨n₁, u, h1, h2, h3, h4, h5, ?_⟩
@@ -225,8 +233,8 @@ theorem segOK_of (hρ : Orient ρ) {L j ok} {v : HVM}
 theorem segOK_append {L j : ℕ} {v : HVM} {d n : ℕ} {w : HVM}
     (h : SegOK ρ x T s p₁ r pe L j v d n w) (hL : L < T.length) :
     SegOK ρ x T s p₁ r pe (L + 1) j (v.append T[L]) d n (w.append T[L]) := by
-  obtain ⟨hd1, hd2, hn, hphi, hrun, ⟨ok', hat⟩, hout, hmatch⟩ := h
-  refine ⟨hd1, hd2, hn, hphi, iterS_append _ hrun, ⟨ok', atHead_append hat hL⟩, hout, ?_⟩
+  obtain ⟨hd1, hd2, hn, hphi, hrun, ⟨ok', hat⟩, hout, hmatch, hmid⟩ := h
+  refine ⟨hd1, hd2, hn, hphi, iterS_append _ hrun, ⟨ok', atHead_append hat hL⟩, hout, ?_, hmid⟩
   intro hr
   obtain ⟨n₁, u, h1, h2, h3, h4, h5, h6⟩ := hmatch hr
   exact ⟨n₁, u.append T[L], h1, h2, iterS_append _ h3, h4, h5,
@@ -275,7 +283,7 @@ theorem match_unique {ρ : String → Bool} {x T : List (Fin 2)} {s p₁ r : ℕ
     {e : ℕ} {u : HVM} (he : e < n) (hu : iterStep e v = some u) (hm : IsMatch u) :
     isRep x T s p₁ r j = true ∧
       ∀ n₁ u₁, iterStep n₁ v = some u₁ → u₁.outputs = v.outputs → IsMatch u₁ → n₁ < n → e = n₁ := by
-  obtain ⟨-, -, -, -, hrun, -, hout, -⟩ := hseg
+  obtain ⟨-, -, -, -, hrun, -, hout, -, -⟩ := hseg
   have hw := iterS_iterStep hrun
   have hlenw : w.outputs.length =
       v.outputs.length + (if isRep x T s p₁ r j = true then 1 else 0) := by
@@ -388,15 +396,23 @@ structure Params : Prop where
   qle : ∀ i, (Z x T s p₁ r i).1.q ≤ x.length - s
 
 /-- **The main loop at slot `g` with `L` letters**: waiting at `Z j`, or `e` steps into the
-segment started at `Z j`, with the timing reference `(gr, pr)`. -/
+segment started at `Z j`, with the timing reference `(gr, pr)`. The outputs are the ends of the
+reports passed so far, all at most `L`. -/
 def Cur (L g : ℕ) (u : HVM) : Prop :=
   ∃ j v gr pr ok, AtHead x T L 8 s p₁ r pe ok (Z x T s p₁ r j) v ∧ v.patternSize = x.length ∧
     RefOK x T s p₁ r gr pr j ∧ pr ≤ Φ x T s p₁ r j ∧
+    (∀ z ∈ u.outputs, z ≤ L) ∧
+    (∀ j'', j'' < j → isRep x T s p₁ r j'' = true →
+      ((endOf x T s p₁ r j'' : ℕ) : ℤ) ∈ v.outputs) ∧
     (((Z x T s p₁ r j).1.pos + (Z x T s p₁ r j).1.q = L ∧ u = v ∧ gr = 512 * (L + 1) ∧
         pr = Φ x T s p₁ r j) ∨
      ((Z x T s p₁ r j).1.pos + (Z x T s p₁ r j).1.q < L ∧
        ∃ d n w e, SegOK ρ x T s p₁ r pe L j v d n w ∧ e < n ∧ iterS x.length ρ e v = some u ∧
-         g + 35 * pr ≤ gr + 35 * Φ x T s p₁ r j + e))
+         g + 35 * pr ≤ gr + 35 * Φ x T s p₁ r j + e ∧
+         ((u.outputs = v.outputs ∧
+            ∀ n₁ u₁, iterS x.length ρ n₁ v = some u₁ → IsMatch u₁ → e ≤ n₁) ∨
+          (isRep x T s p₁ r j = true ∧
+            u.outputs = v.outputs ++ [((endOf x T s p₁ r j : ℕ) : ℤ)]))))
 
 variable {ρ x T s p₁ r pe}
 
@@ -404,34 +420,40 @@ variable {ρ x T s p₁ r pe}
 theorem cur_of_head (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L g j gr pr : ℕ} {ok : Bool}
     {v : HVM} (hat : AtHead x T L 8 s p₁ r pe ok (Z x T s p₁ r j) v) (hps : v.patternSize = x.length)
     (href : RefOK x T s p₁ r gr pr j) (hpr : pr ≤ Φ x T s p₁ r j)
-    (htime : g + 35 * pr ≤ gr + 35 * Φ x T s p₁ r j) :
+    (htime : g + 35 * pr ≤ gr + 35 * Φ x T s p₁ r j) (hvals : ∀ z ∈ v.outputs, z ≤ L)
+    (hrec : ∀ j'', j'' < j → isRep x T s p₁ r j'' = true →
+      ((endOf x T s p₁ r j'' : ℕ) : ℤ) ∈ v.outputs) :
     Cur ρ x T s p₁ r pe L g v := by
   have harr := hat.arr
   rcases Nat.lt_or_ge ((Z x T s p₁ r j).1.pos + (Z x T s p₁ r j).1.q) L with hlt | hge
   · obtain ⟨d, n, w, hseg⟩ := segOK_of (pe := pe) hρ hat hlt
       (PalPeg.GSReportDeadline.orbit_deadlineInv hP.sd j) hps hP.noper hP.p1 hP.ppos
-    exact ⟨j, v, gr, pr, ok, hat, hps, href, hpr,
-      Or.inr ⟨hlt, d, n, w, 0, hseg, hseg.2.2.1, rfl, by omega⟩⟩
+    exact ⟨j, v, gr, pr, ok, hat, hps, href, hpr, hvals, hrec,
+      Or.inr ⟨hlt, d, n, w, 0, hseg, hseg.2.2.1, rfl, by omega,
+        Or.inl ⟨rfl, fun _ _ _ _ => Nat.zero_le _⟩⟩⟩
   · have hL : (Z x T s p₁ r j).1.pos + (Z x T s p₁ r j).1.q = L := by omega
     exact ⟨j, v, 512 * (L + 1), Φ x T s p₁ r j, ok, hat, hps,
       refOK_wait x T s p₁ r j L hP.ppos (by have := hP.sx; omega) hP.qle hL hat.qv, le_rfl,
-      Or.inl ⟨hL, rfl, rfl, rfl⟩⟩
+      hvals, hrec, Or.inl ⟨hL, rfl, rfl, rfl⟩⟩
 
 /-- **One step of the main loop**: it exists, keeps the worker's side conditions and orientation,
-and keeps `Cur`; the output grows only by the current letter count `L` (a report on time). -/
+and keeps `Cur`; the output grows only by the current letter count `L`, and then a report ends
+at `L`. -/
 theorem cur_step (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L g : ℕ} {u : HVM}
     (hc : Cur ρ x T s p₁ r pe L g u) (hg1 : 512 * L ≤ g) (hg2 : g < 512 * (L + 1)) :
     ∃ u', stepMatch u = some u' ∧ ScaWorkerLink.StepSide x.length ρ u ∧
       ScaWorkerLink.orientStep u ρ = ρ ∧ Cur ρ x T s p₁ r pe L (g + 1) u' ∧
-      (u'.outputs = u.outputs ∨ u'.outputs = u.outputs ++ [(L : ℤ)]) := by
-  obtain ⟨j, v, gr, pr, ok, hat, hps, href, hpr, hcase⟩ := hc
-  rcases hcase with ⟨hL, rfl, hgr, hpr'⟩ | ⟨hlt, d, n, w, e, hseg, hen, hu, htime⟩
+      (u'.outputs = u.outputs ∨
+        (u'.outputs = u.outputs ++ [(L : ℤ)] ∧
+          ∃ j, isRep x T s p₁ r j = true ∧ endOf x T s p₁ r j = L)) := by
+  obtain ⟨j, v, gr, pr, ok, hat, hps, href, hpr, hvals, hrec, hcase⟩ := hc
+  rcases hcase with ⟨hL, rfl, hgr, hpr'⟩ | ⟨hlt, d, n, w, e, hseg, hen, hu, htime, hbook⟩
   · -- waiting at a loop head
     obtain ⟨ph, hctl⟩ := hat.ctl
     have hB : u.len ≤ u.pos "B" := by
       rw [atHead_len hat, hat.rel.2.2.2.2.2.2.1]; push_cast; omega
     have e1 := head_wait 8 (some pe) ok ph u hctl hB
-    refine ⟨u, stepMatch_of_one e1, ?_, ?_, ⟨j, u, gr, pr, ok, hat, hps, href, hpr,
+    refine ⟨u, stepMatch_of_one e1, ?_, ?_, ⟨j, u, gr, pr, ok, hat, hps, href, hpr, hvals, hrec,
       Or.inl ⟨hL, rfl, hgr, hpr'⟩⟩, Or.inl rfl⟩
     · refine ⟨fun c a b hc => ?_, fun c h hc => ?_, fun c ms hc => ?_, fun c h hc => ?_⟩
       · rw [hctl] at hc; cases hc
@@ -441,7 +463,7 @@ theorem cur_step (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L g : ℕ} {u 
     · simp [ScaWorkerLink.orientStep, hctl, moveRev]
   · -- inside a segment
     have hseg' := hseg
-    obtain ⟨hd1, hd2, hn0, hphi, hrun, ⟨ok', hat'⟩, hout, hmatch⟩ := hseg'
+    obtain ⟨hd1, hd2, hn0, hphi, hrun, ⟨ok', hat'⟩, hout, hmatch, hmid⟩ := hseg'
     obtain ⟨u', hu', hrest⟩ := iterS_prefix hrun (show e + 1 ≤ n by omega)
     have hs1 : stepS x.length ρ u = some u' := by
       rw [iterS_add, hu, Option.bind_some] at hu'
@@ -450,8 +472,11 @@ theorem cur_step (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L g : ℕ} {u 
     have hlenu : u.len = x.length + L := by
       show (u.word.length : ℤ) = _
       rw [iterStep_word _ (iterS_iterStep hu)]; exact atHead_len hat
+    have hpsu : u.patternSize = x.length := by
+      rw [iterStep_patternSize _ (iterS_iterStep hu)]; exact hps
     -- the `match` step, if this is one
     have key : IsMatch u → isRep x T s p₁ r j = true ∧ u.pos "B" = x.length + L ∧
+        endOf x T s p₁ r j = L ∧ u.outputs = v.outputs ∧
         (∃ c, u.ctl = .pending c (.«match» "B")) := by
       intro hm
       obtain ⟨hrep, huniq⟩ := match_unique hseg hen (iterS_iterStep hu) hm
@@ -468,9 +493,26 @@ theorem cur_step (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L g : ℕ} {u 
         push Not at hcon
         have h512 : 512 * (endOf x T s p₁ r j + 1) ≤ 512 * L := Nat.mul_le_mul_left _ hcon
         omega
-      exact ⟨hrep, by rw [hB₁]; push_cast; omega, c₁, hc₁⟩
+      exact ⟨hrep, by rw [hB₁]; push_cast; omega, by omega, ho₁, c₁, hc₁⟩
     have hmB : IsMatch u → u.len ≤ u.pos "B" := by
       intro hm; obtain ⟨-, hB, -⟩ := key hm; rw [hlenu, hB]
+    -- the output of this step
+    have hout' : (IsMatch u → u'.outputs = u.outputs ++ [(L : ℤ)]) ∧
+        (¬ IsMatch u → u'.outputs = u.outputs) := by
+      refine ⟨fun hm => ?_, fun hm => step_outputs_nomatch hsm hm⟩
+      obtain ⟨-, hB, -, -, c, hc⟩ := key hm
+      obtain ⟨-, hv'⟩ := stepMatch_some hc hsm
+      rw [hv']
+      simp only [matchOut]
+      rw [hB, hpsu]; congr 2; ring
+    have hvals' : ∀ z ∈ u'.outputs, z ≤ L := by
+      intro z hz
+      by_cases hm : IsMatch u
+      · rw [hout'.1 hm, List.mem_append, List.mem_singleton] at hz
+        rcases hz with hz | rfl
+        · exact hvals z hz
+        · exact le_rfl
+      · rw [hout'.2 hm] at hz; exact hvals z hz
     refine ⟨u', hsm, stepSide_of_safe hsafe hmB, orient_of_safe hsafe, ?_, ?_⟩
     · by_cases hlast : e + 1 = n
       · have hw : u' = w := by
@@ -479,20 +521,151 @@ theorem cur_step (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L g : ℕ} {u 
         subst hw
         have hps' : u'.patternSize = x.length := by
           rw [iterStep_patternSize _ (iterS_iterStep hrun)]; exact hps
-        exact cur_of_head hρ hP hat' hps' (fun j'' hj'' hrep => href j'' (by omega) hrep)
-          (hpr.trans (phi_mono x T s p₁ r hP.ppos (by omega))) (by omega)
-      · exact ⟨j, v, gr, pr, ok, hat, hps, href, hpr,
-          Or.inr ⟨hlt, d, n, w, e + 1, hseg, by omega, hu', by omega⟩⟩
+        refine cur_of_head hρ hP hat' hps' (fun j'' hj'' hrep => href j'' (by omega) hrep)
+          (hpr.trans (phi_mono x T s p₁ r hP.ppos (by omega))) (by omega) hvals' ?_
+        intro j'' hj'' hrep
+        rw [hout]
+        rcases Nat.lt_or_ge j'' j with hlt' | hge'
+        · exact List.mem_append_left _ (hrec j'' hlt' hrep)
+        · rcases Nat.eq_or_lt_of_le hge' with heq | hgt
+          · subst heq; rw [if_pos hrep]; exact List.mem_append_right _ (List.mem_singleton_self _)
+          · have hd2' : d = 2 := by omega
+            have : j'' = j + 1 := by omega
+            subst this
+            rw [hmid hd2'] at hrep; exact absurd hrep (by simp)
+      · refine ⟨j, v, gr, pr, ok, hat, hps, href, hpr, hvals', hrec,
+          Or.inr ⟨hlt, d, n, w, e + 1, hseg, by omega, hu', by omega, ?_⟩⟩
+        by_cases hm : IsMatch u
+        · obtain ⟨hrep, -, hend, hov, -⟩ := key hm
+          right
+          refine ⟨hrep, ?_⟩
+          rw [hout'.1 hm, hov, hend]
+        · rw [hout'.2 hm]
+          rcases hbook with ⟨heq, hle⟩ | hpast
+          · left
+            refine ⟨heq, fun n₁ u₁ hu₁ hm₁ => ?_⟩
+            have h1 := hle n₁ u₁ hu₁ hm₁
+            rcases Nat.eq_or_lt_of_le h1 with h2 | h2
+            · subst h2
+              rw [hu] at hu₁
+              rw [Option.some_inj.mp hu₁] at hm
+              exact absurd hm₁ hm
+            · omega
+          · right; exact hpast
     · by_cases hm : IsMatch u
-      · right
-        obtain ⟨-, hB, c, hc⟩ := key hm
-        obtain ⟨-, hv'⟩ := stepMatch_some hc hsm
-        rw [hv']
-        simp only [matchOut]
-        have hpsu : u.patternSize = x.length := by
-          rw [iterStep_patternSize _ (iterS_iterStep hu)]; exact hps
-        rw [hB, hpsu]; congr 2; ring
-      · left; exact step_outputs_nomatch hsm hm
+      · obtain ⟨hrep, -, hend, -, -⟩ := key hm
+        exact Or.inr ⟨hout'.1 hm, j, hrep, hend⟩
+      · exact Or.inl (hout'.2 hm)
+
+/-- **A letter arrives** at the end of tick `L`. -/
+theorem cur_append (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L : ℕ} {u : HVM}
+    (hc : Cur ρ x T s p₁ r pe L (512 * (L + 1)) u) (hL : L < T.length) :
+    Cur ρ x T s p₁ r pe (L + 1) (512 * (L + 1)) (u.append T[L]) := by
+  obtain ⟨j, v, gr, pr, ok, hat, hps, href, hpr, hvals, hrec, hcase⟩ := hc
+  have hvals' : ∀ z ∈ (u.append T[L]).outputs, z ≤ (L + 1 : ℕ) := by
+    intro z hz; have := hvals z hz; push_cast; omega
+  rcases hcase with ⟨hL', rfl, hgr, hpr'⟩ | ⟨hlt, d, n, w, e, hseg, hen, hu, htime, hbook⟩
+  · exact cur_of_head hρ hP (atHead_append hat hL) hps href hpr (by omega) hvals' hrec
+  · refine ⟨j, v.append T[L], gr, pr, ok, atHead_append hat hL, hps, href, hpr, hvals', hrec,
+      Or.inr ⟨by omega, d, n, w.append T[L], e, segOK_append hseg hL, hen, iterS_append _ hu, htime,
+        ?_⟩⟩
+    rcases hbook with ⟨heq, hle⟩ | hpast
+    · left
+      refine ⟨heq, fun n₁ u₁ hu₁ hm₁ => ?_⟩
+      rcases Nat.lt_or_ge n₁ n with h1 | h1
+      · obtain ⟨y, hy, -⟩ := iterS_prefix hseg.2.2.2.2.1 h1.le
+        have := iterS_append (a := T[L]) hy
+        rw [hu₁] at this
+        have hyu : u₁ = y.append T[L] := Option.some_inj.mp this
+        subst hyu
+        exact hle n₁ y hy hm₁
+      · omega
+    · right; exact hpast
+
+/-- **`b` steps inside tick `L`.** -/
+theorem cur_run (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L : ℕ} :
+    ∀ (b : ℕ) {g : ℕ} {u : HVM}, Cur ρ x T s p₁ r pe L g u → 512 * L ≤ g → g + b ≤ 512 * (L + 1) →
+      ∃ u', iterStep b u = some u' ∧
+        (∀ i, i < b → ∀ ui, iterStep i u = some ui → ScaWorkerLink.StepSide x.length ρ ui) ∧
+        (∀ i, i ≤ b → ScaWorkerLink.orientAt i u ρ = ρ) ∧
+        Cur ρ x T s p₁ r pe L (g + b) u' ∧ u.outputs <+: u'.outputs ∧
+        (u'.outputs = u.outputs ∨ ∃ j, isRep x T s p₁ r j = true ∧ endOf x T s p₁ r j = L)
+  | 0, g, u, hc, _, _ =>
+    ⟨u, rfl, fun i hi => absurd hi (Nat.not_lt_zero _),
+      fun i hi => by rw [Nat.le_zero.mp hi]; rfl, hc, List.prefix_refl _, Or.inl rfl⟩
+  | b + 1, g, u, hc, hg1, hg2 => by
+    obtain ⟨u1, hs, hside, horient, hc1, hout1⟩ := cur_step hρ hP hc hg1 (by omega)
+    obtain ⟨u', hrun, hsides, horients, hc', hpre, hout⟩ :=
+      cur_run hρ hP b (g := g + 1) hc1 (by omega) (by omega)
+    refine ⟨u', ?_, ?_, ?_, by rw [show g + (b + 1) = g + 1 + b by omega]; exact hc', ?_, ?_⟩
+    · simp only [iterStep, hs, Option.bind_some]; exact hrun
+    · intro i hi ui hui
+      cases i with
+      | zero => simp only [iterStep, Option.some.injEq] at hui; subst hui; exact hside
+      | succ i =>
+        simp only [iterStep, hs, Option.bind_some] at hui
+        exact hsides i (by omega) ui hui
+    · intro i hi
+      cases i with
+      | zero => rfl
+      | succ i =>
+        rw [ScaWorkerLink.orientAt_succ ρ hs, horient]
+        exact horients i (by omega)
+    · have h1 : u.outputs <+: u1.outputs := by
+        rcases hout1 with h | ⟨h, -⟩
+        · rw [h]
+        · rw [h]; exact List.prefix_append _ _
+      exact h1.trans hpre
+    · rcases hout1 with h1 | ⟨-, hj⟩
+      · rcases hout with h2 | h2
+        · left; rw [h2, h1]
+        · right; exact h2
+      · right; exact hj
+
+/-- **Every report ending by `L` is out by the end of tick `L`.** -/
+theorem cur_live (hP : Params x T s p₁ r pe) {L : ℕ} {u : HVM}
+    (hc : Cur ρ x T s p₁ r pe L (512 * (L + 1)) u) {j' : ℕ}
+    (hrep : isRep x T s p₁ r j' = true) (hend : endOf x T s p₁ r j' ≤ L) :
+    ((endOf x T s p₁ r j' : ℕ) : ℤ) ∈ u.outputs := by
+  obtain ⟨j, v, gr, pr, ok, hat, hps, href, hpr, hvals, hrec, hcase⟩ := hc
+  obtain ⟨hpos', hq'⟩ := rep_shape x T s p₁ r j' hP.ppos (by have := hP.sx; omega) (hP.qle j') hrep
+  -- a report at or after `j` is not yet due, or it is out
+  have hlate : ∀ jj, j ≤ jj → isRep x T s p₁ r jj = true →
+      (Z x T s p₁ r j).1.pos + (Z x T s p₁ r j).1.q < endOf x T s p₁ r jj := by
+    intro jj hjj hr
+    obtain ⟨hp2, hq2⟩ := rep_shape x T s p₁ r jj hP.ppos (by have := hP.sx; omega) (hP.qle jj) hr
+    have hm : (Z x T s p₁ r j).1.pos ≤ (Z x T s p₁ r jj).1.pos := PalPeg.GSDrained.orbit_pos_mono hjj
+    have hqv := hat.qv
+    unfold endOf; rw [← hp2]; omega
+  rcases Nat.lt_or_ge j' j with hlt | hge
+  · have hin := hrec j' hlt hrep
+    rcases hcase with ⟨-, rfl, -⟩ | ⟨-, d, n, w, e, -, -, -, -, hbook⟩
+    · exact hin
+    · rcases hbook with ⟨heq, -⟩ | ⟨-, heq⟩ <;> rw [heq]
+      · exact hin
+      · exact List.mem_append_left _ hin
+  · rcases hcase with ⟨hL, -, -⟩ | ⟨hlt, d, n, w, e, hseg, hen, hu, htime, hbook⟩
+    · have := hlate j' hge hrep; omega
+    · obtain ⟨hd1, hd2, hn0, hphi, -, -, -, hmatch, hmid⟩ := hseg
+      have hr := href j' hge hrep
+      have h512 : 512 * (endOf x T s p₁ r j' + 1) ≤ 512 * (L + 1) := Nat.mul_le_mul_left _ (by omega)
+      rcases Nat.eq_or_lt_of_le hge with heq | hgt
+      · subst heq
+        rcases hbook with ⟨-, hle⟩ | ⟨-, heq⟩
+        · exfalso
+          obtain ⟨n₁, u₁, hn₁, -, hu₁, -, ⟨c₁, hc₁⟩, -⟩ := hmatch hrep
+          have := hle n₁ u₁ hu₁ ⟨c₁, _, hc₁⟩
+          omega
+        · rw [heq]; exact List.mem_append_right _ (List.mem_singleton_self _)
+      · exfalso
+        have hjd : j + d ≤ j' := by
+          rcases Nat.lt_or_ge j' (j + d) with h | h
+          · have : j' = j + 1 := by omega
+            have hd : d = 2 := by omega
+            subst this; rw [hmid hd] at hrep; exact absurd hrep (by simp)
+          · exact h
+        have hm := phi_mono x T s p₁ r hP.ppos hjd
+        omega
 
 end Tick
 
