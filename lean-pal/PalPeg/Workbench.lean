@@ -191,6 +191,7 @@ import PalPeg.ScaWindowInstance
 import PalPeg.ScaGsCoroutine
 import PalPeg.ScaGsCert
 import PalPeg.ScaWorkerCoroutine
+import PalPeg.ScaGsCertFunctional
 import PalPeg.ScaWindowWorker
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
