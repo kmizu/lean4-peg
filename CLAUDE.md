@@ -24,6 +24,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `CanonTrace` は `ShapedRun.OracleTick` 版。`PlateauInv.dpDense`、DP 履歴 `PhysicalDpHistory`/`PhysicalDpSource`。
 - 余白 margin を広げる案は不可（boot が半径 K ちょうどの余白を作る設計）。
 
+### (A) 静かなモードの接続（2026-09-23 深夜、`PhysicalPhaseLayers.lean`、Workbench 登録済み）
+- `forward_quiet_machine`: 静かなモード（markEnd/home/fpp/choose）の tick は全8層を素通しし、`DpCleanup.Enc` を保つ。Snapshot の保存コピーも `successor_put_quiet`（静かな tick は `put` と可換）で同じ定理から運ぶ。`¬NeedsLoan` は `successor_not_loan`（静かなモードは scan に戻らない）でタダ。
+- **`cases_of_remaining_quiet`: home・markEnd・choose の後半（`ChooseBack`）を処理済みに移した。** 残差 `hother` はこれら3つの除外条件も取る。前提なし。
+- fpp は `runsQuiet_fpp` まであり、run から `hcomp`/`hfloorRun`/`hin` を供給すれば処理済みにできる（未接続）。
+- 最終接続 `given_remainingCases_and_frozen` の `hcases` にはまだ `cases_of_remaining_quiet` を差し込んでいない（全体 build 未実行）。
+
 ### (B) 凍結の次の一手（設計済み・未実装）
 最後の比較は一致/shift/fallback のどれもありうる（`PlateauInvariant.plateauCompare`）ので「凍結＝飢餓」は偽。代わりに物理側へ粘着ビット b を足す包み層:
 b' = (入力あり → false; なし → b ∨ 「tick 開始時に右ヘッドが gap 上で pendingTest 偽」)、報告は `!b && repW`。
