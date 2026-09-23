@@ -667,6 +667,22 @@ theorem cur_live (hP : Params x T s p₁ r pe) {L : ℕ} {u : HVM}
         have hm := phi_mono x T s p₁ r hP.ppos hjd
         omega
 
+/-- **The reference at the first loop head** `Z 0 = (⟨s, 0⟩, 0)`: reached at slot `g₀` early
+enough, every report makes its deadline. -/
+theorem refOK_start (x T : List (Fin 2)) (s p₁ r g₀ : ℕ) (hp : 0 < p₁) (hsx : s < x.length)
+    (hq : ∀ i, (Z x T s p₁ r i).1.q ≤ x.length - s)
+    (hg₀ : g₀ < 512 * s + 477 * (x.length - s) + 536) :
+    RefOK x T s p₁ r g₀ (Φ x T s p₁ r 0) 0 := by
+  intro j' _ hrep
+  obtain ⟨hpos, hq'⟩ := rep_shape x T s p₁ r j' hp (by omega) (hq j') hrep
+  have hge : (x.take s).length ≤ (Z x T s p₁ r j').1.pos := PalPeg.GSDrained.orbit_pos_ge j'
+  have hz0 : Z x T s p₁ r 0 = ((⟨(x.take s).length, 0⟩ : PalPeg.ScanState), 0) := rfl
+  have hts : (x.take s).length = s := by simp [List.length_take]; omega
+  unfold endOf
+  rw [← hpos]
+  simp only [Φ, PalPeg.Phi, hz0, hts] at hge ⊢
+  omega
+
 end Tick
 
 end PalPeg.ScaMatcherTick
