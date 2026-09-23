@@ -166,6 +166,7 @@ import PalPeg.PhysicalReport
 import PalPeg.PhysicalDevices
 import PalPeg.PhysicalReportTest
 import PalPeg.PhysicalPhaseStill
+import PalPeg.PhysicalPhaseLayers
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
 import PalPeg.PostRunInduction
