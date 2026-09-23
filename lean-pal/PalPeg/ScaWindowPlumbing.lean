@@ -541,4 +541,177 @@ theorem jobInv_on {W : List (Fin 2)} {cap : ℕ → ℕ} {b S q : ℕ} {st : Sta
     · rw [if_pos hq, if_pos ⟨by omega, by omega⟩, show q + 1 - 2 = q - 1 by omega]
     · rw [if_neg hq, if_neg (fun h3 => by omega)]
 
+/-! ## Births and dormant stages -/
+
+theorem advance_viol (st : StageState) (nb : Bool) (src : ℕ) :
+    (advance st nb src).2 = (advance st false src).2 := rfl
+
+/-- **A birth**: the new stage satisfies the invariant at `d = 0`, and the tick is clean for it
+(given that `advance` raises nothing). -/
+theorem jobInv_birth {W : List (Fin 2)} {cap : ℕ → ℕ} {b S : ℕ} (hS : 1 ≤ S) (st : StageState)
+    (wd : Bool) (wf : List Bool) :
+    (consume (advance st true S).1).2 = false ∧
+    JobInv W cap b S 0 (capture (consume (advance st true S).1).1 wd wf) := by
+  have hsch := stageAt_birth st S
+  have hans : answering (advance st true S).1 = false := by
+    rw [answering_of_stageAt hsch]; simp
+  rw [consume_not _ hans]
+  refine ⟨rfl, (stageAt_congr rfl _ _).mpr hsch, ?_, fun h1 => by simp at h1, ?_,
+    fun r => ?_, ?_⟩
+  · simp [capture, advance]
+  · simp [capture, advance]
+  · have : ¬ ((r.val + 1) * S ≤ 0 ∧ cap r.val ≤ b + 0) := fun h3 => by
+      have := Nat.mul_le_mul_right S (show 1 ≤ r.val + 1 by omega)
+      omega
+    rw [if_neg this]
+    simp [capture, advance]
+  · simp [capture]
+
+/-- A stage that has not been born yet. -/
+def Dormant (st : StageState) : Prop := st.alive = false ∧ st.pending = false ∧ st.release = false
+
+theorem dormant_initial : Dormant StageState.initial := ⟨rfl, rfl, rfl⟩
+
+theorem advance_dormant {st : StageState} (h : Dormant st) (src : ℕ) :
+    (advance st false src).2 = false := by
+  obtain ⟨ha, hp, -⟩ := h
+  simp [advance, ha, hp]
+
+theorem dormant_step {st : StageState} (h : Dormant st) (src : ℕ) (wd : Bool) (wf : List Bool) :
+    (consume (advance st false src).1).2 = false ∧
+    Dormant (capture (consume (advance st false src).1).1 wd wf) := by
+  obtain ⟨ha, hp, hr⟩ := h
+  have hans : answering (advance st false src).1 = false := by
+    simp [answering, advance, ha]
+  rw [consume_not _ hans]
+  refine ⟨rfl, ?_, ?_, ?_⟩ <;> simp [capture, advance, ha, hp]
+
+/-! ## A tick, stage by stage -/
+
+section Run
+variable {Wm Wf : Type} (mOps : WorkerOps Wm) (fOps : WorkerOps Wf)
+
+/-- Stage `i` after a tick: `advance`, `consume`, then `capture` from flag worker `i`'s state after
+the tick. -/
+theorem tick_stage (s : PalState Wm Wf) (a : Fin 2) (i : Fin 2) :
+    (tick mOps fOps s a).stages i =
+      capture (consume (advance (s.stages i) (birthOf s && s.slot == i) s.power).1).1
+        (fOps.modeDone ((tick mOps fOps s a).flags i))
+        (fOps.flags ((tick mOps fOps s a).flags i)) := by
+  have hb : (s.powerReady && (if s.powerReady then s.nextBirth.pred else s.nextBirth) == 0) =
+      birthOf s := by unfold birthOf; cases s.powerReady <;> simp
+  fin_cases i
+  · show _ = capture (consume (advance (s.stages 0) (birthOf s && s.slot == 0) s.power).1).1 _ _
+    rw [← hb]; rfl
+  · show _ = capture (consume (advance (s.stages 1) (birthOf s && s.slot == 1) s.power).1).1 _ _
+    rw [← hb]; rfl
+
+theorem ctlViolation_eq (s : PalState Wm Wf) :
+    ScaWindowFault.ctlViolation s =
+      ((advance (s.stages 0) (birthOf s && s.slot == 0) s.power).2 ||
+        (advance (s.stages 1) (birthOf s && s.slot == 1) s.power).2 ||
+        (consume (advance (s.stages 0) (birthOf s && s.slot == 0) s.power).1).2 ||
+        (consume (advance (s.stages 1) (birthOf s && s.slot == 1) s.power).1).2) := rfl
+
+end Run
+
+/-! ## One tick of a live stage, either way -/
+
+theorem jobInv_tick {W : List (Fin 2)} {cap : ℕ → ℕ} {b S d : ℕ} {st : StageState} {src : ℕ}
+    {wd : Bool} {wf : List Bool} (hS : 1 ≤ S) (h : JobInv W cap b S d st)
+    (hlive : (d + 1) / S ≤ 5)
+    (hcap : ∀ r, r < 4 → (r + 1) * S ≤ d + 1 →
+      b + (r + 1) * S ≤ cap r ∧ cap r < b + (r + 2) * S)
+    (hwd : ∀ r, r < 4 → (r + 1) * S ≤ d + 1 → b + d + 1 ≤ cap r → (wd = true ↔ b + d + 1 = cap r))
+    (hwf : ∀ r, r < 4 → (r + 1) * S ≤ d + 1 → b + d + 1 = cap r → wf = jobBits W b S r) :
+    (advance st false src).2 = false ∧ (consume (advance st false src).1).2 = false ∧
+    JobInv W cap b S (d + 1) (capture (consume (advance st false src).1).1 wd wf) := by
+  obtain ⟨q, m, hm, rfl⟩ : ∃ q m, m < S ∧ d = q * S + m :=
+    ⟨d / S, d % S, Nat.mod_lt _ (by omega), by rw [Nat.div_add_mod' d S]⟩
+  rcases Nat.lt_or_ge (m + 1) S with hm1 | hm1
+  · have hq1 := (divmod_off (q := q) hm1).1
+    rw [hq1] at hlive
+    have hle : q * S ≤ q * S + m + 1 := by omega
+    exact jobInv_off hS hm1 hlive h hcap
+      (fun h1 h2 h3 => hwd (q - 1) (by omega)
+        (by rw [show q - 1 + 1 = q by omega]; omega) h3)
+      (fun h1 h2 h3 => hwf (q - 1) (by omega)
+        (by rw [show q - 1 + 1 = q by omega]; omega) h3)
+  · have hmS : m = S - 1 := by omega
+    subst hmS
+    have hd1 : q * S + (S - 1) + 1 = (q + 1) * S := by rw [Nat.add_mul, Nat.one_mul]; omega
+    have hq1 : (q + 1) * S / S = q + 1 := Nat.mul_div_cancel _ (by omega)
+    rw [hd1, hq1] at hlive
+    have e : ∀ x, b + (q * S + (S - 1)) + 1 = x ↔ b + (q + 1) * S = x := fun x => by omega
+    have := jobInv_on (src := src) (wd := wd) (wf := wf) hS (by omega) h
+      (fun r hr hr' => hcap r hr (by rw [hd1]; exact hr'))
+      (fun h1 h2 => by
+        have := hwd q (by omega) (by rw [hd1]) (by omega)
+        rw [this, e])
+      (fun h1 h2 => hwf q (by omega) (by rw [hd1]) (by omega))
+    rwa [← hd1] at this
+
+/-- A stage at the end of its life (`d + 1 = 6S`) raises no violation when it is replaced. -/
+theorem retire_clean {W : List (Fin 2)} {cap : ℕ → ℕ} {b S : ℕ} {st : StageState} (src : ℕ)
+    (hS : 1 ≤ S) (h : JobInv W cap b S (5 * S + (S - 1)) st) (nb : Bool) :
+    (advance st nb src).2 = false := by
+  rw [advance_viol]
+  have hb : (5 * S + (S - 1) + 1) % S = 0 := by
+    rw [show 5 * S + (S - 1) + 1 = 6 * S by omega, Nat.mul_mod_left]
+  rw [advance_on hS h.sched hb src]
+  have hiv0 : st.interval.val = 5 := by
+    rw [h.sched.2.2.2, (divmod_at (q := 5) (show S - 1 < S by omega)).1]
+  simp [relOf, incInterval, hiv0]
+
+/-! ## The flag workers' promise, and one slot through one tick of the run -/
+
+section Contract
+variable {Wm Wf : Type} (mOps : WorkerOps Wm) (fOps : WorkerOps Wf) (m0 : Wm) (f0 : Wf)
+
+/-- Job `r` of the stage born at `2^j` (slot `idx (j-1)`, half `2^(j-1)`) is captured at `c`:
+before the next release, done exactly at `c` from its release on, with the job's bits. -/
+def CapAt (W : List (Fin 2)) (j r c : ℕ) : Prop :=
+  2 ^ j + (r + 1) * 2 ^ (j - 1) ≤ c ∧ c < 2 ^ j + (r + 2) * 2 ^ (j - 1) ∧
+  (∀ n, 2 ^ j + (r + 1) * 2 ^ (j - 1) ≤ n → n ≤ c → n ≤ W.length →
+    (fOps.modeDone ((run mOps fOps m0 f0 (W.take n)).flags (idx (j - 1))) = true ↔ n = c)) ∧
+  (c ≤ W.length →
+    fOps.flags ((run mOps fOps m0 f0 (W.take c)).flags (idx (j - 1))) =
+      jobBits W (2 ^ j) (2 ^ (j - 1)) r)
+
+/-- **The flag workers' promise** on the word `W`. -/
+def FlagsContract (W : List (Fin 2)) : Prop :=
+  ∃ cap : ℕ → ℕ → ℕ, ∀ j r, 1 ≤ j → r < 4 → 2 ^ j + (r + 1) * 2 ^ (j - 1) ≤ W.length →
+    CapAt mOps fOps m0 f0 W j r (cap j r)
+
+theorem run_take_succ (W : List (Fin 2)) {n : ℕ} (hn : n < W.length) :
+    run mOps fOps m0 f0 (W.take (n + 1)) = tick mOps fOps (run mOps fOps m0 f0 (W.take n)) W[n] := by
+  rw [List.take_succ, List.getElem?_eq_getElem hn, Option.toList_some, ScaWindowSchedule.run_append]
+
+/-- **One slot through one tick**, from the promise: the stage born at `2^j` in its slot. -/
+theorem slot_step {W : List (Fin 2)} {cap : ℕ → ℕ → ℕ} {j d : ℕ}
+    (hC : ∀ r, r < 4 → 2 ^ j + (r + 1) * 2 ^ (j - 1) ≤ W.length →
+      CapAt mOps fOps m0 f0 W j r (cap j r))
+    (hj : 1 ≤ j) (hn : 2 ^ j + d < W.length)
+    (h : JobInv W (cap j) (2 ^ j) (2 ^ (j - 1)) d
+      ((run mOps fOps m0 f0 (W.take (2 ^ j + d))).stages (idx (j - 1))))
+    (hlive : (d + 1) / 2 ^ (j - 1) ≤ 5) (src : ℕ) :
+    let s := run mOps fOps m0 f0 (W.take (2 ^ j + d))
+    (advance (s.stages (idx (j - 1))) false src).2 = false ∧
+      (consume (advance (s.stages (idx (j - 1))) false src).1).2 = false ∧
+      JobInv W (cap j) (2 ^ j) (2 ^ (j - 1)) (d + 1)
+        (capture (consume (advance (s.stages (idx (j - 1))) false src).1).1
+          (fOps.modeDone ((run mOps fOps m0 f0 (W.take (2 ^ j + d + 1))).flags (idx (j - 1))))
+          (fOps.flags ((run mOps fOps m0 f0 (W.take (2 ^ j + d + 1))).flags (idx (j - 1))))) := by
+  intro s
+  have hS : 1 ≤ 2 ^ (j - 1) := Nat.one_le_two_pow
+  refine jobInv_tick hS h hlive (fun r hr hr' => ?_) (fun r hr hr' hle => ?_)
+    (fun r hr hr' he => ?_)
+  · obtain ⟨h1, h2, -⟩ := hC r hr (by omega); exact ⟨h1, h2⟩
+  · obtain ⟨h1, h2, h3, -⟩ := hC r hr (by omega)
+    exact h3 _ (by omega) (by omega) (by omega)
+  · obtain ⟨h1, h2, h3, h4⟩ := hC r hr (by omega)
+    rw [← he] at h4; exact h4 (by omega)
+
+end Contract
+
 end PalPeg.ScaWindowPlumbing
