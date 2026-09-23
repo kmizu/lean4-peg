@@ -207,6 +207,8 @@ import PalPeg.ScaWindowPlumbing
 import PalPeg.ScaWindowFinal
 import PalPeg.ScaHeadRun
 import PalPeg.ScaHeadGen
+import PalPeg.ScaHeadSafe
+import PalPeg.ScaShiftSafe
 import PalPeg.ScaMatcherLoop
 import PalPeg.ScaWorkerEnc
 import PalPeg.ScaWindowReal

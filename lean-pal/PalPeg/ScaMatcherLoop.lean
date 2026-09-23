@@ -1,4 +1,4 @@
-import PalPeg.ScaHeadGen
+import PalPeg.ScaShiftSafe
 import PalPeg.GSVerifier
 import PalPeg.GSReportDeadline
 
@@ -15,7 +15,9 @@ segments.
 set_option autoImplicit false
 namespace PalPeg.ScaMatcherLoop
 open PalPeg.ScaGsProgram PalPeg.ScaGsCoroutine PalPeg.ScaWorkerCoroutine PalPeg.ScaHeadVM
-  PalPeg.ScaHeadRun PalPeg.ScaHeadGen
+  PalPeg.ScaHeadRun PalPeg.ScaHeadGen PalPeg.ScaHeadSafe PalPeg.ScaShiftSafe
+
+variable {W : ℕ} {ρ : String → Bool}
 
 /-- The matcher controller's frame. -/
 abbrev mc (k : ℕ) (pe ok : Option Bool) (ph : Option ℕ) (site : ℕ) : Frame :=
@@ -31,6 +33,40 @@ def LoopRel (lx s p₁ r k : ℕ) (pe : Bool) (pos q c : ℕ) (π : String → �
   (pe = true → π "First" = s + p₁ ∧ π "KFirst" = s + k * p₁ ∧ π "Reach" = s + r) ∧
   π "P" = lx + pos - s ∧ π "A" = s + q ∧ π "B" = lx + pos + q ∧ π "Walk" = c ∧
   π "U" = lx + pos - s + c
+
+/-- The orientation of the main loop's heads (the worker's ghost orientation): the pattern
+heads `Origin`, `Cut`, `A`, `Walk` are reversed, the text heads `B`, `U`, `P`, `KP` forward. -/
+structure Orient (ρ : String → Bool) : Prop where
+  origin : ρ "Origin" = true
+  walk : ρ "Walk" = true
+  a : ρ "A" = true
+  cut : ρ "Cut" = true
+  b : ρ "B" = false
+  u : ρ "U" = false
+  p : ρ "P" = false
+  kp : ρ "KP" = false
+
+theorem ok_names {a b : String} (ha : a ≠ OE) (hb : b ≠ OE) : a ≠ OE ∧ b ≠ OE := ⟨ha, hb⟩
+
+/-- A pattern head against a text head. -/
+theorem ok_symbols {π : String → ℤ} {len : ℤ} {a b : String} (ha : ρ a = true) (hb : ρ b = false)
+    (ha0 : 0 ≤ π a) (haW : π a < W) (hbW : (W : ℤ) ≤ π b) (hao : a ≠ OE) (hbo : b ≠ OE) :
+    EvOk W ρ π len (.symbols a b) := by
+  refine ⟨?_, ?_, hao, hbo⟩
+  · simp only [OnSide, ha, if_true]; exact ⟨ha0, haW⟩
+  · simp only [OnSide, hb]; simpa using hbW
+
+/-- A pattern head and a text head both one cell right. -/
+theorem ok_step2 {π : String → ℤ} {len : ℤ} {a b : String} (hab : a ≠ b) (hb : ρ b = false)
+    (haW : π a + 1 ≤ W) (hao : a ≠ OE) (hbo : b ≠ OE) :
+    EvOk W ρ π len (mv [(a, 1), (b, 1)]) := by
+  show EvOk W ρ π len (.move [⟨a, 1⟩, ⟨b, 1⟩])
+  refine evOk_move ?_ (by simp [hao.symm, hbo.symm])
+  intro m hm _ hr
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
+  rcases hm with rfl | rfl
+  · simp [sumDelta, hab.symm]; exact haW
+  · simp at hr; rw [hb] at hr; exact absurd hr (by simp)
 
 /-! ## Control transitions of the shift decision -/
 
@@ -70,9 +106,9 @@ theorem mc_12 (k : ℕ) (pe ok : Option Bool) (ph : Option ℕ) :
 def reenter (π : String → ℤ) : String → ℤ :=
   Function.update (Function.update π "Walk" (π "Origin")) "U" (π "P")
 
-theorem reenter_run (k : ℕ) (pe ok : Option Bool) (ph : Option ℕ) (v : HVM)
+theorem reenter_run (hρ : Orient ρ) (k : ℕ) (pe ok : Option Bool) (ph : Option ℕ) (v : HVM)
     (hv : v.ctl = .pending [mc k pe ok ph 11] (.copy "Walk" "Origin")) :
-    iterStep 2 v = some { v with
+    iterS W ρ 2 v = some { v with
       ctl := .pending [mc k pe (some true) ph 13] (.available "B")
       pos := reenter v.pos } := by
   have e1 := step_copy hv
@@ -81,24 +117,28 @@ theorem reenter_run (k : ℕ) (pe ok : Option Bool) (ph : Option ℕ) (v : HVM)
       pos := Function.update v.pos "Walk" (v.pos "Origin")
       ctl := .pending [mc k pe ok ph 12] (.copy "U" "P") }) rfl
   rw [mc_12] at e2
-  simp only [iterStep, e1, e2, Option.bind_some]
+  refine iterS_step hv ⟨by rw [hρ.walk, hρ.origin], by decide, by decide⟩ e1
+    (iterS_one rfl ⟨by rw [hρ.u, hρ.p], by decide, by decide⟩ ?_)
+  rw [e2]
   congr 2
 
 /-- **The reset shift**, from the call of `ResetShift` to the next loop head. -/
-theorem shift_reset (k : ℕ) (hk : 1 ≤ k) (pe ok : Option Bool) (ph : Option ℕ) (v : HVM) (q : ℕ)
+theorem shift_reset (hρ : Orient ρ) (k : ℕ) (hk : 1 ≤ k) (pe ok : Option Bool) (ph : Option ℕ)
+    (v : HVM) (q : ℕ)
     (hv : v.ctl = .pending [mc k pe ok ph 25, .resetShift k true 0 none 1] (.equal "A" "Cut"))
     (hq : v.pos "A" = v.pos "Cut" + q) (hC : 0 ≤ v.pos "Cut") (hAL : v.pos "A" ≤ v.len)
     (hBq : (q : ℤ) ≤ v.pos "B") (hBL : v.pos "B" ≤ v.len)
     (hBF : v.pos "B" - q + (rsShifts k q : ℕ) ≤ v.len) (hP0 : 0 ≤ v.pos "P")
-    (hPL : v.pos "P" + (q / k : ℕ) + 1 ≤ v.len) :
-    ∃ n, iterStep n v = some { v with
+    (hPL : v.pos "P" + (q / k : ℕ) + 1 ≤ v.len) (hAW : v.pos "A" ≤ W) :
+    ∃ n, n ≤ 3 * q + 5 ∧ iterS W ρ n v = some { v with
       ctl := .pending [mc k pe (some true) ph 13] (.available "B")
       pos := reenter (rsPos v.pos q (rsShifts k q : ℕ)) } := by
   set f := mc k pe ok ph 25
   let vc : HVM := { v with ctl := .pending [.resetShift k true 0 none 1] (.equal "A" "Cut") }
   have hvc : vc.ctl = Ctl.ofOutcome (next [.resetShift k true 0 none 0] none) := rs_start k
-  obtain ⟨n, -, hrun⟩ := resetShift_run k hk vc q hvc hq hC hAL hBq hBL hBF hP0 hPL
-  have hl := iterStep_lift f n vc _ (by simp [vc, NonEmptyCtl]) hrun
+  obtain ⟨n, hn, hrun⟩ := resetShift_runS (W := W) (ρ := ρ) k hk vc q hvc hq hC hAL hBq hBL hBF
+    hP0 hPL hAW hρ.p hρ.b hρ.kp
+  have hl := iterS_lift f n vc _ (by simp [vc, NonEmptyCtl]) hrun
   have hv' : liftVM f vc = v := by
     simp only [liftVM, vc, liftCtl]; rw [← hv]
   rw [hv'] at hl
@@ -111,23 +151,24 @@ theorem shift_reset (k : ℕ) (hk : 1 ≤ k) (pe ok : Option Bool) (ph : Option 
     simp only [liftVM, vc]
     rw [mc_after_child k pe ok ph 25 (Or.inr rfl)]
   rw [hback] at hl
-  refine ⟨n + 2, ?_⟩
-  rw [iterStep_add, hl, Option.bind_some, reenter_run k pe ok ph _ rfl]
+  refine ⟨n + 2, by omega, ?_⟩
+  rw [iterS_add, hl, Option.bind_some, reenter_run hρ k pe ok ph _ rfl]
 
 /-- **The period shift**, from the call of `PeriodShift` to the next loop head. -/
-theorem shift_period (k : ℕ) (ok : Option Bool) (ph : Option ℕ) (v : HVM) (t : ℕ)
+theorem shift_period (hρ : Orient ρ) (k : ℕ) (ok : Option Bool) (ph : Option ℕ) (v : HVM) (t : ℕ)
     (hv : v.ctl = .pending [mc k (some true) ok ph 24, .periodShift k true 1] (.copy "Walk" "Cut"))
     (ht : v.pos "Cut" + t = v.pos "First") (h0 : 0 ≤ v.pos "Cut") (hF : v.pos "First" ≤ v.len)
     (hA : t ≤ v.pos "A") (hA' : v.pos "A" ≤ v.len) (hP : 0 ≤ v.pos "P")
-    (hP' : v.pos "P" + t ≤ v.len) :
-    iterStep (2 * t + 4) v = some { v with
+    (hP' : v.pos "P" + t ≤ v.len) (hFW : v.pos "First" ≤ W) (hAW : v.pos "A" ≤ W) :
+    iterS W ρ (2 * t + 4) v = some { v with
       ctl := .pending [mc k (some true) (some true) ph 13] (.available "B")
       pos := reenter (psPos v.pos t) } := by
   set f := mc k (some true) ok ph 24
   let vc : HVM := { v with ctl := .pending [.periodShift k true 1] (.copy "Walk" "Cut") }
   have hvc : vc.ctl = Ctl.ofOutcome (next [.periodShift k true 0] none) := ps_start k
-  have hrun := periodShift_run k vc t hvc ht h0 hF hA hA' hP hP'
-  have hl := iterStep_lift f _ vc _ (by simp [vc, NonEmptyCtl]) hrun
+  have hrun := periodShift_runS (W := W) (ρ := ρ) k vc t hvc ht h0 hF hA hA' hP hP' hFW hAW
+    (by rw [hρ.walk, hρ.cut]) hρ.p hρ.kp
+  have hl := iterS_lift f _ vc _ (by simp [vc, NonEmptyCtl]) hrun
   have hv' : liftVM f vc = v := by
     simp only [liftVM, vc, liftCtl]; rw [← hv]
   rw [hv'] at hl
@@ -138,8 +179,8 @@ theorem shift_period (k : ℕ) (ok : Option Bool) (ph : Option ℕ) (v : HVM) (t
     simp only [liftVM, vc]
     rw [mc_after_child k (some true) ok ph 24 (Or.inl rfl)]
   rw [hback] at hl
-  rw [show 2 * t + 4 = (2 * t + 2) + 2 by ring, iterStep_add, hl, Option.bind_some,
-    reenter_run k (some true) ok ph _ rfl]
+  rw [show 2 * t + 4 = (2 * t + 2) + 2 by ring, iterS_add, hl, Option.bind_some,
+    reenter_run hρ k (some true) ok ph _ rfl]
 
 /-! ## Control transitions of the comparison part -/
 
@@ -237,10 +278,10 @@ variable (k : ℕ) (pe : Option Bool)
 theorem round_skip (ph : Option ℕ) (v : HVM)
     (hv : v.ctl = .pending [mc k pe (some true) ph 16] (.less "Walk" "Cut"))
     (he : v.pos "Cut" ≤ v.pos "Walk") :
-    iterStep 1 v = some { v with ctl := .pending [mc k pe (some true) ph 19] (.equal "A" "End") } := by
+    iterS W ρ 1 v = some { v with ctl := .pending [mc k pe (some true) ph 19] (.equal "A" "End") } := by
   have e1 := step_less hv
   rw [show decide (v.pos "Walk" < v.pos "Cut") = false by simp; omega, mc_16_done] at e1
-  simp [iterStep, e1]
+  exact iterS_one hv ⟨by decide, by decide⟩ e1
 
 /-- The move of one prefix comparison. -/
 def walkMove (π : String → ℤ) : String → ℤ :=
@@ -253,12 +294,13 @@ theorem walk_moveSeq (π : String → ℤ) (L : ℤ) (hW : 0 ≤ π "Walk" + 1 �
   simp [Function.update, walkMove]
   exact ⟨hW, hU⟩
 
-theorem round_hit (ph : Option ℕ) (v : HVM)
+theorem round_hit (hρ : Orient ρ) (ph : Option ℕ) (v : HVM)
     (hv : v.ctl = .pending [mc k pe (some true) ph 16] (.less "Walk" "Cut"))
     (hlt : v.pos "Walk" < v.pos "Cut") (hW : v.inRange "Walk") (hU : v.inRange "U")
     (heq : v.word[(v.pos "Walk").toNat]? = v.word[(v.pos "U").toNat]?)
-    (hW1 : v.pos "Walk" + 1 ≤ v.len) (hU1 : v.pos "U" + 1 ≤ v.len) :
-    iterStep 3 v = some { v with
+    (hW1 : v.pos "Walk" + 1 ≤ v.len) (hU1 : v.pos "U" + 1 ≤ v.len)
+    (hWW : v.pos "Walk" < W) (hUW : (W : ℤ) ≤ v.pos "U") :
+    iterS W ρ 3 v = some { v with
       ctl := (Ctl.pending [mc k pe (some true) ph 18] (mv [("Walk", 1), ("U", 1)])).resume
         matchTests false
       pos := walkMove v.pos } := by
@@ -269,21 +311,27 @@ theorem round_hit (ph : Option ℕ) (v : HVM)
   rw [mc_17_hit] at e2
   have e3 := step_move (v := { v with ctl := (.pending [mc k pe (some true) ph 18] (mv [("Walk", 1), ("U", 1)])) }) (ms := [⟨"Walk", 1⟩, ⟨"U", 1⟩]) rfl
     (walk_moveSeq v.pos _ ⟨by have := hW.1; omega, hW1⟩ ⟨by have := hU.1; omega, hU1⟩)
-  simp [iterStep, e1, e2, e3]
+  refine iterS_step hv ⟨by decide, by decide⟩ e1
+    (iterS_step rfl (ok_symbols hρ.walk hρ.u hW.1 hWW hUW (by decide) (by decide)) e2
+      (iterS_one rfl (ok_step2 (by decide) hρ.u (by show v.pos "Walk" + 1 ≤ W; omega)
+        (by decide) (by decide)) ?_))
+  rw [e3]
   rfl
 
-theorem round_miss (ph : Option ℕ) (v : HVM)
+theorem round_miss (hρ : Orient ρ) (ph : Option ℕ) (v : HVM)
     (hv : v.ctl = .pending [mc k pe (some true) ph 16] (.less "Walk" "Cut"))
     (hlt : v.pos "Walk" < v.pos "Cut") (hW : v.inRange "Walk") (hU : v.inRange "U")
-    (hne : v.word[(v.pos "Walk").toNat]? ≠ v.word[(v.pos "U").toNat]?) :
-    iterStep 2 v = some { v with
+    (hne : v.word[(v.pos "Walk").toNat]? ≠ v.word[(v.pos "U").toNat]?)
+    (hWW : v.pos "Walk" < W) (hUW : (W : ℤ) ≤ v.pos "U") :
+    iterS W ρ 2 v = some { v with
       ctl := .pending [mc k pe (some false) ph 19] (.equal "A" "End") } := by
   have e1 := step_less hv
   rw [show decide (v.pos "Walk" < v.pos "Cut") = true by simp; omega, mc_16_go] at e1
   have e2 := step_symbols (v := { v with ctl := (.pending [mc k pe (some true) ph 17] (.symbols "Walk" "U")) }) rfl hW hU
   simp only [hne, decide_false] at e2
   rw [mc_17_miss] at e2
-  simp [iterStep, e1, e2]
+  exact iterS_step hv ⟨by decide, by decide⟩ e1
+    (iterS_one rfl (ok_symbols hρ.walk hρ.u hW.1 hWW hUW (by decide) (by decide)) e2)
 
 end Round
 
@@ -303,11 +351,12 @@ theorem head_wait (v : HVM) (hv : v.ctl = .pending [mc k pe (some ok) ph 13] (.a
 def abMove (π : String → ℤ) : String → ℤ :=
   Function.update (Function.update π "A" (π "A" + 1)) "B" (π "B" + 1)
 
-theorem head_hit (v : HVM) (hv : v.ctl = .pending [mc k pe (some ok) ph 13] (.available "B"))
+theorem head_hit (hρ : Orient ρ) (v : HVM) (hv : v.ctl = .pending [mc k pe (some ok) ph 13] (.available "B"))
     (hB : v.pos "B" < v.len) (hA : v.inRange "A") (hB' : v.inRange "B")
     (heq : v.word[(v.pos "A").toNat]? = v.word[(v.pos "B").toNat]?)
-    (hA1 : v.pos "A" + 1 ≤ v.len) (hB1 : v.pos "B" + 1 ≤ v.len) :
-    iterStep 3 v = some { v with
+    (hA1 : v.pos "A" + 1 ≤ v.len) (hB1 : v.pos "B" + 1 ≤ v.len)
+    (hAW : v.pos "A" < W) (hBW : (W : ℤ) ≤ v.pos "B") :
+    iterS W ρ 3 v = some { v with
       ctl := (Ctl.pending [mc k pe (some ok) ph 15] (mv [("A", 1), ("B", 1)])).resume
         matchTests false
       pos := abMove v.pos } := by
@@ -323,20 +372,26 @@ theorem head_hit (v : HVM) (hv : v.ctl = .pending [mc k pe (some ok) ph 13] (.av
     exact ⟨⟨by have := hA.1; omega, hA1⟩, ⟨by have := hB'.1; omega, hB1⟩⟩
   have e3 := step_move (v := { v with ctl := (.pending [mc k pe (some ok) ph 15] (mv [("A", 1), ("B", 1)])) })
     (ms := [⟨"A", 1⟩, ⟨"B", 1⟩]) rfl hm
-  simp [iterStep, e1, e2, e3]
+  refine iterS_step hv ⟨hρ.b, hB, by decide⟩ e1
+    (iterS_step rfl (ok_symbols hρ.a hρ.b hA.1 hAW hBW (by decide) (by decide)) e2
+      (iterS_one rfl (ok_step2 (by decide) hρ.b (by show v.pos "A" + 1 ≤ W; omega)
+        (by decide) (by decide)) ?_))
+  rw [e3]
   rfl
 
-theorem head_miss (v : HVM) (hv : v.ctl = .pending [mc k pe (some ok) ph 13] (.available "B"))
+theorem head_miss (hρ : Orient ρ) (v : HVM) (hv : v.ctl = .pending [mc k pe (some ok) ph 13] (.available "B"))
     (hB : v.pos "B" < v.len) (hA : v.inRange "A") (hB' : v.inRange "B")
-    (hne : v.word[(v.pos "A").toNat]? ≠ v.word[(v.pos "B").toNat]?) :
-    iterStep 2 v = some { v with
+    (hne : v.word[(v.pos "A").toNat]? ≠ v.word[(v.pos "B").toNat]?)
+    (hAW : v.pos "A" < W) (hBW : (W : ℤ) ≤ v.pos "B") :
+    iterS W ρ 2 v = some { v with
       ctl := (Ctl.pending [mc k pe (some ok) ph 14] (.symbols "A" "B")).resume matchTests false } := by
   have e1 := step_available hv
   rw [show decide (v.pos "B" < v.len) = true by simp; omega, mc_13_go] at e1
   have e2 := step_symbols (v := { v with ctl := (.pending [mc k pe (some ok) ph 14] (.symbols "A" "B")) })
     rfl hA hB'
   simp only [hne, decide_false] at e2
-  simp [iterStep, e1, e2]
+  exact iterS_step hv ⟨hρ.b, hB, by decide⟩ e1
+    (iterS_one rfl (ok_symbols hρ.a hρ.b hA.1 hAW hBW (by decide) (by decide)) e2)
 
 end Compare
 
@@ -373,14 +428,14 @@ theorem walkMoves_pos (d : ℕ) (π : String → ℤ) :
 
 /-- **The prefix check**, from its first round to the end test: the heads `Walk`, `U` move by
 `(pcheck …).1 − c` and `ok` becomes `(pcheck …).2`. -/
-theorem prefix_part (k : ℕ) (pe : Option Bool) (v : HVM) (s c : ℕ) (hit : ℕ → Bool)
+theorem prefix_part (hρ : Orient ρ) (k : ℕ) (pe : Option Bool) (v : HVM) (s c : ℕ) (hit : ℕ → Bool)
     (hv : v.ctl = .pending [mc k pe (some true) (some 0) 16] (.less "Walk" "Cut"))
     (hC : v.pos "Cut" = s) (hW : v.pos "Walk" = c)
     (hhit : ∀ d, d ≤ 1 → c + d < s →
       (v.word[(v.pos "Walk" + d).toNat]? = v.word[(v.pos "U" + d).toNat]? ↔ hit (c + d) = true))
     (hWr : ∀ d, d ≤ 1 → c + d < s → v.inRange "Walk" ∧ 0 ≤ v.pos "U" ∧ v.pos "U" + d + 1 ≤ v.len)
-    (hs : (s : ℤ) ≤ v.len) :
-    ∃ n ph', n ≤ 6 ∧ iterStep n v = some { v with
+    (hs : (s : ℤ) ≤ v.len) (hsW : s ≤ W) (hUW : (W : ℤ) ≤ v.pos "U") :
+    ∃ n ph', n ≤ 6 ∧ iterS W ρ n v = some { v with
       ctl := .pending [mc k pe (some (pcheck hit s c).2) ph' 19] (.equal "A" "End")
       pos := walkMoves ((pcheck hit s c).1 - c) v.pos } := by
   have hl : v.len = (v.word.length : ℤ) := rfl
@@ -393,12 +448,12 @@ theorem prefix_part (k : ℕ) (pe : Option Bool) (v : HVM) (s c : ℕ) (hit : �
       have hne : v.word[(v.pos "Walk").toNat]? ≠ v.word[(v.pos "U").toNat]? := by
         intro he; rw [(hh0.mp he)] at h0; exact absurd h0 (by simp)
       refine ⟨2, some 0, by omega, ?_⟩
-      rw [round_miss k pe (some 0) v hv (by omega) hWr0 ⟨hU0, by omega⟩ hne]
+      rw [round_miss k pe hρ (some 0) v hv (by omega) hWr0 ⟨hU0, by omega⟩ hne (by rw [hW]; omega) hUW]
       simp [pcheck, hc, h0, walkMoves]
     · -- hit at `c`
       have heq : v.word[(v.pos "Walk").toNat]? = v.word[(v.pos "U").toNat]? := hh0.mpr h0
-      have e1 := round_hit k pe (some 0) v hv (by omega) hWr0 ⟨hU0, by omega⟩ heq
-        (by have := hWr0.2; omega) (by omega)
+      have e1 := round_hit (W := W) k pe hρ (some 0) v hv (by omega) hWr0 ⟨hU0, by omega⟩ heq
+        (by have := hWr0.2; omega) (by omega) (by rw [hW]; omega) hUW
       rw [mc_18_again] at e1
       set v1 : HVM := { v with
         ctl := .pending [mc k pe (some true) (some 1) 16] (.less "Walk" "Cut")
@@ -423,12 +478,13 @@ theorem prefix_part (k : ℕ) (pe : Option Bool) (v : HVM) (s c : ℕ) (hit : �
             simp only [Nat.cast_one] at hh1
             rw [hh1.mp he] at h1; exact absurd h1 (by simp)
           refine ⟨3 + 2, some 1, by omega, ?_⟩
-          rw [iterStep_add, e1, Option.bind_some,
-            round_miss k pe (some 1) v1 rfl (by omega) hr1 hr2 hne]
+          rw [iterS_add, e1, Option.bind_some,
+            round_miss k pe hρ (some 1) v1 rfl (by omega) hr1 hr2 hne (by rw [hW1]; omega)
+              (by rw [hv1U]; omega)]
           simp [pcheck, hc, h0, hc1, h1, walkMoves, v1]
         · have heq1 : v1.word[(v1.pos "Walk").toNat]? = v1.word[(v1.pos "U").toNat]? := by
             rw [hv1W, hv1U]; simp only [Nat.cast_one] at hh1; exact hh1.mpr h1
-          have e2 := round_hit k pe (some 1) v1 rfl (by omega) hr1 hr2 heq1
+          have e2 := round_hit (W := W) k pe hρ (some 1) v1 rfl (by omega) hr1 hr2 heq1
             (by
               simp only [HVM.len, v1]
               rw [show walkMove v.pos "Walk" = v.pos "Walk" + 1 by simp [walkMove], hW]
@@ -437,12 +493,13 @@ theorem prefix_part (k : ℕ) (pe : Option Bool) (v : HVM) (s c : ℕ) (hit : �
               simp only [HVM.len, v1]
               rw [show walkMove v.pos "U" = v.pos "U" + 1 by simp [walkMove]]
               simp only [HVM.len] at hU1'; omega)
+            (by rw [hW1]; omega) (by rw [hv1U]; omega)
           rw [mc_18_done] at e2
           refine ⟨3 + 3, some 1, by omega, ?_⟩
-          rw [iterStep_add, e1, Option.bind_some, e2]
+          rw [iterS_add, e1, Option.bind_some, e2]
           simp [pcheck, hc, h0, hc1, h1, walkMoves, v1]
       · refine ⟨3 + 1, some 1, by omega, ?_⟩
-        rw [iterStep_add, e1, Option.bind_some,
+        rw [iterS_add, e1, Option.bind_some,
           round_skip k pe (some 1) v1 rfl (by rw [hW1, hC1]; omega)]
         simp [pcheck, hc, h0, hc1, walkMoves, v1]
   · refine ⟨1, some 0, by omega, ?_⟩
@@ -501,37 +558,39 @@ def decisionCtl (k : ℕ) (pe : Bool) (ok : Option Bool) (ph : Option ℕ) : Ctl
 
 /-- **The shift decision and the shift**: a period shift when `k·p₁ ≤ q ≤ r` (with a period),
 otherwise a reset. -/
-theorem shift_any (k : ℕ) (hk : 1 ≤ k) (pe : Bool) (ok : Option Bool) (ph : Option ℕ) (v : HVM)
+theorem shift_any (hρ : Orient ρ) (k : ℕ) (hk : 1 ≤ k) (pe : Bool) (ok : Option Bool)
+    (ph : Option ℕ) (v : HVM)
     (s p₁ r q : ℕ) (hv : v.ctl = decisionCtl k pe ok ph)
     (hC : v.pos "Cut" = s) (hA : v.pos "A" = s + q)
     (hper : pe = true → v.pos "First" = s + p₁ ∧ v.pos "KFirst" = s + k * p₁ ∧
       v.pos "Reach" = s + r)
     (hAL : v.pos "A" ≤ v.len) (hBq : (q : ℤ) ≤ v.pos "B") (hBL : v.pos "B" ≤ v.len)
     (hBF : v.pos "B" - q + (rsShifts k q : ℕ) ≤ v.len)
-    (hP0 : 0 ≤ v.pos "P") (hPq : v.pos "P" + q ≤ v.len) (hPL : v.pos "P" + (q / k : ℕ) + 1 ≤ v.len) :
-    ∃ n, (pe = true ∧ k * p₁ ≤ q ∧ q ≤ r →
-        iterStep n v = some { v with
+    (hP0 : 0 ≤ v.pos "P") (hPq : v.pos "P" + q ≤ v.len) (hPL : v.pos "P" + (q / k : ℕ) + 1 ≤ v.len)
+    (hAW : v.pos "A" ≤ W) :
+    ∃ n, (pe = true ∧ k * p₁ ≤ q ∧ q ≤ r → n = 2 * p₁ + 6 ∧
+        iterS W ρ n v = some { v with
           ctl := .pending [mc k (some pe) (some true) ph 13] (.available "B")
           pos := reenter (psPos v.pos p₁) }) ∧
-      (¬ (pe = true ∧ k * p₁ ≤ q ∧ q ≤ r) →
-        iterStep n v = some { v with
+      (¬ (pe = true ∧ k * p₁ ≤ q ∧ q ≤ r) → n ≤ 3 * q + 7 ∧
+        iterS W ρ n v = some { v with
           ctl := .pending [mc k (some pe) (some true) ph 13] (.available "B")
           pos := reenter (rsPos v.pos q (rsShifts k q : ℕ)) }) := by
   have hqk : ((q / k : ℕ) : ℤ) ≤ q := by exact_mod_cast Nat.div_le_self q k
   have hreset : ∀ (ok' : Option Bool) (w : HVM), w.pos = v.pos → w.len = v.len →
       w.ctl = .pending [mc k (some pe) ok' ph 25, .resetShift k true 0 none 1] (.equal "A" "Cut") →
-      ∃ n, iterStep n w = some { w with
+      ∃ n, n ≤ 3 * q + 5 ∧ iterS W ρ n w = some { w with
         ctl := .pending [mc k (some pe) (some true) ph 13] (.available "B")
         pos := reenter (rsPos w.pos q (rsShifts k q : ℕ)) } := by
     intro ok' w hwp hwl hw
-    exact shift_reset k hk (some pe) ok' ph w q hw (by rw [hwp, hA, hC])
+    exact shift_reset hρ k hk (some pe) ok' ph w q hw (by rw [hwp, hA, hC])
       (by rw [hwp, hC]; positivity) (by rw [hwp, hwl]; exact hAL) (by rw [hwp]; exact hBq)
       (by rw [hwp, hwl]; exact hBL) (by rw [hwp, hwl]; exact hBF) (by rw [hwp]; exact hP0)
-      (by rw [hwp, hwl]; exact hPL)
+      (by rw [hwp, hwl]; exact hPL) (by rw [hwp]; exact hAW)
   cases pe with
   | false =>
-    obtain ⟨n, hn⟩ := hreset ok v rfl rfl (by simpa [decisionCtl] using hv)
-    exact ⟨n, fun h => absurd h.1 (by simp), fun _ => hn⟩
+    obtain ⟨n, hn, hrun⟩ := hreset ok v rfl rfl (by simpa [decisionCtl] using hv)
+    exact ⟨n, fun h => absurd h.1 (by simp), fun _ => ⟨by omega, hrun⟩⟩
   | true =>
     obtain ⟨hF, hKF, hR⟩ := hper rfl
     have hv' : v.ctl = .pending [mc k (some true) ok ph 22] (.less "A" "KFirst") := by
@@ -544,9 +603,9 @@ theorem shift_any (k : ℕ) (hk : 1 ≤ k) (pe : Bool) (ok : Option Bool) (ph : 
     · have h1' : (q : ℤ) < (k : ℤ) * p₁ := by exact_mod_cast h1
       rw [show decide (v.pos "A" < v.pos "KFirst") = true by
         rw [hA, hKF]; simp only [decide_eq_true_eq]; omega, mc_22_reset] at e1
-      obtain ⟨n, hn⟩ := hreset ok vr rfl rfl rfl
-      refine ⟨1 + n, fun h => absurd h.2.1 (by omega), fun _ => ?_⟩
-      rw [iterStep_add]; simp only [iterStep, e1, Option.bind_some]; exact hn
+      obtain ⟨n, hn, hrun⟩ := hreset ok vr rfl rfl rfl
+      refine ⟨1 + n, fun h => absurd h.2.1 (by omega), fun _ => ⟨by omega, ?_⟩⟩
+      rw [iterS_add, iterS_one hv' ⟨by decide, by decide⟩ e1, Option.bind_some]; exact hrun
     · have h1' : (k : ℤ) * p₁ ≤ q := by exact_mod_cast (not_lt.mp h1)
       rw [show decide (v.pos "A" < v.pos "KFirst") = false by
         rw [hA, hKF]; simp only [decide_eq_false_iff_not, not_lt]; omega, mc_22_next] at e1
@@ -556,9 +615,11 @@ theorem shift_any (k : ℕ) (hk : 1 ≤ k) (pe : Bool) (ok : Option Bool) (ph : 
       · rw [show decide (v.pos "Reach" < v.pos "A") = true by
           rw [hA, hR]; simp only [decide_eq_true_eq]; exact_mod_cast (by omega : s + r < s + q),
           mc_23_reset] at e2
-        obtain ⟨n, hn⟩ := hreset ok vr rfl rfl rfl
-        refine ⟨2 + n, fun h => absurd h.2.2 (by omega), fun _ => ?_⟩
-        rw [iterStep_add]; simp only [iterStep, e1, e2, Option.bind_some]; exact hn
+        obtain ⟨n, hn, hrun⟩ := hreset ok vr rfl rfl rfl
+        refine ⟨2 + n, fun h => absurd h.2.2 (by omega), fun _ => ⟨by omega, ?_⟩⟩
+        rw [iterS_add, iterS_step hv' ⟨by decide, by decide⟩ e1 (iterS_one rfl ⟨by decide, by decide⟩ e2),
+          Option.bind_some]
+        exact hrun
       · rw [show decide (v.pos "Reach" < v.pos "A") = false by
           rw [hA, hR]; simp only [decide_eq_false_iff_not, not_lt]
           exact_mod_cast (by omega : s + q ≤ s + r), mc_23_period] at e2
@@ -566,14 +627,18 @@ theorem shift_any (k : ℕ) (hk : 1 ≤ k) (pe : Bool) (ok : Option Bool) (ph : 
           have : p₁ ≤ k * p₁ := Nat.le_mul_of_pos_left p₁ (by omega)
           have : p₁ ≤ q := by omega
           exact_mod_cast this
-        have hsp := shift_period k ok ph { v with
+        have hsp := shift_period hρ k ok ph { v with
           ctl := (.pending [mc k (some true) ok ph 24, .periodShift k true 1] (.copy "Walk" "Cut")) }
           p₁ rfl (by simp only; rw [hC, hF]) (by simp only; rw [hC]; positivity)
           (by simp only; rw [hF]; simp only [HVM.len] at hAL ⊢; rw [hA] at hAL; omega)
           (by simp only; rw [hA]; omega) hAL hP0
           (by simp only; simp only [HVM.len] at hPq ⊢; omega)
-        refine ⟨2 + (2 * p₁ + 4), fun _ => ?_, fun h => absurd ⟨rfl, by omega, by omega⟩ h⟩
-        rw [iterStep_add]; simp only [iterStep, e1, e2, Option.bind_some]; exact hsp
+          (by simp only; rw [hF]; rw [hA] at hAW; omega) hAW
+        refine ⟨2 + (2 * p₁ + 4), fun _ => ⟨by ring, ?_⟩,
+          fun h => absurd ⟨rfl, by omega, by omega⟩ h⟩
+        rw [iterS_add, iterS_step hv' ⟨by decide, by decide⟩ e1 (iterS_one rfl ⟨by decide, by decide⟩ e2),
+          Option.bind_some]
+        exact hsp
 
 /-! ## The logical word -/
 
@@ -611,10 +676,10 @@ structure AtHead (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : P
 
 theorem end_more (k : ℕ) (pe ok : Option Bool) (ph : Option ℕ) (v : HVM)
     (hv : v.ctl = .pending [mc k pe ok ph 19] (.equal "A" "End")) (hne : v.pos "A" ≠ v.pos "End") :
-    iterStep 1 v = some { v with ctl := .pending [mc k pe ok ph 13] (.available "B") } := by
+    iterS W ρ 1 v = some { v with ctl := .pending [mc k pe ok ph 13] (.available "B") } := by
   have e1 := step_equal hv
   rw [show decide (v.pos "A" = v.pos "End") = false by simp [hne], mc_19_more] at e1
-  simp [iterStep, e1]
+  exact iterS_one hv ⟨by decide, by decide⟩ e1
 
 theorem abMove_other (π : String → ℤ) (h : String) (ha : h ≠ "A") (hb : h ≠ "B") :
     abMove π h = π h := by
@@ -643,9 +708,9 @@ theorem loopRel_hit {lx s p₁ r k : ℕ} {pe : Bool} {pos q c : ℕ} {π : Stri
 
 /-- **A hit with more of `v` to go** is one `vStep`. -/
 theorem step_hit (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : PalPeg.VState) (v : HVM)
-    (h : AtHead x T m k s p₁ r pe ok z v) (hen : z.1.pos + z.1.q < m)
+    (hρ : Orient ρ) (h : AtHead x T m k s p₁ r pe ok z v) (hen : z.1.pos + z.1.q < m)
     (hhit : T[z.1.pos + z.1.q]? = (x.drop s)[z.1.q]?) (hmore : z.1.q + 1 < x.length - s) :
-    ∃ n ok' v', iterStep n v = some v' ∧
+    ∃ n ok' v', n ≤ 10 ∧ iterS x.length ρ n v = some v' ∧ v'.outputs = v.outputs ∧
       AtHead x T m k s p₁ r pe ok' (PalPeg.vStep (x.take s) (x.drop s) k p₁ r T z) v' := by
   obtain ⟨⟨pos, q⟩, c⟩ := z
   simp only at hen hhit hmore
@@ -672,9 +737,11 @@ theorem step_hit (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : P
   have hwB : v.word[(v.pos "B").toNat]? = T[pos + q]? := by
     rw [hB, h.word, show ((x.length : ℤ) + pos + q).toNat = x.length + (pos + q) by omega,
       word_txt x T m _ hen]
-  have e1 := head_hit k (some pe) ok ph v hc (by rw [hB, hlen]; omega)
+  have hqv : q < x.length - s := h.qv
+  have e1 := head_hit (W := x.length) k (some pe) ok ph hρ v hc (by rw [hB, hlen]; omega)
     ⟨by rw [hA]; omega, by rw [hA, hlen]; omega⟩ ⟨by rw [hB]; omega, by rw [hB, hlen]; omega⟩
     (by rw [hwA, hwB, hhit]) (by rw [hA, hlen]; omega) (by rw [hB, hlen]; omega)
+    (by rw [hA]; omega) (by rw [hB]; omega)
   cases ok with
   | false =>
     rw [mc_15_dead] at e1
@@ -684,9 +751,9 @@ theorem step_hit (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : P
     let v1 : HVM := { v with
       ctl := (.pending [mc k (some pe) (some false) (some 0) 19] (.equal "A" "End"))
       pos := abMove v.pos }
-    have e2 := end_more k (some pe) (some false) (some 0) v1 rfl
+    have e2 := end_more (W := x.length) (ρ := ρ) k (some pe) (some false) (some 0) v1 rfl
       (by show abMove v.pos "A" ≠ abMove v.pos "End"; simp [abMove, Function.update]; rw [hA, hE]; omega)
-    refine ⟨3 + 1, false, _, by rw [iterStep_add, e1, Option.bind_some, e2], ?_⟩
+    refine ⟨3 + 1, false, _, by omega, by rw [iterS_add, e1, Option.bind_some, e2], by rfl, ?_⟩
     refine ⟨⟨some 0, rfl⟩, h.word, ?_, fun _ => ⟨?_, ?_⟩, by dsimp only; omega, hsx,
       by dsimp only; omega, by dsimp only; rw [hst]; exact hcs, by dsimp only; omega, htl⟩
     · have := loopRel_hit 0 (show LoopRel x.length s p₁ r k pe pos q c v.pos from h.rel)
@@ -703,7 +770,8 @@ theorem step_hit (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : P
     have hv1U : v1.pos "U" = x.length + pos - s + c := by simp [v1, abMove, Function.update, hU]
     have hv1C : v1.pos "Cut" = s := by simp [v1, abMove, Function.update, hC]
     have hv1len : v1.len = x.length + m := hlen
-    obtain ⟨n2, ph', hn2, e2⟩ := prefix_part k (some pe) v1 s c (hitAt (x.take s) T pos) rfl hv1C hv1W
+    obtain ⟨n2, ph', hn2, e2⟩ := prefix_part (W := x.length) hρ k (some pe) v1 s c
+      (hitAt (x.take s) T pos) rfl hv1C hv1W
       (fun d hd hcd => by
         rw [hv1W, hv1U, show ((c : ℤ) + d).toNat = c + d by omega,
           show ((x.length : ℤ) + pos - s + c + d).toNat = x.length + (pos - s + c + d) by omega]
@@ -714,7 +782,7 @@ theorem step_hit (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : P
         constructor <;> intro hh <;> exact hh.symm)
       (fun d hd hcd => ⟨⟨by rw [hv1W]; omega, by rw [hv1W, hv1len]; omega⟩,
         by rw [hv1U]; omega, by rw [hv1U, hv1len]; omega⟩)
-      (by rw [hv1len]; omega)
+      (by rw [hv1len]; omega) hsx (by rw [hv1U]; omega)
     set cc := (pcheck (hitAt (x.take s) T pos) s c).1 with hcc
     set ok' := (pcheck (hitAt (x.take s) T pos) s c).2 with hok'
     have hccv : cc = PalPeg.vComp (x.take s) T pos (PalPeg.vComp (x.take s) T pos c) := by
@@ -727,12 +795,12 @@ theorem step_hit (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : P
     let v2 : HVM := { v1 with
       ctl := (.pending [mc k (some pe) (some ok') ph' 19] (.equal "A" "End"))
       pos := walkMoves (cc - c) v1.pos }
-    have e3 := end_more k (some pe) (some ok') ph' v2 rfl (by
+    have e3 := end_more (W := x.length) (ρ := ρ) k (some pe) (some ok') ph' v2 rfl (by
       simp only [v2, v1]
       rw [(walkMoves_pos _ _).2.2 _ (by decide) (by decide), (walkMoves_pos _ _).2.2 _ (by decide) (by decide)]
       simp [abMove, Function.update]; rw [hA, hE]; omega)
-    refine ⟨3 + (n2 + 1), ok', _, by rw [iterStep_add, e1, Option.bind_some, iterStep_add, e2,
-      Option.bind_some, e3], ?_⟩
+    refine ⟨3 + (n2 + 1), ok', _, by omega, by rw [iterS_add, e1, Option.bind_some, iterS_add, e2,
+      Option.bind_some, e3], by rfl, ?_⟩
     refine ⟨⟨ph', rfl⟩, h.word, ?_, fun hd => ?_, by dsimp only; omega, hsx, by dsimp only; omega,
       by dsimp only; rw [← hccv]; exact hccs, by dsimp only; omega, htl⟩
     · have := loopRel_hit (cc - c) (show LoopRel x.length s p₁ r k pe pos q c v.pos from h.rel)
@@ -794,10 +862,11 @@ theorem ceil_le_succ (q k : ℕ) (hk : 1 ≤ k) : max 1 (PalPeg.ceilDiv q k) ≤
 /-- **A miss** is one `vStep` (a shift). With no period, `p₁` must be large enough that the
 period branch never applies (`|v| < k·p₁`, as for `effPeriod = |v| + 1`). -/
 theorem step_miss (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 1 ≤ k) (pe ok : Bool)
-    (z : PalPeg.VState) (v : HVM) (h : AtHead x T m k s p₁ r pe ok z v)
+    (z : PalPeg.VState) (v : HVM) (hρ : Orient ρ) (h : AtHead x T m k s p₁ r pe ok z v)
     (hen : z.1.pos + z.1.q < m) (hmiss : T[z.1.pos + z.1.q]? ≠ (x.drop s)[z.1.q]?)
     (hnoper : pe = false → x.length - s < k * p₁) :
-    ∃ n v', iterStep n v = some v' ∧
+    ∃ n v', n ≤ 3 * (z.1.q - PalPeg.gsNextQ k p₁ r z.1.q) + 2 * PalPeg.gsShift k p₁ r z.1.q + 9 ∧
+      iterS x.length ρ n v = some v' ∧ v'.outputs = v.outputs ∧
       AtHead x T m k s p₁ r pe true (PalPeg.vStep (x.take s) (x.drop s) k p₁ r T z) v' := by
   obtain ⟨⟨pos, q⟩, c⟩ := z
   simp only at hen hmiss
@@ -821,13 +890,13 @@ theorem step_miss (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 1 ≤ k) (pe o
   have hwB : v.word[(v.pos "B").toNat]? = T[pos + q]? := by
     rw [hB, h.word, show ((x.length : ℤ) + pos + q).toNat = x.length + (pos + q) by omega,
       word_txt x T m _ hen]
-  have e1 := head_miss k (some pe) ok ph v hc (by rw [hB, hlen]; omega)
+  have e1 := head_miss (W := x.length) k (some pe) ok ph hρ v hc (by rw [hB, hlen]; omega)
     ⟨by rw [hA]; omega, by rw [hA, hlen]; omega⟩ ⟨by rw [hB]; omega, by rw [hB, hlen]; omega⟩
-    (by rw [hwA, hwB]; exact fun he => hmiss he.symm)
+    (by rw [hwA, hwB]; exact fun he => hmiss he.symm) (by rw [hA]; omega) (by rw [hB]; omega)
   rw [mc_14_miss] at e1
   set v1 : HVM := { v with ctl := decisionCtl k pe (some ok) ph } with hv1
   have hv1len : v1.len = x.length + m := hlen
-  obtain ⟨n, hper', hres⟩ := shift_any k hk pe (some ok) ph v1 s p₁ r q rfl hC hA
+  obtain ⟨n, hper', hres⟩ := shift_any (W := x.length) hρ k hk pe (some ok) ph v1 s p₁ r q rfl hC hA
     (fun hp => hper hp) (by rw [hA, hv1len]; omega) (by rw [hB]; omega) (by rw [hB, hv1len]; omega)
     (by
       have htq := ceil_le_succ q k hk
@@ -837,12 +906,14 @@ theorem step_miss (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 1 ≤ k) (pe o
     (by
       have : q / k ≤ q := Nat.div_le_self q k
       rw [hP, hv1len]; push_cast; omega)
+    (by rw [hA]; omega)
   by_cases hbr : pe = true ∧ k * p₁ ≤ q ∧ q ≤ r
-  · have e2 := hper' hbr
-    refine ⟨2 + n, _, by rw [iterStep_add, e1, Option.bind_some, e2], ?_⟩
+  · obtain ⟨hn, e2⟩ := hper' hbr
     have hsh : PalPeg.gsShift k p₁ r q = p₁ := by simp [PalPeg.gsShift, hbr.2]
     have hnq : PalPeg.gsNextQ k p₁ r q = q - p₁ := by simp [PalPeg.gsNextQ, hbr.2]
     have hp1q : p₁ ≤ q := le_trans (Nat.le_mul_of_pos_left p₁ (by omega)) hbr.2.1
+    refine ⟨2 + n, _, by dsimp only; rw [hsh, hnq]; omega,
+      by rw [iterS_add, e1, Option.bind_some, e2], by rfl, ?_⟩
     rw [hsh, hnq]
     refine ⟨⟨ph, rfl⟩, h.word, ?_, fun h' => absurd h' (by simp), by dsimp only; omega, hsx,
       by dsimp only; omega, by dsimp only; omega, by dsimp only; omega, htl⟩
@@ -850,8 +921,7 @@ theorem step_miss (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 1 ≤ k) (pe o
     have := loopRel_period (show LoopRel x.length s p₁ r k true pos q c v.pos by
       rw [← hbr.1]; exact h.rel) hp1q
     rw [hbr.1]; exact this
-  · have e2 := hres hbr
-    refine ⟨2 + n, _, by rw [iterStep_add, e1, Option.bind_some, e2], ?_⟩
+  · obtain ⟨hn, e2⟩ := hres hbr
     have hsh : PalPeg.gsShift k p₁ r q = max 1 (PalPeg.ceilDiv q k) := by
       unfold PalPeg.gsShift
       rw [if_neg]
@@ -868,6 +938,8 @@ theorem step_miss (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 1 ≤ k) (pe o
       | false => have := hnoper rfl; omega
     have hts := rsShifts_eq k q hk
     have htq := ceil_le_succ q k hk
+    refine ⟨2 + n, _, by dsimp only; rw [hnq]; omega,
+      by rw [iterS_add, e1, Option.bind_some, e2], by rfl, ?_⟩
     rw [hsh, hnq, ← hts]
     rw [← hts] at htq
     refine ⟨⟨ph, rfl⟩, h.word, loopRel_reset (show LoopRel x.length s p₁ r k pe pos q c v.pos from h.rel),
@@ -886,10 +958,11 @@ theorem mc_21 (k : ℕ) (pe : Bool) (ok : Option Bool) (ph : Option ℕ) :
 
 /-- At the end test with `A = End`: a live check reports (`assert_equal`, then `match B`), a dead
 one goes straight to the shift decision. -/
-theorem end_report (k : ℕ) (pe : Bool) (ph : Option ℕ) (v : HVM)
+theorem end_report (hρ : Orient ρ) (k : ℕ) (pe : Bool) (ph : Option ℕ) (v : HVM)
     (hv : v.ctl = .pending [mc k (some pe) (some true) ph 19] (.equal "A" "End"))
     (he : v.pos "A" = v.pos "End") (hwc : v.pos "Walk" = v.pos "Cut") :
-    iterStep 3 v = some { v with
+    iterS W ρ 2 v = some { v with ctl := .pending [mc k (some pe) (some true) ph 21] (.«match» "B") } ∧
+    iterS W ρ 3 v = some { v with
       ctl := decisionCtl k pe (some true) ph
       outputs := v.outputs ++ [v.pos "B" - v.patternSize] } := by
   have e1 := step_equal hv
@@ -900,15 +973,20 @@ theorem end_report (k : ℕ) (pe : Bool) (ph : Option ℕ) (v : HVM)
   have e3 := step_match (v := { v with
     ctl := (.pending [mc k (some pe) (some true) ph 21] (.«match» "B")) }) rfl
   rw [mc_21] at e3
-  simp [iterStep, e1, e2, e3]
+  have h2 : iterS W ρ 2 v =
+      some { v with ctl := .pending [mc k (some pe) (some true) ph 21] (.«match» "B") } :=
+    iterS_step hv ⟨by decide, by decide⟩ e1 (iterS_one rfl ⟨by decide, by decide⟩ e2)
+  refine ⟨h2, ?_⟩
+  rw [show (3 : ℕ) = 2 + 1 from rfl, iterS_add, h2, Option.bind_some]
+  exact iterS_one rfl ⟨hρ.b, by decide⟩ e3
 
 theorem end_dead (k : ℕ) (pe : Bool) (ph : Option ℕ) (v : HVM)
     (hv : v.ctl = .pending [mc k (some pe) (some false) ph 19] (.equal "A" "End"))
     (he : v.pos "A" = v.pos "End") :
-    iterStep 1 v = some { v with ctl := decisionCtl k pe (some false) ph } := by
+    iterS W ρ 1 v = some { v with ctl := decisionCtl k pe (some false) ph } := by
   have e1 := step_equal hv
   rw [show decide (v.pos "A" = v.pos "End") = true by simp [he], mc_19_dead] at e1
-  simp [iterStep, e1]
+  exact iterS_one hv ⟨by decide, by decide⟩ e1
 
 theorem rsShifts_le (k q : ℕ) (hk : 1 ≤ k) (hq : 1 ≤ q) : rsShifts k q ≤ q := by
   rw [rsShifts_eq k q hk]
@@ -962,8 +1040,8 @@ theorem loopRel_reset' {lx s p₁ r k : ℕ} {pe : Bool} {pos q t : ℕ} {π : S
 
 /-- **From the shift decision to the next loop head**, for any scan state `(pos, q)` about to
 shift. -/
-theorem shift_to_head (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 ≤ k) (pe : Bool)
-    (ok : Option Bool) (ph : Option ℕ) (v : HVM) (pos q : ℕ)
+theorem shift_to_head (hρ : Orient ρ) (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 ≤ k)
+    (pe : Bool) (ok : Option Bool) (ph : Option ℕ) (v : HVM) (pos q : ℕ)
     (hv : v.ctl = decisionCtl k pe ok ph) (hw : v.word = x ++ T.take m)
     (hO : v.pos "Origin" = 0) (hC : v.pos "Cut" = s) (hE : v.pos "End" = x.length)
     (hper : pe = true → v.pos "First" = s + p₁ ∧ v.pos "KFirst" = s + k * p₁ ∧
@@ -973,7 +1051,8 @@ theorem shift_to_head (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 ≤ k) (
     (hsx : s < x.length) (hcut : s ≤ pos) (hqv : q ≤ x.length - s) (harr : pos + q ≤ m)
     (harr' : pos + q < m ∨ 1 ≤ q) (htl : m ≤ T.length)
     (hnoper : pe = false → x.length - s < k * p₁) (hp1 : pe = true → 1 ≤ p₁) :
-    ∃ n v', iterStep n v = some v' ∧ v'.outputs = v.outputs ∧
+    ∃ n v', n ≤ 3 * (q - PalPeg.gsNextQ k p₁ r q) + 2 * PalPeg.gsShift k p₁ r q + 7 ∧
+      iterS x.length ρ n v = some v' ∧ v'.outputs = v.outputs ∧
       AtHead x T m k s p₁ r pe true
         ((⟨pos + PalPeg.gsShift k p₁ r q, PalPeg.gsNextQ k p₁ r q⟩ : PalPeg.ScanState), 0) v' := by
   have hlen : v.len = x.length + m := by
@@ -990,25 +1069,26 @@ theorem shift_to_head (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 ≤ k) (
     · left
       have : q / k < q := Nat.div_lt_self h0 (by omega)
       omega
-  obtain ⟨n, hper', hres⟩ := shift_any k (by omega) pe ok ph v s p₁ r q hv hC hA hper
+  obtain ⟨n, hper', hres⟩ := shift_any (W := x.length) hρ k (by omega) pe ok ph v s p₁ r q hv hC hA hper
     (by rw [hA, hlen]; omega) (by rw [hB]; omega) (by rw [hB, hlen]; omega)
     (by rw [hB, hlen]; rcases htq with h1 | ⟨h1, h2⟩ <;> [omega; (rw [h2]; push_cast; omega)])
     (by rw [hP]; omega) (by rw [hP, hlen]; omega)
     (by rw [hP, hlen]; rcases hqk with h1 | h1 <;> [(push_cast; omega); (subst h1; simp; omega)])
+    (by rw [hA]; omega)
   have hsr : ShiftRel x.length s p₁ r k pe pos q v.pos := ⟨hO, hC, hE, hper, hP, hA, hB⟩
   by_cases hbr : pe = true ∧ k * p₁ ≤ q ∧ q ≤ r
-  · have e2 := hper' hbr
+  · obtain ⟨hn, e2⟩ := hper' hbr
     have hsh : PalPeg.gsShift k p₁ r q = p₁ := by simp [PalPeg.gsShift, hbr.2]
     have hnq : PalPeg.gsNextQ k p₁ r q = q - p₁ := by simp [PalPeg.gsNextQ, hbr.2]
     have hp1q : p₁ ≤ q := le_trans (Nat.le_mul_of_pos_left p₁ (by omega)) hbr.2.1
     have hp1' := hp1 hbr.1
-    refine ⟨n, _, e2, rfl, ?_⟩
+    refine ⟨n, _, by rw [hsh, hnq]; omega, e2, by rfl, ?_⟩
     rw [hsh, hnq]
     obtain rfl := hbr.1
     exact ⟨⟨ph, rfl⟩, hw, loopRel_period' hsr hp1q, fun h' => absurd h' (by simp),
       by dsimp only; omega, by omega, by dsimp only; omega, by dsimp only; omega,
       by dsimp only; omega, htl⟩
-  · have e2 := hres hbr
+  · obtain ⟨hn, e2⟩ := hres hbr
     have hsh : PalPeg.gsShift k p₁ r q = max 1 (PalPeg.ceilDiv q k) := by
       unfold PalPeg.gsShift
       rw [if_neg]
@@ -1023,7 +1103,7 @@ theorem shift_to_head (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 ≤ k) (
       cases pe with
       | true => exact ⟨rfl, h3⟩
       | false => have := hnoper rfl; omega
-    refine ⟨n, _, e2, rfl, ?_⟩
+    refine ⟨n, _, by rw [hnq]; omega, e2, by rfl, ?_⟩
     rw [hsh, hnq, ← hts]
     have htn : pos + rsShifts k q ≤ m := by
       rcases htq with h1 | ⟨h1, h2⟩
@@ -1053,10 +1133,11 @@ theorem pcheck_done (hit : ℕ → Bool) (s c : ℕ) (h : (pcheck hit s c).2 = t
 
 /-- **A hit, up to the end test**: `A`, `B` advance, the prefix check runs (if live), and the
 controller waits at the end test with the verifier's new `c = vComp (vComp c)`. -/
-theorem hit_to_end (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : PalPeg.VState)
+theorem hit_to_end (hρ : Orient ρ) (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool)
+    (z : PalPeg.VState)
     (v : HVM) (h : AtHead x T m k s p₁ r pe ok z v) (hen : z.1.pos + z.1.q < m)
     (hhit : T[z.1.pos + z.1.q]? = (x.drop s)[z.1.q]?) :
-    ∃ n ok' ph' π', iterStep n v = some { v with
+    ∃ n ok' ph' π', n ≤ 9 ∧ iterS x.length ρ n v = some { v with
         ctl := .pending [mc k (some pe) (some ok') ph' 19] (.equal "A" "End")
         pos := π' } ∧
       LoopRel x.length s p₁ r k pe z.1.pos (z.1.q + 1)
@@ -1084,16 +1165,18 @@ theorem hit_to_end (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z :
   have hwB : v.word[(v.pos "B").toNat]? = T[pos + q]? := by
     rw [hB, h.word, show ((x.length : ℤ) + pos + q).toNat = x.length + (pos + q) by omega,
       word_txt x T m _ hen]
-  have e1 := head_hit k (some pe) ok ph v hc (by rw [hB, hlen]; omega)
+  have e1 := head_hit (W := x.length) k (some pe) ok ph hρ v hc (by rw [hB, hlen]; omega)
     ⟨by rw [hA]; omega, by rw [hA, hlen]; omega⟩ ⟨by rw [hB]; omega, by rw [hB, hlen]; omega⟩
     (by rw [hwA, hwB, hhit]) (by rw [hA, hlen]; omega) (by rw [hB, hlen]; omega)
+    (by rw [hA]; omega) (by rw [hB]; omega)
   cases ok with
   | false =>
     rw [mc_15_dead] at e1
     obtain ⟨hdc, hdh⟩ := h.dead rfl
     have hst : PalPeg.vComp (x.take s) T pos (PalPeg.vComp (x.take s) T pos c) = c := by
       rw [vComp_stuck _ _ _ _ hdh, vComp_stuck _ _ _ _ hdh]
-    refine ⟨3, false, some 0, abMove v.pos, e1, ?_, fun _ => ?_, fun h' => absurd h' (by simp)⟩
+    refine ⟨3, false, some 0, abMove v.pos, le_refl _ |>.trans (by omega), e1, ?_, fun _ => ?_,
+      fun h' => absurd h' (by simp)⟩
     · have := loopRel_hit 0 (show LoopRel x.length s p₁ r k pe pos q c v.pos from h.rel)
       simp only [walkMoves, Nat.add_zero] at this; rw [hst]; exact this
     · rw [hst]; exact ⟨hdc, hdh⟩
@@ -1106,7 +1189,8 @@ theorem hit_to_end (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z :
     have hv1U : v1.pos "U" = x.length + pos - s + c := by simp [v1, abMove, Function.update, hU]
     have hv1C : v1.pos "Cut" = s := by simp [v1, abMove, Function.update, hC]
     have hv1len : v1.len = x.length + m := hlen
-    obtain ⟨n2, ph', hn2, e2⟩ := prefix_part k (some pe) v1 s c (hitAt (x.take s) T pos) rfl hv1C hv1W
+    obtain ⟨n2, ph', hn2, e2⟩ := prefix_part (W := x.length) hρ k (some pe) v1 s c
+      (hitAt (x.take s) T pos) rfl hv1C hv1W
       (fun d hd hcd => by
         rw [hv1W, hv1U, show ((c : ℤ) + d).toNat = c + d by omega,
           show ((x.length : ℤ) + pos - s + c + d).toNat = x.length + (pos - s + c + d) by omega]
@@ -1117,14 +1201,14 @@ theorem hit_to_end (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z :
         constructor <;> intro hh <;> exact hh.symm)
       (fun d hd hcd => ⟨⟨by rw [hv1W]; omega, by rw [hv1W, hv1len]; omega⟩,
         by rw [hv1U]; omega, by rw [hv1U, hv1len]; omega⟩)
-      (by rw [hv1len]; omega)
+      (by rw [hv1len]; omega) hsx (by rw [hv1U]; omega)
     set cc := (pcheck (hitAt (x.take s) T pos) s c).1 with hcc
     set ok' := (pcheck (hitAt (x.take s) T pos) s c).2 with hok'
     have hccv : cc = PalPeg.vComp (x.take s) T pos (PalPeg.vComp (x.take s) T pos c) := by
       rw [hcc, ← pcheck_fst (x.take s) T pos c, hut]
     have hccle : c ≤ cc := by rw [hccv]; exact (PalPeg.le_vComp _ _ _ _).trans (PalPeg.le_vComp _ _ _ _)
-    refine ⟨3 + n2, ok', ph', walkMoves (cc - c) (abMove v.pos),
-      by rw [iterStep_add, e1, Option.bind_some, e2], ?_, fun hd => ?_, fun hd => ⟨rfl, hd⟩⟩
+    refine ⟨3 + n2, ok', ph', walkMoves (cc - c) (abMove v.pos), by omega,
+      by rw [iterS_add, e1, Option.bind_some, e2], ?_, fun hd => ?_, fun hd => ⟨rfl, hd⟩⟩
     · have := loopRel_hit (cc - c) (show LoopRel x.length s p₁ r k pe pos q c v.pos from h.rel)
       rw [show c + (cc - c) = cc by omega] at this
       rw [← hccv]; exact this
@@ -1132,21 +1216,30 @@ theorem hit_to_end (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z :
       rw [hut, ← hcc] at this; rw [← hccv]; exact this
 
 /-- **A hit that completes `v`**: the report (when the prefix check is live), then the shift; two
-`vStep`s. The deadline invariant at the state before rules out an unfinished live check. -/
+`vStep`s. The deadline invariant at the state before rules out an unfinished live check. When the
+report happens, the run reaches the `match` state `u` after `n₁ ≤ 11` steps, with no output before
+it and `B` on the last letter of the occurrence (the worker's `match` timing is checked there). -/
 theorem step_report (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 ≤ k) (pe ok : Bool)
-    (z : PalPeg.VState) (v : HVM) (h : AtHead x T m k s p₁ r pe ok z v)
+    (z : PalPeg.VState) (v : HVM) (hρ : Orient ρ) (h : AtHead x T m k s p₁ r pe ok z v)
     (hen : z.1.pos + z.1.q < m) (hhit : T[z.1.pos + z.1.q]? = (x.drop s)[z.1.q]?)
     (hlast : z.1.q + 1 = x.length - s)
     (hdl : PalPeg.GSReportDeadline.DeadlineInv (x.take s) (x.drop s) T z)
     (hps : v.patternSize = x.length)
     (hnoper : pe = false → x.length - s < k * p₁) (hp1 : pe = true → 1 ≤ p₁) :
-    ∃ n v', iterStep n v = some v' ∧
+    ∃ n v', n ≤ 3 * (x.length - s - PalPeg.gsNextQ k p₁ r (x.length - s)) +
+        2 * PalPeg.gsShift k p₁ r (x.length - s) + 19 ∧
+      iterS x.length ρ n v = some v' ∧
       v'.outputs = v.outputs ++
         (if (PalPeg.vStep (x.take s) (x.drop s) k p₁ r T z).2 = s
           then [((z.1.pos + (x.length - s) : ℕ) : ℤ)] else []) ∧
+      ((PalPeg.vStep (x.take s) (x.drop s) k p₁ r T z).2 = s →
+        ∃ n₁ u, n₁ ≤ 11 ∧ n₁ < n ∧ iterS x.length ρ n₁ v = some u ∧ u.outputs = v.outputs ∧
+          (∃ c, u.ctl = .pending c (.«match» "B")) ∧
+          u.pos "B" = x.length + z.1.pos + (x.length - s)) ∧
       AtHead x T m k s p₁ r pe true
         (PalPeg.vStep (x.take s) (x.drop s) k p₁ r T (PalPeg.vStep (x.take s) (x.drop s) k p₁ r T z)) v' := by
-  obtain ⟨n1, ok', ph', π', e1, hrel', hdead', hlive'⟩ := hit_to_end x T m k s p₁ r pe ok z v h hen hhit
+  obtain ⟨n1, ok', ph', π', hn1, e1, hrel', hdead', hlive'⟩ :=
+    hit_to_end hρ x T m k s p₁ r pe ok z v h hen hhit
   obtain ⟨⟨pos, q⟩, c⟩ := z
   simp only at hen hhit hlast hrel' hdead' hlive' ⊢
   have hsx := h.sx
@@ -1164,6 +1257,7 @@ theorem step_report (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 ≤ k) (pe
     have hq : q + 1 = (x.drop s).length := by simp; omega
     simp only [PalPeg.vStep, PalPeg.scanStep, hq, if_true]
   rw [hvs1, hvs2]
+  rw [← hlast]
   obtain ⟨hO, hC, hE, hper, hP, hA, hB, hW, hU⟩ := hrel'
   set v1 : HVM := { v with
     ctl := (.pending [mc k (some pe) (some ok') ph' 19] (.equal "A" "End"))
@@ -1172,7 +1266,7 @@ theorem step_report (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 ≤ k) (pe
     show π' "A" = π' "End"; rw [hA, hE]; push_cast; omega
   have hstep := fun (w : HVM) (ok'' : Option Bool) (hw : w.ctl = decisionCtl k pe ok'' ph')
       (hwp : w.pos = π') (hww : w.word = x ++ T.take m) =>
-    shift_to_head x T m k s p₁ r hk pe ok'' ph' w pos (q + 1) hw hww
+    shift_to_head hρ x T m k s p₁ r hk pe ok'' ph' w pos (q + 1) hw hww
       (by rw [hwp]; exact hO) (by rw [hwp]; exact hC) (by rw [hwp]; exact hE)
       (fun hp => by rw [hwp]; exact hper hp) (by rw [hwp]; exact hP) (by rw [hwp]; exact hA)
       (by rw [hwp]; exact hB) (by omega) hcut (by omega) (by omega) (Or.inr (by omega)) htl hnoper hp1
@@ -1188,22 +1282,25 @@ theorem step_report (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 ≤ k) (pe
       rw [hcc, ← pcheck_fst (x.take s) T pos c, hut]; exact this
     have hWC : v1.pos "Walk" = v1.pos "Cut" := by
       show π' "Walk" = π' "Cut"; rw [hW, hC, hdone]
-    have e2 := end_report k pe ph' v1 rfl hAE hWC
-    obtain ⟨n3, v', e3, ho3, hat⟩ := hstep { v1 with
+    obtain ⟨e2m, e2⟩ := end_report (W := x.length) hρ k pe ph' v1 rfl hAE hWC
+    obtain ⟨n3, v', hn3, e3, ho3, hat⟩ := hstep { v1 with
         ctl := decisionCtl k pe (some true) ph'
         outputs := v1.outputs ++ [v1.pos "B" - v1.patternSize] } (some true) rfl rfl h.word
-    refine ⟨n1 + (3 + n3), v', by rw [iterStep_add, e1, Option.bind_some, iterStep_add, e2,
-      Option.bind_some, e3], ?_, hat⟩
-    rw [ho3, if_pos hdone]
-    show v.outputs ++ [π' "B" - v.patternSize] = _
-    rw [hB, hps]; push_cast; congr 2; omega
+    refine ⟨n1 + (3 + n3), v', by omega, by rw [iterS_add, e1, Option.bind_some, iterS_add, e2,
+      Option.bind_some, e3], ?_, fun _ => ⟨n1 + 2, _, by omega, by omega,
+        by rw [iterS_add, e1, Option.bind_some, e2m], by rfl, ⟨_, rfl⟩, ?_⟩, hat⟩
+    · rw [ho3, if_pos hdone]
+      show v.outputs ++ [π' "B" - v.patternSize] = _
+      rw [hB, hps]; push_cast; congr 2; omega
+    · show π' "B" = _
+      rw [hB]; push_cast; omega
   | false =>
     obtain ⟨hlt, -⟩ := hdead' rfl
-    have e2 := end_dead k pe ph' v1 rfl hAE
-    obtain ⟨n3, v', e3, ho3, hat⟩ := hstep { v1 with ctl := decisionCtl k pe (some false) ph' }
+    have e2 := end_dead (W := x.length) (ρ := ρ) k pe ph' v1 rfl hAE
+    obtain ⟨n3, v', hn3, e3, ho3, hat⟩ := hstep { v1 with ctl := decisionCtl k pe (some false) ph' }
       (some false) rfl rfl h.word
-    refine ⟨n1 + (1 + n3), v', by rw [iterStep_add, e1, Option.bind_some, iterStep_add, e2,
-      Option.bind_some, e3], ?_, hat⟩
+    refine ⟨n1 + (1 + n3), v', by omega, by rw [iterS_add, e1, Option.bind_some, iterS_add, e2,
+      Option.bind_some, e3], ?_, fun hd => absurd hd (by omega), hat⟩
     rw [ho3, if_neg (by omega), List.append_nil]
 
 end PalPeg.ScaMatcherLoop
