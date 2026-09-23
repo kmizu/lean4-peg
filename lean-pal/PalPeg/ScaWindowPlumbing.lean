@@ -714,4 +714,205 @@ theorem slot_step {W : List (Fin 2)} {cap : ℕ → ℕ → ℕ} {j d : ℕ}
 
 end Contract
 
+/-! ## The whole run -/
+
+section Global
+variable {Wm Wf : Type} (mOps : WorkerOps Wm) (fOps : WorkerOps Wf) (m0 : Wm) (f0 : Wf)
+
+/-- The job invariants of both stages after `n` letters, `2^k ≤ n < 2^(k+1)`. -/
+def GInv (W : List (Fin 2)) (cap : ℕ → ℕ → ℕ) (k n : ℕ) (s : PalState Wm Wf) : Prop :=
+  (1 ≤ k → JobInv W (cap k) (2 ^ k) (2 ^ (k - 1)) (n - 2 ^ k) (s.stages (idx (k - 1)))) ∧
+  (2 ≤ k → JobInv W (cap (k - 1)) (2 ^ (k - 1)) (2 ^ (k - 1 - 1)) (n - 2 ^ (k - 1))
+    (s.stages (idx k))) ∧
+  (k = 0 → ∀ i, Dormant (s.stages i)) ∧
+  (k = 1 → Dormant (s.stages (idx 1)))
+
+/-- A stage's tick is clean. -/
+def Clean (st : StageState) (nb : Bool) (src : ℕ) : Prop :=
+  (advance st nb src).2 = false ∧ (consume (advance st nb src).1).2 = false
+
+theorem clean_of_all (s : PalState Wm Wf)
+    (h : ∀ i : Fin 2, Clean (s.stages i) (birthOf s && s.slot == i) s.power) :
+    ScaWindowFault.ctlViolation s = false := by
+  rw [ctlViolation_eq]
+  obtain ⟨h0a, h0c⟩ := h 0
+  obtain ⟨h1a, h1c⟩ := h 1
+  simp [h0a, h0c, h1a, h1c]
+
+theorem fin2_cover (k : ℕ) (hk : 1 ≤ k) (i : Fin 2) : i = idx k ∨ i = idx (k - 1) := by
+  have h1 := idx_succ_ne (k - 1)
+  rw [show k - 1 + 1 = k by omega] at h1
+  have : ∀ a b c : Fin 2, a ≠ b → c = a ∨ c = b := by decide
+  exact (this _ _ i h1.symm)
+
+variable {mOps fOps m0 f0}
+
+theorem ginv_step {W : List (Fin 2)} {cap : ℕ → ℕ → ℕ}
+    (hC : ∀ j r, 1 ≤ j → r < 4 → 2 ^ j + (r + 1) * 2 ^ (j - 1) ≤ W.length →
+      CapAt mOps fOps m0 f0 W j r (cap j r))
+    {k n : ℕ} (hk : 2 ^ k ≤ n) (hkn : n < 2 ^ (k + 1)) (hnW : n < W.length)
+    (hI : Inv k n (run mOps fOps m0 f0 (W.take n)))
+    (h : GInv W cap k n (run mOps fOps m0 f0 (W.take n))) :
+    ScaWindowFault.ctlViolation (run mOps fOps m0 f0 (W.take n)) = false ∧
+      (n + 1 < 2 ^ (k + 1) → GInv W cap k (n + 1) (run mOps fOps m0 f0 (W.take (n + 1)))) ∧
+      (n + 1 = 2 ^ (k + 1) →
+        GInv W cap (k + 1) (n + 1) (run mOps fOps m0 f0 (W.take (n + 1)))) := by
+  set s := run mOps fOps m0 f0 (W.take n) with hs
+  obtain ⟨_, hready, hpow, hnb, hslot, _, _⟩ := hI
+  have hbirth : birthOf s = decide (n + 1 = 2 ^ (k + 1)) := by
+    simp only [birthOf, hready, hnb, Bool.true_and, Nat.pred_eq_sub_one]
+    by_cases he : n + 1 = 2 ^ (k + 1)
+    · simp [he]; omega
+    · simp [he]; omega
+  have hs' := run_take_succ mOps fOps m0 f0 W hnW
+  have hstage : ∀ i, (run mOps fOps m0 f0 (W.take (n + 1))).stages i =
+      capture (consume (advance (s.stages i) (birthOf s && s.slot == i) s.power).1).1
+        (fOps.modeDone ((run mOps fOps m0 f0 (W.take (n + 1))).flags i))
+        (fOps.flags ((run mOps fOps m0 f0 (W.take (n + 1))).flags i)) := by
+    intro i; rw [hs']; exact tick_stage mOps fOps s _ i
+  have h2k : 2 ^ (k + 1) = 2 * 2 ^ k := by ring
+  -- the young stage (born at `2^k`, slot `idx (k-1)`), when `1 ≤ k`
+  have young : 1 ≤ k → (birthOf s && s.slot == idx (k - 1)) = false ∧
+      Clean (s.stages (idx (k - 1))) false s.power ∧
+      JobInv W (cap k) (2 ^ k) (2 ^ (k - 1)) (n + 1 - 2 ^ k)
+        ((run mOps fOps m0 f0 (W.take (n + 1))).stages (idx (k - 1))) := by
+    intro hk1
+    have hS : 2 ^ k = 2 * 2 ^ (k - 1) := by rw [← pow_succ']; congr 1; omega
+    have hne : (s.slot == idx (k - 1)) = false := by
+      rw [hslot, beq_eq_false_iff_ne]
+      have := idx_succ_ne (k - 1); rw [show k - 1 + 1 = k by omega] at this; exact this.symm
+    have hstep := slot_step mOps fOps m0 f0 (fun r hr hr' => hC k r hk1 hr hr') hk1
+      (d := n - 2 ^ k) (by omega) (by rw [show 2 ^ k + (n - 2 ^ k) = n by omega]; exact h.1 hk1)
+      (Nat.div_le_of_le_mul (by omega)) s.power
+    rw [show 2 ^ k + (n - 2 ^ k) = n by omega] at hstep
+    refine ⟨by rw [hne, Bool.and_false], ⟨hstep.1, hstep.2.1⟩, ?_⟩
+    rw [hstage, hne, Bool.and_false, show n + 1 - 2 ^ k = n - 2 ^ k + 1 by omega]
+    exact hstep.2.2
+  -- the old stage (born at `2^(k-1)`, slot `idx k`), when `2 ≤ k`
+  have hidx : ∀ k, 2 ≤ k → idx k = idx (k - 1 - 1) := fun k hk2 => by
+    rw [← idx_add_two (k - 1 - 1)]; congr 1; omega
+  have old_nb : 2 ≤ k → n + 1 < 2 ^ (k + 1) →
+      (birthOf s && s.slot == idx k) = false ∧ Clean (s.stages (idx k)) false s.power ∧
+      JobInv W (cap (k - 1)) (2 ^ (k - 1)) (2 ^ (k - 1 - 1)) (n + 1 - 2 ^ (k - 1))
+        ((run mOps fOps m0 f0 (W.take (n + 1))).stages (idx k)) := by
+    intro hk2 hlt
+    have hS : 2 ^ k = 2 * 2 ^ (k - 1) := by rw [← pow_succ']; congr 1; omega
+    have hS1 : 2 ^ (k - 1) = 2 * 2 ^ (k - 1 - 1) := by rw [← pow_succ']; congr 1; omega
+    have hnb0 : birthOf s = false := by rw [hbirth]; simp; omega
+    have hst := h.2.1 hk2
+    rw [hidx k hk2] at hst ⊢
+    have hstep := slot_step mOps fOps m0 f0 (fun r hr hr' => hC (k - 1) r (by omega) hr hr')
+      (by omega) (d := n - 2 ^ (k - 1)) (by omega)
+      (by rw [show 2 ^ (k - 1) + (n - 2 ^ (k - 1)) = n by omega]; exact hst)
+      (Nat.lt_succ_iff.mp (Nat.div_lt_of_lt_mul (by omega))) s.power
+    rw [show 2 ^ (k - 1) + (n - 2 ^ (k - 1)) = n by omega] at hstep
+    refine ⟨by rw [hnb0, Bool.false_and], ⟨hstep.1, hstep.2.1⟩, ?_⟩
+    rw [hstage, hnb0, Bool.false_and, show n + 1 - 2 ^ (k - 1) = n - 2 ^ (k - 1) + 1 by omega]
+    exact hstep.2.2
+  have old_birth : 2 ≤ k → n + 1 = 2 ^ (k + 1) →
+      (birthOf s && s.slot == idx k) = true ∧ Clean (s.stages (idx k)) true s.power ∧
+      JobInv W (cap (k + 1)) (2 ^ (k + 1)) (2 ^ k) 0
+        ((run mOps fOps m0 f0 (W.take (n + 1))).stages (idx k)) := by
+    intro hk2 heq
+    have hS : 2 ^ k = 2 * 2 ^ (k - 1) := by rw [← pow_succ']; congr 1; omega
+    have hS1 : 2 ^ (k - 1) = 2 * 2 ^ (k - 1 - 1) := by rw [← pow_succ']; congr 1; omega
+    have hnb1 : (birthOf s && s.slot == idx k) = true := by
+      rw [hbirth, hslot]; simp [heq]
+    have hst := h.2.1 hk2
+    rw [show n - 2 ^ (k - 1) = 5 * 2 ^ (k - 1 - 1) + (2 ^ (k - 1 - 1) - 1) by omega] at hst
+    have hv := retire_clean s.power (Nat.one_le_two_pow) hst true
+    have hb := jobInv_birth (W := W) (cap := cap (k + 1)) (b := 2 ^ (k + 1)) (S := 2 ^ k)
+      Nat.one_le_two_pow (s.stages (idx k))
+      (fOps.modeDone ((run mOps fOps m0 f0 (W.take (n + 1))).flags (idx k)))
+      (fOps.flags ((run mOps fOps m0 f0 (W.take (n + 1))).flags (idx k)))
+    refine ⟨hnb1, ⟨hv, by rw [hpow]; exact hb.1⟩, ?_⟩
+    rw [hstage, hnb1, hpow]
+    exact hb.2
+  -- dormant stages
+  have dorm_nb : ∀ i, Dormant (s.stages i) → (birthOf s && s.slot == i) = false →
+      Clean (s.stages i) false s.power ∧
+      Dormant ((run mOps fOps m0 f0 (W.take (n + 1))).stages i) := by
+    intro i hd hnb0
+    have := dormant_step hd s.power
+      (fOps.modeDone ((run mOps fOps m0 f0 (W.take (n + 1))).flags i))
+      (fOps.flags ((run mOps fOps m0 f0 (W.take (n + 1))).flags i))
+    refine ⟨⟨advance_dormant hd _, this.1⟩, ?_⟩
+    rw [hstage, hnb0]; exact this.2
+  have dorm_birth : ∀ i, Dormant (s.stages i) → (birthOf s && s.slot == i) = true →
+      Clean (s.stages i) true s.power ∧
+      JobInv W (cap (k + 1)) (2 ^ (k + 1)) (2 ^ k) 0
+        ((run mOps fOps m0 f0 (W.take (n + 1))).stages i) := by
+    intro i hd hnb1
+    have hb := jobInv_birth (W := W) (cap := cap (k + 1)) (b := 2 ^ (k + 1)) (S := 2 ^ k)
+      Nat.one_le_two_pow (s.stages i)
+      (fOps.modeDone ((run mOps fOps m0 f0 (W.take (n + 1))).flags i))
+      (fOps.flags ((run mOps fOps m0 f0 (W.take (n + 1))).flags i))
+    refine ⟨⟨by rw [advance_viol]; exact advance_dormant hd _, by rw [hpow]; exact hb.1⟩, ?_⟩
+    rw [hstage, hnb1, hpow]; exact hb.2
+  -- assembly
+  have hk0 : k = 0 → n = 1 := fun h0 => by subst h0; simp at hk hkn; omega
+  have hsl1 : k = 0 → s.slot = 0 := fun h0 => by rw [hslot, h0]; rfl
+  by_cases hB : n + 1 = 2 ^ (k + 1)
+  · -- a birth into slot `idx k`
+    have hnbk : (birthOf s && s.slot == idx k) = true := by rw [hbirth, hslot]; simp [hB]
+    have newborn : Clean (s.stages (idx k)) true s.power ∧
+        JobInv W (cap (k + 1)) (2 ^ (k + 1)) (2 ^ k) 0
+          ((run mOps fOps m0 f0 (W.take (n + 1))).stages (idx k)) := by
+      rcases Nat.lt_or_ge k 2 with hk2 | hk2
+      · rcases Nat.lt_or_ge k 1 with hk1 | hk1
+        · have := (h.2.2.1 (by omega)) (idx k)
+          exact dorm_birth _ this hnbk
+        · have hk1' : k = 1 := by omega
+          have := h.2.2.2 hk1'; rw [← hk1'] at this
+          exact dorm_birth _ this hnbk
+      · exact (old_birth hk2 hB).2
+    refine ⟨clean_of_all s fun i => ?_, fun h' => absurd hB (Nat.ne_of_lt h'), fun _ => ?_⟩
+    · rcases Nat.lt_or_ge k 1 with hk1 | hk1
+      · -- `k = 0`: slot `0` is born, slot `1` sleeps
+        have hk00 : k = 0 := by omega
+        by_cases hi : i = idx k
+        · rw [hi, hnbk]; exact newborn.1
+        · have hnb0 : (birthOf s && s.slot == i) = false := by
+            rw [hbirth, hslot]; simp [hB]; exact fun h3 => hi h3.symm
+          rw [hnb0]; exact (dorm_nb i ((h.2.2.1 hk00) i) hnb0).1
+      · rcases fin2_cover k hk1 i with hi | hi
+        · rw [hi, hnbk]; exact newborn.1
+        · rw [hi, (young hk1).1]; exact (young hk1).2.1
+    · refine ⟨fun _ => ?_, fun hk2 => ?_, fun h3 => absurd h3 (by omega), fun h3 => ?_⟩
+      · simp only [show k + 1 - 1 = k by omega, show n + 1 - 2 ^ (k + 1) = 0 by omega]
+        exact newborn.2
+      · have hk1 : 1 ≤ k := by omega
+        have e1 : k + 1 - 1 = k := by omega
+        have e2 : k + 1 - 1 - 1 = k - 1 := by omega
+        have e3 : idx (k + 1) = idx (k - 1) := by
+          rw [show k + 1 = k - 1 + 2 by omega, idx_add_two]
+        rw [e1, e3]
+        exact (young hk1).2.2
+      · have hk00 : k = 0 := by omega
+        subst hk00
+        have hnb0 : (birthOf s && s.slot == idx 1) = false := by
+          rw [hslot]; simp only [Bool.and_eq_false_iff]; right; decide
+        exact (dorm_nb (idx 1) ((h.2.2.1 rfl) (idx 1)) hnb0).2
+  · -- no birth
+    have hnb0 : birthOf s = false := by rw [hbirth]; simp [hB]
+    have hk1 : 1 ≤ k := by
+      by_contra hk1; have := hk0 (by omega); subst this; omega
+    refine ⟨clean_of_all s fun i => ?_, fun _ => ?_, fun h' => absurd h' hB⟩
+    · rcases fin2_cover k hk1 i with hi | hi
+      · rw [hi]
+        rcases Nat.lt_or_ge k 2 with hk2 | hk2
+        · have hk1' : k = 1 := by omega
+          have hd := h.2.2.2 hk1'; rw [← hk1'] at hd
+          have hnb : (birthOf s && s.slot == idx k) = false := by rw [hnb0, Bool.false_and]
+          rw [hnb]; exact (dorm_nb _ hd hnb).1
+        · rw [(old_nb hk2 (by omega)).1]; exact (old_nb hk2 (by omega)).2.1
+      · rw [hi, (young hk1).1]; exact (young hk1).2.1
+    · refine ⟨fun _ => (young hk1).2.2, fun hk2 => (old_nb hk2 (by omega)).2.2,
+        fun h3 => absurd h3 (by omega), fun h3 => ?_⟩
+      have hd := h.2.2.2 h3
+      have hnb : (birthOf s && s.slot == idx 1) = false := by rw [hnb0, Bool.false_and]
+      exact (dorm_nb _ hd hnb).2
+
+end Global
+
 end PalPeg.ScaWindowPlumbing
