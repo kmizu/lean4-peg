@@ -178,4 +178,82 @@ theorem IsLocal.iterate {D E : ℕ} {Φ : C → (Fin K → List Γ) → C × (Fi
     rw [heq, Nat.mul_succ, Nat.mul_succ]
     exact this
 
+/-! ## Primitive rules and combinators -/
+
+/-- Enlarge the depth and width of a rule. -/
+def Rule.mono {D E D' E' : ℕ} (R : Rule Γ C K D E) (hD : D ≤ D') (hE : E ≤ E') :
+    Rule Γ C K D' E' where
+  f c v := R.f c (view D v)
+  pre_le c v k := (R.pre_le c _ k).trans hE
+  drop_le c v k := (R.drop_le c _ k).trans hD
+
+theorem Rule.run_mono {D E D' E' : ℕ} (R : Rule Γ C K D E) (hD : D ≤ D') (hE : E ≤ E')
+    (c : C) (st : Fin K → List Γ) : (R.mono hD hE).run c st = R.run c st := by
+  have hv : view D (view D' st) = view D st := by
+    funext k; simp only [view, List.take_take]; congr 1; omega
+  simp [Rule.run, Rule.mono, hv]
+
+theorem IsLocal.mono {D E D' E' : ℕ} {Φ : C → (Fin K → List Γ) → C × (Fin K → List Γ)}
+    (h : IsLocal D E Φ) (hD : D ≤ D') (hE : E ≤ E') : IsLocal D' E' Φ := by
+  obtain ⟨R, hR⟩ := h
+  exact ⟨R.mono hD hE, fun c st => by rw [Rule.run_mono, hR]⟩
+
+/-- Choose between two rules by the control and the view. -/
+def Rule.ite {D E : ℕ} (p : C → (Fin K → List Γ) → Bool) (R₁ R₂ : Rule Γ C K D E) :
+    Rule Γ C K D E where
+  f c v := if p c v then R₁.f c v else R₂.f c v
+  pre_le c v k := by split <;> [exact R₁.pre_le c v k; exact R₂.pre_le c v k]
+  drop_le c v k := by split <;> [exact R₁.drop_le c v k; exact R₂.drop_le c v k]
+
+theorem IsLocal.ite {D E : ℕ} {Φ₁ Φ₂ : C → (Fin K → List Γ) → C × (Fin K → List Γ)}
+    (p : C → (Fin K → List Γ) → Bool) (h₁ : IsLocal D E Φ₁) (h₂ : IsLocal D E Φ₂) :
+    IsLocal D E (fun c st => if p c (view D st) then Φ₁ c st else Φ₂ c st) := by
+  obtain ⟨R₁, hR₁⟩ := h₁
+  obtain ⟨R₂, hR₂⟩ := h₂
+  refine ⟨Rule.ite p R₁ R₂, fun c st => ?_⟩
+  simp only [Rule.run, Rule.ite]
+  split <;> simp [hR₁, hR₂, Rule.run]
+
+/-- The rewrite that keeps a stack. -/
+def keep (k : Fin K) : Rewrite Γ K := ⟨[], some k, 0⟩
+
+theorem apply_keep (st : Fin K → List Γ) (k : Fin K) : apply st (keep k) = st k := by
+  simp [apply, keep]
+
+/-- One stack operation on stack `k`, with the control update `g`. -/
+def Rule.op (D : ℕ) (g : C → (Fin K → List Γ) → C) (k : Fin K)
+    (r : C → (Fin K → List Γ) → Rewrite Γ K) (hpre : ∀ c v, (r c v).pre.length ≤ 1)
+    (hdrop : ∀ c v, (r c v).drop ≤ D) : Rule Γ C K D 1 where
+  f c v := (g c v, fun j => if j = k then r c v else keep j)
+  pre_le c v j := by dsimp only; split <;> simp [hpre, keep]
+  drop_le c v j := by dsimp only; split <;> simp [hdrop, keep]
+
+theorem Rule.run_op (D : ℕ) (g : C → (Fin K → List Γ) → C) (k : Fin K)
+    (r : C → (Fin K → List Γ) → Rewrite Γ K) (hpre : ∀ c v, (r c v).pre.length ≤ 1)
+    (hdrop : ∀ c v, (r c v).drop ≤ D) (c : C) (st : Fin K → List Γ) :
+    (Rule.op D g k r hpre hdrop).run c st =
+      (g c (view D st), Function.update st k (apply st (r c (view D st)))) := by
+  refine Prod.ext rfl (funext fun j => ?_)
+  by_cases hj : j = k
+  · subst hj; simp [Rule.run, Rule.op]
+  · simp [Rule.run, Rule.op, hj, apply_keep]
+
+/-- `push x` on stack `k`. -/
+def pushRw (x : Γ) (k : Fin K) : Rewrite Γ K := ⟨[x], some k, 0⟩
+/-- `drop` on stack `k` (pop). -/
+def popRw (k : Fin K) : Rewrite Γ K := ⟨[], some k, 1⟩
+/-- `copyFrom i` into a stack. -/
+def copyRw (i : Fin K) : Rewrite Γ K := ⟨[], some i, 0⟩
+/-- `clear`. -/
+def clearRw : Rewrite Γ K := ⟨[], none, 0⟩
+
+theorem apply_push (st : Fin K → List Γ) (x : Γ) (k : Fin K) : apply st (pushRw x k) = x :: st k := by
+  simp [apply, pushRw]
+theorem apply_pop (st : Fin K → List Γ) (k : Fin K) : apply st (popRw k) = (st k).tail := by
+  simp [apply, popRw]
+theorem apply_copy (st : Fin K → List Γ) (i : Fin K) : apply st (copyRw i) = st i := by
+  simp [apply, copyRw]
+theorem apply_clear (st : Fin K → List Γ) : apply st (clearRw : Rewrite Γ K) = [] := by
+  simp [apply, clearRw]
+
 end PalPeg.ScaLocal
