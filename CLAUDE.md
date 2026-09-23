@@ -42,6 +42,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **choose-select / init / replayStart は物理規則に行が無い**（`ruleNext` の choose は `chooseBackNext` のみ、init/replayStart は `_ => q`）。3つとも head の瞬時コピーで、物理層にビュー用 mirror が無い。旧局所層は mirror 入替え/駐車ビュー（`LocalReplaySwap`/`LocalReplayParked`、`H_initLoc` 等が残差）。設計候補は `ASSEMBLY_PLAN.md:985-1033` と `:731-770`（idleHead 強化）。
 - 残る大物: scan 側（matched・fallback・restart・DP prepare/reset・探索量子）、`rest` の具体化、凍結3欄。
 
+### freeze の確定設計（2026-09-23 深夜、未実装）
+- 凍結後の抽象状態は報告しない（`onLetterTest` が `position+1 ≤ 2|w|` を要求、`frozenAt` は `2|w| ≤ position`）。それでも replayStart が right を center に戻すので物理の沈黙には粘着ビットが要る。
+- 包み層 `FreezeWrap M`: 制御に b を足す。`b' = 入力あり ? false : (b ∨ detect ws)`、`detect` = 右 view が gap 上で pending 偽（`pendingTest`）。報告 `repW' = ¬b ∧ ¬detect ∧ repW`。凍結述語 `PhysFrozen := b ∨ detect`（keep・quiet は構成から即）。
+- 不変量 `Enc' := Enc ∧ (b → 2·到着数 ≤ front)`。`front = position right + replay`（`GalilRunTrace.front`）は入力なし tick で単調（`GalilFrontMono.front_tick_mono`、要 `FrontPack`・`CentreLive`）。報告時は front = position = 2·到着数 − 1 なので b の間は報告不能。detect なら 2·到着数 ≤ position。
+- 6本の TicksWhere は中の機械のまま。包み層が TickCases を持ち上げる。
+
 ### (B) 凍結の次の一手（設計済み・未実装）
 最後の比較は一致/shift/fallback のどれもありうる（`PlateauInvariant.plateauCompare`）ので「凍結＝飢餓」は偽。代わりに物理側へ粘着ビット b を足す包み層:
 b' = (入力あり → false; なし → b ∨ 「tick 開始時に右ヘッドが gap 上で pendingTest 偽」)、報告は `!b && repW`。
