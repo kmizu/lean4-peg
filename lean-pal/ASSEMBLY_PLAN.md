@@ -1,3 +1,66 @@
+## 2026-09-23 16:15: 最上段から接続・報告契約を到着接頭辞基準へ修正（Claude Code, Opus 5.5）
+
+**Workbench BUILD=0・最終公理監査AUDIT=0・無条件 PAL は未完（`obligation_localRealization` は残る）。**
+- DP履歴: `PhysicalDpHistory`（`DpHistory`＝DP12本Dense＋準備中の形、全tickで保存）、`PhysicalDpSource.dense_onRun`/`forward_onRun`で退役側Denseの前提を除去。`CanonTrace`を`ShapedRun.OracleTick`版に強化（生産者は元から保持）、`PlateauInv.dpDense`追加。
+- 上から接続: `PhysicalFinal.given_remainingCases_and_reports`が`PhysicalDpCleanup.machine rest`から`RecognizedByTotalPEG PAL`を標準3公理で出す。残差は`rest`・`hother`・`ReportResiduals`の3つだけ。
+- 報告契約: 旧`hencRep`（全長wの`reportTest`と`repQ`の一致）は、wを知らない実時間機械では満たせない疑いが強い（機械検査の反証は未作成）。`repM`を到着接頭辞の報告点`reportArrived`へ変更し、`LocalShadowConcrete`の`rep_sound`/`rep_complete`をrun状態つきに弱め、`reportArrived_sound`/`_complete`で供給。
+- 次: `ReportResiduals`（報告・出力ビットと`PhysFrozen`）、reset行、`hother`の残り分岐。KPIの39項目表記は未更新（21/18のまま）。
+
+## 2026-09-23: debtへの半径鏡貸出しと再準備を実sweepで証明
+
+**Workbench BUILD=0・最終公理監査AUDIT=0・無条件 PAL は未完。**
+`PhysicalDebtMirror.restart_from_copies`がlastの引き渡しと半径鏡→debtの貸出しを
+32+32の1sweepへ融合。源は既存のコピー付きEnc、残る抽象更新はDP resetのみ。
+再準備中の実mirror2はradius+min(debt,0)を表し、他の全テープは旧CoreInvを保持。
+`repair`は証明用参照で、物理コピーではない。`ready`が条件成立時に旧Runningへ戻す。
+`PhysicalDebtRebuild.running/running_double`がdebt++と負の場合のmirror2++を実行し、
+-1→0を含む2回分も1sweepで検証。6guardは標準3公理のみ。ログは
+`/tmp/physical-debt-rebuild-{workbench,axioms}.log`。両モジュールはWorkbench登録済み。
+**Rebuildingは共通Enc/dispatcherへ未統合。** 比較時radius++/debt--の実行、終了時の
+不足1の補完、DP buffer/resetが残る。SafeCallsの非負guardは最後のadvance前なので、
+終了時debt=-1を排除しない。全growやrestartが完成したとは数えない。
+KPI21完了18未完、T02/M3-01未完、追加公理obligation_localRealizationは残る。
+次は再準備を比較と共通Enc（feed/starved含む）へ統合し、DPバッファを閉じる。
+正本はAGENTS.md §0とPHYSICAL_CONNECTIONS.md末尾。
+
+## 2026-09-23: restartのlast3コピー引き渡しを実sweepで証明
+
+**Workbench全体 build 成功・新規証明は標準3公理のみ・無条件 PAL は未完。**
+`PhysicalRestartCopies` がcounter6→lower、counter15→work、mirror4→lowerの鏡へ渡し、
+旧lower/鏡を同時resetしてspan/鏡へ回す。全Enc・counter形・マクロ境界と、任意の有限役割での
+半径32の実sweepを証明。`from_copies`は源のlastコピーを既存のコピー付きEncから供給する。
+これはrestartへ融合する中間行。debt/DPは旧値のままで、その2更新を加えれば実tickFunと
+一致することを`completed_is_restart`で証明した。物理的なdebt/DP更新や融合は未完。
+最新共通機械は`PhysicalSnapshotEntryDispatch.machine rest`のまま。KPI21完了18未完、
+T02/M3-01は未完。BUILD=0/AUDIT=0: `/tmp/physical-restart-copies-{workbench,axioms}.log`。
+次は半径鏡の貸出し・再準備契約とDPバッファ。旧Encの全mirror義務、inactive DPの空白を
+未供給の後状態仮定にしない。正本はAGENTS.md §0とPHYSICAL_CONNECTIONS.md末尾。
+
+## 2026-09-23: コピー付き二度消費とshift入口を最終TickCasesへ接続
+
+**Workbench全体 build 成功・新規証明は標準公理のみ・無条件 PAL は未完。**
+最新の共通機械は `PhysicalSnapshotEntryDispatch.machine rest`。同じ118本・半径1536で、
+追加コピーを保つ成功二度消費（32+32）、共通入口（64）、3カーソルの12段移動を1sweepへ接続。
+元の合法TickとArrivedOnRunから必要条件を供給し、最終TickCasesのhotherからshift入口を外した。
+boot/feed/starved/count/watch入口/shift進行・終了も保持。新4モジュールをWorkbench登録、
+新7guardは標準3公理のみ。BUILD=0/AUDIT=0: `/tmp/physical-snapshot-entry-{workbench,axioms}.log`。
+他の比較腕・restart・DP等は未完、KPIは21完了18未完、obligation_localRealizationは残る。
+次はrestartのlast3コピー引き渡し・span/debt初期化・鏡再準備・DPバッファへ。
+正本は `AGENTS.md` §0 と `lean-pal/PHYSICAL_CONNECTIONS.md` 末尾。
+
+## 2026-09-23: restart用コピーを保つshift進行・終了を接続
+
+**Workbench全体 build 成功・新規証明は標準公理のみ・無条件 PAL は未完。**
+`PhysicalSnapshotShiftDispatch.machine rest` が同じ118本・半径1536・コピー付きEncで、
+boot/feed/starved/count/watch入口に加えてshift進行・終了を最終TickCasesへ接続した。
+`PhysicalSnapshotShift.saved_tick` が元の合法Tickから保存代表のshiftを作り、`running`が
+既存shiftと6本減算を1sweepで合成、`exit_enc`が終了時のコピー保持を証明する。
+残量上限・CopyIdleは既存OnRunから供給。BUILD=0/AUDIT=0:
+`/tmp/physical-snapshot-shift-{workbench,axioms}.log`。新4guardは標準3公理のみ。
+追加公理obligation_localRealizationは残り、KPIは21完了18未完。次は比較二度消費・shift入口の
+32+32/64+64計画へコピー更新を融合し、restartの3コピー引き渡し・鏡・DP再準備を閉じる。
+現状の正本は `AGENTS.md` §0 と `lean-pal/PHYSICAL_CONNECTIONS.md` 末尾。
+
 ## n566-571 (2026-09-22): `matched` 腕の読み取りが三つとも窓の中に入った
 
 **全体 build 成功・標準公理のみ・無条件 PAL は未完。** 公理リスト未変更。

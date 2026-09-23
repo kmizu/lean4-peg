@@ -873,9 +873,11 @@ structure EncTapes (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 → Boo
   counters : ∀ c : Fin 16, ∀ value, counterOf x c = some value →
     ∃ segments : STape Seg, absCtr segments (polarity c) = value ∧
       tapes (.inr (.inr (.inr (.inr (.inr (.inr (.inl c)))))) ) = padLeft margin (mapTape encSeg segments)
+  /-- The outer `padLeft` supplies the margin. The sealed inner junk need not
+  have that height again; no place-reading or place-update lemma uses it. -/
   places : ∀ (i : Fin 3) place, placeOf x i = some place →
     ∃ (stackTape : STape Γc) (junk : List (Option (Fin 2))),
-      PalPeg.ConcreteLocalMachine.Sealed junk ∧ margin ≤ junk.length ∧
+      PalPeg.ConcreteLocalMachine.Sealed junk ∧
         PalPeg.ConcreteLocalMachine.StackTape stackTape
           (place.letters.map (fun letter => some letter) ++ junk) ∧
         tapes (.inr (.inr (.inr (.inr (.inr (.inl i)))))) = padLeft margin (mapTape encCell stackTape)
@@ -998,8 +1000,8 @@ theorem encTapes_fppTapes (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 
     exact ⟨segments, habs, by rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
   places := by
     intro j place hplace
-    obtain ⟨stackTape, junk, hsealed, hlen, hstack, hslot⟩ := henc.places j place hplace
-    exact ⟨stackTape, junk, hsealed, hlen, hstack, by rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
+    obtain ⟨stackTape, junk, hsealed, hstack, hslot⟩ := henc.places j place hplace
+    exact ⟨stackTape, junk, hsealed, hstack, by rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
   idleShape := hidleShape
   period := by
     intro tape htape
@@ -1023,7 +1025,7 @@ theorem encTapes_copyOne (margin : ℕ) (x : State GalilVM) (polarity newPolarit
     (hwork : absCtr segments (newPolarity 9) = PalPeg.GalilScaffoldCounter.dec x.vm.fpp.work)
     (hcounterTape : newTapes (counterSlot 9) = padLeft margin (mapTape encSeg segments))
     (stackTape : STape PalPeg.CloseoutCoreStep.Γc) (junk : List (Option (Fin 2)))
-    (hsealed : PalPeg.ConcreteLocalMachine.Sealed junk) (hjunk : margin ≤ junk.length)
+    (hsealed : PalPeg.ConcreteLocalMachine.Sealed junk)
     (hstack : PalPeg.ConcreteLocalMachine.StackTape stackTape
       ((PalPeg.GalilScaffoldPlace.left x.vm.fpp.walker).letters.map (fun letter => some letter)
         ++ junk))
@@ -1124,12 +1126,12 @@ theorem encTapes_copyOne (margin : ℕ) (x : State GalilVM) (polarity newPolarit
     intro i pl hpl
     by_cases hi1 : i = 1
     · subst hi1
-      exact ⟨stackTape, junk, hsealed, hjunk, (Option.some.inj hpl) ▸ hstack, hplaceTape⟩
+      exact ⟨stackTape, junk, hsealed, (Option.some.inj hpl) ▸ hstack, hplaceTape⟩
     · have hold : placeOf x i = some pl := by
         rw [← hpl]
         fin_cases i <;> first | exact absurd rfl hi1 | rfl
-      obtain ⟨st, jk, hsl, hln, hstk, hslot⟩ := henc.places i pl hold
-      exact ⟨st, jk, hsl, hln, hstk, by
+      obtain ⟨st, jk, hsl, hstk, hslot⟩ := henc.places i pl hold
+      exact ⟨st, jk, hsl, hstk, by
         rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp)
           (by simpa using fun h => hi1 h)
           (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
@@ -1311,8 +1313,8 @@ theorem encTapes_rewindOne (margin : ℕ) (x : State GalilVM) (polarity newPolar
       exact ⟨seg, by rw [hpolarity _ hne]; exact habs, by rw [hmirrorKept, hslot]⟩
   places := by
     intro i pl hpl
-    obtain ⟨st, jk, hsl, hln, hstk, hslot⟩ := henc.places i pl hpl
-    exact ⟨st, jk, hsl, hln, hstk, by
+    obtain ⟨st, jk, hsl, hstk, hslot⟩ := henc.places i pl hpl
+    exact ⟨st, jk, hsl, hstk, by
       rw [hkept _ (by intro j; cases fppLive <;> simp [progSlotOf]) (by simp)
         (by intro m _; simp) (by simp)
         (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
@@ -1415,9 +1417,9 @@ theorem encTapes_headStep (margin : ℕ) (x y : State GalilVM) (polarity : Fin 1
     exact ⟨seg, habsOld, by rw [hkept _ (by intro k; simp), hslotOld]⟩
   places := by
     intro i pl hpl
-    obtain ⟨st, jk, hsl, hln, hstk, hslotOld⟩ :=
+    obtain ⟨st, jk, hsl, hstk, hslotOld⟩ :=
       henc.places i pl (by rw [← congrFun hplaces i]; exact hpl)
-    exact ⟨st, jk, hsl, hln, hstk, by rw [hkept _ (by intro k; simp), hslotOld]⟩
+    exact ⟨st, jk, hsl, hstk, by rw [hkept _ (by intro k; simp), hslotOld]⟩
   period := by
     intro tape htape
     rw [hkept _ (by intro k; simp)]
@@ -1517,9 +1519,9 @@ theorem encTapes_counterStep (margin : ℕ) (x y : State GalilVM)
           exact hsrc hsrc'), hslotOld]⟩
   places := by
     intro i pl hpl
-    obtain ⟨st, jk, hsl, hln, hstk, hslotOld⟩ :=
+    obtain ⟨st, jk, hsl, hstk, hslotOld⟩ :=
       henc.places i pl (by rw [← congrFun hplaces i]; exact hpl)
-    exact ⟨st, jk, hsl, hln, hstk, by
+    exact ⟨st, jk, hsl, hstk, by
       rw [hkept _ (by simp) (fun m _ => by simp), hslotOld]⟩
   period := by
     intro tape htape
@@ -3625,11 +3627,11 @@ noncomputable def withErase {K : ℕ} (live : Bool)
   fun j => base j ++ eraseOf live ws j
 
 /-- two actions in a tick is all it costs: the branch's own, and one cell of one idle tape. -/
-theorem withErase_length {K b : ℕ} (hK : b + 1 ≤ K) (live : Bool)
+theorem withErase_length {K b bound : ℕ} (hK : b + 1 ≤ bound) (live : Bool)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm))
     (hbase : ∀ j, (base j).length ≤ b) (j : Fin tapeCountM) :
-    (withErase live ws base j).length ≤ K := by
+    (withErase live ws base j).length ≤ bound := by
   have herase : (eraseOf live ws j).length ≤ 1 := by
     unfold eraseOf eraseAct
     split
@@ -3777,6 +3779,37 @@ theorem offLive_offIdle {live : Bool}
     (k : Fin 9) : base (slotIndex (progSlotOf (!live) k)) = [] :=
   h (progSlotOf (!live) k) (fun j => (progSlotOf_ne_flip live j k).symm)
 
+/-- Background erasure preserves the retired half independently of its enclosing rule. -/
+theorem idle_shape_withErase {K : ℕ} (margin : ℕ) (hK1 : 1 ≤ K)
+    (hKn : K ≤ margin + 1) (T : Slot → STape Γm) (live : Bool)
+    (base : Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm))
+    (hbase : ∀ k : Fin 9, base (slotIndex (progSlotOf (!live) k)) = [])
+    (hshape : ∀ k : Fin 9, ∃ raw : STape (Fin 9),
+      T (progSlotOf (!live) k) = padLeft margin (mapTape encProg raw)) (k : Fin 9) :
+    ∃ raw : STape (Fin 9),
+      PalPeg.CloseoutCoreEnc12.actList blankM (T (progSlotOf (!live) k))
+        (withErase live (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) base
+          (slotIndex (progSlotOf (!live) k))) = padLeft margin (mapTape encProg raw) := by
+  obtain ⟨raw, hraw⟩ := hshape k
+  have htable : withErase live (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) base
+      (slotIndex (progSlotOf (!live) k)) = eraseAct
+        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+        (slotIndex (progSlotOf (!live) k)) := by
+    unfold withErase
+    rw [hbase k, List.nil_append]
+    unfold eraseOf
+    rw [if_pos ⟨k, rfl⟩]
+  rw [htable, hraw]
+  unfold eraseAct
+  by_cases hstop : PalPeg.Local.readWin blankM K (tapesOf T (slotIndex (progSlotOf (!live) k)))
+      ⟨K - 1, by omega⟩ = bottomM
+  · rw [if_pos hstop]
+    exact ⟨raw, rfl⟩
+  · rw [if_neg hstop]
+    refine ⟨STape.applyAction (6 : Fin 9) raw ((6 : Fin 9), .left), ?_⟩
+    rw [tapesOf_apply, hraw] at hstop
+    exact erase_preserves_shape margin K hK1 hKn raw hstop
+
 /-- **the idle half's shape survives the tick.**  At each of its nine slots the rule's table is
 the erasure's alone — the branch names nothing there — and the erasure either stops, or blanks a
 cell and steps left, which `erase_preserves_shape` shows keeps the padding. -/
@@ -3793,29 +3826,8 @@ theorem idle_shape_after_erase {Q : Type} {K : ℕ} (margin : ℕ) (hK1 : 1 ≤ 
     ∃ raw : STape (Fin 9),
       (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
         (slotIndex (progSlotOf (!live) k)) = padLeft margin (mapTape encProg raw) := by
-  obtain ⟨raw, hraw⟩ := hshape k
-  have htable : R.acts q none (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-      (slotIndex (progSlotOf (!live) k))
-      = eraseAct (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-          (slotIndex (progSlotOf (!live) k)) := by
-    rw [hacts]
-    show base (slotIndex (progSlotOf (!live) k))
-      ++ eraseOf live _ (slotIndex (progSlotOf (!live) k)) = _
-    rw [hbase k]
-    show [] ++ eraseOf live _ (slotIndex (progSlotOf (!live) k)) = _
-    rw [List.nil_append]
-    unfold eraseOf
-    rw [if_pos ⟨k, rfl⟩]
-  rw [idealStep_tapes, htable, tapesOf_apply, hraw]
-  unfold eraseAct
-  by_cases hstop : PalPeg.Local.readWin blankM K (tapesOf T (slotIndex (progSlotOf (!live) k)))
-      ⟨K - 1, by omega⟩ = bottomM
-  · rw [if_pos hstop]
-    exact ⟨raw, rfl⟩
-  · rw [if_neg hstop]
-    refine ⟨STape.applyAction (6 : Fin 9) raw ((6 : Fin 9), .left), ?_⟩
-    rw [tapesOf_apply, hraw] at hstop
-    exact erase_preserves_shape margin K hK1 hKn raw hstop
+  simpa only [idealStep_tapes, hacts, tapesOf_apply] using
+    idle_shape_withErase margin hK1 hKn T live base hbase hshape k
 
 /-- **a tick in which only the idle half moved.**  The branches that name no action at all — the
 three that stop at a floor, the start of the program, the wipe — still see the background erasure
@@ -3869,8 +3881,8 @@ theorem encTapes_idleOnly (margin : ℕ) (x : State GalilVM) (polarity : Fin 16 
       rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
   places := by
     intro j place hplace
-    obtain ⟨stackTape, junk, hsealed, hlen, hstack, hslot⟩ := henc.places j place hplace
-    exact ⟨stackTape, junk, hsealed, hlen, hstack, by
+    obtain ⟨stackTape, junk, hsealed, hstack, hslot⟩ := henc.places j place hplace
+    exact ⟨stackTape, junk, hsealed, hstack, by
       rw [hkept _ (by intro k; cases fppLive <;> simp [progSlotOf]), hslot]⟩
   period := by
     intro tape htape
@@ -3910,7 +3922,7 @@ theorem placeRead_isNone_iff_centre {margin K : ℕ} {x : State GalilVM} {polari
     (PalPeg.GalilScaffoldPlace.read place).isNone = true
       ↔ centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (placeSlot i)
           = blankM := by
-  obtain ⟨stackTape, junk, hsealed, _, hstack, htape⟩ := henc.places i place hplace
+  obtain ⟨stackTape, junk, hsealed, hstack, htape⟩ := henc.places i place hplace
   have hcentre :
       centreRead (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (placeSlot i)
         = encCell stackTape.focus := by
@@ -4140,9 +4152,9 @@ theorem encTapes_chainConsume (margin : ℕ) (x y : State GalilVM)
             (by intro k; cases fppLive <;> simp [progSlotOf, counterSlot]), hslot]⟩
   places := by
     intro i place hplace
-    obtain ⟨st, jk, hsealed, hlen, hstack, hslotp⟩ :=
+    obtain ⟨st, jk, hsealed, hstack, hslotp⟩ :=
       henc.places i place (by rw [← congrFun hplaces i]; exact hplace)
-    exact ⟨st, jk, hsealed, hlen, hstack, by
+    exact ⟨st, jk, hsealed, hstack, by
       rw [hkept _ (by simp [placeSlot, counterSlot]) (by simp [placeSlot, counterSlot])
         (by simp [placeSlot, periodSlot])
         (by intro k; cases fppLive <;> simp [progSlotOf, placeSlot]), hslotp]⟩
@@ -4220,9 +4232,9 @@ theorem encTapes_periodStep (margin : ℕ) (x y : State GalilVM) (polarity : Fin
     exact ⟨seg, habs, by rw [hkept _ (by simp [counterSlot, periodSlot]), hslotc]⟩
   places := by
     intro i place hplace
-    obtain ⟨st, jk, hsealed, hlen, hstack, hslotp⟩ :=
+    obtain ⟨st, jk, hsealed, hstack, hslotp⟩ :=
       henc.places i place (by rw [← congrFun hplaces i]; exact hplace)
-    exact ⟨st, jk, hsealed, hlen, hstack, by
+    exact ⟨st, jk, hsealed, hstack, by
       rw [hkept _ (by simp [placeSlot, periodSlot]), hslotp]⟩
   mirrors := by
     intro m value hvalue
@@ -6285,6 +6297,171 @@ theorem counter_inc_at {margin : ℕ} (polarity : Fin 16 → Bool) (c : Fin 16) 
         exact hb (by rw [hbit]; simp [hzero])
       exact (padded_pop margin segments (counter_left_ne_nil segments hne)).symm
 
+/-- The second increment reads the tape after the first action inside the source
+window. This also covers a negative counter crossing zero between the actions. -/
+noncomputable def incTwiceSign {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (c : Fin 16) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  incSign q.polarity c ws || decide
+    ((PalPeg.LocalStepFusion.windowAfter K 1 (ws (slotIndex (counterSlot c)))
+      [incAct q c ws]) 0 ≠ encSeg PalPeg.LocalCounter.mark)
+
+/-- Two increments compiled into the same action-list format as every other counter
+update. Mirrors use the source's list and final sign. -/
+noncomputable def incTwiceActs {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (c : Fin 16) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  [incAct q c ws, if incTwiceSign q c ws then
+    some (encSeg PalPeg.LocalCounter.mark, .right) else some (blankM, .left)]
+
+theorem incTwiceActs_length {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (c : Fin 16) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    (incTwiceActs q c ws).length = 2 := rfl
+
+/-- The source counter and any mirror of it undergo the same two increments.
+The source tape supplies both decisions; the mirror only needs the same abstract
+counter and source sign, not literal equality of tapes or discarded segments. -/
+theorem counter_incTwice_at {fppBound dpBound K margin : ℕ}
+    (q : QPhys fppBound dpBound) (c : Fin 16) (T : Slot → STape Γm)
+    (hK2 : 2 ≤ K) (hmargin : K ≤ margin)
+    (source segments : STape Seg) (value : PalPeg.GalilScaffoldCounter.Counter)
+    (hsource : absCtr source (q.polarity c) = value)
+    (habs : absCtr segments (q.polarity c) = value)
+    (hslot : T (counterSlot c) = padLeft margin (mapTape encSeg source))
+    (tape : STape Γm) (htape : tape = padLeft margin (mapTape encSeg segments)) :
+    ∃ segments' : STape Seg,
+      absCtr segments'
+          (incTwiceSign q c (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)))
+        = PalPeg.GalilScaffoldCounter.inc (PalPeg.GalilScaffoldCounter.inc value) ∧
+      PalPeg.CloseoutCoreEnc12.actList blankM tape
+          (incTwiceActs q c (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)))
+        = padLeft margin (mapTape encSeg segments') := by
+  let ws := fun i => PalPeg.Local.readWin blankM K (tapesOf T i)
+  let firstBit := incSign q.polarity c ws
+  have hfirst : firstBit = (q.polarity c || decide (PalPeg.LocalCounter.val source = 0)) :=
+    incSign_eq (by omega) (by omega) q.polarity c T source hslot
+  have hsame : PalPeg.LocalCounter.val segments = PalPeg.LocalCounter.val source :=
+    val_eq_of_absCtr_eq (habs.trans hsource.symm)
+  have hfirstTarget : firstBit = (q.polarity c || decide (PalPeg.LocalCounter.val segments = 0)) := by
+    rw [hsame]; exact hfirst
+  have hact : incAct q c ws =
+      if firstBit then some (encSeg PalPeg.LocalCounter.mark, .right)
+      else some (blankM, .left) := rfl
+  obtain ⟨source', hsource', hsourceTape⟩ :=
+    counter_inc_at q.polarity c firstBit source value hsource hfirst (T (counterSlot c)) hslot
+  obtain ⟨segments', habs', htape'⟩ :=
+    counter_inc_at q.polarity c firstBit segments value habs hfirstTarget tape htape
+  rw [← hact] at hsourceTape htape'
+  have hwindow : PalPeg.LocalStepFusion.windowAfter K 1 (ws (slotIndex (counterSlot c)))
+      [incAct q c ws] = PalPeg.Local.readWin blankM 1 (padLeft margin (mapTape encSeg source')) := by
+    dsimp only [ws]
+    rw [tapesOf_apply, PalPeg.LocalStepFusion.windowAfter_readWin blankM _ _ (by simp; omega)
+      (by rw [hslot, pos_padLeft]; omega)]
+    exact congrArg (PalPeg.Local.readWin blankM 1) hsourceTape
+  have hsecond : incTwiceSign q c ws =
+      (firstBit || decide (PalPeg.LocalCounter.val source' = 0)) := by
+    unfold incTwiceSign
+    rw [hwindow]
+    change (firstBit || decide (_ ≠ _)) = _
+    have hz : PalPeg.LocalCounter.val source' = 0 ↔
+        PalPeg.Local.readWin blankM 1 (padLeft margin (mapTape encSeg source')) 0
+          ≠ encSeg PalPeg.LocalCounter.mark := by
+      simpa using counterZero_iff_below (K := 1) (margin := margin) (by omega) (by omega) source'
+    apply congrArg (fun bit : Bool => firstBit || bit)
+    rw [Bool.eq_iff_iff]
+    simpa only [decide_eq_true_eq] using hz.symm
+  have hsame' : PalPeg.LocalCounter.val segments' = PalPeg.LocalCounter.val source' :=
+    val_eq_of_absCtr_eq (habs'.trans hsource'.symm)
+  have hsecondTarget : incTwiceSign q c ws =
+      (firstBit || decide (PalPeg.LocalCounter.val segments' = 0)) := by
+    rw [hsame']; exact hsecond
+  obtain ⟨result, hresult, hresultTape⟩ := counter_inc_at (fun _ => firstBit) c
+    (incTwiceSign q c ws) segments' (PalPeg.GalilScaffoldCounter.inc value) habs'
+    hsecondTarget (PalPeg.CloseoutCoreEnc12.actList blankM tape [incAct q c ws]) htape'
+  refine ⟨result, hresult, ?_⟩
+  change PalPeg.CloseoutCoreEnc12.actList blankM tape
+    ([incAct q c ws] ++ [if incTwiceSign q c ws then
+      some (encSeg PalPeg.LocalCounter.mark, .right) else some (blankM, .left)]) = _
+  rw [PalPeg.CloseoutCoreEnc13.actList_append]
+  exact hresultTape
+
+/-- The matched comparison's length update writes the length tape and its mirrors
+with the same two actions. It occupies at most two actions on any tape. -/
+noncomputable def scanLengthActs {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  fun j => if j = slotIndex (counterSlot 3) ∨
+      ∃ m : Fin 7, mirrorSource m = 3 ∧ j = slotIndex (mirrorSlot m)
+    then incTwiceActs q 3 ws else []
+
+theorem scanLengthActs_length {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
+    (scanLengthActs q ws j).length ≤ 2 := by
+  unfold scanLengthActs
+  split <;> simp [incTwiceActs_length]
+
+theorem scanLengthActs_counter {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    scanLengthActs q ws (slotIndex (counterSlot 3)) = incTwiceActs q 3 ws := by
+  simp [scanLengthActs]
+
+theorem scanLengthActs_mirror {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (m : Fin 7) (hsrc : mirrorSource m = 3) :
+    scanLengthActs q ws (slotIndex (mirrorSlot m)) = incTwiceActs q 3 ws := by
+  unfold scanLengthActs
+  exact if_pos (Or.inr ⟨m, hsrc, rfl⟩)
+
+theorem scanLengthActs_off {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (slot : Slot)
+    (hc : slot ≠ counterSlot 3)
+    (hm : ∀ m : Fin 7, mirrorSource m = 3 → slot ≠ mirrorSlot m) :
+    scanLengthActs q ws (slotIndex slot) = [] := by
+  unfold scanLengthActs
+  apply if_neg
+  rintro (h | ⟨m, hsrc, h⟩)
+  · exact hc (slotIndex.injective h)
+  · exact hm m hsrc (slotIndex.injective h)
+
+/-- The complete tape encoding is preserved by `length += 2`, including its mirror.
+This is a composable part of `afterCompare` on the existing physical layout. -/
+theorem encTapes_scanLength {fppBound dpBound K margin : ℕ}
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hK2 : 2 ≤ K) (hmargin : K ≤ margin)
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T) :
+    EncTapes margin
+      ⟨x.ctl, {x.vm with length := PalPeg.GalilScaffoldCounter.inc (PalPeg.GalilScaffoldCounter.inc x.vm.length)}⟩
+      (Function.update q.polarity 3
+        (incTwiceSign q 3 (fun i => PalPeg.Local.readWin blankM K (tapesOf T i))))
+      q.gap q.micro q.fppLive q.dpLive
+      (fun slot => PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
+        (scanLengthActs q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) (slotIndex slot))) := by
+  let ws := fun i => PalPeg.Local.readWin blankM K (tapesOf T i)
+  obtain ⟨source, hsource, hsourceTape⟩ := henc.counters 3 x.vm.length rfl
+  obtain ⟨segments, habs, htape⟩ := counter_incTwice_at q 3 T hK2 hmargin
+    source source x.vm.length hsource hsource hsourceTape (T (counterSlot 3)) hsourceTape
+  refine encTapes_counterStep margin x _ q.polarity _ q.gap q.micro q.fppLive q.dpLive T _
+    henc 3 _ rfl ?_ rfl rfl (fun _ => rfl) (fun _ => rfl) rfl rfl
+    (fun c hc => Function.update_of_ne hc _ _) segments ?_ ?_ ?_ ?_
+  · intro c hc
+    fin_cases c <;> first | exact absurd rfl hc | rfl
+  · rw [Function.update_self]
+    exact habs
+  · rw [scanLengthActs_counter]
+    exact htape
+  · intro m hsrc
+    obtain ⟨mirror, habsMirror, hmirrorTape⟩ :=
+      henc.mirrors m x.vm.length (by rw [hsrc]; rfl)
+    rw [hsrc] at habsMirror
+    obtain ⟨mirror', habsMirror', hmirrorTape'⟩ := counter_incTwice_at q 3 T hK2 hmargin
+      source mirror x.vm.length hsource habsMirror hsourceTape (T (mirrorSlot m)) hmirrorTape
+    refine ⟨mirror', ?_, ?_⟩
+    · rw [Function.update_self]
+      exact habsMirror'
+    · rw [scanLengthActs_mirror q _ m hsrc]
+      exact hmirrorTape'
+  · intro slot hc hm
+    rw [scanLengthActs_off q _ slot hc hm]
+    rfl
+
 /-- **one decrement of a counter, on whichever tape carries it.**  The counterpart of
 `counter_inc_at`: the rule pops while the value is positive and pushes otherwise, and the bit it
 branches on becomes the counter's new sign.  Stated for a tape and for any index, because the
@@ -6314,6 +6491,89 @@ theorem counter_dec_at {margin : ℕ} (polarity : Fin 16 → Bool) (c : Fin 16) 
       exact (padded_pop margin segments (counter_left_ne_nil segments hne)).symm
     · rw [if_neg hb, if_neg hb]
       exact (padded_push margin segments).symm
+
+/-- Two decrements use the source window after the first action, including a
+zero crossing. A mirror uses the same decisions and needs only equal value. -/
+noncomputable def decTwiceSign {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (c : Fin 16) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  decSignAt (q.polarity c) (counterSlot c) ws && decide
+    ((PalPeg.LocalStepFusion.windowAfter K 1 (ws (slotIndex (counterSlot c)))
+      [decAct q c ws]) 0 = encSeg PalPeg.LocalCounter.mark)
+
+noncomputable def decTwiceActs {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (c : Fin 16) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  [decAct q c ws, if decTwiceSign q c ws then
+    some (blankM, .left) else some (encSeg PalPeg.LocalCounter.mark, .right)]
+
+theorem decTwiceActs_length {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (c : Fin 16) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    (decTwiceActs q c ws).length = 2 := rfl
+
+theorem counter_decTwice_at {fppBound dpBound K margin : ℕ}
+    (q : QPhys fppBound dpBound) (c : Fin 16) (T : Slot → STape Γm)
+    (hK2 : 2 ≤ K) (hmargin : K ≤ margin)
+    (source segments : STape Seg) (value : PalPeg.GalilScaffoldCounter.Counter)
+    (hsource : absCtr source (q.polarity c) = value)
+    (habs : absCtr segments (q.polarity c) = value)
+    (hslot : T (counterSlot c) = padLeft margin (mapTape encSeg source))
+    (tape : STape Γm) (htape : tape = padLeft margin (mapTape encSeg segments)) :
+    ∃ segments' : STape Seg,
+      absCtr segments'
+          (decTwiceSign q c (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)))
+        = PalPeg.GalilScaffoldCounter.dec (PalPeg.GalilScaffoldCounter.dec value) ∧
+      PalPeg.CloseoutCoreEnc12.actList blankM tape
+          (decTwiceActs q c (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)))
+        = padLeft margin (mapTape encSeg segments') := by
+  let ws := fun i => PalPeg.Local.readWin blankM K (tapesOf T i)
+  let firstBit := decSignAt (q.polarity c) (counterSlot c) ws
+  have hfirst : firstBit = (q.polarity c && decide (PalPeg.LocalCounter.val source ≠ 0)) :=
+    decSignAt_eq (by omega) (by omega) (q.polarity c) c T source hslot
+  have hsame : PalPeg.LocalCounter.val segments = PalPeg.LocalCounter.val source :=
+    val_eq_of_absCtr_eq (habs.trans hsource.symm)
+  have hfirstTarget : firstBit = (q.polarity c && decide (PalPeg.LocalCounter.val segments ≠ 0)) := by
+    rw [hsame]; exact hfirst
+  have hact : decAct q c ws =
+      if firstBit then some (blankM, .left)
+      else some (encSeg PalPeg.LocalCounter.mark, .right) := rfl
+  obtain ⟨source', hsource', hsourceTape⟩ :=
+    counter_dec_at q.polarity c firstBit source value hsource hfirst (T (counterSlot c)) hslot
+  obtain ⟨segments', habs', htape'⟩ :=
+    counter_dec_at q.polarity c firstBit segments value habs hfirstTarget tape htape
+  rw [← hact] at hsourceTape htape'
+  have hwindow : PalPeg.LocalStepFusion.windowAfter K 1 (ws (slotIndex (counterSlot c)))
+      [decAct q c ws] = PalPeg.Local.readWin blankM 1 (padLeft margin (mapTape encSeg source')) := by
+    dsimp only [ws]
+    rw [tapesOf_apply, PalPeg.LocalStepFusion.windowAfter_readWin blankM _ _ (by simp; omega)
+      (by rw [hslot, pos_padLeft]; omega)]
+    exact congrArg (PalPeg.Local.readWin blankM 1) hsourceTape
+  have hsecond : decTwiceSign q c ws =
+      (firstBit && decide (PalPeg.LocalCounter.val source' ≠ 0)) := by
+    unfold decTwiceSign
+    rw [hwindow]
+    change (firstBit && decide (_ = _)) = _
+    have hz : PalPeg.LocalCounter.val source' ≠ 0 ↔
+        PalPeg.Local.readWin blankM 1 (padLeft margin (mapTape encSeg source')) 0
+          = encSeg PalPeg.LocalCounter.mark := by
+      simpa using not_congr
+        (counterZero_iff_below (K := 1) (margin := margin) (by omega) (by omega) source')
+    apply congrArg (fun bit : Bool => firstBit && bit)
+    rw [Bool.eq_iff_iff]
+    simpa only [decide_eq_true_eq] using hz.symm
+  have hsame' : PalPeg.LocalCounter.val segments' = PalPeg.LocalCounter.val source' :=
+    val_eq_of_absCtr_eq (habs'.trans hsource'.symm)
+  have hsecondTarget : decTwiceSign q c ws =
+      (firstBit && decide (PalPeg.LocalCounter.val segments' ≠ 0)) := by
+    rw [hsame']; exact hsecond
+  obtain ⟨result, hresult, hresultTape⟩ := counter_dec_at (fun _ => firstBit) c
+    (decTwiceSign q c ws) segments' (PalPeg.GalilScaffoldCounter.dec value) habs'
+    hsecondTarget (PalPeg.CloseoutCoreEnc12.actList blankM tape [decAct q c ws]) htape'
+  refine ⟨result, hresult, ?_⟩
+  change PalPeg.CloseoutCoreEnc12.actList blankM tape
+    ([decAct q c ws] ++ [if decTwiceSign q c ws then
+      some (blankM, .left) else some (encSeg PalPeg.LocalCounter.mark, .right)]) = _
+  rw [PalPeg.CloseoutCoreEnc13.actList_append]
+  exact hresultTape
 
 /-- **one tick of the fallback copy, on the work counter.**  The rule pops while the value is
 positive and pushes otherwise, and the bit it branches on becomes the counter's new sign, so the
@@ -6418,7 +6678,7 @@ theorem copy_one {fppBound dpBound : ℕ} (margin K : ℕ) (centre : GalilVM →
         (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
       ({q with placeGap := Function.update q.placeGap 1 (!q.placeGap 1), polarity := Function.update q.polarity 9 (workPositive q.polarity (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape)))}, newTapes) := by
   obtain ⟨segments, habsWork, hslotWork⟩ := henc.2.counters 9 x.vm.fpp.work rfl
-  obtain ⟨stackTape, junk, hsealed, hjunk, hstack, hslotPlace⟩ :=
+  obtain ⟨stackTape, junk, hsealed, hstack, hslotPlace⟩ :=
     henc.2.places 1 x.vm.fpp.walker rfl
   obtain ⟨segments', habs', hcount'⟩ :=
     copy_one_counter hK1 (by omega) q.polarity tapes segments x.vm.fpp.work habsWork hslotWork
@@ -6434,7 +6694,7 @@ theorem copy_one {fppBound dpBound : ℕ} (margin K : ℕ) (centre : GalilVM →
   refine ⟨encControl_copyOne x q henc.1 a hread _,
     encTapes_copyOne margin x q.polarity _ q.gap q.micro q.fppLive q.dpLive tapes newTapes
       henc.2 x.ctl a (fun c hc => Function.update_of_ne hc _ _) segments' ?_ ?_
-      stackTape' junk hsealed hjunk hstack' ?_ ?_ hprogOther hkept hidleShape⟩
+      stackTape' junk hsealed hstack' ?_ ?_ hprogOther hkept hidleShape⟩
   · show absCtr segments' (Function.update q.polarity 9 (workPositive q.polarity (fun tape => PalPeg.Local.readWin blankM K (tapesOf tapes tape))) 9) = _
     rw [Function.update_self]
     exact habs'
@@ -8156,42 +8416,49 @@ theorem absHead'_moveRight {v : PalPeg.LocalInputView.InputView}
     · exact PalPeg.LocalArrival.absHead'_moveRight_far hwf hnear (hready hgapTrue hnear) q
     · exact PalPeg.LocalArrival.absHead'_moveRight_near hnear q
 
-/-- the operation on the abstract head that a command carries out, for the three commands that
-move a head on its own: standing still, the step left and the step right.  The arrival is not
-here because it is not an operation on the head alone — it puts a letter into the pending list —
-and the two reposition steps are the halves of a step, which a mode names in pairs. -/
+/-- The abstract operation of a cursor command. `stepRight` crosses one whole input cell,
+so it implements two abstract right moves without adding another queue job or another slot.
+This is needed when the scan's chain consumes both internally and on the match event. -/
 def headOp : PalPeg.ConcreteLocalMachine.ViewCommand →
     Option (PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
   | .stay => some id
   | .moveLeft => some PalPeg.GalilScaffoldInputHead.left
   | .moveRight => some PalPeg.GalilScaffoldChainVerifier.right
+  | .stepRight => some (fun h => PalPeg.GalilScaffoldChainVerifier.right
+      (PalPeg.GalilScaffoldChainVerifier.right h))
   | _ => none
 
-/-- **the one entry point a mode's branch uses: the command it names is the operation the
-abstract tick does to that head.**  The step right carries the arrival condition; the other two
-are free. -/
-theorem absHead'_viewApply {v : PalPeg.LocalInputView.InputView}
-    (hwf : PalPeg.LocalInputView.WF v) (q : List (Fin 2))
-    (command : PalPeg.ConcreteLocalMachine.ViewCommand)
-    (hready : command = .moveRight →
-      v.gap = true → v.near = [] → PalPeg.RTQueue.toList v.far ≠ [])
-    (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
-    (hf : headOp command = some f) :
-    PalPeg.LocalArrival.absHead' (PalPeg.ConcreteLocalMachine.viewApply command v) q
-      = f (PalPeg.LocalArrival.absHead' v q) := by
-  cases command with
-  | stay =>
-    rw [show f = id from (Option.some.inj hf).symm]
-    rfl
-  | arrive a => exact absurd hf (by simp [headOp])
-  | moveRight =>
-    rw [show f = PalPeg.GalilScaffoldChainVerifier.right from (Option.some.inj hf).symm]
-    exact absHead'_moveRight hwf q (hready rfl)
-  | moveLeft =>
-    rw [show f = PalPeg.GalilScaffoldInputHead.left from (Option.some.inj hf).symm]
-    exact absHead'_moveLeftV v q
-  | stepRight => exact absurd hf (by simp [headOp])
-  | stepLeft => exact absurd hf (by simp [headOp])
+/-- A whole-cell move needs an arrived cell regardless of the gap bit. A half-cell
+right move needs one only when it crosses the cell boundary. -/
+def HeadReady (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (view : PalPeg.LocalInputView.InputView) : Prop :=
+  match command with
+  | .moveRight => view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []
+  | .stepRight => view.near = [] → PalPeg.RTQueue.toList view.far ≠ []
+  | _ => True
+
+/-- With no pending arrivals in the encoding, the two abstract availability guards
+supply the whole-cell command's arrival condition. No extra lookahead assumption is needed. -/
+theorem headReady_stepRight_of_canRight (view : PalPeg.LocalInputView.InputView)
+    (hfirst : PalPeg.GalilScaffoldChainVerifier.canRight (PalPeg.LocalArrival.absHead' view []))
+    (hsecond : PalPeg.GalilScaffoldChainVerifier.canRight
+      (PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' view []))) :
+    HeadReady .stepRight view := by
+  intro hnear
+  cases hgap : view.gap with
+  | false =>
+    simpa [PalPeg.GalilScaffoldChainVerifier.canRight, PalPeg.GalilScaffoldChainVerifier.right,
+      PalPeg.LocalArrival.absHead', hgap, hnear] using hsecond
+  | true =>
+    simpa [PalPeg.GalilScaffoldChainVerifier.canRight, PalPeg.LocalArrival.absHead', hgap, hnear]
+      using hfirst
+
+/-- Existing rows using only half-cell moves retain exactly their old arrival condition. -/
+theorem headReady_of_ne_stepRight (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (view : PalPeg.LocalInputView.InputView) (hwhole : command ≠ .stepRight)
+    (hready : command = .moveRight → view.gap = true → view.near = [] →
+      PalPeg.RTQueue.toList view.far ≠ []) : HeadReady command view := by
+  cases command <;> first | exact hready rfl | exact (hwhole rfl).elim | trivial
 
 /-- **a view's step left does not change what it holds.**  A half-step moves only the bit and a
 full step moves the boundary between the two stacks, so the cells are the same list. -/
@@ -8264,13 +8531,68 @@ theorem wf_moveRight {v : PalPeg.LocalInputView.InputView} (hwf : PalPeg.LocalIn
           simp [PalPeg.LocalInputView.stepRight, hhead]]
         exact PalPeg.RTQueue.inv_tail (hwf : PalPeg.RTQueue.Inv far)
 
+/-- Two abstract half-cell moves use exactly one whole-cell view move, at either parity. -/
+theorem moveRight_twice (v : PalPeg.LocalInputView.InputView) :
+    PalPeg.LocalInputView.moveRight (PalPeg.LocalInputView.moveRight v)
+      = PalPeg.LocalInputView.stepRight v := by
+  rcases v with ⟨back, focus, near, far, gap⟩
+  cases gap <;> cases near <;>
+    simp [PalPeg.LocalInputView.moveRight, PalPeg.LocalInputView.stepRight]
+  all_goals cases PalPeg.RTQueue.head? far <;> rfl
+
+/-- If a whole-cell move is ready, its second half-cell move is ready too. -/
+theorem ready_secondRight {v : PalPeg.LocalInputView.InputView}
+    (hready : v.near = [] → PalPeg.RTQueue.toList v.far ≠ []) :
+    (PalPeg.LocalInputView.moveRight v).gap = true →
+      (PalPeg.LocalInputView.moveRight v).near = [] →
+        PalPeg.RTQueue.toList (PalPeg.LocalInputView.moveRight v).far ≠ [] := by
+  cases hg : v.gap <;> simp [PalPeg.LocalInputView.moveRight, hg]
+  exact hready
+
+/-- One existing view slot realizes the two consumptions of a matched chain. -/
+theorem absHead'_stepRight {v : PalPeg.LocalInputView.InputView}
+    (hwf : PalPeg.LocalInputView.WF v) (q : List (Fin 2))
+    (hready : v.near = [] → PalPeg.RTQueue.toList v.far ≠ []) :
+    PalPeg.LocalArrival.absHead' (PalPeg.LocalInputView.stepRight v) q
+      = PalPeg.GalilScaffoldChainVerifier.right
+          (PalPeg.GalilScaffoldChainVerifier.right (PalPeg.LocalArrival.absHead' v q)) := by
+  rw [← moveRight_twice v, absHead'_moveRight (wf_moveRight hwf) q (ready_secondRight hready),
+    absHead'_moveRight hwf q (fun _ => hready)]
+
+/-- **the one entry point a mode's branch uses: the command it names is the operation the
+abstract tick does to that head.** Both right commands carry their respective arrival
+conditions; standing still and moving left are free. -/
+theorem absHead'_viewApply {v : PalPeg.LocalInputView.InputView}
+    (hwf : PalPeg.LocalInputView.WF v) (q : List (Fin 2))
+    (command : PalPeg.ConcreteLocalMachine.ViewCommand)
+    (hready : HeadReady command v)
+    (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hf : headOp command = some f) :
+    PalPeg.LocalArrival.absHead' (PalPeg.ConcreteLocalMachine.viewApply command v) q
+      = f (PalPeg.LocalArrival.absHead' v q) := by
+  cases command with
+  | stay =>
+    rw [show f = id from (Option.some.inj hf).symm]
+    rfl
+  | arrive a => exact absurd hf (by simp [headOp])
+  | moveRight =>
+    rw [show f = PalPeg.GalilScaffoldChainVerifier.right from (Option.some.inj hf).symm]
+    exact absHead'_moveRight hwf q hready
+  | moveLeft =>
+    rw [show f = PalPeg.GalilScaffoldInputHead.left from (Option.some.inj hf).symm]
+    exact absHead'_moveLeftV v q
+  | stepRight =>
+    rw [show f = (fun h => PalPeg.GalilScaffoldChainVerifier.right
+      (PalPeg.GalilScaffoldChainVerifier.right h)) from (Option.some.inj hf).symm]
+    exact absHead'_stepRight hwf q hready
+  | stepLeft => exact absurd hf (by simp [headOp])
+
 /-- **what a view holds, and its queue's invariant, survive the command a mode names.**  These
 are the two side facts `EncTapes.heads` carries about a view, so a mode's branch gets them back
 from the same dispatch that gives it the abstract head. -/
 theorem viewCells_viewApply {v : PalPeg.LocalInputView.InputView}
     (hwf : PalPeg.LocalInputView.WF v) (command : PalPeg.ConcreteLocalMachine.ViewCommand)
-    (hready : command = .moveRight →
-      v.gap = true → v.near = [] → PalPeg.RTQueue.toList v.far ≠ [])
+    (hready : HeadReady command v)
     (hcells : PalPeg.LocalViewCells.ViewCells v)
     (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
     (hf : headOp command = some f) :
@@ -8282,12 +8604,15 @@ theorem viewCells_viewApply {v : PalPeg.LocalInputView.InputView}
   | moveRight =>
     exact ⟨letters, by
       show PalPeg.LocalInputView.cells (PalPeg.LocalInputView.moveRight v) = _
-      rw [cells_moveRight hwf (hready rfl), hletters]⟩
+      rw [cells_moveRight hwf hready, hletters]⟩
   | moveLeft =>
     exact ⟨letters, by
       show PalPeg.LocalInputView.cells (PalPeg.LocalInputView.moveLeftV v) = _
       rw [cells_moveLeftV v, hletters]⟩
-  | stepRight => exact absurd hf (by simp [headOp])
+  | stepRight =>
+    exact ⟨letters, by
+      show PalPeg.LocalInputView.cells (PalPeg.LocalInputView.stepRight v) = _
+      rw [PalPeg.LocalInputView.cells_stepRight hwf, hletters]⟩
   | stepLeft => exact absurd hf (by simp [headOp])
 
 theorem wf_viewApply {v : PalPeg.LocalInputView.InputView} (hwf : PalPeg.LocalInputView.WF v)
@@ -8311,7 +8636,10 @@ theorem wf_viewApply {v : PalPeg.LocalInputView.InputView} (hwf : PalPeg.LocalIn
     show PalPeg.RTQueue.Inv (PalPeg.LocalInputView.moveLeftV v).far
     rw [hfar]
     exact hwf
-  | stepRight => exact absurd hf (by simp [headOp])
+  | stepRight =>
+    show PalPeg.LocalInputView.WF (PalPeg.LocalInputView.stepRight v)
+    rw [← moveRight_twice v]
+    exact wf_moveRight (wf_moveRight hwf)
   | stepLeft => exact absurd hf (by simp [headOp])
 
 /-- **the heads of the encoding after a tick.**  Everything the encoding asks about a head is
@@ -8344,8 +8672,7 @@ theorem heads_afterTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargi
     (habs : PalPeg.LocalArrival.absHead' view [] = head)
     (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
     (hf : headOp ((qs 1).commands v) = some f) (hhead' : head' = f head)
-    (hready : (qs 1).commands v = .moveRight →
-      view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    (hready : HeadReady ((qs 1).commands v) view) :
     ∃ (view' : PalPeg.LocalInputView.InputView)
         (viewTapes' : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
       PalPeg.LocalArrival.absHead' view' [] = head' ∧
@@ -8392,9 +8719,8 @@ theorem heads_afterFusedStep {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
     (hf : headOp ((PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x
       input 1).1.commands v) = some f)
     (hhead' : head' = f head)
-    (hready : (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x input
-        1).1.commands v = .moveRight →
-      view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    (hready : HeadReady ((PalPeg.LocalStepFusion.idealRun
+      (tickRule hK base commandsOf baseActs baseLen) blankM x input 1).1.commands v) view) :
     ∃ (view' : PalPeg.LocalInputView.InputView)
         (viewTapes' : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
       PalPeg.LocalArrival.absHead' view' [] = head' ∧
@@ -8544,6 +8870,145 @@ theorem decToken_encToken (t : Token) : decToken (encToken t) = t := by
   · rw [if_pos h, h]; rfl
   · rw [if_neg h]
 
+/-- Availability is read from the gap bit and the two possible sources of the next letter. -/
+noncomputable def availableTest {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4) : Bool :=
+  let tops := PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1 (viewWindows v ws)
+  !q.gap v || tops.near.isSome || tops.front.isSome
+
+/-- On an encoded view there is no unarrived suffix, so this is the abstract availability test. -/
+theorem availableTest_of_view {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4)
+    (view : PalPeg.LocalInputView.InputView)
+    (htops : PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1 (viewWindows v ws)
+      = PalPeg.ConcreteLocalMachine.viewTops view)
+    (hgap : q.gap v = view.gap) (hcells : PalPeg.LocalViewCells.ViewCells view)
+    (hwf : PalPeg.LocalInputView.WF view) :
+    availableTest q ws v = PalPeg.GalilScaffoldChainInputSupply.canRightTest
+      (PalPeg.LocalArrival.absHead' view []) := by
+  unfold availableTest
+  rw [htops, hgap]
+  obtain ⟨letters, hnear⟩ := PalPeg.LocalViewCells.near_letters hcells
+  simp only [PalPeg.ConcreteLocalMachine.viewTops, PalPeg.RTQueue.head?_eq hwf,
+    PalPeg.GalilScaffoldChainInputSupply.canRightTest, PalPeg.LocalArrival.absHead',
+    List.append_nil, hnear]
+  cases letters <;> cases PalPeg.RTQueue.toList view.far <;> simp
+
+/-- The availability bit follows directly from the existing head encoding. -/
+theorem availableTest_eq {fppBound dpBound K margin : ℕ} {x : State GalilVM}
+    {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (hmargin : K ≤ margin) (v : Fin 4) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hhead : headOf x v = some head) :
+    availableTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) v
+      = PalPeg.GalilScaffoldChainInputSupply.canRightTest head := by
+  obtain ⟨view, viewTapes, habs, hrep, hslots, hcells, hwf⟩ := henc.heads v head hhead
+  rw [← habs]
+  apply availableTest_of_view q _ v view _ hrep.gap hcells hwf
+  rw [viewWindows_of_encoded v T viewTapes hslots]
+  exact PalPeg.ConcreteLocalMachine.viewTopsOfWindows_eq hmargin hcells hrep
+
+noncomputable def counterZeroTest {fppBound dpBound K : ℕ} (_q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (c : Fin 16) : Bool :=
+  decide (belowRead ws (counterSlot c) ≠ encSeg PalPeg.LocalCounter.mark)
+
+noncomputable def counterPositiveTest {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (c : Fin 16) : Bool :=
+  q.polarity c && !counterZeroTest q ws c
+
+noncomputable def counterNegativeTest {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (c : Fin 16) : Bool :=
+  !q.polarity c && !counterZeroTest q ws c
+
+theorem counterZeroTest_eq {fppBound dpBound K margin : ℕ} {x : State GalilVM}
+    {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (hK1 : 1 ≤ K) (hmargin : K ≤ margin) (c : Fin 16)
+    (value : PalPeg.GalilScaffoldCounter.Counter) (hvalue : counterOf x c = some value) :
+    counterZeroTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) c
+      = PalPeg.GalilScaffoldCounter.zero value := by
+  rw [Bool.eq_iff_iff, counterZero_iff_belowRead henc hK1 hmargin c value hvalue]
+  simp [counterZeroTest]
+
+theorem counterPositiveTest_eq {fppBound dpBound K margin : ℕ} {x : State GalilVM}
+    {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (hK1 : 1 ≤ K) (hmargin : K ≤ margin) (c : Fin 16)
+    (value : PalPeg.GalilScaffoldCounter.Counter) (hvalue : counterOf x c = some value) :
+    counterPositiveTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) c
+      = PalPeg.GalilScaffoldCounter.positive value := by
+  rw [Bool.eq_iff_iff, counterPositive_iff_belowRead henc hK1 hmargin c value hvalue]
+  simp [counterPositiveTest, counterZeroTest]
+
+theorem counterNegativeTest_eq {fppBound dpBound K margin : ℕ} {x : State GalilVM}
+    {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (hK1 : 1 ≤ K) (hmargin : K ≤ margin) (c : Fin 16)
+    (value : PalPeg.GalilScaffoldCounter.Counter) (hvalue : counterOf x c = some value) :
+    counterNegativeTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) c
+      = PalPeg.GalilScaffoldCounter.negative value := by
+  unfold counterNegativeTest
+  rw [counterZeroTest_eq henc hK1 hmargin c value hvalue]
+  obtain ⟨segments, habs, -⟩ := henc.counters c value hvalue
+  rw [← habs, PalPeg.LocalCounter.zero_iff]
+  cases q.polarity c <;> cases hv : PalPeg.LocalCounter.val segments <;>
+    simp [absCtr, PalPeg.GalilScaffoldCounter.negative, PalPeg.GalilScaffoldCounter.ofNat,
+      PalPeg.LocalCounter.negOfNat, hv, List.replicate_succ]
+
+/-- Restart has priority over both background arms and comparison. Its three counter tests
+are margin nonnegative, last positive, and lag zero; a broken tag alone does not restart. -/
+noncomputable def restartTest {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  decide (q.chainTag = .broken) && !counterNegativeTest q ws 12
+    && counterPositiveTest q ws 15 && counterZeroTest q ws 11
+
+theorem restartTest_eq {fppBound dpBound K margin : ℕ} {w : List (Fin 2)}
+    {x : State GalilVM} {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (henc : Enc w margin x (q, T)) (hK1 : 1 ≤ K) (hmargin : K ≤ margin) :
+    restartTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = PalPeg.GalilScaffoldChainInputSupply.restartGuardTest x.vm := by
+  unfold restartTest PalPeg.GalilScaffoldChainInputSupply.restartGuardTest
+  rw [henc.1.chainTag]
+  cases hchain : x.vm.chain with
+  | idle | copy | back | watch => simp [chainTagOf]
+  | broken wm =>
+    simp only [chainTagOf, decide_true, Bool.true_and]
+    rw [counterNegativeTest_eq henc.2 hK1 hmargin 12 wm.margin
+        (by simp [counterOf, hchain]),
+      counterPositiveTest_eq henc.2 hK1 hmargin 15 wm.machine.control.last
+        (by simp [counterOf, hchain]),
+      counterZeroTest_eq henc.2 hK1 hmargin 11 wm.lag (by simp [counterOf, hchain])]
+
+/-- The four phases before the comparison result is known. -/
+inductive ScanPhase | restart | quiet | count | compare
+  deriving DecidableEq
+
+def scanPhaseOf (restart replaying available : Bool) (clock : ℕ) : ScanPhase :=
+  if restart then .restart
+  else if !replaying && !available then .quiet
+  else if 1 < clock then .count
+  else .compare
+
+noncomputable def scanPhase {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : ScanPhase :=
+  scanPhaseOf (restartTest q ws) q.ctl.replaying (availableTest q ws 2) q.ctl.clock.val
+
+/-- The finite window chooses the same pre-comparison phase as the abstract controller. -/
+theorem scanPhase_eq {fppBound dpBound K margin : ℕ} {w : List (Fin 2)}
+    {x : State GalilVM} {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (henc : Enc w margin x (q, T)) (hK1 : 1 ≤ K) (hmargin : K ≤ margin) :
+    scanPhase q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = scanPhaseOf (PalPeg.GalilScaffoldChainInputSupply.restartGuardTest x.vm)
+          x.ctl.replaying (PalPeg.GalilScaffoldChainInputSupply.canRightTest x.vm.right)
+          x.ctl.clock := by
+  unfold scanPhase
+  rw [restartTest_eq henc hK1 hmargin, availableTest_eq henc.2 hmargin 2 x.vm.right rfl]
+  have hreplaying := congrArg PalPeg.GalilScaffoldController.Control.replaying henc.1.ctl
+  have hclock := congrArg PalPeg.GalilScaffoldController.Control.clock henc.1.ctl
+  change q.ctl.replaying = x.ctl.replaying at hreplaying
+  change q.ctl.clock.val = x.ctl.clock at hclock
+  rw [hreplaying, hclock]
+
 /-- **when a scan tick steps the chain's verifier.**  A chain steps its verifier in exactly one
 shape — the watching one — and then only when it has lag to spend and its period tape offers a
 symbol to compare.  Both verdicts move the verifier right: a match consumes the letter, and a
@@ -8557,14 +9022,6 @@ noncomputable def chainConsumesTest {fppBound dpBound K : ℕ} (q : QPhys fppBou
   decide (q.chainTag = ChainTag.watchers)
     && (q.polarity 11 && decide (belowRead ws (counterSlot 11) = encSeg PalPeg.LocalCounter.mark))
     && (PalPeg.GalilScaffoldChainConsume.symbol (decToken (centreRead ws periodSlot))).isSome
-
-/-- **the scan's row.**  The three input cursors stand still through a background tick — the
-scan reads the input through its comparison, not by walking — and the fourth moves exactly when
-the chain consumes. -/
-noncomputable def scanCommands {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
-    Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand :=
-  fun v => if v = 3 then (if chainConsumesTest q ws then .moveRight else .stay) else .stay
 
 /-- **the letter a cursor is about to reach is a reading of its view.**  Stepping the abstract
 head right and reading it is stepping the view right and reading that, so the letter the chain's
@@ -8725,6 +9182,8 @@ noncomputable def leavingLetter {fppBound dpBound K : ℕ} (q : QPhys fppBound d
   if q.gap v then
     (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
       (viewWindows v ws)).focus.map PalPeg.GalilScaffoldPlace.letter
+  else if (PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro v).2.1
+      (viewWindows v ws)).focus = none then none
   else
     (PalPeg.ConcreteLocalMachine.symLetter (PalPeg.ConcreteLocalMachine.belowSym
       (viewWindows v ws PalPeg.ConcreteLocalMachine.backTape))).map (fun _ => (2 : Fin 3))
@@ -8735,8 +9194,7 @@ theorem leavingLetter_eq {fppBound dpBound K : ℕ} (margin : ℕ) (q : QPhys fp
     (viewTapes : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc)
     (hrep : PalPeg.ConcreteLocalMachine.ViewRep margin view (q.gap v) (q.micro v) viewTapes)
     (hold : ∀ t, T (headSlot v t) = mapTape encCell (viewTapes t))
-    (hcells : PalPeg.LocalViewCells.ViewCells view) (hK1 : 1 ≤ K) (hKm : K ≤ margin)
-    (a : Option (Fin 2)) (rest : List (Option (Fin 2))) (hback : view.back = a :: rest) :
+    (hcells : PalPeg.LocalViewCells.ViewCells view) (hK1 : 1 ≤ K) (hKm : K ≤ margin) :
     leavingLetter q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) v
       = PalPeg.LocalChain.readV (PalPeg.LocalInputView.moveLeftV view) := by
   have hwin : viewWindows v (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
@@ -8747,19 +9205,29 @@ theorem leavingLetter_eq {fppBound dpBound K : ℕ} (margin : ℕ) (q : QPhys fp
       = PalPeg.ConcreteLocalMachine.viewTops view := by
     rw [hwin]
     exact PalPeg.ConcreteLocalMachine.viewTopsOfWindows_eq hKm hcells hrep
-  have hbelow : PalPeg.ConcreteLocalMachine.symLetter (PalPeg.ConcreteLocalMachine.belowSym
-      (viewWindows v (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
-        PalPeg.ConcreteLocalMachine.backTape)) = a := by
-    rw [hwin]
-    exact viewBack_below view (q.gap v) (q.micro v) viewTapes hrep hK1 hKm a rest hback
   unfold leavingLetter
-  rw [readV_moveLeftV view, htops, hbelow]
-  by_cases hg : view.gap = true
-  · have hgq : q.gap v = view.gap := hrep.gap
-    rw [hgq, if_pos hg, if_pos hg]
+  rw [readV_moveLeftV view, htops, hrep.gap]
+  by_cases hgap : view.gap = true
+  · rw [if_pos hgap, if_pos hgap]
     rfl
-  · have hgq : q.gap v = view.gap := hrep.gap
-    rw [hgq, if_neg hg, if_neg hg, stepLeft_focus_of_back view a rest hback]
+  · rw [if_neg hgap, if_neg hgap]
+    change (if view.focus = none then none else _) = _
+    by_cases hfocus : view.focus = none
+    · have hback := (PalPeg.LocalViewCells.back_nil_iff_focus_none hcells).mpr hfocus
+      simp [hfocus, PalPeg.LocalInputView.stepLeft, hback]
+    · rw [if_neg hfocus]
+      have hnonempty : view.back ≠ [] := fun h =>
+        hfocus ((PalPeg.LocalViewCells.back_nil_iff_focus_none hcells).mp h)
+      obtain ⟨a, rest, hback⟩ : ∃ a rest, view.back = a :: rest := by
+        cases hb : view.back with
+        | nil => exact (hnonempty hb).elim
+        | cons a rest => exact ⟨a, rest, rfl⟩
+      have hbelow : PalPeg.ConcreteLocalMachine.symLetter (PalPeg.ConcreteLocalMachine.belowSym
+          (viewWindows v (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+            PalPeg.ConcreteLocalMachine.backTape)) = a := by
+        rw [hwin]
+        exact viewBack_below view (q.gap v) (q.micro v) viewTapes hrep hK1 hKm a rest hback
+      rw [hbelow, stepLeft_focus_of_back view a rest hback]
 
 /-- **and that reading is the letter the cursor really reaches.**  The three symbols the windows
 show are the view's own three, the near stack of a represented view carries letters and never a
@@ -8819,6 +9287,24 @@ theorem landingLetter_of_verifier {fppBound dpBound K : ℕ} (q : QPhys fppBound
   rw [landingLetter_eq q ws v view htops hgap hcells hinv hready,
     read_right_absHead' junk hwf (fun hg hn => hready hg hn)]
 
+/-- A represented head's next reading comes from its own window. -/
+theorem landingLetter_of_encoded {fppBound dpBound K margin : ℕ} {x : State GalilVM}
+    {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (hmargin : K ≤ margin) (v : Fin 4) (head : PalPeg.GalilScaffoldInputHead.PlaceHead)
+    (hhead : headOf x v = some head) (hcan : PalPeg.GalilScaffoldChainVerifier.canRight head) :
+    landingLetter q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) v
+      = PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldChainVerifier.right head) := by
+  obtain ⟨view, viewTapes, habs, hrep, hslots, hcells, hwf⟩ := henc.heads v head hhead
+  have hready : view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ [] := by
+    rw [← habs, PalPeg.LocalArrival.canRight_absHead'] at hcan
+    intro hg hn
+    simpa [hg, hn] using hcan
+  rw [← habs]
+  apply landingLetter_of_verifier q _ v view [] _ hrep.gap hcells hwf hwf hready
+  rw [viewWindows_of_encoded v T viewTapes hslots]
+  exact PalPeg.ConcreteLocalMachine.viewTopsOfWindows_eq hmargin hcells hrep
+
 /-- **whether the comparison agrees, as the machine decides it.**  The scan compares the letter
 its left cursor leaves for with the letter its right cursor reaches; both are readings of the
 window, so the bit the whole arm turns on is too.
@@ -8850,6 +9336,37 @@ theorem agreeTest_eq {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
   unfold agreeTest
   rw [hleft, hright, read_left_absHead' left junkLeft,
     read_right_absHead' junkRight hwfRight hreadyRight]
+
+/-- The comparison bit follows from the encoded heads, including the left boundary.
+The right availability premise is the one used by the abstract comparison itself. -/
+theorem agreeTest_of_encoded {fppBound dpBound K margin : ℕ} {x : State GalilVM}
+    {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (hK1 : 1 ≤ K) (hmargin : K ≤ margin)
+    (hcan : PalPeg.GalilScaffoldChainVerifier.canRight x.vm.right) :
+    agreeTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = decide (PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldInputHead.left x.vm.left)
+          = PalPeg.GalilScaffoldInputHead.read
+              (PalPeg.GalilScaffoldChainVerifier.right x.vm.right)) := by
+  obtain ⟨left, leftTapes, hleft, hleftRep, hleftSlots, hleftCells, -⟩ :=
+    henc.heads 0 x.vm.left rfl
+  obtain ⟨right, rightTapes, hright, hrightRep, hrightSlots, hrightCells, hrightWf⟩ :=
+    henc.heads 2 x.vm.right rfl
+  have hready : right.gap = true → right.near = [] → PalPeg.RTQueue.toList right.far ≠ [] := by
+    rw [← hright, PalPeg.LocalArrival.canRight_absHead'] at hcan
+    intro hg hn
+    simpa [hg, hn] using hcan
+  have htops : PalPeg.ConcreteLocalMachine.viewTopsOfWindows (q.micro 2).2.1
+      (viewWindows 2 (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
+      = PalPeg.ConcreteLocalMachine.viewTops right := by
+    rw [viewWindows_of_encoded 2 T rightTapes hrightSlots]
+    exact PalPeg.ConcreteLocalMachine.viewTopsOfWindows_eq hmargin hrightCells hrightRep
+  have hagree := agreeTest_eq q _ left right [] []
+    (leavingLetter_eq margin q T 0 left leftTapes hleftRep hleftSlots hleftCells hK1 hmargin)
+    (landingLetter_eq q _ 2 right htops hrightRep.gap hrightCells hrightWf hready)
+    hrightWf hready
+  rw [hleft, hright] at hagree
+  exact hagree
 
 /-- **the chain's verdict, as the machine decides it.**  The period tape offers a symbol or it
 does not; if it does, the verdict is whether the letter the verifier reaches is that symbol.
@@ -9008,6 +9525,110 @@ theorem scanConsumeActs_of_quiet {fppBound dpBound K : ℕ} (q : QPhys fppBound 
   unfold scanConsumeActs
   rw [if_neg (by rw [hquiet]; exact Bool.false_ne_true)]
 
+/-- Read the result of the chain's internal consumption inside the original window.
+The erased program half is included so these are exactly the base rule's tape results. -/
+noncomputable def scanAfterConsumeWindows {fppBound dpBound K : ℕ}
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin tapeCountM → PalPeg.Local.Window Γm 1 :=
+  fun tape => PalPeg.LocalStepFusion.windowAfter K 1 (ws tape)
+    (withErase q.fppLive ws (scanConsumeActs q ws) tape)
+
+/-- Whether the match event consumes after the internal chain step. The first verdict
+matters: an internal mismatch has already broken the chain. On a successful consumption,
+lag and period must be read from the resulting tapes, not from the original window. -/
+noncomputable def chainMatchConsumesTest {fppBound dpBound K : ℕ}
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  match q.chainTag with
+  | .watchers =>
+      if chainConsumesTest q ws then
+        if watchVerdictTest q ws = some true then
+          counterZeroTest (scanConsumeNext q ws) (scanAfterConsumeWindows q ws) 11 &&
+            (PalPeg.GalilScaffoldChainConsume.symbol
+              (decToken (centreRead (scanAfterConsumeWindows q ws) periodSlot))).isSome
+        else false
+      else counterZeroTest q ws 11 &&
+        (PalPeg.GalilScaffoldChainConsume.symbol (decToken (centreRead ws periodSlot))).isSome
+  | .back =>
+      PalPeg.GalilScaffoldChainPeriod.isFirst (decToken (centreRead ws periodSlot)) &&
+        counterZeroTest q ws 11 &&
+        (PalPeg.GalilScaffoldChainConsume.symbol (decToken
+          ((PalPeg.LocalStepFusion.windowAfter K 0 (ws (slotIndex periodSlot))
+            [some (centreRead ws periodSlot, .right)]) 0))).isSome
+  | _ => false
+
+noncomputable def singlePositiveRead {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (c : Fin 16) : Bool :=
+  counterPositiveTest q ws c && decide
+    ((PalPeg.LocalStepFusion.windowAfter K 1 (ws (slotIndex (counterSlot c))) [decAct q c ws]) 0
+      ≠ encSeg PalPeg.LocalCounter.mark)
+
+/-- The caller supplies the right cursor's post-comparison letter. -/
+noncomputable def shiftRead {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (letter : Option (Fin 3)) : Bool :=
+  decide (q.chainTag = .watchers) && counterZeroTest q ws 11 && decide (q.chainPhase = 4) &&
+    !q.chainBroken && (if q.periodOnly then singlePositiveRead q ws 0 else !counterNegativeTest q ws 12) &&
+    decide (PalPeg.GalilScaffoldChainConsume.symbol (decToken (centreRead ws periodSlot)) = letter)
+
+noncomputable def internalWindows {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin tapeCountM → PalPeg.Local.Window Γm 2 :=
+  fun j => PalPeg.LocalStepFusion.windowAfter K 2 (ws j) (withErase q.fppLive ws (scanConsumeActs q ws) j)
+
+noncomputable def internalControl {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : QPhys fppBound dpBound :=
+  if chainConsumesTest q ws then scanConsumeNext q ws else q
+
+noncomputable def scanShiftRead {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  shiftRead (internalControl q ws) (internalWindows q ws) (landingLetter q ws 2)
+
+/-- Both chain events fit in the existing view slot: two half-cell moves are one
+whole-cell move. No extra read of the verifier is needed to choose the motion. -/
+def verifierCommand (internal matched : Bool) : PalPeg.ConcreteLocalMachine.ViewCommand :=
+  if internal then (if matched then .stepRight else .moveRight)
+  else if matched then .moveRight else .stay
+
+/-- Comparison moves left and right simultaneously. Its verifier may move zero, one,
+or two half-cells; background ticks only run the internal chain step. -/
+noncomputable def scanCommands {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand :=
+  if scanPhase q ws = .compare then
+    fun v => if v = 0 then .moveLeft else if v = 2 then .moveRight
+      else if v = 3 then verifierCommand (chainConsumesTest q ws)
+        (if agreeTest q ws then chainMatchConsumesTest q ws else scanShiftRead q ws) else .stay
+  else fun v => if v = 3 then (if chainConsumesTest q ws then .moveRight else .stay) else .stay
+
+/-- The quiet phase is established from the encoding and the abstract guards. -/
+theorem scanPhase_of_quiet {fppBound dpBound K margin : ℕ} {w : List (Fin 2)}
+    {x : State GalilVM} {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (henc : Enc w margin x (q, T)) (hK1 : 1 ≤ K) (hmargin : K ≤ margin)
+    (hrestart : PalPeg.GalilScaffoldChainInputSupply.restartGuardTest x.vm = false)
+    (hquiet : (!x.ctl.replaying &&
+      !PalPeg.GalilScaffoldChainInputSupply.canRightTest x.vm.right) = true) :
+    scanPhase q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = .quiet := by
+  rw [scanPhase_eq henc hK1 hmargin]
+  simp only [scanPhaseOf, hrestart, Bool.false_eq_true, if_false, hquiet, if_true]
+
+/-- The comparison row's three input cursors do not depend on the chain's verdict. -/
+theorem scanCommands_compare_cursors {fppBound dpBound K : ℕ}
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hcompare : scanPhase q ws = .compare) :
+    scanCommands q ws 0 = .moveLeft ∧ scanCommands q ws 1 = .stay ∧
+      scanCommands q ws 2 = .moveRight := by
+  simp [scanCommands, hcompare]
+
+theorem scanCommands_compare_verifier {fppBound dpBound K : ℕ}
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hcompare : scanPhase q ws = .compare) :
+    scanCommands q ws 3 = verifierCommand (chainConsumesTest q ws)
+      (if agreeTest q ws then chainMatchConsumesTest q ws else scanShiftRead q ws) := by
+  simp [scanCommands, hcompare]
+
+def shiftCommands : Fin 4 → PalPeg.ConcreteLocalMachine.ViewCommand :=
+  fun v => if v = 0 then .stepRight else if v = 1 then .moveRight else .stay
+
+
 /-- **the command table, as far as the branches that are proved reach.**  Five of them — the end
 mark, the walk home, the back half of the choice, the preparation program and the fallback copy —
 name nothing but counters, program tapes and period tapes, so every head stands still through
@@ -9029,7 +9650,7 @@ noncomputable def modeCommands {fppBound dpBound K : ℕ} (first : Fin 9)
   | PalPeg.GalilScaffoldController.Mode.copy => stayCommands
   | PalPeg.GalilScaffoldController.Mode.rewind => rewindCommands first q.fppLive q ws
   | PalPeg.GalilScaffoldController.Mode.shift =>
-      if remainsTest q.polarity ws then rest q i ws else stayCommands
+      if remainsTest q.polarity ws then shiftCommands else stayCommands
   | PalPeg.GalilScaffoldController.Mode.scan => scanCommands q ws
   | _ => rest q i ws
 
@@ -9045,11 +9666,13 @@ theorem modeCommands_scan {fppBound dpBound K : ℕ} (first : Fin 9) (rest)
 /-- **the operation each of the scan's commands names.**  Three cursors stay where they are and
 the fourth steps right exactly when the chain consumes. -/
 theorem headOp_scanCommands {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
-    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4) :
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (v : Fin 4)
+    (hbackground : scanPhase q ws ≠ .compare) :
     headOp (scanCommands q ws v)
       = some (if v = 3 ∧ chainConsumesTest q ws then
           PalPeg.GalilScaffoldChainVerifier.right else id) := by
   unfold scanCommands
+  rw [if_neg hbackground]
   by_cases hv : v = 3
   · rw [if_pos hv]
     by_cases hc : chainConsumesTest q ws
@@ -9162,8 +9785,7 @@ theorem heads_afterTableTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
     (habs : PalPeg.LocalArrival.absHead' view [] = head)
     (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
     (hf : headOp command = some f) (hhead' : head' = f head)
-    (hready : command = .moveRight →
-      view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    (hready : HeadReady command view) :
     ∃ (view' : PalPeg.LocalInputView.InputView)
         (viewTapes' : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
       PalPeg.LocalArrival.absHead' view' [] = head' ∧
@@ -9185,7 +9807,7 @@ theorem heads_afterTableTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
     rw [commands_afterFirstStep hK base commandsOf baseActs baseLen x input hslot0 v, hrow]
   exact heads_afterFusedStep hK hmargin base commandsOf baseActs baseLen v x input hslot0 hfused
     view hwf hcells viewTapes hold hrep howed head head' habs f (by rw [hcommand]; exact hf)
-    hhead' (fun hmove => hready (hcommand.symm.trans hmove))
+    hhead' (by rw [hcommand]; exact hready)
 
 /-- **a tick in which no head moves keeps the heads of the encoding.**  Every mode whose branch
 touches only counters, program tapes and period tapes gets its head obligations from here with no
@@ -9224,7 +9846,7 @@ theorem heads_afterStillTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (h
             PalPeg.LocalViewCells.ViewCells view' ∧ PalPeg.LocalInputView.WF view' :=
   heads_afterTableTick hK hmargin base commandsOf baseActs baseLen v x input hslot0 .stay
     (by rw [hstay]; rfl) hfused view hwf hcells viewTapes hold hrep howed head head habs id rfl rfl
-    (fun h => absurd h (by simp))
+    True.intro
 
 /-- **a tick whose row walks this head one cell left keeps the heads of the encoding, with that
 head stepped left.**  The step left asks nothing of the head: a half-step moves only its bit and
@@ -9264,7 +9886,7 @@ theorem heads_afterLeftTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hm
   heads_afterTableTick hK hmargin base commandsOf baseActs baseLen v x input hslot0 .moveLeft
     hleft hfused view hwf hcells viewTapes hold hrep howed head
     (PalPeg.GalilScaffoldInputHead.left head) habs PalPeg.GalilScaffoldInputHead.left rfl rfl
-    (fun h => absurd h (by simp))
+    True.intro
 
 /-- **two tapes that a sweep cannot tell apart give the same window.**  `TEqG` says the head
 stands in the same place and every cell reads the same, and a window is nothing but readings
@@ -9499,9 +10121,9 @@ theorem encTapes_replaceHeadsOfState {margin : ℕ} {z y : State GalilVM}
     exact ⟨seg, hseg, by
       rw [hother _ (by intro v i hEq; exact absurd hEq (by simp [counterSlot, headSlot]))]
       exact hslot⟩
-  · obtain ⟨stack, junk, hsealed, hjunk, hstack, hslot⟩ :=
+  · obtain ⟨stack, junk, hsealed, hstack, hslot⟩ :=
       h.places i place (by rw [← congrFun hplaces i]; exact hp)
-    exact ⟨stack, junk, hsealed, hjunk, hstack, by
+    exact ⟨stack, junk, hsealed, hstack, by
       rw [hother _ (by intro v i hEq; exact absurd hEq (by simp [placeSlot, headSlot]))]
       exact hslot⟩
   · obtain ⟨seg, hseg, hslot⟩ :=
@@ -9573,8 +10195,8 @@ theorem encTapes_replaceHeads {margin : ℕ} {x : State GalilVM} {polarity polar
     exact ⟨seg, hseg, by
       rw [hother _ (by intro v i hEq; exact absurd hEq (by simp [counterSlot, headSlot]))]
       exact hslot⟩
-  · obtain ⟨stack, junk, hsealed, hjunk, hstack, hslot⟩ := h.places i place hp
-    exact ⟨stack, junk, hsealed, hjunk, hstack, by
+  · obtain ⟨stack, junk, hsealed, hstack, hslot⟩ := h.places i place hp
+    exact ⟨stack, junk, hsealed, hstack, by
       rw [hother _ (by intro v i hEq; exact absurd hEq (by simp [placeSlot, headSlot]))]
       exact hslot⟩
   · obtain ⟨seg, hseg, hslot⟩ := h.mirrors m value hm
@@ -9597,8 +10219,7 @@ theorem absHead'_mirror_afterCommand {view : PalPeg.LocalInputView.InputView}
     (hwf : PalPeg.LocalInputView.WF view) (command : PalPeg.ConcreteLocalMachine.ViewCommand)
     (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
     (hf : headOp command = some f)
-    (hready : command = .moveRight →
-      view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ [])
+    (hready : HeadReady command view)
     {centre : PalPeg.GalilScaffoldInputHead.PlaceHead}
     (hmirror : PalPeg.LocalArrival.absHead' view [] = centre) :
     PalPeg.LocalArrival.absHead' (PalPeg.ConcreteLocalMachine.viewApply command view) []
@@ -10279,6 +10900,368 @@ theorem copyActs_length {fppBound dpBound K : ℕ} (live : Bool) (q : QPhys fppB
   unfold copyActs actsAt
   split_ifs <;> (try dsimp only) <;> (try split_ifs) <;> simp
 
+/-- The four counter updates shared by every matched scan. The indices are the
+existing cycle, radius, length and replay slots; chain counters are separate. -/
+def scanMatchCounterEnabled {fppBound dpBound : ℕ} (q : QPhys fppBound dpBound)
+    (c : Fin 16) : Bool :=
+  decide (c = 2 ∨ c = 3) || (decide (c = 0) && q.periodOnly)
+    || (decide (c = 4) && q.ctl.replaying)
+
+noncomputable def scanMatchCounterSign {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (c : Fin 16) : Bool :=
+  if c = 2 then incSign q.polarity c ws
+  else if c = 3 then incTwiceSign q c ws
+  else if scanMatchCounterEnabled q c then decSignAt (q.polarity c) (counterSlot c) ws
+  else q.polarity c
+
+noncomputable def scanMatchCounterActions {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (c : Fin 16) :
+    List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  if c = 2 then [incAct q c ws]
+  else if c = 3 then incTwiceActs q c ws
+  else if scanMatchCounterEnabled q c then [decAct q c ws]
+  else []
+
+theorem scanMatchCounterActions_length {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (c : Fin 16) :
+    (scanMatchCounterActions q ws c).length ≤ 2 := by
+  unfold scanMatchCounterActions
+  split_ifs <;> simp only [List.length_singleton, incTwiceActs_length, List.length_nil] <;> omega
+
+/-- Select the counter represented by a physical slot, including its existing mirrors. -/
+def counterCarrier : Slot → Option (Fin 16)
+  | .inr (.inr (.inr (.inr (.inr (.inr (.inl c)))))) => some c
+  | .inr (.inr (.inr (.inr (.inr (.inr (.inr (.inl m))))))) => some (mirrorSource m)
+  | _ => none
+
+@[simp] theorem counterCarrier_counter (c : Fin 16) :
+    counterCarrier (counterSlot c) = some c := rfl
+@[simp] theorem counterCarrier_mirror (m : Fin 7) :
+    counterCarrier (mirrorSlot m) = some (mirrorSource m) := rfl
+@[simp] theorem counterCarrier_head (v : Fin 4) (i : Fin 12) :
+    counterCarrier (headSlot v i) = none := rfl
+@[simp] theorem counterCarrier_prog (live : Bool) (i : Fin 9) :
+    counterCarrier (progSlotOf live i) = none := by cases live <;> rfl
+@[simp] theorem counterCarrier_dp (live : Bool) (i : Fin 12) :
+    counterCarrier (dpSlotOf live i) = none := by cases live <;> rfl
+@[simp] theorem counterCarrier_place (i : Fin 3) :
+    counterCarrier (placeSlot i) = none := rfl
+@[simp] theorem counterCarrier_period : counterCarrier periodSlot = none := rfl
+@[simp] theorem counterCarrier_answer : counterCarrier (.inr (.inr (.inr (.inl ())))) = none := rfl
+
+noncomputable def scanMatchCounterActs {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  fun j => match counterCarrier (slotIndex.symm j) with
+    | some c => scanMatchCounterActions q ws c
+    | none => []
+
+theorem scanMatchCounterActs_at {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (slot : Slot) :
+    scanMatchCounterActs q ws (slotIndex slot) =
+      match counterCarrier slot with
+      | some c => scanMatchCounterActions q ws c
+      | none => [] := by simp only [scanMatchCounterActs, Equiv.symm_apply_apply]
+
+theorem scanMatchCounterActs_length {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
+    (scanMatchCounterActs q ws j).length ≤ 2 := by
+  unfold scanMatchCounterActs
+  cases counterCarrier (slotIndex.symm j) with
+  | none => simp
+  | some c => simp only [scanMatchCounterActions]; split_ifs <;> simp [incTwiceActs_length]
+
+/-- Counter meaning of the matched scan's update, before the heads are replaced. -/
+def scanMatchCounterValue {fppBound dpBound : ℕ} (q : QPhys fppBound dpBound)
+    (c : Fin 16) (value : PalPeg.GalilScaffoldCounter.Counter) :
+    PalPeg.GalilScaffoldCounter.Counter :=
+  if c = 2 then PalPeg.GalilScaffoldCounter.inc value
+  else if c = 3 then PalPeg.GalilScaffoldCounter.inc (PalPeg.GalilScaffoldCounter.inc value)
+  else if scanMatchCounterEnabled q c then PalPeg.GalilScaffoldCounter.dec value
+  else value
+
+/-- The common counter row works both on the source and on any mirror. -/
+theorem scanMatchCounter_tape {fppBound dpBound K margin : ℕ}
+    (q : QPhys fppBound dpBound) (T : Slot → STape Γm) (hK2 : 2 ≤ K) (hmargin : K ≤ margin)
+    (c : Fin 16) (source segments : STape Seg) (value : PalPeg.GalilScaffoldCounter.Counter)
+    (hsource : absCtr source (q.polarity c) = value)
+    (habs : absCtr segments (q.polarity c) = value)
+    (hsourceTape : T (counterSlot c) = padLeft margin (mapTape encSeg source))
+    (tape : STape Γm) (htape : tape = padLeft margin (mapTape encSeg segments)) :
+    ∃ result : STape Seg,
+      absCtr result (scanMatchCounterSign q
+          (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) c) = scanMatchCounterValue q c value ∧
+      PalPeg.CloseoutCoreEnc12.actList blankM tape (scanMatchCounterActions q
+          (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) c)
+        = padLeft margin (mapTape encSeg result) := by
+  let ws := fun i => PalPeg.Local.readWin blankM K (tapesOf T i)
+  have hval : PalPeg.LocalCounter.val segments = PalPeg.LocalCounter.val source :=
+    val_eq_of_absCtr_eq (habs.trans hsource.symm)
+  by_cases hrad : c = 2
+  · simp only [scanMatchCounterSign, scanMatchCounterValue, scanMatchCounterActions, if_pos hrad]
+    exact counter_inc_at q.polarity c (incSign q.polarity c ws) segments value habs
+      (by rw [hval]; exact incSign_eq (by omega) (by omega) q.polarity c T source hsourceTape)
+      tape htape
+  · by_cases hlen : c = 3
+    · simp only [scanMatchCounterSign, scanMatchCounterValue, scanMatchCounterActions,
+        if_neg hrad, if_pos hlen]
+      exact counter_incTwice_at q c T hK2 hmargin source segments value hsource habs hsourceTape tape htape
+    · by_cases hen : scanMatchCounterEnabled q c = true
+      · simp only [scanMatchCounterSign, scanMatchCounterValue, scanMatchCounterActions,
+          if_neg hrad, if_neg hlen, if_pos hen]
+        exact counter_dec_at q.polarity c (decSignAt (q.polarity c) (counterSlot c) ws)
+          segments value habs
+          (by rw [hval]; exact decSignAt_eq (by omega) (by omega) (q.polarity c) c T source hsourceTape)
+          tape htape
+      · simp only [scanMatchCounterSign, scanMatchCounterValue, scanMatchCounterActions,
+          if_neg hrad, if_neg hlen, if_neg hen]
+        exact ⟨segments, habs, htape⟩
+
+/-- The matched counter row replaces only its own slots; the chain's internal step
+continues to supply the other slots. Its second match event is assembled separately. -/
+noncomputable def scanActs {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  fun j => if scanPhase q ws = .compare ∧ agreeTest q ws = true then
+    match counterCarrier (slotIndex.symm j) with
+    | some c => if scanMatchCounterEnabled q c then scanMatchCounterActions q ws c else scanConsumeActs q ws j
+    | none => scanConsumeActs q ws j
+  else scanConsumeActs q ws j
+
+theorem scanActs_background {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (hbackground : scanPhase q ws ≠ .compare) :
+    scanActs q ws = scanConsumeActs q ws := by
+  funext j
+  unfold scanActs
+  rw [if_neg (fun h => hbackground h.1)]
+
+theorem scanActs_length {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
+    (scanActs q ws j).length ≤ 2 := by
+  unfold scanActs
+  split
+  · cases hcarrier : counterCarrier (slotIndex.symm j) with
+    | none =>
+      simp only [hcarrier]
+      exact (scanConsumeActs_length q ws j).trans (by omega)
+    | some c =>
+      simp only [hcarrier]
+      split_ifs
+      · exact scanMatchCounterActions_length q ws c
+      · exact (scanConsumeActs_length q ws j).trans (by omega)
+  · exact (scanConsumeActs_length q ws j).trans (by omega)
+
+/-- The output test can be read from a represented arrived prefix. It needs no
+knowledge of future letters, only that the arrived length is within the input word. -/
+theorem onLetterTest_of_represents (raw arrived : List (Fin 2)) (s : GalilVM)
+    (hrep : PalPeg.GalilScaffoldInputTrace.Represents s.right.head arrived)
+    (hlen : arrived.length ≤ raw.length) :
+    PalPeg.GalilScaffoldChainInputSupply.onLetterTest raw s
+      = (!s.right.gap && s.right.head.focus.isSome) := by
+  obtain ⟨xs, rs, pending, hhead, hword⟩ := hrep
+  unfold PalPeg.GalilScaffoldChainInputSupply.onLetterTest PalPeg.GalilScaffoldChainInputSupply.position
+  rw [hhead]
+  cases xs with
+  | nil => simp [PalPeg.GalilScaffoldInputHead.layout]
+  | cons a xs =>
+    have hbound : xs.length + 1 ≤ raw.length := by
+      rw [hword] at hlen
+      simp only [List.length_append, List.length_reverse, List.length_cons] at hlen
+      omega
+    cases hgap : s.right.gap <;> simp [PalPeg.GalilScaffoldInputHead.layout, hgap] <;> omega
+
+noncomputable def scanRightOnLetter {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  q.gap 2 && (landingLetter q ws 2).isSome
+
+noncomputable def scanLeftFirst {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  q.gap 0 && decide (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape)
+    ≠ encCell (PalPeg.CloseoutCoreEnc.cellSym none)) &&
+    decide (belowRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape)
+      = encCell (PalPeg.CloseoutCoreEnc.cellSym none))
+
+/-- The post-comparison output bit is computed from the current finite window. -/
+theorem scanRightOnLetter_eq {fppBound dpBound K margin : ℕ}
+    {x : State GalilVM} {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (raw arrived : List (Fin 2))
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (hmargin : K ≤ margin) (hcan : PalPeg.GalilScaffoldChainVerifier.canRight x.vm.right)
+    (hrep : PalPeg.GalilScaffoldInputTrace.Represents x.vm.right.head arrived)
+    (hlen : arrived.length ≤ raw.length) :
+    scanRightOnLetter q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i))
+      = PalPeg.GalilScaffoldChainInputSupply.onLetterTest raw
+          {x.vm with right := PalPeg.GalilScaffoldChainVerifier.right x.vm.right} := by
+  obtain ⟨view, viewTapes, habs, hviewRep, hslots, hcells, hwf⟩ := henc.heads 2 x.vm.right rfl
+  have hgap : q.gap 2 = x.vm.right.gap := by
+    rw [hviewRep.gap]
+    exact congrArg (fun head => head.gap) habs
+  rw [onLetterTest_of_represents raw arrived _
+    (PalPeg.GalilScaffoldChainInputSupply.right_word x.vm.right arrived hrep hcan) hlen]
+  unfold scanRightOnLetter
+  rw [hgap, landingLetter_of_encoded henc hmargin 2 x.vm.right rfl hcan]
+  simp [PalPeg.GalilScaffoldInputHead.read, PalPeg.GalilScaffoldChainVerifier.right]
+
+theorem scanLeftFirst_eq {fppBound dpBound K margin : ℕ}
+    {x : State GalilVM} {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (hK1 : 1 ≤ K) (hmargin : K ≤ margin) :
+    scanLeftFirst q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i))
+      = PalPeg.GalilScaffoldChainInputSupply.leftFirstTest
+          {x.vm with left := PalPeg.GalilScaffoldInputHead.left x.vm.left} := by
+  rw [Bool.eq_iff_iff]
+  simp only [scanLeftFirst, PalPeg.GalilScaffoldChainInputSupply.leftFirstTest,
+    Bool.and_eq_true, decide_eq_true_eq]
+  rw [leftFirst_after_step_iff henc hK1 hmargin 0 x.vm.left rfl]
+  exact and_assoc
+
+/-- Whether replay is exhausted after its matched-tick decrement. -/
+noncomputable def scanReplayZero {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  decide ((PalPeg.LocalStepFusion.windowAfter K 1 (ws (slotIndex (counterSlot 4)))
+    [decAct q 4 ws]) 0 ≠ encSeg PalPeg.LocalCounter.mark)
+
+theorem scanReplayZero_eq {fppBound dpBound K margin : ℕ}
+    {x : State GalilVM} {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (hK2 : 2 ≤ K) (hmargin : K ≤ margin) :
+    scanReplayZero q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i))
+      = PalPeg.GalilScaffoldCounter.zero (PalPeg.GalilScaffoldCounter.dec x.vm.replay) := by
+  let ws := fun i => PalPeg.Local.readWin blankM K (tapesOf T i)
+  obtain ⟨source, habs, hslot⟩ := henc.counters 4 x.vm.replay rfl
+  obtain ⟨result, hresult, hresultTape⟩ := counter_dec_at q.polarity 4
+    (decSignAt (q.polarity 4) (counterSlot 4) ws) source x.vm.replay habs
+    (decSignAt_eq (by omega) (by omega) (q.polarity 4) 4 T source hslot) (T (counterSlot 4)) hslot
+  change PalPeg.CloseoutCoreEnc12.actList blankM (T (counterSlot 4)) [decAct q 4 ws]
+    = padLeft margin (mapTape encSeg result) at hresultTape
+  have hwindow : PalPeg.LocalStepFusion.windowAfter K 1 (ws (slotIndex (counterSlot 4)))
+      [decAct q 4 ws] = PalPeg.Local.readWin blankM 1 (padLeft margin (mapTape encSeg result)) := by
+    dsimp only [ws]
+    rw [tapesOf_apply, PalPeg.LocalStepFusion.windowAfter_readWin blankM _ _ (by simp; omega)
+      (hmargin.trans (henc.margins _))]
+    exact congrArg (PalPeg.Local.readWin blankM 1) hresultTape
+  unfold scanReplayZero
+  rw [hwindow, ← hresult, PalPeg.LocalCounter.zero_iff]
+  rw [Bool.eq_iff_iff]
+  simp only [decide_eq_true_eq]
+  simpa using (counterZero_iff_below (K := 1) (margin := margin) (by omega) (by omega) result).symm
+
+/-- The actual matched control row uses the fixed canonical delay and the two
+post-motion output tests. The replay test is taken after its counter update. -/
+noncomputable def scanMatchedCtl {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : CtlPhys :=
+  {q.ctl with clock := 2048, output := if scanRightOnLetter q ws then scanLeftFirst q ws else q.ctl.output, replaying := q.ctl.replaying && !scanReplayZero q ws}
+
+noncomputable def scanNext {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : QPhys fppBound dpBound :=
+  let base := if chainConsumesTest q ws then scanConsumeNext q ws else q
+  if scanPhase q ws = .compare ∧ agreeTest q ws = true then
+    {base with ctl := scanMatchedCtl q ws, onLetterBit := scanRightOnLetter q ws, leftFirstBit := scanLeftFirst q ws, polarity := fun c => if scanMatchCounterEnabled q c then scanMatchCounterSign q ws c else base.polarity c}
+  else base
+
+theorem scanNext_background {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (hbackground : scanPhase q ws ≠ .compare) :
+    scanNext q ws = if chainConsumesTest q ws then scanConsumeNext q ws else q := by
+  unfold scanNext
+  rw [if_neg (fun h => hbackground h.1)]
+
+/-- The shift updates cycle, remaining, radius, length, spare and the four
+watch counters. Unnamed counter 10 is the boundary spare in this phase. -/
+def shiftCounterDec (c : Fin 16) : Bool :=
+  decide (c = 1 ∨ c = 2 ∨ c = 10 ∨ c = 12 ∨ c = 13 ∨ c = 14 ∨ c = 15)
+
+noncomputable def shiftCounterSign {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (c : Fin 16) : Bool :=
+  if c = 0 then incTwiceSign q c ws
+  else if c = 3 then decTwiceSign q c ws
+  else if shiftCounterDec c then decSignAt (q.polarity c) (counterSlot c) ws
+  else q.polarity c
+
+noncomputable def shiftCounterActions {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (c : Fin 16) :
+    List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  if c = 0 then incTwiceActs q c ws
+  else if c = 3 then decTwiceActs q c ws
+  else if shiftCounterDec c then [decAct q c ws] else []
+
+def shiftCounterValue (c : Fin 16) (value : PalPeg.GalilScaffoldCounter.Counter) :
+    PalPeg.GalilScaffoldCounter.Counter :=
+  if c = 0 then PalPeg.GalilScaffoldCounter.inc (PalPeg.GalilScaffoldCounter.inc value)
+  else if c = 3 then PalPeg.GalilScaffoldCounter.dec (PalPeg.GalilScaffoldCounter.dec value)
+  else if shiftCounterDec c then PalPeg.GalilScaffoldCounter.dec value else value
+
+theorem shiftCounterActions_length {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (c : Fin 16) :
+    (shiftCounterActions q ws c).length ≤ 2 := by
+  unfold shiftCounterActions
+  split_ifs <;> simp [incTwiceActs_length, decTwiceActs_length]
+
+/-- Independent source and mirror tapes follow the whole shift row, also at
+zero crossings. No literal equality of their discarded segments is required. -/
+theorem shiftCounter_tape {fppBound dpBound K margin : ℕ}
+    (q : QPhys fppBound dpBound) (T : Slot → STape Γm) (hK2 : 2 ≤ K) (hmargin : K ≤ margin)
+    (c : Fin 16) (source segments : STape Seg) (value : PalPeg.GalilScaffoldCounter.Counter)
+    (hsource : absCtr source (q.polarity c) = value)
+    (habs : absCtr segments (q.polarity c) = value)
+    (hsourceTape : T (counterSlot c) = padLeft margin (mapTape encSeg source))
+    (tape : STape Γm) (htape : tape = padLeft margin (mapTape encSeg segments)) :
+    ∃ result : STape Seg,
+      absCtr result (shiftCounterSign q
+          (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) c) = shiftCounterValue c value ∧
+      PalPeg.CloseoutCoreEnc12.actList blankM tape (shiftCounterActions q
+          (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) c)
+        = padLeft margin (mapTape encSeg result) := by
+  let ws := fun i => PalPeg.Local.readWin blankM K (tapesOf T i)
+  by_cases hcycle : c = 0
+  · simp only [shiftCounterSign, shiftCounterValue, shiftCounterActions, if_pos hcycle]
+    exact counter_incTwice_at q c T hK2 hmargin source segments value hsource habs hsourceTape tape htape
+  · by_cases hlength : c = 3
+    · simp only [shiftCounterSign, shiftCounterValue, shiftCounterActions, if_neg hcycle, if_pos hlength]
+      exact counter_decTwice_at q c T hK2 hmargin source segments value hsource habs hsourceTape tape htape
+    · by_cases henabled : shiftCounterDec c = true
+      · simp only [shiftCounterSign, shiftCounterValue, shiftCounterActions,
+          if_neg hcycle, if_neg hlength, if_pos henabled]
+        have hval : PalPeg.LocalCounter.val segments = PalPeg.LocalCounter.val source :=
+          val_eq_of_absCtr_eq (habs.trans hsource.symm)
+        exact counter_dec_at q.polarity c (decSignAt (q.polarity c) (counterSlot c) ws)
+          segments value habs
+          (by rw [hval]; exact decSignAt_eq (by omega) (by omega) (q.polarity c) c T source hsourceTape)
+          tape htape
+      · simp only [shiftCounterSign, shiftCounterValue, shiftCounterActions,
+          if_neg hcycle, if_neg hlength, if_neg henabled]
+        exact ⟨segments, habs, htape⟩
+
+/-- Mirror 5 is independent of spare 10 in watch. It rebuilds h while the
+remaining carrier lent by shift entry is decremented. -/
+noncomputable def shiftActs {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
+    Fin tapeCountM → List (PalPeg.CloseoutCoreEnc12.Act Γm) :=
+  fun j => if j = slotIndex (mirrorSlot 5) then [some (encSeg PalPeg.LocalCounter.mark, .right)]
+    else match counterCarrier (slotIndex.symm j) with
+      | some c => shiftCounterActions q ws c
+      | none => []
+
+theorem shiftActs_length {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) (j : Fin tapeCountM) :
+    (shiftActs q ws j).length ≤ 2 := by
+  unfold shiftActs
+  split_ifs
+  · simp
+  · cases counterCarrier (slotIndex.symm j) with
+    | none => simp
+    | some c => exact shiftCounterActions_length q ws c
+
+/-- A whole-cell right move lands at the first letter exactly from the
+sentinel with the letter-side gap bit. ViewCells identifies that sentinel. -/
+noncomputable def shiftLeftFirst {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : Bool :=
+  !q.gap 0 && decide (centreRead ws (headSlot 0 PalPeg.ConcreteLocalMachine.backTape)
+    = encCell (PalPeg.CloseoutCoreEnc.cellSym none))
+
+noncomputable def shiftNext {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) : QPhys fppBound dpBound :=
+  {q with polarity := shiftCounterSign q ws, leftFirstBit := shiftLeftFirst q ws}
+
 /-- the control of the machine, mode by mode. -/
 noncomputable def ruleNext {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K) :
@@ -10291,9 +11274,8 @@ noncomputable def ruleNext {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fi
   | PalPeg.GalilScaffoldController.Mode.fpp => fppNext entryQ q ws
   | PalPeg.GalilScaffoldController.Mode.copy => copyNext q ws
   | PalPeg.GalilScaffoldController.Mode.shift =>
-      if remainsTest q.polarity ws then q else shiftExitNext q
-  | PalPeg.GalilScaffoldController.Mode.scan =>
-      if chainConsumesTest q ws then scanConsumeNext q ws else q
+      if remainsTest q.polarity ws then shiftNext q ws else shiftExitNext q
+  | PalPeg.GalilScaffoldController.Mode.scan => scanNext q ws
   | _ => q
 
 /-- **the two actions that mark a new block.**  `markNew` steps the marks tape right, writes the
@@ -10384,7 +11366,9 @@ noncomputable def ruleActs {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fi
   | PalPeg.GalilScaffoldController.Mode.copy =>
       withErase q.fppLive ws (copyActs q.fppLive q ws)
   | PalPeg.GalilScaffoldController.Mode.scan =>
-      withErase q.fppLive ws (scanConsumeActs q ws)
+      withErase q.fppLive ws (scanActs q ws)
+  | PalPeg.GalilScaffoldController.Mode.shift =>
+      withErase q.fppLive ws (if remainsTest q.polarity ws then shiftActs q ws else fun _ => [])
   | _ => withErase q.fppLive ws (fun _ => [])
 
 theorem ruleActs_length {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
@@ -10412,8 +11396,10 @@ theorem ruleActs_length {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9
           (fun j => by simp) j
       | exact withErase_length (b := 1) (by omega) q.fppLive ws _
           (fun j => copyActs_length q.fppLive q ws j) j
-      | exact withErase_length (b := 1) (by omega) q.fppLive ws _
-          (fun j => scanConsumeActs_length q ws j) j
+      | exact withErase_length (b := 2) (by omega) q.fppLive ws _
+          (fun j => scanActs_length q ws j) j
+      | exact withErase_length (b := 2) (by omega) q.fppLive ws _
+          (fun j => by split_ifs; exact shiftActs_length q ws j; simp) j
 
 /-- **the rule of the physical machine**, so far as its branches are proved. -/
 noncomputable def physRule {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) :
@@ -10478,8 +11464,7 @@ theorem tickPhysRule_heads {fppBound dpBound K margin : ℕ} (entryQ : ℕ) (fir
     (habs : PalPeg.LocalArrival.absHead' view [] = head)
     (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
     (hf : headOp command = some f) (hhead' : head' = f head)
-    (hready : command = .moveRight →
-      view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    (hready : HeadReady command view) :
     ∃ (view' : PalPeg.LocalInputView.InputView)
         (viewTapes' : Fin 12 → STape PalPeg.CloseoutCoreStep.Γc),
       PalPeg.LocalArrival.absHead' view' [] = head' ∧
@@ -10517,7 +11502,7 @@ theorem tickPhysRule_heads {fppBound dpBound K margin : ℕ} (entryQ : ℕ) (fir
       (slotIndex slot))
     (fun _ => rfl) (fun _ _ => rfl) view hwf hcells viewTapes hold hrep howed head head' habs f
     (by rw [hcommand]; exact hf) hhead'
-    (fun hmove => hready (hcommand.symm.trans hmove))
+    (by rw [hcommand]; exact hready)
 
 /-- **in the five modes whose branches move no head, every head stands still.**  The end mark,
 the walk home, the back half of the choice, the preparation program and the fallback copy each
@@ -10556,7 +11541,7 @@ theorem tickPhysRule_heads_still {fppBound dpBound K margin : ℕ} (entryQ : ℕ
             PalPeg.LocalViewCells.ViewCells view' ∧ PalPeg.LocalInputView.WF view' :=
   tickPhysRule_heads entryQ first hbound hKq hK hmargin rest v x input hslot0 .stay
     (by rw [modeCommands_eq_stay first rest x.1 input _ hmode]; rfl) view hwf hcells viewTapes
-    hold hrep howed head head habs id rfl rfl (fun h => absurd h (by simp))
+    hold hrep howed head head habs id rfl rfl True.intro
 
 /-- **in the rewind, the left cursor walks one cell left, and the centre with it when the rewind
 is paired.**  The other cursors stand still, and nothing moves at all once the program's own tape
@@ -10599,7 +11584,7 @@ theorem tickPhysRule_heads_rewind {fppBound dpBound K margin : ℕ} (entryQ : �
       exact rewindCommands_walks first x.1.fppLive x.1 _ hnot v hv)
     view hwf hcells viewTapes hold hrep howed head
     (PalPeg.GalilScaffoldInputHead.left head) habs PalPeg.GalilScaffoldInputHead.left rfl rfl
-    (fun h => absurd h (by simp))
+    True.intro
 
 /-- a slot that is no head's is a slot of the right-hand summand, which is how the rule tells the
 two apart. -/
@@ -10756,8 +11741,8 @@ theorem margin_le_pos_headSlot {margin K : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ 
 /-- **and a tick carries it, whether or not the abstraction names that cursor.**  The twelve
 steps ask nothing of the abstract head: they carry out the command the control holds, and the
 view they leave behind is the view that command names.  What the command has to be is a command
-of a cursor — standing still, a step left or a step right — which is what the rows of the table
-name; the step right carries its arrival condition as usual. -/
+of a cursor — standing still, a step left, or one or two steps right. The right commands
+carry their respective arrival conditions. -/
 theorem headSlotsRep_afterTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) (hmargin : K ≤ margin)
     (base commandsOf baseActs) (baseLen : ∀ q i ws j, (baseActs q i ws j).length ≤ K) (v : Fin 4)
     (x : QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)) (input : Option (Fin 2))
@@ -10772,8 +11757,7 @@ theorem headSlotsRep_afterTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) 
       = command)
     (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
     (hf : headOp command = some f)
-    (hready : command = .moveRight →
-      view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+    (hready : HeadReady command view) :
     HeadSlotsRep margin
         (PalPeg.LocalStepFusion.idealRun (tickRule hK base commandsOf baseActs baseLen) blankM x
           input 12).1.gap
@@ -10794,7 +11778,7 @@ theorem headSlotsRep_afterTick {fppBound dpBound K margin : ℕ} (hK : 2 ≤ K) 
     (fun _ => rfl) (fun _ _ => rfl) view hwf hcells viewTapes hslots hrep howed
   rw [hcommand] at hrep'
   exact ⟨PalPeg.ConcreteLocalMachine.viewApply command view, _, hrep', hslots',
-    viewCells_viewApply hwf command (fun h => hready h) hcells f hf,
+    viewCells_viewApply hwf command hready hcells f hf,
     wf_viewApply hwf command f hf⟩
 
 /-- **the three bits of the control a tick leaves as the branch put them**, named so that the
@@ -10832,6 +11816,97 @@ theorem tickPhysRule_bits {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin
     hfree.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1,
     hfree.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2⟩
 
+/-- A counter carrier names either the source tape or one of its mirrors. -/
+theorem counterCarrier_rep {fppBound dpBound margin : ℕ}
+    {x : State GalilVM} {q : QPhys fppBound dpBound} {T : Slot → STape Γm}
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (slot : Slot) (c : Fin 16) (hcarrier : counterCarrier slot = some c)
+    (value : PalPeg.GalilScaffoldCounter.Counter) (hvalue : counterOf x c = some value) :
+    ∃ segments : STape Seg, absCtr segments (q.polarity c) = value ∧
+      T slot = padLeft margin (mapTape encSeg segments) := by
+  rcases slot with head | prog | dp | answer | period | place | counter | mirror | retired | retiredDP
+  all_goals simp only [counterCarrier, Option.some.injEq, reduceCtorEq] at hcarrier
+  · subst counter
+    exact henc.counters c value hvalue
+  · subst c
+    exact henc.mirrors mirror value hvalue
+
+/-- On an enabled common-counter slot the real scan table performs exactly that
+counter's actions. Background erasure has no action on these slots. -/
+theorem ruleActs_scan_match_counter {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hcompare : scanPhase q ws = .compare) (hagree : agreeTest q ws = true)
+    (slot : Slot) (c : Fin 16) (hcarrier : counterCarrier slot = some c)
+    (henabled : scanMatchCounterEnabled q c = true) :
+    ruleActs entryQ first q ws (slotIndex slot) = scanMatchCounterActions q ws c := by
+  have hidle : ∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k := by
+    intro k hslot
+    rw [hslot, counterCarrier_prog] at hcarrier
+    contradiction
+  simp only [ruleActs, hmode]
+  rw [withErase_at_other q.fppLive ws _ slot hidle]
+  unfold scanActs
+  rw [if_pos ⟨hcompare, hagree⟩, Equiv.symm_apply_apply, hcarrier]
+  exact if_pos henabled
+
+theorem ruleNext_scan_match_counter {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (q : QPhys fppBound dpBound)
+    (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hcompare : scanPhase q ws = .compare) (hagree : agreeTest q ws = true)
+    (c : Fin 16) (henabled : scanMatchCounterEnabled q c = true) :
+    (ruleNext entryQ first hbound q ws).polarity c = scanMatchCounterSign q ws c := by
+  simp [ruleNext, hmode, scanNext, hcompare, hagree, henabled]
+
+/-- The common matched counters, including their mirrors, are encoded after the
+actual twelve-step tick. No hypotheses about the resulting tapes or sign are needed. -/
+theorem scan_match_counter_of_tick {fppBound dpBound K margin : ℕ}
+    (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound)
+    (hKq : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hmargin : K ≤ margin)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (input : Option (Fin 2)) (hslot0 : q.slot.val = 0)
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
+    (hmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hcompare : scanPhase q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) = .compare)
+    (hagree : agreeTest q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) = true)
+    (slot : Slot) (c : Fin 16) (hcarrier : counterCarrier slot = some c)
+    (henabled : scanMatchCounterEnabled q c = true)
+    (value : PalPeg.GalilScaffoldCounter.Counter) (hvalue : counterOf x c = some value) :
+    ∃ segments : STape Seg,
+      absCtr segments ((PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hKq hK2 rest) blankM (q, tapesOf T) input 12).1.polarity c)
+        = scanMatchCounterValue q c value ∧
+      (PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK2 rest)
+          blankM (q, tapesOf T) input 12).2 (slotIndex slot)
+        = padLeft margin (mapTape encSeg segments) := by
+  obtain ⟨source, hsource, hsourceTape⟩ := henc.counters c value hvalue
+  obtain ⟨segments, habs, htape⟩ := counterCarrier_rep henc slot c hcarrier value hvalue
+  obtain ⟨result, hresult, hresultTape⟩ := scanMatchCounter_tape q T hK2 hmargin c
+    source segments value hsource habs hsourceTape (T slot) htape
+  refine ⟨result, ?_, ?_⟩
+  · rw [(tickPhysRule_bits entryQ first hbound hKq hK2 rest q T input hslot0).1,
+      ruleNext_scan_match_counter entryQ first hbound q _ hmode hcompare hagree c henabled]
+    exact hresult
+  · have hnonhead : (slotIndex.symm (slotIndex slot)).isLeft = false := by
+      rw [Equiv.symm_apply_apply]
+      cases slot with
+      | inl head => cases hcarrier
+      | inr other => rfl
+    rw [tickPhysRule_eq entryQ first hbound hKq hK2 rest,
+      tickRule_otherSlots hK2 (fun q _ ws => ruleNext entryQ first hbound q ws)
+        (modeCommands first rest) (fun q _ ws => ruleActs entryQ first q ws)
+        (fun q _ ws j => ruleActs_length entryQ first hKq q ws j)
+        (q, tapesOf T) input hslot0 (slotIndex slot) hnonhead]
+    change PalPeg.CloseoutCoreEnc12.actList blankM (tapesOf T (slotIndex slot))
+      (ruleActs entryQ first q _ (slotIndex slot)) = _
+    rw [tapesOf_apply, ruleActs_scan_match_counter entryQ first q _ hmode hcompare hagree
+      slot c hcarrier henabled]
+    exact hresultTape
+
 /-- **after a tick, every cursor still holds a view**, whatever command the table names for it.
 Which is what the margins of all four cursors' slots come from, the chain's verifier included,
 whether or not the abstraction names it. -/
@@ -10851,8 +11926,7 @@ theorem tickPhysRule_headSlotsRep {fppBound dpBound K margin : ℕ} (entryQ : �
     (f : PalPeg.GalilScaffoldInputHead.PlaceHead → PalPeg.GalilScaffoldInputHead.PlaceHead)
     (hf : headOp command = some f)
     (hready : ∀ view : PalPeg.LocalInputView.InputView,
-      HeadSlotsRepAt margin q.gap q.micro T v view → command = .moveRight →
-        view.gap = true → view.near = [] → PalPeg.RTQueue.toList view.far ≠ []) :
+      HeadSlotsRepAt margin q.gap q.micro T v view → HeadReady command view) :
     HeadSlotsRep margin
         (PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK rest) blankM
           (q, tapesOf T) input 12).1.gap
@@ -10899,7 +11973,7 @@ theorem tickPhysRule_headSlotsRep_still {fppBound dpBound K margin : ℕ} (entry
             (slotIndex slot)) v :=
   tickPhysRule_headSlotsRep entryQ first hbound hKq hK hmargin rest x q T input hslot0 howed henc v
     .stay (by rw [modeCommands_eq_stay first rest q input _ hmode]; rfl) id rfl
-    (fun _ _ h => absurd h (by simp))
+    (fun _ _ => True.intro)
 
 /-- **the whole obligation of a tick.**  The hypotheses are what a mode's branch is already
 proved to leave behind, said of the branch tables — the control it writes and the tapes its own
@@ -10927,8 +12001,7 @@ theorem enc_afterTickOfState {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (f
     (hheadSome : ∀ v, (headOf x v).isSome = (headOf y v).isSome)
     (hheadMap : ∀ v head, headOf x v = some head → headOf y v = some (fs v head))
     (hready : ∀ v view, HeadSlotsRepAt margin q.gap q.micro T v view →
-      commands v = .moveRight → view.gap = true → view.near = [] →
-        PalPeg.RTQueue.toList view.far ≠ [])
+      HeadReady (commands v) view)
     (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T)
     (hctl : EncControl w y (ruleNext entryQ first hbound q
       (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))))
@@ -11035,7 +12108,7 @@ theorem enc_afterStillTick {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (fir
     (fun _ => .stay) (fun _ => by rw [hstay]; rfl)
     (fun _ => id) (fun _ => rfl) (fun v => by rw [hheadsSame v])
     (fun v head hhead => by rw [hheadsSame v]; exact hhead)
-    (fun _ _ _ h => absurd h (by simp)) henc hctl
+    (fun _ _ _ => True.intro) henc hctl
     (fun i => rfl) (fun i => rfl) rfl rfl rfl rfl htapes
 
 /-- **one step of the one-step rule, written out.**  Its control is the mode table's and its
@@ -11112,12 +12185,13 @@ theorem physRule_nq_shift {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin
 theorem physRule_acts_shift {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
     (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
-    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift) :
+    (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.shift)
+    (hdone : remainsTest q.polarity ws = false) :
     (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none ws
       = withErase q.fppLive ws (fun _ => []) := by
   show ruleActs entryQ first q ws = _
   unfold ruleActs
-  rw [hm]
+  simp only [hm, hdone, Bool.false_eq_true, if_false]
 
 theorem physRule_nq_markEnd {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K)
     (q : QPhys fppBound dpBound) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
@@ -11541,7 +12615,7 @@ theorem copy_one_of_rule {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Gal
       ((PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).1,
         fun i => (PalPeg.LocalStepFusion.idealStep R blankM (q, tapesOf T) none).2
           (slotIndex i)) := by
-  obtain ⟨stackTape, junk, hsealed, hjunk, hstack, hslotPlace⟩ :=
+  obtain ⟨stackTape, junk, hsealed, hstack, hslotPlace⟩ :=
     henc.2.places 1 x.vm.fpp.walker rfl
   have hgapBit : q.placeGap 1 = x.vm.fpp.walker.gap := henc.1.placeGap 1 x.vm.fpp.walker rfl
   have hsym := copySymbol_eq hK T x.vm.fpp.walker (q.placeGap 1) hgapBit a hread stackTape junk
@@ -12083,6 +13157,41 @@ theorem physRule_copy_end {fppBound dpBound K : ℕ} (margin : ℕ) (centre : Ga
     (physRule_nq_copy entryQ first hbound hKb q _ hqmode)
     (physRule_acts_copy entryQ first hbound hKb q _ hqmode)
     hK1 hK hmode hdone henc
+
+/-- The fallback copy exit, including all twelve physical steps. -/
+theorem copy_end_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
+    (place : GalilVM → PalPeg.GalilScaffoldPlace.Place) (entry entryQ : ℕ) (first : Fin 9)
+    (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (input : Option (Fin 2))
+    (hbound : 320 < fppBound) (hKb : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hK1 : 1 ≤ K)
+    (hK : K ≤ margin) (hslot0 : q.slot.val = 0) (howed : ∀ v, (q.micro v).2.2.2 = 0)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.copy)
+    (hdone : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).remainingPos
+      x.vm = false)
+    (henc : Enc w margin x (q, T)) :
+    Enc w margin
+      (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x)
+      ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKb hK2 rest) blankM
+          (q, tapesOf T) input 12).1,
+        fun i => (PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hKb hK2 rest) blankM (q, tapesOf T) input 12).2
+            (slotIndex i)) := by
+  exact enc_ofBranchStep_still margin entryQ first hbound hKb hK2 hK rest w x
+    (PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) q T input
+    hslot0 (Or.inr (Or.inr (Or.inr (Or.inr hqmode)))) howed
+    (headOf_tickFun_still centre place entry entryQ first w F delay x
+      (Or.inr (Or.inr (Or.inr hmode))))
+    henc.2
+    (physRule_copy_end margin centre place entry entryQ first w F delay x q T hbound hKb hK1 hK
+      hqmode hmode hdone henc)
+
 
 /-- **the parity walk, of the machine itself.** -/
 theorem physRule_choose_back {fppBound dpBound K : ℕ} (margin : ℕ) (centre : GalilVM → Fin 3)
@@ -13508,8 +14617,10 @@ theorem chainConsumesTest_of_lag_zero {margin K fppBound dpBound : ℕ} {x : Sta
 carried by the same slot machinery as the five still modes. -/
 theorem scanCommands_eq_stay {fppBound dpBound K : ℕ} (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
+    (hbackground : scanPhase q ws ≠ .compare)
     (hquiet : chainConsumesTest q ws = false) : scanCommands q ws = stayCommands := by
   unfold scanCommands
+  rw [if_neg hbackground]
   funext v
   rw [hquiet]
   split <;> rfl
@@ -13521,18 +14632,21 @@ theorem physRule_nq_scan {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 
     (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hbackground : scanPhase q ws ≠ .compare)
     (hquiet : chainConsumesTest q ws = false) :
     (physRule (dpBound := dpBound) entryQ first hbound hK).nq q none ws = q := by
   show ruleNext entryQ first hbound q ws = _
   unfold ruleNext
   rw [hm]
   dsimp only
+  rw [scanNext_background q ws hbackground]
   rw [if_neg (by rw [hquiet]; exact Bool.false_ne_true)]
 
 theorem physRule_acts_scan {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fin 9)
     (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (q : QPhys fppBound dpBound)
     (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (hm : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hbackground : scanPhase q ws ≠ .compare)
     (hquiet : chainConsumesTest q ws = false) :
     (physRule (dpBound := dpBound) entryQ first hbound hK).acts q none ws
       = withErase q.fppLive ws (fun _ => []) := by
@@ -13540,6 +14654,7 @@ theorem physRule_acts_scan {fppBound dpBound K : ℕ} (entryQ : ℕ) (first : Fi
   unfold ruleActs
   rw [hm]
   dsimp only
+  rw [scanActs_background q ws hbackground]
   rw [scanConsumeActs_of_quiet q ws hquiet]
 
 /-- **the quiet arm of the scan, as a state.**  The arm taken because the input cursor has
@@ -13571,6 +14686,7 @@ theorem physRule_background_still {fppBound dpBound K : ℕ} (margin : ℕ) (cen
     (w : List (Fin 2)) (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
     (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
     (hbound : 320 < fppBound) (hK : entryQ + 3 ≤ K) (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+    (hmargin : K ≤ margin)
     (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
     (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
     (hnorestart : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).restartGuard
@@ -13590,6 +14706,10 @@ theorem physRule_background_still {fppBound dpBound K : ℕ} (margin : ℕ) (cen
           (q, tapesOf T) none).1,
         fun i => (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hK)
           blankM (q, tapesOf T) none).2 (slotIndex i)) := by
+  have hbackground : scanPhase q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      ≠ .compare := by
+    rw [scanPhase_of_quiet henc hK1 hmargin hnorestart hquiet]
+    decide
   have htick : PalPeg.GalilScaffoldTop.tickFun
       (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x = x := by
     rw [tickFun_scan_background_quiet centre place entry entryQ first w F delay x hmode hnorestart
@@ -13598,7 +14718,7 @@ theorem physRule_background_still {fppBound dpBound K : ℕ} (margin : ℕ) (cen
       (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
       = withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
           (fun _ => []) :=
-    physRule_acts_scan entryQ first hbound hK q _ hqmode hnoconsume
+    physRule_acts_scan entryQ first hbound hK q _ hqmode hbackground hnoconsume
   have hkeptAll : ∀ slot : Slot, (∀ k : Fin 9, slot ≠ progSlotOf (!q.fppLive) k) →
       (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hK)
           blankM (q, tapesOf T) none).2 (slotIndex slot) = T slot := by
@@ -13608,7 +14728,7 @@ theorem physRule_background_still {fppBound dpBound K : ℕ} (margin : ℕ) (cen
     rfl
   have hq : (PalPeg.LocalStepFusion.idealStep (physRule (dpBound := dpBound) entryQ first hbound hK)
       blankM (q, tapesOf T) none).1 = q :=
-    physRule_nq_scan entryQ first hbound hK q _ hqmode hnoconsume
+    physRule_nq_scan entryQ first hbound hK q _ hqmode hbackground hnoconsume
   rw [htick, hq]
   exact ⟨henc.1, encTapes_idleOnly margin x q.polarity q.gap q.micro q.fppLive q.dpLive T _
     henc.2 hkeptAll
@@ -13668,10 +14788,11 @@ theorem background_still_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (cent
     (by
       unfold modeCommands
       rw [hqmode]
-      exact scanCommands_eq_stay q _ hnoconsume)
+      exact scanCommands_eq_stay q _
+        (by rw [scanPhase_of_quiet henc hK1 hK hnorestart hquiet]; decide) hnoconsume)
     howed (fun v => by rw [htick]) henc.2
     (physRule_background_still margin centre place entry entryQ first w F delay x q T hbound hKb
-      hK1 (by omega) hqmode hmode hnorestart hquiet hid hnoconsume henc)
+      hK1 (by omega) hK hqmode hmode hnorestart hquiet hid hnoconsume henc)
 
 /-- **a background tick with the search at rest and no chain to run is the identity too.**  The
 search steps only in the seven modes that are looking for the period; in the three that have
@@ -14009,10 +15130,9 @@ theorem headOf_stepState_three (y : State GalilVM)
 /-- **the lag's tape after a consuming tick.**  The step's table pops the chain's lag, and the
 bit it branches on is the one the counter's own window gives — so the tape it leaves holds one
 less than it did, under the sign the control now carries. -/
-theorem scanConsume_lagTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (first : Fin 9)
-    (hbound : 320 < fppBound) (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+theorem scanConsume_lagTape {fppBound dpBound K : ℕ} (margin : ℕ)
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
     (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
-    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
     (hconsume : chainConsumesTest q
       (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true)
     (hmatch : watchVerdictTest q
@@ -14024,7 +15144,7 @@ theorem scanConsume_lagTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (fi
           (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
         = PalPeg.GalilScaffoldCounter.dec lag
       ∧ PalPeg.CloseoutCoreEnc12.actList blankM (T (counterSlot 11))
-          (ruleActs entryQ first q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (scanConsumeActs q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
             (slotIndex (counterSlot 11)))
         = padLeft margin (mapTape encSeg seg) := by
   obtain ⟨segments, habs, hslot⟩ := henc.counters 11 lag hlag
@@ -14036,13 +15156,9 @@ theorem scanConsume_lagTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (fi
       (decSignAt_eq hK1 hKn (q.polarity 11) 11 T segments hslot)
       (T (counterSlot 11)) hslot
   refine ⟨seg, habsDec, ?_⟩
-  have hacts : ruleActs entryQ first q
-      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+  have hacts : withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (scanConsumeActs q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
       (slotIndex (counterSlot 11))
       = [decAct q 11 (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))] := by
-    unfold ruleActs
-    rw [hqmode]
-    dsimp only
     rw [withErase_at_other q.fppLive _ _ (counterSlot 11)
       (by intro k; cases q.fppLive <;> simp [progSlotOf, counterSlot]),
       scanConsumeActs_lag q _ hconsume hmatch]
@@ -14051,10 +15167,9 @@ theorem scanConsume_lagTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (fi
 
 /-- **the distance's tape after a consuming tick.**  One more letter of the block, counted the
 way every increment is counted. -/
-theorem scanConsume_distanceTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (first : Fin 9)
-    (hbound : 320 < fppBound) (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
+theorem scanConsume_distanceTape {fppBound dpBound K : ℕ} (margin : ℕ)
+    (hK1 : 1 ≤ K) (hKn : K ≤ margin + 1)
     (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
-    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
     (hconsume : chainConsumesTest q
       (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true)
     (hmatch : watchVerdictTest q
@@ -14066,7 +15181,7 @@ theorem scanConsume_distanceTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ
           (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
         = PalPeg.GalilScaffoldCounter.inc dist
       ∧ PalPeg.CloseoutCoreEnc12.actList blankM (T (counterSlot 13))
-          (ruleActs entryQ first q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (scanConsumeActs q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
             (slotIndex (counterSlot 13)))
         = padLeft margin (mapTape encSeg seg) := by
   obtain ⟨segments, habs, hslot⟩ := henc.counters 13 dist hdist
@@ -14077,13 +15192,9 @@ theorem scanConsume_distanceTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ
       (incSign_eq hK1 hKn q.polarity 13 T segments hslot)
       (T (counterSlot 13)) hslot
   refine ⟨seg, habsInc, ?_⟩
-  have hacts : ruleActs entryQ first q
-      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+  have hacts : withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (scanConsumeActs q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
       (slotIndex (counterSlot 13))
       = [incAct q 13 (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))] := by
-    unfold ruleActs
-    rw [hqmode]
-    dsimp only
     rw [withErase_at_other q.fppLive _ _ (counterSlot 13)
       (by intro k; cases q.fppLive <;> simp [progSlotOf, counterSlot]),
       scanConsumeActs_distance q _ hconsume hmatch]
@@ -14092,10 +15203,9 @@ theorem scanConsume_distanceTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ
 
 /-- **the period tape after a consuming tick, when the chain walks it right.**  The action writes
 back the symbol already under the head and steps, which is what the chain's own step does. -/
-theorem scanConsume_periodTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (first : Fin 9)
-    (hbound : 320 < fppBound) (hK : K ≤ margin)
+theorem scanConsume_periodTape {fppBound dpBound K : ℕ} (margin : ℕ)
+    (hK : K ≤ margin)
     (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
-    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
     (hconsume : chainConsumesTest q
       (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true)
     (hmatch : watchVerdictTest q
@@ -14105,7 +15215,7 @@ theorem scanConsume_periodTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ) 
     (tape : PalPeg.GalilScaffoldChainPeriod.Tape) (hperiod : periodOf x = some tape)
     (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T) :
     PalPeg.CloseoutCoreEnc12.actList blankM (T periodSlot)
-        (ruleActs entryQ first q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+        (withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (scanConsumeActs q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
           (slotIndex periodSlot))
       = padLeft margin (mapTape encToken
           (encPeriod (PalPeg.GalilScaffoldChainPeriod.moveRight tape))) := by
@@ -14113,12 +15223,8 @@ theorem scanConsume_periodTape {fppBound dpBound K : ℕ} (margin entryQ : ℕ) 
     henc.period tape hperiod
   have hcentre : centreRead (fun t => PalPeg.Local.readWin blankM K (tapesOf T t)) periodSlot
       = encToken (encPeriod tape).focus := centreRead_periodSlot henc hK tape hperiod
-  have hacts : ruleActs entryQ first q
-      (fun t => PalPeg.Local.readWin blankM K (tapesOf T t)) (slotIndex periodSlot)
+  have hacts : withErase q.fppLive (fun t => PalPeg.Local.readWin blankM K (tapesOf T t)) (scanConsumeActs q (fun t => PalPeg.Local.readWin blankM K (tapesOf T t))) (slotIndex periodSlot)
       = [some (encToken (encPeriod tape).focus, (.right : PalPeg.CloseoutCoreEnc12.MoveC))] := by
-    unfold ruleActs
-    rw [hqmode]
-    dsimp only
     rw [withErase_at_other q.fppLive _ _ periodSlot
       (by intro k; cases q.fppLive <;> simp [progSlotOf, periodSlot]),
       scanConsumeActs_period q _ hconsume hmatch, hcentre, hforward, if_pos rfl]
@@ -14155,11 +15261,10 @@ writes is read by the encoding.
 
 The cursor is not here: the chain's verifier moves too, but a step right is eleven slots of the
 view layer, so this is the encoding of `stepState` — the tick's state with the cursor put back. -/
-theorem physRule_scan_consume {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (first : Fin 9)
-    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK1 : 1 ≤ K) (hK : K ≤ margin)
+theorem scanConsume_tapes {fppBound dpBound K : ℕ} (margin : ℕ)
+    (hK1 : 1 ≤ K) (hK : K ≤ margin)
     (hKn : K ≤ margin + 1)
     (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
-    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
     (hconsume : chainConsumesTest q
       (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true)
     (hmatch : watchVerdictTest q
@@ -14180,7 +15285,7 @@ theorem physRule_scan_consume {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (
       (scanConsumeNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).polarity
       q.gap q.micro q.fppLive q.dpLive
       (fun slot => PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
-        (ruleActs entryQ first q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+        (withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (scanConsumeActs q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)))
           (slotIndex slot))) := by
   have hcontrol := caught_control_of_plain wm a htok hseen hforward
   have hlagx : counterOf x 11 = some wm.lag := by simp only [counterOf, hchain]
@@ -14189,13 +15294,13 @@ theorem physRule_scan_consume {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (
   have hperiodx : periodOf x = some wm.machine.control.period := by
     simp only [periodOf, hchain]
   obtain ⟨segLag, habsLag, htapeLag⟩ :=
-    scanConsume_lagTape margin entryQ first hbound hK1 hKn x q T hqmode hconsume hmatch
+    scanConsume_lagTape margin hK1 hKn x q T hconsume hmatch
       wm.lag hlagx henc
   obtain ⟨segDist, habsDist, htapeDist⟩ :=
-    scanConsume_distanceTape margin entryQ first hbound hK1 hKn x q T hqmode hconsume hmatch
+    scanConsume_distanceTape margin hK1 hKn x q T hconsume hmatch
       wm.machine.control.distance hdistx henc
   have htapePeriod :=
-    scanConsume_periodTape margin entryQ first hbound hK x q T hqmode hconsume hmatch hfwdBit
+    scanConsume_periodTape margin hK x q T hconsume hmatch hfwdBit
       wm.machine.control.period hperiodx henc
   have hzc : (stepState ⟨x.ctl, {x.vm with
       chain := PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch
@@ -14244,30 +15349,166 @@ theorem physRule_scan_consume {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (
   · exact htapeDist
   · simp only [periodOf, hzc, hcontrol]
   · exact htapePeriod
-  · intro k
-    obtain ⟨raw, hraw⟩ :=
-      idle_shape_after_erase margin hK1 hKn (physRule entryQ first hbound hKq) q T q.fppLive _
-        (by
-          show ruleActs entryQ first q _ = _
-          unfold ruleActs
-          rw [hqmode])
-        (fun k' => scanConsumeActs_off q _ (progSlotOf (!q.fppLive) k')
-          (by cases q.fppLive <;> simp [progSlotOf, counterSlot])
-          (by cases q.fppLive <;> simp [progSlotOf, counterSlot])
-          (by cases q.fppLive <;> simp [progSlotOf, periodSlot]))
-        henc.idleShape k
-    refine ⟨raw, ?_⟩
-    rw [← hraw, idealStep_physRule]
-    dsimp only
-    rw [tapesOf_apply]
+  · exact idle_shape_withErase margin hK1 hKn T q.fppLive _
+      (fun k => scanConsumeActs_off q _ (progSlotOf (!q.fppLive) k)
+        (by cases q.fppLive <;> simp [progSlotOf, counterSlot])
+        (by cases q.fppLive <;> simp [progSlotOf, counterSlot])
+        (by cases q.fppLive <;> simp [progSlotOf, periodSlot])) henc.idleShape
   · intro slot h11 h13 hp hidle
-    rw [show ruleActs entryQ first q
-        (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (slotIndex slot) = [] from by
-      unfold ruleActs
-      rw [hqmode]
-      dsimp only
+    rw [show withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (scanConsumeActs q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))) (slotIndex slot) = [] from by
       rw [withErase_at_other q.fppLive _ _ slot hidle, scanConsumeActs_off q _ slot h11 h13 hp]]
     rfl
+
+/-- The internal consumption theorem specialized to the current scan rule. -/
+theorem physRule_scan_consume {fppBound dpBound K : ℕ} (margin entryQ : ℕ) (first : Fin 9)
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK1 : 1 ≤ K) (hK : K ≤ margin)
+    (hKn : K ≤ margin + 1)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hbackground : scanPhase q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) ≠ .compare)
+    (hconsume : chainConsumesTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true)
+    (hmatch : watchVerdictTest q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = some true)
+    (hfwdBit : (scanConsumeNext q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).chainForward = true)
+    (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (hchain : x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch wm) (a : Fin 3)
+    (htok : wm.machine.control.period.focus = PalPeg.GalilScaffoldChainPeriod.Token.plain a)
+    (hseen : PalPeg.GalilScaffoldInputHead.read
+      (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier) = some a)
+    (hforward : wm.machine.control.forward = true)
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T) :
+    EncTapes margin
+      (stepState ⟨x.ctl, {x.vm with
+        chain := PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch
+          (PalPeg.GalilScaffoldChainWatch.caught wm)}⟩ wm.machine.verifier)
+      (scanConsumeNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).polarity
+      q.gap q.micro q.fppLive q.dpLive
+      (fun slot => PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
+        (ruleActs entryQ first q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+          (slotIndex slot))) := by
+  simpa only [ruleActs, hqmode, scanActs_background q _ hbackground] using scanConsume_tapes margin hK1 hK hKn x q T
+    hconsume hmatch hfwdBit wm hchain a htok hseen hforward henc
+
+/-- The bounded simulation in the command table reads the actual tapes after the
+internal chain step. Its radius one is enough for lag zero and the period symbol. -/
+theorem scanAfterConsumeWindows_eq {fppBound dpBound K : ℕ}
+    (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hK3 : 3 ≤ K) (hmargin : ∀ slot, K ≤ PalPeg.Local.pos (T slot)) :
+    scanAfterConsumeWindows q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = fun tape => PalPeg.Local.readWin blankM 1
+          (tapesOf (fun slot => PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
+            (withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (scanConsumeActs q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))) (slotIndex slot))) tape) := by
+  funext tape
+  unfold scanAfterConsumeWindows
+  rw [PalPeg.LocalStepFusion.windowAfter_readWin blankM (tapesOf T tape) _
+    (by
+      have hlen := withErase_length (b := 1) (bound := 2) (by omega) q.fppLive
+        (fun t => PalPeg.Local.readWin blankM K (tapesOf T t))
+        (scanConsumeActs q (fun t => PalPeg.Local.readWin blankM K (tapesOf T t)))
+        (fun t => scanConsumeActs_length q _ t) tape
+      omega)
+    (hmargin (slotIndex.symm tape))]
+  simp only [tapesOf, Equiv.apply_symm_apply]
+
+/-- The second-consumption decision is the actual post-consumption lag and symbol.
+This reuses the physical consumption proof instead of duplicating its tape arithmetic. -/
+theorem chainMatchConsumesTest_of_watchConsume {fppBound dpBound K : ℕ}
+    (margin entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound)
+    (hKq : entryQ + 3 ≤ K) (hK1 : 1 ≤ K) (hmargin : K ≤ margin)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (htag : q.chainTag = .watchers)
+    (hconsume : chainConsumesTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true)
+    (hmatch : watchVerdictTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = some true)
+    (hfwdBit : (scanConsumeNext q
+      (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))).chainForward = true)
+    (wm : PalPeg.GalilScaffoldChainWatch.State) (hchain : x.vm.chain = .watch wm)
+    (a : Fin 3) (htok : wm.machine.control.period.focus = .plain a)
+    (hseen : PalPeg.GalilScaffoldInputHead.read
+      (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier) = some a)
+    (hforward : wm.machine.control.forward = true)
+    (henc : EncTapes margin x q.polarity q.gap q.micro q.fppLive q.dpLive T) :
+    chainMatchConsumesTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      = (PalPeg.GalilScaffoldCounter.zero (PalPeg.GalilScaffoldChainWatch.caught wm).lag &&
+          (PalPeg.GalilScaffoldChainConsume.symbol
+            (PalPeg.GalilScaffoldChainWatch.caught wm).machine.control.period.focus).isSome) := by
+  let nextQ := scanConsumeNext q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+  let nextT := fun slot => PalPeg.CloseoutCoreEnc12.actList blankM (T slot)
+    (withErase q.fppLive (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) (scanConsumeActs q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))) (slotIndex slot))
+  let nextState := stepState ⟨x.ctl, {x.vm with chain :=
+    PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch (PalPeg.GalilScaffoldChainWatch.caught wm)}⟩
+    wm.machine.verifier
+  have hpost : EncTapes margin nextState nextQ.polarity nextQ.gap nextQ.micro
+      nextQ.fppLive nextQ.dpLive nextT := by
+    have hraw := scanConsume_tapes margin hK1 hmargin (by omega)
+      x q T hconsume hmatch hfwdBit wm hchain a htok hseen hforward henc
+    simpa only [nextQ, scanConsumeNext, hmatch] using hraw
+  have hzero := counterZeroTest_eq (K := 1) hpost (by omega) (by omega) 11
+    (PalPeg.GalilScaffoldChainWatch.caught wm).lag rfl
+  have hsymbol := symbol_centreRead_periodSlot (K := 1) hpost (by omega)
+    (PalPeg.GalilScaffoldChainWatch.caught wm).machine.control.period rfl
+  unfold chainMatchConsumesTest
+  rw [htag, if_pos hconsume, if_pos hmatch,
+    scanAfterConsumeWindows_eq q T (by omega)
+      (fun slot => hmargin.trans (henc.margins slot))]
+  change (counterZeroTest nextQ (fun tape => PalPeg.Local.readWin blankM 1 (tapesOf nextT tape)) 11
+    && _) = _
+  rw [hzero, hsymbol]
+
+/-- The implemented scan row emits the whole-cell command when a watching chain
+consumes twice. Every tested bit is derived from the source encoding. -/
+theorem scanCommands_watch_double {fppBound dpBound K : ℕ}
+    (margin entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound)
+    (hKq : entryQ + 3 ≤ K) (hK1 : 1 ≤ K) (hmargin : K ≤ margin)
+    (w : List (Fin 2)) (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (henc : Enc w margin x (q, T))
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hcompare : scanPhase q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = .compare)
+    (hcanRight : PalPeg.GalilScaffoldChainVerifier.canRight x.vm.right)
+    (hagree : PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldInputHead.left x.vm.left)
+      = PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldChainVerifier.right x.vm.right))
+    (wm : PalPeg.GalilScaffoldChainWatch.State) (hchain : x.vm.chain = .watch wm)
+    (a : Fin 3) (htok : wm.machine.control.period.focus = .plain a)
+    (hcanVer : PalPeg.GalilScaffoldChainVerifier.canRight wm.machine.verifier)
+    (hseen : PalPeg.GalilScaffoldInputHead.read
+      (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier) = some a)
+    (hforward : wm.machine.control.forward = true)
+    (hlag : PalPeg.GalilScaffoldCounter.positive wm.lag = true)
+    (hzero : PalPeg.GalilScaffoldCounter.zero (PalPeg.GalilScaffoldChainWatch.caught wm).lag = true)
+    (hsymbol : (PalPeg.GalilScaffoldChainConsume.symbol
+      (PalPeg.GalilScaffoldChainWatch.caught wm).machine.control.period.focus).isSome = true) :
+    scanCommands q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) 3 = .stepRight := by
+  let ws := fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)
+  have htag : q.chainTag = .watchers := by rw [henc.1.chainTag, hchain]; rfl
+  have hperiod : periodOf x = some wm.machine.control.period := by simp only [periodOf, hchain]
+  have htoken : decToken (centreRead ws periodSlot) = wm.machine.control.period.focus := by
+    rw [centreRead_periodSlot henc.2 hmargin _ hperiod, decToken_encToken]
+    rfl
+  have hpos := (counterPositive_iff_belowRead henc.2 hK1 hmargin 11 wm.lag
+    (by simp only [counterOf, hchain])).mp hlag
+  have hconsume : chainConsumesTest q ws = true := by
+    simpa [chainConsumesTest, htag, htoken, htok,
+      PalPeg.GalilScaffoldChainConsume.symbol] using hpos
+  have hverdict : PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm = some true := by
+    simp [PalPeg.GalilScaffoldChainInputSupply.watchVerdict, htok,
+      PalPeg.GalilScaffoldChainConsume.symbol, hseen]
+  have hmatch : watchVerdictTest q ws = some true := by
+    rw [watchVerdictTest_eq q ws wm
+      (by rw [htoken])
+      (landingLetter_of_encoded henc.2 hmargin 3 wm.machine.verifier
+        (by simp only [headOf, hchain]) hcanVer), hverdict]
+  have hfwdBit : (scanConsumeNext q ws).chainForward = true := by
+    have hqforward : q.chainForward = true := by rw [henc.1.chainForward, hchain]; exact hforward
+    simp [scanConsumeNext, hmatch, htoken, htok, PalPeg.GalilScaffoldChainPeriod.isFirst,
+      PalPeg.GalilScaffoldChainConsume.isLast, hqforward]
+  have hextra := chainMatchConsumesTest_of_watchConsume margin entryQ first hbound hKq hK1 hmargin
+    x q T hqmode htag hconsume hmatch hfwdBit wm hchain a htok hseen hforward henc.2
+  rw [hzero, hsymbol] at hextra
+  rw [scanCommands_compare_verifier q _ hcompare, hconsume,
+    agreeTest_of_encoded henc.2 hK1 hmargin hcanRight, decide_eq_true hagree, hextra]
+  rfl
 
 /-- **what the scan's row of the branch table leaves alone.**  Every arm of it is the control
 word with the chain's tag, phase and direction and two counter signs replaced, so the fourteen
@@ -14428,6 +15669,10 @@ theorem scan_consume_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
         fun i => (PalPeg.LocalStepFusion.idealRun
           (tickPhysRule entryQ first hbound hKq hK2 rest) blankM (q, tapesOf T) input 12).2
             (slotIndex i)) := by
+  have hbackground : scanPhase q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
+      ≠ .compare := by
+    rw [scanPhase_of_quiet henc hK1 hmargin hnorestart hquiet]
+    decide
   have hactive : ¬ x.vm.chain = PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle := by
     rw [hchain]
     exact fun h => PalPeg.GalilScaffoldChainInputSupply.ChainVM.noConfusion h
@@ -14450,7 +15695,7 @@ theorem scan_consume_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
     unfold ruleNext
     rw [hqmode]
     dsimp only
-    rw [if_pos hconsume]
+    rw [scanNext_background q _ hbackground, if_pos hconsume]
   have hy : PalPeg.GalilScaffoldTop.tickFun
       (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x
       = ⟨x.ctl, {x.vm with
@@ -14468,7 +15713,13 @@ theorem scan_consume_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
     (fun v => if v = 3 ∧ chainConsumesTest q
         (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) then
       PalPeg.GalilScaffoldChainVerifier.right else id)
-    (fun v => headOp_scanCommands q _ v) ?_ ?_ hready henc.2 ?_
+    (fun v => headOp_scanCommands q _ v hbackground) ?_ ?_
+    (fun v view hrep => headReady_of_ne_stepRight _ view
+      (by
+        unfold scanCommands
+        rw [if_neg hbackground]
+        split <;> first | (split <;> simp) | simp)
+      (hready v view hrep)) henc.2 ?_
     (z := stepState ⟨x.ctl, {x.vm with
       chain := PalPeg.GalilScaffoldChainInputSupply.ChainVM.watch
         (PalPeg.GalilScaffoldChainWatch.caught wm)}⟩ wm.machine.verifier)
@@ -14497,7 +15748,7 @@ theorem scan_consume_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
       scanConsumeNext_untouched q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))
     rw [hrule, hgap, hmicro, hfl, hdl]
     exact physRule_scan_consume margin entryQ first hbound hKq hK1 hmargin (by omega) x q T
-      hqmode hconsume (by rw [htest, hverdict]) hfwdBit wm hchain a htok hseen hforward henc.2
+      hqmode hbackground hconsume (by rw [htest, hverdict]) hfwdBit wm hchain a htok hseen hforward henc.2
 
 /-- **where a comparison leaves the two input cursors.**  Both outcomes — the one that agrees
 and the one that does not — write the scan lens with the pair the comparison formed, and the
@@ -14535,6 +15786,411 @@ theorem matchedTest_compareFun (P : PalPeg.GalilScaffoldChainInputSupply.Shared)
     = PalPeg.GalilScaffoldInputHead.read
       (PalPeg.GalilScaffoldChainInputSupply.compareFun P s).right) = _
   rw [(compareFun_cursors P s).1, (compareFun_cursors P s).2]
+
+/-- Exactly the three guards preceding comparison, with the same priority as `tickFun`. -/
+theorem scanPhaseOf_compare_iff (restart replaying available : Bool) (clock : ℕ) :
+    scanPhaseOf restart replaying available clock = .compare
+      ↔ restart = false ∧ (!replaying && !available) = false ∧ clock ≤ 1 := by
+  cases restart <;> cases replaying <;> cases available <;>
+    simp [scanPhaseOf, ite_eq_iff]
+
+/-- The physical window's phase and comparison bit select the abstract matched arm.
+This uses encoded heads and counters, rather than assuming agreement of either test. -/
+theorem tickFun_scan_matched_of_window {fppBound dpBound K margin : ℕ}
+    (centre : GalilVM → Fin 3) (place : GalilVM → PalPeg.GalilScaffoldPlace.Place)
+    (entry entryQ : ℕ) (first : Fin 9) (w : List (Fin 2))
+    (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (henc : Enc w margin x (q, T)) (hK1 : 1 ≤ K) (hmargin : K ≤ margin)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hphase : scanPhase q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = .compare)
+    (hcan : PalPeg.GalilScaffoldChainVerifier.canRight x.vm.right)
+    (hmatch : agreeTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true) :
+    let G := PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w
+    let y := G.matchedPlace x.ctl.replaying (G.compare x.vm)
+    PalPeg.GalilScaffoldTop.tickFun G F delay x
+      = ⟨{x.ctl with clock := delay, output := PalPeg.GalilScaffoldTop.refreshFun G y x.ctl.output, replaying := x.ctl.replaying && !F.replayExhausted y}, y⟩ := by
+  dsimp only
+  rw [scanPhase_eq henc hK1 hmargin, scanPhaseOf_compare_iff] at hphase
+  obtain ⟨hrestart, hquiet, hclock⟩ := hphase
+  have hmatched : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).matched
+      ((PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).compare x.vm)
+        = true := by
+    change PalPeg.FrameFunction.matchedTest
+      (PalPeg.GalilScaffoldChainInputSupply.scanLens.get
+        (PalPeg.GalilScaffoldChainInputSupply.compareFun
+          (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm)) = true
+    rw [matchedTest_compareFun, ← agreeTest_of_encoded henc.2 hK1 hmargin hcan]
+    exact hmatch
+  have hnorestart : (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).restartGuard
+      x.vm = false := hrestart
+  have hnotquiet : (!x.ctl.replaying &&
+      !(PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).available x.vm)
+        = false := hquiet
+  unfold PalPeg.GalilScaffoldTop.tickFun
+  rw [hmode]
+  dsimp only
+  rw [if_neg (by rw [hnorestart]; decide), if_neg (by rw [hnotquiet]; decide),
+    if_neg (by omega), if_pos hmatched]
+  simp only [hmode]
+
+/-- The VM projection of the full matched-state equation. -/
+theorem tickFun_scan_matched_vm_of_window {fppBound dpBound K margin : ℕ}
+    (centre : GalilVM → Fin 3) (place : GalilVM → PalPeg.GalilScaffoldPlace.Place)
+    (entry entryQ : ℕ) (first : Fin 9) (w : List (Fin 2))
+    (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (henc : Enc w margin x (q, T)) (hK1 : 1 ≤ K) (hmargin : K ≤ margin)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hphase : scanPhase q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = .compare)
+    (hcan : PalPeg.GalilScaffoldChainVerifier.canRight x.vm.right)
+    (hmatch : agreeTest q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = true) :
+    (PalPeg.GalilScaffoldTop.tickFun
+      (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x).vm
+      = (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w).matchedPlace
+          x.ctl.replaying (PalPeg.GalilScaffoldChainInputSupply.compareFun
+            (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm) := by
+  exact congrArg (fun state => state.vm)
+    (tickFun_scan_matched_of_window centre place entry entryQ first w F delay x q T
+      henc hK1 hmargin hmode hphase hcan hmatch)
+
+/-- The matched control row and both output predicates describe the actual abstract
+successor. This is independent of the chain's internal case, including birth. -/
+theorem scan_matched_control_of_rule {fppBound dpBound K margin : ℕ}
+    (centre : GalilVM → Fin 3) (place : GalilVM → PalPeg.GalilScaffoldPlace.Place)
+    (entry entryQ : ℕ) (first : Fin 9) (w arrived : List (Fin 2))
+    (hbound : 320 < fppBound)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (henc : Enc w margin x (q, T)) (hK2 : 2 ≤ K) (hmargin : K ≤ margin)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hphase : scanPhase q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) = .compare)
+    (hcan : PalPeg.GalilScaffoldChainVerifier.canRight x.vm.right)
+    (hmatch : agreeTest q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) = true)
+    (hrep : PalPeg.GalilScaffoldInputTrace.Represents x.vm.right.head arrived)
+    (hlen : arrived.length ≤ w.length) :
+    let G := PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w
+    let F := PalPeg.GalilScaffoldChainInputSupply.galilFrameS
+      (PalPeg.GalilRunSkeleton.PofC centre place entry w) entryQ first
+    let y := PalPeg.GalilScaffoldTop.tickFun G F 2048 x
+    let q' := ruleNext entryQ first hbound q
+      (fun i => PalPeg.Local.readWin blankM K (tapesOf T i))
+    ctlAbs q'.ctl = y.ctl ∧
+      q'.onLetterBit = PalPeg.GalilScaffoldChainInputSupply.onLetterTest w y.vm ∧
+      q'.leftFirstBit = PalPeg.GalilScaffoldChainInputSupply.leftFirstTest y.vm := by
+  let P := PalPeg.GalilRunSkeleton.PofC centre place entry w
+  let G := PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w
+  let F := PalPeg.GalilScaffoldChainInputSupply.galilFrameS P entryQ first
+  let compared := PalPeg.GalilScaffoldChainInputSupply.compareFun P x.vm
+  let y := G.matchedPlace x.ctl.replaying compared
+  let ws := fun i => PalPeg.Local.readWin blankM K (tapesOf T i)
+  have hright : y.right = PalPeg.GalilScaffoldChainVerifier.right x.vm.right := by
+    change (if x.ctl.replaying then {compared with replay := PalPeg.GalilScaffoldCounter.dec compared.replay} else compared).right = _
+    split <;> exact (compareFun_cursors P x.vm).2
+  have hleft : y.left = PalPeg.GalilScaffoldInputHead.left x.vm.left := by
+    change (if x.ctl.replaying then {compared with replay := PalPeg.GalilScaffoldCounter.dec compared.replay} else compared).left = _
+    split <;> exact (compareFun_cursors P x.vm).1
+  have hreplay : compared.replay = x.vm.replay := by
+    dsimp only [compared]
+    unfold PalPeg.GalilScaffoldChainInputSupply.compareFun
+    rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_replay]
+    split <;> rfl
+  have hon : scanRightOnLetter q ws = PalPeg.GalilScaffoldChainInputSupply.onLetterTest w y := by
+    rw [scanRightOnLetter_eq w arrived henc.2 hmargin hcan hrep hlen]
+    simp only [PalPeg.GalilScaffoldChainInputSupply.onLetterTest, hright]
+  have hfirst : scanLeftFirst q ws = PalPeg.GalilScaffoldChainInputSupply.leftFirstTest y := by
+    rw [scanLeftFirst_eq henc.2 (by omega) hmargin]
+    simp only [PalPeg.GalilScaffoldChainInputSupply.leftFirstTest, hleft]
+  have hqreplay : q.ctl.replaying = x.ctl.replaying :=
+    congrArg (fun ctl => ctl.replaying) henc.1.ctl
+  have hstop : (q.ctl.replaying && !scanReplayZero q ws)
+      = (x.ctl.replaying && !F.replayExhausted y) := by
+    rw [hqreplay, scanReplayZero_eq henc.2 hK2 hmargin]
+    change (x.ctl.replaying && !PalPeg.GalilScaffoldCounter.zero (PalPeg.GalilScaffoldCounter.dec x.vm.replay))
+      = (x.ctl.replaying && !PalPeg.GalilScaffoldCounter.zero y.replay)
+    cases hr : x.ctl.replaying
+    · rfl
+    · simp only [y, G, PalPeg.FrameFunction.galilFrameFun, hr, if_true, hreplay]
+  have hctl : ctlAbs (scanMatchedCtl q ws)
+      = {x.ctl with clock := 2048, output := PalPeg.GalilScaffoldTop.refreshFun G y x.ctl.output, replaying := x.ctl.replaying && !F.replayExhausted y} := by
+    change {ctlAbs q.ctl with clock := 2048, output := if scanRightOnLetter q ws then scanLeftFirst q ws else q.ctl.output, replaying := q.ctl.replaying && !scanReplayZero q ws} = _
+    rw [hstop, hon, hfirst, frameFun_refresh]
+    have hout : q.ctl.output = x.ctl.output := congrArg (fun ctl => ctl.output) henc.1.ctl
+    rw [henc.1.ctl, hout]
+  have hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan :=
+    (congrArg (fun ctl => ctl.mode) henc.1.ctl).trans hmode
+  dsimp only
+  rw [tickFun_scan_matched_of_window centre place entry entryQ first w F 2048 x q T
+    henc (by omega) hmargin hmode hphase hcan hmatch]
+  simp only [ruleNext, hqmode, scanNext, hphase, hmatch, and_self, if_true]
+  exact ⟨hctl, hon, hfirst⟩
+
+/-- The eleven head microsteps preserve the matched controller word and output
+predicates written by step zero, so they encode the abstract tick after all twelve steps. -/
+theorem scan_matched_control_of_tick {fppBound dpBound K margin : ℕ}
+    (centre : GalilVM → Fin 3) (place : GalilVM → PalPeg.GalilScaffoldPlace.Place)
+    (entry entryQ : ℕ) (first : Fin 9) (w arrived : List (Fin 2))
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK2 : 2 ≤ K)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (input : Option (Fin 2)) (hslot0 : q.slot.val = 0)
+    (henc : Enc w margin x (q, T)) (hmargin : K ≤ margin)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hphase : scanPhase q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) = .compare)
+    (hcan : PalPeg.GalilScaffoldChainVerifier.canRight x.vm.right)
+    (hmatch : agreeTest q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) = true)
+    (hrep : PalPeg.GalilScaffoldInputTrace.Represents x.vm.right.head arrived)
+    (hlen : arrived.length ≤ w.length) :
+    let G := PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w
+    let F := PalPeg.GalilScaffoldChainInputSupply.galilFrameS
+      (PalPeg.GalilRunSkeleton.PofC centre place entry w) entryQ first
+    let y := PalPeg.GalilScaffoldTop.tickFun G F 2048 x
+    let q' := (PalPeg.LocalStepFusion.idealRun
+      (tickPhysRule entryQ first hbound hKq hK2 rest) blankM (q, tapesOf T) input 12).1
+    ctlAbs q'.ctl = y.ctl ∧
+      q'.onLetterBit = PalPeg.GalilScaffoldChainInputSupply.onLetterTest w y.vm ∧
+      q'.leftFirstBit = PalPeg.GalilScaffoldChainInputSupply.leftFirstTest y.vm := by
+  have hfree : headFreeFields (PalPeg.LocalStepFusion.idealRun
+      (tickPhysRule entryQ first hbound hKq hK2 rest) blankM (q, tapesOf T) input 12).1
+      = headFreeFields (ruleNext entryQ first hbound q
+          (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape))) := by
+    rw [tickPhysRule_eq entryQ first hbound hKq hK2 rest]
+    exact tickRule_headFree hK2 (fun q _ ws => ruleNext entryQ first hbound q ws)
+      (modeCommands first rest) (fun q _ ws => ruleActs entryQ first q ws)
+      (fun q _ ws j => ruleActs_length entryQ first hKq q ws j) (q, tapesOf T) input hslot0
+  simp only [headFreeFields, Prod.mk.injEq] at hfree
+  obtain ⟨hctl, -, -, -, -, -, -, -, -, -, -, -, -, -, -, -, hon, hfirst, -, -, -⟩ := hfree
+  dsimp only
+  rw [hctl, hon, hfirst]
+  exact scan_matched_control_of_rule centre place entry entryQ first w arrived hbound
+    x q T henc hK2 hmargin hmode hphase hcan hmatch hrep hlen
+
+/-- With an existing chain, comparison changes these four counters independently of
+the chain's internal verdicts. Birth's separate cycle reset cannot occur here. -/
+theorem compareFun_matched_counters (P : PalPeg.GalilScaffoldChainInputSupply.Shared)
+    (s : GalilVM) (hactive : s.chain ≠ PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle)
+    (hagree : PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldInputHead.left s.left)
+      = PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldChainVerifier.right s.right)) :
+    (PalPeg.GalilScaffoldChainInputSupply.compareFun P s).radius = PalPeg.GalilScaffoldCounter.inc s.radius ∧
+    (PalPeg.GalilScaffoldChainInputSupply.compareFun P s).length =
+      PalPeg.GalilScaffoldCounter.inc (PalPeg.GalilScaffoldCounter.inc s.length) ∧
+    (PalPeg.GalilScaffoldChainInputSupply.compareFun P s).cycle =
+      (if s.periodOnly then PalPeg.GalilScaffoldCounter.dec s.cycle else s.cycle) ∧
+    (PalPeg.GalilScaffoldChainInputSupply.compareFun P s).replay = s.replay := by
+  unfold PalPeg.GalilScaffoldChainInputSupply.compareFun
+  simp only [hagree, decide_true, if_true,
+    PalPeg.GalilScaffoldChainInputSupply.afterBirth_of_ne_idle (s := s) hactive]
+  exact ⟨rfl, rfl, rfl, rfl⟩
+
+/-- The actual abstract matched tick asks for the values compiled by the common
+counter row. The hypothesis that the chain already exists excludes birth's reset. -/
+theorem scanMatchCounterValue_eq_tick {fppBound dpBound K margin : ℕ}
+    (centre : GalilVM → Fin 3) (place : GalilVM → PalPeg.GalilScaffoldPlace.Place)
+    (entry entryQ : ℕ) (first : Fin 9) (w : List (Fin 2))
+    (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (henc : Enc w margin x (q, T)) (hK1 : 1 ≤ K) (hmargin : K ≤ margin)
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hphase : scanPhase q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) = .compare)
+    (hcan : PalPeg.GalilScaffoldChainVerifier.canRight x.vm.right)
+    (hmatch : agreeTest q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) = true)
+    (hactive : x.vm.chain ≠ PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle)
+    (c : Fin 16) (henabled : scanMatchCounterEnabled q c = true)
+    (value : PalPeg.GalilScaffoldCounter.Counter) (hvalue : counterOf x c = some value) :
+    counterOf (PalPeg.GalilScaffoldTop.tickFun
+        (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) c
+      = some (scanMatchCounterValue q c value) := by
+  have hagree : PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldInputHead.left x.vm.left)
+      = PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldChainVerifier.right x.vm.right) := by
+    rw [agreeTest_of_encoded henc.2 hK1 hmargin hcan] at hmatch
+    exact of_decide_eq_true hmatch
+  obtain ⟨hrad, hlen, hcycle, hreplay⟩ := compareFun_matched_counters
+    (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm hactive hagree
+  have hvm := tickFun_scan_matched_vm_of_window centre place entry entryQ first w F delay
+    x q T henc hK1 hmargin hmode hphase hcan hmatch
+  change _ = (if x.ctl.replaying then
+    {PalPeg.GalilScaffoldChainInputSupply.compareFun (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm with replay := PalPeg.GalilScaffoldCounter.dec (PalPeg.GalilScaffoldChainInputSupply.compareFun (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm).replay}
+    else PalPeg.GalilScaffoldChainInputSupply.compareFun (PalPeg.GalilRunSkeleton.PofC centre place entry w) x.vm) at hvm
+  have hqreplay : q.ctl.replaying = x.ctl.replaying :=
+    congrArg (fun ctl => ctl.replaying) henc.1.ctl
+  have hqperiod : q.periodOnly = x.vm.periodOnly := henc.1.periodOnly
+  have hwhich : c = 0 ∨ c = 2 ∨ c = 3 ∨ c = 4 := by
+    simp only [scanMatchCounterEnabled, Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq] at henabled
+    tauto
+  rcases hwhich with rfl | rfl | rfl | rfl
+  all_goals simp only [counterOf, Option.some.injEq] at hvalue
+  all_goals rw [← hvalue]
+  all_goals simp only [counterOf, hvm]
+  all_goals cases hrep : x.ctl.replaying <;>
+    simp [hrep, hrad, hlen, hcycle, hreplay, scanMatchCounterValue, scanMatchCounterEnabled,
+      hqperiod, hqreplay]
+
+/-- The common counter slots of the physical matched tick encode the counters of
+`tickFun` itself. This includes the radius and length mirrors and the conditional
+cycle/replay decrements. The remaining chain and control fields are separate obligations. -/
+theorem scan_matched_counters_of_tick {fppBound dpBound K margin : ℕ}
+    (centre : GalilVM → Fin 3) (place : GalilVM → PalPeg.GalilScaffoldPlace.Place)
+    (entry entryQ : ℕ) (first : Fin 9) (w : List (Fin 2))
+    (F : PalPeg.GalilScaffoldTop.Frame GalilVM) (delay : ℕ)
+    (hbound : 320 < fppBound) (hKq : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hmargin : K ≤ margin)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (x : State GalilVM) (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (input : Option (Fin 2)) (hslot0 : q.slot.val = 0)
+    (henc : Enc w margin x (q, T))
+    (hmode : x.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hphase : scanPhase q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) = .compare)
+    (hcan : PalPeg.GalilScaffoldChainVerifier.canRight x.vm.right)
+    (hmatch : agreeTest q (fun i => PalPeg.Local.readWin blankM K (tapesOf T i)) = true)
+    (hactive : x.vm.chain ≠ PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle)
+    (slot : Slot) (c : Fin 16) (hcarrier : counterCarrier slot = some c)
+    (henabled : scanMatchCounterEnabled q c = true) :
+    ∃ segments : STape Seg,
+      some (absCtr segments ((PalPeg.LocalStepFusion.idealRun
+          (tickPhysRule entryQ first hbound hKq hK2 rest) blankM (q, tapesOf T) input 12).1.polarity c))
+        = counterOf (PalPeg.GalilScaffoldTop.tickFun
+          (PalPeg.FrameFunction.galilFrameFun centre place entry entryQ first w) F delay x) c ∧
+      (PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK2 rest)
+          blankM (q, tapesOf T) input 12).2 (slotIndex slot)
+        = padLeft margin (mapTape encSeg segments) := by
+  have hvalue : ∃ value, counterOf x c = some value := by
+    fin_cases c <;> simp_all [scanMatchCounterEnabled, counterOf]
+  obtain ⟨value, hvalue⟩ := hvalue
+  have hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan :=
+    (congrArg (fun ctl => ctl.mode) henc.1.ctl).trans hmode
+  obtain ⟨segments, habs, htape⟩ := scan_match_counter_of_tick entryQ first hbound hKq hK2 hmargin
+    rest x q T input hslot0 henc.2 hqmode hphase hmatch slot c hcarrier henabled value hvalue
+  refine ⟨segments, ?_, htape⟩
+  rw [habs, scanMatchCounterValue_eq_tick centre place entry entryQ first w F delay x q T
+    henc (by omega) hmargin hmode hphase hcan hmatch hactive c henabled value hvalue]
+
+/-- A watching chain may consume internally, reach zero lag, and consume again on the
+same match event. These are the two verdicts the physical scan row must account for. -/
+theorem chainTickFun_watch_double (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (hlag : PalPeg.GalilScaffoldCounter.positive wm.lag = true)
+    (hfirst : PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm = some true)
+    (hzero : PalPeg.GalilScaffoldCounter.zero
+      (PalPeg.GalilScaffoldChainWatch.caught wm).lag = true)
+    (hsecond : PalPeg.GalilScaffoldChainInputSupply.watchVerdict
+      (PalPeg.GalilScaffoldChainWatch.caught wm) = some true) :
+    PalPeg.GalilScaffoldChainInputSupply.chainTickFun true (.watch wm)
+      = .watch (PalPeg.GalilScaffoldChainWatch.immediate
+          (PalPeg.GalilScaffoldChainWatch.caught wm)) := by
+  simp only [PalPeg.GalilScaffoldChainInputSupply.chainTickFun,
+    PalPeg.GalilScaffoldChainInputSupply.chainStepFun, if_true, hlag, hfirst]
+  simp only [PalPeg.GalilScaffoldChainInputSupply.chainMatchedFun, hzero, if_true, hsecond]
+
+/-- The actual comparison, including both chain consumptions. The search is inactive
+because the chain is already watching; the remaining changes are precisely `afterCompare`. -/
+theorem compareFun_watch_double (P : PalPeg.GalilScaffoldChainInputSupply.Shared)
+    (s : GalilVM) (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (hchain : s.chain = .watch wm)
+    (hagree : PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldInputHead.left s.left)
+      = PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldChainVerifier.right s.right))
+    (hlag : PalPeg.GalilScaffoldCounter.positive wm.lag = true)
+    (hfirst : PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm = some true)
+    (hzero : PalPeg.GalilScaffoldCounter.zero
+      (PalPeg.GalilScaffoldChainWatch.caught wm).lag = true)
+    (hsecond : PalPeg.GalilScaffoldChainInputSupply.watchVerdict
+      (PalPeg.GalilScaffoldChainWatch.caught wm) = some true) :
+    PalPeg.GalilScaffoldChainInputSupply.compareFun P s
+      = PalPeg.GalilScaffoldChainInputSupply.afterCompare s
+          ⟨PalPeg.GalilScaffoldInputHead.left s.left,
+            PalPeg.GalilScaffoldChainVerifier.right s.right,
+            .watch (PalPeg.GalilScaffoldChainWatch.immediate
+              (PalPeg.GalilScaffoldChainWatch.caught wm))⟩
+          (PalPeg.GalilScaffoldChainInputSupply.searchLens.get s) := by
+  have hactive : s.chain ≠ PalPeg.GalilScaffoldChainInputSupply.ChainVM.idle := by
+    rw [hchain]; intro h; cases h
+  unfold PalPeg.GalilScaffoldChainInputSupply.compareFun
+  simp only [hagree, decide_true, if_true]
+  rw [PalPeg.GalilScaffoldChainInputSupply.afterBirth_of_ne_idle (s := s) hactive]
+  have hsearch : PalPeg.GalilScaffoldChainInputSupply.searchEffectFun P true s
+      = PalPeg.GalilScaffoldChainInputSupply.searchLens.get s := by
+    simp only [PalPeg.GalilScaffoldChainInputSupply.searchEffectFun, hchain]
+  rw [hsearch, hchain]
+  simp only [PalPeg.GalilScaffoldChainInputSupply.chainAtFun]
+  rw [chainTickFun_watch_double wm hlag hfirst hzero hsecond]
+
+/-- In the double-consumption arm, the existing whole-cell command is exactly the
+verifier operation of the comparison. This connects the chain computation to `headOp`,
+which `enc_afterTickOfState` now carries through the same twelve physical slots. -/
+theorem headOp_compareFun_watch_double (P : PalPeg.GalilScaffoldChainInputSupply.Shared)
+    (s : GalilVM) (wm : PalPeg.GalilScaffoldChainWatch.State)
+    (hchain : s.chain = .watch wm)
+    (hagree : PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldInputHead.left s.left)
+      = PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldChainVerifier.right s.right))
+    (hlag : PalPeg.GalilScaffoldCounter.positive wm.lag = true)
+    (hfirst : PalPeg.GalilScaffoldChainInputSupply.watchVerdict wm = some true)
+    (hzero : PalPeg.GalilScaffoldCounter.zero
+      (PalPeg.GalilScaffoldChainWatch.caught wm).lag = true)
+    (hsecond : PalPeg.GalilScaffoldChainInputSupply.watchVerdict
+      (PalPeg.GalilScaffoldChainWatch.caught wm) = some true)
+    (ctl : PalPeg.GalilScaffoldController.Control) :
+    headOf ⟨ctl, PalPeg.GalilScaffoldChainInputSupply.compareFun P s⟩ 3
+      = (headOp .stepRight).bind (fun f => (headOf ⟨ctl, s⟩ 3).map f) := by
+  rw [compareFun_watch_double P s wm hchain hagree hlag hfirst hzero hsecond]
+  simp only [headOf, hchain, headOp, Option.bind_some, Option.map_some]
+  rfl
+
+/-- The concrete scan command carries the twice-consuming verifier through all twelve
+physical steps, preserving its encoding. The arrival condition comes from the two abstract
+availability guards. No command-table or simulated-window equality is assumed. -/
+theorem scan_watch_double_head {fppBound dpBound K : ℕ}
+    (margin entryQ : ℕ) (first : Fin 9) (hbound : 320 < fppBound)
+    (hKq : entryQ + 3 ≤ K) (hK2 : 2 ≤ K) (hmargin : K ≤ margin)
+    (rest : QPhys fppBound dpBound → Option (Fin 2) →
+      (Fin tapeCountM → PalPeg.Local.Window Γm K) → Fin 4 →
+      PalPeg.ConcreteLocalMachine.ViewCommand)
+    (input : Option (Fin 2)) (w : List (Fin 2)) (x : State GalilVM)
+    (q : QPhys fppBound dpBound) (T : Slot → STape Γm)
+    (henc : Enc w margin x (q, T)) (hslot0 : q.slot.val = 0)
+    (howed : (q.micro 3).2.2.2 = 0)
+    (hqmode : q.ctl.mode = PalPeg.GalilScaffoldController.Mode.scan)
+    (hcompare : scanPhase q (fun tape => PalPeg.Local.readWin blankM K (tapesOf T tape)) = .compare)
+    (hcanRight : PalPeg.GalilScaffoldChainVerifier.canRight x.vm.right)
+    (hagree : PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldInputHead.left x.vm.left)
+      = PalPeg.GalilScaffoldInputHead.read (PalPeg.GalilScaffoldChainVerifier.right x.vm.right))
+    (wm : PalPeg.GalilScaffoldChainWatch.State) (hchain : x.vm.chain = .watch wm)
+    (a : Fin 3) (htok : wm.machine.control.period.focus = .plain a)
+    (hcanVer : PalPeg.GalilScaffoldChainVerifier.canRight wm.machine.verifier)
+    (hcanSecond : PalPeg.GalilScaffoldChainVerifier.canRight
+      (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier))
+    (hseen : PalPeg.GalilScaffoldInputHead.read
+      (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier) = some a)
+    (hforward : wm.machine.control.forward = true)
+    (hlag : PalPeg.GalilScaffoldCounter.positive wm.lag = true)
+    (hzero : PalPeg.GalilScaffoldCounter.zero (PalPeg.GalilScaffoldChainWatch.caught wm).lag = true)
+    (hsymbol : (PalPeg.GalilScaffoldChainConsume.symbol
+      (PalPeg.GalilScaffoldChainWatch.caught wm).machine.control.period.focus).isSome = true) :
+    ∃ (view : PalPeg.LocalInputView.InputView) (viewTapes : Fin 12 → STape Γc),
+      PalPeg.LocalArrival.absHead' view [] = PalPeg.GalilScaffoldChainVerifier.right
+        (PalPeg.GalilScaffoldChainVerifier.right wm.machine.verifier) ∧
+      PalPeg.ConcreteLocalMachine.ViewRep margin view
+        ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK2 rest)
+          blankM (q, tapesOf T) input 12).1.gap 3)
+        ((PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK2 rest)
+          blankM (q, tapesOf T) input 12).1.micro 3) viewTapes ∧
+      (∀ i, (PalPeg.LocalStepFusion.idealRun (tickPhysRule entryQ first hbound hKq hK2 rest)
+        blankM (q, tapesOf T) input 12).2 (slotIndex (headSlot 3 i)) = mapTape encCell (viewTapes i)) ∧
+      PalPeg.LocalViewCells.ViewCells view ∧ PalPeg.LocalInputView.WF view := by
+  have hcommand := scanCommands_watch_double margin entryQ first hbound hKq (by omega) hmargin
+    w x q T henc hqmode hcompare hcanRight hagree wm hchain a htok hcanVer hseen hforward
+    hlag hzero hsymbol
+  obtain ⟨view, viewTapes, habs, hrep, hslots, hcells, hwf⟩ := henc.2.heads 3 wm.machine.verifier
+    (by simp only [headOf, hchain])
+  exact tickPhysRule_heads entryQ first hbound hKq hK2 hmargin rest 3 (q, tapesOf T) input
+    hslot0 .stepRight (by rw [modeCommands_scan first rest q input _ hqmode]; exact hcommand)
+    view hwf hcells viewTapes (fun i => by
+      change tapesOf T (slotIndex (headSlot 3 i)) = _
+      rw [tapesOf_apply]
+      exact hslots i)
+    hrep howed wm.machine.verifier _ habs
+    (fun head => PalPeg.GalilScaffoldChainVerifier.right (PalPeg.GalilScaffoldChainVerifier.right head))
+    rfl rfl (headReady_stepRight_of_canRight view (by rw [habs]; exact hcanVer)
+      (by rw [habs]; exact hcanSecond))
 
 /-- **the rewind never asks a cursor to step right**, so its row carries no arrival condition:
 every cursor either steps left or stands still. -/
@@ -14639,8 +16295,11 @@ theorem rewind_one_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : G
     (fun v head hhead =>
       headOf_tickFun_rewind centre place entry entryQ first w F delay x hxmode hatFirst v head
         hhead)
-    (fun v _ _ hmove =>
-      absurd hmove (rewindCommands_ne_moveRight first q.fppLive q _ v))
+    (fun v view _ => by
+      unfold rewindCommands
+      split
+      · trivial
+      · split <;> dsimp only <;> split <;> trivial)
     henc.2 hctl
     (fun i => rfl) (fun i => rfl) rfl rfl rfl rfl htapes
 
@@ -14696,7 +16355,7 @@ theorem rewind_reset_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre :
     (fun v head hhead => by
       rw [headOf_tickFun_rewindReset centre place entry entryQ first w F delay x hmode hatFirst v]
       exact hhead)
-    (fun _ _ _ h => absurd h (by simp)) henc.2 hctl
+    (fun _ _ _ => True.intro) henc.2 hctl
     (fun i => rfl) (fun i => rfl) rfl rfl rfl rfl htapes
 
 
@@ -14817,7 +16476,7 @@ theorem shift_exit_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : G
     (shift_exit_of_rule margin centre place entry entryQ first w F delay x q T
       (physRule entryQ first hbound hK)
       (physRule_nq_shift entryQ first hbound hK q _ hqmode hdoneQ)
-      (physRule_acts_shift entryQ first hbound hK q _ hqmode) hK1 hKn hmode hdone henc)
+      (physRule_acts_shift entryQ first hbound hK q _ hqmode hdoneQ) hK1 hKn hmode hdone henc)
   exact enc_afterTickOfState margin entryQ first hbound hK hK2 hmargin rest w x _ q T input hslot0 howed
     (fun _ => .stay)
     (fun _ => by rw [modeCommands_shiftExit first rest q input _ hqmode hdoneQ]; rfl)
@@ -14827,8 +16486,12 @@ theorem shift_exit_of_tick {fppBound dpBound K : ℕ} (margin : ℕ) (centre : G
     (fun v head hhead => by
       rw [headOf_tickFun_shiftExit centre place entry entryQ first w F delay x hmode hdone v]
       exact hhead)
-    (fun _ _ _ h => absurd h (by simp)) henc.2 hctl
+    (fun _ _ _ => True.intro) henc.2 hctl
     (fun i => rfl) (fun i => rfl) rfl rfl rfl rfl htapes
+
+/-- info: 'PalPeg.PhysicalEncoding.scan_matched_control_of_tick' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms scan_matched_control_of_tick
 
 end PalPeg.PhysicalEncoding
 
@@ -14964,3 +16627,42 @@ end PalPeg.PhysicalEncoding
 #print axioms PalPeg.PhysicalEncoding.margin_le_pos
 #print axioms PalPeg.PhysicalEncoding.padded_moveRight
 #print axioms PalPeg.PhysicalEncoding.EncTapes
+#print axioms PalPeg.PhysicalEncoding.absHead'_stepRight
+#print axioms PalPeg.PhysicalEncoding.headReady_stepRight_of_canRight
+#print axioms PalPeg.PhysicalEncoding.enc_afterTickOfState
+#print axioms PalPeg.PhysicalEncoding.headOp_compareFun_watch_double
+#print axioms PalPeg.PhysicalEncoding.scanPhase_eq
+#print axioms PalPeg.PhysicalEncoding.agreeTest_of_encoded
+#print axioms PalPeg.PhysicalEncoding.tickFun_scan_matched_vm_of_window
+
+/-- info: 'PalPeg.PhysicalEncoding.scanCommands_watch_double' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.PhysicalEncoding.scanCommands_watch_double
+
+/-- info: 'PalPeg.PhysicalEncoding.scan_watch_double_head' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.PhysicalEncoding.scan_watch_double_head
+
+/-- info: 'PalPeg.PhysicalEncoding.counter_incTwice_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.PhysicalEncoding.counter_incTwice_at
+
+/-- info: 'PalPeg.PhysicalEncoding.encTapes_scanLength' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.PhysicalEncoding.encTapes_scanLength
+
+/-- info: 'PalPeg.PhysicalEncoding.copy_end_of_tick' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.PhysicalEncoding.copy_end_of_tick
+
+/-- info: 'PalPeg.PhysicalEncoding.scanConsume_tapes' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.PhysicalEncoding.scanConsume_tapes
+
+/-- info: 'PalPeg.PhysicalEncoding.scanMatchCounter_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.PhysicalEncoding.scanMatchCounter_tape
+
+/-- info: 'PalPeg.PhysicalEncoding.scan_matched_counters_of_tick' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.PhysicalEncoding.scan_matched_counters_of_tick

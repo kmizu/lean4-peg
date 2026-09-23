@@ -1,4 +1,5 @@
 import PalPeg.LocalQueueProgram
+import PalPeg.LocalBlankSweep
 
 /-!
 # The first step of a machine: from blank tapes
@@ -29,46 +30,23 @@ open PalPeg.Program (STape)
 open PalPeg.RTQueue (Queue)
 
 /-- A tape whose cells are all blank. -/
-def AllBlank (tape : STape Γc) : Prop := ∀ p, rd blankc tape p = blankc
+abbrev AllBlank (tape : STape Γc) : Prop := PalPeg.LocalBlankSweep.AllBlank blankc tape
 
-theorem allBlank_blankTape : AllBlank (STape.blankTape blankc) := by
-  intro p
-  show ([] ++ blankc :: ([] : List Γc)).getD p blankc = blankc
-  cases p with
-  | zero => rfl
-  | succ n => rfl
+theorem allBlank_blankTape : AllBlank (STape.blankTape blankc) :=
+  PalPeg.LocalBlankSweep.allBlank_blankTape blankc
 
 theorem readWin_allBlank {K : ℕ} {tape : STape Γc} (hblank : AllBlank tape)
-    (i : Fin (2 * K + 1)) : readWin blankc K tape i = blankc := by
-  rw [readWin_eq]
-  exact hblank _
+    (i : Fin (2 * K + 1)) : readWin blankc K tape i = blankc :=
+  PalPeg.LocalBlankSweep.readWin_allBlank blankc hblank i
 
-/-- From the left edge of a blank tape the sweep does what it does from a blank tape
-whose head stands at `K`. -/
 theorem sweep_blank_edge_shifted (K : ℕ) {edge shifted : STape Γc} (hedge : pos edge = 0)
     (hedgeBlank : AllBlank edge) (hshifted : pos shifted = K) (hshiftedBlank : AllBlank shifted)
     (window : Window Γc K) (displacement : ℤ) :
     TEqG blankc (sweep blankc K shifted window displacement)
-      (sweep blankc K edge window displacement) := by
-  constructor
-  · rw [sweep, sweep, pos_mvRN, pos_cPhase, pos_mvRN, pos_mvLN, pos_mvRN, pos_cPhase, pos_mvRN,
-      pos_mvLN, hedge, hshifted]
-    omega
-  · intro p
-    have hmarginEdge : 2 * K ≤ pos ((PalPeg.Local.mvR blankc)^[2 * K]
-        ((PalPeg.Local.mvL blankc)^[K] edge)) := by
-      rw [pos_mvRN, pos_mvLN]; omega
-    have hmarginShifted : 2 * K ≤ pos ((PalPeg.Local.mvR blankc)^[2 * K]
-        ((PalPeg.Local.mvL blankc)^[K] shifted)) := by
-      rw [pos_mvRN, pos_mvLN]; omega
-    rw [sweep, sweep, rd_mvRN, rd_cPhase _ _ _ _ hmarginShifted, rd_mvRN, rd_mvLN, rd_mvRN,
-      rd_cPhase _ _ _ _ hmarginEdge, rd_mvRN, rd_mvLN]
-    simp only [pos_mvRN, pos_mvLN, hedge, hshifted, hedgeBlank p, hshiftedBlank p]
-    simp
+      (sweep blankc K edge window displacement) :=
+  PalPeg.LocalBlankSweep.sweep_blank_edge_shifted blankc K hedge hedgeBlank hshifted
+    hshiftedBlank window displacement
 
-/-- **The first step needs no margin.**  From blank tapes at the left edge, a step of
-`compStep R` is, up to `TEqG`, the rule's actions applied to blank tapes whose heads stand at
-`K`; the control is the rule's. -/
 theorem compStep_apply_blankEdge {Terminal Q : Type} {tapeCount K : ℕ}
     (R : ActRule Terminal Q Γc tapeCount K) (control : Q) (input : Option Terminal)
     (edge shifted : Fin tapeCount → STape Γc) (hedge : ∀ tape, pos (edge tape) = 0)
@@ -79,34 +57,9 @@ theorem compStep_apply_blankEdge {Terminal Q : Type} {tapeCount K : ℕ}
       ∀ tape, TEqG blankc
         (actList blankc (shifted tape)
           (R.acts control input (fun tape => readWin blankc K (shifted tape)) tape))
-        (((compStep R).apply blankc (control, edge) input).2 tape) := by
-  have hwindows : (fun tape => readWin blankc K (edge tape))
-      = fun tape => readWin blankc K (shifted tape) := by
-    funext tape i
-    rw [readWin_allBlank (hedgeBlank tape), readWin_allBlank (hshiftedBlank tape)]
-  refine ⟨?_, fun tape => ?_⟩
-  · show R.nq control input (fun tape => readWin blankc K (edge tape)) = _
-    rw [hwindows]
-  · have hideal := PalPeg.CloseoutCoreEnc12.teq_sweep_actList blankc K (shifted tape)
-      (R.acts control input (fun tape => readWin blankc K (shifted tape)) tape)
-      (R.len_le _ _ _ _) (hshifted tape).ge
-    have hsame := sweep_blank_edge_shifted K (hedge tape) (hedgeBlank tape) (hshifted tape)
-      (hshiftedBlank tape)
-      (winAfter K (readWin blankc K (shifted tape))
-        (R.acts control input (fun tape => readWin blankc K (shifted tape)) tape))
-      (dAfter K (readWin blankc K (shifted tape))
-        (R.acts control input (fun tape => readWin blankc K (shifted tape)) tape))
-    have hgoal : ((compStep R).apply blankc (control, edge) input).2 tape
-        = sweep blankc K (edge tape)
-            (winAfter K (readWin blankc K (shifted tape))
-              (R.acts control input (fun tape => readWin blankc K (shifted tape)) tape))
-            (dAfter K (readWin blankc K (shifted tape))
-              (R.acts control input (fun tape => readWin blankc K (shifted tape)) tape)) := by
-      show sweep blankc K (edge tape) _ _ = _
-      simp only [hwindows]
-      rfl
-    rw [hgoal]
-    exact ⟨hideal.1.trans hsame.1, fun p => (hideal.2 p).trans (hsame.2 p)⟩
+        (((compStep R).apply blankc (control, edge) input).2 tape) :=
+  PalPeg.LocalBlankSweep.compStep_apply_blankEdge blankc R control input edge shifted
+    hedge hedgeBlank hshifted hshiftedBlank
 
 /-- The cells of a stack of seals are blank. -/
 theorem allBlank_dTape_seals (height : ℕ) :

@@ -13,9 +13,13 @@
 `lean-pal/` の無条件 `PAL ∈ PEG` は、**残り義務 1 本**。
 それが `PalPeg.PalInPeg.obligation_localRealization`（局所実現）で、
 いまその具体構成を `lean-pal/PalPeg/PhysicalEncoding.lean` に書いている途中。
-**全体 build 成功・標準公理のみ・無条件 PAL は未完。**
+**無条件 PAL は未完。最終定理は局所実現の追加公理に依存する。**
 
-### 0.2 進捗の計器（これ以外を進捗と呼ばない）
+**2026-09-22 最新の作業順序:** ユーザー指定の [`proof-strategy.md`](proof-strategy.md) に従う。
+M0（接続面）→ M1（boot/feed/境界）→ M2（非飢餓scan count）→ M3–M5。
+下のmatched部品記録は再利用資料であり、直近の実装順ではない。
+
+### 0.2 完成判定と残件 KPI（2026-09-22 先輩の指示で更新）
 
 ```sh
 cd lean-pal && . ~/.elan/env && lake env lean PalPeg/Axioms.lean
@@ -29,8 +33,81 @@ cd lean-pal && . ~/.elan/env && lake env lean PalPeg/Axioms.lean
 ```
 
 **この 4 本目が消えて標準 3 公理だけになったとき、§10.5（前提ゼロ）達成。**
-義務を 1 本証明したら guard が壊れる → その更新が唯一の前進の記録。
-新しい `axiom` を足して数を増やしてはならない。
+義務を 1 本証明したら guard が壊れる → その更新が最終義務の放電記録。
+
+**作業中の KPI は [`lean-pal/PHYSICAL_KPI.md`](lean-pal/PHYSICAL_KPI.md)、
+チェック台帳は [`lean-pal/PHYSICAL_CONNECTIONS.md`](lean-pal/PHYSICAL_CONNECTIONS.md)。**
+先輩の最新指示は「公理が一本いうても、それは巨大な塊だから指標にしないでもいいよ。分解してこ」。
+方針書の **39作業項目（M0–M5）** を証拠付きで消し込む。これは補題数でも同じ重さの単位でもない。
+現状 **21完了・18未完**（M0 6/6、M1 7/7、M2 6/6、M3 1/6、M4 0/6、M5 1/8）。
+M3-02のconsume各ケースは、watch count全体を同じ最終TickCasesへ接続して完了。
+Workbench BUILD=0、最終公理監査 AUDIT=0。最新ログは `/tmp/physical-dp-retirement-{workbench,axioms}.log`。
+公理数は日々の指標にせず、上の監査を最後の完成判定に使う。
+最終接続8項目はまだ具体機械での充足が未完。旧23出口表は局所部品の在庫（15あり、8未）。T06 beginShiftを源条件供給・実dispatcherまで接続し完了。
+boot/feed/全starved/idle-chain静止count/watch count全体/正規watch入口/shift入口・進行・終了は、
+同じ役割・符号交換を行う共通 `PhysicalShiftDispatch.machine rest` へ接続済み。
+`cases_of_remaining` が既存CountAtRest/CountWatch/CountBackReady/shiftと、新しいEntryを最終TickCasesへ渡す。
+正規period配置とcopy/backのhは `PhysicalChainShape.period_onRun` で供給済み。
+CountWatchはlag・token・方向・成否で制限しない。他のchain/searchのactiveはhotherに残り、count全体の完成ではない。
+`rest` は未実装命令行。全modeの証明・最終機械の確定は未完。
+**共通接続の基礎（2026-09-23）:** `PhysicalLoanDispatch.machine rest` と
+`PhysicalLoanInvariant.Enc` を下記の最新Cleanup機械/Encが包む。scan・chain idle・searchActiveのとき実mirror2に部分鏡と
+radius/debtのbalanceを要求し、他は従来のコピー付きSnapshot Encを使う。
+`PhysicalDebtFeed`が実feedの12段と証明用補完の可換性を証明し、入力到来・全starvedを新契約へ接続。
+blank・idle静止count・watch count全体・watch入口・shift入口/進行/終了も同じ最終TickCasesへ保持。
+118本・半径1536・有限役割は維持。旧コピー付き入口の32+32/64融合もそのまま再利用する。
+**正のworkのgrow countも接続済み。** `PhysicalGrowStorage`がspan+=8・work--・span鏡と背景消去を保存し、
+`PhysicalGrowCount`がdebt++の2回と部分鏡再準備を32+32+32で融合、同じmacro sweepでclockを減算する。
+実窓のgrow選択と`forward_grow`を最終TickCasesへ接続し、hotherからCountGrowを除いた。
+**grow比較の非ヘッド行も証明済み。** `PhysicalMatchCounters`がradius++/length+=2/debt--と
+条件付きcycle/replay減算、実部分鏡の保存を証明。`PhysicalGrowMatch.body`がgrow 96と比較32を
+半径128の実sweepへ融合し、カーソル以外のVM更新を実compareFun/matchedPlaceと同定した。
+`PhysicalLoanAssembly`は部分鏡を保った12段ヘッド実行・実macro sweepを組み立てる。
+名前のないidle verifierはstayで処理。
+**grow比較の個別接続も完了。** `PhysicalGrowMatchTick`が半径128の非ヘッド行と12段で左右ヘッドと
+clock/output/replayingを更新し、実macro1536 sweepを証明。`PhysicalGrowMatchCase`が窓のguardと
+実tickFunを同定し、`PhysicalLoanDispatch.forward_match/cases_of_remaining`へ接続した。
+到来prefixは既存ArrivedOnRun、右head可用性は非飢餓条件から供給。hotherからMatchGrowを除いた。
+MatchGrowはscan/clock≤1/chain idle/search grow/work正/比較一致で、matched全体の完成ではない。
+prepare（work=0）・他の探索行・search出口補完・DP reset・restart全行も残る。
+今回の新4guardと更新したcases guardは標準3公理以内。全体BUILD=0・最終AUDIT=0。
+KPI21完了18未完、T02/M3-01未完。詳細は§0.6と台帳末尾。
+**退役DP消去を共通dispatcherと同じsweepへ接続済み（既存7activeケースの移行も完了）。** `PhysicalProgramErase`は同じ118本の
+退役DP12本に有限phaseと半径1の行動列を使う。Denseな非空白接頭辞を源条件に、
+線形回数の実sweepでresetへのTEqGを供給し、`bank_sweep_enc`が既存全Encと余白を保持する。
+旧eraseActが非空白rootで停止する例を`left_only_stuck`で確認した。
+**Denseのprogram実行からの供給は完了。** `GalilDpDensity.onRun/fpp_onRun`が任意入力・lowerの
+実初期配置から任意prefixのDP12/FPP9本の形を証明した。MARKSのemit位置は既存prepared完成形と
+実行一意性から供給し、全373命令の保存は有限表のカーネル検査＋実命令の意味で閉じる。
+`PhysicalDpDensity.bank_reset_onRun`が待機/halt後を含む実Control.RunからDenseとサイズ上限を供給し、
+3*(max(w.length+1,lower+1)+bs.count true)+5回の消去でresetへのTEqGを返す。
+**有限phaseと単一sweepへの統合はboot/feed/starvedと既存7activeケースまで接続済み。**
+`PhysicalDpCleanup.machine rest`は旧LoanDispatchを包み、同じ源窓から通常処理の次のlive/役割を
+読み、次に退役側となるDPだけを並行消去する。半径1536・118本のままで追加tickはない。
+`PhysicalEraseBatch.stored`が1536段（各テープ最大1536行動）を1sweepへ融合。
+`PhysicalRetiredDpFrame.loan`が旧snapshot/部分鏡を含む全Encへの置換保存を証明し、
+新Encは存在量化した消去履歴GoodとViewを持つ。`ready`がdoneからresetのTEqGを供給。
+`forward_kept/forward_retired`が通常継続/新退役の一般接続を用意し、
+`PhysicalDpCleanupBoot.forward_feed/forward_starved`が実blank bootを含め源条件を供給済み。
+**2026-09-23 15:05 引き継ぎ最新版は `CLAUDE.md` 冒頭。**
+`PhysicalDpBank.machine`が現在の全dispatcherのdpLive/両bankアドレス保存を源窓から証明。
+`PhysicalLoanDispatch.active_of_remaining`へ既存ケース本体を抽出し、
+`PhysicalDpCleanupDispatch.cases_of_remaining`がCountAtRest/CountWatch/CountBackReady/
+shift/Entry/CountGrow/MatchGrowを新機械/Encの最終TickCasesへ移行済み。
+残差hotherの7除外条件は同じで、未実装ケースは減らしていない。
+`PhysicalDpPreload.dense_onRun`がlower/copy等の任意ロード途中の12本Dense、
+`prepare_run_size`が長さ≤1+実enabled回数を証明。完成済みpreloadを仮定しない。
+`PhysicalDpRetirement.live`がsnapshot/部分鏡を含む源Loan Encからlive DPのTEqGを供給し、
+`forward_preparing/program`が実Run由来のDenseを同じwrapの退役開始へ渡す。
+**再liveまでの消去期限、PAL全体から準備/program Runを供給する接続、
+DP live切替え・prepare/restartの実行行は未完。** Retirement補題の旧後状態Enc/実step等式は
+各reset行が証明して渡す必要がある。現在のdispatcherはDP bitを保持するため、flip行を
+追加するときは別扱いする。FPP旧消去の置換も残る。
+今回の新10guardは標準3公理以内、Workbench BUILD=0（9810 jobs）・AUDIT=0。
+KPI21/18・T15/8を維持。ユーザーのClaude Code引き継ぎ依頼で追加証明作業を区切った。
+具体的な12段結果の射影を直接比較せず、`held_bank/held_roles`・`boot_nonhead`などの一般補題と
+融合規則全体のgeneralizeを先に使う。今回の最終Boot buildは約5秒。
+新しい `axiom` を足して置き換えてはならない。
 
 ### 0.3 残っている義務の型
 
@@ -41,35 +118,31 @@ axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
     H_realizeCanonical centreC placeC entry q first
 ```
 
-消費者は `lean-pal/PalPeg/ShadowedLocalFinal.lean:984` の
-`forwardTick_of_rule`。その最後の仮説 `hideal`（`:995`）が実質の穴で、
-署名は
+最終消費者は `ShadowedLocalFinal.given_physicalMachine_indexed`。
+機械本体を語の量化の外で固定し、証明用の `Enc w` だけを添字付けした。
+元の `given_physicalMachine` は語に依存しない特殊化として維持している。
+固定証人 entry=0 / q=1 / first=0 で8つの物理義務を
+`PhysicalContract.Obligations` に記録し、`PhysicalConnection.given_obligations` が
+既存の抽象側3契約を供給して最終型まで接続する。**仮定付きの型検査であり、8義務の放電ではない。**
 
-```lean
-(R : PalPeg.CloseoutCoreEnc12.ActRule (Fin 2) Q Γ t K) (blankSymbol : Γ)
-(Enc : State GalilVM → Q × (Fin t → STape Γ) → Prop)
-(hmargin : ∀ x p, sweepClosure blankSymbol Enc x p → ∀ tape, K ≤ pos (p.2 tape))
-(hidle   : … starvedTest x = true → 規則が何もしない …)
-(hideal  : ∀ w x p, sweepClosure blankSymbol Enc x p → starvedTest x = false →
-             sweepClosure blankSymbol Enc (tickFun … x) (idealStep R blankSymbol p …))
-```
-
-つまり **具体的な `Q`・`Γ`・`t`・`K`・`R`・`Enc` を与えて `hideal` を証明する**のが
-残りの全部。`Enc` を決めた時点で `hmargin` / `hidle` は符号化の場から出る。
+`PhysicalContract.forwardTick_of_cases` は OnRun / PreTraceIMW / CanonTrace を保持する。
+旧 `forwardTick_of_rule.hideal` の全状態量化へ無理に合わせない。
+quiet scan は `PhysicalGuardProbe.frame_quiet_scan_starves` によりstarved側。
+その生のtick補題を、非飢餓側が接続できた証拠に数えない。
 
 ### 0.4 いま書いている構成（`PalPeg/PhysicalEncoding.lean`）
 
-14,966 行 / 632 トップレベル宣言。`PalPeg/Workbench.lean:84` に登録済み。
-**単体 build EXIT=0・error 0・sorry 0、`PalPeg.Workbench` BUILD=0**（HEAD `a31752a` 時点）。
+16,642 行（2026-09-22 Codex 継続編集後）。`PalPeg/Workbench.lean:84` に登録済み。
+**単体 build EXIT=0・`PalPeg.Workbench` BUILD=0・sorry 0**。matched共通カウンタ・鏡と制御の12ステップ接続まで、Workbench build と9定理の公理guardで検証。最終公理監査AUDIT=0、追加公理1は残る。
 
 | 決めたこと | 実体 |
 |---|---|
 | アルファベット | `Γm`（`blankM` / `bottomM` / `encCell` / `encProg` / `encToken` / `encSeg`） |
 | 物理状態 | `QPhys fppBound dpBound × (Fin tapeCountM → STape Γm)`、`tapeCountM = 118` |
 | テープの割り当て | `abbrev Slot`（`(Fin 4 × Fin 12) ⊕ Fin 9 ⊕ Fin 12 ⊕ Unit ⊕ Unit ⊕ Fin 3 ⊕ Fin 16 ⊕ Fin 7 ⊕ Fin 9 ⊕ Fin 12`）、`slotIndex : Slot ≃ Fin tapeCountM` |
-| 符号化述語 | `Enc margin x p := EncControl x p.1 ∧ EncTapes margin x … p.2` |
+| 符号化述語 | `Enc w margin x p := EncControl w x p.1 ∧ EncTapes margin x … p.2` |
 | 規則 | `physRule entryQ first hbound hK : ActRule …`、分岐表は `ruleNext` / `ruleActs`、命令表は `modeCommands` |
-| 1 ティックの分業 | `physRule := iterRule (tickRule …) 12`。step 0 が文字を読み、ヘッド以外（カウンタ・プログラム・period）を全部やって 4 つの**命令**を制御に書く。step 1–11 がその命令を実行し、ヘッドだけを触る |
+| 1 ティックの分業 | `tickPhysRule` の `idealRun … 12` で検証。step 0 は `ruleNext` / `ruleActs` でヘッド以外を処理して4命令を書き、step 1–11がヘッドを動かす。単独の `physRule` はstep 0の表であり、最終融合はC05 |
 
 **設計上の固定点（動かさないこと）**
 
@@ -105,7 +178,7 @@ axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
 `Mode` は 10 個（`GalilScaffoldController.lean:21`）:
 `init | scan | shift | copy | home | fpp | markEnd | choose | rewind | replayStart`。
 
-**通った分岐は 12 本**（`grep '^theorem .*_of_tick' PalPeg/PhysicalEncoding.lean`）:
+**旧部品台帳は `tickFun` の23出口のうち局所分岐定理あり15、未接続8**（正本は `PHYSICAL_KPI.md`）。下表は既存証明の索引で、ラッパー・部分ケースを含むため行数や定理数を KPI にしない:
 
 | 分岐 | 定理 |
 |---|---|
@@ -113,16 +186,16 @@ axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
 | `home` | `home_of_tick` |
 | `choose`（back 側） | `choose_back_of_tick` |
 | `fpp` | `fpp_of_tick` |
-| `copy` | `copy_one_of_tick` |
+| `copy` | `copy_one_of_tick` / `copy_end_of_tick` |
 | `rewind` | `rewind_one_of_tick` / `rewind_reset_of_tick` / `rewind_one_of_tick_branch` / `rewind_pair_of_tick_branch` |
 | `shift`（出口） | `shift_exit_of_tick` |
 | `scan`（静止腕） | `background_still_of_tick` |
 | `scan`（消費腕） | `scan_consume_of_tick` —— **カーソルが右へ動く最初の枝**（平文字に限る） |
 
-**残っている分岐**（おおよそ 10 本）: `scan` の restart・matched・beginShift・beginFallback、
+**残っている処理の概略**（分岐と共有処理が混在。正確な残数は KPI 台帳）: `scan` の restart・matched・beginFallback、
 `scan` の idle 腕の DP 走者（12 テープ、中身は一番大きい）、`init`、`replayStart`、
-`choose` の select 側、`shift` の `shiftOne`、chain の誕生、そして**境界事象**
-（ブロックを閉じる文字。段の表現が `counterOf` に入るまで書けない）。
+`choose` の select 側、chain の誕生。shiftモード全体は最終接続済み。
+watch countの境界事象は有限役割交換で接続済み。比較内で二度消費するときの合成はM4に残る。
 
 **別名（`alias`）の機構** — 正本 `scala/pal/src/main/scala/pal/` の `alias` は 13 箇所あり、
 ポインタの付け替え（`ScavmStructs.scala:139` の `StackView.copyFrom` は `top = other.top`）。
@@ -133,16 +206,235 @@ axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
   第二のテープで、源を動かす枝は同じティックで鏡も動かす。
   **鏡を 1 本足す費用 = その源を動かす全ての枝に 1 行動と 1 仮説。**
   源を動かす枝がまだ無いうちに足すのが一番安い。
-* **段** — chain の三つ組（counter 13 distance / 14 boundary / 15 last）は入れ子
-  （`last ≤ boundary ≤ distance`）なので、1 本の区切り付きテープの段として持つ。
-  `LocalCounter.resetSeg` が「今いる位置に `sep` を書いて下の段を捨てる」1 行動で、
-  捨てた段が `boundary − last` そのもの。**この表現はまだ `counterOf` に入っていない。**
-  だから境界事象（ブロックを閉じるティック）はまだどの枝でも証明されていない。
+* **境界カウンタ** — counter 13 distance / 14 boundary / 15 last。入れ子の1本の段で
+  持つ初期案は未実装だった。現在は既存の段付き単項カウンタを使い、watch中に未使用の
+  counter 10を予備として準備し、14/15/10の有限役割を回す構成を接続中（§0.6）。
+  成功countのFIRST/LAST境界は同じ役割交換付きdispatcherの最終TickCasesへ接続済み。
+  比較の二度消費とshift入口の合成は実dispatcherまで完了。restartは未完。
 
-### 0.6 次の一手 —— `scan` の `matched` 腕
+### 0.6 次の一手 —— M3 共有する段表現・alias・DP
 
-**通した枝は 12 本**（§0.5）。最後に通したのが `scan` の消費腕
-（`scan_consume_of_tick`）で、**カーソルが右へ動く最初の枝**。そのために組み立て器を
+`PhysicalContract.Enc` は blank boot / running の二相。runningは `CoreEnc` のsweepClosureで、
+`CoreEnc` は既存の Enc と `slot=0 ∧ 全ビューowed=0` を持つ。
+半径は micro=128、macro=1536、margin=1536。有限PC範囲は FPP=max 321 (code.length+1)、DP=code.length+1。
+行動長・PC到達範囲・消去条件は各ケースで供給する必要がある。
+
+* **M1は7/7完了。** `enc_initial` が全空白を受け入れ、`PhysicalBootFeed.boot_sweep` が
+  最初の実sweepで番兵・カウンタ・有限制御を整えて同じ入力を4ビューへ届ける。
+* `PhysicalBootFeed.forwardFeed` は `machineStep noneStep` の初回を含む全some遷移を証明。
+  残りの通常noneステップの実装はデータ引数であり、feedの定理に未証明仮定はない。
+* `boot_none` / `initial_starved` / `first_letter_unstarves` が空白開始と最初の飢餓解除を確認。
+  空語・1文字の全実行の認識証明とは区別する。
+* `LocalBlankSweep.compStep_apply_blankEdge` は任意アルファベットへ一般化済み。
+  旧 `LocalQueueInit` のAPIは特殊化として残した。
+* `EncTapes.places` の未使用な内側の `margin ≤ junk.length` を削除した。
+  外側の `padLeft` が余白を供給する。既存の物理符号化証明は単体EXIT=0。
+* `PhysicalBoundary.macroBoundary_tickRule` が12ステップ後のslot=0/owed=0を証明。
+  `running_fused_step` が同じ実行の融合・実sweepへ輸送する。単体EXIT=0。
+* **M2-01/02完了。** `PhysicalTickDispatch.forward_starved` が全starvedを保存。
+  `PhysicalScanCount.forward_count_atRest` が非飢餓scan/clock>1/chain idle/search idle-or-missedを
+  clock減算・背景消去・12ステップ境界・融合・実sweepまで証明。
+  `cases_of_remaining` で最終TickCasesへ接続。他の静止ケースやcount全体は未完。
+* **M2は6/6完了。** `PhysicalCountConsume.forward_count_plain` がplain・順方向・一致を
+  clock減算、符号更新、period/verifier移動と共に同じ実sweepへ接続。
+  `cases_of_remaining` が最終TickCasesへ渡す。後続M3-02で逆方向・不一致・境界も接続済み。
+  `workStep` と `countedStep` は同じ物理ステップ内でVM更新とclock減算を行う。
+* **M3は1/6完了、残りを統合中。** `ChainBoundaryCache.Inv` が周期テープの形と
+  予備カウンタの準備を結ぶ。成功消費ごとにphaseに応じ1/2/3増分し、境界で新distanceに一致。
+  `inv_consume` は両方向・FIRST/LAST反転、`inv_shift` は実際のshiftと予備減算を保存。
+* `PhysicalCounterCache.boundary_rotate` は同じΓm/padLeftの有限窓から最大3アクションを出し、
+  boundary/last/spareの独立テープの役割交換と次回用Invまで証明する。
+  成功countの境界は `PhysicalBoundaryCount` で全体機械へ接続済み。比較内の合成は残る。
+  詳細はPHYSICAL_CONNECTIONS.md。
+* `PhysicalRoles.Control` は Roles × (Unit ⊕ QPhys)。118本・Γm・半径1536を保ち、
+  `LocalRoleRouting.decode_route` が役割で振り分けた実sweepと論理ステップの対応を証明。
+  `forward_feed` / `cases_of_remaining` へ既存のboot/feed/starved/countケースを輸送済み。
+  `boundaryRoles` は14/15/10を回し、`compose_boundary` が既存の3役交換と結ぶ。
+  `PhysicalBoundaryCount.machine rest` がこの同じ役割表で境界の選択・交換を実装済み。
+  下層の `PhysicalRoles.machine` / `PhysicalCacheMachine.routedMachine` は保持版として残る。
+* `PhysicalFreeCounter.running_free_counter` は未使用counterの更新を全Encへ運ぶ。
+  `PhysicalSpare.overlay` は同じ源窓・半径でslot 10とその符号だけを差し替える。
+  `PhysicalCountSpare.forward_plain` はVM/clock/予備の同時更新と次回用Inv/Repまで実sweepで証明。
+  `PhysicalWatchEntry.forward_count` がback→watch入口を有限窓の選択と実tickFunへ接続。
+  slot 10/13/14/15をreset、periodを右へ動かし、clock減算とFPP背景消去を同時実行する。
+  `cache_at_entry` は正規period配置からInv/Repを作る。入口の後状態Encは仮定しない。
+  `PhysicalCacheInvariant.CoreInv` は休止counterの形式とwatch/brokenのInv/Repを同じEncへ載せる。
+  実boot・初回を含むfeed・全starved・静止count・plain一致count・正規watch入口で保持を証明。
+  `PhysicalCacheMachine.cases_of_remaining` が同じ機械・Encでこれらを最終TickCasesへ接続し、
+  plain消費の源Inv/RepはEncから供給する。`routed_cases` で既存の有限役割へも輸送済み。
+  `PhysicalConsumeStage.running_staged` は両方向・FIRST/LASTを含む実12ステップ後の状態を同定。
+  `PhysicalBoundaryRotate.running_rotate` が境界/last/予備の役割・符号交換を全Encへ運ぶ。
+  `PhysicalBoundaryCount.forward_match` / `cases_of_remaining` は成功countの全token・両方向を
+  同じ役割交換付き機械・CoreInv・最終TickCasesへ接続する。源の左移動条件もCacheから供給。
+  `PhysicalCountMismatch.forward_count` が不一致のwatch→brokenを予備ごと保持する。
+  `PhysicalWatchIdle.forward_count` が非消費を保持し、`PhysicalBoundaryCount.forward_watch` が
+  watch count全体を同じ機械・CoreInv・最終TickCasesへ渡す。token/方向/lag符号/成否の追加仮定なし。
+  **M3-02完了。shift入口の比較二度消費・CoreInv保存も共通dispatcherへ接続済み。
+  restart用コピー、他の比較腕は未完。総数21完了・18未完。**
+* `ChainStoredPeriod.vmTick` がcopy/backのhとperiod長を全VM tickで保存。
+  `PhysicalChainShape.period_onRun` がこれとBlockInvを到着待ちtruncation・報告後plateauへ運ぶ。
+  最終 `CountBackReady` の源条件はback/FIRSTだけになり、正規配置はOnRunから供給済み。
+  `PhysicalPeriodMirror.entry` → `PhysicalCacheMachine.periodMirror_entry` と最終
+  `PhysicalBoundaryCount.forward_entry` が、slot 10を予備にresetした後も鏡5に正符号のhが
+  残ることを実sweepで証明する。鏡5は同じCache/CoreInvへ組み込み済みで、boot/feed/
+  starvedとwatch count全体（境界の役割交換・不一致→brokenを含む）で保持する。
+  `ChainBoundaryCache.cursor_length` と `PhysicalCacheInvariant.running_mirror` が、
+  存在量化されたhをbeginShiftVM'が使うperiodLengthへ結ぶ。鏡の符号はtrueで、予備の符号と独立。
+  **shiftの入口・進行・終了は同じ最終TickCasesへ接続済み。restart用コピーは未完。**
+  `PhysicalShift.ideal_tapes` / `ideal_shaped` / `running_shaped` は更新しないテープと退役FPPの
+  背景消去を含む全Enc・全counter形・マクロ境界を、実sweepまで保存する。
+  `PhysicalShift.running` は予備減算・h鏡再建も同時に共通CoreInvへ格納する。
+  `remainingBound_onRun` は既存Coupledと周期長保存からremaining.toNat≤hを供給する。
+  **Cacheへの上限条件追加は不要だった。** `copyIdle_onRun` も既存traceから供給し、
+  `PhysicalShift.running_mode` は元のremainingPosのcopy側をCopyIdleで排除し、
+  進行を `running`、終了を `running_exit` へ渡す。終了では残量の自然数値がゼロなので
+  再建鏡はhそのものになる。`forward_shift` と最終残差hotherはshiftモード全体を処理済み。
+  `PhysicalShiftEntry.running_lend` はcounter1/鏡5の有限交換を全CoreInv・TEqGで証明。
+  その源はmode=shiftかつremaining=resetの中間状態であり、実tickを追加するものではない。
+  `PhysicalCompareGuard.scanShiftRead_running` がwatch起点の比較後guardを実sweepの源窓から読む。
+  内部消費の成功/失敗/静止、FIRST/LAST、両方向を含み、可用性は既存の合法Tickから供給する。
+  `PhysicalEncoding.scanCommands` は不一致時にこのguardを使って入口の追加移動を選択する。
+  `modeCommands_shift_verifier` が同じ実命令表のmoveRight/stepRight選択を証明。
+  `PhysicalWatchActions` の二段非ヘッド行動列は32+32=64へ縮小した。全体のmicroRadius=128、
+  macroRadius=1536、118本は変更なし。`LocalRoleFusion.compiled_seq` が途中の役割交換を含む
+  二段を単一sweepへまとめる。lag/margin・distance・period・spareと境界snapshotを含む。
+  `PhysicalWatchStep.running_pair_good_ideal` / `running_pair_good` が共通CoreInvを保存する。
+  `PhysicalShiftStart` がradius++、length+=2、cycle/remaining resetと鏡・背景消去を加え、
+  `running_entry` で `PhysicalShiftEntry.running_lend` のremaining/鏡5交換へ接続した。
+  `plan` は二度消費64＋共通入口64を既存半径128へまとめる。
+  `running_nonhead` はこの全非ヘッド処理の単一実sweep後のCoreInvを証明する。
+  `source_of_guard` は既存 `WindowPack.source_watch_of_guard` から源watchと内部Goodを供給。
+  `immediate_good_of_window` / `running_from_window` は源のChainWindowRunと右ヘッドの
+  入力表現から即時Goodも供給する（到来済みprefixを取れる）。
+  `PhysicalTickAssembly.running_tick` は同じ非ヘッドCoreInvの証人と12段ヘッド実行をTEqGで合成。
+  `running_fused_route` は同じ半径1536の実sweepと最終役割交換へ運ぶ。
+  `PhysicalShiftTick.running` は左・右・検証の3カーソル移動まで同じCoreInvを保存する。
+  `PhysicalShiftLanding.running_tick` は源の比較/guard・窓・period形から両Goodを供給し、
+  到達状態をbeginShift/tickFun全体と同定済み。periodLength_consumeで残量の同一性を閉じた。
+  `PhysicalShiftSource.running_onRun` が実行由来の源条件を供給済み。`Heads` は右ヘッドと
+  verifierの同じ到来prefix表現・存在・LagAtだけを取り、窓全体のprefix輸送を不要にした。
+  `represents_trunc` / `heads_onRun` が追跡中の切詰めと報告後plateauをともに処理する。
+  **接続面の修正:** `OnRun` は `TrackedAt.used` を忘れていた。`ArrivedOnRun` がその既存の
+  消費上限を保持し、実行の帰納法から `given_physicalMachine_indexed.hforwardTick` と
+  `TickCases.active` まで渡す。追加の未証明仮定ではない。旧 `OnRun` へ忘却可能。
+  **T06完了:** `PhysicalShiftDispatch.forward_entry` → `cases_of_remaining` が全源条件供給と
+  実際の有限窓選択を閉じた。`entryRead_iff` と `entry_of_compare` が入口全体の被覆を保証する。
+  同じ機械は既存のboot/feed/starved/count/shiftも保持し、追加の物理tickはない。
+  M3-01第4小項目も完了し内訳は4/5。残りはrestart用lastの複数コピーと再準備。
+  M4-02にはbeginFallbackが残る。39項目は21完了・18未完、旧T表は15あり・8未。
+  番兵から最初の文字へ進む場合も`shiftLeftFirst`/`leftFirst_eq`が扱う。
+* **restartの現在地（2026-09-23）:** `PhysicalRestartStorage` が旧lower/span/work/debtの
+  非参照性をbackground/compare/restartで証明し、到来・飢餓・有限制御も扱う。
+  有効なrestartは4値を上書きするので、差し替え前後でtickFunの後状態は同一。
+  実窓のrestart優先選択、4ビューのstay、DP live切替えを含む有限制御は証明済み。
+  `Related` / `related_tick` は全10モードの休止探索storage同値を証明し、`Stored` が
+  同値な代表状態のRunningを保持する。最終dispatcherのEncはまだ従来のまま。
+  `PhysicalSearchRecycle.running_watch_entry` はcounter5/6/7/8とmirror3/4を同じ入口sweepでreset。
+  `PhysicalSearchSnapshots` がその6本に2組のboundary/last/spareを載せる。
+  組は(5,6,7)と(mirror3,mirror4,8)。`entry_saved` で実入口から準備、`watch_consume` で
+  源のphase・period窓による最大3増分/境界交換と次のInv、`shift_running` で全6本の減算を証明。
+  `saved_last_copies` はcounter6/mirror4の独立したlastを取り出す。118本・半径1536は維持。
+  **consume側base/hbaseは`PhysicalSnapshotCount.forward_match`で放電済み。**
+  `rotate_mix` / `jointRoles` が既存14/15/10と追加2組の交換を同じ実sweepへ合成する。
+  `PhysicalSnapshotInvariant.Enc` はcanonicalと同値なstorage代表とwatch/brokenのコピーInvを保持。
+  `PhysicalSnapshotMachine.machine rest` がこの同じEncでblank boot/全feed/全starved/
+  idle静止count/watch count全体/watch入口を実dispatcher・最終TickCasesへ接続した。
+  源Inv/コピーはEnc、入口のperiod形とhはOnRun、verifier可用性は元の合法Tickから供給する。
+  **新Encのshift進行・終了も接続済み。** `PhysicalSnapshotShift.saved_tick` が元の合法Tickから
+  保存代表の合法shiftを再構成。`running` が`overlayWith decrement (workStep rest)`のbaseを放電し、
+  `exit_enc` が終了時の全コピー保持を証明する。`PhysicalSnapshotShiftDispatch.machine rest` は
+  源窓のmode/starved/remaining判定で同じ行へ分岐し、`cases_of_remaining` がshift全体を外す。
+  残量上限とCopyIdleは消費者のOnRunから供給。既存のboot/feed/starved/count/watch入口も保持する。
+  **コピー付きshift入口も最終接続済み。** `PhysicalSearchSnapshots.boundedRule` と
+  `running_increment_ideal` で小半径へ一般化し、`PhysicalSnapshotWatch` が既存watch行と
+  snapshot行を同じ32窓でoverlay、既存14/15/10と追加2組の役割・符号交換を合成する。
+  `running_pair` はoptional内部＋即時の32+32計画を1sweepで証明。`goodAge/goodSpare` は
+  コピー更新量をcanonical watchから定め、`running_good_ideal` が実際のcaught/immediateへ結ぶ。
+  `PhysicalSnapshotEntry` が共通入口64と鏡の引き渡しを合成し、`PhysicalSnapshotEntryTick`
+  が3カーソルの12段移動を合成。`PhysicalSnapshotEntryDispatch.forward_entry` は元の
+  ArrivedOnRun/合法Tickから両Good・到来prefix・period形を供給し、実窓選択とtickFun同定を閉じる。
+  `cases_of_remaining` がshift入口を新Encのhotherから外し、既存全ケースも同じmachineへ保持する。
+  追加sweep・半径増加・保存代表への偽のOnRun仮定はない。`scanShiftRead_running_ready` は
+  Tick由来のverifier可用性を直接受け取る形へ分解し、既存のTick付きAPIも維持した。
+  **他の比較腕（matched/beginFallback等）・restartは新Encのhotherに残る。**
+  **lastの3コピー引き渡しも実装済み。** `PhysicalRestartCopies` がcounter6→lower、
+  counter15→work、mirror4→mirror3を有限交換し、旧lower/鏡3をresetしてspan/鏡4へ渡す。
+  `core_prepared` は全EncTapes・counter形・マクロ境界を保存し、`running` は半径32の
+  実sweepを証明。`from_copies` は源条件を現在のコピー付きEncから供給する。
+  これは同じrestartへ融合する中間行で、この段階のdebt/DPは旧値のまま。
+  **debt初期化と鏡再準備の実行部品も追加済み。** `PhysicalDebtMirror` はmirror2をcounter8へ
+  貸し、符号反転でinitialDebt(radius)を得る。旧counter8はresetして再準備用mirror2へ渡す。
+  `RebuildingCore` は実mirror2に `ofNat (radius.value + min debt.value 0).toNat` を要求し、
+  他のテープには従来CoreInvを保つ。`repair`は証明用にmirror0を参照するだけで物理コピーではない。
+  `ready`が半径/debt非負時に従来Runningへ戻す。`restart_from_copies`はlast引き渡し32と
+  debt貸出し32を1sweepへ融合し、既存のコピー付きEncから源条件を供給。
+  `only_dp_left`は残る抽象更新がDP resetのみと同定する（DP実行行は未実装）。
+  `PhysicalDebtRebuild.running`は有限窓でdebt負を読み、debt++と負の場合だけmirror2++を
+  同時実行。`running_double`は途中の-1→0を含む2回を32+32の単一sweepで証明する。
+  balanceは借用開始時に0、payで保存。比較時radius++/debt--も下記の実行行で保存済み。
+  **Rebuilding契約を共通Enc/dispatcherへ接続済み。** `PhysicalLoanInvariant.Enc`はscan中の
+  idle-chain active searchだけをRebuilding＋balanceにし、他はSnapshot Encを要求する。
+  `PhysicalDebtFeed.run_complete/core_feed/running_feed`はproof補完と実12段/実sweepの可換性を使い、
+  部分鏡の実値を保存する。飢餓判定も実窓から復元。`PhysicalLoanDispatch.machine rest`が
+  初回を含むfeedと全starvedを処理し、`cases_of_remaining`は既接続のcount/watch入口/shift全体を保持。
+  shift終了の非idle源条件は`shift_nonidle_tick/onRun`が実traceとplateauから供給する。
+  **正のworkのgrow countを最終TickCasesへ追加済み。** `PhysicalGrowStorage`はspan/mirror4の
+  独立テープへ8増分、workを1減算、FPPの背景消去を同時実行し、repairとの可換性からRebuildingを保存。
+  `PhysicalGrowCount.body`はこの32とdebt返済32+32を半径96へ融合する。clock減算込みのruleを
+  半径1536の1sweepとして実行し、源のEncからbalance・実work正判定を供給する。
+  `successor_eq`で実tickFunと一致し、`PhysicalLoanDispatch.forward_grow/cases_of_remaining`へ接続。
+  countの全ヘッドは抽象的に静止するため、実ヘッドテープ・制御とマクロ境界もそのまま保持する。
+  12回の追加実行や未計上の準備tickは挿入しない。初回feed/全starved/既存count/watch/shiftは保持済み。
+  全growではなく、work=0のprepareは未完。
+  **比較の非ヘッド処理:** `PhysicalMatchCounters.actual/currentRule`は半径32でradius++、length+=2、
+  debt--、有限制御が選ぶcycle/replay減算を実行する。部分鏡mirror2のpushは源debtが正の場合だけ。
+  `rebuilding_core/running/running_current`が全Rebuildingとbalanceを保持し、負→0や0→負も扱う。
+  `PhysicalGrowStorage`の行動長を再確認して半径64から32へ縮め、grow全体96と比較32を
+  `PhysicalGrowMatch.body`の128へ融合した。`running`は実sweep、`matched_grow`は同じVMの
+  compareFun＋matchedPlace更新と、残るleft/right移動を厳密に同定する。制御/outputはまだ含まない。
+  `PhysicalTickAssembly.running_tick_optional`はheadOfがnoneのビューをstayで扱い、旧APIは維持。
+  `PhysicalLoanAssembly.running_tick/running_fused_route`は実部分鏡を残したまま12段ヘッド実行と
+  半径1536の実sweepへ運ぶ。proof補完だけを使い、実テープの瞬間コピーを行わない。
+  **grow比較への個別適用も最終TickCasesまで完了。** `PhysicalGrowMatchTick.next_control`が
+  源窓のscanMatchedCtl/rightOnLetter/leftFirst/replayZeroを実出力・再生制御へ結ぶ。
+  `running_ideal/running`は左moveLeft・右moveRight・残りstayと実部分鏡を同じ実sweepで保存する。
+  `PhysicalGrowMatchCase.successor_eq/guard_running/forward`は実tickFun一致と実窓の分岐選択、
+  源Encからbalance・Rebuilding、後状態のNeedsLoanを供給する。
+  `PhysicalLoanDispatch.forward_match/cases_of_remaining`でhotherからMatchGrowを除いた。
+  最終call siteでheads_onRunが到来prefixを供給し、非飢餓scanからright.canRightを供給する。
+  後状態Enc・head readiness・入力表現を未供給の引数として残していない。
+  同じ機械は既存CountGrow・boot/feed/starved/count/watch/shift全体も維持。全matchedではない。
+  次はwork=0のprepare/DP reset・bank再利用の契約、他の探索行、search出口補完、
+  DPリセット用バッファ、restart全行。doubleはspan+=2・work--・quarter=(quarter+1)%4で、
+  debt++は源quarter=3だけなのでgrowの2返済を流用しない。
+  SafeCallsのdebt非負条件は最後のadvanceより前なので、search終了時debt=-1も考慮する。
+  `credit_one_short`はその不足が高々1であることだけを証明。終了時の補完行と源条件供給は未完。
+  DPの退役半分の空白も後状態の仮定で済ませない。
+  現EncTapesのidleShapeはFPP9本だけで、DP12本の退役側shape/空白はまだ契約にない。
+  prepareはDP reset(pc320)、tape10のLEFT/right初期化、work=lower、walker=centerを同時に要求する。
+  lower→work/後のspan→workのaliasを既存の鏡と有限役割で扱い、追加tickや後状態仮定で隠さない。
+  T02/M3-01は未完、KPIは21完了18未完、T15あり8未のまま。詳細はPHYSICAL_CONNECTIONS.md末尾。
+* **Tickの合法性を捨てない。** `TickCases.active` は最終消費者が渡す実際のTickも受け取る。
+  `PhysicalCountReady.verifier_canRight_of_countTick` がpositive lag watchのcanRightを供給し、
+  `moveRight_ready` が任意の表現ビューのhreadyへ運ぶ。plain消費の呼び出しで供給済み。
+  そのために可用性をtraceから改めて再構成する必要はない。
+* 巨大な融合規則は定義展開せず、記号的な規則に対する等式を先に適用する。
+  boot_sweepの左端輸送は `sweep_from_blank`、外側Encの輸送は `enc_running` で行う。
+  12段のレコードを `change` / `simpa [bootStep]` で直接展開すると型検査が膨張する。
+  射影した実行結果の輸送でも、`generalize hr : idealRun … = result at hbase hcounter ⊢`
+  のように関連する仮説と目標を一緒に記号化してから射影する。目標だけ記号化して
+  巨大な項へ `rw` / `congrArg` を適用する方法は `core_still` で時間超過した。
+  具体的な `workStep` のテープ保存も同様。`rewrite [workStep]` でrflを走らせずに開き、
+  `generalize hR : workRule rest = R at hkept ⊢` の後に記号的な `fused_kept R` を使う。
+  具体12段のまま `change` / `simpa only [workStep]` を使うと200万heartbeatsでも時間超過した。
+  `PhysicalShiftTick.running_ideal` でも末尾の `simpa only [rule]` / rule等号の `rw` が
+  100万heartbeatsで時間超過した。目標と補題の**各idealRun関数全体**を別々にgeneralizeし、
+  その2関数の等号をつないでから書き換えると、具体12段を展開せず型が合う。
+
+#### 旧次手の資料 —— `scan` の `matched` 腕（M4で再開）
+
+**分岐補題未接続は10/23**（§0.2、KPI 台帳）。`scan` の消費腕
+（`scan_consume_of_tick`）は部分ケースとして通っており、**カーソルが右へ動く最初の枝**。そのために組み立て器を
 二状態化してある（`encTapes_replaceHeadsOfState` → `enc_afterTickOfState`）。
 
 #### 枝を書くときの型（消費腕の部品表）
@@ -187,18 +479,79 @@ let searched := searchEffectFun P agree s              -- 探索も 1 量子
 
 左の着地先は `belowRead`（back テープのヘッド直下）で読む。`backStack v = v.focus :: v.back`
 （`LocalViewDecision.lean:111`）で、`StackTape.belowSym_eq`（`LocalQueueMachine.lean:397`）が
-既にある。側条件は「カーソルの後ろに何かある」こと（左端では step left は動かず、直下は junk。
-`ViewRep.back` の bottom は `near` と違って `Sealed` でない）。
+既にある。**2026-09-22 Codex 継続で左端の側条件を除去**: `leavingLetter` が focus=none を
+先に判定し、その場合は none を返す。`back_nil_iff_focus_none` により back 非空の追加仮定は
+不要になった。左端の未封印 junk を誤読しない。
+
+#### 2026-09-22 Codex 継続: 一ティックの二度消費を既存ビュー命令へ接続
+
+`chainTickFun true` は `chainStepFun` の後に `chainMatchedFun` を行う。
+watch の lag が最初の消費でゼロになれば、そのティックで **もう一度消費する**
+（`GalilScaffoldChainWatch.Outer` のコメントにも明記）。検証カーソルは右へ二歩必要。
+`scanCommands` に単純に一歩だけ追加しても、この枝を表現できない。
+
+* 既存の `.stepRight` は一文字ぶんの移動なので、抽象ヘッドの `right ∘ right` に一致。
+  `moveRight_twice` / `absHead'_stepRight` で証明し、`headOp .stepRight` を実装した。
+* `HeadReady command view` を導入し、`enc_afterTickOfState` まで既存APIをその場で一般化。
+  `.moveRight` は gap=true のときだけ、`.stepRight` は gap によらず次セルが必要。
+  `headReady_stepRight_of_canRight` が抽象側の二つの `canRight` からその条件を出す。
+* `chainTickFun_watch_double` → `compareFun_watch_double` →
+  `headOp_compareFun_watch_double` で実際の比較の二度消費をこの命令へ接続した。
+  **12スロット・118テープ・既存レイアウトのまま**。既存の分岐証明も build 済み。
+* 探索は `searchEffectFun` が **chain=idle の場合だけ**動かす。
+  active chain の比較は探索を恒等写像にしてよい。idle の探索・chain誕生と分けて組み立てる。
+
+**`scanCommands` の比較腕は実装・二度消費の実行まで検証済み。**
+`ruleNext` / `ruleActs` の比較腕も共通カウンタと制御まで接続済み（下記）。`scan_watch_double_head` が実際の
+12ステップで検証カーソルの二歩右移動を与える。一般化した組み立て器に接続した。
+局所実現義務も既証明分岐の数も変わっていない。
+検証: `PalPeg.Workbench` BUILD=0、`PalPeg/Axioms.lean` AUDIT=0。
+`absHead'_stepRight` / `headReady_stepRight_of_canRight` / `enc_afterTickOfState` /
+`headOp_compareFun_watch_double` の個別公理監査も標準3公理以内。
+
+#### 同日続き: scan の窓による分岐判定を抽象 tick へ接続
+
+* `availableTest_eq`: gap・near・front の読みが `canRightTest` と一致。`EncTapes` から導出。
+* `counterZeroTest_eq` / `counterPositiveTest_eq` / `counterNegativeTest_eq`: 符号と直下セルから
+  カウンタの判定を復元。
+* `restartTest_eq`: broken に加え **margin 非負・last 正・lag ゼロ** を読む。
+  引き継ぎ時の「chainTag=broken」という略記だけでは restart の条件にならない。
+* `scanPhase_eq`: restart / quiet / count / compare の優先順が抽象制御と一致。
+* `agreeTest_of_encoded`: 個別の読み取り一致を仮定せず、符号化と右の `canRight` から比較を復元。
+* `tickFun_scan_matched_vm_of_window`: `scanPhase=.compare` と `agreeTest=true` で、実際の
+  `tickFun` が matched 腕のVMを返すことを証明。
+
+**物理の matched 腕全体の証明は未完。** 判定とヘッドに加え、下記の共通部分を
+`scanNext` / `scanActs` として `ruleNext` / `ruleActs` の比較腕へ接続した。
+`scanAfterConsumeWindows` は `windowAfter` で一度目の消費後の窓を復元し、
+`chainMatchConsumesTest_of_watchConsume` が二度目の判定を証明する。
+`incTwiceActs` / `counter_incTwice_at` / `encTapes_scanLength` は、途中で符号が変わる
+場合も含め `length += 2` と鏡の符号化保存まで接続済み。
+**これらは分岐全体の証明ではなく、T05 の残数は減らさない。**
+最終検証: 単体 EXIT=0、Workbench BUILD=0、個別 SCAN_AUDIT=0（標準3公理のみ）。
+`unconditional` は `obligation_localRealization` を依然として使用。
+
+#### 同日続き: matched の共通部分を実際の12ステップへ接続
+
+* `scan_matched_counters_of_tick`: active chain で共通4カウンタと鏡の物理値が
+  抽象 `tickFun` と一致。lengthの二回加算、cycle/replayの条件付き減算を含む。
+* `scan_matched_control_of_tick`: chainの種類によらず制御・出力・再生継続・
+  onLetter/leftFirstが抽象 `tickFun` と一致。到来済み入力の表現・長さは源状態の条件。
+* 内部消費専用の `scanConsume_tapes` に切り出し、二度目の窓を求める補題が
+  比較用 `ruleActs` の拡張に依存しないようにした。
+* **残数は分岐10・共有5・最終接続8・追加公理1のまま。** chain全体と探索・誕生との
+  合成はまだ閉じていない。
 
 #### `matched` 腕に残っていること
 
-1. **`scanCommands` を腕ごとに分ける。** いまは消費腕（`chainConsumesTest`）しか見ていない。
+1. **`scanCommands` の比較行と全ケースの抽象ヘッド対応を閉じる。** 二度消費の plain/forward ケースは接続済み。
    `tickFun` の scan は 6 腕（restart / background×2 / matched / beginShift / beginFallback）で、
-   判別子は順に: `restartGuard`（chainTag = broken、制御）、
+   判別子は順に: `restartGuard`（`restartTest_eq` で窓と接続済み）、
    `!replaying && !available`（`available = canRightTest s.right`、カーソル 2 の窓）、
    `1 < clock`（制御）、`matched`（＝ `agreeTest`、上で閉じた）、`shiftGuard`。
-2. `matched` の制御行（`afterCompare` は `radius++` / `cycle` / `length += 2`）と行動表。
-3. 探索 1 量子と chain 一歩が同じティックに入るので、行動表は 3 系統を同時に書く。
+2. 共通カウンタ・鏡と制御の接続は済み。chain 全ケースと同時に `EncTapes` / `EncControl` を組み立てる。
+3. idle chain では探索と誕生、active chain では chain の内部ステップ＋match 処理を、
+   比較のカウンタ更新と合成する。watch の二度消費には上記 `.stepRight` を使う。
 
 #### そのあと
 
@@ -206,7 +559,7 @@ let searched := searchEffectFun P agree s              -- 探索も 1 量子
 `given_physicalMachine`（`ShadowedLocalFinal.lean:1395`）へ張り替え →
 `PalPeg/Axioms.lean:392` の guard 更新。
 `given_physicalMachine` は標準 3 公理のみに依存し、`unconditional` が既に供給している
-3 つの側条件と、7 つの符号化義務（`hencInit` / `hforwardTick` / `hforwardFeed` /
+3 つの側条件と、8 つの証明義務（`hencInit` / `hforwardTick` / `hforwardFeed` /
 `PhysFrozen`＋3 / `hencRep` / `hencOut`）を取る。**いま作っているのは `hforwardTick` の中身だけ。**
 
 ### 0.7 検証の作法（必ず守る）

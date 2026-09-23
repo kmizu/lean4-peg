@@ -1,3 +1,4 @@
+import PalPeg.PhysicalDpHistory
 import PalPeg.OracleReady
 import PalPeg.CountersCanonicalTrace
 import PalPeg.BranchSupply
@@ -121,6 +122,8 @@ structure PlateauInv (w : List (Fin 2)) (x : State GalilVM) : Prop where
   replayReset : x.vm.replay = reset
   span : SpanRep x.vm
   radiusNonneg : 0 ≤ value x.vm.radius
+  /-- The DP bank a reset would retire is dense. -/
+  dpDense : PalPeg.PhysicalDpHistory.DpHistory (searchLens.get x.vm)
 
 /-- **One tick on the plateau.**  A canonical tick exists; it lands in the invariant
 again (a count tick), or it moves the right head off the word (the comparison). -/
@@ -134,7 +137,7 @@ theorem plateauStep {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w)
   classical
   obtain ⟨c, s⟩ := x
   obtain ⟨hm, hr, hclockPos, hnoGuard, hat, hminv, hQ, ⟨c₀, r₀, k, kS, hI₀, hrun, hshaped⟩,
-    hcounters, hchainLast, hreplay, hspan, hradius⟩ := hinv
+    hcounters, hchainLast, hreplay, hspan, hradius, hdp⟩ := hinv
   have hm' : c.mode = .scan := hm
   have hr' : c.replaying = false := hr
   have hpack : IPackMW centre place entry q first w ⟨c, s⟩ :=
@@ -216,7 +219,10 @@ theorem plateauStep {w : List (Fin 2)} (hP : Decodes (PofC centre place entry w)
       chainLast := chainLastCan_vmTick _ _ centre place entry q first 2048 hchainLast htick
       replayReset := by show s'.replay = reset; rw [hrep']; exact hreplay
       span := PalPeg.BranchSupply.spanRep_congr hlen hrad hspan
-      radiusNonneg := by show 0 ≤ value s'.radius; rw [hrad]; exact hradius }
+      radiusNonneg := by show 0 ≤ value s'.radius; rw [hrad]; exact hradius
+      dpDense := PalPeg.PhysicalDpHistory.dpHistory_tick centre place entry q first
+        (PalPeg.CanonicalSearchHistory.atState_packed centre place entry q first hP hI₀ hrun)
+        hdp htick }
 
 
 variable {centre place entry q first}
