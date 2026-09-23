@@ -2,6 +2,22 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 2026-09-23 深夜（最新・最優先）— 方針転換: Scala の出力経路を TM なしでそのまま写す
+
+コウタ「もとのScalaコードが大したことやってないんよ」「君が問題を難しくしてる」「TMの枠だと色々ずれる」「量はあってもかなり単純になるはず」。
+**118本テープ TM（`Physical*`）経由は打ち切り。** 正本の出力経路は window-pal（`GenerateWindowPal` → `ScaffoldWindowPal` → circuit → `SymbolicSca2Peg`）で、Lean の `GalilScaffold*` が写していた `ScaffoldGalil.scala` は出力経路ではない。
+
+**済み（標準3公理）**
+- `PalInPegSca.pal_recognizedByTotalPEG_of_sca`: `RecognizedBySCA PAL → RecognizedByTotalPEG PAL`（Kim–Park `SCAToPEG.loffBackward` ＋ `PAL_reverse_mem`）。
+- `ScaTyped`: 状態・ラベルを構造型で書いた scaffold 自動機械 `Typed` を Kim–Park の `Fin` 版へ輸送（`pal_in_peg_of_typed`）。
+
+**計画（`DESIGN_SCA_PAL.md` §6 の3層）**
+1. 汎用の永続構造層: Scala `ScaffoldCircuitStructs` を写す。ノードごとに有限個のセル枠、セルは `below`（辺）・枠タグ・`value`（辺）・`data`。スタック = 根の辺＋タグ。push/pop/copy/clear が抽象リストへの表現関係 `Rep` を保つことを1操作1補題で。pop は「根→below」の2歩で半径内。キュー（永続スタック2本）・カウンタも同様。
+2. 抽象機械: window-pal の1文字ぶん（二進段・GS head worker）を永続レコード＋有限制御の `absStep` として Scala と同形に書く。
+3. 不変量 `Inv w` と正しさ: 段①の既存資産（`Assembly.dyadicAnswer_correct`、`StageMatcher.dyadic_gs_correct` 等）へ精緻化。符号化で `Typed` 自動機械へ → `pal_in_peg_of_typed`。
+- 注意: Lean の中央フラグは Manacher、Scala は `GsDualFlags`。どちらに合わせるかは段2で決める。
+- 物理経路の7本の義務（`PalInPegPhysical`）は旧経路として残す（新経路が完成したら最上位を付け替える）。
+
 ## 2026-09-23 深夜 — 最上位を物理機械の経路へ付け替え（最新。下の節より優先）
 
 **目標定理は `PalPeg.PalInPeg.unconditional`（`PalPeg/PalInPegPhysical.lean`）。** 旧 `obligation_localRealization`（「局所機械が存在し正準トレースの抽象 latch と受理が一致」を 1 本の存在命題に詰めたもの。機械の構成と正しさが全部隠れ、抽象 VM の head 瞬時コピーまで tick ごとに追わせる形）はコウタの判断で撤去。旧経路は `PalInPeg.given_localRealization`（前提付き）。
