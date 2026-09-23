@@ -136,13 +136,11 @@ theorem cycleOracleOnPackedRun :
   fun w _ => PalPeg.OracleReady.cycleOracleOn_of_readyLeaves centreC placeC 0 1 0
     (PalPeg.GalilFinalAssembly2.decodesC 0 w) (by decide) (by decide) (by decide) (by decide)
 
-/-- **(OBLIGATION)** 局所実現。n260 で canonical trace に限定した形。
-受理結果と latch の一致を要求しており、trace の全状態の一致は要求していない。
-非決定性だけを理由に旧 `H_realizeLIMW'` を不可能とした以前の説明は誤り。
-`latch_iff_pal_of_preTrace` は適切な trace・lookahead 条件下で canonical 性なしに
-受理結果を `PAL` と同定する。具体的な機械の存在はなお未証明。 -/
-axiom obligation_localRealization (entry q : ℕ) (first : Fin 9) :
-    H_realizeCanonical centreC placeC entry q first
+/-! 旧 `obligation_localRealization`（2026-09-23 に撤去）: 「局所機械が存在し、正準トレースの
+抽象 latch と受理が一致する」を 1 本の存在命題に詰めていた。機械の構成と正しさが全部その中に
+隠れ、しかも抽象 VM の head の瞬時コピーまで tick ごとに追わせる形だった。最上位は
+`PalInPegPhysical.unconditional`（物理機械の経路、残差は型付きの原子義務）へ付け替えた。
+この経路は `given_localRealization` として前提付きで残す。 -/
 
 /-! ### scan landing 義務 — 原子に分解した 5 つ（すべて trace 形）
 
@@ -220,13 +218,13 @@ n96 の「`rewindMargin` を `CentreMargin` 1 葉に縮めた」は数だけの�
 
 /-! ## 目標 -/
 
-/-- **目標**: `PAL ∈ PEG` を前提ゼロで。いまは上の 1 個の `axiom`（`obligation_localRealization`）に
-依存している。
-`#print axioms unconditional` が標準 3 公理だけになったら証明完了。 -/
-theorem unconditional : RecognizedByTotalPEG PAL :=
+/-- 旧経路（抽象 latch との一致を要求する局所実現を前提に取る）。最上位の目標は
+`PalInPegPhysical.unconditional` に移した。 -/
+theorem given_localRealization (hrealize : H_realizeCanonical centreC placeC 0 1 0) :
+    RecognizedByTotalPEG PAL :=
   given_scanLandingObligations 0 1 0
     cycleOracleOnPackedRun
-    (obligation_localRealization 0 1 0)
+    hrealize
     (fun w st Tc hPreTraceIMW =>
       PalPeg.BranchSupply.scanLandingObligations_alongTrace_of_matchRest centreC placeC 0 1 0
         hPreTraceIMW
@@ -245,6 +243,6 @@ theorem unconditional : RecognizedByTotalPEG PAL :=
           hPreTraceIMW.base.pre)
         (hPreTraceIMW.base.tc1 ▸ hPreTraceIMW.base.pre.mono 1 w.length hw le_rfl))
 
-#print axioms unconditional
+#print axioms given_localRealization
 
 end PalPeg.PalInPeg

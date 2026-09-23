@@ -57,6 +57,7 @@ import PalPeg.ProgLang
 import PalPeg.ProgLangLib
 import PalPeg.GSScanProg
 import PalPeg.PalInPegUnconditional
+import PalPeg.PalInPegPhysical
 
 /-!
 # 公理 guard
@@ -381,7 +382,9 @@ import PalPeg.PalInPegUnconditional
 /-! ## 目標定理のラチェット
 
 `PalPeg.PalInPeg.unconditional : RecognizedByTotalPEG PAL` は**閉じた項**だが、
-いま 1 個の未証明義務を `axiom` として持っている（局所実現 `obligation_localRealization`）。下の guard がその一覧を固定するので、
+未証明の義務を `axiom` として持っている（`PalPeg/PalInPegPhysical.lean` の表）。2026-09-23 に
+旧 1 本（`obligation_localRealization`、機械の構成と正しさを 1 本の存在命題に詰めたもの）から
+物理機械の経路へ付け替え、実際に残る義務を 1 本ずつに割った。下の guard がその一覧を固定するので、
 
 * 義務を 1 個証明して `axiom` を外すと guard が壊れる → 更新を強制される（前進の記録）
 * うっかり新しい穴を開けても guard が壊れる → 気づける
@@ -392,7 +395,13 @@ import PalPeg.PalInPegUnconditional
 /-- info: 'PalPeg.PalInPeg.unconditional' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
- PalPeg.PalInPeg.obligation_localRealization] -/
+ PalPeg.PalInPeg.obligation_chooseSelect,
+ PalPeg.PalInPeg.obligation_fpp,
+ PalPeg.PalInPeg.obligation_freeze,
+ PalPeg.PalInPeg.obligation_init,
+ PalPeg.PalInPeg.obligation_replayStart,
+ PalPeg.PalInPeg.obligation_rewindReset,
+ PalPeg.PalInPeg.obligation_scanRest] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.PalInPeg.unconditional
 

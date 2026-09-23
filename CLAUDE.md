@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 2026-09-23 深夜 — 最上位を物理機械の経路へ付け替え（最新。下の節より優先）
+
+**目標定理は `PalPeg.PalInPeg.unconditional`（`PalPeg/PalInPegPhysical.lean`）。** 旧 `obligation_localRealization`（「局所機械が存在し正準トレースの抽象 latch と受理が一致」を 1 本の存在命題に詰めたもの。機械の構成と正しさが全部隠れ、抽象 VM の head 瞬時コピーまで tick ごとに追わせる形）はコウタの判断で撤去。旧経路は `PalInPeg.given_localRealization`（前提付き）。
+公理ラチェット（`Axioms.lean`、AUDIT=0、ルート 9842 jobs BUILD=0）は**7本の原子義務**: `obligation_scanRest` / `obligation_fpp` / `obligation_chooseSelect` / `obligation_rewindReset` / `obligation_init` / `obligation_replayStart` / `obligation_freeze`。前6本は `PhysicalResidualParts.TicksWhere physRest P`（`physRest` は未実装モードの view 命令＝stay）。本数が 1→7 に増えたのは旧 1 本が中身を隠していたため。
+次: fpp は `MachineAgree.margin'` の弱化（物理パディングは `decProg` で 6、`moveLeft` は `left = []` で止まる＝床）。choose-select/init/replayStart は head 装置に遅延コピー（mirror＋役割交換 or 駐車ビュー＋オフセット）を 1 回設計。
+
 ## 2026-09-23 夜 — Claude Code（Opus 5.5）の進捗と再開点（最新。下の節より優先）
 
 **無条件 PAL ∈ PEG は未完成。`obligation_localRealization` は残る。** ブランチ `feat/lean-pal-report-residuals`（main に未マージ、最新 push 済み）。
