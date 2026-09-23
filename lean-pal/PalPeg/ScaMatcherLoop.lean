@@ -919,4 +919,118 @@ theorem rsShifts_le (k q : ℕ) (hk : 1 ≤ k) (hq : 1 ≤ q) : rsShifts k q ≤
   have : (q + k - 1) / k ≤ q := Nat.div_le_of_le_mul hkq
   omega
 
+/-- The heads a shift reads (not `Walk`, `U`). -/
+def ShiftRel (lx s p₁ r k : ℕ) (pe : Bool) (pos q : ℕ) (π : String → ℤ) : Prop :=
+  π "Origin" = 0 ∧ π "Cut" = s ∧ π "End" = lx ∧
+  (pe = true → π "First" = s + p₁ ∧ π "KFirst" = s + k * p₁ ∧ π "Reach" = s + r) ∧
+  π "P" = lx + pos - s ∧ π "A" = s + q ∧ π "B" = lx + pos + q
+
+theorem loopRel_period' {lx s p₁ r k : ℕ} {pos q : ℕ} {π : String → ℤ}
+    (h : ShiftRel lx s p₁ r k true pos q π) (hp : p₁ ≤ q) :
+    LoopRel lx s p₁ r k true (pos + p₁) (q - p₁) 0 (reenter (psPos π p₁)) := by
+  obtain ⟨hO, hC, hE, hper, hP, hA, hB⟩ := h
+  obtain ⟨hF, hKF, hR⟩ := hper rfl
+  have ev : ∀ h', reenter (psPos π p₁) h' =
+      if h' = "U" then π "P" + p₁ else if h' = "Walk" then π "Origin"
+      else if h' = "A" then π "A" - p₁ else if h' = "P" then π "P" + p₁
+      else if h' = "KP" then π "KP" - p₁ else π h' := by
+    intro h'
+    simp only [reenter, psPos, Function.update]
+    by_cases h1 : h' = "U" <;> by_cases h2 : h' = "Walk" <;> simp_all
+  refine ⟨?_, ?_, ?_, fun _ => ⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩ <;> rw [ev] <;> simp <;>
+    push_cast <;> omega
+
+theorem loopRel_reset' {lx s p₁ r k : ℕ} {pe : Bool} {pos q t : ℕ} {π : String → ℤ}
+    (h : ShiftRel lx s p₁ r k pe pos q π) :
+    LoopRel lx s p₁ r k pe (pos + t) 0 0 (reenter (rsPos π q t)) := by
+  obtain ⟨hO, hC, hE, hper, hP, hA, hB⟩ := h
+  have ev : ∀ h', reenter (rsPos π q t) h' =
+      if h' = "U" then π "P" + t else if h' = "Walk" then π "Origin"
+      else if h' = "A" then π "A" - q else if h' = "B" then π "B" - q + t
+      else if h' = "P" then π "P" + t else if h' = "KP" then π "KP" - t else π h' := by
+    intro h'
+    simp only [reenter, rsPos, Function.update]
+    by_cases h1 : h' = "U" <;> by_cases h2 : h' = "Walk" <;> simp_all
+  refine ⟨?_, ?_, ?_, fun hp => ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [ev]; simp; omega
+  · rw [ev]; simp; omega
+  · rw [ev]; simp; omega
+  · obtain ⟨hF, hKF, hR⟩ := hper hp
+    exact ⟨by rw [ev]; simp; omega, by rw [ev]; simp; omega, by rw [ev]; simp; omega⟩
+  all_goals (rw [ev]; simp; push_cast; omega)
+
+/-- **From the shift decision to the next loop head**, for any scan state `(pos, q)` about to
+shift. -/
+theorem shift_to_head (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 ≤ k) (pe : Bool)
+    (ok : Option Bool) (ph : Option ℕ) (v : HVM) (pos q : ℕ)
+    (hv : v.ctl = decisionCtl k pe ok ph) (hw : v.word = x ++ T.take m)
+    (hO : v.pos "Origin" = 0) (hC : v.pos "Cut" = s) (hE : v.pos "End" = x.length)
+    (hper : pe = true → v.pos "First" = s + p₁ ∧ v.pos "KFirst" = s + k * p₁ ∧
+      v.pos "Reach" = s + r)
+    (hP : v.pos "P" = x.length + pos - s) (hA : v.pos "A" = s + q)
+    (hB : v.pos "B" = x.length + pos + q)
+    (hsx : s < x.length) (hcut : s ≤ pos) (hqv : q ≤ x.length - s) (harr : pos + q ≤ m)
+    (harr' : pos + q < m ∨ 1 ≤ q) (htl : m ≤ T.length)
+    (hnoper : pe = false → x.length - s < k * p₁) (hp1 : pe = true → 1 ≤ p₁) :
+    ∃ n v', iterStep n v = some v' ∧ v'.outputs = v.outputs ∧
+      AtHead x T m k s p₁ r pe true
+        ((⟨pos + PalPeg.gsShift k p₁ r q, PalPeg.gsNextQ k p₁ r q⟩ : PalPeg.ScanState), 0) v' := by
+  have hlen : v.len = x.length + m := by
+    simp only [HVM.len, hw, List.length_append, List.length_take]
+    rw [Nat.min_eq_left htl]; push_cast; ring
+  have hts := rsShifts_eq k q (by omega)
+  have htq : (rsShifts k q : ℤ) ≤ q ∨ (q = 0 ∧ rsShifts k q = 1) := by
+    rcases Nat.eq_zero_or_pos q with h0 | h0
+    · right; subst h0; exact ⟨rfl, by simp [rsShifts]⟩
+    · left; exact_mod_cast rsShifts_le k q (by omega) h0
+  have hqk : q / k + 1 ≤ q ∨ q = 0 := by
+    rcases Nat.eq_zero_or_pos q with h0 | h0
+    · right; exact h0
+    · left
+      have : q / k < q := Nat.div_lt_self h0 (by omega)
+      omega
+  obtain ⟨n, hper', hres⟩ := shift_any k (by omega) pe ok ph v s p₁ r q hv hC hA hper
+    (by rw [hA, hlen]; omega) (by rw [hB]; omega) (by rw [hB, hlen]; omega)
+    (by rw [hB, hlen]; rcases htq with h1 | ⟨h1, h2⟩ <;> [omega; (rw [h2]; push_cast; omega)])
+    (by rw [hP]; omega) (by rw [hP, hlen]; omega)
+    (by rw [hP, hlen]; rcases hqk with h1 | h1 <;> [(push_cast; omega); (subst h1; simp; omega)])
+  have hsr : ShiftRel x.length s p₁ r k pe pos q v.pos := ⟨hO, hC, hE, hper, hP, hA, hB⟩
+  by_cases hbr : pe = true ∧ k * p₁ ≤ q ∧ q ≤ r
+  · have e2 := hper' hbr
+    have hsh : PalPeg.gsShift k p₁ r q = p₁ := by simp [PalPeg.gsShift, hbr.2]
+    have hnq : PalPeg.gsNextQ k p₁ r q = q - p₁ := by simp [PalPeg.gsNextQ, hbr.2]
+    have hp1q : p₁ ≤ q := le_trans (Nat.le_mul_of_pos_left p₁ (by omega)) hbr.2.1
+    have hp1' := hp1 hbr.1
+    refine ⟨n, _, e2, rfl, ?_⟩
+    rw [hsh, hnq]
+    obtain rfl := hbr.1
+    exact ⟨⟨ph, rfl⟩, hw, loopRel_period' hsr hp1q, fun h' => absurd h' (by simp),
+      by dsimp only; omega, by omega, by dsimp only; omega, by dsimp only; omega,
+      by dsimp only; omega, htl⟩
+  · have e2 := hres hbr
+    have hsh : PalPeg.gsShift k p₁ r q = max 1 (PalPeg.ceilDiv q k) := by
+      unfold PalPeg.gsShift
+      rw [if_neg]
+      intro h3; apply hbr
+      cases pe with
+      | true => exact ⟨rfl, h3⟩
+      | false => have := hnoper rfl; omega
+    have hnq : PalPeg.gsNextQ k p₁ r q = 0 := by
+      unfold PalPeg.gsNextQ
+      rw [if_neg]
+      intro h3; apply hbr
+      cases pe with
+      | true => exact ⟨rfl, h3⟩
+      | false => have := hnoper rfl; omega
+    refine ⟨n, _, e2, rfl, ?_⟩
+    rw [hsh, hnq, ← hts]
+    have htn : pos + rsShifts k q ≤ m := by
+      rcases htq with h1 | ⟨h1, h2⟩
+      · have : rsShifts k q ≤ q := by exact_mod_cast h1
+        omega
+      · rw [h2]; omega
+    exact ⟨⟨ph, rfl⟩, hw, loopRel_reset' hsr, fun h' => absurd h' (by simp),
+      by dsimp only; omega, by omega, by dsimp only; omega, by dsimp only; omega,
+      by dsimp only; omega, htl⟩
+
 end PalPeg.ScaMatcherLoop
