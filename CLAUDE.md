@@ -26,6 +26,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 W2 の穴（対応表 §6）: head 版が走らせる分解 `GSPreprocess.decompose` の L1（Lean は `decompose2` についてのみ証明）、待ち状態まで回した答え、分解の命令数 ≲ 257·|x|（未確認）、flags の ⟨1,0⟩ 開始・降順ビット列・区間停止・バッチ期限。担当エージェント: L1、drained、BorderJobHead、コスト実測、certFunctional、距離レジスタ不変量、head 表現。
 次の波: 位置レベルの head VM（Config＋head 位置）を定義し CoWorker ≃ head VM（レジスタ不変量経由）、generator ごと（Initialize/First/Second/Decompose/PeriodShift/ResetShift/Matcher 本体）の対応補題、Matcher ↔ `vStep` の揺れ付きシミュレーション（命令数 ≤ 28·ΔΦ）。
 
+**進捗 3（2026-09-23 深夜、エージェント成果・ウチが単体検証中）**
+- `W1` 済: `ScaGsCertFunctional`（`matcher_certified`/`flags_certified`）、`ScaEncode`（1文字1プログラム＋表現関係 ⇒ PEG、`pal_in_peg`）。
+- `GSDecomposeL1.decompose_gsDecomp`: head が走らせる `GSPreprocess.decompose` で L1（k ≥ 4）を直接証明。**`decompose = decompose2` は偽**（長さ 49 の反例、k=4）。
+- **`MiddleBorder.DecOK (Fin 2)` は偽**（`GSDecomposeL1.not_decOK`: `decompose [0] 8` は p₁ = 0、`KSimple` は `0 < p₁` を要求）。⇒ `EndToEnd.endToEnd_*` と `BorderJobHead.dualFlags_gsDec` は空虚。新経路では正規化版 `GSDecomposeL1.gsDecN`（`stageOK_decompose`/`decOK_normalized`）か、その都度の `StageOK` を使う。
+- `GSDrained.drainedAnswer_eq_vAnswer`: tick 境界まで流し切った答え ＝ `vAnswer`（L1 仮定）。`drainIdx n ≤ (k+1)(n−|u|)`。
+- `BorderJobHead.dualFlags_eq`: head の flags 列 ＝ 長さ up−1 から lo までの回文判定（⟨1,0⟩ 開始・降順・打ち切りを吸収）。
+- コスト実測（Python、全語長 ≤ 14 ＋ランダム）: 分解は ≤ 76·|x| 行（必要 ≲ 229·|x|）、flags は 1 文字あたり約 90 行（必要 ≤ 256）で余裕は約 3 倍。**時間補題は「待ちごと」に書く**（最後の待ち i から一致 n まで行数 ≤ 512·(n−i)）。「毎 tick の終わりに流し切り済み」は実測で偽。Lean の `decomposeWork_le` はリセットを 1 単位に数えるので、行数で重み付けし直す（巻き戻しを shift に課金）。
+
 **計画（`DESIGN_SCA_PAL.md` §6 の3層）**
 1. 汎用の永続構造層: Scala `ScaffoldCircuitStructs` を写す。ノードごとに有限個のセル枠、セルは `below`（辺）・枠タグ・`value`（辺）・`data`。スタック = 根の辺＋タグ。push/pop/copy/clear が抽象リストへの表現関係 `Rep` を保つことを1操作1補題で。pop は「根→below」の2歩で半径内。キュー（永続スタック2本）・カウンタも同様。
 2. 抽象機械: window-pal の1文字ぶん（二進段・GS head worker）を永続レコード＋有限制御の `absStep` として Scala と同形に書く。
