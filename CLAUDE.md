@@ -26,6 +26,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 W2 の穴（対応表 §6）: head 版が走らせる分解 `GSPreprocess.decompose` の L1（Lean は `decompose2` についてのみ証明）、待ち状態まで回した答え、分解の命令数 ≲ 257·|x|（未確認）、flags の ⟨1,0⟩ 開始・降順ビット列・区間停止・バッチ期限。担当エージェント: L1、drained、BorderJobHead、コスト実測、certFunctional、距離レジスタ不変量、head 表現。
 次の波: 位置レベルの head VM（Config＋head 位置）を定義し CoWorker ≃ head VM（レジスタ不変量経由）、generator ごと（Initialize/First/Second/Decompose/PeriodShift/ResetShift/Matcher 本体）の対応補題、Matcher ↔ `vStep` の揺れ付きシミュレーション（命令数 ≤ 28·ΔΦ）。
 
+## 2026-09-24 朝 — **`PAL ∈ PEG` 証明完了**（最新・最優先。下の節はすべて履歴）
+
+**`PalPeg.PalInPeg.unconditional : RecognizedByTotalPEG PAL`**（`lean-pal/PalPeg/PalInPegFinal.lean`）。
+`#print axioms` は `[propext, Classical.choice, Quot.sound]` だけで、`sorry`・`admit`・`native_decide`・追加の `axiom` はない。
+`PalPeg/Axioms.lean` の目標ラチェットも標準3公理に更新済み。
+
+- **経路**：Scala の window-pal と同じ構成（scaffold → SCA → PEG）。
+  - 表 worker（照合器・フラグ）を HVM に写し、ガード付きの歩（`ScaHeadSafe`）で worker の側条件を運ぶ。
+  - 照合器の主ループは `ScaMatcherRun`/`ScaMatcherTick`、起動部は `ScaMatcherStart`/`ScaDecomposeSafe`、寿命は `ScaMatcherLife*`、答えは `ScaMatcherAnswer`。
+  - フラグ側は `ScaFlagsHead`/`ScaFlagsLife`/`ScaFlagsJob`。
+  - 組み立ては `ScaWindowFast` → `PalInPegFinal`。
+- **quantum**：照合器 2048、フラグ 32768（Scala の `GsBatchClock.VERIFIED_BATCH`、`GenerateWindowPal --verified`）。
+  - Scala の既定（512/1024、Python とバイト一致）より大きい。証明済みの歩数上限（分解 1698·|x| + 230、フラグの仕事 8098·|y| + 10）がその quantum に収まるようにした（コウタの判断）。
+  - 実測では 512/1024 でも余裕あり（分解は最悪でも約 104 歩/文字、フラグは予算の 0.367）。
+- 旧経路（118 本テープの物理機械）の義務は `PalInPegPhysical.given_physicalObligations` の前提に格下げし、`axiom` は 0 本。
+
 **進捗 6（2026-09-24 朝、最新・最優先）: 前提 2 本つきの `PAL ∈ PEG` まで到達**
 - **`ScaWindowFast.pal_in_peg_of_fast`**（df99904、標準3公理）: 前提は `StartupFast x rho0`（予定どおりの長さのパターン全部で、照合器の起動部が site 3 まで `477|x| + 32s + 527` 歩以内）と `ScaFlagsJob.FlagsFast`（フラグの各仕事が `1024·S` 歩未満）の 2 本だけ。
   - 照合器：`ScaHeadSafe`（ガード付きの歩）、`ScaMatcherRun.seg`、`ScaMatcherTick`（`Cur`/`cur_step`/`cur_run`/`cur_live`/`refOK_start`）、`ScaMatcherStart`、`ScaDecomposeSafe`、`ScaMatcherLife`/`Life2`/`LifeSafe`、`ScaMatcherAnswer`、`ScaWorkerLink`、`ScaMatcherReaders`。

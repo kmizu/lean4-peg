@@ -222,7 +222,7 @@ theorem slotInv'_birth {ρ₀ : List (Fin 2) → String → Bool} (hρ₀ : Star
   refine ⟨u.length + 1, ⟨by simp, hborn, fun b' hb' _ => by simpa using hb'⟩, ?_⟩
   unfold LiveSince'
   rw [htake, hdrop, ← hxdef]
-  refine ⟨birthState' (ρ₀ x) x, (v', orientAt 512 (matchInitial x startCtl) (ρ₀ x)), rfl,
+  refine ⟨birthState' (ρ₀ x) x, (v', orientAt 2048 (matchInitial x startCtl) (ρ₀ x)), rfl,
     hquant, hlink, hmode, ?_⟩
   rw [hout]
   rfl
@@ -279,10 +279,10 @@ theorem slotInv'_live {ρ₀ : List (Fin 2) → String → Bool} (hlivesSafe : S
   · unfold LiveSince'
     rw [htake, hdrop, ← hxdef]
     have houtA' : lifeOut' (ρ₀ x) x (T ++ [a]) =
-        some (v', orientAt 512 (p.1.append a) p.2) := by
+        some (v', orientAt 2048 (p.1.append a) p.2) := by
       rw [lifeOut'_append, hout, Option.bind_some]
       exact hquant
-    refine ⟨feed a p, (v', orientAt 512 (p.1.append a) p.2), hinA, houtA', hlinkA, hmodeA, ?_⟩
+    refine ⟨feed a p, (v', orientAt 2048 (p.1.append a) p.2), hinA, houtA', hlinkA, hmodeA, ?_⟩
     rw [houtA]
     rfl
 
@@ -354,7 +354,7 @@ theorem answering_matcher' {ρ₀ : List (Fin 2) → String → Bool} (hρ₀ : 
 /-- The last quantum of a life from `ρ₀`. -/
 theorem quantum_of_life' {ρ₀ : String → Bool} {x T : List (Fin 2)} {p0 p : Ghosted}
     (hin : lifeIn' ρ₀ x T = some p0) (hout : lifeOut' ρ₀ x T = some p) :
-    iterStep 512 p0.1 = some p.1 ∧ p.2 = orientAt 512 p0.1 p0.2 := by
+    iterStep 2048 p0.1 = some p.1 ∧ p.2 = orientAt 2048 p0.1 p0.2 := by
   rw [lifeOut'_eq_bind, hin, Option.bind_some, quantum_def] at hout
   obtain ⟨v', hv', hp⟩ := Option.map_eq_some_iff.mp hout
   subst hp
@@ -369,14 +369,14 @@ theorem answering_output' {ρ₀ : List (Fin 2) → String → Bool} (hρ₀ : S
           (w.drop (PalPeg.stageOf w.length))).map Prod.fst = some v0 ∧
       lifeVM (w.take (PalPeg.stageOf w.length)).reverse (w.drop (PalPeg.stageOf w.length)) =
         some v ∧
-      iterStep 512 v0 = some v ∧ v0.outputs <+: v.outputs ∧
+      iterStep 2048 v0 = some v ∧ v0.outputs <+: v.outputs ∧
       ScaWindowInstance.matcherOps.output
           ((run ScaWindowInstance.matcherOps fOps ScaWindowInstance.matcherInit f0 w).matchers
             (idx (Nat.log 2 w.length))) =
         decide (v0.outputs.length < v.outputs.length) := by
   obtain ⟨p0, p, hin, hout, -, houtput⟩ := answering_matcher' hρ₀ hlivesSafe fOps f0 w hw
   have hq := (quantum_of_life' hin hout).1
-  refine ⟨p0.1, p.1, ?_, ?_, hq, iterStep_outputs 512 hq, houtput⟩
+  refine ⟨p0.1, p.1, ?_, ?_, hq, iterStep_outputs 2048 hq, houtput⟩
   · rw [← lifeIn'_fst (ρ₀ (w.take (PalPeg.stageOf w.length)).reverse), hin]
     rfl
   · rw [← lifeOut'_fst (ρ₀ (w.take (PalPeg.stageOf w.length)).reverse), hout]

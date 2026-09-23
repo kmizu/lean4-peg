@@ -5,7 +5,7 @@ import PalPeg.ScaMatcherLife
 # The main loop through ticks: segments, waits, and the report deadline
 
 The matcher's main loop runs `seg` segments of the verifier orbit `Z j` while letters arrive, one
-per tick of 512 steps. This file carries a state description across single steps and letter
+per tick of 2048 steps. This file carries a state description across single steps and letter
 arrivals (`Cur`): the head VM is either waiting at a loop head whose next letter has not arrived,
 or inside a segment started at a loop head `Z j`.
 
@@ -41,7 +41,7 @@ def endOf (j : ℕ) : ℕ := (Z x T s p₁ r (j + 1)).1.pos + (x.length - s)
 tick of its last letter. -/
 def RefOK (gr pr j : ℕ) : Prop :=
   ∀ j', j ≤ j' → isRep x T s p₁ r j' = true →
-    gr + 35 * (Φ x T s p₁ r j' - pr) + 11 < 512 * (endOf x T s p₁ r j' + 1)
+    gr + 35 * (Φ x T s p₁ r j' - pr) + 11 < 2048 * (endOf x T s p₁ r j' + 1)
 
 end Defs
 
@@ -128,7 +128,7 @@ theorem refOK_wait (x T : List (Fin 2)) (s p₁ r j L : ℕ) (hp : 0 < p₁) (hv
     (hq : ∀ i, (Z x T s p₁ r i).1.q ≤ x.length - s)
     (hL : (Z x T s p₁ r j).1.pos + (Z x T s p₁ r j).1.q = L)
     (hqj : (Z x T s p₁ r j).1.q < x.length - s) :
-    RefOK x T s p₁ r (512 * (L + 1)) (Φ x T s p₁ r j) j := by
+    RefOK x T s p₁ r (2048 * (L + 1)) (Φ x T s p₁ r j) j := by
   intro j' hj' hrep
   obtain ⟨hpos, hq'⟩ := rep_shape x T s p₁ r j' hp hv (hq j') hrep
   have hmono := phi_mono x T s p₁ r hp hj'
@@ -404,7 +404,7 @@ def Cur (L g : ℕ) (u : HVM) : Prop :=
     (∀ z ∈ u.outputs, z ≤ L) ∧
     (∀ j'', j'' < j → isRep x T s p₁ r j'' = true →
       ((endOf x T s p₁ r j'' : ℕ) : ℤ) ∈ v.outputs) ∧
-    (((Z x T s p₁ r j).1.pos + (Z x T s p₁ r j).1.q = L ∧ u = v ∧ gr = 512 * (L + 1) ∧
+    (((Z x T s p₁ r j).1.pos + (Z x T s p₁ r j).1.q = L ∧ u = v ∧ gr = 2048 * (L + 1) ∧
         pr = Φ x T s p₁ r j) ∨
      ((Z x T s p₁ r j).1.pos + (Z x T s p₁ r j).1.q < L ∧
        ∃ d n w e, SegOK ρ x T s p₁ r pe L j v d n w ∧ e < n ∧ iterS x.length ρ e v = some u ∧
@@ -432,7 +432,7 @@ theorem cur_of_head (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L g j gr pr
       Or.inr ⟨hlt, d, n, w, 0, hseg, hseg.2.2.1, rfl, by omega,
         Or.inl ⟨rfl, fun _ _ _ _ => Nat.zero_le _⟩⟩⟩
   · have hL : (Z x T s p₁ r j).1.pos + (Z x T s p₁ r j).1.q = L := by omega
-    exact ⟨j, v, 512 * (L + 1), Φ x T s p₁ r j, ok, hat, hps,
+    exact ⟨j, v, 2048 * (L + 1), Φ x T s p₁ r j, ok, hat, hps,
       refOK_wait x T s p₁ r j L hP.ppos (by have := hP.sx; omega) hP.qle hL hat.qv, le_rfl,
       hvals, hrec, Or.inl ⟨hL, rfl, rfl, rfl⟩⟩
 
@@ -440,7 +440,7 @@ theorem cur_of_head (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L g j gr pr
 and keeps `Cur`; the output grows only by the current letter count `L`, and then a report ends
 at `L`. -/
 theorem cur_step (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L g : ℕ} {u : HVM}
-    (hc : Cur ρ x T s p₁ r pe L g u) (hg1 : 512 * L ≤ g) (hg2 : g < 512 * (L + 1)) :
+    (hc : Cur ρ x T s p₁ r pe L g u) (hg1 : 2048 * L ≤ g) (hg2 : g < 2048 * (L + 1)) :
     ∃ u', stepMatch u = some u' ∧ ScaWorkerLink.StepSide x.length ρ u ∧
       ScaWorkerLink.orientStep u ρ = ρ ∧ Cur ρ x T s p₁ r pe L (g + 1) u' ∧
       (u'.outputs = u.outputs ∨
@@ -491,7 +491,7 @@ theorem cur_step (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L g : ℕ} {u 
       have hge : L ≤ endOf x T s p₁ r j := by
         by_contra hcon
         push Not at hcon
-        have h512 : 512 * (endOf x T s p₁ r j + 1) ≤ 512 * L := Nat.mul_le_mul_left _ hcon
+        have h512 : 2048 * (endOf x T s p₁ r j + 1) ≤ 2048 * L := Nat.mul_le_mul_left _ hcon
         omega
       exact ⟨hrep, by rw [hB₁]; push_cast; omega, by omega, ho₁, c₁, hc₁⟩
     have hmB : IsMatch u → u.len ≤ u.pos "B" := by
@@ -559,8 +559,8 @@ theorem cur_step (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L g : ℕ} {u 
 
 /-- **A letter arrives** at the end of tick `L`. -/
 theorem cur_append (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L : ℕ} {u : HVM}
-    (hc : Cur ρ x T s p₁ r pe L (512 * (L + 1)) u) (hL : L < T.length) :
-    Cur ρ x T s p₁ r pe (L + 1) (512 * (L + 1)) (u.append T[L]) := by
+    (hc : Cur ρ x T s p₁ r pe L (2048 * (L + 1)) u) (hL : L < T.length) :
+    Cur ρ x T s p₁ r pe (L + 1) (2048 * (L + 1)) (u.append T[L]) := by
   obtain ⟨j, v, gr, pr, ok, hat, hps, href, hpr, hvals, hrec, hcase⟩ := hc
   have hvals' : ∀ z ∈ (u.append T[L]).outputs, z ≤ (L + 1 : ℕ) := by
     intro z hz; have := hvals z hz; push_cast; omega
@@ -584,7 +584,7 @@ theorem cur_append (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L : ℕ} {u 
 
 /-- **`b` steps inside tick `L`.** -/
 theorem cur_run (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L : ℕ} :
-    ∀ (b : ℕ) {g : ℕ} {u : HVM}, Cur ρ x T s p₁ r pe L g u → 512 * L ≤ g → g + b ≤ 512 * (L + 1) →
+    ∀ (b : ℕ) {g : ℕ} {u : HVM}, Cur ρ x T s p₁ r pe L g u → 2048 * L ≤ g → g + b ≤ 2048 * (L + 1) →
       ∃ u', iterStep b u = some u' ∧
         (∀ i, i < b → ∀ ui, iterStep i u = some ui → ScaWorkerLink.StepSide x.length ρ ui) ∧
         (∀ i, i ≤ b → ScaWorkerLink.orientAt i u ρ = ρ) ∧
@@ -624,7 +624,7 @@ theorem cur_run (hρ : Orient ρ) (hP : Params x T s p₁ r pe) {L : ℕ} :
 
 /-- **Every report ending by `L` is out by the end of tick `L`.** -/
 theorem cur_live (hP : Params x T s p₁ r pe) {L : ℕ} {u : HVM}
-    (hc : Cur ρ x T s p₁ r pe L (512 * (L + 1)) u) {j' : ℕ}
+    (hc : Cur ρ x T s p₁ r pe L (2048 * (L + 1)) u) {j' : ℕ}
     (hrep : isRep x T s p₁ r j' = true) (hend : endOf x T s p₁ r j' ≤ L) :
     ((endOf x T s p₁ r j' : ℕ) : ℤ) ∈ u.outputs := by
   obtain ⟨j, v, gr, pr, ok, hat, hps, href, hpr, hvals, hrec, hcase⟩ := hc
@@ -648,7 +648,7 @@ theorem cur_live (hP : Params x T s p₁ r pe) {L : ℕ} {u : HVM}
     · have := hlate j' hge hrep; omega
     · obtain ⟨hd1, hd2, hn0, hphi, -, -, -, hmatch, hmid⟩ := hseg
       have hr := href j' hge hrep
-      have h512 : 512 * (endOf x T s p₁ r j' + 1) ≤ 512 * (L + 1) := Nat.mul_le_mul_left _ (by omega)
+      have h512 : 2048 * (endOf x T s p₁ r j' + 1) ≤ 2048 * (L + 1) := Nat.mul_le_mul_left _ (by omega)
       rcases Nat.eq_or_lt_of_le hge with heq | hgt
       · subst heq
         rcases hbook with ⟨-, hle⟩ | ⟨-, heq⟩
@@ -671,7 +671,7 @@ theorem cur_live (hP : Params x T s p₁ r pe) {L : ℕ} {u : HVM}
 enough, every report makes its deadline. -/
 theorem refOK_start (x T : List (Fin 2)) (s p₁ r g₀ : ℕ) (hp : 0 < p₁) (hsx : s < x.length)
     (hq : ∀ i, (Z x T s p₁ r i).1.q ≤ x.length - s)
-    (hg₀ : g₀ < 512 * s + 477 * (x.length - s) + 536) :
+    (hg₀ : g₀ < 2048 * s + 2013 * (x.length - s) + 2072) :
     RefOK x T s p₁ r g₀ (Φ x T s p₁ r 0) 0 := by
   intro j' _ hrep
   obtain ⟨hpos, hq'⟩ := rep_shape x T s p₁ r j' hp (by omega) (hq j') hrep

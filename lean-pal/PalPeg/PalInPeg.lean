@@ -10,8 +10,8 @@ import PalPeg.CloseoutFinalPack
 /-!
 # `PalInPeg` — 目標定理と、そこへ至る部分結果を 1 つの名前空間に集める
 
-**目標は無条件の `PalInPeg.unconditional : RecognizedByTotalPEG PAL`。まだ存在しない。**
-その名前はそれ専用に予約する。
+**目標は無条件の `PalInPeg.unconditional : RecognizedByTotalPEG PAL`。2026-09-24 に証明済み**
+（`PalPeg/PalInPegFinal.lean`、標準3公理のみ。Scala の window-pal と同じ SCA 経路）。
 
 前提を取るものは全部「部分結果」であり、`PalInPeg.given_<残差>` という名前にする。
 名前だけで「**何を仮定すれば `PAL ∈ PEG` に到達するか**」が読めるのが条件。

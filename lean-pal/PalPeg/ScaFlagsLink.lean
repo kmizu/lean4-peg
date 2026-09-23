@@ -30,12 +30,12 @@ lengths, `end = |text|`).
 
 * `step_pending`, `step_returned`, `step_inactive`: one worker step.
 * `service_link` / `service_modeDone` (1): a service quantum from a linked state runs the VM
-  `n ≤ 1024` steps (`iterFlags n v = some v'`), keeps the link with `v'`, keeps the fault, and the
-  worker is done iff it was done or `n < 1024` (then `v'` is `flagsDone`); the flag stack is
-  `v'.flags.reverse`. So `n = min 1024 (steps to halt)`. The one boundary: a VM that halts at
-  exactly step `1024` is `flagsDone` while the worker is still running; its halt row runs as the
-  first step of the next quantum. The only run hypothesis is `RunsFor 1024 v`: the VM does not
-  get stuck before halting (`∀ i < 1024, iterFlags i v = some u → ¬ u.flagsDone →
+  `n ≤ 32768` steps (`iterFlags n v = some v'`), keeps the link with `v'`, keeps the fault, and the
+  worker is done iff it was done or `n < 32768` (then `v'` is `flagsDone`); the flag stack is
+  `v'.flags.reverse`. So `n = min 32768 (steps to halt)`. The one boundary: a VM that halts at
+  exactly step `32768` is `flagsDone` while the worker is still running; its halt row runs as the
+  first step of the next quantum. The only run hypothesis is `RunsFor 32768 v`: the VM does not
+  get stuck before halting (`∀ i < 32768, iterFlags i v = some u → ¬ u.flagsDone →
   (stepFlags u).isSome`).
 * `arrive_link`, `mark_link`, `start_link`, `release_link` (2): `start true` then `mark true`
   from any `Base` state links the worker to `releaseVM s = flagsInitialVM (flagWord text begin b)
@@ -85,10 +85,10 @@ abbrev live (r : Nat) : List String := (liveReaders ScaGsTables.flagsWorker).get
 /-- The control the coroutine starts from (`CoWorker.start`). -/
 abbrev ctl0 : Ctl := Ctl.ofOutcome (next flagsInitial none)
 
-/-- The flags quantum, `1024` (`GsBatchClock.DEFAULT_BATCH.flags`). -/
+/-- The flags quantum, `32768` (`GsBatchClock.DEFAULT_BATCH.flags`). -/
 abbrev quantum : Nat := ScaGsTables.flagsWorker.quantum
 
-theorem quantum_eq : quantum = 1024 := rfl
+theorem quantum_eq : quantum = 32768 := rfl
 
 theorem flagsW_eq : flagsW = Worker.ofSpec fspec := rfl
 
@@ -636,9 +636,9 @@ theorem fold_link (hfacts : ReaderFacts) {bg b : Nat} :
       exact ⟨0, v, by simp, rfl, hlink, rfl, by simp [hmd], fun _ => hvd⟩
 
 /-- **(1) One service quantum.** From a linked worker (running, or done with a halted VM), if
-the VM does not get stuck before halting within `1024` steps, `service` runs the VM `n ≤ 1024`
+the VM does not get stuck before halting within `32768` steps, `service` runs the VM `n ≤ 32768`
 steps to `v'` and keeps the link with `v'`; the fault stays; the worker is done iff it was
-done or `n < 1024` (the halt row ran within the quantum), and then `v'` is `flagsDone`; the flag
+done or `n < 32768` (the halt row ran within the quantum), and then `v'` is `flagsDone`; the flag
 stack is `v'.flags` reversed. -/
 theorem service_link (hfacts : ReaderFacts) {bg b : Nat} {s : WorkerState} {v : HVM}
     (hlink : Link bg b s v) (hrun : RunsFor quantum v) :
@@ -652,7 +652,7 @@ theorem service_link (hfacts : ReaderFacts) {bg b : Nat} {s : WorkerState} {v : 
   exact ⟨n, v', hn, hiter, hlink', hfault, hmode, hdone, hlink'.flags_eq⟩
 
 /-- `modeDone` after a quantum started running: done iff the VM halted within the quantum
-(`n < 1024`; if it halts at exactly `1024` steps the halt row runs at the next quantum). -/
+(`n < 32768`; if it halts at exactly `32768` steps the halt row runs at the next quantum). -/
 theorem service_modeDone (hfacts : ReaderFacts) {bg b : Nat} {s : WorkerState} {v : HVM}
     (hlink : Link bg b s v) (hrunning : s.mode = .run) (hrun : RunsFor quantum v) :
     ∃ n v', n ≤ quantum ∧ iterFlags n v = some v' ∧ Link bg b (service flagsW s) v' ∧

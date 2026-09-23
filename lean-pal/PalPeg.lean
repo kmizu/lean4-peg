@@ -9,7 +9,7 @@ import PalPeg.Axioms
 根は 4 本だけ。**どこに何があるかはこの 4 本が示す。**
 
 * `PalPeg.PalInPeg` — **目標定理と、そこへ至る部分結果**。無条件の
-  `PalInPeg.unconditional` はまだ存在せず、その名前は予約。前提を取るものは
+  `PalInPeg.unconditional`（`PalInPegFinal`、2026-09-24 証明済み）。前提を取るものは
   `PalInPeg.given_<残差>` で、名前だけで「何を仮定すれば到達するか」が読める。
 * `PalPeg.Canonical` — 主線の部品のカーネル検査済み索引（意味のある別名）。
 * `PalPeg.Workbench` — ビルドは通るが未配線の部品を、主定理との関係で分類したもの。
@@ -30,5 +30,5 @@ import PalPeg.Axioms
 新しいモジュールは、正本の鎖に入るなら `PalPeg/Canonical.lean` に、
 まだ配線していないなら `PalPeg/Workbench.lean` に登録する。
 
-**全体 build 成功・標準公理のみ・無条件 PAL は未完.**
+**全体 build 成功・標準公理のみ・無条件 `PAL ∈ PEG` 証明済み（`PalInPeg.unconditional`）.**
 -/

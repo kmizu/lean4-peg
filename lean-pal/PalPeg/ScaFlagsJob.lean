@@ -6,7 +6,7 @@ import PalPeg.GSDecomposeL1
 # The per-job promise of the flag workers, from the flags head program
 
 `ScaFlagsLife.flagsContract` needs `JobHalts y (2^i) r` for every word `y` of length
-`(r+1)·2^i`, `r < 4`: `DualFlagVM(y, rS, (r+1)S)` halts after `N < 1024·S` steps with the job's
+`(r+1)·2^i`, `r < 4`: `DualFlagVM(y, rS, (r+1)S)` halts after `N < 32768·S` steps with the job's
 bits. `ScaFlagsHead.flags_head_gs_palindromes` runs the flags head program to a halt with the
 palindrome bits of the prefixes of lengths `up - 1` down to `lo`, in at most `8098·|y| + 10`
 steps, given `StageOK` for the program's own decomposition at every stage.
@@ -17,7 +17,7 @@ steps, given `StageOK` for the program's own decomposition at every stage.
   (the stand-in period `L - s + 1` when there is none) is `GSDecomposeL1.gsDecN y 8 L`, whose
   `StageOK` is `GSDecomposeL1.decOK_normalized`.
 * **The budget** is not implied by `8098·|y| + 10` (`|y|` is up to `4S`). It is kept as one
-  hypothesis, `FlagsFast`: every halting run of a job VM takes fewer than `1024·S` steps.
+  hypothesis, `FlagsFast`: every halting run of a job VM takes fewer than `32768·S` steps.
   `iterFlags` is deterministic, so this is a statement about the job's unique halting time.
 
 `jobHalts_of_fast`: `FlagsFast → ∀ y i r, … → JobHalts y (2^i) r`, and the flag workers' promise
@@ -91,11 +91,11 @@ theorem flags_bits (y : List (Fin 2)) (S r : ℕ) {w : HVM}
 /-! ## The budget, and the promise -/
 
 /-- **The step budget of the flags jobs**: every halting run of the job VM on a word of length
-`(r+1)·2^i` (`r < 4`) takes fewer than `1024·2^i` steps. -/
+`(r+1)·2^i` (`r < 4`) takes fewer than `32768·2^i` steps. -/
 def FlagsFast : Prop :=
   ∀ (y : List (Fin 2)) (i r : ℕ), r < 4 → y.length = (r + 1) * 2 ^ i →
     ∀ n w, ScaFlagsLink.iterFlags n (jobStart y (2 ^ i) r) = some w → w.flagsDone →
-      n < 1024 * 2 ^ i
+      n < 32768 * 2 ^ i
 
 /-- **The per-job promise from the step budget.** -/
 theorem jobHalts_of_fast (hfast : FlagsFast) :

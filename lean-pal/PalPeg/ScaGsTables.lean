@@ -17,11 +17,14 @@ open PalPeg.ScaGsProgram
 /-- `GsBatchClock.DEFAULT_BATCH.k`. -/
 def batchK : Nat := 8
 
-/-- `GsBatchClock.DEFAULT_BATCH.matching`: the matcher quantum (`WindowPAL`, `ScaffoldWindowPal.scala:88`). -/
-def matchingQuantum : Nat := 512
+/-- `GsBatchClock.VERIFIED_BATCH.matching`: the matcher quantum of the verified source (`WindowPAL`
+with `GenerateWindowPal --verified`; the derived `DEFAULT_BATCH` has 512, below the proven step
+bounds). -/
+def matchingQuantum : Nat := 2048
 
-/-- `GsBatchClock.DEFAULT_BATCH.flags`: the flags quantum (`WindowPAL`, `ScaffoldWindowPal.scala:89`). -/
-def flagsQuantum : Nat := 1024
+/-- `GsBatchClock.VERIFIED_BATCH.flags`: the flags quantum of the verified source (the derived
+`DEFAULT_BATCH` has 1024). -/
+def flagsQuantum : Nat := 32768
 
 /-- `GsHeads.HEADS`. -/
 def heads : List String := ["Origin", "OriginalEnd", "End", "Cut", "Tail", "A", "B", "P", "First", "Reach", "Walk", "KP", "KFirst", "Second"]

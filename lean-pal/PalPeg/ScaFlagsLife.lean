@@ -18,14 +18,14 @@ from one fact about the flags head VM per job.
   `DualFlagVM(y, rS, (r+1)S)` on `y = W[b, b + (r+1)S)` (`releaseVM_eq`): `Upper = (r+1)S`,
   `Lower = rS`, and the job's bits are the palindrome bits of the prefixes of `y` of lengths
   `rS, …, rS + S - 1` (`jobBits_eq`).
-* From the release on, one service quantum (1024 VM steps) runs per tick. If the VM halts after
+* From the release on, one service quantum (32768 VM steps) runs per tick. If the VM halts after
   `N` steps, the worker executes the halt row as its step `N + 1`, i.e. in the tick
-  `R + N / 1024`. So the capture tick is `R + N / 1024`, and the contract's `c < R + S` is
-  exactly `N < 1024 · S`.
+  `R + N / 32768`. So the capture tick is `R + N / 32768`, and the contract's `c < R + S` is
+  exactly `N < 32768 · S`.
 
 ## The hypothesis
 
-`JobHalts y S r`: `DualFlagVM(y, rS, (r+1)S)` from the coroutine's first yield runs `N < 1024·S`
+`JobHalts y S r`: `DualFlagVM(y, rS, (r+1)S)` from the coroutine's first yield runs `N < 32768·S`
 steps (`iterFlags N … = some v`) to a halted VM whose flags, reversed, are the palindrome bits
 (`segBits`). `iterFlags N … = some v` already says that no earlier state halted or got stuck.
 The main theorems take `JobHalts` for every word of length `(r+1)·2^i`, `r < 4`.
@@ -54,10 +54,10 @@ def segBits (y : List (Fin 2)) (S r : ℕ) : List Bool :=
 def jobStart (y : List (Fin 2)) (S r : ℕ) : HVM :=
   flagsInitialVM y ((r * S : ℕ) : ℤ) (((r + 1) * S : ℕ) : ℤ) ctl0
 
-/-- **The per-job promise**: the flags job on `y` halts within `1024·S` steps, leaving the bits of
+/-- **The per-job promise**: the flags job on `y` halts within `32768·S` steps, leaving the bits of
 the job on its flag list (append order, i.e. reversed onto the worker's stack). -/
 def JobHalts (y : List (Fin 2)) (S r : ℕ) : Prop :=
-  ∃ N v, N < 1024 * S ∧ iterFlags N (jobStart y S r) = some v ∧ v.flagsDone ∧
+  ∃ N v, N < 32768 * S ∧ iterFlags N (jobStart y S r) = some v ∧ v.flagsDone ∧
     v.flags.reverse = segBits y S r
 
 /-- The segment of job `r` of the stage born at `b` with half `S`. -/
@@ -275,19 +275,19 @@ theorem release_live {st : StageState} {S d : ℕ} (hS : 1 ≤ S) (h : StageAt s
 def jobVM (W : List (Fin 2)) (b S r : ℕ) : HVM := jobStart (seg W b S r) S r
 
 /-- The jobs of the stage born at `b` with half `S` (those released inside `W`) halt after
-`N r < 1024·S` steps with their bits. -/
+`N r < 32768·S` steps with their bits. -/
 def StageJobs (W : List (Fin 2)) (N : ℕ → ℕ) (b S : ℕ) : Prop :=
   ∀ r, r < 4 → b + (r + 1) * S ≤ W.length →
-    N r < 1024 * S ∧ ∃ V, iterFlags (N r) (jobVM W b S r) = some V ∧ V.flagsDone ∧
+    N r < 32768 * S ∧ ∃ V, iterFlags (N r) (jobVM W b S r) = some V ∧ V.flagsDone ∧
       V.flags.reverse = jobBits W b S r
 
 /-- The flag worker `e` ticks after the release of job `r`: running the job's VM (after
-`1024·(e+1)` steps) until the tick `N r / 1024`, done with the job's bits from then on. -/
+`32768·(e+1)` steps) until the tick `N r / 32768`, done with the job's bits from then on. -/
 def JobPhase (W : List (Fin 2)) (N : ℕ → ℕ) (b S r e : ℕ) (s : WorkerState) : Prop :=
   s.h = (e : ℤ) ∧
-  (e < N r / 1024 → s.mode = .run ∧
-    ∃ v, iterFlags (1024 * (e + 1)) (jobVM W b S r) = some v ∧ Link b ((r + 1) * S) s v) ∧
-  (N r / 1024 ≤ e → s.mode = .done ∧ s.flags = jobBits W b S r)
+  (e < N r / 32768 → s.mode = .run ∧
+    ∃ v, iterFlags (32768 * (e + 1)) (jobVM W b S r) = some v ∧ Link b ((r + 1) * S) s v) ∧
+  (N r / 32768 ≤ e → s.mode = .done ∧ s.flags = jobBits W b S r)
 
 /-- **The flag worker of the stage born at `b` with half `S`, `d` ticks after the birth.** -/
 def WorkerAt (W : List (Fin 2)) (N : ℕ → ℕ) (b S d : ℕ) (s : WorkerState) : Prop :=
@@ -331,7 +331,7 @@ theorem workerAt_birth {W : List (Fin 2)} {N : ℕ → ℕ} {n S : ℕ} {s : Wor
 
 /-- A job within its budget is done `S - 1` ticks after its release. -/
 theorem jobPhase_done {W : List (Fin 2)} {N : ℕ → ℕ} {b S r e : ℕ} {s : WorkerState}
-    (h : JobPhase W N b S r e s) (hN : N r < 1024 * S) (he : S - 1 ≤ e) : s.mode = .done :=
+    (h : JobPhase W N b S r e s) (hN : N r < 32768 * S) (he : S - 1 ≤ e) : s.mode = .done :=
   (h.2.2 (by omega)).1
 
 theorem releaseVM_eq {W : List (Fin 2)} {b S r : ℕ} {t : WorkerState}
@@ -399,7 +399,7 @@ theorem workerAt_release {W : List (Fin 2)} {N : ℕ → ℕ} {b S d r : ℕ} {s
         · have hnl := hdone.mp hmd
           have := hlast (hdone' hmd)
           omega
-      have hn1024 : n' = 1024 := by
+      have hn1024 : n' = 32768 := by
         by_contra hne
         have := hdone.mpr (by omega)
         rw [hnd] at this
@@ -409,8 +409,8 @@ theorem workerAt_release {W : List (Fin 2)} {N : ℕ → ℕ} {b S d r : ℕ} {s
       · exact hm
       · simp [modeDone, hm] at hnd
     · -- done in the release tick
-      have hNlt : N r < 1024 := by omega
-      have hn'lt : n' < 1024 := by omega
+      have hNlt : N r < 32768 := by omega
+      have hn'lt : n' < 32768 := by omega
       have hmd := hdone.mpr hn'lt
       have hnN := hlast (hdone' hmd)
       subst hnN
@@ -440,17 +440,17 @@ theorem workerAt_window {W : List (Fin 2)} {N : ℕ → ℕ} {b S d r : ℕ} {s 
   obtain ⟨hhe, hrun, hdn⟩ := hph
   have hhnew : (flagTick W[b + d] false false s).h = ((d - (r + 1) * S + 1 : ℕ) : ℤ) := by
     rw [hh', hhe]; push_cast; rfl
-  by_cases hrunning : d - (r + 1) * S < N r / 1024
+  by_cases hrunning : d - (r + 1) * S < N r / 32768
   · obtain ⟨hmr, v, hv, hlink⟩ := hrun hrunning
     obtain ⟨n', v'', hn', hiter, hlink', hfault', hmode', hdone', hflags'⟩ :=
       tick_running ScaFlagsReaders.readerFacts hlink W[b + d] (runsFor_of_halt hV hVd hv quantum)
     rw [quantum_eq] at hn' hmode' hdone'
-    have hcomb : iterFlags (1024 * (d - (r + 1) * S + 1) + n') (jobVM W b S r) = some v'' := by
+    have hcomb : iterFlags (32768 * (d - (r + 1) * S + 1) + n') (jobVM W b S r) = some v'' := by
       rw [iterFlags_add, hv, Option.bind_some, hiter]
     obtain ⟨hle, hlast⟩ := halt_unique hV hVd hcomb
     refine hwin _ hlink'.base (by rw [hfault', hfault]) (by rw [hbeg', hbeg]) htext1
       ⟨hhnew, fun hlt => ?_, fun hge => ?_⟩
-    · have hn1024 : n' = 1024 := by
+    · have hn1024 : n' = 32768 := by
         by_contra hne
         have := hlast (hdone' (by omega))
         omega
@@ -462,9 +462,9 @@ theorem workerAt_window {W : List (Fin 2)} {N : ℕ → ℕ} {b S d r : ℕ} {s 
           simp only [reduceCtorEq, false_or] at this
           omega
       · rw [hn1024] at hcomb
-        rw [show 1024 * (d - (r + 1) * S + 1 + 1) = 1024 * (d - (r + 1) * S + 1) + 1024 by ring]
+        rw [show 32768 * (d - (r + 1) * S + 1 + 1) = 32768 * (d - (r + 1) * S + 1) + 32768 by ring]
         exact hcomb
-    · have hn'lt : n' < 1024 := by
+    · have hn'lt : n' < 32768 := by
         by_contra hge'
         omega
       have hnN := hlast (hdone' hn'lt)
@@ -588,7 +588,7 @@ theorem exists_jobSteps
     (W : List (Fin 2)) :
     ∃ N : ℕ → ℕ → ℕ, ∀ j, 1 ≤ j → StageJobs W (N j) (2 ^ j) (2 ^ (j - 1)) := by
   have hex : ∀ j r : ℕ, ∃ Nr : ℕ, 1 ≤ j → r < 4 → 2 ^ j + (r + 1) * 2 ^ (j - 1) ≤ W.length →
-      Nr < 1024 * 2 ^ (j - 1) ∧ ∃ V, iterFlags Nr (jobVM W (2 ^ j) (2 ^ (j - 1)) r) = some V ∧
+      Nr < 32768 * 2 ^ (j - 1) ∧ ∃ V, iterFlags Nr (jobVM W (2 ^ j) (2 ^ (j - 1)) r) = some V ∧
         V.flagsDone ∧ V.flags.reverse = jobBits W (2 ^ j) (2 ^ (j - 1)) r := by
     intro j r
     by_cases hc : 1 ≤ j ∧ r < 4 ∧ 2 ^ j + (r + 1) * 2 ^ (j - 1) ≤ W.length
@@ -811,7 +811,7 @@ theorem flagsContract
       JobHalts y (2 ^ i) r)
     (W : List (Fin 2)) : FlagsContract mOps flagsOps m0 flagsInit W := by
   obtain ⟨N, hjobs⟩ := exists_jobSteps hjob W
-  refine ⟨fun j r => 2 ^ j + (r + 1) * 2 ^ (j - 1) + N j r / 1024, fun j r hj hr hR => ?_⟩
+  refine ⟨fun j r => 2 ^ j + (r + 1) * 2 ^ (j - 1) + N j r / 32768, fun j r hj hr hR => ?_⟩
   dsimp only
   obtain ⟨hNlt, V, hV, hVd, hVbits⟩ := hjobs j hj r hr hR
   have hSr : 2 ^ (j - 1) ≤ (r + 1) * 2 ^ (j - 1) := Nat.le_mul_of_pos_left _ (Nat.succ_pos r)
@@ -822,7 +822,7 @@ theorem flagsContract
   have hr5 : (r + 2) * 2 ^ (j - 1) ≤ 5 * 2 ^ (j - 1) := Nat.mul_le_mul_right _ (by omega)
   -- the worker between the release and the capture
   have hat : ∀ n, 2 ^ j + (r + 1) * 2 ^ (j - 1) ≤ n →
-      n ≤ 2 ^ j + (r + 1) * 2 ^ (j - 1) + N j r / 1024 → n ≤ W.length →
+      n ≤ 2 ^ j + (r + 1) * 2 ^ (j - 1) + N j r / 32768 → n ≤ W.length →
       JobPhase W (N j) (2 ^ j) (2 ^ (j - 1)) r (n - (2 ^ j + (r + 1) * 2 ^ (j - 1)))
         ((run mOps flagsOps m0 flagsInit (W.take n)).flags (idx (j - 1))) := by
     intro n hRn hnc hnW
@@ -845,7 +845,7 @@ theorem flagsContract
   refine ⟨by omega, by omega, fun n hRn hnc hnW => ?_, fun hcW => ?_⟩
   · have hph := hat n hRn hnc hnW
     show modeDone _ = true ↔ _
-    by_cases hrun : n - (2 ^ j + (r + 1) * 2 ^ (j - 1)) < N j r / 1024
+    by_cases hrun : n - (2 ^ j + (r + 1) * 2 ^ (j - 1)) < N j r / 32768
     · rw [modeDone, (hph.2.1 hrun).1]
       simp
       omega

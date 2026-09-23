@@ -7,9 +7,9 @@ import PalPeg.ScaMatcherAnswer
 # The matcher's lives are safe
 
 A matcher life born on the pattern `x ≠ []` and fed the text `T` (`ScaMatcherLife.lifeIn'` /
-`lifeOut'`, from a start orientation `ρ₀`): one quantum of `512` head-VM steps per tick, the
+`lifeOut'`, from a start orientation `ρ₀`): one quantum of `2048` head-VM steps per tick, the
 letter `T[t]` appended before tick `t + 1`. Global slot `g` counts the steps from birth; tick `t`
-(with `t` letters of `T` available) is slots `512·t … 512·t + 511`.
+(with `t` letters of `T` available) is slots `2048·t … 2048·t + 2047`.
 
 The life goes through three phases (`Good t g u ρ`: the VM `u` with ghost orientation `ρ` at slot
 `g` of tick `t`):
@@ -22,17 +22,17 @@ The life goes through three phases (`Good t g u ρ`: the VM `u` with ghost orien
   `loopOrient ρ₀`, waiting at `WalkHead i` while text cell `i` has not arrived (`walk_wait`);
 * **loop** (`ScaMatcherTick.Cur`): the main loop.
 
-The startup is timed against `B₀ = 512·s + 477·|v| + 535` (`|v| = |x| − s`): while moving,
+The startup is timed against `B₀ = 2048·s + 2013·|v| + 2071` (`|v| = |x| − s`): while moving,
 `g + (remaining startup steps) ≤ B₀`, so the first loop head is reached at `g₀ ≤ B₀`, which is
 what `ScaMatcherTick.refOK_start` asks. The only assumption is on the length of `start_pre`
-(`StartupFast`): `n₁ ≤ 477·|x| + 32·s + 527` (implied by `n₁ ≤ 477·|x| + 527`); this is exactly
+(`StartupFast`): `n₁ ≤ 2013·|x| + 32·s + 2063` (implied by `n₁ ≤ 2013·|x| + 2063`); this is exactly
 what the budget needs (`n₁ + 5 + 3·s + 3 ≤ B₀`). The run reaching site 3 is unique
 (`iterS_site3_unique`: the guarded run cannot pass `copy P Tail`), so `StartupFast` bounds the run
 of `ScaMatcherStart.start_pre`.
 
 ## Results
 
-* `lifeSafe'`: `LifeSafe' ρ₀ x T` for every `T` (every quantum runs its `512` steps and keeps
+* `lifeSafe'`: `LifeSafe' ρ₀ x T` for every `T` (every quantum runs its `2048` steps and keeps
   the worker's side conditions with the ghost orientation).
 * `tick_output`: in tick `t ≤ |T|`, the quantum appends to `outputs` iff a report of the orbit
   ends at `t` (`∃ j, isRep … j ∧ endOf … j = t`); stated on `lifeIn`/`lifeVM` (independent of
@@ -174,9 +174,9 @@ theorem not_isMatch_of_run {a b : ℕ} {v y y' w : HVM} (hy : iterStep a v = som
 abbrev site3 (pe : Bool) : Ctl := .pending [mc 8 (some pe) none none 3] (.copy "P" "Tail")
 
 /-- **The startup is fast**: the startup run `start_pre` (under `ρ₀`, from the birth state) reaches
-the site-3 state in at most `477·|x| + 32·s + 527` steps. -/
+the site-3 state in at most `2013·|x| + 32·s + 2063` steps. -/
 def StartupFast (x : List (Fin 2)) (ρ₀ : String → Bool) : Prop :=
-  ∃ n π', n ≤ 477 * x.length + 32 * (decompose x 8).1 + 527 ∧
+  ∃ n π', n ≤ 2013 * x.length + 32 * (decompose x 8).1 + 2063 ∧
     iterS x.length ρ₀ n (matchInitial x startCtl) = some { matchInitial x startCtl with
       ctl := site3 (decide ((decompose x 8).2.1 ≠ 0))
       pos := π' }
@@ -239,7 +239,7 @@ abbrev v₀ : HVM := matchInitial S.x startCtl
 abbrev w₃ : HVM := { S.v₀ with ctl := site3 S.pe, pos := S.π₃ }
 abbrev ρL : String → Bool := loopOrient S.ρ₀
 /-- The startup's time budget: the first loop head is reached by slot `B₀`. -/
-abbrev B₀ : ℕ := 512 * S.s + 477 * (S.x.length - S.s) + 535
+abbrev B₀ : ℕ := 2048 * S.s + 2013 * (S.x.length - S.s) + 2071
 
 /-- The heads after the startup copies (site 7, `less Walk Cut`). -/
 abbrev w₇ : HVM :=
@@ -255,7 +255,7 @@ structure Setup.OK (S : Setup) : Prop where
   hx : S.x ≠ []
   orient : ScaMatcherStart.StartOrient S.ρ₀
   run3 : iterS S.x.length S.ρ₀ S.n₁ S.v₀ = some S.w₃
-  fast : S.n₁ ≤ 477 * S.x.length + 32 * S.s + 527
+  fast : S.n₁ ≤ 2013 * S.x.length + 32 * S.s + 2063
   keep : Keeps ("End" :: dHeads) S.v₀.pos S.π₃
   endP : S.π₃ "End" = S.x.length
   cut : S.π₃ "Cut" = S.s
@@ -480,13 +480,13 @@ abbrev LoopCur (t g : ℕ) (u : HVM) : Prop := Cur S.ρL S.x S.T S.s S.p₁ S.r 
 variable {S}
 
 /-- **A stop of the walk**: continue moving, wait, or start the main loop. -/
-theorem OK.stop (hS : S.OK) {t g : ℕ} {u : HVM} (hg : g ≤ 512 * (t + 1)) (hout : u.outputs = [])
+theorem OK.stop (hS : S.OK) {t g : ℕ} {u : HVM} (hg : g ≤ 2048 * (t + 1)) (hout : u.outputs = [])
     (hps : u.patternSize = S.x.length)
     (h : (∃ i, WalkHead S.x S.T t S.s S.p₁ S.r S.pe i u ∧ g + 3 * (S.s - i) + 2 ≤ S.B₀) ∨
       (AtHead S.x S.T t 8 S.s S.p₁ S.r S.pe true (Z S.x S.T S.s S.p₁ S.r 0) u ∧ g ≤ S.B₀)) :
     S.WalkMove t g u ∨ S.WalkWait t g u ∨ S.LoopCur t g u := by
   have hsx := hS.sx
-  have hB₀ : S.B₀ = 512 * S.s + 477 * (S.x.length - S.s) + 535 := rfl
+  have hB₀ : S.B₀ = 2048 * S.s + 2013 * (S.x.length - S.s) + 2071 := rfl
   rcases h with ⟨i, hwh, hgi⟩ | ⟨hat, hgB⟩
   · have hi := hwh.lt
     by_cases hit : i < t
@@ -500,7 +500,7 @@ theorem OK.stop (hS : S.OK) {t g : ℕ} {u : HVM} (hg : g ≤ 512 * (t + 1)) (ho
         exact Or.inl ⟨u, 5, w, 0, by norm_num, rfl, hrun, hwo.trans hout, hwps,
           Or.inr ⟨hat, by omega⟩⟩
     · refine Or.inr (Or.inl ⟨i, hwh, by omega, hout, ?_⟩)
-      have : 512 * (t + 1) ≤ 512 * S.s := Nat.mul_le_mul_left _ (by omega)
+      have : 2048 * (t + 1) ≤ 2048 * S.s := Nat.mul_le_mul_left _ (by omega)
       omega
   · refine Or.inr (Or.inr ?_)
     exact cur_of_head hS.loopOrient hS.params hat hps
@@ -511,7 +511,7 @@ theorem OK.stop (hS : S.OK) {t g : ℕ} {u : HVM} (hg : g ≤ 512 * (t + 1)) (ho
 theorem OK.walk_entry (hS : S.OK) {t : ℕ} (ht : t ≤ S.T.length) :
     S.WalkMove t (S.n₁ + 5) (appendAll S.w₇ (S.T.take t)) := by
   have hsx := hS.sx
-  have hB₀ : S.B₀ = 512 * S.s + 477 * (S.x.length - S.s) + 535 := rfl
+  have hB₀ : S.B₀ = 2048 * S.s + 2013 * (S.x.length - S.s) + 2071 := rfl
   have hfast := hS.fast
   have hA0 : S.s = 0 → S.n₁ + 5 + (3 - 0) ≤ S.B₀ := by intro; omega
   have hA1 : S.n₁ + 5 + (1 - 0) + 3 * (S.s - 0) + 2 ≤ S.B₀ := by omega
@@ -540,7 +540,7 @@ theorem OK.walk_entry (hS : S.OK) {t : ℕ} (ht : t ≤ S.T.length) :
       Or.inl ⟨0, hwh, hA1⟩⟩
 
 /-- **One step while moving.** -/
-theorem OK.walkMove_step (hS : S.OK) {t g : ℕ} {u : HVM} (hg : g < 512 * (t + 1))
+theorem OK.walkMove_step (hS : S.OK) {t g : ℕ} {u : HVM} (hg : g < 2048 * (t + 1))
     (h : S.WalkMove t g u) :
     ∃ u', stepMatch u = some u' ∧ StepSide S.x.length S.ρL u ∧ orientStep u S.ρL = S.ρL ∧
       u'.outputs = u.outputs ∧
@@ -573,12 +573,12 @@ theorem OK.walkMove_step (hS : S.OK) {t g : ℕ} {u : HVM} (hg : g < 512 * (t + 
     · exact Or.inr ⟨hat, by omega⟩
 
 /-- **One step while waiting.** -/
-theorem OK.walkWait_step (hS : S.OK) {t g : ℕ} {u : HVM} (hg : g < 512 * (t + 1))
+theorem OK.walkWait_step (hS : S.OK) {t g : ℕ} {u : HVM} (hg : g < 2048 * (t + 1))
     (h : S.WalkWait t g u) :
     stepMatch u = some u ∧ StepSide S.x.length S.ρL u ∧ orientStep u S.ρL = S.ρL ∧
       S.WalkWait t (g + 1) u := by
   obtain ⟨i, hwh, hti, hout, -⟩ := h
-  have hB₀ : S.B₀ = 512 * S.s + 477 * (S.x.length - S.s) + 535 := rfl
+  have hB₀ : S.B₀ = 2048 * S.s + 2013 * (S.x.length - S.s) + 2071 := rfl
   obtain ⟨h1, hctl, hB⟩ := ScaMatcherStart.walk_wait hS.orient u hwh hti
   have hi := hwh.lt
   refine ⟨stepMatch_of_one h1, ⟨fun c a b hc => ?_, fun c h hc => ?_, fun c ms hc => ?_,
@@ -588,7 +588,7 @@ theorem OK.walkWait_step (hS : S.OK) {t g : ℕ} {u : HVM} (hg : g < 512 * (t + 
   · rw [hctl] at hc; cases hc
   · rw [hctl] at hc; cases hc
   · simp [orientStep, hctl, moveRev]
-  · have : 512 * (t + 1) ≤ 512 * S.s := Nat.mul_le_mul_left _ (by omega)
+  · have : 2048 * (t + 1) ≤ 2048 * S.s := Nat.mul_le_mul_left _ (by omega)
     omega
 
 end Setup
@@ -618,7 +618,7 @@ theorem good_of_stop {t g : ℕ} {u : HVM}
 
 /-- **One step of the life.** -/
 theorem OK.good_step (hS : S.OK) {t g : ℕ} {u : HVM} {ρ : String → Bool} (ht : t ≤ S.T.length)
-    (hg1 : 512 * t ≤ g) (hg2 : g < 512 * (t + 1)) (h : S.Good t g u ρ) :
+    (hg1 : 2048 * t ≤ g) (hg2 : g < 2048 * (t + 1)) (h : S.Good t g u ρ) :
     ∃ u', stepMatch u = some u' ∧ StepSide S.x.length ρ u ∧ S.Good t (g + 1) u' (orientStep u ρ) ∧
       (u'.outputs = u.outputs ∨ S.RepAt t) := by
   rcases h with hpre | ⟨rfl, hwm | hww⟩ | ⟨rfl, hc⟩
@@ -646,8 +646,8 @@ theorem OK.good_step (hS : S.OK) {t g : ℕ} {u : HVM} {ρ : String → Bool} (h
 
 /-- **A letter arrives** at the end of tick `t`. -/
 theorem OK.good_append (hS : S.OK) {t : ℕ} {u : HVM} {ρ : String → Bool} (ht : t < S.T.length)
-    (h : S.Good t (512 * (t + 1)) u ρ) : S.Good (t + 1) (512 * (t + 1)) (u.append S.T[t]) ρ := by
-  have hB₀ : S.B₀ = 512 * S.s + 477 * (S.x.length - S.s) + 535 := rfl
+    (h : S.Good t (2048 * (t + 1)) u ρ) : S.Good (t + 1) (2048 * (t + 1)) (u.append S.T[t]) ρ := by
+  have hB₀ : S.B₀ = 2048 * S.s + 2013 * (S.x.length - S.s) + 2071 := rfl
   have htake : S.T.take (t + 1) = S.T.take t ++ [S.T[t]] := by
     rw [List.take_add_one, List.getElem?_eq_getElem ht, Option.toList_some]
   rcases h with ⟨hg, hρ, y, hy, rfl⟩ | ⟨rfl, hwm | hww⟩ | ⟨rfl, hc⟩
@@ -672,7 +672,7 @@ theorem OK.good_append (hS : S.OK) {t : ℕ} {u : HVM} {ρ : String → Bool} (h
 /-- Before the main loop, the slot is at most `B₀` and nothing has been output. -/
 theorem OK.good_early (hS : S.OK) {t g : ℕ} {u : HVM} {ρ : String → Bool} (h : S.Good t g u ρ) :
     S.LoopCur t g u ∨ (g ≤ S.B₀ ∧ u.outputs = []) := by
-  have hB₀ : S.B₀ = 512 * S.s + 477 * (S.x.length - S.s) + 535 := rfl
+  have hB₀ : S.B₀ = 2048 * S.s + 2013 * (S.x.length - S.s) + 2071 := rfl
   have hfast := hS.fast
   have hsx := hS.sx
   rcases h with ⟨hg, -, y, hy, rfl⟩ | ⟨-, hwm | hww⟩ | ⟨-, hc⟩
@@ -699,8 +699,8 @@ theorem OK.good_vals (hS : S.OK) {t g : ℕ} {u : HVM} {ρ : String → Bool} (h
 
 /-- **`b` steps inside tick `t`.** -/
 theorem OK.good_run (hS : S.OK) {t : ℕ} (ht : t ≤ S.T.length) :
-    ∀ (b : ℕ) {g : ℕ} {u : HVM} {ρ : String → Bool}, S.Good t g u ρ → 512 * t ≤ g →
-      g + b ≤ 512 * (t + 1) →
+    ∀ (b : ℕ) {g : ℕ} {u : HVM} {ρ : String → Bool}, S.Good t g u ρ → 2048 * t ≤ g →
+      g + b ≤ 2048 * (t + 1) →
       ∃ u', iterStep b u = some u' ∧ SideRun S.x.length ρ b u ∧
         S.Good t (g + b) u' (orientAt b u ρ) ∧ (u'.outputs = u.outputs ∨ S.RepAt t)
   | 0, g, u, ρ, h, _, _ =>
@@ -752,21 +752,21 @@ theorem take_succ_eq {T : List (Fin 2)} {t : ℕ} (ht : t < T.length) :
 
 /-- **The life at the start of every tick**, with the values output so far below the tick. -/
 theorem OK.life (hS : S.OK) : ∀ t, t ≤ S.T.length →
-    ∃ u ρ, lifeIn' S.ρ₀ S.x (S.T.take t) = some (u, ρ) ∧ S.Good t (512 * t) u ρ ∧
+    ∃ u ρ, lifeIn' S.ρ₀ S.x (S.T.take t) = some (u, ρ) ∧ S.Good t (2048 * t) u ρ ∧
       ∀ z ∈ u.outputs, z < (t : ℤ)
   | 0, _ => ⟨S.v₀, S.ρ₀, rfl, hS.good_initial, by intro z hz; simp [(v₀_fields S.x).2.1] at hz⟩
   | t + 1, ht => by
     obtain ⟨u, ρ, hin, hgood, -⟩ := hS.life t (by omega)
-    obtain ⟨u', hrun, -, hgood', -⟩ := hS.good_run (by omega) 512 hgood le_rfl (by omega)
-    have hout : lifeOut' S.ρ₀ S.x (S.T.take t) = some (u', orientAt 512 u ρ) := by
+    obtain ⟨u', hrun, -, hgood', -⟩ := hS.good_run (by omega) 2048 hgood le_rfl (by omega)
+    have hout : lifeOut' S.ρ₀ S.x (S.T.take t) = some (u', orientAt 2048 u ρ) := by
       rw [lifeOut'_eq_bind, hin, Option.bind_some, quantum_def]
-      show (iterStep 512 u).map _ = _
+      show (iterStep 2048 u).map _ = _
       rw [hrun]
       rfl
-    have hgood'' : S.Good t (512 * (t + 1)) u' (orientAt 512 u ρ) := by
-      rw [show 512 * (t + 1) = 512 * t + 512 by ring]
+    have hgood'' : S.Good t (2048 * (t + 1)) u' (orientAt 2048 u ρ) := by
+      rw [show 2048 * (t + 1) = 2048 * t + 2048 by ring]
       exact hgood'
-    refine ⟨u'.append S.T[t], orientAt 512 u ρ, ?_, hS.good_append (by omega) hgood'', ?_⟩
+    refine ⟨u'.append S.T[t], orientAt 2048 u ρ, ?_, hS.good_append (by omega) hgood'', ?_⟩
     · rw [take_succ_eq (by omega), lifeIn'_append, hout]
       rfl
     · intro z hz
@@ -782,16 +782,16 @@ theorem OK.endOf_ge (hS : S.OK) (j : ℕ) : S.x.length ≤ endOf S.x S.T S.s S.p
   unfold endOf
   omega
 
-/-- **The quantum of tick `t`**: it runs `512` steps with the side conditions, and appends to
+/-- **The quantum of tick `t`**: it runs `2048` steps with the side conditions, and appends to
 `outputs` iff a report ends at `t`. -/
 theorem OK.tick (hS : S.OK) {t : ℕ} (ht : t ≤ S.T.length) :
-    ∃ u ρ u', lifeIn' S.ρ₀ S.x (S.T.take t) = some (u, ρ) ∧ iterStep 512 u = some u' ∧
+    ∃ u ρ u', lifeIn' S.ρ₀ S.x (S.T.take t) = some (u, ρ) ∧ iterStep 2048 u = some u' ∧
       QuantumSafe S.x.length ρ u ∧
       (decide (u.outputs.length < u'.outputs.length) = true ↔ S.RepAt t) := by
-  have hB₀ : S.B₀ = 512 * S.s + 477 * (S.x.length - S.s) + 535 := rfl
+  have hB₀ : S.B₀ = 2048 * S.s + 2013 * (S.x.length - S.s) + 2071 := rfl
   have hsx := hS.sx
   obtain ⟨u, ρ, hin, hgood, hvals⟩ := hS.life t ht
-  obtain ⟨u', hrun, hside, hgood', hrep⟩ := hS.good_run ht 512 hgood le_rfl (by omega)
+  obtain ⟨u', hrun, hside, hgood', hrep⟩ := hS.good_run ht 2048 hgood le_rfl (by omega)
   refine ⟨u, ρ, u', hin, hrun, ⟨by rw [hrun]; rfl, hside⟩, ?_, ?_⟩
   · intro hlt
     rcases hrep with heq | hj
@@ -799,11 +799,11 @@ theorem OK.tick (hS : S.OK) {t : ℕ} (ht : t ≤ S.T.length) :
     · exact hj
   · rintro ⟨j, hj, hend⟩
     have hge := hS.endOf_ge j
-    rw [show 512 * t + 512 = 512 * (t + 1) by ring] at hgood'
+    rw [show 2048 * t + 2048 = 2048 * (t + 1) by ring] at hgood'
     rcases hS.good_early hgood' with hc | ⟨hgB, -⟩
     · have hmem := cur_live hS.params hc hj (le_of_eq hend)
       rw [hend] at hmem
-      have hpre := ScaMatcherLife.iterStep_outputs 512 hrun
+      have hpre := ScaMatcherLife.iterStep_outputs 2048 hrun
       simp only [decide_eq_true_eq]
       by_contra hle
       push Not at hle
@@ -812,7 +812,7 @@ theorem OK.tick (hS : S.OK) {t : ℕ} (ht : t ≤ S.T.length) :
       have := hvals _ hmem
       omega
     · exfalso
-      have : 512 * (t + 1) < 512 * (S.x.length + 1) := by omega
+      have : 2048 * (t + 1) < 2048 * (S.x.length + 1) := by omega
       omega
 
 end Setup
@@ -821,7 +821,7 @@ end Setup
 
 /-- **The matcher's lives are safe**: from a start orientation `ρ₀` agreeing with the startup
 (`ScaMatcherStart.StartOrient`), every quantum of the life born on `x ≠ []` and fed any `T`
-runs its `512` steps and keeps the worker's side conditions, provided `start_pre` is fast. -/
+runs its `2048` steps and keeps the worker's side conditions, provided `start_pre` is fast. -/
 theorem lifeSafe' {x : List (Fin 2)} (hx : x ≠ []) {ρ₀ : String → Bool}
     (hA : ScaMatcherStart.StartOrient ρ₀) (hfast : StartupFast x ρ₀) (T : List (Fin 2)) :
     LifeSafe' ρ₀ x T := by
@@ -851,7 +851,7 @@ theorem tick_output {x : List (Fin 2)} (hx : x ≠ []) {s p r : ℕ} (hdec : dec
     exact (Option.some_inj.mp hin).symm
   have hv : v = u' := by
     rw [← lifeOut'_fst S.ρ₀, lifeOut'_eq_bind, hin', Option.bind_some, quantum_def] at hout
-    rw [show (iterStep 512 (u, ρ).1) = some u' from hrun] at hout
+    rw [show (iterStep 2048 (u, ρ).1) = some u' from hrun] at hout
     exact (Option.some_inj.mp hout).symm
   subst hv0 hv
   exact hiff

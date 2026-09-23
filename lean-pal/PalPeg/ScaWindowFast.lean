@@ -9,8 +9,8 @@ The three promises of `ScaWindowReal.pal_in_peg_of_real_promises` are discharged
 analysis of the real workers, except two statements about how many steps the head programs take:
 
 * `StartupFast` (for every scheduled pattern length `2^j`, `j ≥ 1`): the matcher's startup
-  (`Decompose` and site 0) reaches site 3 within `477·|x| + 32·s + 527` steps;
-* `FlagsFast`: every flags job halts within `1024·S` steps.
+  (`Decompose` and site 0) reaches site 3 within `2013·|x| + 32·s + 2063` steps;
+* `FlagsFast`: every flags job halts within `32768·S` steps.
 
 The rest: the matcher lives are safe and a tick's output says whether a report ends at its letter
 count (`ScaMatcherLifeSafe`), the reports are the occurrences (`ScaMatcherAnswer`), the answering

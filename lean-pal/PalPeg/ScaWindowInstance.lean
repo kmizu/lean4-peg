@@ -9,7 +9,7 @@ Definitions only (no proofs). `WindowPAL` (ScaffoldWindowPal.scala:80-89)
 builds two matchers with `ScaffoldWindowWorkers.matcher(circuit, "match$i",
 rates.matching)` and two flag workers with `ScaffoldWindowWorkers.flags(circuit,
 "flag$i", rates.flags)`, where `rates = GsBatchClock.DEFAULT_BATCH`
-(`matching = 512`, `flags = 1024`). `ScaffoldWindowWorkers.matcher`/`flags`
+(`matching = 2048`, `flags = 32768`, `GsBatchClock.VERIFIED_BATCH`). `ScaffoldWindowWorkers.matcher`/`flags`
 (ScaffoldWindowWorkers.scala:184-188) compile `GsMatchHeads.compileMatcher(unit =
 false)` over `MATCH_HEADS` and `GsDualFlags.compileDualFlags(unit = false)` over
 `DUAL_HEADS` (`isFlags = true`); these are `ScaGsTables.matcherWorker` /
@@ -35,10 +35,10 @@ def opsOf (w : Worker) : ScaWindowPal.WorkerOps WorkerState where
   flags := ScaWindowWorker.flags
   faulted := fun s => s.fault
 
-/-- `ScaffoldWindowWorkers.matcher(_, _, 512)` (ScaffoldWindowWorkers.scala:184-185). -/
+/-- `ScaffoldWindowWorkers.matcher(_, _, 2048)` (ScaffoldWindowWorkers.scala:184-185). -/
 def matcher : Worker := Worker.ofSpec ScaGsTables.matcherWorker
 
-/-- `ScaffoldWindowWorkers.flags(_, _, 1024)` (ScaffoldWindowWorkers.scala:187-188). -/
+/-- `ScaffoldWindowWorkers.flags(_, _, 32768)` (ScaffoldWindowWorkers.scala:187-188). -/
 def flagsW : Worker := Worker.ofSpec ScaGsTables.flagsWorker
 
 def matcherOps : ScaWindowPal.WorkerOps WorkerState := opsOf matcher

@@ -58,6 +58,7 @@ import PalPeg.ProgLangLib
 import PalPeg.GSScanProg
 import PalPeg.PalInPegUnconditional
 import PalPeg.PalInPegPhysical
+import PalPeg.PalInPegFinal
 
 /-!
 # 公理 guard
@@ -381,28 +382,20 @@ import PalPeg.PalInPegPhysical
 
 /-! ## 目標定理のラチェット
 
-`PalPeg.PalInPeg.unconditional : RecognizedByTotalPEG PAL` は**閉じた項**だが、
-未証明の義務を `axiom` として持っている（`PalPeg/PalInPegPhysical.lean` の表）。2026-09-23 に
-旧 1 本（`obligation_localRealization`、機械の構成と正しさを 1 本の存在命題に詰めたもの）から
-物理機械の経路へ付け替え、実際に残る義務を 1 本ずつに割った。下の guard がその一覧を固定するので、
+`PalPeg.PalInPeg.unconditional : RecognizedByTotalPEG PAL`（`PalPeg/PalInPegFinal.lean`）。
+2026-09-24 に物理機械の経路（`axiom` 6 本、いまは `given_physicalObligations` の前提）から
+SCA 経路（Scala の window-pal と同じ構成を quantum 2048/32768 で）へ付け替えた。
 
-* 義務を 1 個証明して `axiom` を外すと guard が壊れる → 更新を強制される（前進の記録）
-* うっかり新しい穴を開けても guard が壊れる → 気づける
+**標準 3 公理（`propext` / `Classical.choice` / `Quot.sound`）だけ。計画書 §10.5（前提ゼロ）達成。**
+この guard は、うっかり穴（`axiom`・`sorry`）を開けたときに壊れて知らせる。 -/
 
-**この guard が標準 3 公理（`propext` / `Classical.choice` / `Quot.sound`）だけに
-なったとき、計画書 §10.5（前提ゼロ）が達成される。** いまは未達。 -/
-
-/-- info: 'PalPeg.PalInPeg.unconditional' depends on axioms: [propext,
- Classical.choice,
- Quot.sound,
- PalPeg.PalInPeg.obligation_chooseSelect,
- PalPeg.PalInPeg.obligation_freeze,
- PalPeg.PalInPeg.obligation_init,
- PalPeg.PalInPeg.obligation_replayStart,
- PalPeg.PalInPeg.obligation_rewindReset,
- PalPeg.PalInPeg.obligation_scanRest] -/
+/-- info: 'PalPeg.PalInPeg.unconditional' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms PalPeg.PalInPeg.unconditional
+
+/-- info: 'PalPeg.PalInPeg.given_physicalObligations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms PalPeg.PalInPeg.given_physicalObligations
 
 /-- info: 'PalPeg.GalilTickFair.tick_canonical_unique' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

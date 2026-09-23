@@ -12,7 +12,7 @@ import PalPeg.ScaMatcherReaders
 controller calls on the **real** (table-compiled) matcher `ScaWindowInstance.matcher`:
 
 * `link_step` — one active table step is one `stepMatch` step;
-* `service_link` — `service` (`quantum = 512` steps, each active iff `mode = run`) is
+* `service_link` — `service` (`quantum = 2048` steps, each active iff `mode = run`) is
   `iterStep quantum` of the head VM; `service_returned` (a returned coroutine faults: the table
   sits in its `halt` sink), `service_idle` (a non-running worker does nothing);
 * `arrive_link` (`arrive` = `HVM.append`), `start_link` (`start` = `matchInitial` on the
@@ -82,7 +82,7 @@ theorem certified : Certified spec cw vs := ScaGsCertFunctional.matcher_certifie
 theorem matcher_eq : ScaWindowInstance.matcher = Worker.ofSpec spec := rfl
 
 /-- The service quantum. -/
-theorem quantum_eq : spec.quantum = 512 := rfl
+theorem quantum_eq : spec.quantum = 2048 := rfl
 
 theorem isFlags_eq : spec.isFlags = false := rfl
 
@@ -717,7 +717,7 @@ theorem service_returned {W : ℕ} {ρ : String → Bool} {s : WorkerState} {v :
   have hm1 : (mstep s).mode = .run := by
     rw [mstep_run hrun, (step_true_mode_fault s).1, hrun]
   rw [service_eq, quantum_eq, Function.iterate_succ_apply]
-  obtain ⟨hmN, hfN⟩ := iterate_run_fault 511 hm1 hf1
+  obtain ⟨hmN, hfN⟩ := iterate_run_fault 2047 hm1 hf1
   exact ⟨hfN, hmN⟩
 
 theorem moveReg_false (f : Fields) (sp : Option ℕ) (sr : Option Bool) (s : WorkerState)

@@ -6,7 +6,7 @@ import PalPeg.Stages
 # The lives of the real matchers in the controller run
 
 A stage slot's matcher is (re)started exactly at its stage's births. Between two births it runs
-one service quantum (`512` head-VM steps) per letter. This file follows the real matchers of the
+one service quantum (`2048` head-VM steps) per letter. This file follows the real matchers of the
 controller run (`ScaWindowPal.run` with `ScaWindowInstance.matcherOps` and `matcherInit`) through
 `ScaWorkerLink` and states everything about them through the head VM.
 
@@ -17,9 +17,9 @@ A life born on the pattern `x` (the text read so far, reversed) and then fed the
 * `lifeIn x T` — the head VM (with its ghost orientation) at the start of the last tick's
   service quantum: `matchInitial x startCtl` with `startOrient` at the birth tick (`T = []`),
   else the previous quantum's result with the last letter appended;
-* `lifeOut x T` — the same after the quantum (`512` `stepMatch` steps, orientation moved along by
+* `lifeOut x T` — the same after the quantum (`2048` `stepMatch` steps, orientation moved along by
   `orientAt`); `lifeVM x T` is its head VM (`lifeVM_nil`, `lifeVM_append`);
-* `LifeSafe x T` — every quantum of the life up to `T` runs `512` steps and meets the side
+* `LifeSafe x T` — every quantum of the life up to `T` runs `2048` steps and meets the side
   conditions `StepSide` at every step (`QuantumSafe`), with `W = x.length`.
 
 ## The schedule of births
@@ -54,9 +54,9 @@ open PalPeg.ScaGsProgram PalPeg.ScaGsCoroutine PalPeg.ScaWindowWorker PalPeg.Sca
 /-- A head VM with its ghost orientation. -/
 abbrev Ghosted := HVM × (String → Bool)
 
-/-- One service quantum: `512` steps, the orientation carried along. -/
+/-- One service quantum: `2048` steps, the orientation carried along. -/
 def quantum (p : Ghosted) : Option Ghosted :=
-  (iterStep 512 p.1).map fun v' => (v', orientAt 512 p.1 p.2)
+  (iterStep 2048 p.1).map fun v' => (v', orientAt 2048 p.1 p.2)
 
 /-- A letter arrives. -/
 def feed (a : Fin 2) (p : Ghosted) : Ghosted := (p.1.append a, p.2)
@@ -93,11 +93,11 @@ theorem lifeIn_append (x T : List (Fin 2)) (a : Fin 2) :
   simp only [List.reverse_reverse]
 
 theorem quantum_def (p : Ghosted) :
-    quantum p = (iterStep 512 p.1).map fun v' => (v', orientAt 512 p.1 p.2) := rfl
+    quantum p = (iterStep 2048 p.1).map fun v' => (v', orientAt 2048 p.1 p.2) := rfl
 
-theorem map_fst_quantum (p : Ghosted) : (quantum p).map Prod.fst = iterStep 512 p.1 := by
+theorem map_fst_quantum (p : Ghosted) : (quantum p).map Prod.fst = iterStep 2048 p.1 := by
   rw [quantum_def]
-  generalize iterStep 512 p.1 = o
+  generalize iterStep 2048 p.1 = o
   cases o with
   | none => rfl
   | some v => rfl
@@ -113,14 +113,14 @@ theorem lifeOut_eq_bind (x T : List (Fin 2)) : lifeOut x T = (lifeIn x T).bind q
     | some p => rw [Option.bind_some, Option.map_some, Option.bind_some]
 
 /-- The birth tick: `arrive`, `start`, `service`. -/
-theorem lifeVM_nil (x : List (Fin 2)) : lifeVM x [] = iterStep 512 (matchInitial x startCtl) := by
+theorem lifeVM_nil (x : List (Fin 2)) : lifeVM x [] = iterStep 2048 (matchInitial x startCtl) := by
   unfold lifeVM
   rw [lifeOut_nil, map_fst_quantum]
   rfl
 
 /-- A later tick: `arrive a`, `service`. -/
 theorem lifeVM_append (x T : List (Fin 2)) (a : Fin 2) :
-    lifeVM x (T ++ [a]) = (lifeVM x T).bind fun v => iterStep 512 (v.append a) := by
+    lifeVM x (T ++ [a]) = (lifeVM x T).bind fun v => iterStep 2048 (v.append a) := by
   unfold lifeVM
   rw [lifeOut_append]
   cases lifeOut x T with
@@ -131,10 +131,10 @@ theorem lifeVM_append (x T : List (Fin 2)) (a : Fin 2) :
 
 /-! ## Safe lives -/
 
-/-- One quantum from `v` with orientations `ρ` runs its `512` steps and meets the side conditions
+/-- One quantum from `v` with orientations `ρ` runs its `2048` steps and meets the side conditions
 at every step (the hypotheses of `ScaWorkerLink.service_link`). -/
 def QuantumSafe (W : ℕ) (ρ : String → Bool) (v : HVM) : Prop :=
-  (iterStep 512 v).isSome ∧ SideRun W ρ 512 v
+  (iterStep 2048 v).isSome ∧ SideRun W ρ 2048 v
 
 /-- Every quantum of the life born on `x` and fed `T` (up to and including `T`'s last letter) is
 safe, with `W = x.length`. -/
@@ -142,7 +142,7 @@ def LifeSafe (x T : List (Fin 2)) : Prop :=
   ∀ T', T' <+: T → ∀ p, lifeIn x T' = some p → QuantumSafe x.length p.2 p.1
 
 theorem quantum_of_safe {W : ℕ} {p : Ghosted} (h : QuantumSafe W p.2 p.1) :
-    ∃ v', iterStep 512 p.1 = some v' ∧ quantum p = some (v', orientAt 512 p.1 p.2) := by
+    ∃ v', iterStep 2048 p.1 = some v' ∧ quantum p = some (v', orientAt 2048 p.1 p.2) := by
   obtain ⟨v', hv'⟩ := Option.isSome_iff_exists.mp h.1
   refine ⟨v', hv', ?_⟩
   unfold quantum
@@ -390,7 +390,7 @@ theorem slotInv_birth (hlivesSafe : ScheduledLivesSafe) {u : List (Fin 2)} {i : 
   refine ⟨u.length + 1, ⟨by simp, hborn, fun b' hb' _ => by simpa using hb'⟩, ?_⟩
   unfold LiveSince
   rw [htake, hdrop, ← hxdef]
-  refine ⟨birthState x, (v', orientAt 512 (matchInitial x startCtl) startOrient), rfl, hquant,
+  refine ⟨birthState x, (v', orientAt 2048 (matchInitial x startCtl) startOrient), rfl, hquant,
     hlink, hmode, ?_⟩
   rw [hout]
   rfl
@@ -455,10 +455,10 @@ theorem slotInv_live (hlivesSafe : ScheduledLivesSafe) {u : List (Fin 2)} {i : F
     · exact absurd (by rw [show u.length + 1 = b' by omega]; exact hbornB) hnoBirth
   · unfold LiveSince
     rw [htake, hdrop, ← hxdef]
-    have houtA' : lifeOut x (T ++ [a]) = some (v', orientAt 512 (p.1.append a) p.2) := by
+    have houtA' : lifeOut x (T ++ [a]) = some (v', orientAt 2048 (p.1.append a) p.2) := by
       rw [lifeOut_append, hout, Option.bind_some]
       exact hquant
-    refine ⟨feed a p, (v', orientAt 512 (p.1.append a) p.2), hinA, houtA', hlinkA, hmodeA, ?_⟩
+    refine ⟨feed a p, (v', orientAt 2048 (p.1.append a) p.2), hinA, houtA', hlinkA, hmodeA, ?_⟩
     rw [houtA]
     rfl
 
@@ -547,10 +547,10 @@ theorem lifeVM_of_lifeOut {x T : List (Fin 2)} {p : Ghosted} (h : lifeOut x T = 
   rw [h]
   rfl
 
-/-- The last quantum of a life: `512` steps from `lifeIn` to `lifeOut`. -/
+/-- The last quantum of a life: `2048` steps from `lifeIn` to `lifeOut`. -/
 theorem quantum_of_life {x T : List (Fin 2)} {p0 p : Ghosted} (hin : lifeIn x T = some p0)
     (hout : lifeOut x T = some p) :
-    iterStep 512 p0.1 = some p.1 ∧ p.2 = orientAt 512 p0.1 p0.2 := by
+    iterStep 2048 p0.1 = some p.1 ∧ p.2 = orientAt 2048 p0.1 p0.2 := by
   rw [lifeOut_eq_bind, hin, Option.bind_some, quantum_def] at hout
   obtain ⟨v', hv', hp⟩ := Option.map_eq_some_iff.mp hout
   subst hp
@@ -592,14 +592,14 @@ theorem answering_output (hlivesSafe : ScheduledLivesSafe) {Wf : Type} (fOps : W
           (w.drop (PalPeg.stageOf w.length))).map Prod.fst = some v0 ∧
       lifeVM (w.take (PalPeg.stageOf w.length)).reverse (w.drop (PalPeg.stageOf w.length)) =
         some v ∧
-      iterStep 512 v0 = some v ∧ v0.outputs <+: v.outputs ∧
+      iterStep 2048 v0 = some v ∧ v0.outputs <+: v.outputs ∧
       ScaWindowInstance.matcherOps.output
           ((run ScaWindowInstance.matcherOps fOps ScaWindowInstance.matcherInit f0 w).matchers
             (idx (Nat.log 2 w.length))) =
         decide (v0.outputs.length < v.outputs.length) := by
   obtain ⟨p0, p, hin, hout, -, houtput⟩ := answering_matcher hlivesSafe fOps f0 w hw
   have hq := (quantum_of_life hin hout).1
-  refine ⟨p0.1, p.1, by rw [hin]; rfl, lifeVM_of_lifeOut hout, hq, iterStep_outputs 512 hq,
+  refine ⟨p0.1, p.1, by rw [hin]; rfl, lifeVM_of_lifeOut hout, hq, iterStep_outputs 2048 hq,
     houtput⟩
 
 /-! ## With every life safe -/
