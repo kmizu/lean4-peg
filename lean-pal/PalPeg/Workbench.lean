@@ -164,6 +164,7 @@ import PalPeg.PhysicalDpSource
 import PalPeg.PhysicalFinal
 import PalPeg.PhysicalReport
 import PalPeg.PhysicalDevices
+import PalPeg.PhysicalReportTest
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
 import PalPeg.PostRunInduction
