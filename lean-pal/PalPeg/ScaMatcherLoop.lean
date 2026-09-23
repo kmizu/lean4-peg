@@ -490,4 +490,85 @@ theorem vComp_stuck (c : ℕ) (h : hitAt u T pos c = false) : PalPeg.vComp u T p
 
 end PCheck
 
+/-! ## The shift decision -/
+
+/-- Where the controller is after deciding to shift. -/
+def decisionCtl (k : ℕ) (pe : Bool) (ok : Option Bool) (ph : Option ℕ) : Ctl :=
+  if pe then .pending [mc k (some true) ok ph 22] (.less "A" "KFirst")
+  else .pending [mc k (some false) ok ph 25, .resetShift k true 0 none 1] (.equal "A" "Cut")
+
+/-- **The shift decision and the shift**: a period shift when `k·p₁ ≤ q ≤ r` (with a period),
+otherwise a reset. -/
+theorem shift_any (k : ℕ) (hk : 1 ≤ k) (pe : Bool) (ok : Option Bool) (ph : Option ℕ) (v : HVM)
+    (s p₁ r q : ℕ) (hv : v.ctl = decisionCtl k pe ok ph)
+    (hC : v.pos "Cut" = s) (hA : v.pos "A" = s + q)
+    (hper : pe = true → v.pos "First" = s + p₁ ∧ v.pos "KFirst" = s + k * p₁ ∧
+      v.pos "Reach" = s + r)
+    (hAL : v.pos "A" ≤ v.len) (hBq : (q : ℤ) ≤ v.pos "B") (hBL : v.pos "B" + 1 ≤ v.len)
+    (hP0 : 0 ≤ v.pos "P") (hPL : v.pos "P" + q + 1 ≤ v.len) :
+    ∃ n, (pe = true ∧ k * p₁ ≤ q ∧ q ≤ r →
+        iterStep n v = some { v with
+          ctl := .pending [mc k (some pe) (some true) ph 13] (.available "B")
+          pos := reenter (psPos v.pos p₁) }) ∧
+      (¬ (pe = true ∧ k * p₁ ≤ q ∧ q ≤ r) →
+        iterStep n v = some { v with
+          ctl := .pending [mc k (some pe) (some true) ph 13] (.available "B")
+          pos := reenter (rsPos v.pos q (rsShifts k q : ℕ)) }) := by
+  have hqk : ((q / k : ℕ) : ℤ) ≤ q := by exact_mod_cast Nat.div_le_self q k
+  have hreset : ∀ (ok' : Option Bool) (w : HVM), w.pos = v.pos → w.len = v.len →
+      w.ctl = .pending [mc k (some pe) ok' ph 25, .resetShift k true 0 none 1] (.equal "A" "Cut") →
+      ∃ n, iterStep n w = some { w with
+        ctl := .pending [mc k (some pe) (some true) ph 13] (.available "B")
+        pos := reenter (rsPos w.pos q (rsShifts k q : ℕ)) } := by
+    intro ok' w hwp hwl hw
+    exact shift_reset k hk (some pe) ok' ph w q hw (by rw [hwp, hA, hC])
+      (by rw [hwp, hC]; positivity) (by rw [hwp, hwl]; exact hAL) (by rw [hwp]; exact hBq)
+      (by rw [hwp, hwl]; exact hBL) (by rw [hwp]; exact hP0) (by rw [hwp, hwl]; omega)
+  cases pe with
+  | false =>
+    obtain ⟨n, hn⟩ := hreset ok v rfl rfl (by simpa [decisionCtl] using hv)
+    exact ⟨n, fun h => absurd h.1 (by simp), fun _ => hn⟩
+  | true =>
+    obtain ⟨hF, hKF, hR⟩ := hper rfl
+    have hv' : v.ctl = .pending [mc k (some true) ok ph 22] (.less "A" "KFirst") := by
+      simpa [decisionCtl] using hv
+    have e1 := step_less hv'
+    have hkp : ((k * p₁ : ℕ) : ℤ) = (k : ℤ) * p₁ := by push_cast; ring
+    let vr : HVM := { v with
+      ctl := (.pending [mc k (some true) ok ph 25, .resetShift k true 0 none 1] (.equal "A" "Cut")) }
+    by_cases h1 : q < k * p₁
+    · have h1' : (q : ℤ) < (k : ℤ) * p₁ := by exact_mod_cast h1
+      rw [show decide (v.pos "A" < v.pos "KFirst") = true by
+        rw [hA, hKF]; simp only [decide_eq_true_eq]; omega, mc_22_reset] at e1
+      obtain ⟨n, hn⟩ := hreset ok vr rfl rfl rfl
+      refine ⟨1 + n, fun h => absurd h.2.1 (by omega), fun _ => ?_⟩
+      rw [iterStep_add]; simp only [iterStep, e1, Option.bind_some]; exact hn
+    · have h1' : (k : ℤ) * p₁ ≤ q := by exact_mod_cast (not_lt.mp h1)
+      rw [show decide (v.pos "A" < v.pos "KFirst") = false by
+        rw [hA, hKF]; simp only [decide_eq_false_iff_not, not_lt]; omega, mc_22_next] at e1
+      have e2 := step_less (v := { v with
+        ctl := (.pending [mc k (some true) ok ph 23] (.less "Reach" "A")) }) rfl
+      by_cases h2 : r < q
+      · rw [show decide (v.pos "Reach" < v.pos "A") = true by
+          rw [hA, hR]; simp only [decide_eq_true_eq]; exact_mod_cast (by omega : s + r < s + q),
+          mc_23_reset] at e2
+        obtain ⟨n, hn⟩ := hreset ok vr rfl rfl rfl
+        refine ⟨2 + n, fun h => absurd h.2.2 (by omega), fun _ => ?_⟩
+        rw [iterStep_add]; simp only [iterStep, e1, e2, Option.bind_some]; exact hn
+      · rw [show decide (v.pos "Reach" < v.pos "A") = false by
+          rw [hA, hR]; simp only [decide_eq_false_iff_not, not_lt]
+          exact_mod_cast (by omega : s + q ≤ s + r), mc_23_period] at e2
+        have hp1 : (p₁ : ℤ) ≤ q := by
+          have : p₁ ≤ k * p₁ := Nat.le_mul_of_pos_left p₁ (by omega)
+          have : p₁ ≤ q := by omega
+          exact_mod_cast this
+        have hsp := shift_period k ok ph { v with
+          ctl := (.pending [mc k (some true) ok ph 24, .periodShift k true 1] (.copy "Walk" "Cut")) }
+          p₁ rfl (by simp only; rw [hC, hF]) (by simp only; rw [hC]; positivity)
+          (by simp only; rw [hF]; simp only [HVM.len] at hAL ⊢; rw [hA] at hAL; omega)
+          (by simp only; rw [hA]; omega) hAL hP0
+          (by simp only; simp only [HVM.len] at hPL ⊢; omega)
+        refine ⟨2 + (2 * p₁ + 4), fun _ => ?_, fun h => absurd ⟨rfl, by omega, by omega⟩ h⟩
+        rw [iterStep_add]; simp only [iterStep, e1, e2, Option.bind_some]; exact hsp
+
 end PalPeg.ScaMatcherLoop
