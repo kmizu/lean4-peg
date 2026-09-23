@@ -295,28 +295,33 @@ def ChooseBack (x : State GalilVM) : Prop :=
     (x.ctl.odd && (decide ((x.vm.fpp.program.config.tapes 8).focus = 8)
         || decide ((x.vm.fpp.program.config.tapes 8).focus = 0))) = false
 
+/-- **The ticks the common machine does not handle yet**, with every source fact the consumer
+supplies. This is the residual of the final tick API. -/
+def UnhandledTicks (rest : RestCommands) : Prop :=
+  ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
+    PreTraceIMW centreC placeC 0 1 0 w st Tc → CanonTrace 0 w st Tc →
+    ∀ (m : Mirrored1 (tapeCount 0)) (p : PalPeg.PhysicalDpCleanup.Config),
+      PalPeg.LocalShadowConcrete.ArrivedOnRun (localGood (spare := 0)) (postPhase 0 1 0) w
+        (heldAfter (Tc w.length) st) m →
+      ¬ frozenAt w m → PalPeg.PhysicalDpCleanup.Enc w (absSC m) p →
+      PalPeg.FrameFunction.starvedTest (absSC m) = false →
+      Tick (galilFrameS (PalPeg.GalilRunSkeleton.PofC centreC placeC 0 w) 1 0) 2048 (absSC m)
+        (PalPeg.PhysicalCacheMachine.successor w (absSC m)) →
+      ¬ PalPeg.PhysicalScanCount.CountAtRest (absSC m) →
+      ¬ PalPeg.PhysicalBoundaryCount.CountWatch (absSC m) →
+      ¬ PalPeg.PhysicalBoundaryCount.CountBackReady (absSC m) →
+      (absSC m).ctl.mode ≠ .shift → ¬ PalPeg.PhysicalShiftDispatch.Entry w (absSC m) →
+      ¬ PalPeg.PhysicalGrowCount.CountGrow (absSC m) →
+      ¬ PalPeg.PhysicalGrowMatchCase.MatchGrow (absSC m) →
+      (absSC m).ctl.mode ≠ .home → (absSC m).ctl.mode ≠ .markEnd →
+      ¬ ChooseBack (absSC m) → ¬ CopyReady w (absSC m) → ¬ RewindStep w (absSC m) →
+      PalPeg.PhysicalDpCleanup.Enc w (PalPeg.PhysicalCacheMachine.successor w (absSC m))
+        ((PalPeg.PhysicalDpCleanup.machine rest).apply blankM p none)
+
 /-- **`home`, `markEnd`, the back half of `choose`, `copy` and the rewind steps join the handled cases** of the common machine's final tick API.
 The residual now also excludes these. -/
 theorem cases_of_remaining_quiet (rest : RestCommands)
-    (hother : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
-      PreTraceIMW centreC placeC 0 1 0 w st Tc → CanonTrace 0 w st Tc →
-      ∀ (m : Mirrored1 (tapeCount 0)) (p : PalPeg.PhysicalDpCleanup.Config),
-        PalPeg.LocalShadowConcrete.ArrivedOnRun (localGood (spare := 0)) (postPhase 0 1 0) w
-          (heldAfter (Tc w.length) st) m →
-        ¬ frozenAt w m → PalPeg.PhysicalDpCleanup.Enc w (absSC m) p →
-        PalPeg.FrameFunction.starvedTest (absSC m) = false →
-        Tick (galilFrameS (PalPeg.GalilRunSkeleton.PofC centreC placeC 0 w) 1 0) 2048 (absSC m)
-          (PalPeg.PhysicalCacheMachine.successor w (absSC m)) →
-        ¬ PalPeg.PhysicalScanCount.CountAtRest (absSC m) →
-        ¬ PalPeg.PhysicalBoundaryCount.CountWatch (absSC m) →
-        ¬ PalPeg.PhysicalBoundaryCount.CountBackReady (absSC m) →
-        (absSC m).ctl.mode ≠ .shift → ¬ PalPeg.PhysicalShiftDispatch.Entry w (absSC m) →
-        ¬ PalPeg.PhysicalGrowCount.CountGrow (absSC m) →
-        ¬ PalPeg.PhysicalGrowMatchCase.MatchGrow (absSC m) →
-        (absSC m).ctl.mode ≠ .home → (absSC m).ctl.mode ≠ .markEnd →
-        ¬ ChooseBack (absSC m) → ¬ CopyReady w (absSC m) → ¬ RewindStep w (absSC m) →
-        PalPeg.PhysicalDpCleanup.Enc w (PalPeg.PhysicalCacheMachine.successor w (absSC m))
-          ((PalPeg.PhysicalDpCleanup.machine rest).apply blankM p none)) :
+    (hother : UnhandledTicks rest) :
     TickCases (PalPeg.PhysicalDpCleanup.machine rest) blankM PalPeg.PhysicalDpCleanup.Enc := by
   apply PalPeg.PhysicalDpCleanupDispatch.cases_of_remaining rest
   intro w st Tc hpre hcanon m p hon hf he hs htick h1 h2 h3 h4 h5 h6 h7
