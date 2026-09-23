@@ -215,6 +215,7 @@ import PalPeg.ScaMatcherAnswer
 import PalPeg.ScaMatcherStart
 import PalPeg.ScaMatcherTick
 import PalPeg.ScaMatcherLifeSafe
+import PalPeg.ScaWindowFast
 import PalPeg.ScaDecomposeSafe
 import PalPeg.ScaWorkerEnc
 import PalPeg.ScaWindowReal
