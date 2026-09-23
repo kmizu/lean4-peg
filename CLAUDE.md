@@ -26,6 +26,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 W2 の穴（対応表 §6）: head 版が走らせる分解 `GSPreprocess.decompose` の L1（Lean は `decompose2` についてのみ証明）、待ち状態まで回した答え、分解の命令数 ≲ 257·|x|（未確認）、flags の ⟨1,0⟩ 開始・降順ビット列・区間停止・バッチ期限。担当エージェント: L1、drained、BorderJobHead、コスト実測、certFunctional、距離レジスタ不変量、head 表現。
 次の波: 位置レベルの head VM（Config＋head 位置）を定義し CoWorker ≃ head VM（レジスタ不変量経由）、generator ごと（Initialize/First/Second/Decompose/PeriodShift/ResetShift/Matcher 本体）の対応補題、Matcher ↔ `vStep` の揺れ付きシミュレーション（命令数 ≤ 28·ΔΦ）。
 
+**進捗 6（2026-09-24 朝、最新・最優先）: 前提 2 本つきの `PAL ∈ PEG` まで到達**
+- **`ScaWindowFast.pal_in_peg_of_fast`**（df99904、標準3公理）: 前提は `StartupFast x rho0`（予定どおりの長さのパターン全部で、照合器の起動部が site 3 まで `477|x| + 32s + 527` 歩以内）と `ScaFlagsJob.FlagsFast`（フラグの各仕事が `1024·S` 歩未満）の 2 本だけ。
+  - 照合器：`ScaHeadSafe`（ガード付きの歩）、`ScaMatcherRun.seg`、`ScaMatcherTick`（`Cur`/`cur_step`/`cur_run`/`cur_live`/`refOK_start`）、`ScaMatcherStart`、`ScaDecomposeSafe`、`ScaMatcherLife`/`Life2`/`LifeSafe`、`ScaMatcherAnswer`、`ScaWorkerLink`、`ScaMatcherReaders`。
+  - フラグ：`ScaFlagsLink`、`ScaFlagsReaders`、`ScaFlagsLife`、`ScaFlagsHead`、`ScaFlagsJob`。
+- **2 本が残る理由**: 証明済みの歩数上限が緩い（分解 1698·|x| + 230、フラグの仕事 8098·|y| + 10）ため、quantum 512/1024 に収まらない。実測では余裕がある（分解は最悪でも約 104 歩/文字、フラグは予算の 0.367）。
+- **コウタの判断: quantum を上げる**（照合器 2048、フラグ 32768）。
+  - Lean 側：別の作業ツリーでエージェントが `ScaGsTables.matchingQuantum`/`flagsQuantum` を変え、512/1024 の直書きを一般化している。
+  - Scala 側：`GsBatchClock.DEFAULT_BATCH`（Python とバイト一致）は残し、検証済み版の定数を別に足して生成器だけ切り替える予定。
+- **最後の手順**:
+  1. 新しい定数で `StartupFast`（`start_pre` の 1698·|x| + 230 から）と `FlagsFast`（`flags_head_gs` の 8098·|y| + 10 から）を算術で証明する。
+  2. `PalInPeg.unconditional` を SCA 経路に付け替える。旧経路の `axiom` 6 本（`PalInPegPhysical`）は、前提を取る定理に格下げする。
+  3. `Axioms.lean` の目標ラチェットを標準3公理に更新する。
+  4. Workbench 全体をビルドする。
+- 注意：`ScaWindowFinal.lean` は既存（`pal_in_peg_of_promises`）。新しい組み立ては `ScaWindowFast.lean` にある。
+
 **進捗 5（2026-09-24 1時、最新・最優先）: 最上位は real workers の3約束だけ**
 - **`ScaWindowReal.pal_in_peg_of_real_promises`**（標準3公理、commit 3ed73b9）。前提は real matcher/flags worker の run についての `hmatch` / `FlagsContract`（`ScaWindowPlumbing`）/ `hworkers` の3つだけ。
   - `hencode` は消えた（`ScaWindowEncode`+`Tick`）。
