@@ -380,7 +380,7 @@ theorem prefix_part (k : ℕ) (pe : Option Bool) (v : HVM) (s c : ℕ) (hit : �
       (v.word[(v.pos "Walk" + d).toNat]? = v.word[(v.pos "U" + d).toNat]? ↔ hit (c + d) = true))
     (hWr : ∀ d, d ≤ 1 → c + d < s → v.inRange "Walk" ∧ 0 ≤ v.pos "U" ∧ v.pos "U" + d + 1 ≤ v.len)
     (hs : (s : ℤ) ≤ v.len) :
-    ∃ n ph', iterStep n v = some { v with
+    ∃ n ph', n ≤ 6 ∧ iterStep n v = some { v with
       ctl := .pending [mc k pe (some (pcheck hit s c).2) ph' 19] (.equal "A" "End")
       pos := walkMoves ((pcheck hit s c).1 - c) v.pos } := by
   have hl : v.len = (v.word.length : ℤ) := rfl
@@ -392,7 +392,7 @@ theorem prefix_part (k : ℕ) (pe : Option Bool) (v : HVM) (s c : ℕ) (hit : �
     · -- mismatch at `c`
       have hne : v.word[(v.pos "Walk").toNat]? ≠ v.word[(v.pos "U").toNat]? := by
         intro he; rw [(hh0.mp he)] at h0; exact absurd h0 (by simp)
-      refine ⟨2, some 0, ?_⟩
+      refine ⟨2, some 0, by omega, ?_⟩
       rw [round_miss k pe (some 0) v hv (by omega) hWr0 ⟨hU0, by omega⟩ hne]
       simp [pcheck, hc, h0, walkMoves]
     · -- hit at `c`
@@ -422,7 +422,7 @@ theorem prefix_part (k : ℕ) (pe : Option Bool) (v : HVM) (s c : ℕ) (hit : �
             intro he; rw [hv1W, hv1U] at he
             simp only [Nat.cast_one] at hh1
             rw [hh1.mp he] at h1; exact absurd h1 (by simp)
-          refine ⟨3 + 2, some 1, ?_⟩
+          refine ⟨3 + 2, some 1, by omega, ?_⟩
           rw [iterStep_add, e1, Option.bind_some,
             round_miss k pe (some 1) v1 rfl (by omega) hr1 hr2 hne]
           simp [pcheck, hc, h0, hc1, h1, walkMoves, v1]
@@ -438,14 +438,14 @@ theorem prefix_part (k : ℕ) (pe : Option Bool) (v : HVM) (s c : ℕ) (hit : �
               rw [show walkMove v.pos "U" = v.pos "U" + 1 by simp [walkMove]]
               simp only [HVM.len] at hU1'; omega)
           rw [mc_18_done] at e2
-          refine ⟨3 + 3, some 1, ?_⟩
+          refine ⟨3 + 3, some 1, by omega, ?_⟩
           rw [iterStep_add, e1, Option.bind_some, e2]
           simp [pcheck, hc, h0, hc1, h1, walkMoves, v1]
-      · refine ⟨3 + 1, some 1, ?_⟩
+      · refine ⟨3 + 1, some 1, by omega, ?_⟩
         rw [iterStep_add, e1, Option.bind_some,
           round_skip k pe (some 1) v1 rfl (by rw [hW1, hC1]; omega)]
         simp [pcheck, hc, h0, hc1, walkMoves, v1]
-  · refine ⟨1, some 0, ?_⟩
+  · refine ⟨1, some 0, by omega, ?_⟩
     rw [round_skip k pe (some 0) v hv (by rw [hW, hC]; omega)]
     simp [pcheck, hc, walkMoves]
 
@@ -703,7 +703,7 @@ theorem step_hit (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : P
     have hv1U : v1.pos "U" = x.length + pos - s + c := by simp [v1, abMove, Function.update, hU]
     have hv1C : v1.pos "Cut" = s := by simp [v1, abMove, Function.update, hC]
     have hv1len : v1.len = x.length + m := hlen
-    obtain ⟨n2, ph', e2⟩ := prefix_part k (some pe) v1 s c (hitAt (x.take s) T pos) rfl hv1C hv1W
+    obtain ⟨n2, ph', hn2, e2⟩ := prefix_part k (some pe) v1 s c (hitAt (x.take s) T pos) rfl hv1C hv1W
       (fun d hd hcd => by
         rw [hv1W, hv1U, show ((c : ℤ) + d).toNat = c + d by omega,
           show ((x.length : ℤ) + pos - s + c + d).toNat = x.length + (pos - s + c + d) by omega]
@@ -1106,7 +1106,7 @@ theorem hit_to_end (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z :
     have hv1U : v1.pos "U" = x.length + pos - s + c := by simp [v1, abMove, Function.update, hU]
     have hv1C : v1.pos "Cut" = s := by simp [v1, abMove, Function.update, hC]
     have hv1len : v1.len = x.length + m := hlen
-    obtain ⟨n2, ph', e2⟩ := prefix_part k (some pe) v1 s c (hitAt (x.take s) T pos) rfl hv1C hv1W
+    obtain ⟨n2, ph', hn2, e2⟩ := prefix_part k (some pe) v1 s c (hitAt (x.take s) T pos) rfl hv1C hv1W
       (fun d hd hcd => by
         rw [hv1W, hv1U, show ((c : ℤ) + d).toNat = c + d by omega,
           show ((x.length : ℤ) + pos - s + c + d).toNat = x.length + (pos - s + c + d) by omega]

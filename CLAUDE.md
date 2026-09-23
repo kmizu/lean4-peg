@@ -34,8 +34,22 @@ W2 の穴（対応表 §6）: head 版が走らせる分解 `GSPreprocess.decomp
 - W2（3約束の放電）の進捗：
   - `ScaHeadRun`：子生成器の持ち上げ、1歩補題。
   - `ScaHeadGen`：PeriodShift / ResetShift の探索版の契約、`rsShifts_eq`。
-  - `ScaMatcherLoop`：照合主ループの部品として、shift_any、比較、接頭辞チェック（pcheck = vComp²）、`AtHead` 不変量。`step_hit` は作業中。
-- 残り：主ループの組み立てと報告（deadline・L1）、Decompose の契約、起動部、時間補題、worker との接続（MatchSide など）、flags 側、最終接続。
+  - `ScaMatcherLoop`：照合主ループの部品として、shift_any、比較、接頭辞チェック（pcheck = vComp²）、`AtHead` 不変量。
+    - ループ頭の各ケースは全部済み（commit 750024a まで）：`head_wait`（B ≥ len なら 1 歩で自分に戻る）、`step_hit`（v の途中の一致＝vStep 1 回）、`step_miss`（不一致→shift＝vStep 1 回）、`step_report`（v を完了する一致＝vStep 2 回、報告は check 済み ⇔ 出力追加）、`shift_to_head`。
+    - `GSReportDeadline`（エージェント F、済み）：軌道上の全状態で `DeadlineInv`（`orbit_deadlineInv`、正規化 p₁ の `ShiftDeadline` が要る）。
+    - **作業中**：歩数の上限を各補題に足している。`prefix_part` は `n ≤ 6` まで済み。次は `step_hit`/`step_miss`/`step_report`/`shift_to_head`/`shift_reset`/`shift_period`/`resetShift_run` に `n ≤ a·ΔΦ + b`（Φ = (k+1)·pos + q、`GSScan.Phi`）の形の上限を足す。
+- 走っているエージェント（2026-09-24 2時頃起動、結果はウチが単体検証してから Workbench 登録・コミット）：
+  - A `ScaHeadDecompose.lean`：head の Decompose が `decompose x k` を返す契約（Cut/First/KFirst/Reach、歩数 C·|x|+C′）。
+  - B `ScaFlagsHead.lean`：flags head プログラム ⇒ `dualFlags y dec 8 lo up`、歩数上限。
+  - D `ScaWorkerLink.lean`：matcher worker ↔ HVM（service/arrive/start、出力ビット ↔ match イベント）。
+  - G `ScaFlagsLink.lean`：flags worker ↔ HVM（modeDone ↔ flagsDone、resetFlags/start/mark）。
+- ウチの残り（順に）：
+  1. 主ループの run 補題：`head_wait`/`step_hit`/`step_miss`/`step_report` を重ねて「HVM は vStep 軌道をなぞり、match ⇔ vReportFlag」。`DeadlineInv` を軌道に沿って運ぶ。
+  2. 起動部（site 0–10、A の契約を使う）：`matchInitial` から最初のループ頭 z₀ = (⟨s,0⟩,0) まで。
+  3. 時間補題（待ちごと。「毎 tick 流し切り済み」は実測で偽）：1 tick 512 歩で答えの tick までに待ち状態に着く。
+  4. `hmatch` の組立：制御器 run → D → HVM → vStep 軌道 → `GSDrained.drainedAnswer_eq_vAnswer` → `occursAt`。
+  5. `hworkers`（`AtHead` から `MatchSide` など、flags 側は B）。6. `FlagsContract`（B+G+時間）。
+  7. 最終：`pal_in_peg_of_real_promises` を具体化、`PalInPeg.unconditional` を付け替え、`Axioms.lean` 更新、Workbench 全体 build。
 
 **進捗 4（2026-09-24 0時）: 制御器の符号化が完成、`hencode` は消えた**
 - **最上位の新しい入口は `ScaWindowEncode.pal_in_peg_of_workers`**（`ScaWindowEncodeTick.lean`、標準3公理、commit 3f103d7）。前提は次のとおり。
