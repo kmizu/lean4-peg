@@ -98,6 +98,48 @@ theorem coreInv_of_ideal (rest : RestCommands) (w : List (Fin 2)) (x y : State G
       from hkc 10, hkm]
     exact cache_congr he.2 hchain hx hy
 
+/-- **The weakest frame for the common invariant.** Counters the VM names (all but the chain's
+`10..15`) take their shape from the new encoding; only the chain's counters, the spare mirror and
+polarity `10` must be kept. A tick may rewrite any VM-named counter and its sign. -/
+theorem coreInv_of_ideal_named (rest : RestCommands) (w : List (Fin 2)) (x y : State GalilVM)
+    (p : CoreState) (he : PalPeg.PhysicalCacheInvariant.CoreInv w x p)
+    (hencoded : PalPeg.PhysicalEncoding.Enc w margin y
+      ((idealRun (workRule rest) blankM p none 12).1,
+        fun i => (idealRun (workRule rest) blankM p none 12).2 (slotIndex i)))
+    (hkeep : ∀ slot : Slot, (slot = mirrorSlot 5 ∨ ∃ c : Fin 16, 10 ≤ c.val ∧ slot = counterSlot c) →
+      (idealRun (workRule rest) blankM p none 12).2 (slotIndex slot) = p.2 (slotIndex slot))
+    (hpol : (idealRun (workRule rest) blankM p none 12).1.polarity 10 = p.1.polarity 10)
+    (hchain : y.vm.chain = x.vm.chain) (hx : x.ctl.mode ≠ .shift) (hy : y.ctl.mode ≠ .shift) :
+    PalPeg.PhysicalCacheInvariant.CoreInv w y (idealRun (workRule rest) blankM p none 12) := by
+  have hcore : CoreEnc w x p := he.1.1
+  have hshape := he.1.2
+  have hb := PalPeg.PhysicalBoundary.macroBoundary_tickRule
+    (fun q _ ws => ruleNext 1 0 fppBound_gt_start q ws) (modeCommands 0 rest)
+    (fun q _ ws => ruleActs 1 0 q ws)
+    (fun q _ ws j => ruleActs_length 1 0 (by decide : 1+3 ≤ microRadius) q ws j)
+    w x p none hcore
+  simp only [← tickPhysRule_eq 1 0 fppBound_gt_start (by decide) (by decide) rest,
+    ← workRule_eq] at hb
+  generalize idealRun (workRule rest) blankM p none 12 = result at hencoded hb hkeep hpol ⊢
+  refine ⟨⟨⟨hencoded, hb⟩, ?_⟩, ?_⟩
+  · intro c
+    by_cases hc : 10 ≤ c.val
+    · obtain ⟨seg, hs⟩ := hshape c
+      refine ⟨seg, ?_⟩
+      change result.2 (slotIndex (counterSlot c)) = _
+      rw [hkeep _ (.inr ⟨c, hc, rfl⟩)]
+      exact hs
+    · have hnamed : ∃ v, counterOf y c = some v := by
+        fin_cases c <;> first | exact ⟨_, rfl⟩ | exact absurd (by decide) hc
+      obtain ⟨v, hv⟩ := hnamed
+      obtain ⟨seg, _, hs⟩ := hencoded.2.counters c v hv
+      exact ⟨seg, hs⟩
+  · rw [hpol, show result.2 PalPeg.PhysicalSpare.spareIndex = p.2 PalPeg.PhysicalSpare.spareIndex
+      from hkeep (counterSlot 10) (.inr ⟨10, by decide, rfl⟩),
+      show result.2 PalPeg.PhysicalPeriodMirror.mirrorIndex = p.2 PalPeg.PhysicalPeriodMirror.mirrorIndex
+      from hkeep (mirrorSlot 5) (.inl rfl)]
+    exact cache_congr he.2 hchain hx hy
+
 /-- The acts of a tick that only walks one mark tape: nothing outside that tape. -/
 theorem withErase_actsAt_other {K : ℕ} (live : Bool) (ws : Fin tapeCountM → PalPeg.Local.Window Γm K)
     (t : Fin 9) (base : Fin tapeCountM → List (Act Γm))
