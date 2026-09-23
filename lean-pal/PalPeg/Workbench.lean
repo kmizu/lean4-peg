@@ -210,6 +210,8 @@ import PalPeg.ScaHeadGen
 import PalPeg.ScaHeadSafe
 import PalPeg.ScaShiftSafe
 import PalPeg.ScaMatcherLoop
+import PalPeg.ScaMatcherRun
+import PalPeg.ScaDecomposeSafe
 import PalPeg.ScaWorkerEnc
 import PalPeg.ScaWindowReal
 import PalPeg.ScaFlagsLink
