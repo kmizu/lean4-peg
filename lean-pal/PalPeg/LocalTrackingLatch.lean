@@ -413,6 +413,36 @@ theorem run_on_time_shift (d : ℕ → ℕ) (c τ : ℕ) (hτ : 2*c ≤ τ) (T :
   · simp only [T', if_neg (Nat.succ_ne_zero m), Nat.succ_mul] at this
     rw [Nat.succ_mul]; omega
 
+/-- **Shifted Lindley with its slack.** The same run finishes checkpoint `m` at least `τ − 2c`
+steps before `m·τ`: the bound `run_on_time_shift` rounds this slack away. -/
+theorem run_on_time_shift_slack (d : ℕ → ℕ) (c τ : ℕ) (hτ : 2*c ≤ τ) (T : ℕ → ℕ) (h0 : T 0 = 0)
+    (hstep : ∀ m, T (m+1) ≤ max (T m) (m*τ) + d (m+1)) (m : ℕ) (hm : 0 < m)
+    (hz : PalPeg.Predictability.backlog d c m = 0) : T m + (τ - 2*c) ≤ m*τ := by
+  let T' : ℕ → ℕ := fun k => if k = 0 then 0 else T k + τ
+  have h0' : T' 0 = 0 := rfl
+  have hstep' : ∀ k, T' (k+1) ≤ max (T' k) ((k+1)*τ) + d (k+1) := by
+    intro k
+    have hs := hstep k
+    show T (k+1) + τ ≤ _
+    rcases k with _ | k
+    · simp only [T', if_pos rfl, zero_mul, zero_add, one_mul, h0] at hs ⊢
+      rw [max_eq_right (Nat.zero_le _)]
+      rw [max_eq_left (Nat.zero_le _)] at hs
+      omega
+    · simp only [T', if_neg (Nat.succ_ne_zero k)]
+      have e : (k+1+1)*τ = (k+1)*τ + τ := Nat.succ_mul _ _
+      rw [e]
+      rcases le_total (T (k+1)) ((k+1)*τ) with h | h
+      · rw [max_eq_right h] at hs; rw [max_eq_right (by omega)]; omega
+      · rw [max_eq_left h] at hs; rw [max_eq_left (by omega)]; omega
+  have hS := PalPeg.Lindley.S_of_run d τ T' h0' hstep' m
+  have hL := PalPeg.Lindley.lindley_le_backlog d c τ hτ m
+  rcases m with _ | m
+  · omega
+  · simp only [T', if_neg (Nat.succ_ne_zero m)] at hS
+    rw [hz] at hL
+    omega
+
 /-- **Deadline slot, packaged.** Checkpoint times `Tc` of a run `st` obeying the
 shifted O-step, with zero backlog at `|w|` and a refreshed report point at
 checkpoint `|w|`, give `Reported` by `|w|·τ` — the machine's last micro-step. -/
