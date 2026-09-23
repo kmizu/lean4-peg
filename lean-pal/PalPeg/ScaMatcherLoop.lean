@@ -1,5 +1,6 @@
 import PalPeg.ScaHeadGen
 import PalPeg.GSVerifier
+import PalPeg.GSReportDeadline
 
 /-!
 # The matcher's main loop against the list-level verifier
@@ -1032,5 +1033,177 @@ theorem shift_to_head (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 ≤ k) (
     exact ⟨⟨ph, rfl⟩, hw, loopRel_reset' hsr, fun h' => absurd h' (by simp),
       by dsimp only; omega, by omega, by dsimp only; omega, by dsimp only; omega,
       by dsimp only; omega, htl⟩
+
+theorem pcheck_done (hit : ℕ → Bool) (s c : ℕ) (h : (pcheck hit s c).2 = true) (hcs : c ≤ s)
+    (hdl : hit c = true → c < s → s ≤ c + 2) : (pcheck hit s c).1 = s := by
+  unfold pcheck at h ⊢
+  by_cases hc : c < s
+  · rw [if_pos hc] at h ⊢
+    cases h0 : hit c
+    · simp [h0] at h
+    · simp only [h0, if_true] at h ⊢
+      have hd := hdl h0 hc
+      by_cases hc1 : c + 1 < s
+      · simp only [hc1, if_true] at h ⊢
+        cases h1 : hit (c + 1)
+        · simp [h1] at h
+        · simp only [h1, if_true]; omega
+      · simp only [hc1, if_false]; omega
+  · rw [if_neg hc]; omega
+
+/-- **A hit, up to the end test**: `A`, `B` advance, the prefix check runs (if live), and the
+controller waits at the end test with the verifier's new `c = vComp (vComp c)`. -/
+theorem hit_to_end (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : PalPeg.VState)
+    (v : HVM) (h : AtHead x T m k s p₁ r pe ok z v) (hen : z.1.pos + z.1.q < m)
+    (hhit : T[z.1.pos + z.1.q]? = (x.drop s)[z.1.q]?) :
+    ∃ n ok' ph' π', iterStep n v = some { v with
+        ctl := .pending [mc k (some pe) (some ok') ph' 19] (.equal "A" "End")
+        pos := π' } ∧
+      LoopRel x.length s p₁ r k pe z.1.pos (z.1.q + 1)
+        (PalPeg.vComp (x.take s) T z.1.pos (PalPeg.vComp (x.take s) T z.1.pos z.2)) π' ∧
+      (ok' = false → PalPeg.vComp (x.take s) T z.1.pos (PalPeg.vComp (x.take s) T z.1.pos z.2) < s ∧
+        hitAt (x.take s) T z.1.pos
+          (PalPeg.vComp (x.take s) T z.1.pos (PalPeg.vComp (x.take s) T z.1.pos z.2)) = false) ∧
+      (ok' = true → ok = true ∧ (pcheck (hitAt (x.take s) T z.1.pos) s z.2).2 = true) := by
+  obtain ⟨⟨pos, q⟩, c⟩ := z
+  simp only at hen hhit ⊢
+  obtain ⟨ph, hc⟩ := h.ctl
+  have hrel : LoopRel x.length s p₁ r k pe pos q c v.pos := h.rel
+  obtain ⟨hO, hC, hE, hper, hP, hA, hB, hW, hU⟩ := hrel
+  have hsx := h.sx
+  have hcut : s ≤ pos := h.cut
+  have hcs : c ≤ s := h.cs
+  have hqv : q < x.length - s := h.qv
+  have htl := h.tl
+  have hlen : v.len = x.length + m := by
+    simp only [HVM.len, h.word, List.length_append, List.length_take]
+    rw [Nat.min_eq_left htl]; push_cast; ring
+  have hut : (x.take s).length = s := by simp [List.length_take]; omega
+  have hwA : v.word[(v.pos "A").toNat]? = (x.drop s)[q]? := by
+    rw [hA, h.word, show ((s : ℤ) + q).toNat = s + q by omega, word_pat x T m (by omega), pat_drop]
+  have hwB : v.word[(v.pos "B").toNat]? = T[pos + q]? := by
+    rw [hB, h.word, show ((x.length : ℤ) + pos + q).toNat = x.length + (pos + q) by omega,
+      word_txt x T m _ hen]
+  have e1 := head_hit k (some pe) ok ph v hc (by rw [hB, hlen]; omega)
+    ⟨by rw [hA]; omega, by rw [hA, hlen]; omega⟩ ⟨by rw [hB]; omega, by rw [hB, hlen]; omega⟩
+    (by rw [hwA, hwB, hhit]) (by rw [hA, hlen]; omega) (by rw [hB, hlen]; omega)
+  cases ok with
+  | false =>
+    rw [mc_15_dead] at e1
+    obtain ⟨hdc, hdh⟩ := h.dead rfl
+    have hst : PalPeg.vComp (x.take s) T pos (PalPeg.vComp (x.take s) T pos c) = c := by
+      rw [vComp_stuck _ _ _ _ hdh, vComp_stuck _ _ _ _ hdh]
+    refine ⟨3, false, some 0, abMove v.pos, e1, ?_, fun _ => ?_, fun h' => absurd h' (by simp)⟩
+    · have := loopRel_hit 0 (show LoopRel x.length s p₁ r k pe pos q c v.pos from h.rel)
+      simp only [walkMoves, Nat.add_zero] at this; rw [hst]; exact this
+    · rw [hst]; exact ⟨hdc, hdh⟩
+  | true =>
+    rw [mc_15_ok] at e1
+    let v1 : HVM := { v with
+      ctl := (.pending [mc k (some pe) (some true) (some 0) 16] (.less "Walk" "Cut"))
+      pos := abMove v.pos }
+    have hv1W : v1.pos "Walk" = c := by simp [v1, abMove, Function.update, hW]
+    have hv1U : v1.pos "U" = x.length + pos - s + c := by simp [v1, abMove, Function.update, hU]
+    have hv1C : v1.pos "Cut" = s := by simp [v1, abMove, Function.update, hC]
+    have hv1len : v1.len = x.length + m := hlen
+    obtain ⟨n2, ph', e2⟩ := prefix_part k (some pe) v1 s c (hitAt (x.take s) T pos) rfl hv1C hv1W
+      (fun d hd hcd => by
+        rw [hv1W, hv1U, show ((c : ℤ) + d).toNat = c + d by omega,
+          show ((x.length : ℤ) + pos - s + c + d).toNat = x.length + (pos - s + c + d) by omega]
+        simp only [v1, h.word]
+        rw [word_pat x T m (by omega), word_txt x T m _ (by omega), pat_take x (by omega : c + d < s)]
+        simp only [hitAt, hut, decide_eq_true_eq]
+        rw [show pos - s + (c + d) = pos - s + c + d by omega]
+        constructor <;> intro hh <;> exact hh.symm)
+      (fun d hd hcd => ⟨⟨by rw [hv1W]; omega, by rw [hv1W, hv1len]; omega⟩,
+        by rw [hv1U]; omega, by rw [hv1U, hv1len]; omega⟩)
+      (by rw [hv1len]; omega)
+    set cc := (pcheck (hitAt (x.take s) T pos) s c).1 with hcc
+    set ok' := (pcheck (hitAt (x.take s) T pos) s c).2 with hok'
+    have hccv : cc = PalPeg.vComp (x.take s) T pos (PalPeg.vComp (x.take s) T pos c) := by
+      rw [hcc, ← pcheck_fst (x.take s) T pos c, hut]
+    have hccle : c ≤ cc := by rw [hccv]; exact (PalPeg.le_vComp _ _ _ _).trans (PalPeg.le_vComp _ _ _ _)
+    refine ⟨3 + n2, ok', ph', walkMoves (cc - c) (abMove v.pos),
+      by rw [iterStep_add, e1, Option.bind_some, e2], ?_, fun hd => ?_, fun hd => ⟨rfl, hd⟩⟩
+    · have := loopRel_hit (cc - c) (show LoopRel x.length s p₁ r k pe pos q c v.pos from h.rel)
+      rw [show c + (cc - c) = cc by omega] at this
+      rw [← hccv]; exact this
+    · have := pcheck_snd (x.take s) T pos c (by rw [hut]; exact hd)
+      rw [hut, ← hcc] at this; rw [← hccv]; exact this
+
+/-- **A hit that completes `v`**: the report (when the prefix check is live), then the shift; two
+`vStep`s. The deadline invariant at the state before rules out an unfinished live check. -/
+theorem step_report (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 2 ≤ k) (pe ok : Bool)
+    (z : PalPeg.VState) (v : HVM) (h : AtHead x T m k s p₁ r pe ok z v)
+    (hen : z.1.pos + z.1.q < m) (hhit : T[z.1.pos + z.1.q]? = (x.drop s)[z.1.q]?)
+    (hlast : z.1.q + 1 = x.length - s)
+    (hdl : PalPeg.GSReportDeadline.DeadlineInv (x.take s) (x.drop s) T z)
+    (hps : v.patternSize = x.length)
+    (hnoper : pe = false → x.length - s < k * p₁) (hp1 : pe = true → 1 ≤ p₁) :
+    ∃ n v', iterStep n v = some v' ∧
+      v'.outputs = v.outputs ++
+        (if (PalPeg.vStep (x.take s) (x.drop s) k p₁ r T z).2 = s
+          then [((z.1.pos + (x.length - s) : ℕ) : ℤ)] else []) ∧
+      AtHead x T m k s p₁ r pe true
+        (PalPeg.vStep (x.take s) (x.drop s) k p₁ r T (PalPeg.vStep (x.take s) (x.drop s) k p₁ r T z)) v' := by
+  obtain ⟨n1, ok', ph', π', e1, hrel', hdead', hlive'⟩ := hit_to_end x T m k s p₁ r pe ok z v h hen hhit
+  obtain ⟨⟨pos, q⟩, c⟩ := z
+  simp only at hen hhit hlast hrel' hdead' hlive' ⊢
+  have hsx := h.sx
+  have hcut : s ≤ pos := h.cut
+  have hcs : c ≤ s := h.cs
+  have htl := h.tl
+  have hut : (x.take s).length = s := by simp [List.length_take]; omega
+  set cc := PalPeg.vComp (x.take s) T pos (PalPeg.vComp (x.take s) T pos c) with hcc
+  have hvs1 : PalPeg.vStep (x.take s) (x.drop s) k p₁ r T ((⟨pos, q⟩ : PalPeg.ScanState), c) =
+      (⟨pos, q + 1⟩, cc) := by
+    have hq : q ≠ (x.drop s).length := by simp; omega
+    simp only [PalPeg.vStep, PalPeg.scanStep, hq, if_false, hhit, if_true, hcc]
+  have hvs2 : PalPeg.vStep (x.take s) (x.drop s) k p₁ r T ((⟨pos, q + 1⟩ : PalPeg.ScanState), cc) =
+      (⟨pos + PalPeg.gsShift k p₁ r (q + 1), PalPeg.gsNextQ k p₁ r (q + 1)⟩, 0) := by
+    have hq : q + 1 = (x.drop s).length := by simp; omega
+    simp only [PalPeg.vStep, PalPeg.scanStep, hq, if_true]
+  rw [hvs1, hvs2]
+  obtain ⟨hO, hC, hE, hper, hP, hA, hB, hW, hU⟩ := hrel'
+  set v1 : HVM := { v with
+    ctl := (.pending [mc k (some pe) (some ok') ph' 19] (.equal "A" "End"))
+    pos := π' } with hv1
+  have hAE : v1.pos "A" = v1.pos "End" := by
+    show π' "A" = π' "End"; rw [hA, hE]; push_cast; omega
+  have hstep := fun (w : HVM) (ok'' : Option Bool) (hw : w.ctl = decisionCtl k pe ok'' ph')
+      (hwp : w.pos = π') (hww : w.word = x ++ T.take m) =>
+    shift_to_head x T m k s p₁ r hk pe ok'' ph' w pos (q + 1) hw hww
+      (by rw [hwp]; exact hO) (by rw [hwp]; exact hC) (by rw [hwp]; exact hE)
+      (fun hp => by rw [hwp]; exact hper hp) (by rw [hwp]; exact hP) (by rw [hwp]; exact hA)
+      (by rw [hwp]; exact hB) (by omega) hcut (by omega) (by omega) (Or.inr (by omega)) htl hnoper hp1
+  cases ok' with
+  | true =>
+    obtain ⟨hok, hpc⟩ := hlive' rfl
+    have hdone : cc = s := by
+      have := pcheck_done (hitAt (x.take s) T pos) s c hpc hcs (fun h0 hlt => by
+        have hh : T[pos - (x.take s).length + c]? = (x.take s)[c]? := by
+          simpa [hitAt] using h0
+        have := PalPeg.GSReportDeadline.le_add_two_of_hit hdl (by simp; omega) hh
+        rw [hut] at this; exact this)
+      rw [hcc, ← pcheck_fst (x.take s) T pos c, hut]; exact this
+    have hWC : v1.pos "Walk" = v1.pos "Cut" := by
+      show π' "Walk" = π' "Cut"; rw [hW, hC, hdone]
+    have e2 := end_report k pe ph' v1 rfl hAE hWC
+    obtain ⟨n3, v', e3, ho3, hat⟩ := hstep { v1 with
+        ctl := decisionCtl k pe (some true) ph'
+        outputs := v1.outputs ++ [v1.pos "B" - v1.patternSize] } (some true) rfl rfl h.word
+    refine ⟨n1 + (3 + n3), v', by rw [iterStep_add, e1, Option.bind_some, iterStep_add, e2,
+      Option.bind_some, e3], ?_, hat⟩
+    rw [ho3, if_pos hdone]
+    show v.outputs ++ [π' "B" - v.patternSize] = _
+    rw [hB, hps]; push_cast; congr 2; omega
+  | false =>
+    obtain ⟨hlt, -⟩ := hdead' rfl
+    have e2 := end_dead k pe ph' v1 rfl hAE
+    obtain ⟨n3, v', e3, ho3, hat⟩ := hstep { v1 with ctl := decisionCtl k pe (some false) ph' }
+      (some false) rfl rfl h.word
+    refine ⟨n1 + (1 + n3), v', by rw [iterStep_add, e1, Option.bind_some, iterStep_add, e2,
+      Option.bind_some, e3], ?_, hat⟩
+    rw [ho3, if_neg (by omega), List.append_nil]
 
 end PalPeg.ScaMatcherLoop
