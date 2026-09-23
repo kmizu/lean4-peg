@@ -22,6 +22,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `hencode` の道筋: 1文字ぶんを `ScaProg.Prog`（push/pop/copy/clear/ctl/ite/seq、Scala circuit の写し）で書く → `Prog.isLocal`（済）→ スタック機械 → 型付き SCA（コンパイラはエージェント `ScaStackMachine`）。抽象状態との表現: カウンタ = Unit スタック、フラグ = Bool スタック、head = 左スタック＋右スタック＋`RTQueue`（エージェント `ScaHeadRep`）、距離レジスタ = 符号（制御）＋単項スタック。Scala のブロック zipper（`ScaWindowStream`）は使わない（1文字あたり有界なら十分）。
 - `hmatch`/`hmiddle`/`hclean`（W2）: head 版コルーチン ↔ `gs_events` 版（Lean の `GSScan`/`GSDecomp`/`GSRealTime`/`GSVerifier`/`StageMatcher`）のシミュレーション。対応表はエージェントが `lean-pal/SCA_GS_MAPPING.md` に作成中。
 
+**進捗 2（2026-09-23 深夜遅く）**: `ScaStackMachine`（スタック機械→型付き SCA、証明済み）、`ScaProg`/`ScaProgEmbed`/`ScaCounter`（スタックプログラムの局所性・埋め込み・カウンタ）、`ScaWindowFault`/`ScaWindowTop.pal_in_peg`（最上位を5義務で組立）、`ScaWorkerCoroutine`（表 worker ≃ コルーチン worker、`certFunctional` 待ち）、`SCA_GS_MAPPING.md`（W2 設計図）。
+W2 の穴（対応表 §6）: head 版が走らせる分解 `GSPreprocess.decompose` の L1（Lean は `decompose2` についてのみ証明）、待ち状態まで回した答え、分解の命令数 ≲ 257·|x|（未確認）、flags の ⟨1,0⟩ 開始・降順ビット列・区間停止・バッチ期限。担当エージェント: L1、drained、BorderJobHead、コスト実測、certFunctional、距離レジスタ不変量、head 表現。
+次の波: 位置レベルの head VM（Config＋head 位置）を定義し CoWorker ≃ head VM（レジスタ不変量経由）、generator ごと（Initialize/First/Second/Decompose/PeriodShift/ResetShift/Matcher 本体）の対応補題、Matcher ↔ `vStep` の揺れ付きシミュレーション（命令数 ≤ 28·ΔΦ）。
+
 **計画（`DESIGN_SCA_PAL.md` §6 の3層）**
 1. 汎用の永続構造層: Scala `ScaffoldCircuitStructs` を写す。ノードごとに有限個のセル枠、セルは `below`（辺）・枠タグ・`value`（辺）・`data`。スタック = 根の辺＋タグ。push/pop/copy/clear が抽象リストへの表現関係 `Rep` を保つことを1操作1補題で。pop は「根→below」の2歩で半径内。キュー（永続スタック2本）・カウンタも同様。
 2. 抽象機械: window-pal の1文字ぶん（二進段・GS head worker）を永続レコード＋有限制御の `absStep` として Scala と同形に書く。
