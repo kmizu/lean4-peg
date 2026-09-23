@@ -284,4 +284,57 @@ theorem round_miss (ph : Option ℕ) (v : HVM)
 
 end Round
 
+/-! ## One comparison at the loop head -/
+
+section Compare
+variable (k : ℕ) (pe : Option Bool) (ok : Bool) (ph : Option ℕ)
+
+theorem head_wait (v : HVM) (hv : v.ctl = .pending [mc k pe (some ok) ph 13] (.available "B"))
+    (hB : v.len ≤ v.pos "B") :
+    iterStep 1 v = some v := by
+  have e1 := step_available hv
+  rw [show decide (v.pos "B" < v.len) = false by simp; omega, mc_13_wait, ← hv] at e1
+  simp [iterStep, e1]
+
+/-- The move of one pattern-text comparison. -/
+def abMove (π : String → ℤ) : String → ℤ :=
+  Function.update (Function.update π "A" (π "A" + 1)) "B" (π "B" + 1)
+
+theorem head_hit (v : HVM) (hv : v.ctl = .pending [mc k pe (some ok) ph 13] (.available "B"))
+    (hB : v.pos "B" < v.len) (hA : v.inRange "A") (hB' : v.inRange "B")
+    (heq : v.word[(v.pos "A").toNat]? = v.word[(v.pos "B").toNat]?)
+    (hA1 : v.pos "A" + 1 ≤ v.len) (hB1 : v.pos "B" + 1 ≤ v.len) :
+    iterStep 3 v = some { v with
+      ctl := (Ctl.pending [mc k pe (some ok) ph 15] (mv [("A", 1), ("B", 1)])).resume
+        matchTests false
+      pos := abMove v.pos } := by
+  have e1 := step_available hv
+  rw [show decide (v.pos "B" < v.len) = true by simp; omega, mc_13_go] at e1
+  have e2 := step_symbols (v := { v with ctl := (.pending [mc k pe (some ok) ph 14] (.symbols "A" "B")) })
+    rfl hA hB'
+  simp only [heq, decide_true] at e2
+  rw [mc_14_hit] at e2
+  have hm : moveSeq blind v.len [⟨"A", 1⟩, ⟨"B", 1⟩] v.pos = some (abMove v.pos) := by
+    simp only [moveSeq, blind]
+    simp [Function.update, abMove]
+    exact ⟨⟨by have := hA.1; omega, hA1⟩, ⟨by have := hB'.1; omega, hB1⟩⟩
+  have e3 := step_move (v := { v with ctl := (.pending [mc k pe (some ok) ph 15] (mv [("A", 1), ("B", 1)])) })
+    (ms := [⟨"A", 1⟩, ⟨"B", 1⟩]) rfl hm
+  simp [iterStep, e1, e2, e3]
+  rfl
+
+theorem head_miss (v : HVM) (hv : v.ctl = .pending [mc k pe (some ok) ph 13] (.available "B"))
+    (hB : v.pos "B" < v.len) (hA : v.inRange "A") (hB' : v.inRange "B")
+    (hne : v.word[(v.pos "A").toNat]? ≠ v.word[(v.pos "B").toNat]?) :
+    iterStep 2 v = some { v with
+      ctl := (Ctl.pending [mc k pe (some ok) ph 14] (.symbols "A" "B")).resume matchTests false } := by
+  have e1 := step_available hv
+  rw [show decide (v.pos "B" < v.len) = true by simp; omega, mc_13_go] at e1
+  have e2 := step_symbols (v := { v with ctl := (.pending [mc k pe (some ok) ph 14] (.symbols "A" "B")) })
+    rfl hA hB'
+  simp only [hne, decide_false] at e2
+  simp [iterStep, e1, e2]
+
+end Compare
+
 end PalPeg.ScaMatcherLoop
