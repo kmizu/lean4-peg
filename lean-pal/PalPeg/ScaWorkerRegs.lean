@@ -35,13 +35,17 @@ worker state together with `markEnd`, the `end` cursor at the last `mark` / `res
 `(pos a = pos b, pos a < pos b)`; the coroutine worker decides the same
 (`coDecision_equal` / `coDecision_less`).
 
-**Table facts.** The generic proofs use eleven facts about the ROM (`TableFacts`): targets and
+**Table facts.** The generic proofs use ten facts about the ROM (`TableFacts`): targets and
 start in range, every pair live after a row has a colour below `registers`, colours are
 injective on each after-set, after-sets hold canonical pairs, the liveness transfer of a row is
 contained in its before-set, target-less rows have nothing live, and the start mappings cover
-the start's live set with distinct colours. `checkTables` is a Boolean version;
-`tableFacts_of_check` turns it into `TableFacts`. For `matcherWorker` and `flagsWorker` it is
-evaluated by the kernel (`matcher_checkTables`, `flags_checkTables`).
+the start's live set with distinct colours. Running `liveDistances` in the kernel is too costly
+(string comparisons inside the Gauss–Seidel iteration: > 5 GB), so the facts come from a
+certificate of live pairs on head indices: `fixpoint_spec` shows the iteration stays below any
+post-fixpoint certificate and stops at a post-fixpoint, and `tableFacts_of_certificate` turns the
+Boolean checks `globalCheck` / `rowsCheck` into `TableFacts`. For `matcherWorker` and
+`flagsWorker` the checks are evaluated by `decide +kernel` (`matcher_tableFacts`,
+`flags_tableFacts`).
 -/
 
 set_option autoImplicit false
@@ -126,7 +130,8 @@ structure TableFacts (spec : WorkerSpec) : Prop where
   startInRange : spec.program.start < spec.program.code.length
   targetsInRange : ∀ (r : Nat) (row : Row), spec.program.code[r]? = some row →
     ∀ t ∈ row.targets, t < spec.program.code.length
-  afterColored : ∀ (r : Nat) (row : Row), spec.program.code[r]? = some row → ∀ p ∈ afterAt spec row, ColorOk spec p
+  afterColored : ∀ (r : Nat) (row : Row), spec.program.code[r]? = some row →
+    ∀ p ∈ afterAt spec row, ColorOk spec p
   afterColorsInjective : ∀ (r : Nat) (row : Row), spec.program.code[r]? = some row →
     ∀ p ∈ afterAt spec row, ∀ p' ∈ afterAt spec row,
       lookupFirst p spec.distances.colors = lookupFirst p' spec.distances.colors → p = p'
@@ -406,13 +411,15 @@ theorem regUpdateAt_copy_uninvolved (spec : WorkerSpec) (db : Array (List Pair))
 theorem regUpdateAt_other (spec : WorkerSpec) (db : Array (List Pair)) {event : Event}
     (targets : List Nat) (i : Nat) (hnotMove : ∀ moves, event ≠ .move moves)
     (hnotCopy : ∀ t s, event ≠ .copy t s) :
-    regUpdateAt spec db ⟨event, targets⟩ i = { source := some i, reverse := false, delta := 0 } := by
+    regUpdateAt spec db ⟨event, targets⟩ i =
+      { source := some i, reverse := false, delta := 0 } := by
   cases event with
   | move moves => exact absurd rfl (hnotMove moves)
   | copy t s => exact absurd rfl (hnotCopy t s)
   | _ => rfl
 
-theorem headStep_other {event : Event} (pos : String → Int) (hnotMove : ∀ moves, event ≠ .move moves)
+theorem headStep_other {event : Event} (pos : String → Int)
+    (hnotMove : ∀ moves, event ≠ .move moves)
     (hnotCopy : ∀ t s, event ≠ .copy t s) : headStep event pos = pos := by
   cases event with
   | move moves => exact absurd rfl (hnotMove moves)
@@ -635,7 +642,8 @@ theorem jump_cases (spec : WorkerSpec) (rb : Array (List String)) (db : Array (L
     (if decided then (fieldsAt spec rb db r row).yes else (fieldsAt spec rb db r row).no)
         ∈ row.targets ∨
       (row.targets = [] ∧
-        (if decided then (fieldsAt spec rb db r row).yes else (fieldsAt spec rb db r row).no) = r) := by
+        (if decided then (fieldsAt spec rb db r row).yes
+          else (fieldsAt spec rb db r row).no) = r) := by
   rw [fieldsAt_yes, fieldsAt_no]
   obtain ⟨event, targets⟩ := row
   cases targets with
@@ -1388,7 +1396,8 @@ theorem copyStep_mem (names : List String) (target source : String) (acc : List 
     y ∈ (match pairOf names (substHead target source p.1) (substHead target source p.2) with
       | some q => union acc [q]
       | none => acc) ↔
-      y ∈ acc ∨ pairOf names (substHead target source p.1) (substHead target source p.2) = some y := by
+      y ∈ acc ∨
+        pairOf names (substHead target source p.1) (substHead target source p.2) = some y := by
   split
   · rename_i q hq
     rw [mem_union, List.mem_singleton, hq, Option.some.injEq]
@@ -1455,5 +1464,1941 @@ theorem transfer_mono (names : List String) (row : Row) (xs ys : List Pair) (hsu
   all_goals exact hsub
 
 end TransferShape
+
+/-! ## A certificate for the liveness tables
+
+The kernel cannot afford to run `liveDistances` on the real programs (string comparisons inside a
+Gauss–Seidel iteration). Instead a certificate `CN` lists the live pairs of every row as pairs of
+head indices (positions in `names`), and `rowCheck` / `globalCheck` verify, on indices, that its
+decoding is a post-fixpoint with the colour and range facts. `fixpoint_spec` then puts
+`liveDistances` below the certificate. -/
+
+section Certificate
+
+variable (names : List String)
+
+/-- The head with index `i`. -/
+def headName (i : Nat) : String := names.getD i ""
+
+/-- The pair with index pair `q`. -/
+def pairName (q : Nat × Nat) : Pair := (headName names q.1, headName names q.2)
+
+/-- `pairOf` on indices. -/
+def pairOfN (i j : Nat) : Option (Nat × Nat) :=
+  if i = j then none else if i < j then some (i, j) else some (j, i)
+
+/-- `substHead` on indices. -/
+def substN (target source i : Nat) : Nat := if i = target then source else i
+
+/-- The decoded certificate table. -/
+def certTable (CN : List (List (Nat × Nat))) : Array (List Pair) :=
+  (CN.map fun l => l.map (pairName names)).toArray
+
+variable {names}
+
+theorem headName_idxOf {h : String} (hmem : h ∈ names) : headName names (names.idxOf h) = h := by
+  unfold headName
+  rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (List.idxOf_lt_length_of_mem hmem),
+    Option.getD_some]
+  exact List.getElem_idxOf _
+
+theorem idxOf_headName (hnodup : names.Nodup) {i : Nat} (hi : i < names.length) :
+    names.idxOf (headName names i) = i := by
+  unfold headName
+  rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi, Option.getD_some]
+  exact List.Nodup.idxOf_getElem hnodup i hi
+
+theorem headName_inj (hnodup : names.Nodup) {i j : Nat} (hi : i < names.length)
+    (hj : j < names.length) : headName names i = headName names j ↔ i = j :=
+  ⟨fun h => by rw [← idxOf_headName hnodup hi, h, idxOf_headName hnodup hj], fun h => h ▸ rfl⟩
+
+theorem pairName_inj (hnodup : names.Nodup) {q q' : Nat × Nat}
+    (hq : q.1 < names.length ∧ q.2 < names.length)
+    (hq' : q'.1 < names.length ∧ q'.2 < names.length) :
+    pairName names q = pairName names q' ↔ q = q' := by
+  unfold pairName
+  rw [Prod.mk.injEq, headName_inj hnodup hq.1 hq'.1, headName_inj hnodup hq.2 hq'.2]
+  exact ⟨fun h => Prod.ext h.1 h.2, fun h => ⟨congrArg Prod.fst h, congrArg Prod.snd h⟩⟩
+
+theorem pairOf_headName (hnodup : names.Nodup) {i j : Nat} (hi : i < names.length)
+    (hj : j < names.length) :
+    pairOf names (headName names i) (headName names j) = (pairOfN i j).map (pairName names) := by
+  unfold pairOf pairOfN
+  rw [idxOf_headName hnodup hi, idxOf_headName hnodup hj]
+  by_cases hij : i = j
+  · subst hij; simp
+  · rw [if_neg (mt (headName_inj hnodup hi hj).mp hij), if_neg hij]
+    split <;> rfl
+
+theorem substHead_headName (hnodup : names.Nodup) {target source : String}
+    (htarget : target ∈ names) (hsource : source ∈ names) {i : Nat} (hi : i < names.length) :
+    substHead target source (headName names i) =
+      headName names (substN (names.idxOf target) (names.idxOf source) i) := by
+  unfold substHead substN
+  by_cases hit : i = names.idxOf target
+  · rw [if_pos hit, if_pos (by rw [hit, headName_idxOf htarget]), headName_idxOf hsource]
+  · rw [if_neg hit, if_neg fun h => hit (by rw [← h, idxOf_headName hnodup hi])]
+
+theorem substN_lt {target source : String} (hsource : source ∈ names) {i : Nat}
+    (hi : i < names.length) :
+    substN (names.idxOf target) (names.idxOf source) i < names.length := by
+  unfold substN
+  split
+  · exact List.idxOf_lt_length_of_mem hsource
+  · exact hi
+
+theorem lookupFirst_pairName (hnodup : names.Nodup) (colorsN : List ((Nat × Nat) × Nat))
+    (hcolorsRange : ∀ e ∈ colorsN, e.1.1 < names.length ∧ e.1.2 < names.length)
+    {q : Nat × Nat} (hq : q.1 < names.length ∧ q.2 < names.length) :
+    lookupFirst (pairName names q) (colorsN.map fun e => (pairName names e.1, e.2)) =
+      lookupFirst q colorsN := by
+  induction colorsN with
+  | nil => rfl
+  | cons e rest ih =>
+    have hkey : pairName names e.1 = pairName names q ↔ e.1 = q :=
+      pairName_inj hnodup (hcolorsRange e (List.mem_cons_self ..)) hq
+    have ihRest := ih fun e' he' => hcolorsRange e' (List.mem_cons_of_mem _ he')
+    unfold lookupFirst at ihRest ⊢
+    rw [List.map_cons, List.find?_cons, List.find?_cons]
+    by_cases hkeyEq : e.1 = q
+    · simp [hkeyEq]
+    · have hnameNe : ¬ pairName names e.1 = pairName names q := fun h => hkeyEq (hkey.mp h)
+      simp only [hnameNe, hkeyEq, decide_false]
+      exact ihRest
+
+theorem certTable_getD (CN : List (List (Nat × Nat))) (r : Nat) :
+    (certTable names CN).getD r [] = (CN.getD r []).map (pairName names) := by
+  unfold certTable
+  rw [Array.getD_eq_getD_getElem?, List.getElem?_toArray, List.getElem?_map,
+    List.getD_eq_getElem?_getD]
+  cases CN[r]? <;> rfl
+
+theorem mem_getD_of_mem {β : Type} {CN : List (List β)} {r : Nat} {q : β}
+    (hq : q ∈ CN.getD r []) : ∃ l ∈ CN, q ∈ l := by
+  rw [List.getD_eq_getElem?_getD] at hq
+  cases hr : CN[r]? with
+  | none => rw [hr] at hq; simp at hq
+  | some l =>
+    rw [hr, Option.getD_some] at hq
+    exact ⟨l, List.mem_of_getElem? hr, hq⟩
+
+theorem sum_range_getD_length {β : Type} (L : List (List β)) :
+    ∑ r ∈ Finset.range L.length, (L.getD r []).length = (L.map List.length).sum := by
+  induction L with
+  | nil => simp
+  | cons l L ih =>
+    rw [List.length_cons, Finset.sum_range_succ', List.map_cons, List.sum_cons]
+    simp only [List.getD_cons_succ, List.getD_cons_zero]
+    rw [ih]
+    omega
+
+end Certificate
+
+/-- The heads a row names in a copy or a comparison. -/
+def eventHeads : Event → List String
+  | .copy target source => [target, source]
+  | .less a b | .equal a b | .assertEqual a b => [a, b]
+  | _ => []
+
+/-- The two heads of a comparison row. -/
+def compareHeads : Event → Option (String × String)
+  | .less a b | .equal a b | .assertEqual a b => some (a, b)
+  | _ => none
+
+theorem mem_transfer_inv {names : List String} {event : Event} {targets : List Nat}
+    (hnotCopy : ∀ t s, event ≠ .copy t s) {succ : List Pair} {y : Pair}
+    (hy : y ∈ distanceTransfer names ⟨event, targets⟩ succ) :
+    y ∈ succ ∨ ∃ a b, compareHeads event = some (a, b) ∧ pairOf names a b = some y := by
+  cases event with
+  | copy t s => exact absurd rfl (hnotCopy t s)
+  | less a b | equal a b | assertEqual a b =>
+    change y ∈ (match pairOf names a b with | some q => union succ [q] | none => succ) at hy
+    split at hy
+    · rename_i q hq
+      rcases (mem_union _ _ _).mp hy with h | h
+      · exact Or.inl h
+      · exact Or.inr ⟨a, b, rfl, by rw [hq, List.mem_singleton.mp h]⟩
+    · exact Or.inl hy
+  | _ => exact Or.inl hy
+
+/-- The pair a row keeps live for a successor pair `q`, on indices: a copy's substitution
+image, `q` itself otherwise. -/
+def imageN (names : List String) (event : Event) (q : Nat × Nat) : Option (Nat × Nat) :=
+  match event with
+  | .copy target source =>
+    pairOfN (substN (names.idxOf target) (names.idxOf source) q.1)
+      (substN (names.idxOf target) (names.idxOf source) q.2)
+  | _ => some q
+
+/-- The pair a comparison row makes live, on indices. -/
+def comparePairN (names : List String) (event : Event) : Option (Nat × Nat) :=
+  match compareHeads event with
+  | some (a, b) => pairOfN (names.idxOf a) (names.idxOf b)
+  | none => none
+
+/-- The optional pair is in `before`. -/
+def optMem (y : Option (Nat × Nat)) (before : List (Nat × Nat)) : Bool :=
+  match y with
+  | some p => decide (p ∈ before)
+  | none => true
+
+/-- `p` has a colour below `registers` (on `String` pairs). -/
+def colorOk (spec : WorkerSpec) (p : Pair) : Bool :=
+  match lookupFirst p spec.distances.colors with
+  | some i => decide (i < spec.distances.registers)
+  | none => false
+
+theorem colorOk_iff {spec : WorkerSpec} {p : Pair} : colorOk spec p = true ↔ ColorOk spec p := by
+  unfold colorOk ColorOk
+  split <;> simp_all
+
+/-- The facts of one row, on the index certificate. -/
+def rowCheck (spec : WorkerSpec) (colorsN : List ((Nat × Nat) × Nat))
+    (CN : List (List (Nat × Nat))) (r : Nat) (row : Row) : Bool :=
+  let before := CN.getD r []
+  let succs := row.targets.flatMap fun t => CN.getD t []
+  let colored := succs.map fun q => (q, lookupFirst q colorsN)
+  row.targets.all (fun t => decide (t < spec.program.code.length)) &&
+  (eventHeads row.event).all (fun h => decide (h ∈ spec.names)) &&
+  colored.all (fun c => match c.2 with
+    | some i => decide (i < spec.distances.registers)
+    | none => false) &&
+  colored.all (fun c => colored.all fun c' => !decide (c.2 = c'.2) || decide (c.1 = c'.1)) &&
+  succs.all (fun q => optMem (imageN spec.names row.event q) before) &&
+  optMem (comparePairN spec.names row.event) before &&
+  (!row.targets.isEmpty || before.isEmpty)
+
+/-- `rowCheck` on the rows `lo, …, lo + n - 1` (split so that the kernel checks it in pieces). -/
+def rowsCheck (spec : WorkerSpec) (colorsN : List ((Nat × Nat) × Nat))
+    (CN : List (List (Nat × Nat))) (lo n : Nat) : Bool :=
+  (List.range' lo n).all fun r =>
+    match spec.program.code[r]? with
+    | some row => rowCheck spec colorsN CN r row
+    | none => true
+
+theorem rowsCheck_append (spec : WorkerSpec) (colorsN : List ((Nat × Nat) × Nat))
+    (CN : List (List (Nat × Nat))) (lo a b : Nat) :
+    rowsCheck spec colorsN CN lo (a + b) =
+      (rowsCheck spec colorsN CN lo a && rowsCheck spec colorsN CN (lo + a) b) := by
+  unfold rowsCheck
+  rw [← List.all_append]
+  congr 1
+  simp
+
+/-- The global facts: names, colours, ranges, sizes, and the `start` mapping. -/
+def globalCheck (spec : WorkerSpec) (colorsN : List ((Nat × Nat) × Nat))
+    (CN : List (List (Nat × Nat))) : Bool :=
+  decide spec.names.Nodup &&
+  decide (spec.distances.colors = colorsN.map fun e => (pairName spec.names e.1, e.2)) &&
+  colorsN.all (fun e => decide (e.1.1 < spec.names.length) && decide (e.1.2 < spec.names.length)) &&
+  CN.all (fun l => l.all fun q => decide (q.1 < q.2) && decide (q.2 < spec.names.length)) &&
+  decide (CN.length = spec.program.code.length) &&
+  decide ((CN.map List.length).sum <
+    spec.program.code.length * spec.names.length * spec.names.length + 1) &&
+  decide (spec.program.start < spec.program.code.length) &&
+  (CN.getD spec.program.start []).all (fun q =>
+    (startMapping spec).any fun e => decide (e.1 = pairName spec.names q)) &&
+  decide (((startMapping spec).map fun e => lookupFirst e.1 spec.distances.colors).Nodup) &&
+  (startMapping spec).all (fun e => colorOk spec e.1)
+
+/-! ## The certificate checks give the table facts -/
+
+section CertificateSound
+
+variable {spec : WorkerSpec} {colorsN : List ((Nat × Nat) × Nat)} {CN : List (List (Nat × Nat))}
+
+/-- `globalCheck`, unpacked. -/
+structure GlobalFacts (spec : WorkerSpec) (colorsN : List ((Nat × Nat) × Nat))
+    (CN : List (List (Nat × Nat))) : Prop where
+  namesNodup : spec.names.Nodup
+  colorsEq : spec.distances.colors = colorsN.map fun e => (pairName spec.names e.1, e.2)
+  colorsRange : ∀ e ∈ colorsN, e.1.1 < spec.names.length ∧ e.1.2 < spec.names.length
+  certRange : ∀ l ∈ CN, ∀ q ∈ l, q.1 < q.2 ∧ q.2 < spec.names.length
+  certLength : CN.length = spec.program.code.length
+  certWeight : (CN.map List.length).sum <
+    spec.program.code.length * spec.names.length * spec.names.length + 1
+  startInRange : spec.program.start < spec.program.code.length
+  startMapped : ∀ q ∈ CN.getD spec.program.start [],
+    ∃ e ∈ startMapping spec, e.1 = pairName spec.names q
+  startColorsNodup :
+    ((startMapping spec).map fun e => lookupFirst e.1 spec.distances.colors).Nodup
+  startColored : ∀ e ∈ startMapping spec, colorOk spec e.1 = true
+
+theorem globalFacts_of_check (hcheck : globalCheck spec colorsN CN = true) :
+    GlobalFacts spec colorsN CN := by
+  simp only [globalCheck, Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true,
+    List.any_eq_true] at hcheck
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨hnodup, hcolorsEq⟩, hcolorsRange⟩, hcertRange⟩, hcertLength⟩, hcertWeight⟩,
+    hstart⟩, hstartMapped⟩, hstartNodup⟩, hstartColored⟩ := hcheck
+  exact ⟨hnodup, hcolorsEq, hcolorsRange, hcertRange, hcertLength, hcertWeight, hstart,
+    hstartMapped, hstartNodup, hstartColored⟩
+
+/-- `rowCheck`, unpacked. -/
+structure RowFacts (spec : WorkerSpec) (colorsN : List ((Nat × Nat) × Nat))
+    (CN : List (List (Nat × Nat))) (r : Nat) (row : Row) : Prop where
+  targetsInRange : ∀ t ∈ row.targets, t < spec.program.code.length
+  headsKnown : ∀ h ∈ eventHeads row.event, h ∈ spec.names
+  colored : ∀ t ∈ row.targets, ∀ q ∈ CN.getD t [],
+    ∃ i, lookupFirst q colorsN = some i ∧ i < spec.distances.registers
+  injective : ∀ t ∈ row.targets, ∀ q ∈ CN.getD t [], ∀ t' ∈ row.targets, ∀ q' ∈ CN.getD t' [],
+    lookupFirst q colorsN = lookupFirst q' colorsN → q = q'
+  image : ∀ t ∈ row.targets, ∀ q ∈ CN.getD t [], ∀ y,
+    imageN spec.names row.event q = some y → y ∈ CN.getD r []
+  compare : ∀ y, comparePairN spec.names row.event = some y → y ∈ CN.getD r []
+  targetless : row.targets = [] → CN.getD r [] = []
+
+theorem optMem_iff {y : Option (Nat × Nat)} {before : List (Nat × Nat)} :
+    optMem y before = true ↔ ∀ p, y = some p → p ∈ before := by
+  cases y <;> simp [optMem]
+
+theorem rowFacts_of_check {r : Nat} {row : Row} (hcheck : rowCheck spec colorsN CN r row = true) :
+    RowFacts spec colorsN CN r row := by
+  simp only [rowCheck, Bool.and_eq_true, List.all_eq_true, decide_eq_true_eq] at hcheck
+  obtain ⟨⟨⟨⟨⟨⟨htargets, hheads⟩, hcolored⟩, hinjective⟩, himage⟩, hcompare⟩, htargetless⟩ :=
+    hcheck
+  have hsucc : ∀ {t q}, t ∈ row.targets → q ∈ CN.getD t [] →
+      q ∈ row.targets.flatMap fun t => CN.getD t [] :=
+    fun ht hq => List.mem_flatMap.mpr ⟨_, ht, hq⟩
+  refine ⟨htargets, hheads, ?_, ?_, ?_, ?_, ?_⟩
+  · intro t ht q hq
+    have hq' := hcolored _ (List.mem_map_of_mem (f := fun q => (q, lookupFirst q colorsN))
+      (hsucc ht hq))
+    revert hq'
+    cases lookupFirst q colorsN <;> simp
+  · intro t ht q hq t' ht' q' hq' hcolorEq
+    have hpair := hinjective _ (List.mem_map_of_mem (f := fun q => (q, lookupFirst q colorsN))
+      (hsucc ht hq)) _ (List.mem_map_of_mem (f := fun q => (q, lookupFirst q colorsN))
+      (hsucc ht' hq'))
+    simpa [hcolorEq] using hpair
+  · intro t ht q hq y hy
+    exact optMem_iff.mp (himage q (hsucc ht hq)) y hy
+  · intro y hy
+    exact optMem_iff.mp hcompare y hy
+  · intro hnil
+    rw [hnil] at htargetless
+    simpa using htargetless
+
+theorem imageN_of_not_copy {names : List String} {event : Event}
+    (hnotCopy : ∀ t s, event ≠ .copy t s) (q : Nat × Nat) : imageN names event q = some q := by
+  cases event with
+  | copy t s => exact absurd rfl (hnotCopy t s)
+  | _ => rfl
+
+theorem compareHeads_mem {event : Event} {a b : String}
+    (hcompare : compareHeads event = some (a, b)) :
+    a ∈ eventHeads event ∧ b ∈ eventHeads event := by
+  cases event <;> simp only [compareHeads, reduceCtorEq, Option.some.injEq, Prod.mk.injEq]
+    at hcompare <;> obtain ⟨rfl, rfl⟩ := hcompare <;> simp [eventHeads]
+
+theorem pairOf_eq_map {names : List String} (hnodup : names.Nodup) {a b : String}
+    (ha : a ∈ names) (hb : b ∈ names) :
+    pairOf names a b = (pairOfN (names.idxOf a) (names.idxOf b)).map (pairName names) := by
+  have hpair := pairOf_headName hnodup (List.idxOf_lt_length_of_mem ha)
+    (List.idxOf_lt_length_of_mem hb)
+  rwa [headName_idxOf ha, headName_idxOf hb] at hpair
+
+/-- The decoded certificate is a post-fixpoint of the liveness transfer. -/
+theorem postFix_certTable (hglobal : GlobalFacts spec colorsN CN)
+    (hrows : ∀ (r : Nat) (row : Row), spec.program.code[r]? = some row →
+      RowFacts spec colorsN CN r row) :
+    PostFix spec.program.code (distanceTransfer spec.names) (certTable spec.names CN) := by
+  intro r row hrow y hy
+  have hrowFacts := hrows r row hrow
+  have hsucc : ∀ {p : Pair}, p ∈ successorsUnion (certTable spec.names CN) row.targets →
+      ∃ t ∈ row.targets, ∃ q ∈ CN.getD t [], pairName spec.names q = p := by
+    intro p hp
+    obtain ⟨t, ht, hpt⟩ := (mem_successorsUnion _ _ _).mp hp
+    rw [certTable_getD, List.mem_map] at hpt
+    obtain ⟨q, hq, rfl⟩ := hpt
+    exact ⟨t, ht, q, hq, rfl⟩
+  have hrange : ∀ {t : Nat} {q : Nat × Nat}, q ∈ CN.getD t [] →
+      q.1 < q.2 ∧ q.2 < spec.names.length := fun hq => by
+    obtain ⟨l, hl, hql⟩ := mem_getD_of_mem hq
+    exact hglobal.certRange l hl _ hql
+  rw [certTable_getD, List.mem_map]
+  unfold recompute at hy
+  obtain ⟨event, targets⟩ := row
+  by_cases hcopy : ∃ t s, event = .copy t s
+  · obtain ⟨target, source, rfl⟩ := hcopy
+    obtain ⟨p, hp, hpair⟩ := mem_transfer_copy_iff.mp hy
+    obtain ⟨t, ht, q, hq, rfl⟩ := hsucc hp
+    have hqRange := hrange hq
+    have htarget : target ∈ spec.names := hrowFacts.headsKnown target (by simp [eventHeads])
+    have hsource : source ∈ spec.names := hrowFacts.headsKnown source (by simp [eventHeads])
+    have hfirst : q.1 < spec.names.length := by omega
+    have hpair' : pairOf spec.names (substHead target source (headName spec.names q.1))
+        (substHead target source (headName spec.names q.2)) = some y := hpair
+    rw [substHead_headName hglobal.namesNodup htarget hsource hfirst,
+      substHead_headName hglobal.namesNodup htarget hsource hqRange.2,
+      pairOf_headName hglobal.namesNodup (substN_lt hsource hfirst)
+        (substN_lt hsource hqRange.2)] at hpair'
+    obtain ⟨y₀, hy₀, rfl⟩ := Option.map_eq_some_iff.mp hpair'
+    exact ⟨y₀, hrowFacts.image t ht q hq y₀ hy₀, rfl⟩
+  · have hnotCopy : ∀ t s, event ≠ .copy t s := fun t s h => hcopy ⟨t, s, h⟩
+    rcases mem_transfer_inv hnotCopy hy with hy | ⟨a, b, hab, hpair⟩
+    · obtain ⟨t, ht, q, hq, rfl⟩ := hsucc hy
+      exact ⟨q, hrowFacts.image t ht q hq q (imageN_of_not_copy hnotCopy q), rfl⟩
+    · obtain ⟨haHeads, hbHeads⟩ := compareHeads_mem hab
+      rw [pairOf_eq_map hglobal.namesNodup (hrowFacts.headsKnown a haHeads)
+        (hrowFacts.headsKnown b hbHeads)] at hpair
+      obtain ⟨y₀, hy₀, rfl⟩ := Option.map_eq_some_iff.mp hpair
+      refine ⟨y₀, hrowFacts.compare y₀ ?_, rfl⟩
+      unfold comparePairN
+      rw [hab]
+      exact hy₀
+
+theorem weight_certTable (code : List Row) (names : List String)
+    (hlength : CN.length = code.length) :
+    weight code (certTable names CN) = (CN.map List.length).sum := by
+  unfold weight
+  simp only [certTable_getD, List.length_map]
+  rw [← hlength]
+  exact sum_range_getD_length CN
+
+/-- **The certificate checks give the table facts.** -/
+theorem tableFacts_of_certificate (hglobalCheck : globalCheck spec colorsN CN = true)
+    (hrowsCheck : rowsCheck spec colorsN CN 0 spec.program.code.length = true) :
+    TableFacts spec := by
+  have hglobal := globalFacts_of_check hglobalCheck
+  have hrows : ∀ (r : Nat) (row : Row), spec.program.code[r]? = some row →
+      RowFacts spec colorsN CN r row := by
+    intro r row hrow
+    have hrlt : r < spec.program.code.length := (List.getElem?_eq_some_iff.mp hrow).1
+    unfold rowsCheck at hrowsCheck
+    rw [List.all_eq_true] at hrowsCheck
+    have hr := hrowsCheck r (List.mem_range'_1.mpr ⟨Nat.zero_le _, by omega⟩)
+    rw [hrow] at hr
+    exact rowFacts_of_check hr
+  obtain ⟨happrox, hpostLive⟩ := fixpoint_spec (code := spec.program.code)
+    (transfer := distanceTransfer spec.names) (transfer_mono spec.names)
+    (transfer_nodup spec.names) (postFix_certTable hglobal hrows)
+    (fuel := spec.program.code.length * spec.names.length * spec.names.length + 1)
+    (by rw [weight_certTable _ _ hglobal.certLength]; exact hglobal.certWeight)
+  have hrange : ∀ {t : Nat} {q : Nat × Nat}, q ∈ CN.getD t [] →
+      q.1 < q.2 ∧ q.2 < spec.names.length := fun hq => by
+    obtain ⟨l, hl, hql⟩ := mem_getD_of_mem hq
+    exact hglobal.certRange l hl _ hql
+  have hbelow : ∀ (t : Nat) {p : Pair}, p ∈ liveAt spec t →
+      ∃ q ∈ CN.getD t [], pairName spec.names q = p := by
+    intro t p hp
+    have hpC := happrox.below t hp
+    rw [certTable_getD, List.mem_map] at hpC
+    exact hpC
+  have hafter : ∀ (row : Row) {p : Pair}, p ∈ afterAt spec row →
+      ∃ t ∈ row.targets, ∃ q ∈ CN.getD t [], pairName spec.names q = p := by
+    intro row p hp
+    obtain ⟨t, ht, hpt⟩ := (mem_successorsUnion _ _ _).mp hp
+    exact ⟨t, ht, hbelow t hpt⟩
+  have hlookup : ∀ {t : Nat} {q : Nat × Nat}, q ∈ CN.getD t [] →
+      lookupFirst (pairName spec.names q) spec.distances.colors = lookupFirst q colorsN := by
+    intro t q hq
+    have hqRange := hrange hq
+    rw [hglobal.colorsEq]
+    exact lookupFirst_pairName hglobal.namesNodup colorsN hglobal.colorsRange
+      ⟨by omega, hqRange.2⟩
+  refine
+    { startInRange := hglobal.startInRange
+      targetsInRange := fun r row hrow => (hrows r row hrow).targetsInRange
+      afterColored := ?_
+      afterColorsInjective := ?_
+      afterCanonical := ?_
+      transferLive := fun r row hrow p hp => hpostLive r row hrow hp
+      targetlessDead := ?_
+      startLiveMapped := ?_
+      startColorsNodup := hglobal.startColorsNodup
+      startColored := fun e he => colorOk_iff.mp (hglobal.startColored e he) }
+  · intro r row hrow p hp
+    obtain ⟨t, ht, q, hq, rfl⟩ := hafter row hp
+    obtain ⟨i, hi, hlt⟩ := (hrows r row hrow).colored t ht q hq
+    exact ⟨i, (hlookup hq).trans hi, hlt⟩
+  · intro r row hrow p hp p' hp' hcolorEq
+    obtain ⟨t, ht, q, hq, rfl⟩ := hafter row hp
+    obtain ⟨t', ht', q', hq', rfl⟩ := hafter row hp'
+    rw [hlookup hq, hlookup hq'] at hcolorEq
+    rw [(hrows r row hrow).injective t ht q hq t' ht' q' hq' hcolorEq]
+  · intro r row hrow p hp
+    obtain ⟨t, ht, q, hq, rfl⟩ := hafter row hp
+    have hqRange := hrange hq
+    have hpairN : pairOfN q.1 q.2 = some q := by
+      unfold pairOfN
+      rw [if_neg (by omega), if_pos hqRange.1]
+    show pairOf spec.names (headName spec.names q.1) (headName spec.names q.2) = _
+    rw [pairOf_headName hglobal.namesNodup (by omega) hqRange.2, hpairN]
+    rfl
+  · intro r row hrow hnil
+    have hcert := (hrows r row hrow).targetless hnil
+    apply List.eq_nil_iff_forall_not_mem.mpr
+    intro p hp
+    obtain ⟨q, hq, -⟩ := hbelow r hp
+    rw [hcert] at hq
+    simp at hq
+  · intro p hp
+    obtain ⟨q, hq, rfl⟩ := hbelow _ hp
+    obtain ⟨e, he, hkey⟩ := hglobal.startMapped q hq
+    exact ⟨e.2, by rw [← hkey]; exact he⟩
+
+end CertificateSound
+
+/-! ## The concrete workers
+
+The certificates were generated by evaluating `liveDistances` on the two workers and writing each
+pair as head indices (`names.idxOf`); they are trusted only through `globalCheck` / `rowsCheck`,
+which the kernel evaluates below (in pieces of 50 rows). -/
+
+section Concrete
+
+open PalPeg.ScaGsTables
+
+set_option maxRecDepth 100000
+
+theorem rowsCheck_split {spec : WorkerSpec} {colorsN : List ((Nat × Nat) × Nat)}
+    {CN : List (List (Nat × Nat))} (lo a b : Nat)
+    (hfirst : rowsCheck spec colorsN CN lo a = true)
+    (hrest : rowsCheck spec colorsN CN (lo + a) b = true) :
+    rowsCheck spec colorsN CN lo (a + b) = true := by
+  rw [rowsCheck_append, hfirst, hrest]
+  rfl
+
+/-- The matcher's live pairs by row, as head-index pairs (generated from `liveDistances`). -/
+def matcherLive : List (List (Nat × Nat)) := [
+  /- 0 -/ [],
+  /- 1 -/ [(0, 4)],
+  /- 2 -/ [(0, 2)],
+  /- 3 -/ [(0, 3), (2, 3)],
+  /- 4 -/ [(0, 3), (2, 3), (3, 5)],
+  /- 5 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (2, 7)],
+  /- 6 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (2, 7)],
+  /- 7 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (3, 6), (2, 6), (2, 7)],
+  /- 8 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (2, 7), (7, 11), (3, 6), (2, 6), (6, 11)],
+  /- 9 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (2, 7), (7, 11), (3, 6), (2, 6), (6, 11)],
+  /- 10 -/ [(0, 3), (2, 3)],
+  /- 11 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11), (3, 6), (2, 6), (6, 11)],
+  /- 12 -/ [(0, 3), (2, 3)],
+  /- 13 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11), (3, 6), (2, 6), (6, 11)],
+  /- 14 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11), (3, 6), (2, 6), (6, 11)],
+  /- 15 -/ [(0, 3), (2, 3)],
+  /- 16 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 17 -/ [(3, 7), (3, 6), (0, 3), (2, 3), (2, 6)],
+  /- 18 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11), (3, 6), (2, 6), (6, 11)],
+  /- 19 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 20 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 21 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 22 -/ [(3, 8), (3, 6), (0, 3), (2, 3), (2, 6)],
+  /- 23 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11), (3, 6), (2, 6), (6, 11)],
+  /- 24 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 25 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 26 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (2, 7), (7, 11)],
+  /- 27 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 28 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (2, 7), (7, 11)],
+  /- 29 -/ [(3, 8), (3, 6), (3, 12), (0, 3), (2, 3), (2, 6)],
+  /- 30 -/ [(3, 5), (0, 3), (2, 5), (3, 10)],
+  /- 31 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 32 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 33 -/ [(3, 8), (3, 6), (3, 12), (0, 3), (2, 3)],
+  /- 34 -/ [(3, 8), (3, 6), (3, 12), (0, 3), (2, 3), (2, 6)],
+  /- 35 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 36 -/ [(3, 5), (0, 3), (2, 5), (3, 10)],
+  /- 37 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 38 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 39 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3)],
+  /- 40 -/ [(3, 8), (3, 6), (3, 12), (0, 3), (2, 3), (2, 6)],
+  /- 41 -/ [(3, 5), (3, 10), (2, 5), (0, 3)],
+  /- 42 -/ [(3, 5), (0, 3), (2, 5), (3, 10)],
+  /- 43 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 44 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 45 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12)],
+  /- 46 -/ [(3, 5), (3, 10), (2, 5), (0, 3)],
+  /- 47 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 48 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 49 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (7, 9), (2, 7)],
+  /- 50 -/ [(3, 5), (0, 3), (2, 5), (3, 10)],
+  /- 51 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 52 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 53 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (7, 9), (2, 7)],
+  /- 54 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 55 -/ [(3, 5), (3, 10), (2, 5), (0, 3)],
+  /- 56 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 57 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 58 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (3, 6), (6, 9), (2, 6), (2, 7), (7, 9)],
+  /- 59 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 60 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 61 -/ [(3, 5), (3, 10), (2, 5), (0, 3)],
+  /- 62 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 63 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 64 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (6, 11), (6, 9), (2, 6), (2, 7), (7, 11), (7, 9)],
+  /- 65 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 66 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 67 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 68 -/ [(3, 5), (3, 10), (2, 5), (0, 3)],
+  /- 69 -/ [(3, 5), (2, 5), (0, 3), (3, 10)],
+  /- 70 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 71 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 72 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (6, 11), (6, 9), (2, 6), (2, 7), (7, 11), (7, 9)],
+  /- 73 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 74 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 75 -/ [(3, 5), (0, 3), (2, 5), (3, 10)],
+  /- 76 -/ [(3, 5), (2, 5), (0, 3)],
+  /- 77 -/ [(3, 5), (3, 10), (2, 5), (0, 3)],
+  /- 78 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 79 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 80 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3)],
+  /- 81 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (6, 11), (6, 9), (2, 6), (2, 7), (7, 11), (7, 9)],
+  /- 82 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 83 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 84 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 85 -/ [(3, 5), (2, 5), (0, 3)],
+  /- 86 -/ [(3, 5), (3, 10), (2, 5), (0, 3)],
+  /- 87 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 88 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 89 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3)],
+  /- 90 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (6, 11), (6, 9), (2, 6), (2, 7), (7, 11), (7, 9)],
+  /- 91 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (6, 11), (6, 9), (2, 6), (2, 7), (7, 11), (7, 9)],
+  /- 92 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 93 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 94 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 95 -/ [(3, 5), (2, 5), (0, 3), (3, 10)],
+  /- 96 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 97 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 98 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3)],
+  /- 99 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (6, 11), (6, 9), (2, 6), (2, 7), (7, 11), (7, 9)],
+  /- 100 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 101 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (6, 11), (6, 9), (2, 6), (2, 7), (7, 11), (7, 9)],
+  /- 102 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 103 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 104 -/ [(3, 5), (2, 5), (0, 3)],
+  /- 105 -/ [(3, 5), (3, 10), (2, 5), (0, 3)],
+  /- 106 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 107 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 108 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 109 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (6, 11), (6, 9), (2, 6), (2, 7), (7, 11), (7, 9)],
+  /- 110 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 111 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 112 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (6, 11), (6, 9), (2, 6), (2, 7), (7, 11), (7, 9)],
+  /- 113 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 114 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 115 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 116 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 117 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 118 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (6, 11), (6, 9), (2, 6), (2, 7), (7, 11), (7, 9), (8, 10)],
+  /- 119 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 120 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 121 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 122 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 123 -/ [(0, 3), (2, 3), (3, 7), (3, 8), (3, 9), (3, 12), (3, 5), (5, 9), (5, 12),
+      (6, 11), (6, 9), (2, 6), (2, 7), (7, 11), (7, 9)],
+  /- 124 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 125 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 126 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 127 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 128 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5), (3, 10)],
+  /- 129 -/ [(3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (3, 5), (5, 9), (5, 12), (3, 7),
+      (6, 11), (6, 9), (2, 6), (2, 7), (7, 11), (7, 9), (8, 10)],
+  /- 130 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 131 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 132 -/ [(0, 3), (2, 3), (3, 7)],
+  /- 133 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 134 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 135 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 136 -/ [(3, 5), (0, 3), (2, 3), (3, 7), (2, 7), (7, 11)],
+  /- 137 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 138 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5), (3, 10)],
+  /- 139 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 140 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 141 -/ [(0, 3), (2, 3), (3, 13)],
+  /- 142 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 143 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 144 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (3, 10), (2, 5), (0, 3)],
+  /- 145 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5), (3, 10)],
+  /- 146 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 147 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 148 -/ [(0, 3), (2, 3), (3, 5), (3, 13)],
+  /- 149 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 150 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 151 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (3, 10), (2, 5), (0, 3)],
+  /- 152 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 153 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 154 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (2, 7), (7, 13), (3, 13)],
+  /- 155 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 156 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 157 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5), (3, 10)],
+  /- 158 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 159 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 160 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (2, 7), (7, 13), (3, 13)],
+  /- 161 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 162 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 163 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 164 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (3, 10), (2, 5), (0, 3)],
+  /- 165 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 166 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 167 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (2, 7), (7, 13), (3, 13), (3, 6), (2, 6)],
+  /- 168 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 169 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 170 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 171 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 172 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (3, 10), (2, 5), (0, 3)],
+  /- 173 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 174 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 175 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (3, 13), (6, 11), (2, 6)],
+  /- 176 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 177 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 178 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 179 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 180 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 181 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (3, 10), (2, 5), (0, 3)],
+  /- 182 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (2, 5), (0, 3), (3, 10)],
+  /- 183 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 184 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 185 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (3, 13), (6, 11), (2, 6)],
+  /- 186 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 187 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 188 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5), (8, 10)],
+  /- 189 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 190 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 191 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 192 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5), (3, 10)],
+  /- 193 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (2, 5), (0, 3)],
+  /- 194 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (3, 10), (2, 5), (0, 3)],
+  /- 195 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 196 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 197 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (3, 13), (6, 11), (2, 6)],
+  /- 198 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 199 -/ [(3, 5), (0, 3), (2, 5)],
+  /- 200 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5), (8, 10)],
+  /- 201 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 202 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 203 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 204 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (2, 5), (0, 3)],
+  /- 205 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (3, 10), (2, 5), (0, 3)],
+  /- 206 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 207 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 208 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13), (6, 11), (2, 6)],
+  /- 209 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 210 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 211 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 212 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (2, 5), (0, 3), (3, 10)],
+  /- 213 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 214 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 215 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13), (6, 11)],
+  /- 216 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13), (6, 11), (2, 6)],
+  /- 217 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 218 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 219 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (2, 5), (0, 3)],
+  /- 220 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (3, 10), (2, 5), (0, 3)],
+  /- 221 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 222 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 223 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 224 -/ [(0, 3), (2, 3), (3, 13), (3, 7)],
+  /- 225 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13), (6, 11), (2, 6)],
+  /- 226 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 227 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 228 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 229 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 230 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 231 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 232 -/ [(0, 3), (2, 3), (3, 13), (3, 7)],
+  /- 233 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13), (6, 11), (2, 6)],
+  /- 234 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 235 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 236 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 237 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 238 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 239 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (3, 13)],
+  /- 240 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 241 -/ [(0, 3), (2, 3), (3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (3, 13)],
+  /- 242 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 243 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 244 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 245 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (0, 3), (2, 3), (5, 9), (5, 12), (3, 7),
+      (7, 11), (7, 9), (2, 7)],
+  /- 246 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 247 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 248 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 249 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 250 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 251 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 252 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 253 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 254 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 255 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 256 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 257 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 258 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 259 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 260 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 261 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 262 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 263 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 264 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 265 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 266 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 267 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 268 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 269 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 270 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 271 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 272 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 273 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 274 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 275 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 276 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 277 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 278 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 279 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 280 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 281 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (0, 3), (2, 5)],
+  /- 282 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 283 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 284 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 285 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 286 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 287 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 288 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 289 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 290 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 291 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 292 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)],
+  /- 293 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (0, 3), (2, 3), (3, 13)]]
+
+/-- The matcher's colours on head indices. -/
+def matcherColors : List ((Nat × Nat) × Nat) :=
+  [((3, 5), 0), ((0, 3), 1), ((7, 11), 2), ((6, 11), 3), ((5, 12), 4), ((5, 9), 5),
+   ((3, 8), 6), ((3, 7), 7), ((2, 7), 8), ((2, 6), 9), ((2, 3), 10), ((3, 6), 11),
+   ((7, 9), 12), ((6, 9), 13), ((3, 12), 14), ((3, 9), 15), ((8, 10), 11), ((7, 13), 4),
+   ((3, 13), 5), ((2, 5), 2), ((3, 10), 3), ((0, 4), 0), ((0, 2), 0)]
+
+/-- The flag worker's live pairs by row, as head-index pairs (generated from `liveDistances`). -/
+def flagsLive : List (List (Nat × Nat)) := [
+  /- 0 -/ [],
+  /- 1 -/ [(0, 16), (15, 16), (1, 16), (1, 15), (1, 14), (0, 1)],
+  /- 2 -/ [(0, 17), (15, 17), (1, 17), (1, 15), (1, 14), (0, 1)],
+  /- 3 -/ [(0, 17), (15, 17), (1, 17), (1, 15), (1, 14), (0, 1)],
+  /- 4 -/ [(0, 17), (15, 17), (1, 17), (1, 15), (1, 14), (0, 1)],
+  /- 5 -/ [(0, 17), (15, 17), (2, 17), (2, 15), (1, 14), (0, 2)],
+  /- 6 -/ [(0, 17), (15, 17), (2, 17), (2, 15), (1, 4), (0, 2)],
+  /- 7 -/ [(0, 17), (15, 17)],
+  /- 8 -/ [(2, 17), (15, 17), (2, 15), (1, 4), (0, 2), (0, 17)],
+  /- 9 -/ [(0, 17), (15, 17)],
+  /- 10 -/ [(2, 17), (15, 17), (2, 15), (1, 4), (0, 2), (0, 17)],
+  /- 11 -/ [(0, 17), (15, 17)],
+  /- 12 -/ [(0, 17), (15, 17)],
+  /- 13 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3)],
+  /- 14 -/ [(0, 17), (15, 17)],
+  /- 15 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (2, 3)],
+  /- 16 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7)],
+  /- 17 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7)],
+  /- 18 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7), (3, 6), (2, 6)],
+  /- 19 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7), (7, 11), (3, 6), (2, 6), (6, 11)],
+  /- 20 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7), (7, 11), (3, 6), (2, 6), (6, 11)],
+  /- 21 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 22 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (3, 6), (0, 17), (2, 6), (6, 11)],
+  /- 23 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 7), (0, 2), (0, 17), (1, 4)],
+  /- 24 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (3, 6), (0, 17), (2, 6), (6, 11)],
+  /- 25 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (3, 6), (0, 17), (2, 6), (6, 11)],
+  /- 26 -/ [(11, 17), (15, 17), (11, 15), (0, 3), (1, 7), (0, 2), (2, 15), (0, 17), (2, 17),
+      (1, 4)],
+  /- 27 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 28 -/ [(3, 7), (3, 6), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2),
+      (2, 3), (2, 6)],
+  /- 29 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (3, 6), (0, 17), (2, 6), (6, 11)],
+  /- 30 -/ [(11, 17), (15, 17), (11, 15), (0, 3), (1, 7), (0, 2), (2, 15), (0, 17), (2, 17),
+      (1, 4)],
+  /- 31 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 32 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 33 -/ [(3, 8), (3, 6), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2),
+      (2, 3), (2, 6)],
+  /- 34 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (3, 6), (0, 17), (2, 6), (6, 11)],
+  /- 35 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 7), (0, 2), (2, 15), (0, 17),
+      (2, 17), (1, 4)],
+  /- 36 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 37 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7), (7, 11)],
+  /- 38 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 39 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7), (7, 11)],
+  /- 40 -/ [(3, 8), (3, 6), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (2, 3), (2, 6)],
+  /- 41 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (1, 7),
+      (0, 17), (2, 17), (1, 4)],
+  /- 42 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 43 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 44 -/ [(3, 8), (3, 6), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (2, 3)],
+  /- 45 -/ [(3, 8), (3, 6), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (2, 3), (2, 6)],
+  /- 46 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 47 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 48 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 49 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (2, 3)],
+  /- 50 -/ [(3, 8), (3, 6), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (2, 3), (2, 6)],
+  /- 51 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4), (3, 10)],
+  /- 52 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 53 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 54 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3)],
+  /- 55 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 56 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4), (3, 10)],
+  /- 57 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 58 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 59 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (7, 9), (2, 7)],
+  /- 60 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 61 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 62 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 63 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 64 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (7, 9), (2, 7)],
+  /- 65 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 66 -/ [(0, 17), (15, 17), (2, 17), (2, 15), (1, 4), (0, 2), (0, 3)],
+  /- 67 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 68 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 69 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (3, 6), (6, 9), (2, 6),
+      (2, 7), (7, 9)],
+  /- 70 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 71 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 72 -/ [(0, 17), (15, 17), (2, 17), (2, 15), (1, 4), (0, 2), (2, 13), (0, 3)],
+  /- 73 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 74 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 75 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 76 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 77 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4)],
+  /- 78 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 79 -/ [(0, 17), (15, 17), (2, 17), (2, 15), (1, 4), (0, 2), (2, 13), (0, 3), (3, 10)],
+  /- 80 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 81 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 82 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 83 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 84 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 85 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4), (3, 10)],
+  /- 86 -/ [(0, 17), (15, 17), (2, 17), (2, 15), (1, 4), (0, 2), (2, 13), (0, 3)],
+  /- 87 -/ [(0, 17), (15, 17), (2, 17), (2, 15), (1, 4), (0, 2), (2, 13), (0, 3), (3, 10)],
+  /- 88 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 89 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 90 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 91 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 92 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 93 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 94 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 95 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4), (3, 10)],
+  /- 96 -/ [(0, 17), (15, 17), (2, 17), (2, 15), (1, 4), (0, 2), (2, 13)],
+  /- 97 -/ [(0, 17), (15, 17), (2, 17), (2, 15), (1, 4), (0, 2), (2, 13)],
+  /- 98 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 99 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 100 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 7), (0, 17),
+      (0, 2), (1, 4)],
+  /- 101 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 102 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (3, 5),
+      (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6), (2, 7), (7, 11),
+      (7, 9), (0, 2), (0, 17)],
+  /- 103 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 104 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 105 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4), (3, 10)],
+  /- 106 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4), (3, 10)],
+  /- 107 -/ [(0, 17), (15, 17), (2, 17), (2, 15), (1, 4), (0, 2)],
+  /- 108 -/ [(0, 17), (15, 17), (2, 17), (2, 15), (1, 4), (0, 2), (2, 13)],
+  /- 109 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 110 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 111 -/ [(3, 8), (3, 9), (3, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 7), (0, 17),
+      (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 112 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 113 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 114 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (3, 5),
+      (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6), (2, 7), (7, 11),
+      (7, 9), (0, 2), (0, 17)],
+  /- 115 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 116 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 117 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4)],
+  /- 118 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4)],
+  /- 119 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4), (3, 10)],
+  /- 120 -/ [(2, 17), (15, 17), (2, 15), (1, 4), (0, 2), (0, 17)],
+  /- 121 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 122 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 123 -/ [(3, 8), (3, 9), (3, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 7), (0, 17),
+      (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 124 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 125 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 126 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 127 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (3, 5),
+      (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6), (2, 7), (7, 11),
+      (7, 9), (0, 2), (0, 17)],
+  /- 128 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 129 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 130 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4)],
+  /- 131 -/ [(2, 17), (15, 17), (2, 15), (1, 4), (0, 2), (0, 17)],
+  /- 132 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 133 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 134 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 7),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 135 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9), (8, 10)],
+  /- 136 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 137 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7)],
+  /- 138 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 139 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7)],
+  /- 140 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 7),
+      (3, 8), (3, 9), (3, 12), (3, 5), (5, 9), (5, 12), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 141 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 142 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 143 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4)],
+  /- 144 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4)],
+  /- 145 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3)],
+  /- 146 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 147 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 148 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (1, 7), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 149 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9), (8, 10)],
+  /- 150 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 151 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 152 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 7)],
+  /- 153 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 154 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 155 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4)],
+  /- 156 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4)],
+  /- 157 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (2, 3)],
+  /- 158 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 159 -/ [(3, 5), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (3, 7), (2, 3),
+      (2, 7), (7, 11), (0, 17)],
+  /- 160 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 161 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 162 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 163 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 13)],
+  /- 164 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 165 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 166 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4)],
+  /- 167 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (0, 2), (2, 15), (7, 13), (0, 17),
+      (2, 17), (1, 4)],
+  /- 168 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7)],
+  /- 169 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4), (3, 10)],
+  /- 170 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 171 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 172 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5), (3, 13)],
+  /- 173 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 174 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 175 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7)],
+  /- 176 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 177 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4), (3, 10)],
+  /- 178 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 179 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 180 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (2, 7), (7, 13), (3, 13)],
+  /- 181 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 182 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 183 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7), (3, 6), (2, 6)],
+  /- 184 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 185 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 186 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 187 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 188 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (2, 7), (7, 13), (3, 13)],
+  /- 189 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 190 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 191 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7), (7, 11), (3, 6), (2, 6), (6, 11)],
+  /- 192 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 193 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 194 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 195 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (2, 7), (7, 13), (3, 13), (3, 6), (2, 6)],
+  /- 196 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 197 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 198 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7), (7, 11), (3, 6), (2, 6), (6, 11)],
+  /- 199 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 200 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 201 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 202 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 203 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (7, 11), (2, 7), (7, 13), (3, 13), (6, 11), (2, 6)],
+  /- 204 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 205 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 206 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 207 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (3, 6), (0, 17), (2, 6), (6, 11)],
+  /- 208 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 209 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 210 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 211 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 212 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 213 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (7, 11), (2, 7), (7, 13), (3, 13), (6, 11), (2, 6)],
+  /- 214 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 215 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 216 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 7), (0, 2), (0, 17), (1, 4)],
+  /- 217 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (3, 6), (0, 17), (2, 6), (6, 11)],
+  /- 218 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (3, 6), (0, 17), (2, 6), (6, 11)],
+  /- 219 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 220 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 221 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4), (3, 10)],
+  /- 222 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 223 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 224 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (7, 11), (2, 7), (7, 13), (3, 13), (6, 11), (2, 6)],
+  /- 225 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 226 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 227 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 228 -/ [(3, 7), (3, 6), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2),
+      (2, 3), (2, 6)],
+  /- 229 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (3, 6), (0, 17), (2, 6), (6, 11)],
+  /- 230 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 231 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 232 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 233 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4), (3, 10)],
+  /- 234 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 235 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 236 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17), (6, 11), (2, 6)],
+  /- 237 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 238 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 239 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 240 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 241 -/ [(3, 8), (3, 6), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2),
+      (2, 3), (2, 6)],
+  /- 242 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (3, 6), (0, 17), (2, 6), (6, 11)],
+  /- 243 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4), (8, 10)],
+  /- 244 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 245 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 246 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 247 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4), (3, 10)],
+  /- 248 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4), (3, 10)],
+  /- 249 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 250 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 251 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17), (6, 11)],
+  /- 252 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17), (6, 11), (2, 6)],
+  /- 253 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 254 -/ [(3, 5), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6), (0, 2), (2, 15), (7, 13),
+      (0, 17), (2, 17), (1, 4)],
+  /- 255 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 256 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7), (7, 11)],
+  /- 257 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 258 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (3, 5), (3, 7),
+      (2, 3), (2, 7), (7, 11)],
+  /- 259 -/ [(3, 8), (3, 6), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (2, 3), (2, 6)],
+  /- 260 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4), (8, 10)],
+  /- 261 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 262 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 263 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 264 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 265 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4), (3, 10)],
+  /- 266 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 267 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 268 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 269 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 13), (3, 7)],
+  /- 270 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17), (6, 11), (2, 6)],
+  /- 271 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 272 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 273 -/ [(3, 8), (3, 6), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (2, 3)],
+  /- 274 -/ [(3, 8), (3, 6), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (2, 3), (2, 6)],
+  /- 275 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 276 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 277 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 278 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 279 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 280 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 281 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 282 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 13), (3, 7)],
+  /- 283 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17), (6, 11), (2, 6)],
+  /- 284 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 285 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 286 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (2, 3)],
+  /- 287 -/ [(3, 8), (3, 6), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (2, 3), (2, 6)],
+  /- 288 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 289 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 290 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 291 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 292 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 293 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 294 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 295 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (7, 11), (2, 7), (7, 13), (3, 13)],
+  /- 296 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 297 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (7, 11), (2, 7), (7, 13), (3, 13)],
+  /- 298 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 299 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 300 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3)],
+  /- 301 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 302 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 303 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 304 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 305 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 306 -/ [(3, 5), (3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4),
+      (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7), (0, 17), (0, 2)],
+  /- 307 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 308 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 309 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 310 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 311 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (7, 9), (2, 7)],
+  /- 312 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 313 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 314 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 315 -/ [(3, 8), (3, 5), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (7, 13),
+      (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 316 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 317 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 318 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 319 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 320 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (7, 9), (2, 7)],
+  /- 321 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 322 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 323 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 324 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 325 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 326 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 327 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (3, 6), (6, 9), (2, 6),
+      (2, 7), (7, 9)],
+  /- 328 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 329 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 330 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 331 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 332 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 333 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 334 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 335 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 336 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 337 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 338 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 339 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 340 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 341 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 342 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 343 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 344 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 345 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 346 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 347 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 348 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 349 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 350 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 351 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 352 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 353 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 354 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 355 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 356 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 7), (0, 17),
+      (0, 2), (1, 4)],
+  /- 357 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 358 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (3, 5),
+      (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6), (2, 7), (7, 11),
+      (7, 9), (0, 2), (0, 17)],
+  /- 359 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 360 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 361 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 362 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 363 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 364 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 365 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 366 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 367 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (3, 5),
+      (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6), (2, 7), (7, 11),
+      (7, 9), (0, 2), (0, 17)],
+  /- 368 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 369 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 370 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 371 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 372 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 373 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 374 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 375 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 376 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 377 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (3, 5),
+      (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6), (2, 7), (7, 11),
+      (7, 9), (0, 2), (0, 17)],
+  /- 378 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 379 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 380 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 381 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 382 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 383 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 384 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9), (8, 10)],
+  /- 385 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 386 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7)],
+  /- 387 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 388 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7)],
+  /- 389 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 7),
+      (3, 8), (3, 9), (3, 12), (3, 5), (5, 9), (5, 12), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9)],
+  /- 390 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 391 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 392 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 393 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 394 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 395 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 396 -/ [(3, 8), (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17),
+      (0, 2), (3, 5), (5, 9), (5, 12), (2, 3), (3, 7), (6, 11), (6, 9), (2, 6),
+      (2, 7), (7, 11), (7, 9), (8, 10)],
+  /- 397 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 398 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 399 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 7)],
+  /- 400 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 401 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (11, 17), (15, 17), (11, 15), (0, 3), (1, 6),
+      (7, 13), (0, 17), (0, 2), (2, 15), (2, 17), (1, 4)],
+  /- 402 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 403 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 404 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 405 -/ [(3, 5), (3, 7), (2, 3), (2, 7), (7, 11), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (0, 17)],
+  /- 406 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 407 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 408 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 13)],
+  /- 409 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 410 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 411 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 412 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 413 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5), (3, 13)],
+  /- 414 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 415 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 416 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 417 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 418 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (2, 7), (7, 13), (3, 13)],
+  /- 419 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 420 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 17), (15, 17), (2, 15), (0, 3),
+      (1, 4), (0, 2), (2, 3), (3, 13), (0, 17)],
+  /- 421 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 422 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 423 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (2, 7), (7, 13), (3, 13)],
+  /- 424 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 425 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 426 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (2, 7), (7, 13), (3, 13), (3, 6), (2, 6)],
+  /- 427 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 428 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 429 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (7, 11), (2, 7), (7, 13), (3, 13), (6, 11), (2, 6)],
+  /- 430 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 431 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 432 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (7, 11), (2, 7), (7, 13), (3, 13), (6, 11), (2, 6)],
+  /- 433 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 434 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 435 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (7, 11), (2, 7), (7, 13), (3, 13), (6, 11), (2, 6)],
+  /- 436 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 437 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 438 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (6, 11), (2, 6)],
+  /- 439 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 440 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 441 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (6, 11)],
+  /- 442 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (6, 11), (2, 6)],
+  /- 443 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 444 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 445 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 446 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 13), (3, 7)],
+  /- 447 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (6, 11), (2, 6)],
+  /- 448 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 449 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 450 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 451 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 452 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 13), (3, 7)],
+  /- 453 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (6, 11), (2, 6)],
+  /- 454 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 455 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 456 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 457 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (7, 11), (2, 7), (7, 13), (3, 13)],
+  /- 458 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 459 -/ [(2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 2), (0, 17), (2, 3), (3, 5),
+      (3, 7), (7, 11), (2, 7), (7, 13), (3, 13)],
+  /- 460 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 461 -/ [(3, 5), (3, 8), (5, 9), (5, 12), (2, 3), (3, 7), (7, 11), (7, 9), (2, 7),
+      (3, 9), (3, 12), (2, 17), (15, 17), (2, 15), (0, 3), (1, 4), (0, 17), (0, 2)],
+  /- 462 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 463 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 464 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 465 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 466 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 467 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 468 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 469 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 470 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 471 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 472 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 473 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 474 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 475 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 476 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 477 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 478 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 479 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 480 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 481 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 482 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 483 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 484 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 485 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 486 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 487 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 488 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 489 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 490 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)],
+  /- 491 -/ [(3, 5), (3, 7), (7, 11), (2, 7), (7, 13), (2, 3), (3, 13), (2, 17), (15, 17),
+      (2, 15), (0, 3), (1, 4), (0, 2), (0, 17)]]
+
+/-- The flag worker's colours on head indices. -/
+def flagsColors : List ((Nat × Nat) × Nat) :=
+  [((15, 17), 0), ((0, 17), 1), ((2, 17), 2), ((2, 15), 3), ((0, 2), 4), ((1, 4), 5),
+   ((0, 3), 6), ((3, 5), 7), ((5, 12), 8), ((5, 9), 9), ((3, 8), 10), ((8, 10), 11),
+   ((3, 12), 12), ((3, 9), 13), ((7, 11), 14), ((6, 11), 15), ((3, 7), 16), ((2, 7), 17),
+   ((2, 6), 18), ((2, 3), 19), ((7, 9), 20), ((6, 9), 21), ((3, 6), 11), ((7, 13), 12),
+   ((3, 13), 8), ((11, 17), 14), ((11, 15), 15), ((1, 6), 13), ((3, 10), 11), ((1, 7), 11),
+   ((2, 13), 7), ((1, 14), 5), ((1, 15), 2), ((0, 1), 3), ((1, 17), 4), ((15, 16), 0),
+   ((1, 16), 1), ((0, 16), 4)]
+
+theorem matcher_rows_0 : rowsCheck matcherWorker matcherColors matcherLive 0 50 = true := by
+  decide +kernel
+
+theorem matcher_rows_50 : rowsCheck matcherWorker matcherColors matcherLive 50 50 = true := by
+  decide +kernel
+
+theorem matcher_rows_100 : rowsCheck matcherWorker matcherColors matcherLive 100 50 = true := by
+  decide +kernel
+
+theorem matcher_rows_150 : rowsCheck matcherWorker matcherColors matcherLive 150 50 = true := by
+  decide +kernel
+
+theorem matcher_rows_200 : rowsCheck matcherWorker matcherColors matcherLive 200 50 = true := by
+  decide +kernel
+
+theorem matcher_rows_250 : rowsCheck matcherWorker matcherColors matcherLive 250 44 = true := by
+  decide +kernel
+
+theorem matcher_global : globalCheck matcherWorker matcherColors matcherLive = true := by
+  decide +kernel
+
+theorem matcher_code_length : matcherWorker.program.code.length = 294 := by
+  decide
+
+theorem matcher_rows :
+    rowsCheck matcherWorker matcherColors matcherLive 0
+      matcherWorker.program.code.length = true := by
+  rw [matcher_code_length]
+  exact rowsCheck_split 0 50 244 matcher_rows_0
+    (rowsCheck_split 50 50 194 matcher_rows_50
+    (rowsCheck_split 100 50 144 matcher_rows_100
+    (rowsCheck_split 150 50 94 matcher_rows_150
+    (rowsCheck_split 200 50 44 matcher_rows_200
+    (matcher_rows_250)))))
+
+/-- **The table facts of the matcher**, from the kernel-checked certificate. -/
+theorem matcher_tableFacts : TableFacts matcherWorker :=
+  tableFacts_of_certificate matcher_global matcher_rows
+
+theorem flags_rows_0 : rowsCheck flagsWorker flagsColors flagsLive 0 50 = true := by
+  decide +kernel
+
+theorem flags_rows_50 : rowsCheck flagsWorker flagsColors flagsLive 50 50 = true := by
+  decide +kernel
+
+theorem flags_rows_100 : rowsCheck flagsWorker flagsColors flagsLive 100 50 = true := by
+  decide +kernel
+
+theorem flags_rows_150 : rowsCheck flagsWorker flagsColors flagsLive 150 50 = true := by
+  decide +kernel
+
+theorem flags_rows_200 : rowsCheck flagsWorker flagsColors flagsLive 200 50 = true := by
+  decide +kernel
+
+theorem flags_rows_250 : rowsCheck flagsWorker flagsColors flagsLive 250 50 = true := by
+  decide +kernel
+
+theorem flags_rows_300 : rowsCheck flagsWorker flagsColors flagsLive 300 50 = true := by
+  decide +kernel
+
+theorem flags_rows_350 : rowsCheck flagsWorker flagsColors flagsLive 350 50 = true := by
+  decide +kernel
+
+theorem flags_rows_400 : rowsCheck flagsWorker flagsColors flagsLive 400 50 = true := by
+  decide +kernel
+
+theorem flags_rows_450 : rowsCheck flagsWorker flagsColors flagsLive 450 42 = true := by
+  decide +kernel
+
+theorem flags_global : globalCheck flagsWorker flagsColors flagsLive = true := by
+  decide +kernel
+
+theorem flags_code_length : flagsWorker.program.code.length = 492 := by
+  decide
+
+theorem flags_rows :
+    rowsCheck flagsWorker flagsColors flagsLive 0
+      flagsWorker.program.code.length = true := by
+  rw [flags_code_length]
+  exact rowsCheck_split 0 50 442 flags_rows_0
+    (rowsCheck_split 50 50 392 flags_rows_50
+    (rowsCheck_split 100 50 342 flags_rows_100
+    (rowsCheck_split 150 50 292 flags_rows_150
+    (rowsCheck_split 200 50 242 flags_rows_200
+    (rowsCheck_split 250 50 192 flags_rows_250
+    (rowsCheck_split 300 50 142 flags_rows_300
+    (rowsCheck_split 350 50 92 flags_rows_350
+    (rowsCheck_split 400 50 42 flags_rows_400
+    (flags_rows_450)))))))))
+
+/-- **The table facts of the flag worker**, from the kernel-checked certificate. -/
+theorem flags_tableFacts : TableFacts flagsWorker :=
+  tableFacts_of_certificate flags_global flags_rows
+
+/-- The invariant holds along every run of the matcher: initially, and after any sequence of
+`start` / `service` / `arrive` / `mark` / `resetFlags` (each lemma above with
+`matcher_tableFacts`). For instance, one service quantum: -/
+theorem matcher_service_inv {g : Ghost} {s : WorkerState} (hinv : Inv matcherWorker g s) :
+    Inv matcherWorker (ghostService matcherWorker s g).2
+      (service (Worker.ofSpec matcherWorker) s) :=
+  service_inv matcher_tableFacts hinv
+
+theorem flags_service_inv {g : Ghost} {s : WorkerState} (hinv : Inv flagsWorker g s) :
+    Inv flagsWorker (ghostService flagsWorker s g).2 (service (Worker.ofSpec flagsWorker) s) :=
+  service_inv flags_tableFacts hinv
+
+end Concrete
 
 end PalPeg.ScaWorkerRegs
