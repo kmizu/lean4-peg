@@ -234,15 +234,13 @@ theorem runsQuiet_chooseBack (rest : RestCommands) (w : List (Fin 2)) (x : State
 
 theorem runsQuiet_fpp (rest : RestCommands) (w : List (Fin 2)) (x : State GalilVM)
     (hmode : x.ctl.mode = .fpp)
-    (hcomp : ∀ t : Fin 9, microRadius ≤ PalPeg.Local.pos (encTape (x.vm.fpp.program.config.tapes t)))
-    (hfloorRun : ∀ k, ∀ t : Fin 9, ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
-      (List.replicate k true) x.vm.fpp.program).config.tapes t).left ≠ [])
+    (hfloorRun : RunOffFloor PalPeg.GalilFppMarkedCode.code 1 x.vm.fpp.program)
     (hin : x.vm.fpp.program.config.pc < fppBound) :
     RunsQuiet rest w x := fun y hy hsame p hp => by
   unfold PalPeg.PhysicalRestartStorage.Same at hsame
   exact PalPeg.PhysicalPhaseStill.running_quiet rest w y p hp (fun T hT =>
     PalPeg.PhysicalPhaseStill.ideal_fpp rest w y (p.1, T) hT (by rw [hy]; exact hmode)
-      (by rw [hsame]; exact hcomp) (by rw [hsame]; exact hfloorRun) (by rw [hsame]; exact hin))
+      (by rw [hsame]; exact hfloorRun) (by rw [hsame]; exact hin))
 
 /-- A rewind step back along the marks tape: not at the first mark, off the floor. -/
 def RewindStep (w : List (Fin 2)) (x : State GalilVM) : Prop :=
@@ -325,6 +323,64 @@ theorem rewindStep_of_tick (w : List (Fin 2)) (x y : State GalilVM) (hm : x.ctl.
   · rename_i h
     exact h.1.1
 
+/-- A relational run of `n` enabled calls never steps left at the floor: the relational step
+forbids it. -/
+theorem runOffFloor_of_run (code : List (PalPeg.GalilFppWide.Instruction 9))
+    (hrf : PalPeg.GalilTickDet.ReadFun code) :
+    ∀ (n : ℕ) (m z : PalPeg.GalilScaffoldControl.Machine 9),
+      PalPeg.GalilScaffoldControl.Run code m (List.replicate n true) z → RunOffFloor code n m
+  | 0, _, _, _ => trivial
+  | n + 1, m, z, h => by
+    cases h with
+    | cons _ y _ _ _ hs hr =>
+      refine ⟨?_, ?_⟩
+      · intro hd t pc hc
+        cases hs with
+        | idle _ _ hi => simp_all
+        | halt x hi => rw [hi] at hc; cases hc
+        | execute x y i hi he =>
+          rw [hi] at hc
+          cases hc
+          cases he
+          assumption
+      · rw [← PalPeg.ProgramFunction.tick_eq_tickFun hrf hs]
+        exact runOffFloor_of_run code hrf n _ _ hr
+
+/-- The first enabled call of a live machine executes an instruction, so its counter is in range. -/
+theorem pc_lt_of_run (code : List (PalPeg.GalilFppWide.Instruction 9))
+    (m z : PalPeg.GalilScaffoldControl.Machine 9) (n : ℕ) (hdone : m.done = false)
+    (h : PalPeg.GalilScaffoldControl.Run code m (List.replicate (n + 1) true) z) :
+    m.config.pc < code.length := by
+  cases h with
+  | cons _ y _ _ _ hs _ =>
+    cases hs with
+    | idle _ _ hi => simp_all
+    | halt x hi => exact (List.getElem?_eq_some_iff.mp hi).1
+    | execute x y i hi _ => exact (List.getElem?_eq_some_iff.mp hi).1
+
+/-- The fpp tick of a live program. -/
+def FppLive (x : State GalilVM) : Prop :=
+  x.ctl.mode = .fpp ∧ x.vm.fpp.program.done = false
+
+/-- **A legal fpp tick of a live program is ready**: its quantum stays off the floor and its
+counter is in range. -/
+theorem fppReady_of_tick (w : List (Fin 2)) (x y : State GalilVM) (hlive : FppLive x)
+    (htick : Tick (galilFrameS (PalPeg.GalilRunSkeleton.PofC centreC placeC 0 w) 1 0) 2048 x y) :
+    RunOffFloor PalPeg.GalilFppMarkedCode.code 1 x.vm.fpp.program ∧
+      x.vm.fpp.program.config.pc < fppBound := by
+  rcases x with ⟨c, s⟩
+  have hrun : ∃ z, PalPeg.GalilScaffoldControl.Run PalPeg.GalilFppMarkedCode.code s.fpp.program
+      (List.replicate 1 true) z := by
+    rcases PalPeg.LocalRealizesPhase.tick_fpp_cases hlive.1 htick with ⟨s', hs, -⟩ | ⟨s', hs, -⟩
+    · exact ⟨_, hs.1.2.1⟩
+    · obtain ⟨_, p, hp, -⟩ := hs.1
+      exact ⟨p, hp⟩
+  obtain ⟨z, hz⟩ := hrun
+  refine ⟨runOffFloor_of_run _ PalPeg.ProgramFunction.readFun_marked 1 _ _ hz, ?_⟩
+  have := pc_lt_of_run _ _ _ 0 hlive.2 hz
+  unfold fppBound
+  omega
+
 /-- **The ticks the common machine does not handle yet**, with every source fact the consumer
 supplies. This is the residual of the final tick API. -/
 def UnhandledTicks (rest : RestCommands) : Prop :=
@@ -347,6 +403,7 @@ def UnhandledTicks (rest : RestCommands) : Prop :=
       ¬ ChooseBack (absSC m) → (absSC m).ctl.mode ≠ .copy →
       ((absSC m).ctl.mode = .rewind →
         (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w).atFirst (absSC m).vm = true) →
+      ¬ FppLive (absSC m) →
       PalPeg.PhysicalDpCleanup.Enc w (PalPeg.PhysicalCacheMachine.successor w (absSC m))
         ((PalPeg.PhysicalDpCleanup.machine rest).apply blankM p none)
 
@@ -369,6 +426,12 @@ theorem cases_of_remaining_quiet (rest : RestCommands)
   · have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode := Or.inr (Or.inr (Or.inr (Or.inl hback.1)))
     exact forward_quiet_machine rest w _ p he hq hs (successor_not_loan w _ hq)
       (runsQuiet_chooseBack rest w _ hback.1 hback.2)
+  by_cases hfppLive : FppLive (absSC m)
+  · have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode :=
+      Or.inr (Or.inr (Or.inl hfppLive.1))
+    obtain ⟨hoff, hin⟩ := fppReady_of_tick w _ _ hfppLive htick
+    exact forward_quiet_machine rest w _ p he hq hs (successor_not_loan w _ hq)
+      (runsQuiet_fpp rest w _ hfppLive.1 hoff hin)
   by_cases hcopyMode : (absSC m).ctl.mode = .copy
   · have hcopy := copyReady_of_tick w _ _ hcopyMode htick
     have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode :=
@@ -387,6 +450,7 @@ theorem cases_of_remaining_quiet (rest : RestCommands)
       cases hat : (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w).atFirst (absSC m).vm
       · exact absurd ⟨hmode, hat⟩ hrewindStep
       · rfl)
+    hfppLive
 
 /-- info: 'PalPeg.PhysicalPhaseLayers.cases_of_remaining_quiet' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

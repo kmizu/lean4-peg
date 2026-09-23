@@ -5,7 +5,7 @@ import PalPeg.PhysicalFinalResidual
 
 `UnhandledTicks` is one obligation over every tick the common machine does not handle yet. Here
 it is split into one obligation per remaining kind of tick, all of the same shape `TicksWhere`:
-the scan ticks outside the seven dispatcher cases, `fpp`, the select half of `choose`, the reset
+the scan ticks outside the seven dispatcher cases, `fpp` of a halted program, the select half of `choose`, the reset
 of `rewind`, `init` and `replayStart`. The final theorem then takes these six and the freeze.
 -/
 set_option autoImplicit false
@@ -43,7 +43,9 @@ def ScanRest (w : List (Fin 2)) (x : State GalilVM) : Prop :=
     ¬ PalPeg.PhysicalShiftDispatch.Entry w x ∧ ¬ PalPeg.PhysicalGrowCount.CountGrow x ∧
     ¬ PalPeg.PhysicalGrowMatchCase.MatchGrow x
 
-def FppMode (_ : List (Fin 2)) (x : State GalilVM) : Prop := x.ctl.mode = .fpp
+/-- The fpp tick of a program that has already halted (a live program's tick is handled). -/
+def FppDone (_ : List (Fin 2)) (x : State GalilVM) : Prop :=
+  x.ctl.mode = .fpp ∧ x.vm.fpp.program.done = true
 
 /-- The choose tick that selects and leaves for `rewind`. -/
 def ChooseSelect (_ : List (Fin 2)) (x : State GalilVM) : Prop :=
@@ -60,12 +62,12 @@ def ReplayStartMode (_ : List (Fin 2)) (x : State GalilVM) : Prop := x.ctl.mode 
 
 /-- **The six parts cover the residual.** -/
 theorem unhandled_of_parts (rest : RestCommands)
-    (hscan : TicksWhere rest ScanRest) (hfpp : TicksWhere rest FppMode)
+    (hscan : TicksWhere rest ScanRest) (hfpp : TicksWhere rest FppDone)
     (hselect : TicksWhere rest ChooseSelect) (hreset : TicksWhere rest RewindReset)
     (hinit : TicksWhere rest InitMode) (hreplay : TicksWhere rest ReplayStartMode) :
     PalPeg.PhysicalPhaseLayers.UnhandledTicks rest := by
   intro w st Tc hpre hcanon m p hon hf he hs htick hrest hwatch hback hshift hentry hgrow hmatch
-    hhome hmark hchooseBack hcopy hrewind
+    hhome hmark hchooseBack hcopy hrewind hfppLive
   have go := fun (P : List (Fin 2) → State GalilVM → Prop) (h : TicksWhere rest P)
     (hp : P w (absSC m)) => h w st Tc hpre hcanon m p hon hf he hs htick hp
   cases hmode : (absSC m).ctl.mode with
@@ -74,7 +76,11 @@ theorem unhandled_of_parts (rest : RestCommands)
   | shift => exact absurd hmode hshift
   | copy => exact absurd hmode hcopy
   | home => exact absurd hmode hhome
-  | fpp => exact go _ hfpp hmode
+  | fpp =>
+    refine go _ hfpp ⟨hmode, ?_⟩
+    cases hd : (absSC m).vm.fpp.program.done
+    · exact absurd ⟨hmode, hd⟩ hfppLive
+    · rfl
   | markEnd => exact absurd hmode hmark
   | choose => exact go _ hselect ⟨hmode, hchooseBack⟩
   | rewind => exact go _ hreset ⟨hmode, hrewind hmode⟩
@@ -82,7 +88,7 @@ theorem unhandled_of_parts (rest : RestCommands)
 
 /-- **The final theorem from the six residual parts and the freeze.** -/
 theorem given_parts_and_frozen (rest : RestCommands)
-    (hscan : TicksWhere rest ScanRest) (hfpp : TicksWhere rest FppMode)
+    (hscan : TicksWhere rest ScanRest) (hfpp : TicksWhere rest FppDone)
     (hselect : TicksWhere rest ChooseSelect) (hreset : TicksWhere rest RewindReset)
     (hinit : TicksWhere rest InitMode) (hreplay : TicksWhere rest ReplayStartMode)
     (PhysFrozen : List (Fin 2) → PalPeg.PhysicalDpCleanup.Config → Prop)

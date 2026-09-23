@@ -258,9 +258,7 @@ theorem ideal_chooseBack (he : PalPeg.PhysicalCacheInvariant.CoreInv w x p)
 /-- **`fpp` keeps the common invariant**, given the program run's facts the rule theorem needs. -/
 theorem ideal_fpp (he : PalPeg.PhysicalCacheInvariant.CoreInv w x p)
     (hmode : x.ctl.mode = .fpp)
-    (hcomp : ∀ t : Fin 9, microRadius ≤ PalPeg.Local.pos (encTape (x.vm.fpp.program.config.tapes t)))
-    (hfloorRun : ∀ k, ∀ t : Fin 9, ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
-      (List.replicate k true) x.vm.fpp.program).config.tapes t).left ≠ [])
+    (hfloorRun : RunOffFloor PalPeg.GalilFppMarkedCode.code 1 x.vm.fpp.program)
     (hin : x.vm.fpp.program.config.pc < fppBound) :
     PalPeg.PhysicalCacheInvariant.CoreInv w
       (tickFun (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w)
@@ -273,7 +271,7 @@ theorem ideal_fpp (he : PalPeg.PhysicalCacheInvariant.CoreInv w x p)
     (fun slot => p.2 (slotIndex slot)) rest none
     fppBound_gt_start (by decide : 1+3 ≤ microRadius) (by decide : 2 ≤ microRadius)
     (by decide : 1 ≤ microRadius) micro_le_margin (by decide : microRadius ≤ margin+1)
-    hcomp hfloorRun hin hcore.2.1 hcore.2.2 hm hmode hcore.1
+    hfloorRun hin hcore.2.1 hcore.2.2 hm hmode hcore.1
   have hT : tapesOf (fun slot => p.2 (slotIndex slot)) = p.2 := by funext j; simp [tapesOf]
   simp only [← workRule_eq, hT, Prod.eta] at hencoded
   have hq : QuietPhase x.ctl.mode := Or.inr (Or.inr (Or.inl hmode))

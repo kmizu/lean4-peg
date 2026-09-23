@@ -4,7 +4,7 @@ import PalPeg.PhysicalResidualParts
 # `PalInPeg.unconditional` — 目標そのもの（物理機械の経路）
 
 `PAL ∈ PEG` を、118 本テープの共通機械 `PhysicalDpCleanup.machine` で示す。報告・出力の契約、
-既存 7 ケース、静かなモード（home・markEnd・choose の後半・copy・rewind の1歩/2歩）は証明済み。
+既存 7 ケース、静かなモード（home・markEnd・choose の後半・copy・rewind の1歩/2歩・未停止の fpp）は証明済み。
 **残りは下の `axiom` で 1 本ずつ明示する。** 1 本証明して外すと `PalPeg/Axioms.lean` の guard が
 壊れて更新を強制される。標準 3 公理だけになったら完成。
 
@@ -14,7 +14,7 @@ import PalPeg.PhysicalResidualParts
 | 義務 | 中身 | 状況 |
 |---|---|---|
 | `obligation_scanRest` | scan の tick のうち既存 7 ケース以外（matched・fallback・restart・探索） | 未 |
-| `obligation_fpp` | fpp の量子。窓一致 `MachineAgree.margin'` が run 上で偽なので弱化が要る | 未 |
+| `obligation_fpp` | fpp でプログラムが停止済みの tick（未停止の fpp は処理済み） | 未 |
 | `obligation_chooseSelect` | choose の select。head の瞬時コピー（物理規則に行が無い） | 未 |
 | `obligation_rewindReset` | rewind の reset。退役 FPP bank の reset が要る | 未 |
 | `obligation_init` | init。head の瞬時コピー（物理規則に行が無い） | 未 |
@@ -37,8 +37,8 @@ noncomputable def physRest : PalPeg.PhysicalScanCount.RestCommands := fun _ _ _ 
 
 /-- **(OBLIGATION)** scan ticks outside the seven dispatcher cases. -/
 axiom obligation_scanRest : TicksWhere physRest ScanRest
-/-- **(OBLIGATION)** the `fpp` quantum. -/
-axiom obligation_fpp : TicksWhere physRest FppMode
+/-- **(OBLIGATION)** the `fpp` tick of a program that has already halted. -/
+axiom obligation_fpp : TicksWhere physRest FppDone
 /-- **(OBLIGATION)** the select half of `choose`. -/
 axiom obligation_chooseSelect : TicksWhere physRest ChooseSelect
 /-- **(OBLIGATION)** the rewind at the first mark. -/
