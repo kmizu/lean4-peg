@@ -42,6 +42,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **choose-select / init / replayStart は物理規則に行が無い**（`ruleNext` の choose は `chooseBackNext` のみ、init/replayStart は `_ => q`）。3つとも head の瞬時コピーで、物理層にビュー用 mirror が無い。旧局所層は mirror 入替え/駐車ビュー（`LocalReplaySwap`/`LocalReplayParked`、`H_initLoc` 等が残差）。設計候補は `ASSEMBLY_PLAN.md:985-1033` と `:731-770`（idleHead 強化）。
 - 残る大物: scan 側（matched・fallback・restart・DP prepare/reset・探索量子）、`rest` の具体化、凍結3欄。
 
+### Scala 実測（2026-09-23 深夜、全 510 語 長さ≤12 ＋ランダム長さ≤40）
+- FPP bank 再利用: 前サイクルの使用長 U ≤ 112、反転間隔 ≥ 272 tick、比 U/間隔 ≤ 0.12（1 マス/tick の消去でも違反 0）。消去期限は余裕。
+- choose-select 直前の head 距離 ÷ fallback 開始からの tick: left ≤ 0.2、center ≤ 0.1（違反 0）。replayStart: ≤ 0.4167（違反 0）。1 マス/tick で先回りする mirror で間に合う → 案 A を採用。
+- init は 1 語 1 回（boot 直後のみ）。Lean でも init に入る遷移は無い（`initial` のみ）。init 後は scan・chain idle・探索開始なので Loan 層の `Partial` 遷移を伴う。物理規則に init/choose-select/replayStart の行は未実装（`ruleNext` の `_ => q`）。
+
 ### freeze の確定設計（2026-09-23 深夜、未実装）
 - 凍結後の抽象状態は報告しない（`onLetterTest` が `position+1 ≤ 2|w|` を要求、`frozenAt` は `2|w| ≤ position`）。それでも replayStart が right を center に戻すので物理の沈黙には粘着ビットが要る。
 - 包み層 `FreezeWrap M`: 制御に b を足す。`b' = 入力あり ? false : (b ∨ detect ws)`、`detect` = 右 view が gap 上で pending 偽（`pendingTest`）。報告 `repW' = ¬b ∧ ¬detect ∧ repW`。凍結述語 `PhysFrozen := b ∨ detect`（keep・quiet は構成から即）。
