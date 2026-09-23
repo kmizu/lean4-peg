@@ -915,4 +915,117 @@ theorem ginv_step {W : List (Fin 2)} {cap : ℕ → ℕ → ℕ}
 
 end Global
 
+/-! ## Every prefix, and the two obligations -/
+
+section Final
+variable {Wm Wf : Type} {mOps : WorkerOps Wm} {fOps : WorkerOps Wf} {m0 : Wm} {f0 : Wf}
+
+theorem ginv_one (W : List (Fin 2)) (cap : ℕ → ℕ → ℕ) (hW : 1 ≤ W.length) :
+    GInv W cap 0 1 (run mOps fOps m0 f0 (W.take 1)) := by
+  have hs' := run_take_succ mOps fOps m0 f0 W (n := 0) (by omega)
+  refine ⟨fun h => absurd h (by omega), fun h => absurd h (by omega), fun _ i => ?_,
+    fun h => absurd h (by omega)⟩
+  rw [hs', tick_stage]
+  have hd : Dormant ((run mOps fOps m0 f0 (W.take 0)).stages i) := by
+    simp [run]; exact dormant_initial
+  have hb : birthOf (run mOps fOps m0 f0 (W.take 0)) = false := by simp [run, birthOf, initial]
+  rw [hb, Bool.false_and]
+  exact (dormant_step hd _ _ _).2
+
+theorem ginv_run (W : List (Fin 2)) (cap : ℕ → ℕ → ℕ)
+    (hC : ∀ j r, 1 ≤ j → r < 4 → 2 ^ j + (r + 1) * 2 ^ (j - 1) ≤ W.length →
+      CapAt mOps fOps m0 f0 W j r (cap j r)) :
+    ∀ n, 1 ≤ n → n ≤ W.length → GInv W cap (Nat.log 2 n) n (run mOps fOps m0 f0 (W.take n)) := by
+  intro n hn1
+  induction n with
+  | zero => omega
+  | succ n ih =>
+    intro hnW
+    rcases Nat.eq_zero_or_pos n with h0 | hpos
+    · subst h0; exact ginv_one W cap hnW
+    · have h := ih hpos (by omega)
+      have hI := inv_run mOps fOps m0 f0 (W.take n) (by simp; omega)
+      simp only [List.length_take, Nat.min_eq_left (show n ≤ W.length by omega)] at hI
+      set k := Nat.log 2 n
+      have hk : 2 ^ k ≤ n := Nat.pow_log_le_self 2 (by omega)
+      have hkn : n < 2 ^ (k + 1) := Nat.lt_pow_succ_log_self (by norm_num) n
+      have hstep := ginv_step hC hk hkn (by omega) hI h
+      rcases Nat.lt_or_ge (n + 1) (2 ^ (k + 1)) with hlt | hge
+      · rw [show Nat.log 2 (n + 1) = k from Nat.log_eq_of_pow_le_of_lt_pow (by omega) hlt]
+        exact hstep.2.1 hlt
+      · have heq : n + 1 = 2 ^ (k + 1) := by omega
+        rw [show Nat.log 2 (n + 1) = k + 1 by rw [heq, Nat.log_pow (by norm_num)]]
+        exact hstep.2.2 heq
+
+theorem clean_run (W : List (Fin 2)) (cap : ℕ → ℕ → ℕ)
+    (hC : ∀ j r, 1 ≤ j → r < 4 → 2 ^ j + (r + 1) * 2 ^ (j - 1) ≤ W.length →
+      CapAt mOps fOps m0 f0 W j r (cap j r)) :
+    ∀ n, n < W.length → ScaWindowFault.ctlViolation (run mOps fOps m0 f0 (W.take n)) = false := by
+  intro n hn
+  rcases Nat.eq_zero_or_pos n with h0 | hpos
+  · subst h0; rfl
+  · have h := ginv_run W cap hC n hpos (by omega)
+    have hI := inv_run mOps fOps m0 f0 (W.take n) (by simp; omega)
+    simp only [List.length_take, Nat.min_eq_left (show n ≤ W.length by omega)] at hI
+    exact (ginv_step hC (Nat.pow_log_le_self 2 (by omega))
+      (Nat.lt_pow_succ_log_self (by norm_num) n) hn hI h).1
+
+/-- **`hclean` from the flag workers' promise.** -/
+theorem hclean_of_contract (hC : ∀ W, FlagsContract mOps fOps m0 f0 W) :
+    ∀ u : List (Fin 2), ScaWindowFault.ctlViolation (run mOps fOps m0 f0 u) = false := by
+  intro u
+  obtain ⟨cap, hcap⟩ := hC (u ++ [0])
+  have := clean_run (u ++ [0]) cap hcap u.length (by simp)
+  rwa [List.take_left] at this
+
+/-- **`hmiddle` from the flag workers' promise.** -/
+theorem hmiddle_of_contract (hC : ∀ W, FlagsContract mOps fOps m0 f0 W) :
+    ∀ w : List (Fin 2), 4 ≤ w.length →
+      (((run mOps fOps m0 f0 w).stages (idx (Nat.log 2 w.length))).middle = true ↔
+        IsPal ((w.drop (stageOf w.length)).take (w.length - 2 * stageOf w.length))) := by
+  intro w hw
+  obtain ⟨cap, hcap⟩ := hC w
+  have h := ginv_run w cap hcap w.length (by omega) le_rfl
+  rw [List.take_length] at h
+  set n := w.length
+  set k := Nat.log 2 n with hkdef
+  have hk : 2 ^ k ≤ n := Nat.pow_log_le_self 2 (by omega)
+  have hkn : n < 2 ^ (k + 1) := Nat.lt_pow_succ_log_self (by norm_num) n
+  have hk2 : 2 ≤ k := by
+    by_contra hlt
+    have : 2 ^ (k + 1) ≤ 4 := by
+      calc 2 ^ (k + 1) ≤ 2 ^ 2 := Nat.pow_le_pow_right (by norm_num) (by omega)
+        _ = 4 := by norm_num
+    omega
+  have hj := h.2.1 hk2
+  have hS : 2 ^ (k - 1) = 2 * 2 ^ (k - 1 - 1) := by rw [← pow_succ']; congr 1; omega
+  have h2k : 2 ^ (k + 1) = 2 * 2 ^ k := by ring
+  have hS2 : 2 ^ k = 2 * 2 ^ (k - 1) := by rw [← pow_succ']; congr 1; omega
+  set S := 2 ^ (k - 1 - 1)
+  set d := n - 2 ^ (k - 1)
+  have hq2 : 2 ≤ d / S := (Nat.le_div_iff_mul_le (by positivity)).mpr (by omega)
+  have hq5 : d / S ≤ 5 := Nat.lt_succ_iff.mp (Nat.div_lt_of_lt_mul (by omega))
+  rw [hj.middle, if_pos ⟨hq2, hq5⟩,
+    getD_jobBits w _ _ _ (Nat.mod_lt _ (by positivity))]
+  have hst : stageOf n = 2 ^ (k - 1) := rfl
+  rw [hst]
+  have hdm := Nat.div_add_mod d S
+  have : (d / S - 2) * S + d % S = n - 2 * 2 ^ (k - 1) := by
+    have e : (d / S - 2) * S = d / S * S - 2 * S := by rw [Nat.sub_mul]
+    rw [e]
+    have := Nat.mul_le_mul_right S hq2
+    rw [Nat.mul_comm] at hdm
+    omega
+  rw [this]
+
+end Final
+
+/-- info: 'PalPeg.ScaWindowPlumbing.hclean_of_contract' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms hclean_of_contract
+
+/-- info: 'PalPeg.ScaWindowPlumbing.hmiddle_of_contract' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms hmiddle_of_contract
+
 end PalPeg.ScaWindowPlumbing
