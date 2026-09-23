@@ -1,4 +1,5 @@
 import PalPeg.ScaHeadGen
+import PalPeg.GSVerifier
 
 /-!
 # The matcher's main loop against the list-level verifier
@@ -445,5 +446,48 @@ theorem prefix_part (k : ℕ) (pe : Option Bool) (v : HVM) (s c : ℕ) (hit : �
   · refine ⟨1, some 0, ?_⟩
     rw [round_skip k pe (some 0) v hv (by rw [hW, hC]; omega)]
     simp [pcheck, hc, walkMoves]
+
+/-! ## `pcheck` is two verifier comparisons -/
+
+section PCheck
+variable {α : Type} [DecidableEq α] (u T : List α) (pos : ℕ)
+
+/-- The comparison the prefix check makes at `c`. -/
+def hitAt (c : ℕ) : Bool := decide (T[pos - u.length + c]? = u[c]?)
+
+theorem vComp_eq (c : ℕ) :
+    PalPeg.vComp u T pos c = if c < u.length ∧ hitAt u T pos c = true then c + 1 else c := by
+  simp [PalPeg.vComp, hitAt]
+
+theorem pcheck_fst (c : ℕ) :
+    (pcheck (hitAt u T pos) u.length c).1 =
+      PalPeg.vComp u T pos (PalPeg.vComp u T pos c) := by
+  rw [vComp_eq u T pos c]
+  unfold pcheck
+  by_cases hc : c < u.length
+  · cases h0 : hitAt u T pos c
+    · simp [hc, h0, vComp_eq]
+    · by_cases hc1 : c + 1 < u.length
+      · cases h1 : hitAt u T pos (c + 1) <;> simp [hc, h0, hc1, h1, vComp_eq]
+      · simp [hc, h0, hc1, vComp_eq]
+  · simp [hc, vComp_eq]
+
+theorem pcheck_snd (c : ℕ) (h : (pcheck (hitAt u T pos) u.length c).2 = false) :
+    (pcheck (hitAt u T pos) u.length c).1 < u.length ∧
+      hitAt u T pos (pcheck (hitAt u T pos) u.length c).1 = false := by
+  unfold pcheck at h ⊢
+  by_cases hc : c < u.length
+  · cases h0 : hitAt u T pos c
+    · simp [hc, h0]
+    · by_cases hc1 : c + 1 < u.length
+      · cases h1 : hitAt u T pos (c + 1) <;> simp_all
+      · simp_all
+  · simp_all
+
+/-- A stuck check stays stuck. -/
+theorem vComp_stuck (c : ℕ) (h : hitAt u T pos c = false) : PalPeg.vComp u T pos c = c := by
+  rw [vComp_eq]; simp [h]
+
+end PCheck
 
 end PalPeg.ScaMatcherLoop
