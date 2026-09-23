@@ -179,6 +179,7 @@ import PalPeg.ScaGsProgram
 import PalPeg.ScaWindowSchedule
 import PalPeg.ScaWindowOutput
 import PalPeg.ScaWindowInstance
+import PalPeg.ScaGsCoroutine
 import PalPeg.ScaWindowWorker
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
