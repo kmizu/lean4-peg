@@ -199,6 +199,9 @@ import PalPeg.GSDrained
 import PalPeg.BorderJobHead
 import PalPeg.ScaHeadRep
 import PalPeg.ScaHeadBridge
+import PalPeg.ScaHeadVM
+import PalPeg.ScaWorkerRegs
+import PalPeg.ScaWindowEncode
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
 import PalPeg.PostRunInduction
