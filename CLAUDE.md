@@ -24,11 +24,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `CanonTrace` は `ShapedRun.OracleTick` 版。`PlateauInv.dpDense`、DP 履歴 `PhysicalDpHistory`/`PhysicalDpSource`。
 - 余白 margin を広げる案は不可（boot が半径 K ちょうどの余白を作る設計）。
 
-### (A) 静かなモードの接続（2026-09-23 深夜、`PhysicalPhaseLayers.lean`、Workbench 登録済み）
-- `forward_quiet_machine`: 静かなモード（markEnd/home/fpp/choose）の tick は全8層を素通しし、`DpCleanup.Enc` を保つ。Snapshot の保存コピーも `successor_put_quiet`（静かな tick は `put` と可換）で同じ定理から運ぶ。`¬NeedsLoan` は `successor_not_loan`（静かなモードは scan に戻らない）でタダ。
-- **`cases_of_remaining_quiet`: home・markEnd・choose の後半（`ChooseBack`）を処理済みに移した。** 残差 `hother` はこれら3つの除外条件も取る。前提なし。
-- fpp は `runsQuiet_fpp` まであり、run から `hcomp`/`hfloorRun`/`hin` を供給すれば処理済みにできる（未接続）。
-- 最終接続 `given_remainingCases_and_frozen` の `hcases` にはまだ `cases_of_remaining_quiet` を差し込んでいない（全体 build 未実行）。
+### (A) 静かなモードの接続（2026-09-23 深夜、`PhysicalPhaseLayers` / `PhysicalPhaseStill` / `PhysicalFinalResidual`、Workbench 登録済み・全体 BUILD=0）
+- **最終入口は `PhysicalFinalResidual.given_unhandledTicks_and_frozen rest hunhandled PhysFrozen …`**（標準3公理）。`hcases` の代わりに名前付き残差 `PhysicalPhaseLayers.UnhandledTicks rest` だけを取る。
+- 処理済み（`cases_of_remaining_quiet`）: 既存7ケース＋ home・markEnd・`ChooseBack`（select でない choose）・`CopyReady`（copy、進む側は walker が読める）・`RewindStep`（rewind の1歩/2歩、atFirst 偽・床に非接触）。
+- 仕組み: `QuietPhase`（markEnd/home/fpp/choose/copy/rewind）の tick は全8層を素通し（`forward_quiet_machine`）。Snapshot の保存コピーは `successor_put_quiet` で同じ定理から運ぶ。`¬NeedsLoan` はタダ（静かなモードは scan に戻らない）。
+- 鍵は **`coreInv_of_ideal_named`**（事前条件を弱めた版）: chain の counter 10..15・mirror 5・極性10 だけ保存すればよく、VM 名付き counter の形は新しい Enc から取る。これで counter を書き換える copy/rewind が home と同じ形で通った。
+- 未処理の静かなモード: fpp（`runsQuiet_fpp` まであるが run 由来の `hcomp`/`hfloorRun`/`hin` の supplier 無し）、rewind の reset 分岐（退役 FPP bank が reset 済み＝`hidle`、FPP 退役消去の置換待ち）、choose-select、`CopyReady`/`RewindStep` の否定側（run から到達不能を示す）。
+- 残る大物: init/replayStart、scan 側（matched・fallback・restart・DP prepare/reset・探索量子）、`rest` の具体化、凍結3欄。
 
 ### (B) 凍結の次の一手（設計済み・未実装）
 最後の比較は一致/shift/fallback のどれもありうる（`PlateauInvariant.plateauCompare`）ので「凍結＝飢餓」は偽。代わりに物理側へ粘着ビット b を足す包み層:
