@@ -337,4 +337,113 @@ theorem head_miss (v : HVM) (hv : v.ctl = .pending [mc k pe (some ok) ph 13] (.a
 
 end Compare
 
+/-! ## The prefix check: up to two rounds -/
+
+/-- The prefix check's outcome from `c`, with `hit c` the comparison at `c` (`c < s`): the new
+`c` and whether no mismatch was seen. -/
+def pcheck (hit : ℕ → Bool) (s c : ℕ) : ℕ × Bool :=
+  if c < s then
+    if hit c then
+      if c + 1 < s then (if hit (c + 1) then (c + 2, true) else (c + 1, false)) else (c + 1, true)
+    else (c, false)
+  else (c, true)
+
+/-- `d` prefix moves. -/
+def walkMoves : ℕ → (String → ℤ) → String → ℤ
+  | 0, π => π
+  | d + 1, π => walkMoves d (walkMove π)
+
+theorem walkMoves_pos (d : ℕ) (π : String → ℤ) :
+    walkMoves d π "Walk" = π "Walk" + d ∧ walkMoves d π "U" = π "U" + d ∧
+      ∀ h, h ≠ "Walk" → h ≠ "U" → walkMoves d π h = π h := by
+  induction d generalizing π with
+  | zero => simp [walkMoves]
+  | succ d ih =>
+    obtain ⟨h1, h2, h3⟩ := ih (walkMove π)
+    refine ⟨?_, ?_, fun h ha hb => ?_⟩
+    · show walkMoves d (walkMove π) "Walk" = _
+      rw [h1]; simp [walkMove]; push_cast; ring
+    · show walkMoves d (walkMove π) "U" = _
+      rw [h2]; simp [walkMove]; push_cast; ring
+    · show walkMoves d (walkMove π) h = _
+      rw [h3 h ha hb]; simp [walkMove, Function.update, ha, hb]
+
+/-- **The prefix check**, from its first round to the end test: the heads `Walk`, `U` move by
+`(pcheck …).1 − c` and `ok` becomes `(pcheck …).2`. -/
+theorem prefix_part (k : ℕ) (pe : Option Bool) (v : HVM) (s c : ℕ) (hit : ℕ → Bool)
+    (hv : v.ctl = .pending [mc k pe (some true) (some 0) 16] (.less "Walk" "Cut"))
+    (hC : v.pos "Cut" = s) (hW : v.pos "Walk" = c)
+    (hhit : ∀ d, d ≤ 1 → c + d < s →
+      (v.word[(v.pos "Walk" + d).toNat]? = v.word[(v.pos "U" + d).toNat]? ↔ hit (c + d) = true))
+    (hWr : ∀ d, d ≤ 1 → c + d < s → v.inRange "Walk" ∧ 0 ≤ v.pos "U" ∧ v.pos "U" + d + 1 ≤ v.len)
+    (hs : (s : ℤ) ≤ v.len) :
+    ∃ n ph', iterStep n v = some { v with
+      ctl := .pending [mc k pe (some (pcheck hit s c).2) ph' 19] (.equal "A" "End")
+      pos := walkMoves ((pcheck hit s c).1 - c) v.pos } := by
+  have hl : v.len = (v.word.length : ℤ) := rfl
+  by_cases hc : c < s
+  · have hh0 := hhit 0 (by omega) (by omega)
+    obtain ⟨hWr0, hU0, hU0'⟩ := hWr 0 (by omega) (by omega)
+    simp only [Nat.cast_zero, add_zero] at hh0
+    cases h0 : hit c
+    · -- mismatch at `c`
+      have hne : v.word[(v.pos "Walk").toNat]? ≠ v.word[(v.pos "U").toNat]? := by
+        intro he; rw [(hh0.mp he)] at h0; exact absurd h0 (by simp)
+      refine ⟨2, some 0, ?_⟩
+      rw [round_miss k pe (some 0) v hv (by omega) hWr0 ⟨hU0, by omega⟩ hne]
+      simp [pcheck, hc, h0, walkMoves]
+    · -- hit at `c`
+      have heq : v.word[(v.pos "Walk").toNat]? = v.word[(v.pos "U").toNat]? := hh0.mpr h0
+      have e1 := round_hit k pe (some 0) v hv (by omega) hWr0 ⟨hU0, by omega⟩ heq
+        (by have := hWr0.2; omega) (by omega)
+      rw [mc_18_again] at e1
+      set v1 : HVM := { v with
+        ctl := .pending [mc k pe (some true) (some 1) 16] (.less "Walk" "Cut")
+        pos := walkMove v.pos }
+      have hW1 : v1.pos "Walk" = c + 1 := by simp [v1, walkMove, hW]
+      have hC1 : v1.pos "Cut" = s := by simp [v1, walkMove, Function.update, hC]
+      by_cases hc1 : c + 1 < s
+      · have hh1 := hhit 1 le_rfl hc1
+        obtain ⟨hWr1, hU1, hU1'⟩ := hWr 1 le_rfl hc1
+        have hv1W : v1.pos "Walk" = v.pos "Walk" + 1 := by simp [v1, walkMove]
+        have hv1U : v1.pos "U" = v.pos "U" + 1 := by simp [v1, walkMove]
+        have hr1 : v1.inRange "Walk" := by
+          simp only [HVM.inRange, HVM.len, v1] at hs ⊢
+          rw [show walkMove v.pos "Walk" = v.pos "Walk" + 1 by simp [walkMove], hW]
+          constructor <;> omega
+        have hr2 : v1.inRange "U" := by
+          simp only [HVM.inRange, HVM.len, v1] at hU1' ⊢
+          rw [show walkMove v.pos "U" = v.pos "U" + 1 by simp [walkMove]]; constructor <;> omega
+        cases h1 : hit (c + 1)
+        · have hne : v1.word[(v1.pos "Walk").toNat]? ≠ v1.word[(v1.pos "U").toNat]? := by
+            intro he; rw [hv1W, hv1U] at he
+            simp only [Nat.cast_one] at hh1
+            rw [hh1.mp he] at h1; exact absurd h1 (by simp)
+          refine ⟨3 + 2, some 1, ?_⟩
+          rw [iterStep_add, e1, Option.bind_some,
+            round_miss k pe (some 1) v1 rfl (by omega) hr1 hr2 hne]
+          simp [pcheck, hc, h0, hc1, h1, walkMoves, v1]
+        · have heq1 : v1.word[(v1.pos "Walk").toNat]? = v1.word[(v1.pos "U").toNat]? := by
+            rw [hv1W, hv1U]; simp only [Nat.cast_one] at hh1; exact hh1.mpr h1
+          have e2 := round_hit k pe (some 1) v1 rfl (by omega) hr1 hr2 heq1
+            (by
+              simp only [HVM.len, v1]
+              rw [show walkMove v.pos "Walk" = v.pos "Walk" + 1 by simp [walkMove], hW]
+              simp only [HVM.len] at hs; omega)
+            (by
+              simp only [HVM.len, v1]
+              rw [show walkMove v.pos "U" = v.pos "U" + 1 by simp [walkMove]]
+              simp only [HVM.len] at hU1'; omega)
+          rw [mc_18_done] at e2
+          refine ⟨3 + 3, some 1, ?_⟩
+          rw [iterStep_add, e1, Option.bind_some, e2]
+          simp [pcheck, hc, h0, hc1, h1, walkMoves, v1]
+      · refine ⟨3 + 1, some 1, ?_⟩
+        rw [iterStep_add, e1, Option.bind_some,
+          round_skip k pe (some 1) v1 rfl (by rw [hW1, hC1]; omega)]
+        simp [pcheck, hc, h0, hc1, walkMoves, v1]
+  · refine ⟨1, some 0, ?_⟩
+    rw [round_skip k pe (some 0) v hv (by rw [hW, hC]; omega)]
+    simp [pcheck, hc, walkMoves]
+
 end PalPeg.ScaMatcherLoop
