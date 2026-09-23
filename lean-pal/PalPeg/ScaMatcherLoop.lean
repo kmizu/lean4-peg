@@ -87,7 +87,8 @@ theorem reenter_run (k : ℕ) (pe ok : Option Bool) (ph : Option ℕ) (v : HVM)
 theorem shift_reset (k : ℕ) (hk : 1 ≤ k) (pe ok : Option Bool) (ph : Option ℕ) (v : HVM) (q : ℕ)
     (hv : v.ctl = .pending [mc k pe ok ph 25, .resetShift k true 0 none 1] (.equal "A" "Cut"))
     (hq : v.pos "A" = v.pos "Cut" + q) (hC : 0 ≤ v.pos "Cut") (hAL : v.pos "A" ≤ v.len)
-    (hBq : (q : ℤ) ≤ v.pos "B") (hBL : v.pos "B" + 1 ≤ v.len) (hP0 : 0 ≤ v.pos "P")
+    (hBq : (q : ℤ) ≤ v.pos "B") (hBL : v.pos "B" ≤ v.len)
+    (hBF : v.pos "B" - q + (rsShifts k q : ℕ) ≤ v.len) (hP0 : 0 ≤ v.pos "P")
     (hPL : v.pos "P" + (q / k : ℕ) + 1 ≤ v.len) :
     ∃ n, iterStep n v = some { v with
       ctl := .pending [mc k pe (some true) ph 13] (.available "B")
@@ -95,7 +96,7 @@ theorem shift_reset (k : ℕ) (hk : 1 ≤ k) (pe ok : Option Bool) (ph : Option 
   set f := mc k pe ok ph 25
   let vc : HVM := { v with ctl := .pending [.resetShift k true 0 none 1] (.equal "A" "Cut") }
   have hvc : vc.ctl = Ctl.ofOutcome (next [.resetShift k true 0 none 0] none) := rs_start k
-  obtain ⟨n, -, hrun⟩ := resetShift_run k hk vc q hvc hq hC hAL hBq hBL hP0 hPL
+  obtain ⟨n, -, hrun⟩ := resetShift_run k hk vc q hvc hq hC hAL hBq hBL hBF hP0 hPL
   have hl := iterStep_lift f n vc _ (by simp [vc, NonEmptyCtl]) hrun
   have hv' : liftVM f vc = v := by
     simp only [liftVM, vc, liftCtl]; rw [← hv]
@@ -504,7 +505,8 @@ theorem shift_any (k : ℕ) (hk : 1 ≤ k) (pe : Bool) (ok : Option Bool) (ph : 
     (hC : v.pos "Cut" = s) (hA : v.pos "A" = s + q)
     (hper : pe = true → v.pos "First" = s + p₁ ∧ v.pos "KFirst" = s + k * p₁ ∧
       v.pos "Reach" = s + r)
-    (hAL : v.pos "A" ≤ v.len) (hBq : (q : ℤ) ≤ v.pos "B") (hBL : v.pos "B" + 1 ≤ v.len)
+    (hAL : v.pos "A" ≤ v.len) (hBq : (q : ℤ) ≤ v.pos "B") (hBL : v.pos "B" ≤ v.len)
+    (hBF : v.pos "B" - q + (rsShifts k q : ℕ) ≤ v.len)
     (hP0 : 0 ≤ v.pos "P") (hPL : v.pos "P" + q + 1 ≤ v.len) :
     ∃ n, (pe = true ∧ k * p₁ ≤ q ∧ q ≤ r →
         iterStep n v = some { v with
@@ -523,7 +525,8 @@ theorem shift_any (k : ℕ) (hk : 1 ≤ k) (pe : Bool) (ok : Option Bool) (ph : 
     intro ok' w hwp hwl hw
     exact shift_reset k hk (some pe) ok' ph w q hw (by rw [hwp, hA, hC])
       (by rw [hwp, hC]; positivity) (by rw [hwp, hwl]; exact hAL) (by rw [hwp]; exact hBq)
-      (by rw [hwp, hwl]; exact hBL) (by rw [hwp]; exact hP0) (by rw [hwp, hwl]; omega)
+      (by rw [hwp, hwl]; exact hBL) (by rw [hwp, hwl]; exact hBF) (by rw [hwp]; exact hP0)
+      (by rw [hwp, hwl]; omega)
   cases pe with
   | false =>
     obtain ⟨n, hn⟩ := hreset ok v rfl rfl (by simpa [decisionCtl] using hv)
@@ -825,6 +828,10 @@ theorem step_miss (x T : List (Fin 2)) (m k s p₁ r : ℕ) (hk : 1 ≤ k) (pe o
   have hv1len : v1.len = x.length + m := hlen
   obtain ⟨n, hper', hres⟩ := shift_any k hk pe (some ok) ph v1 s p₁ r q rfl hC hA
     (fun hp => hper hp) (by rw [hA, hv1len]; omega) (by rw [hB]; omega) (by rw [hB, hv1len]; omega)
+    (by
+      have htq := ceil_le_succ q k hk
+      rw [← rsShifts_eq k q hk] at htq
+      rw [hB, hv1len]; push_cast at htq ⊢; omega)
     (by rw [hP]; omega) (by rw [hP, hv1len]; omega)
   by_cases hbr : pe = true ∧ k * p₁ ≤ q ∧ q ≤ r
   · have e2 := hper' hbr
