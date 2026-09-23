@@ -212,6 +212,7 @@ import PalPeg.ScaShiftSafe
 import PalPeg.ScaMatcherLoop
 import PalPeg.ScaMatcherRun
 import PalPeg.ScaMatcherAnswer
+import PalPeg.ScaMatcherStart
 import PalPeg.ScaDecomposeSafe
 import PalPeg.ScaWorkerEnc
 import PalPeg.ScaWindowReal
