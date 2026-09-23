@@ -222,6 +222,76 @@ theorem inv_birth {k n : ℕ} (a : Fin 2) (s : PalState Wm Wf) (hk : 2 ^ k ≤ n
       (Nat.lt_succ_iff.mp (Nat.div_lt_of_lt_mul (by omega)))
     rwa [show n - 2 ^ k + 1 = n + 1 - 2 ^ (k + 1 - 1) by rw [show k + 1 - 1 = k by omega]; omega] at this
 
+theorem run_append (m0 : Wm) (f0 : Wf) (w : List (Fin 2)) (a : Fin 2) :
+    run mOps fOps m0 f0 (w ++ [a]) = tick mOps fOps (run mOps fOps m0 f0 w) a := by
+  simp [run, List.foldl_append]
+
+/-- **The schedule after any nonempty word.** -/
+theorem inv_run (m0 : Wm) (f0 : Wf) (w : List (Fin 2)) (hw : 1 ≤ w.length) :
+    Inv (Nat.log 2 w.length) w.length (run mOps fOps m0 f0 w) := by
+  induction w using List.reverseRecOn with
+  | nil => simp at hw
+  | append_singleton w a ih =>
+    rw [run_append, List.length_append, List.length_singleton]
+    rcases Nat.eq_zero_or_pos w.length with h0 | hpos
+    · rw [List.length_eq_zero_iff.mp h0]
+      simpa [run] using inv_first mOps fOps a m0 f0
+    · have h := ih hpos
+      set n := w.length
+      set k := Nat.log 2 n
+      have hk : 2 ^ k ≤ n := Nat.pow_log_le_self 2 (by omega)
+      have hn : n < 2 ^ (k + 1) := Nat.lt_pow_succ_log_self (by norm_num) n
+      rcases Nat.lt_or_ge (n + 1) (2 ^ (k + 1)) with hlt | hge
+      · have hlog : Nat.log 2 (n + 1) = k :=
+          Nat.log_eq_of_pow_le_of_lt_pow (by omega) hlt
+        rw [hlog]
+        exact inv_step mOps fOps a _ hk hlt h
+      · have heq : n + 1 = 2 ^ (k + 1) := by omega
+        have hlog : Nat.log 2 (n + 1) = k + 1 := by
+          rw [heq, Nat.log_pow (by norm_num)]
+        rw [hlog]
+        exact inv_birth mOps fOps a _ hk heq h
+
+theorem answering_of_stageAt {st : StageState} {S d : ℕ} (h : StageAt st S d) :
+    answering st = (decide (2 ≤ d / S) && decide (d / S ≤ 5)) := by
+  obtain ⟨ha, -, -, hi⟩ := h
+  simp only [answering, ha, hi, Bool.true_and]
+  generalize d / S = q
+  rcases q with _ | _ | _ | _ | _ | _ | q <;> simp
+
+/-- **From four letters on, exactly the older stage answers**, and it is the stage born at
+`2^(k-1)` with period `2^(k-2)`, where `2^k ≤ n < 2^(k+1)`. -/
+theorem answering_run (m0 : Wm) (f0 : Wf) (w : List (Fin 2)) (hw : 4 ≤ w.length) :
+    2 ≤ Nat.log 2 w.length ∧
+    answering ((run mOps fOps m0 f0 w).stages (idx (Nat.log 2 w.length))) = true ∧
+    answering ((run mOps fOps m0 f0 w).stages (idx (Nat.log 2 w.length - 1))) = false ∧
+    StageAt ((run mOps fOps m0 f0 w).stages (idx (Nat.log 2 w.length)))
+      (2 ^ (Nat.log 2 w.length - 2)) (w.length - 2 ^ (Nat.log 2 w.length - 1)) := by
+  obtain ⟨-, -, -, -, -, hnew, hold⟩ := inv_run mOps fOps m0 f0 w (by omega)
+  set k := Nat.log 2 w.length with hkdef
+  have hk : 2 ^ k ≤ w.length := Nat.pow_log_le_self 2 (by omega)
+  have hn : w.length < 2 ^ (k + 1) := Nat.lt_pow_succ_log_self (by norm_num) _
+  have hk2 : 2 ≤ k := by
+    have := Nat.log_mono_right (b := 2) hw
+    rwa [show Nat.log 2 4 = 2 by rw [show (4 : ℕ) = 2 ^ 2 by norm_num, Nat.log_pow (by norm_num)]]
+      at this
+  have hX : 2 ^ k = 4 * 2 ^ (k - 2) := by
+    rw [show (4 : ℕ) = 2 ^ 2 by norm_num, ← pow_add]; congr 1; omega
+  have hY : 2 ^ (k - 1) = 2 * 2 ^ (k - 2) := by
+    rw [← pow_succ']; congr 1; omega
+  have h2 : 2 ^ (k + 1) = 2 * 2 ^ k := by ring
+  have hpos : 0 < 2 ^ (k - 2) := Nat.two_pow_pos _
+  refine ⟨hk2, ?_, ?_, hold hk2⟩
+  · rw [answering_of_stageAt (hold hk2)]
+    have h1 : 2 ≤ (w.length - 2 ^ (k - 1)) / 2 ^ (k - 2) :=
+      (Nat.le_div_iff_mul_le hpos).mpr (by omega)
+    have h2' : (w.length - 2 ^ (k - 1)) / 2 ^ (k - 2) ≤ 5 :=
+      Nat.lt_succ_iff.mp (Nat.div_lt_of_lt_mul (by omega))
+    simp [h1, h2']
+  · rw [answering_of_stageAt (hnew (by omega))]
+    have h1 : (w.length - 2 ^ k) / 2 ^ (k - 1) < 2 := Nat.div_lt_of_lt_mul (by omega)
+    simp; omega
+
 end
 
 end PalPeg.ScaWindowSchedule
