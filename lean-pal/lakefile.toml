@@ -1,5 +1,5 @@
-# PAL ∈ PEG, conditional on a strictly real-time multitape TM for PAL,
-# via the Kim–Park Lean artifact (PegSeparation, Lean v4.31.0 + Mathlib v4.31.0).
+# PAL ∈ PEG (PalPeg.PalInPeg.unconditional, standard axioms only), via the Scala window-pal
+# construction and the Kim–Park Lean artifact (PegSeparation, Lean v4.31.0 + Mathlib v4.31.0).
 #
 # This package is deliberately separate from `../lean` (Lean v4.32.0, no Mathlib):
 # the artifact's proofs were checked against a pinned Mathlib and are not moved.

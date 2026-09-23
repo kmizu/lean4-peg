@@ -1,4 +1,116 @@
-# lean-pal — `PAL ∈ PEG` の条件付き Lean 4 証明（Kim–Park 成果物経由）
+# lean-pal — `PAL ∈ PEG` の Lean 4 証明
+
+回文言語 `PAL = { w ∈ {0,1}* | wᴿ = w }`（`PalPeg.PAL`、`PalPeg/Basic.lean`）が
+**全域（total）な PEG で認識できる**ことを、前提なしで Lean 4 で証明した。
+
+## 主定理
+
+```lean
+theorem PalPeg.PalInPeg.unconditional : PegSeparation.RecognizedByTotalPEG PalPeg.PAL
+```
+
+- 場所：`PalPeg/PalInPegFinal.lean`。前提なし。
+- `#print axioms` は `[propext, Classical.choice, Quot.sound]`（Lean/Mathlib の標準3公理）だけ。
+- `sorry`・`admit`・`native_decide`・追加の `axiom` は使っていない。パッケージ全体に `axiom` 宣言は 0 本。
+- `PalPeg/Axioms.lean` の目標ラチェットが、この公理一覧を `#guard_msgs` で固定している。穴を開ければビルドが落ちる。
+- `RecognizedByTotalPEG L`（Kim–Park 成果物 `PegSeparation/Common/Recognition.lean`）の意味：
+  - ある非終端数 `n` と PEG 文法 `G` が存在する。
+  - `G` は loff 全域（`IsLoffTotal`：どの入力でも停止する）である。
+  - すべての `w` で `G.Recognizes w ↔ w ∈ L` が成り立つ。
+
+## 検証のしかた
+
+```sh
+make lean-pal                      # 初回（Mathlib キャッシュの取得を含む）
+cd lean-pal && lake build PalPeg   # ルート全体（約 9,900 ジョブ）。公理監査 Axioms.lean を含む
+```
+
+主定理の公理だけを見るには：
+
+```sh
+cd lean-pal
+printf 'import PalPeg.PalInPegFinal\n#print axioms PalPeg.PalInPeg.unconditional\n' > /tmp/Check.lean
+lake env lean /tmp/Check.lean
+# 'PalPeg.PalInPeg.unconditional' depends on axioms: [propext, Classical.choice, Quot.sound]
+```
+
+## 信頼の基盤
+
+主定理を信じるために信頼する必要があるのは、次の3つだけ。
+
+1. Lean 4（v4.31.0）のカーネルと Mathlib（v4.31.0）。
+2. Kim–Park の成果物 `PegSeparation`（Zenodo 10.5281/zenodo.22099762、commit `c364edb`）。
+   - PEG・SCA とその意味論の定義、`RecognizedByTotalPEG` / `RecognizedBySCA`。
+   - 定理 `SCAToPEG.loffBackward`：SCA が認識する言語の反転は、全域 PEG で認識できる。
+3. 本パッケージの定義 `PalPeg.PAL`（`{ w | w.reverse = w }`）。
+
+照合器・フラグ worker・制御器・head VM・Galil–Seiferas のアルゴリズムは、どれも証明の内側にある。
+Lean がその正しさを検査しているので、信頼する必要はない。
+
+## 証明の経路（SCA 経路）
+
+Scala 実装（`scala/pal`）の window-pal 生成器が PEG を出力する経路と、同じ構成を写している。
+その経路は `GenerateWindowPal` → `ScaffoldWindowPal` → 回路 → `SymbolicSca2Peg` の順に進む。
+入力 1 文字ごとに、有限制御と永続スタックの上で次の2つを進める。
+
+- 2 本の dyadic stage。
+- 各 stage の worker 2 種。
+  - 照合器：Galil–Seiferas 実時間文字列照合。
+  - フラグ worker：接頭辞の回文ビット列。
+
+全体の流れを、主定理から下へ順にたどる。
+
+| 層 | 主なファイル | 主な定理 | 内容 |
+|---|---|---|---|
+| 最上位 | `PalInPegFinal` | `unconditional`, `startupFast_all`, `flagsFast` | 歩数の2つの事実を、証明済みの線形上限から算術で出す |
+| 組み立て | `ScaWindowFast` | `pal_in_peg_of_fast` | 下の3つの約束（`hmatch`・`FlagsContract`・`hworkers`）を、照合器とフラグの解析からそろえる |
+| 制御器の正しさ | `ScaWindowPal`, `ScaWindowSchedule`, `ScaWindowOutput`, `ScaWindowTop`, `ScaWindowPlumbing`, `ScaWindowReal` | `accepts_iff_pal`, `pal_in_peg_of_real_promises` | 2 段の dyadic stage と中央フラグで回文を判定する |
+| 制御器の符号化 | `ScaWindowEncode`, `ScaWindowEncodeTick`, `ScaWorkerEnc` | `pal_in_peg_of_workers`, `pal_in_peg_of_real_workers` | 制御器の 1 tick を、1 文字 1 本のスタックプログラムで模倣する |
+| スタック機械 → SCA | `ScaEncode`, `ScaStackMachine`, `ScaProg`, `ScaTyped` | `ScaEncode.pal_in_peg`, `pal_in_peg_of_typed` | 局所的なスタック操作を、型付き SCA に翻訳する |
+| SCA → PEG | `PalInPegSca` | `pal_recognizedByTotalPEG_of_sca` | Kim–Park の `SCAToPEG.loffBackward` と、`PAL` が反転で閉じることを使う |
+| worker の表 = コルーチン | `ScaGsTables`, `ScaGsCertData`, `ScaGsCertFunctional` | `matcher_certified`, `flags_certified` | Scala 出力の命令表（照合器 294 行、フラグ 492 行）が、写したコルーチンと一致する（証明書を `decide +kernel` で検査） |
+| worker ↔ head VM | `ScaWorkerLink`, `ScaFlagsLink`, `ScaWorkerRegs`, `ScaMatcherReaders`, `ScaFlagsReaders` | `service_link`, `readerFacts` | 表の worker の 1 量子が、論理的な head VM の歩の列と一致する（読み取り位置などの側条件つき） |
+| 照合器の主ループ | `ScaHeadSafe`, `ScaShiftSafe`, `ScaMatcherLoop`, `ScaMatcherRun`, `ScaMatcherTick` | `seg`, `cur_step`, `cur_live` | head VM が GS 検証器の軌道をなぞる。側条件を保ち、報告はその出現の最後の文字の tick に出る |
+| 照合器の起動部 | `ScaHeadDecompose`, `ScaDecomposeSafe`, `ScaMatcherStart` | `decompose_runS`, `start_pre` | head の Decompose が GS 分解 `decompose x 8` を返す |
+| 照合器の寿命と答え | `ScaMatcherLife`, `ScaMatcherLife2`, `ScaMatcherLifeSafe`, `ScaMatcherAnswer` | `lifeSafe'`, `tick_output_last`, `answer_iff_occursAt` | どの段の照合器も fault しない。答える段の出力 ⇔ パターンの出現 |
+| 中央フラグ | `ScaFlagsHead`, `ScaFlagsLife`, `ScaFlagsJob` | `flags_head_gs_palindromes`, `flagsContract`, `flagsContract_of_fast` | フラグ VM が接頭辞の回文ビットを計算し、次の仕事の前に終える |
+
+リスト上の Galil–Seiferas の理論は、旧経路で作ったものを使っている。
+
+- `GSScan`、`GSVerifier`、`GSDrained`、`GSReportDeadline`、`GSDecomposeL1`、`GSPreprocess`、`BorderJobHead` など。
+- 分解の正しさ、実時間検証器、報告の期限、分解の仕事量の線形上限を含む。
+
+### 時間の議論
+
+照合器は 1 tick（入力 1 文字）ごとに決まった歩数（quantum）だけ動く。
+報告が遅れて、次の文字が届いたあとに出ると worker が fault する。
+それが起きないことを、次のように示している（`ScaMatcherTick`）。
+
+- ポテンシャル `Φ = (k+1)·pos + q`（`k = 8`）を使う。
+- 主ループの 1 区間の歩数は `35·ΔΦ` 以下。
+- 最後に待った時点から見て、終端 `n` の報告までの歩数は、quantum × 残り文字数に収まる。
+
+### quantum について
+
+Lean のモデルは、Scala の `GsBatchClock.VERIFIED_BATCH`（照合器 2048、フラグ 32768）で動く。
+Scala では `GenerateWindowPal --verified` がこの定数で PEG を出力する。
+
+- **なぜ既定値を使わないか**：Scala の既定値 `DEFAULT_BATCH`（512 / 1024、Python の生成器とバイト一致）は、それより小さい。証明済みの歩数の上限（分解 `1698·|x| + 230`、フラグの 1 仕事 `8098·|y| + 10`）は既定値の予算に収まらないが、この quantum なら収まる。
+- **既定値は実際には足りている見込み**：実測では 512 / 1024 でも余裕がある（分解は最悪でも 1 文字あたり約 104 歩、フラグは予算の約 0.37）。既定値のままの証明には、分解の仕事量をもっと鋭く償却する必要がある。
+- **結論への影響**：quantum は PEG の大きさを変えるだけで、`PAL ∈ PEG` の結論には影響しない。
+
+## 旧経路と部分結果
+
+- **条件付き**：`PalPeg.pal_recognizedByTotalPEG` などは、「`PAL` を認識する厳密実時間多テープ TM が存在する」を仮定して、Kim–Park の実時間 TM → PEG で `PAL ∈ PEG` を出す。Loff–Moreira–Reis (2020) Conjecture 7 の条件付き反駁もここにある。
+- **物理機械（118 本テープ）の経路**：`PalInPegPhysical.given_physicalObligations` に 6 本の前提として残してある。2026-09-24 まで目標定理はこの経路にあり、前提は `axiom` だった。
+- 設計の記録は `ASSEMBLY_PLAN.md`・`DESIGN_SCA_PAL.md`・`SCA_GS_MAPPING.md` を、進捗の履歴はリポジトリ直下の `CLAUDE.md` を参照。
+
+---
+
+## 付録：旧経路の記録（2026-09-24 以前の README 本文）
+
+以下は SCA 経路で完成する前の記述で、見出しだけ 1 段下げた。
+条件付きの経路と、共通の下層（語の組合せ論・GS 分解・実時間照合など）の説明として残す。
 
 回文言語 `PAL = { w ∈ {0,1}* | wᴿ = w }` が PEG 言語であることを、
 **「`PAL` を認識する厳密実時間多テープ TM が存在する」という仮定のもとで** Lean 4 で証明する。
@@ -12,9 +124,9 @@
 単一Progへの一本化を前提にした旧制御層は
 [`archive/single-prog/`](archive/single-prog/README.md) に退避し、ビルド対象から外した。
 
-## 何を証明し、何を仮定しているか
+### 何を証明し、何を仮定しているか
 
-### 仮定（Lean では証明していない）
+#### 仮定（Lean では証明していない）
 
 ただ一つ、`PalPeg.pal_recognizedByTotalPEG` などの前提に現れる
 
@@ -36,7 +148,7 @@ PegSeparation.RealTimeTM.RecognizedBy PalPeg.PAL
 したがってここで示したのは「Galil の機械が成果物の厳密実時間モデルで書ける、と認めるなら `PAL ∈ PEG`」であり、
 無条件の `PAL ∈ PEG` ではない。
 
-### ファイル構成（`PalPeg/*.lean`、層ごと）
+#### ファイル構成（`PalPeg/*.lean`、層ごと）
 
 基礎（`Basic`／`Existence`／`EvenLength`／`Axioms`）は上の 2 節に既出のとおり。残りは以下の層に分かれる。
 
@@ -167,7 +279,7 @@ G.Recognizes w
 Conjecture 7 側は成果物の閉包性 `Closure.recognizedByTotalPEG_inter`（共通部分）と
 `Closure.recognizedByTotalPEG_of_isRegular`（正則 ⊆ PEG）に、`EvenLength` の正則性を渡すだけ。
 
-### 公理 guard
+#### 公理 guard
 
 `PalPeg/Axioms.lean` が主定理ごとに `#print axioms` を `#guard_msgs` で固定している。
 現れる公理は Lean / Mathlib の標準 3 公理 `propext`, `Classical.choice`, `Quot.sound` だけ
@@ -183,7 +295,7 @@ Conjecture 7 側は成果物の閉包性 `Closure.recognizedByTotalPEG_inter`（
 'PalPeg.evenPal_ww_reverse_of_pal' depends on axioms: [propext, Classical.choice, Quot.sound]
 ```
 
-## 依存
+### 依存
 
 - Lean `leanprover/lean4:v4.31.0`（`lean-toolchain`）。この repo の `../lean`（v4.32.0、Mathlib 非依存）とは
   別パッケージ。成果物の証明は pin された Mathlib で検査されたものなので動かさない。
@@ -197,7 +309,7 @@ Conjecture 7 側は成果物の閉包性 `Closure.recognizedByTotalPEG_inter`（
   `Closure.recognizedByTotalPEG_of_isRegular`（`Closure/RegularToPEG.lean`）。
   いずれも成果物側で標準 3 公理のみ（`axioms/closure.txt`）。
 
-## ビルド
+### ビルド
 
 ```sh
 cd lean-pal
@@ -216,7 +328,7 @@ lake build
 エージェントがファイルを編集している最中は `lake build` が一時的に失敗することがある
 （依存モジュールの整合が取れていない中間状態）。編集が落ち着いてから再度ビルドし直すこと。
 
-## 現在の到達点
+### 現在の到達点
 
 `PalPeg/*.lean` に列挙した全モジュールは `sorry` なし・標準 3 公理のみ（`Axioms.lean` の guard 参照）。
 

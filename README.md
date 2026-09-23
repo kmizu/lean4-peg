@@ -129,6 +129,9 @@ recogniser — is future work in this repository; see
 The Python-to-Scala 3 counterparts are present under `scala/pal`; Python remains the
 reference implementation. Scala reproduction commands, reader limits, and the
 current SHA boundary are documented in [`STATUS.md`](docs/palindromes-in-peg/STATUS.md).
-The separate [`lean-pal/`](lean-pal/) package contains a conditional theorem;
-its strict-real-time machine premise and Galil normalization remain assumptions,
-so it is not an unconditional `PAL ∈ PEG` proof.
+The separate [`lean-pal/`](lean-pal/) package proves `PAL ∈ PEG` unconditionally:
+`PalPeg.PalInPeg.unconditional : PegSeparation.RecognizedByTotalPEG PalPeg.PAL` depends only on
+the standard axioms (`propext`, `Classical.choice`, `Quot.sound`). The proof follows the Scala
+window-pal pipeline (scaffold → SCA → PEG, with the service quanta of
+`GsBatchClock.VERIFIED_BATCH`) and ends in the Kim–Park artifact's SCA → PEG theorem; see
+[`lean-pal/README.md`](lean-pal/README.md).
