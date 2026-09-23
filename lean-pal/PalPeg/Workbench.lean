@@ -198,6 +198,7 @@ import PalPeg.GSDecomposeL1
 import PalPeg.GSDrained
 import PalPeg.BorderJobHead
 import PalPeg.ScaHeadRep
+import PalPeg.ScaHeadBridge
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
 import PalPeg.PostRunInduction
