@@ -1,4 +1,5 @@
 import PalPeg.ScaHeadRun
+import PalPeg.GSScan
 
 /-!
 # Contracts of the shared generators, run on their own chain
@@ -411,5 +412,50 @@ theorem resetShift_run (k : ℕ) (hk : 1 ≤ k) (v : HVM) (q : ℕ)
     (by simp [rsPos_zero]) rfl (by omega) hC (by simp; omega) hBq (by simp; omega) hP0 hPL
   refine ⟨1 + n, by omega, ?_⟩
   rw [iterStep_add, h1, Option.bind_some, hrun]
+
+/-! ## Lifting counted runs, and the reset shift count -/
+
+theorem iterStep_lift (f : Frame) :
+    ∀ (n : ℕ) (v w : HVM), NonEmptyCtl v.ctl → iterStep n v = some w →
+      iterStep n (liftVM f v) = some (liftVM f w)
+  | 0, v, w, _, h => by simp [iterStep] at h; subst h; rfl
+  | n + 1, v, w, hv, h => by
+    simp only [iterStep] at h ⊢
+    cases hs : stepMatch v with
+    | none => simp [hs] at h
+    | some v1 =>
+      rw [hs, Option.bind_some] at h
+      obtain ⟨cs, e, hc, -⟩ := stepMatch_ctl hs
+      have hne : cs ≠ [] := by rw [hc] at hv; exact hv
+      have hl : liftVM f v = { v with ctl := .pending (f :: cs) e } := by
+        simp only [liftVM, hc, liftCtl]
+      rw [hl, stepMatch_lift f v cs e hc hne, hs, Option.map_some, Option.bind_some]
+      exact iterStep_lift f n v1 w (nonEmpty_step hv (MStep.step hs)) h
+
+theorem rsShifts_eq (k q : ℕ) (hk : 1 ≤ k) : rsShifts k q = max 1 (PalPeg.ceilDiv q k) := by
+  unfold rsShifts PalPeg.ceilDiv
+  have ha := Nat.div_add_mod q k
+  have hb := Nat.mod_lt q (show 0 < k by omega)
+  split_ifs with h
+  · rcases h with h | h
+    · subst h; simp [Nat.div_eq_of_lt (show k - 1 < k by omega)]
+    · have h1 : (q + k - 1) / k = q / k + 1 := by
+        apply Nat.div_eq_of_lt_le
+        · rw [Nat.add_mul, Nat.one_mul, Nat.mul_comm]; omega
+        · rw [show (q / k + 1 + 1) * k = k * (q / k) + k + k by ring]; omega
+      rw [h1, max_eq_right (Nat.le_add_left _ _)]
+  · have h' : q ≠ 0 ∧ q % k = 0 := by
+      constructor
+      · exact fun h0 => h (Or.inl h0)
+      · by_contra h0; exact h (Or.inr h0)
+    have h1 : (q + k - 1) / k = q / k := by
+      apply Nat.div_eq_of_lt_le
+      · rw [Nat.mul_comm]; omega
+      · rw [show (q / k + 1) * k = k * (q / k) + k by ring]; omega
+    have : 1 ≤ q / k := by
+      rcases Nat.eq_zero_or_pos (q / k) with h0 | h0
+      · rw [h0] at ha; omega
+      · exact h0
+    rw [h1, max_eq_right this, Nat.add_zero]
 
 end PalPeg.ScaHeadGen
