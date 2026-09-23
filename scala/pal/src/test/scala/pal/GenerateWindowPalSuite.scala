@@ -14,13 +14,13 @@ class GenerateWindowPalSuite extends munit.FunSuite {
     val resumed = folder.resolve("resumed.peg")
     val saved = folder.resolve("source.sca")
     val machine = fixture()
-    GenerateWindowPal.run(GenerateWindowPal.Options(original, checkpoint = Some(saved)), () => machine)
+    GenerateWindowPal.run(GenerateWindowPal.Options(original, checkpoint = Some(saved)), Some(() => machine))
     assertEquals(Files.readString(original), machine.compile())
     GenerateWindowPal.run(GenerateWindowPal.Options(resumed, resume = Some(saved)),
-      () => fail("resume rebuilt the source"))
+      Some(() => fail("resume rebuilt the source")))
     assertEquals(Files.readString(resumed), machine.compile())
     GenerateWindowPal.run(GenerateWindowPal.Options(resumed, resume = Some(saved), skipOptimize = false),
-      () => fail("resume rebuilt the source"))
+      Some(() => fail("resume rebuilt the source")))
     assertEquals(Files.readString(resumed), ScaffoldOptimize.optimize(machine)._1.compile())
   }
 
@@ -53,5 +53,16 @@ class GenerateWindowPalSuite extends munit.FunSuite {
     intercept[IllegalArgumentException] {
       GenerateWindowPal.parse(Array("--optimize", output.toString, "--skip-optimize"))
     }
+  }
+
+  test("--verified selects the Lean-verified quanta, above the derived ones") {
+    val output = Files.createTempFile("window-pal-options-", ".peg")
+    assertEquals(GenerateWindowPal.parse(Array(output.toString)).rates, GsBatchClock.DEFAULT_BATCH)
+    val verified = GenerateWindowPal.parse(Array("--verified", output.toString)).rates
+    assertEquals(verified, GsBatchClock.VERIFIED_BATCH)
+    assertEquals((verified.matching, verified.flags), (2048, 32768))
+    assertEquals(verified.k, GsBatchClock.DEFAULT_BATCH.k)
+    assert(verified.matching >= GsBatchClock.DEFAULT_BATCH.matching)
+    assert(verified.flags >= GsBatchClock.DEFAULT_BATCH.flags)
   }
 }

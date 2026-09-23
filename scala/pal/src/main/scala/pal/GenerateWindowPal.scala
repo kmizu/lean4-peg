@@ -7,17 +7,20 @@ import scala.collection.immutable.VectorMap
 /** Emit the complete windowed PAL source as an ordinary binary PEG. */
 object GenerateWindowPal {
   final case class Options(output: Path, checkpoint: Option[Path] = None, resume: Option[Path] = None,
-                           skipOptimize: Boolean = true)
+                           skipOptimize: Boolean = true, verified: Boolean = false) {
+    /** The service quanta of the emitted source (`--verified`: the Lean-verified quanta). */
+    def rates: BatchRates = if (verified) { GsBatchClock.VERIFIED_BATCH } else { GsBatchClock.DEFAULT_BATCH }
+  }
 
-  private val metadata: VectorMap[String, Any] = VectorMap(
-    "kind" -> "window-pal", "k" -> GsBatchClock.DEFAULT_BATCH.k,
-    "matching" -> GsBatchClock.DEFAULT_BATCH.matching, "flags" -> GsBatchClock.DEFAULT_BATCH.flags)
+  private def metadataFor(rates: BatchRates): VectorMap[String, Any] = VectorMap(
+    "kind" -> "window-pal", "k" -> rates.k, "matching" -> rates.matching, "flags" -> rates.flags)
 
   def parse(args: Array[String]): Options = {
     var output: Option[Path] = None
     var checkpoint: Option[Path] = None
     var resume: Option[Path] = None
     var rewriting: Option[Boolean] = None
+    var verified = false
     var index = 0
     while (index < args.length) {
       args(index) match {
@@ -33,13 +36,14 @@ object GenerateWindowPal {
           if (rewriting.contains(false)) { throw new IllegalArgumentException("--skip-optimize conflicts with --optimize") }
           rewriting = Some(true)
           index += 1
+        case "--verified" => verified = true; index += 1
         case option if option.startsWith("-") => throw new IllegalArgumentException("unknown option: " + option)
         case path if output.isEmpty => output = Some(Path.of(path)); index += 1
         case path => throw new IllegalArgumentException("unexpected argument: " + path)
       }
     }
     Options(output.getOrElse(throw new IllegalArgumentException("output path is required")), checkpoint, resume,
-      rewriting.getOrElse(true))
+      rewriting.getOrElse(true), verified)
   }
 
   private def elapsed(started: Long): Double = (System.nanoTime() - started).toDouble / 1000000000.0
@@ -62,8 +66,11 @@ object GenerateWindowPal {
     }.mkString("{", ", ", "}"))
   }
 
-  def run(options: Options, sourceBuilder: () => Scaffold = () => Expr.share { ScaffoldWindowPal.build()._3 }): Unit = {
+  def run(options: Options, sourceBuilder: Option[() => Scaffold] = None): Unit = {
     val started = System.nanoTime()
+    val rates = options.rates
+    val metadata = metadataFor(rates)
+    val build = sourceBuilder.getOrElse(() => Expr.share { ScaffoldWindowPal.build(rates)._3 })
     val machine0 = options.resume match {
       case Some(path) =>
         val (machine, savedMetadata) = ScaffoldArtifact.read(path)
@@ -71,7 +78,7 @@ object GenerateWindowPal {
           throw new IllegalArgumentException("checkpoint is not the complete default window PAL source")
         }
         machine
-      case None => sourceBuilder()
+      case None => build()
     }
     report("phase" -> "built", "seconds" -> elapsed(started),
       "labels" -> machine0.labels.size, "pointers" -> machine0.pointers.size)
@@ -96,7 +103,7 @@ object GenerateWindowPal {
     }
     report("phase" -> "emitted", "file" -> options.output, "rules" -> count,
       "bytes" -> Files.size(options.output), "seconds" -> elapsed(started),
-      "matching" -> GsBatchClock.DEFAULT_BATCH.matching, "flags" -> GsBatchClock.DEFAULT_BATCH.flags)
+      "matching" -> rates.matching, "flags" -> rates.flags)
   }
 
   def main(args: Array[String]): Unit = run(parse(args))

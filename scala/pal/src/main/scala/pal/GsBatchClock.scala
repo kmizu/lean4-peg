@@ -37,4 +37,12 @@ object GsBatchClock {
   }
 
   val DEFAULT_BATCH: BatchRates = deriveBatch()
+
+  /** Quanta for which the Lean proof's step bounds are established
+    * (`lean-pal/PalPeg/ScaWindowFast.lean`): matcher 2048, flags 32768. The proven bounds
+    * (Decompose within 1698|x| + 230 steps, a flags job within 8098|y| + 10) are looser than the
+    * accounting behind `DEFAULT_BATCH`, so the verified source uses larger quanta; `WindowPAL`
+    * accepts any rates above the derived ones.
+    */
+  val VERIFIED_BATCH: BatchRates = DEFAULT_BATCH.copy(matching = 2048, flags = 32768)
 }
