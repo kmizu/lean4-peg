@@ -20,14 +20,14 @@ open PalPeg.GalilFinalAssembly2 (centreC placeC)
 
 /-- The phase modes whose tick writes no counter. -/
 def QuietPhase (m : PalPeg.GalilScaffoldController.Mode) : Prop :=
-  m = .markEnd ∨ m = .home ∨ m = .fpp ∨ m = .choose
+  m = .markEnd ∨ m = .home ∨ m = .fpp ∨ m = .choose ∨ m = .copy
 
 theorem chain_tickFun (w : List (Fin 2)) (x : State GalilVM) (hmode : QuietPhase x.ctl.mode) :
     (tickFun (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w)
       (galilFrameS (PalPeg.GalilRunSkeleton.PofC centreC placeC 0 w) 1 0) 2048 x).vm.chain
       = x.vm.chain := by
   unfold PalPeg.GalilScaffoldTop.tickFun
-  rcases hmode with h | h | h | h <;> rw [h] <;> dsimp only <;> split <;> rfl
+  rcases hmode with h | h | h | h | h <;> rw [h] <;> dsimp only <;> split <;> rfl
 
 theorem mode_tickFun_ne_shift (w : List (Fin 2)) (x : State GalilVM)
     (hmode : QuietPhase x.ctl.mode) :
@@ -35,7 +35,7 @@ theorem mode_tickFun_ne_shift (w : List (Fin 2)) (x : State GalilVM)
       (galilFrameS (PalPeg.GalilRunSkeleton.PofC centreC placeC 0 w) 1 0) 2048 x).ctl.mode
       ≠ .shift := by
   unfold PalPeg.GalilScaffoldTop.tickFun
-  rcases hmode with h | h | h | h <;> rw [h] <;> dsimp only <;> split <;> simp_all
+  rcases hmode with h | h | h | h | h <;> rw [h] <;> dsimp only <;> split <;> simp_all
 
 /-- The chain cache reads the chain and whether the mode is `shift`, and two slots. -/
 theorem cache_congr {x y : State GalilVM} {bit : Bool} {tape mirror : STape Γm}
@@ -241,7 +241,7 @@ theorem ideal_chooseBack (he : PalPeg.PhysicalCacheInvariant.CoreInv w x p)
     hcore.2.1 hcore.2.2 hm hmode hkeep hcore.1
   have hT : tapesOf (fun slot => p.2 (slotIndex slot)) = p.2 := by funext j; simp [tapesOf]
   simp only [← workRule_eq, hT, Prod.eta] at hencoded
-  have hq : QuietPhase x.ctl.mode := Or.inr (Or.inr (Or.inr hmode))
+  have hq : QuietPhase x.ctl.mode := Or.inr (Or.inr (Or.inr (Or.inl hmode)))
   refine coreInv_of_ideal rest w x _ p he hencoded (fun slot hhead hidle hlive => ?_) ?_
     (chain_tickFun w x hq) (by rw [hmode]; decide) (mode_tickFun_ne_shift w x hq)
   · simp only [ruleActs, hm]
@@ -309,6 +309,71 @@ theorem ideal_fpp (he : PalPeg.PhysicalCacheInvariant.CoreInv w x p)
     rw [hbits]
     simp only [ruleNext, hm, fppNext]
     split_ifs <;> rfl
+
+/-- **`copy` keeps the common invariant**, both the step that copies one symbol (reading the
+walker's letter) and the step that marks the end. It rewrites the program's work counter `9` and
+its sign, which the named frame allows. -/
+theorem ideal_copy (he : PalPeg.PhysicalCacheInvariant.CoreInv w x p)
+    (hmode : x.ctl.mode = .copy)
+    (hread : (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w).remainingPos x.vm = true →
+      ∃ a, PalPeg.GalilScaffoldPlace.read x.vm.fpp.walker = some a) :
+    PalPeg.PhysicalCacheInvariant.CoreInv w
+      (tickFun (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w)
+        (galilFrameS (PalPeg.GalilRunSkeleton.PofC centreC placeC 0 w) 1 0) 2048 x)
+      (idealRun (workRule rest) blankM p none 12) := by
+  have hm := hm_of w x p he hmode
+  have hcore : CoreEnc w x p := he.1.1
+  have hencoded : PalPeg.PhysicalEncoding.Enc w margin
+      (tickFun (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w)
+        (galilFrameS (PalPeg.GalilRunSkeleton.PofC centreC placeC 0 w) 1 0) 2048 x)
+      ((PalPeg.LocalStepFusion.idealRun (tickPhysRule 1 0 fppBound_gt_start
+          (by decide : 1+3 ≤ microRadius) (by decide : 2 ≤ microRadius) rest) blankM
+          (p.1, tapesOf (fun slot => p.2 (slotIndex slot))) none 12).1,
+        fun i => (PalPeg.LocalStepFusion.idealRun (tickPhysRule 1 0 fppBound_gt_start
+          (by decide : 1+3 ≤ microRadius) (by decide : 2 ≤ microRadius) rest) blankM
+          (p.1, tapesOf (fun slot => p.2 (slotIndex slot))) none 12).2 (slotIndex i)) := by
+    cases hr : (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w).remainingPos x.vm
+    · exact copy_end_of_tick margin centreC placeC 0 1 0 w
+        (galilFrameS (PalPeg.GalilRunSkeleton.PofC centreC placeC 0 w) 1 0) 2048 x p.1
+        (fun slot => p.2 (slotIndex slot)) rest none
+        fppBound_gt_start (by decide : 1+3 ≤ microRadius) (by decide : 2 ≤ microRadius)
+        (by decide : 1 ≤ microRadius) micro_le_margin
+        hcore.2.1 hcore.2.2 hm hmode hr hcore.1
+    · obtain ⟨a, ha⟩ := hread hr
+      exact copy_one_of_tick margin centreC placeC 0 1 0 w
+        (galilFrameS (PalPeg.GalilRunSkeleton.PofC centreC placeC 0 w) 1 0) 2048 x p.1
+        (fun slot => p.2 (slotIndex slot)) rest none
+        fppBound_gt_start (by decide : 1+3 ≤ microRadius) (by decide : 2 ≤ microRadius)
+        (by decide : 1 ≤ microRadius) micro_le_margin
+        hcore.2.1 hcore.2.2 hm hmode hr a ha hcore.1
+  have hT : tapesOf (fun slot => p.2 (slotIndex slot)) = p.2 := by funext j; simp [tapesOf]
+  simp only [← workRule_eq, hT, Prod.eta] at hencoded
+  have hq : QuietPhase x.ctl.mode := Or.inr (Or.inr (Or.inr (Or.inr hmode)))
+  refine coreInv_of_ideal_named rest w x _ p he hencoded (fun slot hslot => ?_) ?_
+    (chain_tickFun w x hq) (by rw [hmode]; decide) (mode_tickFun_ne_shift w x hq)
+  · have hhead : ∀ v i, slot ≠ headSlot v i := by
+      rcases hslot with rfl | ⟨c, _, rfl⟩ <;> intro v i <;> simp [mirrorSlot, counterSlot, headSlot]
+    have hidle : ∀ i, slot ≠ progSlotOf (!p.1.fppLive) i := by
+      rcases hslot with rfl | ⟨c, _, rfl⟩ <;> intro i <;> cases p.1.fppLive <;>
+        simp [mirrorSlot, counterSlot, progSlotOf]
+    rw [PalPeg.PhysicalShift.ideal_other rest p hcore.2.1 slot hhead]
+    have hacts : ruleActs 1 0 p.1 (fun j => readWin blankM microRadius (p.2 j)) (slotIndex slot)
+        = [] := by
+      simp only [ruleActs, hm]
+      rw [withErase_at_other p.1.fppLive _ _ slot hidle]
+      unfold copyActs
+      rcases hslot with rfl | ⟨c, hc, rfl⟩ <;> cases p.1.fppLive <;>
+        split_ifs <;> simp_all [actsAt, slotIndex.injective.eq_iff, mirrorSlot, counterSlot,
+          progSlot, progSlotOf, placeSlot] <;> omega
+    rw [hacts]
+    rfl
+  · have hbits := (tickPhysRule_bits 1 0 fppBound_gt_start (by decide : 1+3 ≤ microRadius)
+      (by decide : 2 ≤ microRadius) rest p.1 (fun slot => p.2 (slotIndex slot)) none
+      hcore.2.1).1
+    simp only [← workRule_eq, hT, Prod.eta] at hbits
+    rw [hbits]
+    simp only [ruleNext, hm, copyNext]
+    split_ifs <;> simp [Function.update]
 
 /-- **The quiet phase ticks on the fused physical step.** -/
 theorem running_quiet (he : PalPeg.PhysicalCacheInvariant.Running w x p)

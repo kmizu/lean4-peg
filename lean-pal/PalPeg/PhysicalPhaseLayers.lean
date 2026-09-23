@@ -130,21 +130,22 @@ theorem successor_put_quiet (w : List (Fin 2)) (x : State GalilVM)
       PalPeg.PhysicalSearchSnapshots.put (PalPeg.PhysicalCacheMachine.successor w x) v := by
   unfold PalPeg.PhysicalCacheMachine.successor PalPeg.PhysicalSearchSnapshots.put
   unfold PalPeg.GalilScaffoldTop.tickFun
-  rcases hq with h | h | h | h <;> simp only [h] <;> split <;> split <;>
+  rcases hq with h | h | h | h | h <;> simp only [h] <;> split <;> split <;>
     first | rfl | (exfalso; rename_i h1 h2; exact h2 h1) | (exfalso; rename_i h1 h2; exact h1 h2)
 
 theorem quiet_ne_scan {m : PalPeg.GalilScaffoldController.Mode}
     (hq : PalPeg.PhysicalPhaseStill.QuietPhase m) : m ≠ .scan := by
-  rcases hq with h | h | h | h <;> rw [h] <;> decide
+  rcases hq with h | h | h | h | h <;> rw [h] <;> decide
 
 theorem quiet_ne_shift {m : PalPeg.GalilScaffoldController.Mode}
     (hq : PalPeg.PhysicalPhaseStill.QuietPhase m) : m ≠ .shift := by
-  rcases hq with h | h | h | h <;> rw [h] <;> decide
+  rcases hq with h | h | h | h | h <;> rw [h] <;> decide
 
 /-- The per-mode step facts, for every state with the same control and first-period program.
 Snapshots and representatives differ from the source only in the search counters. -/
 def RunsQuiet (rest : RestCommands) (w : List (Fin 2)) (x : State GalilVM) : Prop :=
-  ∀ y : State GalilVM, y.ctl = x.ctl → y.vm.fpp = x.vm.fpp → RunsNonscan rest w y
+  ∀ y : State GalilVM, y.ctl = x.ctl → PalPeg.PhysicalRestartStorage.Same x.vm y.vm →
+    RunsNonscan rest w y
 
 /-- **A quiet phase tick through the snapshot layer.** The representative and every saved copy
 step with the source; the chain, hence the copy's boundary cache, does not move. -/
@@ -157,10 +158,6 @@ theorem forward_quiet_snapshot (rest : RestCommands) (w : List (Fin 2)) (x : Sta
   have hmode := quiet_ne_scan hq
   obtain ⟨⟨y, hr, hold⟩, hcopies⟩ := he
   have hctl : y.ctl = x.ctl := hr.1.symm
-  have hfpp : y.vm.fpp = x.vm.fpp := by
-    have hh := hr.2.1
-    unfold PalPeg.PhysicalRestartStorage.Same at hh
-    simpa only [PalPeg.PhysicalRestartStorage.replace] using congrArg GalilVM.fpp hh
   have hmodey : y.ctl.mode ≠ .scan := by rw [hctl]; exact hmode
   have hsy : PalPeg.FrameFunction.starvedTest y = false := by
     rw [PalPeg.PhysicalRestartStorage.related_starved hr]; exact hs
@@ -185,7 +182,7 @@ theorem forward_quiet_snapshot (rest : RestCommands) (w : List (Fin 2)) (x : Sta
   rw [PalPeg.PhysicalSnapshotMachine.apply_previous rest p none htests.1 htests.2]
   refine ⟨⟨PalPeg.PhysicalCacheMachine.successor w y,
     PalPeg.PhysicalRestartStorage.related_tick w hr,
-    forward_nonscan_shiftDispatch rest w y p hold hmodey hsy (hrun y hctl hfpp)⟩, ?_⟩
+    forward_nonscan_shiftDispatch rest w y p hold hmodey hsy (hrun y hctl hr.2.1)⟩, ?_⟩
   intro wm hwm
   rw [show (PalPeg.PhysicalCacheMachine.successor w x).vm.chain = x.vm.chain from
     PalPeg.PhysicalPhaseStill.chain_tickFun w x hq] at hwm
@@ -193,7 +190,7 @@ theorem forward_quiet_snapshot (rest : RestCommands) (w : List (Fin 2)) (x : Sta
   refine ⟨h, age, spare, hinv, ?_⟩
   unfold PalPeg.PhysicalSearchSnapshots.saved
   rw [← successor_put_quiet w x _ hq]
-  exact forward_nonscan_shiftDispatch rest w _ p hsaved hmode hs (hrun _ rfl rfl)
+  exact forward_nonscan_shiftDispatch rest w _ p hsaved hmode hs (hrun _ rfl (PalPeg.PhysicalRestartStorage.same_replace _ _ _ _ _))
 
 /-- **A quiet phase tick through the whole common machine.** Each dispatcher above the
 snapshot layer tests scan (or shift), so it runs the layer below; the cleanup layer carries its
@@ -230,10 +227,10 @@ theorem runsQuiet_chooseBack (rest : RestCommands) (w : List (Fin 2)) (x : State
     (hmode : x.ctl.mode = .choose)
     (hkeep : (x.ctl.odd && (decide ((x.vm.fpp.program.config.tapes 8).focus = 8)
         || decide ((x.vm.fpp.program.config.tapes 8).focus = 0))) = false) :
-    RunsQuiet rest w x := fun y hy hf p hp =>
+    RunsQuiet rest w x := fun y hy hsame p hp =>
   PalPeg.PhysicalPhaseStill.running_quiet rest w y p hp (fun T hT =>
     PalPeg.PhysicalPhaseStill.ideal_chooseBack rest w y (p.1, T) hT (by rw [hy]; exact hmode)
-      (by rw [hy, hf]; exact hkeep))
+      (by unfold PalPeg.PhysicalRestartStorage.Same at hsame; rw [hy, hsame]; exact hkeep))
 
 theorem runsQuiet_fpp (rest : RestCommands) (w : List (Fin 2)) (x : State GalilVM)
     (hmode : x.ctl.mode = .fpp)
@@ -241,17 +238,31 @@ theorem runsQuiet_fpp (rest : RestCommands) (w : List (Fin 2)) (x : State GalilV
     (hfloorRun : ∀ k, ∀ t : Fin 9, ((PalPeg.ProgramFunction.runFun PalPeg.GalilFppMarkedCode.code
       (List.replicate k true) x.vm.fpp.program).config.tapes t).left ≠ [])
     (hin : x.vm.fpp.program.config.pc < fppBound) :
-    RunsQuiet rest w x := fun y hy hf p hp =>
-  PalPeg.PhysicalPhaseStill.running_quiet rest w y p hp (fun T hT =>
+    RunsQuiet rest w x := fun y hy hsame p hp => by
+  unfold PalPeg.PhysicalRestartStorage.Same at hsame
+  exact PalPeg.PhysicalPhaseStill.running_quiet rest w y p hp (fun T hT =>
     PalPeg.PhysicalPhaseStill.ideal_fpp rest w y (p.1, T) hT (by rw [hy]; exact hmode)
-      (by rw [hf]; exact hcomp) (by rw [hf]; exact hfloorRun) (by rw [hf]; exact hin))
+      (by rw [hsame]; exact hcomp) (by rw [hsame]; exact hfloorRun) (by rw [hsame]; exact hin))
+
+/-- The copy tick whose walker can read the letter it copies. -/
+def CopyReady (w : List (Fin 2)) (x : State GalilVM) : Prop :=
+  x.ctl.mode = .copy ∧
+    ((PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w).remainingPos x.vm = true →
+      ∃ a, PalPeg.GalilScaffoldPlace.read x.vm.fpp.walker = some a)
+
+theorem runsQuiet_copy (rest : RestCommands) (w : List (Fin 2)) (x : State GalilVM)
+    (hready : CopyReady w x) : RunsQuiet rest w x := fun y hy hsame p hp => by
+  unfold PalPeg.PhysicalRestartStorage.Same at hsame
+  exact PalPeg.PhysicalPhaseStill.running_quiet rest w y p hp (fun T hT =>
+    PalPeg.PhysicalPhaseStill.ideal_copy rest w y (p.1, T) hT (by rw [hy]; exact hready.1)
+      (by rw [hsame]; exact hready.2))
 
 /-- A quiet phase moves only among the phases and `rewind`: it never returns to scan. -/
 theorem successor_ne_scan (w : List (Fin 2)) (x : State GalilVM)
     (hq : PalPeg.PhysicalPhaseStill.QuietPhase x.ctl.mode) :
     (PalPeg.PhysicalCacheMachine.successor w x).ctl.mode ≠ .scan := by
   unfold PalPeg.PhysicalCacheMachine.successor PalPeg.GalilScaffoldTop.tickFun
-  rcases hq with h | h | h | h <;> rw [h] <;> dsimp only <;> split <;> simp_all
+  rcases hq with h | h | h | h | h <;> rw [h] <;> dsimp only <;> split <;> simp_all
 
 theorem successor_not_loan (w : List (Fin 2)) (x : State GalilVM)
     (hq : PalPeg.PhysicalPhaseStill.QuietPhase x.ctl.mode) :
@@ -271,7 +282,7 @@ def ChooseBack (x : State GalilVM) : Prop :=
     (x.ctl.odd && (decide ((x.vm.fpp.program.config.tapes 8).focus = 8)
         || decide ((x.vm.fpp.program.config.tapes 8).focus = 0))) = false
 
-/-- **`home`, `markEnd` and the back half of `choose` join the handled cases** of the common machine's final tick API.
+/-- **`home`, `markEnd`, the back half of `choose` and `copy` join the handled cases** of the common machine's final tick API.
 The residual now also excludes these. -/
 theorem cases_of_remaining_quiet (rest : RestCommands)
     (hother : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
@@ -290,7 +301,7 @@ theorem cases_of_remaining_quiet (rest : RestCommands)
         ¬ PalPeg.PhysicalGrowCount.CountGrow (absSC m) →
         ¬ PalPeg.PhysicalGrowMatchCase.MatchGrow (absSC m) →
         (absSC m).ctl.mode ≠ .home → (absSC m).ctl.mode ≠ .markEnd →
-        ¬ ChooseBack (absSC m) →
+        ¬ ChooseBack (absSC m) → ¬ CopyReady w (absSC m) →
         PalPeg.PhysicalDpCleanup.Enc w (PalPeg.PhysicalCacheMachine.successor w (absSC m))
           ((PalPeg.PhysicalDpCleanup.machine rest).apply blankM p none)) :
     TickCases (PalPeg.PhysicalDpCleanup.machine rest) blankM PalPeg.PhysicalDpCleanup.Enc := by
@@ -305,10 +316,16 @@ theorem cases_of_remaining_quiet (rest : RestCommands)
     exact forward_quiet_machine rest w _ p he hq hs (successor_not_loan w _ hq)
       (runsQuiet_markEnd rest w _ hmark)
   by_cases hback : ChooseBack (absSC m)
-  · have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode := Or.inr (Or.inr (Or.inr hback.1))
+  · have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode := Or.inr (Or.inr (Or.inr (Or.inl hback.1)))
     exact forward_quiet_machine rest w _ p he hq hs (successor_not_loan w _ hq)
       (runsQuiet_chooseBack rest w _ hback.1 hback.2)
+  by_cases hcopy : CopyReady w (absSC m)
+  · have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode :=
+      Or.inr (Or.inr (Or.inr (Or.inr hcopy.1)))
+    exact forward_quiet_machine rest w _ p he hq hs (successor_not_loan w _ hq)
+      (runsQuiet_copy rest w _ hcopy)
   exact hother w st Tc hpre hcanon m p hon hf he hs htick h1 h2 h3 h4 h5 h6 h7 hhome hmark hback
+    hcopy
 
 /-- info: 'PalPeg.PhysicalPhaseLayers.cases_of_remaining_quiet' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
