@@ -295,6 +295,36 @@ def ChooseBack (x : State GalilVM) : Prop :=
     (x.ctl.odd && (decide ((x.vm.fpp.program.config.tapes 8).focus = 8)
         || decide ((x.vm.fpp.program.config.tapes 8).focus = 0))) = false
 
+/-- A legal copy tick reads a letter whenever work remains: the abstract copy step demands it. -/
+theorem copyReady_of_tick (w : List (Fin 2)) (x y : State GalilVM) (hm : x.ctl.mode = .copy)
+    (htick : Tick (galilFrameS (PalPeg.GalilRunSkeleton.PofC centreC placeC 0 w) 1 0) 2048 x y) :
+    CopyReady w x := by
+  refine ⟨hm, fun hr => ?_⟩
+  rcases x with ⟨c, s⟩
+  rcases PalPeg.LocalRealizesPhase.tick_copy_cases hm htick with ⟨s', hp, hco, -⟩ | ⟨s', hp, -, -⟩
+  · obtain ⟨a, ha, -⟩ := hco.1
+    exact ⟨a, ha⟩
+  · exact absurd (((PalPeg.FrameFunction.computes_galilFrameFun centreC placeC 0 1 0 w s).remainingPos
+      s).mpr hr) hp
+
+/-- A legal rewind step away from the first mark is off the floor: the abstract step demands it. -/
+theorem rewindStep_of_tick (w : List (Fin 2)) (x y : State GalilVM) (hm : x.ctl.mode = .rewind)
+    (hnotFirst : (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w).atFirst x.vm = false)
+    (htick : Tick (galilFrameS (PalPeg.GalilRunSkeleton.PofC centreC placeC 0 w) 1 0) 2048 x y) :
+    RewindStep w x := by
+  refine ⟨hm, hnotFirst, ?_⟩
+  rcases x with ⟨c, s⟩
+  cases htick
+  all_goals first | (exfalso; simp_all; done) | skip
+  · rename_i hf _
+    have : (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w).atFirst s = true :=
+      decide_eq_true hf
+    simp_all
+  · rename_i h
+    exact h.1.1
+  · rename_i h
+    exact h.1.1
+
 /-- **The ticks the common machine does not handle yet**, with every source fact the consumer
 supplies. This is the residual of the final tick API. -/
 def UnhandledTicks (rest : RestCommands) : Prop :=
@@ -314,7 +344,9 @@ def UnhandledTicks (rest : RestCommands) : Prop :=
       ¬ PalPeg.PhysicalGrowCount.CountGrow (absSC m) →
       ¬ PalPeg.PhysicalGrowMatchCase.MatchGrow (absSC m) →
       (absSC m).ctl.mode ≠ .home → (absSC m).ctl.mode ≠ .markEnd →
-      ¬ ChooseBack (absSC m) → ¬ CopyReady w (absSC m) → ¬ RewindStep w (absSC m) →
+      ¬ ChooseBack (absSC m) → (absSC m).ctl.mode ≠ .copy →
+      ((absSC m).ctl.mode = .rewind →
+        (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w).atFirst (absSC m).vm = true) →
       PalPeg.PhysicalDpCleanup.Enc w (PalPeg.PhysicalCacheMachine.successor w (absSC m))
         ((PalPeg.PhysicalDpCleanup.machine rest).apply blankM p none)
 
@@ -337,18 +369,24 @@ theorem cases_of_remaining_quiet (rest : RestCommands)
   · have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode := Or.inr (Or.inr (Or.inr (Or.inl hback.1)))
     exact forward_quiet_machine rest w _ p he hq hs (successor_not_loan w _ hq)
       (runsQuiet_chooseBack rest w _ hback.1 hback.2)
-  by_cases hcopy : CopyReady w (absSC m)
-  · have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode :=
+  by_cases hcopyMode : (absSC m).ctl.mode = .copy
+  · have hcopy := copyReady_of_tick w _ _ hcopyMode htick
+    have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode :=
       Or.inr (Or.inr (Or.inr (Or.inr (Or.inl hcopy.1))))
     exact forward_quiet_machine rest w _ p he hq hs (successor_not_loan w _ hq)
       (runsQuiet_copy rest w _ hcopy)
-  by_cases hrewind : RewindStep w (absSC m)
-  · have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode :=
+  by_cases hrewindStep : (absSC m).ctl.mode = .rewind ∧
+      (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w).atFirst (absSC m).vm = false
+  · have hrewind := rewindStep_of_tick w _ _ hrewindStep.1 hrewindStep.2 htick
+    have hq : PalPeg.PhysicalPhaseStill.QuietPhase (absSC m).ctl.mode :=
       Or.inr (Or.inr (Or.inr (Or.inr (Or.inr hrewind.1))))
     exact forward_quiet_machine rest w _ p he hq hs (successor_not_loan w _ hq)
       (runsQuiet_rewindStep rest w _ hrewind)
   exact hother w st Tc hpre hcanon m p hon hf he hs htick h1 h2 h3 h4 h5 h6 h7 hhome hmark hback
-    hcopy hrewind
+    hcopyMode (fun hmode => by
+      cases hat : (PalPeg.FrameFunction.galilFrameFun centreC placeC 0 1 0 w).atFirst (absSC m).vm
+      · exact absurd ⟨hmode, hat⟩ hrewindStep
+      · rfl)
 
 /-- info: 'PalPeg.PhysicalPhaseLayers.cases_of_remaining_quiet' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
