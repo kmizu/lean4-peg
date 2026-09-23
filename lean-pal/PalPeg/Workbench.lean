@@ -168,6 +168,7 @@ import PalPeg.PhysicalReportTest
 import PalPeg.PhysicalPhaseStill
 import PalPeg.PhysicalPhaseLayers
 import PalPeg.PhysicalFinalResidual
+import PalPeg.PhysicalResidualParts
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
 import PalPeg.PostRunInduction
