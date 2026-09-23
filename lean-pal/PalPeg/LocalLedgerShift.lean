@@ -311,6 +311,79 @@ theorem reported_local (P : Shared) (q : ℕ) (first : Fin 9) (w : List (Fin 2))
     (fun m => if m ≤ w.length then dwT Tc m else 0) (α + β) hτs
     (by simp only [Nat.zero_min]; exact TA_zero hs htc0 htcm hnd) hstep hz hrep'
 
+
+theorem reported_local_with (P : Shared) (q : ℕ) (first : Fin 9) (w : List (Fin 2))
+    (hw : 0 < w.length) (hpal : w ∈ PAL) (st run : ℕ → State GalilVM) (nd gd f K Tc : ℕ → ℕ)
+    (hs : Sched w nd gd (Tc w.length) K)
+    (hf0 : f 0 = 0) (hfgd : ∀ k, f (k+1) ≤ gd k)
+    (htc0 : Tc 0 = 0) (htcm : ∀ m, m < w.length → Tc m ≤ Tc (m+1))
+    (hnd : ∀ m, m < w.length → ∀ k, k < Tc (m+1) → nd k ≤ m+1)
+    (hbase : Tc 1 ≤ 2050)
+    (hcost : ∀ m, 1 ≤ m → m < w.length →
+      Tc (m+1) - Tc m ≤ alpha' 2048 * (Cw w (m+1) - Cw w m) + beta' 2048)
+    (hend : w.length ≤ f (Tc w.length))
+    (habs : ∀ s, K s ≤ Tc w.length → run s = truncS (w.length - arrL w s) (st (K s)))
+    (hrep : GalilLedgerAssembly.ReportPointAt P q first w w.length (st (Tc w.length)))
+    (R : State GalilVM → Prop) (hR : R (st (Tc w.length))) :
+    ∃ t ≤ w.length * nLocalL - 1, ReportPoint w (run t) ∧ Refreshed P q first (run t) ∧ R (run t) := by
+  set α := 2 * alpha' 2048 with hα
+  set β := 2 * beta' 2048 + 1 with hβ
+  have hτ : 2 * (α + β) ≤ nLocalL := by
+    have h := GalilLedgerThrottled.two_c2_le_τ'
+    unfold GalilLedgerThrottled.c2 GalilLedgerThrottled.τ' at h
+    unfold nLocalL
+    omega
+  -- (2) zero backlog at `|w|`
+  have hz : PalPeg.Predictability.backlog
+      (fun m => if m ≤ w.length then dwT Tc m else 0) (α + β) w.length = 0 :=
+    GalilLedgerThrottled.backlog_zero_trunc' α β nLocalL hτ w hw hpal (dwT Tc)
+      (fun m hm => GalilLedgerThrottled.dwT_cost w Tc htc0 hbase hcost m hm)
+  -- (1) the shifted O-step, for the checkpoint times truncated at `|w|`
+  have hstep : ∀ m, TA K Tc (min (m+1) w.length) ≤
+      max (TA K Tc (min m w.length)) (m * nLocalL) +
+        (if m+1 ≤ w.length then dwT Tc (m+1) else 0) := by
+    intro m
+    by_cases hm : m < w.length
+    · have e1 : min (m+1) w.length = m+1 := by omega
+      have e2 : min m w.length = m := by omega
+      have e3 : m+1 ≤ w.length := hm
+      rw [e1, e2, if_pos e3]
+      exact O_step_local hs htc0 htcm hnd m hm
+    · have e1 : min (m+1) w.length = w.length := by omega
+      have e2 : min m w.length = w.length := by omega
+      have e3 : ¬ (m+1 ≤ w.length) := by omega
+      rw [e1, e2, if_neg e3]
+      exact le_trans (le_max_left _ _) (Nat.le_add_right _ _)
+  -- (3) the report point at checkpoint `|w|`, transported by the tracking equation
+  have hfull : arrL w (TA K Tc w.length) = w.length := by
+    have h2 := TA_exact hs Tc w.length (TA_exists hs htc0 htcm hnd w.length le_rfl)
+    have h1 := used_le_arr hs f hf0 hfgd (TA K Tc w.length) (le_of_eq h2)
+    have h3 := arrL_le w (TA K Tc w.length)
+    rw [h2] at h1
+    omega
+  have hrun : run (TA K Tc w.length) = st (Tc w.length) := by
+    rw [habs _ (le_of_eq (TA_exact hs Tc w.length (TA_exists hs htc0 htcm hnd w.length le_rfl))),
+      hfull, Nat.sub_self, truncS_zero,
+      TA_exact hs Tc w.length (TA_exists hs htc0 htcm hnd w.length le_rfl)]
+  obtain ⟨hrp, hfr⟩ := GalilLedgerAssembly.reportPoint_of_at_length hw hrep
+  have hrep' : ReportPoint w (run (TA K Tc (min w.length w.length))) ∧
+      Refreshed P q first (run (TA K Tc (min w.length w.length))) := by
+    rw [min_self, hrun]; exact ⟨hrp, hfr⟩
+  have hτs : 2 * (α + β) < nLocalL := by
+    rw [hα, hβ, nLocalL_eq]
+    decide
+  obtain ⟨t', ht', hrp', hrf'⟩ := reported_of_shift_early P q first w hw run
+    (fun m => TA K Tc (min m w.length))
+    (fun m => if m ≤ w.length then dwT Tc m else 0) (α + β) hτs
+    (by simp only [Nat.zero_min]; exact TA_zero hs htc0 htcm hnd) hstep hz hrep'
+  -- the witness `reported_of_shift_early` returns is the checkpoint itself
+  refine ⟨TA K Tc (min w.length w.length), ?_, hrep'.1, hrep'.2, ?_⟩
+  · have hle := run_on_time_shift_slack (fun m => if m ≤ w.length then dwT Tc m else 0)
+      (α + β) nLocalL hτs.le (fun m => TA K Tc (min m w.length))
+      (by simp only [Nat.zero_min]; exact TA_zero hs htc0 htcm hnd) hstep w.length hw hz
+    omega
+  · rw [min_self, hrun]; exact hR
+
 /-! ## 5. The ledger obligation -/
 
 /-- **Oracle 4 of `LocalTrackingLatch`, generic form.** -/
@@ -339,6 +412,43 @@ theorem ledger_local (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ
     reported_local (Pof w) (qof w) (firstOf w) w hw hpal (stOf w) (runOf w) (ndOf w) (gdOf w) (fOf w)
       (KOf w) (TcOf w) (hs w hw) (hf0 w hw) (hfgd w hw) (htc0 w hw) (htcm w hw) (hnd w hw)
       (hbase w hw) (hcost w hw) (hend w hw) (habs w hw) (hrep w hw)
+
+
+/-- The ledger with an extra fact `R` carried from the checkpoint to the witness. -/
+def LedgerWith (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ)
+    (firstOf : List (Fin 2) → Fin 9) (runOf : List (Fin 2) → ℕ → State GalilVM)
+    (T : List (Fin 2) → ℕ) (R : List (Fin 2) → State GalilVM → Prop) : Prop :=
+  ∀ w : List (Fin 2), 0 < w.length → w ∈ PAL →
+    ∃ t ≤ T w, ReportPoint w (runOf w t) ∧ Refreshed (Pof w) (qof w) (firstOf w) (runOf w t) ∧
+      R w (runOf w t)
+
+theorem ledger_local_with (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ)
+    (firstOf : List (Fin 2) → Fin 9) (stOf runOf : List (Fin 2) → ℕ → State GalilVM)
+    (ndOf gdOf fOf KOf TcOf : List (Fin 2) → ℕ → ℕ)
+    (hs : ∀ w : List (Fin 2), 0 < w.length →
+      Sched w (ndOf w) (gdOf w) (TcOf w w.length) (KOf w))
+    (hf0 : ∀ w : List (Fin 2), 0 < w.length → fOf w 0 = 0)
+    (hfgd : ∀ (w : List (Fin 2)), 0 < w.length → ∀ k, fOf w (k+1) ≤ gdOf w k)
+    (htc0 : ∀ w : List (Fin 2), 0 < w.length → TcOf w 0 = 0)
+    (htcm : ∀ (w : List (Fin 2)), 0 < w.length → ∀ m, m < w.length → TcOf w m ≤ TcOf w (m+1))
+    (hnd : ∀ (w : List (Fin 2)), 0 < w.length → ∀ m, m < w.length → ∀ k, k < TcOf w (m+1) →
+      ndOf w k ≤ m+1)
+    (hbase : ∀ w : List (Fin 2), 0 < w.length → TcOf w 1 ≤ 2050)
+    (hcost : ∀ (w : List (Fin 2)), 0 < w.length → ∀ m, 1 ≤ m → m < w.length →
+      TcOf w (m+1) - TcOf w m ≤ alpha' 2048 * (Cw w (m+1) - Cw w m) + beta' 2048)
+    (hend : ∀ w : List (Fin 2), 0 < w.length → w.length ≤ fOf w (TcOf w w.length))
+    (habs : ∀ (w : List (Fin 2)), 0 < w.length → ∀ s, KOf w s ≤ TcOf w w.length →
+      runOf w s = truncS (w.length - arrL w s) (stOf w (KOf w s)))
+    (hrep : ∀ w : List (Fin 2), 0 < w.length →
+      GalilLedgerAssembly.ReportPointAt (Pof w) (qof w) (firstOf w) w w.length
+        (stOf w (TcOf w w.length)))
+    (R : List (Fin 2) → State GalilVM → Prop)
+    (hR : ∀ w : List (Fin 2), 0 < w.length → R w (stOf w (TcOf w w.length))) :
+    LedgerWith Pof qof firstOf runOf (fun w => w.length * nLocalL - 1) R :=
+  fun w hw hpal =>
+    reported_local_with (Pof w) (qof w) (firstOf w) w hw hpal (stOf w) (runOf w) (ndOf w) (gdOf w) (fOf w)
+      (KOf w) (TcOf w) (hs w hw) (hf0 w hw) (hfgd w hw) (htc0 w hw) (htcm w hw) (hnd w hw)
+      (hbase w hw) (hcost w hw) (hend w hw) (habs w hw) (hrep w hw) (R w) (hR w hw)
 
 /-- **Oracle 4 with the refined lookahead need** (`GalilLookRefined.PreloadL'`):
 `nd := needT'`, `f := needL'`, and the end bound `|w| ≤ needL' (Tc |w|)` comes
@@ -373,6 +483,40 @@ theorem ledger_localL' (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → �
     hbase hcost
     (fun w hw => used_of_report w hw (hrep w hw))
     habs hrep
+
+
+theorem ledger_localL'_with (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ)
+    (firstOf : List (Fin 2) → Fin 9) (stOf runOf : List (Fin 2) → ℕ → State GalilVM)
+    (KOf TcOf : List (Fin 2) → ℕ → ℕ)
+    (hpre : ∀ w : List (Fin 2), 0 < w.length →
+      GalilLookRefined.PreloadL' w (stOf w) (TcOf w))
+    (hs : ∀ w : List (Fin 2), 0 < w.length →
+      Sched w (GalilLookRefined.needT' w (stOf w)) (fun k => needS w (stOf w) (k+1))
+        (TcOf w w.length) (KOf w))
+    (hbase : ∀ w : List (Fin 2), 0 < w.length → TcOf w 1 ≤ 2050)
+    (hcost : ∀ (w : List (Fin 2)), 0 < w.length → ∀ m, 1 ≤ m → m < w.length →
+      TcOf w (m+1) - TcOf w m ≤ alpha' 2048 * (Cw w (m+1) - Cw w m) + beta' 2048)
+    (habs : ∀ (w : List (Fin 2)), 0 < w.length → ∀ s, KOf w s ≤ TcOf w w.length →
+      runOf w s = truncS (w.length - arrL w s) (stOf w (KOf w s)))
+    (hrep : ∀ w : List (Fin 2), 0 < w.length →
+      GalilLedgerAssembly.ReportPointAt (Pof w) (qof w) (firstOf w) w w.length
+        (stOf w (TcOf w w.length)))
+    (R : List (Fin 2) → State GalilVM → Prop)
+    (hR : ∀ w : List (Fin 2), 0 < w.length → R w (stOf w (TcOf w w.length))) :
+    LedgerWith Pof qof firstOf runOf (fun w => w.length * nLocalL - 1) R :=
+  ledger_local_with Pof qof firstOf stOf runOf
+    (fun w => GalilLookRefined.needT' w (stOf w)) (fun w k => needS w (stOf w) (k+1))
+    (fun w => needS w (stOf w))
+    KOf TcOf hs
+    (fun w hw => Nat.le_zero.mp
+      ((GalilLookRefined.needS_le_needL' w (stOf w) 0).trans (hpre w hw).need0.le))
+    (fun w hw k => le_rfl)
+    (fun w hw => (hpre w hw).tc0)
+    (fun w hw => (hpre w hw).mono)
+    (fun w hw => (hpre w hw).needLe)
+    hbase hcost
+    (fun w hw => used_of_report w hw (hrep w hw))
+    habs hrep R hR
 
 /-! ## 6. `Sched` from the starvation oracle -/
 
@@ -468,6 +612,37 @@ theorem H_ledger_of_local_oracles (S : List (Fin 2) → LocalSys X) (absS : X �
       (fun k => needS w (stOf w) (k+1)) (TcOf w w.length)
       (starved_need w hw) (need_not_starved w hw))
     hbase hcost habs hrep
+
+
+theorem H_ledger_of_local_oracles_with (S : List (Fin 2) → LocalSys X) (absS : X → State GalilVM) (x0 : LX X)
+    (Pof : List (Fin 2) → Shared) (qof : List (Fin 2) → ℕ) (firstOf : List (Fin 2) → Fin 9)
+    (stOf : List (Fin 2) → ℕ → State GalilVM) (TcOf : List (Fin 2) → ℕ → ℕ)
+    (hpre : ∀ w : List (Fin 2), 0 < w.length → GalilLookRefined.PreloadL' w (stOf w) (TcOf w))
+    (starved_need : ∀ (w : List (Fin 2)), 0 < w.length → ∀ s,
+      kOf (S w) w x0 s < TcOf w w.length → ¬ (S w).Starved (micro (S w) w x0 s).core →
+        needS w (stOf w) (kOf (S w) w x0 s + 1) ≤ arrL w s)
+    (need_not_starved : ∀ (w : List (Fin 2)), 0 < w.length → ∀ s,
+      kOf (S w) w x0 s < TcOf w w.length →
+        GalilLookRefined.needT' w (stOf w) (kOf (S w) w x0 s) ≤ arrL w s →
+        ¬ (S w).Starved (micro (S w) w x0 s).core)
+    (hbase : ∀ w : List (Fin 2), 0 < w.length → TcOf w 1 ≤ 2050)
+    (hcost : ∀ (w : List (Fin 2)), 0 < w.length → ∀ m, 1 ≤ m → m < w.length →
+      TcOf w (m+1) - TcOf w m ≤ alpha' 2048 * (Cw w (m+1) - Cw w m) + beta' 2048)
+    (habs : ∀ (w : List (Fin 2)), 0 < w.length → ∀ s, kOf (S w) w x0 s ≤ TcOf w w.length →
+      stAbs (S w) absS w x0 s = truncS (w.length - arrL w s) (stOf w (kOf (S w) w x0 s)))
+    (hrep : ∀ w : List (Fin 2), 0 < w.length →
+      GalilLedgerAssembly.ReportPointAt (Pof w) (qof w) (firstOf w) w w.length
+        (stOf w (TcOf w w.length)))
+    (R : List (Fin 2) → State GalilVM → Prop)
+    (hR : ∀ w : List (Fin 2), 0 < w.length → R w (stOf w (TcOf w w.length))) :
+    LedgerWith Pof qof firstOf (fun w => stAbs (S w) absS w x0)
+      (fun w => w.length * nLocalL - 1) R :=
+  ledger_localL'_with Pof qof firstOf stOf (fun w => stAbs (S w) absS w x0) (fun w => kOf (S w) w x0) TcOf
+    hpre
+    (fun w hw => sched_of_starved (S w) w x0 (GalilLookRefined.needT' w (stOf w))
+      (fun k => needS w (stOf w) (k+1)) (TcOf w w.length)
+      (starved_need w hw) (need_not_starved w hw))
+    hbase hcost habs hrep R hR
 
 end FromOracles
 

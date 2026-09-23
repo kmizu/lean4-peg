@@ -168,17 +168,17 @@ theorem pal_in_peg_of_shadowed_sysC
       TickSucc (Pof w) (qof w) (firstOf w) delay (Canon w) (frozen w m) (absSC m)
           (absSC (tickC (M w) m)) ∧
         Post w (tickC (M w) m) ∧ PhysWF (tickC (M w) m).vm ∧ MirInv1 (tickC (M w) m) ∧ Good (tickC (M w) m))
-    -- the report test only has to be right on the run, given how many letters have arrived
-    (rep_sound : ∀ (w : List (Fin 2)) (m : Mirrored1 P), 0 < w.length →
+    -- the report test only has to be right about the answer, on the run
+    (rep_sound_pal : ∀ (w : List (Fin 2)) (m : Mirrored1 P), 0 < w.length →
       ((∃ k, TrackedAt Good w (stOf w) (TcOf w w.length) w.length k m) ∨
         (Post w m ∧ PhysWF m.vm ∧ MirInv1 m ∧ Good m)) →
-      repM w m = true →
-      ReportPoint w (absSC m) ∧ Refreshed (Pof w) (qof w) (firstOf w) (absSC m))
-    (rep_complete : ∀ (w : List (Fin 2)) (j : ℕ) (m : Mirrored1 P), 0 < w.length →
+      repM w m = true → m.vm.ctl.output = true → IsPal w)
+    (rep_complete_scan : ∀ (w : List (Fin 2)) (j : ℕ) (m : Mirrored1 P), 0 < w.length →
       ((∃ k, TrackedAt Good w (stOf w) (TcOf w w.length) j k m) ∨
         (Post w m ∧ PhysWF m.vm ∧ MirInv1 m ∧ Good m)) →
-      ReportPoint w (absSC m) → Refreshed (Pof w) (qof w) (firstOf w) (absSC m) →
-      repM w m = true)
+      ReportPoint w (absSC m) → (absSC m).ctl.mode = Mode.scan → repM w m = true)
+    (hscanReport : ∀ w : List (Fin 2), 0 < w.length →
+      (stOf w (TcOf w w.length)).ctl.mode = Mode.scan)
     -- the physical machine and its specification
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q)
     (repQ : Q → (Fin t → PalPeg.Local.Window Γ K) → Bool) (outQ : Q → Bool)
@@ -194,7 +194,7 @@ theorem pal_in_peg_of_shadowed_sysC
     (hreadRep : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep w m p →
       repM w m = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j)))
     (hreadOut : ∀ (w : List (Fin 2)) m p, 0 < w.length → OnRun Good Post w (stOf w) m → Rep w m p →
-      ReportPoint w (absSC m) → m.vm.ctl.output = outQ p.1) :
+      repM w m = true → m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   classical
   let S : List (Fin 2) → LocalSys (Mirrored1 P) := fun w => sysM (M w) (repM w)
@@ -402,28 +402,44 @@ theorem pal_in_peg_of_shadowed_sysC
     · exact Or.inr ⟨harr, hpost, hphys, hmir, hgood⟩
   have rep_soundAt : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
       repM w (micro (S w) w x0 s).core = true →
-      ReportPoint w (stAbs (S w) absSC w x0 s) ∧
-        Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absSC w x0 s) := by
-    intro w s hw hlateS hrep
+      (micro (S w) w x0 s).core.vm.ctl.output = true → IsPal w := by
+    intro w s hw hlateS hrep hout
     have harr : arrL w s = w.length := by
       unfold arrL
       rw [nLocalL_eq] at hlateS ⊢
       omega
-    refine rep_sound w _ hw ?_ hrep
+    refine rep_sound_pal w _ hw ?_ hrep hout
     rcases hrunAt w hw s with ⟨k, htracked⟩ | ⟨_, hpost, hphys, hmir, hgood⟩
     · rw [harr] at htracked
       exact Or.inl ⟨k, htracked⟩
     · exact Or.inr ⟨hpost, hphys, hmir, hgood⟩
-  have rep_completeAt : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length →
-      ReportPoint w (stAbs (S w) absSC w x0 s) →
-      Refreshed (Pof w) (qof w) (firstOf w) (stAbs (S w) absSC w x0 s) →
-      repM w (micro (S w) w x0 s).core = true := by
-    intro w s hw hpoint hrefreshed
-    refine rep_complete w (arrL w s) _ hw ?_ hpoint hrefreshed
-    rcases hrunAt w hw s with htracked | ⟨_, hpost, hphys, hmir, hgood⟩
-    · exact Or.inl htracked
-    · exact Or.inr ⟨hpost, hphys, hmir, hgood⟩
-  refine pal_in_peg_of_shadowed_core S absSC Inv x0 Pof qof firstOf H_letter H_first
+  have hledger := PalPeg.LocalLedgerShift.H_ledger_of_local_oracles_with S absSC x0 Pof qof firstOf
+      stOf TcOf hpreload
+      (fun w hw s hbefore hstarved =>
+        (hneedOfNotStarved w _ _ _ hw (hrun w hw s hbefore.le).invC hstarved
+          (hrun w hw s hbefore.le).needy hbefore (hrun w hw s hbefore.le).used).2.1)
+      (fun w hw s hbefore hneed =>
+        hnotStarvedOfNeed w _ _ _ hw (hrun w hw s hbefore.le).invC
+          (hrun w hw s hbefore.le).needy hbefore hneed)
+      hbase hcost (fun w hw s hle => (hrun w hw s hle).needy.2) hlastReport
+      (fun _ x => x.ctl.mode = Mode.scan) hscanReport
+  have rep_completeAt : ∀ w : List (Fin 2), 0 < w.length → IsPal w →
+      ∃ s, (w.length - 1) * nLocalL + 1 ≤ s ∧ s < w.length * nLocalL ∧
+        repM w (micro (S w) w x0 s).core = true ∧
+        (micro (S w) w x0 s).core.vm.ctl.output = true := by
+    intro w hw hpal
+    obtain ⟨t, ht, hpoint, hrefreshed, hscan⟩ :=
+      hledger w hw ((mem_PAL_iff_isPal w).mpr hpal)
+    have ht' : t ≤ w.length * nLocalL - 1 := ht
+    have hpos : 0 < w.length * nLocalL := Nat.mul_pos hw nLocalL_pos
+    refine ⟨t, (hlate w hw t hpoint.atLast).le, by omega, ?_, ?_⟩
+    · refine rep_complete_scan w (arrL w t) _ hw ?_ hpoint hscan
+      rcases hrunAt w hw t with htracked | ⟨_, hpost, hphys, hmir, hgood⟩
+      · exact Or.inl htracked
+      · exact Or.inr ⟨hpost, hphys, hmir, hgood⟩
+    · exact (PalPeg.GalilStructuredSkeleton.output_iff_pal w (Pof w) (H_letter w) (H_first w)
+        (qof w) (firstOf w) _ hpoint hrefreshed).mpr ((mem_PAL_iff_isPal w).mpr hpal)
+  exact pal_in_peg_of_shadowed_core_pal S Inv x0
     L0 blankSymbol q0 repQ outQ htape Rep hrepInit
     (fun w s m p hinput hinv hrep => hsimTick w m p hinv.1 (harrivedOnRun hinv)
       (honRun (hinvTick w s m hinput hinv))
@@ -443,20 +459,10 @@ theorem pal_in_peg_of_shadowed_sysC
           omega)
       (honRun (hinvFeed w s letter m hinput hinv)) hrep)
     (fun w s m p hinv hrep => hreadRep w m p hinv.1 (honRun hinv) hrep)
-    (fun w s m p hinv hrep hpoint => hreadOut w m p hinv.1 (honRun hinv) hrep hpoint)
-    (x0C_started blank delay) (fun _ _ => rfl)
-    rep_soundAt
-    (fun w s hw hpoint hrefreshed =>
-      ⟨s, le_rfl, hlate w hw s hpoint.atLast, rep_completeAt w s hw hpoint hrefreshed⟩)
-    hinvInit hinvTick hinvFeed ?_
-  · exact H_ledger_of_local_oracles S absSC x0 Pof qof firstOf stOf TcOf hpreload
-      (fun w hw s hbefore hstarved =>
-        (hneedOfNotStarved w _ _ _ hw (hrun w hw s hbefore.le).invC hstarved
-          (hrun w hw s hbefore.le).needy hbefore (hrun w hw s hbefore.le).used).2.1)
-      (fun w hw s hbefore hneed =>
-        hnotStarvedOfNeed w _ _ _ hw (hrun w hw s hbefore.le).invC
-          (hrun w hw s hbefore.le).needy hbefore hneed)
-      hbase hcost (fun w hw s hle => (hrun w hw s hle).needy.2) hlastReport
+    (fun w s m p hinv hrep hreport => hreadOut w m p hinv.1 (honRun hinv) hrep hreport)
+    (x0C_started blank delay)
+    rep_soundAt rep_completeAt
+    hinvInit hinvTick hinvFeed
 
 #print axioms pal_in_peg_of_shadowed_sysC
 

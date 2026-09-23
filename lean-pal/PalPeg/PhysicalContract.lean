@@ -27,7 +27,7 @@ open PalPeg.LocalReplayParked (Mirrored1)
 open PalPeg.LocalSysConcrete (absSC x0C Starved InvC)
 open PalPeg.LocalShadowConcrete (OnRun TickSucc)
 open PalPeg.LocalBlankState (tapeCount blankVML)
-open PalPeg.ShadowedLocalFinal (localGood postPhase frozenAt heldAfter reportArrived)
+open PalPeg.ShadowedLocalFinal (localGood postPhase frozenAt heldAfter reportCaught)
 open PalPeg.PhysicalEncoding (QPhys Γm blankM tapeCountM slotIndex)
 
 /-- Enough for the 64 DP calls, the fixed FPP quantum and view primitives.
@@ -142,11 +142,11 @@ structure Obligations {Q Γ : Type} {t K : ℕ} [Fintype Q] [DecidableEq Q] [Fin
   hencRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC 0 1 0 w st Tc → CanonTrace 0 w st Tc →
       ∀ m p, OnRun (localGood (spare := 0)) (postPhase 0 1 0) w (heldAfter (Tc w.length) st) m →
-        Enc w (absSC m) p → reportArrived 0 1 0 w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j))
+        Enc w (absSC m) p → reportCaught w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j))
   hencOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC 0 1 0 w st Tc → CanonTrace 0 w st Tc →
       ∀ m p, OnRun (localGood (spare := 0)) (postPhase 0 1 0) w (heldAfter (Tc w.length) st) m →
-        Enc w (absSC m) p → ReportPoint w (absSC m) →
+        Enc w (absSC m) p → reportCaught w (absSC m) = true →
         m.vm.ctl.output = outQ p.1
 
 /-- Dispatcher obligations retain the actual run and canonical trace. In

@@ -61,9 +61,12 @@ theorem encOut (w : List (Fin 2))
     (m : PalPeg.LocalReplayParked.Mirrored1 (PalPeg.LocalBlankState.tapeCount 0))
     (p : PalPeg.PhysicalDpCleanup.Config)
     (henc : PalPeg.PhysicalDpCleanup.Enc w (PalPeg.LocalSysConcrete.absSC m) p)
-    (hpoint : PalPeg.GalilStructuredSkeleton.ReportPoint w (PalPeg.LocalSysConcrete.absSC m)) :
-    m.vm.ctl.output = outQ p.1 :=
-  output_of_enc w _ p henc (by have := hpoint.atLast; have := hpoint.nonempty; omega)
+    (hcaught : PalPeg.ShadowedLocalFinal.reportCaught w (PalPeg.LocalSysConcrete.absSC m) = true) :
+    m.vm.ctl.output = outQ p.1 := by
+  obtain ⟨-, -, hon, -, -⟩ := (PalPeg.ShadowedLocalFinal.reportCaught_iff w _).mp hcaught
+  unfold PalPeg.GalilScaffoldChainInputSupply.onLetterTest at hon
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at hon
+  exact output_of_enc w _ p henc (by omega)
 
 /-- info: 'PalPeg.PhysicalReport.encOut' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

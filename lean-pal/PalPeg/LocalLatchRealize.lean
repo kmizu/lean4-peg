@@ -206,6 +206,39 @@ theorem pal_in_peg_of_local_core
     (fun _ => rfl) (fun _ => rfl) x0_started outL_abs rep_sound rep_complete
     H_ledger
 
+/-- **`PAL ∈ PEG` from a `K`-local core, answer-level oracles.** The report test is read
+from the control and windows of the state a step starts from; only soundness and
+completeness of the answer are asked of it. -/
+theorem pal_in_peg_of_local_core_pal
+    [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
+    (S : List (Fin 2) → LocalSys X) (x0 : LX X)
+    (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (q0 : Q)
+    (repQ : Q → (Fin t → Window Γ K) → Bool) (outQ : Q → Bool)
+    (encC : X → Q × (Fin t → STape Γ)) (htape : 0 < t)
+    (enc_tick : ∀ (w : List (Fin 2)) (x : X), encC ((S w).tickL x) = L0.apply blank (encC x) none)
+    (enc_feed : ∀ (w : List (Fin 2)) (a : Fin 2) (x : X),
+      encC ((S w).feedC a x) = L0.apply blank (encC x) (some a))
+    (rep_eq : ∀ (w : List (Fin 2)) (x : X),
+      (S w).repL x = repQ (encC x).1 (fun j => PalPeg.Local.readWin blank K ((encC x).2 j)))
+    (out_eq : ∀ (w : List (Fin 2)) (x : X), (S w).outL x = outQ (encC x).1)
+    (encC_init : encC x0.core = (q0, fun _ => STape.blankTape blank))
+    (x0_started : x0.started = false)
+    (rep_sound_pal : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
+      (S w).repL (micro (S w) w x0 s).core = true →
+      (S w).outL (micro (S w) w x0 s).core = true → IsPal w)
+    (rep_complete_pal : ∀ w : List (Fin 2), 0 < w.length → IsPal w →
+      ∃ s, (w.length - 1) * nLocalL + 1 ≤ s ∧ s < w.length * nLocalL ∧
+        (S w).repL (micro (S w) w x0 s).core = true ∧
+        (S w).outL (micro (S w) w x0 s).core = true) :
+    RecognizedByTotalPEG PAL :=
+  pal_in_peg_of_local_latch_pal S x0
+    (latchL L0 repQ outQ) blank (q0, x0.ans, x0.started)
+    (fun p => p.2.1) (fun p => p.2.2) (encL encC) htape
+    (fun w => encL_step L0 blank repQ outQ (S w) encC (enc_tick w) (enc_feed w) (rep_eq w)
+      (out_eq w))
+    (encL_init encC blank x0 q0 encC_init)
+    (fun _ => rfl) (fun _ => rfl) x0_started rep_sound_pal rep_complete_pal
+
 #print axioms latchL_tapes
 #print axioms latchL_core
 #print axioms encL_init

@@ -192,6 +192,64 @@ theorem pal_in_peg_of_shadowed_core
     rw [hstAbsAt w hw t' hpoint]
     exact ⟨hpoint, hrefreshed⟩
 
+/-- **`PAL ∈ PEG` from an abstract system shadowed by a physical machine, answer level.** The
+physical report test and output bit agree with the abstract ones on the run; the abstract ones
+are sound for `PAL` after the last arrival and complete for palindromes before the deadline. -/
+theorem pal_in_peg_of_shadowed_core_pal
+    [Fintype Q] [DecidableEq Q] [Fintype Γ] [DecidableEq Γ]
+    (S : List (Fin 2) → LocalSys A) (Inv : List (Fin 2) → ℕ → A → Prop) (x0 : LX A)
+    (L0 : LocalStep (Fin 2) Q Γ t K) (blank : Γ) (q0 : Q)
+    (repQ : Q → (Fin t → PalPeg.Local.Window Γ K) → Bool) (outQ : Q → Bool) (htape : 0 < t)
+    (Rep : List (Fin 2) → A → Q × (Fin t → STape Γ) → Prop)
+    (hrepInit : ∀ w, Rep w x0.core (q0, fun _ => STape.blankTape blank))
+    (hsimTick : ∀ w s a p, inp w s = none → Inv w s a → Rep w a p →
+      Rep w ((S w).tickL a) (L0.apply blank p none))
+    (hsimFeed : ∀ w s letter a p, inp w s = some letter → Inv w s a → Rep w a p →
+      Rep w ((S w).feedC letter a) (L0.apply blank p (some letter)))
+    (hreadRep : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep w a p →
+      (S w).repL a = repQ p.1 (fun j => PalPeg.Local.readWin blank K (p.2 j)))
+    (hreadOut : ∀ (w : List (Fin 2)) s a p, Inv w s a → Rep w a p → (S w).repL a = true →
+      (S w).outL a = outQ p.1)
+    (x0_started : x0.started = false)
+    (rep_sound_pal : ∀ (w : List (Fin 2)) (s : ℕ), 0 < w.length → (w.length - 1) * nLocalL < s →
+      (S w).repL (micro (S w) w x0 s).core = true →
+      (S w).outL (micro (S w) w x0 s).core = true → IsPal w)
+    (rep_complete_pal : ∀ w : List (Fin 2), 0 < w.length → IsPal w →
+      ∃ s, (w.length - 1) * nLocalL + 1 ≤ s ∧ s < w.length * nLocalL ∧
+        (S w).repL (micro (S w) w x0 s).core = true ∧
+        (S w).outL (micro (S w) w x0 s).core = true)
+    (x0_inv : ∀ w, 0 < w.length → Inv w 0 x0.core)
+    (inv_tick : ∀ w s a, inp w s = none → Inv w s a → Inv w (s+1) ((S w).tickL a))
+    (inv_feed : ∀ w s letter a, inp w s = some letter → Inv w s a →
+      Inv w (s+1) ((S w).feedC letter a)) :
+    RecognizedByTotalPEG PAL := by
+  have hrun := fun w (hw : 0 < w.length) =>
+    micro_shadow (S w) L0 blank repQ outQ Inv (Rep w) x0 q0 w (hrepInit w) (x0_inv w hw)
+    (inv_tick w) (inv_feed w) (hsimTick w) (hsimFeed w)
+  have hrepL : ∀ w, 0 < w.length → ∀ s, (shadowSys (S w) L0 blank repQ outQ).repL
+      (micro (shadowSys (S w) L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core
+        = (S w).repL (micro (S w) w x0 s).core := by
+    intro w hw s
+    obtain ⟨-, hinv, hrep⟩ := hrun w hw s
+    exact (hreadRep w s _ _ hinv hrep).symm
+  have houtL : ∀ w, 0 < w.length → ∀ s, (S w).repL (micro (S w) w x0 s).core = true →
+      (shadowSys (S w) L0 blank repQ outQ).outL
+        (micro (shadowSys (S w) L0 blank repQ outQ) w (shadowInit x0 q0 blank) s).core
+        = (S w).outL (micro (S w) w x0 s).core := by
+    intro w hw s hreport
+    obtain ⟨-, hinv, hrep⟩ := hrun w hw s
+    exact (hreadOut w s _ _ hinv hrep hreport).symm
+  refine pal_in_peg_of_local_core_pal (fun w => shadowSys (S w) L0 blank repQ outQ)
+    (shadowInit x0 q0 blank) L0 blank q0 repQ outQ Prod.snd htape (fun _ _ => rfl)
+    (fun _ _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) rfl x0_started ?_ ?_
+  · intro w s hw hlate hrep hout
+    rw [hrepL w hw] at hrep
+    rw [houtL w hw s hrep] at hout
+    exact rep_sound_pal w s hw hlate hrep hout
+  · intro w hw hpal
+    obtain ⟨s, h1, h2, h3, h4⟩ := rep_complete_pal w hw hpal
+    exact ⟨s, h1, h2, by rw [hrepL w hw]; exact h3, by rw [houtL w hw s h3]; exact h4⟩
+
 #print axioms pal_in_peg_of_shadowed_core
 
 end PalPeg.LocalShadowRealize

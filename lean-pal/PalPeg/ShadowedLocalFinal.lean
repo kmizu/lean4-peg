@@ -465,15 +465,13 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       ∀ m : Mirrored1 (tapeCount spare),
         ((∃ k, PalPeg.LocalShadowConcrete.TrackedAt Good w (heldAfter (Tc w.length) st) (Tc w.length) w.length k m) ∨
           (Post w m ∧ PhysWF m.vm ∧ MirInv1 m ∧ Good m)) →
-        repM w m = true →
-        ReportPoint w (absSC m) ∧ Refreshed (PofC centreC placeC entry w) q first (absSC m))
+        repM w m = true → m.vm.ctl.output = true → IsPal w)
     (rep_complete : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ), 0 < w.length →
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ (j : ℕ) (m : Mirrored1 (tapeCount spare)),
         ((∃ k, PalPeg.LocalShadowConcrete.TrackedAt Good w (heldAfter (Tc w.length) st) (Tc w.length) j k m) ∨
           (Post w m ∧ PhysWF m.vm ∧ MirInv1 m ∧ Good m)) →
-        ReportPoint w (absSC m) → Refreshed (PofC centreC placeC entry w) q first (absSC m) →
-        repM w m = true)
+        ReportPoint w (absSC m) → (absSC m).ctl.mode = Mode.scan → repM w m = true)
     -- the physical machine and its specification
     (L0 : LocalStep (Fin 2) Q Γ t K) (blankSymbol : Γ) (q0 : Q)
     (repQ : Q → (Fin t → PalPeg.Local.Window Γ K) → Bool) (outQ : Q → Bool)
@@ -499,7 +497,7 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
     (hreadOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun Good Post w (heldAfter (Tc w.length) st) m → Rep w m p →
-        ReportPoint w (absSC m) → m.vm.ctl.output = outQ p.1) :
+        repM w m = true → m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   classical
   have hexists : ∀ w : List (Fin 2), ∃ (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
@@ -580,11 +578,14 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       hpostOfLastReport w _ _ hw (htraceOf w hw).1 (htraceOf w hw).2.1 (htraceOf w hw).2.2.1
         (htraceOf w hw).2.2.2 m hinv hneedy)
     hpostTick
-    (fun w m hw hrun hrep =>
-      rep_sound w (stOf w) (TcOf w) hw (htraceOf w hw).1 (htraceOf w hw).2.1 m hrun hrep)
-    (fun w j m hw hrun hpoint hrefreshed =>
+    (fun w m hw hrun hrep hout =>
+      rep_sound w (stOf w) (TcOf w) hw (htraceOf w hw).1 (htraceOf w hw).2.1 m hrun hrep hout)
+    (fun w j m hw hrun hpoint hscan =>
       rep_complete w (stOf w) (TcOf w) hw (htraceOf w hw).1 (htraceOf w hw).2.1 j m hrun hpoint
-        hrefreshed)
+        hscan)
+    (fun w hw => by
+      rw [heldAfter_of_le (stOf w) le_rfl]
+      exact (htraceOf w hw).2.2.1 w.length hw le_rfl)
     L0 blankSymbol q0 repQ outQ htape Rep hrepInit
     (fun w m p hw honRun honRunNext hsucc hrep =>
       hsimTick w _ _ (htraceOf w hw).1 (htraceOf w hw).2.1 m p honRun honRunNext hsucc hrep)
@@ -592,8 +593,8 @@ theorem given_shadowedLocalSystem (entry q : ℕ) (first : Fin 9) (hfirst : firs
       hsimFeed w _ _ (htraceOf w hw).1 (htraceOf w hw).2.1 letter m p hinv honRunNext hrep)
     (fun w m p hw honRun hrep =>
       hreadRep w _ _ (htraceOf w hw).1 (htraceOf w hw).2.1 m p honRun hrep)
-    (fun w m p hw honRun hrep hpoint =>
-      hreadOut w _ _ (htraceOf w hw).1 (htraceOf w hw).2.1 m p honRun hrep hpoint)
+    (fun w m p hw honRun hrep hreport =>
+      hreadOut w _ _ (htraceOf w hw).1 (htraceOf w hw).2.1 m p honRun hrep hreport)
 
 #print axioms given_shadowedLocalSystem
 
@@ -708,6 +709,24 @@ theorem reportArrived_iff (entry q : ℕ) (first : Fin 9) (w : List (Fin 2)) (x 
         x.vm.right.head.incoming = [] ∧ x.vm.right.head.right = [] ∧
         Refreshed (PofC centreC placeC entry w) q first x := by
   unfold reportArrived
+  exact decide_eq_true_iff
+
+open Classical in
+/-- **The report test of the machine, as the Scala scaffold has it (`caught`).** Scanning, not
+replaying, the right head on a letter of the input, nothing arrived beyond it. Everything it
+reads is in the control or at the right head. -/
+noncomputable def reportCaught (w : List (Fin 2)) (x : State GalilVM) : Bool :=
+  decide (x.ctl.mode = Mode.scan ∧ x.ctl.replaying = false ∧
+    PalPeg.GalilScaffoldChainInputSupply.onLetterTest w x.vm = true ∧
+    x.vm.right.head.incoming = [] ∧ x.vm.right.head.right = [])
+
+open Classical in
+theorem reportCaught_iff (w : List (Fin 2)) (x : State GalilVM) :
+    reportCaught w x = true ↔
+      x.ctl.mode = Mode.scan ∧ x.ctl.replaying = false ∧
+        PalPeg.GalilScaffoldChainInputSupply.onLetterTest w x.vm = true ∧
+        x.vm.right.head.incoming = [] ∧ x.vm.right.head.right = [] := by
+  unfold reportCaught
   exact decide_eq_true_iff
 
 /-- A represented head on an odd place `2n-1` splits the word into the `n` letters read, the
@@ -1530,6 +1549,129 @@ theorem reportArrived_complete (entry q : ℕ) (first : Fin 9) (hfirst : first �
   · have := hfrozen.2
     omega
 
+/-- At a report point of the whole word on the run, nothing lies beyond the right head. -/
+theorem rightEnds_of_reportPoint (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4)
+    {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc)
+    (j : ℕ) (m : Mirrored1 (tapeCount spare))
+    (hrun : (∃ k, PalPeg.LocalShadowConcrete.TrackedAt (localGood (spare := spare)) w
+        (heldAfter (Tc w.length) st) (Tc w.length) j k m) ∨
+      (postPhase entry q first w m ∧ PhysWF m.vm ∧ MirInv1 m ∧ localGood m))
+    (hpoint : ReportPoint w (absSC m)) :
+    (absSC m).vm.right.head.incoming = [] ∧ (absSC m).vm.right.head.right = [] := by
+  have hrefreshed : Refreshed (PofC centreC placeC entry w) q first (absSC m) ∨ True :=
+    Or.inr trivial
+  clear hrefreshed
+  have hat := hpoint.atLast
+  rcases hrun with ⟨k, htracked⟩ | ⟨hplateau | hfrozen, _, _, _⟩
+  · have hsource := htracked.needy.2
+    have hk := htracked.beforeEnd
+    rw [heldAfter_of_le st hk] at hsource
+    have hx : absSC m = PalPeg.GalilThrottledRun.truncS (w.length - j) (st k) := hsource
+    rw [hx] at hat ⊢
+    have hat' : position (st k).vm.right = 2 * w.length - 1 := hat
+    rcases Nat.eq_zero_or_pos k with hzero | hkpos
+    · exfalso
+      rw [hzero, hpreTrace.base.pre.start] at hat'
+      have hbootPos : position (initialHead w) = 0 := by simp [position, initialHead]
+      have hbootPos' : position (boot w).vm.right = 0 := hbootPos
+      omega
+    · have hTcPos : 1 ≤ Tc w.length :=
+        hpreTrace.base.tc1 ▸ hpreTrace.base.pre.mono 1 w.length hw le_rfl
+      have hrep := (PalPeg.BranchSupply.headsRepresent_alongTrace centreC placeC entry q first hw
+        hpreTrace
+        (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC entry q first hfirst
+          hpreTrace.base.pre) hTcPos k hkpos hk).right.1
+      have hlen := length_of_rep_odd hrep hw hat'
+      have hinc : (st k).vm.right.head.incoming = [] := List.eq_nil_of_length_eq_zero (by omega)
+      have hright : (st k).vm.right.head.right = [] := List.eq_nil_of_length_eq_zero (by omega)
+      refine ⟨?_, hright⟩
+      show PalPeg.GalilThrottledRun.dropN (w.length - j) (st k).vm.right.head.incoming = []
+      rw [hinc]
+      simp [PalPeg.GalilThrottledRun.dropN]
+  · obtain ⟨c₀, r₀, k, kS, hI₀, hrun, _⟩ := hplateau.onRun
+    have hpack := PalPeg.CloseoutCheckW.ipackMW_last_of_stepsIMWC centreC placeC entry q first hrun
+    have hrep := (PalPeg.WindowPack.rightHead_of_packs hpack.pack hpack.m2 hplateau.scan).1
+    have hlen := length_of_rep_odd hrep hw hat
+    exact ⟨List.eq_nil_of_length_eq_zero (by omega), List.eq_nil_of_length_eq_zero (by omega)⟩
+  · have := hfrozen.2
+    omega
+
+/-- **Completeness of `caught`**: a scanning report point of the whole word on the run is caught. -/
+theorem reportCaught_complete (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4)
+    {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc)
+    (j : ℕ) (m : Mirrored1 (tapeCount spare))
+    (hrun : (∃ k, PalPeg.LocalShadowConcrete.TrackedAt (localGood (spare := spare)) w
+        (heldAfter (Tc w.length) st) (Tc w.length) j k m) ∨
+      (postPhase entry q first w m ∧ PhysWF m.vm ∧ MirInv1 m ∧ localGood m))
+    (hpoint : ReportPoint w (absSC m)) (hscan : (absSC m).ctl.mode = Mode.scan) :
+    reportCaught w (absSC m) = true := by
+  obtain ⟨hinc, hright⟩ := rightEnds_of_reportPoint entry q first hfirst hw hpreTrace j m hrun hpoint
+  have hat := hpoint.atLast
+  refine (reportCaught_iff w _).mpr ⟨hscan, hpoint.notReplaying, ?_, hinc, hright⟩
+  unfold PalPeg.GalilScaffoldChainInputSupply.onLetterTest
+  simp only [Bool.and_eq_true, decide_eq_true_eq]
+  omega
+
+/-- **Soundness of `caught`**: after the last arrival, a caught state with output `true` on the
+run tells a palindrome. The output relation of the trace speaks at every scanning state. -/
+theorem reportCaught_sound (entry q : ℕ) (first : Fin 9) (hfirst : first ≠ 4)
+    {w : List (Fin 2)} (hw : 0 < w.length) {st : ℕ → State GalilVM} {Tc : ℕ → ℕ}
+    (hpreTrace : PreTraceIMW centreC placeC entry q first w st Tc)
+    (m : Mirrored1 (tapeCount spare))
+    (hrun : (∃ k, PalPeg.LocalShadowConcrete.TrackedAt (localGood (spare := spare)) w
+        (heldAfter (Tc w.length) st) (Tc w.length) w.length k m) ∨
+      (postPhase entry q first w m ∧ PhysWF m.vm ∧ MirInv1 m ∧ localGood m))
+    (hcaught : reportCaught w (absSC m) = true) (hout : m.vm.ctl.output = true) :
+    IsPal w := by
+  obtain ⟨hscan, hnr, hon, hinc, hright⟩ := (reportCaught_iff w _).mp hcaught
+  unfold PalPeg.GalilScaffoldChainInputSupply.onLetterTest at hon
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at hon
+  obtain ⟨hodd, hle⟩ := hon
+  have hout' : (absSC m).ctl.output = true := hout
+  rcases hrun with ⟨k, htracked⟩ | ⟨hplateau | hfrozen, _, _, _⟩
+  · have hsource := htracked.needy.2
+    have hk := htracked.beforeEnd
+    rw [Nat.sub_self, PalPeg.GalilThrottledRun.truncS_zero, heldAfter_of_le st hk] at hsource
+    have hx : absSC m = st k := hsource
+    rw [hx] at hscan hnr hodd hle hinc hright hout'
+    rcases Nat.eq_zero_or_pos k with hzero | hkpos
+    · exfalso
+      rw [hzero, hpreTrace.base.pre.start] at hscan
+      exact absurd hscan (by simp [boot, GalilScaffoldController.initial])
+    · have hTcPos : 1 ≤ Tc w.length :=
+        hpreTrace.base.tc1 ▸ hpreTrace.base.pre.mono 1 w.length hw le_rfl
+      have hrep := (PalPeg.BranchSupply.headsRepresent_alongTrace centreC placeC entry q first hw
+        hpreTrace
+        (PalPeg.BranchSupply.marksInv_alongTrace_ofPreTrace centreC placeC entry q first hfirst
+          hpreTrace.base.pre) hTcPos k hkpos hk).right.1
+      have hsane := (PalPeg.BranchSupply.frontPack_alongTrace centreC placeC entry q first hw
+        hpreTrace.base.pre k hkpos hk).sane
+      have htwice := PalPeg.GalilNeedBound.two_usedPH_of_rep w _ hrep hsane
+      have hgap : (st k).vm.right.gap = false := by
+        cases hg : (st k).vm.right.gap
+        · rfl
+        · simp only [position, hg, if_true] at hodd; omega
+      simp only [hgap, Bool.false_eq_true, if_false, PalPeg.GalilThrottledRun.usedPH, hinc,
+        hright, List.length_nil] at htwice
+      have hsound := hpreTrace.base.pre.trace.good k hk hscan hnr hout' w.length hw le_rfl
+        (by omega)
+      simpa using hsound
+  · have hsound := hplateau.sound hscan hnr hout' w.length hw le_rfl hplateau.atLast
+    simpa using hsound
+  · have := hfrozen.2
+    omega
+
+/-- A frozen state is past the input, so it is never caught. -/
+theorem not_caught_of_frozen {w : List (Fin 2)} {m : Mirrored1 (tapeCount spare)}
+    (hfrozen : frozenAt w m) (hcaught : reportCaught w (absSC m) = true) : False := by
+  obtain ⟨-, -, hon, -, -⟩ := (reportCaught_iff w _).mp hcaught
+  unfold PalPeg.GalilScaffoldChainInputSupply.onLetterTest at hon
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at hon
+  have := hfrozen.2
+  omega
+
 end ReportArrived
 
 /-- **`PAL ∈ PEG` from a physical machine.**  Nothing is asked of the abstract local layer any
@@ -1590,16 +1732,16 @@ theorem given_physicalMachine_indexed (entry q : ℕ) (first : Fin 9) (hfirst : 
     (hencRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m →
-        Enc w (absSC m) p → reportArrived entry q first w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j)))
+        Enc w (absSC m) p → reportCaught w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j)))
     (hencOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m →
-        Enc w (absSC m) p → ReportPoint w (absSC m) →
+        Enc w (absSC m) p → reportCaught w (absSC m) = true →
         m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL := by
   refine given_shadowedLocalSystem entry q first hfirst hor hres hChainVerifierSupply
     (fun w => ghostSteps entry q first (localGood (spare := spare)) w)
-    (fun w m => reportArrived entry q first w (absSC m))
+    (fun w m => reportCaught w (absSC m))
     (localGood (spare := spare))
     (fun _ => PalPeg.LocalWF.polWF_x0C ⟨fun _ => rfl, rfl, rfl, fun _ => rfl, fun _ => rfl⟩ 2048)
     (fun w st Tc hpreTrace hcanonical m hinv => by
@@ -1658,10 +1800,10 @@ theorem given_physicalMachine_indexed (entry q : ℕ) (first : Fin 9) (hfirst : 
             plateau_of_nextOK entry q first hfirst hqPos hfirstSeven hfirstEight hw hplateau hspec,
             hspec.2.2.1, hspec.2.2.2.1, hspec.2.2.2.2⟩
         · exact absurd hfrozen' hfrozen)
-    (fun w _ _ hw hpreTrace _ m hrun hreport =>
-      reportArrived_sound entry q first hfirst hw hpreTrace m hrun hreport)
-    (fun w _ _ hw hpreTrace _ j m hrun hpoint hrefreshed =>
-      reportArrived_complete entry q first hfirst hw hpreTrace j m hrun hpoint hrefreshed)
+    (fun w _ _ hw hpreTrace _ m hrun hreport hout =>
+      reportCaught_sound entry q first hfirst hw hpreTrace m hrun hreport hout)
+    (fun w _ _ hw hpreTrace _ j m hrun hpoint hscan =>
+      reportCaught_complete entry q first hfirst hw hpreTrace j m hrun hpoint hscan)
     L0
     blankSymbol q0 repQ outQ htape
     (fun w m p => (¬ frozenAt w m ∧ Enc w (absSC m) p) ∨ (frozenAt w m ∧ PhysFrozen w p))
@@ -1701,26 +1843,19 @@ theorem given_physicalMachine_indexed (entry q : ℕ) (first : Fin 9) (hfirst : 
         · exact Or.inl ⟨hfrozenNext, hencNext⟩
       · exact absurd hfrozen (notFrozen_of_invC entry q first hfrozen.1 hpreTrace m hinv))
     (fun w st Tc hpreTrace hcanonical m p honRun hrep => by
-      show reportArrived entry q first w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j))
+      show reportCaught w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j))
       rcases hrep with ⟨_, henc⟩ | ⟨hfrozen, hphys⟩
       · exact hencRep w st Tc hpreTrace hcanonical m p honRun henc
       · rw [hfrozenQuiet w p hphys]
-        cases htest : reportArrived entry q first w (absSC m) with
+        cases htest : reportCaught w (absSC m) with
         | false => rfl
         | true =>
-          obtain ⟨n, hrp⟩ := ((reportArrived_iff entry q first w _).mp htest).1
-          have hat := hrp.atPlace
-          have hle := hrp.le
-          have hpos := hrp.pos
-          have hbeyond := hfrozen.2
-          omega)
-    (fun w st Tc hpreTrace hcanonical m p honRun hrep hpoint => by
+          exfalso
+          exact not_caught_of_frozen hfrozen htest)
+    (fun w st Tc hpreTrace hcanonical m p honRun hrep hreport => by
       rcases hrep with ⟨_, henc⟩ | ⟨hfrozen, _⟩
-      · exact hencOut w st Tc hpreTrace hcanonical m p honRun henc hpoint
-      · have hlast := hpoint.atLast
-        have := hfrozen.1
-        have := hfrozen.2
-        omega)
+      · exact hencOut w st Tc hpreTrace hcanonical m p honRun henc hreport
+      · exact (not_caught_of_frozen hfrozen hreport).elim)
   intro w st Tc hpreTrace hcanonical mode
   rcases Nat.eq_zero_or_pos w.length with hempty | hw
   · intro m k j _ _ _ _ _ hbefore
@@ -1878,11 +2013,11 @@ theorem given_physicalMachine (entry q : ℕ) (first : Fin 9) (hfirst : first �
     (hencRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m →
-        Enc (absSC m) p → reportArrived entry q first w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j)))
+        Enc (absSC m) p → reportCaught w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankSymbol K (p.2 j)))
     (hencOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC entry q first w st Tc → CanonTrace entry w st Tc →
       ∀ m p, OnRun (localGood (spare := spare)) (postPhase entry q first) w (heldAfter (Tc w.length) st) m →
-        Enc (absSC m) p → ReportPoint w (absSC m) →
+        Enc (absSC m) p → reportCaught w (absSC m) = true →
         m.vm.ctl.output = outQ p.1) :
     RecognizedByTotalPEG PAL :=
   given_physicalMachine_indexed entry q first hfirst hq hqPos hfirstSeven hfirstEight

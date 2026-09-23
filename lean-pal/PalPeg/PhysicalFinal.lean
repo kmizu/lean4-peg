@@ -20,7 +20,7 @@ open PalPeg.GalilFinalAssembly2 (centreC placeC)
 open PalPeg.CloseoutCheckW (PreTraceIMW CanonTrace)
 open PalPeg.LocalSysConcrete (absSC)
 open PalPeg.LocalShadowConcrete (OnRun)
-open PalPeg.ShadowedLocalFinal (localGood postPhase frozenAt heldAfter reportArrived)
+open PalPeg.ShadowedLocalFinal (localGood postPhase frozenAt heldAfter reportCaught)
 open PalPeg.PhysicalEncoding (blankM Γm tapeCountM)
 open PalPeg.PhysicalDpCleanup (Config Enc machine initialControl)
 
@@ -41,11 +41,11 @@ structure ReportResiduals (rest : PalPeg.PhysicalScanCount.RestCommands)
   encRep : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC 0 1 0 w st Tc → CanonTrace 0 w st Tc →
       ∀ m p, OnRun (localGood (spare := 0)) (postPhase 0 1 0) w (heldAfter (Tc w.length) st) m →
-        Enc w (absSC m) p → reportArrived 0 1 0 w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankM PalPeg.PhysicalContract.macroRadius (p.2 j))
+        Enc w (absSC m) p → reportCaught w (absSC m) = repQ p.1 (fun j => PalPeg.Local.readWin blankM PalPeg.PhysicalContract.macroRadius (p.2 j))
   encOut : ∀ (w : List (Fin 2)) (st : ℕ → State GalilVM) (Tc : ℕ → ℕ),
       PreTraceIMW centreC placeC 0 1 0 w st Tc → CanonTrace 0 w st Tc →
       ∀ m p, OnRun (localGood (spare := 0)) (postPhase 0 1 0) w (heldAfter (Tc w.length) st) m →
-        Enc w (absSC m) p → PalPeg.GalilStructuredSkeleton.ReportPoint w (absSC m) →
+        Enc w (absSC m) p → reportCaught w (absSC m) = true →
         m.vm.ctl.output = outQ p.1
 
 /-- `PAL ∈ PEG` from the common machine: only the tick cases and the report
