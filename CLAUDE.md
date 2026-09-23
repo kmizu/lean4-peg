@@ -16,6 +16,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 証明: `ScaHeap`（永続スタック）、`ScaWindowSchedule`（段の運びの閉じた形 `Inv`、`inv_run`、`answering_run`）、`ScaWindowOutput.window_correct`（worker の仕様＋fault なし ⇒ 受理 ↔ PAL）。
 - 残り: (W1) コンパイル済み表 ＝ `GsMatchHeads`/`GsDualFlags` のコルーチン（有限の翻訳検証、力技）、(W2) コルーチン ＝ GS 照合／中央フラグの仕様（Lean の `GSScan`/`GSDecomp`/`GSRealTime`/`StageMatcher` へ）、fault なし、SCA への符号化（無限の部分を永続スタックで）。
 
+**符号化の計画（2026-09-23 深夜、確定）**
+- 最上位は `ScaWindowTop.pal_in_peg`（義務5本: `hmatch`/`hmiddle`/`hclean`/`hworkers`/`hencode`）。
+- W1（表＝コルーチン）は済: `ScaGsCertData`（`decide +kernel`）＋ `ScaGsCert.sim_start/sim_step`。worker への持ち上げはエージェント（`ScaWorkerCoroutine`）。
+- `hencode` の道筋: 1文字ぶんを `ScaProg.Prog`（push/pop/copy/clear/ctl/ite/seq、Scala circuit の写し）で書く → `Prog.isLocal`（済）→ スタック機械 → 型付き SCA（コンパイラはエージェント `ScaStackMachine`）。抽象状態との表現: カウンタ = Unit スタック、フラグ = Bool スタック、head = 左スタック＋右スタック＋`RTQueue`（エージェント `ScaHeadRep`）、距離レジスタ = 符号（制御）＋単項スタック。Scala のブロック zipper（`ScaWindowStream`）は使わない（1文字あたり有界なら十分）。
+- `hmatch`/`hmiddle`/`hclean`（W2）: head 版コルーチン ↔ `gs_events` 版（Lean の `GSScan`/`GSDecomp`/`GSRealTime`/`GSVerifier`/`StageMatcher`）のシミュレーション。対応表はエージェントが `lean-pal/SCA_GS_MAPPING.md` に作成中。
+
 **計画（`DESIGN_SCA_PAL.md` §6 の3層）**
 1. 汎用の永続構造層: Scala `ScaffoldCircuitStructs` を写す。ノードごとに有限個のセル枠、セルは `below`（辺）・枠タグ・`value`（辺）・`data`。スタック = 根の辺＋タグ。push/pop/copy/clear が抽象リストへの表現関係 `Rep` を保つことを1操作1補題で。pop は「根→below」の2歩で半径内。キュー（永続スタック2本）・カウンタも同様。
 2. 抽象機械: window-pal の1文字ぶん（二進段・GS head worker）を永続レコード＋有限制御の `absStep` として Scala と同形に書く。
