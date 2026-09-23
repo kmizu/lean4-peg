@@ -571,4 +571,78 @@ theorem shift_any (k : ℕ) (hk : 1 ≤ k) (pe : Bool) (ok : Option Bool) (ph : 
         refine ⟨2 + (2 * p₁ + 4), fun _ => ?_, fun h => absurd ⟨rfl, by omega, by omega⟩ h⟩
         rw [iterStep_add]; simp only [iterStep, e1, e2, Option.bind_some]; exact hsp
 
+/-! ## The logical word -/
+
+section Word
+variable (x T : List (Fin 2)) (m : ℕ)
+
+theorem word_pat {i : ℕ} (hi : i < x.length) : (x ++ T.take m)[i]? = x[i]? := by
+  rw [List.getElem?_append_left hi]
+
+theorem word_txt (j : ℕ) (hj : j < m) : (x ++ T.take m)[x.length + j]? = T[j]? := by
+  rw [List.getElem?_append_right (by omega), show x.length + j - x.length = j by omega,
+    List.getElem?_take_of_lt hj]
+
+theorem pat_drop {s q : ℕ} : x[s + q]? = (x.drop s)[q]? := by
+  rw [List.getElem?_drop]
+
+theorem pat_take {s c : ℕ} (hc : c < s) : x[c]? = (x.take s)[c]? := by
+  rw [List.getElem?_take_of_lt hc]
+
+end Word
+
+/-- **At the loop head**: the heads encode the verifier state `z` on the word `x ++ T.take m`. -/
+structure AtHead (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : PalPeg.VState)
+    (v : HVM) : Prop where
+  ctl : ∃ ph, v.ctl = .pending [mc k (some pe) (some ok) ph 13] (.available "B")
+  word : v.word = x ++ T.take m
+  rel : LoopRel x.length s p₁ r k pe z.1.pos z.1.q z.2 v.pos
+  dead : ok = false → z.2 < s ∧ hitAt (x.take s) T z.1.pos z.2 = false
+  cut : s ≤ z.1.pos
+  sx : s ≤ x.length
+  qv : z.1.q < x.length - s
+  cs : z.2 ≤ s
+  arr : z.1.pos + z.1.q ≤ m
+  tl : m ≤ T.length
+
+theorem end_more (k : ℕ) (pe ok : Option Bool) (ph : Option ℕ) (v : HVM)
+    (hv : v.ctl = .pending [mc k pe ok ph 19] (.equal "A" "End")) (hne : v.pos "A" ≠ v.pos "End") :
+    iterStep 1 v = some { v with ctl := .pending [mc k pe ok ph 13] (.available "B") } := by
+  have e1 := step_equal hv
+  rw [show decide (v.pos "A" = v.pos "End") = false by simp [hne], mc_19_more] at e1
+  simp [iterStep, e1]
+
+theorem abMove_other (π : String → ℤ) (h : String) (ha : h ≠ "A") (hb : h ≠ "B") :
+    abMove π h = π h := by
+  simp [abMove, Function.update, ha, hb]
+
+theorem loopRel_hit {lx s p₁ r k : ℕ} {pe : Bool} {pos q c : ℕ} {π : String → ℤ} (d : ℕ)
+    (h : LoopRel lx s p₁ r k pe pos q c π) :
+    LoopRel lx s p₁ r k pe pos (q + 1) (c + d) (walkMoves d (abMove π)) := by
+  obtain ⟨hO, hC, hE, hper, hP, hA, hB, hW, hU⟩ := h
+  obtain ⟨m1, m2, m3⟩ := walkMoves_pos d (abMove π)
+  have o : ∀ h', h' ≠ "Walk" → h' ≠ "U" → h' ≠ "A" → h' ≠ "B" →
+      walkMoves d (abMove π) h' = π h' := fun h' a b c' e => by
+    rw [m3 h' a b, abMove_other π h' c' e]
+  refine ⟨by rw [o _ (by decide) (by decide) (by decide) (by decide), hO],
+    by rw [o _ (by decide) (by decide) (by decide) (by decide), hC],
+    by rw [o _ (by decide) (by decide) (by decide) (by decide), hE],
+    fun hp => ?_, by rw [o _ (by decide) (by decide) (by decide) (by decide), hP], ?_, ?_, ?_, ?_⟩
+  · obtain ⟨h1, h2, h3⟩ := hper hp
+    exact ⟨by rw [o _ (by decide) (by decide) (by decide) (by decide), h1],
+      by rw [o _ (by decide) (by decide) (by decide) (by decide), h2],
+      by rw [o _ (by decide) (by decide) (by decide) (by decide), h3]⟩
+  · rw [m3 _ (by decide) (by decide)]; simp [abMove, Function.update, hA]; push_cast; ring
+  · rw [m3 _ (by decide) (by decide)]; simp [abMove, Function.update, hB]; push_cast; ring
+  · rw [m1]; simp [abMove, Function.update, hW]
+  · rw [m2]; simp [abMove, Function.update, hU]; push_cast; ring
+
+/-- **A hit with more of `v` to go** is one `vStep`. -/
+theorem step_hit (x T : List (Fin 2)) (m k s p₁ r : ℕ) (pe ok : Bool) (z : PalPeg.VState) (v : HVM)
+    (h : AtHead x T m k s p₁ r pe ok z v) (hen : z.1.pos + z.1.q < m)
+    (hhit : T[z.1.pos + z.1.q]? = (x.drop s)[z.1.q]?) (hmore : z.1.q + 1 < x.length - s) :
+    ∃ n ok' v', iterStep n v = some v' ∧
+      AtHead x T m k s p₁ r pe ok' (PalPeg.vStep (x.take s) (x.drop s) k p₁ r T z) v' := by
+  sorry
+
 end PalPeg.ScaMatcherLoop
