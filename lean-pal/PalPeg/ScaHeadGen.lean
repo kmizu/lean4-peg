@@ -317,4 +317,99 @@ theorem rs_exit_ret (k ph : ℕ) (ne : Bool) (v : HVM) (π : String → ℤ) (j 
     from rfl, rs_resume_exit_ret k ph ne h] at e1
   simp [iterStep, e1]
 
+theorem modstep (j k : ℕ) (hk : 1 ≤ k) :
+    (j % k + 1 < k → (j + 1) % k = j % k + 1 ∧ (j + 1) / k = j / k) ∧
+    (j % k + 1 = k → (j + 1) % k = 0 ∧ (j + 1) / k = j / k + 1) := by
+  obtain ⟨q, r, hr, rfl⟩ : ∃ q r, r < k ∧ j = q * k + r :=
+    ⟨j / k, j % k, Nat.mod_lt _ (by omega), by rw [Nat.div_add_mod' j k]⟩
+  have hm : (q * k + r) % k = r := by rw [Nat.add_comm, Nat.add_mul_mod_self_right, Nat.mod_eq_of_lt hr]
+  have hd : (q * k + r) / k = q := by
+    rw [Nat.add_comm, Nat.add_mul_div_right _ _ (by omega), Nat.div_eq_of_lt hr, Nat.zero_add]
+  rw [hm, hd]
+  refine ⟨fun h => ⟨?_, ?_⟩, fun h => ⟨?_, ?_⟩⟩
+  · rw [Nat.add_assoc, Nat.add_comm, Nat.add_mul_mod_self_right, Nat.mod_eq_of_lt h]
+  · rw [Nat.add_assoc, Nat.add_comm, Nat.add_mul_div_right _ _ (by omega), Nat.div_eq_of_lt h,
+      Nat.zero_add]
+  · rw [Nat.add_assoc, h, show q * k + k = (q + 1) * k by ring, Nat.mul_mod_left]
+  · rw [Nat.add_assoc, h, show q * k + k = (q + 1) * k by ring, Nat.mul_div_cancel _ (by omega)]
+
+/-- The final shift count of `ResetShift` after rewinding `q` cells: `max 1 ⌈q/k⌉`. -/
+def rsShifts (k q : ℕ) : ℕ := q / k + if q = 0 ∨ q % k ≠ 0 then 1 else 0
+
+theorem rs_loop_run (k : ℕ) (hk : 1 ≤ k) (π : String → ℤ) (L : ℤ) (ne : Bool) (q : ℕ)
+    (hne : ne = decide (q ≠ 0)) :
+    ∀ (m : ℕ) (v : HVM) (j sh : ℕ), j + m = q → sh = j / k → v.ctl = rsLoop k (j % k) ne →
+      v.pos = rsPos π j sh → v.len = L →
+      π "A" - q = π "Cut" → 0 ≤ π "Cut" → π "A" - j ≤ L → (q : ℤ) ≤ π "B" →
+      π "B" - j + sh + 1 ≤ L → 0 ≤ π "P" → π "P" + (q / k : ℕ) + 1 ≤ L →
+      ∃ n, n ≤ 3 * m + 2 ∧
+        iterStep n v = some { v with ctl := .returned none, pos := rsPos π q (rsShifts k q : ℕ) }
+  | 0, v, j, sh, hjm, hsh, hv, hp, hL, he, hC, hAL, hBq, hBL, hP0, hPL => by
+    have hj : j = q := by omega
+    subst hj
+    have hshq : sh = j / k := hsh
+    by_cases hx : (!ne || j % k != 0) = true
+    · refine ⟨2, by omega, ?_⟩
+      rw [rs_exit_shift k (j % k) ne v π j sh hv hp (by omega) hx
+        ⟨by positivity, by rw [hshq]; omega⟩ ⟨by omega, by omega⟩]
+      have : (j = 0 ∨ j % k ≠ 0) := by
+        rw [hne] at hx; simp at hx
+        rcases hx with h0 | h0
+        · exact Or.inl h0
+        · exact Or.inr h0
+      simp only [rsShifts, if_pos this, hshq, Nat.cast_add, Nat.cast_one]
+    · refine ⟨1, by omega, ?_⟩
+      have hx' : (!ne || j % k != 0) = false := by simpa using hx
+      rw [rs_exit_ret k (j % k) ne v π j sh hv hp (by omega) hx']
+      have : ¬ (j = 0 ∨ j % k ≠ 0) := by
+        rw [hne] at hx'; simp at hx'; omega
+      simp only [rsShifts, if_neg this, Nat.add_zero, ← hshq, hp]
+  | m + 1, v, j, sh, hjm, hsh, hv, hp, hL, he, hC, hAL, hBq, hBL, hP0, hPL => by
+    obtain ⟨hs1, hs2⟩ := modstep j k hk
+    have hjq : sh ≤ q / k := by rw [hsh]; exact Nat.div_le_div_right (by omega)
+    rcases Nat.lt_or_ge (j % k + 1) k with hph | hph
+    · obtain ⟨hm1, hd1⟩ := hs1 hph
+      have hstep := rs_iter k (j % k) ne v π j sh hv hp (by omega) hph
+        ⟨by omega, by omega⟩ ⟨by omega, by omega⟩
+      obtain ⟨n, hn, hrun⟩ := rs_loop_run k hk π L ne q hne m
+        { v with ctl := rsLoop k (j % k + 1) ne, pos := rsPos π (↑j + 1) sh } (j + 1) sh
+        (by omega) (by rw [hd1, hsh]) (by rw [hm1]) (by push_cast; rfl) hL he hC (by omega) hBq
+        (by push_cast; omega) hP0 hPL
+      refine ⟨2 + n, by omega, ?_⟩
+      rw [iterStep_add, hstep, Option.bind_some, hrun]
+    · have hph' : j % k + 1 = k := by have := Nat.mod_lt j (show 0 < k by omega); omega
+      obtain ⟨hm1, hd1⟩ := hs2 hph'
+      have hj1 : sh + 1 ≤ q / k := by
+        rw [hsh, ← hd1]; exact Nat.div_le_div_right (by omega)
+      have hstep := rs_wrap k (j % k) ne v π j sh hv hp (by omega) hph'
+        ⟨by omega, by omega⟩ ⟨by omega, by omega⟩ ⟨by omega, by omega⟩ (by omega)
+      obtain ⟨n, hn, hrun⟩ := rs_loop_run k hk π L ne q hne m
+        { v with ctl := rsLoop k 0 ne, pos := rsPos π (↑j + 1) (↑sh + 1) } (j + 1) (sh + 1)
+        (by omega) (by rw [hd1, hsh]) (by rw [hm1]) (by push_cast; rfl) hL he hC (by omega) hBq
+        (by push_cast; omega) hP0 hPL
+      refine ⟨3 + n, by omega, ?_⟩
+      rw [iterStep_add, hstep, Option.bind_some, hrun]
+
+/-- **`ResetShift k true`, from its fresh frame**: rewinding `q = A − Cut` cells, it returns
+within `3q + 3` steps with `A = Cut`, `B − q + t`, `P + t`, `KP − t`, `t = max 1 ⌈q/k⌉`. -/
+theorem resetShift_run (k : ℕ) (hk : 1 ≤ k) (v : HVM) (q : ℕ)
+    (hv : v.ctl = Ctl.ofOutcome (next [.resetShift k true 0 none 0] none))
+    (hq : v.pos "A" = v.pos "Cut" + q) (hC : 0 ≤ v.pos "Cut") (hAL : v.pos "A" ≤ v.len)
+    (hBq : (q : ℤ) ≤ v.pos "B") (hBL : v.pos "B" + 1 ≤ v.len) (hP0 : 0 ≤ v.pos "P")
+    (hPL : v.pos "P" + (q / k : ℕ) + 1 ≤ v.len) :
+    ∃ n, n ≤ 3 * q + 3 ∧
+      iterStep n v = some { v with
+        ctl := .returned none
+        pos := rsPos v.pos q (rsShifts k q : ℕ) } := by
+  rw [rs_start] at hv
+  have h1 := rs_first k v hv
+  have hne : decide (v.pos "A" ≠ v.pos "Cut") = decide (q ≠ 0) := by
+    simp only [decide_eq_decide]; omega
+  rw [hne] at h1
+  obtain ⟨n, hn, hrun⟩ := rs_loop_run k hk v.pos v.len (decide (q ≠ 0)) q rfl q
+    { v with ctl := rsLoop k 0 (decide (q ≠ 0)) } 0 0 (by omega) (by simp) (by simp)
+    (by simp [rsPos_zero]) rfl (by omega) hC (by simp; omega) hBq (by simp; omega) hP0 hPL
+  refine ⟨1 + n, by omega, ?_⟩
+  rw [iterStep_add, h1, Option.bind_some, hrun]
+
 end PalPeg.ScaHeadGen
