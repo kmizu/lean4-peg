@@ -185,6 +185,7 @@ import PalPeg.ScaGsCertData
 import PalPeg.ScaLocal
 import PalPeg.ScaProg
 import PalPeg.ScaProgEmbed
+import PalPeg.ScaCounter
 import PalPeg.ScaWindowInstance
 import PalPeg.ScaGsCoroutine
 import PalPeg.ScaGsCert
