@@ -222,6 +222,7 @@ import PalPeg.ScaMatcherReaders
 import PalPeg.ScaHeadDecompose
 import PalPeg.ScaWorkerLink
 import PalPeg.ScaMatcherLife
+import PalPeg.ScaMatcherLife2
 import PalPeg.GSReportDeadline
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
