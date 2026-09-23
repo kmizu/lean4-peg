@@ -180,6 +180,9 @@ import PalPeg.ScaWindowSchedule
 import PalPeg.ScaWindowOutput
 import PalPeg.ScaWindowFault
 import PalPeg.ScaWindowTop
+import PalPeg.ScaWindowStream
+import PalPeg.ScaGsCertData
+import PalPeg.ScaLocal
 import PalPeg.ScaWindowInstance
 import PalPeg.ScaGsCoroutine
 import PalPeg.ScaGsCert
