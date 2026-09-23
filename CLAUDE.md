@@ -11,6 +11,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `PalInPegSca.pal_recognizedByTotalPEG_of_sca`: `RecognizedBySCA PAL → RecognizedByTotalPEG PAL`（Kim–Park `SCAToPEG.loffBackward` ＋ `PAL_reverse_mem`）。
 - `ScaTyped`: 状態・ラベルを構造型で書いた scaffold 自動機械 `Typed` を Kim–Park の `Fin` 版へ輸送（`pal_in_peg_of_typed`）。
 
+**進捗（2026-09-23 深夜、すべて標準3公理・コミット済み）**
+- 写し（定義のみ、サブエージェント）: `ScaWindowPal`（WindowPAL/WindowStage の tick）、`ScaGsProgram`/`ScaGsTables`（GS 命令型、matcher 294 行・flags 492 行の表、quantum 512/1024）、`ScaWindowWorker`（worker の抽象意味）。
+- 証明: `ScaHeap`（永続スタック）、`ScaWindowSchedule`（段の運びの閉じた形 `Inv`、`inv_run`、`answering_run`）、`ScaWindowOutput.window_correct`（worker の仕様＋fault なし ⇒ 受理 ↔ PAL）。
+- 残り: (W1) コンパイル済み表 ＝ `GsMatchHeads`/`GsDualFlags` のコルーチン（有限の翻訳検証、力技）、(W2) コルーチン ＝ GS 照合／中央フラグの仕様（Lean の `GSScan`/`GSDecomp`/`GSRealTime`/`StageMatcher` へ）、fault なし、SCA への符号化（無限の部分を永続スタックで）。
+
 **計画（`DESIGN_SCA_PAL.md` §6 の3層）**
 1. 汎用の永続構造層: Scala `ScaffoldCircuitStructs` を写す。ノードごとに有限個のセル枠、セルは `below`（辺）・枠タグ・`value`（辺）・`data`。スタック = 根の辺＋タグ。push/pop/copy/clear が抽象リストへの表現関係 `Rep` を保つことを1操作1補題で。pop は「根→below」の2歩で半径内。キュー（永続スタック2本）・カウンタも同様。
 2. 抽象機械: window-pal の1文字ぶん（二進段・GS head worker）を永続レコード＋有限制御の `absStep` として Scala と同形に書く。
