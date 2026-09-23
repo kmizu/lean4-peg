@@ -29,8 +29,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 処理済み（`cases_of_remaining_quiet`）: 既存7ケース＋ home・markEnd・`ChooseBack`（select でない choose）・`CopyReady`（copy、進む側は walker が読める）・`RewindStep`（rewind の1歩/2歩、atFirst 偽・床に非接触）。
 - 仕組み: `QuietPhase`（markEnd/home/fpp/choose/copy/rewind）の tick は全8層を素通し（`forward_quiet_machine`）。Snapshot の保存コピーは `successor_put_quiet` で同じ定理から運ぶ。`¬NeedsLoan` はタダ（静かなモードは scan に戻らない）。
 - 鍵は **`coreInv_of_ideal_named`**（事前条件を弱めた版）: chain の counter 10..15・mirror 5・極性10 だけ保存すればよく、VM 名付き counter の形は新しい Enc から取る。これで counter を書き換える copy/rewind が home と同じ形で通った。
-- 未処理の静かなモード: fpp（`runsQuiet_fpp` まであるが run 由来の `hcomp`/`hfloorRun`/`hin` の supplier 無し）、rewind の reset 分岐（退役 FPP bank が reset 済み＝`hidle`、FPP 退役消去の置換待ち）、choose-select、`CopyReady`/`RewindStep` の否定側（run から到達不能を示す）。
-- 残る大物: init/replayStart、scan 側（matched・fallback・restart・DP prepare/reset・探索量子）、`rest` の具体化、凍結3欄。
+- copy と rewind の1歩/2歩の準備条件（walker が読める・床に非接触）は合法 Tick から出る（`copyReady_of_tick` / `rewindStep_of_tick`）。残差は「copy でない」「rewind なら atFirst」だけ。
+- **fpp の `hcomp` は run 上で偽**（`GalilScaffoldTape.reset` は `left = []`、fpp 開始時に reset のままのテープがある）。`fpp_of_tick`→`physRule_fpp`→`machineAgree_winMachine` の `MachineAgree.margin'`（抽象テープ左に K 以上）が強すぎる。直し方: `margin'` を外し、左端より先は物理パディングの decode と抽象既定記号 6 が一致すること＋`hfloorRun`（床を越えない）で窓一致を保つ。`margin'` の使用は PhysicalEncoding 内 8 か所。
+- 未処理の静かなモード: fpp（上の `hcomp` の修正と `hfloorRun`/`hin` の supplier が要る）、rewind の reset 分岐（退役 FPP bank が reset 済み＝`hidle`、FPP 退役消去の置換待ち）、choose-select、`CopyReady`/`RewindStep` の否定側（run から到達不能を示す）。
+- **choose-select / init / replayStart は物理規則に行が無い**（`ruleNext` の choose は `chooseBackNext` のみ、init/replayStart は `_ => q`）。3つとも head の瞬時コピーで、物理層にビュー用 mirror が無い。旧局所層は mirror 入替え/駐車ビュー（`LocalReplaySwap`/`LocalReplayParked`、`H_initLoc` 等が残差）。設計候補は `ASSEMBLY_PLAN.md:985-1033` と `:731-770`（idleHead 強化）。
+- 残る大物: scan 側（matched・fallback・restart・DP prepare/reset・探索量子）、`rest` の具体化、凍結3欄。
 
 ### (B) 凍結の次の一手（設計済み・未実装）
 最後の比較は一致/shift/fallback のどれもありうる（`PlateauInvariant.plateauCompare`）ので「凍結＝飢餓」は偽。代わりに物理側へ粘着ビット b を足す包み層:
