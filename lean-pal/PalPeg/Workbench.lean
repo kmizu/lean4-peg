@@ -212,6 +212,7 @@ import PalPeg.ScaWorkerEnc
 import PalPeg.ScaWindowReal
 import PalPeg.ScaFlagsLink
 import PalPeg.ScaFlagsReaders
+import PalPeg.ScaMatcherReaders
 import PalPeg.GSReportDeadline
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
