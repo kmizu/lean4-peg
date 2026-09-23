@@ -202,6 +202,7 @@ import PalPeg.ScaHeadBridge
 import PalPeg.ScaHeadVM
 import PalPeg.ScaWorkerRegs
 import PalPeg.ScaWindowEncode
+import PalPeg.ScaWindowEncodeTick
 import PalPeg.PhysicalBoundaryCount
 import PalPeg.ReadyFuelRefute
 import PalPeg.PostRunInduction

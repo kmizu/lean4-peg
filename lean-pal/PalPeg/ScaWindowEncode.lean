@@ -574,14 +574,37 @@ structure Rep (s : PalState Wm Wf) (c : Ctrl Cm Cf) (st : Fin (KK Km Kf) → Lis
   mat : ∀ i, WRep (emM (Γf := Γf) (Kf := Kf) i) mE.Rep (s.matchers i) c st
   flg : ∀ i, WRep (emF (Γm := Γm) (Km := Km) i) fE.Rep (s.flags i) c st
 
-/-- `p` simulates the abstract update `f`. -/
+/-- No worker of `s` has faulted. -/
+def NoFault (mOps : WorkerOps Wm) (fOps : WorkerOps Wf) (s : PalState Wm Wf) : Prop :=
+  ∀ i, mOps.faulted (s.matchers i) = false ∧ fOps.faulted (s.flags i) = false
+
+/-- `g` keeps worker faults: if nothing has faulted after `g`, nothing had faulted before. -/
+def Keeps (mOps : WorkerOps Wm) (fOps : WorkerOps Wf) (g : PalState Wm Wf → PalState Wm Wf) :
+    Prop :=
+  ∀ s, NoFault mOps fOps (g s) → NoFault mOps fOps s
+
+theorem Keeps.comp {mOps : WorkerOps Wm} {fOps : WorkerOps Wf}
+    {f g : PalState Wm Wf → PalState Wm Wf} (hf : Keeps mOps fOps f) (hg : Keeps mOps fOps g) :
+    Keeps mOps fOps (fun s => g (f s)) := fun s h => hf s (hg (f s) h)
+
+theorem Keeps.of_workers {mOps : WorkerOps Wm} {fOps : WorkerOps Wf}
+    (g : PalState Wm Wf → PalState Wm Wf) (hmat : ∀ s, (g s).matchers = s.matchers)
+    (hfl : ∀ s, (g s).flags = s.flags) : Keeps mOps fOps g := fun s h i => by
+  have := h i
+  rw [hmat, hfl] at this
+  exact this
+
+/-- `p` simulates the abstract update `f`, whenever `f`'s result has no faulted worker. -/
 def Sim (f : PalState Wm Wf → PalState Wm Wf) (p : Prog (Γm ⊕ Γf) (Ctrl Cm Cf) (KK Km Kf)) :
     Prop :=
-  ∀ s c st, Rep mE fE s c st → Rep mE fE (f s) (p.eval D c st).1 (p.eval D c st).2
+  ∀ s c st, Rep mE fE s c st → NoFault mOps fOps (f s) →
+    Rep mE fE (f s) (p.eval D c st).1 (p.eval D c st).2
 
 theorem Sim.seq {f g : PalState Wm Wf → PalState Wm Wf}
-    {p q : Prog (Γm ⊕ Γf) (Ctrl Cm Cf) (KK Km Kf)} (hp : Sim mE fE f p) (hq : Sim mE fE g q) :
-    Sim mE fE (fun s => g (f s)) (.seq p q) := fun s c st h => hq _ _ _ (hp s c st h)
+    {p q : Prog (Γm ⊕ Γf) (Ctrl Cm Cf) (KK Km Kf)} (hp : Sim mE fE f p) (hq : Sim mE fE g q)
+    (hg : Keeps mOps fOps g) :
+    Sim mE fE (fun s => g (f s)) (.seq p q) := fun s c st h hnf =>
+  hq _ _ _ (hp s c st h (hg _ hnf)) hnf
 
 /-! ### Worker steps -/
 
@@ -601,10 +624,46 @@ def updM (i : Fin 2) (f : Wm → Wm) (s : PalState Wm Wf) : PalState Wm Wf :=
 def updF (i : Fin 2) (f : Wf → Wf) (s : PalState Wm Wf) : PalState Wm Wf :=
   { s with flags := Function.update s.flags i (f (s.flags i)) }
 
+omit [Inhabited Γm] [Inhabited Γf] in
+/-- A sticky matcher operation keeps faults. -/
+theorem keeps_updM (i : Fin 2) (f : StageState → Wm → Wm)
+    (hf : ∀ b w, mOps.faulted w = true → mOps.faulted (f b w) = true) :
+    Keeps mOps fOps (fun s => updM i (f (s.stages i)) s) := fun s h j => by
+  have hj := h j
+  simp only [updM] at hj
+  refine ⟨?_, hj.2⟩
+  by_cases hji : j = i
+  · subst hji
+    rw [Function.update_self] at hj
+    cases hw : mOps.faulted (s.matchers j)
+    · rfl
+    · rw [hf _ _ hw] at hj; exact absurd hj.1 (by simp)
+  · rw [Function.update_of_ne hji] at hj; exact hj.1
+
+omit [Inhabited Γm] [Inhabited Γf] in
+/-- A sticky flag-worker operation keeps faults. -/
+theorem keeps_updF (i : Fin 2) (f : StageState → Wf → Wf)
+    (hf : ∀ b w, fOps.faulted w = true → fOps.faulted (f b w) = true) :
+    Keeps mOps fOps (fun s => updF i (f (s.stages i)) s) := fun s h j => by
+  have hj := h j
+  simp only [updF] at hj
+  refine ⟨hj.1, ?_⟩
+  by_cases hji : j = i
+  · subst hji
+    rw [Function.update_self] at hj
+    cases hw : fOps.faulted (s.flags j)
+    · rfl
+    · rw [hf _ _ hw] at hj; exact absurd hj.2 (by simp)
+  · rw [Function.update_of_ne hji] at hj; exact hj.2
+
 theorem sim_mOp (i : Fin 2) (p : Prog Γm Cm Km) (f : Wm → Wm)
-    (hp : ∀ w c st, mE.Rep w c st → mE.Rep (f w) (p.eval D c st).1 (p.eval D c st).2) :
+    (hp : ∀ w c st, mE.Rep w c st → mOps.faulted (f w) = false →
+      mE.Rep (f w) (p.eval D c st).1 (p.eval D c st).2) :
     Sim mE fE (updM i f) (mOp (Γf := Γf) (Cf := Cf) (Kf := Kf) i p) := by
-  intro s c st h
+  intro s c st h hnf
+  have hfi : mOps.faulted (f (s.matchers i)) = false := by
+    have := (hnf i).1
+    simpa [updM] using this
   have hfst : ((mOp (Γf := Γf) (Cf := Cf) (Kf := Kf) i p).eval D c st).1.1 = c.1 :=
     eval_embed_fix (emM (Γf := Γf) (Cf := Cf) (Kf := Kf) i) Prod.fst (fun _ _ => rfl) D p c st
   have hother : ∀ j, (∀ k, (mI i k : Fin (KK Km Kf)) ≠ j) →
@@ -618,7 +677,7 @@ theorem sim_mOp (i : Fin 2) (p : Prog Γm Cm Km) (f : Wm → Wm)
     by_cases hi : i' = i
     · subst hi
       simp only [updM, Function.update_self]
-      exact wrep_embed _ D f p hp (h.mat i')
+      exact wrep_embed _ D f p (fun c st hr => hp _ c st hr hfi) (h.mat i')
     · simp only [updM, Function.update_of_ne hi]
       refine wrep_frame _ (h.mat i') ?_ fun k => hother _ fun k' => mI_ne_mI (Ne.symm hi) k' k
       exact eval_embed_fix (emM (Γf := Γf) (Cf := Cf) (Kf := Kf) i) (fun c => c.2.1 i')
@@ -629,9 +688,13 @@ theorem sim_mOp (i : Fin 2) (p : Prog Γm Cm Km) (f : Wm → Wm)
       (fun _ _ => rfl) D p c st
 
 theorem sim_fOp (i : Fin 2) (p : Prog Γf Cf Kf) (f : Wf → Wf)
-    (hp : ∀ w c st, fE.Rep w c st → fE.Rep (f w) (p.eval D c st).1 (p.eval D c st).2) :
+    (hp : ∀ w c st, fE.Rep w c st → fOps.faulted (f w) = false →
+      fE.Rep (f w) (p.eval D c st).1 (p.eval D c st).2) :
     Sim mE fE (updF i f) (fOp (Γm := Γm) (Cm := Cm) (Km := Km) i p) := by
-  intro s c st h
+  intro s c st h hnf
+  have hfi : fOps.faulted (f (s.flags i)) = false := by
+    have := (hnf i).2
+    simpa [updF] using this
   have hfst : ((fOp (Γm := Γm) (Cm := Cm) (Km := Km) i p).eval D c st).1.1 = c.1 :=
     eval_embed_fix (emF (Γm := Γm) (Cm := Cm) (Km := Km) i) Prod.fst (fun _ _ => rfl) D p c st
   have hother : ∀ j, (∀ k, (fI i k : Fin (KK Km Kf)) ≠ j) →
@@ -649,7 +712,7 @@ theorem sim_fOp (i : Fin 2) (p : Prog Γf Cf Kf) (f : Wf → Wf)
     by_cases hi : i' = i
     · subst hi
       simp only [updF, Function.update_self]
-      exact wrep_embed _ D f p hp (h.flg i')
+      exact wrep_embed _ D f p (fun c st hr => hp _ c st hr hfi) (h.flg i')
     · simp only [updF, Function.update_of_ne hi]
       refine wrep_frame _ (h.flg i') ?_ fun k => hother _ fun k' => fI_ne_fI (Ne.symm hi) k' k
       exact eval_embed_fix (emF (Γm := Γm) (Cm := Cm) (Km := Km) i) (fun c => c.2.2 i')
@@ -669,12 +732,15 @@ theorem sim_mSel (i : Fin 2) (sel : StageCtl → Bool) (selA : StageState → Bo
     (hsel : ∀ (t : StageState) (y : StageCtl) (h cl : List (Γm ⊕ Γf)) (res : Fin 4 → List (Γm ⊕ Γf)),
       SRep (encR (Γm := Γm) fE) t y h cl res → sel y = selA t)
     (P : Bool → Prog Γm Cm Km) (f : Bool → Wm → Wm)
-    (hp : ∀ b w c st, mE.Rep w c st → mE.Rep (f b w) ((P b).eval D c st).1 ((P b).eval D c st).2) :
+    (hp : ∀ b w c st, mE.Rep w c st → mOps.faulted (f b w) = false →
+      mE.Rep (f b w) ((P b).eval D c st).1 ((P b).eval D c st).2) :
     Sim mE fE (fun s => updM i (f (selA (s.stages i))) s)
       (mSel (Γf := Γf) (Cf := Cf) (Kf := Kf) i sel P) := by
-  intro s c st h
+  intro s c st h hnf
   simp only [mSel, Prog.eval]
   rw [hsel _ _ _ _ _ (h.ctl.stage i)]
+  revert hnf
+  beta_reduce
   cases selA (s.stages i)
   · exact sim_mOp mE fE i (P false) (f false) (hp false) s c st h
   · exact sim_mOp mE fE i (P true) (f true) (hp true) s c st h
@@ -683,12 +749,15 @@ theorem sim_fSel (i : Fin 2) (sel : StageCtl → Bool) (selA : StageState → Bo
     (hsel : ∀ (t : StageState) (y : StageCtl) (h cl : List (Γm ⊕ Γf)) (res : Fin 4 → List (Γm ⊕ Γf)),
       SRep (encR (Γm := Γm) fE) t y h cl res → sel y = selA t)
     (P : Bool → Prog Γf Cf Kf) (f : Bool → Wf → Wf)
-    (hp : ∀ b w c st, fE.Rep w c st → fE.Rep (f b w) ((P b).eval D c st).1 ((P b).eval D c st).2) :
+    (hp : ∀ b w c st, fE.Rep w c st → fOps.faulted (f b w) = false →
+      fE.Rep (f b w) ((P b).eval D c st).1 ((P b).eval D c st).2) :
     Sim mE fE (fun s => updF i (f (selA (s.stages i))) s)
       (fSel (Γm := Γm) (Cm := Cm) (Km := Km) i sel P) := by
-  intro s c st h
+  intro s c st h hnf
   simp only [fSel, Prog.eval]
   rw [hsel _ _ _ _ _ (h.ctl.stage i)]
+  revert hnf
+  beta_reduce
   cases selA (s.stages i)
   · exact sim_fOp mE fE i (P false) (f false) (hp false) s c st h
   · exact sim_fOp mE fE i (P true) (f true) (hp true) s c st h
@@ -703,7 +772,7 @@ theorem sim_ctlOnly (p : Prog (Γm ⊕ Γf) (Ctrl Cm Cf) (KK Km Kf)) (hp : CtlOn
     (hc : ∀ s c st, Rep mE fE s c st →
       CRep (encR (Γm := Γm) fE) (f s) (p.eval D c st).1.1 (p.eval D c st).2) :
     Sim mE fE f p := by
-  intro s c st h
+  intro s c st h _
   obtain ⟨h1, h2⟩ := ctlOnly_eval D p hp c st
   refine ⟨hc s c st h, fun i => ?_, fun i => ?_⟩
   · rw [hmat]
@@ -1338,5 +1407,269 @@ theorem crep_consS (hD : 1 ≤ D) (i : Fin 2) (s : PalState Wm Wf) (c : Ctrl Cm 
           exact hS.results r'
 
 end Consume
+
+/-! ## `capture` and the end of `tick` as programs -/
+
+section Capture
+variable {Wm Wf Γm Γf Cm Cf : Type} [Inhabited Γm] [Inhabited Γf] {Km Kf D : ℕ}
+  {mOps : WorkerOps Wm} {fOps : WorkerOps Wf}
+  (mE : WorkerEnc Wm mOps Γm Cm Km D) (fE : WorkerEnc Wf fOps Γf Cf Kf D)
+
+/-- Run `P r` for the stage-`i` batch `r` held in the control. -/
+def onBatch (i : Fin 2) (P : Fin 4 → Prog (Γm ⊕ Γf) (Ctrl Cm Cf) (KK Km Kf)) :
+    Prog (Γm ⊕ Γf) (Ctrl Cm Cf) (KK Km Kf) :=
+  .ite (fun c _ => (c.1.stg i).batch.val == 0) (P 0)
+    (.ite (fun c _ => (c.1.stg i).batch.val == 1) (P 1)
+      (.ite (fun c _ => (c.1.stg i).batch.val == 2) (P 2) (P 3)))
+
+omit [Inhabited Γm] [Inhabited Γf] in
+theorem onBatch_eval (i : Fin 2) (P : Fin 4 → Prog (Γm ⊕ Γf) (Ctrl Cm Cf) (KK Km Kf))
+    (c : Ctrl Cm Cf) (st : Fin (KK Km Kf) → List (Γm ⊕ Γf)) :
+    (onBatch i P).eval D c st = (P (c.1.stg i).batch).eval D c st := by
+  simp only [onBatch, Prog.eval]
+  have hr : ∀ r : Fin 4, (c.1.stg i).batch = r → ((if ((c.1.stg i).batch.val == 0) = true then
+      (P 0).eval D c st else if ((c.1.stg i).batch.val == 1) = true then (P 1).eval D c st
+      else if ((c.1.stg i).batch.val == 2) = true then (P 2).eval D c st else (P 3).eval D c st) =
+      (P (c.1.stg i).batch).eval D c st) := by
+    intro r hr
+    rw [hr]
+    fin_cases r <;> rfl
+  exact hr _ rfl
+
+/-- The finite part of `capture()` of stage `i`; the scratch bit `rel` records `done`. -/
+def capCtl (i : Fin 2) (c : Ctrl Cm Cf) (_ : Fin (KK Km Kf) → List (Γm ⊕ Γf)) : Ctl :=
+  { c.1.setStg i { c.1.stg i with
+      pending := ((c.1.stg i).pending || (c.1.stg i).release) &&
+        !(((c.1.stg i).pending || (c.1.stg i).release) && fE.modeDone (c.2.2 i)) } with
+    rel := ((c.1.stg i).pending || (c.1.stg i).release) && fE.modeDone (c.2.2 i) }
+
+/-- `capture()` of stage `i` (ScaffoldWindowPal.scala:60-67): when done, the result packet of
+the current batch becomes a copy of flag worker `i`'s output flag stack. -/
+def capP (i : Fin 2) : Prog (Γm ⊕ Γf) (Ctrl Cm Cf) (KK Km Kf) :=
+  .seq (cctl (capCtl fE i))
+    (.ite (fun c _ => c.1.rel)
+      (onBatch i fun r => .copy (fI i fE.flagsIdx) (cI (.res i r))) .skip)
+
+theorem ctlOnly_capP (i : Fin 2) :
+    CtlOnly (capP (Γm := Γm) (Cm := Cm) (Km := Km) (Kf := Kf) fE i) :=
+  ⟨ctlOnly_cctl _, ⟨ctlOnly_copy _ _, ctlOnly_copy _ _, ctlOnly_copy _ _, ctlOnly_copy _ _⟩,
+    trivial⟩
+
+/-- Flag worker `i`'s output stack, read in the whole machine. -/
+theorem flags_stack {s : PalState Wm Wf} {c : Ctrl Cm Cf} {st : Fin (KK Km Kf) → List (Γm ⊕ Γf)}
+    (h : Rep mE fE s c st) (i : Fin 2) :
+    st (fI i fE.flagsIdx) = (fOps.flags (s.flags i)).map (encR (Γm := Γm) fE) := by
+  have h1 := pure_eq_map (emF (Γm := Γm) (Cm := Cm) (Km := Km) i) (h.flg i).2 fE.flagsIdx
+  have h2 := fE.rep_flags _ _ _ (h.flg i).1
+  change st (fI i fE.flagsIdx) = _ at h1
+  rw [h1, h2, List.map_map]
+  rfl
+
+theorem crep_capS (i : Fin 2) (s : PalState Wm Wf) (c : Ctrl Cm Cf)
+    (st : Fin (KK Km Kf) → List (Γm ⊕ Γf)) (h : Rep mE fE s c st) :
+    CRep (encR fE) (capS fOps i s) ((capP fE i).eval D c st).1.1 ((capP fE i).eval D c st).2 := by
+  have hS := h.ctl.stage i
+  have hy := hS.ctl_eq
+  have hmd : fOps.modeDone (s.flags i) = fE.modeDone (c.2.2 i) := fE.rep_modeDone _ _ _ (h.flg i).1
+  have hfl := flags_stack mE fE h i
+  set t := s.stages i with ht
+  set x := capCtl fE i c (view D st) with hx
+  have hdone : x.rel = ((t.pending || t.release) && fOps.modeDone (s.flags i)) := by
+    rw [hx, hmd]; simp only [capCtl, hy]; rfl
+  have hbatch : (x.stg i).batch = t.batch := by
+    rw [hx]; simp only [capCtl, Ctl.setStg_stg_self, hy]; rfl
+  set st' := if x.rel then Function.update st (cI (.res i t.batch)) (st (fI i fE.flagsIdx))
+    else st with hst'
+  have heval : (capP fE i).eval D c st = ((x, c.2), st') := by
+    simp only [capP, eval_seq, eval_cctl, hst']
+    rw [eval_iteSkip]
+    split
+    · rw [onBatch_eval]
+      show ((x, c.2), Function.update st (cI (.res i (x.stg i).batch)) (st (fI i fE.flagsIdx))) = _
+      rw [hbatch]
+    · rfl
+  have hcap : capS fOps i s = { s with
+      stages := Function.update s.stages i
+        (capture t (fOps.modeDone (s.flags i)) (fOps.flags (s.flags i))), fault := s.fault } :=
+    rfl
+  rw [heval, hcap]
+  dsimp only
+  refine CRep.stageUpd h.ctl i _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ h.ctl.fault
+    (fun j hj => Ctl.setStg_stg_ne _ _ hj) ?_ ?_
+  · intro y hy'
+    obtain ⟨_, _, h3⟩ := CStack.not_ofStage hy'
+    simp only [hst']
+    split
+    · rw [Function.update_of_ne (by simpa using h3 _)]
+    · rfl
+  · have hxs : x.stg i = StageCtl.ofState
+        (capture t (fOps.modeDone (s.flags i)) (fOps.flags (s.flags i))) := by
+      rw [hx, hmd]; simp only [capCtl, Ctl.setStg_stg_self, hy]; rfl
+    rw [hxs]
+    refine SRep.of_ofState ?_ ?_ fun r => ?_
+    · simp only [hst']
+      split
+      · rw [Function.update_of_ne (by simp)]; exact hS.half
+      · exact hS.half
+    · simp only [hst']
+      split
+      · rw [Function.update_of_ne (by simp)]; exact hS.clock
+      · exact hS.clock
+    · simp only [hst', capture]
+      by_cases hd : x.rel = true
+      · rw [if_pos hd]
+        rw [hdone] at hd
+        by_cases hr : t.batch = r
+        · subst hr
+          simp [hd, hfl]
+        · rw [Function.update_of_ne (by simpa using Ne.symm hr)]
+          simp only [hd, Bool.true_and, beq_iff_eq, hr, if_false]
+          exact hS.results r
+      · rw [if_neg hd]
+        rw [hdone] at hd
+        simp only [Bool.not_eq_true] at hd
+        simp only [hd, Bool.false_and, Bool.false_eq_true, if_false]
+        exact hS.results r
+
+/-- The finite part of the end of `tick`: the stage-count check and the output. -/
+def finCtl (a : Fin 2) (c : Ctrl Cm Cf) (_ : Fin (KK Km Kf) → List (Γm ⊕ Γf)) : Ctl :=
+  { c.1 with
+    fault := c.1.fault || (c.1.small.val == 4 &&
+      !(((c.1.stg 0).answering || (c.1.stg 1).answering) &&
+        !((c.1.stg 0).answering && (c.1.stg 1).answering)))
+    output := if c.1.small.val == 4 then
+        ((c.1.stg 0).answering && (c.1.stg 0).middle && mE.output (c.2.1 0)) ||
+        ((c.1.stg 1).answering && (c.1.stg 1).middle && mE.output (c.2.1 1))
+      else c.1.small.val == 1 ||
+        ((c.1.small.val == 2 || c.1.small.val == 3) &&
+          (if (a == 1) = true then c.1.first else !c.1.first)) }
+
+/-- The end of `tick` (ScaffoldWindowPal.scala:129-137). -/
+def finishP (a : Fin 2) : Prog (Γm ⊕ Γf) (Ctrl Cm Cf) (KK Km Kf) := cctl (finCtl mE a)
+
+theorem ctlOnly_finishP (a : Fin 2) :
+    CtlOnly (finishP (Γf := Γf) (Cf := Cf) (Kf := Kf) mE a) := ctlOnly_cctl _
+
+theorem crep_finish (a : Fin 2) (s : PalState Wm Wf) (c : Ctrl Cm Cf)
+    (st : Fin (KK Km Kf) → List (Γm ⊕ Γf)) (h : Rep mE fE s c st) :
+    CRep (encR fE) (finishS mOps a s) ((finishP mE a).eval D c st).1.1
+      ((finishP mE a).eval D c st).2 := by
+  have hA0 := (h.ctl.stage 0).answering
+  have hA1 := (h.ctl.stage 1).answering
+  have hM0 := (h.ctl.stage 0).middle
+  have hM1 := (h.ctl.stage 1).middle
+  have hO0 : mOps.output (s.matchers 0) = mE.output (c.2.1 0) := mE.rep_output _ _ _ (h.mat 0).1
+  have hO1 : mOps.output (s.matchers 1) = mE.output (c.2.1 1) := mE.rep_output _ _ _ (h.mat 1).1
+  refine ⟨h.ctl.powerReady, h.ctl.slot, h.ctl.small, h.ctl.first, ?_, ?_, h.ctl.history,
+    h.ctl.power, h.ctl.nextBirth, h.ctl.stage⟩
+  · simp only [finishP, eval_cctl, finCtl, finishS, h.ctl.fault, h.ctl.small, hA0, hA1]
+  · simp only [finishP, eval_cctl, finCtl, finishS, h.ctl.small, h.ctl.first, hA0, hA1, hM0, hM1,
+      hO0, hO1]
+
+end Capture
+
+/-! ## The letter program and its simulation -/
+
+section Letter
+variable {Wm Wf Γm Γf Cm Cf : Type} [Inhabited Γm] [Inhabited Γf] {Km Kf D : ℕ}
+  {mOps : WorkerOps Wm} {fOps : WorkerOps Wf}
+  (mE : WorkerEnc Wm mOps Γm Cm Km D) (fE : WorkerEnc Wf fOps Γf Cf Kf D)
+
+/-- The part of `tick` before the stage loop (ScaffoldWindowPal.scala:102-115). -/
+def headP (a : Fin 2) : Prog (Γm ⊕ Γf) (Ctrl Cm Cf) (KK Km Kf) :=
+  .seq (.seq (.seq (preP a) (advP 0)) (advP 1)) postP
+
+theorem ctlOnly_headP (a : Fin 2) :
+    CtlOnly (headP (Γm := Γm) (Γf := Γf) (Cm := Cm) (Cf := Cf) (Km := Km) (Kf := Kf) a) :=
+  ⟨⟨⟨ctlOnly_preP a, ctlOnly_advP 0⟩, ctlOnly_advP 1⟩, ctlOnly_postP⟩
+
+theorem crep_head (hD : 1 ≤ D) (a : Fin 2) {enc : Bool → Γm ⊕ Γf} (s : PalState Wm Wf)
+    (c : Ctrl Cm Cf) (st : Fin (KK Km Kf) → List (Γm ⊕ Γf)) (h : CRep enc s c.1 st) :
+    CRep enc (preS s a) ((headP a).eval D c st).1.1 ((headP a).eval D c st).2 := by
+  obtain ⟨h1, hfr1, hb1⟩ := crep_pre1 hD a s c st h
+  set c1 := (preP (Γf := Γf) (Cm := Cm) (Cf := Cf) (Km := Km) (Kf := Kf) a).eval D c st
+  have h2 := crep_adv hD 0 (birthOf s) (pre1 s a) c1.1 c1.2 h1 hb1
+  obtain ⟨hb2, hfr2⟩ := advP_ctl (D := D) 0 c1.1 c1.2
+  set c2 := (advP (Γm := Γm) (Γf := Γf) 0).eval D c1.1 c1.2
+  have h3 := crep_adv hD 1 (birthOf s) (advS 0 (birthOf s) (pre1 s a)) c2.1 c2.2 h2
+    (hb2.trans hb1)
+  obtain ⟨hb3, hfr3⟩ := advP_ctl (D := D) 1 c2.1 c2.2
+  set c3 := (advP (Γm := Γm) (Γf := Γf) 1).eval D c2.1 c2.2
+  exact crep_post (!s.powerReady) (birthOf s) _ c3.1 c3.2 h3 (hfr3.trans (hfr2.trans hfr1))
+    (hb3.trans (hb2.trans hb1))
+
+theorem sim_head (hD : 1 ≤ D) (a : Fin 2) :
+    Sim mE fE (fun s => preS s a) (headP (Γm := Γm) (Γf := Γf) (Cm := Cm) (Cf := Cf) a) :=
+  sim_ctlOnly mE fE _ (ctlOnly_headP a) _ (fun _ => rfl) (fun _ => rfl)
+    fun s c st h => crep_head hD a s c st h.ctl
+
+/-- One stage round (ScaffoldWindowPal.scala:117-128). -/
+def roundP (a i : Fin 2) : Prog (Γm ⊕ Γf) (Ctrl Cm Cf) (KK Km Kf) :=
+  .seq (.seq (.seq (.seq (.seq (.seq (.seq (.seq (.seq
+    (mOp i (mE.arrive a))
+    (fOp i (fE.arrive a)))
+    (fSel i (·.birth) fE.resetFlags))
+    (mSel i (·.birth) mE.start))
+    (fSel i (·.release) fE.start))
+    (fSel i (·.release) fE.mark))
+    (consP fE i))
+    (mOp i mE.service))
+    (fOp i fE.service))
+    (capP fE i)
+
+include mE fE in
+theorem keeps_roundS (a i : Fin 2) : Keeps mOps fOps (roundS mOps fOps a i) := by
+  have k := Keeps.comp (Keeps.comp (Keeps.comp (Keeps.comp (Keeps.comp (Keeps.comp (Keeps.comp
+    (Keeps.comp (Keeps.comp
+    (keeps_updM i (fun _ => mOps.arrive a) fun _ => mE.sticky_arrive a)
+    (keeps_updF i (fun _ => fOps.arrive a) fun _ => fE.sticky_arrive a))
+    (keeps_updF i (fun t => fOps.resetFlags t.birth)
+      fun t => fE.sticky_resetFlags t.birth))
+    (keeps_updM i (fun t => mOps.start t.birth)
+      fun t => mE.sticky_start t.birth))
+    (keeps_updF i (fun t => fOps.start t.release)
+      fun t => fE.sticky_start t.release))
+    (keeps_updF i (fun t => fOps.mark t.release)
+      fun t => fE.sticky_mark t.release))
+    (Keeps.of_workers (consS i) (fun _ => rfl) (fun _ => rfl)))
+    (keeps_updM i (fun _ => mOps.service) fun _ => mE.sticky_service))
+    (keeps_updF i (fun _ => fOps.service) fun _ => fE.sticky_service))
+    (Keeps.of_workers (capS fOps i) (fun _ => rfl) (fun _ => rfl))
+  exact k
+
+theorem sim_round (hD : 1 ≤ D) (a i : Fin 2) :
+    Sim mE fE (roundS mOps fOps a i) (roundP mE fE a i) := by
+  have hs := Sim.seq mE fE (Sim.seq mE fE (Sim.seq mE fE (Sim.seq mE fE (Sim.seq mE fE (Sim.seq mE fE
+    (Sim.seq mE fE (Sim.seq mE fE (Sim.seq mE fE
+    (sim_mOp mE fE i _ _ (mE.rep_arrive a))
+    (sim_fOp mE fE i _ _ (fE.rep_arrive a))
+    (keeps_updF i (fun _ => fOps.arrive a) fun _ => fE.sticky_arrive a))
+    (sim_fSel mE fE i (·.birth) (·.birth) (fun _ _ _ _ _ hS => hS.birth) _ _ fE.rep_resetFlags)
+    (keeps_updF i (fun t => fOps.resetFlags t.birth)
+      fun t => fE.sticky_resetFlags t.birth))
+    (sim_mSel mE fE i (·.birth) (·.birth) (fun _ _ _ _ _ hS => hS.birth) _ _ mE.rep_start)
+    (keeps_updM i (fun t => mOps.start t.birth)
+      fun t => mE.sticky_start t.birth))
+    (sim_fSel mE fE i (·.release) (·.release) (fun _ _ _ _ _ hS => hS.release) _ _
+      fE.rep_start)
+    (keeps_updF i (fun t => fOps.start t.release)
+      fun t => fE.sticky_start t.release))
+    (sim_fSel mE fE i (·.release) (·.release) (fun _ _ _ _ _ hS => hS.release) _ _
+      fE.rep_mark)
+    (keeps_updF i (fun t => fOps.mark t.release)
+      fun t => fE.sticky_mark t.release))
+    (sim_ctlOnly mE fE _ (ctlOnly_consP fE i) (consS i) (fun _ => rfl) (fun _ => rfl)
+      fun s c st h => crep_consS fE hD i s c st h.ctl)
+    (Keeps.of_workers (consS i) (fun _ => rfl) (fun _ => rfl)))
+    (sim_mOp mE fE i _ _ (fun w c st h hf => mE.rep_service w c st h hf))
+    (keeps_updM i (fun _ => mOps.service) fun _ => mE.sticky_service))
+    (sim_fOp mE fE i _ _ (fun w c st h hf => fE.rep_service w c st h hf))
+    (keeps_updF i (fun _ => fOps.service) fun _ => fE.sticky_service))
+    (sim_ctlOnly mE fE _ (ctlOnly_capP fE i) (capS fOps i) (fun _ => rfl) (fun _ => rfl)
+      fun s c st h => crep_capS mE fE i s c st h)
+    (Keeps.of_workers (capS fOps i) (fun _ => rfl) (fun _ => rfl))
+  exact hs
+
+end Letter
 
 end PalPeg.ScaWindowEncode
