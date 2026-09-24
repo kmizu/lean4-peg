@@ -113,25 +113,11 @@ and its restrictions are documented in
 - `scala/generated` is committed; `scripts/check-drift.sh` mechanically
   guarantees it matches a fresh extraction
 - The `lean/` core has zero external dependencies (no Mathlib / Batteries);
-  its toolchain is pinned to Lean v4.32.0. The optional `lean-pal/` package
-  uses pinned Mathlib dependencies.
+  its toolchain is pinned to Lean v4.32.0.
 
-## Palindromes in plain PEG (artifact)
+## Palindromes: `PAL ∈ PEG`
 
-`docs/palindromes-in-peg.md` and `docs/palindromes-in-peg/` hold the construction of an
-ordinary (macro-free) PEG for the binary palindrome language: the generators that
-reproduce the 13,248,052-rule grammar byte for byte, the Rust runner, the verification
-logs, and the notes on why every simpler route fails. The formal side — SCA semantics,
-translation validation of the emitted grammar, and the correctness of the online
-recogniser — is future work in this repository; see
-`docs/palindromes-in-peg/STATUS.md` (start here) and `docs/palindromes-in-peg/PLAIN_PAL_ARTIFACT.md`.
-
-The Python-to-Scala 3 counterparts are present under `scala/pal`; Python remains the
-reference implementation. Scala reproduction commands, reader limits, and the
-current SHA boundary are documented in [`STATUS.md`](docs/palindromes-in-peg/STATUS.md).
-The separate [`lean-pal/`](lean-pal/) package proves `PAL ∈ PEG` unconditionally:
-`PalPeg.PalInPeg.unconditional : PegSeparation.RecognizedByTotalPEG PalPeg.PAL` depends only on
-the standard axioms (`propext`, `Classical.choice`, `Quot.sound`). The proof follows the Scala
-window-pal pipeline (scaffold → SCA → PEG, with the service quanta of
-`GsBatchClock.VERIFIED_BATCH`) and ends in the Kim–Park artifact's SCA → PEG theorem; see
-[`lean-pal/README.md`](lean-pal/README.md).
+The proof that the binary palindromes are recognized by a total PEG
+(`PalPeg.PalInPeg.unconditional`, standard axioms only), and the Scala generator that
+prints an explicit PEG for the construction, are in a separate repository,
+[kmizu/pal-peg](https://github.com/kmizu/pal-peg).

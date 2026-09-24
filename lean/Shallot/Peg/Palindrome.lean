@@ -31,8 +31,8 @@ the characters an OUTER pending match still needs. The concrete witness: `"aaaa"
 is a genuine (even-length) palindrome, but `palGrammar` — this exact literal
 transcription — provably does not derive a full match for it.
 
-Exhaustive computation (Python, outside this Lean development, not itself a
-proof) found this pattern is remarkably ONE-SIDED: checking all strings over
+Exhaustive computation (outside this Lean development, not itself a proof)
+found this pattern is remarkably ONE-SIDED: checking all strings over
 `{a, b}` up to length 20, this grammar never accepts a NON-palindrome (zero false
 positives found), only rejects some genuine ones (many false negatives, `"aaaa"`
 being the shortest). That asymmetry is suggestive — it hints this specific

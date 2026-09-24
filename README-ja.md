@@ -94,12 +94,8 @@ Lean ネイティブ実行と抽出 Scala 実行を突き合わせる——レ�
 - `scala/generated` はコミットされ、`scripts/check-drift.sh` が鮮度を機械保証
 - `lean/` コアは外部依存ゼロ（Mathlib / Batteries 不使用）、ツールチェーンは v4.32.0 に固定
 
-## 回文PEGのScala 3移植
+## 回文：`PAL ∈ PEG`
 
-`scala/pal` にPython版（当面の基準実装）のScala移植を完了した。Scalaの再現コマンド、読み込み制限、
-既定の全体文法SHAの未検証範囲は [STATUS.md](docs/palindromes-in-peg/STATUS.md) にまとめている。
-`PyDiff`のsource/fixtureバイト一致は、各テストが対象にした範囲だけの証拠やね。
-
-なお `lean-pal/` のLean成果物は、Kim–Parkの厳密実時間TMでPALを認識する機械の存在を仮定した
-条件付き定理をビルドする。Galilの機械をそのモデルへ書き下すことと、文献の実時間性を厳密な
-1記号1遷移・各テープ1書込/1移動へ正規化することは未証明で、無条件の `PAL ∈ PEG` ではない。
+2 値の回文が全域的な PEG で認識されることの証明（`PalPeg.PalInPeg.unconditional`、標準公理のみ）と、
+その構成の明示的な PEG を出力する Scala の生成器は、別リポジトリ
+[kmizu/pal-peg](https://github.com/kmizu/pal-peg) に移した。
