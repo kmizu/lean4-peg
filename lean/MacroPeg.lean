@@ -16,3 +16,11 @@ import MacroPeg.Counterexamples
 import MacroPeg.CounterexampleCorpus
 import MacroPeg.Render
 import MacroPeg.Corpus
+import MacroPeg.Properties.Observation
+import MacroPeg.Properties.FiniteArgs
+import MacroPeg.Properties.Specialize
+import MacroPeg.Properties.SpecializeCorrect
+import MacroPeg.Properties.Reachable
+import MacroPeg.Properties.SpecExamples
+import MacroPeg.Properties.ArgEquiv
+import MacroPeg.Properties.Strategy

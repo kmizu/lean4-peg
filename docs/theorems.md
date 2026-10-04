@@ -336,6 +336,64 @@ M-PEG-5 は `MExp.expand` の停止性と「展開後に call が残らない」
   そのため。参照実装の `ParserGenerator` が戦略に関係なく展開して生成しているのは、
   この観点からは CBN 専用と見なすべき
 
+## Macro PEG の性質: 有限特殊化・引数同値・評価戦略（`MacroPeg/Properties/`）
+
+観測は解析木を消した `Option (List Char)`（失敗 `none`、成功 `some rest`）。Macro PEG 側は既存の
+`MOutcome.restOf`、通常 PEG 側は新設の `pegRestOf`。`MacroObs`／`PegObs` は「その観測へ射影される
+有限導出が存在する」こと。燃料つき実行の `none` は観測として扱わない。報告書は
+[`docs/notes/macro-peg-finite-specialization.md`](notes/macro-peg-finite-specialization.md)。
+
+**A: 有限引数領域の一階 CBN 断片の有限特殊化**（`FiniteArgs.lean`／`Specialize.lean`／`SpecializeCorrect.lean`）。
+断片は制限構文 `FGrammar`（通常 PEG 環境 `env`、有限の定数集合 `D`、実引数は転送 `fwd j` か定数 `const k`
+だけの規則）と `MGrammar` への埋め込み `toMacro`。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `finite_specialization_cbn` | **主定理**: `WF F` と入口 `(A, ks)` の妥当性のもとで、全入力・全観測について `MacroObs F.toMacro (F.entry A ks) x r ↔ PegObs (F.specialize A ks) (.nt start) x r` | propext, Classical.choice, Quot.sound |
+| `spec_preserve` / `spec_reflect` | 保存（Macro→PEG）と反映（PEG→Macro）。どちらも導出の帰納法 1 回。失敗・成功・残余を同時に運ぶ | propext, Quot.sound |
+| `finite_specialization_accepts` / `_recognizesAll` | 成功言語と全消費言語を別々に | propext, Classical.choice, Quot.sound |
+| `finite_specialization_run` | 燃料版: 各側に別々の燃料が存在する形で結ぶ | propext, Classical.choice, Quot.sound |
+| `FGrammar.specialize_size` | 規則数はちょうど `|env| + Σ_B |D|^arity(B)`（`_le` が §5.5 の上界） | propext, Quot.sound |
+| `FGrammar.specialize_selfContained` | 生成文法の全 `.nt` が範囲内（参照正当性） | propext, Classical.choice, Quot.sound |
+| `codeOn_inj` / `FGrammar.specializeOn_decode` | 符号化の単射性と、生成側の非終端の復号 | propext / propext, Quot.sound |
+| `FGrammar.wfB_sound` | 実行可能な断片検査の健全性 | propext, Quot.sound |
+| `FGrammar.validVec_call` | 引数領域の閉性: 妥当なベクトルからの呼び出しの実引数も `D` に入る | propext, Quot.sound |
+| `env_obs_iff` | 通常 PEG 環境の式は、環境そのもの・Macro PEG 埋め込みで同じ観測を持つ | propext, Classical.choice, Quot.sound |
+| `fragment_lang_is_peg` / `peg_lang_is_fragment` | §5.6: この断片と通常 PEG は両方の言語観測で同じ言語クラス（Macro PEG 全体についての主張ではない） | propext, Classical.choice, Quot.sound |
+
+**D: 到達可能な組だけの特殊化**（`Reachable.lean`）。特殊化と正当性は組の集合 `S` で一般化してある
+（`finite_specialization_on`、`S` は呼び出しで閉じた妥当な組の集合 `SpecSet`）。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `reachable_specialization` | 入口から到達できる組だけの文法でも主定理と同じ同値 | propext, Classical.choice, Quot.sound |
+| `reach_length_le` | 規則数は全列挙版以下（例では 8→2、18→2） | propext, Quot.sound |
+| `FGrammar.reach_specSet` | 反復の不動点（鳩の巣）が呼び出しで閉じる | propext, Classical.choice, Quot.sound |
+
+**B: 引数の同値性と置換**（`ArgEquiv.lean`）。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `subst_obsEquiv_general` | 固定 `g`（規則本体が一階・純粋）、CBN: 同じ長さで各成分が観測同値な引数環境は、一階・純粋な `body` に代入しても観測同値 | propext, Classical.choice, Quot.sound |
+| `subst_obsEquiv_of_argEquiv` | 指示書どおりスコープ条件つきの形（証明はスコープ条件を使わない） | propext, Classical.choice, Quot.sound |
+| `sim_subst` / `sim_preserve` | 構文の帰納法で済む部分（代入）と、再帰呼び出しのために導出の帰納法が要る部分 | propext |
+| `same_recognizesAll`, `ce_call_argA`, `ce_call_argAEnd`, `argA_not_equiv_argAEnd` | **§6.1 の反例** `F(x) ← x "a" !.`: `"a"` と `"a" !.` は全消費言語が同じだが、`"aa"` で `F("a")` は成功、`F("a" !.)` は失敗 | propext / propext, Quot.sound |
+
+**C: 評価戦略**（`Strategy.lean`）。観測 `SObs g s e x r` は任意の戦略版。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `row1_*` … `row4_*` | §7.1 の表の 4 行 × CBN／Par／Seq を導出として | propext |
+| `rowAnd_*`, `andA_zero_on_a` | 未使用の `&"a"` を入力 `"b"` で: CBN 成功、Par／Seq 失敗（「空文字を受理することがある」への弱化は不可） | propext |
+| `loop_no_derivation` | `Loop() ← Loop()` はどの戦略でも有限導出を持たない（燃料ではなく導出の不存在） | propext |
+| `par_shortCircuit` / `seq_shortCircuit` | Par／Seq で `F(!ε, Loop())` は第 1 引数で失敗 | propext |
+| `par_first_loops` / `seq_first_loops` | Par／Seq で `F(Loop(), !ε)` は導出を持たない | propext |
+| `cbn_unused_first_fails` / `_loops` | CBN では未使用の引数は本体を妨げない | propext |
+| `strategy_agree` | 全規則と開始式の全実引数（未使用も含む）が、閉じていて全戦略・全入力でゼロ文字成功するなら、三戦略の観測は一致 | propext, Quot.sound |
+| `strategy_agree_eps` | 全実引数が構文的に `ε` の断片（最初の段階） | propext, Quot.sound |
+
+表の結果から言語クラスの包含関係は主張していない。
+
 ## CFG 研究: `CFL ⊊ MPEL^CBN_1`（`Cfg/` / `MacroPeg/PegEmbed.lean` / `Shallot/Peg/Examples.lean`）
 
 kmizu/macro_peg（2016年 SWoPP 原稿）が発見的に示唆していた「Macro PEL は CFL を

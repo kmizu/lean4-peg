@@ -420,3 +420,309 @@ machine-checked witnesses for the `subst` fix and for the two side conditions. -
 /-- info: 'Shallot.MacroPeg.ce006_closureReturn_not_noCallableRules' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.ce006_closureReturn_not_noCallableRules
+
+/-! ## Macro PEG properties: finite specialization (A), argument equivalence (B), strategies (C), reachable (D) -/
+
+/-- info: 'Shallot.MacroPeg.macroObs_iff_run' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.macroObs_iff_run
+
+/-- info: 'Shallot.MacroPeg.pegObs_iff_run' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.pegObs_iff_run
+
+/-- info: 'Shallot.MacroPeg.FGrammar.wfB_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.wfB_sound
+
+/-- info: 'Shallot.MacroPeg.FGrammar.validVecB_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.validVecB_sound
+
+/-- info: 'Shallot.MacroPeg.length_vecs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.length_vecs
+
+/-- info: 'Shallot.MacroPeg.mem_vecs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.mem_vecs
+
+/-- info: 'Shallot.MacroPeg.FGrammar.mem_specs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.mem_specs
+
+/-- info: 'Shallot.MacroPeg.FGrammar.length_specs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.length_specs
+
+/-- info: 'Shallot.MacroPeg.FGrammar.specs_code' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.specs_code
+
+/-- info: 'Shallot.MacroPeg.FGrammar.validVec_call' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.validVec_call
+
+/-- info: 'Shallot.MacroPeg.FGrammar.specialize_size' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.specialize_size
+
+/-- info: 'Shallot.MacroPeg.FGrammar.specialize_size_le' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.specialize_size_le
+
+/-- info: 'Shallot.MacroPeg.codeOn_inj' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.codeOn_inj
+
+/-- info: 'Shallot.MacroPeg.FGrammar.specializeOn_decode' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.specializeOn_decode
+
+/-- info: 'Shallot.MacroPeg.FGrammar.specializeOn_selfContained' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.specializeOn_selfContained
+
+/-- info: 'Shallot.MacroPeg.FGrammar.specialize_selfContained' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.specialize_selfContained
+
+/-- info: 'Shallot.MacroPeg.FGrammar.specs_specSet' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.specs_specSet
+
+/-- info: 'Shallot.MacroPeg.FGrammar.entryNt_lt' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.entryNt_lt
+
+/-- info: 'Shallot.MacroPeg.subst_embedExp_any' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.subst_embedExp_any
+
+/-- info: 'Shallot.MacroPeg.rel_spec' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.rel_spec
+
+/-- info: 'Shallot.MacroPeg.spec_preserve' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.spec_preserve
+
+/-- info: 'Shallot.MacroPeg.spec_reflect' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.spec_reflect
+
+/-- info: 'Shallot.MacroPeg.rel_obs_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.rel_obs_iff
+
+/-- info: 'Shallot.MacroPeg.finite_specialization_on' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.finite_specialization_on
+
+/-- info: 'Shallot.MacroPeg.finite_specialization_cbn' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.finite_specialization_cbn
+
+/-- info: 'Shallot.MacroPeg.finite_specialization_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.finite_specialization_accepts
+
+/-- info: 'Shallot.MacroPeg.finite_specialization_recognizesAll' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.finite_specialization_recognizesAll
+
+/-- info: 'Shallot.MacroPeg.finite_specialization_run' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.finite_specialization_run
+
+/-- info: 'Shallot.MacroPeg.peg_obs_as_fragment' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.peg_obs_as_fragment
+
+/-- info: 'Shallot.MacroPeg.fragment_lang_is_peg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.fragment_lang_is_peg
+
+/-- info: 'Shallot.MacroPeg.peg_lang_is_fragment' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.peg_lang_is_fragment
+
+/-- info: 'Shallot.MacroPeg.env_obs_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.env_obs_iff
+
+/-- info: 'Shallot.MacroPeg.FGrammar.reach_specSet' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.reach_specSet
+
+/-- info: 'Shallot.MacroPeg.FGrammar.entry_mem_reach' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.FGrammar.entry_mem_reach
+
+/-- info: 'Shallot.MacroPeg.reachable_specialization' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.reachable_specialization
+
+/-- info: 'Shallot.MacroPeg.reach_length_le' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.reach_length_le
+
+/-- info: 'Shallot.MacroPeg.reach_selfContained' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.reach_selfContained
+
+/-- info: 'Shallot.MacroPeg.loopF_no_obs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.loopF_no_obs
+
+/-- info: 'Shallot.MacroPeg.no_derives_selfLoop' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.no_derives_selfLoop
+
+/-- info: 'Shallot.MacroPeg.sim_subst' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.sim_subst
+
+/-- info: 'Shallot.MacroPeg.sim_preserve' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.sim_preserve
+
+/-- info: 'Shallot.MacroPeg.subst_obsEquiv_general' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.subst_obsEquiv_general
+
+/-- info: 'Shallot.MacroPeg.subst_obsEquiv_of_argEquiv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.subst_obsEquiv_of_argEquiv
+
+/-- info: 'Shallot.MacroPeg.same_recognizesAll' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.same_recognizesAll
+
+/-- info: 'Shallot.MacroPeg.ce_call_argA' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.ce_call_argA
+
+/-- info: 'Shallot.MacroPeg.ce_call_argAEnd' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.ce_call_argAEnd
+
+/-- info: 'Shallot.MacroPeg.ce_not_accepts' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.ce_not_accepts
+
+/-- info: 'Shallot.MacroPeg.argA_not_equiv_argAEnd' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.argA_not_equiv_argAEnd
+
+/-- info: 'Shallot.MacroPeg.row1_cbn' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.row1_cbn
+
+/-- info: 'Shallot.MacroPeg.row1_par' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.row1_par
+
+/-- info: 'Shallot.MacroPeg.row1_seq' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.row1_seq
+
+/-- info: 'Shallot.MacroPeg.row2_cbn' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.row2_cbn
+
+/-- info: 'Shallot.MacroPeg.row2_par' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.row2_par
+
+/-- info: 'Shallot.MacroPeg.row2_seq' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.row2_seq
+
+/-- info: 'Shallot.MacroPeg.row3_cbn' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.row3_cbn
+
+/-- info: 'Shallot.MacroPeg.row3_par' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.row3_par
+
+/-- info: 'Shallot.MacroPeg.row3_seq' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.row3_seq
+
+/-- info: 'Shallot.MacroPeg.row4_cbn' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.row4_cbn
+
+/-- info: 'Shallot.MacroPeg.row4_par' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.row4_par
+
+/-- info: 'Shallot.MacroPeg.row4_seq' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.row4_seq
+
+/-- info: 'Shallot.MacroPeg.rowAnd_cbn' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.rowAnd_cbn
+
+/-- info: 'Shallot.MacroPeg.rowAnd_par' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.rowAnd_par
+
+/-- info: 'Shallot.MacroPeg.rowAnd_seq' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.rowAnd_seq
+
+/-- info: 'Shallot.MacroPeg.andA_zero_on_a' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.andA_zero_on_a
+
+/-- info: 'Shallot.MacroPeg.loop_no_derivation' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.loop_no_derivation
+
+/-- info: 'Shallot.MacroPeg.loop_no_obs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.loop_no_obs
+
+/-- info: 'Shallot.MacroPeg.cbn_unused_first_fails' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.cbn_unused_first_fails
+
+/-- info: 'Shallot.MacroPeg.cbn_unused_first_loops' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.cbn_unused_first_loops
+
+/-- info: 'Shallot.MacroPeg.par_shortCircuit' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.par_shortCircuit
+
+/-- info: 'Shallot.MacroPeg.seq_shortCircuit' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.seq_shortCircuit
+
+/-- info: 'Shallot.MacroPeg.par_first_loops' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.par_first_loops
+
+/-- info: 'Shallot.MacroPeg.seq_first_loops' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.seq_first_loops
+
+/-- info: 'Shallot.MacroPeg.zr_subst' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.zr_subst
+
+/-- info: 'Shallot.MacroPeg.zr_preserve' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.zr_preserve
+
+/-- info: 'Shallot.MacroPeg.strategy_agree' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.strategy_agree
+
+/-- info: 'Shallot.MacroPeg.strategy_agree_eps' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.strategy_agree_eps
