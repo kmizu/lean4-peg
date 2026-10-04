@@ -394,6 +394,25 @@ M-PEG-5 は `MExp.expand` の停止性と「展開後に call が残らない」
 
 表の結果から言語クラスの包含関係は主張していない。
 
+## Macro PEG のメモ化表の大きさ: 有限引数断片は線形、一般には線形で抑えられない（`Visits.lean` / `Complexity.lean`）
+
+packrat（メモ化）評価の計算量を決める「評価される (呼び出し式, 入力位置) の種類数」を上下から押さえる。
+`Visits g e x e' x'` は CBN 評価器が `e` を `x` で評価するときに評価する判断（連接の後半は前半の成功後、
+選択の後半は前半の失敗後、呼び出しは代入した本体を同じ位置で）。報告は
+[`docs/notes/macro-peg-memo-bounds.md`](notes/macro-peg-memo-bounds.md)。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `visits_suffix` | 訪れる位置は入力の接尾辞 | propext |
+| `visits_derivable` | 全体に有限導出があれば、訪れた判断にも有限導出がある（表の各項目が有限の結果を持つ） | propext, Quot.sound |
+| `memo_bound` | **上界**: 有限引数断片（`WF`、入口が妥当）では、訪れる呼び出し判断を `(\|env\| + \|specs\|)·(\|x\|+1)` 未満の番号へ単射に写せる | propext, Classical.choice, Quot.sound |
+| `memo_bound_sum` | 同じ上界を `\|specs\| = Σ_B \|D\|^arity(B)` の形で | propext, Classical.choice, Quot.sound |
+| `exp_visits_all` | **下界**: `F(x) ← "a" (F(x "0") / F(x "1"))`、開始 `F(ε)` は入力 `a^n` で長さ `n` の全ビット列 `w` について `F(w)` を訪れる（`2^n` 種類、`argOf_inj`） | propext, Classical.choice, Quot.sound |
+| `no_linear_memo_bound` | どの定数 `N` でも「全入力で訪問した呼び出し判断を `N·(\|x\|+1)` 未満へ単射に写せる」は成り立たない（鳩の巣） | propext, Classical.choice, Quot.sound |
+
+測っているのは呼び出し式を構文として区別したときの表の大きさで、実行時間そのものでも、部分項を共有する実装の
+下界でも、認識問題の計算複雑性の下界でもない。
+
 ## CFG 研究: `CFL ⊊ MPEL^CBN_1`（`Cfg/` / `MacroPeg/PegEmbed.lean` / `Shallot/Peg/Examples.lean`）
 
 kmizu/macro_peg（2016年 SWoPP 原稿）が発見的に示唆していた「Macro PEL は CFL を
