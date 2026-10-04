@@ -24,3 +24,5 @@ import MacroPeg.Properties.Reachable
 import MacroPeg.Properties.SpecExamples
 import MacroPeg.Properties.ArgEquiv
 import MacroPeg.Properties.Strategy
+import MacroPeg.Properties.Visits
+import MacroPeg.Properties.Complexity
