@@ -26,3 +26,6 @@ import MacroPeg.Properties.ArgEquiv
 import MacroPeg.Properties.Strategy
 import MacroPeg.Properties.Visits
 import MacroPeg.Properties.Complexity
+import MacroPeg.Properties.QbfHard
+import MacroPeg.Properties.Decide
+import MacroPeg.Properties.TrueComplexity
