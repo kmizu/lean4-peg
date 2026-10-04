@@ -413,6 +413,26 @@ packrat（メモ化）評価の計算量を決める「評価される (呼び�
 測っているのは呼び出し式を構文として区別したときの表の大きさで、実行時間そのものでも、部分項を共有する実装の
 下界でも、認識問題の計算複雑性の下界でもない。
 
+## Macro PEG の認識問題の計算量: PSPACE 困難、指数時間で決定可能（`QbfHard.lean` / `Decide.lean` / `TrueComplexity.lean`）
+
+対象は一階（`lam`／`callParam`／`invoke`／`dbg` なし）の call-by-name Macro PEG の認識問題（文法を固定し、入力 `x` を
+受理するか）。報告は [`docs/notes/macro-peg-complexity.md`](notes/macro-peg-complexity.md)。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `qbf_reduction` | **下界**: 固定の一階文法 `qbfG` は QBF の符号 `enc φ` を全消費する ⇔ `φ` が真 | propext, Classical.choice, Quot.sound |
+| `qbf_reject` | 偽の式では有限の失敗導出（非停止ではない） | propext, Classical.choice, Quot.sound |
+| `enc_length` | 符号の長さ = 量化子数 + 1 + Σ_節 (Σ_リテラル (変数番号 + 2) + 1) | propext, Quot.sound |
+| `derives_ev` / `ev_derives` | 有限導出 ⇔ 規則表の Kleene 反復のある段で定義される結果（実引数の意味 = 各位置での結果の列） | propext, Classical.choice, Quot.sound |
+| `tbl_stable` | `iterBound` 段で関連する全項目が不動点に達する（定義済み項目の数による鳩の巣） | propext, Classical.choice, Quot.sound |
+| `decideObs_iff` / `decideObs_none_iff` | **上界**: 判定手続き `decideObs` は観測（失敗／残余）と「有限導出なし」を正しく返す | propext, Classical.choice, Quot.sound |
+| `iterBound_le` | 反復回数 ≤ `\|rules\|·(n+3)^((n+1)·K)·(n+1)`（`K` は最大アリティ）: 入力長について指数 | propext, Quot.sound |
+| `qbf_by_decision` | 両者の接続: 判定手続きを `qbfG` で走らせると QBF を評価する | propext, Classical.choice, Quot.sound |
+
+TQBF の PSPACE 完全性（Stockmeyer–Meyer）は外部の事実で、符号化が多項式時間で計算できることは構造的な写像である
+ことによる（計算モデルは形式化していない）。上界で形式化したのは反復回数で、1 段の費用（表の大きさ × 文法の
+大きさ）は報告で数えている。PSPACE と EXPTIME の間のどこにあるか（EXPTIME 完全かどうか）は未解決。
+
 ## CFG 研究: `CFL ⊊ MPEL^CBN_1`（`Cfg/` / `MacroPeg/PegEmbed.lean` / `Shallot/Peg/Examples.lean`）
 
 kmizu/macro_peg（2016年 SWoPP 原稿）が発見的に示唆していた「Macro PEL は CFL を
