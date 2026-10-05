@@ -23,10 +23,16 @@ inductive NTest where
   | empty
   /-- The top is `0` (false on an empty stack). -/
   | zero
+  /-- The stack is not empty. -/
+  | nonempty
+  /-- The top is positive (false on an empty stack). -/
+  | pos
 
 def NTest.eval : NTest → List Nat → Bool
   | .empty, l => l.isEmpty
   | .zero, l => l.getLast? == some 0
+  | .nonempty, l => !l.isEmpty
+  | .pos, l => match l.getLast? with | some (_ + 1) => true | _ => false
 
 inductive NPrim (K : Nat) where
   | pushZ (i : Fin K)
@@ -98,6 +104,8 @@ def encO : LOutcome K → LOutcome (K + 1)
 def NTest.sym : NTest → Nat → Bool
   | .empty, s => s == 3
   | .zero, s => s == 6
+  | .nonempty, s => s != 3
+  | .pos, s => s == 5
 
 /-- Move the ones on top of `i` to the scratch list. -/
 def onesOut (i : Fin (K + 1)) : LProg (K + 1) := .loop i (· == 5) (moveTop i (scratch K))
