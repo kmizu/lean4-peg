@@ -358,7 +358,7 @@ theorem lastSym_stack_cons {α : Type} (f : α → Nat) (x : α) (st : List α) 
     lastSym (stackL f (x :: st)) = f x + 4 := by
   rw [stackL_cons, lastSym_append]
 
-macro "fin" : tactic => `(tactic| (intro L' hp; simpa [stackL, sb] using hp))
+local macro "ev_fin_tac" : tactic => `(tactic| (intro L' hp; simpa [stackL, sb] using hp))
 
 theorem step_conjV (hd : Dist mr mr2 fr ft vs) (hL : LenOK B L) {st : List Bool}
     (hI : Is mr mr2 fr ft vs L0 a b c d (stackL sb st) L) (hb : st.length + 3 ≤ B) :
@@ -368,7 +368,7 @@ theorem step_conjV (hd : Dist mr mr2 fr ft vs) (hL : LenOK B L) {st : List Bool}
   rcases st with _ | ⟨x, st'⟩
   · have hc : nonEmpty (lastSym (L vs)) = false := by rw [lastSym_vs hI]; rfl
     refine (Step.iteF (T := 1) hL hc (step_pushV hd hL hI 0 (by simpa [stackL] using hb))).mono (by omega) ?_
-    fin
+    ev_fin_tac
   · have hc : nonEmpty (lastSym (L vs)) = true := by rw [lastSym_vs hI, lastSym_stack_cons]; simp [nonEmpty]
     refine Step.iteT (T := 5) hL hc ?_
     have hb' : st'.length + 3 ≤ B := by simp at hb; omega
@@ -382,20 +382,20 @@ theorem step_conjV (hd : Dist mr mr2 fr ft vs) (hL : LenOK B L) {st : List Bool}
             (Is mr mr2 fr ft vs L0 a b c d (stackL sb [])) :=
           Step.iteF (T := 1) hL1 hc3 (step_skip vs hL1 hI1)
         refine Step.seq' (T₁ := 2) (T₂ := 1) h1
-          (fun L2 hL2 hI2 => (step_pushV hd hL2 hI2 0 (by simp [stackL]; omega)).mono (by omega) (by fin)) (by omega)
+          (fun L2 hL2 hI2 => (step_pushV hd hL2 hI2 0 (by simp [stackL]; omega)).mono (by omega) (by ev_fin_tac)) (by omega)
       · have hc3 : nonEmpty (lastSym (L1 vs)) = true := by rw [lastSym_vs hI1, lastSym_stack_cons]; simp [nonEmpty]
         have h1 : Step B 2 (.ite vs nonEmpty (.pop vs) (skipP vs)) L1
             (Is mr mr2 fr ft vs L0 a b c d (stackL sb st'')) :=
           Step.iteT (T := 1) hL1 hc3 (step_popV' hd hL1 hI1 (stackL_cons _ _ _))
         refine Step.seq' (T₁ := 2) (T₂ := 1) h1
-          (fun L2 hL2 hI2 => (step_pushV hd hL2 hI2 0 (by simp [stackL_length] at hb' ⊢; omega)).mono (by omega) (by fin)) (by omega)
+          (fun L2 hL2 hI2 => (step_pushV hd hL2 hI2 0 (by simp [stackL_length] at hb' ⊢; omega)).mono (by omega) (by ev_fin_tac)) (by omega)
     · have hc2 : symIs 1 (lastSym (L vs)) = true := by rw [lastSym_vs hI, lastSym_stack_cons]; simp [symIs, sb]
       refine Step.iteT (T := 4) hL hc2 ?_
       refine Step.seq' (T₁ := 1) (T₂ := 2) (step_popV' hd hL hI (stackL_cons _ _ _)) (fun L1 hL1 hI1 => ?_) (by omega)
       rcases st' with _ | ⟨y, st''⟩
       · have hc3 : nonEmpty (lastSym (L1 vs)) = false := by rw [lastSym_vs hI1]; rfl
         refine Step.iteF (T := 1) hL1 hc3 ?_
-        exact (step_pushV hd hL1 hI1 0 (by simp [stackL]; omega)).mono (by omega) (by fin)
+        exact (step_pushV hd hL1 hI1 0 (by simp [stackL]; omega)).mono (by omega) (by ev_fin_tac)
       · have hc3 : nonEmpty (lastSym (L1 vs)) = true := by rw [lastSym_vs hI1, lastSym_stack_cons]; simp [nonEmpty]
         refine Step.iteT (T := 1) hL1 hc3 ?_
         exact step_skip vs hL1 (by simpa [stackL, sb] using hI1)
@@ -408,7 +408,7 @@ theorem step_disjV (hd : Dist mr mr2 fr ft vs) (hL : LenOK B L) {st : List Bool}
   rcases st with _ | ⟨x, st'⟩
   · have hc : nonEmpty (lastSym (L vs)) = false := by rw [lastSym_vs hI]; rfl
     refine (Step.iteF (T := 1) hL hc (step_pushV hd hL hI 0 (by simpa [stackL] using hb))).mono (by omega) ?_
-    fin
+    ev_fin_tac
   · have hc : nonEmpty (lastSym (L vs)) = true := by rw [lastSym_vs hI, lastSym_stack_cons]; simp [nonEmpty]
     refine Step.iteT (T := 5) hL hc ?_
     have hb' : st'.length + 3 ≤ B := by simp at hb; omega
@@ -419,7 +419,7 @@ theorem step_disjV (hd : Dist mr mr2 fr ft vs) (hL : LenOK B L) {st : List Bool}
       rcases st' with _ | ⟨y, st''⟩
       · have hc3 : nonEmpty (lastSym (L1 vs)) = false := by rw [lastSym_vs hI1]; rfl
         refine Step.iteF (T := 1) hL1 hc3 ?_
-        exact (step_pushV hd hL1 hI1 0 (by simp [stackL]; omega)).mono (by omega) (by fin)
+        exact (step_pushV hd hL1 hI1 0 (by simp [stackL]; omega)).mono (by omega) (by ev_fin_tac)
       · have hc3 : nonEmpty (lastSym (L1 vs)) = true := by rw [lastSym_vs hI1, lastSym_stack_cons]; simp [nonEmpty]
         refine Step.iteT (T := 1) hL1 hc3 ?_
         exact step_skip vs hL1 (by simpa [stackL, sb] using hI1)
@@ -432,13 +432,13 @@ theorem step_disjV (hd : Dist mr mr2 fr ft vs) (hL : LenOK B L) {st : List Bool}
             (Is mr mr2 fr ft vs L0 a b c d (stackL sb [])) :=
           Step.iteF (T := 1) hL1 hc3 (step_skip vs hL1 hI1)
         refine Step.seq' (T₁ := 2) (T₂ := 1) h1
-          (fun L2 hL2 hI2 => (step_pushV hd hL2 hI2 1 (by simp [stackL]; omega)).mono (by omega) (by fin)) (by omega)
+          (fun L2 hL2 hI2 => (step_pushV hd hL2 hI2 1 (by simp [stackL]; omega)).mono (by omega) (by ev_fin_tac)) (by omega)
       · have hc3 : nonEmpty (lastSym (L1 vs)) = true := by rw [lastSym_vs hI1, lastSym_stack_cons]; simp [nonEmpty]
         have h1 : Step B 2 (.ite vs nonEmpty (.pop vs) (skipP vs)) L1
             (Is mr mr2 fr ft vs L0 a b c d (stackL sb st'')) :=
           Step.iteT (T := 1) hL1 hc3 (step_popV' hd hL1 hI1 (stackL_cons _ _ _))
         refine Step.seq' (T₁ := 2) (T₂ := 1) h1
-          (fun L2 hL2 hI2 => (step_pushV hd hL2 hI2 1 (by simp [stackL_length] at hb' ⊢; omega)).mono (by omega) (by fin)) (by omega)
+          (fun L2 hL2 hI2 => (step_pushV hd hL2 hI2 1 (by simp [stackL_length] at hb' ⊢; omega)).mono (by omega) (by ev_fin_tac)) (by omega)
 
 theorem lastSym_rev_drop (es : List Nat) (j : Nat) :
     lastSym (es.drop j).reverse = if h : j < es.length then es[j] + 4 else 3 := by
