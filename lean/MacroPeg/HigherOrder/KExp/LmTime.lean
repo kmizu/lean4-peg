@@ -1,6 +1,7 @@
 import MacroPeg.HigherOrder.KExp.Hard
 import Complexity.ListTime
 import Complexity.NStackIO
+import Complexity.NSpace
 
 /-!
 # A list program with a tower-of-height-`j` budget puts a language in `KEXP j`
@@ -110,5 +111,23 @@ theorem kexp_of_nprog {j : Nat} (hj : 1 ≤ j) {K : Nat} (hK : 1 < K) (p : NProg
   refine ⟨t', b, _, ?_, hx', hb⟩
   have : t * ncost (B' w.length) ≤ T w.length * ncost (B' w.length) := Nat.mul_le_mul_right _ ht
   simp only [T']; omega
+
+/-- **Stack machines within a `tower j` time budget decide `KEXP j` languages** (`j ≥ 1`): only the time is
+bounded; the space follows from it (`nexec_space`). -/
+theorem kexp_of_nprog_time {j : Nat} (hj : 1 ≤ j) {K : Nat} (hK : 1 < K) (p : NProg K) (L : Lang) (T : Nat → Nat)
+    (hT : TowerPoly j T)
+    (h : ∀ w, ∃ t b S', t ≤ T w.length ∧ NExec (fun _ => True) p (nInit K w) t (.stop b S') ∧
+      (b = true ↔ L w)) :
+    KEXP j L := by
+  let B : Nat → Nat := fun n => 2 * n + T n * (1 + T n + 1) + 2
+  have hB : TowerPoly j B := by
+    refine towerPoly_add (towerPoly_add (towerPoly_poly (isPoly_mul (isPoly_const 2) isPoly_id))
+      (towerPoly_mul hj hT (towerPoly_add (towerPoly_add (towerPoly_const 1) hT) (towerPoly_const 1))))
+      (towerPoly_const 2)
+  refine kexp_of_nprog hj hK p L B T hB hT (fun w => ?_)
+  obtain ⟨t, b, S', ht, hx, hb⟩ := h w
+  refine ⟨t, b, S', ht, (nexec_space hx 1 (2 * w.length) (bnd_nInit w)).2 _ ?_, hb⟩
+  have : grow 1 t ≤ T w.length * (1 + T w.length + 1) := Nat.mul_le_mul ht (by omega)
+  simp only [B]; omega
 
 end Shallot.MacroPeg.KExp

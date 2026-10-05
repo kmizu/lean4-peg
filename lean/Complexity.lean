@@ -16,6 +16,7 @@ import Complexity.ListTime
 import Complexity.NStack
 import Complexity.NStackSpec
 import Complexity.NStackIO
+import Complexity.NSpace
 
 /-!
 # TQBF is PSPACE-complete
