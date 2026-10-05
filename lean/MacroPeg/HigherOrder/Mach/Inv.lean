@@ -270,25 +270,32 @@ theorem minv_pruns {s : PSt} (h : MInv s) : ∀ n, MInv (pruns s n)
 
 /-! ## The size of the tables -/
 
-/-- The number of entries in all tables. -/
-def tsize (s : PSt) : Nat := s.tt.length + s.ct.length + s.lt.length + s.rt.length + s.bodies.length
+/-- The number of entries in all tables, the items of the current body, the start and the string. -/
+def tsize (s : PSt) : Nat :=
+  s.tt.length + s.ct.length + s.lt.length + s.rt.length + s.bodies.length + s.out.length + s.x.length +
+    s.start.length
+
+theorem length_serStr_ge : ∀ str : List Char, str.length ≤ (KExp.serStr str).length
+  | [] => by simp [KExp.serStr]
+  | c :: str => by have := length_serStr_ge str; simp [KExp.serStr]; omega
+
+theorem parseStr_len {f : Nat} {l : List Nat} {str : List Char} {r : List Nat} (h : parseStr f l = some (str, r)) :
+    str.length ≤ l.length := by
+  rw [parseStr_sound h]; have := length_serStr_ge str; simp; omega
 
 theorem intern_len_le (tt : List (Nat × Nat)) (a b : Nat) : (Mach.intern tt a b).1.length ≤ tt.length + 1 := by
   unfold Mach.intern; split <;> simp
 
 set_option linter.unusedSimpArgs false in
-theorem pstep_size (s : PSt) : tsize (pstep s) ≤ tsize s + 1 := by
+theorem pstep_size (s : PSt) : tsize (pstep s) ≤ tsize s + 2 + s.tk.length := by
   unfold pstep readExpr readType binDone unDone
   repeat' split
   all_goals first
     | (simp [tsize, PSt.fail, PSt.leaf]; done)
     | (simp [tsize, PSt.fail, PSt.leaf]; omega)
     | (simp only [tsize, Mach.intern]; split <;> simp <;> omega)
+    | (rename_i h; have := parseStr_len h; simp [tsize]; omega)
     | skip
 
-theorem pruns_size (s : PSt) : ∀ n, tsize (pruns s n) ≤ tsize s + n
-  | 0 => by simp [pruns]
-  | n + 1 => by
-    rw [pruns_succ]; have := pruns_size (pstep s) n; have := pstep_size s; omega
 
 end Shallot.MacroPeg.Mach

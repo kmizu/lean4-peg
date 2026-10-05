@@ -117,7 +117,7 @@ theorem pstep_ok_or (s : PSt) : (pstep s).ok = s.ok ∨ (pstep s).ctl = [] := by
 stop rejecting where the machine fails. -/
 theorem readLoop (p : NProg NK) (N T : Nat)
     (hstep : ∀ s, MInv s → s.ok = true → s.ctl ≠ [] → s.tk.length + tsize s ≤ N → StepOK p s T) :
-    ∀ (n : Nat) (s : PSt), pot s + 1 ≤ n → MInv s → s.ok = true → pot s + tsize s + n ≤ N →
+    ∀ (n : Nat) (s : PSt), pot s + 1 ≤ n → MInv s → s.ok = true → pot s + tsize s + n * (pot s + 3) ≤ N →
       ((pruns s n).ok = true → NRuns (.loop CTL .nonempty p) (enc s) (enc (pruns s n)) (n * (T + 1) + 1)) ∧
       ((pruns s n).ok = false → ∃ S', NHalts (.loop CTL .nonempty p) (enc s) false S' (n * (T + 1) + 1))
   | 0, _, h, _, _, _ => absurd h (by omega)
@@ -141,6 +141,9 @@ theorem readLoop (p : NProg NK) (N T : Nat)
           rw [Nat.succ_mul]; omega
         · have hlow : pot (pstep s) < pot s := (pstep_lowers s hc).resolve_left hc₁
           have hsz := pstep_size s
+          have hmul : n * (pot (pstep s) + 3) ≤ n * (pot s + 3) := Nat.mul_le_mul_left _ (by omega)
+          have htk := pot_tk s
+          rw [Nat.succ_mul] at hN
           have ih := readLoop p N T hstep n (pstep s) (by omega) (pstep_minv hi) hok (by omega)
           refine ⟨fun h => (NRuns.loopStep hin x₁ (ih.1 h)).mono ?_, fun h => ?_⟩
           · rw [Nat.succ_mul]; omega
