@@ -24,7 +24,7 @@ def runCost (Tf : List (List Nat)) : List MItem → List (List Nat) → Nat
 /-- The steps of one round. -/
 def roundCost (Tf : List (List Nat)) : Nat :=
   (st.bodies.map (fun l => runCost j cap st Tf l [] + 100 * (l.length + 1))).sum +
-    100 * ((encBodies st.bodies).length + Tf.flatten.length + Tf.length + 1)
+    100 * ((encBodies st.bodies).length + Tf.flatten.length + Tf.length + Tf.flatten.sum + 1)
 
 /-- The steps of the rounds. -/
 def fixCost : Nat → List (List Nat) → Nat
@@ -43,9 +43,11 @@ def evalCost (j cap : Nat) (st : PSt) : Nat :=
   let fuel := (st.rt.map (valT j cap x.length st.tt)).sum + 1
   let Tfin := fixT j cap x st.tt st.ct st.lt st.bodies fuel Tf0
   1000 * (fuel + st.rt.length + Tf0.flatten.length + (valTable j cap x.length st.tt).sum +
-      (encItems st.start).length + (evFlat (runT j cap x st.tt st.ct st.lt Tfin st.start [])).length + x.length + 2) *
+      (encItems st.start).length + (evFlat (runT j cap x st.tt st.ct st.lt Tfin st.start [])).length + x.length +
+      st.tt.length + 2) *
     (fuel + st.rt.length + Tf0.flatten.length + (valTable j cap x.length st.tt).sum +
-      (encItems st.start).length + (evFlat (runT j cap x st.tt st.ct st.lt Tfin st.start [])).length + x.length + 2) +
+      (encItems st.start).length + (evFlat (runT j cap x st.tt st.ct st.lt Tfin st.start [])).length + x.length +
+      st.tt.length + 2) +
   fixCost j cap st fuel Tf0 + runCost j cap st Tfin st.start []
 
 end Shallot.MacroPeg.Mach
