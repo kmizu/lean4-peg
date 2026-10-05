@@ -204,19 +204,19 @@ def enc (q : List Bool) (m : QMatrix) : List Char := prefixStr q ++ '#' :: matri
 
 /-! ## Correctness, bottom-up -/
 
-theorem cNum_ok : ∀ (k i : Nat) (rest : List Char), k ≤ i →
-    MacroObs qbfG (cNum k) (List.replicate i '1' ++ '0' :: rest) (some (List.replicate (i - k) '1' ++ '0' :: rest))
+theorem cNum_ok {g : MGrammar} : ∀ (k i : Nat) (rest : List Char), k ≤ i →
+    MacroObs g (cNum k) (List.replicate i '1' ++ '0' :: rest) (some (List.replicate (i - k) '1' ++ '0' :: rest))
   | 0, i, rest, _ => by
-    show MacroObs qbfG .eps _ (some (List.replicate (i - 0) '1' ++ '0' :: rest))
+    show MacroObs g .eps _ (some (List.replicate (i - 0) '1' ++ '0' :: rest))
     rw [Nat.sub_zero]; exact obs_eps _
   | k + 1, i, rest, h => by
     refine obs_seq (cNum_ok k i rest (by omega)) ?_
     have : i - k = (i - (k + 1)) + 1 := by omega
     rw [this, List.replicate_succ, List.cons_append]
-    exact obs_lit_ok (g := qbfG) ['1'] _
+    exact obs_lit_ok (g := g) ['1'] _
 
-theorem cNum_fail : ∀ (k i : Nat) (rest : List Char), i < k →
-    MacroObs qbfG (cNum k) (List.replicate i '1' ++ '0' :: rest) none
+theorem cNum_fail {g : MGrammar} : ∀ (k i : Nat) (rest : List Char), i < k →
+    MacroObs g (cNum k) (List.replicate i '1' ++ '0' :: rest) none
   | 0, _, _, h => absurd h (Nat.not_lt_zero _)
   | k + 1, i, rest, h => by
     by_cases hik : i < k
@@ -227,44 +227,44 @@ theorem cNum_fail : ∀ (k i : Nat) (rest : List Char), i < k →
       rw [Nat.sub_self]
       exact obs_char_fail _ (by decide)
 
-theorem codeP_match (k i : Nat) (rest : List Char) :
-    MacroObs qbfG (codeP k) (codeStr i ++ rest) (if i = k then some rest else none) := by
+theorem codeP_match {g : MGrammar} (k i : Nat) (rest : List Char) :
+    MacroObs g (codeP k) (codeStr i ++ rest) (if i = k then some rest else none) := by
   unfold codeStr
   rw [List.append_assoc, List.singleton_append]
   by_cases hki : k ≤ i
   · refine obs_seq (cNum_ok k i rest hki) ?_
     by_cases hik : i = k
-    · subst hik; rw [Nat.sub_self, if_pos rfl]; exact obs_lit_ok (g := qbfG) ['0'] rest
+    · subst hik; rw [Nat.sub_self, if_pos rfl]; exact obs_lit_ok (g := g) ['0'] rest
     · rw [if_neg hik, show i - k = (i - k - 1) + 1 by omega, List.replicate_succ, List.cons_append]
       exact obs_char_fail _ (by decide)
   · rw [if_neg (by omega)]
     exact obs_seq_none (cNum_fail k i rest (by omega))
 
-theorem asg_match : ∀ (S : List Nat) (i : Nat) (rest : List Char),
-    MacroObs qbfG (asg S) (codeStr i ++ rest) (if i ∈ S then some rest else none)
+theorem asg_match {g : MGrammar} : ∀ (S : List Nat) (i : Nat) (rest : List Char),
+    MacroObs g (asg S) (codeStr i ++ rest) (if i ∈ S then some rest else none)
   | [], i, rest => by
     rw [if_neg (List.not_mem_nil)]
     exact obs_not_some (obs_eps _)
   | j :: S, i, rest => by
     by_cases hS : i ∈ S
     · rw [if_pos (List.mem_cons_of_mem _ hS)]
-      have := asg_match S i rest
+      have := asg_match (g := g) S i rest
       rw [if_pos hS] at this
       exact obs_alt_some this
-    · have h₁ := asg_match S i rest
+    · have h₁ := asg_match (g := g) S i rest
       rw [if_neg hS] at h₁
       refine obs_alt_none h₁ ?_
-      have h₂ := codeP_match j i rest
+      have h₂ := codeP_match (g := g) j i rest
       by_cases hij : i = j
       · rw [if_pos hij] at h₂; rw [if_pos (by simp [hij])]; exact h₂
       · rw [if_neg hij] at h₂; rw [if_neg (by simp [hij, hS])]; exact h₂
 
-theorem star_one (rest : List Char) : ∀ i : Nat,
-    MacroObs qbfG (.star one) (List.replicate i '1' ++ '0' :: rest) (some ('0' :: rest))
+theorem star_one {g : MGrammar} (rest : List Char) : ∀ i : Nat,
+    MacroObs g (.star one) (List.replicate i '1' ++ '0' :: rest) (some ('0' :: rest))
   | 0 => obs_star_none (obs_char_fail _ (by decide))
   | i + 1 => by
     rw [List.replicate_succ, List.cons_append]
-    exact obs_star_some (obs_lit_ok (g := qbfG) ['1'] _) (star_one rest i)
+    exact obs_star_some (obs_lit_ok (g := g) ['1'] _) (star_one rest i)
 
 theorem code_ok (v : Nat) (rest : List Char) : MacroObs qbfG (.call 6 []) (codeStr v ++ rest) (some rest) := by
   refine obs_call (r := ⟨0, codeBody⟩) rfl rfl ?_
@@ -303,7 +303,7 @@ theorem tl_match (S : List Nat) (l : QLit) (rest : List Char) :
   show MacroObs qbfG (.alt (.seq (.lit ['+']) (.seq (andP (asg S)) (.call 6 [])))
     (.seq (.lit ['-']) (.seq (.notP (asg S)) (.call 6 [])))) _ _
   obtain ⟨b, v⟩ := l
-  have hA := asg_match S v rest
+  have hA := asg_match (g := qbfG) S v rest
   cases b with
   | true =>
     show MacroObs qbfG _ ('+' :: (codeStr v ++ rest)) _
@@ -333,7 +333,7 @@ theorem fl_match (S : List Nat) (l : QLit) (rest : List Char) :
   show MacroObs qbfG (.alt (.seq (.lit ['+']) (.seq (.notP (asg S)) (.call 6 [])))
     (.seq (.lit ['-']) (.seq (andP (asg S)) (.call 6 [])))) _ _
   obtain ⟨b, v⟩ := l
-  have hA := asg_match S v rest
+  have hA := asg_match (g := qbfG) S v rest
   cases b with
   | true =>
     show MacroObs qbfG _ ('+' :: (codeStr v ++ rest)) _

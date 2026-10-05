@@ -127,3 +127,87 @@ theorem iterBound_le (g) (x) {K} (hK : ∀ r ∈ g.rules, r.arity ≤ K) :
    PSPACE に入ること（値の列を全部持たずに済む評価）のどちらか。
 2. **CBV は多項式時間**: Par／Seq では実引数の値が入力の部分文字列なので、同じ表の方法で反復回数が多項式になる
    ことを示す。CBN と CBV の計算量の分離（P ≠ PSPACE のもとで）になる。
+
+---
+
+# 続き（2026-10-05）: 残していた四つの項目
+
+前半で「Lean の定理になっていない部分」として残した四つの扱い。
+
+| 項目 | 結果 |
+|---|---|
+| ちょうどの計算量 | **一階 CBN は EXPTIME 完全**（困難性を新しく証明、`AtmHard.lean`）。外部の事実は APSPACE = EXPTIME |
+| 1 段あたりの費用 | **定理にした**（費用モデル、`DecideCost.lean`） |
+| CBV | **多項式時間を証明**（`DecideCBV.lean`、`DecideCost.lean`）。高階は対象外のまま |
+| TQBF の PSPACE 完全性と、計算モデル | **形式化していない**（チューリング機械と PSPACE をゼロから形式化することになる）。費用は評価器の手数で数えた |
+
+## EXPTIME 困難（`AtmHard.lean`）
+
+交替チューリング機械 `ATM`（記号は `{0, 1}`、状態は `0 … states-1`、各状態は受理／拒否／∀／∃、遷移は（状態, 書く記号, 左右）の
+リスト）。頭は入力の `n` セルの上だけを動き、両端では止まる。受理の値 `Val`（∀ は全部、∃ はどれか）は、全ての枝が有限な
+`Halts` の構成で定まる（`val_functional`）。
+
+```lean
+theorem atm_reduction (M : ATM) (w : List Bool) (hM : M.WF) (hw : w ≠ []) (hh : M.Halts (M.init w)) :
+    MRecognizesAll (atmG M) (atmStart M) (sitesStr w 0) ↔ M.Accepts w
+theorem atm_by_decision ... : decideObs (atmG M) (sitesStr w 0) (atmStart M) = some (some []) ↔ M.Accepts w
+```
+
+構成の要点（CBN の引数は組み立てられるが分解できない）:
+
+- 入力はセルごとの場所 `1^j 0 [y] x ;`（`y` は入力の記号が 1 のとき）の列。
+- テープは場所の上で走らせる構文解析器 `A`。セルについての「事実」が読む長さを決める（1 なら `x` まで読み、0 ならその手前で
+  止まる）。書き込みは事実を前に足す（`fact / A`）。順序つき選択なので、一番新しい事実が勝つ（`fact_rep`）。
+- 頭は符号のテスト `codeP h`。状態は規則そのもの。
+- 規則は全部入力の先頭で走る。セルの照会は先読みの規則 `FT(K, X)`（「セル `K` の場所を探して `X` を試す」）で行う。
+  状態の規則はカウンタ `1^K` で `K = 0, 1, …` を走査して頭の位置を見つける。カウンタから隣のセルの符号を作って、
+  頭を動かす（`scan_ok`, `br_ok`）。
+- ∀ は先読みの連鎖 `&B₁ &B₂ …`、∃ は選択の連鎖。全ての枝が有限なので、選択の途中で止まらない枝に入ることはない。
+
+APSPACE = EXPTIME と「APSPACE の機械は時計を持たせれば全ての枝で止まる」（どちらも外部の事実）から、言語が EXPTIME 完全で
+全ての枝が止まる線形空間の機械 `M` がある。その `atmG M` は固定の一階 CBN 文法で、認識は EXPTIME 困難になる。前半の上界と
+合わせて、**一階 CBN Macro PEG の認識は EXPTIME 完全**。PSPACE 困難（QBF）はこの系として包含される。
+
+## CBV は多項式時間（`DecideCBV.lean`）
+
+CBV（Par／Seq）では、実引数は評価されて消費した接頭辞（リテラル）として渡る。値は入力の部分文字列（`(n+1)²` 個以下）なので、
+規則表の反復回数は多項式になる。
+
+```lean
+theorem decideObsV_iff (hg : g.FirstOrder) (hs : s ≠ .callByName) (he : e.FirstOrder) (x r) :
+    decideObsV s g x e = some r ↔ SObs g s e x r
+theorem iterBoundV_le (g x) (hK : ∀ r ∈ g.rules, r.arity ≤ K) :
+    iterBoundV g x ≤ g.rules.length * (((x.length + 1) * (x.length + 1)) ^ K * (x.length + 1))
+```
+
+導出 ⇔ 反復のある段で定義される結果（`derivesV_ev`／`evV_derives`）。最初に失敗した実引数での失敗
+（`callParArgFail`／`callSeqArgFail`）も評価から取り出す。`Strategy.lean` の戦略表の Par／Seq の 4 マスは、判定手続きで
+`decide` して一致を確認した。CBV が多項式、CBN が EXPTIME 完全なので、一階 CBN の言語には一階 CBV では定義できないものが
+ある（P ≠ EXPTIME は時間階層定理による無条件の事実で、P ≠ PSPACE のような未解決の仮定は要らない）。これは固定の閉じた
+プログラムの違いではなく、言語クラスとしての分離。ただし、時間階層定理・APSPACE = EXPTIME・CBV の費用モデルが実機の
+多項式時間に対応することは Lean の定理ではなく、この結論はそれらを外部の事実として使っている。
+
+## 費用モデル（`DecideCost.lean`）
+
+評価器と同じ分岐をたどって手数を数える `costV`／`costN`（節点 1、表の参照 1、リテラル・仮引数の比較は長さ + 1）。
+
+- `costV_le`／`costN_le`: 1 回の評価 ≤ `cbV n e`／`cbN n e`。
+- `cbV_le`／`cbN_le`: それぞれ `size e · (n+2)^(starDepth e + 1)`、`size e · (n+2)^(nameDepth e + 1)` 以下。固定の式なら
+  `n` の多項式。CBN の深さには実引数の入れ子が入る（値を全位置で計算するため）。
+- `roundCost*_le`: 1 段 ≤ 項目数 × `B`。`totalCostV_poly`: CBV の判定手続き全体は多項式。
+  `totalCostN_exp`: CBN は `M²·B + cbN n e`、`M = |rules|·(n+3)^((n+1)K)·(n+1)`（指数）。
+
+これは評価器の手数の上界で、表を配列として参照 1 で引ける実装を想定した費用モデル。実機の時間やチューリング機械の手数ではない。
+
+## 検証（続き）
+
+- `lake env lean -DautoImplicit=false` で `DecideCBV.lean`・`DecideCost.lean`・`AtmHard.lean` を個別に検査。
+- `cd lean && lake build`: `Build completed successfully (117 jobs).`
+- `bash scripts/audit-source.sh`: OK。
+- 新規の公開定理 62 件（CBV 27、費用 11、ATM 24）を `Audit.lean` に固定。すべて標準の公理だけ。
+
+## まだ残っていること
+
+- **TQBF の PSPACE 完全性、APSPACE = EXPTIME、時間階層定理**: 外部の事実のまま。形式化するには計算モデル（チューリング機械）と
+  計算量クラスの定義から始める必要がある。
+- **高階（`lam`／`callParam`）**: 値の空間が関数の関数になる。同じ方法なら上界は 2 重指数以上になる見込みで、未検討。
