@@ -66,7 +66,7 @@ theorem evSt_scratch : ScratchEmpty (evSt j cap st) := by
   unfold evSt tabSt
   repeat (first | exact h₀ | apply scratch_set _ _ (by decide))
 
-theorem evSt_env (hr : ReadOK st R bis is x) : EvalEnv (evSt j cap st) j cap st [] where
+theorem evSt_env : EvalEnv (evSt j cap st) j cap st [] where
   ct := by me_get
   lt := by me_get
   rt := by me_get
@@ -139,7 +139,7 @@ theorem evalStage_halts (hi : MInv st) (hr : ReadOK st R bis is x) :
   have htag : ∀ it ∈ st.bodies.flatten, it.tag < 13 := fun it h =>
     Nat.lt_succ_of_le (read_tags hr it (List.mem_append_left _ h)).1
   obtain ⟨S', x₅⟩ := evalP_runs itemFullP j cap st (itemFull_runs j cap hi hr) htag (evSt j cap st)
-    (evSt_env j cap hr) (by me_get) (by me_get) (by me_get) (by me_get) (by me_get) (by me_get) (by me_get)
+    (evSt_env j cap) (by me_get) (by me_get) (by me_get) (by me_get) (by me_get) (by me_get) (by me_get)
     (by me_get)
   exact ⟨S', (x₁.seqH (x₂.seqH (x₃.seqH (x₄.seqH x₅)))).mono (by unfold evalStageCost; omega)⟩
 
