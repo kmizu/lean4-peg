@@ -143,4 +143,71 @@ theorem varVecT_eq : ∀ c, ctxSmall j cap tt ct c → ∀ i, varVecT j cap N tt
         | succ i => dsimp only; rw [rowsT, if_pos h.1, varVecT_eq par h.2 i]
       · rfl
 
+/-! ## Evaluating with the tables -/
+
+section StepT
+
+variable (j cap : Nat) (x : List Char) (tt ct : List (Nat × Nat)) (lt : List (List Nat)) (Tf : List (List Nat))
+
+/-- One numbered item, with the tables. -/
+def stepT (it : MItem) (st : List (List Nat)) : List (List Nat) :=
+  let n := envT j cap x.length tt ct it.ctx
+  match it.tag, st with
+  | 5, vb :: va :: st =>
+    (List.zipWith (seqCodes x) (chunksN (x.length + 1) n va) (chunksN (x.length + 1) n vb)).flatten :: st
+  | 6, vb :: va :: st =>
+    (List.zipWith (altCodes x) (chunksN (x.length + 1) n va) (chunksN (x.length + 1) n vb)).flatten :: st
+  | 7, va :: st => ((chunksN (x.length + 1) n va).map (starCodes x)).flatten :: st
+  | 8, va :: st => ((chunksN (x.length + 1) n va).map (notCodes x)).flatten :: st
+  | 9, st =>
+    ((varVecT j cap x.length tt ct it.ctx it.a).map
+      (fun k => (rowsT j cap x.length tt ((varTy ct it.ctx it.a).getD 0)).getD k [])).flatten :: st
+  | 10, st => (List.replicate n (Tf.getD it.a [])).flatten :: st
+  | 11, st => st
+  | 12, vy :: vf :: st =>
+    (List.zipWith
+      (fun fv yv => block (valT j cap x.length tt it.b) (indexIn yv (rowsT j cap x.length tt it.a)) fv)
+      (chunksN ((rowsT j cap x.length tt it.a).length * valT j cap x.length tt it.b) n vf)
+      (chunksN (valT j cap x.length tt it.a) n vy)).flatten :: st
+  | _, st =>
+    match opOf tt lt it with
+    | some (.leaf e) => (List.replicate n (leafCodes x e)).flatten :: st
+    | _ => st
+
+/-- What an item needs of the tables. -/
+def ItemOK (it : MItem) : Prop :=
+  ctxSmall j cap tt ct it.ctx ∧ (it.tag = 9 → small j cap tt ((varTy ct it.ctx it.a).getD 0)) ∧
+    (it.tag = 12 → small j cap tt it.a ∧ need j cap tt it.b)
+
+variable {j cap x tt ct lt Tf}
+
+theorem small_need {k : Nat} (h : small j cap tt k) : need j cap tt k := ⟨by have := h.1; omega, h.2⟩
+
+/-- **With the tables, an item evaluates as without.** -/
+theorem stepT_eq {it : MItem} (h : ItemOK j cap tt ct it) (st : List (List Nat)) :
+    stepT j cap x tt ct lt Tf it st = stepM x tt ct lt Tf it st := by
+  obtain ⟨hc, hv, ha⟩ := h
+  unfold stepT stepM
+  rw [envT_eq _ hc]
+  by_cases h9 : it.tag = 9
+  · have hs := hv h9
+    simp only [h9]
+    rw [varVecT_eq _ hc, rowsT, if_pos hs]
+  by_cases h12 : it.tag = 12
+  · obtain ⟨ha', hb'⟩ := ha h12
+    rw [h12]
+    rcases st with _ | ⟨vy, _ | ⟨vf, st⟩⟩
+    · rfl
+    · rfl
+    · simp only []
+      rw [rowsT, if_pos ha', valT_eq _ hb', valT_eq _ (small_need ha')]
+  split <;> first
+    | rfl
+    | (simp_all; done)
+    | (simp_all; rcases opOf tt lt it with _ | op
+       · rfl
+       · cases op <;> rfl)
+
+end StepT
+
 end Shallot.MacroPeg.Mach
