@@ -25,29 +25,29 @@ def inferE : List HO.Ty → HExp → Option (HO.Ty × List Item)
   | Γ, .lit s => some (.p, [⟨.leaf (.lit s), Γ⟩])
   | Γ, .seq a b =>
     match inferE Γ a, inferE Γ b with
-    | some (.p, ia), some (.p, ib) => some (.p, ⟨.seq, Γ⟩ :: (ia ++ ib))
+    | some (.p, ia), some (.p, ib) => some (.p, ia ++ ib ++ [⟨.seq, Γ⟩])
     | _, _ => none
   | Γ, .alt a b =>
     match inferE Γ a, inferE Γ b with
-    | some (.p, ia), some (.p, ib) => some (.p, ⟨.alt, Γ⟩ :: (ia ++ ib))
+    | some (.p, ia), some (.p, ib) => some (.p, ia ++ ib ++ [⟨.alt, Γ⟩])
     | _, _ => none
   | Γ, .star a =>
     match inferE Γ a with
-    | some (.p, ia) => some (.p, ⟨.star, Γ⟩ :: ia)
+    | some (.p, ia) => some (.p, ia ++ [⟨.star, Γ⟩])
     | _ => none
   | Γ, .notP a =>
     match inferE Γ a with
-    | some (.p, ia) => some (.p, ⟨.notP, Γ⟩ :: ia)
+    | some (.p, ia) => some (.p, ia ++ [⟨.notP, Γ⟩])
     | _ => none
   | Γ, .var i => (Γ[i]?).map (fun τ => (τ, [⟨.var i, Γ⟩]))
   | Γ, .rule i => (R[i]?).map (fun τ => (τ, [⟨.rule i, Γ⟩]))
   | Γ, .lam τ body =>
     match inferE (τ :: Γ) body with
-    | some (σ, ib) => some (τ ⇒ σ, ⟨.lam τ σ, Γ⟩ :: ib)
+    | some (σ, ib) => some (τ ⇒ σ, ib ++ [⟨.lam τ σ, Γ⟩])
     | none => none
   | Γ, .app f y =>
     match inferE Γ f, inferE Γ y with
-    | some (.arr a b, i_f), some (a', iy) => if a = a' then some (b, ⟨.app a b, Γ⟩ :: (i_f ++ iy)) else none
+    | some (.arr a b, i_f), some (a', iy) => if a = a' then some (b, i_f ++ iy ++ [⟨.app a b, Γ⟩]) else none
     | _, _ => none
 
 variable {R}
@@ -133,25 +133,25 @@ theorem inferE_complete {Γ : List HO.Ty} {e : HExp} {τ : HO.Ty} (h : HasTy R �
   | @seq Γ _ _ _ _ iha ihb =>
     obtain ⟨ia, ha⟩ := iha
     obtain ⟨ib, hb⟩ := ihb
-    exact ⟨⟨.seq, Γ⟩ :: (ia ++ ib), by simp [inferE, ha, hb]⟩
+    exact ⟨ia ++ ib ++ [⟨.seq, Γ⟩], by simp [inferE, ha, hb]⟩
   | @alt Γ _ _ _ _ iha ihb =>
     obtain ⟨ia, ha⟩ := iha
     obtain ⟨ib, hb⟩ := ihb
-    exact ⟨⟨.alt, Γ⟩ :: (ia ++ ib), by simp [inferE, ha, hb]⟩
+    exact ⟨ia ++ ib ++ [⟨.alt, Γ⟩], by simp [inferE, ha, hb]⟩
   | @star Γ _ _ ih =>
     obtain ⟨ia, ha⟩ := ih
-    exact ⟨⟨.star, Γ⟩ :: ia, by simp [inferE, ha]⟩
+    exact ⟨ia ++ [⟨.star, Γ⟩], by simp [inferE, ha]⟩
   | @notP Γ _ _ ih =>
     obtain ⟨ia, ha⟩ := ih
-    exact ⟨⟨.notP, Γ⟩ :: ia, by simp [inferE, ha]⟩
+    exact ⟨ia ++ [⟨.notP, Γ⟩], by simp [inferE, ha]⟩
   | @var Γ i _ h => exact ⟨[⟨.var i, Γ⟩], by simp [inferE, h]⟩
   | @rule Γ i _ h => exact ⟨[⟨.rule i, Γ⟩], by simp [inferE, h]⟩
   | @lam Γ a σ _ _ ih =>
     obtain ⟨ib, hb⟩ := ih
-    exact ⟨⟨.lam a σ, Γ⟩ :: ib, by simp [inferE, hb]⟩
+    exact ⟨ib ++ [⟨.lam a σ, Γ⟩], by simp [inferE, hb]⟩
   | @app Γ a b _ _ _ _ ihf ihy =>
     obtain ⟨i_f, hf⟩ := ihf
     obtain ⟨iy, hy⟩ := ihy
-    exact ⟨⟨.app a b, Γ⟩ :: (i_f ++ iy), by simp [inferE, hf, hy]⟩
+    exact ⟨i_f ++ iy ++ [⟨.app a b, Γ⟩], by simp [inferE, hf, hy]⟩
 
 end Shallot.MacroPeg.Flat

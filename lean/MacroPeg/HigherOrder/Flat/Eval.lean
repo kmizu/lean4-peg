@@ -3,9 +3,9 @@ import MacroPeg.HigherOrder.Flat.Envs
 /-!
 # Evaluating a term with numbers
 
-A typed term is written as its items in prefix order (`items`); each item has an operation and the context of its
-subterm. Running the items from right to left (`run`, a `foldr`) with a stack of vectors leaves the *vector* of the
-term on the stack: the numbers of its values over all environments of its context (`vec`, `run_items`).
+A typed term is written as its items in postfix order (`items`); each item has an operation and the context of its
+subterm. Running the items from left to right (`run`, a `foldl`) with a stack of vectors leaves the *vector* of the
+term on the stack: its values over all environments of its context, written out (`vec`, `run_items`).
 
 The operations on numbers:
 
@@ -39,21 +39,21 @@ structure Item where
   op : Op
   ctx : List HO.Ty
 
-/-- The items of a term, in prefix order. -/
+/-- The items of a term, in postfix order. -/
 def items {R : List HO.Ty} : {Γ : List HO.Ty} → {τ : HO.Ty} → Tm R Γ τ → List Item
   | Γ, _, .eps => [⟨.leaf .eps, Γ⟩]
   | Γ, _, .any => [⟨.leaf .any, Γ⟩]
   | Γ, _, .chr c => [⟨.leaf (.chr c), Γ⟩]
   | Γ, _, .range lo hi => [⟨.leaf (.range lo hi), Γ⟩]
   | Γ, _, .lit s => [⟨.leaf (.lit s), Γ⟩]
-  | Γ, _, .seq a b => ⟨.seq, Γ⟩ :: (items a ++ items b)
-  | Γ, _, .alt a b => ⟨.alt, Γ⟩ :: (items a ++ items b)
-  | Γ, _, .star a => ⟨.star, Γ⟩ :: items a
-  | Γ, _, .notP a => ⟨.notP, Γ⟩ :: items a
+  | Γ, _, .seq a b => items a ++ items b ++ [⟨.seq, Γ⟩]
+  | Γ, _, .alt a b => items a ++ items b ++ [⟨.alt, Γ⟩]
+  | Γ, _, .star a => items a ++ [⟨.star, Γ⟩]
+  | Γ, _, .notP a => items a ++ [⟨.notP, Γ⟩]
   | Γ, _, .var i _ => [⟨.var i, Γ⟩]
   | Γ, _, .rule i _ => [⟨.rule i, Γ⟩]
-  | Γ, _, @Tm.lam _ _ a σ body => ⟨.lam a σ, Γ⟩ :: items body
-  | Γ, _, @Tm.app _ _ a b f y => ⟨.app a b, Γ⟩ :: (items f ++ items y)
+  | Γ, _, @Tm.lam _ _ a σ body => items body ++ [⟨.lam a σ, Γ⟩]
+  | Γ, _, @Tm.app _ _ a b f y => items f ++ items y ++ [⟨.app a b, Γ⟩]
 
 /-! ## Parser operations on codes -/
 
@@ -89,18 +89,19 @@ def block (m k : Nat) (fv : List Nat) : List Nat := (fv.drop (k * m)).take m
 /-- One item, on a stack of vectors (one written-out value per environment). -/
 def step : Item → List (List (List Nat)) → List (List (List Nat))
   | ⟨.leaf e, Γ⟩, st => List.replicate (envSize x.length Γ) (leafCodes x e) :: st
-  | ⟨.seq, _⟩, va :: vb :: st => List.zipWith (seqCodes x) va vb :: st
-  | ⟨.alt, _⟩, va :: vb :: st => List.zipWith (altCodes x) va vb :: st
+  | ⟨.seq, _⟩, vb :: va :: st => List.zipWith (seqCodes x) va vb :: st
+  | ⟨.alt, _⟩, vb :: va :: st => List.zipWith (altCodes x) va vb :: st
   | ⟨.star, _⟩, va :: st => va.map (starCodes x) :: st
   | ⟨.notP, _⟩, va :: st => va.map (notCodes x) :: st
   | ⟨.var i, Γ⟩, st => (varVec x.length Γ i).map (fun k => (eRows x.length (Γ.getD i .p)).getD k []) :: st
   | ⟨.rule i, Γ⟩, st => List.replicate (envSize x.length Γ) (Tf.getD i []) :: st
   | ⟨.lam a _, Γ⟩, vb :: st => (chunksN (elems x.length a).length (envSize x.length Γ) vb).map List.flatten :: st
-  | ⟨.app a b, _⟩, vf :: vy :: st =>
+  | ⟨.app a b, _⟩, vy :: vf :: st =>
       List.zipWith (fun fv yv => block (valSize x.length b) (indexIn yv (eRows x.length a)) fv) vf vy :: st
   | _, st => st
 
-def run (is : List Item) (st : List (List (List Nat))) : List (List (List Nat)) := is.foldr (step x Tf) st
+def run (is : List Item) (st : List (List (List Nat))) : List (List (List Nat)) :=
+  is.foldl (fun st it => step x Tf it st) st
 
 end Run
 
@@ -120,8 +121,11 @@ theorem zipWith_map_map {α β γ δ : Type} (f : β → γ → δ) (g : α → 
   | _ :: l => by simp [zipWith_map_map f g h l]
 
 theorem run_append (Tf : List (List Nat)) (is js : List Item) (st : List (List (List Nat))) :
-    run x Tf (is ++ js) st = run x Tf is (run x Tf js st) := by
-  simp [run, List.foldr_append]
+    run x Tf (is ++ js) st = run x Tf js (run x Tf is st) := by
+  simp [run, List.foldl_append]
+
+theorem run_single (Tf : List (List Nat)) (it : Item) (st : List (List (List Nat))) :
+    run x Tf [it] st = step x Tf it st := rfl
 
 variable {x T}
 
@@ -145,25 +149,25 @@ theorem run_items (hT : Env.Mem x.length T) {Tf : List (List Nat)}
   induction t with
   | eps | any | chr | range | lit =>
     intro st
-    simp only [items, run, List.foldr_cons, List.foldr_nil, step, vec, den]
+    simp only [items, run_single, step, vec, den]
     rw [← envs_length, replicate_eq_map]
     rfl
   | seq a b iha ihb | alt a b iha ihb =>
     intro st
     simp only [items]
-    rw [run, List.foldr_cons, ← run, run_append, ihb, iha]
+    rw [run_append, run_append, iha, ihb, run_single]
     simp only [step, vec, zipWith_map_map, seqCodes, altCodes, pOf_flatVal]
     rfl
   | star a ih | notP a ih =>
     intro st
     simp only [items]
-    rw [run, List.foldr_cons, ← run, ih]
+    rw [run_append, ih, run_single]
     simp only [step, vec, List.map_map, Function.comp_def, starCodes, notCodes, pOf_flatVal]
     rfl
   | var i h =>
     rename_i Γ' τ'
     intro st
-    simp only [items, run, List.foldr_cons, List.foldr_nil, step, vec, den]
+    simp only [items, run_single, step, vec, den]
     rw [varVec_eq _ _ i h, List.map_map]
     have hτ : Γ'.getD i .p = τ' := by rw [List.getD_eq_getElem?_getD, h, Option.getD_some]
     congr 1
@@ -173,13 +177,13 @@ theorem run_items (hT : Env.Mem x.length T) {Tf : List (List Nat)}
     rw [hτ, eRows_getD (Env.get_mem (envs_mem _ hρ) i h)]
   | rule i h =>
     intro st
-    simp only [items, run, List.foldr_cons, List.foldr_nil, step, vec, den]
+    simp only [items, run_single, step, vec, den]
     rw [← envs_length, replicate_eq_map, hTf i h]
   | lam body ih =>
     rename_i Γ a σ
     intro st
     simp only [items]
-    rw [run, List.foldr_cons, ← run, ih]
+    rw [run_append, ih, run_single]
     simp only [step, vec, envs, List.map_flatMap, List.map_map]
     have hblocks : (envs x.length Γ).flatMap (fun ρ => (elems x.length a).map
         ((fun ρ' => flatVal x.length σ (den x body T ρ')) ∘ fun d => (d, ρ))) =
@@ -200,7 +204,7 @@ theorem run_items (hT : Env.Mem x.length T) {Tf : List (List Nat)}
     rename_i Γ a b
     intro st
     simp only [items]
-    rw [run, List.foldr_cons, ← run, run_append, ihy, ihf]
+    rw [run_append, run_append, ihf, ihy, run_single]
     simp only [step, vec, zipWith_map_map]
     congr 1
     apply List.map_congr_left

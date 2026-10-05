@@ -17,6 +17,7 @@ import Complexity.NStack
 import Complexity.NStackSpec
 import Complexity.NStackIO
 import Complexity.NSpace
+import Complexity.NKit
 
 /-!
 # TQBF is PSPACE-complete
