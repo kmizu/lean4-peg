@@ -95,4 +95,18 @@ theorem Lists.set_comm {L : Lists K} {i j : Fin K} (h : i ≠ j) (a b : List Nat
 
 theorem Lists.ext_at {L L' : Lists K} (h : ∀ x, L x = L' x) : L = L' := funext h
 
+/-- Equalities between stacks updated at a few places: compare at every index. -/
+macro "lists_eq" : tactic =>
+  `(tactic| (funext x; simp only [Lists.set]; repeat' split
+             all_goals (try subst_vars)
+             all_goals (try simp_all)
+             all_goals (try omega)))
+
+/-- The value of stacks updated at a few places, at one index. -/
+macro "lists_at" : tactic =>
+  `(tactic| (simp only [Lists.set]; repeat' split
+             all_goals (try subst_vars)
+             all_goals (try simp_all)
+             all_goals (try omega)))
+
 end Complexity
