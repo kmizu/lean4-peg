@@ -92,4 +92,59 @@ theorem envT_le (hj : 1 ≤ j) (hcap : 1 ≤ cap) (hw : TTWF tt) (hc : CTWF tt c
         rw [Nat.succ_mul (k + 1)]; omega
       · exact Nat.zero_le _
 
+/-- A type of order at most `j - 2` has rows at most a tower of height `j - 1`. -/
+theorem rowsT_length_le_low (hcap : 1 ≤ cap) (hw : TTWF tt) (k : Nat) (hk : k ≤ tt.length)
+    (hord : ordNum tt k + 2 ≤ j) : (rowsT j cap N tt k).length ≤ tower (j - 1) (polyP N * cap) := by
+  unfold rowsT
+  split
+  · rename_i hs
+    obtain ⟨τ, hτ⟩ := tyOf_some hw k hk
+    rw [rowsNum_length hτ]
+    have hord' : τ.order ≤ j - 2 := by rw [ordNum_eq k hτ] at hord; omega
+    have hsize : τ.size < cap := by
+      have := hs.2; rw [iok_sizeNum_eq hcap k hτ] at this
+      rcases Nat.le_total cap τ.size with h | h
+      · rw [Nat.min_eq_left h] at this; omega
+      · rw [Nat.min_eq_right h] at this; exact this
+    have h₁ := elems_le_T N (j - 2) hord'
+    rw [show j - 2 + 1 = j - 1 by omega] at h₁
+    exact Nat.le_trans h₁ (tower_mono _ (Nat.mul_le_mul_left _ (by omega)))
+  · exact Nat.zero_le _
+
+theorem pow_le_two_pow (a b : Nat) : a ^ b ≤ 2 ^ (a * b) := by
+  induction b with
+  | zero => simp
+  | succ b ih =>
+    rw [Nat.pow_succ, Nat.mul_succ, Nat.pow_add]
+    exact Nat.mul_le_mul ih (Nat.le_of_lt Nat.lt_two_pow_self)
+
+/-- **The candidate tables of a small arrow type** are at most a tower of height `j`. -/
+theorem cand_le (hcap : 1 ≤ cap) (hw : TTWF tt) {k a b : Nat} (hk : tt[k]? = some (a, b)) (hab : a ≤ k ∧ b ≤ k)
+    (hs : small j cap tt (k + 1)) :
+    (rowsT j cap N tt b).length ^ (rowsT j cap N tt a).length ≤ tower j (2 * (polyP N * cap) + 2) := by
+  have hkl : k < tt.length := (List.getElem?_eq_some_iff.1 hk).1
+  have hord : ordNum tt (k + 1) = max (ordNum tt a + 1) (ordNum tt b) := by
+    rw [ordNum]; simp only [hk, if_pos hab]
+  have hsj := hs.1
+  rw [hord] at hsj
+  have hj : 2 ≤ j := by omega
+  have ha := rowsT_length_le_low (N := N) hcap hw a (by omega) (show ordNum tt a + 2 ≤ j by omega)
+  have hb := rowsT_length_le (N := N) (j := j) (by omega) hcap hw b (by omega)
+  obtain ⟨i, rfl⟩ : ∃ i, j = i + 2 := ⟨j - 2, by omega⟩
+  rw [show i + 2 - 1 = i + 1 by omega] at ha
+  rw [tower_succ] at hb
+  have h₁ : (rowsT (i + 2) cap N tt b).length ^ (rowsT (i + 2) cap N tt a).length ≤
+      (2 ^ tower (i + 1) (polyP N * cap)) ^ (rowsT (i + 2) cap N tt a).length := Nat.pow_le_pow_left hb _
+  have h₂ : (2 ^ tower (i + 1) (polyP N * cap)) ^ (rowsT (i + 2) cap N tt a).length ≤
+      (2 ^ tower (i + 1) (polyP N * cap)) ^ tower (i + 1) (polyP N * cap) :=
+    Nat.pow_le_pow_right Nat.one_le_two_pow ha
+  have h₃ : (2 ^ tower (i + 1) (polyP N * cap)) ^ tower (i + 1) (polyP N * cap) =
+      2 ^ (tower (i + 1) (polyP N * cap) * tower (i + 1) (polyP N * cap)) := by rw [← Nat.pow_mul]
+  have h₄ : 2 ^ (tower (i + 1) (polyP N * cap) * tower (i + 1) (polyP N * cap)) ≤
+      2 ^ tower (i + 1) (polyP N * cap + polyP N * cap + 2) := Nat.pow_le_pow_right (by omega) (tower_mul i _ _)
+  have h₅ : tower (i + 2) (2 * (polyP N * cap) + 2) = 2 ^ tower (i + 1) (polyP N * cap + polyP N * cap + 2) := by
+    rw [tower_succ]; congr 2; omega
+  rw [h₅]
+  exact Nat.le_trans h₁ (Nat.le_trans h₂ (h₃ ▸ h₄))
+
 end Shallot.MacroPeg.Mach
