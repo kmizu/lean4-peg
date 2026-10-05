@@ -55,20 +55,6 @@ instance Dom.decEq : (τ : Ty) → DecidableEq (Dom τ)
   | .p => inferInstanceAs (DecidableEq (List Res))
   | .arr _ b => @instDecidableEqList _ (Dom.decEq b)
 
-/-- All well-formed values of `τ`, in a fixed order. -/
-def elems (N : Nat) : (τ : Ty) → List (Dom τ)
-  | .p => allVecs (resElems N) (N + 1)
-  | .arr a b => allVecs (elems N b) (elems N a).length
-
-/-- The least value: no result anywhere. -/
-def bot (N : Nat) : (τ : Ty) → Dom τ
-  | .p => List.replicate (N + 1) none
-  | .arr a b => List.replicate (elems N a).length (bot N b)
-
-/-- Apply a table to a value (the least value if the argument is not well formed). -/
-def Dom.app {N : Nat} {a b : Ty} (f : Dom (a ⇒ b)) (d : Dom a) : Dom b :=
-  (f : List (Dom b)).getD (indexIn d (elems N a)) (bot N b)
-
 /-! ## The information order -/
 
 /-- Two lists of the same length, related entry by entry. -/
@@ -100,6 +86,71 @@ theorem Dom.le_trans : ∀ (τ : Ty) (d₁ d₂ d₃ : Dom τ), Dom.le τ d₁ d
       · exact hst) h₁ h₂
   | .arr _ b, _, _, _, h₁, h₂ => forall₂_trans (Dom.le_trans b) h₁ h₂
 
+/-! ## Deciding the order -/
+
+def pwB {α : Type} (f : α → α → Bool) : List α → List α → Bool
+  | [], [] => true
+  | a :: l, b :: l' => f a b && pwB f l l'
+  | _, _ => false
+
+theorem pwB_iff {α : Type} {f : α → α → Bool} {R : α → α → Prop} (h : ∀ a b, f a b = true ↔ R a b) :
+    ∀ l l' : List α, pwB f l l' = true ↔ Pw R l l'
+  | [], [] => by simp [pwB, Pw.nil]
+  | [], _ :: _ => by simp only [pwB, Bool.false_eq_true, false_iff]; intro h'; cases h'
+  | _ :: _, [] => by simp only [pwB, Bool.false_eq_true, false_iff]; intro h'; cases h'
+  | a :: l, b :: l' => by
+    simp only [pwB, Bool.and_eq_true, h, pwB_iff h l l']
+    constructor
+    · rintro ⟨h₁, h₂⟩; exact .cons h₁ h₂
+    · intro h'; cases h' with | cons h₁ h₂ => exact ⟨h₁, h₂⟩
+
+def Dom.leB : (τ : Ty) → Dom τ → Dom τ → Bool
+  | .p, d, d' => pwB (fun r s : Res => r == none || r == s) (d : List Res) d'
+  | .arr _ b, f, f' => pwB (Dom.leB b) (f : List (Dom b)) f'
+
+theorem Dom.leB_iff : ∀ (τ : Ty) (d d' : Dom τ), Dom.leB τ d d' = true ↔ Dom.le τ d d'
+  | .p, d, d' => pwB_iff (fun r s => by simp) _ _
+  | .arr _ b, f, f' => pwB_iff (Dom.leB_iff b) _ _
+
+/-- A table over the arguments `ea` is monotone. -/
+def TabMono {a b : Ty} (ea : List (Dom a)) (f : List (Dom b)) : Prop :=
+  ∀ p ∈ ea.zip f, ∀ p' ∈ ea.zip f, Dom.le a p.1 p'.1 → Dom.le b p.2 p'.2
+
+def tabMonoB {a b : Ty} (ea : List (Dom a)) (f : List (Dom b)) : Bool :=
+  (ea.zip f).all (fun p => (ea.zip f).all (fun p' => !Dom.leB a p.1 p'.1 || Dom.leB b p.2 p'.2))
+
+theorem tabMonoB_iff {a b : Ty} (ea : List (Dom a)) (f : List (Dom b)) : tabMonoB ea f = true ↔ TabMono ea f := by
+  simp only [tabMonoB, TabMono, List.all_eq_true, Bool.or_eq_true, Bool.not_eq_true', Dom.leB_iff]
+  constructor
+  · intro h p hp p' hp' hle
+    rcases h p hp p' hp' with h' | h'
+    · rw [← Dom.leB_iff] at hle; rw [hle] at h'; cases h'
+    · exact h'
+  · intro h p hp p' hp'
+    by_cases hle : Dom.le a p.1 p'.1
+    · exact .inr (h p hp p' hp' hle)
+    · left; cases hb : Dom.leB a p.1 p'.1
+      · rfl
+      · exact absurd ((Dom.leB_iff _ _ _).1 hb) hle
+
+/-- All well-formed values of `τ` — for a function type, the monotone tables — in a fixed order. -/
+def elems (N : Nat) : (τ : Ty) → List (Dom τ)
+  | .p => allVecs (resElems N) (N + 1)
+  | .arr a b => (allVecs (elems N b) (elems N a).length).filter (tabMonoB (elems N a))
+
+theorem mem_elems_arr {N : Nat} {a b : Ty} {f : Dom (a ⇒ b)} :
+    f ∈ elems N (a ⇒ b) ↔ f ∈ allVecs (elems N b) (elems N a).length ∧ TabMono (elems N a) (f : List (Dom b)) := by
+  simp only [elems, List.mem_filter, tabMonoB_iff]; exact Iff.rfl
+
+/-- The least value: no result anywhere. -/
+def bot (N : Nat) : (τ : Ty) → Dom τ
+  | .p => List.replicate (N + 1) none
+  | .arr a b => List.replicate (elems N a).length (bot N b)
+
+/-- Apply a table to a value (the least value if the argument is not well formed). -/
+def Dom.app {N : Nat} {a b : Ty} (f : Dom (a ⇒ b)) (d : Dom a) : Dom b :=
+  (f : List (Dom b)).getD (indexIn d (elems N a)) (bot N b)
+
 /-! ## Counting defined entries -/
 
 /-- The number of defined entries. -/
@@ -128,7 +179,7 @@ theorem defCount_le_maxCount (N : Nat) : ∀ (τ : Ty) (d : Dom τ), d ∈ elems
     have := List.length_filter_le Option.isSome (d : List Res)
     omega
   | .arr a b, f, h => by
-    obtain ⟨hl, hmem⟩ := (mem_allVecs _ _ _).1 h
+    obtain ⟨hl, hmem⟩ := (mem_allVecs _ _ _).1 (mem_elems_arr.1 h).1
     simp only [defCount, maxCount]
     rw [← hl]
     exact sum_map_le _ _ _ (fun d hd => defCount_le_maxCount N b d (hmem d hd))
@@ -193,8 +244,13 @@ theorem defCount_lt : ∀ (τ : Ty) {d d' : Dom τ}, Dom.le τ d d' → d ≠ d'
 theorem bot_mem (N : Nat) : ∀ τ : Ty, bot N τ ∈ elems N τ
   | .p => (mem_allVecs _ _ _).2 ⟨by simp [bot], fun r hr => by
       simp only [bot, List.mem_replicate] at hr; rw [hr.2]; simp [resElems]⟩
-  | .arr a b => (mem_allVecs _ _ _).2 ⟨by simp [bot], fun d hd => by
-      simp only [bot, List.mem_replicate] at hd; rw [hd.2]; exact bot_mem N b⟩
+  | .arr a b => mem_elems_arr.2 ⟨(mem_allVecs _ _ _).2 ⟨by simp [bot], fun d hd => by
+      simp only [bot, List.mem_replicate] at hd; rw [hd.2]; exact bot_mem N b⟩, by
+      intro q hq q' hq' _
+      have h₁ := (List.of_mem_zip hq).2
+      have h₂ := (List.of_mem_zip hq').2
+      simp only [bot, List.mem_replicate] at h₁ h₂
+      rw [h₁.2, h₂.2]; exact Dom.le_refl b _⟩
 
 theorem pw_replicate {α : Type} {R : α → α → Prop} (b : α) :
     ∀ l : List α, (∀ e ∈ l, R b e) → Pw R (List.replicate l.length b) l
@@ -208,9 +264,65 @@ theorem bot_le (N : Nat) : ∀ (τ : Ty) (d : Dom τ), d ∈ elems N τ → Dom.
     rw [← hl]
     exact pw_replicate none (d : List Res) (fun _ _ => Or.inl rfl)
   | .arr a b, f, h => by
-    obtain ⟨hl, hmem⟩ := (mem_allVecs _ _ _).1 h
+    obtain ⟨hl, hmem⟩ := (mem_allVecs _ _ _).1 (mem_elems_arr.1 h).1
     simp only [Dom.le, bot]
     rw [← hl]
     exact pw_replicate (bot N b) (f : List (Dom b)) (fun d hd => bot_le N b d (hmem d hd))
+
+/-! ## Application -/
+
+section App
+
+variable {N : Nat} {a b : Ty}
+
+theorem getD_mem {α : Type} {P : α → Prop} {c : α} (hc : P c) : ∀ (l : List α) (i : Nat), (∀ x ∈ l, P x) → P (l.getD i c)
+  | [], _, _ => hc
+  | x :: _, 0, h => h x (by simp)
+  | _ :: l, i + 1, h => getD_mem hc l i (fun y hy => h y (by simp [hy]))
+
+theorem app_mem {f : Dom (a ⇒ b)} (hf : f ∈ elems N (a ⇒ b)) (d : Dom a) : Dom.app (N := N) f d ∈ elems N b :=
+  getD_mem (bot_mem N b) _ _ ((mem_allVecs _ _ _).1 (mem_elems_arr.1 hf).1).2
+
+theorem mem_zip_getD {α β : Type} [DecidableEq α] {ea : List α} {f : List β} {d : α} (c : β)
+    (hl : f.length = ea.length) (hd : d ∈ ea) : (d, f.getD (indexIn d ea) c) ∈ ea.zip f := by
+  have hi := getElem?_indexIn d ea hd
+  have hlt : indexIn d ea < ea.length := (List.getElem?_eq_some_iff.1 hi).1
+  have hz : (ea.zip f)[indexIn d ea]? = some (d, f.getD (indexIn d ea) c) := by
+    rw [List.getElem?_zip_eq_some]
+    refine ⟨hi, ?_⟩
+    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by omega)]
+    rfl
+  exact List.mem_of_getElem? hz
+
+/-- A monotone table applied to larger arguments gives larger results. -/
+theorem app_mono_arg {f : Dom (a ⇒ b)} (hf : f ∈ elems N (a ⇒ b)) {d d' : Dom a} (hd : d ∈ elems N a)
+    (hd' : d' ∈ elems N a) (h : Dom.le a d d') : Dom.le b (Dom.app (N := N) f d) (Dom.app (N := N) f d') := by
+  obtain ⟨hv, hmono⟩ := mem_elems_arr.1 hf
+  have hl := ((mem_allVecs _ _ _).1 hv).1
+  exact hmono _ (mem_zip_getD (bot N b) hl hd) _ (mem_zip_getD (bot N b) hl hd') h
+
+theorem pw_getD {α : Type} {R : α → α → Prop} {c : α} (hc : R c c) :
+    ∀ {l l' : List α}, Pw R l l' → ∀ i, R (l.getD i c) (l'.getD i c)
+  | _, _, .nil, _ => hc
+  | _, _, .cons h _, 0 => h
+  | _, _, .cons _ t, i + 1 => pw_getD hc t i
+
+/-- A larger table gives larger results. -/
+theorem app_le_fun {f f' : Dom (a ⇒ b)} (h : Dom.le (a ⇒ b) f f') (d : Dom a) :
+    Dom.le b (Dom.app (N := N) f d) (Dom.app (N := N) f' d) :=
+  pw_getD (Dom.le_refl b _) h _
+
+/-- The table of a function, looked up at a well-formed argument. -/
+theorem app_tab (g : Dom a → Dom b) {d : Dom a} (hd : d ∈ elems N a) :
+    Dom.app (N := N) (a := a) (b := b) ((elems N a).map g) d = g d := by
+  have hi := getElem?_indexIn d (elems N a) hd
+  have hlt : indexIn d (elems N a) < (elems N a).length := (List.getElem?_eq_some_iff.1 hi).1
+  simp only [Dom.app, List.getD_eq_getElem?_getD, List.getElem?_map, hi, Option.map_some, Option.getD_some]
+
+theorem app_bot (d : Dom a) : Dom.app (N := N) (bot N (a ⇒ b)) d = bot N b := by
+  simp only [Dom.app, bot, List.getD_eq_getElem?_getD, List.getElem?_replicate]
+  split <;> rfl
+
+end App
 
 end Shallot.MacroPeg.HO
