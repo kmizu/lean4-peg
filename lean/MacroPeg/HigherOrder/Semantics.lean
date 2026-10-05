@@ -1,5 +1,6 @@
 import MacroPeg.HigherOrder.Syntax
 import MacroPeg.Syntax
+import Shallot.Peg.Props
 
 /-!
 # Higher-order Macro PEG: call-by-name semantics
@@ -143,5 +144,80 @@ theorem hobs_det {g : HGrammar} {e : HExp} {x : List Char} {r r' : Option (List 
   have b := hrun_mono_le hm (Nat.le_max_right n m)
   rw [a] at b
   exact Option.some.inj b
+
+/-! ## A success leaves a suffix of the input -/
+
+theorem hrun_suffix {g : HGrammar} : ∀ {n : Nat} {e : HExp} {y r : List Char},
+    hrun g n e y = some (some r) → ∃ p, y = p ++ r
+  | 0, _, _, _, h => by simp [hrun] at h
+  | n + 1, e, y, r, h => by
+    cases e <;> (rw [hrun.eq_def] at h; dsimp only at h)
+    case eps => cases h; exact ⟨[], rfl⟩
+    case any =>
+      cases y with
+      | nil => cases h
+      | cons c rest => cases h; exact ⟨[c], rfl⟩
+    case chr c =>
+      cases y with
+      | nil => cases h
+      | cons d rest =>
+        dsimp only at h
+        split at h
+        · obtain rfl := Option.some.inj (Option.some.inj h); exact ⟨[d], rfl⟩
+        · simp at h
+    case range lo hi =>
+      cases y with
+      | nil => cases h
+      | cons d rest =>
+        dsimp only at h
+        split at h
+        · obtain rfl := Option.some.inj (Option.some.inj h); exact ⟨[d], rfl⟩
+        · simp at h
+    case lit s =>
+      split at h
+      · rename_i rest hs; cases h; exact Shallot.stripPrefix?_suffix s y _ hs
+      · cases h
+    case seq a b =>
+      cases ha : hrun g n a y with
+      | none => rw [ha] at h; cases h
+      | some ra =>
+        rw [ha] at h
+        cases ra with
+        | none => cases h
+        | some m =>
+          obtain ⟨p₁, rfl⟩ := hrun_suffix ha
+          obtain ⟨p₂, rfl⟩ := hrun_suffix h
+          exact ⟨p₁ ++ p₂, by simp⟩
+    case alt a b =>
+      cases ha : hrun g n a y with
+      | none => rw [ha] at h; cases h
+      | some ra =>
+        rw [ha] at h
+        cases ra with
+        | none => exact hrun_suffix h
+        | some m => cases h; exact hrun_suffix ha
+    case star a =>
+      cases ha : hrun g n a y with
+      | none => rw [ha] at h; cases h
+      | some ra =>
+        rw [ha] at h
+        cases ra with
+        | none => cases h; exact ⟨[], rfl⟩
+        | some m =>
+          obtain ⟨p₁, rfl⟩ := hrun_suffix ha
+          obtain ⟨p₂, rfl⟩ := hrun_suffix h
+          exact ⟨p₁ ++ p₂, by simp⟩
+    case notP a =>
+      cases ha : hrun g n a y with
+      | none => rw [ha] at h; cases h
+      | some ra =>
+        rw [ha] at h
+        cases ra with
+        | none => cases h; exact ⟨[], rfl⟩
+        | some m => cases h
+    case var | rule | lam | app =>
+      split at h
+      · exact hrun_suffix h
+      · cases h
 
 end Shallot.MacroPeg.HO
