@@ -18,7 +18,7 @@ open Complexity
 abbrev IT : Fin NK := 14
 /-- The lengths of the rule values; the next round's values and their lengths. -/
 abbrev RVL : Fin NK := 15
-abbrev RVL2 : Fin NK := 11
+abbrev RVL2 : Fin NK := 17
 
 def evFlat (st : List (List Nat)) : List Nat := st.reverse.flatten
 def evLens (st : List (List Nat)) : List Nat := st.reverse.map List.length
