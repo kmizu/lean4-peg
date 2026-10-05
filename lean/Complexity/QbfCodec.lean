@@ -50,61 +50,67 @@ theorem parseName_encName (x : Name) (rest : List Nat) (fuel : Nat) (hf : x.leng
     simp only [Tok.sep, if_true]
     rw [ih f (by simp at hf; omega)]
 
-theorem parseOp_enc (op : Op) (rest : List Nat) (fuel : Nat) (hf : op.enc.length ≤ fuel) :
-    parseOp fuel (op.enc ++ rest) = some (op, rest) := by
-  have a := length_lt_encName
-  cases op with
-  | var x =>
-    have := a x
-    simp [Op.enc] at hf
-    simp [Op.enc, parseOp, Tok.var, parseName_encName x rest fuel (by omega)]
-  | tt => simp [Op.enc, parseOp, Tok.tt, Tok.var]
-  | ff => simp [Op.enc, parseOp, Tok.ff, Tok.tt, Tok.var]
-  | not g =>
-    have := a g
-    simp [Op.enc] at hf
-    simp [Op.enc, parseOp, Tok.neg, Tok.var, Tok.tt, Tok.ff, parseName_encName g rest fuel (by omega)]
-  | and g h =>
-    have := a g
-    have := a h
-    simp [Op.enc] at hf
-    simp [Op.enc, parseOp, Tok.conj, Tok.var, Tok.tt, Tok.ff, Tok.neg,
-      parseName_encName g _ fuel (by omega), parseName_encName h rest fuel (by omega)]
-  | or g h =>
-    have := a g
-    have := a h
-    simp [Op.enc] at hf
-    simp [Op.enc, parseOp, Tok.disj, Tok.conj, Tok.var, Tok.tt, Tok.ff, Tok.neg,
-      parseName_encName g _ fuel (by omega), parseName_encName h rest fuel (by omega)]
-
-theorem decode_gates : ∀ (gs : List Gate) (fuel : Nat), (gs.flatMap Gate.enc).length < fuel →
-    decodeToks fuel (gs.flatMap Gate.enc) = ⟨[], gs⟩ := by
-  intro gs
-  induction gs with
-  | nil => intro fuel h; obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by simp at h; omega⟩; simp [decodeToks]
-  | cons g gs ih =>
+theorem decode_matrix : ∀ (m : List RTok) (fuel : Nat), (m.flatMap RTok.enc).length < fuel →
+    decodeToks fuel (m.flatMap RTok.enc) = ⟨[], m⟩ := by
+  intro m
+  induction m with
+  | nil =>
+    intro fuel h
+    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by simp at h; omega⟩
+    simp [decodeToks]
+  | cons r m ih =>
     intro fuel h
     obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-    have hn := length_lt_encName g.out
-    have ho : g.op.enc.length ≤ (g.op.enc ++ gs.flatMap Gate.enc).length := by simp
-    simp only [List.flatMap_cons, Gate.enc, List.length_append, List.length_cons] at h
-    simp only [List.flatMap_cons, Gate.enc, List.cons_append, List.append_assoc, decodeToks]
-    simp only [Tok.gate, Tok.all, Tok.ex]
-    simp only [show ¬ (6 = 4 ∨ 6 = 5) by decide, if_false, if_true]
-    rw [parseName_encName g.out _ _ (by simp; omega)]
-    simp only []
-    rw [parseOp_enc g.op _ _ (by simp)]
-    simp only []
-    rw [ih f (by omega)]
+    cases r with
+    | var x =>
+      have hn := length_lt_encName x
+      simp only [List.flatMap_cons, RTok.enc, List.cons_append, List.length_append,
+        List.length_cons] at h
+      simp only [List.flatMap_cons, RTok.enc, List.cons_append, decodeToks]
+      simp only [Tok.var, Tok.all, Tok.ex]
+      simp only [show ¬ (6 = 4 ∨ 6 = 5) by decide, if_false, if_true]
+      rw [parseName_encName x _ _ (by simp; omega)]
+      simp only []
+      rw [ih f (by omega)]
+    | tt =>
+      simp only [List.flatMap_cons, RTok.enc, List.cons_append, List.nil_append,
+        List.length_cons] at h
+      simp only [List.flatMap_cons, RTok.enc, List.cons_append, List.nil_append, decodeToks]
+      rw [ih f (by omega)]
+      simp [Tok.tt, Tok.var, Tok.all, Tok.ex]
+    | ff =>
+      simp only [List.flatMap_cons, RTok.enc, List.cons_append, List.nil_append,
+        List.length_cons] at h
+      simp only [List.flatMap_cons, RTok.enc, List.cons_append, List.nil_append, decodeToks]
+      rw [ih f (by omega)]
+      simp [Tok.tt, Tok.ff, Tok.var, Tok.all, Tok.ex]
+    | neg =>
+      simp only [List.flatMap_cons, RTok.enc, List.cons_append, List.nil_append,
+        List.length_cons] at h
+      simp only [List.flatMap_cons, RTok.enc, List.cons_append, List.nil_append, decodeToks]
+      rw [ih f (by omega)]
+      simp [Tok.tt, Tok.ff, Tok.neg, Tok.var, Tok.all, Tok.ex]
+    | conj =>
+      simp only [List.flatMap_cons, RTok.enc, List.cons_append, List.nil_append,
+        List.length_cons] at h
+      simp only [List.flatMap_cons, RTok.enc, List.cons_append, List.nil_append, decodeToks]
+      rw [ih f (by omega)]
+      simp [Tok.tt, Tok.ff, Tok.neg, Tok.conj, Tok.var, Tok.all, Tok.ex]
+    | disj =>
+      simp only [List.flatMap_cons, RTok.enc, List.cons_append, List.nil_append,
+        List.length_cons] at h
+      simp only [List.flatMap_cons, RTok.enc, List.cons_append, List.nil_append, decodeToks]
+      rw [ih f (by omega)]
+      simp [Tok.tt, Tok.ff, Tok.neg, Tok.conj, Tok.disj, Tok.var, Tok.all, Tok.ex]
 
-theorem decode_quants : ∀ (qs : List (Bool × Name)) (gs : List Gate) (fuel : Nat),
+theorem decode_quants : ∀ (qs : List (Bool × Name)) (m : List RTok) (fuel : Nat),
     (qs.flatMap (fun p => (if p.1 then Tok.all else Tok.ex) :: encName p.2)
-      ++ gs.flatMap Gate.enc).length < fuel →
+      ++ m.flatMap RTok.enc).length < fuel →
     decodeToks fuel (qs.flatMap (fun p => (if p.1 then Tok.all else Tok.ex) :: encName p.2)
-      ++ gs.flatMap Gate.enc) = ⟨qs, gs⟩ := by
-  intro qs gs
+      ++ m.flatMap RTok.enc) = ⟨qs, m⟩ := by
+  intro qs m
   induction qs with
-  | nil => intro fuel h; simpa using decode_gates gs fuel (by simpa using h)
+  | nil => intro fuel h; simpa using decode_matrix m fuel (by simpa using h)
   | cons q qs ih =>
     intro fuel h
     obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
@@ -126,31 +132,32 @@ theorem toks_lt_16 (φ : Qbf) : ∀ t ∈ φ.toks, t < 16 := by
     intro x t ht
     simp only [encName, List.mem_append, List.mem_flatMap, List.mem_replicate, List.mem_singleton] at ht
     rcases ht with ⟨n, _, h | h | h⟩ | h <;> simp [Tok.one, Tok.sep, Tok.fin] at * <;> omega
-  have ho : ∀ o : Op, ∀ t ∈ o.enc, t < 16 := by
+  have ho : ∀ o : RTok, ∀ t ∈ o.enc, t < 16 := by
     intro o t ht
-    cases o <;> simp [Op.enc] at ht <;>
-      first
-      | (rcases ht with h | h | h <;> first | (subst h; decide) | exact hn _ _ h)
-      | (rcases ht with h | h <;> first | (subst h; decide) | exact hn _ _ h)
-      | (subst ht; decide)
+    cases o with
+    | var x =>
+      simp only [RTok.enc, List.mem_cons] at ht
+      rcases ht with h | h
+      · subst h; decide
+      · exact hn _ _ h
+    | tt => simp [RTok.enc] at ht; subst ht; decide
+    | ff => simp [RTok.enc] at ht; subst ht; decide
+    | neg => simp [RTok.enc] at ht; subst ht; decide
+    | conj => simp [RTok.enc] at ht; subst ht; decide
+    | disj => simp [RTok.enc] at ht; subst ht; decide
   simp only [Qbf.toks, List.mem_append, List.mem_flatMap] at ht
   rcases ht with ⟨p, _, h⟩ | ⟨g, _, h⟩
   · simp only [List.mem_cons] at h
     rcases h with h | h
     · subst h; split <;> decide
     · exact hn _ _ h
-  · have h' : t ∈ Tok.gate :: (encName g.out ++ g.op.enc) := by simpa [Gate.enc] using h
-    rcases List.mem_cons.mp h' with h | h
-    · subst h; decide
-    · rcases List.mem_append.mp h with h | h
-      · exact hn _ _ h
-      · exact ho g.op t h
+  · exact ho g t h
 
 theorem decode_encode (φ : Qbf) : Qbf.decode φ.encode = φ := by
   have h1 : ofBits φ.encode = φ.toks := ofBits_toBits _ (toks_lt_16 φ)
   unfold Qbf.decode
   rw [h1]
-  obtain ⟨qs, gs⟩ := φ
-  exact decode_quants qs gs _ (by simp [Qbf.toks])
+  obtain ⟨qs, m⟩ := φ
+  exact decode_quants qs m _ (by simp [Qbf.toks])
 
 end Complexity

@@ -251,20 +251,4 @@ theorem clean_allBlock : ∀ (xs : List Name) (φ : QF), φ.Clean → (allBlock 
   | [], _, h => h
   | _ :: xs, φ, h => clean_allBlock xs φ h
 
-/-! ## Compiling a tree to a circuit -/
-
-/-- Gates of `ψ`, the root gate named `p`, the subtrees named by extending `p`. -/
-def compileF : Formula → Name → List Gate
-  | .var x, p => [⟨p, .var x⟩]
-  | .tt, p => [⟨p, .tt⟩]
-  | .ff, p => [⟨p, .ff⟩]
-  | .not a, p => compileF a (p ++ [0]) ++ [⟨p, .not (p ++ [0])⟩]
-  | .and a b, p => compileF a (p ++ [0]) ++ compileF b (p ++ [1]) ++ [⟨p, .and (p ++ [0]) (p ++ [1])⟩]
-  | .or a b, p => compileF a (p ++ [0]) ++ compileF b (p ++ [1]) ++ [⟨p, .or (p ++ [0]) (p ++ [1])⟩]
-
-/-- The values after running the gates. -/
-def runGates (ρ : List (Name × Bool)) : List Gate → List (Name × Bool) → List (Name × Bool)
-  | [], vals => vals
-  | g :: gs, vals => runGates ρ gs ((g.out, g.op.eval ρ vals) :: vals)
-
 end Complexity
