@@ -67,3 +67,5 @@ import MacroPeg.HigherOrder.Tableau.Typing
 import MacroPeg.HigherOrder.KExp.Encode
 import MacroPeg.HigherOrder.KExp.Run
 import MacroPeg.HigherOrder.KExp.Hard
+import MacroPeg.HigherOrder.KExp.Uniform
+import MacroPeg.HigherOrder.KExp.UniformHard

@@ -1432,6 +1432,18 @@ machine-checked witnesses for the `subst` fix and for the two side conditions. -
 #guard_msgs in
 #print axioms Shallot.MacroPeg.KExp.kexp_hard
 
+/-- info: 'Shallot.MacroPeg.KExp.serIn_inj' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.KExp.serIn_inj
+
+/-- info: 'Shallot.MacroPeg.KExp.umpeg_toBits' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.KExp.umpeg_toBits
+
+/-- info: 'Shallot.MacroPeg.KExp.uniform_hard' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.KExp.uniform_hard
+
 /-! ## TQBF is PSPACE-complete (Complexity) -/
 
 /-- info: 'Complexity.reduction_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
