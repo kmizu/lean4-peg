@@ -22,7 +22,7 @@ theorem lenOK_set {B : Nat} {L : Lists k} (h : LenOK B L) (i : Fin k) {l : List 
   · subst hj; rw [Lists.set_same]; exact hl
   · rw [Lists.set_ne _ _ hj]; exact h j
 
-theorem LExec.q_end {Q : Lists k → Prop} {p : LProg k} {L : Lists k} {t : Nat} {o : LOutcome k}
+theorem LExec.dec_q_end {Q : Lists k → Prop} {p : LProg k} {L : Lists k} {t : Nat} {o : LOutcome k}
     (h : LExec Q p L t o) : ∀ L', o = .cont L' → Q L' := by
   induction h with
   | push _ h2 => intro L' h; cases h; exact h2
@@ -37,8 +37,8 @@ theorem LExec.q_end {Q : Lists k → Prop} {p : LProg k} {L : Lists k} {t : Nat}
   | loopC _ _ _ _ _ ih2 => exact ih2
   | loopS _ _ _ => intro L' h; cases h
 
-theorem Runs.q_end {Q : Lists k → Prop} {p : LProg k} {L L' : Lists k} {T : Nat} (h : Runs Q p L L' T) : Q L' :=
-  let ⟨_, _, hx⟩ := h; hx.q_end _ rfl
+theorem Runs.dec_q_end {Q : Lists k → Prop} {p : LProg k} {L L' : Lists k} {T : Nat} (h : Runs Q p L L' T) : Q L' :=
+  let ⟨_, _, hx⟩ := h; hx.dec_q_end _ rfl
 
 theorem Runs.loopStep {Q : Lists k → Prop} {i : Fin k} {c : Nat → Bool} {p : LProg k} {L L₁ L₂ : Lists k}
     {T₁ T₂ : Nat} (hq : Q L) (hc : c (lastSym (L i)) = true) (h₁ : Runs Q p L L₁ T₁)
@@ -124,7 +124,7 @@ theorem readBits_run {a tk : Fin k} (hat : a ≠ tk) {B : Nat} :
         intro b' hb'
         subst hb'
         obtain ⟨L1, hr1, h1a, h1x⟩ := rPop (i := a) hL
-        have hL1 := hr1.q_end
+        have hL1 := hr1.dec_q_end
         have ha1 : L1 a = bn w := by rw [h1a, hs]; simp [bn]
         obtain ⟨T, L2, hr2, hp, hx⟩ := ih (bs ++ [b']) w L1 hL1 ha1 (by rw [h1x tk (Ne.symm hat)]; exact htk)
         refine ⟨1 + T, L2, hr1.seq hr2, ?_, fun x hx1 hx2 => by rw [hx x hx1 hx2, h1x x hx1]⟩
@@ -173,7 +173,7 @@ theorem tokLoop_run {a tk : Fin k} (hat : a ≠ tk) {B : Nat} :
         · simp at h4
         · simp only [List.length_cons] at hm hB
           obtain ⟨T2, L2, hr2, h2a, h2tk, h2x⟩ :=
-            ih w3.length (by omega) w3 L1 (acc ++ [bitsTokL [b0, b1, b2, b3]]) rfl hr1.q_end
+            ih w3.length (by omega) w3 L1 (acc ++ [bitsTokL [b0, b1, b2, b3]]) rfl hr1.dec_q_end
               (by rw [hpa]; simp [bn]) (by rw [hptk, htk]; simp [bitsTokL]) (by simp; omega)
           refine ⟨T1 + 1 + T2, L2, Runs.loopStep hL hc hr1 hr2, h2a, ?_, fun x h1 h2 => by rw [h2x x h1 h2, hx x h1 h2]⟩
           rw [h2tk]
@@ -181,7 +181,7 @@ theorem tokLoop_run {a tk : Fin k} (hat : a ≠ tk) {B : Nat} :
       · rw [if_neg h4] at hp
         obtain ⟨hpa, hptk⟩ := hp
         have hc2 : nonEmpty (lastSym (L1 a)) = false := by rw [hpa]; rfl
-        refine ⟨T1 + 1 + 1, L1, Runs.loopStep hL hc hr1 (Runs.loopEnd hr1.q_end hc2) |>.mono (by omega), hpa, ?_, hx⟩
+        refine ⟨T1 + 1 + 1, L1, Runs.loopStep hL hc hr1 (Runs.loopEnd hr1.dec_q_end hc2) |>.mono (by omega), hpa, ?_, hx⟩
         rw [hptk, htk]
         rcases w0 with _ | ⟨b1, _ | ⟨b2, _ | ⟨b3, w3⟩⟩⟩
         · simp [ofBits]
@@ -386,7 +386,7 @@ theorem moveAll_run {B : Nat} {i j : Fin k} (hij : i ≠ j) :
     rw [hl] at hB
     simp only [List.length_append, List.length_singleton] at hB
     obtain ⟨L1, hr1, h1i, h1j, h1x⟩ := rMoveTop hij hL hl (by omega)
-    obtain ⟨T, L2, hr2, h2i, h2j, h2x⟩ := ih L1 (by rw [h1i]; rw [hl] at hn; simpa using hn) hr1.q_end
+    obtain ⟨T, L2, hr2, h2i, h2j, h2x⟩ := ih L1 (by rw [h1i]; rw [hl] at hn; simpa using hn) hr1.dec_q_end
       (by rw [h1i, h1j]; simp; omega)
     refine ⟨2 + 1 + T, L2, Runs.loopStep hL hc hr1 hr2, h2i, ?_, fun x hx hx' => by rw [h2x x hx hx', h1x x hx hx']⟩
     rw [h2j, h1j, h1i, hl]; simp
@@ -406,7 +406,7 @@ theorem clearAll_run {B : Nat} {i : Fin k} :
     obtain ⟨l, e, hl⟩ := exists_snoc (l := L i) (by intro h; rw [h] at hn; simp at hn)
     have hc : nonEmpty (lastSym (L i)) = true := by rw [hl, lastSym_append]; rfl
     obtain ⟨L1, hr1, h1i, h1x⟩ := rPop (i := i) hL
-    obtain ⟨T, L2, hr2, h2i, h2x⟩ := ih L1 (by rw [h1i, hl]; rw [hl] at hn; simpa using hn) hr1.q_end
+    obtain ⟨T, L2, hr2, h2i, h2x⟩ := ih L1 (by rw [h1i, hl]; rw [hl] at hn; simpa using hn) hr1.dec_q_end
     exact ⟨1 + 1 + T, L2, Runs.loopStep hL hc hr1 hr2, h2i, fun x hx => by rw [h2x x hx, h1x x hx]⟩
 
 theorem ones_run {B : Nat} {tk buf : Fin k} (htb : tk ≠ buf) :
@@ -426,7 +426,7 @@ theorem ones_run {B : Nat} {tk buf : Fin k} (htb : tk ≠ buf) :
     by_cases ht : t = 1
     · have hc : symIs Tok.one (lastSym (L tk)) = true := by rw [htk, lastSym_rev_cons]; simp [symIs, ht]
       obtain ⟨L1, hr1, h1i, h1j, h1x⟩ := rMoveTop htb hL (l := ts.reverse) (e := t) (by rw [htk]; simp) (by omega)
-      obtain ⟨T, L2, hr2, h2t, h2b, h2x⟩ := ih L1 hr1.q_end h1i (by rw [h1j]; simp; omega)
+      obtain ⟨T, L2, hr2, h2t, h2b, h2x⟩ := ih L1 hr1.dec_q_end h1i (by rw [h1j]; simp; omega)
       refine ⟨2 + 1 + T, L2, Runs.loopStep hL hc hr1 hr2, ?_, ?_, fun x hx hx' => by rw [h2x x hx hx', h1x x hx hx']⟩
       · rw [h2t]; simp [countOnes, ht]
       · rw [h2b, h1j]; simp [countOnes, ht, List.replicate_succ, List.append_assoc]
@@ -440,7 +440,7 @@ theorem finTail_run {B : Nat} {d fl : Fin k} (hfd : fl ≠ d) {L : Lists k} (hL 
     ∃ T L', Runs (LenOK B) (.seq (.push d Tok.fin) (.pop fl)) L L' T ∧ L' d = L d ++ [Tok.fin] ∧ L' fl = [] ∧
       ∀ x, x ≠ d → x ≠ fl → L' x = L x := by
   obtain ⟨L1, hr1, h1d, h1x⟩ := rPush (i := d) Tok.fin hL hd
-  obtain ⟨L2, hr2, h2f, h2x⟩ := rPop (i := fl) hr1.q_end
+  obtain ⟨L2, hr2, h2f, h2x⟩ := rPop (i := fl) hr1.dec_q_end
   refine ⟨1 + 1, L2, hr1.seq hr2, ?_, ?_, fun x hx hx' => by rw [h2x x hx', h1x x hx]⟩
   · rw [h2x d (Ne.symm hfd), h1d]
   · rw [h2f, h1x fl hfd, hfl]; rfl
@@ -460,7 +460,7 @@ theorem nameLoop_run {tk buf d fl : Fin k} (htb : tk ≠ buf) (htd : tk ≠ d) (
     have hc : nonEmpty (lastSym (L fl)) = true := by rw [hfl]; rfl
     have hcl := countOnes_len ts
     obtain ⟨T1, L1, hr1, h1t, h1b, h1x⟩ := ones_run htb ts L hL htk (by rw [hbuf]; simpa using hts)
-    have hL1 := hr1.q_end
+    have hL1 := hr1.dec_q_end
     have hpn := pnm_eq ts
     have h1d : L1 d = da := by rw [h1x d (Ne.symm htd) (Ne.symm hbd), hdd]
     have h1f : L1 fl = [0] := by rw [h1x fl hft hfb, hfl]
@@ -476,11 +476,11 @@ theorem nameLoop_run {tk buf d fl : Fin k} (htb : tk ≠ buf) (htd : tk ≠ d) (
       have hcs : symIs Tok.sep (lastSym (L1 tk)) = false := by simp [h1t, symIs, lastSym]
       have hcf : symIs Tok.fin (lastSym (L1 tk)) = false := by simp [h1t, symIs, lastSym]
       obtain ⟨T2, L2, hr2, h2b, h2x⟩ := clearAll_run (i := buf) (L1 buf).length L1 rfl hL1
-      have hL2 := hr2.q_end
+      have hL2 := hr2.dec_q_end
       have h2d : L2 d = da := by rw [h2x d (Ne.symm hbd), h1d]
       have h2f : L2 fl = [0] := by rw [h2x fl hfb, h1f]
       obtain ⟨T3, L3, hr3, h3d, h3f, h3x⟩ := finTail_run hfd hL2 (by rw [h2d]; simp at hda ⊢; omega) h2f
-      have hL3 := hr3.q_end
+      have hL3 := hr3.dec_q_end
       have hc3 : nonEmpty (lastSym (L3 fl)) = false := by rw [h3f]; rfl
       obtain ⟨Tx, hstep⟩ : ∃ T, Runs (LenOK B) (nameStepP tk buf d fl) L L3 T :=
         ⟨_, by unfold nameStepP; exact hr1.seq (Runs.iteF hL1 hcs (Runs.iteF hL1 hcf (hr2.seq hr3)))⟩
@@ -503,14 +503,14 @@ theorem nameLoop_run {tk buf d fl : Fin k} (htb : tk ≠ buf) (htd : tk ≠ d) (
         have hcs : symIs Tok.sep (lastSym (L1 tk)) = true := by rw [hcnt]; simp [symIs]
         obtain ⟨T2, L2, hr2, h2b, h2d', h2x⟩ := moveAll_run (B := B) hbd (L1 buf).length L1 rfl hL1
           (by rw [h1b', h1d]; simp; omega)
-        have hL2 := hr2.q_end
+        have hL2 := hr2.dec_q_end
         obtain ⟨L3, hr3, h3t, h3x⟩ := rPop (i := tk) hL2
-        have hL3 := hr3.q_end
+        have hL3 := hr3.dec_q_end
         have h2t : L2 tk = r.reverse ++ [Tok.sep] := by rw [h2x tk htb htd, h1t']
         have h2d : L2 d = da ++ List.replicate n Tok.one := by rw [h2d', h1d, h1b']; simp
         have h3d : L3 d = da ++ List.replicate n Tok.one := by rw [h3x d (Ne.symm htd), h2d]
         obtain ⟨L4, hr4, h4d, h4x⟩ := rPush (i := d) Tok.sep hL3 (by rw [h3d]; simp; omega)
-        have hL4 := hr4.q_end
+        have hL4 := hr4.dec_q_end
         have h4t : L4 tk = r.reverse := by
           rw [h4x tk htd, h3t, h2t]; simp
         have h4b : L4 buf = [] := by rw [h4x buf hbd, h3x buf (Ne.symm htb), h2b]
@@ -536,14 +536,14 @@ theorem nameLoop_run {tk buf d fl : Fin k} (htb : tk ≠ buf) (htd : tk ≠ d) (
           have hcs : symIs Tok.sep (lastSym (L1 tk)) = false := by rw [hcnt]; simp [symIs]
           have hcf : symIs Tok.fin (lastSym (L1 tk)) = true := by rw [hcnt]; simp [symIs]
           obtain ⟨T2, L2, hr2, h2b, h2x⟩ := clearAll_run (i := buf) (L1 buf).length L1 rfl hL1
-          have hL2 := hr2.q_end
+          have hL2 := hr2.dec_q_end
           obtain ⟨L3, hr3, h3t, h3x⟩ := rPop (i := tk) hL2
-          have hL3 := hr3.q_end
+          have hL3 := hr3.dec_q_end
           have h2d : L2 d = da := by rw [h2x d (Ne.symm hbd), h1d]
           have h3d : L3 d = da := by rw [h3x d (Ne.symm htd), h2d]
           have h3f : L3 fl = [0] := by rw [h3x fl hft, h2x fl hfb, h1f]
           obtain ⟨T4, L4, hr4, h4d, h4f, h4x⟩ := finTail_run hfd hL3 (by rw [h3d]; simp at hda ⊢; omega) h3f
-          have hL4 := hr4.q_end
+          have hL4 := hr4.dec_q_end
           have hc4 : nonEmpty (lastSym (L4 fl)) = false := by rw [h4f]; rfl
           obtain ⟨Tx, hstep⟩ : ∃ T, Runs (LenOK B) (nameStepP tk buf d fl) L L4 T :=
             ⟨_, by
@@ -565,11 +565,11 @@ theorem nameLoop_run {tk buf d fl : Fin k} (htb : tk ≠ buf) (htd : tk ≠ d) (
           have hcf : symIs Tok.fin (lastSym (L1 tk)) = false := by
             rw [hcnt]; simp [symIs, Tok.fin] at hf ⊢; omega
           obtain ⟨T2, L2, hr2, h2b, h2x⟩ := clearAll_run (i := buf) (L1 buf).length L1 rfl hL1
-          have hL2 := hr2.q_end
+          have hL2 := hr2.dec_q_end
           have h2d : L2 d = da := by rw [h2x d (Ne.symm hbd), h1d]
           have h2f : L2 fl = [0] := by rw [h2x fl hfb, h1f]
           obtain ⟨T3, L3, hr3, h3d, h3f, h3x⟩ := finTail_run hfd hL2 (by rw [h2d]; simp at hda ⊢; omega) h2f
-          have hL3 := hr3.q_end
+          have hL3 := hr3.dec_q_end
           have hc3 : nonEmpty (lastSym (L3 fl)) = false := by rw [h3f]; rfl
           obtain ⟨Tx, hstep⟩ : ∃ T, Runs (LenOK B) (nameStepP tk buf d fl) L L3 T :=
             ⟨_, by
@@ -591,11 +591,11 @@ theorem decName_run {tk d buf fl : Fin k} (htd : tk ≠ d) (htb : tk ≠ buf) (h
       L' tk = (pnm ts).2.reverse ∧ L' d = L d ++ t :: encName (pnm ts).1 ∧ L' buf = [] ∧ L' fl = [] ∧
       ∀ x, x ≠ tk → x ≠ buf → x ≠ d → x ≠ fl → L' x = L x := by
   obtain ⟨L1, hr1, h1t, h1d, h1x⟩ := rMoveTop htd hL htk (by omega)
-  have hL1 := hr1.q_end
+  have hL1 := hr1.dec_q_end
   have h1b : L1 buf = [] := by rw [h1x buf htb.symm hbd, hbuf]
   have h1f : L1 fl = [] := by rw [h1x fl hft hfd, hfl]
   obtain ⟨L2, hr2, h2f, h2x⟩ := rPush (i := fl) 0 hL1 (by rw [h1f]; simp; omega)
-  have hL2 := hr2.q_end
+  have hL2 := hr2.dec_q_end
   have hpf := pnm_facts _ ts rfl
   have h2f' : L2 fl = [0] := by rw [h2f, h1f]; rfl
   obtain ⟨T3, L3, hr3, h3t, h3b, h3f, h3d, h3x⟩ := nameLoop_run htb htd hbd hft hfb hfd (B := B) ts.length ts rfl L2
@@ -708,7 +708,7 @@ theorem decode_run {tk qn mt buf fl : Fin k} (hd : [tk, qn, mt, buf, fl].Nodup) 
       simp only [List.length_cons] at hm hB
       obtain ⟨T1, L1, hr1, h1t, h1q, h1m, h1b, h1f, h1x⟩ :=
         decStep_run hd t ts' hL htk' hbuf hfl (by omega)
-      have hL1 := hr1.q_end
+      have hL1 := hr1.dec_q_end
       obtain ⟨hf1, hf2⟩ := decStep_facts t ts'
       obtain ⟨T2, L2, hr2, h2t, h2q, h2m, h2b, h2f, h2x⟩ :=
         ih (decStep t ts').1.length (by omega) (decStep t ts').1 rfl L1 hL1 h1t h1b h1f
