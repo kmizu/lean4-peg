@@ -53,3 +53,17 @@ import MacroPeg.HigherOrder.ExpSpace.Grammar
 import MacroPeg.HigherOrder.ExpSpace.Address
 import MacroPeg.HigherOrder.ExpSpace.Sim
 import MacroPeg.HigherOrder.ExpSpace.Typing
+import MacroPeg.HigherOrder.Tower
+import MacroPeg.HigherOrder.Bounds
+import MacroPeg.HigherOrder.Cost
+import MacroPeg.HigherOrder.Levels.NatBits
+import MacroPeg.HigherOrder.Levels.Level1
+import MacroPeg.HigherOrder.Levels.Higher
+import MacroPeg.HigherOrder.Tableau.Grammar
+import MacroPeg.HigherOrder.Tableau.Lookup
+import MacroPeg.HigherOrder.Tableau.Input
+import MacroPeg.HigherOrder.Tableau.Sim
+import MacroPeg.HigherOrder.Tableau.Typing
+import MacroPeg.HigherOrder.KExp.Encode
+import MacroPeg.HigherOrder.KExp.Run
+import MacroPeg.HigherOrder.KExp.Hard

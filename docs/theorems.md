@@ -500,12 +500,18 @@ M-PEG-4 の断片では、規則に lambda（`.lam`）を渡して呼べる（`.
 | `HGrammar.WellTyped.toTGrammar` / `decide_wellTyped` | `HasTy` で型が付く文法は型付き文法の erase なので、判定手続きがそのまま使える | propext, Classical.choice, Quot.sound |
 | `eq_ok` / `inc_rep` / `wr_rep` | order 2 の下界の部品（`ExpSpace/`）: 番地はサイトごとのビットを読むパーサ、`EQ` は番地の比較、`incE` は二進の後者、書き込みはクロージャ `λa. EQ(a,H) ? b : T a` | propext, Classical.choice, Quot.sound |
 | `atm2_reduction` / `order2_hard` | **order 2 は 2-EXPTIME 困難**: 作業テープが `2^\|w\|` マスの交替 TM `M` ごとに、型の付いた order 2 の文法 `g2 M` があり、全ての枝が有限なら `w` の符号（長さ `O(\|w\|²)`）を全部読む ⇔ `M` が `w` を受理 | propext, Classical.choice, Quot.sound |
+| `decideCost_le` | **上界の閉じた式**（`Cost.lean`）: 判定手続きの手数を `den` の再帰に沿って数える費用モデルで、規則の型の order が `k+1` 以下（引数と束縛の型は `k` 以下）なら手数 ≤ `tower (k+1) (C·((N+1)(N+2))²)`。`C` は文法と開始式の構文だけで決まる（`gConst`） | propext, Classical.choice, Quot.sound |
+| `spec_all` | レベル `i` の数（`Levels/`）: レベル 0 は `m` 個のビットサイト上のパーサ、レベル `i+1` は型 `lvTy i ⇒ p` の関数。値は `tower (i+1) m` 未満で、zero / max / inc / dec / isZero / isMax / eq が全ての `i` で正しい | propext, Classical.choice, Quot.sound |
+| `tableau_sim` / `start_obs` | 計算表の文法 `gT M K`（`Tableau/`）: 決定性多テープ TM `M` の時刻・ヘッド位置・セルをレベル `K` の数で番地付けし、時刻 `tower (K+1) m` 未満の全ての構成をたどる。開始式が入力を全部読む ⇔ 時刻 `tower (K+1) m - 1` の状態が受理 | propext, Classical.choice, Quot.sound |
+| `gT_wellTyped` / `gT_order` / `startT_hasTy` | `gT M K` は型が付き、order は `K+1`、開始式は閉じたパーサ | propext, Classical.choice, Quot.sound（`gT_order` は propext, Quot.sound） |
+| `enc_polytime` | 入力の符号（ビットサイト `(c+1)(n+1)^(d+1)` 個と入力サイト）を出力するテンプレートは多項式時間で計算できる（TQBF の帰着と同じリスト機械の道具） | propext, Classical.choice, Quot.sound |
+| `kexp_reduction` / `kexp_hard` | **order j は j-EXPTIME 困難**（j ≥ 1）: 時間 `tower j (c(n+1)^d)` で止まる決定性多テープ TM が決める言語（`KEXP j`）は、型付き order j の文法の言語（`MPEG`、ビット列を 4 ビットのトークンとして読む）へ多項式時間で帰着する。外部の事実は使わない | propext, Classical.choice, Quot.sound |
 
 反復回数は `maxEnv`（規則の型ごとの `maxCount` の和）以下で、`maxCount (a ⇒ b) = |elems a| · maxCount b` になる。
-order k の規則なら引数の order は k 未満なので、反復回数と 1 回あたりの表の項目数は |x| について k 重指数で抑えられる。
-実行時間はこの上界と文法の大きさの積で、費用モデルは形式化していない。order 1 では上界と `atm_reduction_HO` を合わせて EXPTIME 完全。
-order 2 では `order2_hard` が 2-EXPTIME 困難を与える（AEXPSPACE = 2-EXPTIME は外部の事実）。上界と合わせて 2-EXPTIME 完全になるのは、
-「order 2 なら二重指数時間」という上界の読み取りを認めた場合。order k ≥ 3 の下界は未証明。
+費用モデル（`decideCost`）での手数は、order `k+1` の文法なら `tower (k+1) (C·poly(N))` 以下（`decideCost_le`）。
+下界は `kexp_hard`: 時間 `tower j (poly)` の決定性 TM が決める言語は、型付き order `j` の文法の言語へ多項式時間で帰着する。
+合わせて、**型付き order `j` の Macro PEG の認識は `j`-EXPTIME 完全**（上界は費用モデルでの手数）。外部の事実は使っていない。
+`order2_hard`（交替 TM 経由）は AEXPSPACE = 2-EXPTIME を外部の事実として使う別証明で、`kexp_hard` はこれに依らない。
 
 ## TQBF は PSPACE 完全（`Complexity/`）
 
