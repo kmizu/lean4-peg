@@ -35,3 +35,6 @@ import MacroPeg.Properties.AtmHard
 import MacroPeg.Properties.MExpEq
 import MacroPeg.Properties.Defun
 import MacroPeg.Properties.DefunCorrect
+import MacroPeg.HigherOrder.Syntax
+import MacroPeg.HigherOrder.Semantics
+import MacroPeg.HigherOrder.Examples
