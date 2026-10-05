@@ -44,8 +44,8 @@ def nameStepP (fl : Fin k) : LProg k :=
     -- a component: its ones, then sep
     (.seq (moveAll buf d) (.seq (.pop tk) (.push d Tok.sep)))
     (.ite tk (symIs Tok.fin)
-      -- end of the name, consuming `fin`
-      (.seq (.pop tk) (.seq (.push d Tok.fin) (.pop fl)))
+      -- end of the name, consuming `fin` (ones just before `fin` are dropped, as in `parseName`)
+      (.seq (clearAll buf) (.seq (.pop tk) (.seq (.push d Tok.fin) (.pop fl))))
       -- anything else: drop the ones, end without consuming
       (.seq (clearAll buf) (.seq (.push d Tok.fin) (.pop fl)))))
 where
