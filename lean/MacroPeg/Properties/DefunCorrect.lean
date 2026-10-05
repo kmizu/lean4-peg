@@ -217,4 +217,107 @@ theorem good_unitRule (hg : ∀ r ∈ g.rules, Good Λ r.body) (hΛ : LamsClosed
 
 end
 
+/-! ## One step of a call-by-name run, seen through its observation
+
+`runObs` forgets the parse tree. Each lemma below unfolds one step of `mpegRun` and says what the observation is in
+terms of the observations of the sub-runs; they hold for every grammar. -/
+
+/-- The observation of a run: `none` = out of fuel, `some none` = failure, `some (some r)` = success leaving `r`. -/
+def runObs (o : Option MOutcome) : Option (Option (List Char)) := o.map MOutcome.restOf
+
+section Steps
+
+variable {G : MGrammar} {n : Nat} {x : List Char}
+
+local notation "run" => mpegRun G Strategy.callByName
+
+theorem obs_seq (a b : MExp) : runObs (run (n + 1) (.seq a b) x) =
+    match runObs (run n a x) with
+    | some (some r) => runObs (run n b r)
+    | some none => some none
+    | none => none := by
+  rw [mpegRun.eq_def]; dsimp only
+  cases run n a x with
+  | none => rfl
+  | some o => cases o with
+    | fail => rfl
+    | ok t r => dsimp only [runObs, Option.map, MOutcome.restOf]; cases run n b r with
+      | none => rfl
+      | some o => cases o <;> rfl
+
+theorem obs_alt (a b : MExp) : runObs (run (n + 1) (.alt a b) x) =
+    match runObs (run n a x) with
+    | some (some r) => some (some r)
+    | some none => runObs (run n b x)
+    | none => none := by
+  rw [mpegRun.eq_def]; dsimp only
+  cases run n a x with
+  | none => rfl
+  | some o => cases o with
+    | ok t r => rfl
+    | fail => dsimp only [runObs, Option.map, MOutcome.restOf]; cases run n b x with
+      | none => rfl
+      | some o => cases o <;> rfl
+
+theorem obs_star (a : MExp) : runObs (run (n + 1) (.star a) x) =
+    match runObs (run n a x) with
+    | some (some r) => runObs (run n (.star a) r)
+    | some none => some (some x)
+    | none => none := by
+  rw [mpegRun.eq_def]; dsimp only
+  cases run n a x with
+  | none => rfl
+  | some o => cases o with
+    | fail => rfl
+    | ok t r => dsimp only [runObs, Option.map, MOutcome.restOf]; cases run n (.star a) r with
+      | none => rfl
+      | some o => cases o <;> rfl
+
+theorem obs_notP (a : MExp) : runObs (run (n + 1) (.notP a) x) =
+    match runObs (run n a x) with
+    | some (some _) => some none
+    | some none => some (some x)
+    | none => none := by
+  rw [mpegRun.eq_def]; dsimp only
+  cases run n a x with
+  | none => rfl
+  | some o => cases o <;> rfl
+
+theorem obs_call {i : Nat} {args : List MExp} {r : MRule} (hr : ruleAtM G.rules i = some r)
+    (ha : r.arity = args.length) :
+    runObs (run (n + 1) (.call i args) x) = runObs (run n (MExp.subst args r.body) x) := by
+  rw [mpegRun.eq_def]; dsimp only
+  simp only [hr, ha, beq_self_eq_true, ↓reduceIte]
+  cases run n (MExp.subst args r.body) x with
+  | none => rfl
+  | some o => cases o <;> rfl
+
+theorem obs_call_missing {i : Nat} {args : List MExp} (hr : ruleAtM G.rules i = none) :
+    runObs (run (n + 1) (.call i args) x) = some none := by
+  rw [mpegRun.eq_def]; dsimp only; simp only [hr]; rfl
+
+theorem obs_call_arity {i : Nat} {args : List MExp} {r : MRule} (hr : ruleAtM G.rules i = some r)
+    (ha : r.arity ≠ args.length) : runObs (run (n + 1) (.call i args) x) = some none := by
+  rw [mpegRun.eq_def]; dsimp only
+  simp only [hr, beq_iff_eq, ha, ↓reduceIte]; rfl
+
+theorem obs_invoke {a : Nat} {b : MExp} {args : List MExp} (ha : a = args.length) :
+    runObs (run (n + 1) (.invoke a b args) x) = runObs (run n (MExp.subst args b) x) := by
+  rw [mpegRun.eq_def]; dsimp only
+  simp only [ha, beq_self_eq_true, ↓reduceIte]
+  cases run n (MExp.subst args b) x with
+  | none => rfl
+  | some o => cases o <;> rfl
+
+theorem obs_invoke_arity {a : Nat} {b : MExp} {args : List MExp} (ha : a ≠ args.length) :
+    runObs (run (n + 1) (.invoke a b args) x) = some none := by
+  rw [mpegRun.eq_def]; dsimp only
+  simp only [beq_iff_eq, ha, ↓reduceIte]; rfl
+
+theorem obs_failAlways : runObs (run (n + 2) MExp.failAlways x) = some none := by
+  unfold MExp.failAlways
+  rw [mpegRun.eq_def]; dsimp only; rw [mpegRun.eq_def]; rfl
+
+end Steps
+
 end Shallot.MacroPeg
