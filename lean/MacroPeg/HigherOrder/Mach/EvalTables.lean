@@ -210,4 +210,68 @@ theorem stepT_eq {it : MItem} (h : ItemOK j cap tt ct it) (st : List (List Nat))
 
 end StepT
 
+/-! ## Rounds and the answer, with the tables -/
+
+section RoundsT
+
+variable (j cap : Nat) (x : List Char) (tt ct : List (Nat × Nat)) (lt : List (List Nat))
+
+def runT (Tf : List (List Nat)) (l : List MItem) (st : List (List Nat)) : List (List Nat) :=
+  l.foldl (fun st it => stepT j cap x tt ct lt Tf it st) st
+
+def roundT (bodies : List (List MItem)) (Tf : List (List Nat)) : List (List Nat) :=
+  bodies.map (fun l => (runT j cap x tt ct lt Tf l []).headD [])
+
+def fixT (bodies : List (List MItem)) : Nat → List (List Nat) → List (List Nat)
+  | 0, Tf => Tf
+  | fuel + 1, Tf =>
+    if roundT j cap x tt ct lt bodies Tf = Tf then Tf else fixT bodies fuel (roundT j cap x tt ct lt bodies Tf)
+
+/-- The answer, with the tables. -/
+def startCodeT (rt : List Nat) (bodies : List (List MItem)) (start : List MItem) : Nat :=
+  ((runT j cap x tt ct lt (fixT j cap x tt ct lt bodies ((rt.map (valT j cap x.length tt)).sum + 1)
+      (rt.map (fun t => List.replicate (valT j cap x.length tt t) 0))) start []).headD []).getD x.length 0
+
+variable {j cap x tt ct lt}
+
+theorem runT_eq (Tf : List (List Nat)) :
+    ∀ (l : List MItem), (∀ it ∈ l, ItemOK j cap tt ct it) → ∀ st,
+      runT j cap x tt ct lt Tf l st = runM x tt ct lt Tf l st
+  | [], _, _ => rfl
+  | it :: l, h, st => by
+    simp only [runT, runM, List.foldl_cons]
+    rw [stepT_eq (h it List.mem_cons_self)]
+    exact runT_eq Tf l (fun i hi => h i (List.mem_cons_of_mem _ hi)) _
+
+theorem roundT_eq {bodies : List (List MItem)} (h : ∀ it ∈ bodies.flatten, ItemOK j cap tt ct it)
+    (Tf : List (List Nat)) : roundT j cap x tt ct lt bodies Tf = roundM x tt ct lt bodies Tf := by
+  unfold roundT roundM
+  refine List.map_congr_left (fun l hl => ?_)
+  rw [runT_eq Tf l (fun it hit => h it (List.mem_flatten.2 ⟨l, hl, hit⟩))]
+
+theorem fixT_eq {bodies : List (List MItem)} (h : ∀ it ∈ bodies.flatten, ItemOK j cap tt ct it) :
+    ∀ fuel Tf, fixT j cap x tt ct lt bodies fuel Tf = fixM x tt ct lt bodies fuel Tf
+  | 0, _ => rfl
+  | fuel + 1, Tf => by
+    simp only [fixT, fixM, roundT_eq h]
+    split
+    · rfl
+    · exact fixT_eq h fuel _
+
+/-- **The answer with the tables** is the answer, when the items need only tabulated types. -/
+theorem startCodeT_eq {rt : List Nat} {bodies : List (List MItem)} {start : List MItem}
+    (hrt : ∀ t ∈ rt, need j cap tt t) (h : ∀ it ∈ bodies.flatten ++ start, ItemOK j cap tt ct it) :
+    startCodeT j cap x tt ct lt rt bodies start = startCodeM x tt ct lt rt bodies start := by
+  have hb : ∀ it ∈ bodies.flatten, ItemOK j cap tt ct it := fun it hi => h it (List.mem_append_left _ hi)
+  have hs : ∀ it ∈ start, ItemOK j cap tt ct it := fun it hi => h it (List.mem_append_right _ hi)
+  have hv : rt.map (valT j cap x.length tt) = rt.map (valNum x.length tt) :=
+    List.map_congr_left (fun t ht => valT_eq t (hrt t ht))
+  have hz : rt.map (fun t => List.replicate (valT j cap x.length tt t) 0) =
+      rt.map (fun t => List.replicate (valNum x.length tt t) 0) :=
+    List.map_congr_left (fun t ht => by rw [valT_eq t (hrt t ht)])
+  unfold startCodeT startCodeM
+  rw [hv, hz, fixT_eq hb, runT_eq _ start hs]
+
+end RoundsT
+
 end Shallot.MacroPeg.Mach
