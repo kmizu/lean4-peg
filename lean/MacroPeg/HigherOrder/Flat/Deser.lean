@@ -74,26 +74,36 @@ def parseE : Nat → List Nat → Option (HExp × List Nat)
     | none => none
   | _, _ => none
 
-def parseRules : Nat → List Nat → Option (List HRule × List Nat)
+def parseTys : Nat → List Nat → Option (List HO.Ty × List Nat)
   | _, 0 :: r => some ([], r)
   | f + 1, 1 :: r =>
     match parseTy f r with
-    | some (τ, r₁) =>
-      match parseE f r₁ with
-      | some (e, r₂) => (parseRules f r₂).map (fun p => (⟨τ, e⟩ :: p.1, p.2))
-      | none => none
+    | some (τ, r₁) => (parseTys f r₁).map (fun p => (τ :: p.1, p.2))
+    | none => none
+  | _, _ => none
+
+def parseBodies : Nat → List Nat → Option (List HExp × List Nat)
+  | _, 0 :: r => some ([], r)
+  | f + 1, 1 :: r =>
+    match parseE f r with
+    | some (e, r₁) => (parseBodies f r₁).map (fun p => (e :: p.1, p.2))
     | none => none
   | _, _ => none
 
 /-- Read an instance; the fuel is the input length. -/
 def deser (l : List Nat) : Option (HGrammar × HExp × List Char) :=
-  match parseRules l.length l with
-  | some (rs, l₁) =>
-    match parseE l.length l₁ with
-    | some (s, l₂) =>
-      match parseStr l.length l₂ with
-      | some (x, []) => some (⟨rs⟩, s, x)
-      | _ => none
+  match parseTys l.length l with
+  | some (ts, l₁) =>
+    match parseBodies l.length l₁ with
+    | some (bs, l₂) =>
+      if ts.length = bs.length then
+        match parseE l.length l₂ with
+        | some (s, l₃) =>
+          match parseStr l.length l₃ with
+          | some (x, []) => some (⟨List.zipWith (fun τ e => ⟨τ, e⟩) ts bs⟩, s, x)
+          | _ => none
+        | none => none
+      else none
     | none => none
   | none => none
 
@@ -176,34 +186,58 @@ theorem parseE_ser : ∀ (e : HExp) (r : List Nat) (f : Nat), (serE e).length �
     simp only [serE, List.cons_append, List.append_assoc, parseE]
     rw [parseTy_ser τ _ f (by omega)]; simp only; rw [ih r f (by omega)]; rfl
 
-theorem parseRules_ser : ∀ (rs : List HRule) (r : List Nat) (f : Nat), (serRules rs).length ≤ f + 1 →
-    parseRules f (serRules rs ++ r) = some (rs, r)
-  | [], r, f, _ => by simp [serRules, parseRules]
-  | ⟨τ, e⟩ :: rs, r, f, h => by
+theorem length_serTys_pos (ts : List HO.Ty) : 1 ≤ (serTys ts).length := by cases ts <;> simp [serTys]
+theorem length_serBodies_pos (es : List HExp) : 1 ≤ (serBodies es).length := by cases es <;> simp [serBodies]
+
+theorem parseTys_ser : ∀ (ts : List HO.Ty) (r : List Nat) (f : Nat), (serTys ts).length ≤ f + 1 →
+    parseTys f (serTys ts ++ r) = some (ts, r)
+  | [], r, f, _ => by simp [serTys, parseTys]
+  | τ :: ts, r, f, h => by
     have h₁ := length_serTy_pos τ
-    have h₂ := length_serE_pos e
-    simp only [serRules, List.length_cons, List.length_append] at h
+    have h₂ := length_serTys_pos ts
+    simp only [serTys, List.length_cons, List.length_append] at h
     obtain ⟨f, rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
-    simp only [serRules, List.cons_append, List.append_assoc, parseRules]
-    rw [parseTy_ser τ _ f (by omega)]; simp only; rw [parseE_ser e _ f (by omega)]; simp only
-    rw [parseRules_ser rs r f (by omega)]
-    rfl
+    simp only [serTys, List.cons_append, List.append_assoc, parseTys]
+    rw [parseTy_ser τ _ f (by omega)]; simp only; rw [parseTys_ser ts r f (by omega)]; rfl
+
+theorem parseBodies_ser : ∀ (es : List HExp) (r : List Nat) (f : Nat), (serBodies es).length ≤ f + 1 →
+    parseBodies f (serBodies es ++ r) = some (es, r)
+  | [], r, f, _ => by simp [serBodies, parseBodies]
+  | e :: es, r, f, h => by
+    have h₁ := length_serE_pos e
+    have h₂ := length_serBodies_pos es
+    simp only [serBodies, List.length_cons, List.length_append] at h
+    obtain ⟨f, rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
+    simp only [serBodies, List.cons_append, List.append_assoc, parseBodies]
+    rw [parseE_ser e _ f (by omega)]; simp only; rw [parseBodies_ser es r f (by omega)]; rfl
+
+theorem zipWith_ty_body : ∀ rs : List HRule,
+    List.zipWith (fun τ e => (⟨τ, e⟩ : HRule)) (rs.map HRule.ty) (rs.map HRule.body) = rs
+  | [] => rfl
+  | ⟨_, _⟩ :: rs => by simp [zipWith_ty_body rs]
 
 /-- **A serialized instance is read back.** -/
 theorem deser_serIn (g : HGrammar) (s : HExp) (x : List Char) : deser (serIn g s x) = some (g, s, x) := by
   unfold deser
-  rw [show serIn g s x = serRules g.rules ++ (serE s ++ serStr x) from rfl]
-  generalize hF : (serRules g.rules ++ (serE s ++ serStr x)).length = F
+  rw [show serIn g s x = serTys (g.rules.map HRule.ty) ++ (serBodies (g.rules.map HRule.body) ++
+    (serE s ++ serStr x)) from rfl]
+  generalize hF : (serTys (g.rules.map HRule.ty) ++ (serBodies (g.rules.map HRule.body) ++
+    (serE s ++ serStr x))).length = F
   simp only [List.length_append] at hF
   have h₁ := length_serE_pos s
   have h₂ := length_serStr_pos x
-  rw [parseRules_ser _ _ _ (by omega)]
+  have h₀ : 1 ≤ (serBodies (g.rules.map HRule.body)).length := by
+    cases g.rules.map HRule.body <;> simp [serBodies]
+  rw [parseTys_ser _ _ _ (by omega)]
   simp only
+  rw [parseBodies_ser _ _ _ (by omega)]
+  simp only [List.length_map, if_true]
   rw [parseE_ser s _ _ (by omega)]
   simp only
   have h₃ := parseStr_ser x [] F (by omega)
   rw [List.append_nil] at h₃
   rw [h₃]
+  simp only [zipWith_ty_body]
 
 /-! ## What is read back serializes to the input -/
 
@@ -318,40 +352,68 @@ theorem parseE_sound : ∀ {f : Nat} {l : List Nat} {e : HExp} {r : List Nat},
       · cases h
     | _ + 13, h => simp [parseE] at h
 
-theorem parseRules_sound : ∀ {f : Nat} {l : List Nat} {rs : List HRule} {r : List Nat},
-    parseRules f l = some (rs, r) → l = serRules rs ++ r
+theorem parseTys_sound : ∀ {f : Nat} {l : List Nat} {ts : List HO.Ty} {r : List Nat},
+    parseTys f l = some (ts, r) → l = serTys ts ++ r
   | _, 0 :: _, _, _, h => by
-    simp only [parseRules, Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h; rfl
-  | f + 1, 1 :: l, rs, r, h => by
-    simp only [parseRules] at h
+    simp only [parseTys, Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h; rfl
+  | f + 1, 1 :: l, ts, r, h => by
+    simp only [parseTys] at h
     split at h
     · rename_i τ r₁ hτ
-      split at h
-      · rename_i e r₂ he
-        simp only [Option.map_eq_some_iff] at h
-        obtain ⟨⟨rs', r'⟩, hrs, hh⟩ := h
-        simp only [Prod.mk.injEq] at hh
-        obtain ⟨rfl, rfl⟩ := hh
-        rw [parseTy_sound hτ, parseE_sound he, parseRules_sound hrs]
-        simp [serRules]
-      · cases h
+      obtain ⟨⟨ts', r'⟩, hts, hh⟩ := Option.map_eq_some_iff.1 h
+      simp only [Prod.mk.injEq] at hh
+      obtain ⟨rfl, rfl⟩ := hh
+      rw [parseTy_sound hτ, parseTys_sound hts]
+      simp [serTys]
     · cases h
-  | 0, 1 :: _, _, _, h | _, [], _, _, h | _, (_ + 2) :: _, _, _, h => by simp [parseRules] at h
+  | 0, 1 :: _, _, _, h | _, [], _, _, h | _, (_ + 2) :: _, _, _, h => by simp [parseTys] at h
+
+theorem parseBodies_sound : ∀ {f : Nat} {l : List Nat} {es : List HExp} {r : List Nat},
+    parseBodies f l = some (es, r) → l = serBodies es ++ r
+  | _, 0 :: _, _, _, h => by
+    simp only [parseBodies, Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h; rfl
+  | f + 1, 1 :: l, es, r, h => by
+    simp only [parseBodies] at h
+    split at h
+    · rename_i e r₁ he
+      obtain ⟨⟨es', r'⟩, hes, hh⟩ := Option.map_eq_some_iff.1 h
+      simp only [Prod.mk.injEq] at hh
+      obtain ⟨rfl, rfl⟩ := hh
+      rw [parseE_sound he, parseBodies_sound hes]
+      simp [serBodies]
+    · cases h
+  | 0, 1 :: _, _, _, h | _, [], _, _, h | _, (_ + 2) :: _, _, _, h => by simp [parseBodies] at h
+
+theorem map_zipWith_ty : ∀ (ts : List HO.Ty) (es : List HExp), ts.length = es.length →
+    (List.zipWith (fun τ e => (⟨τ, e⟩ : HRule)) ts es).map HRule.ty = ts ∧
+      (List.zipWith (fun τ e => (⟨τ, e⟩ : HRule)) ts es).map HRule.body = es
+  | [], [], _ => ⟨rfl, rfl⟩
+  | [], _ :: _, h | _ :: _, [], h => by simp at h
+  | τ :: ts, e :: es, h => by
+    have := map_zipWith_ty ts es (by simpa using h)
+    simp [this.1, this.2]
 
 /-- **What is read back serializes to the input.** -/
 theorem deser_sound {l : List Nat} {g : HGrammar} {s : HExp} {x : List Char} (h : deser l = some (g, s, x)) :
     l = serIn g s x := by
   unfold deser at h
   split at h
-  · rename_i rs l₁ h₁
+  · rename_i ts l₁ h₁
     split at h
-    · rename_i s' l₂ h₂
+    · rename_i bs l₂ h₂
       split at h
-      · rename_i x' h₃
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl, rfl⟩ := h
-        rw [parseRules_sound h₁, parseE_sound h₂, parseStr_sound h₃]
-        simp [serIn]
+      · rename_i hlen
+        split at h
+        · rename_i s' l₃ h₃
+          split at h
+          · rename_i x' h₄
+            simp only [Option.some.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl, rfl⟩ := h
+            obtain ⟨e₁, e₂⟩ := map_zipWith_ty ts bs hlen
+            rw [parseTys_sound h₁, parseBodies_sound h₂, parseE_sound h₃, parseStr_sound h₄]
+            simp only [serIn, e₁, e₂, List.append_nil]
+          · cases h
+        · cases h
       · cases h
     · cases h
   · cases h

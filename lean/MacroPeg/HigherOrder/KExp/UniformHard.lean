@@ -97,7 +97,8 @@ theorem serStr_eq : ∀ x : List Char, serStr x = x.flatMap (fun c => 1 :: serCh
 
 /-- The instance for machine `M`: the grammar and start (constant), then the encoding as a string. -/
 def uT (g : HGrammar) (s : HExp) : Tmpl :=
-  .seq (Tmpl.seqs ((serRules g.rules ++ serE s).map .tok)) (.seq (mapTok charTok encT) (.tok 0))
+  .seq (Tmpl.seqs ((serTys (g.rules.map HRule.ty) ++ (serBodies (g.rules.map HRule.body) ++ serE s)).map .tok))
+    (.seq (mapTok charTok encT) (.tok 0))
 
 theorem uT_WF (g : HGrammar) (s : HExp) : (uT g s).WF 4 :=
   ⟨wf_seqs_tok 4 _, mapTok_WF charTok 4 encT encT_WF, trivial⟩
@@ -105,7 +106,9 @@ theorem uT_WF (g : HGrammar) (s : HExp) : (uT g s).WF 4 :=
 theorem uT_small (g : HGrammar) (s : HExp) (Z : Nat) : (uT g s).Small Z := by
   refine ⟨small_seqs_tok Z _ (fun t ht => ?_), mapTok_small charTok charTok_lt Z encT (encT_small Z), show 0 < 16 by decide⟩
   rcases List.mem_append.1 ht with h | h
-  · exact serRules_lt _ t h
+  · exact serTys_lt _ t h
+  rcases List.mem_append.1 h with h | h
+  · exact serBodies_lt _ t h
   · exact serE_lt _ t h
 
 theorem uT_denote (g : HGrammar) (s : HExp) (w : List Bool) (S T : Nat) (ctr : Nat → Nat) (hn : w.length ≤ S) :

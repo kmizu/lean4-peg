@@ -60,13 +60,20 @@ def serE : HExp → List Nat
   | .lam τ b => 11 :: (serTy τ ++ serE b)
   | .app f a => 12 :: (serE f ++ serE a)
 
-/-- The rules: `1 τ body` per rule, then `0`. -/
-def serRules : List HRule → List Nat
+/-- The rule types: `1 τ` per rule, then `0`. -/
+def serTys : List HO.Ty → List Nat
   | [] => [0]
-  | r :: rs => 1 :: (serTy r.ty ++ (serE r.body ++ serRules rs))
+  | τ :: ts => 1 :: (serTy τ ++ serTys ts)
 
-/-- An instance: the rules, the start expression, the string. -/
-def serIn (g : HGrammar) (s : HExp) (x : List Char) : List Nat := serRules g.rules ++ (serE s ++ serStr x)
+/-- The rule bodies: `1 e` per rule, then `0`. -/
+def serBodies : List HExp → List Nat
+  | [] => [0]
+  | e :: es => 1 :: (serE e ++ serBodies es)
+
+/-- An instance: all rule types (so that a body can be typed in one pass), the rule bodies, the start expression,
+the string. -/
+def serIn (g : HGrammar) (s : HExp) (x : List Char) : List Nat :=
+  serTys (g.rules.map HRule.ty) ++ (serBodies (g.rules.map HRule.body) ++ (serE s ++ serStr x))
 
 /-! ## The codes are prefix-free -/
 
@@ -155,24 +162,45 @@ theorem serE_prefix : ∀ (a b : HExp) (r r' : List Nat), serE a ++ r = serE b +
     obtain ⟨rfl, rfl⟩ := ih _ _ _ h₁
     exact ⟨rfl, rfl⟩
 
-theorem serRules_prefix : ∀ (a b : List HRule) (r r' : List Nat), serRules a ++ r = serRules b ++ r' →
-    a = b ∧ r = r'
-  | [], [], _, _, h => by simpa [serRules] using h
-  | [], _ :: _, _, _, h => by simp [serRules] at h
-  | _ :: _, [], _, _, h => by simp [serRules] at h
-  | ⟨τ, e⟩ :: a, ⟨σ, e'⟩ :: b, r, r', h => by
-    simp only [serRules, List.cons_append, List.append_assoc, List.cons.injEq, true_and] at h
+theorem serTys_prefix : ∀ (a b : List HO.Ty) (r r' : List Nat), serTys a ++ r = serTys b ++ r' → a = b ∧ r = r'
+  | [], [], _, _, h => by simpa [serTys] using h
+  | [], _ :: _, _, _, h => by simp [serTys] at h
+  | _ :: _, [], _, _, h => by simp [serTys] at h
+  | τ :: a, σ :: b, r, r', h => by
+    simp only [serTys, List.cons_append, List.append_assoc, List.cons.injEq, true_and] at h
     obtain ⟨rfl, h₁⟩ := serTy_prefix _ _ _ _ h
-    obtain ⟨rfl, h₂⟩ := serE_prefix _ _ _ _ h₁
-    obtain ⟨rfl, rfl⟩ := serRules_prefix a b r r' h₂
+    obtain ⟨rfl, rfl⟩ := serTys_prefix a b r r' h₁
     exact ⟨rfl, rfl⟩
+
+theorem serBodies_prefix : ∀ (a b : List HExp) (r r' : List Nat), serBodies a ++ r = serBodies b ++ r' →
+    a = b ∧ r = r'
+  | [], [], _, _, h => by simpa [serBodies] using h
+  | [], _ :: _, _, _, h => by simp [serBodies] at h
+  | _ :: _, [], _, _, h => by simp [serBodies] at h
+  | e :: a, e' :: b, r, r', h => by
+    simp only [serBodies, List.cons_append, List.append_assoc, List.cons.injEq, true_and] at h
+    obtain ⟨rfl, h₁⟩ := serE_prefix _ _ _ _ h
+    obtain ⟨rfl, rfl⟩ := serBodies_prefix a b r r' h₁
+    exact ⟨rfl, rfl⟩
+
+/-- Rules are determined by their types and their bodies. -/
+theorem rules_ext : ∀ {rs rs' : List HRule}, rs.map HRule.ty = rs'.map HRule.ty →
+    rs.map HRule.body = rs'.map HRule.body → rs = rs'
+  | [], [], _, _ => rfl
+  | [], _ :: _, h, _ => by simp at h
+  | _ :: _, [], h, _ => by simp at h
+  | ⟨τ, e⟩ :: rs, ⟨τ', e'⟩ :: rs', h₁, h₂ => by
+    simp only [List.map_cons, List.cons.injEq] at h₁ h₂
+    rw [h₁.1, h₂.1, rules_ext h₁.2 h₂.2]
 
 /-- **The serialization is injective.** -/
 theorem serIn_inj {g g' : HGrammar} {s s' : HExp} {x x' : List Char} (h : serIn g s x = serIn g' s' x') :
     g = g' ∧ s = s' ∧ x = x' := by
-  obtain ⟨hr, h₁⟩ := serRules_prefix _ _ _ _ h
-  obtain ⟨rfl, h₂⟩ := serE_prefix _ _ _ _ h₁
-  obtain ⟨rfl, -⟩ := serStr_prefix x x' [] [] (by simpa using h₂)
+  obtain ⟨ht, h₁⟩ := serTys_prefix _ _ _ _ h
+  obtain ⟨hb, h₂⟩ := serBodies_prefix _ _ _ _ h₁
+  obtain ⟨rfl, h₃⟩ := serE_prefix _ _ _ _ h₂
+  obtain ⟨rfl, -⟩ := serStr_prefix x x' [] [] (by simpa using h₃)
+  have hr := rules_ext ht hb
   cases g; cases g'
   simp only at hr
   exact ⟨by rw [hr], rfl, rfl⟩
@@ -234,21 +262,30 @@ theorem serE_lt : ∀ (e : HExp), ∀ t ∈ serE e, t < 16
     · exact serTy_lt τ t h
     · exact serE_lt b t h
 
-theorem serRules_lt : ∀ (rs : List HRule), ∀ t ∈ serRules rs, t < 16
-  | [], t, ht => by simp [serRules] at ht; omega
-  | r :: rs, t, ht => by
-    simp only [serRules, List.mem_cons, List.mem_append] at ht
-    rcases ht with h | h | h | h
+theorem serTys_lt : ∀ (ts : List HO.Ty), ∀ t ∈ serTys ts, t < 16
+  | [], t, ht => by simp [serTys] at ht; omega
+  | τ :: ts, t, ht => by
+    simp only [serTys, List.mem_cons, List.mem_append] at ht
+    rcases ht with h | h | h
     · omega
     · exact serTy_lt _ t h
+    · exact serTys_lt ts t h
+
+theorem serBodies_lt : ∀ (es : List HExp), ∀ t ∈ serBodies es, t < 16
+  | [], t, ht => by simp [serBodies] at ht; omega
+  | e :: es, t, ht => by
+    simp only [serBodies, List.mem_cons, List.mem_append] at ht
+    rcases ht with h | h | h
+    · omega
     · exact serE_lt _ t h
-    · exact serRules_lt rs t h
+    · exact serBodies_lt es t h
 
 theorem serIn_lt (g : HGrammar) (s : HExp) (x : List Char) : ∀ t ∈ serIn g s x, t < 16 := by
   intro t ht
   simp only [serIn, List.mem_append] at ht
-  rcases ht with h | h | h
-  · exact serRules_lt _ t h
+  rcases ht with h | h | h | h
+  · exact serTys_lt _ t h
+  · exact serBodies_lt _ t h
   · exact serE_lt _ t h
   · exact serStr_lt _ t h
 
