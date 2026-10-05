@@ -165,15 +165,16 @@ variable {kt : Nat} (M : TM kt) (K : Nat)
 
 local notation "τK" => lvTy K
 
-def tabRules : List HRule :=
-  [⟨Ty.p ⇒ Ty.p ⇒ Ty.p, lamsT [.p, .p] (ftsBody K)⟩] ++
-  (List.range 3).map (fun s => ⟨τK ⇒ τK ⇒ Ty.p ⇒ Ty.p, lamsT [τK, τK, .p] (inBody K s)⟩) ++
-  (List.range M.nq).map (fun q => ⟨τK ⇒ Ty.p, lamsT [τK] (stateBody M K q)⟩) ++
-  (List.finRange kt).map (fun τ => ⟨τK ⇒ τK ⇒ Ty.p, lamsT [τK, τK] (headBody M K τ)⟩) ++
-  (List.finRange kt).flatMap (fun τ => (List.range M.na).map (fun s =>
-    ⟨τK ⇒ τK ⇒ Ty.p, lamsT [τK, τK] (symBody M K τ s)⟩)) ++
-  (List.finRange kt).flatMap (fun τ => (List.range M.na).map (fun s =>
-    ⟨τK ⇒ τK ⇒ Ty.p, lamsT [τK, τK] (readBody M K τ s)⟩))
+def tabFT : List HRule := [⟨Ty.p ⇒ Ty.p ⇒ Ty.p, lamsT [.p, .p] (ftsBody K)⟩]
+def tabIN : List HRule := (List.range 3).map (fun s => ⟨τK ⇒ τK ⇒ Ty.p ⇒ Ty.p, lamsT [τK, τK, .p] (inBody K s)⟩)
+def tabST : List HRule := (List.range M.nq).map (fun q => ⟨τK ⇒ Ty.p, lamsT [τK] (stateBody M K q)⟩)
+def tabHD : List HRule := (List.finRange kt).map (fun τ => ⟨τK ⇒ τK ⇒ Ty.p, lamsT [τK, τK] (headBody M K τ)⟩)
+def tabSY : List HRule := (List.finRange kt).flatMap (fun τ => (List.range M.na).map (fun s =>
+  ⟨τK ⇒ τK ⇒ Ty.p, lamsT [τK, τK] (symBody M K τ s)⟩))
+def tabRD : List HRule := (List.finRange kt).flatMap (fun τ => (List.range M.na).map (fun s =>
+  ⟨τK ⇒ τK ⇒ Ty.p, lamsT [τK, τK] (readBody M K τ s)⟩))
+
+def tabRules : List HRule := tabFT K ++ (tabIN K ++ (tabST M K ++ (tabHD M K ++ (tabSY M K ++ tabRD M K))))
 
 /-- The levels `0, …, K` and the tableau of `M`. -/
 def gT : HGrammar := ⟨level1Rules ++ (List.range K).flatMap blockRules ++ tabRules M K⟩
