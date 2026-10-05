@@ -119,7 +119,7 @@ theorem Rep.pos0 {L : Lists k} {τ : Tapes k} (hR : Rep L τ) (i : Fin k) : τ.p
 
 theorem Lists.set_self (L : Lists k) (i : Fin k) (l : List Nat) : L.set i l i = l := by simp [Lists.set]
 
-theorem Lists.set_ne (L : Lists k) {i j : Fin k} (h : j ≠ i) (l : List Nat) : L.set i l j = L j := by
+theorem Lists.set_ne_m (L : Lists k) {i j : Fin k} (h : j ≠ i) (l : List Nat) : L.set i l j = L j := by
   simp [Lists.set, h]
 
 theorem lenOK_of_set {L : Lists k} {B : Nat} {i : Fin k} {l : List Nat} (hB : LenOK B (L.set i l))
@@ -128,7 +128,7 @@ theorem lenOK_of_set {L : Lists k} {B : Nat} {i : Fin k} {l : List Nat} (hB : Le
   have := hB j
   rcases eq_or_ne' j i with rfl | h
   · rw [Lists.set_self] at this; omega
-  · rw [Lists.set_ne _ h] at this; exact this
+  · rw [Lists.set_ne_m _ h] at this; exact this
 
 theorem lenOK_set_le {L : Lists k} {B : Nat} (hB : LenOK B L) (i : Fin k) {l : List Nat}
     (hle : l.length ≤ (L i).length) : LenOK B (L.set i l) := by
@@ -136,7 +136,7 @@ theorem lenOK_set_le {L : Lists k} {B : Nat} (hB : LenOK B L) (i : Fin k) {l : L
   have := hB j
   rcases eq_or_ne' j i with rfl | h
   · rw [Lists.set_self]; omega
-  · rw [Lists.set_ne _ h]; exact this
+  · rw [Lists.set_ne_m _ h]; exact this
 
 theorem tfits_of {L : Lists k} {τ : Tapes k} {B : Nat} (hR : Rep L τ) (hB : LenOK B L) (σ : Tapes k)
     (hc : σ.cells = τ.cells) (hp : ∀ j, σ.pos j ≤ (L j).length + 1) : TFits B σ := by
@@ -261,7 +261,7 @@ theorem rep_push {L : Lists k} {τ : Tapes k} (hR : Rep L τ) (i : Fin k) (v : N
       dsimp only
       rw [if_neg (by omega)]
       exact (hR j).2.tail (by omega)
-  · rw [Lists.set_ne _ hj]
+  · rw [Lists.set_ne_m _ hj]
     simp only [hj, false_and, if_false]
     exact (hR j).2
 
@@ -299,7 +299,7 @@ theorem rep_pop {L : Lists k} {τ : Tapes k} (hR : Rep L τ) (i : Fin k) :
         split
         · rfl
         · exact (hR j).2.tail (by omega)
-  · rw [Lists.set_ne _ hj]
+  · rw [Lists.set_ne_m _ hj]
     simp only [hj, false_and, if_false]
     exact (hR j).2
 
@@ -318,7 +318,7 @@ theorem rep_copy {L : Lists k} {τ : Tapes k} (hR : Rep L τ) {i j : Fin k} (hij
       funext x
       rcases eq_or_ne' x j with rfl | hx
       · simp [Lists.set_self]
-      · rw [Lists.set_ne _ hx]
+      · rw [Lists.set_ne_m _ hx]
     rw [hs]
     intro x
     exact hR x
@@ -397,7 +397,7 @@ theorem copyP_spec {L : Lists k} {τ : Tapes k} {B : Nat} (i j : Fin k) (hij : i
         then τ.cells i (L i).length else τ.cells x y⟩ : Tapes k) = τ' at hR'
   have hlenj : (L j).length ≤ ((L.set j (L j ++ (L i).getLast?.toList)) j).length := by
     rw [Lists.set_self]; simp
-  have hleni : ((L.set j (L j ++ (L i).getLast?.toList)) i) = L i := Lists.set_ne _ hij _
+  have hleni : ((L.set j (L j ++ (L i).getLast?.toList)) i) = L i := Lists.set_ne_m _ hij _
   -- step 1
   have h1 := goEnd_spec j hR hB0
   -- step 2
