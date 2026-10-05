@@ -69,3 +69,4 @@ import MacroPeg.HigherOrder.KExp.Run
 import MacroPeg.HigherOrder.KExp.Hard
 import MacroPeg.HigherOrder.KExp.Uniform
 import MacroPeg.HigherOrder.KExp.UniformHard
+import MacroPeg.HigherOrder.KExp.LmTime
