@@ -36,7 +36,7 @@ def tkM (N : Nat) : Nat := N + 1114113
 
 theorem chB_eq (N : Nat) : chB N = tkM N * tkM N := rfl
 
-theorem frameCost_eq (N : Nat) : frameCost N = 100 * (chB N * tkM N) := rfl
+theorem litFrameCost_eq (N : Nat) : frameCost N = 100 * (chB N * tkM N) := rfl
 
 /-- Two character reads and one string read fit into `frameCost N`. -/
 theorem tokCost_le {L N : Nat} (h : L ≤ N) :
@@ -50,18 +50,18 @@ theorem tokCost_le {L N : Nat} (h : L ≤ N) :
     exact Nat.mul_le_mul (by omega) (by omega)
   have e : tkM N * (16 * chB N) = 16 * (chB N * tkM N) := by
     rw [Nat.mul_left_comm, Nat.mul_comm (tkM N)]
-  rw [frameCost_eq]
+  rw [litFrameCost_eq]
   have := chB_big N
   omega
 
 /-! ## Token programs and `readExpr` -/
 
-theorem tokOK_run {p : NProg NK} {s : PSt} {K r : List Nat} {T : Nat} {s' : PSt} (he : readExpr s K = s')
+theorem litTokOK_run {p : NProg NK} {s : PSt} {K r : List Nat} {T : Nat} {s' : PSt} (he : readExpr s K = s')
     (h : NRuns p (enc { s with ctl := K, tk := r }) (enc s') T) (hok : s'.ok = s.ok) (hs : s.ok = true) :
     TokOK p s K r T :=
   ⟨fun _ => he ▸ h, fun hf => by rw [he, hok, hs] at hf; cases hf⟩
 
-theorem tokOK_halt {p : NProg NK} {s : PSt} {K r : List Nat} {T : Nat} (he : readExpr s K = s.fail)
+theorem litTokOK_halt {p : NProg NK} {s : PSt} {K r : List Nat} {T : Nat} (he : readExpr s K = s.fail)
     (h : ∃ S', NHalts p (enc { s with ctl := K, tk := r }) false S' T) : TokOK p s K r T :=
   ⟨fun ht => absurd ht (by rw [he]; simp (config := { decide := true }) [PSt.fail]), fun _ => h⟩
 
@@ -143,7 +143,7 @@ theorem tok2_ok (s : PSt) (K r : List Nat) (htk : s.tk = 2 :: r) (hs : s.ok = tr
   | none =>
     have he : readExpr s K = s.fail := by simp only [readExpr, htk, hp]
     obtain ⟨S', x₁⟩ := charP_fail SA (by decide) (by decide) (enc t) (r := r) rfl hp
-    exact tokOK_halt he ⟨S', x₁.seq.mono (by omega)⟩
+    exact litTokOK_halt he ⟨S', x₁.seq.mono (by omega)⟩
   | some p =>
     obtain ⟨c, r₁⟩ := p
     have he : readExpr s K = s.leaf ⟨2, c.toNat, 0, s.cur⟩ 0 r₁ K := by simp only [readExpr, htk, hp]
@@ -153,7 +153,7 @@ theorem tok2_ok (s : PSt) (K r : List Nat) (htk : s.tk = 2 :: r) (hs : s.ok = tr
     have x₂ := nruns_pushZ SB ((enc { t with tk := r₁ }).set SA [c.toNat])
     rw [Lists.set_ne _ _ (by decide), enc_scratch _ SB (by decide), List.nil_append] at x₂
     have x₃ := leafOutP_runs { t with tk := r₁ } 2 c.toNat 0
-    exact tokOK_run he ((x₁.seq (x₂.seq x₃)).mono (by omega)) rfl hs
+    exact litTokOK_run he ((x₁.seq (x₂.seq x₃)).mono (by omega)) rfl hs
 
 /-! ## Token `3`: a range of characters -/
 
@@ -169,7 +169,7 @@ theorem tok3_ok (s : PSt) (K r : List Nat) (htk : s.tk = 3 :: r) (hs : s.ok = tr
   | none =>
     have he : readExpr s K = s.fail := by simp only [readExpr, htk, hp]
     obtain ⟨S', x₁⟩ := charP_fail SA (by decide) (by decide) (enc t) (r := r) rfl hp
-    exact tokOK_halt he ⟨S', x₁.seq.mono (by omega)⟩
+    exact litTokOK_halt he ⟨S', x₁.seq.mono (by omega)⟩
   | some p =>
     obtain ⟨lo, r₁⟩ := p
     have hlen₁ := parseChar_len hp
@@ -186,7 +186,7 @@ theorem tok3_ok (s : PSt) (K r : List Nat) (htk : s.tk = 3 :: r) (hs : s.ok = tr
     | none =>
       have he : readExpr s K = s.fail := by simp only [readExpr, htk, hp, hp₂]
       obtain ⟨S', x₂⟩ := charP_fail SB (by decide) (by decide) B hBT hp₂
-      exact tokOK_halt he ⟨S', (x₁.seqH x₂.seq).mono (by omega)⟩
+      exact litTokOK_halt he ⟨S', (x₁.seqH x₂.seq).mono (by omega)⟩
     | some p₂ =>
       obtain ⟨hi', r₂⟩ := p₂
       have he : readExpr s K = s.leaf ⟨3, lo.toNat, hi'.toNat, s.cur⟩ 0 r₂ K := by
@@ -199,7 +199,7 @@ theorem tok3_ok (s : PSt) (K r : List Nat) (htk : s.tk = 3 :: r) (hs : s.ok = tr
         exact Lists.set_comm (by decide : SA ≠ TK) _ _
       rw [e] at x₂
       have x₃ := leafOutP_runs { t₁ with tk := r₂ } 3 lo.toNat hi'.toNat
-      exact tokOK_run he ((x₁.seq (x₂.seq x₃)).mono (by omega)) rfl hs
+      exact litTokOK_run he ((x₁.seq (x₂.seq x₃)).mono (by omega)) rfl hs
 
 /-! ## Token `4`: a string -/
 
@@ -220,7 +220,7 @@ theorem tok4_ok (s : PSt) (K r : List Nat) (htk : s.tk = 4 :: r) (hs : s.ok = tr
     have he : readExpr s K = s.fail := by simp only [readExpr, htk, hp]
     obtain ⟨S', x₁⟩ := parseStrP_fail TK SA SC ST SU SG SF LTs (by decide) (by decide) (by decide) true
       (by decide) (enc t) (l := r) rfl (Nat.le_refl _) hp
-    exact tokOK_halt he ⟨S', x₁.seq.mono (by omega)⟩
+    exact litTokOK_halt he ⟨S', x₁.seq.mono (by omega)⟩
   | some p =>
     obtain ⟨str, r₁⟩ := p
     have he : readExpr s K = { s.leaf ⟨4, s.lt.length, 0, s.cur⟩ 0 r₁ K with lt := s.lt ++ [str.map Char.toNat] } := by
@@ -257,6 +257,6 @@ theorem tok4_ok (s : PSt) (K r : List Nat) (htk : s.tk = 4 :: r) (hs : s.ok = tr
       simp (config := { decide := true }) [S₄, S₃, S₂, S₁, Lists.set, h1, h8, h16, h18, h24]
     rw [e] at x₅
     have x₆ := leafOutP_runs t₂ 4 t.lt.length 0
-    exact tokOK_run he ((x₁.seq (x₂.seq (x₃.seq (x₄.seq (x₅.seq x₆))))).mono (by omega)) rfl hs
+    exact litTokOK_run he ((x₁.seq (x₂.seq (x₃.seq (x₄.seq (x₅.seq x₆))))).mono (by omega)) rfl hs
 
 end Shallot.MacroPeg.Mach
