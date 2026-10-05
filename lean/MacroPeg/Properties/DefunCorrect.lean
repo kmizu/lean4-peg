@@ -318,6 +318,88 @@ theorem obs_failAlways : runObs (run (n + 2) MExp.failAlways x) = some none := b
   unfold MExp.failAlways
   rw [mpegRun.eq_def]; dsimp only; rw [mpegRun.eq_def]; rfl
 
+theorem obs_eps : runObs (run (n + 1) .eps x) = some (some x) := by rw [mpegRun.eq_def]; rfl
+theorem obs_lam (a : Nat) (b : MExp) : runObs (run (n + 1) (.lam a b) x) = some (some x) := by
+  rw [mpegRun.eq_def]; rfl
+theorem obs_dbg (b : MExp) : runObs (run (n + 1) (.dbg b) x) = some (some x) := by rw [mpegRun.eq_def]; rfl
+theorem obs_param (k : Nat) : runObs (run (n + 1) (.param k) x) = some none := by rw [mpegRun.eq_def]; rfl
+theorem obs_callParam (k : Nat) (m : List MExp) : runObs (run (n + 1) (.callParam k m) x) = some none := by
+  rw [mpegRun.eq_def]; rfl
+
+/-- Whatever `failAlways` returns is a failure. -/
+theorem obs_failAlways_eq {r : Option (List Char)} (h : runObs (run (n + 1) MExp.failAlways x) = some r) :
+    r = none := by
+  cases n with
+  | zero => unfold MExp.failAlways at h; rw [mpegRun.eq_def] at h; dsimp only at h; rw [mpegRun.eq_def] at h; cases h
+  | succ n => rw [obs_failAlways] at h; cases h; rfl
+
 end Steps
+
+/-! ## The rules of the first-order grammar -/
+
+section Rules
+
+variable {g : MGrammar} {Λ : List (Nat × MExp)}
+
+theorem indexIn_lt {α : Type} [DecidableEq α] {a : α} {l : List α} (h : a ∈ l) : indexIn a l < l.length :=
+  (List.getElem?_eq_some_iff.1 (getElem?_indexIn a l h)).1
+
+/-- A tag computed in a closed scope names a lambda of `Λ` or none. -/
+theorem tagOf_nil_lt (a : MExp) : tagOf Λ [] a < Λ.length + 1 := by
+  unfold tagOf; split
+  · simp
+  · split
+    · have := indexIn_lt (by assumption); omega
+    · omega
+  · omega
+
+theorem tagsOf_mem_vecs {args : List MExp} {m : Nat} (ha : m = args.length) :
+    tagsOf Λ [] args ∈ vecs (Λ.length + 1) m := by
+  refine (mem_vecs _ _ _).2 ⟨by simp [tagsOf, ha], fun k hk => ?_⟩
+  simp only [tagsOf, List.mem_map] at hk
+  obtain ⟨a, _, rfl⟩ := hk
+  exact tagOf_nil_lt a
+
+/-- The first-order grammar has the specialized body for every spec. -/
+theorem ruleAt_defun {u : Nat} {v : List Nat} (hu : u < g.rules.length + Λ.length)
+    (hv : v ∈ vecs (Λ.length + 1) (unitRule g Λ u).arity) :
+    ruleAtM (defunGrammar g Λ).rules (specCode g Λ u v) =
+      some ⟨(unitRule g Λ u).arity, tr g Λ v (unitRule g Λ u).body⟩ := by
+  have hmem : (u, v) ∈ specsOf g Λ := by
+    simp only [specsOf, List.mem_flatMap, List.mem_range, List.mem_map]
+    exact ⟨u, hu, v, hv, rfl⟩
+  rw [ruleAtM_eq_getElem?, defunGrammar, List.getElem?_map, specCode, getElem?_indexIn _ _ hmem]
+  rfl
+
+theorem unitRule_rule {i : Nat} {r : MRule} (hr : ruleAtM g.rules i = some r) :
+    i < g.rules.length ∧ unitRule g Λ i = r := by
+  rw [ruleAtM_eq_getElem?] at hr
+  obtain ⟨hi, he⟩ := List.getElem?_eq_some_iff.1 hr
+  refine ⟨hi, ?_⟩
+  simp only [unitRule, hi, ↓reduceIte, List.getD_eq_getElem?_getD, hr, Option.getD_some]
+
+theorem ruleAtM_none_iff {i : Nat} : ruleAtM g.rules i = none ↔ ¬ i < g.rules.length := by
+  rw [ruleAtM_eq_getElem?, List.getElem?_eq_none_iff]; omega
+
+theorem unitRule_lam {a : Nat} {b : MExp} (h : (a, b) ∈ Λ) :
+    unitRule g Λ (g.rules.length + indexIn (a, b) Λ) = ⟨a, b⟩ := by
+  simp only [unitRule, Nat.add_sub_cancel_left, getElem?_indexIn _ _ h]
+  simp only [ite_eq_right_iff]
+  intro hlt; omega
+
+/-- One step of a translated unit call. -/
+theorem obs_callUnit {n : Nat} {x : List Char} {u : Nat} {args : List MExp} (hu : u < g.rules.length + Λ.length) :
+    runObs (mpegRun (defunGrammar g Λ) .callByName (n + 1) (callUnit g Λ [] u args (trArgs g Λ [] args)) x) =
+      if (unitRule g Λ u).arity = args.length then
+        runObs (mpegRun (defunGrammar g Λ) .callByName n (tr g Λ [] (MExp.subst args (unitRule g Λ u).body)) x)
+      else runObs (mpegRun (defunGrammar g Λ) .callByName (n + 1) MExp.failAlways x) := by
+  unfold callUnit
+  split
+  · rename_i ha
+    rw [obs_call (ruleAt_defun hu (tagsOf_mem_vecs ha)) (by simp [trArgs_eq_map, ha]),
+      tr_subst]
+  · rfl
+
+end Rules
 
 end Shallot.MacroPeg
