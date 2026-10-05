@@ -453,6 +453,23 @@ TQBF の PSPACE 完全性（Stockmeyer–Meyer）は外部の事実で、符号�
 外部の事実として残るのは APSPACE = EXPTIME（Chandra–Kozen–Stockmeyer）と、APSPACE の機械を全ての枝で止まるようにできること、
 TQBF の PSPACE 完全性。費用モデルは評価器の手数（表の参照 1、文字列比較は長さ + 1）で、チューリング機械は形式化していない。
 
+## TQBF は PSPACE 完全（`Complexity/`）
+
+計算モデルから組み立てた形式化。モデルは決定性 `k` テープ Turing 機械（入力は 2 進、空白 `0`、入力ビットは記号 `1`/`2`）、
+`PSPACE`・多項式時間計算可能・多項式時間多対一帰着・`PSPACEHard`・`PSPACEComplete` は `TM.lean` で定義。
+QBF は冠頭形＋RPN 母式、符号は 4 ビットトークン列、`TQBF` は全域復号 `Qbf.decode` で定義（符号でない列も何らかの式に復号される）。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `reduction_correct` | 領域 `s` で `L` を判定する `M` について `L w ↔ TQBF (redQbf M (s |w|) w).encode`（Savitch 型の到達可能性の式、鳩の巣で `2^T` 歩以内の停止） | 標準 3 つ |
+| `tqbf_in_pspace` | `PSPACE TQBF`（リスト機械上の判定器: 復号 → 名前の静的解決 → フレームによる量化子評価、二次の領域） | 標準 3 つ |
+| `tqbf_hard` | `PSPACEHard TQBF`（帰着の出力をテンプレートで記述し、テンプレート解釈器で多項式時間に生成） | 標準 3 つ |
+| `tqbf_pspace_complete` | `PSPACEComplete TQBF` | 標準 3 つ |
+
+中間層: 構造化プログラム → TM のコンパイラ（`run_of_exec`）、リスト機械 → 構造化プログラム（`compile_exec`）、
+`lm_pspace` / `lm_polytime`（リスト機械で書いた判定器・計算を TM の `PSPACE` / `PolyTimeComputable` に移す）。
+報告: `docs/notes/tqbf-pspace-complete.md`。
+
 ## CFG 研究: `CFL ⊊ MPEL^CBN_1`（`Cfg/` / `MacroPeg/PegEmbed.lean` / `Shallot/Peg/Examples.lean`）
 
 kmizu/macro_peg（2016年 SWoPP 原稿）が発見的に示唆していた「Macro PEL は CFL を

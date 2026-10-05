@@ -27,6 +27,7 @@ import Shallot.Peg.MidpointObstruction
 import Shallot.Peg.GrammarExtend
 import MacroPeg
 import Cfg
+import Complexity
 
 /-!
 # Axiom audit
@@ -1260,3 +1261,21 @@ machine-checked witnesses for the `subst` fix and for the two side conditions. -
 /-- info: 'Shallot.MacroPeg.atm_by_decision' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.atm_by_decision
+
+/-! ## TQBF is PSPACE-complete (Complexity) -/
+
+/-- info: 'Complexity.reduction_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.reduction_correct
+
+/-- info: 'Complexity.tqbf_in_pspace' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.tqbf_in_pspace
+
+/-- info: 'Complexity.tqbf_hard' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.tqbf_hard
+
+/-- info: 'Complexity.tqbf_pspace_complete' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.tqbf_pspace_complete
