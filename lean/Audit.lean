@@ -1280,6 +1280,28 @@ machine-checked witnesses for the `subst` fix and for the two side conditions. -
 #guard_msgs in
 #print axioms Shallot.MacroPeg.decideSlice_none_iff
 
+-- Higher-order Macro PEG with closures (`MacroPeg/HigherOrder/`).
+
+/-- info: 'Shallot.MacroPeg.HO.hrun_mono' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.HO.hrun_mono
+
+/-- info: 'Shallot.MacroPeg.HO.hobs_det' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.HO.hobs_det
+
+/-- info: 'Shallot.MacroPeg.HO.instArgs_emb' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.HO.instArgs_emb
+
+/-- info: 'Shallot.MacroPeg.HO.emb_obs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.HO.emb_obs
+
+/-- info: 'Shallot.MacroPeg.HO.embGrammar_order' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.HO.embGrammar_order
+
 /-- info: 'Shallot.MacroPeg.atm_by_decision' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.atm_by_decision

@@ -38,3 +38,4 @@ import MacroPeg.Properties.DefunCorrect
 import MacroPeg.HigherOrder.Syntax
 import MacroPeg.HigherOrder.Semantics
 import MacroPeg.HigherOrder.Examples
+import MacroPeg.HigherOrder.Embed
