@@ -313,4 +313,131 @@ theorem itemsOf_grow {tt ct tt' ct' : List (Nat × Nat)} {lt lt' : List (List Na
     unfold itemsOf at this
     simp [this]
 
+/-! ## Variables, rules, new contexts -/
+
+/-- The variable lookup agrees with the context. -/
+theorem varTy_ctx {tt ct : List (Nat × Nat)} : ∀ (c : Nat) {Γ : List HO.Ty}, ctxOf tt ct c = some Γ → ∀ i,
+    (varTy ct c i).bind (tyOf tt) = Γ[i]? ∧ ∀ t, varTy ct c i = some t → t ≤ tt.length
+  | 0, Γ, h, i => by
+    rw [ctxOf] at h; cases h
+    cases i <;> simp [varTy]
+  | k + 1, Γ, h, i => by
+    rw [ctxOf] at h
+    split at h
+    · rename_i par t hk
+      split at h
+      · rename_i hp
+        split at h
+        · rename_i τ Δ hτ hΔ
+          simp only [Option.some.injEq] at h
+          subst h
+          cases i with
+          | zero =>
+            simp only [varTy, hk, Option.map_some, Option.bind_some, hτ, List.getElem?_cons_zero,
+              Option.some.injEq, forall_eq', true_and]
+            exact tyOf_le hτ
+          | succ i =>
+            simp only [varTy, hk, hp, if_true, List.getElem?_cons_succ]
+            exact varTy_ctx par hΔ i
+        · cases h
+      · cases h
+    · cases h
+
+theorem mapM_getElem? {α β : Type} {f : α → Option β} : ∀ {l : List α} {bs : List β}, l.mapM f = some bs →
+    ∀ i : Nat, (l[i]?).bind f = bs[i]?
+  | [], bs, h, i => by
+    simp only [List.mapM_nil, pure, Option.some.injEq] at h; subst h; simp
+  | a :: l, bs, h, i => by
+    rw [List.mapM_cons] at h
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨b, hb, bs', hbs, rfl⟩ := h
+    cases i with
+    | zero => simp [hb]
+    | succ i => simp only [List.getElem?_cons_succ]; exact mapM_getElem? hbs i
+
+theorem mapM_tyOf_grow {tt tt' : List (Nat × Nat)} (hw : TTWF tt) (he : ∃ e, tt' = tt ++ e) :
+    ∀ {l : List Nat} {R : List HO.Ty}, l.mapM (tyOf tt) = some R → l.mapM (tyOf tt') = some R
+  | [], _, h => h
+  | a :: l, R, h => by
+    rw [List.mapM_cons] at h ⊢
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨b, hb, bs', hbs, rfl⟩ := h
+    simp [tyOf_grow hw he hb, mapM_tyOf_grow hw he hbs]
+
+theorem mapM_tyOf_le {tt : List (Nat × Nat)} : ∀ {l : List Nat} {R : List HO.Ty}, l.mapM (tyOf tt) = some R →
+    ∀ t ∈ l, t ≤ tt.length
+  | [], _, _, t, ht => by simp at ht
+  | a :: l, R, h, t, ht => by
+    rw [List.mapM_cons] at h
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨b, hb, bs', hbs, rfl⟩ := h
+    rcases List.mem_cons.1 ht with rfl | ht
+    · exact tyOf_le hb
+    · exact mapM_tyOf_le hbs t ht
+
+/-- A new innermost binder. -/
+theorem ctxOf_snoc {tt ct : List (Nat × Nat)} (hw : TTWF tt) (hc : CTWF tt ct) {c t : Nat} (hcl : c ≤ ct.length)
+    {Γ : List HO.Ty} {τ : HO.Ty} (hΓ : ctxOf tt ct c = some Γ) (hτ : tyOf tt t = some τ) :
+    ctxOf tt (ct ++ [(c, t)]) (ct.length + 1) = some (τ :: Γ) := by
+  rw [ctxOf]
+  simp only [List.getElem?_concat_length, hcl, if_true, hτ]
+  rw [ctxOf_extend hw hc ⟨[], by simp⟩ ⟨[(c, t)], rfl⟩ c hcl, hΓ]
+
+theorem CTWF.snoc {tt ct : List (Nat × Nat)} (hc : CTWF tt ct) {c t : Nat} (hcl : c ≤ ct.length) (ht : t ≤ tt.length) :
+    CTWF tt (ct ++ [(c, t)]) := by
+  intro k hk
+  by_cases hkl : k < ct.length
+  · rw [List.getElem_append_left hkl]; exact hc k hkl
+  · simp at hk
+    have : k = ct.length := by omega
+    subst this
+    simp; omega
+
+theorem CTWF.grow {tt tt' ct : List (Nat × Nat)} (hc : CTWF tt ct) (he : ∃ e, tt' = tt ++ e) : CTWF tt' ct := by
+  obtain ⟨e, rfl⟩ := he
+  intro k hk; have := hc k hk; simp; omega
+
+theorem parseStr_full {f : Nat} {l : List Nat} {str : List Char} {r : List Nat} (h : parseStr f l = some (str, r)) :
+    parseStr l.length l = some (str, r) := by
+  have hl := parseStr_sound h
+  subst hl
+  apply parseStr_ser
+  simp; omega
+
+/-! ## Reading an expression: the shape of the result -/
+
+/-- The machine finished reading an expression of type `τ` with items `is`. -/
+def ExprDone (s : PSt) (K rest : List Nat) (n : Nat) (τ : HO.Ty) (is : List Item) : Prop :=
+  ∃ s', Reach s s' n ∧ s'.tk = rest ∧ s'.ctl = K ∧ s'.cur = s.cur ∧ s'.ok = s.ok ∧ s'.rt = s.rt ∧
+    s'.bodies = s.bodies ∧ s'.start = s.start ∧ s'.x = s.x ∧
+    (∃ i, s'.ty = i :: s.ty ∧ tyOf s'.tt i = some τ) ∧
+    (∃ outE, s'.out = outE.reverse ++ s.out ∧ itemsOf s'.tt s'.ct s'.lt outE = some is) ∧
+    Grows s.tt s.ct s.lt s'.tt s'.ct s'.lt ∧ TTWF s'.tt ∧ CTWF s'.tt s'.ct
+
+/-- What reading an expression does: finish with its type and items, or fail. -/
+def ExprRes (s : PSt) (K rest : List Nat) (L : Nat) : Option (HO.Ty × List Item) → Prop
+  | some (τ, is) => ∃ n, ExprDone s K rest n τ is ∧ n + 3 * rest.length ≤ 3 * L
+  | none => Fails s
+
+theorem itemsOf_append {tt ct : List (Nat × Nat)} {lt : List (List Nat)} {a b : List MItem} {x y : List Item}
+    (ha : itemsOf tt ct lt a = some x) (hb : itemsOf tt ct lt b = some y) : itemsOf tt ct lt (a ++ b) = some (x ++ y) := by
+  unfold itemsOf at *
+  rw [List.mapM_append, ha, hb]; rfl
+
+theorem itemsOf_single {tt ct : List (Nat × Nat)} {lt : List (List Nat)} {it : MItem} {i : Item}
+    (h : itemOf tt ct lt it = some i) : itemsOf tt ct lt [it] = some [i] := by
+  unfold itemsOf; simp [List.mapM_cons, h]
+
+theorem itemOf_mk {tt ct : List (Nat × Nat)} {lt : List (List Nat)} {it : MItem} {op : Op} {Γ : List HO.Ty}
+    (hop : opOf tt lt it = some op) (hΓ : ctxOf tt ct it.ctx = some Γ) : itemOf tt ct lt it = some ⟨op, Γ⟩ := by
+  simp [itemOf, hop, hΓ]
+
+/-- A leaf: one step, the item, a parser. -/
+theorem leaf_res {s : PSt} {K r : List Nat} {L : Nat} {it : MItem} {op : Op} {Γ : List HO.Ty}
+    (hstep : pstep s = s.leaf it 0 r K) (hop : opOf s.tt s.lt it = some op) (hctx : it.ctx = s.cur)
+    (hΓ : ctxOf s.tt s.ct s.cur = some Γ) (hw : TTWF s.tt) (hc : CTWF s.tt s.ct) (hL : 1 + 3 * r.length ≤ 3 * L) :
+    ExprRes s K r L (some (.p, [⟨op, Γ⟩])) := by
+  refine ⟨1, ⟨s.leaf it 0 r K, hstep, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, ⟨0, rfl, by rw [tyOf]⟩,
+    ⟨[it], rfl, itemsOf_single (itemOf_mk hop (by rw [hctx]; exact hΓ))⟩, Grows.refl _ _ _, hw, hc⟩, hL⟩
+
 end Shallot.MacroPeg.Mach
