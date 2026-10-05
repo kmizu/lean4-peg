@@ -158,6 +158,146 @@ def starRes (da : Dom .p) (q : Nat) : Res :=
   | none => none
 termination_by q
 
+/-! ## Well-formedness and monotonicity of position-wise operators -/
+
+section Ops
+
+variable {x : List Char}
+
+/-- `r` carries no more information than `s`. -/
+def ResLe (r s : Res) : Prop := r = none ∨ r = s
+
+theorem mem_resElems {N : Nat} {r : Res} : r ∈ resElems N ↔ r = none ∨ r = some none ∨ ∃ j ≤ N, r = some (some j) := by
+  simp only [resElems, List.mem_cons, List.mem_map, List.mem_range]
+  constructor
+  · rintro (h | h | ⟨j, hj, rfl⟩)
+    · exact .inl h
+    · exact .inr (.inl h)
+    · exact .inr (.inr ⟨j, by omega, rfl⟩)
+  · rintro (h | h | ⟨j, hj, rfl⟩)
+    · exact .inl h
+    · exact .inr (.inl h)
+    · exact .inr (.inr ⟨j, by omega, rfl⟩)
+
+theorem pw_map {α β : Type} {R : β → β → Prop} {f g : α → β} :
+    ∀ l : List α, (∀ a ∈ l, R (f a) (g a)) → Pw R (l.map f) (l.map g)
+  | [], _ => .nil
+  | a :: l, h => .cons (h a (by simp)) (pw_map l (fun b hb => h b (by simp [hb])))
+
+theorem baseVec_mem {f : Nat → Res} (h : ∀ q ≤ x.length, f q ∈ resElems x.length) :
+    baseVec x f ∈ elems x.length .p := by
+  refine (mem_allVecs _ _ _).2 ⟨by simp [baseVec], fun r hr => ?_⟩
+  simp only [baseVec, List.mem_map, List.mem_range] at hr
+  obtain ⟨q, hq, rfl⟩ := hr
+  exact h q (by omega)
+
+theorem baseVec_le {f f' : Nat → Res} (h : ∀ q, ResLe (f q) (f' q)) : Dom.le .p (baseVec x f) (baseVec x f') :=
+  pw_map _ (fun q _ => h q)
+
+theorem atq_mem {N : Nat} {d : Dom .p} (hd : d ∈ elems N .p) (q : Nat) : atq d q ∈ resElems N :=
+  getD_mem (P := (· ∈ resElems N)) (by simp [resElems]) _ _ ((mem_allVecs _ _ _).1 hd).2
+
+theorem atq_le {d d' : Dom .p} (h : Dom.le .p d d') (q : Nat) : ResLe (atq d q) (atq d' q) :=
+  pw_getD (R := ResLe) (.inl rfl) h q
+
+theorem sfx_length_le (q : Nat) : (sfx x q).length ≤ x.length := by simp [sfx]
+
+theorem leafRes_mem (e : HExp) {q : Nat} : leafRes x e q ∈ resElems x.length := by
+  unfold leafRes
+  cases h : hrun ⟨[]⟩ 1 e (sfx x q) with
+  | none => simp [resElems]
+  | some r =>
+    cases r with
+    | none => simp [resElems]
+    | some rest =>
+      obtain ⟨p, hp⟩ := hrun_suffix h
+      have : rest.length ≤ (sfx x q).length := by rw [hp]; simp
+      have := sfx_length_le (x := x) q
+      exact mem_resElems.2 (.inr (.inr ⟨rest.length, by omega, rfl⟩))
+
+theorem none_mem_resElems (N : Nat) : (none : Res) ∈ resElems N := by simp [resElems]
+theorem fail_mem_resElems (N : Nat) : (some none : Res) ∈ resElems N := by simp [resElems]
+
+theorem seqRes_mem {N : Nat} (da : Dom .p) {db : Dom .p} (hb : db ∈ elems N .p) (q : Nat) :
+    seqRes da db q ∈ resElems N := by
+  unfold seqRes
+  cases hv : atq da q with
+  | none => exact none_mem_resElems N
+  | some r => cases r with
+    | none => exact fail_mem_resElems N
+    | some j => exact atq_mem hb j
+
+theorem altRes_mem {N : Nat} {da db : Dom .p} (ha : da ∈ elems N .p) (hb : db ∈ elems N .p) (q : Nat) :
+    altRes da db q ∈ resElems N := by
+  unfold altRes
+  have h := atq_mem ha q
+  cases hv : atq da q with
+  | none => exact none_mem_resElems N
+  | some r => cases r with
+    | none => exact atq_mem hb q
+    | some j => rw [hv] at h; exact h
+
+theorem notRes_mem {N : Nat} {da : Dom .p} {q : Nat} (hq : q ≤ N) : notRes da q ∈ resElems N := by
+  unfold notRes
+  cases atq da q with
+  | none => exact none_mem_resElems N
+  | some r => cases r with
+    | none => exact mem_resElems.2 (.inr (.inr ⟨q, hq, rfl⟩))
+    | some j => exact fail_mem_resElems N
+
+theorem starRes_mem {N : Nat} (da : Dom .p) : ∀ q ≤ N, starRes da q ∈ resElems N := by
+  intro q
+  induction q using Nat.strongRecOn with
+  | _ q ih =>
+    intro hq
+    rw [starRes]
+    split
+    · split
+      · exact ih _ (by assumption) (by omega)
+      · simp [resElems]
+    · exact mem_resElems.2 (.inr (.inr ⟨q, hq, rfl⟩))
+    · simp [resElems]
+
+theorem seqRes_le {da db da' db' : Dom .p} (ha : Dom.le .p da da') (hb : Dom.le .p db db') (q : Nat) :
+    ResLe (seqRes da db q) (seqRes da' db' q) := by
+  unfold seqRes
+  rcases atq_le ha q with h | h
+  · rw [h]; exact .inl rfl
+  · rw [← h]; split
+    · exact atq_le hb _
+    · exact .inr rfl
+
+theorem altRes_le {da db da' db' : Dom .p} (ha : Dom.le .p da da') (hb : Dom.le .p db db') (q : Nat) :
+    ResLe (altRes da db q) (altRes da' db' q) := by
+  unfold altRes
+  rcases atq_le ha q with h | h
+  · rw [h]; exact .inl rfl
+  · rw [← h]; split
+    · exact atq_le hb _
+    · exact .inr rfl
+
+theorem notRes_le {da da' : Dom .p} (ha : Dom.le .p da da') (q : Nat) : ResLe (notRes da q) (notRes da' q) := by
+  unfold notRes
+  rcases atq_le ha q with h | h
+  · rw [h]; exact .inl rfl
+  · rw [← h]; exact .inr rfl
+
+theorem starRes_le {da da' : Dom .p} (ha : Dom.le .p da da') : ∀ q, ResLe (starRes da q) (starRes da' q) := by
+  intro q
+  induction q using Nat.strongRecOn with
+  | _ q ih =>
+    rw [starRes, starRes]
+    rcases atq_le ha q with h | h
+    · rw [h]; exact .inl rfl
+    · rw [← h]; split
+      · split
+        · exact ih _ (by assumption)
+        · exact .inr rfl
+      · exact .inr rfl
+      · exact .inr rfl
+
+end Ops
+
 /-! ## The meaning of a term -/
 
 /-- The value of `t` given rule values `T` and variable values `ρ`, on the input `x`. -/
@@ -185,5 +325,128 @@ def TBodies.den (x : List Char) {R : List Ty} : {S : List Ty} → TBodies R S �
 def iter (x : List Char) {R : List Ty} (G : TGrammar R) : Nat → Env R
   | 0 => Env.bot x.length R
   | m + 1 => G.bodies.den x (iter x G m)
+
+/-! ## The meaning is well formed and monotone -/
+
+theorem mem_zip_map {α β : Type} {g : α → β} : ∀ {l : List α} {p : α × β}, p ∈ l.zip (l.map g) → p.1 ∈ l ∧ p.2 = g p.1
+  | [], _, h => by simp at h
+  | a :: l, p, h => by
+    simp only [List.map_cons, List.zip_cons_cons, List.mem_cons] at h
+    rcases h with rfl | h
+    · exact ⟨by simp, rfl⟩
+    · obtain ⟨h₁, h₂⟩ := mem_zip_map h
+      exact ⟨by simp [h₁], h₂⟩
+
+/-- **Monotonicity**: with well-formed rule and variable values, the meaning of a term is well formed, and larger
+rule and variable values give a larger meaning. -/
+theorem den_mono (x : List Char) {R : List Ty} : ∀ {Γ : List Ty} {τ : Ty} (t : Tm R Γ τ) {T T' : Env R}
+    {ρ ρ' : Env Γ}, Env.Mem x.length T → Env.Mem x.length T' → Env.le T T' →
+    Env.Mem x.length ρ → Env.Mem x.length ρ' → Env.le ρ ρ' →
+    den x t T ρ ∈ elems x.length τ ∧ Dom.le τ (den x t T ρ) (den x t T' ρ')
+  | _, _, .eps, _, _, _, _, _, _, _, _, _, _
+  | _, _, .any, _, _, _, _, _, _, _, _, _, _
+  | _, _, .chr _, _, _, _, _, _, _, _, _, _, _
+  | _, _, .range _ _, _, _, _, _, _, _, _, _, _, _
+  | _, _, .lit _, _, _, _, _, _, _, _, _, _, _ =>
+    ⟨baseVec_mem (fun _ _ => leafRes_mem _), Dom.le_refl _ _⟩
+  | _, _, .seq a b, _, _, _, _, hT, hT', hTT, hρ, hρ', hρρ => by
+    have ha := den_mono x a hT hT' hTT hρ hρ' hρρ
+    have hb := den_mono x b hT hT' hTT hρ hρ' hρρ
+    exact ⟨baseVec_mem (fun q _ => seqRes_mem _ hb.1 q), baseVec_le (seqRes_le ha.2 hb.2)⟩
+  | _, _, .alt a b, _, _, _, _, hT, hT', hTT, hρ, hρ', hρρ => by
+    have ha := den_mono x a hT hT' hTT hρ hρ' hρρ
+    have hb := den_mono x b hT hT' hTT hρ hρ' hρρ
+    exact ⟨baseVec_mem (fun q _ => altRes_mem ha.1 hb.1 q), baseVec_le (altRes_le ha.2 hb.2)⟩
+  | _, _, .star a, _, _, _, _, hT, hT', hTT, hρ, hρ', hρρ => by
+    have ha := den_mono x a hT hT' hTT hρ hρ' hρρ
+    exact ⟨baseVec_mem (fun q hq => starRes_mem _ q hq), baseVec_le (starRes_le ha.2)⟩
+  | _, _, .notP a, _, _, _, _, hT, hT', hTT, hρ, hρ', hρρ => by
+    have ha := den_mono x a hT hT' hTT hρ hρ' hρρ
+    exact ⟨baseVec_mem (fun _ hq => notRes_mem hq), baseVec_le (notRes_le ha.2)⟩
+  | _, _, .var i h, _, _, _, _, _, _, _, hρ, _, hρρ => ⟨Env.get_mem hρ i h, Env.get_le hρρ i h⟩
+  | _, _, .rule i h, _, _, _, _, hT, _, hTT, _, _, _ => ⟨Env.get_mem hT i h, Env.get_le hTT i h⟩
+  | _, _, @Tm.lam _ _ a b body, T, T', ρ, ρ', hT, hT', hTT, hρ, hρ', hρρ => by
+    have hbody : ∀ {d d' : Dom a}, d ∈ elems x.length a → d' ∈ elems x.length a → Dom.le a d d' →
+        den x body T (d, ρ) ∈ elems x.length b ∧ Dom.le b (den x body T (d, ρ)) (den x body T (d', ρ)) :=
+      fun hd hd' hdd => den_mono x body hT hT (Env.le_refl T) ⟨hd, hρ⟩ ⟨hd', hρ⟩ ⟨hdd, Env.le_refl ρ⟩
+    refine ⟨mem_elems_arr.2 ⟨(mem_allVecs _ _ _).2 ⟨by simp [den], fun v hv => ?_⟩, ?_⟩, ?_⟩
+    · simp only [den, List.mem_map] at hv
+      obtain ⟨d, hd, rfl⟩ := hv
+      exact (hbody hd hd (Dom.le_refl a d)).1
+    · intro p hp p' hp' hle
+      obtain ⟨h₁, e₁⟩ := mem_zip_map hp
+      obtain ⟨h₂, e₂⟩ := mem_zip_map hp'
+      rw [e₁, e₂]
+      exact (hbody h₁ h₂ hle).2
+    · exact pw_map _ (fun d hd =>
+        (den_mono x body hT hT' hTT ⟨hd, hρ⟩ ⟨hd, hρ'⟩ ⟨Dom.le_refl a d, hρρ⟩).2)
+  | _, _, .app f y, T, T', ρ, ρ', hT, hT', hTT, hρ, hρ', hρρ => by
+    have hf := den_mono x f hT hT' hTT hρ hρ' hρρ
+    have hy := den_mono x y hT hT' hTT hρ hρ' hρρ
+    have hy' := den_mono x y hT' hT' (Env.le_refl T') hρ' hρ' (Env.le_refl ρ')
+    exact ⟨app_mem hf.1 _, Dom.le_trans _ _ _ _ (app_mono_arg hf.1 hy.1 hy'.1 hy.2) (app_le_fun hf.2 _)⟩
+
+/-! ## The iterates form an increasing chain that stops -/
+
+section Iterates
+
+variable (x : List Char) {R : List Ty} (G : TGrammar R)
+
+theorem TBodies.den_mono : ∀ {S : List Ty} (ts : TBodies R S) {T T' : Env R},
+    Env.Mem x.length T → Env.Mem x.length T' → Env.le T T' →
+    Env.Mem x.length (ts.den x T) ∧ Env.le (ts.den x T) (ts.den x T')
+  | [], _, _, _, _, _, _ => ⟨trivial, trivial⟩
+  | _ :: _, (t, ts), _, _, hT, hT', hTT => by
+    have h₁ := HO.den_mono x t hT hT' hTT (ρ := ()) (ρ' := ()) trivial trivial trivial
+    have h₂ := TBodies.den_mono ts hT hT' hTT
+    exact ⟨⟨h₁.1, h₂.1⟩, ⟨h₁.2, h₂.2⟩⟩
+
+theorem iter_mem : ∀ m, Env.Mem x.length (iter x G m)
+  | 0 => Env.bot_mem R
+  | m + 1 => (TBodies.den_mono x G.bodies (iter_mem m) (iter_mem m) (Env.le_refl _)).1
+
+theorem iter_le_succ : ∀ m, Env.le (iter x G m) (iter x G (m + 1))
+  | 0 => Env.bot_le (iter_mem x G 1)
+  | m + 1 => (TBodies.den_mono x G.bodies (iter_mem x G m) (iter_mem x G (m + 1)) (iter_le_succ m)).2
+
+/-- Once two consecutive iterates agree, the iterates stay there. -/
+theorem iter_const {m : Nat} (h : iter x G m = iter x G (m + 1)) : ∀ k, m ≤ k → iter x G k = iter x G m := by
+  intro k hk
+  obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hk
+  induction d with
+  | zero => rfl
+  | succ d ih =>
+    show G.bodies.den x (iter x G (m + d)) = _
+    rw [ih (by omega)]; exact h.symm
+
+/-- Some iterate up to `maxEnv` equals the next one: otherwise every step adds a defined entry. -/
+theorem exists_iter_eq : ∃ m ≤ maxEnv x.length R, iter x G m = iter x G (m + 1) := by
+  apply Classical.byContradiction
+  intro hno
+  have hgrow : ∀ m ≤ maxEnv x.length R + 1, m ≤ Env.count (iter x G m) := by
+    intro m
+    induction m with
+    | zero => intro _; exact Nat.zero_le _
+    | succ m ih =>
+      intro hm
+      have hne : iter x G m ≠ iter x G (m + 1) := fun he => hno ⟨m, by omega, he⟩
+      have := Env.count_lt (iter_le_succ x G m) hne
+      have := ih (by omega)
+      omega
+  have h₁ := hgrow (maxEnv x.length R + 1) (Nat.le_refl _)
+  have h₂ := Env.count_le (iter_mem x G (maxEnv x.length R + 1))
+  omega
+
+/-- **The iterates stop**: from `maxEnv |x| R` on they are all equal. -/
+theorem iter_stable : ∀ k, maxEnv x.length R ≤ k → iter x G k = iter x G (maxEnv x.length R) := by
+  obtain ⟨m, hm, he⟩ := exists_iter_eq x G
+  intro k hk
+  rw [iter_const x G he k (by omega), iter_const x G he _ hm]
+
+/-- The stopped iterate is a fixpoint: evaluating the bodies with it gives it back. -/
+theorem iter_fix : G.bodies.den x (iter x G (maxEnv x.length R)) = iter x G (maxEnv x.length R) :=
+  iter_stable x G (maxEnv x.length R + 1) (by omega)
+
+end Iterates
 
 end Shallot.MacroPeg.HO
