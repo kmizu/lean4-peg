@@ -147,4 +147,69 @@ def stepM (it : MItem) (st : List (List Nat)) : List (List Nat) :=
 
 end Step
 
+/-! ## `stepM` is `stepF` -/
+
+section StepEq
+
+variable {x : List Char} {tt ct : List (Nat × Nat)} {lt : List (List Nat)} {Tf : List (List Nat)}
+
+theorem varRows_eq (hw : TTWF tt) {c : Nat} {Γ : List HO.Ty} (hΓ : ctxOf tt ct c = some Γ) (i : Nat) :
+    rowsNum x.length tt ((varTy ct c i).getD 0) = eRows x.length (Γ.getD i .p) := by
+  obtain ⟨hb, hle⟩ := varTy_ctx c hΓ i
+  rcases hv : varTy ct c i with _ | t
+  · rw [hv] at hb
+    have : Γ[i]? = none := by simpa using hb.symm
+    rw [Option.getD_none, List.getD_eq_getElem?_getD, this, Option.getD_none]
+    exact rowsNum_eq x.length 0 (by rw [tyOf])
+  · rw [hv] at hb
+    obtain ⟨τ, hτ⟩ := tyOf_some hw t (hle t hv)
+    rw [Option.bind_some, hτ] at hb
+    rw [Option.getD_some, List.getD_eq_getElem?_getD, ← hb, Option.getD_some]
+    exact rowsNum_eq x.length t hτ
+
+/-- **The numbered evaluator agrees with the packed one.** -/
+theorem stepM_eq (hw : TTWF tt) {it : MItem} {item : Item} (h : itemOf tt ct lt it = some item)
+    (st : List (List Nat)) : stepM x tt ct lt Tf it st = stepF x Tf item st := by
+  unfold itemOf at h
+  split at h
+  · rename_i op Γ hop hΓ
+    cases h
+    have hn : envNum x.length tt ct it.ctx = envSize x.length Γ := envNum_eq it.ctx hΓ
+    have hop' := hop
+    unfold opOf at hop
+    unfold stepM
+    simp only [hn]
+    split at hop
+    -- leaves
+    all_goals first
+      | (rename_i htag; cases hop; rw [htag]; simp only [hop', stepF]; done)
+      | (rename_i htag; cases hop; rw [htag]; rcases st with _ | ⟨vb, _ | ⟨va, st⟩⟩ <;> simp [hop', stepF]; done)
+      | (rename_i htag; cases hop; rw [htag]; simp only [stepF]; rw [varRows_eq hw hΓ, varVecNum_eq _ hΓ])
+      | (rename_i htag; rw [htag]
+         rcases hl : litOf lt it.a with _ | str
+         · rw [hl] at hop; cases hop
+         · rw [hl] at hop; cases hop; simp only [hop', stepF])
+      | (rename_i htag; rw [htag]
+         split at hop
+         · rename_i a σ ha hσ
+           cases hop
+           rcases st with _ | ⟨vb, st⟩ <;> rfl
+         · cases hop)
+      | (rename_i htag; rw [htag]
+         split at hop
+         · rename_i a b ha hb
+           cases hop
+           rcases st with _ | ⟨vy, _ | ⟨vf, st⟩⟩
+           · simp [hop', stepF]
+           · simp [hop', stepF]
+           · simp only [stepF]
+             rw [rowsNum_eq x.length _ ha, valNum_eq _ hb, valNum_eq _ ha, eRows, List.length_map, valSize]
+         · cases hop)
+      | (cases hop)
+      | skip
+    all_goals done
+  · cases h
+
+end StepEq
+
 end Shallot.MacroPeg.Mach
