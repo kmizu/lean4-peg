@@ -10,7 +10,9 @@
 4. 下界は order 1 まで: 交替 TM を模倣する一階の文法を埋め込むと同じ入力を受理するから、高階版も EXPTIME 困難
    （`atm_reduction_HO`）。
 5. **order 2 は 2-EXPTIME 困難。** 作業テープが 2^n マスの交替 TM を、型の付いた order 2 の文法で模倣した（`order2_hard`）。
-   order k ≥ 3 の下界は**未証明**。
+   こちらは AEXPSPACE = 2-EXPTIME を外部の事実として使う。
+6. **order j は j-EXPTIME 完全（j ≥ 1、外部の事実なし）。** 上界は費用モデルでの閉じた式 `tower j (C·poly(N))`
+   （`decideCost_le`）。下界は決定性多テープ TM の計算表を order j の文法でたどる帰着（`kexp_hard`）。
 
 ## 1. 捕獲なしの lambda の断片（`Properties/{MExpEq,Defun,DefunCorrect}.lean`）
 
@@ -70,8 +72,10 @@ lambda は `subst` で葉として扱われるから、実行中に出会う lam
 - `|elems τ|` は塔 `sizeBound`（`|p| ≤ (N+3)^(N+1)`、`|a ⇒ b| ≤ |b|^|a|`）以下。
 - 一階の規則では `maxCount ≤ ((N+3)^(N+1))^n · (N+1)`。
 
-「order k なら k 重指数時間」は、ここからの読み取り（引数の型の order は k 未満）で、order ごとの閉じた式までは証明していない。
-費用モデル（1 回の反復の手数）も形式化していない。
+費用モデル（`Cost.lean`）: `decideHO` の手数を `den` の再帰に沿って数える。値の比較は項目数、λ は引数ごとに本体を 1 回、
+適用は引数の索引探し、パーサ演算子は位置ごと。`decideCost_le` は、規則の型の order が k+1 以下で引数と束縛の型の order が
+k 以下なら、手数が `tower (k+1) (C·((N+1)(N+2))²)` 以下だと示す（`C = gConst`、構文だけで決まる）。
+TM での実装の時間ではなく、この費用モデルでの手数である。
 
 ## 4. order 2 の下界（`HigherOrder/ExpSpace/*.lean`）
 
@@ -95,8 +99,32 @@ lambda は `subst` で葉として扱われるから、実行中に出会う lam
 - 番地の表現 `RepA` とテープの表現 `RepT` を保ったまま、`AtmHard` と同じ形の帰納法で模倣する（`sim`）。
 - 型付け（`g2_wellTyped`）と order（`g2_order`）も示した。だから、この文法は上界の定理と同じクラスに入る。
 
+## 5. order j の下界（`HigherOrder/{Levels,Tableau,KExp}/*.lean`）
+
+交替機械を経由せず、決定性多テープ TM（`Complexity.TM`）の計算表を直接たどる。
+
+レベルの数（`Levels/`）:
+- レベル 0: 入力先頭の `m` 個のビットサイト上のパーサ。値は 2^m 未満。
+- レベル i+1: 型 `lvTy i ⇒ p` の関数。レベル i の数 u を受け取り、ビット u が 1 なら幅 0 で成功する。値は `tower (i+2) m` 未満。
+- 演算（inc / dec / isZero / isMax / eq）はブロック i の 12 規則の部分適用で書く。本体に λ は現れない。
+- 正しさ `Spec` は i についての帰納法（`spec_succ`、`spec_all`）。
+
+計算表の文法 `gT M K`（`Tableau/`）:
+- 規則は STATE_q(t)、HEAD_τ(t, i)、SYM_{τ,s}(t, i)、READ_{τ,s}(t, i) で、t と i はレベル K の数。
+- 漸化式は `TM.step` そのもの。停止状態なら前の構成のまま、そうでなければ読んだ記号の組（有限個）ごとに δ を引く。
+- 時刻 0 のテープ 0 は入力。INPUT ループが入力サイトを先頭から数えて読む。
+- `tableau_sim`: 時刻 `tower (K+1) m` 未満の全ての t で、各テストの真偽が `M.run` の構成と一致する。
+- `start_obs`: 開始式が入力を全部読む ⇔ 最後の時刻の状態が受理。
+- 型付け `gT_wellTyped`、order `gT_order = K + 1`。
+
+帰着（`KExp/`）:
+- `KEXP j L`: 時間 `tower j (c(n+1)^d)` で止まる決定性多テープ TM が L を決める。
+- 符号: ビットサイトを m = (c+1)(n+1)^(d+1) 個、`|`、入力サイト、`#`。m > c(n+1)^d かつ m > n なので、
+  停止時刻は表の範囲に入り、入力も番地に収まる。
+- 符号を出すテンプレート `encT` を、TQBF の帰着と同じリスト機械（`compileT_spec`、`lm_polytime`）で動かす（`enc_polytime`）。
+- `kexp_hard`: j ≥ 1 なら、`KEXP j` の言語は型付き order j の文法の言語へ多項式時間で帰着する。
+
 ## 残り
 
-order k ≥ 3 の下界は未証明。必要なのは、order k-1 の値を番地にして、(k-1) 重指数長のテープを持たせること。
-Jones（2001）と Kop–Simonsen（2017）の cons-free 高階プログラムの結果からは、order k で k-EXPTIME 完全になると予想している。
-どちらも外部の参照で、ここでは使っていない。
+- 上界は費用モデルでの手数。TM 上の実装の時間としては形式化していない。
+- 下界は M ごとに固定した文法の言語への帰着。文法も入力に含める一様な問題は扱っていない。
