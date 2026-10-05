@@ -73,4 +73,15 @@ def ItemRuns (p : NProg NK) (j cap : Nat) (st : PSt) (Tf : List (List Nat)) (it 
     NRuns p S ((S.set EV (evFlat (stepT j cap (st.x.map Char.ofNat) st.tt st.ct st.lt Tf it vs))).set EVL
       (evLens (stepT j cap (st.x.map Char.ofNat) st.tt st.ct st.lt Tf it vs))) (itemCost j cap st Tf it vs)
 
+/-- An item program does the item's step within `itemCost` plus `extra` steps. -/
+def ItemRunsC (p : NProg NK) (j cap : Nat) (st : PSt) (Tf : List (List Nat)) (it : MItem) (extra : Nat) : Prop :=
+  ∀ (S : Lists NK) (vs : List (List Nat)), EvalEnv S j cap st Tf → S IT = encItem it → S EV = evFlat vs →
+    S EVL = evLens vs →
+    NRuns p S ((S.set EV (evFlat (stepT j cap (st.x.map Char.ofNat) st.tt st.ct st.lt Tf it vs))).set EVL
+      (evLens (stepT j cap (st.x.map Char.ofNat) st.tt st.ct st.lt Tf it vs))) (itemCost j cap st Tf it vs + extra)
+
+theorem ItemRuns.withExtra {p : NProg NK} {j cap : Nat} {st : PSt} {Tf : List (List Nat)} {it : MItem}
+    (h : ItemRuns p j cap st Tf it) (extra : Nat) : ItemRunsC p j cap st Tf it extra :=
+  fun S vs hE hI hV hL => (h S vs hE hI hV hL).mono (by omega)
+
 end Shallot.MacroPeg.Mach
