@@ -80,6 +80,10 @@ theorem hhash_site (j : Nat) (b : Bool) (rest : List Char) : HObs g hhash (siteS
 
 theorem hhash_end : HObs g hhash ['#'] (some []) := hobs_lit ['#'] []
 
+theorem hcodeE_hash (rest : List Char) : HObs g hcodeE ('#' :: rest) none :=
+  hobs_of_peg (G := ⟨[]⟩) peg_codeE
+    (obs_seq (Shallot.MacroPeg.obs_star_none (obs_char_fail _ (by decide))) (obs_char_fail _ (by decide)))
+
 theorem hsiteE_hash (rest : List Char) : HObs g hsiteE ('#' :: rest) none :=
   hobs_of_peg (G := ⟨[]⟩) peg_siteE (Shallot.MacroPeg.siteE_hash rest)
 
@@ -134,6 +138,38 @@ theorem hasY_ok (j : Nat) (b : Bool) (rest : List Char) :
     exact hobs_seq_ok hc hy
 
 end Pieces
+
+/-! ## Closed pieces -/
+
+@[simp] theorem cl_hcodeE (k : Nat) : HExp.Cl k hcodeE := HExp.Cl.mono (cl_emb_peg _ peg_codeE) (Nat.zero_le k)
+@[simp] theorem cl_hsiteE (k : Nat) : HExp.Cl k hsiteE := HExp.Cl.mono (cl_emb_peg _ peg_siteE) (Nat.zero_le k)
+@[simp] theorem cl_hoptY (k : Nat) : HExp.Cl k hoptY := HExp.Cl.mono (cl_emb_peg _ peg_optY) (Nat.zero_le k)
+
+theorem cl_apps {k : Nat} : ∀ {f : HExp} {l : List HExp}, HExp.Cl k f → (∀ a ∈ l, HExp.Cl k a) →
+    HExp.Cl k (HExp.apps f l)
+  | _, [], hf, _ => hf
+  | _, a :: _, hf, ha => cl_apps (f := .app _ a) ⟨hf, ha a List.mem_cons_self⟩ (fun b hb => ha b (List.mem_cons_of_mem _ hb))
+
+theorem cl_rcall {k i : Nat} {as : List HExp} (ha : ∀ a ∈ as, HExp.Cl k a) : HExp.Cl k (rcall i as) :=
+  cl_apps trivial ha
+
+/-! ## Binary successor and predecessor bit by bit -/
+
+theorem incBits_getD : ∀ (v : List Bool) (j : Nat), j < v.length →
+    (incBits v).getD j false = (v.getD j false != (v.drop (j + 1)).all id)
+  | [], _, h => by simp at h
+  | b :: rest, 0, _ => by simp [incBits]
+  | b :: rest, j + 1, h => by
+    simp only [incBits, List.getD_cons_succ, List.drop_succ_cons]
+    exact incBits_getD rest j (by simpa using h)
+
+theorem decBits_getD : ∀ (v : List Bool) (j : Nat), j < v.length →
+    (decBits v).getD j false = (v.getD j false != (v.drop (j + 1)).all (! ·))
+  | [], _, h => by simp at h
+  | b :: rest, 0, _ => by simp [decBits]
+  | b :: rest, j + 1, h => by
+    simp only [decBits, List.getD_cons_succ, List.drop_succ_cons]
+    exact decBits_getD rest j (by simpa using h)
 
 /-! ## Addresses -/
 
@@ -336,6 +372,123 @@ theorem eq_ok {a h : HExp} {va vh : List Bool} (ha : RepA M w a va) (hh : RepA M
     · rw [if_neg he] at hs
       simp only [he, false_and, decide_false]
       exact eq_call ha.1 hh.1 (hobs_alt_fail (hhash_not_site hlt) (hobs_seq_fail hs))
+
+theorem test_siteE_step {j : Nat} (hj : j < n) {e : HExp} {b : Bool} (h : Test G e (sfxS w (j + 1)) b) :
+    Test G (.seq hsiteE e) (sfxS w j) b := by
+  cases b with
+  | true => obtain ⟨y, hy⟩ := h; exact ⟨y, siteE_step hj hy⟩
+  | false => exact siteE_step hj h
+
+theorem sc_call {a : HExp} (ha : HExp.Cl 0 a) {x : List Char} {r : Option (List Char)}
+    (hr : HObs G (scE M a) x r) : HObs G (rcall (rSC M) [a]) x r :=
+  hobs_call (g2_sc M) rfl (fun c hc => by simp at hc; rw [hc]; exact ha)
+    (by rw [List.reverse_singleton, inst_sc]; exact hr)
+
+/-- `SC(a)` at site `i`: some site from `i` on has bit `1` in `a` and input symbol `1`. -/
+theorem sc_ok {a : HExp} {va : List Bool} (ha : RepA M w a va) :
+    ∀ d i, i + d = n → Test G (rcall (rSC M) [a]) (sfxS w i) (((va.drop i).zip (w.drop i)).any (fun p => p.1 && p.2)) := by
+  intro d
+  induction d with
+  | zero =>
+    intro i hi
+    have hin : i = n := by omega
+    subst hin
+    have h₁ : va.drop w.length = [] := by simp [ha.2.1]
+    rw [h₁]
+    exact sc_call ha.1 (hobs_alt_fail (hobs_seq_fail (hobs_and_none (bit1_end ha))) (hobs_seq_fail hsiteE_end))
+  | succ d ih =>
+    intro i hi
+    have hlt : i < n := by omega
+    have hrec := test_siteE_step hlt (ih (i + 1) (by omega))
+    have hbit := bit1_test ha hlt
+    have hy : Test G (.seq hcodeE (.lit ['y'])) (sfxS w i) (w.getD i false) := by
+      rw [sfxS_site w hlt]; exact hasY_ok i _ _
+    rw [drop_getD (v := va) (by rw [ha.2.1]; exact hlt), drop_getD (v := w) hlt, List.zip_cons_cons, List.any_cons]
+    cases hx : va.getD i false with
+    | false =>
+      rw [hx] at hbit
+      simp only [Bool.false_and, Bool.false_or]
+      cases hr : ((va.drop (i + 1)).zip (w.drop (i + 1))).any (fun p => p.1 && p.2) with
+      | true =>
+        rw [hr] at hrec; obtain ⟨z, hz⟩ := hrec
+        exact ⟨_, sc_call ha.1 (hobs_alt_fail (hobs_seq_fail (hobs_and_none hbit)) hz)⟩
+      | false => rw [hr] at hrec; exact sc_call ha.1 (hobs_alt_fail (hobs_seq_fail (hobs_and_none hbit)) hrec)
+    | true =>
+      rw [hx] at hbit
+      obtain ⟨u, hu⟩ := hbit
+      cases hw : w.getD i false with
+      | true =>
+        rw [hw] at hy; obtain ⟨u', hu'⟩ := hy
+        exact ⟨_, sc_call ha.1 (hobs_alt_ok (hobs_seq_ok (hobs_and_some hu) (hobs_and_some hu')))⟩
+      | false =>
+        rw [hw] at hy
+        simp only [Bool.true_and, Bool.false_or]
+        have hfirst := hobs_seq_ok (hobs_and_some hu) (hobs_and_none hy)
+        cases hr : ((va.drop (i + 1)).zip (w.drop (i + 1))).any (fun p => p.1 && p.2) with
+        | true =>
+          rw [hr] at hrec; obtain ⟨z, hz⟩ := hrec
+          exact ⟨_, sc_call ha.1 (hobs_alt_fail hfirst hz)⟩
+        | false => rw [hr] at hrec; exact sc_call ha.1 (hobs_alt_fail hfirst hrec)
+
+/-- The first address. -/
+theorem H0_rep : RepA M w H0 (List.replicate n false) := by
+  refine ⟨⟨cl_hcodeE 0, cl_hoptY 0⟩, by simp, fun j hj => ?_, ?_⟩
+  · have h0 : (List.replicate n false).getD j false = false := by
+      simp [List.getD_eq_getElem?_getD, hj]
+    rw [h0, sfxS_site w hj]
+    exact readZero_ok (g := G) j (w.getD j false) (sfxS w (j + 1))
+  · rw [sfxS_end]; exact hobs_seq_fail (hcodeE_hash [])
+
+/-- Reading a site with the bit given by a test (successor and predecessor). -/
+theorem newSite_rep {B : HExp} {nb : Nat → Bool} (hB : ∀ j < n, Test G B (sfxS w j) (nb j))
+    (hBend : Test G B (sfxS w n) false) :
+    (∀ j < n, HObs G (newSite B) (sfxS w j) (some (tapeRest (nb j) (sfxS w (j + 1))))) ∧
+      HObs G (newSite B) (sfxS w n) none := by
+  refine ⟨fun j hj => ?_, ?_⟩
+  · have h := test_guard (hB j hj) (by rw [sfxS_site w hj]; exact readOne_ok (g := G) j _ _)
+      (by rw [sfxS_site w hj]; exact readZero_ok (g := G) j _ _)
+    cases hb : nb j <;> rw [hb] at h <;> exact h
+  · have h := test_guard hBend
+      (by rw [sfxS_end]; exact hobs_seq_fail (B := .lit ['x']) (hobs_seq_fail (B := hoptY) (hcodeE_hash [])))
+      (by rw [sfxS_end]; exact hobs_seq_fail (B := hoptY) (hcodeE_hash []))
+    exact h
+
+theorem cl_newSite {B : HExp} (hB : HExp.Cl 0 B) : HExp.Cl 0 (newSite B) :=
+  ⟨⟨hB, ⟨cl_hcodeE 0, cl_hoptY 0⟩, trivial⟩, ⟨hB, cl_hcodeE 0, cl_hoptY 0⟩⟩
+
+/-- **The successor address.** -/
+theorem inc_rep {H : HExp} {v : List Bool} (hH : RepA M w H v) : RepA M w (incE M H) (incBits v) := by
+  have hcl : HExp.Cl 0 (xorE (bit1 H) (.seq hsiteE (rcall (rALL1 M) [H]))) := by
+    have h1 : HExp.Cl 0 (bit1 H) := ⟨hH.1, trivial⟩
+    have h2 : HExp.Cl 0 (.seq hsiteE (rcall (rALL1 M) [H])) :=
+      ⟨cl_hsiteE 0, cl_rcall (fun a ha => by simp at ha; rw [ha]; exact hH.1)⟩
+    exact ⟨⟨h1, h2⟩, ⟨h1, h2⟩⟩
+  have hB : ∀ j < n, Test G (xorE (bit1 H) (.seq hsiteE (rcall (rALL1 M) [H]))) (sfxS w j)
+      ((incBits v).getD j false) := by
+    intro j hj
+    rw [incBits_getD v j (by rw [hH.2.1]; exact hj)]
+    exact test_xor (bit1_test hH hj) (test_siteE_step hj (all1_ok hH (n - (j + 1)) (j + 1) (by omega)))
+  have hBend : Test G (xorE (bit1 H) (.seq hsiteE (rcall (rALL1 M) [H]))) (sfxS w n) false :=
+    test_xor (p := false) (q := false) (bit1_end hH) (hobs_seq_fail hsiteE_end)
+  obtain ⟨hs, he⟩ := newSite_rep hB hBend
+  exact ⟨cl_newSite hcl, by rw [length_incBits, hH.2.1], hs, he⟩
+
+/-- **The predecessor address.** -/
+theorem dec_rep {H : HExp} {v : List Bool} (hH : RepA M w H v) : RepA M w (decE M H) (decBits v) := by
+  have hcl : HExp.Cl 0 (xorE (bit1 H) (.seq hsiteE (rcall (rALL0 M) [H]))) := by
+    have h1 : HExp.Cl 0 (bit1 H) := ⟨hH.1, trivial⟩
+    have h2 : HExp.Cl 0 (.seq hsiteE (rcall (rALL0 M) [H])) :=
+      ⟨cl_hsiteE 0, cl_rcall (fun a ha => by simp at ha; rw [ha]; exact hH.1)⟩
+    exact ⟨⟨h1, h2⟩, ⟨h1, h2⟩⟩
+  have hB : ∀ j < n, Test G (xorE (bit1 H) (.seq hsiteE (rcall (rALL0 M) [H]))) (sfxS w j)
+      ((decBits v).getD j false) := by
+    intro j hj
+    rw [decBits_getD v j (by rw [hH.2.1]; exact hj)]
+    exact test_xor (bit1_test hH hj) (test_siteE_step hj (all0_ok hH (n - (j + 1)) (j + 1) (by omega)))
+  have hBend : Test G (xorE (bit1 H) (.seq hsiteE (rcall (rALL0 M) [H]))) (sfxS w n) false :=
+    test_xor (p := false) (q := false) (bit1_end hH) (hobs_seq_fail hsiteE_end)
+  obtain ⟨hs, he⟩ := newSite_rep hB hBend
+  exact ⟨cl_newSite hcl, by rw [length_decBits, hH.2.1], hs, he⟩
 
 end Addresses
 
