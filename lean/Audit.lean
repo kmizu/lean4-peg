@@ -1344,6 +1344,14 @@ machine-checked witnesses for the `subst` fix and for the two side conditions. -
 #guard_msgs in
 #print axioms Shallot.MacroPeg.HO.maxCount_parsers
 
+/-- info: 'Shallot.MacroPeg.atmG_arityOk' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.atmG_arityOk
+
+/-- info: 'Shallot.MacroPeg.atm_reduction_HO' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.atm_reduction_HO
+
 /-- info: 'Shallot.MacroPeg.atm_by_decision' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.atm_by_decision

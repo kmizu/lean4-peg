@@ -7,7 +7,8 @@
 2. **クロージャ付きの型付き高階 Macro PEG を定義した。** 一階の Macro PEG は、その order 1 の断片として埋め込める（`emb_obs`）。
 3. **高階 Macro PEG の認識は判定可能。** 有限の単調モデルでの不動点計算が、call-by-name の実行と一致する
    （`decideHO_iff`）。反復回数は値の個数の塔で抑えられ、order k の規則では |x| について k 重指数になる。
-4. 下界（order k で k-EXPTIME 困難）は**未証明**。予想として残す。
+4. 下界は order 1 まで: 交替 TM を模倣する一階の文法を埋め込むと同じ入力を受理するから、高階版も EXPTIME 困難
+   （`atm_reduction_HO`）。order k ≥ 2 で k-EXPTIME 困難かどうかは**未証明**。予想として残す。
 
 ## 1. 捕獲なしの lambda の断片（`Properties/{MExpEq,Defun,DefunCorrect}.lean`）
 
@@ -69,6 +70,6 @@ lambda は `subst` で葉として扱われるから、実行中に出会う lam
 「order k なら k 重指数時間」は、ここからの読み取り（引数の型の order は k 未満）で、order ごとの閉じた式までは証明していない。
 費用モデル（1 回の反復の手数）も形式化していない。
 
-下界は未証明。一階は EXPTIME 困難（`atm_reduction`）で、order 2 で 2-EXPTIME 困難を示すには、指数長のテープを
+order k ≥ 2 の下界は未証明。order 1 は EXPTIME 困難（`atm_reduction_HO`、`atmG_arityOk` で埋め込みの前提を満たす）で、order 2 で 2-EXPTIME 困難を示すには、指数長のテープを
 order 1 の値（番地 ↦ ビット）で持つ交替 TM の模倣が要る。Jones（2001）と Kop–Simonsen（2017）の cons-free 高階
 プログラムの結果からは、order k で k-EXPTIME 完全になると予想している。どちらも外部の参照で、ここでは使っていない。

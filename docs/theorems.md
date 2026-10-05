@@ -495,11 +495,13 @@ M-PEG-4 の断片では、規則に lambda（`.lam`）を渡して呼べる（`.
 | `sound_iter` | **健全性**（論理関係 `RelA`）: 反復が出す結果は実行の結果 | propext, Classical.choice, Quot.sound |
 | `complete_fix` | **完全性**（fuel 添字の論理関係 `RelB`）: 実行の結果は不動点の値 | propext, Classical.choice, Quot.sound |
 | `decideHO_iff` / `decideHO_none_iff` | **判定可能性**: 型付き文法の観測を `decideHO` が判定する | propext, Classical.choice, Quot.sound |
+| `atmG_arityOk` / `atm_reduction_HO` | 交替 TM を模倣する一階の文法はアリティが正しいので、埋め込んでも同じ入力を受理する。高階版は order 1 ですでに EXPTIME 困難 | propext, Classical.choice, Quot.sound |
 | `elems_length_le` / `maxCount_parsers` | 値の個数は塔（`\|p\| ≤ (N+3)^(N+1)`、`\|a ⇒ b\| ≤ \|b\|^\|a\|`）。一階の規則なら反復回数は指数 | propext, Quot.sound |
 
 反復回数は `maxEnv`（規則の型ごとの `maxCount` の和）以下で、`maxCount (a ⇒ b) = |elems a| · maxCount b` になる。
 order k の規則なら引数の order は k 未満なので、反復回数と 1 回あたりの表の項目数は |x| について k 重指数で抑えられる。
-実行時間はこの上界と文法の大きさの積で、費用モデルは形式化していない。k 重指数時間の下界（k-EXPTIME 困難）は未証明。
+実行時間はこの上界と文法の大きさの積で、費用モデルは形式化していない。order 1 では上界と `atm_reduction_HO` を合わせて EXPTIME 完全。
+order k ≥ 2 で k-EXPTIME 困難かどうかは未証明。
 
 ## TQBF は PSPACE 完全（`Complexity/`）
 

@@ -46,3 +46,4 @@ import MacroPeg.HigherOrder.Subst
 import MacroPeg.HigherOrder.Adequacy
 import MacroPeg.HigherOrder.Complete
 import MacroPeg.HigherOrder.Decide
+import MacroPeg.HigherOrder.Hardness
