@@ -188,4 +188,15 @@ theorem caseTop_default (i : Fin K) : ∀ (ps : List (NProg K)) (q : NProg K) (v
       (by rw [Lists.set_set_u]; exact h)
     exact ((h₁.seqH h₂).iteF (by rw [hS']; simp)).mono (by omega)
 
+/-! ## Doing nothing -/
+
+/-- No effect (push and pop on `s`). -/
+def nskip (s : Fin K) : NProg K := .seq (.prim (.pushZ s)) (.prim (.pop s))
+
+theorem nruns_skip (s : Fin K) (S : Lists K) : NRuns (nskip s) S S 2 := by
+  have h₁ := nruns_pushZ s S
+  have h₂ := nruns_pop s (S.set s (S s ++ [0])) (l := S s) (v := 0) (by simp)
+  rw [Lists.set_set_u, Lists.set_get_self] at h₂
+  exact h₁.seq h₂
+
 end Complexity
