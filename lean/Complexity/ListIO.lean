@@ -29,7 +29,7 @@ def initA : Action k := fun r =>
 
 /-- Step B (while tape `0` is not blank): move the input symbol to tape `1` as an element, blank tape `0`. -/
 def initB : Action k := fun r =>
-  (fun j => if j.val = 0 then 0 else if j.val = 1 then r (t0 h1) + 3 else r j,
+  (fun j => if j.val = 0 then 0 else if j.val = 1 then (if r (t0 h1) = 2 then 5 else 4) else r j,
    fun j => if j.val = 0 ∨ j.val = 1 then .R else .S)
 
 /-- Step C (while tape `1` is not on the marker): both heads left. -/
@@ -58,5 +58,15 @@ def finishP : Prog k :=
   .seq (.act (finA o)) (.seq (.loop (fun r => r o != 0) (.act (finB o))) (.halt true))
 
 end
+
+/-- Every pushed constant is below `E`. -/
+def LProg.ConstOK (E : Nat) : LProg k → Prop
+  | .push _ e => e < E
+  | .pop _ => True
+  | .copy _ _ => True
+  | .seq p q => p.ConstOK E ∧ q.ConstOK E
+  | .ite _ _ p q => p.ConstOK E ∧ q.ConstOK E
+  | .loop _ _ p => p.ConstOK E
+  | .halt _ => True
 
 end Complexity
