@@ -231,7 +231,7 @@ variable {G : MGrammar} {n : Nat} {x : List Char}
 
 local notation "run" => mpegRun G Strategy.callByName
 
-theorem obs_seq (a b : MExp) : runObs (run (n + 1) (.seq a b) x) =
+theorem runObs_seq (a b : MExp) : runObs (run (n + 1) (.seq a b) x) =
     match runObs (run n a x) with
     | some (some r) => runObs (run n b r)
     | some none => some none
@@ -245,7 +245,7 @@ theorem obs_seq (a b : MExp) : runObs (run (n + 1) (.seq a b) x) =
       | none => rfl
       | some o => cases o <;> rfl
 
-theorem obs_alt (a b : MExp) : runObs (run (n + 1) (.alt a b) x) =
+theorem runObs_alt (a b : MExp) : runObs (run (n + 1) (.alt a b) x) =
     match runObs (run n a x) with
     | some (some r) => some (some r)
     | some none => runObs (run n b x)
@@ -259,7 +259,7 @@ theorem obs_alt (a b : MExp) : runObs (run (n + 1) (.alt a b) x) =
       | none => rfl
       | some o => cases o <;> rfl
 
-theorem obs_star (a : MExp) : runObs (run (n + 1) (.star a) x) =
+theorem runObs_star (a : MExp) : runObs (run (n + 1) (.star a) x) =
     match runObs (run n a x) with
     | some (some r) => runObs (run n (.star a) r)
     | some none => some (some x)
@@ -273,7 +273,7 @@ theorem obs_star (a : MExp) : runObs (run (n + 1) (.star a) x) =
       | none => rfl
       | some o => cases o <;> rfl
 
-theorem obs_notP (a : MExp) : runObs (run (n + 1) (.notP a) x) =
+theorem runObs_notP (a : MExp) : runObs (run (n + 1) (.notP a) x) =
     match runObs (run n a x) with
     | some (some _) => some none
     | some none => some (some x)
@@ -283,7 +283,7 @@ theorem obs_notP (a : MExp) : runObs (run (n + 1) (.notP a) x) =
   | none => rfl
   | some o => cases o <;> rfl
 
-theorem obs_call {i : Nat} {args : List MExp} {r : MRule} (hr : ruleAtM G.rules i = some r)
+theorem runObs_call {i : Nat} {args : List MExp} {r : MRule} (hr : ruleAtM G.rules i = some r)
     (ha : r.arity = args.length) :
     runObs (run (n + 1) (.call i args) x) = runObs (run n (MExp.subst args r.body) x) := by
   rw [mpegRun.eq_def]; dsimp only
@@ -292,16 +292,16 @@ theorem obs_call {i : Nat} {args : List MExp} {r : MRule} (hr : ruleAtM G.rules 
   | none => rfl
   | some o => cases o <;> rfl
 
-theorem obs_call_missing {i : Nat} {args : List MExp} (hr : ruleAtM G.rules i = none) :
+theorem runObs_call_missing {i : Nat} {args : List MExp} (hr : ruleAtM G.rules i = none) :
     runObs (run (n + 1) (.call i args) x) = some none := by
   rw [mpegRun.eq_def]; dsimp only; simp only [hr]; rfl
 
-theorem obs_call_arity {i : Nat} {args : List MExp} {r : MRule} (hr : ruleAtM G.rules i = some r)
+theorem runObs_call_arity {i : Nat} {args : List MExp} {r : MRule} (hr : ruleAtM G.rules i = some r)
     (ha : r.arity ≠ args.length) : runObs (run (n + 1) (.call i args) x) = some none := by
   rw [mpegRun.eq_def]; dsimp only
   simp only [hr, beq_iff_eq, ha, ↓reduceIte]; rfl
 
-theorem obs_invoke {a : Nat} {b : MExp} {args : List MExp} (ha : a = args.length) :
+theorem runObs_invoke {a : Nat} {b : MExp} {args : List MExp} (ha : a = args.length) :
     runObs (run (n + 1) (.invoke a b args) x) = runObs (run n (MExp.subst args b) x) := by
   rw [mpegRun.eq_def]; dsimp only
   simp only [ha, beq_self_eq_true, ↓reduceIte]
@@ -309,29 +309,29 @@ theorem obs_invoke {a : Nat} {b : MExp} {args : List MExp} (ha : a = args.length
   | none => rfl
   | some o => cases o <;> rfl
 
-theorem obs_invoke_arity {a : Nat} {b : MExp} {args : List MExp} (ha : a ≠ args.length) :
+theorem runObs_invoke_arity {a : Nat} {b : MExp} {args : List MExp} (ha : a ≠ args.length) :
     runObs (run (n + 1) (.invoke a b args) x) = some none := by
   rw [mpegRun.eq_def]; dsimp only
   simp only [beq_iff_eq, ha, ↓reduceIte]; rfl
 
-theorem obs_failAlways : runObs (run (n + 2) MExp.failAlways x) = some none := by
+theorem runObs_failAlways : runObs (run (n + 2) MExp.failAlways x) = some none := by
   unfold MExp.failAlways
   rw [mpegRun.eq_def]; dsimp only; rw [mpegRun.eq_def]; rfl
 
-theorem obs_eps : runObs (run (n + 1) .eps x) = some (some x) := by rw [mpegRun.eq_def]; rfl
-theorem obs_lam (a : Nat) (b : MExp) : runObs (run (n + 1) (.lam a b) x) = some (some x) := by
+theorem runObs_eps : runObs (run (n + 1) .eps x) = some (some x) := by rw [mpegRun.eq_def]; rfl
+theorem runObs_lam (a : Nat) (b : MExp) : runObs (run (n + 1) (.lam a b) x) = some (some x) := by
   rw [mpegRun.eq_def]; rfl
-theorem obs_dbg (b : MExp) : runObs (run (n + 1) (.dbg b) x) = some (some x) := by rw [mpegRun.eq_def]; rfl
-theorem obs_param (k : Nat) : runObs (run (n + 1) (.param k) x) = some none := by rw [mpegRun.eq_def]; rfl
-theorem obs_callParam (k : Nat) (m : List MExp) : runObs (run (n + 1) (.callParam k m) x) = some none := by
+theorem runObs_dbg (b : MExp) : runObs (run (n + 1) (.dbg b) x) = some (some x) := by rw [mpegRun.eq_def]; rfl
+theorem runObs_param (k : Nat) : runObs (run (n + 1) (.param k) x) = some none := by rw [mpegRun.eq_def]; rfl
+theorem runObs_callParam (k : Nat) (m : List MExp) : runObs (run (n + 1) (.callParam k m) x) = some none := by
   rw [mpegRun.eq_def]; rfl
 
 /-- Whatever `failAlways` returns is a failure. -/
-theorem obs_failAlways_eq {r : Option (List Char)} (h : runObs (run (n + 1) MExp.failAlways x) = some r) :
+theorem runObs_failAlways_eq {r : Option (List Char)} (h : runObs (run (n + 1) MExp.failAlways x) = some r) :
     r = none := by
   cases n with
   | zero => unfold MExp.failAlways at h; rw [mpegRun.eq_def] at h; dsimp only at h; rw [mpegRun.eq_def] at h; cases h
-  | succ n => rw [obs_failAlways] at h; cases h; rfl
+  | succ n => rw [runObs_failAlways] at h; cases h; rfl
 
 end Steps
 
@@ -388,7 +388,7 @@ theorem unitRule_lam {a : Nat} {b : MExp} (h : (a, b) ∈ Λ) :
   intro hlt; omega
 
 /-- One step of a translated unit call. -/
-theorem obs_callUnit {n : Nat} {x : List Char} {u : Nat} {args : List MExp} (hu : u < g.rules.length + Λ.length) :
+theorem runObs_callUnit {n : Nat} {x : List Char} {u : Nat} {args : List MExp} (hu : u < g.rules.length + Λ.length) :
     runObs (mpegRun (defunGrammar g Λ) .callByName (n + 1) (callUnit g Λ [] u args (trArgs g Λ [] args)) x) =
       if (unitRule g Λ u).arity = args.length then
         runObs (mpegRun (defunGrammar g Λ) .callByName n (tr g Λ [] (MExp.subst args (unitRule g Λ u).body)) x)
@@ -396,10 +396,239 @@ theorem obs_callUnit {n : Nat} {x : List Char} {u : Nat} {args : List MExp} (hu 
   unfold callUnit
   split
   · rename_i ha
-    rw [obs_call (ruleAt_defun hu (tagsOf_mem_vecs ha)) (by simp [trArgs_eq_map, ha]),
+    rw [runObs_call (ruleAt_defun hu (tagsOf_mem_vecs ha)) (by simp [trArgs_eq_map, ha]),
       tr_subst]
   · rfl
 
 end Rules
+
+/-! ## The runs agree
+
+Both directions go by induction on the fuel and cases on the source expression. A step of the source becomes a step of
+the translation; calls and invocations become a unit call, whose body corresponds again by `tr_subst`. The translation
+may need one more unit of fuel (a failure becomes `failAlways`, which takes two steps). -/
+
+section Simulation
+
+variable {g : MGrammar} {Λ : List (Nat × MExp)}
+
+theorem good_of_sub {e e' : MExp} (hsub : ∀ p ∈ e'.lams, p ∈ e.lams) (h : Good Λ e) : Good Λ e' :=
+  fun p hp => h p (hsub p hp)
+
+theorem rule_mem {i : Nat} {r : MRule} (hr : ruleAtM g.rules i = some r) : r ∈ g.rules := by
+  rw [ruleAtM_eq_getElem?] at hr; exact List.mem_of_getElem? hr
+
+local notation "src" => mpegRun g Strategy.callByName
+local notation "tgt" => mpegRun (defunGrammar g Λ) Strategy.callByName
+
+theorem run_forward (hg : ∀ r ∈ g.rules, Good Λ r.body) (hΛ : LamsClosed Λ) :
+    ∀ (n : Nat) (e : MExp) (x : List Char) (r : Option (List Char)), Good Λ e →
+      runObs (src n e x) = some r → runObs (tgt (n + 1) (tr g Λ [] e) x) = some r
+  | 0, _, _, _, _, h => by rw [mpegRun.eq_def] at h; cases h
+  | n + 1, e, x, r, he, h => by
+    cases e with
+    | eps => rw [runObs_eps] at h; simp only [tr]; rw [runObs_eps]; exact h
+    | any | chr _ | range _ _ | lit _ =>
+      simp only [tr]; rw [mpegRun.eq_def] at h ⊢; dsimp only at h ⊢; exact h
+    | param k => rw [runObs_param] at h; simp only [tr]; rw [runObs_param]; exact h
+    | lam a b => rw [runObs_lam] at h; simp only [tr]; rw [runObs_eps]; exact h
+    | dbg b => rw [runObs_dbg] at h; simp only [tr]; rw [runObs_eps]; exact h
+    | callParam k m => rw [runObs_callParam] at h; simp only [tr, List.getD_nil]; exact runObs_failAlways.trans h
+    | seq a b =>
+      have ha : Good Λ a := good_of_sub (fun p hp => by simp [MExp.lams, hp]) he
+      have hb : Good Λ b := good_of_sub (fun p hp => by simp [MExp.lams, hp]) he
+      rw [runObs_seq] at h; simp only [tr]; rw [runObs_seq]
+      cases hra : runObs (src n a x) with
+      | none => rw [hra] at h; cases h
+      | some ra =>
+        rw [hra] at h; rw [run_forward hg hΛ n a x ra ha hra]
+        cases ra with
+        | none => exact h
+        | some r₁ => exact run_forward hg hΛ n b r₁ r hb h
+    | alt a b =>
+      have ha : Good Λ a := good_of_sub (fun p hp => by simp [MExp.lams, hp]) he
+      have hb : Good Λ b := good_of_sub (fun p hp => by simp [MExp.lams, hp]) he
+      rw [runObs_alt] at h; simp only [tr]; rw [runObs_alt]
+      cases hra : runObs (src n a x) with
+      | none => rw [hra] at h; cases h
+      | some ra =>
+        rw [hra] at h; rw [run_forward hg hΛ n a x ra ha hra]
+        cases ra with
+        | none => exact run_forward hg hΛ n b x r hb h
+        | some r₁ => exact h
+    | star a =>
+      have ha : Good Λ a := good_of_sub (fun p hp => by simp [MExp.lams, hp]) he
+      rw [runObs_star] at h; simp only [tr]; rw [runObs_star]
+      cases hra : runObs (src n a x) with
+      | none => rw [hra] at h; cases h
+      | some ra =>
+        rw [hra] at h; rw [run_forward hg hΛ n a x ra ha hra]
+        cases ra with
+        | none => exact h
+        | some r₁ => exact run_forward hg hΛ n (.star a) r₁ r he h
+    | notP a =>
+      have ha : Good Λ a := good_of_sub (fun p hp => by simp [MExp.lams, hp]) he
+      rw [runObs_notP] at h; simp only [tr]; rw [runObs_notP]
+      cases hra : runObs (src n a x) with
+      | none => rw [hra] at h; cases h
+      | some ra =>
+        rw [hra] at h; rw [run_forward hg hΛ n a x ra ha hra]
+        cases ra <;> exact h
+    | call i args =>
+      have hargs : ∀ p ∈ MExp.lamsArgs args, p ∈ Λ := fun p hp => he p (by simpa [MExp.lams] using hp)
+      cases hr : ruleAtM g.rules i with
+      | none =>
+        rw [runObs_call_missing hr] at h
+        simp only [tr, ruleAtM_none_iff.1 hr, ↓reduceIte]
+        exact runObs_failAlways.trans h
+      | some rule =>
+        obtain ⟨hi, hu⟩ := unitRule_rule (Λ := Λ) hr
+        simp only [tr, hi, ↓reduceIte]
+        rw [runObs_callUnit (by omega), hu]
+        by_cases har : rule.arity = args.length
+        · rw [runObs_call hr har] at h; rw [if_pos har]
+          exact run_forward hg hΛ n _ x r (good_subst hargs (hg rule (rule_mem hr))) h
+        · rw [runObs_call_arity hr har] at h; rw [if_neg har]; exact runObs_failAlways.trans h
+    | invoke a b args =>
+      have hargs : ∀ p ∈ MExp.lamsArgs args, p ∈ Λ := fun p hp => he p (by simp [MExp.lams, hp])
+      have hab : (a, b) ∈ Λ := he _ (by simp [MExp.lams])
+      simp only [tr, hab, ↓reduceIte]
+      rw [runObs_callUnit (by have := indexIn_lt hab; omega), unitRule_lam hab]
+      dsimp only
+      by_cases har : a = args.length
+      · rw [runObs_invoke har] at h; rw [if_pos har]
+        exact run_forward hg hΛ n _ x r (good_subst hargs (hΛ a b hab)) h
+      · rw [runObs_invoke_arity har] at h; rw [if_neg har]; exact runObs_failAlways.trans h
+
+theorem run_backward (hg : ∀ r ∈ g.rules, Good Λ r.body) (hΛ : LamsClosed Λ) :
+    ∀ (n : Nat) (e : MExp) (x : List Char) (r : Option (List Char)), Good Λ e →
+      runObs (tgt n (tr g Λ [] e) x) = some r → runObs (src n e x) = some r
+  | 0, _, _, _, _, h => by rw [mpegRun.eq_def] at h; cases h
+  | n + 1, e, x, r, he, h => by
+    cases e with
+    | eps => simp only [tr] at h; rw [runObs_eps] at h; rw [runObs_eps]; exact h
+    | any | chr _ | range _ _ | lit _ =>
+      simp only [tr] at h; rw [mpegRun.eq_def] at h ⊢; dsimp only at h ⊢; exact h
+    | param k => simp only [tr] at h; rw [runObs_param] at h; rw [runObs_param]; exact h
+    | lam a b => simp only [tr] at h; rw [runObs_eps] at h; rw [runObs_lam]; exact h
+    | dbg b => simp only [tr] at h; rw [runObs_eps] at h; rw [runObs_dbg]; exact h
+    | callParam k m =>
+      simp only [tr, List.getD_nil] at h
+      rw [runObs_callParam, runObs_failAlways_eq h]
+    | seq a b =>
+      have ha : Good Λ a := good_of_sub (fun p hp => by simp [MExp.lams, hp]) he
+      have hb : Good Λ b := good_of_sub (fun p hp => by simp [MExp.lams, hp]) he
+      simp only [tr] at h; rw [runObs_seq] at h; rw [runObs_seq]
+      cases hra : runObs (tgt n (tr g Λ [] a) x) with
+      | none => rw [hra] at h; cases h
+      | some ra =>
+        rw [hra] at h; rw [run_backward hg hΛ n a x ra ha hra]
+        cases ra with
+        | none => exact h
+        | some r₁ => exact run_backward hg hΛ n b r₁ r hb h
+    | alt a b =>
+      have ha : Good Λ a := good_of_sub (fun p hp => by simp [MExp.lams, hp]) he
+      have hb : Good Λ b := good_of_sub (fun p hp => by simp [MExp.lams, hp]) he
+      simp only [tr] at h; rw [runObs_alt] at h; rw [runObs_alt]
+      cases hra : runObs (tgt n (tr g Λ [] a) x) with
+      | none => rw [hra] at h; cases h
+      | some ra =>
+        rw [hra] at h; rw [run_backward hg hΛ n a x ra ha hra]
+        cases ra with
+        | none => exact run_backward hg hΛ n b x r hb h
+        | some r₁ => exact h
+    | star a =>
+      have ha : Good Λ a := good_of_sub (fun p hp => by simp [MExp.lams, hp]) he
+      simp only [tr] at h; rw [runObs_star] at h; rw [runObs_star]
+      cases hra : runObs (tgt n (tr g Λ [] a) x) with
+      | none => rw [hra] at h; cases h
+      | some ra =>
+        rw [hra] at h; rw [run_backward hg hΛ n a x ra ha hra]
+        cases ra with
+        | none => exact h
+        | some r₁ => exact run_backward hg hΛ n (.star a) r₁ r he h
+    | notP a =>
+      have ha : Good Λ a := good_of_sub (fun p hp => by simp [MExp.lams, hp]) he
+      simp only [tr] at h; rw [runObs_notP] at h; rw [runObs_notP]
+      cases hra : runObs (tgt n (tr g Λ [] a) x) with
+      | none => rw [hra] at h; cases h
+      | some ra =>
+        rw [hra] at h; rw [run_backward hg hΛ n a x ra ha hra]
+        cases ra <;> exact h
+    | call i args =>
+      have hargs : ∀ p ∈ MExp.lamsArgs args, p ∈ Λ := fun p hp => he p (by simpa [MExp.lams] using hp)
+      cases hr : ruleAtM g.rules i with
+      | none =>
+        simp only [tr, ruleAtM_none_iff.1 hr, ↓reduceIte] at h
+        rw [runObs_call_missing hr, runObs_failAlways_eq h]
+      | some rule =>
+        obtain ⟨hi, hu⟩ := unitRule_rule (Λ := Λ) hr
+        simp only [tr, hi, ↓reduceIte] at h
+        rw [runObs_callUnit (by omega), hu] at h
+        by_cases har : rule.arity = args.length
+        · rw [if_pos har] at h; rw [runObs_call hr har]
+          exact run_backward hg hΛ n _ x r (good_subst hargs (hg rule (rule_mem hr))) h
+        · rw [if_neg har] at h; rw [runObs_call_arity hr har, runObs_failAlways_eq h]
+    | invoke a b args =>
+      have hargs : ∀ p ∈ MExp.lamsArgs args, p ∈ Λ := fun p hp => he p (by simp [MExp.lams, hp])
+      have hab : (a, b) ∈ Λ := he _ (by simp [MExp.lams])
+      simp only [tr, hab, ↓reduceIte] at h
+      rw [runObs_callUnit (by have := indexIn_lt hab; omega), unitRule_lam hab] at h
+      dsimp only at h
+      by_cases har : a = args.length
+      · rw [if_pos har] at h; rw [runObs_invoke har]
+        exact run_backward hg hΛ n _ x r (good_subst hargs (hΛ a b hab)) h
+      · rw [if_neg har] at h; rw [runObs_invoke_arity har, runObs_failAlways_eq h]
+
+end Simulation
+
+/-! ## Main results -/
+
+theorem macroObs_iff_obs (G : MGrammar) (e : MExp) (x : List Char) (r : Option (List Char)) :
+    MacroObs G e x r ↔ ∃ n, runObs (mpegRun G .callByName n e x) = some r := by
+  rw [macroObs_iff_run]
+  constructor
+  · rintro ⟨n, o, ho, hr⟩; exact ⟨n, by simp [runObs, ho, hr]⟩
+  · rintro ⟨n, h⟩
+    cases ho : mpegRun G .callByName n e x with
+    | none => rw [ho] at h; cases h
+    | some o => rw [ho] at h; exact ⟨n, o, ho, Option.some.inj h⟩
+
+/-- **Defunctionalization preserves observations**: the slice grammar `g` with start `e` and its first-order
+translation `defun g e` succeed (with the same remaining input) or fail on exactly the same inputs. -/
+theorem defun_obs (g : MGrammar) (e : MExp) (x : List Char) (r : Option (List Char)) :
+    MacroObs g e x r ↔ MacroObs (defun g e).1 (defun g e).2 x r := by
+  have hg : ∀ r ∈ g.rules, Good (lamsOf g e) r.body := fun _ hr => good_rule_lamsOf e hr
+  have hΛ := lamsOf_closed (g := g) e
+  have he := good_start_lamsOf (g := g) e
+  rw [macroObs_iff_obs, macroObs_iff_obs]
+  constructor
+  · rintro ⟨n, h⟩; exact ⟨n + 1, run_forward hg hΛ n e x r he h⟩
+  · rintro ⟨n, h⟩; exact ⟨n, run_backward hg hΛ n e x r he h⟩
+
+theorem defun_firstOrder (g : MGrammar) (e : MExp) : (defun g e).1.FirstOrder ∧ (defun g e).2.FirstOrder :=
+  ⟨defunGrammar_firstOrder, tr_firstOrder [] e⟩
+
+/-- A closed start expression stays closed. -/
+theorem defun_closed {g : MGrammar} {e : MExp} (he0 : MExp.subst [] e = e) :
+    MExp.subst [] (defun g e).2 = (defun g e).2 := by
+  have := tr_subst (g := g) (Λ := lamsOf g e) [] e
+  rw [he0] at this
+  exact this.symm
+
+/-- The decision procedure for the callable-value slice: decide the first-order translation. -/
+def decideSlice (g : MGrammar) (x : List Char) (e : MExp) : Option (Option (List Char)) :=
+  decideObs (defun g e).1 x (defun g e).2
+
+/-- **The callable-value slice is decidable**, by the exponential-time procedure for first-order grammars. -/
+theorem decideSlice_iff {g : MGrammar} {e : MExp} (he0 : MExp.subst [] e = e) (x : List Char)
+    (r : Option (List Char)) : decideSlice g x e = some r ↔ MacroObs g e x r :=
+  (decideObs_iff (defun_firstOrder g e).1 (defun_firstOrder g e).2 (defun_closed he0) x r).trans
+    (defun_obs g e x r).symm
+
+theorem decideSlice_none_iff {g : MGrammar} {e : MExp} (he0 : MExp.subst [] e = e) (x : List Char) :
+    decideSlice g x e = none ↔ ∀ r, ¬ MacroObs g e x r := by
+  rw [decideSlice, decideObs_none_iff (defun_firstOrder g e).1 (defun_firstOrder g e).2 (defun_closed he0)]
+  exact forall_congr' fun r => not_congr (defun_obs g e x r).symm
 
 end Shallot.MacroPeg

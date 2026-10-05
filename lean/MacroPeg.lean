@@ -32,3 +32,6 @@ import MacroPeg.Properties.TrueComplexity
 import MacroPeg.Properties.DecideCBV
 import MacroPeg.Properties.DecideCost
 import MacroPeg.Properties.AtmHard
+import MacroPeg.Properties.MExpEq
+import MacroPeg.Properties.Defun
+import MacroPeg.Properties.DefunCorrect

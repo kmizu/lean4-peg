@@ -453,6 +453,26 @@ TQBF の PSPACE 完全性（Stockmeyer–Meyer）は外部の事実で、符号�
 外部の事実として残るのは APSPACE = EXPTIME（Chandra–Kozen–Stockmeyer）と、APSPACE の機械を全ての枝で止まるようにできること、
 TQBF の PSPACE 完全性。費用モデルは評価器の手数（表の参照 1、文字列比較は長さ + 1）で、チューリング機械は形式化していない。
 
+## Macro PEG の計算量（続き 2）: callable 値の断片（M-PEG-4）も EXPTIME 完全（`MExpEq.lean` / `Defun.lean` / `DefunCorrect.lean`）
+
+M-PEG-4 の断片では、規則に lambda（`.lam`）を渡して呼べる（`.callParam` / `.invoke`）。ただし lambda は外の引数を捕獲しない
+（`subst` は `.lam` を葉として扱う）。だから、実行中に出会う lambda は、文法と開始式に書かれた有限個のリスト `Λ` に限られる。
+**脱関数化**でこれを一階の文法に変換し、一階の判定手続きを使い回す。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `MExp.beqE_iff` | `MExp` の手書きの等号判定が等号そのもの（`deriving DecidableEq` は入れ子の帰納型に効かない） | propext, Quot.sound |
+| `tr_subst` | **翻訳と代入の可換性**（無条件）: 代入してから翻訳 = 翻訳した実引数を翻訳した本体に代入。本体の引数のタグ（0 = lambda でない、ℓ+1 = `Λ[ℓ]`）は実引数から静的に決まる | propext, Quot.sound |
+| `lams_subst` / `lamsOf_closed` | 実行中に出会う lambda はすべて `Λ` に入る（代入は lambda を動かすだけ、`Λ` は要素の本体の lambda を含む） | propext, Quot.sound |
+| `run_forward` / `run_backward` | fuel 付きの実行どうしが観測（残り入力）で一致。翻訳側は 1 だけ多く fuel を使う（失敗が `failAlways` の 2 手になる） | propext, Classical.choice, Quot.sound |
+| `defun_obs` | **観測の保存**: `MacroObs g e x r ↔ MacroObs (defun g e).1 (defun g e).2 x r` | propext, Classical.choice, Quot.sound |
+| `defun_firstOrder` | 翻訳結果は一階（`lam`・`dbg`・`callParam`・`invoke` を生まない） | propext, Quot.sound |
+| `decideSlice_iff` / `decideSlice_none_iff` | 断片の判定手続き: 翻訳して `decideObs` で判定 | propext, Classical.choice, Quot.sound |
+
+翻訳後の文法の規則数は `Σ_u (|Λ|+1)^arity(u)`（`u` は規則と lambda）。固定した文法では定数なので、判定は指数時間のままになる。
+一階の文法はそのまま断片に入るので、`atm_reduction` の下界と合わせて断片も EXPTIME 完全。外部の事実は前節と同じ。
+捕獲のある本当の高階版（クロージャ）は対象外で、次の段で扱う。
+
 ## TQBF は PSPACE 完全（`Complexity/`）
 
 計算モデルから組み立てた形式化。モデルは決定性 `k` テープ Turing 機械（入力は 2 進、空白 `0`、入力ビットは記号 `1`/`2`）、

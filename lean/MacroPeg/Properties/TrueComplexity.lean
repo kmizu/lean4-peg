@@ -10,7 +10,8 @@ import MacroPeg.Properties.Decide
   with at most `|rules| · (n+3)^((n+1)·K) · (n+1)` rounds (`iterBound_le`): exponential time.
 
 This file joins the two: `qbfG` is first-order, so the decision procedure evaluates quantified Boolean formulas.
-Whether first-order CBN Macro PEG recognition is EXPTIME-complete (or in PSPACE) is not settled here.
+`AtmHard.lean` later raised the lower bound to EXPTIME-hardness, so first-order CBN recognition is EXPTIME-complete;
+`DefunCorrect.lean` extends the upper bound to the callable-value slice (M-PEG-4).
 -/
 
 namespace Shallot.MacroPeg
