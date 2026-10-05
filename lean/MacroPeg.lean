@@ -29,3 +29,6 @@ import MacroPeg.Properties.Complexity
 import MacroPeg.Properties.QbfHard
 import MacroPeg.Properties.Decide
 import MacroPeg.Properties.TrueComplexity
+import MacroPeg.Properties.DecideCBV
+import MacroPeg.Properties.DecideCost
+import MacroPeg.Properties.AtmHard

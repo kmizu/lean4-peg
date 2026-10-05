@@ -433,6 +433,26 @@ TQBF の PSPACE 完全性（Stockmeyer–Meyer）は外部の事実で、符号�
 ことによる（計算モデルは形式化していない）。上界で形式化したのは反復回数で、1 段の費用（表の大きさ × 文法の
 大きさ）は報告で数えている。PSPACE と EXPTIME の間のどこにあるか（EXPTIME 完全かどうか）は未解決。
 
+## Macro PEG の計算量（続き）: 一階 CBN は EXPTIME 完全、一階 CBV は多項式時間（`AtmHard.lean` / `DecideCBV.lean` / `DecideCost.lean`）
+
+報告は [`docs/notes/macro-peg-complexity.md`](notes/macro-peg-complexity.md) の後半。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `atm_reduction` | **EXPTIME 困難**: 頭が入力上を動く（両端で止まる）交替チューリング機械 `M` の全ての枝が有限なら、一階 CBN 文法 `atmG M` が `w` の符号を全消費 ⇔ `M` が `w` を受理 | propext, Classical.choice, Quot.sound |
+| `atm_sim` | 模倣の本体（`Halts` の帰納法）: テープは「新しい事実を前に足す」選択の連鎖、頭は符号のテスト、照会は先読みの走査 | propext, Classical.choice, Quot.sound |
+| `atmG_firstOrder` / `atm_by_decision` | 模倣の文法は一階なので、指数時間の判定手続きが機械の受理を判定する（上界と合わせて EXPTIME 完全） | propext, Classical.choice, Quot.sound |
+| `sitesStr_length` | 符号の長さは `O(n²)` | propext, Quot.sound |
+| `decideObsV_iff` / `decideObsV_none_iff` | **CBV（Par／Seq）**: 実引数の値が入力の部分文字列であることを使った判定手続き | propext, Classical.choice, Quot.sound |
+| `iterBoundV_le` | CBV の反復回数 ≤ `\|rules\|·((n+1)²)^K·(n+1)`（多項式） | propext, Quot.sound |
+| `costV_le` / `cbV_le` | 費用モデル: CBV の 1 回の評価 ≤ `size·(n+2)^(starDepth+1)` | propext, Quot.sound |
+| `costN_le` / `cbN_le` | CBN の 1 回の評価 ≤ `size·(n+2)^(nameDepth+1)`（実引数は全位置で評価する） | propext, Quot.sound |
+| `totalCostV_poly` | CBV の判定手続きの全費用は多項式（段数 × 項目数 × 1 項目の費用） | propext, Classical.choice, Quot.sound |
+| `totalCostN_exp` | CBN の判定手続きの全費用は `M²·B + cbN n e`、`M = \|rules\|·(n+3)^((n+1)K)·(n+1)` | propext, Classical.choice, Quot.sound |
+
+外部の事実として残るのは APSPACE = EXPTIME（Chandra–Kozen–Stockmeyer）と、APSPACE の機械を全ての枝で止まるようにできること、
+TQBF の PSPACE 完全性。費用モデルは評価器の手数（表の参照 1、文字列比較は長さ + 1）で、チューリング機械は形式化していない。
+
 ## CFG 研究: `CFL ⊊ MPEL^CBN_1`（`Cfg/` / `MacroPeg/PegEmbed.lean` / `Shallot/Peg/Examples.lean`）
 
 kmizu/macro_peg（2016年 SWoPP 原稿）が発見的に示唆していた「Macro PEL は CFL を
