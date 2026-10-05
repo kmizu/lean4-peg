@@ -13,6 +13,9 @@ import Complexity.Savitch
 import Complexity.TopFormula
 import Complexity.Hardness
 import Complexity.ListTime
+import Complexity.NStack
+import Complexity.NStackSpec
+import Complexity.NStackIO
 
 /-!
 # TQBF is PSPACE-complete
