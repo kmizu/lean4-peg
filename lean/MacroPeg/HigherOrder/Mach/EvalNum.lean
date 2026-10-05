@@ -1,5 +1,5 @@
 import MacroPeg.HigherOrder.Mach.Rows
-import MacroPeg.HigherOrder.Mach.ParseSpec
+import MacroPeg.HigherOrder.Mach.ReadAll
 import MacroPeg.HigherOrder.Flat.Packed
 
 /-!
@@ -211,5 +211,95 @@ theorem stepM_eq (hw : TTWF tt) {it : MItem} {item : Item} (h : itemOf tt ct lt 
   · cases h
 
 end StepEq
+
+/-! ## Bodies, rounds and the answer, on numbered items -/
+
+theorem mapM_cons_some {α β : Type} {f : α → Option β} {a : α} {l : List α} {r : List β}
+    (h : (a :: l).mapM f = some r) : ∃ b bs, f a = some b ∧ l.mapM f = some bs ∧ r = b :: bs := by
+  cases hf : f a with
+  | none => simp [List.mapM_cons, hf] at h
+  | some b =>
+    cases hl : l.mapM f with
+    | none => simp [List.mapM_cons, hf, hl] at h
+    | some bs => simp [List.mapM_cons, hf, hl] at h; exact ⟨b, bs, rfl, rfl, h.symm⟩
+
+section Rounds
+
+variable (x : List Char) (tt ct : List (Nat × Nat)) (lt : List (List Nat))
+
+def runM (Tf : List (List Nat)) (l : List MItem) (st : List (List Nat)) : List (List Nat) :=
+  l.foldl (fun st it => stepM x tt ct lt Tf it st) st
+
+def roundM (bodies : List (List MItem)) (Tf : List (List Nat)) : List (List Nat) :=
+  bodies.map (fun l => (runM x tt ct lt Tf l []).headD [])
+
+def fixM (bodies : List (List MItem)) : Nat → List (List Nat) → List (List Nat)
+  | 0, Tf => Tf
+  | fuel + 1, Tf => if roundM x tt ct lt bodies Tf = Tf then Tf else fixM bodies fuel (roundM x tt ct lt bodies Tf)
+
+/-- The answer from the tables of a finished reading: rule types `rt`, bodies, start. -/
+def startCodeM (rt : List Nat) (bodies : List (List MItem)) (start : List MItem) : Nat :=
+  ((runM x tt ct lt (fixM x tt ct lt bodies ((rt.map (valNum x.length tt)).sum + 1)
+      (rt.map (fun t => List.replicate (valNum x.length tt t) 0))) start []).headD []).getD x.length 0
+
+variable {x tt ct lt}
+
+theorem runM_eq (hw : TTWF tt) (Tf : List (List Nat)) :
+    ∀ {l : List MItem} {is : List Item}, itemsOf tt ct lt l = some is → ∀ st,
+      runM x tt ct lt Tf l st = runF x Tf is st
+  | [], is, h, st => by simp [itemsOf] at h; subst h; rfl
+  | it :: l, is, h, st => by
+    obtain ⟨item, is', hit, hl, rfl⟩ := mapM_cons_some h
+    simp only [runM, List.foldl_cons]
+    rw [stepM_eq hw hit]
+    exact runM_eq hw Tf hl _
+
+theorem roundM_eq (hw : TTWF tt) {bodies : List (List MItem)} {bis : List (List Item)}
+    (h : bodies.mapM (itemsOf tt ct lt) = some bis) (Tf : List (List Nat)) :
+    roundM x tt ct lt bodies Tf = roundP x bis Tf := by
+  induction bodies generalizing bis with
+  | nil => simp at h; subst h; rfl
+  | cons l bodies ih =>
+    obtain ⟨is, bis', hl, hb, rfl⟩ := mapM_cons_some h
+    simp only [roundM, roundP, List.map_cons]
+    rw [runM_eq hw Tf hl]
+    have := ih hb
+    simp only [roundM, roundP] at this
+    rw [this]
+
+theorem fixM_eq (hw : TTWF tt) {bodies : List (List MItem)} {bis : List (List Item)}
+    (h : bodies.mapM (itemsOf tt ct lt) = some bis) : ∀ fuel Tf,
+    fixM x tt ct lt bodies fuel Tf = fixP x bis fuel Tf
+  | 0, _ => rfl
+  | fuel + 1, Tf => by
+    simp only [fixM, fixP, roundM_eq hw h]
+    split
+    · rfl
+    · exact fixM_eq hw h fuel _
+
+theorem valNum_sum (hw : TTWF tt) : ∀ {rt : List Nat} {R : List HO.Ty}, rt.mapM (tyOf tt) = some R →
+    (rt.map (valNum x.length tt)).sum = maxEnv x.length R ∧
+      rt.map (fun t => List.replicate (valNum x.length tt t) 0) = R.map (fun τ => List.replicate (valSize x.length τ) 0)
+  | [], R, h => by simp at h; subst h; simp [maxEnv]
+  | t :: rt, R, h => by
+    obtain ⟨τ, R', hτ, hR, rfl⟩ := mapM_cons_some h
+    obtain ⟨h₁, h₂⟩ := valNum_sum hw hR
+    simp [maxEnv, h₁, h₂, valNum_eq t hτ, maxCount_eq_valSize]
+where
+  maxCount_eq_valSize (N : Nat) : ∀ τ : HO.Ty, valSize N τ = maxCount N τ
+    | .p => rfl
+    | .arr a b => by rw [valSize, maxCount, maxCount_eq_valSize N b]
+
+end Rounds
+
+/-- **The answer from a finished reading** is the answer of the packed procedure. -/
+theorem startCodeM_eq {st : PSt} {g : HGrammar} {bis : List (List Item)} {is : List Item} {x : List Char}
+    (hr : ReadOK st g.types bis is x) :
+    startCodeM x st.tt st.ct st.lt st.rt st.bodies st.start = startCodeP x g bis is := by
+  obtain ⟨hsum, hzero⟩ := valNum_sum (x := x) hr.tt hr.rt
+  unfold startCodeM startCodeP
+  rw [hsum, hzero, fixM_eq hr.tt hr.bodies, runM_eq hr.tt _ hr.start]
+  congr 4
+  simp [zeroRules, HGrammar.types, List.map_map, Function.comp_def]
 
 end Shallot.MacroPeg.Mach
