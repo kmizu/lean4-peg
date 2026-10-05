@@ -72,6 +72,12 @@ def FrameOK (p : NProg NK) (s : PSt) (K : List Nat) (T : Nat) : Prop :=
   ((pstep s).ok = true → NRuns p (enc { s with ctl := K }) (enc (pstep s)) T) ∧
     ((pstep s).ok = false → ∃ S', NHalts p (enc { s with ctl := K }) false S' T)
 
+/-- The program `p` of a token of an expression does what `readExpr` does from `s`, whose token has been popped
+(leaving `r`) and whose frame `0` has been popped (leaving `K`), within `T` steps. -/
+def TokOK (p : NProg NK) (s : PSt) (K r : List Nat) (T : Nat) : Prop :=
+  ((readExpr s K).ok = true → NRuns p (enc { s with ctl := K, tk := r }) (enc (readExpr s K)) T) ∧
+    ((readExpr s K).ok = false → ∃ S', NHalts p (enc { s with ctl := K, tk := r }) false S' T)
+
 theorem frameOK_run {p : NProg NK} {s : PSt} {K : List Nat} {T : Nat} {s' : PSt} (he : pstep s = s')
     (h : NRuns p (enc { s with ctl := K }) (enc s') T) (hok : s'.ok = s.ok) (hs : s.ok = true) : FrameOK p s K T :=
   ⟨fun _ => he ▸ h, fun hf => by rw [he, hok, hs] at hf; cases hf⟩
