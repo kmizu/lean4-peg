@@ -569,4 +569,98 @@ theorem sym_next (hspec : Spec GT m (inputTail w) K) {t : Nat} {Tp : HExp} (hTp 
 
 end Next
 
+/-! ## The whole run -/
+
+section Main
+
+variable {kt : Nat} {M : TM kt} {K m : Nat} {w : List Bool}
+
+local notation "GT" => gT M K
+local notation "LX" => encChars m w
+
+theorem kc_zero : kc 0 = .eps := rfl
+
+theorem initCell_le (w : List Bool) (i : Nat) : initCell w i ≤ 2 := by
+  unfold initCell; split
+  · rename_i b _; cases b <;> simp [bitSym]
+  · omega
+
+/-- **The tableau follows the run**: at every time below `E m K`, the tests decide the configuration. -/
+theorem tableau_sim (hspec : Spec GT m (inputTail w) K) (hn : w.length < E m K) :
+    ∀ t, t < E m K → ∀ T, Levels.Rep GT m (inputTail w) K T t → Good M K m w t T := by
+  intro t
+  induction t with
+  | zero =>
+    intro _ T hT
+    have hTc := (hspec.cl hT).1
+    have hz := hspec.isZero hT
+    simp only [beq_self_eq_true] at hz
+    refine ⟨fun q hq => ?_, fun τ I i hI => ?_, fun τ s hs I i hI => ?_⟩
+    · refine st_call hq hTc (test_of_iff (test_guard_pos hz (test_bitC (q == 2) LX)) ?_)
+      show (q == 2) = true ↔ ((2 : Nat) == q) = true
+      simp only [beq_iff_eq]; omega
+    · refine hd_call τ hTc (hspec.cl hI).1 (test_of_iff (test_guard_pos hz (hspec.isZero hI)) ?_)
+      show (i == 0) = true ↔ ((0 : Nat) == i) = true
+      simp only [beq_iff_eq]; omega
+    · refine sy_call τ hs hTc (hspec.cl hI).1 (test_guard_pos hz ?_)
+      unfold initE
+      by_cases h0 : τ.val = 0
+      · rw [if_pos h0]
+        have hcell : (cfg M w 0).cells τ i = initCell w i := by
+          show (if τ.val = 0 then _ else 0) = _
+          rw [if_pos h0]; rfl
+        rw [hcell]
+        by_cases hs2 : s ≤ 2
+        · rw [if_pos hs2]
+          exact input_test M K m w hspec hn (by omega) hI w.length 0 _ (by omega) (Nat.zero_le _) hspec.zero
+        · rw [if_neg hs2]
+          have := initCell_le w i
+          rw [show (initCell w i == s) = false by simp; omega]
+          exact test_failAlways
+      · rw [if_neg h0]
+        have hcell : (cfg M w 0).cells τ i = 0 := by
+          show (if τ.val = 0 then _ else 0) = _
+          rw [if_neg h0]
+        rw [hcell, nat_beq_comm]
+        exact test_bitC _ LX
+  | succ t ih =>
+    intro ht T hT
+    have hTc := (hspec.cl hT).1
+    have hz := hspec.isZero hT
+    rw [show (t + 1 == 0) = false by simp] at hz
+    have hdec := hspec.dec hT (by omega)
+    simp only [Nat.add_sub_cancel] at hdec
+    have hTp := (hspec.cl hdec).1
+    have hG := ih (by omega) _ hdec
+    have hR : InRange M (cfg M w t) := Complexity.inRange_run M (Complexity.inRange_init M w) t
+    have hpos : ∀ τ, (cfg M w t).pos τ < E m K := fun τ => by have := pos_le M w t τ; omega
+    have hpos1 : ∀ τ, (cfg M w t).pos τ + 1 < E m K := fun τ => by have := pos_le M w t τ; omega
+    refine ⟨fun q hq => ?_, fun τ I i hI => ?_, fun τ s hs I i hI => ?_⟩
+    · exact st_call hq hTc (test_guard_neg hz (state_next hspec hTp hG hpos hR hq))
+    · exact hd_call τ hTc (hspec.cl hI).1 (test_guard_neg hz (head_next hspec hTp hG hpos1 hR τ hI))
+    · exact sy_call τ hs hTc (hspec.cl hI).1 (test_guard_neg hz (sym_next hspec hTp hG hpos hR τ hs hI))
+
+/-- **Acceptance**: the grammar consumes the whole input iff the state at the last time `E - 1` is accepting. -/
+theorem start_obs (hspec : Spec GT m (inputTail w) K) (hn : w.length < E m K) :
+    HObs GT (startT K) LX (some []) ↔ (cfg M w (E m K - 1)).state = 0 := by
+  have hG := tableau_sim hspec hn (E m K - 1) (by have := E_pos m K; omega) _ hspec.max
+  have h0 := hG.1 0 (by have := two_lt_nq M; omega)
+  have hstar : HObs GT (.star .any) LX (some []) :=
+    hobs_of_peg (e := .star .any) trivial (Shallot.MacroPeg.star_any_all (g := (⟨[]⟩ : Shallot.MacroPeg.MGrammar)) _)
+  unfold startT
+  cases hb : ((cfg M w (E m K - 1)).state == 0) with
+  | true =>
+    rw [hb] at h0
+    obtain ⟨y, hy⟩ := h0
+    exact ⟨fun _ => by simpa using hb, fun _ => hobs_seq_ok (hobs_and_some hy) hstar⟩
+  | false =>
+    rw [hb] at h0
+    have hnone : HObs GT (.seq (HExp.andP (rcall (rST K 0) [(ops K).max])) (.star .any)) LX none :=
+      hobs_seq_fail (hobs_and_none h0)
+    constructor
+    · intro h; have := hobs_det h hnone; cases this
+    · intro h; simp [h] at hb
+
+end Main
+
 end Shallot.MacroPeg.Tableau
