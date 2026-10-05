@@ -473,6 +473,34 @@ M-PEG-4 の断片では、規則に lambda（`.lam`）を渡して呼べる（`.
 一階の文法はそのまま断片に入るので、`atm_reduction` の下界と合わせて断片も EXPTIME 完全。外部の事実は前節と同じ。
 捕獲のある本当の高階版（クロージャ）は対象外で、次の段で扱う。
 
+## 高階 Macro PEG（クロージャあり）: 定義、一階版の埋め込み、判定可能性（`MacroPeg/HigherOrder/`）
+
+報告は [`docs/notes/macro-peg-higher-order.md`](notes/macro-peg-higher-order.md)。
+
+**定義**: パーサの基本型 `p` 上の単純型付き λ 計算に、PEG 演算を定数として入れ、名前付きの相互再帰規則を足したもの（`Syntax.lean`）。
+- 外の変数を捕獲する lambda と、部分適用した規則を値として渡せる。
+- 意味論は call-by-name のヘッド簡約と fuel 付き実行 `hrun`（`Semantics.lean`）。
+- 型の order は、矢印の左側の入れ子の深さ。一階の規則が order 1、それを受け取る規則が order 2。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `hrun_mono` / `hobs_det` | fuel を増やしても結果は変わらない。観測は入力の関数 | propext |
+| `hrun_suffix` | 成功の残りは入力の接尾辞 | propext |
+| `instArgs_emb` | 一階の呼び出しの β 簡約の列は、代入済みの本体の埋め込みを計算する | propext, Quot.sound |
+| `emb_obs` | **一階の Macro PEG は order-1 の断片**: 一階かつアリティが正しい文法で、`MacroObs G e x r ↔ HObs (embGrammar G) (emb 0 e) x r` | propext, Classical.choice, Quot.sound |
+| `embGrammar_order` | 埋め込んだ文法の order は 1 以下 | propext, Quot.sound |
+| `den_mono` | 有限モデル（位置ごとの結果の表、関数は**単調な**値の上の表）での意味は整っていて、規則の値と変数の値について単調 | propext, Classical.choice, Quot.sound |
+| `iter_stable` | 規則の値の反復は増加列で、定義済みの項目数を数えると `maxEnv` 回で止まる | propext, Classical.choice, Quot.sound |
+| `inst_substC` | β 補題: 閉じた項を束縛変数に入れることと、同時代入の可換性 | propext, Quot.sound |
+| `sound_iter` | **健全性**（論理関係 `RelA`）: 反復が出す結果は実行の結果 | propext, Classical.choice, Quot.sound |
+| `complete_fix` | **完全性**（fuel 添字の論理関係 `RelB`）: 実行の結果は不動点の値 | propext, Classical.choice, Quot.sound |
+| `decideHO_iff` / `decideHO_none_iff` | **判定可能性**: 型付き文法の観測を `decideHO` が判定する | propext, Classical.choice, Quot.sound |
+| `elems_length_le` / `maxCount_parsers` | 値の個数は塔（`\|p\| ≤ (N+3)^(N+1)`、`\|a ⇒ b\| ≤ \|b\|^\|a\|`）。一階の規則なら反復回数は指数 | propext, Quot.sound |
+
+反復回数は `maxEnv`（規則の型ごとの `maxCount` の和）以下で、`maxCount (a ⇒ b) = |elems a| · maxCount b` になる。
+order k の規則なら引数の order は k 未満なので、反復回数と 1 回あたりの表の項目数は |x| について k 重指数で抑えられる。
+実行時間はこの上界と文法の大きさの積で、費用モデルは形式化していない。k 重指数時間の下界（k-EXPTIME 困難）は未証明。
+
 ## TQBF は PSPACE 完全（`Complexity/`）
 
 計算モデルから組み立てた形式化。モデルは決定性 `k` テープ Turing 機械（入力は 2 進、空白 `0`、入力ビットは記号 `1`/`2`）、

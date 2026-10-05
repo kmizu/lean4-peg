@@ -39,3 +39,10 @@ import MacroPeg.HigherOrder.Syntax
 import MacroPeg.HigherOrder.Semantics
 import MacroPeg.HigherOrder.Examples
 import MacroPeg.HigherOrder.Embed
+import MacroPeg.HigherOrder.Typed
+import MacroPeg.HigherOrder.Domain
+import MacroPeg.HigherOrder.Denote
+import MacroPeg.HigherOrder.Subst
+import MacroPeg.HigherOrder.Adequacy
+import MacroPeg.HigherOrder.Complete
+import MacroPeg.HigherOrder.Decide
