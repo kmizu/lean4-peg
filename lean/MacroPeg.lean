@@ -47,3 +47,9 @@ import MacroPeg.HigherOrder.Adequacy
 import MacroPeg.HigherOrder.Complete
 import MacroPeg.HigherOrder.Decide
 import MacroPeg.HigherOrder.Hardness
+import MacroPeg.HigherOrder.ExpSpace.Machine
+import MacroPeg.HigherOrder.ExpSpace.Basic
+import MacroPeg.HigherOrder.ExpSpace.Grammar
+import MacroPeg.HigherOrder.ExpSpace.Address
+import MacroPeg.HigherOrder.ExpSpace.Sim
+import MacroPeg.HigherOrder.ExpSpace.Typing

@@ -61,6 +61,17 @@ theorem decideHO_none_iff : decideHO G t x = none ↔ ∀ r, ¬ HObs G.erase t.e
 
 end Main
 
+/-- **Every well-typed grammar is decided**: for a well-typed grammar and a closed start parser, the decision
+procedure of a typed version decides the observations. -/
+theorem decide_wellTyped {g : HGrammar} (hg : g.WellTyped) {e : HExp} (he : HasTy g.types [] e .p) :
+    ∃ (G : TGrammar g.types) (t : Tm g.types [] .p),
+      ∀ x r, HObs g e x r ↔ ∃ r', decideHO G t x = some r' ∧ r'.map (sfx x) = r := by
+  obtain ⟨G, hG⟩ := hg.toTGrammar
+  obtain ⟨t, ht⟩ := he.toTm
+  refine ⟨G, t, fun x r => ?_⟩
+  have := decideHO_iff G t x r
+  rwa [hG, ht] at this
+
 /-! ## How many values -/
 
 theorem length_allVecs {α : Type} (xs : List α) : ∀ m, (allVecs xs m).length = xs.length ^ m

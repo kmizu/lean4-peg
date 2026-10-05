@@ -79,4 +79,41 @@ theorem Tm.hasTy {R : List Ty} : {Γ : List Ty} → {τ : Ty} → (t : Tm R Γ �
   | _, _, .lam body => .lam body.hasTy
   | _, _, .app f x => .app f.hasTy x.hasTy
 
+/-! ## Typing derivations give typed terms -/
+
+/-- A well-typed expression is the erasure of a typed term. -/
+theorem HasTy.toTm {R : List Ty} {Γ : List Ty} {e : HExp} {τ : Ty} (h : HasTy R Γ e τ) :
+    ∃ t : Tm R Γ τ, t.erase = e := by
+  induction h with
+  | eps => exact ⟨.eps, rfl⟩
+  | any => exact ⟨.any, rfl⟩
+  | chr _ c => exact ⟨.chr c, rfl⟩
+  | range _ lo hi => exact ⟨.range lo hi, rfl⟩
+  | lit _ s => exact ⟨.lit s, rfl⟩
+  | seq _ _ iha ihb =>
+    obtain ⟨a, rfl⟩ := iha; obtain ⟨b, rfl⟩ := ihb; exact ⟨.seq a b, rfl⟩
+  | alt _ _ iha ihb =>
+    obtain ⟨a, rfl⟩ := iha; obtain ⟨b, rfl⟩ := ihb; exact ⟨.alt a b, rfl⟩
+  | star _ iha => obtain ⟨a, rfl⟩ := iha; exact ⟨.star a, rfl⟩
+  | notP _ iha => obtain ⟨a, rfl⟩ := iha; exact ⟨.notP a, rfl⟩
+  | @var _ i _ h => exact ⟨.var i h, rfl⟩
+  | @rule _ i _ h => exact ⟨.rule i h, rfl⟩
+  | lam _ ih => obtain ⟨b, rfl⟩ := ih; exact ⟨.lam b, rfl⟩
+  | app _ _ ihf iha => obtain ⟨f, rfl⟩ := ihf; obtain ⟨a, rfl⟩ := iha; exact ⟨.app f a, rfl⟩
+
+theorem TBodies.exists_of_hasTy {R : List Ty} : ∀ rs : List HRule, (∀ r ∈ rs, HasTy R [] r.body r.ty) →
+    ∃ bs : TBodies R (rs.map HRule.ty), List.zipWith (fun τ b => (⟨τ, b⟩ : HRule)) (rs.map HRule.ty) bs.erase = rs
+  | [], _ => ⟨(), rfl⟩
+  | r :: rs, h => by
+    obtain ⟨t, ht⟩ := (h r List.mem_cons_self).toTm
+    obtain ⟨bs, hbs⟩ := TBodies.exists_of_hasTy rs (fun r' hr => h r' (List.mem_cons_of_mem _ hr))
+    refine ⟨(t, bs), ?_⟩
+    simp only [List.map_cons, TBodies.erase, List.zipWith_cons_cons, ht, hbs]
+
+/-- **A well-typed grammar is the erasure of a typed grammar**, so the decision procedure applies to it. -/
+theorem HGrammar.WellTyped.toTGrammar {g : HGrammar} (hg : g.WellTyped) :
+    ∃ G : TGrammar g.types, G.erase = g := by
+  obtain ⟨bs, hbs⟩ := TBodies.exists_of_hasTy g.rules hg
+  exact ⟨⟨bs⟩, by cases g; simp only [TGrammar.erase, HGrammar.mk.injEq]; exact hbs⟩
+
 end Shallot.MacroPeg.HO

@@ -497,11 +497,15 @@ M-PEG-4 の断片では、規則に lambda（`.lam`）を渡して呼べる（`.
 | `decideHO_iff` / `decideHO_none_iff` | **判定可能性**: 型付き文法の観測を `decideHO` が判定する | propext, Classical.choice, Quot.sound |
 | `atmG_arityOk` / `atm_reduction_HO` | 交替 TM を模倣する一階の文法はアリティが正しいので、埋め込んでも同じ入力を受理する。高階版は order 1 ですでに EXPTIME 困難 | propext, Classical.choice, Quot.sound |
 | `elems_length_le` / `maxCount_parsers` | 値の個数は塔（`\|p\| ≤ (N+3)^(N+1)`、`\|a ⇒ b\| ≤ \|b\|^\|a\|`）。一階の規則なら反復回数は指数 | propext, Quot.sound |
+| `HGrammar.WellTyped.toTGrammar` / `decide_wellTyped` | `HasTy` で型が付く文法は型付き文法の erase なので、判定手続きがそのまま使える | propext, Classical.choice, Quot.sound |
+| `eq_ok` / `inc_rep` / `wr_rep` | order 2 の下界の部品（`ExpSpace/`）: 番地はサイトごとのビットを読むパーサ、`EQ` は番地の比較、`incE` は二進の後者、書き込みはクロージャ `λa. EQ(a,H) ? b : T a` | propext, Classical.choice, Quot.sound |
+| `atm2_reduction` / `order2_hard` | **order 2 は 2-EXPTIME 困難**: 作業テープが `2^\|w\|` マスの交替 TM `M` ごとに、型の付いた order 2 の文法 `g2 M` があり、全ての枝が有限なら `w` の符号（長さ `O(\|w\|²)`）を全部読む ⇔ `M` が `w` を受理 | propext, Classical.choice, Quot.sound |
 
 反復回数は `maxEnv`（規則の型ごとの `maxCount` の和）以下で、`maxCount (a ⇒ b) = |elems a| · maxCount b` になる。
 order k の規則なら引数の order は k 未満なので、反復回数と 1 回あたりの表の項目数は |x| について k 重指数で抑えられる。
 実行時間はこの上界と文法の大きさの積で、費用モデルは形式化していない。order 1 では上界と `atm_reduction_HO` を合わせて EXPTIME 完全。
-order k ≥ 2 で k-EXPTIME 困難かどうかは未証明。
+order 2 では `order2_hard` が 2-EXPTIME 困難を与える（AEXPSPACE = 2-EXPTIME は外部の事実）。上界と合わせて 2-EXPTIME 完全になるのは、
+「order 2 なら二重指数時間」という上界の読み取りを認めた場合。order k ≥ 3 の下界は未証明。
 
 ## TQBF は PSPACE 完全（`Complexity/`）
 

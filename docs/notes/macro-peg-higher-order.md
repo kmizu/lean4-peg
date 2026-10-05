@@ -8,7 +8,9 @@
 3. **高階 Macro PEG の認識は判定可能。** 有限の単調モデルでの不動点計算が、call-by-name の実行と一致する
    （`decideHO_iff`）。反復回数は値の個数の塔で抑えられ、order k の規則では |x| について k 重指数になる。
 4. 下界は order 1 まで: 交替 TM を模倣する一階の文法を埋め込むと同じ入力を受理するから、高階版も EXPTIME 困難
-   （`atm_reduction_HO`）。order k ≥ 2 で k-EXPTIME 困難かどうかは**未証明**。予想として残す。
+   （`atm_reduction_HO`）。
+5. **order 2 は 2-EXPTIME 困難。** 作業テープが 2^n マスの交替 TM を、型の付いた order 2 の文法で模倣した（`order2_hard`）。
+   order k ≥ 3 の下界は**未証明**。
 
 ## 1. 捕獲なしの lambda の断片（`Properties/{MExpEq,Defun,DefunCorrect}.lean`）
 
@@ -56,8 +58,9 @@ lambda は `subst` で葉として扱われるから、実行中に出会う lam
 
 代入について要る事実は、β 補題 `inst_substC` だけ。型付きの代入は作っていない。
 
-定理は内在的に型付いた文法 `TGrammar` を erase したものについて述べている。型検査器（`HasTy` から `Tm` を作る関数）は
-作っていない。
+定理は内在的に型付いた文法 `TGrammar` を erase したものについて述べている。`HasTy` で型が付く文法はどれも、ある
+`TGrammar` の erase になる（`HGrammar.WellTyped.toTGrammar`）。だから判定は well-typed な文法全体に使える
+（`decide_wellTyped`）。計算する型検査器は作っていない（存在を示しただけ）。
 
 ## 計算量について言えること・言えないこと
 
@@ -70,6 +73,30 @@ lambda は `subst` で葉として扱われるから、実行中に出会う lam
 「order k なら k 重指数時間」は、ここからの読み取り（引数の型の order は k 未満）で、order ごとの閉じた式までは証明していない。
 費用モデル（1 回の反復の手数）も形式化していない。
 
-order k ≥ 2 の下界は未証明。order 1 は EXPTIME 困難（`atm_reduction_HO`、`atmG_arityOk` で埋め込みの前提を満たす）で、order 2 で 2-EXPTIME 困難を示すには、指数長のテープを
-order 1 の値（番地 ↦ ビット）で持つ交替 TM の模倣が要る。Jones（2001）と Kop–Simonsen（2017）の cons-free 高階
-プログラムの結果からは、order k で k-EXPTIME 完全になると予想している。どちらも外部の参照で、ここでは使っていない。
+## 4. order 2 の下界（`HigherOrder/ExpSpace/*.lean`）
+
+機械（`Machine.lean`）:
+- 作業テープは 2^n マス（n = |w|）。番地は上位ビットが先の n ビット列。
+- 頭の左右移動は二進の ±1 で、端ではその場に留まる。
+- 初期テープは、マス a に `⋁ⱼ (aⱼ ∧ wⱼ)` を置く。マス eⱼ（ビット j だけ 1）に wⱼ が入るので、機械は入力を読める。
+
+文法 `g2 M`（`Grammar.lean`）:
+- **番地**（order 0）: サイト j で x まで読めば、ビット j が 1 という意味のパーサ。最初の番地は `H0`。
+  - 後者 `incE H`: サイト j を `Hⱼ xor（以降が全部 1）` で読む。後ろのビットは先読みの走査 `ALL1` で調べる。
+  - 前者 `decE H`: 同じく `ALL0` を使う。
+- **テープ**（order 1）: 番地を受け取り、そのマスが 1 なら幅 0 で成功するテストを返す。
+  - 書き込みはクロージャ `λa. &EQ(a,H) b̂ / !EQ(a,H) T a`。
+  - 初期テープは `λa. &SC(a)`。
+- **状態**（order 2）: 型は `p ⇒ (p ⇒ p) ⇒ p`。`T H` でマスを読み、遷移ごとに動かした頭と書いたテープで次の状態を呼ぶ。
+
+証明の流れ:
+- 一階の観測補題（`codeE_ok` など）は、規則を含まない式に限って高階版へ移す（`runObs_peg`）。
+- 規則呼び出しは、代入済みの本体の観測になる（`hobs_call`）。
+- 番地の表現 `RepA` とテープの表現 `RepT` を保ったまま、`AtmHard` と同じ形の帰納法で模倣する（`sim`）。
+- 型付け（`g2_wellTyped`）と order（`g2_order`）も示した。だから、この文法は上界の定理と同じクラスに入る。
+
+## 残り
+
+order k ≥ 3 の下界は未証明。必要なのは、order k-1 の値を番地にして、(k-1) 重指数長のテープを持たせること。
+Jones（2001）と Kop–Simonsen（2017）の cons-free 高階プログラムの結果からは、order k で k-EXPTIME 完全になると予想している。
+どちらも外部の参照で、ここでは使っていない。
