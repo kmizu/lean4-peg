@@ -56,7 +56,10 @@ def itemZ (j cap : Nat) (st : PSt) (Tf : List (List Nat)) (it : MItem) (vs : Lis
     (rowsFlat j cap st.x.length st.tt).length + Tf.flatten.length + Tf.length + st.ct.length + st.lt.length +
     (encLits st.lt).length + (envTable j cap st.x.length st.tt st.ct).sum +
     (valTable j cap st.x.length st.tt).sum + (cntTable j cap st.x.length st.tt).sum + it.a + it.b + it.ctx +
-    st.x.length + st.tt.length
+    st.x.length + st.tt.length +
+    -- the sizes of the numbers that may be compared or counted down
+    (evFlat vs).sum + (evFlat (stepT j cap (st.x.map Char.ofNat) st.tt st.ct st.lt Tf it vs)).sum + Tf.flatten.sum +
+    (rowsFlat j cap st.x.length st.tt).sum + st.x.sum + (encLits st.lt).sum
 
 /-- A bound on the steps of an item program. -/
 def itemCost (j cap : Nat) (st : PSt) (Tf : List (List Nat)) (it : MItem) (vs : List (List Nat)) : Nat :=
