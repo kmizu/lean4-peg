@@ -453,6 +453,60 @@ TQBF の PSPACE 完全性（Stockmeyer–Meyer）は外部の事実で、符号�
 外部の事実として残るのは APSPACE = EXPTIME（Chandra–Kozen–Stockmeyer）と、APSPACE の機械を全ての枝で止まるようにできること、
 TQBF の PSPACE 完全性。費用モデルは評価器の手数（表の参照 1、文字列比較は長さ + 1）で、チューリング機械は形式化していない。
 
+## Macro PEG の計算量（続き 2）: callable 値の断片（M-PEG-4）も EXPTIME 完全（`MExpEq.lean` / `Defun.lean` / `DefunCorrect.lean`）
+
+M-PEG-4 の断片では、規則に lambda（`.lam`）を渡して呼べる（`.callParam` / `.invoke`）。ただし lambda は外の引数を捕獲しない
+（`subst` は `.lam` を葉として扱う）。だから、実行中に出会う lambda は、文法と開始式に書かれた有限個のリスト `Λ` に限られる。
+**脱関数化**でこれを一階の文法に変換し、一階の判定手続きを使い回す。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `MExp.beqE_iff` | `MExp` の手書きの等号判定が等号そのもの（`deriving DecidableEq` は入れ子の帰納型に効かない） | propext, Quot.sound |
+| `tr_subst` | **翻訳と代入の可換性**（無条件）: 代入してから翻訳 = 翻訳した実引数を翻訳した本体に代入。本体の引数のタグ（0 = lambda でない、ℓ+1 = `Λ[ℓ]`）は実引数から静的に決まる | propext, Quot.sound |
+| `lams_subst` / `lamsOf_closed` | 実行中に出会う lambda はすべて `Λ` に入る（代入は lambda を動かすだけ、`Λ` は要素の本体の lambda を含む） | propext, Quot.sound |
+| `run_forward` / `run_backward` | fuel 付きの実行どうしが観測（残り入力）で一致。翻訳側は 1 だけ多く fuel を使う（失敗が `failAlways` の 2 手になる） | propext, Classical.choice, Quot.sound |
+| `defun_obs` | **観測の保存**: `MacroObs g e x r ↔ MacroObs (defun g e).1 (defun g e).2 x r` | propext, Classical.choice, Quot.sound |
+| `defun_firstOrder` | 翻訳結果は一階（`lam`・`dbg`・`callParam`・`invoke` を生まない） | propext, Quot.sound |
+| `decideSlice_iff` / `decideSlice_none_iff` | 断片の判定手続き: 翻訳して `decideObs` で判定 | propext, Classical.choice, Quot.sound |
+
+翻訳後の文法の規則数は `Σ_u (|Λ|+1)^arity(u)`（`u` は規則と lambda）。固定した文法では定数なので、判定は指数時間のままになる。
+一階の文法はそのまま断片に入るので、`atm_reduction` の下界と合わせて断片も EXPTIME 完全。外部の事実は前節と同じ。
+捕獲のある本当の高階版（クロージャ）は対象外で、次の段で扱う。
+
+## 高階 Macro PEG（クロージャあり）: 定義、一階版の埋め込み、判定可能性（`MacroPeg/HigherOrder/`）
+
+報告は [`docs/notes/macro-peg-higher-order.md`](notes/macro-peg-higher-order.md)。
+
+**定義**: パーサの基本型 `p` 上の単純型付き λ 計算に、PEG 演算を定数として入れ、名前付きの相互再帰規則を足したもの（`Syntax.lean`）。
+- 外の変数を捕獲する lambda と、部分適用した規則を値として渡せる。
+- 意味論は call-by-name のヘッド簡約と fuel 付き実行 `hrun`（`Semantics.lean`）。
+- 型の order は、矢印の左側の入れ子の深さ。一階の規則が order 1、それを受け取る規則が order 2。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `hrun_mono` / `hobs_det` | fuel を増やしても結果は変わらない。観測は入力の関数 | propext |
+| `hrun_suffix` | 成功の残りは入力の接尾辞 | propext |
+| `instArgs_emb` | 一階の呼び出しの β 簡約の列は、代入済みの本体の埋め込みを計算する | propext, Quot.sound |
+| `emb_obs` | **一階の Macro PEG は order-1 の断片**: 一階かつアリティが正しい文法で、`MacroObs G e x r ↔ HObs (embGrammar G) (emb 0 e) x r` | propext, Classical.choice, Quot.sound |
+| `embGrammar_order` | 埋め込んだ文法の order は 1 以下 | propext, Quot.sound |
+| `den_mono` | 有限モデル（位置ごとの結果の表、関数は**単調な**値の上の表）での意味は整っていて、規則の値と変数の値について単調 | propext, Classical.choice, Quot.sound |
+| `iter_stable` | 規則の値の反復は増加列で、定義済みの項目数を数えると `maxEnv` 回で止まる | propext, Classical.choice, Quot.sound |
+| `inst_substC` | β 補題: 閉じた項を束縛変数に入れることと、同時代入の可換性 | propext, Quot.sound |
+| `sound_iter` | **健全性**（論理関係 `RelA`）: 反復が出す結果は実行の結果 | propext, Classical.choice, Quot.sound |
+| `complete_fix` | **完全性**（fuel 添字の論理関係 `RelB`）: 実行の結果は不動点の値 | propext, Classical.choice, Quot.sound |
+| `decideHO_iff` / `decideHO_none_iff` | **判定可能性**: 型付き文法の観測を `decideHO` が判定する | propext, Classical.choice, Quot.sound |
+| `atmG_arityOk` / `atm_reduction_HO` | 交替 TM を模倣する一階の文法はアリティが正しいので、埋め込んでも同じ入力を受理する。高階版は order 1 ですでに EXPTIME 困難 | propext, Classical.choice, Quot.sound |
+| `elems_length_le` / `maxCount_parsers` | 値の個数は塔（`\|p\| ≤ (N+3)^(N+1)`、`\|a ⇒ b\| ≤ \|b\|^\|a\|`）。一階の規則なら反復回数は指数 | propext, Quot.sound |
+| `HGrammar.WellTyped.toTGrammar` / `decide_wellTyped` | `HasTy` で型が付く文法は型付き文法の erase なので、判定手続きがそのまま使える | propext, Classical.choice, Quot.sound |
+| `eq_ok` / `inc_rep` / `wr_rep` | order 2 の下界の部品（`ExpSpace/`）: 番地はサイトごとのビットを読むパーサ、`EQ` は番地の比較、`incE` は二進の後者、書き込みはクロージャ `λa. EQ(a,H) ? b : T a` | propext, Classical.choice, Quot.sound |
+| `atm2_reduction` / `order2_hard` | **order 2 は 2-EXPTIME 困難**: 作業テープが `2^\|w\|` マスの交替 TM `M` ごとに、型の付いた order 2 の文法 `g2 M` があり、全ての枝が有限なら `w` の符号（長さ `O(\|w\|²)`）を全部読む ⇔ `M` が `w` を受理 | propext, Classical.choice, Quot.sound |
+
+反復回数は `maxEnv`（規則の型ごとの `maxCount` の和）以下で、`maxCount (a ⇒ b) = |elems a| · maxCount b` になる。
+order k の規則なら引数の order は k 未満なので、反復回数と 1 回あたりの表の項目数は |x| について k 重指数で抑えられる。
+実行時間はこの上界と文法の大きさの積で、費用モデルは形式化していない。order 1 では上界と `atm_reduction_HO` を合わせて EXPTIME 完全。
+order 2 では `order2_hard` が 2-EXPTIME 困難を与える（AEXPSPACE = 2-EXPTIME は外部の事実）。上界と合わせて 2-EXPTIME 完全になるのは、
+「order 2 なら二重指数時間」という上界の読み取りを認めた場合。order k ≥ 3 の下界は未証明。
+
 ## TQBF は PSPACE 完全（`Complexity/`）
 
 計算モデルから組み立てた形式化。モデルは決定性 `k` テープ Turing 機械（入力は 2 進、空白 `0`、入力ビットは記号 `1`/`2`）、
