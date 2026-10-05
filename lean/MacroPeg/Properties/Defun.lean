@@ -118,6 +118,99 @@ def defunGrammar : MGrammar :=
 
 end Translate
 
+/-! ## Translation commutes with substitution -/
+
+section Commute
+
+variable {g : MGrammar} {Λ : List (Nat × MExp)}
+
+theorem argAt_map (f : MExp → MExp) : ∀ (A : List MExp) (k : Nat), argAt (A.map f) k = (argAt A k).map f
+  | [], _ => rfl
+  | _ :: _, 0 => rfl
+  | _ :: A, k + 1 => argAt_map f A k
+
+theorem trArgs_eq_map (v : List Nat) : ∀ A : List MExp, trArgs g Λ v A = A.map (tr g Λ v)
+  | [] => by simp [trArgs]
+  | a :: A => by simp [trArgs, trArgs_eq_map v A]
+
+/-- The tag of a parameter is the tag of the argument it is bound to. -/
+theorem tagOf_param (A : List MExp) (j : Nat) :
+    tagOf Λ (tagsOf Λ [] A) (.param j) = match argAt A j with | some a => tagOf Λ [] a | none => 0 := by
+  induction A generalizing j with
+  | nil => rfl
+  | cons a A ih => cases j with
+    | zero => rfl
+    | succ j => exact ih j
+
+/-- Substituting closed-scope arguments does not change what is statically known about an argument's tag. -/
+theorem tagOf_subst (A : List MExp) (a : MExp) :
+    tagOf Λ [] (MExp.subst A a) = tagOf Λ (tagsOf Λ [] A) a := by
+  cases a with
+  | param j =>
+    rw [tagOf_param]; simp only [MExp.subst]
+    cases argAt A j <;> rfl
+  | callParam k m =>
+    simp only [MExp.subst]
+    split <;> rfl
+  | _ => rfl
+
+theorem tagsOf_substArgs (A args : List MExp) :
+    tagsOf Λ [] (MExp.substArgs A args) = tagsOf Λ (tagsOf Λ [] A) args := by
+  induction args with
+  | nil => rfl
+  | cons a args ih => simp only [MExp.substArgs, tagsOf, List.map_cons] at ih ⊢; rw [tagOf_subst, ih]; rfl
+
+/-- Substituting into a translated unit call. -/
+theorem subst_callUnit (A : List MExp) (u : Nat) (args targs : List MExp) :
+    MExp.subst (trArgs g Λ [] A) (callUnit g Λ (tagsOf Λ [] A) u args targs) =
+      callUnit g Λ [] u (MExp.substArgs A args) (MExp.substArgs (trArgs g Λ [] A) targs) := by
+  unfold callUnit
+  rw [length_substArgs, tagsOf_substArgs]
+  split <;> rfl
+
+mutual
+  /-- **Translation commutes with substitution**: running the translated body with the translated arguments is
+  running the translation of the substituted body. -/
+  theorem tr_subst (A : List MExp) : ∀ b : MExp,
+      tr g Λ [] (MExp.subst A b) = MExp.subst (trArgs g Λ [] A) (tr g Λ (tagsOf Λ [] A) b)
+    | .param k => by
+      simp only [tr, MExp.subst, trArgs_eq_map, argAt_map]
+      cases argAt A k <;> rfl
+    | .call i args => by
+      simp only [tr, MExp.subst]
+      split
+      · rw [subst_callUnit, trArgs_subst A args]
+      · rfl
+    | .callParam k m => by
+      simp only [MExp.subst, tr]
+      rw [show (tagsOf Λ [] A).getD k 0 = tagOf Λ (tagsOf Λ [] A) (.param k) from rfl, tagOf_param]
+      cases h : argAt A k with
+      | none => rfl
+      | some a =>
+        cases a with
+        | lam a b =>
+          simp only [tr, tagOf]
+          split
+          · rw [subst_callUnit, trArgs_subst A m]
+          · rfl
+        | _ => rfl
+    | .invoke a b args => by
+      simp only [tr, MExp.subst]
+      split
+      · rw [subst_callUnit, trArgs_subst A args]
+      · rfl
+    | .seq e₁ e₂ | .alt e₁ e₂ => by simp only [tr, MExp.subst, tr_subst A e₁, tr_subst A e₂]
+    | .star e | .notP e => by simp only [tr, MExp.subst, tr_subst A e]
+    | .eps | .any | .chr _ | .range _ _ | .lit _ | .lam _ _ | .dbg _ => rfl
+
+  theorem trArgs_subst (A : List MExp) : ∀ args : List MExp,
+      trArgs g Λ [] (MExp.substArgs A args) = MExp.substArgs (trArgs g Λ [] A) (trArgs g Λ (tagsOf Λ [] A) args)
+    | [] => rfl
+    | e :: es => by simp only [MExp.substArgs, trArgs, tr_subst A e, trArgs_subst A es]
+end
+
+end Commute
+
 /-- Defunctionalize a grammar and a start expression together. -/
 def defun (g : MGrammar) (e : MExp) : MGrammar × MExp :=
   (defunGrammar g (lamsOf g e), tr g (lamsOf g e) [] e)
