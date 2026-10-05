@@ -23,7 +23,8 @@ def runCost (Tf : List (List Nat)) : List MItem → List (List Nat) → Nat
 
 /-- The steps of one round. -/
 def roundCost (Tf : List (List Nat)) : Nat :=
-  (st.bodies.map (fun l => runCost j cap st Tf l [] + 100 * (l.length + 1))).sum +
+  (st.bodies.map (fun l => runCost j cap st Tf l [] +
+    100 * (l.length + (evFlat (runT j cap (st.x.map Char.ofNat) st.tt st.ct st.lt Tf l [])).length + 1))).sum +
     100 * ((encBodies st.bodies).length + Tf.flatten.length + Tf.length + Tf.flatten.sum + 1)
 
 /-- The steps of the rounds. -/
