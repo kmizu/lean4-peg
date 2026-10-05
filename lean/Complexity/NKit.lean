@@ -81,6 +81,28 @@ theorem nruns_family_const {i : Fin K} {c : NTest} {p : NProg K} (F : Nat → Li
     NRuns (.loop i c p) (F 0) (F n) (n * (T + 1) + 1) :=
   nruns_family F n T htest hstop hbody n 0 (by omega)
 
+
+/-- A loop that runs through a family of states and then stops inside the body. -/
+theorem nhalts_family {i : Fin K} {c : NTest} {p : NProg K} (F : Nat → Lists K) (n T : Nat) {b : Bool}
+    {S' : Lists K} (htest : ∀ m, m ≤ n → c.eval (F m i) = true)
+    (hbody : ∀ m, m < n → NRuns p (F m) (F (m + 1)) T) (hlast : NHalts p (F n) b S' T) :
+    ∀ r m, m + r = n → NHalts (.loop i c p) (F m) b S' ((r + 1) * (T + 1))
+  | 0, m, h => by
+    obtain rfl : m = n := by omega
+    obtain ⟨t, ht, x⟩ := hlast
+    exact ⟨t + 1, by omega, .loopS trivial (htest m (Nat.le_refl _)) x⟩
+  | r + 1, m, h => by
+    obtain ⟨t₁, ht₁, x₁⟩ := hbody m (by omega)
+    obtain ⟨t₂, ht₂, x₂⟩ := nhalts_family F n T htest hbody hlast r (m + 1) (by omega)
+    refine ⟨t₁ + 1 + t₂, ?_, .loopC trivial (htest m (by omega)) x₁ x₂⟩
+    rw [Nat.succ_mul]; omega
+
+/-- A loop that exits at once. -/
+theorem nruns_loop_exit {i : Fin K} {c : NTest} {p : NProg K} {S : Lists K} (h : c.eval (S i) = false) :
+    NRuns (.loop i c p) S S 1 := ⟨1, Nat.le_refl _, .loopF trivial h⟩
+
+theorem nhalts_halt_any {S : Lists K} {b : Bool} : NHalts (.halt b) S b S 1 := nhalts_halt b S
+
 /-! ## Updating stacks -/
 
 theorem Lists.set_comm {L : Lists K} {i j : Fin K} (h : i ≠ j) (a b : List Nat) :
