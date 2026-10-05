@@ -152,11 +152,11 @@ theorem varVec_eq (N : Nat) : ∀ (Γ : List HO.Ty) (i : Nat) {τ : HO.Ty} (h : 
 /-! ## Blocks -/
 
 /-- Cut a list into `n` blocks of length `k`. -/
-def chunksN (k : Nat) : Nat → List Nat → List (List Nat)
+def chunksN {α : Type} (k : Nat) : Nat → List α → List (List α)
   | 0, _ => []
   | n + 1, l => l.take k :: chunksN k n (l.drop k)
 
-theorem chunksN_flatten (k : Nat) : ∀ (ls : List (List Nat)), (∀ l ∈ ls, l.length = k) →
+theorem chunksN_flatten {α : Type} (k : Nat) : ∀ (ls : List (List α)), (∀ l ∈ ls, l.length = k) →
     chunksN k ls.length ls.flatten = ls
   | [], _ => rfl
   | l :: ls, h => by

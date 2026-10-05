@@ -1,4 +1,4 @@
-import MacroPeg.HigherOrder.KExp.Uniform
+import MacroPeg.HigherOrder.KExp.LamFree
 
 /-!
 # The uniform problem for order `j` is `j`-EXPTIME-hard
@@ -132,6 +132,9 @@ theorem uniform_hard {j : Nat} (hj : 1 ≤ j) {L : Lang} (hL : KEXP j L) : Reduc
   rw [hden, umpeg_toBits, kexp_reduction hj hT hdec htb w]
   unfold MPEG
   rw [decode_encBits _ _ w (Nat.le_of_lt hnm)]
-  refine ⟨fun h => ⟨gT_wellTyped M _, by rw [gT_order]; omega, startT_hasTy M _, h⟩, fun h => h.2.2.2⟩
+  have hord : GOrd j g s := by
+    have := gT_GOrd M (j - 1)
+    rwa [show j - 1 + 1 = j by omega] at this
+  refine ⟨fun h => ⟨gT_wellTyped M _, hord, startT_hasTy M _, h⟩, fun h => h.2.2.2⟩
 
 end Shallot.MacroPeg.KExp

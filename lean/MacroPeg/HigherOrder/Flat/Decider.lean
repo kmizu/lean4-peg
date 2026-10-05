@@ -105,47 +105,38 @@ theorem checkRules_wellTyped {g : HGrammar} {bis : List (List Item)} (h : checkR
   rw [← ht]
   exact t.hasTy
 
-/-! ## The least values have number `0` -/
+/-! ## The least values are written out as zeros -/
 
-theorem allVecs_head {α : Type} (a : α) (xs : List α) : ∀ m, ∃ rest, allVecs (a :: xs) m = List.replicate m a :: rest
-  | 0 => ⟨[], rfl⟩
-  | m + 1 => by
-    obtain ⟨rest, h⟩ := allVecs_head a xs m
-    refine ⟨rest.map (a :: ·) ++ xs.flatMap (fun b => (allVecs (a :: xs) m).map (b :: ·)), ?_⟩
-    rw [allVecs, List.flatMap_cons, h]
-    simp [List.replicate_succ]
+theorem flatMap_replicate_zeros {α : Type} (f : α → List Nat) (m : Nat) (x : α) (hx : f x = List.replicate m 0) :
+    ∀ k, (List.replicate k x).flatMap f = List.replicate (k * m) 0
+  | 0 => by simp
+  | k + 1 => by
+    rw [List.replicate_succ, List.flatMap_cons, flatMap_replicate_zeros f m x hx k, hx, Nat.succ_mul,
+      Nat.add_comm (k * m), List.replicate_append_replicate]
 
-theorem elems_head (N : Nat) : ∀ τ : HO.Ty, ∃ rest, elems N τ = bot N τ :: rest
-  | .p => by
-    obtain ⟨rest, h⟩ := allVecs_head (none : Res) _ (N + 1)
-    exact ⟨rest, by simp only [elems, resElems] at h ⊢; rw [h]; rfl⟩
+theorem flatVal_bot (N : Nat) : ∀ τ : HO.Ty, flatVal N τ (bot N τ) = List.replicate (valSize N τ) 0
+  | .p => by simp [flatVal, bot, valSize, resCode]
   | .arr a b => by
-    obtain ⟨rb, hb⟩ := elems_head N b
-    obtain ⟨rest, h⟩ := allVecs_head (bot N b) rb (elems N a).length
-    have hmono : tabMonoB (elems N a) (List.replicate (elems N a).length (bot N b)) = true := by
-      have := bot_mem N (a ⇒ b)
-      rw [mem_elems_arr] at this
-      exact (tabMonoB_iff _ _).2 this.2
-    refine ⟨rest.filter (tabMonoB (elems N a)), ?_⟩
-    simp only [elems]
-    rw [hb, h]
-    simp only [List.filter, hmono]
+    show (List.replicate (elems N a).length (bot N b)).flatMap (flatVal N b) = _
+    rw [flatMap_replicate_zeros (flatVal N b) (valSize N b) (bot N b) (flatVal_bot N b)]
     rfl
 
-theorem vIdx_bot (N : Nat) (τ : HO.Ty) : vIdx N τ (bot N τ) = 0 := by
-  obtain ⟨rest, h⟩ := elems_head N τ
-  simp [vIdx, h, indexIn]
-
-theorem envNums_bot (N : Nat) : ∀ R : List HO.Ty, envNums N (Env.bot N R) = List.replicate R.length 0
+theorem envFlat_bot (N : Nat) : ∀ R : List HO.Ty,
+    envFlat N (Env.bot N R) = R.map (fun τ => List.replicate (valSize N τ) 0)
   | [] => rfl
-  | τ :: R => by simp [envNums, Env.bot, vIdx_bot, envNums_bot N R, List.replicate_succ]
+  | τ :: R => by simp [envFlat, Env.bot, flatVal_bot, envFlat_bot N R]
 
 /-! ## The procedure -/
 
+instance (j : Nat) (g : HGrammar) (s : HExp) : Decidable (GOrd j g s) := by unfold GOrd; infer_instance
+
+/-- The least rule values, written out. -/
+def zeroRules (N : Nat) (g : HGrammar) : List (List Nat) := g.rules.map (fun r => List.replicate (valSize N r.ty) 0)
+
 /-- The code at the full input of the start, after the rounds. -/
 def startCode (g : HGrammar) (x : List Char) (bis : List (List Item)) (is : List Item) : Nat :=
-  answerCode x (((run x (fixNums x bis (maxEnv x.length g.types + 1) (List.replicate g.rules.length 0)) is
-    []).headD []).headD 0)
+  (((run x (fixFlat x bis (maxEnv x.length g.types + 1) (zeroRules x.length g)) is []).headD []).headD []).getD
+    x.length 0
 
 /-- **The flat decision procedure** for the uniform problem of order `j`. -/
 def flatDecide (j : Nat) (bits : List Bool) : Bool :=
@@ -153,18 +144,19 @@ def flatDecide (j : Nat) (bits : List Bool) : Bool :=
   | none => false
   | some (g, s, x) =>
     match checkRules g, inferE g.types [] s with
-    | some bis, some (.p, is) => decide (g.order ≤ j) && (startCode g x bis is == 2)
+    | some bis, some (.p, is) => decide (GOrd j g s) && (startCode g x bis is == 2)
     | _, _ => false
 
 /-- The start code is `2` iff the grammar consumes the whole input. -/
 theorem startCode_iff {g : HGrammar} {G : TGrammar g.types} (hG : G.erase = g) {x : List Char}
     {t : Tm g.types [] .p} : startCode g x (bodyItems G.bodies) (items t) = 2 ↔ HObs g t.erase x (some []) := by
-  have hlen : g.rules.length = g.types.length := by simp [HGrammar.types]
-  have hfix : fixNums x (bodyItems G.bodies) (maxEnv x.length g.types + 1) (List.replicate g.rules.length 0) =
-      envNums x.length (iter x G (maxEnv x.length g.types)) := by
-    rw [hlen, ← envNums_bot]
-    exact fixNums_eq x G _ (by omega)
-  have hrun := run_items (iter_mem x G (maxEnv x.length g.types)) (envNums_getD x.length _) t []
+  have hfix : fixFlat x (bodyItems G.bodies) (maxEnv x.length g.types + 1) (zeroRules x.length g) =
+      envFlat x.length (iter x G (maxEnv x.length g.types)) := by
+    have : zeroRules x.length g = envFlat x.length (Env.bot x.length g.types) := by
+      rw [envFlat_bot]; simp [zeroRules, HGrammar.types]
+    rw [this]
+    exact fixFlat_eq x G _ (by omega)
+  have hrun := run_items (iter_mem x G (maxEnv x.length g.types)) (envFlat_getD x.length _) t []
   unfold startCode
   rw [hfix, hrun, vec_closed]
   simp only [List.headD_cons]

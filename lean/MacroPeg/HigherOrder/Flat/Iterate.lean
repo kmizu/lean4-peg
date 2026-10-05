@@ -3,9 +3,9 @@ import MacroPeg.HigherOrder.Flat.Eval
 /-!
 # The iteration with numbers, and the answer
 
-The rule values are kept as numbers (`envNums`). One round evaluates every rule body (`roundNums`); it is one step of
-`iter` (`roundNums_envNums`). The rounds are repeated until nothing changes (`fixNums`), which happens within
-`maxEnv + 1` rounds and gives the stopped iterate (`fixNums_eq`). The grammar consumes the whole input iff the start
+The rule values are kept written out (`envFlat`). One round evaluates every rule body (`roundFlat`); it is one step
+of `iter` (`roundFlat_envFlat`). The rounds are repeated until nothing changes (`fixFlat`), which happens within
+`maxEnv + 1` rounds and gives the stopped iterate (`fixFlat_eq`). The grammar consumes the whole input iff the start
 term's parser value has code `2` (success, nothing left) at the full input (`accept_iff`).
 -/
 
@@ -15,27 +15,26 @@ open Shallot.MacroPeg.HO
 
 variable (x : List Char) {R : List HO.Ty}
 
-/-! ## Rule values as numbers -/
+/-! ## Rule values written out -/
 
-/-- The numbers of the rule values. -/
-def envNums (N : Nat) : {S : List HO.Ty} → HO.Env S → List Nat
+def envFlat (N : Nat) : {S : List HO.Ty} → HO.Env S → List (List Nat)
   | [], _ => []
-  | τ :: _, (d, T) => vIdx N τ d :: envNums N T
+  | τ :: _, (d, T) => flatVal N τ d :: envFlat N T
 
-theorem envNums_getD (N : Nat) : ∀ {S : List HO.Ty} (T : HO.Env S) (i : Nat) {τ : HO.Ty} (h : S[i]? = some τ),
-    (envNums N T).getD i 0 = vIdx N τ (Env.get T i h)
+theorem envFlat_getD (N : Nat) : ∀ {S : List HO.Ty} (T : HO.Env S) (i : Nat) {τ : HO.Ty} (h : S[i]? = some τ),
+    (envFlat N T).getD i [] = flatVal N τ (Env.get T i h)
   | [], _, _, _, h => by simp at h
   | σ :: S, (d, T), 0, τ, h => by
     obtain rfl : σ = τ := by simpa using h
     rfl
-  | _ :: _, (_, T), i + 1, _, h => envNums_getD N T i h
+  | _ :: _, (_, T), i + 1, _, h => envFlat_getD N T i h
 
-theorem envNums_inj (N : Nat) : ∀ {S : List HO.Ty} {T T' : HO.Env S}, Env.Mem N T → Env.Mem N T' →
-    envNums N T = envNums N T' → T = T'
+theorem envFlat_inj (N : Nat) : ∀ {S : List HO.Ty} {T T' : HO.Env S}, Env.Mem N T → Env.Mem N T' →
+    envFlat N T = envFlat N T' → T = T'
   | [], (), (), _, _, _ => rfl
   | τ :: _, (d, T), (d', T'), ⟨hd, hT⟩, ⟨hd', hT'⟩, h => by
-    simp only [envNums, List.cons.injEq] at h
-    rw [indexIn_inj hd hd' h.1, envNums_inj N hT hT' h.2]
+    simp only [envFlat, List.cons.injEq] at h
+    rw [flatVal_inj τ hd hd' h.1, envFlat_inj N hT hT' h.2]
 
 /-- The items of every rule body. -/
 def bodyItems : {S : List HO.Ty} → TBodies R S → List (List Item)
@@ -43,77 +42,71 @@ def bodyItems : {S : List HO.Ty} → TBodies R S → List (List Item)
   | _ :: _, (t, ts) => items t :: bodyItems ts
 
 /-- One round: every body evaluated with the current rule values. -/
-def roundNums (bis : List (List Item)) (Tn : List Nat) : List Nat :=
-  bis.map (fun is => ((run x Tn is []).headD []).headD 0)
+def roundFlat (bis : List (List Item)) (Tf : List (List Nat)) : List (List Nat) :=
+  bis.map (fun is => ((run x Tf is []).headD []).headD [])
 
-theorem vec_closed (T : HO.Env R) {τ : HO.Ty} (t : Tm R [] τ) : vec x T t = [vIdx x.length τ (den x t T ())] := rfl
+theorem vec_closed (T : HO.Env R) {τ : HO.Ty} (t : Tm R [] τ) : vec x T t = [flatVal x.length τ (den x t T ())] := rfl
 
-theorem roundNums_envNums {T : HO.Env R} (hT : Env.Mem x.length T) :
+theorem roundFlat_envFlat {T : HO.Env R} (hT : Env.Mem x.length T) :
     ∀ {S : List HO.Ty} (ts : TBodies R S),
-      roundNums x (bodyItems ts) (envNums x.length T) = envNums x.length (ts.den x T)
+      roundFlat x (bodyItems ts) (envFlat x.length T) = envFlat x.length (ts.den x T)
   | [], _ => rfl
   | _ :: _, (t, ts) => by
-    simp only [bodyItems, roundNums, List.map_cons]
-    rw [run_items hT (envNums_getD x.length T) t, vec_closed]
-    simp only [List.headD_cons, TBodies.den, envNums, List.cons.injEq, true_and]
-    exact roundNums_envNums hT ts
+    simp only [bodyItems, roundFlat, List.map_cons]
+    rw [run_items hT (envFlat_getD x.length T) t, vec_closed]
+    simp only [List.headD_cons, TBodies.den, envFlat, List.cons.injEq, true_and]
+    exact roundFlat_envFlat hT ts
 
 /-! ## Repeating rounds -/
 
 /-- Repeat rounds until nothing changes, at most `fuel` times. -/
-def fixNums (bis : List (List Item)) : Nat → List Nat → List Nat
-  | 0, Tn => Tn
-  | fuel + 1, Tn => if roundNums x bis Tn = Tn then Tn else fixNums bis fuel (roundNums x bis Tn)
+def fixFlat (bis : List (List Item)) : Nat → List (List Nat) → List (List Nat)
+  | 0, Tf => Tf
+  | fuel + 1, Tf => if roundFlat x bis Tf = Tf then Tf else fixFlat bis fuel (roundFlat x bis Tf)
 
 variable (G : TGrammar R)
 
 theorem round_iter (m : Nat) :
-    roundNums x (bodyItems G.bodies) (envNums x.length (iter x G m)) = envNums x.length (iter x G (m + 1)) :=
-  roundNums_envNums x (iter_mem x G m) G.bodies
+    roundFlat x (bodyItems G.bodies) (envFlat x.length (iter x G m)) = envFlat x.length (iter x G (m + 1)) :=
+  roundFlat_envFlat x (iter_mem x G m) G.bodies
 
-/-- From iterate `m`, the rounds reach the stopped iterate when `m + fuel` exceeds `maxEnv`. -/
-theorem fixNums_iter : ∀ fuel m, maxEnv x.length R < m + fuel + 1 →
-    fixNums x (bodyItems G.bodies) fuel (envNums x.length (iter x G m)) =
-      envNums x.length (iter x G (maxEnv x.length R))
+theorem fixFlat_iter : ∀ fuel m, maxEnv x.length R < m + fuel + 1 →
+    fixFlat x (bodyItems G.bodies) fuel (envFlat x.length (iter x G m)) =
+      envFlat x.length (iter x G (maxEnv x.length R))
   | 0, m, h => by
-    simp only [fixNums]
+    simp only [fixFlat]
     rw [iter_stable x G m (by omega)]
   | fuel + 1, m, h => by
-    simp only [fixNums, round_iter]
+    simp only [fixFlat, round_iter]
     split
     · rename_i heq
-      have hm := envNums_inj x.length (iter_mem x G _) (iter_mem x G _) heq
+      have hm := envFlat_inj x.length (iter_mem x G _) (iter_mem x G _) heq
       by_cases hle : m ≤ maxEnv x.length R
       · rw [← iter_const x G hm.symm _ hle]
       · rw [iter_stable x G m (by omega)]
-    · rw [fixNums_iter fuel (m + 1) (by omega)]
+    · rw [fixFlat_iter fuel (m + 1) (by omega)]
 
-/-- **The rounds from the empty rule values reach the stopped iterate.** -/
-theorem fixNums_eq (fuel : Nat) (h : maxEnv x.length R < fuel + 1) :
-    fixNums x (bodyItems G.bodies) fuel (envNums x.length (Env.bot x.length R)) =
-      envNums x.length (iter x G (maxEnv x.length R)) := by
-  have := fixNums_iter x G fuel 0 (by omega)
+/-- **The rounds from the least rule values reach the stopped iterate.** -/
+theorem fixFlat_eq (fuel : Nat) (h : maxEnv x.length R < fuel + 1) :
+    fixFlat x (bodyItems G.bodies) fuel (envFlat x.length (Env.bot x.length R)) =
+      envFlat x.length (iter x G (maxEnv x.length R)) := by
+  have := fixFlat_iter x G fuel 0 (by omega)
   simpa [iter] using this
 
 /-! ## The answer -/
 
-/-- The code at position `N` of the parser value with number `i`. -/
-def answerCode (i : Nat) : Nat := ((rows x.length .p).getD i []).getD x.length 0
-
-theorem sfx_eq_nil {j : Nat} (hj : j ≤ x.length) : sfx x j = [] ↔ j = 0 := by
-  simp only [sfx, List.drop_eq_nil_iff]; omega
+theorem sfx_eq_nil {j : Nat} (hj : j ≤ x.length) : HO.sfx x j = [] ↔ j = 0 := by
+  simp only [HO.sfx, List.drop_eq_nil_iff]; omega
 
 /-- **The grammar consumes the whole input iff the code at the full input is `2`.** -/
 theorem accept_iff (t : Tm R [] .p) :
     HObs G.erase t.erase x (some []) ↔
-      answerCode x (vIdx x.length .p (den x t (iter x G (maxEnv x.length R)) ())) = 2 := by
+      (flatVal x.length .p (den x t (iter x G (maxEnv x.length R)) ())).getD x.length 0 = 2 := by
   have hd := den_mem (x := x) (iter_mem x G (maxEnv x.length R)) t (ρ := ()) (by simp [envs])
-  have hcode : answerCode x (vIdx x.length .p (den x t (iter x G (maxEnv x.length R)) ())) =
+  have hcode : (flatVal x.length .p (den x t (iter x G (maxEnv x.length R)) ())).getD x.length 0 =
       resCode (decideHO G t x) := by
-    simp only [answerCode, decideHO, atq]
-    rw [List.getD_eq_getElem?_getD (l := rows _ _), rows_getElem? hd, Option.getD_some]
+    simp only [decideHO, atq, flatVal]
     have hl := ((mem_allVecs _ _ _).1 hd).1
-    simp only [row]
     rw [getD_map_lt resCode none 0 _ (by rw [hl]; omega)]
   rw [hcode, decideHO_iff]
   have hmem : decideHO G t x ∈ resElems x.length := by

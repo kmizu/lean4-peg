@@ -70,3 +70,5 @@ import MacroPeg.HigherOrder.KExp.Hard
 import MacroPeg.HigherOrder.KExp.Uniform
 import MacroPeg.HigherOrder.KExp.UniformHard
 import MacroPeg.HigherOrder.KExp.LmTime
+import MacroPeg.HigherOrder.KExp.LamFree
+import MacroPeg.HigherOrder.Flat.Decider

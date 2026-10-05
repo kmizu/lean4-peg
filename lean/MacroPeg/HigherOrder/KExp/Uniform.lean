@@ -17,6 +17,16 @@ namespace Shallot.MacroPeg.KExp
 open Complexity
 open Shallot.MacroPeg.HO
 
+/-! ## The order of the lambdas -/
+
+/-- One more than the largest order of a lambda's binder type (`0` without lambdas). With rule types of order `≤ j`
+and `lamOrd ≤ j`, every subterm of a well-typed expression has a type of order `≤ j`. -/
+def lamOrd : HExp → Nat
+  | .seq a b | .alt a b | .app a b => max (lamOrd a) (lamOrd b)
+  | .star a | .notP a => lamOrd a
+  | .lam τ b => max (τ.order + 1) (lamOrd b)
+  | _ => 0
+
 /-! ## Serialization -/
 
 /-- `n` in unary: `1ⁿ0`. -/
@@ -244,15 +254,19 @@ theorem serIn_lt (g : HGrammar) (s : HExp) (x : List Char) : ∀ t ∈ serIn g s
 
 /-! ## The uniform problem -/
 
-/-- **The uniform recognition problem for order `j`**: the bits encode a grammar that is well typed of order `≤ j`, a
-closed start parser, and a string the grammar consumes. -/
+/-- Order `≤ j`: the rule types, and the lambdas in the bodies and the start (`lamOrd`). -/
+def GOrd (j : Nat) (g : HGrammar) (s : HExp) : Prop :=
+  g.order ≤ j ∧ (∀ r ∈ g.rules, lamOrd r.body ≤ j) ∧ lamOrd s ≤ j
+
+/-- **The uniform recognition problem for order `j`**: the bits encode a well-typed grammar of order `≤ j` (its rule
+types and its lambdas, `GOrd`), a closed start parser, and a string the grammar consumes. -/
 def UMPEG (j : Nat) : Lang := fun bits => ∃ (g : HGrammar) (s : HExp) (x : List Char),
-  ofBits bits = serIn g s x ∧ g.WellTyped ∧ g.order ≤ j ∧ HasTy g.types [] s .p ∧ HObs g s x (some [])
+  ofBits bits = serIn g s x ∧ g.WellTyped ∧ GOrd j g s ∧ HasTy g.types [] s .p ∧ HObs g s x (some [])
 
 /-- On an encoded instance, `UMPEG j` asks exactly the question about that instance. -/
 theorem umpeg_toBits (j : Nat) (g : HGrammar) (s : HExp) (x : List Char) :
     UMPEG j (toBits (serIn g s x)) ↔
-      g.WellTyped ∧ g.order ≤ j ∧ HasTy g.types [] s .p ∧ HObs g s x (some []) := by
+      g.WellTyped ∧ GOrd j g s ∧ HasTy g.types [] s .p ∧ HObs g s x (some []) := by
   unfold UMPEG
   rw [ofBits_toBits _ (serIn_lt g s x)]
   constructor
