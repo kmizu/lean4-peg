@@ -171,4 +171,117 @@ theorem roundCost_iter_le (hr : ReadOK st g.types bis is (st.x.map Char.ofNat)) 
 
 end Round
 
+/-! ## The whole evaluation -/
+
+section Whole
+
+variable {j cap : Nat} {g : HGrammar} {bis : List (List Item)} {is : List Item} {st : PSt} (G : TGrammar g.types)
+
+theorem valT_rt (hrt : ∀ t ∈ st.rt, need j cap st.tt t) :
+    st.rt.map (valT j cap st.x.length st.tt) = st.rt.map (valNum st.x.length st.tt) :=
+  List.map_congr_left (fun t ht => valT_eq t (hrt t ht))
+
+/-- The starting rule values are the first iterate. -/
+theorem zero_iter (hr : ReadOK st g.types bis is (st.x.map Char.ofNat)) (hrt : ∀ t ∈ st.rt, need j cap st.tt t) :
+    st.rt.map (fun t => List.replicate (valT j cap (st.x.map Char.ofNat).length st.tt t) 0) =
+      envFlat (st.x.map Char.ofNat).length (iter (st.x.map Char.ofNat) G 0) := by
+  have hxl : (st.x.map Char.ofNat).length = st.x.length := by simp
+  rw [show iter (st.x.map Char.ofNat) G 0 = Env.bot _ g.types from rfl, envFlat_bot]
+  obtain ⟨_, h₂⟩ := valNum_sum (x := st.x.map Char.ofNat) hr.tt hr.rt
+  rw [← h₂, hxl]
+  exact List.map_congr_left (fun t ht => by rw [valT_eq t (hrt t ht)])
+
+theorem encItems_length (l : List MItem) : (encItems l).length = 4 * l.length := by
+  induction l with
+  | nil => simp [encItems]
+  | cons i l ih => simp only [encItems, List.flatMap_cons, List.length_append, encItem] at ih ⊢; simp [ih]; omega
+
+theorem items_le_enc (l : List MItem) : l.length ≤ (encItems l).length := by rw [encItems_length]; omega
+
+/-- The sizes in the bound on the evaluation, for starting rule values `T0`. -/
+def evFuel (j cap : Nat) (st : PSt) : Nat := (st.rt.map (valT j cap st.x.length st.tt)).sum + 1
+def evPB (j cap : Nat) (st : PSt) (T0 : List (List Nat)) : Nat :=
+  pushBound j cap (st.x.map Char.ofNat) st.tt st.ct T0
+def evR (j cap : Nat) (st : PSt) (T0 : List (List Nat)) : Nat :=
+  (itemK j cap st T0 + 600 + 100 * evPB j cap st T0) * (encBodies st.bodies).length +
+    100 * (encBodies st.bodies).length +
+    100 * ((encBodies st.bodies).length + T0.flatten.length + T0.length + T0.flatten.length * (st.x.length + 2) + 1)
+def evZ (j cap : Nat) (st : PSt) (T0 : List (List Nat)) : Nat :=
+  evFuel j cap st + st.rt.length + T0.flatten.length + (valTable j cap st.x.length st.tt).sum +
+    (encItems st.start).length + (encItems st.start).length * evPB j cap st T0 + st.x.length + st.tt.length + 2
+def evBound (j cap : Nat) (st : PSt) (T0 : List (List Nat)) : Nat :=
+  1000 * evZ j cap st T0 * evZ j cap st T0 + (evFuel j cap st + 1) * (evR j cap st T0 + 1) +
+    (encItems st.start).length * (itemK j cap st T0 + 500)
+
+/-- **The whole evaluation costs at most `evBound`.** -/
+theorem evalCost_le (hr : ReadOK st g.types bis is (st.x.map Char.ofNat)) (hbis : bodyItems G.bodies = bis)
+    (hit : ∀ it ∈ st.bodies.flatten ++ st.start, ItemOK j cap st.tt st.ct it)
+    (hrt : ∀ t ∈ st.rt, need j cap st.tt t) (hx : ∀ c ∈ st.x, c < 1114112) (hlt : LtOK st) :
+    evalCost j cap st ≤
+      evBound j cap st (envFlat (st.x.map Char.ofNat).length (iter (st.x.map Char.ofNat) G 0)) := by
+  have hxl : (st.x.map Char.ofNat).length = st.x.length := by simp
+  obtain ⟨T0, hT0⟩ : ∃ T, T = envFlat (st.x.map Char.ofNat).length (iter (st.x.map Char.ofNat) G 0) := ⟨_, rfl⟩
+  rw [← hT0]
+  have hb : ∀ it ∈ st.bodies.flatten, ItemOK j cap st.tt st.ct it := fun it h => hit it (List.mem_append_left _ h)
+  have hz := zero_iter G hr hrt
+  rw [← hT0] at hz
+  -- the rounds
+  have hround := fun m => roundCost_iter_le G hr hbis hb hx hlt m
+  rw [← hT0] at hround
+  have hfix := fixCost_le G hr hbis hb (evR j cap st T0) (fun m => hround m)
+    ((st.rt.map (valT j cap (st.x.map Char.ofNat).length st.tt)).sum + 1) 0
+  rw [← hT0] at hfix
+  -- where the rounds end
+  obtain ⟨m', hm'⟩ := fixT_iter G hr hbis hb ((st.rt.map (valT j cap (st.x.map Char.ofNat).length st.tt)).sum + 1) 0
+  rw [← hT0] at hm'
+  obtain ⟨Tm, hTm⟩ : ∃ T, T = envFlat (st.x.map Char.ofNat).length (iter (st.x.map Char.ofNat) G m') := ⟨_, rfl⟩
+  rw [← hTm] at hm'
+  have hlen : Tm.map List.length = T0.map List.length := by rw [hTm, hT0, iter_lengths, iter_lengths]
+  have hpB := pushBound_congr (j := j) (cap := cap) (x := st.x.map Char.ofNat) (tt := st.tt) (ct := st.ct) hlen
+  have hW := evalW_congr (j := j) (cap := cap) (st := st) hlen
+  have hsm : ∀ f ∈ Tm, Small (st.x.length + 2) f := by
+    rw [hTm, ← hxl]; exact envFlat_small _ (iter_mem _ G m')
+  have hctx := read_ctx_le hr
+  have hsctx : ∀ it ∈ st.start, it.ctx ≤ st.ct.length := fun it h => hctx it (List.mem_append_right _ h)
+  have hSs : st.start.length ≤ (encItems st.start).length := items_le_enc st.start
+  -- the start
+  have hrun := runT_bounded (j := j) (cap := cap) (x := st.x.map Char.ofNat) (lt := st.lt) hr.tt hr.ct
+    (by rw [hxl]; exact hsm) st.start hsctx [] (by simp)
+  rw [show (evFlat ([] : List (List Nat))).length = 0 from rfl, Nat.zero_add, hpB] at hrun
+  have hstart := runCost_le (j := j) (cap := cap) st hr.tt hr.ct hsm (itemK j cap st T0) st.start []
+    (((encBodies st.bodies).length + (encItems st.start).length) * evPB j cap st T0) hsctx (by simp)
+    (by
+      rw [show (evFlat ([] : List (List Nat))).length = 0 from rfl, Nat.zero_add, hpB]
+      exact Nat.mul_le_mul_right _ (by omega))
+    (fun it hi vs' hvs' hsm' => by
+      have hz' := itemZ_le (j := j) (cap := cap) (Tf := Tm) hr.tt hr.ct (hsctx it hi)
+        (List.mem_append_right _ hi) hsm' hvs' hsm hx hlt
+      rw [hW] at hz'
+      unfold itemCost itemK
+      simp only []
+      refine Nat.mul_le_mul_left _ (pow5_mono (Nat.le_trans hz' ?_))
+      exact Nat.mul_le_mul_left _ (Nat.add_le_add_right (Nat.le_of_eq (Nat.mul_assoc _ _ _).symm) _))
+  have hev : (evFlat (runT j cap (st.x.map Char.ofNat) st.tt st.ct st.lt Tm st.start [])).length ≤
+      (encItems st.start).length * evPB j cap st T0 :=
+    Nat.le_trans hrun.1 (Nat.mul_le_mul_right _ hSs)
+  -- putting it together
+  unfold evalCost
+  simp only []
+  rw [hz, hm']
+  have hZ : (st.rt.map (valT j cap (st.x.map Char.ofNat).length st.tt)).sum + 1 + st.rt.length +
+      T0.flatten.length + (valTable j cap (st.x.map Char.ofNat).length st.tt).sum + (encItems st.start).length +
+      (evFlat (runT j cap (st.x.map Char.ofNat) st.tt st.ct st.lt Tm st.start [])).length +
+      (st.x.map Char.ofNat).length + st.tt.length + 2 ≤ evZ j cap st T0 := by
+    unfold evZ evFuel; rw [hxl]; omega
+  have hZZ : 1000 * _ * _ ≤ 1000 * evZ j cap st T0 * evZ j cap st T0 :=
+    Nat.mul_le_mul (Nat.mul_le_mul_left 1000 hZ) hZ
+  have hS' : st.start.length * (itemK j cap st T0 + 500) ≤
+      (encItems st.start).length * (itemK j cap st T0 + 500) := Nat.mul_le_mul_right _ hSs
+  unfold evBound
+  rw [show evFuel j cap st = (st.rt.map (valT j cap (st.x.map Char.ofNat).length st.tt)).sum + 1 by
+    unfold evFuel; rw [hxl]]
+  exact Nat.add_le_add (Nat.add_le_add hZZ hfix) (Nat.le_trans hstart hS')
+
+end Whole
+
 end Shallot.MacroPeg.Mach
