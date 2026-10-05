@@ -651,4 +651,165 @@ theorem readExpr_spec : ∀ f, IHFun f
       · cases h
     | _ + 13, h => simp [parseE] at h
 
+/-! ## Malformed expressions -/
+
+theorem parseE_shorter {f : Nat} {l : List Nat} {e : HExp} {r : List Nat} (h : parseE f l = some (e, r)) :
+    r.length < l.length := by
+  have := parseE_sound h; have := length_serE_pos e; rw [‹l = _›]; simp; omega
+
+theorem parseStr_none {f : Nat} {l : List Nat} (hl : l.length ≤ f) (h : parseStr f l = none) :
+    parseStr l.length l = none := by
+  cases hs : parseStr l.length l with
+  | none => rfl
+  | some p =>
+    obtain ⟨str, r⟩ := p
+    have hl' := parseStr_sound hs
+    have := parseStr_ser str r f (by rw [hl'] at hl; simp at hl; omega)
+    rw [← hl'] at this; rw [this] at h; cases h
+
+/-- After a first operand that reads and types to a parser (`frame` checks it), reading continues. -/
+theorem fail_after {f : Nat} {s : PSt} {K : List Nat} {R Γ : List HO.Ty} {l l₁ : List Nat} {a : HExp} {fr : Nat}
+    (ih : ∀ (s : PSt) (K : List Nat) (R Γ : List HO.Ty), s.tk = l₁ → s.ctl = 0 :: K → TTWF s.tt → CTWF s.tt s.ct →
+      s.rt.mapM (tyOf s.tt) = some R → ctxOf s.tt s.ct s.cur = some Γ → Fails s)
+    (ha : parseE f l = some (a, l₁)) {s₁ : PSt} (x₁ : Reach s s₁ 1) (htk₁ : s₁.tk = l) (hctl₁ : s₁.ctl = 0 :: fr :: K)
+    (hw : TTWF s₁.tt) (hc : CTWF s₁.tt s₁.ct) (hR : s₁.rt.mapM (tyOf s₁.tt) = some R)
+    (hΓ : ctxOf s₁.tt s₁.ct s₁.cur = some Γ)
+    (hframe : ∀ s₂ : PSt, s₂.ctl = fr :: K → ∀ i τ, s₂.ty = i :: s₁.ty → tyOf s₂.tt i = some τ →
+      Fails s₂ ∨ ∃ K', pstep s₂ = { s₂ with ctl := 0 :: K' }) :
+    Fails s := by
+  have hA := readExpr_spec f l a l₁ ha s₁ (fr :: K) R Γ htk₁ hctl₁ hw hc hR hΓ
+  cases hia : inferE R Γ a with
+  | none => rw [hia] at hA; exact Fails.of_reach x₁ hA
+  | some pa =>
+    obtain ⟨τa, ia⟩ := pa
+    rw [hia] at hA
+    obtain ⟨n₁, hd₁, _⟩ := hA
+    obtain ⟨s₂, x₂, htk₂, hctl₂, hcur₂, _, hrt₂, _, _, _, ⟨i₁, hty₂, hτ₁⟩, _, hg₂, hw₂, hc₂⟩ := hd₁.parts
+    rcases hframe s₂ hctl₂ i₁ τa hty₂ hτ₁ with hf | ⟨K', hstep⟩
+    · exact Fails.of_reach (x₁.trans x₂) hf
+    · exact Fails.of_reach (x₁.trans x₂) (Fails.of_step (by
+        rw [hstep]
+        exact ih _ K' R Γ htk₂ rfl hw₂ hc₂ (by rw [hrt₂]; exact mapM_tyOf_grow hw hg₂.tt hR)
+          (ctxOf_of_grow hg₂ hw hc hΓ hcur₂)))
+
+/-- The `seq`/`alt` check of the first operand: a parser goes on, anything else fails. -/
+theorem frame_bin {fr fr' : Nat} {K : List Nat} {ty₀ : List Nat}
+    (h0 : ∀ s₂ : PSt, s₂.ctl = fr :: K → ∀ r, s₂.ty = 0 :: r → pstep s₂ = { s₂ with ctl := 0 :: fr' :: K })
+    (h1 : ∀ s₂ : PSt, s₂.ctl = fr :: K → ∀ k r, s₂.ty = (k + 1) :: r → pstep s₂ = s₂.fail) :
+    ∀ s₂ : PSt, s₂.ctl = fr :: K → ∀ i τ, s₂.ty = i :: ty₀ → tyOf s₂.tt i = some τ →
+      Fails s₂ ∨ ∃ K', pstep s₂ = { s₂ with ctl := 0 :: K' } := by
+  intro s₂ hc i τ hty _
+  cases i with
+  | zero => exact .inr ⟨fr' :: K, h0 s₂ hc ty₀ hty⟩
+  | succ k => exact .inl (Fails.of_step (by rw [h1 s₂ hc k ty₀ hty]; exact Fails.fail _))
+
+/-- **A malformed expression makes the machine fail.** -/
+theorem readExpr_fail : ∀ (f : Nat) (l : List Nat), l.length ≤ f → parseE f l = none →
+    ∀ (s : PSt) (K : List Nat) (R Γ : List HO.Ty), s.tk = l → s.ctl = 0 :: K → TTWF s.tt → CTWF s.tt s.ct →
+      s.rt.mapM (tyOf s.tt) = some R → ctxOf s.tt s.ct s.cur = some Γ → Fails s
+  | 0, l, hl, _, s, K, _, _, htk, hctl, _, _, _, _ => by
+    obtain rfl : l = [] := List.eq_nil_of_length_eq_zero (by omega)
+    exact Fails.of_step (by simp [pstep, hctl, readExpr, htk]; exact Fails.fail _)
+  | f + 1, [], _, _, s, K, _, _, htk, hctl, _, _, _, _ =>
+    Fails.of_step (by simp [pstep, hctl, readExpr, htk]; exact Fails.fail _)
+  | f + 1, t :: l, hl, h, s, K, R, Γ, htk, hctl, hw, hc, hR, hΓ => by
+    have hrd : pstep s = readExpr s K := by simp [pstep, hctl]
+    have hlf : l.length ≤ f := by simp at hl; omega
+    -- the rest of the expression, read from a state after the first part
+    have ihr : ∀ l₁ : List Nat, l₁.length < l.length → parseE f l₁ = none →
+        ∀ (s : PSt) (K : List Nat) (R Γ : List HO.Ty), s.tk = l₁ → s.ctl = 0 :: K → TTWF s.tt → CTWF s.tt s.ct →
+          s.rt.mapM (tyOf s.tt) = some R → ctxOf s.tt s.ct s.cur = some Γ → Fails s :=
+      fun l₁ hl₁ h₁ => readExpr_fail f l₁ (by omega) h₁
+    match t, h with
+    | 0, h | 1, h => simp [parseE] at h
+    | 2, h =>
+      simp only [parseE, Option.map_eq_none_iff] at h
+      exact Fails.of_step (by rw [hrd]; simp [readExpr, htk, h]; exact Fails.fail _)
+    | 3, h =>
+      simp only [parseE] at h
+      split at h
+      · rename_i lo r₁ hlo
+        simp only [Option.map_eq_none_iff] at h
+        exact Fails.of_step (by rw [hrd]; simp [readExpr, htk, hlo, h]; exact Fails.fail _)
+      · rename_i hlo
+        exact Fails.of_step (by rw [hrd]; simp [readExpr, htk, hlo]; exact Fails.fail _)
+    | 4, h =>
+      simp only [parseE, Option.map_eq_none_iff] at h
+      have := parseStr_none hlf h
+      exact Fails.of_step (by rw [hrd]; simp [readExpr, htk, this]; exact Fails.fail _)
+    | 5, h =>
+      let s₁ : PSt := { s with tk := l, ctl := 0 :: 2 :: K }
+      have x₁ : Reach s s₁ 1 := by show pstep s = s₁; rw [hrd]; simp [readExpr, htk, s₁]
+      simp only [parseE] at h
+      split at h
+      · rename_i a l₁ ha
+        simp only [Option.map_eq_none_iff] at h
+        exact fail_after (ihr l₁ (parseE_shorter ha) h) ha x₁ rfl rfl hw hc hR hΓ
+          (frame_bin (fr' := 3) (fun s₂ hc₂ r hty => by simp [pstep, hc₂, hty])
+            (fun s₂ hc₂ k r hty => by simp [pstep, hc₂, hty]))
+      · rename_i ha
+        exact Fails.of_reach x₁ (readExpr_fail f l hlf ha s₁ _ R Γ rfl rfl hw hc hR hΓ)
+    | 6, h =>
+      let s₁ : PSt := { s with tk := l, ctl := 0 :: 4 :: K }
+      have x₁ : Reach s s₁ 1 := by show pstep s = s₁; rw [hrd]; simp [readExpr, htk, s₁]
+      simp only [parseE] at h
+      split at h
+      · rename_i a l₁ ha
+        simp only [Option.map_eq_none_iff] at h
+        exact fail_after (ihr l₁ (parseE_shorter ha) h) ha x₁ rfl rfl hw hc hR hΓ
+          (frame_bin (fr' := 5) (fun s₂ hc₂ r hty => by simp [pstep, hc₂, hty])
+            (fun s₂ hc₂ k r hty => by simp [pstep, hc₂, hty]))
+      · rename_i ha
+        exact Fails.of_reach x₁ (readExpr_fail f l hlf ha s₁ _ R Γ rfl rfl hw hc hR hΓ)
+    | 12, h =>
+      let s₁ : PSt := { s with tk := l, ctl := 0 :: 10 :: K }
+      have x₁ : Reach s s₁ 1 := by show pstep s = s₁; rw [hrd]; simp [readExpr, htk, s₁]
+      simp only [parseE] at h
+      split at h
+      · rename_i a l₁ ha
+        simp only [Option.map_eq_none_iff] at h
+        exact fail_after (ihr l₁ (parseE_shorter ha) h) ha x₁ rfl rfl hw hc hR hΓ
+          (fun s₂ hc₂ _ _ _ _ => .inr ⟨11 :: K, by simp [pstep, hc₂]⟩)
+      · rename_i ha
+        exact Fails.of_reach x₁ (readExpr_fail f l hlf ha s₁ _ R Γ rfl rfl hw hc hR hΓ)
+    | 7, h =>
+      simp only [parseE, Option.map_eq_none_iff] at h
+      let s₁ : PSt := { s with tk := l, ctl := 0 :: 6 :: K }
+      have x₁ : Reach s s₁ 1 := by show pstep s = s₁; rw [hrd]; simp [readExpr, htk, s₁]
+      exact Fails.of_reach x₁ (readExpr_fail f l hlf h s₁ _ R Γ rfl rfl hw hc hR hΓ)
+    | 8, h =>
+      simp only [parseE, Option.map_eq_none_iff] at h
+      let s₁ : PSt := { s with tk := l, ctl := 0 :: 7 :: K }
+      have x₁ : Reach s s₁ 1 := by show pstep s = s₁; rw [hrd]; simp [readExpr, htk, s₁]
+      exact Fails.of_reach x₁ (readExpr_fail f l hlf h s₁ _ R Γ rfl rfl hw hc hR hΓ)
+    | 9, h | 10, h =>
+      simp only [parseE, Option.map_eq_none_iff] at h
+      exact Fails.of_step (by rw [hrd]; simp [readExpr, htk, h]; exact Fails.fail _)
+    | 11, h =>
+      let s₁ : PSt := { s with tk := l, ctl := 1 :: 8 :: K }
+      have x₁ : Reach s s₁ 1 := by show pstep s = s₁; rw [hrd]; simp [readExpr, htk, s₁]
+      simp only [parseE] at h
+      split at h
+      · rename_i τ l₁ hτp
+        simp only [Option.map_eq_none_iff] at h
+        obtain ⟨n₁, tt₁, i₁, x₂, hw₁, he₁, hi₁, hτ₁, _⟩ := readType_ok f l τ l₁ hτp s₁ (8 :: K) rfl rfl hw
+        let s₂ : PSt := { s₁ with tk := l₁, ctl := 8 :: K, ty := i₁ :: s₁.ty, tt := tt₁ }
+        let s₃ : PSt :=
+          { s₂ with
+            ctl := 0 :: 9 :: i₁ :: s.cur :: K
+            ty := s.ty
+            ct := s.ct ++ [(s.cur, i₁)]
+            cur := s.ct.length + 1 }
+        have x₃ : Reach s₂ s₃ 1 := by show pstep s₂ = s₃; simp [pstep, s₂, s₃, s₁]
+        have hcl : s.cur ≤ s.ct.length := ctxOf_le hΓ
+        have hc₁ : CTWF tt₁ s.ct := hc.grow he₁
+        have hΓ₁ : ctxOf tt₁ s.ct s.cur = some Γ := ctxOf_grow hw hc he₁ ⟨[], (List.append_nil _).symm⟩ hΓ
+        have hl₁ := parseTy_shorter hτp
+        exact Fails.of_reach ((x₁.trans x₂).trans x₃)
+          (ihr l₁ hl₁ h s₃ _ R (τ :: Γ) rfl rfl hw₁ (hc₁.snoc hcl hi₁) (mapM_tyOf_grow hw he₁ hR)
+            (ctxOf_snoc hw₁ hc₁ hcl hΓ₁ hτ₁))
+      · rename_i hτp
+        exact Fails.of_reach x₁ (readType_fail f l hlf hτp s₁ (8 :: K) rfl rfl hw)
+    | _ + 13, _ => exact Fails.of_step (by rw [hrd]; simp [readExpr, htk]; exact Fails.fail _)
+
 end Shallot.MacroPeg.Mach
