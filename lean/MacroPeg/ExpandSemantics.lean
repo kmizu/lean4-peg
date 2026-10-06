@@ -3,6 +3,7 @@ import MacroPeg.Determinism
 import MacroPeg.Soundness
 import MacroPeg.Completeness
 import MacroPeg.Examples
+import MacroPeg.Counterexamples
 
 /-!
 # Macro expansion preserves call-by-name semantics (M-PEG-6)
@@ -818,5 +819,127 @@ theorem ce006_closureReturn_not_noCallableRules :
     noCallableRulesB closureReturnGrammar closureReturnAcyclic = false := by
   simp [noCallableRulesB, MGrammar.expandGrammar, closureReturnGrammar, closureReturnBazBody,
     closureReturnApplyBody, MExp.expand, MExp.expandArgs, MExp.isLamOrParam]
+
+/-- **CE-007 (no `CallByValueSeq` analogue).** CE-001's grammar `S = F("a") !.; F(x) = "b"`
+is acyclic, arity-correct and has no callable-valued rules — every hypothesis of
+`expand_preserves_cbn` holds — yet under `CallByValueSeq` the original program accepts
+`"ab"` (the argument `"a"` is evaluated first and threads the input) while the expanded
+program, in which that argument evaluation has been inlined away, rejects it. So the
+CallByName restriction of T-exp is essential, not an artifact of the proof. -/
+theorem strategyDivergeAcyclic : acyclicB strategyDivergeGrammar = true := by
+  simp [acyclicB, List.range, List.range.loop, List.all, rankGo, rankSuccs, natElem,
+    MGrammar.calls, strategyDivergeGrammar, ruleAtM, MExp.staticCalls, MExp.staticCallsArgs]
+
+theorem ce007_hypotheses_hold :
+    strategyDivergeGrammar.arityOk = true ∧
+      noCallableRulesB strategyDivergeGrammar strategyDivergeAcyclic = true := by
+  refine ⟨?_, ?_⟩
+  · simp [MGrammar.arityOk, strategyDivergeGrammar, MExp.arityOk, MExp.arityOkArgs, ruleAtM]
+  · simp [noCallableRulesB, MGrammar.expandGrammar, strategyDivergeGrammar, MExp.expand,
+      MExp.expandArgs, MExp.expandRule, ruleAtM, MExp.subst, MExp.substArgs, argAt,
+      MExp.isLamOrParam]
+
+/-- The expanded program: `F("a")` inlined to `"b"`, so `S = "b" !.`. -/
+theorem ce007_expanded :
+    (MGrammar.expandGrammar strategyDivergeGrammar strategyDivergeAcyclic).rules.map (·.body) =
+      [ .seq (.lit ['b']) (.notP .any), .lit ['b'] ] := by
+  simp [MGrammar.expandGrammar, strategyDivergeGrammar, MExp.expand, MExp.expandArgs,
+    MExp.expandRule, ruleAtM, MExp.subst, MExp.substArgs, argAt]
+
+theorem ce007_callByValueSeq_expanded_rejects :
+    CmpOutcome.ofRun (MGrammar.expandGrammar strategyDivergeGrammar strategyDivergeAcyclic)
+      .callByValueSeq 10 (.call 0 []) strategyDivergeInput = .reject := by
+  simp [MGrammar.expandGrammar, strategyDivergeGrammar, MExp.expand, MExp.expandArgs,
+    MExp.expandRule, ruleAtM, MExp.subst, MExp.substArgs, argAt]
+  simp [CmpOutcome.ofRun, CmpOutcome.ofMOutcome, mpegRun, evalArgsSeq, strategyDivergeInput,
+    ruleAtM, MExp.subst, MExp.substArgs, argAt, stripPrefix?, beqChar]
+
+/-- The headline of CE-007: `ce001_callByValueSeq` (original accepts) vs. the expanded
+program (rejects) — expansion changed the verdict under `CallByValueSeq`. -/
+theorem ce007_callByValueSeq_diverges :
+    CmpOutcome.ofRun strategyDivergeGrammar .callByValueSeq 10 (.call 0 []) strategyDivergeInput ≠
+      CmpOutcome.ofRun (MGrammar.expandGrammar strategyDivergeGrammar strategyDivergeAcyclic)
+        .callByValueSeq 10 (.call 0 []) strategyDivergeInput := by
+  rw [ce001_callByValueSeq, ce007_callByValueSeq_expanded_rejects]
+  decide
+
+/-! ## `expand` is idempotent
+
+Once no non-empty-arg `.call` remains, there is nothing left for `expand` to do — so
+`expand` is the identity on its own output (T-fix). For the generator this says
+re-running inlining on an already-inlined grammar is a no-op. -/
+
+mutual
+  theorem expand_of_hasCall_false (g : MGrammar) (h : acyclicB g = true) :
+      ∀ e : MExp, e.hasCall = false → MExp.expand g h e = e
+    | .eps, _ => by simp [MExp.expand]
+    | .any, _ => by simp [MExp.expand]
+    | .chr _, _ => by simp [MExp.expand]
+    | .range _ _, _ => by simp [MExp.expand]
+    | .lit _, _ => by simp [MExp.expand]
+    | .param _, _ => by simp [MExp.expand]
+    | .call _ [], _ => by simp [MExp.expand]
+    | .call _ (_ :: _), he => by simp [MExp.hasCall] at he
+    | .seq e₁ e₂, he => by
+      simp only [MExp.hasCall, Bool.or_eq_false_iff] at he
+      simp [MExp.expand, expand_of_hasCall_false g h e₁ he.1, expand_of_hasCall_false g h e₂ he.2]
+    | .alt e₁ e₂, he => by
+      simp only [MExp.hasCall, Bool.or_eq_false_iff] at he
+      simp [MExp.expand, expand_of_hasCall_false g h e₁ he.1, expand_of_hasCall_false g h e₂ he.2]
+    | .star e, he => by
+      simp only [MExp.hasCall] at he
+      simp [MExp.expand, expand_of_hasCall_false g h e he]
+    | .notP e, he => by
+      simp only [MExp.hasCall] at he
+      simp [MExp.expand, expand_of_hasCall_false g h e he]
+    | .dbg e, he => by
+      simp only [MExp.hasCall] at he
+      simp [MExp.expand, expand_of_hasCall_false g h e he]
+    | .lam _ bod, he => by
+      simp only [MExp.hasCall] at he
+      simp [MExp.expand, expand_of_hasCall_false g h bod he]
+    | .callParam _ args, he => by
+      simp only [MExp.hasCall] at he
+      simp [MExp.expand, expandArgs_of_hasCallArgs_false g h args he]
+    | .invoke _ bod args, he => by
+      simp only [MExp.hasCall, Bool.or_eq_false_iff] at he
+      simp [MExp.expand, expand_of_hasCall_false g h bod he.1,
+        expandArgs_of_hasCallArgs_false g h args he.2]
+
+  theorem expandArgs_of_hasCallArgs_false (g : MGrammar) (h : acyclicB g = true) :
+      ∀ es : List MExp, MExp.hasCallArgs es = false → MExp.expandArgs g h es = es
+    | [], _ => by simp [MExp.expandArgs]
+    | e :: es, he => by
+      simp only [MExp.hasCallArgs, Bool.or_eq_false_iff] at he
+      simp [MExp.expandArgs, expand_of_hasCall_false g h e he.1,
+        expandArgs_of_hasCallArgs_false g h es he.2]
+end
+
+theorem expand_idempotent (g : MGrammar) (h : acyclicB g = true) (e : MExp) :
+    MExp.expand g h (MExp.expand g h e) = MExp.expand g h e :=
+  expand_of_hasCall_false g h _ (expand_hasCall_eq_false g h e)
+
+/-- `expandGrammar` is the identity on a grammar whose rule bodies are already
+call-free — the grammar's own acyclicity proof is irrelevant to `expand`'s behaviour on
+such bodies. -/
+theorem expandGrammar_of_callFree (g' : MGrammar) (h' : acyclicB g' = true)
+    (hcf : ∀ r ∈ g'.rules, r.body.hasCall = false) : MGrammar.expandGrammar g' h' = g' := by
+  have hmap : ∀ l : List MRule, (∀ r ∈ l, r.body.hasCall = false) →
+      l.map (fun r => ({ arity := r.arity, body := MExp.expand g' h' r.body } : MRule)) = l := by
+    intro l
+    induction l with
+    | nil => intro _; rfl
+    | cons r rs ih =>
+      intro hl
+      have hr : r.body.hasCall = false := hl r (List.mem_cons_self ..)
+      have hrs : ∀ r' ∈ rs, r'.body.hasCall = false := fun r' hr' => hl r' (List.mem_cons_of_mem _ hr')
+      simp only [List.map, ih hrs, expand_of_hasCall_false g' h' r.body hr]
+  show ({ rules := g'.rules.map _ } : MGrammar) = g'
+  rw [hmap g'.rules hcf]
+
+theorem expandGrammar_idempotent (g : MGrammar) (h : acyclicB g = true)
+    (h' : acyclicB (MGrammar.expandGrammar g h) = true) :
+    MGrammar.expandGrammar (MGrammar.expandGrammar g h) h' = MGrammar.expandGrammar g h :=
+  expandGrammar_of_callFree _ h' (expandGrammar_hasCall_eq_false g h)
 
 end Shallot.MacroPeg
