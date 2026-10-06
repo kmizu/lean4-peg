@@ -44,7 +44,7 @@ theorem writeAt_getD (t : List Nat) (p a j : Nat) :
         by_cases hj : j = p
         · subst hj; simp
         · have : j - t.length - (p - t.length) ≠ 0 := by omega
-          simp [hj, List.getElem?_singleton, this]
+          simp [hj, this]
 
 section Rep
 
