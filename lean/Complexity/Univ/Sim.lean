@@ -38,7 +38,7 @@ theorem writeAt_getD (t : List Nat) (p a j : Nat) :
       by_cases hr : j - t.length < p - t.length
       · have : j ≠ p := by omega
         rw [List.getElem?_append_left (by simpa using hr)]
-        simp [List.getElem?_replicate, hr, this]
+        simp [hr, this]
       · rw [List.getElem?_append_right (by simp; omega)]
         simp only [List.length_replicate]
         by_cases hj : j = p
