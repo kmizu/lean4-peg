@@ -3,9 +3,10 @@ import MacroPeg.HigherOrder.KExp.Encode
 /-!
 # Writing the encoding takes polynomial time
 
-The list program `encLP c d` moves the input to the template's input list, computes `S = c * (|w| + 1) ^ d` in unary
-(the first four phases of the TQBF reduction `redLP`) and runs the template `encT` (`compileT_spec`). So
-`w ↦ toBits (encT.denote ⟨w, S, 0, 0⟩)` is polynomial-time computable (`enc_polytime`).
+The list program `encLP tm c d` moves the input to the template's input list, computes `S = c * (|w| + 1) ^ d` in unary
+(the first four phases of the TQBF reduction `redLP`) and runs a template `tm` (`compileT_spec`). So
+`w ↦ toBits (tm.denote ⟨w, S, 0, 0⟩)` is polynomial-time computable (`tmpl_polytime`), in particular for the encoding
+`encT` (`enc_polytime`).
 -/
 
 namespace Shallot.MacroPeg.KExp
@@ -15,41 +16,44 @@ open Complexity
 /-- The environment of the template on input `w`. -/
 def encEnv (c d : Nat) (w : List Bool) : TEnv := ⟨w, rS c d w.length, 0, fun _ => 0⟩
 
-/-- The reduction's output: the bits of the encoding. -/
-def encBits (c d : Nat) (w : List Bool) : List Bool := toBits (encT.denote (encEnv c d w))
+/-- The output of template `tm` on input `w`, as bits. -/
+def tmplBits (tm : Tmpl) (c d : Nat) (w : List Bool) : List Bool := toBits (tm.denote (encEnv c d w))
 
-def encLP (c d : Nat) : LProg 23 :=
+/-- The reduction's output: the bits of the encoding. -/
+def encBits (c d : Nat) (w : List Bool) : List Bool := tmplBits encT c d w
+
+def encLP (tm : Tmpl) (c d : Nat) : LProg 23 :=
   .seq (moveAll 1 3)
   (.seq (copyLenP 3 19 7)
   (.seq (.push 19 1)
   (.seq (.push 20 1)
   (.seq (repeatP 7 (powStepP 20 19 21 7 22) d)
   (.seq (repeatP 7 (copyLenP 20 4 7) c)
-    (compileT redTT encT))))))
+    (compileT redTT tm))))))
 
 section Bounds
 
-variable (c d : Nat)
+variable (tm : Tmpl) (c d : Nat)
 
 def eZ (n : Nat) : Nat := rP d n + rS c d n + n + 16
-def eU (n : Nat) : Nat := 5 * encT.size * tunit (eZ c d n) * (eZ c d n + 2) ^ encT.depth
-def eSpace (n : Nat) : Nat := eU c d n + eZ c d n + 10
+def eU (n : Nat) : Nat := 5 * tm.size * tunit (eZ c d n) * (eZ c d n + 2) ^ tm.depth
+def eSpace (n : Nat) : Nat := eU tm c d n + eZ c d n + 10
 def eTime (n : Nat) : Nat :=
-  3 * (n + 1) + 8 * (n + 1) + 2 + (d * rStep d n + 1) + (c * (8 * (rP d n + 1)) + 1) + eU c d n
+  3 * (n + 1) + 8 * (n + 1) + 2 + (d * rStep d n + 1) + (c * (8 * (rP d n + 1)) + 1) + eU tm c d n
 
 theorem eZ_poly : IsPoly (eZ c d) := by
   unfold eZ
   exact isPoly_add (isPoly_add (isPoly_add (rP_poly d) (rS_poly c d)) isPoly_id) (isPoly_const _)
 
-theorem eU_poly : IsPoly (eU c d) := by
+theorem eU_poly : IsPoly (eU tm c d) := by
   unfold eU tunit
   exact isPoly_mul (isPoly_mul (isPoly_const _) (isPoly_mul (isPoly_const 100)
     (isPoly_add (eZ_poly c d) (isPoly_const 3)))) (isPoly_pow (isPoly_add (eZ_poly c d) (isPoly_const 2)) _)
 
-theorem eSpace_poly : IsPoly (eSpace c d) :=
-  isPoly_add (isPoly_add (eU_poly c d) (eZ_poly c d)) (isPoly_const 10)
+theorem eSpace_poly : IsPoly (eSpace tm c d) :=
+  isPoly_add (isPoly_add (eU_poly tm c d) (eZ_poly c d)) (isPoly_const 10)
 
-theorem eTime_poly : IsPoly (eTime c d) := by
+theorem eTime_poly : IsPoly (eTime tm c d) := by
   have hn1 : IsPoly (fun n => n + 1) := isPoly_add isPoly_id (isPoly_const 1)
   have hstep : IsPoly (rStep d) := by
     unfold rStep
@@ -62,29 +66,29 @@ theorem eTime_poly : IsPoly (eTime c d) := by
   have t4 : IsPoly (fun n => c * (8 * (rP d n + 1)) + 1) :=
     isPoly_add (isPoly_mul (isPoly_const c) (isPoly_mul (isPoly_const 8) (isPoly_add (rP_poly d) (isPoly_const 1))))
       (isPoly_const 1)
-  exact isPoly_add (isPoly_add (isPoly_add (isPoly_add (isPoly_add t1 t2) (isPoly_const 2)) t3) t4) (eU_poly c d)
+  exact isPoly_add (isPoly_add (isPoly_add (isPoly_add (isPoly_add t1 t2) (isPoly_const 2)) t3) t4) (eU_poly tm c d)
 
 end Bounds
 
-theorem enc_runs (c d : Nat) (w : List Bool) :
-    ∃ t L', t ≤ eTime c d w.length ∧
-      LExec (LenOK (eSpace c d w.length)) (encLP c d) (initLists 23 w) t (.cont L') ∧
-      L' 0 = [] ∧ L' 2 = (encBits c d w).map bitElem := by
+theorem enc_runs (tm : Tmpl) (hwf : tm.WF 4) (hs : ∀ Z, tm.Small Z) (c d : Nat) (w : List Bool) :
+    ∃ t L', t ≤ eTime tm c d w.length ∧
+      LExec (LenOK (eSpace tm c d w.length)) (encLP tm c d) (initLists 23 w) t (.cont L') ∧
+      L' 0 = [] ∧ L' 2 = (tmplBits tm c d w).map bitElem := by
   let n := w.length
   let P := rP d n
   let S := rS c d n
   let Z := eZ c d n
-  let B := eSpace c d n
+  let B := eSpace tm c d n
   have hPZ : P ≤ Z := by simp only [Z, eZ, P]; omega
   have hSZ : S ≤ Z := by simp only [Z, eZ, S]; omega
   have hnZ : n ≤ Z := by simp only [Z, eZ, n]; omega
   have hZB : Z + 10 ≤ B := by simp only [B, eSpace, Z]; omega
-  have hZU : Z ≤ eU c d n := by
-    have h1 : 1 ≤ encT.size := Tmpl.size_pos _
-    have h2 := one_le_pow2 Z encT.depth
+  have hZU : Z ≤ eU tm c d n := by
+    have h1 : 1 ≤ tm.size := Tmpl.size_pos _
+    have h2 := one_le_pow2 Z tm.depth
     simp only [eU, tunit]
-    have : Z ≤ 5 * encT.size * (100 * (Z + 3)) := by
-      have := Nat.mul_le_mul (show 5 ≤ 5 * encT.size by omega) (show Z ≤ 100 * (Z + 3) by omega)
+    have : Z ≤ 5 * tm.size * (100 * (Z + 3)) := by
+      have := Nat.mul_le_mul (show 5 ≤ 5 * tm.size by omega) (show Z ≤ 100 * (Z + 3) by omega)
       omega
     exact Nat.le_trans this (Nat.le_mul_of_pos_right _ h2)
   have hB2 : 2 * Z + 10 ≤ B := by simp only [B, eSpace]; omega
@@ -221,35 +225,39 @@ theorem enc_runs (c d : Nat) (w : List Bool) :
     split
     · exact z6 _ (by simp; omega) (by simp; omega) (by simp; omega) (by simp; omega)
     · exact z6 _ (by decide) (by decide) (by decide) (by decide)
-  have hout := toBits_denote_le Z encT e (encT_small Z) hSZ (Nat.zero_le _) (fun _ => Nat.zero_le _)
-  have hU := ucost_le Z encT
-  have R7 := compileT_spec redTT 4 Z B redTT_distinct encT encT_WF (encT_small Z) e [] L6
+  have hout := toBits_denote_le Z tm e (hs Z) hSZ (Nat.zero_le _) (fun _ => Nat.zero_le _)
+  have hU := ucost_le Z tm
+  have R7 := compileT_spec redTT 4 Z B redTT_distinct tm hwf (hs Z) e [] L6
     hrep (fun i _ => hsv i) hSZ (Nat.zero_le _) hnZ (fun _ _ => Nat.zero_le _) h6
     (by omega) (by
-      have hUB : encT.ucost Z ≤ eU c d n := hU
-      show 0 + (toBits (encT.denote e)).length + 2 ≤ eU c d n + Z + 10
+      have hUB : tm.ucost Z ≤ eU tm c d n := hU
+      show 0 + (toBits (tm.denote e)).length + 2 ≤ eU tm c d n + Z + 10
       omega)
   have R1' := R1.mono (show ((L0 1).length + 1) * 3 ≤ 3 * (n + 1) by rw [e01]; simp [n, Nat.mul_comm])
   have R2' := R2.mono (show 8 * (w.length + 1) ≤ 8 * (n + 1) from Nat.le_refl _)
-  have R7' := R7.mono (show encT.ucost Z ≤ eU c d n from hU)
+  have R7' := R7.mono (show tm.ucost Z ≤ eU tm c d n from hU)
   obtain ⟨t, ht, hx⟩ := R1'.seq (R2'.seq (R3.seq (R4.seq (R5.seq (R6.seq R7')))))
   refine ⟨t, _, ?_, hx, ?_, ?_⟩
-  · show t ≤ 3 * (n + 1) + 8 * (n + 1) + 2 + (d * rStep d n + 1) + (c * (8 * (P + 1)) + 1) + eU c d n
+  · show t ≤ 3 * (n + 1) + 8 * (n + 1) + 2 + (d * rStep d n + 1) + (c * (8 * (P + 1)) + 1) + eU tm c d n
     omega
   · rw [sne _ _ _ _ (by decide)]; exact z6 0 (by decide) (by decide) (by decide) (by decide)
   · show (L6.set 2 _) 2 = _
     rw [Lists.set_same, List.nil_append]
     rfl
 
-theorem encLP_constOK (c d : Nat) : (encLP c d).ConstOK 2 := by
+theorem encLP_constOK (tm : Tmpl) (c d : Nat) : (encLP tm c d).ConstOK 2 := by
   refine ⟨constOK_moveAll _ _, constOK_copyLenP _ _ _ (by decide), by simp [LProg.ConstOK],
     by simp [LProg.ConstOK], constOK_repeatP _ _ ?_ d, constOK_repeatP _ _ (constOK_copyLenP _ _ _ (by decide)) c,
     constOK_compileT redTT _⟩
   simp [powStepP, mulP, LProg.ConstOK, moveTop, moveAll, clearP, constOK_copyLenP]
 
+/-- **A template's output is computable in polynomial time.** -/
+theorem tmpl_polytime (tm : Tmpl) (hwf : tm.WF 4) (hs : ∀ Z, tm.Small Z) (c d : Nat) :
+    PolyTimeComputable (tmplBits tm c d) :=
+  lm_polytime (k := 23) (by decide) 2 (by decide) (encLP tm c d) 2 (by decide) (encLP_constOK tm c d)
+    _ (eSpace tm c d) (eTime tm c d) (eSpace_poly tm c d) (eTime_poly tm c d) (fun w => enc_runs tm hwf hs c d w)
+
 /-- **The encoding is computable in polynomial time.** -/
-theorem enc_polytime (c d : Nat) : PolyTimeComputable (encBits c d) :=
-  lm_polytime (k := 23) (by decide) 2 (by decide) (encLP c d) 2 (by decide) (encLP_constOK c d)
-    _ (eSpace c d) (eTime c d) (eSpace_poly c d) (eTime_poly c d) (fun w => enc_runs c d w)
+theorem enc_polytime (c d : Nat) : PolyTimeComputable (encBits c d) := tmpl_polytime encT encT_WF encT_small c d
 
 end Shallot.MacroPeg.KExp

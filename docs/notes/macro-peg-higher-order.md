@@ -13,6 +13,9 @@
    こちらは AEXPSPACE = 2-EXPTIME を外部の事実として使う。
 6. **order j は j-EXPTIME 完全（j ≥ 1、外部の事実なし）。** 上界は費用モデルでの閉じた式 `tower j (C·poly(N))`
    （`decideCost_le`）。下界は決定性多テープ TM の計算表を order j の文法でたどる帰着（`kexp_hard`）。
+7. **一様な問題（文法も入力）は TM の時間で j-EXPTIME 完全**（`umpeg_complete`、j ≥ 1）。下界は計算表の文法を
+   前置きにした符号への帰着（`uniform_hard`）。上界は判定を数のスタック機械 `mainP j` で書き（`mainP_halts`）、
+   手数を `tower j (poly)` で抑え（`mainCost_le`）、リスト機械経由で多テープ TM に写した（`umpeg_kexp`）。
 
 ## 1. 捕獲なしの lambda の断片（`Properties/{MExpEq,Defun,DefunCorrect}.lean`）
 
@@ -124,7 +127,19 @@ TM での実装の時間ではなく、この費用モデルでの手数であ�
 - 符号を出すテンプレート `encT` を、TQBF の帰着と同じリスト機械（`compileT_spec`、`lm_polytime`）で動かす（`enc_polytime`）。
 - `kexp_hard`: j ≥ 1 なら、`KEXP j` の言語は型付き order j の文法の言語へ多項式時間で帰着する。
 
+一様な問題（`KExp/Uniform*.lean`、`KExp/Upper.lean`、`Mach/`）:
+- `UMPEG j`: ビット列が文法・開始式・入力の符号 `serIn g s x` で、文法は型付き order j、開始式は閉じたパーサで、
+  入力を全部読む。符号は単射（`serIn_inj`）。
+- 下界 `uniform_hard`: `KEXP j` の言語は、計算表の文法 `gT M (j-1)` と開始式を前置きにした符号で `UMPEG j` に帰着する。
+- 上界: 判定を数のスタック機械 `NProg`（40 本のスタック）で書いた `mainP j`。読み取り機械でトークンを読み（`readStage_ok`）、
+  order を検査し（`ordStage_first`）、order < j かつ大きさ < 3|w|+2 の「小さい」型だけ値の表を作って（`rowsTableP_runs` ほか）、
+  規則の値を不動点まで反復する（`evalP_runs`）。答えは `numDecideT j w`（`mainP_halts`）で、`UMPEG j` の判定（`numDecideT_iff`）。
+- 手数は `tower j (c·(n+1)^8)` 以下（`mainCost_le`）。スタック機械はリスト機械を経て多テープ TM に写り
+  （`kexp_of_nprog_time`）、`umpeg_kexp` になる。
+
 ## 残り
 
-- 上界は費用モデルでの手数。TM 上の実装の時間としては形式化していない。
-- 下界は M ごとに固定した文法の言語への帰着。文法も入力に含める一様な問題は扱っていない。
+- 固定した文法の言語 `MPEG g s` の上界は、費用モデルの手数（`decideCost_le`）のまま。一様な判定器に `g, s` を前置きすれば
+  TM の時間でも同じ上界になるはずだが、定理にはしていない。
+- 大きい機械のファイル（`Mach/EvalLoop.lean`、`ItemLeaf.lean`、`ItemVRA.lean`、`RowsTable.lean`）は 2000〜3000 行あり、
+  分割していない。
