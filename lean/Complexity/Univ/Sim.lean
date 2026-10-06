@@ -127,7 +127,7 @@ theorem finit_rep {k : Nat} (M : TM k) (w : List Bool) : FRep M (initCfg k w) (f
       simp only [finit, initCfg, hi, if_true, List.getD_eq_getElem?_getD]
       rw [List.getElem?_ofFn]
       cases hw : w[j]? <;> simp [hw, hk, List.getElem?_map]
-    · simp [finit, initCfg, hi, List.getD_eq_getElem?_getD, List.getElem?_ofFn]
+    · simp [finit, initCfg, hi, List.getD_eq_getElem?_getD]
   sym := by
     intro i j
     have := M.three_le_na
