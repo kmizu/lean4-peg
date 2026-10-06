@@ -137,9 +137,16 @@ TM での実装の時間ではなく、この費用モデルでの手数であ�
 - 手数は `tower j (c·(n+1)^8)` 以下（`mainCost_le`）。スタック機械はリスト機械を経て多テープ TM に写り
   （`kexp_of_nprog_time`）、`umpeg_kexp` になる。
 
+order の階層（`KExp/Hierarchy.lean`、`KExp/Diag*.lean`、`KExp/Close*.lean`、`Complexity/Univ/`）:
+- TM は遷移表に直せて（`tableOf`、`frun_rep`）、数のスタック機械 `simP` が表を B 手シミュレートする（`simP_runs`、
+  手数は `simCost_le`）。
+- 時間階層 `kexp_strict`: 対角言語 `Diag j` は `KEXP j` に入らず（`diag_not_kexp`）、`KEXP (j+1)` に入る（`diag_kexp`、
+  `tower j (2^m) = tower (j+1) m` で 1 段上の塔に収まる）。
+- 帰着で閉じる `kexp_reduces`: 帰着の表を動かし、出力を読み戻して（`extractP_runs`）判定の表を動かす。
+- 固定文法の TM 上界 `mpeg_kexp`: `fixedMap_polytime` で `UMPEG j` へ帰着する。
+- `order_strict`: `Diag j` を `kexp_hard` で order j+1 の文法に帰着すると、その言語は order ≤ j のどの文法の言語でもない。
+
 ## 残り
 
-- 固定した文法の言語 `MPEG g s` の上界は、費用モデルの手数（`decideCost_le`）のまま。一様な判定器に `g, s` を前置きすれば
-  TM の時間でも同じ上界になるはずだが、定理にはしていない。
 - 大きい機械のファイル（`Mach/EvalLoop.lean`、`ItemLeaf.lean`、`ItemVRA.lean`、`RowsTable.lean`）は 2000〜3000 行あり、
   分割していない。
