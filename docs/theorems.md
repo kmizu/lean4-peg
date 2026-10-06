@@ -506,11 +506,17 @@ M-PEG-4 の断片では、規則に lambda（`.lam`）を渡して呼べる（`.
 | `gT_wellTyped` / `gT_order` / `startT_hasTy` | `gT M K` は型が付き、order は `K+1`、開始式は閉じたパーサ | propext, Classical.choice, Quot.sound（`gT_order` は propext, Quot.sound） |
 | `enc_polytime` | 入力の符号（ビットサイト `(c+1)(n+1)^(d+1)` 個と入力サイト）を出力するテンプレートは多項式時間で計算できる（TQBF の帰着と同じリスト機械の道具） | propext, Classical.choice, Quot.sound |
 | `kexp_reduction` / `kexp_hard` | **order j は j-EXPTIME 困難**（j ≥ 1）: 時間 `tower j (c(n+1)^d)` で止まる決定性多テープ TM が決める言語（`KEXP j`）は、型付き order j の文法の言語（`MPEG`、ビット列を 4 ビットのトークンとして読む）へ多項式時間で帰着する。外部の事実は使わない | propext, Classical.choice, Quot.sound |
+| `serIn_inj` / `umpeg_toBits` | 一様な問題の入力の符号（`KExp/Uniform.lean`）: 文法・開始式・入力文字列 `(g, s, x)` を 4 ビットのトークン列 `serIn g s x` にする符号は単射。`UMPEG j` は「符号が型付き order `j` の文法と閉じたパーサの開始式と入力を表し、開始式が入力を全部読む」ビット列の言語 | propext（`umpeg_toBits` は propext, Quot.sound） |
+| `uniform_hard` | **一様な問題は j-EXPTIME 困難**（j ≥ 1）: `KEXP j` の言語は `UMPEG j` へ多項式時間で帰着する（計算表の文法 `gT M (j-1)` と開始式を前置きにした符号を出す） | propext, Classical.choice, Quot.sound |
+| `mainP_halts` | 判定を数のスタック機械 `NProg` で書いた `mainP j`（`Mach/`）: 読み取り機械でトークンを読み、order を検査し、小さい型の表を作って評価する。ビット列 `w` から必ず止まって `numDecideT j w` を返す。`numDecideT_iff`: その答えは `UMPEG j` の判定 | propext, Classical.choice, Quot.sound |
+| `mainCost_le` | `mainP j` の手数は `tower j (c·(|w|+1)^d)` 以下（`c` は `j` で決まる） | propext, Classical.choice, Quot.sound |
+| `umpeg_kexp` / `umpeg_complete` | **一様な問題は TM の意味で j-EXPTIME 完全**（j ≥ 1）: スタック機械をリスト機械経由で多テープ TM に写し（`kexp_of_nprog_time`）、`UMPEG j` を時間 `tower j (poly)` で決める。`uniform_hard` と合わせて完全 | propext, Classical.choice, Quot.sound |
 
 反復回数は `maxEnv`（規則の型ごとの `maxCount` の和）以下で、`maxCount (a ⇒ b) = |elems a| · maxCount b` になる。
 費用モデル（`decideCost`）での手数は、order `k+1` の文法なら `tower (k+1) (C·poly(N))` 以下（`decideCost_le`）。
 下界は `kexp_hard`: 時間 `tower j (poly)` の決定性 TM が決める言語は、型付き order `j` の文法の言語へ多項式時間で帰着する。
 合わせて、**型付き order `j` の Macro PEG の認識は `j`-EXPTIME 完全**（上界は費用モデルでの手数）。外部の事実は使っていない。
+文法も入力に含める一様な問題 `UMPEG j` は、**TM の時間で `j`-EXPTIME 完全**（`umpeg_complete`）。上界はチューリング機械の手数で、費用モデルに頼らない。
 `order2_hard`（交替 TM 経由）は AEXPSPACE = 2-EXPTIME を外部の事実として使う別証明で、`kexp_hard` はこれに依らない。
 
 ## TQBF は PSPACE 完全（`Complexity/`）

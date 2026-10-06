@@ -63,7 +63,7 @@ theorem sites_large (c d n : Nat) : c * (n + 1) ^ d < rS (c + 1) (d + 1) n ∧ n
 /-- The output, read back as characters, is the encoding with `rS c d |w|` bit sites. -/
 theorem decode_encBits (c d : Nat) (w : List Bool) (hn : w.length ≤ rS c d w.length) :
     (ofBits (encBits c d w)).map tokChar = encChars (rS c d w.length) w := by
-  unfold encBits
+  unfold encBits tmplBits
   rw [ofBits_toBits _ (encT_tokens _)]
   exact encT_denote w _ 0 _ hn
 
