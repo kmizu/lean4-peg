@@ -1460,6 +1460,38 @@ machine-checked witnesses for the `subst` fix and for the two side conditions. -
 #guard_msgs in
 #print axioms Shallot.MacroPeg.KExp.umpeg_complete
 
+/-- info: 'Complexity.frun_rep' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.frun_rep
+
+/-- info: 'Complexity.Univ.simP_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.Univ.simP_runs
+
+/-- info: 'Shallot.MacroPeg.KExp.diag_not_kexp' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.KExp.diag_not_kexp
+
+/-- info: 'Shallot.MacroPeg.KExp.diag_kexp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.KExp.diag_kexp
+
+/-- info: 'Shallot.MacroPeg.KExp.kexp_strict' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.KExp.kexp_strict
+
+/-- info: 'Shallot.MacroPeg.KExp.kexp_reduces' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.KExp.kexp_reduces
+
+/-- info: 'Shallot.MacroPeg.KExp.mpeg_kexp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.KExp.mpeg_kexp
+
+/-- info: 'Shallot.MacroPeg.KExp.order_strict' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.KExp.order_strict
+
 /-! ## TQBF is PSPACE-complete (Complexity) -/
 
 /-- info: 'Complexity.reduction_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
