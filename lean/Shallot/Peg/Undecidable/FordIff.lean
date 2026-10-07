@@ -4,7 +4,8 @@ import Shallot.Peg.Undecidable.Ford
 # The language of Ford's grammar is nonempty iff the instance has a solution
 
 `fordG C` has the rules `D ← &. &(A !.) B !.` (rule 0, the start), `A` (rule 1, the tops) and `B` (rule 2, the
-bottoms). `D` accepts a string exactly when it is nonempty and both sides eat all of it, i.e. when it is the
+bottoms). The language of a grammar is, as in Ford, the strings on which the start rule succeeds (`Accepts`).
+`D` accepts a string exactly when it is nonempty and both sides eat all of it, i.e. when it is the
 common string of a nonempty index list on both sides (`fordG_accepts`). So **`L(fordG C)` is nonempty iff `C` has
 a solution** (`ford_iff`), for an instance whose strings are all nonempty.
 -/
@@ -19,8 +20,9 @@ def fordG (C : PCP) : Grammar where
   rules := [fordD, sideAlts C.top 1 (List.range C.length), sideAlts C.bot 2 (List.range C.length)]
   start := 0
 
-/-- The language of a grammar: the strings its start rule eats completely. -/
-def Accepts (g : Grammar) (w : List Char) : Prop := ∃ t, Derives g (.nt g.start) w (.ok t [])
+/-- **The language of a grammar**, as Ford defines it: the strings on which the start rule succeeds (it need not eat
+all of the string). -/
+def Accepts (g : Grammar) (w : List Char) : Prop := ∃ t r, Derives g (.nt g.start) w (.ok t r)
 
 /-! ## Predicates -/
 
@@ -79,7 +81,7 @@ theorem marks_inj {I J : List Nat} (h : marks I = marks J) : I = J := by
 theorem fordG_accepts {C : PCP} (hC : C.NonemptyPairs) (w : List Char) :
     Accepts (fordG C) w ↔ ∃ I, I ≠ [] ∧ C.Valid I ∧ w = encS C.top I ∧ w = encS C.bot I := by
   constructor
-  · rintro ⟨t, h⟩
+  · rintro ⟨t, r, h⟩
     cases h with
     | ntOk _ e _ _ _ hr hd =>
       cases hr
@@ -95,6 +97,7 @@ theorem fordG_accepts {C : PCP} (hC : C.NonemptyPairs) (w : List Char) :
             cases h₄ with
             | seqOk _ _ _ rB _ _ _ hB₁ hB₂ =>
               obtain ⟨rfl, -⟩ := notAny_ok hB₂
+              clear hB₂
               obtain ⟨I, hI, hIw⟩ := side_sound (fordG_rule1 (C := C)) (top_ne hC) hA₁
               obtain ⟨J, hJ, hJw⟩ := side_sound (fordG_rule2 (C := C)) (bot_ne hC) hB₁
               rw [List.append_nil] at hIw hJw
@@ -120,7 +123,7 @@ theorem fordG_accepts {C : PCP} (hC : C.NonemptyPairs) (w : List Char) :
     have hw0 : w ≠ [] := by
       rw [hwt]; simp [encS, hm]
     obtain ⟨c, w', rfl⟩ := List.exists_cons_of_ne_nil hw0
-    refine ⟨.nodeNT 0 (.seq .notT (.seq .notT (.seq tB .notT))), .ntOk _ fordD _ _ _ rfl ?_⟩
+    refine ⟨.nodeNT 0 (.seq .notT (.seq .notT (.seq tB .notT))), [], .ntOk _ fordD _ _ _ rfl ?_⟩
     exact .seqOk _ _ _ _ _ .notT (.seq .notT (.seq tB .notT)) (andP_of (.anyOk c w'))
       (.seqOk _ _ _ _ _ .notT (.seq tB .notT) (andP_of (.seqOk _ _ _ _ _ tA .notT hA hnot))
         (.seqOk _ _ _ _ _ tB .notT hB hnot))
