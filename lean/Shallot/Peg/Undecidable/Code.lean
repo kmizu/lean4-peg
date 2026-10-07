@@ -117,4 +117,37 @@ theorem encG_inj {g g' : Grammar} (h : encG g = encG g') : g = g' := by
   cases g; cases g'
   simp_all
 
+theorem serRules_prefix' : ∀ (l l' : List PExp) (r r' : List Nat), l.length = l'.length →
+    (l.map serE).flatten ++ r = (l'.map serE).flatten ++ r' → l = l' ∧ r = r'
+  | [], [], r, r', _, h => ⟨rfl, by simpa using h⟩
+  | e :: l, e' :: l', r, r', hl, h => by
+    simp only [List.map_cons, List.flatten_cons, List.append_assoc] at h
+    obtain ⟨rfl, h₁⟩ := serE_prefix e e' _ _ h
+    obtain ⟨rfl, h₂⟩ := serRules_prefix' l l' r r' (by simpa using hl) h₁
+    exact ⟨rfl, h₂⟩
+  | [], _ :: _, _, _, hl, _ => by simp at hl
+  | _ :: _, [], _, _, hl, _ => by simp at hl
+
+/-- **The code of a grammar is prefix-free.** -/
+theorem serG_prefix {g g' : Grammar} {r r' : List Nat} (h : serG g ++ r = serG g' ++ r') : g = g' ∧ r = r' := by
+  simp only [serG, List.cons_append, List.cons.injEq] at h
+  obtain ⟨hs, hl, hr⟩ := h
+  obtain ⟨hrules, hrest⟩ := serRules_prefix' g.rules g'.rules r r' hl hr
+  cases g; cases g'
+  simp_all
+
+theorem unary_append (a b : List Nat) : Complexity.Univ.unary (a ++ b) =
+    Complexity.Univ.unary a ++ Complexity.Univ.unary b := by
+  simp [Complexity.Univ.unary]
+
+/-- **Pairs of grammars are determined by their bits.** -/
+theorem encG_pair_inj {g h g' h' : Grammar} (e : encG g ++ encG h = encG g' ++ encG h') : g = g' ∧ h = h' := by
+  have e₁ : serG g ++ serG h = serG g' ++ serG h' := by
+    have := congrArg Complexity.Univ.deUnary e
+    simpa [encG, ← unary_append, Complexity.Univ.deUnary_unary] using this
+  obtain ⟨rfl, e₂⟩ := serG_prefix e₁
+  exact ⟨rfl, by
+    have := congrArg (fun l => Complexity.Univ.unary l) e₂
+    exact encG_inj (by simpa [encG] using this)⟩
+
 end Shallot
