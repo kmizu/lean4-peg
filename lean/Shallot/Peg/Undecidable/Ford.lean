@@ -22,7 +22,7 @@ namespace Shallot
 
 /-! ## Characters and literals -/
 
-theorem beqChar_eq {c d : Char} : beqChar c d = true ↔ c = d := by
+theorem beqChar_true_iff {c d : Char} : beqChar c d = true ↔ c = d := by
   unfold beqChar
   simp only [beq_iff_eq]
   exact ⟨fun h => by have := congrArg Char.ofNat h; simpa using this, fun h => h ▸ rfl⟩
@@ -34,13 +34,13 @@ theorem strip_eq : ∀ {s u r : List Char}, stripPrefix? s u = some r → u = s 
     unfold stripPrefix? at h
     split at h
     · rename_i hcd
-      rw [beqChar_eq.1 hcd, strip_eq h]; rfl
+      rw [beqChar_true_iff.1 hcd, strip_eq h]; rfl
     · cases h
 
 theorem strip_append (s r : List Char) : stripPrefix? s (s ++ r) = some r := by
   induction s with
   | nil => rfl
-  | cons c cs ih => simp [stripPrefix?, beqChar_eq.2 rfl, ih]
+  | cons c cs ih => simp [stripPrefix?, beqChar_true_iff.2 rfl, ih]
 
 /-- A literal always has a derivation. -/
 theorem lit_total (g : Grammar) (s u : List Char) : ∃ o, Derives g (.lit s) u o := by
@@ -69,7 +69,7 @@ theorem lit_word_fail (g : Grammar) {l : List Bool} (hl : l ≠ []) {t : List Ch
         have : beqChar (bitC b) '#' = false := by
           cases h : beqChar (bitC b) '#'
           · rfl
-          · exact absurd (beqChar_eq.1 h) (bitC_ne_hash b)
+          · exact absurd (beqChar_true_iff.1 h) (bitC_ne_hash b)
         simp [this]
 
 /-! ## The side rules -/
