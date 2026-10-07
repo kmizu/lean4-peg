@@ -803,3 +803,17 @@ Ford の証明に忠実に、PCP から帰着する。言語は Ford の定義�
 Ford の論文が書いていない前提を二つ補った: PCP の文字列は空でない（空だと `A ← ε A aᵢ` が左再帰になり導出がない）、
 完全性の帰着では元の文法が完全である（そうでないと `A'` も止まらない入力が残る）。Ford の印 `aᵢ` は一文字の終端記号だが、
 文字は有限個なので、互いに接頭辞にならない文字列 `# |…| $` で代用した。
+
+## 未解決問題「PEG で書けない文脈自由言語はあるか」は一つの言語の問題（`Cfg/Greibach/`）
+
+Aho–Ullman と Ford の問い（`CFLSubsetPELConjecture`）を、Greibach の最難言語 `L0`（Nipkow の AFP `Greibach_Hardest` に従う）の問題に言い換えた。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `l0_cfl` | `L0` は文脈自由 | propext, Quot.sound |
+| `stdForm_exists` | どの CFG にも、ε を除いて同じ言語の Greibach 標準形（右辺は終端記号＋非終端記号、開始記号は右辺に出ない）がある（ε 除去・単位規則除去・左隅変換） | propext, Classical.choice, Quot.sound |
+| `greibach_std` | 標準形の文法の言語は、ε を除いて `h⁻¹(L0)`。`h` は空でないブロックで、有限個の文字を除いて `c d` | propext, Classical.choice, Quot.sound |
+| `isPEL_invHom` / `isPEL_nonempty` / `isPEL_addEps` | PEG の言語は、有限個のブロックの逆準同型、ε の除去・追加で閉じる | propext, Classical.choice, Quot.sound（ε の 2 本は propext, Quot.sound） |
+| `cfl_pel_iff` | **全ての文脈自由言語が PEG を持つ ⇔ `L0` が PEG を持つ** | propext, Classical.choice, Quot.sound |
+
+問い自体は未解決のまま。`L0` に PEG を作るか、`L0` に PEG が無いことを示せば決着する。
