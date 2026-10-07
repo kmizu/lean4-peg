@@ -783,3 +783,23 @@ languages・OI 階層との関係（3節目）は、本プロジェクトが一�
 拡張も同様に、本プロジェクトの `MExp`/`MGrammar` には実装されていない別軸の
 拡張である——関連研究として引用するが、本プロジェクトの定理がそれらを包含・
 一般化・あるいは反証すると主張するものではない。
+
+## PEG の空性・同値性・完全性は決定不能（Ford 2004 §3.4–3.5、`Shallot/Peg/Undecidable/`）
+
+Ford の証明に忠実に、PCP から帰着する。言語は Ford の定義どおり「開始規則が成功する文字列」（`Accepts`、全部食べなくてよい）。
+問題はビット列の上の言語として定義し、決定可能性は時間の上限なしの TM（`TMDecidable`）。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `side_sound` / `side_total` / `side_complete` | Ford の `A ← x₁ A a₁ / … / xₙ A aₙ / ε`: 成功すれば添字の列の文字列を食べる・必ず成功する・添字の列の文字列（の後に印か終わり）からちょうどその文字列を食べる（順序付き選択でも、印が添字を決めるので） | propext, Quot.sound ほか |
+| `ford_iff` | **Ford の帰着**: `D ← &. &(A !.) B !.` の文法 `fordG C` の言語が空でない ⇔ PCP の解がある（対の文字列が空でないこと） | propext, Quot.sound |
+| `ford_equiv_iff` / `ford_complete_iff` | 同値性（空言語の文法と比べる）、完全性（`A' ← &e_S A'`）。完全性の帰着は元の文法が完全であることが要り、`fordG` は完全（`fordG_complete`） | propext, Quot.sound |
+| `oneTape_decides` | k テープの判定機械は 1 テープの判定機械に直せる | propext, Classical.choice, Quot.sound |
+| `k1_undecidable` | 1 テープの表が自分の符号を受理するか（`K1`）は決定不能（受理と拒否を入れ替えた機械に自分の符号を読ませる対角線） | propext, Classical.choice, Quot.sound |
+| `tm_sr` / `sr_mpcp` / `mpcp_pcp` / `pcpN_pcp` | 1 テープの表の受理 → 文字列書き換え → MPCP → PCP → ビットの PCP（Forster–Heiter–Smolka 2018 の型） | propext, Classical.choice, Quot.sound（`pcpN_pcp` は propext, Quot.sound） |
+| `k1_grammar` / `kP_computes` | `K1 w` ⇔ `k1Grammar w` の言語が空でない。その文法の符号は数のスタック機械が計算する | propext, Classical.choice, Quot.sound |
+| `peg_empty_undecidable` / `peg_equiv_undecidable` / `peg_complete_undecidable` | **PEG の空性・同値性・完全性は決定不能** | propext, Classical.choice, Quot.sound |
+
+Ford の論文が書いていない前提を二つ補った: PCP の文字列は空でない（空だと `A ← ε A aᵢ` が左再帰になり導出がない）、
+完全性の帰着では元の文法が完全である（そうでないと `A'` も止まらない入力が残る）。Ford の印 `aᵢ` は一文字の終端記号だが、
+文字は有限個なので、互いに接頭辞にならない文字列 `# |…| $` で代用した。
