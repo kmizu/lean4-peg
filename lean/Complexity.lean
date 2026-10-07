@@ -39,6 +39,25 @@ import Complexity.Univ.SimStep
 import Complexity.Univ.SimTrav
 import Complexity.Univ.SimWrite
 import Complexity.Univ.Table
+import Complexity.Comp.Basic
+import Complexity.Comp.HaltSim
+import Complexity.Comp.NDecide
+import Complexity.Comp.Reduce
+import Complexity.OneTape.Code
+import Complexity.OneTape.Machine
+import Complexity.OneTape.Macro
+import Complexity.OneTape.Main
+import Complexity.OneTape.Sweep
+import Complexity.OneTape.Track
+import Complexity.Undec.Defs
+import Complexity.Undec.K1
+import Complexity.Undec.K1Defs
+import Complexity.Undec.MPCP
+import Complexity.Undec.SRMPCP
+import Complexity.Undec.TMSR
+import Complexity.Undec.TMSRDefs
+import Complexity.Undec.TMSRSim
+import Complexity.Undec.TMSRStep
 
 /-!
 # TQBF is PSPACE-complete

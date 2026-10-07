@@ -28,6 +28,7 @@ import Shallot.Peg.GrammarExtend
 import MacroPeg
 import Cfg
 import Complexity
+import Shallot
 
 /-!
 # Axiom audit
@@ -1607,3 +1608,59 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.ce002_not_wf' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.ce002_not_wf
+
+/-- info: 'Shallot.ford_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.ford_iff
+
+/-- info: 'Shallot.ford_equiv_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.ford_equiv_iff
+
+/-- info: 'Shallot.ford_complete_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.ford_complete_iff
+
+/-- info: 'Shallot.fordG_complete' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.fordG_complete
+
+/-- info: 'Complexity.oneTape_decides' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.oneTape_decides
+
+/-- info: 'Complexity.k1_undecidable' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.k1_undecidable
+
+/-- info: 'Complexity.Undec.tm_sr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.Undec.tm_sr
+
+/-- info: 'Complexity.Undec.sr_mpcp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.Undec.sr_mpcp
+
+/-- info: 'Complexity.Undec.mpcp_pcp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.Undec.mpcp_pcp
+
+/-- info: 'Shallot.pcpN_pcp' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.pcpN_pcp
+
+/-- info: 'Shallot.k1_grammar' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.k1_grammar
+
+/-- info: 'Shallot.peg_empty_undecidable' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.peg_empty_undecidable
+
+/-- info: 'Shallot.peg_equiv_undecidable' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.peg_equiv_undecidable
+
+/-- info: 'Shallot.peg_complete_undecidable' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.peg_complete_undecidable
