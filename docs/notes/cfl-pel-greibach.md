@@ -26,3 +26,6 @@ Lean での確かめ（Lean 4.31 + mathlib の、Kim–Park の成果物 Zenodo 
 
 注意: これは「全域な PEG」についての答え。このリポジトリの `IsPEL`（止まらない文法も許し、止まらない入力は受理しない）で
 同じことが言えるかは、全域でない PEG の言語が全域な PEG で書けるかに依る。
+
+（2026-10-21 追記）書ける（`isPEL_iff_isTotalPEL`、`partial-total-peg.md`）。その構成を写して
+`greibachHardest_not_PEL : ¬ IsPEL L0` も標準の 3 公理だけで通った（kmizu/peg-separation-axiom-free）。
