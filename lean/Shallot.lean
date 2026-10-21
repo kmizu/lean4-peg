@@ -58,3 +58,11 @@ import Shallot.Peg.Undecidable.MachPrintWord
 import Shallot.Peg.Undecidable.MachSpec
 import Shallot.Peg.Undecidable.Main
 import Shallot.Peg.Undecidable.PCP
+import Shallot.Peg.Total.Guarded
+import Shallot.Peg.Total.Height
+import Shallot.Peg.Total.Main
+import Shallot.Peg.Total.Mask
+import Shallot.Peg.Total.Spec
+import Shallot.Peg.Total.SpecSeq
+import Shallot.Peg.Total.SpecStar
+import Shallot.Peg.Total.Transform
