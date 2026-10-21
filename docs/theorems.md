@@ -816,4 +816,17 @@ Aho–Ullman と Ford の問い（`CFLSubsetPELConjecture`）を、Greibach の�
 | `isPEL_invHom` / `isPEL_nonempty` / `isPEL_addEps` | PEG の言語は、有限個のブロックの逆準同型、ε の除去・追加で閉じる | propext, Classical.choice, Quot.sound（ε の 2 本は propext, Quot.sound） |
 | `cfl_pel_iff` | **全ての文脈自由言語が PEG を持つ ⇔ `L0` が PEG を持つ** | propext, Classical.choice, Quot.sound |
 
-問い自体は未解決のまま。`L0` に PEG を作るか、`L0` に PEG が無いことを示せば決着する。
+問いは Kim–Park (arXiv:2608.29592) が全域な PEG について否定的に解いた。下の節の同値と合わせると `IsPEL` でも否定的
+（`greibachHardest_not_PEL`、kmizu/peg-separation-axiom-free）。
+
+## 止まらない文法も許した PEG の言語は全域な PEG の言語と一致する（`Shallot/Peg/Total/`）
+
+Ford 2004 §5 が Birman の変換によると述べ、証明していない主張。開いている非終端記号の集合を付けた実行時の循環検査で示した。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `spec_all` | 変換した式の、食べずに成功・食べて成功・ループの三つの仕様 | propext, Classical.choice, Quot.sound |
+| `newG_accepts` | 変換した文法は元の文法と同じ語を受理する | propext, Classical.choice, Quot.sound |
+| `newG_allNtTotal` / `newG_complete` | 変換した文法は全ての非終端記号が全ての入力で止まる | propext, Classical.choice, Quot.sound |
+| `isPEL_allNtTotal` | `IsPEL L` なら、全ての非終端記号が止まる文法で `L` が書ける | propext, Classical.choice, Quot.sound |
+| `isPEL_iff_isTotalPEL` | **`IsPEL L ↔ IsTotalPEL L`** | propext, Classical.choice, Quot.sound |
