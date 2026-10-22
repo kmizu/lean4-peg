@@ -1,6 +1,6 @@
 # 決定性 CFL ⊆ PEL を Lean で
 
-`dpda_isPEL : IsPEL M.language`、`dpda_isTotalPEL : IsTotalPEL M.language`（`lean/Shallot/Peg/Dpda/`、約 1000 行）。
+`dpda_isPEL : IsPEL M.language`、`dpda_isTotalPEL : IsTotalPEL M.language`（`lean/Shallot/Peg/Dpda/`、約 1100 行）。
 
 ## 文献
 - Ford (2004) §5: Birman が TS/gTS で任意の DPDA を模倣できると示した [5] と書き、「決定性 LR 系の言語は PEG で書ける」とする。
