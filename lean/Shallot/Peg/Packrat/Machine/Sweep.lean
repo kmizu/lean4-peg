@@ -94,7 +94,7 @@ theorem swept_next_mem (g : Grammar) (x : List Char) (n : Nat) (js : List (Node 
       rw [Lists.set_ne _ _ hne]
       exact hz a (List.mem_cons_of_mem _ ha)
 
-private theorem finRange_nodup (N : Nat) : (List.finRange N).Nodup := by
+theorem finRange_nodup (N : Nat) : (List.finRange N).Nodup := by
   rw [List.nodup_iff_pairwise_ne, List.pairwise_iff_getElem]
   intro i j hi hj hij he
   have hh := congrArg Fin.val he

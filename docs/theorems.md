@@ -855,7 +855,7 @@ Ford 2004 §5 が証明なしに引く結果（Birman–Ullman, Information and 
 ## 任意の PEG の有限表による有界認識（`Shallot/Peg/Packrat/`）
 
 停止性を仮定せず、固定入力に対する成功・失敗・導出なしを区別する。
-[詳しい仕様と残作業](notes/peg-packrat.md)。`PEL ⊊ P` と機械上の時間上限はまだ未証明。
+[詳しい仕様と残作業](notes/peg-packrat.md)。`PEL ⊊ P` は未証明。機械上の一様な上界は後節。
 
 | 定理 | 内容 | 依存 |
 |------|------|------|
@@ -869,7 +869,7 @@ Ford 2004 §5 が証明なしに引く結果（Birman–Ullman, Information and 
 
 ## PEG のセルを計算する具体的なスタック機械（`Shallot/Peg/Packrat/Machine/`）
 
-`N` は入力長。下記はスタック機械のステップ上限で、TM 全体の時間上限は未証明。
+`N` は入力長。下記は各セルのスタック機械のステップ上限。全体の TM 上界は後節。
 
 | 定理 | 内容 | 依存 |
 |------|------|------|
@@ -884,7 +884,7 @@ Ford 2004 §5 が証明なしに引く結果（Birman–Ullman, Information and 
 ## PEG 全構文のセルコンパイラと表走査（`Shallot/Peg/Packrat/Machine/`）
 
 旧行と入力行が与えられた状態から、全ての次行を計算する具体的なスタック機械。
-初期化・全反復と TM 全体の時間上限は引き続き未接続。
+初期化・全反復と TM 上の時間への接続は後節。
 
 | 定理 | 内容 | 依存 |
 |------|------|------|
@@ -898,3 +898,23 @@ Ford 2004 §5 が証明なしに引く結果（Birman–Ullman, Information and 
 | `Machine.nruns_fillRow` | カウンタ付きループで末尾を含む全位置の行を埋める | propext, Classical.choice, Quot.sound |
 | `Machine.nruns_sweep` | 全ての次行を埋め、旧表とその他の領域を保つ | propext, Classical.choice, Quot.sound |
 | `Machine.sweepCost_le` | 一走査の上限は文法ごとの定数 × (入力長 + 1)² | propext, Quot.sound |
+
+## PEG の完全な認識機械と一様な多項式時間（`Shallot/Peg/Packrat/Machine/`）
+
+入力は固定関数 `f : Bool → Char` で二文字に写すビット列。
+TM の次数 15 は全文法で共通、係数は文法と二文字に依存する。
+真部分性の対角線は未証明。
+
+| 定理 | 内容 | 依存 |
+|------|------|------|
+| `Machine.nruns_replaceRow` | 次行を順序を保って旧行へ移し、作業領域を戻す | propext, Quot.sound |
+| `Machine.nruns_roundP` / `roundCost_le` | 走査と転送で表を1ラウンド進め、二次の上限で再利用可能な状態へ戻す | propext, Classical.choice, Quot.sound（上限のみは propext, Quot.sound） |
+| `Machine.nruns_iterateBound` / `iterateCost_le` | 有限反復の上限を計算して全反復を実行し、三次のステップ上限を示す | propext, Classical.choice, Quot.sound（上限のみは propext, Quot.sound） |
+| `Machine.nruns_initialize` | 空の旧行から未知の全表を作る | propext, Quot.sound |
+| `Machine.nruns_load_nInit` | 実際のビット入力から文字の入力行と長さを作る | propext, Classical.choice, Quot.sound |
+| `Machine.nhalts_finish` | 開始規則の位置ゼロを読み、全入力消費との一致を比較して停止する | propext, Classical.choice, Quot.sound |
+| `Machine.program_halts` / `program_halts_fullAccepts` | 実際の開始状態からの全プログラムの停止と元の受理・有界認識器との一致 | propext, Classical.choice, Quot.sound |
+| `Machine.programCost_le` | 全プログラムのスタック機械時間は文法ごとの定数 × (入力長 + 1)³ 以下 | propext, Quot.sound |
+| `Machine.program_tm` | 検証済み変換で具体的な TM と停止期限を構成 | propext, Classical.choice, Quot.sound |
+| `Machine.tmTime_degree15` | 期限は文法ごとの定数 × (入力長 + 1)¹⁵ 以下 | propext, Quot.sound |
+| `Machine.bitLanguage_time15` | 全入力消費の PEG 言語を判定する次数15の TM が存在 | propext, Classical.choice, Quot.sound |
