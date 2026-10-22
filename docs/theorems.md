@@ -880,3 +880,21 @@ Ford 2004 §5 が証明なしに引く結果（Birman–Ullman, Information and 
 | `Packrat.Machine.nruns_altCell_round` | 元の表の順序付き選択セルを `20 * N + 34` ステップ以内で計算 | propext, Classical.choice, Quot.sound |
 | `Packrat.Machine.nruns_starCell_round` | 元の表の反復セルを `20 * N + 57` ステップ以内で計算 | propext, Classical.choice, Quot.sound |
 | `Packrat.Machine.nruns_notCell_round` | 元の表の否定先読みセルを `10 * N + 20` ステップ以内で計算 | propext, Classical.choice, Quot.sound |
+
+## PEG 全構文のセルコンパイラと表走査（`Shallot/Peg/Packrat/Machine/`）
+
+旧行と入力行が与えられた状態から、全ての次行を計算する具体的なスタック機械。
+初期化・全反復と TM 全体の時間上限は引き続き未接続。
+
+| 定理 | 内容 | 依存 |
+|------|------|------|
+| `Machine.nruns_readTest` | 入力行を読み、固定の有限表からコンパイルした分岐を実行 | propext, Classical.choice, Quot.sound |
+| `Machine.chrTest_char` / `rangeTest_char` | 数値の照合表と元の文字・文字範囲の判定が一致 | propext, Classical.choice, Quot.sound |
+| `Machine.nruns_lexCell_input` | 任意文字・文字・範囲のセルを入力長に線形の上限で計算 | propext, Classical.choice, Quot.sound |
+| `Machine.literalScan_value` / `nruns_literalCell` | カーソルを使うリテラル照合の具体的な実行と元の表の一致 | propext, Classical.choice, Quot.sound |
+| `Machine.literalCost_le` | 固定リテラルの上限は入力長に線形 | propext, Quot.sound |
+| `Machine.layout_disjoint` | 文法ごとの旧行・次行・作業領域の割当てが衝突しない | propext, Classical.choice, Quot.sound |
+| `Machine.nruns_compileCell` | 全構文のセルコンパイラは次ラウンドの値を計算し出力以外を保つ | propext, Classical.choice, Quot.sound |
+| `Machine.nruns_fillRow` | カウンタ付きループで末尾を含む全位置の行を埋める | propext, Classical.choice, Quot.sound |
+| `Machine.nruns_sweep` | 全ての次行を埋め、旧表とその他の領域を保つ | propext, Classical.choice, Quot.sound |
+| `Machine.sweepCost_le` | 一走査の上限は文法ごとの定数 × (入力長 + 1)² | propext, Quot.sound |

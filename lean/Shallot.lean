@@ -84,3 +84,4 @@ import Shallot.Peg.Packrat.Stored
 import Shallot.Peg.Packrat.Examples
 import Shallot.Peg.Packrat.Machine.Alt
 import Shallot.Peg.Packrat.Machine.Star
+import Shallot.Peg.Packrat.Machine.Examples
