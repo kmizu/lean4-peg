@@ -35,6 +35,9 @@ itself the axiom audit**. Full inventory: [docs/theorems.md](docs/theorems.md)
 - **PEG**: interpreter soundness, completeness, and determinism against a
   Ford-style formal semantics (determinism includes parse-tree uniqueness and
   uses no axioms at all)
+- **PEG expressive power**: over the fixed binary alphabet, PEG languages form a
+  strict subclass of polynomial-time languages, with a verified recognizer and
+  a concrete diagonal witness. [Proof notes](docs/notes/peg-strict-in-p.md).
 - **Typechecker**: sound **and** complete w.r.t. the typing relation
 - **Type soundness**: well-typed programs cannot get stuck (only `divByZero`
   is possible; every stuck-class error is provably absent)

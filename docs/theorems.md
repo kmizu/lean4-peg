@@ -855,7 +855,7 @@ Ford 2004 §5 が証明なしに引く結果（Birman–Ullman, Information and 
 ## 任意の PEG の有限表による有界認識（`Shallot/Peg/Packrat/`）
 
 停止性を仮定せず、固定入力に対する成功・失敗・導出なしを区別する。
-[詳しい仕様と残作業](notes/peg-packrat.md)。`PEL ⊊ P` は未証明。機械上の一様な上界は後節。
+[詳しい仕様と残作業](notes/peg-packrat.md)。固定二進アルファベット上の `PEL ⊊ P` と機械上の一様な上界は後節。
 
 | 定理 | 内容 | 依存 |
 |------|------|------|
@@ -903,7 +903,7 @@ Ford 2004 §5 が証明なしに引く結果（Birman–Ullman, Information and 
 
 入力は固定関数 `f : Bool → Char` で二文字に写すビット列。
 TM の次数 15 は全文法で共通、係数は文法と二文字に依存する。
-真部分性の対角線は未証明。
+真部分性の対角線と既存の文字列言語クラスとの対応は後節。
 
 | 定理 | 内容 | 依存 |
 |------|------|------|
@@ -918,3 +918,23 @@ TM の次数 15 は全文法で共通、係数は文法と二文字に依存す�
 | `Machine.program_tm` | 検証済み変換で具体的な TM と停止期限を構成 | propext, Classical.choice, Quot.sound |
 | `Machine.tmTime_degree15` | 期限は文法ごとの定数 × (入力長 + 1)¹⁵ 以下 | propext, Quot.sound |
 | `Machine.bitLanguage_time15` | 全入力消費の PEG 言語を判定する次数15の TM が存在 | propext, Classical.choice, Quot.sound |
+
+## 固定二進アルファベットで `PEL ⊊ P`（`Shallot/Peg/Separation/`）
+
+`'0'` / `'1'` 上の、全入力消費を受理条件とする PEG 言語のクラスを `IsBitPEL` とする。
+`KEXP 0` は既存の TM による多項式時間のクラス。
+既知の時間階層による分離を、具体的な万能機械と自己適用で形式化した。
+[証明の定義・構成・範囲](notes/peg-strict-in-p.md)。
+
+| 定理 | 内容 | 依存 |
+|------|------|------|
+| `PegSeparation.polyDiag_code` / `polyDiag_not_time` | 固定予算 `(入力長 + 1)^(p + 1)` の対角言語は、どの定数でも次数 `p` の TM では判定できない | propext, Quot.sound |
+| `PegSeparation.polyFront_ok` / `polyFront_bad` | 入力中の指数を使わず固定値へ上書きし、正しい表と元の入力を配置、不正コードは拒否 | propext, Classical.choice, Quot.sound |
+| `PegSeparation.polyDiagP_halts` | 実際の開始状態から対角言語を判定して停止する具体的なスタック機械 | propext, Classical.choice, Quot.sound |
+| `PegSeparation.polyDiagBound_poly` | 固定した `p` に対する全実行の上限は多項式 | propext, Quot.sound |
+| `PegSeparation.nprog_in_P` / `polyDiag_in_P` | 検証済み変換で対角言語を判定する多項式時間 TM を構成 | propext, Classical.choice, Quot.sound |
+| `PegSeparation.isBitPEL_iff_restriction` | `IsBitPEL` は既存の文字列版 `Cfg.IsPEL` を二進入力へ制限したものと同値 | なし |
+| `PegSeparation.bitPEL_in_P` | 任意の二進 PEG 言語は P に属する | propext, Classical.choice, Quot.sound |
+| `PegSeparation.polynomial_non_PEL` | 具体的な `PolyDiag 15` は P に属し、二進 PEG 言語でない | propext, Classical.choice, Quot.sound |
+| `PegSeparation.pel_strict_in_p` | **PEL ⊊ P**（固定二進アルファベット、停止しない文法も許す） | propext, Classical.choice, Quot.sound |
+| `PegSeparation.lifted_polyDiag_not_PEL` / `character_counterexample` | 二進文字だけからなる反例は元の `Cfg.IsPEL` にも属さず、二進符号化で多項式時間判定できる | propext, Classical.choice, Quot.sound |
