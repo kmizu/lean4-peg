@@ -61,6 +61,15 @@ import Shallot.Peg.Undecidable.PCP
 import Shallot.Peg.Total.Guarded
 import Shallot.Peg.Total.Height
 import Shallot.Peg.Total.Main
+import Shallot.Peg.Dpda.Defs
+import Shallot.Peg.Dpda.Run
+import Shallot.Peg.Dpda.Grammar
+import Shallot.Peg.Dpda.Lemmas
+import Shallot.Peg.Dpda.Sound
+import Shallot.Peg.Dpda.Moves
+import Shallot.Peg.Dpda.PopSpec
+import Shallot.Peg.Dpda.AccSpec
+import Shallot.Peg.Dpda.Main
 import Shallot.Peg.Total.Mask
 import Shallot.Peg.Total.Spec
 import Shallot.Peg.Total.SpecSeq

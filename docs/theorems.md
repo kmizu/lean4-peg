@@ -830,3 +830,24 @@ Ford 2004 §5 が Birman の変換によると述べ、証明していない主�
 | `newG_allNtTotal` / `newG_complete` | 変換した文法は全ての非終端記号が全ての入力で止まる | propext, Classical.choice, Quot.sound |
 | `isPEL_allNtTotal` | `IsPEL L` なら、全ての非終端記号が止まる文法で `L` が書ける | propext, Classical.choice, Quot.sound |
 | `isPEL_iff_isTotalPEL` | **`IsPEL L ↔ IsTotalPEL L`** | propext, Classical.choice, Quot.sound |
+
+## 決定性 CFL は PEG の言語（Birman–Ullman 1973 定理 2.2、`Shallot/Peg/Dpda/`）
+
+Ford 2004 §5 が証明なしに引く結果（Birman–Ullman, Information and Control 23, 1973）。DPDA は状態・スタック記号を番号、入力記号を `Char` の有限リストで持ち、
+ε 動作があれば読み動作は無い（決定性）。受理は最終状態で、入力を全部読んで最終状態に着く走りがあること。
+
+文法は Birman–Ullman の三つ組構成に従う。状態 `q, r` とスタック記号 `Z` に対し、`P q Z r`（論文の `[qZr]`: `Z` を取り除いて状態 `r` で終わる）と
+`A q Z`（`Z` の上で受理する）。動作は順序付き選択、積んだ記号を取り除く状態は全状態の順序付き選択で探す。決定性により成功する候補は高々一つ。
+論文の正規化（入力を必ず読み切る、スタックを空にして止まる）は使わない。文法は DPDA が止まらないところで止まらなくてよく、`IsPEL` を示してから
+`isPEL_iff_isTotalPEL` で完全な PEG にする。
+
+| 定理 | 内容 | 公理 |
+|------|------|------|
+| `DPDA.sound` | `A q₀ Z₀` が `w` を全部食べて成功すれば DPDA は `w` を受理する | propext, Quot.sound |
+| `DPDA.pop_spec` | `Z` が `n` 手で取り除かれて状態 `p` なら、`P q Z p` は成功して残りを返し、他の `r` では失敗する（`n` についての帰納法） | propext, Classical.choice, Quot.sound |
+| `DPDA.afail_le` / `DPDA.aok_le` | 受理が `Z` の寿命の外なら `A q Z` は失敗、中なら成功 | propext, Classical.choice, Quot.sound |
+| `DPDA.complete` | DPDA が受理する語は `A q₀ Z₀` が受理する | propext, Classical.choice, Quot.sound |
+| `dpda_isPEL` | **DPDA の言語は PEG の言語（`IsPEL`）** | propext, Classical.choice, Quot.sound |
+| `dpda_isTotalPEL` | その言語は完全な PEG の言語（`IsTotalPEL`） | propext, Classical.choice, Quot.sound |
+
+論文が省いた部分は、正規化を避けることで要らなくなった。論文の第二部（文法が成功すれば DPDA が読んだ列）は `sound` として自分で示した。
