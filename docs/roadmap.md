@@ -72,3 +72,12 @@ M-PEG-6 で、この非循環な展開が `CallByName` 意味論を保つこと�
 セッション内で修復済み——`sigParams`/`transApp`/`transMatcher`をProp引数
 消去に対応させ、`expand`のScala側3方一致を自動corpus diffで達成した。詳細は
 `docs/extractable-subset.md`と上のM-PEG-5行の追補を参照）
+
+
+## 2026-10-22: PEL ⊊ P の形式化が完了
+
+固定二進アルファベット・全入力消費の受理条件で、停止しない PEG 文法も含めて
+`PegSeparation.pel_strict_in_p` を証明した。全域化の仮定は不要。
+既知の時間階層による分離を、入力から停止までの認識機械、次数15の一様な TM 上界、
+具体的な多項式時間の対角言語へ接続した。元の `Cfg.IsPEL` に属さない二進文字列の
+反例にも対応づけている。[構成と検証](notes/peg-strict-in-p.md)。

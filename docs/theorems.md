@@ -851,3 +851,90 @@ Ford 2004 §5 が証明なしに引く結果（Birman–Ullman, Information and 
 | `dpda_isTotalPEL` | その言語は完全な PEG の言語（`IsTotalPEL`） | propext, Classical.choice, Quot.sound |
 
 論文が省いた部分は、正規化を避けることで要らなくなった。論文の第二部（文法が成功すれば DPDA が読んだ列）は `sound` として自分で示した。
+
+## 任意の PEG の有限表による有界認識（`Shallot/Peg/Packrat/`）
+
+停止性を仮定せず、固定入力に対する成功・失敗・導出なしを区別する。
+[詳しい仕様と残作業](notes/peg-packrat.md)。固定二進アルファベット上の `PEL ⊊ P` と機械上の一様な上界は後節。
+
+| 定理 | 内容 | 依存 |
+|------|------|------|
+| `Packrat.iter_eq_run` | 表の各反復と同じ燃料の `pegRun` の結果が、木を除いて一致 | propext, Quot.sound |
+| `Packrat.iter_sound` / `iter_complete` | 埋まった値には導出があり、導出があればいつか埋まる | propext, Quot.sound |
+| `Packrat.bound_stationary` / `bound_fixed` | 部分式数 × (入力長 + 1) + 1 回で関連セルが安定 | propext, Classical.choice, Quot.sound |
+| `Packrat.bounded_iff` / `bounded_none_iff` | 有界表の値と導出の同値、空セルと導出の不存在の同値 | propext, Classical.choice, Quot.sound |
+| `Packrat.accepts_iff` | 有界認識器と元の PEG の受理が一致（残りの入力を許す） | propext, Classical.choice, Quot.sound |
+| `Packrat.stored_eq_iter` | 保存する有限表の実装が関数版の仕様と一致 | propext, Quot.sound |
+| `Packrat.storedParse_iff` / `storedParse_none_iff` | 保存する実装について、導出の存在・不存在との同値 | propext, Classical.choice, Quot.sound |
+
+## PEG のセルを計算する具体的なスタック機械（`Shallot/Peg/Packrat/Machine/`）
+
+`N` は入力長。下記は各セルのスタック機械のステップ上限。全体の TM 上界は後節。
+
+| 定理 | 内容 | 依存 |
+|------|------|------|
+| `Packrat.fullAccepts_iff` / `Machine.start_full_iff` | 全入力消費の受理と、最終の数値表が入力末尾を指すことの接続 | propext, Classical.choice, Quot.sound |
+| `Packrat.Machine.step_encode` | 絶対的な到達位置で符号化した数値表の一段と元の `F` の一致 | propext |
+| `Packrat.Machine.nruns_readRow` | 行と位置を保ち、作業スタックを戻して値を読み出す具体的な機械 | propext, Quot.sound |
+| `Packrat.Machine.nruns_seqCell_round` | 元の表の連接セルを `20 * N + 47` ステップ以内で計算 | propext, Classical.choice, Quot.sound |
+| `Packrat.Machine.nruns_altCell_round` | 元の表の順序付き選択セルを `20 * N + 34` ステップ以内で計算 | propext, Classical.choice, Quot.sound |
+| `Packrat.Machine.nruns_starCell_round` | 元の表の反復セルを `20 * N + 57` ステップ以内で計算 | propext, Classical.choice, Quot.sound |
+| `Packrat.Machine.nruns_notCell_round` | 元の表の否定先読みセルを `10 * N + 20` ステップ以内で計算 | propext, Classical.choice, Quot.sound |
+
+## PEG 全構文のセルコンパイラと表走査（`Shallot/Peg/Packrat/Machine/`）
+
+旧行と入力行が与えられた状態から、全ての次行を計算する具体的なスタック機械。
+初期化・全反復と TM 上の時間への接続は後節。
+
+| 定理 | 内容 | 依存 |
+|------|------|------|
+| `Machine.nruns_readTest` | 入力行を読み、固定の有限表からコンパイルした分岐を実行 | propext, Classical.choice, Quot.sound |
+| `Machine.chrTest_char` / `rangeTest_char` | 数値の照合表と元の文字・文字範囲の判定が一致 | propext, Classical.choice, Quot.sound |
+| `Machine.nruns_lexCell_input` | 任意文字・文字・範囲のセルを入力長に線形の上限で計算 | propext, Classical.choice, Quot.sound |
+| `Machine.literalScan_value` / `nruns_literalCell` | カーソルを使うリテラル照合の具体的な実行と元の表の一致 | propext, Classical.choice, Quot.sound |
+| `Machine.literalCost_le` | 固定リテラルの上限は入力長に線形 | propext, Quot.sound |
+| `Machine.layout_disjoint` | 文法ごとの旧行・次行・作業領域の割当てが衝突しない | propext, Classical.choice, Quot.sound |
+| `Machine.nruns_compileCell` | 全構文のセルコンパイラは次ラウンドの値を計算し出力以外を保つ | propext, Classical.choice, Quot.sound |
+| `Machine.nruns_fillRow` | カウンタ付きループで末尾を含む全位置の行を埋める | propext, Classical.choice, Quot.sound |
+| `Machine.nruns_sweep` | 全ての次行を埋め、旧表とその他の領域を保つ | propext, Classical.choice, Quot.sound |
+| `Machine.sweepCost_le` | 一走査の上限は文法ごとの定数 × (入力長 + 1)² | propext, Quot.sound |
+
+## PEG の完全な認識機械と一様な多項式時間（`Shallot/Peg/Packrat/Machine/`）
+
+入力は固定関数 `f : Bool → Char` で二文字に写すビット列。
+TM の次数 15 は全文法で共通、係数は文法と二文字に依存する。
+真部分性の対角線と既存の文字列言語クラスとの対応は後節。
+
+| 定理 | 内容 | 依存 |
+|------|------|------|
+| `Machine.nruns_replaceRow` | 次行を順序を保って旧行へ移し、作業領域を戻す | propext, Quot.sound |
+| `Machine.nruns_roundP` / `roundCost_le` | 走査と転送で表を1ラウンド進め、二次の上限で再利用可能な状態へ戻す | propext, Classical.choice, Quot.sound（上限のみは propext, Quot.sound） |
+| `Machine.nruns_iterateBound` / `iterateCost_le` | 有限反復の上限を計算して全反復を実行し、三次のステップ上限を示す | propext, Classical.choice, Quot.sound（上限のみは propext, Quot.sound） |
+| `Machine.nruns_initialize` | 空の旧行から未知の全表を作る | propext, Quot.sound |
+| `Machine.nruns_load_nInit` | 実際のビット入力から文字の入力行と長さを作る | propext, Classical.choice, Quot.sound |
+| `Machine.nhalts_finish` | 開始規則の位置ゼロを読み、全入力消費との一致を比較して停止する | propext, Classical.choice, Quot.sound |
+| `Machine.program_halts` / `program_halts_fullAccepts` | 実際の開始状態からの全プログラムの停止と元の受理・有界認識器との一致 | propext, Classical.choice, Quot.sound |
+| `Machine.programCost_le` | 全プログラムのスタック機械時間は文法ごとの定数 × (入力長 + 1)³ 以下 | propext, Quot.sound |
+| `Machine.program_tm` | 検証済み変換で具体的な TM と停止期限を構成 | propext, Classical.choice, Quot.sound |
+| `Machine.tmTime_degree15` | 期限は文法ごとの定数 × (入力長 + 1)¹⁵ 以下 | propext, Quot.sound |
+| `Machine.bitLanguage_time15` | 全入力消費の PEG 言語を判定する次数15の TM が存在 | propext, Classical.choice, Quot.sound |
+
+## 固定二進アルファベットで `PEL ⊊ P`（`Shallot/Peg/Separation/`）
+
+`'0'` / `'1'` 上の、全入力消費を受理条件とする PEG 言語のクラスを `IsBitPEL` とする。
+`KEXP 0` は既存の TM による多項式時間のクラス。
+既知の時間階層による分離を、具体的な万能機械と自己適用で形式化した。
+[証明の定義・構成・範囲](notes/peg-strict-in-p.md)。
+
+| 定理 | 内容 | 依存 |
+|------|------|------|
+| `PegSeparation.polyDiag_code` / `polyDiag_not_time` | 固定予算 `(入力長 + 1)^(p + 1)` の対角言語は、どの定数でも次数 `p` の TM では判定できない | propext, Quot.sound |
+| `PegSeparation.polyFront_ok` / `polyFront_bad` | 入力中の指数を使わず固定値へ上書きし、正しい表と元の入力を配置、不正コードは拒否 | propext, Classical.choice, Quot.sound |
+| `PegSeparation.polyDiagP_halts` | 実際の開始状態から対角言語を判定して停止する具体的なスタック機械 | propext, Classical.choice, Quot.sound |
+| `PegSeparation.polyDiagBound_poly` | 固定した `p` に対する全実行の上限は多項式 | propext, Quot.sound |
+| `PegSeparation.nprog_in_P` / `polyDiag_in_P` | 検証済み変換で対角言語を判定する多項式時間 TM を構成 | propext, Classical.choice, Quot.sound |
+| `PegSeparation.isBitPEL_iff_restriction` | `IsBitPEL` は既存の文字列版 `Cfg.IsPEL` を二進入力へ制限したものと同値 | なし |
+| `PegSeparation.bitPEL_in_P` | 任意の二進 PEG 言語は P に属する | propext, Classical.choice, Quot.sound |
+| `PegSeparation.polynomial_non_PEL` | 具体的な `PolyDiag 15` は P に属し、二進 PEG 言語でない | propext, Classical.choice, Quot.sound |
+| `PegSeparation.pel_strict_in_p` | **PEL ⊊ P**（固定二進アルファベット、停止しない文法も許す） | propext, Classical.choice, Quot.sound |
+| `PegSeparation.lifted_polyDiag_not_PEL` / `character_counterexample` | 二進文字だけからなる反例は元の `Cfg.IsPEL` にも属さず、二進符号化で多項式時間判定できる | propext, Classical.choice, Quot.sound |
