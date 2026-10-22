@@ -32,6 +32,9 @@ flowchart LR
   （決定性は構文木の一意性込み・公理ゼロ）
 - **PEG の表現力**: 固定二進アルファベット上で **PEL ⊊ P**。検証済みの認識機械と
   具体的な対角言語で分離する。[証明と定義の範囲](docs/notes/peg-strict-in-p.md)。
+- **Macro PEG の表現力**: **PEL ⊊ 一階 CBN Macro PEL** を無条件に証明。
+  高階引数なし・引数個数の上限なしの固定文法を証人にする。
+  [証明と符号化](docs/notes/peg-macro-strict.md)。
 - **型検査器**: 型付け関係に対して健全**かつ**完全
 - **型健全性**: well-typed なプログラムは stuck しない（`divByZero` のみ許容）
 - **コンパイラ正しさ**: `runProgram` が値 v で成功 ⇒ コンパイル済み VM も同じ v
