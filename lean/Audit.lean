@@ -1750,3 +1750,37 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.Packrat.storedParse_none_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.Packrat.storedParse_none_iff
+
+/-! ## Stack-machine packrat cells -/
+
+/-- info: 'Shallot.Packrat.fullAccepts_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.Packrat.fullAccepts_iff
+
+/-- info: 'Shallot.Packrat.Machine.start_full_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.Packrat.Machine.start_full_iff
+
+/-- info: 'Shallot.Packrat.Machine.step_encode' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.Packrat.Machine.step_encode
+
+/-- info: 'Shallot.Packrat.Machine.nruns_readRow' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.Packrat.Machine.nruns_readRow
+
+/-- info: 'Shallot.Packrat.Machine.nruns_seqCell_round' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.Packrat.Machine.nruns_seqCell_round
+
+/-- info: 'Shallot.Packrat.Machine.nruns_altCell_round' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.Packrat.Machine.nruns_altCell_round
+
+/-- info: 'Shallot.Packrat.Machine.nruns_starCell_round' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.Packrat.Machine.nruns_starCell_round
+
+/-- info: 'Shallot.Packrat.Machine.nruns_notCell_round' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.Packrat.Machine.nruns_notCell_round

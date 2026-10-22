@@ -866,3 +866,17 @@ Ford 2004 §5 が証明なしに引く結果（Birman–Ullman, Information and 
 | `Packrat.accepts_iff` | 有界認識器と元の PEG の受理が一致（残りの入力を許す） | propext, Classical.choice, Quot.sound |
 | `Packrat.stored_eq_iter` | 保存する有限表の実装が関数版の仕様と一致 | propext, Quot.sound |
 | `Packrat.storedParse_iff` / `storedParse_none_iff` | 保存する実装について、導出の存在・不存在との同値 | propext, Classical.choice, Quot.sound |
+
+## PEG のセルを計算する具体的なスタック機械（`Shallot/Peg/Packrat/Machine/`）
+
+`N` は入力長。下記はスタック機械のステップ上限で、TM 全体の時間上限は未証明。
+
+| 定理 | 内容 | 依存 |
+|------|------|------|
+| `Packrat.fullAccepts_iff` / `Machine.start_full_iff` | 全入力消費の受理と、最終の数値表が入力末尾を指すことの接続 | propext, Classical.choice, Quot.sound |
+| `Packrat.Machine.step_encode` | 絶対的な到達位置で符号化した数値表の一段と元の `F` の一致 | propext |
+| `Packrat.Machine.nruns_readRow` | 行と位置を保ち、作業スタックを戻して値を読み出す具体的な機械 | propext, Quot.sound |
+| `Packrat.Machine.nruns_seqCell_round` | 元の表の連接セルを `20 * N + 47` ステップ以内で計算 | propext, Classical.choice, Quot.sound |
+| `Packrat.Machine.nruns_altCell_round` | 元の表の順序付き選択セルを `20 * N + 34` ステップ以内で計算 | propext, Classical.choice, Quot.sound |
+| `Packrat.Machine.nruns_starCell_round` | 元の表の反復セルを `20 * N + 57` ステップ以内で計算 | propext, Classical.choice, Quot.sound |
+| `Packrat.Machine.nruns_notCell_round` | 元の表の否定先読みセルを `10 * N + 20` ステップ以内で計算 | propext, Classical.choice, Quot.sound |

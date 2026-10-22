@@ -24,6 +24,9 @@ example : storedParse ⟨[.chr 'a'], 0⟩ ['b'] = some none := by decide
 example : storedParse ⟨[.lit ['a', 'b']], 0⟩ ['a', 'b', 'c'] = some (some 2) := by decide
 example : storedParse greedy ['a', 'b'] = some (some 1) := by decide
 
+example : fullAccepts ⟨[.lit ['a', 'b']], 0⟩ ['a', 'b'] = true := by decide
+example : fullAccepts ⟨[.lit ['a', 'b']], 0⟩ ['a', 'b', 'c'] = false := by decide
+
 /-- Priority does not recover from a divergent first alternative. -/
 theorem blocked_no_derivation : ∀ o, ¬ Derives blocked (.nt 0) [] o :=
   storedParse_none_iff.mp (by decide)

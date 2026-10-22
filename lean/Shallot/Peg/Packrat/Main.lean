@@ -97,4 +97,27 @@ theorem accepts_iff (g : Grammar) (x : List Char) :
     have hp := parse_iff.mpr ⟨.ok t rest, hd, rfl⟩
     simp [accepts, hp, erase]
 
+/-- Full-input recognition, as used by `Cfg.IsPEL`. -/
+def fullAccepts (g : Grammar) (x : List Char) : Bool :=
+  decide (parse g x = some (some x.length))
+
+/-- Full-input recognition agrees with successful derivation leaving no suffix. -/
+theorem fullAccepts_iff (g : Grammar) (x : List Char) :
+    fullAccepts g x = true ↔ ∃ t, Derives g (.nt g.start) x (.ok t []) := by
+  simp only [fullAccepts, decide_eq_true_eq, parse_iff]
+  constructor
+  · rintro ⟨o, hd, he⟩
+    cases o with
+    | fail => cases he
+    | ok t rest =>
+      simp only [erase, Option.some.injEq] at he
+      obtain ⟨p, hp⟩ := derives_suffix hd t rest rfl
+      have hl : rest.length = 0 := by
+        have hx : x.length = p.length + rest.length := by rw [hp, List.length_append]
+        omega
+      have hr : rest = [] := List.length_eq_zero_iff.mp hl
+      exact ⟨t, hr ▸ hd⟩
+  · rintro ⟨t, hd⟩
+    exact ⟨.ok t [], hd, by simp [erase]⟩
+
 end Shallot.Packrat
