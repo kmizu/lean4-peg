@@ -81,3 +81,11 @@ M-PEG-6 で、この非循環な展開が `CallByName` 意味論を保つこと�
 既知の時間階層による分離を、入力から停止までの認識機械、次数15の一様な TM 上界、
 具体的な多項式時間の対角言語へ接続した。元の `Cfg.IsPEL` に属さない二進文字列の
 反例にも対応づけている。[構成と検証](notes/peg-strict-in-p.md)。
+
+## 2026-10-23: PEL ⊊ 一階 CBN Macro PEL
+
+`PegSeparation.pel_strict_in_firstOrder` を証明。
+固定した一階文法を証人として、元の文字列版 `Cfg.IsPEL` との真包含を得た。
+P の帰着閉包、order 1 タブローの一階構文への双方向変換、両クラスに共通の
+4ビット復号から動く PEG の P 判定器を接続した。引数個数は制限しない。
+[構成と定義の範囲](notes/peg-macro-strict.md)。

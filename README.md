@@ -38,6 +38,10 @@ itself the axiom audit**. Full inventory: [docs/theorems.md](docs/theorems.md)
 - **PEG expressive power**: over the fixed binary alphabet, PEG languages form a
   strict subclass of polynomial-time languages, with a verified recognizer and
   a concrete diagonal witness. [Proof notes](docs/notes/peg-strict-in-p.md).
+- **Macro PEG expressive power**: ordinary PEG languages are strictly contained in
+  first-order call-by-name Macro PEG languages, unconditionally. The witness is a
+  fixed grammar with parser arguments and unrestricted finite arities.
+  [Proof and encoding](docs/notes/peg-macro-strict.md).
 - **Typechecker**: sound **and** complete w.r.t. the typing relation
 - **Type soundness**: well-typed programs cannot get stuck (only `divByZero`
   is possible; every stuck-class error is provably absent)

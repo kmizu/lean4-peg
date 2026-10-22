@@ -87,3 +87,5 @@ import Shallot.Peg.Packrat.Machine.Star
 import Shallot.Peg.Packrat.Machine.Examples
 import Shallot.Peg.Packrat.Machine.EndToEnd
 import Shallot.Peg.Separation.Examples
+
+import Shallot.Peg.Separation.MacroStrict

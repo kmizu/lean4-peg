@@ -938,3 +938,20 @@ TM の次数 15 は全文法で共通、係数は文法と二文字に依存す�
 | `PegSeparation.polynomial_non_PEL` | 具体的な `PolyDiag 15` は P に属し、二進 PEG 言語でない | propext, Classical.choice, Quot.sound |
 | `PegSeparation.pel_strict_in_p` | **PEL ⊊ P**（固定二進アルファベット、停止しない文法も許す） | propext, Classical.choice, Quot.sound |
 | `PegSeparation.lifted_polyDiag_not_PEL` / `character_counterexample` | 二進文字だけからなる反例は元の `Cfg.IsPEL` にも属さず、二進符号化で多項式時間判定できる | propext, Classical.choice, Quot.sound |
+
+## 普通の PEG と一階 CBN Macro PEG の真包含
+
+詳細は [peg-macro-strict.md](notes/peg-macro-strict.md)。一階は高階引数を持たないという意味で、
+引数個数を1以下にする `Cfg.IsMPEL1` とは異なる。両クラスとも全入力消費で比較する。
+
+| 定理 | 内容 | 依存 |
+|------|------|------|
+| `PegSeparation.closeBoundN_poly` | 帰着と P 判定器を実行する具体的な合成機械の多項式上限 | propext, Quot.sound |
+| `PegSeparation.p_reduces` | 実際の TM による P の多項式時間帰着閉包 | propext, Classical.choice, Quot.sound |
+| `MacroPeg.HO.emb_firstGrammar` / `firstGrammar_obs` | 型付き・ラムダなし本体の規則を一階へ戻し、文法の復元と全観測の双方向一致を証明 | propext, Classical.choice, Quot.sound |
+| `MacroPeg.HO.tableau_firstShape` / `first_order_hard` | order 1 タブローの一階性と、任意の EXPTIME 言語から固定一階文法への実多項式時間帰着 | propext, Classical.choice, Quot.sound |
+| `PegSeparation.readToken_spec` / `tokenLoop_spec` / `nruns_loadTokens` | 共通の4ビット復号を実入力から実行するスタック機械の正しさと上限 | propext, Classical.choice, Quot.sound |
+| `PegSeparation.tokenProgram_halts` / `tokenLanguage_in_P` | Macro PEG と同じ復号で普通の PEG を判定する P の TM | propext, Classical.choice, Quot.sound |
+| `PegSeparation.pel_subset_firstOrder` | 普通の PEG の一階 CBN Macro PEG への包含 | propext, Quot.sound |
+| `PegSeparation.firstOrder_witness` | アリティ検査に合格する固定一階文法で、その言語は P に属さない | propext, Classical.choice, Quot.sound |
+| `PegSeparation.firstOrder_non_PEL` / `pel_strict_in_firstOrder` | 元の文字列クラスに対する **PEL ⊊ 一階 CBN Macro PEL** | propext, Classical.choice, Quot.sound |

@@ -189,7 +189,7 @@ theorem lf_initE (τ : Fin kt) (s : Nat) {i : HExp} (hi : LF i) : LF (initE K τ
     · exact lf_fail
   · exact lf_bitC _
 
-theorem lf_tab : ∀ r ∈ tabRules M K, ∃ τs σ B, r.body = lamsT τs B ∧ LF B ∧ r.ty = arrows τs σ := by
+theorem lf_tab_parser : ∀ r ∈ tabRules M K, ∃ τs B, r.body = lamsT τs B ∧ LF B ∧ r.ty = arrows τs HO.Ty.p := by
   intro r hr
   have hv := lf_var
   have ho := lf_ops K
@@ -197,30 +197,37 @@ theorem lf_tab : ∀ r ∈ tabRules M K, ∃ τs σ B, r.body = lamsT τs B ∧ 
   rcases hr with hr | hr | hr | hr | hr | hr
   · simp only [tabFT, List.mem_cons, List.not_mem_nil, or_false] at hr
     subst hr
-    exact ⟨_, HO.Ty.p, _, rfl, lf_alt (lf_seq (lf_andP (lf_seq (hv 1) (lf_lit _))) (lf_andP (hv 0)))
+    exact ⟨_, _, rfl, lf_alt (lf_seq (lf_andP (lf_seq (hv 1) (lf_lit _))) (lf_andP (hv 0)))
       (lf_seq (lf_seq lf_codeE (lf_alt (lf_lit _) (lf_lit _))) (lf_rcall2 (hv 1) (hv 0))), rfl⟩
   · obtain ⟨s, _, rfl⟩ := List.mem_map.1 hr
-    exact ⟨_, HO.Ty.p, _, rfl, lf_guardE (lf_ftE K (hv 0) lf_eps)
+    exact ⟨_, _, rfl, lf_guardE (lf_ftE K (hv 0) lf_eps)
       (lf_guardE (ho.2.2.2 _ _ (hv 2) (hv 1)) (lf_ftE K (hv 0) (lf_symE s))
         (lf_rcall3 (hv 2) (ho.2.2.1 _ (hv 1)).1 (lf_seq (hv 0) (lf_lit _)))) (lf_bitC _), rfl⟩
   · obtain ⟨q, _, rfl⟩ := List.mem_map.1 hr
-    exact ⟨_, HO.Ty.p, _, rfl, lf_guardE (ho.2.2.1 _ (hv 0)).2.2.1 (lf_bitC _)
+    exact ⟨_, _, rfl, lf_guardE (ho.2.2.1 _ (hv 0)).2.2.1 (lf_bitC _)
       (lf_stateNext M K q (ho.2.2.1 _ (hv 0)).2.1), rfl⟩
   · obtain ⟨τ, _, rfl⟩ := List.mem_map.1 hr
     have hd := (ho.2.2.1 _ (hv 1)).2.1
-    exact ⟨_, HO.Ty.p, _, rfl, lf_guardE (ho.2.2.1 _ (hv 1)).2.2.1 (ho.2.2.1 _ (hv 0)).2.2.1
+    exact ⟨_, _, rfl, lf_guardE (ho.2.2.1 _ (hv 1)).2.2.1 (ho.2.2.1 _ (hv 0)).2.2.1
       (lf_nextChain M K hd _ _ (lf_rcall2 hd (hv 0)) (fun _ _ => lf_movedE M K τ _ hd (hv 0))), rfl⟩
   · obtain ⟨τ, _, he⟩ := List.mem_flatMap.1 hr
     obtain ⟨s, _, rfl⟩ := List.mem_map.1 he
     have hd := (ho.2.2.1 _ (hv 1)).2.1
-    exact ⟨_, HO.Ty.p, _, rfl, lf_guardE (ho.2.2.1 _ (hv 1)).2.2.1 (lf_initE K τ s (hv 0))
+    exact ⟨_, _, rfl, lf_guardE (ho.2.2.1 _ (hv 1)).2.2.1 (lf_initE K τ s (hv 0))
       (lf_nextChain M K hd _ _ (lf_rcall2 hd (hv 0))
         (fun _ _ => lf_guardE (lf_rcall2 hd (hv 0)) (lf_bitC _) (lf_rcall2 hd (hv 0)))), rfl⟩
   · obtain ⟨τ, _, he⟩ := List.mem_flatMap.1 hr
     obtain ⟨s, _, rfl⟩ := List.mem_map.1 he
     have hi := (ho.2.2.1 _ (hv 0))
-    exact ⟨_, HO.Ty.p, _, rfl, lf_alt (lf_seq (lf_andP (lf_rcall2 (hv 1) (hv 0))) (lf_rcall2 (hv 1) (hv 0)))
+    exact ⟨_, _, rfl, lf_alt (lf_seq (lf_andP (lf_rcall2 (hv 1) (hv 0))) (lf_rcall2 (hv 1) (hv 0)))
       (lf_seq (lf_notP hi.2.2.2) (lf_rcall2 (hv 1) hi.1)), rfl⟩
+
+
+theorem lf_tab : ∀ r ∈ tabRules M K, ∃ τs σ B,
+    r.body = lamsT τs B ∧ LF B ∧ r.ty = arrows τs σ := by
+  intro r hr
+  obtain ⟨τs, B, hb, hl, ht⟩ := lf_tab_parser M K r hr
+  exact ⟨τs, .p, B, hb, hl, ht⟩
 
 end Tab
 
