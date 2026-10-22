@@ -75,3 +75,10 @@ import Shallot.Peg.Total.Spec
 import Shallot.Peg.Total.SpecSeq
 import Shallot.Peg.Total.SpecStar
 import Shallot.Peg.Total.Transform
+
+import Shallot.Peg.Packrat.Spec
+import Shallot.Peg.Packrat.Domain
+import Shallot.Peg.Packrat.Fixed
+import Shallot.Peg.Packrat.Main
+import Shallot.Peg.Packrat.Stored
+import Shallot.Peg.Packrat.Examples

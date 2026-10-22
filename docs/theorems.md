@@ -851,3 +851,18 @@ Ford 2004 §5 が証明なしに引く結果（Birman–Ullman, Information and 
 | `dpda_isTotalPEL` | その言語は完全な PEG の言語（`IsTotalPEL`） | propext, Classical.choice, Quot.sound |
 
 論文が省いた部分は、正規化を避けることで要らなくなった。論文の第二部（文法が成功すれば DPDA が読んだ列）は `sound` として自分で示した。
+
+## 任意の PEG の有限表による有界認識（`Shallot/Peg/Packrat/`）
+
+停止性を仮定せず、固定入力に対する成功・失敗・導出なしを区別する。
+[詳しい仕様と残作業](notes/peg-packrat.md)。`PEL ⊊ P` と機械上の時間上限はまだ未証明。
+
+| 定理 | 内容 | 依存 |
+|------|------|------|
+| `Packrat.iter_eq_run` | 表の各反復と同じ燃料の `pegRun` の結果が、木を除いて一致 | propext, Quot.sound |
+| `Packrat.iter_sound` / `iter_complete` | 埋まった値には導出があり、導出があればいつか埋まる | propext, Quot.sound |
+| `Packrat.bound_stationary` / `bound_fixed` | 部分式数 × (入力長 + 1) + 1 回で関連セルが安定 | propext, Classical.choice, Quot.sound |
+| `Packrat.bounded_iff` / `bounded_none_iff` | 有界表の値と導出の同値、空セルと導出の不存在の同値 | propext, Classical.choice, Quot.sound |
+| `Packrat.accepts_iff` | 有界認識器と元の PEG の受理が一致（残りの入力を許す） | propext, Classical.choice, Quot.sound |
+| `Packrat.stored_eq_iter` | 保存する有限表の実装が関数版の仕様と一致 | propext, Quot.sound |
+| `Packrat.storedParse_iff` / `storedParse_none_iff` | 保存する実装について、導出の存在・不存在との同値 | propext, Classical.choice, Quot.sound |
