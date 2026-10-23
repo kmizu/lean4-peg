@@ -47,6 +47,10 @@ itself the axiom audit**. Full inventory: [docs/theorems.md](docs/theorems.md)
   A verified grammar translation preserves each original character-string language;
   one CBN language witnesses both strict inclusions.
   [Translation and proof](docs/notes/cbv-cbn-inclusion.md).
+- **Sequential versus parallel CBV**: every first-order Seq language is recognized
+  by a fixed first-order Par grammar on the same original character strings.
+  The reverse inclusion and strictness remain unresolved.
+  [Construction and scope](docs/notes/cbv-par-seq-comparison.md).
 - **Typechecker**: sound **and** complete w.r.t. the typing relation
 - **Type soundness**: well-typed programs cannot get stuck (only `divByZero`
   is possible; every stuck-class error is provably absent)
