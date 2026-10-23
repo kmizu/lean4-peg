@@ -61,7 +61,7 @@
 - `ExprProgram`: 全固定式の `exprProgram` と引数の `argsProgram` を具体的な `NProg` として定義。
   Parは現在位置を保ち、Seqは各引数の返り位置へ進む。引数番号を重み付き加算で順位へまとめ、
   最後に保存済みの規則表を読む。呼出しと反復は専用フレームを使う。
-  **この定義全体の正しさと統一時間上界は、まだ未証明。**
+  全式の実行証明と統一時間上界は、後述の `ExprRuns` / `MachineBounds` で接続済み。
 - `CallArithmetic`: `rankUpdate_runs` は順位の更新を実行し、`ruleRead_runs` はその順位から
   意味論の正しい規則セルを読む。両者の実際の費用の多項式性も示す。
 - `ExprState` / `CallFrames`: `EvalReady` が式の境界で保存する不変条件。
@@ -70,11 +70,29 @@
 - 算術・表参照には `compile_runs_used` / `tableRead_runs_used` を追加。
   式に現れない変数レジスタが空でも利用でき、呼出し終了時に引数番号を片付けた後の表参照にも対応する。
 
+- `RankedArgs`: 一つの順位へ引数を順に積み上げる仕様。
+  `rankedArgs_seq` / `rankedArgs_par` はリスト値の引数評価器との一致、
+  `rankedCall_eval` は同じ保存済み表から同じ呼出し結果を得ることを示す。
+- `MachineBounds`: 算術の値・費用の単調性、辞書・順位・行長の一様な上限。
+  `exprBudget` / `argsBudget` は加減乗算・辞書走査・表走査・反復を含む費用式で、
+  `exprBudget_poly` / `argsBudget_poly` が固定文法・固定式ごとの多項式性を示す。
+- `ArgStep` / `ArgsRuns` / `CallQuery`: `argsProgram_runs` が全引数列の実行を検証。
+  途中の未確定・失敗では早期終了し、成功時だけ区間登録と順位更新を行う。
+  `ruleRead_bounded` は合法な最終順位すべてに対し、実算術と表走査で値を読むこととその費用を保証する。
+- `ExprRuns`: **`exprProgram_runs` が全固定式の実行と統一費用上限を証明。**
+  保存済み表が `pack T`（`T` は入力長内の結果を返す表）、環境が有効な区間番号列という
+  不変条件の下で、実際の `NProg` が `eval` の三値結果と一致する。
+  `tblV` の全反復はこの表条件を満たす。`eval_correct` を介した元の意味論との接続は
+  一階CBV-Par/Seqに使うもので、CBNの実際の意味論のP上界を主張していない。
+- `PositionSweep`: `positionSweep_runs` は入力の残り長 `0..n` を順に走査し、
+  各式の結果を次の表へ追記する。カウンタ・位置フレーム・返り値フレームは復元。
+  `positionSweepCost_poly` はこの全位置分の行生成の実費用の多項式性を示す。
+
 ## 残る接続
 
-1. 固定文法に対する表の初期化とセル列挙。
-2. `exprProgram` / `argsProgram` を `EvalReady` の下で相互帰納し、数値評価器との一致と統一時間上界を証明。
-3. 各部品の実行証明を、完成済みの全式プログラム定義へつなぐ。特に引数の早期終了・順位累積・規則参照を合成する。
+1. 有効な引数番号ベクトルを辞書順に列挙し、`positionSweep` と合わせて規則の全行を生成。
+2. 全規則の行を `keys` の順番で連結して `numericRound` の実行証明へつなぐ。
+3. 多項式個のゼロからなる初期表を実際に作る。
 4. 規則表の全反復、開始式、受理停止までのプログラムと多項式上界。
 5. 共通4ビット復号から入力表反転・辞書生成へつなぎ、`PegSeparation.nprog_in_P` へ接続して
    両戦略のTM上のP所属を証明。
