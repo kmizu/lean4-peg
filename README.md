@@ -42,6 +42,11 @@ itself the axiom audit**. Full inventory: [docs/theorems.md](docs/theorems.md)
   first-order call-by-name Macro PEG languages, unconditionally. The witness is a
   fixed grammar with parser arguments and unrestricted finite arities.
   [Proof and encoding](docs/notes/peg-macro-strict.md).
+- **Macro PEG evaluation strategies**: both first-order call-by-value variants
+  (Par and Seq) are strictly contained in first-order call-by-name, unconditionally.
+  A verified grammar translation preserves each original character-string language;
+  one CBN language witnesses both strict inclusions.
+  [Translation and proof](docs/notes/cbv-cbn-inclusion.md).
 - **Typechecker**: sound **and** complete w.r.t. the typing relation
 - **Type soundness**: well-typed programs cannot get stuck (only `divByZero`
   is possible; every stuck-class error is provably absent)
