@@ -43,6 +43,18 @@ theorem RootTest.seq {g : MGrammar} {a b : MExp} {x : List Char} {P Q : Prop}
     · exact obs_seq (ha.1 hp) (hb.2 (fun hq => hn ⟨hp, hq⟩))
     · exact obs_seq_none (ha.2 hp)
 
+/-- A false guard prevents evaluation of the body; totality is needed only on the selected branch. -/
+theorem RootTest.guarded {g : MGrammar} {guard body : MExp} {x : List Char} {P Q : Prop}
+    (hg : RootTest g guard x P) (hb : P → RootTest g body x Q) :
+    RootTest g (.seq guard body) x (P ∧ Q) := by
+  classical
+  constructor
+  · rintro ⟨hp, hq⟩; exact obs_seq (hg.1 hp) ((hb hp).1 hq)
+  · intro hn
+    by_cases hp : P
+    · exact obs_seq (hg.1 hp) ((hb hp).2 (fun hq => hn ⟨hp, hq⟩))
+    · exact obs_seq_none (hg.2 hp)
+
 theorem RootTest.alt {g : MGrammar} {a b : MExp} {x : List Char} {P Q : Prop}
     (ha : RootTest g a x P) (hb : RootTest g b x Q) : RootTest g (.alt a b) x (P ∨ Q) := by
   classical
