@@ -34,7 +34,7 @@ theorem seq_firstOrder {tails : List MExp} (h : ∀ body ∈ tails, body.FirstOr
   obtain ⟨body, hb, rfl⟩ := List.mem_map.mp hr
   exact h body hb
 
-private theorem success_prefix {g : MGrammar} {x : List Char}
+theorem success_prefix {g : MGrammar} {x : List Char}
     {T : Nat → List (List Char) → Val} (hT : SoundTV g x .callByValuePar T)
     (E : List (List Char)) (e : MExp) (he : e.FirstOrder) (p j : Nat) (hp : p ≤ x.length)
     (hv : evV g x .callByValuePar T E e p = some (some j)) :
