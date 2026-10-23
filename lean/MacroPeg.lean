@@ -159,3 +159,15 @@ import MacroPeg.HigherOrder.KExp.CloseBound
 import MacroPeg.HigherOrder.KExp.Close
 import MacroPeg.HigherOrder.KExp.Hierarchy
 import MacroPeg.HigherOrder.Flat.Decider
+
+import MacroPeg.CBV.Decide
+import MacroPeg.CBV.Address
+import MacroPeg.CBV.SpanCost
+import MacroPeg.CBV.TableRead
+import MacroPeg.CBV.SpanBuild
+import MacroPeg.CBV.MirrorBuild
+import MacroPeg.CBV.ParamMachine
+import MacroPeg.CBV.ControlMachine
+import MacroPeg.CBV.CallFrames
+import MacroPeg.CBV.PositionSweep
+import MacroPeg.CBV.Upper

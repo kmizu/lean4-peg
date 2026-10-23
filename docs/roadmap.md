@@ -89,3 +89,11 @@ M-PEG-6 で、この非循環な展開が `CallByName` 意味論を保つこと�
 P の帰着閉包、order 1 タブローの一階構文への双方向変換、両クラスに共通の
 4ビット復号から動く PEG の P 判定器を接続した。引数個数は制限しない。
 [構成と定義の範囲](notes/peg-macro-strict.md)。
+
+## 2026-10-23: 一階CBNとPar・Seq両CBVの共通分離
+
+`PegSeparation.firstOrder_cbn_not_cbv` を無条件に証明。
+表の構築・検索・単進算術・反復・転送を含む具体的なCBV判定器を、実ビット入力から
+多項式時間TMへ接続した。既存のP非所属の固定一階CBN文法を同じ証人として使い、
+元の文字列言語でParにもSeqにも認識できないことを得た。
+[機械構成と定義の範囲](notes/cbv-machine.md)。

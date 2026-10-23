@@ -89,3 +89,5 @@ import Shallot.Peg.Packrat.Machine.EndToEnd
 import Shallot.Peg.Separation.Examples
 
 import Shallot.Peg.Separation.MacroStrict
+
+import Shallot.Peg.Separation.CBVStrict

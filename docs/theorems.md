@@ -955,3 +955,17 @@ TM の次数 15 は全文法で共通、係数は文法と二文字に依存す�
 | `PegSeparation.pel_subset_firstOrder` | 普通の PEG の一階 CBN Macro PEG への包含 | propext, Quot.sound |
 | `PegSeparation.firstOrder_witness` | アリティ検査に合格する固定一階文法で、その言語は P に属さない | propext, Classical.choice, Quot.sound |
 | `PegSeparation.firstOrder_non_PEL` / `pel_strict_in_firstOrder` | 元の文字列クラスに対する **PEL ⊊ 一階 CBN Macro PEL** | propext, Classical.choice, Quot.sound |
+
+## 一階CBNからPar・Seq両CBVへの共通分離
+
+詳細は [cbv-machine.md](notes/cbv-machine.md)。全入力を消費する元の文字列言語で比較し、
+同じ一つの固定CBN言語がParにもSeqにも属さないことを示す。
+
+| 定理 | 内容 | 依存 |
+|------|------|------|
+| `MacroPeg.CBV.exprProgram_runs` / `exprBudget_poly` | 全固定式を実行するスタック機械の正しさと、実算術・表参照込みの多項式上界 | propext, Classical.choice, Quot.sound |
+| `MacroPeg.CBV.envSweep_runs` / `roundProgram_runs` | 引数ベクトル・位置・規則を順に列挙し、数値表の一巡を実機械で生成 | propext, Classical.choice, Quot.sound |
+| `MacroPeg.CBV.tableInit_runs` / `saturation_runs` | ゼロ表と反復回数を実際に構築し、全反復後の意味論上の表に到達 | propext, Classical.choice, Quot.sound |
+| `MacroPeg.CBV.inputProgram_halts` | 実ビット入力の復号・入力表反転・辞書生成から、初期化・反復・開始式評価・受理停止までの機械 | propext, Classical.choice, Quot.sound |
+| `MacroPeg.CBV.language_in_P` | 一階CBV-Par/Seqの認識を、共通符号化の実入力から動く多項式時間TMへ接続 | propext, Classical.choice, Quot.sound |
+| `PegSeparation.firstOrder_cbn_not_cbv` | **一階CBNで認識でき、Par・Seqどちらの一階CBVでも認識できない共通言語が存在** | propext, Classical.choice, Quot.sound |
