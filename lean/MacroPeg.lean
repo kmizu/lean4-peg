@@ -159,3 +159,7 @@ import MacroPeg.HigherOrder.KExp.CloseBound
 import MacroPeg.HigherOrder.KExp.Close
 import MacroPeg.HigherOrder.KExp.Hierarchy
 import MacroPeg.HigherOrder.Flat.Decider
+
+import MacroPeg.CBV.Decide
+import MacroPeg.CBV.Address
+import MacroPeg.CBV.SpanCost
