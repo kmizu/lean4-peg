@@ -163,3 +163,4 @@ import MacroPeg.HigherOrder.Flat.Decider
 import MacroPeg.CBV.Decide
 import MacroPeg.CBV.Address
 import MacroPeg.CBV.SpanCost
+import MacroPeg.CBV.TableRead
