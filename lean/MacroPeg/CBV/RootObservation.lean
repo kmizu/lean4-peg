@@ -269,4 +269,15 @@ theorem Predicate.notP {g : MGrammar} {s : Strategy} {e : MExp} {x : List Char}
     have hp : P := Classical.byContradiction hn
     exact not_ok (h.1 hp)
 
+theorem Predicate.guarded {g : MGrammar} {s : Strategy} {guard body : MExp}
+    {x : List Char} {P Q : Prop} (hg : Predicate g s guard x P)
+    (hb : P → Predicate g s body x Q) : Predicate g s (.seq guard body) x (P ∧ Q) := by
+  constructor
+  · rintro ⟨hp, hq⟩
+    exact seq_ok (hg.1 hp) ((hb hp).1 hq)
+  · intro hn
+    by_cases hp : P
+    · exact seq_ok (hg.1 hp) ((hb hp).2 (fun hq => hn ⟨hp, hq⟩))
+    · exact seq_fail (hg.2 hp)
+
 end Shallot.MacroPeg.CBV.RootObservation
