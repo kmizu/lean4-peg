@@ -34,6 +34,7 @@ Par 文法の全補助規則を元入力 `x` の先頭で実行する。
 | `PrefixInterval.lean` | 元入力の任意の二区間の等値判定。固定二規則の全文字版も構成 |
 | `PrefixEndpoint.lean` | 有限の評価結果の終点検査と、静的リテラルに対する正確な終点テスト |
 | `ParSimulation/Control.lean` | ソースの部分的結果に対する選択・否定の合成、実際の名前付き規則による逐次合成の成功・失敗テスト |
+| `ParSimulation/Terminals.lean` | ソースの全ての原子式について、任意の戦略・表近似・環境に対する `evV` の成功と明示的失敗の再現 |
 
 `counterGrammar_interval` は、入力に依存しない一つの一階 Par 文法について、
 全ての文字列・全ての有効区間・全ての観測を量化する。
