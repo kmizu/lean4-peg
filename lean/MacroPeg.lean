@@ -32,6 +32,8 @@ import MacroPeg.Properties.Decide
 import MacroPeg.Properties.TrueComplexity
 import MacroPeg.Properties.DecideCBV
 import MacroPeg.CBVtoCBN.ClockBound
+import MacroPeg.CBVtoCBN.ClockGrammar
+import MacroPeg.CBVtoCBN.CaptureStep
 import MacroPeg.CBVtoCBN.EmptyInput
 import MacroPeg.Properties.DecideCost
 import MacroPeg.Properties.AtmHard
