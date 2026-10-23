@@ -1,102 +1,73 @@
-# 一階CBVの機械上界とCBNからの分離（作業中）
+# 一階CBVのTM上のP上界と、CBNからの共通分離
 
-目標は、一つの固定した一階CBN文法の言語が、一階CBV-ParおよびCBV-Seqの
-どの固定文法でも認識できないこと。既存の `PegSeparation.firstOrder_witness` を使う。
-完成には、両CBV戦略の認識を実際の多項式時間TMへ接続する必要がある。
-**この機械上界と最終分離定理は、まだ完成していない。**
+`PegSeparation.firstOrder_cbn_not_cbv` を無条件に証明した。
+元の文字列言語 `L : List Char → Prop` に対し、結論は次の形。
 
-## 現在証明した部分
+```text
+∃ L, IsFirstOrderMPEL L
+   ∧ ¬ IsFirstOrderCBVPEL callByValuePar L
+   ∧ ¬ IsFirstOrderCBVPEL callByValueSeq L
+```
 
-`lean/MacroPeg/CBV/` に、既存の `DecideCBV` と同じ判定を有限の数値表で行う仕様を構成した。
+証人は既存の `PegSeparation.firstOrder_witness` が与える固定一階CBN文法。
+その言語は共通の入力符号化で、実際のTM上のPに属さない。
+今回、両CBV戦略の認識を実入力から停止までの多項式時間TMへ接続し、
+同じCBN言語を認識するCBV文法が存在すると矛盾することを示した。
 
-- `Indexed`: 部分文字列の辞書と引数ベクトルに番号を振り、規則・引数番号・入力位置の組を
-  数値リストのセルにする。`unpack_pack` と `iterate_pack` が既存の表との一致を示す。
-  表の長さは `iterBoundV`、各セルの値は入力長+2以下。
-- `Spans`: 辞書の各要素に入力区間を対応させる。同じ文字列を表す複数の区間を許し、
-  `literalAt_spanId` と `lookup_pack_ids` が別名による検索の正しさを保証する。
-- `Eval` / `EvalSpec`: 数値表と数値の引数番号を読む評価器。
-  `eval_correct` が、旧 `evV` との結果一致を示す。未知・失敗・成功を区別する。
-- `Decide`: 全反復を数値リストだけで行う `numericIterate` と `numericDecide`。
-  `numericObservation_iff` / `numericAccept_iff` は両CBV戦略の有限導出と同値。
-  `numericIterate_size` は、全反復で表の長さ・セルの値が多項式の大きさに収まることを示す。
-- `Address`: 引数ベクトルの辞書順を混合基数の順位に直し、規則のオフセットと合わせる。
-  `keys_get_address` / `pack_get_address` が、表全体のキー検索をせずに計算したアドレスの正しさを示す。
-- `SpanMachine` / `SpanCost`: 既存の検証済み `Mach.internP` を再利用し、区間の番号を検索する
-  **実際の `NProg`** とその実行証明 `spanLookup_runs` を与える。
-  `spanLookupCost_poly` は辞書検索にかかる実際のスタック時間の多項式上限。
+## 定義と範囲
 
-数値表で計算できること、表が多項式サイズであることだけではTM上のP所属は結論していない。
-`numericDecide` の全計算を実行する機械の構成と時間上界が残る。
+- 一階は `MGrammar.FirstOrder` / `MExp.FirstOrder`。高階呼出しを含まないという意味で、
+  固定した規則の引数個数には制限を置かない。
+- CBNは `MacroObs`、CBVは戦略を明示する `SObs`。いずれも全入力を消費した成功で受理する。
+- `IsFirstOrderCBVPEL s L` は、一つの固定文法・固定開始式がすべての文字列で `L` と一致すること。
+  最終定理は、同じ `L` がParのどの文法にもSeqのどの文法にも属さないという共通の証人。
+- 機械の入力には既存の `FirstLanguage` と同じ4ビット復号を用いる。
+  短い最後のグループを捨てる処理も既存の `tokenWord` と同じ。
+  元の文字列言語の同値性をこの共通入力へ制限して矛盾を導くので、最終結論は文字列言語上にある。
+- P非所属や時間階層を追加の前提にはしていない。CBVからCBNへの包含はこの定理の主張に含めない。
 
-- `Arithmetic` / `TableRead`: アドレス式の加算・乗算を実際の `NProg` に翻訳し、
-  入力と作業用スタックの保存・結果・実行時間を証明。`value_addressExpr` はその式が
-  本当にCBVセルのアドレスであること、`tableRead_cell` は保存済みの表を実際に走査して
-  意味論上の値を読むことを示す。`cost_poly` / `tableRead_cost_poly` が費用の多項式性を示す。
+## 実行する機械
 
-- `SpanBuild`: 入力長から区間辞書の全対を生成する二重ループ。
-  `spanBuild_runs` が番号順を含む完全な出力を保証し、`spanBuildCost_poly` が生成費用を抑える。
-- `Mirror` / `MirrorBuild`: 残り入力長を添字とする入力表。`mirrorBuild_runs` は読み込み済み表を
-  実際に反転し、作業用スタックを復元する。`mirrorScan_literal` は区間の照合と通常のリテラルの一致。
-- `CompareRows` / `ScanStep` / `ScanLoop` / `LiteralMachine`: 入力表の実際の二回走査による文字比較、
-  残り長に従う照合ループ、返り値の生成とローカル領域の解放。
-  `spanLiteral_runs` と `spanLiteralCost_poly` が動的リテラル全体の正しさと費用を保証する。
-- `ParamMachine`: 引数番号から二つのアドレスを計算し、辞書表を走査して区間を取得する。
-  `paramLiteral_runs` は辞書読出し・照合・区間フレームの解放を合成した実行証明。
-  `paramLiteralCost_poly` はこれらすべてを含む多項式上界。
-- `FixedLiteral` / `LexMachine`: 固定リテラル、任意文字、文字、文字範囲の実機。
-  `fixedLiteral_runs` / `remainingLex_runs` は入力表を読んで正しい結果を返すことを保証する。
-  `remainingLex_any` / `remainingLex_chr` / `remainingLex_range` / `literalCode_eval` が
-  `eval` の基本式と対応し、それぞれ費用も多項式。
-- `ControlMachine`: `altEval_runs` は明示的失敗でだけ再試行し、未確定値を保つ。
-  `notAfter_runs` は否定の三値変換、`seqAfter_runs` は成功時に位置を復号して右式を評価し、
-  呼出し元の位置スタックを復元する。右式の実行証明を引数に取る合成則で、全式の翻訳定理はまだ残る。
+`MacroPeg.CBV.inputProgram g s e` は、固定された文法と式から構成した具体的な数値スタック機械。
+実行時に意味論の関数表や自由な配列アクセスを与えない。
 
-- `StarMachine`: `starEval_runs` は `evStar` と一致する完全な反復プログラム。
-  実際の数値比較で厳密な位置減少を判定し、未確定・失敗・非消費成功も区別する。
-  任意の呼出し元スタックの上へ局所位置・フラグを積み、終了時に復元。
-  `starEvalCost_poly` は、内側の評価に多項式上界があれば反復全体にも付くことを示す。
-- `SpanRegister`: 成功コードから区間の終点 `min j p` を実際の減算で作り、辞書を検索する。
-  `registerSpan_runs` / `registerSpanCost_poly` は、開始位置と返り位置の大小を仮定せず、
-  準備・正規化・検索・片付けのすべてを含む。
-- `ExprProgram`: 全固定式の `exprProgram` と引数の `argsProgram` を具体的な `NProg` として定義。
-  Parは現在位置を保ち、Seqは各引数の返り位置へ進む。引数番号を重み付き加算で順位へまとめ、
-  最後に保存済みの規則表を読む。呼出しと反復は専用フレームを使う。
-  全式の実行証明と統一時間上界は、後述の `ExprRuns` / `MachineBounds` で接続済み。
-- `CallArithmetic`: `rankUpdate_runs` は順位の更新を実行し、`ruleRead_runs` はその順位から
-  意味論の正しい規則セルを読む。両者の実際の費用の多項式性も示す。
-- `ExprState` / `CallFrames`: `EvalReady` が式の境界で保存する不変条件。
-  `paramEval_runs` は環境行の実走査から動的リテラル照合までの変数参照を検証。
-  呼出しフレームの準備・復元、ParとSeqの位置更新にも実行証明を与えた。
-- 算術・表参照には `compile_runs_used` / `tableRead_runs_used` を追加。
-  式に現れない変数レジスタが空でも利用でき、呼出し終了時に引数番号を片付けた後の表参照にも対応する。
+1. 既存の `loadTokens` で実際のビット入力を復号し、入力表と長さを作る。
+2. `MirrorBuild` が入力表を反転して残り入力長を添字にし、`SpanBuild` が全区間対の辞書を生成する。
+3. `TableInit` が辞書長・入力長・固定文法から表のセル数を実算術で計算し、ゼロ表と反復カウンタを作る。
+4. `EnvSweep` が引数番号ベクトルを辞書順に列挙し、`PositionSweep` が全位置の式評価を行う。
+   `RuleSweep` は規則順に結果をつなぎ、`numericRound` と一致する次の表を生成する。
+5. `Iteration` が次の表を実際に転送して入れ替え、`iterBoundV` 回の反復で対応する `tblV` に到達する。
+6. `LoadedProgram` が開始式を評価し、返り値が残り入力ゼロの成功コードである場合だけ受理停止する。
 
-- `RankedArgs`: 一つの順位へ引数を順に積み上げる仕様。
-  `rankedArgs_seq` / `rankedArgs_par` はリスト値の引数評価器との一致、
-  `rankedCall_eval` は同じ保存済み表から同じ呼出し結果を得ることを示す。
-- `MachineBounds`: 算術の値・費用の単調性、辞書・順位・行長の一様な上限。
-  `exprBudget` / `argsBudget` は加減乗算・辞書走査・表走査・反復を含む費用式で、
-  `exprBudget_poly` / `argsBudget_poly` が固定文法・固定式ごとの多項式性を示す。
-- `ArgStep` / `ArgsRuns` / `CallQuery`: `argsProgram_runs` が全引数列の実行を検証。
-  途中の未確定・失敗では早期終了し、成功時だけ区間登録と順位更新を行う。
-  `ruleRead_bounded` は合法な最終順位すべてに対し、実算術と表走査で値を読むこととその費用を保証する。
-- `ExprRuns`: **`exprProgram_runs` が全固定式の実行と統一費用上限を証明。**
-  保存済み表が `pack T`（`T` は入力長内の結果を返す表）、環境が有効な区間番号列という
-  不変条件の下で、実際の `NProg` が `eval` の三値結果と一致する。
-  `tblV` の全反復はこの表条件を満たす。`eval_correct` を介した元の意味論との接続は
-  一階CBV-Par/Seqに使うもので、CBNの実際の意味論のP上界を主張していない。
-- `PositionSweep`: `positionSweep_runs` は入力の残り長 `0..n` を順に走査し、
-  各式の結果を次の表へ追記する。カウンタ・位置フレーム・返り値フレームは復元。
-  `positionSweepCost_poly` はこの全位置分の行生成の実費用の多項式性を示す。
+`InputMachine.inputProgram_halts` が、この全経路の停止・答え・実行費用を証明する。
+`CBV.language_in_P` は `PegSeparation.nprog_in_P` の検証済み変換を使い、
+数値スタック機械から文字スタック機械、さらにTMへ接続する。
 
-## 残る接続
+## 表と式評価の検証
 
-1. 有効な引数番号ベクトルを辞書順に列挙し、`positionSweep` と合わせて規則の全行を生成。
-2. 全規則の行を `keys` の順番で連結して `numericRound` の実行証明へつなぐ。
-3. 多項式個のゼロからなる初期表を実際に作る。
-4. 規則表の全反復、開始式、受理停止までのプログラムと多項式上界。
-5. 共通4ビット復号から入力表反転・辞書生成へつなぎ、`PegSeparation.nprog_in_P` へ接続して
-   両戦略のTM上のP所属を証明。
-6. `firstOrder_witness` のP非所属と矛盾させ、元の文字列言語で共通の非包含証人を組み立てる。
+- `Indexed` / `Spans` / `Address`: 規則・引数区間番号・位置を数値行へ対応づける。
+  区間が同じ文字列を表す別名であっても、意味論の表と参照結果が一致する。
+- `Arithmetic` / `TableRead`: 加算・乗算・アドレス計算と、保存された行の実走査。
+  `compile_runs_used` / `tableRead_runs_used` は、式が使う入力レジスタだけに値を要求する。
+- `SpanRegister` / `ParamMachine`: 成功区間を実減算で正規化して辞書を検索し、
+  変数参照では環境行から番号と区間の両端を取得して入力を照合する。
+- `CompareRows` / `ScanStep` / `ScanLoop` / `LiteralMachine` / `FixedLiteral` / `LexMachine`:
+  実際の文字読出し・比較・照合と、EOF・失敗・返り位置の正しさ。
+- `ControlMachine` / `StarMachine`: 未確定・失敗・成功を保つ選択・連接・否定、
+  実比較による厳密な位置減少を条件とする反復。ローカルフレームは終了時に復元する。
+- `RankedArgs` / `ArgStep` / `ArgsRuns` / `CallQuery`: 引数の早期終了、ParとSeqの位置制御、
+  混合基数順位の累積、正しい規則セルの実参照。
+- `ExprRuns.exprProgram_runs`: `EvalReady` と有効な番号環境の下で、
+  全固定式の `NProg` 実行が数値評価器 `eval` と一致する。
+  `eval_correct` / `numericAccept_iff` が、一階CBVの元の有限導出へ結果を接続する。
 
-`spanLookupP` はレジスタを引数に取るので、引数の照合後に得る区間から番号を登録する際に再利用できる。
-完成済みの局所部品をもって、全体のTM上界や最終分離が証明済みとはしていない。
+## 多項式上界と依存監査
+
+辞書長は `(n+1)²` 以下。全規則のアリティの和を固定値 `A` とすると、表の長さと
+反復回数は `規則数 · ((n+1)²)^A · (n+1)` 以下、引数の順位は `((n+1)²)^A` 以下。
+表構築、文字比較、辞書・表の実走査、単進数での算術、表の転送をすべて費用に含める。
+`loadedCost_poly` と `setupCost_poly`、既存の入力読込み上限から、実ビット長の多項式上界を得る。
+
+`lean/MacroPeg.lean` / `lean/Shallot.lean` に統合し、`lean/Audit.lean` は主要部品から
+`CBV.language_in_P` と `PegSeparation.firstOrder_cbn_not_cbv` までの依存を固定する。
+依存は `propext`、`Classical.choice`、`Quot.sound` の標準項目のみ。
