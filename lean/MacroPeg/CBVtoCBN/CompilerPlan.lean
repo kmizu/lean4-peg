@@ -200,8 +200,8 @@ def compilerFrontRules (source : MGrammar) (s : Strategy) (start : MExp) (alphab
     (.seq (andP .any) (.seq (.call 2 [.eps]) (.star .any)))
   [⟨4, spanEqBody 0 alphabet⟩, ⟨0, top⟩, ⟨1, findLengthBody 2 3⟩, ⟨1, initial⟩]
 
-/-- The executable candidate translation. Whole-grammar correctness is a remaining proof obligation.
-The finite alphabet parameter permits small executable checks; the intended unrestricted instance uses `unicodeAlphabet`. -/
+/-- The executable grammar generator. `Recognition.translate_recognizes` proves language preservation
+for the unrestricted instance. The alphabet and digit parameters also permit small executable checks. -/
 def compileCandidate (source : MGrammar) (s : Strategy) (start : MExp) (alphabet : List Char) (digits : Nat) : MGrammar :=
   ⟨compilerFrontRules source s start alphabet digits ++
     compilerGeneratedRules source s (compilerNodes source start) digits⟩

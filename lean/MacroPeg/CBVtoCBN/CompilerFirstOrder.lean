@@ -103,8 +103,8 @@ private theorem compilerFragmentAt_fo (fs : CompileFragments) (hf : FragmentsFO 
         exact hf (offset, rules) (by simp) rule (List.mem_of_getElem? he)
     · exact ih (fun f hmem => hf f (List.mem_cons_of_mem _ hmem))
 
-/-- Every rule produced by the complete candidate generator is first-order, for either strategy.
-Language preservation is a separate remaining obligation. -/
+/-- Every generated rule is first-order, for either strategy.
+Language preservation for the unrestricted translator is established in `Recognition`. -/
 theorem compileCandidate_firstOrder (source : MGrammar) (s : Strategy) (start : MExp)
     (alphabet : List Char) (digits : Nat) : (compileCandidate source s start alphabet digits).FirstOrder := by
   intro rule hr

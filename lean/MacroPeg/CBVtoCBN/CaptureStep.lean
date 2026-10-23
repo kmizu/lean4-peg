@@ -126,7 +126,7 @@ theorem captureBlock_test (preRules tail : List MRule) (argument next : Nat) (th
       ⟨preRules ++ (captureBlock preRules.length argument next thread rest.length ++ tail)⟩
       (.call argument (skipN p :: skipN (x.length - p) :: skipN j :: skipN (x.length - j) :: rest)) x
       (a = some (some j)))
-    (hn : ∀ j, j ≤ x.length → RootTest
+    (hn : ∀ j, j ≤ x.length → a = some (some j) → RootTest
       ⟨preRules ++ (captureBlock preRules.length argument next thread rest.length ++ tail)⟩
       (.call next (captureNextArgs thread (skipN j) (skipN (x.length - j))
         (skipN p) (skipN (x.length - p)) rest)) x
@@ -148,7 +148,7 @@ theorem captureBlock_test (preRules tail : List MRule) (argument next : Nat) (th
       (a = some (some j) ∧ F (pre x p j) (if thread then j else p) = some v) := by
     intro j hj
     rw [rootTest_call_iff hc (by simp [ctx]), captureCandidate_subst]
-    exact (hl j hj).seq (hn j hj)
+    exact (hl j hj).guarded (hn j hj)
   have h := pairSearchBlock_test preRules
     (⟨rest.length + 4, captureCandidateBody argument next thread rest.length⟩ :: tail)
     (preRules.length + 3) ctx x

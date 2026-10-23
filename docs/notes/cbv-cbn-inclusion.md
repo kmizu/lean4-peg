@@ -1,69 +1,74 @@
-# First-order CBV to CBN: construction in progress
+# Both first-order CBV strategies are strictly contained in CBN
 
-The target is language-preserving inclusion for both call-by-value strategies, on the original character strings:
+The following are proved unconditionally in Lean, on the original character-string languages:
 
 - first-order CBV-Par ⊊ first-order CBN;
 - first-order CBV-Seq ⊊ first-order CBN.
 
-These inclusions are **not proved yet**. `firstOrder_cbn_not_cbv` already supplies one CBN language outside both CBV classes. The remaining requirement is an actual first-order CBN grammar for each first-order CBV grammar and start expression. Polynomial-time membership and hardness under reductions do not supply this translation.
+The flagship theorem is `Shallot.PegSeparation.firstOrder_cbv_par_seq_strict_cbn` in `lean/Shallot/Peg/Separation/CBVStrict.lean`. It supplies both inclusions and one CBN language outside both CBV classes. The individual results are `firstOrder_par_strict_cbn` and `firstOrder_seq_strict_cbn`.
 
-## Checked representation
+The inclusion is established by an actual fixed grammar translation, independently of the earlier polynomial-time upper bounds for CBV. It does not change, pad, or encode the recognized input string.
 
-The modules in `lean/MacroPeg/CBVtoCBN/` implement the following CBN components.
+## Translation contract
 
-| Module | Checked property |
+`CBVtoCBN.translate source strategy start` produces one first-order CBN grammar depending only on the source syntax and strategy. Its fixed start expression is `CBVtoCBN.candidateStart` (the historical low-level name). For every first-order source grammar and first-order start expression, either CBV strategy satisfies:
+
+```lean
+CBVtoCBN.translate_recognizes hg hs he x :
+  MacroObs (CBVtoCBN.translate source strategy start)
+    CBVtoCBN.candidateStart x (some []) ↔
+  SObs source strategy start x (some [])
+```
+
+Here `hs` states that the source strategy is not CBN. There is no restriction on the original characters, input length, finite grammar arities, source recursion, or termination of the source computation. The target grammar's first-order property is `translate_firstOrder`. Acceptance preservation suffices for the language-class result; an undefined source computation is rejected by the total bounded success predicate.
+
+## Captured values without higher-order parameters
+
+Every logical remaining position `p` is represented by closed CBN counter expressions of lengths `p` and `n-p`. A captured substring from remaining position `a` to `b` is represented by four counters `[a,n-a,b,n-b]`, with `b ≤ a ≤ n`; its decoded value is exactly `pre x a b`.
+
+All logical tests run at the unchanged original input root. The first-order interval matcher compares captured substrings character by character. Its fixed `unicodeAlphabet` covers every Lean character, so parameter replay is valid even for characters absent from the source grammar's literals. Named rules receive counters and captured intervals; no callable parameter is introduced.
+
+The semantic interfaces keep source success-at-an-endpoint and source explicit failure as separate total `RootTest` predicates. Both are false for an undefined approximation. Negating success alone would incorrectly turn undefined evaluation into source failure, so ordered choice, negation and call short-circuiting use the explicit-failure predicate. Literal parameter failure can use negation of endpoint existence because literal matching itself is total.
+
+The capture continuation is required to be total only when its argument actually succeeded. This guard matters: other candidate endpoints need not describe valid captured intervals, and their continuations are never evaluated.
+
+## Clock and proof structure
+
+For a fixed source grammar whose arities are bounded by `K`, `clockDigits source K = |rules| + 2K + 1` base-`n+1` digits suffice on nonempty inputs. `sourceArityBound` supplies a fixed bound from the source grammar. The all-`n` digit tuple reaches every finite observation of the source CBV table approximants. Fixed CBN rules discover `n`, initialize the tuple and decrement it with borrowing.
+
+Arguments are evaluated at the current table round. Only entry into the called rule body decrements the clock. An exhausted clock gives an undefined table entry, not source explicit failure. Empty-input acceptance is computed from the source grammar at translation time and handled by a fixed separate branch.
+
+The main proof chain is:
+
+| Theorem | Evidence |
 | --- | --- |
-| `Positions` | A closed expression `skipN k` consumes exactly `k` arbitrary characters when available and explicitly fails otherwise. Complementary counters test equality and order of logical positions at the unchanged input root. |
-| `Control` | A total zero-width guard selects exactly one branch, preserving that branch's success, failure, and absence of finite observations. |
-| `LengthSearch` | Finite input-length and complement discovery passes frozen counters to a static continuation. |
-| `SpanMatch` | A fixed first-order recursive rule compares two input intervals character by character. |
-| `SpanValues` | A finite cover of all Lean characters makes interval comparison independent of the input alphabet. `capturedLiteral_iff` identifies this comparison with actual matching of the string captured by CBV. |
-| `PositionSearch` | Finite existential position search retains arbitrary context arguments. Totality requires every candidate test to be a total zero-width predicate. |
-| `ContextSearch` | Complement discovery retains arbitrary context arguments and preserves every observation of its continuation. |
-| `CounterStep` | A paired prefix/complement counter branches at zero or decrements to its predecessor, retaining the context and the observations of a static continuation. |
-| `EmptyInput` | A constant branch computed from the source grammar recognizes its acceptance of the empty input, for either CBV strategy. It rejects every nonempty original input. |
-| `Routing` | Static parameter slices and paired arguments substitute to exactly the retained context. |
-| `ClockStep` / `ClockGrammar` | An actual finite first-order rule fragment decrements the full fixed-width clock, handles borrowing and the all-zero case, and preserves every observation of either continuation. A fixed start fragment discovers the input length and initializes every digit. |
-| `RootTests` / `PairSearch` | Total zero-width predicates compose under conjunction, disjunction and negation. A three-rule block quantifies over paired position counters while retaining context. |
-| `PartialTests` | Successful alternatives, explicit alternative failure, and negation retain the distinction between unknown and failure. Actual generated fragments implement both success and failure of sequencing, given total subexpression predicates. |
-| `CaptureStep` | A four-rule fragment passes the consumed interval and the correct Par/Seq current position to a named continuation. Both success and explicit failure use this bounded capture relation. Source call/argument clauses agree with this continuation form. Every successful finite approximation yields valid interval endpoints, in any literal environment. |
-| `Repetition` | An actual five-rule fragment implements the source repetition success relation. Target recursion strictly decreases the current position, including when the operand's approximation is unknown or succeeds without consumption. Repetition's explicit-failure predicate is always false. |
-| `LeafTests` | Epsilon, arbitrary characters, character literals, ranges and fixed strings are translated to total logical-position predicates, with exact correspondence to `evV`. |
-| `ParameterTests` | Captured intervals implement both success and failure of source parameter lookup. Endpoint guards prevent the matcher from receiving an invalid interval. Missing parameters explicitly fail. |
-| `CompilerPlan` | `compileCandidate` actually generates a finite target grammar from the source grammar, strategy, start expression, alphabet cover and digit count. This is an executable candidate whose complete language preservation remains unproved. |
-| `CompilerFirstOrder` | Every rule of the candidate grammar is proved first-order, without assumptions on the source syntax. |
-| `CompilerLayout` | Collected nodes resolve to their generated rules at every local slot. Start expressions, original rule bodies and table-lookup nodes are present in the dictionary. |
-| `CompilerAvailability` / `CompilerState` | Source subtrees carry availability of all their collected code. Canonical target arguments encode positions, clock and captured environment; validity and decoding are explicit. This avoids a separate transitive search through the global dictionary. |
-| `CompilerBasics` / `CompilerBlocks` | Primary predicates unfold at the actual generated addresses with checked arities. Fragment lookup certificates recover literal rule sublists and transport the template semantics to the full generated grammar. |
-| `CompiledSequence` / `CompiledControl` / `CompiledParameters` | The actual generated sequence, repetition, negation and parameter predicates preserve the bounded source evaluation, assuming the corresponding proper subexpression predicates. The failure adapter supplies a valid unused endpoint zero. |
-| `CompiledCalls` / `CompiledSyntax` | Source-call entry agrees with argument stage zero; missing and wrong-arity calls explicitly fail. Mutual structural induction establishes all source expression cases from a `CallHandler` which receives correctness of proper argument subexpressions. That handler is an explicit remaining obligation. |
-| `ClockBound` | On nonempty inputs, a grammar-dependent fixed number of base-`n+1` digits suffices to reach every finite observation of the source CBV evaluator. |
+| `compiledArguments_correct` | The real argument-stage rules preserve the caller environment, accumulate captured intervals in order and use the correct Par or Seq current position. |
+| `compiledLookup_correct` | Actual clock and packing rules implement a source table lookup, given body correctness at the predecessor clock. |
+| `callHandler_of_lookup` | Correct table lookups discharge the call-constructor interface using the generated argument stages. |
+| `compiledSyntax_correct` | Structural induction handles every first-order expression, using only proper argument-subexpression hypotheses at calls. |
+| `compiledEvaluator_correct` | Strong induction on clock value closes the preceding interfaces unconditionally for the actual generated grammar. |
+| `translate_recognizes` | Full-clock evaluation, empty-input handling and the fixed whole-input entry establish recognition equivalence for every original string. |
+| `firstOrder_cbv_subset_cbn` | Recognition equivalence produces a CBN witness for every CBV language. |
+| `firstOrder_cbv_par_seq_strict_cbn` | Both inclusions combine with the existing common noncontainment witness. |
 
-All calls in these constructions are to named rules. No callable parameter is introduced. There is no padding, input encoding, or reduction to a different recognition problem.
+The lower-level generator retains its `compileCandidate` name and explicit alphabet/digit parameters for executable checks. `translate` selects the unrestricted alphabet and sufficient fixed digit count. `compileCandidate_firstOrder` proves that every generated rule is first-order; `compileCandidate_at` checks the actual static rule layout. `ExprAvailable` carries all code locations of a source subtree, including every argument stage, so the simulation uses the actual collected dictionary.
 
-A logical position `p` is represented by closed counters of lengths `p` and `n-p`. A captured value is represented by two endpoints, rather than by an expression that tries to remember where it was evaluated. Evaluation of logical tests stays at the original physical input root. `LenRep` and first-order observational substitution allow different counter syntax to denote the same position; appending `.any` need not preserve the canonical syntax tree.
+## Verification
 
-`capturedLiteral_iff` uses the source evaluator's remaining-input coordinates. For valid `j ≤ p ≤ n` and `r ≤ q ≤ n`, comparing `[n-p,n-j)` and `[n-q,n-r)` is equivalent to matching `pre x p j` at `sfx x q` and leaving exactly `sfx x r`. The matcher covers every Lean character, including inputs whose characters do not occur as literals in the source grammar.
+The proofs use standard Lean only. Exact dependency guards in `lean/Audit.lean` check the simulation, translation, class inclusion and strict-inclusion results against the standard dependencies `propext`, `Classical.choice` and `Quot.sound`. The source audit rejects proof placeholders, additional declarations of axioms and native proof computation.
 
-## Remaining translation
+From `lean/`:
 
-The proposed target evaluator uses two total root predicates: success ending at a specified logical position, and explicit failure. At a bottom approximant both predicates fail. Negation of success alone must never stand for source failure, because that would identify divergence with failure.
+```sh
+lake build
+lake env lean --run ../scripts/check-cbv-cbn-candidate.lean
+```
 
-For a fixed source grammar whose arities are bounded by `K`, `clockDigits g K = |rules| + 2K + 1` digits suffice on every nonempty input. `fullClock_sufficient` bounds `iterBoundV` by the all-`n` digit tuple, and `fullClock_eval_iff` connects evaluation at that bound to all finite source approximants. `ClockGrammar.clockBlock_iff` proves the generated CBN multiple-digit operation, and `clockStartBlock_iff` proves initialization from the unchanged input. These clock fragments are independent of the input string. `clockTable_step` identifies their numeric predecessor with exactly one source table round; `clockTable_zero` identifies exhaustion with an unknown entry. Arguments retain the current round, and only entry into the called body decrements it. `EmptyInput.emptyInputP_correct` supplies the separate empty-input acceptance branch, since base `n+1` degenerates there.
+From the repository root:
 
-The generated candidate uses four global rules (interval matcher, whole-input entry, length discovery and initialization) followed by fixed-width code slots. Expression predicates take a current-position pair, a queried-endpoint pair, the frozen input length, clock pairs and captured environment values. Argument stages append captured spans, preserve the original environment while evaluating each argument, and route either the original or advanced current position according to Par or Seq. Rule lookup decrements the clock only after the arguments have succeeded. The default alphabet for the final unrestricted theorem will be `unicodeAlphabet`; the generator's alphabet parameter also permits small executable checks.
+```sh
+bash scripts/audit-source.sh
+git diff --check
+```
 
-The remaining obligations are:
-
-1. Prove correctness of the generated argument stages, preserving the original caller environment while accumulating captured intervals in order. At a valid call, `CallHandler` already receives correctness of every proper argument subexpression; these hypotheses must be used to discharge the actual capture fragments and their routing wrappers. The completed expression induction does not assume that the surrounding expression is correct.
-2. Prove correctness of generated table lookup using strong induction on clock value. An exhausted clock yields unknown, and a predecessor clock enters the called rule body with its captured environment. Instantiate the checked expression induction with the resulting call handler. This mutual evaluation argument is still unproved.
-3. Combine the empty-input branch, full-clock bound and whole-input entry to establish language equivalence for every original character string. Choose the digit count from the fixed source grammar and instantiate the unrestricted alphabet cover.
-4. Derive both class inclusions and combine them with the existing common noncontainment witness for the requested strict inclusions.
-
-The earlier dictionary-closure obligation is handled by `ExprAvailable`: availability includes the entire collected source subtree. Its sequence, alternative, repetition, negation and call projections provide all children and argument stages directly. The source start and every original rule body satisfy this property in the actual candidate dictionary.
-
-`lake env lean --run ../scripts/check-cbv-cbn-candidate.lean` (from `lean/`) exercises the actual generator and interpreter. The current suite compares Par and Seq with the generated CBN grammar on 288 cases covering recursive calls, one and two captured arguments, replay, nested capture, ordered choice, negation, ranges, fixed strings, empty iterations and left-recursive unknown results. It checks that each target evaluation finishes within its explicit interpreter bound. These finite checks are routing evidence, not a proof of general language preservation.
-
-`PartialTests.sequenceSuccessBlock_test` and `sequenceFailureBlock_test` check actual finite rule fragments; their hypotheses are the total correctness of the invoked subexpression predicates. `CaptureStep.captureBlock_test` likewise checks a real generated capture fragment against the evaluated argument and a named continuation. The expression-side hypotheses are now assembled by `compiledSyntax_correct`. Its `CallHandler` parameter must still be proved using the generated argument stages and clocked table lookup; it is not an inclusion theorem or an unconditional evaluator simulation.
-
-The helper theorems do not assert these final inclusions. Their dependency guards are in `lean/Audit.lean` and their source is part of the ordinary repository build.
+The executable routing suite compares Par and Seq with the generated CBN grammar on 288 cases, including recursion, multiple and nested captures, replay, ordered choice, negation, ranges, literals, empty iterations and left-recursive undefined results. Every checked target evaluation finishes within the interpreter bound. General preservation follows from the Lean theorems, rather than from these finite examples.

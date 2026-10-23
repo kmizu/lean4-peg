@@ -5,8 +5,8 @@ namespace Shallot.MacroPeg.CBVtoCBN
 def SyntaxCorrect (c : CompilerConfig) (x : List Char) (ds : List Nat) (E : CapturedEnv) (e : MExp) : Prop :=
   ∀ p, p ≤ x.length → ∀ q, q ≤ x.length → ExprCorrect c x ds E e p q
 
-/-- The remaining call proof receives correctness of all proper argument subexpressions.
-It must establish the real generated call, rather than assuming correctness of the surrounding syntax. -/
+/-- The call-constructor interface receives correctness of proper argument subexpressions.
+`CompilerCorrect.callHandler_of_lookup` discharges it using the generated argument stages. -/
 def CallHandler (c : CompilerConfig) (x : List Char) (ds : List Nat) (E : CapturedEnv) : Prop :=
   ∀ callee actuals (rule : MRule), ruleAtM c.source.rules callee = some rule → rule.arity = actuals.length →
     MExp.FirstOrderArgs actuals → ExprAvailable c.nodes E.length (.call callee actuals) →
@@ -14,7 +14,7 @@ def CallHandler (c : CompilerConfig) (x : List Char) (ds : List Nat) (E : Captur
 
 mutual
   /-- All first-order expression constructors are proved for the actual generator.
-The call handler is the sole remaining constructor obligation and receives only smaller-expression hypotheses. -/
+The call handler receives only smaller-expression hypotheses and is instantiated by the clock induction. -/
   theorem compiledSyntax_correct (c : CompilerConfig) (halpha : c.alphabet = unicodeAlphabet)
       (x : List Char) (ds : List Nat) (hd : ds.length = c.digits) (E : CapturedEnv) (hv : ValidEnv x.length E)
       (hcall : CallHandler c x ds E) :

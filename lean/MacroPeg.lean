@@ -36,6 +36,7 @@ import MacroPeg.CBVtoCBN.ClockGrammar
 import MacroPeg.CBVtoCBN.CaptureStep
 import MacroPeg.CBVtoCBN.CompilerLayout
 import MacroPeg.CBVtoCBN.CompiledSyntax
+import MacroPeg.CBVtoCBN.Recognition
 import MacroPeg.CBVtoCBN.EmptyInput
 import MacroPeg.Properties.DecideCost
 import MacroPeg.Properties.AtmHard
