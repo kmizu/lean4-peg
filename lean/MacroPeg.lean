@@ -184,3 +184,4 @@ import MacroPeg.CBV.PrefixEndpoint
 import MacroPeg.CBV.ParSimulation.Control
 import MacroPeg.CBV.ParSimulation.Terminals
 import MacroPeg.CBV.ParSimulation.CompiledSequence
+import MacroPeg.CBV.ParSimulation.Recognition

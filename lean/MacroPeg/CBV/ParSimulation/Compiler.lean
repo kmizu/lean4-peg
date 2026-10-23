@@ -8,9 +8,9 @@ open PrefixCounters
 open CBVtoCBN (CompileNode compilerNodes compilerEnvArity compilerCaptured compilerSlotSize
   paramsFrom compilerFragmentAt CompileFragments compilerFailRule emptyInputP)
 
-/-! Executable candidate for the Seq-to-Par translation. The prefix-counter
-and source-clause libraries prove its component algorithms. Global source
-simulation and the actual code-layout connection are still separate work. -/
+/-! Executable Seq-to-Par translation. `Recognition.translate_recognizes`
+proves language preservation for its unrestricted instance. Explicit
+alphabet and clock parameters remain available for executable checks. -/
 
 def address (nodes : List CompileNode) (digits : Nat) (node : CompileNode) : Nat :=
   8 + compilerSlotSize digits * nodes.idxOf node
@@ -112,6 +112,13 @@ def argumentFragments (source : MGrammar) (nodes : List CompileNode) (digits bas
           (20, [⟨w + 1, existsBody (base + 20) (base + 21) w⟩,
             ⟨w + 1, argumentCandidateBody arg (next + 1) callerWidth w⟩])]
 
+def lookupClockParams (digits envSize : Nat) : List MExp :=
+  .param 2 :: (paramsFrom 3 digits ++ .param 0 :: .param 1 :: paramsFrom (3 + digits) envSize)
+
+def lookupPackParams (digits envSize : Nat) : List MExp :=
+  .param (1 + digits) :: .param (2 + digits) :: .param 0 ::
+    (paramsFrom 1 digits ++ paramsFrom (3 + digits) envSize)
+
 def lookupFragments (source : MGrammar) (nodes : List CompileNode) (digits base callee : Nat) : CompileFragments := Id.run do
   match ruleAtM source.rules callee with
   | none => return [(0, [⟨0, MExp.failAlways⟩, ⟨0, .eps⟩])]
@@ -123,10 +130,8 @@ def lookupFragments (source : MGrammar) (nodes : List CompileNode) (digits base 
     let successPack := base + 12 + 4 * digits
     let failurePack := base + 13 + 4 * digits
     let onZero := base + 14 + 4 * digits
-    let rotated := .param 2 :: (paramsFrom 3 digits ++
-      .param 0 :: .param 1 :: paramsFrom (3 + digits) (2 * rule.arity))
-    let packed := .param (1 + digits) :: .param (2 + digits) :: .param 0 ::
-      (paramsFrom 1 digits ++ paramsFrom (3 + digits) (2 * rule.arity))
+    let rotated := lookupClockParams digits (2 * rule.arity)
+    let packed := lookupPackParams digits (2 * rule.arity)
     return [(0, [⟨w, .call (base + 10) rotated⟩, ⟨w, .call failureClock rotated⟩]),
       (10, clockBlock (base + 10) 0 successPack onZero digits ctxSize),
       (11 + 2 * digits, clockBlock failureClock 0 failurePack onZero digits ctxSize),

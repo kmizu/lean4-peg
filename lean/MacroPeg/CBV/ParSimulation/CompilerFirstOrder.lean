@@ -67,7 +67,7 @@ private theorem argumentFragments_fo (source : MGrammar) (nodes : List CompileNo
 
 private theorem lookupFragments_fo (source : MGrammar) (nodes : List CompileNode) (digits base callee : Nat) :
     FragmentsFO (lookupFragments source nodes digits base callee) := by
-  cases hr : ruleAtM source.rules callee <;> simp [lookupFragments, hr]
+  cases hr : ruleAtM source.rules callee <;> simp [lookupFragments, lookupClockParams, lookupPackParams, hr]
 
 private theorem fragments_fo (source : MGrammar) (nodes : List CompileNode)
     (digits base : Nat) (node : CompileNode) : FragmentsFO (fragments source nodes digits base node) := by
@@ -89,8 +89,8 @@ private theorem fragmentAt_fo (fs : CompileFragments) (hf : FragmentsFO fs) (slo
       | some rule => exact hf (offset, rules) (by simp) rule (List.mem_of_getElem? he)
     · exact ih (fun f hmem => hf f (List.mem_cons_of_mem _ hmem))
 
-/-- The executable candidate always generates a first-order Par grammar.
-This is a syntactic theorem, independent of the pending language theorem. -/
+/-- The executable generator always produces a first-order Par grammar.
+Language preservation of the unrestricted instance is proved in `Recognition`. -/
 theorem compileCandidate_firstOrder (source : MGrammar) (start : MExp)
     (alphabet : List Char) (digits : Nat) : (compileCandidate source start alphabet digits).FirstOrder := by
   intro rule hr

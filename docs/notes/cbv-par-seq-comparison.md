@@ -7,9 +7,15 @@
 を比較する。目標は、言語を変えない双方向の文法変換、または片方のクラスに属して
 他方に属さない言語の証明である。
 
-**比較自体は未解決。以下は Par 上の評価器を構築するための証明済み部品であり、
-Seq ⊆ Par、Par ⊆ Seq、一致、真包含のいずれもまだ主張しない。**
-既存の `CBVStrict.lean` は両 CBV から CBN への真包含を扱う。
+**一階 Seq ⊆ 一階 Par を無条件に証明した。逆方向と真包含は未解決。**
+言語クラスの定理は `Shallot.PegSeparation.firstOrder_seq_subset_par`
+（`lean/Shallot/Peg/Separation/CBVStrategies.lean`）。
+既存の CBN との結果を合わせると、`一階 Seq ⊆ 一階 Par ⊊ 一階 CBN` となる。
+
+`ParSimulation.translate source start` は元の文法と開始式だけから一つの固定文法を作る。
+`translate_recognizes` は、全ての元の文字列 `x : List Char` について、
+生成先 Par の全消費成功とソース Seq の全消費成功が同値であることを証明する。
+空入力も含み、符号化・パディング・入力長の制限・ソースの停止性を仮定しない。
 
 ## 接頭辞で位置を持つ
 
@@ -41,6 +47,10 @@ Par 文法の全補助規則を元入力 `x` の先頭で実行する。
 | `ParSimulation/Repetition.lean` | 位置の進行を要求する反復。空成功や未定義から偽の受理を導かない |
 | `ParSimulation/Compiler{,FirstOrder,Layout,State,Adapters}.lean` | 実行可能な生成器、一階性、実際のアドレス配置、捕捉環境と表近似を結ぶ状態表現 |
 | `ParSimulation/Compiled{Parameters,Control,Sequence}.lean` | 実際の生成コードのパラメータ・選択・否定・反復・逐次合成の正しさ |
+| `ParSimulation/{LookupRouting,LookupRules,CompiledLookup}.lean` | 実際の時計付き規則検索とソース表の一段の対応 |
+| `ParSimulation/{ArgumentState,ArgumentRouting,CompiledArguments,CompiledCalls}.lean` | 捕捉値の順序・呼び出し元環境・逐次位置を保つ実際の引数段階 |
+| `ParSimulation/CompilerCorrect.lean` | 時計帰納法と構文帰納法を組み合わせた無条件の有限表シミュレーション |
+| `ParSimulation/Recognition.lean` | 全時計の初期化・空入力・元文字列の全消費による受理保存 |
 
 `counterGrammar_interval` は、入力に依存しない一つの一階 Par 文法について、
 全ての文字列・全ての有効区間・全ての観測を量化する。
@@ -54,15 +64,15 @@ Par 文法の全補助規則を元入力 `x` の先頭で実行する。
 
 `ParSimulation.sequence_success_test` と `sequence_failure_test` は、
 構成要素の成功・失敗テストから、実際の探索規則と中間位置の検査規則を通じて
-ソースの `seqResult` へ接続する。これはまだ全ソース文法のコンパイラではなく、
-個々のソース構文節を構成するための証明である。
+ソースの `seqResult` へ接続する。全体のシミュレーションでは、
+これらの構文節の証明を引数段階と表検索の証明へ組み合わせている。
 
 ## 実際の生成コードへの接続
 
 `ParSimulation.compileCandidate` は一つのソース Seq 文法と開始式から Par 文法を生成する。
 入力依存の非終端記号や入力の再符号化を導入しない。
 各ソース式には成功と明示的失敗の二つの検査規則を割り当て、
-両方が偽となる未定義の場合を保存する設計である。
+両方が偽となる表近似の未定義の場合を保存する。
 
 `compileCandidate_firstOrder` は、出力される全規則の一階性を証明する。
 `compileCandidate_at` は、収集した全ソース節の全局所スロットについて、
@@ -72,7 +82,15 @@ Par 文法の全補助規則を元入力 `x` の先頭で実行する。
 `compiledAlt_correct`、`compiledStar_correct`、`compiledNot_correct`、
 `compiledSequence_correct` を証明した。これらは、子の式の正しさを受け取り、
 ソースの実際の `evV` に対応づける定理である。
-まだ全式の無条件のシミュレーション定理にはなっていない。
+`compiledArguments_correct` が実引数の捕捉を、`compiledLookup_correct` が時計を
+一段減らす規則本体への遷移を証明する。これらにより
+`compiledEvaluator_correct` には呼び出し処理やシミュレーションの仮定が残らない。
+
+最終翻訳では、ソースの固定アリティ上界を `sourceArityBound` で取り、
+`clockDigits` 個の基数 `n+1` の桁を全て `n` で初期化する。
+非空入力では、既存の `fullClock_eval_iff` が全ての有限導出を捉える十分性を保証する。
+空入力はソース依存の定数分岐で処理する。
+最後に成功テストから元入力全体を消費することで、元の全消費の言語へ接続する。
 
 `scripts/check-seq-par-candidate.lean` では、捕捉・複数引数・捕捉値の転送・再帰・
 左再帰による未定義・空成功反復・否定・規則なし・引数個数不一致などを含む
@@ -80,17 +98,13 @@ Par 文法の全補助規則を元入力 `x` の先頭で実行する。
 ソースは燃料400、生成先は燃料2000で比較し、生成先は全件で評価が完了した。
 この有限検証は、任意の文法・入力に対する言語保存の証明を代替しない。
 
-## 次の接続
+## 残る比較
 
-まず Seq の有限表評価を、これらの位置・区間テストと名前付き補助規則へ移す。
-既存の `CBVtoCBN.ClockBound` の算術的な十分性は再利用できるが、
-CBN の `LenRep` を Par のリテラル値と同一視してはいけない。
-接頭辞リテラルは元入力の先頭でだけ位置を表す。
-
-残る接続は、引数の逐次捕捉、時計を使った表検索から規則本体への遷移、
-その二つを構文帰納法と時計帰納法へ組み合わせること、空入力と初期化、
-元の全入力消費の受理条件である。
-その後も逆方向の包含、またはクラス分離の証明が必要である。
+一方向の包含は閉じた。目標全体を閉じるには、Par から Seq への同じ元文字列上の
+翻訳、または Par で認識できて Seq のどの文法でも認識できない言語が必要である。
+今回の翻訳は、補助規則を元入力の先頭で実行して接頭辞値を何度でも渡せる Par の
+性質を使う。同じコードを Seq で実行すると、実引数の捕捉が入力を進めるため、
+同じ不変条件にはならない。
 
 単純な引数の段階化には、既に捕捉した値を補助規則へ渡すと再照合が起きる問題がある。
 この局所変換の難しさだけから、言語クラスの非包含は結論できない。
