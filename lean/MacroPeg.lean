@@ -164,3 +164,7 @@ import MacroPeg.CBV.Decide
 import MacroPeg.CBV.Address
 import MacroPeg.CBV.SpanCost
 import MacroPeg.CBV.TableRead
+import MacroPeg.CBV.SpanBuild
+import MacroPeg.CBV.MirrorBuild
+import MacroPeg.CBV.ParamMachine
+import MacroPeg.CBV.ControlMachine

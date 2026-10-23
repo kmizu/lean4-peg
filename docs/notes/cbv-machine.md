@@ -33,14 +33,33 @@
   本当にCBVセルのアドレスであること、`tableRead_cell` は保存済みの表を実際に走査して
   意味論上の値を読むことを示す。`cost_poly` / `tableRead_cost_poly` が費用の多項式性を示す。
 
+- `SpanBuild`: 入力長から区間辞書の全対を生成する二重ループ。
+  `spanBuild_runs` が番号順を含む完全な出力を保証し、`spanBuildCost_poly` が生成費用を抑える。
+- `Mirror` / `MirrorBuild`: 残り入力長を添字とする入力表。`mirrorBuild_runs` は読み込み済み表を
+  実際に反転し、作業用スタックを復元する。`mirrorScan_literal` は区間の照合と通常のリテラルの一致。
+- `CompareRows` / `ScanStep` / `ScanLoop` / `LiteralMachine`: 入力表の実際の二回走査による文字比較、
+  残り長に従う照合ループ、返り値の生成とローカル領域の解放。
+  `spanLiteral_runs` と `spanLiteralCost_poly` が動的リテラル全体の正しさと費用を保証する。
+- `ParamMachine`: 引数番号から二つのアドレスを計算し、辞書表を走査して区間を取得する。
+  `paramLiteral_runs` は辞書読出し・照合・区間フレームの解放を合成した実行証明。
+  `paramLiteralCost_poly` はこれらすべてを含む多項式上界。
+- `FixedLiteral` / `LexMachine`: 固定リテラル、任意文字、文字、文字範囲の実機。
+  `fixedLiteral_runs` / `remainingLex_runs` は入力表を読んで正しい結果を返すことを保証する。
+  `remainingLex_any` / `remainingLex_chr` / `remainingLex_range` / `literalCode_eval` が
+  `eval` の基本式と対応し、それぞれ費用も多項式。
+- `ControlMachine`: `altEval_runs` は明示的失敗でだけ再試行し、未確定値を保つ。
+  `notAfter_runs` は否定の三値変換、`seqAfter_runs` は成功時に位置を復号して右式を評価し、
+  呼出し元の位置スタックを復元する。右式の実行証明を引数に取る合成則で、全式の翻訳定理はまだ残る。
+
 ## 残る接続
 
-1. 入力区間の辞書を生成する実機、固定文法に対する表の初期化とセル列挙。
-2. アドレス計算・表参照のプログラム（完了）を各式の呼び出し評価へ組み込む。
-3. 入力区間で与えたリテラルの照合、固定式の `eval` / Par・Seq引数評価を実行するプログラム。
+1. 固定文法に対する表の初期化とセル列挙。
+2. 完了した基本式・選択・否定・連接の部品を、再帰的な固定式コンパイラと不変条件へまとめる。
+3. `star`、Par・Seq引数評価、区間番号の登録、規則呼出しの表参照を組み込む。
 4. 規則表の全反復、開始式、受理停止までのプログラムと多項式上界。
-5. 既存の共通4ビット復号と `PegSeparation.nprog_in_P` へ接続して、両戦略のTM上のP所属を証明。
+5. 共通4ビット復号から入力表反転・辞書生成へつなぎ、`PegSeparation.nprog_in_P` へ接続して
+   両戦略のTM上のP所属を証明。
 6. `firstOrder_witness` のP非所属と矛盾させ、元の文字列言語で共通の非包含証人を組み立てる。
 
-`Complexity.Univ.subTo`、`Mach.ve_mul`、`peekAt` などの既存の検証済み部品を再利用できる。
-`spanLookupP` はレジスタを引数に取るので、全体機械への組み込み時に別の機械へ書き直す必要はない。
+`spanLookupP` はレジスタを引数に取るので、引数の照合後に得る区間から番号を登録する際に再利用できる。
+完成済みの局所部品をもって、全体のTM上界や最終分離が証明済みとはしていない。
