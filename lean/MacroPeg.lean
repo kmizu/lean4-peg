@@ -178,3 +178,7 @@ import MacroPeg.CBV.ControlMachine
 import MacroPeg.CBV.CallFrames
 import MacroPeg.CBV.PositionSweep
 import MacroPeg.CBV.Upper
+import MacroPeg.CBV.PrefixInterval
+import MacroPeg.CBV.PrefixSearch
+import MacroPeg.CBV.PrefixEndpoint
+import MacroPeg.CBV.ParSimulation.Control
