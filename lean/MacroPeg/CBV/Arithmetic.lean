@@ -53,9 +53,15 @@ def compile {K V : Nat} (r : Regs K V) : AddrExpr V → NProg K
       (.seq (nmv r.out r.a r.ao.symm) (.seq (nmv r.out r.b r.bo.symm)
         (ve_mul r.a r.b r.tmp r.out r.btmp))))
 
+/-- Only the variables occurring in an expression need a nonempty input frame. -/
+def inputs {V : Nat} : AddrExpr V → List (Fin V)
+  | .num _ => []
+  | .var i => [i]
+  | .add a b | .mul a b => inputs a ++ inputs b
+
 /-- The address-arithmetic compiler preserves all input stacks and its scratch stacks. -/
-theorem compile_runs {K V : Nat} (r : Regs K V) (f : Fin V → Nat) (e : AddrExpr V) :
-    ∀ S : Lists K, (∀ i, ∃ l, S (r.vars i) = l ++ [f i]) → S r.tmp = [] →
+theorem compile_runs_used {K V : Nat} (r : Regs K V) (f : Fin V → Nat) (e : AddrExpr V) :
+    ∀ S : Lists K, (∀ i, i ∈ inputs e → ∃ l, S (r.vars i) = l ++ [f i]) → S r.tmp = [] →
     NRuns (compile r e) S (S.set r.out (S r.out ++ [value f e])) (cost f e) := by
   have hab := r.ab
   have hat := r.atmp
@@ -67,14 +73,16 @@ theorem compile_runs {K V : Nat} (r : Regs K V) (f : Fin V → Nat) (e : AddrExp
   | num n => intro S _ _; exact nruns_pushC _ _ _
   | var i =>
     intro S hf _
-    obtain ⟨l, hl⟩ := hf i
+    obtain ⟨l, hl⟩ := hf i (by simp [inputs])
     exact nruns_dup _ _ (r.vo i) S hl
   | add a b ha hb =>
     intro S hf ht
-    have x₁ := ha S hf ht
+    have x₁ := ha S (fun i hi => hf i (by simp only [inputs, List.mem_append]; exact Or.inl hi)) ht
     let S₁ := S.set r.out (S r.out ++ [value f a])
-    have hf₁ : ∀ i, ∃ l, S₁ (r.vars i) = l ++ [f i] := by
-      intro i; rw [show S₁ (r.vars i) = S (r.vars i) from Lists.set_ne _ _ (r.vo i)]; exact hf i
+    have hf₁ : ∀ i, i ∈ inputs b → ∃ l, S₁ (r.vars i) = l ++ [f i] := by
+      intro i hi
+      rw [show S₁ (r.vars i) = S (r.vars i) from Lists.set_ne _ _ (r.vo i)]
+      exact hf i (by simp only [inputs, List.mem_append]; exact Or.inr hi)
     have ht₁ : S₁ r.tmp = [] := by simp [Lists.set, S₁, Lists.set, r.to, ht]
     have x₂ := hb S₁ hf₁ ht₁
     let S₂ := S₁.set r.out (S₁ r.out ++ [value f b])
@@ -107,10 +115,12 @@ theorem compile_runs {K V : Nat} (r : Regs K V) (f : Fin V → Nat) (e : AddrExp
     exact (x₁.seq (x₂.seq (x₃.seq (x₄.seq (x₅.seq x₆))))).mono (by simp only [cost]; omega)
   | mul a b ha hb =>
     intro S hf ht
-    have x₁ := ha S hf ht
+    have x₁ := ha S (fun i hi => hf i (by simp only [inputs, List.mem_append]; exact Or.inl hi)) ht
     let S₁ := S.set r.out (S r.out ++ [value f a])
-    have hf₁ : ∀ i, ∃ l, S₁ (r.vars i) = l ++ [f i] := by
-      intro i; rw [show S₁ (r.vars i) = S (r.vars i) from Lists.set_ne _ _ (r.vo i)]; exact hf i
+    have hf₁ : ∀ i, i ∈ inputs b → ∃ l, S₁ (r.vars i) = l ++ [f i] := by
+      intro i hi
+      rw [show S₁ (r.vars i) = S (r.vars i) from Lists.set_ne _ _ (r.vo i)]
+      exact hf i (by simp only [inputs, List.mem_append]; exact Or.inr hi)
     have ht₁ : S₁ r.tmp = [] := by simp [Lists.set, S₁, Lists.set, r.to, ht]
     have x₂ := hb S₁ hf₁ ht₁
     let S₂ := S₁.set r.out (S₁ r.out ++ [value f b])
@@ -139,6 +149,12 @@ theorem compile_runs {K V : Nat} (r : Regs K V) (f : Fin V → Nat) (e : AddrExp
       simp [Lists.set, hko, hka, hkb]
     rw [he] at x₅
     exact (x₁.seq (x₂.seq (x₃.seq (x₄.seq x₅)))).mono (by simp only [cost]; omega)
+
+/-- Convenience rule when every variable register has a top value. -/
+theorem compile_runs {K V : Nat} (r : Regs K V) (f : Fin V → Nat) (e : AddrExpr V)
+    (S : Lists K) (hf : ∀ i, ∃ l, S (r.vars i) = l ++ [f i]) (ht : S r.tmp = []) :
+    NRuns (compile r e) S (S.set r.out (S r.out ++ [value f e])) (cost f e) :=
+  compile_runs_used r f e S (fun i _ => hf i) ht
 
 /-- Address expressions are polynomial when their input registers are polynomially bounded functions. -/
 theorem value_poly {V : Nat} (f : Nat → Fin V → Nat)

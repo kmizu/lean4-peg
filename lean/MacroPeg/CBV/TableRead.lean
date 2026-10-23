@@ -12,18 +12,18 @@ def tableReadP {K V : Nat} (r : AddrExpr.Regs K V) (row idx ans : Fin K)
     (.seq (readRow row r.tmp idx r.out ans hrt hta hpi) (.prim (.pop r.out)))
 
 /-- A complete real table read charges both address calculation and the linear scan of the numeric row. -/
-theorem tableRead_runs {K V : Nat} (r : AddrExpr.Regs K V) (row idx ans : Fin K)
+theorem tableRead_runs_used {K V : Nat} (r : AddrExpr.Regs K V) (row idx ans : Fin K)
     (hrt : row ≠ r.tmp) (hta : r.tmp ≠ ans) (hpi : r.out ≠ idx)
     (hd : [row, r.tmp, idx, r.out, ans].Nodup) (f : Fin V → Nat) (e : AddrExpr V)
     (S : Lists K) (data : List Nat) (hdata : S row = data)
-    (hf : ∀ i, ∃ l, S (r.vars i) = l ++ [f i]) (ht : S r.tmp = [])
+    (hf : ∀ i, i ∈ AddrExpr.inputs e → ∃ l, S (r.vars i) = l ++ [f i]) (ht : S r.tmp = [])
     (hi : AddrExpr.value f e < data.length) :
     NRuns (tableReadP r row idx ans hrt hta hpi e) S
       (S.set ans (S ans ++ [data[AddrExpr.value f e]]))
       (AddrExpr.cost f e + 6 * data.length + 4 * AddrExpr.value f e + 8) := by
   have hro : row ≠ r.out := by simp_all [List.nodup_cons]
   have hao : ans ≠ r.out := Ne.symm (by simp_all [List.nodup_cons])
-  have hx := AddrExpr.compile_runs r f e S hf ht
+  have hx := AddrExpr.compile_runs_used r f e S hf ht
   let S₁ := S.set r.out (S r.out ++ [AddrExpr.value f e])
   have h₁r : S₁ row = data := by rw [show S₁ row = S row from Lists.set_ne _ _ hro]; exact hdata
   have h₁t : S₁ r.tmp = [] := by simp [S₁, Lists.set_ne _ _ r.to, ht]
@@ -46,6 +46,18 @@ theorem tableRead_runs {K V : Nat} (r : AddrExpr.Regs K V) (row idx ans : Fin K)
     simp [S₂, S₁, Lists.set, hko, hka]
   rw [he] at hp
   exact (hx.seq (hr.seq hp)).mono (by omega)
+
+/-- Convenience rule for a table read when every arithmetic variable has a top value. -/
+theorem tableRead_runs {K V : Nat} (r : AddrExpr.Regs K V) (row idx ans : Fin K)
+    (hrt : row ≠ r.tmp) (hta : r.tmp ≠ ans) (hpi : r.out ≠ idx)
+    (hd : [row, r.tmp, idx, r.out, ans].Nodup) (f : Fin V → Nat) (e : AddrExpr V)
+    (S : Lists K) (data : List Nat) (hdata : S row = data)
+    (hf : ∀ i, ∃ l, S (r.vars i) = l ++ [f i]) (ht : S r.tmp = [])
+    (hi : AddrExpr.value f e < data.length) :
+    NRuns (tableReadP r row idx ans hrt hta hpi e) S
+      (S.set ans (S ans ++ [data[AddrExpr.value f e]]))
+      (AddrExpr.cost f e + 6 * data.length + 4 * AddrExpr.value f e + 8) :=
+  tableRead_runs_used r row idx ans hrt hta hpi hd f e S data hdata (fun i _ => hf i) ht hi
 
 /-- The complete table-read budget remains polynomial when the row and the address inputs do. -/
 theorem tableRead_cost_poly {V : Nat} (f : Nat → Fin V → Nat) (e : AddrExpr V) (rows : Nat → Nat)
