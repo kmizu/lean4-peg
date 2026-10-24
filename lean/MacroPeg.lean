@@ -611,3 +611,9 @@ import MacroPeg.CBV.IndependentCaptureControl
 import MacroPeg.CBV.DynamicScannerCompiler
 import MacroPeg.CBV.DynamicScannerCorrespondence
 import MacroPeg.CBV.DynamicScannerFusionExamples
+
+import MacroPeg.CBV.RecursiveCaptureSafety
+import MacroPeg.CBV.FrozenCaptureControl
+import MacroPeg.CBV.RecursiveScannerHelpers
+import MacroPeg.CBV.RecursiveScannerArguments
+import MacroPeg.CBV.RecursiveCaptureExamples

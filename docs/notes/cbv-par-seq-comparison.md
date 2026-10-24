@@ -8196,3 +8196,48 @@ lemmas still support the independent helpers). Shared M/q, unary logical
 users and source scanner-prefix form remain restrictions. General PEG
 prefixes, mixed-fragment compiler integration, independent multiple captures,
 and unrestricted Par/Seq equality or separation remain unresolved.
+
+
+### Recursive helper arguments: actual capture safety and relocated scans
+
+`RecursiveCaptureSafety` extends frontier safety to bounded nullary calls.
+The finite consuming-path check on the original helper bodies and an
+induction on actual physical tables prove `physical_rows`. Recursive calls,
+mutual cycles and nullable stars are allowed: no parser-totality assumption
+is made. `frozen_capture` derives the complete actual captured word and exact
+suffix split at arbitrary frozen user stages. Negative queries retain their
+original computation but contribute no characters to the captured word.
+`TotalCaptureSafety.suffix_shape_calls` is the shared structural proof; the
+previous call-free public theorems keep their statements.
+
+`FrozenCaptureControl` transports retained-parameter control and inline
+filters to actual canonical helper computations. Its product parser can be
+a proper prefix of the frozen component. `RecursiveScannerHelpers` installs
+original parser nodes, their observer products, and relocated scanner rules
+in that order, before arbitrary user rules. It proves actual installation,
+closed-component validity, stabilization-floor bounds and the relocated
+scanner's ordinary run result. No helper result is supplied as advice.
+
+`RecursiveScannerArguments.argument_eq` and `filter_correct` preserve full
+partial results across distinct actual grammars and independent user stages.
+`capture` derives all-state defined advancement from finite helper-body and
+argument checks. `residual_scan` then proves that scanning from the original
+position and scanning from the actual capture endpoint in the reached state
+meet at the same position. The captured word and its length are not supplied
+as separate premises; they come from the actual argument evaluation.
+
+The kernel examples use H = a H c / empty, retain ac before the fresh
+recursive capture, and consume acaacc or acaaaccc. Their complete scanner
+actions differ. A successful empty alternative stays committed when its
+later continuation rejects; using the explicit recursive helper accepts.
+A safe self-cycle is undefined at every physical clock on every input.
+`combined_residual` instantiates the all-input, all-user-stage residual-scan
+theorem for the actual combined helper prefix and arbitrary user extensions.
+
+This closes recursive helper capture safety, inline observer transport and
+residual scanner alignment. It does **not yet** extend
+`DynamicScannerCorrespondence`'s whole user-row induction, all-observation
+or language theorem to these arguments. That composition, positive
+parameterized user calls inside arguments, general PEG prefixes,
+mixed-fragment integration, independent multiple captures and unrestricted
+Par/Seq equality or separation remain unresolved.
