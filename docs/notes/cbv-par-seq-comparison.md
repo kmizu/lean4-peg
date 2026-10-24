@@ -1203,3 +1203,49 @@ The separate parameter, character, and literal machines still require layout
 adapters and result-tag conversion to use this common dispatch and assembly.
 The ordinary-input loader and complete evaluator loop also remain unconnected.
 No general Par/Seq equality or separation follows yet.
+
+### Read results now return ordinary encoded value tasks
+
+`SequentialAtomResult` supplies a common thirteen-register return layout for
+all input-reading atoms. Register zero retains the original encoded input;
+registers seven, eight, and nine hold an optional source cursor, the target
+position, and the success marker; eleven retains the following frame fields.
+The adapter removes the temporary source cursor, converts the marker to the
+ordinary success/failure tag, and invokes `SequentialAtomCodec.finish` through
+an injective register map. The final state has only the original input and the
+encoded value-task fields in register twelve; all work registers are empty.
+The following frame fields and frame count are included unchanged in that
+value-task encoding.
+
+`NBoundedConstant.push_runs` verifies the status constants directly at the same
+space capacity, rather than enlarging the surrounding input workspace.
+`bounded_result_runs` discharges the local assembler's numeric bound from the
+returned position, frame count, and bounded following fields. `space_linear`
+provides its exact affine dependence on the numeric field bound for a fixed
+local front.
+
+`SequentialParamResult` connects the entire runtime environment lookup and
+original-input interval comparison to this return adapter. `scan_bounds` and
+`view_bounds` prove that the returned cursors stay within the original input
+positions, including failure. `param_runs`, `compiled_param`, and `param_tape`
+now end in `outputFields (atom x E (.param index) p) frameCount frameFields`,
+not just a position and success flag. Their fourteen-tape execution retains the
+original input, clears the work registers, and has an explicit capacity affine
+in input length and the numeric field bound. It still starts from the separate
+original-input/environment/position layout used by parameter evaluation.
+
+`SequentialReadResult` embeds character and literal readers into the same
+layout and applies the same assembler. `character_tape` and `literal_tape`
+verify their full path to the ordinary encoded value-task result on fourteen
+tapes. Character predicates include any character, a fixed character, and an
+inclusive range. These adapters start after the caller has discarded the
+capture environment, while preserving the frame fields. `literal_scan_bound`
+justifies the result bound even after a partially matched literal fails.
+`characterSpace_linear` and `literalSpace_linear` give exact affine capacity
+formulas. All inputs remain arbitrary original character strings.
+
+The source-ID selector must still be connected to these return adapters through
+one common branch layout; the separate parameter path includes environment
+lookup while character/literal paths need the environment-discard step first.
+The ordinary-input loader and complete evaluator/terminal loop also remain.
+The general CBV-Par versus CBV-Seq comparison is still unresolved.
