@@ -7348,3 +7348,145 @@ has not been combined with the earlier before/after-test or mixed-body
 compilers. Arbitrary consuming arguments, general initial body positions,
 independent multiple captures, and general Par/Seq equality or separation
 remain unresolved.
+
+### Caller-selected fragments before the end of an a-run
+
+`ControlledFragmentReplay` investigates the next boundary directly:
+`B_(G,H) = (A;&(A;G))*;H`, with A=a*;#. H may select a proper prefix
+of the final a-run, rather than consume its greedy maximum. The argument
+can therefore end on an a, invalidating `argument_stop` and the old
+immediate-# target body.
+
+`linked_fragment_iff` proves a general prefix-code equivalence for a
+complete-word trace followed by any fragment. `trace_replay_iff`
+specializes it to an a-fragment followed by the remaining a-run and #;
+it does not equate the fragment length with the initial run length.
+`physical_tail_compare` implements the new local comparison using an
+ordinary unary Seq helper with body A;param0. The actual H is evaluated
+in the original caller environment; after capture the helper consumes
+the remaining a-run and #, then compares the retained fragment.
+
+`physical_preflight_iff` recovers the full-word trace from the actual
+star execution and proves success equivalence of the physical Seq
+filter and the original whole replay. This theorem assumes successful
+star/H executions, an a-only captured fragment, and a remaining run
+ending in #. It is a local conditional result: failed terminal scans
+and a syntax-derived all-input condition on H have not been discharged.
+Original argument failure and undefinedness are propagated before the
+comparison, including a universally undefined empty-star H.
+
+`split_arguments` proves that three consecutive real Seq arguments
+`[a*, #;(A;&(A;G))*, H]`, on the positive first-iteration branch,
+retain exactly the original whole capture. All three evaluate in the
+unchanged caller environment. `wholeView_eval` restores that value
+throughout any first-order continuation with complete partial results.
+The three pieces represent one source capture, not independent captures.
+
+Kernel executions select a or aa inside aaa, accept and later reuse
+aa#a captured inside an aa run, and combine the earlier full-word stop
+with an independently selected final fragment. They exercise zero-word
+and empty fragments, longer traces, malformed/short copies, and show
+that the old immediate-# body rejects at this actual early endpoint.
+Both concrete grammars and the proposed entry are first-order.
+
+The proposed entry's recursive call transfer, all-input failure cases,
+and composition with the earlier recursive/mixed-body compilers remain
+unproved. General Par/Seq equality or separation remains unresolved.
+
+### All-input preflight for a syntax-selected final fragment
+
+`ControlledFragmentPreflight` discharges the preceding local capture and
+delimiter premises for H_J=(a;&J)*. J is a caller-side test, including
+parent-dependent or recursive first-order expressions. Successful
+iterations consume exactly one a; failing tests stop before consuming
+that iteration's a. `fragment_shape` derives the actual a-only capture
+from this syntax for arbitrary tables, without a capture-value oracle.
+
+`block_prefix_after_fragment` and `terminal_of_replay` recover the
+remaining a-run and # from an actual successful source replay. The
+latter does not assume that the complete-word trace or the fragment was
+maximal. Conversely `tail_result` and `physical_trace` recover the exact
+physical helper result even when the terminal scanner fails. On a
+successful original argument, `physical_range` excludes undefined or
+shifted preflight results: only the actual capture endpoint or finite
+comparison failure can result.
+
+`physical_iff` now holds on every input after an actual argument success,
+with no successful-star, a-only-value, delimiter, trace, or word-count
+premise. `physical_result` includes every argument outcome. Original
+argument None/failure is propagated first; after a successful capture,
+preflight returns its endpoint exactly when the original A/whole-value
+replay succeeds, and otherwise returns the same finite failure. This is
+an exact caller-position result with ordinary Seq tables and the two
+actual comparison rules, not a semantic helper-row assumption.
+
+Kernel executions select a, aa, or empty inside aaa by changing only
+the caller's retained word, and reuse the whole value afterward. Inputs
+without a valid terminal word, including empty input and a fragment
+consuming the entire input, fail finitely. An empty-star J on aaZ stays
+undefined before the scanner's finite failure can replace it.
+
+This closes the earlier local preflight premises for this H syntax.
+The mandatory source body entry A;param0, one source capture, fixed
+A=a*;#, and the specified full-word/fragment argument shape still limit
+the construction. Transfer across source/target recursive user tables,
+clock-zero seeds, complete call transfer, and a final fixed recursive
+grammar language theorem for the new fragment family remain unproved.
+General Par/Seq equality or separation remains unresolved.
+
+### Recursive grammar preservation for both stopping controls
+
+`ControlledFragmentEntry` connects the all-input filter to complete
+calls. `star_congr`, `fragment_congr`, and `argument_congr` preserve
+actual argument results across different grammars, strategies, clocks,
+and caller environments when G and J correspond at the current caller
+clock. `endpoint_state` derives the actual residual a-run, delimiter,
+and retained final fragment at the original replay endpoint; the old
+greedy boundary assumption is not needed.
+
+The positive branch performs three actual captures, and its body
+A;param2;wholeView(b) reconstructs the whole original value. The zero
+full-word branch captures H alone and uses A;param0;b. `branches_eq`
+preserves the complete partial result of the real continuation, with
+first-iteration guards preventing a failed callee from selecting a
+different capture. `transfer` places the continuation correspondence at
+the previous callee clock, while both tests remain at the current clock.
+`preflight_zero` and `zero` supply the real physical-clock-zero seed
+using actual unavailable helper rows, including partial tests.
+
+`ControlledFragmentRecursive` renders template calls with two arguments
+G and J into a unary source call whose sole argument is
+B_(G,J)=(A;&(A;G))*;(a;&J)*. A singleton template supplies G with J=eps;
+an empty template supplies both eps. The generated Seq grammar installs
+the actual two comparison helpers and a ternary/unary pair for each user.
+The two templates are stopping tests, not independent source captures.
+
+Structural induction treats both rendered tests at the current clock,
+including parent parameters, calls to the same user, mutual recursion,
+and nested controls. Ordinary-clock induction handles the previous-clock
+callee continuation. `evaluator_eq` establishes every partial result at
+every ordinary stage for all retained environments and valid positions.
+`stable_eq`, `observations_iff`, and `language_translation` preserve all
+finite observations and the language of unchanged original strings in
+one fixed first-order Seq grammar. No capture-shape, delimiter, input
+condition, semantic helper-row, or recursive continuation oracle remains
+in these final theorems.
+
+Kernel executions follow real 0→1→0 calls capturing a → aaa#a → aa,
+with a recursive user-2 test selecting the middle fragment and both
+parents reused after return. A same-user probe fails with a fresh aa
+capture but succeeds with a fresh a, stopping the actual call's fragment
+before its greedy endpoint. Other examples exercise recursive G probes,
+both controls selecting one capture, parent-selected a/aa/empty fragments,
+zero-full-word calls, and short parent/child/grandchild rejection.
+An empty-star J on aaZ is undefined at every ordinary source/target clock,
+before a scanner's finite failure could replace it.
+
+This closes recursive grammar preservation for the specified fragment
+family. Fixed A=a*;#, one source capture, B_(G,J)'s argument shape, and
+the mandatory A;param0 body entry remain restrictions. Three or more
+template arguments render as failure. This construction has not been
+combined with earlier mixed-body or independent-header compilers.
+Arbitrary consuming arguments, arbitrary initial body positions,
+independent multiple captures, and general Par/Seq equality or separation
+remain unresolved.
