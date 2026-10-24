@@ -5421,3 +5421,67 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.HybridReplayCompiler.duplication_shape' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.HybridReplayCompiler.duplication_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.CommonOriginCaptures.controls_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CommonOriginCaptures.controls_length
+
+/-- info: 'Shallot.MacroPeg.CBV.CommonOriginCaptures.differences_scan' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CommonOriginCaptures.differences_scan
+
+/-- info: 'Shallot.MacroPeg.CBV.CommonOriginCaptures.chunks_prefix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CommonOriginCaptures.chunks_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.CommonOriginCaptures.storage_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CommonOriginCaptures.storage_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.CommonOriginCaptures.reconstruct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CommonOriginCaptures.reconstruct
+
+/-- info: 'Shallot.MacroPeg.CBV.CommonOriginCaptures.ranks_mem_controls' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CommonOriginCaptures.ranks_mem_controls
+
+/-- info: 'Shallot.MacroPeg.CBV.CommonOriginCaptures.par_prefixes' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CommonOriginCaptures.par_prefixes
+
+/-- info: 'Shallot.MacroPeg.CBV.CommonOriginCaptures.par_representation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CommonOriginCaptures.par_representation
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureViews.prefixExpr_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureViews.prefixExpr_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureViews.evV_rebind' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureViews.evV_rebind
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureViews.body_view' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureViews.body_view
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureViews.common_origin_body' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureViews.common_origin_body
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureViews.variants_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureViews.variants_length
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureViews.finite_body_choice' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureViews.finite_body_choice
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureViews.par_body_representation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureViews.par_body_representation

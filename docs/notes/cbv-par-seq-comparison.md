@@ -1825,3 +1825,53 @@ body begins by replaying the head, all source rules have the common arity
 It does not yet accommodate several independent unbounded captures, arbitrary
 body placement, or a general Par normal form. Consequently it is a further
 direct reverse fragment, not a proof of general equality or separation.
+
+### Arbitrary overlapping captures: disjoint runtime values and finite body views
+
+`CommonOriginCaptures` removes the restriction to one or two unbounded values
+at the **value representation** level. Every successful `DerivesArgsPar`
+derivation produces words that are prefixes of its common caller input
+(`par_prefixes`). Sort these words by length and split adjacent prefixes at
+their boundaries. `chunks` constructs exactly as many consecutive pieces as
+there were arguments. Empty captures and repeated lengths give empty pieces;
+they require no special exclusion. The total stored character count is at
+most the caller input length (`storage_bound`).
+
+`ranks` records, in the original parameter order, how many pieces reconstruct
+each captured word. `reconstruct` proves exact recovery of the entire tuple.
+For arity `d`, all ranks lie between zero and `d`, and the rank vector belongs
+to the input-independent list `controls d d`. This list has exactly
+`(d+1)^d` entries, counting all vectors rather than only reachable ones. No
+captured word or character value belongs to a finite palette. The runtime
+pieces can have arbitrarily large lengths and arbitrary character contents.
+
+`par_representation` connects this representation to the actual argument
+semantics: the literal expressions for those pieces form a successful Seq
+argument list on the original input, producing exactly the disjoint runtime
+values and leaving the suffix after the longest capture. This literal list
+is computed from **already evaluated capture values**. The theorem therefore
+does not supply a fixed Seq parser for discovering the pieces.
+
+`CaptureViews.prefixExpr k` replays the first `k` consecutive runtime pieces.
+`prefixExpr_eval` proves that this expression has the same partial evaluator
+value as the reconstructed captured literal. The general `evV_rebind` lemma
+then extends equality of parameter views to any first-order expression,
+including ordered choice, repetition, predicates, and calls under either
+argument convention. `finite_body_choice` provides an input-independent finite
+list of first-order body variants, one of which preserves the original body's
+full three-valued evaluation with the disjoint environment. The final
+`par_body_representation` packages successful Seq value capture and this body
+view together for arbitrary successful Par argument derivations; it imposes
+no replay, literal-argument, or finite-capture restriction on the source.
+
+This is a representation and local evaluation result. Both sides of each
+body equality use the **same input position, grammar, strategy, and recursive
+table**. Calls inside a body still enter the original rules with the same
+argument values. No equivalence of a globally transformed recursive grammar
+or of different Par/Seq calling strategies follows yet. A general reverse
+translation must still discover the correct pieces and finite control from
+the source syntax at runtime, preserve argument failure/undefinedness and
+order, and reconcile the original Par body position with the later Seq body
+position. Multiple unbounded values themselves now have a verified disjoint
+representation; these operational obligations remain open, as does the
+language-class equality/separation question.
