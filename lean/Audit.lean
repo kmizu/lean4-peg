@@ -16139,6 +16139,10 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.MixedAdjacentExamples.all_inputs
 
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.stuck_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedOriginControl.stuck_eval
+
 /-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.embed_exact' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.MixedOriginControl.embed_exact
@@ -16171,11 +16175,11 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.MixedOriginControl.core_rule
 
-/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.codeCall_eval' depends on axioms: [propext] -/
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.codeCall_eval' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.MixedOriginControl.codeCall_eval
 
-/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.replayCall_eval' depends on axioms: [propext] -/
+/-- info: 'Shallot.MacroPeg.CBV.MixedOriginControl.replayCall_eval' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.MixedOriginControl.replayCall_eval
 
@@ -16292,3 +16296,253 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.MixedOriginControlExamples.direct_all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyLeaves.render_embed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyLeaves.render_embed
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyLeaves.raw_render' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyLeaves.raw_render
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyLeaves.append_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyLeaves.append_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyLeaves.lookup_prefix' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyLeaves.lookup_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyLeaves.copies_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyLeaves.copies_length
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyLeaves.lookup_mapped' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyLeaves.lookup_mapped
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyLeaves.lookup_original' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyLeaves.lookup_original
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyLeaves.lookup_test' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyLeaves.lookup_test
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyLeaves.lookup_tail' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyLeaves.lookup_tail
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyLeaves.render_expand' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyLeaves.render_expand
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyLeaves.control_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyLeaves.control_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyLeaves.body_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyLeaves.body_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyForm.expand_congr' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyForm.expand_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyForm.expand_shift' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyForm.expand_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyForm.join_left' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyForm.join_left
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyForm.join_right' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyForm.join_right
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyForm.atom_syntax' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyForm.atom_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyForm.choice_syntax' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyForm.choice_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyForm.neg_syntax' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyForm.neg_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyForm.compose_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyForm.compose_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyForm.repeatThen_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyForm.repeatThen_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyStar.identity_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyStar.identity_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyStar.diverge_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyStar.diverge_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyStar.strict_change' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyStar.strict_change
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyStar.done_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyStar.done_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyStar.repeat_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyStar.repeat_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodySyntax.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodySyntax.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodySyntax.normalize_ordinary' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodySyntax.normalize_ordinary
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.emit_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.emit_length
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.placed_leaf' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.placed_leaf
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.normalized_bodies' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.normalized_bodies
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.headers' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.headers
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.body_results' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.body_results
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.tables_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.tables_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.normalized_observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.normalized_observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.language_translation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.source_eq_original' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.source_eq_original
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.original_language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.original_language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.shift_all' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.shift_all
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.emit_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.emit_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.valid_of_kinds' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.valid_of_kinds
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.valid_of_source_kinds' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.valid_of_source_kinds
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.embed_typed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.embed_typed
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.raw_typed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.raw_typed
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyCompiler.source_language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyCompiler.source_language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyExamples.valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyExamples.source_execution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.source_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyExamples.target_execution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.target_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyExamples.short_outer' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.short_outer
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyExamples.all_inputs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyExamples.nullable_valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.nullable_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyExamples.nullable_executions' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.nullable_executions
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyExamples.nullable_all_inputs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.nullable_all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyExamples.direct_grammar' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.direct_grammar
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyExamples.direct_all_inputs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.direct_all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyExamples.commitment' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.commitment
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedBodyExamples.nested_star_executions' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.nested_star_executions

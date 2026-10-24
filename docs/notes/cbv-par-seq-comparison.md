@@ -6861,3 +6861,75 @@ call-free codeword-control shape with a shared independent Pure prefix-code
 A. Recursive headers for parent-dependent adjacent comparison, independent
 multiple source captures, and general Par/Seq equality or separation
 remain unresolved.
+
+### Nested consuming bodies over runtime shifted and ordinary leaves
+
+`MixedBodyLeaves`, `MixedBodyForm`, `MixedBodyStar`, `MixedBodySyntax`, and
+`MixedBodyCompiler` connect the earlier guarded continuation and nullable
+star normalization methods to runtime codeword shifts and mixed recursive
+arguments. The source is now a tree of replay leaves, prioritized choice,
+negation, consuming sequence, and ordinary star, with arbitrary nesting.
+Its leaf list, continuations, control plans, global offsets, and recursive
+source grammar are generated from that tree. A caller does not supply a
+normal form or semantic replacement-body certificate.
+
+The two ordinary source leaf shapes remain `param0;tail` and
+`A;param0;tail`. Their tails are arbitrary supported mixed bodies, including
+retained parameters, general recursive arguments, and calls back into the
+original nested-body users. A codeword user's tree can mix both leaf kinds.
+A general-capture user's tree has ordinary replay leaves only. The
+`Ordinary` source-syntax check is preserved by normalization, and
+`valid_of_source_kinds` automatically derives the generated control-family
+kind and address conditions. There is no Consumer or Closed prerequisite
+on a sequence or ordinary star operand.
+
+Sequence distributes its continuation into selected output leaves while
+retaining original leaves as guards. Thus a later failure or undefined
+result cannot reopen a successful shorter alternative. Both runtime
+shifted and ordinary leaves retain their entry kind when copied. The
+same parameter environment is used throughout the inline continuation.
+
+A negative output under star can succeed without consuming and therefore
+make the original star undefined. `MixedOriginControl.Part` now also has a
+synthetic `stuck` leaf, whose source and compiled syntax is the ordinary
+expression `eps*`. It is evaluated directly at the origin, independently
+of the actual captured word, rather than being forced through a replay
+prefix that might fail. This preserves undefinedness even when the
+captured word cannot be replayed at the current position. Argument
+preflight still runs before the whole callee plan. The nullable-star
+transformation freezes negative outputs through this divergence guard,
+then uses the existing guarded greedy-star factorization. The zero-step
+continuation is a predicate returning the current origin. Nested stars
+and nullable positive replay leaves retain their original partial results.
+
+Local full partial equality uses sound physical tables only to justify
+valid endpoints and the guarded star rotation. Source and normalized
+recursive grammars have identical arities; induction proves equality of
+all ordinary Par tables, including calls within arguments. Stable
+observation equality then composes with `MixedOriginControl` and the
+mixed adjacent compiler. `source_eq_original` proves exact equality with
+a grammar containing the original ordinary calls and the original nested
+body before normalization. `source_language_translation` exposes the
+fixed first-order Seq language translation on unchanged strings with
+source entry-kind and call well-typedness checks only.
+
+The main kernel example puts both leaf kinds in an inner star, sequences
+that star with a delimiter replay, repeats the sequence in an outer star,
+and finishes with a shifted replay outside both stars. Its actual mutual
+recursion includes a shifted call inside a general parent-plus-colon
+argument, another shifted child, and full general-parent and outer-parent
+reuse on return. A second outer iteration takes zero inner iterations.
+Both original Par and generated Seq accept; both reject a short outer
+copy. Further executions check that a failed continuation does not retry
+a longer shifted alternative, that a negative star operand may return at
+the original origin or stay undefined, that argument failure is preserved,
+and that nested stars remain undefined.
+
+This closes arbitrary nesting of choice, negation, sequence, and star
+**over these replay leaves**, not arbitrary Par body syntax. For example,
+ordinary closed consumption followed by use of an unrestricted capture
+is not automatically a replay leaf of either kind. Shifted arguments
+still have the specified call-free `A;D` codeword-control shape; A is a
+shared independent Pure prefix-code parser. Independent multiple original
+captures, recursive headers for the parent-dependent adjacent method,
+general inverse translation, and general class separation remain open.

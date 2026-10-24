@@ -13,9 +13,9 @@ open CodewordReplay (power)
 shifted recursive call inside the latter's general argument. -/
 def parts : List (Part header) := [
   ⟨true,.alt (.seq (.chr '@') (.seq (.replay 1 (.seq (.param 0) (.seq (.chr ':') (.call 0 two))))
-      (.seq (.chr '?') (.param 0)))) (.seq (.chr '!') (.param 0))⟩,
-  ⟨false,.seq (.chr '~') (.seq (.call 0 dynamic) (.seq (.chr '?') (.param 0)))⟩,
-  ⟨false,.seq (.chr 'Z') (.param 0)⟩]
+      (.seq (.chr '?') (.param 0)))) (.seq (.chr '!') (.param 0)),false⟩,
+  ⟨false,.seq (.chr '~') (.seq (.call 0 dynamic) (.seq (.chr '?') (.param 0))),false⟩,
+  ⟨false,.seq (.chr 'Z') (.param 0),false⟩]
 
 /-- User zero chooses between shifted and ordinary replay. Its first test
 negates a whole ordinary replay leaf at the capture's origin. User two
@@ -72,7 +72,7 @@ theorem failed_argument :
 /-- Empty-loop general arguments stay undefined even when the source
 callee is a negative plan. This is independent of either recursion table. -/
 def negativeSpecs : List Spec := [⟨false,.notP (.leaf 0)⟩]
-def negativeParts : List (Part header) := [⟨false,.eps⟩]
+def negativeParts : List (Part header) := [⟨false,.eps,false⟩]
 
 theorem undefined_argument (x : List Char) (T U V : ClockFreezing.Table) (E F : List (List Char)) (p : Nat) :
     evV (source header negativeParts negativeSpecs) x .callByValuePar T E

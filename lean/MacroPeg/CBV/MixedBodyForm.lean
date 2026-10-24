@@ -1,0 +1,161 @@
+import MacroPeg.CBV.MixedBodyLeaves
+
+namespace Shallot.MacroPeg.CBV.MixedBodyForm
+open AdjacentCallsiteRecursive (Header)
+open MixedAdjacentRecursive (Body)
+open MixedOriginControl (Part Spec render expand)
+open MixedBodyLeaves (raw lookup appendBody)
+open ReplayControlFusion (Plan)
+open ContinuationFamily (shift)
+open ContinuationPlan (sem sequence bind)
+variable {H : Header}
+
+structure Form (H : Header) where
+  leaves : List (Part H)
+  plan : Plan
+  bounded : plan.All (fun i => i<leaves.length)
+  positive : 0<leaves.length
+
+def Form.syntax (f : Form H) : Body H := MixedBodyLeaves.control f.leaves f.plan
+
+def atom (r : Part H) : Form H := ⟨[r],.leaf 0,by simp [Plan.All],by simp⟩
+def neg (f : Form H) : Form H := ⟨f.leaves,.notP f.plan,f.bounded,f.positive⟩
+
+structure Pair (H : Header) where
+  leaves : List (Part H)
+  left : Plan
+  right : Plan
+  left_bound : left.All (fun i => i<leaves.length)
+  right_bound : right.All (fun i => i<leaves.length)
+  positive : 0<leaves.length
+
+def join (f g : Form H) : Pair H where
+  leaves := f.leaves++g.leaves
+  left := f.plan
+  right := shift f.leaves.length g.plan
+  left_bound := Plan.all_imp (fun i hi => by simp only [List.length_append]; omega) _ f.bounded
+  right_bound := ContinuationFamily.shift_all _ _ _ (by simp) _ g.bounded
+  positive := by simp only [List.length_append]; have := f.positive; omega
+
+def choice (f g : Form H) : Form H :=
+  let j := join f g
+  ⟨j.leaves,.alt j.left j.right,⟨j.left_bound,j.right_bound⟩,j.positive⟩
+
+def compose (f g : Form H) : Form H :=
+  let j := join f g
+  let C := MixedBodyLeaves.control j.leaves j.right
+  ⟨j.leaves++MixedBodyLeaves.copies j.leaves j.left C,bind j.leaves.length j.left j.right,
+    ConsumingPlanOutputs.bind_bound _ _ _ (by simp [MixedBodyLeaves.copies_length])
+      (by simp [MixedBodyLeaves.copies_length]) _
+      (Plan.all_imp (fun i hi => by simp only [List.length_append,MixedBodyLeaves.copies_length]; omega) _ j.right_bound)
+      _ j.left_bound,
+    by simp only [List.length_append,MixedBodyLeaves.copies_length]; have := j.positive; omega⟩
+
+def repeatThen (f : Form H) (B : Body H) (g : Form H) : Form H :=
+  let j := join f g
+  let n := j.leaves.length
+  ⟨MixedBodyLeaves.layout j.leaves j.left j.right B,MixedBodyLeaves.plan j.leaves j.left j.right,
+    by
+      have hlen : (MixedBodyLeaves.layout j.leaves j.left j.right B).length=3*n := by
+        simp only [MixedBodyLeaves.layout,List.length_append,MixedBodyLeaves.copies_length]; omega
+      rw [hlen]
+      have hp := j.positive
+      have hQ := Plan.all_imp (fun i (hi : i<n) => show i<3*n by omega) _ j.right_bound
+      have hzero : (Plan.leaf 0).All (fun i => i<3*n) := by change 0<3*n; omega
+      have htest := ConsumingPlanOutputs.bind_bound n n (3*n) (by omega) (by omega) (.leaf 0) hzero _ j.left_bound
+      have htail := ConsumingPlanOutputs.bind_bound n (2*n) (3*n) (by omega) (by omega) (.leaf 0) hzero _ j.left_bound
+      exact ⟨⟨htest,htail⟩,htest,hQ⟩,
+    by simp only [MixedBodyLeaves.layout,List.length_append,MixedBodyLeaves.copies_length]; have := j.positive; omega⟩
+
+theorem expand_congr (L R : Nat → Body H) : ∀ P, P.All (fun i => L i=R i) → MixedOriginControl.expand L P=MixedOriginControl.expand R P
+  | .leaf _, h => h
+  | .alt a b, h | .guard a b, h => by simp only [MixedOriginControl.expand,expand_congr L R a h.1,expand_congr L R b h.2]
+  | .notP a, h => by simp only [MixedOriginControl.expand,expand_congr L R a h]
+
+theorem expand_shift (L : Nat → Body H) (offset : Nat) :
+    ∀ P, MixedOriginControl.expand L (shift offset P)=MixedOriginControl.expand (fun i => L (offset+i)) P
+  | .leaf _ => rfl
+  | .alt a b | .guard a b => by simp only [shift,expand,expand_shift L offset a,expand_shift L offset b]
+  | .notP a => by simp only [shift,expand,expand_shift L offset a]
+
+theorem join_left (f g : Form H) : MixedBodyLeaves.control (join f g).leaves (join f g).left=f.syntax := by
+  apply expand_congr
+  exact Plan.all_imp (fun i hi => MixedBodyLeaves.lookup_prefix _ _ i hi) _ f.bounded
+
+theorem join_right (f g : Form H) : MixedBodyLeaves.control (join f g).leaves (join f g).right=g.syntax := by
+  change expand _ (shift _ g.plan)=_
+  rw [expand_shift]
+  apply expand_congr
+  apply Plan.all_imp _ _ g.bounded
+  intro i hi
+  simp [lookup,join,List.getElem?_append_right (by omega : f.leaves.length≤f.leaves.length+i)]
+
+theorem atom_syntax (r : Part H) : (atom r).syntax=raw r := rfl
+
+theorem choice_syntax (f g : Form H) : (choice f g).syntax=.alt f.syntax g.syntax := by
+  change MixedAdjacentRecursive.Body.alt (MixedBodyLeaves.control (join f g).leaves (join f g).left)
+    (MixedBodyLeaves.control (join f g).leaves (join f g).right)=_
+  rw [join_left,join_right]
+
+theorem neg_syntax (f : Form H) : (neg f).syntax=.notP f.syntax := rfl
+
+/-- Seq of arbitrary finite control plans, including zero-consuming negative
+outputs, with selective continuation copies. -/
+theorem compose_eval (H : Header) (ps : List Spec) (f h : Form H)
+    (g : MGrammar) (x : List Char) (s : Strategy) (T : ClockFreezing.Table) (E : List (List Char)) (p : Nat) :
+    evV g x s T E (render H ps (compose f h).syntax) p=
+    evV g x s T E (.seq (render H ps f.syntax) (render H ps h.syntax)) p := by
+  let j := join f h
+  let C := MixedBodyLeaves.control j.leaves j.right
+  let L := fun i q => evV g x s T E (render H ps (lookup j.leaves i)) q
+  let R := fun i q => evV g x s T E
+    (render H ps (lookup (j.leaves++MixedBodyLeaves.copies j.leaves j.left C) i)) q
+  have hOrig : ∀ i, i<j.leaves.length → ∀ q, R i q=L i q := by
+    intro i hi q
+    dsimp only [R,L]
+    rw [MixedBodyLeaves.lookup_prefix _ _ i hi]
+  have ht : ∀ i, i∈ConsumingPlanOutputs.outputs j.left → i<j.leaves.length → ∀ q,
+      R (j.leaves.length+i) q=sequence (L i) (sem L j.right) q := by
+    intro i ho hi q
+    dsimp only [R,L]
+    rw [MixedBodyLeaves.lookup_mapped _ _ _ _ i ho hi]
+    have hlookup : lookup j.leaves i=raw j.leaves[i] := by simp [lookup,List.getElem?_eq_getElem hi]
+    rw [hlookup,MixedBodyLeaves.append_eval]
+    apply congrArg (fun K => sequence (fun q => evV g x s T E (render H ps (raw j.leaves[i])) q) K q)
+    funext q
+    exact MixedBodyLeaves.control_eval H ps j.leaves j.right g x s T E q
+  have he := ConsumingPlanOutputs.bind_correct j.leaves.length j.leaves.length L R hOrig
+    j.right j.right_bound j.left j.left_bound ht p
+  change evV g x s T E (render H ps
+    (MixedBodyLeaves.control (j.leaves++MixedBodyLeaves.copies j.leaves j.left C) (bind j.leaves.length j.left j.right))) p=_
+  rw [MixedBodyLeaves.control_eval]
+  change sem R (bind j.leaves.length j.left j.right) p=_
+  rw [he]
+  have hl := MixedBodyLeaves.control_eval H ps j.leaves j.left g x s T E
+  have hr := MixedBodyLeaves.control_eval H ps j.leaves j.right g x s T E
+  have ha : sem L j.left=(fun q => evV g x s T E (render H ps f.syntax) q) := by
+    funext q
+    rw [←hl q,show MixedBodyLeaves.control j.leaves j.left=f.syntax from join_left f h]
+  have hb : sem L j.right=(fun q => evV g x s T E (render H ps h.syntax) q) := by
+    funext q
+    rw [←hr q,show MixedBodyLeaves.control j.leaves j.right=h.syntax from join_right f h]
+  rw [ha,hb]
+  rfl
+
+theorem repeatThen_eval (H : Header) (ps : List Spec) (f h : Form H)
+    (B : Body H) (hc : LeafContinuation.Consumer f.plan) (g : MGrammar) (x : List Char)
+    (s : Strategy) (hs : s≠.callByName) (T : ClockFreezing.Table) (hT : SoundTV g x s T)
+    (E : List (List Char)) (p : Nat) (hp : p≤x.length) :
+    evV g x s T E (.seq (.star (.seq (render H ps f.syntax) (render H ps B)))
+      (render H ps h.syntax)) p=
+    evV g x s T E (render H ps (repeatThen f B h).syntax) p := by
+  have he := MixedBodyLeaves.body_eq H ps (join f h).leaves (join f h).left (join f h).right B
+    hc (join f h).left_bound (join f h).right_bound g x s hs T hT E p hp
+  rw [join_left,join_right] at he
+  change _=evV g x s T E (render H ps
+    (MixedBodyLeaves.control (MixedBodyLeaves.layout (join f h).leaves (join f h).left (join f h).right B)
+      (MixedBodyLeaves.plan (join f h).leaves (join f h).left (join f h).right))) p
+  rw [MixedBodyLeaves.control,MixedBodyLeaves.render_expand]
+  exact he
+
+end Shallot.MacroPeg.CBV.MixedBodyForm

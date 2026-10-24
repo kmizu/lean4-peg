@@ -43,7 +43,7 @@ theorem source_syntax (H : Header) (specs : List Spec) :
 def originalLeaf (H : Header) (parts : List (Part H)) (i : Nat) : MExp :=
   match parts[i]? with
   | none => MExp.failAlways
-  | some r => .seq (MixedAdjacentRecursive.sourcePrefix H r.split) (sourceExpr r.body)
+  | some r => if r.stuck then .star .eps else .seq (MixedAdjacentRecursive.sourcePrefix H r.split) (sourceExpr r.body)
 def original (H : Header) (parts : List (Part H)) (specs : List Spec) : MGrammar :=
   ⟨⟨1,.param 0⟩::specs.map (fun s => ⟨1,s.plan.exp (originalLeaf H parts)⟩)⟩
 

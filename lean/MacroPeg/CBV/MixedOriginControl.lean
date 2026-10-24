@@ -7,10 +7,19 @@ namespace Shallot.MacroPeg.CBV.MixedOriginControl
 open AdjacentCallsiteRecursive (Header Argument argument argument_syntax)
 open MixedAdjacentRecursive (Body sourcePrefix)
 open ReplayControlFusion (Plan)
-abbrev Part := MixedAdjacentRecursive.Spec
+structure Part (H : Header) where
+  split : Bool
+  body : Body H
+  /-- A compiler-generated empty-progress loop, independent of capture. -/
+  stuck : Bool := false
 structure Spec where
   split : Bool
   plan : Plan
+
+theorem stuck_eval (g : MGrammar) (x : List Char) (s : Strategy) (T : ClockFreezing.Table)
+    (E : List (List Char)) (p : Nat) : evV g x s T E (.star .eps) p=none := by
+  change evStar (fun q => some (some q)) p=none
+  exact evStar_stuck rfl (by omega)
 
 def embed (H : Header) : MExp → Body H
   | .seq a b => .seq (embed H a) (embed H b)
@@ -25,7 +34,7 @@ def embed (H : Header) : MExp → Body H
   | .lit w => .lit w
   | _ => .notP .eps
 
-theorem embed_exact (H : Header) (parts : List (Part H)) (mode : Bool) :
+theorem embed_exact (H : Header) (parts : List (MixedAdjacentRecursive.Spec H)) (mode : Bool) :
     ∀ e, HelperArgument.Syntax 0 e → MixedAdjacentRecursive.render H parts true mode (embed H e)=e
   | .seq a b, h | .alt a b, h => by simp only [embed,MixedAdjacentRecursive.render,embed_exact H parts mode a h.1,embed_exact H parts mode b h.2]
   | .star a, h | .notP a, h => by simp only [embed,MixedAdjacentRecursive.render,embed_exact H parts mode a h]
@@ -39,7 +48,7 @@ def expand {H : Header} (L : Nat → Body H) : Plan → Body H
   | .notP a => .notP (expand L a)
   | .guard a b => .seq (.notP (.notP (expand L a))) (expand L b)
 
-theorem expand_render (H : Header) (parts : List (Part H)) (par mode : Bool) (L : Nat → Body H) :
+theorem expand_render (H : Header) (parts : List (MixedAdjacentRecursive.Spec H)) (par mode : Bool) (L : Nat → Body H) :
     ∀ P, MixedAdjacentRecursive.render H parts par mode (expand L P)=
       P.exp (fun i => MixedAdjacentRecursive.render H parts par mode (L i))
   | .leaf _ => rfl
@@ -50,7 +59,12 @@ theorem expand_render (H : Header) (parts : List (Part H)) (par mode : Bool) (L 
 def codeCall (H : Header) (parts : List (Part H)) (a : Argument H) (j : Nat) : Body H :=
   match parts[j]? with
   | none => .notP .eps
-  | some r => if r.split then .call j a else .replay j (embed H (argument H a))
+  | some r => if r.stuck then .star .eps else if r.split then .call j a else .replay j (embed H (argument H a))
+
+def replayCall (H : Header) (parts : List (Part H)) (a : Body H) (j : Nat) : Body H :=
+  match parts[j]? with
+  | none => .notP .eps
+  | some r => if r.stuck then .star .eps else .replay j a
 
 def normalize (H : Header) (parts : List (Part H)) (specs : List Spec) : Body H → Body H
   | .call i a => match specs[i]? with
@@ -62,7 +76,7 @@ def normalize (H : Header) (parts : List (Part H)) (specs : List Spec) : Body H 
     | none => .notP .eps
     | some s => if s.split then .notP .eps else
         .seq (.notP (.notP (normalize H parts specs a)))
-          (expand (fun j => .replay j (normalize H parts specs a)) s.plan)
+          (expand (replayCall H parts (normalize H parts specs a)) s.plan)
   | .seq a b => .seq (normalize H parts specs a) (normalize H parts specs b)
   | .alt a b => .alt (normalize H parts specs a) (normalize H parts specs b)
   | .star a => .star (normalize H parts specs a)
@@ -95,10 +109,10 @@ def render (H : Header) (specs : List Spec) : Body H → MExp
 def sourceLeaf (H : Header) (parts : List (Part H)) (specs : List Spec) (i : Nat) : MExp :=
   match parts[i]? with
   | none => MExp.failAlways
-  | some r => .seq (sourcePrefix H r.split) (render H specs r.body)
+  | some r => if r.stuck then .star .eps else .seq (sourcePrefix H r.split) (render H specs r.body)
 def source (H : Header) (parts : List (Part H)) (specs : List Spec) : MGrammar :=
   ⟨⟨1,.param 0⟩::specs.map (fun s => ⟨1,s.plan.exp (sourceLeaf H parts specs)⟩)⟩
-def coreUsers (H : Header) (parts : List (Part H)) (specs : List Spec) : List (Part H) :=
+def coreUsers (H : Header) (parts : List (Part H)) (specs : List Spec) : List (MixedAdjacentRecursive.Spec H) :=
   parts.map (fun r => ⟨r.split,normalize H parts specs r.body⟩)
 abbrev core (H : Header) (parts : List (Part H)) (specs : List Spec) :=
   MixedAdjacentRecursive.source H (coreUsers H parts specs)
@@ -111,7 +125,7 @@ abbrev targetRender (H : Header) (parts : List (Part H)) (specs : List Spec) (e 
 
 /-- General captures enter ordinary leaves; codeword captures may enter both. -/
 def Valid (H : Header) (parts : List (Part H)) (specs : List Spec) : Prop :=
-  ∀ s∈specs, s.plan.All (fun j => ∃ r, parts[j]?=some r ∧ (s.split=false → r.split=false))
+  ∀ s∈specs, s.plan.All (fun j => ∃ r, parts[j]?=some r ∧ (s.split=false → r.split=false ∨ r.stuck=true))
 
 theorem render_firstOrder (H : Header) (specs : List Spec) : ∀ e, (render H specs e).FirstOrder
   | .call i a => by
@@ -149,7 +163,10 @@ theorem source_firstOrder (H : Header) (parts : List (Part H)) (specs : List Spe
     unfold sourceLeaf
     cases parts[j]? with
     | none => trivial
-    | some r => exact ⟨HelperArgument.firstOrder 0 _ (prefix_syntax H r.split),render_firstOrder H specs r.body⟩
+    | some r =>
+      cases hr : r.stuck <;> simp only [hr,Bool.false_eq_true,ite_false,ite_true]
+      · exact ⟨HelperArgument.firstOrder 0 _ (prefix_syntax H r.split),render_firstOrder H specs r.body⟩
+      · trivial
 
 theorem source_rule (H : Header) (parts : List (Part H)) (specs : List Spec) (i : Nat) (s : Spec)
     (hr : specs[i]?=some s) : ruleAtM (source H parts specs).rules (i+1)=some ⟨1,s.plan.exp (sourceLeaf H parts specs)⟩ := by
@@ -164,7 +181,8 @@ theorem core_rule (H : Header) (parts : List (Part H)) (specs : List Spec) (i : 
 
 abbrev table (g : MGrammar) (x : List Char) (k : Nat) := tblV g x .callByValuePar k
 def leafRows (H : Header) (parts : List (Part H)) (specs : List Spec) (x : List Char) (k : Nat)
-    (w : List Char) (p j : Nat) : Res := valAt (table (core H parts specs) x k (j+1) [w]) p
+    (w : List Char) (p j : Nat) : Res :=
+  if (parts[j]?.map Part.stuck)=some true then none else valAt (table (core H parts specs) x k (j+1) [w]) p
 def Rows (H : Header) (parts : List (Part H)) (specs : List Spec) (x : List Char) (k : Nat) : Prop :=
   ∀ i s, specs[i]?=some s → ∀ w p, p≤x.length →
     valAt (table (source H parts specs) x k (i+1) [w]) p = s.plan.eval (leafRows H parts specs x k w p) p
@@ -176,36 +194,45 @@ theorem codeCall_eval (H : Header) (parts : List (Part H)) (specs : List Spec) (
     evV (core H parts specs) x .callByValuePar (table (core H parts specs) x k) E
       (MixedAdjacentRecursive.render H (coreUsers H parts specs) true mode (codeCall H parts a j)) p=
       leafRows H parts specs x k (pre x p q) p j := by
-  simp only [codeCall,hr]
-  cases hs : r.split <;> simp only [Bool.false_eq_true,ite_false,ite_true,MixedAdjacentRecursive.render,
-    core_lookup,hr,Option.map_some,hs,ite_false,ite_true]
-  · rw [embed_exact H _ mode _ (argument_syntax H a),evV_call_par (core_rule H parts specs j r hr) rfl (by decide)]
-    simp only [evParArgs,ha,leafRows]
-  · rw [evV_call_par (core_rule H parts specs j r hr) rfl (by decide)]
-    simp only [evParArgs,ha,leafRows]
+  simp only [codeCall,hr,leafRows,Option.map_some]
+  cases hd : r.stuck <;> simp only [Bool.false_eq_true,ite_false,ite_true,Option.some.injEq]
+  case true => exact stuck_eval _ _ _ _ _ _
+  case false =>
+    cases hs : r.split <;> simp only [Bool.false_eq_true,ite_false,ite_true,MixedAdjacentRecursive.render,
+      core_lookup,hr,Option.map_some,hs,ite_false,ite_true]
+    · rw [embed_exact H _ mode _ (argument_syntax H a),evV_call_par (core_rule H parts specs j r hr) rfl (by decide)]
+      simp only [evParArgs,ha]
+    · rw [evV_call_par (core_rule H parts specs j r hr) rfl (by decide)]
+      simp only [evParArgs,ha]
 
 theorem replayCall_eval (H : Header) (parts : List (Part H)) (specs : List Spec) (x : List Char) (k : Nat)
     (E : List (List Char)) (a : Body H) (mode : Bool) (p q j : Nat) (r : Part H)
-    (hr : parts[j]?=some r) (hs : r.split=false)
+    (hr : parts[j]?=some r) (hs : r.split=false ∨ r.stuck=true)
     (ha : evV (core H parts specs) x .callByValuePar (table (core H parts specs) x k)
       E (coreRender H parts specs mode a) p=some (some q)) :
     evV (core H parts specs) x .callByValuePar (table (core H parts specs) x k) E
-      (MixedAdjacentRecursive.render H (coreUsers H parts specs) true mode (.replay j (normalize H parts specs a))) p=
+      (MixedAdjacentRecursive.render H (coreUsers H parts specs) true mode (replayCall H parts (normalize H parts specs a) j)) p=
       leafRows H parts specs x k (pre x p q) p j := by
-  simp only [MixedAdjacentRecursive.render,core_lookup,hr,Option.map_some,hs,Bool.false_eq_true,ite_false]
-  rw [evV_call_par (core_rule H parts specs j r hr) rfl (by decide)]
-  simp only [evParArgs,ha,leafRows]
+  simp only [replayCall,hr,leafRows,Option.map_some]
+  cases hd : r.stuck
+  · have hk : r.split=false := hs.resolve_right (by simp [hd])
+    simp only [Bool.false_eq_true,ite_false,Option.some.injEq,
+      MixedAdjacentRecursive.render,core_lookup,hr,Option.map_some,hk,ite_false]
+    rw [evV_call_par (core_rule H parts specs j r hr) rfl (by decide)]
+    simp only [evParArgs,ha]
+  · simp only [ite_true,MixedAdjacentRecursive.render]
+    exact stuck_eval _ _ _ _ _ _
 
 /-- Evaluate the argument before control expansion, including when every
 leaf of the plan is negative. Failed or undefined arguments cannot be
 turned into successful predicates by normalization. -/
 theorem call_plan_eq (g h : MGrammar) (x : List Char) (T U : ClockFreezing.Table)
-    (i : Nat) (P : Plan) (L : Nat → MExp) (E : List (List Char)) (a b : MExp) (p : Nat)
+    (i : Nat) (P : Plan) (L : Nat → MExp) (R : List Char → Nat → Res) (E : List (List Char)) (a b : MExp) (p : Nat)
     (hr : ∃ body, ruleAtM g.rules i=some ⟨1,body⟩)
     (harg : evV g x .callByValuePar T E a p=evV h x .callByValuePar U E b p)
-    (hRows : ∀ w, valAt (T i [w]) p=P.eval (fun j => valAt (U (j+1) [w]) p) p)
+    (hRows : ∀ w, valAt (T i [w]) p=P.eval (R w) p)
     (hLeaf : ∀ q, evV h x .callByValuePar U E b p=some (some q) →
-      P.All (fun j => evV h x .callByValuePar U E (L j) p=valAt (U (j+1) [pre x p q]) p)) :
+      P.All (fun j => evV h x .callByValuePar U E (L j) p=R (pre x p q) j)) :
     evV g x .callByValuePar T E (.call i [a]) p=
       evV h x .callByValuePar U E (.seq (.andP b) (P.exp L)) p := by
   obtain ⟨body,hr⟩ := hr
@@ -233,7 +260,7 @@ theorem coreRender_replay (H : Header) (parts : List (Part H)) (specs : List Spe
     (mode : Bool) (i : Nat) (s : Spec) (hr : specs[i]?=some s) (hs : s.split=false) (a : Body H) :
     coreRender H parts specs mode (.replay i a)=
       .seq (.andP (coreRender H parts specs mode a)) (s.plan.exp (fun j =>
-        MixedAdjacentRecursive.render H (coreUsers H parts specs) true mode (.replay j (normalize H parts specs a)))) := by
+        MixedAdjacentRecursive.render H (coreUsers H parts specs) true mode (replayCall H parts (normalize H parts specs a) j))) := by
   simp only [coreRender,normalize,hr,hs,Bool.false_eq_true,ite_false,MixedAdjacentRecursive.render]
   rw [expand_render]
   rfl
@@ -323,20 +350,23 @@ theorem tables_rows (H : Header) (parts : List (Part H)) (specs : List Spec)
     apply Plan.all_imp (t:=s.plan) _ (hValid s (List.mem_of_getElem? hr))
     intro j hj
     obtain ⟨r,hrj,_⟩ := hj
-    simp only [sourceLeaf,hrj,leafRows]
-    rw [valAt_tblV_succ (core_rule H parts specs j r hrj) [w] hp]
-    have heq := LastCodewordGrammar.syntax_eval (source H parts specs) (core H parts specs)
-      x .callByValuePar .callByValuePar (table (source H parts specs) x k) (table (core H parts specs) x k)
-      (tblV_ok _ _ _ k) [w] _ (prefix_syntax H r.split) p hp
-    cases hv : evV (source H parts specs) x .callByValuePar (table (source H parts specs) x k)
-        [w] (sourcePrefix H r.split) p with
-    | none => rw [evV_seq_none hv,evV_seq_none (heq.symm.trans hv)]
-    | some v => cases v with
-      | none => rw [evV_seq_fail hv,evV_seq_fail (heq.symm.trans hv)]
-      | some q =>
-        rw [evV_seq_ok hv,evV_seq_ok (heq.symm.trans hv)]
-        exact evaluator_of_rows H parts specs hValid x k ih r.body r.split [w] q
-          (evV_ok (tblV_ok _ _ _ k) _ p hp q hv)
+    cases hd : r.stuck
+    · simp only [sourceLeaf,hrj,hd,Bool.false_eq_true,ite_false,leafRows,Option.map_some,
+        Bool.false_eq_true,Option.some.injEq,ite_false]
+      rw [valAt_tblV_succ (core_rule H parts specs j r hrj) [w] hp]
+      have heq := LastCodewordGrammar.syntax_eval (source H parts specs) (core H parts specs)
+        x .callByValuePar .callByValuePar (table (source H parts specs) x k) (table (core H parts specs) x k)
+        (tblV_ok _ _ _ k) [w] _ (prefix_syntax H r.split) p hp
+      cases hv : evV (source H parts specs) x .callByValuePar (table (source H parts specs) x k)
+          [w] (sourcePrefix H r.split) p with
+      | none => rw [evV_seq_none hv,evV_seq_none (heq.symm.trans hv)]
+      | some v => cases v with
+        | none => rw [evV_seq_fail hv,evV_seq_fail (heq.symm.trans hv)]
+        | some q =>
+          rw [evV_seq_ok hv,evV_seq_ok (heq.symm.trans hv)]
+          exact evaluator_of_rows H parts specs hValid x k ih r.body r.split [w] q
+            (evV_ok (tblV_ok _ _ _ k) _ p hp q hv)
+    · simp only [sourceLeaf,hrj,hd,ite_true,leafRows,Option.map_some,stuck_eval]
 
 theorem evaluator_eq (H : Header) (parts : List (Part H)) (specs : List Spec)
     (hValid : Valid H parts specs) (x : List Char) (k : Nat) (e : Body H) (mode : Bool)
