@@ -97,4 +97,17 @@ theorem look_sequence_congr (g g' : MGrammar) (x : List Char) (s s' : Strategy)
     | none => rfl
     | some q => exact hb
 
+/-- Preserve both caller-origin and capture-endpoint tests before entering
+an arbitrary unary Par body. Neither test must be pure or terminating. -/
+theorem window_call_eq (g : MGrammar) (x : List Char) (T : ClockFreezing.Table)
+    (E : List (List Char)) (i p : Nat) (body a before after : MExp)
+    (hr : ruleAtM g.rules i=some ⟨1,body⟩) :
+    evV g x .callByValuePar T E
+      (.call i [.seq (look before) (.seq a (look after))]) p=
+    evV g x .callByValuePar T E
+      (.seq (look before) (.seq (look (.seq a after)) (.call i [a]))) p := by
+  rw [call_eq g x T E i p body (.seq a (look after)) before hr]
+  exact look_sequence_congr g g x .callByValuePar .callByValuePar T T E E
+    before before _ _ p rfl (suffix_call_eq g x T E i p body a after hr)
+
 end Shallot.MacroPeg.CBV.ArgumentGuard

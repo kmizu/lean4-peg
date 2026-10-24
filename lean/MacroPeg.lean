@@ -588,3 +588,5 @@ import MacroPeg.CBV.FragmentMixedCompiler
 import MacroPeg.CBV.FragmentMixedExamples
 
 import MacroPeg.CBV.FragmentDirectExamples
+
+import MacroPeg.CBV.FragmentWindowExamples

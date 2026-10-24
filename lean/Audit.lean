@@ -18797,3 +18797,43 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FragmentDirectExamples.selected_general_argument
+
+-- Actual fragment arguments with caller-origin and capture-endpoint tests.
+
+/-- info: 'Shallot.MacroPeg.CBV.ArgumentGuard.window_call_eq' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ArgumentGuard.window_call_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.guarded_source_syntax' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.guarded_source_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.guarded_call_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.guarded_call_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentWindowExamples.actual_guarded_argument' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentWindowExamples.actual_guarded_argument
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentWindowExamples.guarded_mutual_returns' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentWindowExamples.guarded_mutual_returns
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentWindowExamples.endpoint_parent_dependency' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentWindowExamples.endpoint_parent_dependency
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentWindowExamples.argument_order' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentWindowExamples.argument_order
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentWindowExamples.endpoint_choice_commit' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentWindowExamples.endpoint_choice_commit

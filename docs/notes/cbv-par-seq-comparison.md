@@ -7884,3 +7884,50 @@ Capture-independent consuming prefixes, unrestricted shifted captures, and
 independent multiple source captures remain outside the construction. The
 shifted branch still uses fixed A=a*;# and a-only consuming H. General
 Par/Seq equality or separation remains unresolved.
+
+### Caller-dependent tests at both ends of a fragment capture
+
+`ArgumentGuard.window_call_eq` combines the origin and endpoint test
+normalizations for any actual unary Par rule, arbitrary table/environment,
+and arbitrary argument/test parsers. It moves an argument
+`&before; a; &after` to caller-origin `&before; &(a; after); call[a]`.
+The second preview executes `after` at the endpoint actually selected by a,
+then restores the caller origin. No purity, totality, successful-capture,
+or input-shape assumption is needed. Failure and undefinedness keep their
+original order, and neither preview contributes to the held value.
+
+`FragmentMixedRecursive` now accepts the four surface templates
+`call i [before,G,H,after]`. These denote **one** real source argument
+`&render(before); ((A;&(A;render(G)))*; fragmentRender(H)); &render(after)`;
+`guarded_source_syntax` proves that exact source syntax. The target performs
+the origin and actual-endpoint previews before using the existing mixed
+bare/shifted fragment entry. Unknown users still reject. Three-template and
+five-or-more-template calls remain unsupported. Existing zero/one/two-template
+calls retain their meaning.
+
+`guarded_call_eq` preserves the complete partial result at every ordinary
+clock, including zero. Current-clock structural induction discharges both
+test correspondences, fragment G/H correspondences, and arbitrary recursive
+calls inside tests. Previous-clock induction handles callee continuations.
+The existing nested-body compiler's source/core table equality and final
+observation/language preservation apply unchanged; no caller-supplied guard,
+body, table, continuation, or semantic shape oracle is added.
+
+Kernel examples use old parent a in both tests of a child aaa#a. Its endpoint
+test consumes parent a and probes an actual recursive user; that lookahead
+restores the selected endpoint before capture finishes. The child body uses
+mixed bare/shifted iterations, captures a fresh aa grandchild with its own
+parent-dependent guards, and restores both parents' complete values. Changing
+the old parent to aa makes the endpoint check fail on the same input even
+though both origin tests succeed. Origin divergence precedes a failed
+capture, endpoint divergence precedes a rejected body, and a finite endpoint
+failure remains finite even at clock zero and before a negative body.
+A successful aa alternative cannot be reopened as a after its endpoint test
+fails; explicitly choosing a would accept that input.
+
+This extends the actual argument syntax within the consuming-fragment
+compiler, including parent-dependent recursive checks at both endpoints.
+It does not resolve capture-dependent processing after an arbitrary consuming
+prefix or arbitrary consuming shifted arguments. A remains a*;#, H remains
+a-only consuming syntax, and logical users still have one source capture.
+General Par/Seq equality or separation remains unresolved.

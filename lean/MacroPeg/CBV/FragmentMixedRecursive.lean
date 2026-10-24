@@ -41,6 +41,30 @@ def call (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) (i : Nat
     else .seq (PartialCodewordCapture.look (argument G H))
       (P.exp (fun j => entry kinds n j G H))
 
+/-- Four templates describe before, fragment controls G/H, and after.
+The source has one actual capture, guarded at its real two endpoints. -/
+def guardedCall (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool)
+    (i : Nat) (before G H after : MExp) : MExp :=
+  match plans[i]? with
+  | none => MExp.failAlways
+  | some _ => if par then
+      .call i [.seq (PartialCodewordCapture.look before) (.seq (argument G H) (PartialCodewordCapture.look after))]
+    else .seq (PartialCodewordCapture.look before) (.seq (PartialCodewordCapture.look (.seq (argument G H) after))
+      (call kinds n plans false i G H))
+
+private theorem guarded_firstOrder (kinds : List Bool) (n : Nat) (plans : List Plan)
+    (par : Bool) (i : Nat) (before G H after : MExp)
+    (hb : before.FirstOrder) (hG : G.FirstOrder) (hH : H.FirstOrder) (ha : after.FirstOrder)
+    (hc : (call kinds n plans false i G H).FirstOrder) :
+    (guardedCall kinds n plans par i before G H after).FirstOrder := by
+  unfold guardedCall
+  cases plans[i]? with
+  | none => trivial
+  | some P =>
+    cases par
+    · exact ⟨hb,⟨⟨⟨scanner_firstOrder,scanner_firstOrder,hG⟩,hH⟩,ha⟩,hc⟩
+    · exact ⟨⟨hb,⟨⟨scanner_firstOrder,scanner_firstOrder,hG⟩,hH⟩,ha⟩,True.intro⟩
+
 /-- Direct argument fusion is available only when every source body query
 and output uses ordinary replay or the capture-independent stuck leaf. -/
 def replayOnly (kinds : List Bool) (n : Nat) : Plan → Bool
@@ -90,12 +114,16 @@ private theorem direct_firstOrder (n : Nat) (plans : List Plan) (par : Bool) (i 
 
 /-- In fragment mode only a-consuming syntax is generated. Tests switch
 back to normal mode so they may inspect parents or invoke recursive users.
-The second template of a normal call describes H itself, not its star test. -/
+The second template of a two-template normal call describes H itself,
+not its star test. Four-template calls also carry origin/endpoint tests. -/
 def render (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) : Bool → MExp → MExp
   | false,.call i [] => call kinds n plans par i .eps .eps
   | false,.call i [G] => if eligible kinds n plans i then directCall n plans par i (render kinds n plans par false G)
     else call kinds n plans par i (render kinds n plans par false G) .eps
   | false,.call i [G,H] => call kinds n plans par i (render kinds n plans par false G) (render kinds n plans par true H)
+  | false,.call i [before,G,H,after] => guardedCall kinds n plans par i
+      (render kinds n plans par false before) (render kinds n plans par false G)
+      (render kinds n plans par true H) (render kinds n plans par false after)
   | f,.seq a b => .seq (render kinds n plans par f a) (render kinds n plans par f b)
   | f,.alt a b => .alt (render kinds n plans par f a) (render kinds n plans par f b)
   | f,.star a => .star (render kinds n plans par f a)
@@ -127,6 +155,11 @@ theorem render_firstOrder (kinds : List Bool) (n : Nat) (plans : List Plan) (par
       · exact call_firstOrder kinds n plans par i _ .eps (render_firstOrder kinds n plans par false G) True.intro
   | false,.call i [G,H] => call_firstOrder kinds n plans par i _ _
       (render_firstOrder kinds n plans par false G) (render_firstOrder kinds n plans par true H)
+  | false,.call i [before,G,H,after] => guarded_firstOrder kinds n plans par i _ _ _ _
+      (render_firstOrder kinds n plans par false before) (render_firstOrder kinds n plans par false G)
+      (render_firstOrder kinds n plans par true H) (render_firstOrder kinds n plans par false after)
+      (call_firstOrder kinds n plans false i _ _ (render_firstOrder kinds n plans par false G)
+        (render_firstOrder kinds n plans par true H))
   | f,.seq a b | f,.alt a b => by
       have ha := render_firstOrder kinds n plans par f a
       have hb := render_firstOrder kinds n plans par f b
@@ -143,7 +176,7 @@ theorem render_firstOrder (kinds : List Bool) (n : Nat) (plans : List Plan) (par
   | f,.eps => by cases f <;> trivial
   | false,.param _ | false,.any | false,.chr _ | false,.range _ _ | false,.lit _ => trivial
   | true,.param _ | true,.any | true,.range _ _ | true,.call _ _
-  | false,.call _ (_::_::_::_) => trivial
+  | false,.call _ [_,_,_] | false,.call _ (_::_::_::_::_::_) => trivial
   | f,.dbg _ | f,.lam _ _ | f,.callParam _ _ | f,.invoke _ _ _ => by cases f <;> trivial
 
 /-- The single argument of a replay-only source call is the actual parser
@@ -155,6 +188,16 @@ theorem direct_source_syntax (kinds : List Bool) (n : Nat) (plans : List Plan) (
   cases hr : plans[i]? with
   | none => simp [eligible,hr] at he
   | some P => rfl
+
+/-- The four surface templates become one actual unary Par argument,
+with the second test at the endpoint selected by G/H. -/
+theorem guarded_source_syntax (kinds : List Bool) (n : Nat) (plans : List Plan)
+    (i : Nat) (P : Plan) (hr : plans[i]?=some P) (before G H after : MExp) :
+    render kinds n plans true false (.call i [before,G,H,after])=
+      .call i [.seq (PartialCodewordCapture.look (render kinds n plans true false before))
+        (.seq (argument (render kinds n plans true false G) (render kinds n plans true true H))
+          (PartialCodewordCapture.look (render kinds n plans true false after)))] := by
+  simp only [render,guardedCall,hr,ite_true]
 
 theorem render_fragment_syntax (kinds : List Bool) (n : Nat) (plans : List Plan) (par : Bool) :
     ∀ e, FragmentConsumingSyntax.Syntax (render kinds n plans par true e)
@@ -547,6 +590,50 @@ private theorem call_eq (plans : List Plan) (tails : List Part) (hValid : Valid 
     exact ArgumentGuard.look_sequence_congr _ _ x .callByValuePar .callByValueSeq _ _ E E
       _ _ _ _ p harg hplans
 
+theorem guarded_call_eq (plans : List Plan) (tails : List Part) (hValid : Valid plans tails)
+    (x : List Char) (m i p : Nat) (E : List (List Char))
+    (before before' after after' G G' H H' : MExp) (hH' : FragmentConsumingSyntax.Syntax H') (hp : p≤x.length)
+    (hGFO : G.FirstOrder) (hHFO : H.FirstOrder)
+    (hG : ∀ q, q≤x.length → evV (source plans tails) x .callByValuePar
+        (tblV (source plans tails) x .callByValuePar m) E G q=
+      evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E G' q)
+    (hH : ∀ q, q≤x.length → evV (source plans tails) x .callByValuePar
+        (tblV (source plans tails) x .callByValuePar m) E H q=
+      evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E H' q)
+    (hbefore : evV (source plans tails) x .callByValuePar
+        (tblV (source plans tails) x .callByValuePar m) E before p=
+      evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E before' p)
+    (hafter : ∀ q, q≤x.length → evV (source plans tails) x .callByValuePar
+        (tblV (source plans tails) x .callByValuePar m) E after q=
+      evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E after' q)
+    (hprev : ∀ k, m=k+1 → ∀ e E p, p≤x.length →
+      evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar k) E (render (tails.map Prod.fst) tails.length plans true false e) p=
+      evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq k) E (render (tails.map Prod.fst) tails.length plans false false e) p) :
+    evV (source plans tails) x .callByValuePar (tblV (source plans tails) x .callByValuePar m) E (guardedCall (tails.map Prod.fst) tails.length plans true i before G H after) p=
+      evV (target plans tails) x .callByValueSeq (tblV (target plans tails) x .callByValueSeq m) E (guardedCall (tails.map Prod.fst) tails.length plans false i before' G' H' after') p := by
+  cases hr : plans[i]? with
+  | none => simp only [guardedCall,hr]; rfl
+  | some P =>
+    simp only [guardedCall,hr,Bool.false_eq_true,ite_false,ite_true]
+    rw [ArgumentGuard.window_call_eq _ x _ E i p _ (argument G H) before after
+      (source_rule plans tails i P hr)]
+    apply ArgumentGuard.look_sequence_congr _ _ x .callByValuePar .callByValueSeq _ _ E E
+      before before' _ _ p hbefore
+    apply ArgumentGuard.look_sequence_congr _ _ x .callByValuePar .callByValueSeq _ _ E E
+      (.seq (argument G H) after) (.seq (argument G' H') after') _ _ p
+    · have harg := FragmentConsumingEntry.argument_congr _ _ x .callByValuePar .callByValueSeq _ _
+        (tblV_ok _ _ _ m) E E G G' H H' hG hH p hp
+      cases hv : evV (source plans tails) x .callByValuePar
+          (tblV (source plans tails) x .callByValuePar m) E (argument G H) p with
+      | none => rw [evV_seq_none hv,evV_seq_none (harg.symm.trans hv)]
+      | some r => cases r with
+        | none => rw [evV_seq_fail hv,evV_seq_fail (harg.symm.trans hv)]
+        | some q =>
+          rw [evV_seq_ok hv,evV_seq_ok (harg.symm.trans hv)]
+          exact hafter q (evV_ok (tblV_ok _ _ _ m) _ p hp q hv)
+    · have hc := call_eq plans tails hValid x m i p E G G' H H' hH' hp hGFO hHFO hG hH hprev
+      simpa only [call,hr,ite_true] using hc
+
 private theorem render_seq (kinds : List Bool) (n : Nat) (plans : List Plan) (par f : Bool) (a b : MExp) :
     render kinds n plans par f (.seq a b)=.seq (render kinds n plans par f a) (render kinds n plans par f b) := by
   cases f <;> rfl
@@ -587,6 +674,13 @@ theorem evaluator_of_previous (plans : List Plan) (tails : List Part) (hValid : 
       (render_firstOrder _ _ _ true false G) (render_firstOrder _ _ _ true true H)
       (fun q hq => evaluator_of_previous plans tails hValid x m hprev false G E q hq)
       (fun q hq => evaluator_of_previous plans tails hValid x m hprev true H E q hq) hprev
+  | false,.call i [before,G,H,after], E, p, hp => guarded_call_eq plans tails hValid x m i p E _ _ _ _ _ _ _ _
+      (render_fragment_syntax (tails.map Prod.fst) tails.length plans false H) hp
+      (render_firstOrder _ _ _ true false G) (render_firstOrder _ _ _ true true H)
+      (fun q hq => evaluator_of_previous plans tails hValid x m hprev false G E q hq)
+      (fun q hq => evaluator_of_previous plans tails hValid x m hprev true H E q hq)
+      (evaluator_of_previous plans tails hValid x m hprev false before E p hp)
+      (fun q hq => evaluator_of_previous plans tails hValid x m hprev false after E q hq) hprev
   | f,.seq a b, E, p, hp => by
     have hh := evaluator_of_previous plans tails hValid x m hprev f a E p hp
     simp only [render_seq]
@@ -623,7 +717,7 @@ theorem evaluator_of_previous (plans : List Plan) (tails : List Part) (hValid : 
     · rfl
   | f,.eps, _, _, _ => by cases f <;> rfl
   | true,.param _, _, _, _ | true,.any, _, _, _ | true,.range _ _, _, _, _ | true,.call _ _, _, _, _
-  | false,.call _ (_::_::_::_), _, _, _ => rfl
+  | false,.call _ [_,_,_], _, _, _ | false,.call _ (_::_::_::_::_::_), _, _, _ => rfl
   | f,.dbg _, _, _, _ | f,.lam _ _, _, _, _ | f,.callParam _ _, _, _, _
   | f,.invoke _ _ _, _, _, _ => by cases f <;> rfl
 
