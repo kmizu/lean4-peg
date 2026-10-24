@@ -3388,3 +3388,332 @@ settle equality or construct an unconditional Par/Seq separator.
 The root imports and 27 new public theorem axiom guards include initialization,
 all halting cases, the standard-input machine, and the class consequences.
 All audited dependencies are standard Lean axioms.
+
+### Recursive reverse compilation with any number of unbounded prefix captures
+
+`PrefixFamilyFusion` removes the two-argument and common-arity restrictions of
+`PrefixPairFusion`. Its templates are arbitrary finite rule lists, with a
+separate arity for each rule. For a call with chunk parsers `A0,...,Ad-1`,
+the generated Par arguments are the cumulative parsers
+
+```
+F(A0, A0 A1, ..., A0 ... Ad-1).
+```
+
+The Seq target instead calls `F(A0,...,Ad-1)` consecutively. In a source
+rule of arity `d>0`, the body begins by replaying parameter `d-1`; in the
+Seq target this replay disappears. Each later source parameter `k` is
+reconstructed by the target expression `y0 ... yk`. Zero-argument rules
+use an empty replay. Nested calls in arguments and bodies undergo the same
+transformation. The number of rules and each rule's arity are preserved.
+
+`words` and `parsers` implement the cumulative value and syntax operations.
+`arguments_factor` proves that the actual Par evaluation of the cumulative
+parsers returns the cumulative words of the actual consecutive argument
+run. This covers the first finite failure and undefined evaluation, as well
+as successful empty chunks. `arguments_prefix` identifies the concatenation
+of the chunks with exactly the consumed original input. `parameters_eq`
+proves that all original captured values remain available through their
+views, without a finite value palette or a capture-length bound.
+
+`tables_shifted` connects every recursive table approximation at the source
+and target body positions. `evaluator_eq`, `decide_eq`, and `observations_iff`
+then preserve the complete partial semantics, including finite failure and
+absence of a finite result. `language_translation` constructs a fixed
+first-order Seq grammar and root for the same original character language.
+No input encoding, repetition, padding, or input-length restriction occurs.
+Missing rules, mismatched call arities, empty input, predicates, and
+repetition are included in the evaluator proof.
+
+`PrefixFamilyTestFusion` also extends the replay-test construction to this
+whole variable-arity family. Its source bodies test the longest-prefix
+replay followed by their tails. The target moves tests to call sites,
+captures all adjacent chunks, and restores the caller's original position
+after the test. `render_commute` proves that call-site test movement and
+the prefix compiler commute; `observations_iff` and `language_translation`
+connect the actual fixed grammars, including recursive calls.
+
+These are reverse translations for **generated prefix-factored source
+grammars**. They do not transform arbitrary independent Par argument
+expressions into parsers for their successive prefix differences, reorder
+arbitrary captures, or normalize arbitrary bodies to a longest-prefix replay.
+The earlier value-level representation theorem for arbitrary overlapping
+captures does not supply those operational transformations. Thus every
+capture in this fragment can now be unbounded, and rule arities can vary,
+while general same-original-language Par/Seq equality or separation remains
+unresolved. The root imports and 22 new public axiom guards cover both
+compilers and their semantic connections.
+
+### Discovering runtime chunks from independent greedy scanner arguments
+
+`NestedScannerArguments` supplies an operational factorization, rather than
+assuming already evaluated capture words or syntactically cumulative parser
+arguments. `choice A` reads one character from a fixed finite character list
+`A`; `scan A` greedily repeats it. For static lists `A` included in `B`,
+`scan_absorb` proves the actual evaluator identity
+
+```
+(scan A) (scan B) = scan B.
+```
+
+The second scan resumes at the first scan's actual endpoint. `scan_eval`
+proves its complete semantics on every valid suffix of every original
+Unicode character input, by the corresponding `dropWhile` result. Empty
+character sets, empty captures, stopping characters outside either set, and
+EOF are covered. The inclusion condition concerns only the fixed syntax:
+`covers_iff` verifies a finite Boolean check, and `cumulative_nested` constructs
+an increasing family from any finite list of character sets by cumulative
+union. It requires no input-dependent advice.
+
+For any number of character sets in inclusion order, `parsers_collapse` and
+`independent_arguments` prove that independent Par arguments return exactly
+the same values as their cumulative-parser expansion. Thus, for example,
+
+```
+F(a*, (a/b)*, (a/b/c)*)
+```
+
+can use the preceding prefix-family compiler without supplying difference
+parsers or capture values. On input `a^n b^m c^k z`, the original argument
+values are `a^n`, `a^n b^m`, and `a^n b^m c^k`; consecutive target scans
+capture `a^n`, `b^m`, and `c^k`. None of `n,m,k` has a fixed bound.
+
+`NestedScannerFusion` connects this identity to whole recursive grammars.
+Its actual source calls retain the independent scanner expressions; source
+rule bodies begin with the last parameter's replay and then their template
+tail. Rules may have different arities, including zero. The Seq target is
+an actual `PrefixFamilyFusion.seqGrammar`, with cumulative parameter views.
+`evaluator_of_tables` and `tables_eq` prove the normalization under all
+recursive approximations. `observations_iff` and `language_translation`
+preserve all finite observations and the whole-input language on unchanged
+original strings. No totality assumption is imposed on recursive bodies.
+
+The `Test` namespace also handles source bodies under positive lookahead.
+`source_commute` and `wrapped_eq` move these tests to call sites while keeping
+scanner arguments intact. `Test.observations_iff` and
+`Test.language_translation` connect the corresponding fixed Seq target,
+retaining the captured values inside the test and restoring caller positions.
+Both compilers include failure, undefined recursive evaluations, missing rules,
+and arity mismatches.
+
+This closes argument discovery for independent, inclusion-ordered greedy
+scanners. It does not handle arbitrary recursive argument parsers, arbitrary
+regular parser residuals, captures forwarded as argument expressions,
+non-nested or differently ordered scanner families, or source bodies without
+the leading replay (or replay test). These remain mathematical obligations;
+the general Par/Seq language-class question is unresolved. Root imports and
+20 new public theorem axiom guards cover the operational factorization and
+both language-preserving compiler connections.
+
+### Runtime stopping-order selection for arbitrary pairs of greedy scanners
+
+`ScannerFrontier` removes the inclusion-order premise at the operational
+argument interface for two independent scanners `scan A` and `scan B`.
+Their static character sets may overlap without either containing the other.
+First scan their intersection. At its stopping point, test whether `A` can
+continue. If it cannot, `A` is the shorter capture (ties take this branch);
+otherwise `B` is the shorter one. `guard` implements this as an actual
+positive lookahead over the common scan and a negative character test.
+`guard_eval` proves its exact Boolean result on every original input and
+valid position, including EOF and coincident endpoints.
+
+`sequential_arguments` proves that consecutive scans of the intersection
+and the remaining longer scanner produce the actual disjoint runtime chunks
+`u,v`. `parallel_arguments` proves that the original independent Par capture
+values are `[u,u++v]` or `[u++v,u]` according to the computed stopping order.
+The proof imposes no bound on capture lengths and supplies no previously
+evaluated capture values or endpoint advice to the generated syntax.
+
+`dispatch A B left right` is a fixed first-order Seq expression which runs
+that guard and selects one of two fixed rule slots. Both selected calls
+capture the chunks using their ordinary argument expressions. The negative
+guard on the second branch prevents failure of the chosen call from falling
+through. `dispatch_eval` proves the complete partial result for arbitrary
+recursive tables: success, finite failure, and undefinedness all propagate.
+`stopping_order_switches` gives one fixed non-nested pair with both stopping
+orders after arbitrarily long shared `a` prefixes, so the bit is genuinely
+input-dependent rather than a static inclusion choice.
+
+`body true e` and `body false e` are two input-independent body variants
+using cumulative parameter views in the original order. `body_eval` preserves
+all first-order uses of both values at the advanced position, through the
+same grammar, strategy, and recursive table. `dispatch_body_eval` connects
+the actual guard, capture, query entry, and installed variants to arbitrary
+first-order body evaluation at every table clock.
+
+This closes runtime discovery and finite-control selection for a non-nested
+scanner pair. It is **not** yet a whole recursive Par-to-Seq compiler:
+`call_of_body_relation` retains an explicit source/target body-table relation,
+and `body_eval` itself does not change the strategy or recursive call targets.
+A generated grammar must install and route the two rule variants, prove their
+recursive table relation, and reconcile the source body entry position.
+Arbitrary argument parsers, arbitrary numbers of unordered endpoints, and
+source bodies without a suitable replay remain further obligations. General
+same-original-language equality or separation is still unresolved. Root
+imports and 15 new public axiom guards include the runtime selector, actual
+query entry, and the explicit conditional call bridge.
+
+### Closing the recursive compiler for non-nested scanner pairs
+
+`ScannerPairFusion` closes the recursive body-table relation left explicit
+by `ScannerFrontier.call_of_body_relation` for a concrete replay-shaped
+source family. A finite specification assigns two static character sets and
+one template tail to each source rule. The character sets have no inclusion
+or ordering requirement. Template `call i []` becomes the source call
+`F_i(scan A_i, scan B_i)`; its two arguments are independently evaluated at
+the caller's original position. Other nonempty template call argument lists
+and higher-order template forms are explicitly mapped to failure.
+
+Each source body uses the actual frontier guard to replay the longer of its
+two captured parameters, then evaluates its rendered template tail. The Seq
+compiler emits two arity-two rules per source rule. Their bodies use the two
+cumulative capture views, while every translated call uses the fixed runtime
+dispatch to select the appropriate rule and capture the adjacent chunks.
+`par_rule_count`, `seq_rule_count`, `par_rule`, and `seq_rule` verify the actual
+finite rule layout: N source rules become exactly 2N target rules, at slots
+`2*i` and `2*i+1`. The generator depends only on the finite specification and
+root template, not on the input or evaluated capture values.
+
+`Shifted` records both possible original parameter orders and the actual
+frontier guard result. `tables_shifted` proves that relation for every
+recursive approximation, using the installed source replay and target views.
+`evaluator_eq` consequently preserves every three-valued expression result
+at every clock, including recursive calls inside sequencing, prioritized
+choice, repetition, and predicates. The body-table relation is now a theorem
+of the generated grammars, rather than a remaining compiler hypothesis.
+
+The different rule counts give different decision-procedure stabilization
+bounds. `stable_result_eq` proves that equal evaluators at every clock have
+equal stable results without assuming equal bounds. `decide_eq`,
+`observations_iff`, and `language_translation` then connect the actual fixed
+first-order grammars on every original character string, including empty
+input, finite failure, and absence of a finite observation. Runtime captures
+have no length bound and retain both original values for later uses in the
+tail, including around further recursive calls.
+
+This is a complete reverse compiler for the **specified scanner-pair source
+family**. It does not normalize an arbitrary Par grammar into that family.
+In particular, each rule has one fixed scanner pair, all generated source
+bodies begin with a dynamically selected longest-prefix replay, and calls
+with arbitrary parser arguments or forwarded captures are outside the
+interface. General argument residualization and arbitrary source body entry
+remain unresolved, as does the main same-original-language Par/Seq comparison.
+The root import and 15 new public axiom guards cover actual rule generation,
+recursive correspondence, differing stabilization bounds, and language
+preservation.
+
+### Finite-state residual discovery beyond one-state character scans
+
+`StatefulScanner` adds a finite-state prefix-scanner model and an actual
+first-order PEG generator. A state has an ordered finite list of character
+transitions; each transition consumes exactly one character. The scanner
+stops at EOF or the first missing transition. Duplicate character entries
+use the first matching transition, consistently in the model and generated
+syntax. This model is not asserted to cover all regular PEG argument syntax
+or arbitrary backtracking argument parsers.
+
+`run_after_prefix` proves the residual law: after consuming a prefix, resume
+in the state reached by that prefix. `branches` generates guarded character
+transitions and named zero-argument calls. The negative guards ensure that
+a failed final-state test in a recursive successor cannot fall back to a
+shorter, previously visited stopping state. `query_eval` proves the actual
+recursive evaluator in any grammar containing the generated block. A clock
+of at least the remaining input length plus one suffices; this is a proof
+bound, not fuel or advice added to the input.
+
+`StatefulScannerFamily` installs all stopping-state selectors together in
+one fixed grammar. A scanner with N states uses exactly N² generated rules.
+`grammar_rule` verifies the real addresses. `entry_eval` and
+`entry_observation` prove that each selector consumes the scanner's actual
+prefix exactly when its fixed candidate state is the real final state;
+otherwise it fails finitely. `probe_eval` and `probe_observation` give the
+input-restoring tests. Both CBV strategies and all original character strings
+are included. `capture_eval` connects the generated selector to actual Seq
+argument evaluation and the original captured prefix.
+
+`StatefulScannerBridge` identifies the existing character-set scanner with
+the one-state instance, including actual compiled observations. Its two-state
+counterexample `resetting_changes_result` shows why the residual state cannot
+simply be discarded: consuming an initial `a` enables an arbitrarily long
+following `b` scan, whereas restarting in the initial state stops immediately.
+
+`StatefulScannerProduct` generates a finite synchronized product of two
+independent scanners. It consumes their common prefix until either scanner
+has no next transition. `next_joint` preserves ordered transition lookup;
+`run_product` identifies the generated product with simultaneous scanning.
+`common_prefix` proves that one actual consumed word reaches both recorded
+states, and `residual_runs` proves that both original scans resume exactly
+from those states and the common suffix. `frontier_stops` includes tied
+endpoints. The state-pair encoding and all reached states are finite static
+control, while the consumed prefix can have unbounded length.
+
+`common_entry`, `common_probe_observation`, and `common_capture` connect this
+product to the actual fixed PEG selector grammar. Every candidate pair has
+fixed rule slots: the right pair captures the actual common prefix, wrong
+pairs finitely fail, and the probe restores the caller position. Neither
+reached states nor prefix lengths are supplied as input-dependent advice.
+For source scanners with N and M states the product has N*M states, and its
+complete selector grammar has (N*M)² rules, all fixed before reading input.
+
+These results provide runtime residual-state discovery and common-prefix
+capture for finite-state arguments, beyond the earlier stateless scanners.
+They do not yet assemble both residual scans, the finite rule variants, and
+recursive body correspondence into a finite-state extension of
+`ScannerPairFusion`. General recursive argument parsers and arbitrary source
+body entry remain further obligations. General Par/Seq equality or separation
+is unresolved. Four root imports and 28 new public axiom guards cover the
+actual generators, all-input observations, residual identities, and Seq
+capture connections.
+
+### Combining stateful selectors and residual captures in one grammar
+
+`StatefulPairArguments` installs the common-state selector family and both
+ordinary residual scanners together, followed by arbitrary user rules.
+Its helper prefix has exactly `(N*M)^2 + N + M` rules. `common_rule`,
+`left_rule`, and `right_rule` verify the actual addresses, and
+`grammar_firstOrder` preserves first-order user tails. The new
+`StatefulScanner.block_rule`, `block_firstOrder`, and `entry_of_layout`
+connect a generated scanner block to its entry call when other blocks and
+user rules are installed in the same grammar.
+
+`common_eval`, `left_eval`, and `right_eval` prove the three real entries
+against their exact finite-state results. `arguments_eval` then connects the
+common selector and the appropriate residual entry to actual consecutive Seq
+argument evaluation in this combined grammar. Empty chunks and tied stopping
+positions are included. `first_remainder` proves that the scanner selected
+as shorter stops exactly at the common frontier. `capture_reconstruction`
+identifies the independently evaluated original Par argument values with
+`[u,u++v]` or `[u++v,u]` from the Seq chunks, in the original parameter order.
+There is no capture-length bound or precomputed value input.
+
+`caseGuard` is an actual input-restoring PEG test for one candidate residual
+state pair and one stopping order. It combines the compiled common-state
+selector with a character-transition test at that frontier. `caseGuard_eval`
+proves that exactly the actual control passes and every wrong candidate
+finitely fails. `controls` enumerates all state pairs and both orders using
+only the fixed scanner state counts; `controls_mem` proves exhaustiveness.
+
+`dispatch` checks these candidates and calls the selected arity-two user
+rule with the actual two capture parsers. Its negative guards prevent a
+chosen user-rule failure from falling through to another candidate.
+`dispatch_eval` and `complete_dispatch_eval` prove the complete partial
+result for every user-rule result, including failure and undefinedness.
+Their user-rule premise is the actual syntactic lookup and arity, not a
+semantic simulation hypothesis or input-dependent control advice.
+
+`complete_dispatch_body_eval` also connects query entry to two installed
+capture-view body variants. Residual states select the parsers; the user body
+needs only the original capture order, so two body variants suffice. The
+proof runs the real guard, both captures, and named user query in one grammar,
+then preserves every first-order use of the reconstructed values in the body.
+It retains the explicit clock bound needed for the lexical helper queries.
+
+This closes the combined operational argument interface and user-body entry
+for finite-state scanner pairs. It does **not** yet prove a whole recursive
+Par-to-Seq grammar transformation: recursive user-body correspondence and
+its interaction with the helper-query clocks remain to be established.
+Arbitrary recursive/backtracking argument parsers and arbitrary source body
+entry are also outside this interface. The general same-original-language
+comparison remains unresolved. Root imports and 26 new public axiom guards
+cover installed block layouts, runtime case selection, capture reconstruction,
+complete dispatch, and actual body entry.

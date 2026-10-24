@@ -376,3 +376,14 @@ import MacroPeg.CBV.SequentialPackedInitMachine
 import MacroPeg.CBV.SequentialPackedHaltMachine
 import MacroPeg.CBV.SequentialPackedBinaryLoader
 import MacroPeg.CBV.SequentialPackedBinaryInputMachine
+import MacroPeg.CBV.PrefixFamilyFusion
+import MacroPeg.CBV.PrefixFamilyTestFusion
+import MacroPeg.CBV.NestedScannerArguments
+import MacroPeg.CBV.NestedScannerFusion
+import MacroPeg.CBV.ScannerFrontier
+import MacroPeg.CBV.ScannerPairFusion
+import MacroPeg.CBV.StatefulScanner
+import MacroPeg.CBV.StatefulScannerFamily
+import MacroPeg.CBV.StatefulScannerBridge
+import MacroPeg.CBV.StatefulScannerProduct
+import MacroPeg.CBV.StatefulPairArguments
