@@ -2453,3 +2453,74 @@ yet shows that all operations on the compressed streams run in linear TM
 space. The established complete TM upper bound remains `O(n log n)`, and
 neither a general reverse translation nor a Par/Seq language-class separation
 has been proved.
+
+### A lossless whole-state representation with linear stored length
+
+`MacroPeg.CBV.SequentialSharedPool` transfers the original fixed-program
+expression-pool certificates to every reachable word-machine task and frame.
+Scope frames contain no syntax. The other frames recover their certificates
+through scope erasure, including the argument tails and repetition bodies.
+
+`MacroPeg.CBV.SequentialSharedStateCodec` now assembles all runtime fields.
+Its logical input has three streams: control integers, ordered cursors, and
+ordered capture words. Control records include task/frame tags, rule and
+expression-pool references, argument-list lengths, environment lengths, and
+the stack length. A reader consumes the exact number of words and positions
+required by each record. `readTask_write`, `readFrame_write`, and `read_write`
+prove recovery while preserving arbitrary tails of all three streams. Thus
+the reconstruction restores word environments and field associations, rather
+than just an ungrouped list of words or positions.
+
+The complete `Packed` representation has four streams over fixed alphabets:
+
+- one unary block for the shared clock;
+- unary blocks for the control integers;
+- the monotone difference encoding of the ordered cursor list;
+- tagged characters with terminators for the ordered word list.
+
+There are no unencoded runtime fields in `Packed`. The fixed expression pool
+is determined by the grammar and start expression and is the codec context.
+`reachable_decode_encode` proves exact recovery of the whole configuration
+at every initialized reachable state. `encode_injective` proves that valid
+states cannot collapse to one representation. The executable `packedStep`
+decodes, performs an actual word-machine transition, and re-encodes;
+`reachable_step_commutes` proves its agreement with that transition.
+
+`MacroPeg.CBV.SequentialSharedStateBound` counts the complete representation,
+including the control stream and all environment/grouping headers. Write
+`P` for the expression-pool length, `D` for the fixed program budget, and `R`
+for the number of rules. Its control budget is the source-only constant
+
+```
+B = D * (P + 1) + D + R + P + 10.
+```
+
+Argument tails have length at most `D`; expression identifiers are at most
+`P`; live rule references are below `R`. The sum of environment-length headers
+is charged to the already counted retained word records. Consequently, for
+`K` frames and `W` retained word records, `control_cost` bounds the unary
+control stream by `(K + 1) * B + K + 2 + W`. Both nonempty and empty words are
+included in `W`, and the one stack-length header is also counted.
+
+Combining this with clock, character, cursor, and frame bounds gives
+`encoded_state_linear`: for every grammar `g`, start expression `e`, original
+input `x`, and reachable word-machine state `c`,
+
+```
+length (encode (compilerNodes g e) c) <= linearFactor g e * (x.length + 1).
+```
+
+Here length is the total number of symbols in all four streams, each over an
+alphabet independent of input length. The coefficient depends only on the
+fixed source program. This is a complete stored-state size theorem, including
+syntax references, frame tags, environment grouping, capture values, input
+positions, and the shared clock.
+
+It is still **not a complete linear-space TM simulation**. In particular,
+`packedStep` materializes the decoded cursor list and configuration, and no
+linear workspace bound is asserted for this implementation. The next
+operational obligation is to implement the needed transitions on the
+compressed streams with bounded workspace and connect that implementation to
+the initialized TM model. The existing complete TM theorem remains
+`O(n log n)`. General Par/Seq equality and language-class separation are still
+open; a compact state representation alone proves neither conclusion.
