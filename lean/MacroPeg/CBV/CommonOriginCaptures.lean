@@ -168,6 +168,17 @@ theorem reconstruct {input : List Char} {words : List (List Char)}
   simp only [ranks,List.map_map]
   exact (List.map_congr_left (fun w hw => (rank_correct hp hw).2)).trans (List.map_id _)
 
+/-- If a tuple includes the whole caller prefix, its disjoint representation
+covers exactly that prefix, rather than merely an unspecified shorter prefix. -/
+theorem chunks_cover {input : List Char} {words : List (List Char)}
+    (hp : ∀ w ∈ words, w <+: input) (hi : input ∈ words) : (chunks words).flatten = input := by
+  have hr := (rank_correct hp hi).2
+  have hpre : input <+: (chunks words).flatten := by
+    rw [← hr]
+    refine ⟨((chunks words).drop ((views (chunks words)).idxOf input)).flatten,?_⟩
+    rw [← List.flatten_append,List.take_append_drop]
+  exact (chunks_prefix hp).eq_of_length_le hpre.length_le
+
 theorem ranks_mem_controls {input : List Char} {words : List (List Char)}
     (hp : ∀ w ∈ words, w <+: input) : ranks words ∈ controls words.length words.length :=
   (mem_controls _ _ _).mpr ⟨ranks_length words,ranks_bounded hp⟩

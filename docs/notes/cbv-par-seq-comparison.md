@@ -1875,3 +1875,51 @@ order, and reconcile the original Par body position with the later Seq body
 position. Multiple unbounded values themselves now have a verified disjoint
 representation; these operational obligations remain open, as does the
 language-class equality/separation question.
+
+### Why disjoint capture values alone cannot repair body-entry position
+
+`PartitionResidualControl` tests the preceding representation against the
+remaining entry-position obligation. The obstruction is stronger than the
+earlier single-literal residual result: even an arbitrary prefix-selected
+partition with any fixed arity bound, plus arbitrary finite prefix-selected
+body control, cannot provide a general local residual interface.
+
+For a bounded environment whose nonempty words cannot match any remaining
+suffix, `signature` records exactly which parameter slots contain the empty
+word. Empty words remain observable, while nonempty dead words and missing
+slots all fail. `agree_iff_signature` proves that this is the exact
+`EnvAgree` quotient. The signature belongs to `controls 1 arity`, a list of
+size `2^arity`, independently of the captured lengths and contents. This
+handles empty chunks explicitly; simply declaring every chunk dead would be
+incorrect.
+
+`no_finite_tuple_summary` allows any bounded runtime tuple with this property,
+not just the canonical sorted differences. It shows that no finite
+prefix-selected body state together with that tuple can recognize `n=m` on
+the remaining suffix `c^m` for all prefix counts `n`. The proof combines the
+finite body state and the empty-slot signature into one finite key. Equal
+keys give indistinguishable continuations in an arbitrary first-order target
+grammar, contradicting the infinitely many required residual behaviors.
+
+For every partition of the consumed prefix `a^n b`, all its nonempty pieces
+are dead on `c^m` (`partition_dead`). `no_partitioned_factorization` therefore
+rules out this interface for the actual balanced source grammar
+`B <- 'a' B 'c' / 'b'`, even for whole-input acceptance. The target grammar
+and its recursive bodies are arbitrary; the selected entry state and tuple
+must depend only on the consumed prefix, and the tuple length has a fixed
+bound. `CommonOriginCaptures.chunks_cover` identifies the canonical chunks
+with the whole prefix whenever the common-origin tuple contains that longest
+prefix. `no_common_origin_factorization` applies the obstruction directly to
+that representation and arbitrary finite body variants.
+
+The balanced grammar itself recognizes `a^n b c^n` under **both** CBV
+strategies, as `FiniteResidualControl.balanced_recognizes` already proves.
+This is not a separating language. The residual interface discards any
+unbounded pending caller continuation before entering the suffix; a genuine
+Seq recognizer can retain its recursive callers. Selection that has already
+inspected the suffix is also outside this interface. Thus a general reverse
+construction cannot consist solely of capturing a bounded tuple of past
+segments and selecting a finite body at the advanced position. It must
+preserve additional computation, use a different evaluation arrangement, or
+otherwise avoid these explicit hypotheses. General Par/Seq equality or
+language-class separation remains open.

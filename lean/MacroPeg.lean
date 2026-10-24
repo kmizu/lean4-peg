@@ -298,3 +298,4 @@ import MacroPeg.CBV.HybridReplayFusion
 import MacroPeg.CBV.HybridReplayCompiler
 import MacroPeg.CBV.CommonOriginCaptures
 import MacroPeg.CBV.CaptureViews
+import MacroPeg.CBV.PartitionResidualControl

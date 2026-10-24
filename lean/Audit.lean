@@ -5485,3 +5485,47 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.CaptureViews.par_body_representation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.CaptureViews.par_body_representation
+
+/-- info: 'Shallot.MacroPeg.CBV.FiniteResidualControl.no_nat_embedding' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FiniteResidualControl.no_nat_embedding
+
+/-- info: 'Shallot.MacroPeg.CBV.CommonOriginCaptures.chunks_cover' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CommonOriginCaptures.chunks_cover
+
+/-- info: 'Shallot.MacroPeg.CBV.PartitionResidualControl.signature_finite' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartitionResidualControl.signature_finite
+
+/-- info: 'Shallot.MacroPeg.CBV.PartitionResidualControl.signature_agree' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartitionResidualControl.signature_agree
+
+/-- info: 'Shallot.MacroPeg.CBV.PartitionResidualControl.agree_iff_signature' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartitionResidualControl.agree_iff_signature
+
+/-- info: 'Shallot.MacroPeg.CBV.PartitionResidualControl.no_finite_tuple_summary' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartitionResidualControl.no_finite_tuple_summary
+
+/-- info: 'Shallot.MacroPeg.CBV.PartitionResidualControl.partition_dead' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartitionResidualControl.partition_dead
+
+/-- info: 'Shallot.MacroPeg.CBV.PartitionResidualControl.no_partitioned_factorization' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartitionResidualControl.no_partitioned_factorization
+
+/-- info: 'Shallot.MacroPeg.CBV.PartitionResidualControl.no_common_origin_factorization' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartitionResidualControl.no_common_origin_factorization
