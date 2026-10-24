@@ -5568,3 +5568,17 @@ public PR theorem dependencies were rechecked. Fourteen new guards use only
 standard Lean axioms or no axioms; four existing normalization guards now
 include standard `Classical.choice`. The new modules have no proof
 placeholders or Lean warnings.
+
+### Consuming continuations without reopening priority choice
+
+`ContinuationPlan` normalizes `P ; Q`, where `P` and `Q` are finite origin-control plans. It keeps original leaves for tests and adds leaves that execute an original leaf followed by `Q`. The choice case explicitly tests the old left branch: `(&A ; continued A) / (!A ; continued B)`. Distributing to `(A ; Q) / (B ; Q)` would reopen a successful `A` if `Q` failed, so it is unsound. The guarded construction preserves the full partial result, including undefinedness. The correctness theorem supports arbitrary appended-leaf offsets, and `expression_eq` discharges its local semantic premises with actual generated expressions.
+
+`LeafContinuation` factors an arbitrary `Arg` tail into actual replay-leaf bodies. The tail may use retained captures, stars, and recursive calls with fresh arguments. Its `Consumer` condition requires every successful output path to select a leaf; arbitrary plans, including negative tests, remain allowed in guards. Closed leaves may be duplicated only when the appended tail is also syntactically closed. Replay leaves have no such restriction. `source_body_eq` identifies the generated body with the existing origin-control source grammar's exact `sourceLeaf` syntax using one common ambient renderer, preserving recursive addresses and capture scope.
+
+`ContinuationGrammar` independently lifts the general plan normalization through actual mutually recursive grammars. Each rule has its own leaf expressions, two plans, and arity. All ordinary physical tables agree at every round for either CBV strategy. Its observation theorem preserves unchanged original strings and retains only syntactic boundedness/first-order premises, with no assumed recursive-row or filter correspondence. This is a within-strategy grammar normalization, not yet a new end-to-end Par-to-Seq theorem for consuming control families.
+
+Kernel examples check a parent `aa` capture, a fresh child `aaaa` capture through recursive calls, and reuse of the original parent afterward. A short successful replay followed by a failed tail rejects `ab#`, while naive distribution accepts it; the guarded normal form rejects it. An empty-star tail after a committed branch remains undefined for arbitrary grammar tables. Unbounded observation preservation is obtained from the grammar theorem rather than a finite example run.
+
+Remaining connection: assemble the generated replay leaves and distinct per-user continuations into the existing global origin-control family and compose the actual recursive source grammar normalization with its Seq translation. General consuming-entry stars, multiple independent general captures, arbitrary original-grammar normalization, and general Par/Seq equality or separation remain open.
+
+Validation: full `lake build` passed (860 jobs), including Audit. All 31 new theorem guards passed with standard Lean axioms or no axioms. The four new modules have no compiler warnings or proof placeholders; source audit passed.

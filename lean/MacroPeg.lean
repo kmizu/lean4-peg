@@ -451,3 +451,7 @@ import MacroPeg.CBV.OriginControlNormalization
 import MacroPeg.CBV.OriginControlExamples
 import MacroPeg.CBV.EmptyReplayExamples
 import MacroPeg.CBV.ClosedOriginExamples
+import MacroPeg.CBV.ContinuationPlan
+import MacroPeg.CBV.LeafContinuation
+import MacroPeg.CBV.ContinuationGrammar
+import MacroPeg.CBV.ContinuationExamples
