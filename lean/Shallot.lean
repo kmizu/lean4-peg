@@ -91,3 +91,4 @@ import Shallot.Peg.Separation.Examples
 import Shallot.Peg.Separation.MacroStrict
 
 import Shallot.Peg.Separation.CBVStrict
+import Shallot.Peg.Separation.CBVParLower

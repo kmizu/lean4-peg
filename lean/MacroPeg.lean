@@ -210,3 +210,8 @@ import MacroPeg.CBV.ParTableau.Layout
 import MacroPeg.CBV.ParTableau.Transitions
 import MacroPeg.CBV.ParTableau.Routing
 import MacroPeg.CBV.ParTableau.Read
+import MacroPeg.CBV.ParTableau.Atoms
+import MacroPeg.CBV.ParTableau.Initial
+import MacroPeg.CBV.ParTableau.Position
+import MacroPeg.CBV.ParTableau.Sim
+import MacroPeg.CBV.ParTableau.Recognition
