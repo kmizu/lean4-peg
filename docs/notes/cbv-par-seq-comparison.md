@@ -4932,3 +4932,59 @@ unresolved.
 Validation: full `lake build` succeeds (825 jobs), including `Audit`. All
 fourteen new public theorem guards use only standard Lean axioms. No bounded
 execution or new semantic axiom is used to justify the global correspondence.
+
+
+## 2026-10-24: Actual filtered arguments select arbitrary shift phases
+
+`PeriodicCaptureMachine` constructs a concrete machine for any nonempty
+fixed shift word `u`. Its states are the positions of `u` plus one sink.
+`prefix_iff_nonsink` proves that its run on `w` is nonsink exactly when
+`w` is a prefix of `u ++ w`. `run_rotation` proves the actual word equation
+`u ++ w = w ++ phase u r` at the reached nonsink state. No primitive-period,
+block-safe syntax, or capture-length hypothesis is imposed. The empty shift
+already belongs to the earlier direct replay-fusion case; this machine and
+the new caller theorem assume a nonempty shift.
+
+`CaptureProductExtension` proves that every original and generated product
+reference stays inside the zero-arity component. `component_valid` and
+`component_installed` allow ordinary parameter-bearing rows to be appended.
+`extension_call_eq` preserves canonical helper queries across these extensions
+and strategies; `extension_product_correct` installs the complete filter
+specification in the real caller grammar, without supplied semantic advice.
+
+`FilteredOverlapCaller` then constructs an actual Par/Seq grammar pair.
+The Par unary body is `(u param(0)) B`; the Seq grammar has one unary body
+`(phase u r) B` for each nonsink state. Its caller enumerates these rows with
+the corresponding generated state-filtered capture parser as the actual
+argument. Thus the selected Seq call consumes and retains the original full
+capture; the later continuation can replay or inspect that same value.
+A failed continuation cannot make another state use a different winning
+source capture. A sink capture makes source replay finitely fail and every
+Seq candidate fail. An undefined capture remains undefined because the
+nonempty phase list first queries the original undefined parse.
+
+`evaluator_eq` proves equality of complete partial results at every input and
+valid position. `observations_iff` includes finite failure and every successful
+remaining suffix. `language_translation` supplies one fixed first-order
+target grammar and start expression for all unchanged original strings.
+The continuation `B` may contain parameters, literals, any/range atoms,
+sequence, choice, repetition, predicates, and zero-argument calls into the
+independent helper component. The capture parser itself is any valid original
+literal/control graph, including mutual recursion, empty captures, cycles,
+and nullable repetition; it need not have periodic capture syntax.
+
+A kernel-checked physical execution uses shift `abc`, actual `abca` capture,
+residual `bca`, and reuse of the complete `abca` after `#`. A nonperiodic
+winning `abcx` capture is rejected by both real grammars.
+
+This connects the previous global product theorem to actual unary caller
+arguments and removes the old block-safe-head restriction for this entry
+shape. It does not yet compile parameter-dependent general capture parsers,
+recursive calls that replace the capture inside `B`, arbitrary body entry
+shapes, or multiple independent captures. Any/range source-graph normalization
+also remains open. Full Par/Seq equality or separation is still unresolved.
+
+Validation: full `lake build` succeeds (828 jobs). All 35 new public theorem
+axiom guards pass in `Audit` (34 use only standard Lean axioms, one needs no
+axioms); the updated Audit build also succeeds. No new Lean warnings or
+proof placeholders occur in these modules.

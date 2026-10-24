@@ -420,3 +420,6 @@ import MacroPeg.CBV.PeriodicOverlapFusion
 import MacroPeg.CBV.OverlapNecessity
 import MacroPeg.CBV.RegularCaptureProduct
 import MacroPeg.CBV.RegularCaptureCorrectness
+import MacroPeg.CBV.PeriodicCaptureMachine
+import MacroPeg.CBV.CaptureProductExtension
+import MacroPeg.CBV.FilteredOverlapCaller
