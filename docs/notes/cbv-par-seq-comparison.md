@@ -6423,3 +6423,52 @@ argument shapes, held-value-dependent control/header parsing, independent
 multiple source captures, and general Par/Seq equality or separation remain
 unresolved. Two target parts represent one original source capture; this is
 not a theorem for two independent original captures.
+
+
+### Codeword control with mutually recursive binary Seq rows
+
+`CodewordControlRecursive` connects the preceding control compiler to an
+arbitrary finite family of mutually recursive unary source users. The same
+finite control and Pure prefix-code header are shared across those users;
+user continuations can contain sequence, prioritized choice, negation, star,
+new captures through user calls, and arbitrary later uses of the retained
+source parameter. In the target, each user has two parameters containing
+the first captured header and the remaining control-selected capture.
+Source parameter occurrences become `wholeView` expressions over both parts.
+Recursive calls obtain a fresh pair; returning restores the caller's pair.
+The source and target renderers insert the actual argument and verifier calls
+at each call site rather than requiring manually annotated body leaves.
+
+`Parameters` relates the evaluator for the whole source word with the view
+of its disjoint target parts. `entry` derives local entry equivalence from
+an actual successful header and control trace, with an arbitrary first-order
+continuation and sound actual table. `prefix_identity` specializes this to
+the two leading prefixes. Both recursive tables seed only real prefix
+failures: the source seeds `A;param0`, the target seeds `param0`. The exact
+identity relates the seeds even when verification rejects before querying
+the target user row. The unary filter row is physically stable after one
+ordinary round. `tables_shifted` and `evaluator_eq` then preserve the view
+relation at every recursive stage; ordinary cofinality of both actual seeded
+tables proves `stable_eq`, `observations_iff`, and `language_translation`.
+These final theorems use the original unmodified strings and fixed ordinary
+grammars, with no assumed table relation or supplied trace decomposition.
+
+`CodewordControlRecursiveExamples` executes mutual recursion with capture
+counts 3→1→2 and header lengths 2→3→1. The actual target pairs are
+`(u,u²)`→`(v,eps)`→`(w,w)`. Returning through both callers reuses the entire
+original parent captures. Short parent/child copies and unequal child
+captures are rejected. A separate header uses genuinely nested star at every
+recursion level and has both ordinary execution checks and all-input
+observation equivalence. Failed initial headers, early replay failure,
+undefined original arguments under arbitrary tables/environments, and a
+looping continuation undefined at every ordinary stage are checked too.
+A nullable header with an epsilon control successfully captures two empty
+parts and preserves an empty whole capture.
+
+This closes the user-recursion gap for the finite codeword-control compiler.
+It still requires a shared independent Pure prefix-code header and Pure
+control tests, the initial source `A;param0` replay, and one original capture
+per source call. Recursive header helpers, control depending on held values
+or user rows, arbitrary original argument shapes, and independent multiple
+source captures remain open for this compiler. General Par/Seq equality or
+separation is still unresolved.
