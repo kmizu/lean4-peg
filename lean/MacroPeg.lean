@@ -339,3 +339,7 @@ import MacroPeg.CBV.SequentialCallPackedMachine
 import MacroPeg.CBV.SequentialQueryInstallMachine
 import MacroPeg.CBV.SequentialQueryEnterPackedMachine
 import MacroPeg.CBV.SequentialQueryPackedMachine
+import MacroPeg.CBV.SequentialTagDispatchMachine
+import MacroPeg.CBV.SequentialScopeControlMachine
+import MacroPeg.CBV.SequentialScopeWordMachine
+import MacroPeg.CBV.SequentialScopePackedMachine

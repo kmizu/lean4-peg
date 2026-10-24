@@ -3022,3 +3022,60 @@ selection, ordinary-input initialization, and the complete recognition
 connection remain open. The established complete recognizer bound is still
 `O(n log n)`, and general same-input Par/Seq equality or separation remains
 unresolved.
+
+### Complete scope return with preserved return-value captures
+
+`MacroPeg.CBV.SequentialScopeControlMachine` restores the saved environment
+header while retaining the actual result fields. It removes the callee's
+current-environment-length field, saves the positive stack count and the
+result fields, removes the scope tag, and moves the saved environment length
+into the new current header. The result fields are restored unchanged and
+the stack count decreases by one. `restore_runs` covers arbitrary runtime
+field values and continuation suffixes, with every intermediate capacity
+bounded by the initial control-stream capacity. The program parameter is only
+the fixed number of task fields, two or three.
+
+`MacroPeg.CBV.SequentialScopeWordMachine` frees the callee environment without
+freeing words owned by a successful argument return. Expression results and
+undefined/failure argument results carry no task-owned words, so their current
+environment can be deleted directly using its unary header. A successful
+argument value first saves its actual word prefix on tape 5. Its current
+environment is then saved on tape 7 and released, and the return-word prefix
+is restored above the caller's saved environment. `stashReturnWords_runs`
+uses an injective register permutation of the already verified streaming
+stash; `preserveReturnWords_runs` and `result_words_runs` verify exact word
+order, empty-word records, source preservation, scratch cleanup, and all
+intermediate capacities.
+
+`MacroPeg.CBV.SequentialTagDispatchMachine` generalizes restored-state unary
+dispatch to a fixed finite tag bound. It saves a fixed number of headers and
+reads the tag bits directly, transferring each inspected bit temporarily.
+Each selected branch receives the complete original source state with empty
+scratch. The code bound and branch templates are fixed before execution;
+no decoded tag or external selector is provided. `dispatch_runs` verifies
+every intermediate state and composes arbitrary bounded branch runs.
+
+`MacroPeg.CBV.SequentialScopePackedMachine` combines these operations into one
+fixed scope-return program. It reads the actual task kind (expression or
+argument value), then the argument-result tag when needed. All expression and
+argument result forms are covered, including undefined, failure, success,
+and arbitrary successful return environments. The program frees only the
+callee environment, restores the caller environment, preserves the complete
+return value and input cursor, removes the scope frame, and directly increases
+the unary shared clock by one. `actual_step` checks the original Seq operation;
+`transition_runs` and `transition_tape` construct its complete encoded successor
+from every initialized reachable scope return. All intermediate eight-tape
+states satisfy capacity
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+The fixed pushed-symbol alphabet is verified as well. This completes the
+scope-return subroutine without restricting it to expression results or
+assuming away argument-valued scope states. These remain subroutines entered
+at preloaded reachable states. Other remaining instructions, captured-word
+matching, whole-machine instruction selection, ordinary-input initialization,
+and the complete recognition connection remain open. The established complete
+recognizer bound remains `O(n log n)`, and general same-input Par/Seq equality
+or separation is unresolved.
