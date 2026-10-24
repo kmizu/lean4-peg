@@ -18139,3 +18139,661 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FragmentBodyExamples.undefined_right_continuation
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.entry_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.entry_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.render_fragment_syntax' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.render_fragment_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.leaf_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.leaf_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.source_rule' depends on axioms: [propext, Classical.choice] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.leaf_rule' depends on axioms: [propext, Classical.choice] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.leaf_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.stuck_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.stuck_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.stuck_call' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.stuck_call
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.compare_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.compare_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.tail_compare_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.tail_compare_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.ternary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.ternary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.unary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.unary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.source_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.source_call
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.evaluator_of_previous' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.evaluator_of_previous
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.stable_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.stable_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStuckRecursive.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStuckRecursive.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableControl.normalize_bounded' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableControl.normalize_bounded
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableControl.negative_star_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableControl.negative_star_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableControl.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableControl.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableControl.leaf_stuck' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableControl.leaf_stuck
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableControl.valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableControl.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableControl.headers' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableControl.headers
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableControl.body_results' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableControl.body_results
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableControl.tables_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableControl.tables_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableControl.grammar_evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableControl.grammar_evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableControl.body_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableControl.body_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableControl.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableControl.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableControl.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableControl.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableControl.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableControl.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableExamples.nullable_origin_before_replay' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableExamples.nullable_origin_before_replay
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableExamples.zero_iteration_returns_origin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableExamples.zero_iteration_returns_origin
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableExamples.finite_argument_failure_first' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableExamples.finite_argument_failure_first
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableExamples.undefined_argument_first' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableExamples.undefined_argument_first
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableExamples.double_star_origin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableExamples.double_star_origin
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableExamples.recursive_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableExamples.recursive_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentNullableExamples.mutual_nullable_body_returns' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentNullableExamples.mutual_nullable_body_returns
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.lookup_prefix' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.lookup_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.lookup_copy' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.lookup_copy
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.render_scanner' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.render_scanner
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.render_raw' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.render_raw
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.render_plan' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.render_plan
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.append_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.append_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.control_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.control_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.join_left' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.join_left
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.join_right' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.join_right
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.compose_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.compose_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.lookup_original' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.lookup_original
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.lookup_test' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.lookup_test
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.lookup_tail' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.lookup_tail
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.loop_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.loop_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.repeatThen_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.repeatThen_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.strict_change' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.strict_change
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.star_negative' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.star_negative
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.iterate_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.iterate_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarForm.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarForm.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.relocate_bounded' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.relocate_bounded
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.relocate_exp' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.relocate_exp
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.emit_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.emit_length
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.emit_bounded' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.emit_bounded
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.placed_leaf' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.placed_leaf
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.normalized_bodies' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.normalized_bodies
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.headers' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.headers
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.body_results' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.body_results
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.tables_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.tables_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarExamples.mixed_operand_has_nullable_output' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarExamples.mixed_operand_has_nullable_output
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarExamples.mixed_star_consumes_then_stops' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarExamples.mixed_star_consumes_then_stops
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarExamples.zero_iterations_and_short_copy' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarExamples.zero_iterations_and_short_copy
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarExamples.nullable_after_consuming_iteration' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarExamples.nullable_after_consuming_iteration
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarExamples.nested_body_star' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarExamples.nested_body_star
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentStarExamples.mutual_star_returns' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentStarExamples.mutual_star_returns
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.entry_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.entry_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.render_fragment_syntax' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.render_fragment_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.leaf_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.leaf_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.source_rule' depends on axioms: [propext, Classical.choice] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.leaf_rule' depends on axioms: [propext, Classical.choice] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.leaf_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.stuck_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.stuck_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.stuck_call' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.stuck_call
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.compare_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.compare_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.tail_compare_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.tail_compare_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.ternary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.ternary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.unary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.unary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.source_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.source_call
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.bare_transfer' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.bare_transfer
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.evaluator_of_previous' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.evaluator_of_previous
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.stable_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.stable_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.lookup_prefix' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.lookup_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.lookup_copy' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.lookup_copy
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.render_scanner' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.render_scanner
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.render_head' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.render_head
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.render_raw' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.render_raw
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.render_plan' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.render_plan
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.append_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.append_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.control_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.control_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.join_left' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.join_left
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.join_right' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.join_right
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.compose_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.compose_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.lookup_original' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.lookup_original
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.lookup_test' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.lookup_test
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.lookup_tail' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.lookup_tail
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.loop_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.loop_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.repeatThen_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.repeatThen_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.strict_change' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.strict_change
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.star_negative' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.star_negative
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.iterate_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.iterate_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedForm.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedForm.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.relocate_bounded' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.relocate_bounded
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.relocate_exp' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.relocate_exp
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.emit_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.emit_length
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.emit_bounded' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.emit_bounded
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.placed_leaf' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.placed_leaf
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.normalized_bodies' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.normalized_bodies
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.headers' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.headers
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.body_results' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.body_results
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.tables_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.tables_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedCompiler.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedExamples.mixed_iterations_reuse_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedExamples.mixed_iterations_reuse_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedExamples.short_final_capture_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedExamples.short_final_capture_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedExamples.empty_bare_replay_star' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedExamples.empty_bare_replay_star
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedExamples.mixed_mutual_returns' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedExamples.mixed_mutual_returns
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedExamples.short_noncodeword_iteration_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedExamples.short_noncodeword_iteration_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedExamples.mixed_branch_commit' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedExamples.mixed_branch_commit
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedExamples.mixed_nullable_control' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedExamples.mixed_nullable_control
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.replayOnly_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.replayOnly_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.direct_source_syntax' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.direct_source_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentMixedRecursive.direct_call_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentMixedRecursive.direct_call_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentDirectExamples.generated_argument_kinds' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentDirectExamples.generated_argument_kinds
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentDirectExamples.original_actual_argument' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentDirectExamples.original_actual_argument
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentDirectExamples.general_fragment_mutual_returns' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentDirectExamples.general_fragment_mutual_returns
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentDirectExamples.short_general_grandchild_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentDirectExamples.short_general_grandchild_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentDirectExamples.general_argument_preview_and_rollback' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentDirectExamples.general_argument_preview_and_rollback
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentDirectExamples.selected_general_argument' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentDirectExamples.selected_general_argument

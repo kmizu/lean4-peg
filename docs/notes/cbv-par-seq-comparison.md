@@ -7691,3 +7691,196 @@ prefixes before the first replay, unrestricted arguments, and independent
 multiple captures remain outside this construction. The fixed A=a*;# header,
 a-only consuming H, one actual capture, and per-replay-leaf A;param0 shape
 remain restrictions. General Par/Seq equality or separation is unresolved.
+
+### Capture-independent divergence and nullable source body loops
+
+`FragmentStuckRecursive` extends the consuming-fragment origin compiler with
+one distinguished leaf at index `tails.length`. Its source body is `eps*`,
+independent of the captured value. Ordinary leaf indices still select
+A;param0;b. Logical source rows and appended leaf rows agree at every clock,
+including clock zero. The Seq expansion previews the actual argument before
+executing the divergent leaf: a mandatory fragment's finite failure must
+remain failure, rather than becoming undefined. `evaluator_eq`,
+`observations_iff`, and `language_translation` cover arbitrary valid finite
+origin plans mixing both leaf kinds, recursive argument tests, and normal
+continuations. The only new layout premise is a finite index bound `j≤n`.
+
+`FragmentNullableControl.Body` retains actual source `(!e)*` and `(e*)*`
+constructors, nested with choice, guards, and negation. `negativeStar`
+normalizes the former to a finite plan: a successful negative test diverges
+at the unchanged position; a failed test yields zero iterations there.
+Double stars normalize to the divergent leaf, using the generic nested-star
+result. The local evaluator theorem needs no totality, Consumer, sound-table,
+purity, valid-position, or input-shape premise. `tables_eq` proves equality
+of all ordinary clock tables between the actual source grammar and its
+normalized core; `observations_iff` and `language_translation` compose this
+with the fixed Seq compiler on unchanged strings. Finite body-index validity
+is checked separately, rather than assumed semantic correspondence.
+
+Kernel examples distinguish origin divergence from a replay-wrapped loop:
+on a! the actual argument captures a, but A;param0 fails; the source nullable
+loop and generated Seq call are undefined, whereas the incorrect wrapper
+finitely fails. On a#a a failed negative test returns the original position
+with zero iterations. Mandatory argument failure at clocks 0/1/2 and an
+undefined consuming argument precede the body. A real 0→1→0 example runs
+these nullable stars inside recursive source rows and restores each parent's
+whole capture after returning.
+
+This supplies capture-independent divergent leaves and integrates two
+nullable star forms with recursive consuming-fragment capture translation.
+It does not yet normalize a general star whose operand alternates between
+consuming replay outputs and zero-consuming predicate outputs. This new
+compiler has not been composed with `FragmentBodyForm`'s arbitrary sequence
+normalizer or with ordinary bare-param/closed leaf kinds. Fixed A=a*;#,
+a-only consuming H, one actual source capture, and A;param0 replay entries
+remain restrictions. Unrestricted Par/Seq equality or separation remains
+unresolved.
+
+### General nested fragment-body stars from actual source syntax
+
+`FragmentStarForm` combines the previous finite sequence normalizer with
+capture-independent divergent leaves. A local leaf is `some b` for
+A;param0;b or `none` for eps*. Continuation copies append to b only when it
+exists: a divergent leaf remains undefined at the original position.
+`compose_eval` preserves prioritized branch commitment, including a negative
+output followed by a consuming continuation.
+
+For arbitrary control operands, `strict` redirects zero-consuming predicate
+outputs to a guarded divergent leaf with `NullableStarControl.freeze`.
+`strict_change` and `star_change` preserve the original star's partial result.
+The first consuming replay output receives an inline continuation implementing
+the remaining greedy iterations, guarded by the complete next iteration.
+`loop_eval` discharges the local chain premises using actual generated leaf
+expressions. `star_negative` proves that a terminating star already stops
+where its operand fails, permitting a final negative test instead of a
+special capture-independent epsilon leaf. No Consumer or totality condition
+is imposed on the source operand. Its constructor may be any nesting of
+leaf, sequence, prioritized choice, negation, and ordinary star.
+
+The local `evaluator_eq` uses sound evaluation tables, a valid input position,
+and a call-by-value strategy for the decreasing-parser rotation. These are
+discharged in `FragmentStarCompiler.tables_eq` by the actual first-order
+core grammar and its ordinary clock tables; they are not supplied as
+semantic oracles by callers of `observations_iff` or `language_translation`.
+
+The compiler computes all local suffix lists and plans from the source body.
+`address`/`relocate` send local divergent leaves to the single global stuck
+index and ordinary replay leaves to their generated helper rows. The
+`placed_leaf` proof covers both cases. Source grammar user rows retain the
+original nested Body.syntax, including its stars. Header equality, actual
+body result equality, and ordinary-clock table equality connect it to the
+normalized recursive core. The final fixed first-order Seq grammar preserves
+all finite observations and the language on every unchanged input. Finite
+layout validity is generated automatically.
+
+Kernel executions cover a syntactically non-Consumer operand that chooses
+consuming X branches twice and then finitely stops at Q, zero iterations,
+reuse of the full capture after the star, a short final copy, undefinedness
+when a negative branch succeeds after a consuming iteration, and nested
+body stars. An actual 0→1→0 execution replays aaa#a twice in the child body
+star, then captures fresh aa in the grandchild and restores both parents'
+whole values after return.
+
+This closes the general body-star and sequence-composition gaps for this
+consuming-fragment family. It does not remove the fixed A=a*;# header,
+a-only consuming H, one actual capture, or A;param0 entry for each ordinary
+leaf. Ordinary bare-param and capture-independent consuming leaves, arbitrary
+initial consuming prefixes, unrestricted arguments, and independent multiple
+captures remain outside this compiler. General Par/Seq equality or separation
+is unresolved.
+
+### Bare and shifted replay leaves in one fragment-capture compiler
+
+`FragmentMixedRecursive.Part` records whether a leaf begins with A;param0
+or directly with param0 (a neutral eps is retained in the latter's source
+syntax). Both kinds have an arbitrary normal continuation and use the same
+actual consuming-fragment argument `(A;&(A;G))*;H`. The source may select
+between these entries through origin guards and predicates. A bare leaf
+becomes an ordinary unary Seq call evaluating the complete actual argument;
+a shifted leaf uses the existing fragment preflight and three-piece/unary
+entry. The compiler-generated divergent leaf remains independent of capture.
+
+`bare_transfer` proves ordinary replay fusion for arbitrary first-order
+source arguments and corresponding target arguments, including finite
+failure, undefinedness, and the clock-zero empty table. Successful actual
+argument evaluation determines the exact retained prefix and the same
+endpoint reached by source param0. Its continuation receives the complete
+value rather than only a fragment. In the recursive compiler, current-clock
+argument equality and previous-clock continuation equality are discharged by
+structural/clock induction for both leaf kinds together. All normal recursive
+calls, including those inside fragment tests, use this shared translation.
+
+`FragmentMixedForm` retains each leaf kind while copying continuations and
+normalizing sequence, prioritized choice, negation, and general nested star.
+Bare leaves may replay an empty value: the iteration remains undefined if
+no progress occurs. `FragmentMixedCompiler` generates the mixed leaf layout,
+kind table, relocation, and validity bounds automatically, retains the actual
+nested source user bodies, and proves all ordinary call-by-value clock tables
+equal to the normalized core. Its final observation/language translation
+preserves every unchanged input without supplied semantic table, body,
+argument, continuation, layout, or capture-shape assumptions.
+
+Kernel runs switch bare→shifted→bare inside a star and reuse the original a
+after its delimiter. A child capture aaa#a switches shifted→bare→shifted,
+then makes a fresh aa grandchild capture and restores both parents' values.
+Short whole-value copies and final copies are rejected. An empty bare replay
+under star stays undefined. A short ordinary choice cannot reopen as a longer
+shifted choice when its continuation fails; the naive distribution accepts
+the same input rejected by the real source and generated Seq grammar.
+Mixed predicate outputs also retain finite stopping versus empty-success
+undefinedness after a consuming bare iteration.
+
+This integrates ordinary replay leaves with the new consuming-fragment
+argument compiler. The generic bare entry lemma permits arbitrary arguments,
+but the final shared renderer still uses the specified fragment argument
+family. Capture-independent consuming branches and arbitrary consuming
+prefixes before replay are not covered: appending a capture-dependent
+continuation to a closed branch requires retaining the capture through that
+branch. The fixed A=a*;# header, a-only consuming H, and one source capture
+remain restrictions. General Par/Seq equality or separation remains unresolved.
+
+### General actual arguments routed to replay-only users
+
+`FragmentMixedRecursive.replayOnly` checks every query and output leaf in a
+logical body's generated finite plan. It accepts only bare replay entries
+and the distinguished capture-independent stuck leaf. `replayOnly_sound`
+turns that Boolean check into the corresponding finite structural property;
+no semantic equivalence, termination, or input-shape condition is checked.
+
+For a single-argument template call into such a user, `render` now passes
+the rendered argument itself to the actual unary source rule.
+`direct_source_syntax` proves this exact syntax equality. It no longer wraps
+that argument as the G test of `(A;&(A;G))*;eps`. The target previews the same
+actual parser and distributes its ordinary unary Seq calls across the body
+plan. The original two-template calls still construct consuming-fragment
+arguments, and users with shifted queries keep their fragment entry path.
+Zero-template calls retain their earlier default fragment interpretation.
+
+`direct_call_eq` uses the actual argument result and the existing generic
+`bare_transfer` entry theorem to preserve success, complete captured values,
+finite failure, undefinedness, and clock zero. The eligibility proof rules
+out shifted leaf rows on this path, and the stuck leaf retains argument
+preview before divergence. Current-clock structural induction handles the
+arbitrary rendered argument parser, including old parameters, fresh literal
+stars, and recursive calls to both user kinds. Previous-clock induction
+handles each callee continuation. Existing generated-layout normalization,
+all-clock source/core table equality, and final observation/language theorems
+apply unchanged, without a new user-supplied eligibility premise.
+
+Kernel examples route an actual literal ab into an ordinary user, then pass
+through a fragment user holding aaa#a. That child constructs a fresh general
+argument from its whole held value, ':', fresh b*, and an actual fragment-user
+call consuming a#aY. The new captured value aaa#a:bbba#aY is replayed and
+reused after '!', then both parent values return. A short grandchild copy is
+rejected. A negative ordinary body returns at the original position even
+though its actual ab argument advanced, while argument failure at clock zero
+and an undefined empty star precede that body. A selected aa/a general
+argument remains committed when its later copy is too short.
+
+General arguments are now integrated for replay-only callees, in the same
+recursive compiler as consuming-fragment calls. This does not yet provide
+arbitrary arguments to a callee whose body queries shifted replay leaves.
+Capture-independent consuming prefixes, unrestricted shifted captures, and
+independent multiple source captures remain outside the construction. The
+shifted branch still uses fixed A=a*;# and a-only consuming H. General
+Par/Seq equality or separation remains unresolved.
