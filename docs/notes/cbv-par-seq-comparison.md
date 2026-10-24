@@ -2924,3 +2924,48 @@ instruction selection, ordinary-input initialization, and the complete
 recognition connection remain open. The existing complete recognizer still
 has its established `O(n log n)` bound. General same-input Par/Seq language-class
 equality or separation remains unresolved.
+
+### Pass actual captured arguments from a call frame to its query
+
+`MacroPeg.CBV.SequentialCallPackedMachine` implements the complete return
+from a call continuation for all three argument outcomes. On success the
+actual argument environment `W` and current position `q` become the query
+`query i W q`, while the caller environment stays `E`. `other_streams` proves
+that the packed words, cursor stream, and shared clock are exactly unchanged;
+only control information changes. Undefined and failure argument outcomes
+become the corresponding expression outcomes, also preserving those streams.
+
+The successful program first removes the old call frame's tag and rule index,
+then decrements the stack-length header, then replaces the argument-result
+fields by the query tag and source-fixed rule index. Removing the frame first
+avoids temporarily storing that rule index twice. The runtime argument-count
+field is preserved as a unary stream throughout. The unsuccessful program
+similarly removes the call frame and changes only the task tag, preserving
+the actual undefined/failure result tag.
+
+`success_runs` and `unsuccessful_runs` verify every intermediate list state,
+arbitrary continuation suffix preservation, and cleared scratch. `program i`
+uses the existing runtime argument-result dispatcher; no decoded result flag,
+environment, argument count, or input position is provided to it. Its parameter
+`i` is the fixed rule index of the source call template. Whole-machine selection
+of such templates is still a separate construction.
+
+`actual_step` checks the original Seq transition. `before_control` and
+`after_control` identify both control streams; `control_only_update` and
+`other_streams` verify the complete successor representation. `transition_runs`
+and `transition_tape` construct that successor from every initialized reachable
+call return, with all eight-tape intermediate states bounded by
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+`finite_alphabet` verifies the fixed pushed-symbol alphabet, independently of
+the rule index's unary length. This completes the call-return subroutine;
+it does not yet execute the query's rule body. Query entry must install `W`
+as the current environment, save `E` in a scope frame, and decrement the clock.
+Query/scope transitions, other remaining instructions, captured-word matching,
+whole-machine selection, ordinary-input initialization, and the complete
+recognizer connection remain open. The established complete recognizer bound
+is still `O(n log n)`, and general same-input Par/Seq equality or separation
+remains unresolved.

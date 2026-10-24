@@ -335,3 +335,4 @@ import MacroPeg.CBV.SequentialArgHeadPackedMachine
 import MacroPeg.CBV.SequentialWordRotateMachine
 import MacroPeg.CBV.SequentialArgConsPackedMachine
 import MacroPeg.CBV.SequentialArgConsReturnPackedMachine
+import MacroPeg.CBV.SequentialCallPackedMachine
