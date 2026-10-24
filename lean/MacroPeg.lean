@@ -573,3 +573,7 @@ import MacroPeg.CBV.FragmentOriginExamples
 import MacroPeg.CBV.FragmentBodyForm
 import MacroPeg.CBV.FragmentBodyCompiler
 import MacroPeg.CBV.FragmentBodyExamples
+
+import MacroPeg.CBV.FragmentStuckRecursive
+import MacroPeg.CBV.FragmentNullableControl
+import MacroPeg.CBV.FragmentNullableExamples

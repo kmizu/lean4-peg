@@ -7691,3 +7691,47 @@ prefixes before the first replay, unrestricted arguments, and independent
 multiple captures remain outside this construction. The fixed A=a*;# header,
 a-only consuming H, one actual capture, and per-replay-leaf A;param0 shape
 remain restrictions. General Par/Seq equality or separation is unresolved.
+
+### Capture-independent divergence and nullable source body loops
+
+`FragmentStuckRecursive` extends the consuming-fragment origin compiler with
+one distinguished leaf at index `tails.length`. Its source body is `eps*`,
+independent of the captured value. Ordinary leaf indices still select
+A;param0;b. Logical source rows and appended leaf rows agree at every clock,
+including clock zero. The Seq expansion previews the actual argument before
+executing the divergent leaf: a mandatory fragment's finite failure must
+remain failure, rather than becoming undefined. `evaluator_eq`,
+`observations_iff`, and `language_translation` cover arbitrary valid finite
+origin plans mixing both leaf kinds, recursive argument tests, and normal
+continuations. The only new layout premise is a finite index bound `j≤n`.
+
+`FragmentNullableControl.Body` retains actual source `(!e)*` and `(e*)*`
+constructors, nested with choice, guards, and negation. `negativeStar`
+normalizes the former to a finite plan: a successful negative test diverges
+at the unchanged position; a failed test yields zero iterations there.
+Double stars normalize to the divergent leaf, using the generic nested-star
+result. The local evaluator theorem needs no totality, Consumer, sound-table,
+purity, valid-position, or input-shape premise. `tables_eq` proves equality
+of all ordinary clock tables between the actual source grammar and its
+normalized core; `observations_iff` and `language_translation` compose this
+with the fixed Seq compiler on unchanged strings. Finite body-index validity
+is checked separately, rather than assumed semantic correspondence.
+
+Kernel examples distinguish origin divergence from a replay-wrapped loop:
+on a! the actual argument captures a, but A;param0 fails; the source nullable
+loop and generated Seq call are undefined, whereas the incorrect wrapper
+finitely fails. On a#a a failed negative test returns the original position
+with zero iterations. Mandatory argument failure at clocks 0/1/2 and an
+undefined consuming argument precede the body. A real 0→1→0 example runs
+these nullable stars inside recursive source rows and restores each parent's
+whole capture after returning.
+
+This supplies capture-independent divergent leaves and integrates two
+nullable star forms with recursive consuming-fragment capture translation.
+It does not yet normalize a general star whose operand alternates between
+consuming replay outputs and zero-consuming predicate outputs. This new
+compiler has not been composed with `FragmentBodyForm`'s arbitrary sequence
+normalizer or with ordinary bare-param/closed leaf kinds. Fixed A=a*;#,
+a-only consuming H, one actual source capture, and A;param0 replay entries
+remain restrictions. Unrestricted Par/Seq equality or separation remains
+unresolved.
