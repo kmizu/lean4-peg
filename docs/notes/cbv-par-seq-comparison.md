@@ -3915,3 +3915,61 @@ therefore does not cover arbitrary capture-dependent bodies or several
 independent arbitrary captures. General CBV-Par/CBV-Seq equality and separation
 remain unresolved; this is an extension toward the body-entry obligation,
 not a redefinition of that objective.
+
+
+### Consuming body control with position-independent word arguments
+
+`CBV/WordArguments.lean` and `CBV/WordControlFusion.lean` address the remaining
+consuming-prefix boundary for another explicitly delimited source family.
+Actual arguments are literals, parameter references, or concatenations of
+such expressions. `value` computes their word from the current environment;
+`word_eval` proves that each argument matches precisely that same word at
+every position, or finitely fails everywhere if a referenced value is missing.
+`value_of_success` connects this static expression value to the actual runtime
+capture. There is no finite palette or bound on the word length. In particular,
+`duplication` proves that `param(0) param(0)` denotes `w ++ w` for arbitrary `w`.
+
+Body control now supports **arbitrary consuming sequence and repetition**,
+as well as prioritized choice and negative predicates, between replay and
+local parts. A replay part is `x B`; its tail `B` may use the capture and make
+recursive calls with word-valued arguments. A local part is independent of
+the outer environment and may consume input or recurse. Calls retain their
+argument expression in the original caller environment. Each later replay
+leaf can therefore match the same word from its current position, even after
+a preceding local part or previous iterations have consumed input. The
+successful Seq call captures that word at its new position and passes it to
+the actual target tail rule.
+
+This is complementary to `ReplayControlFusion`: it permits consuming control
+between parts, while imposing word-valued arguments instead of arbitrary
+recursive head parsers. An arbitrary parser can choose different captured
+words at different positions; the position-independent value proof cannot
+be applied to such a parser.
+
+The target has one fixed zero-argument entry rule `eps` followed by one rule
+per part (arity one or zero). `enter_word` transfers the caller's argument
+expression to an equal literal word throughout the complete body control.
+The table invariant relates a source row at **any** environment word and
+input position to the actual target entry and expanded control at that
+position. The entry rule keeps this strong invariant undefined at stage zero,
+even for unmatched environment words or missing part references; a source
+rule has not yet been unfolded at that stage. It is an ordinary installed
+rule, not a semantic advice mechanism.
+
+`Plan.eval_congr` covers consuming sequence and repetition with all intermediate
+position bounds. `tables_shifted` proves the relation at every physical table
+round, including empty captures, missing values, failed later replays, and
+non-consuming loops. `evaluator_eq`, `observations_iff`, and
+`language_translation` then preserve all finite successes and failures and
+the original full-consumption language, without assuming a recursive user
+simulation. The kernel-checked `consuming_prefix_and_repetition` example
+captures `aa`, consumes an `a` before replaying that original value, accepts
+`aaa`, rejects `aab`, and repeats the pattern twice on six `a` characters
+under both actual grammars.
+
+The construction still requires unary word-valued arguments and body
+factorization into replay/local parts. It does not establish a normal form
+for arbitrary source bodies, cover independently evaluated arbitrary argument
+parsers, or prove general Par/Seq equality or separation. The complete original
+objective remains open. Root imports and 24 new public axiom guards cover the
+word-value foundation and its full recursive compiler application.

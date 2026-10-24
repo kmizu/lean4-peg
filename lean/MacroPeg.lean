@@ -394,3 +394,5 @@ import MacroPeg.CBV.FrozenPairArguments
 import MacroPeg.CBV.StatefulPairFusion
 import MacroPeg.CBV.ReplayFallbackFusion
 import MacroPeg.CBV.ReplayControlFusion
+import MacroPeg.CBV.WordArguments
+import MacroPeg.CBV.WordControlFusion
