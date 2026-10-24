@@ -7884,3 +7884,170 @@ Capture-independent consuming prefixes, unrestricted shifted captures, and
 independent multiple source captures remain outside the construction. The
 shifted branch still uses fixed A=a*;# and a-only consuming H. General
 Par/Seq equality or separation remains unresolved.
+
+### Caller-dependent tests at both ends of a fragment capture
+
+`ArgumentGuard.window_call_eq` combines the origin and endpoint test
+normalizations for any actual unary Par rule, arbitrary table/environment,
+and arbitrary argument/test parsers. It moves an argument
+`&before; a; &after` to caller-origin `&before; &(a; after); call[a]`.
+The second preview executes `after` at the endpoint actually selected by a,
+then restores the caller origin. No purity, totality, successful-capture,
+or input-shape assumption is needed. Failure and undefinedness keep their
+original order, and neither preview contributes to the held value.
+
+`FragmentMixedRecursive` now accepts the four surface templates
+`call i [before,G,H,after]`. These denote **one** real source argument
+`&render(before); ((A;&(A;render(G)))*; fragmentRender(H)); &render(after)`;
+`guarded_source_syntax` proves that exact source syntax. The target performs
+the origin and actual-endpoint previews before using the existing mixed
+bare/shifted fragment entry. Unknown users still reject. Three-template and
+five-or-more-template calls remain unsupported. Existing zero/one/two-template
+calls retain their meaning.
+
+`guarded_call_eq` preserves the complete partial result at every ordinary
+clock, including zero. Current-clock structural induction discharges both
+test correspondences, fragment G/H correspondences, and arbitrary recursive
+calls inside tests. Previous-clock induction handles callee continuations.
+The existing nested-body compiler's source/core table equality and final
+observation/language preservation apply unchanged; no caller-supplied guard,
+body, table, continuation, or semantic shape oracle is added.
+
+Kernel examples use old parent a in both tests of a child aaa#a. Its endpoint
+test consumes parent a and probes an actual recursive user; that lookahead
+restores the selected endpoint before capture finishes. The child body uses
+mixed bare/shifted iterations, captures a fresh aa grandchild with its own
+parent-dependent guards, and restores both parents' complete values. Changing
+the old parent to aa makes the endpoint check fail on the same input even
+though both origin tests succeed. Origin divergence precedes a failed
+capture, endpoint divergence precedes a rejected body, and a finite endpoint
+failure remains finite even at clock zero and before a negative body.
+A successful aa alternative cannot be reopened as a after its endpoint test
+fails; explicitly choosing a would accept that input.
+
+This extends the actual argument syntax within the consuming-fragment
+compiler, including parent-dependent recursive checks at both endpoints.
+It does not resolve capture-dependent processing after an arbitrary consuming
+prefix or arbitrary consuming shifted arguments. A remains a*;#, H remains
+a-only consuming syntax, and logical users still have one source capture.
+General Par/Seq equality or separation remains unresolved.
+
+### Retaining captures through a stateful consuming prefix
+
+`LoopCaptureSafety` replaces a character-set condition on captured words
+with a finite-state loop condition. For a fixed partial deterministic scanner
+M and initial state q, an admitted literal word must return M from q to q.
+Arguments may combine these literals, old retained parameters, sequence,
+prioritized choice, arbitrary nested star, and negative queries. Queries can
+contain supported recursive user calls. The caller environment contains loop
+words; this invariant is established again by actual successful argument
+evaluation at each recursive call. `suffix_shape` and `capture_loop` derive
+the captured word and exact scanner resumption equality, without a supplied
+successful-capture or suffix-shape oracle. No consuming user call is admitted
+outside queries in this argument syntax.
+
+`StatefulLoopFusion` installs the actual compiled finite-state scanner rows
+before the unary user rows. Each user body is `scan(M,q); tail`, so the first
+use of the held value may occur after an unbounded, genuinely consuming
+closed prefix. Tails have arbitrary sequence, choice, predicates, nested
+star, parameter use, and recursive unary user calls with checked arguments.
+All users share M and q. `Supported` reserves the helper addresses and checks
+the finite literal-loop and argument-syntax conditions. No syntax conversion
+or new input encoding is used: the very same generated grammar and start
+expression work under both CBV strategies for this family.
+
+The scanner rows stabilize at input length plus one independently of user
+rows and captured environments. Their physical evaluation is frozen only
+for analysis; `helpers_stable` discharges the actual installed-row condition.
+Structural evaluator induction and user-clock induction preserve complete
+partial results of the frozen tables, including clock-zero user rows.
+Physical/frozen cofinality then gives `observations_iff` and
+`language_translation` for every unchanged original string and arbitrary
+success/failure observation. An empty-success loop remains undefined.
+
+The two-state example alternates a/b transitions, also permits c loops, and
+stops at the actual missing-transition boundary. Captures c → cab → cabab
+are retained through consuming prefixes, including extra a characters beyond
+the capture.
+A child argument reads its old c value, runs a fresh `(ab/c)*`, and uses a
+negative recursive user probe; the grandchild and both parents reuse their
+complete values after returning. `StatefulScannerFastTable.eq_frozen` proves
+an executable run-based helper table equal to the actual frozen table;
+`physical` transfers its checked results to ordinary physical clocks. Kernel
+examples use that equality rather than repeatedly unfolding scanner rounds.
+The concrete grammar has an all-input language correspondence theorem, as
+well as kernel executions rejecting
+short parent/child/grandchild copies. A plain {a,b} scanner consumes past the
+real stateful boundary and changes acceptance. A non-loop capture a gives a
+Par/Seq difference for this unchanged grammar, showing why the loop check
+cannot just be dropped; it is not a class-separation witness.
+
+This supplies a further consuming-prefix family rather than an unrestricted
+prefix construction. It is a separate compiler theorem from the mixed
+fragment family. General state-changing captures would require carrying the
+reached scanner state into the residual prefix; arbitrary PEG consuming
+prefixes, general shifted arguments, independent multiple captures, and the
+general Par/Seq equality/separation question remain unresolved.
+
+### State-changing captures with checked finite transition actions
+
+`CaptureActionSafety` records a word's action from **every** state of a
+partial finite-state scanner, including undefined transitions. Concatenation
+composes these finite actions. `Typed` is a syntax derivation for literal
+words, param0, sequence, same-action choice, negative queries, and star with
+identity-action operands. A successful actual execution derives both the
+complete captured word and its exact action. Parent accuracy is needed only
+for an actual retained param0 and is re-established after each real capture.
+No preselected capture, successful execution, termination, or input suffix
+shape is supplied to the final translation.
+
+`infer` computes a candidate action from the actual argument syntax and the
+caller's finite action type. `equal` compares actions by enumerating the
+fixed finite states; `infer_sound` and `fits_sound` turn the Boolean check
+into `Typed`. Unequal-action alternatives and non-identity-action star
+operands are rejected by this checker. Negative queries retain the ordinary
+parser and may contain checked recursive user calls. Positive consuming user
+calls inside arguments remain unsupported.
+
+`StatefulActionFusion` assigns one finite capture-action type to each source
+user rule. All source user bodies start with the same compiled scanner
+`scan(M,q)`. The generated target keeps the argument, complete captured value,
+callee address, and tail, but resumes that prefix in `captureAction(q)`.
+`Supported` checks actual calls against the callee's action type using `fits`;
+`Valid` also requires the action to be defined at q. These are finite
+syntactic/type checks, not semantic equivalence or captured-value oracles.
+This removes the return-to-q condition for this typed family. It is a
+complementary theorem to `StatefulLoopFusion`: the latter permits varying
+full actions as long as they fix q, whereas this new theorem permits a
+state change but fixes a full action for each user.
+
+The actual argument action and prefix are derived by structural induction.
+User-clock induction relates the source row at its original position to the
+target row at the capture endpoint. `run_after_prefix` establishes exactly
+the resumption state selected by the computed type. The held value enters
+the callee unchanged; its full action supplies the parent information for
+new nested arguments. Installed helper stability and physical/frozen
+cofinality yield all finite observation correspondence and unchanged-string
+language preservation for two ordinary first-order grammars. Neither
+physical grammar receives a frozen table or an input-dependent annotation.
+
+Kernel examples capture a → acca → accaa, whose actions require target scan
+starts 1 → 0 → 1. A child uses the parent value, fresh c*, a final a, and a
+negative recursive user probe. Extra b/ab prefix transitions run before body
+uses and both parents' full values return. The concrete grammar has an
+all-input language theorem. Short whole-value copies are rejected. On ab!a,
+the corrected Seq grammar accepts while simply resetting the scanner to 0
+rejects. The words a and ab reach the same state from 0 but differ from 1,
+showing why retaining only one endpoint state cannot type later parameter
+composition. Same-action a/ac choice stays committed after a later short
+copy; explicitly selecting ac would accept. Empty captures and argument
+failure/undefinedness ordering, including clock zero, are preserved.
+
+The source user action types are fixed for the finite grammar. Calls whose
+actual argument can select different actions need further finite dispatch or
+normalization; this is not an unrestricted capture classifier. This family
+also requires capture consumption within the source scanner frontier,
+a shared finite-state consuming prefix, and unary source users. Integrating
+these consuming-prefix families with the mixed fragment compiler, arbitrary
+PEG prefixes, unrestricted shifted arguments, independent multiple captures,
+and general Par/Seq equality or separation remain unresolved.

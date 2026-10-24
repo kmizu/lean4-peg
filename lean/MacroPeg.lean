@@ -588,3 +588,14 @@ import MacroPeg.CBV.FragmentMixedCompiler
 import MacroPeg.CBV.FragmentMixedExamples
 
 import MacroPeg.CBV.FragmentDirectExamples
+
+import MacroPeg.CBV.FragmentWindowExamples
+
+import MacroPeg.CBV.LoopCaptureSafety
+import MacroPeg.CBV.StatefulScannerFastTable
+import MacroPeg.CBV.StatefulLoopFusion
+import MacroPeg.CBV.StatefulLoopExamples
+
+import MacroPeg.CBV.CaptureActionSafety
+import MacroPeg.CBV.StatefulActionFusion
+import MacroPeg.CBV.StatefulActionExamples
