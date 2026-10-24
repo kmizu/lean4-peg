@@ -253,3 +253,6 @@ import MacroPeg.CBV.SequentialInputPair
 import MacroPeg.CBV.SequentialSpanMachine
 import MacroPeg.CBV.SequentialEnvLookup
 import MacroPeg.CBV.SequentialParamMachine
+import MacroPeg.CBV.SequentialCodeTest
+import MacroPeg.CBV.SequentialCharacterMachine
+import MacroPeg.CBV.SequentialLiteralRead

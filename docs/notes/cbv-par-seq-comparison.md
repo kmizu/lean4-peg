@@ -1121,3 +1121,43 @@ task, implementing the other atomic cases, loading ordinary input, and
 integrating all transitions and terminal decisions into the evaluator. This
 component still starts with the original input already encoded. The general
 Par/Seq equality-or-separation question remains unresolved.
+
+### Original-input character and literal atoms
+
+`SequentialCodeTest` implements numeric tests for any character, one fixed
+character, and a fixed inclusive character range. EOF is code zero; original
+characters use `toNat + 1`. The arbitrary-character test checks positivity.
+The fixed-character and range tests use shrinking comparisons with grammar
+constants, including immediate failure for reversed ranges. The code tester
+clears its code and comparison scratch and returns a success flag.
+
+`SequentialCharacterMachine` copies the saved runtime position into the reader,
+reads and restores the original encoded input, applies the chosen code test,
+and decrements the saved position only on success. `character_value` identifies
+its result with `SequentialStack.atom` for `.any`, `.chr`, and `.range` for every
+original `List Char`, valid position, and capture environment. This includes EOF,
+NUL, arbitrary Unicode characters, and empty or reversed ranges. The compiled
+program uses eight actual tapes. `capacity_linear` gives the exact capacity
+`(2^32 + 2) * n + 3 + SequentialCodeTest.capacity kind`.
+
+The potentially long original-input traversal keeps its direct linear space
+annotation. Only the character-code tester uses time-to-space conversion: its
+initial code is bounded by the fixed alphabet constant `2^32`, and its time bound
+depends on that constant and fixed source characters, never on the input length.
+Thus that conversion contributes a fixed additive capacity.
+
+`SequentialLiteralRead` composes fixed-character machines for a grammar literal,
+clearing the success flag between stages and stopping at the first mismatch.
+Its program depends only on the literal. `scan_correct` proves the exact result
+of `stripPrefix?`, and `literal_value` connects it to `.lit` in the existing atom
+semantics, including the empty literal and EOF. `compiled_literal` and
+`literal_tape` verify the whole composition on eight tapes. All intermediate
+tapes fit `(2^32 + 2) * n + 3 + reserve literal`, where `reserve` is a fixed sum
+of code-tester capacities. Both character and literal machines retain the
+original encoded input in register zero.
+
+The evaluator still needs source-expression selection and task/result encoding
+around these atom machines, together with the trivial non-reading atoms,
+ordinary-input initialization, and the complete transition/terminal loop.
+These components start with the original input already encoded. They do not
+yet decide the general CBV-Par versus CBV-Seq equality-or-separation question.
