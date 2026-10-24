@@ -3443,3 +3443,64 @@ capture in this fragment can now be unbounded, and rule arities can vary,
 while general same-original-language Par/Seq equality or separation remains
 unresolved. The root imports and 22 new public axiom guards cover both
 compilers and their semantic connections.
+
+### Discovering runtime chunks from independent greedy scanner arguments
+
+`NestedScannerArguments` supplies an operational factorization, rather than
+assuming already evaluated capture words or syntactically cumulative parser
+arguments. `choice A` reads one character from a fixed finite character list
+`A`; `scan A` greedily repeats it. For static lists `A` included in `B`,
+`scan_absorb` proves the actual evaluator identity
+
+```
+(scan A) (scan B) = scan B.
+```
+
+The second scan resumes at the first scan's actual endpoint. `scan_eval`
+proves its complete semantics on every valid suffix of every original
+Unicode character input, by the corresponding `dropWhile` result. Empty
+character sets, empty captures, stopping characters outside either set, and
+EOF are covered. The inclusion condition concerns only the fixed syntax:
+`covers_iff` verifies a finite Boolean check, and `cumulative_nested` constructs
+an increasing family from any finite list of character sets by cumulative
+union. It requires no input-dependent advice.
+
+For any number of character sets in inclusion order, `parsers_collapse` and
+`independent_arguments` prove that independent Par arguments return exactly
+the same values as their cumulative-parser expansion. Thus, for example,
+
+```
+F(a*, (a/b)*, (a/b/c)*)
+```
+
+can use the preceding prefix-family compiler without supplying difference
+parsers or capture values. On input `a^n b^m c^k z`, the original argument
+values are `a^n`, `a^n b^m`, and `a^n b^m c^k`; consecutive target scans
+capture `a^n`, `b^m`, and `c^k`. None of `n,m,k` has a fixed bound.
+
+`NestedScannerFusion` connects this identity to whole recursive grammars.
+Its actual source calls retain the independent scanner expressions; source
+rule bodies begin with the last parameter's replay and then their template
+tail. Rules may have different arities, including zero. The Seq target is
+an actual `PrefixFamilyFusion.seqGrammar`, with cumulative parameter views.
+`evaluator_of_tables` and `tables_eq` prove the normalization under all
+recursive approximations. `observations_iff` and `language_translation`
+preserve all finite observations and the whole-input language on unchanged
+original strings. No totality assumption is imposed on recursive bodies.
+
+The `Test` namespace also handles source bodies under positive lookahead.
+`source_commute` and `wrapped_eq` move these tests to call sites while keeping
+scanner arguments intact. `Test.observations_iff` and
+`Test.language_translation` connect the corresponding fixed Seq target,
+retaining the captured values inside the test and restoring caller positions.
+Both compilers include failure, undefined recursive evaluations, missing rules,
+and arity mismatches.
+
+This closes argument discovery for independent, inclusion-ordered greedy
+scanners. It does not handle arbitrary recursive argument parsers, arbitrary
+regular parser residuals, captures forwarded as argument expressions,
+non-nested or differently ordered scanner families, or source bodies without
+the leading replay (or replay test). These remain mathematical obligations;
+the general Par/Seq language-class question is unresolved. Root imports and
+20 new public theorem axiom guards cover the operational factorization and
+both language-preserving compiler connections.

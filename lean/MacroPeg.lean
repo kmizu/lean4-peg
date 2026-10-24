@@ -378,3 +378,5 @@ import MacroPeg.CBV.SequentialPackedBinaryLoader
 import MacroPeg.CBV.SequentialPackedBinaryInputMachine
 import MacroPeg.CBV.PrefixFamilyFusion
 import MacroPeg.CBV.PrefixFamilyTestFusion
+import MacroPeg.CBV.NestedScannerArguments
+import MacroPeg.CBV.NestedScannerFusion

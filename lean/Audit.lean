@@ -7767,3 +7767,97 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.PrefixFamilyTestFusion.language_translation
+
+-- Independent greedy scanner arguments and their fixed reverse compilers.
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerArguments.choice_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerArguments.choice_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerArguments.scan_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerArguments.scan_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerArguments.scan_absorb' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerArguments.scan_absorb
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerArguments.parsers_collapse' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerArguments.parsers_collapse
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerArguments.arguments_congr' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerArguments.arguments_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerArguments.independent_arguments' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerArguments.independent_arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerArguments.covers_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerArguments.covers_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerArguments.cumulative_nested' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerArguments.cumulative_nested
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerFusion.source_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerFusion.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerFusion.render_scans' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerFusion.render_scans
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerFusion.evaluator_of_tables' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerFusion.evaluator_of_tables
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerFusion.tables_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerFusion.tables_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerFusion.decide_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerFusion.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerFusion.Test.supported_render' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerFusion.Test.supported_render
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerFusion.Test.wrapped_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerFusion.Test.wrapped_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerFusion.Test.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerFusion.Test.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.NestedScannerFusion.Test.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.NestedScannerFusion.Test.language_translation
