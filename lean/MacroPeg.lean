@@ -343,3 +343,10 @@ import MacroPeg.CBV.SequentialTagDispatchMachine
 import MacroPeg.CBV.SequentialScopeControlMachine
 import MacroPeg.CBV.SequentialScopeWordMachine
 import MacroPeg.CBV.SequentialScopePackedMachine
+import MacroPeg.CBV.SequentialSymbolDispatchMachine
+import MacroPeg.CBV.SequentialWordMatchMachine
+import MacroPeg.CBV.SequentialWordRestoreMachine
+import MacroPeg.CBV.SequentialWordInputMachine
+import MacroPeg.CBV.SequentialCountGuardMachine
+import MacroPeg.CBV.SequentialParamMatchMachine
+import MacroPeg.CBV.SequentialParamPackedMachine

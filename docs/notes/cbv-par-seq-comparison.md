@@ -3079,3 +3079,59 @@ matching, whole-machine instruction selection, ordinary-input initialization,
 and the complete recognition connection remain open. The established complete
 recognizer bound remains `O(n log n)`, and general same-input Par/Seq equality
 or separation is unresolved.
+
+
+### Complete parameter matching from the actual environment and original input
+
+`MacroPeg.CBV.SequentialParamPackedMachine` implements the complete `.param k`
+transition on the same original `List Char` input. The program receives only
+the source-fixed parameter index. Its environment, selected captured word,
+current position, success flag, and resulting position are read or computed
+from the actual tape streams. `actual_step` identifies the full Seq successor;
+`transition_runs` and `transition_tape` construct its complete packed encoding
+from every initialized reachable parameter task. Missing parameters, empty
+words, exhausted input, and mismatching characters are included.
+
+Seven modules supply the executable components:
+
+- `SequentialSymbolDispatchMachine` compares two actual symbols using a fixed
+  finite decision tree. Its source alphabet covers all Lean `Char` values via
+  the established positive-character encoding and bound `0x110001`. The large
+  fixed tree is a space construction; no small-code or efficient-time claim
+  is made.
+- `SequentialWordMatchMachine` compares a selected word against a prepared
+  input suffix. Every matching character moves to a restoration buffer and
+  directly decrements the difference-encoded current cursor. Its trace
+  semantics agree exactly with `stripPrefix?`.
+- `SequentialWordRestoreMachine` retains the successful cursor or removes the
+  partially advanced current cursor on failure. Both actual word and input
+  streams are restored, including any temporarily skipped environment words.
+- `SequentialWordInputMachine` locates the actual suffix by counting the
+  current unary cursor block, restores that cursor block, and composes the
+  comparison and restoration. No decoded input position or substring is
+  provided to its fixed program.
+- `SequentialCountGuardMachine` tests a unary count against a source-fixed
+  bound and restores the complete count before either branch. The runtime
+  count has no fixed upper bound.
+- `SequentialParamMatchMachine` uses that guard to check `k < environment
+  length` before skipping exactly `k` word records. Delimiters handle empty
+  words. The guard prevents a missing parameter from selecting a word owned
+  by the continuation. All skipped words are restored after matching.
+- `SequentialParamPackedMachine` reads the computed success bit and replaces
+  the old task fields with the actual expression return value. The clock,
+  current and saved environments, continuation, saved cursors, original
+  input, and empty scratch tapes agree with the complete successor encoding.
+
+Every intermediate eight-tape state satisfies capacity
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+The fixed pushed-symbol alphabet and standard-axiom dependencies are audited.
+This closes the parameter lookup and captured-word matching subroutine; it
+still starts from a preloaded initialized reachable encoded state. Other
+remaining instructions, whole-machine instruction selection, ordinary-input
+initialization, and the complete recognition connection remain open. The
+established complete recognizer bound remains `O(n log n)`. General same-input
+Par/Seq equality or separation is unresolved.

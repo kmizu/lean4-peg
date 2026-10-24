@@ -43,6 +43,7 @@ import MacroPeg.CBV.ParamMachine
 import MacroPeg.CBV.ControlMachine
 import MacroPeg.CBV.CallFrames
 import MacroPeg.CBV.PositionSweep
+import MacroPeg.CBV.SequentialParamPackedMachine
 
 /-!
 # Axiom audit
@@ -6891,3 +6892,153 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialScopePackedMachine.finite_alphabet' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialScopePackedMachine.finite_alphabet
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSymbolDispatchMachine.dispatch_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSymbolDispatchMachine.dispatch_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSymbolDispatchMachine.compare_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSymbolDispatchMachine.compare_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSymbolDispatchMachine.constOK' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSymbolDispatchMachine.constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordMatchMachine.trace_exists' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordMatchMachine.trace_exists
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordMatchMachine.Trace.split' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordMatchMachine.Trace.split
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordMatchMachine.Trace.stripPrefix' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordMatchMachine.Trace.stripPrefix
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordMatchMachine.stop_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordMatchMachine.stop_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordMatchMachine.advance_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordMatchMachine.advance_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordMatchMachine.loop_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordMatchMachine.loop_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordMatchMachine.constOK' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordMatchMachine.constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordRestoreMachine.success_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordRestoreMachine.success_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordRestoreMachine.record_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordRestoreMachine.record_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordRestoreMachine.restore_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordRestoreMachine.restore_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordRestoreMachine.match_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordRestoreMachine.match_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordRestoreMachine.constOK' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordRestoreMachine.constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordInputMachine.prepare_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordInputMachine.prepare_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordInputMachine.original_input_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordInputMachine.original_input_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordInputMachine.constOK' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordInputMachine.constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCountGuardMachine.guard_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCountGuardMachine.guard_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCountGuardMachine.constOK' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCountGuardMachine.constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamMatchMachine.skipWords_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamMatchMachine.skipWords_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamMatchMachine.present_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamMatchMachine.present_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamMatchMachine.missing_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamMatchMachine.missing_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamMatchMachine.match_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamMatchMachine.match_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamMatchMachine.constOK' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamMatchMachine.constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamPackedMachine.actual_step' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamPackedMachine.actual_step
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamPackedMachine.before_control' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamPackedMachine.before_control
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamPackedMachine.after_control' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamPackedMachine.after_control
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamPackedMachine.finish_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamPackedMachine.finish_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamPackedMachine.transition_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamPackedMachine.transition_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamPackedMachine.transition_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamPackedMachine.transition_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamPackedMachine.finite_alphabet' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamPackedMachine.finite_alphabet
