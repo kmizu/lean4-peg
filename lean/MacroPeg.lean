@@ -487,3 +487,5 @@ import MacroPeg.CBV.SelectedPrefixGrammar
 import MacroPeg.CBV.SelectedPrefixExamples
 import MacroPeg.CBV.RecursiveCodeGrammar
 import MacroPeg.CBV.RecursiveCodeExamples
+import MacroPeg.CBV.HelperArgument
+import MacroPeg.CBV.DependentCodeExamples

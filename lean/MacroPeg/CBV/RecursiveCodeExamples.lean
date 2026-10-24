@@ -96,8 +96,14 @@ theorem two_captured (x : List Char) (p q : Nat) (hp : p≤x.length)
 
 def user (mark : Char) (next : Nat) : User header where
   arg := two
-  lexical := by simp [two,head,bodies,RecursiveParserStability.Lexical,header]
-  captured := two_captured
+  allowed := by simp [two,head,bodies,HelperArgument.Syntax,header]
+  captured := by
+    intro x E p q hp h
+    have hh := RecursiveParserStability.lexical_eval (RecursiveParserStability.installed bodies)
+      (RecursiveParserStability.installed bodies) x .callByValuePar .callByValuePar
+      (canonical bodies x) (canonical bodies x) (tblV_ok _ _ _ _)
+      (by intro i hi j hj; rfl) E [] two (by simp [two,head,bodies,RecursiveParserStability.Lexical]) p hp
+    exact two_captured x p q hp (hh ▸ h)
   body := .alt (.seq (.lit [mark]) (.seq (.call next []) (.seq (.lit ['?']) (.param 0)))) (.lit ['!'])
 
 def tails : List (User header) := [user '@' 1,user '%' 0]
@@ -138,21 +144,21 @@ theorem translated_execution :
 
 def cyclicUser : User header where
   arg := .call 0 []
-  lexical := by change 0<2; omega
+  allowed := by change 0<2; omega
   captured := by
-    intro x p q hp h
+    intro x E p q hp h
     have hn := RecursiveParserStability.cycle_undefined
       (g:=RecursiveParserStability.grammar bodies) (by rfl) x .callByValuePar
-      (RecursiveParserStability.floor bodies x) [] p hp
+      (RecursiveParserStability.floor bodies x) E p hp
     change evV (RecursiveParserStability.grammar bodies) x .callByValuePar
       (tblV (RecursiveParserStability.grammar bodies) x .callByValuePar (RecursiveParserStability.floor bodies x))
-      [] (.call 0 []) p=some (some q) at h
+      E (.call 0 []) p=some (some q) at h
     rw [hn] at h
     cases h
   body := .eps
 
 theorem cyclic_argument_undefined (x : List Char) (p : Nat) (hp : p≤x.length) :
-    argument header cyclicUser x p=none :=
+    argument header cyclicUser x [] p=none :=
   RecursiveParserStability.cycle_undefined (by rfl) x .callByValuePar
     (RecursiveParserStability.floor bodies x) [] p hp
 

@@ -13450,6 +13450,14 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SelectedPrefixExamples.translated_execution
 
+/-- info: 'Shallot.MacroPeg.CBV.HelperArgument.firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HelperArgument.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.HelperArgument.eval_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.HelperArgument.eval_eq
+
 /-- info: 'Shallot.MacroPeg.CBV.RecursiveCodeGrammar.helpers_firstOrder' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveCodeGrammar.helpers_firstOrder
@@ -13465,6 +13473,14 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.RecursiveCodeGrammar.seeded_lexical' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveCodeGrammar.seeded_lexical
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCodeGrammar.argument_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCodeGrammar.argument_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCodeGrammar.view_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCodeGrammar.view_firstOrder
 
 /-- info: 'Shallot.MacroPeg.CBV.RecursiveCodeGrammar.view_param_firstOrder' depends on axioms: [propext] -/
 #guard_msgs in
@@ -13505,6 +13521,10 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.RecursiveCodeGrammar.parameters_double' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveCodeGrammar.parameters_double
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveCodeGrammar.argument_view_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveCodeGrammar.argument_view_eval
 
 /-- info: 'Shallot.MacroPeg.CBV.RecursiveCodeGrammar.evaluator_of_shift' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
@@ -13595,3 +13615,33 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveCodeExamples.cyclic_no_observation
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCodeExamples.guarded_captured' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCodeExamples.guarded_captured
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCodeExamples.argument_depends_on_parent' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCodeExamples.argument_depends_on_parent
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCodeExamples.duplicated_argument_view_required' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCodeExamples.duplicated_argument_view_required
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCodeExamples.source_execution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCodeExamples.source_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCodeExamples.all_inputs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCodeExamples.all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCodeExamples.translated_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCodeExamples.translated_execution

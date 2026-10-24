@@ -5952,3 +5952,46 @@ prefix-code construction. It does not cover arguments depending on retained
 values, arguments recursively calling the parameterized user component,
 other capture shapes, arbitrary consuming prefixes, or multiple independent
 captures. General Par/Seq equality or separation remains unresolved.
+
+
+### Retained-value-dependent arguments in the same runtime code compiler
+
+`HelperArgument.Syntax` extends lexical argument expressions with retained
+parameters, under sequence, choice, predicates, and arbitrary repetition.
+Calls still target the independent nullary recursive helper component.
+`eval_eq` proves complete partial evaluation agreement using actual helper
+row agreement and the same retained environment; parameters are not erased.
+
+`RecursiveCodeGrammar.User` now certifies its argument's successful
+**actual environment-dependent** captures in the stabilized helper table.
+Every such capture must still have two codewords, for every environment.
+Source calls pass the original argument B. Target calls instead test
+`view B`, where old parameter zero is read as two copies of the retained
+header word. `argument_view_eval` derives full partial result agreement
+from helper independence and the retained-parameter relation. This commits
+the same argument selection before header evaluation. The shifted-row
+invariant now quantifies the original calling environment. The existing
+cofinality proof gives ordinary fixed-grammar `observations_iff` and
+`language_translation` on unchanged inputs, with no externally supplied
+recursive equivalence or filter oracle. Undefined dependent arguments
+remain undefined before body entry on both sides.
+
+`DependentCodeExamples` uses `!param0; (R '#'); (R '#')` as the actual
+argument, with `R <- 'a' R 'b' / eps`. It accepts a fresh child's capture
+only if the old retained value does not already match there. The argument's
+selected result changes when only the parent's retained value changes.
+A separate kernel test shows that testing the unmodified argument with
+only one retained header word changes its result; the duplicated view is
+required even for partial argument selection. The actual recursive source
+accepts parent `aabb#`, child `ab#`, then reuses the parent's two-word value
+after return. It rejects short parent copies and a child repeating the
+parent value. All target observations follow from the all-input theorem.
+Earlier closed recursive-helper and unproductive-cycle examples still pass.
+
+This removes the **retained-value independence** restriction on argument
+parsers in this construction. Headers themselves remain independent of
+retained values. Two-codeword capture certificates, independent nullary
+helper calls, and unary user rules remain restrictions. Recursive argument
+calls into parameterized users, general capture shapes, independently
+multiple captures, arbitrary consuming headers, and general Par/Seq
+class equality or separation remain unresolved.
