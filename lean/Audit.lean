@@ -11051,3 +11051,81 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ProfiledDependentRecursion.dependent_recursive_execution
+
+-- Mutual retained-value-dependent user families.
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.parRender_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.parRender_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.seqRender_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.seqRender_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.source_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.key_mem' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.key_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.target_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.target_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.par_installed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.par_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.seq_installed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.seq_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.selected_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.selected_call
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.entry_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.entry_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.evaluator_of_rows' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.evaluator_of_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MutualProfiledRecursion.mutual_capture_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MutualProfiledRecursion.mutual_capture_execution

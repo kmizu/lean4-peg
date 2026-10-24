@@ -5171,3 +5171,39 @@ preserved. General Par/Seq class equality or separation remains unresolved.
 Validation: full `lake build` succeeds (835 jobs), including `Audit`. All
 36 added public theorem axiom guards use only standard Lean axioms or no
 axioms. The three new modules have no Lean warnings or proof placeholders.
+
+## Mutual user families with distinct arguments and bodies
+
+`MutualProfiledRecursion` removes the single-user-family restriction of the
+preceding compiler. A finite list of unary users each supplies its own
+retained-value-dependent argument expression and its own body template.
+A body may call any other member, including itself, under sequence,
+choice, repetition, and predicates. Every member uses the same fixed
+nonempty shifted prefix `(u param(0))` before its distinct body.
+
+The target user address is selected from a finite enumeration of pairs
+`(callee index, complete capture profile)`. `selected_call` connects actual
+generated profile queries to the installed unary row and the original Par
+argument value/endpoint. `tables_shifted` proves the simultaneous row
+correspondence for all members and stages. `evaluator_eq` extends it through
+body control, and `observations_iff` removes the seeded clocks to preserve
+finite observations on unchanged input. `language_translation` builds one
+fixed first-order Seq grammar for the entire mutually recursive family;
+its hypotheses are syntactic argument/helper validity and a nonempty shift.
+
+The kernel execution uses two different rules and both directions of their
+call cycle. The first independently captures `aa`; the second captures the
+retained `aa` followed by a fresh `a`, giving `aaa`, and then calls the first
+again. Both grammars retain `aaa` and `aa` across the nested returns, and
+reject a shortened `aa` substituted for the middle rule's retained `aaa`.
+
+The common shift is still a restriction: different shifts would require
+joint metadata for their phase machines or a corresponding combined
+filter. Argument expressions still exclude retained-parameter-dependent
+star and user calls. Multiple independent arguments, arbitrary body entry
+shapes, and normalization of arbitrary original source grammars are still
+open; this is not a general language-class equality or separation result.
+
+Validation: full `lake build` succeeds (836 jobs), including `Audit`. The
+17 additional public theorem guards use only standard Lean axioms. The new
+module has no proof placeholders or Lean warnings.
