@@ -7528,10 +7528,60 @@ preserve a consuming fragment followed by an empty-star None before the
 missing-delimiter comparison. A syntax certificate also covers nested
 consuming choices with parent-dependent recursive tests.
 
-This is a complete local call bridge, not yet an expanded recursive compiler
-or an unrestricted inverse translation. The existing recursive compiler
-still renders only the earlier G/J star-fragment family. A syntax-directed
-compiler for the new consuming H must connect both current-clock argument
-correspondence and the zero-clock seed to its recursive rows. Fixed A=a*;#,
+The local call bridge retains explicit current-clock argument and
+previous-clock continuation correspondence premises. The recursive compiler
+below discharges them for its generated source family. Fixed A=a*;#,
 only a-consuming H, one source capture, and the mandatory A;param0 body entry
 remain restrictions. General Par/Seq equality or separation remains unresolved.
+
+### Recursive compiler for consuming fragments
+
+`FragmentConsumingRecursive` compiles normal template calls with two
+templates G and H into one actual unary Par argument
+`(A;&(A;G))*;H`. In contrast to the earlier G/J compiler, the second
+template is the consuming fragment itself. A singleton template supplies
+G and H=eps; an empty template supplies G=H=eps. Both source and target
+are fixed grammars determined by the finite list of user tails.
+
+The syntax-directed renderer has normal and fragment modes. In fragment
+mode, eps, chr a, a-only literals, sequence, prioritized choice, and star
+remain consuming operations. Tests switch their child to normal mode,
+allowing caller parameters, calls to the same user, mutual recursion,
+and nested controls. A-only literals are rendered as fixed a-sequences.
+Other consuming fragment leaves render as failure. Unknown user indices,
+three or more call templates, and higher-order forms also render as failure.
+These are source-family restrictions, not equivalence claims for arbitrary
+unsupported source expressions.
+
+`render_fragment_syntax` derives the generated fragment certificate.
+`evaluator_of_previous` proves normal and fragment partial correspondence
+together by structural recursion at the current ordinary clock, and
+`evaluator_eq` closes the previous-clock user continuation by clock induction.
+At clock zero it uses actual argument correspondence and the fail-capable
+zero seed, preserving finite argument failure before any missing callee
+row. At positive clocks it applies the full real-call transfer theorem.
+
+`stable_eq`, `observations_iff`, and `language_translation` then preserve
+all finite observations and the language of unchanged original strings
+in one fixed first-order Seq grammar. No capture shape, input delimiter,
+word count, semantic helper-row, current-clock argument correspondence,
+or previous-clock continuation correspondence is assumed in these final
+theorems. The physical evaluators also agree at every ordinary stage for
+every retained environment and valid position, in both renderer modes.
+
+Kernel executions follow actual 0→1→0 calls with a → aaa#a → aa captures,
+a mandatory middle fragment stopped by a recursive user-2 test, and
+parent values reused after both returns. The real middle Seq arguments
+are [aaa,#,a] at the same endpoint; the grandchild captures aa in its own
+caller environment. Additional executions cover a same-user test inside H,
+parent-dependent H together with a nontrivial G, shorter parent/child/grandchild
+copies, successful and committed-failure aa/a choices, empty fragments,
+and zero complete words. Mandatory argument failure and a-consuming H
+followed by an empty-star None are preserved at every ordinary clock.
+
+This closes recursive preservation for the consuming-fragment family.
+It does not remove the fixed A=a*;# header, a-only consuming fragment,
+one source capture, or mandatory A;param0 body-entry restrictions. Mixed-body
+compiler integration, general consuming arguments, arbitrary initial body
+positions, independent multiple captures, and general Par/Seq equality or
+separation remain unresolved.

@@ -17773,3 +17773,125 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingExamples.recursive_tests_in_consuming_syntax' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FragmentConsumingExamples.recursive_tests_in_consuming_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.aWord_syntax' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.aWord_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.render_fragment_syntax' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.render_fragment_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.compare_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.compare_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.tail_compare_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.tail_compare_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.ternary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.ternary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.unary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.unary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.evaluator_of_previous' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.evaluator_of_previous
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.evaluator_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.stable_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.stable_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursive.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursive.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.mutual_returns' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.mutual_returns
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.actual_child_and_grandchild_captures' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.actual_child_and_grandchild_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.short_parent_child_grandchild_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.short_parent_child_grandchild_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.same_user_probe' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.same_user_probe
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.consuming_choice_commit' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.consuming_choice_commit
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.both_controls_and_parent' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.both_controls_and_parent
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.empty_fragments' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.empty_fragments
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.mandatory_failure' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.mandatory_failure
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.consuming_then_undefined' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.consuming_then_undefined
