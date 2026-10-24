@@ -5821,3 +5821,41 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialSharedSpace.reachable_captured_characters' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialSharedSpace.reachable_captured_characters
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.step_commutes' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.step_commutes
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.Runs.lift' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.Runs.lift
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.step_clock_mass' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.step_clock_mass
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.initial_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.initial_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.reachable_clock_bounds' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.reachable_clock_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.result_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.result_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.accepts_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.accepts_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.drive_result_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.drive_result_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.reachable_captured_characters' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.reachable_captured_characters

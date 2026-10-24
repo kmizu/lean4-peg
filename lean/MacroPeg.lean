@@ -307,3 +307,4 @@ import MacroPeg.CBV.CircuitProgram
 import MacroPeg.CBV.SequentialCaptureRegions
 import MacroPeg.CBV.SequentialSharedStack
 import MacroPeg.CBV.SequentialSharedSpace
+import MacroPeg.CBV.SequentialSharedClock

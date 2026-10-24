@@ -2255,3 +2255,44 @@ parameter lookup. The previously proved complete TM bound remains
 `O(n log n)`. Neither a general Par-to-Seq translation nor a language-class
 separation follows from this payload bound; the general comparison remains
 open.
+
+### Sharing the Seq query clock across all continuations
+
+`MacroPeg.CBV.SequentialSharedClock` removes the clock fields from every task
+and continuation frame. The configuration has one current clock. Entering an
+existing rule body at a valid cursor decrements it; returning through a scope
+frame increments it. A zero-clock query, a missing rule, or an invalid cursor
+produces the same undefined result as before and leaves the clock unchanged.
+Thus a nested call restores both the caller environment and the clock needed
+by its remaining computation.
+
+The executable transition function is related to `SequentialSharedStack` by
+`inflate`: it reconstructs a structural frame's clock from the current clock
+and the number of intervening scopes. `step_commutes` proves exact agreement
+of **every** transition on arbitrary configurations. `runs_inflate` and
+`Runs.lift` transfer finite executions in both directions. `initial_runs`,
+`result_iff`, and `accepts_iff` connect the new machine to the original Seq
+semantics on unchanged `List Char` input. `drive_result_iff` checks the result,
+the empty restored outer environment, and the restored initial clock for the
+fuelled executable driver.
+
+`step_clock_mass` proves the invariant
+
+```
+current clock + number of active scopes = initial clock.
+```
+
+Consequently `reachable_clock_bounds` bounds both quantities by
+`(number of grammar rules + 1) * (input length + 1)` at every reachable state.
+The global captured-character bound also transfers without duplication:
+`reachable_captured_characters` still counts the current environment, every
+suspended environment, pending argument heads, and current argument results.
+The reconstruction function is used in proofs only; the runtime continuation
+stack contains no per-frame clocks.
+
+This eliminates one source of repeated integer metadata and bounds the number
+of scope records, including scopes with empty environments. It does not yet
+bound all structural frames or empty captures in this machine, compress
+saved cursors and span endpoints, or implement a linear-space TM simulation.
+The established complete TM bound remains `O(n log n)`, and the general
+Par/Seq language-class question remains open.
