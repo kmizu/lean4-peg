@@ -505,3 +505,5 @@ import MacroPeg.CBV.LastCodewordHelperExamples
 import MacroPeg.CBV.SelectedCodewordVerification
 import MacroPeg.CBV.SelectedCodewordGrammar
 import MacroPeg.CBV.SelectedCodewordExamples
+import MacroPeg.CBV.SelectedCodewordRecursive
+import MacroPeg.CBV.SelectedCodewordRecursiveExamples

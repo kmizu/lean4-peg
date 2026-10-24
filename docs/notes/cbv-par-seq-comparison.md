@@ -6266,12 +6266,58 @@ short and unequal copies, an undefined condition after earlier unequal
 words, and an undefined continuation. An empty successful step is proved
 undefined at every table and position.
 
-This extension currently has a pure shared header and condition, with a
-call-free parameter-using continuation. The previous compiler still
-handles independent recursive headers and mutually recursive user tails
-for its designated last-preserving argument; combining that recursion
-support with the new selected-stop construction remains to be done.
+The standalone compiler uses a pure shared header and condition, with a
+call-free parameter-using continuation. The mutual user recursion extension
+follows below. Independent recursive headers are supported by the earlier
+last-preserving compiler; combining those headers with the new selected-stop
+construction remains to be done.
 Arbitrary argument expressions, arbitrary capture shapes, dependent
 headers/conditions, multiple independent captures, and general Par/Seq
 class equality or separation remain unresolved. The verifier counterexample
 above distinguishes verification methods, not language classes.
+
+
+### Selected stops across mutual user recursion
+
+`SelectedCodewordRecursive` keeps the same B=(A;&(A;G))* capture and V
+syntax while allowing arbitrary user sequence, choice, predicates,
+repetition, and mutual calls in the continuation. A and G remain pure;
+both the unbounded word count and each header's length are input-selected.
+Every user row retains its whole original capture, passes a newly selected
+B to each recursive call, and recovers the old capture on return. There is
+no word-count argument or changed representation of the held string.
+
+Zero-word capture is a material initialization case. If A fails at entry,
+B succeeds with the empty capture and the new `!S / &V(A)` guard succeeds
+through !S. Nevertheless, both actual user bodies must fail on their A
+prefix. The previous source-only prefix seed and uninitialized target user
+row therefore cannot be used unchanged. The new compiler seeds actual
+prefix failures on both sides: source A;param0 and target A. `seed_entry`
+relates the two seeds through the actual selected-stop probe, including
+its successful-zero case. Applying the already proved entry equation to
+an empty-literal loop proves this seed relation without assuming a final
+header where none exists. Both seeds are bracketed by ordinary frozen
+rounds; neither gives a negative answer for a genuinely undefined prefix.
+
+`tables_shifted` proves the full recursive row relation with these two
+seeds and the physically stabilized unary verifier. `stable_eq`,
+`observations_iff`, and `language_translation` remove the intermediate
+clocks and preserve ordinary finite observations and the language of the
+same original strings. The output is a fixed ordinary Seq grammar.
+
+`SelectedCodewordRecursiveExamples` verifies a mutual 0→1→0 chain with
+captures `(a#)^3`→`aa#`→`#^2`. Every capture stops before its final header
+and a later unequal header consumed only by its continuation; return
+reuses the whole grandchild, child, and parent captures. Both ordinary
+grammars accept, reject short parent/child copies and unequal replayed
+headers, and accept a variation with an empty grandchild capture. A
+separate example confirms the real zero-capture/header-failure seed on
+both sides. Undefined stop conditions are preserved for every table and
+environment, while a nullable-loop continuation is undefined at every
+ordinary source stage and has no finite observation on either side.
+
+Remaining restrictions include the guarded-star argument shape, leading
+A;param0 replay, pure shared A/G, and unary user captures. Independent
+recursive headers/conditions, arbitrary source arguments and capture
+shapes, conditions depending on held values, and multiple independent
+captures remain open, as does general Par/Seq equality or separation.
