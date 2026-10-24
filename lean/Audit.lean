@@ -16546,3 +16546,43 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.nested_star_executions
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.captured_not_whole' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.captured_not_whole
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.run_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.run_at
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.argument_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.argument_at
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.input_split' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.input_split
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.actual_capture' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.actual_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.prefix_only_false_positive' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.prefix_only_false_positive
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.sample_executions' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.sample_executions
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.endpoint_regression' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.endpoint_regression
