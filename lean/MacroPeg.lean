@@ -617,3 +617,8 @@ import MacroPeg.CBV.FrozenCaptureControl
 import MacroPeg.CBV.RecursiveScannerHelpers
 import MacroPeg.CBV.RecursiveScannerArguments
 import MacroPeg.CBV.RecursiveCaptureExamples
+
+import MacroPeg.CBV.RecursiveScannerCompiler
+import MacroPeg.CBV.RecursiveScannerCorrespondence
+import MacroPeg.CBV.RelocatedScannerFastTable
+import MacroPeg.CBV.RecursiveScannerFusionExamples

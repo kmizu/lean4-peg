@@ -8241,3 +8241,67 @@ or language theorem to these arguments. That composition, positive
 parameterized user calls inside arguments, general PEG prefixes,
 mixed-fragment integration, independent multiple captures and unrestricted
 Par/Seq equality or separation remain unresolved.
+
+
+### Whole recursive grammar preservation with recursive helper arguments
+
+`RecursiveScannerCompiler` and `RecursiveScannerCorrespondence` now close
+the user-row composition left open above. The source and generated target
+install original nullary parser nodes, their observer products, relocated
+stateful scanners and unary user rules in one actual finite grammar.
+Original arguments invoke the original helper nodes; observer products are
+queried only by generated target filters. Each user still starts with the
+shared scanner from the shared state. Different callsites carry their own
+actual argument syntax, including retained parameters, independently
+recursive helper captures, sequence, prioritized choice, queries and stars.
+
+`evaluator_of_rows` combines the actual argument and filter results from
+`RecursiveScannerArguments` with successful-capture safety and real unary
+capture binding. `tables_rows` is an induction on user rounds: each source
+row at the original position agrees with its actual captured-word profile
+row at the capture endpoint. The source header and generated residual
+header reach the same endpoint. Successful captures provide the new
+singleton environment and its exact observer metadata; returning to the
+parent keeps the original environment and complete retained value.
+
+`observations_iff`, `defined_iff`, `undefined_iff` and
+`language_translation` remove the analysis clock using the installed closed
+helper component's actual stabilization and physical/frozen cofinality.
+The fixed generated Seq grammar preserves all finite observations and the
+same unchanged original string language on all inputs. Physical clocks may
+differ. The public `checked_observations_iff` and
+`checked_language_translation` require only finite node-reference,
+consuming-path, body and start checks. They require no helper-row, capture
+shape, successful argument, metadata accuracy, scanner frontier or recursive
+correspondence oracle. The all-state defined-transition condition on
+consuming helper words remains a restriction; it is not parser totality.
+
+The actual mutually recursive example executes users 0 → 1 → 0 and captures
+ac → acac → acacac, with residual scanner states 1 → 0 → 1, extra b scans
+and full parent-value reuse on return. Both ordinary source and target
+tables are kernel checked. Another execution changes the fresh recursive
+helper captures from ac to aacc to ac, retaining the whole resulting values
+and restoring both parents. Three short grandchild/child/parent copies
+reject, with actual target physical failures derived from the all-input
+correspondence. An empty argument alternative stays committed on ac!ac and
+rejects at EOF; explicitly using the recursive helper accepts. Empty
+recursive capture and argument failure at clock zero are also checked.
+Repeating H = a H c / empty is undefined at every physical clock on every
+input in both generated grammars; the proof derives the absence of finite
+helper failure and preserves nullable-success divergence.
+
+`RelocatedScannerFastTable` computes only the installed scanner block
+analytically; all other helper, product and user rows still use actual PEG
+steps. Its table equals the corresponding actual frozen table and every
+finite result is transported to an ordinary physical table. It is used to
+avoid re-expanding scanner rounds during kernel examples, not as an oracle
+in the language preservation proof.
+
+This removes the no-positive-rule-call restriction for independently
+recursive nullary helpers inside this scanner-prefix family. Positive
+parameterized user calls inside arguments, general PEG prefixes,
+mixed-fragment integration and independent multiple captures are still
+unresolved, as is unrestricted first-order CBV-Par/Seq class equality or
+separation. Shared M/q, unary users and source scanner-prefix form remain
+restrictions. The earlier loop-safe and fixed-action constructions remain
+complementary; no unrestricted normalization theorem is claimed.
