@@ -1,4 +1,5 @@
 import MacroPeg.CBV.CaptureMachineFamily
+import MacroPeg.CBV.ProfiledDependentRecursion
 
 /-! A finite family of distinct unary bodies and retained-value-dependent
 arguments can mutually recurse through the a joint profile for their distinct shifted-replay prefixes. -/

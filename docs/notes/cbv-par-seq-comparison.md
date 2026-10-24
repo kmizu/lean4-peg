@@ -5251,3 +5251,59 @@ separation remains unresolved.
 Validation: full `lake build` succeeds (839 jobs), including `Audit`. All
 34 additional public theorem guards use only standard Lean axioms or no
 axioms. The three added modules have no proof placeholders or Lean warnings.
+
+## Retained Word repetition inside capture arguments
+
+The dependent argument syntax now includes `star a` when `render a` is a
+Word expression: retained parameters, literals, and their concatenation.
+These new stars compose with the existing fresh independent helper captures,
+sequence, choice, and predicates. Their iteration counts and captured word
+lengths are unbounded. Star over an arbitrary helper-dependent or recursive
+argument is not included in this extension.
+
+`CaptureOrbit` proves that every count n of a bounded deterministic state
+transition has a finite descriptor `(k,l)`: either exactly k steps (l=0), or
+k steps followed by any number of l-step cycles. Prefix and cycle lengths
+are bounded by the machine width. The proof covers transient states and
+cycles, not just permutations or idempotent word profiles.
+
+`InlineRepeat` renders a descriptor as a fixed number of inline copies,
+optionally a star of an l-copy block, and the original parser's stopping
+test. On a successful source repetition, its exact count specification is
+proved using strictly decreasing traces and grouped greedy evaluation.
+A candidate either consumes the entire original greedy capture or fails;
+it cannot accept by shortening the original repetition.
+
+`WordStarFilter` computes the repeated Word's transition from finite incoming
+profiles and literal profiles. Its actual PEG filter begins with a lookahead
+of the original star to preserve undefined empty iteration, and then chooses
+among the finite descriptor expressions. `correct` proves complete filtered
+partial results for every valid finite machine, accurate incoming metadata,
+sound CBV table, and input position. There are no parameter-bearing helper
+calls: every repeated parameter remains in the current environment.
+Missing parameters still yield zero iterations; empty successful Word values
+still make star undefined.
+
+This filter is installed in `DependentCaptureFilter` and transported through
+`ParametricHelperControl`. Consequently the existing complete single-user,
+mutual-user, and heterogeneous-shift language theorems now also admit these
+retained-Word stars inside new capture arguments.
+
+Kernel executions check greedy `aba` repetition on `abaaba#`: the full
+six-character capture reaches the sink of the `ab` machine, and a phase-one
+filter rejects rather than stopping after the first copy. Empty retained
+values remain undefined and missing parameters permit zero iterations.
+A real source user retains `abab`, passes its greedy two-copy repetition
+`abababab` to another user, and then reuses the parent's original `abab`.
+The shortened child copy fails. The corresponding generated Seq observations
+are derived from the unbounded language compiler theorem.
+
+General capture-dependent star bodies, user recursion inside arguments,
+multiple independent arguments, arbitrary body entry shapes, and general
+original-grammar normalization remain unresolved. No general Par/Seq
+language-class equality or separation is claimed.
+
+Validation: full `lake build` succeeds (843 jobs), including all existing
+and 45 added public theorem axiom guards in `Audit`. They use only standard
+Lean axioms or no axioms. The four added modules and modified argument/filter
+modules have no proof placeholders or Lean warnings.

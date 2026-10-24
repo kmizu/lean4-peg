@@ -434,3 +434,7 @@ import MacroPeg.CBV.MutualProfiledRecursion
 import MacroPeg.CBV.CaptureMachineFamily
 import MacroPeg.CBV.HeterogeneousProfiledRecursion
 import MacroPeg.CBV.HeterogeneousReplayExamples
+import MacroPeg.CBV.CaptureOrbit
+import MacroPeg.CBV.InlineRepeat
+import MacroPeg.CBV.WordStarFilter
+import MacroPeg.CBV.WordStarExamples

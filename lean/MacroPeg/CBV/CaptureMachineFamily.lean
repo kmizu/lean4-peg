@@ -1,4 +1,4 @@
-import MacroPeg.CBV.MutualProfiledRecursion
+import MacroPeg.CBV.CaptureTransitionProfile
 
 /-! A disjoint union lets one captured-word profile retain the transitions
 of every phase machine in a finite family. -/
