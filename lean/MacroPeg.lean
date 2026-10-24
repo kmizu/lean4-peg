@@ -325,3 +325,4 @@ import MacroPeg.CBV.SequentialCursorDecreaseMachine
 import MacroPeg.CBV.SequentialAnyCursorMachine
 import MacroPeg.CBV.SequentialControlEditMachine
 import MacroPeg.CBV.SequentialAnyPackedMachine
+import MacroPeg.CBV.SequentialEntryPackedMachine

@@ -2679,3 +2679,35 @@ dispatch, standard-input initialization, and the complete TM recognition
 connection remain to be constructed. General Par/Seq equality or separation
 is unresolved, and the established complete recognizer bound remains
 `O(n log n)`.
+
+### Complete compressed structural entries
+
+`SequentialControlEditMachine.incrementSecond` saves the first unary control
+header, pushes one bit into the second header, and restores the first header.
+`incrementSecond_runs` verifies the exact result, empty scratch restoration,
+and every intermediate state's capacity using only the initial and final
+length bounds. Header values are neither decoded nor supplied as program
+parameters.
+
+`MacroPeg.CBV.SequentialEntryPackedMachine` now implements complete structural
+entries for ordered choice, negation, repetition, and nonempty argument lists.
+Its program first duplicates the current cursor, replaces the old task by the
+new task and continuation frame, and increments the stack-length header. The
+environment-length header, shared clock, captured words, and previous stack
+are preserved. Performing the replacement before the header increment lets
+the final reachable-state bound also cover the intermediate control stream.
+
+`before_control`, `after_control`, and `after_layout` identify the complete
+source and target representations. `transition_runs` and `transition_tape`
+construct the actual successor for each initialized reachable entry with
+capacity `linearFactor g e * (input length + 1) + 3`, including all intermediate
+tape states. `finite_alphabet` proves the fixed pushed-symbol alphabet. The
+source expression and compiler node list determine each program template;
+runtime environment and stack lengths are not built into the template.
+
+These are still subroutines for preloaded reachable states, not a dispatcher
+or a recognizer. The remaining instructions, dynamic matching, dispatch,
+ordinary-input initialization, and complete recognition connection are open.
+The established complete recognizer bound remains `O(n log n)`. General
+Par/Seq equality or separation remains unresolved; even a completed linear
+space upper bound would require a separate argument to settle that comparison.

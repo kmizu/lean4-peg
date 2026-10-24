@@ -6239,3 +6239,39 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialAnyPackedMachine.finite_alphabet
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialControlEditMachine.incrementSecond_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialControlEditMachine.incrementSecond_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialControlEditMachine.incrementSecond_constOK' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialControlEditMachine.incrementSecond_constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.before_control' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.before_control
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.after_control' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.after_control
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.after_layout' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.after_layout
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.transition_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.transition_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.transition_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.transition_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.finite_alphabet' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEntryPackedMachine.finite_alphabet
