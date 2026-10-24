@@ -562,3 +562,7 @@ import MacroPeg.CBV.ControlledFragmentExamples
 import MacroPeg.CBV.ControlledFragmentEntry
 import MacroPeg.CBV.ControlledFragmentRecursive
 import MacroPeg.CBV.ControlledFragmentRecursiveExamples
+
+import MacroPeg.CBV.FragmentConsumingSyntax
+import MacroPeg.CBV.FragmentConsumingEntry
+import MacroPeg.CBV.FragmentConsumingExamples

@@ -17677,3 +17677,99 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ControlledFragmentRecursiveExamples.undefined_fragment_probe
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentPreflight.physical_iff_of_shape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentPreflight.physical_iff_of_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.ControlledFragmentPreflight.physical_result_of_shape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ControlledFragmentPreflight.physical_result_of_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingSyntax.firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingSyntax.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingSyntax.shape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingSyntax.shape
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingSyntax.physical_result' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingSyntax.physical_result
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingEntry.argument_congr' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingEntry.argument_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingEntry.entry_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingEntry.entry_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingEntry.endpoint_state' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingEntry.endpoint_state
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingEntry.positive_state' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingEntry.positive_state
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingEntry.branches_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingEntry.branches_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingEntry.transfer' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingEntry.transfer
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingEntry.preflight_zero_success' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingEntry.preflight_zero_success
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingEntry.zero' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingEntry.zero
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingExamples.chosen_syntax' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingExamples.chosen_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingExamples.consuming_choice_and_reuse' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingExamples.consuming_choice_and_reuse
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingExamples.choice_commit_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingExamples.choice_commit_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingExamples.mandatory_fragment_failure' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingExamples.mandatory_fragment_failure
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingExamples.mandatory_failure_zero' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingExamples.mandatory_failure_zero
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingExamples.consuming_then_undefined' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingExamples.consuming_then_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentConsumingExamples.recursive_tests_in_consuming_syntax' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentConsumingExamples.recursive_tests_in_consuming_syntax

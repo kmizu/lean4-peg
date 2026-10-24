@@ -7490,3 +7490,48 @@ combined with earlier mixed-body or independent-header compilers.
 Arbitrary consuming arguments, arbitrary initial body positions,
 independent multiple captures, and general Par/Seq equality or separation
 remain unresolved.
+
+### Consuming control inside the final a-fragment
+
+`FragmentConsumingSyntax.Syntax` removes the final `(a;&J)*` shape from
+the local bridge. Its consuming leaves are `eps` and `chr 'a'`; sequence,
+prioritized choice, and arbitrary nested star compose them. Positive and
+negative tests may contain any first-order expression, including retained
+parameters and recursive user calls. This is a syntax restriction on
+consumption, not a totality premise. A fragment can fail, be undefined,
+stop before the greedy a-run endpoint, or choose different consuming paths.
+
+`shape` derives the actual a-only capture from successful evaluation for
+arbitrary tables, strategies, inputs, and caller environments. The generalized
+`ControlledFragmentPreflight.physical_iff_of_shape` and
+`physical_result_of_shape` expose the comparison argument independently of
+its original star shape. `FragmentConsumingSyntax.physical_result` discharges
+the shape premise from syntax and preserves the full physical preflight
+result on every input and valid position. The missing-delimiter and empty
+fragment cases require no separate input-shape assumption.
+
+`FragmentConsumingEntry` carries the actual H through the real three-piece
+or unary Seq argument evaluation. Its endpoint and branch theorems recover
+the original capture and replay endpoint; `transfer` preserves the complete
+partial call result across different grammars, environments, and positive
+ordinary clocks. The current-clock G/H correspondence and previous-clock
+callee-continuation correspondence are explicit premises. Finite argument
+failure is now possible and is handled before evaluating the callee.
+`preflight_zero_success` uses the physically absent comparison-helper rows;
+`zero` preserves argument failure as well as None at clock zero, provided
+the actual source/target arguments correspond at that clock.
+
+Kernel executions accept a mandatory `aa / a` fragment and reuse its entire
+capture, reject the shorter-copy input without reopening the successful
+`aa` branch, preserve mandatory-fragment failure even at clock zero, and
+preserve a consuming fragment followed by an empty-star None before the
+missing-delimiter comparison. A syntax certificate also covers nested
+consuming choices with parent-dependent recursive tests.
+
+This is a complete local call bridge, not yet an expanded recursive compiler
+or an unrestricted inverse translation. The existing recursive compiler
+still renders only the earlier G/J star-fragment family. A syntax-directed
+compiler for the new consuming H must connect both current-clock argument
+correspondence and the zero-clock seed to its recursive rows. Fixed A=a*;#,
+only a-consuming H, one source capture, and the mandatory A;param0 body entry
+remain restrictions. General Par/Seq equality or separation remains unresolved.
