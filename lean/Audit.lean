@@ -3975,3 +3975,47 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialStarReturnMachine.transition_tape
+
+/-! Input-driven dispatch across all return frames. -/
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnScan.lift_trace' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnScan.lift_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnScan.frame_trace' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnScan.frame_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnScan.parser_trace' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnScan.parser_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnScan.compile_trace' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnScan.compile_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnScanMachine.selected_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnScanMachine.selected_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnMachine.space_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnMachine.space_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnMachine.space_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnMachine.space_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnMachine.transition_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnMachine.transition_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialReturnMachine.transition_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialReturnMachine.transition_tape
