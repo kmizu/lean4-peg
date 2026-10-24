@@ -4951,3 +4951,43 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialInitializationNumbers.space_linear' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialInitializationNumbers.space_linear
+
+/-- info: 'Complexity.append_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.append_runs
+
+/-- info: 'Complexity.moveAll_runs_bounded' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.moveAll_runs_bounded
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInitializationFields.assemble_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInitializationFields.assemble_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInitializationFields.initial_fields' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInitializationFields.initial_fields
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInitializationFields.runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInitializationFields.runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInitializationFields.space_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInitializationFields.space_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSeedMachine.halts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSeedMachine.halts
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSeedMachine.tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSeedMachine.tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSeedMachine.recognizes' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSeedMachine.recognizes
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSeedMachine.space_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSeedMachine.space_bound

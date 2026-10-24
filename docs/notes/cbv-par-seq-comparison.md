@@ -1448,3 +1448,33 @@ produce the length and original-input encoding, assemble the six initial
 numeric fields `[0, clock, n, rootExprId, 0, 0]`, and invoke the verified binary
 front writer. The initialized evaluator is already available after that
 boundary. General Par/Seq equality or separation is still unresolved.
+
+
+### Initial-field assembly and evaluation from the length/input seed
+
+`SequentialInitializationFields.initial_fields` identifies the six initial
+numeric fields exactly as `[0, clock, n, rootExprId, 0, 0]`. The fixed assembly
+program appends the field markers and root ID, transfers the runtime clock and
+length into their fields, initializes the two-marker register, and consumes
+the length/clock registers. `assemble_runs` proves the resulting state is the
+existing front writer's exact input, with the original-input register retained.
+`runs` invokes that verified writer and produces precisely
+`SequentialStepMachine.state g x e (SequentialStack.initial g x e)`.
+`space_linear` bounds the entire assembly and emission stage, including every
+copy and scan, by a grammar-dependent linear function of input length.
+
+`SequentialSeedMachine.program` now composes numeric initialization, field
+assembly and binary writing, and the complete evaluator on the same twenty
+registers. `halts` proves termination from `seed n X`, and `tape` transfers the
+entire computation to twenty actual tapes. `recognizes` attaches the exact
+first-order Seq full-consumption observation on the same original `List Char`
+to its halting answer. No clock, width, bound value, expression selector, or
+binary initial configuration is supplied separately. `space_bound` adds only
+a linear initialization term to the previously proved `O(n log n)` binary
+stack bound.
+
+The seed still contains the unary input length and `encS (codes x)`. An
+ordinary-input loader must produce both of these from the actual input tape;
+these theorems do not yet provide that loader or a standard-input TM class
+membership theorem. The general Par/Seq language-class comparison remains
+open, and the current space upper bound alone supplies no separating language.

@@ -275,3 +275,5 @@ import MacroPeg.CBV.SequentialTerminalTest
 import MacroPeg.CBV.SequentialTerminalMachine
 import MacroPeg.CBV.SequentialEvaluationMachine
 import MacroPeg.CBV.SequentialInitializationNumbers
+import MacroPeg.CBV.SequentialInitializationFields
+import MacroPeg.CBV.SequentialSeedMachine
