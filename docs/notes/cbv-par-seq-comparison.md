@@ -6061,8 +6061,8 @@ A's finite failure. `last_trace` constructs the B trace with one fewer
 iterations from any nonempty maximal finite A trace. No grammar count is
 used in these parsers.
 
-`LastCodewordCandidate` supplies a **candidate**, not yet an all-input
-translation. Set A to `a* '#'`, B as above, and `tail = '!';param0`.
+`LastCodewordCandidate` first supplied a candidate; its all-input certificate
+is now `LastCodewordExamples.all_inputs` below. Set A to `a* '#'`, B as above, and `tail = '!';param0`.
 The source has `F(x) <- A x tail`, called as F(B) under Par.
 The Seq candidate has `F(x) <- A tail`, plus
 `V(u) <- (&A u)* !A`, entered through `&B; &V(A); F(B)`.
@@ -6087,8 +6087,140 @@ later undefinedness. The actual ordinary Seq candidate without `&B` thus
 fails, whereas the guarded entry remains undefined. This guard-order
 counterexample is kernel-checked.
 
-The new candidate's equivalence on **all** inputs, its rejection of every
-unequal run, and integration with arbitrary recursive user tails remain
-unproved. The preceding fixed-count compiler's all-input theorems remain
-separate and verified. General Par/Seq class equality or separation is
-still unresolved.
+The all-input gap for this candidate is closed below, followed by a
+recursive integration for the same designated argument family. The
+preceding fixed-count recursive compiler is separate. General Par/Seq
+class equality or separation is still unresolved.
+
+### Last-header verification on every original input
+
+`LastCodewordVerification.Run` labels every actual strict header step with
+its consumed substring. `run_of_trace` derives these labels from ordinary
+sound evaluation and the header's prefix-code certificate. `capture_run`
+extracts the whole maximal run from the successful original B itself;
+it proves that B's actual capture is exactly the run with its final word
+removed. The empty exception is an empty capture with A failing at origin.
+No list of words or periodicity certificate is assumed at call entry.
+
+For any run `u::vs`, the captured prefix matches after the first header iff
+all words in vs equal u. Unique prefix decoding proves this for arbitrarily
+long nonuniform lists, not only powers of a header. `verifier_run` proves
+that the fixed expression `(&A;param0)*;!A` has exactly this result on the
+actual remaining run. A mismatch stops the repetition, then `!A` rejects
+at the mismatching header, even if more copies occur later.
+`actual_entry` connects source replay and target last-header consumption
+with the same entire capture and an arbitrary continuation, including its
+failure or undefinedness.
+
+`LastCodewordGrammar` installs actual ordinary source and target rows for
+a pure prefix-code header A and a call-free tail b that may use the held
+parameter, sequence, choice, predicates, and repetition. Its translation is
+`F(B)` under Par to `&B; &V(A); F(B)` under Seq, with B=(A;&A)*,
+source F(x)=A;x;b, target F(x)=A;b, and V(u)=(&A;u)*;!A. The grammar is
+fixed independently of input lengths and header counts, including zero
+captured words. `physical_agreement` proves complete partial agreement at
+every positive source and target physical stage, on every input suffix.
+Stage zero may differ because the Seq guard can reject before an
+uninitialized row query; monotonic lifting and actual table stability give
+`observations_iff` and `language_translation` on unchanged original inputs.
+The final theorem contains no supplied table correspondence or filter oracle.
+
+`LastCodewordExamples.all_inputs` specializes this theorem to the exact
+previous candidate with A=a*;'#' and b='!';param0. Unequal headers, short
+retained copies, zero captures, and undefined continuations are also checked
+in ordinary physical tables. Recursive continuations for this argument
+family are integrated below. Recursive headers for this new route, more
+general capture shapes, and independent multiple captures remain
+unresolved, along with general class equality or separation.
+
+
+### Unbounded last-header captures through mutual recursion
+
+`LastCodewordRecursive` removes the call-free-tail restriction for this
+route. A fixed finite set of unary user rows shares a pure prefix-code
+header A and the argument B=(A;&A)*. Each source user body is
+`(A;param0);render(source,tail)`; each target body is
+`A;render(target,tail)`. Calls in arbitrary finite sequence, choice,
+predicate, and repetition syntax may call any user row, recapture B at the
+new position, and return to the unchanged whole parent capture. Both
+renderings use exactly the same retained environment, without a repeated
+word view or a grammar-fixed count. The ordinary target installs a single
+unary verifier V(u)=(&A;u)*;!A and renders each call as
+`&B; &V(A); F(B)`.
+
+The verifier's entire physical row stabilizes after one ordinary round,
+including every retained value and every physical suffix. Freezing this
+proved row separates its initialization from recursive user depth. The
+source's actual failed `(A;param0)` prefixes are seeded before user
+iteration. `seed_entry` proves that this seed exactly matches the Seq
+verifier's early rejection on every successful B. It uses the proved local
+entry equation with an undefined continuation, and cannot seed a negative
+answer for an undefined argument. The seed is bracketed by ordinary frozen
+rounds; existing cofinality transports the full recursive table induction
+to actual ordinary grammar observations. No stable row, periodicity test,
+recursive equivalence, or selected capture is an external oracle in the
+final `observations_iff` / `language_translation` theorem.
+
+`LastCodewordRecursiveExamples` checks an actual mutual 0→1→0 call chain:
+parent capture `(a#)^3`, child `aa#`, grandchild `#^2`, followed by return
+and reuse of the whole child and parent strings. The actual arguments
+therefore change counts 3→1→2 and header lengths 2→3→1 at runtime. Both
+ordinary strategies accept the complete input and reject short parent or
+child copies and unequal child headers. A separate source continuation
+with an empty literal loop is undefined at every ordinary stage and has
+no finite observations on either generated grammar.
+
+The source family still requires the designated last-preserving argument
+and leading shifted replay, a shared header, and one retained capture per
+user row. The independent recursive header extension follows below. This
+is not a transformation of arbitrary first-order Par grammars; general
+argument/capture shapes, multiple independent captures, and general
+Par/Seq equality or separation remain unresolved.
+
+
+### Independent recursive headers with unbounded capture counts
+
+`LastCodewordHelpers` and `LastCodewordHelperGrammar` remove the shared
+header's call-free restriction. The existing `RecursiveCodeGrammar.Header`
+provides a valid independent nullary helper component and a prefix-code
+certificate for the header's actual stabilized evaluation. The new
+compiler installs these helpers, the unary verifier V, and all recursive
+user rows. Neither header lengths nor the number of words captured by
+B=(A;&A)* are fixed by the grammar or bounded by the theorem.
+
+`lexical_environment` proves that a nullary lexical expression ignores its
+caller's retained environment even before stabilization and at arbitrary
+query positions. The existing actual helper floor initializes the nullary
+component; `stable` proves that one further ordinary round stabilizes the
+whole parameterized verifier row for every held string. The combined
+frozen selection includes both the nullary helpers and this unary row;
+it does not incorrectly treat V as an independent nullary helper.
+`lexical_table` and `syntax_eval` identify actual header, argument, and
+verifier evaluations with the standalone component's physical table.
+Nonproductive helper recursion is included, not replaced with failure.
+
+The previous successful-capture local entry equation works for any sound
+table and environment-independent header, so it applies directly to these
+actual helper computations. Prefix-failure seeds and recursive row
+induction then preserve the same full retained strings through arbitrary
+user sequence, choice, predicates, repetition, and mutual user calls.
+`stable_eq`, `observations_iff`, and `language_translation` remove the
+intermediate clocks and give ordinary fixed-grammar preservation on every
+unchanged original input. No helper agreement, recursion equivalence,
+periodicity test, or capture value is supplied by the user in the final
+theorem beyond the independent component and its code certificate.
+
+`LastCodewordHelperExamples` uses the actual recursive header
+`R <- 'a' R 'b' / eps; A <- R '#'` alongside a nonproductive helper cycle.
+Ordinary evaluations verify captures `(aabb#)^3`→`ab#`→`#^2`, mutual calls,
+return and reuse of the entire parent/child strings, rejection of short
+copies and unequal child headers. Choosing the nonproductive helper as
+the header makes the original argument undefined at every physical source
+stage and leaves the generated Seq grammar without a finite observation
+on every input.
+
+The remaining source restrictions are the designated last-preserving
+argument B and leading shifted replay A;param0, a shared independent
+header (not a header depending on held values or user rows), and unary
+user captures. General source argument/capture shapes, multiple independent
+captures, and general class equality or separation remain unresolved.
