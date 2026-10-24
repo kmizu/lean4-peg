@@ -65,8 +65,9 @@ theorem syntax_eval (H : Header) (g : MGrammar) (hg : Installed H.bodies g)
 
 /-- The combined frozen floor initializes the verifier one ordinary round
 after the independent nullary component has stabilized. -/
-theorem stable (H : Header) (g : MGrammar) (hg : Installed H.bodies g)
-    (hr : ruleAtM g.rules H.bodies.length=some ⟨1,LastCodewordVerification.verifier H.head⟩)
+theorem stable_unary (H : Header) (body : MExp)
+    (hbody : HelperArgument.Syntax H.bodies.length body) (g : MGrammar) (hg : Installed H.bodies g)
+    (hr : ruleAtM g.rules H.bodies.length=some ⟨1,body⟩)
     (x : List Char) (s : Strategy) : ClockFreezing.StableRows g x s (pick H) (floor H x) := by
   have hs := RecursiveParserStability.helpers_stable H.valid hg x s
   intro k i hi W
@@ -85,11 +86,18 @@ theorem stable (H : Header) (g : MGrammar) (hg : Installed H.bodies g)
     apply List.map_congr_left
     intro p hp
     apply HelperArgument.eval_eq hg hg x s s _ _ (tblV_ok g x s _) _ W
-      (LastCodewordVerification.verifier H.head)
-      ⟨⟨lexical_syntax _ H.head H.lexical,True.intro⟩,lexical_syntax _ H.head H.lexical⟩ p
+      (body)
+      hbody p
       (by have := List.mem_range.mp hp; omega)
     intro j hj q hq
     exact congrArg (fun row => valAt row q) (hs k j (by simp [RecursiveParserStability.pick,hj]) [])
+
+/-- Specialization to the original last-header verifier. -/
+theorem stable (H : Header) (g : MGrammar) (hg : Installed H.bodies g)
+    (hr : ruleAtM g.rules H.bodies.length=some ⟨1,LastCodewordVerification.verifier H.head⟩)
+    (x : List Char) (s : Strategy) : ClockFreezing.StableRows g x s (pick H) (floor H x) :=
+  stable_unary H (LastCodewordVerification.verifier H.head)
+    ⟨⟨lexical_syntax _ H.head H.lexical,True.intro⟩,lexical_syntax _ H.head H.lexical⟩ g hg hr x s
 
 /-- Any table whose selected rows are the actual combined-floor rows
 agrees with the standalone canonical helper parser on every valid suffix. -/

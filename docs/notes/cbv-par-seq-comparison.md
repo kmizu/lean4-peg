@@ -6267,10 +6267,8 @@ words, and an undefined continuation. An empty successful step is proved
 undefined at every table and position.
 
 The standalone compiler uses a pure shared header and condition, with a
-call-free parameter-using continuation. The mutual user recursion extension
-follows below. Independent recursive headers are supported by the earlier
-last-preserving compiler; combining those headers with the new selected-stop
-construction remains to be done.
+call-free parameter-using continuation. Extensions to mutual user recursion
+and independent recursive headers and conditions follow below.
 Arbitrary argument expressions, arbitrary capture shapes, dependent
 headers/conditions, multiple independent captures, and general Par/Seq
 class equality or separation remain unresolved. The verifier counterexample
@@ -6316,8 +6314,60 @@ both sides. Undefined stop conditions are preserved for every table and
 environment, while a nullable-loop continuation is undefined at every
 ordinary source stage and has no finite observation on either side.
 
-Remaining restrictions include the guarded-star argument shape, leading
-A;param0 replay, pure shared A/G, and unary user captures. Independent
-recursive headers/conditions, arbitrary source arguments and capture
-shapes, conditions depending on held values, and multiple independent
+This compiler retains the guarded-star argument shape, leading A;param0
+replay, pure shared A/G, and unary user captures. Its independent recursive
+header/condition extension follows below. Arbitrary source arguments and
+capture shapes, conditions depending on held values, and multiple independent
 captures remain open, as does general Par/Seq equality or separation.
+
+
+### Recursive conditions preserve the selected capture endpoint
+
+`SelectedCodewordHelpers` and `SelectedCodewordHelperGrammar` allow both
+A and G to call a valid independent nullary recursive parser component.
+The code certificate concerns A's actual canonical helper evaluation;
+G may use arbitrary lexical sequence, choice, predicates, repetition,
+and nullary helper calls. Neither may inspect the retained value or call
+the parameterized user rows. Users still recapture B=(A;&(A;G))* and keep
+the entire selected capture through mutual user recursion and return.
+
+`LastCodewordHelpers.stable_unary` generalizes the existing stability
+proof to any parameter-using helper expression over the independent
+component. The original last-header stability theorem now specializes
+this lemma. The selected verifier has the same actual floor: initialize
+the nullary component, then perform one further ordinary round for its
+unary row. This proves stability for every retained value, rather than
+treating the parameterized row as independent or supplying a semantic
+verifier table. Actual selected rows determine the canonical lexical
+computations on each side, including the two frozen round-zero tables
+used to compute their actual failed-prefix seeds.
+
+The successful-argument entry equation requires only a sound actual table,
+header code certificate, and environment independence of A and S; these
+follow from the installed lexical component. The two-sided seed relation
+therefore extends to recursive headers and conditions without assuming a
+final successful header in the empty-capture case. The recursive table
+induction and both seeded clocks' ordinary cofinality yield `stable_eq`,
+`observations_iff`, and `language_translation` for the same original
+strings and ordinary fixed grammars. The generated syntax contains no
+input-dependent word count or selected endpoint.
+
+`SelectedCodewordHelperExamples` uses A=`R;'#'`, with
+`R <- 'a' R 'b' / eps`, and G=`&A`. The stop condition thus actually calls
+the independent recursive parser too. It succeeds on `aabb#` and rejects
+`aab#`. Ordinary executions select captures `(aabb#)^3`→`ab#`→`#^2`,
+consume later unequal words only in their continuations, restore and reuse
+parent/child captures, reject short or unequal copies, and accept a case
+with an empty grandchild capture. Both actual seeds handle zero captured
+words with a failed initial header. Nonproductive recursion is tested
+separately in A and in G: the respective source start is undefined at
+every ordinary stage, every input, and every valid position, and the
+compiled target has no finite observation on any input. The G example
+uses a nullable header, so an undefined condition cannot become an empty
+successful iteration or a finite star stop.
+
+The guarded-star argument shape, leading shifted replay, shared independent
+A/G, and unary captures remain restrictions. General argument/capture
+shapes, headers or conditions depending on held values or user rows,
+multiple independent captures, and general Par/Seq equality or separation
+remain unresolved.
