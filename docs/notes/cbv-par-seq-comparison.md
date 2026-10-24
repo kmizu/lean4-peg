@@ -4144,3 +4144,351 @@ origin-control callees. Unary source rules and replay/local body factorization
 also remain. Thus the general CBV-Par/CBV-Seq equality or separation is still
 unresolved. Root imports and 34 new public axiom guards cover the selector,
 mutual recursive compiler, shifted-position example, and unbounded unknown case.
+
+
+### Boundary of finite Word selection for fresh consuming repetition
+
+`CBV/WordSelectionBoundary.lean` identifies a limitation of the latest reverse
+compiler's capture-selection interface. It does **not** separate Par and Seq
+language classes.
+
+`candidates` enumerates the finite Word expressions a guarded argument can
+offer to its continuation: literal and parameter leaves, empty words for
+successful predicates, union for choice, and concatenated pairs for sequencing.
+`candidates_word` verifies their syntax. `selectAt_congr` proves that agreeing
+on just this list makes two continuations produce identical selector syntax,
+for every predicate translator, prefix, and continuation. Recursive predicates
+do not introduce additional captured characters.
+
+`success_candidate` ties the list to actual successful source evaluations,
+including sequenced argument positions and predicate results. For a fixed
+current environment, `capture_le_budget` bounds all these captures by a
+finite input-independent sum of candidate value lengths. This does not impose
+a universal bound across environments: existing parameters may be arbitrarily
+long, and the earlier duplication construction remains valid. The distinction
+is between selecting combinations of existing values and discovering an
+arbitrarily long **new** capture while that environment stays fixed.
+
+`no_finite_word_family` quantifies over **any** finite family of expressions,
+not just the particular enumeration, and any fixed environment. Choosing a
+repeated-character word longer than the sum of all their values gives a value
+outside the family. `scanner_replicate` and `scanner_exceeds_family` connect
+this length argument to an actual successful greedy source scanner for every
+repetition length, under either evaluation strategy. It is not an assumed
+or externally supplied capture. `no_shape_scanner_equivalent` applies the
+bound to real physical grammar tables: no guarded-selection-shaped argument,
+even with arbitrary first-order recursive predicate bodies, agrees with this
+consuming scanner on all original strings at any fixed table round.
+
+Crucially, `scanner_observations` proves the scanner itself has identical
+Par and Seq finite observations on **every** original string, including all
+remaining suffixes and finite failure observations. Thus the obstruction
+excludes this finite-candidate capture interface, rather than recognition
+by a different Seq grammar. Merely adding recursive predicates or more finite
+Word alternatives cannot remove the general consuming-repetition gap. A full
+reverse compiler needs a way to introduce fresh dynamic captures with the
+required body position, a richer runtime representation, or a construction
+that preserves observations without reconstructing the capture this way.
+The general equality/separation goal remains unresolved. Root imports and
+ten standard-axiom guards cover the new boundary results.
+
+
+### Fresh parser captures by fusing a repeated body prefix
+
+`CBV/ParserPrefixFusion.lean` gives a complementary reverse compiler that
+actually introduces fresh unbounded captures, beyond the finite Word-selector
+interface. It uses a specific source body/call relationship rather than
+trying to reconstruct every possible captured word at the original position.
+
+A specification supplies one closed call-free PEG `A_i` and a tail `B_i`
+for each unary rule. Raw zero-argument calls to `i` are expanded to actual
+calls `F_i(A_i)`; all calls to a given rule use that same fixed argument
+parser. The generated Par rule is `F_i(x) <- A_i B_i`, and the Seq rule is
+`F_i(x) <- B_i`. Both actual grammars use the same expanded root expression.
+Thus Par evaluates the parser once as its argument and again as the body
+prefix, whereas Seq retains that fresh capture and enters the tail at the
+end of the first evaluation. The captured value is never inserted as a
+compile-time literal or selected from a finite family.
+
+`Pure` permits arbitrary nesting of literals, character/range/any atoms,
+sequencing, ordered choice, predicates, and consuming repetition in `A_i`.
+It excludes parameters and calls. `pure_eval` proves the **whole partial**
+parser result is independent of grammar tables, strategy, and environment;
+nullable repetitions are allowed and remain undefined. Tails and the root
+may use parameters, consuming sequence/repetition, choice/predicates, and
+recursive calls to any supplied rule, under the fixed-argument calling
+convention. Calls with arbitrary user-supplied arguments are not part of
+this raw syntax. Existing captures remain in caller environments across
+recursive calls, as usual.
+
+`tables_shifted` proves the actual physical row correspondence at **every**
+round. `evaluator_eq` discharges expression simulation from that proof, and
+`observations_iff`/`language_translation` preserve all finite success/failure
+observations and full-consumption languages on the same original strings.
+Only the syntactic `Pure` check is assumed; there is no argument oracle,
+external user-table correspondence, helper stabilization premise, or totality
+assumption.
+
+`copy_word` proves for **every** a/b word `w` that the source really captures
+`[w]` and both fixed grammars accept `w#w` at their actual physical first
+round. The tail consumes `#` **before** replaying the retained capture.
+`beyond_finite_word_selection` connects this positive construction to the
+preceding impossibility theorem: for any fixed environment and finite
+Word-expression family, these same grammars realize a capture outside that
+family and subsequently replay it. This is an unbounded theorem, not a
+bounded execution sample.
+
+`nested_captures` kernel-checks three recursive calls retaining `ab`, `ba`,
+and the empty word in one run. It accepts `ab#ba##baab` and rejects
+`ab#ba##bbab` under both actual grammars. `nullable_repetition_keeps_undefined`
+proves, for every input and physical round, that `eps*` as the argument never
+becomes failure or an empty successful capture in either grammar.
+
+The remaining restrictions matter: a call uses the callee's fixed closed
+call-free parser, and the Par body must reparse that parser as its first
+action. No normalization of arbitrary Par bodies or argument computations
+into this form is proved. This complements the selected-Word compiler; it
+does not replace the general original-string equality/separation goal.
+Root imports and nineteen new public axiom guards cover the construction.
+
+
+### Independent recursive argument parsers
+
+`CBV/RecursiveParserStability.lean` removes the call-free restriction on the
+argument-parser component. `Lexical n` permits arbitrary ordinary PEG control,
+including calls to any of the first `n` arity-zero helper rules. The component
+is closed: it cannot refer to captured parameters or user rules. Helpers may
+be mutually recursive or have no finite result; totality and a bound on the
+recursive derivation depth are not assumed.
+
+`Installed` specifies the actual helper prefix of a combined grammar.
+`helper_rows_eq` proves complete physical helper rows agree between arbitrary
+installed extensions, strategies, and environments at every round. The
+standalone component's finite-table stabilization theorem supplies the floor
+`iterBoundV (grammar bodies) x + 1`. `helpers_stable` transfers stabilization
+to the actual installed combined grammar for **all** capture environments.
+`frozen_lexical_eval` therefore agrees at all frozen user stages, without
+external parser results or a supplied helper-stability premise. The floor is
+a proof device depending on the input; no such number or advice is added to
+the generated grammar or its input.
+
+`CBV/RecursivePrefixFusion.lean` installs the same independent recursive
+helper component in source and target, followed by unary user rules. A user's
+head `A_i` may query that recursive component. Every call to the user captures
+its fixed `A_i`; its Par body is `A_i B_i`, and its Seq body is `B_i`. The
+recursive user tails still retain their captures through arbitrary consuming
+control and later replay. `tables_shifted` and `evaluator_eq` prove all frozen
+user rounds correspond. `observations_iff` invokes physical/frozen cofinality
+on both **actual** grammars, preserving every finite success/failure on the
+original character input. `language_translation` has only the syntactic
+closed-component conditions; generic lexical correspondence and shifted
+user-table relations are discharged internally.
+
+`lexical_zero_iff_pure`, `valid_without_helpers`, `render_without_helpers`,
+and `without_helpers` prove that supplying no recursive helper rules gives
+exactly the preceding call-free compiler's syntax and eligibility condition.
+This extends that construction, rather than requiring a new external oracle
+for the newly admitted arguments.
+
+`balanced_prefix_observation` proves that an installed recursive rule
+`A <- a A b / eps` captures `a^n b^n` for **every** `n`, with any non-a
+starting suffix. `balanced_copy` uses this actual argument derivation to
+prove one fixed source/target pair accepts `w#w` for every
+`w = a^n b^n`, replaying the capture after consuming `#`. The proof builds a
+real Par call derivation and applies the complete original-string reverse
+compiler; it does not sample a bounded set of depths.
+`balanced_physical_execution` additionally kernel-checks acceptance of
+`aabb#aabb` and finite failure on `aabb#aab` using actual physical tables.
+`cycle_undefined` and `recursive_argument_undefined` prove that an unproductive
+recursive helper leaves the complete argument call undefined under both
+strategies, on every input and at every physical stage.
+
+The remaining restrictions are fixed per-callee closed arguments, an independent
+arity-zero argument component, and the Par body's initial reparse of the same
+argument parser. User-dependent recursive arguments, general body-entry
+normalization, and arbitrary independent captures are still outside this
+construction. General Par/Seq language-class equality or separation remains
+unresolved. Thirty-one new public axiom guards and root imports cover this
+extension.
+
+
+### Fresh captures and capture-dependent recursive arguments in one grammar
+
+`CBV/MixedPrefixFusion.lean` combines the independent-recursive-parser entry
+with the earlier leading-replay calling convention in one actual source/target
+grammar. A user specification has either a closed recursive parser head `A`,
+or no parser head. The corresponding Par bodies are `A B` and `x B`; both
+Seq bodies are `B`. All actual user rules have arity one.
+
+The raw shorthand `F()` calls a parser-headed rule with its fixed `A`.
+`R(a)` calls a replay-headed rule with the recursively translated argument
+`a`. Such arguments may use current captures, concatenation, ordered choice,
+consuming repetition, predicates, and user calls of either kind. They are
+not limited to Word expressions, a finite value palette, independent parser
+queries, or an origin-control-only body discipline. Both kinds of rules may
+call each other recursively, including inside an argument predicate. The
+parser-headed rules themselves still use their fixed closed arguments.
+
+`Ready` records the actual entry relationship: replay rules need the captured
+word's prefix split, while parser-headed rules need the real recursive parser
+result. `tables_shifted` derives both row relationships simultaneously at
+every frozen user stage. `ClockFreezing.frozen_sound` proves every defined
+frozen row has an actual derivation, using its information-order embedding
+into a physical table; it does not need a helper-stability assumption. This
+supplies the successful-prefix fact for arbitrary recursive replay arguments.
+The final `evaluator_eq`, `observations_iff`, and `language_translation`
+discharge the argument, helper, and user-table correspondence internally,
+preserving all finite observations and languages on the original strings.
+
+`lift`, `render_lift`, `grammars_lift`, and `valid_lift` embed the preceding
+independent-recursive-parser compiler exactly, including its eligibility,
+source/target grammars, and expanded expressions.
+
+`mixed_recursive_capture_execution` kernel-checks a run in which a new
+recursive capture `ab` feeds an argument containing `!Probe(x)` and
+`(x x / x)`. The replay rule consumes the selected argument, then recursively
+re-enters the parser-headed rule and obtains another fresh capture `aabb`.
+The two strategies accept `ab#abab!aabb#aabbaabb` and finitely reject
+`ab#abab!aabb#babbaabb` under their actual physical tables. The probe itself
+is a user-rule call, so argument evaluation crosses the recursive rule
+interface while using the caller's retained capture.
+
+`recursive_argument_choice_undefined` proves a separate user-recursive
+argument query stays undefined on **every** input and at **every** physical
+round. Negating it does not produce failure or success, and its following
+empty-word argument alternative cannot be selected.
+
+The remaining body restriction is an initial replay or an initial reparse of
+the fixed closed argument parser. No arbitrary body-entry normalization is
+proved. Parser-headed argument computations are still independent of user
+rules and current captures; unrestricted recursive/capture-dependent
+arguments enter through replay-headed rules. Multiple independent general
+arguments and general Par/Seq equality or separation remain unresolved.
+Twenty new public axiom guards cover the mixed compiler and frozen soundness.
+
+
+### Caller-position control around fresh captures and arbitrary replay calls
+
+`CBV/OriginPrefixControl.lean` lifts the previous two entry conventions into
+finite body control, removing their unconditional initial-replay/reparse
+requirement. A rule has a caller-position `ReplayControlFusion.Plan`: a
+finite combination of prioritized alternatives, negation, and guarded
+sequencing (`&P Q`). Each referenced part either enters an arbitrary tail
+after replaying/reparsing the capture, or is a closed local expression that
+runs directly at the original caller position. A body can therefore inspect
+the capture under predicates, consume and fail in one branch, restore the
+caller position, and select a local branch that returns before the argument's
+endpoint. No initial consuming capture read is required of the whole body.
+
+As before, rules are either fixed-parser rules, using a closed expression
+that may query the independent mutually recursive PEG helper component, or
+replay rules, accepting arbitrary recursively translated arguments. Those
+arguments may use retained values, consuming repetition, choice, predicates,
+and user calls of either kind. Part tails may themselves call either kind
+of user recursively. A successful continuation does not reevaluate the
+argument at an advanced position: every caller-side control leaf starts at
+the same original position, so repeated argument evaluation in a leaf retains
+its exact original captured value.
+
+The source expands each rule's plan with its parser/replay entries and its
+local parts. The target expands control at the call site and installs one
+advanced arity-one rule per replay part and one arity-zero rule per local
+part. `render_closed` proves raw local parts remain capture-independent
+through the full recursive translation. `call_eval` explicitly performs the
+argument check before **all** body control, including a fully local body.
+Finite failure and undefinedness of the argument therefore cannot be
+bypassed by a local alternative.
+
+`tables_shifted` derives the actual source-user/target-part relation at every
+frozen user round. The syntactic plan-index check ensures even stage-zero
+control remains undefined until a real user row is reached. `evaluator_eq`
+then covers arbitrary raw expressions and recursive arguments.
+`observations_iff` uses the already-proved actual helper stabilization and
+physical/frozen cofinality, yielding all original-string finite observations;
+`language_translation` has only syntactic component, head, local-closure, and
+plan-index premises. No continuation, argument, user-table, or helper oracle
+remains in the final theorem.
+
+`origin_fallback_execution` kernel-checks the actual physical tables. On
+`aabbaabb`, the fresh recursive parser captures the first `aabb`; the first
+branch forwards that value recursively and fails. A capture-dependent
+negative lookahead then selects local `a` at the original position, leaving
+seven characters. The same grammars finitely reject `aabb#aabb`, where the
+probe successfully replays the captured value after `#`. This is a return
+**before** the fresh argument's endpoint, not a forced advance.
+`undefined_argument_before_local_branch` proves that an unproductive
+recursive argument stays undefined before a local body branch on every
+input and at every physical stage, even though that branch ignores the
+capture and could otherwise succeed immediately.
+
+The remaining control restriction is substantive: no consuming sequence or
+iteration of different capture-dependent parts is allowed at the caller
+control level. Consuming computation is allowed inside an entered tail or
+local part. The caller-level control must keep every parameter-sensitive
+entry at the original position. Fixed-parser arguments remain independent
+of user rules and captures, whereas unrestricted dependent arguments enter
+through replay rules. General body decomposition, multiple independent
+general captures, and general Par/Seq equality or separation remain
+unresolved. Twenty-eight new public axiom guards cover this construction.
+
+
+### Consuming control and fresh origin captures in one recursive grammar
+
+`CBV/ConsumingPrefixControl.lean` combines the fresh recursive-parser
+construction with consuming body control, using one installed source/target
+grammar pair. Its `WordControlFusion.Plan` permits arbitrary consuming
+sequence and repetition, as well as choice and predicates, between parts.
+The old caller-position plan embeds through `originPlan`: restoring guards
+become double-negated left sides of sequencing. `originPlan_atOrigin` and
+`originPlan_exp` verify the control discipline and exact expression equality.
+
+Calling conventions can change within recursive computation. A fixed-parser
+rule obtains a fresh unbounded capture from the independent recursive PEG
+component and uses caller-position control. A replay rule may consume between
+capture uses if its actual argument is a position-independent Word expression
+(literals, existing parameters, and concatenation). These Word values may be
+arbitrarily long and may duplicate existing captures. If the replay callee
+uses caller-position control, its argument may instead be any supported
+recursive computation. Thus new captures can be passed as retained values
+into consuming rules, and those rules can recursively re-enter fixed-parser
+rules for further fresh captures. This does not require a finite value palette.
+
+`enter_word` preserves the argument's value at every later body position;
+`enter_origin` permits arbitrary parsers when all capture-sensitive entries
+stay at the call origin. The `Supported` check chooses one of those two
+conditions per call. Fixed-parser heads themselves must use `AtOrigin`
+control. This restriction is explicit: directly using an arbitrary fresh
+parser as the argument of a consuming-control rule remains outside the proof.
+Composite choices or predicates inside consuming-call arguments are not
+Word expressions in this combined compiler; the earlier guarded-selector
+compiler still handles its own separate fragment.
+
+A fixed zero-argument entry rule retains the physical user-round boundary,
+including stage zero. `leaf_step` connects actual source entries to target
+part rows. The source/target plan proof uses all-position congruence for
+replay-headed consuming rules and origin-only congruence for fresh-parser
+rules. `tables_shifted` closes that mixed correspondence at every frozen
+user round. Actual helper stabilization and physical/frozen cofinality then
+yield `observations_iff` and `language_translation` on the same original
+strings. No capture, recursive-call, continuation, or lexical oracle remains
+in the final result.
+
+`fresh_capture_consuming_execution` kernel-checks a real physical-table run.
+The recursive parser first captures `ab`; the consuming rule reads a local
+`ab!` prefix before repeatedly replaying the held `ab` and consuming `;`.
+It then recursively captures `aabb` and enters consuming control again.
+Both strategies accept `ab#ab!ab;ab;?aabb#aabb!aabb;` and finitely reject
+`ab#ab!ab;ab;?aabb#aabb!ab;`, where the later replay is shorter than the
+held capture. The theorem is checked against actual physical tables, not
+frozen helper values. General language/observation preservation is the
+unbounded theorem; this example exercises both mode changes and the loop.
+
+The central remaining gap is arbitrary argument evaluation at advanced
+capture-sensitive body positions. General consuming-call argument capture,
+general body decomposition, multiple independent general arguments, and
+general Par/Seq equality or separation remain unresolved. The existing
+`original_reverse_requires_P_linear_space` bridge was also rechecked in
+`Shallot/Peg/Separation/CBVSeqLinearSpace.lean`; its conditional separator
+still requires an unproved P language outside linear space. No new class
+conclusion is drawn here. Thirty-eight new public axiom guards cover the
+combined consuming-control compiler.

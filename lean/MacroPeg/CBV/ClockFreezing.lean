@@ -109,6 +109,13 @@ theorem frozen_ok (g : MGrammar) (x : List Char) (s : Strategy) (pick : Nat → 
   exact tblV_ok g x s (floor+k) i W p j
     ((frozen_le_physical g x s pick floor k i W p).eq_of_some hv)
 
+theorem frozen_sound {g : MGrammar} (hg : g.FirstOrder) (x : List Char) (s : Strategy)
+    (hs : s ≠ .callByName) (pick : Nat → Bool) (floor k : Nat) :
+    SoundTV g x s (frozen g x s pick floor k) := by
+  intro i r W hr ha p hp v hv
+  exact tblV_sound hg hs (floor+k) i r W hr ha p hp v
+    ((frozen_le_physical g x s pick floor k i W p).eq_of_some hv)
+
 /-- The same finite successes and failures occur in both evaluations.
 Undefinedness is not converted into a negative answer. -/
 theorem defined_iff (g : MGrammar) (x : List Char) (s : Strategy) (pick : Nat → Bool)

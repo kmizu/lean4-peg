@@ -8987,3 +8987,638 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.GuardedControlFusion.undefined_predicate_stays_undefined
+
+-- Finite Word selection cannot manufacture arbitrary fresh repetition captures.
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.candidates_word' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.candidates_word
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.selectAt_congr' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.selectAt_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.success_candidate' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.success_candidate
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.value_le_budget' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.value_le_budget
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.capture_le_budget' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.capture_le_budget
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.scanner_replicate' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.scanner_replicate
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.no_finite_word_family' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.no_finite_word_family
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.scanner_exceeds_family' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.scanner_exceeds_family
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.no_shape_scanner_equivalent' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.no_shape_scanner_equivalent
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.scanner_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.scanner_observations
+
+-- Fresh parser captures with repeated-prefix body entry.
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.pure_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.pure_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.pure_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.pure_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.par_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.par_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.seq_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.evaluator_of_shift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.tables_shifted' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.decide_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.copy_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.copy_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.copy_word' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.copy_word
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.beyond_finite_word_selection' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.beyond_finite_word_selection
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.nested_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.nested_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.nested_captures' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.nested_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.ParserPrefixFusion.nullable_repetition_keeps_undefined' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ParserPrefixFusion.nullable_repetition_keeps_undefined
+
+-- Independent recursive argument parsers and repeated-prefix fusion.
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveParserStability.installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveParserStability.installed
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveParserStability.lexical_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveParserStability.lexical_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveParserStability.lexical_zero_iff_pure' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveParserStability.lexical_zero_iff_pure
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveParserStability.lexical_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveParserStability.lexical_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveParserStability.helper_rows_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveParserStability.helper_rows_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveParserStability.floor_agree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveParserStability.floor_agree
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveParserStability.row_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveParserStability.row_length
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveParserStability.helpers_stable' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveParserStability.helpers_stable
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveParserStability.frozen_lexical_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveParserStability.frozen_lexical_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursiveParserStability.cycle_undefined' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursiveParserStability.cycle_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.render_without_helpers' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.render_without_helpers
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.without_helpers' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.without_helpers
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.valid_without_helpers' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.valid_without_helpers
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.par_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.par_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.seq_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.seq_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.par_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.par_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.seq_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.evaluator_of_shift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.lexical_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.lexical_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.tables_shifted' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.balanced_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.balanced_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.balanced_prefix_observation' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.balanced_prefix_observation
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.balanced_copy' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.balanced_copy
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.balanced_physical_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.balanced_physical_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.RecursivePrefixFusion.recursive_argument_undefined' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RecursivePrefixFusion.recursive_argument_undefined
+
+-- Mixed fixed-parser/replay entries with recursive capture-dependent arguments.
+
+/-- info: 'Shallot.MacroPeg.CBV.ClockFreezing.frozen_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClockFreezing.frozen_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.render_lift' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.render_lift
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.grammars_lift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.grammars_lift
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.valid_lift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.valid_lift
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.par_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.par_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.seq_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.seq_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.par_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.par_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.seq_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.evaluator_of_shift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.lexical_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.lexical_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.language_translation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.example_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.example_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.mixed_recursive_capture_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.mixed_recursive_capture_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.MixedPrefixFusion.recursive_argument_choice_undefined' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.MixedPrefixFusion.recursive_argument_choice_undefined
+
+-- Caller-position control over fresh recursive and arbitrary replay captures.
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.lexical_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.lexical_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.callLeaf_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.callLeaf_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.invoke_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.invoke_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.plan_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.plan_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.callLeaf_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.callLeaf_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.invoke_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.invoke_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.render_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.render_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.par_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.par_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.seq_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.seq_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.par_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.par_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.seq_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.entry_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.entry_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.sourceLeaf_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.sourceLeaf_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.callLeaf_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.callLeaf_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.call_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.call_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.evaluator_of_shift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.lexical_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.lexical_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.seq_user_step' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.seq_user_step
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.example_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.example_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.origin_fallback_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.origin_fallback_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.OriginPrefixControl.undefined_argument_before_local_branch' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.OriginPrefixControl.undefined_argument_before_local_branch
+
+-- Fresh origin captures and consuming control with retained Word arguments.
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.originPlan_atOrigin' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.originPlan_atOrigin
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.originPlan_exp' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.originPlan_exp
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.lexical_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.lexical_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.callLeaf_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.callLeaf_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.invoke_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.invoke_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.plan_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.plan_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.callLeaf_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.callLeaf_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.invoke_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.invoke_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.render_closed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.render_closed
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.par_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.par_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.seq_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.seq_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.par_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.par_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.seq_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.entry_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.entry_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.sourceLeaf_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.sourceLeaf_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.gate_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.gate_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.frozen_gate_ok' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.frozen_gate_ok
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.render_word' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.render_word
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.origin_eval_congr' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.origin_eval_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.callLeaf_congr' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.callLeaf_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.enter_origin' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.enter_origin
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.callLeaf_word' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.callLeaf_word
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.enter_word' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.enter_word
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.call_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.call_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.enter_of_success' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.enter_of_success
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.evaluator_of_shift' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.lexical_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.lexical_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.seq_user_step' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.seq_user_step
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.leaf_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.leaf_step
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.example_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.example_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ConsumingPrefixControl.fresh_capture_consuming_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ConsumingPrefixControl.fresh_capture_consuming_execution
