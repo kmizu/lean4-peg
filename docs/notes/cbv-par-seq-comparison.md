@@ -6978,3 +6978,43 @@ uses the concrete `!` continuation to select the replay endpoint; an
 arbitrary continuation or recursive user cannot simply replace it.
 General shifted arguments, full observation preservation, recursive
 integration, and the original class equality/separation goal remain open.
+
+### Actual split captures and the entire unbounded positive family
+
+`PartialCodewordExecution.split_arguments` now evaluates both actual Seq
+arguments at an arbitrary matching suffix, with the same original caller
+environment E for each. For positive source word count n+1, the first
+capture is `a^k` and the second is `# u^n a^k`. Their concatenation is
+exactly the original `u^(n+1) a^k`; neither the new first argument value
+nor an assumed capture endpoint is supplied to the second argument.
+`actual_split` applies this to the ordinary input origin.
+
+`source_body_at` and `split_body_at` connect the actual replay endpoints
+to the same continuation environment. The latter uses the existing
+`wholeView` rebind theorem for two pieces. `bodies_eq` preserves complete
+partial results for every first-order continuation, including undefined
+or failing continuations. This is a local equality under the same
+grammar, strategy, and table; it is not a recursive Par/Seq row theorem.
+
+The actual preflight is now proved by induction for every k,n.
+`input_rotated` relates the original input to `a^k (# a^k)^(n+1) ! w`;
+`check_at` proves the greedy comparison endpoint and its final `!` test.
+`preflight_execution` uses the real stage-one Seq table. Both the binary
+long branch and the unary zero-count branch are connected to their
+physical rule queries and later whole-capture reuse.
+
+`source_execution`, `target_execution`, and `family_observations` prove
+that the two single fixed grammars accept `input k n` for **all** k,n,
+including zero/empty captures. This replaces the finite-only evidence
+for the unbounded positive family. All 15 new public theorems have
+standard-axiom or axiom-free guards.
+
+What is still required is a converse on arbitrary input: ideally
+`SObs source Par sourceRoot x (some [])` and the corresponding target
+statement should each be equivalent to `exists k n, x = input k n`.
+The converse must derive uniform runs and the final copy from actual
+capture and replay behavior, and reject malformed runs, delimiters,
+and copies. The present positive family and local body bridge do not
+establish this. Full finite-failure/undefinedness correspondence,
+arbitrary caller continuations through preflight, recursive integration,
+general inverse translation, and class separation remain open.

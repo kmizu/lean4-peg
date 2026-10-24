@@ -540,3 +540,4 @@ import MacroPeg.CBV.MixedBodySyntax
 import MacroPeg.CBV.MixedBodyCompiler
 import MacroPeg.CBV.MixedBodyExamples
 import MacroPeg.CBV.PartialCodewordCapture
+import MacroPeg.CBV.PartialCodewordExecution
