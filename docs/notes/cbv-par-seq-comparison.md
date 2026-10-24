@@ -3324,3 +3324,67 @@ Thus this closes linear-workspace **evaluation from a preloaded packed initial
 state**, not yet the complete ordinary-input linear-space recognizer. The
 previous complete recognizer bound remains `O(n log n)`, and general same-input
 Par/Seq equality or separation is unresolved.
+
+
+### Standard-input linear-space recognition and the language-class consequence
+
+`SequentialPackedInitMachine` generates the real initial packed state from
+only the original character word on its input tape. A scan generates the
+current unary position and shared clock, installs the fixed initial control
+fields, and restores the input. Neither the input length nor a precomputed
+initial configuration is supplied. `initial_shape` identifies all eight
+streams with the established whole-state codec; `initialize_runs` bounds all
+intermediate initialization states by the packed evaluator's same capacity.
+
+`SequentialPackedHaltMachine` reads the actual final result tag and, for a
+successful result, tests the actual compressed remaining position. Only
+success at position zero accepts. `recognize_halts` composes initialization,
+the entire packed evaluation loop, and that accepting/rejecting halt for every
+original character list. `answer_iff` identifies the answer with the original
+first-order Seq observation. This interface starts with the character word on
+tape 6 and empty other lists, so a standard-input bridge is still needed for
+a conventional binary-input TM statement.
+
+`SequentialPackedBinaryLoader` supplies that bridge for ordinary a/b words.
+The standard input bit list becomes exactly one a/b character per bit, with
+all temporary buffers cleared. It does not repeat, pad, or annotate the input.
+`SequentialPackedBinaryInputMachine` composes the standard `initP` tape
+normalizer, loader, packed initialization, complete evaluation, and final halt.
+`machine` constructs a fixed **eight-tape finite-alphabet Turing machine**
+which decides the original Seq language on the ordinary a/b word. Its space
+bound covers every tape and every intermediate action, including loading and
+normalization:
+
+```
+space(g,e,n) = (linearFactor g e + 1) * (n + 1) + 3
+            <= (linearFactor g e + 4) * (n + 1).
+```
+
+Thus the prior standard-input `O(n log n)` bound is improved to `O(n)` for
+these binary word languages. The character-list initializer and evaluator
+also retain their unrestricted Unicode semantics; this standard TM theorem
+specifically uses the ordinary a/b restriction.
+
+`Complexity.SpaceLinear` records deterministic linear space with the standard
+binary input convention. `Shallot.PegSeparation.binary_seq_in_linear_space`
+connects the complete recognizer to the language class, and
+`binary_seq_in_P_and_linear_space` combines it with the established inclusion
+in Par and binary `Par = P`:
+
+```
+binary first-order CBV-Seq <= P intersect DSPACE(O(n)).
+```
+
+`binary_reverse_requires_P_linear_space` and
+`original_reverse_requires_P_linear_space` show that a reverse inclusion,
+including one on the same original character languages, would put every P
+language in deterministic linear space. The conditional theorem
+`P_outside_linear_space_separates_original` obtains a genuine original-language
+separator if a P language outside that space class is supplied. Its space
+lower-bound hypothesis remains explicit and unproved. The new recognizer
+therefore strengthens the necessary condition for equality; it does **not**
+settle equality or construct an unconditional Par/Seq separator.
+
+The root imports and 27 new public theorem axiom guards include initialization,
+all halting cases, the standard-input machine, and the class consequences.
+All audited dependencies are standard Lean axioms.

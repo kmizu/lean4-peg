@@ -372,3 +372,7 @@ import MacroPeg.CBV.SequentialStepDispatchMachine
 import MacroPeg.CBV.SequentialFieldPresenceMachine
 import MacroPeg.CBV.SequentialRunningMachine
 import MacroPeg.CBV.SequentialPackedLoopMachine
+import MacroPeg.CBV.SequentialPackedInitMachine
+import MacroPeg.CBV.SequentialPackedHaltMachine
+import MacroPeg.CBV.SequentialPackedBinaryLoader
+import MacroPeg.CBV.SequentialPackedBinaryInputMachine

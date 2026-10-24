@@ -47,6 +47,7 @@ import MacroPeg.CBV.SequentialParamPackedMachine
 import MacroPeg.CBV.SequentialEightTapeMachine
 import MacroPeg.CBV.SequentialActiveDispatchMachine
 import MacroPeg.CBV.SequentialPackedLoopMachine
+import Shallot.Peg.Separation.CBVSeqLinearSpace
 
 /-!
 # Axiom audit
@@ -7542,3 +7543,131 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialPackedLoopMachine.finite_alphabet' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialPackedLoopMachine.finite_alphabet
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedInitMachine.input_fits' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedInitMachine.input_fits
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedInitMachine.stage_fits' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedInitMachine.stage_fits
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedInitMachine.body_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedInitMachine.body_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedInitMachine.scan_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedInitMachine.scan_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedInitMachine.seed_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedInitMachine.seed_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedInitMachine.program_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedInitMachine.program_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedInitMachine.initial_shape' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedInitMachine.initial_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedInitMachine.initialize_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedInitMachine.initialize_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedHaltMachine.halt_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedHaltMachine.halt_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedHaltMachine.final_halts' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedHaltMachine.final_halts
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedHaltMachine.recognize_halts' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedHaltMachine.recognize_halts
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedHaltMachine.answer_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedHaltMachine.answer_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedBinaryLoader.scan_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedBinaryLoader.scan_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedBinaryLoader.runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedBinaryLoader.runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.input_capacity' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.input_capacity
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.lists_halts' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.lists_halts
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.recognizes' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.recognizes
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.finite_alphabet' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.finite_alphabet
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.machine' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.machine
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.space_linear_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialPackedBinaryInputMachine.space_linear_bound
+
+/-- info: 'Complexity.SpaceLinear.to_nlog' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.SpaceLinear.to_nlog
+
+/-- info: 'Shallot.PegSeparation.binary_seq_in_linear_space' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.binary_seq_in_linear_space
+
+/-- info: 'Shallot.PegSeparation.binary_reverse_requires_P_linear_space' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.binary_reverse_requires_P_linear_space
+
+/-- info: 'Shallot.PegSeparation.original_reverse_requires_P_linear_space' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.original_reverse_requires_P_linear_space
+
+/-- info: 'Shallot.PegSeparation.P_outside_linear_space_separates_original' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.P_outside_linear_space_separates_original
+
+/-- info: 'Shallot.PegSeparation.binary_seq_in_P_and_linear_space' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.binary_seq_in_P_and_linear_space
