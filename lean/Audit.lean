@@ -15750,3 +15750,202 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.AdjacentCodewordRecursiveExamples.all_inputs
+
+
+-- Different explicit arguments at each recursive call site.
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.rest_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.rest_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.argument_syntax' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.argument_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.argument_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.argument_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.checks_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.checks_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.head_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.head_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.target_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.target_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.comparator_stable' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.comparator_stable
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_ok' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_ok
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.target_ok' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.target_ok
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.target_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.target_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.parameters_empty' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.parameters_empty
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.parameters_parts' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.parameters_parts
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.prefix_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.prefix_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.prefix_bridge' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.prefix_bridge
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.prefix_positive' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.prefix_positive
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.compare_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.compare_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.compare_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.compare_spec
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.views_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.views_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.evaluator_of_shift' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_step' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_step
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.target_step' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.target_step
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.tables_shifted' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.stable_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.stable_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.undefined_call' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.undefined_call
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_syntax' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_eq_original' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.source_eq_original
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.original_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.original_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.sourceExpr_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.sourceExpr_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.original_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.original_observations
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.original_language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteRecursive.original_language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteExamples.executions' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteExamples.executions
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteExamples.actual_captures' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteExamples.actual_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteExamples.parent_controls_argument' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteExamples.parent_controls_argument
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteExamples.undefined_stages' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteExamples.undefined_stages
+
+/-- info: 'Shallot.MacroPeg.CBV.AdjacentCallsiteExamples.all_inputs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.AdjacentCallsiteExamples.all_inputs

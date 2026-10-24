@@ -6706,3 +6706,49 @@ Recursive header/helper integration for parent-dependent control, arbitrary
 original argument shapes, independent multiple captures, and the general
 Par/Seq equality-or-separation question remain open. The 37 new public
 theorem guards use standard axioms or none.
+
+### Different explicit arguments at each recursive call site
+
+`AdjacentCallsiteRecursive` removes the single shared D restriction from
+the parent-dependent recursive compiler. Each call site carries its own
+codeword-control argument, including different arguments to the same
+callee. Argument tests can inspect the current parent. The generated
+source calls remain unary, while the target splits that one capture into
+two consecutive Seq arguments. The header A remains shared.
+
+`Body H` records the ordinary first-order body constructors and a per-call
+`Argument H`. Each argument is A followed by its own codeword control;
+the stored proof checks only call-free argument syntax, allowing retained
+parameters. `sourceExpr` directly emits ordinary source calls containing
+those actual argument expressions. For syntactically scoped bodies,
+`source_syntax` and `source_eq_original` identify the proof's source with
+that direct original grammar exactly. `original_observations` and
+`original_language_translation` then preserve every finite observation and
+the recognized language of that original grammar on unchanged strings.
+Both grammars and starts are explicitly proved first-order. This is still
+a restricted source family, not a decoder for arbitrary first-order PEGs.
+
+The recursive table relation uses captured traces rather than the chosen
+argument syntax, so different call sites can share the same user row.
+The existing adjacent-prefix argument applies to each call's own control,
+with caller-side parent views and ordinary unary comparator executions.
+Simultaneous evaluator and row induction, prefix seeds, and cofinality
+close the complete fixed-grammar correspondence. No compatibility premise
+requires the different call-site controls to choose the same trace.
+
+The example calls user 0 with a two-word argument at the root and a
+three-word argument in the grandchild, passing through user 1 with a
+parent-dependent one-word capture. Actual target pairs are
+`(u,u)→(u,eps)→(v,v²)`, with `u=a#` and `v=aa#`; the original parent values
+are reused after return. Short copies are rejected. The dynamic argument
+also chooses different endpoints under different retained parents. An
+undefined later argument node remains None for every pair of ordinary
+source/target stages even when earlier words are unequal.
+
+All 43 new public theorem guards use standard axioms or none. Remaining
+constraints are a shared independent Pure prefix-code A, call-free
+codeword control in each argument, one original capture per call, and
+source users beginning with A;param0. General original argument shapes,
+arbitrary user entry bodies, recursive header/helper integration for this
+parent-dependent construction, independent multiple captures, and general
+Par/Seq equality or separation remain unresolved.

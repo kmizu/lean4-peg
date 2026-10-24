@@ -525,3 +525,5 @@ import MacroPeg.CBV.AdjacentCodewordCalls
 import MacroPeg.CBV.AdjacentCodewordExamples
 import MacroPeg.CBV.AdjacentCodewordRecursive
 import MacroPeg.CBV.AdjacentCodewordRecursiveExamples
+import MacroPeg.CBV.AdjacentCallsiteRecursive
+import MacroPeg.CBV.AdjacentCallsiteExamples
