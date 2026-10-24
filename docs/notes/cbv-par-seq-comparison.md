@@ -7283,7 +7283,7 @@ the old maximal-run preflight rejects the valid source prefix. Short
 copies are rejected, and the candidate also handles zero full words and
 an empty final run.
 
-Scope: the new all-input preflight theorems compare the real argument
+Scope at the local-preflight checkpoint: these all-input theorems compare the real argument
 and replay in the same grammar/strategy/table context, using physical
 Seq helper rows. The local entry theorem likewise uses one context.
 The candidate's complete call executions above are finite kernel checks,
@@ -7291,4 +7291,60 @@ not a general Par/Seq translation theorem. A cross-grammar recursive row
 relation translating G, complete call transfer including the zero branch,
 and composition with the earlier compiler remain to be proved. Concrete
 A, the B_G argument shape, one capture, and the initial A/param replay
-remain restrictions. General Par/Seq equality or separation is unresolved.
+remain restrictions. The recursive connection below closes this checkpoint's
+call-transfer and row-correspondence gaps. General Par/Seq equality or
+separation is unresolved.
+
+### Recursive caller-controlled lengths and complete call transfer
+
+`ControlledPartialEntry.transfer` now joins the physical preflight and
+both actual Seq capture branches across different grammars, strategies,
+ordinary clocks, and caller environments. The sole argument is the actual
+B_G capture. The positive branch passes `[a*, #;B_G]` to a binary row and
+restores the full captured value through `wholeView`; immediate iteration
+failure passes the actual a-run to a unary row. The callee tail receives
+exactly the original whole value at the original replay endpoint. Finite
+prefix failure, undefined stopping tests, and arbitrary continuation
+failure/undefinedness are preserved. The guarded branches cannot retry a
+different capture after a continuation fails. `preflight_zero` and `zero`
+prove the actual ordinary-clock-zero seed without supplying frozen rows.
+
+`ControlledPartialRecursive` discharges both premises of that transfer.
+It uses template `call i []` for a source call with G=eps and `call i [G]`
+for a source call with `B_render(G)`. The latter is one actual captured
+argument: G is a stopping test in the original caller environment, not an
+additional capture. G can contain retained parameters, calls to the same
+user or other users, nested controlled calls, choices, predicates, and
+stars. The source user bodies are `A;param0;render(tail)`. Target rows 0/1
+are the two unary comparison helpers; each user gets binary/unary rows at
+2i+2/2i+3.
+
+Structural recursion handles G at the current caller clock, while
+ordinary-clock induction supplies the callee continuation at the previous
+clock. `evaluator_eq` establishes complete partial-result equality at
+every ordinary stage for all caller environments and valid positions.
+`stable_eq`, `observations_iff`, and `language_translation` then preserve
+all finite observations and the language of unchanged original strings
+in one fixed first-order Seq grammar. No argument/replay/filter/recursive
+row relation remains as an extra premise in these final theorems.
+
+Kernel executions follow a real 0→1→0 chain with captures aa → a#a → aa
+and reuse both parents after returning. In another example the stopping
+test calls user 0 before the actual user-0 invocation: the first probe
+succeeds and the second fails, selecting a#a, which the actual callee
+reuses later. Parent-held two versus three codewords changes the returned
+endpoint on the same input in both generated grammars. Short parent,
+child, and grandchild copies are rejected. The recursive compiler also
+accepts zero-full-word and empty captures. An empty-star stopping test
+on two real headers remains undefined at every ordinary clock on both
+sides.
+
+The restricted recursive family is now proved, beyond the preceding
+shared-context and finite-execution results. Concrete A=a*;#, the B_G
+argument shape, one capture, and the initial A/param replay remain
+requirements. Calls with two or more template arguments render as
+failure; they do not express independent source captures. This compiler
+has not been combined with the earlier before/after-test or mixed-body
+compilers. Arbitrary consuming arguments, general initial body positions,
+independent multiple captures, and general Par/Seq equality or separation
+remain unresolved.

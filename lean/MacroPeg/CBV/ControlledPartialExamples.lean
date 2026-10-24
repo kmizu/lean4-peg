@@ -1,16 +1,14 @@
-import MacroPeg.CBV.ControlledPartialPreflight
+import MacroPeg.CBV.ControlledPartialEntry
 
-/-! Executions of a caller-controlled partial-capture candidate. The
-candidate preflight is not yet an all-input recursive translation. -/
+/-! Concrete caller-controlled partial captures through the shared call
+entry, including a boundary counterexample for the old maximal checker. -/
 namespace Shallot.MacroPeg.CBV.ControlledPartialExamples
 open ControlledPartialCapture
 open ControlledPartialPreflight (preflight)
 open PartialCodewordCapture (runA look eof)
 open RuntimeShiftFilter (scanner)
 
-def translated (test : MExp) : MExp := .seq (look (preflight test))
-  (.alt (.seq (look (step test)) (.call 2 [runA,restArgument test]))
-    (.seq (.notP (step test)) (.call 3 [runA])))
+def translated (test : MExp) : MExp := ControlledPartialEntry.entry 2 3 test
 
 def tail : MExp := .seq (.lit ['#']) (.seq scanner
   (.seq (.lit ['!','?']) (.seq (.param 0) eof)))

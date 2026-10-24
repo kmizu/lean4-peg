@@ -552,4 +552,7 @@ import MacroPeg.CBV.PartialCodewordGuardExamples
 import MacroPeg.CBV.PartialCodewordSuffixExamples
 import MacroPeg.CBV.ControlledPartialCapture
 import MacroPeg.CBV.ControlledPartialPreflight
+import MacroPeg.CBV.ControlledPartialEntry
 import MacroPeg.CBV.ControlledPartialExamples
+import MacroPeg.CBV.ControlledPartialRecursive
+import MacroPeg.CBV.ControlledPartialRecursiveExamples
