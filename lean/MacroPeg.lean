@@ -250,3 +250,4 @@ import MacroPeg.CBV.SequentialStructuralEntryMachine
 import MacroPeg.CBV.SequentialCallEntryMachine
 import MacroPeg.CBV.SequentialInputRead
 import MacroPeg.CBV.SequentialInputPair
+import MacroPeg.CBV.SequentialSpanMachine

@@ -4363,3 +4363,45 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialInputPair.matchCount_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialInputPair.matchCount_step
+
+/-! Original-input capture-interval loops with linear intermediate workspace. -/
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSpanMachine.reg_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSpanMachine.reg_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSpanMachine.body_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSpanMachine.body_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSpanMachine.loop_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSpanMachine.loop_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSpanMachine.scan_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSpanMachine.scan_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSpanMachine.setup_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSpanMachine.setup_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSpanMachine.value_output' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSpanMachine.value_output
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSpanMachine.span_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSpanMachine.span_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSpanMachine.span_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSpanMachine.span_value
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSpanMachine.compiled_span' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSpanMachine.compiled_span
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSpanMachine.span_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSpanMachine.span_tape

@@ -1053,3 +1053,32 @@ loop. The remaining-count loop, environment-span lookup, atomic-expression
 selection, original-input initialization, and whole-evaluator integration still
 need connection. It does not resolve general CBV-Par versus CBV-Seq equality
 or separation.
+
+### Complete runtime capture-interval scan
+
+`SequentialSpanMachine` now connects the inner comparison to a complete numeric
+loop over a capture interval. Its ten numeric registers contain the original
+encoded input, the fixed comparison workspace, two persistent suffix positions,
+and the remaining count. `setup_runs` computes `a - b` from the runtime interval
+endpoints by shrinking comparison. The loop copies the two positions into the
+comparison registers, restores the original input after both reads, advances
+both persistent positions and decrements the count on a match, and stops with an
+empty count register on a mismatch. A zero count denotes success. Comparison
+scratch is cleared after each iteration.
+
+`scan_correct` proves the final success/position result equals the existing
+`SequentialSpanRecompute.matchCount`. `span_value` therefore identifies the
+result with `matchSpan x a b p`, for arbitrary original character inputs and
+valid positions. Empty captures, target EOF, mismatches, and successful scans
+are covered. The program is fixed: the capture length is runtime data, with no
+input-dependent unrolling and no materialized captured substring.
+
+`compiled_span` and `span_tape` carry the entire endpoint setup and loop through
+the list compiler to eleven actual tapes. Every intermediate tape fits the
+same linear capacity `(2^32 + 2) * x.length + 3`. The numeric running-time bound
+is `4*b + 5 + (a-b)*(16*x.length + 4*2^32 + 31) + 1`; the list execution bound
+multiplies this by `ncost` of the capacity. The final encoded original input is
+preserved on register zero. The initial state already contains that encoded
+input and the endpoints; environment lookup, the ordinary-input loader, atomic
+selection and evaluator integration remain to be connected. The general
+Par/Seq equality-or-separation objective remains open.
