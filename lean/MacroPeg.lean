@@ -277,3 +277,5 @@ import MacroPeg.CBV.SequentialEvaluationMachine
 import MacroPeg.CBV.SequentialInitializationNumbers
 import MacroPeg.CBV.SequentialInitializationFields
 import MacroPeg.CBV.SequentialSeedMachine
+import MacroPeg.CBV.SequentialInputLength
+import MacroPeg.CBV.SequentialEncodedMachine

@@ -4991,3 +4991,39 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialSeedMachine.space_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialSeedMachine.space_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInputLength.scan_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInputLength.scan_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInputLength.runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInputLength.runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInputLength.encS_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInputLength.encS_count
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInputLength.original_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInputLength.original_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInputLength.space_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInputLength.space_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEncodedMachine.halts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEncodedMachine.halts
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEncodedMachine.tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEncodedMachine.tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEncodedMachine.recognizes' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEncodedMachine.recognizes
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEncodedMachine.space_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEncodedMachine.space_bound

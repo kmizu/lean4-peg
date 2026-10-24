@@ -1478,3 +1478,32 @@ ordinary-input loader must produce both of these from the actual input tape;
 these theorems do not yet provide that loader or a standard-input TM class
 membership theorem. The general Par/Seq language-class comparison remains
 open, and the current space upper bound alone supplies no separating language.
+
+
+### Recovering input length and evaluating from a single encoded input
+
+`SequentialInputLength` scans the complete original-input encoding, counts its
+field-marker cells, and moves the scanned cells onto a temporary stack. It then
+reverses that transfer to restore the exact original encoding. `scan_runs` proves
+the actual loop, including all intermediate moves and counter updates.
+`encS_count` shows that each numeric field contributes exactly one marker;
+`original_runs` therefore produces the evaluator's seed with the exact original
+character count. Empty inputs are covered. The workspace capacity is the encoded
+input length plus four cells, so `space_linear` bounds this stage linearly in
+the original character length.
+
+`SequentialEncodedMachine` composes this restored-input length computation with
+the complete seed evaluator. Its sole initial data is `encS (codes x)` in
+register 11; all other registers are empty. No input length, clock, width,
+selector, or initial stack is provided separately. `halts` proves the whole
+program stops, `tape` transfers it to twenty actual tapes, and `recognizes`
+identifies its actual halting answer with first-order sequential
+full-consumption observation on the same original character list. `space_bound`
+retains the previous grammar-dependent linear plus binary `O(n log n)` capacity.
+
+The theorem still starts with the original input already encoded as numeric
+fields. It does not yet start at the standard raw input configuration, and
+therefore does not establish a standard-input TM space-class theorem. The
+ordinary-input encoding/loader and the general Par/Seq equality or separation
+remain unresolved. In particular, the current space upper bound alone does
+not give a separating language in P.
