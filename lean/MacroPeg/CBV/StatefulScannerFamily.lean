@@ -5,7 +5,7 @@ compiler and query syntax do not receive the state reached on the input. -/
 namespace Shallot.MacroPeg.CBV.StatefulScannerFamily
 open StatefulScanner
 
-private theorem uniform_lookup {α : Type} (blocks : List (List α)) (width : Nat)
+theorem uniform_lookup {α : Type} (blocks : List (List α)) (width : Nat)
     (h : ∀ b ∈ blocks, b.length = width) (i j : Nat) (hj : j < width) :
     blocks.flatten[i*width+j]? = (blocks[i]?).bind (fun b => b[j]?) := by
   induction blocks generalizing i with

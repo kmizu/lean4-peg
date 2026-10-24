@@ -622,3 +622,11 @@ import MacroPeg.CBV.RecursiveScannerCompiler
 import MacroPeg.CBV.RecursiveScannerCorrespondence
 import MacroPeg.CBV.RelocatedScannerFastTable
 import MacroPeg.CBV.RecursiveScannerFusionExamples
+
+import MacroPeg.CBV.ObservedScanner
+import MacroPeg.CBV.ObservedScannerDispatch
+import MacroPeg.CBV.SequentialCaptureObserver
+import MacroPeg.CBV.ObservedScannerExamples
+import MacroPeg.CBV.SequentialCaptureObserverExamples
+import MacroPeg.CBV.ParameterizedCaptureSafety
+import MacroPeg.CBV.ParameterizedCaptureSafetyExamples

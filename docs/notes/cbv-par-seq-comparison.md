@@ -8305,3 +8305,66 @@ unresolved, as is unrestricted first-order CBV-Par/Seq class equality or
 separation. Shared M/q, unary users and source scanner-prefix form remain
 restrictions. The earlier loop-safe and fixed-action constructions remain
 complementary; no unrestricted normalization theorem is claimed.
+
+
+### Parameterized capture safety and observed scanner handoff
+
+`ParameterizedCaptureSafety` derives the scanner-frontier capture invariant
+for calls with arbitrary finite argument lists, including parameterized
+calls inside arguments and mutually recursive rules of different arities.
+`grammarCheck` checks the actual rule bodies: consuming literals must have
+defined transitions from every scanner state, retained parameters must
+already be safe, and consuming calls and their arguments must pass the same
+check. Queries preserve their original behavior and consume no output;
+the check does not assume their termination. Arguments still evaluate in
+the caller environment. `par_arguments` proves that all parallel captures
+are safe at the unchanged caller position; `seq_arguments` additionally
+derives the safe prefix consumed before the callee starts. Induction on
+physical table clocks closes the actual rule-row invariant. The proof also
+covers actual frozen tables for arbitrary row selections and floors,
+without a stability or termination oracle.
+
+`ObservedScanner` and `ObservedScannerDispatch` generate an actual scanner
+product with an arbitrary total finite observer. The original scanner alone
+determines the frontier: an observer's absorbing failure state does not stop
+the scan. Relocated blocks choose the actual final scanner/observer pair,
+then execute the corresponding continuation at the actual scan endpoint.
+Later continuation failure or undefinedness cannot choose another stopping
+point or final state. Both states advance through the whole captured word.
+`physical_dispatch_resumption` now derives this handoff from a successful
+capture in a finitely checked parameterized source grammar to real relocated
+scanner rules in a different grammar, allowing independent clocks,
+strategies, retained environments and arbitrary continuations. This is a
+conditional local handoff after actual capture success, not yet a complete
+call translation including argument failure.
+
+`SequentialCaptureObserver` proves the one-call observer induction step for
+actual unary Seq rules. The observer must advance across the actual
+argument before evaluating the callee body. When that call itself occurs
+inside a fresh argument, the selected profile must describe the entire
+call's consumption, rather than only the word passed as its parameter.
+The general call theorem still requires a callee product-row relation.
+The concrete examples discharge that relation using actual installed
+unary rules, uniformly on every input and physical clock, and execute a
+nested call retaining `ab#ab` after observing an inner argument `ab`.
+The whole value is reused after `!`, then the parent `a` is restored.
+Resetting the observer at callee entry, or using the inner argument's
+profile for the whole call, rejects in the corresponding kernel examples.
+
+Additional kernel examples distinguish observer failure from the original
+scanner frontier, preserve continuation failure and nullable divergence,
+check two independent actual argument captures in both evaluation modes,
+and prove an actual mutual unary cycle undefined on every original input
+at every physical clock. A literal crossing the scanner frontier is rejected
+by the consuming-path check, including inside a positive call argument;
+the same literal in a query needs no consuming-path restriction.
+
+These are building blocks for parameterized arguments in the scanner-prefix
+translation. The new safety theorem requires checked consuming paths in all
+rules of its actual source grammar; it does not claim that arbitrary user
+bodies with scanner prefixes satisfy that condition. The general Seq call
+observer step and scanner dispatch still need a simultaneous recursive
+plain/product compiler and row proof for this family. That integration,
+general PEG prefixes, mixed-fragment integration, independent multiple
+captures in the translation, and unrestricted first-order Par/Seq class
+equality or separation remain unresolved.
