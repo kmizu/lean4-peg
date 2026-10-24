@@ -415,3 +415,5 @@ import MacroPeg.CBV.ScannerPrefixFusion
 import MacroPeg.CBV.MixedScannerPrefixFusion
 import MacroPeg.CBV.CaptureCommutation
 import MacroPeg.CBV.UnaryOverlapFusion
+import MacroPeg.CBV.BlockCapture
+import MacroPeg.CBV.PeriodicOverlapFusion

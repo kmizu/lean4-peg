@@ -10127,3 +10127,111 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.UnaryOverlapFusion.overlapping_capture_execution' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.UnaryOverlapFusion.overlapping_capture_execution
+
+-- Periodic block captures and genuinely noncommuting overlap.
+
+/-- info: 'Shallot.MacroPeg.CBV.BlockCapture.copies_add' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.BlockCapture.copies_add
+
+/-- info: 'Shallot.MacroPeg.CBV.BlockCapture.copies_commute' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.BlockCapture.copies_commute
+
+/-- info: 'Shallot.MacroPeg.CBV.BlockCapture.rotate' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.BlockCapture.rotate
+
+/-- info: 'Shallot.MacroPeg.CBV.BlockCapture.related_refl' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.BlockCapture.related_refl
+
+/-- info: 'Shallot.MacroPeg.CBV.BlockCapture.related_trans' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.BlockCapture.related_trans
+
+/-- info: 'Shallot.MacroPeg.CBV.BlockCapture.evaluator_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.BlockCapture.evaluator_safe
+
+/-- info: 'Shallot.MacroPeg.CBV.BlockCapture.physical_rows_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.BlockCapture.physical_rows_safe
+
+/-- info: 'Shallot.MacroPeg.CBV.BlockCapture.frozen_rows_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.BlockCapture.frozen_rows_safe
+
+/-- info: 'Shallot.MacroPeg.CBV.BlockCapture.head_capture' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.BlockCapture.head_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.BlockCapture.prefix_rotate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.BlockCapture.prefix_rotate
+
+/-- info: 'Shallot.MacroPeg.CBV.BlockCapture.ab_noncommuting' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.BlockCapture.ab_noncommuting
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.par_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.par_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.seq_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.seq_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.par_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.par_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.seq_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.evaluator_of_shift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.lexical_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.lexical_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.example_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.example_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.PeriodicOverlapFusion.rotated_overlap_execution' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PeriodicOverlapFusion.rotated_overlap_execution

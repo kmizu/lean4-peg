@@ -4715,3 +4715,55 @@ fragment with a fixed repetition prefix and one independent head per rule.
 General noncommuting overlap, arbitrary body decomposition, multiple
 independent general arguments, and full Par/Seq equality or separation remain
 unresolved. Twenty additional public axiom guards cover the construction.
+
+
+### Noncommuting overlap through periodic capture phases
+
+`CBV/BlockCapture.lean` replaces the singleton alphabet with a fixed word
+block `u`. `Safe n u` describes recursive expressions that consume whole
+numbers of these blocks: block-power literals, empty expressions, component
+calls, sequencing, choice, repetition, and unrestricted negative queries.
+Ordinary lexical validity remains a separate requirement. `evaluator_safe`
+proves an actual suffix relation with a block-power prefix;
+`physical_rows_safe` and `frozen_rows_safe` derive it for every helper round.
+`head_capture` then identifies the value captured by a block-safe recursive
+core followed by a fixed phase suffix `left` as `u^n ++ left`.
+
+If `u = left ++ right`, the appropriate word equation is
+`u ++ (u^n ++ left) = (u^n ++ left) ++ (right ++ left)`.
+`rotate` proves this for every block count. `prefix_rotate` turns the equation
+into exact parser equality, including finite failure, using a rotated residual
+rather than assuming that the source prefix and capture commute.
+`ab_noncommuting` proves for every `n` that `ab` and `(ab)^n a` do not commute.
+Thus this construction covers genuinely noncommuting shifted replay.
+
+`CBV/PeriodicOverlapFusion.lean` closes the corresponding fixed recursive
+grammar transformation. A rule specifies a closed recursive core, static
+`left` and `right`, and an arbitrary recursively rendered tail `B`. Its caller
+captures `core left`; the Par body is `(u param(0)) B`, while the Seq body is
+`(right left) B`. The target still holds the exact original capture for later
+uses. The syntactic block condition on the core and helper component derives
+the phase equation during the user-row induction. No runtime phase or word
+commutation oracle is assumed by `observations_iff` or
+`language_translation`; both concern the same original character strings and
+all finite observations. Undefined and finitely failing arguments retain their
+strict call semantics.
+
+`rotated_overlap_execution` kernel-checks actual physical tables for the
+recursive core `A <- 'ab' A 'ab' / 'ab'`. On `(ab)^14 a`, the argument
+`A 'a'` actually captures `(ab)^13 a`, a 27-character word. The source then
+consumes `ab` before its first replay, starting that replay 2 characters into
+the original capture and overlapping it by 25 characters. Seq captures the
+same word first and consumes the rotated residual `ba`. The theorem checks
+that using unrotated `ab` at this position fails. Both proper grammars also
+reuse the 27-character capture after `#`, recursively obtain an 11-character
+capture from `(ab)^6 a`, and accept. Replacing the first block's final `a`
+with `b` is finitely rejected by both strategies.
+
+The block and phase suffix remain static per rule; the captured block count
+and the input are unbounded. General nonperiodic overlap, runtime-dependent
+phase selection, arbitrary body decomposition, multiple independent general
+captures, and full Par/Seq equality or separation remain unresolved. This is
+an additional restricted compiler, not yet a unification with the guarded
+body-plan and absorbing-scanner compilers. Twenty-six new public axiom guards
+cover the construction.
