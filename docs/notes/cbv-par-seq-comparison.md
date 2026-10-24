@@ -8051,3 +8051,148 @@ a shared finite-state consuming prefix, and unary source users. Integrating
 these consuming-prefix families with the mixed fragment compiler, arbitrary
 PEG prefixes, unrestricted shifted arguments, independent multiple captures,
 and general Par/Seq equality or separation remain unresolved.
+
+
+### Dynamic scanner capture observation (2026-10-25)
+
+`DynamicScannerCapture` connects partial `StatefulScanner.Machine` transitions
+to the existing total `DependentCaptureFilter` observer by adding one absorbing
+missing-transition state. `observer_run` and `observer_result` identify the
+observer result with actual partial advancement on the whole captured word.
+A full observer profile determines the partial action from every scanner state;
+`finite_action_cover` covers all actual captured words by finite profiles.
+
+`filter_result` preserves the original Par argument's failure and undefinedness
+and filters successful captures by the requested partial transition. Arguments
+may have unequal-action choices, nonidentity star operands, retained parameters,
+and recursive nullary helpers. `filter_success` derives the actual original
+capture endpoint and transition; `filter_resumption` derives the exact original
+prefix split and residual scan start from a successful generated filter.
+No capture-shape or successful-scan premise is supplied to these conclusions.
+
+`dispatch_result` enumerates finite observer endpoints and invokes just the
+continuation for the actual original capture's endpoint. A continuation may
+fail or diverge without choosing a different argument capture. It preserves
+argument failure/undefinedness before continuation evaluation. The dispatcher
+is ordinary first-order syntax when its continuations are first-order.
+Kernel examples cover changing-action a*, committed a/aa choice, absorbing
+missing transitions, retained ac reuse after a variable-action capture, empty
+capture, failed arguments, empty loops, and divergent selected continuations.
+
+This is a local classifier/continuation construction in the installed regular
+helper-product grammar at its stable table. Accurate incoming observer metadata
+remains a premise (existing environment/profile-guard theorems provide it).
+It is not yet a complete stateful user-call compiler: binding new captures,
+propagating dynamically selected full profiles through recursive user rows,
+physical-clock correspondence for that compiler, and its all-input language
+preservation still need to be connected. In particular, observing a missing
+transition does not solve captures extending past the original scan frontier.
+The general Par/Seq language-class equality or separation remains unresolved.
+
+
+### Binding dynamic captures to installed residual scanners (2026-10-25)
+
+`DynamicScannerBinding` installs one real unary Seq rule for every finite
+observer profile and appends the actual partial-machine scanner block. Each
+variant starts at the state decoded from its profile, followed by a
+profile-specialized body. The callsite uses the existing actual profile guards
+and binds the entire original argument, rather than a bounded proxy for it.
+`resume_actual` identifies the decoded state with partial advancement on the
+captured word from any scanner start state.
+
+`entry_result` relates an actual Par argument in an independently extended
+source grammar to the installed target row, at arbitrary source and target
+user stages. `entry_step` unfolds that row: the environment is exactly the
+singleton original capture, the selected scanner is the one obtained from
+that capture, and the body is specialized by its complete observer profile.
+Failure and undefinedness remain ahead of the callee. `recapture_step`
+discharges incoming metadata accuracy for a parent specialized by its actual
+profile, and repeats the actual binding step for a new child capture.
+`scanner_physical` evaluates the selected installed scanner at an ordinary
+physical bound; `scanner_prefix_eq` proves exact original/residual scan
+agreement when the actual capture is inside the original scan frontier.
+`physical` and `observations_iff` connect the installed grammar's user stages
+to actual physical tables and all its finite observations. `entry_undefined`
+proves undefined source arguments stay undefined at every physical target
+clock, even when a specialized callee could reject immediately.
+
+Kernel examples use a single fixed target grammar for odd/even a* captures,
+whole child acaa capture followed by restored parent ac, short-copy rejection,
+committed a/aa variants, and original-string observations. A recursive source
+and generated recursive target execute a → aa → aaa captures with target
+starts 1 → 0 → 1, extra scanner transitions, and whole child/parent reuse on
+return. Grandchild, child, and parent short copies are rejected on both sides;
+the successful recursive target run is transferred to a physical table and
+ordinary SObs. This is a concrete recursive execution, not an all-input
+language-equivalence theorem for the recursive pair.
+
+The frontier boundary is verified on the actual grammars: capturing a! in
+a!a! extends beyond the source scan's stopping point. The source accepts,
+whereas the generated residual-entry grammar rejects. Thus this entry
+construction cannot be claimed as an unrestricted translation. The next
+missing proof is a syntactic guarantee of the scan frontier for dynamically
+varying arguments, followed by all-input recursive row correspondence and
+source/target language preservation. User calls inside positive argument
+parsers, general PEG prefixes, independent multiple captures, and general
+Par/Seq equality or separation remain unresolved.
+
+
+### Checked dynamic captures through whole recursive grammars (2026-10-25)
+
+`DynamicScannerCompiler` and `DynamicScannerCorrespondence` close the
+whole-grammar connection for a new dynamic-capture family. Each source user
+starts with the same actual partial scanner M/q followed by an arbitrary
+body built from literals, primitives, retained parameters, user calls,
+sequence, prioritized choice, negation and nested stars. Every user call
+carries its own actual argument syntax. The generated target has one unary
+rule per logical user and finite full observer profile, and starts its
+scanner in the state actually reached by that capture. Incoming full profiles
+select the next child's profile before its ordinary Seq capture binding.
+Both grammars and both starts are fixed independently of the input.
+
+`TotalCaptureSafety.check` is an executable finite syntax check. Literal
+words must have defined transitions from every scanner state; parameters
+preserve that property through the actual capture environment. The property
+is closed under sequence, unequal-action choice and arbitrary star. Negative
+queries consume no capture characters and may fail or diverge. Arguments in
+this whole-grammar compiler contain no rule calls; their control may otherwise
+mix retained values and new literals freely. `IndependentCaptureControl`
+transports their full partial results and inline generated filters between
+actual user grammars and clocks. It does not assume successful argument
+results or total parsing behavior.
+
+`capture_total` derives the exact physical capture, suffix split and defined
+advancement from actual argument evaluation. Structural evaluator induction
+and user-clock induction prove every source row at the original position
+matches the generated profile row at the actual capture endpoint. Scanner
+rows are actual installed helper rows stabilized at input length plus one;
+physical/frozen cofinality removes the analysis clock. `checked_observations_iff`
+and `checked_language_translation` require only the finite body/start checks.
+They preserve all finite observations and the same unchanged original string
+language on all inputs, including failure and undefinedness. `undefined_iff`
+also identifies absence of a defined result at every ordinary physical clock.
+No capture-shape, selected-action, metadata-accuracy, frontier, argument-result
+or recursive-row oracle is a caller premise of these final theorems.
+
+The generated mutually recursive example captures a → aa → aaa, chooses
+residual states 1 → 0 → 1, consumes extra b transitions, and restores both
+parent values. Its concrete ordinary source/target executions and three
+short-copy rejections are kernel checked, and `language` covers every input
+and every finite observation for this actual pair. The same generated grammar
+also accepts even and empty captures. Unequal-action a/aa commits to a on
+aa!aa and rejects rather than retrying aa after EOF failure; explicit aa
+succeeds. A nullable empty-literal-star argument is undefined on every input
+at every ordinary clock on both sides, and argument failure at clock zero is
+preserved. The a! frontier-crossing argument from the previous section is
+now rejected by the finite syntax check.
+
+This is complementary to the earlier loop-safe and fixed-action families,
+not their strict superset: requiring defined advancement from all states
+excludes some partial actions those families permit. It removes the fixed
+full-action-per-user restriction for this new family. Positive rule calls,
+including independent nullary recursive helpers, inside arguments have not
+yet been integrated into its whole-grammar proof (the earlier local binding
+lemmas still support the independent helpers). Shared M/q, unary logical
+users and source scanner-prefix form remain restrictions. General PEG
+prefixes, mixed-fragment compiler integration, independent multiple captures,
+and unrestricted Par/Seq equality or separation remain unresolved.

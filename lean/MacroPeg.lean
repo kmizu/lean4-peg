@@ -599,3 +599,15 @@ import MacroPeg.CBV.StatefulLoopExamples
 import MacroPeg.CBV.CaptureActionSafety
 import MacroPeg.CBV.StatefulActionFusion
 import MacroPeg.CBV.StatefulActionExamples
+
+import MacroPeg.CBV.DynamicScannerCapture
+import MacroPeg.CBV.DynamicScannerExamples
+
+import MacroPeg.CBV.DynamicScannerBinding
+import MacroPeg.CBV.DynamicScannerBindingExamples
+
+import MacroPeg.CBV.TotalCaptureSafety
+import MacroPeg.CBV.IndependentCaptureControl
+import MacroPeg.CBV.DynamicScannerCompiler
+import MacroPeg.CBV.DynamicScannerCorrespondence
+import MacroPeg.CBV.DynamicScannerFusionExamples
