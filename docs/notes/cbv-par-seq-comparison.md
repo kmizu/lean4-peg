@@ -1340,3 +1340,44 @@ connected. In particular, this atomic transition still starts with the original
 input already encoded in its separate register. The general Par/Seq
 comparison remains unresolved; this space analysis alone gives no separating
 language in P.
+
+### One dispatcher for all nonterminal transitions
+
+`SequentialStepScan` labels the existing front-read plans with seven transition
+keys. It reads the actual task tag and, for expression tasks, the actual source
+ID. Source expressions select atomic, structural, or call entry; the other task
+tags select argument entry, rule query, or return. A value with an empty stack
+selects a separate terminal continuation. `parser_trace` proves the selected key
+and exact consumed front for every source-pool-valid configuration. No operator
+or front-length selector is an extra runtime input.
+
+`SequentialInputScan` compiles these labelled plans into the twenty-register
+host with arbitrary twenty-register continuations. Its `compile_trace` lifts
+the verified field fetches and counted reads while preserving the original
+input register. `SequentialStepScanMachine` restores the unchanged binary front
+before entering the selected continuation, so the existing complete transition
+machines can be reused. The extra parse/restore pass is deliberate; it does not
+change the intermediate space capacity.
+
+`SequentialStepMachine` now binds all six nonterminal keys to the actual
+compiled components. Atomic transitions use the twenty-register machine;
+structural/call/argument/query/return transitions embed their existing
+eleven-register machines and retain the original input and fresh workspace.
+`transition_runs` covers every reachable configuration with an actual next
+`SequentialStack.step`, and `transition_tape` carries that entire selection and
+transition through twenty actual tapes. The end state is again the complete
+binary evaluator configuration with its separate original-input encoding.
+
+The capacity is the sum of the parser and component bounds. `space_eq` reduces
+it to eleven copies of the binary front bound plus an affine numeric/input
+term. `space_bound` then gives a single grammar-dependent linear term plus
+eleven copies of the existing `O(n log n)` binary-state storage term, uniformly
+for reachable configurations. It bounds every intermediate state of the whole
+selected transition, not merely the selected component's endpoints.
+
+The terminal continuation remains an explicit program parameter: this theorem
+handles all nonterminal steps and does not claim a complete recognizer. Terminal
+acceptance, repeated evaluation, and loading ordinary input into the initial
+binary/original-input state remain to be connected. The general Par/Seq
+comparison remains unresolved; no class separation follows from this upper
+bound alone.

@@ -4821,3 +4821,39 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialAtomMachine.space_bound' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialAtomMachine.space_bound
+
+/-! Actual task/source selection for every input-preserving nonterminal step. -/
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStepScan.parser_trace' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStepScan.parser_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialInputScan.compile_trace' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialInputScan.compile_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStepScanMachine.selected_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStepScanMachine.selected_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStepMachine.component_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStepMachine.component_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStepMachine.transition_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStepMachine.transition_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStepMachine.transition_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStepMachine.transition_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStepMachine.space_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStepMachine.space_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStepMachine.space_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStepMachine.space_bound
