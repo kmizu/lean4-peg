@@ -16868,3 +16868,160 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.PartialCodewordPreflight.undefined_continuation
+
+-- Partial-codeword recursive compiler: complete partial results on ordinary clocks.
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordTotality.literal_total' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordTotality.literal_total
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordTotality.param_total' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordTotality.param_total
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordTotality.run_total' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordTotality.run_total
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordTotality.scanner_total_strict' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordTotality.scanner_total_strict
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordTotality.argument_total' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordTotality.argument_total
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordTotality.checker_total' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordTotality.checker_total
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordTotality.argument_pure' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordTotality.argument_pure
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordTotality.argument_context' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordTotality.argument_context
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordTotality.prefix_total' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordTotality.prefix_total
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordTotality.preflight_total' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordTotality.preflight_total
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordTotality.preflight_failure_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordTotality.preflight_failure_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordTotality.preflight_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordTotality.preflight_zero
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordEntry.positive_branch' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordEntry.positive_branch
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordEntry.zero_branch' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordEntry.zero_branch
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordEntry.transfer' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordEntry.transfer
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordEntry.zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordEntry.zero
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursive.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursive.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursive.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursive.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.checker_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursive.checker_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.binary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursive.binary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.unary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursive.unary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.evaluator_of_calls' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursive.evaluator_of_calls
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.calls_agree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursive.calls_agree
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursive.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.stable_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursive.stable_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursive.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursive.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursive.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursiveExamples.mutual_returns' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursiveExamples.mutual_returns
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursiveExamples.empty_and_partial' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursiveExamples.empty_and_partial
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursiveExamples.rejected_copies' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursiveExamples.rejected_copies
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursiveExamples.undefined_stages' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursiveExamples.undefined_stages
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordRecursiveExamples.target_undefined_stages' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordRecursiveExamples.target_undefined_stages

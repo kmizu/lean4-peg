@@ -7097,3 +7097,59 @@ branches integrated, including failures/undefinedness before the
 continuation. The general inverse compiler and Par/Seq class
 comparison remain unresolved. All 18 new public theorem guards use
 only standard axioms or none.
+
+
+### Partial-codeword captures through mutual recursion
+
+`PartialCodewordTotality`, `PartialCodewordEntry`, and
+`PartialCodewordRecursive` discharge the outstanding ordinary-clock
+simulation for this concrete capture family. The source uses
+`A=a*;#`, actual unary argument `B=(A;&A)*;a*`, and user bodies
+`A;param0;tail`. A nullary call in a template means a fresh actual
+source call with argument B. The fixed target has checker rule 0 and
+a binary/unary rule pair for each source user. It does not depend on
+the input or captured word/count.
+
+The new totality proofs establish finite results for the actual source
+argument, initial replay, and marker-free checker at every valid input
+position. Each checker repetition consumes a #, so its totality does
+not impose any termination condition on the following continuation.
+Together with the earlier two success directions, this yields exact
+failure correspondence before entering the continuation. Both actual
+Seq capture branches are then reduced to the source whole-capture view.
+A successful long-branch call whose continuation fails or remains
+undefined cannot fall back to the short branch.
+
+`PartialCodewordEntry.transfer` transports the complete partial result
+between different source and target grammars and clocks, assuming only
+the continuation evaluator relation and the actual generated rules.
+The clock-zero theorem supplies the shared undefined seed.
+`PartialCodewordRecursive.calls_agree` and `evaluator_eq` discharge the
+continuation relation by simultaneous ordinary-clock and expression
+induction. For every input, valid position, retained environment, and
+ordinary clock, the rendered expressions have identical complete
+partial results. Sequences, prioritized alternatives, predicates, and
+stars preserve this relation, including undefined empty-consuming
+repetitions. No semantic row oracle remains in `evaluator_eq`.
+
+`stable_eq`, `observations_iff`, and `language_translation` connect those
+iterates to all finite observations and one fixed first-order Seq
+grammar on exactly the original strings. This includes finite failures
+and absence of finite observations, rather than accepted strings alone.
+The recursive examples run actual user 0 → 1 → 0 with captures a#a, aa,
+and ##; both parents reuse their whole capture after returning. The same
+grammars handle empty captures and reject short parent/child copies.
+An empty-star continuation has no result at any ordinary clock on either
+side, as proved with a quantified clock rather than finite sampling.
+
+Scope remains explicit: this compiler handles the stated concrete A/B
+and the mandatory initial scanner/replay, with one source capture per
+call. Template nullary calls expand to exactly this B; they do not
+represent arbitrary original nullary or parameterized calls. Unsupported
+higher-order and nonempty-argument template calls render as failure.
+Arbitrary source arguments, bodies without that initial replay, mixtures
+with the other capture compilers, and multiple independent captures are
+not covered. The general Par/Seq equality-or-separation question remains
+open. The next generalization must preserve the actual argument choice
+and its failure/undefinedness, rather than assuming a periodic value
+shape or a total checker for arbitrary parsers.
