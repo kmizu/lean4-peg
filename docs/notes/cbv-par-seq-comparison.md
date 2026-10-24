@@ -2030,3 +2030,50 @@ supply the language-preserving Par-to-Seq translation required by the main
 question. This construction verifies a uniform, unrestricted-size runtime
 lookup mechanism and its recursive use; general Par/Seq equality or
 language-class separation remains open.
+
+### Exact forward-program language, including malformed inputs
+
+`ForwardBooleanSyntax` closes the preceding promised-input gap by adding a
+syntax guard to the existing fixed evaluator. It introduces no program-specific
+rules or input rewriting. The validator reads the root identifier and zero or
+more complete records, then requires end of input. Its gate parser recognizes
+exactly the four serialized gate forms and checks all operand delimiters.
+The entry is `&validator Start`, with the same one-rule Seq grammar as before.
+
+`readId_sound`, `gateSyntax_sound`, and `recordSyntax_sound` recover the
+serialized objects from arbitrary successful parses. `syntax_sound` handles
+every original character string and recovers a root identifier and complete
+program. The converse is proved by `syntax_complete`; `syntax_iff` gives exact
+syntax recognition. `syntax_total` proves finite evaluation on every input:
+identifier repetition consumes a character on each step, and every successful
+record consumes its opening marker. Thus malformed strings are covered by a
+termination proof, not merely omitted from the program specification.
+
+`ProgramLanguage x` is the explicit character-language predicate
+
+```
+exists n P, x = identifier(n) ++ encode(P)
+            and tableLookup(evaluateTable(P), n) = true.
+```
+
+`language_iff` proves acceptance equivalent to this predicate for **all**
+`List Char` inputs. `nonserialization_failure` gives actual finite failure
+for every malformed serialization. `entry_decides` strengthens acceptance
+equivalence to a finite Boolean decision on every string, ruling out both
+undefinedness and a partially consumed success. The previous semantics of
+missing references and repeated labels is retained: this layer checks syntax
+and does not silently add a unique-label or defined-reference condition.
+
+`normalized_language_iff` and `normalized_entry_decides` connect the validated
+entry to the call-probe version on the same original strings, including all
+malformed inputs. `CBVForwardBoolean.forwardBoolean_is_seq` packages the fixed
+grammar and root as actual `IsFirstOrderCBVPEL` membership, and
+`forwardBoolean_normalized_is_seq` gives the second concrete Seq witness.
+`forwardBoolean_is_par` applies the existing language-preserving Seq-to-Par
+translation to exactly the same character language.
+
+This supplies a total language recognizer and a concrete common language-class
+member, rather than only evaluator correctness on an assumed syntax domain.
+A complexity-hardness reduction and an input-preserving simulation of all Par
+grammars remain separate obligations. Neither general equality nor separation
+of Par and Seq follows from this common member.

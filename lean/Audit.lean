@@ -5633,3 +5633,67 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ForwardBooleanProgram.accepted_identifier_unbounded
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanSyntax.readId_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanSyntax.readId_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanSyntax.gateSyntax_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanSyntax.gateSyntax_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanSyntax.recordSyntax_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanSyntax.recordSyntax_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanSyntax.syntax_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanSyntax.syntax_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanSyntax.syntax_complete' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanSyntax.syntax_complete
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanSyntax.syntax_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanSyntax.syntax_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanSyntax.syntax_total' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanSyntax.syntax_total
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanSyntax.language_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanSyntax.language_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanSyntax.nonserialization_failure' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanSyntax.nonserialization_failure
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanSyntax.entry_decides' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanSyntax.entry_decides
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanSyntax.normalized_language_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanSyntax.normalized_language_iff
+
+/-- info: 'Shallot.PegSeparation.forwardBoolean_is_seq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.forwardBoolean_is_seq
+
+/-- info: 'Shallot.PegSeparation.forwardBoolean_normalized_is_seq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.forwardBoolean_normalized_is_seq
+
+/-- info: 'Shallot.PegSeparation.forwardBoolean_is_par' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.forwardBoolean_is_par
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanSyntax.normalized_entry_decides' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanSyntax.normalized_entry_decides
