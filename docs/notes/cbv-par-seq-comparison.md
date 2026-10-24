@@ -4250,3 +4250,63 @@ action. No normalization of arbitrary Par bodies or argument computations
 into this form is proved. This complements the selected-Word compiler; it
 does not replace the general original-string equality/separation goal.
 Root imports and nineteen new public axiom guards cover the construction.
+
+
+### Independent recursive argument parsers
+
+`CBV/RecursiveParserStability.lean` removes the call-free restriction on the
+argument-parser component. `Lexical n` permits arbitrary ordinary PEG control,
+including calls to any of the first `n` arity-zero helper rules. The component
+is closed: it cannot refer to captured parameters or user rules. Helpers may
+be mutually recursive or have no finite result; totality and a bound on the
+recursive derivation depth are not assumed.
+
+`Installed` specifies the actual helper prefix of a combined grammar.
+`helper_rows_eq` proves complete physical helper rows agree between arbitrary
+installed extensions, strategies, and environments at every round. The
+standalone component's finite-table stabilization theorem supplies the floor
+`iterBoundV (grammar bodies) x + 1`. `helpers_stable` transfers stabilization
+to the actual installed combined grammar for **all** capture environments.
+`frozen_lexical_eval` therefore agrees at all frozen user stages, without
+external parser results or a supplied helper-stability premise. The floor is
+a proof device depending on the input; no such number or advice is added to
+the generated grammar or its input.
+
+`CBV/RecursivePrefixFusion.lean` installs the same independent recursive
+helper component in source and target, followed by unary user rules. A user's
+head `A_i` may query that recursive component. Every call to the user captures
+its fixed `A_i`; its Par body is `A_i B_i`, and its Seq body is `B_i`. The
+recursive user tails still retain their captures through arbitrary consuming
+control and later replay. `tables_shifted` and `evaluator_eq` prove all frozen
+user rounds correspond. `observations_iff` invokes physical/frozen cofinality
+on both **actual** grammars, preserving every finite success/failure on the
+original character input. `language_translation` has only the syntactic
+closed-component conditions; generic lexical correspondence and shifted
+user-table relations are discharged internally.
+
+`lexical_zero_iff_pure`, `valid_without_helpers`, `render_without_helpers`,
+and `without_helpers` prove that supplying no recursive helper rules gives
+exactly the preceding call-free compiler's syntax and eligibility condition.
+This extends that construction, rather than requiring a new external oracle
+for the newly admitted arguments.
+
+`balanced_prefix_observation` proves that an installed recursive rule
+`A <- a A b / eps` captures `a^n b^n` for **every** `n`, with any non-a
+starting suffix. `balanced_copy` uses this actual argument derivation to
+prove one fixed source/target pair accepts `w#w` for every
+`w = a^n b^n`, replaying the capture after consuming `#`. The proof builds a
+real Par call derivation and applies the complete original-string reverse
+compiler; it does not sample a bounded set of depths.
+`balanced_physical_execution` additionally kernel-checks acceptance of
+`aabb#aabb` and finite failure on `aabb#aab` using actual physical tables.
+`cycle_undefined` and `recursive_argument_undefined` prove that an unproductive
+recursive helper leaves the complete argument call undefined under both
+strategies, on every input and at every physical stage.
+
+The remaining restrictions are fixed per-callee closed arguments, an independent
+arity-zero argument component, and the Par body's initial reparse of the same
+argument parser. User-dependent recursive arguments, general body-entry
+normalization, and arbitrary independent captures are still outside this
+construction. General Par/Seq language-class equality or separation remains
+unresolved. Thirty-one new public axiom guards and root imports cover this
+extension.
