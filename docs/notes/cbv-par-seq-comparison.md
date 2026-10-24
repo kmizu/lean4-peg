@@ -6061,8 +6061,8 @@ A's finite failure. `last_trace` constructs the B trace with one fewer
 iterations from any nonempty maximal finite A trace. No grammar count is
 used in these parsers.
 
-`LastCodewordCandidate` supplies a **candidate**, not yet an all-input
-translation. Set A to `a* '#'`, B as above, and `tail = '!';param0`.
+`LastCodewordCandidate` first supplied a candidate; its all-input certificate
+is now `LastCodewordExamples.all_inputs` below. Set A to `a* '#'`, B as above, and `tail = '!';param0`.
 The source has `F(x) <- A x tail`, called as F(B) under Par.
 The Seq candidate has `F(x) <- A tail`, plus
 `V(u) <- (&A u)* !A`, entered through `&B; &V(A); F(B)`.
@@ -6087,8 +6087,48 @@ later undefinedness. The actual ordinary Seq candidate without `&B` thus
 fails, whereas the guarded entry remains undefined. This guard-order
 counterexample is kernel-checked.
 
-The new candidate's equivalence on **all** inputs, its rejection of every
-unequal run, and integration with arbitrary recursive user tails remain
-unproved. The preceding fixed-count compiler's all-input theorems remain
-separate and verified. General Par/Seq class equality or separation is
-still unresolved.
+The all-input gap for this candidate is closed below. Integration of this
+last-header route with arbitrary recursive user tails remains unproved;
+the preceding fixed-count recursive compiler is separate. General Par/Seq
+class equality or separation is still unresolved.
+
+### Last-header verification on every original input
+
+`LastCodewordVerification.Run` labels every actual strict header step with
+its consumed substring. `run_of_trace` derives these labels from ordinary
+sound evaluation and the header's prefix-code certificate. `capture_run`
+extracts the whole maximal run from the successful original B itself;
+it proves that B's actual capture is exactly the run with its final word
+removed. The empty exception is an empty capture with A failing at origin.
+No list of words or periodicity certificate is assumed at call entry.
+
+For any run `u::vs`, the captured prefix matches after the first header iff
+all words in vs equal u. Unique prefix decoding proves this for arbitrarily
+long nonuniform lists, not only powers of a header. `verifier_run` proves
+that the fixed expression `(&A;param0)*;!A` has exactly this result on the
+actual remaining run. A mismatch stops the repetition, then `!A` rejects
+at the mismatching header, even if more copies occur later.
+`actual_entry` connects source replay and target last-header consumption
+with the same entire capture and an arbitrary continuation, including its
+failure or undefinedness.
+
+`LastCodewordGrammar` installs actual ordinary source and target rows for
+a pure prefix-code header A and a call-free tail b that may use the held
+parameter, sequence, choice, predicates, and repetition. Its translation is
+`F(B)` under Par to `&B; &V(A); F(B)` under Seq, with B=(A;&A)*,
+source F(x)=A;x;b, target F(x)=A;b, and V(u)=(&A;u)*;!A. The grammar is
+fixed independently of input lengths and header counts, including zero
+captured words. `physical_agreement` proves complete partial agreement at
+every positive source and target physical stage, on every input suffix.
+Stage zero may differ because the Seq guard can reject before an
+uninitialized row query; monotonic lifting and actual table stability give
+`observations_iff` and `language_translation` on unchanged original inputs.
+The final theorem contains no supplied table correspondence or filter oracle.
+
+`LastCodewordExamples.all_inputs` specializes this theorem to the exact
+previous candidate with A=a*;'#' and b='!';param0. Unequal headers, short
+retained copies, zero captures, and undefined continuations are also checked
+in ordinary physical tables. Arbitrary recursive user tails, recursive
+headers for this new route, more general capture shapes, and independent
+multiple captures remain unresolved, along with general class equality
+or separation.

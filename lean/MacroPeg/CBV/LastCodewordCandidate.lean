@@ -5,7 +5,7 @@ import MacroPeg.CBV.PrefixCodeCapture
 
 /-! A fixed candidate keeps the whole last-preserving capture. Its header
 length and capture's codeword count are both selected by the input. Positive
-families below are not yet an all-input equivalence theorem. -/
+families below are extended to all inputs in LastCodewordExamples. -/
 namespace Shallot.MacroPeg.CBV.LastCodewordCandidate
 open RuntimeShiftFilter (block scanner)
 open CodewordReplay (power)
@@ -232,7 +232,7 @@ theorem entries_firstOrder : sourceEntry.FirstOrder ∧ targetEntry.FirstOrder :
 
 /-- One fixed pair of actual grammars accepts this entire family with
 unbounded header length and unbounded captured word count. This is a
-positive family, not a claim of equivalence on all other inputs. -/
+positive family; LastCodewordExamples.all_inputs covers all other inputs. -/
 theorem observations (k n : Nat) :
     SObs source .callByValuePar sourceEntry (input k n) (some []) ∧
     SObs target .callByValueSeq targetEntry (input k n) (some []) := by

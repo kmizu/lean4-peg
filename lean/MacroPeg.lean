@@ -494,3 +494,6 @@ import MacroPeg.CBV.CountedCodeGrammar
 import MacroPeg.CBV.CountedCodeExamples
 import MacroPeg.CBV.LastCodewordRotation
 import MacroPeg.CBV.LastCodewordCandidate
+import MacroPeg.CBV.LastCodewordVerification
+import MacroPeg.CBV.LastCodewordGrammar
+import MacroPeg.CBV.LastCodewordExamples
