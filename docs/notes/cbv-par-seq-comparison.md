@@ -5116,3 +5116,245 @@ unresolved.
 Validation: full `lake build` succeeds (832 jobs), including `Audit`. All
 29 new public theorem axiom guards use only standard Lean axioms. The new
 modules have no proof placeholders or Lean warnings.
+
+## Retained-value-dependent fresh captures through recursive specialized rows
+
+`ParametricHelperControl` transports helper-only control with retained
+parameters between arbitrary appended caller grammars and arbitrary seeded
+user stages. Closing parameters by literals reduces it to the existing
+independent-helper theorem. This also moves the dependent argument filters
+into real callers without a semantic helper-table assumption.
+
+`DependentProfileCall` selects the complete transition profile of the actual
+new argument by generated product-query lookaheads. Its continuation is an
+actual unary call to the corresponding appended profile-specialized rule.
+`entry_par_correct` proves that the value, endpoint, and profile address are
+those of the original Par argument, including undefined and failed queries.
+The incoming profile condition remains explicit here and is discharged by
+the recursive compiler below.
+
+`ProfiledDependentRecursion` extends the earlier recursive shifted-replay
+compiler: call zero now evaluates a fixed argument expression A in the
+current retained environment. A may combine retained parameters with fresh
+captures from an independent recursive helper graph, literals, sequence,
+ordered choice, and negation. Every new value's entire transition profile
+chooses the target row, whose recursive calls use that new profile.
+The body template allows literals, parameter replay, helper calls, recursive
+call zero, sequence, choice, star, and negation in arbitrary combinations.
+The source row has prefix `(u param(0))` for a fixed nonempty u; the target
+row has the corresponding rotation prefix followed by the translated body.
+
+All profiles, including ones whose transition from zero is the sink, are
+installed. Sink rows have a failing prefix, so the same physically bounded
+prefix seed works at the bottom stage. `tables_shifted` proves the complete
+recursive row correspondence by induction; `evaluator_eq` carries it through
+body control. `observations_iff` removes seeded stages using physical-table
+cofinality, preserving every finite success/failure observation on unchanged
+original strings. `language_translation` produces one fixed first-order Seq
+grammar and entry for every member of this source family. No incoming
+semantic profile premise remains in that language theorem.
+
+The physical-table kernel execution initializes a parent capture `aba`, then
+captures `aba + fresh ba = ababa` in its child. After return the parent must
+still replay `aba`; replacing the parent's final copy by the child's longer
+`ababa` is rejected by both generated grammars.
+
+This extends the earlier independent-capture recursion theorem to arguments
+that depend on the retained value. It still assumes a single fixed unary
+user body/argument family and the explicit shifted-replay entry shape.
+Parameter-dependent star and recursive user calls inside A, multiple user
+families and independent arguments, and normalization of arbitrary original
+source grammars are not covered. Unsupported raw higher-order or
+parameter-bearing-call syntax is rendered as failure, not claimed to be
+preserved. General Par/Seq class equality or separation remains unresolved.
+
+Validation: full `lake build` succeeds (835 jobs), including `Audit`. All
+36 added public theorem axiom guards use only standard Lean axioms or no
+axioms. The three new modules have no Lean warnings or proof placeholders.
+
+## Mutual user families with distinct arguments and bodies
+
+`MutualProfiledRecursion` removes the single-user-family restriction of the
+preceding compiler. A finite list of unary users each supplies its own
+retained-value-dependent argument expression and its own body template.
+A body may call any other member, including itself, under sequence,
+choice, repetition, and predicates. Every member uses the same fixed
+nonempty shifted prefix `(u param(0))` before its distinct body.
+
+The target user address is selected from a finite enumeration of pairs
+`(callee index, complete capture profile)`. `selected_call` connects actual
+generated profile queries to the installed unary row and the original Par
+argument value/endpoint. `tables_shifted` proves the simultaneous row
+correspondence for all members and stages. `evaluator_eq` extends it through
+body control, and `observations_iff` removes the seeded clocks to preserve
+finite observations on unchanged input. `language_translation` builds one
+fixed first-order Seq grammar for the entire mutually recursive family;
+its hypotheses are syntactic argument/helper validity and a nonempty shift.
+
+The kernel execution uses two different rules and both directions of their
+call cycle. The first independently captures `aa`; the second captures the
+retained `aa` followed by a fresh `a`, giving `aaa`, and then calls the first
+again. Both grammars retain `aaa` and `aa` across the nested returns, and
+reject a shortened `aa` substituted for the middle rule's retained `aaa`.
+
+The common shift is still a restriction: different shifts would require
+joint metadata for their phase machines or a corresponding combined
+filter. Argument expressions still exclude retained-parameter-dependent
+star and user calls. Multiple independent arguments, arbitrary body entry
+shapes, and normalization of arbitrary original source grammars are still
+open; this is not a general language-class equality or separation result.
+
+Validation: full `lake build` succeeds (836 jobs), including `Audit`. The
+17 additional public theorem guards use only standard Lean axioms. The new
+module has no proof placeholders or Lean warnings.
+
+## Different fixed replay prefixes within one recursive family
+
+`CaptureMachineFamily` forms a disjoint union of any finite list of word
+transition machines. Embedded component runs remain in their own component;
+`profile_component` recovers any component's transition from the union word
+profile. `phase_profile` specializes this construction to a list of distinct
+fixed replay shifts, including an arbitrary number of user rules. The
+transition metadata is still finite and depends only on the fixed grammar.
+
+`HeterogeneousProfiledRecursion` gives each unary user its own argument,
+nonempty literal shift, and body. It generates filters for the union machine
+and specializes target rules by `(callee index, union capture profile)`.
+The callee's actual shift selects its embedded start state; the target
+rotation is obtained by subtracting the component offset from that profile
+entry. `tailPrefix_actual` proves this is the original phase machine's
+rotation for the actual captured word. Thus a profile for one shift is never
+silently reused as the phase of a different shift.
+
+The simultaneous recursive row theorem, body evaluator equality, all finite
+observations, and fixed-grammar language translation now hold for finite
+mutually recursive families with different shifts. These language theorems
+have no semantic metadata premise: helper/argument validity and nonempty
+literal shifts are the stated conditions. The input remains the original
+character string throughout.
+
+`HeterogeneousReplayExamples` computes the joint profile of `aaba` for shifts
+`ab` and `aab`: it is a sink from the first start and phase one from the
+second. A distinct-shift mutual example uses prefixes `a` and `aa` with
+captures `aa → aaa → aa`, retaining each ancestor value after nested return.
+The original grammar's success and bad-copy failure are checked on physical
+finite tables. The generated Seq grammar's corresponding finite observations
+are derived from the unbounded compiler theorem, rather than a separate
+bounded evaluation of the larger generated profile grammar.
+
+Fixed shifts may now differ between users. The shifted-replay body-entry
+shape itself is still required. Retained-parameter-dependent repetition or
+user calls inside arguments, multiple independent arguments, and normalizing
+arbitrary original source grammars remain open. General Par/Seq equality or
+separation remains unresolved.
+
+Validation: full `lake build` succeeds (839 jobs), including `Audit`. All
+34 additional public theorem guards use only standard Lean axioms or no
+axioms. The three added modules have no proof placeholders or Lean warnings.
+
+## Retained Word repetition inside capture arguments
+
+The dependent argument syntax now includes `star a` when `render a` is a
+Word expression: retained parameters, literals, and their concatenation.
+These new stars compose with the existing fresh independent helper captures,
+sequence, choice, and predicates. Their iteration counts and captured word
+lengths are unbounded. Star over an arbitrary helper-dependent or recursive
+argument is not included in this extension.
+
+`CaptureOrbit` proves that every count n of a bounded deterministic state
+transition has a finite descriptor `(k,l)`: either exactly k steps (l=0), or
+k steps followed by any number of l-step cycles. Prefix and cycle lengths
+are bounded by the machine width. The proof covers transient states and
+cycles, not just permutations or idempotent word profiles.
+
+`InlineRepeat` renders a descriptor as a fixed number of inline copies,
+optionally a star of an l-copy block, and the original parser's stopping
+test. On a successful source repetition, its exact count specification is
+proved using strictly decreasing traces and grouped greedy evaluation.
+A candidate either consumes the entire original greedy capture or fails;
+it cannot accept by shortening the original repetition.
+
+`WordStarFilter` computes the repeated Word's transition from finite incoming
+profiles and literal profiles. Its actual PEG filter begins with a lookahead
+of the original star to preserve undefined empty iteration, and then chooses
+among the finite descriptor expressions. `correct` proves complete filtered
+partial results for every valid finite machine, accurate incoming metadata,
+sound CBV table, and input position. There are no parameter-bearing helper
+calls: every repeated parameter remains in the current environment.
+Missing parameters still yield zero iterations; empty successful Word values
+still make star undefined.
+
+This filter is installed in `DependentCaptureFilter` and transported through
+`ParametricHelperControl`. Consequently the existing complete single-user,
+mutual-user, and heterogeneous-shift language theorems now also admit these
+retained-Word stars inside new capture arguments.
+
+Kernel executions check greedy `aba` repetition on `abaaba#`: the full
+six-character capture reaches the sink of the `ab` machine, and a phase-one
+filter rejects rather than stopping after the first copy. Empty retained
+values remain undefined and missing parameters permit zero iterations.
+A real source user retains `abab`, passes its greedy two-copy repetition
+`abababab` to another user, and then reuses the parent's original `abab`.
+The shortened child copy fails. The corresponding generated Seq observations
+are derived from the unbounded language compiler theorem.
+
+General capture-dependent star bodies, user recursion inside arguments,
+multiple independent arguments, arbitrary body entry shapes, and general
+original-grammar normalization remain unresolved. No general Par/Seq
+language-class equality or separation is claimed.
+
+Validation: full `lake build` succeeds (843 jobs), including all existing
+and 45 added public theorem axiom guards in `Audit`. They use only standard
+Lean axioms or no axioms. The four added modules and modified argument/filter
+modules have no proof placeholders or Lean warnings.
+
+## General retained-dependent argument repetition by first returns
+
+`FirstReturn` constructs inline state-constrained paths by eliminating the
+current state from a finite allowed-state list. At state q, a star consumes
+first-return loops to q which avoid the final target and eliminated states;
+a final exit reaches the target without visiting q again. Removing q reduces
+the allowed-state list, so this is a finite PEG expression generator, not a
+parameter-bearing recursive helper. `hit_correct` proves the first-target
+semantics on every real finite iteration path. `returns_correct` then
+consumes all complete target-return loops and applies the original stopping
+test. This prevents accepting a shorter source-repetition prefix.
+
+`GeneralStarFilter` lifts every successful original greedy repetition to
+such a state-annotated path using the correctness of its one-step filters.
+It preserves complete filtered partial results, with an initial lookahead of
+the original star retaining undefined or empty-iteration behavior. No
+uniform-word, fixed iteration-profile, or non-nullability premise is used.
+Different iterations may consume different strings and take different state
+transitions.
+
+The `DependentCaptureFilter.Expr.star` validity condition is now recursive
+argument validity, replacing the earlier Word-only condition. Its filter
+uses this general inline construction. The first-order, safe-helper-control,
+Par/Seq argument equality, and full filter specifications have been extended
+accordingly. Thus nested stars, ordered choices, predicates, retained values,
+and fresh independent recursive helper captures may be mixed inside new
+arguments to every existing recursive language compiler.
+
+The kernel example repeats an argument producing `a`, `ab`, `abb`, and
+`acac`, with the final token itself using retained-dependent nested star.
+The odd-b state filter accepts the complete capture; the even-b filter
+rejects. A nested empty iteration remains undefined. A second actual source
+example retains `abab` and captures a new child value by a fresh six-character
+helper iteration followed by a retained four-character iteration, then uses
+the original parent value after return. The source physical tables verify
+success and a shortened-child failure; the generated Seq observations follow
+from the unbounded recursive compiler theorem.
+
+Repetition inside the supported argument syntax no longer has a Word-only
+restriction. Parameter-bearing user calls inside arguments, multiple
+independent arguments, the required shifted-replay body-entry shape, and
+normalization of arbitrary original source grammars remain unresolved.
+General Par/Seq language-class equality or separation remains unproved.
+
+Validation: full `lake build` succeeds (846 jobs), including `Audit` and
+30 additional public theorem guards. Fifteen existing guard expectations
+were updated to include the actual standard `Classical.choice` dependency
+from the new well-founded state-elimination definitions. All dependencies
+remain standard Lean axioms or none; the new/modified modules have no proof
+placeholders or Lean warnings.
