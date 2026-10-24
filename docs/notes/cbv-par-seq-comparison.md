@@ -3764,3 +3764,45 @@ normalization of general recursive/backtracking arguments, and arbitrary
 source body entry remain open. In particular, the general same-original-
 language equality or separation has not been proved. Root imports and 29
 new axiom guards cover this clock transfer and its actual dispatch application.
+
+
+### A complete recursive finite-state replay compiler
+
+`CBV/StatefulPairFusion.lean` closes the recursive user-rule correspondence
+left open above. A specification chooses initial states in two fixed finite
+machines and a first-order template tail; different rules may choose different
+states and may call each other recursively. The generated Par rule captures
+the two independent scans from the original caller position, uses real PEG
+state/order guards to select the longer capture, replays it from that position,
+and evaluates the rendered tail. The generated Seq grammar has two user-body
+variants per specification, alongside the same actual scanner-helper prefix.
+Its input-driven dispatch captures the common prefix and residual segment,
+then reconstructs the original ordered values for the selected tail.
+
+The construction is a fixed grammar translation. `render`, `parTail`,
+`seqTail`, `parGrammar`, and `seqGrammar` depend only on the machines and
+specifications, not on the input, its length, the stopping states, or capture
+values. The captured strings may have arbitrary length. Nested recursive
+calls, sequence, prioritized choice, star, and lookahead in template tails
+are preserved. As in the earlier stateless compiler, template calls `call i []`
+refer to a specification; nonempty template argument lists and higher-order
+forms render to failure. This explicitly specifies the supported source family.
+
+`replay_eval` identifies the actual runtime-selected source replay without a
+semantic oracle. `evaluator_of_shift` reduces all template expressions to the
+capture/table relation. `tables_shifted` proves that relation for **every**
+frozen user stage, starting from undefined user rows, by evaluating the real
+installed bodies on both sides. `evaluator_eq` consequently has no external
+user-call simulation premise. `observations_iff` eliminates the frozen
+iterations via the already proved physical/frozen cofinality. It preserves
+all finite successes and failures on each original `List Char` input, including
+empty input and equal scan endpoints. Undefined evaluation is not identified
+with finite failure. Finally `language_translation` gives an actual fixed
+first-order Seq grammar recognizing the same full-consumption language.
+
+This completes the reverse compiler for this finite-state **replay-shaped**
+family. It does not normalize arbitrary recursive/backtracking arguments or
+an arbitrary source body starting at the original call position. In particular,
+it does not establish the general CBV-Par/CBV-Seq reverse inclusion or a
+language-class separator. Those remain the full objective. Root imports and
+14 new public theorem axiom guards cover the complete compiler connection.

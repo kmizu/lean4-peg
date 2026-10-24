@@ -391,3 +391,4 @@ import MacroPeg.CBV.StatefulPairArguments
 import MacroPeg.CBV.ClockFreezing
 import MacroPeg.CBV.StatefulScannerStability
 import MacroPeg.CBV.FrozenPairArguments
+import MacroPeg.CBV.StatefulPairFusion

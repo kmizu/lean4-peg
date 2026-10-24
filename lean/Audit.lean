@@ -8351,3 +8351,61 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FrozenPairArguments.complete_dispatch_body_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.replay_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.replay_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.replay_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.replay_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.render_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.user_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.user_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.par_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.par_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.seq_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.chunks_split' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.chunks_split
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.evaluator_of_shift' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairFusion.language_translation
