@@ -5358,3 +5358,44 @@ were updated to include the actual standard `Classical.choice` dependency
 from the new well-founded state-elimination definitions. All dependencies
 remain standard Lean axioms or none; the new/modified modules have no proof
 placeholders or Lean warnings.
+
+
+### Physical-prefix row correspondence and observer handoff
+
+`CapturePrefixRows` strengthens the row invariant used by the heterogeneous
+recursive compiler. For every physical decomposition `sfx x p = w ++ sfx x j`,
+the source unary row at `p`, supplied with `w`, equals its profile-specialized
+Seq row at `j`. The prefix need not arise from the user's configured argument
+at the same approximation stage, or from that argument at any stage. Both
+finite failure and undefined evaluation remain part of this equality.
+
+The proof derives replay rotation from a literal witness in an empty grammar;
+no soundness condition is imposed on the two replay tables. It then inducts
+on seeded user rounds with the stronger physical-prefix invariant. The old
+same-stage argument condition follows from this invariant using actual capture
+soundness, so the evaluator step applies without assuming that condition as a
+separate row oracle. `rows_of_capture` permits the witnessing capture to come
+from any sound first-order CBV grammar and table, at an unrelated stage.
+
+For any finite observer `D`, `filtered_rows` factors an observed source row
+through the captured word: the tail starts at `run D q w`, rather than `q`.
+`filtered_rows_profile` obtains that state from the finite incoming profile.
+This is an identity for the real recursive rows and all partial results; it
+is not yet a generator for filtered user rows. The proof uses physical suffix
+soundness of successful target row queries to compose the consumed prefixes.
+
+The kernel example configures the user's argument as `Z`, which fails on
+`ababa#aba`, but supplies the physical prefix `aba` directly to its unary row.
+The source row succeeds, and the target row's success follows from the general
+row theorem. A two-state b-parity observer distinguishes the full three b's
+from the two b's in the tail, detecting an incorrect unshifted observer state.
+
+This removes the same-stage capture premise needed for the next recursive
+argument construction. Parameter-bearing user calls inside arguments still
+require generated product user rows and a simultaneous argument/body proof.
+Multiple independent arguments, arbitrary body entry, original-grammar
+normalization, and general Par/Seq equality or separation remain unresolved.
+
+Validation: full `lake build` passed (847 jobs), including Audit. All thirteen
+new public axiom guards use only standard Lean axioms. The new module has no
+proof placeholders or Lean warnings.

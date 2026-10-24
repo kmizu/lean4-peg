@@ -11623,3 +11623,65 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.GeneralStarExamples.translated_observations
+
+-- Physical captured-prefix rows and observer handoff.
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturePrefixRows.captured_word' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturePrefixRows.captured_word
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturePrefixRows.prefix_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturePrefixRows.prefix_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturePrefixRows.shifted_of_rows' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturePrefixRows.shifted_of_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturePrefixRows.rows' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturePrefixRows.rows
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturePrefixRows.filter_prefix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturePrefixRows.filter_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturePrefixRows.row_success_prefix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturePrefixRows.row_success_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturePrefixRows.filtered_rows' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturePrefixRows.filtered_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturePrefixRows.filtered_rows_profile' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturePrefixRows.filtered_rows_profile
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturePrefixRows.rows_of_capture' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturePrefixRows.rows_of_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturePrefixRows.Examples.users_valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturePrefixRows.Examples.users_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturePrefixRows.Examples.source_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturePrefixRows.Examples.source_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturePrefixRows.Examples.target_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturePrefixRows.Examples.target_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.CapturePrefixRows.Examples.observer_handoff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CapturePrefixRows.Examples.observer_handoff
