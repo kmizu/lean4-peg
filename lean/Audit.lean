@@ -19079,3 +19079,89 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.StatefulActionExamples.empty_and_argument_order
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.encode_bound' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.encode_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.observer_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.observer_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.observer_step' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.observer_step
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.observer_run' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.observer_run
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.encode_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.encode_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.observer_result' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.observer_result
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.profile_determines_action' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.profile_determines_action
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.finite_action_cover' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.finite_action_cover
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.filter_result' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.filter_result
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.filter_success' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.filter_success
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.filter_resumption' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.filter_resumption
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.dispatch_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.dispatch_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.dispatch_success' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.dispatch_success
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCapture.dispatch_result' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCapture.dispatch_result
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerExamples.changing_star' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerExamples.changing_star
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerExamples.unequal_choice_commit' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerExamples.unequal_choice_commit
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerExamples.missing_transition' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerExamples.missing_transition
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerExamples.argument_order' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerExamples.argument_order
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerExamples.retained_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerExamples.retained_value

@@ -8051,3 +8051,40 @@ a shared finite-state consuming prefix, and unary source users. Integrating
 these consuming-prefix families with the mixed fragment compiler, arbitrary
 PEG prefixes, unrestricted shifted arguments, independent multiple captures,
 and general Par/Seq equality or separation remain unresolved.
+
+
+### Dynamic scanner capture observation (2026-10-25)
+
+`DynamicScannerCapture` connects partial `StatefulScanner.Machine` transitions
+to the existing total `DependentCaptureFilter` observer by adding one absorbing
+missing-transition state. `observer_run` and `observer_result` identify the
+observer result with actual partial advancement on the whole captured word.
+A full observer profile determines the partial action from every scanner state;
+`finite_action_cover` covers all actual captured words by finite profiles.
+
+`filter_result` preserves the original Par argument's failure and undefinedness
+and filters successful captures by the requested partial transition. Arguments
+may have unequal-action choices, nonidentity star operands, retained parameters,
+and recursive nullary helpers. `filter_success` derives the actual original
+capture endpoint and transition; `filter_resumption` derives the exact original
+prefix split and residual scan start from a successful generated filter.
+No capture-shape or successful-scan premise is supplied to these conclusions.
+
+`dispatch_result` enumerates finite observer endpoints and invokes just the
+continuation for the actual original capture's endpoint. A continuation may
+fail or diverge without choosing a different argument capture. It preserves
+argument failure/undefinedness before continuation evaluation. The dispatcher
+is ordinary first-order syntax when its continuations are first-order.
+Kernel examples cover changing-action a*, committed a/aa choice, absorbing
+missing transitions, retained ac reuse after a variable-action capture, empty
+capture, failed arguments, empty loops, and divergent selected continuations.
+
+This is a local classifier/continuation construction in the installed regular
+helper-product grammar at its stable table. Accurate incoming observer metadata
+remains a premise (existing environment/profile-guard theorems provide it).
+It is not yet a complete stateful user-call compiler: binding new captures,
+propagating dynamically selected full profiles through recursive user rows,
+physical-clock correspondence for that compiler, and its all-input language
+preservation still need to be connected. In particular, observing a missing
+transition does not solve captures extending past the original scan frontier.
+The general Par/Seq language-class equality or separation remains unresolved.
