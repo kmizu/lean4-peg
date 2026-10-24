@@ -6662,3 +6662,144 @@ remain the next compiler integration, alongside arbitrary original
 argument shapes and independent multiple captures. General Par/Seq
 language-class equality or separation remains unresolved. All eight new
 public theorem guards use only standard axioms.
+
+### Parent-dependent control through mutually recursive user rows
+
+`AdjacentCodewordRecursive` removes the call-free continuation restriction
+from the adjacent-comparison translation. Its source and target are fixed
+finite grammars. User tails can mutually recurse, sequence, choose, negate,
+and repeat, while control tests inspect the current caller's retained
+parameters. Every finite observation and the recognized language are
+preserved on the unchanged original input, including failure and
+undefinedness. The source remains unary; the two target arguments are
+parts of that one original capture.
+
+The source call captures `B=A;D` and its user body begins with `A;param0`.
+The target first preflights the original argument and the adjacent filter
+under the caller's whole-value view, then calls a binary user with
+`[A,wholeView D]`. That user replays the first part and continues with
+both parts viewed as the source whole value. An ordinary unary `param0`
+row compares adjacent codewords; the parent is never copied into a new
+Seq argument or passed to the comparator.
+
+The recursive row relation uses the actual captured codeword trace and
+the source whole-replay prefix condition. It does not assume that D has a
+parent-independent canonical value. Both prefix seeds include failures
+from their actual leading replay, so a failed comparison remains finite
+failure at the seed rather than becoming undefined. Simultaneous evaluator
+and row induction establishes correspondence at every seeded stage.
+Ordinary-table cofinality then gives the stable partial result, all finite
+observations, and language equality.
+
+`AdjacentCodewordRecursiveExamples` exercises mutual recursion 0→1→0,
+whole capture counts 2→1→2, and actual Seq pairs `(u,u)→(u,eps)→(v,v)`
+for `u=a#`, `v=aa#`. Parent tests choose a shorter child; a different
+parent chooses the longer grandchild. On return, each original whole
+capture is reused. Short parent, child, and grandchild copies and unequal
+words are rejected. A nullable parent test leaves the original argument
+undefined under arbitrary recursive tables on both sides.
+
+The remaining restrictions are explicit: A is a shared independent Pure
+prefix-code header, D is shared call-free codeword control, and every
+source user begins with A followed by replay of its single whole capture.
+Recursive header/helper integration for parent-dependent control, arbitrary
+original argument shapes, independent multiple captures, and the general
+Par/Seq equality-or-separation question remain open. The 37 new public
+theorem guards use standard axioms or none.
+
+### Different explicit arguments at each recursive call site
+
+`AdjacentCallsiteRecursive` removes the single shared D restriction from
+the parent-dependent recursive compiler. Each call site carries its own
+codeword-control argument, including different arguments to the same
+callee. Argument tests can inspect the current parent. The generated
+source calls remain unary, while the target splits that one capture into
+two consecutive Seq arguments. The header A remains shared.
+
+`Body H` records the ordinary first-order body constructors and a per-call
+`Argument H`. Each argument is A followed by its own codeword control;
+the stored proof checks only call-free argument syntax, allowing retained
+parameters. `sourceExpr` directly emits ordinary source calls containing
+those actual argument expressions. For syntactically scoped bodies,
+`source_syntax` and `source_eq_original` identify the proof's source with
+that direct original grammar exactly. `original_observations` and
+`original_language_translation` then preserve every finite observation and
+the recognized language of that original grammar on unchanged strings.
+Both grammars and starts are explicitly proved first-order. This is still
+a restricted source family, not a decoder for arbitrary first-order PEGs.
+
+The recursive table relation uses captured traces rather than the chosen
+argument syntax, so different call sites can share the same user row.
+The existing adjacent-prefix argument applies to each call's own control,
+with caller-side parent views and ordinary unary comparator executions.
+Simultaneous evaluator and row induction, prefix seeds, and cofinality
+close the complete fixed-grammar correspondence. No compatibility premise
+requires the different call-site controls to choose the same trace.
+
+The example calls user 0 with a two-word argument at the root and a
+three-word argument in the grandchild, passing through user 1 with a
+parent-dependent one-word capture. Actual target pairs are
+`(u,u)→(u,eps)→(v,v²)`, with `u=a#` and `v=aa#`; the original parent values
+are reused after return. Short copies are rejected. The dynamic argument
+also chooses different endpoints under different retained parents. An
+undefined later argument node remains None for every pair of ordinary
+source/target stages even when earlier words are unequal.
+
+All 43 new public theorem guards use standard axioms or none. Remaining
+constraints are a shared independent Pure prefix-code A, call-free
+codeword control in each argument, one original capture per call, and
+source users beginning with A;param0. General original argument shapes,
+arbitrary user entry bodies, recursive header/helper integration for this
+parent-dependent construction, independent multiple captures, and general
+Par/Seq equality or separation remain unresolved.
+
+### General replay arguments mixed with shifted codeword users
+
+`MixedAdjacentRecursive` connects the existing arbitrary-argument replay
+translation and the parent-dependent adjacent translation inside one
+mutually recursive grammar. A replay source row begins with `param0`;
+its target removes that replay and keeps one whole capture. A shifted
+source row begins with `A;param0`; its target keeps the two consecutive
+parts used by adjacent comparison. Every source user is unary; target
+arity is one or two according to the user kind.
+
+An actual argument to a replay user may have arbitrary supported body
+syntax, including retained parameters, literals, consuming sequence and
+star, prioritized choice, predicates, and recursive calls to either kind
+of user. It need not be a codeword sequence, call-free, or independent of
+the parent. Each shifted call still uses its own `A;D` argument, where D
+is call-free codeword control whose tests can read retained parameters.
+Only shifted calls require the shared independent Pure prefix-code A.
+
+Argument compilation uses the caller's parameter view, rather than the
+callee's view. The table relation has two parts: any actual consumed
+prefix relates a replay source row at its original position to the unary
+target at the argument endpoint, while the adjacent codeword trace relates
+a shifted row to its binary target. Simultaneous evaluator/table induction
+handles recursive argument calls as well as user tails. Actual prefix
+seeds and comparator freezing preserve finite failures and undefinedness;
+ordinary cofinality gives stable partial equality and all observations.
+
+`MixedAdjacentSyntax.sourceExpr` directly emits ordinary source calls with
+explicit actual arguments, including nested recursive arguments. The
+syntactic `WellTyped` condition checks only callee existence and entry
+kind. For well-typed rows and start, `source_eq_original` is exact grammar
+equality; `original_language_translation` preserves the unchanged string
+language and proves that both grammars and starts are first-order. This
+remains a specified source family, not a normal form for all Par grammars.
+
+The mixed example sends a shifted user's whole parent plus a fresh colon
+and a completed shifted child call as the argument of a replay user.
+That non-codeword capture survives another shifted call and is reused in
+full on return, followed by reuse of the outer shifted parent. Kernel
+executions accept this input and reject short outer and inner copies.
+Further executions cover a replay user inside another replay user's
+argument, empty capture, and calls under predicates. An empty-progress
+argument stays None under arbitrary tables, environments, inputs, and
+positions, before either callee body is entered.
+
+All 42 new public theorem guards use standard axioms or none. General
+Par/Seq equality or separation is still unresolved: arbitrary original
+user bodies need not have either leading-replay shape, shifted arguments
+are still codeword controls, and independent multiple source captures and
+recursive headers for the parent-dependent adjacent method remain open.

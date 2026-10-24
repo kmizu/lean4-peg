@@ -523,3 +523,10 @@ import MacroPeg.CBV.CodewordControlEnvironmentExamples
 import MacroPeg.CBV.AdjacentCodewordControl
 import MacroPeg.CBV.AdjacentCodewordCalls
 import MacroPeg.CBV.AdjacentCodewordExamples
+import MacroPeg.CBV.AdjacentCodewordRecursive
+import MacroPeg.CBV.AdjacentCodewordRecursiveExamples
+import MacroPeg.CBV.AdjacentCallsiteRecursive
+import MacroPeg.CBV.AdjacentCallsiteExamples
+import MacroPeg.CBV.MixedAdjacentRecursive
+import MacroPeg.CBV.MixedAdjacentSyntax
+import MacroPeg.CBV.MixedAdjacentExamples
