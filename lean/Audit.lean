@@ -12240,3 +12240,138 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.ContinuationExamples.undefined_tail' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ContinuationExamples.undefined_tail
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.shift_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.shift_eval
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.shift_all' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.shift_all
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.emit_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.emit_length
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.local_bounded' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.local_bounded
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.emit_bounded' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.emit_bounded
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.plans_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.plans_valid
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.leaves_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.leaves_valid
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.placed_leaf' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.placed_leaf
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.user_body_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.user_body_eq
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.bodies_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.bodies_eval
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.headers' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.headers
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.body_results' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.body_results
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.tables_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.tables_eq
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.evaluator_eq
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.source_firstOrder
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.normalized_observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.normalized_observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.observations_iff
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamily.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamily.language_translation
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamilyExamples.shapes' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamilyExamples.shapes
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamilyExamples.valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamilyExamples.valid
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamilyExamples.entry_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamilyExamples.entry_valid
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamilyExamples.source_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamilyExamples.source_execution
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamilyExamples.translated_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamilyExamples.translated_observations
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamilyExamples.test_returns_origin' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamilyExamples.test_returns_origin
+
+
+/-- info: 'Shallot.MacroPeg.CBV.ContinuationFamilyExamples.translated_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ContinuationFamilyExamples.translated_execution
