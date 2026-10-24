@@ -1585,3 +1585,51 @@ results already rule out retaining a nonempty literal capture at the same
 Seq argument/body position, and the earlier residual-interface impossibility
 results explicitly leave whole-grammar transformations and retained continuations
 open.
+
+
+### Direct reverse translations for recursive replay tests
+
+`CallLookahead` separates input restoration from capture evaluation. For an
+arbitrary fixed first-order Par grammar, let `tested g` put a positive lookahead
+around each rule body. Let `wrapped g` instead transform all body call sites
+into positive lookaheads, recursively transforming their argument expressions.
+`observations_iff` proves that `tested g` on an original expression and
+`wrapped g` on its transformed expression have exactly the same finite
+observations on every original input. The proof relates all table-approximation
+clocks with `Peeked`: successful rule results are reset to the caller position,
+while explicit failure and undefined results are retained. Calls of arbitrary
+arity, recursive calls, argument failure, missing rules, and arity mismatches
+are covered. No totality premise is required. This particular rule-to-call
+lookahead movement is proved for Par; it is not claimed for Seq, whose arguments
+already consume input before the body is entered.
+
+`ReplayTestFusion` composes this movement with the verified replay fusion.
+Its Par source rules have the shape `F(x) <- &(x B)`. The fixed Seq target
+rules are `F(x) <- translated(B)`, and every translated call is under positive
+lookahead. The Seq argument consumes the prefix which the Par body replays;
+the literal capture remains available in `B`, and the enclosing call lookahead
+restores the original caller position after the test. `observations_iff`
+preserves every finite observation, and `language_translation` constructs an
+actual fixed first-order target grammar and root expression recognizing the
+same original character strings, including empty input. Recursive first-order
+tails may freely reuse their captured literal values.
+
+`PrefixPairTestFusion` extends the same construction to the earlier factored
+two-prefix interface. Template calls `F(A,B)` mean `F(A,A B)` in the Par source
+and `F(A,B)` in the Seq target. Par retains the two common-origin values `u`
+and `u++v`; Seq captures consecutive chunks `u` and `v` and reconstructs both
+values when referenced. The source body tests a replay of its full second
+prefix followed by its template tail. The target omits that leading replay
+and uses positive lookahead at each call site to restore the caller position.
+`render_commute`, `wrapped_pair`, `observations_iff`, and `language_translation`
+connect the actual recursive fixed grammars. Template calls are required to
+have two arguments everywhere; this condition is stated by `PairCalls`.
+
+These results add genuine Par-to-Seq translations for recursive capture-using
+tests whose call results do not advance their callers. They do not normalize
+arbitrary Par bodies into replay-test form, nor factor arbitrary independent
+Par arguments into adjacent chunks. The earlier residual-interface
+impossibilities are not contradicted: the new construction changes call-site
+control and the callee's position together. The general equality/separation
+question remains open; these fragments are progress toward a reverse compiler,
+not a proof that the whole classes coincide.

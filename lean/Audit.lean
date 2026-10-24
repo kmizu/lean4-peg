@@ -5102,3 +5102,53 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.PegSeparation.P_outside_nlog_space_separates_original
+
+/-- info: 'Shallot.MacroPeg.CBV.CallLookahead.render_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CallLookahead.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CallLookahead.evaluator_of_peek' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CallLookahead.evaluator_of_peek
+
+/-- info: 'Shallot.MacroPeg.CBV.CallLookahead.tables_peeked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CallLookahead.tables_peeked
+
+/-- info: 'Shallot.MacroPeg.CBV.CallLookahead.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CallLookahead.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.CallLookahead.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CallLookahead.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayTestFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayTestFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayTestFusion.recognizes_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayTestFusion.recognizes_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ReplayTestFusion.language_translation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ReplayTestFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixPairTestFusion.render_commute' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixPairTestFusion.render_commute
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixPairTestFusion.wrapped_pair' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixPairTestFusion.wrapped_pair
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixPairTestFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixPairTestFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.PrefixPairTestFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PrefixPairTestFusion.language_translation
