@@ -427,3 +427,6 @@ import MacroPeg.CBV.SeededClock
 import MacroPeg.CBV.RecursiveFilteredOverlap
 import MacroPeg.CBV.CaptureTransitionProfile
 import MacroPeg.CBV.DependentCaptureFilter
+import MacroPeg.CBV.ParametricHelperControl
+import MacroPeg.CBV.DependentProfileCall
+import MacroPeg.CBV.ProfiledDependentRecursion

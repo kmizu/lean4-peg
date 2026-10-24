@@ -5116,3 +5116,58 @@ unresolved.
 Validation: full `lake build` succeeds (832 jobs), including `Audit`. All
 29 new public theorem axiom guards use only standard Lean axioms. The new
 modules have no proof placeholders or Lean warnings.
+
+## Retained-value-dependent fresh captures through recursive specialized rows
+
+`ParametricHelperControl` transports helper-only control with retained
+parameters between arbitrary appended caller grammars and arbitrary seeded
+user stages. Closing parameters by literals reduces it to the existing
+independent-helper theorem. This also moves the dependent argument filters
+into real callers without a semantic helper-table assumption.
+
+`DependentProfileCall` selects the complete transition profile of the actual
+new argument by generated product-query lookaheads. Its continuation is an
+actual unary call to the corresponding appended profile-specialized rule.
+`entry_par_correct` proves that the value, endpoint, and profile address are
+those of the original Par argument, including undefined and failed queries.
+The incoming profile condition remains explicit here and is discharged by
+the recursive compiler below.
+
+`ProfiledDependentRecursion` extends the earlier recursive shifted-replay
+compiler: call zero now evaluates a fixed argument expression A in the
+current retained environment. A may combine retained parameters with fresh
+captures from an independent recursive helper graph, literals, sequence,
+ordered choice, and negation. Every new value's entire transition profile
+chooses the target row, whose recursive calls use that new profile.
+The body template allows literals, parameter replay, helper calls, recursive
+call zero, sequence, choice, star, and negation in arbitrary combinations.
+The source row has prefix `(u param(0))` for a fixed nonempty u; the target
+row has the corresponding rotation prefix followed by the translated body.
+
+All profiles, including ones whose transition from zero is the sink, are
+installed. Sink rows have a failing prefix, so the same physically bounded
+prefix seed works at the bottom stage. `tables_shifted` proves the complete
+recursive row correspondence by induction; `evaluator_eq` carries it through
+body control. `observations_iff` removes seeded stages using physical-table
+cofinality, preserving every finite success/failure observation on unchanged
+original strings. `language_translation` produces one fixed first-order Seq
+grammar and entry for every member of this source family. No incoming
+semantic profile premise remains in that language theorem.
+
+The physical-table kernel execution initializes a parent capture `aba`, then
+captures `aba + fresh ba = ababa` in its child. After return the parent must
+still replay `aba`; replacing the parent's final copy by the child's longer
+`ababa` is rejected by both generated grammars.
+
+This extends the earlier independent-capture recursion theorem to arguments
+that depend on the retained value. It still assumes a single fixed unary
+user body/argument family and the explicit shifted-replay entry shape.
+Parameter-dependent star and recursive user calls inside A, multiple user
+families and independent arguments, and normalization of arbitrary original
+source grammars are not covered. Unsupported raw higher-order or
+parameter-bearing-call syntax is rendered as failure, not claimed to be
+preserved. General Par/Seq class equality or separation remains unresolved.
+
+Validation: full `lake build` succeeds (835 jobs), including `Audit`. All
+36 added public theorem axiom guards use only standard Lean axioms or no
+axioms. The three new modules have no Lean warnings or proof placeholders.
