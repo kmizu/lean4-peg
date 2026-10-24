@@ -408,3 +408,5 @@ import MacroPeg.CBV.RecursivePrefixFusion
 import MacroPeg.CBV.MixedPrefixFusion
 import MacroPeg.CBV.OriginPrefixControl
 import MacroPeg.CBV.ConsumingPrefixControl
+import MacroPeg.CBV.MappedGuardedWordSelection
+import MacroPeg.CBV.GuardedPrefixControl

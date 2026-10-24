@@ -4492,3 +4492,60 @@ general Par/Seq equality or separation remain unresolved. The existing
 still requires an unproved P language outside linear space. No new class
 conclusion is drawn here. Thirty-eight new public axiom guards cover the
 combined consuming-control compiler.
+
+
+### Guarded selection in the fresh/consuming recursive compiler
+
+`CBV/GuardedPrefixControl.lean` closes the previously separate guarded-argument
+and fresh-capture/consuming-control constructions. Replay calls may now use
+arguments built from literals, parameters, concatenation, prioritized choice,
+and negation. Predicate bodies may contain arbitrary supported recursive
+calls, including fresh-parser rules and consuming rules. If the callee uses
+caller-position control, arbitrary supported arguments remain permitted.
+Independent recursive-parser heads still require caller-position control.
+
+The source-side predicate calls have already been rewritten to installed
+user addresses; they are not the raw predicate syntax. The new
+`CBV/MappedGuardedWordSelection.lean` proves selection with two independently
+transformed predicate bodies. `Agrees` compares the actual source rendering
+with the actual target rendering at every valid argument position.
+`selectAt_eval` preserves undefined results, finite failure, captured words,
+and continuation results through sequential argument components. Successful
+negation contributes the empty Word expression. The continuation is invoked
+at the original caller position, with the selected Word expression fixed.
+Later consuming failure cannot change that selection.
+
+The compiler uses mutual `render`/`scanArg`/`chooseAt` definitions. Its semantic
+proof mutually establishes evaluator correspondence and predicate agreement;
+no recursive predicate oracle is assumed by the final theorem. A target gate
+preserves the user-round boundary, and the existing physically stabilized
+helper component connects all frozen rounds to actual observations.
+`observations_iff` covers every finite success/failure observation on the same
+original character strings. `language_translation` supplies one fixed Seq
+grammar and start expression.
+
+This is an extension of the actual prior source, not a different source
+execution convention. `Spec` is the previous spec type; `source_render_eq`
+and `source_grammar_eq` prove exact equality with the previously installed
+Par expressions and grammar. `consuming_supported` and `consuming_valid`
+embed the previous Word fragment. `original_observations_iff` and
+`original_language_translation` state the preservation theorem directly for
+that prior source grammar, with the enlarged syntactic support condition.
+
+`fresh_selected_consuming_execution` kernel-checks physical tables for three
+inputs. Both strategies accept
+`ab#abab!abab;?aabb#aabbaabb!aabbaabb;`: a fresh `ab` is duplicated by a selected
+argument after a recursive negative query; consuming control replays `abab`,
+then recursion obtains fresh `aabb` and replays its selected duplication.
+Both also accept `ab#ab!ab;`, where the doubled argument fails before entry
+and the short arm is selected. Both finitely reject `ab#abab!ab;`, where the
+doubled argument succeeds before entry but its later replay fails. This last
+input would accept if the continuation incorrectly reselected the short arm.
+These examples supplement the unbounded observation theorem.
+
+The remaining gap is still arbitrary argument capture for consuming rules:
+non-finite fresh parser results cannot in general be selected from these
+finite Word-expression candidates. General body decomposition and multiple
+independent general captures also remain outside this compiler. General
+Par/Seq equality or language-class separation is not established.
+Fifty-four new public axiom guards cover this extension.
