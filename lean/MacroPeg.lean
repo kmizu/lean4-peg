@@ -387,3 +387,17 @@ import MacroPeg.CBV.StatefulScannerFamily
 import MacroPeg.CBV.StatefulScannerBridge
 import MacroPeg.CBV.StatefulScannerProduct
 import MacroPeg.CBV.StatefulPairArguments
+
+import MacroPeg.CBV.ClockFreezing
+import MacroPeg.CBV.StatefulScannerStability
+import MacroPeg.CBV.FrozenPairArguments
+import MacroPeg.CBV.StatefulPairFusion
+import MacroPeg.CBV.ReplayFallbackFusion
+import MacroPeg.CBV.ReplayControlFusion
+import MacroPeg.CBV.WordArguments
+import MacroPeg.CBV.WordControlFusion
+import MacroPeg.CBV.MixedControlFusion
+import MacroPeg.CBV.SymbolicWordSelection
+import MacroPeg.CBV.SelectedControlFusion
+import MacroPeg.CBV.GuardedWordSelection
+import MacroPeg.CBV.GuardedControlFusion

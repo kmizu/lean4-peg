@@ -3717,3 +3717,430 @@ entry are also outside this interface. The general same-original-language
 comparison remains unresolved. Root imports and 26 new public axiom guards
 cover installed block layouts, runtime case selection, capture reconstruction,
 complete dispatch, and actual body entry.
+
+
+### Separating scanner rounds from user-rule rounds
+
+`CBV/ClockFreezing.lean` defines a frozen table iteration for any actual
+grammar: selected helper rows are fixed at their physical table values at a
+finite floor `B`, while all other rule rows iterate their actual bodies.
+The grammar itself is unchanged. The construction is an analysis of its
+finite evaluation, not an input-dependent grammar or additional advice.
+Writing `P_k` for physical tables and `F_k` for frozen tables, the proofs give
+
+```
+F_k ≤ P_(B+k)
+P_k ≤ F_k           (when the selected physical rows are stable after B)
+```
+
+Here the order preserves every defined result, both success and finite
+failure. Consequently `defined_iff`, `stable_defined_iff`, and
+`observations_iff` transfer finite outcomes between frozen evaluation and
+the actual grammar semantics. Undefinedness is not treated as finite failure.
+`frozen_user_step` also proves that a non-helper rule spends exactly one
+user round evaluating its actual installed body.
+
+`CBV/StatefulScannerStability.lean` discharges the stability condition for
+the previously generated combined grammar. Every common-selector and left
+or right residual-scanner row is stable after `x.length + 1` physical rounds.
+This is equality of entire rows at every capture environment, for arbitrary
+recursive user tails; it is not a stability hypothesis on an external
+lexical oracle. The proof includes zero-state edge cases where applicable,
+all input positions and the selectors' finite failure results.
+
+`CBV/FrozenPairArguments.lean` then proves exact common/left/right entry,
+Seq argument, independent Par argument, reconstruction, guard, and complete
+dispatch contracts at **every** frozen user stage, including stage zero.
+The installed-body dispatch theorem requires both body slots to lie outside
+the helper prefix and connects stage `k+1` dispatch directly to stage `k`
+evaluation with the original captured values. It has no scanner-depth bound
+on `k`; the physical/frozen comparison supplies the required physical rounds
+when returning to the real grammar.
+
+This removes the helper-query clock obstruction from the finite-state
+argument/body interface. It still does not establish the recursive user-rule
+correspondence of a full finite-state Par-to-Seq compiler. That correspondence,
+normalization of general recursive/backtracking arguments, and arbitrary
+source body entry remain open. In particular, the general same-original-
+language equality or separation has not been proved. Root imports and 29
+new axiom guards cover this clock transfer and its actual dispatch application.
+
+
+### A complete recursive finite-state replay compiler
+
+`CBV/StatefulPairFusion.lean` closes the recursive user-rule correspondence
+left open above. A specification chooses initial states in two fixed finite
+machines and a first-order template tail; different rules may choose different
+states and may call each other recursively. The generated Par rule captures
+the two independent scans from the original caller position, uses real PEG
+state/order guards to select the longer capture, replays it from that position,
+and evaluates the rendered tail. The generated Seq grammar has two user-body
+variants per specification, alongside the same actual scanner-helper prefix.
+Its input-driven dispatch captures the common prefix and residual segment,
+then reconstructs the original ordered values for the selected tail.
+
+The construction is a fixed grammar translation. `render`, `parTail`,
+`seqTail`, `parGrammar`, and `seqGrammar` depend only on the machines and
+specifications, not on the input, its length, the stopping states, or capture
+values. The captured strings may have arbitrary length. Nested recursive
+calls, sequence, prioritized choice, star, and lookahead in template tails
+are preserved. As in the earlier stateless compiler, template calls `call i []`
+refer to a specification; nonempty template argument lists and higher-order
+forms render to failure. This explicitly specifies the supported source family.
+
+`replay_eval` identifies the actual runtime-selected source replay without a
+semantic oracle. `evaluator_of_shift` reduces all template expressions to the
+capture/table relation. `tables_shifted` proves that relation for **every**
+frozen user stage, starting from undefined user rows, by evaluating the real
+installed bodies on both sides. `evaluator_eq` consequently has no external
+user-call simulation premise. `observations_iff` eliminates the frozen
+iterations via the already proved physical/frozen cofinality. It preserves
+all finite successes and failures on each original `List Char` input, including
+empty input and equal scan endpoints. Undefined evaluation is not identified
+with finite failure. Finally `language_translation` gives an actual fixed
+first-order Seq grammar recognizing the same full-consumption language.
+
+This completes the reverse compiler for this finite-state **replay-shaped**
+family. It does not normalize arbitrary recursive/backtracking arguments or
+an arbitrary source body starting at the original call position. In particular,
+it does not establish the general CBV-Par/CBV-Seq reverse inclusion or a
+language-class separator. Those remain the full objective. Root imports and
+14 new public theorem axiom guards cover the complete compiler connection.
+
+
+### Restoring the caller for a capture-independent fallback
+
+`CBV/ReplayFallbackFusion.lean` addresses body entry through retained caller
+continuation rather than a residual body entered after all captures. Source
+rules have arity one and the form
+
+```
+F(x) <- (x B) / C
+```
+
+`B` is any first-order expression, including recursive calls and reuse of
+`x`. `C` has no reference to the outer captured environment (`Closed`); it
+may consume input, recurse, and invoke other rules with their own captures.
+The head argument is an arbitrary first-order expression. It is not restricted
+to a finite-state scan, finite palette, or bounded-length capture.
+
+The target generates an arity-one rule for translated `B` and an arity-zero
+rule for translated `C`. A translated call with argument `A` has the form
+
+```
+&translated(A) (F_main(translated(A)) / F_fallback())
+```
+
+The initial test preserves the source argument's failure and undefinedness
+before either body branch can run. Successful argument evaluation is repeated
+deterministically by the actual Seq call to `F_main`, which starts `B` at the
+capture endpoint with the captured value available. If that call finitely
+fails, ordinary caller-side PEG choice restores the original position before
+calling `F_fallback`. An undefined first branch never selects the fallback.
+`closed_env` and `render_closed` justify removing the outer capture from this
+fallback's environment, including through its argument expressions.
+
+`Shifted` relates a source row to an ordered choice between the target's
+advanced main row and its original-position fallback row. `evaluator_of_shift`
+proves the complete argument/call interface, including unknown, failed, and
+successful arguments. `tables_shifted` proves this relation at every physical
+table round for the actual generated rules. `evaluator_eq`, `decide_eq`,
+`observations_iff`, and `language_translation` then close the fixed recursive
+compiler without a user-table simulation hypothesis or totality assumption.
+All finite original-string observations are preserved.
+
+Unlike an unconditional replay source, the whole call need not advance past
+its argument capture. The kernel-checked `fallback_returns_before_capture`
+example captures all of `ab` but returns with `b` remaining after the first
+branch fails, under both actual grammars. This arrangement lies outside the
+single advanced-position interface ruled out by the earlier residual-control
+obstructions: it retains the original caller and its choice continuation.
+
+The restriction is substantive: the fallback cannot use the outer capture.
+Bodies whose non-replay branch accesses that value at arbitrary positions,
+multiple independent arbitrary arguments, and a general Par normal form
+remain unresolved. This is a direct extension of the reverse compiler, not
+a proof of general equality or a language-class separator. Root imports and
+18 new public axiom guards cover the compiler and the earlier-return example.
+
+
+### Capture-dependent choice and predicates at the original body position
+
+`CBV/ReplayControlFusion.lean` generalizes caller-position fallback into a
+finite body-control tree. A fixed part table contains arbitrary first-order
+expressions. A replay part denotes `x B`, where `B` may use the unbounded
+captured word and make recursive calls. A local part is independent of the
+outer environment and may itself consume input or recurse. Each arity-one
+source rule chooses a finite `Plan` assembled from these parts by prioritized
+choice, negative predicate, and guarded sequencing `&P Q`. Guard operands
+and nested predicates may themselves contain any such control tree. All part
+references are syntactically valid; `ValidPlan` imposes no semantic oracle.
+
+Unlike the preceding two-branch compiler, a fallback may now depend on the
+captured word, and there may be any fixed number of capture-dependent branches
+and tests. For example the generated source can implement
+
+```
+F(x) <- (x fail) / (&(!(x 'z')) 'a')
+```
+
+Both alternatives inspect the capture. On a successful negative test, the
+second alternative reads `a` from the original caller position, not from the
+capture endpoint. `capture_dependent_fallback` kernel-checks the actual Par
+and Seq table evaluations: capturing `ab` on input `ab` leaves `b`, whereas
+the same capture on input `abz` makes the second branch finitely fail.
+
+The Seq grammar has one actual rule per fixed part: arity one for a replay
+tail and arity zero for a local part. Call translation checks the arbitrary
+head argument first, then executes the finite body-control tree at the caller.
+Each replay leaf performs a real Seq call with that head parser, which
+reconstructs the same deterministic runtime capture before entering its tail.
+Choice and predicates retain the original caller position and their usual
+partial-result behavior. No input-dependent grammar, capture palette, bounded
+capture length, or finite-state head assumption is used.
+
+`Plan.exp_eval` gives exact semantics for the control tree, including failure
+and undefinedness of guards and predicates. `callLeaf_eval` connects its real
+Seq calls to captured and original-position rows. `evaluator_of_shift` handles
+arbitrary recursive first-order head arguments, and `tables_shifted` proves the
+entire source-to-target table relation at every physical round. The resulting
+`observations_iff` and `language_translation` preserve every finite observation
+and the original full-consumption language with no recursive user simulation
+premise. Root imports and 21 public axiom guards cover the connection.
+
+The remaining boundary is structural: a consuming local part cannot be
+followed by a new outer-capture-dependent part at that advanced position.
+Such sequential reuse must already lie inside a replay tail. The control tree
+therefore does not cover arbitrary capture-dependent bodies or several
+independent arbitrary captures. General CBV-Par/CBV-Seq equality and separation
+remain unresolved; this is an extension toward the body-entry obligation,
+not a redefinition of that objective.
+
+
+### Consuming body control with position-independent word arguments
+
+`CBV/WordArguments.lean` and `CBV/WordControlFusion.lean` address the remaining
+consuming-prefix boundary for another explicitly delimited source family.
+Actual arguments are literals, parameter references, or concatenations of
+such expressions. `value` computes their word from the current environment;
+`word_eval` proves that each argument matches precisely that same word at
+every position, or finitely fails everywhere if a referenced value is missing.
+`value_of_success` connects this static expression value to the actual runtime
+capture. There is no finite palette or bound on the word length. In particular,
+`duplication` proves that `param(0) param(0)` denotes `w ++ w` for arbitrary `w`.
+
+Body control now supports **arbitrary consuming sequence and repetition**,
+as well as prioritized choice and negative predicates, between replay and
+local parts. A replay part is `x B`; its tail `B` may use the capture and make
+recursive calls with word-valued arguments. A local part is independent of
+the outer environment and may consume input or recurse. Calls retain their
+argument expression in the original caller environment. Each later replay
+leaf can therefore match the same word from its current position, even after
+a preceding local part or previous iterations have consumed input. The
+successful Seq call captures that word at its new position and passes it to
+the actual target tail rule.
+
+This is complementary to `ReplayControlFusion`: it permits consuming control
+between parts, while imposing word-valued arguments instead of arbitrary
+recursive head parsers. An arbitrary parser can choose different captured
+words at different positions; the position-independent value proof cannot
+be applied to such a parser.
+
+The target has one fixed zero-argument entry rule `eps` followed by one rule
+per part (arity one or zero). `enter_word` transfers the caller's argument
+expression to an equal literal word throughout the complete body control.
+The table invariant relates a source row at **any** environment word and
+input position to the actual target entry and expanded control at that
+position. The entry rule keeps this strong invariant undefined at stage zero,
+even for unmatched environment words or missing part references; a source
+rule has not yet been unfolded at that stage. It is an ordinary installed
+rule, not a semantic advice mechanism.
+
+`Plan.eval_congr` covers consuming sequence and repetition with all intermediate
+position bounds. `tables_shifted` proves the relation at every physical table
+round, including empty captures, missing values, failed later replays, and
+non-consuming loops. `evaluator_eq`, `observations_iff`, and
+`language_translation` then preserve all finite successes and failures and
+the original full-consumption language, without assuming a recursive user
+simulation. The kernel-checked `consuming_prefix_and_repetition` example
+captures `aa`, consumes an `a` before replaying that original value, accepts
+`aaa`, rejects `aab`, and repeats the pattern twice on six `a` characters
+under both actual grammars.
+
+The construction still requires unary word-valued arguments and body
+factorization into replay/local parts. It does not establish a normal form
+for arbitrary source bodies, cover independently evaluated arbitrary argument
+parsers, or prove general Par/Seq equality or separation. The complete original
+objective remains open. Root imports and 24 new public axiom guards cover the
+word-value foundation and its full recursive compiler application.
+
+
+### Mixing arbitrary parsers and consuming word control in one recursive grammar
+
+`CBV/MixedControlFusion.lean` connects the preceding complementary fragments
+inside the **same actual generated grammars**, using the existing `parGrammar`,
+`seqGrammar`, and `render` from `WordControlFusion`. No additional grammar or
+input-dependent mode selection is introduced.
+
+`AtOrigin` certifies control trees built from leaves, prioritized choice,
+negative predicates, and guarded sequencing `&P Q` whose leaves all execute
+from the original caller position. `origin_congr` proves that agreeing leaf
+results at that single position suffice for their complete evaluation. At a
+call to such a rule, an arbitrary supported first-order argument parser can
+be evaluated again at that original position and recapture its same word.
+For a call into general consuming control, the argument must instead be a
+word expression (literal, parameter, or concatenation), so its captured value
+remains position-independent throughout later sequence and repetition.
+
+`Supported` expresses these alternatives **per call**. Argument expressions
+are recursively checked, so fresh parsers may themselves call either kind
+of rule according to the same discipline. Replay and local part bodies may
+likewise cross between kinds recursively. `word_fragment_supported` embeds
+the prior word-only fragment into this predicate. The restriction to unary
+source rules and replay/local body parts is retained.
+
+`GateOK` is established directly for every physical target table by
+`physical_gate_ok`; it says that the installed entry rule's successes restore
+the original position. `callLeaf_congr` and `enter_origin` require equal
+argument results only where origin control will actually run them. The
+arbitrary-parser case obtains this equality and the captured word from real
+source semantics, not a global position-independence premise. The word case
+uses the earlier `enter_word` theorem. These cases close
+`evaluator_of_shift`, and `tables_shifted` proves the entire mixed recursive
+user-table correspondence at every physical round. `observations_iff` and
+`language_translation` preserve all finite observations and the original
+full-consumption language. No gate correctness, user simulation, or semantic
+argument oracle remains as an external premise of those final theorems.
+
+The kernel-checked `fresh_parser_then_consuming_call` example combines
+
+```
+F(x) <- x G(x)
+G(x) <- 'a' x !F('')
+```
+
+It calls `F` with a fresh two-character parser, passes its captured `aa` to
+consuming `G`, and calls back into `F` under negation. Both actual grammars
+consume five `a` characters after four table rounds. The example also checks
+the mixed syntax conditions for its root and every part.
+
+This removes the need to select one argument/control convention for the
+whole source grammar. It does not allow an arbitrary position-dependent
+parser at a consuming-control call, normalize all capture-dependent bodies
+into these parts, or handle multiple independent general arguments. The
+unrestricted equality/separation objective remains unresolved. Root imports
+and 15 new public axiom guards cover the mixed connection.
+
+
+### Committing composite argument choices before consuming body control
+
+`CBV/SymbolicWordSelection.lean` builds a selector from argument **syntax**
+alone. Its supported arguments contain literals, current parameters,
+concatenation, and prioritized choice. The selector chooses a word expression
+made only from literals, parameters, and concatenation. It does not enumerate
+runtime character strings or require a finite palette for the parameter values.
+Thus choices between a current word and its duplication remain supported at
+arbitrary captured lengths.
+
+`selectAt` retains a word expression for the already selected prefix and uses
+input-restoring PEG probes to inspect the next subargument at its actual
+position. Concatenation selects its right operand after the left operand's
+consumed prefix; a failed later operand does not retry the left operand's
+choice. Prioritized choice uses guarded dispatch, so failure or undefinedness
+of the selected continuation cannot change the selected argument alternative.
+`selectAt_eval` and `select_eval` prove the full partial result and the value of
+the selected word expression for arbitrary continuations respecting that value.
+The construction depends on source expressions and their finite branch structure,
+not on an environment, input, table, capture length, or captured characters.
+
+`CBV/SelectedControlFusion.lean` discharges that continuation interface using
+actual installed target part rules. A call with such a composite argument
+selects its word expression at the original position, then enters the body
+control with that fixed expression. Later replay leaves evaluate the selected
+word expression, not the original choice-containing parser. Arbitrary consuming
+sequence, repetition, choice, and predicates in the body therefore preserve
+the original captured value even if another alternative would match at a later
+position. `growing_argument_supported` checks choices involving `x x` and `x`
+without a palette-closure condition.
+
+This new compiler also retains arbitrary supported argument parsers at
+`AtOrigin` callees. `mixed_fragment_supported` embeds the preceding mixed
+fragment into its syntax predicate. Such calls may recursively cross into
+composite-argument consuming calls and back. The source grammar constructor
+is unchanged; the target is a fixed entry rule and a fixed rule per part,
+with the syntax selectors generated at call sites.
+
+`evaluator_of_shift` connects actual selection, actual captures, and actual
+part queries. `tables_shifted` proves the recursive relation at every physical
+round; no user-call simulation or argument-value oracle is retained in
+`observations_iff` or `language_translation`. They preserve all finite results
+and the same original full-consumption language.
+
+The kernel-checked `chosen_word_stays_committed` example uses a consuming
+source body `F(x) <- 'a' x` and a composite argument `(aa / a) eps`. Input
+`aaa` succeeds, while `aab` finitely fails under both actual grammars. On the
+second input the initial choice committed to `aa`; retrying `a` after the
+body fails, or re-evaluating the original choice at the advanced position,
+would incorrectly produce a success. The example also checks the syntax
+conditions for the root and every part.
+
+Consuming-control arguments still exclude repetition, predicates, and recursive
+calls; those remain allowed only under the separate origin-control discipline.
+The unary source restriction and replay/local body factorization also remain.
+General Par/Seq equality or a language-class separator is still unresolved.
+Root imports and 28 new public axiom guards cover the selector and its complete
+recursive compiler application.
+
+
+### Recursive predicates within consuming-call arguments
+
+`CBV/GuardedWordSelection.lean` extends syntax-selected arguments with negative
+predicates. A successful predicate contributes the empty word; its failure and
+undefinedness are retained distinctly. Its body may be any supported
+first-order computation, including repetition and recursive queries obeying
+the same call discipline. Positive lookahead follows from double negation.
+Literals, current parameters, concatenation, and prioritized choice remain
+available around these tests, with no finite capture palette.
+
+`argRender` translates predicate bodies. `Checks` records the subexpressions
+whose query semantics must correspond. `arg_eval` and `probe_eval` evaluate
+the translated predicates at the actual current argument position, after the
+already selected prefix. `selectAt_eval` then selects the complete captured
+word expression without letting a failed continuation retry an argument choice.
+For a successful predicate it passes `lit []` to the continuation. Its generic
+predicate correspondence premise is explicit at this interface layer.
+
+`CBV/GuardedControlFusion.lean` discharges that premise for the actual recursive
+compiler. `render`, `scanArg`, and `chooseAt` are mutually defined on decreasing
+source syntax, so predicate translation and selector construction produce one
+fixed finite grammar. `scanArg_eq` and `chooseAt_eq` connect that code to the
+generic selector. Target first-order syntax is proved mutually with the
+first-order property of translated predicate subexpressions.
+
+Crucially, `evaluator_of_shift` is proved mutually with `predicate_checks`.
+The expression proof supplies recursive predicate correspondence, and the
+selector uses it at each actual argument position. `tables_shifted` closes
+the recursive user-table relation at every physical round. Consequently
+`observations_iff` and `language_translation` retain no external hypothesis
+that predicates, gates, arguments, or recursive user rules simulate correctly.
+They preserve every finite success/failure and the original full-consumption
+language, including empty captures and predicate queries with no finite result.
+`selected_fragment_supported` embeds the preceding composite-argument fragment.
+
+`predicate_at_argument_position` checks a query after an initial captured `a`.
+The query tests for `z`; the root succeeds on `aaa` and finitely fails on `aza`
+under both actual grammars. Testing at the original position instead would
+miss the `z`, and the body's consuming fallback would incorrectly accept.
+`undefined_predicate_stays_undefined` proves, for **every** physical table stage,
+that a self-recursive query in a negated argument leaves both complete calls
+undefined. It never becomes finite failure and cannot select the next argument
+alternative. This result is by induction and recursive compiler correspondence,
+not just a finite execution sample.
+
+The remaining argument restriction concerns forms producing captured characters:
+consuming repetition and direct recursive calls are still outside consuming-call
+argument selection. Such computations are allowed inside predicates and at
+origin-control callees. Unary source rules and replay/local body factorization
+also remain. Thus the general CBV-Par/CBV-Seq equality or separation is still
+unresolved. Root imports and 34 new public axiom guards cover the selector,
+mutual recursive compiler, shifted-position example, and unbounded unknown case.
