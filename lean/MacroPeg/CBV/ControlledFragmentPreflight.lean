@@ -255,16 +255,19 @@ theorem physical_trace (g : MGrammar) (hg : g.FirstOrder) (x : List Char)
       | some z => exact hh
   · simp [hl]
 
-/-- All-input success correspondence for the syntactic a-fragment.
-No capture-shape, delimiter, trace, or word-count hypothesis remains. -/
-theorem physical_iff (g : MGrammar) (hg : g.FirstOrder) (x : List Char)
-    (m p q : Nat) (E : List (List Char)) (G J : MExp) (hJ : J.FirstOrder)
+/-- The physical comparison works for any actual a-only fragment parser.
+It need not be a star, total, or independent of the caller. -/
+theorem physical_iff_of_shape (g : MGrammar) (hg : g.FirstOrder) (x : List Char)
+    (m p q : Nat) (E : List (List Char)) (G H : MExp) (hH : H.FirstOrder)
+    (hshape : ∀ j q, j≤x.length →
+      evV g x .callByValueSeq (tblV g x .callByValueSeq (m+1)) E H j=some (some q) →
+      ∃ l, pre x j q=List.replicate l 'a' ∧ sfx x j=List.replicate l 'a'++sfx x q)
     (hp : p≤x.length) (r0 : ruleAtM g.rules 0=some ⟨1,.param 0⟩)
     (r1 : ruleAtM g.rules 1=some ⟨1,tailBody⟩)
     (ha : evV g x .callByValueSeq (tblV g x .callByValueSeq (m+1)) E
-      (argument G (fragment J)) p=some (some q)) :
+      (argument G H) p=some (some q)) :
     evV g x .callByValueSeq (tblV g x .callByValueSeq (m+1)) E
-      (preflight G (fragment J)) p=some (some q) ↔
+      (preflight G H) p=some (some q) ↔
     ∃ z, evV g x .callByValueSeq (tblV g x .callByValueSeq (m+1))
       [pre x p q] (.seq scanner (.param 0)) p=some (some z) := by
   let T := tblV g x .callByValueSeq (m+1)
@@ -272,7 +275,7 @@ theorem physical_iff (g : MGrammar) (hg : g.FirstOrder) (x : List Char)
   obtain ⟨j,hs,hh⟩ := seq_success g x .callByValueSeq T E _ _ p q ha
   have hj := evV_ok hOk _ p hp j hs
   have hq := evV_ok hOk _ j hj q hh
-  obtain ⟨l,hz,hfrag⟩ := fragment_shape g x .callByValueSeq T E J j q hj hh
+  obtain ⟨l,hz,hfrag⟩ := hshape j q hj hh
   obtain ⟨ws,hw,htrace,hresult⟩ := physical_trace g hg x m p j q E G _ hp r0 r1 hs hh
   have hi : sfx x p=ws.flatten++List.replicate l 'a'++sfx x q := by
     rw [htrace,hfrag,List.append_assoc]
@@ -293,7 +296,7 @@ theorem physical_iff (g : MGrammar) (hg : g.FirstOrder) (x : List Char)
           obtain ⟨v,hscan,_⟩ := seq_success g x .callByValueSeq _ _ _ _ q z hb
           obtain ⟨r,hr⟩ := PartialCodewordClassification.scanner_shape g x .callByValueSeq _ _ q v hq hscan
           exact (ControlledFragmentReplay.physical_preflight_iff g hg x m p j q l r E G _
-            (fragment_firstOrder J hJ) (sfx x v) hp r0 r1 hs hh hz
+            hH (sfx x v) hp r0 r1 hs hh hz
             (by simpa [block,List.append_assoc] using hr)).mp hf
     next hl => cases hf'
   · rintro ⟨z,hhsource⟩
@@ -301,7 +304,22 @@ theorem physical_iff (g : MGrammar) (hg : g.FirstOrder) (x : List Char)
     rw [hcap] at hb
     obtain ⟨r,tail,hr⟩ := terminal_of_replay g x .callByValueSeq T ws l p q z hp hw hi hb
     exact (ControlledFragmentReplay.physical_preflight_iff g hg x m p j q l r E G _
-      (fragment_firstOrder J hJ) tail hp r0 r1 hs hh hz hr).mpr ⟨z,hhsource⟩
+      hH tail hp r0 r1 hs hh hz hr).mpr ⟨z,hhsource⟩
+
+/-- All-input success correspondence for the syntactic a-fragment.
+No capture-shape, delimiter, trace, or word-count hypothesis remains. -/
+theorem physical_iff (g : MGrammar) (hg : g.FirstOrder) (x : List Char)
+    (m p q : Nat) (E : List (List Char)) (G J : MExp) (hJ : J.FirstOrder)
+    (hp : p≤x.length) (r0 : ruleAtM g.rules 0=some ⟨1,.param 0⟩)
+    (r1 : ruleAtM g.rules 1=some ⟨1,tailBody⟩)
+    (ha : evV g x .callByValueSeq (tblV g x .callByValueSeq (m+1)) E
+      (argument G (fragment J)) p=some (some q)) :
+    evV g x .callByValueSeq (tblV g x .callByValueSeq (m+1)) E
+      (preflight G (fragment J)) p=some (some q) ↔
+    ∃ z, evV g x .callByValueSeq (tblV g x .callByValueSeq (m+1))
+      [pre x p q] (.seq scanner (.param 0)) p=some (some z) := by
+  exact physical_iff_of_shape g hg x m p q E G (fragment J)
+    (fragment_firstOrder J hJ) (fragment_shape g x .callByValueSeq _ E J) hp r0 r1 ha
 
 /-- A successful actual argument gives either its exact capture endpoint
 or finite comparison failure; a missing delimiter cannot create None. -/
@@ -326,6 +344,44 @@ theorem physical_range (g : MGrammar) (hg : g.FirstOrder) (x : List Char)
   rw [hresult,hv]
   cases v <;> by_cases h : AdjacentCodewordControl.Linked ws (sfx x j) <;> simp [h]
 
+/-- Given a shape theorem for successful fragments, preserve the exact
+caller-position partial result. Argument failure and None come first. -/
+theorem physical_result_of_shape (g : MGrammar) (hg : g.FirstOrder) (x : List Char)
+    (m p : Nat) (E : List (List Char)) (G H : MExp) (hH : H.FirstOrder)
+    (hshape : ∀ j q, j≤x.length →
+      evV g x .callByValueSeq (tblV g x .callByValueSeq (m+1)) E H j=some (some q) →
+      ∃ l, pre x j q=List.replicate l 'a' ∧ sfx x j=List.replicate l 'a'++sfx x q)
+    (hp : p≤x.length) (r0 : ruleAtM g.rules 0=some ⟨1,.param 0⟩)
+    (r1 : ruleAtM g.rules 1=some ⟨1,tailBody⟩) :
+    evV g x .callByValueSeq (tblV g x .callByValueSeq (m+1)) E
+      (preflight G H) p=
+    match evV g x .callByValueSeq (tblV g x .callByValueSeq (m+1)) E
+        (argument G H) p with
+    | none => none
+    | some none => some none
+    | some (some q) =>
+      match evV g x .callByValueSeq (tblV g x .callByValueSeq (m+1))
+          [pre x p q] (.seq scanner (.param 0)) p with
+      | some (some _) => some (some q) | other => other := by
+  let T := tblV g x .callByValueSeq (m+1)
+  cases ha : evV g x .callByValueSeq T E (argument G H) p with
+  | none => exact ControlledFragmentReplay.preflight_none g x .callByValueSeq T E G _ p ha
+  | some v => cases v with
+    | none => exact ControlledFragmentReplay.preflight_fail g x .callByValueSeq T E G _ p ha
+    | some q =>
+      dsimp only []
+      obtain ⟨v,hv⟩ := PartialCodewordTotality.prefix_total g x .callByValueSeq T
+        (tblV_ok g x .callByValueSeq (m+1)) (pre x p q) p hp
+      have hiff := physical_iff_of_shape g hg x m p q E G H hH hshape hp r0 r1 ha
+      rw [hv]
+      cases v with
+      | none =>
+        rcases physical_range g hg x m p q E G _ hp r0 r1 ha with hf | hf
+        · obtain ⟨z,hz⟩ := hiff.mp hf
+          rw [hv] at hz; cases hz
+        · exact hf
+      | some z => exact hiff.mpr ⟨z,hv⟩
+
 /-- Complete caller-position partial result for every input and valid
 position. Undefined/failing original arguments are preserved first; on a
 successful argument the physical filter tests exactly its whole replay.
@@ -344,23 +400,7 @@ theorem physical_result (g : MGrammar) (hg : g.FirstOrder) (x : List Char)
       match evV g x .callByValueSeq (tblV g x .callByValueSeq (m+1))
           [pre x p q] (.seq scanner (.param 0)) p with
       | some (some _) => some (some q) | other => other := by
-  let T := tblV g x .callByValueSeq (m+1)
-  cases ha : evV g x .callByValueSeq T E (argument G (fragment J)) p with
-  | none => exact ControlledFragmentReplay.preflight_none g x .callByValueSeq T E G _ p ha
-  | some v => cases v with
-    | none => exact ControlledFragmentReplay.preflight_fail g x .callByValueSeq T E G _ p ha
-    | some q =>
-      dsimp only []
-      obtain ⟨v,hv⟩ := PartialCodewordTotality.prefix_total g x .callByValueSeq T
-        (tblV_ok g x .callByValueSeq (m+1)) (pre x p q) p hp
-      have hiff := physical_iff g hg x m p q E G J hJ hp r0 r1 ha
-      rw [hv]
-      cases v with
-      | none =>
-        rcases physical_range g hg x m p q E G _ hp r0 r1 ha with hf | hf
-        · obtain ⟨z,hz⟩ := hiff.mp hf
-          rw [hv] at hz; cases hz
-        · exact hf
-      | some z => exact hiff.mpr ⟨z,hv⟩
+  exact physical_result_of_shape g hg x m p E G (fragment J)
+    (fragment_firstOrder J hJ) (fragment_shape g x .callByValueSeq _ E J) hp r0 r1
 
 end Shallot.MacroPeg.CBV.ControlledFragmentPreflight

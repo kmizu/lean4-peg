@@ -7490,3 +7490,204 @@ combined with earlier mixed-body or independent-header compilers.
 Arbitrary consuming arguments, arbitrary initial body positions,
 independent multiple captures, and general Par/Seq equality or separation
 remain unresolved.
+
+### Consuming control inside the final a-fragment
+
+`FragmentConsumingSyntax.Syntax` removes the final `(a;&J)*` shape from
+the local bridge. Its consuming leaves are `eps` and `chr 'a'`; sequence,
+prioritized choice, and arbitrary nested star compose them. Positive and
+negative tests may contain any first-order expression, including retained
+parameters and recursive user calls. This is a syntax restriction on
+consumption, not a totality premise. A fragment can fail, be undefined,
+stop before the greedy a-run endpoint, or choose different consuming paths.
+
+`shape` derives the actual a-only capture from successful evaluation for
+arbitrary tables, strategies, inputs, and caller environments. The generalized
+`ControlledFragmentPreflight.physical_iff_of_shape` and
+`physical_result_of_shape` expose the comparison argument independently of
+its original star shape. `FragmentConsumingSyntax.physical_result` discharges
+the shape premise from syntax and preserves the full physical preflight
+result on every input and valid position. The missing-delimiter and empty
+fragment cases require no separate input-shape assumption.
+
+`FragmentConsumingEntry` carries the actual H through the real three-piece
+or unary Seq argument evaluation. Its endpoint and branch theorems recover
+the original capture and replay endpoint; `transfer` preserves the complete
+partial call result across different grammars, environments, and positive
+ordinary clocks. The current-clock G/H correspondence and previous-clock
+callee-continuation correspondence are explicit premises. Finite argument
+failure is now possible and is handled before evaluating the callee.
+`preflight_zero_success` uses the physically absent comparison-helper rows;
+`zero` preserves argument failure as well as None at clock zero, provided
+the actual source/target arguments correspond at that clock.
+
+Kernel executions accept a mandatory `aa / a` fragment and reuse its entire
+capture, reject the shorter-copy input without reopening the successful
+`aa` branch, preserve mandatory-fragment failure even at clock zero, and
+preserve a consuming fragment followed by an empty-star None before the
+missing-delimiter comparison. A syntax certificate also covers nested
+consuming choices with parent-dependent recursive tests.
+
+The local call bridge retains explicit current-clock argument and
+previous-clock continuation correspondence premises. The recursive compiler
+below discharges them for its generated source family. Fixed A=a*;#,
+only a-consuming H, one source capture, and the mandatory A;param0 body entry
+remain restrictions. General Par/Seq equality or separation remains unresolved.
+
+### Recursive compiler for consuming fragments
+
+`FragmentConsumingRecursive` compiles normal template calls with two
+templates G and H into one actual unary Par argument
+`(A;&(A;G))*;H`. In contrast to the earlier G/J compiler, the second
+template is the consuming fragment itself. A singleton template supplies
+G and H=eps; an empty template supplies G=H=eps. Both source and target
+are fixed grammars determined by the finite list of user tails.
+
+The syntax-directed renderer has normal and fragment modes. In fragment
+mode, eps, chr a, a-only literals, sequence, prioritized choice, and star
+remain consuming operations. Tests switch their child to normal mode,
+allowing caller parameters, calls to the same user, mutual recursion,
+and nested controls. A-only literals are rendered as fixed a-sequences.
+Other consuming fragment leaves render as failure. Unknown user indices,
+three or more call templates, and higher-order forms also render as failure.
+These are source-family restrictions, not equivalence claims for arbitrary
+unsupported source expressions.
+
+`render_fragment_syntax` derives the generated fragment certificate.
+`evaluator_of_previous` proves normal and fragment partial correspondence
+together by structural recursion at the current ordinary clock, and
+`evaluator_eq` closes the previous-clock user continuation by clock induction.
+At clock zero it uses actual argument correspondence and the fail-capable
+zero seed, preserving finite argument failure before any missing callee
+row. At positive clocks it applies the full real-call transfer theorem.
+
+`stable_eq`, `observations_iff`, and `language_translation` then preserve
+all finite observations and the language of unchanged original strings
+in one fixed first-order Seq grammar. No capture shape, input delimiter,
+word count, semantic helper-row, current-clock argument correspondence,
+or previous-clock continuation correspondence is assumed in these final
+theorems. The physical evaluators also agree at every ordinary stage for
+every retained environment and valid position, in both renderer modes.
+
+Kernel executions follow actual 0→1→0 calls with a → aaa#a → aa captures,
+a mandatory middle fragment stopped by a recursive user-2 test, and
+parent values reused after both returns. The real middle Seq arguments
+are [aaa,#,a] at the same endpoint; the grandchild captures aa in its own
+caller environment. Additional executions cover a same-user test inside H,
+parent-dependent H together with a nontrivial G, shorter parent/child/grandchild
+copies, successful and committed-failure aa/a choices, empty fragments,
+and zero complete words. Mandatory argument failure and a-consuming H
+followed by an empty-star None are preserved at every ordinary clock.
+
+This closes recursive preservation for the consuming-fragment family.
+The standalone compiler still uses a fixed A=a*;# header, an a-only
+consuming fragment, one source capture, and mandatory A;param0 body entry.
+The following origin-control extension relaxes that user-body entry shape.
+General consuming arguments, arbitrary initial consuming body positions,
+independent multiple captures, and general Par/Seq equality or separation
+remain unresolved.
+
+### Origin body control with consuming-fragment calls
+
+`FragmentOriginRecursive` combines the consuming-fragment call bridge with
+`ReplayControlFusion.Plan` and the generic call normalization from
+`MixedOriginControl`. A logical user body is now a finite tree of prioritized
+choice, negation, and positive guards over replay leaves. Each leaf has
+body A;param0;b, with b an arbitrary normal template. The caller still supplies
+one actual argument `(A;&(A;G))*;H`, with the same consuming-fragment syntax
+and recursive caller-side tests as above.
+
+The source grammar contains the logical users with these actual body trees,
+followed by ordinary unary leaf rules. Generated source calls address logical
+users only; the appended leaf rows support a same-clock normalization proof.
+The target grammar contains the two comparison helpers and a ternary/unary
+pair per leaf. At each target call, an actual-argument preview precedes the
+body's origin-control tree of physical Seq entries. No captured value is
+presumed at the original position: each leaf's call bridge derives the real
+pieces, endpoint, and restored whole value.
+
+`source_call` proves the actual source call equal to its guarded expansion
+into source leaf calls at every ordinary clock. At clock zero every leaf row
+is absent and the entire control plan remains undefined after successful
+argument evaluation; finite argument failure is still preserved first.
+The syntactic `Valid` premise only checks that each plan leaf index exists.
+There is no input, capture-value, semantic table-row, or totality condition.
+
+Structural induction again treats normal and consuming-fragment templates
+together, while ordinary-clock induction handles user continuations.
+`evaluator_eq`, `stable_eq`, `observations_iff`, and `language_translation`
+preserve all partial results, all finite observations, and the language of
+unchanged strings in one fixed first-order Seq grammar. No argument or
+continuation correspondence is supplied to these final results.
+
+Kernel executions use real 0→1→0 calls with negative origin guards and
+prioritized fallback, retaining a → aaa#a → aa and rejecting short copies.
+A distinct negative-body example on a! actually captures a yet returns the
+original position; its continuation then consumes the original a! input.
+On #, the mandatory argument fails, while omitting the outer argument
+preview would let the negative target body succeed. Further executions
+preserve undefined arguments before negative bodies, nullable rollback
+inside a caller star, and both finite-failure and missing-row behavior at
+clock zero.
+
+A logical user no longer has to begin with a consuming A;param0. Its body
+may inspect the capture through several origin branches and predicates and
+return before the capture endpoint. The replay leaves still require that
+entry shape. The next extension normalizes nested consuming sequences over
+these leaves; arbitrary initial consuming expressions and general body stars
+are still outside the compiler. The fixed header, a-only consuming H,
+one source capture, and unsupported-template restrictions remain. This is
+not a complete integration of `MixedBodyCompiler` or a general Par→Seq
+translation, and no language-class equality or separation is claimed.
+
+### Nested consuming body sequences from source syntax
+
+`FragmentBodyForm.Body` represents actual nested user bodies built from
+replay leaves A;param0;b, sequence, prioritized choice, and negation. The
+suffix b is an arbitrary normal template, so it may call users recursively,
+construct new consuming fragments, reuse the held value, or contain loops.
+The body itself is not replaced by a supplied control plan.
+
+`normalize` computes a finite plan and its leaf suffixes. Composition keeps
+original leaves as queries and appends continuation copies. It uses
+`ContinuationPlan.bind`: a successful alternative is guarded before its
+continuation runs, while a negative zero-consuming output invokes the
+right body at the unchanged position. The actual copied suffix b;C is
+proved equal to sequencing the original leaf with C. `compose_eval` and
+`evaluator_eq` preserve the full partial result in arbitrary grammar/table/
+strategy/caller contexts, without a Consumer or totality condition.
+
+`FragmentBodyCompiler` gathers these generated suffixes and shifts their
+plans into one layout. Its source grammar retains each user's original
+nested Body.syntax. `normalized_bodies` and `body_results` prove equality
+with the actual generated plan bodies; `headers`, `tables_eq`, and
+`evaluator_eq` lift that equality through every recursive grammar round.
+The normalization requires no semantic table assumptions, input condition,
+or user-supplied body-equivalence proof. Appended source helper rows are
+preserved and have the same generated leaf bodies as the normalized grammar.
+
+The generated bounds prove `FragmentOriginRecursive.Valid` automatically.
+`observations_iff` composes this exact source normalization with the
+recursive consuming-fragment compiler, and `language_translation` gives
+one fixed first-order Seq grammar on unchanged strings for every source
+user list. No layout, leaf-index validity certificate, capture-shape,
+argument/continuation correspondence, or recursive row oracle is left as
+a premise of these final results.
+
+Kernel executions sequence a negative left body with a replaying right
+body, and run real 0→1→0 recursion where user 1 consumes two separate replay
+leaves before invoking user 0. The captures a → aaa#a → aa remain available
+after returns, and a short grandchild copy is rejected. A source body
+`(leaf(x) / leaf(xy));leaf(!;param0)` rejects a#axya#a!a because its x branch
+has already succeeded. The naively distributed alternative of the two full
+sequences accepts that input; the generated Seq grammar preserves the
+source rejection. A right continuation's empty-star None is also retained
+after a negative zero-consuming success.
+
+This extends finite body normalization through arbitrary nesting of sequence,
+choice, and negation for the consuming-fragment family. General stars over
+these body controls, ordinary bare-param/closed leaf kinds, arbitrary consuming
+prefixes before the first replay, unrestricted arguments, and independent
+multiple captures remain outside this construction. The fixed A=a*;# header,
+a-only consuming H, one actual capture, and per-replay-leaf A;param0 shape
+remain restrictions. General Par/Seq equality or separation is unresolved.
