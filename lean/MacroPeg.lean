@@ -193,3 +193,5 @@ import MacroPeg.CBV.FiniteResidualControl
 import MacroPeg.CBV.SequentialClock
 import MacroPeg.CBV.SequentialRecompute
 import MacroPeg.CBV.SequentialSpanRecompute
+import MacroPeg.CBV.SequentialStack
+import MacroPeg.CBV.SequentialStackRank
