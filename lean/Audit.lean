@@ -5282,3 +5282,86 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ChoiceSpecializationCompiler.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceArguments.success_prefix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceArguments.success_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceArguments.probe_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceArguments.probe_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceArguments.pre_concat' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceArguments.pre_concat
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceArguments.selectAt_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceArguments.selectAt_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceArguments.selectArgs_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceArguments.selectArgs_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceArgumentDomain.success_possible' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceArgumentDomain.success_possible
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceArgumentDomain.arguments_bounds' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceArgumentDomain.arguments_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceArgumentDomain.closedB_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceArgumentDomain.closedB_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceArgumentDomain.supportedB_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceArgumentDomain.supportedB_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceArgumentDomain.no_nonempty_palette_for_duplication' depends on axioms: [propext,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceArgumentDomain.no_nonempty_palette_for_duplication
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceArgumentDomain.concrete_concatenation_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceArgumentDomain.concrete_concatenation_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceSpecialization.target_zero_arity' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceSpecialization.target_zero_arity
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceSpecialization.tables_related' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceSpecialization.tables_related
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceSpecialization.limit_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceSpecialization.limit_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceSpecialization.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceSpecialization.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceSpecialization.check_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceSpecialization.check_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceSpecialization.checked_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceSpecialization.checked_observations
+
+/-- info: 'Shallot.MacroPeg.CBV.SequenceSpecialization.checked_language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequenceSpecialization.checked_language_translation

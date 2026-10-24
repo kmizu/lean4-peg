@@ -1723,3 +1723,51 @@ captures, concatenation of argument parsers, arbitrary finite-valued recursive
 argument parsers, and unbounded dynamically captured strings are not yet
 covered. This extends the reverse compiler to a concrete input-dependent
 finite-value fragment; general Par/Seq equality or separation remains open.
+
+
+### Sequential argument composition with a checked finite domain
+
+`SequenceArguments.selectAt` extends the selector to argument sequencing.
+Its continuation still runs at the original caller position. When the first
+part selects `u`, the next selector tests the second part after the known
+prefix followed by `u`; this replay occurs entirely inside lookahead. The
+selected result is `u++v`. `probe_eval`, `pre_concat`, and `selectAt_eval`
+prove that the probed position and the concatenated captured word agree with
+the actual sequential argument evaluation. Ordered choices retain their
+commitment before the continuation. `selectArgs_eval` then evaluates each
+whole Par argument against the original common caller position.
+
+`SequenceArgumentDomain.possible V a` enumerates the syntactically possible
+words of an argument: literals are singleton sets, parameters range over the
+palette `V`, choices combine lists, and sequences form concatenations. `Closed`
+requires the supported argument syntax and membership of every possible final
+word in `V`. Intermediate pieces of a composite argument need not themselves
+be members of `V`; `concrete_concatenation_checked` demonstrates that a palette
+containing only `ab` can cover the composite literal argument `a b`.
+`success_possible` and `arguments_bounds` prove this syntactic check covers
+every value selected in an actual run. `closedB_iff` and `supportedB_iff`
+connect the executable finite checks to their precise predicates.
+
+`SequenceSpecialization` connects this selector to the fixed finite
+rule/value-vector enumeration. Every target rule has arity zero. The full
+table, limit, and observation proofs cover recursive source bodies and
+preserve success, failure, and undefinedness. `check` tests a supplied finite,
+input-independent palette against every source rule and the root expression.
+`checked_observations` and `checked_language_translation` prove that a successful
+check produces one fixed first-order Seq grammar recognizing the same original
+character strings, without a leading-replay or totality requirement.
+
+A finite palette is an actual restriction, not an automatic consequence of
+argument sequencing. `no_nonempty_palette_for_duplication` proves that the
+syntactic closure check for `param(0) param(0)` cannot succeed with a palette
+containing a nonempty word: closure would contain words of arbitrarily large
+length. This theorem concerns the finite-domain interface and does not prove
+language-class non-inclusion. The check also overapproximates possible parameter
+combinations, so no completeness claim for finite-valued source semantics is
+made.
+
+The exact supported argument syntax is literal, parameter, sequencing, and
+ordered choice. Character/range atoms, argument repetition and recursion,
+and general unbounded captures remain outside this compiler. General Par/Seq
+equality or separation remains open; the finite-domain construction does not
+replace the required unbounded representation or a genuine separating witness.

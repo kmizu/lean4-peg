@@ -290,3 +290,6 @@ import MacroPeg.CBV.LiteralSpecializationCompiler
 import MacroPeg.CBV.ChoiceArguments
 import MacroPeg.CBV.ChoiceSpecialization
 import MacroPeg.CBV.ChoiceSpecializationCompiler
+import MacroPeg.CBV.SequenceArguments
+import MacroPeg.CBV.SequenceArgumentDomain
+import MacroPeg.CBV.SequenceSpecialization
