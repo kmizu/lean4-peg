@@ -1,4 +1,4 @@
-import MacroPeg.CBV.SequentialExpressionDispatchMachine
+import MacroPeg.CBV.SequentialSyntaxListDispatchMachine
 
 /-! Decode the actual argument-list code through finite source-fixed branches.
 Each unary field is restored before the next decision or instruction runs. -/
@@ -15,15 +15,11 @@ def execute (ns : List CBVtoCBN.CompileNode) (g : MGrammar) : List MExp → LPro
   | [] => SequentialStaticPackedMachine.program ns g .argsNil
   | a :: es => SequentialEightTapeMachine.program (SequentialEntryPackedMachine.program ns (.args a es))
 
-def parse (ns : List CBVtoCBN.CompileNode) (g : MGrammar) : Nat → List MExp → LProg 8
-  | 0,done => execute ns g done
-  | fuel+1,done => SequentialTagDispatchMachine.program 2 1 (4+done.length)
-      (SequentialStackPool.exprPool ns).length (fun id => match (SequentialStackPool.exprPool ns)[id]? with
-        | some a => parse ns g fuel (done ++ [a])
-        | none => skipP 2)
+def parse (ns : List CBVtoCBN.CompileNode) (g : MGrammar) (fuel : Nat) (done : List MExp) : LProg 8 :=
+  SequentialSyntaxListDispatchMachine.parse ns 3 (execute ns g) fuel done
 
 def program (ns : List CBVtoCBN.CompileNode) (g : MGrammar) (bound : Nat) : LProg 8 :=
-  SequentialTagDispatchMachine.program 2 1 3 bound (fun n => parse ns g n [])
+  SequentialSyntaxListDispatchMachine.program ns 3 bound (execute ns g)
 
 theorem writeExprs_eq (ns : List CBVtoCBN.CompileNode) (es : List MExp) :
     SequentialStackCodec.writeExprs ns es=es.length :: es.map (SequentialStackCodec.exprId ns) := by
@@ -74,45 +70,21 @@ theorem parse_runs (g : MGrammar) (x : List Char) (e : MExp) (done es : List MEx
       (parse (CBVtoCBN.compilerNodes g e) g es.length done)
       (withInput (encode (CBVtoCBN.compilerNodes g e) (before (done ++ es) m E p K)) x)
       (withInput (encode (CBVtoCBN.compilerNodes g e) next) x) T := by
-  induction es generalizing done with
-  | nil =>
-    simpa only [List.append_nil,List.length_nil,parse] using execute_runs g x e done m E p K next
-      (by simpa only [List.append_nil] using h) (by simpa only [List.append_nil] using hs)
-  | cons a es ih =>
-    let ns := CBVtoCBN.compilerNodes g e
-    let L := withInput (encode ns (before (done ++ a :: es) m E p K)) x
-    let target := withInput (encode ns next) x
-    let B := (SequentialSharedStateBound.linearFactor g e+1)*(x.length+1)+3
-    have he : (done ++ [a]) ++ es=done ++ a :: es := by simp only [List.append_assoc,List.singleton_append]
-    obtain ⟨T,ht⟩ := ih (done ++ [a]) (by simpa only [he] using h) (by simpa only [he] using hs)
-    rw [he] at ht
-    have hok : SequentialStackPool.ArgsOK ns (done ++ a :: es) := (SequentialSharedPool.reachable_ok g x e _ h).1
-    have ha : a ∈ SequentialStackPool.exprPool ns := hok.mem a (by simp)
-    have hget : (SequentialStackPool.exprPool ns)[SequentialStackCodec.exprId ns a]?=some a := get_idxOf ha
-    let nextBranch := fun (id : Nat) => match (SequentialStackPool.exprPool ns)[id]? with
-      | some b => parse ns g es.length (done ++ [b])
-      | none => skipP 2
-    have hb : Complexity.Runs (LenOK B) (nextBranch (SequentialStackCodec.exprId ns a)) L target T := by
-      simpa only [nextBranch,hget] using ht
-    have hL : LenOK B L := by obtain ⟨t,ht,hx⟩ := hb; exact hx.q_start
-    let saved := [E.length,K.length,1,(done ++ a :: es).length] ++ done.map (SequentialStackCodec.exprId ns)
-    let C := (blocks (writeFrames ns K).control ++ blocks (es.map (SequentialStackCodec.exprId ns))) ++ [0]
-    have hsrc : L 2=C ++ unary (SequentialStackCodec.exprId ns a) ++ blocks saved := by
-      change withInput (encode ns (before (done ++ a :: es) m E p K)) [] 2 = _
-      rw [before_control,writeExprs_eq]
-      simp only [saved,C,List.map_append,List.map_cons,blocks_append,blocks_cons,
-        show blocks []=[] from rfl,List.nil_append,List.append_assoc]
-    have hid : SequentialStackCodec.exprId ns a ≤ (SequentialStackPool.exprPool ns).length :=
-      Nat.le_of_lt (List.idxOf_lt_length_of_mem ha)
-    obtain ⟨U,hu⟩ := SequentialTagDispatchMachine.dispatch_runs (src := (2 : Fin 8)) (tmp := 1) (by decide)
-      saved (SequentialStackPool.exprPool ns).length (SequentialStackCodec.exprId ns a) hid C nextBranch
-      L target hsrc (by rw [lastSym_append]; rfl) rfl hL hb
-    have hlen : saved.length=4+done.length := by
-      simp [saved]
-      omega
-    rw [hlen] at hu
-    refine ⟨U,?_⟩
-    simpa only [parse,List.length_cons] using hu
+  let ns := CBVtoCBN.compilerNodes g e
+  let L := withInput (encode ns (before (done ++ es) m E p K)) x
+  let target := withInput (encode ns next) x
+  let B := (SequentialSharedStateBound.linearFactor g e+1)*(x.length+1)+3
+  obtain ⟨T,ht⟩ := execute_runs g x e (done ++ es) m E p K next h hs
+  have hb : Complexity.Runs (LenOK B) (execute ns g (done ++ es)) L target T := ht
+  have hL : LenOK B L := by obtain ⟨t,ht,hx⟩ := hb; exact hx.q_start
+  have hok : SequentialStackPool.ArgsOK ns (done ++ es) := (SequentialSharedPool.reachable_ok g x e _ h).1
+  have hctrl : L 2=blocks (writeFrames ns K).control ++ blocks ([E.length,K.length,1] ++
+      [(done ++ es).length] ++ (done ++ es).map (SequentialStackCodec.exprId ns)) := by
+    change withInput (encode ns (before (done ++ es) m E p K)) [] 2 = _
+    rw [before_control,writeExprs_eq]
+    simp only [blocks_append,List.singleton_append,List.append_assoc]
+  exact SequentialSyntaxListDispatchMachine.parse_runs ns (execute ns g) done es [E.length,K.length,1]
+    (blocks (writeFrames ns K).control) L target hok.mem hctrl rfl hL hb
 
 /-- One fixed source program reads the runtime argument-list length and each
 actual syntax id before executing its complete argument-start instruction. -/
@@ -128,21 +100,22 @@ theorem transition_runs (g : MGrammar) (x : List Char) (e : MExp) (es : List MEx
   let L := withInput (encode ns (before es m E p K)) x
   let target := withInput (encode ns next) x
   let B := (SequentialSharedStateBound.linearFactor g e+1)*(x.length+1)+3
-  obtain ⟨T,ht⟩ := parse_runs g x e [] es m E p K next h hs
-  have hb : Complexity.Runs (LenOK B) (parse ns g es.length []) L target T := ht
+  obtain ⟨T,ht⟩ := execute_runs g x e es m E p K next h hs
+  have hb : Complexity.Runs (LenOK B) (execute ns g es) L target T := ht
   have hL : LenOK B L := by obtain ⟨t,ht,hx⟩ := hb; exact hx.q_start
   have hfit : sizeOf es ≤ SequentialStackCode.programBudget g e :=
     (SequentialSharedStateBound.reachable_fits g x e _ h).1
   have hlen : es.length ≤ SequentialStackCode.programBudget g e :=
     Nat.le_trans (SequentialSharedStateBound.exprs_length_size es) hfit
-  let C := (blocks (writeFrames ns K).control ++ blocks (es.map (SequentialStackCodec.exprId ns))) ++ [0]
-  have hsrc : L 2=C ++ unary es.length ++ blocks [E.length,K.length,1] := by
+  have hok : SequentialStackPool.ArgsOK ns es := (SequentialSharedPool.reachable_ok g x e _ h).1
+  have hctrl : L 2=blocks (writeFrames ns K).control ++ blocks ([E.length,K.length,1] ++
+      [es.length] ++ es.map (SequentialStackCodec.exprId ns)) := by
     change withInput (encode ns (before es m E p K)) [] 2 = _
-    rw [before_control,writeExprs_eq,blocks_cons]
-    simp only [C,List.append_assoc]
-  exact SequentialTagDispatchMachine.dispatch_runs (src := (2 : Fin 8)) (tmp := 1) (by decide)
-    [E.length,K.length,1] (SequentialStackCode.programBudget g e) es.length hlen C (fun n => parse ns g n [])
-    L target hsrc (by rw [lastSym_append]; rfl) rfl hL hb
+    rw [before_control,writeExprs_eq]
+    simp only [blocks_append,List.singleton_append,List.append_assoc]
+  exact SequentialSyntaxListDispatchMachine.program_runs ns (SequentialStackCode.programBudget g e)
+    (execute ns g) es [E.length,K.length,1] (blocks (writeFrames ns K).control) L target hlen hok.mem
+    hctrl rfl hL hb
 
 theorem finite_alphabet (ns : List CBVtoCBN.CompileNode) (g : MGrammar) (bound : Nat) :
     ∃ E, 0x110001 ≤ E ∧ (program ns g bound).compile.SymOK (E+4) := by

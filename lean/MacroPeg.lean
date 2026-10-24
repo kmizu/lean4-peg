@@ -362,3 +362,13 @@ import MacroPeg.CBV.SequentialExpressionDispatchMachine
 import MacroPeg.CBV.SequentialArgumentsDispatchMachine
 import MacroPeg.CBV.SequentialQueryDispatchMachine
 import MacroPeg.CBV.SequentialActiveDispatchMachine
+import MacroPeg.CBV.SequentialSyntaxListDispatchMachine
+import MacroPeg.CBV.SequentialArgHeadDispatchMachine
+import MacroPeg.CBV.SequentialRefReturnDispatchMachine
+import MacroPeg.CBV.SequentialReturnFields
+import MacroPeg.CBV.SequentialExpressionReturnDispatchMachine
+import MacroPeg.CBV.SequentialArgumentsReturnDispatchMachine
+import MacroPeg.CBV.SequentialStepDispatchMachine
+import MacroPeg.CBV.SequentialFieldPresenceMachine
+import MacroPeg.CBV.SequentialRunningMachine
+import MacroPeg.CBV.SequentialPackedLoopMachine

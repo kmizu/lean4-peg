@@ -3255,3 +3255,72 @@ Ordinary-input initialization, the complete execution loop and halt handling,
 and the recognition connection also remain open. The established complete
 recognizer bound is still `O(n log n)`. General same-input Par/Seq equality or
 separation remains unresolved.
+
+
+### Complete step selection and the packed evaluation loop
+
+`SequentialSyntaxListDispatchMachine` generalizes inline syntax-list selection
+to any fixed number of headers and any source-fixed continuation family. Its
+program reads the actual list length and ids, restoring the complete source
+before each subsequent selection or continuation. The previous argument-start
+dispatch now uses this same decoder. `SequentialArgHeadDispatchMachine` uses
+it below five headers to select the actual argument tail retained by a frame.
+
+`SequentialRefReturnDispatchMachine` reads saved syntax ids for sequence,
+choice, and repetition returns. Reachable pool certificates identify the exact
+saved expression, including the body of a repetition. `SequentialReturnFields`
+proves common control layouts for every expression and argument return form
+and every continuation tag.
+
+`SequentialExpressionReturnDispatchMachine` selects the actual continuation
+for expression results: sequence, choice, negation, repetition, argument-head,
+and scope returns all use their complete instruction programs. The source
+step equation rules out mismatched return/frame forms. No decoded frame is a
+program argument.
+
+`SequentialArgumentsReturnDispatchMachine` first reads the actual result tag.
+Undefined and failed argument values have four fields before the frame tag;
+successful values have five, including their actual capture count. The
+selected frame dispatcher therefore skips the correct header length, retains
+all returned words, and chooses argument-cons, named-call, or scope return.
+Call return additionally reads the actual rule id behind the frame tag; its
+fixed bound follows from the existing reachable-frame invariant.
+
+`SequentialStepDispatchMachine` combines these return selectors with the
+active-task selector. Its one source-fixed eight-tape program constructs the
+complete encoded successor for **every defined step from every initialized
+reachable state**. Task kind, result form, frame kind, rule id, and syntax
+payloads are all selected from the actual tapes.
+
+`SequentialFieldPresenceMachine` checks a unary field below a fixed header
+prefix and restores the entire control stream before either continuation.
+`SequentialRunningMachine` uses this to inspect the stack count and, when the
+stack is empty, the task kind. It appends one running flag on tape 7 while
+preserving all original fields and other scratch.
+
+`SequentialPackedLoopMachine` checks that flag, removes it before each complete
+step, and computes the next flag afterward. Consequently each instruction
+still receives precisely its established empty-scratch interface. `loop_runs`
+and `run_trace` simulate actual finite source executions without putting their
+length in the program or on a tape. `evaluate_runs` uses the existing actual
+initial-to-final execution, so the same fixed loop always terminates with the
+exact original `SequentialSpanRecompute.run` result from the preloaded packed
+initial state. `evaluate_tape` transfers the entire execution to actual tape
+programs. The temporary flag is cleared at the end; the original input and the
+complete encoded final configuration are retained.
+
+All selection, instruction, and loop intermediates satisfy capacity
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+The fixed finite alphabets cover the original Unicode encoding; 43 new public
+theorem dependencies are audited against the standard axioms. Code may depend
+strongly on the fixed grammar; no efficient-time or compact-code bound is
+claimed here. Ordinary-input initialization and mapping the final encoded
+result to a standard accepting/rejecting halt still need to be connected.
+Thus this closes linear-workspace **evaluation from a preloaded packed initial
+state**, not yet the complete ordinary-input linear-space recognizer. The
+previous complete recognizer bound remains `O(n log n)`, and general same-input
+Par/Seq equality or separation is unresolved.
