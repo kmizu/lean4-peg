@@ -203,3 +203,10 @@ import MacroPeg.CBV.SequentialStackCodecBound
 import MacroPeg.CBV.SequentialStackBinary
 import MacroPeg.CBV.PrefixSuccessor
 import MacroPeg.CBV.PrefixTupleSearch
+import MacroPeg.CBV.PrefixNumerals
+import MacroPeg.CBV.ParTableau.Compiler
+import MacroPeg.CBV.ParTableau.FirstOrder
+import MacroPeg.CBV.ParTableau.Layout
+import MacroPeg.CBV.ParTableau.Transitions
+import MacroPeg.CBV.ParTableau.Routing
+import MacroPeg.CBV.ParTableau.Read
