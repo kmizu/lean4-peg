@@ -1,7 +1,9 @@
 import MacroPeg.CBV.PartialCodewordEntry
+import MacroPeg.CBV.ArgumentGuard
 
 /-! A fixed inverse compiler for mutually recursive users whose actual
-argument is (A;&A)*;a* and whose body begins A;param0. This is a restricted
+argument is (A;&A)*;a*, optionally preceded by a caller-dependent
+recursive lookahead, and whose body begins A;param0. This is a restricted
 family, not a normal form for all first-order Par grammars. -/
 namespace Shallot.MacroPeg.CBV.PartialCodewordRecursive
 open PartialCodewordCapture (argument runA look restArgument)
@@ -9,10 +11,17 @@ open PartialCodewordPreflight (checkBody)
 open RuntimeShiftFilter (scanner)
 open ClockFreezing (Table)
 
+/-- Template calls `call i []` capture B; `call i [test]` capture
+`&render(test);B`. The test has the caller environment and original position.
+These template arguments are not passed to the source callee as values. -/
 def render (tails : List MExp) (par : Bool) : MExp → MExp
   | .call i [] => match tails[i]? with
     | none => MExp.failAlways
     | some _ => if par then .call i [argument] else PartialCodewordEntry.entry (2*i+1) (2*i+2)
+  | .call i [test] => match tails[i]? with
+    | none => MExp.failAlways
+    | some _ => if par then .call i [.seq (look (render tails par test)) argument]
+      else .seq (look (render tails par test)) (PartialCodewordEntry.entry (2*i+1) (2*i+2))
   | .seq a b => .seq (render tails par a) (render tails par b)
   | .alt a b => .alt (render tails par a) (render tails par b)
   | .star a => .star (render tails par a)
@@ -33,6 +42,13 @@ def pair (b : MExp) : List MRule :=
 def target (tails : List MExp) : MGrammar :=
   ⟨⟨1,checkBody⟩::tails.flatMap (fun b => pair (render tails false b))⟩
 
+theorem entry_firstOrder (binary unary : Nat) :
+    (PartialCodewordEntry.entry binary unary).FirstOrder := by
+  simp [PartialCodewordEntry.entry,PartialCodewordEntry.branches,
+    PartialCodewordCapture.longTest,argument,runA,restArgument,look,scanner,
+    NestedScannerArguments.scan,NestedScannerArguments.choice,MExp.failAlways,
+    MExp.FirstOrder,MExp.FirstOrderArgs]
+
 theorem render_firstOrder (tails : List MExp) (par : Bool) :
     ∀ e, (render tails par e).FirstOrder
   | .call i [] => by
@@ -46,10 +62,20 @@ theorem render_firstOrder (tails : List MExp) (par : Bool) :
           NestedScannerArguments.scan,NestedScannerArguments.choice,MExp.failAlways,
           MExp.FirstOrder,MExp.FirstOrderArgs]
       · exact ⟨ParserPrefixFusion.pure_firstOrder argument PartialCodewordTotality.argument_pure,True.intro⟩
+  | .call i [test] => by
+    have ht := render_firstOrder tails par test
+    simp only [render]
+    cases hr : tails[i]? with
+    | none => trivial
+    | some b =>
+      cases par
+      · exact ⟨ht,entry_firstOrder _ _⟩
+      · exact ⟨⟨ht,ParserPrefixFusion.pure_firstOrder argument PartialCodewordTotality.argument_pure⟩,
+          True.intro⟩
   | .seq a b | .alt a b => ⟨render_firstOrder tails par a,render_firstOrder tails par b⟩
   | .star a | .notP a => render_firstOrder tails par a
   | .param _ | .eps | .any | .chr _ | .range _ _ | .lit _ => trivial
-  | .call _ (_::_) | .dbg _ | .lam _ _ | .callParam _ _ | .invoke _ _ _ => trivial
+  | .call _ (_::_::_) | .dbg _ | .lam _ _ | .callParam _ _ | .invoke _ _ _ => trivial
 
 theorem source_firstOrder (tails : List MExp) : (source tails).FirstOrder := by
   intro r hr
@@ -129,6 +155,46 @@ theorem evaluator_of_calls (tails : List MExp) (x : List Char) (m : Nat) (hc : C
     cases hr : tails[i]? with
     | none => rfl
     | some b => exact hc i b hr E p hp
+  | .call i [test], E, p, hp => by
+    have ht := evaluator_of_calls tails x m hc test E p hp
+    simp only [render]
+    cases hr : tails[i]? with
+    | none => rfl
+    | some b =>
+      change evV (source tails) x .callByValuePar (tblV (source tails) x .callByValuePar m) E
+        (.call i [.seq (look (render tails true test)) argument]) p=
+        evV (target tails) x .callByValueSeq (tblV (target tails) x .callByValueSeq m) E
+          (.seq (look (render tails false test)) (PartialCodewordEntry.entry (2*i+1) (2*i+2))) p
+      rw [ArgumentGuard.call_eq _ _ _ _ _ _ _ _ _ (source_rule tails i b hr)]
+      have hlook : evV (source tails) x .callByValuePar (tblV (source tails) x .callByValuePar m) E
+          (look (render tails true test)) p=
+          evV (target tails) x .callByValueSeq (tblV (target tails) x .callByValueSeq m) E
+            (look (render tails false test)) p := by
+        change evV _ _ _ _ _ (.andP (render tails true test)) p=
+          evV _ _ _ _ _ (.andP (render tails false test)) p
+        rw [CallLookahead.evV_peek,CallLookahead.evV_peek,ht]
+      cases hv : evV (source tails) x .callByValuePar (tblV (source tails) x .callByValuePar m) E
+          (render tails true test) p with
+      | none =>
+        have hl : evV (source tails) x .callByValuePar (tblV (source tails) x .callByValuePar m) E
+            (look (render tails true test)) p=none := by
+          change evV _ _ _ _ _ (.andP (render tails true test)) p=none
+          rw [CallLookahead.evV_peek,hv]; rfl
+        rw [evV_seq_none hl,evV_seq_none (hlook.symm.trans hl)]
+      | some r => cases r with
+        | none =>
+          have hl : evV (source tails) x .callByValuePar (tblV (source tails) x .callByValuePar m) E
+              (look (render tails true test)) p=some none := by
+            change evV _ _ _ _ _ (.andP (render tails true test)) p=some none
+            rw [CallLookahead.evV_peek,hv]; rfl
+          rw [evV_seq_fail hl,evV_seq_fail (hlook.symm.trans hl)]
+        | some q =>
+          have hl : evV (source tails) x .callByValuePar (tblV (source tails) x .callByValuePar m) E
+              (look (render tails true test)) p=some (some p) := by
+            change evV _ _ _ _ _ (.andP (render tails true test)) p=some (some p)
+            rw [CallLookahead.evV_peek,hv]; rfl
+          rw [evV_seq_ok hl,evV_seq_ok (hlook.symm.trans hl)]
+          exact hc i b hr E p hp
   | .seq a b, E, p, hp => by
     have hh := evaluator_of_calls tails x m hc a E p hp
     simp only [render]
@@ -157,7 +223,7 @@ theorem evaluator_of_calls (tails : List MExp) (x : List Char) (m : Nat) (hc : C
     rw [evaluator_of_calls tails x m hc a E p hp]
   | .param _, _, _, _ | .eps, _, _, _ | .any, _, _, _ | .chr _, _, _, _
   | .range _ _, _, _, _ | .lit _, _, _, _ => rfl
-  | .call _ (_::_), _, _, _ | .dbg _, _, _, _ | .lam _ _, _, _, _
+  | .call _ (_::_::_), _, _, _ | .dbg _, _, _, _ | .lam _ _, _, _, _
   | .callParam _ _, _, _, _ | .invoke _ _ _, _, _, _ => rfl
 
 /-- The real ordinary clocks align exactly. Each source call is matched

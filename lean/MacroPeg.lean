@@ -547,3 +547,5 @@ import MacroPeg.CBV.PartialCodewordTotality
 import MacroPeg.CBV.PartialCodewordEntry
 import MacroPeg.CBV.PartialCodewordRecursive
 import MacroPeg.CBV.PartialCodewordRecursiveExamples
+import MacroPeg.CBV.ArgumentGuard
+import MacroPeg.CBV.PartialCodewordGuardExamples

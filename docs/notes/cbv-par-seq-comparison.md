@@ -7145,11 +7145,51 @@ side, as proved with a quantified clock rather than finite sampling.
 Scope remains explicit: this compiler handles the stated concrete A/B
 and the mandatory initial scanner/replay, with one source capture per
 call. Template nullary calls expand to exactly this B; they do not
-represent arbitrary original nullary or parameterized calls. Unsupported
-higher-order and nonempty-argument template calls render as failure.
+represent arbitrary original nullary calls. Singleton template arguments
+now denote recursive caller tests as described below. Higher-order and
+two-or-more-argument template calls render as failure.
 Arbitrary source arguments, bodies without that initial replay, mixtures
 with the other capture compilers, and multiple independent captures are
 not covered. The general Par/Seq equality-or-separation question remains
 open. The next generalization must preserve the actual argument choice
 and its failure/undefinedness, rather than assuming a periodic value
 shape or a total checker for arbitrary parsers.
+
+
+### Caller-dependent recursive tests inside the actual argument
+
+The partial-codeword compiler now permits a singleton template argument:
+`call i [test]` expands on the source side to the actual unary call
+`call i [&render(test);B]`. The target evaluates `&render(test)` at the
+same caller origin and environment, before its marker-free preflight and
+capture branches. The test may consume internally, use parent parameters,
+call any user (including the same user), nest guarded calls, and use
+choice, predicates, or stars. It returns to the original position before
+capturing B. The actual source argument may now fail or remain undefined;
+its totality is no longer assumed by the complete recursive compiler.
+
+`ArgumentGuard.call_eq` proves the extraction of that actual argument
+test for any unary Par callee, any argument parser, table, environment,
+and position. Its complete partial equality requires neither a pure nor
+a total test or argument. The generated compiler uses B as that argument;
+only B's earlier totality theorem, not the guarded argument's totality,
+is used inside the capture entry transfer. The expression induction
+translates the test at the current ordinary clock; the user-row induction
+still handles the callee continuation at the preceding clock. Thus
+`evaluator_eq` and all observation/language theorems now cover tests with
+real user recursion without a new row or parser correspondence oracle.
+
+Kernel checks show parent a#a selecting child a, child a selecting
+grandchild aa, both returns with the original held values, and a nested
+argument test that invokes user 0 before actually invoking user 0.
+Changing only a caller's held a to b changes acceptance to finite failure
+on the same input and callee in both grammars. An empty-star test stays
+undefined for all inputs, valid positions, environments, and arbitrary
+user tables, even when the following B/preflight would reject immediately.
+The ordering of the test before entry checking is therefore essential.
+
+This removes the total-argument and caller-independent-test restrictions
+for the stated capture family. The captured value is still selected by B
+when the test succeeds. Consuming arbitrary argument prefixes/suffixes,
+independent multiple captures, bodies without the mandatory initial
+scanner/replay, and a general Par-to-Seq compiler remain unresolved.
