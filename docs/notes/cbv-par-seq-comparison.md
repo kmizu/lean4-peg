@@ -2077,3 +2077,42 @@ member, rather than only evaluator correctness on an assumed syntax domain.
 A complexity-hardness reduction and an input-preserving simulation of all Par
 grammars remain separate obligations. Neither general equality nor separation
 of Par and Seq follows from this common member.
+
+### Numbered Boolean circuits and a quadratic data encoding
+
+`Complexity.BoolCircuit` defines a separate, grammar-independent circuit
+model. Gates occur in evaluation order and are Boolean constants, negations
+of numbered wires, or conjunctions of two numbered wires. `WellFormed`
+requires each operand to refer to an earlier gate. Evaluation appends each
+computed bit to the value vector; an unavailable wire defaults to false,
+so the evaluator is also defined for ill-formed gate lists.
+
+`CircuitProgram` connects this model to the fixed forward-program Seq
+recognizer. A left fold emits gate `i` as a record with label `i`, prepending
+it to the previously emitted records. Thus circuit evaluation order becomes
+the reverse declaration order needed by forward queries. Each gate becomes
+exactly one record (`program_length`); sharing is preserved as references,
+without expanding a circuit into a formula tree.
+
+`compileFrom_correct` proves that appending a circuit bit and prepending its
+forward definition preserve the whole wire-value function. `program_correct`
+and `table_correct` connect every output index to the previously verified
+forward-query and table semantics. `recognizes` and `normalized_recognizes`
+then identify full-input acceptance by the fixed validated Seq grammars with
+the circuit's output bit. These semantic theorems cover every finite numbered
+gate list; well-formedness is needed for the size statement, not hidden as a
+semantic assumption.
+
+For `N` gates in a well-formed circuit and a root index at most `N`,
+`input_length_bound` proves that the complete character input has length at
+most `N * (3*N + 8) + N + 1`. The proof bounds emitted labels and all operands,
+then the actual unary identifier, header, gate payload, and program lengths.
+The grammar remains fixed independently of `N` and the circuit contents.
+
+`input_language_iff` states the explicit mapping into the exact
+`ProgramLanguage` predicate. This is a semantic reduction with a verified
+quadratic output-size bound. No logspace or polynomial-time Turing-machine
+implementation of the encoder, or P-hardness theorem, is asserted. The mapping
+also changes an input circuit into its character serialization: it does not
+provide the unchanged-input simulation of every P language needed to close
+the Par/Seq comparison. General equality and separation remain open.

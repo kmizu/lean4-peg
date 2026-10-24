@@ -5697,3 +5697,55 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ForwardBooleanSyntax.normalized_entry_decides
+
+/-- info: 'Complexity.BoolCircuit.values_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Complexity.BoolCircuit.values_length
+
+/-- info: 'Complexity.BoolCircuit.wellFormed_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.BoolCircuit.wellFormed_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.CircuitProgram.lookup_snoc' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CircuitProgram.lookup_snoc
+
+/-- info: 'Shallot.MacroPeg.CBV.CircuitProgram.compileFrom_correct' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CircuitProgram.compileFrom_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.CircuitProgram.program_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CircuitProgram.program_length
+
+/-- info: 'Shallot.MacroPeg.CBV.CircuitProgram.program_correct' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CircuitProgram.program_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.CircuitProgram.table_correct' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CircuitProgram.table_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.CircuitProgram.recognizes' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CircuitProgram.recognizes
+
+/-- info: 'Shallot.MacroPeg.CBV.CircuitProgram.input_language_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CircuitProgram.input_language_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.CircuitProgram.normalized_recognizes' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CircuitProgram.normalized_recognizes
+
+/-- info: 'Shallot.MacroPeg.CBV.CircuitProgram.program_bounded' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CircuitProgram.program_bounded
+
+/-- info: 'Shallot.MacroPeg.CBV.CircuitProgram.encode_length_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CircuitProgram.encode_length_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.CircuitProgram.input_length_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CircuitProgram.input_length_bound
