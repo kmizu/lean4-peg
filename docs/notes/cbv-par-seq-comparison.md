@@ -2863,3 +2863,64 @@ whole-machine instruction selection, ordinary-input initialization, and the
 complete recognition connection remain open. The established complete
 recognizer bound remains `O(n log n)`, and general same-input Par/Seq equality
 or separation is unresolved.
+
+### Assemble captured words into the argument environment
+
+`MacroPeg.CBV.SequentialWordRotateMachine` provides `stashAfter`: skip a
+source-fixed number of unary control fields, use the next field to save whole
+words, and restore the complete control stream. Unlike the earlier environment
+stash, it also permits an existing word prefix in scratch. Its loop reads the
+actual word count, so neither the word count nor the words become program
+parameters. `incrementAfter` changes a unary count below fixed header fields
+without decoding it.
+
+The fixed `program` rotates a pending captured word `w` into its position as
+the first argument of `w :: W`. On the reversed word tape the source is
+
+```
+continuation words ++ wordCode w ++ wordTape E ++ wordTape W
+```
+
+and the target is
+
+```
+continuation words ++ wordTape E ++ wordTape W ++ wordCode w.
+```
+
+It first saves the evaluated arguments using their runtime count behind four
+headers, then saves the current environment using its own runtime count. The
+pending word is moved to separate scratch, both prefixes are restored, and
+finally the word is restored above them. `rotate_runs` proves this exact
+permutation, scratch cleanup, and every intermediate capacity using only the
+initial word-tape bound. `discard_runs` instead deletes the pending word below
+the current environment when the argument result is undefined or failure.
+Empty words remain separate terminated records in both operations.
+
+`MacroPeg.CBV.SequentialArgConsPackedMachine` composes successful rotation with
+an increment of the argument count, a decrement of the stack count, and removal
+of the capture-frame tag. The cursor, clock, original input, and current
+environment survive. `before_words` and `after_words` match the actual retained
+word ordering, and `transition_runs`/`transition_tape` construct the complete
+encoded successor of the original Seq transition. The program has no grammar,
+syntax, captured word, word count, or environment parameter.
+
+`MacroPeg.CBV.SequentialArgConsReturnPackedMachine` adds the undefined and
+failure returns and the runtime argument-result dispatcher. The same single
+fixed program handles all three outcomes: success prepends the actual word
+to the argument environment; undefined and failure delete it while preserving
+the corresponding argument-result tag. All three decrement the stack count
+and remove the pending capture frame. `transition_runs` and `transition_tape`
+prove complete successor-state equality from every initialized reachable
+capture-cons return, with every intermediate eight-tape state bounded by
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+The fixed pushed-symbol alphabet requirements are also verified. These are
+complete return subroutines for preloaded reachable states. Call/query/scope
+transitions, remaining instructions, captured-word matching, whole-machine
+instruction selection, ordinary-input initialization, and the complete
+recognition connection remain open. The existing complete recognizer still
+has its established `O(n log n)` bound. General same-input Par/Seq language-class
+equality or separation remains unresolved.

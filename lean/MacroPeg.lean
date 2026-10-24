@@ -332,3 +332,6 @@ import MacroPeg.CBV.SequentialCaptureCopyMachine
 import MacroPeg.CBV.SequentialCaptureSpliceMachine
 import MacroPeg.CBV.SequentialArgCapturePackedMachine
 import MacroPeg.CBV.SequentialArgHeadPackedMachine
+import MacroPeg.CBV.SequentialWordRotateMachine
+import MacroPeg.CBV.SequentialArgConsPackedMachine
+import MacroPeg.CBV.SequentialArgConsReturnPackedMachine
