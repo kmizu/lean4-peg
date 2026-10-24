@@ -7925,3 +7925,65 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ScannerFrontier.stopping_order_switches
+
+-- Recursive fixed compiler for independent, non-nested scanner pairs.
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.par_rule_count' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.par_rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.seq_rule_count' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.seq_rule_count
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.par_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.par_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.seq_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.seq_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.par_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.par_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.seq_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.seq_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.chunks_split' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.chunks_split
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.evaluator_of_shift' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.stable_result_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.stable_result_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.decide_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.language_translation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.language_translation

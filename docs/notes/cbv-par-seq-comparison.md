@@ -3552,3 +3552,52 @@ source bodies without a suitable replay remain further obligations. General
 same-original-language equality or separation is still unresolved. Root
 imports and 15 new public axiom guards include the runtime selector, actual
 query entry, and the explicit conditional call bridge.
+
+### Closing the recursive compiler for non-nested scanner pairs
+
+`ScannerPairFusion` closes the recursive body-table relation left explicit
+by `ScannerFrontier.call_of_body_relation` for a concrete replay-shaped
+source family. A finite specification assigns two static character sets and
+one template tail to each source rule. The character sets have no inclusion
+or ordering requirement. Template `call i []` becomes the source call
+`F_i(scan A_i, scan B_i)`; its two arguments are independently evaluated at
+the caller's original position. Other nonempty template call argument lists
+and higher-order template forms are explicitly mapped to failure.
+
+Each source body uses the actual frontier guard to replay the longer of its
+two captured parameters, then evaluates its rendered template tail. The Seq
+compiler emits two arity-two rules per source rule. Their bodies use the two
+cumulative capture views, while every translated call uses the fixed runtime
+dispatch to select the appropriate rule and capture the adjacent chunks.
+`par_rule_count`, `seq_rule_count`, `par_rule`, and `seq_rule` verify the actual
+finite rule layout: N source rules become exactly 2N target rules, at slots
+`2*i` and `2*i+1`. The generator depends only on the finite specification and
+root template, not on the input or evaluated capture values.
+
+`Shifted` records both possible original parameter orders and the actual
+frontier guard result. `tables_shifted` proves that relation for every
+recursive approximation, using the installed source replay and target views.
+`evaluator_eq` consequently preserves every three-valued expression result
+at every clock, including recursive calls inside sequencing, prioritized
+choice, repetition, and predicates. The body-table relation is now a theorem
+of the generated grammars, rather than a remaining compiler hypothesis.
+
+The different rule counts give different decision-procedure stabilization
+bounds. `stable_result_eq` proves that equal evaluators at every clock have
+equal stable results without assuming equal bounds. `decide_eq`,
+`observations_iff`, and `language_translation` then connect the actual fixed
+first-order grammars on every original character string, including empty
+input, finite failure, and absence of a finite observation. Runtime captures
+have no length bound and retain both original values for later uses in the
+tail, including around further recursive calls.
+
+This is a complete reverse compiler for the **specified scanner-pair source
+family**. It does not normalize an arbitrary Par grammar into that family.
+In particular, each rule has one fixed scanner pair, all generated source
+bodies begin with a dynamically selected longest-prefix replay, and calls
+with arbitrary parser arguments or forwarded captures are outside the
+interface. General argument residualization and arbitrary source body entry
+remain unresolved, as does the main same-original-language Par/Seq comparison.
+The root import and 15 new public axiom guards cover actual rule generation,
+recursive correspondence, differing stabilization bounds, and language
+preservation.
