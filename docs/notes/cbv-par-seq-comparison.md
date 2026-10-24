@@ -7988,3 +7988,66 @@ fragment family. General state-changing captures would require carrying the
 reached scanner state into the residual prefix; arbitrary PEG consuming
 prefixes, general shifted arguments, independent multiple captures, and the
 general Par/Seq equality/separation question remain unresolved.
+
+### State-changing captures with checked finite transition actions
+
+`CaptureActionSafety` records a word's action from **every** state of a
+partial finite-state scanner, including undefined transitions. Concatenation
+composes these finite actions. `Typed` is a syntax derivation for literal
+words, param0, sequence, same-action choice, negative queries, and star with
+identity-action operands. A successful actual execution derives both the
+complete captured word and its exact action. Parent accuracy is needed only
+for an actual retained param0 and is re-established after each real capture.
+No preselected capture, successful execution, termination, or input suffix
+shape is supplied to the final translation.
+
+`infer` computes a candidate action from the actual argument syntax and the
+caller's finite action type. `equal` compares actions by enumerating the
+fixed finite states; `infer_sound` and `fits_sound` turn the Boolean check
+into `Typed`. Unequal-action alternatives and non-identity-action star
+operands are rejected by this checker. Negative queries retain the ordinary
+parser and may contain checked recursive user calls. Positive consuming user
+calls inside arguments remain unsupported.
+
+`StatefulActionFusion` assigns one finite capture-action type to each source
+user rule. All source user bodies start with the same compiled scanner
+`scan(M,q)`. The generated target keeps the argument, complete captured value,
+callee address, and tail, but resumes that prefix in `captureAction(q)`.
+`Supported` checks actual calls against the callee's action type using `fits`;
+`Valid` also requires the action to be defined at q. These are finite
+syntactic/type checks, not semantic equivalence or captured-value oracles.
+This removes the return-to-q condition for this typed family. It is a
+complementary theorem to `StatefulLoopFusion`: the latter permits varying
+full actions as long as they fix q, whereas this new theorem permits a
+state change but fixes a full action for each user.
+
+The actual argument action and prefix are derived by structural induction.
+User-clock induction relates the source row at its original position to the
+target row at the capture endpoint. `run_after_prefix` establishes exactly
+the resumption state selected by the computed type. The held value enters
+the callee unchanged; its full action supplies the parent information for
+new nested arguments. Installed helper stability and physical/frozen
+cofinality yield all finite observation correspondence and unchanged-string
+language preservation for two ordinary first-order grammars. Neither
+physical grammar receives a frozen table or an input-dependent annotation.
+
+Kernel examples capture a → acca → accaa, whose actions require target scan
+starts 1 → 0 → 1. A child uses the parent value, fresh c*, a final a, and a
+negative recursive user probe. Extra b/ab prefix transitions run before body
+uses and both parents' full values return. The concrete grammar has an
+all-input language theorem. Short whole-value copies are rejected. On ab!a,
+the corrected Seq grammar accepts while simply resetting the scanner to 0
+rejects. The words a and ab reach the same state from 0 but differ from 1,
+showing why retaining only one endpoint state cannot type later parameter
+composition. Same-action a/ac choice stays committed after a later short
+copy; explicitly selecting ac would accept. Empty captures and argument
+failure/undefinedness ordering, including clock zero, are preserved.
+
+The source user action types are fixed for the finite grammar. Calls whose
+actual argument can select different actions need further finite dispatch or
+normalization; this is not an unrestricted capture classifier. This family
+also requires capture consumption within the source scanner frontier,
+a shared finite-state consuming prefix, and unary source users. Integrating
+these consuming-prefix families with the mixed fragment compiler, arbitrary
+PEG prefixes, unrestricted shifted arguments, independent multiple captures,
+and general Par/Seq equality or separation remain unresolved.

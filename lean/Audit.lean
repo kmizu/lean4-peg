@@ -18947,3 +18947,135 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.StatefulLoopExamples.empty_and_argument_order
+
+-- Typed transition actions for state-changing captures.
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureActionSafety.action_append' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureActionSafety.action_append
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureActionSafety.compose_identity' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureActionSafety.compose_identity
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureActionSafety.equal_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureActionSafety.equal_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureActionSafety.infer_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureActionSafety.infer_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureActionSafety.fits_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureActionSafety.fits_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureActionSafety.suffix_shape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureActionSafety.suffix_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureActionSafety.capture_action' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureActionSafety.capture_action
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionFusion.supported_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionFusion.supported_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionFusion.helper_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionFusion.helper_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionFusion.user_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionFusion.user_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionFusion.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionFusion.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionFusion.helpers_stable' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionFusion.helpers_stable
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionFusion.scanner_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionFusion.scanner_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionFusion.evaluator_of_shift' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionFusion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionExamples.valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionExamples.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionExamples.generated_resumption_states' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionExamples.generated_resumption_states
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionExamples.mutual_returns' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionExamples.mutual_returns
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionExamples.actual_child_capture' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionExamples.actual_child_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionExamples.short_copies_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionExamples.short_copies_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionExamples.mutual_language' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionExamples.mutual_language
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionExamples.state_change_requires_resumption' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionExamples.state_change_requires_resumption
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionExamples.whole_action_needed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionExamples.whole_action_needed
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionExamples.committed_same_action_choice' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionExamples.committed_same_action_choice
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionExamples.inference_limits' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionExamples.inference_limits
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulActionExamples.empty_and_argument_order' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulActionExamples.empty_and_argument_order
