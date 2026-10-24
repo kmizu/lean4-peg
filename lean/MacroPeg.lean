@@ -206,6 +206,9 @@ import MacroPeg.CBV.SequentialWordWrite
 import MacroPeg.CBV.SequentialWordCycle
 import MacroPeg.CBV.SequentialFront
 import MacroPeg.CBV.SequentialFrontRead
+import MacroPeg.CBV.SequentialFieldFetch
+import MacroPeg.CBV.SequentialFrontScan
+import MacroPeg.CBV.SequentialFrontScanMachine
 import MacroPeg.CBV.PrefixSuccessor
 import MacroPeg.CBV.PrefixTupleSearch
 import MacroPeg.CBV.PrefixNumerals

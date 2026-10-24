@@ -3549,3 +3549,51 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialFrontRead.reachable_read_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFieldFetch.fetch_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFieldFetch.fetch_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFieldFetch.repeat_fetch_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFieldFetch.repeat_fetch_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFieldFetch.counted_fetch_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFieldFetch.counted_fetch_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrontScan.parser_correct' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrontScan.parser_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrontScan.splitFront_correct' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrontScan.splitFront_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrontScanMachine.eval_trace' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrontScanMachine.eval_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrontScanMachine.compile_trace' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrontScanMachine.compile_trace
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrontScanMachine.parser_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrontScanMachine.parser_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrontScanMachine.reachable_parser_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrontScanMachine.reachable_parser_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrontScanMachine.reachable_parser_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrontScanMachine.reachable_parser_tape
