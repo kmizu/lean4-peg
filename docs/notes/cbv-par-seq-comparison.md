@@ -1969,3 +1969,64 @@ claimed to preserve its original language. Nor does the result reconcile
 overlapping Par argument values or the original Par body position. It is a
 verified whole-grammar component for suffix-informed evaluation arrangements;
 the general Par-to-Seq translation and language-class comparison remain open.
+
+### A fixed Seq evaluator for forward Boolean reference programs
+
+`ForwardQueryScan` and `ForwardBooleanProgram` implement a concrete use of
+runtime captures, suffix inspection, and retained recursive callers. One
+fixed first-order Seq grammar evaluates every finite forward Boolean program
+from its serialization. There is one recursive rule of arity one; the grammar
+does not depend on the program, its labels, or its computed values.
+
+An identifier is `a^n b`, with no bound on `n`. A record is `[identifier]gate;`.
+The gate forms are `1`, `0`, `!identifier`, and `&identifier,identifier`.
+The whole input begins with the queried identifier and then the record list.
+Lookup selects the first matching later definition. Operands of that gate
+are evaluated in the strict record tail after its definition; missing
+references are false. These rules give total semantics for every finite
+record list, including repeated labels, while admitting arbitrarily large
+forward acyclic circuits with shared references.
+
+The grammar has the following shape, using Seq calls throughout:
+
+```
+Id      <- 'a'* 'b'
+Q(name) <- &((!('[' name ']') .)* '[' name ']'
+            ('1' / '!' !Q(Id) / '&' Q(Id) ',' Q(Id)))
+Start   <- Q(Id) .*
+```
+
+`Q(Id)` captures the actual reference word before its body runs. Its body
+searches later declarations while that captured value remains bound. On
+success the lookahead restores the position immediately after the reference,
+so a conjunction can then read its comma and second operand. Nested queries
+retain their callers rather than exporting values out of lookahead. The
+strict declaration-tail induction proves that every query on a serialized
+program terminates with success or finite failure. The empty program and
+missing definitions are included.
+
+`seek_header_here` and `seek_header_skip` verify the actual capture-dependent
+search. `query_observation` connects all finite programs to recursive Boolean
+evaluation, including short-circuit conjunction and negation. `table_correct`
+identifies this semantics with a right-to-left table that computes and retains
+shared gate results. `program_observation` and `table_recognizes` connect the
+fixed root to whole-input acceptance on every serialized program. For example,
+`b[b]&ab,ab;[ab]!aab;[aab]0;` evaluates the same referenced negation twice and
+accepts. `accepted_identifier_unbounded` proves that accepted inputs actually
+use captured identifiers beyond every fixed length bound.
+
+The preceding Seq lookahead relocation applies to this entire recursive
+machine. `normalized_observations` preserves all character-input observations,
+including malformed inputs, between the body-test grammar and its translated
+call-probe grammar. `normalized_program_recognizes` connects the translated
+grammar to the same Boolean table on the original serialized program strings.
+
+The program-correctness theorem is stated on serialized program inputs; it
+does not assert a syntax-validation characterization for arbitrary malformed
+strings. No polynomial-time hardness reduction or simulation of every P
+language on its unchanged original input has been established here. In
+particular, generating a circuit encoding from some other input would not
+supply the language-preserving Par-to-Seq translation required by the main
+question. This construction verifies a uniform, unrestricted-size runtime
+lookup mechanism and its recursive use; general Par/Seq equality or
+language-class separation remains open.

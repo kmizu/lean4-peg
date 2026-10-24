@@ -300,3 +300,5 @@ import MacroPeg.CBV.CommonOriginCaptures
 import MacroPeg.CBV.CaptureViews
 import MacroPeg.CBV.PartitionResidualControl
 import MacroPeg.CBV.SequentialCallLookahead
+import MacroPeg.CBV.ForwardQueryScan
+import MacroPeg.CBV.ForwardBooleanProgram

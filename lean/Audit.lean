@@ -5569,3 +5569,67 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialCallLookahead.plain_peek_changes_result' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialCallLookahead.plain_peek_changes_result
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardQueryScan.strip_identifier' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardQueryScan.strip_identifier
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardQueryScan.seek_before' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardQueryScan.seek_before
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardQueryScan.seek_header_skip' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardQueryScan.seek_header_skip
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanProgram.grammar_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanProgram.grammar_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanProgram.readId_obs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanProgram.readId_obs
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanProgram.query_of_search' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanProgram.query_of_search
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanProgram.gate_observation' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanProgram.gate_observation
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanProgram.search_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanProgram.search_spec
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanProgram.query_observation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanProgram.query_observation
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanProgram.table_correct' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanProgram.table_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanProgram.program_observation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanProgram.program_observation
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanProgram.table_recognizes' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanProgram.table_recognizes
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanProgram.normalized_program_recognizes' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanProgram.normalized_program_recognizes
+
+/-- info: 'Shallot.MacroPeg.CBV.ForwardBooleanProgram.accepted_identifier_unbounded' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ForwardBooleanProgram.accepted_identifier_unbounded
