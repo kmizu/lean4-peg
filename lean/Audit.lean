@@ -5895,3 +5895,51 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_valid_captures' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_valid_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.atom_decode' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.atom_decode
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.step_commutes' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.step_commutes
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.runs_decode' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.runs_decode
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.runs_lift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.runs_lift
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.original_result_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.original_result_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.accepts_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.accepts_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.drive_result_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.drive_result_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWordSpace.reachable_word_characters' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWordSpace.reachable_word_characters
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWordSpace.reachable_word_records' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWordSpace.reachable_word_records
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWordSpace.stack_linear_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWordSpace.stack_linear_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWordSpace.decodeWords_encodeWords' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWordSpace.decodeWords_encodeWords
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWordSpace.capture_stream_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWordSpace.capture_stream_linear

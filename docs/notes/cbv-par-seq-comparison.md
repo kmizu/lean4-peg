@@ -2349,3 +2349,55 @@ input cursors remain integer metadata, and bounded-space implementations of
 the required operations have not been supplied. These results do not prove
 a general reverse grammar translation or a language-class separation. The
 complete TM upper bound established so far remains `O(n log n)`.
+
+### An actual shared Seq machine with word-valued captures
+
+`MacroPeg.CBV.SequentialSharedWords` now implements capture environments as
+`List (List Char)`, rather than lists of origin-coordinate pairs. Parameter
+matching uses `stripPrefix?` on the stored word. A successful argument creates
+its word with `pre x p q`; pending argument continuations retain that word,
+and scope frames retain the caller's word environment. Tasks and frames have
+no capture-origin fields. The machine still uses one current environment,
+one shared query clock, and the unchanged original input.
+
+`atom_decode` equates parameter matching with matching a valid numeric span.
+`step_commutes` proves that decoding a span configuration commutes with an
+actual transition; its only validity hypothesis concerns the current capture
+environment. No semantic operation is supplied as an oracle to the word
+machine. `runs_decode` moves real initialized span executions to the word
+machine. Conversely, `lift_step` and `runs_lift` show that every execution
+reachable in the word machine has a matching initialized span execution.
+Thus agreement covers intermediate states in both directions, not just a
+selected successful run.
+
+`original_result_iff` equates terminal results with the original
+`SequentialStack` on the same `List Char` input. `accepts_iff` connects this
+to first-order Seq observations. The executable driver's `drive_result_iff`
+checks the result together with restoration of the outer empty word
+environment and the initial clock, including failed and undefined
+finite-clock results.
+
+`MacroPeg.CBV.SequentialSharedWordSpace` transfers the resource bounds to
+**every reachable word-machine state**. `decode_retained_words` counts every
+copy in the current environment, suspended scopes, pending argument heads,
+and current query or argument-result values. Consequently
+`reachable_word_characters` bounds their total character count by input
+length. `reachable_word_records` also counts empty words, and
+`stack_linear_bound` counts all continuation records.
+
+The capture stream codec stores each word as tagged characters followed by
+one terminator, including a terminator for an empty word.
+`decodeWords_encodeWords` proves a left inverse and
+`encodeWords_injective` proves that no word sequence is lost.
+`encodeWords_length` is exactly the total character count plus the number of
+words. `capture_stream_linear` therefore gives a linear symbol bound for the
+whole retained-word sequence, with an alphabet independent of input length.
+This stream codec preserves the word sequence; it is not yet a codec for
+environment grouping or the complete machine state.
+
+Capture-origin endpoints are eliminated from the runtime word machine.
+Saved input cursors still remain, and a complete state codec and bounded-space
+implementations of the operations are missing. In particular, this does not
+yet establish a linear-space TM simulation, a general Par-to-Seq grammar
+translation, or a language-class separation. The proved complete TM bound
+remains `O(n log n)`.

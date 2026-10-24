@@ -310,3 +310,5 @@ import MacroPeg.CBV.SequentialSharedSpace
 import MacroPeg.CBV.SequentialSharedClock
 import MacroPeg.CBV.SequentialSharedRank
 import MacroPeg.CBV.SequentialSharedPayload
+import MacroPeg.CBV.SequentialSharedWords
+import MacroPeg.CBV.SequentialSharedWordSpace
