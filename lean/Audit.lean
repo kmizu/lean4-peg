@@ -10291,3 +10291,119 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.OverlapNecessity.rotation_choice_false_positive
+
+-- Generated finite-state capture filters: local laws and physical executions.
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.run_append' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.run_append
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.run_bound' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.run_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.choice_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.choice_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.core_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.core_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.grammar_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.grammar_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.original_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.original_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.decode' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.decode
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.filter_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.filter_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.filter_body_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.filter_body_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.original_call_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.original_call_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.product_call_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.product_call_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.helper_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.helper_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.original_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.original_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.filter_step' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.filter_step
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.choice_commit' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.choice_commit
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.left_cycle_undefined' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.left_cycle_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.nullable_star_undefined' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.nullable_star_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.alternating_valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.alternating_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.scanner_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.scanner_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.scanner_filter_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.scanner_filter_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.prioritized_filter_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.prioritized_filter_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.choice_eval_unique' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.choice_eval_unique
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.literal_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.literal_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.star_filter_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.star_filter_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.predicate_filter_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.predicate_filter_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.guarded_rotation_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.guarded_rotation_execution

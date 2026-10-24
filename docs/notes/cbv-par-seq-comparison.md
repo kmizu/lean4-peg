@@ -4819,3 +4819,69 @@ No new unrestricted translation is claimed. A general phase filter and the
 arbitrary consuming-body/multiple-capture cases remain open, as does the full
 Par/Seq language-class comparison. Twelve new public axiom guards cover the
 normal form, operational consequences, and counterexample.
+
+
+### A generated recursive capture/state product
+
+`CBV/RegularCaptureProduct.lean` constructs actual arity-zero PEG rules for
+filtering consumed words by a finite-state machine. The source is a finite
+graph with literal, sequence, ordered-choice, repetition, and negation nodes;
+node references may be recursive. Each graph node remains an original query
+rule. Additional rules are indexed by node, starting state, and ending state.
+The finite state count and graph fix the generated grammar independently of
+the input. Literal transitions use the actual literal word; sequence enumerates
+intermediate states; repetition recurses through product rules; predicates
+preserve the starting state.
+
+This is executable construction and local semantic groundwork, not yet a
+proved general product translation. `filter_rule` verifies the concrete
+address/decode scheme and rule lookup. `grammar_firstOrder`, `helper_valid`,
+and `original_installed` verify syntax and the independent original component.
+Every product rule first queries its original node through an actual grammar
+call. `filter_body_eval` and `filter_step` establish this guard at evaluator
+and physical-round level: unknown queries remain unknown, failed queries
+remain failed, and only a successful original query enters the state product.
+
+Ordered choice branches on the original left query, not its state-filtered
+version. `choice_commit` proves that a successful original left parse remains
+chosen when its filtered continuation fails. `choice_eval_unique` proves the
+intermediate-state enumeration law for success, finite failure, and undefined
+continuations. `filtered` records the intended full result specification;
+`literal_correct` verifies it for literal nodes when the original query has
+its actual literal result. Closing the recursive table correspondence for
+all graph nodes remains required.
+
+Some nontermination properties are already unbounded theorems of the actual
+construction. `left_cycle_undefined` covers a left-recursive graph on every
+input, valid position, and physical round, for every in-range state pair.
+`nullable_star_undefined` does the same for repetition of an empty successful
+operand. A final-state mismatch cannot change these undefined computations
+into finite rejection.
+
+Kernel-checked physical tables additionally exercise:
+
+- A recursive a/b/c scanner that captures both `ababa` and `abac` before `#`.
+  The generated alternating-a/b filter retains `ababa` at the original
+  endpoint and finitely rejects `abac`; the source graph is not block-safe.
+- `ab / a`: requesting the state reached by `a` rejects the winning `ab`
+  parse. Naively choosing between independently filtered alternatives would
+  incorrectly select the shorter `a`.
+- Greedy `a*`: a final-state request cannot stop repetition early. The whole
+  greedy capture reaches the sink state rather than the state after one `a`.
+- Negation: success retains the input position and starting automaton state;
+  requesting a different ending state finitely fails.
+- Prototype shift-`ab` caller wiring with an original `abac / aba` head.
+  Generated state guards reject the prior `abacab` false positive without
+  falling back to a different head capture. On `ababa`, the actual `aba`
+  capture selects residual `ba`, and both source and target accept.
+
+These executions validate concrete generated grammars at finite physical
+rounds. They do not prove correctness for all graph/input/state combinations.
+Outstanding work includes that global soundness/completeness correspondence,
+normalization of general ordinary PEG syntax (including any/range atoms) to
+the graph, and the unbounded caller-level observation theorem. The current
+product has no parameter-bearing source nodes, and the shift caller wiring
+is a prototype for `ab` with an EOF tail. General capture-dependent argument
+filtering, arbitrary body decomposition, multiple independent captures, and
+the full Par/Seq language-class goal remain unresolved. Twenty-six new public
+axiom guards cover the established local and physical results.
