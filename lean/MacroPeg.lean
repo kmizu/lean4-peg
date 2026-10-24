@@ -350,3 +350,9 @@ import MacroPeg.CBV.SequentialWordInputMachine
 import MacroPeg.CBV.SequentialCountGuardMachine
 import MacroPeg.CBV.SequentialParamMatchMachine
 import MacroPeg.CBV.SequentialParamPackedMachine
+import MacroPeg.CBV.SequentialTokenMatchMachine
+import MacroPeg.CBV.SequentialTokenInputMachine
+import MacroPeg.CBV.SequentialReadTests
+import MacroPeg.CBV.SequentialReadPackedMachine
+import MacroPeg.CBV.SequentialStaticPackedMachine
+import MacroPeg.CBV.SequentialEightTapeMachine

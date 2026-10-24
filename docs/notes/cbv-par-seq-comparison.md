@@ -3135,3 +3135,59 @@ remaining instructions, whole-machine instruction selection, ordinary-input
 initialization, and the complete recognition connection remain open. The
 established complete recognizer bound remains `O(n log n)`. General same-input
 Par/Seq equality or separation is unresolved.
+
+
+### Fixed-source reads, remaining static entries, and the common eight-tape layout
+
+`SequentialTokenMatchMachine` executes a source-fixed list of symbol guards
+against the actual input suffix. A successful guard moves one actual character
+into the restoration prefix and directly decrements the compressed cursor.
+Exhausted input or a false guard removes the current cursor. Both success and
+failure restore the complete input. `SequentialTokenInputMachine` prepares the
+suffix by reading the actual cursor, composes these tests, and returns the
+computed result bit and cursor with the original input and scratch restored.
+No literal or decoded input position is provided on a runtime buffer.
+
+`SequentialReadTests` identifies the test programs with the original semantics
+of `eps`, `any`, `chr`, `range`, `lit`, `dbg`, and directly evaluated `lam`.
+`literal_run` proves exact `stripPrefix?` agreement for every literal and input;
+`atom_result` includes empty input, empty literals, and every valid input
+position. Unicode characters and inclusive codepoint ranges are unrestricted.
+The source-fixed literal is represented by code guards, so its length does not
+add a tape-space term. `SequentialReadPackedMachine.transition_runs` and
+`transition_tape` construct the complete encoded successor for all these
+primitives from initialized reachable states.
+
+`SequentialStaticPackedMachine` supplies complete entries for sequence,
+named call, empty argument list, unresolved `callParam`, and `invoke`. The
+source grammar determines whether a named rule exists and whether its arity
+matches the source argument list. A valid call installs the actual argument
+task and its cursor-free call frame. Missing rules and arity mismatches return
+failure and remove the current cursor. Empty arguments return the actual empty
+capture environment and unchanged position. Higher-order forms keep exactly
+the original word machine's failure (`callParam`) or undefined (`invoke`)
+behavior. Sequence installs its left expression and cursor-free continuation.
+Every branch preserves the original input, captured words, shared clock, and
+unaffected continuation and environment fields.
+
+`SequentialEightTapeMachine` injectively renames the existing six-register
+programs onto the common eight-register layout. `lift_runs` preserves the
+complete endpoints and all intermediate capacity bounds while retaining the
+original-input tape and extra scratch tape. `entry_runs` covers the earlier
+choice, negation, repetition, and nonempty-argument entries; `return_runs`
+covers sequence, choice, and negation returns. These results use the same
+capacity as the new primitive and static programs:
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+The pushed-symbol alphabets and 27 new public theorem dependencies are
+audited. The remaining compressed instruction gap is repetition return:
+its successful branch must inspect the actual difference between current and
+saved cursors to decide progress, then either reenter or return undefined.
+Whole-machine instruction selection, ordinary-input initialization, and the
+complete recognition connection also remain open. The established complete
+recognizer still has its `O(n log n)` bound. Neither a reverse same-input
+grammar translation nor a genuine Par/Seq language-class separator has been
+proved.
