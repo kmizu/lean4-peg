@@ -7097,3 +7097,144 @@ branches integrated, including failures/undefinedness before the
 continuation. The general inverse compiler and Par/Seq class
 comparison remain unresolved. All 18 new public theorem guards use
 only standard axioms or none.
+
+
+### Partial-codeword captures through mutual recursion
+
+`PartialCodewordTotality`, `PartialCodewordEntry`, and
+`PartialCodewordRecursive` discharge the outstanding ordinary-clock
+simulation for this concrete capture family. The source uses
+`A=a*;#`, actual unary argument `B=(A;&A)*;a*`, and user bodies
+`A;param0;tail`. A nullary call in a template means a fresh actual
+source call with argument B. The fixed target has checker rule 0 and
+a binary/unary rule pair for each source user. It does not depend on
+the input or captured word/count.
+
+The new totality proofs establish finite results for the actual source
+argument, initial replay, and marker-free checker at every valid input
+position. Each checker repetition consumes a #, so its totality does
+not impose any termination condition on the following continuation.
+Together with the earlier two success directions, this yields exact
+failure correspondence before entering the continuation. Both actual
+Seq capture branches are then reduced to the source whole-capture view.
+A successful long-branch call whose continuation fails or remains
+undefined cannot fall back to the short branch.
+
+`PartialCodewordEntry.transfer` transports the complete partial result
+between different source and target grammars and clocks, assuming only
+the continuation evaluator relation and the actual generated rules.
+The clock-zero theorem supplies the shared undefined seed.
+`PartialCodewordRecursive.calls_agree` and `evaluator_eq` discharge the
+continuation relation by simultaneous ordinary-clock and expression
+induction. For every input, valid position, retained environment, and
+ordinary clock, the rendered expressions have identical complete
+partial results. Sequences, prioritized alternatives, predicates, and
+stars preserve this relation, including undefined empty-consuming
+repetitions. No semantic row oracle remains in `evaluator_eq`.
+
+`stable_eq`, `observations_iff`, and `language_translation` connect those
+iterates to all finite observations and one fixed first-order Seq
+grammar on exactly the original strings. This includes finite failures
+and absence of finite observations, rather than accepted strings alone.
+The recursive examples run actual user 0 → 1 → 0 with captures a#a, aa,
+and ##; both parents reuse their whole capture after returning. The same
+grammars handle empty captures and reject short parent/child copies.
+An empty-star continuation has no result at any ordinary clock on either
+side, as proved with a quantified clock rather than finite sampling.
+
+Scope remains explicit: this compiler handles the stated concrete A/B
+and the mandatory initial scanner/replay, with one source capture per
+call. Template nullary calls expand to exactly this B; they do not
+represent arbitrary original nullary calls. Singleton template arguments
+now denote recursive caller tests as described below. Higher-order and
+three-or-more-argument template calls render as failure.
+Arbitrary source arguments, bodies without that initial replay, mixtures
+with the other capture compilers, and multiple independent captures are
+not covered. The general Par/Seq equality-or-separation question remains
+open. The next generalization must preserve the actual argument choice
+and its failure/undefinedness, rather than assuming a periodic value
+shape or a total checker for arbitrary parsers.
+
+
+### Caller-dependent recursive tests inside the actual argument
+
+The partial-codeword compiler now permits a singleton template argument:
+`call i [test]` expands on the source side to the actual unary call
+`call i [&render(test);B]`. The target evaluates `&render(test)` at the
+same caller origin and environment, before its marker-free preflight and
+capture branches. The test may consume internally, use parent parameters,
+call any user (including the same user), nest guarded calls, and use
+choice, predicates, or stars. It returns to the original position before
+capturing B. The actual source argument may now fail or remain undefined;
+its totality is no longer assumed by the complete recursive compiler.
+
+`ArgumentGuard.call_eq` proves the extraction of that actual argument
+test for any unary Par callee, any argument parser, table, environment,
+and position. Its complete partial equality requires neither a pure nor
+a total test or argument. The generated compiler uses B as that argument;
+only B's earlier totality theorem, not the guarded argument's totality,
+is used inside the capture entry transfer. The expression induction
+translates the test at the current ordinary clock; the user-row induction
+still handles the callee continuation at the preceding clock. Thus
+`evaluator_eq` and all observation/language theorems now cover tests with
+real user recursion without a new row or parser correspondence oracle.
+
+Kernel checks show parent a#a selecting child a, child a selecting
+grandchild aa, both returns with the original held values, and a nested
+argument test that invokes user 0 before actually invoking user 0.
+Changing only a caller's held a to b changes acceptance to finite failure
+on the same input and callee in both grammars. An empty-star test stays
+undefined for all inputs, valid positions, environments, and arbitrary
+user tables, even when the following B/preflight would reject immediately.
+The ordering of the test before entry checking is therefore essential.
+
+This removes the total-argument and caller-independent-test restrictions
+for the stated capture family. The captured value is still selected by B
+when the test succeeds. Consuming arbitrary argument prefixes/suffixes,
+independent multiple captures, bodies without the mandatory initial
+scanner/replay, and a general Par-to-Seq compiler remain unresolved.
+
+
+### Recursive tests at the actual capture endpoint
+
+The same compiler now accepts `call i [before,after]` as template syntax
+for one actual source argument `&render(before);B;&render(after)`.
+The second test runs at B's selected endpoint with the unchanged caller
+environment. It is not a second source argument or an independent capture.
+On the target side, the tests are `&render(before)` followed by
+`&(B;render(after))`, before the existing checker/capture branches.
+Both previews return to the caller origin. A succeeding preview lets the
+same pure B choose the same held word; no test is moved to the wrong
+physical endpoint or supplied the callee's new capture environment.
+
+`ArgumentGuard.suffix_call_eq` proves a more general normalization:
+`call i [arg;&test]` and `&(arg;test);call i [arg]` have identical complete
+partial results for every unary Par callee, argument, test, table,
+environment, and position. Neither purity nor totality is required;
+the repeated argument evaluation uses exactly the same environment and
+table. `look_sequence_congr` then transports the preview and continuation
+relations across strategies/grammars. In the concrete compiler, B's
+context independence and endpoint validity let the expression induction
+translate the after test at its actual endpoint. The existing ordinary
+user-row induction closes the callee relation; the full evaluator,
+finite-observation, and unchanged-string language theorems all cover
+nested before/after tests and user recursion without extra semantic
+premises.
+
+New kernel executions pass captures a → aa → aaa#aaa through user
+0 → 1 → 0 and restore the two parents after returning. Parent-held a
+versus aa changes the actual endpoint test's result on the same input;
+putting that test at the original caller position fails instead.
+Another endpoint test parses a fresh user invocation before the real
+outer call. Short endpoint copies and returned copies are rejected.
+`undefined_after_capture` proves, for every input/valid position/caller
+environment and arbitrary pair of tables, that an empty-star post-test
+remains undefined even when the callee prefix would otherwise reject.
+The target cannot run its preflight before that post-test.
+
+The captured value after successful tests is still the value selected
+by concrete B. Consuming changes to that value, general first-use
+positions in the body, multiple independent captures, and the full
+Par/Seq class comparison remain unresolved. These preview equations
+supply exact handling of zero-consuming argument conditions; they do not
+justify erasing arbitrary consuming parts of an argument.
