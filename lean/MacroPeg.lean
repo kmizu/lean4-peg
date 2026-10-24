@@ -219,6 +219,11 @@ import MacroPeg.CBV.SequentialSeqReturnMachine
 import MacroPeg.CBV.SequentialNumericBlock
 import MacroPeg.CBV.SequentialAltReturn
 import MacroPeg.CBV.SequentialAltReturnMachine
+import MacroPeg.CBV.SequentialCallReturn
+import MacroPeg.CBV.SequentialCallReturnMachine
+import MacroPeg.CBV.SequentialArgConsReturn
+import MacroPeg.CBV.SequentialArgConsReturnMachine
+import MacroPeg.CBV.SequentialArgumentBind
 import MacroPeg.CBV.PrefixSuccessor
 import MacroPeg.CBV.PrefixTupleSearch
 import MacroPeg.CBV.PrefixNumerals
