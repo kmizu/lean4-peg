@@ -200,3 +200,4 @@ import MacroPeg.CBV.SequentialStackCode
 import MacroPeg.CBV.SequentialStackPool
 import MacroPeg.CBV.SequentialStackCodec
 import MacroPeg.CBV.SequentialStackCodecBound
+import MacroPeg.CBV.SequentialStackBinary
