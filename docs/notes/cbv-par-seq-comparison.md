@@ -2628,3 +2628,54 @@ only the cursor component. Complete control/word updates, actual dynamic
 matching, dispatch, initialization, and the final TM recognition connection
 remain open, as does the general Par/Seq language-class comparison. The
 proved complete recognizer's space bound remains `O(n log n)`.
+
+### A complete compressed-state `any` transition
+
+`MacroPeg.CBV.SequentialControlEditMachine` supplies the control-stream
+operations that the cursor-only atom update lacked. `moveBlock` saves one
+complete unary field, including its delimiter. `discardHead` and
+`discardBlock` erase a field without decoding its value. `saveMany` and
+`discardMany` repeat these operations a source-fixed number of times.
+`replace` saves the header fields, discards an old record, writes a fixed new
+record, and restores the headers. Field values are never supplied to the
+program as a decoded integer array.
+
+`replace_runs` proves the actual list execution, arbitrary suffix preservation,
+scratch cleanup, and `LenOK B` at every instruction state. Capacity sufficient
+for the initial state and the complete replacement also suffices for all
+partial copies and intermediate states. `replace_constOK` verifies that only
+the two fixed bit symbols are pushed, regardless of the field values.
+
+`MacroPeg.CBV.SequentialAnyPackedMachine` combines this operation with the
+direct cursor updates. The first two control fields, environment length and
+stack length, are saved unchanged. The old task fields `[0, anyExpressionId]`
+are discarded and replaced by `[3, 2]` for success or `[3, 1]` for failure.
+The source cursor's leading bit chooses the branch **before** the cursor is
+modified; neither a success flag nor a new position is supplied externally.
+The clock, captured words, and continuation stack remain unchanged by this
+atom, and both scratch tapes are empty again at completion.
+
+`after_layout` proves equality with the whole successor representation,
+including all four packed streams. `transition_runs` checks the actual Seq
+step and constructs the complete encoded successor on the list machine.
+`transition_tape` then supplies the compiled six-tape execution for every
+initialized reachable `any` state, covering both success and empty-input
+failure, with capacity
+
+```
+linearFactor g e * (input length + 1) + 2.
+```
+
+This bound covers all intermediate tape positions and writes, not just
+stored endpoints. `finite_alphabet` verifies the complete transition's fixed
+pushed-symbol alphabet. The initial and final space bounds come from the same
+reachable-state theorem; the proof also verifies reachability of the actual
+successor before using its bound.
+
+This is the first complete transition for the compressed machine, rather
+than only an update of its cursor component. It is still a subroutine entered
+at a preloaded reachable `any` state. Other instructions, dynamic matching,
+dispatch, standard-input initialization, and the complete TM recognition
+connection remain to be constructed. General Par/Seq equality or separation
+is unresolved, and the established complete recognizer bound remains
+`O(n log n)`.
