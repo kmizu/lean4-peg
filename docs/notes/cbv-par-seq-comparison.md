@@ -6662,3 +6662,47 @@ remain the next compiler integration, alongside arbitrary original
 argument shapes and independent multiple captures. General Par/Seq
 language-class equality or separation remains unresolved. All eight new
 public theorem guards use only standard axioms.
+
+### Parent-dependent control through mutually recursive user rows
+
+`AdjacentCodewordRecursive` removes the call-free continuation restriction
+from the adjacent-comparison translation. Its source and target are fixed
+finite grammars. User tails can mutually recurse, sequence, choose, negate,
+and repeat, while control tests inspect the current caller's retained
+parameters. Every finite observation and the recognized language are
+preserved on the unchanged original input, including failure and
+undefinedness. The source remains unary; the two target arguments are
+parts of that one original capture.
+
+The source call captures `B=A;D` and its user body begins with `A;param0`.
+The target first preflights the original argument and the adjacent filter
+under the caller's whole-value view, then calls a binary user with
+`[A,wholeView D]`. That user replays the first part and continues with
+both parts viewed as the source whole value. An ordinary unary `param0`
+row compares adjacent codewords; the parent is never copied into a new
+Seq argument or passed to the comparator.
+
+The recursive row relation uses the actual captured codeword trace and
+the source whole-replay prefix condition. It does not assume that D has a
+parent-independent canonical value. Both prefix seeds include failures
+from their actual leading replay, so a failed comparison remains finite
+failure at the seed rather than becoming undefined. Simultaneous evaluator
+and row induction establishes correspondence at every seeded stage.
+Ordinary-table cofinality then gives the stable partial result, all finite
+observations, and language equality.
+
+`AdjacentCodewordRecursiveExamples` exercises mutual recursion 0→1→0,
+whole capture counts 2→1→2, and actual Seq pairs `(u,u)→(u,eps)→(v,v)`
+for `u=a#`, `v=aa#`. Parent tests choose a shorter child; a different
+parent chooses the longer grandchild. On return, each original whole
+capture is reused. Short parent, child, and grandchild copies and unequal
+words are rejected. A nullable parent test leaves the original argument
+undefined under arbitrary recursive tables on both sides.
+
+The remaining restrictions are explicit: A is a shared independent Pure
+prefix-code header, D is shared call-free codeword control, and every
+source user begins with A followed by replay of its single whole capture.
+Recursive header/helper integration for parent-dependent control, arbitrary
+original argument shapes, independent multiple captures, and the general
+Par/Seq equality-or-separation question remain open. The 37 new public
+theorem guards use standard axioms or none.

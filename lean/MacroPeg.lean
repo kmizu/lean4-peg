@@ -523,3 +523,5 @@ import MacroPeg.CBV.CodewordControlEnvironmentExamples
 import MacroPeg.CBV.AdjacentCodewordControl
 import MacroPeg.CBV.AdjacentCodewordCalls
 import MacroPeg.CBV.AdjacentCodewordExamples
+import MacroPeg.CBV.AdjacentCodewordRecursive
+import MacroPeg.CBV.AdjacentCodewordRecursiveExamples
