@@ -4144,3 +4144,50 @@ origin-control callees. Unary source rules and replay/local body factorization
 also remain. Thus the general CBV-Par/CBV-Seq equality or separation is still
 unresolved. Root imports and 34 new public axiom guards cover the selector,
 mutual recursive compiler, shifted-position example, and unbounded unknown case.
+
+
+### Boundary of finite Word selection for fresh consuming repetition
+
+`CBV/WordSelectionBoundary.lean` identifies a limitation of the latest reverse
+compiler's capture-selection interface. It does **not** separate Par and Seq
+language classes.
+
+`candidates` enumerates the finite Word expressions a guarded argument can
+offer to its continuation: literal and parameter leaves, empty words for
+successful predicates, union for choice, and concatenated pairs for sequencing.
+`candidates_word` verifies their syntax. `selectAt_congr` proves that agreeing
+on just this list makes two continuations produce identical selector syntax,
+for every predicate translator, prefix, and continuation. Recursive predicates
+do not introduce additional captured characters.
+
+`success_candidate` ties the list to actual successful source evaluations,
+including sequenced argument positions and predicate results. For a fixed
+current environment, `capture_le_budget` bounds all these captures by a
+finite input-independent sum of candidate value lengths. This does not impose
+a universal bound across environments: existing parameters may be arbitrarily
+long, and the earlier duplication construction remains valid. The distinction
+is between selecting combinations of existing values and discovering an
+arbitrarily long **new** capture while that environment stays fixed.
+
+`no_finite_word_family` quantifies over **any** finite family of expressions,
+not just the particular enumeration, and any fixed environment. Choosing a
+repeated-character word longer than the sum of all their values gives a value
+outside the family. `scanner_replicate` and `scanner_exceeds_family` connect
+this length argument to an actual successful greedy source scanner for every
+repetition length, under either evaluation strategy. It is not an assumed
+or externally supplied capture. `no_shape_scanner_equivalent` applies the
+bound to real physical grammar tables: no guarded-selection-shaped argument,
+even with arbitrary first-order recursive predicate bodies, agrees with this
+consuming scanner on all original strings at any fixed table round.
+
+Crucially, `scanner_observations` proves the scanner itself has identical
+Par and Seq finite observations on **every** original string, including all
+remaining suffixes and finite failure observations. Thus the obstruction
+excludes this finite-candidate capture interface, rather than recognition
+by a different Seq grammar. Merely adding recursive predicates or more finite
+Word alternatives cannot remove the general consuming-repetition gap. A full
+reverse compiler needs a way to introduce fresh dynamic captures with the
+required body position, a richer runtime representation, or a construction
+that preserves observations without reconstructing the capture this way.
+The general equality/separation goal remains unresolved. Root imports and
+ten standard-axiom guards cover the new boundary results.

@@ -401,3 +401,4 @@ import MacroPeg.CBV.SymbolicWordSelection
 import MacroPeg.CBV.SelectedControlFusion
 import MacroPeg.CBV.GuardedWordSelection
 import MacroPeg.CBV.GuardedControlFusion
+import MacroPeg.CBV.WordSelectionBoundary

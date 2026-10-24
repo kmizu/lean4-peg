@@ -8987,3 +8987,57 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.GuardedControlFusion.undefined_predicate_stays_undefined
+
+-- Finite Word selection cannot manufacture arbitrary fresh repetition captures.
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.candidates_word' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.candidates_word
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.selectAt_congr' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.selectAt_congr
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.success_candidate' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.success_candidate
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.value_le_budget' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.value_le_budget
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.capture_le_budget' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.capture_le_budget
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.scanner_replicate' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.scanner_replicate
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.no_finite_word_family' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.no_finite_word_family
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.scanner_exceeds_family' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.scanner_exceeds_family
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.no_shape_scanner_equivalent' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.no_shape_scanner_equivalent
+
+/-- info: 'Shallot.MacroPeg.CBV.WordSelectionBoundary.scanner_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.WordSelectionBoundary.scanner_observations
