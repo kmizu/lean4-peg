@@ -6472,3 +6472,45 @@ per source call. Recursive header helpers, control depending on held values
 or user rows, arbitrary original argument shapes, and independent multiple
 source captures remain open for this compiler. General Par/Seq equality or
 separation is still unresolved.
+
+
+### Recursive helpers inside codeword control: actual entry and seed bridge
+
+`CodewordControlHelpers` removes the Pure-header/test requirement from the
+local two-part entry proof. `Control n` permits tests built from an installed
+independent nullary recursive component. Structural proofs show that rendered
+controls are lexical and generated comparisons use only those helpers and
+the retained word. `stable` freezes the actual unary comparison row one round
+after the helper component stabilizes, using `stable_unary`; it does not
+install a semantic oracle as a rule.
+
+`argument_success` derives the first actual header and both consecutive
+captured parts from the original successful argument. `argument_entry` then
+preserves the complete partial entry result with arbitrary first-order
+continuations. `physical_lexical_at` supplies lexical agreement from actual
+ordinary tables at every stage after the helper floor. In particular,
+`physical_argument_entry_seq` crosses the Par/Seq entry-position boundary
+between arbitrary installed grammars and arbitrary extra ordinary rounds,
+with parameter-using continuations that may themselves call the independent
+recursive helpers. The theorem takes an actual successful source argument,
+not a trace decomposition, a capture-shape assumption, or a supplied table
+relation. `prefix_identity` and `seed_entry` give the exact leading-prefix
+and finite-failure-seed equations needed for recursive user-row integration.
+
+`CodewordControlHelperExamples` uses A=`R;'#'`, with
+`R <- 'a' R 'b' / eps`. Its nested control tests A and A;A, so the header,
+control tests, and continuation all actually use the recursive component.
+Ordinary table executions keep `ab#ab#` as `[ab#,ab#]`, reuse the whole value
+under both conventions, extend the header to `aabb#`, reject short copies,
+and reject an unequal committed `ab#aabb#` capture. The general actual-entry
+corollary applies on every input and every stabilized pair of ordinary
+stages. Nonproductive recursion is tested separately in a control test and
+in the header on every input, ordinary stage, valid position, and retained
+environment; argument/verifier undefinedness is preserved.
+
+This section proves the recursive-helper entry and seed bridge. It does
+not yet compose it with `CodewordControlRecursive`'s full user-row induction,
+and it is not a new recursive-helper language translation theorem. That
+composition, held-value-dependent header/control evaluation, arbitrary
+original argument shapes, and independent multiple source captures remain
+open. General Par/Seq equality or separation remains unresolved.

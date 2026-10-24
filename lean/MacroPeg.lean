@@ -515,3 +515,5 @@ import MacroPeg.CBV.CodewordControlGrammar
 import MacroPeg.CBV.CodewordControlExamples
 import MacroPeg.CBV.CodewordControlRecursive
 import MacroPeg.CBV.CodewordControlRecursiveExamples
+import MacroPeg.CBV.CodewordControlHelpers
+import MacroPeg.CBV.CodewordControlHelperExamples
