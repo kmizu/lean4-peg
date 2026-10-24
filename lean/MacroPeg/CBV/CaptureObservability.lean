@@ -125,7 +125,8 @@ theorem dead_environment {x : List Char} {E : List (List Char)}
   | none => simp [parameterRest, he]
   | some w => simp [parameterRest, he, h w (List.mem_of_getElem? he) p hp]
 
-theorem absent_character {x : List Char} {c : Char} (hc : c ∉ x) : Unreplayable x [c] := by
+theorem absent_head {x rest : List Char} {c : Char} (hc : c ∉ x) :
+    Unreplayable x (c :: rest) := by
   intro p hp
   cases hx : sfx x p with
   | nil => rfl
@@ -134,6 +135,9 @@ theorem absent_character {x : List Char} {c : Char} (hc : c ∉ x) : Unreplayabl
     have hd : d ∈ x := by rw [hroot, hx]; simp
     have hne : c ≠ d := by intro he; subst c; exact hc hd
     simp [Shallot.stripPrefix?, Shallot.beqChar, Char.toNat_inj, hne]
+
+theorem absent_character {x : List Char} {c : Char} (hc : c ∉ x) : Unreplayable x [c] :=
+  absent_head hc
 
 theorem dead_singletons_agree {x u v : List Char} (hu : Unreplayable x u)
     (hv : Unreplayable x v) : EnvAgree x [u] [v] := by
