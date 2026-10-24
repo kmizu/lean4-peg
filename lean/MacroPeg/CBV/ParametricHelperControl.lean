@@ -66,7 +66,7 @@ theorem render_safe (nodes : List Node) (D : Machine) :
   | .helper i, hi => Nat.lt_of_lt_of_le hi (by simp [grammar])
   | .seq a b, ha | .alt a b, ha => ⟨render_safe nodes D a ha.1,render_safe nodes D b ha.2⟩
   | .notP a, ha => render_safe nodes D a ha
-  | .star a, ha => WordStarFilter.word_safe _ (DependentCaptureFilter.render a) ha
+  | .star a, ha => render_safe nodes D a ha
 
 theorem choice_safe (n : Nat) : ∀ es, (∀ e∈es, Safe n e) → Safe n (choice es)
   | [], _ => True.intro
@@ -75,8 +75,8 @@ theorem choice_safe (n : Nat) : ∀ es, (∀ e∈es, Safe n e) → Safe n (choic
 theorem filter_safe (nodes : List Node) (D : Machine) (hD : 0<D.width) (S : List (List Nat)) :
     ∀ a, DependentCaptureFilter.Valid nodes a → ∀ q r, q<D.width → r<D.width →
       Safe (grammar nodes D).rules.length (DependentCaptureFilter.filter nodes D S a q r)
-  | .star a, ha, q, r, _, _ => WordStarFilter.filter_safe _ D S (DependentCaptureFilter.render a)
-      (WordStarFilter.word_safe _ _ ha) q r
+  | .star a, ha, q, r, hq, hr => GeneralStarFilter.filter_safe _ D.width (DependentCaptureFilter.render a)
+      (render_safe nodes D a ha) _ (fun q r hq hr => filter_safe nodes D hD S a ha q r hq hr) q r hq hr
   | .lit _, _, _, _, _, _ | .param _, _, _, _, _, _ => by
     simp only [DependentCaptureFilter.filter]; split <;> trivial
   | .helper i, hi, q, r, hq, hr => key_bound nodes D hD i q r hi hq hr

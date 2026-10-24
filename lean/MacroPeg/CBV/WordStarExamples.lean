@@ -30,7 +30,7 @@ def bad : List Char := "ababab#abab!ababababab@abab?abab".toList
 
 theorem nodes_valid : RegularCaptureProduct.Valid nodes := by simp [RegularCaptureProduct.Valid,nodes]
 theorem users_valid : Valid nodes users := by
-  simp [Valid,users,nodes,DependentCaptureFilter.Valid,DependentCaptureFilter.render,WordArguments.Word]
+  simp [Valid,users,nodes,DependentCaptureFilter.Valid]
 
 /-- The parent retains abab; its child's argument greedily captures two
 copies, abababab, and the parent still uses abab after return. -/

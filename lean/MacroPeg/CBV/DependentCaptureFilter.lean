@@ -1,4 +1,4 @@
-import MacroPeg.CBV.WordStarFilter
+import MacroPeg.CBV.GeneralStarFilter
 
 /-! Inline state filters for parameter-dependent finite parser control.
 Fresh recursive helper captures can be mixed with retained parameters. -/
@@ -29,7 +29,7 @@ def Valid (nodes : List Node) : Expr → Prop
   | .helper i => i<nodes.length
   | .seq a b | .alt a b => Valid nodes a ∧ Valid nodes b
   | .notP a => Valid nodes a
-  | .star a => WordArguments.Word (render a)
+  | .star a => Valid nodes a
   | _ => True
 
 def Accurate (D : Machine) (S : List (List Nat)) (E : List (List Char)) : Prop :=
@@ -44,7 +44,7 @@ def filter (nodes : List Node) (D : Machine) (S : List (List Nat)) : Expr → Na
   | .seq a b, q, r => choice ((List.range D.width).map (fun t =>
       .seq (filter nodes D S a q t) (filter nodes D S b t r)))
   | .alt a b, q, r => RootObservation.branch (.andP (render a)) (filter nodes D S a q r) (filter nodes D S b q r)
-  | .star a, q, r => WordStarFilter.filter D S (render a) q r
+  | .star a, q, r => GeneralStarFilter.filter D.width (render a) (fun q r => filter nodes D S a q r) q r
   | .notP a, q, r => .seq (.notP (render a)) (if some q=some r then .eps else MExp.failAlways)
 
 theorem render_firstOrder : ∀ a, (render a).FirstOrder
@@ -56,7 +56,8 @@ theorem filter_firstOrder (nodes : List Node) (D : Machine) (S : List (List Nat)
     ∀ a q r, (filter nodes D S a q r).FirstOrder
   | .lit _, _, _ | .param _, _, _ => by simp only [filter]; split <;> trivial
   | .helper _, _, _ => True.intro
-  | .star a, q, r => WordStarFilter.filter_firstOrder D S (render a) (render_firstOrder a) q r
+  | .star a, q, r => GeneralStarFilter.filter_firstOrder D.width (render a) (render_firstOrder a)
+      _ (fun q r => filter_firstOrder nodes D S a q r) q r
   | .seq a b, q, r => by
     apply choice_firstOrder
     intro e he
@@ -119,8 +120,9 @@ theorem correct (nodes : List Node) (hNodes : RegularCaptureProduct.Valid nodes)
       evV (grammar nodes D) x .callByValueSeq (table nodes D x) E (filter nodes D S a q r) p =
         filtered D x q r p (evV (grammar nodes D) x .callByValueSeq (table nodes D x) E (render a) p)
   | .star a, ha, p, hp, q, r, hq, _ =>
-    WordStarFilter.correct D hD S E hS (grammar nodes D) x .callByValueSeq (by decide) (table nodes D x)
-      (tblV_sound (grammar_firstOrder nodes D) (by decide) _) (render a) ha p hp q r hq
+    GeneralStarFilter.correct D hD (grammar nodes D) x .callByValueSeq (by decide) (table nodes D x)
+      (tblV_sound (grammar_firstOrder nodes D) (by decide) _) E (render a) (render_firstOrder a) _
+      (fun q r p hq hr hp => correct nodes hNodes D hD x S E hS a ha p hp q r hq hr) q r p hq hp
   | .lit w, _, p, hp, q, r, _, _ => by
     apply atom_correct (state := some (run D q w))
     intro j hv
@@ -230,9 +232,9 @@ theorem render_eq (nodes : List Node) (hNodes : RegularCaptureProduct.Valid node
       evV (grammar nodes D) x .callByValuePar
         (tblV (grammar nodes D) x .callByValuePar (iterBoundV (grammar nodes D) x)) E (render a) p =
       evV (grammar nodes D) x .callByValueSeq (table nodes D x) E (render a) p
-  | .star a, ha, p, _ => by
+  | .star a, ha, p, hp => by
     simp only [render,evV_star]
-    exact evStar_congr p (fun z _ => SeededClock.word_eval_eq _ _ x .callByValuePar .callByValueSeq _ _ E (render a) ha z)
+    exact evStar_congr p (fun z hz => render_eq nodes hNodes D x E a ha z (by omega))
   | .lit _, _, _, _ | .param _, _, _, _ => rfl
   | .helper i, hi, p, hp => by
     simp only [render]

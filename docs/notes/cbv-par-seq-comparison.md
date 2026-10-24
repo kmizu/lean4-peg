@@ -5307,3 +5307,54 @@ Validation: full `lake build` succeeds (843 jobs), including all existing
 and 45 added public theorem axiom guards in `Audit`. They use only standard
 Lean axioms or no axioms. The four added modules and modified argument/filter
 modules have no proof placeholders or Lean warnings.
+
+## General retained-dependent argument repetition by first returns
+
+`FirstReturn` constructs inline state-constrained paths by eliminating the
+current state from a finite allowed-state list. At state q, a star consumes
+first-return loops to q which avoid the final target and eliminated states;
+a final exit reaches the target without visiting q again. Removing q reduces
+the allowed-state list, so this is a finite PEG expression generator, not a
+parameter-bearing recursive helper. `hit_correct` proves the first-target
+semantics on every real finite iteration path. `returns_correct` then
+consumes all complete target-return loops and applies the original stopping
+test. This prevents accepting a shorter source-repetition prefix.
+
+`GeneralStarFilter` lifts every successful original greedy repetition to
+such a state-annotated path using the correctness of its one-step filters.
+It preserves complete filtered partial results, with an initial lookahead of
+the original star retaining undefined or empty-iteration behavior. No
+uniform-word, fixed iteration-profile, or non-nullability premise is used.
+Different iterations may consume different strings and take different state
+transitions.
+
+The `DependentCaptureFilter.Expr.star` validity condition is now recursive
+argument validity, replacing the earlier Word-only condition. Its filter
+uses this general inline construction. The first-order, safe-helper-control,
+Par/Seq argument equality, and full filter specifications have been extended
+accordingly. Thus nested stars, ordered choices, predicates, retained values,
+and fresh independent recursive helper captures may be mixed inside new
+arguments to every existing recursive language compiler.
+
+The kernel example repeats an argument producing `a`, `ab`, `abb`, and
+`acac`, with the final token itself using retained-dependent nested star.
+The odd-b state filter accepts the complete capture; the even-b filter
+rejects. A nested empty iteration remains undefined. A second actual source
+example retains `abab` and captures a new child value by a fresh six-character
+helper iteration followed by a retained four-character iteration, then uses
+the original parent value after return. The source physical tables verify
+success and a shortened-child failure; the generated Seq observations follow
+from the unbounded recursive compiler theorem.
+
+Repetition inside the supported argument syntax no longer has a Word-only
+restriction. Parameter-bearing user calls inside arguments, multiple
+independent arguments, the required shifted-replay body-entry shape, and
+normalization of arbitrary original source grammars remain unresolved.
+General Par/Seq language-class equality or separation remains unproved.
+
+Validation: full `lake build` succeeds (846 jobs), including `Audit` and
+30 additional public theorem guards. Fifteen existing guard expectations
+were updated to include the actual standard `Classical.choice` dependency
+from the new well-founded state-elimination definitions. All dependencies
+remain standard Lean axioms or none; the new/modified modules have no proof
+placeholders or Lean warnings.

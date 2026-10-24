@@ -438,3 +438,6 @@ import MacroPeg.CBV.CaptureOrbit
 import MacroPeg.CBV.InlineRepeat
 import MacroPeg.CBV.WordStarFilter
 import MacroPeg.CBV.WordStarExamples
+import MacroPeg.CBV.FirstReturn
+import MacroPeg.CBV.GeneralStarFilter
+import MacroPeg.CBV.GeneralStarExamples
