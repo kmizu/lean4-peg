@@ -1,0 +1,67 @@
+import MacroPeg.CBV.StatefulScannerStability
+
+/-! Executable frozen tables whose scanner rows use the proved finite-state
+run. This avoids re-expanding physical scanner rounds in kernel examples. -/
+namespace Shallot.MacroPeg.CBV.RelocatedScannerFastTable
+open StatefulScanner
+open ClockFreezing (Table)
+
+def table {n : Nat} (M : Machine n) (base : Nat) (g : MGrammar) (x : List Char) (s : Strategy) : Nat → Table
+  | 0 => fun i E => if hi : base≤i ∧ i<base+n then
+      (List.range (x.length+1)).map (fun p => some (some (run M ⟨i-base,by omega⟩ (sfx x p)).2.length)) else []
+  | k+1 => fun i E => if hi : base≤i ∧ i<base+n then
+      (List.range (x.length+1)).map (fun p => some (some (run M ⟨i-base,by omega⟩ (sfx x p)).2.length))
+    else ClockFreezing.step g x s (table M base g x s k) i E
+
+private theorem helper_row {n : Nat} (M : Machine n) (base : Nat) (g : MGrammar) (x : List Char) (s : Strategy)
+    (layout : ∀ q : Fin n, ruleAtM g.rules (base+q.val)=some ⟨0,branches base (terminal true) (M.arcs q)⟩)
+    (q : Fin n) (E : List (List Char)) :
+    tblV g x s (x.length+1) (base+q.val) E=
+      (List.range (x.length+1)).map (fun p => some (some (run M q (sfx x p)).2.length)) := by
+  have hl : ∀ q : Fin n, ruleAtM g.rules (base+q.val)=some ⟨0,branches base (terminal true) (M.arcs q)⟩ := by
+    exact layout
+  have hignore := StatefulScannerStability.rows_ignore_environment M (fun _ => true) g base hl x s (x.length+1) q E
+  rw [hignore]
+  have hlen := StatefulScannerStability.row_length M (fun _ => true) g base hl x s (x.length+1) q [] (by omega)
+  apply List.ext_getElem
+  · simpa using hlen
+  · intro p hp hp'
+    have hb : p≤x.length := by rw [hlen] at hp; omega
+    have hh := query_eval M (fun _ => true) g base hl x s p hb (x.length+1) (by omega) q
+    have he : (tblV g x s (x.length+1) (base+q.val) [])[p]=some (some (run M q (sfx x p)).2.length) := by
+      simpa only [valAt,List.getD_eq_getElem?_getD,List.getElem?_eq_getElem hp,Option.getD_some,if_true] using hh
+    simpa only [List.getElem_map,List.getElem_range] using he
+
+/-- The executable table is exactly the frozen table of this actual
+installed scanner block, independently of all other helper and user rows. -/
+theorem eq_frozen {n : Nat} (M : Machine n) (base : Nat) (g : MGrammar) (x : List Char) (s : Strategy)
+    (layout : ∀ q : Fin n, ruleAtM g.rules (base+q.val)=some ⟨0,branches base (terminal true) (M.arcs q)⟩)
+    (k : Nat) : table M base g x s k=
+      ClockFreezing.frozen g x s (fun i => decide (base≤i ∧ i<base+n)) (x.length+1) k := by
+  induction k with
+  | zero =>
+    funext i E
+    by_cases hi : base≤i ∧ i<base+n
+    · simp only [table,dif_pos hi,ClockFreezing.frozen,show decide (base≤i ∧ i<base+n)=true from by simp [hi],ite_true]
+      exact by
+        have he := (helper_row M base g x s layout ⟨i-base,by omega⟩ E).symm
+        simpa only [Nat.add_sub_of_le hi.1] using he
+    · simp [table,ClockFreezing.frozen,hi]
+  | succ k ih =>
+    funext i E
+    by_cases hi : base≤i ∧ i<base+n
+    · simp only [table,dif_pos hi,ClockFreezing.frozen,show decide (base≤i ∧ i<base+n)=true from by simp [hi],ite_true]
+      exact by
+        have he := (helper_row M base g x s layout ⟨i-base,by omega⟩ E).symm
+        simpa only [Nat.add_sub_of_le hi.1] using he
+    · simp [table,ClockFreezing.frozen,hi,ih]
+
+theorem physical {n : Nat} (M : Machine n) (base : Nat) (g : MGrammar) (x : List Char) (s : Strategy)
+    (layout : ∀ q : Fin n, ruleAtM g.rules (base+q.val)=some ⟨0,branches base (terminal true) (M.arcs q)⟩)
+    (k : Nat) (E : List (List Char)) (e : MExp) (p : Nat) (v : Option Nat)
+    (hv : evV g x s (table M base g x s k) E e p=some v) :
+    evV g x s (tblV g x s (x.length+1+k)) E e p=some v := by
+  rw [eq_frozen M base g x s layout] at hv
+  exact (evV_mono (ClockFreezing.frozen_le_physical g x s _ (x.length+1) k) e p).eq_of_some hv
+
+end Shallot.MacroPeg.CBV.RelocatedScannerFastTable
