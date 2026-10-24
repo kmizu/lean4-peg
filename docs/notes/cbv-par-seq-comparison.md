@@ -2116,3 +2116,55 @@ implementation of the encoder, or P-hardness theorem, is asserted. The mapping
 also changes an input circuit into its character serialization: it does not
 provide the unchanged-input simulation of every P language needed to close
 the Par/Seq comparison. General equality and separation remain open.
+
+### Research audit: regex and auxiliary-pushdown comparisons
+
+The [ICALP 2024 REWBLk paper by Uezato](https://drops.dagstuhl.de/storage/00lipics/lipics-vol297-icalp2024/LIPIcs.ICALP.2024.155/LIPIcs.ICALP.2024.155.pdf)
+identifies its regex model with NLOG. Its syntax has finite capture variables
+and iteration, without recursive grammar rules. Its choice takes a union of
+possible results, and positive lookahead retains variable updates (Sections
+3.1–3.2). These hypotheses differ from Macro PEG's prioritized choice,
+callee-local captures, and recursive activations. In particular, Macro PEG's
+double-negative lookahead returns no updated caller environment. Applying the
+NLOG theorem to Seq would require a separate semantics-preserving translation;
+the similar capture and lookahead notation does not establish one.
+
+The [auxiliary-pushdown review in Allender and Lange, 2014, Section 1](https://theoryofcomputing.org/articles/v010a008/v010a008.pdf)
+also distinguishes two bounds that must not be conflated. A logspace auxiliary
+pushdown machine has a stack excluded from its work-space charge. With
+unrestricted running time the deterministic model characterizes P; imposing
+polynomial time gives Log(DCFL) for deterministic machines, and Log(CFL) for
+nondeterministic machines. Thus merely identifying logspace local storage and
+a pushdown stack would not provide a strict upper class below P.
+
+The current Lean evidence is more specific than either analogy:
+
+- `SequentialStackCodecBound.task_length` and `frame_length` bound each local
+  record by a grammar-dependent number of integer fields.
+- `SequentialStackPayload.reachable_payload_bounds` bounds the stored capture
+  endpoints, positions, and clocks at every actual reachable state.
+- `SequentialStackRank.stack_linear_bound` bounds the number of live frames
+  linearly in input length; `SequentialStackBinary.reachable_bit_bound` charges
+  the whole retained stack, not just the active environment.
+- `CBVSeqSpace.binary_seq_in_nlog_space` connects the complete initialized
+  machine to the actual binary Seq language class in deterministic
+  `O(n log(n+1))` space.
+
+These are proved interpreter bounds. No polynomial running-time bound for the
+same stack-recomputation algorithm has been proved. The separate memo-table
+P upper bound cannot be combined with a different algorithm's local memory
+bound to obtain a simultaneous time/space theorem. Likewise, the interpreter
+can store capture origins as numeric input intervals; a source grammar's
+captured value is a word, not an instruction for arbitrary coordinate access.
+A reverse simulation must implement the needed access with Seq syntax.
+
+The audit therefore changes the next proof obligation. A smaller-class upper
+bound needs one complete algorithm satisfying that class's simultaneous
+resource conditions, including all pending environments. A P lower bound via
+auxiliary pushdown machines needs an actual input-preserving Seq simulation,
+including input-head motion, stack manipulation, and capture access. Neither
+obligation follows from the existing stack interpreter. The already proved
+`original_reverse_requires_P_nlog_space` remains a necessary consequence of
+general equality; it is not a proof of equality or separation. This audit
+adds literature evidence and narrows the available methods, without claiming
+a new Lean theorem or a solution of the language-class question.
