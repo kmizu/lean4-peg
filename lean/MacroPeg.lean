@@ -382,3 +382,7 @@ import MacroPeg.CBV.NestedScannerArguments
 import MacroPeg.CBV.NestedScannerFusion
 import MacroPeg.CBV.ScannerFrontier
 import MacroPeg.CBV.ScannerPairFusion
+import MacroPeg.CBV.StatefulScanner
+import MacroPeg.CBV.StatefulScannerFamily
+import MacroPeg.CBV.StatefulScannerBridge
+import MacroPeg.CBV.StatefulScannerProduct

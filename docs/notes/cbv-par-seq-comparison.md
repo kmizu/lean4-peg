@@ -3601,3 +3601,66 @@ remain unresolved, as does the main same-original-language Par/Seq comparison.
 The root import and 15 new public axiom guards cover actual rule generation,
 recursive correspondence, differing stabilization bounds, and language
 preservation.
+
+### Finite-state residual discovery beyond one-state character scans
+
+`StatefulScanner` adds a finite-state prefix-scanner model and an actual
+first-order PEG generator. A state has an ordered finite list of character
+transitions; each transition consumes exactly one character. The scanner
+stops at EOF or the first missing transition. Duplicate character entries
+use the first matching transition, consistently in the model and generated
+syntax. This model is not asserted to cover all regular PEG argument syntax
+or arbitrary backtracking argument parsers.
+
+`run_after_prefix` proves the residual law: after consuming a prefix, resume
+in the state reached by that prefix. `branches` generates guarded character
+transitions and named zero-argument calls. The negative guards ensure that
+a failed final-state test in a recursive successor cannot fall back to a
+shorter, previously visited stopping state. `query_eval` proves the actual
+recursive evaluator in any grammar containing the generated block. A clock
+of at least the remaining input length plus one suffices; this is a proof
+bound, not fuel or advice added to the input.
+
+`StatefulScannerFamily` installs all stopping-state selectors together in
+one fixed grammar. A scanner with N states uses exactly N² generated rules.
+`grammar_rule` verifies the real addresses. `entry_eval` and
+`entry_observation` prove that each selector consumes the scanner's actual
+prefix exactly when its fixed candidate state is the real final state;
+otherwise it fails finitely. `probe_eval` and `probe_observation` give the
+input-restoring tests. Both CBV strategies and all original character strings
+are included. `capture_eval` connects the generated selector to actual Seq
+argument evaluation and the original captured prefix.
+
+`StatefulScannerBridge` identifies the existing character-set scanner with
+the one-state instance, including actual compiled observations. Its two-state
+counterexample `resetting_changes_result` shows why the residual state cannot
+simply be discarded: consuming an initial `a` enables an arbitrarily long
+following `b` scan, whereas restarting in the initial state stops immediately.
+
+`StatefulScannerProduct` generates a finite synchronized product of two
+independent scanners. It consumes their common prefix until either scanner
+has no next transition. `next_joint` preserves ordered transition lookup;
+`run_product` identifies the generated product with simultaneous scanning.
+`common_prefix` proves that one actual consumed word reaches both recorded
+states, and `residual_runs` proves that both original scans resume exactly
+from those states and the common suffix. `frontier_stops` includes tied
+endpoints. The state-pair encoding and all reached states are finite static
+control, while the consumed prefix can have unbounded length.
+
+`common_entry`, `common_probe_observation`, and `common_capture` connect this
+product to the actual fixed PEG selector grammar. Every candidate pair has
+fixed rule slots: the right pair captures the actual common prefix, wrong
+pairs finitely fail, and the probe restores the caller position. Neither
+reached states nor prefix lengths are supplied as input-dependent advice.
+For source scanners with N and M states the product has N*M states, and its
+complete selector grammar has (N*M)² rules, all fixed before reading input.
+
+These results provide runtime residual-state discovery and common-prefix
+capture for finite-state arguments, beyond the earlier stateless scanners.
+They do not yet assemble both residual scans, the finite rule variants, and
+recursive body correspondence into a finite-state extension of
+`ScannerPairFusion`. General recursive argument parsers and arbitrary source
+body entry remain further obligations. General Par/Seq equality or separation
+is unresolved. Four root imports and 28 new public axiom guards cover the
+actual generators, all-input observations, residual identities, and Seq
+capture connections.

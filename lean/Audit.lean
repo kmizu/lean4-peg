@@ -7987,3 +7987,127 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.ScannerPairFusion.language_translation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ScannerPairFusion.language_translation
+
+-- Compiled finite-state residual selectors and synchronized capture frontiers.
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScanner.run_after_prefix' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScanner.run_after_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScanner.run_suffix' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScanner.run_suffix
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScanner.block_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScanner.block_length
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScanner.grammar_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScanner.grammar_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScanner.grammar_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScanner.grammar_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScanner.branches_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScanner.branches_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScanner.query_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScanner.query_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScanner.entry_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScanner.entry_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerFamily.grammar_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerFamily.grammar_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerFamily.grammar_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerFamily.grammar_length
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerFamily.grammar_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerFamily.grammar_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerFamily.entry_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerFamily.entry_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerFamily.probe_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerFamily.probe_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerFamily.entry_observation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerFamily.entry_observation
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerFamily.probe_observation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerFamily.probe_observation
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerBridge.run_stateless' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerBridge.run_stateless
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerBridge.stateless_observation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerBridge.stateless_observation
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerBridge.resetting_changes_result' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerBridge.resetting_changes_result
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerProduct.next_joint' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerProduct.next_joint
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerProduct.product_next' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerProduct.product_next
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerProduct.run_product' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerProduct.run_product
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerProduct.residual_runs' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerProduct.residual_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerProduct.common_prefix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerProduct.common_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerProduct.common_entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerProduct.common_entry
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerProduct.common_probe_observation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerProduct.common_probe_observation
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerProduct.frontier_stops' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerProduct.frontier_stops
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerFamily.capture_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerFamily.capture_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerProduct.common_capture' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerProduct.common_capture
