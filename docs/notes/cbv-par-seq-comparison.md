@@ -6933,3 +6933,88 @@ still have the specified call-free `A;D` codeword-control shape; A is a
 shared independent Pure prefix-code parser. Independent multiple original
 captures, recursive headers for the parent-dependent adjacent method,
 general inverse translation, and general class separation remain open.
+
+### Partial final runtime codewords: an experimental fixed grammar
+
+`PartialCodewordCapture` studies the previously uncovered argument
+`B = (A;&A)*;a*`, with `A = a*;#`. For `u = a^k#` and
+`w = u^n a^k`, consider the original strings `u w ! w`. The source has one
+unary rule `A;param0;!;param0;EOF`, called with the actual argument B.
+Unlike the last-codeword-only argument, B ends inside the last runtime
+codeword. The same captured value is used after shifted replay and again
+after `!`.
+
+`argument_at` proves the actual B endpoint for every k,n at any matching
+input suffix, arbitrary grammar, table, strategy, and caller environment.
+`actual_capture` identifies the captured prefix as exactly w.
+`captured_not_whole` proves that for k>0 it is not any whole power of u.
+These are general Lean proofs; they do not prove the target translation.
+
+A candidate fixed Seq grammar first captures `a*` in a lookahead call and
+compares every following run with that value. Its comparison must end at
+`!`. A prefix-only check was falsified by `#a#!#a`: the source rejects,
+while the initial Seq candidate accepts. Both the false positive and the
+corrected rejection are kernel-checked.
+
+After the preflight, the long branch captures `a*` and
+`#;(A;&A)*;a*` as two consecutive arguments. Its body is
+`#;param0;!;param0;param1;EOF`. This reconstructs the original w from the
+two pieces for later use. A separate guarded unary branch handles n=0;
+the branch guards prevent fallback after a committed long-branch failure.
+The grammars contain no length/count parameters. Lean checks six concrete
+accepting executions, including empty, short, and multiword captures.
+
+`scripts/experiments/partial_codeword_capture.py` evaluates these exact
+fixed grammars independently, preserving the original caller environment
+when evaluating successive Seq arguments. It compares both results with
+the separate language description `u^(n+1) a^k ! u^n a^k`. Exhaustive
+strings over `{a,#,!}` of length at most 9 (29,524 cases), plus 6,155 longer
+generated/mutated strings for 0<=k,n<=8, pass. These checks are finite;
+they do not establish the unbounded family or all-input equivalence.
+
+The next obligation is the target's all-input result and exact split
+capture, including malformed runs and copies. The preflight currently
+uses the concrete `!` continuation to select the replay endpoint; an
+arbitrary continuation or recursive user cannot simply replace it.
+General shifted arguments, full observation preservation, recursive
+integration, and the original class equality/separation goal remain open.
+
+### Actual split captures and the entire unbounded positive family
+
+`PartialCodewordExecution.split_arguments` now evaluates both actual Seq
+arguments at an arbitrary matching suffix, with the same original caller
+environment E for each. For positive source word count n+1, the first
+capture is `a^k` and the second is `# u^n a^k`. Their concatenation is
+exactly the original `u^(n+1) a^k`; neither the new first argument value
+nor an assumed capture endpoint is supplied to the second argument.
+`actual_split` applies this to the ordinary input origin.
+
+`source_body_at` and `split_body_at` connect the actual replay endpoints
+to the same continuation environment. The latter uses the existing
+`wholeView` rebind theorem for two pieces. `bodies_eq` preserves complete
+partial results for every first-order continuation, including undefined
+or failing continuations. This is a local equality under the same
+grammar, strategy, and table; it is not a recursive Par/Seq row theorem.
+
+The actual preflight is now proved by induction for every k,n.
+`input_rotated` relates the original input to `a^k (# a^k)^(n+1) ! w`;
+`check_at` proves the greedy comparison endpoint and its final `!` test.
+`preflight_execution` uses the real stage-one Seq table. Both the binary
+long branch and the unary zero-count branch are connected to their
+physical rule queries and later whole-capture reuse.
+
+`source_execution`, `target_execution`, and `family_observations` prove
+that the two single fixed grammars accept `input k n` for **all** k,n,
+including zero/empty captures. This replaces the finite-only evidence
+for the unbounded positive family. All 15 new public theorems have
+standard-axiom or axiom-free guards.
+
+What is still required is a converse on arbitrary input: ideally
+`SObs source Par sourceRoot x (some [])` and the corresponding target
+statement should each be equivalent to `exists k n, x = input k n`.
+The converse must derive uniform runs and the final copy from actual
+capture and replay behavior, and reject malformed runs, delimiters,
+and copies. The present positive family and local body bridge do not
+establish this. Full finite-failure/undefinedness correspondence,
+arbitrary caller continuations through preflight, recursive integration,
+general inverse translation, and class separation remain open.

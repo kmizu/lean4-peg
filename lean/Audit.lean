@@ -16546,3 +16546,119 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.MixedBodyExamples.nested_star_executions
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.captured_not_whole' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.captured_not_whole
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.run_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.run_at
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.argument_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.argument_at
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.input_split' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.input_split
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.actual_capture' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.actual_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.prefix_only_false_positive' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.prefix_only_false_positive
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.sample_executions' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.sample_executions
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordCapture.endpoint_regression' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordCapture.endpoint_regression
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.pieces_join' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.pieces_join
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.word_boundary' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.word_boundary
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.split_arguments' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.split_arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.actual_split' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.actual_split
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.source_body_at' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.source_body_at
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.split_body_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.split_body_at
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.bodies_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.bodies_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.check_at' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.check_at
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.input_rotated' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.input_rotated
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.preflight_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.preflight_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.source_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.source_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.target_positive_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.target_positive_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.target_zero_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.target_zero_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.target_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.target_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.PartialCodewordExecution.family_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.PartialCodewordExecution.family_observations
