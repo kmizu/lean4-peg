@@ -3717,3 +3717,50 @@ entry are also outside this interface. The general same-original-language
 comparison remains unresolved. Root imports and 26 new public axiom guards
 cover installed block layouts, runtime case selection, capture reconstruction,
 complete dispatch, and actual body entry.
+
+
+### Separating scanner rounds from user-rule rounds
+
+`CBV/ClockFreezing.lean` defines a frozen table iteration for any actual
+grammar: selected helper rows are fixed at their physical table values at a
+finite floor `B`, while all other rule rows iterate their actual bodies.
+The grammar itself is unchanged. The construction is an analysis of its
+finite evaluation, not an input-dependent grammar or additional advice.
+Writing `P_k` for physical tables and `F_k` for frozen tables, the proofs give
+
+```
+F_k ≤ P_(B+k)
+P_k ≤ F_k           (when the selected physical rows are stable after B)
+```
+
+Here the order preserves every defined result, both success and finite
+failure. Consequently `defined_iff`, `stable_defined_iff`, and
+`observations_iff` transfer finite outcomes between frozen evaluation and
+the actual grammar semantics. Undefinedness is not treated as finite failure.
+`frozen_user_step` also proves that a non-helper rule spends exactly one
+user round evaluating its actual installed body.
+
+`CBV/StatefulScannerStability.lean` discharges the stability condition for
+the previously generated combined grammar. Every common-selector and left
+or right residual-scanner row is stable after `x.length + 1` physical rounds.
+This is equality of entire rows at every capture environment, for arbitrary
+recursive user tails; it is not a stability hypothesis on an external
+lexical oracle. The proof includes zero-state edge cases where applicable,
+all input positions and the selectors' finite failure results.
+
+`CBV/FrozenPairArguments.lean` then proves exact common/left/right entry,
+Seq argument, independent Par argument, reconstruction, guard, and complete
+dispatch contracts at **every** frozen user stage, including stage zero.
+The installed-body dispatch theorem requires both body slots to lie outside
+the helper prefix and connects stage `k+1` dispatch directly to stage `k`
+evaluation with the original captured values. It has no scanner-depth bound
+on `k`; the physical/frozen comparison supplies the required physical rounds
+when returning to the real grammar.
+
+This removes the helper-query clock obstruction from the finite-state
+argument/body interface. It still does not establish the recursive user-rule
+correspondence of a full finite-state Par-to-Seq compiler. That correspondence,
+normalization of general recursive/backtracking arguments, and arbitrary
+source body entry remain open. In particular, the general same-original-
+language equality or separation has not been proved. Root imports and 29
+new axiom guards cover this clock transfer and its actual dispatch application.

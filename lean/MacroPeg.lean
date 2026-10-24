@@ -387,3 +387,7 @@ import MacroPeg.CBV.StatefulScannerFamily
 import MacroPeg.CBV.StatefulScannerBridge
 import MacroPeg.CBV.StatefulScannerProduct
 import MacroPeg.CBV.StatefulPairArguments
+
+import MacroPeg.CBV.ClockFreezing
+import MacroPeg.CBV.StatefulScannerStability
+import MacroPeg.CBV.FrozenPairArguments

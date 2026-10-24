@@ -8223,3 +8223,131 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.complete_dispatch_body_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.ClockFreezing.step_physical' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClockFreezing.step_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.ClockFreezing.step_mono' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClockFreezing.step_mono
+
+/-- info: 'Shallot.MacroPeg.CBV.ClockFreezing.frozen_rows' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClockFreezing.frozen_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.ClockFreezing.frozen_user_step' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClockFreezing.frozen_user_step
+
+/-- info: 'Shallot.MacroPeg.CBV.ClockFreezing.frozen_le_physical' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClockFreezing.frozen_le_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.ClockFreezing.physical_le_frozen' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClockFreezing.physical_le_frozen
+
+/-- info: 'Shallot.MacroPeg.CBV.ClockFreezing.frozen_mono' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClockFreezing.frozen_mono
+
+/-- info: 'Shallot.MacroPeg.CBV.ClockFreezing.frozen_ok' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClockFreezing.frozen_ok
+
+/-- info: 'Shallot.MacroPeg.CBV.ClockFreezing.defined_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClockFreezing.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ClockFreezing.stable_defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClockFreezing.stable_defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ClockFreezing.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ClockFreezing.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerStability.rows_ignore_environment' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerStability.rows_ignore_environment
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerStability.row_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerStability.row_length
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerStability.rows_stable' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerStability.rows_stable
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerStability.helpers_stable' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerStability.helpers_stable
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerStability.frozen_le_physical' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerStability.frozen_le_physical
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerStability.physical_le_frozen' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerStability.physical_le_frozen
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerStability.defined_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerStability.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScannerStability.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScannerStability.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FrozenPairArguments.left_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrozenPairArguments.left_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FrozenPairArguments.right_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrozenPairArguments.right_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FrozenPairArguments.common_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrozenPairArguments.common_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FrozenPairArguments.arguments_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrozenPairArguments.arguments_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FrozenPairArguments.caseGuard_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrozenPairArguments.caseGuard_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FrozenPairArguments.independent_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrozenPairArguments.independent_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FrozenPairArguments.capture_reconstruction' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrozenPairArguments.capture_reconstruction
+
+/-- info: 'Shallot.MacroPeg.CBV.FrozenPairArguments.dispatch_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrozenPairArguments.dispatch_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FrozenPairArguments.complete_dispatch_eval' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrozenPairArguments.complete_dispatch_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.FrozenPairArguments.complete_dispatch_body_eval' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FrozenPairArguments.complete_dispatch_body_eval
