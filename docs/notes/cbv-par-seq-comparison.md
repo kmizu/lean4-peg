@@ -5706,3 +5706,202 @@ The examples pass retained `a` twice and append a fresh `b*`, capturing `aabbb` 
 The alphabet condition is essential for this identity construction. A capture `a#a#` on input `a#a#a#` crosses the scanner delimiter: Par accepts and Seq with the same grammar rejects, and the argument fails Safe. This is a boundary example, not a class-separating language. Captures crossing the scanner frontier, arbitrary consuming closed prefixes, integration of this family with the general body compiler, and multiple independent general captures remain open. General Par/Seq equality or separation is not established.
 
 Validation: full `lake build` passed (883 jobs), including Audit. All 133 public PR theorem dependencies were rechecked and guards passed; 21 guards are new. The three new modules compile without warnings/placeholders; source and whitespace audits passed.
+
+
+### A runtime shift cannot use one fixed finite capture filter
+
+`CBV/RuntimeShiftFilter.lean` examines the remaining consuming prefix
+`a*;#` directly. `scanner_eval` proves that this actual expression consumes
+`a^n#` on every input `a^n# ++ rest`, for either strategy and arbitrary
+tables and environments. The shift length is unbounded and input-dependent.
+
+Write `b(n)=a^n#`. For a capture `b(n)++b(m)`, the necessary overlap
+condition is exactly
+
+```text
+(b(n)++b(m)) is a prefix of b(n)++(b(n)++b(m)) iff n=m.
+```
+
+`no_uniform_filter` proves that no fixed valid finite `RegularCaptureProduct.Machine`,
+with any accepting-state predicate, decides this condition for all n,m.
+Correctness would make its states after b(n) pairwise distinct: append b(n)
+to distinguish any colliding b(n),b(m). `CaptureOrbit.bounded_collision`
+then contradicts the finite width. `fixed_shift_filter` separately confirms
+that the existing phase machine remains exact for each individual static
+shift. Merely choosing one larger fixed machine cannot extend that method
+to this unbounded runtime family.
+
+This is a compilation-method obstruction, **not a Par/Seq class separator**.
+Indeed `seq_compare_blocks` and `seq_observations` prove that one fixed
+first-order Seq grammar, `Replay(x)=x` with entry `Replay(a*;#)`, accepts
+every b(n)++b(n) and finitely rejects every b(n)++b(m) with n!=m. It stores
+the runtime block itself rather than a finite phase. No argument above
+excludes Seq mechanisms using retained captures, recursive work, or queries.
+
+The next missing construction must preserve that kind of unbounded runtime
+information while also preserving the original argument parser's selected
+capture, undefinedness, and later reuses. The direct two-block comparison
+is already handled by Seq; turning arbitrary crossing captures into such
+a representation remains unresolved. General equality or separation has
+not been established.
+
+
+### Retaining a runtime prefix codeword for crossing captures
+
+`CBV/PrefixCodeCapture.lean` begins the replacement for a uniform finite
+filter. For any prefix-free code, if the actually selected argument capture
+is `u++v` for complete codewords u,v, successful replay after consuming u
+forces u=v. The codeword set and the individual words may be infinite and
+unbounded. `actual_capture` derives this from actual first-order argument,
+head, and replay evaluations through a sound table. The argument may use
+retained values or recursion; its selected capture is never guessed anew.
+
+`collapse` is a complete partial-result identity at the advanced body entry.
+With a complete v at the current suffix, matching the old `u++v` and using
+it in an arbitrary first-order continuation is equivalent to matching the
+retained u twice and replacing every old parameter occurrence by that
+duplicated view. Unequal codewords give failure on both sides. Equal words
+preserve every continuation result, including undefinedness. `view_eval`
+uses `CaptureViews.evV_rebind`, so parameter uses inside call arguments,
+choice, predicates, and repetition are covered through the same arbitrary
+recursive table. The proof does not assume the continuation succeeds.
+
+`actual_entry` derives this identity at a real source call from its argument
+and head evaluations; it does not assume the final replay succeeds.
+`two_header_entry` instantiates it with the actual two-header argument
+`(a*;#);(a*;#)` and body prefix `a*;#` at every valid physical suffix, for
+all first/second header lengths and every first-order continuation.
+`scanner_at` supplies the actual argument/head results. No finite phase or
+finite value palette is used for this representation.
+
+`PrefixCodeCaptureExamples.recursive_execution` kernel-checks physical
+source Par and candidate target Seq grammars on the same ordinary input.
+The source retains parent `aa#aa#`, captures child `aaa#aaa#`, and reuses
+the parent after the child returns. The candidate retains `aa#`/`aaa#`
+and duplicates them where the source uses its longer capture. Both accept
+`aa#aa#aa#@aaa#aaa#aaa#!?aa#aa#`; both finitely reject the short parent
+copy and unequal child headers. A preflight of the original two-header
+argument precedes candidate Seq calls.
+
+**Scope:** the unbounded theorem is a local entry/representation identity
+within one strategy and recursive table. The finite recursive executions
+do not establish an all-input recursive grammar translation. The remaining
+work includes translating the recursive rows, preserving argument failure
+and undefinedness at calls, and handling captures beyond the two-complete-
+codeword shape. No general Par/Seq equality or separation is claimed.
+
+
+### Runtime prefix-code representation now gives a recursive translation
+
+`CBV/RuntimePrefixGrammar.lean` closes the recursive-table and call-level
+gaps left by the preceding local representation lemma for the two-codeword
+family. A `Header` supplies a closed call-free parser A (choice, predicates,
+and nullable repetition are permitted), a prefix-free code, and a proof that
+each successful A capture is in that code. This is a lexical output
+certificate, not a supplied equivalence of source/target calls or tables.
+The parser and its words need not have a length bound or finite value palette.
+
+For a finite list of raw tails, the source has unary rules with bodies
+`A;param0;tail`, and each source call captures the actual result of `A;A`.
+The target call first tests `&(A;A)` at the original position, then captures
+A once. Target rules replay the retained codeword twice, and rewrite all
+old parameter uses to that duplicated view. Raw zero-argument recursive
+calls choose a rule in this family; ordinary consuming sequence, choice,
+predicates, and repetition are allowed throughout the tails and entry.
+This is a constructor for a specified source family, not a renderer for
+arbitrary source argument syntax.
+
+`tables_shifted` proves the correspondence on ordinary physical tables at
+every stage, including zero. If the two selected codewords differ, the
+source and target body prefixes both fail. If they agree, both prefixes
+reach the same original-input suffix and `evaluator_of_shift` compares the
+continuations with old capture u++u and retained target capture u. Recursive
+calls are handled by the previous physical stage; no helper stabilization
+or caller-supplied recursive equivalence is needed. The preflight preserves
+argument failure and undefinedness before querying the target row.
+
+`observations_iff` preserves every finite success remainder and finite
+failure on every original input. `language_translation` constructs one fixed
+first-order Seq grammar and entry, independent of the input, preserving
+whole-string recognition. Undefinedness is preserved by the complete
+physical partial-result equalities; no final-success assumption is used.
+
+`RuntimePrefixExamples.header` proves the lexical certificate for the actual
+`a*;#` parser, using the prefix-free code defined by
+`dropWhile (accepts ['a']) w = [#]`. Both code safety and prefix freedom are
+proved, not assumed. Its two-rule mutual recursion changes the runtime
+header length from 2 to 3 to 1, then restores the child and parent captures.
+The source physical tables accept
+`aa#aa#aa#@aaa#aaa#aaa#%a#a#a#!?aaa#aaa#?aa#aa#` and reject the short parent
+and unequal child. Target Seq observations follow from the all-input
+translation theorem. `previous_candidate_all_inputs` also proves the exact
+source/target pair of the preceding `PrefixCodeCaptureExamples` equivalent
+on all inputs; those earlier finite checks now have an unbounded bridge.
+
+`preflight_stage_zero` checks why the guard is present: on `a#`, the original
+two-header argument and the generated target call both finitely fail at
+stage zero, whereas a plain target call capturing one header reaches an
+undefined stage-zero row.
+
+The general class comparison remains unresolved. This compiler fixes each
+call argument to the two-head parser A;A, uses one common closed call-free
+header parser, and begins every rule body with A followed by immediate
+replay. Arbitrary selected arguments, captures with other shapes, independent
+multiple captures, and arbitrary consuming prefixes are not covered. The
+result is an actual fixed recursive grammar translation for this family,
+not a proof of the general reverse inclusion.
+
+
+### Preserve independently selected two-codeword arguments
+
+`CBV/SelectedPrefixGrammar.lean` removes the fixed `A;A` argument of the
+preceding compiler. Each source rule has its own closed call-free argument
+parser B, allowing prioritized choice, predicates, and repetition (including
+undefined nullable repetition). Its output certificate says that every
+successful selected capture consists of two complete words of the header's
+prefix-free code. The certificate constrains the captured shape; it does
+not supply a source/target evaluator or recursive-table equivalence.
+
+Source calls are ordinary `F(B)`, with source bodies `A;param0;tail`. The
+constructed target first tests **the original B**, then captures A once and
+uses the duplicated retained value. In particular, it does not replace the
+argument by `A;A`, choose B's result again after a continuation failure, or
+ignore B's undefinedness when A could fail.
+
+The body header can now fail even after B succeeded. A finite counterexample
+in `SelectedPrefixExamples.early_head_failure` makes the resulting clock
+difference explicit: on `a#a#X`, the original physical stage-zero call is
+undefined, physical stage one fails, and the target already fails at stage
+zero while evaluating A as an argument. Ordinary stage-by-stage equality
+would be false here.
+
+The proof uses the existing `SeededClock` construction **only on the source
+side**. A failed A prefix is placed in the initial source row, justified by
+an actual finite source computation. `tables_shifted` relates these source
+rounds to ordinary target physical stages. It handles B's actual selected
+capture, obtains the first codeword from A's independent successful parse,
+and uses prefix freedom to identify that word with the first part of B's
+capture. Unequal parts cause matching replay failures; equal parts reach
+the same suffix with corresponding retained values. `stable_eq` removes
+the seeds by their proved cofinality with source physical tables.
+`observations_iff` and `language_translation` consequently concern the
+actual ordinary grammars and unchanged original inputs, including finite
+failure and preservation of undefinedness.
+
+`SelectedPrefixExamples` supplies syntax-derived code certificates for B
+with choice and tests before/after capture. A second argument has an
+unproductive empty-star fallback. A guarded `a*;#` header independently
+rejects the X case even though B succeeded. The old three-generation
+recursive good input is accepted and the short parent copy rejected; Seq
+observations follow from the unbounded translation. `a#a#Z` tests rejection
+by the original selected argument before any target header or row query.
+`undefined_argument` proves that an undefined B remains undefined before
+body entry for arbitrary tables, and `undefined_at_every_stage` checks an
+actual argument with empty-star divergence at **all** physical stages.
+
+This closes the independently selected argument and early-head-failure
+gaps within the two-codeword, closed call-free argument family. The argument
+parser still cannot depend on retained parameters or call recursive helper
+parsers, the header remains closed call-free, and other capture shapes or
+multiple independent captures are not translated. General Par/Seq equality
+or separation remains unresolved.
