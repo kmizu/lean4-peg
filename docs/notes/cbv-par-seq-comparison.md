@@ -1082,3 +1082,42 @@ preserved on register zero. The initial state already contains that encoded
 input and the endpoints; environment lookup, the ordinary-input loader, atomic
 selection and evaluator integration remain to be connected. The general
 Par/Seq equality-or-separation objective remains open.
+
+### Runtime parameter lookup followed by interval matching
+
+`SequentialEnvLookup` consumes the existing `writeEnv` encoding and extracts the
+pair for a fixed source parameter index `k`. It tests the runtime environment
+length before each pair. An absent parameter therefore stops at the environment
+boundary even when following frame fields are nonempty. After the selection it
+drains the remaining counted environment, retaining the following fields in
+their original order. Its numeric time is at most `8 * E.length + 10`, independent
+of the values of endpoints. The grammar fixes `k` and bounds environment length
+by its arity budget; this stage can use the constant-time-to-space argument
+without applying it to the input-dependent interval traversal.
+
+`SequentialParamMachine` composes that lookup with the complete span machine.
+The original encoded input occupies its own register; the lookup obtains both
+endpoints directly from the runtime environment. A missing parameter returns
+failure. A present parameter invokes the interval loop, including empty
+captures and target-EOF failure. `param_value` identifies the final result with
+`SequentialStack.atom x E (.param k) p` on the same original character input.
+The original encoded input and the fields following the environment survive.
+
+`linear_param_runs`, `compiled_param`, and `param_tape` verify the combined
+program through thirteen numeric registers and fourteen actual tapes. For
+`E.length <= A`, at most `M` following fields, and field bound `N` covering the
+input length and arity, every intermediate tape fits
+
+```
+(2^32 + 2) * x.length
+  + (1 + 2*A + M + (8*A+10)) * N
+  + (1 + 2*A + M + (8*A+10)*(8*A+11) + 5).
+```
+
+`capacity_linear` proves this expression equals the capacity used in the
+execution theorem. For fixed grammar and a local front, `A` and `M` are
+constants. The remaining work is selecting atomic expressions from the encoded
+task, implementing the other atomic cases, loading ordinary input, and
+integrating all transitions and terminal decisions into the evaluator. This
+component still starts with the original input already encoded. The general
+Par/Seq equality-or-separation question remains unresolved.

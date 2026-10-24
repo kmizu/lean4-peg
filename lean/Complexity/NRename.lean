@@ -79,4 +79,25 @@ theorem NBoundedTransfer.FitsRuns.rename_frame {k m B : Nat} {ρ : Fin k → Fin
   obtain ⟨t,ht,he⟩ := h
   exact ⟨t,ht,he.rename_frame hi R hR⟩
 
+theorem NExec.weaken {k : Nat} {Q Q' : Lists k → Prop} (hQ : ∀ S, Q S → Q' S)
+    {p : NProg k} {S : Lists k} {t : Nat} {o : LOutcome k} (h : NExec Q p S t o) :
+    NExec Q' p S t o := by
+  induction h with
+  | prim h h' => exact .prim (hQ _ h) (hQ _ h')
+  | halt h => exact .halt (hQ _ h)
+  | seqC _ _ ih1 ih2 => exact .seqC ih1 ih2
+  | seqS _ ih => exact .seqS ih
+  | iteT h hc _ ih => exact .iteT (hQ _ h) hc ih
+  | iteF h hc _ ih => exact .iteF (hQ _ h) hc ih
+  | loopF h hc => exact .loopF (hQ _ h) hc
+  | loopC h hc _ _ ih1 ih2 => exact .loopC (hQ _ h) hc ih1 ih2
+  | loopS h hc _ ih => exact .loopS (hQ _ h) hc ih
+
+theorem NBoundedTransfer.FitsRuns.mono_space {k B C : Nat} (hBC : B ≤ C)
+    {p : NProg k} {S S' : Lists k} {T : Nat} (h : FitsRuns B p S S' T) :
+    FitsRuns C p S S' T := by
+  obtain ⟨t,ht,he⟩ := h
+  refine ⟨t,ht,he.weaken (fun S hS => ?_)⟩
+  exact ⟨Nat.le_trans hS.1 hBC,fun i => Nat.le_trans (hS.2 i) hBC⟩
+
 end Complexity

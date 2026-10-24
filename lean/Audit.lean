@@ -4405,3 +4405,63 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialSpanMachine.span_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialSpanMachine.span_tape
+
+/-! Header-bounded environment lookup and original-input parameter matching. -/
+
+/-- info: 'Complexity.NExec.weaken' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Complexity.NExec.weaken
+
+/-- info: 'Complexity.NBoundedTransfer.FitsRuns.mono_space' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Complexity.NBoundedTransfer.FitsRuns.mono_space
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEnvLookup.drain_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEnvLookup.drain_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEnvLookup.search_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEnvLookup.search_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEnvLookup.lookup_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEnvLookup.lookup_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialEnvLookup.lookup_fits' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialEnvLookup.lookup_fits
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamMachine.spanReg_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamMachine.spanReg_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamMachine.envReg_injective' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamMachine.envReg_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamMachine.param_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamMachine.param_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamMachine.param_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamMachine.param_value
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamMachine.capacity_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamMachine.capacity_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamMachine.linear_param_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamMachine.linear_param_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamMachine.compiled_param' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamMachine.compiled_param
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialParamMachine.param_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialParamMachine.param_tape
