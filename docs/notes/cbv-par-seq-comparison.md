@@ -12,6 +12,10 @@
 （`lean/Shallot/Peg/Separation/CBVStrategies.lean`）。
 既存の CBN との結果を合わせると、`一階 Seq ⊆ 一階 Par ⊊ 一階 CBN` となる。
 
+通常の二文字アルファベット `a/b` 上では、同じ入力表現の機械上界と下界を接続し、
+`一階 Seq_bin ⊆ 一階 Par_bin = P` を証明した。二文字版の逆包含は、Seq が P 全体を
+認識するかという問いと同値である。原文字列上の一般の逆包含・真包含はまだ未解決。
+
 `ParSimulation.translate source start` は元の文法と開始式だけから一つの固定文法を作る。
 `translate_recognizes` は、全ての元の文字列 `x : List Char` について、
 生成先 Par の全消費成功とソース Seq の全消費成功が同値であることを証明する。
@@ -457,8 +461,8 @@ Par の非包含を導く定理もない。一般の逆翻訳と真包含の問�
 `firstOrder_par_contains_P` は通常の二文字アルファベット `'a'`/`'b'` 上の版で、
 任意の P 言語を入力に依存しない一階 Par 文法で認識する。文字列はそのまま読み、
 パディング・位置コードは加えない。
-既存の上界で使う4ビット・トークン入力 `tokenWord` との表現の差を省略して
-原文字列の全クラスについての「Par = P」とは言い換えない。
+既存の上界で使う4ビット・トークン入力 `tokenWord` との表現の差は、次節で
+一文字ずつの実際の入力機械を作って解消した。結論は通常の二文字アルファベット上の版である。
 
 `scripts/check-par-tableau-recognition.lean` は、空入力・非空入力・Unicode 文字を含め、
 生成した開始式を直接実行して受理と拒否を確認する。任意入力の根拠は上記の Lean 証明である。
@@ -466,6 +470,39 @@ Par の非包含を導く定理もない。一般の逆翻訳と真包含の問�
 **Par 側の P 下界は接続したが、Par と Seq の一致・真包含は依然として未解決。**
 これを決めるには、一般の Par から Seq への同じ元文字列上の逆翻訳、または
 Seq のどの文法でも認識できない Par 言語が必要である。
+
+### 同じ二文字入力での Par = P と、比較に残る条件
+
+`Shallot/Peg/Separation/BitWord.lean` は `bitWord w` を一ビット一文字の
+通常の `a/b` 語として定義する。`BitWordInput.lean` の `readLetter_spec` と
+`nruns_loadLetters` は、実際の数値スタック機械が入力ビットを一つずつ読み、
+その語の文字行と正しい長さを構築することを証明する。入力を4ビット単位にまとめたり、
+不完全な末尾を捨てたりしない。静的な文字コードの出力だけに既存の命令を再利用する。
+
+`CBV/BitWordMachine.lean` は、この行を既存の辞書・全区間・表評価器へ実際に渡す。
+`bitWordProgram_halts` は機械の停止と結果を、全入力の正確な費用
+`160*(n+1) + 2 + setupCost n + loadedCost g e n` で保証する。
+`bitWordLanguage_in_P` が Par・Seq 両方式について通常の `a/b` 入力での P 上界であり、
+4ビット入力用の `encodedLanguage` とは異なる定理である。
+
+`Shallot/Peg/Separation/CBVBinary.lean` の `IsFirstOrderBinaryCBVPEL` は、
+固定の一階文法で通常の二文字語を認識する言語クラスである。
+**`binary_par_iff_P`** がこのクラスと機械ベースの `KEXP 0` との一致を示す。
+下界も上界も同じ `bitWord`、同じ元の語を使い、空入力も含む。
+
+残る比較は次のように正確に切り分けられる。
+
+- `binary_reverse_iff_seq_covers_P`：二文字版の Par から Seq への包含は、
+  Seq が全ての P 言語を認識することと同値である。どちらもまだ証明していない。
+- `original_reverse_requires_seq_P`：元の任意の文字列言語を保つ一般の逆翻訳があれば、
+  特に二文字版で Seq が P 全体を認識する。この必要条件だけで一般の逆翻訳を得たとはしない。
+- `binary_P_witness_separates_original`：二文字版の Seq クラス全体に属さない P 言語が
+  一つあれば、`L(inputBits x)` により元の文字列クラスの真の非包含証人になる。
+  そのような言語自体はまだ構成していない。
+
+以上は言語クラスを揃えた比較であり、同じ文法の評価結果の差や特定の引数渡しの
+失敗から非包含を結論するものではない。元の目標を閉じるには、依然として
+一般の逆翻訳か、Seq の全ての文法を排除する具体的な言語証人が必要である。
 
 関連研究では、[Uezato, ICALP 2024](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ICALP.2024.155)
 が後方参照と先読みを持つ正規表現による NLOG の特徴付けを与える。

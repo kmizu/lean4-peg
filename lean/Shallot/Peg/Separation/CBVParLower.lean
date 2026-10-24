@@ -1,5 +1,6 @@
 import Shallot.Peg.Separation.CBVStrict
 import MacroPeg.CBV.ParTableau.Recognition
+import Shallot.Peg.Separation.BitWord
 
 namespace Shallot.PegSeparation
 
@@ -16,8 +17,6 @@ theorem firstOrder_par_contains_P_projection {L : Complexity.Lang} (hL : KExp.KE
     CBV.ParTableau.polynomialStart_firstOrder M c degree, ?_⟩
   intro x
   exact (CBV.ParTableau.polynomial_recognizes c degree (by intro n; simpa using hT n) hdec htb x).symm
-
-def bitWord (w : List Bool) : List Char := w.map (fun b => if b then 'b' else 'a')
 
 theorem inputBits_bitWord (w : List Bool) : CBV.ParTableau.inputBits (bitWord w) = w := by
   induction w with
