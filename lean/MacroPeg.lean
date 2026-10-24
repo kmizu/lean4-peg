@@ -299,3 +299,4 @@ import MacroPeg.CBV.HybridReplayCompiler
 import MacroPeg.CBV.CommonOriginCaptures
 import MacroPeg.CBV.CaptureViews
 import MacroPeg.CBV.PartitionResidualControl
+import MacroPeg.CBV.SequentialCallLookahead

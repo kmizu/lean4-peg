@@ -1923,3 +1923,49 @@ segments and selecting a finite body at the advanced position. It must
 preserve additional computation, use a different evaluation arrangement, or
 otherwise avoid these explicit hypotheses. General Par/Seq equality or
 language-class separation remains open.
+
+### Moving Seq body tests to call sites while retaining runtime consumption
+
+`SequentialCallLookahead` supplies an evaluation rearrangement that may inspect
+the suffix while holding arbitrary runtime captures. As in `CallLookahead`,
+`tested g` replaces each rule body `B` with `&B`. Here the strategy is Seq,
+so a call still consumes its actual arguments before testing that body.
+Moving the body test to a plain `&F(args)` at the caller would erase this
+argument consumption. `plain_peek_changes_result` gives an actual derivation
+counterexample: a one-argument empty rule consumes the input `a`, while the
+plain call peek leaves it untouched and fails whole-input acceptance.
+
+The corrected translation replaces a call by
+
+```
+&F(render(args)) sequenceArgs(render(args))
+```
+
+and replaces each target rule body with its recursively rendered body.
+`sequenceArgs` evaluates the argument expressions consecutively and returns
+their final position, discarding only the resulting value tuple. The call
+probe first evaluates those arguments and invokes the rule with their actual
+captured words, so its body can inspect the remaining suffix with those
+values bound. Failure or undefinedness of that call propagates before the
+second argument pass. If the probe succeeds, argument re-evaluation is
+deterministic and reproduces the same final position. The enclosing caller
+therefore advances exactly as it did with the body test in the source.
+
+`evaluator_of_peek` and `arguments_of_peek` prove this simultaneously for
+expressions and Seq argument lists under related arbitrary recursive tables.
+`tables_peeked` establishes the relation at every recursive approximation.
+Rule counts and arities stay equal, so `iterBound_eq` connects the actual
+fixed-point decision procedures. `observations_iff` preserves every finite
+observation on the original character strings, and `language_translation`
+constructs the fixed first-order Seq target grammar and root.
+
+There is no finite capture palette, bound on capture lengths, or restriction
+to a replay-first body or a fixed argument count. Recursive calls in arguments,
+repetition, predicates, failure, and undefinedness are included. Values remain
+bound inside the probed call; the construction does not export captures from
+a lookahead. The transformation concerns a **Seq source with body tests**
+and a Seq target. Inserting tests into an arbitrary source grammar is not
+claimed to preserve its original language. Nor does the result reconcile
+overlapping Par argument values or the original Par body position. It is a
+verified whole-grammar component for suffix-informed evaluation arrangements;
+the general Par-to-Seq translation and language-class comparison remain open.

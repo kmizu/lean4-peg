@@ -5529,3 +5529,43 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.PartitionResidualControl.no_common_origin_factorization
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCallLookahead.sequenceArgs_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCallLookahead.sequenceArgs_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCallLookahead.render_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCallLookahead.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCallLookahead.evaluator_of_peek' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCallLookahead.evaluator_of_peek
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCallLookahead.arguments_of_peek' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCallLookahead.arguments_of_peek
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCallLookahead.tables_peeked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCallLookahead.tables_peeked
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCallLookahead.evaluator_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCallLookahead.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCallLookahead.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCallLookahead.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCallLookahead.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCallLookahead.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCallLookahead.plain_peek_changes_result' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCallLookahead.plain_peek_changes_result
