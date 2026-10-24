@@ -5399,3 +5399,67 @@ normalization, and general Par/Seq equality or separation remain unresolved.
 Validation: full `lake build` passed (847 jobs), including Audit. All thirteen
 new public axiom guards use only standard Lean axioms. The new module has no
 proof placeholders or Lean warnings.
+
+
+### Explicit recursive users inside dependent arguments
+
+`RecursiveArgumentCompiler` replaces the fixed argument chosen per callee by
+an explicit, structurally nested argument at every call site. Its syntax has
+literals, retained parameters, independent recursive helpers, unary user calls,
+sequence, prioritized choice, negation, and arbitrary nested stars. The same
+syntax describes both user bodies and arguments; user calls inside arguments
+can therefore invoke mutually recursive parameter-bearing users, whose bodies
+can call further users with different arguments. Rendering is structural and
+does not recursively expand a callee's configured argument at compile time.
+
+Each user still has a nonempty fixed literal shift and the source row entry
+`(shift_i param(0)) body_i`. The joint phase machine supplies complete finite
+profiles. The compiler generates ordinary target rows and product target rows,
+indexed by callee, incoming profile, and either plain mode or observer start/end
+states. A product row reads the same rotated prefix as the plain row, then
+filters the body from the state obtained by processing both the captured word
+and that rotated prefix. Its argument is the actual translated argument, so
+Seq's argument evaluation captures and consumes it once; no retained value is
+passed through a helper call merely to run a filter.
+
+`ProfileControl` implements profile selection over any actual plain expression
+and its actual product expressions. Its one-step correctness premise is local
+and is discharged structurally in the recursive compiler. Undefined arguments
+stay undefined, and a later continuation failure cannot select a different
+capture/profile. `ControlFilter` supplies the compositional sequence law.
+
+`RecursiveArgumentCorrespondence.evaluator_of_rows` proves plain and filtered
+evaluation together by structural induction, allowing recursive user calls
+inside the arguments themselves. `tables_rows` discharges its row premise by
+induction over seeded user rounds, simultaneously for every physical incoming
+prefix and every valid product state pair. Both modes have the same leading
+rotated prefix; therefore the existing physically justified prefix-failure
+seed preserves their zero-stage relation. The argument-stage and body-stage
+inductions are separate, resolving the mismatch that motivated the stronger
+physical-prefix invariant. No semantic row or argument-filter oracle remains
+in the final evaluator, observation, or language theorems.
+
+`observations_iff` removes the seeds and relates actual finite observations of
+the two fixed first-order grammars on every unchanged original input string.
+`language_translation` provides the corresponding fixed Seq grammar. Complete
+partial-result correspondence also preserves undefinedness.
+
+The kernel example uses different shifts `a` and `aa`. A recursive user under
+argument repetition captures the parent's six a's; a later call under star
+uses that retained value to capture fourteen a's for a recursive child. The
+child copies all fourteen after its delimiter, and the parent copies its own
+six after return. Substituting a six-character child copy or a two-character
+parent copy fails in the actual source grammar. Generated Seq observations
+follow from the unbounded compiler theorem, rather than bounded evaluation of
+the large profile/product grammar. An empty argument iteration is proved
+undefined in every seeded target round.
+
+Remaining scope: multiple independent general arguments, arbitrary source
+body entry, and normalization of arbitrary original first-order grammars into
+the shifted unary form. The new syntax uses literals and the listed controls;
+ordinary character atoms and other original syntax have not been normalized
+into it. General Par/Seq equality or separation remains unresolved.
+
+Validation: full `lake build` passed (852 jobs), including Audit. All
+thirty-eight new public axiom guards use only standard Lean axioms. The five
+new modules have no proof placeholders or Lean warnings.
