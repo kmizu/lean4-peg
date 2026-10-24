@@ -15419,3 +15419,45 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.CodewordControlHelperGrammarExamples.cyclic_header_no_observations
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordControlFilter.success_environment' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordControlFilter.success_environment
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordControlFilter.replay_success_environment' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordControlFilter.replay_success_environment
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordControlEnvironmentExamples.parent_selects_endpoint' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordControlEnvironmentExamples.parent_selects_endpoint
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordControlEnvironmentExamples.no_context_independent_result' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordControlEnvironmentExamples.no_context_independent_result
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordControlEnvironmentExamples.extra_argument_does_not_copy_context' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordControlEnvironmentExamples.extra_argument_does_not_copy_context
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordControlEnvironmentExamples.parent_controls_nullable_loop' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordControlEnvironmentExamples.parent_controls_nullable_loop
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordControlEnvironmentExamples.scanner_control' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordControlEnvironmentExamples.scanner_control

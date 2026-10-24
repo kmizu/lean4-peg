@@ -6542,3 +6542,34 @@ and one original unary capture remain restrictions. Held-value-dependent
 header/control evaluation, arbitrary original argument shapes, independent
 multiple source captures, and general Par/Seq equality or separation remain
 unresolved. All 33 additional public theorem guards use standard axioms.
+
+
+### Retained context in codeword-control comparison
+
+`CodewordControlFilter.success_environment` generalizes the comparison
+induction from `[u]` to `u::E`, with arbitrary additional retained values.
+Tests, choices, negation, and nested repetition execute in that same
+environment. The header can also inspect it, provided its actual successes
+are certified codewords. A successful raw run produces its actual word
+sequence; the filter keeps precisely that run when every word equals u.
+`replay_success_environment` connects this to the original whole-capture
+replay and the two consecutive target parts, preserving partial outcomes
+of the continuation. Existing unary theorems specialize these results to
+empty E. Raw failure and undefinedness use the existing environment-general
+`filter_fail` and `filter_none` lemmas.
+
+This closes a local semantic restriction, not the fixed-grammar context
+transport problem. `CodewordControlEnvironmentExamples` makes the latter
+precise. On `a#aa#?`, a retained `?` test stops before the unequal second
+word and comparison succeeds; deleting the context consumes that word and
+comparison fails. A quantified theorem rules out any context-independent
+result for that same input and comparison word in this construction.
+Simply adding the parent parameter as a Seq argument fails too: Seq must
+match its literal at the new input position. A nullable repetition changes
+from undefined to finite success if the retained test is erased.
+
+Thus the next grammar construction must actually preserve or encode the
+caller context inside its verifier. Replacing it with the comparison word,
+erasing it, or appending a parameter argument is insufficient. These
+obstructions concern those specific construction choices, not arbitrary
+Seq grammars; general Par/Seq equality or separation remains unresolved.
