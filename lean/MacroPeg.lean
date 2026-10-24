@@ -213,6 +213,9 @@ import MacroPeg.CBV.SequentialFrontWrite
 import MacroPeg.CBV.SequentialFrontRoundtrip
 import MacroPeg.CBV.SequentialNotReturn
 import MacroPeg.CBV.SequentialNotReturnMachine
+import MacroPeg.CBV.SequentialLocalPipeline
+import MacroPeg.CBV.SequentialSeqReturn
+import MacroPeg.CBV.SequentialSeqReturnMachine
 import MacroPeg.CBV.PrefixSuccessor
 import MacroPeg.CBV.PrefixTupleSearch
 import MacroPeg.CBV.PrefixNumerals

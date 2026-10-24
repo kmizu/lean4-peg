@@ -30,13 +30,13 @@ def outputFields (r : Res) (k p : Nat) : List Nat :=
 def dataState (vs : List Nat) : Lists 3 := fun i => if i = 0 then vs else []
 def revState (vs : List Nat) : Lists 3 := fun i => if i = 1 then vs else []
 
-def prepend (ops : List (NPrim 3)) (next : NProg 3) : NProg 3 :=
+def prepend {K : Nat} (ops : List (NPrim K)) (next : NProg K) : NProg K :=
   ops.foldr (fun op next => .seq (.prim op) next) next
 
-def applied (ops : List (NPrim 3)) (S : Lists 3) : Lists 3 :=
+def applied {K : Nat} (ops : List (NPrim K)) (S : Lists K) : Lists K :=
   ops.foldl (fun S op => op.apply S) S
 
-theorem prepend_runs (ops : List (NPrim 3)) (next : NProg 3) (S S' : Lists 3) (T : Nat)
+theorem prepend_runs {K : Nat} (ops : List (NPrim K)) (next : NProg K) (S S' : Lists K) (T : Nat)
     (h : NRuns next (applied ops S) S' T) : NRuns (prepend ops next) S S' (ops.length + T) := by
   induction ops generalizing S with
   | nil => simpa [prepend, applied] using h
@@ -51,7 +51,7 @@ theorem runOps_runs (ops : List (NPrim 3)) (S : Lists 3) :
     NRuns (runOps ops) S (opsResult ops S) (ops.length + 1) :=
   prepend_runs ops _ S _ 1 (nruns_prim _ _)
 
-def constants (i : Fin 3) (n : Nat) : List (NPrim 3) := .pushZ i :: List.replicate n (.inc i)
+def constants {K : Nat} (i : Fin K) (n : Nat) : List (NPrim K) := .pushZ i :: List.replicate n (.inc i)
 
 def common (tag : Nat) (savePos : Bool) : List (NPrim 3) :=
   [.dup 1 2 (by decide), .pop 1, .dec 2, .pop 1] ++
