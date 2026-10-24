@@ -10407,3 +10407,65 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.guarded_rotation_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.defined_at_fixed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.defined_at_fixed
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.row_at_fixed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.row_at_fixed
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.filter_at_fixed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.filter_at_fixed
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.physical_success_prefix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.physical_success_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.literal_at_fixed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.literal_at_fixed
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.select_success' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.select_success
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.row_success_prefix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.row_success_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.finite_success' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.finite_success
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.product_at_fixed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.product_at_fixed
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.bound_fixed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.bound_fixed
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.product_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.product_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.canonical_helpers_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.canonical_helpers_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.product_source_correct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.product_source_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.RegularCaptureProduct.product_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RegularCaptureProduct.product_observations

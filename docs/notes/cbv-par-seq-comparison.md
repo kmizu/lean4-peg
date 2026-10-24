@@ -4885,3 +4885,50 @@ is a prototype for `ab` with an EOF tail. General capture-dependent argument
 filtering, arbitrary body decomposition, multiple independent captures, and
 the full Par/Seq language-class goal remain unresolved. Twenty-six new public
 axiom guards cover the established local and physical results.
+
+
+## 2026-10-24: Recursive capture product correctness on every input
+
+`RegularCaptureCorrectness` closes the global table correspondence left open
+in the preceding section. For every valid finite literal/control graph,
+valid finite-state machine, input string, node, position, and state pair,
+`product_correct` equates the generated filter's canonical Seq result with
+`filtered` applied to the original parser's canonical result. In particular,
+undefined stays undefined, finite failure stays finite failure, a matching
+successful capture retains its exact endpoint, and a successful capture with
+the wrong final state becomes finite failure. There is no stopping,
+nonnullable-star, acyclicity, or capture-length hypothesis.
+
+The proof uses actual physical tables. `defined_at_fixed` transports any
+finite source result to a physical fixed point, including source rounds
+after the chosen fixed point. `row_at_fixed` establishes the installed PEG
+body equations. `finite_success` inducts on the source approximation round,
+with an inner strong induction on the remaining input position for star.
+Every successful star iteration strictly decreases that position; nullable
+iterations cannot yield a finite source success. `select_success` proves
+that the intermediate-state enumeration follows only the actual first
+capture's state, so later failure never selects another capture. Guards
+handle failed and undefined source results directly.
+
+`bound_fixed` eliminates a supplied fixed-point premise from the public
+correctness theorem by proving that the evaluator's standard bound is itself
+a fixed point. `canonical_helpers_eq` relates independent helper components
+across grammar extensions and both CBV strategies. Consequently,
+`product_source_correct` compares the generated Seq filter with the original
+standalone Par grammar, rather than only with queries inside the generated
+grammar. `product_observations` gives the corresponding unbounded successful
+finite-observation theorem on the unchanged original strings and preserves
+the exact remaining suffix.
+
+This proves the generated regular capture filter, not a general Par-to-Seq
+compiler. The graph still has no parameter-bearing source nodes and no
+any/range atoms. Ordinary syntax normalization, phase-machine construction
+for arbitrary shift words, and an unbounded theorem for the shifted caller
+that consumes the filtered argument remain to be connected. General
+capture-dependent filtering, arbitrary body decomposition, multiple
+independent captures, and full language-class equality/separation remain
+unresolved.
+
+Validation: full `lake build` succeeds (825 jobs), including `Audit`. All
+fourteen new public theorem guards use only standard Lean axioms. No bounded
+execution or new semantic axiom is used to justify the global correspondence.

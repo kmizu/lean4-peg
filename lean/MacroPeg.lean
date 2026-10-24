@@ -419,3 +419,4 @@ import MacroPeg.CBV.BlockCapture
 import MacroPeg.CBV.PeriodicOverlapFusion
 import MacroPeg.CBV.OverlapNecessity
 import MacroPeg.CBV.RegularCaptureProduct
+import MacroPeg.CBV.RegularCaptureCorrectness
