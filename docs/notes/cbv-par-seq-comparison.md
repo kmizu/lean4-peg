@@ -5463,3 +5463,52 @@ into it. General Par/Seq equality or separation remains unresolved.
 Validation: full `lake build` passed (852 jobs), including Audit. All
 thirty-eight new public axiom guards use only standard Lean axioms. The five
 new modules have no proof placeholders or Lean warnings.
+
+
+### Capture-dependent origin control with recursive arguments
+
+`OriginControlNormalization` allows source unary bodies to be finite trees of
+prioritized choice, negation, and positive guards over shifted-replay leaves.
+A source rule need not start with replay and can return before its argument's
+endpoint. Leaf tails and call-site arguments retain the recursive argument
+syntax, including capture-dependent user recursion and nested stars.
+
+The syntactic normalization expands a control call into its caller-side tree
+of leaf calls, preceded by lookahead of the normalized argument. The lookahead
+preserves argument failure and undefinedness before negation can inspect a
+branch. Every leaf re-evaluates the same deterministic argument at the same
+origin and stage, supplying the same word; later branch failure cannot select
+a different capture. This does not assume the original source is a normalized
+core grammar.
+
+Par-to-Par normalization is proved at every ordinary physical table round for
+the entire recursive family. The row invariant relates a source control-user
+row to the tree of actual normalized leaf-row queries. All leaves are unknown
+at zero; the plan's all-unknown law handles negation. At successor rounds the
+shared prefix and structural evaluator induction relate the recursive tails.
+The row premise is discharged by induction, while independent helper tables
+are transported between actual installed grammars. `normalized_observations_iff`
+then composes with the recursive argument compiler to prove actual finite
+observations and fixed Seq language translation on unchanged original strings.
+No semantic row/filter oracle or source-replacement assumption remains.
+
+The kernel example combines parent-six / child-fourteen / parent-six capture
+reuse with guarded choice and negative fallback. Short copies fail under a
+final delimiter. After a failed recursive branch, another caller returns after
+one character although its argument captured six, demonstrating restoration of
+the origin. Generated Seq observations, including that earlier endpoint,
+follow from the unbounded theorem. A kernel counterexample shows that dropping
+the argument lookahead turns a failed `Z` argument into success via negation.
+Empty argument iteration is unknown in every source physical round, and the
+generated Seq grammar has no finite success or failure observation for it.
+
+Remaining scope: arbitrary consuming sequences/stars at body entry are not
+yet reduced to origin control trees. Every consuming leaf still starts with a
+nonempty fixed shifted replay. Capture-independent consuming leaves, multiple
+independent general arguments, atom normalization, and arbitrary original
+grammar normalization remain open. General Par/Seq equality or separation is
+not established.
+
+Validation: full `lake build` passed (854 jobs), including Audit. All
+twenty-eight new public axiom guards use only standard Lean axioms or no
+axioms. The two added modules have no proof placeholders or Lean warnings.
