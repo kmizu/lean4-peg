@@ -8111,3 +8111,115 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.StatefulScannerProduct.common_capture' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.StatefulScannerProduct.common_capture
+
+-- Combined finite-state scanner arguments, runtime controls, and actual user-body entry.
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScanner.block_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScanner.block_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScanner.block_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScanner.block_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulScanner.entry_of_layout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulScanner.entry_of_layout
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.grammar_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.grammar_length
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.common_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.common_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.left_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.left_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.right_rule' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.right_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.grammar_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.grammar_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.left_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.left_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.right_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.right_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.common_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.common_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.first_remainder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.first_remainder
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.common_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.common_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.arguments_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.arguments_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.next_enabled' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.next_enabled
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.stopTest_eval' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.stopTest_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.caseGuard_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.caseGuard_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.independent_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.independent_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.final_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.final_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.capture_reconstruction' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.capture_reconstruction
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.controls_mem' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.controls_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.goodCase_iff_eq' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.goodCase_iff_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.dispatch_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.dispatch_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.dispatch_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.dispatch_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.complete_dispatch_eval' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.complete_dispatch_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.StatefulPairArguments.complete_dispatch_body_eval' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.StatefulPairArguments.complete_dispatch_body_eval

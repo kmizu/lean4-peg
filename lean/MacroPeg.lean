@@ -386,3 +386,4 @@ import MacroPeg.CBV.StatefulScanner
 import MacroPeg.CBV.StatefulScannerFamily
 import MacroPeg.CBV.StatefulScannerBridge
 import MacroPeg.CBV.StatefulScannerProduct
+import MacroPeg.CBV.StatefulPairArguments

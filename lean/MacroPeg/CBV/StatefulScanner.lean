@@ -92,6 +92,18 @@ theorem grammar_firstOrder {n : Nat} (M : Machine n) (finish : Fin n → Bool) :
   apply branches_firstOrder
   cases finish q <;> trivial
 
+theorem block_rule {n : Nat} (M : Machine n) (finish : Fin n → Bool) (base : Nat) (q : Fin n) :
+    ruleAtM (block M finish base) q.val =
+      some ⟨0,branches base (terminal (finish q)) (M.arcs q)⟩ := by
+  simp [block,ruleAtM_eq_getElem?,q.isLt]
+
+theorem block_firstOrder {n : Nat} (M : Machine n) (finish : Fin n → Bool) (base : Nat) :
+    ∀ r ∈ block M finish base, r.body.FirstOrder := by
+  intro r hr
+  obtain ⟨q,rfl⟩ := List.mem_ofFn.mp hr
+  apply branches_firstOrder
+  cases finish q <;> trivial
+
 private theorem call_nil {g : MGrammar} {x : List Char} {s : Strategy}
     {T : Nat → List (List Char) → Val} {E : List (List Char)} (i p : Nat) (r : MRule)
     (hr : ruleAtM g.rules i = some r) (ha : r.arity = 0) :
@@ -169,6 +181,19 @@ theorem query_eval {n : Nat} (M : Machine n) (finish : Fin n → Bool)
         | some r =>
           have he := ih rest.length (by omega) (by omega) m (by omega) r
           simpa only [hrest,run,ht] using he
+
+/-- A scanner entry remains correct when its block is installed with other
+scanner blocks and user rules in the same actual grammar. -/
+theorem entry_of_layout {n : Nat} (M : Machine n) (finish : Fin n → Bool)
+    (g : MGrammar) (base : Nat)
+    (layout : ∀ q : Fin n, ruleAtM g.rules (base+q.val) =
+      some ⟨0,branches base (terminal (finish q)) (M.arcs q)⟩)
+    (x : List Char) (s : Strategy) (q : Fin n) (E : List (List Char)) (p clock : Nat)
+    (hp : p ≤ x.length) (hclock : p+1 ≤ clock) :
+    evV g x s (tblV g x s clock) E (.call (base+q.val) []) p =
+      some (if finish (run M q (sfx x p)).1 then some (run M q (sfx x p)).2.length else none) := by
+  rw [call_nil _ _ _ (layout q) rfl]
+  exact query_eval M finish g base layout x s p hp clock hclock q
 
 theorem entry_eval {n : Nat} (M : Machine n) (finish : Fin n → Bool) (x : List Char)
     (s : Strategy) (q : Fin n) (p m : Nat) (hp : p ≤ x.length) (hm : p+1 ≤ m)

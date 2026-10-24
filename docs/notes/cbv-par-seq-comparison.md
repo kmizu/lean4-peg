@@ -3664,3 +3664,56 @@ body entry remain further obligations. General Par/Seq equality or separation
 is unresolved. Four root imports and 28 new public axiom guards cover the
 actual generators, all-input observations, residual identities, and Seq
 capture connections.
+
+### Combining stateful selectors and residual captures in one grammar
+
+`StatefulPairArguments` installs the common-state selector family and both
+ordinary residual scanners together, followed by arbitrary user rules.
+Its helper prefix has exactly `(N*M)^2 + N + M` rules. `common_rule`,
+`left_rule`, and `right_rule` verify the actual addresses, and
+`grammar_firstOrder` preserves first-order user tails. The new
+`StatefulScanner.block_rule`, `block_firstOrder`, and `entry_of_layout`
+connect a generated scanner block to its entry call when other blocks and
+user rules are installed in the same grammar.
+
+`common_eval`, `left_eval`, and `right_eval` prove the three real entries
+against their exact finite-state results. `arguments_eval` then connects the
+common selector and the appropriate residual entry to actual consecutive Seq
+argument evaluation in this combined grammar. Empty chunks and tied stopping
+positions are included. `first_remainder` proves that the scanner selected
+as shorter stops exactly at the common frontier. `capture_reconstruction`
+identifies the independently evaluated original Par argument values with
+`[u,u++v]` or `[u++v,u]` from the Seq chunks, in the original parameter order.
+There is no capture-length bound or precomputed value input.
+
+`caseGuard` is an actual input-restoring PEG test for one candidate residual
+state pair and one stopping order. It combines the compiled common-state
+selector with a character-transition test at that frontier. `caseGuard_eval`
+proves that exactly the actual control passes and every wrong candidate
+finitely fails. `controls` enumerates all state pairs and both orders using
+only the fixed scanner state counts; `controls_mem` proves exhaustiveness.
+
+`dispatch` checks these candidates and calls the selected arity-two user
+rule with the actual two capture parsers. Its negative guards prevent a
+chosen user-rule failure from falling through to another candidate.
+`dispatch_eval` and `complete_dispatch_eval` prove the complete partial
+result for every user-rule result, including failure and undefinedness.
+Their user-rule premise is the actual syntactic lookup and arity, not a
+semantic simulation hypothesis or input-dependent control advice.
+
+`complete_dispatch_body_eval` also connects query entry to two installed
+capture-view body variants. Residual states select the parsers; the user body
+needs only the original capture order, so two body variants suffice. The
+proof runs the real guard, both captures, and named user query in one grammar,
+then preserves every first-order use of the reconstructed values in the body.
+It retains the explicit clock bound needed for the lexical helper queries.
+
+This closes the combined operational argument interface and user-body entry
+for finite-state scanner pairs. It does **not** yet prove a whole recursive
+Par-to-Seq grammar transformation: recursive user-body correspondence and
+its interaction with the helper-query clocks remain to be established.
+Arbitrary recursive/backtracking argument parsers and arbitrary source body
+entry are also outside this interface. The general same-original-language
+comparison remains unresolved. Root imports and 26 new public axiom guards
+cover installed block layouts, runtime case selection, capture reconstruction,
+complete dispatch, and actual body entry.
