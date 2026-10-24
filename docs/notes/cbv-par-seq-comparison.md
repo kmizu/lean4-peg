@@ -7018,3 +7018,36 @@ and copies. The present positive family and local body bridge do not
 establish this. Full finite-failure/undefinedness correspondence,
 arbitrary caller continuations through preflight, recursive integration,
 general inverse translation, and class separation remain open.
+
+### All-input language equality for the partial-codeword pair
+
+`PartialCodewordClassification` closes both converses on arbitrary original
+strings, with no supplied word length, word count, alphabet restriction,
+or well-formed-input premise. Both `source_language` and `target_language`
+are equivalent to `exists k n, x = input k n`, where `u=a^k#`,
+`w=u^n a^k`, and `input k n = u w ! w`. Thus `language_eq` proves exact
+accepted-language equality for these two fixed grammars. Malformed runs,
+delimiters, and final copies cannot produce a complete successful parse.
+
+On the Seq side, `check_inverse` extracts the count and marker endpoint
+from the actual greedy checker trace. `run_shape` derives k from the real
+first argument; the unary/binary body inverses validate the entire final
+copy and EOF. `target_inverse` joins those facts through the actual calls,
+including the guarded zero-word branch.
+
+On the Par side, `source_body_inverse` derives the input equation from
+actual scanner/replay/EOF success. The actual argument supplies its
+captured prefix and, via `argument_stop`, a suffix that cannot begin with
+another a. `stopped_overlap` applies the existing general periodic-overlap
+theorem and proves that this greedy stop forces the final partial-codeword
+phase to have length k. It therefore derives the same w and n without
+assuming an intended argument shape or uniform codeword trace.
+
+This settles accepted-language equality for this candidate, not full
+finite-failure/undefinedness correspondence or arbitrary continuations.
+The preflight still uses a concrete ! marker; the converse is not a
+recursive row relation or a general inverse compiler. Removing that
+marker dependence and composing real partial captures with recursive
+user continuations remain central obligations for the original general
+Par/Seq equality-or-separation goal. All 19 new public theorem guards
+use only standard axioms (or a subset thereof).
