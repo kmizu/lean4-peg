@@ -2207,3 +2207,475 @@ environment. Bounding those copies, accounting for all saved cursors and
 clocks, and implementing any proposed compressed representation remain
 additional obligations. The current deterministic space upper bound remains
 `O(n log(n+1))`; no linear-space bound or Par/Seq separation is claimed here.
+
+### One environment per Seq activation and a global capture-payload bound
+
+`MacroPeg.CBV.SequentialSharedStack` now implements a second deterministic
+Seq evaluator. A configuration stores one current capture environment.
+Sequence, choice, negation, repetition, and argument-head continuations carry
+no environments. When a query enters a rule body, it saves the caller's
+current environment once in a scope frame and installs the new argument
+environment. Returning through that frame restores the caller environment.
+In particular, a nested call inside an argument restores the environment
+needed to evaluate the remaining arguments.
+
+This is an executable transition function, not an assumed semantic operation.
+`expression_runs`, `arguments_runs`, and `query_runs` prove its finite-clock
+semantics and environment restoration. `original_result_iff` equates its
+terminal results with those of the existing `SequentialStack` on the same
+original `List Char` input. `accepts_iff` connects it to first-order Seq
+observations. The fuelled `drive` returns the whole terminal configuration;
+`drive_result_iff` checks both the result and restoration of the empty outer
+environment, including failed and undefined finite-clock results.
+
+`MacroPeg.CBV.SequentialSharedSpace` proves a global bound that was unavailable
+for the evaluator with duplicated continuation environments. It charges a
+span `(p,q)` by `p-q` and counts every retained copy: the current environment,
+all suspended scope environments, every pending argument head, and an
+argument environment stored in the current task or returned value.
+`reachable_weight` bounds their total charged length by the input length at
+**every reachable state**. `reachable_captured_characters` consequently bounds
+the sum of lengths of all their decoded character words by the same input
+length, even if each retained span is materialized as a separate word.
+
+The proof uses the exact argument-window conservation law from
+`SequentialCaptureRegions`: successful arguments started at `p` and ending
+at `q` have total capture length `p-q`. A proof-only continuation certificate
+assigns the fresh callee environment this consumed-input credit. On entry to
+a body, its environment length plus its starting cursor is at most the
+caller's credit. A scope return releases the callee environment. Structural
+continuations save no capture payload, and pending argument heads telescope
+against the starting cursors of the argument tails. The certificates add no
+runtime accounting fields.
+
+This bounds captured **character payload**, not the total space of a Turing
+machine. It does not bound the number of empty captures or scopes, compress
+integer cursor and clock metadata, or implement bounded-space allocation and
+parameter lookup. The previously proved complete TM bound remains
+`O(n log n)`. Neither a general Par-to-Seq translation nor a language-class
+separation follows from this payload bound; the general comparison remains
+open.
+
+### Sharing the Seq query clock across all continuations
+
+`MacroPeg.CBV.SequentialSharedClock` removes the clock fields from every task
+and continuation frame. The configuration has one current clock. Entering an
+existing rule body at a valid cursor decrements it; returning through a scope
+frame increments it. A zero-clock query, a missing rule, or an invalid cursor
+produces the same undefined result as before and leaves the clock unchanged.
+Thus a nested call restores both the caller environment and the clock needed
+by its remaining computation.
+
+The executable transition function is related to `SequentialSharedStack` by
+`inflate`: it reconstructs a structural frame's clock from the current clock
+and the number of intervening scopes. `step_commutes` proves exact agreement
+of **every** transition on arbitrary configurations. `runs_inflate` and
+`Runs.lift` transfer finite executions in both directions. `initial_runs`,
+`result_iff`, and `accepts_iff` connect the new machine to the original Seq
+semantics on unchanged `List Char` input. `drive_result_iff` checks the result,
+the empty restored outer environment, and the restored initial clock for the
+fuelled executable driver.
+
+`step_clock_mass` proves the invariant
+
+```
+current clock + number of active scopes = initial clock.
+```
+
+Consequently `reachable_clock_bounds` bounds both quantities by
+`(number of grammar rules + 1) * (input length + 1)` at every reachable state.
+The global captured-character bound also transfers without duplication:
+`reachable_captured_characters` still counts the current environment, every
+suspended environment, pending argument heads, and current argument results.
+The reconstruction function is used in proofs only; the runtime continuation
+stack contains no per-frame clocks.
+
+This eliminates one source of repeated integer metadata and bounds the number
+of scope records, including scopes with empty environments. It does not yet
+bound all structural frames or empty captures in this machine, compress
+saved cursors and span endpoints, or implement a linear-space TM simulation.
+The established complete TM bound remains `O(n log n)`, and the general
+Par/Seq language-class question remains open.
+
+### Counting every shared-machine frame and capture record
+
+`MacroPeg.CBV.SequentialSharedRank` now relates every intermediate state of
+`SequentialSharedClock` directly to the original `SequentialStack`.
+`eraseStack` reconstructs the lexical environment and clock of each structural
+frame while dropping scope frames. A scope return erases to a stuttering
+step; every other transition is simulated by one original transition.
+`step_erases` and `runs_erase` prove this for the actual machines, without
+assuming that the new machine's states have an extra well-formedness type.
+
+`eraseStack_length` gives exact accounting: the original stack length plus
+the number of dropped scopes equals the new stack length. Combining the
+original stack rank with clock conservation gives `stack_linear_bound`.
+Writing `R` for the number of rules, `C` for `SequentialStackRank.codeBudget`,
+`n` for input length, and `e` for the start expression, every reachable state
+satisfies
+
+```
+number of all frames <= (R + 1) * (C + 1) * (n + 1) + sizeOf e.
+```
+
+This counts structural continuations, call continuations, pending argument
+heads, and scope records, including those with no character payload.
+
+`MacroPeg.CBV.SequentialSharedPayload` also bounds environments saved only
+for restoration. Such an environment can be absent from the erased original
+stack, so its validity cannot simply be read from that stack's payload
+bound. `step_envs_ok` and `reachable_envs_ok` explicitly maintain all current
+and suspended environments. Newly installed query environments come from the
+original machine's argument-count invariant. Saved scope environments are
+preserved by body entry and recovered by scope return.
+
+Let `A` be the sum of grammar rule arities. `reachable_task_captures` and
+`reachable_frame_captures` bound every retained environment by `A` entries.
+`reachable_capture_records` therefore proves
+
+```
+number of all retained capture entries <= (number of frames + 2) * A.
+```
+
+`capture_records_linear` substitutes the linear frame bound. This count
+includes **empty captures** as well as nonempty ones. Together with the
+previous captured-character bound, it controls both the total word payload
+and the number of word delimiters. `reachable_valid_captures` verifies that
+every retained span satisfies `0 <= end <= start <= n`, including captures
+in scope environments that disappear under erasure.
+
+A complete linear-space simulation is still missing: span endpoints and saved
+input cursors remain integer metadata, and bounded-space implementations of
+the required operations have not been supplied. These results do not prove
+a general reverse grammar translation or a language-class separation. The
+complete TM upper bound established so far remains `O(n log n)`.
+
+### An actual shared Seq machine with word-valued captures
+
+`MacroPeg.CBV.SequentialSharedWords` now implements capture environments as
+`List (List Char)`, rather than lists of origin-coordinate pairs. Parameter
+matching uses `stripPrefix?` on the stored word. A successful argument creates
+its word with `pre x p q`; pending argument continuations retain that word,
+and scope frames retain the caller's word environment. Tasks and frames have
+no capture-origin fields. The machine still uses one current environment,
+one shared query clock, and the unchanged original input.
+
+`atom_decode` equates parameter matching with matching a valid numeric span.
+`step_commutes` proves that decoding a span configuration commutes with an
+actual transition; its only validity hypothesis concerns the current capture
+environment. No semantic operation is supplied as an oracle to the word
+machine. `runs_decode` moves real initialized span executions to the word
+machine. Conversely, `lift_step` and `runs_lift` show that every execution
+reachable in the word machine has a matching initialized span execution.
+Thus agreement covers intermediate states in both directions, not just a
+selected successful run.
+
+`original_result_iff` equates terminal results with the original
+`SequentialStack` on the same `List Char` input. `accepts_iff` connects this
+to first-order Seq observations. The executable driver's `drive_result_iff`
+checks the result together with restoration of the outer empty word
+environment and the initial clock, including failed and undefined
+finite-clock results.
+
+`MacroPeg.CBV.SequentialSharedWordSpace` transfers the resource bounds to
+**every reachable word-machine state**. `decode_retained_words` counts every
+copy in the current environment, suspended scopes, pending argument heads,
+and current query or argument-result values. Consequently
+`reachable_word_characters` bounds their total character count by input
+length. `reachable_word_records` also counts empty words, and
+`stack_linear_bound` counts all continuation records.
+
+The capture stream codec stores each word as tagged characters followed by
+one terminator, including a terminator for an empty word.
+`decodeWords_encodeWords` proves a left inverse and
+`encodeWords_injective` proves that no word sequence is lost.
+`encodeWords_length` is exactly the total character count plus the number of
+words. `capture_stream_linear` therefore gives a linear symbol bound for the
+whole retained-word sequence, with an alphabet independent of input length.
+This stream codec preserves the word sequence; it is not yet a codec for
+environment grouping or the complete machine state.
+
+Capture-origin endpoints are eliminated from the runtime word machine.
+Saved input cursors still remain, and a complete state codec and bounded-space
+implementations of the operations are missing. In particular, this does not
+yet establish a linear-space TM simulation, a general Par-to-Seq grammar
+translation, or a language-class separation. The proved complete TM bound
+remains `O(n log n)`.
+
+### Monotone saved cursors and a linear binary position stream
+
+`MacroPeg.CBV.SequentialSharedCursors` extracts the current cursor, when
+present, followed by the saved cursors in stack order. It includes expression,
+argument, and query tasks, successful returned-value cursors, and positions
+stored in choice, negation, repetition, and argument-head frames. It omits
+failed or undefined result cursors, since those results store no position.
+These are all the word machine's input-position fields: captured words and
+scope environments no longer retain origin endpoints.
+
+`reachable_chain` proves that this complete position list is nondecreasing
+from the top towards the bottom of the stack, starting above zero and bounded
+by the original input length, at **every reachable word-machine state**.
+This includes intermediate argument evaluation and failed or undefined
+results, not just successful terminal runs. The proof extracts position
+bounds from the shared-machine scope certificates: each saved cursor is the
+bound of its incoming continuation kind, and those bounds never decrease
+along the stack. The initialized span/word execution correspondence transfers
+the certificate to the actual word machine.
+
+`MacroPeg.CBV.SequentialCursorChain` implements difference encoding and its
+inverse. For a cursor list `p1 <= ... <= pk`, it stores the differences
+`p1, p2-p1, ..., pk-p(k-1)`. Each difference is written as that many `true`
+bits followed by one `false` delimiter. Zero differences require only their
+delimiter. `Chain.restore`, `decodeDeltas_encodeDeltas`, and
+`Chain.decode_encode` prove exact recovery on the increasing domain;
+`Chain.encode_injective` proves that distinct valid position lists cannot
+collapse under saturating subtraction.
+
+The sum of differences is at most input length, so the entire position stream
+uses at most `input length + number of stored positions` bits. There are at
+most `number of frames + 1` stored positions. `cursor_stream_correct` verifies
+the codec on every reachable state, and `reachable_cursor_bits` consequently
+bounds the stream length by
+
+```
+input length + number of frames + 1.
+```
+
+`cursor_bits_linear` substitutes the fixed-program linear frame bound. This
+removes the logarithmic factor from the **stored position stream** without
+assuming that many equal or nearby saved cursors cost a binary integer each.
+
+The capture-word stream and the position stream are still separate partial
+encodings. They have not been assembled with syntax references, environment
+grouping, frame tags, and the shared clock into a complete verified state
+codec. In particular, the executable inverse returns cursor values; no proof
+yet shows that all operations on the compressed streams run in linear TM
+space. The established complete TM upper bound remains `O(n log n)`, and
+neither a general reverse translation nor a Par/Seq language-class separation
+has been proved.
+
+### A lossless whole-state representation with linear stored length
+
+`MacroPeg.CBV.SequentialSharedPool` transfers the original fixed-program
+expression-pool certificates to every reachable word-machine task and frame.
+Scope frames contain no syntax. The other frames recover their certificates
+through scope erasure, including the argument tails and repetition bodies.
+
+`MacroPeg.CBV.SequentialSharedStateCodec` now assembles all runtime fields.
+Its logical input has three streams: control integers, ordered cursors, and
+ordered capture words. Control records include task/frame tags, rule and
+expression-pool references, argument-list lengths, environment lengths, and
+the stack length. A reader consumes the exact number of words and positions
+required by each record. `readTask_write`, `readFrame_write`, and `read_write`
+prove recovery while preserving arbitrary tails of all three streams. Thus
+the reconstruction restores word environments and field associations, rather
+than just an ungrouped list of words or positions.
+
+The complete `Packed` representation has four streams over fixed alphabets:
+
+- one unary block for the shared clock;
+- unary blocks for the control integers;
+- the monotone difference encoding of the ordered cursor list;
+- tagged characters with terminators for the ordered word list.
+
+There are no unencoded runtime fields in `Packed`. The fixed expression pool
+is determined by the grammar and start expression and is the codec context.
+`reachable_decode_encode` proves exact recovery of the whole configuration
+at every initialized reachable state. `encode_injective` proves that valid
+states cannot collapse to one representation. The executable `packedStep`
+decodes, performs an actual word-machine transition, and re-encodes;
+`reachable_step_commutes` proves its agreement with that transition.
+
+`MacroPeg.CBV.SequentialSharedStateBound` counts the complete representation,
+including the control stream and all environment/grouping headers. Write
+`P` for the expression-pool length, `D` for the fixed program budget, and `R`
+for the number of rules. Its control budget is the source-only constant
+
+```
+B = D * (P + 1) + D + R + P + 10.
+```
+
+Argument tails have length at most `D`; expression identifiers are at most
+`P`; live rule references are below `R`. The sum of environment-length headers
+is charged to the already counted retained word records. Consequently, for
+`K` frames and `W` retained word records, `control_cost` bounds the unary
+control stream by `(K + 1) * B + K + 2 + W`. Both nonempty and empty words are
+included in `W`, and the one stack-length header is also counted.
+
+Combining this with clock, character, cursor, and frame bounds gives
+`encoded_state_linear`: for every grammar `g`, start expression `e`, original
+input `x`, and reachable word-machine state `c`,
+
+```
+length (encode (compilerNodes g e) c) <= linearFactor g e * (x.length + 1).
+```
+
+Here length is the total number of symbols in all four streams, each over an
+alphabet independent of input length. The coefficient depends only on the
+fixed source program. This is a complete stored-state size theorem, including
+syntax references, frame tags, environment grouping, capture values, input
+positions, and the shared clock.
+
+It is still **not a complete linear-space TM simulation**. In particular,
+`packedStep` materializes the decoded cursor list and configuration, and no
+linear workspace bound is asserted for this implementation. The next
+operational obligation is to implement the needed transitions on the
+compressed streams with bounded workspace and connect that implementation to
+the initialized TM model. The existing complete TM theorem remains
+`O(n log n)`. General Par/Seq equality and language-class separation are still
+open; a compact state representation alone proves neither conclusion.
+
+### Direct compressed-cursor operations with intermediate tape bounds
+
+`MacroPeg.CBV.SequentialCursorEdit` gives local algebra for the reversed
+binary cursor stream, using symbol `1` for a true bit and symbol `0` for a
+block delimiter. Removing a cursor merges its difference into the next block;
+when no next cursor exists, it discards the obsolete data bits. Adding an
+identical cursor inserts a zero-difference block. Removing the second cursor
+preserves the first cursor while merging the second cursor's difference into
+the following block. The algebra proves agreement with the original absolute
+cursor lists on the previously verified increasing domain.
+
+`MacroPeg.CBV.SequentialCursorEditMachine` implements these operations as
+actual `Complexity.LProg` programs using copy, pop, push, tests, and loops:
+
+- `dropBlock` removes the first cursor, merging the difference or clearing it
+  at the end of the stream;
+- `duplicate` duplicates the first cursor by adding one zero-difference block;
+- `dropSaved` removes the second cursor while preserving the first.
+
+The common `scan` moves only the leading unary block and stops at its
+delimiter. None of these programs decodes the suffix to a list of integers or
+receives a precomputed prefix-length counter. `scan_runs`, `dropBlock_runs`,
+`duplicate_runs`, and `dropSaved_runs` prove the actual list executions with
+`LenOK B` at **every visited instruction state**. Scratch starts and ends
+empty, and unrelated tapes are preserved. Deletion fits the existing tape
+capacity; duplication needs only one additional cell. `drop_current_runs`,
+`duplicate_current_runs`, and `drop_saved_runs` connect the raw stream edits
+to the intended absolute-cursor list edits.
+
+`tape_runs` applies the existing list-to-tape compiler and proves execution
+under `TFits B`, covering intermediate tape head positions and writes as well
+as completed subroutine states. This supplies operational space evidence that
+the previous materializing `packedStep` did not provide.
+
+`MacroPeg.CBV.SequentialCursorEntryMachine` connects the duplicate operation
+to actual word-machine entries for choice, negation, repetition, and argument
+heads. `actual_step` checks the source transitions. `layout` holds the complete
+packed state's cursor, control, clock, and word streams on six tapes, with
+empty scratch tapes. `cursor_update` and `cursor_update_tape` update the cursor
+component for every such initialized reachable entry with capacity
+
+```
+linearFactor g e * (input length + 1) + 3.
+```
+
+The other packed-state streams survive unchanged during this **cursor
+component update**. The result is not yet the fully updated packed successor:
+control and word changes still need their own implementation and composition.
+The current-cursor decrease needed after successful input consumption also
+remains to be implemented, as do complete dispatch, initialization, and the
+final TM recognition connection. The general Par/Seq comparison remains open,
+and the proved complete recognizer's space bound remains `O(n log n)`.
+
+### Decreasing a cursor directly after successful consumption
+
+`MacroPeg.CBV.SequentialCursorDecrease` gives the remaining local cursor
+algebra. Decreasing the current cursor by one removes one true bit from its
+head block and adds one true bit to the next difference block, if there is a
+next saved cursor. At the end of the cursor list, the obsolete bit is simply
+discarded. `lowerRest_relative` and `lower_current` prove that this direct edit
+preserves all the saved absolute positions on the increasing domain.
+
+`MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement` implements that edit
+with actual list instructions. It removes the leading bit, scans the remaining
+head block into scratch, removes the delimiter, conditionally adds a bit to
+the suffix, and restores the delimiter and head block. It receives neither
+the old absolute position nor a new result position as a runtime input.
+`decrement_runs` and `decrement_current_runs` prove the encoded result, empty
+scratch restoration, preservation of unrelated tapes, and `LenOK B` for every
+instruction state using the **original capacity**.
+
+`consume` repeats this edit using a unary counter of consumed characters.
+`consume_runs` proves that consuming `used <= p` characters changes the first
+cursor from `p` to `p-used`, preserves the saved cursor list, and empties both
+the counter and scratch. `consume_tape` supplies the compiled `TFits B` tape
+execution, covering all intermediate states. The counter's production by a
+dynamic input/word matcher remains a separate obligation. For a source-fixed
+length, `consumeFixed` creates the unary counter itself with fixed push
+instructions; `consumeFixed_runs` proves the complete allocation, edit, and
+cleanup within the same capacity. This is a cursor operation, not a literal
+matching test.
+
+`MacroPeg.CBV.SequentialAnyCursorMachine` connects the operation to the actual
+`any` atom. Its program tests the last symbol of the compressed cursor stream:
+a positive cursor ends in a true bit and takes the decrement branch; zero
+ends in a delimiter and takes the existing cursor-deletion branch. Thus both
+success and empty-input failure select their cursor update from the stream
+itself, with no supplied success flag, consumed-length counter, or new result
+position. `actual_step` checks the real Seq transition; `cursor_update` and
+`cursor_update_tape` prove the corresponding cursor-component update for all
+initialized reachable `any` states with capacity
+
+```
+linearFactor g e * (input length + 1) + 2.
+```
+
+The other complete packed-state streams remain on their tapes unchanged.
+`decrement_constOK`, `consumeFixed_constOK`, and `finite_alphabet` also verify
+the fixed pushed-symbol alphabet requirements. These programs still update
+only the cursor component. Complete control/word updates, actual dynamic
+matching, dispatch, initialization, and the final TM recognition connection
+remain open, as does the general Par/Seq language-class comparison. The
+proved complete recognizer's space bound remains `O(n log n)`.
+
+### A complete compressed-state `any` transition
+
+`MacroPeg.CBV.SequentialControlEditMachine` supplies the control-stream
+operations that the cursor-only atom update lacked. `moveBlock` saves one
+complete unary field, including its delimiter. `discardHead` and
+`discardBlock` erase a field without decoding its value. `saveMany` and
+`discardMany` repeat these operations a source-fixed number of times.
+`replace` saves the header fields, discards an old record, writes a fixed new
+record, and restores the headers. Field values are never supplied to the
+program as a decoded integer array.
+
+`replace_runs` proves the actual list execution, arbitrary suffix preservation,
+scratch cleanup, and `LenOK B` at every instruction state. Capacity sufficient
+for the initial state and the complete replacement also suffices for all
+partial copies and intermediate states. `replace_constOK` verifies that only
+the two fixed bit symbols are pushed, regardless of the field values.
+
+`MacroPeg.CBV.SequentialAnyPackedMachine` combines this operation with the
+direct cursor updates. The first two control fields, environment length and
+stack length, are saved unchanged. The old task fields `[0, anyExpressionId]`
+are discarded and replaced by `[3, 2]` for success or `[3, 1]` for failure.
+The source cursor's leading bit chooses the branch **before** the cursor is
+modified; neither a success flag nor a new position is supplied externally.
+The clock, captured words, and continuation stack remain unchanged by this
+atom, and both scratch tapes are empty again at completion.
+
+`after_layout` proves equality with the whole successor representation,
+including all four packed streams. `transition_runs` checks the actual Seq
+step and constructs the complete encoded successor on the list machine.
+`transition_tape` then supplies the compiled six-tape execution for every
+initialized reachable `any` state, covering both success and empty-input
+failure, with capacity
+
+```
+linearFactor g e * (input length + 1) + 2.
+```
+
+This bound covers all intermediate tape positions and writes, not just
+stored endpoints. `finite_alphabet` verifies the complete transition's fixed
+pushed-symbol alphabet. The initial and final space bounds come from the same
+reachable-state theorem; the proof also verifies reachability of the actual
+successor before using its bound.
+
+This is the first complete transition for the compressed machine, rather
+than only an update of its cursor component. It is still a subroutine entered
+at a preloaded reachable `any` state. Other instructions, dynamic matching,
+dispatch, standard-input initialization, and the complete TM recognition
+connection remain to be constructed. General Par/Seq equality or separation
+is unresolved, and the established complete recognizer bound remains
+`O(n log n)`.

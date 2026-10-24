@@ -5793,3 +5793,449 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureRegions.reachable_decoded_arguments' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialCaptureRegions.reachable_decoded_arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStack.query_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStack.query_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStack.original_result_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStack.original_result_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStack.accepts_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStack.accepts_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStack.drive_result_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStack.drive_result_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedSpace.step_scoped' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedSpace.step_scoped
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedSpace.reachable_weight' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedSpace.reachable_weight
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedSpace.reachable_captured_characters' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedSpace.reachable_captured_characters
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.step_commutes' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.step_commutes
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.Runs.lift' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.Runs.lift
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.step_clock_mass' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.step_clock_mass
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.initial_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.initial_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.reachable_clock_bounds' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.reachable_clock_bounds
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.result_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.result_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.accepts_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.accepts_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.drive_result_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.drive_result_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.reachable_captured_characters' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.reachable_captured_characters
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedRank.step_erases' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedRank.step_erases
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedRank.runs_erase' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedRank.runs_erase
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedRank.eraseStack_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedRank.eraseStack_length
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedRank.stack_linear_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedRank.stack_linear_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedPayload.step_envs_ok' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedPayload.step_envs_ok
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_envs_ok' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_envs_ok
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_frame_captures' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_frame_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedPayload.capture_records_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedPayload.capture_records_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_valid_captures' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_valid_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.atom_decode' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.atom_decode
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.step_commutes' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.step_commutes
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.runs_decode' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.runs_decode
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.runs_lift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.runs_lift
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.original_result_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.original_result_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.accepts_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.accepts_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWords.drive_result_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWords.drive_result_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWordSpace.reachable_word_characters' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWordSpace.reachable_word_characters
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWordSpace.reachable_word_records' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWordSpace.reachable_word_records
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWordSpace.stack_linear_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWordSpace.stack_linear_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWordSpace.decodeWords_encodeWords' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWordSpace.decodeWords_encodeWords
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedWordSpace.capture_stream_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedWordSpace.capture_stream_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.restore' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.restore
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.delta_sum' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.delta_sum
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorChain.decodeDeltas_encodeDeltas' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorChain.decodeDeltas_encodeDeltas
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.decode_encode' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.decode_encode
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.encode_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorChain.Chain.encode_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedCursors.reachable_chain' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedCursors.reachable_chain
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedCursors.cursor_stream_correct' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedCursors.cursor_stream_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedCursors.reachable_cursor_bits' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedCursors.reachable_cursor_bits
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedCursors.cursor_bits_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedCursors.cursor_bits_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedPool.reachable_ok' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedPool.reachable_ok
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStateCodec.readTask_write' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStateCodec.readTask_write
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStateCodec.readFrame_write' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStateCodec.readFrame_write
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStateCodec.read_write' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStateCodec.read_write
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStateCodec.reachable_decode_encode' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStateCodec.reachable_decode_encode
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStateCodec.encode_injective' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStateCodec.encode_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStateCodec.reachable_step_commutes' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStateCodec.reachable_step_commutes
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStateBound.reachable_fits' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStateBound.reachable_fits
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStateBound.exprs_cost' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStateBound.exprs_cost
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStateBound.task_cost' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStateBound.task_cost
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStateBound.frame_cost' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStateBound.frame_cost
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStateBound.reachable_control_cost' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStateBound.reachable_control_cost
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStateBound.reachable_length' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStateBound.reachable_length
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStateBound.encoded_state_linear' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStateBound.encoded_state_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEdit.drop_relative' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEdit.drop_relative
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEdit.duplicate_current' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEdit.duplicate_current
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEdit.drop_saved' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEdit.drop_saved
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.scan_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.scan_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.dropBlock_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.dropBlock_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.duplicate_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.duplicate_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.dropSaved_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.dropSaved_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.drop_current_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.drop_current_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.duplicate_current_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.duplicate_current_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.drop_saved_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.drop_saved_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.tape_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.tape_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEntryMachine.actual_step' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEntryMachine.actual_step
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEntryMachine.cursor_update' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEntryMachine.cursor_update
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEntryMachine.cursor_update_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEntryMachine.cursor_update_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecrease.lowerRest_relative' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecrease.lowerRest_relative
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecrease.lower_current' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecrease.lower_current
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement_current_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement_current_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consume_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consume_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consumeFixed_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consumeFixed_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consume_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consume_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement_constOK' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.decrement_constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consumeFixed_constOK' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorDecreaseMachine.consumeFixed_constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.actual_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.actual_step
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.cursor_update' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.cursor_update
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.cursor_update_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.cursor_update_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.finite_alphabet' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyCursorMachine.finite_alphabet
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialControlEditMachine.blocks_append' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialControlEditMachine.blocks_append
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialControlEditMachine.moveBlock_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialControlEditMachine.moveBlock_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialControlEditMachine.discardHead_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialControlEditMachine.discardHead_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialControlEditMachine.saveMany_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialControlEditMachine.saveMany_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialControlEditMachine.discardMany_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialControlEditMachine.discardMany_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialControlEditMachine.replace_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialControlEditMachine.replace_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialControlEditMachine.replace_constOK' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialControlEditMachine.replace_constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyPackedMachine.before_control' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyPackedMachine.before_control
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyPackedMachine.after_layout' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyPackedMachine.after_layout
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyPackedMachine.control_update' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyPackedMachine.control_update
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyPackedMachine.transition_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyPackedMachine.transition_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyPackedMachine.transition_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyPackedMachine.transition_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAnyPackedMachine.finite_alphabet' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAnyPackedMachine.finite_alphabet
