@@ -17895,3 +17895,123 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.FragmentConsumingRecursiveExamples.consuming_then_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.render_fragment_syntax' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.render_fragment_syntax
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.leaf_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.leaf_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.source_rule' depends on axioms: [propext, Classical.choice] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.leaf_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.leaf_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.compare_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.compare_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.tail_compare_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.tail_compare_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.ternary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.ternary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.unary_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.unary_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.source_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.source_call
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.evaluator_of_previous' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.evaluator_of_previous
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.stable_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.stable_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginRecursive.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginRecursive.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginExamples.valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginExamples.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginExamples.mutual_origin_control' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginExamples.mutual_origin_control
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginExamples.short_copies_rejected' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginExamples.short_copies_rejected
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginExamples.rollback_before_capture_endpoint' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginExamples.rollback_before_capture_endpoint
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginExamples.argument_guard_is_needed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginExamples.argument_guard_is_needed
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginExamples.argument_none_precedes_negative_body' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginExamples.argument_none_precedes_negative_body
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginExamples.rollback_star_is_undefined' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginExamples.rollback_star_is_undefined
+
+/-- info: 'Shallot.MacroPeg.CBV.FragmentOriginExamples.zero_clock_failure_and_no_row' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.FragmentOriginExamples.zero_clock_failure_and_no_row

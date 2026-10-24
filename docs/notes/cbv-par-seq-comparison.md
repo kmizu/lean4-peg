@@ -7580,8 +7580,61 @@ and zero complete words. Mandatory argument failure and a-consuming H
 followed by an empty-star None are preserved at every ordinary clock.
 
 This closes recursive preservation for the consuming-fragment family.
-It does not remove the fixed A=a*;# header, a-only consuming fragment,
-one source capture, or mandatory A;param0 body-entry restrictions. Mixed-body
-compiler integration, general consuming arguments, arbitrary initial body
-positions, independent multiple captures, and general Par/Seq equality or
-separation remain unresolved.
+The standalone compiler still uses a fixed A=a*;# header, an a-only
+consuming fragment, one source capture, and mandatory A;param0 body entry.
+The following origin-control extension relaxes that user-body entry shape.
+General consuming arguments, arbitrary initial consuming body positions,
+independent multiple captures, and general Par/Seq equality or separation
+remain unresolved.
+
+### Origin body control with consuming-fragment calls
+
+`FragmentOriginRecursive` combines the consuming-fragment call bridge with
+`ReplayControlFusion.Plan` and the generic call normalization from
+`MixedOriginControl`. A logical user body is now a finite tree of prioritized
+choice, negation, and positive guards over replay leaves. Each leaf has
+body A;param0;b, with b an arbitrary normal template. The caller still supplies
+one actual argument `(A;&(A;G))*;H`, with the same consuming-fragment syntax
+and recursive caller-side tests as above.
+
+The source grammar contains the logical users with these actual body trees,
+followed by ordinary unary leaf rules. Generated source calls address logical
+users only; the appended leaf rows support a same-clock normalization proof.
+The target grammar contains the two comparison helpers and a ternary/unary
+pair per leaf. At each target call, an actual-argument preview precedes the
+body's origin-control tree of physical Seq entries. No captured value is
+presumed at the original position: each leaf's call bridge derives the real
+pieces, endpoint, and restored whole value.
+
+`source_call` proves the actual source call equal to its guarded expansion
+into source leaf calls at every ordinary clock. At clock zero every leaf row
+is absent and the entire control plan remains undefined after successful
+argument evaluation; finite argument failure is still preserved first.
+The syntactic `Valid` premise only checks that each plan leaf index exists.
+There is no input, capture-value, semantic table-row, or totality condition.
+
+Structural induction again treats normal and consuming-fragment templates
+together, while ordinary-clock induction handles user continuations.
+`evaluator_eq`, `stable_eq`, `observations_iff`, and `language_translation`
+preserve all partial results, all finite observations, and the language of
+unchanged strings in one fixed first-order Seq grammar. No argument or
+continuation correspondence is supplied to these final results.
+
+Kernel executions use real 0→1→0 calls with negative origin guards and
+prioritized fallback, retaining a → aaa#a → aa and rejecting short copies.
+A distinct negative-body example on a! actually captures a yet returns the
+original position; its continuation then consumes the original a! input.
+On #, the mandatory argument fails, while omitting the outer argument
+preview would let the negative target body succeed. Further executions
+preserve undefined arguments before negative bodies, nullable rollback
+inside a caller star, and both finite-failure and missing-row behavior at
+clock zero.
+
+A logical user no longer has to begin with a consuming A;param0. Its body
+may inspect the capture through several origin branches and predicates and
+return before the capture endpoint. The replay leaves still require that
+entry shape; arbitrary initial consuming sequences/stars have not been
+normalized into this new compiler. The fixed header, a-only consuming H,
+one source capture, and unsupported-template restrictions remain. This is
+not a complete integration of `MixedBodyCompiler` or a general Par→Seq
+translation, and no language-class equality or separation is claimed.
