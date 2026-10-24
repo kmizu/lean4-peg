@@ -5995,3 +5995,52 @@ helper calls, and unary user rules remain restrictions. Recursive argument
 calls into parameterized users, general capture shapes, independently
 multiple captures, arbitrary consuming headers, and general Par/Seq
 class equality or separation remain unresolved.
+
+
+### Any positive fixed codeword count, chosen separately per rule
+
+`CodewordReplay` removes the special role of two codewords from the local
+runtime capture representation. Unique prefix decoding compares an arbitrary
+finite list of codewords against another encoded list plus an arbitrary
+suffix. If `u ++ flatten(vs)` can be replayed after consuming the first
+codeword `u`, then `vs` must be a list of copies of `u`. A target replay of
+`length(vs)+1` copies of `u` forces the same condition. When the condition
+fails both replays fail; when it holds their consumed strings and subsequent
+retained-value views agree. `collapse` preserves the complete partial
+result for every first-order continuation, strategy, and table.
+
+`CountedCodeGrammar` incorporates this representation in the ordinary
+recursive compiler. Each user rule carries its own natural `extra`; its
+successful original argument captures `extra+1` complete codewords. The
+words are not assumed equal: equality is forced by actual shifted replay,
+and unequal captures fail correctly. Headers are the same independent
+recursive PEG parsers as before. Arguments retain the `HelperArgument`
+syntax, so selection, predicates, repetition, retained parameter uses, and
+independent recursive helper calls remain supported.
+
+The caller's count determines the view of old retained values used to test
+the original argument. The callee's separate count determines replay and
+views after a fresh capture. Thus different counts may coexist in mutual
+recursion without changing the fixed grammar at runtime. Actual helper
+stability, prefix-failure seeds, and both cofinality bridges again yield
+`observations_iff` and `language_translation` for all finite observations
+and whole-string recognition over unchanged original inputs. The theorem
+permits any positive initial view count; empty initial environments require
+positivity so a missing parameter cannot become a successful empty replay.
+No count bound shared by all grammars or codeword length bound is assumed.
+
+`CountedCodeExamples.headers_captured` derives actual shape certificates
+for every count from `R '#'`, where `R <- 'a' R 'b' / eps`. Dependent
+arguments first test `!param0` and then parse the required number of
+headers. A three-generation physical source execution alternates counts
+**3 -> 1 -> 3**, with runtime codewords `aabb# -> ab# -> #`, and reuses
+both child and parent values after return. Kernel checks also reject a
+short parent copy and an unequal three-codeword capture. All generated Seq
+observations follow from the full same-input translation theorem.
+
+Counts remain fixed **per rule**, rather than varying without bound with
+the input. This closes the fixed two-codeword restriction, but does not
+translate arbitrary capture shapes, retained-value-dependent headers,
+argument calls into parameterized user rules, independent multiple
+captures, or arbitrary consuming prefixes. General Par/Seq class equality
+or separation remains unresolved.

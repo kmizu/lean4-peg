@@ -13645,3 +13645,155 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.DependentCodeExamples.translated_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordReplay.replay_word' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordReplay.replay_word
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordReplay.replay_value' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordReplay.replay_value
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordReplay.replay_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordReplay.replay_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordReplay.view_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordReplay.view_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordReplay.decode_prefix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordReplay.decode_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordReplay.shift_forces_replicate' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordReplay.shift_forces_replicate
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordReplay.source_prefix_forces' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordReplay.source_prefix_forces
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordReplay.replay_prefix_forces' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordReplay.replay_prefix_forces
+
+/-- info: 'Shallot.MacroPeg.CBV.CodewordReplay.collapse' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CodewordReplay.collapse
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.argument_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.argument_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.view_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.view_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.view_param_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.view_param_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.source_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.source_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.target_installed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.target_installed
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.target_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.target_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.parameters_empty' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.parameters_empty
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.parameters_power' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.parameters_power
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.argument_view_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.argument_view_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.evaluator_of_shift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.source_step' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.source_step
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.target_step' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.target_step
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeGrammar.undefined_argument' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeGrammar.undefined_argument
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeExamples.headers_allowed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeExamples.headers_allowed
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeExamples.head_captured_env' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeExamples.head_captured_env
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeExamples.headers_captured' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeExamples.headers_captured
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeExamples.guarded_captured' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeExamples.guarded_captured
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeExamples.source_execution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeExamples.source_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeExamples.all_inputs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeExamples.all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.CountedCodeExamples.translated_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CountedCodeExamples.translated_execution
