@@ -317,3 +317,6 @@ import MacroPeg.CBV.SequentialSharedCursors
 import MacroPeg.CBV.SequentialSharedPool
 import MacroPeg.CBV.SequentialSharedStateCodec
 import MacroPeg.CBV.SequentialSharedStateBound
+import MacroPeg.CBV.SequentialCursorEdit
+import MacroPeg.CBV.SequentialCursorEditMachine
+import MacroPeg.CBV.SequentialCursorEntryMachine

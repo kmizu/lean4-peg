@@ -2524,3 +2524,56 @@ compressed streams with bounded workspace and connect that implementation to
 the initialized TM model. The existing complete TM theorem remains
 `O(n log n)`. General Par/Seq equality and language-class separation are still
 open; a compact state representation alone proves neither conclusion.
+
+### Direct compressed-cursor operations with intermediate tape bounds
+
+`MacroPeg.CBV.SequentialCursorEdit` gives local algebra for the reversed
+binary cursor stream, using symbol `1` for a true bit and symbol `0` for a
+block delimiter. Removing a cursor merges its difference into the next block;
+when no next cursor exists, it discards the obsolete data bits. Adding an
+identical cursor inserts a zero-difference block. Removing the second cursor
+preserves the first cursor while merging the second cursor's difference into
+the following block. The algebra proves agreement with the original absolute
+cursor lists on the previously verified increasing domain.
+
+`MacroPeg.CBV.SequentialCursorEditMachine` implements these operations as
+actual `Complexity.LProg` programs using copy, pop, push, tests, and loops:
+
+- `dropBlock` removes the first cursor, merging the difference or clearing it
+  at the end of the stream;
+- `duplicate` duplicates the first cursor by adding one zero-difference block;
+- `dropSaved` removes the second cursor while preserving the first.
+
+The common `scan` moves only the leading unary block and stops at its
+delimiter. None of these programs decodes the suffix to a list of integers or
+receives a precomputed prefix-length counter. `scan_runs`, `dropBlock_runs`,
+`duplicate_runs`, and `dropSaved_runs` prove the actual list executions with
+`LenOK B` at **every visited instruction state**. Scratch starts and ends
+empty, and unrelated tapes are preserved. Deletion fits the existing tape
+capacity; duplication needs only one additional cell. `drop_current_runs`,
+`duplicate_current_runs`, and `drop_saved_runs` connect the raw stream edits
+to the intended absolute-cursor list edits.
+
+`tape_runs` applies the existing list-to-tape compiler and proves execution
+under `TFits B`, covering intermediate tape head positions and writes as well
+as completed subroutine states. This supplies operational space evidence that
+the previous materializing `packedStep` did not provide.
+
+`MacroPeg.CBV.SequentialCursorEntryMachine` connects the duplicate operation
+to actual word-machine entries for choice, negation, repetition, and argument
+heads. `actual_step` checks the source transitions. `layout` holds the complete
+packed state's cursor, control, clock, and word streams on six tapes, with
+empty scratch tapes. `cursor_update` and `cursor_update_tape` update the cursor
+component for every such initialized reachable entry with capacity
+
+```
+linearFactor g e * (input length + 1) + 3.
+```
+
+The other packed-state streams survive unchanged during this **cursor
+component update**. The result is not yet the fully updated packed successor:
+control and word changes still need their own implementation and composition.
+The current-cursor decrease needed after successful input consumption also
+remains to be implemented, as do complete dispatch, initialization, and the
+final TM recognition connection. The general Par/Seq comparison remains open,
+and the proved complete recognizer's space bound remains `O(n log n)`.

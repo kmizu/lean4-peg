@@ -6051,3 +6051,63 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialSharedStateBound.encoded_state_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEdit.drop_relative' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEdit.drop_relative
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEdit.duplicate_current' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEdit.duplicate_current
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEdit.drop_saved' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEdit.drop_saved
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.scan_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.scan_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.dropBlock_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.dropBlock_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.duplicate_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.duplicate_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.dropSaved_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.dropSaved_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.drop_current_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.drop_current_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.duplicate_current_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.duplicate_current_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.drop_saved_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.drop_saved_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEditMachine.tape_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEditMachine.tape_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEntryMachine.actual_step' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEntryMachine.actual_step
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEntryMachine.cursor_update' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEntryMachine.cursor_update
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialCursorEntryMachine.cursor_update_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialCursorEntryMachine.cursor_update_tape
