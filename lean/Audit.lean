@@ -12492,3 +12492,56 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.LeadingReplayStarExamples.translated_execution
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStar.render_expand' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStar.render_expand
+
+
+/-- info: 'Shallot.MacroPeg.CBV.LeadingReplayStar.rotate_tail' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.LeadingReplayStar.rotate_tail
+
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedReplayStarExamples.valid' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedReplayStarExamples.valid
+
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedReplayStarExamples.entry_valid' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedReplayStarExamples.entry_valid
+
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedReplayStarExamples.branch_executions' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedReplayStarExamples.branch_executions
+
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedReplayStarExamples.source_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedReplayStarExamples.source_execution
+
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedReplayStarExamples.translated_observations' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedReplayStarExamples.translated_observations
+
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedReplayStarExamples.commitment_required' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedReplayStarExamples.commitment_required
+
+
+/-- info: 'Shallot.MacroPeg.CBV.SelectedReplayStarExamples.translated_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SelectedReplayStarExamples.translated_execution

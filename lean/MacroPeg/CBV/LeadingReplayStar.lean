@@ -15,10 +15,17 @@ def replay (shift : List Char) : Arg := .seq (.lit shift) (.param 0)
 inductive User where
   | control : ContinuationFamily.User → User
   | repeated : List Char → Arg → Arg → User
+  | selected : List Leaf → Plan → Arg → Arg → User
+
+def selectedBody (leaves : List Leaf) (P : Plan) : Arg :=
+  OriginControlNormalization.expand (LeafContinuation.lookup leaves) P
+
+def rotatedTail (A B tail : Arg) : Arg := .seq (.seq (.star (.seq B A)) (.notP B)) tail
 
 def User.toControl : User → ContinuationFamily.User
   | .control u => u
   | .repeated u B tail => ⟨[⟨some u,.seq (.seq (.star (.seq B (replay u))) (.notP B)) tail⟩],.leaf 0,none⟩
+  | .selected leaves P B tail => ⟨leaves,P,some (rotatedTail (selectedBody leaves P) B tail)⟩
 def converted (users : List User) := users.map User.toControl
 abbrev ambient (users : List User) := ContinuationFamily.leaves (converted users)
 abbrev specs (users : List User) := ContinuationFamily.specs (converted users)
@@ -32,6 +39,9 @@ def sourceBody (nodes : List Node) (users : List User) : User → MExp
   | .repeated u B tail => .seq
       (.seq (.star (.seq (sourceRender nodes users (replay u)) (sourceRender nodes users B))) (sourceRender nodes users (replay u)))
       (sourceRender nodes users tail)
+  | .selected leaves P B tail => .seq
+      (.seq (.star (.seq (sourceRender nodes users (selectedBody leaves P)) (sourceRender nodes users B)))
+        (sourceRender nodes users (selectedBody leaves P))) (sourceRender nodes users tail)
 def sourceRules (nodes : List Node) (users : List User) := users.map (fun u => (⟨1,sourceBody nodes users u⟩ : MRule))
 def sourceGrammar (nodes : List Node) (users : List User) : MGrammar :=
   FilteredOverlapCaller.extend nodes (OriginControlNormalization.machine (ambient users) (specs users)) (sourceRules nodes users)
@@ -48,6 +58,29 @@ theorem sequence_assoc (g : MGrammar) (x : List Char) (s : Strategy) (T : ClockF
   | none => rfl
   | some result => cases result <;> rfl
 
+
+theorem render_expand (nodes : List Node) (leaves : List Leaf) (ps : List Plan) (L : Nat → Arg) :
+    ∀ P, OriginControlNormalization.render nodes leaves ps (OriginControlNormalization.expand L P)=
+      P.exp (fun i => OriginControlNormalization.render nodes leaves ps (L i))
+  | .leaf _ => rfl
+  | .alt a b | .guard a b => by
+    simp only [OriginControlNormalization.expand,OriginControlNormalization.render,Plan.exp,
+      render_expand nodes leaves ps L a,render_expand nodes leaves ps L b,MExp.andP]
+  | .notP a => by
+    simp only [OriginControlNormalization.expand,OriginControlNormalization.render,Plan.exp,render_expand nodes leaves ps L a]
+
+theorem rotate_tail (g : MGrammar) (x : List Char) (s : Strategy) (hs : s≠.callByName)
+    (T : ClockFreezing.Table) (hT : SoundTV g x s T) (E : List (List Char)) (A B C : MExp)
+    (ha : A.FirstOrder) (hb : B.FirstOrder) (p : Nat) (hp : p≤x.length) :
+    evV g x s T E (.seq (.seq (.star (.seq A B)) A) C) p=
+      evV g x s T E (.seq A (.seq (.seq (.star (.seq B A)) (.notP B)) C)) p := by
+  have hr := GreedyRotation.expression_eq g x s hs T hT E A B ha hb p hp
+  rw [←sequence_assoc g x s T E A (.seq (.star (.seq B A)) (.notP B)) C p]
+  change (match evV g x s T E (.seq (.star (.seq A B)) A) p with
+    | some (some j) => evV g x s T E C j | other => other)=_
+  rw [hr]
+  rfl
+
 theorem body_eq (nodes : List Node) (users : List User) (u : User)
     (g : MGrammar) (x : List Char) (s : Strategy) (hs : s≠.callByName)
     (T : ClockFreezing.Table) (hT : SoundTV g x s T) (E : List (List Char)) (p : Nat) (hp : p≤x.length) :
@@ -59,16 +92,23 @@ theorem body_eq (nodes : List Node) (users : List User) (u : User)
     let A := sourceRender nodes users (replay u)
     let b := sourceRender nodes users B
     let c := sourceRender nodes users tail
-    have hr := GreedyRotation.expression_eq g x s hs T hT E A b
-      (OriginControlNormalization.render_firstOrder nodes (ambient users) (specs users) (replay u))
-      (OriginControlNormalization.render_firstOrder nodes (ambient users) (specs users) B) p hp
     change evV g x s T E (.seq (.seq (.star (.seq A b)) A) c) p=
       evV g x s T E (.seq A (.seq (.seq (.star (.seq b A)) (.notP b)) c)) p
-    rw [←sequence_assoc g x s T E A (.seq (.star (.seq b A)) (.notP b)) c p]
-    change (match evV g x s T E (.seq (.star (.seq A b)) A) p with
-      | some (some j) => evV g x s T E c j | other => other)=_
-    rw [hr]
-    rfl
+    exact rotate_tail g x s hs T hT E A b c
+      (OriginControlNormalization.render_firstOrder nodes (ambient users) (specs users) (replay u))
+      (OriginControlNormalization.render_firstOrder nodes (ambient users) (specs users) B) p hp
+  | selected ls P B tail =>
+    let a := selectedBody ls P
+    let A := sourceRender nodes users a
+    let b := sourceRender nodes users B
+    let c := sourceRender nodes users tail
+    change evV g x s T E (.seq (.seq (.star (.seq A b)) A) c) p=
+      evV g x s T E (.seq (P.exp (fun i => sourceRender nodes users (LeafContinuation.lookup ls i)))
+        (.seq (.seq (.star (.seq b A)) (.notP b)) c)) p
+    rw [←render_expand nodes (ambient users) (specs users) (LeafContinuation.lookup ls) P]
+    exact rotate_tail g x s hs T hT E A b c
+      (OriginControlNormalization.render_firstOrder nodes (ambient users) (specs users) a)
+      (OriginControlNormalization.render_firstOrder nodes (ambient users) (specs users) B) p hp
 
 theorem headers (nodes : List Node) (users : List User) (i : Nat) :
     (ruleAtM (sourceGrammar nodes users).rules i).map MRule.arity=
@@ -145,6 +185,11 @@ theorem source_firstOrder (nodes : List Node) (users : List User) : (sourceGramm
           OriginControlNormalization.render_firstOrder nodes (ambient users) (specs users) tail⟩
     | repeated u B tail =>
       have ha := OriginControlNormalization.render_firstOrder nodes (ambient users) (specs users) (replay u)
+      have hb := OriginControlNormalization.render_firstOrder nodes (ambient users) (specs users) B
+      have ht := OriginControlNormalization.render_firstOrder nodes (ambient users) (specs users) tail
+      exact ⟨⟨⟨ha,hb⟩,ha⟩,ht⟩
+    | selected ls P B tail =>
+      have ha := OriginControlNormalization.render_firstOrder nodes (ambient users) (specs users) (selectedBody ls P)
       have hb := OriginControlNormalization.render_firstOrder nodes (ambient users) (specs users) B
       have ht := OriginControlNormalization.render_firstOrder nodes (ambient users) (specs users) tail
       exact ⟨⟨⟨ha,hb⟩,ha⟩,ht⟩

@@ -460,3 +460,4 @@ import MacroPeg.CBV.ContinuationFamilyExamples
 import MacroPeg.CBV.GreedyRotation
 import MacroPeg.CBV.LeadingReplayStar
 import MacroPeg.CBV.LeadingReplayStarExamples
+import MacroPeg.CBV.SelectedReplayStarExamples
