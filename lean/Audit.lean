@@ -4135,3 +4135,65 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialQueryEntryMachine.transition_tape
+
+/-! Source-selected structural expression entry and frame construction. -/
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrameBuild.seq_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrameBuild.seq_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrameBuild.both_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrameBuild.both_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrameBuild.not_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrameBuild.not_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialFrameBuild.runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialFrameBuild.runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStructuralEntry.readHead_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStructuralEntry.readHead_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStructuralEntry.capture_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStructuralEntry.capture_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStructuralEntry.body_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStructuralEntry.body_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStructuralEntry.numeric_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStructuralEntry.numeric_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStructuralEntry.local_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStructuralEntry.local_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStructuralEntry.original_step' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStructuralEntry.original_step
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStructuralEntryMachine.space_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStructuralEntryMachine.space_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStructuralEntryMachine.space_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStructuralEntryMachine.space_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStructuralEntryMachine.transition_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStructuralEntryMachine.transition_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialStructuralEntryMachine.transition_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialStructuralEntryMachine.transition_tape
