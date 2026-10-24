@@ -431,3 +431,6 @@ import MacroPeg.CBV.ParametricHelperControl
 import MacroPeg.CBV.DependentProfileCall
 import MacroPeg.CBV.ProfiledDependentRecursion
 import MacroPeg.CBV.MutualProfiledRecursion
+import MacroPeg.CBV.CaptureMachineFamily
+import MacroPeg.CBV.HeterogeneousProfiledRecursion
+import MacroPeg.CBV.HeterogeneousReplayExamples

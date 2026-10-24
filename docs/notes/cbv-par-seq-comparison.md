@@ -5207,3 +5207,47 @@ open; this is not a general language-class equality or separation result.
 Validation: full `lake build` succeeds (836 jobs), including `Audit`. The
 17 additional public theorem guards use only standard Lean axioms. The new
 module has no proof placeholders or Lean warnings.
+
+## Different fixed replay prefixes within one recursive family
+
+`CaptureMachineFamily` forms a disjoint union of any finite list of word
+transition machines. Embedded component runs remain in their own component;
+`profile_component` recovers any component's transition from the union word
+profile. `phase_profile` specializes this construction to a list of distinct
+fixed replay shifts, including an arbitrary number of user rules. The
+transition metadata is still finite and depends only on the fixed grammar.
+
+`HeterogeneousProfiledRecursion` gives each unary user its own argument,
+nonempty literal shift, and body. It generates filters for the union machine
+and specializes target rules by `(callee index, union capture profile)`.
+The callee's actual shift selects its embedded start state; the target
+rotation is obtained by subtracting the component offset from that profile
+entry. `tailPrefix_actual` proves this is the original phase machine's
+rotation for the actual captured word. Thus a profile for one shift is never
+silently reused as the phase of a different shift.
+
+The simultaneous recursive row theorem, body evaluator equality, all finite
+observations, and fixed-grammar language translation now hold for finite
+mutually recursive families with different shifts. These language theorems
+have no semantic metadata premise: helper/argument validity and nonempty
+literal shifts are the stated conditions. The input remains the original
+character string throughout.
+
+`HeterogeneousReplayExamples` computes the joint profile of `aaba` for shifts
+`ab` and `aab`: it is a sink from the first start and phase one from the
+second. A distinct-shift mutual example uses prefixes `a` and `aa` with
+captures `aa → aaa → aa`, retaining each ancestor value after nested return.
+The original grammar's success and bad-copy failure are checked on physical
+finite tables. The generated Seq grammar's corresponding finite observations
+are derived from the unbounded compiler theorem, rather than a separate
+bounded evaluation of the larger generated profile grammar.
+
+Fixed shifts may now differ between users. The shifted-replay body-entry
+shape itself is still required. Retained-parameter-dependent repetition or
+user calls inside arguments, multiple independent arguments, and normalizing
+arbitrary original source grammars remain open. General Par/Seq equality or
+separation remains unresolved.
+
+Validation: full `lake build` succeeds (839 jobs), including `Audit`. All
+34 additional public theorem guards use only standard Lean axioms or no
+axioms. The three added modules have no proof placeholders or Lean warnings.
