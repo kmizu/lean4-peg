@@ -6542,3 +6542,123 @@ and one original unary capture remain restrictions. Held-value-dependent
 header/control evaluation, arbitrary original argument shapes, independent
 multiple source captures, and general Par/Seq equality or separation remain
 unresolved. All 33 additional public theorem guards use standard axioms.
+
+
+### Retained context in codeword-control comparison
+
+`CodewordControlFilter.success_environment` generalizes the comparison
+induction from `[u]` to `u::E`, with arbitrary additional retained values.
+Tests, choices, negation, and nested repetition execute in that same
+environment. The header can also inspect it, provided its actual successes
+are certified codewords. A successful raw run produces its actual word
+sequence; the filter keeps precisely that run when every word equals u.
+`replay_success_environment` connects this to the original whole-capture
+replay and the two consecutive target parts, preserving partial outcomes
+of the continuation. Existing unary theorems specialize these results to
+empty E. Raw failure and undefinedness use the existing environment-general
+`filter_fail` and `filter_none` lemmas.
+
+This closes a local semantic restriction, not the fixed-grammar context
+transport problem. `CodewordControlEnvironmentExamples` makes the latter
+precise. On `a#aa#?`, a retained `?` test stops before the unequal second
+word and comparison succeeds; deleting the context consumes that word and
+comparison fails. A quantified theorem rules out any context-independent
+result for that same input and comparison word in this construction.
+Simply adding the parent parameter as a Seq argument fails too: Seq must
+match its literal at the new input position. A nullable repetition changes
+from undefined to finite success if the retained test is erased.
+
+Thus the next grammar construction must actually preserve or encode the
+caller context inside its verifier. Replacing it with the comparison word,
+erasing it, or appending a parameter argument is insufficient. These
+obstructions concern those specific construction choices, not arbitrary
+Seq grammars; general Par/Seq equality or separation remains unresolved.
+
+
+### Adjacent comparisons keep parent control in the caller
+
+The preceding context transport obstruction can be avoided locally by
+moving comparison into the original caller rather than moving the parent
+into a unary verifier. `AdjacentCodewordControl` checks each consumed
+codeword against the bytes immediately following it. An ordinary unary
+Seq rule with body `param0`, called with `[A]`, captures the current header
+and replays it after that header. Lookahead makes the comparison zero-width;
+it does not receive or inspect the caller's parameters.
+
+For codewords u followed by ws and remaining input r, `Linked` checks all
+adjacent pairs and the final word against r. `linked_replay` proves these
+checks equivalent to the original whole capture u++ws.flatten matching
+ws.flatten++r. The final comparison is essential: the shifted source replay
+needs one extra copy after the selected argument. Zero remaining words and
+empty codewords are included without assuming positive consumption.
+
+The inline filter preserves raw-node preflight, prioritized branches, and
+greedy stopping tests. Its success theorem derives the actual word sequence
+and checks `Linked` for arbitrary finite sequence, choice, negation, tests,
+and nested star in the original environment E. Raw failure and undefinedness
+are preserved before comparison. `argument_checks` identifies the shifted
+replay predicate, and `entry` preserves the complete partial continuation
+result with the whole capture represented by two consecutive target values.
+`physical_compare` and `physical_entry` discharge the comparison premise
+using actual ordinary Seq tables at every positive stage in arbitrary
+first-order grammars containing the replay rule.
+
+`AdjacentCodewordExamples` provides fixed source and target grammars whose
+parent is freshly captured from input. The same child input captures one
+or two words depending on whether its parent is `a#` or `#`. Both ordinary
+executions accept, and both reject short copies and an unequal word. Actual
+target evaluation retains `[a#,[]]` or `[a#,a#]`. A nullable parent test stays
+undefined through original-argument preflight.
+
+This establishes the local entry mechanism and concrete dynamic-parent
+executions, not all-input equivalence of those example grammars or a full
+recursive compiler for parameter-dependent control. Next, replace the old
+whole-control unary verifier in the user-row induction with this caller-side
+filter, preserving parent environments through parameter views. Arbitrary
+original capture shapes, independent multiple captures, and general Par/Seq
+equality or separation remain unresolved. All 15 new public theorem guards
+use standard axioms or none.
+
+
+### Actual parent-dependent calls and all-input parent restoration
+
+`AdjacentCodewordCalls.physical_agreement` connects the local adjacent
+entry to actual Par and Seq calls in possibly different first-order
+grammars. It works at arbitrary rule addresses and every pair of positive
+ordinary stages, on every input, valid position, and retained environment.
+The header is a shared independent Pure prefix-code parser. The codeword
+control and continuation are call-free first-order expressions, but the
+control tests can inspect any retained caller parameters. There is no
+manually supplied comparison oracle: an actual unary Seq replay rule
+discharges the adjacent comparison premise.
+
+The proof first preserves original-argument failure and undefinedness.
+On success, actual source argument evaluation determines both capture
+parts. Original-argument preflight, adjacent entry, and ordinary rule-body
+lookups give complete partial equality. Source and target do not need the
+same table stage. Surrounding grammars may have other first-order rows;
+the theorem imposes only the specified user/comparison rows and the
+call-free control/continuation restriction. `stable_result_eq` transfers
+agreement after any fixed stage offset to the stable partial result.
+
+`AdjacentCodewordExamples` now follows the child with `?;param0` in the
+parent, reusing the original parent after return. The two accepting inputs
+are `#@a#a#a##!a#a#?#` and `a#@a#a#a##!a#?a#`. A short parent copy, short child
+copies, and unequal codewords are rejected by both ordinary executions.
+The input-selected parent changes the child's actual one-/two-word
+capture; no literal parent is baked into the grammar.
+
+The earlier example's all-input gap is closed: `child_agreement` applies
+on every input and every parent environment, `root_agreement` handles the
+fresh outer capture and return, and `all_inputs` proves all finite success
+and failure observations agree on the unchanged original input. The
+resulting fixed target grammar recognizes exactly the source's language.
+Early-stage equality is unnecessary; stable correspondence uses the
+ordinary-stage offset of two.
+
+This still does not compose parent-dependent control with arbitrary
+mutually recursive user continuations or recursive header helpers. Those
+remain the next compiler integration, alongside arbitrary original
+argument shapes and independent multiple captures. General Par/Seq
+language-class equality or separation remains unresolved. All eight new
+public theorem guards use only standard axioms.

@@ -519,3 +519,7 @@ import MacroPeg.CBV.CodewordControlHelpers
 import MacroPeg.CBV.CodewordControlHelperExamples
 import MacroPeg.CBV.CodewordControlHelperGrammar
 import MacroPeg.CBV.CodewordControlHelperGrammarExamples
+import MacroPeg.CBV.CodewordControlEnvironmentExamples
+import MacroPeg.CBV.AdjacentCodewordControl
+import MacroPeg.CBV.AdjacentCodewordCalls
+import MacroPeg.CBV.AdjacentCodewordExamples

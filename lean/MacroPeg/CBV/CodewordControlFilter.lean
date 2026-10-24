@@ -82,25 +82,26 @@ theorem filter_fail (g : MGrammar) (x : List Char) (s : Strategy) (T : Table)
   rw [CallLookahead.evV_peek,h]
   rfl
 
-/-- Once the original parser has selected a finite success, filtering may
-reject it but cannot select a different branch or shorten its repetition. -/
-theorem success (g : MGrammar) (x : List Char) (s : Strategy) (hs : s≠.callByName)
+/-- With arbitrary retained context after the comparison word, filtering
+keeps the original branch and stopping point. Header and tests may inspect
+that context; only the actual header-success code certificate is required. -/
+theorem success_environment (g : MGrammar) (x : List Char) (s : Strategy) (hs : s≠.callByName)
     (T : Table) (hT : SoundTV g x s T) (hOk : OkTV x.length T)
     (A : MExp) (hA : A.FirstOrder) {C : List Char → Prop} (hc : PrefixCodeCapture.PrefixFree C)
-    (u : List Char) (hu : C u)
-    (hcode : ∀ p q, p≤x.length → evV g x s T [u] A p=some (some q) → C (pre x p q)) :
-    ∀ d p q, p≤x.length → evV g x s T [u] (render A d) p=some (some q) →
+    (u : List Char) (hu : C u) (E : List (List Char))
+    (hcode : ∀ p q, p≤x.length → evV g x s T (u::E) A p=some (some q) → C (pre x p q)) :
+    ∀ d p q, p≤x.length → evV g x s T (u::E) (render A d) p=some (some q) →
       ∃ ws : List (List Char), (∀ w∈ws, C w) ∧ sfx x p=ws.flatten++sfx x q ∧
-        evV g x s T [u] (filter A d) p=
+        evV g x s T (u::E) (filter A d) p=
           if ws=List.replicate ws.length u then some (some q) else some none := by
   intro d
   induction d with
   | token =>
     intro p q hp hv
     have hq : q≤x.length := evV_ok hOk A p hp q hv
-    have hsf := (WordStarFilter.success_prefix hs hT [u] A hA p q hp hv).2
+    have hsf := (WordStarFilter.success_prefix hs hT (u::E) A hA p q hp hv).2
     refine ⟨[pre x p q],by simpa using hcode p q hp hv,by simpa using hsf,?_⟩
-    rw [filter,evV_seq_ok (show evV g x s T [u] (.andP (render A .token)) p=some (some p) by
+    rw [filter,evV_seq_ok (show evV g x s T (u::E) (.andP (render A .token)) p=some (some p) by
       rw [CallLookahead.evV_peek,hv]; rfl)]
     by_cases he : pre x p q=u
     · have hh := hsf
@@ -121,45 +122,45 @@ theorem success (g : MGrammar) (x : List Char) (s : Strategy) (hs : s≠.callByN
     exact ⟨[],by simp,by simp,by simp [filter,render,evV,MExp.andP]⟩
   | test e =>
     intro p q hp hv
-    have he : p=q := by rw [render,CallLookahead.evV_peek] at hv; cases hh : evV g x s T [u] e p with
+    have he : p=q := by rw [render,CallLookahead.evV_peek] at hv; cases hh : evV g x s T (u::E) e p with
       | none => simp [CallLookahead.peek,hh] at hv
       | some r => cases r with | none => simp [CallLookahead.peek,hh] at hv | some j => simpa [CallLookahead.peek,hh] using hv
     subst q
     refine ⟨[],by simp,by simp,?_⟩
-    rw [filter,evV_seq_ok (show evV g x s T [u] (.andP (render A (.test e))) p=some (some p) by
+    rw [filter,evV_seq_ok (show evV g x s T (u::E) (.andP (render A (.test e))) p=some (some p) by
       rw [CallLookahead.evV_peek,hv]; rfl)]
     exact hv
   | notP a ih =>
     intro p q hp hv
     have he : p=q := by
-      change (match evV g x s T [u] (render A a) p with
+      change (match evV g x s T (u::E) (render A a) p with
         | some (some _) => some none | some none => some (some p) | none => none)=some (some q) at hv
       split at hv <;> simp_all
     subst q
     refine ⟨[],by simp,by simp,?_⟩
-    rw [filter,evV_seq_ok (show evV g x s T [u] (.andP (render A (.notP a))) p=some (some p) by
+    rw [filter,evV_seq_ok (show evV g x s T (u::E) (.andP (render A (.notP a))) p=some (some p) by
       rw [CallLookahead.evV_peek,hv]; rfl)]
     exact hv
   | seq a b ia ib =>
     intro p q hp hv
-    change (match evV g x s T [u] (render A a) p with
-      | some (some j) => evV g x s T [u] (render A b) j | other => other)=_ at hv
-    cases ha : evV g x s T [u] (render A a) p with
+    change (match evV g x s T (u::E) (render A a) p with
+      | some (some j) => evV g x s T (u::E) (render A b) j | other => other)=_ at hv
+    cases ha : evV g x s T (u::E) (render A a) p with
     | none => simp [ha] at hv
     | some result => cases result with
       | none => simp [ha] at hv
       | some j =>
-        have hb : evV g x s T [u] (render A b) j=some (some q) := by simpa [ha] using hv
+        have hb : evV g x s T (u::E) (render A b) j=some (some q) := by simpa [ha] using hv
         have hj : j≤x.length := evV_ok hOk _ p hp j ha
         obtain ⟨as,hac,has,haf⟩ := ia p j hp ha
         obtain ⟨bs,hbc,hbs,hbf⟩ := ib j q hj hb
         refine ⟨as++bs,by intro w hw; exact (List.mem_append.mp hw).elim (hac w) (hbc w),
           by simpa [List.flatten_append,List.append_assoc,hbs] using has,?_⟩
-        rw [filter,evV_seq_ok (show evV g x s T [u] (.andP (render A (.seq a b))) p=some (some p) by
-          rw [CallLookahead.evV_peek]; change CallLookahead.peek p (evV g x s T [u] (.seq (render A a) (render A b)) p)=_
+        rw [filter,evV_seq_ok (show evV g x s T (u::E) (.andP (render A (.seq a b))) p=some (some p) by
+          rw [CallLookahead.evV_peek]; change CallLookahead.peek p (evV g x s T (u::E) (.seq (render A a) (render A b)) p)=_
           rw [evV_seq_ok ha,hb]; rfl)]
-        change (match evV g x s T [u] (filter A a) p with
-          | some (some z) => evV g x s T [u] (filter A b) z | other => other)=_
+        change (match evV g x s T (u::E) (filter A a) p with
+          | some (some z) => evV g x s T (u::E) (filter A b) z | other => other)=_
         rw [haf]
         by_cases he : as=List.replicate as.length u
         · rw [if_pos he]
@@ -170,15 +171,15 @@ theorem success (g : MGrammar) (x : List Char) (s : Strategy) (hs : s≠.callByN
         · rw [if_neg he,if_neg (fun h => he ((uniform_append u as bs).mp h).1)]
   | alt a b ia ib =>
     intro p q hp hv
-    have hpre : evV g x s T [u] (.andP (render A (.alt a b))) p=some (some p) := by
+    have hpre : evV g x s T (u::E) (.andP (render A (.alt a b))) p=some (some p) := by
       rw [CallLookahead.evV_peek,hv]; rfl
-    change (match evV g x s T [u] (render A a) p with
-      | some none => evV g x s T [u] (render A b) p | other => other)=_ at hv
-    cases ha : evV g x s T [u] (render A a) p with
+    change (match evV g x s T (u::E) (render A a) p with
+      | some none => evV g x s T (u::E) (render A b) p | other => other)=_ at hv
+    cases ha : evV g x s T (u::E) (render A a) p with
     | none => simp [ha] at hv
     | some result => cases result with
       | none =>
-        have hb : evV g x s T [u] (render A b) p=some (some q) := by simpa [ha] using hv
+        have hb : evV g x s T (u::E) (render A b) p=some (some q) := by simpa [ha] using hv
         obtain ⟨ws,hw,hsf,hf⟩ := ib p q hp hb
         refine ⟨ws,hw,hsf,?_⟩
         rw [filter,evV_seq_ok hpre,ChoiceArguments.branch_eval,ha]
@@ -195,10 +196,10 @@ theorem success (g : MGrammar) (x : List Char) (s : Strategy) (hs : s≠.callByN
     induction p using Nat.strongRecOn with
     | ind p ih =>
       intro q hp hv
-      have hpre : evV g x s T [u] (.andP (render A (.star a))) p=some (some p) := by
+      have hpre : evV g x s T (u::E) (.andP (render A (.star a))) p=some (some p) := by
         rw [CallLookahead.evV_peek,hv]; rfl
-      change evStar (fun z => evV g x s T [u] (render A a) z) p=some (some q) at hv
-      cases ha : evV g x s T [u] (render A a) p with
+      change evStar (fun z => evV g x s T (u::E) (render A a) z) p=some (some q) at hv
+      cases ha : evV g x s T (u::E) (render A a) p with
       | none => rw [evStar_none ha] at hv; cases hv
       | some result => cases result with
         | none =>
@@ -206,9 +207,9 @@ theorem success (g : MGrammar) (x : List Char) (s : Strategy) (hs : s≠.callByN
           have he : p=q := by simpa using hv
           subst q
           refine ⟨[],by simp,by simp,?_⟩
-          have hf := filter_fail g x s T [u] A a p ha
+          have hf := filter_fail g x s T (u::E) A a p ha
           rw [filter,evV_seq_ok hpre]
-          rw [evV_seq_ok (show evV g x s T [u] (.star (filter A a)) p=some (some p) from evStar_fail hf),evV_not_fail ha]
+          rw [evV_seq_ok (show evV g x s T (u::E) (.star (filter A a)) p=some (some p) from evStar_fail hf),evV_not_fail ha]
           rfl
         | some j =>
           by_cases hjp : j<p
@@ -219,23 +220,34 @@ theorem success (g : MGrammar) (x : List Char) (s : Strategy) (hs : s≠.callByN
             refine ⟨as++bs,by intro w hw; exact (List.mem_append.mp hw).elim (hac w) (hbc w),
               by simpa [List.flatten_append,List.append_assoc,hbs] using has,?_⟩
             rw [filter,evV_seq_ok hpre]
-            have hfpre : evV g x s T [u] (.andP (render A (.star a))) j=some (some j) := by
-              rw [CallLookahead.evV_peek]; change CallLookahead.peek j (evStar (fun z => evV g x s T [u] (render A a) z) j)=_
+            have hfpre : evV g x s T (u::E) (.andP (render A (.star a))) j=some (some j) := by
+              rw [CallLookahead.evV_peek]; change CallLookahead.peek j (evStar (fun z => evV g x s T (u::E) (render A a) z) j)=_
               rw [hv]; rfl
             rw [filter,evV_seq_ok hfpre] at hbf
             by_cases he : as=List.replicate as.length u
             · rw [if_pos he] at haf
-              change (match evStar (fun z => evV g x s T [u] (filter A a) z) p with
-                | some (some z) => evV g x s T [u] (.notP (render A a)) z | other => other)=_
+              change (match evStar (fun z => evV g x s T (u::E) (filter A a) z) p with
+                | some (some z) => evV g x s T (u::E) (.notP (render A a)) z | other => other)=_
               rw [evStar_ok haf hjp]
-              change evV g x s T [u] (.seq (.star (filter A a)) (.notP (render A a))) j=_
+              change evV g x s T (u::E) (.seq (.star (filter A a)) (.notP (render A a))) j=_
               rw [hbf]
               congr 1
               exact propext ⟨fun h => (uniform_append u as bs).mpr ⟨he,h⟩,fun h => ((uniform_append u as bs).mp h).2⟩
             · rw [if_neg he] at haf
-              rw [evV_seq_ok (show evV g x s T [u] (.star (filter A a)) p=some (some p) from evStar_fail haf),evV_not_ok ha]
+              rw [evV_seq_ok (show evV g x s T (u::E) (.star (filter A a)) p=some (some p) from evStar_fail haf),evV_not_ok ha]
               rw [if_neg (fun h => he ((uniform_append u as bs).mp h).1)]
           · rw [evStar_stuck ha hjp] at hv; cases hv
+
+theorem success (g : MGrammar) (x : List Char) (s : Strategy) (hs : s≠.callByName)
+    (T : Table) (hT : SoundTV g x s T) (hOk : OkTV x.length T)
+    (A : MExp) (hA : A.FirstOrder) {C : List Char → Prop} (hc : PrefixCodeCapture.PrefixFree C)
+    (u : List Char) (hu : C u)
+    (hcode : ∀ p q, p≤x.length → evV g x s T [u] A p=some (some q) → C (pre x p q)) :
+    ∀ d p q, p≤x.length → evV g x s T [u] (render A d) p=some (some q) →
+      ∃ ws : List (List Char), (∀ w∈ws, C w) ∧ sfx x p=ws.flatten++sfx x q ∧
+        evV g x s T [u] (filter A d) p=
+          if ws=List.replicate ws.length u then some (some q) else some none := by
+  exact success_environment g x s hs T hT hOk A hA hc u hu [] hcode
 
 /-- Reconstruct the whole source argument from two consecutive captures. -/
 def wholeView (b : MExp) : MExp := MExp.subst [CaptureViews.prefixExpr 2] b
@@ -310,6 +322,30 @@ theorem replay_trace (g : MGrammar) (x : List Char) (s : Strategy) (T : Table)
 
 /-- Exact partial replay equivalence after the original control selects
 its endpoint. The input after that endpoint need not start with a header. -/
+theorem replay_success_environment (g : MGrammar) (x : List Char) (s : Strategy) (hs : s≠.callByName)
+    (T : Table) (hT : SoundTV g x s T) (hOk : OkTV x.length T)
+    (A : MExp) (hA : A.FirstOrder) {C : List Char → Prop} (hc : PrefixCodeCapture.PrefixFree C)
+    (u : List Char) (hu : C u) (E : List (List Char))
+    (hcode : ∀ p q, p≤x.length → evV g x s T (u::E) A p=some (some q) → C (pre x p q))
+    (d : Expr) (p q : Nat) (hp : p≤x.length)
+    (hv : evV g x s T (u::E) (render A d) p=some (some q))
+    (b : MExp) (hb : b.FirstOrder) :
+    evV g x s T [u++pre x p q] (.seq (.param 0) b) p=
+      match evV g x s T (u::E) (filter A d) p with
+      | some (some _) => evV g x s T [u,pre x p q] (.seq (.param 0) (wholeView b)) q
+      | other => other := by
+  obtain ⟨ws,hw,htrace,hf⟩ := success_environment g x s hs T hT hOk A hA hc u hu E hcode d p q hp hv
+  have hq := evV_ok hOk (render A d) p hp q hv
+  have hpre : pre x p q=ws.flatten := by
+    simpa only [length_sfx x hp,length_sfx x hq] using pre_eq (sfx_is_suffix x p) htrace
+  rw [hpre,hf]
+  have hr := replay_trace g x s T hc u hu ws hw p q hq htrace b hb
+  by_cases he : ws=List.replicate ws.length u
+  · rw [if_pos he] at hr ⊢
+    exact hr
+  · rw [if_neg he] at hr ⊢
+    exact hr
+
 theorem replay_success (g : MGrammar) (x : List Char) (s : Strategy) (hs : s≠.callByName)
     (T : Table) (hT : SoundTV g x s T) (hOk : OkTV x.length T)
     (A : MExp) (hA : A.FirstOrder) {C : List Char → Prop} (hc : PrefixCodeCapture.PrefixFree C)
@@ -322,16 +358,6 @@ theorem replay_success (g : MGrammar) (x : List Char) (s : Strategy) (hs : s≠.
       match evV g x s T [u] (filter A d) p with
       | some (some _) => evV g x s T [u,pre x p q] (.seq (.param 0) (wholeView b)) q
       | other => other := by
-  obtain ⟨ws,hw,htrace,hf⟩ := success g x s hs T hT hOk A hA hc u hu hcode d p q hp hv
-  have hq := evV_ok hOk (render A d) p hp q hv
-  have hpre : pre x p q=ws.flatten := by
-    simpa only [length_sfx x hp,length_sfx x hq] using pre_eq (sfx_is_suffix x p) htrace
-  rw [hpre,hf]
-  have hr := replay_trace g x s T hc u hu ws hw p q hq htrace b hb
-  by_cases he : ws=List.replicate ws.length u
-  · rw [if_pos he] at hr ⊢
-    exact hr
-  · rw [if_neg he] at hr ⊢
-    exact hr
+  exact replay_success_environment g x s hs T hT hOk A hA hc u hu [] hcode d p q hp hv b hb
 
 end Shallot.MacroPeg.CBV.CodewordControlFilter
