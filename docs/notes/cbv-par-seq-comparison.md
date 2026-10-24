@@ -2969,3 +2969,56 @@ whole-machine selection, ordinary-input initialization, and the complete
 recognizer connection remain open. The established complete recognizer bound
 is still `O(n log n)`, and general same-input Par/Seq equality or separation
 remains unresolved.
+
+### Complete query entry, including zero clock and absent rules
+
+`MacroPeg.CBV.SequentialQueryInstallMachine` moves the query's actual unary
+metadata into the new environment and scope fields. The old current-environment
+length becomes the saved scope's length; the query's argument count becomes
+the new current-environment length; the stack count increases by one. The
+query tag and rule-index fields are discarded and the fixed rule-body code
+is written. Each saved unary field is moved back from scratch, so no decoded
+length or input-dependent replacement prefix is supplied to the program.
+`install_runs` verifies exact output, scratch cleanup, arbitrary continuation
+suffix preservation, and every intermediate capacity using the initial and
+final control-stream bounds.
+
+`MacroPeg.CBV.SequentialQueryEnterPackedMachine` adds the shared-clock
+operation and proves a complete positive-clock query transition. The actual
+argument environment `W` becomes current, the caller environment `E` becomes
+a scope frame, and the rule body starts at exactly the query's input position.
+The word stream is unchanged: before entry it contains the task arguments,
+current environment, and continuation words; after entry it contains the new
+current environment, saved scope environment, and the same continuation.
+`other_streams` verifies the word and cursor equalities. `clock_pop` verifies
+the direct one-bit clock decrement, and `control_clock_update` identifies the
+complete successor representation after both changed streams are updated.
+
+`MacroPeg.CBV.SequentialQueryPackedMachine` supplies the complete query
+program. The rule option and body identifier depend only on the fixed source
+grammar and rule template. When a rule exists, the program tests the actual
+unary clock tape before choosing entry or abort; no clock flag is provided.
+A missing rule always selects abort. Abort reads the query's runtime argument
+count behind four fixed headers, removes those task-owned words, restores
+all control fields, removes the current cursor, and changes the task to an
+undefined expression result. The caller environment, continuation stack,
+clock, and original input survive. Empty words and an empty argument list are
+handled by the same delimiter and unary-count loops.
+
+`actual_step` checks the full source query operation for valid positions;
+`reachable_step` obtains that validity from the established reachable cursor
+chain. `transition_runs` and `transition_tape` construct the complete successor
+for all initialized reachable query states, including zero clock and absent
+rules, with every intermediate eight-tape state bounded by
+
+```
+(linearFactor g e + 1) * (input length + 1) + 3.
+```
+
+All three modules verify their fixed pushed-symbol alphabet requirements.
+This completes query execution from a preloaded reachable state. Scope return,
+other remaining instructions, captured-word matching, whole-machine instruction
+selection, ordinary-input initialization, and the complete recognition
+connection remain open. The established complete recognizer bound is still
+`O(n log n)`, and general same-input Par/Seq equality or separation remains
+unresolved.

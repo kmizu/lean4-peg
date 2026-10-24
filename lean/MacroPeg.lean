@@ -336,3 +336,6 @@ import MacroPeg.CBV.SequentialWordRotateMachine
 import MacroPeg.CBV.SequentialArgConsPackedMachine
 import MacroPeg.CBV.SequentialArgConsReturnPackedMachine
 import MacroPeg.CBV.SequentialCallPackedMachine
+import MacroPeg.CBV.SequentialQueryInstallMachine
+import MacroPeg.CBV.SequentialQueryEnterPackedMachine
+import MacroPeg.CBV.SequentialQueryPackedMachine
