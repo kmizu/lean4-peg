@@ -481,3 +481,5 @@ import MacroPeg.CBV.ScannerArgumentExamples
 import MacroPeg.CBV.RuntimeShiftFilter
 import MacroPeg.CBV.PrefixCodeCapture
 import MacroPeg.CBV.PrefixCodeCaptureExamples
+import MacroPeg.CBV.RuntimePrefixGrammar
+import MacroPeg.CBV.RuntimePrefixExamples

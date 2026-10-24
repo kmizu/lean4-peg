@@ -13203,3 +13203,107 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.PrefixCodeCaptureExamples.recursive_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.head_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.head_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.lexical_success' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.lexical_success
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.argument_eval' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.argument_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.view_param_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.view_param_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.render_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.target_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.target_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.target_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.parameters_empty' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.parameters_empty
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.parameters_double' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.parameters_double
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.evaluator_of_shift' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.decide_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.decide_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixGrammar.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixGrammar.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixExamples.code_prefixFree' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixExamples.code_prefixFree
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixExamples.scanner_captured' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixExamples.scanner_captured
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixExamples.source_execution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixExamples.source_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixExamples.preflight_stage_zero' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixExamples.preflight_stage_zero
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixExamples.all_inputs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixExamples.all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixExamples.previous_candidate_all_inputs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixExamples.previous_candidate_all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.RuntimePrefixExamples.translated_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.RuntimePrefixExamples.translated_execution

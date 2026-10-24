@@ -5789,3 +5789,64 @@ do not establish an all-input recursive grammar translation. The remaining
 work includes translating the recursive rows, preserving argument failure
 and undefinedness at calls, and handling captures beyond the two-complete-
 codeword shape. No general Par/Seq equality or separation is claimed.
+
+
+### Runtime prefix-code representation now gives a recursive translation
+
+`CBV/RuntimePrefixGrammar.lean` closes the recursive-table and call-level
+gaps left by the preceding local representation lemma for the two-codeword
+family. A `Header` supplies a closed call-free parser A (choice, predicates,
+and nullable repetition are permitted), a prefix-free code, and a proof that
+each successful A capture is in that code. This is a lexical output
+certificate, not a supplied equivalence of source/target calls or tables.
+The parser and its words need not have a length bound or finite value palette.
+
+For a finite list of raw tails, the source has unary rules with bodies
+`A;param0;tail`, and each source call captures the actual result of `A;A`.
+The target call first tests `&(A;A)` at the original position, then captures
+A once. Target rules replay the retained codeword twice, and rewrite all
+old parameter uses to that duplicated view. Raw zero-argument recursive
+calls choose a rule in this family; ordinary consuming sequence, choice,
+predicates, and repetition are allowed throughout the tails and entry.
+This is a constructor for a specified source family, not a renderer for
+arbitrary source argument syntax.
+
+`tables_shifted` proves the correspondence on ordinary physical tables at
+every stage, including zero. If the two selected codewords differ, the
+source and target body prefixes both fail. If they agree, both prefixes
+reach the same original-input suffix and `evaluator_of_shift` compares the
+continuations with old capture u++u and retained target capture u. Recursive
+calls are handled by the previous physical stage; no helper stabilization
+or caller-supplied recursive equivalence is needed. The preflight preserves
+argument failure and undefinedness before querying the target row.
+
+`observations_iff` preserves every finite success remainder and finite
+failure on every original input. `language_translation` constructs one fixed
+first-order Seq grammar and entry, independent of the input, preserving
+whole-string recognition. Undefinedness is preserved by the complete
+physical partial-result equalities; no final-success assumption is used.
+
+`RuntimePrefixExamples.header` proves the lexical certificate for the actual
+`a*;#` parser, using the prefix-free code defined by
+`dropWhile (accepts ['a']) w = [#]`. Both code safety and prefix freedom are
+proved, not assumed. Its two-rule mutual recursion changes the runtime
+header length from 2 to 3 to 1, then restores the child and parent captures.
+The source physical tables accept
+`aa#aa#aa#@aaa#aaa#aaa#%a#a#a#!?aaa#aaa#?aa#aa#` and reject the short parent
+and unequal child. Target Seq observations follow from the all-input
+translation theorem. `previous_candidate_all_inputs` also proves the exact
+source/target pair of the preceding `PrefixCodeCaptureExamples` equivalent
+on all inputs; those earlier finite checks now have an unbounded bridge.
+
+`preflight_stage_zero` checks why the guard is present: on `a#`, the original
+two-header argument and the generated target call both finitely fail at
+stage zero, whereas a plain target call capturing one header reaches an
+undefined stage-zero row.
+
+The general class comparison remains unresolved. This compiler fixes each
+call argument to the two-head parser A;A, uses one common closed call-free
+header parser, and begins every rule body with A followed by immediate
+replay. Arbitrary selected arguments, captures with other shapes, independent
+multiple captures, and arbitrary consuming prefixes are not covered. The
+result is an actual fixed recursive grammar translation for this family,
+not a proof of the general reverse inclusion.
