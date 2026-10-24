@@ -8088,3 +8088,50 @@ physical-clock correspondence for that compiler, and its all-input language
 preservation still need to be connected. In particular, observing a missing
 transition does not solve captures extending past the original scan frontier.
 The general Par/Seq language-class equality or separation remains unresolved.
+
+
+### Binding dynamic captures to installed residual scanners (2026-10-25)
+
+`DynamicScannerBinding` installs one real unary Seq rule for every finite
+observer profile and appends the actual partial-machine scanner block. Each
+variant starts at the state decoded from its profile, followed by a
+profile-specialized body. The callsite uses the existing actual profile guards
+and binds the entire original argument, rather than a bounded proxy for it.
+`resume_actual` identifies the decoded state with partial advancement on the
+captured word from any scanner start state.
+
+`entry_result` relates an actual Par argument in an independently extended
+source grammar to the installed target row, at arbitrary source and target
+user stages. `entry_step` unfolds that row: the environment is exactly the
+singleton original capture, the selected scanner is the one obtained from
+that capture, and the body is specialized by its complete observer profile.
+Failure and undefinedness remain ahead of the callee. `recapture_step`
+discharges incoming metadata accuracy for a parent specialized by its actual
+profile, and repeats the actual binding step for a new child capture.
+`scanner_physical` evaluates the selected installed scanner at an ordinary
+physical bound; `scanner_prefix_eq` proves exact original/residual scan
+agreement when the actual capture is inside the original scan frontier.
+`physical` and `observations_iff` connect the installed grammar's user stages
+to actual physical tables and all its finite observations. `entry_undefined`
+proves undefined source arguments stay undefined at every physical target
+clock, even when a specialized callee could reject immediately.
+
+Kernel examples use a single fixed target grammar for odd/even a* captures,
+whole child acaa capture followed by restored parent ac, short-copy rejection,
+committed a/aa variants, and original-string observations. A recursive source
+and generated recursive target execute a → aa → aaa captures with target
+starts 1 → 0 → 1, extra scanner transitions, and whole child/parent reuse on
+return. Grandchild, child, and parent short copies are rejected on both sides;
+the successful recursive target run is transferred to a physical table and
+ordinary SObs. This is a concrete recursive execution, not an all-input
+language-equivalence theorem for the recursive pair.
+
+The frontier boundary is verified on the actual grammars: capturing a! in
+a!a! extends beyond the source scan's stopping point. The source accepts,
+whereas the generated residual-entry grammar rejects. Thus this entry
+construction cannot be claimed as an unrestricted translation. The next
+missing proof is a syntactic guarantee of the scan frontier for dynamically
+varying arguments, followed by all-input recursive row correspondence and
+source/target language preservation. User calls inside positive argument
+parsers, general PEG prefixes, independent multiple captures, and general
+Par/Seq equality or separation remain unresolved.

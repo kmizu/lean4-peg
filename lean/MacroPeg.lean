@@ -602,3 +602,6 @@ import MacroPeg.CBV.StatefulActionExamples
 
 import MacroPeg.CBV.DynamicScannerCapture
 import MacroPeg.CBV.DynamicScannerExamples
+
+import MacroPeg.CBV.DynamicScannerBinding
+import MacroPeg.CBV.DynamicScannerBindingExamples
