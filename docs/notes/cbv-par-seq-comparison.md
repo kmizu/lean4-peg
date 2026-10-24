@@ -5905,3 +5905,190 @@ parser still cannot depend on retained parameters or call recursive helper
 parsers, the header remains closed call-free, and other capture shapes or
 multiple independent captures are not translated. General Par/Seq equality
 or separation remains unresolved.
+
+
+### Recursive helpers for runtime prefix-code captures
+
+`RecursiveCodeGrammar` removes the closed call-free restriction on both
+header A and the independently selected argument B. A finite installed
+component of ordinary nullary PEG rules may be recursive or mutually
+recursive and may include undefined cycles. A and each B can use any
+lexical expression over this component, including choice, predicates,
+sequence, and repetition. Their successful captures still require the
+same prefix-free code and two-codeword shape certificates; those
+certificates are stated at the actual stabilized standalone helper table.
+
+The generated grammars install the same helper component before their
+unary user rules. Source user bodies have `A;param0;tail`, and source calls
+pass B. Target calls test the original B and capture A; target bodies
+replay the captured word twice and replace old parameter uses by duplicate
+views. User tails may contain mutual recursion, sequence, choice,
+predicates, and repetition. No helper calls into user rules or retained
+parameter dependencies are permitted in A or B.
+
+`frozen_lexical` and `seeded_lexical` derive the helper evaluation
+correspondence from actual physical helper rows, using independence of
+the installed component. `tables_shifted` synchronizes source prefix-seeded
+rounds with target rounds having stabilized helpers. The proof then removes
+both internal clocks using proved cofinality. `observations_iff` preserves
+**all finite observations on the same original input** between the actual
+ordinary grammars; `language_translation` produces one fixed first-order
+Seq grammar. Its final statement contains no table advice, oracle, seeded
+semantics, supplied row equivalence, or input transformation.
+
+`RecursiveCodeExamples` uses the genuine recursive helper
+`R <- 'a' R 'b' / eps` and header `R '#'`. A separate unproductive nullary
+cycle coexists in the same component. Successful balanced-header captures
+satisfy a prefix-free code certificate derived from the actual helper
+syntax and consumption. An argument parses two such headers. Kernel
+execution checks parent `aabb#`, child `ab#`, restoration and replay of the
+parent capture after return, and rejection of a short parent copy. Target
+observations are obtained from the all-input theorem. The cyclic argument
+is undefined in the ordinary source at every physical stage, and the
+generated Seq grammar has no finite observation for it on any input.
+
+This closes recursive **independent helper** parsing in the runtime
+prefix-code construction. It does not cover arguments depending on retained
+values, arguments recursively calling the parameterized user component,
+other capture shapes, arbitrary consuming prefixes, or multiple independent
+captures. General Par/Seq equality or separation remains unresolved.
+
+
+### Retained-value-dependent arguments in the same runtime code compiler
+
+`HelperArgument.Syntax` extends lexical argument expressions with retained
+parameters, under sequence, choice, predicates, and arbitrary repetition.
+Calls still target the independent nullary recursive helper component.
+`eval_eq` proves complete partial evaluation agreement using actual helper
+row agreement and the same retained environment; parameters are not erased.
+
+`RecursiveCodeGrammar.User` now certifies its argument's successful
+**actual environment-dependent** captures in the stabilized helper table.
+Every such capture must still have two codewords, for every environment.
+Source calls pass the original argument B. Target calls instead test
+`view B`, where old parameter zero is read as two copies of the retained
+header word. `argument_view_eval` derives full partial result agreement
+from helper independence and the retained-parameter relation. This commits
+the same argument selection before header evaluation. The shifted-row
+invariant now quantifies the original calling environment. The existing
+cofinality proof gives ordinary fixed-grammar `observations_iff` and
+`language_translation` on unchanged inputs, with no externally supplied
+recursive equivalence or filter oracle. Undefined dependent arguments
+remain undefined before body entry on both sides.
+
+`DependentCodeExamples` uses `!param0; (R '#'); (R '#')` as the actual
+argument, with `R <- 'a' R 'b' / eps`. It accepts a fresh child's capture
+only if the old retained value does not already match there. The argument's
+selected result changes when only the parent's retained value changes.
+A separate kernel test shows that testing the unmodified argument with
+only one retained header word changes its result; the duplicated view is
+required even for partial argument selection. The actual recursive source
+accepts parent `aabb#`, child `ab#`, then reuses the parent's two-word value
+after return. It rejects short parent copies and a child repeating the
+parent value. All target observations follow from the all-input theorem.
+Earlier closed recursive-helper and unproductive-cycle examples still pass.
+
+This removes the **retained-value independence** restriction on argument
+parsers in this construction. Headers themselves remain independent of
+retained values. Two-codeword capture certificates, independent nullary
+helper calls, and unary user rules remain restrictions. Recursive argument
+calls into parameterized users, general capture shapes, independently
+multiple captures, arbitrary consuming headers, and general Par/Seq
+class equality or separation remain unresolved.
+
+
+### Any positive fixed codeword count, chosen separately per rule
+
+`CodewordReplay` removes the special role of two codewords from the local
+runtime capture representation. Unique prefix decoding compares an arbitrary
+finite list of codewords against another encoded list plus an arbitrary
+suffix. If `u ++ flatten(vs)` can be replayed after consuming the first
+codeword `u`, then `vs` must be a list of copies of `u`. A target replay of
+`length(vs)+1` copies of `u` forces the same condition. When the condition
+fails both replays fail; when it holds their consumed strings and subsequent
+retained-value views agree. `collapse` preserves the complete partial
+result for every first-order continuation, strategy, and table.
+
+`CountedCodeGrammar` incorporates this representation in the ordinary
+recursive compiler. Each user rule carries its own natural `extra`; its
+successful original argument captures `extra+1` complete codewords. The
+words are not assumed equal: equality is forced by actual shifted replay,
+and unequal captures fail correctly. Headers are the same independent
+recursive PEG parsers as before. Arguments retain the `HelperArgument`
+syntax, so selection, predicates, repetition, retained parameter uses, and
+independent recursive helper calls remain supported.
+
+The caller's count determines the view of old retained values used to test
+the original argument. The callee's separate count determines replay and
+views after a fresh capture. Thus different counts may coexist in mutual
+recursion without changing the fixed grammar at runtime. Actual helper
+stability, prefix-failure seeds, and both cofinality bridges again yield
+`observations_iff` and `language_translation` for all finite observations
+and whole-string recognition over unchanged original inputs. The theorem
+permits any positive initial view count; empty initial environments require
+positivity so a missing parameter cannot become a successful empty replay.
+No count bound shared by all grammars or codeword length bound is assumed.
+
+`CountedCodeExamples.headers_captured` derives actual shape certificates
+for every count from `R '#'`, where `R <- 'a' R 'b' / eps`. Dependent
+arguments first test `!param0` and then parse the required number of
+headers. A three-generation physical source execution alternates counts
+**3 -> 1 -> 3**, with runtime codewords `aabb# -> ab# -> #`, and reuses
+both child and parent values after return. Kernel checks also reject a
+short parent copy and an unequal three-codeword capture. All generated Seq
+observations follow from the full same-input translation theorem.
+
+Counts remain fixed **per rule**, rather than varying without bound with
+the input. This closes the fixed two-codeword restriction, but does not
+translate arbitrary capture shapes, retained-value-dependent headers,
+argument calls into parameterized user rules, independent multiple
+captures, or arbitrary consuming prefixes. General Par/Seq class equality
+or separation remains unresolved.
+
+
+### Leave the final header outside an input-dependent capture
+
+A separate route keeps the **whole original capture**, avoiding loss of
+its input-dependent codeword count. For a partial header parser A, let
+`B = (A &A)*`. `LastCodewordRotation.rotate` proves
+`B A = A A*` for all deterministic decreasing partial parsers, including
+finite failure, later undefined results, and nullable repetition loops.
+`expression_rotation` connects this equation to actual first-order CBV
+expression evaluation under a sound table. `capture_endpoint` derives from
+a successful actual B that either A already fails at the original position
+and B is empty, or B ends at a final successful A immediately followed by
+A's finite failure. `last_trace` constructs the B trace with one fewer
+iterations from any nonempty maximal finite A trace. No grammar count is
+used in these parsers.
+
+`LastCodewordCandidate` supplies a **candidate**, not yet an all-input
+translation. Set A to `a* '#'`, B as above, and `tail = '!';param0`.
+The source has `F(x) <- A x tail`, called as F(B) under Par.
+The Seq candidate has `F(x) <- A tail`, plus
+`V(u) <- (&A u)* !A`, entered through `&B; &V(A); F(B)`.
+V checks that the maximal run consists of copies of its runtime first
+header; F retains B's entire capture and consumes the final header before
+reusing that original capture after '!'.
+
+For `u = a^k '#'`, the **same fixed pair of grammars**, independent of k
+and n, is proved to accept every `u^(n+1) '!' u^n` for all k,n, including
+n=0. These are ordinary physical-stage evaluations and SObs derivations,
+not bounded enumeration. `capture_at` and `captured_value` prove that the
+actual B captures n complete runtime words while leaving the final word.
+`verifier_at` checks all n remaining words, and `body_at` verifies the same
+retained full string after the source shifted replay and the candidate's
+last-header consumption. Both runtime header length and captured word
+count are unbounded without changing the grammar.
+
+The initial `&B` is necessary for partial semantics: with header
+`A / (eps)*`, input `a#aa#Z` gives an undefined source argument. A premature
+verification sees unequal headers and finitely fails before reaching the
+later undefinedness. The actual ordinary Seq candidate without `&B` thus
+fails, whereas the guarded entry remains undefined. This guard-order
+counterexample is kernel-checked.
+
+The new candidate's equivalence on **all** inputs, its rejection of every
+unequal run, and integration with arbitrary recursive user tails remain
+unproved. The preceding fixed-count compiler's all-input theorems remain
+separate and verified. General Par/Seq class equality or separation is
+still unresolved.
