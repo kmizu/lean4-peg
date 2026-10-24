@@ -7788,3 +7788,53 @@ leaf. Ordinary bare-param and capture-independent consuming leaves, arbitrary
 initial consuming prefixes, unrestricted arguments, and independent multiple
 captures remain outside this compiler. General Par/Seq equality or separation
 is unresolved.
+
+### Bare and shifted replay leaves in one fragment-capture compiler
+
+`FragmentMixedRecursive.Part` records whether a leaf begins with A;param0
+or directly with param0 (a neutral eps is retained in the latter's source
+syntax). Both kinds have an arbitrary normal continuation and use the same
+actual consuming-fragment argument `(A;&(A;G))*;H`. The source may select
+between these entries through origin guards and predicates. A bare leaf
+becomes an ordinary unary Seq call evaluating the complete actual argument;
+a shifted leaf uses the existing fragment preflight and three-piece/unary
+entry. The compiler-generated divergent leaf remains independent of capture.
+
+`bare_transfer` proves ordinary replay fusion for arbitrary first-order
+source arguments and corresponding target arguments, including finite
+failure, undefinedness, and the clock-zero empty table. Successful actual
+argument evaluation determines the exact retained prefix and the same
+endpoint reached by source param0. Its continuation receives the complete
+value rather than only a fragment. In the recursive compiler, current-clock
+argument equality and previous-clock continuation equality are discharged by
+structural/clock induction for both leaf kinds together. All normal recursive
+calls, including those inside fragment tests, use this shared translation.
+
+`FragmentMixedForm` retains each leaf kind while copying continuations and
+normalizing sequence, prioritized choice, negation, and general nested star.
+Bare leaves may replay an empty value: the iteration remains undefined if
+no progress occurs. `FragmentMixedCompiler` generates the mixed leaf layout,
+kind table, relocation, and validity bounds automatically, retains the actual
+nested source user bodies, and proves all ordinary call-by-value clock tables
+equal to the normalized core. Its final observation/language translation
+preserves every unchanged input without supplied semantic table, body,
+argument, continuation, layout, or capture-shape assumptions.
+
+Kernel runs switch bare→shifted→bare inside a star and reuse the original a
+after its delimiter. A child capture aaa#a switches shifted→bare→shifted,
+then makes a fresh aa grandchild capture and restores both parents' values.
+Short whole-value copies and final copies are rejected. An empty bare replay
+under star stays undefined. A short ordinary choice cannot reopen as a longer
+shifted choice when its continuation fails; the naive distribution accepts
+the same input rejected by the real source and generated Seq grammar.
+Mixed predicate outputs also retain finite stopping versus empty-success
+undefinedness after a consuming bare iteration.
+
+This integrates ordinary replay leaves with the new consuming-fragment
+argument compiler. The generic bare entry lemma permits arbitrary arguments,
+but the final shared renderer still uses the specified fragment argument
+family. Capture-independent consuming branches and arbitrary consuming
+prefixes before replay are not covered: appending a capture-dependent
+continuation to a closed branch requires retaining the capture through that
+branch. The fixed A=a*;# header, a-only consuming H, and one source capture
+remain restrictions. General Par/Seq equality or separation remains unresolved.
