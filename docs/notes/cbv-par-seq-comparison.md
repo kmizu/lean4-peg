@@ -313,6 +313,23 @@ Par との言語クラスの関係を結論しない。
 二進符号化とその復号、遷移実装中の作業域まで含む空間定理は依然として未証明であり、
 Par と Seq の言語クラスの一致・真包含も、この結果だけからは結論しない。
 
+### 到達状態の自然数列への符号化と復号
+
+`CBV/SequentialStackPool.lean` の `reachable_ok` は、途中の全タスク・全フレームの
+式が、固定した文法と開始式から作る有限の構文プールに属することを示す。
+`CBV/SequentialStackCodec.lean` は式をこのプールの番号で表し、タスク・環境・
+継続スタックを自然数列へ符号化する。`reachable_roundtrip` は、全到達状態で
+実際の符号化を復号すると元の状態がそのまま戻ることを保証する。
+
+`CBV/SequentialStackCodecBound.lean` の `reachable_length` は、この自然数列の長さが
+`(initialCap g x start + 1) * (7 + 3 * arityBudget g)` 以下であることを示す。
+`reachable_numbers` は、タグ・長さヘッダ・構文番号・全数値フィールドを含めた
+各要素が `numberBound g x start` 以下であることを示す。
+固定文法・開始式では、列長と各要素の上界はともに入力長について線形である。
+これは自然数セルによる可逆な符号化の定理であり、二進列への実装と復号、
+遷移中の作業域を含むチューリング機械の空間定理はまだ証明していない。
+Par と Seq の言語クラスの一致・真包含も未解決のままである。
+
 関連研究では、[Uezato, ICALP 2024](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ICALP.2024.155)
 が後方参照と先読みを持つ正規表現による NLOG の特徴付けを与える。
 ただし同論文の選択は結果集合の和であり、正の先読みから変数更新が外へ残る

@@ -197,3 +197,6 @@ import MacroPeg.CBV.SequentialStack
 import MacroPeg.CBV.SequentialStackRank
 import MacroPeg.CBV.SequentialStackPayload
 import MacroPeg.CBV.SequentialStackCode
+import MacroPeg.CBV.SequentialStackPool
+import MacroPeg.CBV.SequentialStackCodec
+import MacroPeg.CBV.SequentialStackCodecBound
