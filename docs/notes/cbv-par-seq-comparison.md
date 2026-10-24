@@ -4988,3 +4988,64 @@ Validation: full `lake build` succeeds (828 jobs). All 35 new public theorem
 axiom guards pass in `Audit` (34 use only standard Lean axioms, one needs no
 axioms); the updated Audit build also succeeds. No new Lean warnings or
 proof placeholders occur in these modules.
+
+
+## 2026-10-24: Recursive user recapture with prefix-failure seeding
+
+`RecursiveFilteredOverlap` extends filtered shifted replay to a recursively
+called user body. One fixed nonempty shift `u`, one fixed original capture
+node, and one fixed user-body template determine the source and target
+first-order grammars. Raw call zero recaptures at the current input position;
+raw call `j+1` invokes independent helper `j`. Parameters, ordinary atoms,
+sequence, ordered choice, predicates, and repetition are recursively rendered.
+Captures can have different unbounded lengths on successive calls. The
+caller's old capture remains available after the child returns.
+
+The ordinary bottom user tables cannot be compared round for round. A
+nonperiodic successful head is rejected by the Seq argument filter before
+entering a user rule, whereas Par needs a user step to reject its shifted
+replay. `SeededClock` resolves this proof issue without changing either
+installed grammar. `prefixSeed` initially records only a finite failure of
+an installed sequence body's leading expression, evaluated with actual
+frozen helper rows and bottom user rows. `prefixSeed_lower` and
+`prefixSeed_upper` place it between ordinary frozen stages zero and one.
+The resulting `frozen_le`, `le_frozen`, and `defined_iff` prove that seeded
+iteration has exactly the original physical evaluator's finite results.
+It cannot turn genuine undefinedness into a failed observation.
+
+`rounds_lexical` connects all seeded helper queries to the canonical physical
+evaluator. `rounds_failed_prefix` proves that a genuinely failed Word prefix
+is failed from seeded stage zero onwards, independently of its continuation.
+These are proof devices; no supplied capture oracle, seed table, or input
+length appears in the final generated grammar or language theorem.
+
+`entry_eq` compares actual phase-filtered unary calls from corresponding
+user rows. `evaluator_of_rows` extends that comparison through the rendered
+body's control and parameter uses. `tables_shifted` closes the recursive row
+correspondence by user-stage induction: the initial probes agree by the word
+rotation equation, and each subsequent stage uses the previous stage for
+its recursively rendered continuation. `evaluator_eq` preserves the full
+partial result at every seeded stage, environment, and valid position.
+`observations_iff` removes seeding using physical cofinality and preserves
+all finite failures and successful suffixes of the real source/target
+grammars. `language_translation` supplies one fixed target grammar and
+start expression for all unchanged original strings.
+
+A kernel execution checks actual capture endpoints: the parent captures
+five-character `ababa`, and a child call later captures three-character `aba`.
+The complete input `abababa#ababa!ababa#aba?ababa` is accepted by both actual
+physical grammars. Replacing the final parent copy by the child's shorter
+`aba` is rejected by both. Thus the parent value is retained across return
+from recursive fresh capture.
+
+This closes recursive capture replacement for one fixed independent capture
+parser, shift, and user-body template. It does not yet unify several such
+user families with different heads/shifts, compile capture parsers depending
+on incoming parameter values, support arbitrary body entry positions, or
+handle multiple independent general arguments. Ordinary graph normalization
+of any/range source atoms remains open. General Par/Seq language-class
+equality or separation is still unresolved.
+
+Validation: full `lake build` succeeds (830 jobs), including `Audit`. All
+34 new public theorem axiom guards use only standard Lean axioms. Both new
+modules compile without new warnings or proof placeholders.
