@@ -157,6 +157,12 @@ inductive Runs (g : MGrammar) (x : List Char) : Config → Config → Prop where
   | refl (c) : Runs g x c c
   | cons {a b c} (h : step g x a = some b) (tail : Runs g x b c) : Runs g x a c
 
+theorem Runs.trans {g : MGrammar} {x : List Char} {a b c : Config}
+    (h : Runs g x a b) (h' : Runs g x b c) : Runs g x a c := by
+  induction h with
+  | refl => exact h'
+  | cons hs ht ih => exact .cons hs (ih h')
+
 theorem runs_inflate {g : MGrammar} {x : List Char} {a b : Config}
     (h : Runs g x a b) : SequentialSharedStack.Runs g x (inflate a) (inflate b) := by
   induction h with

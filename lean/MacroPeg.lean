@@ -308,3 +308,5 @@ import MacroPeg.CBV.SequentialCaptureRegions
 import MacroPeg.CBV.SequentialSharedStack
 import MacroPeg.CBV.SequentialSharedSpace
 import MacroPeg.CBV.SequentialSharedClock
+import MacroPeg.CBV.SequentialSharedRank
+import MacroPeg.CBV.SequentialSharedPayload

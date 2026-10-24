@@ -5859,3 +5859,39 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialSharedClock.reachable_captured_characters' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialSharedClock.reachable_captured_characters
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedRank.step_erases' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedRank.step_erases
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedRank.runs_erase' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedRank.runs_erase
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedRank.eraseStack_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedRank.eraseStack_length
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedRank.stack_linear_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedRank.stack_linear_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedPayload.step_envs_ok' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedPayload.step_envs_ok
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_envs_ok' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_envs_ok
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_frame_captures' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_frame_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedPayload.capture_records_linear' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedPayload.capture_records_linear
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_valid_captures' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedPayload.reachable_valid_captures

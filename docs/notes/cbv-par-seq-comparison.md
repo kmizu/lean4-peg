@@ -2296,3 +2296,56 @@ bound all structural frames or empty captures in this machine, compress
 saved cursors and span endpoints, or implement a linear-space TM simulation.
 The established complete TM bound remains `O(n log n)`, and the general
 Par/Seq language-class question remains open.
+
+### Counting every shared-machine frame and capture record
+
+`MacroPeg.CBV.SequentialSharedRank` now relates every intermediate state of
+`SequentialSharedClock` directly to the original `SequentialStack`.
+`eraseStack` reconstructs the lexical environment and clock of each structural
+frame while dropping scope frames. A scope return erases to a stuttering
+step; every other transition is simulated by one original transition.
+`step_erases` and `runs_erase` prove this for the actual machines, without
+assuming that the new machine's states have an extra well-formedness type.
+
+`eraseStack_length` gives exact accounting: the original stack length plus
+the number of dropped scopes equals the new stack length. Combining the
+original stack rank with clock conservation gives `stack_linear_bound`.
+Writing `R` for the number of rules, `C` for `SequentialStackRank.codeBudget`,
+`n` for input length, and `e` for the start expression, every reachable state
+satisfies
+
+```
+number of all frames <= (R + 1) * (C + 1) * (n + 1) + sizeOf e.
+```
+
+This counts structural continuations, call continuations, pending argument
+heads, and scope records, including those with no character payload.
+
+`MacroPeg.CBV.SequentialSharedPayload` also bounds environments saved only
+for restoration. Such an environment can be absent from the erased original
+stack, so its validity cannot simply be read from that stack's payload
+bound. `step_envs_ok` and `reachable_envs_ok` explicitly maintain all current
+and suspended environments. Newly installed query environments come from the
+original machine's argument-count invariant. Saved scope environments are
+preserved by body entry and recovered by scope return.
+
+Let `A` be the sum of grammar rule arities. `reachable_task_captures` and
+`reachable_frame_captures` bound every retained environment by `A` entries.
+`reachable_capture_records` therefore proves
+
+```
+number of all retained capture entries <= (number of frames + 2) * A.
+```
+
+`capture_records_linear` substitutes the linear frame bound. This count
+includes **empty captures** as well as nonempty ones. Together with the
+previous captured-character bound, it controls both the total word payload
+and the number of word delimiters. `reachable_valid_captures` verifies that
+every retained span satisfies `0 <= end <= start <= n`, including captures
+in scope environments that disappear under erasure.
+
+A complete linear-space simulation is still missing: span endpoints and saved
+input cursors remain integer metadata, and bounded-space implementations of
+the required operations have not been supplied. These results do not prove
+a general reverse grammar translation or a language-class separation. The
+complete TM upper bound established so far remains `O(n log n)`.
