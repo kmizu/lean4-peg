@@ -466,3 +466,7 @@ import MacroPeg.CBV.GuardedStarFactor
 import MacroPeg.CBV.StarThenPlan
 import MacroPeg.CBV.StarThenCompiler
 import MacroPeg.CBV.StarThenExamples
+import MacroPeg.CBV.BodyNormalForm
+import MacroPeg.CBV.BodySyntaxNormalization
+import MacroPeg.CBV.BodySyntaxCompiler
+import MacroPeg.CBV.BodySyntaxExamples
