@@ -1022,3 +1022,362 @@ Par/Seq の一致・分離は引き続き未解決である。
 原入力をこのスタックへ読み込む初期化、原子的照合と捕捉区間比較の全処理、
 既存の状態更新機械とのレジスタ統合はまだ残る。全体の Seq 空間上界と
 Par/Seq の一致・分離は引き続き未解決である。
+
+### Restoring two-cursor character comparison
+
+`Complexity.NRename` now injects numeric subprograms into a larger fixed register
+set. `NExec.rename_frame` preserves the exact step count and `NFits B` capacity
+at every intermediate state; registers outside the injection retain their
+ambient values. This lets the original-input reader coexist with capture
+cursors, counters, and a previously read character, without deriving extra
+space from the input-dependent traversal time.
+
+`SequentialInputPair` reads at two valid suffix positions of the same original
+`List Char`, retaining the two codes in distinct registers. Both traversals
+restore the original encoded input. The seven-register numeric program then
+uses the shrinking comparator; the two comparison registers are zero exactly
+when the original character codes agree. `compiled_compare` and `compare_tape`
+verify this execution through list programs and the eight-tape machine. All
+intermediate tapes have the same capacity `(2^32 + 2) * x.length + 3` as the
+single-character reader, with no captured-substring buffer. The constant is a
+coarse fixed alphabet bound, not a dependence on the grammar or input contents.
+
+`matchCount_step` connects this actual comparison result to the next-character
+guard of the existing capture matcher. For a positive remaining capture count,
+it advances both suffix positions exactly when the codes agree, and fails on a
+mismatch or target EOF. Character zero is still distinct from EOF. The theorem
+covers arbitrary original `Char` inputs and valid numeric capture positions.
+
+This is the inner comparison and its semantic bridge, not yet the full capture
+loop. The remaining-count loop, environment-span lookup, atomic-expression
+selection, original-input initialization, and whole-evaluator integration still
+need connection. It does not resolve general CBV-Par versus CBV-Seq equality
+or separation.
+
+### Complete runtime capture-interval scan
+
+`SequentialSpanMachine` now connects the inner comparison to a complete numeric
+loop over a capture interval. Its ten numeric registers contain the original
+encoded input, the fixed comparison workspace, two persistent suffix positions,
+and the remaining count. `setup_runs` computes `a - b` from the runtime interval
+endpoints by shrinking comparison. The loop copies the two positions into the
+comparison registers, restores the original input after both reads, advances
+both persistent positions and decrements the count on a match, and stops with an
+empty count register on a mismatch. A zero count denotes success. Comparison
+scratch is cleared after each iteration.
+
+`scan_correct` proves the final success/position result equals the existing
+`SequentialSpanRecompute.matchCount`. `span_value` therefore identifies the
+result with `matchSpan x a b p`, for arbitrary original character inputs and
+valid positions. Empty captures, target EOF, mismatches, and successful scans
+are covered. The program is fixed: the capture length is runtime data, with no
+input-dependent unrolling and no materialized captured substring.
+
+`compiled_span` and `span_tape` carry the entire endpoint setup and loop through
+the list compiler to eleven actual tapes. Every intermediate tape fits the
+same linear capacity `(2^32 + 2) * x.length + 3`. The numeric running-time bound
+is `4*b + 5 + (a-b)*(16*x.length + 4*2^32 + 31) + 1`; the list execution bound
+multiplies this by `ncost` of the capacity. The final encoded original input is
+preserved on register zero. The initial state already contains that encoded
+input and the endpoints; environment lookup, the ordinary-input loader, atomic
+selection and evaluator integration remain to be connected. The general
+Par/Seq equality-or-separation objective remains open.
+
+### Runtime parameter lookup followed by interval matching
+
+`SequentialEnvLookup` consumes the existing `writeEnv` encoding and extracts the
+pair for a fixed source parameter index `k`. It tests the runtime environment
+length before each pair. An absent parameter therefore stops at the environment
+boundary even when following frame fields are nonempty. After the selection it
+drains the remaining counted environment, retaining the following fields in
+their original order. Its numeric time is at most `8 * E.length + 10`, independent
+of the values of endpoints. The grammar fixes `k` and bounds environment length
+by its arity budget; this stage can use the constant-time-to-space argument
+without applying it to the input-dependent interval traversal.
+
+`SequentialParamMachine` composes that lookup with the complete span machine.
+The original encoded input occupies its own register; the lookup obtains both
+endpoints directly from the runtime environment. A missing parameter returns
+failure. A present parameter invokes the interval loop, including empty
+captures and target-EOF failure. `param_value` identifies the final result with
+`SequentialStack.atom x E (.param k) p` on the same original character input.
+The original encoded input and the fields following the environment survive.
+
+`linear_param_runs`, `compiled_param`, and `param_tape` verify the combined
+program through thirteen numeric registers and fourteen actual tapes. For
+`E.length <= A`, at most `M` following fields, and field bound `N` covering the
+input length and arity, every intermediate tape fits
+
+```
+(2^32 + 2) * x.length
+  + (1 + 2*A + M + (8*A+10)) * N
+  + (1 + 2*A + M + (8*A+10)*(8*A+11) + 5).
+```
+
+`capacity_linear` proves this expression equals the capacity used in the
+execution theorem. For fixed grammar and a local front, `A` and `M` are
+constants. The remaining work is selecting atomic expressions from the encoded
+task, implementing the other atomic cases, loading ordinary input, and
+integrating all transitions and terminal decisions into the evaluator. This
+component still starts with the original input already encoded. The general
+Par/Seq equality-or-separation question remains unresolved.
+
+### Original-input character and literal atoms
+
+`SequentialCodeTest` implements numeric tests for any character, one fixed
+character, and a fixed inclusive character range. EOF is code zero; original
+characters use `toNat + 1`. The arbitrary-character test checks positivity.
+The fixed-character and range tests use shrinking comparisons with grammar
+constants, including immediate failure for reversed ranges. The code tester
+clears its code and comparison scratch and returns a success flag.
+
+`SequentialCharacterMachine` copies the saved runtime position into the reader,
+reads and restores the original encoded input, applies the chosen code test,
+and decrements the saved position only on success. `character_value` identifies
+its result with `SequentialStack.atom` for `.any`, `.chr`, and `.range` for every
+original `List Char`, valid position, and capture environment. This includes EOF,
+NUL, arbitrary Unicode characters, and empty or reversed ranges. The compiled
+program uses eight actual tapes. `capacity_linear` gives the exact capacity
+`(2^32 + 2) * n + 3 + SequentialCodeTest.capacity kind`.
+
+The potentially long original-input traversal keeps its direct linear space
+annotation. Only the character-code tester uses time-to-space conversion: its
+initial code is bounded by the fixed alphabet constant `2^32`, and its time bound
+depends on that constant and fixed source characters, never on the input length.
+Thus that conversion contributes a fixed additive capacity.
+
+`SequentialLiteralRead` composes fixed-character machines for a grammar literal,
+clearing the success flag between stages and stopping at the first mismatch.
+Its program depends only on the literal. `scan_correct` proves the exact result
+of `stripPrefix?`, and `literal_value` connects it to `.lit` in the existing atom
+semantics, including the empty literal and EOF. `compiled_literal` and
+`literal_tape` verify the whole composition on eight tapes. All intermediate
+tapes fit `(2^32 + 2) * n + 3 + reserve literal`, where `reserve` is a fixed sum
+of code-tester capacities. Both character and literal machines retain the
+original encoded input in register zero.
+
+The evaluator still needs source-expression selection and task/result encoding
+around these atom machines, together with the trivial non-reading atoms,
+ordinary-input initialization, and the complete transition/terminal loop.
+These components start with the original input already encoded. They do not
+yet decide the general CBV-Par versus CBV-Seq equality-or-separation question.
+
+### Source-ID dispatch and atom result encoding
+
+`SequentialAtomCodec.prepare` reads the existing expression-task prefix and
+separates the source expression ID, saved input position, and reversed runtime
+environment plus following frame fields. It drops the unused clock for an
+atomic step. `prepare_runs` proves the transformation from the ordinary
+`inputFields` encoding, rather than assuming a separately supplied operator.
+
+`select` combines that normalization with a fixed branch table generated from
+`exprPool ns`. `selected_runs` proves that the runtime ID selects the matching
+source expression branch. It allows a branch to use additional ambient numeric
+registers, including a preserved original-input register outside the injective
+normalization map. All intermediate states retain the same `NFits B` bound;
+branch correctness is an explicit premise of this generic composition theorem.
+The input-reading atom adapters still need to discharge that premise in one
+unified layout.
+
+`SequentialAtomCodec.finish` consumes the runtime result tag and position and
+writes `[3,0] ++ writeRes result ++ [frameCount] ++ frameFields`, clearing its
+work registers. The three tags represent undefined, failure, and success.
+`finish_runs` handles every `Res`, and `input_prefix` / `output_prefix` identify
+both formats with the evaluator's actual `prefixCode`. `original_step` links
+these endpoints to the original stack transition for atomic expressions.
+Normalization and assembly take time bounded by the local environment/frame
+field counts, so their time-to-space conversion is linear in the numeric field
+bound for a fixed grammar and local front.
+
+`SequentialSimpleAtom` supplies complete source-selected branches for atoms
+that do not read input: `eps`, `dbg`, and `lam` succeed without consumption;
+`callParam` fails and `invoke` returns undefined, as in the existing semantics.
+The branch consumes only the header-counted environment and retains all
+following frame fields. `numeric_runs` starts from the encoded expression task,
+selects by its actual source ID, executes the branch, and returns the encoded
+value task. `numeric_tape` carries this entire path through six actual tapes,
+with exact agreement with `SequentialStack.atom`. Its `space_linear` theorem
+makes the numeric-field dependence explicit.
+
+The separate parameter, character, and literal machines still require layout
+adapters and result-tag conversion to use this common dispatch and assembly.
+The ordinary-input loader and complete evaluator loop also remain unconnected.
+No general Par/Seq equality or separation follows yet.
+
+### Read results now return ordinary encoded value tasks
+
+`SequentialAtomResult` supplies a common thirteen-register return layout for
+all input-reading atoms. Register zero retains the original encoded input;
+registers seven, eight, and nine hold an optional source cursor, the target
+position, and the success marker; eleven retains the following frame fields.
+The adapter removes the temporary source cursor, converts the marker to the
+ordinary success/failure tag, and invokes `SequentialAtomCodec.finish` through
+an injective register map. The final state has only the original input and the
+encoded value-task fields in register twelve; all work registers are empty.
+The following frame fields and frame count are included unchanged in that
+value-task encoding.
+
+`NBoundedConstant.push_runs` verifies the status constants directly at the same
+space capacity, rather than enlarging the surrounding input workspace.
+`bounded_result_runs` discharges the local assembler's numeric bound from the
+returned position, frame count, and bounded following fields. `space_linear`
+provides its exact affine dependence on the numeric field bound for a fixed
+local front.
+
+`SequentialParamResult` connects the entire runtime environment lookup and
+original-input interval comparison to this return adapter. `scan_bounds` and
+`view_bounds` prove that the returned cursors stay within the original input
+positions, including failure. `param_runs`, `compiled_param`, and `param_tape`
+now end in `outputFields (atom x E (.param index) p) frameCount frameFields`,
+not just a position and success flag. Their fourteen-tape execution retains the
+original input, clears the work registers, and has an explicit capacity affine
+in input length and the numeric field bound. It still starts from the separate
+original-input/environment/position layout used by parameter evaluation.
+
+`SequentialReadResult` embeds character and literal readers into the same
+layout and applies the same assembler. `character_tape` and `literal_tape`
+verify their full path to the ordinary encoded value-task result on fourteen
+tapes. Character predicates include any character, a fixed character, and an
+inclusive range. These adapters start after the caller has discarded the
+capture environment, while preserving the frame fields. `literal_scan_bound`
+justifies the result bound even after a partially matched literal fails.
+`characterSpace_linear` and `literalSpace_linear` give exact affine capacity
+formulas. All inputs remain arbitrary original character strings.
+
+The source-ID selector must still be connected to these return adapters through
+one common branch layout; the separate parameter path includes environment
+lookup while character/literal paths need the environment-discard step first.
+The ordinary-input loader and complete evaluator/terminal loop also remain.
+The general CBV-Par versus CBV-Seq comparison is still unresolved.
+
+### Unified source-selected atomic transitions
+
+`SequentialAtomBranch` now places every atomic constructor in one common
+thirteen-register layout. Parameter branches perform runtime environment
+lookup and interval matching. Character and literal branches first drain only
+the header-counted environment, preserving the saved position and following
+fields, then invoke their reader/result adapter. Non-reading branches use the
+same environment/position fields and the ordinary result codec. `branch_runs`
+proves all these paths return the actual `SequentialStack.atom` result while
+retaining the original encoded input. Each branch returns an ordinary encoded
+value-task word with its frame count and following frame fields unchanged.
+
+`SequentialAtomSelect` combines this branch table with the expression-task
+normalizer. The entire input/output word occupies register twelve, the original
+input register zero, and the temporary source ID register fourteen. The
+normalizer reads that ID from the existing task encoding; `caseTop` consumes it
+before invoking a branch. Thus the program is fixed by `exprPool ns` and does
+not receive an external choice of atomic operation. `selected_runs` connects
+the encoded expression-task word to the encoded value-task word for every
+atomic source expression in the pool.
+
+The capacity includes the normalization budget, local environment/result work,
+and the sum of the reader reserves of the fixed source pool. Every selected
+reserve is bounded by this sum. `reserve_affine`, `space_affine`, and
+`capacity_affine` verify that these finite sums retain an affine capacity. In
+particular, for fixed source pool, arity bound, and local frame-field count,
+there are constants `a`, `b`, and `c` such that the compiled capacity is
+`a * inputLength + b * numericFieldBound + c`. The original task's field bounds
+also imply the normalized environment/position bounds; they are not additional
+unverified post-normalization assumptions.
+
+`bounded_selected_runs` discharges the task's encoded-size bound using its
+arity, frame-field, clock, source-pool, and position bounds. `compiled_selected`
+and `selected_tape` carry the complete normalization, actual-ID selection,
+atomic evaluation, and value-task assembly through sixteen actual tapes. The
+output state retains the original encoded input and the returned task word;
+all work registers, including the temporary source ID, are clear. Arbitrary
+original `List Char` inputs, empty captures/literals, EOF, absent parameters,
+all character predicates, and undefined atomic results remain covered by the
+respective branch correctness theorems.
+
+This completes the unified numeric atomic transition component. Its initial
+state still has the original input already encoded and the local task word
+already decoded from the binary evaluator state. The binary front parser and
+writer, full transition dispatch, ordinary-input initialization, and terminal
+loop still need connection. The general Par/Seq equality-or-separation claim
+remains open.
+
+### Atomic transitions now include binary front parsing and writing
+
+`SequentialInputHost` extends the existing eleven-list binary evaluator layout
+to twenty lists. The original input encoding occupies register eleven. An
+injective placement of the sixteen compiled atom lists leaves the binary
+continuation, held value, constant two-marker, and field width untouched.
+`old_runs` embeds an existing eleven-list program while preserving the input
+register and fresh workspace; `atom_runs` embeds the unified atom program while
+preserving the binary continuation and metadata. Its local-word register is
+the same register used by the existing front parser and writer.
+
+`SequentialInputPipeline` composes the embedded front parser, a twenty-list local
+operation, and the embedded writer. Its transition theorem retains the original
+input register through all three stages. It uses the parser's verified endpoint
+space annotation and the writer's bit-capacity condition; no input-dependent
+traversal time is converted to extra space.
+
+`SequentialAtomMachine.transition_runs` now covers every reachable atomic
+expression task. It starts with the complete encoded binary evaluator state,
+parses the actual task/front, selects and evaluates the atomic source expression,
+assembles the ordinary value-task word, and writes the next binary state with
+the continuation unchanged. The separate original-input encoding survives the
+entire operation. `transition_tape` carries that complete transition through
+twenty actual tapes. The environment validity, clock, source-pool membership,
+frame-field count, and numeric field bounds are derived from the reachable
+original stack configuration.
+
+`space_eq` isolates the additional numeric/input workspace as an affine term
+in input length and the existing numeric field bound. `space_bound` then uses
+the verified linear numeric bound and binary state-storage bound to obtain
+`C * (n+1)` plus the existing `O(n log n)` state-storage term, with constants
+fixed by the grammar and root expression. The theorem bounds every intermediate
+state of this parser/atom/writer transition, rather than only its endpoints.
+
+All transition kinds now have compiled components: the other entry/return
+machines still use eleven lists and can be embedded with `old_runs` into the
+same input-preserving host. A single outer dispatcher, terminal handling,
+ordinary-input initialization, and complete evaluator loop remain to be
+connected. In particular, this atomic transition still starts with the original
+input already encoded in its separate register. The general Par/Seq
+comparison remains unresolved; this space analysis alone gives no separating
+language in P.
+
+### One dispatcher for all nonterminal transitions
+
+`SequentialStepScan` labels the existing front-read plans with seven transition
+keys. It reads the actual task tag and, for expression tasks, the actual source
+ID. Source expressions select atomic, structural, or call entry; the other task
+tags select argument entry, rule query, or return. A value with an empty stack
+selects a separate terminal continuation. `parser_trace` proves the selected key
+and exact consumed front for every source-pool-valid configuration. No operator
+or front-length selector is an extra runtime input.
+
+`SequentialInputScan` compiles these labelled plans into the twenty-register
+host with arbitrary twenty-register continuations. Its `compile_trace` lifts
+the verified field fetches and counted reads while preserving the original
+input register. `SequentialStepScanMachine` restores the unchanged binary front
+before entering the selected continuation, so the existing complete transition
+machines can be reused. The extra parse/restore pass is deliberate; it does not
+change the intermediate space capacity.
+
+`SequentialStepMachine` now binds all six nonterminal keys to the actual
+compiled components. Atomic transitions use the twenty-register machine;
+structural/call/argument/query/return transitions embed their existing
+eleven-register machines and retain the original input and fresh workspace.
+`transition_runs` covers every reachable configuration with an actual next
+`SequentialStack.step`, and `transition_tape` carries that entire selection and
+transition through twenty actual tapes. The end state is again the complete
+binary evaluator configuration with its separate original-input encoding.
+
+The capacity is the sum of the parser and component bounds. `space_eq` reduces
+it to eleven copies of the binary front bound plus an affine numeric/input
+term. `space_bound` then gives a single grammar-dependent linear term plus
+eleven copies of the existing `O(n log n)` binary-state storage term, uniformly
+for reachable configurations. It bounds every intermediate state of the whole
+selected transition, not merely the selected component's endpoints.
+
+The terminal continuation remains an explicit program parameter: this theorem
+handles all nonterminal steps and does not claim a complete recognizer. Terminal
+acceptance, repeated evaluation, and loading ordinary input into the initial
+binary/original-input state remain to be connected. The general Par/Seq
+comparison remains unresolved; no class separation follows from this upper
+bound alone.
