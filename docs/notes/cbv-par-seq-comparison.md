@@ -5905,3 +5905,50 @@ parser still cannot depend on retained parameters or call recursive helper
 parsers, the header remains closed call-free, and other capture shapes or
 multiple independent captures are not translated. General Par/Seq equality
 or separation remains unresolved.
+
+
+### Recursive helpers for runtime prefix-code captures
+
+`RecursiveCodeGrammar` removes the closed call-free restriction on both
+header A and the independently selected argument B. A finite installed
+component of ordinary nullary PEG rules may be recursive or mutually
+recursive and may include undefined cycles. A and each B can use any
+lexical expression over this component, including choice, predicates,
+sequence, and repetition. Their successful captures still require the
+same prefix-free code and two-codeword shape certificates; those
+certificates are stated at the actual stabilized standalone helper table.
+
+The generated grammars install the same helper component before their
+unary user rules. Source user bodies have `A;param0;tail`, and source calls
+pass B. Target calls test the original B and capture A; target bodies
+replay the captured word twice and replace old parameter uses by duplicate
+views. User tails may contain mutual recursion, sequence, choice,
+predicates, and repetition. No helper calls into user rules or retained
+parameter dependencies are permitted in A or B.
+
+`frozen_lexical` and `seeded_lexical` derive the helper evaluation
+correspondence from actual physical helper rows, using independence of
+the installed component. `tables_shifted` synchronizes source prefix-seeded
+rounds with target rounds having stabilized helpers. The proof then removes
+both internal clocks using proved cofinality. `observations_iff` preserves
+**all finite observations on the same original input** between the actual
+ordinary grammars; `language_translation` produces one fixed first-order
+Seq grammar. Its final statement contains no table advice, oracle, seeded
+semantics, supplied row equivalence, or input transformation.
+
+`RecursiveCodeExamples` uses the genuine recursive helper
+`R <- 'a' R 'b' / eps` and header `R '#'`. A separate unproductive nullary
+cycle coexists in the same component. Successful balanced-header captures
+satisfy a prefix-free code certificate derived from the actual helper
+syntax and consumption. An argument parses two such headers. Kernel
+execution checks parent `aabb#`, child `ab#`, restoration and replay of the
+parent capture after return, and rejection of a short parent copy. Target
+observations are obtained from the all-input theorem. The cyclic argument
+is undefined in the ordinary source at every physical stage, and the
+generated Seq grammar has no finite observation for it on any input.
+
+This closes recursive **independent helper** parsing in the runtime
+prefix-code construction. It does not cover arguments depending on retained
+values, arguments recursively calling the parameterized user component,
+other capture shapes, arbitrary consuming prefixes, or multiple independent
+captures. General Par/Seq equality or separation remains unresolved.
