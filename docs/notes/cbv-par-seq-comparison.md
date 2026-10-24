@@ -1507,3 +1507,39 @@ therefore does not establish a standard-input TM space-class theorem. The
 ordinary-input encoding/loader and the general Par/Seq equality or separation
 remain unresolved. In particular, the current space upper bound alone does
 not give a separating language in P.
+
+
+### Standard-input TM space bound on ordinary a/b words
+
+`SequentialBinaryLoader` reads the standard list input, one input bit per
+ordinary a/b character. It emits each character's numeric field into a temporary
+stack in reverse order, then reverses the complete transfer into register 11.
+`runs` gives exactly `SequentialEncodedMachine.input (bitWord w)`. It supplies
+no repeated input, extra clock, length field, or binary stack state. The loader
+uses at most `100*n+4` cells per tape, including intermediate constant pushes.
+
+`SequentialBinaryInputMachine.program` composes the existing standard tape
+initializer `initP` with this loader and the complete evaluator. `tape` starts
+at the actual `initTapes 20 w`. `recognizes` ties its halting answer to sequential
+CBV full-consumption observation of `bitWord w`, the ordinary a/b word with one
+character per input bit. `finite_alphabet` obtains a fixed finite tape alphabet
+from the finite list program, and `machine` transfers the entire run to an
+actual deterministic twenty-tape TM from `initCfg 20 w`.
+
+For each fixed first-order grammar and root expression, that TM decides the
+same ordinary binary language with capacity
+
+```
+(C + 104)*(n+1) + 11*(A*(n+1))*((n+1).log2 + B.log2 + 2)
+```
+
+where `C`, `A`, and `B` depend only on the fixed source grammar and expression.
+This is an `O(n log(n+1))` bound on every intermediate configuration of the
+standard-input computation, including input import, encoding, length recovery,
+clock/width computation, initial-stack writing, evaluation, and final acceptance.
+No running-time improvement is claimed.
+
+This closes the standard-input connection for the ordinary a/b alphabet. The
+arbitrary-Char input decoder remains separate. General Par/Seq equality or
+separation is still open, and the space upper bound alone does not separate
+Seq from Par=P on the binary alphabet.

@@ -5027,3 +5027,47 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialEncodedMachine.space_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialEncodedMachine.space_bound
+
+/-- info: 'Complexity.LProg.ConstOK.mono' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Complexity.LProg.ConstOK.mono
+
+/-- info: 'Complexity.LProg.exists_constOK' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.LProg.exists_constOK
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialBinaryLoader.reverseFields_reverse' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialBinaryLoader.reverseFields_reverse
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialBinaryLoader.scan_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialBinaryLoader.scan_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialBinaryLoader.runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialBinaryLoader.runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.lists_halts' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.lists_halts
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.recognizes' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.recognizes
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.finite_alphabet' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.finite_alphabet
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.machine' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.machine
