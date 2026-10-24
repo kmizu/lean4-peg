@@ -1633,3 +1633,53 @@ impossibilities are not contradicted: the new construction changes call-site
 control and the callee's position together. The general equality/separation
 question remains open; these fragments are progress toward a reverse compiler,
 not a proof that the whole classes coincide.
+
+
+### Static literal captures: reverse compilation without leading replay
+
+`LiteralArguments` isolates a different route around the calling-position
+problem. When an actual argument is a literal expression or a forwarded
+parameter, its captured word is statically known from the enclosing value
+environment. This does not make the argument evaluation optional: the literal
+must still match at the original caller position, even when the callee ignores
+its parameter. `arguments_eval` proves that the actual left-to-right Par
+argument evaluation resolves the value vector and checks every word against
+that same original suffix. A missing forwarded parameter fails, and empty
+literals are covered. `guards_eval` realizes these checks as non-consuming
+positive-lookahead guards.
+
+`LiteralSpecialization` enumerates one finite specialization for each source
+rule and each value vector of the rule's arity over a fixed finite palette.
+`mem_specs` and `specs_valid` prove coverage and validity of the actual
+input-independent enumeration. The compiler replaces each parameter with its
+literal value and each call with argument guards followed by a zero-argument
+call to the appropriate specialized rule. Missing rules, arity mismatches,
+and unresolved arguments preserve failure. `target_zero_arity` verifies that
+every generated rule has arity zero. There is no leading-replay restriction
+on the source rule body.
+
+`evaluator_of_related` and `tables_related` connect the actual finite generated
+grammar to the source Par evaluator at every table clock. The target Seq call
+receives no consuming arguments, while the guards check the original arguments
+at the caller's unchanged position. `limit_eq` uses both fixed-point stability
+bounds; it does not assume that the differently sized source and target grammars
+have identical iteration bounds. `observations_iff` consequently preserves
+success with every residual input, finite failure, and absence of a finite
+result through arbitrary recursive supported bodies.
+
+`LiteralSpecializationCompiler` removes the supplied-palette premise. It
+collects the argument literals from all source rules and the root expression,
+proves that every resolved value stays within that palette, and produces one
+fixed first-order Seq grammar and root from the source syntax alone.
+`language_translation` preserves full-consumption recognition on exactly the
+same original character strings, with no totality or input-size assumption.
+Source bodies may contain arbitrary supported recursion, sequencing, choice,
+negation, repetition, and reuse of their parameters.
+
+The precise restriction is syntactic: every actual argument at every call is
+a `.lit` expression or a `.param` forwarding an existing value. The result does
+not yet cover `.any`, `.range`, an arbitrary finite-valued argument parser, or
+unbounded dynamically captured strings. Those require additional value-selection
+or residual parsing machinery. This gives a direct reverse compiler for a
+new source fragment with unrestricted body placement, but does not establish
+the general Par-to-Seq inclusion or a language-class separation.

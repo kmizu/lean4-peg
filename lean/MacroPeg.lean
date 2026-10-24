@@ -284,3 +284,6 @@ import MacroPeg.CBV.SequentialBinaryInputMachine
 import MacroPeg.CBV.CallLookahead
 import MacroPeg.CBV.ReplayTestFusion
 import MacroPeg.CBV.PrefixPairTestFusion
+import MacroPeg.CBV.LiteralArguments
+import MacroPeg.CBV.LiteralSpecialization
+import MacroPeg.CBV.LiteralSpecializationCompiler
