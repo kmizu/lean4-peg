@@ -91,4 +91,26 @@ theorem machine {g : MGrammar} (hg : g.FirstOrder) {e : MExp} (he : e.FirstOrder
   exact ⟨(program g e).machine na hna hs,
     (program g e).decides_of_exec na hna hs _ (space g e) (recognizes hg he)⟩
 
+/-- Absorb the source-dependent constants into the conventional n log n
+capacity, with one constant for every input length. -/
+theorem space_nlog_bound (g : MGrammar) (e : MExp) :
+    ∃ C, ∀ n, space g e n ≤ C*(n+1)*((n+1).log2+1) := by
+  let D := coefficient g e+104
+  let A := cellCoefficient g e
+  let B := (numberCoefficient g e).log2+2
+  refine ⟨D+11*A*B,?_⟩
+  intro n
+  let t := n+1
+  let l := (n+1).log2
+  have hl : l ≤ B*l := by
+    simpa only [Nat.one_mul] using Nat.mul_le_mul_right l (show 1 ≤ B by unfold B; omega)
+  have hlog : l+B ≤ B*(l+1) := by rw [Nat.mul_add,Nat.mul_one]; omega
+  have hlin : D*t ≤ D*t*(l+1) := Nat.le_mul_of_pos_right _ (by omega)
+  have hbin : 11*(A*t)*(l+(numberCoefficient g e).log2+2) ≤ (11*A*B)*t*(l+1) := by
+    calc
+      _ ≤ 11*(A*t)*(B*(l+1)) := Nat.mul_le_mul_left _ (by simpa only [B,Nat.add_assoc] using hlog)
+      _ = _ := by simp only [Nat.mul_assoc,Nat.mul_left_comm,Nat.mul_comm]
+  have hh := Nat.add_le_add hlin hbin
+  simpa only [space,D,A,t,l,Nat.add_mul,Nat.mul_assoc] using hh
+
 end Shallot.MacroPeg.CBV.SequentialBinaryInputMachine

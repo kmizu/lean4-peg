@@ -1,3 +1,4 @@
+import Shallot.Peg.Separation.CBVSeqSpace
 import Shallot.Basic
 import Shallot.Data.RBVerify
 import Shallot.Data.RBBalance
@@ -5071,3 +5072,33 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.machine' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.machine
+
+/-- info: 'Complexity.TM.SpaceBounded.mono' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Complexity.TM.SpaceBounded.mono
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.space_nlog_bound' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialBinaryInputMachine.space_nlog_bound
+
+/-- info: 'Shallot.PegSeparation.binary_seq_in_nlog_space' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.binary_seq_in_nlog_space
+
+/-- info: 'Shallot.PegSeparation.binary_reverse_requires_P_nlog_space' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.binary_reverse_requires_P_nlog_space
+
+/-- info: 'Shallot.PegSeparation.original_reverse_requires_P_nlog_space' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.original_reverse_requires_P_nlog_space
+
+/-- info: 'Shallot.PegSeparation.P_outside_nlog_space_separates_original' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.PegSeparation.P_outside_nlog_space_separates_original

@@ -1543,3 +1543,45 @@ This closes the standard-input connection for the ordinary a/b alphabet. The
 arbitrary-Char input decoder remains separate. General Par/Seq equality or
 separation is still open, and the space upper bound alone does not separate
 Seq from Par=P on the binary alphabet.
+
+
+### The language-class consequence and the remaining lower bound
+
+`Complexity.SpaceNLogN` states deterministic `DSPACE(n log(n+1))` with the
+standard binary-input convention: one fixed finite-tape TM and one constant
+`C` bound every input run by `C*(n+1)*(log2(n+1)+1)` cells per tape.
+`SequentialBinaryInputMachine.space_nlog_bound` absorbs the previous explicit
+source constants into this conventional bound.
+
+`Shallot.PegSeparation.binary_seq_in_nlog_space` therefore applies to the
+entire first-order Seq class on the ordinary a/b alphabet, without assuming
+a particular source grammar or a separate initialization routine.
+`binary_reverse_requires_P_nlog_space` and
+`original_reverse_requires_P_nlog_space` combine it with the verified binary
+Par=P theorem: either binary reverse inclusion or a general original-character
+reverse translation would imply that every P language belongs to this space
+class.
+
+`P_outside_nlog_space_separates_original` gives the other direction needed by
+a possible space-based separation strategy: an explicit P language outside
+this deterministic space bound would be recognized by a fixed Par grammar,
+while no Seq grammar could recognize it. It includes the already proved
+Seq-to-Par inclusion and the genuine original-character-language separation
+conclusion, using the same unpadded input correspondence.
+
+These are implications, with the complexity lower bound an explicit hypothesis.
+No such P witness is constructed here, and no converse from a space upper bound
+to Seq recognition is claimed. Consequently none of these theorems decides the
+Par/Seq comparison. This isolates the missing mathematical step in a space-based
+strategy; merely improving the input loader or repackaging the upper bound does
+not supply it. Direct reverse compilation, or a genuine non-inclusion witness,
+remains the requested conclusion.
+
+The [2019 article](https://kmizu.hatenablog.com/entry/2019/10/24/145039) also uses
+both evaluation conventions for tag matching. Rechecking that example confirms
+the calling-position distinction; it does not itself supply a language-class
+separation or a general translation. The repository's `SequentialCaptures`
+results already rule out retaining a nonempty literal capture at the same
+Seq argument/body position, and the earlier residual-interface impossibility
+results explicitly leave whole-grammar transformations and retained continuations
+open.
