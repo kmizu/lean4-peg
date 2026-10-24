@@ -13027,3 +13027,101 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.ArgumentBodyExamples.consuming_prefix_not_valid
+
+-- Dynamic alphabet-safe captures through consuming scanner prefixes.
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerCapturedArguments.subst_safe' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerCapturedArguments.subst_safe
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerCapturedArguments.absorbed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerCapturedArguments.absorbed
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerCapturedArguments.all_of_dropWhile_append' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerCapturedArguments.all_of_dropWhile_append
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerCapturedArguments.capture_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerCapturedArguments.capture_safe
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerCapturedArguments.singleton_scan' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerCapturedArguments.singleton_scan
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentFusion.supported_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentFusion.supported_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentFusion.firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentFusion.firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentFusion.rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentFusion.rule
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentFusion.evaluator_of_shift' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentFusion.evaluator_of_shift
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentFusion.tables_shifted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentFusion.tables_shifted
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentFusion.evaluator_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentFusion.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentFusion.observations_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentFusion.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentFusion.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentFusion.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentExamples.valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentExamples.valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentExamples.entry_valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentExamples.entry_valid
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentExamples.source_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentExamples.source_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentExamples.fresh_capture' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentExamples.fresh_capture
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentExamples.all_inputs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentExamples.all_inputs
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentExamples.translated_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentExamples.translated_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentExamples.consuming_prefix' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentExamples.consuming_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.ScannerArgumentExamples.crossing_boundary' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.ScannerArgumentExamples.crossing_boundary

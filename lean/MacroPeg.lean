@@ -475,3 +475,6 @@ import MacroPeg.CBV.NullableStarExamples
 import MacroPeg.CBV.ArgumentBodyView
 import MacroPeg.CBV.ArgumentBodyCompiler
 import MacroPeg.CBV.ArgumentBodyExamples
+import MacroPeg.CBV.ScannerCapturedArguments
+import MacroPeg.CBV.ScannerArgumentFusion
+import MacroPeg.CBV.ScannerArgumentExamples
