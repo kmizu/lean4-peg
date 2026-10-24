@@ -406,3 +406,4 @@ import MacroPeg.CBV.ParserPrefixFusion
 import MacroPeg.CBV.RecursiveParserStability
 import MacroPeg.CBV.RecursivePrefixFusion
 import MacroPeg.CBV.MixedPrefixFusion
+import MacroPeg.CBV.OriginPrefixControl

@@ -4365,3 +4365,68 @@ rules and current captures; unrestricted recursive/capture-dependent
 arguments enter through replay-headed rules. Multiple independent general
 arguments and general Par/Seq equality or separation remain unresolved.
 Twenty new public axiom guards cover the mixed compiler and frozen soundness.
+
+
+### Caller-position control around fresh captures and arbitrary replay calls
+
+`CBV/OriginPrefixControl.lean` lifts the previous two entry conventions into
+finite body control, removing their unconditional initial-replay/reparse
+requirement. A rule has a caller-position `ReplayControlFusion.Plan`: a
+finite combination of prioritized alternatives, negation, and guarded
+sequencing (`&P Q`). Each referenced part either enters an arbitrary tail
+after replaying/reparsing the capture, or is a closed local expression that
+runs directly at the original caller position. A body can therefore inspect
+the capture under predicates, consume and fail in one branch, restore the
+caller position, and select a local branch that returns before the argument's
+endpoint. No initial consuming capture read is required of the whole body.
+
+As before, rules are either fixed-parser rules, using a closed expression
+that may query the independent mutually recursive PEG helper component, or
+replay rules, accepting arbitrary recursively translated arguments. Those
+arguments may use retained values, consuming repetition, choice, predicates,
+and user calls of either kind. Part tails may themselves call either kind
+of user recursively. A successful continuation does not reevaluate the
+argument at an advanced position: every caller-side control leaf starts at
+the same original position, so repeated argument evaluation in a leaf retains
+its exact original captured value.
+
+The source expands each rule's plan with its parser/replay entries and its
+local parts. The target expands control at the call site and installs one
+advanced arity-one rule per replay part and one arity-zero rule per local
+part. `render_closed` proves raw local parts remain capture-independent
+through the full recursive translation. `call_eval` explicitly performs the
+argument check before **all** body control, including a fully local body.
+Finite failure and undefinedness of the argument therefore cannot be
+bypassed by a local alternative.
+
+`tables_shifted` derives the actual source-user/target-part relation at every
+frozen user round. The syntactic plan-index check ensures even stage-zero
+control remains undefined until a real user row is reached. `evaluator_eq`
+then covers arbitrary raw expressions and recursive arguments.
+`observations_iff` uses the already-proved actual helper stabilization and
+physical/frozen cofinality, yielding all original-string finite observations;
+`language_translation` has only syntactic component, head, local-closure, and
+plan-index premises. No continuation, argument, user-table, or helper oracle
+remains in the final theorem.
+
+`origin_fallback_execution` kernel-checks the actual physical tables. On
+`aabbaabb`, the fresh recursive parser captures the first `aabb`; the first
+branch forwards that value recursively and fails. A capture-dependent
+negative lookahead then selects local `a` at the original position, leaving
+seven characters. The same grammars finitely reject `aabb#aabb`, where the
+probe successfully replays the captured value after `#`. This is a return
+**before** the fresh argument's endpoint, not a forced advance.
+`undefined_argument_before_local_branch` proves that an unproductive
+recursive argument stays undefined before a local body branch on every
+input and at every physical stage, even though that branch ignores the
+capture and could otherwise succeed immediately.
+
+The remaining control restriction is substantive: no consuming sequence or
+iteration of different capture-dependent parts is allowed at the caller
+control level. Consuming computation is allowed inside an entered tail or
+local part. The caller-level control must keep every parameter-sensitive
+entry at the original position. Fixed-parser arguments remain independent
+of user rules and captures, whereas unrestricted dependent arguments enter
+through replay rules. General body decomposition, multiple independent
+general captures, and general Par/Seq equality or separation remain
+unresolved. Twenty-eight new public axiom guards cover this construction.
