@@ -1249,3 +1249,51 @@ one common branch layout; the separate parameter path includes environment
 lookup while character/literal paths need the environment-discard step first.
 The ordinary-input loader and complete evaluator/terminal loop also remain.
 The general CBV-Par versus CBV-Seq comparison is still unresolved.
+
+### Unified source-selected atomic transitions
+
+`SequentialAtomBranch` now places every atomic constructor in one common
+thirteen-register layout. Parameter branches perform runtime environment
+lookup and interval matching. Character and literal branches first drain only
+the header-counted environment, preserving the saved position and following
+fields, then invoke their reader/result adapter. Non-reading branches use the
+same environment/position fields and the ordinary result codec. `branch_runs`
+proves all these paths return the actual `SequentialStack.atom` result while
+retaining the original encoded input. Each branch returns an ordinary encoded
+value-task word with its frame count and following frame fields unchanged.
+
+`SequentialAtomSelect` combines this branch table with the expression-task
+normalizer. The entire input/output word occupies register twelve, the original
+input register zero, and the temporary source ID register fourteen. The
+normalizer reads that ID from the existing task encoding; `caseTop` consumes it
+before invoking a branch. Thus the program is fixed by `exprPool ns` and does
+not receive an external choice of atomic operation. `selected_runs` connects
+the encoded expression-task word to the encoded value-task word for every
+atomic source expression in the pool.
+
+The capacity includes the normalization budget, local environment/result work,
+and the sum of the reader reserves of the fixed source pool. Every selected
+reserve is bounded by this sum. `reserve_affine`, `space_affine`, and
+`capacity_affine` verify that these finite sums retain an affine capacity. In
+particular, for fixed source pool, arity bound, and local frame-field count,
+there are constants `a`, `b`, and `c` such that the compiled capacity is
+`a * inputLength + b * numericFieldBound + c`. The original task's field bounds
+also imply the normalized environment/position bounds; they are not additional
+unverified post-normalization assumptions.
+
+`bounded_selected_runs` discharges the task's encoded-size bound using its
+arity, frame-field, clock, source-pool, and position bounds. `compiled_selected`
+and `selected_tape` carry the complete normalization, actual-ID selection,
+atomic evaluation, and value-task assembly through sixteen actual tapes. The
+output state retains the original encoded input and the returned task word;
+all work registers, including the temporary source ID, are clear. Arbitrary
+original `List Char` inputs, empty captures/literals, EOF, absent parameters,
+all character predicates, and undefined atomic results remain covered by the
+respective branch correctness theorems.
+
+This completes the unified numeric atomic transition component. Its initial
+state still has the original input already encoded and the local task word
+already decoded from the binary evaluator state. The binary front parser and
+writer, full transition dispatch, ordinary-input initialization, and terminal
+loop still need connection. The general Par/Seq equality-or-separation claim
+remains open.

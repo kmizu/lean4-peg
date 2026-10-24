@@ -4721,3 +4721,51 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialReadResult.literal_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialReadResult.literal_tape
+
+/-! Uniform source-ID selection of every original-input atomic transition. -/
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAtomBranch.discard_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAtomBranch.discard_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAtomBranch.branch_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAtomBranch.branch_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAtomBranch.reserve_affine' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAtomBranch.reserve_affine
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAtomSelect.prepReg_injective' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAtomSelect.prepReg_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAtomSelect.branchReg_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAtomSelect.branchReg_injective
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAtomSelect.selected_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAtomSelect.selected_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAtomSelect.space_affine' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAtomSelect.space_affine
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAtomSelect.capacity_affine' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAtomSelect.capacity_affine
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAtomSelect.bounded_selected_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAtomSelect.bounded_selected_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAtomSelect.compiled_selected' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAtomSelect.compiled_selected
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialAtomSelect.selected_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialAtomSelect.selected_tape
