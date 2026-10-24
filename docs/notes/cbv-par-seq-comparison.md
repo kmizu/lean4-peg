@@ -5049,3 +5049,70 @@ equality or separation is still unresolved.
 Validation: full `lake build` succeeds (830 jobs), including `Audit`. All
 34 new public theorem axiom guards use only standard Lean axioms. Both new
 modules compile without new warnings or proof placeholders.
+
+
+## 2026-10-24: Full transition profiles for parameter-dependent arguments
+
+A final state from one start state is insufficient metadata for a retained
+capture reused inside a later argument. `single_phase_insufficient` checks
+this with shift machine `aab`: `a` and `aaba` both take state zero to state
+one, but from state one they end at states two and three respectively.
+The same retained value can be replayed after another argument prefix, so
+its behavior from other start states matters.
+
+`CaptureTransitionProfile` represents a word by the array of its resulting
+states from every start state. `profile_mem` places every unbounded captured
+word's array in the fixed enumeration `profiles D`; `profiles_length` gives
+its size `width^width`. `compose_correct` computes the profile of a
+concatenation from the two finite arrays alone, without inspecting either
+retained word. None of this restricts actual capture lengths or replaces
+retained strings with a finite word palette.
+
+The profile is executable information, not a supplied semantic answer.
+`guard` uses lookaheads of the actual generated state-filtered capture calls
+for every starting state. `guard_correct` proves exact profile discrimination
+on the original committed capture, preserves undefined and failed original
+queries, and leaves the caller position unchanged. `select_correct` chooses
+a continuation from the finite profile list at the origin; a later failure
+cannot choose another capture or a different profile. These are unbounded
+canonical evaluator theorems on the generated helper grammar.
+
+`DependentCaptureFilter.Expr` then adds retained parameters to finite parser
+control: literals, parameters, independent recursive helper calls, sequence,
+ordered choice, and negation. An inline generated filter uses finite incoming
+profiles for parameter replay, the existing product for fresh helper captures,
+and real source queries for ordered-choice commitment. `correct` preserves
+the complete filtered result for every valid expression, input, environment,
+and state pair with accurate incoming metadata. Fresh helper calls can
+capture new arbitrarily long words, so these arguments are not merely Word
+expressions over a fixed environment.
+
+`render_eq` relates original Par and Seq argument evaluation for this syntax;
+`correct_par` gives the filtered Seq result against the original Par query.
+`guard_accurate` derives the incoming metadata condition from an actual
+successful profile guard on the previous capture. `guarded_argument_correct`
+therefore justifies the parameter-dependent filter after the previous capture
+has advanced the input position, using the retained original string and its
+actual generated guard instead of a semantic profile premise.
+
+A bounded kernel execution additionally constructs real profile-specialized
+unary Seq rows. It captures `a` or `b`, selects the complete profile through
+lookaheads, retains that character as the actual argument, and parses
+`c + param(0) + fresh b*`. `a#cabb#` succeeds and `b#cbbb#` fails for requested
+state zero. Both old words have state zero from zero. Deliberately supplying
+the `a` profile with retained `b` would wrongly pass the inner filter; the
+actual profile selector prevents that inconsistency in the execution.
+
+This closes finite-control parameter-dependent argument filtering, not the
+complete recursive parameter-dependent call translation. Selecting the new
+argument's full profile and threading it through specialized recursive user
+rows still need an unbounded caller correspondence. Parameter-dependent
+repetition and general parameter-bearing recursive parsers are outside this
+inline syntax (independent helpers may already recurse and repeat). Multiple
+user families, general body entry and independent arguments, ordinary graph
+normalization, and full Par/Seq language-class equality/separation remain
+unresolved.
+
+Validation: full `lake build` succeeds (832 jobs), including `Audit`. All
+29 new public theorem axiom guards use only standard Lean axioms. The new
+modules have no proof placeholders or Lean warnings.

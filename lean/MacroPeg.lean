@@ -425,3 +425,5 @@ import MacroPeg.CBV.CaptureProductExtension
 import MacroPeg.CBV.FilteredOverlapCaller
 import MacroPeg.CBV.SeededClock
 import MacroPeg.CBV.RecursiveFilteredOverlap
+import MacroPeg.CBV.CaptureTransitionProfile
+import MacroPeg.CBV.DependentCaptureFilter

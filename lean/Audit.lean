@@ -10765,3 +10765,129 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.RecursiveFilteredOverlap.recursive_capture_execution
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.profile_length' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.profile_length
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.profile_get' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.profile_get
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.profile_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.profile_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.profiles_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.profiles_length
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.member_length' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.member_length
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.member_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.member_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.profile_append' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.profile_append
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.compose_correct' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.compose_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.single_phase_insufficient' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.single_phase_insufficient
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.checks_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.checks_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.guard_firstOrder' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.guard_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.checks_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.checks_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.checks_iff_profile' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.checks_iff_profile
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.guard_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.guard_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.choice_unique' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.choice_unique
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.choice_failed' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.choice_failed
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.select_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.select_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.CaptureTransitionProfile.select_correct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.CaptureTransitionProfile.select_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCaptureFilter.render_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCaptureFilter.render_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCaptureFilter.filter_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCaptureFilter.filter_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCaptureFilter.success_prefix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCaptureFilter.success_prefix
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCaptureFilter.atom_correct' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCaptureFilter.atom_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCaptureFilter.correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCaptureFilter.correct
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCaptureFilter.environment_accurate' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCaptureFilter.environment_accurate
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCaptureFilter.render_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCaptureFilter.render_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCaptureFilter.correct_par' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCaptureFilter.correct_par
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCaptureFilter.guard_accurate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCaptureFilter.guard_accurate
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCaptureFilter.guarded_argument_correct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCaptureFilter.guarded_argument_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.DependentCaptureFilter.dependent_argument_execution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DependentCaptureFilter.dependent_argument_execution
