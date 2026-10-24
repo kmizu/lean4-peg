@@ -4081,3 +4081,57 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialArgsEntryMachine.transition_tape
+
+/-! Input-driven rule queries with clock and capture preservation. -/
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialRuleLookup.exists_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialRuleLookup.exists_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialRuleLookup.runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialRuleLookup.runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialQueryEntry.prepare_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialQueryEntry.prepare_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialQueryEntry.resume_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialQueryEntry.resume_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialQueryEntry.nil_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialQueryEntry.nil_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialQueryEntry.numeric_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialQueryEntry.numeric_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialQueryEntry.local_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialQueryEntry.local_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialQueryEntry.original_step' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialQueryEntry.original_step
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialQueryEntryMachine.space_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialQueryEntryMachine.space_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialQueryEntryMachine.space_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialQueryEntryMachine.space_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialQueryEntryMachine.transition_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialQueryEntryMachine.transition_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialQueryEntryMachine.transition_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialQueryEntryMachine.transition_tape

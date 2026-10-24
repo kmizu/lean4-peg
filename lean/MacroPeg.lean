@@ -245,3 +245,4 @@ import MacroPeg.CBV.SequentialArgHeadReturnMachine
 import MacroPeg.CBV.SequentialStarReturnMachine
 import MacroPeg.CBV.SequentialReturnMachine
 import MacroPeg.CBV.SequentialArgsEntryMachine
+import MacroPeg.CBV.SequentialQueryEntryMachine
