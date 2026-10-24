@@ -4019,3 +4019,65 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialReturnMachine.transition_tape
+
+/-! Capture-preserving argument evaluation entry. -/
+
+/-- info: 'Complexity.NCountedTransfer.words_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.NCountedTransfer.words_runs
+
+/-- info: 'Complexity.NCountedTransfer.counted_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.NCountedTransfer.counted_runs
+
+/-- info: 'Complexity.NCountedTransfer.copyAll_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.NCountedTransfer.copyAll_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNumericFive.compiled_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNumericFive.compiled_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialNumericFive.local_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialNumericFive.local_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialArgsEntry.startCons_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialArgsEntry.startCons_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialArgsEntry.nil_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialArgsEntry.nil_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialArgsEntry.numeric_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialArgsEntry.numeric_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialArgsEntry.local_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialArgsEntry.local_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialArgsEntry.original_step' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialArgsEntry.original_step
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialArgsEntryMachine.space_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialArgsEntryMachine.space_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialArgsEntryMachine.space_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialArgsEntryMachine.space_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialArgsEntryMachine.transition_runs' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialArgsEntryMachine.transition_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialArgsEntryMachine.transition_tape' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialArgsEntryMachine.transition_tape
