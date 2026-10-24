@@ -239,3 +239,13 @@ import MacroPeg.CBV.ParTableau.Position
 import MacroPeg.CBV.ParTableau.Sim
 import MacroPeg.CBV.ParTableau.Recognition
 import MacroPeg.CBV.BitWordMachine
+
+import MacroPeg.CBV.SequentialCaptureMin
+import MacroPeg.CBV.SequentialArgHeadReturnMachine
+import MacroPeg.CBV.SequentialStarReturnMachine
+import MacroPeg.CBV.SequentialReturnMachine
+import MacroPeg.CBV.SequentialArgsEntryMachine
+import MacroPeg.CBV.SequentialQueryEntryMachine
+import MacroPeg.CBV.SequentialStructuralEntryMachine
+import MacroPeg.CBV.SequentialCallEntryMachine
+import MacroPeg.CBV.SequentialInputRead
