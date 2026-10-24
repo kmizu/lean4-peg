@@ -305,3 +305,5 @@ import MacroPeg.CBV.ForwardBooleanProgram
 import MacroPeg.CBV.ForwardBooleanSyntax
 import MacroPeg.CBV.CircuitProgram
 import MacroPeg.CBV.SequentialCaptureRegions
+import MacroPeg.CBV.SequentialSharedStack
+import MacroPeg.CBV.SequentialSharedSpace

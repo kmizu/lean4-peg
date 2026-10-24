@@ -2207,3 +2207,51 @@ environment. Bounding those copies, accounting for all saved cursors and
 clocks, and implementing any proposed compressed representation remain
 additional obligations. The current deterministic space upper bound remains
 `O(n log(n+1))`; no linear-space bound or Par/Seq separation is claimed here.
+
+### One environment per Seq activation and a global capture-payload bound
+
+`MacroPeg.CBV.SequentialSharedStack` now implements a second deterministic
+Seq evaluator. A configuration stores one current capture environment.
+Sequence, choice, negation, repetition, and argument-head continuations carry
+no environments. When a query enters a rule body, it saves the caller's
+current environment once in a scope frame and installs the new argument
+environment. Returning through that frame restores the caller environment.
+In particular, a nested call inside an argument restores the environment
+needed to evaluate the remaining arguments.
+
+This is an executable transition function, not an assumed semantic operation.
+`expression_runs`, `arguments_runs`, and `query_runs` prove its finite-clock
+semantics and environment restoration. `original_result_iff` equates its
+terminal results with those of the existing `SequentialStack` on the same
+original `List Char` input. `accepts_iff` connects it to first-order Seq
+observations. The fuelled `drive` returns the whole terminal configuration;
+`drive_result_iff` checks both the result and restoration of the empty outer
+environment, including failed and undefined finite-clock results.
+
+`MacroPeg.CBV.SequentialSharedSpace` proves a global bound that was unavailable
+for the evaluator with duplicated continuation environments. It charges a
+span `(p,q)` by `p-q` and counts every retained copy: the current environment,
+all suspended scope environments, every pending argument head, and an
+argument environment stored in the current task or returned value.
+`reachable_weight` bounds their total charged length by the input length at
+**every reachable state**. `reachable_captured_characters` consequently bounds
+the sum of lengths of all their decoded character words by the same input
+length, even if each retained span is materialized as a separate word.
+
+The proof uses the exact argument-window conservation law from
+`SequentialCaptureRegions`: successful arguments started at `p` and ending
+at `q` have total capture length `p-q`. A proof-only continuation certificate
+assigns the fresh callee environment this consumed-input credit. On entry to
+a body, its environment length plus its starting cursor is at most the
+caller's credit. A scope return releases the callee environment. Structural
+continuations save no capture payload, and pending argument heads telescope
+against the starting cursors of the argument tails. The certificates add no
+runtime accounting fields.
+
+This bounds captured **character payload**, not the total space of a Turing
+machine. It does not bound the number of empty captures or scopes, compress
+integer cursor and clock metadata, or implement bounded-space allocation and
+parameter lookup. The previously proved complete TM bound remains
+`O(n log n)`. Neither a general Par-to-Seq translation nor a language-class
+separation follows from this payload bound; the general comparison remains
+open.

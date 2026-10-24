@@ -5793,3 +5793,31 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialCaptureRegions.reachable_decoded_arguments' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialCaptureRegions.reachable_decoded_arguments
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStack.query_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStack.query_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStack.original_result_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStack.original_result_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStack.accepts_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStack.accepts_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedStack.drive_result_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedStack.drive_result_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedSpace.step_scoped' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedSpace.step_scoped
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedSpace.reachable_weight' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedSpace.reachable_weight
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialSharedSpace.reachable_captured_characters' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialSharedSpace.reachable_captured_characters
