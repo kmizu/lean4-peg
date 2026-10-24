@@ -8135,3 +8135,64 @@ varying arguments, followed by all-input recursive row correspondence and
 source/target language preservation. User calls inside positive argument
 parsers, general PEG prefixes, independent multiple captures, and general
 Par/Seq equality or separation remain unresolved.
+
+
+### Checked dynamic captures through whole recursive grammars (2026-10-25)
+
+`DynamicScannerCompiler` and `DynamicScannerCorrespondence` close the
+whole-grammar connection for a new dynamic-capture family. Each source user
+starts with the same actual partial scanner M/q followed by an arbitrary
+body built from literals, primitives, retained parameters, user calls,
+sequence, prioritized choice, negation and nested stars. Every user call
+carries its own actual argument syntax. The generated target has one unary
+rule per logical user and finite full observer profile, and starts its
+scanner in the state actually reached by that capture. Incoming full profiles
+select the next child's profile before its ordinary Seq capture binding.
+Both grammars and both starts are fixed independently of the input.
+
+`TotalCaptureSafety.check` is an executable finite syntax check. Literal
+words must have defined transitions from every scanner state; parameters
+preserve that property through the actual capture environment. The property
+is closed under sequence, unequal-action choice and arbitrary star. Negative
+queries consume no capture characters and may fail or diverge. Arguments in
+this whole-grammar compiler contain no rule calls; their control may otherwise
+mix retained values and new literals freely. `IndependentCaptureControl`
+transports their full partial results and inline generated filters between
+actual user grammars and clocks. It does not assume successful argument
+results or total parsing behavior.
+
+`capture_total` derives the exact physical capture, suffix split and defined
+advancement from actual argument evaluation. Structural evaluator induction
+and user-clock induction prove every source row at the original position
+matches the generated profile row at the actual capture endpoint. Scanner
+rows are actual installed helper rows stabilized at input length plus one;
+physical/frozen cofinality removes the analysis clock. `checked_observations_iff`
+and `checked_language_translation` require only the finite body/start checks.
+They preserve all finite observations and the same unchanged original string
+language on all inputs, including failure and undefinedness. `undefined_iff`
+also identifies absence of a defined result at every ordinary physical clock.
+No capture-shape, selected-action, metadata-accuracy, frontier, argument-result
+or recursive-row oracle is a caller premise of these final theorems.
+
+The generated mutually recursive example captures a → aa → aaa, chooses
+residual states 1 → 0 → 1, consumes extra b transitions, and restores both
+parent values. Its concrete ordinary source/target executions and three
+short-copy rejections are kernel checked, and `language` covers every input
+and every finite observation for this actual pair. The same generated grammar
+also accepts even and empty captures. Unequal-action a/aa commits to a on
+aa!aa and rejects rather than retrying aa after EOF failure; explicit aa
+succeeds. A nullable empty-literal-star argument is undefined on every input
+at every ordinary clock on both sides, and argument failure at clock zero is
+preserved. The a! frontier-crossing argument from the previous section is
+now rejected by the finite syntax check.
+
+This is complementary to the earlier loop-safe and fixed-action families,
+not their strict superset: requiring defined advancement from all states
+excludes some partial actions those families permit. It removes the fixed
+full-action-per-user restriction for this new family. Positive rule calls,
+including independent nullary recursive helpers, inside arguments have not
+yet been integrated into its whole-grammar proof (the earlier local binding
+lemmas still support the independent helpers). Shared M/q, unary logical
+users and source scanner-prefix form remain restrictions. General PEG
+prefixes, mixed-fragment compiler integration, independent multiple captures,
+and unrestricted Par/Seq equality or separation remain unresolved.

@@ -19297,3 +19297,207 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
  Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.DynamicScannerBindingExamples.frontier_boundary
+
+/-- info: 'Shallot.MacroPeg.CBV.TotalCaptureSafety.total_nil' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TotalCaptureSafety.total_nil
+
+/-- info: 'Shallot.MacroPeg.CBV.TotalCaptureSafety.total_append' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TotalCaptureSafety.total_append
+
+/-- info: 'Shallot.MacroPeg.CBV.TotalCaptureSafety.wordCheck_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TotalCaptureSafety.wordCheck_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.TotalCaptureSafety.check_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TotalCaptureSafety.check_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.TotalCaptureSafety.suffix_shape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TotalCaptureSafety.suffix_shape
+
+/-- info: 'Shallot.MacroPeg.CBV.TotalCaptureSafety.capture_total' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.TotalCaptureSafety.capture_total
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentCaptureControl.check_sound' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentCaptureControl.check_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentCaptureControl.eval_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentCaptureControl.eval_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentCaptureControl.render_safe' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentCaptureControl.render_safe
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentCaptureControl.filter_safe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentCaptureControl.filter_safe
+
+/-- info: 'Shallot.MacroPeg.CBV.IndependentCaptureControl.filter_correct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.IndependentCaptureControl.filter_correct
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCompiler.check_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCompiler.check_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCompiler.bodies_check_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCompiler.bodies_check_sound
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCompiler.sourceExpr_firstOrder' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCompiler.sourceExpr_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCompiler.targetExpr_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCompiler.targetExpr_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCompiler.source_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCompiler.source_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCompiler.key_mem' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCompiler.key_mem
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCompiler.target_rule' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCompiler.target_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCompiler.source_firstOrder' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCompiler.source_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCompiler.target_firstOrder' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCompiler.target_firstOrder
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCompiler.helper_rule' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCompiler.helper_rule
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCompiler.helpers_stable' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCompiler.helpers_stable
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCompiler.scanner_eval' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCompiler.scanner_eval
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.evaluator_of_rows' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.evaluator_of_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.tables_rows' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.tables_rows
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.evaluator_eq' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.evaluator_eq
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.defined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.defined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.undefined_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.undefined_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.checked_observations_iff' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.checked_observations_iff
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.checked_language_translation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerCorrespondence.checked_language_translation
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.syntax_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.syntax_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.genuinely_dynamic' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.genuinely_dynamic
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.language' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.language
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.mutual_returns' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.mutual_returns
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.short_copies' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.short_copies
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.frontier_boundary_checked' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.frontier_boundary_checked
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.undefined_argument' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.undefined_argument
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.argument_failure_clock_zero' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.argument_failure_clock_zero
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.even_and_empty_captures' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.even_and_empty_captures
+
+/-- info: 'Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.committed_choice' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.DynamicScannerFusionExamples.committed_choice
