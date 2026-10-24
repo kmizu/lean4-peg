@@ -577,3 +577,7 @@ import MacroPeg.CBV.FragmentBodyExamples
 import MacroPeg.CBV.FragmentStuckRecursive
 import MacroPeg.CBV.FragmentNullableControl
 import MacroPeg.CBV.FragmentNullableExamples
+
+import MacroPeg.CBV.FragmentStarForm
+import MacroPeg.CBV.FragmentStarCompiler
+import MacroPeg.CBV.FragmentStarExamples

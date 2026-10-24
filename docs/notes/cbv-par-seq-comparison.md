@@ -7735,3 +7735,56 @@ normalizer or with ordinary bare-param/closed leaf kinds. Fixed A=a*;#,
 a-only consuming H, one actual source capture, and A;param0 replay entries
 remain restrictions. Unrestricted Par/Seq equality or separation remains
 unresolved.
+
+### General nested fragment-body stars from actual source syntax
+
+`FragmentStarForm` combines the previous finite sequence normalizer with
+capture-independent divergent leaves. A local leaf is `some b` for
+A;param0;b or `none` for eps*. Continuation copies append to b only when it
+exists: a divergent leaf remains undefined at the original position.
+`compose_eval` preserves prioritized branch commitment, including a negative
+output followed by a consuming continuation.
+
+For arbitrary control operands, `strict` redirects zero-consuming predicate
+outputs to a guarded divergent leaf with `NullableStarControl.freeze`.
+`strict_change` and `star_change` preserve the original star's partial result.
+The first consuming replay output receives an inline continuation implementing
+the remaining greedy iterations, guarded by the complete next iteration.
+`loop_eval` discharges the local chain premises using actual generated leaf
+expressions. `star_negative` proves that a terminating star already stops
+where its operand fails, permitting a final negative test instead of a
+special capture-independent epsilon leaf. No Consumer or totality condition
+is imposed on the source operand. Its constructor may be any nesting of
+leaf, sequence, prioritized choice, negation, and ordinary star.
+
+The local `evaluator_eq` uses sound evaluation tables, a valid input position,
+and a call-by-value strategy for the decreasing-parser rotation. These are
+discharged in `FragmentStarCompiler.tables_eq` by the actual first-order
+core grammar and its ordinary clock tables; they are not supplied as
+semantic oracles by callers of `observations_iff` or `language_translation`.
+
+The compiler computes all local suffix lists and plans from the source body.
+`address`/`relocate` send local divergent leaves to the single global stuck
+index and ordinary replay leaves to their generated helper rows. The
+`placed_leaf` proof covers both cases. Source grammar user rows retain the
+original nested Body.syntax, including its stars. Header equality, actual
+body result equality, and ordinary-clock table equality connect it to the
+normalized recursive core. The final fixed first-order Seq grammar preserves
+all finite observations and the language on every unchanged input. Finite
+layout validity is generated automatically.
+
+Kernel executions cover a syntactically non-Consumer operand that chooses
+consuming X branches twice and then finitely stops at Q, zero iterations,
+reuse of the full capture after the star, a short final copy, undefinedness
+when a negative branch succeeds after a consuming iteration, and nested
+body stars. An actual 0→1→0 execution replays aaa#a twice in the child body
+star, then captures fresh aa in the grandchild and restores both parents'
+whole values after return.
+
+This closes the general body-star and sequence-composition gaps for this
+consuming-fragment family. It does not remove the fixed A=a*;# header,
+a-only consuming H, one actual capture, or A;param0 entry for each ordinary
+leaf. Ordinary bare-param and capture-independent consuming leaves, arbitrary
+initial consuming prefixes, unrestricted arguments, and independent multiple
+captures remain outside this compiler. General Par/Seq equality or separation
+is unresolved.
