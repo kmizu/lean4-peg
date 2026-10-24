@@ -3461,3 +3461,47 @@ repetition, and does not vouch for CE-002's diverging macro grammar. -/
 /-- info: 'Shallot.MacroPeg.CBV.SequentialWordRead.read_word_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Shallot.MacroPeg.CBV.SequentialWordRead.read_word_tape
+
+/-- info: 'Complexity.BinaryWord.half_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.BinaryWord.half_runs
+
+/-- info: 'Complexity.BinaryWord.digit_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.BinaryWord.digit_runs
+
+/-- info: 'Complexity.BinaryWord.emit_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.BinaryWord.emit_runs
+
+/-- info: 'Complexity.BinaryWord.write_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Complexity.BinaryWord.write_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordWrite.write_word_runs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordWrite.write_word_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordWrite.write_word_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordWrite.write_word_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordCycle.cycle_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordCycle.cycle_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordCycle.cycle_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordCycle.cycle_tape
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordCycle.fieldSpace_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordCycle.fieldSpace_bound
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordCycle.field_cycle_runs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordCycle.field_cycle_runs
+
+/-- info: 'Shallot.MacroPeg.CBV.SequentialWordCycle.field_cycle_tape' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Shallot.MacroPeg.CBV.SequentialWordCycle.field_cycle_tape
